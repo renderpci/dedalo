@@ -1,4 +1,5 @@
 <?php 
+# DEPRECATE v4
 $t_error_de_conexion_title = "اتصال شکست خورد. بارگذاری مجدد صفحه بعد از چند ثانیه" ;
 $instalar_title = "نصب" ;
 $error_install_title = "خطا : شما باید بانک اطلاعاتی سیستم نصب" ;

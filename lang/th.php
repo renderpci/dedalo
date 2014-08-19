@@ -1,4 +1,5 @@
 <?php 
+# DEPRECATE v4
 $t_error_de_conexion_title = "การเชื่อมต่อล้มเหลว โหลดหน้าเพียงไม่กี่วินาที" ;
 $instalar_title = "ติดตั้ง" ;
 $error_install_title = "ข้อผิดพลาด : คุณต้องติดตั้งระบบฐานข้อมูล" ;

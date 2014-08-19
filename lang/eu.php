@@ -1,4 +1,5 @@
 <?php 
+# DEPRECATE v4
 $t_error_de_conexion_title = "Konexioak huts egin du. Berritze batzuk segundu orria" ;
 $instalar_title = "Instalatzeko" ;
 $error_install_title = "Errorea: datu-base sistema instalatu behar duzu" ;

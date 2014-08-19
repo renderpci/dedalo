@@ -1,4 +1,5 @@
 <?php 
+# DEPRECATE v4
 $t_error_de_conexion_title = "接続に失敗しました。数秒後にページをリロード" ;
 $instalar_title = "インストール" ;
 $error_install_title = "エラー：データベースのシステムをインストールする必要があります。" ;

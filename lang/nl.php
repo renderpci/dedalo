@@ -1,4 +1,5 @@
 <?php 
+# DEPRECATE v4
 $t_error_de_conexion_title = "Verbinding is mislukt. Reload de pagina na een paar seconden" ;
 $instalar_title = "Te installeren" ;
 $error_install_title = "Fout: U moet het database-systeem" ;

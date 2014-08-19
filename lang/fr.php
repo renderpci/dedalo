@@ -1,4 +1,5 @@
 <?php 
+# DEPRECATE v4
 $t_error_de_conexion_title = "Échec de la connexion. Recharger la page après quelques secondes" ;
 $instalar_title = "Installer" ;
 $error_install_title = "Erreur: vous devez installer le système de base de données" ;

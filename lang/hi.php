@@ -1,4 +1,5 @@
 <?php 
+# DEPRECATE v4
 $t_error_de_conexion_title = "कनेक्शन असफल रहा. पुनः लोड एक कुछ सेकंड के बाद पृष्ठ" ;
 $instalar_title = "स्थापित" ;
 $error_install_title = "त्रुटि: आप डेटाबेस प्रणाली स्थापित करना होगा" ;
