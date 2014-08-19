@@ -1,9 +1,9 @@
 <?php  
 /************************************************************************
 	
-    Dédalo : Intangible Cultural Heritage Management Platform
+    Dédalo : Cultural Heritage & Oral history Management Platform
 	
-	Copyright (C) 2011  Authors: Juan Francisco Onielfa, Alejandro Peña
+	Copyright (C) 1998 - 2014  Authors: Juan Francisco Onielfa, Alejandro Peña
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU Affero General Public License as
