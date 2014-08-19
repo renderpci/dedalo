@@ -1,0 +1,107 @@
+@charset "UTF-8";
+/* CSS Document */
+
+/* 
+* Paginación
+*/
+/* General */
+.pagContDiv {
+	margin:0px;
+	padding:0px;
+	display: block;
+	background-color:#666;
+	
+	-webkit-border-top-left-radius: 5px;
+	-webkit-border-top-right-radius: 25px;
+	-moz-border-radius-topleft: 5px;
+	-moz-border-radius-topright: 25px;	
+	border-top-left-radius: 5px;
+	border-top-right-radius: 25px;
+	
+	width:320px;
+	text-align:left;
+	height:20px;
+	overflow:hidden;
+	background-image:url(../images/iconos/fondo_barra_paginacion.png);
+	background-position:bottom;
+	background-repeat:repeat-x;
+	border-left-width: 1px;
+	border-left-style: solid;
+	border-left-color: #999999;
+	/**/
+	-moz-box-shadow		: 2px 2px 8px #999999;
+	-webkit-box-shadow	: 2px 2px 8px #999999;
+	box-shadow			: 2px 4px 8px #999999;
+	
+}
+/* parte inferior */
+.pagContDivDown {
+	margin:0px;
+	display: block;
+	background-color:#666;
+	-webkit-border-bottom-left-radius: 5px;
+	-webkit-border-bottom-right-radius: 25px;
+	-moz-border-radius-bottomleft: 5px;
+	-moz-border-radius-bottomright: 25px;
+	border-bottom-left-radius: 5px;
+	border-bottom-right-radius: 25px;
+	
+	width:auto;
+	text-align:left;
+	height:20px;
+	overflow:hidden;
+	background-image:url(../images/iconos/fondo_barra_paginacion.png); background-position:bottom; background-repeat:repeat-x;
+	/*
+	-moz-box-shadow		: -10px 0px 8px #cccccc;
+	-webkit-box-shadow	: -10px 0px 8px #cccccc;
+	box-shadow			: -10px 0px 8px #cccccc;
+	*/	
+}
+.pagContDivNoMargen {
+	margin:0px;
+	padding:0px ;
+	display: block;
+	background-color:#666;
+	
+	-webkit-border-top-left-radius: 5px;
+	-webkit-border-top-right-radius: 5px;
+	-moz-border-radius-topleft: 5px;
+	-moz-border-radius-topright: 5px;
+	border-top-left-radius: 5px;
+	border-top-right-radius: 5px;
+		
+	width:auto;
+	text-align:left;
+	height:20px;
+	overflow:hidden;
+	background-image:url(../images/iconos/fondo_barra_paginacion.png); background-position:bottom; background-repeat:repeat-x;
+}
+/* none (flat_list jeraquias) */
+.pagContDivNoRound {
+	margin:0px;
+	padding:0px;
+	display: block;
+	background-color:#666;
+	width:auto;
+	text-align:left;
+	height:20px;
+	overflow:hidden;
+	background-image:url(../images/iconos/fondo_barra_paginacion.png); background-position:bottom; background-repeat:repeat-x;
+}
+.BtnDesactivo { opacity:0.4; cursor:default !important }
+
+
+
+.pagElementDiv{ display:block; margin:0px !important; width:29px; height:20px; position:relative; float:left; }
+.pagElementDiv img{ cursor:pointer; margin:0px; padding:0px;  }
+#pagElementDivText { color:#CCC;  text-align:center; width:auto; margin-left:10px; margin-top:4px;margin-left:12px; font-size:10px !important ;   }
+
+.botonTablaCentro2 {display: inline-block;padding:2px;}
+
+#listServerData p { padding-top:5px; border-bottom:solid 1px #CCC; display: table}
+
+.contFotoList { width:64px; height:48px; overflow:hidden !important;  margin:0px !important ; cursor:default; text-align:center; }
+.contFotoList img { min-width:64px; height:48px; }
+
+
+.botonTablaCentro { margin-left: 1px; margin-right:1px; }

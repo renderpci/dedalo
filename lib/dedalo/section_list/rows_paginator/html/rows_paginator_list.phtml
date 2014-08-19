@@ -1,0 +1,62 @@
+<?php
+	
+	# VISUALIZADOR HTML	
+
+	# ELEMENTOS	
+	if(!isset ($ar_css['css_span_dato'])) 					$ar_css['css_span_dato']='';
+	if(!isset ($ar_css['css_button_search'])) 				$ar_css['css_button_search']='';
+	
+	
+	print "\n\n<!-- ROWS_PAGINATOR [] -->";
+		
+	# CONTENIDO (INPUT)
+	$html_contenido  = "\n<div class=\"css_wrap_rows_paginator\">";
+	
+	
+	switch($permissions) {
+			
+		case 0	:	$html_contenido .= "\n <span class=\"css_span_dato {$ar_css['css_span_dato']}\"> ".label::get_label('sin_acceso')." </span>";
+					break;
+						
+		case ($permissions>=1)	:
+					
+					$html_contenido  .= "\n<div class=\"css_rows_paginator_content\">";
+					
+					
+					# INFO
+					$html_contenido  .= "\n<div class=\"css_rows_paginator_info\"> Displayed $page_row_begin to $page_row_end of $totalRows </div>";
+					
+					
+					# LINKS
+					$html_contenido  .= "\n<div class=\"css_rows_paginator_div_links\">";
+					
+					if($pageNum>1)
+					#$html_contenido  .= "\n <a href=\"?{$page_query_string}&pageNum=1\" class=\"gradiend_button_1 link\"> << </a>";
+					$html_contenido  .= "\n <div onclick=\"goto_url('?{$page_query_string}&pageNum=1')\" class=\"icon_bs paginator_first_icon link\"></div>";
+					
+					if($totalPages>1 && $pageNum>1)
+					#$html_contenido  .= "\n <a href=\"?{$page_query_string}&pageNum=$prev_page\" class=\"gradiend_button_1 link\"> < </a>";
+					$html_contenido  .= "\n <div onclick=\"goto_url('?{$page_query_string}&pageNum=$prev_page')\" class=\"icon_bs paginator_prev_icon link\"></div>";
+					
+					if($totalPages>1 && $pageNum<$totalPages)
+					#$html_contenido  .= "\n <a href=\"?{$page_query_string}&pageNum=$next_page\" class=\"icon_bs paginator_next_icon link gradiend_button_1\"> > </a>";
+					$html_contenido  .= "\n <div onclick=\"goto_url('?{$page_query_string}&pageNum=$next_page')\" class=\"icon_bs paginator_next_icon link\"></div>";
+				
+					
+					if($pageNum<$totalPages)
+					#$html_contenido  .= "\n <a href=\"?{$page_query_string}&pageNum=$totalPages\" class=\"gradiend_button_1 link\"> >> </a>";
+					$html_contenido  .= "\n <div onclick=\"goto_url('?{$page_query_string}&pageNum=$totalPages')\" class=\"icon_bs paginator_last_icon link\"></div>";
+					
+					$html_contenido  .= "\n </div>";
+					
+						
+					$html_contenido  .= "\n</div><!-- /css_rows_paginator_content -->";								
+	}
+	
+	$html_contenido .= "\n</div><!-- /css_wrap_rows_paginator -->";
+	
+	# PRINT HTML
+	print $html_contenido;
+	
+
+?>

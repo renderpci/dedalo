@@ -1,0 +1,25 @@
+<?php
+
+	# VISUALIZADOR HTML
+
+
+	# CONTENIDO THUMB
+	$html_contenido = '';
+	switch($permissions) {
+			
+		case 0	:	$html_contenido .= "\n <span class=\"css_span_dato {$ar_css['css_span_dato']}\"> ".label::get_label('sin_acceso')." (image)</span>";
+					break;
+
+					
+		case ($permissions>=1) :			
+					$html_contenido .= "\n <img class=\"css_image\"
+					src=\"$image_url\" id=\"img_$identificador_unico\"
+					data-tipo=\"$tipo\" data-id_matrix=\"$id\" data-image_id=\"$image_id\" data-parent_matrix=\"$parent\" data-img_width=\"$img_width\" data-img_height=\"$img_height\"			
+					/>";
+					
+	}
+	
+	# PRINT HTML	
+	print $html_contenido;	
+
+?>

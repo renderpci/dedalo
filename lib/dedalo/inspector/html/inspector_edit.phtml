@@ -1,0 +1,195 @@
+<?php
+
+	$html = '';
+
+		
+	# INSPECTOR DIV
+	$html .= "\n <div id=\"inspector_div\" class=\"inspector_div box_shadow_1 box_border_radius_1 \">";			
+		
+		
+		#
+		# INFO
+		#
+		$html .= "\n<div class=\"css_section_group_titulo tap_title title_down_box text_unselectable\">
+								<label class=\"css_label\">INFO</label>
+							</div>";
+		$html .= "\n<div class=\"css_section_group_content tap_content inspector_div_content \" >";
+		$html .= "\n <div id=\"inspector_info\" class=\"inspector_info_body\"></div>";	
+		$html .= "\n</div>";
+		
+		
+		#
+		# TOOLS
+		#
+		$html .= "\n<div class=\"css_section_group_titulo tap_title title_down_box text_unselectable border_radius_0\" 
+							data-tap_id=\"Inspector_tools_tap\">
+							<label class=\"css_label\">".label::get_label('heramientas')."</label>
+							</div>";
+		$html .= "\n<div class=\"css_section_group_content tap_content inspector_div_content \" >";
+			
+		# FIXED SECTION TOOLS
+		#if ($fixed_tools) {
+		#$html .= "\n <div id=\"inspector_tools_section\" class=\"inspector_info_body inspector_info_body_fixed\">";
+		#$html .= $tool_relation_button_html;
+		#$html .= "</div>";#/inspector_info_body
+		#}
+
+		# VARIABLE COMPONENT TOOLS
+		$html .= "\n <div id=\"inspector_tools\" class=\"inspector_info_body\"></div>";
+		
+		#$html .= "\n <div id=\"inspector_tools_log\" ></div>";
+		$html .= "\n</div>";#/css_section_group_content	
+
+
+		#
+		# INDEXATIONS
+		#			
+		$html .= "\n<div class=\"css_section_group_titulo tap_title title_down_box text_unselectable border_radius_0\" 
+							data-tap_id=\"Inspector_relations_tap\">
+							<label class=\"css_label\">".label::get_label('indexaciones')."</label>
+							</div>";
+		$html .= "\n<div class=\"css_section_group_content tap_content inspector_div_content \" >";
+		$html .= "\n <div id=\"inspector_indexations\" class=\"inspector_info_body\"> </div>";
+		$html .= "\n</div>";
+		
+		
+
+		#
+		# RELATIONS
+		#					
+		$html .= "\n<div class=\"css_section_group_titulo tap_title title_down_box text_unselectable border_radius_0\" 
+							data-tap_id=\"Inspector_relations_tap\">
+							<label class=\"css_label\">".label::get_label('relaciones')."</label>
+							</div>";
+		$html .= "\n<div class=\"css_section_group_content tap_content inspector_div_content \" >";
+
+			# Relations tag (dynamic)
+			$html .= "\n <div id=\"inspector_relation_list_tag\" class=\"inspector_info_body\"> $tool_relation_button_html </div>";
+			
+			# Relations section (fixed)
+			$html .= "\n <div id=\"inspector_relation_list_sections\" class=\"inspector_info_body\">";
+			$html .= "\n<div class=\"relaciones_list_title\">".label::get_label('ficha')."</div>";
+			$html .= $relation_list_html ;
+			$html .= "</div>";
+
+		$html .= "\n</div>";
+
+		
+		#
+		# DEBUG
+		#
+		if(SHOW_DEBUG===true || strpos(DEDALO_HOST, '8888')!==false) {
+		$html .= "\n<div class=\"css_section_group_titulo tap_title title_down_box text_unselectable border_radius_0\" data-tap_id=\"Inspector_debug_tap\">
+							<label class=\"css_label\">Debug</label>
+					</div>";
+		$html .= "\n<div id=\"inspector_debug\" class=\"inspector_info_body css_section_group_content tap_content inspector_div_content \" ></div>";
+		
+		/**/
+		$html .= "<div class=\"css_section_group_content tap_content inspector_div_content inspector_info_body \" >";			
+		
+
+		$html .= "<div class=\"label_lang_data_selector\">".label::get_label('idioma') .' '. label::get_label('datos').'</div>';
+		$html .= "<select data-type_of_lang=\"dedalo_data_lang\" onchange=\"common.jump_select_lang(this)\">";
+
+			foreach($ar_all_project_langs as $lg) {
+
+				$selected = null; if(DEDALO_DATA_LANG==$lg) $selected = 'selected="selected"';
+				$html .= "<option value=\"$lg\" {$selected}>".RecordObj_ts::get_termino_by_tipo($lg,DEDALO_APPLICATION_LANG)."</option>";
+			}			
+			
+		$html .= "</select>";
+		$html .="</div>";
+		}#end if(SHOW_DEBUG===true) {
+		
+
+
+		#
+		# TINYMCE EVENTS (COMPONENT_TEXT_AREA)
+		#
+		# If any 'component_text_area' is loaded, show TINYMCE EVENTS inspector tap
+		/*
+		if (isset($ar_loaded_modelos) && in_array('component_text_area', $ar_loaded_modelos)) {
+			
+			$html .= "\n<div class=\"css_section_group_titulo tap_title title_down_box text_unselectable border_radius_0\" 
+								data-tap_id=\"Inspector_events_tap\">
+								<label class=\"css_label\">Events</label>
+								</div>";
+			$html .= "\n<div class=\"css_section_group_content tap_content inspector_div_content \" >";
+			$html .= "\n <div id=\"inspector_events\" class=\"inspector_info_body\"></div>";
+			$html .= "\n</div>";
+		}
+		*/
+		
+		
+		#
+		# OTHERS
+		#
+		if(SHOW_DEBUG===true) {
+		$iconv = iconv_get_encoding('all');		
+		$html .= "\n<div class=\"css_section_group_titulo tap_title title_down_box text_unselectable border_radius_0\" 
+							data-tap_id=\"Inspector_others_tap\">
+							<label class=\"css_label\">Others</label>
+							</div>";
+		$html .= "\n<div class=\"css_section_group_content tap_content inspector_div_content \" >";
+		$html .= "\n <div id=\"inspector_others\" class=\"inspector_info_body\">";
+
+		$html .= " Dédalo version ".DEDALO_VERSION. " - Build " .DEDALO_BUILD. "<br>";
+		#$html .= " Section: ". $section_tipo . " $section_label <br>";
+		$html .= " MySQLi info ".$mysql_info ."<br>";
+		$html .= " PHP version ". $php_info. " - cache: $check_cache <br>";
+		$html .= " PHP memory usage ". tools::get_memory_usage('pid') ."<br>";		
+		$html .= " Dedalo cache manager: ". DEDALO_CACHE_MANAGER ;
+		if (defined('DEDALO_CACHE_MANAGER_DB')) {
+			$html .= ' : '.DEDALO_CACHE_MANAGER_DB.'';
+		}
+		$html .= "<br>";
+							/*
+							if(isset($_SESSION['debug_content'])) {							
+								foreach ($_SESSION['debug_content'] as $key => $value) {
+									if(strpos($key, 'RecordDataBoundObject')!==false) {
+										$key = str_replace('RecordDataBoundObject', 'RDBO', $key);
+										$html .= "$key : ". count($value) ."<br>";
+									}
+									
+								}
+							}
+							#$html .= print_r($_SESSION['debug_content']['common::show_loaded_modelos']);
+							
+							$_SESSION['debug_content']['Load'.' cache']
+							$_SESSION['debug_content']['Load']
+							$_SESSION['debug_content']['search'.' cache']
+							$_SESSION['debug_content']['search']
+							$_SESSION['common::show_loaded_modelos']
+							*/
+		/*
+		$html .= "	PHP iconv input_encoding ". iconv_get_encoding('input_encoding'). "<br>
+							PHP iconv output_encoding ". iconv_get_encoding('output_encoding') . "<br>	
+							PHP iconv internal_encoding ". iconv_get_encoding('internal_encoding') . "<br>
+							";
+		*/
+		$html .= "	</div><!-- /inspector_others -->";
+		$html .= "	<div id=\"load_time_inspector\"></div>";			
+		$html .= "\n</div><!-- /css_section_group_content -->";
+		}#if(SHOW_DEBUG===true)
+
+
+		#
+		# ACTIVITY LOG
+		#
+		$html .= "\n<div class=\"css_section_group_titulo tap_title title_down_box text_unselectable\">
+							<label class=\"css_label\">ACTIVITY LOG</label>
+							</div>";
+		$html .= "\n<div class=\"css_section_group_content tap_content inspector_div_content \" >";
+		$html .= "\n <div id=\"inspector_log\" class=\"inspector_info_body\"></div>";			
+		$html .= "\n</div>";
+		
+		
+		
+	$html .= "\n </div>";#/inspector_div
+
+
+		
+	
+
+	print $html;
+?>

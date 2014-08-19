@@ -1,0 +1,94 @@
+<?php
+
+	# VISUALIZADOR HTML	
+	
+	# ELEMENTOS
+	if(!isset ($ar_css['css_span_dato'])) 						$ar_css['css_span_dato']='';
+	if(!isset ($ar_css['css_check_box_filter_master'])) 		$ar_css['css_check_box_filter_master']='';
+	if(!isset ($ar_css['css_span_ejemplo'])) 					$ar_css['css_span_ejemplo']='';
+	if(!isset ($ar_css['css_span_debugger']))					$ar_css['css_span_debugger']='';
+	if(!isset ($ar_css['css_wrap_check_box']))					$ar_css['css_wrap_check_box']='';
+	if(!isset ($ar_css['css_check_box_filter_master_rotulo']))	$ar_css['css_check_box_filter_master_rotulo']='';
+	
+	if(!isset ($tools_html))									$tools_html='';
+	
+	
+	print "\n<!-- FILTER MASTER [tipo:$tipo id_matrix:$id] -->";
+	print "\n<div class=\"css_wrap_filter_master wrap_component {$ar_css['css_check_box_filter_master_rotulo']}\" id=\"{$id_wrapper}\"
+	data-id_matrix=\"{$id}\" data-tipo=\"{$tipo}\" data-lang=\"{$lang}\" data-parent=\"{$parent}\" data-parent=\"{$parent}\" data-modo=\"{$modo}\" data-dato=\"{$dato_string}\" data-component_name=\"{$component_name}\" >";
+	
+	//data-id_matrix=\"{$id}\" data-tipo=\"{$tipo}\" data-parent=\"{$parent}\" data-modo=\"ajax\"
+	
+	# ETIQUETA (LABEL)
+	$html_label = component_common_draw::draw_label($this);
+	
+	# CONTENIDO (INPUT)
+	$html_contenido = '';
+	switch($permissions) {
+			
+		case 0	:	$html_contenido .= "\n <span class=\"css_span_dato {$ar_css['css_span_dato']}\"> ".label::get_label('sin_acceso')." (checkbox)</span>"; 
+					break;
+						
+		case 1	: 	if (is_array ($ar_proyectos_section)) foreach ($ar_proyectos_section as $value => $rotulo) {
+						
+						if( is_array($dato) && in_array($value,$dato) ) {
+							$checked = 'checked="checked"';
+						}else {
+							$checked = "";
+						}
+						$html_contenido .= "\n <input class=\"css_check_box_filter_master {$ar_css['css_check_box_filter_master']}\" type=\"checkbox\" 
+						name=\"{$input_name}\"
+						data-tipo=\"{$tipo}\" data-parent=\"{$parent}\"
+						value=\"{$value}\" id=\"{$id}\" title=\"$html_title\" 
+						$checked  disabled />";						
+						$html_contenido .= "\n <label class=\"css_check_box_filter_master_rotulo {$ar_css['css_check_box_filter_master_rotulo']}\" $required >$rotulo</label>";	
+					}
+					break;	
+						
+		case ($permissions>=2)	:
+
+					# VERIFY USER LOGGED IS CURRENT VIEWED USER			
+						$userID_matrix_logged = navigator::get_userID_matrix();							#dump($userID_matrix_logged,'userID_matrix_logged');
+						$userID_matrix_viewed = $parent;
+						
+						$disabled = NULL;
+						if($userID_matrix_logged==$userID_matrix_viewed)
+							$disabled = "disabled";
+					
+					if (is_array ($ar_proyectos_section)) foreach ($ar_proyectos_section as $value => $rotulo) {
+						
+						if( is_array($dato) && array_key_exists($value,$dato) ) {
+							$checked = 'checked="checked"';
+						}else {
+							$checked = "";
+						}
+						$html_contenido .= "\n <input class=\"css_check_box_filter_master {$ar_css['css_check_box_filter_master']}\" type=\"checkbox\" 
+						name=\"{$input_name}\"
+						data-tipo=\"{$tipo}\" data-id_matrix=\"{$id}\" data-lang=\"{$lang}\" data-parent=\"{$parent}\"
+						value=\"{$value}\" title=\"$html_title\" $checked $disabled />";
+												
+						$html_contenido .= "\n <label class=\"css_check_box_filter_master_rotulo {$ar_css['css_check_box_filter_master_rotulo']}\" $required >$rotulo</label><br>";	
+					}
+					
+					#$html_contenido .= "\n <span class=\"css_span_log\"></span>";										
+					#$html_contenido .= "\n <span class=\"css_span_ejemplo {$ar_css['css_span_ejemplo']}\">$ejemplo</span>";
+					
+					#$html_contenido .= $html_tools;
+		
+			if($permissions==3)
+			
+					$html_contenido .= "\n <span class=\"css_span_debugger {$ar_css['css_span_debugger']}\" id=\"debugger_{$id}\" >{$debugger}</span>";	
+					
+							
+	}
+
+	# Prepare content to show in page
+	tools::prepare_content($html_contenido);
+	
+	# PRINT HTML
+	print $html_label;
+	print $html_contenido;
+
+	print "\n</div>\n\n"; //wrap
+
+?>

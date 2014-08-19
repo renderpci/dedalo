@@ -1,0 +1,74 @@
+<?php
+
+	# VISUALIZADOR HTML
+
+	# ELEMENTOS
+	if(!isset ($ar_css['css_span_dato'])) 					$ar_css['css_span_dato']='';
+	if(!isset ($ar_css['css_button_search'])) 				$ar_css['css_button_search']='';
+
+
+
+	print "\n\n<!-- ROWS_SEARCH -->";
+	print "\n<div class=\"css_wrap_rows_search\">";
+
+
+		# CONTENIDO (INPUT)
+		$html_contenido   = '';
+		$html_contenido  .= "\n <div class=\"tap_title css_rows_search_tap\" data-tap_id=\"filter_tap\"> ".label::get_label('filtro')." </div>";
+
+		switch($permissions) {
+
+			case 0	:	$html_contenido .= "\n <span class=\"css_span_dato {$ar_css['css_span_dato']}\"> ".label::get_label('sin_acceso')." </span>";
+						break;
+
+			case ($permissions>=1)	:
+
+						$display_content  = false;	#if(isset($_REQUEST['search']) && empty($_REQUEST['reset'])) $display_content = "style=\"display:block\" ";
+
+						$html_contenido  .= "\n<div class=\"tap_content css_rows_search_content\" $display_content >";
+
+
+
+						# FORM
+						#$html_contenido  .= "\n<form class=\"css_rows_search_form\" id=\"search_form\" name=\"search_form\" method=\"POST\" action=\"?".clean_url_vars()."\" >";
+						$html_contenido  .= "\n<form class=\"css_rows_search_form\" id=\"search_form\" name=\"search_form\" method=\"POST\" action=\"\" >";
+
+
+							# COMPONENTS ( CAMPOS DE BÚSQUEDA )
+							foreach($ar_search_fields as $component_obj) {
+
+								$html_contenido .= $component_obj->get_html();
+							}
+							$html_contenido  .= "\n <hr>";
+
+
+							# SEARCH COMPONENTS (MAX PER PAGE ...)
+							foreach($ar_tools_search as $current_tool_search) {
+
+								$html_contenido .= $current_tool_search->get_html();
+							}
+
+							/*
+							# BUTTONS
+							foreach($ar_buttons_search_obj_html as $button_search_obj_html) {
+
+								$html_contenido .= $button_search_obj_html;
+							}
+							*/
+
+							$html_contenido  .= "\n <input type=\"hidden\" name=\"search\" value=\"y\">";
+							
+						$html_contenido  .= "\n</form>";
+
+
+						$html_contenido  .= "\n</div><!-- /css_rows_search_content -->";
+		}
+
+
+
+		# PRINT HTML
+		print $html_contenido;
+
+
+	print "\n</div><!-- /css_wrap_rows_search -->";
+?>

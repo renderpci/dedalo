@@ -1,0 +1,71 @@
+/*CSS Document
+WRAP DIV CONTAINER*/
+.css_wrap_component_security_areas {
+	padding: 5px;
+}
+
+.css_wrap_component_security_areas LABEL {
+	white-space: nowrap;
+	max-width: 220px;	
+	text-overflow:ellipsis;
+	display: inline-block;
+}
+
+/*-- INPUT --*/
+INPUT.css_component_security_areas {
+	padding: 2px;
+	border: 1px solid #9E9E9E;
+	border-radius: 3px;
+	box-shadow: inset 0 0 6px #999999;
+	}
+	INPUT.css_component_security_areas:hover {
+	}
+	INPUT.css_component_security_areas:focus {
+		-webkit-box-shadow: 0 0 10px #ccc;
+		-moz-box-shadow: 0 0 10px #ccc;
+		box-shadow: 0 0 5px #CCC;
+	}
+	INPUT.css_component_security_areas:active {
+	}
+
+
+DIV.security_areas_tree {
+	margin: 4px;
+	margin-left: -40px;
+	display: inline-block;
+	position: relative;
+	min-width: 800px;
+	width: auto;	
+	}
+	DIV.security_areas_tree LI {
+		margin-left: 40px;
+		list-style: none;
+	}
+
+.global_admin_element {
+	color: #5D9EDE;
+}
+.area_admin_element {
+	color: #5D9EDE;
+}
+
+SPAN.security_areas_admin_checkbox {
+	display: inline-block;
+	margin: 0;
+	margin-left: 5px;
+	padding: 0;
+	width: 250px;
+	float: right;
+	display: none;
+}
+.component_security_areas_admin + LABEL {
+	color: #999999;	
+}
+
+/*LIST*/
+.security_areas_list_div {
+	white-space: nowrap;
+	max-height: 100px;
+	overflow: auto;
+}
+

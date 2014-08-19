@@ -1,0 +1,58 @@
+<?php
+	
+	# VISUALIZADOR HTML	
+
+	# ELEMENTOS
+	if(!isset ($ar_css['css_section_group_wrap']))		$ar_css['css_section_group_wrap']='';
+	if(!isset ($ar_css['css_section_group_titulo']))	$ar_css['css_section_group_titulo']='';
+	if(!isset ($ar_css['css_span_dato'])) 				$ar_css['css_span_dato']='';;
+	
+	
+	
+	print "\n\n<!-- SECTION GROUP [tipo:$tipo] $label -->";
+
+	print "\n<div id=\"$section_group_id\" class=\"css_section_group_wrap box_shadow_1 box_border_radius_1 {$ar_css['css_section_group_wrap']}\" >";
+	
+	# ETIQUETA (LABEL)	
+	$html_label  = "\n<div class=\"css_section_group_titulo tap_title title_down_box text_unselectable\" data-tap_id=\"{$tipo}\" > ";
+	$html_label .= component_common_draw::draw_label($this);
+	if (SHOW_DEBUG) {
+	#$html_label .= "<span class=\"debug_info\"> $identificador_unico </span>";
+	}	
+	$html_label .= " </div>";	
+		
+	#dump( label::get_var_from_label($label), "$label" );
+
+	# CONTENIDO (INPUT)
+	$html_contenido = "\n<div class=\"css_section_group_content tap_content\" >";
+	
+	switch($permissions) {
+			
+		case 0	:	$html_contenido .= "\n <span class=\"css_span_dato {$ar_css['css_span_dato']}\"> ".label::get_label('sin_acceso')." (group)</span>"; 		
+					break;
+						
+		case ($permissions>=1)	:
+
+					#$html_contenido .= '<div class="gridster"><ul>';
+					$html_contenido .= "\n $components_html ";	
+					#$html_contenido .= '</ul></div>';				
+						
+		case 2	: 
+		case 3	:	
+					break;			
+	}
+	
+	$html_contenido .= "\n</div><!-- /css_section_group_content -->";
+
+
+	# Prepare content to show in page
+	#tools::prepare_content($html_contenido);
+	
+	
+	# PRINT HTML
+	print $html_label;
+	print $html_contenido;
+
+	
+	print "\n</div><!-- /css_section_group_wrap SECTION GROUP [tipo:$tipo] $label  -->\n\n"; //wrap
+?>

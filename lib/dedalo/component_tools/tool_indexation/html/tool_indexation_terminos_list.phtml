@@ -1,0 +1,39 @@
+<?php
+	
+
+	# VISUALIZADOR HTML	
+	$html    = "";
+
+	#$html    .= "\n<!-- TOOL PAGE [tipo:$tipo] -->";	
+	#$html   .= "\n<div class=\"wrap_tool wrap_tool_indexation_page\" >";
+	#$html   .= "\n<div class=\"content_data text_shadow_inset\" >";
+	
+		/*
+		$html   .= "\n<script>
+					var media_base_path = '',
+						media_extension = ''									
+					</script>";
+		*/
+
+		# TAG ID
+		if ($context=='inspector') {
+		
+			$html   .= "\n<div class=\"terminos_list_title\" >";
+			$html 	.= label::get_label('etiqueta'). " $tag_value";
+			$html   .= "\n</div>";
+		}
+
+		# LIST
+		$html   .= "\n<ul>";
+		$html .= $index_list_html ;
+		$html   .= "\n</ul>";
+
+
+	
+	#$html .= "\n</div><!-- /content_data -->";
+	#$html .= "\n</div><!-- /wrap_tool -->"; //wrap_tool
+
+
+	print $html;
+		
+?>

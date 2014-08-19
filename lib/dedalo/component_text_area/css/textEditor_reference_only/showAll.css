@@ -1,0 +1,24 @@
+@charset "UTF-8";
+/* CSS Document */
+body	{
+background-color: #F2F2F2;
+color: #333;
+padding:5px;	
+font-family:Verdana, Geneva, sans-serif;
+font-size: 12px;
+text-align:justify;
+line-height:22px;
+}
+br {}
+img { width:56px;height:19px;}
+img:active 	{opacity:0.5}
+
+/* INDEX */
+.index	{ display:inline;vertical-align:middle;cursor:move;margin:0px;	}
+.hilite	{ display:inline;color:#4f251d; margin:0px; background-color:#eaeaea; padding:2px; padding-top:1px; margin-top:3px; padding-bottom:3px; }
+
+/* TC */
+.tc 	{ display:inline;vertical-align:middle;cursor:move;margin:0px;margin-top:1px; margin-left:2px;margin-right:2px;	}
+
+.displayNone { display:none }
+ 

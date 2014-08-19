@@ -1,0 +1,66 @@
+<?php
+	
+	# VISUALIZADOR HTML	
+
+	# ELEMENTOS
+	if(!isset ($ar_css['css_section_list_wrap']))		$ar_css['css_section_list_wrap']='';
+	if(!isset ($ar_css['css_section_list_titulo']))		$ar_css['css_section_list_titulo']='';
+	if(!isset ($ar_css['css_span_dato'])) 				$ar_css['css_span_dato']='';;
+	
+	
+	
+	print "\n\n<!-- SECTION LIST LIST [tipo:$tipo id_matrix:$id] -->";
+	print "\n<div class=\"css_section_list_wrap {$ar_css['css_section_list_wrap']}\" id=\"wrap_{$tipo}\" >";
+	
+	# USADO PARA ORDENAR (JS)
+	#print "\n<script>var page_query_string='$page_query_string';</script>";
+				
+	# ETIQUETA (LABEL)
+	#$html_label = component_common_draw::draw_label($this);
+	#print "\n<hr><div class=\"css_section_group_titulo tap_title\" > $html_label </div>";
+	
+		
+	
+	# CONTENIDO (INPUT)
+	$html_contenido  = "\n<div class=\"css_section_group_content tap_content\" >";
+	#$html_contenido .= $group_search_html;	
+	
+	
+	
+	switch($permissions) {
+			
+		case 0	:	$html_contenido .= "\n <span class=\"css_span_dato {$ar_css['css_span_dato']}\"> ".label::get_label('sin_acceso')." </span>";
+					break;
+						
+		case ($permissions>=1)	:		
+					
+					
+					# SEARCH FILTER
+					#$html_contenido .= $rows_search_html;				
+					
+					
+					# PAGINATOR
+					#$html_contenido .= $rows_paginator_html;
+
+
+					$html_contenido .= "\n<table class=\"css_section_list_table box_shadow_1 box_border_radius_1\">";
+					$html_contenido .= "\n <caption style=\"text-align:left;\"> $section_name </caption>";
+					
+					# TH TITULOS
+					$html_contenido .= $rows_header_html;
+					
+					# TD DATOS
+					$html_contenido .= $rows_html;					
+					
+					$html_contenido .= "\n</table>";
+								
+	}
+	
+	$html_contenido .= "\n</div><!-- /css_section_group_content -->";
+	
+	# PRINT HTML
+	print $html_contenido;
+	
+	
+	print "\n</div><!-- /css_section_list_wrap -->\n\n"; //wrap
+?>

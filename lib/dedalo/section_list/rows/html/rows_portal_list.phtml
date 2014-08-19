@@ -1,0 +1,307 @@
+<?php
+	
+	# VISUALIZADOR HTML	
+
+	# ELEMENTOS	
+	if(!isset ($ar_css['css_span_dato'])) 				$ar_css['css_span_dato']='';
+	if(!isset ($ar_css['css_span_debugger'])) 			$ar_css['css_span_debugger']='';
+	
+	print "\n\n<!-- ROWS [$id] -->";
+	
+	$n_td=1;
+
+	# CONTENIDO (INPUT)
+	$html_contenido  = '';
+
+	$rel_locator2 = str_replace('.', '_', $rel_locator);
+
+	# TR id
+	$html_contenido  .= "\n<tr id=\"portal_tr_list_{$rel_locator2}\" class=\"portal_tr_list_{$id}\" >";
+	#$html_contenido  .= "\n<tr class=\"portal_tr_list_{$id}\" >";
+
+	switch($permissions) {
+			
+		case 0	:	
+				$html_contenido .= "\n <span class=\"css_span_dato {$ar_css['css_span_dato']}\"> ".label::get_label('sin_acceso')." (Portal)</span>";
+				break;
+						
+		case ($permissions>=1) :
+					
+				if( !is_array($ar_rows) || count($ar_rows)==0 ) {
+					
+					$html_contenido .= "\n <td>";
+					#$html_contenido .= " No records found.. ";
+					$html_contenido .= "\n </td>";
+					
+				}else{
+					
+					##
+					# TD ID
+					#
+					$html_td_id  = '';
+					$html_td_id .= "\n <td class=\"section_edit_in_portal_td_row section_list_td_row \">";
+					
+						
+						# ID TEXT
+						$html_td_id .= "\n  $section_dato ";
+
+						# DELETE RECORD BUTTON
+						if($permissions>=2) {
+							$btn_title	 		= label::get_label('borrar') .' '. label::get_label('recurso') .' '. $rel_locator;						
+							$button_delete_html = "<div class=\"delete_portal_link icon_bs link image_delete_icon\"
+					    	data-rel_locator=\"$rel_locator\"
+					    	title=\"$btn_title\"
+					    	onclick=\"$('#delete_dialog_portal').data('button_obj',this).dialog('open')\"			    	
+					    	></div>";
+					    	$html_td_id .= $button_delete_html ;	# onclick=\"component_portal.remove_resource_from_portal(this)\"
+						
+						
+
+
+				    	$section_obj 			= new section($id, $section_tipo);	#dump($section_obj,"section_obj");
+				    	#$section_obj->set_caller_id($caller_id);	#dump($caller_id,'caller_id');
+						#$section_obj->set_show_inspector(false);	
+						$identificador_unico	= $section_obj->get_identificador_unico();
+						$id_wrapper 			= 'wrap_section_'.$identificador_unico.'_'.$rel_locator2;
+						$section_lang			= $section_obj->get_lang();
+						$section_tipo			= $section_obj->get_tipo();
+						$section_component_name = get_class($section_obj);
+							#dump($section_obj,'$section_obj');
+						
+
+
+						# ICON CHANGE LIST MODE
+						$btn_title	  	= ucfirst(label::get_label('modo')) .' '. label::get_label('completo');
+						$html_td_id 	.= "\n<div class=\"icon_bs th_large_icon link\"
+											data-portal_tr_edit=\"portal_tr_edit_{$rel_locator2}\" data-portal_tr_list=\"portal_tr_list_{$rel_locator2}\"
+											data-id_wrapper=\"{$id_wrapper}\" data-common_row_id=\"{$id}\"
+											title=\"$btn_title\"
+											onclick=\"component_portal.open_tr_edit(this)\"
+											></div>";
+						}
+						# BUTTON EDIT						
+						
+						#$link = "javascript:;";
+						#$html_td_id .= "<div class=\"css_section_group_image_edit div_image_link\" 
+						#data-id_matrix=\"$id\" data-caller_id=\"$caller_id\"
+						#title=\"$id\" onclick=\"component_portal.edit_on_dialog_window(this)\" ></div>";
+													
+					
+						#$html_td_id .= "<div class="css_section_group_image_edit div_image_link" onclick=\"goto_url('?m=edit&tipo={$current_section}&id=$id')\" title=\"matrix $id\" ></div>";
+								
+
+						# DEBUG INFO
+						if($permissions==3)		
+						$html_td_id .= "\n <span class=\"css_span_debugger {$ar_css['css_span_debugger']}\" id=\"debugger_{$id}\" >{$id}</span>";	
+							
+
+					$html_td_id .= "\n </td>";
+					
+					
+
+					##
+					# TD DATOS
+					#
+					$n_td 			= count($ar_component_obj)+1;
+					$html_td_datos  = '';
+					if(is_array($ar_component_obj)) foreach($ar_component_obj as $component_obj) {
+						
+						# aditional td css selectors
+						$td_css_selector = 'td_'.get_class($component_obj);	
+
+						$html_td_datos .= "\n <td class=\" section_list_td_row $td_css_selector\">";
+
+						$component_name = get_class($component_obj); 		#$html_td_datos .= "<span class=\"debug_info\"> $component_name ".$component_obj->get_tipo()."</span>";	
+						$component_tipo = $component_obj->get_tipo();
+						#dump($component_obj,'$component_obj');
+
+						switch($component_name) {
+
+							case 'component_portal':								
+										# When current obj is component_portal, show in this TD only button new and
+										# show list of records in aditional TR line at bottom
+										$component_portal = $component_obj;	#dump($component_portal->get_id(),"id");
+										#$component_portal->set_modo('button_new');
+										#$html_td_datos .= 'inside';
+										#$html_td_datos .= $component_portal->get_html();	#dump($component_portal,'$component_portal');
+										#$component_portal_id_tab = 'tab_'.$component_portal->get_identificador_unico();
+
+										#$component_portal->set_show_button_new(FALSE);
+										#$component_portal->set_modo('edit');
+										$html_td_datos .= $component_portal->get_html();
+										break;
+
+							case 'component_relation':
+										# When current obj is component_relation, show in this TD only yes/no
+										# show list of records in aditional TR line at bottom
+										$component_relation = $component_obj;	#dump($component_relation->get_id(),"id");
+										$component_relation_dato = $component_relation->get_dato();
+										if (is_array($component_relation_dato)) {
+											$html_td_datos .= label::get_label('si');
+										}else{
+											$html_td_datos .= label::get_label('no');
+										}										
+										break;
+
+							# Esto se revisará para cortar fragmentos de video o imágenes cuando los componentes av/image lo implementen
+							case 'component_text_area':
+										
+										if (strpos($rel_locator, '.'.$component_tipo.'.')!==false) {
+											# Si el rel_locator refiere un fragmento (ej. 2541.dd20.1) extraemos el contenido del mismo como html del componente actual								
+											$fragment_html 	= component_text_area::get_fragment_text_from_rel_locator( $rel_locator )[0];
+												#dump($fragment_html,'fragment_html'." para rel_locator:$rel_locator");
+											$html_td_datos .= $fragment_html;										
+										}else{
+											# Si el rel_locator NO refiere un fragmento (ej. 2541.0.0) extraeremos el componente completo (get->html())
+											$html_td_datos .= $component_obj->get_html();
+										}
+										break;
+
+							default:
+										# Default case
+										$html_td_datos .= $component_obj->get_html();
+										break;					
+						}
+						
+						$html_td_datos .= "\n </td>";													
+					}#end foreach($ar_component_obj as $component_obj)
+				}
+				
+				# TD ID
+				$html_contenido .= $html_td_id;
+				
+				# TD DATOS ADDED BELOW
+				$html_contenido .= $html_td_datos;
+
+				break;
+			
+	}
+	$html_contenido .= "\n</tr>";
+	
+
+
+	/**
+	* COMPONENT MODO EDIT HTML OCULTO --> PASAR A CARGAR MEDIANTE AJAX !!
+	* Build a edit version of current section
+	*/
+	$section_html	 = '';
+	$section_html 	.= "\n\n<!-- SECTION [id:$id tipo:$tipo] -->";
+	$section_html 	.= "\n<div class=\"css_section_wrap\" id=\"{$id_wrapper}\" 
+	data-id_matrix=\"{$id}\" data-tipo=\"{$section_tipo}\" data-lang=\"{$section_lang}\" 
+	data-modo=\"edit\" data-context=\"edit_in_portal\" data-component_name=\"{$section_component_name}\">";
+	
+		$section_html .= "\n<div class=\"css_section_content\" id=\"section_{$identificador_unico}_$rel_locator2\" >";
+		#$section_html .= "\n<div class=\"content_data\" >";
+		$section_html .= ".." ;
+		#$section_html .= "\n</div>";
+		$section_html .= "\n</div>";
+	
+	$section_html .= "\n</div><!-- /css_section_wrap --> ";
+	
+	/*
+	$section_obj 	= new section($id, $section_tipo, 'edit');	#dump($section_obj,"section_obj");
+	$section_obj->set_caller_id($caller_id);
+	$section_obj->set_show_inspector(false);
+	$section_html 	= $section_obj->get_html();
+	*/
+	#
+	# TR 
+	$html_contenido .= "\n<tr id=\"portal_tr_edit_{$rel_locator2}\" class=\"portal_tr_edit_{$id}\" style=\"display:none\" >";		
+		
+		#
+		# TD ID
+		$n_td = count($ar_component_obj);
+		$html_contenido .= "\n<td class=\"section_edit_in_portal_td_row section_list_td_row \">";
+			# ID TEXT
+			$html_contenido .= "\n  $section_dato ";
+			# DELETE RECORD BUTTON 
+			$html_contenido .= $button_delete_html;
+
+			# ICON CHANGE LIST MODE
+			$btn_title	  	= label::get_label('modo') .' '. label::get_label('listado');
+			$html_contenido .= "\n<div class=\"icon_bs th_list_icon link\"
+								data-portal_tr_edit=\"portal_tr_edit_{$rel_locator2}\" data-portal_tr_list=\"portal_tr_list_{$rel_locator2}\"
+								title=\"$btn_title\"
+								onclick=\"component_portal.close_tr_edit(this)\"
+								></div>";
+		$html_contenido .= "\n</td>";
+
+		#
+		# TD DATA
+		$html_contenido .= "\n <td colspan=\"$n_td\" class=\"section_edit_in_portal_td\">";		
+		$html_contenido .= $section_html;	
+		$html_contenido .= "\n </td>";
+
+
+	$html_contenido .= "\n</tr>";
+	
+
+
+	/**
+	* ADITIONAL BOTTOM ROW FOR PORTAL RECURSION CONTENT
+	*//*
+	if ( isset($component_portal) && isset($pisuerga35895465456456456) ) {		
+		
+		# Portal dato
+		$portal_dato = $component_portal->get_dato();
+			#dump( $component_portal,'portal_dato');
+
+		if (is_array($portal_dato) && count($portal_dato)>0) {
+					
+		
+			$component_portal->set_modo('edit');
+			$component_portal->set_show_button_new(FALSE);
+
+			$component_portal_html	= $component_portal->get_html();	
+
+			$html_contenido .= "\n<tr>";
+			$html_contenido .= "\n <td colspan=\"$n_td\">****";
+			$html_contenido .= $component_portal_html;
+			$html_contenido .= "\n </td>";
+			$html_contenido .= "\n</tr>";
+		}
+	}
+	*/
+
+
+
+
+	/**
+	* ADITIONAL BOTTOM ROW FOR RELATIONS CONTENT
+	*/
+	if ( isset($component_relation) ) {
+
+		# Relation dato
+		$component_relation_dato = $component_relation->get_dato();	
+			#dump( $component_relation_dato,'component_relation_dato');
+
+		if (is_array($component_relation_dato) && count($component_relation_dato)>0) {
+		/*
+			#dump($component_relation,"component_relation for id:$id - tipo:$tipo - -modo:$modo - current_tipo_section:$current_tipo_section");
+		
+			$component_relation->set_modo('relation');
+			$component_relation->set_current_tipo_section($current_tipo_section);
+
+			$component_relation_html	= $component_relation->get_html();			
+				#dump($component_relation);		
+
+			$html_contenido .= "\n<tr>";
+			$html_contenido .= "\n <td colspan=\"$n_td\">";
+			$html_contenido .= "\n RELATIONS CONTENT IN THIS TR ";
+			$html_contenido .= $component_relation_html;
+			$html_contenido .= "\n </td>";
+			$html_contenido .= "\n</tr>";
+		*/	
+		}		
+	}
+
+
+	
+	
+
+
+	# PRINT HTML
+	print $html_contenido;
+	
+
+?>

@@ -1,0 +1,55 @@
+<?php echo "XXXXXX";
+/*
+$html_decoder_ts_childens 	 = '';
+$html_decoder_ts_childens 	.= "\n <li class=\"expanded\"><!-- li $terminoID $termino -->";						
+$html_decoder_ts_childens	.= "\n  <a href=\"#\" >";					
+
+$html_title		= false;	
+$dato_current	= NULL;		
+
+if(isset($dato[$terminoID]))
+$dato_current	= intval($dato[$terminoID]);				 
+
+# OPTION 1 . READ ONLY
+$checked		= false;
+if( $dato_current === 0) $checked = 'checked="checked"';						
+$html_decoder_ts_childens .= "\n  -<input class=\"css_security_radio_button\" type=\"radio\" name=\"{$terminoID}\" data-tipo=\"{$tipo}\" value=\"0\" id=\"{$id}\" title=\"No acces\" data-flag=\"component_security_access\" $checked />";
+
+# OPTION 2 . READ AND WRITE
+$checked		= false;
+if( $dato_current === 1) $checked = 'checked="checked"';	
+$html_decoder_ts_childens.= "\n  r<input class=\"css_security_radio_button\" type=\"radio\" name=\"{$terminoID}\" data-tipo=\"{$tipo}\" value=\"1\" id=\"{$id}\" title=\"Read only\" data-flag=\"component_security_access\" $checked />";
+
+# OPTION 2 . READ AND WRITE
+$checked		= false;
+if( $dato_current === 2) $checked = 'checked="checked"';	
+$html_decoder_ts_childens .= "\n  w<input class=\"css_security_radio_button\" type=\"radio\" name=\"{$terminoID}\" data-tipo=\"{$tipo}\" value=\"2\" id=\"{$id}\" title=\"Read and write\" data-flag=\"component_security_access\" $checked />";
+
+$html_decoder_ts_childens.= "\n  $termino \n  </a>";
+
+$html_decoder_ts_childens .= " <h7>[$terminoID]</h7>";
+	
+
+if(isset($ar_list_of_values[$terminoID])) {	
+
+	$html_decoder_ts_childens .= "\n <ul class=\"menu\">" ;
+	$ar_ts_current = $ar_list_of_values[$terminoID];							
+	
+	foreach ($ar_ts_current as $terminoID_current => $termino_current){					
+		
+		#$ar_ts_current = decoder_ts_childens_html($terminoID_current, $termino_current, $ar_list_of_values,$id,$tipo,$dato);
+		#include(__FILE__); exit();
+		ob_start();
+		include_once ( __FILE__ );
+		$html_decoder_ts_childens .=  ob_get_contents();
+		ob_get_clean();				
+
+	}
+	$html_decoder_ts_childens.= "\n </ul>\n";
+	
+}
+
+$html_decoder_ts_childens .= " \n </li><!-- /li $terminoID $termino -->";
+
+*/
+?>

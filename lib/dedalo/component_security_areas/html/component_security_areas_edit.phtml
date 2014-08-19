@@ -1,0 +1,91 @@
+<?php
+
+	# VISUALIZADOR HTML	
+
+	# ELEMENTOS
+	if(!isset ($ar_css['css_span_dato'])) 							$ar_css['css_span_dato']='';
+	if(!isset ($ar_css['css_component_security_areas'])) 			$ar_css['css_component_security_areas']='';
+	if(!isset ($ar_css['css_span_ejemplo'])) 						$ar_css['css_span_ejemplo']='';
+	if(!isset ($ar_css['css_span_debugger']))						$ar_css['css_span_debugger']='';
+	if(!isset ($ar_css['css_wrap_component_security_areas']))		$ar_css['css_wrap_component_security_areas']='';
+	if(!isset ($ar_css['css_component_security_areas_rotulo']))		$ar_css['css_component_security_areas_rotulo']='';
+	
+	if(!isset ($tools_html))						$tools_html='';
+	
+	
+	print "\n<!-- SECURITY AREAS (CHECK BOX) [tipo:$tipo id_matrix:$id] -->";
+	print "\n<div class=\"css_wrap_component_security_areas wrap_component {$ar_css['css_wrap_component_security_areas']}\" 
+	data-id_matrix=\"{$id}\" data-tipo=\"{$tipo}\" data-lang=\"{$lang}\" data-parent=\"{$parent}\" data-modo=\"{$modo}\" data-dato=\"{$dato_string}\" data-component_name=\"{$component_name}\" >";
+
+	
+	# ETIQUETA (LABEL)
+	$html_label = component_common_draw::draw_label($this);
+	
+	# CONTENIDO (INPUT)
+	$html_contenido = '';
+	switch($permissions) {
+			
+		case 0	:	$html_contenido .= "\n <span class=\"css_span_dato {$ar_css['css_span_dato']}\"> ".label::get_label('sin_acceso')." (component security areas) $valor</span>"; 
+					break;
+						
+		case 1	: 	/*
+					if (is_array ($ar_list_of_values)) foreach ($ar_list_of_values as $value => $rotulo) {
+						
+						if( is_array($dato) && in_array($value,$dato) ) {
+							$checked = 'checked="checked"';
+						}else {
+							$checked = "";
+						}
+						$html_contenido .= "\n <input class=\"css_component_security_areas {$ar_css['css_component_security_areas']}\" type=\"checkbox\" name=\"{$tipo}\" 
+						data-tipo=\"{$tipo}\" value=\"{$value}\" id=\"{$id}\" title=\"$html_title\" data-flag=\"component_security_areas\" $checked  disabled />";						
+						$html_contenido .= "\n <label class=\"css_component_security_areas_rotulo {$ar_css['css_component_security_areas_rotulo']}\" $required >$rotulo</label>";	
+					}
+					*/
+					$html_contenido .= "\n <div class=\"security_areas_tree\">";
+					$html_contenido .= $html_tree;
+					$html_contenido .= "\n </div>";
+
+					break;	
+						
+		case ($permissions>=2)	:
+					/*
+					if (is_array ($ar_list_of_values)) foreach ($ar_list_of_values as $value => $rotulo) {
+						
+						if( is_array($dato) && in_array($value,$dato) ) {
+							$checked = 'checked="checked"';
+						}else {
+							$checked = "";
+						}
+						$html_contenido .= "\n <input class=\"css_component_security_areas {$ar_css['css_component_security_areas']}\" type=\"checkbox\" 
+						name=\"{$tipo}_{$id}\"
+						data-tipo=\"{$tipo}\" data-id_matrix=\"{$id}\" data-lang=\"{$lang}\" data-flag=\"component_security_areas\" 
+						value=\"{$value}\"
+						title=\"$html_title\" 						
+						$checked />";											
+						
+						$html_contenido .= "\n <label class=\"css_component_security_areas_rotulo {$ar_css['css_component_security_areas_rotulo']}\" $required >$rotulo</label>";	
+					}
+					*/
+					$html_contenido .= "\n <div class=\"security_areas_tree\">";
+					$html_contenido .= $html_tree;
+					$html_contenido .= "\n </div>";
+					
+					#$html_contenido .= "\n <span class=\"css_span_log\"></span>";										
+					#$html_contenido .= "\n <span  class=\"css_span_ejemplo {$ar_css['css_span_ejemplo']}\">$ejemplo</span>";
+					
+					#$html_contenido .= $html_tools;
+		
+			if($permissions==3)
+			
+					$html_contenido .= "\n <span class=\"css_span_debugger {$ar_css['css_span_debugger']}\" id=\"debugger_{$id}\" >{$debugger}</span>";	
+					
+							
+	}
+	
+	# PRINT HTML
+	print $html_label;
+	print $html_contenido;
+	
+	
+	print "\n</div>\n\n"; //wrap
+?>

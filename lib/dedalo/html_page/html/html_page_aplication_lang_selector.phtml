@@ -1,0 +1,17 @@
+<?php
+$jump_lang ='';
+$jump_lang .= "\n<!-- JUMP LANG -->";	
+$jump_lang .= "\n<select class=\"dedalo_aplication_langs_selector\" data-type_of_lang=\"dedalo_application_lang\" onchange=\"common.jump_select_lang(this)\">";
+
+	foreach($dedalo_application_langs as $lang => $lang_name) {
+		
+		$selected = '';
+		if(DEDALO_DATA_LANG == $lang) $selected = 'selected="selected"';
+		
+		$jump_lang .= "\n <option value=\"{$lang}\" {$selected}>$lang_name</option>";
+	}
+
+$jump_lang .= "\n</select>";
+
+print $jump_lang;
+?>

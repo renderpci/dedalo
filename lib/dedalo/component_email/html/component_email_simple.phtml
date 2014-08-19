@@ -1,0 +1,44 @@
+<?php
+
+	# VISUALIZADOR HTML	
+
+	# ELEMENTOS
+	if(!isset ($ar_css['css_span_dato'])) 		$ar_css['css_span_dato']='';
+	if(!isset ($ar_css['css_email'])) 			$ar_css['css_email']='';
+	if(!isset ($ar_css['css_wrap_email']))		$ar_css['css_wrap_email']='';
+	
+	if(!isset ($html_tools))					$html_tools='';
+	
+	
+	print "\n<!-- EMAIL [tipo:$tipo id_matrix:$id] -->";
+	print "\n<div class=\"css_wrap_email {$ar_css['css_wrap_email']}\" >";
+	
+	# ETIQUETA (LABEL)
+	$html_label = component_common_draw::draw_label($this);
+	
+	# CONTENIDO (INPUT)
+	$html_contenido = '';
+	/*
+	switch($permissions) {
+			
+		case 0	:	$html_contenido .= "\n <span class=\"css_span_dato {$ar_css['css_span_dato']}\"> ".label::get_label('sin_acceso')." (email)</span>";
+					break;
+						
+		case ($permissions>=1)	:
+		
+					$html_contenido .= "\n <input class=\"css_email {$ar_css['css_email']}\" type=\"text\" name=\"{$tipo}\" data-tipo=\"{$tipo}\" id=\"{$id}\" value=\"\" title=\"$html_title\" placeholder=\"$modo\" />";					
+	}
+	*/
+	$html_contenido .= "\n <input class=\"css_email {$ar_css['css_email']}\" type=\"text\" 							
+							id=\"{$identificador_unico}\" name=\"{$tipo}\" 
+							data-tipo=\"{$tipo}\" data-id_matrix=\"{$id}\" data-lang=\"{$lang}\" 
+							value=\"\" title=\"$html_title\" placeholder=\"$modo\" />";
+	
+	
+	# PRINT HTML
+	print $html_label;
+	print $html_contenido;
+	
+	
+	print "\n</div>\n\n"; //wrap
+?>

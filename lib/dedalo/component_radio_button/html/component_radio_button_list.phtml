@@ -1,0 +1,41 @@
+<?php
+
+	# VISUALIZADOR HTML	
+
+	# ELEMENTOS
+	if(!isset ($ar_css['css_span_dato'])) 			$ar_css['css_span_dato']='';
+	if(!isset ($ar_css['css_radio_button'])) 		$ar_css['css_radio_button']='';
+	if(!isset ($ar_css['css_span_ejemplo'])) 		$ar_css['css_span_ejemplo']='';
+	if(!isset ($ar_css['css_span_debugger']))		$ar_css['css_span_debugger']='';
+	if(!isset ($ar_css['css_wrap_radio_button']))	$ar_css['css_wrap_radio_button']='';
+	if(!isset ($ar_css['css_radio_button_rotulo']))	$ar_css['css_radio_button_rotulo']='';
+	
+	if(!isset ($tools_html))						$tools_html='';
+	
+	
+	print "\n<!-- RADIO BUTTON [$tipo $id] $label -->";
+	print "\n<div class=\"css_wrap_radio_button {$ar_css['css_wrap_radio_button']}\">";
+	
+	# ETIQUETA (LABEL)
+	#$html_label = component_common_draw::draw_label($this);
+	
+	# CONTENIDO (INPUT)
+	$html_contenido = '';
+	switch($permissions) {
+			
+		case 0	:	$html_contenido .= "\n <span class=\"css_span_dato {$ar_css['css_span_dato']}\"> No access here (radio_button)! </span>";
+					break;
+						
+		case ($permissions>=1)	:
+		
+					$html_contenido .= "\n <span class=\"css_span_dato {$ar_css['css_span_dato']}\">$valor</span>";	
+					
+	}	
+	
+	# PRINT HTML
+	#print $html_label;
+	print $html_contenido;
+		
+	
+	print "\n</div>\n\n"; //wrap
+?>

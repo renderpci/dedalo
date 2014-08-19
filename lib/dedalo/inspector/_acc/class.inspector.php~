@@ -1,0 +1,117 @@
+<?php
+/*
+* CLASS INSPECTOR
+*/
+
+
+class inspector {	
+
+	protected $modo;
+
+	public function __construct($modo) {
+		$this->modo = $modo;
+	}
+
+	/**
+	* HTML
+	*/
+	public function get_html() {	
+							
+		$file = DEDALO_LIB_BASE_PATH .'/'. __CLASS__ .'/'. __CLASS__ .'.php';
+	
+		ob_start();
+		include ( $file );
+		$html =  ob_get_contents();
+		ob_get_clean();
+		
+		return $html;
+	}
+
+
+	/**
+	* GET_TOOL_RELATION_BUTTON_HTML
+	*/
+	protected function get_tool_relation_button_html() {
+
+		$current_section_id_matrix = navigator::get_selected('id');
+			#dump($current_section_id_matrix,'current_section_id_matrix');
+
+		$current_section_tipo = navigator::get_selected('section');
+			#dump($current_section_tipo,'current_section_tipo');
+
+		$section 			 = new section($current_section_id_matrix, $current_section_tipo);
+		$ar_children_objects = $section->get_ar_children_objects_by_modelo_name_in_section('component_relation');
+			#dump($ar_children_objects,'ar_children_objects');
+
+		if (!empty($ar_children_objects[0])) {
+			$component_relation = $ar_children_objects[0];
+			$tool_relation_obj 	= $component_relation->load_tools('tool_relation');
+				#dump($tool_relation_obj,'tool_relation_obj');
+			
+			if (isset($tool_relation_obj[0])) {
+				$html 		= $tool_relation_obj->get_html();
+				return $html;
+			}			
+		}
+	}
+
+
+
+	/**
+	* GET_TOOL_RELATION_SECTION_LIST_HTML
+	*//*
+	protected function get_tool_relation_section_list_html() {
+
+		$current_section_id_matrix = navigator::get_selected('id');
+			#dump($current_section_id_matrix,'current_section_id_matrix');
+
+		$current_section_tipo 	= navigator::get_selected('section');
+			#dump($current_section_tipo,'current_section_tipo');
+
+		$rel_locator			= $current_section_id_matrix.'.0.0';
+
+		$relation_list_html = '';
+		unset($arguments);
+		$arguments['strPrimaryKeyName']	= 'parent';
+		$arguments['dato:json']			= $rel_locator;
+		$RecordObj_matrix				= new RecordObj_matrix(NULL);
+		$ar_records						= $RecordObj_matrix->search($arguments,'matrix');
+			#dump($ar_records,'ar_records');
+
+		# Las agrupamos por tipo
+		$ar_section = array();
+		foreach ($ar_records as $current_section_id) {
+			$RecordObj_matrix 	= new RecordObj_matrix($current_section_id);
+			$tipo 				= $RecordObj_matrix->get_tipo();
+			$ar_section[$tipo][]= $current_section_id;
+		}
+		#dump($ar_section,'$ar_section');
+		#unset($ar_section['dd12']);
+
+		# Recorremos todos los tipos
+		foreach ($ar_section as $tipo => $ar_values) {
+
+			$sections_text 	= implode(', ',$ar_values);
+			$section_name 	= RecordObj_ts::get_termino_by_tipo($tipo,DEDALO_APPLICATION_LANG);
+			$relation_list_html .= "<div class=\"tipo_group_related\"><h3 class=\"text_shadow_inset\">$section_name</h3></div>";							
+			
+			$section_ob = new section(NULL, $tipo, 'relation_reverse');			#dump($ar_values,'$ar_values'," tipo -> $tipo");
+			# le asignamos los valores al objeto
+			$section_ob->ar_id_section_custom 	= $ar_values;
+			$section_ob->rel_locator 			= $rel_locator;
+			$section_ob->tag 					= null;
+				#dump($section_ob->ar_id_section_custom,'$section_ob->ar_id_section_custom'); 
+				
+			$relation_list_html .= $section_ob->get_html();
+				#dump($section_ob,'section_ob');							
+		}
+		#dump($relation_list_html,'$relation_list_html');
+
+		return $relation_list_html;
+	}
+	*/
+	
+
+	
+};
+?>

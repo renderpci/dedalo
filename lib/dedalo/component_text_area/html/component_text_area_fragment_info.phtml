@@ -1,0 +1,38 @@
+<?php
+
+	# VISUALIZADOR HTML	
+
+	
+	# CONTENIDO (INPUT)
+	$html_contenido = '';
+	switch($permissions) {
+			
+		case 0	:	
+			$html_contenido .= "\n <span class=\"css_span_dato {$ar_css['css_span_dato']}\"> No access here (text_area)! </span>";	
+			break;
+						
+		
+		case ($permissions>=1)	:			
+			
+			# Fragment info div
+			$html_contenido .= "
+			<div class=\"fragment_id_info\" 
+			 data-id_matrix=\"$id\" data-tipo=\"$tipo\" data-caller_id=\"$caller_id\" data-rel_locator=\"$rel_locator\"		 
+			\"> 
+			 <b>Index id $tag_value </b>
+			</div>
+			";				
+	}
+	
+
+	# Prepare content to show in page
+	tools::prepare_content($html_contenido);
+
+
+	# PRINT HTML
+	print $html_contenido;
+
+	
+
+	
+?>

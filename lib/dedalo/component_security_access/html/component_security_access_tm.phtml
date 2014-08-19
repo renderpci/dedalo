@@ -1,0 +1,70 @@
+<?php
+
+	# VISUALIZADOR HTML	
+
+	# ELEMENTOS
+	if(!isset ($ar_css['css_wrap_security_access']))	$ar_css['css_wrap_security_access']='';
+	if(!isset ($ar_css['css_span_dato'])) 				$ar_css['css_span_dato']='';
+	if(!isset ($ar_css['css_security_radio_button'])) 	$ar_css['css_security_radio_button']='';
+	if(!isset ($ar_css['css_span_ejemplo'])) 			$ar_css['css_span_ejemplo']='';
+	if(!isset ($ar_css['css_span_debugger']))			$ar_css['css_span_debugger']='';	
+	if(!isset ($ar_css['css_radio_button_rotulo']))		$ar_css['css_radio_button_rotulo']='';
+		
+	
+	print "\n<!-- SECURITY ACCESS [tipo:$tipo id_matrix:$id] -->";
+	print "\n<div class=\"css_wrap_security_access {$ar_css['css_wrap_security_access']}\" id=\"wrap_{$tipo}\">";
+	
+	# ETIQUETA (LABEL)
+	$html_label = component_common_draw::draw_label($this);
+	
+	# CONTENIDO (INPUT)
+	$html_contenido = '';
+	switch($permissions) {
+			
+		case 0	:	$html_contenido .= "\n <span class=\"css_span_dato {$ar_css['css_span_dato']}\"> No access here (security_access)! </span>";	
+					break;
+						
+		case 1	: 	$html_contenido .= "\n <span class=\"css_span_dato {$ar_css['css_span_dato']}\"> No read access here (security_access)!</span>";
+					break;	
+						
+		case ($permissions>=2)	:
+		
+					/* FORMATO:
+					<ul class="menu" id="security_access_ul">  
+					<li class="expanded"><a href="#">Create content</a>
+					  
+						<ul class="menu"> 
+						<li class="leaf"><a href="#">Map</a></li> 
+						<li class="leaf"><a href="#">Page</a></li> 
+						<li class="leaf"><a href="#">Story</a></li> 
+						</ul> 
+						
+					</li>
+					</ul>
+					*/
+					
+					$html_contenido .= " <span class='error'> ESTE TIME MACHINE ESTÁ POR ACABAR ... </span>";
+						
+					$html_contenido .= "\n\n <!-- Tree --> " ;					
+					
+					$html_contenido .= $tree_html;
+											
+
+					$html_contenido .= $html_tools;
+		
+		
+			if($permissions==3)
+			
+					$html_contenido .= "\n <br><span class=\"css_span_debugger {$ar_css['css_span_debugger']}\" id=\"debugger_{$id}\" >{$debugger}</span>";					
+										
+							
+	}	
+		
+	
+	# PRINT HTML
+	print $html_label;
+	print $html_contenido;
+	
+	
+	print "\n</div>\n\n"; //wrap
+?>

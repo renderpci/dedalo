@@ -1,0 +1,25 @@
+<?php
+
+	# VISUALIZADOR HTML	
+		
+	# BUTTON TOOL IN INSPECTOR
+	$html_tool    = "\n<!-- TOOL INDEXATION [tipo:$tipo id_matrix:$id] -->";
+	$html_tool   .= "<div class=\"tool_inspector_div\">";
+
+	$btn_title	  = label::get_label('abrir').' '.label::get_label('herramienta');
+	$html_tool   .= "\n<div class=\"icon_bs tool_relation_icon link\"
+								data-tipo=\"{$tipo}\" data-id_matrix=\"{$id}\" data-caller_id=\"{$parent}\"
+								title=\"$btn_title\"
+								onclick=\"tool_common.open_tool_relation(this)\"
+								> </div> ";
+
+
+	$html_tool   .= label::get_label('relaciones');
+	
+
+	$html_tool   .= "</div>";#/tool_inspector_div
+
+	# PRINT HTML
+	print $html_tool;
+	
+?>

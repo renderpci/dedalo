@@ -1,0 +1,40 @@
+<?php
+
+	# VISUALIZADOR HTML	
+
+	# ELEMENTOS
+	if(!isset ($ar_css['css_text_area_wrap'])) 		$ar_css['css_text_area_wrap']='';
+	if(!isset ($ar_css['css_span_dato'])) 			$ar_css['css_span_dato']=''; 
+	if(!isset ($ar_css['css_span_debugger']))		$ar_css['css_span_debugger']='';
+	
+	
+	#echo "\n<!-- TEXT AREA [tipo:$tipo id_matrix:$id] -->";
+	echo "<div class=\"css_text_area_wrap\" >";
+	
+	# ETIQUETA (LABEL)
+	#$html_label = component_common_draw::draw_label($this);
+	
+	# CONTENIDO (INPUT)
+	$html_contenido = '';
+	switch($permissions) {
+			
+		case 0:		$html_contenido .= "\n <span class=\"css_span_dato {$ar_css['css_span_dato']}\"> No access here (text_area)! </span>";	
+					break;
+						
+		case ($permissions>=1):
+		
+					$html_contenido .= "<span class=\"css_span_dato {$ar_css['css_span_dato']}\" data-tipo=\"{$tipo}\" data-id_matrix=\"{$id}\" data-parent=\"{$parent}\" data-lang=\"{$lang}\">$valor</span>";
+			
+			
+					if($permissions==3) {
+						$html_contenido .= "<span class=\"css_span_debugger {$ar_css['css_span_debugger']}\" id=\"debugger_{$id}\" >{$debugger}</span>";	
+					}
+	}
+	
+	
+	# PRINT HTML
+	print $html_contenido;
+	
+	
+	echo "</div>"; //wrap
+?>

@@ -1,0 +1,28 @@
+/*CSS Document
+WRAP DIV CONTAINER*/
+.css_wrap_button_search
+{
+	display: inline-block;
+	padding: 3px;
+	padding-bottom: 8px;
+	font-size: 10px;
+}
+.css_button_search
+{
+	display: inline-block;
+	cursor: pointer;
+	height: 20px;
+	background-color: #E57400;
+	color: #FFFFFF;
+	font-weight: bold;
+	border: none;
+	border-radius: 3px;
+	box-shadow: 1px 2px 2px #888888;
+	background-image: url('../../themes/default/ramp_orange.jpg');
+	padding-left: 5px;
+	padding-right: 5px;
+	margin-left: 10px;
+	margin-top: 5px;
+}
+/*VARIANTES EXCLUSIVAS DE ESTE COMPONENTE
+********************************************************************************************************************************************************/

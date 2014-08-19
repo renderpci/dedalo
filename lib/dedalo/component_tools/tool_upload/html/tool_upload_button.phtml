@@ -1,0 +1,24 @@
+<?php
+
+	# VISUALIZADOR HTML	
+		
+	# BUTTON TOOL
+	$html_tool    = "\n<!-- TOOL UPLOAD [tipo:$tipo id_matrix:$id] -->";
+	$html_tool   .= "<div class=\"tool_inspector_div\">";
+
+	$btn_title	  = label::get_label('abrir').' '.label::get_label('herramienta');
+	$html_tool   .= "\n<div class=\"icon_bs tool_upload_icon link\" 								
+								data-tipo=\"{$tipo}\" data-id_matrix=\"{$id}\" data-sid=\"{$SID}\" data-quality=\"$quality\"
+								title=\"$btn_title\"
+								onclick=\"tool_common.open_tool_upload(this)\"
+								> </div>";
+
+
+	$html_tool   .= label::get_label('tool_upload');	#" Upload";	
+
+	$html_tool   .= "</div>";#/tool_inspector_div
+
+	# PRINT HTML
+	print $html_tool;
+	
+?>

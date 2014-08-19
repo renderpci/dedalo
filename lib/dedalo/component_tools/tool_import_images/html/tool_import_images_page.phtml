@@ -1,0 +1,36 @@
+<?php
+
+	# VISUALIZADOR HTML
+
+	# HEADER HTML
+	$header_html = '';		
+	$header_html  .= "\n<!-- TOOL IMPORT IMAGES [tipo:$tipo] -->";
+	$header_html  .= "<div class=\"tool_header\">";
+	$header_html  .= "<div class=\"h2_title\"> TOOL IMPORT IMAGES </div>";
+	$header_html  .= "<div class=\"import_context_label\">";
+	$header_html  .= "<a href=\"$url_manage_files\">".label::get_label('gestion_de_archivos')."</a>";
+	$header_html  .= "<a href=\"$url_import_preview\">".label::get_label('preview_de_importacion')."</a>";	
+	if(SHOW_DEBUG && $context!='form') $header_html .= "<span class=\"debug_info\">".TOOL_IMPORT_IMAGES_UPLOAD_DIR."</span>";
+	$header_html  .= "</div>";
+
+	$header_html  .= "</div>";#/tool_inspector_div	
+	
+	# PRINT HTML
+	print $header_html;
+
+	# HELP INFO
+	if($context=='files')
+	print $import_help;
+
+	
+	# BODY HTML
+	print $body_html ;
+	
+	
+	#echo css::build_tag(DEDALO_LIB_BASE_URL.'/section_group/css/section_group.css');
+	#print section_group::build_dummy_section_group($title=label::get_label('gestionar_archivos'),$body=$body_html);
+?>
+
+
+
+

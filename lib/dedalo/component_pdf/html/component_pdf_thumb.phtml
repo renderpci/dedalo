@@ -1,0 +1,29 @@
+<?php
+	$html = '';
+
+	if($file_exists) {
+
+		#$html .= "<div class=\"pdf_thumb_icon\" onclick=\"component_pdf.open_pdf(this)\" data-pdf_url=\"$pdf_url\"></div>";
+		#$html .= "<iframe src=\"$pdf_url\" class=\"pdf_object_thumb\" >[Your browser does not support iframe</iframe>";
+		#width=\"$media_width\" height=\"$media_height\" 
+		?>
+		<!-- Embed PDF File -->
+		<object class="pdf_object_thumb" type="application/pdf" data="<?php echo $pdf_url ?>?#zoom=50&scrollbar=1&toolbar=0&navpanes=0" id="pdf_content" data-id_matrix="<?php echo $id ?>" >
+			<param name="zoom" value="50%" />
+	    	<p>Your browser does not support pdf view.</p>
+	  	</object>
+		<?php
+
+	}else{
+		#$html .= "<div class=\"pdf_thumb_icon_default\"></div>";
+		$html .= "<div class=\"pdf_text_no_file\">";
+		$html .= label::get_label('sin_fichero');
+		if(SHOW_DEBUG) {
+			$html .= " <br><mark>$pdf_url</mark>";
+		}
+		$html .= "</div>";
+	}
+
+	print $html;
+?>
+

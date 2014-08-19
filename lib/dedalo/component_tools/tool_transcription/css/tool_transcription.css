@@ -1,0 +1,98 @@
+/* INSPECTOR */
+
+
+
+/*-- PAGE --*/
+.wrap_tool_transcription_page {	
+	display: block;
+	position: absolute;
+	width: 99.9%;	
+	height: 96%;
+	overflow: hidden;
+}
+
+
+/*-- HEADER --*/
+.header_tool {
+
+	}
+	.header_tool .lang_selector_in_header {
+		float: left;
+		position: absolute;
+		top: 3px;
+		left: 10px;
+		text-transform: capitalize;
+	}
+	.header_tool #header_info {
+		display: inline-block;
+		float: left;
+		margin-left: 20px;
+		position: relative;
+		top: 5px;
+	}
+
+/*-- common --*/
+.tool_transcription_left, .tool_transcription_right {
+	display: block;
+	position: absolute;  
+	height: 96%;
+}
+
+/*-- LEFT AREA (text) --*/
+.tool_transcription_left {
+	/*background-color: #86c4ca;*/	
+	float: left;
+  	width: 44.5%;  		
+}
+
+
+/*-- RIGHT AREA (media) --*/
+.tool_transcription_right {
+	/*background-color: #e08d90;*/	
+	margin-left: 44.5%;	
+	width: 55.3%;
+	overflow: hide;
+	float: left;
+	}
+	/*-- image content --*/
+	.tool_transcription_right .css_wrap_image {
+		height: 100%;
+		}	
+		.tool_transcription_right .css_wrap_image > .content_data {
+			position: absolute;
+			padding: 0;
+			/*background-color:#f2eda3;*/
+			width: 100%;/**/
+			/*box-shadow: 2px 2px 16px #7b7b7b inset;*/
+			height: 100%;
+			display: block;
+			overflow: auto;
+		}
+		canvas {
+			display: block;
+		}
+	/*-- video frame --*/
+	.tool_transcription_right .videoFrame {	
+				
+	}
+
+	
+
+
+
+
+/*-- INSPECTOR --*/
+.tool_transcription_inspector_log {
+	min-width: 124px;
+	white-space: nowrap;
+	text-align: center;
+	display: block;
+	float: right;	
+	position: absolute;
+	top: 35px;
+	right:4%;
+	z-index: 2000;
+	opacity: .9;
+}
+
+

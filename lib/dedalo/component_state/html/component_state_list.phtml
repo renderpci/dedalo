@@ -1,0 +1,77 @@
+<?php
+
+	# VISUALIZADOR HTML	
+
+	# ELEMENTOS
+	if(!isset ($ar_css['css_span_dato'])) 		$ar_css['css_span_dato']='';
+	if(!isset ($ar_css['css_span_debugger']))	$ar_css['css_span_debugger']='';
+	
+	echo "\n<!-- STATE [tipo:$tipo id_matrix:$id] -->";	
+		
+	# CONTENIDO 
+	$html_contenido = '';
+	switch($permissions) {
+			
+		case 0	:	$html_contenido .= ''; 		
+					break;
+					
+		case ($permissions>=1)	:
+				
+					$icon_html = '';
+
+					$estado_copy = $estado;
+					if (is_array ($estado)) foreach ($estado as $key => $value) {
+
+						$title ='';
+						
+						if($value>0) {
+
+
+
+
+							if($key=='tool_lang') {
+
+								$title .= label::get_label($key);		 
+								$title .=":{$value}% ";
+
+								foreach ($estado_copy as $key_copy => $value_copy) {
+
+									if($key_copy=='ar_porcentaje_lang') {										
+										foreach ($value_copy as $current_lang => $porcentaje_lang) {									
+											$title .= "\n  ".RecordObj_ts::get_termino_by_tipo($current_lang).":{$porcentaje_lang}%  ";
+										}										
+									}
+								}
+							}
+
+							if($key=='ar_porcentaje_lang'){
+								# ˙Nothing to do
+							}else{
+								if($key!='tool_lang') {
+									$title .= label::get_label($key);		 
+									$title .=":{$value}%";
+								}
+								
+								$key_maped = $this->map_tool_name($key);
+								$icon_html .= "<div class=\"icon_map_state\" title=\"$title\">$key_maped</div>";
+							}							
+
+							
+						}							
+						
+					}
+
+					$html_contenido .= $icon_html;
+
+					
+			if($permissions==3)
+					
+					$html_contenido .= "\n <span class=\"css_span_debugger {$ar_css['css_span_debugger']}\" id=\"debugger_{$id}\" >{$debugger}</span>";	
+							
+	}	
+
+	
+	# PRINT HTML	
+	print $html_contenido;	
+	
+?>

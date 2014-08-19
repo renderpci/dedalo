@@ -1,0 +1,87 @@
+<?php
+
+	# VISUALIZADOR HTML	
+
+	# ELEMENTOS
+	if(!isset ($ar_css['css_span_dato'])) 			$ar_css['css_span_dato']='';
+	if(!isset ($ar_css['css_ref'])) 				$ar_css['css_ref']='';
+	if(!isset ($ar_css['css_span_ejemplo'])) 		$ar_css['css_span_ejemplo']='';
+	if(!isset ($ar_css['css_span_debugger']))		$ar_css['css_span_debugger']='';
+	if(!isset ($ar_css['css_wrap_autocomplete_ts']))$ar_css['css_wrap_autocomplete_ts']='';
+		
+	
+	print "\n<!-- COMPONENT_AUTOCOMPLETE_TS [tipo:$tipo id_matrix:$id] $label -->";
+	print "\n<div class=\"css_wrap_autocomplete_ts wrap_component {$ar_css['css_wrap_autocomplete_ts']}\" id=\"{$id_wrapper}\" 
+	data-id_matrix=\"{$id}\" data-tipo=\"{$tipo}\" data-lang=\"{$lang}\" data-parent=\"{$parent}\" data-modo=\"{$modo}\" data-dato=\"{$valor_string}\" data-component_name=\"{$component_name}\" >";
+	
+	# ETIQUETA (LABEL)
+	$html_label = component_common_draw::draw_label($this);
+	
+	# CONTENIDO (INPUT)
+	$html_contenido = '';
+	switch($permissions) {
+			
+		case 0	:	$html_contenido .= "\n <span class=\"css_span_dato {$ar_css['css_span_dato']}\"> ".label::get_label('sin_acceso')." (ref)</span>";
+					break;
+						
+		case 1	: 	$html_contenido .= $valor;
+					break;	
+						
+		
+		case ($permissions>=2)	:
+		
+					# VALOR . STRING RESOLVED TO SHOW
+					$html_contenido .= "\n <div class=\"css_autocomplete_ts_valor\"> $valor </div>";
+
+
+					# INPUT DATA HIDDEN
+					$html_contenido .= "\n <input class=\"css_autocomplete_ts_dato_hidden\" type=\"text\" 
+						name=\"{$input_name}\" 
+						data-tipo=\"{$tipo}\" data-id_matrix=\"{$id}\" data-parent=\"{$parent}\" data-lang=\"{$lang}\" data-ar_tipo_to_search='{$ar_referenced_tipo_json}'
+						data-link_fields='{$ar_link_fields}'
+						value=\"{$dato}\"						
+						title='$ar_referenced_tipo_json'
+						disabled=\"disabled\"
+						/>";	
+
+					
+
+					# INPUT SEARCH FIELD
+					$html_contenido .= "\n <input class=\"css_autocomplete_ts_search_field\" type=\"text\" placeholder=\"".label::get_label('buscar')."...\"
+						name=\"{$input_name}\" 
+						data-ar_tipo_to_search='{$ar_referenced_tipo_json}'
+						onclick=\"component_autocomplete_ts.activate(this)\"
+						/>";	
+
+
+					# BTN DELETE
+					$html_contenido .= "\n <div class=\"div_image_link link css_autocomplete_ts_button_delete\" 
+					data-tipo=\"{$tipo}\"
+					title=\"$label $id\"
+					onclick=\"component_autocomplete_ts.delete(this)\"></div>";	
+
+					
+					# TREE RESOLUTION STATS
+					#$html_contenido .= "\n <div id=\"autocomplete_ts_tree_stats_{$tipo}\" class=\"css_autocomplete_ts_tree_stats\"> Calculating.. </div>";
+					
+
+					
+			if($permissions==3)
+					
+					$html_contenido .= "\n <span class=\"css_span_debugger {$ar_css['css_span_debugger']}\" id=\"debugger_{$id}\" >{$debugger}</span>";	
+				
+											
+	}
+
+	# Prepare content to show in page
+	tools::prepare_content($html_contenido);
+	
+	
+	# PRINT HTML
+	print $html_label;
+	print $html_contenido;
+	
+	
+	
+	print "\n</div><!-- /css_wrap_autocomplete_ts COMPONENT_AUTOCOMPLETE_TS [tipo:$tipo id_matrix:$id] $label -->\n\n"; //wrap
+?>

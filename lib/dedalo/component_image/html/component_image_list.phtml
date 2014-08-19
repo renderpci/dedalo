@@ -1,0 +1,31 @@
+<?php
+
+	# VISUALIZADOR HTML
+
+	# ELEMENTOS
+	if(!isset ($ar_css['css_span_dato'])) 		$ar_css['css_span_dato']='';
+	if(!isset ($ar_css['css_span_debugger']))	$ar_css['css_span_debugger']='';
+
+	#print "\n<!-- IMAGE [tipo:$tipo id_matrix:$id modo:$modo] -->";
+
+	# CONTENIDO (INPUT)
+	$html_contenido = '';
+	switch($permissions) {
+
+		case 0	:	$html_contenido .= '';
+					break;
+
+		case ($permissions>=1):
+
+				$html_contenido .= "<div class=\"div_image_image_in_list\">";
+				$html_contenido .= "<img class=\"thumb_in_list image_image_in_list\" width=\"102\" height=\"57\" src=\"$image_url\" data-id_matrix=\"$id\" data-image_id=\"$image_id\" data-parent_matrix=\"$parent\" data-objetive_thumb_url=\"$objetive_thumb_url\" onclick=\"window.open('{$image_full_url}','_blank')\" />";
+				$html_contenido .= "</div>";
+
+			#if($permissions==3)
+					#$html_contenido .= "\n <span class=\"css_span_debugger {$ar_css['css_span_debugger']}\" id=\"debugger_{$id}\" >{$debugger}</span>";
+	}
+
+
+	# PRINT HTML
+	print $html_contenido;
+?>

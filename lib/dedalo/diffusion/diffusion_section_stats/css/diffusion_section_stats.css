@@ -1,0 +1,98 @@
+
+
+#stats_container {
+  margin: 20px;
+  margin-top: 10px;
+  display: inline-block; 
+  width: 98%;
+  clear: both;
+  margin-bottom: 80px;
+}
+  /*-- Current Wrapper --*/
+  #stats_container .wrap_stats_graphic {
+      background-color:#e4e4e4;
+      display: inline-block;      
+      width: 20.2%;
+      min-width: 600px;
+      height: 500px;
+      margin: 5px;
+      overflow: hidden;
+      border-radius: 6px;
+      box-shadow: 2px 2px 8px #a3a3a3 inset;
+    }
+    /*-- Titulo --*/
+    #stats_container .wrap_stats_graphic .titulo_chart {
+    	font-size: 30px;
+      line-height: 30px;
+    	margin: 0px;
+    	padding-left: 15px;
+      padding-top: 10px;
+    	text-transform: capitalize;
+      /*
+      background-color: #bfedf3;
+      */
+    }
+    /*-- SVG --*/
+    #stats_container .wrap_stats_graphic .chart {
+      width: 600px;
+      height: 475px;
+      border: 2px;
+      display: block;
+      /*
+      min-width: 100px;
+      min-height: 200px;
+      */
+      margin: 0px;
+      /*
+      margin: 10px;
+      Minimum height and width is a good idea to prevent negative SVG dimensions...
+      For example width should be =< margin.left + margin.right + 1,
+      of course 1 pixel for the entire chart would not be very useful, BUT should not have errors
+      */
+    }
+    #stats_container .wrap_stats_graphic .stats_pie {
+
+    }
+    #stats_container .wrap_stats_graphic .stats_bar {
+      height: 385px;
+      width: 600px !important;
+      margin-top: 80px;      
+      position: relative;
+      left: -10px;
+    }
+    #stats_container .wrap_stats_graphic .stats_bar_horizontal {
+      height: 385px;
+      width: 495px !important;
+      margin-top: 80px;      
+    }
+   
+/*-- Close button --*/
+.close_stats {
+  /*
+  float: right;
+  width: 20px;
+  height: 16px;
+  */
+  position: relative;
+  left: 23px;
+  top: 8px;
+  cursor: pointer;
+}
+
+
+TEXT.nv-legend-text{
+  background-color: #ff6a07 !important;
+}
+
+
+/*
+.nv-legendWrap {
+  width: 100%;
+  background-color: #f36523 !important;
+  
+}
+.nv-series {
+  background-color: #f3e76b;
+}
+
+*/

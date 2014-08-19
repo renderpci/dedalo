@@ -1,0 +1,102 @@
+<?php
+
+	die("DEPERCATED: USE EDIT VERSION HERE");
+
+	# VISUALIZADOR HTML	
+
+	# ELEMENTOS
+	if(!isset ($ar_css['css_span_dato'])) 		$ar_css['css_span_dato']='';
+	if(!isset ($ar_css['css_text_area'])) 		$ar_css['css_text_area']='';
+	if(!isset ($ar_css['css_span_ejemplo'])) 	$ar_css['css_span_ejemplo']='';
+	if(!isset ($ar_css['css_span_debugger']))	$ar_css['css_span_debugger']='';
+	if(!isset ($ar_css['css_wrap_text_area']))	$ar_css['css_wrap_text_area']='';
+	
+	if(!isset ($html_tools))					$html_tools='';
+	
+	
+	print "\n<!-- TEXT AREA [tipo:$tipo id_matrix:$id] -->";
+	print "\n<div class=\"css_wrap_text_area wrap_component {$ar_css['css_wrap_text_area']}\" id=\"{$id_wrapper}\" 
+	data-id_matrix=\"{$id}\" data-tipo=\"{$tipo}\" data-parent=\"{$parent}\" data-lang=\"{$lang}\" data-dato=\"{$dato_raw}\" data-component_name=\"{$component_name}\" >";
+	
+	# ETIQUETA (LABEL)
+	$html_label = component_common_draw::draw_label($this)."<span class=\"debug_info\"> $identificador_unico</span>";
+	
+	# CONTENIDO (INPUT)
+	$html_contenido = '';
+	switch($permissions) {
+			
+		case 0	:	$html_contenido .= "\n <span class=\"css_span_dato {$ar_css['css_span_dato']}\"> No access here (text_area)! </span>";	
+					break;
+						
+		case 1	: 	$html_contenido .= "\n<div class=\"text_area_content text_area_content_shadow\" >";
+					$html_contenido .= "\n <span class=\"css_span_dato {$ar_css['css_span_dato']}\">$dato</span>";
+					$html_contenido .= "\n</div>"; #end text_area_content
+					break;	
+						
+		
+		case ($permissions>=2)	:
+
+					#$html_contenido .= "\n<div class=\"text_area_content\" >";
+		
+
+
+						/**
+						* Text area
+						*/
+						$html_contenido .= "\n <textarea class=\"css_text_area text_area_tm {$ar_css['css_text_area']}\" 
+						id=\"{$identificador_unico}_tm\" 
+						name=\"{$input_name}\" 
+						data-tipo=\"{$tipo}\" data-id_matrix=\"{$id}\" data-lang=\"{$lang}\" data-last_tag_index_id=\"\" data-flag=\"component_text_area\"
+						title=\"$html_title\" disabled>$dato</textarea>";
+						
+						
+						
+
+
+
+						/**
+						* WRAP CURRENT SELECTED FRAGMENT (INDEXATION AND RELATIONS LIST TABS) 
+						*/
+						$html_contenido .= "\n <div id=\"relations_ajax_div_{$tipo}\" class=\"wrap_fragment\" 
+						data-id_matrix=\"{$id}\" data-tipo=\"{$tipo}\" data-parent=\"{$parent}\" data-modo=\"selected_fragment\" data-caller_id=\"$caller_id\"
+						> <!-- AJAX CONTENT HERE --> </div>";
+
+
+						/**
+						* Info footer when time machine mode
+						*/						
+						$html_contenido .= "\n<div class=\"tm_component_footer_info\"> $version_date </div>";	
+
+
+					
+					#$html_contenido .= "\n</div>"; #end text_area_content
+
+
+
+
+		
+			if($permissions==3)	
+					
+					$html_contenido .= "\n <span class=\"css_span_debugger {$ar_css['css_span_debugger']}\" id=\"debugger_{$id}\" >{$debugger}</span>";	
+							
+	}
+	
+	# Prepare content to show in page
+	tools::prepare_content($html_contenido);
+	
+	# PRINT HTML
+	print $html_label;
+	print $html_contenido;
+
+	
+	
+	print "\n</div>\n\n"; //wrap
+	
+?>
+
+<script type="text/javascript">
+$(function() {
+	// Init all time machine text areas (with class 'text_area_tm')
+	text_editor.init_tm();	
+});							
+</script>

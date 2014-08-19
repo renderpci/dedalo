@@ -1,0 +1,101 @@
+<?php
+
+	# VISUALIZADOR HTML	
+
+	
+	# CONTENIDO (INPUT)
+	$html_contenido = '';
+	switch($permissions) {
+			
+		case 0	:	
+			$html_contenido .= "\n <span class=\"css_span_dato {$ar_css['css_span_dato']}\"> No access here (text_area)! </span>";	
+			break;
+						
+		
+		case ($permissions>=1)	:			
+			
+			# Fragment info div
+			$html_contenido .= "
+			<div class=\"fragment_id_info\" 
+			 data-id_matrix=\"$id\" data-tipo=\"$tipo\" data-caller_id=\"$caller_id\" data-rel_locator=\"$rel_locator\"		 
+			\"> 
+			 <b>Index id $tag_value </b>
+			</div>
+			";
+
+
+			# TAG STATE SELECTOR
+			$html_contenido .= "\n <div class=\"wrap_tag_state_selector\">";
+				#
+				# CURRENT TAG STATE SELECTOR
+				#
+				$name = 'tag_state_selector_' .$tag;	
+				$ar_states = array(	'n'=>'Normal',
+									#'u'=>'Used',
+									'r'=>'To review' 
+								  );
+				$html_contenido .= "\n Tag state ";
+				$html_contenido .= "
+				<select class=\"tag_state_selector\" name=\"$name\"
+				data-tag=\"$tag\"
+				onchange=\"component_text_area.change_tag_state(this)\"
+				>
+				";			
+				#$html_contenido .= "\n <option value=\"\"></option>";				
+				foreach ($ar_states as $key => $value) {
+
+					$html_contenido .= "\n <option value=\"$key\" ";
+
+					if($tag_state==$key) 
+						$html_contenido .= " selected=\"selected\" ";
+
+					$html_contenido .= ">$value</option>";
+
+				}			
+				$html_contenido .= "\n</select>\n";
+			$html_contenido .= " [$rel_locator]</div><!-- /wrap_tag_state_selector -->";
+			
+
+			# BUTTON DELETE TAG
+			$html_contenido .= "\n <div class=\"div_delete_tag\" >";
+			$html_contenido .= " <div class=\"icon_bs tool_indexation_delete_icon link\" 
+			data-tipo=\"{$tipo}\" data-id_matrix=\"{$id}\" data-parent=\"{$parent}\" data-lang=\"{$lang}\" data-tag=\"{$tag}\" data-rel_locator=\"{$rel_locator}\"
+			title=\"Delete tag\"
+			onclick=\"tool_indexation.delete_tag(this)\"
+			></div>";
+			$html_contenido .= "\n Delete tag</div>";	#<div class="css_button_delete div_image_link " data-tipo="dd185" data-id_matrix="1" title="Borrar entrevista"></div>
+
+
+			# BUTTON CLOSE
+			#$html_contenido .= "\n <div class=\"css_button_close_fragment\" onclick=\"tool_indexation.toggle_selected_fragment(this);\">Close</div>";
+			$html_contenido .= "\n <div class=\"icon_bs tool_indexation_show_fragment link\" data-tap_id=\"indexation_fragment\" onclick=\"tool_indexation.toggle_selected_fragment(this);\"></div>";
+			
+
+			# TEXT SELECTED FRAGMENT
+			$html_contenido .= "\n <div class=\"selected_fragment \">{$fragment_text}</div>";			
+	}	
+
+
+	# Prepare content to show in page
+	tools::prepare_content($html_contenido);
+
+
+	# TEXT SELECTED FRAGMENT
+	$html_contenido .= "\n <div class=\"terminos_list\">";
+	$html_contenido .= "\n <div class=\"terminos_list_title\">".label::get_label('descriptores')."</div>";
+	$html_contenido .= $component_text_area_terminos_list_html;
+	$html_contenido .= "\n </div";
+
+
+
+	# PRINT HTML
+	print $html_contenido;
+
+	#print "<script>tool_indexation.selected_rel_locator='$rel_locator'; alert(tool_indexation.selected_rel_locator)</script>";
+	#print '<script type="text/javascript">
+	#			tool_indexation.selected_rel_locator="'.$rel_locator.'"; alert(tool_indexation.selected_rel_locator)		
+	#			</script>';	
+		
+
+	
+?>

@@ -1,0 +1,36 @@
+<?php
+
+	# VISUALIZADOR HTML		
+	$html='';
+
+	$html   .= "\n<div class=\"header_tool\">";
+
+		# LANG SELECTOR (PROVISIONAL)		
+
+		$html .= "<div class=\"lang_selector_in_header\">". label::get_label('idioma');		
+		$html .= "<select name=\"dedalo_data_lang\" id=\"dedalo_data_lang\" data-type_of_lang=\"dedalo_data_lang\" onchange=\"common.jump_select_lang(this)\">";
+
+			foreach($ar_all_project_langs as $lg) {
+
+				$selected = null; if(DEDALO_DATA_LANG==$lg) $selected = 'selected="selected"';
+				$html .= "<option value=\"$lg\" {$selected}>".RecordObj_ts::get_termino_by_tipo($lg,DEDALO_APPLICATION_LANG)."</option>";
+			}			
+			
+		$html .= "</select>";
+		$html .= "</div>";#end lang_selector_in_header
+
+
+		# HEADER_INFO
+		$html .= "\n <div id=\"header_info\"> Info: </div>";
+		
+		# COMPONENT STATE
+		$html   .= $component_state_html ;
+
+
+	$html   .= "</div><!-- /header_tool -->";
+
+
+
+	print $html;
+		
+?>

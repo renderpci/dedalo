@@ -1,0 +1,58 @@
+<?php
+
+	# VISUALIZADOR HTML	
+
+	# ELEMENTOS
+	if(!isset ($ar_css['css_span_dato'])) 		$ar_css['css_span_dato']='';	
+	if(!isset ($ar_css['css_span_debugger']))	$ar_css['css_span_debugger']='';
+	if(!isset ($ar_css['css_wrap_login']))		$ar_css['css_wrap_login']='';
+	
+	
+	print "\n<!-- LOGIN [tipo:$tipo id_matrix:$id] -->";		
+	print "\n<div class=\"css_wrap_login bg_gradient1 {$ar_css['css_wrap_login']}\" id=\"wrap_login\">";	
+	print "\n<form class=\"css_form\" name=\"form_login\" id=\"form_login\" action=\"\" onsubmit=\"login.Login()\" method=\"post\" >";
+
+
+		# CONTENIDO (INPUT)
+		$html_contenido = '';
+
+
+		# LANG JUMP
+		$html_contenido .= $dedalo_aplication_langs_selector_html;
+		
+
+		$html_contenido .= $html_username;
+		$html_contenido .= $html_password;
+		$html_contenido .= $html_button_login;
+		
+		$html_contenido .= "\n<input type=\"hidden\" id=\"tipo_login\"			value=\"$tipo\" >";
+		$html_contenido .= "\n<input type=\"hidden\" id=\"tipo_username\"		value=\"$tipo_username\" >";
+		$html_contenido .= "\n<input type=\"hidden\" id=\"tipo_password\"		value=\"$tipo_password\" >";	
+		$html_contenido .= "\n<input type=\"hidden\" id=\"tipo_active_account\"	value=\"$tipo_active_account\" >";
+
+		
+		
+				
+		$html_contenido .= "\n<div class=\"login_ajax_response\" >  </div>";
+
+
+		# VERSION : Dedalo verrsion info
+		$html_contenido .= "<div class=\"dedalo_version\"> Dédalo version ".DEDALO_VERSION. " - Build " .DEDALO_BUILD ;
+		#if(strpos($_SERVER['HTTP_HOST'],'8888')!==false) {
+			$html_contenido .= " ".DEDALO_DATABASE_CONN." ";
+		#}
+		$html_contenido .= "</div>";
+
+
+		# DEDALO_BACKUP_ON_LOGIN
+		$html_contenido .= "\n<script>DEDALO_BACKUP_ON_LOGIN='".DEDALO_BACKUP_ON_LOGIN."';</script>";
+		
+		# PRINT HTML
+		print $html_contenido;
+
+
+	
+	
+	print "\n</form>";	
+	print "\n</div>\n\n"; //css_wrap_login	
+?>

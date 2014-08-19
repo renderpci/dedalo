@@ -1,0 +1,92 @@
+
+
+<div class="css_time_machine_label css_tool_label history_label text_shadow_inset"><?php echo label::get_label('historico') ?></div>
+
+<!-- BUTTONS APPLY / CLOSE -->
+<div id="<?php echo "tm_header_{$tipo}_{$id}_{$lang}" ?>" class="tm_header_div div_image_link apply_and_save_link" onclick="tool_time_machine.assign_time_machine_value(this)"
+	data-tipo="<?php echo $tipo ?>" data-id_matrix="<?php echo $id ?>" data-lang="<?php echo $lang ?>">
+   
+    <div class="tm_apply_and_save_text text_shadow_inset"><?php echo label::get_label('aplicar_y_salvar') ?></div>
+    
+    <div class="css_time_machine_image_aplicate div_image_link"></div>
+
+    <?php /*<div class="close_tool_tm div_image_link" onclick="close_tm(this)">Close</div>*/?>
+
+</div>
+
+
+    
+<div class="time_machine_record_rows shadow_inset">    
+     <!-- TM ROWS -->
+	<?php
+	# ROWS DATA ITERATION
+	$id_matrix_component	= $id;
+	$ar_dato_printed 		= NULL;
+	foreach($ar_component_time_machine as $tm_obj) {	
+		
+		$fecha				= component_date::timestamp_to_date($tm_obj->get_timestamp(), $seconds=true);	#$tm_obj->get_timestamp();
+		$userID				= $tm_obj->get_userID();
+		
+		$mod_user_name		= $tm_obj->get_user_name();					#dump($mod_user_name);
+		
+		$id_time_machine	= $tm_obj->get_ID();
+		$lang				= $tm_obj->get_lang();						#dump($id_time_machine);
+		$dato				= $tm_obj->get_dato();						#dump($dato);
+		$identificador_unico= $tm_obj->get_identificador_unico();		#dump($dato);
+
+		
+		$show_row 		 = true;
+		
+
+		# Case relation
+		# Recorremos el array excluyendo los registros de time machine que no contengan elementos de esta sección		
+		# Por rehacer...
+
+		
+
+
+		# Case normal
+
+		# DATO STRING . Si el dato es un array, lo encapsulamos como JSON ["36","53"]
+		if(is_array($dato) || is_object($dato)) {
+			$dato_string = json_encode($dato);						#dump($dato);				
+		}else{
+			# Lo codificamos para evitar problemas con las comillas
+			$dato_string	= urlencode($dato);						#dump($dato);	
+		}
+		
+		#$dato_string	= urlencode($dato_string);	
+
+		# ROW HTML
+		if ($show_row===true) {
+			?>
+	        <div class="css_time_machine_record_line" onclick="tool_time_machine.set_tm_history_value_to_tm_preview(this)"
+	        data-id_matrix="<?php echo $id_matrix_component ?>"
+	        data-tipo="<?php echo $tipo ?>" data-lang="<?php echo $lang ?>"
+	        data-id_time_machine="<?php echo $id_time_machine ?>"
+	        data-current_tipo_section="<?php echo $current_tipo_section ?>"
+	        >
+	        	<!-- INFO LINE -->
+				<span><?php echo $fecha ?> - <?php echo $mod_user_name ?> (<?php echo $userID ?>)</span>
+	            
+	            <!-- BUTTON BACK -->
+	            <div class="css_image_go_back div_image_link" title="Show tm value (<?php echo $id_time_machine ?>)"></div>
+
+	            <?php 
+	            if (SHOW_DEBUG===true) {
+	            	echo "<span class=\"debug_info\">$dato_string</span>" ;
+	            }
+	            ?>
+	        </div>
+			<?php	
+		}#if ($show_row===true)	
+
+		
+	}// loop
+	#dump($ar_dato_printed,'$ar_dato_printed');
+
+	?>
+
+
+</div><!-- css_time_machine_record_rows -->	
+

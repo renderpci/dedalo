@@ -1,0 +1,61 @@
+<?php
+	$html  = '';
+	
+	#$html  .= "\n<div class=\"player_icon config_icon\" onclick=\"av_media_player.toggle_table_configure_keys()\"> </div>";
+
+	$html  .= "\n<table class=\"table_configure_keys\">";
+
+	# HEADER TR
+	$html .= "\n <tr>";
+		
+		$html .= "\n <th>";
+		$html .= label::get_label('accion');
+		$html .= "\n </th>";
+
+		$html .= "\n <th>";
+		$html .= label::get_label('tecla');
+		$html .= "\n </th>";
+
+	$html .= "\n </tr>";
+
+
+	# ROWS TR
+	$html .= "\n <tr class=\"text_shadow_inset\">";
+		
+		$html .= "\n <td>";
+		$html .= "Play/Pause";
+		$html .= "\n </td>";
+
+		$html .= "\n <td>";
+		$html .= "\n <input class=\"av_player_input_text\" type=\"text\" 
+						name=\"play_pause\"
+						value=\"27\"
+						title=\"Click and press keyboard key to change\"
+						/>";
+		$html .= "\n <span class=\"keycode_name play_pause_name\">  </span>";
+		$html .= "\n <span class=\"insert_tc_default\" onclick=\"set_value(27)\"> Default value [ESCAPE] </span>";
+		$html .= "\n </td>";
+
+	$html .= "\n </tr>";
+	$html .= "\n <tr class=\"text_shadow_inset\">";
+		
+		$html .= "\n <td>";
+		$html .= label::get_label('insertar'). ' TC';
+		$html .= "\n </td>";
+
+		$html .= "\n <td>";
+		$html .= "\n <input class=\"av_player_input_text\" type=\"text\" 
+						name=\"insert_tc\"
+						value=\"113\"
+						title=\"Click and press keyboard key to change\"
+						/>";
+		$html .= "\n <span class=\"keycode_name insert_tc_name\">  </span>";
+		$html .= "\n <span class=\"insert_tc_default\" onclick=\"set_value(113)\"> Default value [F2] </span>";
+		$html .= "\n </td>";
+
+	$html .= "\n </tr>";
+
+
+	$html .= "\n </table>";
+	print $html;
+?>

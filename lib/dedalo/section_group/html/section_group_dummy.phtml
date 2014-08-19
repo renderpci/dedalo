@@ -1,0 +1,31 @@
+<?php
+	
+	# VISUALIZADOR HTML	
+
+	# ELEMENTOS
+	
+	
+	print "\n\n<!-- SECTION GROUP DUMMY -->";
+
+	print "\n<div id=\"$section_group_id\" class=\"css_section_group_wrap box_shadow_1 box_border_radius_1 {$ar_css['css_section_group_wrap']}\" >";
+	
+		# ETIQUETA (LABEL)	
+		$html_label  = "\n<div class=\"css_section_group_titulo tap_title title_down_box text_unselectable\" data-tap_id=\"{$tap_id}\" > ";
+		$html_label .= "<label class=\"css_label \" style=\"font-weight:bold\" title=\"\">$title</label>";
+		$html_label .= " </div>";	
+			
+	
+
+		# CONTENIDO (INPUT)
+		$html_contenido  = "\n<div class=\"css_section_group_content tap_content\" >";		
+		$html_contenido .= $body;
+		$html_contenido .= "\n</div><!-- /css_section_group_content -->";
+		
+		
+		# PRINT HTML
+		print $html_label;
+		print $html_contenido;
+
+	
+	print "\n</div><!-- /css_section_group_wrap SECTION GROUP DUMMY -->\n\n"; //wrap
+?>

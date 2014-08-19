@@ -1,0 +1,53 @@
+<?php
+
+	# VISUALIZADOR HTML	
+	
+	if(!isset ($ar_css['css_wrap_tool_transcription']))		$ar_css['css_wrap_tool_transcription']='';
+	if(!isset ($ar_css['css_div_tool_transcription']))		$ar_css['css_div_tool_transcription']='';
+	
+
+	$html    = "\n<!-- TOOL TRANSCRIPTION PAGE [tipo:$tipo] -->";
+	$html   .= $header_html;
+	$html   .= "\n<div class=\"wrap_tool_transcription_page\" >";
+
+		
+		# LEFT DIV TEXT AREA
+		$html 	.= "\n<div class=\"tool_transcription_left\">";
+		$html 	.= $html_text;
+		$html 	.= "\n</div><!-- /tool_transcription_left -->";
+
+		
+		# RIGHT DIV MEDIA
+		$html 	.= "\n<div class=\"tool_transcription_right\">";		
+		#$html 	.= "<iframe id=\"videoFrame\" name=\"videoFrame\" class=\"videoFrame\" src=\"{$iframe_url}\" ></iframe>";
+		$html 	.= $html_media;
+		$html 	.= "\n</div><!-- /tool_transcription_right -->";
+
+	
+	$html   .= "\n</div><!-- /wrap_tool_transcription_page -->"; //page wrap
+
+
+	
+	# INSPECTOR LOG tool_transcription 
+	$html 	.= "\n<div id=\"inspector_log\" class=\"tool_transcription_inspector_log\"> </div>";
+
+
+
+	print $html;		
+?>
+
+<script type="text/javascript">
+	var component_related_obj_id = "<?php echo $component_related_obj_id ?>";
+	/*
+	// BEFORE UNLOAD
+	$(window).bind("beforeunload", function(event){					
+		// Update transcription text component on opener page
+		var component_related_obj = window.opener.$(".css_text_area[data-id_matrix=\''.$component_related_obj_id.'\']");
+		if( $(component_related_obj).length == 1 ) {
+			window.opener.component_common.update_component_by_ajax("'.$component_related_obj_id.'");
+		}
+	});
+	*/
+</script>
+
+

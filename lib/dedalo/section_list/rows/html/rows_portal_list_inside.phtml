@@ -1,0 +1,113 @@
+<?php
+	
+	# VISUALIZADOR HTML	
+
+	# ELEMENTOS	
+	if(!isset ($ar_css['css_span_dato'])) 				$ar_css['css_span_dato']='';
+	if(!isset ($ar_css['css_span_debugger'])) 			$ar_css['css_span_debugger']='';
+	
+	print "\n\n<!-- ROWS [$id] -->";
+	
+	$n_td=1;
+
+	# CONTENIDO (INPUT)
+	$html_contenido  = '';
+
+	# TR id
+	$html_contenido  .= "\n<tr id=\"portal_tr_list_{$id}_inside\" >";
+	#$html_contenido  .= "\n<tr>";
+
+	switch($permissions) {
+			
+		case 0	:	
+				$html_contenido .= "\n <span class=\"css_span_dato {$ar_css['css_span_dato']}\"> ".label::get_label('sin_acceso')." (Portal)</span>";
+				break;
+						
+		case ($permissions>=1) :
+
+				$html_td_datos  = '';
+					
+				if( !is_array($ar_rows) || count($ar_rows)==0 ) {
+					
+					$html_td_datos .= "\n <td>";
+					#$html_td_datos .= "No records found.. ";
+					$html_td_datos .= "\n </td>";
+					
+				}else{					
+
+					# TD DATOS
+					#dump($ar_component_obj_html,'$ar_component_obj_html');
+					$html_td_datos .= "\n <td class=\"section_list_td_row row_portal_inside text_unselectable\">";
+					
+					
+					if(is_array($ar_component_obj_html)) {
+
+						$n_records = count($ar_component_obj_html);
+							#echo $n_records;
+						$i =1;
+						foreach($ar_component_obj_html as $rel_locator => $ar_td) {
+
+							$n_componentes = count($ar_td);
+								#echo $n_componentes;
+							$current_component_number = 0;
+
+							foreach ($ar_td as $component_obj_html) {
+								#dump($component_obj_html,'$component_obj_html');
+								$current_component_number++;
+
+								if(empty($component_obj_html)) continue;
+
+								#$html_td_datos .= "\n <div>";
+								if ($i==1) {
+									# PRIMER ELEMENTO
+									$html_td_datos .= "\n <div class=\"portal_first_element_content\">";
+									$html_td_datos .= $component_obj_html;
+									# BUTTON MORE
+									if($n_records>1  && $current_component_number==$n_componentes ) {
+										$html_td_datos .= "\n <div class=\"icon_bs portal_toggle_more_elements_more\" onclick=\"component_portal.toggle_more_elements_content(this)\"></div>";
+									}									
+									$html_td_datos .= "\n </div>";
+								}else{
+									# SIGUIENTES ELEMENTOS
+									$html_td_datos .= "\n <div class=\"portal_more_elements_content\">";
+									$html_td_datos .= $component_obj_html;
+									$html_td_datos .= "\n </div>";
+								}
+								#$html_td_datos .= "\n </div>";
+								$icon_more_showed = true;
+
+								# NOTA: sumando aquí, sólo se mostrará el primer elemento (de la primera columna del portal) y al desplegar todo completo
+								#$i++;
+								
+							}#end foreach ($ar_td as $component_obj_html)
+							
+							# NOTA: sumando aquí, se mostrán todos los elementos de este row (todas las columnas del portal)
+							$i++;
+						}# /foreach($ar_component_obj_html as $rel_locator => $ar_td) 
+
+					}# /if(is_array($ar_component_obj_html))
+
+
+					$html_td_datos .= "\n </td>";
+					
+				}
+			
+				
+				# TD DATOS ADDED BELOW
+				$html_contenido .= $html_td_datos;
+
+				break;
+			
+	}
+	$html_contenido .= "\n</tr>";
+	
+
+
+	
+
+
+	# PRINT HTML
+	print $html_contenido;
+	
+
+?>

@@ -1,0 +1,83 @@
+<?php
+	
+	# VISUALIZADOR HTML	
+
+	# ELEMENTOS	
+	if(!isset ($ar_css['css_span_dato'])) 				$ar_css['css_span_dato']='';
+	if(!isset ($ar_css['css_span_debugger'])) 			$ar_css['css_span_debugger']='';
+	
+	print "\n\n<!-- ROWS [$id] -->";
+		
+	# Hilight unassigned (to projects filter) records
+	$class_td_id = NULL;
+	if( isset(filter::$ar_records_unassigned) && in_array($id, filter::$ar_records_unassigned) ) 
+		$class_td_id = 'unassigned';
+		#dump(filter::$ar_records_unassigned);
+
+
+	# CONTENIDO (INPUT)
+	$html_contenido  = "\n<tr class=\"{$class_td_id}\">";	
+	
+	switch($permissions) {
+			
+		case 0	:	$html_contenido .= "\n <span class=\"css_span_dato {$ar_css['css_span_dato']}\"> ".label::get_label('sin_acceso')." </span>";
+					break;
+						
+		case ($permissions>=1)	:
+					
+					if( !is_array($ar_rows) || count($ar_rows)==0 ) {
+						
+						$html_contenido .= "\n <td class=\"section_list_td_border\">";
+						#$html_contenido .= "No records found.. ";
+						$html_contenido .= "\n </td>";
+						
+					}else{
+					
+						# TD ID
+						$html_contenido .= "\n <td class=\"row_id section_list_td_border section_list_td_row \">";					
+						
+							
+							# ID TEXT
+							$html_contenido .= "\n  $section_dato ";
+							
+
+							# BUTTON RESTORE
+							$title = label::get_label('recuperar') .' '.label::get_label('registro');
+							if(SHOW_DEBUG) $title .= "\n id time machine: $id_time_machine";
+					        $html_contenido .= "
+					        <!-- BUTTON BACK -->
+					        <div class=\"icon_bs tool_time_machine_goback_icon link\" title=\"$title\"
+					        data-tipo=\"$section_tipo\"
+					        data-id_time_machine=\"$id_time_machine\"
+					        onclick=\"tool_common.section_list_recover_section(this)\"
+					        > </div> ";
+
+					        $html_contenido .= label::get_label('recuperar');
+
+
+							# DEBUG INFO
+							if($permissions==3)		
+							$html_contenido .= "\n <span class=\"css_span_debugger {$ar_css['css_span_debugger']}\" id=\"debugger_{$id}\" >{$id}</span>";	
+								
+							
+
+						$html_contenido .= "\n </td>";
+
+						
+						# TD DATOS
+						if(isset($ar_component_obj_html) && is_array($ar_component_obj_html)) foreach($ar_component_obj_html as $id_section => $component_obj_html) {
+							
+							$html_contenido .= "\n <td class=\"section_list_td_border section_list_td_row\">";
+							$html_contenido .= $component_obj_html;
+							$html_contenido .= "\n </td>";
+													
+						}
+					}
+	}
+	$html_contenido .= "\n</tr>";
+	
+	# PRINT HTML
+	print $html_contenido;
+	
+
+?>

@@ -1,0 +1,52 @@
+<?php
+
+	# VISUALIZADOR HTML	
+
+	# ELEMENTOS
+	if(!isset ($ar_css['css_span_dato'])) 			$ar_css['css_span_dato']='';
+	if(!isset ($ar_css['css_pdf'])) 				$ar_css['css_pdf']='';
+	if(!isset ($ar_css['css_span_ejemplo'])) 		$ar_css['css_span_ejemplo']='';
+	if(!isset ($ar_css['css_span_debugger']))		$ar_css['css_span_debugger']='';
+	if(!isset ($ar_css['css_wrap_pdf']))			$ar_css['css_wrap_pdf']='';	
+	
+	
+	print "\n<!-- PDF [tipo:$tipo id_matrix:$id] $label -->";
+	print "\n<div class=\"css_wrap_pdf wrap_component {$ar_css['css_wrap_pdf']}\" id=\"{$id_wrapper}\"
+	data-id_matrix=\"{$id}\" data-tipo=\"{$tipo}\" data-lang=\"{$lang}\" data-parent=\"{$parent}\" data-modo=\"{$modo}\" data-dato=\"{$valor}\" data-component_name=\"{$component_name}\" >";
+	
+		
+		# ETIQUETA (LABEL)
+		$html_label = component_common_draw::draw_label($this);
+		
+		# CONTENIDO (INPUT)
+		$html_contenido = '';
+		switch($permissions) {
+				
+			case 0 :	$html_contenido .= "\n <span class=\"css_span_dato {$ar_css['css_span_dato']}\"> ".label::get_label('sin_acceso')." (av)</span>";
+						break;
+							
+			case ($permissions>=1) :
+			
+						# pdf THUMB
+						$html_contenido .= "\n <div class=\"css_wrap_pdf_thumb\" onclick=\"alert('Sorry, component_pdf is under construction')\" >";
+						$html_contenido .= $pdf_thumb_html ;
+						$html_contenido .= "\n </div>";		
+						
+				if($permissions==3)		
+						$html_contenido .= "\n <span class=\"css_span_debugger {$ar_css['css_span_debugger']}\" id=\"debugger_{$id}\" >{$debugger}</span>";	
+												
+		}
+
+		# Prepare content to show in page
+		tools::prepare_content($html_contenido);	
+		
+
+		# PRINT HTML
+		print $html_label;
+		print $html_contenido;
+	
+	
+	print "\n</div><!-- /css_wrap_pdf [tipo:$tipo id_matrix:$id] $label -->\n"; //wrap
+
+
+?>

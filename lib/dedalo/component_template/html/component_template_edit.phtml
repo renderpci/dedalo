@@ -1,0 +1,59 @@
+<?php
+
+	# VISUALIZADOR HTML	
+
+	# ELEMENTOS
+	if(!isset ($ar_css['css_span_dato'])) 		$ar_css['css_span_dato']='';
+	if(!isset ($ar_css['css_text_area'])) 		$ar_css['css_text_area']='';
+	if(!isset ($ar_css['css_span_ejemplo'])) 	$ar_css['css_span_ejemplo']='';
+	if(!isset ($ar_css['css_span_debugger']))	$ar_css['css_span_debugger']='';
+	if(!isset ($ar_css['css_wrap_text_area']))	$ar_css['css_wrap_text_area']='';
+	
+	if(!isset ($html_tools))					$html_tools='';
+	
+	
+	print "\n<!-- TEXT AREA [tipo:$tipo id_matrix:$id] -->";
+	print "\n<div class=\"css_wrap_text_area wrap_component {$ar_css['css_wrap_text_area']}\" 
+	data-id_matrix=\"{$id}\" data-tipo=\"{$tipo}\" data-lang=\"{$lang}\" data-parent=\"{$parent}\" data-dato=\"{$dato_raw}\" data-component_name=\"{$component_name}\" >";
+	
+	# ETIQUETA (LABEL)
+	$html_label = component_common_draw::draw_label($this);
+	
+	# CONTENIDO (INPUT)
+	$html_contenido = '';
+	switch($permissions) {
+			
+		case 0	:	$html_contenido .= "\n <span class=\"css_span_dato {$ar_css['css_span_dato']}\"> No access here (text_area)! </span>";	
+					break;
+						
+		case 1	: 	$html_contenido .= "\n <span class=\"css_span_dato {$ar_css['css_span_dato']}\">$dato</span>";
+					break;	
+						
+		
+		case ($permissions>=2)	:
+		
+					$html_contenido .= "\n <textarea class=\"css_text_area {$ar_css['css_text_area']}\" 
+					id=\"{$identificador_unico}\" name=\"{$tipo}_{$id}\" 
+					data-tipo=\"{$tipo}\" data-id_matrix=\"{$id}\" data-lang=\"{$lang}\" data-parent=\"{$parent}\" 
+					title=\"$html_title\">$dato</textarea>";
+					#$html_contenido .= "\n <span  class=\"css_span_ejemplo {$ar_css['css_span_ejemplo']}\">$ejemplo</span>";
+					#$html_contenido .= "\n <span class=\"css_span_log\"></span>";
+					#$html_contenido .= $html_tools;
+		
+			if($permissions==3)	
+					
+					$html_contenido .= "\n <span class=\"css_span_debugger {$ar_css['css_span_debugger']}\" id=\"debugger_{$id}\" >{$debugger}</span>";	
+							
+	}
+	
+	
+	# PRINT HTML
+	print $html_label;
+	print $html_contenido;
+
+	# INIT COMPONENT
+	#require(DEDALO_LIB_BASE_PATH . "/component_common/trigger.component_init.php");
+	
+	
+	print "\n</div>\n\n"; //wrap
+?>
