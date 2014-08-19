@@ -1,0 +1,8 @@
+@charset "UTF-8";
+/* CSS Document */
+
+.languageLine {  margin-top:4px; width:265px}
+.languageLine .l-icon { vertical-align: text-bottom;  }
+
+#newlangBtn { position: relative; left:0px; display: inline-block}
+#langDIV { display:inline-block;  position: relative ; width:200px; margin-left:2px; }
