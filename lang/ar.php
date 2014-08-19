@@ -1,4 +1,5 @@
 <?php 
+# DEPRECATE v4
 $t_error_de_conexion_title = "فشل الاتصال. تحديث الصفحة بعد بضع ثوان" ;
 $instalar_title = "تثبيت" ;
 $error_install_title = "خطأ : يجب تثبيت نظام قاعدة البيانات" ;
