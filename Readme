@@ -22,3 +22,5 @@ For Intangible Heritage with the Render model (standar schema) for the IPCE you 
 For the Oral History no is necessary Memcache or Redis.
 
 If you have more than 100.000 records. We recomended that wait to the beta 2 (very, very soon)
+
+Added new info test by Paco
