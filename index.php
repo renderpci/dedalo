@@ -2,7 +2,7 @@
 /************************************************************************
 	
     Dédalo : Cultural Heritage & Oral History Management Platform
-	
+	Version: Beta 1-2
 	Copyright (C) 1998 - 2014  
     Authors: Juan Francisco Onielfa, Alejandro Peña Carbonell
 
