@@ -1,5 +1,6 @@
-**Readme**
-**Ver 4 Beta 1 - 01-09-2014**
+**README**
+
+*Ver 4 Beta 1 - 01-09-2014*
 
 This beta is the last version of MySQL.
 
