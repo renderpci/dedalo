@@ -1,1 +1,0 @@
-<?php  header("Location: jer_list.php"); exit;?>
