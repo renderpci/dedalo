@@ -1,5 +1,4 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml">
+<!DOCTYPE html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
 <title>D4 TS</title>
@@ -123,9 +122,11 @@ print js::build_tag(DEDALO_ROOT_WEB . '/jer/js/jer_flat_list.js');
         
         
         
-	<?php if($totalRows_Recordset1>0) do { 
+	<?php 
+        #if($totalRows_Recordset1>0) do {
+        while ($row_Recordset1 = pg_fetch_assoc($result) ) {
     
-		$terminoID 		= strval($row_Recordset1['terminoID']);
+		$terminoID 		= (string)trim($row_Recordset1['terminoID']);
 				
 		$RecordObj_ts	= new RecordObj_ts($terminoID);		
 		$termino 		= RecordObj_ts::get_termino_by_tipo($terminoID);		#var_dump($termino);			# converted by descriptors
@@ -230,7 +231,8 @@ print js::build_tag(DEDALO_ROOT_WEB . '/jer/js/jer_flat_list.js');
         </tr>
 	<?php
     #} while ($row_Recordset1 = mysql_fetch_assoc($Recordset1)); mysql_free_result($Recordset1);
-     } while ($row_Recordset1 = $result->fetch_array(MYSQLI_ASSOC) ); #$result->close();
+    #} while ($row_Recordset1 = $result->fetch_array(MYSQLI_ASSOC) ); #$result->close();
+    };
     ?>
   
  

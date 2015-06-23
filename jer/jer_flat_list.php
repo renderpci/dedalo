@@ -1,28 +1,4 @@
 <?php 
-/************************************************************************
-	
-    Dédalo : Cultural Heritage & Oral History Management Platform
-	
-	Copyright (C) 1998 - 2014  Authors: Juan Francisco Onielfa, Alejandro Peña
-
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU Affero General Public License as
-    published by the Free Software Foundation, either version 3 of the
-    License, or (at your option) any later version.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU Affero General Public License for more details.
-
-    You should have received a copy of the GNU Affero General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
-	
-	http://www.fmomo.org
-	dedalo@fmomo.org
-	
-************************************************************************/
-
 require_once( dirname(dirname(__FILE__)).'/lib/dedalo/config/config4.php');
 
 /**
@@ -35,6 +11,14 @@ if($is_logged!==true) {
 	header("Location: $url");
 	exit();
 }
+$security 	 = new security();
+$permissions = (int)$security->get_security_permissions(DEDALO_TESAURO_TIPO);
+if ($permissions<1) {
+	$url =  DEDALO_ROOT_WEB ."/main/";
+	header("Location: $url");
+	exit();
+}
+
 require_once(DEDALO_LIB_BASE_PATH . '/common/class.navigator.php');
 
 
@@ -57,7 +41,7 @@ $head = setVar('head','no');
 $modo = setVar('modo','tesauro_edit');
 
 
-if(!$tld || $tld=='') {
+if(empty($tld)) {
 	
 	echo $codHeader;
 	#echo '<link rel="stylesheet" type="text/css" charset="utf-8" href="../css/general.css" />';
@@ -65,7 +49,7 @@ if(!$tld || $tld=='') {
 	die();	
 }
 	
-$tld = strtolower($tld);
+$tld = strtolower(trim($tld));
 
 $tabla 	= 'jer_'.$tld ;
 
@@ -81,7 +65,7 @@ $ts 			= new Tesauro($modo);
 # inicializamos clase jerarquia
 $jer 			= new Jerarquia();
 $jer->tabla 	= $tabla ;
-$datosFromTLD 	= $jer->datosGrupoJerarquia(false,$tld);
+$datosFromTLD 	= $jer->datosGrupoJerarquia(false,$tld); 	#dump($datosFromTLD,"datodFromTLD false,$tld");
 $nombreGrupo 	= $datosFromTLD['nombre'];
 
 # fijamos la localización 2
@@ -95,7 +79,7 @@ if($datosFromTLD['activa']!='si') die(" Select hierarchy please ");
 * Búsqueda
 */
 $maxRows_Recordset1 = 15 ;
-$incPag=1;require('../inc/incPag.php');# paginación
+$incPag=1;require(DEDALO_ROOT.'/inc/incPag.php');# paginación
  
    $terminoIDGET 	= false;
    $terminoGET		= false;
@@ -104,9 +88,9 @@ $incPag=1;require('../inc/incPag.php');# paginación
    
    if ((isset($_REQUEST['filtro'])) && ($_REQUEST['filtro'] == "y"))
    {
- 	$terminoIDGET	 	= $_REQUEST['terminoID'];		if($terminoIDGET!='') 		$filtro .= " AND terminoID LIKE '$terminoIDGET' " ;
- 	$terminoGET			= $_REQUEST['termino'];			if($terminoGET!='') 		$filtro .= " AND termino LIKE '%$terminoGET%' " ;	
-	$esdescriptorGET	= $_REQUEST['esdescriptor'];	if($esdescriptorGET!='') 	$filtro .= " AND esdescriptor = '$esdescriptorGET' " ;
+ 	$terminoIDGET	 	= $_REQUEST['terminoID'];		if($terminoIDGET!='') 		$filtro .= " AND \"terminoID\" LIKE '$terminoIDGET' " ;
+ 	$terminoGET			= $_REQUEST['termino'];			if($terminoGET!='') 		$filtro .= " AND \"termino\" LIKE '%$terminoGET%' " ;	
+	$esdescriptorGET	= $_REQUEST['esdescriptor'];	if($esdescriptorGET!='') 	$filtro .= " AND \"esdescriptor\" = '$esdescriptorGET' " ;
    }
  
  	$orden = 'id';
@@ -115,20 +99,9 @@ $incPag=1;require('../inc/incPag.php');# paginación
 	if (isset($_GET['ot']) && $_GET['ot']!=' ' ) 		$ot = $_GET['ot'];
 	$ordenacion = " ORDER BY $orden  $ot  "; 
 	
+
+### MYSQL ####
 /*
-$query_Recordset1 = "
-SELECT SQL_CACHE terminoID FROM 
-$tabla
-WHERE
-esmodelo = '$esmodelo'
-$filtro
-$ordenacion 
-";
-$query_limit_Recordset1 = sprintf("%s LIMIT %d, %d", $query_Recordset1, $startRow_Recordset1, $maxRows_Recordset1);
-$Recordset1 			= mysql_query($query_limit_Recordset1, DB::_getConnection()) or die(mysql_error());
-$row_Recordset1 		= mysql_fetch_assoc($Recordset1);
-*/
-####
 $sql 		= "SELECT SQL_CACHE terminoID 
 				FROM $tabla
 				WHERE
@@ -141,13 +114,28 @@ $result 	= DBi::_getConnection()->query($sql_limited);
 	#dump($result,'$result');
 
 $row_Recordset1 = $result->fetch_array(MYSQLI_ASSOC);
-####
+*/
+### /MYSQL ####
 
-$incPag=2;require('../inc/incPag.php');# paginacion
+### POSTGRESQL ####
+$sql = "
+SELECT \"terminoID\" 
+FROM \"$tabla\" AS jer
+WHERE
+esmodelo = '$esmodelo'
+$filtro
+$ordenacion
+";
+$sql_limited	= $sql . 'LIMIT '.$maxRows_Recordset1.' OFFSET '.intval($startRow_Recordset1);		#dump($sql,"sql");die();
+#$result 		= pg_query(DBi::_getConnection(), $sql_limited);
+$result			= JSON_RecordObj_matrix::search_free($sql_limited);
+### /POSTGRESQL ####
+
+$incPag=2;require(DEDALO_ROOT.'/inc/incPag.php');# paginacion
 
 
 
-$page_html = 'html/jer_flat_list.phtml'; 
+$page_html = dirname(__FILE__).'/html/jer_flat_list.phtml'; 
 
 # LOAD VISTA TEMPLATE CODE
 require_once($page_html);

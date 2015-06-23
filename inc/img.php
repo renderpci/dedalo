@@ -12,7 +12,7 @@ if(!isset($fx)) $fx = false;
 if(isset($_REQUEST['fx']))	$fx = $_REQUEST['fx'];
 
 # Load obj ficha
-require_once('class.Thumb.php');
+require_once(dirname(__FILE__).'/class.Thumb.php');
 $thumb 		= new Thumb($source);
 
 

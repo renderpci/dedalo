@@ -1,19 +1,12 @@
 <?php #session_start();
-
-# set some time
-#$myDateTimeZone 		= 'Europe/Madrid';
-#date_default_timezone_set($myDateTimeZone);
+# set some time Important!
+$myDateTimeZone = 'Europe/Madrid';
+date_default_timezone_set($myDateTimeZone);
 
 #ini_set('error_reporting', E_ALL ^ E_NOTICE);
 #ini_set('display_errors', 1);
 
-# verify we have GD Lib with FreeType Support
-# print_r( gd_info() );
-#$gd_info = gd_info();
-#$freetype_support = $gd_info['FreeType Support'];		#var_dump( $freetype_support );
-#if($freetype_support===false) die("Error: you need GD Lib with FreeType Support for run this script.");
-
-
+#
 # TEXT
 $text = false;
 #if(isset($_REQUEST['t'])) $text = $_REQUEST['t'];
@@ -26,6 +19,7 @@ if(!$text) die("Need text!");
 $text = trim(stripslashes(urldecode($text)));	// Texto a mostrar
 $text = strip_tags($text, '');
 
+#
 # TYPE
 $type = false;
 if(strpos($text,'[index-') !== false || strpos($text,'[/index-') !== false) 
@@ -36,6 +30,8 @@ else if(strpos($text,'[svg-') !== false)
 	$type = 'svg' ;
 else if(strpos($text,'[geo-') !== false)
 	$type = 'geo' ;
+else if(strpos($text,'[page-') !== false)
+	$type = 'page' ;
 
 if(!$type) die("Need type!");
 
@@ -57,6 +53,13 @@ switch($type) {
 						$ar_parts 	= explode('-', $text);
 						$text 		= $ar_parts[2];
 						$imgBase 	= "../images/btn_base/geo-{$state}.png";
+						break;
+
+	case 'page'	: 		# mode [page-n-1]
+						$state 		= substr($text,6,1);						
+						$ar_parts 	= explode('-', $text);
+						$text 		= substr($ar_parts[2],0,-1);
+						$imgBase 	= "../images/btn_base/page-{$state}.png";
 						break;
 
 	case 'index':	if(strpos($text,'/')) {
@@ -128,6 +131,11 @@ switch($type) {
 
 					if($state=='n') $colorText	= $white ;
 					break;
+
+	case 'page':	$colorText	= $black ;
+					$colorBG 	= $black ;
+					$fontname	= 'arial.ttf'; // --
+					$fontsize	= 7.9  ; # 11 o 10.88					
 }
 
 # activamos el alpha (24bit png)
@@ -142,11 +150,12 @@ $pathFonts 	= "../lib/fonts/truetype/";
 
 $fontfile	= $pathFonts . $fontname ;
 
-$offsetX	= 0 ; # 3
-$offsetY	= 5 ; # 2
+$offsetX	= 1 ; # 0
+$offsetY	= 4 ; # 5
 
 switch ($type) {
 	case 'svg':
+	case 'page':
 		$offsetX = 7;
 		break;
 	case 'geo':

@@ -1,5 +1,4 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml">
+<!DOCTYPE html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
 <title>D4 TS</title>
@@ -115,15 +114,18 @@ print js::build_tag(DEDALO_ROOT_WEB . '/jer/js/jer_list.js');
     		<div style="height:470px; width:100%; overflow:auto">
         		<table class="recordsTableList">
                 
-        		<?php if($totalRows_Recordset1>0) do { 
+        		<?php
+                #if($totalRows_Recordset1>0) do { 
+                while ($row_Recordset1 = pg_fetch_assoc($result) ) {
             
         		$id 		= intval($row_Recordset1['id']);	
         		$alpha2 	= $row_Recordset1['alpha2'];
         		$nombre 	= $row_Recordset1['nombre'];
         		$activa 	= $row_Recordset1['activa'];
         		$tipo	 	= $row_Recordset1['tipo'];
-        		$tipoText 	= $row_Recordset1['tipoText'];
-        		$mainLang 	= $row_Recordset1['mainLang'];
+        		$tipoText 	= $row_Recordset1['tipo_text'];
+        		$mainLang 	= $row_Recordset1['main_lang'];
+                    #dump($mainLang,"mainLang");
         		?>    
                 <tr id="<?php echo "tr_$id"?>" align="center" bgcolor="#CFCFCF" class="trTaxlist" >     
                 
@@ -165,7 +167,8 @@ print js::build_tag(DEDALO_ROOT_WEB . '/jer/js/jer_list.js');
                 </tr>
         		<?php 
                 #} while ($row_Recordset1 = mysql_fetch_assoc($Recordset1)); mysql_free_result($Recordset1); 
-                } while ($row_Recordset1 = $result->fetch_array(MYSQLI_ASSOC) ); #$result->close();
+                #} while ($row_Recordset1 = $result->fetch_array(MYSQLI_ASSOC) ); #$result->close();
+                };
                 ?>
          
          
@@ -190,7 +193,8 @@ print js::build_tag(DEDALO_ROOT_WEB . '/jer/js/jer_list.js');
    
       <!-- IFRAME FLAT DATOS - MODELO -->
       <div style="display:block; width:auto; float:none; margin-left:475px; ">
-      	<iframe id="iframeFlat" name="iframeFlat" width="100%" height="610px" frameborder="0" src="jer_flat_list.php?head=no&tld=" scrolling="auto" ></iframe>
+      	<?php /* */ ?>
+        <iframe id="iframeFlat" name="iframeFlat" width="100%" height="610px" frameborder="0" src="jer_flat_list.php?head=no&tld=" scrolling="auto" ></iframe> 
       </div>
       
     </div><!-- /wrap_content -->  

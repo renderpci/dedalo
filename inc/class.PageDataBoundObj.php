@@ -1,5 +1,5 @@
 <?php
-require_once('class.DB.php');
+require_once(dirname(__FILE__).'/class.DB.php');
 
 abstract class PageDataBoundObj {
 	

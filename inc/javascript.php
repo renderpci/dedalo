@@ -1,5 +1,5 @@
 <?php //javascript con variables de php 
-require_once('../Connections/config.php');
+require_once(dirname(dirname(__FILE__)).'/Connections/config.php');
 ?>
 <script type="text/javascript">
 // vars

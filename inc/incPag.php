@@ -15,11 +15,12 @@ if($incPag==2)
 	  	$totalRows_Recordset1 = $_GET['totalRows_Recordset1'];
 	} else {
 		# Búsqueda de TODOS los registros (sin filtro de paginacion)
-	  	#$all_Recordset1 = mysql_query($query_Recordset1);
-	  	$result_all 		= DBi::_getConnection()->query($sql);
+	  	#$result_all = DBi::_getConnection()->query($sql);
+	  	#$result_all = pg_query(DBi::_getConnection(), $sql);
+	  	$result_all	= JSON_RecordObj_matrix::search_free($sql);
 
-	  	#$totalRows_Recordset1 = mysql_num_rows($all_Recordset1);
-	  	$totalRows_Recordset1 = $result_all->num_rows;
+	  	#$totalRows_Recordset1 = $result_all->num_rows;
+	  	$totalRows_Recordset1 = pg_num_rows($result_all);
 	}
 
 

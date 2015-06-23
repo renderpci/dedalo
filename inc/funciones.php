@@ -997,7 +997,7 @@ function eliminarOT() {
 	return $qs ;
 }
 /**
-* We exec allways elimanrOT for disponibility in javascript function ordenar ()javasc
+* We exec always elimanrOT for disponibility in javascript function ordenar ()javasc
 * execute eliminarOT()
 *$eliminarOT = eliminarOT();
 */

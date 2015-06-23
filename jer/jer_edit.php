@@ -1,28 +1,4 @@
 <?php 
-/************************************************************************
-	
-    Dédalo : Cultural Heritage & Oral History Management Platform
-	
-	Copyright (C) 1998 - 2014  Authors: Juan Francisco Onielfa, Alejandro Peña
-
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU Affero General Public License as
-    published by the Free Software Foundation, either version 3 of the
-    License, or (at your option) any later version.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU Affero General Public License for more details.
-
-    You should have received a copy of the GNU Affero General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
-	
-	http://www.fmomo.org
-	dedalo@fmomo.org
-	
-************************************************************************/
-
 require_once( dirname(dirname(__FILE__)).'/lib/dedalo/config/config4.php');
 
 /**
@@ -35,6 +11,14 @@ if($is_logged!==true) {
 	header("Location: $url");
 	exit();
 }
+$security 	 = new security();
+$permissions = (int)$security->get_security_permissions(DEDALO_TESAURO_TIPO);
+if ($permissions<1) {
+	$url =  DEDALO_ROOT_WEB ."/main/";
+	header("Location: $url");
+	exit();
+}
+
 require_once(DEDALO_LIB_BASE_PATH . '/common/class.navigator.php');
 
 
@@ -65,6 +49,7 @@ if($modo=='edit') {
 	
 	# array de id's ocupados
 	$idsOcupados = $ts->camposOcupados('id');
+		#dump($idsOcupados,"idsocupados"); die();
 	
 	# array de tlds alpha2 ocupados
 	$alpha2Ocupados = $ts->camposOcupados('alpha2');
@@ -260,11 +245,24 @@ $(document).ready(function() {
 		   
 		  	# Comprobamos si existe la tabla "jer_lg"
 			$tabla = 'jer_lg';
-			/*
-			$query = "SELECT terminoID FROM $tabla ";		
-			$exist = @ mysql_query($query, DB::_getConnection());
-			*/
-			##
+
+
+			### POSTGRESQL ####
+			$strQuery = "
+			SELECT count(*) AS full_count FROM \"$tabla\"
+			";
+			$result	= JSON_RecordDataBoundObject::search_free($strQuery);			
+			$rows 	= pg_fetch_assoc($result);
+				#dump($rows['count'],"result tabla:$tabla - sql:$sql");die();
+			if ($rows['full_count']<1) {
+				echo '<input type="text" name="SelectLangList" id="SelectLangList" style="width:40px; text-align:center" value="en" readonly >';
+			}
+			### /POSTGRESQL ####
+
+
+			
+			
+			/* OLD  WORLD
 			$sql 	= "SELECT terminoID FROM $tabla";
 			$result = DBi::_getConnection()->query($sql);
 				#dump($result,'$result');			
@@ -277,6 +275,7 @@ $(document).ready(function() {
 				#$selectLang	= LangTranslate::createSelectLangList($mainLang);
 				#echo $selectLang ;
 			}
+			*/
 			/*	 <span class="anotacionTexto"> current: <?php echo $datos['mainLang'] ?></span> */ 
 		  ?>
           </td>

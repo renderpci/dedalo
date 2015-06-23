@@ -1,28 +1,4 @@
 <?php
-/************************************************************************
-	
-    Dédalo : Cultural Heritage & Oral History Management Platform
-	
-	Copyright (C) 1998 - 2014  Authors: Juan Francisco Onielfa, Alejandro Peña
-
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU Affero General Public License as
-    published by the Free Software Foundation, either version 3 of the
-    License, or (at your option) any later version.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU Affero General Public License for more details.
-
-    You should have received a copy of the GNU Affero General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
-	
-	http://www.fmomo.org
-	dedalo@fmomo.org
-	
-************************************************************************/
-
 require_once(DEDALO_ROOT . '/jer/class.RecordObj_jer.php');
 require_once(DEDALO_LIB_BASE_PATH . '/db/class.RecordObj_ts.php');
 require_once(DEDALO_LIB_BASE_PATH . '/db/class.RecordObj_descriptors.php');
@@ -50,21 +26,66 @@ class Jerarquia {
 	public function datosGrupoJerarquia($id=false, $tld=false) {
 		
 		if(!$id && !$tld) die("datosGrupoJerarquia: need mor vars ");
+
+		$arguments=array();
+		if ($id) {
+		$arguments['id']		= $id;
+		}
+		if ($tld) {
+		$arguments['alpha2']	= strtoupper(trim($tld));
+		}
+		$RecordObj_jer			= new RecordObj_jer(NULL);	
+		$ar_id					= $RecordObj_jer->search($arguments);
+			#dump($ar_id,print_r($arguments,true));#die();
+
+		$data = array();
+		foreach ($ar_id as $current_id) {
+			$RecordObj_jer 		= new RecordObj_jer($current_id);		
+			$ar_editable_fields = $RecordObj_jer->get_ar_editable_fields();
+			$data['id']	= $current_id;
+				#dump($RecordObj_jer,"RecordObj_jer");
+			foreach ($ar_editable_fields as $current_field_name) {
+				$fname = 'get_'.$current_field_name;
+				$data[$current_field_name]	= $RecordObj_jer->$fname();
+			}
+		}
+		#dump($data,"data id:$id, tld:$tld ");#die();
+		return $data;
+
+
+		/* OLD WORLD
+		if ($tld) {
+			$tld = strtoupper($tld);
+		}
 		
 		if($tld) 	$filter = " WHERE alpha2 = '$tld' ";
 		if($id)		$filter = " WHERE id = '$id' ";
 		
-		$ar_fields 	= array('id','alpha3','alpha2','nombre','tipo','activa','mainLang');
+		$ar_fields 	= array('id','alpha3','alpha2','nombre','tipo','activa','"mainLang"');
 		$str_fields	= implode(',',$ar_fields);
 		
 		# sql
-		$sql 		= " SELECT $str_fields FROM jerarquia $filter LIMIT 1 ";
-		$result 	= DBi::_getConnection()->query($sql);
-			#dump($result,'$result');
+		$sql 		= " SELECT $str_fields FROM jerarquia $filter LIMIT 1 ";	
+			dump($sql,'$sql');
 
-		# No results
-		if($result->num_rows<1)	return(false);
+		$result 	= pg_query(DBi::_getConnection(), $sql);
+			#dump($result, 'result', array());
+		if (!$result) {
+			if(SHOW_DEBUG) {
+				throw new Exception("Error Processing Request : Cannot (34) execute query: $sql <br>\n". pg_last_error(), 1);
+			}else{
+				throw new Exception("Error Processing DB Request (34) ", 1);
+			}								
+		}
+		dump(pg_num_rows($result),"ar_rows id:$id, tld:$tld");die(__METHOD__ ." EN PROCESO");
+		# No records
+		if (pg_num_rows($result)<1) {
+			return false;
+		}
+		$ar_rows = pg_fetch_assoc($result);
+			dump($ar_rows,"ar_rows");die(__METHOD__ ." EN PROCESO");
 
+		
 		# Create array objs with all records founded
 		$rows = $result->fetch_array(MYSQLI_ASSOC);
 
@@ -73,52 +94,11 @@ class Jerarquia {
 		}
 		
 		return $data ;
-	}
-
-
-
+		*/
+	}#end datosGrupoJerarquia
 	
 	
 	
-	
-	/*
-	* crear desplegable básico crearDesplegableJerTipo
-	*/
-	static function  crearDesplegableJerTipo($idGet, $ancho='200', $select_name='tipo') {
-
-		global  $sin_seleccion_title ;
-		
-		$html = '';
-
-		$ar_all_tipos = RecordObj_jer::get_ar_all_tipos();
-
-		$html .= "<select name=\"$select_name\" id=\"tipo\" style=\"color:#333333;width:".$ancho."px; \" > " ;
-		
-		$html .= "<option value=\"\" ";
-			if (!(strcmp("", $idGet))) { $html .= "selected=\"selected\" ";} ;	
-		$html .= "> </option>
-		";
-		
-		# Tipo 5 is not showed
-		if(SHOW_DEBUG==FALSE) {
-			# Remove tipo 5 from array
-			unset($ar_all_tipos[5]);
-		}
-
-		# Create array objs with all records founded
-		foreach ($ar_all_tipos as $id => $nombre) {							
-			
-			$html .= "<option value=\"$id\" ";
-			if (!(strcmp($idGet, $id))) 
-				$html .= "selected=\"selected\" ";
-			$html .= " style=\"margin-top:4px\">";			
-			$html .= "$nombre" ;	# [$id]		
-			$html .= "</option>";
-		}
-		$html .= "</select>";
-		
-		return $html ;		
-	}
 
 	
 	/*
@@ -127,7 +107,18 @@ class Jerarquia {
 	*/
 	public function camposOcupados($campo) {
 
-		$sql 		= " SELECT $campo FROM jerarquia WHERE $campo IS NOT NULL ORDER BY $campo ASC ";
+		$arguments=array();
+		$arguments["strPrimaryKeyName"]	 	= $campo;
+		$arguments["\"$campo\":not_null"] 	= '';
+		$RecordObj_jer						= new RecordObj_jer(NULL);	
+		$ar_rows							= $RecordObj_jer->search($arguments);
+			#dump($ar_rows,"ar_rows : campo:$campo ".print_r($arguments,true));
+
+		if (empty($ar_rows)) return false;
+
+		return $ar_rows;
+		/* OLD WORLD		
+		$sql 		= " SELECT \"$campo\" FROM jerarquia WHERE $campo IS NOT NULL ORDER BY $campo ASC ";
 		$result 	= DBi::_getConnection()->query($sql);
 			#dump($result,'$result');
 
@@ -142,6 +133,28 @@ class Jerarquia {
 		}
 		
 		return $arrayOcupados ;
+		*/
+	}
+
+
+	/*
+	* TLD3_TO_TLD2 
+	*/
+	public static function tld3_to_tld2($tld3) {
+
+		#$tld3 = preg_replace("/lg-/", "", $tld3);
+		#dump($tld3," tld3");
+
+		$arguments=array();
+		$arguments["strPrimaryKeyName"]	 	= 'alpha2';
+		$arguments["alpha3"] 				= strtoupper($tld3);
+		$RecordObj_jer						= new RecordObj_jer(NULL);	
+		$ar_rows							= $RecordObj_jer->search($arguments);
+			#dump($ar_rows,"ar_rows : campo:$tld3 ".print_r($arguments,true));
+
+		if (empty($ar_rows[0])) return false;
+
+		return $ar_rows[0];
 	}
 	
 	
@@ -177,14 +190,15 @@ class Jerarquia {
 		$mainLang_stored	= $RecordObj_jer->get_mainLang();
 		if($mainLang_stored	!= $mainLang) {
 			# mainLan has changed. Change all descriptors of this jerarquia
-			$sql = " 
+			$strQuery = " 
 			UPDATE descriptors
 			SET lang = '$mainLang'
 			WHERE 
-			terminoID LIKE '{$alpha2}%'
+			\"terminoID\" LIKE '{$alpha2}%'
 			";
-			$res = DBi::_getConnection()->query($sql);
-			if(!$res) throw new Exception("Error Processing Request. jerarquia edit", 1);		
+			#$res = DBi::_getConnection()->query($sql);
+			$result		= JSON_RecordDataBoundObject::search_free($strQuery);
+			if(!$result) throw new Exception("Error Processing Request. jerarquia edit", 1);		
 		}
 		
 		
@@ -195,7 +209,7 @@ class Jerarquia {
 			if(isset($_POST['nombre'])) 		$updateSQL .= " nombre = "		. GetSQLValueString(trim($_POST['nombre']), "text")			.',' ;
 			if(isset($_POST['alpha2'])) 		$updateSQL .= " alpha2 = " 		. GetSQLValueString(trim($alpha2), "text")					.',' ;
 			if(isset($_POST['alpha3'])) 		$updateSQL .= " alpha3 = " 		. GetSQLValueString(trim($alpha3), "text")					.',' ;
-			if(isset($_POST['mainLang'])) 		$updateSQL .= " mainLang = " 	. GetSQLValueString(trim($_POST['mainLang']), "text")		.',' ;
+			if(isset($_POST['mainLang'])) 		$updateSQL .= " \"mainLang\" = " . GetSQLValueString(trim($_POST['mainLang']), "text")		.',' ;
 			if(isset($_POST['activa'])) 		$updateSQL .= " activa = " 		. GetSQLValueString(trim($_POST['activa']), "text")			.',' ;
 			if(isset($_POST['tipo'])) 			$updateSQL .= " tipo = " 		. intval($_POST['tipo'])									.',' ;				
 			
@@ -204,8 +218,9 @@ class Jerarquia {
 			$updateSQL .= " WHERE id = $id LIMIT 1 " ;	#die($updateSQL);			
 			
 			$sql = $updateSQL;
-			$res = DBi::_getConnection()->query($sql);
-			if(!$res) throw new Exception("Error Processing Request. jerarquia edit", 1);
+			#$res = DBi::_getConnection()->query($sql);
+			$result		= JSON_RecordDataBoundObject::search_free($sql);
+			if(!$result) throw new Exception("Error Processing Request. jerarquia edit", 1);
 			
 			# Creamos las tablas					
 			if($activa=='si') $createTabla = $this->insertTableJerarquia($alpha2,$nombre,$mainLang);
@@ -355,8 +370,8 @@ class Jerarquia {
 		$RecordObj_jer->MarkForDeletion();		
 		
 		# REGISTRO . registrarAccion($userID, $modo, $detalle, $donde='', $ip='0') 
-		require_once('../Connections/config.php');
-		require_once('../inc/funciones.php');
+		require_once(DEDALO_ROOT.'/Connections/config.php');
+		require_once(DEDALO_ROOT.'/inc/funciones.php');
 		registrarAccion(USRID,'DELETE', $detaill="Deleted jerarquia id:$id, name:$nombre " ,"jerarquia"); 
 		
 		
@@ -374,10 +389,11 @@ class Jerarquia {
 		
 		# TABLA . Eliminamos la tabla  jer_$tld
 		$nombre = 'jer_'.$tld;
-		$sql = " DROP TABLE IF EXISTS `$nombre` ";
+		$sql = " DROP TABLE IF EXISTS \"$nombre\" ";
 
-		$res = DBi::_getConnection()->query($sql);
-		if(!$res) throw new Exception("Error Processing Request. deleteTableJerarquia", 1);	
+		#$res = DBi::_getConnection()->query($sql);
+		$result	 = JSON_RecordDataBoundObject::search_free($sql);
+		if(!$result) throw new Exception("Error Processing Request. deleteTableJerarquia", 1);	
 		
 		return true ;		
 	
@@ -566,10 +582,53 @@ class Jerarquia {
 	
 	
 	# GET_MAINLANG : resolve main lang
-	public static function get_mainLang($terminoID) {		
+	public static function get_mainLang($terminoID) {
+		# Structure
+		if (strpos($terminoID, 'dd')===0) {
+			return 'lg-spa';
+		}	
 		return RecordObj_jer::get_mainLang_static($terminoID);
 	}
 	
 	
+
+
+	/*
+	* crear desplegable básico crearDesplegableJerTipo
+	*/
+	static function  crearDesplegableJerTipo($idGet, $ancho='200', $select_name='tipo') {
+		global  $sin_seleccion_title ;
+		
+		$html = '';
+
+		$ar_all_tipos = RecordObj_jer::get_ar_all_tipos();
+
+		$html .= "<select name=\"$select_name\" id=\"tipo\" style=\"color:#333333;width:".$ancho."px; \" > " ;
+		
+		$html .= "<option value=\"\" ";
+			if (!(strcmp("", $idGet))) { $html .= "selected=\"selected\" ";} ;	
+		$html .= "> </option>
+		";
+		
+		# Tipo 5 is not showed
+		if(SHOW_DEBUG==FALSE) {
+			# Remove tipo 5 from array
+			unset($ar_all_tipos[5]);
+		}
+
+		# Create array objs with all records founded
+		foreach ($ar_all_tipos as $id => $nombre) {							
+			
+			$html .= "<option value=\"$id\" ";
+			if (!(strcmp($idGet, $id))) 
+				$html .= "selected=\"selected\" ";
+			$html .= " style=\"margin-top:4px\">";			
+			$html .= "$nombre" ;	# [$id]		
+			$html .= "</option>";
+		}
+		$html .= "</select>";
+		
+		return $html ;		
+	}
 }
 ?>

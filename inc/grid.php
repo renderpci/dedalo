@@ -1,6 +1,8 @@
 <?php
 require_once( dirname(dirname(__FILE__)).'/lib/dedalo/config/config4.php');
 
+die("GRID STOP . IN PROCESS ");
+
 /**
 * LOGIN
 */

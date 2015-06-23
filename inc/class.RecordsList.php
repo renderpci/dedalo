@@ -1,5 +1,5 @@
 <?php
-require_once('../Connections/config.php');
+require_once(dirname(dirname(__FILE__)).'/Connections/config.php');
 
 class RecordsList {	############## DEDALO RecordsList TRADUCTOR TABLE FOR LIST RESULT RECORDS
 	

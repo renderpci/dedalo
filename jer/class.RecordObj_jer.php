@@ -1,30 +1,6 @@
 <?php
-/************************************************************************
-	
-    Dédalo : Cultural Heritage & Oral History Management Platform
-	
-	Copyright (C) 1998 - 2014  Authors: Juan Francisco Onielfa, Alejandro Peña
-
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU Affero General Public License as
-    published by the Free Software Foundation, either version 3 of the
-    License, or (at your option) any later version.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU Affero General Public License for more details.
-
-    You should have received a copy of the GNU Affero General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
-	
-	http://www.fmomo.org
-	dedalo@fmomo.org
-	
-************************************************************************/
-
 require_once(DEDALO_ROOT . '/jer/class.Jerarquia.php');
-require_once(DEDALO_LIB_BASE_PATH . '/db/class.RecordDataBoundObject.php');
+#require_once(DEDALO_LIB_BASE_PATH . '/db/class.RecordDataBoundObject.php');
 
 # ts_lang RecordObj
 
@@ -133,7 +109,15 @@ class RecordObj_jer extends RecordDataBoundObject {
 	
 	# resolve main lang
 	public static function get_mainLang_static($terminoID) {
-		#var_dump($terminoID);		
+
+		static $ar_mainLang;
+		if(isset($ar_mainLang[$terminoID])) {
+			#error_log("Returned from static : $terminoID");
+			#dump('XXXX',"Returned from static : $terminoID");
+			return($ar_mainLang[$terminoID]);
+		}
+
+		#dump($terminoID); die();
 		if(strlen($terminoID)<2) return(NULL);		
 				
 		$alpha2 = Tesauro::terminoID2prefix($terminoID);		
@@ -141,15 +125,17 @@ class RecordObj_jer extends RecordDataBoundObject {
 				
 		$arguments=array();
 		$arguments['alpha2']	= $alpha2;
-		
 		$RecordObj_jer			= new RecordObj_jer(NULL);	
 		$ar_id					= $RecordObj_jer->search($arguments);
+			#dump($ar_id, 'ar_id', $arguments);
 		
 		if(empty($ar_id[0]))	return(NULL);
 		
 		
 		$RecordObj_jer			= new RecordObj_jer($ar_id[0]);
 		$mainLang				= $RecordObj_jer->get_mainLang();
+
+		$ar_mainLang[$terminoID] = $mainLang;
 		
 		return $mainLang;				
 	}
@@ -167,15 +153,36 @@ class RecordObj_jer extends RecordDataBoundObject {
 
 	# GET_ALL_TIPOS
 	public static function get_ar_all_tipos() {
-
+		
 		$ar_final 	= array();
-
+		/*
 		$sql 		= "SELECT id, nombre FROM jerarquia_tipos ORDER BY nombre ASC " ;
-		$result 	= DBi::_getConnection()->query($sql);
+		#$result 	= DBi::_getConnection()->query($sql);		
+		$result 	= pg_query(DBi::_getConnection(), $sql) or die("Cannot execute query: $query\n". pg_last_error());
+				#dump($result, 'result', array());
 
-		if(($result->num_rows)>0) while ($rows = $result->fetch_array(MYSQLI_ASSOC) ) {	
+		while ($rows = pg_fetch_assoc($result)) {
 			$ar_final[$rows['id']] = $rows['nombre'];
-		}; #$result->close();
+		}
+		*/
+
+		$arguments=array();
+		$arguments['strPrimaryKeyName']	= 'id';
+		$arguments['sql_code']			= 'id > 0';
+		$arguments['order_by_asc']		= 'nombre';
+		$RecordObj_jer					= new RecordObj_jer(NULL);	
+		$ar_records						= $RecordObj_jer->search($arguments,'jerarquia_tipos');
+			#dump($ar_records,'$ar_records');
+
+		foreach ($ar_records as $current_id) {
+			$arguments=array();
+			$arguments['strPrimaryKeyName']	= 'nombre';
+			$arguments['id']				= $current_id;
+			$RecordObj_jer					= new RecordObj_jer(NULL);	
+			$ar_records						= $RecordObj_jer->search($arguments,'jerarquia_tipos');
+
+			$ar_final[$current_id] = $ar_records[0];
+		}
 
 		return $ar_final;
 	}
@@ -183,6 +190,7 @@ class RecordObj_jer extends RecordDataBoundObject {
 
 	/**
 	* GET_TESAURO_BY_JER_TIPO
+	* @see component_autocomplete_ts->get_ar_referenced_tipo
 	*/
 	public static function get_ar_tesauro_by_jer_tipo($tipo, $activa=true) {
 
@@ -194,10 +202,11 @@ class RecordObj_jer extends RecordDataBoundObject {
 
 		$RecordObj_jer					= new RecordObj_jer(NULL);
 		$ar_records						= $RecordObj_jer->search($arguments);
-
 		
 		return $ar_records;
 	}
+
+
 	
 }
 ?>
