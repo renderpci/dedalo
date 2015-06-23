@@ -73,7 +73,7 @@ abstract class backup {
 				if(file_exists($prgfile)) {
 					chmod($prgfile, 0755);
 				}else{
-					throw new Exception("Error Processing backup. Script file not exists or is not accessible", 1);			
+					throw new Exception("Error Processing backup. Script file not exists or is not accessible.Please check folder '../backup/temp' permissions", 1);			
 				}
 			}
 			

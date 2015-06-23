@@ -1,15 +1,18 @@
 **README**
 
-*Ver 4 Release Candidate - 22-06-2015*
+*Ver 4 Release Candidate - 23-06-2015*
 
 We are very pleased to introduce the Release candidate of the version 4 of Dédalo.
 
 VERY IMPORTANT:
 - The Release candidate is the first version of Dédalo with Postgres.
 
-- The MySQL support is FULL removed.
-
 - The new version will run in PostgreSQL 9.4+ ONLY.
+
+- The MySQL support is FULL removed for the investigation system.
+
+- But you can use MySQL with the publication part (only with the publication).
+
 
 *NOTE: Run the Beta 1 if you want to run with MySQL, but think that the development of Dédalo will not come back to MySQL.*
 
@@ -30,7 +33,7 @@ The schema of "matrix" into the database has significant changes:
     Are changed and removed, now the schema only have the field "data" in JSON format, with all previous data
     The final schema of matrix for version 4 is:
 
-**TABLES**
+**TABLES FOR THE DATABASE**
 
 - jer_xx (you can change the "xx" with the TLD of the country, for ex: «es» for Spain or «fr» for France, etc)
 - jer_ts
@@ -54,7 +57,7 @@ The schema of "matrix" into the database has significant changes:
 - matrix_time_machine
 - matrix_users
 
-**Structures**
+**Structures of the Tables**
 
 *jer_xx:(you can change the "xx" with the TLD of the country, for ex: «es» for Spain or «fr» for France, etc. The structure is the same for all countries)*
 
@@ -257,7 +260,7 @@ section_tipo	|	character varying NULL
 datos	|	jsonb NULL
 
 
-*Notes for Beta 1 for MySQL:*
+*Notes of Beta 1 for MySQL:*
 - If you need install the beta 1, we recomended MySQL 5.6 and PHP 5.6.
 
 - For Intangible Heritage with the Render model (standar schema) for the IPCE you will need install Memcache or Redis.
@@ -272,6 +275,7 @@ datos	|	jsonb NULL
 - PHP 5.6+
 - Apache 2.2.3+
 - Postgres 9.4+
+- MySQL 5.6+ (NOT REQUIRED, only if you want use it for publication)
 
 *libs required for the Dédalo*
 
