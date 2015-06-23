@@ -105,6 +105,27 @@ relaciones	:	text NULL
 
 propiedades	:	text NULL
 
+
+*jerarquia: structure*
+
+Column	:	Type Comment
+
+id	:	integer Auto Increment [nextval('jerarquia_id_seq')]	 
+
+alpha3	:	character varying(3) NULL	 
+
+alpha2	:	character varying(2)	 
+
+nombre	:	character varying(255)	 
+
+tipo	:	numeric(8,0)	 
+
+activa	:	sino [si]	 
+
+mainLang:	character varying(8)
+
+
+
 *Notes for Beta 1 for MySQL:*
 - If you need install the beta 1, we recomended MySQL 5.6 and PHP 5.5.
 
