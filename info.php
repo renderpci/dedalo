@@ -4,7 +4,7 @@
 	
     Dédalo : Cultural Heritage & Oral History Management Platform
 	
-	Copyright (C) 1998 - 2014  Authors: Juan Francisco Onielfa, Alejandro Peña
+	Copyright (C) 1998 - 2015  Authors: Juan Francisco Onielfa, Alejandro Peña
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU Affero General Public License as
