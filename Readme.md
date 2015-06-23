@@ -78,20 +78,32 @@ matrix_users
 
 *jer_xx: structure*
 
-Column		Type Comment
+Column    Type Comment
 
-id		integer Auto Increment [nextval('jer_es_id_seq')]
-terminoID	character varying(8) NULL
-parent		character varying(8)
-modelo		character varying(8) NULL
-esmodelo	sino NULL
-esdescriptor	sino NULL
-visible		sino NULL
+id    integer Auto Increment [nextval('jer_es_id_seq')]
+
+
+terminoID   character varying(8) NULL
+
+parent    character varying(8)
+
+modelo    character varying(8) NULL
+
+esmodelo    sino NULL
+
+esdescriptor    sino NULL
+
+visible   sino NULL
+
 norden		numeric(4,0) NULL
-usableIndex	sino NULL
-traducible	sino NULL
-relaciones	text NULL
-propiedades	text NULL
+
+usableIndex		sino NULL
+
+traducible		sino NULL
+
+relaciones		text NULL
+
+propiedades		text NULL
 
 *Notes for Beta 1 for MySQL:*
 - If you need install the beta 1, we recomended MySQL 5.6 and PHP 5.5.
