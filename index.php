@@ -1,10 +1,9 @@
 <?php  
 /************************************************************************
 	
-    Dédalo : Cultural Heritage & Oral History Management Platform
-	Version: RC, beta 4
-	Copyright (C) 1998 - 2015  
-    Authors: Juan Francisco Onielfa, Alejandro Peña Carbonell
+    Dédalo : Intangible Cultural Heritage Management Platform
+	
+	Copyright (C) 1998-2015  Authors: Juan Francisco Onielfa, Alejandro Peña
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU Affero General Public License as
@@ -23,7 +22,6 @@
 	dedalo@fmomo.org
 	
 ************************************************************************/
-
 header("HTTP/1.1 301 Moved Permanently"); 
 header("Location: lib/dedalo/main/"); exit();
 ?>
