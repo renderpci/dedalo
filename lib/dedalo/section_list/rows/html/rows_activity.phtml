@@ -1,0 +1,167 @@
+<?php
+	
+	# VISUALIZADOR HTML	
+
+	
+	print "\n\n<!-- ROWS [$id] -->";		
+	
+
+	# CONTENIDO (INPUT)
+	$html_contenido  = "\n<tr>";	
+	
+	switch($permissions) {
+			
+		case 0	:	$html_contenido .= "\n <span class=\"css_span_dato\"> ".label::get_label('sin_acceso')." </span>";
+					break;
+						
+		case ($permissions>=1):
+
+				if( !is_array($ar_valor) || count($ar_valor)==0 ) {						
+					$html_contenido .= "\n <td class=\"section_list_td_border\">";
+					#$html_contenido .= "No records found.. ";
+					$html_contenido .= "\n </td>";
+					break;
+				}
+					
+				# TD ID
+				$title=null;
+				if(SHOW_DEBUG) $title .= "matrix id: $id";
+				$html_contenido .= "\n <td class=\"section_list_td_border section_list_td_row \" title=\"$title\">";					
+											
+					# ID TEXT
+					#$html_contenido .= "\n  $section_id ";
+					$html_contenido .= "\n  $current_id ";
+
+					if(SHOW_DEBUG) {
+						#$html_contenido .= "<br><mark style=\"color:#a3a3a3;padding-right:5px\">$current_id</mark>";
+					}
+
+				$html_contenido .= "\n </td>";
+
+				
+
+				# TD DATOS
+				foreach($ar_valor as $component_tipo => $valor) {
+					
+					$td_aditional_class = 'td_'.$component_tipo;
+
+					$html_contenido .= "\n <td class=\"section_list_td_border section_list_td_row $td_aditional_class\">";
+					#$current_component = logger_backend_activity::$ar_elements_activity_tipo[$component_tipo];
+
+					/*
+					static $_SECTION_TIPO 		= array('tipo'=>'dd542','modelo_name'=>'section');
+					static $_COMPONENT_IP 		= array('tipo'=>'dd544','modelo_name'=>'component_ip');
+					static $_COMPONENT_QUIEN 	= array('tipo'=>'dd543','modelo_name'=>'component_autocomplete');
+					static $_COMPONENT_QUE 		= array('tipo'=>'dd545','modelo_name'=>'component_autocomplete_ts');
+					static $_COMPONENT_DONDE 	= array('tipo'=>'dd546','modelo_name'=>'component_autocomplete_ts');
+					static $_COMPONENT_CUANDO 	= array('tipo'=>'dd547','modelo_name'=>'component_date');
+					static $_COMPONENT_PROYECTOS= array('tipo'=>'dd550','modelo_name'=>'component_filter');
+					static $_COMPONENT_DATOS 	= array('tipo'=>'dd551','modelo_name'=>'component_input_text');
+					*/
+					
+					#$html_contenido .= $current_component;
+					switch ($component_tipo) {
+						
+						# IP TD
+						case (logger_backend_activity::$_COMPONENT_IP['tipo']):
+							#$html_contenido .= $valor;
+							if (!isset($ar_component_resolved[$component_tipo][$valor])) {
+								$component = component_common::get_instance('component_ip',$component_tipo,null,'list',DEDALO_DATA_NOLAN,$section_tipo);
+								$component->set_dato($valor);
+								$ar_component_resolved[$component_tipo][$valor] = $component->get_html();
+							}
+							$html_contenido .= ''.$ar_component_resolved[$component_tipo][$valor].'';
+							break;
+						
+						# WHO TD
+						case (logger_backend_activity::$_COMPONENT_QUIEN['tipo']):
+							$html_contenido .= $valor;
+							/*
+							if (!isset($ar_component_resolved[$component_tipo][$valor])) {
+
+								$component = component_common::get_instance('component_autocomplete',$component_tipo,null,'list',DEDALO_DATA_NOLAN,$section_tipo);
+									dump($valor, ' valor');
+								$component->set_dato($valor);
+								$ar_component_resolved[$component_tipo][$valor] = 'XXX';// $component->get_html();
+							}
+							$html_contenido .= ''.$ar_component_resolved[$component_tipo][$valor].'';
+							*/
+							break;
+						
+						# WHAT TD
+						case (logger_backend_activity::$_COMPONENT_QUE['tipo']):
+							#$html_contenido .= $valor;
+							if (!isset($ar_component_resolved[$component_tipo][$valor])) {
+								#$component = component_common::get_instance('component_input_text',$component_tipo,null,'list');
+								#$component->set_dato($valor);
+								$ar_component_resolved[$component_tipo][$valor] = RecordObj_dd::get_termino_by_tipo($valor, DEDALO_DATA_LANG,$section_tipo);
+							}
+							$html_contenido .= ''.$ar_component_resolved[$component_tipo][$valor].'';
+							break;
+						
+						# WHERE TD
+						case (logger_backend_activity::$_COMPONENT_DONDE['tipo']):
+							#$html_contenido .= $valor;
+							if (!isset($ar_component_resolved[$component_tipo][$valor])) {
+								#$component = component_common::get_instance('component_input_text',$component_tipo,null,'list');
+								#$valor_final = $component->get_dato(); 	dump($valor_final," valor_final");
+								#$ar_component_resolved[$component_tipo][$valor] = $component->get_html();
+								$ar_component_resolved[$component_tipo][$valor] = RecordObj_dd::get_termino_by_tipo($valor, DEDALO_DATA_LANG);
+							}
+							$html_contenido .= ''.$ar_component_resolved[$component_tipo][$valor].'';
+							break;
+						
+						# WHEN TD
+						case (logger_backend_activity::$_COMPONENT_CUANDO['tipo']):
+							$html_contenido .= $valor;
+							/*
+							if (!isset($ar_component_resolved[$component_tipo][$valor])) {
+								$component = component_common::get_instance('component_date',$component_tipo,null,'list');
+								$component->set_dato($valor);
+								$ar_component_resolved[$component_tipo][$valor] = $component->get_html();
+							}
+							$html_contenido .= ''.$ar_component_resolved[$component_tipo][$valor].'';
+							*/
+							break;
+
+						# DATOS TD
+						case (logger_backend_activity::$_COMPONENT_DATOS['tipo']):
+							$ar_dato_valors = (array)json_handler::decode($valor,true); 	#dump($valor,"");
+							$html_contenido .='<div>';
+							foreach ($ar_dato_valors as $datos_key => $datos_value) {
+								$html_contenido .= "$datos_key: $datos_value<br>";
+								#echo "$key - $value<br>";
+							}
+							$html_contenido .='</div>';							
+							break;
+						
+						# PROJECTS TD
+						case (logger_backend_activity::$_COMPONENT_PROYECTOS['tipo']):
+							#$html_contenido .= $valor;
+							$dato = (object)json_handler::decode($valor);							
+								#dump($dato,"dato");
+							if (!isset($ar_component_resolved[$component_tipo][$valor])) {								
+								$component = component_common::get_instance('component_filter',$component_tipo,null,'list',DEDALO_DATA_LANG,$section_tipo);
+								$component->set_dato($dato);
+								$ar_component_resolved[$component_tipo][$valor] = $component->get_html();
+									#dump($ar_component_resolved[$component_tipo],"");
+							}
+							$html_contenido .= ''.$ar_component_resolved[$component_tipo][$valor].'';
+							break;					
+						default:
+							$html_contenido .= $valor ; 
+							break;
+					}					
+					$html_contenido .= "\n </td>";
+				}
+
+
+					
+	}
+	$html_contenido .= "\n</tr>";
+	
+	# PRINT HTML
+	print $html_contenido;
+	
+
+?>

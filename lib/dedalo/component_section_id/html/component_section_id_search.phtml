@@ -1,0 +1,38 @@
+<?php
+
+	# VISUALIZADOR HTML	
+		
+	if(isset($_REQUEST[$tipo])) $dato = $_REQUEST[$tipo];
+
+	#print "\n<div class=\"css_wrap_section_id wrap_component\">";	
+	
+	
+	# ETIQUETA (LABEL)
+	$html_label = component_common_draw::draw_label($this);
+	
+	# CONTENIDO (INPUT)
+	$html_contenido = '';
+	switch($permissions) {
+			
+		case 0	:	$html_contenido .= "";
+					break;
+						
+		case ($permissions>=1) :			
+					$html_contenido .= "\n <input class=\"input_css_section_id\" type=\"text\" 
+					name=\"{$tipo}\" 
+					data-tipo=\"{$tipo}\"
+					value=\"{$dato}\" title=\"$html_title\" />";
+											
+	}
+
+	# Prepare content to show in page
+	tools::prepare_content($html_contenido);	
+	
+	
+	# PRINT HTML
+	print $html_label;
+	print $html_contenido;
+
+	#print "\n</div><!-- /css_wrap_section_id -->\n"; //wrap
+	
+?>

@@ -1,0 +1,47 @@
+<?php
+	
+	# VISUALIZADOR HTML	
+
+	# ELEMENTOS
+	if(!isset ($ar_css['css_span_dato'])) 		$ar_css['css_span_dato']='';
+	
+	print "\n<!-- AREA_ACTIVITY [tipo:$tipo modo:$modo] -->";
+	print "\n<div class=\"css_wrap_area_activity\" 
+	data-tipo=\"{$tipo}\" data-lang=\"{$lang}\" data-component_name=\"{$component_name}\" >";
+	
+	# ETIQUETA (LABEL)
+	$html_label = "\n<div class=\"css_area_titulo\" > ".component_common_draw::draw_label($this)." </div>";	
+	
+	# CONTENIDO (INPUT)
+	$html_contenido = '';
+	switch($permissions) {
+			
+		case 0:		$html_contenido .= "\n <span class=\"css_span_dato {$ar_css['css_span_dato']}\"> ".label::get_label('sin_acceso')." (input_text)</span>";
+					break;						
+						
+		case ($permissions>=1):
+					
+					$html_contenido .= "\n <blockquote> ";
+					foreach ($ar_children_areas as $key => $value) {
+						$section_name = RecordObj_dd::get_termino_by_tipo($key,DEDALO_APPLICATION_LANG);
+						$html_contenido .= "<a href=\"?t=$key\">$section_name</a><br>";
+					}
+					$html_contenido .= "\n </blockquote> ";					
+											
+	}	
+	
+	
+	# Prepare content to show in page
+	tools::prepare_content($html_contenido);
+
+	
+	# PRINT HTML
+	print $html_label;
+	print $html_contenido;
+	
+	
+	print "\n</div><!-- /AREA_ACTIVITY [tipo:$tipo modo:$modo] -->"; //wrap
+
+
+
+?>

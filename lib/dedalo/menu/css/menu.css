@@ -1,0 +1,355 @@
+/*CSS Document
+MENU
+#menu_wrapper #menu_div_wrap {
+z-index: 1000;
+background-color: #f5f181; padding: 10px
+}
+#menu_wrapper #menu_div_wrap UL {
+list-style: none;
+}
+#menu_wrapper #menu_div_wrap LI {
+margin: 0px;
+}
+.menu_ul_create_link {
+display: inline-block;
+margin: 5px;
+position: relative;
+}
+.menu_ul_create_link SPAN, A {
+display: inline;
+}
+.ui-menu {
+min-width: 110px;
+font-size: 0.95em !important;
+/*MENU SHADOW
+-webkit-box-shadow: 0 1px 8px #999999 inset;
+-moz-box-shadow: 0 1px 8px #999999 inset;
+box-shadow: inset 0 1px 8px #999999;
+}
+.menu_a_span {
+color: #808080;
+font-size: 10px;
+padding-left: 5px;
+text-decoration: none !important;
+}
+.menu_a_span_hilite {
+color: #000000;
+background-color: #FFFF00;
+}
+*/
+
+
+
+/* MENU WRAPPER 
+------------------------------------------------------- */
+.menu_wrapper_space {
+	height: 29px;
+	margin-bottom: 10px;
+	/*background-color:#7f7f7f;*/	
+}
+#menu_wrapper {
+	z-index: 100;
+	position: fixed;
+	top: 0px;
+	display: block;
+	clear: both;
+	width: 100%;
+	min-width: 932px;
+	/*height: 32px;*/
+	height: 29px;
+	box-shadow: 0 2px 3px rgba(0, 0, 0, 0.4);
+	-webkit-box-shadow: 0 2px 3px rgba(0, 0, 0, .4);
+	-moz-box-shadow: 0 2px 3px rgba(0, 0, 0, .4);
+	/*background: #8B8B8B;*/
+	background: linear-gradient(to bottom, rgba(86,85,86,0.92) 0%,rgba(51,51,51,0.92) 100%);
+	/*for firefox 3.6+*/
+	/*
+	border: 1px solid #3A3A3A;
+	border-style: inset;
+	min-width: 1210px;
+	*/
+	}
+	.menu_wrapper_debug {
+		background: linear-gradient(to bottom, rgba(210,107,25,0.8) 0%,rgba(156,62,0,0.8) 100%) !important;
+	}
+	.menu_wrapper_debug_development {
+		background: linear-gradient(to bottom, rgba(214,21,0,0.9) 0%,rgba(135,0,13,0.9) 100%) !important; /* W3C */
+	}
+
+	/*-- Button in menu common --*/
+	#menu_wrapper .button_in_menu {
+		position: relative;
+		float: right;
+		display: inline-block;
+		cursor: pointer;
+	}
+
+	/*-- Quit button --*/
+	#menu_wrapper #quit {
+		float: left;
+		top: 7px;
+		left: 10px;
+		z-index: 100;
+		background-color:#d4d4d4;
+		background-position: -120px -72px;
+		border-radius: 3px;
+	}
+
+	/*-- Dedalo icon top --*/
+	#menu_wrapper .dedalo_icon_top {	
+		width: 16px;
+		height: 16px;
+		position: absolute;
+		top: 6px;
+		left: 50px;
+		background-image: url(../../themes/default/favicon.ico);
+	}
+	/*-- Logged username --*/
+	#menu_wrapper .logged_user_name {
+		color:#c9c9c9;
+		float: left;
+		margin-left: 15px;
+		top: 5px;
+		cursor: default;
+	}
+	/*-- Log messages checkbox --
+	#menu_wrapper .div_log_messages_checkbox {
+		float: left;
+		color:#c9c9c9;
+		margin-left: 20px;
+		top: 5px;
+		cursor: default;
+		}
+		.div_log_messages_checkbox input {margin-left: 3px;}
+	*/
+	/*-- Aplication lang selector --*/
+	#menu_wrapper .dedalo_aplication_langs_selector {
+		float: left;
+		margin-left: 20px;
+		top: 2px;
+		position: relative;
+		background-color: #373737;
+		box-shadow: inset 2px 2px 4px #3f3f3f;
+		color: #cccccc;		
+		border-radius: 6px;
+		border-color: transparent;
+		line-height: 1em;
+		opacity: 0.8;
+	}
+
+	/*-- Button inspector --*/
+	#menu_wrapper #button_toggle_inspector {	
+		right: 8px;
+		top: 5px;
+		padding: 2px;
+		margin-left: 10px;
+		line-height: 1em;
+		font-size: 90%;
+		z-index: 100;
+		background-color:#d4d4d4;
+		background-position: -117px -93px;		
+		border-radius: 3px;
+		height: 19px;
+		width: 19px;
+		}
+		#button_toggle_inspector .button_toggle_inspector_in_dialog {top: 0px;}
+
+
+	/*-- Label section name --*/
+	#menu_wrapper #current_section_label {
+		right: 6px;
+		top: 3px;
+		width: auto;
+		color: #FFFFFF;
+		background-color: #313131;
+		margin: 0;
+		padding: 5px;
+		padding-left: 7px;
+		padding-right: 7px;
+		line-height: 1em;
+		font-size: 100%;
+		white-space: nowrap;
+		border-radius: 4px;		
+	}
+	#menu_wrapper #current_section_label mark {
+		color: #FFFFFF !important;
+		opacity: 0.9;
+	}
+
+
+
+
+
+/* TREE : Menu (tree) 
+------------------------------------------------------- */
+#menu_wrapper #menu {
+	float: left;
+	/*width: 100%; */
+	display: inline-block !important;
+	margin: 0;
+	margin-left: 66px;
+	margin-top: 3px;
+	/*padding: 3px 45px 0;*/
+	padding: 0;
+	line-height: 100%;
+}
+#menu_wrapper #menu LI {
+	margin: 0 3px;
+	padding: 0 0 5px;
+	float: left;
+	position: relative;
+	list-style: none;
+}
+/*main level link*/
+#menu_wrapper #menu A {
+	color: #E7E5E5;
+	text-decoration: none;
+	display: block;
+	padding: 5px;
+	margin: 0;
+	border-radius: 1.6em;
+	text-shadow: 0 1px 1px rgba(0, 0, 0, 0.3);
+	/*font-family: 'Roboto', sans-serif;*/
+	font-weight: 100 !important;	
+	-webkit-font-smoothing: subpixel-antialiased;	
+}
+/* main level link LI hover */
+#menu_wrapper #menu .current A, #menu_wrapper #menu LI:hover > A {
+	background: #D1D1D1;
+/*for non-css3 browsers*/
+	filter: progid:DXImageTransform.Microsoft.gradient(startColorstr='#ebebeb', endColorstr='#a1a1a1');
+/*for IE*/
+	background: -webkit-gradient(linear, left top, left bottom, from(#ebebeb), to(#a1a1a1));
+/*for webkit browsers*/
+	background: -moz-linear-gradient(top, #ebebeb, #a1a1a1);
+/*for firefox 3.6+*/
+	color: #444;
+/*
+border-top: solid 1px #f8f8f8;
+border-style:  inset;*/
+	-webkit-box-shadow: 0 1px 1px rgba(0, 0, 0, .2);
+	-moz-box-shadow: 0 1px 1px rgba(0, 0, 0, .2);
+	box-shadow: 0 1px 1px rgba(0, 0, 0, 0.2);
+	text-shadow: 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+/*sub levels link hover*/
+#menu_wrapper #menu UL LI:hover A, #menu_wrapper #menu LI:hover LI A {
+	background: none;
+	border: none;
+	color: #666;
+	-webkit-box-shadow: none;
+	-moz-box-shadow: none;
+}
+#menu_wrapper #menu UL A:hover {
+	background: #E57400 !important;
+/*para no-css3 browsers*/
+	filter: progid:DXImageTransform.Microsoft.gradient(startColorstr='#f08b24', endColorstr='#d26a00');
+/*para IE*/
+	background: -webkit-gradient(linear, left top, left bottom, from(#f08b24), to(#d26a00)) !important;
+/*para webkit browsers*/
+	background: -moz-linear-gradient(top, #f08b24, #d26a00) !important;
+/*for firefox 3.6+*/
+	color: #FFF !important;
+	border-radius: 0;
+	text-shadow: 0 1px 1px rgba(0, 0, 0, 0.1);
+}
+/*deja el camino iluminado*/
+#menu_wrapper #menu UL > LI:hover > A {
+	background: #E08528 !important;
+/*para no-css3 browsers*/
+	filter: progid:DXImageTransform.Microsoft.gradient(startColorstr='#f79a3c', endColorstr='#e08528');
+/*para IE*/
+	background: -webkit-gradient(linear, left top, left bottom, from(#f08b24), to(#d26a00)) !important;
+/*para webkit browsers*/
+	background: -moz-linear-gradient(top, #f79a3c, #e08528) !important;
+/*for firefox 3.6+*/
+	color: #FFF !important;
+	border-radius: 0;
+	text-shadow: 0 1px 1px rgba(0, 0, 0, 0.1);
+}
+/*level 2 list*/
+#menu_wrapper #menu UL {
+	background: #DDD;
+/*for non-css3 browsers*/
+	filter: progid:DXImageTransform.Microsoft.gradient(startColorstr='#ffffff', endColorstr='#cfcfcf');
+/*for IE*/
+	background: -webkit-gradient(linear, left top, left bottom, from(#fff), to(#cfcfcf));
+/*for webkit browsers*/
+	background: -moz-linear-gradient(top, #fff, #cfcfcf);
+/*for firefox 3.6+*/
+	display: none;
+	margin: 0;
+	padding: 0;
+	min-width: 185px;
+	position: absolute;
+	top: 25px;
+	left: 0;
+	border: 1px solid #B4B4B4;
+	border-radius: 10px;
+	-webkit-box-shadow: 0 1px 3px rgba(0, 0, 0, .3);
+	-moz-box-shadow: 0 1px 3px rgba(0, 0, 0, .3);
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+/*-- dropdown --*/
+#menu_wrapper #menu LI:hover > UL {
+	display: block;
+	margin-top: 2px;
+}
+#menu_wrapper #menu UL LI {
+	border: 1px solid #B4B4B4;
+	border-style: none none inset;
+	float: none;
+	margin: 0;
+	padding: 0;
+}
+#menu_wrapper #menu UL A {
+	text-shadow: 0 1px 1px rgba(255, 255, 255, 0.9);
+}
+/*level 3+ list*/
+#menu_wrapper #menu UL UL {
+	left: 97%;
+	top: -3px;
+}
+/*rounded corners for first and last child*/
+#menu_wrapper #menu UL LI:first-child > A {
+	-webkit-border-top-left-radius: 9px;
+	-moz-border-radius-topleft: 9px;
+	-webkit-border-top-right-radius: 9px;
+	-moz-border-radius-topright: 9px;
+}
+#menu_wrapper #menu UL LI:last-child > A {
+	-webkit-border-bottom-left-radius: 9px;
+	-moz-border-radius-bottomleft: 9px;
+	-webkit-border-bottom-right-radius: 9px;
+	-moz-border-radius-bottomright: 9px;
+}
+/*clearfix*/
+#menu_wrapper #menu:after {
+	content: ".";
+	display: block;
+	clear: both;
+	visibility: hidden;
+	line-height: 0;
+	height: 0;
+}
+#menu_wrapper #menu {
+	display: inline-block;
+}
+
+
+
+
+HTML[xmlns] #menu_wrapper #menu {
+	display: block;
+}
+* HTML #menu_wrapper #menu {
+	height: 1%;
+}
+
+
+@media screen and (max-width: 1024px) {
+	
+	#menu_wrapper .logged_user_name {
+		display: none;
+	}
+}

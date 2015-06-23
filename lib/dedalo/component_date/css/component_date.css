@@ -1,0 +1,45 @@
+/*CSS Document
+WRAP DIV CONTAINER*/
+.css_wrap_date, .css_wrap_date_tm {
+	padding: 0px;
+	padding: 5px;
+	position: relative;
+}
+.css_wrap_date_tm .content_data {
+}
+
+/*-- INPUT --*/
+input.css_date {
+	width: 7.5em;
+	text-align: center;
+	}
+	input.css_date.full {
+		width: 12em ;
+	}
+
+/*-- CALENDAR IMAGE --*/	
+.css_wrap_date .content_data .ui-datepicker-trigger {
+	margin-left: 5px;
+	margin-right: 5px;
+	position: relative;
+	top: 3px;
+	cursor: pointer;
+}
+
+.current_date_info {
+	float: right;
+	color: #aaaaaa;
+	margin-right: 10px;
+	position: relative;
+	top: 4px;
+}
+
+
+TD.td_component_date {	
+	width: 78px;	
+	}
+	TD.td_component_date:hover {
+	}
+	TD.td_component_date .date_in_list {
+		white-space:nowrap !important;
+	}

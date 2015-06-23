@@ -1,0 +1,43 @@
+/* tool_print css */
+
+
+@page {
+  @top-left-corner { content: " "; border: solid green; }
+  @top-right-corner { content: url(foo.png); border: solid green; }
+  @bottom-right-corner { content: counter(page); border: solid green; }
+  @bottom-left-corner { content: normal; border: solid green; }
+}
+
+
+
+.div_element {
+		
+		display: block;
+		width: 100%;
+		height: 400px;
+
+				 size: 21cm 27.9cm;
+				 background-color: #cbcbcb;
+				 color: #666666;
+				
+	}
+
+
+
+/*PRINT
+@media print {
+.div_element {
+		background-color: #dbd06c;
+		display: block;
+		width: 100%;
+		height: 400px;
+
+				 size: 15cm 4cm;
+				 background-color: #111111;
+				 color: #26db00;
+				
+	}
+
+	
+
+}*/

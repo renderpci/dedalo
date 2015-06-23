@@ -1,0 +1,82 @@
+<?php
+
+	# PLAYER
+	$html_contenido = '';
+
+	$html_contenido .= "\n<div class=\"pdf_player_wrap\">";
+
+
+		$html_contenido .= "\n <iframe id=\"pdf_viewer_frame\" name=\"pdf_viewer_frame\" class=\"pdf_viewer_frame\" src=\"\" allowfullscreen></iframe>";
+
+
+	$html_contenido .= "\n</div><!-- /pdf_player_wrap -->";
+
+	$html_contenido .= "<script>component_pdf.load_iframe_url('pdf_viewer_frame','$iframe_url')</script>";
+	
+
+	# PRINT HTML
+	print $html_contenido;
+
+
+
+	/*
+
+	# VISUALIZADOR HTML	
+
+	# ELEMENTOS
+	if(!isset ($ar_css['css_span_dato'])) 			$ar_css['css_span_dato']='';
+	if(!isset ($ar_css['css_pdf'])) 				$ar_css['css_pdf']='';
+	if(!isset ($ar_css['css_span_ejemplo'])) 		$ar_css['css_span_ejemplo']='';
+	if(!isset ($ar_css['css_span_debugger']))		$ar_css['css_span_debugger']='';
+	if(!isset ($ar_css['css_wrap_pdf']))			$ar_css['css_wrap_pdf']='';	
+	
+	
+	print "\n<!-- PDF [tipo:$tipo section_id_matrix:$parent] $label -->";
+	print "\n<div class=\"css_wrap_pdf wrap_component {$ar_css['css_wrap_pdf']}\" id=\"{$id_wrapper}\"
+	data-tipo=\"{$tipo}\" data-lang=\"{$lang}\" data-parent=\"{$parent}\" data-modo=\"{$modo}\" data-dato=\"{$valor}\" data-component_name=\"{$component_name}\" data-path=\"{$pdf_url}\"
+	 >";
+	
+		
+		# CONTENIDO (INPUT)
+		$html_contenido = '';
+		switch($permissions) {
+				
+			case 0 :	$html_contenido .= "\n <span class=\"css_span_dato {$ar_css['css_span_dato']}\"> ".label::get_label('sin_acceso')." (av)</span>";
+						break;
+							
+			case ($permissions>=1) :
+				
+						# pdf THUMB
+						if($file_exists) {
+							$html_contenido .= "\n <div class=\"css_wrap_pdf_transcription\" onclick=\"\" >";
+
+							$html_contenido .= "<object class=\"pdf_transcription\" type=\"application/pdf\" 
+													data=\"$pdf_url\"?>?#zoom=50&scrollbar=1&toolbar=0&navpanes=0\" id=\"pdf_content\">
+													<param name=\"zoom\" value=\"50%\" />
+						    						<p>Your browser does not support pdf view.</p>
+						    					</object>";
+							$html_contenido .= "\n </div>";
+						}else{
+							$html_contenido .= "\n <div class=\"css_wrap_pdf_thumb\" >";
+							$html_contenido .= "<span class=\"notas\">No file is loaded</span>" ;
+							$html_contenido .= "\n </div>";
+						}
+						
+				if($permissions==3)		
+						$html_contenido .= "\n <span class=\"css_span_debugger {$ar_css['css_span_debugger']}\" id=\"debugger_{$tipo}\" >{$debugger}</span>";	
+												
+		}
+
+		# Prepare content to show in page
+		#tools::prepare_content($html_contenido);	
+		
+
+		# PRINT HTML
+		#print $html_label;
+		print $html_contenido;
+	
+	
+	print "\n</div><!-- /css_wrap_pdf [tipo:$tipo section_id_matrix:$parent] $label -->\n"; //wrap
+	*/
+
+?>

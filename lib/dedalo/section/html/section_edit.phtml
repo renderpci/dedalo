@@ -1,0 +1,105 @@
+<?php
+	
+	# VISUALIZADOR HTML	
+
+	# ELEMENTOS
+	if(!isset ($ar_css['css_section_wrap']))				$ar_css['css_section_wrap']='';
+	if(!isset ($ar_css['css_section_content']))				$ar_css['css_section_content']='';
+	if(!isset ($ar_css['css_section_titulo']))				$ar_css['css_section_titulo']='';
+	if(!isset ($ar_css['css_span_dato'])) 					$ar_css['css_span_dato']='';
+
+	
+	#dump($_SESSION);
+	print "\n\n<!-- SECTION [id:$id tipo:$tipo] -->";
+	print "\n<div class=\"css_section_wrap {$ar_css['css_section_wrap']}\" id=\"{$id_wrapper}\" 
+	data-id_matrix=\"{$id}\" data-tipo=\"{$tipo}\" data-lang=\"{$lang}\" data-parent=\"{$parent}\"
+	data-modo=\"{$modo}\" data-dato=\"array\" data-component_name=\"{$component_name}\"
+	data-section_id=\"{$section_id}\" data-label=\"{$label}\" data-section_info='{$section_info}'
+	>";
+	
+		
+
+		# CONTENT
+		$html_contenido  = '';
+
+		#$html_contenido .= "\n<div class=\"css_section_content\" id=\"section_{$identificador_unico}\" >";	
+		
+			# Header (label)
+			/*
+			$html_section_label='';
+			#if($caller_id<=0) {
+			if($context_name=='default' || $context_name=='list_into_tool_portal' || $context_name=='list_into_tool_relation') {
+				$html_section_label	.= "\n<div class=\"css_section_titulo\" onclick=\"goto_url('?m=list&t=$tipo&caller_id=$this->caller_id')\">";	# onclick=\"goto_url('?m=list&t=$tipo&caller_id=$this->caller_id')\"
+				$html_section_label	.= component_common_draw::draw_label($this);
+				if(SHOW_DEBUG)
+				$html_section_label	.= " [$section_id] context_name: $context_name";
+				$html_section_label	.= "</div>";
+				print "\n<script>$('#current_section_label').html('$label')</script>";
+				#print "\n<script>document.getElementById('current_section_label').innerHTML = '$label'</script>";
+			}
+			if($context_name=='list_into_tool_portal' || $context_name=='list_into_tool_relation') {
+				$html_contenido	.= "<div class=\"margin_block\"></div>";
+			}
+			*/
+			#dump($context_name,'context_name');
+		
+			# Fields
+			switch($permissions) {
+					
+				case 0	:	$html_contenido .= "\n <span class=\"css_span_dato {$ar_css['css_span_dato']}\">";
+							$html_contenido .= label::get_label('contenido_no_autorizado');
+								#dump(security::$ar_permissions_table," security::ar_permissions_table");
+							$html_contenido .= " (Section $tipo - $modo)</span>";
+							break;
+								
+				case ($permissions>=1)	:
+
+							if($this->caller_id>0 && $modo!='edit') {
+								$html_contenido .= "<div class=\"div_clear_edit_in_relation\"></div>";
+							}
+											
+							$html_contenido .= "\n $html_section_add ";
+								
+				case 2	: 
+				case 3	:	
+							break;			
+			}
+			
+		#$html_contenido .= "\n</div>";# /css_section_content		
+		
+		# Prepare content to show in page
+		#tools::prepare_content($html_contenido);	
+
+		/*
+		# BUTTON OPEN / HIDE SIDEBAR INSPECTOR
+		$caller_id = navigator::get_selected('caller_id');
+		if( empty($caller_id) )		
+		print "<div id=\"button_toggle_inspector\" class=\"css_button_generic text_unselectable'\" onclick=\"inspector.toggle_sidebar()\">INSPECTOR $caller_id</div>";
+		*/
+		
+		#######################
+		# SIDEBAR (INSPECTOR)
+		if ($show_inspector) {
+			print "\n<div id=\"sidebar\">";
+			print $html_inspector;
+			print "\n</div><!-- /sidebar -->";
+		}
+		#######################
+
+		
+		#######################
+		# CONTENT PRINT HTML
+		print "\n<div class=\"css_section_content\" id=\"section_{$identificador_unico}\" >";
+		print $html_contenido;
+		print "\n</div><!-- /css_section_content -->";	
+		#######################
+		
+
+		
+
+
+
+
+	
+	print "\n</div><!-- /SECTION WRAP [id:$id tipo:$tipo] -->\n\n"; //wrap
+?>

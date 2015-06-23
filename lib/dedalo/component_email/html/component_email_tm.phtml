@@ -1,0 +1,54 @@
+<?php
+/*
+	# VISUALIZADOR HTML	
+
+	# ELEMENTOS
+	if(!isset ($ar_css['css_span_dato'])) 		$ar_css['css_span_dato']='';
+	if(!isset ($ar_css['css_email'])) 			$ar_css['css_email']='';
+	if(!isset ($ar_css['css_span_ejemplo'])) 	$ar_css['css_span_ejemplo']='';
+	if(!isset ($ar_css['css_span_debugger']))	$ar_css['css_span_debugger']='';
+	if(!isset ($ar_css['css_wrap_email']))		$ar_css['css_wrap_email']='';
+	
+	if(!isset ($html_tools))					$html_tools='';
+	
+	
+	print "\n<!-- EMAIL [tipo:$tipo id_matrix:$id] -->";
+	print "\n<div class=\"css_wrap_email {$ar_css['css_wrap_email']}\" id=\"wrap_{$identificador_unico}\">";
+	
+	# ETIQUETA (LABEL)
+	$html_label = component_common_draw::draw_label($this);
+	
+	# CONTENIDO (INPUT)
+	$html_contenido = '';					
+	switch($permissions) {
+			
+		case 0	:	$html_contenido .= ''; 		
+					break;
+						
+		case 1	: 	$html_contenido .= "\n <span class=\"css_span_dato {$ar_css['css_span_dato']}\">$dato</span>";
+					break;	
+						
+		case ($permissions>=2)	:
+					
+					$html_contenido .= "\n <input class=\"css_email bg_email {$ar_css['css_email']}\" type=\"text\" 				 
+					id=\"{$identificador_unico}\" name=\"{$tipo}_{$id}_tm\" 
+					data-tipo=\"{$tipo}\" data-id_matrix=\"{$id}\" data-lang=\"{$lang}\" 
+					value=\"{$dato}\" 
+					title=\"$html_title\" 
+					disabled />";
+										
+			if($permissions==3)
+		
+					$html_contenido .= "\n <span class=\"css_span_debugger {$ar_css['css_span_debugger']}\" id=\"debugger_{$id}\" >{$debugger}</span>";	
+							
+	}
+	
+	
+	# PRINT HTML
+	print $html_label;
+	print $html_contenido;
+	
+	
+	print "\n</div>\n\n"; //wrap
+*/
+?>

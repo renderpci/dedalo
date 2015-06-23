@@ -1,0 +1,17 @@
+<?php
+
+	# VISUALIZADOR HTML	
+	$html_tool='';
+	
+	# BUTTON TOOL INLINE
+	$btn_title	  = label::get_label('abrir').' '.label::get_label('herramienta');
+	$html_tool   .= "\n<div class=\"icon_bs tool_lang_icon link tool_lang_icon_inline\"
+						data-tipo=\"{$tipo}\" data-id_matrix=\"{$id}\" data-parent=\"{$parent}\" data-lang=\"{$lang}\" data-tab_id=\"img_lang_{$tipo}_{$id}\" 
+						title=\"$btn_title\"
+						onclick=\"tool_common.open_tool_lang(this)\"
+						></div>";	
+	
+	# PRINT HTML
+	print $html_tool;
+	
+?>

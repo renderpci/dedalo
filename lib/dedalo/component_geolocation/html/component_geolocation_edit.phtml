@@ -1,0 +1,84 @@
+<?php
+
+	# VISUALIZADOR HTML	
+
+	# ELEMENTOS
+	
+	
+	print "\n<!-- GEOLOCATION [tipo:$tipo] -->";
+	print "\n<div class=\"css_wrap_geolocation wrap_component\" id=\"{$id_wrapper}\"
+	data-tipo=\"{$tipo}\"
+	data-lang=\"{$lang}\"
+	data-section_tipo=\"{$section_tipo}\"
+	data-parent=\"{$parent}\"
+	data-modo=\"{$modo}\"
+	data-dato='{$dato_json}'
+	data-component_name=\"{$component_name}\"
+	data-component_info='{$component_info}'
+	>";
+	
+		
+		# ETIQUETA (LABEL)
+		$html_label = component_common_draw::draw_label($this);
+		
+		# CONTENIDO (INPUT)
+		$html_contenido = '';
+		switch($permissions) {
+				
+			case 0	:	$html_contenido .= "";
+						break;
+							
+			case 1	: 	$html_contenido .= "\n <span class=\"css_span_dato\"> Under construction </span>";
+						break;	
+							
+			case ($permissions>=2) :
+
+						$html_contenido .= "\n <span>".label::get_label('latitud')."</span>";
+						$html_contenido .= "\n <input type=\"text\" name=\"lat\" value =\"{$dato->lat}\"
+						data-tipo=\"{$tipo}\"
+						data-lang=\"{$lang}\"
+						data-section_tipo=\"{$section_tipo}\"
+						data-parent=\"{$parent}\"
+						data-modo=\"{$modo}\"
+						/>";
+
+						$html_contenido .= "\n <span>".label::get_label('longitud')."</span>";
+						$html_contenido .= "\n <input type=\"text\" name=\"lon\" value =\"{$dato->lon}\"/>";
+
+						$html_contenido .= "\n <span>".label::get_label('mapa_zoom')."</span>";
+						$html_contenido .= "\n <input type=\"text\" name=\"zoom\" value =\"{$dato->zoom}\"/>";
+
+						$html_contenido .= "\n <div class=\"leaflet_map\" id=\"$identificador_unico\"><!-- Map content here --></div>";	
+						break;										
+															
+		}
+
+		# Prepare content to show in page
+		tools::prepare_content($html_contenido);	
+		
+
+		# PRINT HTML
+		print $html_label;
+		print $html_contenido;
+	
+	
+	print "\n</div><!-- /css_wrap_geolocation GEOLOCATION [tipo:$tipo section_id_matrix:$parent] $label -->\n"; //wrap
+
+
+?>
+<script type="text/javascript">
+	// Set var geo provider fron config
+	component_geolocation.DEDALO_GEO_PROVIDER = '<?php echo DEDALO_GEO_PROVIDER ?>';
+	// Build map
+	
+		component_geolocation.init_map('<?php echo $identificador_unico ?>');
+	setTimeout(function(){	
+		//L.Util.requestAnimFrame(map.invalidateSize,map,!1,map._container);
+		//L.map.invalidateSize(false);
+		//console.log(L.map)
+		//console.log(component_geolocation)
+		//component_geolocation.maps.invalidateSize(false);
+	}, 1000)
+	
+		
+</script>

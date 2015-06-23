@@ -1,0 +1,97 @@
+<?php
+
+	# VISUALIZADOR HTML	
+
+	# ELEMENTOS
+	if(!isset ($ar_css['css_span_dato'])) 			$ar_css['css_span_dato']='';
+	if(!isset ($ar_css['css_select'])) 				$ar_css['css_select']='';
+	if(!isset ($ar_css['css_span_ejemplo'])) 		$ar_css['css_span_ejemplo']='';
+	if(!isset ($ar_css['css_span_debugger']))		$ar_css['css_span_debugger']='';
+	if(!isset ($ar_css['css_wrap_select']))			$ar_css['css_wrap_select']='';
+	//if(!isset ($ar_css['css_select_rotulo']))		$ar_css['css_select_rotulo']='';
+	
+	
+	print "\n<!-- SELECT [tipo:$tipo section_id_matrix:$parent $section_tipo] $label -->";
+	print "\n<div class=\"css_wrap_select wrap_component {$ar_css['css_wrap_select']}\" id=\"{$id_wrapper}\" 
+	data-tipo=\"{$tipo}\"
+	data-lang=\"{$lang}\"
+	data-parent=\"{$parent}\"
+	data-section_tipo=\"{$section_tipo}\"
+	data-modo=\"{$modo}\"
+	data-dato=\"{$dato_string}\"
+	data-component_name=\"{$component_name}\"
+	data-component_info='{$component_info}'
+	>";
+	
+	# ETIQUETA (LABEL)
+	$html_label = component_common_draw::draw_label($this);
+	
+	# CONTENIDO (INPUT)
+	$html_contenido = '';
+	switch($permissions) {
+			
+		case 0	:	$html_contenido .= "";
+					break;
+						
+		case 1	: 						
+					$html_contenido .= $this->valor;
+					break;	
+						
+		
+		case ($permissions>=2)	:
+		
+					$html_contenido .= "\n <select class=\"css_select {$ar_css['css_select']}\"					
+					name=\"{$input_name}\" 
+					data-tipo=\"{$tipo}\" data-lang=\"{$lang}\" data-section_tipo=\"{$section_tipo}\" data-parent=\"{$parent}\"
+					title=\"$html_title\"> ";
+					
+					if(empty($dato)) {
+						$checked = 'selected';
+					}else{
+						$checked = "";
+					}
+					$html_contenido .= "\n <option value=\"\" {$checked}> </option>";
+					
+					foreach ($ar_list_of_values->result as $value => $rotulo) {
+
+						$value   = (string)$value; 
+						$locator = (object)json_handler::decode($value);	# Locator is json encoded object
+						#dump($locator," locator"); dump($dato," dato");
+
+						if (in_array($locator, $dato)) {	# dato is array always
+							$checked = 'selected';
+						}else{
+							$checked = "";
+						}
+						
+						$html_contenido .= "\n <option value='$value' {$checked}> {$rotulo}</option>";							
+					}					
+					$html_contenido .= "\n </select>";	
+					
+					#$html_contenido .= "\n <span class=\"css_span_log\"></span>";
+					#$html_contenido .= "\n <span  class=\"css_span_ejemplo {$ar_css['css_span_ejemplo']}\">$ejemplo</span>";
+					
+					$html_contenido .= $html_tools;
+										
+					
+			if($permissions==3)
+					
+					$html_contenido .= "\n <span class=\"css_span_debugger {$ar_css['css_span_debugger']}\" id=\"debugger_{$tipo}\" >{$debugger}</span>";	
+				
+											
+	}
+
+	# Prepare content to show in page
+	tools::prepare_content($html_contenido);
+	
+	
+	# PRINT HTML
+	print $html_label;
+	print $html_contenido;
+	
+	if(SHOW_DEBUG) {
+		echo $ar_list_of_values->debug;
+	}
+	
+	print "\n</div><!-- /css_wrap_select SELECT [tipo:$tipo section_id_matrix:$parent] $label -->\n\n"; //wrap
+?>

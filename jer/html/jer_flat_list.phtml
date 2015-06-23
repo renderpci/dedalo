@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<title>D4 TS</title>
+<link rel="shortcut icon" href="../favicon.ico" />
+
+<?php
+# CSS
+print css::build_tag(JQUERY_UI_URL_CSS); 
+print css::build_tag(DEDALO_LIB_BASE_URL .'/html_page/css/html_page.css');
+print css::build_tag(DEDALO_LIB_BASE_URL .'/common/css/common.css');
+print css::build_tag(DEDALO_LIB_BASE_URL .'/menu/css/menu.css'); 
+print css::build_tag(DEDALO_ROOT_WEB .'/css/list.css');
+print css::build_tag(DEDALO_ROOT_WEB .'/jer/css/jer_main.css');
+print css::build_tag(DEDALO_ROOT_WEB .'/jer/css/jer_flat_list.css');
+?>
+<script type="text/javascript">
+    var DEDALO_LIB_BASE_URL = '<?php echo DEDALO_LIB_BASE_URL ?>' ;
+    var page_globals = new Object();
+        page_globals.dedalo_application_lang    = '<?php echo DEDALO_APPLICATION_LANG ?>' ;
+        page_globals.dedalo_data_lang       = '<?php echo DEDALO_DATA_LANG ?>' ;
+        page_globals.dedalo_data_nolan      = '<?php echo DEDALO_DATA_NOLAN ?>' ;       
+        page_globals.modo           = '<?php echo $modo ?>' ;
+ 
+    var DEBUG = true;
+
+    /*
+    * clean query $_SERVER['QUERY_STRING'] for avoid duplicates in js function ordenar()
+    */
+    var query_string = '<?php echo eliminarOT() ?>';
+
+    // vars
+    var esta_seguro_de_eliminar_registro_1_title    = '<?php echo msgJS($esta_seguro_de_eliminar_registro_1_title) ?>';
+    var esta_completamente_seguro_title             = '<?php echo msgJS($esta_completamente_seguro_title) ?>';
+    var nombre_title                                = '<?php echo msgJS($nombre_title) ?>';
+</script>
+<?php
+# JS
+print js::build_tag(JQUERY_LIB_URL_JS);
+print js::build_tag(JQUERY_UI_URL_JS);
+print js::build_tag(DEDALO_LIB_BASE_URL . '/common/js/common.js');
+print js::build_tag(DEDALO_LIB_BASE_URL . '/login/js/login.js');
+print js::build_tag(DEDALO_ROOT_WEB . '/inc/javascript.js');
+print js::build_tag(DEDALO_ROOT_WEB . '/jer/js/jer_javascript.js');
+print js::build_tag(DEDALO_ROOT_WEB . '/jer/js/jer_flat_list.js');
+?>
+
+
+</head>
+
+<body>      
+<div id="wrapGeneral" class="list_content" style="display:none">  
+<table class="jer_list_table" width="100%"  border="0" cellspacing="0" cellpadding="0" height="100%">
+
+    
+  <tr>
+    <td height="100%" align="center" valign="top">    
+    
+    <form name="form1" method="get" action="" style=""> 
+            
+        ID
+        <input type="text" name="terminoID" id="terminoID" value="<?php echo $terminoIDGET ?>" style="width:40px; text-align:center">
+        
+        <?php echo $termino_title ?>     
+        <input type="text" name="termino" id="termino" value="<?php echo $terminoGET ?>" style="width:80px; text-align:center">       
+        
+        <?php echo $descriptor_title ?>        
+        <select name="esdescriptor" id="esdescriptor">
+        	<option value="" ></option>
+            <option value="si" <?php if (!(strcmp('si', $esdescriptorGET))) {echo "selected=\"selected\" ";} ?> ><?php echo $si_title ?></option>
+            <option value="no" <?php if (!(strcmp('no', $esdescriptorGET))) {echo "selected=\"selected\" ";} ?> ><?php echo $no_title ?></option>              
+        </select>      
+               
+        <?php echo $max_por_pagina_title ?> 
+        <input type="text" name="max" id="max" value="<?php echo $maxRows_Recordset1 ?>" style="width:40px; text-align:center">
+        
+        <input name="filtro" type="hidden" value="y">
+        <input name="tld" type="hidden" value="<?php echo $tld ?> ">         
+        <input type="submit" name="button" id="button" value=" <?php echo $buscar_title ?> " class="SubmitButon">      
+        
+        <a href="javascript:window.location.href='?tld=<?php echo $tld?>' ;"><?php echo $ver_todos_title ?></a>
+    
+    </form>
+    
+    
+    <?php # styles bar
+	if($modo== 'modelo_edit') {
+		$bgColor 	= "#222";
+		$bgImg		= 1 ;	
+	}else{
+		$bgColor 	= "#8c6b6e";
+		$bgImg		= 2 ;	
+	}
+	
+	?>    
+    
+    <div id="list" style="width:96%; text-align:center;">
+    
+	<div class="divZonaActual" <?php echo "style=\"background-color:$bgColor ; background-image: url(../images/deco/bg$bgImg.jpg)\" "; ?> >
+    	<div class="divLinkTesauro" onClick="javascript:top.location='../ts/ts_list.php?modo=<?php echo $modo ?>';"><?php echo ucfirst($tesaurus_title)?></div>
+        <div style="padding:1px;"> <?php if($modo=='modelo_edit') echo "$modelo_title $de_title " ; echo $nombreGrupo ?></div>      	
+    </div>    
+    
+	<?php $pag = 'none'; include('../inc/paginacion.php'); ?>
+      
+    <table class="recordsTableList">
+    	<tr class="rowHead">
+		  <td width="44" align="center" nowrap >ID<?php echo flechasOrden('terminoID')?></td>
+		  <td width="" align="left" nowrap style="text-align:left" ><?php echo $nombre_title ?> <?php echo flechasOrden('termino')?></td>
+          <td width="101" align="left"><?php echo $padre_title ?></td>
+          <?php if($modo!='modelo_edit'){?>
+          <td width="20" align="center" nowrap ><?php echo $tipo_title ?></td>                
+          <td width="79" align="center" nowrap >Modelo</td>
+          <?php }#if($modo!='modelo'){?>
+		</tr>
+    </table>
+      
+      
+      <div style="height:470px; width:100%; overflow:auto">
+      <table class="recordsTableList">
+      
+        
+        
+        
+	<?php 
+        #if($totalRows_Recordset1>0) do {
+        while ($row_Recordset1 = pg_fetch_assoc($result) ) {
+    
+		$terminoID 		= (string)trim($row_Recordset1['terminoID']);
+				
+		$RecordObj_ts	= new RecordObj_ts($terminoID);		
+		$termino 		= RecordObj_ts::get_termino_by_tipo($terminoID);		#var_dump($termino);			# converted by descriptors
+		$parent 		= $RecordObj_ts->get_parent();
+		
+		if($parent && $parent!='') 	{
+			$parentText		= RecordObj_ts::get_termino_by_tipo($parent);
+		}
+		if($parent == $tld.'0') 	$parentText = "";
+		
+		$modelo 		= $RecordObj_ts->get_modelo();
+		$esdescriptor 	= $RecordObj_ts->get_esdescriptor();
+		$hijosArray 	= $RecordObj_ts->get_ar_childrens_of_this();
+		$tr				= $RecordObj_ts->get_ar_terminos_relacionados($terminoID);
+		$nTR			= count($tr);
+		$nIndexaciones	= null;#$ts->nIndexaciones($terminoID);		
+			
+		?>    
+        <tr class="rowData" align="center" bgcolor="#CFCFCF" onMouseOver="bg(this,'#DDDDDD')"   onMouseOut="bg(this,'')" >     
+        
+          
+        <td width="40" height="37" nowrap align="right"><span style="margin-right:2px;"><?php echo $terminoID ?></span></td>
+        
+        <!-- TERMINO + TR + IND + HIJOS --> 
+        <td width="" align="left" style="padding-left:2px; padding-top:6px; text-align:left" >
+        
+			<?php if($terminoID != $tld.'1' && $terminoID != $tld.'2'){?>
+            <img src="../images/iconos/button_drop.png" title="Drop" onClick="borrarFichaTermino('<?php echo $terminoID ?>', '<?php echo addslashes($termino) ?>');" class="dropIcon"/>
+            <?php } ?>
+			<img src="../images/iconos/edit_grey.png"	title="Edit" onClick="openTSeditFromFlat('<?php echo $terminoID ?>','<?php echo $parent ?>')" class="btnEdit" />
+			
+			<?php $color = false; if($modo=='modelo_edit') $color = "style=\"color:#666 \"";?>
+            <span <?php echo $color ?> ><?php echo $termino ?></span>
+        	
+            <!-- TERMINOS RELACIONADOS TR -->            
+            <?php if($nTR >0) {?>
+            <span><?php #echo $nTR ?> </span>
+        	<img src="../images/iconos/tr-icon.gif" style=" display:inline-block;margin-left:0px; cursor:pointer " onClick="javascript: $('#<?php echo "tr_$terminoID"?>').toggle()" title="<?php echo $mostrar_terminos_relacionados_title?>">
+            <?php }#if($nTR >0) {?>
+            
+            <!-- INDEXACIONES -->            
+            <?php if($nIndexaciones>0) {?>
+        	<img src="../images/iconos/u.gif" style="display:inline-block;margin-left:0px; cursor:pointer; clear:right " onClick="javascript: $('#<?php echo "ind_$terminoID"?>').toggle()" title="<?php echo "$total_title  $indexaciones_title : $nIndexaciones "?>">            
+            <?php }#if($nIndexaciones>0) {?>
+            
+            <!-- HIJOS -->            
+            <?php if(is_array($hijosArray) && count($hijosArray)>0) {?>
+            <span><?php #echo $nHijos ?> </span>
+        	<img id="flecha_<?php echo $terminoID ?>" src="../images/iconos/flecha_der.gif" style="display:inline-block;margin-left:0px;cursor:pointer;clear:right" onClick="ToggleFlechaJer('<?php echo $terminoID?>')" title="<?php echo $mostrar_hijos_title?>">            
+            <?php }#if($nHijos >0) {?>            
+            
+            <!-- div hijos -->
+            <div id="<?php echo "hijos_$terminoID"?>" style=" display:block; clear:both; color: #666; text-align:left; padding:6px; margin-left:30px; display:none">
+            	<?php
+                	if(is_array($hijosArray)) foreach($hijosArray as $terminoIDActual) {
+						
+						$terminoActual	= RecordObj_ts::get_termino_by_tipo($terminoIDActual);
+						echo "- $terminoActual [$terminoIDActual]<br>";						
+					}
+				?>
+            </div>
+            <!-- div Indexaciones -->
+            <div id="<?php echo "ind_$terminoID"?>" style=" display:block; clear:both; background-color: #999; color:#CCC; text-align:left; padding:3px;margin-left:30px; margin-top:5px; display:none">
+            	<?php
+                	echo " $total_title  $indexaciones_title : $nIndexaciones";
+				?>
+            </div>
+            <!-- div tr -->
+            <div id="<?php echo "tr_$terminoID"?>" style=" display:block; clear:both; background-color:#666; color:#CCC; text-align:left; padding:3px;margin-left:30px; margin-top:5px; display:none">
+            	<?php
+                	if(is_array($tr)) foreach($tr as $key => $ar_values) {
+						
+						foreach($ar_values as $modeloID => $terminoIDActual2) {
+							$terminoActual2	= RecordObj_ts::get_termino_by_tipo($terminoIDActual2);
+							echo "[TR] $terminoActual2 [$terminoIDActual2]<br>";
+						}
+					}
+				?>
+            </div>
+                           
+        </td>
+        
+        <!-- PADRE --> 
+        <td width="105" align="left" style="padding:0px;text-align:left" >
+        <?php if(!$parent || $parent==''){?>
+        	<div style="width:100%; height:34px; margin:0px; background-color:red; "></div>
+        <?php }else{?>
+            <div id="<?php echo "parent_$terminoID"?>" style=" display:inline-block; clear:both; color:#666; text-align:left; padding:3px; width:auto;" title="ID: <?php echo $parent ?>"><?php echo $parentText ?></div>
+		<?php }//if($parent)?>		
+        </td>
+        
+        <?php if($modo!='modelo_edit'){?>
+        <!-- TIPO -->        
+        <td width="20"><?php if($esdescriptor=='si') echo "<div title=\"$descriptor_title\">D</div>"; if($esdescriptor=='no') echo "<div title=\"$no_descriptor_title\">ND</div>"; ?></td>
+        
+      	<!-- MODELO --> 
+        <td width="60" style="" title="<?php echo $modelo ; ?>" ><?php 
+		echo RecordObj_ts::get_termino_by_tipo($modelo); 
+		?></td>
+		<?php }#if($modo!='modelo_edit'){?>
+        
+        </tr>
+	<?php
+    #} while ($row_Recordset1 = mysql_fetch_assoc($Recordset1)); mysql_free_result($Recordset1);
+    #} while ($row_Recordset1 = $result->fetch_array(MYSQLI_ASSOC) ); #$result->close();
+    };
+    ?>
+  
+ 
+  
+  
+  	<?php if($totalRows_Recordset1<1){ ?>
+        <tr>
+            <td colspan="9" > <div style="color: #F30; padding:10px"><?php echo $no_hay_resultados_coincidentes_title ?></div> </td>
+        </tr>    
+	<?php } #if($totalRows_Recordset1>0) ?>
+    
+      
+	</table>
+     </div> 
+      
+      <?php $pag = 'down'; include('../inc/paginacion.php'); ?> <br>
+    </div><!-- /list -->
+      
+      </td>
+  </tr>
+  <?php if($head=='si'){?>
+  <tr>
+    <td align="center" valign="bottom"><?php include_once('../inc/footer.php'); ?></td>
+  </tr>
+  <?php }#if($head=='si'){?>
+</table>
+</div>
+</body>
+</html>

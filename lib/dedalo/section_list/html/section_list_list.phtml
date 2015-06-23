@@ -1,0 +1,145 @@
+<?php
+
+	# VISUALIZADOR HTML	
+
+	# ELEMENTOS
+	if(!isset ($ar_css['css_section_list_wrap']))		$ar_css['css_section_list_wrap']='';
+	if(!isset ($ar_css['css_section_list_titulo']))		$ar_css['css_section_list_titulo']='';
+	if(!isset ($ar_css['css_span_dato'])) 				$ar_css['css_span_dato']='';;
+	
+	
+	
+	print "\n <!-- SECTION LIST LIST [tipo:$tipo modo:$modo] -->";
+	print "\n <div class=\"css_section_list_wrap {$ar_css['css_section_list_wrap']}\" id=\"wrap_{$tipo}_{$modo}\" data-options='".json_handler::encode($this->options)."' >";
+	
+				
+	# ETIQUETA (LABEL)
+	#$html_label = component_common_draw::draw_label($this);
+	#print "\n<hr><div class=\"css_section_group_titulo tab_title\" > $html_label </div>";
+	
+		
+	
+	# CONTENIDO (INPUT)
+	$html_contenido  = "\n<div class=\"css_section_group_content tab_content\">";
+	#$html_contenido .= $group_search_html;	
+	
+	
+	
+	switch($permissions) {
+			
+		case 0	:	$html_contenido .= "\n <span class=\"css_span_dato {$ar_css['css_span_dato']}\"> ".label::get_label('sin_acceso')." </span>";
+					break;
+						
+		case ($permissions>=1)	:
+				/*
+				# BUTTONS
+				$html_contenido .= "\n<div class=\"section_buttons_container\">";
+				foreach ($this->section_obj->ar_buttons as $current_button_modelo_name => $current_ar_button_obj_model) {
+					# Skip delete button
+					if($current_button_modelo_name=='button_delete') continue;
+					foreach($current_ar_button_obj_model as $current_button_obj) {
+						# Se buuton target tipo
+						$current_button_obj->set_target($section_tipo);
+						$html_contenido .= $current_button_obj->get_html();
+					}
+						
+				}
+				$html_contenido .= "\n</div>";#end section_buttons_container
+				*/
+
+				#$html_contenido .= "\n<div id=\"stats_info\"><!-- Stats content here --></div>";
+
+
+				# LIST (Search,paginator,rows)
+				$html_contenido .= "\n<div class=\"main_list main_list_{$modo}\">";
+
+					# SEARCH FILTER
+					$html_contenido .= $rows_search_html;					
+					
+					# PAGINATOR
+					$html_contenido .= $rows_paginator_html;
+
+					# TABLE
+					$html_contenido .= "\n<table class=\"table_rows_list\">"; // css_section_list_table box_shadow_1 box_border_radius_1
+					#$html_contenido .= "\n <caption style=\"text-align:left;\"> $tipo </caption>";
+					
+						# TH TITULOS
+						$html_contenido .= '<thead>';
+						$html_contenido .= $rows_header_html;
+						$html_contenido .= '</thead>';
+						
+						# TD DATOS
+						$html_contenido .= '<tbody>';
+						$html_contenido .= $rows_html;
+						$html_contenido .= '</tbody>';				
+						
+						/*
+						# DELETE DIALOG
+						$html_contenido .= "<!-- ui-dialog -->
+											<div id=\"delete_dialog\" title=\"Delete\">								
+												<p>Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. 
+												Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.</p>								
+											</div>
+											";
+						*/
+					$html_contenido .= "\n</table>";
+
+
+					# PAGINATOR
+					#$html_contenido .= $rows_paginator_html;
+					
+					
+
+				$html_contenido .= "\n</div><!-- /main_list -->";#end main_list
+
+
+
+				if(SHOW_DEBUG) {
+					#dump($this, ' this 1 ');
+					$limit_time=SLOW_QUERY_MS;
+					$html_info='';
+					#dump($this->rows_obj,"");
+					$total_list_time = $this->rows_obj->generated_time['get_rows_data'] + round(microtime(1)-$start_time,3);
+					$style='';
+					if ($total_list_time>$limit_time) {
+						$style = "color:red";
+					}			
+					$html_info .= "<div style=\"margin:15px;margin-bottom:20px;padding:3px;{$style}\" onclick=\"$(this).children('pre').toggle()\"> Time To Generate section list: ";
+					$html_info .= $total_list_time;
+					$html_info .= ", get_rows_data:".$this->rows_obj->generated_time['get_rows_data']." (over {$this->rows_obj->options->full_count} records)";
+					$html_info .= ", HTML section list: ".round(microtime(1)-$start_time,3);
+					if (isset($this->rows_obj->generated_time['rows_paginator'])) {
+						$html_info .= ", rows_paginator: ".$this->rows_obj->generated_time['rows_paginator'];
+					}			
+					if (isset($this->rows_obj->generated_time['rows_header'])) {
+						$html_info .= ", rows_header: ".$this->rows_obj->generated_time['rows_header'];
+					}
+					if (isset($this->rows_obj->generated_time['rows'])) {		
+						$html_info .= ", rows: ".$this->rows_obj->generated_time['rows'];
+					}
+					#dump($this->rows_obj->options->search_options_session_key," ");
+					if (isset($this->rows_obj->options->search_options_session_key)) {		
+						$html_info .= ", search_options_key: ".$this->rows_obj->options->search_options_session_key;
+					}
+					$html_info .= ", strQuery:";
+					$html_info .= "<pre style=\"display:none\"> ".$this->rows_obj->strQuery ."</pre>";
+					$html_info .= "</div>";
+					#echo "<div> Time To Generate section list: HTML: ".round(microtime(1)-$start_time,3)."</div>";
+						
+					$html_contenido .= $html_info;
+				}#end if(SHOW_DEBUG)
+								
+	}
+	
+	$html_contenido .= "\n</div><!-- /css_section_group_content -->";
+	
+	# PRINT HTML
+	print $html_contenido;
+
+
+
+	
+	
+	
+	print "\n</div><!-- /css_section_list_wrap -->\n\n"; //wrap
+?>

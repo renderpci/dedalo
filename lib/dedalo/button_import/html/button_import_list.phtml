@@ -1,0 +1,35 @@
+<?php
+
+	# VISUALIZADOR HTML	
+		
+	
+	#print "\n<!-- BUTTON IMPORT [tipo:$tipo] -->";	
+	
+	# CONTENIDO (INPUT)
+	$html_contenido = '';
+	
+	switch($permissions) {
+			
+		case 0	:	$html_contenido .= "";
+					break;
+						
+		case 1	: 	$html_contenido .= "";
+					break;	
+						
+		case ($permissions>=2)	:
+
+			$html_contenido .= "\n <div class=\"css_button_generic css_button_import link\"			
+			data-tipo=\"{$tipo}\"
+			data-target_section_tipo=\"{$target_section_tipo}\"
+			data-tool_name=\"{$tool_name}\"
+			data-context_name=\"{$context_name}\"
+			title=\"$html_title\" 
+			onclick=\"tool_common.open_tool_import(this)\" >";
+			$html_contenido .= $label;
+			$html_contenido .= "</div>";	
+	}
+	
+	
+	# PRINT HTML
+	print $html_contenido;	
+?>

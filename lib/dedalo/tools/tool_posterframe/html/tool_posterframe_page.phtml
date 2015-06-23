@@ -1,0 +1,56 @@
+<?php
+
+	# VISUALIZADOR HTML		
+
+	$html    = "\n<!-- TOOL PAGE [tipo:$tipo] -->";	
+	$html   .= "\n<div class=\"wrap_tool wrap_tool_posterframe_page\" >";
+
+		
+		# DIV CONTENT
+		$html 	.= "\n<div class=\"tool_posterframe_content\">";
+
+
+			# PLAYER
+			#$html 	.= "<iframe id=\"videoFrame\" name=\"videoFrame\" class=\"videoFrame\" src=\"{$iframe_url}\" ></iframe>";
+			$html 	.= $html_media_player_posterframe;
+
+			
+			# CONTROLS
+			$html .= "\n<div class=\"tool_posterframe_controls\">";			
+
+				# BUTTON NEW
+				$html .= "<div class=\"css_button_generic posterframe_button_new\"
+				data-video_id=\"$video_id\" data-quality=\"$quality\"
+				data-parent=\"$parent\"
+				onClick=\"tool_posterframe.generate_posterframe(this, component_av.player_get_current_time_in_seconds())\" 
+				> ". label::get_label('crear'). " Posterframe
+				</div>";
+
+				# BUTTON DELETE
+				$html .= "<div class=\"icon_bs posterframe_button_delete\"
+				data-video_id=\"$video_id\" data-quality=\"$quality\"
+				data-parent=\"$parent\"
+				onclick=\"tool_posterframe.delete_posterframe(this)\"
+				></div>";
+
+				# THUMB IMAGE
+				#$html .= "<div class=\"posterframe_thumb\">";
+				$html .= "<div class=\"posterframe_thumb_image\" style=\"background: url($posterframe_url);\"></div>";
+				#$html .= "\n <img class=\"av_posterframe_thumb\" src=\"$posterframe_url\" />";
+				#$html .= "</div>";
+
+			$html .= "\n</div><!-- /tool_posterframe_controls -->";			
+
+
+		$html 	.= "\n</div><!-- /tool_posterframe_content -->";
+
+	
+	$html   .= "\n</div><!-- /wrap_tool_posterframe_page -->"; //page wrap
+
+	
+	# INSPECTOR LOG TOOL
+	$html 	.= "\n<div id=\"inspector_log\" class=\"tool_transcription_inspector_log\"> </div>";
+
+	print $html;
+		
+?>

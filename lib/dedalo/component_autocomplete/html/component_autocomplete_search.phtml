@@ -1,0 +1,64 @@
+<?php
+
+	# VISUALIZADOR HTML	
+
+	# ELEMENTOS
+	if(!isset ($ar_css['css_span_dato'])) 			$ar_css['css_span_dato']='';
+	if(!isset ($ar_css['css_select'])) 				$ar_css['css_select']='';
+	if(!isset ($ar_css['css_span_ejemplo'])) 		$ar_css['css_span_ejemplo']='';
+	if(!isset ($ar_css['css_span_debugger']))		$ar_css['css_span_debugger']='';
+	if(!isset ($ar_css['css_wrap_select']))			$ar_css['css_wrap_select']='';
+	//if(!isset ($ar_css['css_select_rotulo']))		$ar_css['css_select_rotulo']='';
+	
+	
+	if(isset($_REQUEST[$tipo]))						$dato = $_REQUEST[$tipo];		#var_dump($_REQUEST[$tipo]);
+	
+	
+	print "\n<!-- SELECT [tipo:$tipo section_id:$parent] $label -->";
+	print "\n<div class=\"css_wrap_select {$ar_css['css_wrap_select']}\" >";
+	
+	# ETIQUETA (LABEL)
+	$html_label = component_common_draw::draw_label($this);
+	
+	# CONTENIDO (INPUT)
+	$html_contenido = '';
+	switch($permissions) {
+			
+		case 0	:	$html_contenido .= "\n <span class=\"css_span_dato {$ar_css['css_span_dato']}\"> No access here (select)! </span>";
+					break;
+						
+		
+		case ($permissions>=1)	:
+		
+					$html_contenido .= "\n <select class=\"css_select {$ar_css['css_select']}\" name=\"{$tipo}\" data-tipo=\"{$tipo}\" title=\"$html_title\"> ";
+					
+					if(empty($dato)) {
+						$checked = 'selected';
+					}else{
+						$checked = "";
+					}
+					$html_contenido .= "\n <option value=\"\" {$checked}> </option>";
+					
+					foreach ($ar_list_of_values->result as $value => $rotulo) {
+						
+						if( $dato == $value) {
+							$checked = 'selected';
+						}else {
+							$checked = "";
+						}
+						$html_contenido .= "\n <option value='$value' {$checked}> {$rotulo}</option>";							
+					}					
+					$html_contenido .= "\n </select>";	
+									
+											
+	}
+	
+	
+	# PRINT HTML
+	print $html_label;
+	print $html_contenido;
+	
+	
+	
+	print "\n</div><!-- /css_wrap_select -->\n\n"; //wrap
+?>

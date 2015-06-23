@@ -1,0 +1,208 @@
+@charset "UTF-8";
+/* CSS Document */
+
+
+
+#headerDIV {  
+/* background-image:url(../images/top3.png);  */
+}
+
+#headerTable{ 	
+	box-shadow : 2px 3px 8px #888888;
+	background-color: #000000;
+	height:64px;
+}
+
+#headerTable #logoDedalo{ margin:0px;height:64px; min-width:200px;overflow:hidden;background-repeat:no-repeat; background-position:0px; }
+
+#headerTable #logoPlataforma{ margin-top:25px; margin-right:3px; border:none;}
+
+.salir_btn_class { display:inline-block; float:left; padding-right:6px; padding-left:2px; padding-top:1px; color:#666666; cursor:pointer}
+
+/* lang select jump header */
+#headerTable #langSelect { background-color:#666; border:none; padding:0px; height:16px; margin-top:0px; width:36px; color:#000; margin-left:2px; position:absolute }
+
+
+.td_logo_dedalo_platform {
+	background-image:url(http://www.fmomo.org/dedalo/logo/);
+	/*background-image:url(http://www.fmomo.org/dedalo/logo/img/logo_dedalo_platform.png);*/
+	background-repeat:no-repeat;
+	background-position: right 25px;
+}
+
+/*
+/* TABS SECCIONES (ex. INICIO, CAPTACIONES, TESAURO ..) -----------------------------------------------------------  */
+
+#botoneraTop {
+	position: relative;
+	top:20px;
+	margin-left:10px;
+	vertical-align:baseline;
+	display: inline-block;
+	min-width:615px;
+}
+
+/* tab normal */
+.topTab , .topTabSelected {		
+	height:18px;
+	margin-top:2px;
+	display:inline-block;
+	margin-right:2px;	
+	float:left;
+	padding-left:6px;
+	padding-right:6px;
+	color:#333;
+	background-color: #5D5D5D;	
+	text-transform:uppercase;
+	cursor:pointer;
+	/*	
+	-webkit-border-top-left-radius: 3px;
+	-webkit-border-top-right-radius: 3px;
+	-moz-border-radius-topleft: 3px;
+	-moz-border-radius-topright: 3px;
+	*/
+	border-top-left-radius: 3px;
+	border-top-right-radius: 3px;
+	
+	/*
+	-webkit-user-select: none;
+	-moz-user-select: none;	
+	*/
+	user-select: none;
+	/*
+	//
+	//background-image:url(../images/deco/bg2_h26invert.png); background-position:bottom; background-repeat:repeat-x;
+	*/		
+}
+.topTab a {	display:block;font-size:10px;margin-top:3px; color: #999}
+.topTab:hover {	color:#FFF ; background-color: #494949; }
+
+/* tab selected */
+.topTabSelected {
+	color:#FFF;
+	background-color:#dd6d00;	
+	cursor: text;
+	background-image: url(../images/deco/ramp_orange2.png); background-position:0px 0px; background-repeat:repeat-x;
+}
+.topTabSelected a {	display:block;font-size:10px;margin-top:3px; }
+
+
+
+
+
+/*
+/* NIVEL 2 LINKS SUBSECIONES (ex. Captaciones, Cintas, Informantes) ----------------------------------------------------------- */
+
+#botoneraTopNivel2 {
+	position:relative;
+	top:20px;
+	height:24px;		
+	margin-left:0px;
+	vertical-align:baseline;
+	display:block;
+	min-width:550px;
+	padding-left:10px;	
+	border-top-left-radius: 8px;
+	border-top-right-radius: 50px;	
+	/* background-image:url(../images/deco/bg2_h26.png); background-position:bottom; background-repeat:repeat-x;*/
+	background-image: url(../images/deco/ramp_orange2.png); background-position:0px -18px; background-repeat:repeat-x;	
+	background-color:#d86d00;	
+}
+#botoneraTopNivel2 .linkSeccion {
+	color:#999; 
+	margin:0px;
+	margin-right:10px;
+	margin-top:4px;
+	height:18px;
+	display: inline-block;	
+	color: #333; /* <---  highlight for v3 beta */ 
+	
+}
+#botoneraTopNivel2 a:hover { color:#FFF; }
+#botoneraTopNivel2 .linkSeccionSelected {
+	margin-right:15px;
+	margin-top:4px;
+	height:18px;
+	display: inline-block;
+	font-weight:bold;
+	cursor:text;
+	color:#ebeaea;
+}
+#botoneraTopNivel2 #versionTab { display:inline-block;float:right;color:#EDEDED; margin-top:10px; margin-right:6px; font-family:"Trebuchet MS", Arial, Helvetica, sans-serif; font-size:9px; text-transform:capitalize }
+
+
+
+
+
+
+/*
+/* NIVEL 3 SITUACION Y ACCIONES (ex. Nueva Captación, Listado ...) ----------------------------------------------------------- */
+
+#subCabeceraN3{ height:20px;padding-top:3px;}
+
+#infoSituacion {float:left;width:224px;overflow:hidden;text-align:center;}
+
+.linkAccion {
+	color:#999; 
+	margin-right:15px;
+	display: inline-block;
+	height:18px;
+	margin-top:0px;
+	float:left;	
+}
+.linkAccionSelected {
+	color: #FFF; 
+	margin-right:15px;
+	display: inline-block;
+	height:18px;
+	margin-top:0px;
+	float:left;
+	font-weight:bold;
+}
+.linkAccion img {
+	margin-right:2px;
+	margin-top:-4px !important ;	
+}
+
+/* zona inferior donde aprarece la situación y las acciones */
+.botoneraTop2{
+	margin-top:0px;
+	margin-left:0px;
+	margin-bottom:0px;
+	padding:0px;
+	height:16px;
+	overflow:hidden;
+	display:block;
+}
+
+.botoneraTopRight {
+	margin-top:40px;
+	margin-right:7px;
+	float: right;
+ 
+}
+.textoTr {
+	display: block;
+	font-family: Verdana, Arial, Helvetica, sans-serif;
+	font-size: 11px;
+	line-height: 13px;
+}
+.TablaLinea1 {
+	border: 1px solid #000000;
+}
+.bordeTop{
+	border-top-width: 1px;
+	border-top-style: dashed;	
+	border-top-color: #496273;
+}
+.Tpresentacion {
+	text-align: justify;
+	width: 700px;
+}
+
+.hr_sub_head { width:97%;color:#BBB;margin-bottom:6px;margin-top:0px;height:1px;overflow:hidden;} 
+
+.botonTabla { margin-left: 2px; float: left; margin-top:1px;}
+.botonTablaZactual { margin-left: 2px; float: left; color:#FFF;}
+.botonTablaZactual a{ color:#FFF; }
+

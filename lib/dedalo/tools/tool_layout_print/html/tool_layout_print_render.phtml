@@ -1,0 +1,53 @@
+<?php
+
+
+$html='';
+
+	/*
+	$html .= '<div class="top">';
+		
+		$html .= "\n<div class=\"section_title \" > TOOL LAYOUT PRINT : $section_title</div>";
+		if(SHOW_DEBUG) {
+			$html .= "<div class=\"layout_debug_info\">context_name: $context_name [".reset($tool_layout_print_records)."]</div>";
+		}
+
+		# Template_name
+		$html .= '<div class="template_name">';
+			#$html .= $section_layout_label;
+			$html .= '<span>'.label::get_label('nombre').'</span>';
+			if(SHOW_DEBUG) {
+				#$html .= " [$tipo]";
+			}
+			$html .= "<input type=\"text\" id=\"input_layout_label\" name=\"layout_label\" value=\"$section_layout_label\" placeholder=\"Template name\" />";
+			
+			$html .= "<input type=\"hidden\" id=\"input_section_target_tipo\" name=\"section_target_tipo\" value=\"$tipo\" />";
+			$html .= "<input type=\"hidden\" id=\"input_section_layout_id\" name=\"section_layout_id\" value=\"$section_layout_id\" />";
+		$html .= '</div>';	
+
+
+	$html .= '</div>';	
+	*/
+		
+		
+	#
+	# PAGES CONTAINER . Pages are added by javascript in this div
+	$html .= "<div id=\"pages_container\">";
+	#$html .= '<div id="page1" class="page" ondrop="Drop(event)" ondragover="dragOver(event)" ondragenter="dragEnter(event)" ondragleave="dragLeave(event)"></div>';
+	#if (!empty($section_layout_dato) && property_exists($section_layout_dato, $type)) {
+		$html .= $section_layout_dato->$type;
+		#$component_html = $section_layout_dato->$type;
+			#dump($section_layout_dato->edit," section_layout_dato");
+	#}
+	$html .= "</div>";
+
+		
+		
+
+	
+
+
+	
+
+
+echo $html;
+?>

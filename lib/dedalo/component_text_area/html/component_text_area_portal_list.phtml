@@ -1,0 +1,90 @@
+<?php
+
+	throw new Exception("Error Processing Request: Unused mode", 1);
+
+
+	# VISUALIZADOR HTML	
+
+	# ELEMENTOS
+	if(!isset ($ar_css['css_span_dato'])) 		$ar_css['css_span_dato']='';
+	if(!isset ($ar_css['css_text_area'])) 		$ar_css['css_text_area']='';
+	if(!isset ($ar_css['css_span_ejemplo'])) 	$ar_css['css_span_ejemplo']='';
+	if(!isset ($ar_css['css_span_debugger']))	$ar_css['css_span_debugger']='';
+	if(!isset ($ar_css['css_wrap_text_area']))	$ar_css['css_wrap_text_area']='';
+	
+	if(!isset ($html_tools))					$html_tools='';
+	
+	
+	print "\n<!-- TEXT AREA [tipo:$tipo section_id_matrix:$parent] $label -->";
+	print "\n<div class=\"css_wrap_text_area wrap_component {$ar_css['css_wrap_text_area']}\" id=\"{$id_wrapper}\"
+	data-tipo=\"{$tipo}\" data-section_tipo=\"{$section_tipo}\" data-parent=\"{$parent}\" data-lang=\"{$lang}\" data-modo=\"{$modo}\" data-dato=\"{$dato_raw}\" data-component_name=\"{$component_name}\" >";
+	
+	# ETIQUETA (LABEL)
+	$html_label = component_common_draw::draw_label($this);
+	
+	# CONTENIDO (INPUT)
+	$html_contenido = '';
+	switch($permissions) {
+			
+		case 0	:	$html_contenido .= "\n <span class=\"css_span_dato {$ar_css['css_span_dato']}\"> No access here (text_area)! </span>";	
+					break;
+						
+		case 1	: 	$html_contenido .= "\n<div class=\"text_area_content text_area_content_shadow\" >";
+					$html_contenido .= "\n <span class=\"css_span_dato {$ar_css['css_span_dato']}\">$dato</span>";
+					$html_contenido .= "\n</div>"; #end text_area_content
+
+						
+					break;	
+						
+		
+		case ($permissions>=2)	:
+
+					# Dato reference default lang
+					if ($modo!='tool_lang') {
+					#$html_contenido .= "\n <div class=\"dato_refecence_default_lang\">$dato_reference_lang</div>";
+					}
+					
+
+					/**
+					* Text area
+					*/
+					$html_contenido .= "\n <textarea class=\"css_text_area $text_area_tm {$ar_css['css_text_area']}\" 
+					id=\"{$identificador_unico}\" 
+					name=\"{$input_name}\" 
+					data-tipo=\"{$tipo}\" data-lang=\"{$lang}\" data-section_tipo=\"{$section_tipo}\" data-parent=\"{$parent}\" data-last_tag_index_id=\"{$last_tag_index_id}\"
+					title=\"$html_title\">$dato</textarea>";
+
+					
+					if (SHOW_DEBUG) {
+					$html_contenido .= "<span class=\"debug_info\"> $identificador_unico</span>";
+					}
+					
+					
+
+		
+			if($permissions==3)	
+					
+					$html_contenido .= "\n <span class=\"css_span_debugger {$ar_css['css_span_debugger']}\" id=\"debugger_{$tipo}\" >{$debugger}</span>";
+					break;
+							
+	}	
+	
+	
+	# Prepare content to show in page
+	tools::prepare_content($html_contenido);
+
+	
+	# PRINT HTML
+	#print $html_label;
+	print $html_contenido;
+
+	
+	
+	print "\n</div><!-- /css_wrap_text_area  $label -->\n\n"; //wrap	
+
+?>
+<script type="text/javascript">
+	// Init current text editor
+	text_editor.init('<?php echo $identificador_unico ?>','<?php echo $modo?>','<?php echo $propiedades_json ?>')
+</script>
+

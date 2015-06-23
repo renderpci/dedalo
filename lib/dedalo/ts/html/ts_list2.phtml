@@ -1,0 +1,195 @@
+
+
+<?php
+# CSS
+/*
+print css::build_tag(JQUERY_UI_URL_CSS);
+print css::build_tag(DEDALO_LIB_BASE_URL .'/common/css/common.css');
+print css::build_tag(DEDALO_LIB_BASE_URL .'/html_page/css/html_page.css');
+print css::build_tag(DEDALO_LIB_BASE_URL .'/diffusion/diffusion_index_ts/css/diffusion_index_ts.css');
+print css::build_tag(DEDALO_LIB_BASE_URL .'/tools/tool_av_versions/css/tool_av_versions.css');
+print css::build_tag(DEDALO_LIB_BASE_URL .'/menu/css/menu.css');
+print css::build_tag(DEDALO_LIB_BASE_URL .'/component_portal/css/component_portal.css');
+*/
+print css::build_tag(DEDALO_LIB_BASE_URL .'/ts/css/ts_list.css');
+?>
+
+<script type="text/javascript">
+	var DEDALO_LIB_BASE_URL	= '<?php echo DEDALO_LIB_BASE_URL ?>' ;
+	var page_globals = new Object();
+		page_globals.dedalo_application_lang	= '<?php echo DEDALO_APPLICATION_LANG ?>' ;
+		page_globals.dedalo_data_lang		= '<?php echo DEDALO_DATA_LANG ?>' ;
+		page_globals.dedalo_data_nolan		= '<?php echo DEDALO_DATA_NOLAN ?>' ;
+		page_globals.modo			= '<?php echo $modo ?>' ;
+	
+	DEBUG = <?php var_export(SHOW_DEBUG);?>;
+
+	// VARS de mensajes de aviso multi-idioma
+	var el_descriptor_tiene_hijos_title 			= '<?php echo msgJS($el_descriptor_tiene_hijos_title) ?>' ;
+	var el_descriptor_tiene_indexaciones_title		= '<?php echo msgJS($el_descriptor_tiene_indexaciones_title) ?>' ;
+	var seguro_que_quiere_borrar_este_termino_title	= '<?php echo msgJS($seguro_que_quiere_borrar_este_termino_title) ?>' ;
+	var hijos_title									= '<?php echo msgJS($hijos_title) ?>' ;
+
+	// Establecemos una cookie de modo para toda la página
+	var modo 		= '<?php echo $modo ?>';
+	var accion 		= '<?php echo $accion ?>';
+	var ts_lang		= '<?php echo $ts_lang ?>';
+	var type		= '<?php echo $type ?>';
+
+	/*
+	* VAR terminoIDresalte es un string viene del get  cuando se hace una búsqueda.
+	* Se le pasa al loop "openTrackedDivs" para que pase en cada ciclo el listado de 
+	* terminos a resaltar (tipo 525,632,874)
+	*/
+	var terminoIDresalte = '<?php echo $terminoIDlist ?>';	//alert(terminoIDresalte);
+</script>
+<?php
+# JS
+/*
+print js::build_tag(JQUERY_LIB_URL_JS);
+print js::build_tag(JQUERY_UI_URL_JS);
+print js::build_tag(DEDALO_LIB_BASE_URL . '/common/js/common.js');
+print js::build_tag(DEDALO_LIB_BASE_URL . '/login/js/login.js');
+print js::build_tag(DEDALO_LIB_BASE_URL .'/component_portal/js/component_portal.js');
+print js::build_tag(DEDALO_LIB_BASE_URL .'/tools/tool_av_versions/js/tool_av_versions.js');
+print js::build_tag(DEDALO_LIB_BASE_URL . '/common/js/cookies.js');
+print js::build_tag(DEDALO_LIB_BASE_URL . '/common/js/lang/'.DEDALO_APPLICATION_LANG.'.js');
+*/
+#print js::build_tag(DEDALO_ROOT_WEB 	. '/lib/jquery/jquery.ajaxQueue.min.js');
+print js::build_tag(DEDALO_ROOT_WEB 	. '/lib/jquery/AjaxQ-master/ajaxq.js');
+#print js::build_tag(DEDALO_ROOT_WEB 	. '/inc/javascript.js');
+print js::build_tag(DEDALO_LIB_BASE_URL . '/ts/js/ts_common.js');
+print js::build_tag(DEDALO_LIB_BASE_URL . '/ts/js/ts_list.js');
+?>
+</head>
+
+<body onLoad="set_localStorage('tsopen','1',7);" onBeforeUnload="set_localStorage('tsopen','0',7);" onUnload="set_localStorage('tsopen','0',7);" >
+<div id="wrapGeneral">
+<table >
+
+  <tr>
+    <td align="center" valign="top" >
+    <div id="tesauro_content">         
+    
+    <form id="form1" name="form1" method="post" action="trigger.Tesauro.php" onsubmit="return ts.validate_form(this);">
+    			
+		<!-- ID -->
+		ID <input type="text" name="terminoID" id="terminoID" value="<?php echo $terminoID ?>" style="width:30px; text-align:center" >     
+		
+		<!-- TERMINO -->
+		<?php echo $termino_title ?>
+        <?php /*<img src="../images/icon-help.gif" align="absmiddle" class="btnGo1" onClick="ts.mostrarInfo(this,event);"> */?>
+        <div class="icon-help" onClick="ts.mostrarInfo(this,event);"></div>
+		<input type="text" name="termino" id="termino" value="<?php echo $termino ?>" style="width:80px; text-align:center">        
+
+        <!-- DEF -->
+		<?php echo $definicion_title  ?>
+		<input type="text" name="def" id="def" value="<?php echo $def ?>" style="width:50px; text-align:center">
+
+		<?php /* if(SHOW_DEBUG) { ?>
+		<!-- MODELO_NAME -->
+		<?php echo 'Model'  ?>
+		<input type="text" name="modelo_name" id="modelo_name" value="<?php echo $modelo_name ?>" style="width:40px; text-align:center">    
+        <?php } #if(SHOW_DEBUG) */ ?>
+
+        <!-- SELECT TYPE -->
+        <?php
+        /*
+		if($alowed5==='456') {			
+			echo "<input name=\"nombre\" type=\"hidden\" value=\"$type\" >";			
+		}else{			
+			echo $tipo_title . ' ' . $nombre_select ;		 	
+		}
+		*/
+		echo $tipo_title . ' ' . $nombre_select ;
+		?>
+        
+        <!-- SELECT LANG -->
+		<?php echo $idioma_title ?>: 
+		<?php echo $todos_title ?> <input type="radio" name="ts_lang" value="" checked>
+        <?php if($ts_lang) {?>
+		<?php echo RecordObj_ts::get_termino_by_tipo($ts_lang); ?> <input type="radio" name="ts_lang" value="<?php echo $ts_lang ?>" checked > 
+        <?php }#if($ts_lang) {?>
+        
+        
+        <input name="accion" type="hidden" value="searchTSform">
+        <input name="modo" type="hidden" value="<?php echo $modo ?>">
+        
+		<input type="submit" name="button" id="button" value=" OK " class="SubmitButon">
+        
+        <!-- RESET -->
+        <?php if($modo != 'tesauro_rel_DES') {?>
+        <a href="javascript:reset_window_and_reload();" style="margin-left:12px;font-weight:bold"> Reset </a>  <?php #if(SHOW_DEBUG==true) echo " [$modo]" ?>
+        <?php }#if($modo != 'tesauro_rel') {?>
+        
+        <?php /*
+        <a href="javascript:document.location.href='?modo=<?php echo $modo?>&type=<?php echo $type?>';" style="margin-left:6px; margin-right:6px; font-weight:bold"> <?php echo $recargar_title ?> </a>
+        */ ?>
+
+        <?php echo $idioma_title ?>
+        <?php echo $SelectLangList ; ?>
+        
+        <div style="display:inline-block; margin-left:50px;">
+        	<?php 
+			if($total=='form')
+			{
+				echo " $total_title: $n";
+				if($n>$max) echo " ($mostradas_title $max $de_title $n) ";
+			}
+			?>
+        </div>
+        
+    </form>
+    
+    
+   
+    
+    
+    <div id="tsTreeLOAD">
+                
+    
+    <?php	
+	#************************************************
+	#	LISTADO INICIAL
+	#************************************************
+	
+	echo $buildTreeHtml;	
+			
+	?>
+    </div> 
+    
+      
+    <div id="tsTree" style="width:96%;"><!-- AJAX CONTENT trigger.Tesauro.php --></div>
+    
+    
+    </div><!-- /tesauro_content -->
+    </td>
+	</tr>
+    
+    
+	<tr>
+        <td align="center"  valign="bottom" >
+            <!-- iconos de información -->
+            <?php if($modo=='tesauro_edit'|| $modo=='modelo_edit'){ ?>	
+            <div style="padding:20px; margin-top:40px">
+            <img src="../themes/default/nd.gif" width="15" height="14" align="absmiddle"> <?php echo $no_descriptores_title ?> 
+            <img src="../themes/default/q.gif" width="15" height="14" align="absmiddle" style="padding-left:10px"> <?php echo $definicion_title ?>  
+            <img src="../themes/default/u.gif" alt="" width="15" height="14" align="absmiddle" style="padding-left:10px"> <?php echo $usado_en_indexaciones_title ?>  
+            <img src="../themes/default/tr-icon.gif" alt="" width="15" height="14" align="absmiddle" style="padding-left:10px"> <?php echo $terminos_relacionados_title ?>
+            <img src="../themes/default/m-icon.gif" width="15" height="15" align="absmiddle" style="padding-left:10px"> <?php echo ucfirst($modelo_title) ?> 
+            <img src="../themes/default/edit_grey.png" width="15" height="15" align="absmiddle" style="padding-left:10px"> <?php echo $editar_title ?> 
+            <img src="../themes/default/video.png" width="15" height="15" align="absmiddle" style="padding-left:10px"> <?php echo $ver_texto_video_title ?> 
+            <img src="../themes/default/sonido.png" width="15" height="15" align="absmiddle" style="padding-left:10px"> <?php echo $ver_texto_audio_title ?>
+            </div>
+            <div class="bottom_separator"></div>
+            <?php }//?>
+        </td>
+    </tr>
+    
+    
+</table>
+</div><!-- fin wrapGeneral -->
+
+
+<?php include_once(DEDALO_ROOT .'/inc/operators_help.html');?>
+

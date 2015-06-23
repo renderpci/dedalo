@@ -1,0 +1,50 @@
+<?php
+
+	# VISUALIZADOR HTML	- PLAYER (TRANSCRIPTION)
+
+		
+	# CONTENIDO 
+	$html_contenido = '';
+
+	$html_contenido .= "<div class=\"leaflet_map_player\">";
+	$html_contenido .= "\n <div class=\"leaflet_map\" id=\"$identificador_unico\"><!-- Content here --></div>";
+	#$html_contenido .= "<div onclick=\"component_geolocation.get_data()\">Get current data</div>";
+	#$html_contenido .= "<div onclick=\"component_geolocation.set_stored_data()\">Set stored data</div>";
+	$html_contenido .= "</div>";					
+		
+
+	# PRINT HTML
+	print $html_contenido;	
+
+
+	/*
+	# CSS
+	print css::build_tag(DEDALO_ROOT_WEB .'/lib/leaflet/leaflet.css');
+	print css::build_tag(DEDALO_ROOT_WEB .'/lib/leaflet/Leaflet.draw-master/dist/leaflet.draw.css');
+	
+	# JS	
+	#print js::build_tag(DEDALO_ROOT_WEB	 . '/lib/leaflet/leaflet.js');
+	print js::build_tag('http://cdn.leafletjs.com/leaflet-0.7.1/leaflet.js');
+	print js::build_tag(DEDALO_ROOT_WEB . '/lib/leaflet/leaflet-google.js');
+
+	print js::build_tag(DEDALO_ROOT_WEB . '/lib/leaflet/Leaflet.draw-master/dist/leaflet.draw.js');
+	
+	switch (DEDALO_GEO_PROVIDER) {
+		case 'GOOGLE':			
+			#print js::build_tag('http://cdn.leafletjs.com/leaflet-0.7.1/leaflet.js');
+			#print js::build_tag('http://matchingnotes.com/javascripts/leaflet-google.js');
+			#print js::build_tag('http://maps.google.com/maps/api/js?v=3.2&sensor=false');
+			print js::build_tag(DEDALO_ROOT_WEB . '/lib/leaflet/leaflet-google.js');
+			break;
+		
+		default:			
+			break;
+	}	
+	*/
+
+?>
+<script type="text/javascript">
+	component_geolocation.DEDALO_GEO_PROVIDER = '<?php echo DEDALO_GEO_PROVIDER ?>';
+	// Build map
+	component_geolocation.init_map('<?php echo $identificador_unico ?>');
+</script>

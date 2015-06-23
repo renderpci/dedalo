@@ -1,0 +1,48 @@
+<?php
+
+	# VISUALIZADOR HTML	
+
+	# ELEMENTOS
+	if(!isset ($ar_css['css_span_dato'])) 						$ar_css['css_span_dato']='';
+	if(!isset ($ar_css['css_component_project_langs']))			$ar_css['css_component_project_langs']='';
+	if(!isset ($ar_css['css_span_ejemplo'])) 					$ar_css['css_span_ejemplo']='';
+	if(!isset ($ar_css['css_span_debugger']))					$ar_css['css_span_debugger']='';
+	if(!isset ($ar_css['css_wrap_component_project_langs']))	$ar_css['css_wrap_component_project_langs']='';
+		
+	
+	#print "\n<!-- COMPONENT_PROJECT_LANGS [tipo:$tipo] -->";
+	print "\n<div class=\"css_wrap_component_project_langs {$ar_css['css_wrap_component_project_langs']}\" >";
+	
+	
+	# CONTENIDO (INPUT)
+	$html_contenido = '';
+	switch($permissions) {
+			
+		case 0	:	$html_contenido .= "\n <span class=\"css_span_dato {$ar_css['css_span_dato']}\"> ".label::get_label('sin_acceso')." (component_project_langs)</span>";
+					break;
+						
+		case 1	: 	$html_contenido .= "\n <span class=\"css_span_dato {$ar_css['css_span_dato']}\">$dato</span>";
+					break;	
+						
+		case ($permissions>=2)	:					
+					
+					$html_langs	= NULL;
+					if(is_array($ar_langs)) foreach($ar_langs as $terminoID => $lang_name) {
+						
+						$html_langs .= $lang_name . ', ' ;		
+					}					
+					$html_contenido .= substr($html_langs,0,-2);				
+					
+			if($permissions==3)		
+					$html_contenido .= "\n <span class=\"css_span_debugger {$ar_css['css_span_debugger']}\" id=\"debugger_{$tipo}\" >{$debugger}</span>";	
+					
+											
+	}
+	
+	
+	# PRINT HTML
+	print $html_contenido;
+	
+	
+	print "\n</div>\n\n"; //wrap
+?>

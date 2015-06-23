@@ -1,0 +1,70 @@
+<?php
+
+	# VISUALIZADOR HTML	
+
+	# ELEMENTOS
+	if(!isset ($ar_css['css_span_dato'])) 			$ar_css['css_span_dato']='';
+	
+	
+	print "\n<!-- PROFILE [tipo:$tipo section_id_matrix:$parent] $label -->";
+	print "\n<div class=\"css_wrap_profile wrap_component\" id=\"{$id_wrapper}\" 
+	data-tipo=\"{$tipo}\" data-lang=\"{$lang}\"
+	data-parent=\"{$parent}\"
+	data-section_tipo=\"{$section_tipo}\"
+	data-modo=\"{$modo}\"
+	data-component_name=\"{$component_name}\"
+	data-component_info='{$component_info}'
+	>";
+	
+	# ETIQUETA (LABEL)
+	$html_label = component_common_draw::draw_label($this);
+	
+	# CONTENIDO (INPUT)
+	$html_contenido = '';
+	switch($permissions) {
+			
+		case 0:	
+			$html_contenido .= "\n <span class=\"css_span_dato {$ar_css['css_span_dato']}\"> ".label::get_label('sin_acceso')." </span>";
+			break;					
+		
+		case ($permissions>=1):		
+			$html_contenido .= "\n <select class=\"css_select_profile\" name=\"{$input_name}\" data-tipo=\"{$tipo}\" data-lang=\"{$lang}\" data-section_tipo=\"{$section_tipo}\" data-parent=\"{$parent}\" title=\"$html_title\">";
+			
+				if(empty($dato)) {
+					$checked = 'selected';
+				}else{
+					$checked = "";
+				}
+				# First option (custom)
+				$html_contenido .= "\n <option value=\"0\" {$checked}> Custom </option>";
+				
+				# DB Options
+				foreach ($ar_select_values as $value => $rotulo) {
+					
+					if( $dato == $value) {
+						$checked = 'selected';
+					}else {
+						$checked = "";
+					}
+					$html_contenido .= "\n <option value=\"{$value}\" {$checked}> {$rotulo}</option>";							
+				}
+
+			$html_contenido .= "\n </select>";
+
+			#$html_contenido .= "<div class=\"icon_bs icon_apply\"></div>";
+			$html_contenido .= "\n <input type=\"button\" value=\"".label::get_label('aplicar')."\" class=\"css_button_generic apply_profile_button\" onclick=\"component_profile.apply_profile(this)\">";
+			
+			$html_contenido .= " <span class=\"notas\"><i> Componente para testeo</i></span>";								
+	}
+
+	# Prepare content to show in page
+	tools::prepare_content($html_contenido);
+	
+	
+	# PRINT HTML
+	print $html_label;
+	print $html_contenido;	
+	
+	
+	print "\n</div><!-- /css_wrap_select PROFILE [tipo:$tipo section_id_matrix:$parent] $label -->\n\n"; //wrap
+?>

@@ -1,0 +1,290 @@
+<?php
+
+
+$html='';
+
+
+	$html .= '<div class="top">';
+		
+		$html .= "\n<div class=\"section_title \" > TOOL LAYOUT PRINT : $section_title</div>";
+		if(SHOW_DEBUG) {
+		$html .= "<div class=\"layout_debug_info\">context_name: $context_name [".reset($tool_layout_print_records)."]</div>";
+	}
+
+		# Template_name
+		$html .= '<div class="template_name">';
+		#$html .= $section_layout_label;
+		$html .= '<span>'.label::get_label('nombre').'</span>';
+		if(SHOW_DEBUG) {
+			#$html .= " [$tipo]";
+		}
+		$html .= "<input type=\"text\" id=\"input_layout_label\" name=\"layout_label\" value=\"$section_layout_label\" placeholder=\"Template name\" />";
+		
+		$html .= "<input type=\"hidden\" id=\"input_section_target_tipo\" name=\"section_target_tipo\" value=\"$tipo\" />";
+		$html .= "<input type=\"hidden\" id=\"input_section_layout_id\" name=\"section_layout_id\" value=\"$section_layout_id\" />";
+		$html .= '</div>';
+
+
+		# Editable text div
+		$html .= '<div class="warp_icon_editable_text">';
+		$html .= ' <div id="free_text" class="icon_free_text" title="Drag free text box to page" draggable="true" ondragstart="dragStart(event,\'free_text\')">';
+		$html .= '  <div class="close" onclick="javascript:remove_free_text(this)"></div>';
+		$html .= '  <div class="drag_text_editor" style="display:none"></div>';
+		$html .= '  <div id="text_editor" class="editable_text"></div>';
+		$html .= ' </div>';
+		$html .= '</div>';
+
+
+		# header_element text div
+		$html .= '<div class="warp_icon_header_button" title="Click element to add into page" onclick="add_page_fixed_element(this,\'header\')">';		
+		$html .= '</div>';
+
+		# footer_element text div
+		$html .= '<div class="warp_icon_footer_button" title="Click element to add into page" onclick="add_page_fixed_element(this,\'footer\')">';		
+		$html .= '</div>';
+		 
+
+	$html .= '</div>';
+
+	
+	#
+	# CENTER
+	$html .= '<div class="center">';
+		
+		#
+		# LEFT PANEL (COMPONENTS) RECURSIVE with 3 levels of portals
+		$html .= '<div id="left" class="left">';
+		#add two levels of portals into two different html, in the last we join the three variable into one html + html1 + html2
+		$html1='';
+		$html2='';
+		#for every global section with the section and the compoments	
+		foreach ($ar_section_resolved as $section => $ar_components) {
+			#save the section and the current section label for use into the page "drop"
+			$all_sections[$section] = $section_title;
+			//dump($section,'$section');
+			//add the principal section
+			$html .= '<div id='.$section.'>';
+			//add the div with the title and all childrens of this section
+			$html .= '<div class="section_childrens" onclick="javascript:show_childrens_to_left(\''.$section.'\')">';
+			$html .= $section_title;
+			$html .= '</div>';
+			$html .= '<div class="warp_components_display" style="display:none">';
+			#for every component
+			foreach ($ar_components as $tipo_component => $component) {
+			#if the component is one array the component is a portal with the data of the compponent 'portal', and the section that the portal referal 'section'
+			if(is_array($component)){
+				#select the components 'childrens' of the refereal section and select the component of the 'portal'
+				$childrens = $component['section'];
+				$component = $component['portal'];
+				//dump($component,'$component');
+				#make a div with the component portal
+				$html .= '<div id="'.$tipo_component.'" class="draggable component_box border_box dedalo_component" data-parent_section='.$section.' draggable="true" ondragstart="dragStart(event,\''.$section.'\')" ondragend="dragEnd(event)">';
+					# Add button close hidden
+					$html .= '<div id="close" class="close" style="display:none" onclick="javascript:returnLeft('.$tipo_component.')"></div>';
+					# Component html
+					$html .= $component->get_html();
+					$html .= '</div>';
+
+						#for every component of the section referal by the current portal, create the second level html1, one portal have only one refereal section
+						foreach ($childrens as $section1 => $portal_ar_component) {
+							# add the div with the title and all childrens of this section referenced by the portal	
+							$html1 .= '<div id ='.$section1.'_'.$tipo_component.'>';
+							$html1 .= '<div class="section_childrens" onclick="javascript:show_childrens_to_left(\''.$section1.'_'.$tipo_component.'\')">';
+							$html1 .= $component->get_label();
+							$html1 .= '</div>';
+							$html1 .= '<div class="warp_components_display" style="display:none">';
+						
+							#save the portal and the current portal label for use into the page "drop"
+							$all_sections[$section1.'_'.$tipo_component] = $component->get_label();
+							#for every component into the portal section
+							foreach ($portal_ar_component as $portal_tipo_component => $portal_component) {
+								#if the current compoent is one array the compoent is a portal (one portal into the portal)
+								if(is_array($portal_component)){
+										#select the components 'childrens' of the refereal section and select the component of the 'portal'
+										$childrens_portal = $portal_component['section'];
+										$portal_component = $portal_component['portal'];
+										#make a div with the component portal
+										$html1 .= '<div id="'.$tipo_component.'_'.$portal_tipo_component.'" class="draggable component_box border_box dedalo_component" data-parent_section='.$section1.'_'.$tipo_component.' draggable="true" ondragstart="dragStart(event,\''.$section1.'_'.$tipo_component.'\')" ondragend="dragEnd(event)">';
+										# Add button close hidden
+										$html1 .= '<div id="close" class="close" style="display:none" onclick="javascript:returnLeft('.$tipo_component.'_'.$portal_tipo_component.')"></div>';
+										# Component html
+										$html1 .= $portal_component->get_html();
+										$html1 .= '</div>';
+
+										#for every component of the section referal by the current portal, create the third level html2, one portal have only one refereal section
+										foreach ($childrens_portal as $section2 => $portal2_ar_component) {
+											# # add the div with the title and all childrens of this section referenced by the portal
+											$html2 .= '<div id ='.$section2.'_'.$portal_tipo_component.'>';	
+											$html2 .= '<div class="section_childrens" onclick="javascript:show_childrens_to_left(\''.$section2.'_'.$portal_tipo_component.'\')">';
+											$html2 .= $component->get_label().' | '.$portal_component->get_label();
+											$html2 .= '</div>';
+											$html2 .= '<div class="warp_components_display" style="display:none">';
+
+
+											#save the portal and the current section for use into the page "drop"
+											$all_sections[$section2.'_'.$portal_tipo_component] = $component->get_label().' | '.$portal_component->get_label();
+											#for every component into the portal section											
+											foreach ($portal2_ar_component as $portal2_tipo_component => $portal2_component) {
+												#if the current component is one array the component is a portal (one portal into the portal into the portal)
+												if(is_array($portal2_component)){
+													#select the components 'childrens' of the refereal section and select the component of the 'portal'
+													$childrens2_portal = $portal2_component['section'];
+													$portal2_component = $portal2_component['portal'];
+													#make a div with the component portal
+													$html2 .= '<div id="'.$portal_tipo_component.'_'.$portal2_tipo_component.'" class="draggable component_box border_box dedalo_component" data-parent_section='.$section2.'_'.$portal_tipo_component.' draggable="true" ondragstart="dragStart(event,\''.$section2.'_'.$portal_tipo_component.'\')" ondragend="dragEnd(event)">';
+													# Add button close hidden
+													$html2 .= '<div id="close" class="close" style="display:none" onclick="javascript:returnLeft('.$portal_tipo_component.'_'.$portal2_tipo_component.')"></div>';
+													# Component html
+													$html2 .= $portal2_component->get_html();
+													$html2 .= '</div>';
+												}else{
+													#make a div with the rest of the components (no portal)
+													$html2 .= '<div id="'.$portal_tipo_component.'_'.$portal2_tipo_component.'" class="draggable component_box border_box dedalo_component" data-parent_section='.$section2.'_'.$portal_tipo_component.' draggable="true" ondragstart="dragStart(event,\''.$section2.'_'.$portal_tipo_component.'\')" ondragend="dragEnd(event)">';
+													# Add button close hidden
+													$html2 .= '<div id="close" class="close" style="display:none" onclick="javascript:returnLeft('.$portal_tipo_component.'_'.$portal2_tipo_component.')"></div>';
+													# Component html
+													$html2 .= $portal2_component->get_html();
+													$html2 .= '</div>';
+												};
+											};
+										};
+
+										$html2 .= '</div>';	//end warp_components_display
+										$html2 .= '</div>';	//end	section2						
+
+								}else{
+									#make a div with the rest of the components (no portal)
+									$html1 .= '<div id="'.$tipo_component.'_'.$portal_tipo_component.'" class="draggable component_box border_box dedalo_component" data-parent_section='.$section1.'_'.$tipo_component.' draggable="true" ondragstart="dragStart(event,\''.$section1.'_'.$tipo_component.'\')" ondragend="dragEnd(event)">';
+									# Add button close hidden
+									$html1 .= '<div id="close" class="close" style="display:none" onclick="javascript:returnLeft('.$tipo_component.'_'.$portal_tipo_component.')"></div>';
+										# Component html
+									$html1 .= $portal_component->get_html();
+									$html1 .= '</div>';
+
+								};
+							};
+							
+						}
+					$html1 .= '</div>'; //end warp_components_display
+					$html1 .= '</div>';	//end	section1
+
+			}else{
+				#make a div with the rest of the components (no portal)
+				$html .= '<div id="'.$tipo_component.'" class="draggable component_box border_box dedalo_component" data-parent_section='.$section.' draggable="true" ondragstart="dragStart(event,\''.$section.'\')" ondragend="dragEnd(event)">';
+					# Add button close hidden
+					$html .= '<div id="close" class="close" style="display:none" onclick="javascript:returnLeft('.$tipo_component.')"></div>';
+					# Component html
+					$html .= $component->get_html();
+				$html .= '</div>';
+			};
+		};
+		
+		#dump($all_sections,'$all_sections');
+
+/*
+			foreach ($ar_components as $tipo_component => $component) {	
+				$html .= '<div id="'.$tipo_component.'" class="draggable component_box border_box dedalo_component" draggable="true" ondragstart="dragStart(event)" ondragend="dragEnd(event)">';
+					# Add button close hidden
+					$html .= '<div id="close" class="close" style="display:none" onclick="javascript:returnLeft('.$tipo_component.')"></div>';
+					# Component html
+					$html .= $component->get_html();
+				$html .= '</div>';
+			}*/
+		}
+		$html .= '</div>';//end warp_components_display
+		$html .= '</div>';//end	section
+		$html .= $html1;
+		$html .= $html2;
+		$html .= '</div>';//end	left
+
+
+		#
+		# PAGES CONTAINER . Pages are added by javascript in this div
+		$html .= "<div id=\"pages_container\">";
+		#$html .= '<div id="page1" class="page" ondrop="Drop(event)" ondragover="dragOver(event)" ondragenter="dragEnter(event)" ondragleave="dragLeave(event)"></div>';
+		if (!empty($section_layout_dato) && property_exists($section_layout_dato, $type)) {
+			$html .= $section_layout_dato->$type;
+			$component_html = $section_layout_dato->$type;
+			$html .= "<script>$(document).ready(function() { loadPage(); });</script>";
+		}
+		$html .= "</div>";
+
+		
+		
+
+		#
+		# RIGHT PANEL (BUTTONS)
+		$html .= '<div class="right">';
+			# base buttons
+			$html .= "<div class=\"wrap_buttons\">";
+				# Button print
+				$html .= "<div class=\"wrap_icon wrap_print\">";
+				$html .= "<div class=\"t_icon icon_template icon_print\" onclick=\"tool_layout_print.print_pdf(this)\" 
+				data-component_layout_tipo=\"$component_layout_tipo\" data-section_layout_id=\"$section_layout_id\" data-section_layout_tipo=\"$section_layout_tipo\"></div>";
+				$html .= "<span>".label::get_label('print')."</span>";
+				$html .= "</div>";
+
+				/**/
+				# Button edit
+				$html .= "<div class=\"wrap_icon wrap_edit\" style=\"display:none\" onclick=\"return location.reload()\">";
+				$html .= "<div class=\"t_icon icon_template icon_edit\"></div>";
+				$html .= "<span>".label::get_label('edit_template')."</span>";
+				$html .= "</div>";
+				
+
+				# Button save (invissible by default)
+				$html .= "<div class=\"wrap_icon wrap_save\">";
+				$html .= "<div class=\"t_icon icon_template icon_save\" onclick=\"tool_layout_print.save_template(this)\" 
+				data-component_layout_tipo=\"$component_layout_tipo\" data-section_layout_id=\"$section_layout_id\" data-section_layout_tipo=\"$section_layout_tipo\"></div>";
+				$html .= "<span>".label::get_label('save_template')."</span>";
+				$html .= "<div id=\"save_response\"></div>";
+				$html .= "</div>";
+
+				# Button ad fixed height page
+				$html .= "<div class=\"wrap_icon wrap_add_page_fixed\">";
+				$html .= "<div class=\"t_icon icon_template icon_template_add_page_fixed\" onclick=\"show_pages_options('wrap_select_option_pages_fixed')\"></div>";
+				$html .= "<span>".label::get_label('new_page')."</span>";
+				$html .= "</div>";
+
+				# Button ad fluid height page
+				$html .= "<div class=\"wrap_icon wrap_add_page_fluid\">";
+				$html .= "<div class=\"t_icon icon_template icon_template_add_page_fluid\" onclick=\"show_pages_options('wrap_select_option_pages_fluid')\"></div>";
+				$html .= "<span>".label::get_label('new_fluid_page')."</span>";
+				$html .= "</div>";
+			#end base buttons
+			$html .= "</div>";
+			/*
+			* List of the pages to select the New Page
+			*/
+			# list ad fixed height page
+			$html .= "<div class=\"wrap_select_option_pages_fixed\">";
+			$html .= "<div id=\"close\" class=\"close\" onclick=\"javascript:show_pages_options('wrap_select_option_pages_fixed')\"></div>";
+			foreach ($all_sections as $portal => $portal_name) {
+				$html .= "<div class=\"t_icon icon_template icon_template_add_page_fixed_mini icon_template_add_page_fixed\" onclick=\"addPage('fixed','$portal','$portal_name')\"></div>";
+				$html .= "<span>".label::get_label('new_fixed_page').':</br>'.$portal_name."</span>";
+				#$html .= "</option>"; style=\"display:none\"
+			};
+			$html .= "</div>";
+
+			# list ad fluid height page
+			$html .= "<div class=\"wrap_select_option_pages_fluid\">";
+			$html .= "<div id=\"close\" class=\"close\" onclick=\"javascript:show_pages_options('wrap_select_option_pages_fluid')\"></div>";
+			foreach ($all_sections as $portal => $portal_name) {
+				$html .= "<div class=\"t_icon icon_template icon_template_add_page_fluid_mini icon_template_add_page_fluid\" onclick=\"addPage('fluid','$portal','$portal_name')\"></div>";
+				$html .= "<span>".label::get_label('new_fluid_page').':</br>'.$portal_name."</span>";
+				#$html .= "</option>"; style=\"display:none\"
+			};
+			$html .= "</div>";
+
+			#$html .= " <br><div onclick=\"tool_layout_print.save_template(this)\" data-tipo=\"$component_layout_tipo\" data-parent=\"$section_layout_id\"> Save template $component_layout_tipo - $section_layout_id</div>";
+
+		$html .= '</div>';
+
+	$html .= '</div>';
+
+
+	
+
+
+echo $html;
+?>

@@ -1,0 +1,75 @@
+<?php
+
+	# VISUALIZADOR HTML	
+
+	# ELEMENTOS
+	if(!isset ($ar_css['css_span_dato'])) 			$ar_css['css_span_dato']='';
+	if(!isset ($ar_css['css_pdf'])) 				$ar_css['css_pdf']='';
+	if(!isset ($ar_css['css_span_ejemplo'])) 		$ar_css['css_span_ejemplo']='';
+	if(!isset ($ar_css['css_span_debugger']))		$ar_css['css_span_debugger']='';
+	if(!isset ($ar_css['css_wrap_pdf']))			$ar_css['css_wrap_pdf']='';	
+	
+	
+	print "\n<!-- PDF [tipo:$tipo section_id_matrix:$parent] $label -->";
+	print "\n<div class=\"css_wrap_pdf wrap_component {$ar_css['css_wrap_pdf']}\"
+	id=\"{$id_wrapper}\"
+	data-tipo=\"{$tipo}\"
+	data-lang=\"{$lang}\"
+	data-section_tipo=\"{$section_tipo}\"
+	data-parent=\"{$parent}\"
+	data-modo=\"{$modo}\"
+	data-dato=\"{$valor}\"
+	data-component_name=\"{$component_name}\"
+	data-aditional_path=\"$aditional_path\"
+	data-initial_media_path=\"$initial_media_path\"
+	data-component_info='{$component_info}'
+	>";
+	
+		
+		# ETIQUETA (LABEL)
+		$html_label = component_common_draw::draw_label($this);
+		
+		# CONTENIDO (INPUT)
+		$html_contenido = '';
+		switch($permissions) {
+				
+			case 0 :	$html_contenido .= "";
+						break;
+							
+			case ($permissions>=1) :
+				
+						# pdf THUMB
+						if($file_exists) { 
+							$html_contenido .= "\n <div class=\"css_wrap_pdf_thumb\" onclick=\"\" >";
+							/*
+							#Embed PDF File
+							$html_contenido .= "<object class=\"pdf_object_thumb\" type=\"application/pdf\" 
+													data=\"$pdf_url\"?>?#zoom=50&scrollbar=1&toolbar=0&navpanes=0\" id=\"pdf_content\">
+													<param name=\"zoom\" value=\"50%\" />
+						    						<p>Your browser does not support pdf view.</p>
+						    					</object>";
+							*/
+							
+							$html_contenido .= $pdf_thumb_html ; # Rendered in thumb mode
+							$html_contenido .= "\n </div>";
+						}else{
+							$html_contenido .= "\n <div class=\"css_wrap_pdf_thumb\" >";
+							$html_contenido .= "  <span class=\"notas\">No file is loaded</span>" ;
+							$html_contenido .= "\n </div>";
+						}	
+												
+		}
+
+		# Prepare content to show in page
+		tools::prepare_content($html_contenido);	
+		
+
+		# PRINT HTML
+		print $html_label;
+		print $html_contenido;
+	
+	
+	print "\n</div><!-- /css_wrap_pdf [tipo:$tipo section_id_matrix:$parent] $label -->\n"; //wrap
+
+
+?>

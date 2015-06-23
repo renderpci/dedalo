@@ -1,0 +1,76 @@
+<?php
+
+	# VISUALIZADOR HTML	
+
+	print "\n<div class=\"wrap_btn_relate_fragment\">";
+
+
+	# CONTENIDO (INPUT)
+	$html_contenido = '';
+
+	
+	switch($permissions) {
+			
+		case 0	:	
+			$html_contenido .= "\n <span class=\"css_span_dato {$ar_css['css_span_dato']}\"> No access here (text_area)! </span>";	
+			break;
+						
+		
+		case ($permissions>=1)	:
+
+			/**
+			* CURRENT SELECTED RELATION (FRAGMENT AND RELATIOS LIST)
+			*/
+
+			#dump($context_name,"context_name");
+			switch ($context_name) {
+
+				case 'list_into_tool_relation':
+					$button_action 	= "parent.tool_relation.add_relation(this)";
+					$button_label 	= label::get_label('relacionar_fragmento_seleccionado') . " (".label::get_label('etiqueta')." $tag_value)";
+					break;
+
+				case 'list_into_tool_portal':
+					$button_action 	= 'tool_portal.add_resource(this)';#"tool_portal.add_fragment_resource(this)";
+					$button_label 	= label::get_label('relacionar_fragmento_seleccionado') . " (".label::get_label('etiqueta')." $tag_value)";
+					break;				
+				
+				default:
+					$button_label 	= '';
+					$button_action 	= "alert('Please define context_name to activate this button')";
+					break;
+			}
+			
+			# RELATE BUTTON . 
+			# Relate current selected text with caller_id section
+			# des: data-tipo=\"$caller_tipo\" data-caller_tipo=\"$caller_tipo\"	 data-caller_id=\"$caller_id\"			
+			$html_contenido .= "<div class=\"css_button_generic btn_relate_fragment\"  
+			 data-tipo=\"$tipo\"			  
+			 data-portal_tipo=\"$arguments->portal_tipo\"
+			 data-portal_parent=\"$arguments->portal_parent\"
+			 data-portal_section_tipo=\"".(string)$arguments->portal_section_tipo."\"
+			 data-rel_locator='$rel_locator' 
+			 onclick=\"{$button_action}\"
+			 >";
+			$html_contenido .= $button_label;
+			$html_contenido .= " context_name:$context_name, $arguments->portal_tipo, $arguments->portal_parent";
+			if(SHOW_DEBUG===true) {
+				$rel_locator_js_pretty = json_encode($rel_locator);
+				$html_contenido .= " <span class=\"debug_info\">[parent:$parent - rel_locator:$rel_locator_js_pretty]</span>";	# caller_id:$caller_id -
+			}
+
+			$html_contenido .= "</div>";
+			
+	}
+	
+	# Prepare content to show in page
+	tools::prepare_content($html_contenido);	
+
+
+	# PRINT HTML
+	print $html_contenido;
+
+	
+	print "\n</div><!-- /wrap_btn_relate_fragment -->\n\n"; //wrap	
+	
+?>

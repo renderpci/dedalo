@@ -1,0 +1,68 @@
+<?php
+
+
+$html='';
+
+	$html  .= "\n<!-- TOOL PAGE [tipo:$tipo] -->";
+
+	$html .= '<div class="top">';
+	$html .= "\n<div class=\"section_title \" > TOOL LAYOUT PRINT : $section_title</div>";
+	if(SHOW_DEBUG) {
+		$html .= "<div class=\"layout_debug_info\">context_name: $context_name</div>";
+	}
+
+	$html .= '</div>';
+	
+	#
+	# Public templates	
+	$ar_templates = $ar_templates_public;
+	$html .= '<div class="wrap_public_templates">';
+	$html .= '<h2>'.$public_templates_title.'</h2>';
+	$html .= '<ul class="text_unselectable text_shadow_inset">';	
+		foreach ($ar_templates as $id_matrix => $obj) {
+			$html .= '<li data-template_id="'.$id_matrix.'" data-template_tipo="'.DEDALO_SECTION_LAYOUT_PUBLIC_TIPO.'">';
+			$html .= '<div class="t_icon icon_template_mini icon_template_more"></div>';
+			$html .= '<div class="t_icon icon_template_mini icon_template_minus" onclick="tool_layout_print.delete_template(this)"></div>';
+			$html .= '<div class="t_icon icon_template icon_template_public" onclick="tool_layout_print.goto_edit(this)"></div>';
+			$html .= '<span>';
+			$html  .= $obj->label;
+			if(SHOW_DEBUG) {
+				$html  .= " [$id_matrix]";
+			}
+			$html .= '</span>';
+			$html .= '</li>';
+		}
+		$html .= '<li data-template_id="" data-template_tipo="'.DEDALO_SECTION_LAYOUT_PUBLIC_TIPO.'">';
+		$html .= '<div class="t_icon icon_template icon_template_public icon_add_template" onclick="tool_layout_print.goto_edit(this)"></div>';
+		$html .= '<span>'.label::get_label('nueva_plantilla_vacia').'</span>';
+		$html .= '</li>';
+	$html .= '</ul>';
+	$html .= '</div>';
+
+	#$html .= '<hr>';
+
+	#
+	# Private templates
+	$ar_templates = $ar_templates_private;
+	$html .= '<div class="wrap_private_templates">';
+	$html .= '<h2>'.$private_templates_title.'</h2>';
+	$html .= '<ul>';
+	foreach ($ar_templates as $id_matrix => $obj) {
+		$html .= '<li data-template_id="'.$id_matrix.'" data-template_tipo="'.DEDALO_SECTION_LAYOUT_TEMPLATES_TIPO.'">';
+		$html .= '<div class="t_icon icon_template_mini icon_template_more"></div>';
+		#$html .= '<div class="t_icon icon_template_minus"></div>';
+		$html .= '<div class="t_icon icon_template icon_template_private" onclick="tool_layout_print.goto_edit(this)"></div>';
+		$html .= '<span>';
+		$html  .= $obj->label;
+		if(SHOW_DEBUG) {
+			$html  .= " [$id_matrix]";
+		}
+		$html .= '</span>';
+		$html .= '</li>';
+	}
+	$html .= '</ul>';
+	$html .= '</div>';
+
+
+echo $html;
+?>

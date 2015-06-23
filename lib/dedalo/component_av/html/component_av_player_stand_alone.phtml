@@ -1,0 +1,73 @@
+<?php
+
+	# VISUALIZADOR HTML	
+
+	#dump($_REQUEST, ' _REQUEST');
+
+	# PLAYER
+	$html_contenido = '';
+
+	$html_contenido .= "\n<div class=\"css_player_wrap\">";
+
+
+	# POSTERFRAME ONLY
+	#$html_contenido .= "\n <img class=\"av_posterframe_only\" src=\"$posterframe_url\" width=\"$video_width\" height=\"$video_height\" alt=\"Posterframe\" title=\"\" />";
+
+	
+	# VIDEO HTML5 OBJ	
+
+		$html_contenido .= "<video class=\"css_av_video\"
+		preload=\"none\"
+		controls=\"controls\"
+		poster=\"$posterframe_url\"
+		onerror=\"component_av.failed(event)\"
+		id=\"{$player_id}\"
+		data-tipo=\"{$tipo}\"
+		data-section_tipo=\"{$section_tipo}\"
+		data-parent=\"{$parent}\"
+		data-video_id=\"{$video_id}\"
+		>";
+
+			$html_contenido .= "\n <source id=\"video_mp4_{$tipo}\" src=\"$video_url\" preload=\"metadata\" type=\"video/mp4\" >";
+			
+			# FALLBACK IMG (no html5 codec video support)
+			$html_contenido .= "\n <img src=\"$posterframe_url\" alt=\"Posterframe\" title=\"No video playback capabilities\" />";
+
+		$html_contenido .= "\n</video>";
+	
+	
+	
+		
+	
+	/*
+	# CONTROLS
+	$html_contenido .= "\n<div class=\"css_av_video_controls\">";
+
+		# BUTTON GOTO BEGIN
+		$html_contenido .= "\n<div class=\"css_button_generic css_av_video_controls_inicio av_player_btn\" onclick=\"component_av.goto_time(this,0)\">Inicio</div>";
+		
+		# BUTTON PLAY / PAUSE
+		$html_contenido .= "\n<div class=\"css_button_generic css_av_video_controls_play_pause av_player_btn\">Play</div>";
+
+		# TC DISPLAY
+		$html_contenido .= "\n<div class=\"tc_display\">00:00:00</div>";
+
+		# BUTTONS REWIND / FORDWARD
+		$html_contenido .= "\n<div class=\"css_button_generic css_av_video_controls_rew av_player_btn\" onclick=\"component_av.controlVideo(this,'-10')\"><10</div>";
+		$html_contenido .= "\n<div class=\"css_button_generic css_av_video_controls_rew av_player_btn\" onclick=\"component_av.controlVideo(this,'-5')\">< 5</div>";
+		$html_contenido .= "\n<div class=\"css_button_generic css_av_video_controls_forw av_player_btn\" onclick=\"component_av.controlVideo(this,'5')\">5 ></div>";
+		$html_contenido .= "\n<div class=\"css_button_generic css_av_video_controls_forw av_player_btn\" onclick=\"component_av.controlVideo(this,'10')\">10 ></div>";
+
+		# QUALITY SELECTOR
+		$html_contenido .= "\n<div class=\"quality_selector\"> quality_selector here </div>";
+
+	$html_contenido .= "\n</div><!-- /css_av_video_controls -->";
+	*/
+
+
+	$html_contenido .= "\n</div><!-- /css_player_wrap -->";
+
+	# PRINT HTML
+	print $html_contenido;
+
+?>
