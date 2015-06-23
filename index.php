@@ -2,8 +2,8 @@
 /************************************************************************
 	
     Dédalo : Cultural Heritage & Oral History Management Platform
-	Version: Beta 1-2
-	Copyright (C) 1998 - 2014  
+	Version: RC, beta 4
+	Copyright (C) 1998 - 2015  
     Authors: Juan Francisco Onielfa, Alejandro Peña Carbonell
 
     This program is free software: you can redistribute it and/or modify
