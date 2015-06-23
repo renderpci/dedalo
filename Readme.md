@@ -1,6 +1,6 @@
 **README**
 
-*Ver 4 Release Candidate - 23-06-2015*
+*Ver 4 Release Candidate - 22-06-2015*
 
 We are very pleased to introduce the Release candidate of the version 4 of Dédalo.
 
@@ -11,7 +11,7 @@ VERY IMPORTANT:
 
 - The new version will run in PostgreSQL 9.4+ ONLY.
 
-Run the Beta 1 if you want to run with MySQL, but think that the development of Dédalo will not come back to MySQL.
+*NOTE: Run the Beta 1 if you want to run with MySQL, but think that the development of Dédalo will not come back to MySQL.*
 
 Finally Postgres comunity has made a impresionant job with the JSONB. We have some versions of Dédalo with the new schema of "Matrix" (id, parent, dato, tipo, lang) in MySQL than run very very slowly. We are working in the new format the last 4 years and the Beta 1 of Dédalo can run acceptably well. Dédalo have some caches for run the searchers but this version don't work "fine" with a large amount of data >100.000 rows (>100.000 interviews, or >100.000 heritage goods...).
 
@@ -19,7 +19,7 @@ But
 
 Postgres with JSONB run ~1000 times faster!!!! and the GIN index have very good optimization for the new schema model of Dédalo.
 
-We think that the new model is a future for Dédalo, and with PostgreSQL 9.4 is possible!!!!
+We think that the new model is a future for Dédalo, and with PostgreSQL 9.4+ is possible!!!!
 
 We are very exited with the new JSONB and are expectant and waiting VODKA!
 
@@ -32,7 +32,7 @@ The schema of "matrix" into the database has significant changes:
 
 **TABLES**
 
-jer_es
+jer_xx (you can change the "xx" with the TLD of the country, for ex: «es» for Spain or «fr» for France, etc)
 
 jer_ts
 
@@ -76,7 +76,7 @@ matrix_users
 
 **Structures**
 
-*jer_xx:*
+*jer_xx:(you can change the "xx" with the TLD of the country, for ex: «es» for Spain or «fr» for France, etc. The structure is the same for all countries)*
 
 Column  |  Type Comment
 --------- | ---------
