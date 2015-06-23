@@ -30,7 +30,7 @@ The schema of "matrix" into the database has significant changes:
     Are changed and removed, now the schema only have the field "data" in JSON format, with all previous data
     The final schema of matrix for version 4 is:
 
-*TABLES*
+**TABLES**
 
 jer_es
 
@@ -74,7 +74,7 @@ matrix_time_machine
 
 matrix_users
 
-*Structures*
+**Structures**
 
 *jer_xx: structure*
 
