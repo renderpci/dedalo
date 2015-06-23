@@ -1,7 +1,7 @@
 <?php # etiquetas específicas de este site
-if($idSite=='memorial')
+if($idSite=='xxxx.xx')
 {
-$ejemplo_codigo_captacion_title = "ex. 2009/001/001"; # ejemplo en captaciones edit
-$serie_proyecto_title = "Expedient relacionat";
+$ejemplo_codigo_captacion_title = "ex: XXX/XXX/XXX"; # ejemplo en captaciones edit
+$serie_proyecto_title = "Expediente relacionado";
 }
 ?>
