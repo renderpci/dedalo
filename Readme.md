@@ -76,7 +76,7 @@ matrix_users
 
 **Structures**
 
-*jer_xx: structure*
+*jer_xx:*
 
 Column  |  Type Comment
 --------- | ---------
@@ -94,23 +94,36 @@ relaciones	|	text NULL
 propiedades	|	text NULL
 
 
-*jerarquia: structure*
+*jerarquia:*
 
-Column	:	Type Comment
+Column	|	Type Comment
+--------- | ---------
+id	|	integer Auto Increment [nextval('jerarquia_id_seq')]	 
+alpha3	|	character varying(3) NULL	 
+alpha2	|	character varying(2)	 
+nombre	|	character varying(255)	 
+tipo	|	numeric(8,0)	 
+activa	|	sino [si]	 
+mainLang|	character varying(8)
 
-id	:	integer Auto Increment [nextval('jerarquia_id_seq')]	 
 
-alpha3	:	character varying(3) NULL	 
+*jerarquia_tipos:*
 
-alpha2	:	character varying(2)	 
+Column	|	Type Comment
+--------- | ---------
+id	|	integer Auto Increment [nextval('jerarquia_tipos_id_seq')]	 
+nombre	|	character varying(256)	 
+orden	|	numeric(4,0)
 
-nombre	:	character varying(255)	 
 
-tipo	:	numeric(8,0)	 
+*main_dd:*
 
-activa	:	sino [si]	 
-
-mainLang:	character varying(8)
+Column	|	Type Comment
+--------- | ---------
+id	|	integer Auto Increment [nextval('main_dd_id_seq')]	 
+tld	|	character varying(32) NULL	 
+counter	|	integer NULL	 
+name	|	character varying(255) NULL
 
 
 
