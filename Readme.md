@@ -125,6 +125,44 @@ tld	|	character varying(32) NULL
 counter	|	integer NULL	 
 name	|	character varying(255) NULL
 
+*matrix:*
+
+Column	|Type	Comment
+--------- | ---------
+id	|	integer Auto Increment [nextval('matrix_id_seq')]	 
+section_id	|	integer NULL	 
+section_tipo	|	character varying NULL	 
+datos	|	jsonb NULL
+
+
+*matrix_activities:*
+
+Column	|Type	Comment
+--------- | ---------
+id	|	integer Auto Increment [nextval('matrix_activities_id_seq')]	 
+section_id	|	integer NULL	 
+section_tipo	|	character varying NULL	 
+datos	|	jsonb NULL
+
+
+*matrix_activities:*
+
+Column	|Type	Comment
+--------- | ---------
+id	|	integer Auto Increment [nextval('matrix_activities_id_seq')]	 
+section_id	|	integer NULL	 
+section_tipo	|	character varying NULL	 
+datos	|	jsonb NULL
+
+*matrix_activity:*
+
+Column	|	Type	Comment
+--------- | ---------
+id	|	integer Auto Increment [nextval('matrix_activity_id_seq')]	 
+date	|	timestamp NULL [now()]	 
+section_id	|	integer NULL Auto Increment [nextval('matrix_activity_section_id_seq')]	 
+section_tipo	|	character varying [dd542]	 
+datos	|	jsonb NULL
 
 
 *Notes for Beta 1 for MySQL:*
