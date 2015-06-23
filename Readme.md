@@ -32,47 +32,27 @@ The schema of "matrix" into the database has significant changes:
 
 **TABLES**
 
-jer_xx (you can change the "xx" with the TLD of the country, for ex: «es» for Spain or «fr» for France, etc)
-
-jer_ts
-
-jerarquia
-
-jerarquia_tipos
-
-main_dd
-
-matrix
-
-matrix_activities
-
-matrix_activity
-
-matrix_counter
-
-matrix_counter_dd
-
-matrix_dd
-
-matrix_descriptors
-
-matrix_descriptors_dd
-
-matrix_layout
-
-matrix_layout_dd
-
-matrix_list
-
-matrix_profiles
-
-matrix_projects
-
-matrix_stat
-
-matrix_time_machine
-
-matrix_users
+- jer_xx (you can change the "xx" with the TLD of the country, for ex: «es» for Spain or «fr» for France, etc)
+- jer_ts
+- jerarquia
+- jerarquia_tipos
+- main_dd
+- matrix
+- matrix_activities
+- matrix_activity
+- matrix_counter
+- matrix_counter_dd
+- matrix_dd
+- matrix_descriptors
+- matrix_descriptors_dd
+- matrix_layout
+- matrix_layout_dd
+- matrix_list
+- matrix_profiles
+- matrix_projects
+- matrix_stat
+- matrix_time_machine
+- matrix_users
 
 **Structures**
 
@@ -278,10 +258,51 @@ datos	|	jsonb NULL
 
 
 *Notes for Beta 1 for MySQL:*
-- If you need install the beta 1, we recomended MySQL 5.6 and PHP 5.5.
+- If you need install the beta 1, we recomended MySQL 5.6 and PHP 5.6.
 
 - For Intangible Heritage with the Render model (standar schema) for the IPCE you will need install Memcache or Redis.
 
 - For the Oral History no is necessary Memcache or Redis.
 
 
+**DEPENDENCES**
+
+*Required for the OS*
+
+- PHP 5.6+
+- Apache 2.2.3+
+- Postgres 9.4+
+
+*libs required for the Dédalo*
+
+- Jquery 2.1.14
+- bootstrap 3.1.1
+- calendar 1.25
+- Captionator 0.5.1
+- ffmpeg 2.6.1
+- qtfaststart 1.0
+- FullCalendar v2.3.1
+- geoip
+- gruntfile
+- jshash md5 v2.2
+- SWFObject v1.5
+- jwplayer 5.9.2118
+- leaflet 0.8
+- lessphp v0.4.0
+- MediaElement 2.14.2
+- nvd3 1.7.1
+- paper 0.9.20
+- pdfjs 1.1.1
+- pdfkit
+- predis 0.8.5
+- PdfParser (2014)
+- tcpdf 6.2.5
+- tinymce 4.1.10
+- wexflow 1.2
+- videojs 3.0r2
+- wkhtmltopdf 0.12.1-08b0817
+- Zend: Bit
+-       Exception
+-       Io
+-       Media
+-       Mime
