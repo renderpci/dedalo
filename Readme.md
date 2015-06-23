@@ -5,11 +5,11 @@
 We are very pleased to introduce the Release candidate of the version 4 of Dédalo.
 
 VERY IMPORTANT:
-The Release candidate is the first version of Dédalo with Postgres.
+- The Release candidate is the first version of Dédalo with Postgres.
 
-The MySQL support is FULL removed.
+- The MySQL support is FULL removed.
 
-The new version will run in PostgreSQL 9.4+ ONLY.
+- The new version will run in PostgreSQL 9.4+ ONLY.
 
 Run the Beta 1 if you want to run with MySQL, but think that the development of Dédalo will not come back to MySQL.
 
