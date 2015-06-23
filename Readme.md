@@ -93,7 +93,6 @@ traducible	|	sino NULL
 relaciones	|	text NULL
 propiedades	|	text NULL
 
-
 *jerarquia:*
 
 Column	|	Type Comment
@@ -106,7 +105,6 @@ tipo	|	numeric(8,0)
 activa	|	sino [si]	 
 mainLang|	character varying(8)
 
-
 *jerarquia_tipos:*
 
 Column	|	Type Comment
@@ -114,7 +112,6 @@ Column	|	Type Comment
 id	|	integer Auto Increment [nextval('jerarquia_tipos_id_seq')]	 
 nombre	|	character varying(256)	 
 orden	|	numeric(4,0)
-
 
 *main_dd:*
 
@@ -134,17 +131,6 @@ section_id	|	integer NULL
 section_tipo	|	character varying NULL	 
 datos	|	jsonb NULL
 
-
-*matrix_activities:*
-
-Column	|Type	Comment
---------- | ---------
-id	|	integer Auto Increment [nextval('matrix_activities_id_seq')]	 
-section_id	|	integer NULL	 
-section_tipo	|	character varying NULL	 
-datos	|	jsonb NULL
-
-
 *matrix_activities:*
 
 Column	|Type	Comment
@@ -162,6 +148,132 @@ id	|	integer Auto Increment [nextval('matrix_activity_id_seq')]
 date	|	timestamp NULL [now()]	 
 section_id	|	integer NULL Auto Increment [nextval('matrix_activity_section_id_seq')]	 
 section_tipo	|	character varying [dd542]	 
+datos	|	jsonb NULL
+
+*matrix_counter:*
+
+Column	|	Type	Comment
+--------- | ---------
+id	|	integer Auto Increment [nextval('matrix_counter_id_seq')]	 
+parent	|	integer	 
+dato	|	integer NULL	 
+tipo	|	character varying(16)	 
+lang	|	character varying(16)	 
+ref	|	text NULL
+
+*matrix_counter_dd:*
+
+Column	|	Type	Comment
+--------- | ---------
+id	|	integer Auto Increment [nextval('matrix_counter_dd_id_seq')]	 
+parent	|	integer	NULL 
+dato	|	integer NULL	 
+tipo	|	character varying(16) NULL	 
+lang	|	character varying(16) NULL	 
+ref	|	text NULL
+
+*matrix_dd:*
+
+Column	|	Type	Comment
+--------- | ---------
+id	|	integer Auto Increment [nextval('matrix_dd_id_seq')]	 
+section_id	|	integer NULL	 
+section_tipo	|	character varying NULL	 
+datos	|	jsonb NULL
+
+*matrix_descriptors:*
+
+Column	|	Type	Comment
+--------- | ---------
+id	|	integer Auto Increment [nextval('matrix_descriptors_id_seq')]	 
+parent	|	character varying(8)	 
+dato	|	text NULL	 
+tipo	|	character varying(16)	 
+lang	|	character varying(8)
+
+*matrix_descriptors_dd:*
+
+Column	|	Type	Comment
+--------- | ---------
+id	|	integer Auto Increment [nextval('matrix_descriptors_dd_id_seq')]	 
+parent	|	character varying(32)	 
+dato	|	text NULL	 
+tipo	|	character varying(8)	 
+lang	|	character varying(8)
+
+*matrix_layout:*
+
+Column	|	Type	Comment
+--------- | ---------
+id	|	integer Auto Increment [nextval('matrix_layout_id_seq')]	 
+section_id	|	integer NULL	 
+section_tipo	|	character varying NULL	 
+datos	|	jsonb NULL
+
+*matrix_layout_dd:*
+
+Column	|	Type	Comment
+--------- | ---------
+id	|	integer Auto Increment [nextval('matrix_layout_dd_id_seq')]	 
+section_id	|	integer NULL	 
+section_tipo	|	character varying NULL	 
+datos	|	jsonb NULL
+
+*matrix_list:*
+
+Column	|	Type	Comment
+--------- | ---------
+id	|	integer Auto Increment [nextval('matrix_list_id_seq')]	 
+section_id	|	integer NULL	 
+section_tipo	|	character varying NULL	 
+datos	|	jsonb NULL
+
+*matrix_profiles:*
+
+Column	|	Type	Comment
+--------- | ---------
+id	|	integer Auto Increment [nextval('matrix_profiles_id_seq')]	 
+section_id	|	integer NULL	 
+section_tipo	|	character varying NULL	 
+datos	|	jsonb NULL
+
+*matrix_projects:*
+
+Column	|	Type	Comment
+--------- | ---------
+id	|	integer Auto Increment [nextval('matrix_projects_id_seq')]	 
+section_id	|	integer NULL	 
+section_tipo	|	character varying NULL	 
+datos	|	jsonb NULL
+
+*matrix_stat:*
+
+Column	|	Type	Comment
+--------- | ---------
+id	|	integer Auto Increment [nextval('matrix_stat_id_seq')]	 
+datos	|	jsonb NULL
+
+*matrix_time_machine:*
+
+Column	|	Type	Comment
+--------- | ---------
+id	|	integer Auto Increment [nextval('matrix_time_machine_id_seq')]	 
+id_matrix	|	integer NULL	 
+section_id	|	integer NULL	 
+tipo	|	character varying NULL	 
+lang	|	character varying NULL	 
+timestamp	|	timestamp NULL	 
+userID	|	integer NULL	 
+state	|	character(32) NULL	 
+dato	|	jsonb NULL
+
+*matrix_users:*
+
+Column	|	Type	Comment
+--------- | ---------
+id	|	integer Auto Increment [nextval('matrix_users_id_seq')]	 
+section_id	|	integer NULL	 
+section_tipo	|	character varying NULL	 
 datos	|	jsonb NULL
 
 
