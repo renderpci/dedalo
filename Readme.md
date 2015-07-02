@@ -314,19 +314,19 @@ datos	|	jsonb NULL
 
 **INSTALLATION**
 
-1.- Download Dédalo and copy to the root web server
-2.- Create a DB in PostgreSQL and name it to: dedalo_xx (you can change the xx with own name).
-3.- Restore the file /install/db/dedalo4_install.backup to the postgres created DB. 
+1. Download Dédalo and copy to the root web server
+2. Create a DB in PostgreSQL and name it to: dedalo_xx (you can change the xx with own name).
+3. Restore the file /install/db/dedalo4_install.backup to the postgres created DB. 
 		pg_restore /install/db/dedalo4_install.backup dedalo_xx
-4.- Download the dependences and libs for Dédalo and install it into the /lib/ folder. In some cases you need see the /lib/dedalo/config/sample.config4.php file in order to change or customize the installation.
-5.- Rename the /lib/dedalo/config/sample.config4.php to /lib/dedalo/config/config4.php.
-6.- Change the file /lib/dedalo/config/sample.config4_db.php with your DB configuration.
-7.- Rename the /lib/dedalo/config/sample.config4_db.php to /lib/dedalo/config/config4_db.php.
-8.- Run Dédalo into the browser. 
-9.- Fix your admin password (you can change only once), the default account is: admin (this user is a root and only for development or debuger the application).
-10.- Create one Administrator user account with all access to the system.(this user will be the administrator of the system)
-11.- Logout and login with the Administrator acount.
-12.- Create Users and Projects as you need.
+4. Download the dependences and libs for Dédalo and install it into the /lib/ folder. In some cases you need see the /lib/dedalo/config/sample.config4.php file in order to change or customize the installation.
+5. Rename the /lib/dedalo/config/sample.config4.php to /lib/dedalo/config/config4.php.
+6. Change the file /lib/dedalo/config/sample.config4_db.php with your DB configuration.
+7. Rename the /lib/dedalo/config/sample.config4_db.php to /lib/dedalo/config/config4_db.php.
+8. Run Dédalo into the browser. 
+9. Fix your admin password (you can change only once), the default account is: admin (this user is a root and only for development or debuger the application).
+10. Create one Administrator user account with all access to the system.(this user will be the administrator of the system)
+11. Logout and login with the Administrator acount.
+12. Create Users and Projects as you need.
 
 
 **USE**
