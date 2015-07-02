@@ -57,7 +57,7 @@ body {
 	}	
 	.css_wrap_login .login_ajax_response {
 		display:block !important;
-		width: 280px;
+		/*width: 280px;*/
 		min-width:134px;
 		padding:10px;
 		text-align:center !important;
@@ -74,3 +74,17 @@ body {
 		color: #a1a1a1;
 		font-size: 0.9em;
 	}
+
+
+	.set_pasw_input {
+		margin:10px;
+		text-align: right;
+		margin-right: 30%;
+		margin-top: 15px;
+		}
+	.set_button {
+		padding-right: 20%;
+		} 
+		.set_button > input {
+			cursor: pointer;
+		}

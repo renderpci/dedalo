@@ -1,0 +1,59 @@
+<?php
+
+	# VISUALIZADOR HTML	
+	
+	
+	print "\n<!-- LOGIN [tipo:$tipo id_matrix:$id] -->";		
+	print "\n<div class=\"css_wrap_login\" id=\"wrap_login\">";	
+	print "\n<form class=\"css_form\" name=\"form_set_psw\" id=\"form_set_psw\" action=\"\" onsubmit=\"login.set_psw()\" method=\"post\" >";
+
+
+		# CONTENIDO (INPUT)
+		$html_contenido = '';
+
+
+
+			# LANG JUMP
+			#$html_contenido .= $dedalo_aplication_langs_selector_html;
+			
+			$html_contenido .= "<div>";
+			$html_contenido .= "Please set a password for super admin the system.<br>
+								<span class=\"warning\">
+								IMPORTANT: Remember this password because you can not change it later.
+								</span>";
+
+			$html_contenido .= "<div class=\"set_pasw_input\">";				
+			$html_contenido .= " Password <input type=\"password\" name=\"psw\" id=\"psw\" />";
+			$html_contenido .= "</div>";
+
+			$html_contenido .= "<div class=\"set_pasw_input\">";	
+			$html_contenido .= " Retype <input type=\"password\" name=\"psw2\" id=\"psw2\" />";
+			$html_contenido .= "</div>";
+
+			$html_contenido .= "<div class=\"set_pasw_input set_button\">";	
+			$html_contenido .= " <input type=\"button\" name=\"submit\" value=\"Save\" onclick=\"login.set_psw()\" />";
+			$html_contenido .= "</div>";
+
+
+			$html_contenido .= "</div>";
+			
+					
+			$html_contenido .= "\n<div class=\"login_ajax_response\" >  </div>";
+
+
+			
+
+		
+		
+		$html_contenido .= "</div>";
+
+		
+		# PRINT HTML
+		print $html_contenido;
+
+
+	
+	
+	print "\n</form>";	
+	print "\n</div>\n\n"; //css_wrap_login	
+?>

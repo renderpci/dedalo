@@ -23,7 +23,21 @@
 	}
 	if(SHOW_DEBUG) {
 		#dump($ar_parents , '$ar_parents ');
+		#dump($this->test_su_default_password(), '$this->test_su_default_password()');die();
 	}
+
+
+	#
+	# Test if superuser psw is default
+	if( defined('DEDALO_TEST_INSTALL') && defined('DEDALO_TEST_INSTALL')===true && $this->test_su_default_password()===true ) {
+	dump(DEDALO_TEST_INSTALL, ' var');
+		$page_html	= 'html/' . get_class($this) . '_set_psw.phtml';
+		include($page_html);
+		return;
+	}
+
+
+
 	
 
 	# LANG JUMP

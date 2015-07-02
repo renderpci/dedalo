@@ -122,7 +122,7 @@
 				# Url del thumb si estuviera creado (si no lo está se redirecciona a 'themes/default/0.jpg')
 				$thumb_file_url 	= DEDALO_MEDIA_BASE_URL.DEDALO_IMAGE_FOLDER.'/'.DEDALO_IMAGE_THUMB_DEFAULT.'/'.$f;
 				$objetive_thumb_url = $thumb_file_url;
-				#dump($objetive_thumb_url," objetive_thumb_url");
+					#dump($objetive_thumb_url," objetive_thumb_url");
 				
 				#if (!file_exists(DEDALO_ROOT.'/'.$thumb_file_url)) {
 				#	return null;

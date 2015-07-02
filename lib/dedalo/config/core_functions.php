@@ -231,9 +231,7 @@ function dedalo_encryptStringArray ($stringArray, $key = DEDALO_INFORMACION) {
 function dedalo_decryptStringArray ($stringArray, $key = DEDALO_INFORMACION) {
 	#$start_time = start_time();
 	if (!function_exists('mcrypt_encrypt')) throw new Exception("Error Processing Request: Lib MCRYPT unavailable.", 1);
- 	$s = unserialize(rtrim(mcrypt_decrypt(MCRYPT_RIJNDAEL_256, md5($key), base64_decode(strtr($stringArray, '-_,', '+/=')), MCRYPT_MODE_CBC, md5(md5($key))), "\0"));
- 	#$exec_time = exec_time($start_time);
-	#dump($exec_time,'exec_time');
+ 	$s = unserialize(rtrim(mcrypt_decrypt(MCRYPT_RIJNDAEL_256, md5($key), base64_decode(strtr($stringArray, '-_,', '+/=')), MCRYPT_MODE_CBC, md5(md5($key))), "\0")); 	
  	return $s;
 }
 

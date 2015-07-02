@@ -33,10 +33,10 @@
 
 	# TIME ZONE : Zona horaria (for backups archive names)
 	define('DEDALO_TIMEZONE'		, 'Europe/Madrid');	date_default_timezone_set(DEDALO_TIMEZONE);
-	# SET LOCALE (Spanish for example)
-	setlocale(LC_ALL,'es_ES');
+	# SET LOCALE (Spanish for example)	
 	#setlocale(LC_ALL,'en_EN');
-	setlocale(LC_COLLATE, 'es_ES.utf8');
+	setlocale(LC_ALL,'es_ES'); 			// For Mac
+	#setlocale(LC_ALL, 'es_ES.utf8');	// For Linux
 
 
 
@@ -151,8 +151,7 @@ define('DEDALO_ENTITY', 'my_entity_name'); # Like 'dedalo4'
 													)));
 
 	# TRANSLATOR
-	define('DEDALO_TRANSLATOR_URL'				, 'http://babel.antropolis.net/babel_engine/');	# default Babel: http://babel.antropolis.net/babel_engine/
-
+	define('DEDALO_TRANSLATOR_URL'				, '');	# Apertium, Google translator, etc..
 
 
 
@@ -180,6 +179,7 @@ define('DEDALO_ENTITY', 'my_entity_name'); # Like 'dedalo4'
 ################################################################
 # DEBUG : Application debug config
 	$show_debug = false;
+	/*
 	if(
 		# SUPERUSER IS LOGGED
 		(
@@ -189,6 +189,7 @@ define('DEDALO_ENTITY', 'my_entity_name'); # Like 'dedalo4'
 	) {
 		$show_debug = true;
 	}
+	*/
 	define('SHOW_DEBUG'				, $show_debug);
 
 	# ERROR : Handler class
@@ -341,4 +342,6 @@ define('DEDALO_ENTITY', 'my_entity_name'); # Like 'dedalo4'
 	define('DEDALO_ENTITY_MENU_SKIP_TIPOS'			, serialize( array()));
 
 
+# DEDALO_TEST_INSTALL
+define('DEDALO_TEST_INSTALL', true);
 ?>

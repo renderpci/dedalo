@@ -181,7 +181,7 @@ class TR {
 	
 	
 	# clean text to translate	
-	public static function deleteMarks($string, $deleteTC=true, $deleteIndex=true, $deleteSvg=true, $deleteGeo=true) {
+	public static function deleteMarks($string, $deleteTC=true, $deleteIndex=true, $deleteSvg=true, $deleteGeo=true, $delete_page=true) {
 		
 		# TC clear
 		if($deleteTC) {
@@ -196,19 +196,19 @@ class TR {
 		}
 
 		# Svg clear
-		if($deleteIndex) {
+		if($deleteSvg) {
 			$pattern 	= TR::get_mark_pattern('svg');
 			$string 	= preg_replace($pattern, '', $string);
 		}
 
 		# Geo clear
-		if($deleteIndex) {
+		if($deleteGeo) {
 			$pattern 	= TR::get_mark_pattern('geo');
 			$string 	= preg_replace($pattern, '', $string);
 		}
 
 		# Page clear
-		if($deleteIndex) {
+		if($delete_page) {
 			$pattern 	= TR::get_mark_pattern('page');
 			$string 	= preg_replace($pattern, '', $string);
 		}

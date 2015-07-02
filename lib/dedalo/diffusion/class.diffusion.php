@@ -909,7 +909,8 @@ abstract class diffusion  {
 										#dump($component_autocomplete_dato, ' component_autocomplete '.$lang);
 
 									if (!empty($component_autocomplete_dato) && empty($valor)) {
-										$valor = 'sorry resolve value in progress..';
+										error_log('sorry resolve value diffusion component_autocomplete in progress..');
+										$valor = ""; // 'sorry resolve value in progress..';
 									}				
 									$ar_field_data['field_value'] = $valor;
 										#$current_component->set_modo('edit');

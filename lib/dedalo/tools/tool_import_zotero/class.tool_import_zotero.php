@@ -39,7 +39,9 @@ class tool_import_zotero extends tool_common {
 	}
 
 
-
+	/**
+	* SET_UP
+	*/
 	static function set_up() {
 
 		if (isset($_REQUEST['button_tipo'])) {
@@ -56,14 +58,15 @@ class tool_import_zotero extends tool_common {
 
 		}else{
 			# BIBLIOGRAPHY DEDALO STANDAR TIPOS
-			define('ZOTERO_COMPONENT_TIPO_BIBLIOGRAFIA_CODIGO', 'rsc137');
-			define('ZOTERO_SECTION_TIPO_VIRTUAL_BIBLIOGRAFIA' , 'rsc205');
-			define('ZOTERO_COMPONENT_TIPO_BIBLIOGRAFIA_FILTER', 'rsc148');
-			define('ZOTERO_SECTION_TIPO_SERIES_COLECCIONES'	  , 'rsc212');  # Lista de valores Series / colecciones
-			define('ZOTERO_COMPONENT_TIPO_SERIES_COLECCIONES' , 'rsc214');  # component_input_text in Lista de valores Series / colecciones
-			define('ZOTERO_COMPONENT_TIPO_BIBLIOGRAFIA_DESCRIPCION_TRANSCRIPCION', 'rsc210');  # rsc210 Transcripción / descripción 
-			define('ZOTERO_COMPONENT_TIPO_BIBLIOGRAFIA_DOCUMENTO', 'rsc209');	# Bibliografía Documento [rsc209]
-			define('ZOTERO_SECTION_TIPO_LISTA_TIPOLOGIA_BIBLIOGRAFIA', 'dd810'); # dd810 Lista valores privada tipologia de bibliografía
+			define('ZOTERO_COMPONENT_TIPO_BIBLIOGRAFIA_CODIGO'					, 'rsc137');
+			define('ZOTERO_SECTION_TIPO_VIRTUAL_BIBLIOGRAFIA' 					, 'rsc205');
+			define('ZOTERO_COMPONENT_TIPO_BIBLIOGRAFIA_FILTER'					, 'rsc148');
+			define('ZOTERO_SECTION_TIPO_SERIES_COLECCIONES'	  					, 'rsc212');	# Lista de valores Series / colecciones
+			define('ZOTERO_COMPONENT_TIPO_SERIES_COLECCIONES' 					, 'rsc214');	# component_input_text in Lista de valores Series / colecciones
+			define('ZOTERO_COMPONENT_TIPO_BIBLIOGRAFIA_DESCRIPCION_TRANSCRIPCION', 'rsc210');	# rsc210 Transcripción / descripción 
+			define('ZOTERO_COMPONENT_TIPO_BIBLIOGRAFIA_DESCRIPCION_TRANSCRIPCION_REVISION', 'rsc260');	# rsc210 Transcripción / descripción 
+			define('ZOTERO_COMPONENT_TIPO_BIBLIOGRAFIA_DOCUMENTO'				, 'rsc209');	# Bibliografía Documento [rsc209]
+			define('ZOTERO_SECTION_TIPO_LISTA_TIPOLOGIA_BIBLIOGRAFIA'			, 'dd810'); 	# dd810 Lista valores privada tipologia de bibliografía
 
 			## DEDALO
 			define('ZOTERO_COMPONENT_TIPO_TIPOLOGIA_DE_BIBLIORAFIA' 	, 'rsc138'); # Tipología bibliográfica select (Nota: Establecer correspondencias tipo 'entry-encyclopedia' => 'Libro electrónico')
@@ -84,7 +87,7 @@ class tool_import_zotero extends tool_common {
 
 			define('ZOTERO_LABEL_NOMBRE_FICHERO_PDF'					, 'dd176'); # Nombre del fichero pdf
 		}
-	}
+	}//end set_up
 
 	
 
@@ -262,7 +265,7 @@ class tool_import_zotero extends tool_common {
 	* @param string $tipo component tipo . default 'ZOTERO_COMPONENT_TIPO_BIBLIOGRAFIA_CODIGO' (Bibliografia->Código)
 	* @param string $section_tipo  		 . default 'ZOTERO_SECTION_TIPO_VIRTUAL_BIBLIOGRAFIA' (Bibligrafía. Virtual section (real is rsc3))
 	* @return int $section_id
-	*/
+	*//*
 	public static function get_section_id_from_zotero_id( $zotero_id, $tipo=ZOTERO_COMPONENT_TIPO_BIBLIOGRAFIA_CODIGO, $section_tipo=ZOTERO_SECTION_TIPO_VIRTUAL_BIBLIOGRAFIA ) {
 		$section_id=0;
 
@@ -275,10 +278,10 @@ class tool_import_zotero extends tool_common {
 		$sql_filter  = JSON_RecordObj_matrix::build_pg_filter('gin','datos',$tipo,$lang,$value);
 		$strQuery   = "
 		-- ".__METHOD__."
-		SELECT section_id \n FROM \"$table\" \n 
+		SELECT section_id \n FROM \"$table\" \n
 		WHERE
 		section_tipo = '$section_tipo'
-		AND \n $sql_filter \n 
+		AND \n $sql_filter \n
 		LIMIT 1
 		";
 		$strQuery=sanitize_query($strQuery);
@@ -292,8 +295,8 @@ class tool_import_zotero extends tool_common {
 		}
 
 		return (int)$section_id;
-	}
-
+	}//end get_section_id_from_zotero_id
+	*/
 
 	/**
 	* GET_DATA_MAP
@@ -321,7 +324,8 @@ class tool_import_zotero extends tool_common {
 			ZOTERO_COMPONENT_TIPO_TITULO_CORTO 				=> 'shortTitle',	# Titulo corto
 			ZOTERO_LABEL_NOMBRE_FICHERO_PDF  				=> 'call-number'	# Nombre del fichero pdf (label)
 			);
-	}
+	}//end get_data_map
+
 
 	/**
 	* GET_TIPOLOGIA_FROM_ZOTERO_TYPE
@@ -346,11 +350,12 @@ class tool_import_zotero extends tool_common {
 		$result = isset($map[$type]) ? $map[$type] : null;
 
 		return $result;
-	}
+	}//end get_tipologia_from_zotero_type
+
+
 
 	/**
-	* PROCESS_FILE
-	* 
+	* PROCESS_FILE 
 	* @param array $file_data 
 	* @param array $checkbox_values
 	* @return array $ar_response (array of stdClass objects with tracking info about process)
@@ -358,7 +363,7 @@ class tool_import_zotero extends tool_common {
 	public static function process_file($file_data, $checkbox_values){
 		$ar_response=array();
 
-		$section_tipo 	= ZOTERO_SECTION_TIPO_VIRTUAL_BIBLIOGRAFIA;	# Bibligrafía. Virtual section (real is rsc3)
+		$section_tipo 	= ZOTERO_SECTION_TIPO_VIRTUAL_BIBLIOGRAFIA;	# Bibliografía. Virtual section (real is rsc3)
 		$data_map 		= self::get_data_map();
 
 		#dump($checkbox_values, ' checkbox_values');die();
@@ -371,9 +376,49 @@ class tool_import_zotero extends tool_common {
 			# Record
 			$zotero_obj = $file_data[$key];
 
-			$section_id = (int)self::get_section_id_from_zotero_id( $zotero_obj->id );
-				#dump($section_id, ' section_id - '.$zotero_obj->id);die();
+			#
+			# Section id get from zotero data
+			# Behaviour : 
+			$optional_id = 'call-number';
+			if (isset($zotero_obj->$optional_id)) {
+				$section_id = (int)$zotero_obj->$optional_id;	// Optionally, if is defined zotero->call-number, use this as section id
+			}else{
+				$section_id = (int)$zotero_obj->id;	// Default, get from zotero id
+			}
+			#dump($section_id, ' section_id - '.$zotero_obj->id);die();
+			if ($section_id<1) throw new Exception("Error Processing Request. section_id is empty", 1);
 
+			#
+			# SECTION : Force create section record if not exits
+			$section = section::get_instance($section_id, $section_tipo);
+			$forced_create_record = $section->forced_create_record();
+
+			if ($forced_create_record===true) {
+				# Created new record
+				$parent  = $section_id;
+			}else{
+				# Record already exists
+				$parent  = $section_id;				
+
+				# DEFAULT
+				# Propiedades : if default dato is set in 'propiedades', save component here
+				# Example: {"filtered_by":{"rsc235":[{"section_tipo":"rsc229","section_id":"2"}]}}
+				$RecordObj_dd = new RecordObj_dd($section_tipo);
+				$propiedades_current_setion = json_decode($RecordObj_dd->get_propiedades());
+				if (isset($propiedades_current_setion->filtered_by)) {
+					
+					$component_tipo	 		= key($propiedades_current_setion->filtered_by);
+						#dump($propiedades_current_setion," propiedades_current_setion - component_tipo: $component_tipo");					
+					$component_dato 		= $propiedades_current_setion->filtered_by->$component_tipo;
+					$component_modelo_name  = RecordObj_dd::get_modelo_name_by_tipo($component_tipo);	
+					$current_component 		= component_common::get_instance($component_modelo_name, $component_tipo, $parent, 'edit', DEDALO_DATA_NOLAN, $section_tipo);
+					$current_component->set_dato($component_dato);
+					#$current_component->Save();
+						#dump($current_component,"current_component section_tipo:$section_tipo");
+				}
+			}
+
+			/* OLD WORLD
 			# PARENT (section id matrix)
 			# Each zotero obj is stored as Dédalo row
 			if ($section_id>0) {
@@ -406,8 +451,8 @@ class tool_import_zotero extends tool_common {
 					#$current_component->Save();
 						#dump($current_component,"current_component section_tipo:$section_tipo");
 				}
-
 			}
+			*/
 			if ($parent<1) throw new Exception("Error Processing Request. Section parent is empty", 1);
 
 			# Response track
@@ -488,7 +533,6 @@ class tool_import_zotero extends tool_common {
 						break;
 
 					case 'call-number':
-
 						if (empty($value)) {
 							$ar_response[$parent]->$name ="- Ignored $name empty file from zotero import process";
 							break;
@@ -533,13 +577,29 @@ class tool_import_zotero extends tool_common {
 								#dump($options, ' options');
 						$pdf_file_text = (object)tool_transcription::get_text_from_pdf( $options );
 
-						if (empty($pdf_file_text) || !isset($pdf_file_text->result) || $pdf_file_text->result=='error') {
+						$clean_pdf_file_text = trim($pdf_file_text->original);
+
+						#dump($clean_pdf_file_text,'$clean_pdf_file_text '.strlen($clean_pdf_file_text));
+
+						if (empty($pdf_file_text) || !isset($pdf_file_text->result) || $pdf_file_text->result=='error' || strlen($clean_pdf_file_text)<1 ) {
 							$pdf_file_url = $component_pdf->get_pdf_url();
 							$ar_response[$parent]->$name .= "<span class=\"error\">";
 							$ar_response[$parent]->$name .= "- Error in pdf to text transcription. <br>".$pdf_file_text->msg ."<br>";
 							$ar_response[$parent]->$name .= " (There are probably a permissions/security restriction problem like with the pdf file).";
 							$ar_response[$parent]->$name .= " Please review Document Security Content Copying options in file: <a href=\"$pdf_file_url\" target=\"_blank\" >".pathinfo($source_pdf_path)['basename']."</a>";
 							$ar_response[$parent]->$name .= "</span><br>";
+
+							$component_tipo = ZOTERO_COMPONENT_TIPO_BIBLIOGRAFIA_DESCRIPCION_TRANSCRIPCION_REVISION;
+							$component 		= component_common::get_instance('component_radio_button', $component_tipo, $parent, 'edit', DEDALO_DATA_NOLAN, $section_tipo);
+							$locator = new locator();
+								$locator->set_section_id(NUMERICAL_MATRIX_VALUE_YES);
+								$locator->set_section_tipo(DEDALO_SECTION_SI_NO_TIPO);
+
+							$component->set_dato( $locator );
+							$component->Save();
+							$ar_response[$parent]->$name .="- Saved transcription for revision: yes.<br>";
+
+							#dump($component,'$component');
 						
 						}else{						
 						
@@ -571,7 +631,7 @@ class tool_import_zotero extends tool_common {
 		#dump($ar_response, ' ar_response');
 
 		return (array)$ar_response;
-	}
+	}//end process_file
 
 
 
@@ -611,10 +671,12 @@ class tool_import_zotero extends tool_common {
 		#dump($section_id, ' section_id '.utf8_decode($strQuery));
 
 		return (int)$section_id;
-	}
+	}//end get_section_id_from_zotero_container_title
+
 
 	
 }#end class
+
 
 
 # SET TOOL CONTANTS

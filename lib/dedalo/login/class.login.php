@@ -250,9 +250,9 @@ class login extends common {
 			return $response;
 		}
 
-		$_SESSION['dedalo4']['auth']['user_id']	= $rest_config->user_id;
-		$_SESSION['dedalo4']['auth']['username']		= $rest_config->user;
-		$_SESSION['dedalo4']['auth']['is_logged']		= 1;
+		$_SESSION['dedalo4']['auth']['user_id']		= $rest_config->user_id;
+		$_SESSION['dedalo4']['auth']['username']	= $rest_config->user;
+		$_SESSION['dedalo4']['auth']['is_logged']	= 1;
 
 		# CONFIG KEY
 		$_SESSION['dedalo4']['auth']['salt_secure']	= dedalo_encryptStringArray(DEDALO_SALT_STRING);
@@ -307,9 +307,9 @@ class login extends common {
 		
 
 		# SESSION : If backup is ok, fix session data
-		$_SESSION['dedalo4']['auth']['user_id']	= $user_id;
-		$_SESSION['dedalo4']['auth']['username']		= $username;
-		$_SESSION['dedalo4']['auth']['is_logged']		= 1;
+		$_SESSION['dedalo4']['auth']['user_id']		= $user_id;
+		$_SESSION['dedalo4']['auth']['username']	= $username;
+		$_SESSION['dedalo4']['auth']['is_logged']	= 1;
 
 		# CONFIG KEY
 		$_SESSION['dedalo4']['auth']['salt_secure']	= dedalo_encryptStringArray(DEDALO_SALT_STRING);
@@ -569,7 +569,26 @@ class login extends common {
 
 
 
+	/**
+	* TEST_SU_DEFAULT_PASSWORD
+	* Check if admin user password default has ben changed or not
+	* @return bool true/false
+	*/
+	public function test_su_default_password() {
+	
+		$component  = component_common::get_instance('component_password', DEDALO_USER_PASSWORD_TIPO, -1, 'edit', DEDALO_DATA_NOLAN, DEDALO_SECTION_USERS_TIPO);
+		$dato 		= $component->get_dato();
+		if(SHOW_DEBUG) {
+			#dump(dedalo_decryptStringArray($dato), 'psw : '.$dato);
+		}
+		
+		$default = 'Dedalo4debugChangePsW'; // Dedalo4debugChangePsW		
+		if (dedalo_decryptStringArray($dato)==$default) {
+			return true;
+		}
+		return false;
 
+	}#end test_su_default_password
 
 
 

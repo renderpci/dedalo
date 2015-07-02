@@ -17,45 +17,48 @@
 		$html_contenido = '';
 
 
-		# LANG JUMP
-		$html_contenido .= $dedalo_aplication_langs_selector_html;
-		
 
-		$html_contenido .= $html_username;
-		$html_contenido .= "<div style=\"height:5px\"></div>";
-		$html_contenido .= $html_password;
-		$html_contenido .= $html_button_login;
-		
-		$html_contenido .= "\n<input type=\"hidden\" id=\"tipo_login\"			value=\"$tipo\" >";
-		$html_contenido .= "\n<input type=\"hidden\" id=\"tipo_username\"		value=\"$tipo_username\" >";
-		$html_contenido .= "\n<input type=\"hidden\" id=\"tipo_password\"		value=\"$tipo_password\" >";	
-		$html_contenido .= "\n<input type=\"hidden\" id=\"tipo_active_account\"	value=\"$tipo_active_account\" >";
+			# LANG JUMP
+			$html_contenido .= $dedalo_aplication_langs_selector_html;
+			
 
-		
-		
-				
-		$html_contenido .= "\n<div class=\"login_ajax_response\" >  </div>";
+			$html_contenido .= $html_username;
+			$html_contenido .= "<div style=\"height:5px\"></div>";
+			$html_contenido .= $html_password;
+			$html_contenido .= $html_button_login;
+			
+			$html_contenido .= "\n<input type=\"hidden\" id=\"tipo_login\"			value=\"$tipo\" >";
+			$html_contenido .= "\n<input type=\"hidden\" id=\"tipo_username\"		value=\"$tipo_username\" >";
+			$html_contenido .= "\n<input type=\"hidden\" id=\"tipo_password\"		value=\"$tipo_password\" >";	
+			$html_contenido .= "\n<input type=\"hidden\" id=\"tipo_active_account\"	value=\"$tipo_active_account\" >";
 
-
-		# VERSION : Dedalo verrsion info
-		$html_contenido .= "<div class=\"dedalo_version\"> Dédalo version ".DEDALO_VERSION. " - Build " .DEDALO_BUILD ;
-
-		# Postgres user and db name
-		if(strpos($_SERVER['HTTP_HOST'],'8888')!==false) {
-			$html_contenido .= "<br> ".DEDALO_USERNAME_CONN." -> ".DEDALO_DATABASE_CONN ;
-		}
-		if(SHOW_DEBUG) {			
-			#$html_contenido .= " ".DEDALO_DATABASE_CONN." ";
-			#$html_contenido .= " : ".DEDALO_DB_PORT_CONN." ";			
-		}
+			
+			
+					
+			$html_contenido .= "\n<div class=\"login_ajax_response\" >  </div>";
 
 
-		try {
-		    $str_version 	 = RecordObj_dd::get_termino_by_tipo(DEDALO_ROOT_TIPO);
-			$html_contenido .= "<br>DD version: $str_version";
-		} catch (Exception $e) {
-		    echo 'Excepction: ',  $e->getMessage(), "\n";
-		}
+			# VERSION : Dedalo verrsion info
+			$html_contenido .= "<div class=\"dedalo_version\"> Dédalo version ".DEDALO_VERSION. " - Build " .DEDALO_BUILD ;
+
+			# Postgres user and db name
+			if(strpos($_SERVER['HTTP_HOST'],'8888')!==false) {
+				$html_contenido .= "<br> ".DEDALO_USERNAME_CONN." -> ".DEDALO_DATABASE_CONN ;
+			}
+			if(SHOW_DEBUG) {			
+				#$html_contenido .= " ".DEDALO_DATABASE_CONN." ";
+				#$html_contenido .= " : ".DEDALO_DB_PORT_CONN." ";			
+			}
+
+
+			try {
+			    $str_version 	 = RecordObj_dd::get_termino_by_tipo(DEDALO_ROOT_TIPO);
+				$html_contenido .= "<br>DD version: $str_version";
+			} catch (Exception $e) {
+			    echo 'Excepction: ',  $e->getMessage(), "\n";
+			}
+
+	
 		
 		
 		$html_contenido .= "</div>";

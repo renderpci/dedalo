@@ -16,7 +16,7 @@ class component_password extends component_common {
 		return (string)$dato;
 	}
 
-	# SET_DATO
+	# SET_DATO (NO ENCRYTP THIS VAR !)
 	public function set_dato($dato) {
 		parent::set_dato( (string)$dato );
 	}

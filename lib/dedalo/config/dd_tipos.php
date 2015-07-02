@@ -36,7 +36,8 @@ define('DEDALO_COMPONENT_PROJECT_LANGS_TIPO'			, 'dd267');
 
 # dedalo_diffusion_tipo
 define('DEDALO_DIFFUSION_TIPO'							, 'dd3');
-define('DEDALO_CAMPO_SI_NO_TIPO'						, 'dd62');	# Tipo del campo valor (no de la sección) lista privada con valores posibles: 1,3 (si,no) -traducible-
+define('DEDALO_COMPONENT_SI_NO_TIPO'					, 'dd62');	# Tipo del campo valor (no de la sección) lista privada con valores posibles: 1,3 (si,no) -traducible-
+define('DEDALO_SECTION_SI_NO_TIPO'						, 'dd64');
 
 # dedalo_section_layout
 define('DEDALO_SECTION_LAYOUT_TEMPLATES_TIPO'			, 'dd20'); # TIPO of secction layout with the default and private templates for print, list, edit... the secitions

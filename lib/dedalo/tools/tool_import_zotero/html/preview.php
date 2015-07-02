@@ -114,7 +114,14 @@ if (empty($ar_files[0])) {
 
 				#
 				# Button go_to_file
-				$section_id = tool_import_zotero::get_section_id_from_zotero_id($current_obj->id);
+				# $section_id = tool_import_zotero::get_section_id_from_zotero_id($current_obj->id); OLD WORLD
+				$optional_id = 'call-number';
+				if (isset($current_obj->$optional_id)) {
+					$section_id = (int)$current_obj->$optional_id;	// Optionally, if is defined zotero->call-number, use this as section id
+				}else{
+					$section_id = (int)$current_obj->id;	// Default, get from zotero id
+				}
+				
 				if ($section_id>0) {
 					$url='?t='.$section_tipo.'&id='.$section_id;			
 					$html .= "<div class=\"btn_inside_section_buttons_container button_go_to_file\">";

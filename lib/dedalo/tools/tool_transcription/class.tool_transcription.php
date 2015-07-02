@@ -186,6 +186,7 @@ class tool_transcription extends tool_common {
 
 		#
 		# PAGES TAGS	
+		$original_text = str_replace("","", $pdf_text);
 		$pages = explode("", $pdf_text);
 		#dump($pages,"pages ");die();
 		$i=(int)$options->first_page;
@@ -199,6 +200,7 @@ class tool_transcription extends tool_common {
 
 		$response->result = (string)$pdf_text;
 		$response->msg 	  = "Ok Processing Request pdf_automatic_transcription: text processed";
+		$response->original = $original_text;
 		return $response;
 
 	}#end build_pdf_transcription

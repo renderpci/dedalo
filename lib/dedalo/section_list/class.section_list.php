@@ -141,7 +141,7 @@ class section_list extends common {
 			$sql_options->limit				  	= isset($_SESSION['dedalo4']['config']['max_rows']) ? (int)$_SESSION['dedalo4']['config']['max_rows'] : DEDALO_MAX_ROWS_PER_PAGE;	# fix_cascade_config4_var('max_rows', 10);
 			#if($section_tipo==DEDALO_ACTIVITY_SECTION_TIPO && $sql_options->limit<50) $sql_options->limit = 50;
 			$sql_options->offset				= (int)0;			
-			$sql_options->order_by				= (bool)false;//(bool)false; default 'id ASC'
+			$sql_options->order_by				= (bool)false;//(bool)false; default 'section_id ASC'
 			$sql_options->search_options_session_key = (bool)false;	# key con el que se guarda la cache de session de las opciones. Por defecto es section tipo, pero en el caso de portales es distinto a la sección.
 
 			# Options overwrite sql_options defaults
@@ -192,8 +192,10 @@ class section_list extends common {
 		foreach ((array)$map_values as $current_component_tipo) {
 			$current_permissions = common::get_permissions($current_component_tipo); #dump($current_permissions, 'permissions for $current_component_tipo:'.$current_component_tipo, array());
 			if ($current_permissions<1) {
-				# Unset element from layout map to hide column in list
-				unset($sql_options->layout_map[$current_section_list_tipo][array_search($current_component_tipo, $sql_options->layout_map[$current_section_list_tipo])]);
+				# Unset element from layout map to hide column in list				
+				if (is_array($sql_options->layout_map[$current_section_list_tipo])) {
+					unset($sql_options->layout_map[$current_section_list_tipo][array_search($current_component_tipo, $sql_options->layout_map[$current_section_list_tipo] )]);
+				}				
 			}
 		}
 		#dump($sql_options, '$sql_options->layout_map', array());
@@ -619,7 +621,7 @@ class section_list extends common {
 						# Para ordenar, usaremos el dato en 'valor' siempre (salvo cuando ordenamos con id o section_id que es directo)
 						# por ello, formateamos la llamada de tipo 'dd23 ASC' como 'datos#>>'{components, dd23, valor, lg-nolan}' DESC'
 						if (!$sql_options->order_by || empty($sql_options->order_by)) {							
-							$order = "\n ORDER BY id ASC ";
+							$order = "\n ORDER BY section_id ASC ";
 						}else{
 							if ( strpos($sql_options->order_by, 'section_id ')===0 || strpos($sql_options->order_by, 'id ')===0 ) {
 								# ORDER BY COLUMN

@@ -129,7 +129,10 @@
 					}//end if (!empty($_SESSION['dedalo4']['config']['search_options'][$search_options_session_key]))		
 
 					$rows_data = section_list::get_rows_data($options);
+					if(SHOW_DEBUG) {
 						#dump($rows_data->result," rows_data result ".to_string($options));
+					}
+						
 				}
 				
 					#dump($rows_data," rows_data");
