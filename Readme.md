@@ -314,10 +314,12 @@ datos	|	jsonb NULL
 
 **INSTALLATION**
 
-1. Download Dédalo and copy to the root web server
+1. Download Dédalo and copy to the httpdocs of web server
 2. Create a DB in PostgreSQL and name it to: dedalo_xx (you can change the xx with own name).
 3. Restore the file /install/db/dedalo4_install.backup to the postgres created DB. 
+
 		pg_restore /install/db/dedalo4_install.backup dedalo_xx
+
 4. Download the dependences and libs for Dédalo and install it into the /lib/ folder. In some cases you need see the /lib/dedalo/config/sample.config4.php file in order to change or customize the installation.
 5. Rename the /lib/dedalo/config/sample.config4.php to /lib/dedalo/config/config4.php.
 6. Change the file /lib/dedalo/config/sample.config4_db.php with your DB configuration.
@@ -328,6 +330,16 @@ datos	|	jsonb NULL
 11. Logout and login with the Administrator acount.
 12. Create Users and Projects as you need.
 
+**SYSTEM OF THE SERVER**
+
+Dédalo in the server part is tested into the next Operating Systems:
+- CentOS 6.5, 6.6, 7.1
+- Red Hat Enterprise Linux 6.5, 6.6, 7.1
+- MacOsX 10.6, 10.7, 10.8, 10.9, 10.10
+
+All other Linux will be compatible but we don't test it.
+
+Windows: is possible that Dédalo can run but NO IS TESTED.
 
 **USE**
 
