@@ -1,6 +1,6 @@
 **README**
 
-*Ver 4 Release Candidate - 23-06-2015*
+*Ver 4 Release Candidate - 01-07-2015*
 
 We are very pleased to introduce the Release candidate of the version 4 of Dédalo.
 
@@ -26,7 +26,9 @@ We think that the new model is a future for Dédalo, and with PostgreSQL 9.4+ is
 
 We are very exited with the new JSONB and are expectant and waiting VODKA!
 
-*For install with postges:*
+Very, very thanks for the excelent work of Oleg Bartunov, Teodor Sigaev and Alexander Korotkov.
+
+*For install with PostgreSQL:*
 
 The schema of "matrix" into the database has significant changes:
   - The fields: parent, dato, tipo, lang
