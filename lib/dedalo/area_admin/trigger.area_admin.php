@@ -1,7 +1,0 @@
-<?php
-
-
-/* 
-* PASADO A RENDER
-*/
-
