@@ -1,0 +1,37 @@
+<?php
+
+	# VISUALIZADOR HTML
+
+
+	# CONTENIDO THUMB
+	$html_contenido = '';
+	switch($permissions) {
+			
+		case 0	:	$html_contenido .= "";
+					break;
+
+					
+		case ($permissions>=1) :
+					
+					
+					$html_contenido .= "\n <img class=\"css_image\"
+					src=\"$image_url\"
+					id=\"img_$identificador_unico\"
+					data-image_id=\"$image_id\"
+					data-tipo=\"$tipo\"
+					data-section_tipo=\"{$section_tipo}\"
+					data-parent=\"$parent\"
+					data-lang=\"$lang\"
+					data-img_width=\"$img_width\"
+					data-img_height=\"$img_height\"
+					alt=\"$image_id\"
+					/>";
+
+					
+					
+	}
+	
+	# PRINT HTML	
+	print $html_contenido;	
+
+?>

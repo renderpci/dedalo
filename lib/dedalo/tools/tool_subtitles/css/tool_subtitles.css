@@ -1,0 +1,33 @@
+/* TOOL_SUBTITLES */
+
+
+/* PAGE */
+.wrap_tool_subtitles_page {		
+
+}
+
+.tool_subtitles_wrap {
+	/*background-color: #CAEDAE;*/
+	display: block;
+	width: 100%;
+	padding: 10px;
+	position: absolute;
+	bottom: 0px;
+	}
+	#tool_subtitles_line_lenght {
+		width: 45px;
+		font-size: 110%;
+		margin-left: 10px;
+		margin-right: 5px;
+		text-align: center;
+		height: 1.65em;
+		border-radius: 3px;
+		border: none;
+	}
+	#subtitles_response {
+		padding: 5px;
+		padding-top: 10px;
+		overflow: auto;
+		height: 50%;
+		max-height: 300px;
+	}

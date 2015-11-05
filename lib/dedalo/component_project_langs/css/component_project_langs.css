@@ -1,0 +1,78 @@
+
+
+/* WRAP DIV CONTAINER */
+.css_wrap_component_project_langs, 
+.css_wrap_component_project_langs_tm { 
+
+}
+
+.css_wrap_component_project_langs .content_data { width: 50%; text-align: left; }
+
+/* LIST DIV */
+ul.css_component_project_langs {
+	display: block;
+	position:relative;	
+	top:0px;
+	padding:5px;		
+	/* width:24%; */
+	line-height:22px;
+	min-width:120px;
+}
+
+/* li line */
+.css_wrap_component_project_langs li { list-style:none; cursor:move; border-radius:2px; margin:1px; font-weight:normal; white-space:nowrap;padding-right: 55px;	}
+.ui-state-default {  }
+
+/* ul icon */
+.ui-icon { display:inline-block; position:relative; top:3px;}
+
+/* lang name */
+.css_component_project_langs_lang_name { display:inline-block;}
+
+/* Delete button */
+.css_component_project_langs_lang_delete { 
+	display: inline-block;
+	background-color: #CCCCCC;
+	cursor:pointer;
+	padding:0px;
+	padding-left:5px;
+	padding-right: 5px;	
+	color:#000;
+	font-size:9px;
+	/*float:right;*/
+	position: absolute;
+	right:7px;
+	height:23px;
+}
+.css_component_project_langs_lang_delete:hover { background-color: #CC0000; color:#FFFFFF}
+
+
+/* Btn Add lang */
+DIV.css_btn_add_lang {	
+	float: right;
+	margin-bottom:10px;
+	margin-right: 5px;
+}
+
+/* LANG */
+.css_lang_image_delete {	 
+	 background-image:url('../../themes/defaults/button_drop.png');
+	 background-position:center 1px;
+	 margin-left:4px;
+	 opacity:0.6;
+}
+.css_lang_image_delete:hover {opacity:1;}
+
+
+/* SEARCH */
+.css_component_project_langs_lupa_bg {
+	background-image: url('../../themes/default/lupa2.gif');
+	background-repeat:no-repeat;
+	background-position:0 1px;	
+}
+
+
+
+/* VARIANTES EXCLUSIVAS DE ESTE COMPONENTE 
+********************************************************************************************************************************************************/
+

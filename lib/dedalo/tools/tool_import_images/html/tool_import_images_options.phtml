@@ -1,0 +1,73 @@
+<?php
+
+	# VISUALIZADOR HTML	
+
+	# Tabla informativa en el lateral superior que muestra variables globales para la importación. 
+	# Generalmente definidas en propiedades
+	
+	$html    = "";
+	#dump($button_import_obj->propiedades, ' $button_import_obj->propiedades');
+	#$html .= build_table((array)$button_import_obj->propiedades);
+
+	if(SHOW_DEBUG) {
+		$html .= "<table class=\"import_options\">";
+		$html .= "<caption>Propiedades</caption>";
+		foreach ((array)$button_import_obj->propiedades as $key => $value) {
+			$html .= "<tr><th>$key</th><td>$value</td></tr>";
+		}
+		$html .= "</table>";
+	}
+
+
+
+/*
+	$html .= "<table class=\"import_options\">";
+	
+		$html .= "<tr>";
+			$html .= "<td>";
+			$html .= "campo_destino";
+			$html .= "</td>";
+			$html .= "<td>";
+			$html .= "$campo_destino_name"; if(SHOW_DEBUG) $html .= " [$campo_destino]";
+			$html .= "</td>";
+		$html .= "</tr>";
+
+		if(!empty($portal_destino)) {
+		$html .= "<tr>";
+			$html .= "<td>";
+			$html .= "portal_destino";
+			$html .= "</td>";
+			$html .= "<td>";
+			$html .= "$portal_destino_name"; if(SHOW_DEBUG) $html .= " [$portal_destino]";
+			$html .= "</td>";
+		$html .= "</tr>";	
+		}
+
+		$html .= "<tr>";
+			$html .= "<td>";
+			$html .= "campo_referencia_seccion";
+			$html .= "</td>";
+			$html .= "<td>";
+			$html .= "$campo_referencia_seccion_name"; if(SHOW_DEBUG) $html .= " [$campo_referencia_seccion]";
+			$html .= "</td>";
+		$html .= "</tr>";
+
+		$html .= "<tr>";
+			$html .= "<td>";
+			$html .= "calidad prederminada";
+			$html .= "</td>";
+			$html .= "<td>";
+			$html .= "$default_target_quality";
+			$html .= "</td>";
+		$html .= "</tr>";
+
+	$html .= "</table>";
+*/
+	if(!in_array($default_target_quality, $ar_quality)) {
+		$html .= "<div class=\"warning\"> Sorry: Current target quality ($default_target_quality) not valid</div>";
+	}
+
+	# PRINT HTML
+	print $html;
+	
+?>

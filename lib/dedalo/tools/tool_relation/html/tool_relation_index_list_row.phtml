@@ -1,0 +1,40 @@
+<?php
+
+	# VISUALIZADOR HTML	
+
+	
+	$html_contenido = '';
+
+
+	/**
+	* CURRENT TESAURUS ROW
+	*/
+	
+
+	# Icon
+	if($button_row=='delete') {
+		# Delete button
+		$html_contenido .= "\n <div class=\"icon_bs tool_indexation_delete_icon link\" 
+							data-id_matrix=\"$current_matrix_id\" data-tag=\"$selected_tagName\"
+							data-termino_id=\"$terminoID\" data-termino=\"$termino\" data-tipo=\"$tipo\" data-rel_locator='$rel_locator'
+							onclick=\"tool_indexation.remove_index(this)\"
+							>";
+		$html_contenido .= "</div>";
+	}else{
+		# label icon
+		$html_contenido .= "\n <div class=\"icon_bs tool_indexation_icon link\" 
+							data-id_matrix=\"$current_matrix_id\" data-rel_locator='$rel_locator' data-tag=\"$tag_value\" 
+							data-termino_id=\"$terminoID\" data-termino=\"$termino\" data-tipo=\"$tipo\"					
+							>";
+		$html_contenido .= "</div>";
+	}
+	
+
+	# Term text
+	$html_contenido .= "\n <div class=\"tool_indexation_index_list_termino\" title=\"$terminoID\">{$termino}</div><br>";
+	
+	
+	# PRINT HTML
+	print $html_contenido;
+	
+?>

@@ -1,0 +1,72 @@
+/* CSS Document */
+
+
+/* WRAP DIV CONTAINER */
+.css_wrap_relation { padding:0px; padding-bottom:0px; }
+
+.css_wrap_relation .content_data { width: 100%;}
+.css_wrap_relation .content_data:hover { }
+
+.css_wrap_relation label { }
+
+
+TABLE.relation_table {	
+	padding: 4px;
+	width: auto;
+	margin-left: 23%
+}
+TABLE.relation_table TR { background-color:#e7e7e7; color: #7f7f7f; text-align:left; }
+TABLE.relation_table TH { padding: 4px; font-weight: normal; color: #e5e5e5; background-color: #c0c0c0}
+TABLE.relation_table TD { padding: 2px; padding-left: 4px; padding-right: 4px; }
+
+.css_edit_icon {
+	background-image:url('../../themes/default/lapiz.png');
+}
+
+
+.relation_candidates_btn {
+	background-color: #887ac0; color: white; margin-left: 23%;
+}
+.relation_candidates_list {
+	display: block;
+	margin-top: 5px;
+	margin-left: 23%;
+}
+
+
+/* BOX SELECTOR LIST */
+.component_relation_selector_div {
+	padding:5px;
+	/* columns */
+	-moz-column-count:		5;
+	-webkit-column-count:	5;
+}
+.component_relation_selector_div UL { list-style: none; }
+.component_relation_selector_div a { line-height: 140%; text-decoration: none; margin-left:5px; opacity: 0.7; }
+.component_relation_selector_div a:hover {opacity:1;}
+
+/* RELATION */
+/*.section_group_iframe { width:100% !important; magin: 0px !important; padding: 0 !important; border: none; overflow: scroll; display: block; height: 180px}*/
+
+.btn_relation_new { 
+	position: relative;
+	top: -10px;
+	right: 10px;
+	line-height: 1px !important;
+	float:right;
+	cursor: pointer;
+	display: none;
+}
+
+.css_section_group_content_relation {
+	
+}
+
+.component_relation_ajax { width: 100%; height: 100%; overflow: auto;}
+
+
+
+
+/* VARIANTES EXCLUSIVAS DE ESTE COMPONENTE 
+********************************************************************************************************************************************************/
+

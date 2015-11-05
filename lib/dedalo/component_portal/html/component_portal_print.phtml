@@ -1,0 +1,216 @@
+<?php
+
+	# VISUALIZADOR HTML	
+
+	# ELEMENTOS
+	if(!isset ($ar_css['css_span_dato'])) 		$ar_css['css_span_dato']='';
+	if(!isset ($ar_css['css_wrap_portal'])) 	$ar_css['css_wrap_portal']='';
+
+		
+		
+		# CONTENIDO (INPUT)
+		$html_contenido = '';
+		switch($permissions) {
+				
+			case 0	:	$html_contenido .= "";
+						break;
+							
+			#case 1	: 	$html_contenido .= "\n <span class=\"css_span_dato {$ar_css['css_span_dato']}\">$valor</span>";
+			#			break;	
+							
+			case ($permissions>=1)	:
+
+						#
+						# LABEL
+							if (!isset($this->print_options->show_label) || $this->print_options->show_label==true) {
+								$html_contenido .= "\n<div class=\"print_label\">";
+								$html_contenido .= $label;
+								$html_contenido .= "</div>";
+							}
+
+
+						#
+						# PRINT_CONTENT HTML (LIST ROWS)
+						#
+						$html_contenido .= "<div id=\"section_list_rows_content_div_{$this->tipo}\" class=\"print_content section_list_rows_content_div \" >";
+												
+							
+							#
+							# TABLE
+							$table = "<table id=\"portal_table_{$tipo}\" data-parent=\"$parent\" class=\"table_rows_list print_table_rows_list\">";
+
+							# HEADERS (TH)
+							if ($this->html_options->header) {
+							
+								$table .= "<tr>";
+								foreach ($ar_columns as $column_tipo => $column_label) {
+									if ($column_tipo=='edit' && !$this->html_options->id_column) continue;
+									$table .= "<th><div class=\"th_title\">$column_label</div></th>";
+								}
+								$table .= "</tr>";
+							}//end if ($this->html_options->header)
+		
+							# ROWS (TD)
+							$row_number=1;
+							if ($this->html_options->rows && !empty($rows_data->result)) {
+							foreach ($rows_data->result as $key => $table_rows) {
+							foreach ($table_rows as $current_id => $rows) {
+								//echo "<hr> $current_id - ".print_r($rows,true);
+
+								if ($this->html_options->rows_limit && $row_number > $this->html_options->rows_limit) {
+									break; # Limit number of records to sowh
+								}
+
+								# REL_LOCATOR : The current_id can be id matrix or locator like object
+									$rel_locator = $current_id;	// Default							
+									if (isset($rows['lc_object'])) { // Locator object
+										$rel_locator = $rows['lc_object'];
+										$rel_locator = json_handler::encode($rel_locator);
+										if(SHOW_DEBUG) {
+											#dump($rel_locator," rel_locator from lc_object ");
+										}
+									}
+
+								# ROW
+									$id = $rows['id'];
+									if (empty($id)) {
+										dump("Se ha recibido un row de id 0 en component portal edit. Se ha omitido pero algo va mal, probablemente haya un proyecto de parent 0 creado por error");
+										continue;
+									}
+
+								# SECTION ID
+									$section_id = $rows['section_id'];
+
+
+								# COLUMNS
+									#dump($rows['rsc29']," rows");
+									$table .= "<tr class=\"tr_sortable\" data-dato='$rel_locator'>";
+									#foreach ((array)$rows as $key => $current_value) {
+									foreach ($ar_columns as $column_tipo => $column_label) {										
+
+										# EDIT COLUMN
+										if ($column_tipo=='edit') {
+											if (!$this->html_options->id_column) continue;
+
+											$table .= "<td class=\"id_column\">";
+
+											#
+											# EDIT BUTTON
+												$context_http_query = http_build_query($context);
+												$url  = htmlspecialchars("?t=$target_section_tipo&id=$id&m=edit&{$context_http_query}");
+												$url .= "&top_tipo=".TOP_TIPO."&top_id=".TOP_ID;
+
+												# Breadcrumb : add bc_path = url vars
+												$bc_path = tools::get_bc_path();
+													#dump($bc_path, ' bc_path');
+												$url 	.= "&bc_path=". base64_encode($bc_path);
+
+												# id_path
+												$id_path = tools::get_id_path($id);
+													#dump($id_path,"id_path - $id");
+												$url 	.= "&id_path=". $id_path;
+
+												$title 	= "Goto resource $section_id [$id]";
+												if(SHOW_DEBUG) $title .= "\n url:$url \n modo $modo, context $context->context_name";
+												$table .= "<div class='button_edit div_image_link link' title=\"$title\" onclick=\"window.open('$url', '_blank', 'toolbar=0,location=0,menubar=0')\"></div>";
+												
+											#
+											# DELETE RECORD BUTTON
+												if ($permissions>=2) {
+													$btn_title	 = label::get_label('borrar') .' '. label::get_label('recurso');
+													$table 		.= " <div class=\"delete_portal_link icon_bs link image_delete_icon\"
+											    	data-rel_locator='$rel_locator'
+											    	title=\"$btn_title\"
+											    	onclick=\"$('#delete_dialog_portal').data('button_obj',this).dialog('open')\"
+											    	></div>";
+												}
+
+											if(SHOW_DEBUG) {
+												# ID MATRIX
+												$table .= "<br><mark style=\"color:#a3a3a3;padding-right:5px\">$current_id</mark>";
+											}
+
+											$table .= "</td>";
+
+
+										# COMPONENTS COLUMNS
+										}else{
+
+											$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($column_tipo, true);
+
+											# Row value default
+											$value = isset($rows[$column_tipo]) ? $rows[$column_tipo] : '';
+											
+
+											if ($modelo_name=='component_portal' && !empty($value)) {
+												# Portal with locators
+												$parent 		 = null; // $id / null
+												$component_portal = component_common::get_instance('component_portal',$column_tipo,$parent,'list',DEDALO_DATA_NOLAN);
+												$component_portal->html_options->rows_limit	= 1;
+												if ($parent===null) {
+													# Use already query calculated values for speed
+													$ar_records   = (array)json_handler::decode($value);	#dump($ar_records,"ar_records for portal $current_component_tipo - id:$id");#die();
+													$component_portal->set_dato($ar_records);
+													$component_portal->set_identificador_unico($component_portal->get_identificador_unico().'_'.$id); // Set unic id for build search_options_session_key used in sessions
+												}
+												$value = $component_portal->get_html();
+											}//end if ($modelo_name=='component_portal')
+											else{
+												if (isset($rows['lc_object']) && isset($rows['lc_object']->section_id) && isset($rows['lc_object']->section_tipo)) {
+													
+													#
+													# COMPONENT HTML IN PRINT MODE (ignore 'valor_list' and build every component data)
+													$current_component = component_common::get_instance($modelo_name,
+																										$column_tipo,
+																										$rows['lc_object']->section_id,
+																										'print',
+																										DEDALO_DATA_LANG,
+																										$rows['lc_object']->section_tipo
+																										);
+													$print_options = new stdClass();
+														$print_options->show_label = false;
+													$current_component->print_options = $print_options;
+													$value = $current_component->get_html();
+														#dump($rows['lc_object'], " value ".to_string($target_section_tipo)); die();
+												}
+											}
+
+											# aditional td css selectors										
+											$td_css_selector = 'td_'.$modelo_name;
+
+											$table .= "<td class=\"$td_css_selector\">";
+											$table .= "$value";										
+											$table .= "</td>";
+
+										}//end if ($modelo_name=='component_portal')
+
+									}//end foreach ($ar_columns as $column_tipo => $column_label)
+									$table .= "</tr>";	
+
+							
+							$row_number++;
+
+
+							}//END foreach ($table_rows as $current_id => $rows)
+							}//END foreach ($rows_data->result as $key => $table_rows)
+							}//end if ($this->html_options->header)
+
+							$table .= '</table>';
+
+							$html_contenido .= $table;
+
+						
+						$html_contenido .= "</div>";//end print_content
+						break;
+												
+		}
+
+		# Prepare content to show in page
+		#tools::prepare_content($html_contenido);	
+
+		
+
+		
+		print $html_contenido;
+	
+?>

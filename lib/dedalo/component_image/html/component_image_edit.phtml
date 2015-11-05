@@ -1,0 +1,97 @@
+<?php
+$js_url = DEDALO_LIB_BASE_URL.'/component_image/js/component_image_read.js';
+?>
+<script>var url = '<?php echo $js_url ?>';</script>
+<?php
+
+	# VISUALIZADOR HTML	
+
+	# ELEMENTOS	
+	if(!isset ($ar_css['css_wrap_image']))			$ar_css['css_wrap_image']='';	
+
+		
+	print "\n<!-- IMAGE [tipo:$tipo section_id_matrix:$parent] $label -->";
+	print "\n<div class=\"css_wrap_image wrap_component {$ar_css['css_wrap_image']}\" 
+	id=\"{$id_wrapper}\"
+	data-tipo=\"{$tipo}\"
+	data-lang=\"{$lang}\"	
+	data-parent=\"{$parent}\"
+	data-section_tipo=\"{$section_tipo}\"
+	data-modo=\"{$modo}\"
+	data-dato=\"{$valor}\"
+	data-component_name=\"{$component_name}\"
+	data-component_info='{$component_info}'
+	>";
+	
+		
+		# ETIQUETA (LABEL)
+		$html_label = component_common_draw::draw_label($this);
+		
+		# CONTENIDO (INPUT)
+		$html_contenido = '';
+		switch($permissions) {
+				
+			case 0 :
+					$html_contenido .= "";
+					break;
+							
+			case ($permissions>=1) :
+			
+					# IMAGE THUMB
+					$title = '';
+					if(SHOW_DEBUG) {
+						$title .= "image_path: ".$this->get_image_path($quality);
+					}
+
+					
+					$open_tool_default='';
+
+					# IMAGE NOT EXISTS. PLACE DEDALO IMAGE WITH LINK TO DEFAULT TOOL
+					if (!file_exists($this->get_image_path())) {
+						$open_tool_default ="data-image_id=\"$image_id\"
+						data-quality=\"".DEDALO_IMAGE_QUALITY_ORIGINAL."\"
+						data-aditional_path=\"$aditional_path\"
+						data-initial_media_path=\"$initial_media_path\"
+						data-tipo=\"$tipo\"
+						data-parent=\"$parent\"
+						data-section_tipo=\"$section_tipo\"
+						onclick=\"tool_common.open_tool_upload(this)\" ";
+					}
+					
+					# CANVAS : IMAGE 
+					
+					$html_contenido .= "<canvas id=\"$identificador_unico\" class=\"canvas_edit\" title=\"$title\" $open_tool_default >";
+					$html_contenido .= $image_thumb_html ; # Rendered in thumb mode
+					$html_contenido .= "</canvas>";
+
+					#$html_contenido .= "<a href=\"$image_url\" target=\"_blank\" > + ";
+					#$html_contenido .= "</a>";
+											
+		}
+
+		# INIT : Init canvas in read only mode 
+		$html_contenido .= "\n<script>component_image_read.init_canvas('$identificador_unico');</script>";
+
+		# Prepare content to show in page
+		tools::prepare_content($html_contenido);	
+		
+
+		# PRINT HTML
+		print $html_label;
+		print $html_contenido;
+	
+	
+	print "\n</div><!-- /css_wrap_image IMAGE [tipo:$tipo section_id_matrix:$parent] $label -->\n"; //wrap
+
+
+	
+?>
+
+
+
+
+
+
+
+
+

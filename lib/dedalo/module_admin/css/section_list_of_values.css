@@ -1,0 +1,58 @@
+@charset "UTF-8";
+/* CSS Document */
+
+
+/* WRAP DIV CONTAINER */
+.css_section_list_table { 
+
+	background-color: #F9F9F9; 
+	
+	margin:20px;
+	border-collapse: collapse;
+	
+	-moz-box-shadow		: 2px 2px 8px #888888;
+	-webkit-box-shadow	: 2px 2px 8px #888888;
+	box-shadow			: 2px 4px 8px #888888;
+	
+	border-radius: 4px;
+	
+	font-family:Verdana, Geneva, sans-serif;
+	font-size:12px;	
+}
+
+.css_section_list_table_th {
+	
+	background-color: #666;
+	color:#CCCCCC;
+	padding:5px;
+	text-align:left;
+	
+	border-bottom-width: 1px;
+	border-bottom-style: solid;
+	border-bottom-color: #ccc;
+	
+	border-left-width: 1px;
+	border-left-style: solid;
+	border-left-color: #ccc;	
+}
+
+.css_section_list_table td {
+	color:#333;
+	padding:5px;
+	text-align:left;
+	word-wrap:break-word;
+	
+	border-bottom-width: 1px;
+	border-bottom-style: solid;
+	border-bottom-color: #ccc;
+	
+	border-left-width: 1px;
+	border-left-style: solid;
+	border-left-color: #ccc;
+}
+
+
+
+
+/* VARIANTES EXCLUSIVAS DE ESTE COMPONENTE 
+********************************************************************************************************************************************************/

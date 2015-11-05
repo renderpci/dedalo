@@ -1,0 +1,28 @@
+
+
+.layout_key_label {
+	color:#aeaeae;
+	text-transform: capitalize;
+}
+.css_input_text_layout {
+	padding: 3px;
+	padding-left: 5px;
+	border: 1px solid #9E9E9E;
+	border-radius: 3px;
+	-webkit-box-shadow: 0 0 6px #999999 inset;
+	-moz-box-shadow: 0 0 6px #999999;
+	box-shadow: inset 0 0 6px #999999;
+	width: 99.0%;
+	min-height:15em; 
+	resize:vertical;  /* none|horizontal|vertical|both */
+	}
+	.css_input_text_layout:hover {
+		background-color: #F1F1F1;
+	}
+	.css_input_text_layout:focus {
+		-webkit-box-shadow: 0 0 10px #ccc;
+		-moz-box-shadow: 0 0 10px #ccc;
+		box-shadow: 0 0 10px #CCC;		
+		min-height:50em; 
+		background-color: #F1F1F1;
+	}

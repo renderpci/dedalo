@@ -1,0 +1,33 @@
+<?php
+/**
+* TOOL_IMPORT_ZOTERO PAGE
+*/
+
+$html='';
+
+	$html   .= "\n<!-- TOOL PAGE [tipo:$tipo] -->";
+	$html   .= "\n<div class=\"upload_title text_shadow_inset\" > TOOL IMPORT ZOTERO </div>";
+
+	#
+	# UPLOAD FORM
+	$html .= "<div id=\"wrap_upload\">";
+	$html .= $html_upload;
+	$html .= "</div>";
+
+	#
+	# PREVIEW TABLE
+	$html .= "<div id=\"wrap_preview\">";
+	#$html .= $html_preview;
+	$html .= "</div><!-- /wrap_preview -->";
+
+
+	#
+	# PROCESS RESPONSE TABLE
+	$html .= "<div id=\"wrap_process\">";
+	#$html .= $html_preview;
+	$html .= "</div><!-- /wrap_process -->";
+
+	
+
+echo $html;
+?>

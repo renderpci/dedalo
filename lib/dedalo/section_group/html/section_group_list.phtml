@@ -1,0 +1,59 @@
+<?php
+	
+	# VISUALIZADOR HTML	
+
+	# ELEMENTOS
+	if(!isset ($ar_css['css_section_group_wrap']))		$ar_css['css_section_group_wrap']='';
+	if(!isset ($ar_css['css_section_group_titulo']))	$ar_css['css_section_group_titulo']='';
+	if(!isset ($ar_css['css_span_dato'])) 				$ar_css['css_span_dato']='';
+	if(!isset ($ar_css['css_span_debugger'])) 			$ar_css['css_span_debugger']='';
+	
+	
+	print "\n\n<!-- SECTION GROUP [tipo:$tipo] -->";
+	#print "\n<div class=\"css_section_group_wrap {$ar_css['css_section_group_wrap']}\" >";
+	
+	
+	# ETIQUETA (LABEL)
+	#$html_label = component_common_draw::draw_label($this);	
+	#print "\n<div class=\"css_section_group_titulo tab_title\" > $html_label </div>";
+	
+		
+	
+	# CONTENIDO (INPUT)
+	$html_contenido = "";
+	
+	switch($permissions) {
+			
+		case 0	:	$html_contenido .= "\n <span class=\"css_span_dato {$ar_css['css_span_dato']}\"> ".label::get_label('sin_acceso')." (group) </span>";		
+					break;
+						
+		case ($permissions>=1)	:
+		
+					$html_contenido .= "\n<td>";					
+					$html_contenido .= "$section_dato ";
+					$html_contenido .= "<div class=\"button_edit div_image_link\" onclick=\"goto_url('?modo=edit&id=$id')\"></div>";
+										
+					if($permissions==3)	
+					$html_contenido .= " <span class=\"css_span_debugger {$ar_css['css_span_debugger']}\" id=\"debugger_{$id}\" >{$id}</span>";
+					$html_contenido .= $button_delete_html;
+					$html_contenido .= "</td>";
+					
+					if(is_array($ar_components_html)) foreach($ar_components_html as $component_html) {
+			
+						$html_contenido .= "\n<td> $component_html </td>";
+					}	
+						
+		case 2	: 
+		case 3	:									
+					break;			
+	}
+		
+	$html_contenido .= "";
+	
+	
+	# PRINT HTML
+	print $html_contenido;
+	
+	
+	#print "\n</div>\n\n"; //wrap
+?>

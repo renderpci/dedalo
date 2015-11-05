@@ -1,0 +1,31 @@
+<?php
+
+	# VISUALIZADOR HTML	
+
+	# ELEMENTOS	
+	
+	
+	#echo "\n<!-- SELECT [tipo:$tipo id_matrix:$id] $label -->";
+	#echo "\n<div class=\"css_wrap_select {$ar_css['css_wrap_select']}\" >";
+	
+	
+	# CONTENIDO (INPUT)
+	$html_contenido = '';
+	switch($permissions) {
+			
+		case 0:	
+				$html_contenido .= "";
+				break;
+											
+		case ($permissions>=1):
+										
+				$html_contenido .= $valor ;				
+					
+	}
+	
+	
+	# PRINT HTML
+	print $html_contenido;	
+	
+	
+?>

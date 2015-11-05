@@ -1,0 +1,233 @@
+@charset "UTF-8";
+/* CSS Document */
+@import url('../css/headerBtns.css');
+/*
+calabaza logo: #e57400
+*/
+/* font face test
+@font-face {  
+	font-family: myFont ;  
+	src: url( ../lib/fonts/truetype/futura.ttf ) format("truetype");
+}
+*/
+html {top:0; margin-top:0; height:100% }
+html, body { background-color:#d9d9d9; }
+body {
+ /*background-image: url(../images/fondo.png);*/ 
+ /*background-repeat: repeat-x;*/
+ top:0; left:0;
+ background-image:url(../images/bg_noise.jpg);
+ margin-left: 0px;
+ margin-top: 0px;
+ margin-right: 0px;
+ margin-bottom: 0px;
+ 
+ height:100% !important; /*important*/
+}
+body,td,th { font-family: Verdana,Arial,Helvetica,sans-serif; font-size:11px;color:#3C3C3C;}
+
+iframe { margin:0px; padding:0px; border:none; background-color:transparent }
+
+a:link { text-decoration: none; color:#3C3C3C; font-weight:inherit}
+a:visited { text-decoration: none; color: #000000;}
+a:hover { text-decoration: none; color: #FFFFFF;}
+a:active { text-decoration: none; color: #1A262A;}
+
+p {	margin: 0px }
+
+h1 , h3 { font-family: Verdana, Arial, Helvetica, sans-serif; font-size: 20px; color: #000000;}
+h3 { font-size:12px;}
+
+
+/* FORM ELEMENTS */
+input {
+  font-family: Verdana, Arial, Helvetica, sans-serif;
+  font-size: 10px;
+  background-color: #F4F4F4;
+  border: 1px solid #CCCCCC;
+  border-radius:3px;
+  padding: 2px;
+  margin: 2px;
+  color: #666666;  
+}
+
+[disabled],[readonly] {	background-color:#CCC; }
+
+textarea {
+	font-family: Arial, Helvetica, sans-serif;
+	font-size: 11px;
+	background-color: #f4f4f4;
+	border: 1px solid #CCCCCC;
+	padding: 2px;
+    color: #999999;
+	border-radius:4px;
+}
+select {
+	font-family: Arial, Helvetica, sans-serif;
+	font-size: 11px;
+	background-color: #f4f4f4;
+	border: 1px solid #CCCCCC;
+	padding: 2px;
+    color: #333333;
+  	border-radius:3px;	
+}
+input[type="checkbox"] { cursor:pointer ; margin-bottom:5px;}
+
+input[type=button]{ color:#F7F7F7;height:21px;padding:3px; padding-left:5px; padding-right:5px; padding-top:0px;border:none;border-radius:3px;background-image:url(../images/th_ramp2.png);background-position:0 -1px;cursor:pointer; }
+input[type=button]:hover { color:#fff }
+.SubmitButon{
+cursor:pointer;
+height:20px;
+background-color:#e57400;
+color:#FFF ;
+border:none;
+border-radius:3px;
+box-shadow: 1px 2px 2px #888888;
+background-image: url(../images/deco/ramp_orange.jpg) !important;
+padding-left:4px; padding-right:4px;
+}
+
+
+
+#wrap { width:631px; margin-right:auto; margin-left:auto;  }
+
+#wrapGeneral{ display:block; height:100%; width:100%; margin:0px; padding:0px; position:absolute; top:0px }
+#wrapGeneral #wrapGeneralTable { height:100%; width:100%; border:none;padding:0px; border-collapse:collapse; /* 'cellspacing' equivalent */}
+#wrapGeneral #wrapGeneralTable .wrapTDhead { height:77px; vertical-align:top; padding:0;}
+#wrapGeneral #wrapGeneralTable .wrapTDcontent { vertical-align:top;padding:0; text-align:center;display:block}
+#wrapGeneral #wrapGeneralTable .wrapTDfooter  { vertical-align:bottom;padding:0;width:100%;}
+
+.content { width:100%; height: 400px; margin-top: 10px; margin-bottom: 10px; position: relative; }
+.botonT { font-family: Verdana, Arial, Helvetica, sans-serif; font-size: 10px; color: #000000; margin-left: 4px;  margin-right: 4px; }
+
+#localizacion{ color: #666666;}
+
+/* indexaciones */
+.h5div{ font-size: 10px;padding: 0.2em; color:black; background:orange; border:1px solid Gray; width:60px;text-align: center;margin:3px; display:inline }
+/* tc's */
+.h6div{ font-size: 10px;padding: 0.2em; color:#6F0; background:#1C1C1C; border:1px solid Gray; width:60px;text-align: center;margin:3px;display:inline }
+
+
+.blanco {color: #CCCCCC;font-weight: bold;}
+
+.box_shadow_1 {box-shadow:1px 1px 6px #707070 inset;}
+
+
+.textoIndex { margin:10px; line-height:18px; text-align:justify; }
+
+.bullet { vertical-align: middle; border:none; margin:0px; padding:0px; position: relative; top:-2px; cursor:pointer;}
+
+.flechas{ cursor:pointer; vertical-align: text-top; margin:0px; margin-left:2px; padding:0px; }
+
+.rotuloAyuda {
+	font-family: Tahoma, Geneva, sans-serif;
+	font-size: 12px;
+	font-weight: bold;
+	color: #000;
+	padding-bottom: 10px;
+}
+.nordenClass{
+	font-size:8px; 
+	color: #999;
+	color:#C30
+}
+
+.errorMsg{
+	padding:15px; 
+	font-family:Verdana, Geneva, sans-serif; 
+	font-size:12px; 
+	color:#C00;
+	background-color:#F90
+}
+.anadirMunicipiosLink { margin-left:10px; height:16px; width:120px; display:inline-block; vertical-align: middle }
+
+.spinner{ width:100%; height:92%;padding: 10px 0px;background: url(../images/spinner.gif) no-repeat center;}
+.spinnerTS{background-image: url(../images/spinner.gif);background-repeat: no-repeat;background-position: left;	margin-left: 65px;padding-top:10px;height:22px;}
+
+.municipioBusqueda { 
+	background-image:url(../images/iconos/lupaInput.png); 
+	background-position:left; 
+	background-repeat:no-repeat; 
+	background-color: #ebebeb;
+	width:97%; 
+	padding-left:17px;
+	height:20px;	
+	vertical-align:middle;
+  	border-radius:12px;
+}
+.municipioIDinput { width:60px;text-align:center; font-weight:bold;color:#333;}
+
+
+.editBtnBlue, #editBtnBlue { cursor:pointer; vertical-align: middle; margin-top:-2px; margin-left:3px; width:15px; height:15px;  }
+.dropBtn { cursor:pointer; margin-left:3px; vertical-align: text-bottom /*vertical-align: middle; margin-top:-5px;*/  }
+
+.error { color:#F00; font-weight:bold; padding:4px; }
+.ok { color:#090; font-weight:bold; padding:4px; }
+.notas , .anotacionTexto { font-family:Arial, Helvetica, sans-serif; font-size:11px; font-weight:100; color:#999}
+
+.imgOpenTopo { vertical-align: text-bottom; margin-bottom:-1px; cursor:pointer; }
+
+
+
+/**** Lang Translate lang tabla*****/
+#formLanguage {margin:20px;}
+#formLanguage #langTable { margin:10px;}
+#formLanguage #langTable th { background-color:#333; color:#CCC; padding:4px; padding-left:10px;border-top-left-radius:5px;border-top-right-radius: 5px;}
+#formLanguage #langTable td { background-color: #CCC; }
+#formLanguage #langTable .referencia { padding:4px; padding-left:10px; }
+#formLanguage #langTable .var { padding:4px; padding-left:10px; color:#999; width:220px; overflow:hidden }
+#formLanguage #langTable .textAreaLang {width:700px;height:100%;padding:3px; min-height:24px; font-size:1.1em }
+#formLanguage .submitBtn {padding-left:5px;	padding-right:5px; 	background-color:#090; color:#FFF; cursor:pointer;border-radius:5px;}
+#formLanguage #selectorBtn { background-color:#F93; float:right; margin-right:15px;}
+#formLanguage input[readonly] { background-color: #F0F0F0; text-align:center}
+.langAtention { margin:0px; padding:0px; color:#C00; margin-left:50px; padding-left:40px; line-height:30px; margin-bottom:-15px;  background-image:url(../auth/images/atencion.png); background-repeat:no-repeat }
+
+
+/* HELP */
+.linkPDF {
+	display:block;
+	width:190px;
+	height:48px;
+	margin:10px;
+	text-align:left;
+	padding-left:60px;
+	padding-right:10px;
+	padding-top:30px;
+	background-color:#CCC;
+	cursor:pointer;
+	background-image:url(../images/iconos/pdf_icon.png);
+	background-repeat:no-repeat;
+	background-position:5px;
+
+}
+#pdfFiles {width:30%; }
+
+#listLangCode { margin-right:40px;margin-bottom:50px; margin-top:0px; float:right}
+#listLangCode .listLangCode { float:left; display:inline-block ; width:45px;  clear:left; margin-top:2px;}
+#listLangCode .listLangName { float:left; display:inline ;  margin-left:5px; margin-top:2px;}
+
+.unTranslated { color:#80A5E5;font-style:italic; text-decoration:line-through}
+
+.capitalize { text-transform:capitalize}
+
+
+
+#footer table { 
+	background-color:#000 ;	
+	box-shadow : 0px 0px 8px #888888;
+	margin-top:15px;
+	font-weight:100;	
+}
+#footer #footerDebug { color:#666 !important; line-height:1.2em; padding:5px; cursor:pointer}
+#footer #footerDebug #footerQueryDebug { margin:0px !important; position:absolute; top:0px; left:-2px; width:100%; background-color:#222;opacity:0.98}
+#footer #footerQueryDebug .sql_query { font-size:10px;padding:5px;height:auto;text-align:left;word-wrap:break-word;white-space:pre-wrap }
+#footer #footerQueryDebug .sql_query hr { border: thin solid #000; }
+
+
+/* PRINT */
+@media print {
+	body { color: #333 !important; background-image: none !important; font-size:1em !important; }
+	#rowData, #wrapGeneral { background-color:#FFF !important; }
+	a, a:link, a:visited { color: #000 !important; text-decoration:none !important; }
+	#headerTable, .botoneraTop2, #form1, .noPrint { display: none !important; }
+}

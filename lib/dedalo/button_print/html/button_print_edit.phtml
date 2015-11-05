@@ -1,0 +1,52 @@
+<?php
+/*
+	# VISUALIZADOR HTML	
+
+	# ELEMENTOS
+	if(!isset ($ar_css['css_span_dato'])) 			$ar_css['css_span_dato']='';
+	if(!isset ($ar_css['css_button_import'])) 		$ar_css['css_button_import']='';
+	if(!isset ($ar_css['css_span_debugger']))		$ar_css['css_span_debugger']='';
+	if(!isset ($ar_css['css_wrap_button_import']))	$ar_css['css_wrap_button_import']='';
+		
+	
+	print "\n<!-- BUTTON IMPORT [tipo:$tipo id_matrix:$id] -->";
+	print "\n<div class=\"css_wrap_button_import {$ar_css['css_wrap_button_import']}\">";
+	
+	
+		# ETIQUETA (LABEL)
+		$html_label = component_common_draw::draw_label($this);
+		
+		# CONTENIDO (INPUT)
+		$html_contenido = '';
+		switch($permissions) {
+				
+			case 0	:	$html_contenido .= "\n <span class=\"css_span_dato {$ar_css['css_span_dato']}\"> ".label::get_label('sin_acceso')." (button_import)</span>";
+						break;
+							
+			case 1	: 	$html_contenido .= "";
+						break;	
+							
+			case ($permissions>=2)	:
+			
+						$html_contenido .= "\n edit<input class=\"css_button_generic css_button_import link\" type=\"button\" 
+						onclick=\"import.Import(this)\" 
+						data-tipo=\"{$target_tipo}\" 
+						value=\"$label edit\" 
+						title=\"$html_title\" />";
+						
+						
+				if($permissions==3)		
+						$html_contenido .= "\n <span class=\"css_span_debugger {$ar_css['css_span_debugger']}\" id=\"debugger_{$tipo}\" >{$debugger}</span>";
+						
+												
+		}
+		
+		
+		# PRINT HTML
+		print $html_contenido;
+
+	
+	
+	print "\n</div><!-- /css_wrap_button_import -->\n\n"; //wrap
+*/
+?>

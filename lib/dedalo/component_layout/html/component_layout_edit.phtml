@@ -1,0 +1,121 @@
+<?php
+
+	# VISUALIZADOR HTML	
+
+	# ELEMENTOS
+	
+	print "\n<!-- COMPONENT_LAYOUT [tipo:$tipo section_id_matrix:$parent] $label -->";
+	print "\n<div class=\"css_wrap_html_text wrap_component\" id=\"{$id_wrapper}\"
+	data-tipo=\"{$tipo}\"
+	data-section_tipo=\"{$section_tipo}\"
+	data-parent=\"{$parent}\"
+	data-lang=\"{$lang}\"
+	data-modo=\"{$modo}\"
+	data-component_name=\"{$component_name}\"
+	data-component_info='{$component_info}' >";
+	
+	# ETIQUETA (LABEL)
+	$html_label = component_common_draw::draw_label($this);
+	
+	# CONTENIDO (INPUT)
+	$html_contenido = '';
+	switch($permissions) {	
+			
+		case 0	:	$html_contenido .= "";	
+					break;
+						
+		case 1	: 	
+					foreach ($dato as $key => $value) {
+						$html_contenido .= "\n <span class=\"css_span_dato \">".htmlentities($value)."</span>";
+					}
+					break;	
+						
+		
+		case ($permissions>=2) :
+
+					if(SHOW_DEBUG) {
+						#dump($dato, ' $dato');
+					}
+					$key  ='full';
+						#dump($dato, " dato ".to_string());
+					$value= (string)json_encode($dato,JSON_PRETTY_PRINT);
+
+					$editor_id = $identificador_unico.'_'.$key;
+
+					##
+					# Text area
+					$html_contenido .= "\n <textarea class=\"css_input_text_layout\" 
+					id=\"{$editor_id}\" 
+					name=\"{$input_name}\"
+					data-tipo=\"{$tipo}\"
+					data-lang=\"{$lang}\"
+					data-section_tipo=\"{$section_tipo}\"
+					data-parent=\"{$parent}\"
+					data-key_name=\"{$key}\"
+					data-context_name=\"$context_name\"
+					title=\"$html_title\">$value</textarea>";
+					
+					
+					#
+					# JSON EDITOR (EXPERIMENTAL)
+					$html_contenido .= "<div id=\"saveDocument\">Save</div>
+					<div id=\"editor_json\" style=\"height:800px;width:100%\"></div>
+					<script>
+					  $('#$editor_id').hide()
+					  var options = {
+					    mode: 'code',
+					    modes: ['code', 'form', 'text', 'tree', 'view'], // allowed modes
+					    error: function (err) {
+					      alert(err.toString());
+					    }
+					  };  
+					  // create the editor
+					  var container = document.getElementById('editor_json');
+					  var editor = new JSONEditor(container,options, $value);
+					  // Send JSON text to input and force save
+					  document.getElementById('saveDocument').onclick = function () {
+					    $('#$editor_id')
+					    	.val(editor.getText())
+					    	.trigger('change');
+					  	};
+					</script>";
+
+
+					foreach ($dato as $key => $part) {
+						if($key=='classes') {
+							$render =  tool_layout_print::render_css_classes( $part );
+							$html_contenido .= "<pre>".htmlspecialchars($render)."</pre>";
+						}
+						if($key=='pages') {							
+							foreach ((array)$part as $current_page) {
+								$options = new stdClass();
+								    $options->page        = $current_page;
+								    $options->record      = false;
+								    $options->render_type = 'print';
+								$render = tool_layout_print::render_page( $options );
+								$html_contenido .= "<pre style=\"white-space: pre-line;\">".htmlspecialchars($render->html)."</pre>";
+							}
+						}
+					}//end foreach ($dato as $key => $part) {
+					break;						
+	}
+
+	# INIT : Init text editor	
+	#$html_contenido .= "\n<script>component_html_text_editor.init('$identificador_unico','$modo','$propiedades_json');</script>";
+	
+	
+	# Prepare content to show in page
+	tools::prepare_content($html_contenido);
+
+	
+	# PRINT HTML
+	print $html_label;
+	print $html_contenido;
+	
+	
+	print "\n</div><!-- /css_wrap_html_text  $label -->\n\n"; //wrap
+
+
+
+?>
+

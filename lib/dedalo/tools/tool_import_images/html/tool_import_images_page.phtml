@@ -1,0 +1,64 @@
+<?php
+
+	# VISUALIZADOR HTML
+
+	$custom_tool_label = isset($custom_tool_label) ? " : <h2>$custom_tool_label</h2>" : '';
+
+	# HEADER HTML
+	$header_html = '';		
+	$header_html  .= "\n<!-- TOOL IMPORT IMAGES [tipo:$tipo] -->";
+	$header_html  .= "<div class=\"tool_header\">";
+	$header_html  .= "<div class=\"h2_title\"> TOOL IMPORT IMAGES $custom_tool_label</div>";
+	$header_html  .= "<div class=\"import_context_label\">";
+	if(SHOW_DEBUG && $context!='form') $header_html .= "<span class=\"debug_info\">".TOOL_IMPORT_IMAGES_UPLOAD_DIR."</span>";
+	$header_html  .= "</div>";
+
+	$header_html  .= "</div>";#/tool_inspector_div	
+	
+	# PRINT HTML
+	print $header_html;
+
+	# HELP INFO
+	if($context_name=='files')
+	print $import_help;
+
+	
+	# BODY HTML
+	print $body_html ;
+
+	
+	# FOOTER HTML
+	$footer_html='';
+	$footer_html .= "<div class=\"import_context_label\">";
+	
+	switch ($context_name) {
+		case 'files':
+			$footer_html .= " <a id=\"button_import_images\" href=\"$url_import_preview\" class=\"btn btn-success fileinput-button\">
+							<strong>OK</strong>
+							<span>".label::get_label('tool_import_images'). ' ' .strip_tags($custom_tool_label). " </span>                    
+						  </a> </div>";
+			break;
+		
+		case 'form':
+			$footer_html  .= " <a id=\"button_gestion_de_archivos\" href=\"$url_manage_files\" class=\"btn btn-info fileinput-button\">
+							<strong></strong>
+							<span> Volver a ".label::get_label('gestion_de_archivos')."</span>
+						  </a> ";
+			break;
+		
+		default:
+			# code...
+			break;
+	}
+
+	$footer_html .= "</div>";
+
+	echo $footer_html;
+	
+	#echo css::build_tag(DEDALO_LIB_BASE_URL.'/section_group/css/section_group.css');
+	#print section_group::build_dummy_section_group($title=label::get_label('gestionar_archivos'),$body=$body_html);
+?>
+
+
+
+

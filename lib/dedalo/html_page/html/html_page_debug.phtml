@@ -1,0 +1,54 @@
+<?php
+# DESACTIVO
+return null;
+
+
+
+if (login::is_logged()!==true) return null;
+
+require_once(DEDALO_LIB_BASE_PATH . '/common/class.debug.php');
+
+
+# Force calculate loaded modelos
+common::show_loaded_modelos();
+
+print "\n\n<!-- html_page DEBUGGER -->";
+print "\n<div class=\"html_page_debugger_wrap\">";
+
+		print "\n<div class=\"html_page_debugger_label text_unselectable\">DEBUG</div>";
+
+		# DEBUG CONTENT
+		print "<div class=\"html_page_debugger_content\">";
+		if( isset($_SESSION['debug_content']) && is_array($_SESSION['debug_content']) ) foreach( $_SESSION['debug_content'] as $key => $ar_value) {	
+				
+			echo "\n<div>"; 
+			echo "\n<pre class=\"css_debug_html_page_title \"><b>$key</b>:</pre>";
+			echo "<pre class=\"css_debug_html_page_content\">";
+			
+			switch($key) {
+				
+				case (	$key=='RecordDataBoundObject::search' || 
+						$key=='RecordDataBoundObject::Load' || 
+						$key=='RecordDataBoundObject::search cache' || 
+						$key=='RecordDataBoundObject::Load cache') :
+				
+														$total_ms = Debug::get_time_from_ar_debug($ar_value);																
+														echo "Total $total_ms ms <br>";
+														print_r($ar_value);
+														break;
+														
+				default :								print_r($ar_value);
+			}
+			
+			#preg_match('@^(?:http://)?([^/]+)@i',	"http://www.php.net/index.html", $matches);
+			#$host = $matches[1];
+			
+			
+			echo "\n</pre> ";
+			echo "\n</div>"; 
+			echo "\n<hr>";
+		}
+		print "</div><!-- /debug_content -->";
+
+print "\n</div><!-- /html_page DEBUGGER -->\n\n"; //wrap
+?>

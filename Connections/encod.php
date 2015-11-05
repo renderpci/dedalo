@@ -1,0 +1,3 @@
+<?php 
+die('ENCOD DEPRECATED !');
+?>

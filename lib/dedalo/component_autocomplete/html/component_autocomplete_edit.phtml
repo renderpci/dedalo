@@ -1,0 +1,135 @@
+<?php
+
+	# VISUALIZADOR HTML	
+
+	# ELEMENTOS
+	if(!isset ($ar_css['css_wrap_autocomplete']))	$ar_css['css_wrap_autocomplete']='';
+
+			
+	
+	print "\n<!-- COMPONENT_AUTOCOMPLETE [tipo:$tipo section_id:$parent] $label -->";
+	print "\n<div class=\"css_wrap_autocomplete wrap_component {$ar_css['css_wrap_autocomplete']}\" id=\"{$id_wrapper}\" 
+	data-tipo=\"{$tipo}\"
+	data-lang=\"{$lang}\"	
+	data-parent=\"{$parent}\"
+	data-section_tipo=\"{$section_tipo}\"
+	data-referenced_section_tipo='{$referenced_section_tipo}'	
+	data-tipo_to_search='{$tipo_to_search}'
+	data-modo=\"{$modo}\"
+	data-dato=\"{$dato_json}\"
+	data-component_name=\"{$component_name}\"	
+	data-component_info='{$component_info}' 
+	>";
+	
+	# ETIQUETA (LABEL)
+	$html_label = component_common_draw::draw_label($this);
+	
+	# CONTENIDO (INPUT)
+	$html_contenido = '';
+	switch($permissions) {
+			
+		case 0	:	$html_contenido .= "";
+					break;
+						
+		case 1	: 	$html_contenido .= $valor;
+					break;						
+		
+		case ($permissions>=2)	:
+				
+					# VALOR . STRING RESOLVED TO SHOW
+					$html_contenido .= "\n <ul class=\"css_autocomplete_valor\">";
+					foreach ($ar_valor as $current_value => $value) {
+						
+						$html_contenido .= "<li>";
+
+						# BTN DELETE
+						$html_contenido .= "\n <div class=\"icon_bs link css_autocomplete_button_delete\"
+						data-tipo=\"{$tipo}\"
+						data-current_value='$current_value'
+						title=\"$label $parent\"
+						onclick=\"component_autocomplete.delete(this)\"></div>";
+
+						$html_contenido .= $value;
+						if(SHOW_DEBUG) {
+							$html_contenido .= " <span class=\"notes\">$current_value</span>";
+						}
+
+						$html_contenido .= "</li>";
+
+					}
+					$html_contenido .= "</ul>";
+
+
+					#
+					# INPUT SEARCH FIELD
+					$html_contenido .= "\n <input type=\"text\" class=\"css_autocomplete_search_field\" placeholder=\"".label::get_label('buscar')."...\"						
+						data-tipo='{$tipo}'
+						data-section_tipo=\"{$section_tipo}\" 
+						data-parent='{$parent}'
+						data-referenced_section_tipo='{$referenced_section_tipo}'
+						data-tipo_to_search='{$tipo_to_search}'
+						data-tipo_section_to_search='{$referenced_section_tipo}'
+						onfocus=\"component_autocomplete.activate(this)\"
+						/>";
+
+
+					# BTN DELETE
+						/*
+						$html_contenido .= "\n <div class=\"icon_bs link css_autocomplete_button_delete\" 
+						data-tipo=\"{$tipo}\"
+						title=\"$label $tipo\"
+						onclick=\"component_autocomplete.delete(this)\"></div>";
+						*/
+
+					
+					# BTN EDIT
+					$url_edit = "?t=".$referenced_section_tipo;		#dump($this->referenced_section_tipo," this");
+					$html_contenido .= "<div class=\"icon_bs link edit_autocomplete\" onclick=\"window.open('$url_edit')\"></div>";
+
+					# BTN NEW ELEMENT
+					$html_contenido .= "<div class=\"icon_bs link new_autocomplete\" onclick=\"component_autocomplete.new_element(this)\"></div>";
+
+					# NEW_ELEMENT_CONTAINER ajax loads here
+					$html_contenido .= "<div class=\"new_element_container\"></div>";
+
+
+					# INPUT DATA HIDDEN
+					$css_add = SHOW_DEBUG ? 'debug' : '';
+					$html_contenido .= "\n <input type=\"text\" class=\"css_autocomplete_dato_hidden $css_add\" 
+						name=\"{$input_name}\" 
+						data-tipo=\"{$tipo}\"
+						data-section_tipo=\"{$section_tipo}\"
+						data-parent=\"{$parent}\"
+						data-lang=\"{$lang}\"
+						data-tipo_to_search='{$tipo_to_search}'
+						data-tipo_section_to_search='{$referenced_section_tipo}'
+						data-dato_in_db='$dato_json'
+						value='$dato_json'
+						title=''
+						disabled=\"disabled\"
+						/>";
+					
+
+			if($permissions==3)
+					
+					$html_contenido .= "\n <span class=\"css_span_debugger\" id=\"debugger_{$tipo}\" >{$debugger}</span>";	
+				
+											
+	}
+
+	# Prepare content to show in page
+	tools::prepare_content($html_contenido);
+	
+	
+	# PRINT HTML
+	print $html_label;
+	print $html_contenido;
+	
+	if(SHOW_DEBUG) {
+		if (isset($this->ar_list_of_values->debug)) {
+			echo $this->ar_list_of_values->debug;
+		}		
+	}
+	
+	print "\n</div><!-- /css_wrap_component_autocomplete COMPONENT_AUTOCOMPLETE [tipo:$tipo section_id:$parent] $label -->\n\n"; //wrap
+?>

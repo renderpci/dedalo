@@ -1,0 +1,49 @@
+<?php
+	
+	# VISUALIZADOR HTML	
+
+	# ELEMENTOS
+	if(!isset ($ar_css['css_section_group_wrap']))		$ar_css['css_section_group_wrap']='';
+	if(!isset ($ar_css['css_section_group_titulo']))	$ar_css['css_section_group_titulo']='';
+	if(!isset ($ar_css['css_span_dato'])) 				$ar_css['css_span_dato']='';;
+	
+	
+	
+	print "\n\n<!-- SECTION GROUP [tipo:$tipo] -->";
+	print "\n<div class=\"css_section_group_wrap {$ar_css['css_section_group_wrap']}\" >";
+	
+	# ETIQUETA (LABEL)	
+	$html_label = "\n<div class=\"css_section_group_titulo tab_title\" > ".component_common_draw::draw_label($this)." SEARCH </div>";	
+		
+	
+	# CONTENIDO (INPUT)
+	$html_contenido = "\n<div class=\"css_section_group_content tab_content\" >";
+	
+	switch($permissions) {
+			
+		case 0	:	$html_contenido .= "\n <span class=\"css_span_dato {$ar_css['css_span_dato']}\"> ".label::get_label('sin_acceso')." (group)</span>"; 		
+					break;
+						
+		case ($permissions>=1)	:
+		
+					#$html_contenido .= "\n".$ar_components_html;
+					if(is_array($ar_components_html)) foreach($ar_components_html as $component_html) {
+			
+						$html_contenido .= "\n $component_html ";
+					}	
+						
+		case 2	: 
+		case 3	:	
+					break;			
+	}
+	
+	$html_contenido .= "\n</div>";
+	
+	
+	# PRINT HTML
+	#print $html_label;
+	print $html_contenido;
+	
+	
+	print "\n</div><!-- /SECTION GROUP [$tipo] -->\n\n"; //wrap
+?>

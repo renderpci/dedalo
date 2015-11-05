@@ -1,0 +1,38 @@
+@charset "UTF-8";
+/* CSS Document */
+
+
+/* WRAP DIV CONTAINER */
+.css_wrap_email {
+
+}
+
+.css_wrap_email .content_data { }
+
+/* INPUT TEXT */
+input.css_email {	
+	width:60%;		
+	}
+		
+
+
+
+.bg_email {
+	background-image:url('../../themes/default/email.png');
+	background-position: right 1px;
+	background-repeat:no-repeat;
+}
+
+
+.css_email_lupa_bg {
+	background-image: url('../../themes/default/lupa2.gif');
+	background-repeat:no-repeat;
+	background-position:0 1px;	
+}
+
+.css_email_error { background-color:red;}
+.css_email_error:hover { background-color:orange;}
+
+/* VARIANTES EXCLUSIVAS DE ESTE COMPONENTE 
+********************************************************************************************************************************************************/
+

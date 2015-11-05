@@ -1,0 +1,289 @@
+<?php
+
+	# VISUALIZADOR HTML		
+
+	$html    = "\n<!-- TOOL PAGE [tipo:$tipo] -->";	
+	$html   .= "\n<div class=\"wrap_tool wrap_tool_av_versions_page\" >";
+	$html   .= $header_html;
+	$html   .= "\n<div class=\"content_data text_shadow_inset\" >";
+
+
+		$html   .= "\n<script>
+					var video_base_path = '$video_base_path',
+						video_extension = '$video_extension'
+					</script>";
+
+
+		
+
+
+		# PLAYER
+		$html .= $player_html;
+
+
+		# VERSIONS
+		$html .= "\n<table class=\"table_versions\">";
+	    	 
+
+	    	#
+			# QUALITY ROW
+			    $html .= "\n <tr>";
+			    $html .= "\n <th>". label::get_label('calidad'). "</th>" ;
+			    foreach ($ar_all_files_by_quality as $quality => $file_path) {
+			    	$td_style = null; if($quality==DEDALO_AV_QUALITY_DEFAULT) $td_style = 'td_default_quality';
+			    	$html .= "\n <th class=\"$td_style\">";
+			    	$html .= $quality;
+			    	if ($quality==DEDALO_AV_QUALITY_DEFAULT) {
+			    		$html .= " <span class=\"av_info\">[Default]</span>";
+			    	}
+			    	$html .= "\n </th>";
+			    }
+			    $html .= "\n </tr>";
+			
+		    
+		    #
+	      	# FILE ROW (ICON VIDEO)
+			    $html .= "\n <tr>";
+			    $html .= "\n <td>". label::get_label('fichero')."</td>" ;
+			    foreach ($ar_all_files_by_quality as $quality => $file_path) {
+
+			    	$td_style = null; if($quality==DEDALO_AV_QUALITY_DEFAULT) $td_style = 'td_default_quality';
+			    	$html .= "\n <td class=\"$td_style\">";
+
+			    	$title = '';
+			    	if(SHOW_DEBUG) {
+			    		$title .= $this->component_obj->get_video_path($quality);
+			    		#dump($this->component_obj->get_video_path($quality), '$this->component_obj->get_video_path($quality)');
+			    	}
+			    	$style = '';
+		    		if( !file_exists($this->component_obj->get_video_path($quality)) ) {
+		    			$style = "display:none";
+		    		}
+			    	$html .= "<div class=\"icon_bs link av_video_icon\" style=\"$style\"
+			    	data-video_id=\"$video_id\"
+			    	data-quality=\"$quality\"
+			    	data-parent=\"$parent\"
+			    	data-section_tipo=\"$section_tipo\"
+			    	data-tipo=\"$tipo\"
+			    	onclick=\"tool_av_versions.change_media_quality(this)\"
+			    	title=\"$title\"
+			    	></div>";
+			    	# Unplayable msg
+			    	$file_ext = pathinfo($file_path, PATHINFO_EXTENSION);
+			    	if (!empty($file_ext) && $file_ext!=DEDALO_AV_EXTENSION) {
+			    	 	$html .= "<span class=\"notas\">unplayable [$file_ext]</span>";
+			    	}
+
+			    	if (is_dir($file_path)) {
+			    	 	$html .= "<span class=\"notas\">unplayable [DVD]</span>";
+			    	}	
+			    	$html .= "\n </td>";
+			    }
+			    $html .= "\n </tr>";
+			
+		    
+		    #
+		    # SIZE ROW
+			    $html .= "\n <tr>";
+			    $html .= "\n <td>". label::get_label('tamano')."</td>" ;
+			    foreach ($ar_all_files_by_quality as $quality => $file_path) {
+			    	$td_style = null; if($quality==DEDALO_AV_QUALITY_DEFAULT) $td_style = 'td_default_quality';
+			    	$html .= "\n <td class=\"$td_style\">";
+
+			    	$style = '';
+		    		if( !$file_path ) {
+		    			$style = "display:none";
+		    		}else{
+						$html .= "<div class=\"av_size_info\" style=\"$style\"
+				    	data-quality=\"$quality\"
+				    	data-parent=\"$parent\"
+				    	data-section_tipo=\"$section_tipo\"
+				    	data-tipo=\"$tipo\"
+				    	>";			    	
+				    	$html .= $this->component_obj->get_video_size($quality, $file_path);				    	
+				    	$html .= "</div>";	#dump($this->component_obj->get_video_size($quality), $this->component_obj->get_video_path($quality));
+		    		}				
+			    		    	
+			    	$html .= "\n </td>";
+			    }
+			    $html .= "\n </tr>";
+				
+		    
+			#
+			# UPLOAD ROW
+				if ($permissions>=2) {
+
+					$html .= "\n <tr>";
+					$html .= "\n <td>". label::get_label('subir')."</td>" ;
+					foreach ($ar_all_files_by_quality as $quality => $file_path) {
+						$td_style = null; if($quality==DEDALO_AV_QUALITY_DEFAULT) $td_style = 'td_default_quality';
+			    	$html .= "\n <td class=\"$td_style\">";
+
+						$html .= "<div class=\"icon_bs link tool_upload_icon\"
+					 	data-video_id=\"$video_id\"
+					 	data-quality=\"$quality\"
+					 	data-parent=\"$parent\"
+					 	data-section_tipo=\"$section_tipo\"
+					 	data-tipo=\"$tipo\"
+						onclick=\"tool_common.open_tool_upload(this)\"
+						></div>";
+						$html .= "\n </td>";
+					}
+					$html .= "\n </tr>";
+			    }
+			
+		    
+		    #
+		    # DOWNLOAD ROW
+		    if ($permissions>=2) {
+
+			    $html .= "\n <tr>";
+			    $html .= "\n <td>". label::get_label('descargar')."</td>" ;
+			    foreach ($ar_all_files_by_quality as $quality => $file_path) {
+			    	$td_style = null; if($quality==DEDALO_AV_QUALITY_DEFAULT) $td_style = 'td_default_quality';
+		    	$html .= "\n <td class=\"$td_style\">";
+
+			    	$style = '';
+		    		if( $this->component_obj->get_original_file_path($quality)==false ) {
+		    			$style = "display:none";
+		    		}
+			    	$html .= "<div class=\"icon_bs link av_download_icon\" style=\"$style\"
+			    	data-video_id=\"$video_id\"
+			    	data-quality=\"$quality\"
+			    	data-parent=\"$parent\"
+			    	data-section_tipo=\"$section_tipo\"
+			    	data-tipo=\"$tipo\"
+			    	onclick=\"tool_av_versions.download_file(this)\"
+			    	></div>";
+			    	    	
+			    	$html .= "\n </td>";
+			    }
+			    $html .= "\n </tr>";
+			}
+			
+			
+			#
+		    # DELETE ROW
+		    if ($permissions>=2) {
+
+			    $html .= "\n <tr>";
+			    $html .= "\n <td>". label::get_label('borrar')."</td>" ;
+			    foreach ($ar_all_files_by_quality as $quality => $file_path) {
+			    	$td_style = null; if($quality==DEDALO_AV_QUALITY_DEFAULT) $td_style = 'td_default_quality';
+		    	$html .= "\n <td class=\"$td_style\">";
+			    	
+			    	$style = '';
+		    		if( $this->component_obj->get_original_file_path($quality)==false ) {
+		    			$style = "display:none";
+		    		}
+			    	$html .= "<div class=\"icon_bs link av_delete_icon\" style=\"$style\"
+			    	data-video_id=\"$video_id\"
+			    	data-quality=\"$quality\"
+			    	data-parent=\"$parent\"
+			    	data-section_tipo=\"$section_tipo\"
+			    	data-tipo=\"$tipo\"
+			    	data-file_path=\"$file_path\"
+			    	onclick=\"tool_av_versions.delete_version(this)\"
+			    	></div>";
+			    	    	
+			    	$html .= "\n </td>";
+			    }
+			    $html .= "\n </tr>";
+			}
+			
+			
+			#
+		    # GENERATE ROW
+		    if ( $permissions>=2 && strlen(DEDALO_AV_FFMPEG_PATH)>4 ) {
+
+			    $html .= "\n <tr>";
+			    $html .= "\n <td>". label::get_label('generar') .' '.label::get_label('version'). "</td>" ;
+			    foreach ($ar_all_files_by_quality as $quality => $file_path) {
+			    	
+			    	$td_style = null; if($quality==DEDALO_AV_QUALITY_DEFAULT) $td_style = 'td_default_quality';
+		    		
+		    		$html .= "\n <td class=\"$td_style\">";
+			    	$tmp_file		 		= DEDALO_MEDIA_BASE_PATH . DEDALO_AV_FOLDER . '/tmp/'.$quality.'_'.$video_id.'.sh';
+			    	$source_quality_file 	= $file_path;	//$this->component_obj->get_video_path($quality);
+			    	if( file_exists($tmp_file) ) {	//&& !file_exists($source_quality_file)
+			    		$html .= "<small>Processing..</small>";
+			    	//}else if ( !file_exists($source_quality_file) ) {
+			    	}else {
+			    		   		
+						$source_quality = $this->component_obj->get_source_quality_to_build($quality);
+							#dump($source_quality,'$source_quality for '.$quality);
+						$style = '';
+						if( empty($source_quality) ) {
+							$style = "display:none";
+						}
+						$html .= "<div class=\"icon_bs link av_generate_icon\" style=\"$style\"
+						data-video_id=\"$video_id\"
+						data-quality=\"$quality\"
+						data-source_quality=\"$source_quality\"
+						data-target_quality=\"$quality\"
+						data-parent=\"$parent\"
+						data-section_tipo=\"$section_tipo\"
+						data-tipo=\"$tipo\"						
+						onclick=\"tool_av_versions.generate_version(this)\"
+						title=\"$source_quality\"
+						></div>";
+					}
+					$html .= "\n </td>";
+
+				}//end foreach ($ar_all_files_by_quality as $quality => $file_path) {
+			    $html .= "\n </tr>";
+			}
+
+			#
+		    # CONFORM HEADER
+		    if(SHOW_DEBUG) {
+		    # WORKING HERE (12-09-2015)
+		    if ( $permissions>=2 && strlen(DEDALO_AV_FFMPEG_PATH)>4 ) {
+
+			    $html .= "\n <tr>";
+			    $html .= "\n <td>". label::get_label('conformar') .' '.label::get_label('cabecera'). "</td>" ;
+			    foreach ($ar_all_files_by_quality as $quality => $file_path) {
+			    	
+			    	$td_style = null; if($quality==DEDALO_AV_QUALITY_DEFAULT) $td_style = 'td_default_quality';
+		    		
+		    		$html .= "\n <td class=\"$td_style\">";			    	
+			    	$source_quality_file = $file_path;	//$this->component_obj->get_video_path($quality);	
+			    			    	
+			    		if ($file_path && file_exists($source_quality_file)) {
+
+			    			$source_quality = $this->component_obj->get_source_quality_to_build($quality);						
+							
+							$style = '';							
+							$html .= "<div class=\"icon_bs link av_generate_icon\" style=\"$style\"
+							data-video_id=\"$video_id\"
+							data-quality=\"$quality\"							
+							data-parent=\"$parent\"
+							data-section_tipo=\"$section_tipo\"
+							data-tipo=\"$tipo\"						
+							onclick=\"tool_av_versions.conform_header(this)\"
+							title=\"$source_quality\"
+							></div>";
+						}//end if (file_exists($source_quality_file)) {
+					
+					$html .= "\n </td>";
+
+				}//end foreach ($ar_all_files_by_quality as $quality => $file_path) {
+			    $html .= "\n </tr>";
+			}
+			}
+
+
+		$html .= "\n</table><!-- /table_versions -->";
+
+
+	
+	$html .= "\n</div><!-- /content_data -->";
+	$html .= "\n</div><!-- /wrap_tool -->"; //wrap_tool
+
+	
+	# INSPECTOR LOG TOOL
+	$html .= "\n<div id=\"inspector_log\" class=\"tool_transcription_inspector_log\"> </div>";
+
+	print $html;
+		
+?>

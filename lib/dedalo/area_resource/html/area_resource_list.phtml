@@ -1,0 +1,54 @@
+<?php
+	
+	# VISUALIZADOR HTML	
+
+	# ELEMENTOS
+	if(!isset ($ar_css['css_area_wrap']))				$ar_css['css_area_wrap']='';
+	if(!isset ($ar_css['css_area_titulo']))				$ar_css['css_area_titulo']='';
+	if(!isset ($ar_css['css_span_dato'])) 				$ar_css['css_span_dato']='';;
+	
+	
+	
+	print "\n\n<!-- AREA [tipo:$tipo] -->";
+	print "\n<div class=\"css_area_wrap {$ar_css['css_area_wrap']}\" > ";
+	
+	
+	# ETIQUETA (LABEL)
+	$html_label = "\n<div class=\"css_area_titulo\" > ".component_common_draw::draw_label($this)." </div>";	
+		
+	
+	# CONTENIDO (INPUT)
+	$html_contenido  ='';
+	$html_contenido .= "\n<div class=\"css_area_content\" >";
+	
+	switch($permissions) {
+			
+		case 0	:	$html_contenido .= "\n <span class=\"css_span_dato {$ar_css['css_span_dato']}\"> ".label::get_label('sin_acceso')." </span>";
+					break;
+						
+		case ($permissions>=1)	:
+		
+					$html_contenido .= "\n <blockquote> ";
+					foreach ($ar_children_areas as $key => $value) {
+						$section_name = RecordObj_dd::get_termino_by_tipo($key,DEDALO_APPLICATION_LANG);
+						$html_contenido .= "<a href=\"?t=$key\">$section_name</a><br>";
+					}
+					$html_contenido .= "\n </blockquote> ";
+					
+					break;			
+	}
+	
+	$html_contenido .= "\n</div>";
+	
+	
+	# Prepare content to show in page
+	tools::prepare_content($html_contenido);
+
+	
+	# PRINT HTML
+	print $html_label;
+	print $html_contenido;
+	
+	
+	print "\n</div><!-- /AREA [$tipo] -->\n\n"; //wrap
+?>

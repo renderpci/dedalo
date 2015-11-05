@@ -1,0 +1,88 @@
+<?php
+
+	# VISUALIZADOR HTML	
+
+	# ELEMENTOS
+	if(!isset ($ar_css['css_span_dato'])) 		$ar_css['css_span_dato']='';
+	if(!isset ($ar_css['css_date'])) 			$ar_css['css_date']='';
+	if(!isset ($ar_css['css_span_ejemplo'])) 	$ar_css['css_span_ejemplo']='';
+	if(!isset ($ar_css['css_span_debugger']))	$ar_css['css_span_debugger']='';
+	if(!isset ($ar_css['css_wrap_date']))		$ar_css['css_wrap_date']='';
+	
+	
+	print "\n<!-- DATE [tipo:$tipo section_id_matrix:$parent] $label -->";
+	print "\n<div class=\"css_wrap_date wrap_component {$ar_css['css_wrap_date']}\" id=\"{$id_wrapper}\"
+	data-tipo=\"{$tipo}\"
+	data-lang=\"{$lang}\"
+	data-section_tipo=\"{$section_tipo}\"
+	data-parent=\"{$parent}\"
+	data-modo=\"{$modo}\"
+	data-dato='{$dato_json}''
+	data-component_name=\"{$component_name}\"
+	data-component_info='{$component_info}'
+	>";
+	
+		
+		# ETIQUETA (LABEL)
+		$html_label = component_common_draw::draw_label($this);
+		
+		# CONTENIDO (INPUT)
+		$html_contenido = '';
+		switch($permissions) {
+				
+			case 0	:	$html_contenido .= "\n <span class=\"css_span_dato {$ar_css['css_span_dato']}\"> ".label::get_label('sin_acceso')." (date)</span>";
+						break;
+							
+			case 1	: 	$html_contenido .= "\n <span class=\"css_span_dato {$ar_css['css_span_dato']}\">$dato_json</span>";
+						break;	
+							
+			case ($permissions>=2) :
+						
+						$add_class='';
+						if ( !empty($propiedades) && 
+							 isset($propiedades->method->get_valor_local) && 
+							 reset($propiedades->method->get_valor_local)==true 
+							) $add_class = 'full';
+
+						$html_contenido .= "\n <input type=\"text\" class=\"css_date full $add_class\"  
+						name=\"{$input_name}\" id=\"{$identificador_unico}\"
+						data-tipo=\"{$tipo}\"
+						data-section_tipo=\"{$section_tipo}\"
+						data-parent=\"{$parent}\"
+						data-lang=\"{$lang}\" 
+						value=\"{$valor}\"
+						onclick=\"component_date.activate_datepicker(this)\"
+						title=\"$html_title\"
+						/>";
+
+						$html_contenido .= " <span class=\"css_span_ejemplo\">Format $ejemplo </span>";			
+						
+						if(SHOW_DEBUG)
+						$html_contenido .= "\n <span class=\"current_date_info\">Current date: <span>$dato_json</span></span>";
+
+						#$html_contenido .= "\n <span  class=\"css_span_ejemplo {$ar_css['css_span_ejemplo']}\">$ejemplo</span>";
+					
+						# Save handler js
+						$html_contenido .= "<script>$('#$identificador_unico').on(\"change\",function(){component_date.Save(this);})</script>";
+
+						/**/
+				if($permissions==3)		
+						$html_contenido .= "\n <span class=\"css_span_debugger {$ar_css['css_span_debugger']}\" id=\"debugger_{$tipo}\" >{$debugger}</span>";	
+												
+		}
+		
+
+
+		# Prepare content to show in page
+		tools::prepare_content($html_contenido);	
+		
+
+		# PRINT HTML
+		print $html_label;
+		print $html_contenido;
+	
+	
+	print "\n</div><!-- /css_wrap_date DATE [tipo:$tipo section_id_matrix:$parent] $label -->\n"; //wrap
+
+
+?>

@@ -1,0 +1,32 @@
+<?php
+
+	# VISUALIZADOR HTML	
+
+	# ELEMENTOS	
+	
+	
+	#echo "\n<!-- AUTOCOMPLETE [tipo:$tipo section_id:$parent] $label -->";
+	#echo "\n<div class=\"css_wrap_autocomplete {$ar_css['css_wrap_autocomplete']}\" >";
+	
+	# ETIQUETA (LABEL)
+	#$html_label = component_common_draw::draw_label($this);
+	
+	# CONTENIDO (INPUT)
+	$html_contenido = '';
+	switch($permissions) {
+			
+		case 0	:	$html_contenido .= "";		
+					break;
+		
+		case ($permissions>=1):
+										
+					$html_contenido .= $valor ;					
+	}
+	
+	
+	# PRINT HTML
+	print $html_contenido;
+	
+	
+	#echo "\n</div>\n\n"; //css_wrap_autocomplete
+?>
