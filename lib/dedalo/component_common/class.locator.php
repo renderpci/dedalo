@@ -80,11 +80,11 @@ class locator extends stdClass {
 	}
 
 	public function set_section_id($value) {
-		if(abs($value)<1 && $value!='unknow') {
+		if(abs($value)<1 && $value!='unknow' && strpos($value, DEDALO_SECTION_ID_TEMP)===false) {
 			throw new Exception("Error Processing Request. Invalid section_id: $value", 1);
 		}
 		$this->section_id = (string)$value;
-	}
+	}	
 
 	public function set_section_tipo($value) {
 		if(!RecordObj_dd::get_prefix_from_tipo($value)) {
@@ -182,15 +182,25 @@ class locator extends stdClass {
 	* On destruct object, test if minimun data is set or not
 	*/
 	function __destruct() {
-		if (!isset($this->section_tipo)) {
-			dump($this, ' this');
-			#dump(debug_backtrace(), 'debug_backtrace()');
-			throw new Exception("Error Processing Request. locator section_tipo is mandatory", 1);			
+
+		#
+		# ONLY FOR DEBUG !!
+		if(SHOW_DEBUG) {		
+			if (!isset($this->section_tipo)) {
+				dump($this, ' this');
+				#dump(debug_backtrace(), 'debug_backtrace()');
+				throw new Exception("Error Processing Request. locator section_tipo is mandatory", 1);			
+			}
+			if (!isset($this->section_id)) {
+				dump($this, ' this');
+				throw new Exception("Error Processing Request. locator section_id is mandatory", 1);			
+			}
+		}else{
+			if (!isset($this->section_tipo) || !isset($this->section_id)) {
+				error_log("ERROR: wrong locator format detected. Please fix this ASAP : ".to_string($this));
+			}
 		}
-		if (!isset($this->section_id)) {
-			dump($this, ' this');
-			throw new Exception("Error Processing Request. locator section_id is mandatory", 1);			
-		}
+		
 	}
 
 

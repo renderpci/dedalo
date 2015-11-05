@@ -76,7 +76,9 @@
 		case 'lang'	:	$ar_css		= $this->get_ar_css();						
 						break;
 		
-		case 'search':	$ar_css		= false;		
+		case 'search':	$ar_css		= false;
+						$ar_comparison_operators 	= $this->build_search_comparison_operators();
+						$ar_logical_operators 		= $this->build_search_logical_operators();	
 						break;
 										
 	}

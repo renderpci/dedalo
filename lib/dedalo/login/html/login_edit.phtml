@@ -8,8 +8,9 @@
 	if(!isset ($ar_css['css_wrap_login']))		$ar_css['css_wrap_login']='';	//bg_gradient1
 	
 	
-	print "\n<!-- LOGIN [tipo:$tipo id_matrix:$id] -->";		
-	print "\n<div class=\"css_wrap_login  {$ar_css['css_wrap_login']}\" id=\"wrap_login\">";	
+	print "\n<!-- LOGIN [tipo:$tipo id_matrix:$id] -->";
+	print "\n<div class=\"login_body\">";		
+	print "\n<div class=\"css_wrap_login {$ar_css['css_wrap_login']}\" id=\"wrap_login\">";	
 	print "\n<form class=\"css_form\" name=\"form_login\" id=\"form_login\" action=\"\" onsubmit=\"login.Login()\" method=\"post\" >";
 
 
@@ -21,10 +22,26 @@
 			# LANG JUMP
 			$html_contenido .= $dedalo_aplication_langs_selector_html;
 			
+			#
+			# USERNAME
+			#$html_contenido .= $html_username;
+			$html_contenido .= "<input type=\"text\"
+			class=\"login_input\"
+			id=\"login_username\"
+			value=\"\"
+			placeholder=\"".$username_label."\"
+			/>";
+			
+			#
+			# PASSWORD
+			#$html_contenido .= $html_password;
+			$html_contenido .= "<input type=\"password\"
+			class=\"login_input\"
+			id=\"login_password\"
+			value=\"\"
+			placeholder=\"".$password_label."\"
+			/>";
 
-			$html_contenido .= $html_username;
-			$html_contenido .= "<div style=\"height:5px\"></div>";
-			$html_contenido .= $html_password;
 			$html_contenido .= $html_button_login;
 			
 			$html_contenido .= "\n<input type=\"hidden\" id=\"tipo_login\"			value=\"$tipo\" >";
@@ -32,36 +49,35 @@
 			$html_contenido .= "\n<input type=\"hidden\" id=\"tipo_password\"		value=\"$tipo_password\" >";	
 			$html_contenido .= "\n<input type=\"hidden\" id=\"tipo_active_account\"	value=\"$tipo_active_account\" >";
 
-			
-			
-					
-			$html_contenido .= "\n<div class=\"login_ajax_response\" >  </div>";
+						
+			#
+			# AJAX RESPONSE	
+			$html_contenido .= "\n<div class=\"login_ajax_response\">  </div>";
 
 
+			#
 			# VERSION : Dedalo verrsion info
 			$html_contenido .= "<div class=\"dedalo_version\"> Dédalo version ".DEDALO_VERSION. " - Build " .DEDALO_BUILD ;
 
-			# Postgres user and db name
-			if(strpos($_SERVER['HTTP_HOST'],'8888')!==false) {
-				$html_contenido .= "<br> ".DEDALO_USERNAME_CONN." -> ".DEDALO_DATABASE_CONN ;
-			}
-			if(SHOW_DEBUG) {			
-				#$html_contenido .= " ".DEDALO_DATABASE_CONN." ";
-				#$html_contenido .= " : ".DEDALO_DB_PORT_CONN." ";			
-			}
+				# Postgres user and db name
+				if(strpos($_SERVER['HTTP_HOST'],'8888')!==false) {
+					$html_contenido .= "<br> ".DEDALO_USERNAME_CONN." -> ".DEDALO_DATABASE_CONN ;
+				}
+				if(SHOW_DEBUG) {			
+					#$html_contenido .= " ".DEDALO_DATABASE_CONN." ";
+					#$html_contenido .= " : ".DEDALO_DB_PORT_CONN." ";			
+				}
 
 
-			try {
-			    $str_version 	 = RecordObj_dd::get_termino_by_tipo(DEDALO_ROOT_TIPO);
-				$html_contenido .= "<br>DD version: $str_version";
-			} catch (Exception $e) {
-			    echo 'Excepction: ',  $e->getMessage(), "\n";
-			}
-
-	
+				try {
+				    $str_version 	 = RecordObj_dd::get_termino_by_tipo(DEDALO_ROOT_TIPO);
+					$html_contenido .= "<br>DD version: $str_version";
+				} catch (Exception $e) {
+				    echo 'Excepction: ',  $e->getMessage(), "\n";
+				}
+			
 		
-		
-		$html_contenido .= "</div>";
+			$html_contenido .= "</div>";
 
 
 		# DEDALO_BACKUP_ON_LOGIN
@@ -74,5 +90,6 @@
 	
 	
 	print "\n</form>";	
-	print "\n</div>\n\n"; //css_wrap_login	
+	print "\n</div>"; //css_wrap_login	
+	print "\n</div>\n\n"; //login_body
 ?>

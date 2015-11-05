@@ -60,13 +60,19 @@ class component_filter extends component_common {
 	}#end __construct
 
 
-	# GET DATO . Format {"7":2,"298":2}
+	/**
+	* GET DATO : Format {"7":2,"269":2,"298":2}
+	* @see component_filter_master->get_dato() for maintain unyfied format of projetcs
+	*/
 	public function get_dato() {
-		$dato = parent::get_dato();			
+		$dato = parent::get_dato();
 		return (array)$dato;
 	}
 
-	# SET_DATO
+	/**
+	* SET_DATO
+	* @see component_filter_master->set_dato() for maintain unifyed format of projetcs
+	*/
 	public function set_dato($dato) {
 		if (empty($dato)) {
 			$dato=array();
@@ -99,7 +105,6 @@ class component_filter extends component_common {
 
 			#dump($parent_save_result,'$parent_save_result for component_filter Save tipo:'.$this->tipo." parent: ".$this->parent);
 
-
 		# Devolvemos el resultado del save
 		return $parent_save_result;
 	}
@@ -115,7 +120,8 @@ class component_filter extends component_common {
 	function propagate_filter() {
 
 		$section_id 	= $this->get_parent();
-		$section_tipo 	= component_common::get_section_tipo_from_component_tipo($this->tipo);	
+		#$section_tipo 	= component_common::get_section_tipo_from_component_tipo($this->tipo);
+		$section_tipo 	= $this->get_section_tipo();
 		$section 		= section::get_instance($section_id, $section_tipo);
 		$dato_filter   	= $this->get_dato();
 
@@ -143,14 +149,14 @@ class component_filter extends component_common {
 		$dato 		= $this->get_dato();
 		$ar_final 	= array();
 		
-		if(is_array($ar_proyectos_for_current_section)) foreach ($ar_proyectos_for_current_section as $id_matrix => $name) {
+		if(is_array($ar_proyectos_for_current_section)) foreach ($ar_proyectos_for_current_section as $section_id => $name) {
 			
-			#dump(array_key_exists((int)$id_matrix,(array)$dato)," ");
-			if( is_array($dato) && in_array($id_matrix, array_keys($dato)) ) {
+			#dump(array_key_exists((int)$section_id,(array)$dato)," ");
+			if( is_array($dato) && in_array($section_id, array_keys($dato)) ) {
 
-				$ar_final[$id_matrix] = $name;	#dump($id_matrix," id_matrix - $name");
+				$ar_final[$section_id] = $name;	#dump($section_id," section_id - $name");
 				#$html .= $name;
-				#if($id_matrix != end($ar_proyectos_for_current_section))
+				#if($section_id != end($ar_proyectos_for_current_section))
 				#	$html .= '<br>';
 			}
 		}
@@ -159,7 +165,7 @@ class component_filter extends component_common {
 			
 			return $ar_final;
 
-		}else{
+		}else if($format=='html'){
 
 			$html = '';
 			foreach ($ar_final as $name) {
@@ -169,7 +175,16 @@ class component_filter extends component_common {
 			$html = substr($html, 0,-4);				
 			
 			return $html;
-		}		
+		}else if($format=='html_concat'){
+			$html = '';
+			foreach ($ar_final as $name) {
+				$html .= $name;
+				$html .= ' · ';
+			}
+			$html = substr($html, 0,-4);				
+			
+			return $html;
+		}
 	}
 	
 
@@ -582,31 +597,56 @@ class component_filter extends component_common {
 	}//end get_valor_lang
 
 
+	/**
+	* BUILD_SEARCH_COMPARISON_OPERATORS 
+	* Note: Override in every specific component
+	* @param array $comparison_operators . Like array('=','!=')
+	* @return object stdClass $search_comparison_operators
+	*/
+	public function build_search_comparison_operators( $comparison_operators=array('=','!=') ) {
+		return (object)parent::build_search_comparison_operators($comparison_operators);
+	}#end build_search_comparison_operators
 
 
+	
 	/**
 	* GET_SEARCH_QUERY
-	* Build search query for current component . Overwrite for different needs in other components
-	* @param string ..
-	* @see class.section_list.php get_rows_data filter_by_search
-	* @return string SQL query (ILIKE by default)
+	* Build search query for current component . Overwrite for different needs in other components 
+	* (is static to enable direct call from section_records without construct component)
+	* Params
+	* @param string $json_field . JSON container column Like 'dato'
+	* @param string $search_tipo . Component tipo Like 'dd421'
+	* @param string $tipo_de_dato_search . Component dato container Like 'dato' or 'valor'
+	* @param string $current_lang . Component dato lang container Like 'lg-spa' or 'lg-nolan'
+	* @param string $search_value . Value received from search form request Like 'paco'
+	* @param string $comparison_operator . SQL comparison operator Like 'ILIKE'
+	*
+	* @see class.section_records.php get_rows_data filter_by_search
+	* @return string $search_query . POSTGRE SQL query (like 'datos#>'{components, oh21, dato, lg-nolan}' ILIKE '%paco%' )
 	*/
-	public static function get_search_query( $json_field, $search_tipo, $tipo_de_dato_search, $current_lang, $search_value ) {
+	public static function get_search_query( $json_field, $search_tipo, $tipo_de_dato_search, $current_lang, $search_value, $comparison_operator='=') {
 		if ( empty($search_value) ) {
 			return null;
 		}
 		if(SHOW_DEBUG) {
 			#dump($search_value, ' search_value');
 		}
-
+		
 		if (is_array($search_value)) {
 			$current_search_value = implode("','", $search_value);
 		}else{
 			$current_search_value = $search_value;
 		}
-		# datos#>'{components,oh22,dato,lg-nolan}' ?| array['1']
-		#$search_query = " $json_field#>>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}' ILIKE '%$search_value%' ";
-		$search_query = " $json_field#>'{components,$search_tipo,$tipo_de_dato_search,$current_lang}' ?| array['$current_search_value'] ";
+		
+		#$search_query = " $json_field#>'{components,$search_tipo,$tipo_de_dato_search,$current_lang}' ?| array['$current_search_value'] ";
+		switch (true) {
+			case $comparison_operator=='=':
+				$search_query = " $json_field#>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}' ?| array['$current_search_value'] ";
+				break;
+			case $comparison_operator=='!=':
+				$search_query = " ($json_field#>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}' @> '[$current_search_value]'::jsonb)=FALSE ";
+				break;
+		}		
 
 		if(SHOW_DEBUG) {
 			$search_query = " -- filter_by_search $search_tipo ". get_called_class() ." \n".$search_query;

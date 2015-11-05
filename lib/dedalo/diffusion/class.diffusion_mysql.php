@@ -474,7 +474,7 @@ abstract class diffusion_mysql  {
 					$field_name  = $field['field_name'];
 					$field_value = $field['field_value'];
 
-					if(is_array($field_value)) {
+					if(is_array($field_value) || is_object($field_value)) {
 						# TYPE ARRAY : Convert to json
 						$field_value = json_encode($field_value);	
 					}else{

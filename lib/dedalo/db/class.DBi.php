@@ -1,7 +1,9 @@
 <?php
-#require_once( dirname(dirname(__FILE__)) .'/config/config4.php');
-
-# DB CONNECTION ######################
+/**
+* DBI
+* DB CONNECTION 
+* To close connection use pg_close(DBi::_getConnection()); at end of page
+*/
 
 abstract class DBi {
 

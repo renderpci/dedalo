@@ -11,8 +11,8 @@ date_default_timezone_set($myDateTimeZone);
 $text = false;
 #if(isset($_REQUEST['t'])) $text = $_REQUEST['t'];
 // get last directory in $PATH
-$text = substr(strrchr($_SERVER["PHP_SELF"], ".php/"), 5);
-	#echo $text;
+$text = substr(strrchr($_SERVER["REQUEST_URI"], ".php/"), 5);
+	#die($text);
 if(!$text) die("Need text!");
 
 
@@ -81,6 +81,7 @@ switch($type) {
 						$imgBase 	= "../images/btn_base/tc.png";
 						break;
 }
+#print_r($text);die();
 
 
 # Formateo del texto en 1 o 2 líneas en función de la cantidad de caracteres
@@ -116,7 +117,7 @@ switch($type) {
 	case 'tc'	:	$colorText	= $colorH ;
 					$colorBG 	= $black ;
 					$fontname	= 'arial.ttf'; // --
-					$fontsize	= 8.5  ; # 11 o 10.88
+					$fontsize	= 7.9  ; # 11 o 10.88
 					break;
 
 	case 'svg':		$colorText	= $black ;
@@ -150,7 +151,7 @@ $pathFonts 	= "../lib/fonts/truetype/";
 
 $fontfile	= $pathFonts . $fontname ;
 
-$offsetX	= 1 ; # 0
+$offsetX	= 3 ; # 0
 $offsetY	= 4 ; # 5
 
 switch ($type) {
@@ -161,7 +162,32 @@ switch ($type) {
 	case 'geo':
 		$offsetX = 7;
 		break;
+	case 'index':
+		$offsetX = 2;
+		break;
+	case 'tc':
+		$offsetX = 2;
+		$offsetY = 3;
+		break;
 }
+
+# CUSTOM OFFSET FOR MAC
+if (strpos($_SERVER['HTTP_HOST'], '8888')!==false) {
+	$offsetX	= 0 ; # 0
+	$offsetY	= 5 ; # 5
+
+	switch ($type) {
+		case 'svg':
+		case 'page':
+			$offsetX = 7;
+			break;
+		case 'geo':
+			$offsetX = 7;
+			break;
+		case 'index':
+			break;
+	}
+}//end if (strpos($_SERVER['HTTP_HOST'], '8888')!==false)
 
 
 // Set the background to be white

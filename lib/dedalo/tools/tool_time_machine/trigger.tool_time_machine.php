@@ -115,9 +115,10 @@ if($mode=='assign_time_machine_value') {
 	$component_obj_to_save	= component_common::get_instance(null, $tipo, $parent, 'edit', DEDALO_DATA_LANG, $current_tipo_section);
 		#dump($component_obj_to_save,"component_obj_to_save");die();
 
+	
 	$component_obj_to_save->set_dato($dato_time_machine);
 	$component_obj_to_save->Save();
-
+	
 
 	#
 	# COMPONENT PORTAL SEARCH_OPTIONS : Clear old data and force recreate
@@ -150,9 +151,9 @@ if($mode=='assign_time_machine_value') {
 * @param $current_tipo_section (sectionj tipo)
 * Load and show in section list view (when user click on Time Machine icon at bottom), all deleted records with this section tipo that are found in matrix_time_machine 
 */
-if($mode=='section_list_load_rows_history') {
+if($mode=='section_records_load_rows_history') {
 	
-	if (strlen($current_tipo_section)<3) die("Error Processing Request: Unable section_list_load_rows_history ! (Few vars)");
+	if (strlen($current_tipo_section)<3) die("Error Processing Request: Unable section_records_load_rows_history ! (Few vars)");
 
 	# SECTIONS_TIME_MACHINE : Array of tm_id records of current section current_tipo_section with status 'deleted'
 	$ar_sections_time_machine	= (array)tool_time_machine::get_ar_sections_time_machine($current_tipo_section);
@@ -171,7 +172,7 @@ if($mode=='section_list_load_rows_history') {
 	
 
 	# AR_LOCATORS : locator build
-	# For compatibility with standar section_list way of manage "get_rows_data", we convert tm_id to section_id_matrix inside locator object
+	# For compatibility with standar section_records way of manage "get_rows_data", we convert tm_id to section_id_matrix inside locator object
 	# like '$locator->section_id_matrix = $tm_id'
 	$ar_locators=array();
 	foreach ($ar_sections_time_machine as $key => $tm_id) {
@@ -179,10 +180,10 @@ if($mode=='section_list_load_rows_history') {
 			$locator->section_id = (string)$tm_id;
 		$ar_locators[] = $locator;
 		if(SHOW_DEBUG) {
-			error_log(__METHOD__." Review this locator format Is compatible with new locator? ");
+			#error_log(__METHOD__." Review this locator format is compatible with new locator? ".to_string($locator));
 		}
 	}
-	#dump($ar_locators,"ar_locators ");
+	#dump($ar_locators,"ar_locators "); die();
 	/*
 	# LAYOUT MAP : Same as conventional list for current section	
 	$layout_map 		= component_layout::get_layout_map_from_section( $section );
@@ -198,19 +199,20 @@ if($mode=='section_list_load_rows_history') {
 		$options->matrix_table  	= 'matrix_time_machine'; # Search in matrix_time_machine instead matrix
 		$options->json_field 		= 'dato';				 # Search in json container 'dato' instead matrix 'datos'	
 	
-	$section_list 	= new section_list($section->get_tipo(), $options);
+	$section_records 	= new section_records($section->get_tipo(), $options);
 
 	$html_contenido='';
 	$html_contenido .= "<div id=\"section_list_rows_content_div_{$tipo}_tm\" class=\"section_list_rows_content_div\" >";
-	$html_contenido .= $section_list->get_html();
+	$html_contenido .= $section_records->get_html();
 	$html_contenido .= "</div>";
 	*/
-
+	#dump($section,'html_contenido'); die();
+	
 	$options = new stdClass();
 		$options->filter_by_id = $ar_locators;
 
 	$html_contenido = $section->get_html($options);
-		#dump($html_contenido,'html_contenido');
+		
 	
 	print $html_contenido;
 	#print_r($ar_sections_time_machine);
@@ -225,12 +227,12 @@ if($mode=='section_list_load_rows_history') {
 * @param $id_time_machine 
 * @param $current_tipo_section (section_tipo)
 */
-if($mode=='section_list_recover_section') {
+if($mode=='section_records_recover_section') {
 
 	#dump($id_time_machine," id_time_machine DEBE SER 16 PARA OH1-16");die();
 	
-	if ( $id_time_machine<1 ) die("Error Processing Request: Unable section_list_recover_section ! (Few vars)");
-	if ( empty($current_tipo_section) )	die("Error Processing Request: section_list_recover_section current_tipo_section is mandatory");
+	if ( $id_time_machine<1 ) die("Error Processing Request: Unable section_records_recover_section ! (Few vars)");
+	if ( empty($current_tipo_section) )	die("Error Processing Request: section_records_recover_section current_tipo_section is mandatory");
 
 	$id_time_machine = (int)$id_time_machine;
 	$section_tipo 	 = (string)$current_tipo_section;

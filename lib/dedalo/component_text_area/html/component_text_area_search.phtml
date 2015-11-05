@@ -19,16 +19,21 @@
 					break;						
 		
 		case ($permissions>=1)	:
-					/*
-					$html_contenido .= "\n <textarea class=\"css_text_area {$ar_css['css_text_area']}\" 
-					id=\"{$identificador_unico}\" name=\"{$tipo}\" 
-					data-tipo=\"{$tipo}\" 
-					title=\"$html_title\">$dato</textarea>";
-					*/
+
+					# COMPARISON OPERATORS
+					$html_contenido .= operator::get_search_comparison_operators_html($tipo,$ar_comparison_operators);
+
+					# INPUT
+					$html_contenido .= "<span id=\"search_component_$tipo\">";	
 					$html_contenido .= "\n <input class=\"css_input_text text_area_search\" type=\"text\" 
 					name=\"{$tipo}\" 
 					data-tipo=\"{$tipo}\"
-					value=\"{$dato}\" title=\"$html_title\" />";
+					value=\"{$dato}\"
+					title=\"$html_title\" />";
+					$html_contenido .= "</span>";	
+
+					# LOGICAL OPERATORS
+					$html_contenido .= operator::get_search_logical_operators_html($tipo,$ar_logical_operators);
 				
 	}
 

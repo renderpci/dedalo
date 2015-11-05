@@ -19,32 +19,50 @@ abstract class backup {
 		try {
 			# NAME : File name formated as date . (One hour resolution)
 			$user_id 		= isset($_SESSION['dedalo4']['auth']['user_id']) ? $_SESSION['dedalo4']['auth']['user_id'] : '';
-			$db_name 		= date("Y-m-d_H") .'.'. DEDALO_DATABASE_CONN .'.'. DEDALO_DB_TYPE.'_'.$user_id ;
-			
+			$db_name 		= date("Y-m-d_H") .'.'. DEDALO_DATABASE_CONN .'.'. DEDALO_DB_TYPE .'_'. $user_id ;			
 
-			$file_path			= DEDALO_LIB_BASE_PATH.'/backup/backups/';
+			$file_path		= DEDALO_LIB_BASE_PATH.'/backup/backups';
 
-			# backups folder exists verify
+			# Backups folder exists verify
 			if( !is_dir($file_path) ) {
 			$create_dir 	= mkdir($file_path, 0700, true);
 			if(!$create_dir) throw new Exception(" Error on read or create backup directory. Permission denied");
 			}
-
-			$mysqlExportPath 	= $file_path . $db_name . '.custom.backup';
-
+			
+			#
+			# Time range for backups in hours
+			if (!defined('DEDALO_BACKUP_TIME_RANGE')) {
+				define('DEDALO_BACKUP_TIME_RANGE', 4); // Minimun lapse of time (in hours) for run backup script again. Default: (int) 4
+			}			
+			$last_modification_time_secs = get_last_modification_date( $file_path, $allowedExtensions=array('backup'), $ar_exclude=array('/acc/'));
+			$current_time_secs 			 = time();
+			$difference_in_hours 		 = round( ($current_time_secs/3600) - round($last_modification_time_secs/3600), 0 );
+				#dump($difference_in_hours, ' difference_in_hours ++ '.to_string( ($current_time_secs/3600).' - '.($last_modification_time_secs/3600) ));
+			if ( $difference_in_hours < DEDALO_BACKUP_TIME_RANGE ) {
+				$msg = "BACKUP INFO: Skipped backup. A recent backup (about $difference_in_hours hours early) already exists. Is not necessary build another";
+				if(SHOW_DEBUG) {
+					error_log($msg);
+				}
+				return $msg;
+			}
+			
+			#
 			# Backup file exists (less than an hour apart)
+			$mysqlExportPath = $file_path .'/'. $db_name . '.custom.backup';
 			if (file_exists($mysqlExportPath)) {
-				return "Skipped backup. A recent backup already exists ('$mysqlExportPath'). Is not necessary to make another";
+				$msg = "Skipped backup. A recent backup already exists ('$mysqlExportPath'). Is not necessary build another";
+				if(SHOW_DEBUG) {
+					error_log($msg);
+				}
+				return $msg;
 			}
 
 			// Export the database and output the status to the page
 			$command='';	#'sleep 1 ;';	
 			$command = DB_BIN_PATH.'pg_dump -h '.DEDALO_HOSTNAME_CONN.' -p '.DEDALO_DB_PORT_CONN. ' -U "'.DEDALO_USERNAME_CONN.'" -F c -b -v '.DEDALO_DATABASE_CONN.'  > "'.$mysqlExportPath .'"';
-			$command = 'sleep 10s; nice -n 19 '.$command ;
+			$command = 'sleep 60s; nice -n 19 '.$command ;
 
-			if(SHOW_DEBUG) {
-				error_log($command);
-			}
+			
 	
 
 			# BUILD SH FILE WITH BACKUP COMMAND IF NOT EXISTS
@@ -73,9 +91,14 @@ abstract class backup {
 				if(file_exists($prgfile)) {
 					chmod($prgfile, 0755);
 				}else{
-					throw new Exception("Error Processing backup. Script file not exists or is not accessible.Please check folder '../backup/temp' permissions", 1);			
+					throw new Exception("Error Processing backup. Script file not exists or is not accessible.Please check folder '../backup/temp' permissions", 1);
 				}
 			}
+
+			if(SHOW_DEBUG) {
+				$msg = "BACKUP INFO: Building backup file ($mysqlExportPath). Command:\n $command";
+				error_log($msg);
+			}			
 			
 			# RUN COMMAND
 			return exec_::exec_sh_file($prgfile);
@@ -168,6 +191,7 @@ abstract class backup {
 			error_log("WARNING: DEDALO_EXTRAS_PATH is not defined. Using default.. ");
 		}
 
+
 		#
 		# MAIN TLDS
 		# Get all main tlds like dd,oh,ich,rsc,et..
@@ -235,6 +259,10 @@ abstract class backup {
 			define('DEDALO_EXTRAS_PATH'		, DEDALO_LIB_BASE_PATH .'/extras');
 			error_log("WARNING: DEDALO_EXTRAS_PATH is not defined. Using default.. ");
 		}
+
+		#
+		# DB_SYSTEM_CONFIG_VERIFY
+		self::db_system_config_verify();
 
 		#
 		# CORE : Load core dedalo str
@@ -398,6 +426,15 @@ abstract class backup {
 	*/
 	public static function export_structure($db_name=null, $exclude_tables=true) {
 
+		$result = new stdClass();
+			$result->msg  = '';
+			$result->code = false;
+
+		#
+		# DB_SYSTEM_CONFIG_VERIFY
+		self::db_system_config_verify();
+
+
 		if (empty($db_name)) {
 			$db_name = 'dedalo4_development_str.custom';
 		}	
@@ -424,16 +461,25 @@ abstract class backup {
 		#$command = "nice ".$command ;
 			#dump($command, 'command', array());#die();
 
-		exec($command,$output,$worked_result);
-		$res_html='';	
+		exec($command.' 2>&1', $output, $worked_result);	
+		#passthru($command,$worked_result);
+		#dump($output, ' worked_result ++ '.to_string($worked_result));
+		$res_html='';
+		if(SHOW_DEBUG) {
+			#$res_html .= "<div>command otuput: ".var_export($worked_result,true)."</div>";
+			$res_html .= "<div style=\"font-family:courier;font-size:11px;word-wrap:break-word;padding:3px;\">$command</div>";
+		}
 		switch($worked_result){
 			case 0:
 				$res_html .= '<div style="color:white;background-color:green;padding:10px;font-family:arial;font-size:14px;word-wrap:break-word;border-radius:5px;">
 				EXPORT to file: <br>Database <br> <b>' .DEDALO_DATABASE_CONN .'</b><br> successfully exported to file<br> <b>' .$mysqlExportPath .'</b></div>';
 				break;
 			case 1:
-				$res_html .= '<div style="color:white;background-color:orange;padding:10px;font-family:arial;font-size:14px;word-wrap:break-word;border-radius:5px;">
-				There was a warning during the export of <b>' .DEDALO_DATABASE_CONN .'</b> to <b>' .$mysqlExportPath .'</b></div>';
+				$res_html .= '<div style="color:white;background-color:red;padding:10px;font-family:arial;font-size:14px;word-wrap:break-word;border-radius:5px;">
+				There was a problem during the export of <b>' .DEDALO_DATABASE_CONN .'</b> to <b>' .$mysqlExportPath .'</b></div>';
+				if(SHOW_DEBUG) {
+					dump($output, ' worked_result: '.to_string($worked_result));
+				}
 				break;
 			case 2:
 				$res_html .= '<div style="color:white;background-color:red;padding:10px;font-family:arial;font-size:14px;word-wrap:break-word;border-radius: 5px;">
@@ -446,10 +492,15 @@ abstract class backup {
 				</tr>
 				</table>
 				</div>';
+				if(SHOW_DEBUG) {
+					dump($output, ' worked_result: '.to_string($worked_result));
+				}
 				break;
 			default:
 				$res_html .= $worked_result;
 		}
+		
+	
 		#$res_html .= "<pre>";
 		#$res_html .= print_r($ar_dedalo_private_tables,true);
 		#$res_html .= "</pre>";
@@ -463,9 +514,40 @@ abstract class backup {
 			$res_html .= wrap_pre($ar_response_html);
 		}		
 
-		return $res_html;
+		$result->msg 	= $res_html;
+		$result->code 	= $worked_result;
+
+		return $result;
+		#return $res_html;
 
 	}#end export_structure
+
+
+	/**
+	* DB_SYSTEM_CONFIG_VERIFY
+	* @return 
+	*/
+	public static function db_system_config_verify() {
+		
+		#
+		# PGPASS VERIFY
+		$processUser = posix_getpwuid(posix_geteuid());
+		$base_dir 	 = $processUser['dir'];
+		$file 		 = $base_dir.'/.pgpass';		
+
+		# File test
+		if (!file_exists($file)) {
+			die( wrap_pre("Error. Database system configuration not allow import (1)") );
+		}
+
+		# File permissions
+		$perms = decoct(fileperms($file) & 0777);
+			#dump($perms, ' perms ++ '.to_string());
+		if ($perms!='600') {
+			die( wrap_pre("Error. Database system configuration not allow import (2)") );
+		}
+
+	}#end db_system_config_verify
 
 
 	/**
@@ -477,6 +559,11 @@ abstract class backup {
 	*/
 	public static function import_structure($db_name='dedalo4_development_str.custom') {
 
+		#
+		# DB_SYSTEM_CONFIG_VERIFY
+		self::db_system_config_verify();
+
+				
 		$file_path		 	 = DEDALO_LIB_BASE_PATH .'/backup/backups_structure/';
 		$mysqlImportFilename = $file_path . $db_name . ".backup";
 	
@@ -493,15 +580,65 @@ abstract class backup {
 		#$command = "nice ".$command ;
 			#dump($command, ' command');
 
-		exec($command,$output,$worked);
+		#exec($command,$output,$worked);
+		exec($command.' 2>&1', $output, $worked_result);
 		$res_html='';
-		switch($worked){
+		if(SHOW_DEBUG) {
+			#dump($worked_result," console response code for:\n $command ");
+			#dump($output," console output for:\n $command");
+			$res_html .= "<div style=\"font-family:courier;font-size:11px;word-wrap:break-word;padding:3px;\">$command</div>";
+		}
+		switch($worked_result){
+			
 			# OK (0)
 			case 0:
 				$res_html .= '<div style="color:white;background-color:green;padding:10px;font-family:arial;font-size:14px;word-wrap:break-word;border-radius:5px;">';
 				$res_html .= 'IMPORT file:<br> File <br><b>' .$mysqlImportFilename .'</b><br> successfully imported to database<br> <b>' . DEDALO_DATABASE_CONN .'</b>';
 				$res_html .= '</div>';
+
+				#
+				# LOAD_DEDALO_STR_TABLES_DATA
+				# Load partials srt data based on tld to independent files
+				#if ($db_name=='dedalo4_development_str.custom') {
+					#sleep(2);
+					$ar_response 		= self::load_dedalo_str_tables_data();	
+					$ar_response_html 	= implode('<hr>', (array)$ar_response);
+					$res_html .= wrap_pre($ar_response_html);
+				#}
+
+				#
+				# DELETE DEVELOPMENT ELEMENTS FROM FINAL STRUCTURE
+				if (DEDALO_DATABASE_CONN!='dedalo4_development') {
+					
+					$ar_parents 			= array('dd1111','dd1189');
+					$ar_recursive_childrens = $ar_parents;
+					foreach ($ar_parents as $current_terminoID) {
+						$ar_delete 				= RecordObj_dd::get_ar_recursive_childrens($current_terminoID);
+						$ar_recursive_childrens = array_merge($ar_recursive_childrens,$ar_delete);
+					}			
+
+					foreach ($ar_recursive_childrens as $key => $terminoID) {
+
+						$RecordObj_dd = new RecordObj_dd($terminoID);				
+						$RecordObj_dd->Delete();
+						
+						$arguments=array();
+						$arguments['parent']	= $terminoID;	
+						$RecordObj_matrix		= new RecordObj_matrix('matrix_descriptors_dd',NULL);
+						$ar_result				= (array)$RecordObj_matrix->search($arguments);
+						foreach ($ar_result as $current_id) {
+							$RecordObj_matrix	= new RecordObj_matrix('matrix_descriptors_dd',$current_id);
+							$RecordObj_matrix->Delete();
+						}
+						#echo "Deleted $terminoID<br>";
+
+					}//end foreach ($ar_recursive_childrens as $key => $terminoID)
+
+					$res_html .= wrap_pre( "Removed development elements: ".count($ar_recursive_childrens)." from parents: ".implode(',', $ar_parents) );
+
+				}//end if (DEDALO_DATABASE_CONN!='dedalo4_development')
 				break;
+
 			# ERROR (1)
 			case 1:
 				$res_html .= '<div style="color:white;background-color:red;padding:10px;font-family:arial;font-size:14px;word-wrap:break-word;border-radius: 5px;">
@@ -520,29 +657,16 @@ abstract class backup {
 				}
 				break;
 			default:			
-				$res_html .= "Command response: ".$worked ."<br> for command: $command";
-				if ($worked==127) {
+				$res_html .= "Command response: ".$worked_result ."<br> for command: $command";
+				if ($worked_result==127) {
 					$res_html .= "Review your mysql path please: <br>DB_BIN_PATH: ".DB_BIN_PATH."<br>PHP_BIN_PATH: ".PHP_BIN_PATH ;
 				}
 		}
-		if(SHOW_DEBUG) {
-			#dump($worked," console response code for:\n $command ");
-			#dump($output," console output for:\n $command");
-		}
+		
 		#$res_html .= "<pre>";
 		#$res_html .= print_r($ar_dedalo_private_tables,true);
 		#$res_html .= "</pre>";
 
-
-		#
-		# LOAD_DEDALO_STR_TABLES_DATA
-		# Load partials srt data based on tld to independent files
-		#if ($db_name=='dedalo4_development_str.custom') {
-			sleep(3);
-			$ar_response 		= self::load_dedalo_str_tables_data();	
-			$ar_response_html 	= implode('<hr>', (array)$ar_response);
-			$res_html .= wrap_pre($ar_response_html);
-		#}
 
 		return $res_html;
 

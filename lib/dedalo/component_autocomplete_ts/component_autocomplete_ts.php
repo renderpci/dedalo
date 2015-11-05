@@ -2,7 +2,7 @@
 	
 	# CONTROLLER
 
-	$id 					= $this->get_id();
+	#$id 					= $this->get_id();
 	$tipo 					= $this->get_tipo();
 	$parent 				= $this->get_parent();
 	$section_tipo			= $this->get_section_tipo();
@@ -13,11 +13,11 @@
 	$debugger				= $this->get_debugger();
 	$permissions			= common::get_permissions($tipo);
 	$ejemplo				= NULL;
-	$html_title				= "Info about $id";
+	$html_title				= "Info about $parent";
 	$ar_tools_obj			= $this->get_ar_tools_obj();	
 	$html_tools				= '';
 	
-	$valor_string			= $dato;
+	#$valor_string			= $dato;
 	$lang					= $this->get_lang();
 	$identificador_unico	= $this->get_identificador_unico();
 	$ar_referenced_tipo 	= $this->get_ar_referenced_tipo();
@@ -31,28 +31,17 @@
 
 	$file_name				= $modo;
 	
-	switch($modo) {
-		
-		
-		case 'search' :	
-				$id_wrapper = 'wrapper_'.$identificador_unico;
-				$input_name = $tipo;
-				# Valor searched
-				$valor_searched 		= NULL;
-				$valor_searched_string 	= NULL;
-				if (!empty($_REQUEST[$tipo])) {
-					$valor_searched 		= $_REQUEST[$tipo];
-					$valor_searched_string 	= RecordObj_dd::get_termino_by_tipo($_REQUEST[$tipo]);
-				}
-				break;
+	switch($modo) {		
 
 		case 'edit'	:
 				$ar_css			= false;						
 				$id_wrapper 	= 'wrapper_'.$identificador_unico;
 				$input_name 	= $tipo;
-				$valor 			= $this->get_valor();
+				$valor 			= $this->get_valor($lang);
+				$ar_valor 		= $this->get_valor($lang,'array');
 				$ar_link_fields	= json_handler::encode($this->ger_ar_link_fields());
 				$component_info = $this->get_component_info('json');
+				$dato_json 		= json_encode($dato);		
 				break;
 
 		case 'tool_time_machine'	:	
@@ -63,9 +52,21 @@
 				$file_name 	= 'edit';
 				break;	
 						
-		case 'search99':
-				$ar_list_of_values		= null;
-				$ar_css		= false;
+		case 'search' :	
+				$id_wrapper = 'wrapper_'.$identificador_unico;
+				$input_name = $tipo;
+				# Valor searched
+				$valor_searched 		= NULL;
+				$valor_searched_string 	= NULL;
+				$ar_valor 				= $this->get_valor($lang,'array');				
+				$dato_json 				= json_encode($dato);
+							
+				if (!empty($_REQUEST[$tipo])) {
+					$valor_searched 		= $_REQUEST[$tipo];
+					$valor_searched_string 	= RecordObj_dd::get_termino_by_tipo($_REQUEST[$tipo]);
+				}
+				$ar_comparison_operators = $this->build_search_comparison_operators();
+				$ar_logical_operators 	 = $this->build_search_logical_operators();
 				break;
 						
 		case 'list_tm' :
@@ -76,7 +77,10 @@
 
 		case 'list'	:	
 				$ar_css		= false;
-				$valor 		= $this->get_valor();	#dump($valor);
+				$valor 		= $this->get_valor($lang,'string');				
+					#dump($valor, ' valor ++ '.to_string());
+				# Return direct value for store in 'valor_list'
+				#return (string)$valor; 	# Like "Catarroja, L'Horta Sud, Valencia/València, Comunidad Valenciana, España"
 				break;
 
 		case 'relation':
@@ -87,7 +91,7 @@
 				break;
 		
 		case 'print' :
-				$valor = $this->get_valor();
+				$valor = $this->get_valor($lang,'string');
 				break;			
 							
 		

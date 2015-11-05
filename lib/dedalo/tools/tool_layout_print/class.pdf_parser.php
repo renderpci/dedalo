@@ -1,10 +1,32 @@
 <?php
 /*
+
+	DEPRECATED
+
+*/
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/*
 * CLASS PDF_PARSER
 * Manage the pdf parser for the pages of the print layout
 */
 require_once( dirname(dirname(dirname(__FILE__))) .'/config/config4.php');
-require_once( dirname(dirname(dirname(__FILE__))) .'../tcpdf/tcpdf.php');
+require_once( DEDALO_ROOT .'/lib/tcpdf/tcpdf.php');
 
 
 class pdf_parser {
@@ -83,7 +105,7 @@ class pdf_parser {
 		}
 
 		//Close and output PDF document, FI= F save to disk, I send to the browser
-		$pdf->Output("/media/print_pdf/".$template_name.'.pdf', 'FI');
+		$pdf->Output(DEDALO_LIB_BASE_PATH . "/tools/tool_layout_print/print_pdf/".$template_name.'.pdf', 'FI');
 			
 	}
 	

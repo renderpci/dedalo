@@ -66,6 +66,9 @@
 								return;
 							}
 							$ar_proyectos_section = (array)$this->get_ar_proyectos_section();
+							if(SHOW_DEBUG) {
+								#dump($ar_proyectos_section, " ar_proyectos_section ".to_string());
+							}
 							break;
 
 		case 'relation':	# Force file_name to 'list'

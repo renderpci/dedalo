@@ -13,8 +13,8 @@
 	if(!isset ($tools_html))						$tools_html='';
 	
 	
-	echo "\n<!-- CHECK BOX [$tipo $parent] -->";
-	echo "\n<div class=\"css_wrap_check_box {$ar_css['css_check_box_rotulo']}\" style=\"white-space:nowrap\" >";
+	#echo "\n<!-- COMPONENT FILTER MASTER [$tipo $parent] -->";
+	#echo "\n<div class=\"css_wrap_check_box {$ar_css['css_check_box_rotulo']}\" style=\"white-space:nowrap\" >";
 	
 	# ETIQUETA (LABEL)
 	#$html_label = component_common_draw::draw_label($this);
@@ -23,7 +23,7 @@
 	$html_contenido = '';
 	switch($permissions) {
 			
-		case 0	:	$html_contenido .= "\n <span class=\"css_span_dato {$ar_css['css_span_dato']}\"> ".label::get_label('sin_acceso')." (check_box_list)</span>"; 		
+		case 0	:	$html_contenido .= "";
 					break;	
 						
 		case ($permissions>=1):
@@ -47,14 +47,9 @@
 						$html_contenido .= "</ul>";
 							#dump($html_contenido,"html_contenido");	
 					}
-		
-			if($permissions==3)
-		
-					$html_contenido .= "\n <span class=\"css_span_debugger {$ar_css['css_span_debugger']}\" id=\"debugger_{$tipo}\" >{$debugger}</span>";	
-					
-					
+					break;
 										
-	}
+	}//end switch($permissions) {
 	
 	
 	# PRINT HTML
@@ -63,5 +58,5 @@
 	#print $html_tools;
 	
 	
-	echo "\n</div>\n\n"; //wrap
+	#echo "\n</div>\n\n"; //wrap
 ?>

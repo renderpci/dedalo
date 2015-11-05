@@ -23,32 +23,39 @@
 	$html_contenido = '';
 	switch($permissions) {
 			
-		case 0	:	$html_contenido .= "\n <span class=\"css_span_dato {$ar_css['css_span_dato']}\"> No access here (select)! </span>";
+		case 0	:	$html_contenido .= "";
 					break;
 						
 		
 		case ($permissions>=1)	:
-		
+
+					# COMPARISON OPERATORS
+					$html_contenido .= operator::get_search_comparison_operators_html($tipo,$ar_comparison_operators);
+
+					
+					# SELECT
 					$html_contenido .= "\n <select class=\"css_select {$ar_css['css_select']}\" name=\"{$tipo}\" data-tipo=\"{$tipo}\" title=\"$html_title\"> ";
-					
-					if(empty($dato)) {
-						$checked = 'selected';
-					}else{
-						$checked = "";
-					}
-					$html_contenido .= "\n <option value=\"\" {$checked}> </option>";
-					
-					foreach ($ar_list_of_values->result as $value => $rotulo) {
-						
-						if( $dato == $value) {
+						if(empty($dato)) {
 							$checked = 'selected';
-						}else {
+						}else{
 							$checked = "";
 						}
-						$html_contenido .= "\n <option value=\"{$value}\" {$checked}> {$rotulo}</option>";							
-					}					
+						$html_contenido .= "\n <option value=\"\" {$checked}> </option>";
+						
+						foreach ($ar_list_of_values->result as $value => $rotulo) {
+							
+							if( $dato == $value) {
+								$checked = 'selected';
+							}else {
+								$checked = "";
+							}
+							$html_contenido .= "\n <option value='$value' {$checked}> {$rotulo}</option>";
+						}					
 					$html_contenido .= "\n </select>";	
-									
+					
+
+					# LOGICAL OPERATORS
+					$html_contenido .= operator::get_search_logical_operators_html($tipo,$ar_logical_operators);
 											
 	}
 	

@@ -3,43 +3,75 @@
 
 $html='';
 
-	/*
+	/**/
 	$html .= '<div class="top">';
-		
-		$html .= "\n<div class=\"section_title \" > TOOL LAYOUT PRINT : $section_title</div>";
-		if(SHOW_DEBUG) {
-			$html .= "<div class=\"layout_debug_info\">context_name: $context_name [".reset($tool_layout_print_records)."]</div>";
-		}
-
-		# Template_name
-		$html .= '<div class="template_name">';
-			#$html .= $section_layout_label;
-			$html .= '<span>'.label::get_label('nombre').'</span>';
-			if(SHOW_DEBUG) {
-				#$html .= " [$tipo]";
-			}
-			$html .= "<input type=\"text\" id=\"input_layout_label\" name=\"layout_label\" value=\"$section_layout_label\" placeholder=\"Template name\" />";
-			
-			$html .= "<input type=\"hidden\" id=\"input_section_target_tipo\" name=\"section_target_tipo\" value=\"$tipo\" />";
-			$html .= "<input type=\"hidden\" id=\"input_section_layout_id\" name=\"section_layout_id\" value=\"$section_layout_id\" />";
-		$html .= '</div>';	
-
-
-	$html .= '</div>';	
-	*/
+	$html .= "\n<div class=\"section_title \" > TOOL LAYOUT PRINT : $section_title</div>";
+	if(SHOW_DEBUG) {
+		$html .= "<div class=\"layout_debug_info\">context_name: $context_name</div>";
+	}
+	$html .= '</div>';
+	
 		
 		
 	#
 	# PAGES CONTAINER . Pages are added by javascript in this div
-	$html .= "<div id=\"pages_container\">";
-	#$html .= '<div id="page1" class="page" ondrop="Drop(event)" ondragover="dragOver(event)" ondragenter="dragEnter(event)" ondragleave="dragLeave(event)"></div>';
-	#if (!empty($section_layout_dato) && property_exists($section_layout_dato, $type)) {
-		$html .= $section_layout_dato->$type;
-		#$component_html = $section_layout_dato->$type;
-			#dump($section_layout_dato->edit," section_layout_dato");
-	#}
-	$html .= "</div>";
+	$html .= "<div id=\"render_msg\">";
 
+		$html .= "<div id=\"wrap_info_stats\" class=\"\">";
+
+			#
+			# INFO STATS
+			$html .= "<div id=\"info_stats\" class=\"\">";
+			$html .= " <span>".label::get_label('total_records')."</span> <strong>$n_records</strong><br>";
+			$html .= " <span>".label::get_label('total_pages')."</span> <strong>$n_pages</strong>";
+			$html .= "</div>";
+
+
+			#
+			# TRIGGER COMMAND
+			$html .= "<div id=\"render_pdf_response\" class=\"\">";
+			$html .= " <span class=\"printing_animated\"></span> <br><br>".label::get_label('rendering_pdf');	//<span class=\"css_spinner\"></span>
+			$html .= "</div>";
+
+		$html .= "</div>";
+
+
+
+		#
+		# DEBUG INFO
+		$html .= "<div id=\"render_pdf_response_debug\">";
+		$html .= "";
+		$html .= "</div>";
+		$html .= "<script>var render_pdf_data='".json_encode($render_pdf_data)."'; tool_layout_print.render_pdf(render_pdf_data)</script>";		
+		
+
+		#
+		# MESSAGES
+		$html .= "<div>";
+		$html .= "".implode("<br>", $ar_msg);
+		$html .= "</div>";
+
+
+		#
+		# PAGES HTML LINK
+		if(SHOW_DEBUG) {
+		
+			$html .= "<br> Pages html:";
+			if (isset($header_html_url)) {
+				#$html .= "<br>HEADER <a href=\"$header_html_url\" target=\"_blank\">$header_html_url</a>";
+			}
+			if (isset($footer_html_url)) {
+				$html .= "<br>FOOTER <a href=\"$footer_html_url\" target=\"_blank\">$footer_html_url</a>";
+			}
+			foreach ($ar_url as $url) {
+				$html .= "<br><a href=\"$url\" target=\"_blank\">$url</a>";
+			}
+			$html .= "<br>command: <br><div>".$command."</div>";
+			$html .= "<br>command (pre): <br><pre>".$command."</pre>";
+		}
+
+	
+	$html .= "</div>";//end #render_msg
 		
 		
 

@@ -3,15 +3,15 @@
 	# VISUALIZADOR HTML	
 
 	# ELEMENTOS
-	if(!isset ($ar_css['css_span_dato'])) 			$ar_css['css_span_dato']='';
-	if(!isset ($ar_css['css_select_lang'])) 				$ar_css['css_select_lang']='';
-	if(!isset ($ar_css['css_span_ejemplo'])) 		$ar_css['css_span_ejemplo']='';
-	if(!isset ($ar_css['css_span_debugger']))		$ar_css['css_span_debugger']='';
-	if(!isset ($ar_css['css_wrap_select_lang']))			$ar_css['css_wrap_select_lang']='';
-	//if(!isset ($ar_css['css_select_lang_rotulo']))		$ar_css['css_select_lang_rotulo']='';
+	if(!isset ($ar_css['css_span_dato'])) 				$ar_css['css_span_dato']='';
+	if(!isset ($ar_css['css_select_lang'])) 			$ar_css['css_select_lang']='';
+	if(!isset ($ar_css['css_span_ejemplo'])) 			$ar_css['css_span_ejemplo']='';
+	if(!isset ($ar_css['css_span_debugger']))			$ar_css['css_span_debugger']='';
+	if(!isset ($ar_css['css_wrap_select_lang']))		$ar_css['css_wrap_select_lang']='';
+	//if(!isset ($ar_css['css_select_lang_rotulo']))	$ar_css['css_select_lang_rotulo']='';
 	
 	
-	if(isset($_REQUEST[$tipo]))						$dato = $_REQUEST[$tipo];
+	if(isset($_REQUEST[$tipo])) $dato = $_REQUEST[$tipo];
 		#dump($dato,'dato');
 	
 	
@@ -30,27 +30,36 @@
 						
 		
 		case ($permissions>=1)	:
+
+					# COMPARISON OPERATORS
+					$html_contenido .= operator::get_search_comparison_operators_html($tipo,$ar_comparison_operators);
 		
-					$html_contenido .= "\n <select class=\"css_select_lang {$ar_css['css_select_lang']}\" name=\"{$tipo}\" data-tipo=\"{$tipo}\" title=\"$html_title\"> ";
+
+					# INPUT
+					$html_contenido .= "\n <select class=\"css_select_lang {$ar_css['css_select_lang']}\" name=\"{$tipo}\" data-tipo=\"{$tipo}\" title=\"$html_title\"> ";		
+
+					$checked = "";	
 					
-					if(empty($dato)) {
-						$checked = 'selected';
-					}else{
-						$checked = "";
-					}
 					$html_contenido .= "\n <option value=\"\" {$checked}> </option>";
 					
 					if (is_array ($ar_all_project_select_langs)) foreach ($ar_all_project_select_langs as $value => $rotulo) {
 						
+						
+						/*
 						if( $dato == $value) {
 							$checked = 'selected';
 						}else {
 							$checked = "";
 						}
+						*/
 						$html_contenido .= "\n <option value=\"{$value}\" {$checked}> {$rotulo}</option>";							
 					}					
-					$html_contenido .= "\n </select>";	
-									
+					$html_contenido .= "\n </select>";
+
+					# LOGICAL OPERATORS
+					$html_contenido .= operator::get_search_logical_operators_html($tipo,$ar_logical_operators);	
+					
+					break;			
 											
 	}
 

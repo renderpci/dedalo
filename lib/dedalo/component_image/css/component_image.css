@@ -1,5 +1,4 @@
-/*CSS Document*/
-@import url('component_image_canvas.css');
+/*@import url('component_image_canvas.css');*/
 
 /*-- Wrap div container --*/
 .css_wrap_image, .css_wrap_image_tm {	
@@ -115,7 +114,6 @@
 	opacity: 1;
 }
 
-
 .image_image_in_list {
 	
 }
@@ -130,6 +128,17 @@
 	height: 50%;
 }
 */
+
+
+
+/*  CANVAS 
+--------------------------------------------------- */
+.canvas_transcription_edit {
+	width: auto;
+	height: auto;
+	/*background-color: #caf5ab;*/
+}
+
 
 
 

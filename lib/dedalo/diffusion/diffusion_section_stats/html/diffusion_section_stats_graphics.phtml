@@ -7,8 +7,8 @@
 	print "\n<div class=\"css_wrap_diffusion_section_stats_graphics\" >";
 	
 		# Close button
-		echo "<div class=\"close_stats\" onclick=\"diffusion_section_stats.hide_stats_content(this)\"> ".label::get_label('cerrar')." </div>";
-		
+		#echo "<div class=\"close_stats\" onclick=\"diffusion_section_stats.hide_stats_content(this)\"> ".label::get_label('cerrar')." </div>";
+		echo "<div class=\"close_stats\" onclick=\"$('.css_button_stats:first').trigger('click');\"> ".label::get_label('cerrar')." </div>";
 		
 		# Stats container div
 		echo "<div id=\"stats_container\" >";
@@ -41,8 +41,8 @@
 							echo "$column_title";
 							echo "</th>";
 						echo "</tr>";
-						$current_values = $ar_value->data[0]->values;
-						foreach ($current_values as $ckey => $cvalue) {
+						$current_values = isset($ar_value->data[0]) ? $ar_value->data[0]->values : array();
+						foreach ((array)$current_values as $ckey => $cvalue) {
 							echo "<tr>";
 								echo "<td>";
 								echo $cvalue->y;
@@ -59,7 +59,9 @@
 							echo "<pre>".print_r($ar_js_obj[$key],true)."</pre>";
 							$current_component_tipo = $ar_js_obj[$key]->tipo;
 							#dump($this->diffusion_map_object->$caller_section_tipo->$current_component_tipo->debug, 'debug', array());
+							if (isset($this->diffusion_map_object->$caller_section_tipo->$current_component_tipo->debug)) {
 							echo "<pre>".print_r($this->diffusion_map_object->$caller_section_tipo->$current_component_tipo->debug,true)."</pre>";
+							}							
 						}
 
 					echo "</div>";#end current_stats_item_info

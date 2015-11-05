@@ -21,6 +21,8 @@
 	$identificador_unico	= $this->get_identificador_unico();
 	$component_name			= get_class($this);
 	$dato_string			= $this->get_dato_as_string();
+	$dato_json 				= json_encode($dato);
+		#dump($dato_json, ' dato_json');
 	
 			#dump($ar_list_of_values,'ar_list_of_values');
 
@@ -55,6 +57,9 @@
 				$referenced_tipo 	= $this->get_referenced_tipo();
 				$ar_list_of_values	= $this->get_ar_list_of_values( DEDALO_DATA_LANG, null);
 				$ar_css		= false;
+				
+				$ar_comparison_operators 	= $this->build_search_comparison_operators();
+				$ar_logical_operators 		= $this->build_search_logical_operators();
 				#if(is_array($ar_tools_obj)) foreach($ar_tools_obj as $tool_obj) {
 				#	$html_tools .= $tool_obj->get_html();
 				#}
@@ -67,7 +72,8 @@
 				$file_name = 'list';
 							
 		case 'list' :
-				$valor  = $this->get_valor();
+		
+				$valor  			= $this->get_valor();
 				$referenced_tipo 	= $this->get_referenced_tipo();
 				$ar_list_of_values	= $this->get_ar_list_of_values( DEDALO_DATA_LANG, null );
 				$ar_css				= $this->get_ar_css();	

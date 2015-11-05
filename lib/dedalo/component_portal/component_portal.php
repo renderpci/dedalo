@@ -23,13 +23,13 @@
 	$component_name			= get_class($this);
 	$context				= $this->get_context();
 
-
 	
 	if (isset($context->context_name) && $context->context_name=='tool_time_machine') {
 		$this->set_show_button_new(false);
 	}
+	
 
-	$propiedades			= $this->RecordObj_dd->get_propiedades();
+	$propiedades			= $this->get_propiedades();
 	$id_wrapper 			= 'wrapper_'.$identificador_unico;	
 	$button_new_html 		= NULL;
 	$section_html 			= NULL;
@@ -53,16 +53,73 @@
 				#$component_info = $this->get_component_info('json');
 				#$valor			= $this->get_dato_as_string();
 				#$show_button_new = $this->get_show_button_new();
+				
+				#if (is_string($this->html_options->header)) {
+				#	$this->html_options->header = json_decode($this->html_options->header);
+				#}
 
-				$this->html_options->header 	= true;
-				$this->html_options->rows   	= true;
+				# Defaults		
+				$this->html_options->header 	= isset($this->html_options->header) ? $this->html_options->header : true;
+				$this->html_options->rows 		= isset($this->html_options->rows) ? $this->html_options->rows : true;
 				$this->html_options->id_column 	= false;
-				$this->html_options->rows_limit	= false;
+				$this->html_options->rows_limit = isset($this->html_options->rows_limit) ? $this->html_options->rows_limit : false;
 				$this->html_options->buttons 	= false;
-				$this->html_options->sortable 	= false;
+				$this->html_options->sortable 	= isset($this->html_options->sortable) ? $this->html_options->sortable : false;
+											
 
-				#$file_name = 'edit';
-				#break;
+				$dato = $this->get_dato();
+
+				if (empty($dato)) {
+
+					# Empty object
+					$rows_data = new stdClass();
+						$rows_data->result = array();
+
+					$this->html_options->header = false;
+					$this->html_options->rows 	= false;
+
+				}else{										
+						
+					# LAYOUT_MAP : Calculate list for layout map
+					# All related terms are selected except section that is unset from the array								
+					$layout_map_virtual  = $this->get_layout_map();
+					$target_section_tipo = $this->get_target_section_tipo();
+						#dump( $layout_map_virtual,"layout_map_virtual - $target_section_tipo"); #die();
+
+					# OPTIONS
+					$options = new stdClass();
+						$options->section_tipo  = $target_section_tipo;
+						$options->filter_by_id  = (array)$dato;
+						$options->layout_map  	= $layout_map_virtual;
+						$options->modo  		= 'portal_list';
+						$options->limit 		= false; # IMPORTANT : No limit is applicated to portal list. All records are viewed always
+						$options->search_options_session_key = $search_options_session_key;
+							#dump($options," options");					
+
+						# OPTIONS CONTEXT : Configure section context
+						$context = new stdClass();
+							$context->context_name 	= 'list_in_portal';
+							$context->portal_tipo 	= $tipo;
+							$context->portal_parent = $parent;
+
+						$options->context = $context;
+							#dump($options,"options");									
+					
+
+					$rows_data = search::get_records_data($options);
+					if(SHOW_DEBUG) {
+						#dump($rows_data->result," rows_data result ".to_string($options));
+					}						
+				}
+				
+					#dump($rows_data," rows_data");
+				$ar_columns = $this->get_ar_columns();	
+					#dump($ar_columns, ' ar_columns ++ '.to_string());
+					#die();			
+			
+				#!isset($target_section_tipo) ? $target_section_tipo = $this->get_target_section_tipo() : '';
+				break;
+
 
 		# EDIT MODE
 		# Build section list from array of section's id stored in component_portal dato
@@ -73,6 +130,8 @@
 
 				$valor			= $this->get_dato_as_string();
 				$component_info = $this->get_component_info('json');
+
+				#$this->get_valor();
 
 				$exclude_elements = $this->get_exclude_elements();
 					#dump($exclude_elements, ' exclude_elements');
@@ -128,7 +187,7 @@
 								#dump($options,"options");									
 					}//end if (!empty($_SESSION['dedalo4']['config']['search_options'][$search_options_session_key]))		
 
-					$rows_data = section_list::get_rows_data($options);
+					$rows_data = search::get_records_data($options);
 					if(SHOW_DEBUG) {
 						#dump($rows_data->result," rows_data result ".to_string($options));
 					}
@@ -141,7 +200,7 @@
 				!isset($target_section_tipo) ? $target_section_tipo = $this->get_target_section_tipo() : '';
 				$show_button_new = $this->get_show_button_new();					
 				
-				$propiedades = json_decode($propiedades);
+				# Daggable
 				$dragable_connectWith = isset($propiedades->dragable_connectWith) ? "portal_table_".$propiedades->dragable_connectWith : null ;
 				
 				break;
@@ -190,7 +249,7 @@
 							#dump($options,"options");									
 				}//end if (!empty($_SESSION['dedalo4']['config']['search_options'][$search_options_session_key]))
 				
-				$rows_data = section_list::get_rows_data($options);
+				$rows_data = search::get_records_data($options);
 					#dump($rows_data," rows_data");
 				$ar_columns = $this->get_ar_columns();					
 				

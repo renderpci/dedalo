@@ -32,6 +32,9 @@
 					break;
 						
 		case ($permissions>=1)	:
+					# COMPARISON OPERATORS
+					$html_contenido .= operator::get_search_comparison_operators_html($tipo,$ar_comparison_operators);
+
 		
 					foreach ($ar_list_of_values->result as $value => $rotulo) {
 						
@@ -46,7 +49,9 @@
 						title=\"$html_title\" $checked />";						
 						$html_contenido .= "\n <label class=\"css_check_box_rotulo\"
 						$required_code >$rotulo</label> ";	
-					}					
+					}
+					# LOGICAL OPERATORS
+					$html_contenido .= operator::get_search_logical_operators_html($tipo,$ar_logical_operators);				
 										
 							
 	}

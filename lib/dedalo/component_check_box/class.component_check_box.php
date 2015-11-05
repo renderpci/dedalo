@@ -31,8 +31,9 @@ class component_check_box extends component_common {
 		if (!empty($dato) && !is_array($dato)) {
 			#dump($dato,"dato");
 			trigger_error("Error: ".__CLASS__." dato type is wrong. Array expected and ".gettype($dato)." is received for tipo:$this->tipo, parent:$this->parent");
-			$this->set_dato(array());
-			$this->Save();
+			#$this->set_dato(array());
+			#$this->Save();
+			$dato=array();
 		}
 		if ($dato==null) {
 			$dato=array();

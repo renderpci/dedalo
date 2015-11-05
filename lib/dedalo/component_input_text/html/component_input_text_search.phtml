@@ -2,14 +2,10 @@
 
 	# VISUALIZADOR HTML	
 
-	# ELEMENTOS
-	if(!isset ($ar_css['css_span_dato'])) 		$ar_css['css_span_dato']='';
+	# ELEMENTOS	
 	if(!isset ($ar_css['css_input_text'])) 		$ar_css['css_input_text']='';
-	if(!isset ($ar_css['css_span_ejemplo'])) 	$ar_css['css_span_ejemplo']='';
-	if(!isset ($ar_css['css_span_debugger']))	$ar_css['css_span_debugger']='';
 	if(!isset ($ar_css['css_wrap_input_text']))	$ar_css['css_wrap_input_text']='';
-	
-	if(!isset ($html_tools))					$html_tools='';
+
 	
 	if(isset($_REQUEST[$tipo]))					$dato = $_REQUEST[$tipo];		#var_dump($_REQUEST[$tipo]);
 	
@@ -24,17 +20,29 @@
 	$html_contenido = '';
 	switch($permissions) {
 			
-		case 0	:	$html_contenido .= "\n <span class=\"css_span_sin_acceso\">".label::get_label('sin_acceso')."</span>";
+		case 0	:	$html_contenido .= "";
 					break;
 						
 		case ($permissions>=1) :
-		
-					$html_contenido .= "\n <input class=\"css_input_text {$ar_css['css_input_text']}\" type=\"text\" 
+
+					# COMPARISON OPERATORS
+					$html_contenido .= operator::get_search_comparison_operators_html($tipo,$ar_comparison_operators);					
+
+					# INPUT 
+					$html_contenido .= "<span id=\"search_component_$tipo\">";
+					$html_contenido .= "\n <input class=\"css_input_text_search {$ar_css['css_input_text']}\" type=\"text\" 
 					name=\"{$tipo}\" 
 					data-tipo=\"{$tipo}\"
-					value=\"{$dato}\" title=\"$html_title\" />";
+					value=\"{$dato}\"
+					title=\"$html_title\" />";
+					$html_contenido .= "</span>";
+
+					# LOGICAL OPERATORS
+					$html_contenido .= operator::get_search_logical_operators_html($tipo,$ar_logical_operators);
+					
 											
-	}
+	}//end switch($permissions) 
+
 
 	# Prepare content to show in page
 	tools::prepare_content($html_contenido);	

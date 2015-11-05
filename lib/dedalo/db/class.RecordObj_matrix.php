@@ -1,11 +1,10 @@
 <?php
-if(!defined('DEDALO_LIB_BASE_PATH'))
-require_once( dirname(dirname(__FILE__)) .'/config/config4.php');
+#if(!defined('DEDALO_LIB_BASE_PATH'))
+#require_once( dirname(dirname(__FILE__)) .'/config/config4.php');
 
-require_once(DEDALO_LIB_BASE_PATH . '/common/class.common.php');
-require_once(DEDALO_LIB_BASE_PATH . '/common/class.navigator.php');
-require_once(DEDALO_LIB_BASE_PATH . '/db/class.RecordDataBoundObject.php');
-
+#require_once(DEDALO_LIB_BASE_PATH . '/common/class.common.php');
+#require_once(DEDALO_LIB_BASE_PATH . '/common/class.navigator.php');
+require(DEDALO_LIB_BASE_PATH . '/db/class.RecordDataBoundObject.php');
 
 class RecordObj_matrix extends RecordDataBoundObject {
 	

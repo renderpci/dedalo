@@ -75,7 +75,8 @@
 						$maxHeight 			= 303 ;
 
 
-						$posterframe_url 	= $PosterFrameObj->get_thumb_url($maxWidht, $maxHeight, $fx='crop').'&t='.start_time();									
+						$posterframe_url 	= $PosterFrameObj->get_thumb_url($maxWidht, $maxHeight, $fx='crop').'&t='.start_time();	
+						$posterframe_url 	= str_replace('&', '&amp;', $posterframe_url);
 						break;
 		
 		case 'player_posterframe':
@@ -94,7 +95,8 @@
 
 		case 'player_stand_alone':
 
-						$posterframe_url 	= $this->get_posterframe_url().'?&t='.start_time();					
+						$posterframe_url 	= $this->get_posterframe_url().'?&t='.start_time();
+						$posterframe_url 	= str_replace('&', '&amp;', $posterframe_url);
 						$player_id			= 'player_'.$video_id;
 
 						
@@ -107,14 +109,14 @@
 						if (!file_exists($video_path)) {
 							$video_path = $this->get_video_path($falback_quality);
 							if (file_exists($video_path)) {
-								$this->set_quality($falback_quality);								
+								$this->set_quality($falback_quality);
 								// Update vars
 								$video_url  	= $this->get_video_url();
 								$quality		= $this->get_quality();
 								$posterframe_url= DEDALO_LIB_BASE_URL.'/themes/default/0_audio.jpg';
 							}
 						}						
-						break;
+						break;		
 		
 		case 'portal_list':
 						$file_name 			= 'list';
@@ -129,12 +131,16 @@
 						$maxWidht 			= 102 ;
 						$maxHeight 			= 57  ; # 90
 						$posterframe_url 	= $PosterFrameObj->get_thumb_url($maxWidht, $maxHeight, $fx='crop');#.'&t='.start_time();
+						$posterframe_url 	= str_replace('&', '&amp;', $posterframe_url);
 							#dump($posterframe_url,$video_id);
 						break;
 
 		case 'search':	return NULL;		
 						break;
-											
+
+		case 'print':
+						$posterframe_url 	= $this->get_posterframe_url();
+						break;											
 	}
 
 	

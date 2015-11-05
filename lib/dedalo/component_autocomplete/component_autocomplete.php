@@ -30,22 +30,21 @@
 	$file_name				= $modo;
 	
 	switch($modo) {
-		
+	
 		case 'edit'	:
 				
 				$tipo_to_search			= $this->get_tipo_to_search(); 	
 				#$referenced_section_tipo= $this->get_referenced_section_tipo();		#dump($referenced_section_tipo, ' referenced_section_tipo'); return;
 				$referenced_section_tipo= $this->get_target_section_tipo();
 				$ar_css					= false;
-				$valor 					= $this->get_valor();		#dump($valor,"$label valor");
-				#$ar_list_of_values 		= $this->ar_list_of_values;	# Fixed in get_valor
+				#$valor 				= $this->get_valor();		#dump($valor,"$label valor");
+				$ar_valor 				= $this->get_valor($lang,'array');
 				$id_wrapper 			= 'wrapper_'.$identificador_unico;
 				$input_name 			= "{$tipo}_{$parent}";
 				$component_info 		= $this->get_component_info('json');
 				#$parent_section_tipo	= component_common::get_section_tipo_from_component_tipo($referenced_tipo);
 				#$current_tipo_section 	= $this->get_current_tipo_section();
-				$dato_string 			= json_handler::encode($dato);
-
+				$dato_json 				= json_handler::encode($dato);
 
 					/*
 					dump($tipo_to_search, ' tipo_to_search');					
@@ -53,7 +52,6 @@
 					#dump($parent_section_tipo, ' parent_section_tipo');
 					#dump($current_tipo_section, ' current_tipo_section');
 					*/
-
 				break;
 
 		case 'tool_time_machine' :	
@@ -66,17 +64,23 @@
 						
 		case 'search':
 				$referenced_tipo		= $this->get_referenced_tipo();
-				$ar_list_of_values		= $this->get_ar_list_of_values(DEDALO_DATA_LANG, null);
+				$ar_list_of_values		= $this->get_ar_list_of_values(DEDALO_DATA_LANG, null); // $this->get_ar_list_of_values( $lang, null, $this->referenced_section_tipo, $filter_custom );
+
+				$ar_comparison_operators = $this->build_search_comparison_operators();
+				$ar_logical_operators 	 = $this->build_search_logical_operators();
+
 				$ar_css		= false;
 				break;
-						
+		case 'dummy' :
+				$file_name = 'search';
+				break;				
 		case 'list_tm' :
 				$file_name = 'list';
 		case 'portal_list':
 				$file_name 	= 'list';
 		case 'list'	:
 				$ar_css		= false;
-				$valor 		= $this->get_valor();
+				$valor 	= $this->get_valor($lang,'string');
 				break;
 
 		case 'relation':
@@ -87,7 +91,7 @@
 				break;
 				
 		case 'print' :
-				$valor = $this->get_valor();
+				$valor = $this->get_valor($lang,'string');
 				break;
 
 	}

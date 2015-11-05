@@ -51,29 +51,36 @@ class component_filter_master extends component_common {
 	* Esto es aplicable a TODOS los componentes
 	*/
 
-	# GET DATO : Format {"7":2,"269":2,"298":2}
+	/**
+	* GET DATO : Format {"7":2,"269":2,"298":2}
+	* @see component_filter->get_dato() for maintain unifyed format of projetcs
+	*/
 	public function get_dato() {
 		$dato = parent::get_dato();
 		return (array)$dato;
 	}
 
-	# SET_DATO
+	/**
+	* SET_DATO
+	* @see component_filter->set_dato() for maintain unifyed format of projetcs
+	*/
 	public function set_dato($dato) {
-		if (!$dato || is_scalar($dato)) {
-			$dato=new stdClass();
+		if (empty($dato)) {
+			$dato=array();
 		}
-		if (!is_object($dato)) {
-			$dato=(object)$dato;
-		}
-		parent::set_dato( $dato );
+		parent::set_dato( (object)$dato );
 	}
 
 
+	/**
+	* SAVE OVERRIDE
+	* Overwrite component_common method 
+	*/
 	public function Save() {
 		# Reset cache session IMPORTANT !
 		unset($_SESSION['dedalo4']['config']['get_user_projects']);
 
-		return parent::Save();		
+		return parent::Save();
 	}
 
 	
@@ -93,22 +100,21 @@ class component_filter_master extends component_common {
 		$dato 	= (array)$this->get_dato();
 		$html 	= '';
 		
-		if(is_array($dato)) foreach ($dato as $id_matrix => $state) {
+		foreach ($dato as $section_id => $state) {
 
 			if($state!=2) continue;
 
-			$component_filter = component_common::get_instance('component_input_text', DEDALO_PROJECTS_NAME_TIPO, $id_matrix, 'list', DEDALO_DATA_LANG, $this->section_tipo);
-				#dump($component_filter, 'component_filter', array());
-			$name = $component_filter->get_valor();
-
+			$current_component = component_common::get_instance('component_input_text', DEDALO_PROJECTS_NAME_TIPO, $section_id, 'list', DEDALO_DATA_LANG, DEDALO_SECTION_PROJECTS_TIPO);
+			$name = $current_component->get_valor();
+				
 			$html .= $name ;
 			if(SHOW_DEBUG) {
-				#$html .= " [$id_matrix]";
+				#$html .= " [$section_id]";
+				#dump($name, " name ".to_string());
 			}
-			if ($id_matrix!=end($dato)) $html .= '<br>';
-			
+			$html .= '<br>';			
 		}
-		
+		$html = substr($html, 0, -4);
 		
 		return $html;		
 	}

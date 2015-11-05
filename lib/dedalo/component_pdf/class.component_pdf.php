@@ -189,7 +189,8 @@ class component_pdf extends component_common {
 		$dato = $this->get_dato();
 		if (!isset($dato->section_id)) {
 			if(SHOW_DEBUG) {
-				trigger_error(__METHOD__." Component dato is empty");
+				#dump($dato, ' dato ++ '.to_string());
+				trigger_error(__METHOD__." Component dato (parent:$this->parent,section_tipo:$this->section_tipo) is empty for: ".to_string($dato));
 			}
 			return 0;	
 		}

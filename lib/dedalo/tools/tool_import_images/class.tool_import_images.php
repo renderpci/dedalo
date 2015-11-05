@@ -74,6 +74,8 @@ class tool_import_images extends tool_common {
 		# Fix propiedades
 		$this->button_import_propiedades = $propiedades;
 
+			dump($propiedades, ' propiedades ++ '.to_string());
+
 		return $button_import_obj;
 	}
 

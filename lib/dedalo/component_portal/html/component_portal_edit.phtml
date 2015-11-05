@@ -104,7 +104,7 @@
 						
 
 						# HEADERS (TH)
-						if ($this->html_options->header) {
+						if ($this->html_options->header && !empty($rows_data->result)) {
 						
 							$table .= "<thead>";
 							$table .= "<tr>";
@@ -116,7 +116,7 @@
 							$table .= "</thead>";
 						}//end if ($this->html_options->header)
 
-						#dump($rows_data->result," ");
+						#dump($rows_data->result," rows_data->result");
 	
 						# ROWS (TD)
 						$row_number=1;
@@ -210,55 +210,22 @@
 										$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($column_tipo, true);
 
 										# Row value default
-										/*if (!isset($rows[$column_tipo])) {
+										if (!isset($rows[$column_tipo])) {
 											$table .= "<td class=\"\">";
 											$table .= ''; // User with NO access to this column
 											$table .= "</td>";
 											continue;
-										}	*/									
+										}
+																		
 										$value = $rows[$column_tipo];
 										#dump($rows,"rows $this->tipo");
 
 										# Row value overwrite on special cases
-										switch (true) {
-
-											# COMPONENTS WITH LOCATORS
-											case ($modelo_name=='component_autocomplete'):
-											case ($modelo_name=='component_radio_button'):
-											case ($modelo_name=='component_check_box'):
-											case ($modelo_name=='component_select'):
-											case ($modelo_name=='component_relation'):
-
-												$parent 		   = $section_id; // $section_id / null
-												$current_component = component_common::get_instance($modelo_name,$column_tipo,$parent,'list',DEDALO_DATA_NOLAN,$target_section_tipo);	
-													#dump($target_section_tipo, ' target_section_tipo');
-												#$current_component->html_options->rows_limit	= 1;
-												#if ($parent===null) {
-													# Use already query calculated values for speed
-													$ar_records   = (array)json_handler::decode($value);	#dump($ar_records,"ar_records for portal $current_component_tipo - id:$section_id");#die();
-													$current_component->set_dato($ar_records); 				#dump($value, 'ar_records');
-													$current_component->set_identificador_unico($current_component->get_identificador_unico().'_'.$section_id); // Set unic id for build search_options_session_key used in sessions
-												#}
-												$value = $current_component->get_html();
-												break;
-
-											# COMPONENT_TEXT_AREA
-											case ($modelo_name=='component_text_area' && !empty($value)):
-												
-												#dump($value," value");
-												#dump($rows['lc_object'],"lc_object ");
-												
-												# TO VERIFY THIS SELECTOR..
-												$rel_locator = $rows['lc_object'];	//(object)json_handler::decode($rel_locator);
-
-												if (!property_exists($rel_locator, 'tag_id')) {										
-													$ar_records = (array)json_handler::decode($value);
-													$value 		= reset($ar_records);
-												}
-												break;
+										switch ($modelo_name) {
 
 											# COMPONENT_PORTAL
-											case ($modelo_name=='component_portal' && !empty($value)):
+											case ('component_portal'):
+												#if (empty($value)) break; // Avoid resolve empty portals
 												# Portal with locators
 												$parent 		 = null; // $section_id / null
 												$component_portal = component_common::get_instance('component_portal',$column_tipo,$parent,'list',DEDALO_DATA_NOLAN,$target_section_tipo);
@@ -272,6 +239,69 @@
 												$value = $component_portal->get_html();
 												break;
 
+											# COMPONENTS WITH LOCATORS
+											case ('component_autocomplete'):
+											case ('component_radio_button'):
+											case ('component_check_box'):
+											case ('component_select'):
+											case ('component_relation'):
+												#if (empty($value)) break; // Avoid resolve empty vars
+												/*
+												$parent 		   = $section_id; // $section_id / null
+												$current_component = component_common::get_instance($modelo_name,$column_tipo,$parent,'list',DEDALO_DATA_NOLAN,$target_section_tipo);	
+													#dump($target_section_tipo, ' target_section_tipo');
+												#$current_component->html_options->rows_limit	= 1;
+												#if ($parent===null) {
+													# Use already query calculated values for speed
+													$ar_records   = (array)json_handler::decode($value);	#dump($ar_records,"ar_records for portal $current_component_tipo - id:$section_id");#die();
+													$current_component->set_dato($ar_records); 				#dump($value, 'ar_records');
+													$current_component->set_identificador_unico($current_component->get_identificador_unico().'_'.$section_id); // Set unic id for build search_options_session_key used in sessions
+												#}
+												$value = $current_component->get_html();
+												*/
+												$parent 		   = $section_id;	//null;
+												$current_component = component_common::get_instance($modelo_name, $column_tipo, $parent, 'list', DEDALO_DATA_NOLAN, $target_section_tipo);
+												# Use already query calculated values for speed
+												$ar_records   = (array)json_handler::decode($value);	#dump($ar_records,"ar_records for portal $column_tipo - id:$id");#die();
+												$current_component->set_dato($ar_records);
+												$current_component->set_identificador_unico($current_component->get_identificador_unico().'_'.$section_id); // Set unic id for build
+												$value = $current_component->get_html();
+												break;
+
+											# COMPONENT_TEXT_AREA
+											case ('component_text_area'):
+												/*
+												# TO VERIFY THIS SELECTOR..
+												$rel_locator = $rows['lc_object'];	//(object)json_handler::decode($rel_locator);
+
+												if (!property_exists($rel_locator, 'tag_id')) {										
+													$ar_records = (array)json_handler::decode($value);
+													$value 		= reset($ar_records);
+												}
+												*/
+												$obj_value = json_decode($rows[$column_tipo]); # Evitamos los errores del handler accediendo directamente al json_decode de php
+												$current_tag = 0;
+												if (is_object($obj_value) && isset($obj_value->$current_tag)) {
+													$value = $obj_value->$current_tag;
+												}else{
+													$value = $rows[$column_tipo];
+												}
+												break;
+
+
+												
+											default:
+												$parent 		   = $section_id; // $section_id / null
+
+												$RecordObjt_dd = new RecordObj_dd($column_tipo);
+												if($RecordObjt_dd->get_traducible() =='no'){
+													$lang = DEDALO_DATA_NOLAN;
+												}else{
+													$lang = DEDALO_DATA_LANG;
+												}
+												$current_component = component_common::get_instance($modelo_name,$column_tipo,$parent,'list',$lang,$target_section_tipo);
+												$value = $current_component->get_html();
+
 										}//end switch (true)
 
 										# aditional td css selectors										
@@ -279,7 +309,12 @@
 
 										# TD COLUMN
 										$table .= "<td class=\"$td_css_selector\">";
-										$table .= $value;									
+										if (is_string($value)) {
+											$table .= $value;
+										}else{
+											$table .= to_string($value);
+										}
+																			
 										$table .= "</td>";
 
 									}//end if ($modelo_name=='component_portal')
@@ -297,8 +332,14 @@
 
 
 						# When no result, Empty row is render for drag
-						if (empty($rows_data->result)) {
-							#$table .= "<tr><td colspan=\"".count($ar_columns)."\"></td></tr>";
+						if (empty($rows_data->result) && !empty($dato)) {
+							$table .= "<tr><td colspan=\"".count($ar_columns)."\">";
+							if(SHOW_DEBUG) {
+								$table .= "<div class=\"warning\">Sorry. I can't resolve this locator: <blockquote> ".to_string($dato,true)."</blockquote></div>";
+							}else{
+								$table .= "<div class=\"warning\">Sorry. I can't resolve this link data</div>";
+							}							
+							$table .= "</td></tr>";
 						}						
 
 						$table .= "</tbody>";
@@ -335,7 +376,7 @@
 			$limit_time=SLOW_QUERY_MS/10;
 			$html_info='';
 			#dump($rows_data,"");
-			$total_list_time = $rows_data->generated_time['get_rows_data'] + round(microtime(1)-$start_time,3);
+			$total_list_time = $rows_data->generated_time['get_records_data'] + round(microtime(1)-$start_time,3);
 			$style='';
 			if ($total_list_time>$limit_time) {
 				$style = "color:red";

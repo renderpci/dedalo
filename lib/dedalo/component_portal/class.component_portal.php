@@ -132,11 +132,44 @@ class component_portal extends component_common {
 		parent::set_dato( (array)$dato );
 	}
 
-	# GET_VALOR
-	public function get_valor() {		
+	# GET_VALOR OLD
+	public function get_valor_OLD() {		
 		$dato = $this->get_dato();
 		return $dato;
 	}
+	/**
+	* GET VALOR 
+	* Get resolved string representation of current values (locators)	
+	* @return string | null
+	*/
+	public function get_valor( $lang=DEDALO_DATA_LANG, $data_to_be_used='valor', $separator_rows='<br>', $separator_fields=', ' ) {
+		$start_time = microtime(1);
+
+		if (isset($this->valor)) {			
+			return $this->valor;
+		}
+
+		$options = new stdClass();
+			$options->lang 				= $lang;	
+			$options->data_to_be_used 	= $data_to_be_used;
+			$options->separator_rows 	= $separator_rows;
+			$options->separator_fields 	= $separator_fields;
+
+			$valor_from_ar_locators 	= $this->get_valor_from_ar_locators($options);
+				#dump($valor_from_ar_locators, ' valor_from_ar_locators');
+		
+		if(SHOW_DEBUG) {
+			$total_list_time = round(microtime(1)-$start_time,3);
+			#$bt = debug_backtrace();
+			#dump($bt, ' bt');
+			error_log("WARNING CALLED GET VALOR IN COMPONENT PORTAL !! ({$total_list_time}ms) ".$this->tipo);
+		}
+
+		return $this->valor = $valor_from_ar_locators->result;
+
+	}//end get_valor
+
+
 	# GET_DATO_AS_STRING
 	public function get_dato_as_string() {
 		$dato = (array)$this->get_dato();
@@ -177,6 +210,9 @@ class component_portal extends component_common {
 
 		return;		
 	}
+
+
+	
 
 
 	/**
@@ -229,7 +265,7 @@ class component_portal extends component_common {
 			$options->filter_by_modelo_name	= 'component_portal';
 			$options->tipo					= $section_tipo;
 			
-		$ar_references = (array)common::get_references($options);		
+		$ar_references = (array)common::get_references($options);	
 		if (empty($ar_references)) return NULL;
 
 
@@ -821,7 +857,7 @@ class component_portal extends component_common {
 	*/
 	public function get_layout_map() {
 
-		if (isset($this->layout_map)) return $this->layout_map;
+		if (isset($this->layout_map) && !empty($this->layout_map)) return $this->layout_map;
 		
 		$ar_related=array();
 		switch ($this->modo) {
@@ -1131,9 +1167,18 @@ class component_portal extends component_common {
 
 		$component_portal_model = 'dd592';
 		$ar_all_terminoID 		= RecordObj_dd::get_ar_all_terminoID_of_modelo_tipo($component_portal_model);
+		if(SHOW_DEBUG) {
+			#dump($ar_all_terminoID, ' ar_all_terminoID');die();
+		}
+
+		$ar_recursive_childrens = RecordObj_dd::get_ar_recursive_childrens(DEDALO_ROOT_TIPO);
 
 		$ar_portals_map=array();
 		foreach ($ar_all_terminoID as $key => $current_terminoID) {
+
+			if (!in_array($current_terminoID, $ar_recursive_childrens)) {
+				continue; # Skip external elements
+			}
 
 			$target_section_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($current_terminoID, $modelo_name='section', $relation_type='termino_relacionado');
 			
@@ -1142,7 +1187,10 @@ class component_portal extends component_common {
 			}			
 		}
 		if(SHOW_DEBUG) {
-			#dump($ar_portals_map," ar_portals_map");
+			#dump($ar_portals_map," ar_portals_map");die();
+			if (empty($ar_portals_map)) {
+				error_log("WARNING: empty ar_portals_map ".__METHOD__);
+			}
 		}
 
 		return (array)$ar_portals_map;

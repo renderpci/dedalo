@@ -195,6 +195,7 @@ IMG { border:none; vertical-align:middle; }
 		float:left;
 		margin-left:10px;
 		font-weight:bold;
+		line-height: 1.9em;
 	}
 	#tsTreeLOAD .tsHeader .tsHeaderLeft IMG {
 		margin-left:2px;
@@ -336,13 +337,12 @@ TABLE.table_list_ts_used {
 }
 .bullet_mas {
 	background-image: url('../../themes/default/bullet_mas.png');
-	width: 18px;
-	height: 18px;
 	display: inline-block;
-	position: relative;
-	top: -2px;
-	vertical-align: text-top;
 	cursor:pointer;
+	width: 18px;
+	height: 18px;	
+	position: relative;	
+	vertical-align: top;
 }
 .icon_delete {
 	background-image: url('../../themes/default/delete.png');

@@ -2,13 +2,10 @@
 /*
 * CLASS COMPONENT LAYOUT
 
-  Se encarga de hacer las agrupaciones de componentes para la visualización de las fichas, tanto en los listados
-  como en edit o relation
+  Se encarga de hacer las agrupaciones de componentes para la visualización de las fichas en modo edit
   Hay un 'mapeo' obligatorio en estructura para cada modo y en adelante se implementará como una preferencia del usuario
   que sobre-escribe la de la estructura usada por defecto.
-  Si no se define para una sección generará un excepción.
-  Extiente component_common ya que guardará datos en matrix cuando esté habilitada la opción
-
+  Si no se define para una sección, generará un excepción.
 */
 
 class component_layout extends component_common {
@@ -16,7 +13,8 @@ class component_layout extends component_common {
 	# Overwrite __construct var lang passed in this component
 	protected $lang = DEDALO_DATA_NOLAN;
 
-	static $pattern_tipo = "/\{(\w*)\}/";
+	#static $pattern_tipo = "/\{(\w*)\}/";
+	#static $ar_parts 	 = array('classes','pages'); // object dato parts ,'edit'
 
 	
 	# CONSTRUCT
@@ -33,273 +31,47 @@ class component_layout extends component_common {
 	# GET DATO
 	public function get_dato() {		
 		$dato = parent::get_dato();
+
+		if(!empty($dato) && !is_object($dato)) {
+			if(SHOW_DEBUG) {
+				trigger_error("Error. dato converted to layout_print because is not as expected object. ". gettype($dato));
+			}
+			$dato = new layout_print();
+		}
+
 		return (object)$dato;
 	}
 
 	# SET_DATO
-	public function set_dato($dato) {	
+	public function set_dato($dato) {
+		if (!is_string($dato)) {
+			trigger_error("Error. Only string format is accepted as dato");
+			return false;
+		}
+
+		//dump($dato, " dato 1".to_string());
+		# Dato is set as string. Convert to object before set
+		$dato = json_handler::decode($dato);
+
+		if(!empty($dato) && !is_object($dato)) {
+			$dato = new layout_print();
+		}
+		/*
+		foreach (component_layout::$ar_parts as $part) {
+			if(!property_exists($dato, $part)) $dato->$part = '';
+			if (!json_encode($dato->$part)) {
+				$dato->$part = json_decode($dato->$part);
+			}
+		}
+		*/
+		//dump($dato, " dato 2".to_string());
+		
 		parent::set_dato( (object)$dato );
 	}
 
 
 
 
-
-	/**
-	* BUILD_HTML_TEMPLATE
-	* Get html code and create a template with apropiated substitutions
-	* @param string $html_string . DOM element .page html
-	* @return string $html_template
-	* @see Documentation: http://simplehtmldom.sourceforge.net/manual.htm
-	* @see Used in tool_layout_print
-	*/
-	public static function build_html_template($html_string) {
-
-		# include dom parser
-		include DEDALO_ROOT . '/lib/dom/simple_html_dom.php';
-
-		if(SHOW_DEBUG) {
-		 	#dump( htmlspecialchars($html_string)," html_string ");
-		} 
-		
-		# Load to DOM parser
-		$html = str_get_html($html_string);
-		
-		# Find elements by class (like jquery)
-		$ar_component_box = (array)$html->find('div[class=dedalo_component]');
-		
-		foreach ($ar_component_box as $key => $box) {
-
-			# Component_tipo is id attr
-			$component_tipo = $box->id;			
-				#dump($box->id," ");
-
-			# Replace DOM element content with template var (like Smarty..)
-			$box->innertext = '{'.$component_tipo.'}';
-		}
-		
-		# Dumps the internal DOM tree back into string 
-		$html_template = trim($html->save());
-			#dump( htmlspecialchars($html_template) );
-
-		return (string)$html_template;
-
-	}//end build_html_template
-
-	
-
-	/**
-	* RENDER_TEMPLATE_PREVIEW
-	* Rebuild html from template. Replace php vars (like $oh1) by component html data
-	* @param string $html_template
-	* @param int $parent OR null. id matrix of current section
-	* @return string $html_template
-	*/
-	public static function render_template_preview( $html_template, $parent, $is_recursion=false ) {
-		#error_log($html_template);		
-
-		$parent = empty($parent) ? null : (int)$parent;
-		#error_log("parent: $parent");
-		#dump( htmlspecialchars($html_template) );
-
-		$pattern = self::$pattern_tipo;	# "/\{(\w*)\}/";
-		preg_match_all($pattern, $html_template, $output_array);
-			#dump($output_array, ' output_array');#die();
-
-		if (empty($output_array[1])) {
-			if(SHOW_DEBUG) {
-				#error_log("This template don't have components!");
-			}
-			return $html_template; # Return untouched html
-		}
-		$ar_component_tipo = (array)$output_array[1];
-
-		foreach ( $ar_component_tipo as $key => $component_tipo) {
-
-			if ( strpos($component_tipo, '_')!==false && !$is_recursion) {
-				//continue;
-				$ar_tipos = explode('_', $component_tipo);
-				$portal_tipo 	  = $ar_tipos[0];
-				$portal_component = $ar_tipos[1];
-
-				//error_log("portal_tipo:$portal_tipo - portal_component:$portal_component");
-
-				$component_portal = component_common::get_instance('component_portal',$portal_tipo,$parent,'print');
-				$dato = $component_portal->get_dato();
-
-				$parent = isset($dato[0]->section_id) ? $dato[0]->section_id : null;				
-				#error_log( json_encode($dato) ." for $portal_tipo and portal_component:$portal_component - parent:$parent");		
-
-				$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($portal_component, true);
-				$component 	 	= component_common::get_instance($modelo_name,$portal_component,$parent,'print'); // oh25_rsc70
-				$component_html = $component->get_html();
-
-				# Replace php var name with component html 
-				$find 	 = '{'.$component_tipo.'}';
-				$replace = trim($component_html);
-				# Add button close
-				$replace = '<div id="close" class="close" onclick="javascript:returnLeft('.$component_tipo.')"></div>'.$replace;
-				$html_template = str_replace($find, $replace, $html_template);				
-
-			}else{
-
-				$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo, true);
-				$component 	 	= component_common::get_instance($modelo_name,$component_tipo,$parent,'print'); // oh25_rsc70
-				$component_html = $component->get_html();
-
-				# Replace php var name with component html 
-				$find 	 = '{'.$component_tipo.'}';
-				$replace = trim($component_html);
-				# Add button close
-				$replace = '<div id="close" class="close" onclick="javascript:returnLeft('.$component_tipo.')"></div>'.$replace;
-				$html_template = str_replace($find, $replace, $html_template);
-				#$html_template = preg_replace($pattern, $replace, $html_template); # preg replace version
-			}			
-			
-		}//end foreach ( $ar_component_tipo as $key => $component_tipo)
-		
-		$html_template = preg_replace("/ {2,}/", " ", $html_template); # Remove double spaces
-
-		if (isset($html_template_temp)) {
-			$html_template .= $html_template_temp;
-		}
-		return $html_template;
-
-	}#end render_template_preview
-
-
-
-
-	/**
-	* RENDER_TEMPLATE_FULL
-	* Rebuild html from template. Replace php vars (like $oh1) by component html data
-	* Create one page for each portal record
-	* @param string $html_template
-	* @param int $parent OR null. id matrix of current section
-	* @return string $html_template
-	*/
-	public static function render_template_full( $html_template, $parent, $is_recursion=false ) {
-
-		
-
-		/* 
-
-			WORKING HERE 
-
-		*/
-
-
-		if (empty($parent)) {
-			error_log(__METHOD__." Error: Empty parent");
-			return '';
-		}
-
-		$pattern = self::$pattern_tipo;	# "/\{(\w*)\}/";
-		preg_match_all($pattern, $html_template, $output_array);
-			#dump($output_array, ' output_array');#die();
-
-		if (empty($output_array[1])) {
-			if(SHOW_DEBUG) {
-				error_log(__METHOD__." Warning: This template don't have components!");
-			}
-			return $html_template; # Return untouched html
-		}
-		$ar_component_tipo = (array)$output_array[1];
-
-		foreach ( $ar_component_tipo as $key => $component_tipo) {
-
-			# PORTAL CASE
-			if ( strpos($component_tipo, '_')!==false && !$is_recursion) {
-				
-				$ar_tipos = explode('_', $component_tipo);
-				$portal_tipo 	  = $ar_tipos[0];
-				$portal_component = $ar_tipos[1];
-
-				$component_portal = component_common::get_instance('component_portal',$portal_tipo,$parent,'print');
-				$dato = $component_portal->get_dato();
-
-				if(!isset($dato[0]->section_id)) {
-					error_log(__METHOD__." Warning: This portal don't have records!");
-					continue;
-				}
-				# Buil one pàge for each portal record
-				$current_page = $html_template;
-				foreach ($dato as $current_locator) {
-
-					$parent 		= $current_locator->section_id;
-					$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($portal_component, true);
-					$component 	 	= component_common::get_instance($modelo_name,$portal_component,$parent,'print'); // oh25_rsc70
-					$component_html = $component->get_html();
-
-					# Replace php var name with component html 
-					$find 	 = '{'.$component_tipo.'}';
-					$replace = trim($component_html);
-					$html_template = str_replace($find, $replace, $current_page);
-
-				}//end foreach ($dato as $current_locator)
-
-				
-
-				# Replace php var name with component html 
-				$find 	 = '{'.$component_tipo.'}';
-				$replace = trim($component_html);
-				# Add button close
-				$replace = '<div id="close" class="close" onclick="javascript:returnLeft('.$component_tipo.')"></div>'.$replace;
-				$html_template = str_replace($find, $replace, $html_template);				
-
-			# DIRECT COMPONENT CASE
-			}else{
-
-				$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo, true);
-				$component 	 	= component_common::get_instance($modelo_name,$component_tipo,$parent,'print'); // oh25_rsc70
-				$component_html = $component->get_html();
-
-				# Replace php var name with component html 
-				$find 	 = '{'.$component_tipo.'}';
-				$replace = trim($component_html);
-				# Add button close
-				$replace = '<div id="close" class="close" onclick="javascript:returnLeft('.$component_tipo.')"></div>'.$replace;
-				$html_template = str_replace($find, $replace, $html_template);
-				#$html_template = preg_replace($pattern, $replace, $html_template); # preg replace version
-			}			
-			
-		}//end foreach ( $ar_component_tipo as $key => $component_tipo)
-		
-		$html_template = preg_replace("/ {2,}/", " ", $html_template); # Remove double spaces
-
-		if (isset($html_template_temp)) {
-			$html_template .= $html_template_temp;
-		}
-		return $html_template;
-
-	}#end render_template_full
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-	
-
-	
-
-
-
-
-
-
-	
 	/**
 	* GET_LAYOUT_MAP_FROM_SECTION
 	* 
@@ -309,6 +81,10 @@ class component_layout extends component_common {
 	*/
 	public static function get_layout_map_from_section(section $section_obj, $from_cache=false) {
 		$layout_map = array();
+
+		# layout map can be injected in section vars 'layout_map'
+		if (isset($section_obj->layout_map) && !empty($section_obj->layout_map)) return $section_obj->layout_map;
+
 
 		$modo 			= $section_obj->get_modo();
 		$section_tipo 	= $section_obj->get_tipo();		
@@ -346,7 +122,7 @@ class component_layout extends component_common {
 						$ar_layout_hierarchie = component_layout::get_ar_layout_hierarchy($section_tipo);
 							#dump($ar_layout_hierarchie,"AR_LAYOUT_HIERARCHIE");
 						# 2 Recorremos el array llevando el control de los ya resueltos para no volver a incluirlos 						
-						$layout_map = $ar_layout_hierarchie;												
+						$layout_map = $ar_layout_hierarchie;
 					}				
 					break;
 
@@ -743,6 +519,9 @@ class component_layout extends component_common {
 								$children_lang 	= DEDALO_DATA_LANG;	if($RecordObj_dd2->get_traducible()=='no') $children_lang = DEDALO_DATA_NOLAN;
 	
 								$component_obj	= component_common::get_instance($children_modelo_name, $children_tipo, $section_id, 'edit', $children_lang, $section_obj->get_tipo() );
+
+								
+
 								if(SHOW_DEBUG) {
 									#dump($component_obj," component_obj");
 									#dump($section_obj->get_tipo()," section tipo  component $children_tipo ($children_modelo_name)");
@@ -779,7 +558,7 @@ class component_layout extends component_common {
 
 						# Encapsulamos el resultado en un section group
 						# SECTION GROUP
-						$section_group 		= new section_group($element_tipo, $modo, $html_elements, $section_id);
+						$section_group 		= new section_group($element_tipo, $section_obj->get_tipo(), $modo, $html_elements);
 							#dump($section_group,'section_group',"section group tipo $element_tipo ");
 
 						$current_element_html = $section_group->get_html();
@@ -842,9 +621,12 @@ class component_layout extends component_common {
 							#$component_relation 	= new component_relation($component_relation_tipo, $section_id, 'edit');
 							$component_relation 	= component_common::get_instance('component_relation', $component_relation_tipo, $section_id, 'edit', DEDALO_DATA_NOLAN, $section_obj->get_tipo());
 								#dump($component_relation,'$component_relation');
+
+							
 							
 							# Component relation id. Calculamos su ID
 							$component_relation_id = $component_relation->get_id();
+
 							
 							# Despejamos todas las secciones (por tipo) que tinen registros en este component_relation
 							# Las secciones definidas fijas en estructura, se incluirán en cualquier caso, aun no teniendo registros
@@ -884,6 +666,8 @@ class component_layout extends component_common {
 						$component_obj	= component_common::get_instance($element_modelo_name, $terminoID, $section_id, 'edit', $element_lang, $section_obj->get_tipo());
 						$component_obj->current_tipo_section = $current_tipo_section;
 							#dump($section_obj->get_tipo()," section tipo  component $terminoID ($element_modelo_name)");die();
+
+												
 
 						$html	.= $component_obj->get_html();
 							#dump($element_modelo_name,"component_obj");
@@ -939,6 +723,272 @@ class component_layout extends component_common {
 
 	 	}#end foreach($array as $k=>$each)
 	}
+	
+
+	
+
+	
+	
+
+
+	
+
+
+
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	/* DEPRECATED METHODS 
+	-------------------------------------------------------------------------------------------------------------------*/
+
+		/**
+		* BUILD_HTML_TEMPLATE
+		* Get html code and create a template with apropiated substitutions
+		* @param string $html_string . DOM element .page html
+		* @return string $html_template
+		* @see Documentation: http://simplehtmldom.sourceforge.net/manual.htm
+		* @see Used in tool_layout_print
+		*/
+		public static function build_html_template__DEPRECATED($html_string) {
+
+			# include dom parser
+			include DEDALO_ROOT . '/lib/dom/simple_html_dom.php';
+
+			if(SHOW_DEBUG) {
+			 	#dump( htmlspecialchars($html_string)," html_string ");
+			} 
+			
+			# Load to DOM parser
+			$html = str_get_html($html_string);
+			
+			# Find elements by class (like jquery)
+			$ar_component_box = (array)$html->find('div[class=dedalo_component]');
+			
+			foreach ($ar_component_box as $key => $box) {
+
+				# Component_tipo is id attr
+				$component_tipo = $box->id;			
+					#dump($box->id," ");
+
+				# Replace DOM element content with template var (like Smarty..)
+				$box->innertext = '{'.$component_tipo.'}';
+			}
+			
+			# Dumps the internal DOM tree back into string 
+			$html_template = trim($html->save());
+				#dump( htmlspecialchars($html_template) );
+
+			return (string)$html_template;
+
+		}//end build_html_template
+
+
+
+		/**
+		* RENDER_TEMPLATE_PREVIEW
+		* Rebuild html from template. Replace php vars (like $oh1) by component html data
+		* @param string $html_template
+		* @param int $parent OR null. id matrix of current section
+		* @return string $html_template
+		*/
+		public static function render_template_preview__DEPERECATED( $html_template, $record, $is_recursion=false ) {
+			#error_log($html_template);				
+
+			$parent 		= (int)$record['section_id'];
+			$section_tipo 	= (string)$record['section_tipo'];
+
+			#dump($section_tipo, ' section_tipo');
+			$parent = empty($parent) ? null : (int)$parent;
+			#error_log("parent: $parent");
+			#dump( htmlspecialchars($html_template) );
+
+			$pattern = self::$pattern_tipo;	# "/\{(\w*)\}/";
+			preg_match_all($pattern, $html_template, $output_array);
+				#dump($output_array, ' output_array');#die();
+
+			if (empty($output_array[1])) {
+				if(SHOW_DEBUG) {
+					#error_log("This template don't have components!");
+				}
+				return $html_template; # Return untouched html
+			}
+			$ar_component_tipo = (array)$output_array[1];
+
+			foreach ( $ar_component_tipo as $key => $component_tipo) {
+
+				if ( strpos($component_tipo, '_')!==false && !$is_recursion) {
+					#continue;
+					$ar_tipos = explode('_', $component_tipo);
+					$portal_tipo 	  = $ar_tipos[0];
+					$portal_component = $ar_tipos[1];
+
+					//error_log("portal_tipo:$portal_tipo - portal_component:$portal_component");
+
+					$component_portal = component_common::get_instance('component_portal',$portal_tipo,$parent,'print',DEDALO_DATA_NOLAN,$section_tipo);
+					$dato = $component_portal->get_dato();
+
+					$parent = isset($dato[0]->section_id) ? $dato[0]->section_id : null;
+					#dump($parent, ' parent'); die();
+					#error_log( json_encode($dato) ." for $portal_tipo and portal_component:$portal_component - parent:$parent");		
+
+					$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($portal_component, true);
+					$component 	 	= component_common::get_instance($modelo_name,$portal_component,$parent,'print',DEDALO_DATA_LANG,$section_tipo); // oh25_rsc70
+					$component_html = $component->get_html();
+
+					# Replace php var name with component html 
+					$find 	 = '{'.$component_tipo.'}';
+					$replace = trim($component_html);
+
+					# Add button close
+					$replace = '<div id="close" class="close" onclick="javascript:returnLeft('.$component_tipo.')"></div>'.$replace;
+					$html_template = str_replace($find, $replace, $html_template);				
+
+				}else{
+
+					$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo, true);
+					$component 	 	= component_common::get_instance($modelo_name,$component_tipo,$parent,'print',DEDALO_DATA_LANG,$section_tipo); // oh25_rsc70
+					$component_html = $component->get_html();
+
+					# Replace php var name with component html 
+					$find 	 = '{'.$component_tipo.'}';
+					$replace = trim($component_html);
+					# Add button close
+					$replace = '<div id="close" class="close" onclick="javascript:returnLeft('.$component_tipo.')"></div>'.$replace;
+					$html_template = str_replace($find, $replace, $html_template);
+					#$html_template = preg_replace($pattern, $replace, $html_template); # preg replace version
+				}			
+				
+			}//end foreach ( $ar_component_tipo as $key => $component_tipo)
+			
+			$html_template = preg_replace("/ {2,}/", " ", $html_template); # Remove double spaces
+
+			if (isset($html_template_temp)) {
+				$html_template .= $html_template_temp;
+			}
+			return $html_template;
+
+		}#end render_template_preview
+
+
+
+		/**
+		* RENDER_TEMPLATE_FULL
+		* Rebuild html from template. Replace php vars (like $oh1) by component html data
+		* Create one page for each portal record
+		* @param string $html_template
+		* @param int $parent OR null. id matrix of current section
+		* @return string $html_template
+		*/
+		public static function render_template_full_DEPRECATED( $html_template, $record, $is_recursion=false ) {
+
+			$parent 		= (int)$record['section_id'];
+			$section_tipo 	= (string)$record['section_tipo'];
+				#dump($parent, ' parent');die();
+				if (empty($parent)) {
+					error_log(__METHOD__." Error: Empty parent");
+					return '';
+				}
+
+			$pattern = self::$pattern_tipo;	# "/\{(\w*)\}/";
+			preg_match_all($pattern, $html_template, $output_array);
+				dump($output_array, ' output_array');die();
+
+				if (empty($output_array[1])) {
+					if(SHOW_DEBUG) {
+						error_log(__METHOD__." Warning: This template don't have components!");
+					}
+					return $html_template; # Return untouched html
+				}
+				$ar_component_tipo = (array)$output_array[1];
+			
+
+			foreach ( $ar_component_tipo as $key => $component_tipo) {
+
+				# PORTAL CASE
+				if ( strpos($component_tipo, '_')!==false && !$is_recursion) {
+					
+					$ar_tipos = explode('_', $component_tipo);
+					$portal_tipo 	  = $ar_tipos[0];
+					$portal_component = $ar_tipos[1];
+
+					$component_portal = component_common::get_instance('component_portal',$portal_tipo,$parent,'print');
+					$dato = $component_portal->get_dato();
+
+					if(!isset($dato[0]->section_id)) {
+						error_log(__METHOD__." Warning: This portal don't have records!");
+						continue;
+					}
+					# Buil one pàge for each portal record
+					$current_page = $html_template;
+					foreach ($dato as $current_locator) {
+
+						$parent 		= $current_locator->section_id;
+						$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($portal_component, true);
+						$component 	 	= component_common::get_instance($modelo_name,$portal_component,$parent,'print'); // oh25_rsc70
+						$component_html = $component->get_html();
+
+						# Replace php var name with component html 
+						$find 	 = '{'.$component_tipo.'}';
+						$replace = trim($component_html);
+						$html_template = str_replace($find, $replace, $current_page);
+
+					}//end foreach ($dato as $current_locator)
+
+					
+
+					# Replace php var name with component html 
+					$find 	 = '{'.$component_tipo.'}';
+					$replace = trim($component_html);
+					# Add button close
+					$replace = '<div id="close" class="close" onclick="javascript:returnLeft('.$component_tipo.')"></div>'.$replace;
+					$html_template = str_replace($find, $replace, $html_template);				
+
+				# DIRECT COMPONENT CASE
+				}else{
+
+					$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo, true);
+					$component 	 	= component_common::get_instance($modelo_name,$component_tipo,$parent,'print'); // oh25_rsc70
+					$component_html = $component->get_html();
+
+					# Replace php var name with component html 
+					$find 	 = '{'.$component_tipo.'}';
+					$replace = trim($component_html);
+					# Add button close
+					$replace = '<div id="close" class="close" onclick="javascript:returnLeft('.$component_tipo.')"></div>'.$replace;
+					$html_template = str_replace($find, $replace, $html_template);
+					#$html_template = preg_replace($pattern, $replace, $html_template); # preg replace version
+				}			
+				
+			}//end foreach ( $ar_component_tipo as $key => $component_tipo)
+			
+			$html_template = preg_replace("/ {2,}/", " ", $html_template); # Remove double spaces
+
+			if (isset($html_template_temp)) {
+				$html_template .= $html_template_temp;
+			}
+			return $html_template;
+
+		}#end render_template_full
+
+
+
+	
+	
 
 
 
@@ -953,9 +1003,4 @@ class component_layout extends component_common {
 
 
 };#END CLASS
-
-
-
-
-
 ?>

@@ -28,6 +28,13 @@ $html='';
 		$html .= "</div><!-- /wrap_edit -->";
 	}	
 	
+	#
+	# RENDER
+	if ($context_name=='render') {
 
+		$html .= "<div id=\"wrap_render\">";
+		$html .= $html_render;
+		$html .= "</div><!-- /wrap_render -->";
+	}	
 echo $html;
 ?>

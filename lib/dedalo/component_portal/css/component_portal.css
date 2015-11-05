@@ -38,7 +38,7 @@ WRAP DIV CONTAINER*/
 	font-size: 84%;
 	font-weight: normal;
 	background-image: none;
-	background-color: #6e6e6e;
+	/*background-color: #6e6e6e;*/
 	box-shadow: none;
 	/*z-index: 9000 !important;*/
 }
@@ -111,7 +111,7 @@ div.portal_more_elements_content {
 
 .portal_debug_info {
 	font-size: 90%;
-	padding: 3px;
+	/*padding: 4px;*/
 	cursor: pointer;
 	word-wrap: break-word;
 }
@@ -124,4 +124,35 @@ div.portal_more_elements_content {
 	cursor: move;
 }
 
+
+/* PRINT CSS
+------------------------------------------------------- */
+.print_table_rows_list {
+	box-shadow: none;
+	width: 100%;
+	margin: 0px;
+	}
+	.print_table_rows_list th {
+		background-image: none;
+		background-color: #ffffff;
+		border-bottom: 1px solid #eeeeee;
+		border-left:none;
+		font-weight: light;
+		padding-bottom: 5px;
+	
+	}
+	.print_table_rows_list td {
+		border: none;
+		background-color: #ffffff;
+		border-bottom: 1px solid #eeeeee;
+
+	}
+	.print_table_rows_list .table_rows_list th div.th_title{
+		max-width: none;
+		overflow: visible;
+	}
+	.print_table_rows_list .table_rows_list th:first-child{
+		border-top-left-radius: none;
+		border-bottom: 1px solid #eeeeee !important;
+	}
 

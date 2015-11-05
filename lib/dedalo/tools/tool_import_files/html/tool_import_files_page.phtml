@@ -1,0 +1,94 @@
+<?php
+
+	# VISUALIZADOR HTML
+
+	$custom_tool_label = isset($custom_tool_label) ? " : <h2>$custom_tool_label</h2>" : '';
+
+	#
+	# HEADER HTML
+		$header_html = '';
+		$header_html  .= "\n<!-- TOOL IMPORT FILES [tipo:$tipo] -->";
+		$header_html  .= "<div class=\"tool_header\">";
+		$header_html  .= " <div class=\"h2_title\"> TOOL IMPORT IMAGES $custom_tool_label </div>";
+		$header_html  .= " <div class=\"import_context_label\">";
+		if(SHOW_DEBUG && $context!='form') {
+		$header_html .= "  <span class=\"debug_info\">".TOOL_IMPORT_FILES_UPLOAD_DIR."</span>";
+		}
+		$header_html  .= " </div>";//import_context_label
+		$header_html  .= " </div>";//tool_header
+		echo $header_html;
+
+
+	#
+	# HELP INFO
+		if($context_name=='files' && isset($import_help)) {
+			echo $import_help;
+		}		
+	
+
+	#
+	# FILES UPLOAD MANAGER HTML
+		include(DEDALO_LIB_BASE_PATH.'/tools/tool_import_files/html/jquery_upload.phtml');		
+		echo "<script>var upload_handler_url='$upload_handler_url';</script>";
+	
+	
+	#
+	# FORM (Temporal section)
+		# Note that current section_id received in get url is like 'tmp1'. Section change automatically save_handler (to 'session') for manage this cases as temporal section		
+		$temp_id 			 = DEDALO_SECTION_ID_TEMP.'_'.$parent.'_'.$user_id;
+		$section 			 = section::get_instance($temp_id,$target_section_tipo,'edit');
+		
+		# Add custom layout map defined in propiedades of current component portal
+		if (!empty($custom_layout_map)) {
+			$section->layout_map = $custom_layout_map;	// Inject custom layout map fron propiedades
+		}		
+		$section->show_inspector = (bool)false;
+			#dump($section->get_dato(), ' section ++ '.to_string());
+		
+			
+
+		if(SHOW_DEBUG) {
+			$temp_data_uid = $target_section_tipo.'_'.$temp_id;
+			if (isset($_SESSION['dedalo4']['section_temp_data'][$temp_id])) {
+				#dump($_SESSION['dedalo4']['section_temp_data'][$temp_data_uid], '$_SESSION[dedalo4][section_temp_data][$temp_data_uid] ++ '.to_string($temp_data_uid));
+			}
+		}
+		$section_temp_html  = '';
+		$section_temp_html .= "<div class=\"wrap_section_temp\">";
+		$section_temp_html .= $section->get_html();	
+		$section_temp_html .= "</div>";
+		
+		#
+		# PAGE_GLOBALS : Set vars to enable components save data in session
+		$section_temp_html .= "<script>
+		page_globals.modo='edit';
+			//console.log(page_globals);
+		</script>";
+
+		echo $section_temp_html;
+
+
+
+
+
+
+
+
+
+	#
+	# FOOTER HTML
+		$footer_html='';
+		$footer_html .= "<div class=\"import_context_label_footer \">";
+		$footer_html .= " <a id=\"button_import_images\" href=\"javascript:;\" class=\"btn btn-success fileinput-button\"
+		data-tipo=\"$tipo\"
+		data-section_tipo=\"$section_tipo\"
+		data-parent=\"$parent\"
+		onclick=\"tool_import_files.import_files(this)\">
+							<strong>OK</strong> <span>".label::get_label('tool_import_images'). ' ' .strip_tags($custom_tool_label). " </span>
+						  </a>";
+		$footer_html .= "</div>";
+		echo $footer_html;
+?>
+
+
+

@@ -366,17 +366,17 @@ class login extends common {
 	private static function verify_login() {
 
 		# NO ESTÁ AUTENTIFICADO
-		if( empty($_SESSION['dedalo4']['auth']['user_id']) || empty($_SESSION['dedalo4']['auth']['is_logged']) || $_SESSION['dedalo4']['auth']['is_logged'] != 1 || empty($_SESSION['dedalo4']['auth']['salt_secure']) ) {
-
-			if( empty($_SESSION['dedalo4']['auth']['user_id']) || $_SESSION['dedalo4']['auth']['user_id']<1  ) {
-				#throw new Exception("Error Login: User ID incorrect", 1);
+		if( empty($_SESSION['dedalo4']['auth']['user_id']) || 
+			empty($_SESSION['dedalo4']['auth']['is_logged']) || 
+			$_SESSION['dedalo4']['auth']['is_logged'] != 1 || 
+			empty($_SESSION['dedalo4']['auth']['salt_secure']) 
+			) {
+			
+			
+			if (empty($_SESSION['dedalo4']['auth']['user_id'])) {
+				# exit possible session
+				unset($_SESSION['dedalo4']);
 			}
-			if( empty($_SESSION['dedalo4']['auth']['is_logged']) || $_SESSION['dedalo4']['auth']['is_logged'] != 1 ) {
-				#throw new Exception("Error Login: User is not logged", 1);
-			}
-			#if( empty($_SESSION['dedalo4']['auth']['salt_secure']) || $_SESSION['dedalo4']['auth']['salt_secure'] != '7PVecu9VSxLHnawfGF2oDCISXvsq2khsOKvPiTJ_D7a_wVaxqQwzRJElPxsecePnFzmrP34RIG0J0ykg3Mbobg,,') {
-				#throw new Exception("Error Login: Incorrect security config", 1);
-			#}
 
 			return false;
 
@@ -438,7 +438,7 @@ class login extends common {
 
 
 			switch($modelo_current) {
-
+				/*
 				case 'login_username'	:
 
 						if(isset($ar_terminos_relacionados[0]))	foreach($ar_terminos_relacionados[0] as $key => $current_tipo) {
@@ -457,7 +457,7 @@ class login extends common {
 							break;
 						}
 						break;
-
+				*/
 				case 'component_active_account'		:
 
 						if(isset($ar_terminos_relacionados[0])) foreach($ar_terminos_relacionados[0] as $key => $current_tipo) {

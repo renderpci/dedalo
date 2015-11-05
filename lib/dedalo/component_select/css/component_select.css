@@ -10,6 +10,7 @@ select.css_select {
 	padding: 2px;
 	cursor: pointer;
 	margin-left: 0px;
+	max-width: 99.9%;
 	/*
 	border:solid 1px #9E9E9E;
 	border-radius        : 3px;

@@ -130,7 +130,8 @@ class component_state extends component_common {
 
 		$section_id = $this->parent;	if( intval($section_id)<1 ) throw new Exception("Error Processing Request: section_id is empty - modo:$this->modo", 1);
 
-		$section_tipo	= component_common::get_section_tipo_from_component_tipo($this->tipo);	
+		#$section_tipo	= component_common::get_section_tipo_from_component_tipo($this->tipo);
+		$section_tipo	= $this->get_section_tipo();
 
 		# CACHE : Cache (las secciones del mismo tipo, tienen la misma estructura)
 		static $ar_data_by_tool;

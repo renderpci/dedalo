@@ -1,31 +1,41 @@
-/*CSS Document
-WRAP DIV CONTAINER*/
+/* WRAP DIV CONTAINER */
 .css_wrap_input_text, .css_wrap_input_text_tm {
 	
 }
 .css_wrap_input_text_tm .content_data {
 }
-/*INPUT TEXT*/
-input.css_input_text {	
+
+/* INPUT TEXT */
+.css_input_text {	
 	width: 99.5%;
-	}
+}
 	
-/*LANG*/
-.css_lang_image_delete {
-	background-image: url('../../themes/default/button_drop.png');
-	background-position: center 1px;
-	margin-left: 4px;
-	opacity: 0.6;
-}
-.css_lang_image_delete:hover {
-	opacity: 1;
-}
-/*SEARCH*/
-.css_input_text_lupa_bg {
-	background-image: url('../../themes/default/lupa2.gif');
-	background-repeat: no-repeat;
-	background-position: 0 1px;
-}
+/*LANG
+------------------------------------------------------- */
+	.css_lang_image_delete {
+		background-image: url('../../themes/default/button_drop.png');
+		background-position: center 1px;
+		margin-left: 4px;
+		opacity: 0.6;
+	}
+	.css_lang_image_delete:hover {
+		opacity: 1;
+	}
+
+/* SEARCH
+------------------------------------------------------- */
+	.css_input_text_lupa_bg {
+		background-image: url('../../themes/default/lupa2.gif');
+		background-repeat: no-repeat;
+		background-position: 0 1px;
+		width: 50%;
+	}
+
+	.css_input_text_search {
+
+		width: 50%;
+	}
+
 
 /* PRINT
 ------------------------------------------------------- */

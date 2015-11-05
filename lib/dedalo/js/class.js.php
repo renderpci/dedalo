@@ -44,8 +44,8 @@ class js {
 			#$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/common/js/labels.php';
 			$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/common/js/lang/'.DEDALO_APPLICATION_LANG.'.js';
 			
-			# SECTION LIST		
-			#$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/section_list/js/section_list.js' ;
+			# SEARCH		
+			$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/search/js/search.js' ;
 
 			# COMPONENT_PORTAL
 			#$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/component_portal/js/component_portal.js';
@@ -185,15 +185,7 @@ class js {
 				#$html .= self::build_tag( DEDALO_UPLOADER_URL . '/js/jquery.fileupload.js');						
 				#$html .= self::build_tag( DEDALO_LIB_BASE_URL . '/tools/tool_upload/js/tool_upload.js' );	
 				#$added_component_av_commons = true;		
-			}
-
-			# Si se carga un portal_list cargamos siempre el section_list
-			/*
-			if( strpos($url,'portal_list')!== false ) {					
-				$html .= self::build_tag( DEDALO_LIB_BASE_URL . '/section_list/js/section_list.js' );	
-				#$added_component_av_commons = true;		
-			}
-			*/
+			}			
 
 			# EVITA DUPLICIDADES
 			if(strpos($html,$url)===false)					
@@ -222,6 +214,7 @@ class js {
 				}				
 			}
 			*/
+			$url = $url.'?v='.DEDALO_VERSION;
 			return "\n<script src=\"$url\" type=\"text/javascript\" charset=\"utf-8\"></script>";
 		}
 
@@ -249,6 +242,11 @@ class js {
 				return "\n<script src=\"$url\"></script>\n<script>window.nv || document.write('<script src=\"".NVD3_URL_JS."\"><\/script>')</script>";
 				break;			
 			default:
+
+				if (strpos($url, DEDALO_HOST)===false) {
+					$url = 'http://'.DEDALO_HOST.$url;
+				}
+
 				if(SHOW_DEBUG) {
 					$url .= "?".date("m.d.y.h");	#DEDALO_VERSION; .i.s
 				}

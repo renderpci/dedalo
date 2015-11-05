@@ -869,7 +869,7 @@ abstract class diffusion  {
 					
 					switch ($diffusion_modelo_name) {
 						case 'field_date':
-							$ar_field_data['field_value'] = $current_component->get_dato();
+							$ar_field_data['field_value'] = $current_component->get_valor();
 								#dump($ar_field_data['field_value'], ' dato field_date ');
 							break;
 						
@@ -879,17 +879,6 @@ abstract class diffusion  {
 									# DATO
 									$ar_field_data['field_value'] = $current_component->get_dato(); # Important: use raw text
 									break;								
-								case 'component_portal':
-									$dato = $current_component->get_dato();
-									if (is_array($dato)) {
-										$ar_id =array();
-										foreach ($dato as $current_locator) {
-											$ar_id[] = $current_locator->section_id;
-										}
-										$dato = $ar_id;
-									}
-									$ar_field_data['field_value'] = $dato;
-									break;
 								case 'component_image':
 									# DATO
 									$ar_field_data['field_value'] = $current_component->get_image_url(DEDALO_IMAGE_QUALITY_DEFAULT); # Important: use raw text
@@ -902,14 +891,35 @@ abstract class diffusion  {
 									# DATO
 									$ar_field_data['field_value'] = $current_component->get_pdf_url(DEDALO_PDF_QUALITY_DEFAULT); # Important: use raw text
 									break;
+								case 'component_array':									
+									$ar_field_data['field_value'] = implode(',', $current_component->get_dato() );
+									break;
+								case 'component_portal':
+									# If not isset propiedades->data_to_be_used, we understand that is 'dato' for speed
+									if (!isset($propiedades->data_to_be_used)) {
+										$data_to_be_used = 'dato';
+										$dato = $current_component->get_dato();
+										if (is_array($dato)) {
+											$ar_id =array();
+											foreach ($dato as $current_locator) {
+												$ar_id[] = $current_locator->section_id;
+											}
+											$dato = $ar_id;
+										}
+										$ar_field_data['field_value'] = $dato;
+									}else{
+										# 'Default' behaviour is now get_valor (...)
+										$data_to_be_used = $propiedades->data_to_be_used;
+										$ar_field_data['field_value'] = $current_component->get_valor( $lang );
+									}									
+									break;								
 								case 'component_autocomplete':
 									# DATO	-- POR RESOLVER (NO VA) --
-									$valor = $current_component->get_valor( $lang );
 									$component_autocomplete_dato = $current_component->get_dato();
-										#dump($component_autocomplete_dato, ' component_autocomplete '.$lang);
+									$valor 						 = $current_component->get_valor( $lang );
 
-									if (!empty($component_autocomplete_dato) && empty($valor)) {
-										error_log('sorry resolve value diffusion component_autocomplete in progress..');
+									if (empty($valor) && !empty($component_autocomplete_dato) ) {
+										error_log('WARNING: sorry resolve value diffusion component_autocomplete in progress.. ('.$current_component->get_tipo().', '.$current_component->get_parent().', '.$current_component->get_section_tipo().')');
 										$valor = ""; // 'sorry resolve value in progress..';
 									}				
 									$ar_field_data['field_value'] = $valor;
@@ -1176,7 +1186,7 @@ abstract class diffusion  {
 					if(SHOW_DEBUG) {
 						$section_name = RecordObj_dd::get_termino_by_tipo($options->section_tipo);
 						#throw new Exception("Error Processing Request. diffusion_section not found in correspondece with section_tipo: $options->section_tipo . Nothing is updated", 1);
-						echo "<br>diffusion update_record: Omitted update section <b>'$section_name'</b>. Diffusion_section not found in correspondece with section_tipo: $options->section_tipo ";
+						echo "<br>diffusion update_record: Omitted update section <b>'$section_name'</b>. Optional diffusion_section not found in correspondece with section_tipo: $options->section_tipo ";
 					}
 					#error_log(__METHOD__." WARNING: diffusion_section not found in correspondece with section_tipo: $options->section_tipo . Nothing is updated !!");
 					return false;

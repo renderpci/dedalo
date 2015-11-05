@@ -12,8 +12,8 @@ if(login::is_logged()!==true) {
 require_once(DEDALO_ROOT .'/Connections/config.php');
 require_once(DEDALO_ROOT .'/inc/funciones.php');
 require_once(DEDALO_ROOT .'/lang_translate/class.LangTranslate.php');
-require_once(DEDALO_LIB_BASE_PATH . '/common/class.navigator.php');
-require_once(DEDALO_LIB_BASE_PATH . '/db/class.RecordObj_descriptors.php');
+#require_once(DEDALO_LIB_BASE_PATH . '/common/class.navigator.php');
+#require_once(DEDALO_LIB_BASE_PATH . '/db/class.RecordObj_descriptors.php');
 
 
 # set vars

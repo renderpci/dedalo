@@ -21,7 +21,7 @@ if (login::is_logged()) {
 	echo "<div id=\"menu_wrapper\" class=\"$menu_wrapper_css\" >";
 
 		# Quit button
-		echo "<div id=\"quit\" class=\"button_in_menu icon_bs link\" title=\"".label::get_label('salir')."\"></div>";
+		echo "<div id=\"quit\" class=\"button_in_menu icon_bs link\" title=\"".label::get_label('salir')."\" onclick=\"login.Quit()\"></div>";
 
 		# Icon Dédalo
 		echo "\n<a href=\"http://www.fmomo.org/\" target=\"_blank\" class=\"dedalo_icon_top\" title=\"Dédalo version ".DEDALO_VERSION." ( build ".DEDALO_BUILD.")\"></a>";
@@ -106,7 +106,7 @@ if (login::is_logged()) {
 			}else if(!empty($section_tipo)) {
 				echo "<div id=\"current_section_label\" class=\"button_in_menu css_label text_unselectable\" title=\"".label::get_label('ir_a_seccion')."\" onclick=\"goto_url('?m=list&t=$section_tipo')\">";				
 				echo $section_name;
-				echo ' '.section::$active_section_id;
+				echo ' <span id="current_section_id_label">'.section::$active_section_id.'</span>';
 				echo "</div>";
 
 			}

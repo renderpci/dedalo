@@ -33,6 +33,9 @@
 		case 'search' :
 				# Nothing to do
 				#return print "$component_name. working here..";
+				$ar_comparison_operators 	= $this->build_search_comparison_operators();
+				$ar_logical_operators 		= $this->build_search_logical_operators();
+				$dato 						= isset($_REQUEST[$tipo]) ? json_decode($_REQUEST[$tipo]) : null;
 				#break;
 		case 'ajax' :
 		case 'edit' :	
@@ -74,7 +77,9 @@
 				#$ar_css		= false;
 				#$valor = $this->get_valor();
 				$ar_proyectos_section = (array)$this->get_ar_proyectos_for_current_section();
-					#dump($dato,"dato");
+				if(SHOW_DEBUG) {
+					#dump($ar_proyectos_section, " ar_proyectos_section ".to_string());
+				}
 				break;
 
 		case 'relation' :
@@ -93,7 +98,7 @@
 				}
 				break;
 		case 'print' :
-				$valor = $this->get_valor();
+				$valor = $this->get_valor('html_concat');
 				break;
 	}
 		

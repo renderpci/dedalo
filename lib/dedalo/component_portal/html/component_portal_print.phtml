@@ -20,12 +20,13 @@
 							
 			case ($permissions>=1)	:
 
-
 						#
 						# LABEL
-							$html_contenido .= "\n<div class=\"print_label \">";
-							$html_contenido .= $label;
-							$html_contenido .= "</div><!-- /print_label -->";
+							if (!isset($this->print_options->show_label) || $this->print_options->show_label==true) {
+								$html_contenido .= "\n<div class=\"print_label\">";
+								$html_contenido .= $label;
+								$html_contenido .= "</div>";
+							}
 
 
 						#
@@ -36,7 +37,7 @@
 							
 							#
 							# TABLE
-							$table = "<table id=\"portal_table_{$tipo}\" data-parent=\"$parent\" class=\"table_rows_list\">";
+							$table = "<table id=\"portal_table_{$tipo}\" data-parent=\"$parent\" class=\"table_rows_list print_table_rows_list\">";
 
 							# HEADERS (TH)
 							if ($this->html_options->header) {
@@ -138,7 +139,8 @@
 											$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($column_tipo, true);
 
 											# Row value default
-											$value = $rows[$column_tipo];
+											$value = isset($rows[$column_tipo]) ? $rows[$column_tipo] : '';
+											
 
 											if ($modelo_name=='component_portal' && !empty($value)) {
 												# Portal with locators
@@ -153,6 +155,25 @@
 												}
 												$value = $component_portal->get_html();
 											}//end if ($modelo_name=='component_portal')
+											else{
+												if (isset($rows['lc_object']) && isset($rows['lc_object']->section_id) && isset($rows['lc_object']->section_tipo)) {
+													
+													#
+													# COMPONENT HTML IN PRINT MODE (ignore 'valor_list' and build every component data)
+													$current_component = component_common::get_instance($modelo_name,
+																										$column_tipo,
+																										$rows['lc_object']->section_id,
+																										'print',
+																										DEDALO_DATA_LANG,
+																										$rows['lc_object']->section_tipo
+																										);
+													$print_options = new stdClass();
+														$print_options->show_label = false;
+													$current_component->print_options = $print_options;
+													$value = $current_component->get_html();
+														#dump($rows['lc_object'], " value ".to_string($target_section_tipo)); die();
+												}
+											}
 
 											# aditional td css selectors										
 											$td_css_selector = 'td_'.$modelo_name;

@@ -47,6 +47,7 @@
 		
 		case ($permissions>=2)	:
 
+					/*
 					# Dato reference default lang
 					if ($modo!='tool_lang' && !empty($default_component)) {
 						#$html_contenido .= "\n <div class=\"dato_refecence_default_lang\">$dato_reference_lang</div>";						
@@ -56,6 +57,14 @@
 							#dump($tool_lang,'$tool_lang');
 						$html_contenido .= $tool_lang->get_html();
 					}
+					*/
+
+
+					if (is_object($context_name)) {
+						$context_name_text = isset($context_name->context_name) ? $context_name->context_name : '';
+					}else{
+						$context_name_text = $context_name;
+					}
 					
 
 					##
@@ -64,24 +73,27 @@
 					$html_contenido .= "\n <textarea class=\"css_html_text {$ar_css['css_html_text']}\" 
 					id=\"{$identificador_unico}\" 
 					name=\"{$input_name}\" 
-					data-tipo=\"{$tipo}\" data-lang=\"{$lang}\" data-section_tipo=\"{$section_tipo}\" data-parent=\"{$parent}\"
-					data-context_name=\"$context_name\"
+					data-tipo=\"{$tipo}\"
+					data-lang=\"{$lang}\"
+					data-section_tipo=\"{$section_tipo}\"
+					data-parent=\"{$parent}\"
+					data-context_name=\"$context_name_text\"
 					title=\"$html_title\">$dato</textarea>";					
 					
 					
 					if (SHOW_DEBUG) {
-					$html_contenido .= "<span class=\"debug_info\"> $identificador_unico</span>";
+						#$html_contenido .= "<span class=\"debug_info\"> $identificador_unico</span>";
 					}			
 
 		
 			if($permissions==3)	
 					
-					$html_contenido .= "\n <span class=\"css_span_debugger {$ar_css['css_span_debugger']}\" id=\"debugger_{$tipo}\" >{$debugger}</span>";
+					#$html_contenido .= "\n <span class=\"css_span_debugger {$ar_css['css_span_debugger']}\" id=\"debugger_{$tipo}\" >{$debugger}</span>";
 					break;							
 	}
 
 	# INIT : Init text editor	
-	$html_contenido .= "\n<script>component_html_text_editor.init('$identificador_unico','$modo','$propiedades_json');</script>";
+	$html_contenido .= "\n<script>$(function(){component_html_text_editor.init('$identificador_unico','$modo','$propiedades_json');});</script>";
 	
 	
 	# Prepare content to show in page

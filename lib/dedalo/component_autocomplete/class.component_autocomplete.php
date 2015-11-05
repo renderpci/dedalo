@@ -42,6 +42,7 @@ class component_autocomplete extends component_common {
 	# GET DATO : 
 	public function get_dato() {
 		$dato = parent::get_dato();
+
 		if (!empty($dato) && !is_array($dato)) {
 			#dump($dato,"dato");
 			trigger_error("Error: ".__CLASS__." dato type is wrong. Array expected and ".gettype($dato)." is received for tipo:$this->tipo, parent:$this->parent");
@@ -67,7 +68,17 @@ class component_autocomplete extends component_common {
 		if (is_object($dato)) {
 			$dato = array($dato); // IMPORTANT 
 		}
-		parent::set_dato( (array)$dato );
+
+		# Remove possible duplicates
+		$dato_unique=array();
+		foreach ((array)$dato as $locator) {
+			if (!in_array($locator, $dato_unique)) {
+				$dato_unique[] = $locator;
+			}		
+		}
+		$dato = $dato_unique;
+
+		parent::set_dato( (array)$dato );		
 	}
 	
 
@@ -91,22 +102,34 @@ class component_autocomplete extends component_common {
 	/**
 	* GET VALOR 
 	* Get resolved string representation of current value (expected id_matrix of section or array)
-	* @return string | null
+	* @return array $this->valor
 	*/
-	public function get_valor( $lang=DEDALO_DATA_LANG ) {
-
+	public function get_valor( $lang=DEDALO_DATA_LANG, $format='string' ) {
+		/*
 		if (isset($this->valor)) {
 			if(SHOW_DEBUG) {
-				//error_log("Catched valor !!! from ".__METHOD__);
+				#error_log("Catched valor !!! from ".__METHOD__);
 			}
 			return $this->valor;
 		}
+		*/
 		
 		$dato = $this->get_dato();
-		if (empty($dato)) {
-			return $this->valor = null;
+			#dump($dato,'dato '.gettype($dato) );
+
+		if ( empty($dato) ) {
+			if ($format=='array') {
+				return array();
+			}else{
+				return '';
+			}
 		}
-		#dump($dato, ' dato');
+
+		# lang never must be DEDALO_DATA_NOLAN
+		if ($lang==DEDALO_DATA_NOLAN) {
+			$lang = DEDALO_DATA_LANG;
+		}
+
 		
 		# Test dato format (b4 changed to object)
 		foreach ($dato as $key => $value) {
@@ -122,22 +145,43 @@ class component_autocomplete extends component_common {
 		if (!isset($this->referenced_section_tipo)) {
 			$this->referenced_section_tipo = $this->get_target_section_tipo();
 		}
+	
+		# Filter custom (for ar_list_of_values)
+		$filter_custom = false;
+			foreach ($dato as $current_locator) {
 
-		$this->ar_list_of_values = $this->get_ar_list_of_values( $lang, null, $this->referenced_section_tipo ); # Importante: Buscamos el valor en el idioma actual
+				if (isset($current_locator->section_id)) {
+					$locator_section_id = $current_locator->section_id;
+					$filter_custom .= "section_id = $locator_section_id OR ";
+				}
+			}
+			if (!empty($filter_custom)) {
+				$filter_custom = "\n AND (" .substr($filter_custom, 0, -4). ")";
+			}
+			#dump($filter_custom, ' filter_custom ++ '.to_string());
+
+		$this->ar_list_of_values = $this->get_ar_list_of_values( $lang, null, $this->referenced_section_tipo, $filter_custom ); # Importante: Buscamos el valor en el idioma actual
 			#dump($this->ar_list_of_values, ' $this->ar_list_of_values');
+		$ar_valor=array();
 		foreach ($this->ar_list_of_values->result as $locator => $rotulo) {
-			
+
+			$locator_string = $locator;
 			$locator = json_handler::decode($locator);	# Locator is json encoded object				
 
-			if (in_array($locator, $dato)) {
-				$this->valor = $rotulo;
-					#dump($this->valor, ' this->valor - lang:'.DEDALO_DATA_LANG);
-				return $this->valor;
-			}
+			#if (in_array($locator, $dato)) {
+				$ar_valor[$locator_string] = $rotulo;		
+			#}
+		}//end foreach ($this->ar_list_of_values->result as $locator => $rotulo) {
+			
+		if ($format=='array') {
+			$valor = $ar_valor;
+		}else{
+			$valor = implode("<br>", $ar_valor);
 		}
-
-		return $this->valor = null;
+		
+		return $valor;
 	}
+
 
 
 	/**
@@ -267,24 +311,52 @@ class component_autocomplete extends component_common {
 
 
 	/**
-	* GET_SEARCH_QUERY
-	* Build search query for current component . Overwrite for different needs in other components
-	* @param string ..
-	* @see class.section_list.php get_rows_data filter_by_search
-	* @return string SQL query (ILIKE by default)
+	* BUILD_SEARCH_COMPARISON_OPERATORS 
+	* Note: Override in every specific component
+	* @param array $comparison_operators . Like array('=','!=')
+	* @return object stdClass $search_comparison_operators
 	*/
-	public static function get_search_query( $json_field, $search_tipo, $tipo_de_dato_search, $current_lang, $search_value ) {
-		
-		if ( empty($search_value) || strpos($search_value, 'section_id')===false ) {
-			return null;
+	public function build_search_comparison_operators( $comparison_operators=array('=','!=') ) {
+		return (object)parent::build_search_comparison_operators($comparison_operators);
+	}#end build_search_comparison_operators
+
+
+
+	/**
+	* GET_SEARCH_QUERY (OVERWRITE COMPONENT COMMON)
+	* Build search query for current component . Overwrite for different needs in other components 
+	* (is static to enable direct call from section_records without construct component)
+	* Params
+	* @param string $json_field . JSON container column Like 'dato'
+	* @param string $search_tipo . Component tipo Like 'dd421'
+	* @param string $tipo_de_dato_search . Component dato container Like 'dato' or 'valor'
+	* @param string $current_lang . Component dato lang container Like 'lg-spa' or 'lg-nolan'
+	* @param string $search_value . Value received from search form request Like 'paco'
+	* @param string $comparison_operator . SQL comparison operator Like 'ILIKE'
+	*
+	* @see class.section_records.php get_rows_data filter_by_search
+	* @return string $search_query . POSTGRE SQL query (like 'datos#>'{components, oh21, dato, lg-nolan}' ILIKE '%paco%' )
+	*/
+	public static function get_search_query( $json_field, $search_tipo, $tipo_de_dato_search, $current_lang, $search_value, $comparison_operator='=') {
+		$search_query='';
+		if ( empty($search_value) ) {
+			return $search_query;
 		}
-		$search_query = " $json_field#>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}' @> '[$search_value]'::jsonb ";
+		switch (true) {
+			case $comparison_operator=='=':
+				$search_query = " $json_field#>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}' @> '[$search_value]'::jsonb ";
+				break;
+			case $comparison_operator=='!=':
+				$search_query = " ($json_field#>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}' @> '[$search_value]'::jsonb)=FALSE ";
+				break;
+		}
+		
 		if(SHOW_DEBUG) {
 			$search_query = " -- filter_by_search $search_tipo ". get_called_class() ." \n".$search_query;
+			#dump($search_query, " search_query for search_value: ".to_string($search_value)); #return '';
 		}
 		return $search_query;
-	}
-
+	}//end get_search_query
 
 
 

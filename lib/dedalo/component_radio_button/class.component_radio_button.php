@@ -47,7 +47,7 @@ class component_radio_button extends component_common {
 
 	# SET_DATO
 	public function set_dato($dato) {
-		if (is_string($dato)) { # Tool Time machine case, dato is string
+		if (is_string($dato) && strpos($dato, '}')!==false ) { # Tool Time machine case, dato is string
 			$dato = json_handler::decode($dato);
 		}
 		if(SHOW_DEBUG) {
@@ -56,7 +56,6 @@ class component_radio_button extends component_common {
 		if (is_object($dato)) {
 			$dato = array($dato);
 		}
-
 		parent::set_dato( (array)$dato );
 	}
 
@@ -89,11 +88,13 @@ class component_radio_button extends component_common {
 			return $this->valor;
 		}
 
+		
+
 		switch ($this->modo) {
 
-			case 'diffusion':
+			case 'diffusion':				
 				$dato = $this->get_dato();
-
+				
 				$object_si = new stdClass();
 					$object_si->section_id   = (string)NUMERICAL_MATRIX_VALUE_YES;
 					$object_si->section_tipo = (string)"dd64";
@@ -111,8 +112,10 @@ class component_radio_button extends component_common {
 			
 			default:
 				
+				
 				# Always run list of values
-				$ar_list_of_values	= $this->get_ar_list_of_values( $lang, null ); # Importante: Buscamos el valor en el idioma actual
+				$ar_list_of_values	= $this->get_ar_list_of_values( $lang, null, false); # Importante: Buscamos el valor en el idioma actual
+				
 			
 				
 				$dato = $this->get_dato();
@@ -124,9 +127,9 @@ class component_radio_button extends component_common {
 				foreach ($dato as $key => $value) {
 					if (!is_object($value)) {
 						if(SHOW_DEBUG) {
-							dump($dato," dato");
+							dump($dato," dato");						
+							trigger_error(__METHOD__." Wrong dato format. OLD format dato in $this->label $this->tipo .Expected object locator, but received: ".gettype($value) .' : '. print_r($value,true) );
 						}
-						trigger_error(__METHOD__." Wrong dato format. OLD format dato in $this->label $this->tipo .Expected object locator, but received: ".gettype($value) .' : '. print_r($value,true) );
 						return $this->valor = null;
 					}
 				}
@@ -178,23 +181,52 @@ class component_radio_button extends component_common {
 
 
 	/**
-	* GET_SEARCH_QUERY
-	* Build search query for current component . Overwrite for different needs in other components
-	* @param string ..
-	* @see class.section_list.php get_rows_data filter_by_search
-	* @return string SQL query (ILIKE by default)
+	* BUILD_SEARCH_COMPARISON_OPERATORS 
+	* Note: Override in every specific component
+	* @param array $comparison_operators . Like array('=','!=')
+	* @return object stdClass $search_comparison_operators
 	*/
-	public static function get_search_query( $json_field, $search_tipo, $tipo_de_dato_search, $current_lang, $search_value ) {
+	public function build_search_comparison_operators( $comparison_operators=array('=','!=') ) {
+		return (object)parent::build_search_comparison_operators($comparison_operators);
+	}//end build_search_comparison_operators
 
-		if ( empty($search_value) || strpos($search_value, 'section_id')===false ) {
-			return null;
+	/**
+	* GET_SEARCH_QUERY
+	* Build search query for current component . Overwrite for different needs in other components 
+	* (is static to enable direct call from section_records without construct component)
+	* Params
+	* @param string $json_field . JSON container column Like 'dato'
+	* @param string $search_tipo . Component tipo Like 'dd421'
+	* @param string $tipo_de_dato_search . Component dato container Like 'dato' or 'valor'
+	* @param string $current_lang . Component dato lang container Like 'lg-spa' or 'lg-nolan'
+	* @param string $search_value . Value received from search form request Like 'paco'
+	* @param string $comparison_operator . SQL comparison operator Like 'ILIKE'
+	*
+	* @see class.section_records.php get_rows_data filter_by_search
+	* @return string $search_query . POSTGRE SQL query (like 'datos#>'{components, oh21, dato, lg-nolan}' ILIKE '%paco%' )
+	*/
+	public static function get_search_query( $json_field, $search_tipo, $tipo_de_dato_search, $current_lang, $search_value, $comparison_operator='=') {
+		$search_query='';
+		if ( empty($search_value) ) {
+			return $search_query;
 		}
-		$search_query = " $json_field#>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}' @> '[$search_value]'::jsonb ";
+		switch (true) {
+			case $comparison_operator=='=':
+				$search_query = " $json_field#>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}' @> '[$search_value]'::jsonb ";
+				break;
+			case $comparison_operator=='!=':
+				$search_query = " ($json_field#>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}' @> '[$search_value]'::jsonb)=FALSE ";
+				break;
+		}
+		
 		if(SHOW_DEBUG) {
 			$search_query = " -- filter_by_search $search_tipo ". get_called_class() ." \n".$search_query;
+			#dump($search_query, " search_query for search_value: ".to_string($search_value)); #return '';
 		}
 		return $search_query;
-	}
+	}//end get_search_query
+
+
 
 
 }

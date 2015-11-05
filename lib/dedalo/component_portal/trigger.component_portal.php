@@ -86,7 +86,7 @@ if ($mode=='save_order') {
 
 	
 	$dato_formatted=array();
-	foreach ($dato as $key => $value) {			
+	foreach ((array)$dato as $key => $value) {			
 		if ( !is_object($value) || empty($value->section_id) ) {
 			trigger_error("Error on save_order of portal rows. One or more elements are empty ");
 			continue;

@@ -49,7 +49,7 @@ $js_url = DEDALO_LIB_BASE_URL.'/component_image/js/component_image_read.js';
 					# IMAGE NOT EXISTS. PLACE DEDALO IMAGE WITH LINK TO DEFAULT TOOL
 					if (!file_exists($this->get_image_path())) {
 						$open_tool_default ="data-image_id=\"$image_id\"
-						data-quality=\"$quality\"
+						data-quality=\"".DEDALO_IMAGE_QUALITY_ORIGINAL."\"
 						data-aditional_path=\"$aditional_path\"
 						data-initial_media_path=\"$initial_media_path\"
 						data-tipo=\"$tipo\"

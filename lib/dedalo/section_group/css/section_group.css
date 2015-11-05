@@ -69,3 +69,11 @@ DIV.css_section_group_wrap * DIV.css_section_group_wrap {
 	display: inline-block;
 }
 
+/* LABEL IN WRAP SECTION GROUP TAP CONTEXT */
+.css_print_label {
+	font-size: 18px;
+	font-variant: small-caps;
+	text-align: center;
+	-webkit-font-smoothing: antialiased;
+}
+

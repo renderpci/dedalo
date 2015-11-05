@@ -174,15 +174,15 @@ if (empty($ar_files[0])) {
 				
 					$prev_value=$value;
 					if ($name=='issued' || $name=='accessed') {				             
-						$value = tool_import_zotero::zotero_date_to_timestamp($value);						
+						$value = tool_import_zotero::zotero_date_to_dd_date($value);						
 						if(SHOW_DEBUG) {
-							$value .= "<br>".print_r($prev_value,true);
+							$value .= "<br>".to_string($prev_value);
 						}
 					}
 					if ($name=='author' || $name=='editor') {   
 						$value = tool_import_zotero::zotero_name_to_name($value);
 						if(SHOW_DEBUG) {
-							$value .= "<br>".print_r($prev_value,true);
+							$value .= "<br>".to_string($prev_value);
 						}
 					}
 					if ($name==$call_number_name) {

@@ -36,27 +36,221 @@ class component_autocomplete_ts extends component_common {
 		}
 	}
 
-	# GET DATO : Format "es967"
+	/**
+	* GET DATO : 
+	* OLD Format: "es967"
+	* NEW Format: Array(locator1,locator2,..)
+	*/
 	public function get_dato() {
 		$dato = parent::get_dato();
-		return (string)$dato;
+
+		# Compatibility old dedalo instalations version < 4.31
+		# dato like 'es425' is converted to standar locator and later to array
+		if (is_string($dato)) {
+			$value 	 = $dato;
+			$locator = self::convert_dato_to_locator($value);			
+			$dato 	 = array( $locator );
+			$this->set_dato($dato);
+			$this->Save();
+			if(SHOW_DEBUG) {
+				#dump($value, ' value converted to locator 1 ++ '.to_string($dato));
+			}
+		}else if (is_array($dato)) {
+			/* temporal only
+			foreach ($dato as $key => $value) {
+				if (is_string($value)) {
+					$locator = self::convert_dato_to_locator($value);
+					$dato 	 = array( $locator );
+					$this->set_dato($dato);
+					$this->Save();
+					if(SHOW_DEBUG) {
+						dump($value, ' value converted to locator 2 ++ '.to_string($dato));
+					}
+					break;
+				}
+			}
+			*/
+		}
+		
+		return (array)$dato;
 	}
 
 	# SET_DATO . With regex verification
 	public function set_dato($dato) {
-		# Si el dato está vacío, es que queremos eliminar el contenido. No comprobar ese caso.
-		if (!empty($dato)) {
-			# code...		
-			preg_match('/^[a-z]{2}\d+$/', $dato, $output_array);
-			if( empty($output_array) ) {
-				throw new Exception("Error Processing Request. Invalid dato: '$dato' for component $this->tipo", 1);			
-			}
+		if (is_string($dato)) {
+			$dato = json_decode($dato);
 		}
-		parent::set_dato( (string)$dato );
+
+		if (is_object($dato)) {
+			$dato = array($dato); // IMPORTANT 
+		}
+
+		# Remove possible duplicates
+		$dato_unique=array();
+		foreach ($dato as $locator) {
+			if (!in_array($locator, $dato_unique)) {
+				$dato_unique[] = $locator;
+			}		
+		}
+		$dato = $dato_unique;
+		
+		parent::set_dato( (array)$dato );
 	}
 
 
-	
+	/**
+	* GET VALOR 
+	* Get resolved string representation of current tesauro value
+	*/
+	public function get_valor( $lang=DEDALO_DATA_LANG, $format='string' ) {
+		/*
+		if (isset($this->valor)) {
+			if(SHOW_DEBUG) {
+				#error_log("Catched valor !!! from ".__METHOD__);
+			}
+			return $this->valor;
+		}
+		*/
+
+		$dato = $this->get_dato();
+			#dump($dato,'dato '.gettype($dato) );
+
+		if ( empty($dato) ) {
+			if ($format=='array') {
+				return array();
+			}else{
+				return '';
+			}
+		}
+
+		if(!is_array($dato)) return "Sorry, type:" .gettype($dato). " not supported yet";
+
+		# lang never must be DEDALO_DATA_NOLAN
+		if ($lang==DEDALO_DATA_NOLAN) {
+			$lang = DEDALO_DATA_LANG;
+		}
+
+		# Propiedades
+		$propiedades = $this->get_propiedades();
+		#dump($propiedades,'$propiedades');
+
+		$ar_valor = array();
+		foreach ($dato as $key => $current_locator) {
+				
+			$current_locator_string = json_encode($current_locator);
+			$terminoID = self::get_terminoID_by_locator($current_locator); // nota ahora es un terminoID			
+		
+			$current_valor  = '';
+			$current_valor .= RecordObj_ts::get_termino_by_tipo($terminoID, $lang, true);
+				#dump($current_valor, ' current_valor ++ '.to_string($lang));
+
+			#if (!empty($propiedades->jer_tipo) && $propiedades->jer_tipo==2) {
+				# Show with childrens like "Benimamet - Valencia - Spain"
+				$RecordObj_ts = new RecordObj_ts($terminoID);
+				$ar_parents = $RecordObj_ts->get_ar_parents_of_this($terminoID); ksort($ar_parents);
+					#dump($ar_parents,'ar_parents '.$terminoID);
+					foreach ($ar_parents as $current_terminoID) {
+						$current_termino = RecordObj_ts::get_termino_by_tipo($current_terminoID, $lang,true);
+						$current_valor .= ", $current_termino";
+					}
+			#}
+			#dump($current_locator, ' current_locator ++ '.to_string());
+			$ar_valor[$current_locator_string] = $current_valor;
+
+		}//end foreach ($dato as $key => $current_locator) {
+
+
+		if ($format=='array') {
+			$valor = $ar_valor;
+		}else{
+			$valor = implode("<br>", $ar_valor);
+		}
+		#dump($valor, ' valor ++ '.to_string());
+		
+		//$this->valor = $valor;
+
+		return $valor;
+
+	}//end get_valor
+
+	/**
+	* GET_DATO_SEARCH
+	* Generate an array prepared to search containing self and all parents
+	* @return 
+	*/
+	public function get_dato_search() {
+		$dato_search=array();
+
+		$dato = $this->get_dato();
+		foreach ((array)$dato as $current_locator) {
+			
+			# self
+			$dato_search[] 	= $current_locator;
+
+			# parents
+			$terminoID 		= self::get_terminoID_by_locator($current_locator);
+			$RecordObj_ts 	= new RecordObj_ts($terminoID);
+			$ar_parents 	= (array)$RecordObj_ts->get_ar_parents_of_this();
+			foreach ($ar_parents as $current_terminoID) {
+				
+				$locator = self::convert_dato_to_locator($current_terminoID);
+				if (!in_array($locator, $dato_search)) {
+					$dato_search[] = $locator;
+				}
+			}
+		}
+		#dump($dato_search, ' dato_search1 ++ '.to_string());		
+
+		return $dato_search;
+
+	}#end get_dato_search
+
+
+	/**
+	* CONVERT_DATO_TO_LOCATOR
+	* Convert old dato like 'es352' to standar locator like {"section_id":"es352","section_tipo":"es"}
+	* Warning: this is a temporal locator (22-10-2015) and will be changed in tesaurized versions
+	* @return object locator
+	*/
+	public static function convert_dato_to_locator($old_dato) {
+
+		if (is_object($old_dato)) {
+			return $old_dato;	// unnecessary convert
+		}
+		if (is_array($old_dato) || !is_string($old_dato)) {			
+			if(SHOW_DEBUG) {
+				dump($dato, ' dato ++ '.to_string());
+			}
+			trigger_error("Ops.. dato is not valid for convert ");
+			return $old_dato;
+		}
+
+		$prefix = RecordObj_dd::get_prefix_from_tipo($old_dato);
+
+		$section_id 	= (string)str_replace($prefix, '', $old_dato);
+		$section_tipo 	= (string)$prefix.'1';
+
+		$locator = new locator();
+			$locator->set_section_id($section_id);		
+			$locator->set_section_tipo($section_tipo);
+			#dump($locator, ' locator ++ '.to_string()); die();
+		
+		return (object)$locator;
+
+	}#end convert_dato_to_locator
+
+
+	/**
+	* GET_TERMINOID_BY_LOCATOR
+	* @return string $terminoID
+	*/
+	public static function get_terminoID_by_locator( $locator ) {
+		if(!isset($locator->section_tipo) || !isset($locator->section_id)) {
+			dump($locator, ' locator ++ '.to_string());
+		}
+		$terminoID = substr($locator->section_tipo,0,strlen($locator->section_tipo)-1).$locator->section_id;			
+		return (string)$terminoID;
+	}#end get_terminoID_by_locator
 
 
 	# GET_REFERENCED_TIPO
@@ -128,38 +322,7 @@ class component_autocomplete_ts extends component_common {
 	}
 	
 
-	/**
-	* GET VALOR 
-	* Get resolved string representation of current tesauro value
-	*/
-	public function get_valor() {
-
-		#$dato = $this->dato;
-		$dato = $this->get_dato();
-			#dump($dato,'dato '.gettype($dato) );
-
-		if ( empty($dato) || strlen($dato)<3 || $dato=='null' ) return NULL;
-
-		if(!is_string($dato)) return "Sorry, type:" .gettype($dato). " not supported yet";		
-
-		$valor = RecordObj_ts::get_termino_by_tipo($dato, DEDALO_DATA_LANG);
-
-		# Propiedades
-		$propiedades = $this->get_propiedades();
-			#dump($propiedades,'$propiedades');
-		if (!empty($propiedades->jer_tipo) && $propiedades->jer_tipo==2) {
-			# Show with childrens like "Benimamet - Valencia - Spain"
-			$RecordObj_ts = new RecordObj_ts($dato);
-			$ar_parents = $RecordObj_ts->get_ar_parents_of_this($dato); ksort($ar_parents);
-				#dump($ar_parents,'ar_parents '.$dato);
-				foreach ($ar_parents as $current_terminoID) {
-					$current_termino = RecordObj_ts::get_termino_by_tipo($current_terminoID, DEDALO_DATA_LANG,true);
-					$valor .= ", $current_termino";
-				}
-		}
-
-		return $valor;
-	}
+	
 
 
 	/**
@@ -328,8 +491,13 @@ class component_autocomplete_ts extends component_common {
 		#if(SHOW_DEBUG) $GLOBALS['log_messages'] .= exec_time($start_time, __METHOD__, "ar_recursive_childrens: ".count($ar_recursive_childrens) );		
 		#if(SHOW_DEBUG) error_log( exec_time($start_time, __METHOD__, " string_to_search:$string_to_search ") );
 		
-		return $ar_result;		
-	}
+		return $ar_result;
+
+	}//end autocomplete_ts_search
+
+
+
+
 
 	/**
 	* AUTOCOMPLETE_TS_SEARCH
@@ -382,7 +550,65 @@ class component_autocomplete_ts extends component_common {
 
 	
 
-	
+	/**
+	* BUILD_SEARCH_COMPARISON_OPERATORS 
+	* Note: Override in every specific component
+	* @param array $comparison_operators . Like array('=','!=')
+	* @return object stdClass $search_comparison_operators
+	*/
+	public function build_search_comparison_operators( $comparison_operators=array('=','!=') ) {
+		return (object)parent::build_search_comparison_operators($comparison_operators);
+	}#end build_search_comparison_operators
+
+
+	/**
+	* GET_SEARCH_QUERY (OVERWRITE COMPONENT COMMON)
+	* Build search query for current component . Overwrite for different needs in other components 
+	* (is static to enable direct call from section_records without construct component)
+	* Params
+	* @param string $json_field . JSON container column Like 'dato'
+	* @param string $search_tipo . Component tipo Like 'dd421'
+	* @param string $tipo_de_dato_search . Component dato container Like 'dato' or 'valor'
+	* @param string $current_lang . Component dato lang container Like 'lg-spa' or 'lg-nolan'
+	* @param string $search_value . Value received from search form request Like 'paco'
+	* @param string $comparison_operator . SQL comparison operator Like 'ILIKE'
+	*
+	* @see class.section_records.php get_rows_data filter_by_search
+	* @return string $search_query . POSTGRE SQL query (like 'datos#>'{components, oh21, dato, lg-nolan}' ILIKE '%paco%' )
+	*/
+	public static function get_search_query( $json_field, $search_tipo, $tipo_de_dato_search, $current_lang, $search_value, $comparison_operator='=') {		
+		
+		$search_value = json_decode($search_value);
+			if ( !$search_value || empty($search_value) ) {
+				return false;
+			}
+
+		$search_query='';
+		# Fixed
+		$tipo_de_dato_search='dato_search';
+		switch (true) {
+			case $comparison_operator=='=':
+				foreach ((array)$search_value as $current_value) {
+					$current_value = json_encode($current_value);
+					$search_query .= " $json_field#>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}' @> '[$current_value]'::jsonb OR \n";
+				}
+				$search_query = substr($search_query, 0,-5);
+				break;
+			case $comparison_operator=='!=':
+				foreach ((array)$search_value as $current_value) {
+					$current_value = json_encode($current_value);
+					$search_query = " ($json_field#>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}' @> '[$current_value]'::jsonb)=FALSE OR \n";
+				}
+				$search_query = substr($search_query, 0,-5);
+				break;
+		}
+		
+		if(SHOW_DEBUG) {
+			$search_query = " -- filter_by_search $search_tipo ". get_called_class() ." \n".$search_query;
+			#dump($search_query, " search_query for search_value: ".to_string($search_value)); #return '';
+		}
+		return $search_query;
+	}//end get_search_query
 
 }
 ?>

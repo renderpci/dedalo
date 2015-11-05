@@ -2,7 +2,7 @@
 	
 	# CONTROLLER	
 	
-	$id						= $this->get_id();
+	#$id						= $this->get_id();
 	$tipo					= $this->get_tipo();
 	$permissions			= common::get_permissions($tipo);
 	if ($permissions<1) {
@@ -15,8 +15,10 @@
 	$ar_css					= $this->get_ar_css();
 	$component_name			= get_class($this);
 	$components_html		= $this->get_components_html();					#dump($id);
+	$section_tipo			= $this->get_section_tipo();
+	$section_label			= RecordObj_dd::get_termino_by_tipo($section_tipo, DEDALO_DATA_LANG, true);
 
-	$identificador_unico 	= 'tab_' .$id. '_' .common::get_identificador_unico();		#dump($identificador_unico,'identificador_unico');
+	$identificador_unico 	= 'tab_'.common::get_identificador_unico();		#dump($identificador_unico,'identificador_unico');
 	
 	$file_name				= $modo ;
 	
@@ -25,7 +27,7 @@
 	switch($modo) {
 		
 		case 'edit' :		# Nothing to do
-							$section_group_id = $tipo.'_'.$id;
+							$section_group_id = $tipo;
 							break;
 
 		case 'search' :		# Nothing to do
@@ -35,7 +37,10 @@
 							break;
 
 		case 'relation' :	
-							break;				
+							break;
+
+		case 'print' :	
+							break;		
 
 	}
 	

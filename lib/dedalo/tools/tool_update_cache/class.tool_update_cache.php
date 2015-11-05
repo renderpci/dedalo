@@ -37,7 +37,7 @@ class tool_update_cache {
 	* UPDATE_CACHE
 	* @return bool
 	*/
-	public function update_cache( $options ) {
+	public function update_cache( $options=null ) {
 
 		# Disable logging activity and time machine # !IMPORTANT
 		logger_backend_activity::$enable_log = false;
@@ -171,9 +171,15 @@ class tool_update_cache {
 			$current_component 	= new $modelo_name($current_component_tipo, $section_id, 'list', $current_lang, $section_tipo);
 			#$current_component->set_modo('list');
 			#$current_component->get_html();
-			if (strpos($modelo_name, 'filter')!==false) {
-				$current_component->set_propagate_filter(false); # !IMPORTANT (to avoid calculate inverse search of portals, very long process)
-			}
+			switch (true) {
+				case (strpos($modelo_name, 'filter')!==false) :
+					$current_component->set_propagate_filter(false); # !IMPORTANT (to avoid calculate inverse search of portals, very long process)
+					break;
+				case ($modelo_name=='component_autocomplete_ts') :
+					$current_dato = $current_component->get_dato(); # !IMPORTANT Force get_dato update component dato and save it
+					break;				
+				default:
+			}			
 			$current_component->Save();
 			if(SHOW_DEBUG) {
 				#$label = $current_component->get_label();
@@ -197,6 +203,7 @@ class tool_update_cache {
 
 		#return true;
 	}
+
 
 
 

@@ -59,6 +59,8 @@
 					$ar_css		= false;
 					$referenced_tipo	= $this->get_referenced_tipo();
 					$ar_list_of_values  = $this->get_ar_list_of_values(DEDALO_DATA_LANG, null);
+					$ar_comparison_operators 	= $this->build_search_comparison_operators();
+					$ar_logical_operators 		= $this->build_search_logical_operators();
 					break;
 		
 		case 'portal_list' :

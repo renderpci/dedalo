@@ -203,8 +203,8 @@ define('DEDALO_ENTITY', 'my_entity_name'); # Like 'dedalo4'
 	# JQUERY JS LIB
 	define('JQUERY_LIB_URL_JS'		, DEDALO_ROOT_WEB . '/lib/jquery/jquery-2.1.4.min.js');
 	# JQUERY UI
-	define('JQUERY_UI_URL_JS'		, DEDALO_ROOT_WEB . '/lib/jquery/jquery-ui-1.11.2/jquery-ui.min.js');
-	define('JQUERY_UI_URL_CSS'		, DEDALO_ROOT_WEB . '/lib/jquery/jquery-ui-1.11.2/jquery-ui.min.css');
+	define('JQUERY_UI_URL_JS'		, DEDALO_ROOT_WEB . '/lib/jquery/jquery-ui/jquery-ui.min.js');
+	define('JQUERY_UI_URL_CSS'		, DEDALO_ROOT_WEB . '/lib/jquery/jquery-ui/jquery-ui.min.css');
 	
 	define('JQUERY_TABLESORTER_JS'	, DEDALO_ROOT_WEB . '/lib/jquery/jquery-tablesorter/jquery.tablesorter.min.js');
 
@@ -238,27 +238,34 @@ define('DEDALO_ENTITY', 'my_entity_name'); # Like 'dedalo4'
 		# EXTENSION normally mp4, mov
 		define('DEDALO_AV_EXTENSION'				, 'mp4');
 		# DEDALO_IMAGE_EXTENSIONS_SUPPORTED
-		define('DEDALO_AV_EXTENSIONS_SUPPORTED'		, serialize( array('mp4') ));
+		define('DEDALO_AV_EXTENSIONS_SUPPORTED'		, serialize( array('mp4','mov','avi','mpg','mpeg') ));
 		# MIME normally video/mp4, quicktime/mov
 		define('DEDALO_AV_MIME_TYPE'				, 'video/mp4');
 		# TYPE normally h264/AAC
 		define('DEDALO_AV_TYPE'						, 'h264/AAC');
-		# QUALITY FOLDERS ARRAY normally '404','audio' (Sort DESC quality) 
-		define('DEDALO_AV_AR_QUALITY'				, serialize( array('1080','720','576','404','240','audio') ));
+		# QUALITY DEDALO_AV_QUALITY_ORIGINAL normally 'original'
+		define('DEDALO_AV_QUALITY_ORIGINAL'			, 'original');
 		# QUALITY DEFAULT normally '404' (estándar dedalo 72x404)	
 		define('DEDALO_AV_QUALITY_DEFAULT'			, '404');
+		# QUALITY FOLDERS ARRAY normally '404','audio' (Sort DESC quality) 
+		define('DEDALO_AV_AR_QUALITY'				, serialize( array(DEDALO_AV_QUALITY_ORIGINAL,'1080','720','576',DEDALO_AV_QUALITY_DEFAULT,'240','audio') ));		
 		# EXTENSION normally mp4, mov
 		define('DEDALO_AV_POSTERFRAME_EXTENSION'	, 'jpg');
-		# FFMPEG PATH usualmente /usr/local/bin/ffmpeg
-		define('DEDALO_AV_FFMPEG_PATH'				, '/usr/local/bin/ffmpeg');			# Like '/usr/local/bin/ffmpeg'
+		# FFMPEG PATH usualmente /usr/bin/ffmpeg
+		define('DEDALO_AV_FFMPEG_PATH'				, '/usr/bin/ffmpeg');			# Like '/usr/bin/ffmpeg'
 		# FFMPEG SETTINGS
 		define('DEDALO_AV_FFMPEG_SETTINGS'			, DEDALO_LIB_BASE_PATH . '/media_engine/lib/ffmpeg_settings');
-		# FAST START PATH usualmente /usr/local/bin/qt-faststart
-		define('DEDALO_AV_FASTSTART_PATH'			, '/usr/local/bin/qt-faststart');	# Like '/usr/local/bin/qt-faststart';
+		# FAST START PATH usualmente /usr/bin/qt-faststart
+		define('DEDALO_AV_FASTSTART_PATH'			, '/usr/bin/qt-faststart');		# Like '/usr/bin/qt-faststart';
 		# AV STREAMER
 		define('DEDALO_AV_STREAMER'					, NULL);
 		# AV STREAMER
 		define('DEDALO_AV_WATERMARK_FILE'			, DEDALO_MEDIA_BASE_PATH .'/'. DEDALO_AV_FOLDER . '/watermark/watermark.png');
+		# TEXT_SUBTITLES_ENGINE (tool_subtitles)
+		define('TEXT_SUBTITLES_ENGINE'				, DEDALO_LIB_BASE_PATH . '/tools/tool_subtitles');
+		# DEDALO_AV_RECOMPRESS_ALL
+		define('DEDALO_AV_RECOMPRESS_ALL'			, 1); // 1 re re-compress all av files uploaded, 0 to only copy av files uploaded (default 0)
+		
 
 	# IMAGE MEDIA
 		# IMAGE FOLDER normally '/image'
@@ -267,16 +274,18 @@ define('DEDALO_ENTITY', 'my_entity_name'); # Like 'dedalo4'
 		define('DEDALO_IMAGE_EXTENSION'				, 'jpg');
 		# MIME normally image/jpeg
 		define('DEDALO_IMAGE_MIME_TYPE'				, 'image/jpeg');
-		# DEDALO_IMAGE_EXTENSIONS_SUPPORTED
-		define('DEDALO_IMAGE_EXTENSIONS_SUPPORTED'	, serialize( array('jpg','jpeg','png','tif','tiff','bmp','psd') ));
 		# TYPE normally jpeg
 		define('DEDALO_IMAGE_TYPE'					, 'jpeg');
-		# QUALITY FOLDERS ARRAY IN MB		
-		define('DEDALO_IMAGE_AR_QUALITY'			, serialize( array('>100MB','25MB','6MB','1.5MB','<1MB','thumb') ));		
+		# QUALITY ORIGINAL normally 'original'
+		define('DEDALO_IMAGE_QUALITY_ORIGINAL'		, 'original');
 		# QUALITY DEFAULT normally '1.5MB'
 		define('DEDALO_IMAGE_QUALITY_DEFAULT'		, '1.5MB');
 		# DEDALO_IMAGE_THUMB_DEFAULT
 		define('DEDALO_IMAGE_THUMB_DEFAULT'			, 'thumb');
+		# QUALITY FOLDERS ARRAY IN MB		
+		define('DEDALO_IMAGE_AR_QUALITY'			, serialize( array(DEDALO_IMAGE_QUALITY_ORIGINAL,'>100MB','25MB','6MB',DEDALO_IMAGE_QUALITY_DEFAULT,'<1MB',DEDALO_IMAGE_THUMB_DEFAULT) ));
+		# DEDALO_IMAGE_EXTENSIONS_SUPPORTED
+		define('DEDALO_IMAGE_EXTENSIONS_SUPPORTED'	, serialize( array('jpg','jpeg','png','tif','tiff','bmp','psd','raw') ));		
 		# PRINT DPI (default 150. Used to calculate print size of images -tool_image_versions-)
 		define('DEDALO_IMAGE_PRINT_DPI'				, 150);
 		# IMAGE LIB
@@ -306,10 +315,10 @@ define('DEDALO_ENTITY', 'my_entity_name'); # Like 'dedalo4'
 		define('DEDALO_PDF_TYPE'					, 'pdf');
 		
 		# DEDALO_PDF_RENDERER (daemon generador de pdf a partir de html)
-		define('DEDALO_PDF_RENDERER'				, '/usr/local/bin/wkhtmltopdf');	# Like '/usr/local/bin/wkhtmltopdf'
+		define('DEDALO_PDF_RENDERER'				, '/usr/bin/wkhtmltopdf');	# Like '/usr/bin/wkhtmltopdf'
 
 		# PDF_AUTOMATIC_TRANSCRIPTION_ENGINE (daemon generador de ficheros de texto a partir de pdf)
-		define('PDF_AUTOMATIC_TRANSCRIPTION_ENGINE'	, '/usr/local/bin/pdftotext');		# Like '/usr/local/bin/pdftotext'
+		define('PDF_AUTOMATIC_TRANSCRIPTION_ENGINE'	, '/usr/bin/pdftotext');		# Like '/usr/bin/pdftotext'
 		
 	
 	# HTML_FILES
@@ -344,4 +353,8 @@ define('DEDALO_ENTITY', 'my_entity_name'); # Like 'dedalo4'
 
 # DEDALO_TEST_INSTALL
 define('DEDALO_TEST_INSTALL', true);
+
+# DEDALO_SECTION_ID_TEMP : Name / prefix of section_id temporals used to store special sections in memory or session
+define('DEDALO_SECTION_ID_TEMP', 'tmp');
+
 ?>

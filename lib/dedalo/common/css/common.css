@@ -69,7 +69,7 @@
 	cursor: not-allowed !important;
 }
 
-/*BUTTON*/
+/* BUTTON 
 .css_button_generic {
 	font-size: 86%;
 	display: inline-block;
@@ -93,6 +93,80 @@
 }
 .css_button_generic:hover { opacity: 1}
 .css_button_generic:active { opacity: 0.8; color:#000000}
+*/
+
+.css_button_generic {
+	font-size: 100%;
+	display: inline-block;
+	cursor: pointer;
+	min-height: 1em;
+	line-height: 1em;
+	background-color: #f2f2f2;
+	/*color: #000000;*/
+	border: 1px;
+	border-style: solid;
+	border-color: #d6d6d6;
+	border-radius: 4px;
+	padding: 7px;
+	padding-left: 14px;
+	padding-right: 14px;
+	margin-left: 5px;
+	margin-top: 3px;
+	user-select:none;-webkit-user-select:none;
+}
+.css_button_generic:hover { 
+	opacity: 1;
+	background-color: #ff9439;
+	color: #000000;
+	
+
+}
+.css_button_generic:active { opacity: 0.8; color:#000000}
+
+
+
+/* BUTTON WITH ICON LEFT
+---------------------------------------- */
+	.button_with_icon_left {
+		display: inline-block;
+		font-size: 100%;
+		font-weight: 300;
+		cursor: pointer;
+		line-height: 1.2em;
+		color: #2e2e2e;
+		transition: background-color 0.5s ease;
+		user-select: none;
+		-webkit-user-select: none;
+		border-radius: 4px;
+		padding: 7px;
+		padding-right: 6px;
+		padding-left: 6px;
+		margin-top: 1px;
+		width: auto;
+		min-width: 100px;
+		background-color: rgba(201, 201, 201, 0.3);	
+		}
+		.button_with_icon_left::before {
+			content: '';
+			background-image: url("../../themes/default/glyphicons-halflings.png");
+			background-position: -360px -144px;
+			margin-right: 7px;	
+			width: 14px;
+			height: 14px;
+			/* Position/Spacing */
+		  	float: left; 
+		  	opacity: 0.5;	
+		}
+		.button_with_icon_left:hover {
+			/*opacity: 0.7;*/
+ 			background-color: rgba(201, 201, 201, 1);
+		}
+		.button_with_icon_left:active {
+			/*opacity: 0.7;*/
+ 			background-color: rgba(201, 201, 201, 0.3);
+		}
+
+
 	
 /*GRADIENT*/
 .gradiend_button_1 {
@@ -109,8 +183,8 @@
 		background: -ms-linear-gradient(top, rgba(239,239,239,1) 0%,rgba(193,193,193,1) 67%);
 	/*IE10+*/
 		background: linear-gradient(to bottom, rgba(239,239,239,1) 0%,rgba(193,193,193,1) 67%);
-	/*W3C*/
-		filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#efefef', endColorstr='#c1c1c1',GradientType=0 );
+	/*W3C
+		filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#efefef', endColorstr='#c1c1c1',GradientType=0 );*/
 	/*IE6-9*/
 }
 /*-- BG GRADIENT1 (Used for wrap login) --*/
@@ -122,7 +196,7 @@
 	background: -o-linear-gradient(top,  rgba(224,224,224,1) 0%,rgba(247,247,247,1) 32%); /* Opera 11.10+ */
 	background: -ms-linear-gradient(top,  rgba(224,224,224,1) 0%,rgba(247,247,247,1) 32%); /* IE10+ */
 	background: linear-gradient(to bottom,  rgba(224,224,224,1) 0%,rgba(247,247,247,1) 32%); /* W3C */
-	filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#e0e0e0', endColorstr='#f7f7f7',GradientType=0 ); /* IE6-9 */	 
+	/*filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#e0e0e0', endColorstr='#f7f7f7',GradientType=0 );  IE6-9 */	 
 }
 
 /* Background semitransparent
@@ -263,6 +337,8 @@
 	box-shadow: inset 0 1px 10px #bfbfbf;
 	*/
 	text-shadow: 0 -1px 1px #a5a5a5;
+	position: relative;
+ 	z-index: 1;
 }
 .ok {
 	background-color: #0C0;
@@ -284,10 +360,10 @@
 	text-align: left;
 	padding: 3px;
 	padding-left: 8px;
-	padding-right: 8px;	
+	padding-right: 8px;
 }
 .dump {
-	background-color:rgba(217, 227, 255, 0.7);
+	background-color:rgba(217, 227, 255, 0.8);
 	color: #4B5D5E;
 	font-family: monospace;
 	border-radius: 4px;
@@ -296,7 +372,7 @@
 
 	font-weight: inherit;	
 	width: 95%;
-	text-shadow:none;	
+	text-shadow:none;
 }
 .icon_warning {
 	background-image: url("../../themes/default/glyphicons-halflings.png");
@@ -328,7 +404,7 @@
 	padding: 20px;
 	opacity: 0.8;
 }
-.notas {
+.notas, .notes {
 	color: #a6a6a6;
 	font-size: 80%;
 }
@@ -355,7 +431,7 @@ mark {
 
 /*-- thumb images in list (image,av,etc.) --*/
 .thumb_in_list {
-	box-shadow: 1px 1px 6px #888888;
+	box-shadow: 1px 1px 6px #CACACA;
 	border-radius: 1px;
 	width: 102px;
 	height: 57px;
@@ -369,8 +445,9 @@ mark {
 	width: 99.2%;
 	margin: 0px;
 	margin-left: 5px;
-  	box-shadow: 2px 2px 8px #888888;
-  	border-radius: 4px;
+	margin-top: 5px;
+	box-shadow: 2px 2px 7px #D4D4D4;
+	border-radius: 4px;
 	}	
 	.table_rows_list tr {
 		
@@ -388,7 +465,7 @@ mark {
 		border-left-width: 1px;
 		border-left-style: solid;
 		border-left-color: #CCC;
-		line-height: 15px;
+		line-height: 14px;
 		background-color: rgba(238,238,238,0.7);
 		background-image: url('../../themes/default/tab_header2.jpg');
 		background-repeat: repeat-x;		
@@ -410,6 +487,7 @@ mark {
 			border-top-right-radius: 4px;
 		}
 	.table_rows_list td {
+		position: relative;
 		color: #333;
 		text-align: left;
 		word-wrap: break-word;
@@ -421,15 +499,15 @@ mark {
 		border-left-color: #CCC;
 		border-left: none;
 		vertical-align: top;
-		padding: 5px;
+		padding: 3px;
 		background-color: #F9F9F9;
-  		background-color: rgba(249, 249, 249, 0.60);
+  		background-color: rgba(249, 249, 249, 1.0);
 		}
 		.table_rows_list th.id_column,
 		.table_rows_list td.id_column {
 			text-align: right;
 			white-space: nowrap;
-			width: 34px !important;;
+			width: 34px !important;
 			/* width: auto !important; */
 		}
 
@@ -537,5 +615,8 @@ label.css_label:hover.tooltips span {
   margin-left: -76px;
   z-index: 999;
 }
+
+
+
 
 

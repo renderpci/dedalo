@@ -363,9 +363,10 @@ class AVObj extends MediaObj {
 			
 			
 			echo "<div style=\"color:#FFF;word-wrap:break-word;\">";
-			if(SHOW_DEBUG)
+			if(SHOW_DEBUG) {
 				echo __METHOD__ . ' Exception: ',  $e->getMessage(), "<br />";
-			echo " <strong> Unable to read movie information. Movie not exists or header is malformed or corrupt !</strong>";
+			}
+			echo " <strong> Sorry. Unable to read movie information ($local_file)</strong>";
 			echo "</div>";
 			
 		}

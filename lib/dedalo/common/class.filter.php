@@ -182,7 +182,7 @@ abstract class filter {
 	* IS_AUTHORIZED_RECORD
 	* 
 	*/
-	public static function is_authorized_record($record_id, $section_tipo) {
+	public static function is_authorized_record($section_id, $section_tipo) {
 
 		if(SHOW_DEBUG) {
 			#$start_time=microtime(true);
@@ -202,15 +202,25 @@ abstract class filter {
 			return true;
 		
 		}else{
+
+			#
+			# DEDALO SUPERUSER EDIT CASE
+			# Avoid show DEDALO_SUPERUSER to edit
+				if($section_id==DEDALO_SUPERUSER && $matrix_table=='matrix_users') {		
+					$msg="Error Processing Request.";
+					if(SHOW_DEBUG) $msg .= "<hr>Current user is not editable : $matrix_table";
+					throw new Exception($msg, 1);
+				}
+
 			/**/
-			# Mode : using 'section_list::get_rows_data' query and filtering by id
+			# Mode : using 'search::get_records_data' query and filtering by id
 			# DESESTIMADA (es mas sencilla pero crea un problema con el layout map que no vale la pena resolver)
 			/*
 			$locator = new stdClass();
-				$locator->section_id = $record_id;
+				$locator->section_id = $section_id;
 			*/
 			$locator = new locator();
-				$locator->set_section_id($record_id);
+				$locator->set_section_id($section_id);
 				$locator->set_section_tipo($section_tipo);			
 
 			$options = new stdClass();
@@ -220,7 +230,7 @@ abstract class filter {
 				$options->sql_columns 	= "id,section_id,section_tipo";
 				$options->filter_by_id 	= array($locator);
 
-			$rows_data = section_list::get_rows_data($options);
+			$rows_data = search::get_records_data($options);
 			if(SHOW_DEBUG) {
 				#dump($rows_data, 'rows_data'. print_r($options,true));
 			}
@@ -261,7 +271,7 @@ abstract class filter {
 			}
 
 			
-			$strQuery = "SELECT id FROM \"$matrix_table\" WHERE (id=".$record_id.") $sql_filtro";
+			$strQuery = "SELECT id FROM \"$matrix_table\" WHERE (id=".$section_id.") $sql_filtro";
 			#dump($strQuery,"strQuery");
 			$result	= JSON_RecordObj_matrix::search_free($strQuery);
 				#dump(pg_num_rows($result),"result");

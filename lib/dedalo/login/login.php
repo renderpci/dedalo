@@ -30,7 +30,9 @@
 	#
 	# Test if superuser psw is default
 	if( defined('DEDALO_TEST_INSTALL') && defined('DEDALO_TEST_INSTALL')===true && $this->test_su_default_password()===true ) {
-	dump(DEDALO_TEST_INSTALL, ' var');
+		if(SHOW_DEBUG) {
+			#dump(DEDALO_TEST_INSTALL, ' DEDALO_TEST_INSTALL');
+		}	
 		$page_html	= 'html/' . get_class($this) . '_set_psw.phtml';
 		include($page_html);
 		return;
@@ -45,6 +47,9 @@
 
 	
 	# USERNAME
+	$tipo_username	= DEDALO_USER_NAME_TIPO;
+	$username_label = RecordObj_dd::get_termino_by_tipo($tipo_username, DEDALO_DATA_LANG,true);
+	/*
 	$tipo_username	= NULL;
 	$html_username 	= '';
 	$name			= 'username';
@@ -53,9 +58,12 @@
 		$tipo_username	= $ar_components_obj[$name]->get_tipo();
 		$html_username 	= $ar_components_obj[$name]->get_html();			#var_dump($ar_components_obj[$name]);		 
 	}
+	*/
 	
-	# PASSWORD
-	$tipo_password	= NULL;
+	# PASSWORD	
+	$tipo_password	= DEDALO_USER_PASSWORD_TIPO;
+	$password_label = RecordObj_dd::get_termino_by_tipo($tipo_password, DEDALO_DATA_LANG,true);
+	/*
 	$html_password 	= '';
 	$name			= 'password';
 	if(isset($ar_components_obj[$name]) && is_object($ar_components_obj[$name])) {
@@ -63,6 +71,7 @@
 		$ar_components_obj[$name]->set_id($name);
 		$html_password = $ar_components_obj[$name]->get_html();		
 	}
+	*/
 	
 	# EMAIL
 	$html_email 	= '';

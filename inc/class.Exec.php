@@ -12,7 +12,7 @@ class Exec {
 			#echo "<b>Command: ( exec(command ,output) )</b><br>" .$command ;
 			
 				#shell_exec($command);
-				exec( $command , $output);				
+				exec( $command , $output);	
 				
 				#print(shell_exec($command));
 			 

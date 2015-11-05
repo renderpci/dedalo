@@ -3,11 +3,11 @@
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
 <title>D4 TS</title>
-
-<link rel="stylesheet" type="text/css" charset="utf-8" href="../../../css/general.css" />
-<link rel="stylesheet" type="text/css" charset="utf-8" href="../../../css/edit.css" />
-
-<script language="JavaScript" type="text/javascript" src="<?php echo JQUERY_LIB_URL_JS ?>"></script>
+<?php
+print css::build_tag(DEDALO_ROOT_WEB .'/css/general.css');
+print css::build_tag(DEDALO_ROOT_WEB .'/css/edit.css');
+print js::build_tag(JQUERY_LIB_URL_JS);
+?>
 <script type="text/javascript">
 // vars 
 var debe_introducir_title_orden_title = '<?php echo msgJS("$debe_introducir_title N. $orden_title") ?>';

@@ -17,17 +17,17 @@
 			#$html_contenido .= $dedalo_aplication_langs_selector_html;
 			
 			$html_contenido .= "<div>";
-			$html_contenido .= "Please set a password for super admin the system.<br>
+			$html_contenido .= "Please set a password for global admin user to manage the system.<br>
 								<span class=\"warning\">
 								IMPORTANT: Remember this password because you can not change it later.
 								</span>";
 
-			$html_contenido .= "<div class=\"set_pasw_input\">";				
-			$html_contenido .= " Password <input type=\"password\" name=\"psw\" id=\"psw\" />";
+			$html_contenido .= "<div class=\"set_pasw_input\">";	
+			$html_contenido .= " Password <input type=\"password\" name=\"psw\" id=\"psw\" class=\"login_input\" placeholder=\"Password\" />";
 			$html_contenido .= "</div>";
 
 			$html_contenido .= "<div class=\"set_pasw_input\">";	
-			$html_contenido .= " Retype <input type=\"password\" name=\"psw2\" id=\"psw2\" />";
+			$html_contenido .= " Retype <input type=\"password\" name=\"psw2\" id=\"psw2\" class=\"login_input\" placeholder=\"Retype password\" />";
 			$html_contenido .= "</div>";
 
 			$html_contenido .= "<div class=\"set_pasw_input set_button\">";	

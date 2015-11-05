@@ -27,7 +27,10 @@
 require_once(dirname(__FILE__).'/lib/dedalo/config/config4.php');
 
 # LOGIN VERIFICATION
-if(login::is_logged()!==true) die("<span class='error'> Auth error: please login </span>");
+if (strpos(DEDALO_HOST,'8888')===FALSE) {
+	if(login::is_logged()!==true) die("<span class='error'> Auth error: please login </span>");
+}
+
 
 /*
 function alist ($array) {  //This function prints a text array as an html list.
@@ -51,7 +54,7 @@ $test_daemons = array(
 
 foreach ($test_daemons as $key => $daemon_test) {
 	exec( "$daemon_test ", $out, $rcode); //Try to get ImageMagick "convert" program version number.
-	echo "Return code for $daemon_test is $rcode <br>"; //Print the return code: 0 if OK, nonzero if error.
+	echo "Return code for test_daemons $daemon_test is $rcode <br>"; //Print the return code: 0 if OK, nonzero if error.
 }
 
 #echo alist($out); //Print the output of "convert -version"
@@ -59,6 +62,11 @@ foreach ($test_daemons as $key => $daemon_test) {
 #var_dump($out);
 #echo "</pre>";
 
+$processUser = posix_getpwuid(posix_geteuid());
+print "User running php: <b>".$processUser['name']."</b>";
+echo "<pre>";
+print_r($processUser);
+echo "</pre>";
 
 ?>
 <?php  

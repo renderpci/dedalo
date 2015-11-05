@@ -50,7 +50,8 @@ $options = array(
 		// is enabled, set to 0 to disable chunked reading of files:
 		'readfile_chunk_size' => 10 * 1024 * 1024, // 10 MiB
 		// Defines which files can be displayed inline when downloaded:
-		'inline_file_types' => '/\.(pdf|json)$/i',
+		'inline_file_types' => '/\.(json)$/i',
+		//'inline_file_types' => '/\.(json)$/i',
 		// Defines which files (based on their names) are accepted for upload:
 		'accept_file_types' => '/.+$/i',
 		// The php.ini settings upload_max_filesize and post_max_size
@@ -71,7 +72,7 @@ $options = array(
 		// Set to 0 to use the GD library to scale and orient images,
 		// set to 1 to use imagick (if installed, falls back to GD),
 		// set to 2 to use the ImageMagick convert binary directly:
-		'image_library' => 2,
+		'image_library' => 0,
 		// Uncomment the following to define an array of resource limits
 		// for imagick:       
 		#'imagick_resource_limits' => array(
@@ -88,7 +89,9 @@ $options = array(
 		#'convert_params' => '-limit memory 32MiB -limit map 32MiB',
 	   
 		// Command or path for to the ImageMagick identify binary:
-		'identify_bin' => MAGICK_PATH.'identify',
+		'identify_bin' => MAGICK_PATH.'identify',		
+		'image_versions' => array()
+		/*
 		'image_versions' => array(
 			// The empty image version key defines options for the original image:
 			'' => array(
@@ -115,7 +118,9 @@ $options = array(
 				'max_width' => 80,
 				'max_height' => 80
 			)
+		
 		)
+		*/
 	);
 	#dump($options, 'options');
 

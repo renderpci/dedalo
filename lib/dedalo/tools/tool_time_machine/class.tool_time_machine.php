@@ -62,13 +62,13 @@ class tool_time_machine extends tool_common {
 	* STATIC COMPOUND ARRAY OF TIME_MACHINE OBJTECTS (ONE FOR EVERY TIME_MACHINE RECORD)
 	* @see Used by trigger.tool_time_machine.php
 	*/
-	public static function get_ar_component_time_machine($tipo, $parent, $lang=NULL) {
+	public static function get_ar_component_time_machine($tipo, $parent, $lang=NULL, $section_tipo) {
 
 		# Creamos un objeto time_machine con los datos recibidos
 		$RecordObj_time_machine		= new RecordObj_time_machine(NULL);
 
 		# creamos un array con las coincidencias existentes
-		$ar_time_machine_records	= $RecordObj_time_machine->get_ar_time_machine_of_this($tipo, $parent, $lang);
+		$ar_time_machine_records	= $RecordObj_time_machine->get_ar_time_machine_of_this($tipo, $parent, $lang, $section_tipo);
 			#dump($ar_time_machine_records,'ar_time_machine_records'); exit();
 
 		$ar_time_machine_obj = array();
@@ -114,6 +114,7 @@ class tool_time_machine extends tool_common {
 		# Search all sections of current tipo in table matrix_time_machine
 		$arguments=array();
 		$arguments['strPrimaryKeyName']= 'section_id' ;
+		$arguments['section_tipo']		= $section_tipo ;
 		$arguments['tipo']				= $section_tipo ;
 		$arguments['state']				= 'deleted';
 		$arguments['order_by_asc']		= 'id';

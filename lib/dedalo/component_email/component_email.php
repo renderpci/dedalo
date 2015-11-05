@@ -68,13 +68,17 @@
 		
 		case 'search':
 				$ar_css		= $this->get_ar_css();
-				foreach($ar_tools_obj as $tool_obj) $html_tools .= $tool_obj->get_html();		
+				foreach($ar_tools_obj as $tool_obj) $html_tools .= $tool_obj->get_html();
+				$ar_comparison_operators 	= $this->build_search_comparison_operators();
+				$ar_logical_operators 		= $this->build_search_logical_operators();		
 				break;
 						
 		case 'simple':
 				$ar_css		= $this->get_ar_css();	
 				break;					
-						
+		case 'print':
+				
+				break;				
 	}
 	
 	$page_html	= DEDALO_LIB_BASE_PATH .'/'. get_class($this) . '/html/' . get_class($this) . '_' . $file_name . '.phtml';

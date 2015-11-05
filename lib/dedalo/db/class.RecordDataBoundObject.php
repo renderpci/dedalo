@@ -1,6 +1,8 @@
 <?php
-require_once(DEDALO_LIB_BASE_PATH . '/db/class.DBi.php');
-require_once(DEDALO_LIB_BASE_PATH . '/db/class.json_handler.php');
+#require_once(DEDALO_LIB_BASE_PATH . '/db/class.DBi.php');
+#require_once(DEDALO_LIB_BASE_PATH . '/db/class.json_handler.php');
+
+
 
 abstract class RecordDataBoundObject {
 
@@ -202,7 +204,7 @@ abstract class RecordDataBoundObject {
 			if (!$result) {
 				trigger_error("Error Processing Request Load");
 				if(SHOW_DEBUG) {
-					throw new Exception("Error Processing Request Load: ".pg_last_error()." <hr>$strQuery", 1);
+					throw new Exception("Error Processing Request Load: (".DEDALO_DATABASE_CONN.") ".pg_last_error()." <hr>$strQuery", 1);
 				}
 			}
 
@@ -212,8 +214,8 @@ abstract class RecordDataBoundObject {
 
 			if(!$arRow)	{
 				if(SHOW_DEBUG) {
-						dump($arRow," arRow");
-					throw new Exception("Error Processing Request. strQuery:$strQuery", 1);					
+					dump($this,"WARNING: No result on Load arRow : strQuery:".$strQuery);
+					#throw new Exception("Error Processing Request (".DEDALO_DATABASE_CONN.") strQuery:$strQuery", 1);					
 				}
 				return(false);
 			}
@@ -447,6 +449,7 @@ abstract class RecordDataBoundObject {
 		if (!empty($matrix_table)) {
 			$this->strTableName = $matrix_table;
 		}
+		#dump($ar_arguments, " ar_arguments ".to_string());
 
 		$strPrimaryKeyName	= $this->strPrimaryKeyName;
 		$strQuery			= '';
@@ -687,17 +690,20 @@ abstract class RecordDataBoundObject {
 			#dump($strQuery);
 		
 			$result = pg_query(DBi::_getConnection(), $strQuery);	# or die("Cannot (1) execute query: $strQuery <br>\n". pg_last_error());
-					#dump($result, 'result', array());
-			
-			if (!$result) {
-				trigger_error("Error on DB query");
-				if(SHOW_DEBUG) {
-					throw new Exception("Error Processing Request . ".pg_last_error(), 1);
-				}								
-			}
-
-			while ($rows = pg_fetch_assoc($result)) {
-				$ar_records[] = $rows[$strPrimaryKeyName];
+			#$result = pg_prepare(DBi::_getConnection(), "", $strQuery);		
+			#$result = pg_execute(DBi::_getConnection(), "",array());
+				#dump($result, " result ".to_string($strQuery));	
+				if (!$result) {					
+					if(SHOW_DEBUG) {
+						throw new Exception("Error Processing Request . ".pg_last_error(), 1);
+					}else{
+						trigger_error("Error on DB query");
+					}							
+				}
+			if (is_resource($result)) {			
+				while ($rows = pg_fetch_assoc($result)) {
+					$ar_records[] = $rows[$strPrimaryKeyName];
+				}
 			}
 			#dump($ar_records, 'ar_records', array());	
 		
@@ -923,9 +929,9 @@ abstract class RecordDataBoundObject {
 			if($this->blForDeletion == true) {				
 
 				if (is_int($this->ID)) {
-					$strQuery 	= "DELETE FROM \"$this->strTableName\" WHERE $this->strPrimaryKeyName = $this->ID";
+					$strQuery 	= "DELETE FROM \"$this->strTableName\" WHERE \"$this->strPrimaryKeyName\" = $this->ID";
 				}else{
-					$strQuery 	= "DELETE FROM \"$this->strTableName\" WHERE $this->strPrimaryKeyName = '$this->ID' ";
+					$strQuery 	= "DELETE FROM \"$this->strTableName\" WHERE \"$this->strPrimaryKeyName\" = '$this->ID' ";
 				}				
 
 				#$result 		= mysql_query($strQuery, DBi::_getConnection());

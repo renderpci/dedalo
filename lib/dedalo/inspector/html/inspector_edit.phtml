@@ -15,6 +15,8 @@
 							</div>";
 		$html .= "\n<div class=\"css_section_group_content tab_content inspector_div_content \" >";
 		$html .= "\n <div id=\"inspector_info\" class=\"inspector_info_body\"></div>";	
+		# Records navigator container ready
+		$html .= "\n <div id=\"inspector_records_navigator\"></div>";
 		$html .= "\n</div>";
 		
 		
@@ -133,55 +135,61 @@
 		# OTHERS
 		#
 		if(SHOW_DEBUG===true) {
-		$iconv = iconv_get_encoding('all');		
-		$html .= "\n<div class=\"css_section_group_titulo tab_title title_down_box text_unselectable border_radius_0\" 
-							data-tab_id=\"Inspector_others_tap\">
-							<label class=\"css_label\">Others</label>
-							</div>";
-		$html .= "\n<div class=\"css_section_group_content tab_content inspector_div_content \" >";
-		$html .= "\n <div id=\"inspector_others\" class=\"inspector_info_body\">";
+			$iconv = iconv_get_encoding('all');
+			$html .= "\n<div class=\"css_section_group_titulo tab_title title_down_box text_unselectable border_radius_0\" 
+								data-tab_id=\"Inspector_others_tap\">
+								<label class=\"css_label\">Others</label>
+								</div>";
+			$html .= "\n<div class=\"css_section_group_content tab_content inspector_div_content \" >";
+			$html .= "\n <div id=\"inspector_others\" class=\"inspector_info_body\">";
 
-		$html .= " Dédalo version ".DEDALO_VERSION. " - Build " .DEDALO_BUILD. "<br>";
-		$html .= " <span class=\"key\">TOP_TIPO:</span> <span class=\"value\"><b>". TOP_TIPO . "</b></span><br>";
-		$html .= " <span class=\"key\">TOP_ID:</span> <span class=\"value\"><b>".TOP_ID."</b></span><br>";
-		$html .= " DB info ".$db_info ."<br>";
-		$html .= " PHP version ". $php_info. " - cache: $php_check_cache <br>";
-		$html .= " PHP memory usage ". tools::get_memory_usage('pid') ."<br>";		
-		$html .= " Dedalo cache manager: ". DEDALO_CACHE_MANAGER ;
-		if (defined('DEDALO_CACHE_MANAGER_DB')) {
-			$html .= ' : '.DEDALO_CACHE_MANAGER_DB.'';
-		}
-		if (defined('DEDALO_ENTITY')) {
-			$html .= "<br>DEDALO_ENTITY: ".DEDALO_ENTITY;
-		}
-		$html .= "<br>";
-							/*
-							if(isset($_SESSION['debug_content'])) {							
-								foreach ($_SESSION['debug_content'] as $key => $value) {
-									if(strpos($key, 'RecordDataBoundObject')!==false) {
-										$key = str_replace('RecordDataBoundObject', 'RDBO', $key);
-										$html .= "$key : ". count($value) ."<br>";
+			$html .= " Dédalo version ".DEDALO_VERSION. " - Build " .DEDALO_BUILD. "<br>";
+			$html .= " <span class=\"key\">TOP_TIPO:</span> <span class=\"value\"><b>". TOP_TIPO . "</b></span><br>";
+			$html .= " <span class=\"key\">TOP_ID:</span> <span class=\"value\"><b>".TOP_ID."</b></span><br>";
+			$html .= " DB info ".$db_info ."<br>";
+			$html .= " PHP version ". $php_info. " - cache: $php_check_cache <br>";
+			$html .= " PHP memory usage ". tools::get_memory_usage('pid') ."<br>";		
+			$html .= " Dedalo cache manager: ". DEDALO_CACHE_MANAGER ;
+			if (defined('DEDALO_CACHE_MANAGER_DB')) {
+				$html .= ' : '.DEDALO_CACHE_MANAGER_DB.'';
+			}
+			if (defined('DEDALO_ENTITY')) {
+				$html .= "<br>DEDALO_ENTITY: ".DEDALO_ENTITY;
+			}
+			$html .= "<br>";
+								/*
+								if(isset($_SESSION['debug_content'])) {							
+									foreach ($_SESSION['debug_content'] as $key => $value) {
+										if(strpos($key, 'RecordDataBoundObject')!==false) {
+											$key = str_replace('RecordDataBoundObject', 'RDBO', $key);
+											$html .= "$key : ". count($value) ."<br>";
+										}
+										
 									}
-									
 								}
-							}
-							#$html .= print_r($_SESSION['debug_content']['common::show_loaded_modelos']);
-							
-							$_SESSION['debug_content']['Load'.' cache']
-							$_SESSION['debug_content']['Load']
-							$_SESSION['debug_content']['search'.' cache']
-							$_SESSION['debug_content']['search']
-							$_SESSION['common::show_loaded_modelos']
-							*/
-		/*
-		$html .= "	PHP iconv input_encoding ". iconv_get_encoding('input_encoding'). "<br>
-							PHP iconv output_encoding ". iconv_get_encoding('output_encoding') . "<br>	
-							PHP iconv internal_encoding ". iconv_get_encoding('internal_encoding') . "<br>
-							";
-		*/
-		$html .= "	</div><!-- /inspector_others -->";
-		$html .= "	<div id=\"load_time_inspector\"></div>";			
-		$html .= "\n</div><!-- /css_section_group_content -->";
+								#$html .= print_r($_SESSION['debug_content']['common::show_loaded_modelos']);
+								
+								$_SESSION['debug_content']['Load'.' cache']
+								$_SESSION['debug_content']['Load']
+								$_SESSION['debug_content']['search'.' cache']
+								$_SESSION['debug_content']['search']
+								$_SESSION['common::show_loaded_modelos']
+								*/
+			/*
+			$html .= "	PHP iconv input_encoding ". iconv_get_encoding('input_encoding'). "<br>
+								PHP iconv output_encoding ". iconv_get_encoding('output_encoding') . "<br>	
+								PHP iconv internal_encoding ". iconv_get_encoding('internal_encoding') . "<br>
+								";
+			*/
+			$processUser = posix_getpwuid(posix_geteuid());
+			$html .= "User running php: <b>".$processUser['name']."</b>";
+			$html .= "<pre>";
+			$html .= print_r($processUser,true);
+			$html .= "</pre>";
+
+			$html .= "	</div><!-- /inspector_others -->";
+			$html .= "	<div id=\"load_time_inspector\"></div>";			
+			$html .= "\n</div><!-- /css_section_group_content -->";
 		}#if(SHOW_DEBUG===true)
 
 

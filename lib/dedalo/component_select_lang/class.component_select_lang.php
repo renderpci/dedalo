@@ -40,7 +40,8 @@ class component_select_lang extends component_common {
 
 		if($section_id > 1) {
 			
-			$section_tipo		 	= component_common::get_section_tipo_from_component_tipo($this->tipo);		
+			#$section_tipo		 	= component_common::get_section_tipo_from_component_tipo($this->tipo);	
+			$section_tipo		 	= $this->get_section_tipo();
 			$section 				= section::get_instance($section_id,$section_tipo);
 			$ar_all_project_langs 	= $section->get_ar_all_project_langs();
 				#dump($ar_all_project_langs," ar_all_project_langs ".DEDALO_APPLICATION_LANG);		
@@ -79,6 +80,17 @@ class component_select_lang extends component_common {
 		}
 		return $dato;					
 	}
+
+	/**
+	* BUILD_SEARCH_COMPARISON_OPERATORS 
+	* Note: Override in every specific component
+	* @param array $comparison_operators . Like array('=','!=')
+	* @return object stdClass $search_comparison_operators
+	*/
+	public function build_search_comparison_operators( $comparison_operators=array('=','!=') ) {
+		return (object)parent::build_search_comparison_operators($comparison_operators);
+	}#end build_search_comparison_operators
+	
 
 }
 ?>

@@ -95,7 +95,7 @@ class tool_upload extends tool_common {
 		$f_error		= $_FILES["fileToUpload"]['error'];
 		$f_error_text 	= tool_upload::error_number_to_text($f_error);
 		$f_extension 	= strtolower(pathinfo($f_name, PATHINFO_EXTENSION));
-			#dump($f_extension,'$f_extension for '.$f_temp_name.' - '.$f_name);
+			//dump($f_extension,'$f_extension for '.$f_temp_name.' - '.$f_name);
 
 		$this->file_obj->f_name 	 = $f_name;
 
@@ -140,14 +140,72 @@ class tool_upload extends tool_common {
 		if(substr($folder_path, -1)!='/') $folder_path .= '/';
 
 		$this->file_obj->uploaded_file_path = $folder_path . $nombre_archivo;	
-		
-		
+	
+
+
 		# Move temp uploaded file to final dir 
 		if(file_exists($f_temp_name)) {
-			$move_file = (bool)move_uploaded_file($f_temp_name, $this->file_obj->uploaded_file_path);
-			if (!$move_file) {
-				$msg = "File $f_temp_name exists. Error on move to: " . $this->file_obj->uploaded_file_path ; 
-				trigger_error($msg);
+
+			$fileUploadOK =0;
+
+			#If the file is a .zip (DVD) create the folder and copy the VIDEO_TS and AUDIO_TS to the destination folder.
+			if($f_extension == 'zip'){
+
+				$zip = new ZipArchive;
+				$res = $zip->open($f_temp_name);
+
+				if ($res === TRUE) {
+					# Create the directorys
+					if( !is_dir($folder_path.'/'.$SID) ) {
+						$create_dir = mkdir($folder_path.'/'.$SID, 0777);
+						$create_dir = mkdir($folder_path.'/'.$SID.'/VIDEO_TS/', 0777);
+						$create_dir = mkdir($folder_path.'/'.$SID.'/AUDIO_TS/', 0777);
+						if(!$create_dir) {
+							throw new Exception("Error on read or create directory for \"$SID\" folder. Permission denied ! ", 1);
+						}
+					}
+					# See al .zip files for located the VIDEO_TS and AUDIO_TS folders
+					for ($i=0; $i < $zip->numFiles; $i++) {
+
+						  $filename = $zip->getNameIndex($i);
+						  
+						  if(strpos($filename,'VIDEO_TS')!== false){
+
+						  	$fileinfo = pathinfo($filename);
+						  	# Don't copy the original VIDEO_TS in the zip file
+							if ($fileinfo['basename'] == 'VIDEO_TS') {
+								continue;
+							}
+							#Copy al files of the VIDEO_TS zip file into the VIDEO_TS destination file
+							copy("zip://".$f_temp_name.'#'.$filename, $folder_path.$SID.'/VIDEO_TS/'.$fileinfo['basename']);
+
+					        $fileUploadOK = 1;
+
+
+						  }else if(strpos($filename,'AUDIO_TS')!== false){
+							$fileinfo = pathinfo($filename);
+							# Don't copy the original AUDIO_TS in the zip file
+							if ($fileinfo['basename'] == 'AUDIO_TS') {
+								continue;
+							}
+							#Copy al files of the VIDEO_TS zip file into the AUDIO_TS destination file					        
+					        copy("zip://".$f_temp_name.'#'.$filename, $folder_path.$SID.'/AUDIO_TS/'.$fileinfo['basename']);
+					        $fileUploadOK = 1;
+
+						  }else{
+						  	$fileUploadOK = 0;
+						  }
+					}
+					$zip->close();
+			 
+				}
+			}else{
+
+				$move_file = (bool)move_uploaded_file($f_temp_name, $this->file_obj->uploaded_file_path);
+				if (!$move_file) {
+					$msg = "File $f_temp_name exists. Error on move to: " . $this->file_obj->uploaded_file_path ; 
+					trigger_error($msg);
+				}
 			}
 		}else{
 			$msg = "Error[upload_trigger]: temporal file $f_temp_name not exists. I can't move the file to final location.";
@@ -156,9 +214,10 @@ class tool_upload extends tool_common {
 		}
 
 
+			//dump($fileUploadOK, ' fileUploadOK'.to_string());
 		#
 		# ERROR : FILE NOT FOUND
-		if( !file_exists($this->file_obj->uploaded_file_path) ) {		
+		if( !file_exists($this->file_obj->uploaded_file_path) && $fileUploadOK == 0 ) {		
 			
 			$fileUploadOK = 0;	# ERROR	NUMBER
 
@@ -206,6 +265,7 @@ class tool_upload extends tool_common {
 			$fileUploadOK = 1;	# OK
 			
 			# AJUSTAMOS LOS PERMISOS
+			/*
 			try{
 				$ajust_permissions = chmod($this->file_obj->uploaded_file_path, 0775);
 				if (!$ajust_permissions) {
@@ -216,6 +276,7 @@ class tool_upload extends tool_common {
 				$msg = 'Exception[upload_trigger][SET_PERMISSIONS]: ' . $e->getMessage() . "\n";
 				trigger_error($msg);
 			}
+			*/
 
 			
 			$html .= " <!-- UPLOAD MSG OK -->";
@@ -224,15 +285,21 @@ class tool_upload extends tool_common {
 			$html .= 'Ok. '. label::get_label('fichero_subido_con_exito');
 
 			if (defined('DEDALO_AV_RECOMPRESS_ALL') && DEDALO_AV_RECOMPRESS_ALL==1) {
-				$html .= "<hr>The uploaded file is transcoding in background now. Please, reload the video page after some minutes.";
-			}
+				if ($file_size_mb>10) {
+					$html .= "<hr> The uploaded file is transcoding in background now. Please, wait some minutes before play your media file.";
+					if(SHOW_DEBUG) {
+						$html .= " MB:$file_size_mb";
+					}
+				}				
+			}//end if (defined('DEDALO_AV_RECOMPRESS_ALL') && DEDALO_AV_RECOMPRESS_ALL==1) {
+
 
 				# POSTPROCESSING_FILE : Procesos a activar tras la carga del archivo
 				$postprocessing_result = $this->postprocessing_file($component_name, $SID, $quality);
 				# POSTPROCESSING_FILE NOTIFICATIONS
 				if ( strpos( strtolower($postprocessing_result), 'error')!==false || strpos( strtolower($postprocessing_result), 'exception')!==false ) {
 				$html .= "<div class=\"warning\">";
-				$html .= 'File was uploaded correctly but an ERROR was found in the processing: '. $postprocessing_result;
+				$html .= ' File was uploaded correctly but an ERROR was found in the processing: '. $postprocessing_result;
 				$html .= "</div>";
 				}
 
@@ -329,15 +396,20 @@ class tool_upload extends tool_common {
 		# Recorremos todas las opciones de terminación posibles buscando ficheros a eliminar
 		foreach ($ar_allowed_extensions as $current_allowed_extension) {
 
-			$current_possible_file = $folder_path . $SID .'.'. $current_allowed_extension;
+			$current_possible_file = $folder_path .'/'. $SID .'.'. $current_allowed_extension;
 			if(SHOW_DEBUG) {
-				#dump($current_possible_file,'current_possible_file');
-			}				
-			
-			if(file_exists($current_possible_file)) {				
-				$file_to_move_renamed = $folder_path . 'deleted/'. $SID . '_deleted_'. $dateMovement . '.' . $current_allowed_extension ;			
+				//dump($current_possible_file,'current_possible_file');
+			}
+			if(file_exists($current_possible_file)) {
+					//dump($current_possible_file, ' current_possible_file'.to_string());
+				$file_to_move_renamed = $folder_path . '/deleted/'. $SID . '_deleted_'. $dateMovement . '.' . $current_allowed_extension ;			
 				rename($current_possible_file, $file_to_move_renamed);
 			}
+		}
+
+		if(is_dir($folder_path.'/'.$SID)) {
+			$file_to_move_renamed = $folder_path . '/deleted/'. $SID . '_deleted_'. $dateMovement ;			
+			rename($folder_path.'/'.$SID , $file_to_move_renamed);
 		}
 	}
 	
@@ -414,19 +486,25 @@ class tool_upload extends tool_common {
 							# DEDALO_AV_RECOMPRESS_ALL
 							# When config DEDALO_AV_RECOMPRESS_ALL is set to 1, all video files are re-compressed to 960k/s variable bit rate and keyframe every 75 frames
 							if (defined('DEDALO_AV_RECOMPRESS_ALL') && DEDALO_AV_RECOMPRESS_ALL==1) {
-								$ffmpeg_path = DEDALO_AV_FFMPEG_PATH;
-								$source_file = $this->file_obj->uploaded_file_path;
-								$source_file2= $source_file.'_original.'.$file_ext;
-								if( !rename($source_file, $source_file2) ) {
-									throw new Exception("Error Processing Request. File $source_file access denied", 1);									
-								}
-								$target_file = $AVObj->get_local_full_path();							
-								#$command 	 = "$ffmpeg_path -y -i $source_file2 -pix_fmt yuv420p -vb 960k -s 720x404 -g 75 $target_file"; //  -y -i $path_copia -pix_fmt yuv420p -vb 960k -s 720x404 -g 75 
-								#$res 	 	 = shell_exec($command);
-								Ffmpeg::convert_to_dedalo_av( $source_file2, $target_file );
-								if(SHOW_DEBUG) {
-									#dump($command, ' command');
-								}
+								
+								# If default quality file not exists, generate default quality version now
+								# $target_file  = $AVObj->get_local_full_path(); ???????????????????????????????? SURE ???????
+								$AVObj_target = new AVObj($SID, DEDALO_AV_QUALITY_DEFAULT);
+								$target_file  = $AVObj_target->get_local_full_path();
+								if (!file_exists($target_file)) {
+									$source_file = $this->file_obj->uploaded_file_path;
+									/*
+									$source_file2= $source_file.'_original.'.$file_ext;
+									if( !rename($source_file, $source_file2) ) {
+										throw new Exception("Error Processing Request. File $source_file access denied", 1);									
+									}
+									*/
+									
+									Ffmpeg::convert_to_dedalo_av( $source_file, $target_file );
+									if(SHOW_DEBUG) {
+										#dump($command, ' command');
+									}
+								}//end if (!file_exists($target_file)) {							
 							}
 
 							#
@@ -442,8 +520,8 @@ class tool_upload extends tool_common {
 							#
 							# CONFORM HEADERS
 							# Apply qt-faststart to optimize file headers position						
-							$Ffmpeg = new Ffmpeg();
-							$Ffmpeg->conform_header($AVObj);							
+							#$Ffmpeg = new Ffmpeg();
+							#$Ffmpeg->conform_header($AVObj);							
 						}						
 												
 
@@ -475,8 +553,16 @@ class tool_upload extends tool_common {
 							$result = custom_postprocessing_image($this);
 								#dump($result, ' result');
 						}
+						/*
+						if ($quality==DEDALO_IMAGE_QUALITY_ORIGINAL) {
+							# Create default version too
+							$this->component_obj->convert_quality( $quality, DEDALO_IMAGE_QUALITY_DEFAULT );
+							# Create thumb from default quality version
+							$this->component_obj->generate_thumb();
+						}
+						*/
 
-						# Force update data and create thumb
+						# Save force update data and create defauly and thumb
 						$this->component_obj->Save();
 
 					} catch (Exception $e) {
@@ -537,7 +623,7 @@ class tool_upload extends tool_common {
 	* BUILD_THUMB_FILE
 	*
 	*/
-	protected function build_thumb_file($SID) {
+	protected function build_thumb_file__DEPRECATED($SID) {
 		
 		$path_thumb 	= DEDALO_MEDIA_BASE_PATH.DEDALO_IMAGE_FOLDER.'/'.DEDALO_IMAGE_THUMB_DEFAULT.$this->file_obj->aditional_path.'/'.$SID.'.'.DEDALO_IMAGE_EXTENSION;
 		if (file_exists($path_thumb)) {

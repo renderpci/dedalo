@@ -93,7 +93,7 @@
 							}
 						}	
 					}
-					#dump($canvas_id,'canvas_id');
+					#dump($canvas_id,'canvas_id');					
 					break;
 
 		
@@ -228,7 +228,9 @@
 					#error_log('selected_fragment rel_locator: '.$rel_locator);					
 					break;
 		
-		case 'search' :	$ar_css		= false; 							
+		case 'search' :	$ar_css		= false;
+						$ar_comparison_operators 	= $this->build_search_comparison_operators();
+						$ar_logical_operators 		= $this->build_search_logical_operators();						
 					break;
 		
 		case 'portal_list'	:

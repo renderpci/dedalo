@@ -2,13 +2,7 @@
 
 	# VISUALIZADOR HTML	
 
-	# ELEMENTOS
-	if(!isset ($ar_css['css_span_dato'])) 			$ar_css['css_span_dato']='';
-	if(!isset ($ar_css['css_select'])) 				$ar_css['css_select']='';
-	if(!isset ($ar_css['css_span_ejemplo'])) 		$ar_css['css_span_ejemplo']='';
-	if(!isset ($ar_css['css_span_debugger']))		$ar_css['css_span_debugger']='';
-	if(!isset ($ar_css['css_wrap_select']))			$ar_css['css_wrap_select']='';
-	//if(!isset ($ar_css['css_select_rotulo']))		$ar_css['css_select_rotulo']='';
+	# ELEMENTOS	
 	
 	
 	#echo "\n<!-- SELECT [tipo:$tipo id_matrix:$id] $label -->";
@@ -20,27 +14,18 @@
 	switch($permissions) {
 			
 		case 0:	
-				$html_contenido .= "";#\n <span class=\"css_span_dato {$ar_css['css_span_dato']}\"> No access here (select)! </span>";		
+				$html_contenido .= "";
 				break;
 											
 		case ($permissions>=1):
 										
-				$html_contenido .= $valor ;
-				
-				if(SHOW_DEBUG) {
-					$html_contenido .= " <span class=\"debug_info\">[$dato]</span>";
-				}
-					
-				if($permissions==3) {
-					$html_contenido .= "\n <span class=\"css_span_debugger {$ar_css['css_span_debugger']}\" id=\"debugger_{$id}\" >{$debugger}</span>";	
-				}			
+				$html_contenido .= $valor ;				
 					
 	}
 	
 	
 	# PRINT HTML
-	print $html_contenido;
+	print $html_contenido;	
 	
 	
-	echo "\n</div>\n\n"; //wrap
 ?>

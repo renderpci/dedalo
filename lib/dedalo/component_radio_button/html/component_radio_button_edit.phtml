@@ -20,7 +20,7 @@
 	data-parent=\"{$parent}\"
 	data-lang=\"{$lang}\"
 	data-modo=\"{$modo}\"
-	data-dato=\"{$dato_string}\"
+	data-dato='{$dato_json}'
 	data-component_name=\"{$component_name}\"
 	data-component_info='{$component_info}'
 	>";
@@ -87,7 +87,10 @@
 						$html_contenido .= "\n <label class=\"css_radio_button_rotulo {$ar_css['css_radio_button_rotulo']}\" $required_code >$rotulo</label>";						
 					}
 					
-					#$html_contenido .= "\n <span class=\"css_span_log\"></span>";
+					if(SHOW_DEBUG) {
+						$html_contenido .= "\n <span class=\"notas\">dato: $dato_json</span>";;
+					}
+					#
 					#$html_contenido .= "\n <span  class=\"css_span_ejemplo {$ar_css['css_span_ejemplo']}\">$ejemplo</span>";
 					
 					$html_contenido .= 	$html_tools;

@@ -116,6 +116,7 @@ class diffusion_section_stats extends diffusion {
 	}
 
 
+
 	/**
 	* GET_DATES_SQL_FROM_RANGE
 	*/
@@ -198,6 +199,27 @@ class diffusion_section_stats extends diffusion {
 
 		$this->diffusion_map_object = new stdClass();		
 
+		#SEARCH FROM USER SELECTION
+
+		$search_options_session_key = 'section_'.$options->section_tipo;
+
+		#dump($search_options_session_key,'$search_from_user');
+
+		#SELECT THE SEARCH SESION FROM USER
+		if (!empty($_SESSION['dedalo4']['config']['search_options'][$search_options_session_key])) {
+			
+			$options_search_sesion 	  = (object)$_SESSION['dedalo4']['config']['search_options'][$search_options_session_key];
+			$options_search_from_user = clone($options_search_sesion); // Important: clone session object
+		
+			$options_search_from_user->search_options_session_key 	= 'current_edit';
+			$options_search_from_user->modo 						= 'edit';
+			$options_search_from_user->offset 						= false;
+			$options_search_from_user->layout_map					= array();
+
+			#dump($options_search_from_user,'$options_search_from_user');
+		}
+
+
 		# ITERATE ALL SECTIONS (included activity)
 		foreach ($ar_diffusion_map as $stats_tipo => $current_obj) {
 
@@ -206,7 +228,8 @@ class diffusion_section_stats extends diffusion {
 
 			$cn=0;foreach ($current_obj->components as $current_component_tipo => $current_component_target_tipo) {
 				
-				if ($current_component_tipo=='dd1093') continue; # Skip field 'dato' stats
+				if ($current_component_tipo=='dd1093') continue; # Skip stats field 'dato' stats
+				if ($current_component_tipo=='dd551') continue; # Skip real field 'dato' stats
 				#if ($current_component_tipo=='dd1071') continue; # skip quien (2 values)
 				/*
 				if ($current_component_tipo=='dd1070') continue; # skip ip
@@ -239,7 +262,11 @@ class diffusion_section_stats extends diffusion {
 				$change_section = false;
 					
 					$i=0;foreach ($ar_related_component_tipo as $current_column_tipo) {
+
+						# Set section_tipo for search in query
+						$section_tipo = $current_obj->section;
 						$current_column_tipo_orig = $current_column_tipo;
+						$filter_custom = " section_tipo = '$section_tipo'";
 						# current_lang
 						$RecordObj_dd 	= new RecordObj_dd($current_column_tipo);
 						$model_name 	= $RecordObj_dd->get_modelo_name();	
@@ -254,24 +281,98 @@ class diffusion_section_stats extends diffusion {
 						#
 						# PORTALES
 						# Case portals change sql query and current column tipo
-						if($model_name == 'component_portal'){
-							$current_column_tipo = $current_obj->propiedades->portal_list[0];
-							$RecordObj_dd 		 = new RecordObj_dd($current_column_tipo);
-							$model_name 		 = $RecordObj_dd->get_modelo_name();	
-							$traducible 		 = $RecordObj_dd->get_traducible();
-							if ($traducible!='si') {
-								$current_lang = DEDALO_DATA_NOLAN;
-							}else{
-								$current_lang = DEDALO_DATA_LANG;
-							}
-							$change_section = true;
-							$section_tipo_portal = component_common::get_section_tipo_from_component_tipo($current_column_tipo);
-							#dump($section_tipo,'$section_tipo');							
+						if (isset($current_obj->propiedades->stats_look_at)) {
+							#dump($current_obj->propiedades->stats_look_at);
+
+								$options_search_portal = clone($options_search_sesion);
+								
+								$options_search_portal->layout_map 	= array($current_column_tipo);
+								$options_search_portal->limit		= false;
+								$options_search_portal->offset		= false;
+								$options_search_portal->search_options_session_key 	= 'current_edit';
+								$options_search_portal->modo 						= 'edit';
+
+								$section_rows 	= search::get_records_data($options_search_portal);
+
+								$result = $section_rows->result;
+
+								$filtro_portal = array();
+								$filtro_portal_sql = '';
+									
+									#dump($result, ' result ++ '.to_string()); 
+									#dump( reset(array_values($result)), 'array_values() ++ '.to_string());
+
+								foreach ($result as $key => $ar_value) {										
+									foreach ($ar_value as $tipo => $dato) {
+										
+										if (empty($dato[$current_column_tipo])) continue;
+											
+										#$filtro_portal[] = $dato[$current_column_tipo];
+										$ar_locators = json_decode($dato[$current_column_tipo]);
+										#dump($ar_locators);
+										foreach ((array)$ar_locators as $current_key => $current_locator) {
+
+											switch ($model_name) {
+												case 'component_filter':
+													#Change the dato of the proyecto with standar locator
+													$current_locator ='';
+													$current_locator = new stdClass();
+
+													$current_locator->section_id = $current_key;
+													$current_locator->section_tipo = DEDALO_SECTION_PROJECTS_TIPO;
+
+													#Change section_tipo for serarch in query
+													#$filter_custom = " section_tipo = '".DEDALO_SECTION_PROJECTS_TIPO."'";
+													$section_tipo = DEDALO_SECTION_PROJECTS_TIPO;
+												
+												default:
+													if (!isset($current_locator->section_tipo) || !isset($current_locator->section_id)) continue;
+													$filtro_portal_sql .= "\n(section_id = ".$current_locator->section_id." AND section_tipo = '".$current_locator->section_tipo."') OR";
+													#Change section_tipo for serarch in query
+													$section_tipo = $current_locator->section_tipo;
+													break;
+											}//end switch ($model_name) {
+											
+										}//end foreach ((array)$ar_locators as $current_key => $current_locator) {
+										
+									}//end oreach ($ar_value as $tipo => $dato) {
+								}//end foreach ($result as $key => $ar_value) {
+
+								#$filter_custom = '';
+								if (!empty($filtro_portal_sql)) {
+									$filter_custom = "\n(".substr($filtro_portal_sql, 0,-3).") ";
+								}								
+								#dump($filtro_portal_sql ,'$filtro_portal_sql');
+
+								$current_column_tipo = $current_obj->propiedades->stats_look_at[0];
+								$RecordObj_dd 		 = new RecordObj_dd($current_column_tipo);
+								$model_name 		 = $RecordObj_dd->get_modelo_name();	
+								$traducible 		 = $RecordObj_dd->get_traducible();
+								if ($traducible!='si') {
+									$current_lang = DEDALO_DATA_NOLAN;
+								}else{
+									$current_lang = DEDALO_DATA_LANG;
+								}
+								$change_section = true;
+								#$section_tipo_portal = component_common::get_section_tipo_from_component_tipo($current_column_tipo);
+									#dump($section_tipo,'$section_tipo - current_column_tipo:'.$current_column_tipo);							
+
+						}//if (isset($current_obj->propiedades->stats_look_at)){
+
+						#PROPERTIES MODIFICATOR
+						#In propiedades is poosible put one modificator of the value. for ex: valor_arguments : year
+						#this value change the query for sql going to the depper into the value of the component.
+						
+						if(isset($current_obj->propiedades->valor_arguments)){
+							$valor_arguments = ', '.$current_obj->propiedades->valor_arguments;
+						}else{
+							$valor_arguments = '';
 						}
 
+						#
 						# COLUMNS
 						if ($i<1) {
-						$sql_columns .= "\n COUNT (datos#>>'{components, $current_column_tipo, dato, $current_lang}') AS count,";
+							$sql_columns .= "\n COUNT (datos#>>'{components, $current_column_tipo, dato, $current_lang $valor_arguments}') AS count,";
 						}
 						switch (true) {
 
@@ -280,59 +381,78 @@ class diffusion_section_stats extends diffusion {
 								break;
 							
 							default:
-								$sql_columns .= "\n datos#>>'{components, $current_column_tipo, dato, $current_lang}' AS $current_column_tipo";	
+								$sql_columns .= "\n datos#>>'{components, $current_column_tipo, dato, $current_lang $valor_arguments}' AS $current_column_tipo";	
 						}											
 
+						#
 						# GROUP BY 
 						if ($i<1) {
 						$sql_group .= "\nGROUP BY";
 						}
 						#$sql_group .= "\n datos#>>'{components, $current_column_tipo, dato, $current_lang}'";
-						$sql_group .= " $current_column_tipo";
+						$sql_group .= " $current_column_tipo"; 	
 
 						if ($current_column_tipo_orig != end($ar_related_component_tipo)) {
 							$sql_columns .= ',';
 							$sql_group .= ',';
 						}
 
-					$i++;}
+					$i++;}//end $i=0;foreach ($ar_related_component_tipo as $current_column_tipo) {
 					
-						# DATE
-						if ($section_tipo==DEDALO_ACTIVITY_SECTION_TIPO) {
+					
+					# DATE
+					if ($section_tipo==DEDALO_ACTIVITY_SECTION_TIPO) {
 						$date_filter = self::get_date_sql(
 											$options->fecha[0],
 											$options->fecha[1]
 										);
-						}else{
+					}else{
 						$date_filter = '';	
-						}
+					}
 						
 
 			
-					$current_matrix_table 	= common::get_matrix_table_from_tipo($section_tipo);
+					$current_matrix_table = common::get_matrix_table_from_tipo($section_tipo);
 					$filter_options = new stdClass();
 					/*
-					* If the model of the component is a portal the reference of the top tipo (creator top tipo) is the filter, because some portals can have the same info for two types of Heritage or OH
-					*/
-					if ($change_section){
-						$filter_by_section_tipo = "\n-- section_creator_top_tipo -- \n datos@>'{\"section_creator_top_tipo\":\"$section_tipo\"}'::jsonb ";
-						$filter_options->section_tipo 	= $section_tipo_portal;			
-
-					}else{
-						$filter_by_section_tipo = "\n-- filter_by_section_tipo -- \n section_tipo = '$section_tipo' ";
-						$filter_options->section_tipo 	= $section_tipo;			
+						* If the model of the component is a portal the reference of the top tipo (creator top tipo) is the filter, because some portals can have the same info for two types of Heritage or OH
 						
-					}
-			
-					$filter_by_projects		= filter::get_sql_filter($filter_options);
+						if ($change_section){
+							$filter_by_section_tipo = "\n-- section_creator_top_tipo -- \n datos@>'{\"section_creator_top_tipo\":\"$section_tipo\"}'::jsonb ";
+							$filter_options->section_tipo 	= $section_tipo_portal;			
+
+						}else{
+							$filter_by_section_tipo = "\n-- filter_by_section_tipo -- \n section_tipo = '$section_tipo' ";
+							$filter_options->section_tipo 	= $section_tipo;			
+							
+						}
+							*/
+					#$filter_by_projects		= filter::get_sql_filter($filter_options);
 					$filter_by_date			= $date_filter;
-					$filter_group			= $sql_group;
-					$strQuery ="\nSELECT $sql_columns \n FROM \"$current_matrix_table\" \nWHERE $filter_by_section_tipo $filter_by_projects $filter_by_date $filter_group ORDER BY count DESC\n";
+					$group_by				= $sql_group;
+					#$strQuery ="\nSELECT $sql_columns \n FROM \"$current_matrix_table\" \nWHERE $filter_by_section_tipo $filter_by_projects $filter_by_date $group_by ORDER BY count DESC\n";
+					
+					$options_search_from_user->sql_columns 	= $sql_columns;
+					$options_search_from_user->matrix_table	= $current_matrix_table;
+					$options_search_from_user->group_by		= $group_by;
+					$options_search_from_user->limit		= '';
+					$options_search_from_user->order_by		= 'count';
+					$options_search_from_user->filter_custom= $filter_custom;
+
+						#dump($options_search_from_user,'$options_search_from_user');die();
+					$section_rows 	= search::get_records_data($options_search_from_user);
+						#dump($section_rows,'$section_rows');
+
 						#dump($strQuery,"strQuery");
 						#echo "<pre>$strQuery</pre><hr>";
 					#dump($strQuery,'$strQuery');
-					$result	= JSON_RecordObj_matrix::search_free($strQuery);
+					$result	= $section_rows->result; 
+					#dump($result,"result");
 					
+
+					#$result	= JSON_RecordObj_matrix::search_free($strQuery);
+					#dump($result,"result"); die();
+
 					$sql_time = round(microtime(1)-$start_time,3);
 					
 					#
@@ -340,26 +460,39 @@ class diffusion_section_stats extends diffusion {
 					$ar_stats=array();
 					$stats_obj=new stdClass();
 					# Rows
-					$r=0; while ($rows = pg_fetch_assoc($result)) {
-						
-						# Columns
-						$c=0; while ($c < pg_num_fields($result)) {
 
-							$fieldName = pg_field_name($result, $c);	# Select column left to right
-								#dump($fieldName, 'fieldName', array());							
-							$ar_stats[$r][$fieldName] = $rows[$fieldName];
+					foreach ($result as $key => $ar_value) {
+						foreach ($ar_value as $value) {
+							if(empty($value['count'])) continue;
+							$ar_stats[] = array_reverse($value);
+						}						
+					}
+					#dump($ar_stats,'ar_stats');
+
+					/******************BEFORE****************
+						$r=0; while ($rows = pg_fetch_assoc($result)) {
 							
-						$c++;}
-						if(empty($ar_stats[$r]['count']) ){
-							unset($ar_stats[$r]);
-						}else{
-							$ar_stats[$r] = array_reverse($ar_stats[$r]);
-						};
-					
-							#dump($ar_stats[$r], '$ar_stats[$r]', array());
+							# Columns
+							$c=0; while ($c < pg_num_fields($result)) {
+
+								$fieldName = pg_field_name($result, $c);	# Select column left to right
+									#dump($fieldName, 'fieldName', array());							
+								$ar_stats[$r][$fieldName] = $rows[$fieldName];
+								
+							$c++;}
+							if(empty($ar_stats[$r]['count']) ){
+								unset($ar_stats[$r]);
+							}else{
+								$ar_stats[$r] = array_reverse($ar_stats[$r]);
+							};
 						
-					$r++;}
-					#dump($ar_stats,'$ar_stats '); #die();
+								dump($ar_stats[$r], '$ar_stats[$r]', array());
+							
+						$r++;}
+						*/
+
+
+					#dump($ar_stats,'$ar_stats '); die();
 					#
 					# EXAMPLE RESULT FORMAT OF 'ar_stats'
 					# Array (
@@ -382,22 +515,23 @@ class diffusion_section_stats extends diffusion {
 						$js_obj->tipo 		= $current_component_tipo ;
 						if(SHOW_DEBUG) {
 							$js_obj->title .=  " <span>($current_obj->graph_type)</span>";
+							$js_obj->query = $section_rows->strQuery;						
 						}
 						$js_obj->graph_type = $current_obj->graph_type;						
 						$js_obj->data 		= $this->washer($ar_stats, $current_component_tipo, $current_obj->propiedades);
 					$this->js_ar_obj[] = $js_obj;
 
 					# DIFFUSION_MAP_OBJECT					
-					#$this->diffusion_map_object = new stdClass();
-					#$this->diffusion_map_object->$section_tipo = new stdClass();
+					$this->diffusion_map_object = new stdClass();
+					$this->diffusion_map_object->$section_tipo = new stdClass();
 					$this->diffusion_map_object->$section_tipo->$current_component_tipo = new stdClass();		
-					$this->diffusion_map_object->$section_tipo->$current_component_tipo->ar_stats 	= $ar_stats;
-					$this->diffusion_map_object->$section_tipo->$current_component_tipo->js_obj 	= $js_obj;
+						$this->diffusion_map_object->$section_tipo->$current_component_tipo->ar_stats 	= $ar_stats;
+						$this->diffusion_map_object->$section_tipo->$current_component_tipo->js_obj 	= $js_obj;
 
 					# Debug
 					$this->diffusion_map_object->$section_tipo->$current_component_tipo->debug = new stdClass();
-					$this->diffusion_map_object->$section_tipo->$current_component_tipo->debug->sql_time = $sql_time;	
-					$this->diffusion_map_object->$section_tipo->$current_component_tipo->debug->strQuery = $strQuery;					
+						$this->diffusion_map_object->$section_tipo->$current_component_tipo->debug->sql_time = $sql_time;
+						$this->diffusion_map_object->$section_tipo->$current_component_tipo->debug->strQuery = $section_rows->strQuery;
 
 				$cn++;
 				#if ($cn>=1) 
@@ -409,8 +543,9 @@ class diffusion_section_stats extends diffusion {
 		#dump($this->diffusion_map_object, 'this->diffusion_map_object', array());
 
 		if(SHOW_DEBUG) {
-			echo "<span style=\"float:left\">Time To Generate stats ".round(microtime(1)-$start_time,3)."</span>";
+			echo "<span style=\"float:left\">Time To Generate stats ".round(microtime(1)-$start_time,3)."</span>"; # <br>".$section_rows->strQuery;
 			#dump( $this->diffusion_map_object, 'var', array());;
+			#dump($section_rows->strQuery, '$section_rows->strQuery');
 		}
 		
 		return $this->js_ar_obj;
@@ -446,7 +581,9 @@ class diffusion_section_stats extends diffusion {
 		$added_extras=false;
 
 		if ( !isset($ar_stats[0]) || count($ar_stats[0])>2 ) {
-			trigger_error("Sorry, not implemented yet for complex graphs");
+			if(SHOW_DEBUG) {
+				//trigger_error("Sorry, not implemented yet for complex graphs");
+			}			
 			return false;
 		}
 
@@ -464,7 +601,18 @@ class diffusion_section_stats extends diffusion {
 					#	[dd27] => lg-eng
 					#	[count] => 13
 					# )
-					$key 		= reset($ar_value);  
+					$key 		= reset($ar_value);
+					/*
+						if (strpos($key, '_')) {
+							$ar_parts = explode('_', $key);
+							$key = $ar_parts[0];
+							if(SHOW_DEBUG) {
+								$msg = sprintf("Bad data skiped or component_tipo dd1073: %s ",$key) ;
+								error_log($msg);
+							}
+						}
+						*/
+					
 
 					# Get first key of current array element. Ex. 'dd27' for
 					# (
@@ -486,8 +634,8 @@ class diffusion_section_stats extends diffusion {
 						$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($first_key,true);
 					#}
 						#dump($modelo_name,'$modelo_name');
-					switch (true) { 
-						
+					switch (true) {						
+
 						# ACTIVITY : IP Address
 						case ($component_tipo=='dd1070'):
 							$current_value_obj=new stdClass();
@@ -523,17 +671,53 @@ class diffusion_section_stats extends diffusion {
 						# ACTIVITY : Who
 						case ($component_tipo=='dd1071'):
 							$key = json_decode($key);
-							$component_current = component_common::get_instance('component_input_text', DEDALO_USER_NAME_TIPO, $key->section_id, 'edit', DEDALO_DATA_NOLAN,$key->section_tipo);
-							$component_value	= $component_current->get_valor(); 	#dump($component_value,"component_value for $first_key - $key - $modelo_name");
-							if (empty($component_value)) {
-								$component_value='na';
+							if (is_object($key)) { // old values
+								# old format is not array. Nothing to do
+							}else if(is_array($key)) {
+								$key = reset($key); // New format is array of object
+							}else{
+								#dump($key, ' key ++ '.to_string());
+							}							
+							
+							if (is_object($key)) {
+								$component_current = component_common::get_instance('component_input_text', DEDALO_USER_NAME_TIPO, $key->section_id, 'edit', DEDALO_DATA_NOLAN, $key->section_tipo);
+								$component_value	= $component_current->get_valor(); 	#dump($component_value,"component_value for $first_key - $key - $modelo_name");
+								if (empty($component_value)) {
+									$component_value='na';
+								}
+								$current_value_obj=new stdClass();
+								$current_value_obj->$x_axis = (string)$component_value;
+								$current_value_obj->$y_axis = intval($value);
+								$current_obj->values[] = $current_value_obj;
 							}
-							$current_value_obj=new stdClass();
-							$current_value_obj->$x_axis = (string)$component_value;
-							$current_value_obj->$y_axis = intval($value);
-							$current_obj->values[] = $current_value_obj;
+							
 							break;
 
+						# ACTIVITY : WHERE : Activity dónde						
+						case ($component_tipo=='dd1073'):
+							#dump($key, ' value ++ '.to_string());
+							if (strpos($key, '_')!==false) {
+								$ar_parts = explode('_', $key);
+								if(SHOW_DEBUG) {
+									$msg = sprintf("Bad data received for component_tipo dd1073: %s . Explode and use %s instead",$key,$ar_parts[0]) ;
+									error_log($msg);
+								}								
+								$key = $ar_parts[0];
+							}
+							$key_resolved = RecordObj_dd::get_termino_by_tipo( $key, DEDALO_DATA_LANG, true );
+
+							$current_value_obj=new stdClass();
+								$current_value_obj->$x_axis = (string)$key_resolved;
+								if (empty($current_value_obj->$x_axis)) {
+									$current_value_obj->$x_axis = (string)'no avaliable';
+									if(SHOW_DEBUG) {
+										$current_value_obj->$x_axis .= " [key_resolved:".to_string($key_resolved)." - key:".to_string($key)."]";
+									}
+								}
+								$current_value_obj->$y_axis = (int)$value;
+								$current_obj->values[] = $current_value_obj;
+							break;
+						
 						# PROJECTS : components with model component_filter
 						case ($modelo_name=='component_filter'):
 							if(!isset($table_temp)) $table_temp=array();
@@ -580,26 +764,35 @@ class diffusion_section_stats extends diffusion {
 							break;
 						
 						# COMPONENT SELECT : component_select, component_select_lang
-						case ($modelo_name=='component_dateXX'):
-							$current_component 	= component_common::get_instance($modelo_name, $first_key, NULL, 'list', DEDALO_DATA_NOLAN);
-							$current_component->set_dato($key);
-							#$key_resolved 		= $current_component->get_valor();							
-							$key_resolved 	= $current_component->get_valor_local();
-								dump($key_resolved, "key_resolved - key: $key - value: ".$value);
+						case ($modelo_name=='component_date'):
+							#dump($tvalue,'$tvalue');
+							if(isset($propiedades->valor_arguments)){
+								$key_resolved = $key;
 
+							}else{
+								$current_component 	= component_common::get_instance($modelo_name, $first_key, NULL, 'list', DEDALO_DATA_NOLAN);
+								$current_component->set_dato($key);
+								#$key_resolved 		= $current_component->get_valor();							
+								$key_resolved 	= $current_component->get_valor_local();
+									dump($key_resolved, "key_resolved - key: $key - value: ".$value);
+							}
 								$current_value_obj=new stdClass();
 								$current_value_obj->$x_axis = (string)$key_resolved;								
-								$current_value_obj->$y_axis = (int)$tvalue;
-								$current_obj->values[] = $current_value_obj;				
+								$current_value_obj->$y_axis = (int)$value;
+								$current_obj->values[] = $current_value_obj;
+								
+
 							break;
+
 						# DEFAULT BEHAVIOR
 						default:
 							
 							#dump($key, "key first_key: $first_key - value : $value");
 							if ($key!='count') {//&& strpos($key, 'dd')===0
 								try {
-									if (intval($key) >0) {
+									if (intval($key)>0) {
 										$current_component 	= component_common::get_instance($modelo_name, $first_key, NULL, 'list');
+										#$current_component 	= new $modelo_name($first_key, NULL, 'list', DEDALO_DATA_LANG);
 										$current_component->set_dato($key);
 										$key_resolved 		= $current_component->get_valor();
 										//dump($first_key, ' first_key');
@@ -616,7 +809,8 @@ class diffusion_section_stats extends diffusion {
 											if( is_string($key) && strlen($key)>2 )
 											$key_resolved = RecordObj_ts::get_termino_by_tipo( $key, DEDALO_DATA_LANG, true );
 										}
-										#$key_resolved = RecordObj_ts::get_termino_by_tipo( $key, DEDALO_DATA_LANG, true );										
+										#$key_resolved = RecordObj_ts::get_termino_by_tipo( $key, DEDALO_DATA_LANG, true );
+										#dump($key_resolved, ' key_resolved');									
 									}									
 								} catch (Exception $e) {
 									//dump($first_key, ' first_key');
@@ -629,10 +823,18 @@ class diffusion_section_stats extends diffusion {
 									$key_resolved = $key;
 									#dump($key_resolved ,'$key_resolved '.$modelo_name);
 									# Get value of 'component_input_text' from section project id (tipo is fixed: DEDALO_PROJECTS_NAME_TIPO)
+									
+									$current_key_obj = json_decode($key);
+									$current_section_tipo = (is_array($current_key_obj) && isset(reset($current_key_obj)->section_tipo)) ? reset($current_key_obj)->section_tipo : null;
+									if (SHOW_DEBUG && $current_section_tipo==null) {
+										dump($current_key_obj, "$first_key + ".to_string($value));
+									}
 
-									$current_component 	= component_common::get_instance($modelo_name, $first_key, NULL, 'list', DEDALO_DATA_LANG);
+									$current_component 	= component_common::get_instance($modelo_name, $first_key, NULL, 'list', DEDALO_DATA_LANG, $current_section_tipo);		//dump($key, "$first_key + ".to_string($value));
+									#$current_component 	= new $modelo_name($first_key, NULL, 'list');									
 									$current_component->set_dato($key);
 									$key_resolved 		= $current_component->get_valor();
+									#dump($key_resolved ,'$key_resolved for: '.$key);
 									if ($modelo_name == 'component_date') {
 										$key_resolved 	= $current_component->get_valor_local();
 									}
@@ -641,7 +843,8 @@ class diffusion_section_stats extends diffusion {
 								$key_resolved = $key;
 							}
 							
-							$key_resolved = strip_tags($key_resolved);
+
+							$key_resolved = isset($key_resolved) ? strip_tags($key_resolved) : null;
 								#dump($key_resolved, ' key_resolved '.$value);
 								if (empty($value)) {
 									continue; 	# Skip empty data
@@ -654,6 +857,9 @@ class diffusion_section_stats extends diffusion {
 							$current_value_obj->$x_axis = (string)$key_resolved;
 							if (empty($current_value_obj->$x_axis)) {
 								$current_value_obj->$x_axis = (string)'no avaliable';
+								if(SHOW_DEBUG) {
+									$current_value_obj->$x_axis .= " default [key_resolved:".to_string($key_resolved)." - key:".to_string($key)."]";
+								}
 							}
 							$current_value_obj->$y_axis = (int)$value;
 							$current_obj->values[] = $current_value_obj;

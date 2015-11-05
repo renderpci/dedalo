@@ -261,7 +261,7 @@
 	# CLOSE DB CONNECTION
 	# dump(DBi::_getConnection());
 	#DBi::_getConnection()->close();
-	pg_close(DBi::_getConnection());
+	//pg_close(DBi::_getConnection());
 
 
 

@@ -28,27 +28,16 @@
 	switch($permissions) {
 			
 		case 0	:	$html_contenido .= "";
-					break;
-						
-		case 1	: 	foreach ($ar_list_of_values->result as $value => $rotulo) {
-						
-						if( $value == $dato ) {
-							$checked = 'checked="checked"';
-						}else {
-							$checked = "";
-						}
-						$html_contenido .= "\n <input class=\"css_radio_button {$ar_css['css_radio_button']}\" type=\"radio\" name=\"{$tipo}\" 
-						data-tipo=\"{$tipo}\" value=\"{$value}\" title=\"$html_title\" $checked disabled />";
-						$html_contenido .= "\n <label class=\"css_radio_button_rotulo {$ar_css['css_radio_button_rotulo']}\"
-						$required_code >$rotulo</label>";	
-					}
-					break;	
-						
+					break;						
 		
-		case ($permissions>=2)	:
-		
+		case ($permissions>=1)	:
+					
+					# COMPARISON OPERATORS
+					$html_contenido .= operator::get_search_comparison_operators_html($tipo,$ar_comparison_operators);
+					
+					# INPUT
+					$html_contenido .= "<span id=\"search_component_$tipo\">";
 					foreach ($ar_list_of_values->result as $value => $rotulo) {
-						
 						if( $value == $dato ) {
 							$checked = 'checked="checked"';
 						}else {
@@ -59,9 +48,12 @@
 						value='$value' 
 						title=\"$html_title\" $checked
 						/>";
-						$html_contenido .= "\n <label class=\"css_radio_button_rotulo {$ar_css['css_radio_button_rotulo']}\" $required_code >$rotulo</label>";
-						
-					}										
+						$html_contenido .= "\n <label class=\"css_radio_button_rotulo {$ar_css['css_radio_button_rotulo']}\" $required_code >$rotulo</label>";						
+					}
+					$html_contenido .= "</span>";
+
+					# LOGICAL OPERATORS
+					$html_contenido .= operator::get_search_logical_operators_html($tipo,$ar_logical_operators);
 							
 	}	
 	

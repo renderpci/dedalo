@@ -35,6 +35,8 @@
 			# CONTENT
 			$html_head .= "<div class=\"head_row_content\">";
 
+				#dump($current_diffusion_obj, "current_diffusion_obj ".to_string());
+
 				# VALOR : Si el valor recibido es único (no es un compuesto de varios registros) se formatea para unificar la lectura
 				if(!is_array($valor)) {
 					$valor = array( $current_diffusion_obj->id = array($current_diffusion_obj->tipo => $valor ) );
@@ -69,10 +71,11 @@
 
 								# IMG
 								case 'component_image':
-									$component_image = component_common::get_instance('component_image',$component_tipo,$section_id,'list');
-									$html_head .= $component_image->get_html();
-									#$img_url 	= DEDALO_IMAGE_FILE_URL . "?m=image&SID=$current_valor&w=102&h=57&fx=crop";
-									#$html_head .= "<img src=\"$img_url\" class=\"index_ts_thumb\" />";
+									#$component_image = component_common::get_instance('component_image',$component_tipo,$section_id,'list',$section_tipo);
+									#$html_head .= $component_image->get_html();
+									#$img_url 	= DEDALO_IMAGE_FILE_URL . "?m=image&SID=$current_valor&w=102&h=57&fx=crop"; 	#dump($img_url, " img_url ".to_string());
+									$img_url 	= DEDALO_MEDIA_BASE_URL .'/'. DEDALO_IMAGE_FOLDER .'/'. DEDALO_IMAGE_THUMB_DEFAULT . "/{$current_valor}.jpg";
+									$html_head .= "<img src=\"$img_url\" class=\"index_ts_thumb\" />";
 									break;
 
 								# AV

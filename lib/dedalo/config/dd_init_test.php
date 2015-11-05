@@ -3,6 +3,8 @@
 # Verifica la integridad del sistema (habitualmente en la secuencia de arranque o login)
 # Comprueba la existencia de elementos / directorios / permisos necesarios para ejecutar Dédalo
 
+
+
 # PHP VERSION
 if (version_compare(PHP_VERSION, '5.4.15', '<'))
 	throw new Exception(" Error. This php version ".PHP_VERSION." is not supported by Dédalo");
@@ -73,17 +75,17 @@ foreach ($ar_quality as $quality) {
 		}
 	}
 }
-*/
-	
+*/	
 
 # MEDIA PDF folder
-# Target folder exists test	
+# Target folder exists test
+if(defined('DEDALO_PDF_FOLDER')) {
 $folder_path = DEDALO_MEDIA_BASE_PATH.DEDALO_PDF_FOLDER.'/'.DEDALO_PDF_QUALITY_DEFAULT;
 if( !is_dir($folder_path) ) {
 	if(!mkdir($folder_path, 0777,true)) {
 		throw new Exception(" Error on read or create media pdf default directory. Permission denied ");
 	}
-}
+}}
 
 # MEDIA HTML FILES folder
 # Target folder exists test	
@@ -93,10 +95,25 @@ if( !is_dir($folder_path) ) {
 	if(!mkdir($folder_path, 0777,true)) {
 		throw new Exception(" Error on read or create media DEDALO_HTML_FILES_FOLDER default directory. Permission denied ");
 	}
-}	
+}}
+
+# DEDALO_IMAGE_THUMB_DEFAULT
+# Target folder exists test	
+$folder_path = DEDALO_MEDIA_BASE_PATH.DEDALO_IMAGE_FOLDER.'/'.DEDALO_IMAGE_THUMB_DEFAULT;
+if( !is_dir($folder_path) ) {
+	if(!mkdir($folder_path, 0777,true)) {
+		throw new Exception(" Error on read or create thumbs directory. Permission denied");
+	}
 }
 
-
+# DEDALO_IMAGE_THUMB_DEFAULT
+# Target folder exists test	
+$folder_path = DEDALO_MEDIA_BASE_PATH.DEDALO_IMAGE_FOLDER.'/'.DEDALO_IMAGE_QUALITY_ORIGINAL;
+if( !is_dir($folder_path) ) {
+	if(!mkdir($folder_path, 0777,true)) {
+		throw new Exception(" Error on read or create originals directory. Permission denied");
+	}
+}
 
 
 # LOGS folder
@@ -109,14 +126,6 @@ if( !is_dir($folder_path) ) {
 }
 
 
-# DEDALO_IMAGE_THUMB_DEFAULT
-# Target folder exists test	
-$folder_path = DEDALO_MEDIA_BASE_PATH.DEDALO_IMAGE_FOLDER.'/'.DEDALO_IMAGE_THUMB_DEFAULT;
-if( !is_dir($folder_path) ) {
-	if(!mkdir($folder_path, 0777,true)) {
-		throw new Exception(" Error on read or create thumbs directory. Permission denied");
-	}
-}
 
 # IMAGE MAGICK
 #exec(MAGICK_PATH. "convert -version", $out, $rcode); // Try to get ImageMagick "convert" program version number.
@@ -127,30 +136,16 @@ if (empty($image_magick)) {
 }
 
 # FFMPEG
-#$ffmpeg = trim(shell_exec('type -P ffmpeg'));
-#if (empty($ffmpeg)) throw new Exception("Error on system test. ffmpeg lib not found", 1);
-#exec(DEDALO_AV_FFMPEG_PATH. " ", $ffmpeg_output, $ffmpeg_codigo); // Try to get ffmpeg "convert" program version number.
-#if ($ffmpeg_codigo==127) {
-#	throw new Exception("Error on system test. ffmpeg lib not found", 1);
-#}
 $ffmpeg = trim(shell_exec('type -P '.DEDALO_AV_FFMPEG_PATH));
 if (empty($ffmpeg)) {
 	throw new Exception("Error on system test. ffmpeg lib not found", 1);
 }
 
-
 # QT-FASTSTART
-#$ffmpeg = trim(shell_exec('type -P qt-faststart'));
-#if (empty($ffmpeg)) throw new Exception("Error on system test. qt-faststart lib not found", 1);
-#exec(DEDALO_AV_FASTSTART_PATH. " ", $faststart_output, $faststart_codigo); // Try to get faststart "convert" program version number.
-#if ($faststart_codigo==127) {
-#	throw new Exception("Error on system test. faststart lib not found", 1);
-#}
-$ffmpeg = trim(shell_exec('type -P '.DEDALO_AV_FASTSTART_PATH));
-if (empty($ffmpeg)) {
-	throw new Exception("Error on system test. faststart lib not found", 1);
+$qt_faststart = trim(shell_exec('type -P '.DEDALO_AV_FASTSTART_PATH));
+if (empty($qt_faststart)) {
+	throw new Exception("Error on system test. qt-faststart lib not found", 1);
 }
-
 
 # DEFAULT PROJECT
 if (!defined('DEDALO_DEFAULT_PROJECT')) {
@@ -191,14 +186,12 @@ if (!function_exists('mcrypt_encrypt')) {
 	}
 
 
+
+
+
 # AREA TREE 
 area::get_ar_ts_children_all_areas_hierarchized(true);
 
-
-# DEDALO_MAX_ROWS_PER_PAGE
-if(!isset($_SESSION['dedalo4']['config']['max_rows'])) {
-	$_SESSION['dedalo4']['config']['max_rows'] = DEDALO_MAX_ROWS_PER_PAGE ;	
-}
 
 
 ?>

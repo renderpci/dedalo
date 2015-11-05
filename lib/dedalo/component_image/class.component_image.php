@@ -44,13 +44,13 @@ class component_image extends component_common {
 		# Creamos el componente normalmente
 		parent::__construct($tipo, $parent, $modo, $lang, $section_tipo);
 
-		/**/
+		/*
 		# Dato : Verificamos que hay un dato. Si no, asignamos el dato por defecto en el idioma actual		
 		# Force calculate and set initial dato
 		$dato = $this->get_dato();
 			#dump(empty($dato)," dato $modo");
 
-		$need_save=false;
+		$this->need_save=false;
 		if($this->parent>0 && !isset($dato->section_id)) {
 
 			#####################################################################################################
@@ -64,10 +64,10 @@ class component_image extends component_common {
 
 			# Dato
 			$this->set_dato($locator);
-			$need_save=true;
+			$this->need_save=true;
 		}#end if(empty($dato->counter) && $this->parent>0)
+		*/
 
-	
 			#
 			# CONFIGURACIÓN NECESARIA PARA PODER SALVAR (Al salvar se guarda una versión valor_list html que no funciona si no no están estas variables asignadas)
 			#
@@ -88,18 +88,18 @@ class component_image extends component_common {
 					#dump($this->ImageObj,"ImageObj en construct");
 
 			
-		
-		if ($need_save) {
+		/*
+		if ($this->need_save) {
+			
 			# result devuelve el id de la sección parent creada o editada
 			$result = $this->Save();
 			if(SHOW_DEBUG) {
 				$total=round(microtime(true)-$start_time,3);
 				error_log("Updated ".RecordObj_dd::get_termino_by_tipo($this->tipo)." locator (to ".$locator->get_flat().") of current ".get_called_class()." (tipo:$this->tipo - section_tipo:$this->section_tipo - parent:$this->parent - lang:$this->lang) $total ms");
-			}			
-		}#end if ($need_save)
-
-		
-		
+			}
+					
+		}#end if ($this->need_save)
+		*/
 
 		if(SHOW_DEBUG) {
 			global$TIMER;$TIMER[__METHOD__.'_OUT_'.$this->tipo.'_'.$this->modo.'_'.microtime(1)]=microtime(1);
@@ -107,6 +107,42 @@ class component_image extends component_common {
 
 	}#end __construct
 
+
+
+	/**
+	* SAVE
+	* @return int $parent (section_id)
+	*/
+	public function Save() {
+
+		#####################################################################################################
+		# DEFAULT DATO
+		$locator = new locator();
+			$locator->set_component_tipo($this->tipo);
+			$locator->set_section_tipo($this->section_tipo);
+			$locator->set_section_id($this->parent);			
+		# END DEFAULT DATO
+		######################################################################################################
+
+		# Dato
+		$this->set_dato($locator);
+		
+		# Generate default image quality from original if need
+		$default = $this->generate_default($overwrite=false);
+
+		# Generate thumb image quality from default allways (if default exits)
+		$thumb 	 = $this->generate_thumb();
+
+		if(SHOW_DEBUG) {
+			error_log("SAVING COMPONENT IMAGE: generate_thumb response: ".to_string($thumb));
+		}
+
+		return parent::Save();
+
+	}#end Save
+
+
+	
 
 
 	/**
@@ -198,17 +234,20 @@ class component_image extends component_common {
 
 		#
 		# CASE 2 FALLBACK DEFAULT NAME : Default behavior like 'dd20_rsc750_1'
+		/*
 		$dato = $this->get_dato();
-		if (!isset($dato->section_id)) {
-			
+		if (!isset($dato->section_id)) {			
 			if(SHOW_DEBUG) {
-				trigger_error(__METHOD__." Component image dato is empty");
+				if($this->parent>0)			
+				trigger_error(__METHOD__." Warning: Component image dato is empty. component_tipo:$component_tipo, parent:$this->parent, section_tipo:$this->section_tipo");
 			}
 			return 0;	
 		}
 		$locator  = new locator($dato);
 		$image_id = $locator->get_flat($dato);
 			#dump($image_id,'image_id');	
+		*/
+		$image_id = $this->tipo.'_'.$this->section_tipo.'_'.$this->parent;
 
 		return $this->image_id = $image_id;
 	}
@@ -226,30 +265,65 @@ class component_image extends component_common {
 		if(isset($this->aditional_path)) return $this->aditional_path;
 
 		$propiedades = $this->get_propiedades();
+		
 		if (isset($propiedades->aditional_path)) {
+			
+			switch (true) {
 
-			$component_tipo 	= $propiedades->aditional_path;
-			$component_modelo 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo);
+				case (is_string($propiedades->aditional_path)):
+					$component_tipo 	= $propiedades->aditional_path;
+					$component_modelo 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo);
 
-			$component 	= component_common::get_instance($component_modelo, $component_tipo, $this->parent, 'edit', DEDALO_DATA_NOLAN, $this->section_tipo);
-			$dato 		= trim($component->get_dato());			
+					$component 	= component_common::get_instance($component_modelo, $component_tipo, $this->parent, 'edit', DEDALO_DATA_NOLAN, $this->section_tipo);
+					$dato 		= trim($component->get_dato());			
 
-			# Add / at begin if not exits
-			if ( substr($dato, 0, 1) != '/' ) {
-				$dato = '/'.$dato;
+					# Add / at begin if not exits
+					if ( substr($dato, 0, 1) != '/' ) {
+						$dato = '/'.$dato;
+					}
+
+					# Remove / at end if exists
+					if ( substr($dato, -1) === '/' ) {
+						$dato = substr($dato, 0, -1);
+					}
+					#dump($dato,'$dato');
+
+					$ar_aditional_path[$this->image_id] = $dato;
+
+					if(isset($propiedades->max_items_folder) && empty($dato)) {
+
+						$max_items_folder  = $propiedades->max_items_folder;
+						$parent_section_id = $this->parent;
+
+						$ar_aditional_path[$this->image_id] = '/'.$max_items_folder*(floor($parent_section_id / $max_items_folder));
+
+						$component->set_dato( $ar_aditional_path[$this->image_id] );
+						$component->Save();
+					}
+
+					#dump(gettype($propiedades->aditional_path),'$propiedades->aditional_path');
+					break;
+
+				/*
+				case (is_object($propiedades->aditional_path) ):
+					//dump(gettype($propiedades->aditional_path),'$propiedades->aditional_path');
+					if(isset($propiedades->aditional_path->max_items_folder)){
+						$max_items_folder = $propiedades->aditional_path->max_items_folder;
+						$parent_section_id = $this->parent;
+
+						$ar_aditional_path[$this->image_id] = '/'.$max_items_folder*(floor($parent_section_id / $max_items_folder));
+					}
+
+					break;
+				*/
 			}
-
-			# Remove / at end if exists
-			if ( substr($dato, -1) === '/' ) {
-				$dato = substr($dato, 0, -1);
-			}
-			#dump($dato,'$dato');
-
-			$ar_aditional_path[$this->image_id] = $dato;
+			
 
 		}else{
 			$ar_aditional_path[$this->image_id] = false;
 		}
+
+
 
 		return $this->aditional_path = $ar_aditional_path[$this->image_id];
 	}
@@ -285,8 +359,7 @@ class component_image extends component_common {
 
 			#dump($this->ImageObj,"ImageObj");dump($this,"this");
 		if (!isset($this->ImageObj)) {
-			throw new Exception("Error Processing Request (get_image_url)", 1);
-			
+			throw new Exception("Error Processing Request (get_image_url)", 1);			
 		}
 
 		$ImageObj = (object)$this->ImageObj;
@@ -408,6 +481,188 @@ class component_image extends component_common {
 	}
 
 
+	/**
+	* CONVERT_QUALITY
+	* @return (BOOL)
+	*/
+	public function convert_quality( $source_quality, $target_quality ) {
+
+		$image_id 			= $this->get_image_id();
+		$aditional_path 	= $this->get_aditional_path();
+		$initial_media_path = $this->get_initial_media_path();
+		
+		# Image source
+		$source_ImageObj		= new ImageObj($image_id, $source_quality, $aditional_path, $initial_media_path);
+		$source_image 			= $source_ImageObj->get_local_full_path();		#dump($source_image, ' source_image');
+		$source_pixels_width	= $source_ImageObj->get_image_width();
+		$source_pixels_height	= $source_ImageObj->get_image_height();
+			#dump($source_ImageObj,'ImageObj');
+			#dump($source_image,"source_image $source_pixels_width x $source_pixels_height");
+
+		# Image target
+		$target_ImageObj		= new ImageObj($image_id, $target_quality, $aditional_path, $initial_media_path);
+		$target_image 			= $target_ImageObj->get_local_full_path();
+		$ar_target 				= ImageObj::get_target_pixels_to_quality_conversion($source_pixels_width, $source_pixels_height, $target_quality);
+		$target_pixels_width 	= $ar_target[0];
+		$target_pixels_height 	= $ar_target[1];
+			#dump($target_image,"target_image $target_pixels_width x $target_pixels_height");
+
+		# TARGET FOLDER VERIFY (EXISTS AND PERMISSIONS)				
+		$target_dir = $target_ImageObj->get_media_path_abs() ;
+		if( !is_dir($target_dir) ) {
+			if(!mkdir($target_dir, 0777,true)) throw new Exception(" Error on read or create directory \"$target_quality\". Permission denied $target_dir (2)");
+		}			
+		
+		if($target_pixels_width<1)  $target_pixels_width  = 720;
+		if($target_pixels_height<1) $target_pixels_height = 720;
+
+		$flags = '-thumbnail '.$target_pixels_width.'x'.$target_pixels_height ;
+		ImageMagick::convert($source_image, $target_image, $flags);
+			#dump($flags,"$source_image, $target_image");
+			#chmod($source_image, 0777);
+			#chmod($target_image, 0777);
+
+		# THUMB . Generate allways when current target quality is default
+		if ($target_quality==DEDALO_IMAGE_QUALITY_DEFAULT) {
+			# make thumb
+			#$this->generate_thumb();
+		}
+
+		return true;
+
+	}#end convert_quality
+
+
+	/**
+	* GENERATE_DEFAULT
+	* @return bool true / false
+	*/
+	public function generate_default($overwrite=false) {
+
+		# common data
+		$image_id 			 = $this->get_image_id();
+		$aditional_path 	 = $this->get_aditional_path();
+		$initial_media_path  = $this->get_initial_media_path();
+
+		# source data (default quality is source)
+		$source_ImageObj	 = new ImageObj($image_id, DEDALO_IMAGE_QUALITY_ORIGINAL, $aditional_path, $initial_media_path);
+		$original_image_path = $source_ImageObj->get_local_full_path();
+
+		if (!file_exists($original_image_path)) {
+			return false;
+		}
+
+		# target data (target quality is thumb)
+		$ImageObj			 = new ImageObj($image_id, DEDALO_IMAGE_QUALITY_DEFAULT, $aditional_path, $initial_media_path);
+		$image_default_path  = $ImageObj->get_local_full_path();
+
+		if ($overwrite || !file_exists($image_default_path)) {
+			$this->convert_quality( DEDALO_IMAGE_QUALITY_ORIGINAL, DEDALO_IMAGE_QUALITY_DEFAULT );		
+		}
+
+		return true;
+		
+	}#end generate_default
+
+
+	/**
+	* GENERATE_THUMB
+	* @return array url,path of thumb file path OR bool false if default quality file not exts
+	*/
+	public function generate_thumb() {
+
+		if(SHOW_DEBUG) {
+			error_log("DEBUG INFO: Called generate_thumb");
+		}
+
+		# common data
+		$image_id 			 = $this->get_image_id();
+		$aditional_path 	 = $this->get_aditional_path();
+		$initial_media_path  = $this->get_initial_media_path();
+
+		# source data (default quality is source)
+		$source_ImageObj	 = new ImageObj($image_id, DEDALO_IMAGE_QUALITY_DEFAULT, $aditional_path, $initial_media_path);
+		$default_image_path  = $source_ImageObj->get_local_full_path();
+
+		if (!file_exists($default_image_path)) {
+			if(SHOW_DEBUG) {
+				#error_log("DEBUG INFO: Default image quality don't exists. Skip create thumb.");
+			}
+			return false;
+		}
+		#error_log("DEBUG INFO: Default image quality exists. Building thumb.");
+		
+		# target data (target quality is thumb)
+		$ImageObj			 = new ImageObj($image_id, DEDALO_IMAGE_THUMB_DEFAULT, $aditional_path, $initial_media_path);
+		$image_thumb_path 	 = $ImageObj->get_local_full_path();
+		$image_thumb_url 	 = $ImageObj->get_url();	//$this->get_image_url($quality=DEDALO_IMAGE_THUMB_DEFAULT);
+		if(file_exists($image_thumb_path)) {
+			#unlink($image_thumb_path);
+			$image_thumb_path_des = $image_thumb_path.'_DES';
+			shell_exec("mv $image_thumb_path $image_thumb_path_des");
+			#error_log("DEBUG INFO: thumb exists. renaming thumb.");
+		}
+		
+		# thumb generate
+		$dd_thumb = ImageMagick::dd_thumb( 'list', $default_image_path, $image_thumb_path, $dimensions="102x57", $initial_media_path);
+
+		#error_log("DEBUG INFO: dd_thumb function called.");
+
+		if(SHOW_DEBUG) {
+			//dump($dd_thumb, ' generate_thumb: dd_thumb ++ '.to_string());
+			#if(!file_exists($image_thumb_path)) {
+				#dump($default_image_path, ' default_image_path ++ '.to_string());
+				#dump($image_thumb_path, ' image_thumb_path ++ '.to_string());
+				#dump($initial_media_path, ' initial_media_path ++ '.to_string());
+				#throw new Exception("Error Processing Request. NO SE HA GENERADO EL THUMB: $image_thumb_path", 1);		
+			#}
+			#error_log("RESPONSE generate_thumb: $dd_thumb");
+			#error_log("RESPONSE image_thumb_url: $image_thumb_url");
+		}		
+
+		return array('path'=>$image_thumb_path,
+					 'url' =>$image_thumb_url,
+					);
+		#return $dd_thumb;
+
+	}#end generate_thumb
+
+
+	/**
+	* GET_THUMB_URL
+	* @return 
+	*/
+	public function get_thumb_url() {
+		# common data
+		$image_id 			 = $this->get_image_id();
+		$aditional_path 	 = $this->get_aditional_path();
+		$initial_media_path  = $this->get_initial_media_path();
+		
+		# target data (target quality is thumb)
+		$ImageObj			 = new ImageObj($image_id, DEDALO_IMAGE_THUMB_DEFAULT, $aditional_path, $initial_media_path);		
+		$image_thumb_url 	 = $ImageObj->get_url();
+
+		return $image_thumb_url;
+
+	}#end get_thumb_url
+
+	/**
+	* GET_THUMB_PATH
+	* @return 
+	*/
+	public function get_thumb_path() {
+		# common data
+		$image_id 			 = $this->get_image_id();
+		$aditional_path 	 = $this->get_aditional_path();
+		$initial_media_path  = $this->get_initial_media_path();
+		
+		# target data (target quality is thumb)
+		$ImageObj			 = new ImageObj($image_id, DEDALO_IMAGE_THUMB_DEFAULT, $aditional_path, $initial_media_path);
+		$image_thumb_path 	 = $ImageObj->get_local_full_path();
+		
+		return $image_thumb_path;
+		
+	}#end get_thumb_path
 
 
 	/**
@@ -509,7 +764,7 @@ class component_image extends component_common {
 
 		#
 		# Image remove
-		$ar_quality = (array)unserialize(DEDALO_IMAGE_AR_QUALITY);		
+		$ar_quality = (array)unserialize(DEDALO_IMAGE_AR_QUALITY);
 		foreach ($ar_quality as $current_quality) {
 			# media_path
 			$media_path = $this->get_image_path($current_quality);
@@ -593,6 +848,30 @@ class component_image extends component_common {
 
 		return true;
 	}#end restore_component_media_files
+
+
+
+
+
+	/**
+	* __DESTRUCT
+	* @return 
+	*/
+	public function __destruct() {
+		/*
+		if ($this->need_save) {
+
+			$this->generate_thumb();
+			
+			# result devuelve el id de la sección parent creada o editada
+			$result = $this->Save();
+			if(SHOW_DEBUG) {
+				#$total=round(microtime(true)-$start_time,3);
+				#error_log("Updated ".RecordObj_dd::get_termino_by_tipo($this->tipo)." locator (to ".$locator->get_flat().") of current ".get_called_class()." (tipo:$this->tipo - section_tipo:$this->section_tipo - parent:$this->parent - lang:$this->lang) $total ms");
+			}					
+		}#end if ($this->need_save)
+		*/
+	}#end __destruct
 
 
 

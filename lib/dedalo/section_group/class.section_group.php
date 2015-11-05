@@ -10,20 +10,21 @@ class section_group extends common {
 	protected $tipo;
 	protected $modo;
 	protected $lang;
-	protected $id;		# id matrix of current section
 
 	# STRUCTURE DATA
 	protected $RecordObj_dd;
 	protected $modelo;
 	protected $norden;
 	protected $label;
+	protected $section_tipo;
+
 
 	protected $components_html;
 
 
-	function __construct($tipo, $modo, $components_html, $id_section=NULL) {
+	function __construct($tipo, $section_tipo, $modo, $components_html=NULL) {
 
-		#dump($tipo, "modo:$modo, , id_section:$id_section");
+		#dump($tipo, "modo:$modo, , id_section:$id_section"); die();
 
 		$this->define_tipo($tipo);
 		$this->define_modo($modo);
@@ -31,7 +32,7 @@ class section_group extends common {
 
 		$this->components_html = $components_html;
 
-		$this->id = $id_section;
+		$this->section_tipo = $section_tipo;
 
 		$this->load_structure_data();
 	}
@@ -42,6 +43,8 @@ class section_group extends common {
 	protected function define_lang($lang) {	$this->lang = $lang ; }
 	# define modo
 	protected function define_modo($modo) {	$this->modo = $modo ; }
+	# define section_tipo
+	protected function define_section_tipo($section_tipo) { $this->section_tipo = $section_tipo ; }
 
 
 

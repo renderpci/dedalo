@@ -15,7 +15,7 @@ class component_max_rows extends component_common {
 	* GET VALOR
 	*/
 	public function get_valor() {
-		return $_SESSION['dedalo4']['config']['max_rows'];
+		return DEDALO_MAX_ROWS_PER_PAGE;	//$_SESSION['dedalo4']['config']['max_rows'];
 		#return rows_paginator::get_maxRows();
 	}
 	

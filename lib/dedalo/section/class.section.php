@@ -2,8 +2,8 @@
 /*
 * CLASS SECTION
 */
-require_once(DEDALO_LIB_BASE_PATH . '/section_list/rows_search/class.rows_search.php');
-
+require_once(DEDALO_LIB_BASE_PATH . '/search/records_search/class.records_search.php');
+require_once(DEDALO_LIB_BASE_PATH . '/search/records_navigator/class.records_navigator.php');
 
 
 
@@ -56,14 +56,23 @@ class section extends common {
 	public $portal_layout_components;
 	public $portal_tipo;
 
-	protected $section_virtual 	 = false;
-	protected $section_real_tipo ;
+	public $section_virtual 	 = false;
+	public $section_real_tipo ;
 
 	static $active_section_id;
-	
 
+	public $is_temp = false;	# Used to force save data to session instead database. Default is false
+	
+	public $options;
 	# CACHE SECTIONS INSTANCES
 	#public static $ar_section_instances = array(); # array chache of called instances of components
+
+
+	# SAVE_HANDLER
+	# Default is 'database'. Other options like 'session' are accepted
+	# Note that section change automatically this value (to 'session' for example) when received section_id is like 'temp1' for manage this cases as temporal section
+	public $save_handler = 'database';
+	
 
 	/**
 	* GET_INSTANCE
@@ -93,7 +102,7 @@ class section extends common {
     		#unset($first_section);
     		$ar_section_instances = array_slice($ar_section_instances,50,null,true); //50
     		if(SHOW_DEBUG) {
-    			#error_log(__METHOD__." Overload secions prevent. Unset first cache item [$key]");
+    			error_log(__METHOD__." Overload secions prevent (max 100). Unset first cache item [$key]");
     		}    		
     		#return new section($section_id, $tipo, $modo);
     	}
@@ -103,7 +112,9 @@ class section extends common {
     		$ar_section_instances[$key] = new section($section_id, $tipo, $modo);
     		#error_log("NO exite una instancia de la sección $key. Se devuelve el objeto estático");
     	}else{
-			#error_log("Ya exite una instancia de la sección $key. Se devuelve el objeto estático");
+    		if(SHOW_DEBUG) {
+    			#error_log("Ya exite una instancia de la sección $key. Se devuelve el objeto estático");
+    		}			
     	}
     	#dump( array_keys($ar_section_instances), ' ar_section_instances'); 	
        
@@ -129,10 +140,10 @@ class section extends common {
 		}
 
 		# Set general vars
-		$this->section_id 		= $section_id;
-		$this->tipo 	= $tipo;
-		$this->modo 	= $modo;
-		$this->parent 	= 0;		
+		$this->section_id 	= $section_id;
+		$this->tipo 		= $tipo;
+		$this->modo 		= $modo;
+		$this->parent 		= 0;
 
 
 		# When tipo is set, calculate structure data
@@ -153,16 +164,17 @@ class section extends common {
 		*/
 
 		# ACTIVE_SECTION_section_id : Set global var
-		if($modo=='edit' && $this->section_id>0 && !isset(section::$active_section_id)) {
-			section::$active_section_id = $this->get_section_id();
+		if($modo=='edit'
+		 	&& ($this->section_id>0 || strpos($this->section_id, DEDALO_SECTION_ID_TEMP)!==false)
+			&& !isset(section::$active_section_id) ) {
+				section::$active_section_id = $this->get_section_id();
 		}
-
-
 
 		if(SHOW_DEBUG) {
 			#global$TIMER;$TIMER[__METHOD__.'_' .$section_name.'_OUT_'.$tipo.'_'.$modo.'_'.$section_id.'_'.microtime(1)]=microtime(1);
 		}
-	}
+	}//end __construct
+	
 
 	/**
 	* GET DATO
@@ -172,6 +184,27 @@ class section extends common {
 		if ($this->modo!='edit') {
 		#	return NULL;
 		}
+
+			# If section_id have a temporal string the save hander will be 'session' the section will save into the menory NOT to database
+			if( strpos($this->section_id, DEDALO_SECTION_ID_TEMP)!==false){
+				$this->save_handler = 'session';
+			}
+
+			#
+			# SAVE_HANDLER DIFFERENT TO DATABASE CASE
+			# Sometimes we need use section as temporal element without save real data to database. Is this case
+			# data is saved to session as temporal data and can be recovered from $_SESSION['dedalo4']['section_temp_data'] using key '$this->tipo.'_'.$this->section_id'
+			if (isset($this->save_handler) && $this->save_handler=='session') {
+				$temp_data_uid = $this->tipo.'_'.$this->section_id;
+				# Fix dato as object
+				if (isset($_SESSION['dedalo4']['section_temp_data'][$temp_data_uid])) {
+					$this->dato = (object)$_SESSION['dedalo4']['section_temp_data'][$temp_data_uid];
+				}else{
+					$this->dato = new stdClass();
+				}				
+				return $this->dato;
+			}
+
 
 		if(SHOW_DEBUG) {
 			#$start_time = start_time();
@@ -195,7 +228,8 @@ class section extends common {
 		}
 		*/
 
-		if( empty($this->section_id) || abs($this->section_id)<1 ) {
+		if( empty($this->section_id) 
+			|| (abs($this->section_id)<1 && strpos($this->section_id, DEDALO_SECTION_ID_TEMP)===false)) {
 
 			# Experimental (devolvemos como que ya se ha intentado cargar, aunque sin section_id)
 			#$this->bl_loaded_matrix_data = true;
@@ -270,7 +304,7 @@ class section extends common {
 			global$TIMER;$TIMER[__METHOD__.'_IN_'.$component_tipo.'_'.$lang .'_'.$this->modo.'_'.microtime(1)]=microtime(1);
 		}
 	
-		if (abs($this->section_id)<1) {
+		if (abs($this->section_id)<1 && strpos($this->section_id, DEDALO_SECTION_ID_TEMP)===false) {
 			if(SHOW_DEBUG) {
 				if ($this->section_id=='result') {
 					throw new Exception("Error Processing Request. 'result' is not valid section_id. Maybe you are using foreach 'ar_list_of_values' incorrectly", 1);					
@@ -285,7 +319,8 @@ class section extends common {
 			#if ($component_tipo=='oh22') {
 			#	dump($datos,"DATOS A OF FILTER section_tipo:$section_tipo - section_id:$this->section_id, $lang");#die();
 			#}
-			#dump($datos," datos");			
+			#dump($datos," datos");
+		
 		
 		if (is_object($datos)) {
 
@@ -336,7 +371,7 @@ class section extends common {
 		#dump($component_obj->get_tipo(),"tipo");
 
 		# La sección es necesaria antes de gestionar el dato del componente. Si no existe, la crearemos previamente
-		if (abs($this->get_section_id())<1) {
+		if (abs($this->get_section_id())<1  && strpos($this->get_section_id(), DEDALO_SECTION_ID_TEMP)===false) {
 			$section_id = $this->Save();
 			trigger_error("Se ha creado una sección ($section_id) disparada por el salvado del componente ".$component_obj->get_tipo());
 			if(SHOW_DEBUG) {
@@ -358,6 +393,7 @@ class section extends common {
 		$component_lang 		= $component_obj->get_lang();
 		$component_valor_lang 	= $component_obj->get_valor_lang();
 		$component_modelo_name 	= get_class($component_obj);	#RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+		$component_traducible 	= $component_obj->get_traducible();
 
 		if (empty($component_tipo)) {
 			throw new Exception("Error Processing Request: component_tipo is empty", 1);			
@@ -416,11 +452,11 @@ class section extends common {
 		
 		#
 		# VALOR : Actualizamos el valor en el idioma actual	
-			if($component_lang == $component_valor_lang ){
+			if($component_lang == $component_valor_lang && $component_traducible=='si'){
 				$component_global_dato->valor->$component_lang = $component_obj->get_valor();
 			}else{
 				$component_global_dato->valor->$component_lang = $component_obj->get_dato_unchanged();
-			}			
+			}
 
 		#
 		# VALOR LIST : Actualizamos el Html del componente en modo list		
@@ -434,6 +470,8 @@ class section extends common {
 				case 'component_check_box':
 				case 'component_select':
 				case 'component_relation':
+				case 'component_filter':
+				case 'component_filter_master':
 					$html = $component_obj->get_dato_unchanged();
 					break;			
 				default:
@@ -460,6 +498,24 @@ class section extends common {
 			}
 				#dump($component_global_dato->valor_list->$component_lang);#die();
 
+		#
+		# DATO_SEARCH
+			switch ($component_modelo_name) {				
+				case 'component_autocomplete_ts':					
+					if (!isset($component_global_dato->dato_search)) {
+						$component_global_dato->dato_search = new stdClass();
+						}
+						if (!isset($component_global_dato->dato_search->$component_lang)) {
+							$component_global_dato->dato_search->$component_lang = new stdClass();
+						}
+					$component_global_dato->dato_search->$component_lang = $component_obj->get_dato_search();
+					break;
+				default: // Nothing to do
+			}
+
+
+
+		#
 		# REPLACE COMPONENT PORTION OF GLOBAL OBJECT :  Actualizamos todo el componente en el objeto global
 		if (!isset($dato->components->$component_tipo)) {
 			if (!isset($dato->components)) {
@@ -609,6 +665,24 @@ class section extends common {
 			$tipo = $section_real_tipo;
 		}
 		*/
+
+		
+			#
+			# SAVE_HANDLER DIFFERENT TO DATABASE CASE
+			# Sometimes we need use section as temporal element without save real data to database. Is this case
+			# data is saved to session as temporal data and can be recovered from $_SESSION['dedalo4']['section_temp_data'] using key '$this->tipo.'_'.$this->section_id'
+			if (isset($this->save_handler) && $this->save_handler=='session') {
+				#dump($this->dato, ' this->dato ++ '.to_string());
+				$temp_data_uid = $this->tipo.'_'.$this->section_id;
+				if(!isset($_SESSION['dedalo4']['section_temp_data'][$temp_data_uid])) {
+					$_SESSION['dedalo4']['section_temp_data'][$temp_data_uid] = (object)$this->dato;
+				}else{
+					$_SESSION['dedalo4']['section_temp_data'][$temp_data_uid] = (object)$this->get_dato();
+				}							
+				
+				return $this->section_id;
+			}
+		
 
 		$matrix_table = common::get_matrix_table_from_tipo($original_tipo); // This function fallback to real section if virtal section don't have table defined
 
@@ -952,19 +1026,19 @@ class section extends common {
 					if(SHOW_DEBUG) {
 						if ((int)$this->section_id==0) {
 							dump((int)$this->section_id,"this section_id");
-							throw new Exception("Error Processing Request. Record is NOT deleted (1)", 1);							
+							throw new Exception("Error Processing Request. Record is NOT deleted (1)", 1);					
 						}
 					}
 					
 					#	
 					# TIME MACHINE : prepare matrix_time_machine data for recover this section later
 					# Get time machine id based on section tipo and section_id 
-					$ar_id_time_machine = (array)RecordObj_time_machine::get_ar_time_machine_of_this($section_tipo, $this->section_id);
+					$ar_id_time_machine = (array)RecordObj_time_machine::get_ar_time_machine_of_this($section_tipo, $this->section_id, 'lg-nolan', $section_tipo); // $tipo, $parent, $lang=NULL, $section_tipo
 					if (empty($ar_id_time_machine[0])) {
 						#return "Error on delete record. Time machine version of this record not exists. Please contact with your admin to delete this record";
 						$RecordObj_time_machine_new = new RecordObj_time_machine(null);
 						$RecordObj_time_machine_new->set_section_id((int)$this->section_id);
-
+						$RecordObj_time_machine_new->set_section_tipo((string)$section_tipo);
 						$RecordObj_time_machine_new->set_tipo((string)$section_tipo);
 						$RecordObj_time_machine_new->set_lang((string)$this->get_lang());
 						$RecordObj_time_machine_new->set_timestamp((string)component_date::get_timestamp_now_for_db());	# Format 2012-11-05 19:50:44
@@ -1102,14 +1176,8 @@ class section extends common {
 			global$TIMER;$TIMER[__METHOD__.'_in_'.$this->tipo.'_'.$this->modo.'_'.microtime(1)]=microtime(1);
 		}
 
-		# Save current object in session var for calculate css later (Save obj in current state at this point)
-		#css::save_obj_in_session($this)
-		$modo = $this->modo;
-
-		$content_html = '';
-
-			#
-			# DEDALO_CACHE_MANAGER : Read from cache if var exists ##			
+			
+			# DEDALO_CACHE_MANAGER : Read from cache if var exists ##################
 			if(DEDALO_CACHE_MANAGER && CACHE_SECTIONS) {
 				$cache_key_name = $this->get_section_cache_key_name();
 				if (cache::exists($cache_key_name)) {
@@ -1118,43 +1186,22 @@ class section extends common {
 					return cache::get($cache_key_name);
 				}
 			}
-			# /DEDALO_CACHE_MANAGER #################################
+			# /DEDALO_CACHE_MANAGER #################################################
+		
 
-
-		# CALCULA Y CARGA TODOS SUS COMPONENTES GENERANDO EL CONTENIDO PARA INSERTAR EN EL WRAPPER DE LA SECCIÓN
-		switch($modo) {
-
-			case 'edit_inspector' :
-						# Nothing to do
-						break;
-			case 'edit':
-			case 'list':
-			case 'list_tm':
-			#case 'portal_list':			
-			case 'relation':
-			case 'relation_reverse_sections':
-			case 'relation_reverse':
-						$generated_content_html = $this->generate_content_html($modo, $options);
-						#$this->ar_section_list_obj	= $this->generate_layout_list();
-							#dump($this->ar_section_list_obj);
-						break;
-
-			default :	trigger_error("modo: $modo is not valid", E_USER_ERROR);
-		}
-			
-
+		# Load controller
 		ob_start();
 		include ( DEDALO_LIB_BASE_PATH .'/'. __CLASS__ .'/'. __CLASS__ .'.php' );
 		$html =  ob_get_clean();
 		
 
-				#
-				# DEDALO_CACHE_MANAGER : Set cache var #################
-				if(DEDALO_CACHE_MANAGER && CACHE_SECTIONS) {
-					#if(strpos($cache_key_name, 'list')!=false && strpos($cache_key_name, 'portal')===false) 
-					cache::set($cache_key_name, $html);				
-				}
-				# /DEDALO_CACHE_MANAGER #################################
+			
+			# DEDALO_CACHE_MANAGER : Set cache var #################################
+			if(DEDALO_CACHE_MANAGER && CACHE_SECTIONS) {
+				#if(strpos($cache_key_name, 'list')!=false && strpos($cache_key_name, 'portal')===false) 
+				cache::set($cache_key_name, $html);				
+			}
+			# /DEDALO_CACHE_MANAGER #################################################
 
 
 		if(SHOW_DEBUG) {
@@ -1221,267 +1268,6 @@ class section extends common {
 		}
 		return $tipo;
 	}	
-
-
-
-
-
-
-	/**
-	* GENERATE CONTENT HTML
-	* @param string $modo	
-	* @return string $html. full resolved html content
-	*/
-	protected function generate_content_html($modo, $options) {
-
-		if(SHOW_DEBUG) {
-			$start_time = start_time();
-			global$TIMER;$TIMER[__METHOD__.'_IN_'.$this->tipo.'_'.$modo.'_'.microtime(1)]=microtime(1);
-		}
-
-		#
-		# CONTENT
-		# Contenido html del listado / grupo.
-		$html 								= '';
-		$ar_components_verify_duplicates	= array();
-		$ar_section_groups_resolved 		= array();
-		switch ($modo) {
-
-			#case 'search':	# Same as edit
-			case 'edit':
-					# SECTION_REAL_TIPO
-					$section_real_tipo  = $this->get_section_real_tipo();	# Fija $this->section_real_tipo que es necesario luego
-						#dump($section_real_tipo,"section_real_tipo ");
-
-					# SECURITY
-					$is_authorized_record = (bool)filter::is_authorized_record($this->get_section_id(), $this->tipo);
-						#dump($is_authorized_record,"is_authorized_record");
-					if (!$is_authorized_record) {
-						$this->set_permissions( (int)0 );
-					}					
-					
-					# default vars for layout
-					$current_section_obj  = $this;
-					$ar_exclude_elements  = array(); #array('dd1106');
-					
-					#
-					# SECTION VIRTUAL CASE
-					#dump($this->section_virtual,"virtual");
-					if ($this->section_virtual==true ) {
-						# Clone current  section obj
-						$current_section_obj  = clone $this;
-						# Inject real tipo to section object clone sended to layout when mode is edit
-						$current_section_obj->tipo = $this->section_real_tipo;
-
-
-						# Exclude elements of layout edit.
-						if (!empty($_REQUEST['exclude_elements'])) {
-							# Override default exclude elements
-							$exclude_elements_tipo = trim($_REQUEST['exclude_elements']);
-						}else{
-							# Localizamos el elemento de tipo 'exclude_elements' que será hijo de la sección actual
-							$ar_exclude_elements_tipo = section::get_ar_children_tipo_by_modelo_name_in_section($this->tipo, 'exclude_elements',true,false); //section_tipo, $ar_modelo_name_required, $from_cache=true, $resolve_virtual=true
-							#if(isset($exclude_elements_tipo[0])) $exclude_elements_tipo = $exclude_elements_tipo[0];							
-							$exclude_elements_tipo = $ar_exclude_elements_tipo[0];
-								#dump($ar_exclude_elements_tipo,"exclude_elements_tipo for tipo: $this->tipo - $exclude_elements_tipo");
-						}
-						#dump($exclude_elements_tipo, ' exclude_elements_tipo');
-						
-
-						if (!empty($exclude_elements_tipo)) {
-							# Localizamos los elementos a excluir que son los términos relacionados con este elemento ('exclude_elements')
-							$ar_related = RecordObj_dd::get_ar_terminos_relacionados($exclude_elements_tipo, $cache=false, $simple=true);
-								#dump($ar_related,'$ar_related');
-							# Los recorremos y almacenams tanto los directos como los posibles hijos (recuerda que se pueden excluir section groups completos)
-							foreach ($ar_related as $current_excude_tipo) {
-								# Exclusión directa
-								$ar_exclude_elements[] = $current_excude_tipo;
-
-								# Comprobamos si es un section group, y si lo es, excluimos además sus hijos
-								#$ar_childrens 	= RecordObj_dd::get_ar_childrens($current_excude_tipo,null);
-								$RecordObj_dd 	= new RecordObj_dd($current_excude_tipo);
-								$ar_childrens 	= (array)$RecordObj_dd->get_ar_childrens_of_this('si',null,null);
-								foreach ($ar_childrens as $current_children) {
-									$ar_exclude_elements[] = $current_children;
-								}
-							}
-						}
-						#dump($ar_exclude_elements,'ar_exclude_elements '.$this->tipo);
-					}#end if ($this->section_virtual==true )
-
-					#
-					# LAYOUT MAP : PENDIENTE UNIFICAR MAQUETACIÓN CON LAYOUT MAP A PARTIR DEL MODO EDIT <------
-					# Consulta el listado de componentes a mostrar en el listado / grupo actual
-					#dump($current_section_obj,"current_section_obj");die();					
-					$layout_map = component_layout::get_layout_map_from_section($current_section_obj); # Important: send obj section with REAL tipo to allow resolve structure
-						#dump($layout_map,"layout ".$current_section_obj->tipo);
-						#dump($this->permissions, ' $this->permissions');
-						
-					if ($this->permissions===0) {
-						# Avoid walk layout and load components
-						$html='';
-					}else{
-						# WALK : Al ejecutar el walk sobre el layout map podemos excluir del rendeo de html los elementos (section_group, componente, etc.) requeridos (virtual section)
-						if(SHOW_DEBUG) {
-							global$TIMER;$TIMER['component_layout::walk_layout_map'.'_IN_'.$this->tipo.'_'.$this->modo.'_'.microtime(1)]=microtime(1);
-						}
-						$ar = array();
-						$current_section_obj->tipo = $this->tipo; # Restore section tipo (needed for virtual sections resolution)
-						$html = component_layout::walk_layout_map($current_section_obj, $layout_map, $ar, $ar_exclude_elements); 
-							#dump($ar_exclude_elements,"layout ".$current_section_obj->tipo);
-
-						if(SHOW_DEBUG) {
-							global$TIMER;$TIMER['component_layout::walk_layout_map'.'_OUT_'.$this->tipo.'_'.$this->modo.'_'.microtime(1)]=microtime(1);
-						}
-					}
-					break;
-
-			case 'list_tm':
-					/* CALLED FROM TRIGGER (trigger.tool_time_machine)*/
-					if (!is_object($options) || empty($options) || !isset($options->filter_by_id)) {
-						error_log("Error: Wrong options received for tm list");
-						return false;
-					}					
-					
-					$layout_map = component_layout::get_layout_map_from_section( $this );
-						#dump($layout_map,"layout_map");
-					
-					#$options = new stdClass(); 
-						$options->section_tipo 		= $this->tipo;
-						$options->section_real_tipo = $this->get_section_real_tipo(); # es mas rápido calcularlo aquí que en la stática;
-						$options->layout_map 		= $layout_map;
-						$options->modo 				= $modo;
-						$options->context 			= $this->context;	# inyectado a la sección y usado para generar pequeñas modificaciones en la visualización del section list como por ejemplo el link de enlazar un registro con un portal
-							#dump($options);die();
-
-						$options->matrix_table  = 'matrix_time_machine';
-						$options->json_field 	= 'dato';			
-					
-					$section_list 	= new section_list($this->tipo, $options);
-					$html .= $section_list->get_html();
-					
-					break;
-
-			case 'list':
-			#case 'portal_list':
-			#case 'portal_list_in_list':
-			case 'relation':
-			case 'relation_reverse_sections':
-			case 'relation_reverse':
-
-					/*
-					#
-					# LAYOUT MAP : PENDIENTE UNIFICAR MAQUETACIÓN CON LAYOUT MAP A PARTIR DEL MODO EDIT <------
-					# Consulta el listado de componentes a mostrar en el listado / grupo actual					
-					$layout_map 		= component_layout::get_layout_map_from_section( $this );
-						#dump($layout_map, 'layout_map', array());
-
-					if (empty($layout_map)) {
-						#dump($this);
-						$label = $this->get_label();
-						throw new Exception("layout_map is not defined! [$modo on $label] ", 1);
-					}
-
-					# SECTION VIRTUAL TEST . Overwrite filter_tipo with real value if is virtual
-					/*
-					$section_real_tipo = $this->get_section_real_tipo();
-					if($section_real_tipo!=$section_tipo) {
-						$section_tipo = $section_real_tipo;
-						$options['section_tipo'] = $section_real_tipo;
-					}
-					*/
-										
-
-					
-					if(SHOW_DEBUG) {
-						$start_time = microtime(1);
-						global$TIMER;$TIMER[__METHOD__.'_ROWS_SEARCH_IN_'.$this->tipo.'_'.$modo.'_'.microtime(1)]=microtime(1);
-					}
-
-					#
-					# ROWS_SEARCH
-					$rows_search = new rows_search($this, 'list');
-					$html .= $rows_search->get_html();
-						#dump($this->tipo,"section_list"); #die();
-
-					if(SHOW_DEBUG) {
-						global$TIMER;$TIMER[__METHOD__.'_ROWS_SEARCH_OUT_'.$this->tipo.'_'.$modo.'_'.microtime(1)]=microtime(1);
-						#dump($start_time-microtime(1), ' _ROWS_SEARCH_OUT_ ');
-					}
-
-					#unset($_SESSION['dedalo4']['config']['search_options']);
-					#dump($_SESSION['dedalo4']['config']['search_options'],"all search_options en session");
-					
-					$search_options_session_key = $this->tipo.'_'.$this->modo.'_'.TOP_TIPO;	//get_class().'_'.
-					# CASE LIST OPENED BY PORTAL
-					if (isset($_REQUEST['m']) && $_REQUEST['m']=='tool_portal' && !empty($_REQUEST['t'])) {
-						$search_options_session_key .= '_'.$_REQUEST['t'];
-					}
-					if(SHOW_DEBUG) {
-						#dump($_SESSION['dedalo4']['config']['search_options'][$search_options_session_key], '');
-						#unset($_SESSION['dedalo4']['config']['search_options'][$search_options_session_key]);
-					}					
-					if (!empty($_SESSION['dedalo4']['config']['search_options'][$search_options_session_key])) {
-						$options = $_SESSION['dedalo4']['config']['search_options'][$search_options_session_key];
-						$options->full_count = false; # Force update count records on non ajax call
-						if(SHOW_DEBUG) {
-							#error_log("Section: Search options precalculado en sesión key $search_options_session_key");
-						}						
-					}else{
-						$layout_map = component_layout::get_layout_map_from_section( $this );
-							#dump($layout_map,"layout_map");
-						
-						$options = new stdClass();
-							$options->section_tipo 		= $this->tipo;
-							$options->section_real_tipo = $this->get_section_real_tipo(); # es mas rápido calcularlo aquí que en la stática;
-							$options->layout_map 		= $layout_map;
-							$options->modo 				= $modo;
-							$options->context 			= $this->context;	# inyectado a la sección y usado para generar pequeñas modificaciones en la visualización del section list como por ejemplo el link de enlazar un registro con un portal
-							$options->search_options_session_key = $search_options_session_key;
-								#dump($options);#die();
-
-							# EN PRUEBAS (20-11-2014)
-							if (isset($_REQUEST['m']) && $_REQUEST['m']=='tool_portal') {
-								$portal_tipo = $_REQUEST['t'];
-								$options->filter_by_section_creator_portal_tipo = $portal_tipo;
-							}
-
-
-						if ($this->tipo==DEDALO_ACTIVITY_SECTION_TIPO) {
-							$options->tipo_de_dato 			= 'dato';
-							$options->tipo_de_dato_order	= 'dato';
-							$options->order_by				= 'id DESC';	#section_id ASC						
-						}
-					}
-					#dump($options,"options");			
-					
-					$section_list 	= new section_list($this->tipo, $options);
-					$html .= $section_list->get_html();
-					#$html .= "<script>section_list.load_rows(".json_handler::encode($options).")</script>";
-
-					break;
-
-			default:
-					trigger_error("modo: $modo is not valid for section use", E_USER_ERROR);
-		}
-
-		if(SHOW_DEBUG) {
-			#$GLOBALS['log_messages'] .= exec_time($start_time, __METHOD__. ' [FULL NOT INCLUDED FILTER]', "html($this->tipo)" );
-			global$TIMER;$TIMER[__METHOD__.'_out_'.$this->tipo.'_'.$this->modo.'_'.microtime(1)]=microtime(1);
-		}
-
-		return $html;
-	}
-
-
-	
-
-
-
-
-
-
-
 
 
 
@@ -1826,7 +1612,7 @@ class section extends common {
 	/**
 	* GET_AR_BUTTONS
 	* Calcula los bonones de esta sección y los deja disponibles como : $this->ar_buttons
-	* @see section_list.php modo:list 
+	* @see section_records.php modo:list 
 	*/
 	public function get_ar_buttons() {
 
@@ -2162,6 +1948,9 @@ class section extends common {
 		$section_info->created_by_user_name		= (string)$this->get_created_by_user_name();	
 		$section_info->modified_date 			= (string)$this->get_modified_date();
 		$section_info->modified_by_user_name	= (string)$this->get_modified_by_user_name();
+
+		$section_info->label					= (string)$this->get_label();
+		$section_info->section_id				= (string)$this->get_section_id();
 			#dump($section_info,"section_info");
 
 		switch ($format) {
@@ -2185,7 +1974,6 @@ class section extends common {
 	public static function get_ar_all_section_records_unfiltered($section_tipo) {
 
 		$matrix_table 	= common::get_matrix_table_from_tipo($section_tipo);
-		#$filter 		= "datos @> '{\"section_tipo\":\"$section_tipo\"}'::jsonb "; //datos #>>'{section_tipo}' = '$value_component_section_tipo'
 		$filter 		= "section_tipo = '$section_tipo'";
 		$strQuery= "-- ".__METHOD__." 
 				SELECT section_id

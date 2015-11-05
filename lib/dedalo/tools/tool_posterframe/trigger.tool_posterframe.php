@@ -10,9 +10,8 @@ if(login::is_logged()!==true) die("<span class='error'> Auth error: please login
 
 # set vars
 	$vars = array('mode','video_id','quality','source_quality','target_quality','timecode', 'parent');
-	if(is_array($vars)) foreach($vars as $name) {
-		$$name = common::setVar($name);
-	}
+		foreach($vars as $name) $$name = common::setVar($name);
+	
 
 # mode
 	if(empty($mode)) exit("<span class='error'> Trigger: Error Need mode..</span>");
@@ -38,7 +37,8 @@ if($mode=='generate_posterframe') {
 	}
 	if ( empty($parent) ) {
 		throw new Exception("Error Processing Request. Few vars! (parent)", 1);
-	}	
+	}
+
 
 	$reelID		= $video_id ;
 	$quality 	= $target_quality ;
@@ -50,8 +50,8 @@ if($mode=='generate_posterframe') {
 	$Ffmpeg		= new Ffmpeg();
 	$render		= $Ffmpeg->create_posterframe($AVObj, $timecode);			#create_posterframe(AVObj $AVObj, $timecode)
 
-	# Extract tipo from video_id like dd732-1.mp4 => dd732
-	$ar 	= explode('-', $video_id);
+	# Extract tipo from video_id like rsc35_rsc167_8.mp4 => rsc35
+	$ar 	= explode('_', $video_id);
 	$tipo 	= $ar[0];
 
 	

@@ -11,11 +11,13 @@ require_once(dirname(dirname(__FILE__)).'/config/config4.php');
 $TIMER['config4_includes']=microtime(1);
 
 # FORCE REDIRECT TO DEDALO/MAIN 
+/*
 if ( strpos($_SERVER["REQUEST_URI"], '.php')!==false ) {
 	header("HTTP/1.1 301 Moved Permanently");
 	header("Location: ".DEDALO_LIB_BASE_URL."/main/?t=".MAIN_FALLBACK_SECTION);
 	exit();
 }
+*/
 
 	#dump($_SESSION,"");
 
@@ -231,9 +233,14 @@ if ( strpos($_SERVER["REQUEST_URI"], '.php')!==false ) {
 
 	#dump( RecordDataBoundObject::$ar_RecordDataObject_query_search,'$ar_RecordDataObject_query_search');
 
+	# CLOSE DB CONNECTION
+	# dump(DBi::_getConnection());	
+	pg_close(DBi::_getConnection());
+	
+	
 	
 /*
-if(SHOW_DEBUG) {
+//if(SHOW_DEBUG) {
 	$TIMER['main_end']=microtime(1);
 	echo "<table id=\"load_time_table\"><tr><td>name</td><td>so far</td><td>delta</td><td>%</td></tr>";
 	reset($TIMER);
@@ -255,7 +262,7 @@ if(SHOW_DEBUG) {
 	}
 	echo "<tr><td>PHP memory usage</td><td>".tools::get_memory_usage('pid')."</td><td></td><td></td></tr>";
 	echo "</table>";
-}
+//}
 */
 #dump(get_included_files(),"get_included_files");
 ?>

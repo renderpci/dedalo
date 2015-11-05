@@ -34,7 +34,7 @@
 	$quality				= $this->get_quality();
 	$aditional_path			= $this->get_aditional_path();
 	$initial_media_path		= $this->get_initial_media_path();
-	$image_url				= $this->get_image_url();
+	#$image_url				= $this->get_image_url();
 
 	#dump("$id,$tipo,$parent");
 
@@ -102,32 +102,29 @@
 				break;
 
 		case 'portal_list':
+				$file_name = 'list';
 				# JS includes
 					js::$ar_url[] = DEDALO_LIB_BASE_URL.'/component_image/js/component_image_read.js';
+
+
+				break;
 
 		case 'list_tm':
 				$file_name = 'list';
 		case 'list':
-	
-				# ImageObj				
-				$maxWidht 	= 102 ;
-				$maxHeight 	= 57  ; # 57
-				#$image_url	= $this->ImageObj->get_thumb_url($maxWidht, $maxHeight, $fx='crop');
-					#die($aditional_path.'/'.$image_id.'.'.DEDALO_IMAGE_EXTENSION);
-				$f = $aditional_path.'/'.$image_id.'.'.DEDALO_IMAGE_EXTENSION;
-				if(strpos($f, '/')===0) $f = substr($f, 1);	
-				$image_url		= ImageMagick::get_thumb('list',$f, true, $initial_media_path);	// $mode, $f, $verify=true, $initial_media_path
+
+				#
+				# DEFAULT QUALITY IMAGE URL (onclick go to)
 				$image_full_url = $this->ImageObj->get_url();
-
-				# Url del thumb si estuviera creado (si no lo está se redirecciona a 'themes/default/0.jpg')
-				$thumb_file_url 	= DEDALO_MEDIA_BASE_URL.DEDALO_IMAGE_FOLDER.'/'.DEDALO_IMAGE_THUMB_DEFAULT.'/'.$f;
-				$objetive_thumb_url = $thumb_file_url;
-					#dump($objetive_thumb_url," objetive_thumb_url");
 				
-				#if (!file_exists(DEDALO_ROOT.'/'.$thumb_file_url)) {
-				#	return null;
-				#}
-
+				#
+				# THUMB URL
+				$thumb_path = $this->get_thumb_path();
+				if (!file_exists($thumb_path)) {
+					return null;
+				}
+				$thumb_file_url = $this->get_thumb_url();
+								
 				break;
 
 		case 'list_ts':
@@ -141,6 +138,9 @@
 				return NULL;
 				break;
 
+		case 'print': 
+
+				break;
 	}
 
 	$page_html	= DEDALO_LIB_BASE_PATH .'/'. get_class($this) . '/html/' . get_class($this) . '_' . $file_name . '.phtml';	

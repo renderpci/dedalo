@@ -1,6 +1,6 @@
 <?php
-require_once(DEDALO_LIB_BASE_PATH . '/db/class.RecordDataBoundObject.php');
-require_once(DEDALO_LIB_BASE_PATH . '/db/class.RecordObj_descriptors_dd.php');
+#require_once(DEDALO_LIB_BASE_PATH . '/db/class.RecordDataBoundObject.php');
+#require_once(DEDALO_LIB_BASE_PATH . '/db/class.RecordObj_descriptors_dd.php');
 
 
 class RecordObj_dd extends RecordDataBoundObject {
@@ -528,10 +528,15 @@ class RecordObj_dd extends RecordDataBoundObject {
 		
 		# STATIC CACHE
 		static $ar_parents_of_this_data;		
-		if(isset($this->terminoID) && isset($ar_parents_of_this_data[$this->terminoID])) 	 return $ar_parents_of_this_data[$this->terminoID];
+		if(isset($this->terminoID) && isset($ar_parents_of_this_data[$this->terminoID])) {
+			return $ar_parents_of_this_data[$this->terminoID];
+		}
 		
 		$ar_parents_of_this = array();	
-		$parent				= $this->get_parent();					if(!$parent) return $ar_parents_of_this;
+		$parent				= $this->get_parent();
+		if(!$parent) {
+			return $ar_parents_of_this;
+		}
 		$parent_inicial		= $parent;	
 		$parent_zero		= 'dd0';
 
@@ -564,7 +569,9 @@ class RecordObj_dd extends RecordDataBoundObject {
 		
 		# STATIC CACHE
 		static $ar_siblings_of_this_data;		
-		if(isset($this->terminoID) && isset($ar_siblings_of_this_data[$this->terminoID])) return $ar_siblings_of_this_data[$this->terminoID];
+		if(isset($this->terminoID) && isset($ar_siblings_of_this_data[$this->terminoID])) {
+			return $ar_siblings_of_this_data[$this->terminoID];
+		}
 		
 		$ar_siblings_of_this		= array();
 		
@@ -588,7 +595,9 @@ class RecordObj_dd extends RecordDataBoundObject {
 		
 		# STATIC CACHE
 		static $get_n_hijos_descriptores_data;		
-		if(isset($this->terminoID) && isset($get_n_hijos_descriptores_data[$this->terminoID])) return $get_n_hijos_descriptores_data[$this->terminoID];
+		if(isset($this->terminoID) && isset($get_n_hijos_descriptores_data[$this->terminoID])) {
+			return $get_n_hijos_descriptores_data[$this->terminoID];
+		}
 		
 		$arguments["parent"]		= $this->terminoID;
 		$arguments["esdescriptor"]	= 'si';		
@@ -756,7 +765,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 		
 		# STATIC CACHE		
 		static $get_ar_terminoID_by_modelo_name_and_relation_data;
-		$name	= $tipo.'_'.$modelo_name.'_'.$relation_type.'_'.(int)$search_exact;
+		$name = $tipo.'_'.$modelo_name.'_'.$relation_type.'_'.(int)$search_exact;
 		if(isset($get_ar_terminoID_by_modelo_name_and_relation_data[$name])) {
 			return $get_ar_terminoID_by_modelo_name_and_relation_data[$name];
 		}
@@ -800,7 +809,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 
 			case 'children_recursive' :
 				
-					# Obtenemos los hijos
+					# Obtenemos los hijos recursivamente
 					$RecordObj_dd	= new RecordObj_dd($tipo);
 					$ar_childrens	= $RecordObj_dd->get_ar_recursive_childrens_of_this($tipo);		#dump($ar_childrens);
 					

@@ -10,11 +10,16 @@ class component_input_text extends component_common {
 	# GET DATO
 	public function get_dato() {				
 		$dato = parent::get_dato();
+		#if(SHOW_DEBUG && $this->tipo=='divalcdi42') {
+		#	dump($dato, ' dato ++ '.to_string($this->tipo.'-'.$this->parent.'-'.$this->section_tipo));
+		#}
+			
+
 		if(SHOW_DEBUG) {
 			if ( !is_null($dato) && !is_string($dato)  ) {
 				dump(parent::get_dato(), 'WRONG TYPE dato: '.$this->tipo);
 			}
-		}	
+		}
 		return (string)$dato;
 	}
 
@@ -63,24 +68,35 @@ class component_input_text extends component_common {
 
 	/**
 	* GET_SEARCH_QUERY
-	* Build search query for current component . Overwrite for different needs in other components
-	* @param string ..
-	* @see class.section_list.php get_rows_data filter_by_search
-	* @return string SQL query (ILIKE by default)
+	* Build search query for current component . Overwrite for different needs in other components 
+	* (is static to enable direct call from section_records without construct component)
+	* Params
+	* @param string $json_field . JSON container column Like 'dato'
+	* @param string $search_tipo . Component tipo Like 'dd421'
+	* @param string $tipo_de_dato_search . Component dato container Like 'dato' or 'valor'
+	* @param string $current_lang . Component dato lang container Like 'lg-spa' or 'lg-nolan'
+	* @param string $search_value . Value received from search form request Like 'paco'
+	* @param string $comparison_operator . SQL comparison operator Like 'ILIKE'
+	*
+	* @see class.section_records.php get_rows_data filter_by_search
+	* @return string $search_query . POSTGRE SQL query (like 'datos#>'{components, oh21, dato, lg-nolan}' ILIKE '%paco%' )
 	*/
-	public static function get_search_query( $json_field, $search_tipo, $tipo_de_dato_search, $current_lang, $search_value ) {
+	/*
+	public static function get_search_query( $json_field, $search_tipo, $tipo_de_dato_search, $current_lang, $search_value, $comparison_operator='ILIKE') {//, $logical_operator = 'AND' 
 		if ( empty($search_value) ) {
 			return null;
 		}
-		if (intval($search_value)===0) {
-			# Search as string
-			$search_query = " $json_field#>>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}' ILIKE '%$search_value%' ";
-		}else{
-			$search_query = " $json_field#>>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}' = '" . intval($search_value) ."'";
-
-			#$field_name   = "$json_field#>>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}'";
-			#$search_value = "'".$search_value."'";
-			#$search_query = component_common::resolve_search_operators( $field_name, $search_value, $default_operator='=' );
+		if(SHOW_DEBUG) {
+			#dump($search_value, ' search_value');
+		}
+		
+		switch (true) {
+			case ($comparison_operator=='=' || $comparison_operator=='!='):
+				$search_query = " $json_field#>>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}' $comparison_operator '$search_value' ";
+				break;
+			default:
+				$search_query = " $json_field#>>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}' $comparison_operator '%$search_value%' ";
+				break;
 		}
 		
 		if(SHOW_DEBUG) {
@@ -88,6 +104,7 @@ class component_input_text extends component_common {
 		}
 		return $search_query;
 	}
+	*/
 
 
 

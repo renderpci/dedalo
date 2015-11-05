@@ -130,30 +130,50 @@ class ImageMagick {
 	*/
 	public static function dd_thumb( $mode, $source_file, $target_file, $dimensions="102x57", $initial_media_path) {
 
+		# Valid path verify
+		$folder_path = pathinfo($target_file)['dirname'];
+		if( !is_dir($folder_path) ) {
+			if(!mkdir($folder_path, 0777,true)) {
+				throw new Exception(" Error on read or create dd_thumb directory. Permission denied");
+			}
+		}
+
 		# Dimensions (original 102x57)
 		#$dimensions = (string)"102x90";
-
 		# Nota: para ejecutar un crop, definir como {$dimensions}^ .Desactivado el crop por interferir demasiado con las fotos verticales
 
 		switch ($mode) {
 			case 'list':
-				$command = MAGICK_PATH."convert -define jpeg:size=400x400 \"$source_file\"[0] \
-         									-thumbnail {$dimensions} -gravity center -extent {$dimensions} -unsharp 0x.5 jpg -quality 90 \"$target_file\" ";
+				#$command = MAGICK_PATH."convert -define jpeg:size=400x400 \"$source_file\"[0] -thumbnail {$dimensions} -gravity center -extent {$dimensions} -unsharp 0x.5 jpg -quality 90 \"$target_file\" ";
+				$command = MAGICK_PATH."convert -define jpeg:size=400x400 \"$source_file\"[0] -thumbnail {$dimensions} -gravity center -extent {$dimensions} -unsharp 0x.5 -quality 90 \"$target_file\" ";
 				break;
 			case 'edit':
-				$command = MAGICK_PATH."convert -define jpeg:size=400x400 \"$source_file\" \
-         									-thumbnail x404 -unsharp 0x.5 jpg -quality 72 \"$target_file\" ";
+				#$command = MAGICK_PATH."convert -define jpeg:size=400x400 \"$source_file\" -thumbnail x404 -unsharp 0x.5 jpg -quality 72 \"$target_file\" ";
+				$command = MAGICK_PATH."convert -define jpeg:size=400x400 \"$source_file\" -thumbnail x404 -unsharp 0x.5 -quality 72 \"$target_file\" ";
 				break;
 			default:
 				throw new Exception("Error Processing file. Thumb mode is not valid", 1);
 				break;
 		}
 		#$command = 'nice -n 19 '.$command;
-		#if(SHOW_DEBUG) dump($command,'ImageMagick command '.$mode);
+		
 
 		# RUN COMMAND
-		#return exec_::exec_command($command);	
+		#$result = shell_exec($command);
+		#return exec_::exec_command($command);
+		$result = exec($command.' 2>&1', $output, $worked_result);
+		if(SHOW_DEBUG) {
+			if ($worked_result!=0) {
+				dump($worked_result, ' worked_result ++ '.to_string($output));
+			}
+			if (!empty($result)) {
+				error_log("COMMAND DD_THUMB WARNING (not empty result): ".to_string($result));
+			}
+		}
 
+		return $result;
+			
+		/*
 		$prgfile = DEDALO_MEDIA_BASE_PATH.DEDALO_IMAGE_FOLDER.$initial_media_path.'/temp/dd_thumb_'.$mode.'_'.str_replace('/', '_', substr($target_file, strpos($target_file, 'thumbs/')+7) ).'.sh';
 			#dump($prgfile,'$prgfile');
 			#if(file_exists($prgfile)) unlink($prgfile);
@@ -181,8 +201,11 @@ class ImageMagick {
 		}
 		
 		# RUN COMMAND
-		return exec_::exec_sh_file($prgfile);		
-	}
+		return exec_::exec_sh_file($prgfile);
+		*/
+	}//end dd_thumb
+
+
 	
 	
 	/**
@@ -197,6 +220,14 @@ class ImageMagick {
 	*
 	*/
 	public static function convert($source_file, $target_file, $flags='') {
+
+		# Valid path verify
+		$folder_path = pathinfo($target_file)['dirname'];
+		if( !is_dir($folder_path) ) {
+			if(!mkdir($folder_path, 0777,true)) {
+				throw new Exception(" Error on read or create dd_thumb directory. Permission denied");
+			}
+		}
 
 
 		# IDENTIFY : Get info aboout source file Colorspace
@@ -239,9 +270,18 @@ class ImageMagick {
 
 
 		# EXE COMMAND
-		$command_exc = exec_::exec_command($command);
+		#$result = exec_::exec_command($command);
+		$result = exec($command.' 2>&1', $output, $worked_result);
+		if(SHOW_DEBUG) {
+			if ($worked_result!=0) {
+				dump($worked_result, ' worked_result ++ '.to_string($output));
+			}
+			if (!empty($result)) {
+				error_log("COMMAND CONVERT WARNING (not empty result): ".to_string($result));
+			}
+		}
 
-		return $command_exc;
+		return $result;
 
 	}#end convert
 

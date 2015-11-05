@@ -33,7 +33,7 @@ function dump($val, $var_name=NULL, $arguments=array()){
 								
 		# VAR_NAME
 		if(isset($var_name))
-			$html .= "\n  name: <b>".$var_name."</b>";	
+			$html .= "\n  name: <strong>".$var_name."</strong>";	
 		
 		# EXPECTED
 		if(isset($expected))
@@ -61,6 +61,9 @@ function dump($val, $var_name=NULL, $arguments=array()){
 				$value_html .= print_r($val,true);
 				break;
 			default:
+				if(is_string($val) && $val != strip_tags($val)) {
+					$val = htmlspecialchars($val);
+				}
 				$value_html .= var_export($val,true);
 				break;
 		}	
@@ -105,7 +108,7 @@ function wrap_pre($string) {
 	#$html .= "\n<html xmlns=\"http://www.w3.org/1999/xhtml\" ><body>";	
 	$html .= "\n<!DOCTYPE html>";
 	$html .= "\n<meta http-equiv=\"Content-Type\" content=\"text/html; charset=UTF-8\" />";
-	$html .= "<pre class=\"dump\" style=\"font-family:monospace;color:#4B5D5E;font-size:0.9em;background-color:rgba(217, 227, 255, 0.7);border-radius:5px;padding:10px\">";
+	$html .= "<pre class=\"dump\" style=\"font-family:monospace;color:#4B5D5E;font-size:0.9em;background-color:rgba(217, 227, 255, 0.8);border-radius:5px;padding:10px;position:relative;z-index:9999\">";
 	$html .= "<div class=\"icon_warning\" ></div>";
 	$html .= stripslashes($string);
 	$html .= "\n</pre>";
@@ -193,18 +196,25 @@ function to_string($var=null) {
 
 
 # GET_LAST_MODIFICATION_DATE : Get last modified file date in all Dedalo files
-function get_last_modification_date($path) {
-	
+# This will return a timestamp, you will have to use date() like date("d-m-Y H:i:s ", $ret));
+function get_last_modification_date($path, $allowedExtensions=null, $ar_exclude=array('/acc/','/backups/')) {
+	#error_log('---- PATH: '.$path);
 	// Only take into account those files whose extensions you want to show.
-	$allowedExtensions = array(
-	  'php',
-	  'phtml',
-	  'js',
-	  'css'
-	);
+	if (empty($allowedExtensions)) {
+		$allowedExtensions = array(
+		  'php',
+		  'phtml',
+		  'js',
+		  'css'
+		);
+	}
     
     if (!file_exists($path))
         return 0;
+
+	foreach ($ar_exclude as $exclude) {
+		if ( strpos($path, $exclude)!==false ) return 0;
+	}    
     
     $ar_bits = explode(".", $path);
     $extension = end($ar_bits);
@@ -214,8 +224,8 @@ function get_last_modification_date($path) {
     
     if (is_array(glob($path."/*"))) foreach (glob($path."/*") as $fn)
 	{
-        if (get_last_modification_date($fn) > $ret)
-            $ret = get_last_modification_date($fn);    
+        if (get_last_modification_date($fn,$allowedExtensions,$ar_exclude) > $ret)
+            $ret = get_last_modification_date($fn,$allowedExtensions,$ar_exclude);    
             // This will return a timestamp, you will have to use date().
 	}
 	#dump($ret,'$ret');
@@ -228,8 +238,7 @@ function dedalo_encryptStringArray ($stringArray, $key = DEDALO_INFORMACION) {
 	$s = strtr(base64_encode(mcrypt_encrypt(MCRYPT_RIJNDAEL_256, md5($key), serialize($stringArray), MCRYPT_MODE_CBC, md5(md5($key)))), '+/=', '-_,');	
 	return $s;
 }
-function dedalo_decryptStringArray ($stringArray, $key = DEDALO_INFORMACION) {
-	#$start_time = start_time();
+function dedalo_decryptStringArray ($stringArray, $key = DEDALO_INFORMACION) {	
 	if (!function_exists('mcrypt_encrypt')) throw new Exception("Error Processing Request: Lib MCRYPT unavailable.", 1);
  	$s = unserialize(rtrim(mcrypt_decrypt(MCRYPT_RIJNDAEL_256, md5($key), base64_decode(strtr($stringArray, '-_,', '+/=')), MCRYPT_MODE_CBC, md5(md5($key))), "\0")); 	
  	return $s;

@@ -31,11 +31,16 @@
 					break;	
 						
 		case ($permissions>=2)	:
+					# COMPARISON OPERATORS
+					$html_contenido .= operator::get_search_comparison_operators_html($tipo,$ar_comparison_operators);
 		
 					$html_contenido .= "\n <input class=\"css_input_text {$ar_css['css_input_text']}\" type=\"text\" 
 					id=\"{$identificador_unico}\" name=\"{$tipo}\" 
 					data-tipo=\"{$tipo}\" data-lang=\"{$lang}\"
 					value=\"{$dato}\" title=\"$html_title\" />";
+
+					# LOGICAL OPERATORS
+					$html_contenido .= operator::get_search_logical_operators_html($tipo,$ar_logical_operators);
 											
 	}
 	

@@ -7,7 +7,7 @@ if(login::is_logged()!==true) die("<span class='error'> Auth error: please login
 
 
 # set vars
-	$vars = array('mode','image_id','quality','aditional_path','initial_media_path','source_quality','target_quality','tipo','parent','degrees','extension');
+	$vars = array('mode','image_id','quality','aditional_path','initial_media_path','source_quality','target_quality','tipo','parent','section_tipo','degrees','extension');
 	foreach($vars as $name) $$name = common::setVar($name);
 	
 # mode
@@ -259,6 +259,13 @@ if($mode=='delete_version') {
 	if ( empty($parent) ) {
 		throw new Exception("Error Processing Request. Few vars! (parent)", 1);
 	}
+	if ( empty($tipo) ) {
+		throw new Exception("Error Processing Request. Few vars! (tipo)", 1);
+	}
+	if ( empty($section_tipo) ) {
+		throw new Exception("Error Processing Request. Few vars! (section_tipo)", 1);
+	}
+	
 	
 	$ImageObj 			= new ImageObj($image_id, $quality, $aditional_path, $initial_media_path);		
 	$folder_path		= $ImageObj->get_media_path_abs(); # incluye / final
@@ -282,7 +289,18 @@ if($mode=='delete_version') {
 			
 			# move / rename file
 			$rename 		= rename($file, $folder_path_del . "/$image_id" . '_deleted_' . date("Y-m-d") . '.' . $ImageObj->get_extension() );
-			if(!$rename) 	throw new Exception(" Error on move files to folder \"deleted\" . Permission denied . The files are not deleted");	
+			if(!$rename) 	throw new Exception(" Error on move files to folder \"deleted\" . Permission denied . The files are not deleted");
+
+
+			# Save component (update valor list)
+			$component_image = component_common::get_instance(	'component_image',
+																$tipo,
+																$parent,
+																'edit',
+																DEDALO_DATA_NOLAN,
+																$section_tipo
+																);
+			$component_image->Save();
 			
 
 			/*	DESACTIVO TEMPORALMENTE

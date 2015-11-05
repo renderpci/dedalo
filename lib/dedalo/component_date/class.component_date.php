@@ -8,6 +8,7 @@
 */
 
 
+
 class component_date extends component_common {
 	
 	# Overwrite __construct var lang passed in this component
@@ -20,7 +21,7 @@ class component_date extends component_common {
 
 	
 	function __construct($tipo=null, $parent=null, $modo='edit', $lang=DEDALO_DATA_NOLAN, $section_tipo=null) {
-
+		
 		# Force always DEDALO_DATA_NOLAN
 		$lang = $this->lang;
 
@@ -33,6 +34,53 @@ class component_date extends component_common {
 				throw new Exception("Error Processing Request. Wrong component lang definition. This component $tipo (".get_class().") is not 'traducible'. Please fix this ASAP", 1);				
 			}
 		}
+
+	}//end __construct
+
+
+	/**
+	* GET_DATO
+	* Dato change to object with year, month, day, hour, minute, second separated in key->value like
+	* {
+	*    "year": -500000,
+	*    "month": 10,
+	*    "day": 3,
+	*    "hour": 19,
+	*    "minute": 56,
+	*    "second": 43
+	* }
+	*/
+	public function get_dato() {
+		$dato = parent::get_dato();
+	
+		if (empty($dato) || (is_object($dato) && empty(get_object_vars($dato))) ) {
+			#$dd_date = new dd_date();
+				#dump($dd_date, ' dd_date');
+			return null;
+		}
+
+		# Compatibility old dedalo instalations
+		if (is_string($dato)) {
+			$dd_date    = new dd_date();
+			$this->dato = (object)$dd_date->get_date_from_timestamp( $dato );
+			$this->Save();
+			$dato = parent::get_dato();
+		}
+
+		return (object)$dato;
+	}
+
+	# SET_DATO
+	public function set_dato( $dato ) {
+		
+		if (is_string($dato) && strpos($dato, '{')!==false ) {
+			$dato = json_decode($dato);
+		}
+		
+		if (!is_object($dato)) {
+			throw new Exception("Error Processing Request. Only objects are accepted. Type: ".gettype($dato), 1);
+		}
+		parent::set_dato( (object)$dato );
 	}
 
 	
@@ -44,8 +92,7 @@ class component_date extends component_common {
 	public function Save() {
 		
 		# Dato
-		$dato = $this->dato;
-		$dato_source = $dato;
+		$dato = $this->dato;		
 
 		# DELETING DATE
 		if (empty($dato)) {
@@ -54,56 +101,62 @@ class component_date extends component_common {
 		}
 
 		# DATO FORMAT VERIFY
-		if ( !is_string($dato) || empty($dato) ) {			
+		if ( !is_object($dato) ) {			
 			if(SHOW_DEBUG) {
 				#dump($dato,'$dato');
 				#throw new Exception("Dato is not string!", 1);
-				error_log("Bad date format:".$dato);
+				error_log("Bad date format:".to_string($dato));
 			}
 			return false;
 		}
+		/*
+			$regex1 = "/^(0[0-9]|[12][0-9]|3[01])[-\/.](0[0-9]|1[012])[-\/.](-?[0-9]+)$/";
+			$regex2 = "/^(0[0-9]|1[012])[-\/.](-?[0-9]+)$/";
+			$regex3 = "/^(-?[0-9]+)$/";
 
-
-		# CONVERT 2013-11-30 FORMAT TO TIMESTAMP => 2013-11-30 00:00:00
-		try {
-			$date = new DateTime($dato);
-		} catch (Exception $e) {
-		    if(SHOW_DEBUG) {
-				error_log("Bad date format:".$dato);
+			if( preg_match($regex1, $dato, $matches)>0 ){			
+				$day 	= $matches[1];
+				$month	= $matches[2];
+				$year 	= $matches[3];				
+			}else if( preg_match($regex2, $dato, $matches)>0 ){
+				$day 	= "00";
+				$month	= $matches[1];
+				$year 	= $matches[2];
+			}else if( preg_match($regex2, $dato, $matches)>0 ){
+				$day 	= "00";
+				$month	= "00";
+				$year 	= $matches[1];
+			}else{
+				trigger_error("Error on format date. Date '$dato' is not valid!");
+				return false;
 			}
-			return false;
-		}
-		
-		$dato = $date->format('Y-m-d H:i:s');
 
-		# Verify format
-		$pattern = '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9] [0-9][0-9]:[0-9][0-9]:[0-9][0-9]';
-		if(!preg_match_all("/$pattern/", $dato, $matches, PREG_PATTERN_ORDER)) {
-			# Format error
-			$msg = "Error: format date '$dato_source' is wrong. <br> Nothing is saved!";
-			trigger_error($msg);
-			return $msg;
-		}
+			# Time defaults
+			$hour 	="00";
+			$minute ="00";
+			$second ="00";
+			
+			# Unix time convert
+			$unix_time = mktime($hour,$minute,$second,$month,$day,$year);
+	  			#dump($mktime, ' time - from '.$dato);
 
-		# Set dato
-		$this->dato = $dato;
+			# Date formated from unix time
+			$dato_formated = date("Y-m-d H:i:s", $unix_time);
+
+			if(SHOW_DEBUG) {
+				dump($dato_formated,'date - '.$dato);
+			}		
+
+			# Set dato
+			$this->dato = (string)$dato_formated;
+		*/
 
 		# A partir de aquí, salvamos de forma estándar
 		return parent::Save();
 	}
 
 
-	# GET DATO : Format "1952-04-13 00:00:00"
-	public function get_dato() {
-		$dato = parent::get_dato();
-		$dato = trim(strip_tags($dato));
-		return (string)$dato;
-	}
-
-	# SET_DATO
-	public function set_dato($dato) {
-		parent::set_dato( (string)$dato );
-	}
+	
 
 	
 
@@ -115,38 +168,55 @@ class component_date extends component_common {
 	* GET VALOR (Ojo: Se usa para ordenar, por lo que mantiene el formato DB. Para visualizar usar 'get_valor_local()')
 	* Dato formated as timestamp '2012-11-07 17:33:49'
 	*/
-	public function get_valor($format='Y-m-d H:i:s') {
+	public function get_valor() {
+		$valor='';
 
 		$dato = $this->get_dato();
 
+		if (empty($dato)) return $valor;
+
+		$dd_date 		= new dd_date( $dato );
+		$date_format	= "Y-m-d H:i:s"; # Default is used but passed for clarity
+		$valor 	 		= $dd_date->get_dd_timestamp($date_format);
+		/*
 		$date = new DateTime($dato);
 		$valor = $date->format($format);
 			#dump($valor, 'valor', array());
-		
-		return $valor;
-	}
+		*/
+		return (string)$valor;
+	}//end get_valor
 
 	/**
 	* GET VALOR LOCAL 
 	* Convert internal dato formated as timestamp '2012-11-07 17:33:49' to current lang data format like '07-11-2012 17:33:49'
 	*/
 	public function get_valor_local( $full=false ) {
-		
-		# Real matrix dato timestamp
-		$timestamp = trim($this->get_dato());
+		$valor_local='';
 
-		if (empty($timestamp) || strlen($timestamp)<=10) {
-			return null;
+		$dato = $this->get_dato();
+
+		if (empty($dato)) return $valor_local;
+
+		$dd_date 		= new dd_date( $dato );
+		switch (true) {
+			case (empty($dato->month) && empty($dato->day) ):
+				$date_format	= "Y";
+				break;
+			case ( empty($dato->day) && !empty($dato->month) ):
+				$date_format	= "m-Y";
+				break;
+			default:
+				$date_format	= "d-m-Y";
+				break;
+		}
+		#$date_format	= "d-m-Y";	# TODO: change order when use english lang ?? ...
+		$valor_local 	= $dd_date->get_dd_timestamp($date_format);
+		if(SHOW_DEBUG) {
+			#dump($valor_local, ' valor_local');
 		}
 
-		#dump($timestamp,strlen($timestamp)." $this->tipo - $timestamp -");
-		
-		# Formated dato by current data lang
-		$valor = component_date::timestamp_to_date($timestamp, $full);
-	
-
-		return $valor;		
-	}
+		return (string)$valor_local;
+	}//end get_valor_local
 
 
 	
@@ -216,57 +286,7 @@ class component_date extends component_common {
 		return $date;
 	}
 
-
-	/**
-	* DATE_TO_TIMESTAMP
-	* CONVERT 2013-11-30 FORMAT TO TIMESTAMP =>  2013-11-30 00:00:00
-	*/
-	public static function date_to_timestamp($dato) {
-
-		# Verify
-		if(strlen($dato)<10) {
-			error_log(__METHOD__." $dato format is wrong");
-			return null;
-		}
-		if(strlen($dato)>10) {
-			$pattern = '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9] [0-9][0-9]:[0-9][0-9]:[0-9][0-9]';
-			if(preg_match_all("/$pattern/", $dato, $matches, PREG_PATTERN_ORDER)) {
-				return $dato;
-			}else{
-				error_log(__METHOD__." $dato format is wrong");
-				$msg = "Error Date format $dato is wrong. Use format as XX-XX-XXXX ";
-				#throw new Exception($msg, 1);
-				return $msg; 
-			}						
-		}
-
-		$pattern = '([0-9][0-9])-([0-9][0-9])-([0-9][0-9][0-9][0-9])';
-		if(preg_match_all("/$pattern/", $dato, $matches, PREG_PATTERN_ORDER)) {
-			#dump( $matches,' $matches');
-
-			if (in_array(DEDALO_APPLICATION_LANG, self::$ar_american)) {
-				
-				# American format month/day/year 'MM-DD-YYYY'				
-				$mes 		= $matches[1][0];
-				$dia   		= $matches[2][0];
-				$ano  		= $matches[3][0];
-
-			}else{
-
-				# European format day.month.year 'DD-MM-YYYY'
-				$dia   		= $matches[1][0];			
-				$mes 		= $matches[2][0];				
-				$ano  		= $matches[3][0];
-			}
-			
-			$timestamp 	= $ano.'-'.$mes.'-'.$dia.' 00:00:00' ;
-
-			return 	$timestamp;
-
-		}else{
-			return null;
-		}		
-	}
+	
 
 
 

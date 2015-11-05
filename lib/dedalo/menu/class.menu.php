@@ -104,7 +104,6 @@ class menu extends common {
 			$ar_ts_children_areas = area::get_ar_ts_children_all_areas_hierarchized();
 				#dump($ar_ts_children_areas,"ar_ts_children_areas");
 
-
 			$menu_structure_html .= self::walk_ar_tesauro($ar_ts_children_areas, $arguments_tree, $option);
 
 
@@ -118,6 +117,7 @@ class menu extends common {
 				#dump($ar_ts_children_areas,$ar_ts_children_areas);
 				switch (true) {
 					case ($option=='create_link'):
+
 						# TESAURO LINK IN MENU
 						$tesauro_html = '';
 						$tesauro_html .= "<li>";
@@ -145,16 +145,19 @@ class menu extends common {
 						# code...
 						break;
 				}			
-			}
-			
-
+			}//end if ( (array_key_exists(DEDALO_TESAURO_TIPO, $ar_ts_children_areas) && $tesauro_permissions==2) || $logged_user_is_global_admin===true) {
 
 		$menu_structure_html .= "\n</ul><!-- /MENU --> \n";
 
-		/**/
+
+		
 		# STORE CACHE DATA
 		if ($option=='create_link') {
-			$_SESSION['dedalo4']['config']['menu_structure_html'][$uid][DEDALO_APPLICATION_LANG] = tools::clean_html_code($menu_structure_html);
+			if(SHOW_DEBUG) {
+				$_SESSION['dedalo4']['config']['menu_structure_html'][$uid][DEDALO_APPLICATION_LANG] = tools::clean_html_code($menu_structure_html);
+			}else{
+				$_SESSION['dedalo4']['config']['menu_structure_html'][$uid][DEDALO_APPLICATION_LANG] = tools::clean_html_code($menu_structure_html);
+			}
 		}
 
 		if(SHOW_DEBUG) {
@@ -162,8 +165,9 @@ class menu extends common {
 			#$total=round(microtime(1)-$start_time,3); 	dump($total, 'total');
 		}
 
-		return $menu_structure_html ;
-	}
+		return (string)$menu_structure_html ;
+
+	}//end public static function get_menu_structure_html($option, $arguments_tree) {
 
 	# CREATE LINK FOR MENU
 	public static function create_link($tipo, $termino, $modelo_name=NULL, $arguments_tree) {
@@ -246,14 +250,12 @@ class menu extends common {
 				case ($option=='create_link' && $visible == 'no'):
 				case ($option=='create_link' && $tipo == DEDALO_MEDIA_AREA_TIPO):
 				case ($option=='create_link' && $tipo == DEDALO_TESAURO_TIPO):
-				case ($option=='create_link' && $tipo == DEDALO_ENTITY_MEDIA_AREA_TIPO):
-					
-					$show = false;
-					break;
-
+				case ($option=='create_link' && $tipo == DEDALO_ENTITY_MEDIA_AREA_TIPO):					
+						$show = false;
+						break;
 				case ($option=='create_link' && in_array($tipo, unserialize(DEDALO_ENTITY_MENU_SKIP_TIPOS))):
-					$skip = true;
-					break;
+						$skip = true;
+						break;
 			}
 			
 
@@ -274,10 +276,9 @@ class menu extends common {
 			*/
 
 
-
 			# AREA ADMIN ELEMENTS diferenciate with class 'global_admin_element'
 			if(isset($arguments_tree['context']) && $arguments_tree['context']=='users' && in_array($tipo, component_security_areas::get_ar_tipo_admin()) )	{
-				$open_term		= "\n <li class=\"global_admin_element\" >";
+				$open_term	= "\n <li class=\"global_admin_element\" >";
 			}
 
 
@@ -289,36 +290,40 @@ class menu extends common {
 			$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 
 			# TERMINO (In current data lang with fallback)
-			$termino	 = RecordObj_dd::get_termino_by_tipo($tipo, DEDALO_APPLICATION_LANG, true);	#get_termino_by_tipo($terminoID, $lang=false)
+			$termino	 = RecordObj_dd::get_termino_by_tipo($tipo, DEDALO_APPLICATION_LANG, true);
 			
-			if($skip===true){
-					if(is_array($value) && $modelo_name!='section') {
-						$html .= self::walk_ar_tesauro($value, $arguments_tree, $option);	# Recursion walk_ar_tesauro
-						#dump($html,'$html');
-					}
+			if($skip===true) {
 
-			}else if($show===true)	{
-
-					$html	.= $open_term;
-
-					# Decorate term
-					$html 	.= self::$option($tipo, $termino, $modelo_name, $arguments_tree);
-
-					if(is_array($value) && $modelo_name!='section') {
-						$html .= $open_group ;
-						$html .= self::walk_ar_tesauro($value, $arguments_tree, $option);	# Recursion walk_ar_tesauro
-						$html .= $close_group;
-					}
-
-					$html .= $close_term;
+				if(is_array($value) && $modelo_name!='section') {
+					$html .= self::walk_ar_tesauro($value, $arguments_tree, $option);	# Recursion walk_ar_tesauro
+					#dump($html,'$html');
 				}
 
-		}//end foreach
+			}else if($show===true) {
 
-		#$html 		.= $close_group ;
+				$html	.= $open_term;
+
+				# Decorate term
+				$html 	.= self::$option($tipo, $termino, $modelo_name, $arguments_tree);
+
+				if(is_array($value) && $modelo_name!='section') {
+					
+					$current_html = self::walk_ar_tesauro($value, $arguments_tree, $option);	# Recursion walk_ar_tesauro
+					if (strlen($current_html)) {
+						$html .= $open_group;
+						$html .= $current_html;
+						$html .= $close_group;
+					}
+				}
+
+				$html .= $close_term;
+			}
+
+		}//end foreach($ar_tesauro as $tipo => $value) {
 		
 		return $html;
-	}
+
+	}//end walk_ar_tesauro
 
 
 

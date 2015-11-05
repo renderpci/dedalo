@@ -54,6 +54,7 @@
 				$input_name = "{$tipo}_{$parent}";
 
 				$dato = htmlentities($dato);
+					#dump($this, ' dato ++ '.to_string($this->tipo));
 				
 				# DATO_REFERENCE_LANG
 				$dato_reference_lang= NULL;												
@@ -103,6 +104,8 @@
 				break;
 		
 		case 'search':
+				$ar_comparison_operators 	= $this->build_search_comparison_operators();
+				$ar_logical_operators 		= $this->build_search_logical_operators();
 				$ar_css = false;		
 				break;
 						

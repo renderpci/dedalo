@@ -36,7 +36,7 @@
 				$id_wrapper 	= 'wrapper_'.$identificador_unico;
 				$component_info	= $this->get_component_info('json');			
 				break;
-		case 'print' :
+		#case 'print' :
 		case 'tool_time_machine' :			
 				$id_wrapper = 'wrapper_'.$identificador_unico.'_tm';
 				$input_name = "{$tipo}_{$parent}_tm";	
@@ -46,6 +46,7 @@
 				
 		case 'portal_list':
 				if(empty($valor)) return null;
+		case 'print' :
 		case 'list_tm' :
 				$file_name = 'list';
 						

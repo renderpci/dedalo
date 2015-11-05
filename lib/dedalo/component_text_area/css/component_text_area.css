@@ -87,7 +87,7 @@
 
 
 .text_area_search {
-	
+	width: 50%;
 }
 
 
@@ -288,6 +288,13 @@ DIV.selected_fragment {
 	right: 0;
 	top: 0;
 	*/
+}
+
+
+/* PRINT 
+-------------------------------------------------- */
+.print_content {
+	text-align: justify;
 }
 
 

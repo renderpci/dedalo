@@ -3,9 +3,11 @@
 WRAP DIV CONTAINER*/
 .css_wrap_radio_button {
 	line-height: 1.1em;
-}
-.css_wrap_radio_button .content_data {
-}
+	}
+	.css_wrap_radio_button .content_data {
+		padding-top: 0px;
+	}
+	
 
 /*-- INPUT --*/
 input.css_radio_button {

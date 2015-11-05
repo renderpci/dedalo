@@ -27,7 +27,9 @@
 	}
 	.css_wrap_profile .apply_profile_button {
 		opacity: 0.6;
-		height: 19px;
+		height: 20px;
+		padding-top: 0;
+		padding-bottom: 0;
 	}	
 	.css_wrap_profile .apply_profile_button:hover {
 		opacity: 1;

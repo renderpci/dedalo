@@ -3,9 +3,10 @@
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
 <title>"Geo"</title>
-
-<link rel="stylesheet" type="text/css" charset="utf-8" href="<?php echo DEDALO_ROOT_WEB .'/lib/leaflet/leaflet.css'; ?>" />
-<script language="JavaScript" type="text/javascript" src="<?php echo DEDALO_ROOT_WEB .'/lib/leaflet/leaflet.js'; ?>"></script>
+<?php
+print css::build_tag(DEDALO_ROOT_WEB .'/lib/leaflet/leaflet.css');
+print js::build_tag(DEDALO_ROOT_WEB .'/lib/leaflet/leaflet.js');
+?>
 
 </head>
 <body style="margin:0;padding:0">

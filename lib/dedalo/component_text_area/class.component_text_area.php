@@ -532,7 +532,7 @@ die(__METHOD__." EN PROCESO");
 	* @param $rel_locator (Object like '{rel_locator:{section_id : "55"}, {section_id : "oh1"},{component_tipo:"oh25"} }')
 	* @return $fragment
 	* @see static component_text_area::get_fragment_text_from_tag($tag, $raw_text)
-	* Usado por section_list/rows/rows.php para mostrar el fragmento en los listados
+	* Usado por section_records/rows/rows.php para mostrar el fragmento en los listados
 	*/
 	public static function get_fragment_text_from_rel_locator( $rel_locator ) {
 

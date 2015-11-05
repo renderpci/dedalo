@@ -65,6 +65,7 @@
 				# Only show pdf icon						 
 				break;
 		
+		case 'print':
 		case 'portal_list':
 		case 'list_tm':
 				$file_name = 'list';

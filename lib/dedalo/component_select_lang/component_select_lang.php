@@ -59,7 +59,9 @@
 				break;
 
 		case 'search':	
-				$ar_all_project_select_langs = $this->get_ar_all_project_select_langs();				
+				$ar_all_project_select_langs 	= $this->get_ar_all_project_select_langs();
+				$ar_comparison_operators 		= $this->build_search_comparison_operators();
+				$ar_logical_operators 	 		= $this->build_search_logical_operators();				
 				break;						
 		
 		case 'list_tm' :

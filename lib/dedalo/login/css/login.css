@@ -1,6 +1,7 @@
 /* CSS Document */
 
-body {
+
+.login_body {
 	background-image: url('../../themes/default/dedalo_icon_big.png');
 	background-repeat: no-repeat;
 	background-position: 0px top;
@@ -8,60 +9,88 @@ body {
 	min-height: 1024px;
 }
 /* WRAP DIV CONTAINER */
-.css_wrap_login {	
+.css_wrap_login {
 	color:#333;
 	width:auto;
 	display:none;
 	padding:25px;	
-	background-color: rgba(248,248,248,0.75);	
+	background-color: rgba(255,255,255,0.75);	
 	position: absolute;
 	left: 37%;
 	top: 20%;		
-	box-shadow: 1px 1px 8px #999999 inset;	
+	/*box-shadow: 1px 1px 8px #999999 inset;*/	
 	border:solid 1px #E6E6E6;
 	border-radius:8px;
+	width: 320px;
 	}
 	.css_wrap_login .css_form {
 		text-align: center;
 	}
 	/*-- LANG SELECTOR --*/
 	.css_wrap_login .dedalo_aplication_langs_selector {
-		margin-bottom: 15px;		
-		position: relative;
-		left: 8px;
+		margin-bottom: 19px;		
+		position: relative;		
+		font-size: 12px !important;
+		-webkit-appearance: none;
+		border: 1px;
+		border-style: solid;
+		border-color: #d2d2d2;
+		border-radius: 4px;
+		padding: 8px;
+		padding-right: 44px;
+		background-image: url('../../themes/default/select_2x.png');
+		background-repeat: no-repeat;
+		background-position-x: 95%;
+		background-position-y: center;
+		background-size: 10px 6px;
+		width: 100%;
 	}
 	/*-- LABELS --*/
 	.css_wrap_login label {
 		min-width:93px !important;
-		padding-top:5px;
+		padding-top:6px!important;
+		text-align: right !important;
+		letter-spacing:1px !important;
 	}
 	/*-- INPUTS --*/
-	.css_wrap_login .css_input_text,
-	.css_wrap_login .css_password {
-		width:165px !important; 
-		min-height:2.0em;
-		margin-bottom:5px;
+	.css_wrap_login #login_username,
+	.css_wrap_login #login_password {
+		width:100%; 
+		min-height:2.5em;
+		margin-bottom:5px;	
+		font-weight: lighter;
+		letter-spacing:1px;
+		box-shadow: none;
+		text-align: left;
+		padding-left: 10px;
+		font-size: 1.0em;
 	}
-	.css_wrap_login .css_input_text:focus,
-	.css_wrap_login .css_password:focus {
-		
-	}
+	
 	/*-- BUTTON LOGIN --*/
 	.css_wrap_login .css_button_login {
-		margin-left: 0px;
-		margin-bottom: 10px;
+		margin: 0;
+		margin-top: 10px;
+		padding: 10px;
 		position: relative;
-		left: -5px;
-		width: 60px;
-		font-size: 0.96em;
+		font-size: 1.31em;
+		width: 100%;
 	}	
 	.css_wrap_login .login_ajax_response {
-		display:block !important;
-		/*width: 280px;*/
-		min-width:134px;
-		padding:10px;
-		text-align:center !important;
-	}
+		display: block;
+		padding: 0px;
+		text-align: center;
+		min-height: 20px;
+		}		
+		.css_wrap_login .login_ajax_response .error, .css_wrap_login .login_ajax_response .ok {
+		    width: 100%;
+		    padding: 8px;
+		    margin: 0;
+		}
+		.css_wrap_login .login_ajax_response .ok {
+			margin-top: 18px;
+			margin-bottom: 10px;
+			background-color: rgba(0, 204, 0, 0.69);
+		}
 	.building_backup {
 		background-color: #f7f7f7;
 		color: #999999;
@@ -79,8 +108,10 @@ body {
 	.set_pasw_input {
 		margin:10px;
 		text-align: right;
-		margin-right: 30%;
 		margin-top: 15px;
+		width: 100%;
+		text-align: left;
+		margin-bottom: 10px;	
 		}
 	.set_button {
 		padding-right: 20%;
@@ -88,3 +119,9 @@ body {
 		.set_button > input {
 			cursor: pointer;
 		}
+
+	.css_wrap_login input[type="text"], 
+	.css_wrap_login input[type="password"] {
+		width: 100%;
+		padding: 5px;
+	}

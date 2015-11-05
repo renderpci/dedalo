@@ -116,8 +116,8 @@ a:active {
 	font-size:23px;	
 	width:140px;
 	height:23px;
-	display:inline-block;
-	vertical-align:middle;
+	display: inline-block;
+	vertical-align: baseline;
 	text-shadow: 1px 2px 2px #b9b9b9;	/*box-shadow: 1px 2px 2px #888888;*/	
 	position: relative;
 	top: 2px;

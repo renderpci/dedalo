@@ -2,6 +2,7 @@
 	
 	# CONTROLLER
 
+
 	$tipo 					= $this->get_tipo();
 	$parent 				= $this->get_parent();
 	$section_tipo 			= $this->get_section_tipo();
@@ -9,7 +10,7 @@
 	$dato 					= $this->get_dato();
 	$traducible 			= $this->get_traducible();
 	$label 					= $this->get_label();
-	$permissions			= common::get_permissions($tipo);
+	$permissions			= 1;	//common::get_permissions($tipo);
 	$html_title				= "Info about $tipo";		
 	$html_tools				= '';
 	$valor					= $this->get_valor();				
@@ -25,7 +26,8 @@
 		case 'edit':				
 				$id_wrapper 	= 'wrapper_'.$identificador_unico;
 				$input_name 	= "{$tipo}_{$parent}";				
-				$component_info = $this->get_component_info('json');
+				$component_info = '';//$this->get_component_info('json');
+					#dump($component_info, ' component_info'.to_string());
 				break;
 
 		case 'print':
@@ -51,7 +53,10 @@
 		case 'search':
 				if ($dato<1) {
 					$dato = null;
-				}	
+				}
+
+				$ar_comparison_operators 	= $this->build_search_comparison_operators();
+				$ar_logical_operators 		= $this->build_search_logical_operators();
 				break;					
 	}
 	

@@ -1,6 +1,6 @@
 <?php
 require_once(DEDALO_LIB_BASE_PATH . '/db/class.RecordDataBoundObject.php');
-require_once(DEDALO_LIB_BASE_PATH . '/db/class.RecordObj_descriptors.php');
+#require_once(DEDALO_LIB_BASE_PATH . '/db/class.RecordObj_descriptors.php');
 require_once(DEDALO_LIB_BASE_PATH . '/ts/class.Tesauro.php');
 
 

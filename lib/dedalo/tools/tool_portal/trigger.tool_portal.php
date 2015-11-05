@@ -97,7 +97,10 @@ if ($mode=='show_full') {
 			#error_log("Removed 'filter_by_section_creator_portal_tipo' from session var SESSION[config4][search_options][$search_options_session_key]");
 		}
 	}else{
-		error_log("Error on portal_tool show_full");
+		error_log("Error on portal_tool show_full. Session key received not exists: $search_options_session_key ");
+		if(SHOW_DEBUG) {
+			#dump($_SESSION['dedalo4']['config']['search_options'][$search_options_session_key], ' var');;
+		}
 	}
 	exit();
 }

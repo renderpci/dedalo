@@ -3,8 +3,8 @@
 # MÉTODOS COMPARTIDOS POR TODOS LOS COMPONENTES Y ZONAS
 # DECLARAR LOS MÉTODOS PUBLIC
 require_once(DEDALO_LIB_BASE_PATH . '/common/class.Accessors.php');
-require_once(DEDALO_LIB_BASE_PATH . '/component_common/class.locator.php');
-require_once(DEDALO_LIB_BASE_PATH . '/db/class.RecordObj_matrix.php');
+#require_once(DEDALO_LIB_BASE_PATH . '/component_common/class.locator.php');
+#require_once(DEDALO_LIB_BASE_PATH . '/db/class.RecordObj_matrix.php');
 
 
 
@@ -130,7 +130,8 @@ abstract class common extends Accessors {
 
 			# PROPIEDADES : Always JSON decoded
 			#dump($this->RecordObj_dd->get_propiedades()," ");
-			$this->propiedades =  json_handler::decode($this->RecordObj_dd->get_propiedades());
+			$propiedades = $this->RecordObj_dd->get_propiedades();
+			$this->propiedades = !empty($propiedades) ? json_handler::decode($propiedades) : false;
 			
 
 
@@ -331,7 +332,15 @@ abstract class common extends Accessors {
 	}
 
 	
+	public function set_dato($dato){
 
+		# UNSET previous calculated valor
+		unset($this->valor);
+		# UNSET previous calculated ar_list_of_values
+		unset($this->ar_list_of_values);
+
+		$this->dato = $dato;
+	}
 
 
 	protected function set_default_value() {
@@ -378,10 +387,12 @@ abstract class common extends Accessors {
 	# GET LOADED OBJS BY MODEL ID
 	public static function get_ar_loaded_modelos() {		
 		
-		if(is_array(common::$ar_loaded_modelos))
-			return array_unique(common::$ar_loaded_modelos);		#dump(common::$ar_loaded_modelos); echo "<hr>";
-		else
+		if(is_array(common::$ar_loaded_modelos)){
+			#dump(common::$ar_loaded_modelos); echo "<hr>";
+			return array_unique(common::$ar_loaded_modelos);			
+		}else{
 			return common::$ar_loaded_modelos;
+		}
 	}
 
 	
@@ -795,7 +806,7 @@ abstract class common extends Accessors {
 			switch ($options->filter_by_modelo_name) {
 				case 'component_portal':
 					#$ar_portales 	 = (array)RecordObj_dd::get_ar_terminoID_by_modelo_name('component_portal');
-					$ar_portals_map = component_portal::get_ar_portals_map();
+					$ar_portals_map = (array)component_portal::get_ar_portals_map();
 					$result 		= (array)array_keys($ar_portals_map,$options->tipo);
 						#dump($ar_portals_map,"ar_portals_map ");dump($result,"result ");die();
 

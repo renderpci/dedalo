@@ -71,13 +71,14 @@ class json_handler {
 					return $result;
 				}
 				if(SHOW_DEBUG) {
-					#dump(debug_backtrace(), "JSON ERROR BACKTRACE");die();
+					#dump(debug_backtrace(), "JSON ERROR BACKTRACE");#die();
 					#throw new Exception("Error Processing Request", 1);					
 				}
 	 
 				if (json_last_error()!=JSON_ERROR_NONE) {
+					#dump(debug_backtrace(), "JSON ERROR BACKTRACE");#die();
 					#dump($json,"json error "); //[0]['function'];
-					throw new Exception("Error Processing Request", 1);                    
+					#throw new Exception("Error Processing Request", 1);                    
 				    #throw new RuntimeException(static::$_messages[json_last_error()]. " -> $json");
 				}
 
@@ -86,6 +87,7 @@ class json_handler {
 				$msg = "json_decode Message: " .$e->getMessage();
 				#throw new Exception("$msg", 1);
 				#dump($e); 
+				dump($json, "json catch Exception ".to_string($msg));
 				trigger_error("$msg", E_USER_ERROR);           
 				#throw new RuntimeException(static::$_messages[json_last_error()]);
 			}

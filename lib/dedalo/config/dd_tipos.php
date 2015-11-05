@@ -43,8 +43,12 @@ define('DEDALO_SECTION_SI_NO_TIPO'						, 'dd64');
 define('DEDALO_SECTION_LAYOUT_TEMPLATES_TIPO'			, 'dd20'); # TIPO of secction layout with the default and private templates for print, list, edit... the secitions
 define('DEDALO_SECTION_LAYOUT_PUBLIC_TIPO'				, 'dd30'); # TIPO of secction layout with the user and public layouts for print, list, edit... the secitions
 
-#dedalo Media
+# dedalo Media
 define('DEDALO_MEDIA_COLLECTION_TIPO'					, 'rsc25'); # TIPO of the collection component that contain the data of the collection, that can will used to make he path to the media
+
+# Modelos
+define('MODELO_SECTION'									, 'dd6');
+
 
 # TOP_TIPO
 if (!empty($_REQUEST['top_tipo'])) {

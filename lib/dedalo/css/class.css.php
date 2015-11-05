@@ -1,5 +1,5 @@
 <?php
-require_once(DEDALO_LIB_BASE_PATH . '/db/class.RecordObj_dd.php');
+#require_once(DEDALO_LIB_BASE_PATH . '/db/class.RecordObj_dd.php');
 
 
 class css {
@@ -43,22 +43,22 @@ class css {
 			# BUTTONS css
 			$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/button_common/css/button_common.css';
 
+			# SEARCH css
+			$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/search/css/search.css';
+
 			# COMPONENTS common css
-			#$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/component_common/css/component_common.css';
-				
-			# SECTION LIST css
-			#($modo == 'section_list') ? ($ar_url_basic[] = DEDALO_LIB_BASE_URL . '/section_list/css/section_list.css') : '';
-			#$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/section_list/css/section_list.css';
+			#$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/component_common/css/component_common.css';			
 
 			# COMPONENT_PORTAL css
 			#$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/component_portal/css/component_portal.css';
 
 			# Ponemos las librerías básicas al principio de la lista
-			css::$ar_url = array_merge($ar_url_basic, css::$ar_url);
+			#css::$ar_url = array_merge($ar_url_basic, css::$ar_url);
 
 						
 
-		# Recorremos los elemetos usados por modeloID es decir: root=dd117, etc..		
+		# Recorremos los elemetos usados por modeloID es decir: root=dd117, etc..
+		$ar_url_elements=array();		
 		$ar_excepciones 		= array('relation_list');
 		$ar_loaded_modelos_name = array_unique(common::$ar_loaded_modelos_name);
 		foreach($ar_loaded_modelos_name as $modelo_name) {			
@@ -87,7 +87,7 @@ class css {
 
 			# Load específico del objeto actual	
 			if (!in_array($modelo_name, $ar_excepciones)) {		
-				css::$ar_url[]			= DEDALO_LIB_BASE_URL . '/'. $modelo_name .'/css/'. $modelo_name .'.css';
+				$ar_url_elements[]			= DEDALO_LIB_BASE_URL . '/'. $modelo_name .'/css/'. $modelo_name .'.css';
 			}		
 		}
 		# Portales	
@@ -98,15 +98,19 @@ class css {
 		}
 		*/
 		# TOOLS COMMON
-		css::$ar_url[] = DEDALO_LIB_BASE_URL . '/tools/tool_common/css/tool_common.css';
+		$ar_url_elements[] = DEDALO_LIB_BASE_URL . '/tools/tool_common/css/tool_common.css';
 
 		# CURRENT TOOL MAIN CSS
 		#if (strpos($modo, 'tool_')!==false) {
-		#	css::$ar_url[] = DEDALO_LIB_BASE_URL . '/tools/'.$modo.'/css/'.$modo.'.css';		
+		#	$ar_url_elements[] = DEDALO_LIB_BASE_URL . '/tools/'.$modo.'/css/'.$modo.'.css';		
 		#}
 
 		# eliminamos las duplicidades		
-		css::$ar_url = array_unique(css::$ar_url);
+		$ar_url_elements = array_unique($ar_url_elements);
+
+	
+		# Añadimos al final los elementos existentes en css::$ar_url
+		css::$ar_url = array_merge($ar_url_basic, $ar_url_elements, css::$ar_url);
 
 		
 		#despejamos las url
@@ -158,17 +162,24 @@ class css {
 	/**
 	* BUILD_TAG
 	*/
-	static function build_tag($url) {
+	static function build_tag($url, $media=null) {
+
 		if (strpos($url, 'section_group_')!==false) return null;
 
 		if (!USE_CDN) {
 			if(SHOW_DEBUG) {
-				$url .= "?".date("ymdh");
+				#$url .= "?".date("ymdh");
 			}else{
-				$url .= "?".date("ymd");
-			}			
+				#$url .= "?".date("ymd");
+			}					
 		}
-		return "\n<link rel=\"stylesheet\" href=\"$url\" type=\"text/css\" media=\"screen\" />";
+		$media_attr='';
+		if (!is_null($media)) {
+			$media_attr = "media=\"$media\"";  // Like screen
+		}
+		
+		$url = $url.'?v='.DEDALO_VERSION;
+		return "\n<link rel=\"stylesheet\" href=\"$url\" type=\"text/css\" {$media_attr}/>";
 	}
 	
 	

@@ -23,12 +23,18 @@ if($action=='export') {
 	# Dump historic data first
 	$db_name = 'dedalo4_development_str_'.date("Y-m-d_Hi").'.custom';
 	$exp 	 = backup::export_structure($db_name, $exclude_tables=false);	// Full backup
-	echo $exp;
+	echo $exp->msg;
 	echo '<br>';
-
+	if ($exp->code!=0) {
+		echo "<pre>Sorry. Nex step export_structure stopped ($exp->code)</pre>";
+		exit();
+	}
+	
 	# Dump official structure version 'dedalo4_development_str.custom' (partial backup)
 	$res = backup::export_structure(null, $exclude_tables=true);	 // Partial backup
-	echo $res;
+	echo $res->msg;
+
+	
 	exit();
 }
 
@@ -42,8 +48,12 @@ if($action=='import') {
 	# Before import, EXPORT ;-)
 	$db_name = 'dedalo4_development_str_'.date("Y-m-d_Hi").'.custom';
 	$exp 	 = backup::export_structure($db_name, $exclude_tables=false);	// Full backup
-	echo $exp;
+	echo $exp->msg;
 	echo '<br>';
+	if ($exp->code!=0) {
+		echo "<pre>Sorry. Nex step import_structure stopped ($exp->code)</pre>";
+		exit();
+	}
 
 	$res = backup::import_structure();	
 	echo $res;

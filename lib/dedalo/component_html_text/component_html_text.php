@@ -87,7 +87,7 @@
 						$dato_reference_lang= NULL;												
 						if (empty($dato)) { # && $traducible=='si'
 							$dato_reference_lang = $this->get_dato_default_lang();		
-						}
+						}						
 						# Force file_name
 						$file_name  = 'edit';	
 						break;

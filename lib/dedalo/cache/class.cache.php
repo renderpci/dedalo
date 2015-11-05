@@ -33,6 +33,7 @@ class cache {
 		define('CACHE_TOOLS'			, false);
 		define('CACHE_BUTTONS'			, false);
 		define('CACHE_LABELS'			, false);
+		define('CACHE_OPERATORS'		, false);
 		define('CACHE_AR_ID_RECORDS'	, false);
 	}
 	

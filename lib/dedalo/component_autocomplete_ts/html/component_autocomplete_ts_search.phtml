@@ -10,7 +10,7 @@
 	if(!isset ($ar_css['css_wrap_autocomplete_ts']))$ar_css['css_wrap_autocomplete_ts']='';
 		
 	
-	print "\n<!-- COMPONENT_AUTOCOMPLETE_TS [tipo:$tipo id_matrix:$id] $label -->";
+	print "\n<!-- COMPONENT_AUTOCOMPLETE_TS [tipo:$tipo id_matrix:$parent] $label -->";
 	print "\n<div class=\"css_wrap_autocomplete_ts wrap_component {$ar_css['css_wrap_autocomplete_ts']}\" id=\"{$id_wrapper}\" >";
 	
 	# ETIQUETA (LABEL)
@@ -23,45 +23,69 @@
 		case 0	:	$html_contenido .= "\n <span class=\"css_span_dato {$ar_css['css_span_dato']}\"> ".label::get_label('sin_acceso')." (ref)</span>";
 					break;
 						
-		case 1	: 	$html_contenido .= $dato;
+		case 1	: 	$html_contenido .= $valor;
 					break;	
 						
 		
 		case ($permissions>=2)	:
+
+					# COMPARISON OPERATORS
+					$html_contenido .= operator::get_search_comparison_operators_html($tipo,$ar_comparison_operators);
+
+					
 		
 					# VALOR . STRING RESOLVED TO SHOW
-					$html_contenido .= "\n <div class=\"css_autocomplete_ts_valor\">".$valor_searched_string."</div>";
+					#$html_contenido .= "\n <div class=\"css_autocomplete_ts_valor\">".$valor_searched_string."</div>";
+					# VALOR . STRING RESOLVED TO SHOW
+					$html_contenido .= "\n <ul class=\"css_autocomplete_ts_valor\">";					
+					$html_contenido .= "</ul>";
+
+					
+					#
+					# INPUT SEARCH FIELD
+					$html_contenido .= "\n <input type=\"text\" class=\"css_autocomplete_ts_search_field\"
+					placeholder=\"".label::get_label('buscar')."...\"
+					data-ar_tipo_to_search='{$ar_referenced_tipo_json}'
+					onclick=\"component_autocomplete_ts.activate(this)\"
+					/>";
+
 
 
 					# INPUT DATA HIDDEN
-					$html_contenido .= "\n <input type=\"text\" class=\"css_autocomplete_ts_dato_hidden\"
-						id=\"{$identificador_unico}\" name=\"{$tipo}\" 
-						data-tipo=\"{$tipo}\" data-id_matrix=\"{$id}\" data-parent=\"{$parent}\" data-lang=\"{$lang}\" data-ar_tipo_to_search='{$ar_referenced_tipo_json}' 
-						value=\"$valor_searched\"						
-						/>";
+					$html_contenido .= "\n <input type=\"text\" name=\"{$input_name}\" class=\"css_autocomplete_ts_dato_hidden temmporal\"
+					id=\"{$identificador_unico}\"						 
+					data-tipo=\"{$tipo}\"
+					data-section_tipo=\"{$section_tipo}\"
+					data-parent=\"{$parent}\"
+					data-lang=\"{$lang}\"
+					value='{$dato_json}'
+					/>";
 					
-
-					# SEARCH FIELD
-					$html_contenido .= "\n <input class=\"css_autocomplete_ts_search_field\" type=\"text\" placeholder=\"Search..\"						
-						data-ar_tipo_to_search='{$ar_referenced_tipo_json}'
-						/>";
 
 
 					# BTN DELETE
+					/*
 					$html_contenido .= "\n <div class=\"div_image_link link css_autocomplete_ts_button_delete\" 
 					data-tipo=\"{$tipo}\"
 					title=\"$label $id\"
-					onclick=\"component_autocomplete_ts.delete_searched_value(this)\"></div>";	
+					onclick=\"component_autocomplete_ts.delete_searched_value(this)\"></div>";
+					*/	
 
 
 					# TREE RESOLUTION STATS
-					$html_contenido .= "\n <div id=\"autocomplete_ts_tree_stats_{$tipo}\" class=\"css_autocomplete_ts_tree_stats\"></div>";
-					
+					#$html_contenido .= "\n <div id=\"autocomplete_ts_tree_stats_{$tipo}\" class=\"css_autocomplete_ts_tree_stats\">231</div>";					
+
+								
+
+					# LOGICAL OPERATORS
+					$html_contenido .= operator::get_search_logical_operators_html($tipo,$ar_logical_operators);
+
+					break;
 
 					
 			if($permissions==3)
 					
-					$html_contenido .= "\n <span class=\"css_span_debugger {$ar_css['css_span_debugger']}\" id=\"debugger_{$id}\" >{$debugger}</span>";	
+					$html_contenido .= "\n <span class=\"css_span_debugger {$ar_css['css_span_debugger']}\" id=\"debugger_{$parent}\" >{$debugger}</span>";	
 				
 											
 	}
@@ -76,5 +100,5 @@
 	
 	
 	
-	print "\n</div><!-- /css_wrap_autocomplete_ts COMPONENT_AUTOCOMPLETE_TS [tipo:$tipo id_matrix:$id] $label -->\n\n"; //wrap
+	print "\n</div><!-- /css_wrap_autocomplete_ts COMPONENT_AUTOCOMPLETE_TS [tipo:$tipo id_matrix:$parent] $label -->\n\n"; //wrap
 ?>

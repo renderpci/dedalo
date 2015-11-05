@@ -1,9 +1,8 @@
 <?php
-require_once( dirname(dirname(__FILE__)) .'/config/config4.php');
-
-require_once(DEDALO_LIB_BASE_PATH . '/common/class.common.php');
-require_once(DEDALO_LIB_BASE_PATH . '/common/class.navigator.php');
-require_once(DEDALO_LIB_BASE_PATH . '/db/class.JSON_RecordDataBoundObject.php');
+#require_once( dirname(dirname(__FILE__)) .'/config/config4.php');
+#require_once(DEDALO_LIB_BASE_PATH . '/common/class.common.php');
+#require_once(DEDALO_LIB_BASE_PATH . '/common/class.navigator.php');
+require(DEDALO_LIB_BASE_PATH . '/db/class.JSON_RecordDataBoundObject.php');
 
 
 class JSON_RecordObj_matrix extends JSON_RecordDataBoundObject {
@@ -180,6 +179,7 @@ class JSON_RecordObj_matrix extends JSON_RecordDataBoundObject {
 		"id" 					=> "ID",		# integer
 		"id_matrix" 			=> "id_matrix",	# integer
 		"section_id" 			=> "section_id",# integer
+		"section_tipo" 			=> "section_tipo",# string charvar 32
 		"tipo" 					=> "tipo",		# string charvar 32
 		"lang" 					=> "lang", 		# string 16
 		"timestamp" 			=> "timestamp", # timestamp standar db format
@@ -192,6 +192,8 @@ class JSON_RecordObj_matrix extends JSON_RecordDataBoundObject {
 		#$RecordObj_time_machine->set_id_matrix( $this->get_ID() );
 		# section_id
 		$RecordObj_time_machine->set_section_id( $this->get_section_id() );	// $save_options->time_machine_section_id
+		# section_tipo
+		$RecordObj_time_machine->set_section_tipo( $this->get_section_tipo() );
 		# tipo
 		$RecordObj_time_machine->set_tipo( $save_options->time_machine_tipo );
 		# lang

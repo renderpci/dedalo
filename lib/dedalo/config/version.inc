@@ -250,7 +250,103 @@
 
 	Valencia 02-03-2015 v4.0b3.27
 		Added session cache for rows_search html (moved form elements css to section list css)
+
+
+	
+
+	Valencia 28-07-2015 v4.0 RC 4.2
+		Add class dd_date to manage unsupported dates like -40000, etc.
+		component_date: Date component recreated to support dates as object like {"year":-41985,"month":11,"day":15,"hour":23,"minute":54,"second":4} 
+		component_date: Current date format is imcompatible with anterior format, but onload in edit mode, dato is resaved whith new format 
+		component_date: 'dato' now is a dd_date object and 'value' is a dd_timestamp like '-40000-12-31 00:00:00'
+		Time machine: fixed a bug that cause wrong list of values data in components of virtual sections
+		Time machine: Added column 'section_tipo' in table matrix_time_machine for manage correctly components of virtual sections
+
+	
+	Valencia 11-08-2015 v4.0 RC 4.21
+		Add Search operators (SQL comparison and logical operators)
+		Add class operators to manage search operators
+		Working here to implement all components search operators
+	
+
+	Valencia 18-08-2015 v4.0 RC 4.22
+		component_text_area: fixed image tags error display in php >= 5.6.12
+		text image tags: modify button img offset to adjust show with linux arial font ttf
+		text image tags: modify tc image base to new small height 16px
+		difussion_ts: fixed image issue with new locator format. Now image is get from value from thumbs dir
+	
+
+	Valencia 18-08-2015 v4.0 RC 4.23
+		component_filter_master: fixed list value bug
+	
+
+	Valencia 22-08-2015 v4.0 RC 4.24
+		search: modified section edit behaviour to enable list and search in edit mode
+		lib:geoip:data : updated geoip lib data (GeoLiteCity.dat)
+		lib:tinymce : updated from 4.2.3 to 4.2.4
+		TODO: 	- update inspector section info on navigate in edit mode - OK
+				- update right top label about current section id - OK
+				- Activity: error "json_decode Message: Error Processing Request" (admin) - OK
+				- tool portal : list for select record. View filtered / unfiltered don't work -OK
+
+
+	Valencia 22-08-2015 v4.0 RC 4.25
+		fixed bug in tool portal : list for select record. View filtered / unfiltered 
+		fixed bug in component_html_text : edit 'context_name' is passed as string now instead of object
+		fixed bug in tool_import_zotero : preview 'date' now work as standar dd_date format instead timestamp
 		
+
+	Valencia 04-09-2015 v4.0 RC 4.26
+		Add remove development elements (dd str) in backup script for non development instalations
+		lib:tinymce : updated from 4.2.4 to 4.2.5
+		Changed 'section_list' to 'section_records' to unify list and edit sections manager view
+
+
+	Valencia 04-09-2015 v4.0 RC 4.27
+		stats: adapted to support partial results (using general search section params) and different component levels
+		diffusion: support for resolve portals 'valor' 
+
+	
+	Valencia 04-09-2015 v4.0 RC 4.28
+		tool_import_zotero : Fixed issue with pdf preview that call gosthscript lib and hang cpu trying build thumbs (now is dissable)
+
+
+	Valencia 28-09-2015 v4.0 RC 4.29
+		tool_replace_component_data : Add new tool
+		interface: changed buttons styles and other cosmetic issues
+
+	Valencia 14-10-2015 v4.0 RC 4.30
+		component_common : fixed ar_list_of_values data issue when a component is changed from translatable to non translatable and viceversa		
+		minor fixes for stability and view 	
+
+	Valencia 14-10-2015 v4.0 RC 4.31
+		component_common : set_dato now unset var ar_list_of_values to avoid cache when data is injected (ex. statistics)
+		
+
+	Valencia 14-10-2015 v4.0 RC 4.32
+		component_autocomplete_ts : now is multivalue and deeep searchable
+		component_autocomplete_ts : now is multivalue 
+		
+	Valencia 26-10-2015 v4.0 RC 4.33
+		backup : added 'DEDALO_BACKUP_TIME_RANGE' to control the building of backup files. Default 4 hours
+		
+	
+	Valencia 31-10-2015 v4.0 RC 4.34
+		tool_import_files : added tool as alpha version
+		section : added 'save_handler' concept to manage temporal data in sections (required for the new tool tool_import_files)
+		config : added 'DEDALO_SECTION_ID_TEMP' to control temporal sections. Default 'tmp'
+		
+	
+	Valencia 04-11-2015 v4.0 RC 4.35
+		component_image: changed save way. Now, on save, defult quality and thumb are created allways to ensure list view consistency. 'valor_list' now is set to null when file thumb not exists, instead a defaul 0.jpg image
+		search : added ignore project behaviour when section is list of values (tables matrix_list and matrix_dd) to allow all users view all lists
+		backup: added control to export sequence for capture errors and stop next execution (avoid do import with bad auth conditions)
+				added db_system_config_verify for test pgpass file
+		
+	Valencia 05-11-2015 v4.0.000
+		Released current version (4.0 RC 4.35) as version 4.0 official launch
+
+
 
 	/**
 	* @todo
@@ -267,18 +363,26 @@
 	
 	
 	# Version
-	define('DEDALO_VERSION', "4.0 RC 4.1");
-
-
-
+	define('DEDALO_VERSION'	, '4.0.000');
+	define('DEDALO_BUILD'	, '05-11-2015');
+	
+	/*
 	# Build
 	if (isset($_SESSION['dedalo4']['config']['DEDALO_BUILD'])) {
 		define('DEDALO_BUILD', $_SESSION['dedalo4']['config']['DEDALO_BUILD']);
-	}else{
-		// Reads folder (dedalo lib) recursively and get the more recently edited file date
-		$last_modification_timestamp= get_last_modification_date(DEDALO_LIB_BASE_PATH);
+	}else{		
+		$last_modification_timestamp_file = DEDALO_LIB_BASE_PATH.'/write/last_modification_timestamp.txt';
+		if (file_exists($last_modification_timestamp_file)) {
+			$last_modification_timestamp = file_get_contents($last_modification_timestamp_file);
+		}else{
+			// Reads folder (dedalo lib) recursively and get the more recently edited file date
+			$last_modification_timestamp = get_last_modification_date(DEDALO_LIB_BASE_PATH,null,array('/acc/','/backups','/temp/'));
+			file_put_contents($last_modification_timestamp_file, $last_modification_timestamp);
+		}
 		define('DEDALO_BUILD', date("d-m-Y H:i:s ", $last_modification_timestamp));
-		$_SESSION['dedalo4']['config']['DEDALO_BUILD'] = DEDALO_BUILD;
+		$_SESSION['dedalo4']['config']['DEDALO_BUILD'] = DEDALO_BUILD;		
 	}
+	*/
+	
 	
 ?>

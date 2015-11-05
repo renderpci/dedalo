@@ -18,7 +18,7 @@
 	data-parent=\"{$parent}\"
 	data-section_tipo=\"{$section_tipo}\"
 	data-modo=\"{$modo}\"
-	data-dato=\"{$dato_string}\"
+	data-dato='{$dato_string}'
 	data-component_name=\"{$component_name}\"
 	data-component_info='{$component_info}'
 	>";
@@ -52,6 +52,7 @@
 					}
 					$html_contenido .= "\n <option value=\"\" {$checked}> </option>";
 					
+
 					foreach ($ar_list_of_values->result as $value => $rotulo) {
 
 						$value   = (string)$value; 
@@ -64,7 +65,12 @@
 							$checked = "";
 						}
 						
-						$html_contenido .= "\n <option value='$value' {$checked}> {$rotulo}</option>";							
+						$html_contenido .= "\n<option value='$value' {$checked}>";
+						$html_contenido .= $rotulo;
+						if(SHOW_DEBUG) {
+							$html_contenido .= " ". trim($value);
+						}
+						$html_contenido .= "</option>";							
 					}					
 					$html_contenido .= "\n </select>";	
 					

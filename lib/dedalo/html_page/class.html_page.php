@@ -55,7 +55,7 @@ abstract class html_page {
 
 
 
-
+	//pg_close(DBi::_getConnection());
 
 
 		

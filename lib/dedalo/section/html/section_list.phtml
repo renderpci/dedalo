@@ -65,8 +65,9 @@
 						# BUTTON SHOW ALL / SHOW FILTERED 
 						# SEARCH_OPTIONS_SESSION_KEY						
 						if (isset($_REQUEST['m']) && $_REQUEST['m']=='tool_portal') {					
-						
-							$search_options_session_key = ''.$tipo.'_'.$modo.'_'.TOP_TIPO.'_'.$_REQUEST['t'];	// section_
+							#dump($search_options_session_key, " search_options_session_key ".to_string());
+							#dump($_SESSION['dedalo4']['config']['search_options'][$search_options_session_key]->filter_by_section_creator_portal_tipo, " search_options_session_key ".to_string());
+							#$search_options_session_key = ''.$tipo.'_'.$modo.'_'.TOP_TIPO;	// section_ .'_'.$_REQUEST['t']
 							if(!empty($_SESSION['dedalo4']['config']['search_options'][$search_options_session_key]->filter_by_section_creator_portal_tipo)){
 								$current_btn_label = label::get_label('mostrar_todos');
 								$current_btn_class = 'show_full';
@@ -80,7 +81,11 @@
 							data-search_options_session_key=\"$search_options_session_key\" 
 							data-mode=\"$current_btn_class\" 
 							onclick=\"tool_portal.show_more_toggle(this)\">
-							$current_btn_label</div>";
+							$current_btn_label";
+							if(SHOW_DEBUG) {
+								$html_buttons .= " $search_options_session_key";
+							}
+							$html_buttons .= "</div>";
 						}//<div class=\"icon_bs $current_btn_class\"></div>
 
 
@@ -115,17 +120,20 @@
 
 					$html_buttons .= "\n</div>";#end section_buttons_container
 					$html_contenido .= $html_buttons;
-
-
-
-
 					
 
 					#$html_contenido .= "\n<div id=\"stats_info\"><!-- Stats content here --></div>";
 
 
+					#
 					# Content html
-					$html_contenido .= "\n $html_section_add ";
+					
+						# SEARCH_FORM_HTML
+						$html_contenido .= $search_form_html;
+
+						# ROWS_LIST_HTML
+						$html_contenido .= $rows_list_html;
+					
 
 					# Time machine section button
 					#$html_contenido .= "\n $html_section_tm ";
@@ -141,14 +149,15 @@
 	
 	# PRINT HTML
 	#print $html_label;
-	print $html_contenido;
+	echo $html_contenido;
 	
 	
-	print "\n</div><!-- /css_section_wrap SECTION [tipo:$tipo modo:$modo] -->\n\n"; //wrap
+	echo "\n</div><!-- /css_section_wrap SECTION [tipo:$tipo modo:$modo] -->\n\n"; //wrap
 
 
+	#
 	# Time machine section button and rows list					
-	print $html_section_tm;	
+	echo $time_machine_html;	
 	
 	
 ?>

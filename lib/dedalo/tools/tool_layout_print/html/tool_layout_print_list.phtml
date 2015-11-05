@@ -19,15 +19,15 @@ $html='';
 	$html .= '<div class="wrap_public_templates">';
 	$html .= '<h2>'.$public_templates_title.'</h2>';
 	$html .= '<ul class="text_unselectable text_shadow_inset">';	
-		foreach ($ar_templates as $id_matrix => $obj) {
-			$html .= '<li data-template_id="'.$id_matrix.'" data-template_tipo="'.DEDALO_SECTION_LAYOUT_PUBLIC_TIPO.'">';
+		foreach ($ar_templates as $template_key => $obj) {			
+			$html .= '<li data-template_id="'.$obj->section_id.'" data-template_tipo="'.DEDALO_SECTION_LAYOUT_PUBLIC_TIPO.'">';
 			$html .= '<div class="t_icon icon_template_mini icon_template_more"></div>';
 			$html .= '<div class="t_icon icon_template_mini icon_template_minus" onclick="tool_layout_print.delete_template(this)"></div>';
 			$html .= '<div class="t_icon icon_template icon_template_public" onclick="tool_layout_print.goto_edit(this)"></div>';
 			$html .= '<span>';
 			$html  .= $obj->label;
 			if(SHOW_DEBUG) {
-				$html  .= " [$id_matrix]";
+				$html  .= " [$template_key]";
 			}
 			$html .= '</span>';
 			$html .= '</li>';
@@ -47,15 +47,15 @@ $html='';
 	$html .= '<div class="wrap_private_templates">';
 	$html .= '<h2>'.$private_templates_title.'</h2>';
 	$html .= '<ul>';
-	foreach ($ar_templates as $id_matrix => $obj) {
-		$html .= '<li data-template_id="'.$id_matrix.'" data-template_tipo="'.DEDALO_SECTION_LAYOUT_TEMPLATES_TIPO.'">';
+	foreach ($ar_templates as $template_key => $obj) {
+		$html .= '<li data-template_id="'.$obj->section_id.'" data-template_tipo="'.DEDALO_SECTION_LAYOUT_TEMPLATES_TIPO.'">';
 		$html .= '<div class="t_icon icon_template_mini icon_template_more"></div>';
 		#$html .= '<div class="t_icon icon_template_minus"></div>';
 		$html .= '<div class="t_icon icon_template icon_template_private" onclick="tool_layout_print.goto_edit(this)"></div>';
 		$html .= '<span>';
 		$html  .= $obj->label;
 		if(SHOW_DEBUG) {
-			$html  .= " [$id_matrix]";
+			$html  .= " [$template_key]";
 		}
 		$html .= '</span>';
 		$html .= '</li>';

@@ -1,3 +1,6 @@
+<?php # Remove this line and the next line to re-configure the application
+	    die('Error: Sorry, the application has already been configured.'); 
+	    ?>
 <?php
 $TOP_TIPO=false;
 require_once( dirname(dirname(dirname(__FILE__))) .'/lib/dedalo/config/config4.php');

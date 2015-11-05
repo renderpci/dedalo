@@ -1,9 +1,9 @@
 <?php
 # COMPONENT COMMON (ABSTRACT CLASS)
 # MÉTODOS COMPARTIDOS POR TODOS LOS COMPONENTES
-require_once(DEDALO_LIB_BASE_PATH . '/common/class.common.php');
-require_once(DEDALO_LIB_BASE_PATH . '/db/class.RecordObj_matrix.php');
-require_once(DEDALO_LIB_BASE_PATH . '/db/class.RecordObj_time_machine.php');
+#require_once(DEDALO_LIB_BASE_PATH . '/common/class.common.php');
+#require_once(DEDALO_LIB_BASE_PATH . '/db/class.RecordObj_matrix.php');
+#require_once(DEDALO_LIB_BASE_PATH . '/db/class.RecordObj_time_machine.php');
 
 
 abstract class component_common extends common {
@@ -29,7 +29,7 @@ abstract class component_common extends common {
 	protected $required ;				# field is required . Valorar de usar 'Usable en Indexación' (tesauro) para gestionar esta variable
 	protected $debugger ;				# info for admin
 	protected $ejemplo ;				# ex. 'MO36001-GA'
-	protected $ar_tools_name = array('tool_time_machine','tool_lang');
+	protected $ar_tools_name = array('tool_time_machine','tool_lang','tool_replace_component_data');
 	protected $ar_tools_obj ;
 	protected $ar_authorized_tool_name ;
 
@@ -68,6 +68,10 @@ abstract class component_common extends common {
     	# SECTION_TIPO : OPTIONAL (if empty, section_tipo is calculated from: 1. page globals, 2. structure -only useful for real sections-)
 		if (empty($section_tipo)) {
 			$section_tipo = component_common::resolve_section_tipo($tipo);
+			if(SHOW_DEBUG && DEDALO_ENTITY=='development') {
+				dump($section_tipo, ' resolve_section_tipo from: '.to_string($tipo));
+				dump(debug_backtrace(), ' debug_backtrace '.to_string());			
+			}			
 		}
 
 
@@ -80,11 +84,13 @@ abstract class component_common extends common {
 				dump($tipo," tipo");
 				throw new Exception("Error Processing Request. trying to use wrong var: '$tipo' as tipo to load as component", 1);				
 			}
-			if ( !empty($parent) && (!is_numeric($parent) || abs($parent)<1) ) {
+			if ( (!empty($parent) 
+				 && ( (!is_numeric($parent) || abs($parent)<1)) && strpos($parent, DEDALO_SECTION_ID_TEMP)===false) )
+				{
 				dump($parent," parent");
 				throw new Exception("Error Processing Request. trying to use wrong var: '$parent' as parent to load as component", 1);				
 			}			
-			$ar_valid_modo = array("edit","list","search","simple","list_tm","tool_portal","tool_lang","edit_tool","indexation","selected_fragment","tool_indexation",'tool_transcription');
+			$ar_valid_modo = array("edit","list","search","simple","list_tm","tool_portal","tool_lang","edit_tool","indexation","selected_fragment","tool_indexation",'tool_transcription','print');
 			if ( empty($modo) || !in_array($modo, $ar_valid_modo) ) {
 				#dump($modo," modo");
 				#throw new Exception("Error Processing Request. trying to use wrong var: '$modo' as modo to load as component", 1);
@@ -98,8 +104,17 @@ abstract class component_common extends common {
 		
 		static $ar_component_instances;
 
+		if(SHOW_DEBUG) {
+    		if (is_array($parent)) {
+    			dump(debug_backtrace(), 'debug_backtrace()');
+				dump($parent, ' parent');
+			}
+    	}
+    	
+
 		# KEY : Store in memory key for re-use
     	$key = $tipo .'_'. $section_tipo .'_'. $parent .'_'. $lang;
+    	
 
     	# OVERLOAD : If ar_component_instances > 99 , not add current element to cache to avoid overload
     	if ( isset($ar_component_instances) && count($ar_component_instances)>300) {
@@ -109,9 +124,9 @@ abstract class component_common extends common {
     		if(SHOW_DEBUG) {
     			#error_log(__METHOD__." Overload components prevent. Unset first cache item [$key]");
     		}
-    		#return new $component_name($tipo, $parent, $modo, $lang, $section_tipo);
     	}
 
+    	# unset($ar_component_instances);
     	# FIND CURRENT INSTANCE IN CACHE    	
     	if ( !isset($ar_component_instances) || !array_key_exists($key, $ar_component_instances) ) {
 
@@ -237,27 +252,29 @@ abstract class component_common extends common {
 		$this->load_component_dato();
 	
 
+	
 		# PROPIEDADES:DATO_DEFAULT : Default data try
 		# If 'propiedades:dato_default' exists, use this value as initial value, save component data and reload component data
 		if( ($this->dato===null || $this->dato==='' || $this->dato===false)
-			&& ( $this->modo=='edit' && empty($this->parent) )
+			&& ( $this->modo=='edit' ) // && empty($this->parent) (Now always have parent!)
 			) {
 			
 			$propiedades = $this->RecordObj_dd->get_propiedades();
-				#dump($propiedades,'$propiedades');
+			if(SHOW_DEBUG) {
+				#dump($propiedades,'$propiedades tipo:'.$this->tipo." - parent:$this->parent");
+			}				
 
 			if(!empty($propiedades)) {
 
 				$propiedades = json_handler::decode($propiedades);
 					#dump($propiedades->dato_default,'$propiedades->dato_default');
-				if(isset($propiedades->dato_default)) {	
+				if(isset($propiedades->dato_default)) {
 
 					#dump($propiedades->dato_default,'$propiedades->dato_default intentando salvar desde tipo:'.$this->tipo." parent:".$this->parent);
 					$dato_default = $propiedades->dato_default;
 
-					#Method Used
+					# Method Used
 					if(isset($propiedades->dato_default->method)) {
-
 						$dato_default = $this->get_method( (string)$propiedades->dato_default->method );
 					}
 
@@ -265,15 +282,21 @@ abstract class component_common extends common {
 					$this->id 	= $this->Save();
 
 					# INFO LOG
-					$msg = "INFO: component_common. Created ".get_called_class()." $this->id [$tipo] with default data from 'propiedades' (".to_string($propiedades->dato_default).") - modo:$this->modo";
-					error_log($msg);
-					#throw new Exception("$msg", 1);					
+					if(SHOW_DEBUG) {
+						$msg = "INFO: component_common. Created ".get_called_class()." $this->id [$tipo] with default data from 'propiedades' (".to_string($propiedades->dato_default).") - modo:$this->modo ";
+						error_log($msg);
+					}
 
 					$this->load_component_dato();
 				}
 			}
 
 		}#end if
+
+
+		if ($this->modo=='print') {
+			$this->print_options = new stdClass();
+		}
 
 
 	}#end __construct
@@ -297,8 +320,29 @@ abstract class component_common extends common {
 			return $this->dato_resolved;
 		}
 
+
+		/*
+		#
+		# IS TEMP CASE
+		# Sometimes we need use component as temporal element without save real data to database. Is this case
+		# data is saved to session as temporal data
+		if (isset($this->is_temp) && $this->is_temp===true) {
+			$temp_data_uid = $this->tipo.'_'.$this->parent.'_'.$this->lang.'_'.$this->section_tipo;
+			if (isset($_SESSION['dedalo4']['component_temp_data'][$temp_data_uid])) {
+				$this->dato = $_SESSION['dedalo4']['component_temp_data'][$temp_data_uid];
+			}else{
+				$this->dato = null;
+			}
+
+		}else{
+
+			# MATRIX DATA : Load matrix data 
+			$this->load_component_dato();	
+		}
+		*/
+				
 		# MATRIX DATA : Load matrix data 
-		$this->load_component_dato();			
+		$this->load_component_dato();
 
 		return $this->dato; # <- Se aplicará directamente el fallback de idioma para el modo list
 	}
@@ -322,6 +366,7 @@ abstract class component_common extends common {
 			#$this->bl_loaded_matrix_data = true;
 			return NULL;
 		}
+
 		
 		if( !$this->bl_loaded_matrix_data ) {
 			# Experimental (si ya se ha intentado cargar pero con sin id, y ahora se hace con id, lo volvemos a intentar)
@@ -335,7 +380,7 @@ abstract class component_common extends common {
 					}
 				}					
 				$section = section::get_instance($this->parent, $this->section_tipo);
-					#dump($section->get_dato()," section obj");
+
 			
 			# Fix dato
 			# El lang_fallback, lo haremos directamente en la extracción del dato del componente en la sección y sólo para el modo list.
@@ -345,6 +390,7 @@ abstract class component_common extends common {
 			}
 			$this->dato = $section->get_component_dato($this->tipo, $this->lang, $lang_fallback);
 				#dump($this->dato,"this->dato"); #die();
+			
 
 			$this->bl_loaded_matrix_data = true;
 		}
@@ -482,9 +528,10 @@ abstract class component_common extends common {
 			$lang = DEDALO_DATA_NOLAN;
 		}
 		*/
+		
 
 		# PARENT : Verify parent
-		if(abs($parent)<1) {
+		if(abs($parent)<1 && strpos($parent, DEDALO_SECTION_ID_TEMP)===false) {
 			if(SHOW_DEBUG) {
 				dump($this, "this section_tipo:$section_tipo - parent:$parent - tipo:$tipo - lang:$lang");
 				throw new Exception("Error Processing Request. Inconsistency detected: component trying to save without parent ($parent) ", 1);;
@@ -495,21 +542,40 @@ abstract class component_common extends common {
 		# Verify component minumun vars before save
 		if( (empty($parent) || empty($tipo) || empty($lang)) )
 			throw new Exception("Save: More data are needed!  section_tipo:$section_tipo, parent:$parent, tipo,$tipo, lang,$lang", 1);
+		
 
 		# DATO
 		$dato 	= $this->dato;
 			#dump($dato,"dato en save del component common");
+
+	
+		#
+		# IS TEMP CASE
+		# Sometimes we need use component as temporal element without save real data to database. Is this case
+		# data is saved to session as temporal data
+		/*
+		if (isset($this->is_temp) && $this->is_temp===true) {
+			$temp_data_uid = $tipo.'_'.$parent.'_'.$lang.'_'.$section_tipo;
+			$_SESSION['dedalo4']['component_temp_data'][$temp_data_uid] = $dato ;
+			if(SHOW_DEBUG) {
+				error_log("INFO: IS_TEMP: saved dato from component $temp_data_uid");
+			}
+			dump($dato, ' dato ++ '.to_string($temp_data_uid));
+			return false;
+		}
+		*/
 		
 
 		# SECTION : Preparamos la sección que será la que se encargue de salvar el dato del componente
-		$section 			= section::get_instance($parent, $section_tipo);
-		$section_matrix_id 	= $section->save_component_dato($this);
+		$section 	= section::get_instance($parent, $section_tipo);		
+		$section_id = $section->save_component_dato($this);
+			#dump($section_id, ' section_id');
 
 		# ID : Check valid id returned
-		if (abs($section_matrix_id)<1) {
-			throw new Exception("Save: received id ($section_matrix_id) not valid!", 1);
+		if (abs($section_id)<1 && strpos($section_id, DEDALO_SECTION_ID_TEMP)===false) {
+			throw new Exception("Save: received id ($section_id) not valid!", 1);
 		}
-		#dump($section_matrix_id,"section_matrix_id");		
+		#dump($section_id,"section_id");		
 
 
 		# ACTIVITY
@@ -527,7 +593,7 @@ abstract class component_common extends common {
 							"tipo"			=> $this->tipo,
 							"parent"		=> $this->parent,
 							"lang"			=> $this->lang,
-							"top_id"		=> (TOP_ID ? TOP_ID : $section_matrix_id),
+							"top_id"		=> (TOP_ID ? TOP_ID : $section_id),
 							"top_tipo"		=> (TOP_TIPO ? TOP_TIPO : $section_tipo),
 							"component_name"=> get_called_class(),
 							"table"			=> $matrix_table
@@ -553,7 +619,7 @@ abstract class component_common extends common {
 		}
 
 		# RETURN MATRIX ID
-		return (int)$section_matrix_id;
+		return (int)$section_id;
 
 	}#end Save
 
@@ -839,8 +905,8 @@ trigger_error("!!! DEPRECATED ".__METHOD__);
 			return null;
 		}
 
-		$authorized_tool 		= component_security_tools::is_authorized_tool_for_logged_user($tool_name);
-		$tool_obj 				= null;
+		$authorized_tool = component_security_tools::is_authorized_tool_for_logged_user($tool_name);
+		$tool_obj 		 = null;
 
 		if ($authorized_tool) {
 			# TOOL OBJ
@@ -850,6 +916,30 @@ trigger_error("!!! DEPRECATED ".__METHOD__);
 		}
 		return $tool_obj;
 	}
+
+	/**
+	* GET_AR_TOOLS_NAME
+	* @return array $ar_tools_name
+	*/
+	protected function get_ar_tools_name() {
+		# Default tools
+		$ar_tools_name = $this->ar_tools_name;
+
+		$propiedades = $this->get_propiedades();
+		if (isset($propiedades->ar_tools_name)) {
+			#dump($propiedades->ar_tools_name, ' propiedades ++ '.to_string());
+			foreach ($propiedades->ar_tools_name as $current_name => $obj_tool) {				
+				#dump( $obj_tool, ' obj_tool ++ '.to_string($current_name));
+				$ar_tools_name[] = $current_name;
+			}
+			if(SHOW_DEBUG) {
+				#dump($propiedades->ar_tools_name, ' ar_tools_name ADDED TOOLS FROM PROPIEDADES . total: '.to_string( $ar_tools_name ));
+			}
+		}
+			
+		return (array)$ar_tools_name;
+	}#end get_ar_tools_name
+
 	# LOAD TOOLS
 	public function load_tools() {
 
@@ -886,7 +976,7 @@ trigger_error("!!! DEPRECATED ".__METHOD__);
 
 			if ($authorized_tool) {				
 
-				# INDEATION TOOL CASE : When current tool have 'indexation' name, test thesaurus permissions for avoid inconsistencies
+				# INDEXATION TOOL CASE : When current tool have 'indexation' name, test thesaurus permissions for avoid inconsistencies
 				if (strpos($tool_name, 'indexation')!==false) {
 					$security=new security();
 					$ts_permissions = (int)$security->get_security_permissions(DEDALO_TESAURO_TIPO);
@@ -1151,7 +1241,7 @@ trigger_error("!!! DEPRECATED ".__METHOD__);
 		$RecordObj_time_machine = $this->get_last_time_machine_obj();						#dump($RecordObj_time_machine );
 
 		if(is_object($RecordObj_time_machine)) {
-			return $RecordObj_time_machine->get_mod_date();
+			return $RecordObj_time_machine->get_timestamp();
 		}
 		return NULL;
 	}
@@ -1163,39 +1253,177 @@ trigger_error("!!! DEPRECATED ".__METHOD__);
 		$RecordObj_time_machine = $this->get_last_time_machine_obj();						#dump($RecordObj_time_machine );
 
 		if(is_object($RecordObj_time_machine)) {
-			return $RecordObj_time_machine->get_user_name();
+			return $RecordObj_time_machine->get_userID();
 		}
 		return NULL;
 	}
 
-	function get_last_time_machine_obj() {
+	/**
+	* GET_LAST_TIME_MACHINE_OBJ
+	* @return object $RecordObj_time_machine
+	*/
+	function get_last_time_machine_obj() {		
+		/*return NULL;
+		*/
+		if(empty($this->parent)) return null;
 
-		if(empty($this->id)) return null;
+		if (isset($this->RecordObj_time_machine)) {
+			return $this->RecordObj_time_machine;
+		}
 
 		$arguments=array();
-		$arguments['id_matrix']		= $this->id;
+		$arguments['section_id']	= $this->parent;
+		$arguments['tipo']			= $this->tipo;
+		$arguments['section_tipo']	= $this->section_tipo;
 		$arguments['lang']			= $this->lang;
-		#$arguments['order_by_desc']	= 'timestamp';
+		$arguments['order_by_desc']	= 'timestamp';
+		$arguments['sql_limit']		= 1;
 		$RecordObj_time_machine		= new RecordObj_time_machine(NULL);
-		$ar_id						= $RecordObj_time_machine->search($arguments);				#dump($ar_id,'ar_id');
+		$ar_id						= (array)$RecordObj_time_machine->search($arguments);				#dump($ar_id,'ar_id '.to_string($arguments));
 
 		if(count($ar_id)>0) {
-			$last_tm_record_id 		= $ar_id[0];
-			$RecordObj_time_machine	= new RecordObj_time_machine($last_tm_record_id);		#dump($RecordObj_time_machine);
+			$last_tm_record_id 				= $ar_id[0];
+			$this->RecordObj_time_machine	= new RecordObj_time_machine($last_tm_record_id);			#dump($RecordObj_time_machine);
 
-			return 	$RecordObj_time_machine;
+			return $this->RecordObj_time_machine;
 		}
 		return NULL;
+		
 	}
 
+
+	/**
+	* GET_VALOR_FROM_AR_LOCATORS
+	* Return resolved string of all values of all locators
+	* @param object $request_options 
+	* @return object $valor_from_ar_locators {result,info}
+	*/
+	public function get_valor_from_ar_locators( $request_options ) {
+
+		$start_time = microtime(1);
+		$valor_from_ar_locators	= new stdClass();
+
+		#dump($this, ' this');
+		$options = new stdClass();
+			$options->lang 				= DEDALO_DATA_LANG;
+			$options->data_to_be_used 	= 'valor';
+			$options->separator_fields 	= ', ';
+			$options->separator_rows 	= '<br>';
+			$options->separator_fields 	= ', ';
+			foreach ($request_options as $key => $value) {
+				if (property_exists($options, $key)) $options->$key = $value;
+			}
+
+		#
+		# LOCATORS (If empty, return '')
+		$ar_locators = (array)$this->get_dato();
+			#dump($ar_locators, ' ar_locators');
+			if (empty($ar_locators)) {
+				$valor_from_ar_locators->result='';
+				$valor_from_ar_locators->debug='No locators found '.$this->get_tipo();
+				return $valor_from_ar_locators;
+			}
+
+		#
+		# TERMINOS_RELACIONADOS . Obtenemos los terminos relacionados del componente actual	
+		$ar_terminos_relacionados = (array)$this->RecordObj_dd->get_relaciones();
+			#dump($ar_terminos_relacionados, ' ar_terminos_relacionados');
+		
+		#
+		# FIELDS AND MATRIX_TABLE
+		$fields=array();
+		foreach ($ar_terminos_relacionados as $key => $ar_value) {
+			$modelo = key($ar_value);
+			$tipo 	= $ar_value[$modelo];
+
+			#$modelo_name = RecordObj_dd::get_termino_by_tipo($modelo);
+			#if ($modelo_name=='section') {
+			if ($modelo==MODELO_SECTION) { // 
+				$matrix_table = common::get_matrix_table_from_tipo( $tipo );							
+			}else{
+				$fields[] = $tipo;
+			}
+		}
+		#dump($matrix_table, ' matrix_table ');
+
+		#
+		# SELECT : Selector de terminos relacionados en DB
+		$strQuery_select='';		
+		foreach ($fields as $current_tipo) {						
+			# SELECCIÓN EN EL LENGUAJE ACTUAL			
+			$RecordObj_dd 	= new RecordObj_dd($current_tipo);
+			$current_lang 	= $RecordObj_dd->get_traducible() =='no' ? DEDALO_DATA_NOLAN : $options->lang;
+			$strQuery_select .= "\n datos #>>'{components,$current_tipo,$options->data_to_be_used,$current_lang}' AS $current_tipo";
+			if($current_tipo != end($fields)) $strQuery_select .= ',';
+		}
+		#dump($strQuery_select, '$strQuery_select');
+		
+		#
+		# WHERE : Filtro de locators en DB
+		$strQuery_where='';
+		foreach ($ar_locators as $current_locator) {			
+			$current_section_id 	= $current_locator->section_id;
+			$current_section_tipo 	= $current_locator->section_tipo;
+			
+			$strQuery_where .= "\n section_id = $current_section_id AND section_tipo = '$current_section_tipo' OR";			
+		}
+		if (!empty($strQuery_where)) {
+			$strQuery_where = substr($strQuery_where, 0, -2);
+		}
+		$strQuery_where = '('.$strQuery_where.')';
+		#dump($strQuery_where, ' strQuery_where');
+
+		# QUERY
+		$strQuery = "-- ".__METHOD__."\n SELECT $strQuery_select FROM $matrix_table WHERE $strQuery_where";
+			#dump($strQuery, ' strQuery');
+
+		$result	  = JSON_RecordObj_matrix::search_free($strQuery);
+		$ar_final = array();
+		while ($rows = pg_fetch_assoc($result)) {
+			$string ='';
+			foreach ($fields as $current_tipo) {
+				$string .= (string)$rows[$current_tipo];
+				if($current_tipo != end($fields)) $string .= $options->separator_fields;		
+			}
+			$ar_final[] = $string;
+		}//end while
+		$valor_from_ar_locators->result = implode($options->separator_rows, $ar_final);
+		#dump($valor, ' valor');
+
+		if(SHOW_DEBUG) {
+			$html_info='';
+			$limit_time=SLOW_QUERY_MS/100;			
+			$total_list_time = round(microtime(1)-$start_time,3);
+			$style='';
+			if ($total_list_time>$limit_time || $total_list_time>0.020) {
+				$style = "color:red";
+			}			
+			$html_info .= "<div class=\"ar_list_of_values_debug_info\" style=\"{$style}\" onclick=\"$(this).children('pre').toggle()\"> Time: ";
+			$html_info .= $total_list_time;
+			$html_info .= "<pre style=\"display:none\"> ".$strQuery ."</pre>";
+			$html_info .= "</div>";		
+			$valor_from_ar_locators->debug = $html_info;			
+			if ($total_list_time>$limit_time) {
+				error_log($total_list_time."ms. SLOW QUERY: ".__METHOD__.' '.$strQuery);
+			}
+			#error_log(__METHOD__.' '.$total_list_time."ms. QUERY: ".$strQuery);
+		}#end if(SHOW_DEBUG)
+
+		return (object)$valor_from_ar_locators;
+		
+	}#end get_valor_from_ar_locators
 	
 
 
 	/**
 	* AR LIST OF VALUES
-	* USADO POR CHECKBOXES, RADIO_BUTTONS Y SELECTS
+	* Used by comonent_check_box, comonent_radio_button, comonent_select and comonent_autocomplete
+	*
 	* @param string $lang default 'DEDALO_DATA_LANG'
 	* @param string $id_path default false
+	* @param string $referenced_section_tipo 
+	* @param string $filter_custom
+	*
 	* @return object ar_list_of_values {result,info}
 	* Format:
 	*	Object {
@@ -1207,9 +1435,17 @@ trigger_error("!!! DEPRECATED ".__METHOD__);
 	*		"others":"..."
 	* 	} parent
 	*/
-	public function get_ar_list_of_values($lang=DEDALO_DATA_LANG, $id_path=false, $referenced_section_tipo=false) {
+	public function get_ar_list_of_values($lang=DEDALO_DATA_LANG, $id_path=false, $referenced_section_tipo=false, $filter_custom=false) {
 
-		$use_cache = false;
+		$use_cache = true; // Default false
+			#dump($this->modo, ' this->modo');
+		if ($this->modo=='list') {
+			$use_cache = true; // Used in section list for speed
+		}
+
+		if(SHOW_DEBUG) {
+			global$TIMER;$TIMER[__METHOD__.'_IN_'.$this->tipo.'_'.$this->modo.'_'.$this->parent.'_'.microtime(1)]=microtime(1);;
+		}
 
 		if(isset($this->ar_list_of_values)) {
 			if(SHOW_DEBUG) {
@@ -1219,13 +1455,15 @@ trigger_error("!!! DEPRECATED ".__METHOD__);
 		}
 
 		static $list_of_values_cache;
-
-		$uid = $this->tipo.'_'.$this->lang;
+	
+		$uid = $this->tipo.'_'.$this->modo.'_'.$this->lang.'_'.rawurlencode($filter_custom);	//.'_'.$this->parent
+			#dump($uid, ' uid ++ '.to_string());
 		if($use_cache===true && isset($list_of_values_cache[$uid])) {
 			if(SHOW_DEBUG) {
-				error_log("+++ Returned get_ar_list_of_values already is calculated in list_of_values_cache.. ($uid)");
+				//error_log("+++ Returned get_ar_list_of_values already is calculated in list_of_values_cache.. ($uid)");
+				//dump($uid, ' uid :: '.to_string($referenced_section_tipo));
 			}
-			return($list_of_values_cache[$uid]);
+			return $this->ar_list_of_values = $list_of_values_cache[$uid];
 		}
 
 		
@@ -1242,85 +1480,75 @@ trigger_error("!!! DEPRECATED ".__METHOD__);
 
 		#dump($this->RecordObj_dd->get_relaciones(), ' this');
 
-		/* OLD*/
-		# Obtenemos los terminos relacionados del componente actual
-		#$ar_terminos_relacionados = $this->get_relaciones();
-		$ar_terminos_relacionados = RecordObj_dd::get_ar_terminos_relacionados($this->tipo, true, true);
-			#dump($ar_terminos_relacionados, ' ar_terminos_relacionados '.$lang);
-	
-		if (empty($ar_terminos_relacionados)) {
-			#throw new Exception("Error Processing Request. List of values without TR. Please review structure ($tipo)", 1);
-			$msg = "Error Processing Request. List of values without TR. Please review structure ($tipo) <br> Nota: esta función NO está acabada. Falta contemplar los casos en que el dato se accede directamente (Ver versión anterior abajo)"; 
-			trigger_error($msg);
-			$list_of_values->result   = (array)$ar_final;
-			$list_of_values->msg 	  = (string)$msg;
-			$list_of_values->strQuery = null;
+		
+		#
+		# AR_TERMINOS_RELACIONADOS
+		$ar_terminos_relacionados = (array)$this->RecordObj_dd->get_relaciones();
+			if (empty($ar_terminos_relacionados)) {
+				#throw new Exception("Error Processing Request. List of values without TR. Please review structure ($tipo)", 1);
+				$msg = "Error Processing Request. List of values without TR. Please review structure ($tipo) <br> Nota: esta función NO está acabada. Falta contemplar los casos en que el dato se accede directamente (Ver versión anterior abajo)"; 
+				trigger_error($msg);
+				$list_of_values->result   = (array)$ar_final;
+				$list_of_values->msg 	  = (string)$msg;
+				$list_of_values->strQuery = null;
+				return $list_of_values;
+			}
+			$fields 				= array();
+			$section_tipo_related 	= false;
+			$matrix_table 			= false;
+			foreach ($ar_terminos_relacionados as $key => $ar_value) {
+				$modelo = key($ar_value);
+				$tipo 	= $ar_value[$modelo];
 
-			return $list_of_values;
-		}
-
-		# COMPONENT AUTOCOMPLETE CASE REMOVE SECTION OF ar_terminos_relacionados ARRAY (EN PRUEBAS..)
-		$ar_terminoID_by_modelo_name = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($this->tipo, 'section', 'termino_relacionado');
-		if (!empty($ar_terminoID_by_modelo_name[0])) {
-			foreach ($ar_terminos_relacionados as $key => $value) {
-				if ($value==$ar_terminoID_by_modelo_name[0]) {
-					unset($ar_terminos_relacionados[$key]);
-					//fixed the section related to find the list
-					$section_tipo_related = $ar_terminoID_by_modelo_name[0];
+				#$modelo_name = RecordObj_dd::get_termino_by_tipo($modelo);
+				#if ($modelo_name=='section') {
+				if ($modelo==MODELO_SECTION) { // 
+					$section_tipo_related 	= $tipo;	// Fix section tipo related	
+					$matrix_table 			= common::get_matrix_table_from_tipo($section_tipo_related); // Fix matrix table
+				}else{
+					$fields[] = $tipo;
 				}
 			}
-		}else{
+			$terminoID_valor = reset($fields); // Select first field tipo
+			if (!$section_tipo_related) {					
+				$section_tipo_related = $this->get_section_tipo_from_component_tipo($terminoID_valor); // // Fix section tipo related
+			}
+			if (!$matrix_table) {
+				$matrix_table = common::get_matrix_table_from_tipo($terminoID_valor); // Fix matrix table
+			}
+			$ar_terminos_relacionados = $fields;
 
-			$component_related = reset($ar_terminos_relacionados);
-			$related_section_tipo = $this->get_section_tipo_from_component_tipo($component_related);
-
-			//fixed the section related to find the list
-			$section_tipo_related = $related_section_tipo;
-
-		}
-
-		#dump($section_tipo_related,'$section_tipo_related');
-
-		# Selecionamos el primero
-		$terminoID_valor = reset($ar_terminos_relacionados);	# Format 'array([dd9] => rsc85)'
-			#dump($ar_terminos_relacionados,"terminoID_valor $terminoID_valor");
-		
-
-
-		#$ar_terminoID_by_modelo_name = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($this->tipo, 'component_', 'termino_relacionado'); 
-		#$terminoID_valor = reset($ar_terminoID_by_modelo_name);
-
-		$matrix_table 		 = common::get_matrix_table_from_tipo($terminoID_valor);
-		#$parent_section_tipo = isset($this->section_tipo) ? $this->section_tipo : component_common::get_section_tipo_from_component_tipo($terminoID_valor);
-			#dump($parent_section_tipo," parent_section_tipo");		
 			
+
 		#
-		# Selector de terminos relacionados en DB
+		# STRQUERY_SELECT SELECTOR
 		$strQuery_select='';
-		$strQuery_where='';
-		#datos #>'{components}' ? 
-		foreach ($ar_terminos_relacionados as $current_tipo) {
-			
-			/* 
-			# SELECCIÓN CON UN LENGUANJE
-			$RecordObj_dd 	= new RecordObj_dd($current_tipo);
-			$current_lang 	= ($RecordObj_dd->get_traducible() =='no' ? DEDALO_DATA_NOLAN : $lang);
-			$strQuery_select .= JSON_RecordObj_matrix::build_pg_select('btree','datos',$current_tipo,'dato',$current_lang);
-			*/
-			# SELECCIÓN CON TODOS LOS LENGUAJES
-			$strQuery_select .= "datos #>>'{components,$current_tipo,dato}' AS $current_tipo " ;
-			# SELECCIÓN EN EL LENGUAJE ACTUAL (SÓLO PARA ORDENAR)
-			$strQuery_select .= ", datos #>>'{components,$current_tipo,dato,$lang}' AS {$current_tipo}_lang " ;
+			$strQuery_where='';
+			#datos #>'{components}' ? 
+			foreach ($ar_terminos_relacionados as $current_tipo) {
+				
+				/* 
+				# SELECCIÓN CON UN LENGUANJE
+				$RecordObj_dd 	= new RecordObj_dd($current_tipo);
+				$current_lang 	= ($RecordObj_dd->get_traducible() =='no' ? DEDALO_DATA_NOLAN : $lang);
+				$strQuery_select .= JSON_RecordObj_matrix::build_pg_select('btree','datos',$current_tipo,'dato',$current_lang);
+				*/
+				# SELECCIÓN CON TODOS LOS LENGUAJES
+				$strQuery_select .= "datos #>>'{components,$current_tipo,dato}' AS $current_tipo " ;
+				# SELECCIÓN EN EL LENGUAJE ACTUAL (SÓLO PARA ORDENAR)			
+				$RecordObj_dd 	= new RecordObj_dd($current_tipo);
+				$current_lang 	= $RecordObj_dd->get_traducible()=='no' ? DEDALO_DATA_NOLAN : $lang;
+				$strQuery_select .= ", datos #>>'{components,$current_tipo,dato,$current_lang}' AS {$current_tipo}_lang " ;
 
-			# WHERE CLAUSE
-			#$strQuery_where = "datos #>'{components}' ? '$current_tipo'";
-			$strQuery_where = "section_tipo = '$section_tipo_related'";
-			if ( $current_tipo != end($ar_terminos_relacionados) ) $strQuery_where .=" AND ";
-
-			if ( $current_tipo != end($ar_terminos_relacionados) ) $strQuery_select .=", \n\t\t\t\t\t";
-
-		}
-		#dump($strQuery_select, '$strQuery_select');
+				# WHERE CLAUSE
+				#$strQuery_where = "datos #>'{components}' ? '$current_tipo'";
+				$strQuery_where = "section_tipo = '$section_tipo_related'";
+				if ( $current_tipo != end($ar_terminos_relacionados) ) {
+					$strQuery_where  .=" AND ";
+					$strQuery_select .=", \n\t\t\t\t\t";
+				}
+			}
+			#dump($strQuery_select, '$strQuery_select');
 
 
 		#
@@ -1364,7 +1592,6 @@ trigger_error("!!! DEPRECATED ".__METHOD__);
 					$id_query .= "( section_tipo='$current_section_tipo' AND ";
 					$id_query .= "section_id=$current_section_id )";
 					if ( $currrent_id != end($ar_id) ) $id_query .=" OR ";
-
 				}
 				$query= "
 						SELECT $strQuery_select_tipo
@@ -1394,10 +1621,11 @@ trigger_error("!!! DEPRECATED ".__METHOD__);
 				$current_lang 	= ($RecordObj_dd->get_traducible() =='no' ? DEDALO_DATA_NOLAN : $lang);
 				$filter_propiedades .= "AND ".JSON_RecordObj_matrix::build_pg_filter('gin','datos',$p_key,$current_lang,$filter_locator);
 					#dump($filter_propiedades,'$filter_propiedades');
-			}
+			}//end if (isset($this->propiedades->filtered_by_field_value)) {
+
 
 			#
-			# filtered_by
+			# FILTERED_BY
 			# dump( end($this->propiedades->filtered_by) );
 			if (isset($this->propiedades->filtered_by)) {
 				/*
@@ -1443,15 +1671,17 @@ trigger_error("!!! DEPRECATED ".__METHOD__);
 			}
 			
 
-		# QUERY
+		#
+		# MAIN QUERY
 		$strQuery="
 				-- ".__METHOD__."
 				SELECT section_id, section_tipo, $strQuery_select
 				FROM \"$matrix_table\" WHERE
-				$strQuery_where  $filter_propiedades				
+				$strQuery_where  $filter_propiedades $filter_custom				
 				ORDER BY {$terminoID_valor}_lang ASC
 				";
 		#dump($strQuery,'$strQuery');
+		
 		$strQuery = sanitize_query($strQuery);
 		$result	  = JSON_RecordObj_matrix::search_free($strQuery);
 
@@ -1469,32 +1699,54 @@ trigger_error("!!! DEPRECATED ".__METHOD__);
 				if ( count($ar_terminos_relacionados)>1 && $current_tipo != end($ar_terminos_relacionados) ) $valor .=" ";
 			}
 			*/
+
 			foreach ($ar_terminos_relacionados as $current_tipo) {
 
 				# ROW format is string json with all langs data like '{"lg-cat": "No", "lg-eng": "No", "lg-eus": null, "lg-fra": null, "lg-spa": "No"}'
 				# dump($rows[$current_tipo], '$rows[$current_tipo]');
-				$val 		  = json_decode($rows[$current_tipo]);				
+				$val = json_decode($rows[$current_tipo]);
+					
 
 				#$RecordObj_dd 	= new RecordObj_dd($current_tipo);
 				#$current_lang 	= ($RecordObj_dd->get_traducible() =='no' ? DEDALO_DATA_NOLAN : $lang);
 				
 				$lang_nolang = DEDALO_DATA_NOLAN;
 				$lang_current= $lang;
-				$lang_default= 'lg-spa';
+				# lang never must be DEDALO_DATA_NOLAN
+				if ($lang_current==DEDALO_DATA_NOLAN) {
+					$lang_current = DEDALO_DATA_LANG;
+				}
+				$lang_default= DEDALO_DATA_LANG_DEFAULT;	//'lg-spa';
 
+				# dump($val, ' val ++ ' .DEDALO_DATA_LANG.' '.to_string($lang_current));
 				# LANG FALLBACK 
 				switch (true) {
+					# COMPONENT HAS CHANGED TRANSLATABLE / NON TRANSLATABLE AND TWO DATA IS STORED
+					case (isset($val->$lang_nolang) && isset($val->$lang_current) && $val->$lang_nolang!=$val->$lang_current):
+						error_log("WARNING: (".__METHOD__.") component current_tipo:$current_tipo parent:$this->parent referenced_section_tipo:$referenced_section_tipo have double data ($lang_current / $lang_nolang). $lang_current was used, but please review this ASAP to avoid inconsistencies");
+						# Don't break here
+
 					# SET NOLAN (current component is not translatable)
-					case (isset($val->$lang_nolang) && !empty($val->$lang_nolang)):
+					case (isset($val->$lang_nolang) && !isset($val->$lang_current)):
 						
-						if (is_array($val->$lang_nolang)) {
-							dump($val->$lang_nolang, 'WARNING: expected string instead array var - '.$current_tipo);
+						# Only string and numbers are supported now
+						if (is_array($val->$lang_nolang) || is_object($val->$lang_nolang)) {
+							$val->$lang_nolang = '';
+							if(SHOW_DEBUG) {
+								#dump(debug_backtrace(), 'debug_backtrace()');
+							}
+							#dump($val->$lang_nolang, 'WARNING: (ar_list_of_values) $val->$lang_nolang expected string instead array (ONLY STRINGS AR SUPPORTED FOR NOW) var - '.$current_tipo);
 						}
-						$valor .= $val->$lang_nolang;
+						$valor .= to_string($val->$lang_nolang);
 						break;
 					# SET LANG CURRENT REQUEST (current component is translatable)
 					case (isset($val->$lang_current)):
-						$valor .= $val->$lang_current;
+						#if (is_string($val->$lang_current)) {
+							if(SHOW_DEBUG) {
+								#dump($val->$lang_current, ' val->$lang_current ++ '.to_string());;
+							}
+							$valor .= $val->$lang_current;
+						#}						
 						break;
 					# SET DEFAULT LANG FOR LIST OF VALUES
 					case (isset($val->$lang_default)):
@@ -1546,7 +1798,7 @@ trigger_error("!!! DEPRECATED ".__METHOD__);
 			#}
 			#dump($strQuery," strQuery");
 			if ($total_list_time>$limit_time) {
-				error_log("SLOW QUERY: ".$strQuery);
+				error_log($total_list_time."ms. SLOW QUERY: ".__METHOD__.' '.$strQuery);
 			}
 			#error_log("QUERY: $strQuery total_list_time:$total_list_time - uid:$uid");
 		}#end if(SHOW_DEBUG)
@@ -1558,6 +1810,10 @@ trigger_error("!!! DEPRECATED ".__METHOD__);
 		# CACHE
 		if ($use_cache===true) {
 			$list_of_values_cache[$uid] = $list_of_values;
+		}
+
+		if(SHOW_DEBUG) {
+			global$TIMER;$TIMER[__METHOD__.'_OUT_'.$this->tipo.'_'.$this->modo.'_'.$this->parent.'_count_'.count($ar_final).'_'.microtime(1)]=microtime(1);
 		}		
 		
 		# Fix var
@@ -1747,9 +2003,17 @@ trigger_error("!!! DEPRECATED ".__METHOD__);
 	* DECORE UNTRANSLATED
 	*/
 	public static function decore_untranslated($string) {
+		if(SHOW_DEBUG) {
+			if (!is_string($string)) {
+				#dump($string, ' string ++ '.to_string());
+				#throw new Exception("Error Processing Request", 1);
+				#trigger_error(to_string($string));
+			}
+		}
+		
 		#return '<span class="untranslated">'.$string.'</span>';
 		#if(empty($string)) $string = 'untranslated';
-		return '<mark>'.$string.'</mark>';
+		return '<mark>'.to_string($string).'</mark>';
 	}
 	/**
 	* GET LANG NAME
@@ -1890,7 +2154,9 @@ trigger_error("!!! DEPRECATED ".__METHOD__);
 		if ($remove_key!==false) {
 			unset($dato[$remove_key]);
 			$dato = array_values($dato); # Re-index array dato (IMPORTANT FOR MAINTAIN JSON ARRAY FORMAT !!)
-			error_log(__METHOD__." Unset key $remove_key of dato");
+			if(SHOW_DEBUG) {
+				error_log("DEBUG INFO: ".__METHOD__." Removed key $remove_key from dato");
+			}			
 		}
 		#dump($dato,"dato - remove_key:$remove_key - ".print_r($std_object,true));
 
@@ -1981,17 +2247,7 @@ trigger_error("!!! DEPRECATED ".__METHOD__);
 	}
 
 
-	/**
-	* GET_SECTION_LIST_ID_NUMBER_FROM_COMPONENT_TIPO
-	*/
-	public static function get_section_list_id_number_from_component_tipo($component_tipo) {
-
-		exit("UNDER CONSTRUCTION");
-
-
-		return $section_list_id_number;
-	}
-
+	
 
 	/**
 	* GET_DIFFUSION_OBJ
@@ -2183,12 +2439,18 @@ trigger_error("!!! DEPRECATED ".__METHOD__);
 	public function get_component_info($format='json') {
 		
 		$component_info = new stdClass();
-		
-		$component_info->mod_date 			= (string)$this->get_mod_date();		
-		$component_info->mod_by_user_name 	= (string)$this->get_mod_by_user_name();	
-		$component_info->ar_tools_name 		= (array)$this->get_ar_authorized_tool_name();
+			
+			if(SHOW_DEBUG) {
+				# Desactivo por velocidad (necesita acceder time_machine por cada componente)
+				#$component_info->mod_date 			= (string)$this->get_mod_date();		
+				#$component_info->mod_by_user_name 	= (string)$this->get_mod_by_user_name();
+			}
 
-		$component_info->propiedades 		= (object)$this->get_propiedades();
+			
+			$component_info->ar_tools_name 		= (array)$this->get_ar_authorized_tool_name();
+
+			$component_info->propiedades 		= (object)$this->get_propiedades();
+				#dump($component_info, " component_info ".to_string());
 
 		switch ($format) {
 			case 'json':
@@ -2340,36 +2602,20 @@ trigger_error("!!! DEPRECATED ".__METHOD__);
 
 
 	
-	/**
-	* GET_SEARCH_QUERY
-	* Build search query for current component . Overwrite for different needs in other components
-	* @param string ..
-	* @see class.section_list.php get_rows_data filter_by_search
-	* @return string SQL query (ILIKE by default)
-	*/
-	public static function get_search_query( $json_field, $search_tipo, $tipo_de_dato_search, $current_lang, $search_value ) {
-		if ( empty($search_value) ) {
-			return null;
-		}
-		$search_query = " $json_field#>>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}' ILIKE '%$search_value%' ";
-		if(SHOW_DEBUG) {
-			$search_query = " -- filter_by_search $search_tipo ". get_called_class() ." \n".$search_query;
-		}
-		return $search_query;
-	}
+	
 
 
 
 	/**
 	* GET_AR_COMPONENTS_WITH_REFERENCES
-	* Get array of model name of components that store references (locators)
+	* Get model name array of components that can store references (locators)
 	* @return array $ar_components_with_references
 	*/
-	public function get_ar_components_with_references() {
-		
+	public function get_ar_components_with_references() {		
 		return array('component_portal','component_autocomplete','component_radio_button','component_check_box','component_select');
-
 	}#end get_ar_components_with_references
+
+
 
 
 
@@ -2377,7 +2623,7 @@ trigger_error("!!! DEPRECATED ".__METHOD__);
 	* RESOLVE_SEARCH_OPERATORS (temporal method)
 	* @return string $sql_line
 	*/
-	public static function resolve_search_operators( $field_name, $string_to_resolve, $default_operator='=' ) {
+	public static function resolve_search_operators__DEPERECATED( $field_name, $string_to_resolve, $default_operator='=' ) {
 		$sql_line = null;
 		$ar_operators = array('<','>','<=','>=');
 		foreach ($ar_operators as $current_operator) {
@@ -2394,6 +2640,134 @@ trigger_error("!!! DEPRECATED ".__METHOD__);
 		return (string)$sql_line;
 
 	}#end resolve_search_operators
+
+	
+
+
+	/**
+	* BUILD_SEARCH_COMPARISON_OPERATORS 
+	* @return object stdClass $search_comparison_operators
+	*/
+	public function build_search_comparison_operators( $comparison_operators=array('ILIKE','LIKE','=','!=') ) {
+		$search_comparison_operators = new stdClass();
+
+		#
+		# Overwrite defaults with 'propiedades'->SQL_comparison_operators
+			if(SHOW_DEBUG) {
+				#dump($this->propiedades, " this->propiedades ".to_string());;
+			}		
+			if(isset($this->propiedades->SQL_comparison_operators)) {
+				$comparison_operators = (array)$this->propiedades->SQL_comparison_operators;
+			}
+
+
+		foreach ($comparison_operators as $current) {
+			# Get the name of the operator in current lang 
+			$operator = operator::get_operator($current);
+			$search_comparison_operators->$current = $operator;
+		}
+		return (object)$search_comparison_operators;
+
+	}#end build_search_comparison_operators
+
+
+	/**
+	* BUILD_SEARCH_LOGICAL_OPERATORS 
+	* Default generic method
+	* @return object stdClass $search_comparison_operators
+	*/
+	public function build_search_logical_operators( $logical_operators=array('AND','OR','NOT') ) {
+		$search_logical_operators = new stdClass();
+
+		#
+		# Overwrite defaults with 'propiedades'->SQL_logical_operators
+			if(SHOW_DEBUG) {
+				#dump($this->propiedades, " this->propiedades ".to_string());;
+			}		
+			if(isset($this->propiedades->SQL_logical_operators)) {
+				$logical_operators = (array)$this->propiedades->SQL_logical_operators;
+			}
+
+		foreach ($logical_operators as $current) {
+			# Get the name of the operator in current lang
+			$operator = operator::get_operator($current);
+			$search_logical_operators->$current = $operator;
+		}
+		return (object)$search_logical_operators;
+
+	}#end build_search_logical_operators
+
+
+
+	/**
+	* GET_SEARCH_QUERY
+	* Build search query for current component . Overwrite for different needs in other components 
+	* (is static to enable direct call from section_records without construct component)
+	* Params
+	* @param string $json_field . JSON container column Like 'dato'
+	* @param string $search_tipo . Component tipo Like 'dd421'
+	* @param string $tipo_de_dato_search . Component dato container Like 'dato' or 'valor'
+	* @param string $current_lang . Component dato lang container Like 'lg-spa' or 'lg-nolan'
+	* @param string $search_value . Value received from search form request Like 'paco'
+	* @param string $comparison_operator . SQL comparison operator Like 'ILIKE'
+	*
+	* @see class.section_records.php get_rows_data filter_by_search
+	* @return string $search_query . POSTGRE SQL query (like 'datos#>'{components, oh21, dato, lg-nolan}' ILIKE '%paco%' )
+	*/
+	public static function get_search_query( $json_field, $search_tipo, $tipo_de_dato_search, $current_lang, $search_value, $comparison_operator='ILIKE') {//, $logical_operator = 'AND' 
+		
+		if ( empty($search_value) ) {
+			return false;
+		}
+
+		$search_query='';
+		switch (true) {
+			case ($comparison_operator=='ILIKE' || $comparison_operator=='LIKE'):
+				// Allow wildcards like "house*" or "*house"
+				// dump($search_value[strlen($search_value) - 1], "$search_value[0] ".to_string());
+				$separator 	   = '*';				
+				if ( $search_value[0] == $separator ) {
+					// Begin with * like
+					$search_value = str_replace($separator, '', $search_value);
+					$search_query = " $json_field#>>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}' $comparison_operator '%$search_value' ";
+				
+				}else if ( $search_value[strlen($search_value) - 1] == $separator ) {
+					// End with *
+					$search_value = str_replace($separator, '', $search_value);
+					$search_query = " $json_field#>>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}' $comparison_operator '$search_value%' ";
+					
+				}else{
+					// Contain
+					$search_value = str_replace($separator, '', $search_value);
+					$search_query = " $json_field#>>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}' $comparison_operator '%$search_value%' ";
+				}
+				break;
+			case ($comparison_operator=='=' || $comparison_operator=='!='):
+				$search_query = " $json_field#>>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}' $comparison_operator '$search_value' ";
+				break;
+
+			case ($comparison_operator=='IS NULL' || $comparison_operator=='IS NOT NULL'):
+				if($comparison_operator == 'IS NULL'){
+					$comparison_operator2 = '=';
+					$union_operator = 'OR';
+				}else{
+					$comparison_operator2 = '!=';
+					$union_operator = 'AND';
+				}
+				$search_query = " (($json_field#>>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}') $comparison_operator $union_operator ";
+				$search_query .= "($json_field#>>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}') $comparison_operator2 '' )";
+				break;
+
+			default:
+				$search_query = " $json_field#>>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}' $comparison_operator '%$search_value%' ";
+				break;
+		}
+		
+		if(SHOW_DEBUG) {
+			$search_query = " -- filter_by_search $search_tipo ". get_called_class() ." \n".$search_query;
+		}
+		return $search_query;
+	}
 
 
 }

@@ -32,10 +32,10 @@ $AVObj = new AVObj($reelID, $quality, $tcin, $tcout);
 $PosterFrameObj = new PosterFrameObj($reelID);
 	
 
-	# Si no existe el fichero default quality, lo intentaremos con el de audio
+	# Si no existe el fichero default quality, lo intentaremos con alguno que exista, empezando por la calidad más alta
 	$file_path = $AVObj->get_media_path_abs() . $AVObj->get_name() .'.'. $AVObj->get_extension();	#dump($file_path, ' file_path');
 	if (!file_exists($file_path)) {
-		$ar_valid	= $AVObj->get_ar_quality_with_file();	#dump($ar_valid);
+		$ar_valid	= $AVObj->get_ar_quality_with_file();
 		if (!empty($ar_valid[0])) {
 			$quality = $ar_valid[0];
 			$AVObj->set_quality($quality);			

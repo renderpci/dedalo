@@ -1,8 +1,7 @@
 <?php
 require_once( dirname(dirname(__FILE__)).'/config/config4.php');
-
-require_once(DEDALO_LIB_BASE_PATH . '/db/class.RecordObj_matrix.php');
-require_once(DEDALO_LIB_BASE_PATH . '/common/class.TR.php');
+#require_once(DEDALO_LIB_BASE_PATH . '/db/class.RecordObj_matrix.php');
+#require_once(DEDALO_LIB_BASE_PATH . '/common/class.TR.php');
 
 
 if(login::is_logged()!==true) die("<span class='error'> Auth error: please login </span>");
@@ -47,12 +46,11 @@ if($mode=='Save') {
 	
 	# Assign dato
 	$component_obj->set_dato($dato);
-
-	#dump($component_obj," component_obj");	return ;
+ 
 
 	# Call the specific function of the current component that handles the data saving with your specific preprocessing language, etc ..
 	$id = $component_obj->Save();
-	
+		#dump($component_obj, ' component_obj');	
 
 	# Return id
 	echo $id;
@@ -287,6 +285,8 @@ if ($mode=='load_component_by_ajax') {
 
 	$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 	$component_obj 	= component_common::get_instance($modelo_name, $tipo, $parent, $modo, $lang, $section_tipo);
+		#$dato= $component_obj->get_dato();
+		#dump($dato, ' component_obj - '."$modelo_name - tipo:$tipo - parent:$parent, $modo, $lang, $section_tipo");
 
 	# CURRENT TIPO SECTION
 	# Si se recibe section_tipo, configuramos el objeto para que tenga ese parámeto asignado

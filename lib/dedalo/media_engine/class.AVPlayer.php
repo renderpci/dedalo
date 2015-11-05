@@ -184,7 +184,8 @@ class AVPlayer extends Accessors {
 			if(SHOW_DEBUG) {
 				#dump($this->quality, ' $this->quality');;
 			}
-		}		
+		}
+		#dump($modo, ' modo');		
 				
 		switch($modo) {			
 			

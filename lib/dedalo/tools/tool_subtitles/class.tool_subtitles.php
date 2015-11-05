@@ -309,8 +309,19 @@ class tool_subtitles extends tool_common {
 				$text 	= $value;
 				#if (empty($text) || strlen($text)<1 ) continue; # Skip
 
-				$tcin 	= $ar_fragments[$key-1];
-				$tcout 	= $ar_fragments[$key+1];
+				#$tcin 	= $ar_fragments[$key-1];
+				if (isset($ar_fragments[$key-1])) {
+					$tcin 	= $ar_fragments[$key-1];
+				}else{
+					$tcin 	= null;
+				}
+				
+				#$tcout 	= $ar_fragments[$key+1];
+				if (isset($ar_fragments[$key+1])) {
+					$tcout 	= $ar_fragments[$key+1];
+				}else{
+					$tcout 	= null;
+				}
 
 					#
 					# TCOUT : Corregimos el tcout si es inferior al anterior
@@ -334,9 +345,9 @@ class tool_subtitles extends tool_common {
 					*/
 
 				
-				$ar_fragments_formated[] = array(	'tcin' 			=> $tcin,
-													'tcout' 		=> $tcout,
-													'text' 			=> $text,													
+				$ar_fragments_formated[] = array(	'tcin' 	=> $tcin,
+													'tcout' => $tcout,
+													'text' 	=> $text,													
 													);
 			}
 		}
@@ -483,7 +494,7 @@ class tool_subtitles extends tool_common {
 			
 
 			$ar_lines[$i]['text']	= trim($current_line_cut);
-			$current_tcin_secs		= $offsetSecs - ($this->tcin/1000) + ($this->dif_ms_in/1000);
+			$current_tcin_secs		= $offsetSecs - ($this->tcin/1000);	// Eliminada esta parte (verificar su influencia): + ($this->dif_ms_in/1000);
 				/*
 				dump($current_tcin_secs,'current_tcin_secs',array(
 					'offsetSecs'=>$offsetSecs,

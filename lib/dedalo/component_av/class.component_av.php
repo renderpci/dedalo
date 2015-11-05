@@ -200,30 +200,131 @@ class component_av extends component_common {
 		return DEDALO_MEDIA_BASE_PATH . DEDALO_AV_FOLDER .'/posterframe/'. $this->get_video_id() .'.'.DEDALO_AV_POSTERFRAME_EXTENSION;
 	}
 	
+	/**
+	* GET_ORIGINAL_FILE_PATH
+	* Si se sube un archivo de extensión distinta a DEDALO_IMAGE_EXTENSION, se convierte a DEDALO_IMAGE_EXTENSION. Los archivos originales
+	* se guardan renombrados pero conservando la terminación. Se usa esta función para localizarlos comprobando si hay mas de uno.
+	* @param string $quality
+	* @return string $result (original_file_path) with extension OR false
+	*/
+	public function get_original_file_path($quality) {
+		$result = false;
+		$initial_quality = $this->get_quality();
+
+		$this->quality 	= $quality; // change current component quality temporally
+		$ar_originals 	= array();
+		$target_dir 	= $this->get_target_dir();
+		
+		if(!file_exists($target_dir)) return null;
+
+		if ($handle = opendir($target_dir)) {
+
+		    while (false !== ($file = readdir($handle))) {
+
+		    	if($this->get_video_id() == $file && is_dir($target_dir.'/'.$file)){
+		    		/*
+		    		$dvd_folder = $target_dir.'/'.$file;
+					# dvd_folder dir set permissions 0777
+
+					$stat = stat($dvd_folder);
+						//dump($stat['uid'], ' stat: '.posix_geteuid() ) ; die();
+
+		    		if(posix_geteuid() != $stat['uid']){
+						chown($dvd_folder, posix_geteuid());
+		    		}
+
+					$wantedPerms = 0777;
+					$actualPerms = fileperms($dvd_folder);
+					if($actualPerms < $wantedPerms) {
+						$chmod = chmod($dvd_folder, $wantedPerms);
+						if(!$chmod) die(" Sorry. Error on set valid permissions to directory for \"$dvd_folder\".  ") ;
+					}
+
+
+					*/
+		    		$ar_originals[] = $file; 
+		    		continue;
+		    	}
+		        // note that '.' and '..' is returned even
+		        $findme = $this->get_video_id() . '.';
+
+		        if( strpos($file, $findme)!==false ) {  // && strpos($file, $this->get_target_filename())===false
+		        	$ar_originals[] = $file;
+
+		        }
+		    }
+		    closedir($handle);
+		}
+		$n = count($ar_originals);
+		if ($n==0) {
+			$result = false;
+		}elseif($n==1) {
+			#$path = $_FILES['image']['name'];
+			#$ext = pathinfo($ar_originals[0], PATHINFO_EXTENSION);
+			$result = $target_dir.'/'.$ar_originals[0];
+				#dump($result, ' result');
+		}else{
+			if(SHOW_DEBUG) {
+				dump($ar_originals, "ar_originals ".to_string($ar_originals));
+				trigger_error("ERROR (DEBUG ONLY): Current quality have more than one file. ".to_string($ar_originals));
+			}						
+		}
+
+		// return current component quality
+		$this->quality 	= $initial_quality;
+			
+		return $result;
+	}
+
+
 
 	/**
 	* GET_VIDEO SIZE
 	*/
-	public function get_video_size($quality=false) {
-		
-		if(!$quality)
-		$quality 	= $this->get_quality();
-		$video_id 	= $this->get_video_id();
+	public function get_video_size($quality=false, $filename=false) {		
 
-		$filename 	= DEDALO_MEDIA_BASE_PATH . DEDALO_AV_FOLDER. '/' . $quality . '/'. $video_id .'.'. DEDALO_AV_EXTENSION ;
+		if (!$filename) {
+			if(!$quality)
+			$quality 	= $this->get_quality();
+			$video_id 	= $this->get_video_id();
+
+			$filename 	= DEDALO_MEDIA_BASE_PATH . DEDALO_AV_FOLDER. '/' . $quality . '/'. $video_id .'.'. DEDALO_AV_EXTENSION ;
+		}
 
 		if ( !file_exists( $filename )) {
 			return false ;
 		}
-		
-		try {	
-			$size		= @filesize($filename) ;
-			if(!$size)	throw new Exception('Unknow size!') ;
-		} catch (Exception $e) {
-			#echo '',  $e->getMessage(), "\n";
-			#trigger_error( __METHOD__ . " " . $e->getMessage() , E_USER_NOTICE) ;
-			return false;
-		}		
+		$size = 0;
+		if(is_dir($filename)){
+			//minimum size of the initial vob (512KB)
+			$vob_filesize = 512*1000;
+
+			if(is_dir($filename.'/VIDEO_TS')){
+
+				$handle = opendir($filename.'/VIDEO_TS'); 
+			  		 while (false !== ($file = readdir($handle))) {
+			  		 	$extension = pathinfo($file,PATHINFO_EXTENSION);
+			  		 	if($extension == 'VOB' && filesize($filename.'/VIDEO_TS/'.$file) > $vob_filesize){
+			  		 		#dump($file,'$file: '.filesize($filename.'/VIDEO_TS/'.$file));
+
+			  		 		//reset the size of the vob (for the end files of the video)
+			  		 		$vob_filesize = 0;
+			  		 		$size += filesize($filename.'/VIDEO_TS/'.$file);
+			  		 	}
+			  		 }
+			  	}
+		}else{
+			try {
+				$size		= @filesize($filename) ;
+				if(!$size)	throw new Exception('Unknow size!') ;
+			} catch (Exception $e) {
+				#echo '',  $e->getMessage(), "\n";
+				#trigger_error( __METHOD__ . " " . $e->getMessage() , E_USER_NOTICE) ;
+				return false;
+			}
+		}
+
+	
 		$size_kb = round($size / 1024) ;
 		
 		if($size_kb <= 1024) return $size_kb . ' KB' ;
@@ -265,7 +366,7 @@ class component_av extends component_common {
 		foreach($ar_quality as $current_quality) {
 
 			# Current file
-			$filename = $this->get_video_path($current_quality);			
+			$filename = $this->get_original_file_path($current_quality);			
 			
 			if (file_exists($filename)) {
 
@@ -285,6 +386,27 @@ class component_av extends component_common {
 		
 		return false;
 	}
+
+
+	/**
+	* GET_AR_ALL_FILES_BY_QUALITY
+	* @param array $ar_quality optional
+	* @return array $ar_all_files_by_quality
+	*/
+	public function get_ar_all_files_by_quality( $ar_quality=false ) {
+
+		if (!$ar_quality) {
+			$ar_quality = unserialize(DEDALO_AV_AR_QUALITY);
+		}
+
+		$ar_all_files_by_quality=array();
+		foreach ($ar_quality as $current_quality) {
+			$ar_all_files_by_quality[$current_quality] = $this->get_original_file_path($current_quality);
+		}
+
+		return (array)$ar_all_files_by_quality;
+		
+	}#end get_ar_all_files_by_quality
 	
 	
 

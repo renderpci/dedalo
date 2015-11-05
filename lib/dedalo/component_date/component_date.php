@@ -27,7 +27,7 @@
 	$ar_css					= false;
 
 
-	$section_tipo = component_common::get_section_tipo_from_component_tipo($tipo);
+	#$section_tipo = component_common::get_section_tipo_from_component_tipo($tipo);
 		#dump($section_tipo,'section_tipo');
 
 
@@ -37,15 +37,16 @@
 		#dump( $propiedades->method->get_valor_local ," ");
 	}
 
-	# CONTEXT
+	# CONTEXT	
 	if (isset($propiedades->method->get_valor_local)) {
 		$valor	= $this->get_valor_local( reset($propiedades->method->get_valor_local) );		#dump($valor," valor");
 	}else{
 		$valor	= $this->get_valor_local(false);
 	}
-	#dump($valor,'valor');
-	/**/
-
+	if(SHOW_DEBUG) {
+	 	#dump($valor,'valor');
+	} 
+	
 	
 
 	$file_name = $modo;
@@ -62,12 +63,11 @@
 				# Verify component content record is inside section record filter
 				if ($this->get_filter_authorized_record()===false) return NULL;
 
-
-
 				$ar_css			= $this->get_ar_css();
 				$id_wrapper 	= 'wrapper_'.$identificador_unico;
 				$input_name 	= "{$tipo}_{$parent}";
 				$component_info = $this->get_component_info('json');
+				$dato_json 		= json_encode($this->dato);
 							
 				#if (empty($dato)) { # && $traducible=='si'
 				#	$dato_reference_lang = $this->get_dato_default_lang();#$this->get_ejemplo();	#RecordObj_dd::get_termino_by_tipo($tipo,DEDALO_DATA_LANG_DEFAULT);						
@@ -124,7 +124,9 @@
 				*/						
 				break;
 		
-		case 'search':		
+		case 'search':
+				$ar_comparison_operators 	= $this->build_search_comparison_operators();
+				$ar_logical_operators 		= $this->build_search_logical_operators();	
 				break;
 						
 		case 'simple':	

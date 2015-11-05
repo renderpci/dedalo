@@ -86,17 +86,46 @@ class Ffmpeg {
 	
 		$name	 	= $AVObj->get_name();
 		$extension	= $AVObj->get_extension();
+		if(SHOW_DEBUG) {
+			#dump($name, " NAME ".to_string());	
+		}
+				
 			
 		$ar_quality = unserialize(DEDALO_AV_AR_QUALITY);
 		
 		# Recorre el array de calidades de mayor a menor hasta que encuentra una que exista
 		if(is_array($ar_quality)) foreach($ar_quality as $quality) {
 			
-			$file = DEDALO_MEDIA_BASE_PATH . DEDALO_AV_FOLDER . "/{$quality}/{$name}.{$extension}";
-			if(file_exists($file)) {
-				return $file; 
-			}
-		}
+			#$file = DEDALO_MEDIA_BASE_PATH . DEDALO_AV_FOLDER . "/{$quality}/{$name}.{$extension}";
+			
+				#
+				# Search for every possible file whit this name and unknow extension
+				$target_dir = DEDALO_MEDIA_BASE_PATH . DEDALO_AV_FOLDER . "/{$quality}";
+				if (is_dir($target_dir)) {				
+				
+					if ($handle = opendir($target_dir)) {
+					    while (false !== ($file = readdir($handle))) {
+
+					        // note that '.' and '..' is returned even
+							if($name == $file && is_dir($target_dir.'/'.$file)){
+					        	$file_path = $target_dir.'/'.$file;
+					        	return $file_path;
+				    		}
+
+					        $findme = $name . '.';
+					        if( strpos($file, $findme)!==false ) {  // && strpos($file, $this->get_target_filename())===false
+					        	$file_path = $target_dir.'/'.$file;
+					        	return $file_path;
+					        }		        
+					    }
+					    closedir($handle);
+					}//end if ($handle = opendir($target_dir)) {
+				}
+
+			#if(file_exists($file)) {
+			#	return $file; 
+			#}
+		}//end if(is_array($ar_quality)) foreach($ar_quality as $quality) {
 		return false;
 	}
 	
@@ -142,22 +171,44 @@ class Ffmpeg {
 	public function create_av_alternate(AVObj $AVObj, $setting) {
 				
 		# load ar_settings
-		$this->ar_settings = $this->get_ar_settings();
+		$this->ar_settings = $this->get_ar_settings();		
 		
 		# verify setting exists
-		if( !in_array($setting, $this->ar_settings) ) die("Error: setting: '$setting' not exits!");		
+		if( !in_array($setting, $this->ar_settings) ) die("Error: setting: '$setting' not exits! (create_av_alternate). Please contact with your admin to create");		
 		
 		# import vars from settings file		
 		require_once(DEDALO_AV_FFMPEG_SETTINGS .'/'. $setting .'.php');
+
+		/* EXAMPLE VARS
+		$vb				= '960k';			# video rate kbs
+		$s				= '720x404';		# scale
+		$g				= 75;				# keyframes interval (gob)	
+		$vcodec			= 'libx264';		# default libx264
+
+		$progresivo		= "-vf yadif";		# desentrelazar
+		$gamma_y		= "0.97";			# correccion de luminancia
+		$gamma_u		= "1.01";			# correccion de B-y
+		$gamma_v		= "0.98";			# correccion de R-y
+		$gammma			= "-vf lutyuv=\"u=gammaval($gamma_u):v=gammaval($gamma_v):y=gammaval($gamma_y)\""; # corrección de gamma
+		$force			= 'mp4';			# default mp4
+
+		$ar				= 44100;			# audio sample rate (22050)
+		$ab				= '64k';			# adio rate kbs
+		$ac				= "1";				# numero de canales de audio 2 = stereo, 1 = nomo
+		$acodec			= 'libvo_aacenc';	# default libvo_aacenc
+
+		$target_path 	= "404";			# like '404'
+		*/
 			
 		$target_path		= strval($target_path);	# definido en los settings (usualmente es la calidad sin el sufijo de sistema, como '1080' para 1080_pal)
+		
 		
 		# CREATE FINAL TARGET PATH
 		$pre_target_path 	= $AVObj->get_media_path_abs();		
 		$pre_target_path 	= substr($pre_target_path,0,-1);	# remove last /
 		$ar_pre_target_path	= explode('/',$pre_target_path);	# explode by /
 		$result				= array_pop($ar_pre_target_path); 	# remove last element of array (the quality folder)		
-		$final_target_path	= implode('/',$ar_pre_target_path).'/'. $target_path ;
+		$final_target_path	= implode('/',$ar_pre_target_path).'/'. $target_path ;	
 
 		
 			# quality dir exists	
@@ -185,7 +236,47 @@ class Ffmpeg {
 			}
 		
 		# SOURCE FILE		
-		$src_file			= $this->get_master_media_file($AVObj);		
+		$src_file			= $this->get_master_media_file($AVObj);
+
+		#IF the source file is a directory (DVD folder), change the source file to the .VOB into the DVD folder and set the concat of the .vobs
+		if(is_dir($src_file)){
+			$is_all_ok = false;
+			$vob_files = array();
+			if(!is_dir($src_file.'/VIDEO_TS')){
+				throw new Exception("Error: is necessary the DVD structure (VIDEO_TS)", 1);
+			}
+			//minimum size of the initial vob (512KB)
+			$vob_filesize = 512*1000;
+			if ($handle = opendir($src_file.'/VIDEO_TS')) {
+		  		 while (false !== ($file = readdir($handle))) {
+		  		 	$extension = pathinfo($file,PATHINFO_EXTENSION);
+		  		 	if($extension == 'VOB' && filesize($src_file.'/VIDEO_TS/'.$file) > $vob_filesize){
+		  		 		#dump($file,'$file: '.filesize($src_file.'/VIDEO_TS/'.$file));
+		  		 		$is_all_ok 	= true;
+		  		 		//reset the size of the vob (for the end files of the video)
+		  		 		$vob_filesize = 0;
+		  		 		$vob_files[]= $src_file.'/VIDEO_TS/'.$file;
+		  		 	}
+		  		 }
+		  	}
+		  	if($is_all_ok){
+		  		//$src_file	= 'concat:$(echo '.$src_file.'/VIDEO_TS/*.VOB|tr \  \|)';
+		  		$concat = '';
+		  		foreach ($vob_files as $vob_file) {
+		  			$concat .= $vob_file.'|';
+		  		}
+		  		$src_file	= '\'concat:'.$concat.'\'';
+		  		
+		  	}else{
+		  		throw new Exception("Error: is necessary the DVD structure (.VOB files)", 1);
+		  	}
+		  				  		 		
+		}# End if source file is directory
+
+		if(SHOW_DEBUG) {
+			#dump($src_file, " src_file ".to_string($final_target_path));
+			#die();
+		}
 		
 		# SOME UTIL VARS		
 		$target_file		= $final_target_path 			. '/' .$AVObj->get_name() . '.' . DEDALO_AV_EXTENSION;
@@ -210,48 +301,12 @@ class Ffmpeg {
 			if($actualPerms < $wantedPerms) {
 				$chmod = chmod($tmp_folder, $wantedPerms);
 				if(!$chmod) die(" Sorry. Error on set valid permissions to directory for \"tmp\".  ") ;
-			}
+			}		
 		
-		
-		# VERIFY IF IS INSTALLED FFMPEG AND RETURN PATH IF YES. 	Usualmente es '/usr/local/bin/ffmpeg'	
-		/*		
-		try {
-			$ffmpeg_installed_path = $this->get_ffmpeg_installed_path();
+		# target quality
+		$target_quality = $this->get_quality_from_setting($setting);
+		$prgfile 		= $tmp_folder .'/' . $target_quality .'_'. $AVObj->get_name() . '.sh';	 
 
-			if(!file_exists($ffmpeg_installed_path))
-				die('Option not installed (ffmpeg)');
-
-			$ffmpeg_file_permissions = fileperms($ffmpeg_installed_path) & 511;
-			if( $ffmpeg_file_permissions < 493 )
-				throw new Exception("Error incorrect permissions $ffmpeg_file_permissions (ffmpeg)", 1);
-
-		}catch(Exception $e1){
-			print ('Exception: '. $e1->getMessage(). "\n<br>");	
-		}
-		*/
-		
-			
-		/*
-		# VERIFY IF IS INSTALLED FASTSTART AND RETURN PATH IF YES. 	Usualmente es '/usr/local/bin/qt-faststart'
-		try {
-			$qt_faststart_installed_path 	= $this->get_qt_faststart_installed_path();	
-
-			if(!file_exists($qt_faststart_installed_path))
-				die('Option not installed (qt-faststart)');
-
-			$qt_faststart_file_permissions = fileperms($qt_faststart_installed_path) & 511;
-			if( !$qt_faststart_file_permissions )
-				throw new Exception("Error on read permissions $qt_faststart_file_permissions (qt_faststart) (SELinux restriction can be in use..)", 1);
-
-			if( $qt_faststart_file_permissions && $qt_faststart_file_permissions < 493 )
-				throw new Exception("Error incorrect permissions $qt_faststart_file_permissions (qt_faststart)", 1);
-
-		}catch(Exception $e2){
-			print ('Exception: '. $e2->getMessage(). "\n<br>");	
-		}
-		*/
-
-		
 		
 		# COMMANDS SHELL
 		$command	 = '';			
@@ -259,32 +314,38 @@ class Ffmpeg {
 		if($setting=='audio') {
 			
 			# paso 1 extraer el audio		
-			$command	.= "nice -n 19 ".DEDALO_AV_FFMPEG_PATH." -i $src_file -vn -acodec copy $tmp_file && ";			
+			#$command	.= "nice -n 19 ".DEDALO_AV_FFMPEG_PATH." -i $src_file -vn -acodec copy $tmp_file ";			
+			# convert format always
+			$command	.= "nice -n 19 ".DEDALO_AV_FFMPEG_PATH." -i $src_file -vn -acodec libvo_aacenc -ar 44100 -ab 128k -ac 2 $target_file ";
 			# fast-start
-			$command	.= "nice -n 19 ".DEDALO_AV_FASTSTART_PATH." $tmp_file $target_file && ";			
+			#$command	.= "&& ".DEDALO_AV_FASTSTART_PATH." $tmp_file $target_file ";			
 			# delete media temp
-			$command	.= "rm -f $tmp_file ";
+			#$command	.= "&& rm -f $tmp_file ";
+			# delete self sh file
+			$command	.= "&& rm -f " . $prgfile;
 		
 		}else{
 			
 			# paso 1 sólo video			
-			$command	.= "nice -n 19 ".DEDALO_AV_FFMPEG_PATH." -i $src_file -an -pass 1 -vcodec $vcodec -vb $vb -s $s -g $g $progresivo $gammma -f $force -passlogfile $log_file -y /dev/null && ";
+			$command	.= "nice -n 19 ".DEDALO_AV_FFMPEG_PATH." -i $src_file -an -pass 1 -vcodec $vcodec -vb $vb -s $s -g $g $progresivo $gammma -f $force -passlogfile $log_file -y /dev/null ";
 			
 			# paso 2 video
-			$command	.= "nice -n 19 ".DEDALO_AV_FFMPEG_PATH." -i $src_file -pass 2 -vcodec $vcodec -vb $vb -s $s -g $g $progresivo $gammma -f $force -passlogfile $log_file -y ";			
+			$command	.= "&& nice -n 19 ".DEDALO_AV_FFMPEG_PATH." -i $src_file -pass 2 -vcodec $vcodec -vb $vb -s $s -g $g $progresivo $gammma -f $force -passlogfile $log_file -y ";			
 			
 			# paso 2 audio
-			$command	.= "-acodec $acodec -ar $ar -ab $ab -ac $ac -y $tmp_file && ";													
+			$command	.= "-acodec $acodec -ar $ar -ab $ab -ac $ac -y $tmp_file ";													
 			
 			# fast-start
-			$command	.= "nice -n 19 ".DEDALO_AV_FASTSTART_PATH." $tmp_file $target_file && ";														
+			$command	.= "&& nice -n 19 ".DEDALO_AV_FASTSTART_PATH." $tmp_file $target_file ";														
 			
 			# delete media temp
-			$command	.= "rm -f $tmp_file && ";
+			$command	.= "&& rm -f $tmp_file ";
 			
-			# delete log temps
-			$command	.= "rm -f $log_file && ";
-			$command	.= "rm -f $log_file.mbtree";		
+			# delete log temps (all generated logs files)
+			$command	.= "&& rm -f $log_file* ";
+
+			# delete self sh file
+			$command	.= "&& rm -f " . $prgfile;
 		}
 		
 		
@@ -293,13 +354,8 @@ class Ffmpeg {
 			error_log($command);
 		}
 		#$av_alternate_command_exc = exec_::exec_command($command);
-		
-			
-		# target quality
-		$target_quality = $this->get_quality_from_setting($setting); 
-		
-		#$prgfile = tempnam("$tmp_folder", "SH"); 
-		$prgfile = $tmp_folder .'/' . $target_quality .'_'. $AVObj->get_name() . '.sh';		
+					
+		# SH FILE	
 		#if(is_resource($prgfile)) chmod($prgfile, 0755); 
 		$fp = fopen($prgfile, "w"); 
 		fwrite($fp, "#!/bin/bash\n"); 
@@ -340,13 +396,24 @@ class Ffmpeg {
 		
 		# SRC VIDEO FILE
 		$src_file			= $AVObj->get_media_path_abs()	. $AVObj->get_name() . '.' . $AVObj->get_extension();
-			#dump($src_file,'$src_file');
+		if(SHOW_DEBUG) {
+			#dump($src_file,'$src_file 1');
+			#dump($AVObj, " AVObj ".to_string());	
+			#dump(file_exists($src_file), "file_exists($src_file) ".to_string());
+		}			
 		
 		
 		# SI NO EXISTE EL DEFAULT, BUSCAMOS OTRO DE MAYOR A MENOR
 		if(!file_exists($src_file)) {			
-			$src_file		= $AVObj->get_master_media_file($AVObj);		
+			$src_file		= $this->get_master_media_file($AVObj);		
 		}
+		if (!$src_file) {
+			if(SHOW_DEBUG) {
+				dump($src_file, "NOT FOUND src_file 2".to_string());;
+			}
+			return false;
+		}
+		
 		
 		# IMAGE JPG TARGET FILE		
 		$PosterFrameObj		= new PosterFrameObj($reelID = $AVObj->get_name(), $tc=NULL);
@@ -355,8 +422,7 @@ class Ffmpeg {
 		
 		
 			# posterframe dir exists	
-			if( !is_dir($target_path) ) {
-				
+			if( !is_dir($target_path) ) {				
 				$create_dir = mkdir($target_path, 0777);
 				if(!$create_dir) die(" Sorry. Error on read or create directory for \"posterframe\" folder. Permission denied !  ") ; # [$final_target_path]
 				
@@ -491,40 +557,64 @@ class Ffmpeg {
 	* CONFORM_HEADER
 	*/
 	public function conform_header(AVObj $AVObj) {
-					
+		
+		$result = false;		
+		
 		$ffmpeg_installed_path 			= DEDALO_AV_FFMPEG_PATH;
 		$qt_faststart_installed_path 	= DEDALO_AV_FASTSTART_PATH;
 
+		//$AVObj->get_media_path_abs()	.
+		$file_path 			= $AVObj->get_name() . '.' . $AVObj->get_extension();	//$AVObj->get_local_full_path();		
+		$file_path_temp 	= $AVObj->get_name() . '_temp.' . $AVObj->get_extension();;	//str_replace('.mp4', '_.mp4', $file_path);
+		$file_path_original = $AVObj->get_name() . '_untouched.' . $AVObj->get_extension();;	//str_replace('.mp4', '_.mp4', $file_path);
+			#dump($file_path, " file_path - ".to_string($file_path_temp));return;
 
-		$file_path 	= $AVObj->get_local_full_path();
-		#$file_path2 = $file_path.'_2';
-		$file_path2 = str_replace('.mp4', '_.mp4', $file_path);
-
+	
 		$command  = '';
+
+		$command .= "cd ".$AVObj->get_media_path_abs()." ";
 		
 		# Copy file
-		$command .= "$ffmpeg_installed_path -i $file_path -c:v copy -c:a copy  $file_path2  ";	# && rm -f $file_path && mv $file_path2 $file_path # -y
+		$command .= "&& $ffmpeg_installed_path -i $file_path -c:v copy -c:a copy -movflags +faststart $file_path_temp ";	# && rm -f $file_path && mv $file_path_temp $file_path # -y
 		
-		# Remove original
-		$command .= "&& rm -f $file_path ";
+		# Rename original
+		$command .= "&& mv $file_path $file_path_original ";
 		
-		# Rename new file as original
-		#$command .= "mv $file_path2 $file_path";
+		# Rename new file as source
+		$command .= "&& mv $file_path_temp $file_path ";
 
 		# Faststart
-		$command .= "&& $qt_faststart_installed_path $file_path2 $file_path ";
+		#$command .= "&& $qt_faststart_installed_path $file_path $file_path ";
+
 
 		# Remove temp file
-		$command .= "&& rm -f $file_path2 ";
+		#$command .= "&& rm -f $file_path_temp ";
+
+			dump($command, ' command'.to_string()); die();
 		
-		$result = shell_exec( $command );
+		try {
+
+			$result = shell_exec( $command );
+
+		} catch (Exception $e) {
+		    echo 'Caught exception: ',  $e->getMessage(), "\n";
+		    if(SHOW_DEBUG) {
+		    	dump($e->getMessage(), " EXCEPTION ".to_string());
+		    }		    	
+		}
+		
 		#$conform_header_command_exc = Exec::exec_command($command);
 
-		if(SHOW_DEBUG) error_log("Admin Debug command for ".__METHOD__."<div class=\"notas\">sudo -u _www $command </div><hr>") ;
+		if(SHOW_DEBUG) {
+			error_log("Admin Debug command for ".__METHOD__."<div class=\"notas\">sudo -u _www $command </div><hr>");
+			dump($result, " result ".to_string($command));
+		}
 
 		return $result;
 
 	}//end conform_header
+
+
 	
 	
 	/*
@@ -570,24 +660,33 @@ class Ffmpeg {
 
 	/**
 	* CONVERT_TO_DEDALO_AV
-	* @return 
+	* Transcode any media to dedalo standar quality (usually 404)
+	* Not return nothing, open terminal proccess and send resutl to /dev/null
 	*/
-	public static function convert_to_dedalo_av( $source_file, $target_file ) {
+	public static function convert_to_dedalo_av( $source_file, $target_file, $async=true ) {
 		
-		$ffmpeg_path = DEDALO_AV_FFMPEG_PATH;
+		$ffmpeg_path 		= DEDALO_AV_FFMPEG_PATH;
+		$qt_faststart_path  = DEDALO_AV_FASTSTART_PATH;
 		
+		# COMMAND: Full process
 		$command = "nice $ffmpeg_path -y -i $source_file -vf \"yadif=0:-1:0, scale=720:404:-1\" -vb 960k -g 75 -f mp4 -vcodec libx264 -acodec libvo_aacenc -ar 44100 -ab 128k -ac 2 -movflags faststart $target_file";
-		#$res 	 = shell_exec($command);
+		
+		# Comando procesado sólo fast start
+		#$command = "nice $qt_faststart_path $source_file $target_file";
 
-		# Exec without wait finish
-		exec("$command  > /dev/null &");
-
+		
+		if ($async) {
+			# Exec without wait finish
+			exec("$command  > /dev/null &");
+		}else{
+			# Exec wait finish
+			exec("$command");
+		}		
+		
 
 		if(SHOW_DEBUG) {
 			error_log($command);
-		}
-
-		#return $res;
+		}	
 
 	}#end convert_to_dedalo_av
 

@@ -29,11 +29,15 @@
 	
 	switch($modo) {
 		
-		case 'edit' :				
+		case 'edit' :
 				$id_wrapper 	= 'wrapper_'.$identificador_unico;
 				$input_name 	= "{$tipo}_{$parent}";
 				$component_info = $this->get_component_info('json');
 				#return "WORK IN PROGRESS..";
+
+				# Aditional css / js
+				css::$ar_url[] = DEDALO_ROOT_WEB."/lib/jsoneditor/jsoneditor.min.css";
+				js::$ar_url[]  = DEDALO_ROOT_WEB."/lib/jsoneditor/jsoneditor.min.js";
 
 				# reference
 				#$dato = new stdClass();

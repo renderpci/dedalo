@@ -73,9 +73,6 @@ if($mode=='autocomplete') {
 
 
 
-
-
-
 /**
 * NEW_ELEMENT
 * Render form to submit new record to source list
@@ -93,29 +90,54 @@ if($mode=='new_element') {
 	if (empty($section_tipo)) {
 		return "Error: section_tipo is not defined!";
 	}
-
-	$ar_terminos_relacionados 	= RecordObj_dd::get_ar_terminos_relacionados($tipo, true, true);
 	$lang = DEDALO_DATA_LANG;
+	
+	$ar_terminos_relacionados 	= RecordObj_dd::get_ar_terminos_relacionados($tipo, true, true);
+		#dump($ar_terminos_relacionados, ' ar_terminos_relacionados ++ '.to_string());
+	
+	if(SHOW_DEBUG) {
+		if (empty($ar_terminos_relacionados)) {
+			throw new Exception("Error Processing Request. Missing required 'ar_terminos_relacionados' for current component", 1);
+		}
+		# First array element must be a secion
+		foreach ((array)$ar_terminos_relacionados as $current_tipo) {
+			$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_tipo);
+			if ($modelo_name!=='section') {
+				throw new Exception("Error Processing Request [$modelo_name]. Missing required 'ar_terminos_relacionados'->section for current component. First related element must be a section element. Please review elements order", 1);
+			}
+			break;
+		}
+	}
 
 	$html='';
 	$html .= "<div class=\"component_autocomplete_new_element\">";
-	foreach ($ar_terminos_relacionados as $current_tipo) {
-		$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_tipo, true);
-		if ($modelo_name=='section') continue;
-		if ($modelo_name!='component_input_text') {
-			if(SHOW_DEBUG) {
-				trigger_error("Current component is not 'component_input_text'. Ignoring component");
-			}
-			continue;
-		}
-		$title = RecordObj_dd::get_termino_by_tipo($current_tipo,$lang,true);
-		$html .= $title;
-		$html .= " <input class=\"\" type=\"text\" name=\"$current_tipo\" data-tipo=\"{$current_tipo}\" value=\"\" /> ";
 
-		if ($current_tipo==end($ar_terminos_relacionados)) {
-			$html .= "<input type=\"button\" class=\"css_button_generic button_submit_new_element\" data-referenced_section_tipo=\"$referenced_section_tipo\" value=\"".label::get_label('nuevo')."\" onclick=\"component_autocomplete.submit_new_element(this)\" />";
+		#
+		# INPUTS
+		foreach ($ar_terminos_relacionados as $current_tipo) {
+			$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_tipo, true);
+			if ($modelo_name=='section') continue;
+			if ($modelo_name!='component_input_text') {
+				if(SHOW_DEBUG) {
+					trigger_error("Current component is not 'component_input_text'. Ignoring component");
+				}
+				continue;
+			}
+			$title = RecordObj_dd::get_termino_by_tipo($current_tipo,$lang,true);
+			$html .= $title;
+			$html .= " <input type=\"text\" class=\"\" name=\"$current_tipo\" data-tipo=\"{$current_tipo}\" value=\"\" /> ";
 		}
-	}
+
+		#
+		# BUTTON NEW
+		$html .= "<input type=\"button\"
+		class=\"css_button_generic button_submit_new_element\"
+		data-referenced_section_tipo=\"$referenced_section_tipo\"
+		value=\"".label::get_label('nuevo')."\"
+		onclick=\"component_autocomplete.submit_new_element(this)\"
+		/>";
+		
+
 	$html .= "</div>";
 
 	echo $html;
@@ -125,6 +147,11 @@ if($mode=='new_element') {
 
 
 
+
+/**
+* SUBMIT_NEW_ELEMENT
+* Fire submit form of new element
+*/
 if($mode=='submit_new_element') {
 	
 	if (empty($tipo)) {

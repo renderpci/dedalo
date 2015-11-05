@@ -37,8 +37,14 @@
 					break;		
 						
 		case ($permissions>=1) :
+
+					# COMPARISON OPERATORS
+					$html_contenido .= operator::get_search_comparison_operators_html($tipo,$ar_comparison_operators);
 					
-					if (is_array ($ar_proyectos_section)) foreach ($ar_proyectos_section as $value => $rotulo) {
+
+					# INPUT
+					$html_contenido .= "<span id=\"search_component_$tipo\">";					
+					$i=1; if(is_array ($ar_proyectos_section)) foreach ($ar_proyectos_section as $value => $rotulo) {
 						#dump($value,'value'); dump($dato,'dato');
 						#if( is_array($dato) && array_key_exists($value,$dato) ) {
 						if( is_array($dato) && in_array($value, array_keys($dato)) ) {
@@ -46,16 +52,22 @@
 						}else {
 							$checked = "";
 						}
-						$html_contenido .= "\n <input class=\"filter_checkbox {$ar_css['filter_checkbox']}\" type=\"checkbox\" 
-						name=\"{$tipo}\"
+						$html_contenido .= "\n <input class=\"filter_checkbox {$ar_css['filter_checkbox']}\" type=\"checkbox\"
+						name=\"{$tipo}_array\"
 						data-tipo=\"{$tipo}\"
-						value=\"{$value}\" 
-						title=\"$html_title $value\" $checked />";
-												
-						$html_contenido .= "\n <label class=\"filter_checkbox_rotulo {$ar_css['filter_checkbox_rotulo']}\" $required_code >$rotulo</label>";
-						$html_contenido .= "\n <span class=\"debug_info\">id: $value</span>";
-						$html_contenido .= "\n <br>";
-					}
+						value=\"{$value}\"
+						title=\"$html_title $value\" $checked
+						/> ";
+						
+						$html_contenido .= "\n <label class=\"filter_checkbox_rotulo {$ar_css['filter_checkbox_rotulo']}\" $required_code >$rotulo</label> ";
+						$html_contenido .= "\n <span class=\"debug_info\">id: $value</span> ";
+						#$html_contenido .= "\n <br>";
+						
+					$i++;}
+					$html_contenido .= "</span>";	
+
+					# LOGICAL OPERATORS
+					$html_contenido .= operator::get_search_logical_operators_html($tipo,$ar_logical_operators);
 					break;
 					
 							

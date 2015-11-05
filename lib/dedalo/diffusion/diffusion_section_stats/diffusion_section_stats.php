@@ -16,7 +16,7 @@
 	if(empty($ar_js_obj)) {
 		
 		echo "<mark>No activity data exists for this section in this date: $this->fecha</mark>";
-		echo "<div onclick=\"diffusion_section_stats.hide_stats_content(this)\">Close</div>";
+		echo "<div onclick=\"$('.css_button_stats:first').trigger('click');\">Close</div>";
 		return false;
 	}
 

@@ -5,6 +5,7 @@
 	$id 					= $this->source_component->get_id();
 	$tipo 					= $this->source_component->get_tipo();
 	$parent 				= $this->source_component->get_parent();
+	$section_tipo			= $this->source_component->get_section_tipo();
 	$lang 					= $this->source_component->get_lang();
 	$label 					= $this->source_component->get_label();
 	$traducible 			= $this->source_component->get_traducible();
@@ -74,7 +75,7 @@
 		case 'rows':
 				
 				# ROWS ARRAY 
-				$ar_component_time_machine	= tool_time_machine::get_ar_component_time_machine($tipo, $parent, $lang);
+				$ar_component_time_machine	= tool_time_machine::get_ar_component_time_machine($tipo, $parent, $lang, $section_tipo);
 					#dump($ar_component_time_machine,"ar_component_time_machine");die();
 
 				# current_tipo_section is needed for relation tm !
@@ -139,7 +140,7 @@
 				*/
 				if (empty($id_time_machine)) {
 					# Buscamos en matrix_time_machine el último registro de este componente
-					$ar_time_machine_of_this 	= RecordObj_time_machine::get_ar_time_machine_of_this($tipo, $parent, $lang);
+					$ar_time_machine_of_this 	= RecordObj_time_machine::get_ar_time_machine_of_this($tipo, $parent, $lang, $section_tipo);
 					$id_time_machine 			= current($ar_time_machine_of_this);
 				}
 

@@ -16,6 +16,7 @@
 // If set to nonempty value (Example: example.com) will only allow downloads when referrer contains this text
 define('ALLOWED_REFERRER', $allowed_referrer);	#define('ALLOWED_REFERRER', '');
 
+
 // Download folder, i.e. folder where you keep all files for download.
 // MUST end with slash (i.e. "/" )
 define('BASE_DIR',$base_dir);
@@ -74,6 +75,9 @@ $allowed_ext = array (
   'psd' => 'image/psd',
   'bmp' => 'image/bmp',  
   'pdf' => 'application/pdf',
+
+    // archives
+  'zip' => 'application/zip',
 );
 
 
@@ -86,7 +90,7 @@ $allowed_ext = array (
 if (ALLOWED_REFERRER !== ''
 && (!isset($_SERVER['HTTP_REFERER']) || strpos(strtoupper($_SERVER['HTTP_REFERER']),strtoupper(ALLOWED_REFERRER)) === false)
 ) {
-  die("Internal server error. Please contact system administrator.");
+  die("Internal server error. Please contact system administrator (err1).");
 }
 
 // Make sure program execution doesn't time out
@@ -103,6 +107,7 @@ if (strpos($file_name, "\0") !== FALSE) die('');
 // Get real file name.
 // Remove any path info to avoid hacking by adding relative path, etc.
 $fname = basename($file_name);
+
 
 // Check if the file exists
 // Check in subfolders too
@@ -129,21 +134,35 @@ function find_file ($dirname, $fname, &$file_path) {
 // get full file path (including subfolders)
 $file_path = '';
 find_file(BASE_DIR, $fname, $file_path);
+ # dump(BASE_DIR.$image_id, ' BASE_DIR.$video_id ++ '.to_string());
 
-if (!is_file($file_path)) {
-  die("File does not exist. Make sure you specified correct file name."); 
+if(isset($video_id) && is_dir(BASE_DIR.$video_id)){
+  $org_folder = BASE_DIR.$video_id;
+  $zip_folder = BASE_DIR.'zip/'.$video_id;
+  $comand = 'zip -rj '.$zip_folder.'.zip '.$org_folder;
+  exec($comand);
+  $file_path = $zip_folder.'.zip';
+  $fname = $video_id.'.zip';
+  $file_name_showed = 'media_downloaded_' . substr(strrchr($fname, "_"), 1);
+
+  if (!is_file($file_path)) {
+    die("File does not exist. Make sure you specified correct file name."); 
+  }
 }
+
+
+
 
 // file size in bytes
 $fsize = filesize($file_path); 
-
 // file extension
 $fext = strtolower(substr(strrchr($fname,"."),1));
 
-// check if allowed extension
+  // check if allowed extension
 if (!array_key_exists($fext, $allowed_ext)) {
   die("Not allowed file type."); 
 }
+
 
 // get mime type
 if ($allowed_ext[$fext] == '') {
@@ -177,7 +196,6 @@ else {
   $asfname = str_replace(array('"',"'",'\\','/'), '', $file_name_showed);
   if ($asfname === '') $asfname = 'NoName';
 }
-
 // set headers
 header("Pragma: public");
 header("Expires: 0");
@@ -202,6 +220,10 @@ if ($file) {
     }
   }
   @fclose($file);
+}
+
+if($fext == 'zip'){
+  unlink($file_path);
 }
 
 // log downloads

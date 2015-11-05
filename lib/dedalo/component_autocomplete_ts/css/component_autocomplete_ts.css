@@ -8,7 +8,7 @@ WRAP DIV CONTAINER*/
 	}
 
 /* VALOR TEXT */
-DIV.css_autocomplete_ts_valor {
+.css_autocomplete_ts_valor {
 	display: inline-block;	
 	color: #1a1a1a;
 	padding: 3px;
@@ -72,13 +72,13 @@ input.css_autocomplete_ts_dato_hidden {
 
 /* BTN DELETE */
 .css_autocomplete_ts_button_delete {
-	float: right;
 	position: relative;
-	top: 5px;
-	right:0px;
+	top: 0px;
+	margin-right: 5px;
 	background-position: -456px 0;
 	opacity: 0.3;
 }
+
 
 
 .ui-autocomplete-loading {

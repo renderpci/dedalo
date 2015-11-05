@@ -194,11 +194,15 @@ if ($mode=='get_events') {
 
 
 
+/**
+* SAVE_ONE_EVENT
+*/
 function save_one_event( $options ) {
 	// Require our Event class and datetime utilities
 	# require(DEDALO_ROOT . '/lib/fullcalendar/demos/php/utils.php');
 
 	#$options = json_decode($options);	// Decode received string
+	#dump($options, ' options (request)');
 
 	// Section tipo like 'mupreva106' for 'Turnos'
 	if (empty($options->tipo) ) {
@@ -207,7 +211,9 @@ function save_one_event( $options ) {
 		exit($msg);
 	}
 	if (empty($options->section_tipo)) {
-		exit("Error. options->section_tipo is mandatory");
+		$msg = "Error. options->section_tipo is mandatory";
+		error_log($msg);
+		exit($msg);
 	}
 	$section_tipo = $options->section_tipo;
 	
@@ -228,6 +234,11 @@ function save_one_event( $options ) {
 			exit("Error. event_end is mandatory");
 		}
 
+	if(SHOW_DEBUG) {
+		#dump($options, ' options (request)');
+		#dump($tool_vars, ' tool_vars (session)');
+	}
+
 	#
 	# OPTIONS		
 		# Verify options		
@@ -243,18 +254,26 @@ function save_one_event( $options ) {
 		if (empty($options->section_id)) {
 			# Create new record
 			$section = section::get_instance(null, $tool_vars->tipo);
-			$options->section_id = $section->Save();
+			$section_id = $section->Save();
 
-			# project (only once, when section is created)
+			if(SHOW_DEBUG) {
+				#dump($section_id, ' section_id created new');;
+			}
+
+			# PROJECT (only once, when section is created)
 			$ar_component_tipo = section::get_ar_children_tipo_by_modelo_name_in_section($tool_vars->tipo, 'component_filter', true);
 			if (empty($ar_component_tipo[0])) {
 				throw new Exception("Error Processing Request. Component filter not found", 1);		
 			}
 			$component_tipo = $ar_component_tipo[0];
-			$component  = component_common::get_instance('component_filter', $component_tipo, $options->section_id, 'edit', DEDALO_DATA_NOLAN, $section_tipo);			
+			$component  = component_common::get_instance('component_filter', $component_tipo, $section_id, 'edit', DEDALO_DATA_NOLAN, $section_tipo);			
 			$component->Save();	// Save default dato defined in propiedades
+		}else{
+			$section_id = (int)$options->section_id;
 		}
-		#dump($options->section_id," options"); die();	
+		if(SHOW_DEBUG) {
+			#dump($section_id," section_id"); #die();
+		}
 
 	
 		#dump($options," options");
@@ -266,12 +285,12 @@ function save_one_event( $options ) {
 
 			$component_tipo = $tool_vars->event->$key;
 			$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
-			$component  	= component_common::get_instance($modelo_name, $component_tipo, $options->section_id, 'edit', DEDALO_DATA_NOLAN, $section_tipo);
+			$component  	= component_common::get_instance($modelo_name, $component_tipo, $section_id, 'edit', DEDALO_DATA_NOLAN, $section_tipo);
 			$component->set_dato($value);
 			$component->Save();
 		}
 
-	return (int)$options->section_id;
+	return (int)$section_id;
 	/*
 	echo "<span>Saved event $options->section_id <br>
 	title:$options->title, start:$options->start, end:$options->end [$options->section_id]</span>";
@@ -305,6 +324,9 @@ if ($mode=='save_array_events') {
 	}
 
 	$arr_events = json_decode($arr_events);
+	if(SHOW_DEBUG) {
+		#dump($arr_events, ' arr_events');;
+	}
 
 	foreach ($arr_events as $options) {		
 		$result  = save_one_event( (object)$options );

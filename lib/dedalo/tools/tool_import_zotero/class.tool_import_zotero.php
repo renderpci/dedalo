@@ -52,7 +52,7 @@ class tool_import_zotero extends tool_common {
 					throw new Exception("Error Processing Request. Error in button import zotero config. Wrong process_script path", 1);
 				}
 				if(SHOW_DEBUG) {
-					error_log(__METHOD__." Loaded custom tool options: ".DEDALO_LIB_BASE_PATH.$propiedades->process_script);
+					#error_log(__METHOD__."NOTICE: Loaded custom tool options: ".DEDALO_LIB_BASE_PATH.$propiedades->process_script);
 				}
 			}
 
@@ -121,10 +121,10 @@ class tool_import_zotero extends tool_common {
 
 
 	/**
-	* ZOTERO_DATE_TO_TIMESTAMP
-	* Convert zotero date format (object with date/time parts) to standar timestamp (string like '2015-01-12 15:01:16')
+	* ZOTERO_DATE_TO_DD_DATE
+	* Convert zotero date format (object with date/time parts) to standar deddalo dd_date
 	* @param object $zotero_date
-	* @return string $timestamp
+	* @return object $dd_date
 	* Format zotero obj example
 	* stdClass Object (
     *        [date-parts] => Array (
@@ -137,8 +137,11 @@ class tool_import_zotero extends tool_common {
     *        [season] => 12:57:26
     *    )
 	*/
-	public static function zotero_date_to_timestamp( stdClass $zotero_date) {
+	public static function zotero_date_to_dd_date( stdClass $zotero_date) {
 
+		$dd_date = new dd_date();
+
+		#
 		# Date 
 		$branch_name = 'date-parts';
 		$branch		 = $zotero_date->$branch_name;
@@ -146,36 +149,31 @@ class tool_import_zotero extends tool_common {
 			error_log("Wrong data from ".print_r($zotero_date,true));
 			return (string)'';
 		}
-		if (!isset($branch[0][1])) {
-			$branch[0][1]='01';
-		}
-		if (!isset($branch[0][2])) {
-			$branch[0][2]='01';
-		}
-		$value = $branch[0][0].'-'.$branch[0][1].'-'.$branch[0][2];
-		
-		# Time
-		$time = '00:00:00';
-		if (property_exists($zotero_date, 'season')) {			
-			$current_date	= DateTime::createFromFormat("H:i:s", $zotero_date->season);
-			if ($current_date) {
-				$time  = $current_date->format("H:i:s");
-			}			
-		}
 
-		# Timestamp
-		$date = DateTime::createFromFormat("Y-m-d H:i:s", $value.' '.$time);
-		if ($date) {
-			$timestamp 	 = $date->format("Y-m-d H:i:s");
-		}else{
-			$timestamp 	 = '';
+		if(isset($branch[0][0])) $dd_date->set_year((int)$branch[0][0]); 
+		if(isset($branch[0][1])) $dd_date->set_month((int)$branch[0][1]);
+		if(isset($branch[0][2])) $dd_date->set_day((int)$branch[0][2]);
+
+
+		#
+		# Time
+		if (property_exists($zotero_date, 'season')) {
+			$current_date	= $zotero_date->season;
+			if ($current_date) {
+				$regex   = "/^([0-9]+)?:?([0-9]+)?:?([0-9]+)?/";
+				preg_match($regex, $current_date, $matches);
+
+				if(isset($matches[1])) $dd_date->set_hour((int)$matches[1]);
+				if(isset($matches[2])) $dd_date->set_minute((int)$matches[2]);
+				if(isset($matches[3])) $dd_date->set_second((int)$matches[3]);
+			}
 		}
 
 		if(SHOW_DEBUG) {
-			#dump($timestamp, ' timestamp from value '.$value ." - ".print_r($date,true));
+			
 		}		
 
-		return (string)$timestamp;
+		return (object)$dd_date;
 	}
 
 
@@ -525,7 +523,7 @@ class tool_import_zotero extends tool_common {
 
 					case 'issued':
 					case 'accessed':
-						$date 	   = self::zotero_date_to_timestamp( $zotero_obj->$name );
+						$date 	   = self::zotero_date_to_dd_date( $zotero_obj->$name );
 						$component = component_common::get_instance('component_date', $component_tipo, $parent, 'edit', DEDALO_DATA_NOLAN, $section_tipo);
 						$component->set_dato( $date );
 						$component->Save();

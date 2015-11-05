@@ -88,13 +88,14 @@ WRAP*/
 
 
 .section_content_list {
-	width: 100%;
+	width: 100% ;
 	/*margin-top: -18px;*/
 	top: 0px;
 }
-.css_section_content A {
-	font-weight: bold;
+.css_section_content a {
+	font-weight: normal;
 	text-decoration: none;
+	font-size: 90%;	
 }
 /*ROTULO TITULO SECCION ACTUAL*/
 .css_section_titulo {

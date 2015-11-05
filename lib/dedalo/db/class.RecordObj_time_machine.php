@@ -1,6 +1,7 @@
 <?php
-
 require_once(DEDALO_LIB_BASE_PATH . '/db/class.RecordDataBoundObject.php');
+
+
 
 
 class RecordObj_time_machine extends RecordDataBoundObject {
@@ -8,6 +9,7 @@ class RecordObj_time_machine extends RecordDataBoundObject {
 	# MATRIX VARS
 	#protected $id_matrix;
 	protected $section_id;
+	protected $section_tipo;
 	protected $tipo;
 	protected $lang;
 	protected $timestamp;
@@ -47,6 +49,7 @@ class RecordObj_time_machine extends RecordDataBoundObject {
 			"id" 					=> "ID",		# integer
 			#"id_matrix" 			=> "id_matrix",	# integer
 			"section_id" 			=> "section_id",# integer
+			"section_tipo" 			=> "section_tipo",# string charvar 32
 			"tipo" 					=> "tipo",		# string charvar 32
 			"lang" 					=> "lang", 		# string 16
 			"timestamp" 			=> "timestamp", # timestamp standar db format
@@ -77,13 +80,14 @@ class RecordObj_time_machine extends RecordDataBoundObject {
 	
 	
 	# AR TIME MACHINE : Array de registros de time_machine para el id_matrix recibido
-	public static function get_ar_time_machine_of_this($tipo, $parent, $lang=NULL) {
+	public static function get_ar_time_machine_of_this($tipo, $parent, $lang=NULL, $section_tipo) {
 				
 		$ar_time_machine_of_this 	= array();
 		
 		$arguments=array();			
 		$arguments['tipo']			= $tipo ;
 		$arguments['section_id']	= $parent ;
+		$arguments['section_tipo']	= $section_tipo ;
 		if(!empty($lang))
 		$arguments['lang']			= $lang ;
 		$arguments['order_by_desc']	= 'timestamp';
