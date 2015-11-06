@@ -164,7 +164,7 @@ class ImageMagick {
 		$result = exec($command.' 2>&1', $output, $worked_result);
 		if(SHOW_DEBUG) {
 			if ($worked_result!=0) {
-				dump($worked_result, ' worked_result ++ '.to_string($output));
+				dump($worked_result, ' worked_result. output: '.to_string($output));
 			}
 			if (!empty($result)) {
 				error_log("COMMAND DD_THUMB WARNING (not empty result): ".to_string($result));

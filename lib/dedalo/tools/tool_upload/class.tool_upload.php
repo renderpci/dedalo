@@ -538,8 +538,8 @@ class tool_upload extends tool_common {
 						$this->file_obj->aditional_path = $this->component_obj->get_aditional_path();
 
 						#
-						# DEFAULT_IMAGE_FORMAT : If uploaded file is not in Dedalo default format (jpg), is converted, and original is conserved (like filename.tif)
-						$this->file_obj->default_format_file = $this->build_default_image_format();
+						# DEFAULT_IMAGE_FORMAT : If uploaded file is not in Dedalo standar format (jpg), is converted, and original is conserved (like filename.tif)
+						$this->file_obj->default_format_file = $this->build_standar_image_format();
 						
 						#
 						# THUMB . Eliminamos el thumb anterior si existiese. Los thumbs se crean automáticamente al solicitarlos (list)
@@ -548,7 +548,7 @@ class tool_upload extends tool_common {
 
 						# POSTPROCESSING_IMAGE_SCRIPT
 						if (defined('POSTPROCESSING_IMAGE_SCRIPT')) {
-							sleep(2);
+							sleep(1);
 							require( POSTPROCESSING_IMAGE_SCRIPT );
 							$result = custom_postprocessing_image($this);
 								#dump($result, ' result');
@@ -562,7 +562,7 @@ class tool_upload extends tool_common {
 						}
 						*/
 
-						# Save force update data and create defauly and thumb
+						# Save force update data and create default and thumb qualitys
 						$this->component_obj->Save();
 
 					} catch (Exception $e) {
@@ -600,18 +600,18 @@ class tool_upload extends tool_common {
 
 
 	/**
-	* BUILD_DEFAULT_IMAGE_FORMAT
-	* If uploaded file is not in Dedalo default format (jpg), is converted, and original is conserved (like filename.tif)
+	* BUILD_standar_IMAGE_FORMAT
+	* If uploaded file is not in Dedalo standar format (jpg), is converted, and original is conserved (like filename.tif)
 	*/
-	protected function build_default_image_format() {
+	protected function build_standar_image_format() {
 
 		$f_extension 	= strtolower(pathinfo($this->file_obj->uploaded_file_path, PATHINFO_EXTENSION));
 		if ($f_extension!=DEDALO_IMAGE_EXTENSION) {
-			$new_file 	= substr($this->file_obj->uploaded_file_path, 0, -(strlen($f_extension)) ).DEDALO_IMAGE_EXTENSION;
-			ImageMagick::convert($this->file_obj->uploaded_file_path, $new_file);
-				#dump($new_file,"converted from: $this->file_obj->uploaded_file_path");
+			$new_file_path 	= substr($this->file_obj->uploaded_file_path, 0, -(strlen($f_extension)) ).DEDALO_IMAGE_EXTENSION;
+			ImageMagick::convert($this->file_obj->uploaded_file_path, $new_file_path);
+				#dump($new_file_path,"converted from: $this->file_obj->uploaded_file_path");
 
-			return $new_file;
+			return $new_file_path;
 		
 		}else{
 			return $this->file_obj->uploaded_file_path;
@@ -619,29 +619,7 @@ class tool_upload extends tool_common {
 	}
 
 
-	/**
-	* BUILD_THUMB_FILE
-	*
-	*/
-	protected function build_thumb_file__DEPRECATED($SID) {
-		
-		$path_thumb 	= DEDALO_MEDIA_BASE_PATH.DEDALO_IMAGE_FOLDER.'/'.DEDALO_IMAGE_THUMB_DEFAULT.$this->file_obj->aditional_path.'/'.$SID.'.'.DEDALO_IMAGE_EXTENSION;
-		if (file_exists($path_thumb)) {
-			unlink($path_thumb);
-			if(SHOW_DEBUG) error_log("INFO: Deleted thumb image: $path_thumb from upload tool");
-		}
-		$source_file = DEDALO_MEDIA_BASE_PATH.DEDALO_IMAGE_FOLDER.'/'.DEDALO_IMAGE_QUALITY_DEFAULT.$this->file_obj->aditional_path.'/'.$SID.'.'.DEDALO_IMAGE_EXTENSION;
-		if (file_exists($source_file)) {
-			# Create thumb from default quality file
-			ImageMagick::dd_thumb('list', $source_file, $path_thumb, $dimensions="102x57", $initial_media_path); //dd_thumb( $mode, $source_file, $target_file, $dimensions="102x57", $initial_media_path) 
-			if(SHOW_DEBUG) error_log("INFO: Created thumb image: $path_thumb from $source_file in upload tool");
-		}else{
-			if(SHOW_DEBUG) error_log("INFO: Not created thumb image: $path_thumb from $source_file in upload tool because source file not found");	
-		}
-		return $path_thumb;
-	}#end build_thumb_file
-
-
+	
 
 	
 }

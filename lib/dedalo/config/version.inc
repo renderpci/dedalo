@@ -363,8 +363,8 @@
 	
 	
 	# Version
-	define('DEDALO_VERSION'	, '4.0.000');
-	define('DEDALO_BUILD'	, '05-11-2015');
+	define('DEDALO_VERSION'	, '4.0.004');
+	define('DEDALO_BUILD'	, '06-11-2015');
 	
 	/*
 	# Build

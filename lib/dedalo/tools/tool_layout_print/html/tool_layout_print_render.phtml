@@ -42,32 +42,37 @@ $html='';
 		$html .= "<div id=\"render_pdf_response_debug\">";
 		$html .= "";
 		$html .= "</div>";
-		$html .= "<script>var render_pdf_data='".json_encode($render_pdf_data)."'; tool_layout_print.render_pdf(render_pdf_data)</script>";		
+			
 		
 
 		#
 		# MESSAGES
 		$html .= "<div>";
-		$html .= "".implode("<br>", $ar_msg);
+		#$html .= "".implode("<br>", $ar_msg);
 		$html .= "</div>";
 
 
 		#
 		# PAGES HTML LINK
 		if(SHOW_DEBUG) {
-		
+			
 			$html .= "<br> Pages html:";
 			if (isset($header_html_url)) {
 				#$html .= "<br>HEADER <a href=\"$header_html_url\" target=\"_blank\">$header_html_url</a>";
 			}
 			if (isset($footer_html_url)) {
-				$html .= "<br>FOOTER <a href=\"$footer_html_url\" target=\"_blank\">$footer_html_url</a>";
+				$html .= "<br>Footer <br><a href=\"$footer_html_url\" target=\"_blank\">$footer_html_url</a>";
 			}
+			foreach ($urls_group_by_section as $key => $ar_url) {
+				$html .= "<hr><div>Page $key</div>";
 			foreach ($ar_url as $url) {
-				$html .= "<br><a href=\"$url\" target=\"_blank\">$url</a>";
+				$html .= "<a href=\"$url\" target=\"_blank\">$url</a><br>";
 			}
-			$html .= "<br>command: <br><div>".$command."</div>";
-			$html .= "<br>command (pre): <br><pre>".$command."</pre>";
+				$html .= "";
+			}
+			#$html .= "<br>command: <br><div>".$command."</div>";
+			#$html .= "<br>command (pre): <br><pre>".$command."</pre>";
+			/**/
 		}
 
 	
@@ -75,8 +80,9 @@ $html='';
 		
 		
 
-	
-
+	#
+	# SCRIPT AJAX CALL
+	$html .= "<script>var render_pdf_data='".json_encode($render_pdf_data)."'; tool_layout_print.render_pdf(render_pdf_data)</script>";	
 
 	
 

@@ -222,52 +222,44 @@
 						
 						js::$ar_url[] = DEDALO_LIB_BASE_URL."/tools/".$tool_name."/js/".$tool_name.".js";
 
-						# SEARCH_OPTIONS
-						$search_options_key = 'section_'.$tipo;
-						if (!isset($_SESSION['dedalo4']['config']['search_options'][$search_options_key])) {
-							echo "Please select template"; return ;
-						}
-						# Change some specific print options
-						$print_search_options = clone($_SESSION['dedalo4']['config']['search_options'][$search_options_key]);							
-							$print_search_options->modo = 'list';
-							$print_search_options->limit = false;
-							# layout map full with all section components
-							$ar_components = (array)section::get_ar_children_tipo_by_modelo_name_in_section($tipo, 'component_', $from_cache=true, $resolve_virtual=false);	 #dump($ar_recursive_childrens, ' ar_recursive_childrens');
-							$print_search_options->layout_map = array($tipo => $ar_components);
 						
-						$ar_records		= search::get_records_data($print_search_options);
-							#dump($ar_records, ' ar_records ');
+						#
+						# AR_RECORDS
+							$search_options_key = 'section_'.$tipo;
+							if (!isset($_SESSION['dedalo4']['config']['search_options'][$search_options_key])) {
+								echo "Please select template"; return ;
+							}
+							# Change some specific print options
+							$print_search_options = clone($_SESSION['dedalo4']['config']['search_options'][$search_options_key]);							
+								$print_search_options->modo = 'list';
+								$print_search_options->limit = false;
+								# layout map full with all section components
+								$ar_components = (array)section::get_ar_children_tipo_by_modelo_name_in_section($tipo, 'component_', $from_cache=true, $resolve_virtual=false);	 #dump($ar_recursive_childrens, ' ar_recursive_childrens');
+								$print_search_options->layout_map = array($tipo => $ar_components);
+							
+							$ar_records		= search::get_records_data($print_search_options);
+								#dump($ar_records, ' ar_records '); exit();
+						
 
-						
+						#
+						# TEMPLATE
+							$section_layout_tipo 	= (string)$_GET['template_tipo'];
+							$section_layout_id 		= (string)$_GET['template_id'];	
+							$ar_templates_mix 		= (array)$_SESSION['dedalo4']['config']['ar_templates_mix']; # Set in previous step (context_name=list)
+								#dump($ar_templates_mix," ar_templates_mix");
+							
+							$array_key = $section_layout_tipo .'_'. $section_layout_id;
+							if (!isset($_SESSION['dedalo4']['config']['ar_templates_mix'][$array_key])) {							
+								throw new Exception("Error Processing Request. Not found ar_templates_mix ", 1);							
+							}
+							$template_obj 			= clone($_SESSION['dedalo4']['config']['ar_templates_mix'][$array_key]);					
+							$section_layout_label 	= isset($template_obj->label) ? $template_obj->label : '';
+							$component_layout_tipo 	= $template_obj->component_layout_tipo;
 
-						$section_layout_tipo 	= (string)$_GET['template_tipo'];
-						$section_layout_id 		= (string)$_GET['template_id'];	
-						$ar_templates_mix 		= (array)$_SESSION['dedalo4']['config']['ar_templates_mix']; # Set in previous step (context_name=list)
-							#dump($ar_templates_mix," ar_templates_mix");
-						
-						$array_key 	  = $section_layout_tipo .'_'. $section_layout_id;
-						if (isset($_SESSION['dedalo4']['config']['ar_templates_mix'][$array_key])) {
-							// Existing template
-							$template_obj = clone($_SESSION['dedalo4']['config']['ar_templates_mix'][$array_key]);
-						}else{
-							// New blank template
-							/*
-								$ar_components_tipo = section::get_ar_children_tipo_by_modelo_name_in_section($section_layout_tipo, 'component_layout', false); #Important cache false							
-								$template_obj = new stdClass();
-									$template_obj->component_layout_tipo = reset($ar_components_tipo);
-								*/
-							throw new Exception("Error Processing Request. Not found ar_templates_mix ", 1);							
-						}
-						
-							#dump($current_template, ' current_template'.to_string());						
-					
-						$section_layout_label 	= isset($template_obj->label) ? $template_obj->label : '';
-						$component_layout_tipo 	= $template_obj->component_layout_tipo;
-
-						# component_layout
-						$component_layout    = component_common::get_instance('component_layout',$component_layout_tipo,$section_layout_id,'print',DEDALO_DATA_NOLAN,$section_layout_tipo);
-						$section_layout_dato = (object)$component_layout->get_dato();
-							#dump($section_layout_dato->pages, ' section_layout_dato'); die();
+							# component_layout
+							$component_layout    = component_common::get_instance('component_layout',$component_layout_tipo,$section_layout_id,'print',DEDALO_DATA_NOLAN,$section_layout_tipo);
+							$section_layout_dato = (object)$component_layout->get_dato();
+								#dump($section_layout_dato->pages, ' section_layout_dato'); die();
 
 						#
 						# RENDER PAGES . Render with first record of $tool_layout_print_records
@@ -286,9 +278,10 @@
 										$options->pages 		= $section_layout_dato->pages;
 										$options->records 		= $ar_2;
 										$options->render_type 	= 'render';
+										$options->tipo 			= $tipo;
 
 									$result = tool_layout_print::render_pages( $options );
-										#dump($result, ' result'.to_string());
+										#dump($result, ' result'.to_string()); die(); // key format: [2_oh1_2] 
 									#$pages_rendered = implode('', $result->ar_pages);
 									
 								}//end if (isset($section_layout_dato->pages)) {
@@ -297,31 +290,19 @@
 							
 						#
 						# SAVE PAGES . Save html files to disk
-						$user_id = $_SESSION['dedalo4']['auth']['user_id'];
-						$path 	 = '/print/'.$tipo.'/'.$user_id;
-						$pages_html_temp = DEDALO_MEDIA_BASE_PATH .$path;
+						$user_id 		 	= $_SESSION['dedalo4']['auth']['user_id'];
+						$print_files_path	= '/print/'.$tipo.'/'.$user_id;
+						$pages_html_temp 	= DEDALO_MEDIA_BASE_PATH .$print_files_path;
 						if(!file_exists($pages_html_temp)) mkdir($pages_html_temp, 0777,true);
 						
-						// Remove old files in temp folder
-						shell_exec("rm -R $pages_html_temp/*.html"); //die();
-						shell_exec("rm -R $pages_html_temp/*.pdf"); 
-						#sleep(1);
-						
-						$ar_url=array();
-						foreach ($result->ar_pages as $pkey => $current_page) {
+						# Remove old files in temp folder
+						shell_exec("rm -R $pages_html_temp/*.html");
+						shell_exec("rm -R $pages_html_temp/*.pdf");						
 
-							$request_options = new stdClass();
-								$request_options->page_html = $current_page;
-								#$request_options->js_links  = js::build_tag( DEDALO_LIB_BASE_URL."/tools/tool_layout_print/js/wkhtmltopdf.js?t=".time() );
-							$current_page_complete = tool_layout_print::create_full_html_page( $request_options );
-
-							#dump($current_page, ' current_page'.to_string());
-							$html_file_name = $pages_html_temp.'/'.$pkey.'.html';
-							file_put_contents($html_file_name, $current_page_complete);
-
-							$ar_url[] = 'http://'.DEDALO_HOST . DEDALO_MEDIA_BASE_URL . $path .'/'. $pkey.'.html';
-
-						}//end foreach ($result->ar_pages as $pkey => $current_page) {
+						#
+						# URLS_GROUP_BY_SECTION
+						# Array of all pages url by section tipo and section id. Key is like 'oh1_1' => array(page1,page2)
+						$urls_group_by_section = $this->get_urls_group_by_section( $result->ar_pages, $tipo, $print_files_path, $pages_html_temp );
 
 						# Generate header and footer files
 							/*
@@ -331,70 +312,31 @@
 								$current_page_complete = tool_layout_print::create_full_html_page( $request_options );
 								$header_html_file_name = 'header.html';								
 								file_put_contents($pages_html_temp.'/'.$header_html_file_name, $current_page_complete);
-								$header_html_url = 'http://'.DEDALO_HOST . DEDALO_MEDIA_BASE_URL . $path .'/'. $header_html_file_name.'';
+								$header_html_url = 'http://'.DEDALO_HOST . DEDALO_MEDIA_BASE_URL . $print_files_path .'/'. $header_html_file_name.'';
 							}
-							*/
-							if (isset($result->footer_html)) {
-								$footer_html = "<div class=\"pagination_info\">". sprintf( label::get_label('number_page_of_total_pages'), "<span class=\"var_pdf_page\">0</span>", "<span class=\"var_pdf_topage\">0</span>"). "</div>";
-								$request_options = new stdClass();
-									$request_options->page_html  = $footer_html;	//$result->footer_html;tool_layout_print/css/tool_layout_render.css?15102909
-									$request_options->css_links  = css::build_tag( 'http://'.DEDALO_HOST.DEDALO_LIB_BASE_URL."/tools/tool_layout_print/css/tool_layout_render.css" );
-									$request_options->js_links   = js::build_tag(  'http://'.DEDALO_HOST.DEDALO_LIB_BASE_URL."/tools/tool_layout_print/js/wkhtmltopdf.js" );//?t=".time()									
-									#$request_options->on_load  	 = 'onload="subst()"';
-								$current_page_complete = tool_layout_print::create_full_html_page( $request_options );
-								$footer_html_file_name = 'footer.html';
-								file_put_contents($pages_html_temp.'/'.$footer_html_file_name, $current_page_complete);
-								$footer_html_url = 'http://'.DEDALO_HOST . DEDALO_MEDIA_BASE_URL . $path .'/'. $footer_html_file_name.'';
-								//$footer_html_url = 'http://'.DEDALO_HOST . DEDALO_MEDIA_BASE_URL . $path .'/footer_source.html';
-							}
+							*/														
+							$footer_html = "<div class=\"pagination_info\">". sprintf( label::get_label('number_page_of_total_pages'), "<span class=\"var_pdf_page\">0</span>", "<span class=\"var_pdf_topage\">0</span>"). "</div>";
+							$request_options = new stdClass();
+								$request_options->page_html  = $footer_html;	//$result->footer_html;tool_layout_print/css/tool_layout_render.css?15102909
+								$request_options->css_links  = css::build_tag( 'http://'.DEDALO_HOST.DEDALO_LIB_BASE_URL."/tools/tool_layout_print/css/tool_layout_render.css" );
+								$request_options->js_links   = js::build_tag(  'http://'.DEDALO_HOST.DEDALO_LIB_BASE_URL."/tools/tool_layout_print/js/wkhtmltopdf.js" );									
+							$current_page_complete = tool_layout_print::create_full_html_page( $request_options );
+							$footer_html_file_name = 'footer.html';
+							file_put_contents($pages_html_temp.'/'.$footer_html_file_name, $current_page_complete);
+							$footer_html_url = 'http://'.DEDALO_HOST . DEDALO_MEDIA_BASE_URL . $print_files_path .'/'. $footer_html_file_name.'';
+							//$footer_html_url = 'http://'.DEDALO_HOST . DEDALO_MEDIA_BASE_URL . $print_files_path .'/footer_source.html';
+							
 						
 						#
 						# INFO STATS
 						$n_records 	= count($ar_records->result);
-						$n_pages 	= count($ar_url);
-
-						$ar_msg=array();
+						$n_pages 	= count($result->ar_pages);
 						
-							$pdf_target_path = $pages_html_temp . '/print.pdf';
-							$pdf_url  		 = 'http://'.DEDALO_HOST . DEDALO_MEDIA_BASE_URL . $path .'/print.pdf';
-
 							
-							#
-							# PDF RENDERER COMMAND							
-								$command  = DEDALO_PDF_RENDERER ." ";	//. " --no-stop-slow-scripts --debug-javascript --javascript-delay $javascript_delay ";
-								if(SHOW_DEBUG) {
-									$command .= "-L 10 -R 10 -T 10 -B 20 ";	// -q (quiet)		
-								}else{
-									$command .= "-L 10 -R 10 -T 10 -B 20 --load-error-handling ignore --load-media-error-handling ignore -q ";	// -q (quiet)		
-								}								
-								#$command .= "--header-html '$header_html_url' ";								
-								#$command .= "--footer-html '$footer_html_url' ";
-								#$command .= "--footer-center \"Page [page] of [toPage]\" --footer-font-size 9 ";			
-								$command .= implode(" ", $ar_url)." "; //" '$url'";
-								$command .= "'$pdf_target_path' ";							
+						$ar_command 	 = $this->get_ar_command( $urls_group_by_section, $print_files_path, $pages_html_temp, $footer_html_url );
+						$render_pdf_data = $ar_command;
 
-							
-							#
-							# TRIGGER DATA . Prepare data to send
-							$render_pdf_data = new stdClass();
-								$render_pdf_data->command 	= rawurlencode($command);
-								$render_pdf_data->pdf_url 	= rawurlencode($pdf_url);
-								$render_pdf_data->pdf_path 	= rawurlencode($pdf_target_path);
 
-							
-							/*
-							if(SHOW_DEBUG) {
-								$ar_msg[] = "<br>Generating pdf file to $pdf_target_path <br><strong>Command:</strong> <br>". str_replace(' ', " ", $command);
-								$ar_msg[] = "<br>Download pdf <a href=\"$pdf_url\" target=\"_blank\">".$pdf_url."</a>";						
-							}
-							$output = shell_exec($command." > /dev/null 2>/dev/null &");
-							#$output = null;
-							#$ar_msg[] = "<hr>output: <pre>$output</pre>";
-							*/
-							#$result = exec_::live_execute_command($command, true);
-								#dump($result, ' result ++ '.to_string());
-
-						
 						ob_start();
 						include ( DEDALO_LIB_BASE_PATH .'/tools/'.get_called_class().'/html/'.get_called_class().'_'.$context_name.'.phtml' );
 						$html_render = ob_get_clean();	

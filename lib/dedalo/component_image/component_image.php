@@ -139,7 +139,7 @@
 				break;
 
 		case 'print': 
-
+				$image_url				= $this->get_image_url();
 				break;
 	}
 

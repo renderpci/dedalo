@@ -82,9 +82,9 @@ class tool_layout_print extends tool_common {
 		$html .= "\n<meta http-equiv=\"content-type\" content=\"text/html; charset=utf-8\">";
 		//$html .= "\n<title>".$options->page_title."</title>";
 		$html .= $options->css_links;
-			
-		#$html .= "\n<base href='http://".DEDALO_HOST."'>";
+		if (!empty($options->js_code)) {
 		$html .= "\n<script>$options->js_code</script>";
+		}		
 		$html .= "\n</head>";	
 		$html .= "\n<body {$options->on_load}>";
 		$html .= "\n<div id=\"html_page_wrap\" style=\"display:block\">";
@@ -109,15 +109,18 @@ class tool_layout_print extends tool_common {
 	* @return string $html
 	*/
 	public static function render_pages( $request_options ) {		
-
+	
 		$options = new stdClass();
 			$options->pages 		= array();
 			$options->records 		= array();
 			$options->render_type 	= 'preview';
+			$options->tipo 			= null;	// main section tipo
 			foreach ($request_options as $key => $value) if (property_exists($options, $key)) { $options->$key = $value; }
 
-		$header_html=false;
-		$footer_html=false;
+		$precalculated_header_html=false;
+		$precalculated_footer_html=false;
+
+		$last_main_section_key=false;
 
 		# RESULT
 		$result = new stdClass();
@@ -129,6 +132,8 @@ class tool_layout_print extends tool_common {
 			
 			# Iterate all pages
 			$p=1;foreach ((array)$options->pages as $pkey => $current_page) {
+					#dump($current_page, ' current_page ++ '.to_string());
+					#dump($precalculated_header_html, ' precalculated_header_html ++ $pkey: '.to_string($pkey));
 
 				# Define if header and footer will be rendered.
 				# In preview mode, we only need render first page
@@ -146,7 +151,19 @@ class tool_layout_print extends tool_common {
 					#dump($page_tipo, ' page_tipo'.to_string());
 
 				$page_key = $p.'_'.$page_tipo.'_'.$current_record['section_id'];
-					#dump($page_key, ' page_key'.to_string());
+
+				
+					$main_section_key  = null;
+					$main_section_tipo = $options->tipo;
+					preg_match("/[0-9]+_((.{3,})_[0-9]+)/", $page_key, $output_array);
+					# If current pkey is like main section, is assigned. If not main_section_key is maintained
+					$current_section 	= $output_array[2];	// Like oh1 from 2_oh1_1
+					if ($current_section==$main_section_tipo) {
+						$main_section_key = $output_array[1];  // Like oh1_1 from 2_oh1_1
+							#dump($main_section_key, " main_section_key ++ main_section_tipo: $main_section_tipo ++ current_section: ".to_string($current_section));
+					}
+					
+					
 			
 				# 
 				# PORTAL CASE
@@ -204,17 +221,13 @@ class tool_layout_print extends tool_common {
 										$page_options->render_type 	= $options->render_type;
 										$page_options->header_footer= $header_footer;
 
-										# Get and inject calculated header / footer
-										if($header_html) $page_options->page->header->rendered = $header_html;
-										if($footer_html) $page_options->page->footer->rendered = $footer_html;
-											#dump($page_options, ' options');
+										# Get and inject calculated header / footer	
+										# Si ya existe una cabecera precalculada, la usamos
+										if($precalculated_header_html) {
+											$page_options->page->header->rendered = $precalculated_header_html;
+										}																			
 									
-									$current_page_html = (object)tool_layout_print::render_page( $page_options );
-										#dump($current_page_html , "current_page_html  ".to_string());	# die();
-
-									# Set only one footer / header
-									#if(!$header_html) $header_html = $current_page_html->header_html;
-									#if(!$footer_html) $footer_html = $current_page_html->footer_html;
+									$current_page_html = (object)tool_layout_print::render_page( $page_options );										
 									
 									$result->ar_pages[$page_key.$p] = (string)$current_page_html->html;
 
@@ -240,17 +253,13 @@ class tool_layout_print extends tool_common {
 									$page_options->render_type 	= $options->render_type;
 									$page_options->header_footer= $header_footer;
 
-									# Get and inject calculated header / footer
-									if($header_html) $page_options->page->header->rendered = $header_html;
-									if($footer_html) $page_options->page->footer->rendered = $footer_html;
-										#dump($page_options, ' options');
+									# Get and inject calculated header / footer	
+									# Si ya existe una cabecera precalculada, la usamos
+									if($precalculated_header_html) {
+										$page_options->page->header->rendered = $precalculated_header_html;
+									}							
 								
-								$current_page_html = (object)tool_layout_print::render_page( $page_options );
-									#dump($current_page_html , "current_page_html  ".to_string());	# die();
-
-								# Set only one footer / header
-								#if(!$header_html) $header_html = $current_page_html->header_html;
-								#if(!$footer_html) $footer_html = $current_page_html->footer_html;
+								$current_page_html = (object)tool_layout_print::render_page( $page_options );									
 								
 								$result->ar_pages[$page_key.$p] = (string)$current_page_html->html;
 
@@ -273,26 +282,35 @@ class tool_layout_print extends tool_common {
 						$page_options->header_footer= $header_footer;
 
 						# Get and inject calculated header / footer
-						if($header_html) $page_options->page->header->rendered = $header_html;
-						if($footer_html) $page_options->page->footer->rendered = $footer_html;
-							#dump($page_options, ' options');
-					
-					$current_page_html = (object)tool_layout_print::render_page( $page_options );
-						#dump($current_page_html , "current_page_html  ".to_string());	# die();
+						# Si la seción es la misma que la anterior y ya se precalculó la cabecera, la usamos																
+						if($main_section_key==$last_main_section_key && $precalculated_header_html) {							
+							$page_options->page->header->rendered = $precalculated_header_html;													
+						}
+						
+					$current_page_html = (object)tool_layout_print::render_page( $page_options );						
 
 					# Set only one footer / header
-					if(!$header_html) $header_html = $current_page_html->header_html;
-					if(!$footer_html) $footer_html = $current_page_html->footer_html;
+					# En cada cambio de registro de sección principal, guardaremos la cabecera calculada
+					if ($main_section_key!=$last_main_section_key) {				
+						$precalculated_header_html = $current_page_html->header_html;						
+					}
 					
 					$result->ar_pages[$page_key] = (string)$current_page_html->html;
 
-					# Store header / footer html
-					$result->header_html = $current_page_html->header_html;
-					$result->footer_html = $current_page_html->footer_html;
+					# Store header / footer html				
+					#$result->header_html = $current_page_html->header_html;					
 
 					$p++;
 				}//end if (strpos($page_tipo, '_')!==false)
 				
+
+				if(SHOW_DEBUG) {
+					#dump($precalculated_header_html, "page_key:$page_key - main_section_key:$main_section_key - ".' precalculated_header_html ++ $pkey:'.to_string($pkey));
+					//if ($main_section_key!=$last_main_section_key) dump($main_section_key, ' main_section_key ++ last_main_section_key: '.to_string($last_main_section_key));;
+				}
+
+				# store last main_section_key
+				$last_main_section_key = $main_section_key;
 				
 			}//end foreach ((array)$options->pages as $pkey => $current_page) {
 
@@ -425,7 +443,7 @@ class tool_layout_print extends tool_common {
 				// temporal
 				if (is_array($page->header)) { $page->header = reset($page->header); trigger_error("Sorry. page->header must be an object"); }
 
-				if (isset($page->header->rendered)) {
+				if (isset($page->header->rendered) ) {	// && isset($pisuerga_por_valladolid)
 					// Calculated before
 					$header_html = $page->header->rendered;					
 				}else{
@@ -1227,6 +1245,87 @@ class tool_layout_print extends tool_common {
 	}//end process_template
 
 
+
+	/**
+	* GET_URLS_GROUP_BY_SECTION
+	* Group arra of url's by section to generate indivudual pdf for section
+	* @return array $urls_group_by_section
+	*/
+	public function get_urls_group_by_section( $ar_pages, $section_tipo, $print_files_path, $pages_html_temp ) {
+		
+		$main_section_tipo 		= $section_tipo;
+		$urls_group_by_section 	= array();
+		foreach ($ar_pages as $pkey => $current_page) {
+
+			preg_match("/[0-9]+_((.{3,})_[0-9]+)/", $pkey, $output_array);
+			# If current pkey is like main section, is assigned. If not main_section_key is maintained
+			$current_section 	= $output_array[2];	// Like oh1 from 2_oh1_1
+			if ($current_section==$main_section_tipo) {
+				$main_section_key = $output_array[1];  // Like oh1_1 from 2_oh1_1
+					#dump($main_section_key, ' main_section_key ++ '.to_string());
+			}
+			
+			$request_options = new stdClass();
+				$request_options->page_html = $current_page;
+				#$request_options->js_links  = js::build_tag( DEDALO_LIB_BASE_URL."/tools/tool_layout_print/js/wkhtmltopdf.js?t=".time() );
+			$current_page_complete = tool_layout_print::create_full_html_page( $request_options );
+
+			#dump($current_page, ' current_page'.to_string());
+			$html_file_name = $pages_html_temp.'/'.$pkey.'.html';
+			file_put_contents($html_file_name, $current_page_complete);
+
+			$url = 'http://'.DEDALO_HOST . DEDALO_MEDIA_BASE_URL . $print_files_path .'/'. $pkey.'.html';			
+			$urls_group_by_section[$main_section_key][] 	= $url;
+			
+		}//end foreach ($ar_pages as $pkey => $current_page) {
+
+		return $urls_group_by_section;
+
+	}#end get_urls_group_by_section
+
+
+
+	/**
+	* GET_AR_COMMAND
+	* @return array ar_command . Array of objects
+	*/
+	public function get_ar_command( $urls_group_by_section, $print_files_path, $pages_html_temp, $footer_html_url ) {
+		
+		$ar_command=array();
+		foreach ($urls_group_by_section as $key => $ar_url) {
+
+			$pdf_path 	= $pages_html_temp . '/'.$key.'_print.pdf';
+			$pdf_url	= 'http://'.DEDALO_HOST . DEDALO_MEDIA_BASE_URL . $print_files_path .'/'.$key.'_print.pdf';
+			$label 		= $key;
+
+			$command  = DEDALO_PDF_RENDERER ." ";	//. " --no-stop-slow-scripts --debug-javascript --javascript-delay $javascript_delay ";
+			if(SHOW_DEBUG) {
+				#$command .= "-L 10 -R 10 -T 10 -B 20 ";	// -q (quiet)
+				$command .= "-L 10 -R 10 -T 10 -B 20 -q ";	
+			}else{
+				$command .= "-L 10 -R 10 -T 10 -B 20 --load-error-handling ignore --load-media-error-handling ignore -q ";	// -q (quiet)	
+			}								
+			#$command .= "--header-html '$header_html_url' ";
+			# footer custom							
+			$command .= "--footer-html '$footer_html_url' ";
+			# footer automatic
+			#$command .= "--footer-center \"Page [page] of [toPage]\" --footer-font-size 9 ";			
+			$command .= implode(" ", $ar_url)." "; //" '$url'";								
+			$command .= "'$pdf_path' ";
+
+
+			$command_obj = new stdClass();
+				$command_obj->command 	= rawurlencode($command);
+				$command_obj->pdf_path 	= rawurlencode($pdf_path);
+				$command_obj->pdf_url 	= rawurlencode($pdf_url);
+				$command_obj->label 	= rawurlencode($label);
+
+			$ar_command[] = $command_obj;
+		}
+
+		return $ar_command;
+
+	}#end get_ar_command
 	
 	
 };#end tool_layout_print

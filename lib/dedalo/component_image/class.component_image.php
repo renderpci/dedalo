@@ -487,6 +487,12 @@ class component_image extends component_common {
 	*/
 	public function convert_quality( $source_quality, $target_quality ) {
 
+		if ($target_quality==DEDALO_IMAGE_QUALITY_ORIGINAL || $target_quality==DEDALO_IMAGE_THUMB_DEFAULT) {
+			if(SHOW_DEBUG) {
+				throw new Exception("Error Processing Request. Wrong target quality: $target_quality", 1);				;
+			}
+			return false;
+		}
 		$image_id 			= $this->get_image_id();
 		$aditional_path 	= $this->get_aditional_path();
 		$initial_media_path = $this->get_initial_media_path();
@@ -520,13 +526,7 @@ class component_image extends component_common {
 		ImageMagick::convert($source_image, $target_image, $flags);
 			#dump($flags,"$source_image, $target_image");
 			#chmod($source_image, 0777);
-			#chmod($target_image, 0777);
-
-		# THUMB . Generate allways when current target quality is default
-		if ($target_quality==DEDALO_IMAGE_QUALITY_DEFAULT) {
-			# make thumb
-			#$this->generate_thumb();
-		}
+			#chmod($target_image, 0777);		
 
 		return true;
 
@@ -572,7 +572,7 @@ class component_image extends component_common {
 	public function generate_thumb() {
 
 		if(SHOW_DEBUG) {
-			error_log("DEBUG INFO: Called generate_thumb");
+			error_log("DEBUG INFO (generate_thumb): Called generate_thumb");
 		}
 
 		# common data
@@ -586,7 +586,7 @@ class component_image extends component_common {
 
 		if (!file_exists($default_image_path)) {
 			if(SHOW_DEBUG) {
-				#error_log("DEBUG INFO: Default image quality don't exists. Skip create thumb.");
+				error_log("DEBUG INFO (generate_thumb): Default image quality don't exists. Skip create thumb.");
 			}
 			return false;
 		}
@@ -604,26 +604,14 @@ class component_image extends component_common {
 		}
 		
 		# thumb generate
-		$dd_thumb = ImageMagick::dd_thumb( 'list', $default_image_path, $image_thumb_path, $dimensions="102x57", $initial_media_path);
+		$dd_thumb = ImageMagick::dd_thumb('list', $default_image_path, $image_thumb_path, $dimensions="102x57", $initial_media_path);
 
-		#error_log("DEBUG INFO: dd_thumb function called.");
+		if(SHOW_DEBUG) error_log("DEBUG INFO (generate_thumb): dd_thumb function called and executed.");
 
-		if(SHOW_DEBUG) {
-			//dump($dd_thumb, ' generate_thumb: dd_thumb ++ '.to_string());
-			#if(!file_exists($image_thumb_path)) {
-				#dump($default_image_path, ' default_image_path ++ '.to_string());
-				#dump($image_thumb_path, ' image_thumb_path ++ '.to_string());
-				#dump($initial_media_path, ' initial_media_path ++ '.to_string());
-				#throw new Exception("Error Processing Request. NO SE HA GENERADO EL THUMB: $image_thumb_path", 1);		
-			#}
-			#error_log("RESPONSE generate_thumb: $dd_thumb");
-			#error_log("RESPONSE image_thumb_url: $image_thumb_url");
-		}		
 
 		return array('path'=>$image_thumb_path,
 					 'url' =>$image_thumb_url,
 					);
-		#return $dd_thumb;
 
 	}#end generate_thumb
 

@@ -495,8 +495,8 @@
 		padding: 20px;
 		padding-bottom: 120px;
 		top: 45px;
-		background-color: #F7F7F7;
-		position: absolute;
+		/*background-color: #F7F7F7;*/
+		position: relative;
 		height: 100%;
 		width: 100%;
 		}
@@ -518,10 +518,19 @@
 			#render_pdf_response {
 				padding: 10px;
 				padding-top: 30px;
-				padding-bottom: 30px;
-				font-size: 115%;
+				padding-bottom: 30px;				
 				min-height: 320px;		
-				}				
+				}
+				#render_pdf_response ul {
+
+					}
+					#render_pdf_response ul li {
+						display: inline-block;
+						padding: 10px;
+					}
+					#render_pdf_response ul li label {
+						display: block;
+					}		
 				.printing_animated {
 					background-image: url('../images/printing.gif');
 					background-repeat: no-repeat;					
@@ -535,8 +544,12 @@
 					background-repeat: no-repeat;					
 					width: 230px;
 					height: 306px;
-					display: inline-block;
+					display: block;
 					opacity: 0.6;
+					zoom: 0.3;
+					width: 100%;
+    				background-position: center;
+    				margin-bottom: 15px;
 					}
 					.icon_pdf_big:hover {
 						opacity: 1;
@@ -544,7 +557,11 @@
 
 		#render_pdf_response_debug {
 			padding: 10px;
-
+		}
+		hr {
+		    border: none;
+		    height: 1px;
+		    background-color: rgba(224,224,224,1);
 		}
 
 	/* CUSTOM CLASSES ADDED TO PRINT ELEMENTS
@@ -552,4 +569,24 @@
 		.content_text_big1 .print_content {
 			font-size: 20px;
 		}
+		.content_text_nocut .print_content{
 
+			word-wrap: break-word;
+			-webkit-nbsp-mode: space;
+			-webkit-line-break: after-white-space;
+			-webkit-user-modify: read-write;
+
+
+			background-color: #eeddaa;
+			-webkit-column-break-inside: avoid;
+			-webkit-region-break-inside:avoid;
+			page-break-inside: avoid;
+
+		}
+		.content_text_nocut{
+			word-wrap: break-word;
+			-webkit-nbsp-mode: space;
+			-webkit-line-break: after-white-space;
+			-webkit-user-modify: read-write;
+
+		}

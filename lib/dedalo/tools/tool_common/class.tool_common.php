@@ -58,9 +58,10 @@ abstract class tool_common extends common {
 		
 		# NEW MODE : Sin usar get_ar_children_objects_by_modelo_name_in_section
 		$component_tipo = $this->component_obj->get_tipo();
-		$section_tipo	= component_common::get_section_tipo_from_component_tipo($component_tipo);
+		$section_tipo	= $this->component_obj->get_section_tipo();
 		$ar_result 		= section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, 'component_state',true);
 			#dump($ar_result,'get_ar_children_tipo_by_modelo_name_in_section '.$section_tipo);
+			
 
 		if (empty($ar_result[0])) {
 			return null;
@@ -68,7 +69,7 @@ abstract class tool_common extends common {
 			#$component_tipo = $ar_result[0];
 			#$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo);
 			#$this->component_state  = new component_state($ar_result[0],$parent,'edit_tool',DEDALO_DATA_NOLAN);
-			$this->component_state  = component_common::get_instance('component_state', $ar_result[0], $parent, 'edit_tool', DEDALO_DATA_NOLAN);
+			$this->component_state  = component_common::get_instance('component_state', $ar_result[0], $parent, 'edit_tool', DEDALO_DATA_NOLAN, $section_tipo);
 			# Configuramos el componente en el modo adecuado para el tool
 			$this->component_state->set_caller_component_tipo($this->component_obj->get_tipo());
 			$this->component_state->set_caller_element(get_called_class());

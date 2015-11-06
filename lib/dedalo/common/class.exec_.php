@@ -103,7 +103,7 @@ class exec_ {
 	        $live_output     = fread($proc, 4096);
 	        $complete_output = $complete_output . $live_output;
 	        if ($live) {
-	        	echo nl2br("$live_output");
+	        	echo nl2br( $live_output );
 	        	@ flush();
 	        }	        
 	    }
@@ -117,7 +117,7 @@ class exec_ {
 	    // return exit status and intended output
 	    return array (
 	                    'exit_status'  => $matches[0],
-	                    'output'       => str_replace("Exit status : " . $matches[0], '', nl2br($complete_output))
+	                    'output'       => str_replace("Exit status : " . $matches[0], '', nl2br( trim($complete_output) ))
 	                 );
 	}//end 
 

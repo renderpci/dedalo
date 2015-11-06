@@ -126,7 +126,7 @@ if( $mode=='save_template' ) {
 		$component_layout->set_dato( $original_dato_string );
 		$component_layout->Save();
 		if(SHOW_DEBUG) {
-			error_log("Generated component_layout: " .json_encode($dato) );
+			#error_log("Generated component_layout: " .json_encode($dato) );
 		}
 
 
@@ -136,7 +136,7 @@ if( $mode=='save_template' ) {
 		$component_input_text->set_dato($section_target_tipo);
 		$component_input_text->Save();
 		if(SHOW_DEBUG) {
-			error_log("Saved SECTION TARGET:  $section_target_tipo");
+			#error_log("Saved SECTION TARGET:  $section_target_tipo");
 		}
 	
 
@@ -146,7 +146,7 @@ if( $mode=='save_template' ) {
 		$component_input_text->set_dato($layout_label);
 		$component_input_text->Save();
 		if(SHOW_DEBUG) {
-			error_log("Saved LABEL:  $layout_label");
+			#error_log("Saved LABEL:  $layout_label");
 		}
 
 
@@ -169,7 +169,7 @@ if( $mode=='save_template' ) {
 	}
 
 	if(SHOW_DEBUG) {
-		error_log("Saved component_layout [$component_layout_tipo] id:".$section_layout_id." ");
+		#error_log("Saved component_layout [$component_layout_tipo] id:".$section_layout_id." ");
 	} 
 
 	echo (int)$section_layout_id;
@@ -187,56 +187,65 @@ if( $mode=='save_template' ) {
 if( $mode=='render_pdf' ) {
 
 	$response = new stdClass();	
+		$response->msg 	 = '';
+		$response->debug = array();
 
 	$render_pdf_data = isset($_REQUEST['render_pdf_data']) ? $_REQUEST['render_pdf_data'] : false;
 	if (empty($render_pdf_data) || !json_decode($render_pdf_data)) {
-		$response->msg = "Sorry. Invalid/empty render_pdf_data";
+		$response->msg .= "Sorry. Invalid/empty render_pdf_data";
 		echo json_encode($response);
 		exit;
 	}
 
 	$render_pdf_data = json_decode($render_pdf_data);
-	$command 		 = $render_pdf_data->command;
-	$pdf_url 		 = $render_pdf_data->pdf_url;
-	$pdf_path 		 = $render_pdf_data->pdf_path;
+		#dump($render_pdf_data, ' render_pdf_data ++ '.to_string());
 
-	$command 	= rawurldecode($command);
-	$pdf_url 	= rawurldecode($pdf_url);
-	$pdf_path 	= rawurldecode($pdf_path);
 
-	#
-	# Exec command
-	$result = exec_::live_execute_command($command,false);
-	#$result  = shell_exec($command." ");	// > /dev/null 2>/dev/null &
-		#dump($result, ' result ++ '.to_string($command));
+	foreach ((array)$render_pdf_data as $key => $command_obj) {
+		$element_html = '';
 
-	$response->debug = '';
-	if(SHOW_DEBUG) {		
-		$response->debug = $result;
+		$command 	= rawurldecode($command_obj->command);
+		$pdf_url 	= rawurldecode($command_obj->pdf_url);
+		$pdf_path 	= rawurldecode($command_obj->pdf_path);
+		$label 		= rawurldecode($command_obj->label);
 
-		$version  = shell_exec(DEDALO_PDF_RENDERER ." -V ");
-		$response->debug['version'] = $version;
-		$response->debug['path'] 	= DEDALO_PDF_RENDERER;
-	}
-
-	if($result['exit_status'] === "0"){
-		// command execution succeeds
-		$response->msg = trim("<a href=\"$pdf_url\" class=\"icon_pdf_big\" target=\"_blank\"></a><br><br>View pdf file");		
-	} else {
-	    // command execution failure
-	    $response->msg = trim("<span class=\"error\">Sorry. Error on render pdf file</span>");
-	}
-
-	if(SHOW_DEBUG) {
-		$size = @ filesize($pdf_path);
-		if ($size && $size>0) {
-			$KB = (int)$size/1000 ;
-			$response->msg .= "<br>Filesize $KB KBytes";
-		}			
-	}
+		#
+		# Exec command
+		$result = exec_::live_execute_command($command,false);
+		#$result  = shell_exec($command." ");	// > /dev/null 2>/dev/null &
+			#dump($result, ' result ++ '.to_string($command));
 		
-	
-	echo json_encode($response);
+		if(SHOW_DEBUG) {
+			
+			$response->debug[$key] = $result;
+
+			$version  = shell_exec(DEDALO_PDF_RENDERER ." -V ");
+			$response->debug[$key]['version'] = $version;
+			$response->debug[$key]['path'] 	= DEDALO_PDF_RENDERER;		
+		}
+
+		if($result['exit_status'] === "0"){
+			// command execution succeeds
+			$element_html .= trim("<a href=\"$pdf_url\" class=\"icon_pdf_big\" target=\"_blank\"></a><label>View pdf file ".$label."</label>");		
+		} else {
+		    // command execution failure
+		    $element_html .= trim("<span class=\"error\">Sorry. Error on render pdf file</span>");
+		}
+
+		if(SHOW_DEBUG) {
+			$size = @ filesize($pdf_path);
+			if ($size && $size>0) {
+				$KB = (int)$size/1000 ;
+				$element_html .= "<label>Filesize $KB KBytes</label>";
+			}			
+		}
+		
+		$response->msg .= "<li>".$element_html."</li>";
+	}
+
+	$response->msg = "<ul class=\"pdf_link_container\">".$response->msg."</ul>";
+
+	echo json_encode($response); 
 	return;
 
 }//end render_pdf

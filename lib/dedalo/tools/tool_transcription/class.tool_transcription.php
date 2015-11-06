@@ -41,6 +41,8 @@ class tool_transcription extends tool_common {
 		# media parent
 		$parent = $this->component_obj->get_parent();
 
+		$section_tipo = $this->component_obj->get_section_tipo();
+			
 
 		# media related terms
 		/*
@@ -74,7 +76,7 @@ class tool_transcription extends tool_common {
 
 
 		# Create final related component
-		$component_text_area = component_common::get_instance('component_text_area', $termino_relacionado_tipo, $parent, 'edit', DEDALO_DATA_LANG);
+		$component_text_area = component_common::get_instance('component_text_area', $termino_relacionado_tipo, $parent, 'edit', DEDALO_DATA_LANG, $section_tipo);
 
 
 		$this->component_related_obj = $component_text_area;

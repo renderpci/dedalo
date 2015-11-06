@@ -5,11 +5,10 @@
 <title>Media Player</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="shortcut icon" href="/favicon.ico" />
-
-<?php echo $css_link_code ?>
-
-<link rel="stylesheet" href="<?php echo DEDALO_LIB_BASE_URL ?>/media_engine/css/av_media_player.css" type="text/css" />
-
+<?php
+print $css_link_code;
+print css::build_tag(DEDALO_LIB_BASE_URL .'/media_engine/css/av_media_player.css');
+?>
 <script>
  // vars
  /*
@@ -36,23 +35,23 @@ var page_globals = new Object();
 </head>
 <body>
 <div id="wrap_edit_video">
-         
-       
-    <!-- PLAYER HTML Media container -->
-    <div class="videoContainer" >
+		 
+	   
+	<!-- PLAYER HTML Media container -->
+	<div class="videoContainer" >
 	<?php echo $player ?>    
-    </div>
-    
-    
-    <!-- MSG LOAD control de video -->	
-    <div id="loading_msg" class="select_none"> Loading... </div>
-    
-    
-    <!-- Botones control de video -->		
-    <div id="video_controls" class="select_none">	
-    	
-       
-        <?php
+	</div>
+	
+	
+	<!-- MSG LOAD control de video -->	
+	<div id="loading_msg" class="select_none"> Loading... </div>
+	
+	
+	<!-- Botones control de video -->		
+	<div id="video_controls" class="select_none">	
+		
+	   
+		<?php
 		switch($modo) {
 			
 			case 'posterframe' :	
@@ -102,18 +101,18 @@ var page_globals = new Object();
 			
 		}		
 		?>   
-        
+		
 		 
-    </div><!-- /video_controls -->
-        
+	</div><!-- /video_controls -->
+		
    
-    <?php
-    	# CONFIG
-    	print "\n <div class=\"player_icon config_icon select_none\" onclick=\"av_media_player.toggle_config_player_content()\"> </div>";
-    	print "<div class=\"config_player_content select_none\">";   
+	<?php
+		# CONFIG
+		print "\n <div class=\"player_icon config_icon select_none\" onclick=\"av_media_player.toggle_config_player_content()\"> </div>";
+		print "<div class=\"config_player_content select_none\">";   
 
-    	#echo $configure_keys_html;	
-    	?>
+		#echo $configure_keys_html;	
+		?>
 		<!-- PLAYER SELECTOR -->
 		<div class="player_type_links">
 			
@@ -128,40 +127,34 @@ var page_globals = new Object();
 		</div>
 		
 		<!-- DEBUG -->
-	    <?php #if( SHOW_DEBUG ){?>    
-	    <div class="debugDIV">
-	    	TC 
+		<?php #if( SHOW_DEBUG ){?>    
+		<div class="debugDIV">
+			TC 
 			<?php echo "tcin: $tcin - tcout: $tcout "; ?><br>
 			Media 
-	        <a href="<?php echo $AVObj->get_url() ;?>" target="_blank" style="color:#666"><?php echo $AVObj->get_url();?></a> 
-	        <?php echo $AVObj->get_size();?>  <br>
-	        Posterframe             
-	        <a href="<?php echo $PosterFrameObj->get_url() ;?>" target="_blank" style="color:#666"><?php echo $PosterFrameObj->get_url();?></a> 
-	        <?php echo $PosterFrameObj->get_size();?>
-	           
-	        <div id="debugMovie">  </div>
-	    </div>                 
-	    <?php #}//if( SHOW_DEBUG ){?>  
+			<a href="<?php echo $AVObj->get_url() ;?>" target="_blank" style="color:#666"><?php echo $AVObj->get_url();?></a> 
+			<?php echo $AVObj->get_size();?>  <br>
+			Posterframe             
+			<a href="<?php echo $PosterFrameObj->get_url() ;?>" target="_blank" style="color:#666"><?php echo $PosterFrameObj->get_url();?></a> 
+			<?php echo $PosterFrameObj->get_size();?>
+			   
+			<div id="debugMovie">  </div>
+		</div>                 
+		<?php #}//if( SHOW_DEBUG ){?>  
 
 		<?php
 		print "</div><!-- /config_player_content -->";
-	?>
-    
-    
-    
-    
-    
-    
-    
-    
-    
-        		
-        
+	?> 
+	
+				
+		
 </div>
 </body>
 </html>
 <?php /*
 <script language="JavaScript" type="text/javascript" src="<?php echo DEDALO_LIB_BASE_URL ?>/component_common/js/component_common.js"></script>
 */ ?>
-<script language="JavaScript" type="text/javascript" src="<?php echo DEDALO_LIB_BASE_URL ?>/media_engine/js/av_media_player_commands.js"></script>
-<script language="JavaScript" type="text/javascript" src="<?php echo DEDALO_LIB_BASE_URL ?>/media_engine/js/av_media_player.js"></script>
+<?php
+print js::build_tag(DEDALO_LIB_BASE_URL . '/media_engine/js/av_media_player_commands.js');
+print js::build_tag(DEDALO_LIB_BASE_URL . '/media_engine/js/av_media_player.js');
+?>
