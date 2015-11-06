@@ -1,0 +1,162 @@
+/*CSS Document*/
+
+/* WRAP
+********************************************************************************/
+.wrap_component {
+	/*display: flex;*/
+}
+.selected_wrap {
+	background-color: #ECECEC;
+	background: rgb(242, 242, 242);
+	/*Old browsers*/
+		background: -moz-linear-gradient(top, rgba(242,242,242,1) 0%, rgba(236,236,236,1) 100%);
+	/*FF3.6+*/
+		background: -webkit-gradient(linear, left top, left bottom, color-stop(0%,rgba(242,242,242,1)), color-stop(100%,rgba(236,236,236,1)));
+	/*Chrome,Safari4+*/
+		background: -webkit-linear-gradient(top, rgba(242,242,242,1) 0%,rgba(236,236,236,1) 100%);
+	/*Chrome10+,Safari5.1+*/
+		background: -o-linear-gradient(top, rgba(242,242,242,1) 0%,rgba(236,236,236,1) 100%);
+	/*Opera 11.10+*/
+		background: -ms-linear-gradient(top, rgba(242,242,242,1) 0%,rgba(236,236,236,1) 100%);
+	/*IE10+*/
+		background: linear-gradient(to bottom, rgba(242,242,242,1) 0%,rgba(236,236,236,1) 100%);
+	/*W3C*/
+		filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#f2f2f2', endColorstr='#ececec',GradientType=0 );
+	/*IE6-9*/
+		-webkit-box-shadow: 0 1px 8px #999999 inset;
+		-moz-box-shadow: 0 1px 8px #999999 inset;
+		box-shadow: inset 0 1px 8px #999999;
+	/*
+	padding-bottom:8px !important;
+	padding-top:8px !important;
+
+	margin-top        :5px;
+	margin-bottom    :5px;
+	*/
+	-webkit-transition: all 0.3s ease-in-out;
+	-moz-transition: all 0.3s ease-in-out;
+	transition: all 0.3s ease-in-out;
+}
+
+/* CONTENT DATA
+********************************************************************************/
+.content_data {
+	padding: 0;
+	margin: 0;
+	display: inline-block;
+	width: 83%;
+	/*background-color:#fff7e0;*/
+}
+
+/* LABEL
+********************************************************************************/
+LABEL.css_label {
+	padding: 4px;
+	padding-top: 3px;
+	/*min-width:140px;
+	min-width:12%;
+	max-width: 12%;*/
+	min-width: 15%;
+	/*
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	*/
+	text-align: left;
+	display: inline-block;
+	word-wrap: break-word;
+	vertical-align: top;
+	cursor: pointer;
+	-webkit-user-select: none;
+	-khtml-user-select: none;
+	-moz-user-select: none;
+	-o-user-select: none;
+	user-select: none;
+	height: auto;
+}
+/*LABEL IN WRAP COMPONENT CONTEXT */
+.wrap_component LABEL.css_label {
+	max-width: 90px;
+	text-overflow: ellipsis;
+	overflow: hidden;
+	white-space: nowrap;
+	/*Don't forget this one*/
+	display: inline-block;
+	cursor:default;
+}
+.css_label_naranja {
+	color: #F60;
+}
+.css_label_grey_bg_50 {
+	background-color: #626262;
+	padding: 3px;
+}
+.css_hide_label {
+	visibility: hidden;
+}
+.css_label_titulo {
+	font-weight: bold;
+	font-size: 13px;
+	color: #EEE;
+	width: auto;
+}
+
+/* TEXT DATO STRING
+********************************************************************************/
+.css_span_dato {
+	-webkit-user-select: none;
+	-khtml-user-select: none;
+	-moz-user-select: none;
+	-o-user-select: none;
+	user-select: none;
+	line-height: 1.3em;
+	display: inline-block;
+	padding: 2px;
+/*padding-left: 4px;*/
+	color: #404040;
+	font-size: 96%;	
+}
+DIV.dato_refecence_default_lang {
+	font-style: italic;
+	color: #3A5880 !important;
+	opacity: 0.6;
+}
+
+/* EJEMPLO TEXT
+********************************************************************************/
+.css_span_ejemplo {
+	font-style: italic;
+	display: inline-block;
+	color: #999999;
+	font-size: smaller;
+	margin-right: 5px;
+	position: relative;
+}
+
+/* SPINNER
+********************************************************************************/
+.css_spinner {
+	background-image: url('../../themes/default/spinner.gif');
+	background-position: center;
+	background-repeat: no-repeat;
+	min-width: 100px;
+	width: 100%;
+	min-height: 16px;
+	display: inline-block;
+}
+
+/* TOOL LABEL
+********************************************************************************/
+.css_tool_label {
+	display: inline-block;
+	padding-left: 5px;
+	padding-right: 5px;
+	/*margin-left: 23%;*/
+	text-transform: uppercase;
+	color:#363636;
+	font-size: 130%;
+}
+.tools_container_div {
+	position: relative;
+	z-index: 2000;
+}

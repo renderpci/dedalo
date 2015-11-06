@@ -1,0 +1,157 @@
+/*CSS Document
+WRAP DIV CONTAINER*/
+.css_wrap_portal {
+	padding: 5px;
+	/*padding-bottom: 10px;*/
+	padding-top: 2px;
+	padding-bottom: 0px;
+	position: relative;
+}
+
+/* > select only the first '.content_data' inside css_wrap_portal */
+.css_wrap_portal > .content_data {
+	width: 100%;/*  */
+	/* background-color: #edbff5; */
+	display: inline-block;
+	position: relative;
+	top: -16px;
+	margin-bottom: -15px;
+}
+/* hide main label (> first label only) */
+.css_wrap_portal > .css_label {
+	/* display: none; */
+}
+
+/* TABLE overwrite section list table inside portal */
+.css_wrap_portal TABLE.css_section_list_table {
+	width: 99.4%;
+	margin: 5px;
+	margin-left: 7px;
+}
+
+
+/* TABLE TD FIRST . ID COLUMN */
+.css_section_list_table tr td:first-child {
+    width: 50px;
+}
+
+/* TABLE LAST TD . LAST TD IMAGE/AV THUMB
+.css_section_list_table tr td:last-child {
+    width: 102px;
+}
+*/
+/* OVERWRITE SECTION CONTENT WIDHT */
+.css_wrap_portal .css_section_content {
+	width: 99.8%;
+	position: relative;
+	/* background-color: #efc4f4; */
+}
+
+/* BTN NEW */
+.btn_new_ep {
+	text-transform: none;
+	float: right;
+	position: relative; /* */
+	margin-right: 4px;
+	/*top:-4px;*/
+	top: -5px;
+	margin-left: 0px;
+	margin-top: 0;
+	margin-bottom: 0px;
+	padding:4px;
+	white-space: nowrap; /**/
+	font-size: 84%;
+	font-weight: normal;
+	background-image: none;
+	background-color: #6e6e6e;
+	box-shadow: none;
+	/*z-index: 9000 !important;*/
+}
+.btn_new_ep_NEW {
+	text-transform: none;
+	float: right;
+	position: relative;
+	margin-right: 5px;
+	top: 26px;
+	right: 10px;
+	margin-left: -5px;
+	margin-top: 0;
+	white-space: nowrap;
+	font-size: 84%;
+	font-weight: normal;
+	background-image: none;
+	background-color: #6e6e6e;
+	box-shadow: none;
+	padding: 4px;
+	z-index: 1;
+}
+
+/* TD ID ICONS */
+.th_large_icon {
+	background-position: -216px 0;
+	top: 0px;
+}
+.th_list_icon {
+	background-position: -264px 0;
+	top: 0px;
+}
+
+
+/* PORTAL INSIDE */
+TABLE.table_portal_inside {
+	margin: 0;
+	/*margin-top: -5px;*/
+}
+TD.row_portal_inside {
+	font-size: 90%;
+	padding: 0 !important;
+}
+DIV.portal_first_element_content {
+	min-height: 0px;
+	text-align: left;
+	/* background-color: #b8f3f3; */
+}
+
+/*-- BUTTON MORE IMAGES --*/
+DIV.portal_toggle_more_elements_more {
+	background-position: 0 -96px;
+	background-position: -313px -119px;
+
+	left: -17px;
+	top:-3px;
+	opacity: 0.8;
+	background-color:#c8c8c8;
+	padding: 0px;
+	border-radius: 2px;
+}
+DIV.portal_toggle_more_elements_minus {
+	background-position: -24px -96px;
+	background-position: -288px -120px;
+}
+DIV.portal_more_elements_content {
+	display: none;
+	text-align: left;
+	white-space: normal;
+}
+
+TABLE.table_portal_inside TD {
+	border: none;
+}
+/*
+TABLE.table_portal_inside TD IMG {
+	-moz-box-shadow: 1px 1px 6px #888888;
+	-webkit-box-shadow: 1px 1px 6px #888888;
+	box-shadow: 1px 1px 6px #888888;
+	border-radius: 2px;
+}
+*/
+
+.portal_loading_msg {
+	min-height: 67px;
+	padding-left: 5px;
+	padding-top: 4px;
+	color: #a2bef4
+}
+
+
+

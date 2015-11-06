@@ -1,0 +1,43 @@
+<?php
+
+	# VISUALIZADOR HTML	
+		
+			
+		# CONTENIDO (INPUT)
+		$html_contenido = '';
+
+		switch($permissions) {
+			
+			case 0	:	$html_contenido .= "\n <span class=\"css_span_dato {$ar_css['css_span_dato']}\"> ".label::get_label('contenido_no_autorizado')." </span>";
+						break;
+							
+			case ($permissions>=1)	:
+			
+						# BUTTON SELECT EXISTING RECORD HTML
+						$html_contenido .= "\n<div class=\"css_button_generic btn_new_ep\" 
+						data-tipo=\"{$tipo}\"
+						data-id_matrix=\"{$id}\" 
+						data-caller_id=\"{$parent}\"
+						data-target_section_tipo=\"{$target_section_tipo}\"					
+						onclick=\"tool_common.open_tool_portal(this)\"
+						title=\"id:$id - parent:$parent - tipo:$tipo\"
+						>";
+						$html_contenido .= '+';
+						$html_contenido .= ' '. ucfirst(label::get_label('existente')) ;#. " $label" ;
+
+						if(SHOW_DEBUG) {
+							$html_contenido .= ' '.$_SESSION['config4']['top_tipo'].'.'.$target_section_tipo.'.'.$this->tipo;
+						}
+
+						$html_contenido .= "\n</div>";
+
+						if (SHOW_DEBUG) {
+							$html_contenido .= "<span class=\"debug_info\">id:$id - parent:$parent - tipo:$tipo </span>";
+						}
+						break;
+		}		
+						
+
+		# PRINT HTML
+		print $html_contenido;
+?>
