@@ -7,14 +7,14 @@ Today we introduce the update of the V4 to 4.0.3
 
 Important: This update change the "profiles" and user behavior. 
 
-1 - Download and Update all files of Dédalo
-2 - Create the profiles 
-3 - Assign users (users can not be without profile)
+1. Download and Update all files of Dédalo
+2. Create the profiles 
+3. Assign users (users can not be without profile)
 
 The componet_security_areas, componet_security_acces and componet_security_tools ONLY work for the profiles and are deprecated for Users.
 The root user (dev-user) can see this componets for some time in the Users records.
 
-This update some issues and bugs for the V4.
+This update fixed some issues and bugs for the V4.
 
 New user inteface.
 
