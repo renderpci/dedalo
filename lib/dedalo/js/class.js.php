@@ -5,7 +5,7 @@ class js {
 	static $ar_url = array();
 	
 	
-	# JS LINK CODE . RETURN COMBINATED JS LINKS FOR INSERT IN HEADER 
+	# JS LINK CODE . RETURN COMBINATED JS LINKS FOR INSERT IN HEADER  
 	public static function get_js_link_code() {
 		global $modo;
 		

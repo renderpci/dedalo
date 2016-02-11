@@ -12,8 +12,14 @@
 	
 	
 	print "\n<!-- INPUT_TEXT [tipo:$tipo section_id_matrix:$parent] $label -->";
-	print "\n<div class=\"css_wrap_input_text wrap_component {$ar_css['css_wrap_input_text']}\" id=\"{$id_wrapper}\"
-	data-tipo=\"{$tipo}\" data-lang=\"{$lang}\" data-section_tipo=\"{$section_tipo}\" data-parent=\"{$parent}\" data-modo=\"{$modo}\" data-dato=\"{$dato}\" data-component_name=\"{$component_name}\"
+	print "\n<div class=\"css_wrap_input_text wrap_component wrap_component_{$tipo}\" id=\"{$id_wrapper}\"
+	data-tipo=\"{$tipo}\"
+	data-lang=\"{$lang}\"
+	data-section_tipo=\"{$section_tipo}\"
+	data-parent=\"{$parent}\"
+	data-modo=\"{$modo}\"
+	data-dato=\"{$dato}\"
+	data-component_name=\"{$component_name}\"
 	data-component_info='{$component_info}' >";
 	
 		
@@ -34,21 +40,35 @@
 			
 						# Dato reference default lang
 						if ($modo!='tool_lang' && !empty($default_component)) {
-							#$html_contenido .= "\n <div class=\"dato_refecence_default_lang\">$dato_reference_lang</div>";						
+							#$html_contenido .= "\n <div class=\"dato_refecence_default_lang\">$dato_reference_lang</div>";
 							# Fijamos el lenguaje actual como el de destino para el tool_lang
 							$html_contenido .= "<script>set_localStorage('last_target_lang','$lang')</script>";
 							$tool_lang = new tool_lang($default_component,'button');
 								#dump($tool_lang,'$tool_lang');
 							$html_contenido .= $tool_lang->get_html();
 						}
+
+						# Avoid autocomplete input username in Users section
+						$remove_autocomplete = '';
+						if ($section_tipo==DEDALO_SECTION_USERS_TIPO) {
+							$remove_autocomplete = "readonly onfocus=\"this.removeAttribute('readonly');\"";
+						}
 						
 
-						$html_contenido .= "\n <input class=\"css_input_text {$ar_css['css_input_text']}\" type=\"text\" 
-						name=\"{$input_name}\" 
-						data-tipo=\"{$tipo}\" data-section_tipo=\"{$section_tipo}\" data-parent=\"{$parent}\" data-lang=\"{$lang}\" 
-						value=\"{$dato}\" 
+						$html_contenido .= "\n<input class=\"css_input_text {$ar_css['css_input_text']}\" type=\"text\"
+						data-tipo=\"{$tipo}\"
+						data-section_tipo=\"{$section_tipo}\"
+						data-parent=\"{$parent}\"
+						data-lang=\"{$lang}\"
+						value=\"{$dato}\"
 						title=\"$html_title\"
-						/>";			
+						name=\"{$input_name}\"
+						autocomplete=\"off\"
+						onchange=\"component_input_text.Save(this)\"
+						$remove_autocomplete />";
+						#$html_contenido .= "<script>setAttribute(“autocomplete”,”off”)</script>";
+
+						#readonly onfocus=\"this.removeAttribute('readonly');\"
 						
 						#$html_contenido .= "\n <span  class=\"css_span_log\"></span>";					
 						#$html_contenido .= "\n <span  class=\"css_span_ejemplo {$ar_css['css_span_ejemplo']}\">$ejemplo</span>";						

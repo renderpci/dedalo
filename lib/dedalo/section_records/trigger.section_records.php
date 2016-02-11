@@ -27,7 +27,7 @@ if ($mode=='load_rows') {
 		#dump($_REQUEST,"_REQUEST");
 	}
 	
-	$options = $_REQUEST['options'];
+	$options = $_POST['options'];
 
 
 	# Received post var 'options' is a json object stringnified. Decode to regenrate original object
@@ -67,7 +67,7 @@ if ($mode=='load_rows') {
 	}
 
 	#$options = json_handler::decode(json_encode($options));	# Force array of objects instead default array of arrays format
-		#dump($options, 'options', array());
+		#dump($options, 'options', array()); die();
 
 	if (!defined('SECTION_TIPO')) {
 		define('SECTION_TIPO', $options->section_tipo);

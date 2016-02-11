@@ -9,7 +9,7 @@ class TesauroElements {
 	/*
 	* CREA LINEA DE TESAURO CON ICONOS Y TÉRMINO
 	*/
-	protected function makeTSline($terminoID,$termino,$parent,$children,$def,$obs,$hijosD,$hijosND,$nIndexaciones,$ncaptaciones,$nordenV,$resalte,$modelo,$usableIndex,$traducible) {
+	protected function makeTSline($terminoID,$termino,$parent,$children,$def,$obs,$hijosD,$hijosND,$nIndexaciones,$ncaptaciones,$nordenV,$resalte,$modelo,$usableIndex,$traducible,$visible) {
 
 		# Linea de iconos y término
 		#print("terminoID $terminoID,termino $termino,parent $parent,children $children,def $def,obs $obs,hijosD $hijosD,hijosND $hijosND,ncaptaciones $ncaptaciones,nordenV $nordenV,resalte $resalte,modo $modo ,usableIndex $usableIndex <hr>");
@@ -73,7 +73,7 @@ class TesauroElements {
 			}
 
 			# Mostrar texto del término
-			$html .= $this->renderTextTermino($terminoID,$termino,$parent,$resalte);
+			$html .= $this->renderTextTermino($terminoID,$termino,$parent,$resalte,$visible);
 
 			if($traducible=='no')
 			$html .= " <em>(no traducible)</em>";
@@ -228,7 +228,7 @@ class TesauroElements {
 	/*
 	crea el texto del termino
 	*/
-	protected function renderTextTermino($terminoID,$termino,$parent,$resalte=0) {
+	protected function renderTextTermino($terminoID,$termino,$parent,$resalte=0,$visible='si') {
 
 		global $editar_title ;
 
@@ -246,11 +246,12 @@ class TesauroElements {
 			$html .= "[$this->ts_lang] ";
 			$html .= "</span>";
 		}
+		$style_visible = $visible=='no' ? 'visible_no' : '';
 
 		if( substr($terminoID, 0,2)=='dd' && DEDALO_DATABASE_CONN!='dedalo4_development' ) {
-			$html .= "\n <span class=\"termino_text\" alt=\"$terminoID\" >";
+			$html .= "\n <span class=\"termino_text $style_visible\" alt=\"$terminoID\" >";
 		}else{
-			$html .= "\n <span class=\"termino_text\" alt=\"$terminoID\" ondblclick=\"ts.edit_inline(this)\">";
+			$html .= "\n <span class=\"termino_text $style_visible\" alt=\"$terminoID\" ondblclick=\"ts.edit_inline(this)\">";
 		}
 		$html .= $termino;
 		$html .= "</span>";
@@ -346,7 +347,7 @@ class TesauroElements {
 		$html 	 = "\n <!-- Btn Mostrar usados -->";
 		$title 	 = '';#label::get_label('');
 		$termino = urlencode($termino);
-		$html 	 .= "\n <div class=\"cuadroU\" title=\"$title\" onclick=\"ts.show_indexations('$terminoID','$termino');\">U:$nIndexaciones</div>";
+		$html 	 .= "\n <div class=\"cuadroU\" title=\"$title\" onclick=\"ts.show_indexations(this, '$terminoID','$termino','$nIndexaciones');\">U:$nIndexaciones</div>";
 
 		return $html ;
 	}

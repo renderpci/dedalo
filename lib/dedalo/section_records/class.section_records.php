@@ -92,7 +92,7 @@ class section_records extends common {
 				$rows_obj->result 	= $ar_data;
 				$rows_obj->options 	= $this->options;
 
-			$this->rows_obj = $rows_obj;		
+			$this->rows_obj = $rows_obj;
 		}
 		#
 		# DEFAULT CASE (save_handler is 'database')

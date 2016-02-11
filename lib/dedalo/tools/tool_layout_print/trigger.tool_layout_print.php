@@ -5,7 +5,7 @@ require_once( DEDALO_LIB_BASE_PATH .'/common/class.exec_.php');
 	
 if(login::is_logged()!==true) {
 	$string_error = "Auth error: please login";
-	print Error::wrap_error($string_error);
+	print dd_error::wrap_error($string_error);
 	die();
 }
 // it's safe to overwrite the $_POST if the content-type is application/json

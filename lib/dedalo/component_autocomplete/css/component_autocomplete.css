@@ -21,14 +21,7 @@ WRAP DIV CONTAINER*/
 input.css_autocomplete_search_field {
 	float: right;
 	width: 90px;
-	margin-left: 10px;
-	/*
-	padding: 2px;
-	padding-left: 5px;	
-	border: 1px solid #9E9E9E;
-	border-radius: 3px;
-	box-shadow: inset 0 0 6px #999999;
-	*/
+	margin-right: 13px;	
 	opacity: 0.5;
 	background: white url('../../themes/default/lupa2.gif') right center no-repeat;
 	background-size: auto 100%;
@@ -71,21 +64,25 @@ input.css_autocomplete_dato_hidden {
 	background-position: -456px 0;
 	opacity: 0.3;
 }
-/* BTN EDIT */
+/* BTN EDIT SECTION */
 .edit_autocomplete {
 	float: right;
 	position: relative;
 	top: 5px;
-	right: 3px;
 	background-position: 0 -72px;
 	opacity: 0.3;
+}
+/* BTN EDIT ROW */
+.edit_autocomplete_row {
+	top: 2px;
+    left: 5px;
 }
 /* BTN NEW */
 .new_autocomplete {
 	float: right;	
 	position: relative;
 	top: 5px;
-	right: 7px;
+	right: 5px;
 	background-position: 0 -96px;
 	opacity: 0.3;
 }

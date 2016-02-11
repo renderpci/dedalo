@@ -1,4 +1,6 @@
 <?php
+
+
 	
 	# CONTROLLER
 
@@ -10,6 +12,7 @@
 	$dato 					= $this->get_dato();			#dump($dato);
 	$label 					= $this->get_label();
 	$required				= $this->get_required();
+	$propiedades			= $this->get_propiedades();
 	$debugger				= $this->get_debugger();
 	$permissions			= common::get_permissions($tipo);
 	$ejemplo				= NULL;
@@ -31,27 +34,23 @@
 	
 	switch($modo) {
 	
-		case 'edit'	:
+		case 'edit'	:				
+					
+				$ar_target_section_tipo 	 = $this->get_ar_target_section_tipo();		
+				$ar_target_section_tipo_json = json_encode($ar_target_section_tipo);	#dump($ar_target_section_tipo, ' ar_target_section_tipo ++ '.to_string());
 				
 				$tipo_to_search			= $this->get_tipo_to_search(); 	
-				#$referenced_section_tipo= $this->get_referenced_section_tipo();		#dump($referenced_section_tipo, ' referenced_section_tipo'); return;
-				$referenced_section_tipo= $this->get_target_section_tipo();
 				$ar_css					= false;
-				#$valor 				= $this->get_valor();		#dump($valor,"$label valor");
-				$ar_valor 				= $this->get_valor($lang,'array');
+				$valor 					= $this->get_valor();		#dump($valor,"$label valor");
+				$ar_valor 				= $this->get_valor($lang,'array');		#dump($ar_valor, ' ar_valor ++ '.to_string());
 				$id_wrapper 			= 'wrapper_'.$identificador_unico;
 				$input_name 			= "{$tipo}_{$parent}";
-				$component_info 		= $this->get_component_info('json');
-				#$parent_section_tipo	= component_common::get_section_tipo_from_component_tipo($referenced_tipo);
-				#$current_tipo_section 	= $this->get_current_tipo_section();
+				$component_info 		= $this->get_component_info('json');				
 				$dato_json 				= json_handler::encode($dato);
 
-					/*
-					dump($tipo_to_search, ' tipo_to_search');					
-					dump($referenced_section_tipo, ' referenced_section_tipo');
-					#dump($parent_section_tipo, ' parent_section_tipo');
-					#dump($current_tipo_section, ' current_tipo_section');
-					*/
+				$in_time_machine =  (isset($_REQUEST['m']) && $_REQUEST['m']=='tool_time_machine') || 
+									(isset($_REQUEST['mode']) && $_REQUEST['mode']=='load_preview_component') ? true : false;
+				
 				break;
 
 		case 'tool_time_machine' :	
@@ -64,7 +63,7 @@
 						
 		case 'search':
 				$referenced_tipo		= $this->get_referenced_tipo();
-				$ar_list_of_values		= $this->get_ar_list_of_values(DEDALO_DATA_LANG, null); // $this->get_ar_list_of_values( $lang, null, $this->referenced_section_tipo, $filter_custom );
+				$ar_list_of_values		= $this->get_ar_list_of_values(DEDALO_DATA_LANG, null); // $this->get_ar_list_of_values( $lang, null, $this->ar_referenced_section_tipo, $filter_custom );
 
 				$ar_comparison_operators = $this->build_search_comparison_operators();
 				$ar_logical_operators 	 = $this->build_search_logical_operators();

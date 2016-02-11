@@ -1,10 +1,6 @@
 <?php
-	if(!SHOW_DEBUG) {
-		return '';
-	}
-
+	
 	# CONTROLLER
-
 	$tipo 					= $this->get_tipo();
 	$target_section_tipo	= $this->RecordObj_dd->get_parent();
 	$id						= NULL;

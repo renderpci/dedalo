@@ -31,9 +31,10 @@ if($mode=='show_indexations') {
 	$html 				= $diffusion_index_ts->get_html();
 		#dump($html,'$html');
 
-	exit($html);
+	echo $html;
+	exit();
 
-}#end Save
+}#end show_indexations
 
 
 

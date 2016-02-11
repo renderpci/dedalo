@@ -64,33 +64,4 @@
 
 }
 
-/* icons */
 
-.av_video_icon {
-	background-position: -192px 0px;
-}
-/*
-.av_upload_icon {
-	background-position: -288px -144px;
-}
-*/
-.tool_upload_icon {
-	background-position: -288px -144px;
-}
-
-.av_download_icon {
-	background-position: -312px -144px;
-}
-.av_download_icon_watermark {
-	background-position: -120px -24px;
-}
-.av_delete_icon {
-	/* background-image: url('../../../themes/default/delete.png'); 
-	width: 11px;
-	height: 13px;
-	*/
-	background-position: -456px 0px;
-}
-.av_generate_icon {
-	background-position: -432px 0px;	
-}

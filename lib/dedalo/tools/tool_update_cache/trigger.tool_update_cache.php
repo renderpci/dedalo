@@ -29,9 +29,7 @@ if($mode=='update_cache') {
 	$result 			= $tool_update_cache->update_cache();
 
 	if(SHOW_DEBUG) {		
-		#dump(tool_update_cache::$debug_response,'$tool_update_cache->debug_response');
-		#global $log_messages;
-		#$log_messages .= tool_update_cache::$debug_response;
+		#dump(tool_update_cache::$debug_response,'$tool_update_cache->debug_response');		
 	}
 	
 	if ($result==true) {
@@ -56,24 +54,20 @@ if($mode=='update_cache_by_section_id') {
 	if (empty($section_tipo)) throw new Exception("Error Processing Request: Unable load_source_component ! (Few vars1)", 1);
 	if (empty($section_id))   throw new Exception("Error Processing Request: Unable load_source_component ! (Few vars2)", 1);
 
-	if (strpos($section_id, ',')!==false) {
-		$section_id = explode(',', $section_id);
-	}else{
-		$section_id = (array)$section_id;
-	}
 
-	$tool_update_cache  = new tool_update_cache($section_tipo);
+	$locator = new locator();
+		$locator->set_section_tipo($section_tipo);
+		$locator->set_section_id($section_id);	
 
 	$options = new stdClass();
-		$options->filter_by_id = $section_id;
+		$options->filter_by_id = array( $locator );
 	
-	$result  = $tool_update_cache->update_cache( $options );
+	$tool_update_cache  = new tool_update_cache($section_tipo);
+	$result  			= $tool_update_cache->update_cache( $options );
 
 
 	if(SHOW_DEBUG) {		
-		#dump(tool_update_cache::$debug_response,'$tool_update_cache->debug_response');
-		#global $log_messages;
-		#$log_messages .= tool_update_cache::$debug_response;
+		#dump(tool_update_cache::$debug_response,'$tool_update_cache->debug_response');		
 	}
 	
 	if ($result==true) {
@@ -82,6 +76,8 @@ if($mode=='update_cache_by_section_id') {
 		echo $result;
 	}
 	
+	debug_log(__METHOD__." update_cache_by_section_id trigger result: ".to_string($result), logger::DEBUG);
+
 	exit();
 }
 

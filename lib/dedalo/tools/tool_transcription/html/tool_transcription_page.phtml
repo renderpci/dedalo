@@ -7,7 +7,36 @@
 	
 
 	$html    = "\n<!-- TOOL TRANSCRIPTION PAGE [tipo:$tipo] -->";
-	$html   .= $header_html;
+	#$html   .= $header_html;
+	$html   .= "\n<div class=\"header_tool\">";
+
+		# LANG SELECTOR (PROVISIONAL)
+		$html .= "<div class=\"lang_selector_in_header\">". label::get_label('idioma');		
+		$html .= "<select name=\"dedalo_data_lang\" id=\"dedalo_data_lang\"		
+		data-tipo=\"$component_related_tipo\"
+		data-section_tipo=\"{$section_tipo}\"
+		data-parent=\"$parent\"
+		data-type_of_lang=\"dedalo_data_lang\"
+		onchange=\"tool_transcription.change_text_editor_lang(this)\">";
+
+			foreach($ar_all_project_langs as $lg) {
+				$selected = null;
+				if(DEDALO_DATA_LANG==$lg) $selected = 'selected="selected"';
+				$html .= "<option value=\"$lg\" {$selected}>".RecordObj_ts::get_termino_by_tipo($lg,DEDALO_APPLICATION_LANG)."</option>";
+			}			
+			
+		$html .= "</select>";
+		$html .= "</div>";#end lang_selector_in_header
+
+
+		# HEADER_INFO
+		$html .= "\n <div id=\"header_info\"> Info: </div>";
+		
+		# COMPONENT STATE
+		$html   .= $component_state_html ;
+
+
+	$html   .= "</div><!-- /header_tool -->";
 	$html   .= "\n<div class=\"wrap_tool_transcription_page\" >";
 
 		
@@ -56,7 +85,7 @@
 	print $html;		
 ?>
 
-<script type="text/javascript">
+<script>
 	var component_related_obj_tipo = "<?php echo $component_related_obj_tipo ?>";
 		//console.log(component_related_obj_tipo); alert(component_related_obj_tipo)	
 </script>

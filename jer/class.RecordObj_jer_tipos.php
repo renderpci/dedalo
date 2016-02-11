@@ -59,6 +59,7 @@ class RecordObj_jer_tipos extends RecordDataBoundObject {
 		
 		$RecordObj_jer_tipos		= new RecordObj_jer_tipos(NULL);		
 		$ar_id						= $RecordObj_jer_tipos->search($arguments);
+			#dump($ar_id, ' ar_id ++ '.to_string());
 		
 		foreach($ar_id as $id) {
 			

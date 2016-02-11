@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<title><?php echo $page_title ?></title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="shortcut icon" href="<?php echo DEDALO_ROOT_WEB ?>/favicon.ico" />
+<?php echo $css_link_code ?>
+
+<script>
+var DEDALO_LIB_BASE_URL	= '<?php echo DEDALO_LIB_BASE_URL ?>', DEDALO_ROOT_WEB = '<?php echo DEDALO_ROOT_WEB ?>';
+var page_globals = {
+	dedalo_version:'<?php echo DEDALO_VERSION ?>',
+	dedalo_application_lang:'<?php echo DEDALO_APPLICATION_LANG ?>',
+	dedalo_data_lang:'<?php echo DEDALO_DATA_LANG ?>',
+	dedalo_data_nolan:'<?php echo DEDALO_DATA_NOLAN ?>',
+	section_tipo:"<?php echo defined('SECTION_TIPO') ? SECTION_TIPO : '' ?>",
+	modo:'<?php echo $modo ?>',
+	user_id:'<?php if(isset($user_id)) echo $user_id ?>'
+}
+DEBUG = <?php var_export(SHOW_DEBUG); ?>;
+</script><?php echo $js_link_code ?>
+</head>
+
+<body>
+	<div id="html_page_wrap">
+
+		<?php
+		# PAGE HEADER HTML
+			#print $html_header;
+		
+		# CONTENT HTML
+			echo '<!-- CONTENT HTML -->';
+			echo "\n<div id=\"content_maintenance\" class=\"content_html\">";
+			echo "	<h1 class=\"main_font_light\"> ".label::get_label('sitio_en_mantenimiento')." </h1>";
+			echo "\n</div><!-- /content_html -->\n\n";	
+		?>
+
+	</div><!-- /html_page_wrap -->
+</body>
+</html>

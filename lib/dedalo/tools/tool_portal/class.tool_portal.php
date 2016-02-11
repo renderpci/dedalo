@@ -15,6 +15,7 @@ class tool_portal extends tool_common {
 
 	public $button_row ;
 
+
 	
 	public function __construct($component_obj, $modo='button') {
 		

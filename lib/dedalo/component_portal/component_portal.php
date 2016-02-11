@@ -34,13 +34,14 @@
 	$button_new_html 		= NULL;
 	$section_html 			= NULL;
 	$file_name				= $modo;
-	
+
+	$portal_parent 			= $parent;	
 
 	# TIME MACHINE SPECIFIC KEY CHANGES
 	$id_time_machine_key = isset($_REQUEST['id_time_machine']) ? '_'.$_REQUEST['id_time_machine'] : '';
 	# SEARCH_OPTIONS_SESSION_KEY
-	$search_options_session_key = $identificador_unico.'_'.TOP_TIPO.'_'.TOP_ID.$id_time_machine_key;		#dump($search_options_session_key," search_options_session_key");
-
+	#$search_options_session_key = 'portal_edit'.$identificador_unico.'_'.TOP_TIPO.'_'.TOP_ID.$id_time_machine_key;		#dump($search_options_session_key," search_options_session_key");
+	$search_options_session_key = 'portal_'.$modo.'_'.$section_tipo.'_'.$tipo.'_'.$parent;
 	
 	switch($modo) {	
 		
@@ -83,7 +84,7 @@
 					# LAYOUT_MAP : Calculate list for layout map
 					# All related terms are selected except section that is unset from the array								
 					$layout_map_virtual  = $this->get_layout_map();
-					$target_section_tipo = $this->get_target_section_tipo();
+					$target_section_tipo = $this->get_ar_target_section_tipo()[0];
 						#dump( $layout_map_virtual,"layout_map_virtual - $target_section_tipo"); #die();
 
 					# OPTIONS
@@ -115,9 +116,7 @@
 					#dump($rows_data," rows_data");
 				$ar_columns = $this->get_ar_columns();	
 					#dump($ar_columns, ' ar_columns ++ '.to_string());
-					#die();			
-			
-				#!isset($target_section_tipo) ? $target_section_tipo = $this->get_target_section_tipo() : '';
+					#die();				
 				break;
 
 
@@ -131,14 +130,14 @@
 				$valor			= $this->get_dato_as_string();
 				$component_info = $this->get_component_info('json');
 
+
 				#$this->get_valor();
 
 				$exclude_elements = $this->get_exclude_elements();
 					#dump($exclude_elements, ' exclude_elements');
 					#dump($dato, ' dato');
 				if(SHOW_DEBUG) {
-					#dump($_SESSION['dedalo4']['config']['search_options'][$search_options_session_key],"options for $tipo");
-					unset($_SESSION['dedalo4']['config']['search_options'][$search_options_session_key]);
+					#dump($_SESSION['dedalo4']['config']['search_options'][$search_options_session_key],"options for $tipo");				
 				}			
 				if (empty($dato)) {
 
@@ -150,10 +149,7 @@
 					$this->html_options->rows 	= false;
 
 				}else{
-
-					if(SHOW_DEBUG) {
-						#unset($_SESSION['dedalo4']['config']['search_options'][$search_options_session_key]);
-					}					
+										
 					if (isset($_SESSION['dedalo4']['config']['search_options'][$search_options_session_key])) {						
 						$options = $_SESSION['dedalo4']['config']['search_options'][$search_options_session_key];		
 						$options->full_count = false; # Force update count records on non ajax call						
@@ -163,17 +159,17 @@
 						
 						# LAYOUT_MAP : Calculate list for layout map
 						# All related terms are selected except section that is unset from the array								
-						$layout_map_virtual  = $this->get_layout_map();
-						$target_section_tipo = $this->get_target_section_tipo();
-							#dump( $layout_map_virtual,"layout_map_virtual - $target_section_tipo"); #die();
+						$layout_map_virtual  	= $this->get_layout_map();
+						$ar_target_section_tipo = $this->get_ar_target_section_tipo();
+							#dump( $layout_map_virtual,"layout_map_virtual - $ar_target_section_tipo"); #die();
 
 						# OPTIONS
 						$options = new stdClass();
-							$options->section_tipo  = $target_section_tipo;
-							$options->filter_by_id  = (array)$dato;
-							$options->layout_map  	= $layout_map_virtual;
-							$options->modo  		= 'portal_list';
-							$options->limit 		= false; # IMPORTANT : No limit is applicated to portal list. All records are viewed always
+							$options->section_tipo  	= reset($ar_target_section_tipo);
+							$options->filter_by_locator = (array)$dato;
+							$options->layout_map  		= $layout_map_virtual;
+							$options->modo  			= 'portal_list';
+							$options->limit 			= false; # IMPORTANT : No limit is applicated to portal list. All records are viewed always
 							$options->search_options_session_key = $search_options_session_key;
 								#dump($options," options");					
 
@@ -191,13 +187,32 @@
 					if(SHOW_DEBUG) {
 						#dump($rows_data->result," rows_data result ".to_string($options));
 					}
+					
+
+					#
+					# COMPONENT STATE DATO
+					/*
+					if (isset($this->component_state_tipo)) {
+
+						$state_options = $options;
+						$state_options->tipo_de_dato = 'dato';
+						$state_options->layout_map 	 = array($this->component_state_tipo);
+						$rows_data_state = search::get_records_data($state_options);
+							dump($rows_data_state, ' rows_data_state ++ '.to_string());		
 						
+						# STATE UPDATE DATA
+						$this->update_state($rows_data_state);
+					}
+					*/
 				}
 				
 					#dump($rows_data," rows_data");
 				$ar_columns = $this->get_ar_columns();				
 			
-				!isset($target_section_tipo) ? $target_section_tipo = $this->get_target_section_tipo() : '';
+				!isset($ar_target_section_tipo) ? $ar_target_section_tipo = $this->get_ar_target_section_tipo() : array();
+				$ar_target_section_tipo_json = json_encode($ar_target_section_tipo);
+
+
 				$show_button_new = $this->get_show_button_new();					
 				
 				# Daggable
@@ -209,12 +224,7 @@
 		# Build section list from array of section's id stored in component_portal dato
 		case 'list' :					
 				$dato = $this->get_dato();		#dump($dato); #dump($dato," dato $this->tipo - ". print_r($this,true) );				
-				if (empty($dato)) return null;
-				
-				if(SHOW_DEBUG) {
-					#dump($search_options_session_key,"options for $tipo");
-					#unset($_SESSION['dedalo4']['config']['search_options'][$search_options_session_key]);
-				}
+				if (empty($dato)) return null;				
 
 				if (isset($_SESSION['dedalo4']['config']['search_options'][$search_options_session_key])) {						
 					$options = $_SESSION['dedalo4']['config']['search_options'][$search_options_session_key];		
@@ -222,21 +232,25 @@
 					# Set context
 					$context = $options->context;
 
+					$options->filter_by_id  = (array)$dato;
+
 				}else{						
 					
 					# LAYOUT_MAP : Calculate list for layout map
 					# All related terms are selected except section that is unset from the array								
-					$layout_map_virtual  = $this->get_layout_map();
-					$target_section_tipo = $this->get_target_section_tipo();
+					$layout_map_virtual  	= $this->get_layout_map();
+					$ar_target_section_tipo = $this->get_ar_target_section_tipo();
 						#dump( $layout_map_virtual,"layout_map_virtual - $target_section_tipo");#die();
+
 	
 					# OPTIONS
 					$options = new stdClass();
-						$options->section_tipo  = $target_section_tipo;
-						$options->filter_by_id  = (array)$dato;
-						$options->layout_map  	= $layout_map_virtual;
-						$options->modo  		= 'portal_list';
-						$options->limit 		= false; # IMPORTANT : No limit is applicated to portal list. All records are viewed always
+						$options->section_tipo  	 = reset($ar_target_section_tipo);
+						#$options->section_tipo  	 = reset($dato)->section_tipo;
+						$options->filter_by_locator  = (array)$dato;
+						$options->layout_map  		 = $layout_map_virtual;
+						$options->modo  			 = 'portal_list';
+						$options->limit 			 = false; # IMPORTANT : No limit is applicated to portal list. All records are viewed always						
 						$options->search_options_session_key = $search_options_session_key;
 
 						# OPTIONS CONTEXT : Configure section context
@@ -248,12 +262,14 @@
 						$options->context = $context;
 							#dump($options,"options");									
 				}//end if (!empty($_SESSION['dedalo4']['config']['search_options'][$search_options_session_key]))
+				#dump($options, ' options ++ '.to_string());
 				
 				$rows_data = search::get_records_data($options);
 					#dump($rows_data," rows_data");
-				$ar_columns = $this->get_ar_columns();					
+				$ar_columns = $this->get_ar_columns();				
 				
-				!isset($target_section_tipo) ? $target_section_tipo = $this->get_target_section_tipo() : '';
+				!isset($ar_target_section_tipo) ? $ar_target_section_tipo = $this->get_ar_target_section_tipo() : array();
+				$ar_target_section_tipo_json = json_encode($ar_target_section_tipo);
 				break;
 		
 		/*
@@ -270,7 +286,7 @@
 						if (is_array($dato) && !empty($dato[0])) {
 							#dump($dato,"dato");
 
-							$target_section_tipo = $this->get_target_section_tipo();
+							$target_section_tipo = $this->get_ar_target_section_tipo()[0];
 
 							# Now we create and configure a new empty section for list ($id=NULL, $tipo=false, $modo='edit', $parent=NULL, $lang=DEDALO_DATA_LANG)
 							$section_obj = section::get_instance(NULL, $target_section_tipo, 'portal_list');	#dump($target_section_tipo,'$target_section_tipo');

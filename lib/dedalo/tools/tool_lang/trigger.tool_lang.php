@@ -4,7 +4,7 @@ require_once( dirname(dirname(dirname(__FILE__))) .'/config/config4.php');
 if(login::is_logged()!==true) die("<span class='error'> Auth error: please login </span>");
 
 # set vars
-	$vars = array('mode','id','parent','section_tipo','dato','tipo','lang','source_lang','target_lang','caller_component_tipo','caller_element');
+	$vars = array('mode','id','parent','section_tipo','dato','tipo','lang','source_lang','target_lang','caller_component_tipo','caller_element','tool_name','tool_locator');
 		foreach($vars as $name) $$name = common::setVar($name);
 
 # mode
@@ -144,55 +144,34 @@ if($mode=='load_target_component') {
 */
 if($mode=='update_tool_header') { 	
 	
-	if (empty($caller_component_tipo)|| empty($caller_element) || empty($parent)) throw new Exception("Error Processing Request: Unable update_tool_header ! (Few vars1)", 1);
+	if (empty($tipo)||
+		empty($parent) ||
+		empty($section_tipo) ||
+		empty($lang) ||
+		empty($tool_name) || 
+		empty($tool_locator)
+		) exit("Error Processing Request: Unable update_tool_header ! (Few vars1)");
 
+	$modelo_name    = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+	$component_obj  = component_common::get_instance($modelo_name,
+													$tipo,
+													$parent,
+													'edit_tool',
+													$lang,
+													$section_tipo);
 
-	# NEW MODE : Sin usar get_ar_children_objects_by_modelo_name_in_section
-	$section_tipo	= component_common::get_section_tipo_from_component_tipo($caller_component_tipo);	# ++ por verificar el cáculo <<<<<<<
-	$ar_result 		= section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, 'component_state',true);
-
-	if (empty($ar_result[0])) {
-		return null;
-	}else{
-		$component_tipo = $ar_result[0];
-		#$component_state  = new component_state($component_tipo, $parent, 'edit_tool', DEDALO_DATA_NOLAN);	#$id=NULL, $tipo=NULL, $modo='edit', $parent=NULL, $lang=DEDALO_DATA_LANG
-		$component_state  = component_common::get_instance('component_state', $component_tipo, $parent, 'edit_tool', DEDALO_DATA_NOLAN, $section_tipo);
-
-		# Configuramos el componente en el modo adecuado para el tool
-		$component_state->set_caller_component_tipo($caller_component_tipo);
-		$component_state->set_caller_element($caller_element);
-		$component_state->set_modo('edit_tool');
+	#
+	# STATE
+	# Create component_state configurated
+	$component_state 		= $component_obj->get_component_state( $tool_locator, $component_obj->get_lang() );
+	$component_state_html 	= '';
+	if (!empty($component_state)) {
+		$component_state_html = $component_state->get_html();
 	}
 	
-
-	/*
-	# OLD MODE
-	# Calculamos el tipo del component_state en base al parent recibido que es común
-	$section_tipo 	= common::get_tipo_by_id($parent, $table='matrix');
-	$section 		= section::get_instance($parent, $section_tipo);
-		
-	$ar_children_objects_by_modelo_name = $section->get_ar_children_objects_by_modelo_name_in_section($modelo_name_required='component_state');
-	if (count($ar_children_objects_by_modelo_name)!=1) {
-		#$msg = "Warning: component_state not found or is not properly defined in structure. component_state founded: ".count($ar_children_objects_by_modelo_name);
-		#trigger_error($msg);
-		return null;
-	}
-	$tipo = $ar_children_objects_by_modelo_name[0]->get_tipo();		
+	debug_log(__METHOD__." Updated tool header ".to_string(), logger::DEBUG);
 	
-	# COMPONENT	
-	$component_state	= new component_state($tipo, $parent, 'edit_tool');
-
-	# Configure obj
-	$component_state->set_caller_component_tipo($caller_component_tipo);
-	$component_state->set_caller_element($caller_element);
-	*/
-
-
-
-	# Get component html
-	$html = $component_state->get_html();
-	
-	print $html;
+	print $component_state_html;
 	exit();
 	
 }

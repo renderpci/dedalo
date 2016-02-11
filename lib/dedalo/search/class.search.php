@@ -36,7 +36,7 @@ class search extends common {
 			}			
 			return null;
 		}
-		if(empty($options->section_tipo)){
+		if(empty($options->section_tipo) && !isset($options->filter_by_locator) ){
 			trigger_error("options section_tipo is mandatory");
 			return null;
 		}
@@ -44,8 +44,8 @@ class search extends common {
 		#dump($options,'options');
 		#error_log("Llamada get_rows_data con section_tipo:$options->section_tipo ");
 
-		# SECTION TIPO : mandatory
-		$section_tipo = $options->section_tipo;		
+		# SECTION TIPO : mandatory		
+		$section_tipo = $options->section_tipo;
 
 		#
 		# OPTIONS : Las opciones pasadas en la llamada modifican los valores default de la búsqueda
@@ -63,10 +63,11 @@ class search extends common {
 			$sql_options->projects				= (bool)false;	# user projects (normaly calculated later)
 			
 			$sql_options->filter_by_id			= (bool)false;	# Used by portals, etc. If exists, must be a array of locator objects with '$locator->section_id = $record_id' defined inside
-			
+			$sql_options->filter_by_locator		= (bool)false;	
 			$sql_options->filter_by_search		= (bool)false;	# Search filter used by search form			
 			$sql_options->filter_by_propiedades	= (bool)false;
 			$sql_options->filter_by_section_creator_portal_tipo	= (bool)false;
+			$sql_options->filter_by_inverse_locators 			= (bool)false;		
 			$sql_options->filter_custom			= (bool)false;
 			
 			$sql_options->operators				= (bool)false;	# SQL operators used by search from
@@ -110,8 +111,8 @@ class search extends common {
 		#
 		# MATRIX_TABLE
 		# Si no se recibe en options se calculará aquí 
-		if (!$sql_options->matrix_table) {
-			$sql_options->matrix_table = common::get_matrix_table_from_tipo($section_tipo);
+		if (!$sql_options->matrix_table) {			
+			$sql_options->matrix_table = common::get_matrix_table_from_tipo($section_tipo);			
 		}
 	
 		#
@@ -144,10 +145,16 @@ class search extends common {
 			}
 			$current_permissions = common::get_permissions($current_component_tipo); #dump($current_permissions, 'permissions for $current_component_tipo:'.$current_component_tipo, array());
 			if ($current_permissions<1) {
-				# Unset element from layout map to hide column in list				
-				if (is_array($sql_options->layout_map[$current_section_list_tipo])) {
-					unset($sql_options->layout_map[$current_section_list_tipo][array_search($current_component_tipo, $sql_options->layout_map[$current_section_list_tipo] )]);
-				}				
+				# Unset element from layout map to hide column in list
+				$ar_layout = reset($sql_options->layout_map);
+					#dump($clayout, ' var ++ '.to_string());	 die();
+
+				if (isset($ar_layout[$current_section_list_tipo]) && is_array($ar_layout[$current_section_list_tipo])) {
+					$ckey = array_search($current_component_tipo, $ar_layout[$current_section_list_tipo]);
+					if (isset($ckey) && $ckey) {
+						unset( reset($ar_layout)[$current_section_list_tipo][$ckey] );
+					}
+				}
 			}
 		}
 		#dump($sql_options, '$sql_options->layout_map', array()); die();
@@ -160,7 +167,7 @@ class search extends common {
 
 		#
 		# SECTION FILTER TIPO : Actual component_filter de esta sección
-		#$component_filter_tipo = section::get_ar_children_tipo_by_modelo_name_in_section($sql_options->section_real_tipo, 'component_filter')[0];
+		#$component_filter_tipo = section::get_ar_children_tipo_by_modelo_name_in_section($sql_options->section_tipo, 'component_filter')[0];
 			#dump($component_filter_tipo,"component_filter_tipo");die();
 
 
@@ -242,19 +249,51 @@ class search extends common {
 			# FILTER
 			#
 			#					
-				$sql_filtro =' section_id IS NOT NULL ';
-				
+				# FILTER BASE
+				$sql_filtro =' section_id IS NOT NULL ';				
 				if($sql_options->section_tipo == DEDALO_ACTIVITY_SECTION_TIPO){
 					$sql_filtro = ' id IS NOT NULL ';
 				}
+
+
+				#
+				# FILTER_BY_SECTION_TIPO : Add current section tipo to filter (in matrix time machine column section_tipo is 'tipo')									
+					if( $sql_options->section_tipo !== DEDALO_ACTIVITY_SECTION_TIPO && !$sql_options->filter_by_locator ) {
+						
+						$sql_filtro .= "\n-- filter_by_section_tipo -- \n";	
+						
+						$RecordObj_dd = new RecordObj_dd($sql_options->section_tipo);
+						$propiedades  = $RecordObj_dd->get_propiedades();		
+						$propiedades  = (object)json_decode($propiedades);		
+						if ( property_exists($propiedades, 'section_tipo') && $propiedades->section_tipo=='real' ) {
+							$current_section_tipo = section::get_section_tipo_static($sql_options->section_tipo); #dump($propiedades, " propiedades ".to_string());
+						}else{
+							$current_section_tipo = $sql_options->section_tipo;
+						}
+						$sql_filtro .= " AND ($section_tipo_column_name = '$current_section_tipo') "; # Column mode
+					}
+
+				#
+				# FILTER_BY_LOCATOR : Section filtered by locators (section_id & section_tipo)					
+					if ($sql_options->filter_by_locator) {
+						$filter_by_locator  = '';
+						foreach ((array)$sql_options->filter_by_locator as $current_locator) {
+							$filter_by_locator .= "(section_tipo='$current_locator->section_tipo' AND section_id=$current_locator->section_id) OR\n";
+						}
+						if (!empty($filter_by_locator)) {
+							$sql_filtro .= "\n-- filter_by_locator -- \n AND (\n" . substr($filter_by_locator, 0,-3)."\n)";
+						}
+					}
+				
 				#
 				# FILTER_BY_ID : Used by portals and formated as locator objects array
-					if ($sql_options->section_real_tipo==DEDALO_SECTION_USERS_TIPO) {
-						$sql_filtro .= 'AND (section_id>0)'; # Avoid show global admin user in list
+					if ($sql_options->section_tipo==DEDALO_SECTION_USERS_TIPO) {
+						$sql_filtro .= 'AND (section_id>0) '; # Avoid show global admin user in list
 					}																
 					if(!empty($sql_options->filter_by_id) && is_array($sql_options->filter_by_id)) {
-							#dump($sql_options->filter_by_id," sql_options->filter_by_id");
-						$sql_filtro .= "\n-- filter_by_id -- \n";						
+						
+						$sql_filtro .= "\n-- filter_by_id -- \n";
+
 						$sql_filtro .= ' AND (';
 						$filter_by_id_keys = array_keys($sql_options->filter_by_id);
 						$order_by_resolved='';
@@ -270,7 +309,6 @@ class search extends common {
 								throw new Exception("ERROR: Deprecated section_id_matrix for current_locator: :" .json_encode($current_locator). " ");							
 							}
 
-
 							if (!is_object($sql_options->filter_by_id[$current_key]) || !isset($current_locator->section_id) || empty($current_locator->section_id)) { 
 								# Invalid locator
 								if(SHOW_DEBUG) {
@@ -280,9 +318,7 @@ class search extends common {
 								}
 							}else{
 
-
-								$current_id_section = $current_locator->section_id;
-								$sql_filtro .= " section_id=".intval($current_id_section).' ';
+								$sql_filtro .= " section_id=".(int)$current_locator->section_id." ";
 								if ($current_key != end($filter_by_id_keys)) {
 									$sql_filtro .= 'OR';
 									#error_log($current_key." - ".end($filter_by_id_keys));
@@ -294,7 +330,7 @@ class search extends common {
 								# WHEN id=225086 THEN 1
 								# WHEN id=225041 THEN 2
 								# END
-								$order_by_resolved .= "\nWHEN section_id={$current_id_section} THEN $i ";
+								$order_by_resolved .= "\nWHEN section_id={$current_locator->section_id} THEN $i ";
 								$i++;
 							}							
 						}
@@ -302,60 +338,54 @@ class search extends common {
 
 						# ORDER BY : Final clause
 						$order_by_resolved = "\nCASE ".$order_by_resolved." \nEND ";
-							#dump($order_by_resolved,"order_by_resolved"); 	dump($sql_options,"sql_options");
-						#dump($sql_filtro," sql_filtro $order_by_resolved");						
-					}
-					#dump($sql_options->filter_by_id, 'sql_options->filter_by_id', array());
-					#dump($sql_filtro,"sql_filtro - sql_columns:$sql_columns");
-
-				#
-				# SECTION_TIPO : Add current real section tipo to filter (in matrix time machine column section_tipo is 'tipo')
-					#if (!empty($propiedades) && !is_null($propiedades) && isset($propiedades->filtered_by) && !empty($propiedades->filtered_by) ) {
-						# Si exite un filtro de propiedades, no usamos el de sección (por velocidad y redundancia)
-					#}else{
-						$sql_filtro .= "\n-- filter_by_section_tipo -- \n";
-						#if(strlen($sql_filtro)<8) $sql_filtro .= " AND";
-						#$sql_filtro .= " AND $sql_options->json_field @> '{\"section_tipo\":\"".$sql_options->section_real_tipo."\"}'::jsonb "; # json datum mode
-						if($sql_options->section_tipo !== DEDALO_ACTIVITY_SECTION_TIPO){
-						
-							$RecordObj_dd = new RecordObj_dd($sql_options->section_tipo);
-							$propiedades  = $RecordObj_dd->get_propiedades();		
-							$propiedades  = (object)json_decode($propiedades);		
-							if ( property_exists($propiedades, 'section_tipo') && $propiedades->section_tipo=='real' ) {
-								$current_section_tipo = section::get_section_real_tipo_static($sql_options->section_tipo); #dump($propiedades, " propiedades ".to_string());
-							}else{
-								$current_section_tipo = $sql_options->section_tipo;
-							}
-							$sql_filtro .= " AND ($section_tipo_column_name = '$current_section_tipo') "; # Column mode
-						}
-						
-					#}
-
+												
+					}//END if(!empty($sql_options->filter_by_id) && is_array($sql_options->filter_by_id))				
 
 
 				#
-				# SECTION_CREATOR_PORTAL_TIPO : Section filtered by section_creator_portal_tipo
+				# FILTER_BY_SECTION_CREATOR_PORTAL_TIPO : Section filtered by section_creator_portal_tipo
 					# If is received 'view_all' as request, this filter is ignored
 					if (empty($_REQUEST['view_all']) && !empty($sql_options->filter_by_section_creator_portal_tipo)) {
 						$section_creator_portal_tipo_filtro  = "\n-- filter_by_section_creator_portal_tipo -- \n";
-						$section_creator_portal_tipo_filtro .= "AND $sql_options->json_field @> '{\"section_creator_portal_tipo\":\"".$sql_options->filter_by_section_creator_portal_tipo."\"}'::jsonb ";						
+						$section_creator_portal_tipo_filtro .= "AND $sql_options->json_field @> '{\"section_creator_portal_tipo\":\"".$sql_options->filter_by_section_creator_portal_tipo."\"}'::jsonb ";
 						if(SHOW_DEBUG) {
 							#log_messages("Used: $section_creator_portal_tipo_filtro",'');
 						}
 						$sql_filtro .= $section_creator_portal_tipo_filtro;
 					}
 
+				
+				#
+				# FILTER_BY_INVERSE_LOCATORS : Section filtered by inverse locators
+					# datos #> '{inverse_locators}' @> '[{"section_tipo":"oh1"}]'
+					if ($sql_options->filter_by_inverse_locators) {						
+						$filter_by_inverse_locators  = "\n-- filter_by_inverse_locators -- \n";
+						foreach ($sql_options->filter_by_inverse_locators as $key => $value) {
+							$filter_by_inverse_locators .= "AND $sql_options->json_field #> '{inverse_locators}' @> '[{\"$key\":\"".$value."\"}]'::jsonb ";
+						}												
+						if(SHOW_DEBUG) {
+							#log_messages("Used: $filter_by_inverse_locators",'');
+						}
+						$sql_filtro .= $filter_by_inverse_locators;
+					}
+
+
+				
+
+
+
 				#
 				# PROPIEDADES : Section filter_by_id
 				# Returned format is like '[rsc24] => 114'. component tipo => value
 				# NOTA: Opcionalmente, se podría prescindir de este filtro ya que 'filter_by_section_creator_portal_tipo' en más restrictivo. ¿Esto es así???
-					if(!empty($sql_options->filter_by_id) && is_array($sql_options->filter_by_id)) {
+					if( !empty($sql_options->filter_by_id) || !empty($sql_options->filter_by_locator) ) {
 						# Notinhg to do (filter by id is more restrictive)
 					
 					}else if ($sql_options->section_real_tipo != $sql_options->section_tipo) {
 						# This section is virtual, notinhg to do (filter by section_tipo have the same effect)
 					
 					}else{
+
 						$RecordObj_dd = new RecordObj_dd($sql_options->section_tipo);
 						$propiedades  = json_decode($RecordObj_dd->get_propiedades());				
 						if (!is_null($propiedades) && isset($propiedades->filtered_by) && !empty($propiedades->filtered_by) ) {
@@ -363,7 +393,7 @@ class search extends common {
 							$propiedades_filtro='';
 							$propiedades_filtro_include=true;
 							$propiedades_filtro .= "\n-- filter_by_propiedades -- \n";						
-							$propiedades_filtro .= ' AND (';
+							$propiedades_filtro .= ' OR (';
 							foreach ($propiedades->filtered_by as $current_component_tipo => $current_value) {
 								
 								$RecordObj_dd 	= new RecordObj_dd($current_component_tipo);
@@ -383,69 +413,69 @@ class search extends common {
 								$propiedades_filtro .= "datos#>'{components,$current_component_tipo,dato,$current_lang}' @> '$current_value_flat'::jsonb \n AND ";
 
 								/*
-								switch (true) {
-									# String : ex. '11'
-									case is_string($current_value):
-										#$propiedades_filtro .= "\n $sql_options->json_field#>>'{components, $current_component_tipo, dato, ". $current_lang ."}' = '$current_value' AND ";
-										#$propiedades_filtro .= "\n $sql_options->json_field @>'{\"components\":{\"$current_component_tipo\":{\"dato\":{\"$current_lang\":\"$current_value\"}}}}' AND ";										
-										#$propiedades_filtro .= "\n ".JSON_RecordObj_matrix::build_pg_filter(	//$modo,$datos='datos',$tipo,$lang,$value
-											#'btree',
-
-									$propiedades_filtro .=  "($sql_options->json_field #>'{components,$current_component_tipo,dato,$current_lang}'@>'$locator_fb') AND ";
-										break;
-									# Object : Case checkboxes, for example. like. '[31] => 2'
-									case is_object($current_value):
-										#dump($current_value, ' current_value');
-										$key=key($current_value);
-										$val=reset($current_value); if(!is_int($val)) $val='"'.$val.'"';										
-										$current_value_clean = "{\"$key\":$val}";
-										#$propiedades_filtro .= "\n $sql_options->json_field#>'{components, $current_component_tipo, dato, ". $current_lang ."}' @> '$current_value_clean' AND ";
-										#$propiedades_filtro .= "\n $sql_options->json_field @>'{\"components\":{\"$current_component_tipo\":{\"dato\":{\"$current_lang\":$current_value_clean}}}}' AND ";
-										# BUG !!!!!!!!!!!!!!								
-										$propiedades_filtro .= "\n ".JSON_RecordObj_matrix::build_pg_filter(	//$modo,$datos='datos',$tipo,$lang,$value
-											'btree',
-											$sql_options->json_field,
-											$current_component_tipo,
-											$current_lang,
-											$current_value
-											). " AND ";
-
-										break;
-									# Object : Case checkboxes, for example. like. '[31] => 2'
-									case is_array($current_value):
-										foreach ($current_value as $key => $current_value2) {
-											$key=key($current_value2);
-											$val=reset($current_value2); if(!is_int($val)) $val='"'.$val.'"';
-											#dump(reset($current_value2), ' current_value2 '.$key);
-											$current_value2 = "{\"$key\":$val}";
-											#$propiedades_filtro .= "\n $sql_options->json_field#>'{components, $current_component_tipo, dato, ". $current_lang ."}' @> '$current_value2' AND ";
-											#$propiedades_filtro .= "\n $sql_options->json_field @>'{\"components\":{\"$current_component_tipo\":{\"dato\":{\"$current_lang\":$current_value2}}}}' AND ";
-											# BUG !!!
+									switch (true) {
+										# String : ex. '11'
+										case is_string($current_value):
+											#$propiedades_filtro .= "\n $sql_options->json_field#>>'{components, $current_component_tipo, dato, ". $current_lang ."}' = '$current_value' AND ";
+											#$propiedades_filtro .= "\n $sql_options->json_field @>'{\"components\":{\"$current_component_tipo\":{\"dato\":{\"$current_lang\":\"$current_value\"}}}}' AND ";										
 											#$propiedades_filtro .= "\n ".JSON_RecordObj_matrix::build_pg_filter(	//$modo,$datos='datos',$tipo,$lang,$value
-											#	'btree',
-											#	$sql_options->json_field,
-											#	$current_component_tipo,
-											#	$current_lang,
-											#	$current_value2
-											#	). " AND ";											
-										}
-										$propiedades_filtro .= "\n ".JSON_RecordObj_matrix::build_pg_filter(	//$modo,$datos='datos',$tipo,$lang,$value
+												#'btree',
+
+										$propiedades_filtro .=  "($sql_options->json_field #>'{components,$current_component_tipo,dato,$current_lang}'@>'$locator_fb') AND ";
+											break;
+										# Object : Case checkboxes, for example. like. '[31] => 2'
+										case is_object($current_value):
+											#dump($current_value, ' current_value');
+											$key=key($current_value);
+											$val=reset($current_value); if(!is_int($val)) $val='"'.$val.'"';										
+											$current_value_clean = "{\"$key\":$val}";
+											#$propiedades_filtro .= "\n $sql_options->json_field#>'{components, $current_component_tipo, dato, ". $current_lang ."}' @> '$current_value_clean' AND ";
+											#$propiedades_filtro .= "\n $sql_options->json_field @>'{\"components\":{\"$current_component_tipo\":{\"dato\":{\"$current_lang\":$current_value_clean}}}}' AND ";
+											# BUG !!!!!!!!!!!!!!								
+											$propiedades_filtro .= "\n ".JSON_RecordObj_matrix::build_pg_filter(	//$modo,$datos='datos',$tipo,$lang,$value
 												'btree',
 												$sql_options->json_field,
 												$current_component_tipo,
 												$current_lang,
 												$current_value
 												). " AND ";
-										break;
-									default:
-										$propiedades_filtro_include=false;
-										if(SHOW_DEBUG) {
-											dump($current_value, ' propiedades');
-										}
-										trigger_error("Error: Current value from propiedades-filtered_by is not string or object. I can't manage this value for now");
-										break;
-								}#end switch
-								*/							
+
+											break;
+										# Object : Case checkboxes, for example. like. '[31] => 2'
+										case is_array($current_value):
+											foreach ($current_value as $key => $current_value2) {
+												$key=key($current_value2);
+												$val=reset($current_value2); if(!is_int($val)) $val='"'.$val.'"';
+												#dump(reset($current_value2), ' current_value2 '.$key);
+												$current_value2 = "{\"$key\":$val}";
+												#$propiedades_filtro .= "\n $sql_options->json_field#>'{components, $current_component_tipo, dato, ". $current_lang ."}' @> '$current_value2' AND ";
+												#$propiedades_filtro .= "\n $sql_options->json_field @>'{\"components\":{\"$current_component_tipo\":{\"dato\":{\"$current_lang\":$current_value2}}}}' AND ";
+												# BUG !!!
+												#$propiedades_filtro .= "\n ".JSON_RecordObj_matrix::build_pg_filter(	//$modo,$datos='datos',$tipo,$lang,$value
+												#	'btree',
+												#	$sql_options->json_field,
+												#	$current_component_tipo,
+												#	$current_lang,
+												#	$current_value2
+												#	). " AND ";											
+											}
+											$propiedades_filtro .= "\n ".JSON_RecordObj_matrix::build_pg_filter(	//$modo,$datos='datos',$tipo,$lang,$value
+													'btree',
+													$sql_options->json_field,
+													$current_component_tipo,
+													$current_lang,
+													$current_value
+													). " AND ";
+											break;
+										default:
+											$propiedades_filtro_include=false;
+											if(SHOW_DEBUG) {
+												dump($current_value, ' propiedades');
+											}
+											trigger_error("Error: Current value from propiedades-filtered_by is not string or object. I can't manage this value for now");
+											break;
+									}#end switch
+									*/							
 							}
 							$propiedades_filtro = substr($propiedades_filtro, 0, -4);
 							$propiedades_filtro .= ')';
@@ -467,7 +497,7 @@ class search extends common {
 				# PROJECTS : Add authorized projects to current logged user
 				# Return sql code to add to current sql filter
 					$filter_options = new stdClass();
-						$filter_options->section_tipo 	= $sql_options->section_real_tipo;
+						$filter_options->section_tipo 	= $sql_options->section_real_tipo; // ! Important real tipo
 						$filter_options->json_field 	= $sql_options->json_field;
 					if ($sql_options->matrix_table=='matrix_list' || $sql_options->matrix_table=='matrix_dd') {
 						# No filter is applicable when current section is a list of values (public or private)
@@ -498,79 +528,102 @@ class search extends common {
 							}
 
 							# SEARCH OPERATORS RESOLVE
+							$comparison_operator = "ILIKE";
 							if(isset($sql_options->operators->comparison_operator)){
 								foreach ($sql_options->operators->comparison_operator as $key_tipo => $operator) {
 									if($key_tipo == $search_tipo){												
 										$comparison_operator = $operator;
+										break;
 									}
 								}
-							}else{$comparison_operator = "ILIKE";}
-
+							}							
+							$logical_operator = "AND";
 							if(isset($sql_options->operators->logical_operator)){
 								foreach ($sql_options->operators->logical_operator as $key_tipo => $operator) {
 									if($key_tipo == $search_tipo){
 										$logical_operator = $operator;
+										break;
 									}
 								}
-							}else{$logical_operator = "AND";}
+							}
 
 							$search_tipo_modelo_name = RecordObj_dd::get_modelo_name_by_tipo($search_tipo, true);
+
 							
-							if ($search_tipo_modelo_name=='component_section_id DEPRECATED') {	# SEARCH using component_section_id
-								#$sql_filter_by_search .= "\n" . component_common::resolve_search_operators( 'section_id', $search_value );
+							
+							#dump($search_tipo," search_tipo - search_value: $search_value");
+							# Search component section to separate portal components
+							$component_section_tipo = component_common::get_section_tipo_from_component_tipo($search_tipo);
+							$section_real_tipo 		= $sql_options->section_real_tipo;
+								#dump($section_real_tipo," section_real_tipo - sql_options->section_tipo: $sql_options->section_tipo");
+							
+							if ($component_section_tipo != $section_real_tipo) {
 
-							}else{
-								#dump($search_tipo," search_tipo - search_value: $search_value");
-								# Search component section to separate portal components
-								$component_section_tipo = component_common::get_section_tipo_from_component_tipo($search_tipo);
-									#dump($component_section_tipo," component_section_tipo - sql_options->section_real_tipo: $sql_options->section_real_tipo");
-								if ($component_section_tipo != $sql_options->section_real_tipo) {
-									
-									# Is portal element. We make a pre search to obtain locators
-									$table_search 	 = common::get_matrix_table_from_tipo($search_tipo);									
-									$subsearch_query = $search_tipo_modelo_name::get_search_query( $sql_options->json_field, $search_tipo, $sql_options->tipo_de_dato_search, $current_lang, $search_value, $comparison_operator);
-										#dump($subsearch_query, " subsearch_query ".to_string());
-									
-									$search_by_value= self::search_by_value($subsearch_query, $table_search);
-									$ar_locator 	= $search_by_value->ar_locator;										
-									$portal_tipo 	= section::get_portal_tipo_from_component($sql_options->section_real_tipo, $search_tipo);
-										
-									if (count($ar_locator)>0) {										
-										
-										$sql_filter_by_search .= "\n".$search_by_value->strQuery."\n";
-										$sql_filter_by_search .= '(';
-										foreach ($ar_locator as $current_locator) {
-											$current_locator_string = json_encode($current_locator);
-											$sql_filter_by_search .= "\n $sql_options->json_field#>'{components,$portal_tipo,dato,lg-nolan}' @> '[$current_locator_string]' ";
-											if ($current_locator != end($ar_locator)) $sql_filter_by_search .= 'OR ';
-										}
-										$sql_filter_by_search .= ') ';
-
-									}else{
-										// Only to avoid show results when no ar_locator are found																			
-										$sql_filter_by_search .= "\n".$search_by_value->strQuery;
-										$sql_filter_by_search .= "\n $sql_options->json_field#>'{components,$portal_tipo,dato,lg-nolan}' @> '{\"RESULT\":\"NOTHING_FOUND\"}' "; 
-									}							
+								#
+								# SUBSEARCH . Subquery when current component is not current section (like informant name in oh1)
+								$subsearch_query = $sql_options->json_field."#>>'{section_real_tipo}' = '$component_section_tipo' ";
 								
+								// Is portal element. We make a pre search to obtain locators
+								$table_search 	  = common::get_matrix_table_from_tipo($search_tipo);									
+								$subsearch_query .= ' AND '.$search_tipo_modelo_name::get_search_query( $sql_options->json_field, $search_tipo, $sql_options->tipo_de_dato_search, $current_lang, $search_value, $comparison_operator);
+									#dump($subsearch_query, " subsearch_query ".to_string());
+								
+								$search_by_value= self::search_by_value($subsearch_query, $table_search);
+								$ar_locator 	= $search_by_value->ar_locator;										
+								$portal_tipo 	= section::get_portal_tipo_from_component($section_real_tipo, $search_tipo);
+									
+								if (count($ar_locator)>0) {										
+									
+									$sql_filter_by_search .= "\n".$search_by_value->strQuery."\n";
+									$sql_filter_by_search .= '(';
+									foreach ($ar_locator as $current_locator) {
+										$current_locator_string = json_encode($current_locator);
+										$sql_filter_by_search .= "\n $sql_options->json_field#>'{components,$portal_tipo,dato,lg-nolan}' @> '[$current_locator_string]' ";
+										if ($current_locator != end($ar_locator)) $sql_filter_by_search .= 'OR ';
+									}
+									$sql_filter_by_search .= ') ';
+
 								}else{
 
-									# Normal case. Direct search
-									$sql_filter_by_search .= "\n".$search_tipo_modelo_name::get_search_query($sql_options->json_field, $search_tipo, $sql_options->tipo_de_dato_search, $current_lang, $search_value, $comparison_operator);//, $logical_operator					
-								}//end if ($component_section_tipo != $sql_options->section_real_tipo)
-
-							}//end if ($search_tipo_modelo_name=='component_section_id')
+									// Only to avoid show results when no ar_locator are found																			
+									$sql_filter_by_search .= "\n".$search_by_value->strQuery;
+									$sql_filter_by_search .= "\n $sql_options->json_field#>'{components,$portal_tipo,dato,lg-nolan}' @> '{\"RESULT\":\"NOTHING_FOUND\"}' "; 
+								}
 							
+							}else{
+
+								#
+								# Normal case. Direct search (component belong current section)
+								$sql_filter_by_search .= "\n".$search_tipo_modelo_name::get_search_query($sql_options->json_field,
+																										 $search_tipo,
+																									 	 $sql_options->tipo_de_dato_search,
+																										 $current_lang,
+																										 $search_value,
+																										 $comparison_operator);//, $logical_operator
+								/*
+								dump($sql_options->json_field, ' sql_options->json_field ++ '.to_string());
+								dump($search_tipo, ' search_tipo ++ '.to_string());
+								dump($sql_options->tipo_de_dato_search, ' sql_options->tipo_de_dato_search ++ '.to_string());
+								dump($current_lang, ' current_lang ++ '.to_string());
+								dump($search_value, ' search_value ++ '.to_string());
+								dump($comparison_operator, ' comparison_operator ++ '.to_string());
+								*/
+							}//end if ($component_section_tipo != $section_real_tipo)
+
+							
+							# Add logical_operator each iteration
 							if($search_tipo != $last_key) {
 								$sql_filter_by_search .= $logical_operator; // Default is 'AND'
 								$sql_filter_by_search .= ' ';
 							}
 							
-						}
+						}//end foreach ($sql_options->filter_by_search as $search_tipo => $search_value) {
 						
 						if ( strlen($sql_filter_by_search)>30 ) {
-							$sql_filtro .= 'AND ('.$sql_filter_by_search."\n)";							
-						}						
-					}
+							$sql_filtro .= ' AND ('.$sql_filter_by_search."\n)";							
+						}
+
+					}//end if (!empty($sql_options->filter_by_search) && count((array)$sql_options->filter_by_search)>0) {
 					#dump($sql_filtro,"sql_filtro");				
 				
 				
@@ -705,8 +758,8 @@ class search extends common {
 			#
 				if (!$sql_options->full_count && $sql_options->limit>0) {
 					$start_time_full_count= microtime(1);
-					$sql_columns 	= "count(id) AS full_count"; // count(*) OVER() AS full_count
-					$strQuery_count	= "SELECT $sql_columns FROM \"$sql_options->matrix_table\" WHERE ".trim($sql_filtro)." LIMIT 1;";
+					$sql_columns 	= "count(*) AS full_count"; // count(*) OVER() AS full_count
+					$strQuery_count	= "SELECT $sql_columns FROM \"$sql_options->matrix_table\" WHERE ".trim($sql_filtro)." \n;";	// LIMIT 1
 					if(SHOW_DEBUG) {
 						$strQuery_count = '-- '.__METHOD__.' : '.debug_backtrace()[1]['function']."\n".$strQuery_count;
 					}
@@ -928,6 +981,8 @@ class search extends common {
 				#dump($sql_options->search_options_session_key,"search_options_session_key");
 				#dump($sql_options,"sql_options $sql_options->search_options_session_key");
 				#dump($records_data->result," records_data-result");
+
+				$records_data->strQuery = "-- SEARCH_OPTIONS_SESSION_KEY: ".$sql_options->search_options_session_key ."\n". $records_data->strQuery;
 			
 				global$TIMER;$TIMER[__METHOD__.'_OUT_'.$current_sosk .'_'. $sql_options->search_options_session_key]=microtime(1);
 			}

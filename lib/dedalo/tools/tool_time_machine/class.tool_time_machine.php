@@ -141,7 +141,7 @@ class tool_time_machine extends tool_common {
 		*/
 
 		if(SHOW_DEBUG) {
-			#$GLOBALS['log_messages'] .= exec_time($start_time, __METHOD__, $ar_sections_time_machine);
+			#$GLOBALS['log_messages'][] = exec_time($start_time, __METHOD__, $ar_sections_time_machine);
 		}
 
 		return $ar_sections_time_machine ;
@@ -250,7 +250,7 @@ class tool_time_machine extends tool_common {
 		#
 		# Admin of current area
 		$is_admin_of_current_area		= (bool)false;
-		$ar_authorized_areas_for_user 	= component_security_areas::get_ar_authorized_areas_for_user($userID, $mode_result='full', DEDALO_COMPONENT_SECURITY_AREAS_USER_TIPO);
+		$ar_authorized_areas_for_user 	= component_security_areas::get_ar_authorized_areas_for_user($userID, $mode_result='full');
 			#dump($ar_authorized_areas_for_user, 'ar_authorized_areas_for_user', array());
 		if(is_array($ar_authorized_areas_for_user)) foreach ($ar_authorized_areas_for_user as $key => $value) {
 			if ($key == $tipo.'-admin' && $value == 2) {

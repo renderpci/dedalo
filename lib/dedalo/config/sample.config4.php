@@ -54,7 +54,7 @@ define('DEDALO_ENTITY', 'my_entity_name'); # Like 'dedalo4'
 	define('LOGGER_LEVEL', logger::ERROR);
 
 	# Log messages in page
-	$log_messages = NULL;
+	$log_messages = array();
 	global $log_messages;		
 	
 	# APP : LOG APPLICATION INFO IN DB
@@ -283,7 +283,7 @@ define('DEDALO_ENTITY', 'my_entity_name'); # Like 'dedalo4'
 		# DEDALO_IMAGE_THUMB_DEFAULT
 		define('DEDALO_IMAGE_THUMB_DEFAULT'			, 'thumb');
 		# QUALITY FOLDERS ARRAY IN MB		
-		define('DEDALO_IMAGE_AR_QUALITY'			, serialize( array(DEDALO_IMAGE_QUALITY_ORIGINAL,'>100MB','25MB','6MB',DEDALO_IMAGE_QUALITY_DEFAULT,'<1MB',DEDALO_IMAGE_THUMB_DEFAULT) ));
+		define('DEDALO_IMAGE_AR_QUALITY'			, serialize( array(DEDALO_IMAGE_QUALITY_ORIGINAL,'25MB','6MB',DEDALO_IMAGE_QUALITY_DEFAULT,'<1MB',DEDALO_IMAGE_THUMB_DEFAULT) ));
 		# DEDALO_IMAGE_EXTENSIONS_SUPPORTED
 		define('DEDALO_IMAGE_EXTENSIONS_SUPPORTED'	, serialize( array('jpg','jpeg','png','tif','tiff','bmp','psd','raw') ));		
 		# PRINT DPI (default 150. Used to calculate print size of images -tool_image_versions-)
@@ -305,10 +305,10 @@ define('DEDALO_ENTITY', 'my_entity_name'); # Like 'dedalo4'
 		define('DEDALO_PDF_EXTENSION'				, 'pdf');
 		# DEDALO_PDF_EXTENSIONS_SUPPORTED
 		define('DEDALO_PDF_EXTENSIONS_SUPPORTED'	, serialize( array('pdf') ));
-		# QUALITY FOLDERS ARRAY					
-		define('DEDALO_PDF_AR_QUALITY'				, serialize( array('standar') ));
 		# QUALITY DEFAULT normally 'standar'
 		define('DEDALO_PDF_QUALITY_DEFAULT'			, 'standar');
+		# QUALITY FOLDERS ARRAY					
+		define('DEDALO_PDF_AR_QUALITY'				, serialize( array(DEDALO_PDF_QUALITY_DEFAULT) ));		
 		# MIME normally application/pdf
 		define('DEDALO_PDF_MIME_TYPE'				, 'application/pdf');
 		# TYPE normally jpeg
@@ -357,4 +357,12 @@ define('DEDALO_TEST_INSTALL', true);
 # DEDALO_SECTION_ID_TEMP : Name / prefix of section_id temporals used to store special sections in memory or session
 define('DEDALO_SECTION_ID_TEMP', 'tmp');
 
+
+################################################################
+# MAINTENACE : maintenance mode active / unactive
+	$maintenance_mode = false;
+	define('DEDALO_MAINTENANCE_MODE', $maintenance_mode);
+	if (DEDALO_MAINTENANCE_MODE) {
+		include(DEDALO_LIB_BASE_PATH.'/maintenance/maintenance.php');
+	}
 ?>

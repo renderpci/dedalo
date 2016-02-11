@@ -135,7 +135,7 @@ if($mode=='Save_related') {
 		
 		# Build component as construct ($id=NULL, $tipo=false, $modo='edit', $parent=NULL)		
 		# $component_obj = new $component_name($tipo, $id_section, 'edit', DEDALO_DATA_LANG);
-		$component_obj = component_common::get_instance($component_name,$tipo, $id_section, 'edit', DEDALO_DATA_LANG, $section_tipo);
+		$component_obj = component_common::get_instance($component_name, $tipo, $id_section, 'edit', DEDALO_DATA_LANG, $section_tipo);
 		
 		# Assign dato
 		$component_obj->set_dato($dato);
@@ -284,12 +284,21 @@ if ($mode=='load_component_by_ajax') {
 
 
 	$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
-	$component_obj 	= component_common::get_instance($modelo_name, $tipo, $parent, $modo, $lang, $section_tipo);
+	$component_obj 	= component_common::get_instance($modelo_name,
+													 $tipo,
+													 $parent,
+													 $modo,
+													 $lang,
+													 $section_tipo);
+
+	if(SHOW_DEBUG) {
 		#$dato= $component_obj->get_dato();
 		#dump($dato, ' component_obj - '."$modelo_name - tipo:$tipo - parent:$parent, $modo, $lang, $section_tipo");
+	}
+		
 
 	# CURRENT TIPO SECTION
-	# Si se recibe section_tipo, configuramos el objeto para que tenga ese parámeto asignado
+	# Si se recibe section_tipo, configuramos el objeto para que tenga ese parámetro asignado
 	# Por ejemplo, en relaciones, se requiere para discriminar qué seccion querenmos actualizar
 	if (!empty($current_tipo_section)) {
 		$component_obj->current_tipo_section = $current_tipo_section;

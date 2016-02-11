@@ -30,7 +30,7 @@
 	$file_name				= $modo;
 	$pdf_id 				= $this->get_pdf_id();
 	$quality				= $this->get_quality();
-	$pdf_url				= $this->get_pdf_url();
+	$pdf_url				= $this->get_pdf_url().'?t='.time();
 	$aditional_path			= $this->get_aditional_path();		
 	$initial_media_path		= $this->get_initial_media_path();
 	$file_exists 			= $this->get_file_exists();

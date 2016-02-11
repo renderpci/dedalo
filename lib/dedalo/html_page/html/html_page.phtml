@@ -19,10 +19,11 @@ header('Content-Type: text/html');
 <script>
 var DEDALO_LIB_BASE_URL	= '<?php echo DEDALO_LIB_BASE_URL ?>', DEDALO_ROOT_WEB = '<?php echo DEDALO_ROOT_WEB ?>';
 var page_globals = {
+	dedalo_version:'<?php echo DEDALO_VERSION ?>',
 	dedalo_application_lang:'<?php echo DEDALO_APPLICATION_LANG ?>',
 	dedalo_data_lang:'<?php echo DEDALO_DATA_LANG ?>',
 	dedalo_data_nolan:'<?php echo DEDALO_DATA_NOLAN ?>',
-	_parent:'<?php echo $parent ?>',
+	_parent:<?php echo isset($parent) ? (int)$parent : "''" ?>,
 	tipo:'<?php echo $tipo ?>',
 	section_tipo:"<?php echo defined('SECTION_TIPO') ? SECTION_TIPO : '' ?>",
 	modo:'<?php echo $modo ?>',
@@ -30,6 +31,7 @@ var page_globals = {
 	context_name:'<?php if(isset($context_name)) echo $context_name ?>',
 	top_tipo:'<?php echo TOP_TIPO; #if(isset($top_tipo)) echo $top_tipo ?>',
 	top_id:'<?php echo TOP_ID;	#if(isset($top_id)) echo $top_id ?>',
+	tag_id:'<?php echo isset($_REQUEST["tag_id"]) ? $_REQUEST["tag_id"] : "" ?>',
 	user_id:'<?php if(isset($user_id)) echo $user_id ?>',
 <?php if (isset($_REQUEST["portal_tipo"])) { ?>
 	portal_tipo:'<?php echo $_REQUEST["portal_tipo"] ?>',
@@ -75,8 +77,8 @@ DEBUG = <?php var_export(SHOW_DEBUG); ?>;
 
 	# LOG MESSAGES		
 		print '<!-- LOG MESSAGES HTML -->';
-		print '<div id="log_messages">';
-		print $log_messages;
+		print '<div id="log_messages" ondblclick="this.innerHTML=\'\';">';
+		print implode('<br>', (array)$log_messages);
 		if(error_get_last()) {
 			print "Last Error: <pre>";
 			print_r(error_get_last());
@@ -87,7 +89,7 @@ DEBUG = <?php var_export(SHOW_DEBUG); ?>;
 	
 	# GLOBAL INFO
 		print '<!-- GLOBAL INFO-->';
-		print '<div id="global_info">';
+		print '<div id="global_info" ondblclick="this.innerHTML=\'\';">';
 		print '</div>';
 
 
@@ -106,6 +108,7 @@ DEBUG = <?php var_export(SHOW_DEBUG); ?>;
 		if(
 			isset($_SERVER['HTTP_REFERER']) 
 			&& empty($caller_id)
+			&& empty($_GET['bc_path'])
 			&& strpos($modo, 'tool_')===false
 			&& login::is_logged()
 			)

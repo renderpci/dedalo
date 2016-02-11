@@ -1,4 +1,57 @@
-/*-- INSPECTOR --*/
+/* HEADER_TOOL
+---------------------------------------- */
+.header_tool {
+	background-color: rgba(103, 103, 103, 0.8);
+	color: #f5f5f5;
+	height: 30px;
+	}
+	.header_tool LABEL.css_label {
+		min-width: 1px;
+	}
+	.header_tool .content_data, 
+	.header_tool .css_wrap_state  .content_data {
+		width: auto;
+	}
+
+
+/* BTN_INSIDE_SECTION_BUTTONS_CONTAINER
+---------------------------------------- */
+.btn_inside_section_buttons_container {
+	display: inline-block;
+	font-size: 100%;
+	font-weight: 300;
+	cursor: pointer;
+	line-height: 1.2em;
+	color: #2e2e2e;
+	transition: background-color 0.5s ease;
+	user-select: none;
+	-webkit-user-select: none;
+	border-radius: 4px;
+	padding: 7px;
+	padding-right: 8px;
+	padding-left: 8px;
+	margin-top: 1px;
+	width: auto;
+	min-width: 100px;
+	background-color: rgba(201, 201, 201, 0.3);	
+	}
+	.btn_inside_section_buttons_container::before {
+		content: '';
+		background-image: url("../../../themes/default/glyphicons-halflings.png");
+		/*background-position: -240px -24px;*/
+		margin-right: 7px;	
+		width: 14px;
+		height: 14px;
+	  	float: left; 
+	  	opacity: 0.5;	
+	}
+	.btn_inside_section_buttons_container:hover {
+		background-color: rgba(201, 201, 201, 1);
+	}
+
+
+/* INSPECTOR 
+---------------------------------------- */
 .tool_time_machine_icon {
 	background-position: -216px -24px;
 	-moz-transform: scaleX(-1);
@@ -33,7 +86,7 @@
 	background-position: -96px -72px;
 }
 .tool_indexation_icon {
-	background-position: -25px -48px;
+	background-position: -25px -47px;
 }
 .tool_calendar_icon {
 	background-position: -192px -121px;
@@ -56,6 +109,30 @@
 .tool_import_files_icon {
 	background-position: -384px -144px;
 }
+.tool_warning {
+	background-position: -144px -120px;
+}
+.tool_diffusion_icon {
+	background-position: -24px -144px;
+}
+.tool_diffusion {
+	min-width: auto !important;
+	}
+	.tool_diffusion:before {
+	    background-position: -24px -144px;
+	}
+	.tool_diffusion_inspector {
+		margin-left: 5px;
+		padding-left: 18px;
+		background-position: -24px -144px;
+		line-height: 1.6em;
+		color: #000000;
+		white-space: nowrap;
+	}
+	#tool_diffusion_response {
+		margin-left: 5px;
+		padding-left: 18px;
+	}
 
 .tool_current_indexation_icon {
 	background-position: 0px -48px;
@@ -71,6 +148,9 @@
 
 .tool_replace_component_data_icon {
 	background-position: -336px -120px;
+}
+.icon_share {
+	background-position: -336px -96px;
 }
 
 
@@ -100,7 +180,8 @@
 
 
 
-/*-- TIME MACHINE IN SECTION LIST --*/
+/* TIME MACHINE IN SECTION LIST 
+---------------------------------------- */
 .tm_list_wrap {
 	display: block;
 	padding-left: 20px;
@@ -140,59 +221,10 @@
 
 
 
-/*-- HEADER_TOOL --*/
-.header_tool {
-	background-color: rgba(103, 103, 103, 0.8);
-	color: #f5f5f5;
-	height: 30px;
-	text-align: right;
-	}
-	.header_tool LABEL.css_label {
-		min-width: 1px;
-	}
-	.header_tool .content_data {
-		width: auto;
-	}
 
 
-
-
-
-/* btn_inside_section_buttons_container
-------------------------------------------------------- */
-.btn_inside_section_buttons_container {
-	display: inline-block;
-	font-size: 100%;
-	font-weight: 300;
-	cursor: pointer;
-	line-height: 1.2em;
-	color: #2e2e2e;
-	transition: background-color 0.5s ease;
-	user-select: none;
-	-webkit-user-select: none;	
-	border-radius: 4px;	
-	padding: 7px;
-	padding-right: 8px;
-	padding-left: 8px;
-	margin-top: 1px;
-	width: auto;
-	min-width: 100px;
-	background-color: rgba(201, 201, 201, 0.3);	
-	}
-	.btn_inside_section_buttons_container::before {
-		content: '';
-		background-image: url("../../../themes/default/glyphicons-halflings.png");
-		/*background-position: -240px -24px;*/
-		margin-right: 7px;	
-		width: 14px;
-		height: 14px;
-		/* Position/Spacing */
-	  	float: left; 
-	  	opacity: 0.5;	
-	}
-
-/* btn_tool_portal_show_full
-------------------------------------------------------- */
+/* BTN_TOOL_PORTAL_SHOW_FULL
+---------------------------------------- */
 #btn_tool_portal_show_full {	
 	margin-top: 9px;
 	}
@@ -207,8 +239,8 @@
 		background-position: -408px -144px;
 	}
 
-/* button_update_cache
-------------------------------------------------------- */
+/* BUTTON_UPDATE_CACHE
+---------------------------------------- */
 #button_update_cache {
 	/*opacity: 0.5;*/
 	margin-left: 6px;
@@ -216,16 +248,12 @@
 	}
 	#button_update_cache::before {
 		background-position: -240px -0px;
-	}
-	#button_update_cache:hover {
-		/*opacity: 0.7;*/
-		background-color: rgba(201, 201, 201, 1);
-	}
+	}	
 	#button_update_cache_loading {
 		/*
 		background-repeat: no-repeat;
 		background-position: center;
-		background-size: 10%;	
+		background-size: 10%;
 		opacity: 0.7;
 		*/
 		cursor: none;

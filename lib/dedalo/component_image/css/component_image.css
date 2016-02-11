@@ -70,20 +70,25 @@
 
 /*-- URL defined in style --*/
 .div_image_image_in_list {
+	display:inline-block;
 	width: 102px;
 	height: 57px;/* 57px;*/
 	background-repeat: no-repeat;
 	background-position: center;
-	display:inline-block;
-	/*background-image: url('../../themes/default/spinner2.gif');*/
-	background-color: #f5f5f5;
+	/*background-size: 100%;*/
+	/*background-image: url('../../themes/default/spinner2.gif');
+	background-color: #f5f5f5;*/
+	background-color: #FFFFFF;
+	}
+	.div_image_image_in_list:hover {
+		cursor: -webkit-zoom-in;
+		cursor: -moz-zoom-in;
 	}
 	.div_image_image_in_list IMG {
 		display: block;
 	}
 	.div_image_image_in_list IMG:hover {
-		cursor: -webkit-zoom-in;
-		cursor: -moz-zoom-in;
+		
 	}
 
 /*-- Original --*/
@@ -128,7 +133,12 @@
 	height: 50%;
 }
 */
-
+.css_wrap_image .no_file {
+	cursor: pointer;
+	}
+	.css_wrap_image  .no_file:hover {
+		opacity: 0.7;
+	}
 
 
 /*  CANVAS 

@@ -9,8 +9,14 @@
 		
 		$html_selector .= "\n<!-- TOOL LANG SELECTOR SOURCE LANG -->";
 		$html_selector .= "\n <span class=\"rotulo_tool_lang_selector\">Source lang:</span> ";
-		$html_selector .= "\n <select class=\"tool_lang_selector_source css_select\" 
-		data-tipo=\"{$tipo}\" data-parent=\"{$parent}\" onchange=\"tool_lang.load_source_component(this)\" > ";
+		$html_selector .= "\n <select class=\"tool_lang_selector_source css_select\"
+		data-tipo=\"{$tipo}\"
+		data-parent=\"{$parent}\"
+		data-section_tipo=\"{$section_tipo}\"
+		data-tool_name=\"{$tool_name}\"
+		data-tool_locator=\"{$tool_locator}\"
+		onchange=\"tool_lang.load_source_component(this)\"
+		> ";
 					
 				if(empty($lang)) {
 					$checked = 'selected';

@@ -30,22 +30,20 @@ class OptimizeTC {
 	// Localizado el index IN, si el TC anterior y posterior están a mas de X caracteres, hacemos una 
 	// aproximaximación y creamos un TC virtual con la media de las duraciones de los caracteres entre 
 	// los TC anterior y posterior
-	public static function optimize_tcIN($texto, $indexIN, $inicioPos='') {	
+	public static function optimize_tcIN($texto, $indexIN, $inicioPos='', $in_margin=100) {	
 		
 		$debug = false;
 		
-		/* Si inicioPos > 0 estaremos buscando de forma libre, sin index */
-		if( isset($inicioPos) && $inicioPos!='' )
-		{
-			$margen 	= 100 ;
-			$indexPos 	= $inicioPos - $margen ;
+		// Si inicioPos > 0 estaremos buscando de forma libre, sin index o ya sabemos la posición
+		if( $inicioPos!='' ) {
+			#$in_margin 	= 100 ;	
+			$indexPos 	= $inicioPos - $in_margin ;
 			if($indexPos<0) $indexPos = 0;
-		}
-		else
-		{
+		}else{
 			# pos absoluta de index IN
 			$indexPos = strpos($texto, $indexIN); 
 		}
+		#dump($indexPos, ' indexPos ++ indexIN'.to_string($indexIN));
 		
 		# margen de validación
 		$margen = 55 ;
@@ -116,16 +114,16 @@ class OptimizeTC {
 	}
 	
 	
-	public static function optimize_tcOUT($texto, $indexOUT, $finalPos='') {	
+	public static function optimize_tcOUT($texto, $indexOUT, $finalPos='', $in_margin=100) {	
 		
 		$debug = false;
 		
 		/* Si finalPos > 0 estaremos buscando de forma libre, sin index */
-		if( isset($finalPos) && $finalPos!='' )
+		if( $finalPos!='' )
 		{
 			$indexPos 	= strpos($texto, $finalPos);
-			$margen 	= 100 ;
-			$indexPos 	= $finalPos + $margen ;
+			#$in_margin 	= 100 ;
+			$indexPos 	= $finalPos + $in_margin ;
 		}
 		else
 		{
@@ -180,7 +178,10 @@ class OptimizeTC {
 					$difSeg 	= $nextTCseg -$prevTCseg ;
 					
 					# calculamos cuantos segundos ocupa un caracter
-					@ $segChar 	= $difSeg / $difTCchar ;
+					$segChar = 0;
+					if ($difTCchar>0) {
+						$segChar = $difSeg / $difTCchar;
+					}					
 					
 					# calculamos los caracteres entre en prevTC y el index IN
 					$charPrevTCindexIn =  strlen( substr($texto, $tcPrevPosAbs+16, ($indexPos - $tcPrevPosAbs) ) ); 

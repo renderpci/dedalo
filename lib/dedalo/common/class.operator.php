@@ -144,7 +144,6 @@ require_once( dirname(dirname(__FILE__)) .'/config/config4.php');
 		
 		if(SHOW_DEBUG) {
 			global$TIMER;$TIMER[__METHOD__.'_IN_'.microtime(1)]=microtime(1);
-			error_log("set_static_operator_vars lang: $lang");
 		}		
 		
 		$ar_terminoID_by_modelo_name = (array)RecordObj_dd::get_ar_terminoID_by_modelo_name($modelo_name='operator'); 
@@ -170,16 +169,13 @@ require_once( dirname(dirname(__FILE__)) .'/config/config4.php');
 			}			
 
 			# Set value			
-			$ar_operator[$vars_obj->SQL_operator] 	= RecordObj_dd::get_termino_by_tipo($current_terminoID, $lang, $cached, $fallback);
-		}
-		#dump($ar_operator,'$ar_operator');
-		#error_log("INFO: calculated operators from structure");
-
-		
+			$ar_operator[$vars_obj->SQL_operator] = RecordObj_dd::get_termino_by_tipo($current_terminoID, $lang, $cached, $fallback);
+		}	
 
 		if(SHOW_DEBUG) {
 			global$TIMER;$TIMER[__METHOD__.'_OUT_'.microtime(1)]=microtime(1);
 			#error_log("Calculated operators ".count($ar_terminoID_by_modelo_name));
+			debug_log(__METHOD__." for lang: $lang");
 		}
 			
 		return (array)$ar_operator;

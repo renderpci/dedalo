@@ -125,10 +125,7 @@ IMG { border:none; vertical-align:middle; }
 		width: 100%;
 	}
 
-.bottom_separator {
-	display: block;
-	height: 200px;
-}
+
 
 /********************  
 * TESAURO JERÁRQUICO 
@@ -167,7 +164,41 @@ IMG { border:none; vertical-align:middle; }
 .divLineasInfo { color:#496473; padding-top:5px; padding-right:2px; padding-bottom:5px; padding-left:50px; clear:left;  }
 
 .div_termino{display:none; background-color:#FF3; }
-.divCintas { display:none; color:#496473; padding-top:5px; padding-right:2px; padding-bottom:5px; padding-left:50px; clear:left; }
+.divCintas {
+	display:none;
+	padding-top:5px;
+	padding-right:2px;
+	padding-bottom:5px;
+	padding-left:50px;
+	clear:left;
+}
+
+/* BUTTON DIFFUSION PUBLISH CURRENT THESAURUS 
+-------------------------------------------- */		
+	#tool_diffusion_thesaurus {
+		float: right;	
+		margin: 0;
+		margin-right: 35px;
+		padding: 0;
+		}
+		#tool_diffusion_thesaurus div.button_duffusion_thesaurus {			
+			vertical-align: middle;
+			padding: 5px;
+			height: 25px;
+			}
+			.button_duffusion_thesaurus span {
+				display: block;
+				float: left;
+			}
+			.button_duffusion_thesaurus select {				
+				max-width: 90px;
+				margin-left: 5px;
+				float: left;
+				top: -4px;
+				position: relative;
+			}
+		
+
 
 
 /*-- LIST HEADER --*/
@@ -195,8 +226,10 @@ IMG { border:none; vertical-align:middle; }
 		float:left;
 		margin-left:10px;
 		font-weight:bold;
-		line-height: 1.9em;
-	}
+		line-height:1.9em;
+		width:100%;
+		padding-right:17px;
+		}		
 	#tsTreeLOAD .tsHeader .tsHeaderLeft IMG {
 		margin-left:2px;
 		margin-top:-2px;
@@ -430,6 +463,36 @@ TABLE.table_list_ts_used {
 .terminoIDinList .add_index_btn {
 	vertical-align: middle;
 	top: 0px;
+}
+
+.indexations_spinner {
+	margin-left: 21px;
+    padding: 5px;
+}
+
+.button_indexation {
+	
+}
+
+.icon_legends {
+	margin-top: 200px;
+	opacity: 0.85;
+	}
+	.icon_legends img {
+		vertical-align: sub;
+		margin-left: 15px;
+		margin-right: 5px;
+		position: relative;
+		top:0px;
+	}
+
+.bottom_separator {
+	display: block;
+	height: 200px;
+}
+
+.visible_no {
+	color: #FD1500
 }
 
 /*

@@ -33,7 +33,15 @@
 		case 'tool_time_machine' :
 					$ar_css		= false;	
 					#break;
-		case 'edit' :					
+		case 'edit' :
+					if ($section_tipo==DEDALO_SECTION_USERS_TIPO) {
+						if(SHOW_DEBUG) {
+							echo "DEBUG MODE ONLY:";
+						}else{
+							return null;
+						}
+					}
+
 					$permissions	= $this->get_permisions_of_this_area();		#dump($permissions,"permissions");
 					$ar_css			= array();#$this->get_ar_css();
 					$component_info	= $this->get_component_info('json');		#dump($component_info,"component_info");
@@ -45,6 +53,9 @@
 						case 1 :			 	$html_tree = $this->get_tree($disabled='disabled'); break;												
 						case ($permissions>=2):	$html_tree = $this->get_tree($disabled=NULL); 		break;													
 					}
+
+
+
 					break;
 						
 		case 'search' :	

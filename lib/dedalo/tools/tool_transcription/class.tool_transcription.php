@@ -13,8 +13,8 @@ class tool_transcription extends tool_common {
 	# text component
 	protected $component_related_obj ;
 
-
 	
+
 	public function __construct($component_obj, $modo='button') {
 		
 		# Fix modo
@@ -22,6 +22,9 @@ class tool_transcription extends tool_common {
 
 		# Fix current media component
 		$this->component_obj = $component_obj;
+
+		# Fix lang
+		$this->lang = $this->component_obj->get_lang();
 
 		# Fix related component (text)
 		#$this->component_related_obj = $this->get_component_related_obj();
@@ -74,7 +77,6 @@ class tool_transcription extends tool_common {
 			break;
 		}
 
-
 		# Create final related component
 		$component_text_area = component_common::get_instance('component_text_area', $termino_relacionado_tipo, $parent, 'edit', DEDALO_DATA_LANG, $section_tipo);
 
@@ -82,11 +84,12 @@ class tool_transcription extends tool_common {
 		$this->component_related_obj = $component_text_area;
 
 		return $this->component_related_obj;
-	}
+
+	}//end get_component_related_obj
 
 
 	
-	
+
 
 	
 	

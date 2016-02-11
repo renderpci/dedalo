@@ -8,7 +8,7 @@ class css {
 	static $ar_url = array();
 	
 	
-	# CSS LINK CODE . RETURN COMBINATED CSS LINKS FOR INSERT IN HEADER 
+	# CSS LINK CODE . RETURN COMBINATED CSS LINKS FOR INSERT IN HEADER  
 	public static function get_css_link_code() {
 		global $modo;
 					
@@ -20,6 +20,7 @@ class css {
 
 			# Bootstrap 
     		#$ar_url_basic[] = DEDALO_ROOT_WEB . '/lib/bootstrap/css/bootstrap.min.css' ;
+    		#$ar_url_basic[]  = 'https://cdnjs.cloudflare.com/ajax/libs/normalize/3.0.3/normalize.css';
 
 			# JQUERY UI css
 			$ar_url_basic[] = JQUERY_UI_URL_CSS ;
@@ -54,6 +55,8 @@ class css {
 
 			# Ponemos las librerías básicas al principio de la lista
 			#css::$ar_url = array_merge($ar_url_basic, css::$ar_url);
+
+			#$ar_url_basic[] = DEDALO_ROOT_WEB.'/lib/nvd3/nv.d3.min.css';
 
 						
 

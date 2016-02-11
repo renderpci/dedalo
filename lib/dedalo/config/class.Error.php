@@ -4,10 +4,14 @@
 */
 #require_once( dirname(dirname(__FILE__)) . '/config/config4.php');
 
-class Error {
+class dd_error {
 
     // CATCHABLE ERRORS
     public static function captureError( $number, $message, $file, $line ) {
+
+        # if (ini_get('display_errors') == 0) {
+            #return;
+        #}
 
         // Insert all in one table
         $error = array( 'type' => $number, 'message' => $message, 'file' => $file, 'line' => $line );
@@ -17,11 +21,11 @@ class Error {
         $error_to_show['debug']  = "<span class='error'>Ops.. [Error]$number " . $message ."</span>";
         $error_to_show['dump']   = '<pre>' . print_r($error,true) . '</pre>';
 
-        global $log_messages ;
+       
         if(SHOW_DEBUG===true) {
-            $log_messages .= $error_to_show['debug'].$error_to_show['dump'];
+            $GLOBALS['log_messages'][] = $error_to_show['debug'].$error_to_show['dump'];
         }else{
-            $log_messages .= $error_to_show['user'];
+            #$GLOBALS['log_messages'][] = $error_to_show['user'];
         }
 
         # LOGGER
@@ -29,7 +33,7 @@ class Error {
             logger::$obj['error']->log_message($error_to_show['debug'].$error_to_show['dump'], logger::ERROR, __METHOD__);
         }
 
-        error_log($error_to_show['debug'].$error_to_show['dump']);
+        error_log('ERROR: '.$error_to_show['debug'].$error_to_show['dump']);
 
 
         /*
@@ -46,7 +50,7 @@ class Error {
         }
 
         global $log_messages ;
-        $log_messages .= $string_error;
+        $GLOBALS['log_messages'][] = $string_error;
 
 
         # LOGGER
@@ -71,15 +75,14 @@ class Error {
             $error_to_show['user']   = "<span class='error'>Ops.. [Exception] " . $exception->getMessage() ."</span>";
             $error_to_show['debug']  = "<span class='error'>Ops.. [Exception] " . $exception->getMessage() ."</span>";
             $error_to_show['dump']   = '<pre>' . print_r($exception,true) . '</pre>';
-
-            global $log_messages ;
+            
             if(SHOW_DEBUG===true) {
-                $log_messages .= $error_to_show['debug'].$error_to_show['dump'];
+                $GLOBALS['log_messages'][] = $error_to_show['debug'].$error_to_show['dump'];
             }else{
-                $log_messages .= $error_to_show['user'];
+                $GLOBALS['log_messages'][] = $error_to_show['user'];
             }
 
-            print self::wrap_error($log_messages);
+            print self::wrap_error( implode('<br>', $GLOBALS['log_messages']) );
 
             error_log($error_to_show['debug'].$error_to_show['dump']);
         }
@@ -91,14 +94,13 @@ class Error {
             $error_to_show['debug'] = "<span class='error'>Ops.. [Exception2] " . $exception->getMessage() ."</span>" . "<span class='error'>Ops2.. [Exception2] " . $exception2->getMessage() ."</span>";
             $error_to_show['dump']  = '<pre><h1>Additional uncaught exception thrown while handling exception.</h1>'.print_r($exception,true).'<hr>'.print_r($exception2,true).'</pre>';
 
-            global $log_messages ;
             if(SHOW_DEBUG===true) {
-                $log_messages .= $error_to_show['debug'].$error_to_show['dump'];
+                $GLOBALS['log_messages'][] = $error_to_show['debug'].$error_to_show['dump'];
             }else{
-                $log_messages .= $error_to_show['user'];
+                $GLOBALS['log_messages'][] = $error_to_show['user'];
             }
 
-            print self::wrap_error($log_messages);
+            print self::wrap_error( implode('<br>', $GLOBALS['log_messages']) );
         }
 
 
@@ -124,14 +126,14 @@ class Error {
             $error_to_show['debug']  = "<span class='error'>Ops.. [Fatal Error] " . $error['message'] ." </span>";
             $error_to_show['dump']   = '<pre>' . print_r($error,true) . '</pre>';
 
-            global $log_messages ;
+           
             if(SHOW_DEBUG===true) {
-                $log_messages .= $error_to_show['debug'].$error_to_show['dump'];
+                $GLOBALS['log_messages'][] = $error_to_show['debug'].$error_to_show['dump'];
             }else{
-                $log_messages .= $error_to_show['user'];
+                $GLOBALS['log_messages'][] = $error_to_show['user'];
             }
 
-            print self::wrap_error($log_messages);
+            print self::wrap_error( implode('<br>', $GLOBALS['log_messages']) );
 
         } else {
             return true;
@@ -189,13 +191,14 @@ if(SHOW_DEBUG===true) {
 }else{
 
     ini_set( 'display_errors', 0 );     // Default 0
-    error_reporting(E_ALL ^ E_NOTICE);  // Default E_ALL ^ E_NOTICE
+    #error_reporting(E_ALL ^ E_NOTICE);  // Default E_ALL ^ E_NOTICE
+    error_reporting(0);
 }
 
 # SET ERROR HANDLERS
-set_error_handler( array( 'Error', 'captureError' ) );
-set_exception_handler( array( 'Error', 'captureException' ) );
-register_shutdown_function( array( 'Error', 'captureShutdown' ) );
+set_error_handler( array( 'dd_error', 'captureError' ) );
+set_exception_handler( array( 'dd_error', 'captureException' ) );
+register_shutdown_function( array( 'dd_error', 'captureShutdown' ) );
 
 
 // PHP set_error_handler TEST

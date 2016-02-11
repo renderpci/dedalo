@@ -25,6 +25,18 @@ if(login::is_logged()!==true) die("<span class='error'> Auth error: please login
 if ($mode=='load_inspector_relation_list_tag') {
 
 	exit("Opción desactiva momentáneamente"); # Sólo por velocidad y revisión
+
+
+
+
+
+
+
+
+
+
+
+	
 	
 	if (empty($tagName)) {
 		throw new Exception("load_inspector_relation_list_tag->tagName is empty", 1);		
@@ -47,7 +59,7 @@ if ($mode=='load_inspector_relation_list_tag') {
 		$options->to_find 				= $rel_locator;
 		$options->filter_by_modelo_name = 'component_relation';		
 
-	$ar_relation_reverse_records	= common::get_references($options);
+	#$ar_relation_reverse_records	= common::get_references__DEPRECATED($options);
 		#dump($ar_relation_reverse_records,'$ar_relation_reverse_records');
 
 	# Results group by 'section_tipo':

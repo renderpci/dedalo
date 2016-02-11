@@ -445,7 +445,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 
 	# CHILDRENS RECURSIVE ARRAY
 	# SACA TODOS LOS HIJOS DEL TERMINO ACTUAL RECURSIVAMENTE
-	public function get_ar_recursive_childrens_of_this($terminoID, $is_recursion=0) {
+	public function get_ar_recursive_childrens_of_this( $terminoID, $is_recursion=0 ) {
 		
 		# IMPORTANTE: NO HACER CACHE DE ESTE MÉTODO (AFECTA A COMPONENT_FILTER_MASTER)
 				
@@ -469,7 +469,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 	* GET_AR_RECURSIVE_CHILDRENS : Static version
 	* No hay aumento de velocidad apreciable entre la versión estática y dinámica. Sólo una reducción de unos 140 KB en el consumo de memoria
 	*/
-	public static function get_ar_recursive_childrens($terminoID, $is_recursion=false) {
+	public static function get_ar_recursive_childrens($terminoID, $is_recursion=false, $ar_exclude_models=false) {
 
 		$ar_resolved=array();
 		
@@ -478,15 +478,22 @@ class RecordObj_dd extends RecordDataBoundObject {
 			$ar_resolved[] = $terminoID;
 		}
 
-		#$ar_childrens  = (array)RecordObj_dd::get_ar_childrens($terminoID);
 		$RecordObj_dd 	= new RecordObj_dd($terminoID);
 		$ar_childrens 	= (array)$RecordObj_dd->get_ar_childrens_of_this('si',null,null);
 
-
 		foreach($ar_childrens as $current_terminoID) {
 
+			# Exclude models optional
+			if ($ar_exclude_models) {
+				$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_terminoID,true);
+				if (in_array($modelo_name, $ar_exclude_models)) {
+					debug_log(__METHOD__." Skiped model '$modelo_name' ".to_string($current_terminoID), logger::DEBUG);
+					continue ;	// Skip current modelo and childrens 
+				}				
+			}
+
 			# Recursion
-			$ar_resolved = 	array_merge( $ar_resolved, (array)RecordObj_dd::get_ar_recursive_childrens($current_terminoID,true) );
+			$ar_resolved = array_merge( $ar_resolved, (array)RecordObj_dd::get_ar_recursive_childrens($current_terminoID, true, $ar_exclude_models) );
 		}
 		
 		return $ar_resolved;
@@ -498,6 +505,12 @@ class RecordObj_dd extends RecordDataBoundObject {
 	public static function get_ar_recursive_childrens_with_exclude($terminoID, $is_recursion=false, $ar_exclude=array()) {
 
 		$ar_resolved=array();
+		/*
+		static $ar_resolved;
+		if (!isset($ar_resolved)) {
+			$ar_resolved=array();
+		}
+		*/
 		
 		if($is_recursion) {
 			#array_push($ar_resolved, $terminoID);
@@ -516,7 +529,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 			}
 
 			# Recursion
-			$ar_resolved = 	array_merge( $ar_resolved, (array)RecordObj_dd::get_ar_recursive_childrens($current_terminoID,true,$ar_exclude) );
+			$ar_resolved = 	array_merge( $ar_resolved, (array)RecordObj_dd::get_ar_recursive_childrens( $current_terminoID, true ) );
 		}
 		
 		return $ar_resolved;
@@ -758,7 +771,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 		if(is_array($tipo) && isset($tipo[0])) {
 			$tipo = $tipo[0];
 			if(SHOW_DEBUG) {
-				error_log("Used function 'get_ar_terminoID_by_modelo_name_and_relation' received one array instead a espected string. Used first value as tipo:".$tipo);
+				debug_log(__METHOD__." Used function 'get_ar_terminoID_by_modelo_name_and_relation' received one array instead a espected string. Used first value as tipo: ".to_string($tipo), logger::DEBUG);
 				throw new Exception("Error Processing Request", 1);				
 			}
 		}
@@ -872,8 +885,8 @@ class RecordObj_dd extends RecordDataBoundObject {
 			case 'parent' :
 				
 					# Obtenemos los padres
-					$RecordObj_dd				= new RecordObj_dd($tipo);
-					$ar_parents	= $RecordObj_dd->get_ar_parents_of_this();	#dump($ar_parents,'ar_parents');die();
+					$RecordObj_dd	= new RecordObj_dd($tipo);
+					$ar_parents		= $RecordObj_dd->get_ar_parents_of_this();	#dump($ar_parents,'ar_parents');die();
 					
 					# los recorremos para filtrar por modelo
 					if(is_array($ar_parents)) foreach($ar_parents as $terminoID) {
@@ -910,7 +923,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 
 		#if(SHOW_DEBUG) $GLOBALS['log_messages'] .= exec_time($start_time, __METHOD__, $result );
 		
-		return $result;
+		return (array)$result;
 	}
 	
 	

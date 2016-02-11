@@ -226,13 +226,13 @@ TABLE.table_preview {
 		}
 		FORM.form_preview .submit_import,
 		.button_back {
-			height: 22px;
 			padding-top: 7px;
 			padding-left: 8px;
 			padding-right: 8px;
 			margin-right: 10px;
 			margin-left: 20px;
 			font-weight: normal;
+			text-transform: uppercase;
 		}
 		FORM.form_preview .quality_selector {
 			margin-right: 10px;

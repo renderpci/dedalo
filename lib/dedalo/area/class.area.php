@@ -26,7 +26,7 @@
 		$this->define_lang(DEDALO_DATA_LANG);
 		$this->define_modo($modo);
 
-		$this->ar_children_include_modelo_name	= array('area','section');
+		$this->ar_children_include_modelo_name	= array('area','section','section_tool');
 		$this->ar_children_exclude_modelo_name	= array('login','tools','section_list','filter','component_security_areas');
 		
 		# common load tesauro data of current obj
@@ -82,8 +82,12 @@
 
 		if(SHOW_DEBUG) $start_time=microtime(1);
 
-		if (isset($_SESSION['dedalo4']['config']['ar_ts_children_all_areas_hierarchized']) ) {					
-			return $_SESSION['dedalo4']['config']['ar_ts_children_all_areas_hierarchized'];
+		if (isset($_SESSION['dedalo4']['config']['ar_ts_children_all_areas_hierarchized']) ) {
+			if(SHOW_DEBUG) {
+				#return $_SESSION['dedalo4']['config']['ar_ts_children_all_areas_hierarchized'];
+			}else{
+				return $_SESSION['dedalo4']['config']['ar_ts_children_all_areas_hierarchized'];
+			}			
 		}
 
 		# AREA_ROOT
@@ -120,12 +124,22 @@
 		$ar_ts_childrens_thesaurus 		= $area_resource->get_ar_ts_children_areas($include_main_tipo);
 			#dump($ar_ts_childrens_thesaurus," ar_ts_childrens_thesaurus");
 
+		# AREA_TOOLS
+		if (isset(RecordObj_dd::get_ar_terminoID_by_modelo_name('area_tool')[0])) {
+			$current_tipo 					= RecordObj_dd::get_ar_terminoID_by_modelo_name('area_tool')[0];
+			$area_resource 					= new area_resource($current_tipo);
+			$ar_ts_childrens_tools 			= $area_resource->get_ar_ts_children_areas($include_main_tipo);
+				#dump($ar_ts_childrens_tools," ar_ts_childrens_tools $current_tipo - $include_main_tipo");
+		}else{
+			$ar_ts_childrens_tools = array();
+		}		
+
 		# AREA_ADMIN
 		$current_tipo 					= RecordObj_dd::get_ar_terminoID_by_modelo_name('area_admin')[0];
 		$area_admin 					= new area_admin($current_tipo);
 		$ar_ts_childrens_admin 			= $area_admin->get_ar_ts_children_areas($include_main_tipo);
 
-		$ar_all = array_merge($ar_ts_childrens_root, $ar_ts_childrens_activity, $ar_ts_childrens_publication, $ar_ts_childrens_resource, $ar_ts_childrens_thesaurus, $ar_ts_childrens_admin);
+		$ar_all = array_merge($ar_ts_childrens_root, $ar_ts_childrens_activity, $ar_ts_childrens_publication, $ar_ts_childrens_resource, $ar_ts_childrens_thesaurus, $ar_ts_childrens_tools, $ar_ts_childrens_admin);
 			#dump($ar_all,'ar_all');
 
 		# Store for speed
@@ -173,7 +187,6 @@
 		$ar_ts_children_areas_cache[$id_unic] = $ar_ts_children_areas;
 			#dump($ar_ts_children_areas,'ar_ts_children_areas',"array recursive terminoID:$terminoID , include_main_tipo: var_export($include_main_tipo, true); ");
 
-		#if(SHOW_DEBUG) $GLOBALS['log_messages'] .= exec_time($start_time, __METHOD__, $ar_ts_children_areas );
 
 		return $ar_ts_children_areas ;
 	}

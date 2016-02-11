@@ -310,8 +310,13 @@ $html='';
 
 	$html .= '</div>';
 
-
-	$html .= "<script>tool_layout_print.set_mode('print')</script>";
+	if (empty($_GET['template_id'])) {
+		# new template
+		$html .= "<script>tool_layout_print.set_mode('edit')</script>";
+	}else{
+		# already exist template
+		$html .= "<script>tool_layout_print.set_mode('print')</script>";
+	}	
 
 
 echo $html;

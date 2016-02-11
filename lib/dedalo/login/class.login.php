@@ -58,7 +58,7 @@ class login extends common {
 	public static function Login( $trigger_post_vars ) {
 	
 		# Test mcrypt lib
-		if (!function_exists('mcrypt_encrypt')) return ("Error Processing Request: MCRYPT lib is not available");
+		if (!function_exists('mcrypt_encrypt')) die("Error Processing Request: MCRYPT lib is not available");
 
 		# Mandatory vars
 		$mandatoy_vars = array('username','password','tipo_login','tipo_password','tipo_active_account');
@@ -76,12 +76,12 @@ class login extends common {
 
 		# Search username
 		$arguments=array();
-		#$arguments["datos#>>'{section_tipo}'"] = DEDALO_SECTION_USERS_TIPO;
-		$arguments["section_tipo"]  = DEDALO_SECTION_USERS_TIPO;
+		$arguments["strPrimaryKeyName"] = 'section_id';
+		$arguments["section_tipo"]  	= DEDALO_SECTION_USERS_TIPO;
 		$arguments["datos#>>'{components,".DEDALO_USER_NAME_TIPO.",dato,lg-nolan}'"] = $username;
-		$matrix_table 				= common::get_matrix_table_from_tipo(DEDALO_SECTION_USERS_TIPO);
-		$JSON_RecordObj_matrix		= new JSON_RecordObj_matrix($matrix_table,NULL,DEDALO_SECTION_USERS_TIPO);
-		$ar_result					= (array)$JSON_RecordObj_matrix->search($arguments);
+		$matrix_table 					= common::get_matrix_table_from_tipo(DEDALO_SECTION_USERS_TIPO);
+		$JSON_RecordObj_matrix			= new JSON_RecordObj_matrix($matrix_table,NULL,DEDALO_SECTION_USERS_TIPO);
+		$ar_result						= (array)$JSON_RecordObj_matrix->search($arguments);
 			#dump($ar_result,"ar_result ",$arguments);#die();
 
 		if( !is_array($ar_result) || empty($ar_result[0])  ) {
@@ -173,6 +173,7 @@ class login extends common {
 						if(!component_security_administrator::is_global_admin($user_id)) {
 							#dump(component_security_administrator::is_global_admin($user_id),"is_global_admin $user_id");
 							# USER : TEST SECURITY AREAS VALUES
+							/*
 							# Comprobamos que el usuario tiene algún área asignada antes de dejarlo entrar (los administradores suelen olvidarse de hacerlo)
 							$component_security_areas 	= component_common::get_instance('component_security_areas', DEDALO_COMPONENT_SECURITY_AREAS_USER_TIPO, $user_id, 'edit', DEDALO_DATA_LANG,DEDALO_SECTION_USERS_TIPO);
 							$security_areas_dato 		= (array)$component_security_areas->get_dato();
@@ -180,6 +181,19 @@ class login extends common {
 							if (empty($security_areas_dato) || count($security_areas_dato)<1) {
 								exit(label::get_label('error_usuario_sin_areas'));
 							}
+							*/
+							$component_profile 		  = component_common::get_instance('component_profile',
+																						DEDALO_USER_PROFILE_TIPO,
+																						$user_id,
+																						'edit',
+																						DEDALO_DATA_NOLAN,
+																						DEDALO_SECTION_USERS_TIPO);
+							$profile_dato 	  		  = $component_profile->get_dato();
+								#dump($profile_dato,"profile_dato $user_id"); die();
+							if (empty($profile_dato) || $profile_dato<1) {
+								exit(label::get_label('error_usuario_sin_perfil'));
+							}
+
 
 							# USER : TEST FILTER MASTER VALUES
 							# Comprobamos que el usuario tiene algún proyecto asignado antes de dejarlo entrar (los administradores suelen olvidarse de hacerlo)
@@ -197,7 +211,7 @@ class login extends common {
 
 					# RETURN OK AND RELOAD PAGE
 					return ' Login.. ';
-					die();
+					#die();
 
 				}#if(isset($ar_password_id[0])
 
@@ -298,9 +312,9 @@ class login extends common {
 		
 		# RESET ALL SESSION VARS BEFORE INIT
 		#dump($_SESSION,'$_SESSION');		
-		if(isset($_SESSION)) foreach ($_SESSION as $key => $value) {
+		#if(isset($_SESSION)) foreach ($_SESSION as $key => $value) {
 			# Nothint to delete
-		}
+		#}
 
 		# DEDALO INIT TEST SECUENCE
 		require(DEDALO_LIB_BASE_PATH.'/config/dd_init_test.php');

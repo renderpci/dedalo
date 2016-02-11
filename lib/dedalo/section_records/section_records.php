@@ -17,6 +17,7 @@
 		case 'edit':
 
 				require_once(DEDALO_LIB_BASE_PATH . '/section_records/record/class.record.php');
+				require_once(DEDALO_LIB_BASE_PATH . '/search/records_navigator/class.records_navigator.php');
 
 				#
 				# PAGINATOR HTML
@@ -49,17 +50,14 @@
 
 		case 'list':
 
-
 				require_once(DEDALO_LIB_BASE_PATH . '/section_records/rows_header/class.rows_header.php');
 				require_once(DEDALO_LIB_BASE_PATH . '/section_records/rows/class.rows.php');
 
 				/*
 				$tool_update_cache = new tool_update_cache($tipo);
 				$tool_update_cache->update_cache();
-				if(SHOW_DEBUG) {
-					global $log_messages;
-					#dump(tool_update_cache::$debug_response,'$tool_update_cache->debug_response');
-					$log_messages .= tool_update_cache::$debug_response;
+				if(SHOW_DEBUG) {					
+					#dump(tool_update_cache::$debug_response,'$tool_update_cache->debug_response');					
 				}
 				*/	
 
@@ -69,17 +67,17 @@
 				#$this->section_obj->set_ar_buttons();
 				#$section = section::get_instance(null, $this->options->section_tipo);
 				#$ar_delete_button = $section->get_ar_children_objects_by_modelo_name_in_section("button_delete");
-
-				if (isset($this->options->section_real_tipo)) {				
-					$section_real_tipo = $this->options->section_real_tipo;
-					$ar_children_tipo_by_modelo_name_in_section = section::get_ar_children_tipo_by_modelo_name_in_section($section_real_tipo, 'button_delete', true);
-						#dump($ar_children_tipo_by_modelo_name_in_section,"section_real_tipo:$section_real_tipo");
-
+				# dump($this->button_delete_permissions, ' $this->button_delete_permissions ++ '.to_string());	
+				if (!$this->button_delete_permissions) {
+					$ar_children_tipo_by_modelo_name_in_section = section::get_ar_children_tipo_by_modelo_name_in_section($this->tipo, 'button_delete', $from_cache=true, $resolve_virtual=true); //$section_tipo, $ar_modelo_name_required, $from_cache=true, $resolve_virtual=false
+					# dump($ar_children_tipo_by_modelo_name_in_section, ' ar_children_tipo_by_modelo_name_in_section ++ '.to_string($this->tipo));
 					if (!empty($ar_children_tipo_by_modelo_name_in_section[0])) {
 						$security = new security();
 						$this->button_delete_permissions = $security->get_security_permissions($ar_children_tipo_by_modelo_name_in_section[0]);
 					}
 				}
+				
+				
 				#dump($this);
 				#dump($button_delete_permissions," button_delete_permissions");
 				if(SHOW_DEBUG) {

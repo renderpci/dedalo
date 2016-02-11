@@ -47,7 +47,7 @@ if ($mode=='save_order') {
 		exit();
 	}
 
-	$component_portal = component_common::get_instance('component_portal',$portal_tipo, $portal_parent, 'edit', DEDALO_DATA_NOLAN, $section_tipo);
+	$component_portal = component_common::get_instance('component_portal', $portal_tipo, $portal_parent, 'edit', DEDALO_DATA_NOLAN, $section_tipo);
 		#dump($component_portal,'$component_portal');
 
 	$dato = json_handler::decode($dato);
@@ -168,7 +168,7 @@ if($mode=='new_portal_record') {
 
 
 	echo $new_portal_record;
-	die();
+	exit();
 	
 }#end new_portal_record
 
@@ -200,15 +200,19 @@ if($mode=='remove_locator_from_portal') {
 	}
 
 	$rel_locator = (object)$rel_locator;
-	#dump($rel_locator,"rel_locator");die();
+		#dump($rel_locator,"rel_locator");die();
 	
 	#$component_portal = new component_portal($portal_tipo, $portal_parent, 'edit', DEDALO_DATA_NOLAN);
 	$component_portal = component_common::get_instance('component_portal',$portal_tipo, $portal_parent, 'edit', DEDALO_DATA_NOLAN, $section_tipo);
 		#dump($component_portal,'$component_portal');
 
+	#SAVE the component portal with the new locator
 	$result = $component_portal->remove_locator($rel_locator);
 	$component_portal->Save();
 		#dump($result,'$result');
+
+	#DELETE AND UPDATE the state of this section and his parents
+	$state = $component_portal->remove_state_from_locator($rel_locator);
 
 	
 	if ($result===true) {
@@ -216,7 +220,7 @@ if($mode=='remove_locator_from_portal') {
 	}else{
 		print 'error: '.$result;
 	}	
-	die();
+	exit();
 
 }#end delete_portal_record
 
@@ -255,64 +259,73 @@ if($mode=='remove_resource_from_portal') {
 		}		
 		exit();
 	}
-	$rel_locator = (object)$rel_locator;
+	$rel_locator = json_decode($rel_locator);
 		#dump($rel_locator->section_id, 'rel_locator', array());die();
 	
 	#$component_portal = new component_portal($portal_tipo, $portal_parent, 'edit', DEDALO_DATA_NOLAN);
-	$component_portal = component_common::get_instance('component_portal',$portal_tipo, $portal_parent, 'edit', DEDALO_DATA_NOLAN, $section_tipo);
+	$component_portal = component_common::get_instance('component_portal',
+														$portal_tipo,
+													 	$portal_parent,
+													 	'edit',
+														DEDALO_DATA_NOLAN,
+														$section_tipo);
 		#dump($component_portal,'$component_portal');
 
 
 	# Return 'ok' / 'Sorry. You can not delete this resource because it is used in other records..'
 	$msg = $component_portal->remove_resource_from_portal((object)$rel_locator, (string)$portal_tipo);
+	
+	#DELETE AND UPDATE the state of this section and his parents
+	$state = $component_portal->remove_state_from_locator($rel_locator);
 	echo $msg;
-	die();
-
-	/*
-	# Todas las referencias a el recurso dado con el locator
-	#$all_resource_references = $component_portal->get_all_resource_references($rel_locator, $portal_tipo);
-	$options = new stdClass();
-		$options->to_find 				= $rel_locator->section_id;
-		$options->filter_by_modelo_name	= 'component_portal';
-		$options->tipo 					= $target_section_tipo;
-		
-	$references = (array)common::get_references($options);
-	$all_resource_references = array_keys($references);
+	exit();
 	
-	# Remove self section reference
-	$all_resource_references = array_diff($all_resource_references, array($portal_parent));	
-		#dump($all_resource_references,"all_resource_references - ".count($all_resource_references)." - portal_parent:$portal_parent");
-	
-	if (count($all_resource_references)>0) {
-
-		# CASE 1 . Hay otros registros que usan este recurso. Avisamos de que NO se puede eliminar el mismo y no hacemos nada.
-		$msg_html='Sorry. You can not delete this resource because it is used in other records: <br>';
-		foreach ($all_resource_references as $current_section_id) {
-
-			$section_tipo 			= common::get_tipo_by_id($current_section_id, $table='matrix');
-			$section 				= section::get_instance($current_section_id,$section_tipo);			
-			$section_id_number 		= $section->get_section_id();
-			$section_termino 		= RecordObj_dd::get_termino_by_tipo($section_tipo,null,true);
-			if ($current_section_id!=$portal_parent) {
-				$msg_html .= "<br> Ref. $section_id_number - $section_termino ";
-				if(SHOW_DEBUG) $msg_html .= " id_matrix:$current_section_id";
-			}			
-		}
-		print($msg_html);
-		die();		
-	
-	}else{
-
-		# CASE 2 . No hay otros registros que usen este recurso. Podemos borrarlo tranquilamente y lo hacemos.
-		$component_portal->remove_resource_from_portal($rel_locator, $portal_tipo);
-		print 'ok';
-		die();
-	}
-	*/
 
 }#end delete_portal_record
 
 
+
+/**
+* SHOW_MORE
+* Used in list to sow more than first element of current portal
+*/
+if($mode=='show_more') {
+
+	if( empty($portal_tipo) ) {
+		trigger_error("Error portal_tipo is mandatory");
+		if(SHOW_DEBUG) {
+			throw new Exception("Trigger Error: portal_tipo is empty ! ", 1); 
+		}		
+		exit();
+	}
+	if( empty($section_tipo) ) {
+		trigger_error("Error section_tipo is mandatory");
+		if(SHOW_DEBUG) {
+			throw new Exception("Trigger Error: section_tipo is empty ! ", 1); 
+		}
+		exit();
+	}
+	if( empty($portal_parent) ) {
+		trigger_error("Error portal_parent is mandatory");
+		if(SHOW_DEBUG) {
+			#throw new Exception("Trigger Error: portal_parent is empty ! ", 1); 
+		}
+		exit();
+	}
+	
+	$component_portal = component_common::get_instance('component_portal',
+													  $portal_tipo,
+													  $portal_parent,
+													  'list',
+													  DEDALO_DATA_NOLAN,
+													  $section_tipo);
+	$component_portal->html_options->skip_records = 1; // Skip first result
+	$html = $component_portal->get_html();
+
+	echo $html;
+	exit();
+
+}//end show_more
 
 
 ?>

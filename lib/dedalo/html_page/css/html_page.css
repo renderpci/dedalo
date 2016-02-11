@@ -85,7 +85,9 @@ PRE {
 	word-wrap: break-word;	
 	line-height: 1.2em;
 }
-
+.main_font_light {
+	font-family: 'Oxygen-light';
+}
 
 /* HTML5 display-role reset for older browsers */
 article, aside, details, figcaption, figure,
@@ -257,7 +259,7 @@ q:before, q:after { content:''; content:none; }
 */
 
 
-SPAN.ajax_loading_msg {
+span.ajax_loading_msg {
 	display: inline-block;
 	padding: 6px;
 }
@@ -339,18 +341,22 @@ SPAN.ajax_loading_msg {
 
 
 
-/*-- DIALOG --*/
-.dialog_page_iframe {
-	width: 100% !important;
-	margin: 0px !important;
-	padding: 0 !important;
-	border: none;
-	/*overflow: scroll;*/
-	display: block;
-}
-.ui-widget-content {
-	background-image: none;
-}
+/* DIALOG OVERRIDE 
+------------------------------- */
+	.dialog_page_iframe {
+		width: 100% !important;
+		margin: 0px !important;
+		padding: 0 !important;
+		border: none;
+		/*overflow: scroll;*/
+		display: block;
+	}
+	.ui-widget-content {
+		background-image: none;
+	}
+	.ui-dialog {
+		width: 96% !important;
+	}
 
 
 /*-- JQUERY UI MODIFICATIONS --*/

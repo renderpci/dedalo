@@ -28,17 +28,18 @@
 	switch($modo) {		
 		
 		case 'player':
-		case 'edit':	
+		case 'edit':
+				$leaflet_dist = 'stable_versions';	// stable_versions | dev_versions
 				# CSS
-					css::$ar_url[] = DEDALO_ROOT_WEB .'/lib/leaflet/leaflet.css';
-					css::$ar_url[] = DEDALO_ROOT_WEB .'/lib/leaflet/Leaflet.draw-master/dist/leaflet.draw.css';
+					css::$ar_url[] = DEDALO_ROOT_WEB ."/lib/leaflet/$leaflet_dist/leaflet.css";
+					css::$ar_url[] = DEDALO_ROOT_WEB ."/lib/leaflet/$leaflet_dist/leaflet.draw/leaflet.draw.css";
 
 				# JS	
-					js::$ar_url[] = DEDALO_ROOT_WEB . '/lib/leaflet/leaflet.js';
-					js::$ar_url[] = DEDALO_ROOT_WEB . '/lib/leaflet/Leaflet.draw-master/dist/leaflet.draw.js';
+					js::$ar_url[] = DEDALO_ROOT_WEB . "/lib/leaflet/$leaflet_dist/leaflet.js";
+					js::$ar_url[] = DEDALO_ROOT_WEB . "/lib/leaflet/$leaflet_dist/leaflet.draw/leaflet.draw.js";
 					switch (DEDALO_GEO_PROVIDER) {
 						case 'GOOGLE':
-							js::$ar_url[] = DEDALO_ROOT_WEB .'/lib/leaflet/leaflet-google.js';
+							js::$ar_url[] = DEDALO_ROOT_WEB ."/lib/leaflet/$leaflet_dist/leaflet-google.js";
 							break;						
 						default:			
 							break;

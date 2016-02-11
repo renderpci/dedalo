@@ -30,11 +30,15 @@ if($mode=='load_preview_component') {
 	if (empty($tipo)) throw new Exception("Error Processing Request: Unable load_preview_component ! (tipo is empty)", 1);
 	if (empty($current_tipo_section)) throw new Exception("Error Processing Request: Unable load_preview_component ! (current_tipo_section is empty)", 1);
 
-	#$component_tipo 	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);	
-	$component 			= component_common::get_instance(null, $tipo, $parent, 'edit', DEDALO_DATA_LANG, $current_tipo_section);
+	#
+	# COMPONENT
+	$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);	
+	$component 		= component_common::get_instance($modelo_name, $tipo, $parent, 'edit', DEDALO_DATA_LANG, $current_tipo_section);
 		#dump($component,"component");#die();
 	$component->set_identificador_unico( $component->get_identificador_unico().'_preview' );
 
+	#
+	# TOOL
 	$tool_time_machine 	= new tool_time_machine($component, 'preview');
 
 	# Configure obj
@@ -124,7 +128,7 @@ if($mode=='assign_time_machine_value') {
 	# COMPONENT PORTAL SEARCH_OPTIONS : Clear old data and force recreate
 	#dump($_SESSION['dedalo4']['config']['search_options'],"search_options");
 	if (get_class($component_obj_to_save)=='component_portal' && isset($_SESSION['dedalo4']['config']['search_options']) ) {		
-		$target_section_tipo = $component_obj_to_save->get_target_section_tipo();		
+		$target_section_tipo = $component_obj_to_save->get_ar_target_section_tipo()[0];		
 		foreach ($_SESSION['dedalo4']['config']['search_options'] as $key => $value) {
 			if ( strpos($key, $target_section_tipo)!==false ) {
 				unset($_SESSION['dedalo4']['config']['search_options'][$key]);

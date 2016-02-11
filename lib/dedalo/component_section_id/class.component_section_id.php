@@ -64,7 +64,7 @@ class component_section_id extends component_common {
 				break;
 			
 			default:
-				$search_query = " section_id $comparison_operator " . intval($search_value);
+				$search_query = " section_id $comparison_operator " . intval($search_value).' ';
 				break;
 		}
 		

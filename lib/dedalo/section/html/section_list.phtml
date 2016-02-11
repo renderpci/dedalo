@@ -44,16 +44,7 @@
 		case 0	:	$html_contenido .= "\n <span class=\"css_span_dato sin_acceso {$ar_css['css_span_dato']}\"> ".label::get_label('contenido_no_autorizado')." </span>";
 					break;
 						
-		case ($permissions>=1)	:
-		
-					#$html_contenido .= "\n".$ar_components_html;
-					#$html_contenido .= "\n <a href=\"javascript:;\" onclick=\"New(this)\" data-tipo=\"{$tipo}\"> New ($tipo)</a> <div class=\"new_ajax_response\"></div> ";	
-					#dump( $_SESSION['dedalo4']['config']['search_options']['section_'.$tipo.'_'.$modo.'_'.TOP_TIPO.'_'.$_REQUEST['t']], ' 1 ');
-					#dump('section_'.$tipo.'_'.$modo.'_'.TOP_TIPO.'_'.$_REQUEST['t'], ' var');
-	
-
-
-					
+		case ($permissions>=1) :	
 
 					#
 					# BUTTONS
@@ -62,8 +53,8 @@
 					$html_buttons .= "\n<div class=\"section_buttons_container\">";
 
 						#
-						# BUTTON SHOW ALL / SHOW FILTERED 
-						# SEARCH_OPTIONS_SESSION_KEY						
+						# PORTAL BUTTONS: SHOW ALL / SHOW FILTERED 
+						# Add buttons for tool_portal mode (modo is 'list' but url request contain var m=tool_portal)
 						if (isset($_REQUEST['m']) && $_REQUEST['m']=='tool_portal') {					
 							#dump($search_options_session_key, " search_options_session_key ".to_string());
 							#dump($_SESSION['dedalo4']['config']['search_options'][$search_options_session_key]->filter_by_section_creator_portal_tipo, " search_options_session_key ".to_string());
@@ -74,7 +65,7 @@
 							}else{
 								$current_btn_label = label::get_label('mostrar_filtrados');
 								$current_btn_class = 'show_filtered';
-							}					
+							}
 
 							$html_buttons .= "
 							<div id=\"btn_tool_portal_show_full\" class=\"btn_inside_section_buttons_container $current_btn_class\"
@@ -86,36 +77,58 @@
 								$html_buttons .= " $search_options_session_key";
 							}
 							$html_buttons .= "</div>";
-						}//<div class=\"icon_bs $current_btn_class\"></div>
+						}//end if (isset($_REQUEST['m']) && $_REQUEST['m']=='tool_portal') {
 
 
-						#dump($ar_buttons, 'ar_buttons', array());
-						foreach ($ar_buttons as $current_button_modelo_name => $current_ar_button_obj_model) {
+						#
+						# SECTION TOP BUTTONS (new, stats, print, etc)
+						# dump($ar_buttons, 'ar_buttons', array());
+						foreach((array)$ar_buttons as $current_button_modelo_name => $current_ar_button_obj_model) {
 							# Skip delete button
 							#if($current_button_modelo_name=='button_stats') continue;
-							foreach($current_ar_button_obj_model as $current_button_obj) {
+							foreach($current_ar_button_obj_model as $current_button_obj) {								
 								# Set buton target tipo
 								$current_button_obj->set_target($tipo);
 								$html_buttons .= $current_button_obj->get_html();
-							}							
+							}						
 						}
+
+						
+						#
+						# TOOL_DIFFUSION button for export to mysql
+						$authorized_tool = (bool)component_security_tools::is_authorized_tool_for_logged_user('tool_diffusion');
+						if ($authorized_tool && defined('DEDALO_DIFFUSION_MAP')) {
+							$DEDALO_DIFFUSION_MAP = unserialize(DEDALO_DIFFUSION_MAP);
+							if (isset($DEDALO_DIFFUSION_MAP[$tipo])) {
+								$tool_diffusion = new tool_diffusion($tipo,'button');
+								$html_buttons  .= $tool_diffusion->get_html();
+							}
+						}
+
+						#
 						# DEBUG BUTTONS
-						$is_global_admin = component_security_administrator::is_global_admin( navigator::get_user_id() );
-							#dump($is_global_admin, ' is_global_admin');
+						# Special debug only buttons
+						$is_global_admin = component_security_administrator::is_global_admin( navigator::get_user_id() );						
 						if( (SHOW_DEBUG || $is_global_admin) && !isset($_REQUEST['cache_updated'])	) {
 							if(isset($_GET['m']) && strpos($_GET['m'], 'tool')!==false) {
 								# Nothing to show
-							}else{
-								$tool_update_cache = new tool_update_cache($tipo,'button');
-								$html_buttons     .= $tool_update_cache->get_html();
+							}else{								
+								if (isset($context->context_name) && $context->context_name=='section_tool') {
+									# Section tool is not updateable
+								}else{
+									#
+									# TOOL_UPDATE_CACHE
+									$tool_update_cache = new tool_update_cache($tipo,'button');
+									$html_buttons     .= $tool_update_cache->get_html();
 
-								# Temporal
-								#$html_buttons .= "\n <div id=\"button_update_cache\" class=\"btn_inside_section_buttons_container\"
-								#onclick=\"tool_update_cache.update_cache(this,{'section_tipo':'$this->tipo'})\">".label::get_label('update_cache')." $this->tipo *
-								#</div>";
-							}							
-						}
-						
+									# Temporal
+									#$html_buttons .= "\n <div id=\"button_update_cache\" class=\"btn_inside_section_buttons_container\"
+									#onclick=\"tool_update_cache.update_cache(this,{'section_tipo':'$this->tipo'})\">".label::get_label('update_cache')." $this->tipo *
+									#</div>";
+								}							
+							}
+																					
+						}						
 						
 
 					$html_buttons .= "\n</div>";#end section_buttons_container

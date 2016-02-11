@@ -195,7 +195,9 @@
 	* JAVASCRIPT 
 	*/
 		# PARENT (JAVASCRIPT VAR) NEEDED FOR TIME MACHINE
-		if(isset($_REQUEST['id'])) {
+		if(isset($_REQUEST['parent'])) {
+			$parent = $_REQUEST['parent'];
+		}elseif(isset($_REQUEST['id'])) {
 			$parent = $_REQUEST['id'];
 			$_SESSION['dedalo4']['config']['id'] = $parent;
 		}else if(!empty($_SESSION['dedalo4']['config']['id'])) {
@@ -219,7 +221,7 @@
 	
 
 	# LOG MESSAGES
-		global $log_messages;							#dump($log_messages.'$log_messages');
+		global $log_messages;	#dump($log_messages.'$log_messages');
 
 
 		

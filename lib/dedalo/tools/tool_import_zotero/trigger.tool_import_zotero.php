@@ -57,9 +57,9 @@ if( $mode=='process_file' ) {
 		$file_data = json_decode(file_get_contents($ar_files[0]));	// @return expected: array of objects 
 		#dump($file_data, ' file_data');#exit();
 
-	$process_file 	= (array)tool_import_zotero::process_file($file_data, $checkbox_values);
+	$process_file = (array)tool_import_zotero::process_file($file_data, $checkbox_values);
 	#echo "Ok process_file <hr>";
-		#dump($process_file, ' process_file');die();
+		#dump($process_file, ' process_file');#die();
 	
 	$html='';
 	foreach ($process_file as $key => $obj_value) {
@@ -97,7 +97,8 @@ if( $mode=='process_file' ) {
 		}
 
 		$html .= '</table><br>';
-	}
+
+	}//end foreach ($process_file as $key => $obj_value) {
 
 	# 
 	# JSON FILE DELETE AFTER IMPORT
@@ -109,6 +110,7 @@ if( $mode=='process_file' ) {
 
 	echo $html;
 
+	
 	#
 	# EXC INFO
 	$exec_time 		= exec_time_unit($start_time, $unit='sec');
@@ -120,9 +122,20 @@ if( $mode=='process_file' ) {
 	logger_backend_activity::$enable_log = true;
 	RecordObj_time_machine::$save_time_machine_version = true;
 
+
+	# Custom potprocessing file	
+	if (!empty(tool_import_zotero::$process_script)) {
+		$ar_section_id = array_keys($process_file);	// Keys are section id of each created/updated record
+		include_once(DEDALO_LIB_BASE_PATH.''.tool_import_zotero::$process_script);
+		if (function_exists('custom_process')) {
+			custom_process( $ar_section_id );
+		}
+	}
+	
 	exit();
 	
 }#end if( $mode=='process_file' ) 
+
 
 
 

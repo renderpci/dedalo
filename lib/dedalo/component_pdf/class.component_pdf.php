@@ -79,7 +79,8 @@ class component_pdf extends component_common {
 			# DEBUG
 			if(SHOW_DEBUG) {
 				$total=round(microtime(true)-$start_time,3);
-				error_log("Updated ".RecordObj_dd::get_termino_by_tipo($this->tipo)." locator (to ".$locator->get_flat().") of current ".get_called_class()." (tipo:$this->tipo - section_tipo:$this->section_tipo - parent:$this->parent - lang:$this->lang)");
+				$name = RecordObj_dd::get_termino_by_tipo($this->tipo,true);
+				error_log("DEBUG INFO ".__METHOD__." Saved $name with dato ".$locator->get_flat()." of current ".get_called_class()." (tipo:$this->tipo - section_tipo:$this->section_tipo - parent:$this->parent - lang:$this->lang)");
 			}		
 		}#end if ($need_save)
 		
@@ -231,7 +232,8 @@ class component_pdf extends component_common {
 	public function get_ar_tools_obj() {
 		
 		# Remove common tools (time machine and lang)
-		unset($this->ar_tools_name);
+		#unset($this->ar_tools_name);
+		$this->ar_tools_name = array();
 
 		# Add tool_image_versions
 		$this->ar_tools_name[] = 'tool_pdf_versions';

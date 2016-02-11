@@ -388,11 +388,13 @@ class Ffmpeg {
 	* @param $timecode
 	*	Float number timecode like 102.369217 (from javascript media engine tc control)
 	*	Is formated here to ffmpeg as 102.369
+	* @param $ar_target
+	*	array|bool default false
 	*
 	* @return $posterFrame_command_exc
 	*	Terminal commnad response
 	*/
-	public function create_posterframe(AVObj $AVObj, $timecode) {
+	public function create_posterframe(AVObj $AVObj, $timecode, $ar_target=false) {
 		
 		# SRC VIDEO FILE
 		$src_file			= $AVObj->get_media_path_abs()	. $AVObj->get_name() . '.' . $AVObj->get_extension();
@@ -415,11 +417,17 @@ class Ffmpeg {
 		}
 		
 		
-		# IMAGE JPG TARGET FILE		
-		$PosterFrameObj		= new PosterFrameObj($reelID = $AVObj->get_name(), $tc=NULL);
-		$target_path		= DEDALO_MEDIA_BASE_PATH . DEDALO_AV_FOLDER . '/posterframe';
-		$target_file		= $target_path .'/'. $AVObj->get_name() . '.' . $PosterFrameObj->get_extension();		
-		
+		# IMAGE JPG TARGET FILE	
+		if ($ar_target) {
+			# Forced case. Paths ar received directly (identifying image for example)
+			$target_path 	= $ar_target['target_path'];  // Absolute path to image dir
+			$target_file 	= $ar_target['target_file'];  // Absolute final path of file (included target_path)
+		}else{
+			# Deafult case . Paths are extracted from PosterFrameObj
+			$PosterFrameObj	= new PosterFrameObj($reelID = $AVObj->get_name(), $tc=NULL);
+			$target_path	= DEDALO_MEDIA_BASE_PATH . DEDALO_AV_FOLDER . '/posterframe';
+			$target_file	= $target_path .'/'. $AVObj->get_name() . '.' . $PosterFrameObj->get_extension();
+		}
 		
 			# posterframe dir exists	
 			if( !is_dir($target_path) ) {				
@@ -691,6 +699,43 @@ class Ffmpeg {
 	}#end convert_to_dedalo_av
 
 
+
+	/**
+	* GET_MEDIA_ATTRIBUTES
+	* @return object json mixed file info like:
+	* stdClass Object
+	*	(
+	*	    [format] => stdClass Object
+	*	        (
+	*	            [filename] => /Users/paco/Trabajos/Dedalo/site_dedalo_plataforma_40/media_test/media_192.168.1.7/av/404/rsc35_rsc167_15.mp4
+	*	            [nb_streams] => 2
+	*	            [nb_programs] => 0
+	*	            [format_name] => mov,mp4,m4a,3gp,3g2,mj2
+	*	            [format_long_name] => QuickTime / MOV
+	*	            [start_time] => -0.001333
+	*	            [duration] => 4237.866667
+	*	            [size] => 545314647
+	*	            [bit_rate] => 1029413
+	*	            [probe_score] => 100
+	*	            [tags] => stdClass Object
+	*	                (
+	*	                    [major_brand] => mp42
+	*	                    [minor_version] => 1
+	*	                    [compatible_brands] => mp42mp41
+	*	                    [creation_time] => 2012-07-11 12:10:32
+	*	                )
+	*	        )
+	*	)
+	*/
+	public static function get_media_attributes( $source_file ) {		
+		
+	    $command = DEDALO_AV_FFPROBE_PATH . ' -v quiet -print_format json -show_format ' . $source_file . ' 2>&1';  
+	    $output  = json_decode( shell_exec($command) );  
+	   		#dump($output, ' output ++ '.to_string());
+
+	   	return $output;
+
+	}#end get_media_attributes
 
 
 

@@ -1,4 +1,5 @@
 <?php
+	//dump($_REQUEST, ' _REQUEST ++ '.to_string()); return;
 
 	# CONTROLLER TOOL LANG
 
@@ -13,7 +14,7 @@
 	$tool_name 				= get_class($this);
 
 	$button_row				= $this->button_row;
-	$target_section_tipo 	= $this->component_obj->get_target_section_tipo();
+	$target_section_tipo 	= $this->component_obj->target_section_tipo;
 	
 	$modo 					= $this->get_modo();
 	$file_name 				= $modo;	
@@ -41,16 +42,38 @@
 
 					$exclude_elements = $this->component_obj->get_exclude_elements();
 
+					# SEARCH_OPTIONS_SESSION_KEY
+					$search_options_session_key = 'tool_portal_'.$target_section_tipo;
+
 					# CONFIGURE SECTION CONTEXT
 					$context = new stdClass();
-						$context->context_name 			= 'list_into_tool_portal';
-						$context->portal_tipo 			= $tipo;
-						$context->portal_parent 		= $parent;
-						$context->portal_section_tipo 	= $section_tipo;
-						$context->exclude_elements 	  	= $exclude_elements;
+						$context->context_name 				 = 'list_into_tool_portal';
+						$context->portal_tipo 				 = $tipo;
+						$context->portal_parent 			 = $parent;
+						$context->portal_section_tipo 		 = $section_tipo;
+						$context->exclude_elements 	  		 = $exclude_elements;
+						$context->search_options_session_key = $search_options_session_key;
+							#dump($context, ' context ++ '.to_string());
 					
 					$section->set_context($context);
 
+					// Remove previous search_options session for refresh link buttons
+					if (isset($_SESSION['dedalo4']['config']['search_options'])) {					
+						foreach((array)$_SESSION['dedalo4']['config']['search_options'] as $key => $value) {							
+							if ($key==$search_options_session_key) {
+								//dump($_SESSION['dedalo4']['config']['search_options'][$key], '$_SESSION[dedalo4][config][search_options][$key] ++ '.to_string());								
+								if (isset($_SESSION['dedalo4']['config']['search_options'][$key]->context->portal_parent)) {
+									$_SESSION['dedalo4']['config']['search_options'][$key]->context->portal_parent  = $parent;
+									$_SESSION['dedalo4']['config']['search_options'][$key]->context->portal_tipo 	= $tipo;
+									debug_log(__METHOD__." Updated session key:$key to context->portal_parent = $parent ".to_string(), logger::DEBUG);
+								}else{
+									unset($_SESSION['dedalo4']['config']['search_options'][$key]);
+									debug_log(__METHOD__." Removed session key: ".to_string($key), logger::DEBUG);
+								}
+								break;
+							}							
+						}
+					}
 					$section_html = $section->get_html();
 
 				#DEDALO_LIB_BASE_URL + "/main/?m=list&tipo="+current_tipo+"&caller_id="+caller_id+"&caller_tipo="+caller_tipo;

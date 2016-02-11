@@ -31,44 +31,65 @@ if (strpos(DEDALO_HOST,'8888')===FALSE) {
 	if(login::is_logged()!==true) die("<span class='error'> Auth error: please login </span>");
 }
 
+#print "Session.save_handler: <b>".ini_get('session.save_handler')."</b><br>";
 
-/*
-function alist ($array) {  //This function prints a text array as an html list.
-  $alist = "<ul>";
-  for ($i = 0; $i < sizeof($array); $i++) {
-    $alist .= "<li>$array[$i]";
-  }
-  $alist .= "</ul>";
-  return $alist;
-}
-*/
-$test_daemons = array(
-				'convert',
-				'identify',
-				'/usr/local/bin/ffmpeg',
-				'/usr/local/bin/qt-faststart',
-				'/Applications/MAMP/bin/php/php5.5.3/bin/php',
-				MYSQL_BIN_PATH.'mysql',
-				PHP_BIN_PATH
-				);
+#
+# DATABASE
+$info_database = pg_version(DBi::_getConnection());
+print "Database: <b>".$info_database['IntervalStyle']."</b>";
+echo "<pre>";
+print_r($info_database);
+echo "</pre>";
 
-foreach ($test_daemons as $key => $daemon_test) {
-	exec( "$daemon_test ", $out, $rcode); //Try to get ImageMagick "convert" program version number.
-	echo "Return code for test_daemons $daemon_test is $rcode <br>"; //Print the return code: 0 if OK, nonzero if error.
-}
-
-#echo alist($out); //Print the output of "convert -version"
-
-#var_dump($out);
-#echo "</pre>";
-
+#
+# PHP USER
 $processUser = posix_getpwuid(posix_geteuid());
-print "User running php: <b>".$processUser['name']."</b>";
+print "PHP user: <b>".$processUser['name']."</b>";
 echo "<pre>";
 print_r($processUser);
 echo "</pre>";
 
+#
+# FFMPEG
+$ffmpeg = shell_exec(DEDALO_AV_FFMPEG_PATH." -version ");
+print "FFMPEG: <b>".DEDALO_AV_FFMPEG_PATH."</b>";
+echo "<pre>";
+print_r($ffmpeg);
+echo "</pre>";
+
+#
+# FFPROBE
+$ffmpeg = shell_exec(DEDALO_AV_FFPROBE_PATH." -version ");
+print "PROBE: <b>".DEDALO_AV_FFPROBE_PATH."</b>";
+echo "<pre>";
+print_r($ffmpeg);
+echo "</pre>";
+
+#
+# IMAGE MAGICK
+$result = shell_exec(MAGICK_PATH."convert -version ");
+print "IMAGE MAGICK: <b>".MAGICK_PATH."</b>";
+echo "<pre>";
+print_r($result);
+echo "</pre>";
+
+
 ?>
-<?php  
+<?php 
+#
+# PHP INFO
 echo phpinfo();
+
+#
+# DB DATA CHECK
+require(DEDALO_LIB_BASE_PATH.'/db/class.data_check.php');
+$data_check = new data_check();
+$response 	= $data_check->check_sequences();
+if ($response->result!=true) {
+	debug_log(__METHOD__." $response->msg ".to_string(), logger::WARNING);
+	if(SHOW_DEBUG) {
+		die("Error on ".$response->msg);
+	}
+}
+echo "<hr><div>".$response->msg."</div>";
 ?>

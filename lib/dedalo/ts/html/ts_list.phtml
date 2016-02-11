@@ -7,16 +7,8 @@
 <link rel="shortcut icon" href="<?php echo DEDALO_ROOT_WEB ?>/favicon.ico" />
 <?php
 # CSS
-print css::build_tag(JQUERY_UI_URL_CSS);
-print css::build_tag(DEDALO_LIB_BASE_URL .'/common/css/common.css');
-print css::build_tag(DEDALO_LIB_BASE_URL .'/html_page/css/html_page.css');
-print css::build_tag(DEDALO_LIB_BASE_URL .'/diffusion/diffusion_index_ts/css/diffusion_index_ts.css');
-print css::build_tag(DEDALO_LIB_BASE_URL .'/tools/tool_av_versions/css/tool_av_versions.css');
-print css::build_tag(DEDALO_LIB_BASE_URL .'/menu/css/menu.css');
-print css::build_tag(DEDALO_LIB_BASE_URL .'/component_portal/css/component_portal.css');
-print css::build_tag(DEDALO_LIB_BASE_URL .'/ts/css/ts_list.css');
+echo trim(css::get_css_link_code());
 ?>
-
 <script type="text/javascript">
 	var DEDALO_LIB_BASE_URL	= '<?php echo DEDALO_LIB_BASE_URL ?>' ;
 	var page_globals = new Object();
@@ -49,21 +41,25 @@ print css::build_tag(DEDALO_LIB_BASE_URL .'/ts/css/ts_list.css');
 </script>
 <?php
 # JS
-print js::build_tag(JQUERY_LIB_URL_JS);
-print js::build_tag(JQUERY_UI_URL_JS);
-print js::build_tag(DEDALO_LIB_BASE_URL . '/common/js/common.js');
-print js::build_tag(DEDALO_LIB_BASE_URL . '/login/js/login.js');
-print js::build_tag(DEDALO_LIB_BASE_URL .'/component_portal/js/component_portal.js');
-print js::build_tag(DEDALO_LIB_BASE_URL .'/tools/tool_av_versions/js/tool_av_versions.js');
-print js::build_tag(DEDALO_LIB_BASE_URL . '/common/js/cookies.js');
-print js::build_tag(DEDALO_LIB_BASE_URL . '/common/js/lang/'.DEDALO_APPLICATION_LANG.'.js');
-#print js::build_tag(DEDALO_ROOT_WEB 	. '/lib/jquery/jquery.ajaxQueue.min.js');
-print js::build_tag(DEDALO_ROOT_WEB 	. '/lib/jquery/AjaxQ-master/ajaxq.js');
-#print js::build_tag(DEDALO_ROOT_WEB 	. '/inc/javascript.js');
-print js::build_tag(DEDALO_LIB_BASE_URL . '/ts/js/ts_common.js');
-print js::build_tag(DEDALO_LIB_BASE_URL .'/tools/tool_common/js/tool_common.js');
-print js::build_tag(DEDALO_LIB_BASE_URL .'/tools/tool_indexation/js/tool_indexation.js');
-print js::build_tag(DEDALO_LIB_BASE_URL . '/ts/js/ts_list.js');
+echo trim(js::get_js_link_code());
+/*
+	print js::build_tag(JQUERY_LIB_URL_JS);
+	print js::build_tag(JQUERY_UI_URL_JS);
+	print js::build_tag(DEDALO_LIB_BASE_URL . '/common/js/common.js');
+	print js::build_tag(DEDALO_LIB_BASE_URL . '/tools/tool_common/js/tool_common.js');
+	print js::build_tag(DEDALO_LIB_BASE_URL . '/login/js/login.js');
+	print js::build_tag(DEDALO_LIB_BASE_URL .'/component_portal/js/component_portal.js');
+	print js::build_tag(DEDALO_LIB_BASE_URL .'/tools/tool_av_versions/js/tool_av_versions.js');
+	print js::build_tag(DEDALO_LIB_BASE_URL . '/common/js/cookies.js');
+	print js::build_tag(DEDALO_LIB_BASE_URL . '/common/js/lang/'.DEDALO_APPLICATION_LANG.'.js');
+	#print js::build_tag(DEDALO_ROOT_WEB 	. '/lib/jquery/jquery.ajaxQueue.min.js');
+	print js::build_tag(DEDALO_ROOT_WEB 	. '/lib/jquery/AjaxQ-master/ajaxq.js');
+	#print js::build_tag(DEDALO_ROOT_WEB 	. '/inc/javascript.js');
+	print js::build_tag(DEDALO_LIB_BASE_URL . '/ts/js/ts_common.js');
+	print js::build_tag(DEDALO_LIB_BASE_URL .'/tools/tool_common/js/tool_common.js');
+	print js::build_tag(DEDALO_LIB_BASE_URL .'/tools/tool_indexation/js/tool_indexation.js');
+	print js::build_tag(DEDALO_LIB_BASE_URL . '/ts/js/ts_list.js');
+	*/
 ?>
 </head>
 
@@ -82,7 +78,27 @@ print js::build_tag(DEDALO_LIB_BASE_URL . '/ts/js/ts_list.js');
   <tr>
 	<td align="center" valign="top" >
 	<div id="tesauro_content">         
-	
+	<?php
+	#
+	# LOG MESSAGES		
+		print '<!-- LOG MESSAGES HTML -->';
+		print '<div id="log_messages" ondblclick="this.innerHTML=\'\';">';
+		print implode('<br>', (array)$log_messages);
+		if(error_get_last()) {
+			print "Last Error: <pre>";
+			print_r(error_get_last());
+			print "</pre>";
+		}
+		print "</div><!-- /log_messages -->\n\n";
+
+	#
+	# BUTTON DIFFUSION publish thesaurus
+	$tool_diffusion_options = new stdClass();
+		$tool_diffusion_options->ar_tables = (array)$arrayTablas;	
+	$tool_diffusion = new tool_diffusion('temp', 'button_thesaurus');
+	$tool_diffusion->options = $tool_diffusion_options;
+	echo $tool_diffusion->get_html();
+	?>
 
 	<!-- FORM -->
 	<form id="form1" name="form1" method="post" action="trigger.Tesauro.php" onsubmit="return ts.validate_form(this);">
@@ -257,15 +273,15 @@ print js::build_tag(DEDALO_LIB_BASE_URL . '/ts/js/ts_list.js');
 		<td align="center"  valign="bottom" >
 			<!-- iconos de información -->
 			<?php if($modo=='tesauro_edit'|| $modo=='modelo_edit'){ ?>	
-			<div style="padding:20px; margin-top:40px">
-			<img src="../themes/default/nd.gif" width="15" height="14" align="absmiddle"> <?php echo $no_descriptores_title ?> 
-			<img src="../themes/default/q.gif" width="15" height="14" align="absmiddle" style="padding-left:10px"> <?php echo $definicion_title ?>  
-			<img src="../themes/default/u.gif" alt="" width="15" height="14" align="absmiddle" style="padding-left:10px"> <?php echo $usado_en_indexaciones_title ?>  
-			<img src="../themes/default/tr-icon.gif" alt="" width="15" height="14" align="absmiddle" style="padding-left:10px"> <?php echo $terminos_relacionados_title ?>
-			<img src="../themes/default/m-icon.gif" width="15" height="15" align="absmiddle" style="padding-left:10px"> <?php echo ucfirst($modelo_title) ?> 
-			<img src="../themes/default/edit_grey.png" width="15" height="15" align="absmiddle" style="padding-left:10px"> <?php echo $editar_title ?> 
-			<img src="../themes/default/video.png" width="15" height="15" align="absmiddle" style="padding-left:10px"> <?php echo $ver_texto_video_title ?> 
-			<img src="../themes/default/sonido.png" width="15" height="15" align="absmiddle" style="padding-left:10px"> <?php echo $ver_texto_audio_title ?>
+			<div class="icon_legends">
+				<img src="../themes/default/nd.gif"><?php echo $no_descriptores_title ?> 
+				<img src="../themes/default/q.gif"><?php echo $definicion_title ?>  
+				<img src="../themes/default/u.gif"><?php echo $usado_en_indexaciones_title ?>  
+				<img src="../themes/default/tr-icon.gif"><?php echo $terminos_relacionados_title ?>
+				<img src="../themes/default/m-icon.gif"><?php echo ucfirst($modelo_title) ?> 
+				<img src="../themes/default/edit_grey.png"><?php echo $editar_title ?> 
+				<img src="../themes/default/video.png"><?php echo $ver_texto_video_title ?> 
+				<img src="../themes/default/sonido.png"><?php echo $ver_texto_audio_title ?>
 			</div>
 			<div class="bottom_separator"></div>
 			<?php }//?>

@@ -51,8 +51,7 @@ class component_geolocation extends component_common {
 
 			# DEBUG
 			if(SHOW_DEBUG===true) {
-				$msg = "INFO: Added default component_geolocation data $parent with: ($tipo, $lang) dato:".to_string($dato_new);
-				error_log($msg);
+				debug_log(__METHOD__."  Added default component_geolocation data $parent with: ($tipo, $lang) dato: ".to_string($dato_new), logger::DEBUG);
 			}
 		}
 
@@ -83,7 +82,8 @@ class component_geolocation extends component_common {
 	public function get_ar_tools_obj() {
 		
 		# Remove common tools (time machine and lang)
-		unset($this->ar_tools_name);
+		#unset($this->ar_tools_name);
+		$this->ar_tools_name = array();
 
 		# Add tool_transcription
 		$this->ar_tools_name[] = 'tool_transcription';
@@ -127,10 +127,11 @@ class component_geolocation extends component_common {
 			return $valor;
 		}			
 		
-	}
+	}//end get_valor
 
 
 
-}
 
+
+};
 ?>

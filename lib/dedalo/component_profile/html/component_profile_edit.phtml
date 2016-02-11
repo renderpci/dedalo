@@ -8,8 +8,10 @@
 	
 	print "\n<!-- PROFILE [tipo:$tipo section_id_matrix:$parent] $label -->";
 	print "\n<div class=\"css_wrap_profile wrap_component\" id=\"{$id_wrapper}\" 
-	data-tipo=\"{$tipo}\" data-lang=\"{$lang}\"
+	data-tipo=\"{$tipo}\"
+	data-lang=\"{$lang}\"
 	data-parent=\"{$parent}\"
+	data-dato=\"{$dato}\"
 	data-section_tipo=\"{$section_tipo}\"
 	data-modo=\"{$modo}\"
 	data-component_name=\"{$component_name}\"
@@ -28,7 +30,13 @@
 			break;					
 		
 		case ($permissions>=1):		
-			$html_contenido .= "\n <select class=\"css_select_profile\" name=\"{$input_name}\" data-tipo=\"{$tipo}\" data-lang=\"{$lang}\" data-section_tipo=\"{$section_tipo}\" data-parent=\"{$parent}\" title=\"$html_title\">";
+			$html_contenido .= "\n <select class=\"css_select_profile\" name=\"{$input_name}\" id=\"$identificador_unico\" onchange=\"component_profile.Save(this)\"
+			data-tipo=\"{$tipo}\"
+			data-lang=\"{$lang}\"
+			data-section_tipo=\"{$section_tipo}\"
+			data-parent=\"{$parent}\"
+			data-dato=\"{$dato}\"
+			title=\"$html_title\">";
 			
 				if(empty($dato)) {
 					$checked = 'selected';
@@ -41,7 +49,7 @@
 				# DB Options
 				foreach ($ar_select_values as $value => $rotulo) {
 					
-					if( $dato == $value) {
+					if( $value == $dato) {
 						$checked = 'selected';
 					}else {
 						$checked = "";
@@ -51,10 +59,21 @@
 
 			$html_contenido .= "\n </select>";
 
+			/*
 			#$html_contenido .= "<div class=\"icon_bs icon_apply\"></div>";
 			$html_contenido .= "\n <input type=\"button\" value=\"".label::get_label('aplicar')."\" class=\"css_button_generic apply_profile_button\" onclick=\"component_profile.apply_profile(this)\">";
+			*/			
+
+
+			#
+			# button_value
+			$button_value 	 = label::get_label('ir_al_perfil');
+			$html_contenido .= " <input type=\"button\" value=\"$button_value\" class=\"go_to_profile\" onclick=\"component_profile.go_to_profile(this, '$profile_section_tipo', '$identificador_unico')\">";
+
+			if(SHOW_DEBUG) {
+				$html_contenido .= " <span class=\"notas\"> (Current dato: $dato)</span>";	
+			}
 			
-			$html_contenido .= " <span class=\"notas\"><i> Componente para testeo</i></span>";								
 	}
 
 	# Prepare content to show in page

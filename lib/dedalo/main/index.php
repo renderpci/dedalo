@@ -28,8 +28,8 @@ if ( strpos($_SERVER["REQUEST_URI"], '.php')!==false ) {
 
 	if(SHOW_DEBUG) {
 		if ($tipo) {
-			trigger_error("Plese use 't' instead 'tipo' in request! ");
-		};
+			debug_log(__METHOD__." Plese use 't' instead 'tipo' in request! ".to_string(), logger::DEBUG);
+		}
 	}
 
 	if($t) $tipo = $t;
@@ -44,7 +44,7 @@ if ( strpos($_SERVER["REQUEST_URI"], '.php')!==false ) {
 		if (strlen($tipo)>0) $tipo_to_msg 	= 'not valid';		
 		$msg = "Error Processing Request: Main Page tipo:'$tipo' is $tipo_to_msg! Main Page redirected to secure MAIN_FALLBACK_SECTION: ".MAIN_FALLBACK_SECTION." ".RecordObj_dd::get_termino_by_tipo(MAIN_FALLBACK_SECTION);
 		if(SHOW_DEBUG) {
-			error_log($msg);
+			debug_log(__METHOD__." $msg ".to_string(), logger::DEBUG);
 		}
 		
 		if (verify_dedalo_prefix_tipos(MAIN_FALLBACK_SECTION)) {
@@ -74,7 +74,7 @@ if ( strpos($_SERVER["REQUEST_URI"], '.php')!==false ) {
 	# If id==0, redirect to current section in list mode
 	if ($modo=='edit' && $id<1) {
 		$msg = "Error Processing Request: Main Page id:'$id' is not valid! Main Page redirected to modo 'list' and requested tipo: ".$tipo. " ". RecordObj_dd::get_termino_by_tipo($tipo);
-		error_log($msg);
+		debug_log(__METHOD__." $msg ".to_string(), logger::DEBUG);
 		header("Location: ".DEDALO_LIB_BASE_URL."/main/?t=".$tipo."&m=list");
 		exit();
 	}
@@ -112,12 +112,15 @@ if ( strpos($_SERVER["REQUEST_URI"], '.php')!==false ) {
 
 					if ($modo=='tool_portal') {
 						$element = component_common::get_instance($modelo_name, $tipo, $parent, $modo, DEDALO_DATA_NOLAN, $section_tipo); 	#dump($modo, ' modo');
+						$target_section_tipo = isset($_REQUEST['target_section_tipo']) ? $_REQUEST['target_section_tipo'] : false;
+						$element->set_target_section_tipo($target_section_tipo);
+							
 					}else{
 						$element = component_common::get_instance($modelo_name, $tipo, $parent, 'edit', DEDALO_DATA_LANG, $section_tipo);
 					}
 				}
 
-				# build tool
+				# Build tool
 				$tool_obj 		= new $tool_name($element, 'page');
 				$content		= $tool_obj->get_html();
 
@@ -126,38 +129,24 @@ if ( strpos($_SERVER["REQUEST_URI"], '.php')!==false ) {
 				break;
 		
 		# SECTION
-		case ($modo=='edit' || $modo=='list') :	
+		case ($modo=='edit' || $modo=='list' || $modo=='section_tool') :	
 				
 				# Si tenemos el id pero no el tipo, paramos (el tipo es necesario siempre para identificar la tabla)
 				if($id>0 && empty($tipo)) {
 					throw new Exception("Sorry. 'tipo' is mandatory", 1);					
 				}
 
-				/*
-				# Averiguamos el modelo del tipo pasado. Lo usaremos commo nombre de la clase del nuevo objeto a crear (usualmente section)
-				if(!empty($tipo)) {
-					#$RecordObj_dd 	= new RecordObj_dd($tipo);
-					#$modelo_name 	= $RecordObj_dd->get_modelo_name();
-					$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
-				}else{
-					$modelo_name 	= 'section';
-				}
-				*/
-
+				#
 				# MODELO_NAME : Can be section / area 
-				$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);#'section';
+				$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 				tools::$globals['modelo_name'] = $modelo_name;
-					#dump($modelo_name,'$modelo_name');
-
-				# Force 'section'
-				#$modelo_name = 'section';
 
 				try {			
 
 					switch(true) {
 
 						case ($modelo_name=='section') :
-									
+
 									$element_obj = section::get_instance($id, $tipo, $modo);
 										#dump($element_obj," element_obj");
 									#$element_obj->set_caller_id($caller_id);
@@ -165,8 +154,27 @@ if ( strpos($_SERVER["REQUEST_URI"], '.php')!==false ) {
 									# FIX SECTION TIPO
 									define('SECTION_TIPO', $tipo);
 									break;
+						
+						case ($modelo_name=='section_tool') :
+
+									# Confiure section from section_tool data
+									$RecordObj_dd = new RecordObj_dd($tipo);
+									$propiedades  = json_decode($RecordObj_dd->get_propiedades());
+										#dump($propiedades->context->target_section_tipo, ' propiedades ++ '.to_string());
+
+									$section_tipo = $propiedades->context->target_section_tipo;
+									
+									$element_obj = section::get_instance($id, $section_tipo, $modo);
+									
+									# Fix section_tool context params									
+									$element_obj->context = (object)$propiedades->context;	
+
+									# FIX SECTION TIPO
+									define( 'SECTION_TIPO', $section_tipo );
+									break;
 
 						case (strpos($modelo_name, 'area')!==false) :
+						
 									$element_obj = new $modelo_name($tipo, $modo);	#__construct($id=NULL, $tipo=false, $modo='edit') 											
 									break;
 
@@ -215,8 +223,6 @@ if ( strpos($_SERVER["REQUEST_URI"], '.php')!==false ) {
 		
 				# NAVIGATOR 
 				navigator::set_selected('area', $tipo);
-
-
 				
 
 				$html = html_page::get_html( $element_obj );

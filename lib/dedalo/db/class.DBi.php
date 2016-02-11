@@ -54,6 +54,17 @@ abstract class DBi {
 			return($mysqli);
 		}
 
+				/*
+				$mysqli = new mysqli($host, $user, $password, $database, $port);
+				if ($mysqli->connect_errno) {
+				    echo "Failed to connect to MySQL: (" . $mysqli->connect_errno . ") " . $mysqli->connect_error;
+				    die();
+				}
+				#echo $mysqli->host_info . "\n";
+
+				return $mysqli;
+				*/
+
 		# Oculta el mensaje 'MySQL extension is deprecated & will be removed in the future of PHP' cuando se usa con PHP >=5
 		# error_reporting(E_ERROR | E_PARSE);
 		

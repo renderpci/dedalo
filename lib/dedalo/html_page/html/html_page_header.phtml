@@ -6,7 +6,7 @@
 if (login::is_logged()) {
 	
 	switch (true) {
-		case (SHOW_DEBUG===TRUE && DEDALO_DATABASE_CONN=='dedalo4_development' && strpos(DEDALO_HOST,'8888')!==FALSE):
+		case (SHOW_DEBUG===TRUE && DEDALO_DATABASE_CONN=='dedalo4_development' && DEDALO_ENTITY=='development'):
 			$menu_wrapper_css = 'menu_wrapper_debug_development';
 			break;
 		case (SHOW_DEBUG):
@@ -57,7 +57,11 @@ if (login::is_logged()) {
 		?>
 
 
-		<?php if (
+		<?php 	
+		#
+		# DEBUG OPTIONS
+		/*
+		if (
 			SHOW_DEBUG===true && 
 			component_security_administrator::is_global_admin(navigator::get_user_id())===true && 
 			strpos($_SERVER['REQUEST_URI'], 'dd_list.php')!==false
@@ -77,7 +81,7 @@ if (login::is_logged()) {
 			<?php # EXPORT BUTTON (ADMIN)
 			if( 
 				DEDALO_DATABASE_CONN=='dedalo4_development' 
-				&& strpos(DEDALO_HOST,'localhost:8888')!==false 
+				&& strpos(DEDALO_HOST,'localhost')!==false 
 				|| (DEDALO_DATABASE_CONN=='dedalo4_development2')
 			) { ?>
 			<a href="javascript:void" class="export_link" onclick="if( confirm('Sure to EXPORT and overwrite structure data in file \n \'dedalo4_development_str.custom.backup\' \nfile?') ) window.open('<?php echo DEDALO_LIB_BASE_URL ?>/backup/trigger.db_utils.php?action=export','Export','width=600,height=600');" >
@@ -86,7 +90,7 @@ if (login::is_logged()) {
 			} 
 			?>
 
-		<?php } ?>
+		<?php } */ ?>
 		
 		
 
@@ -111,12 +115,84 @@ if (login::is_logged()) {
 
 			}
 		}#end if(!empty($current_selected_area))
+
+
+		#
+		# DEBUG SECOND LINE
+		if(SHOW_DEBUG) {
+			/**/
+			$debug_line_html  ='';
+			$debug_line_html .= "<div class=\"debug_line_wrap\">";
+
+			#
+			# DEDALO_ENTITY
+			$processUser = posix_getpwuid(posix_geteuid());
+			$debug_line_html .= "<span>".DEDALO_ENTITY."</span>";
+
+
+			#
+			# PHP USER
+			$processUser = posix_getpwuid(posix_geteuid());
+			$debug_line_html .= "<span>PHP ".phpversion()." ".ini_get('session.save_handler')." <b>".$processUser['name']."</b></span>";
+
+			#
+			# DATABASE 
+			$debug_line_html .= "<span>DB PGSQL ".pg_version(DBi::_getConnection())['server']." <b>".DEDALO_DATABASE_CONN."</b></span>";
+
+			#
+			# HTTP SERVER 
+			if (function_exists('apache_get_version')) {
+				$debug_line_html .= "<span>HTTP "." <b>".apache_get_version()."</b></span>";
+			}
+		
+
+			#
+			# INFO LINK
+			$debug_line_html .= "<a href=\"".DEDALO_ROOT_WEB."/info.php\">Info</a>";
+
+			#
+			# STRUCTURE LINKS
+			if ( SHOW_DEBUG===true && 
+				component_security_administrator::is_global_admin(navigator::get_user_id())===true && 
+				strpos($_SERVER['REQUEST_URI'], 'dd_list.php')!==false
+				) {
+
+					# IMPORT BUTTON (ADMIN)
+					if( strpos(DEDALO_HOST, 'localhost')===false ) {	
+						$debug_line_html .= "<a href=\"javascript:void(0)\" class=\"\" onclick=\"menu.import_str(this)\">IMPORT</a>";
+					}
+
+					# EXPORT BUTTON (ADMIN)
+					if( DEDALO_DATABASE_CONN=='dedalo4_development' && strpos(DEDALO_HOST,'localhost')!==false ) { 
+						$debug_line_html .= "<a href=\"javascript:void(0)\" class=\"\" onclick=\"menu.export_str(this)\">EXPORT</a>";
+					}
+
+
+			}//END STRUCTURE LINKS
+
+
+			#
+			# VERSION
+			$debug_line_html .= "<span>".DEDALO_VERSION." ".DEDALO_BUILD."</span>";
+
+			$debug_line_html .= "</div>";//END debug_line_wrap
+			echo $debug_line_html;
+
+			$menu_wrapper_space_style = 'height:58px';
+		}
 		
 	
 	echo "</div><!-- /menu_wrapper -->\n";
 
-	# Sólo se usa para ocupar el espacio del mewnu_wrapper ya que este es de posición fija y no ocupa espacio en la página	
-	echo "<div class=\"menu_wrapper_space\"></div>";
+
+	
+	# Sólo se usa para ocupar el espacio del mewnu_wrapper ya que este es de posición fija y no ocupa espacio en la página
+	$menu_wrapper_space_style = isset($menu_wrapper_space_style) ? $menu_wrapper_space_style : '';
+	echo "<div class=\"menu_wrapper_space\" style=\"$menu_wrapper_space_style\"></div>";
+	
+		
+
+	
 }
 ?>
 
@@ -128,7 +204,7 @@ if (login::is_logged()) {
 		#echo "<div class=\"icon_bs link\" id=\"quit\" title=\"".label::get_label('salir')."\"></div>";
 	}else{			
 
-		if( strpos(DEDALO_HOST, 'debug:8888')!==false || (isset($_REQUEST['larana']) && $_REQUEST['larana']=='cantora') ) { 
+		if( DEDALO_HOST == 'debug' || (isset($_REQUEST['larana']) && $_REQUEST['larana']=='cantora') ) { 
 			?>
 			<div class="dedalo_header_info_div">
 			<?php echo " Database: <b>".DEDALO_DATABASE_CONN . "</b> " ?>

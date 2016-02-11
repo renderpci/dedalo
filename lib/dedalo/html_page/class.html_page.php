@@ -14,7 +14,7 @@ abstract class html_page {
 	* STATIC METHOD GET_HTML
 	* @param $content (String or Obj)
 	*/
-	public static function get_html($content, $html_raw=false) {
+	public static function get_html( $content, $html_raw=false ) {
 
 		if(SHOW_DEBUG) $start_time = start_time();
 		

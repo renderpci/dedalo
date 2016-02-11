@@ -126,7 +126,7 @@ class tool_subtitles extends tool_common {
 
 			$type='srt';
 			
-			if( strpos($_SERVER['HTTP_HOST'], '8888')!==false ) {
+			if( DEDALO_ENTITY=='development' ) {
 				$added_advice = false;
 			}else{
 				$added_advice = false;	# TEMPORAL !!!!!!! SET TO FALSE WHEN WORK IN PRODUCTION

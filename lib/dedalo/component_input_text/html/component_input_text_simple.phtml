@@ -16,12 +16,14 @@
 	# CONTENIDO (INPUT)
 	$html_contenido = '';
 
-	$html_contenido .= "\n <input class=\"css_input_text {$ar_css['css_input_text']}\" type=\"text\" 
-	id=\"{$identificador_unico}\" name=\"{$tipo}_{$parent}\" 
-	data-tipo=\"{$tipo}\" data-modo=\"login\"
-	value=\"\" 
-	title=\"$html_title\" 
+	$html_contenido .= "\n <input class=\"css_input_text {$ar_css['css_input_text']}\" type=\"text\"
+	id=\"{$identificador_unico}\" name=\"{$tipo}_{$parent}\"
+	data-tipo=\"{$tipo}\"
+	data-modo=\"login\"
+	value=\"\"
+	title=\"$html_title\"
 	placeholder=\"$label\"
+	onchange=\"component_input_text.Save(this)\"
 	/>";
 	
 	

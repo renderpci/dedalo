@@ -148,7 +148,7 @@
 		    
 			#
 			# UPLOAD ROW
-			if ($permissions>=2) {
+			if ( $permissions>=2 && component_security_tools::is_authorized_tool_for_logged_user('tool_upload') ) {
 
 				$current_section_tipo = isset($_GET['section_tipo']) ?  $_GET['section_tipo'] : ''; 	
 

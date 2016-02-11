@@ -24,6 +24,14 @@ abstract class filter {
 	public static function get_sql_filter( $filter_options ) {
 		$sql_filtro='';
 
+		#
+		# DEDALO_BYPASS_FILTER
+		# In some cases yo can bypass filter setting a constant in config called DEDALO_BYPASS_FILTER to bool true
+		if ( defined('DEDALO_BYPASS_FILTER') && DEDALO_BYPASS_FILTER===true ) {
+			$sql_filtro .= "\n-- filter is BYPASSED -- \n";
+			return $sql_filtro; 
+		}
+
 		# Verify minimun valid options acepted
 		if(!is_object($filter_options)) {
 			trigger_error("ilegal filter_options type");
@@ -44,8 +52,7 @@ abstract class filter {
 			$options->json_field	= 'datos';
 
 		# filter_options overwrite options defaults
-		foreach ( (object)$filter_options as $key => $value) {
-			#if (isset($options->$key)) {
+		foreach ( (object)$filter_options as $key => $value) {			
 			if (property_exists($options, $key)) {
 				$options->$key = $value;
 			}
@@ -57,7 +64,6 @@ abstract class filter {
 			$options->projects = (array)filter::get_user_projects(navigator::get_user_id());		#dump($options, ' $options->projects');
 		}
 		#dump($options,"filter_options");
-
 		
 
 
@@ -66,9 +72,8 @@ abstract class filter {
 		if ($is_global_admin===true) {
 			$sql_filtro .= '';
 		}else{
-			if (empty($options->projects)) {
-				global $log_messages;
-				$log_messages .= "<div class=\"warning\">Warning: User without projects!!</div>";
+			if (empty($options->projects)) {				
+				debug_log(__METHOD__. "<div class=\"warning\">Warning: User without projects!!</div>", logger::WARNING);
 			}			
 			switch (true) {
 				##### PROFILES ########################################################
@@ -97,13 +102,34 @@ abstract class filter {
 				##### USERS ########################################################
 				case ($options->section_tipo===DEDALO_SECTION_USERS_TIPO) :							
 					# AREAS FILTER
-					$sql_filtro .= "\n-- filter_users_by_areas -- \n";
+					$user_id = navigator::get_user_id();
+					$sql_filtro .= "\n-- filter_users_by_profile_areas -- \n";
 					$sql_filtro .= 'AND section_id>0 AND ';
-					$sql_filtro .= "\n $options->json_field @>'{\"created_by_userID\":".navigator::get_user_id()."}'::jsonb OR \n";				
+					$sql_filtro .= "\n $options->json_field @>'{\"created_by_userID\":".$user_id."}'::jsonb OR \n";				
 					$sql_filtro .= '((';
 					# Editing users. Use user areas as filter
-					# Current user authorized areas
-					$component_security_areas = component_common::get_instance('component_security_areas', DEDALO_COMPONENT_SECURITY_AREAS_USER_TIPO, navigator::get_user_id(), 'list', DEDALO_DATA_NOLAN, DEDALO_SECTION_USERS_TIPO);
+
+					#
+					# USER PROFILE
+					# Calculate current user profile id
+					$component_profile = component_common::get_instance('component_profile',
+																	  	DEDALO_USER_PROFILE_TIPO,
+																	  	$user_id,
+																	  	'edit',
+																	  	DEDALO_DATA_NOLAN,
+																	  	DEDALO_SECTION_USERS_TIPO);
+					$profile_id = (int)$component_profile->get_dato();
+					#if (empty($profile_id)) {
+					#	return $dato;
+					#}
+
+					# Current user profile authorized areas
+					$component_security_areas = component_common::get_instance('component_security_areas',
+																				DEDALO_COMPONENT_SECURITY_AREAS_PROFILES_TIPO,
+																				$profile_id,
+																				'edit',
+																				DEDALO_DATA_NOLAN,
+																				DEDALO_SECTION_PROFILES_TIPO);
 					$security_areas_dato 	  = (array)$component_security_areas->get_dato();
 						#çdump($security_areas_dato,"security_areas_dato");
 					# Iterate and clean array of authorized areas of this user like '[dd942-admin] => 2'
@@ -117,11 +143,31 @@ abstract class filter {
 						exit();
 						#die( label::get_label('contenido_no_autorizado') );
 					}
-					foreach ($ar_area_tipo as $current_area_tipo) {
-						$sql_filtro.= "\n $options->json_field#>'{components, ".DEDALO_COMPONENT_SECURITY_AREAS_USER_TIPO.", dato, ". DEDALO_DATA_NOLAN ."}' @>'{\"$current_area_tipo\":\"2\"}' ";
-						if ($current_area_tipo != end($ar_area_tipo)) $sql_filtro .= "OR";
-					}
+
+					#
+					# SEARCH PROFILES WITH CURRENT USER AREAS
+						$profile_sql = "SELECT section_id FROM \"matrix_profiles\" WHERE ";
+						foreach ($ar_area_tipo as $current_area_tipo) {
+							$profile_sql.= "\n datos#>'{components, ".DEDALO_COMPONENT_SECURITY_AREAS_PROFILES_TIPO.", dato, ". DEDALO_DATA_NOLAN ."}' @>'{\"$current_area_tipo\":\"2\"}' ";
+							if ($current_area_tipo != end($ar_area_tipo)) $profile_sql .= "OR";
+						}
+						#dump( stripcslashes($profile_sql), ' $profile_sql ++ '.to_string($profile_sql));
+						$result = JSON_RecordObj_matrix::search_free($profile_sql);
+						$ar_profile_id=array();
+						while ($rows = pg_fetch_assoc($result)) {
+							$section_id 	 = $rows['section_id'];	
+							$ar_profile_id[] = $section_id;
+						}
+						#dump($ar_profile_id, ' $ar_profile_id ++ '.to_string($profile_sql)); die();
+
+					foreach ($ar_profile_id as $current_profile_id) {
+						$sql_filtro.= "\n $options->json_field#>'{components, ".DEDALO_USER_PROFILE_TIPO.", dato, ". DEDALO_DATA_NOLAN ."}' = '$current_profile_id' ";
+						if ($current_profile_id != end($ar_profile_id)) $sql_filtro .= "OR";
+					}					
 					$sql_filtro .= "\n)";
+					#dump($sql_filtro, ' $sql_filtro ++ '.to_string($sql_filtro));die();
+
+
 					# PROJECTS FILTER
 					$component_filter_master = component_common::get_instance('component_filter_master', DEDALO_FILTER_MASTER_TIPO, navigator::get_user_id(), 'list', DEDALO_DATA_NOLAN, DEDALO_SECTION_USERS_TIPO);
 					$filter_master_dato 	 = (array)$component_filter_master->get_dato();
@@ -147,7 +193,7 @@ abstract class filter {
 					$sql_filtro .= "\n-- filter_by_projects -- \n";
 					$sql_filtro .= 'AND ';
 					# SECTION FILTER TIPO : Actual component_filter de esta sección
-					$ar_component_filter 	= section::get_ar_children_tipo_by_modelo_name_in_section($options->section_tipo, 'component_filter');
+					$ar_component_filter 	= section::get_ar_children_tipo_by_modelo_name_in_section($options->section_tipo, 'component_filter', true, false);	//$section_tipo, $ar_modelo_name_required, $from_cache=true, $resolve_virtual=false
 					if (empty($ar_component_filter[0])) {
 						if(SHOW_DEBUG) {
 							$section_name = RecordObj_dd::get_termino_by_tipo($options->section_tipo);
@@ -175,7 +221,9 @@ abstract class filter {
 		}
 
 		return $sql_filtro;
+
 	}#end get_sql_filter
+
 
 
 	/**
@@ -229,6 +277,7 @@ abstract class filter {
 				$options->layout_map 	= array($section_tipo);
 				$options->sql_columns 	= "id,section_id,section_tipo";
 				$options->filter_by_id 	= array($locator);
+				$options->search_options_session_key = 'filter_is_authorized_record_'.$section_tipo.'_'.$section_id;
 
 			$rows_data = search::get_records_data($options);
 			if(SHOW_DEBUG) {

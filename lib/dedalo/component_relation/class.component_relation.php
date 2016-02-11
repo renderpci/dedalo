@@ -52,6 +52,7 @@ class component_relation extends component_common {
 		
 		# Remove common tools (time machine and lang)
 		#unset($this->ar_tools_name);
+		$this->ar_tools_name = array();
 
 		# Add tool_transcription
 		#$this->ar_tools_name[] = 'tool_relation';
@@ -299,12 +300,7 @@ class component_relation extends component_common {
 		# LOG
 		#$log = logger::get_instance();
 		#$log->log_message("Calculated all_authorized_content_sections. Time to generate:" . round( microtime(TRUE) - tools::get_request_time() ,4), logger::DEBUG, __METHOD__);
-
-		#dump($ar_mix);
-		if(SHOW_DEBUG) {
-			#$GLOBALS['log_messages'] .= exec_time($start_time, __METHOD__, $ar_mix);
-		}
-		
+	
 		return $ar_mix;
 	}
 
@@ -661,11 +657,8 @@ die("EN PROCESO");
 					}
 				}
 				#dump($ar_id,"ar_id"); die("STOP");
-			*/
-				
-		if(SHOW_DEBUG) {
-			#$GLOBALS['log_messages'] .= exec_time($start_time, __METHOD__. ' ' );
-		}
+			*/				
+		
 
 		return $ar_id;
 		

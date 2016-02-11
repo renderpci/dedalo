@@ -8,17 +8,17 @@
 			
 	
 	print "\n<!-- COMPONENT_AUTOCOMPLETE [tipo:$tipo section_id:$parent] $label -->";
-	print "\n<div class=\"css_wrap_autocomplete wrap_component {$ar_css['css_wrap_autocomplete']}\" id=\"{$id_wrapper}\" 
+	print "\n<div class=\"css_wrap_autocomplete wrap_component {$ar_css['css_wrap_autocomplete']}\" id=\"{$id_wrapper}\"
 	data-tipo=\"{$tipo}\"
-	data-lang=\"{$lang}\"	
+	data-lang=\"{$lang}\"
 	data-parent=\"{$parent}\"
 	data-section_tipo=\"{$section_tipo}\"
-	data-referenced_section_tipo='{$referenced_section_tipo}'	
+	data-ar_target_section_tipo='{$ar_target_section_tipo_json}'
 	data-tipo_to_search='{$tipo_to_search}'
 	data-modo=\"{$modo}\"
-	data-dato=\"{$dato_json}\"
-	data-component_name=\"{$component_name}\"	
-	data-component_info='{$component_info}' 
+	data-dato='{$dato_json}'
+	data-component_name=\"{$component_name}\"
+	data-component_info='{$component_info}'
 	>";
 	
 	# ETIQUETA (LABEL)
@@ -40,18 +40,37 @@
 					$html_contenido .= "\n <ul class=\"css_autocomplete_valor\">";
 					foreach ($ar_valor as $current_value => $value) {
 						
+						$current_value_obj  	= json_decode($current_value);
+						$current_section_id 	= $current_value_obj->section_id;
+						$current_section_tipo 	= $current_value_obj->section_tipo;
+
 						$html_contenido .= "<li>";
 
+						
+						#
 						# BTN DELETE
+						if (!$in_time_machine) {
 						$html_contenido .= "\n <div class=\"icon_bs link css_autocomplete_button_delete\"
 						data-tipo=\"{$tipo}\"
 						data-current_value='$current_value'
+						data-id_wrapper=\"$id_wrapper\"
 						title=\"$label $parent\"
 						onclick=\"component_autocomplete.delete(this)\"></div>";
-
+						}
+						
+						#
+						# LABEL
 						$html_contenido .= $value;
+						
+						#
+						# BTN EDIT
+						if (!$in_time_machine) {
+						$url_edit = "?t=".$current_section_tipo.'&id='.$current_section_id.'&m=edit';	// To first section only onclick=\"window.open('$url_edit')\"
+						$html_contenido .= "<a href=\"$url_edit\" target=\"_blank\" class=\"icon_bs link edit_autocomplete edit_autocomplete_row\"></a>";
+						}
+
 						if(SHOW_DEBUG) {
-							$html_contenido .= " <span class=\"notes\">$current_value</span>";
+							#$html_contenido .= " <span class=\"notes\">$current_value</span>";
 						}
 
 						$html_contenido .= "</li>";
@@ -59,52 +78,59 @@
 					}
 					$html_contenido .= "</ul>";
 
+					
+					if (!$in_time_machine) {
+				
+						#
+						# BTN EDIT WHOLE SECTION
+						$url_edit = "?t=".reset($ar_target_section_tipo);	// To first section only  onclick=\"window.open('$url_edit')\"
+						$html_contenido .= "<a href=\"$url_edit\" target=\"_blank\" class=\"icon_bs link edit_autocomplete\"></a>";
+
+
+						#
+						# BTN NEW ELEMENT
+						$html_contenido .= "<div class=\"icon_bs link new_autocomplete\" data-target_section_tipo=\"".reset($ar_target_section_tipo)."\" onclick=\"component_autocomplete.new_element(this,'$id_wrapper')\"></div>";
+
+
+						#
+						# INPUT SEARCH FIELD
+						$html_contenido .= "\n <input type=\"text\" class=\"css_autocomplete_search_field\" placeholder=\"".label::get_label('buscar')."...\"
+							data-tipo='{$tipo}'
+							data-section_tipo=\"{$section_tipo}\"
+							data-parent='{$parent}'
+							data-ar_target_section_tipo='{$ar_target_section_tipo_json}'					
+							data-tipo_to_search='{$tipo_to_search}'
+							onfocus=\"component_autocomplete.activate(this)\"
+							/>";
+
+
+						#
+						# NEW_ELEMENT_CONTAINER ajax loads here
+						$html_contenido .= "<div class=\"new_element_container\" data-type=\"new_element_container\"></div>";
+
+						if(SHOW_DEBUG) {
+							$html_contenido .= "<div class=\"notes\">target_section_tipo: ".implode(', ', $ar_target_section_tipo)."</div>";
+							if (isset($propiedades->filtered_by)) {
+								$html_contenido .= "<div class=\"notes\">filtered_by: ".json_encode($propiedades->filtered_by)."</div>";	// filtered_by
+							}
+							$html_contenido .= "<div class=\"notes\">".str_replace('},', '},<br>', $dato_json) ."</div>";												
+						}
+					}
+
 
 					#
-					# INPUT SEARCH FIELD
-					$html_contenido .= "\n <input type=\"text\" class=\"css_autocomplete_search_field\" placeholder=\"".label::get_label('buscar')."...\"						
-						data-tipo='{$tipo}'
-						data-section_tipo=\"{$section_tipo}\" 
-						data-parent='{$parent}'
-						data-referenced_section_tipo='{$referenced_section_tipo}'
-						data-tipo_to_search='{$tipo_to_search}'
-						data-tipo_section_to_search='{$referenced_section_tipo}'
-						onfocus=\"component_autocomplete.activate(this)\"
-						/>";
-
-
-					# BTN DELETE
-						/*
-						$html_contenido .= "\n <div class=\"icon_bs link css_autocomplete_button_delete\" 
-						data-tipo=\"{$tipo}\"
-						title=\"$label $tipo\"
-						onclick=\"component_autocomplete.delete(this)\"></div>";
-						*/
-
-					
-					# BTN EDIT
-					$url_edit = "?t=".$referenced_section_tipo;		#dump($this->referenced_section_tipo," this");
-					$html_contenido .= "<div class=\"icon_bs link edit_autocomplete\" onclick=\"window.open('$url_edit')\"></div>";
-
-					# BTN NEW ELEMENT
-					$html_contenido .= "<div class=\"icon_bs link new_autocomplete\" onclick=\"component_autocomplete.new_element(this)\"></div>";
-
-					# NEW_ELEMENT_CONTAINER ajax loads here
-					$html_contenido .= "<div class=\"new_element_container\"></div>";
-
-
-					# INPUT DATA HIDDEN
-					$css_add = SHOW_DEBUG ? 'debug' : '';
-					$html_contenido .= "\n <input type=\"text\" class=\"css_autocomplete_dato_hidden $css_add\" 
-						name=\"{$input_name}\" 
+					# INPUT DATA HIDDEN					
+					$html_contenido .= "\n <input type=\"text\" class=\"css_autocomplete_dato_hidden\"
+						name=\"{$input_name}\"
+						data-type=\"autocomplete_dato_hidden\"
 						data-tipo=\"{$tipo}\"
 						data-section_tipo=\"{$section_tipo}\"
 						data-parent=\"{$parent}\"
 						data-lang=\"{$lang}\"
-						data-tipo_to_search='{$tipo_to_search}'
-						data-tipo_section_to_search='{$referenced_section_tipo}'
-						data-dato_in_db='$dato_json'
-						value='$dato_json'
+						data-ar_target_section_tipo='{$ar_target_section_tipo_json}'
+						data-dato_in_db='{$dato_json}'
+						data-id_wrapper=\"$id_wrapper\"
+						value='{$dato_json}'
 						title=''
 						disabled=\"disabled\"
 						/>";

@@ -42,7 +42,7 @@ if ($mode=='import_files') {
 													$section_tipo
 												 );	
 	# Portal target_section_tipo
-	$target_section_tipo = $component->get_target_section_tipo();
+	$target_section_tipo = $component->get_ar_target_section_tipo()[0];
 	$propiedades 		 = $component->get_propiedades();
 	$tool_propiedades 	 = $propiedades->ar_tools_name->tool_import_files;
 	/*

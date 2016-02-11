@@ -39,9 +39,9 @@ abstract class backup {
 			$difference_in_hours 		 = round( ($current_time_secs/3600) - round($last_modification_time_secs/3600), 0 );
 				#dump($difference_in_hours, ' difference_in_hours ++ '.to_string( ($current_time_secs/3600).' - '.($last_modification_time_secs/3600) ));
 			if ( $difference_in_hours < DEDALO_BACKUP_TIME_RANGE ) {
-				$msg = "BACKUP INFO: Skipped backup. A recent backup (about $difference_in_hours hours early) already exists. Is not necessary build another";
+				$msg = " Skipped backup. A recent backup (about $difference_in_hours hours early) already exists. Is not necessary build another";
 				if(SHOW_DEBUG) {
-					error_log($msg);
+					debug_log(__METHOD__.$msg);
 				}
 				return $msg;
 			}
@@ -50,9 +50,9 @@ abstract class backup {
 			# Backup file exists (less than an hour apart)
 			$mysqlExportPath = $file_path .'/'. $db_name . '.custom.backup';
 			if (file_exists($mysqlExportPath)) {
-				$msg = "Skipped backup. A recent backup already exists ('$mysqlExportPath'). Is not necessary build another";
+				$msg = " Skipped backup. A recent backup already exists ('$mysqlExportPath'). Is not necessary build another";
 				if(SHOW_DEBUG) {
-					error_log($msg);
+					debug_log(__METHOD__.$msg);
 				}
 				return $msg;
 			}
@@ -79,7 +79,7 @@ abstract class backup {
 					}
 				} catch (Exception $e) {
 					$msg = '<span class="error">'.$e->getMessage().'</span>';
-					echo Error::wrap_error($msg);
+					echo dd_error::wrap_error($msg);
 				}
 
 				# SH FILE GENERATING
@@ -96,12 +96,14 @@ abstract class backup {
 			}
 
 			if(SHOW_DEBUG) {
-				$msg = "BACKUP INFO: Building backup file ($mysqlExportPath). Command:\n $command";
-				error_log($msg);
+				$msg = " Building backup file ($mysqlExportPath). Command:\n $command";
+				debug_log(__METHOD__.$msg);
 			}			
 			
 			# RUN COMMAND
-			return exec_::exec_sh_file($prgfile);
+			$res = exec_::exec_sh_file($prgfile);
+			debug_log(__METHOD__." $res ".to_string(), logger::DEBUG);
+			return $res;
 
 
 			/*
@@ -130,6 +132,7 @@ abstract class backup {
 		} catch (Exception $e) {
 			$msg = "Sorry $username. ".  $e->getMessage(). "\n";
 			trigger_error($msg);
+			debug_log(__METHOD__." $msg ".to_string(), logger::DEBUG);
 			die($msg);
 		}
 
@@ -188,7 +191,7 @@ abstract class backup {
 
 		if (!defined('DEDALO_EXTRAS_PATH')) {
 			define('DEDALO_EXTRAS_PATH'		, DEDALO_LIB_BASE_PATH .'/extras');
-			error_log("WARNING: DEDALO_EXTRAS_PATH is not defined. Using default.. ");
+			debug_log(__METHOD__." WARNING: DEDALO_EXTRAS_PATH is not defined. Using default.. ",logger::WARNING);
 		}
 
 
@@ -230,9 +233,9 @@ abstract class backup {
 				throw new Exception(" Error on read or create file. Permission denied ({$path}/matrix_descriptors_dd_{$current_tld}.copy)");
 			}
 
-			$msg = "Saved str tables partial data to $current_tld ";
+			$msg = " Saved str tables partial data to $current_tld ";
 			if(SHOW_DEBUG) {
-				#error_log($msg);
+				#debug_log(__METHOD__.$msg);
 			}
 
 			$ar_response[]=$msg;
@@ -257,7 +260,7 @@ abstract class backup {
 
 		if (!defined('DEDALO_EXTRAS_PATH')) {
 			define('DEDALO_EXTRAS_PATH'		, DEDALO_LIB_BASE_PATH .'/extras');
-			error_log("WARNING: DEDALO_EXTRAS_PATH is not defined. Using default.. ");
+			debug_log(__METHOD__." WARNING: DEDALO_EXTRAS_PATH is not defined. Using default.. ", logger::WARNING);
 		}
 
 		#

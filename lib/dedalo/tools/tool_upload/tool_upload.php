@@ -11,7 +11,7 @@ require_once( DEDALO_LIB_BASE_PATH . '/media_engine/class.AVPlayer.php');
 
 if(login::is_logged()!==true) {
 	$string_error = "Auth error: please login";
-	print Error::wrap_error($string_error);
+	print dd_error::wrap_error($string_error);
 	die();
 }
 
@@ -156,7 +156,7 @@ if(login::is_logged()!==true) {
 						}				
 					} catch (Exception $e) {
 						$msg = '<span class="error">'.$e->getMessage().'</span>';
-						echo Error::wrap_error($msg);
+						echo dd_error::wrap_error($msg);
 					}
 					
 					

@@ -53,7 +53,8 @@ class component_password extends component_common {
 	public function get_ar_tools_obj() {
 		
 		# Remove common tools (time machine and lang)
-		unset($this->ar_tools_name);
+		#unset($this->ar_tools_name);
+		$this->ar_tools_name = array();
 
 		# Add tool_time_machine
 		$this->ar_tools_name[] = 'tool_time_machine';

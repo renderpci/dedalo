@@ -44,26 +44,29 @@
 							 reset($propiedades->method->get_valor_local)==true 
 							) $add_class = 'full';
 
-						$html_contenido .= "\n <input type=\"text\" class=\"css_date full $add_class\"  
-						name=\"{$input_name}\" id=\"{$identificador_unico}\"
+						$html_contenido .= "\n <input type=\"text\" class=\"css_date full $add_class\" id=\"{$identificador_unico}\"
+						name=\"{$input_name}\"
 						data-tipo=\"{$tipo}\"
 						data-section_tipo=\"{$section_tipo}\"
 						data-parent=\"{$parent}\"
-						data-lang=\"{$lang}\" 
+						data-lang=\"{$lang}\"
 						value=\"{$valor}\"
-						onclick=\"component_date.activate_datepicker(this)\"
 						title=\"$html_title\"
+						onclick=\"component_date.activate_datepicker(this)\"
+						onchange=\"component_date.Save(this)\"
 						/>";
 
-						$html_contenido .= " <span class=\"css_span_ejemplo\">Format $ejemplo </span>";			
+						$html_contenido .= " <span class=\"css_span_ejemplo\">Format $ejemplo </span>";
 						
-						if(SHOW_DEBUG)
-						$html_contenido .= "\n <span class=\"current_date_info\">Current date: <span>$dato_json</span></span>";
+						if(SHOW_DEBUG) {
+							$html_contenido .= "\n <span class=\"current_date_info\">Current date: <span>$dato_json</span></span>";
+						}
+						
 
 						#$html_contenido .= "\n <span  class=\"css_span_ejemplo {$ar_css['css_span_ejemplo']}\">$ejemplo</span>";
 					
 						# Save handler js
-						$html_contenido .= "<script>$('#$identificador_unico').on(\"change\",function(){component_date.Save(this);})</script>";
+						#$html_contenido .= "<script>$('#$identificador_unico').on(\"change\",function(){component_date.Save(this);})</script>";
 
 						/**/
 				if($permissions==3)		

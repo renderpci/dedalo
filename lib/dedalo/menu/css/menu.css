@@ -51,6 +51,7 @@ background-color: #FFFF00;
 	z-index: 100;
 	position: fixed;
 	top: 0px;
+	left:0px;
 	display: block;
 	clear: both;
 	width: 100%;
@@ -352,6 +353,42 @@ HTML[xmlns] #menu_wrapper #menu {
 * HTML #menu_wrapper #menu {
 	height: 1%;
 }
+
+
+/* DEBUG_LINE_WRAP
+------------------------------------------------- */
+.debug_line_wrap {
+	height: 24px;
+	background-color: rgb(107, 107, 107);
+	margin-top: 29px;
+	text-align: left;
+	padding: 4px;
+	padding-left: 0px;
+	z-index: 0;
+	color: #ECF4F8 !important;
+	}
+	.debug_line_wrap a,
+	.debug_line_wrap span
+	 {
+		color: #ECF4F8 !important;
+		text-decoration: none;
+		padding: 4px;
+		padding-left: 9px;
+		padding-right: 9px;
+		margin-right: 0px;
+		line-height: 1em;	
+		}
+		.debug_line_wrap a {
+			background-color: #5B5B5B;
+			margin-right: 1px;
+			}
+			.debug_line_wrap a:hover {
+				background-color: #7E8284
+			}
+
+
+
+
 
 
 @media screen and (max-width: 1024px) {

@@ -47,7 +47,11 @@
 					$PosterFrameObj 	= new PosterFrameObj($video_id,$quality);
 					$maxWidht 			= 125 ;
 					$maxHeight 			= 70  ;
-					$posterframe_url 	= $PosterFrameObj->get_thumb_url($maxWidht, $maxHeight, $fx='crop').'&t='. start_time();					
+					$posterframe_url 	= $PosterFrameObj->get_thumb_url($maxWidht, $maxHeight, $fx='crop').'&t='. start_time();
+
+					#
+					# INDENTIFYING IMAGE
+					$ar_identifying_image = $this->get_ar_identifying_image();					
 										
 					break;				
 		

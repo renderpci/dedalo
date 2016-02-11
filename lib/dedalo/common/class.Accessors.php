@@ -19,7 +19,7 @@ class Accessors {
 		}
 		return(false);
 	}
-	
+	# SET
 	private function SetAccessor($strMember, $strNewValue) {
 		
 		if(property_exists($this, $strMember)) {
@@ -45,7 +45,7 @@ class Accessors {
 			return(false);
 		}
 	}
-	
+	# GET
 	private function GetAccessor($strMember) {
 		
 		if(property_exists($this, $strMember)) {

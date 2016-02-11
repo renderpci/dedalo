@@ -26,6 +26,15 @@
 	.css_wrap_login .css_form {
 		text-align: center;
 	}
+	.maintenance_advice {
+		padding-bottom: 15px;
+		color: #F56500;
+		font-size: 1.6em;
+    	text-align: center;
+	}
+	.maintenance_mode_class {
+		opacity: 0.35;
+	}
 	/*-- LANG SELECTOR --*/
 	.css_wrap_login .dedalo_aplication_langs_selector {
 		margin-bottom: 19px;		

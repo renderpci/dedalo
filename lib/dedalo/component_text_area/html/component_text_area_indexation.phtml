@@ -14,7 +14,14 @@
 	
 	print "\n<!-- TEXT AREA [tipo:$tipo section_id:$parent section_tipo:$section_tipo] $label -->";
 	print "\n<div class=\"css_wrap_text_area wrap_component {$ar_css['css_wrap_text_area']} text_area_tool_indexation\" id=\"{$id_wrapper}\"
-	data-tipo=\"{$tipo}\" data-section_tipo=\"{$section_tipo}\" data-parent=\"{$parent}\" data-lang=\"{$lang}\" data-modo=\"{$modo}\" data-dato=\"{$dato_raw}\" data-component_name=\"{$component_name}\" >";
+	data-tipo=\"{$tipo}\"
+	data-section_tipo=\"{$section_tipo}\"
+	data-parent=\"{$parent}\"
+	data-lang=\"{$lang}\"
+	data-modo=\"{$modo}\"
+	data-dato=\"{$dato_raw}\"
+	data-component_name=\"{$component_name}\"
+	>";
 	
 	
 	
@@ -45,32 +52,38 @@
 					# ETIQUETA (LABEL)
 					$html_contenido = component_common_draw::draw_label($this);
 
-					/**
-					* Text area
-					*/
-					$html_contenido .= "\n <textarea class=\"css_text_area $text_area_tm {$ar_css['css_text_area']} text_area_tool_indexation\" 
-					id=\"{$identificador_unico}\" 
-					name=\"{$input_name}\" 
-					data-tipo=\"{$tipo}\" data-lang=\"{$lang}\" data-section_tipo=\"{$section_tipo}\" data-parent=\"{$parent}\" data-last_tag_index_id=\"{$last_tag_index_id}\"
+					#
+					# TEXT AREA
+					#
+					$html_contenido .= "\n <textarea class=\"css_text_area $text_area_tm {$ar_css['css_text_area']} text_area_tool_indexation\"
+					id=\"{$identificador_unico}\"
+					name=\"{$input_name}\"
+					data-tipo=\"{$tipo}\"
+					data-parent=\"{$parent}\"
+					data-lang=\"{$lang}\"
+					data-section_tipo=\"{$section_tipo}\"
+					data-last_tag_index_id=\"{$last_tag_index_id}\"
 					title=\"$html_title\">$dato</textarea>";
 
 					
 					if (SHOW_DEBUG) {
-					$html_contenido .= "<span class=\"debug_info\"> $identificador_unico</span>";
+					#$html_contenido .= "<span class=\"debug_info\"> $identificador_unico</span>";
 					}
 					
 					
-					/**
-					* BTN CREATE FRAGMENT  
-					*/
+					#
+					# BTN CREATE FRAGMENT  
+					#
 					#if($caller_id>0)
 					$html_contenido .= "\n <div class=\"css_button_generic btn_create_fragment\" style=\"display:none\"
-					data-identificador_unico=\"$identificador_unico\" 
+					data-identificador_unico=\"$identificador_unico\"
+					data-parent=\"{$parent}\"
+					data-section_tipo=\"{$section_tipo}\"
 					onclick=\"tool_indexation.create_fragment(this);\"
 					>";				
 					$html_contenido .= label::get_label('crear_nuevo_fragmento');
-					if(SHOW_DEBUG===true) {
-					$html_contenido .= " <span class=\"debug_info\">[last_tag_index_id:$last_tag_index_id - caller_id:$caller_id]</span>";
+					if(SHOW_DEBUG) {
+						#$html_contenido .= " <span class=\"debug_info\">[last_tag_index_id:$last_tag_index_id - caller_id:$caller_id]</span>";
 					}
 					$html_contenido .= "</div>";
 
@@ -93,9 +106,8 @@
 					//fragment_info = function(tagName, tipo, parent)
 
 		
-			if($permissions==3)	
-					
-					$html_contenido .= "\n <span class=\"css_span_debugger {$ar_css['css_span_debugger']}\" id=\"debugger_{$tipo}\" >{$debugger}</span>";
+				#if($permissions==3)					
+					#$html_contenido .= "\n <span class=\"css_span_debugger {$ar_css['css_span_debugger']}\" id=\"debugger_{$tipo}\" >{$debugger}</span>";
 					break;
 							
 	}

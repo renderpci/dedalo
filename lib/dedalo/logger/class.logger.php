@@ -31,22 +31,22 @@ class logger {
 	public static function level_to_string($log_level) {
 		switch ($log_level) {
 			case logger::DEBUG:
-				return logger::DEBUG;
+				return 'DEBUG';
 				break;
 			case logger::INFO:
-				return logger::INFO;
+				return 'INFO';
 				break;
 			case logger::NOTICE:
-				return logger::NOTICE;
+				return 'NOTICE';
 				break;
 			case logger::WARNING:
-				return logger::WARNING;
+				return 'WARNING';
 				break;
 			case logger::ERROR:
-				return logger::ERROR;
+				return 'ERROR';
 				break;
 			case logger::CRITICAL:
-				return logger::CRITICAL;				
+				return 'CRITICAL';				
 				break;			
 			default:
 				return '[unknow]';

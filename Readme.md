@@ -1,5 +1,23 @@
 **README**
 
+
+*Ver 4.0.3 Final - 11-02-2016*
+
+Today we introduce the update of the V4 to 4.0.3
+
+Important: This update change the "profiles" and user behavior. 
+
+1 - Download and Update all files of Dédalo
+2 - Create the profiles 
+3 - Assign users (users can not be without profile)
+
+The componet_security_areas, componet_security_acces and componet_security_tools ONLY work for the profiles and are deprecated for Users.
+The root user (dev-user) can see this componets for some time in the Users records.
+
+This update some issues and bugs for the V4.
+
+New user inteface.
+
 *Ver 4.0 Final - 05-11-2015*
 
 We are very pleased to introduce the final of the version 4 of Dédalo.
@@ -15,6 +33,7 @@ VERY IMPORTANT:
 
 
 ** MySQL and the future of Dédalo **
+
 *NOTE: Run the Beta 1 if you want to run with MySQL, but think that the development of Dédalo will not come back to MySQL.*
 
 Finally Postgres comunity has made a impresionant job with the JSONB.

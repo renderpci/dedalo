@@ -28,7 +28,7 @@
 		data-video_id=\"{$video_id}\"
 		>";
 
-			$html_contenido .= "\n <source id=\"video_mp4_{$tipo}\" src=\"$video_url\" preload=\"metadata\" type=\"video/mp4\" >";
+			$html_contenido .= "\n <source id=\"video_mp4_{$tipo}\" src=\"$video_url\" preload=\"none\" type=\"video/mp4\" >";
 			
 			# FALLBACK IMG (no html5 codec video support)
 			$html_contenido .= "\n <img src=\"$posterframe_url\" alt=\"Posterframe\" title=\"No video playback capabilities\" />";

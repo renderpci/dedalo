@@ -15,6 +15,13 @@ class component_text_area extends component_common {
 		#$dato = TR::addTagImgOnTheFly($dato);	#dump($dato,'dato2');
 		#$dato = self::decode_dato_html($dato);
 
+		# Compatibility old dedalo3 instalations		
+		if ( strpos($dato, '[index_')!==false || strpos($dato, '[out_index_')!==false ) {
+			$this->dato = $this->convert_tr_v3_v4( $dato );	// Update index tags format
+			$this->Save();
+			$dato = parent::get_dato();
+		}
+
 		return (string)$dato;
 	}
 
@@ -22,6 +29,29 @@ class component_text_area extends component_common {
 	public function set_dato($dato) {
 		parent::set_dato( (string)$dato );
 	}
+
+
+	/**
+	* CONVERT_TR_V3_V4
+	* @return 
+	*/
+	public function convert_tr_v3_v4( $dato ) {
+		
+		$dato_source = $dato;
+		
+		#
+		# INDEX IN		
+		$dato_final = preg_replace("/\[index_[0]*([0-9]+)_in\]/", "[index-n-$1]", $dato_source, -1 , $count_index_in);
+
+		#
+		# INDEX OUT		
+		$dato_final = preg_replace("/\[out_index_[0]*([0-9]+)\]/", "[/index-n-$1]", $dato_final, -1 , $count_index_out);
+
+		debug_log(__METHOD__." Replaced index_in:$count_index_in and index_out:$count_index_out matches in dato".to_string(), logger::DEBUG);
+
+		return (string)$dato_final;
+
+	}#end convert_tr_v3_v4
 
 
 
@@ -103,7 +133,7 @@ class component_text_area extends component_common {
 
 					foreach ($tags_en_texto[0] as $key => $tag) {
 
-						$ar_fragmento = (array)$this->get_fragment_text_from_tag($tag, $this->dato);
+						$ar_fragmento = (array)component_text_area::get_fragment_text_from_tag($tag, $this->dato);
 								#dump($ar_fragmento,"ar_fragmento");
 						
 						if(strlen($ar_fragmento[0])>$max_char) {
@@ -142,7 +172,7 @@ class component_text_area extends component_common {
 					
 					foreach ($tags_en_texto[0] as $key => $tag) {
 
-						$fragmento = $this->get_fragment_text_from_tag($tag, $this->dato);
+						$fragmento = component_text_area::get_fragment_text_from_tag($tag, $this->dato);
 						
 						if(strlen($fragmento[0])>$max_char)
 						{
@@ -576,7 +606,12 @@ die(__METHOD__." EN PROCESO");
 			#dump($tag,'tag',"from rel_locator: $rel_locator");
 
 		#$component_text_area= new component_text_area($component_tipo, $section_id, $modo='edit', DEDALO_DATA_LANG);
-		$component_text_area= component_common::get_instance('component_text_area', $component_tipo, $section_id, $modo='edit', DEDALO_DATA_LANG, $section_tipo);
+		$component_text_area= component_common::get_instance('component_text_area',
+															 $component_tipo,
+															 $section_id,
+															 $modo='edit',
+															 DEDALO_DATA_LANG,
+															 $section_tipo);
 		$raw_text 			= $component_text_area->get_dato_real();
 
 		return component_text_area::get_fragment_text_from_tag($tag, $raw_text);
@@ -637,13 +672,8 @@ die(__METHOD__." EN PROCESO");
 		$diffusion_obj->columns['valor']	= $this->get_valor();
 		*/
 
-		/*
-			Método en revisión para b4
-			
-			Falta despejar 'section_tipo' (probablemante de 'propiedaes') para crear el componente y revisar
-
-		*/
-			$section_tipo = null; 	// De  momento
+		
+		$section_tipo = $this->section_tipo; 
 
 		if(isset($propiedades['rel_locator'])) {
 
@@ -672,25 +702,36 @@ die(__METHOD__." EN PROCESO");
 					# TC
 					$tag_in_pos  	= $fragment_info[1];
 					$tag_out_pos 	= $fragment_info[2];
-					$tc_in 		 	= OptimizeTC::optimize_tcIN($texto, $tag_in_pos);
-					$tc_out 	 	= OptimizeTC::optimize_tcOUT($texto, $tag_out_pos);
-						#dump($tc_in ,'$tc_in ');
+					$tc_in 		 	= OptimizeTC::optimize_tcIN($texto, false, $tag_in_pos, $in_margin=0);
+					$tc_out 	 	= OptimizeTC::optimize_tcOUT($texto, false, $tag_out_pos, $in_margin=100);
+						#dump($tc_in ,"tc_in - tc_out:$tc_out, tag_in_pos:$tag_in_pos - tag_out_pos:$tag_out_pos ");
+
 					$tcin_secs		= OptimizeTC::TC2seg($tc_in);
 			        $tcout_secs		= OptimizeTC::TC2seg($tc_out);
 			        $duracion_secs	= $tcout_secs - $tcin_secs;
 			        $duracion_tc	= OptimizeTC::seg2tc($duracion_secs);
 
+			        $diffusion_obj->columns['related_tipo']	= $current_related_tipo;
 			        $diffusion_obj->columns['related']		= $related_modelo_name;
 			        $diffusion_obj->columns['tc_in']		= $tc_in;
 			        $diffusion_obj->columns['tc_out']		= $tc_out;
 			        $diffusion_obj->columns['duracion_tc']	= $duracion_tc;
+			        $diffusion_obj->columns['tcin_secs']	= $tcin_secs;
+			        $diffusion_obj->columns['tcout_secs']	= $tcout_secs;		        	
 					
 					#$component_av   = new component_av($current_related_tipo, $this->get_parent(), 'edit');
-					$component_av   = component_common::get_instance('component_av', $current_related_tipo, $this->get_parent(), 'edit', DEDALO_DATA_LANG, $section_tipo);
+					$component_av   = component_common::get_instance($related_modelo_name,
+																	 $current_related_tipo,
+																	 $this->get_parent(),
+																	 'list',
+																	 DEDALO_DATA_LANG,
+																	 $section_tipo);
 					$video_id 		= $component_av->get_video_id();
 
 					$diffusion_obj->columns['video_id']	= $video_id;
 			        #$diffusion_obj->columns['video_url']	= $duracion_tc;
+
+			        #dump($diffusion_obj, ' diffusion_obj ++ '.to_string());
 
 					break;
 

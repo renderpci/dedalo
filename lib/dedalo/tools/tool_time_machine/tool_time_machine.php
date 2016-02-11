@@ -50,12 +50,8 @@
 					# Set variant for id
 					$source_component->set_variant( tool_time_machine::$preview_variant );		
 				}
-				#dump($source_component,' $source_component');
+				#dump($source_component,' $source_component');			
 				
-				# Build rows html
-				$this->set_modo('rows');	# change temp
-				$rows_html = $this->get_html();
-				$this->set_modo('page');	# restore modo
 
 				# Build source html
 				$this->set_modo('source');	# change temp
@@ -63,8 +59,13 @@
 				$this->set_modo('page');	# restore modo
 
 				# Build preview html
-				$this->set_modo('preview');	# change temp
-				$preview_html = 'Loading..';#$this->get_html();
+				#$this->set_modo('preview');	# change temp
+				$preview_html = 'Loading..';#$this->get_html();	// Loaded by ajax !
+				#$this->set_modo('page');	# restore modo
+
+				# Build rows html
+				$this->set_modo('rows');	# change temp
+				$rows_html = $this->get_html();
 				$this->set_modo('page');	# restore modo
 
 				#$source_component_html 			= $source_component->get_html();
@@ -102,31 +103,35 @@
 				# Configure component
 				# In case relation, set current_tipo_section as received value by url GET
 				$current_tipo_section = common::setVar('current_tipo_section');	
-				if(!empty($current_tipo_section)) {
-					$source_component->set_current_tipo_section($current_tipo_section);
 
-					# Set variant for id
-					$source_component->set_variant( tool_time_machine::$preview_variant );		
+				if(!empty($current_tipo_section)) {
+					$source_component->set_current_tipo_section($current_tipo_section);					
+
 				}
 				#dump($source_component,' $source_component');
+				
+				# Set variant for id
+				#$source_component->set_variant( tool_time_machine::$preview_variant );
+				$source_component->set_variant( tool_time_machine::$actual_variant );	
+					
+					#dump($source_component, ' source_component ++ '.to_string( tool_time_machine::$actual_variant  ));
 
 				# COMPONENT CONTEXT SET
 				$context = new stdClass();
-				$context->context_name = 'tool_time_machine';
+					$context->context_name = 'tool_time_machine';
 				$source_component->set_context($context);
 
-				$source_component_html 			= $source_component->get_html();
-
+				$source_component_html = $source_component->get_html();
 				break;
 
 		# PREVIEW . Component preview composed from last record of 'matrix_time_machine' about current component
 		case 'preview':
 
 				# Assigned previously in trigger time machine
-				$id_time_machine 		= $this->get_id_time_machine();		#dump($id_time_machine,"id_time_machine ");
+				$id_time_machine 		= $this->get_id_time_machine();
 				$version_date 			= $this->get_version_date();
 				#$current_tipo_section 	= $this->get_current_tipo_section();				
-					#dump($id_time_machine,'id_time_machine');
+					#dump($id_time_machine,'id_time_machine'); #die();
 
 				/*
 				# CURRENT TIPO SECTION
@@ -166,13 +171,14 @@
 					# Set variant for id
 					$source_component->set_variant( tool_time_machine::$preview_variant );
 
+
 					# Set time machine version date
 					$version_date 			= component_date::timestamp_to_date($timestamp,true);
 					#$source_component->set_version_date($timestamp);
 
 					# COMPONENT CONTEXT SET
 					$context = new stdClass();
-					$context->context_name = 'tool_time_machine';
+						$context->context_name = 'tool_time_machine';
 					$source_component->set_context($context);
 
 					# Get component html

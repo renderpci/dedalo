@@ -576,8 +576,7 @@
 			-webkit-line-break: after-white-space;
 			-webkit-user-modify: read-write;
 
-
-			background-color: #eeddaa;
+			/*background-color: #eeddaa;*/
 			-webkit-column-break-inside: avoid;
 			-webkit-region-break-inside:avoid;
 			page-break-inside: avoid;

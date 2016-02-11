@@ -6,7 +6,7 @@ if(login::is_logged()!==true) die("<span class='error'> Auth error: please login
 
 
 # set vars
-	$vars = array('mode','tipo','tipo_to_search','referenced_section_tipo','string_to_search','id_path','parent','ar_data','section_tipo','propiedades');
+	$vars = array('mode','tipo','tipo_to_search','ar_target_section_tipo','target_section_tipo','string_to_search','id_path','parent','ar_data','section_tipo','propiedades','locator');
 		foreach($vars as $name)	$$name = common::setVar($name);
 
 # mode
@@ -24,37 +24,25 @@ if($mode=='autocomplete') {
 
 	if (strlen($string_to_search)<1) {
 		return null;
+	}	
+	if (empty($ar_target_section_tipo)) {
+		return "Error: ar_target_section_tipo is not defined!";
 	}
-	if (empty($tipo_to_search)) {
-		return "Error: tipo_to_search is not defined!";
+	$ar_target_section_tipo = json_decode($ar_target_section_tipo);
+		#dump($ar_target_section_tipo, ' ar_target_section_tipo ++ '.to_string());
+	if (!$ar_target_section_tipo) {
+		return "Error: ar_target_section_tipo is wrong!";
 	}
-	if (empty($referenced_section_tipo)) {
-		return "Error: referenced_section_tipo is not defined!";
-	}
-
 
 	/* Example
 	[mode] => autocomplete
     [tipo] => oh18
-    [tipo_to_search] => dd900
     [string_to_search] => casa
     [top_tipo] => oh1
     [id_path] =>
-	*/
-		
-	/*
-	dump($tipo_to_search,'ar-tipo_to_search pre decode');
+	*/	
 
-	# JSON DECODE tipo_to_search
-	$tipo_to_search = json_handler::decode($tipo_to_search);
-		dump($tipo_to_search,'ar-tipo_to_search post decode');
-
-	if (empty($tipo_to_search)) {
-		return NULL;
-	}
-	*/
-
-	$result = (array)component_autocomplete::autocomplete_search($tipo, $tipo_to_search, $referenced_section_tipo, (string)$string_to_search, 30, $id_path); //$tipo, $referenced_tipo, $referenced_section_tipo, $string_to_search, $max_results=30, $id_path
+	$result = (array)component_autocomplete::autocomplete_search($tipo, (array)$ar_target_section_tipo, (string)$string_to_search, 30, $id_path); //$tipo, $referenced_tipo, $ar_target_section_tipo, $string_to_search, $max_results=30, $id_path
 		#dump($result," result");
 	#error_log( json_encode($result) );
 	#dump( key($result)," result");
@@ -82,17 +70,18 @@ if($mode=='autocomplete') {
 if($mode=='new_element') {
 
 	if (empty($tipo)) {
-		return "Error: tipo is not defined!";
-	}
-	if (empty($referenced_section_tipo)) {
-		return "Error: referenced_section_tipo is not defined!";
+		exit("Error: tipo is not defined!");
 	}
 	if (empty($section_tipo)) {
-		return "Error: section_tipo is not defined!";
+		exit("Error: section_tipo is not defined!");
 	}
+	if (empty($target_section_tipo)) {
+		exit("Error: target_section_tipo is empty!");
+	}	
+	
 	$lang = DEDALO_DATA_LANG;
 	
-	$ar_terminos_relacionados 	= RecordObj_dd::get_ar_terminos_relacionados($tipo, true, true);
+	$ar_terminos_relacionados = RecordObj_dd::get_ar_terminos_relacionados($tipo, true, true);
 		#dump($ar_terminos_relacionados, ' ar_terminos_relacionados ++ '.to_string());
 	
 	if(SHOW_DEBUG) {
@@ -110,7 +99,7 @@ if($mode=='new_element') {
 	}
 
 	$html='';
-	$html .= "<div class=\"component_autocomplete_new_element\">";
+	$html .= "<div class=\"component_autocomplete_new_element\" data-type=\"component_autocomplete_new_element\" >";
 
 		#
 		# INPUTS
@@ -125,17 +114,20 @@ if($mode=='new_element') {
 			}
 			$title = RecordObj_dd::get_termino_by_tipo($current_tipo,$lang,true);
 			$html .= $title;
-			$html .= " <input type=\"text\" class=\"\" name=\"$current_tipo\" data-tipo=\"{$current_tipo}\" value=\"\" /> ";
+			$html .= " <input type=\"text\" class=\"\" name=\"$current_tipo\" data-tipo=\"{$current_tipo}\" value=\"\" placeholder=\"$title\" /> ";
 		}
 
 		#
 		# BUTTON NEW
 		$html .= "<input type=\"button\"
 		class=\"css_button_generic button_submit_new_element\"
-		data-referenced_section_tipo=\"$referenced_section_tipo\"
+		data-target_section_tipo=\"$target_section_tipo\"
 		value=\"".label::get_label('nuevo')."\"
 		onclick=\"component_autocomplete.submit_new_element(this)\"
 		/>";
+		if(SHOW_DEBUG) {
+			$html .= " <span class=\"note\">[$target_section_tipo]</span>";
+		}
 		
 
 	$html .= "</div>";
@@ -163,108 +155,94 @@ if($mode=='submit_new_element') {
 	if (empty($section_tipo)) {
 		return "Error: section_tipo is not defined!";
 	}
-	if (empty($referenced_section_tipo)) {
-		return "Error: referenced_section_tipo is not defined!";
-	}	
 	if (empty($ar_data)) {
 		return "Error: ar_data is not defined!";
 	}
-
 	$ar_data = json_decode($ar_data);
 		#dump($ar_data, ' ar_data');
+
+	if (empty($target_section_tipo)) {
+		return "Error: target_section_tipo is not defined!";
+	}
+	
 
 	$referenced_tipo = key($ar_data);
 	if ( !is_object($ar_data) || empty($referenced_tipo) ) {
 		return "Error: ar_data is not object!";
 	}
 
-
-	#
-	# PROJECTS HERITAGE
-	if ($section_tipo!=DEDALO_SECTION_PROJECTS_TIPO) {
-		# All except main section Projects
-		$source_ar_filter = section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, 'component_filter', true, true); //$section_tipo, $ar_modelo_name_required, $from_cache=true, $resolve_virtual=false
-		if (!isset($source_ar_filter[0])) {
-			if(SHOW_DEBUG) {
-				throw new Exception("Error Processing Request. component_filter is not defined! ($section_tipo)", 1);
-			}
-			return "Error: component_filter is not defined!";
-		}
-		$source_component_filter = component_common::get_instance('component_filter', $source_ar_filter[0], $parent, 'edit', DEDALO_DATA_NOLAN, $section_tipo);
-		$source_component_filter_dato = $source_component_filter->get_dato();
-			#dump($source_component_filter_dato, ' source_component_filter_dato');exit();
-	}
-	
-	#
-	# SECTION : Create a new section
-	#$parent_section_tipo 		= component_common::get_section_tipo_from_component_tipo( $referenced_tipo );
-	$parent_section_tipo 		= $referenced_section_tipo;
-		#dump($parent_section_tipo, ' section_tipo - '.$referenced_tipo);
-	$section 	= section::get_instance(null,$parent_section_tipo);
-	$section_id = $section->Save();
-		#dump($parent_section_tipo," parent_section_tipo saved ($section_id)");
-		#die();
-	
-	#
-	# FILTER : Set heritage of projects
-	if ($section_tipo!=DEDALO_SECTION_PROJECTS_TIPO) {
-		# All except main section Projects
-		$target_ar_filter  = section::get_ar_children_tipo_by_modelo_name_in_section($parent_section_tipo, 'component_filter', true, true);
-
-		if (!isset($target_ar_filter[0])) {
-			if(SHOW_DEBUG) {
-				throw new Exception("Error Processing Request. target component_filter is not defined! ($parent_section_tipo)", 1);
-			}
-			return "Error: target component_filter is not defined!";
-		}
-		$target_component_filter = component_common::get_instance('component_filter', $target_ar_filter[0], $section_id,'edit', DEDALO_DATA_NOLAN, $parent_section_tipo);
-		$target_component_filter->set_dato($source_component_filter_dato);
-		$target_component_filter->Save();
-	}
-	
-
-	#
-	# PROPIEDADES
-	if ($propiedades) {
-		$propiedades = json_decode($propiedades);
-		#dump($propiedades, ' propiedades');
-		if (isset($propiedades->filtered_by)) foreach($propiedades->filtered_by as $current_tipo => $current_value) {
-			#dump($current_value, ' current_tipo - '.$current_tipo);
-			$component = component_common::get_instance(null, $current_tipo, $section_id, 'edit', DEDALO_DATA_LANG, $parent_section_tipo);
-			$component->set_dato($current_value);
-			$component->Save();
-		}
-	}
-	#dump($propiedades, ' propiedades');	die("section_id: $section_id B");
-
-	#
-	# COMPONENTS
-	# Format:
-	# value: stdClass Object
-	# (
-	#    [rsc85] => a
-	#    [rsc86] => b
-	# )
-	#
-	foreach ($ar_data as $current_tipo => $current_value) {
-		
-		$component = component_common::get_instance(null, $current_tipo,$section_id, 'edit', DEDALO_DATA_LANG, $parent_section_tipo);		
-		$component->set_dato( trim($current_value) );
-		$component->Save();
-	}
-
-	$locator = new locator();
-		$locator->set_section_id($section_id);
-		$locator->set_section_tipo($parent_section_tipo);
-			#dump($locator,'locator');
+	$new_autocomplete_record = component_autocomplete::create_new_autocomplete_record($parent, $tipo, $target_section_tipo, $section_tipo, $ar_data);
 
 	#echo (int)$section_id;
-	echo json_encode($locator);
+	echo json_encode($new_autocomplete_record);
 	exit();
+
 
 }#end if($mode=='submit_new_element')
 
 
+
+/**
+* SUBMIT_NEW_ELEMENT
+* Fire submit form of new element
+*/
+if($mode=='add_locator') {
+	
+	if (empty($tipo)) {
+		exit( "Error: tipo is not defined!");
+	}
+	if (empty($parent)) {
+		exit( "Error: parent is not defined!");
+	}
+	if (empty($section_tipo)) {
+		exit( "Error: section_tipo is not defined!");
+	}
+	if (empty($locator)) {
+		exit( "Error: locator is not defined!");
+	}
+
+	$locator = json_decode($locator);
+		#dump($ar_data, ' ar_data');
+
+	$component_autocomplete = component_autocomplete::get_instance('component_autocomplete', $tipo, $parent, 'edit', DEDALO_DATA_NOLAN, $section_tipo);
+
+	$final = $component_autocomplete->add_locator($locator);
+
+	#echo (int)$section_id;
+	echo json_encode($final);
+	exit();
+}
+
+/**
+* SUBMIT_NEW_ELEMENT
+* Fire submit form of new element
+*/
+if($mode=='remove_locator') {
+	
+	if (empty($tipo)) {
+		exit( "Error: tipo is not defined!");
+	}
+	if (empty($parent)) {
+		exit( "Error: parent is not defined!");
+	}
+	if (empty($section_tipo)) {
+		exit( "Error: section_tipo is not defined!");
+	}
+	if (empty($locator)) {
+		exit( "Error: locator is not defined!");
+	}
+
+	$locator = json_decode($locator);
+		#dump($ar_data, ' ar_data');
+
+	$component_autocomplete = component_autocomplete::get_instance('component_autocomplete', $tipo, $parent, 'edit', DEDALO_DATA_NOLAN, $section_tipo);
+
+	$final = $component_autocomplete->remove_locator($locator);
+
+	#echo (int)$section_id;
+	echo json_encode($final);
+	exit();
+}
 
 
 

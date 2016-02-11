@@ -34,3 +34,6 @@
 	.css_wrap_profile .apply_profile_button:hover {
 		opacity: 1;
 	}
+	.go_to_profile {
+		margin-left: 10px
+	}

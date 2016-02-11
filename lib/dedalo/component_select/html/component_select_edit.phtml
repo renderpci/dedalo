@@ -40,9 +40,12 @@
 		
 		case ($permissions>=2)	:
 		
-					$html_contenido .= "\n <select class=\"css_select {$ar_css['css_select']}\"					
-					name=\"{$input_name}\" 
-					data-tipo=\"{$tipo}\" data-lang=\"{$lang}\" data-section_tipo=\"{$section_tipo}\" data-parent=\"{$parent}\"
+					$html_contenido .= "\n <select class=\"css_select {$ar_css['css_select']}\" onchange=\"component_select.Save(this)\"
+					name=\"{$input_name}\"
+					data-tipo=\"{$tipo}\"
+					data-lang=\"{$lang}\"
+					data-section_tipo=\"{$section_tipo}\"
+					data-parent=\"{$parent}\"
 					title=\"$html_title\"> ";
 					
 					if(empty($dato)) {

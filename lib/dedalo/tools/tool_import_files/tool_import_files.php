@@ -89,7 +89,7 @@
 								#dump($ar_components, ' ar_components ++ '.to_string());
 
 							$user_id 			 = navigator::get_user_id();
-							$target_section_tipo = $component_obj->get_target_section_tipo();	
+							$target_section_tipo = $component_obj->get_ar_target_section_tipo()[0];	
 							$target_component 	 = $propiedades->ar_tools_name->tool_import_files->target_component;
 
 							# Layout map formatted

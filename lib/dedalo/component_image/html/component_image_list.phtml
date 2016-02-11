@@ -12,7 +12,7 @@
 			break;
 
 		case ($permissions>=1):
-
+			/*
 			$html_contenido .= "<div class=\"div_image_image_in_list\">"; //width=\"102\" height=\"57\"
 
 				# CLICK_ACTION
@@ -29,6 +29,21 @@
 				#$html_contenido .= " thumb_file_url: $thumb_file_url ";
 
 			$html_contenido .= "</div>";
+			*/
+
+			# CLICK_ACTION
+			$click_action="onclick=\"tool_common.open_player(this,{'type':'component_image','image_full_url':'$image_full_url'});\" ";
+
+			$style = "background-image:url('$thumb_file_url')";
+			$html_contenido .= "<div class=\"thumb_in_list div_image_image_in_list\" style=\"$style\" $click_action
+			data-image_id=\"$image_id\"
+			data-parent_matrix=\"$parent\"
+			alt=\"$image_id\"
+			>";
+
+			$html_contenido .= "</div>";
+
+
 			break;
 	}
 

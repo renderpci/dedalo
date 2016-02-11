@@ -45,9 +45,9 @@ $js_url = DEDALO_LIB_BASE_URL.'/component_image/js/component_image_read.js';
 
 					
 					$open_tool_default='';
-
+					$add_class='';
 					# IMAGE NOT EXISTS. PLACE DEDALO IMAGE WITH LINK TO DEFAULT TOOL
-					if (!file_exists($this->get_image_path())) {
+					if (!file_exists($this->get_image_path()) && component_security_tools::is_authorized_tool_for_logged_user('tool_upload') ) {
 						$open_tool_default ="data-image_id=\"$image_id\"
 						data-quality=\"".DEDALO_IMAGE_QUALITY_ORIGINAL."\"
 						data-aditional_path=\"$aditional_path\"
@@ -55,13 +55,28 @@ $js_url = DEDALO_LIB_BASE_URL.'/component_image/js/component_image_read.js';
 						data-tipo=\"$tipo\"
 						data-parent=\"$parent\"
 						data-section_tipo=\"$section_tipo\"
-						onclick=\"tool_common.open_tool_upload(this)\" ";
+						onclick=\"tool_common.open_tool_upload(this)\"
+						title=\"Upload file in original quality\" ";
+
+						$add_class = 'no_file';
 					}
 					
 					# CANVAS : IMAGE 
 					
-					$html_contenido .= "<canvas id=\"$identificador_unico\" class=\"canvas_edit\" title=\"$title\" $open_tool_default >";
-					$html_contenido .= $image_thumb_html ; # Rendered in thumb mode
+					$html_contenido .= "<canvas id=\"$identificador_unico\" class=\"canvas_edit $add_class\" $open_tool_default >";
+					#$html_contenido .= $image_thumb_html ; # Rendered in thumb mode
+					$html_contenido .= "\n <img class=\"css_image\"
+					src=\"$image_url\"
+					id=\"img_$identificador_unico\"
+					data-image_id=\"$image_id\"
+					data-tipo=\"$tipo\"
+					data-section_tipo=\"{$section_tipo}\"
+					data-parent=\"$parent\"
+					data-lang=\"$lang\"
+					data-img_width=\"$img_width\"
+					data-img_height=\"$img_height\"
+					alt=\"$image_id\"
+					/>";
 					$html_contenido .= "</canvas>";
 
 					#$html_contenido .= "<a href=\"$image_url\" target=\"_blank\" > + ";

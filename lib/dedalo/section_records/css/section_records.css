@@ -7,31 +7,28 @@
 	font-weight: normal;
 	min-height: 60px;
 }
-.css_section_list_wrap {
-	
-}
+.css_section_list_wrap {	
+	}
+	.css_section_list_wrap > .content_data { /* select first css element only */
+		width: 100%;
+	}
 .section_list_rows_content_div {
 	/*top: 15px;
 	position: relative;*/
 }
-
-.css_section_list_wrap > .content_data { /* select first css element only */
-	width: 100%;
-}
 .section_buttons_container {
-	/*float: right;
-	margin-right: 10px;*/
-	position: absolute;
+	float: right;
+	position: relative;
 	min-height: 28px;
 	right: 10px;	
-	top: -7px;
+	top: -4px;
 	z-index: 1;
 }
 
 
 /* Table list 
 ------------------------------------------------------- */
-TABLE.css_section_list_table {
+table.css_section_list_table {
 	margin: 20px;
 	margin-top: 0px;
 	margin-left: 10px;
@@ -42,7 +39,7 @@ TABLE.css_section_list_table {
 	}
 
 	/*- Rows -*/
-	TABLE.css_section_list_table TH {		
+	table.css_section_list_table TH {		
 		padding: 5px;
 		padding-top: 3px;
 		padding-bottom: 0px;
@@ -63,11 +60,11 @@ TABLE.css_section_list_table {
 		line-height: 15px;
 	}
 
-	TABLE.css_section_list_table TH:first-child {
+	table.css_section_list_table TH:first-child {
 		border-top-left-radius: 5px;
 		border: none !important;
 	}
-	TABLE.css_section_list_table TH:last-child {
+	table.css_section_list_table TH:last-child {
 		border-top-right-radius: 4px;
 	}
 	.css_section_list_table TH DIV.th_title {
@@ -80,7 +77,7 @@ TABLE.css_section_list_table {
 		cursor: default;
 
 	}	
-	TABLE.css_section_list_table TH DIV.flechas {
+	table.css_section_list_table TH DIV.flechas {
 		display: inline-block;
 		margin: 0;
 		margin-right: -3px;
@@ -89,7 +86,7 @@ TABLE.css_section_list_table {
 
 	}
 	/* -- ROWS DATOS [TD] -- */
-	TABLE.css_section_list_table TD {
+	table.css_section_list_table TD {
 		color: #333;
 		/* padding: 5px; */
 		text-align: left;
@@ -106,7 +103,7 @@ TABLE.css_section_list_table {
 		background-color: rgba(249, 249, 249, 0.82);
 		*/
 	}
-	TABLE.css_section_list_table .section_list_td_row {
+	table.css_section_list_table .section_list_td_row {
 		padding: 5px;
 		vertical-align: top;
 		/*
@@ -117,7 +114,7 @@ TABLE.css_section_list_table {
 		white-space: nowrap;
 		*/
 	}
-	TABLE.css_section_list_table TD SPAN {
+	table.css_section_list_table TD SPAN {
 		width: auto;
 		white-space: pre-wrap;
 		/* max-width: 200px;
@@ -126,13 +123,20 @@ TABLE.css_section_list_table {
 		*/
 	}
 	
-	TABLE.css_section_list_table TH.id_column,
-	TABLE.css_section_list_table TD.id_column {
+	table.css_section_list_table TH.id_column,
+	table.css_section_list_table TD.id_column {
 		text-align: right;
 		white-space: nowrap;
 		width: 34px !important;
 		/* width: auto !important; */
 	}
+
+		TD.td_component_text_area {
+			display: block;
+		    max-height: 68px;
+		    overflow: hidden;		   
+		    /*display: table-cell;*/   
+		}
 
 		/*-- td_css_selector --*/
 		TD.td_component_av ,
@@ -142,17 +146,19 @@ TABLE.css_section_list_table {
 			width: 102px ;
 		}
 		TD.td_component_state {
-			width: 80px !important;
+			font-size: 96%;
+			/*white-space: nowrap;*/
+			/*width: 80px !important;*/
 		}
 		TD.td_component_security_administrator {
 			width: 100px !important;
 		}
 
 
-	TABLE.css_section_list_table  TD IMG {
+	table.css_section_list_table  TD IMG {
 		
 	}
-	.css_section_list_table TABLE.table_widht_auto {
+	.css_section_list_table table.table_widht_auto {
 		width: auto !important;
 	}
 
@@ -189,7 +195,7 @@ TABLE.css_section_list_table {
 	border-collapse: collapse;
 	/*margin: 100px !important;*/
 }
-.css_section_list_table_relation TH {
+.css_section_list_table_relation th {
 	color: #CCCCCC;
 	padding: 5px;
 	padding-top: 1px;
@@ -210,7 +216,7 @@ TABLE.css_section_list_table {
 	background: linear-gradient(to bottom, rgba(178,178,178,1) 0%,rgba(96,96,96,1) 100%);
 	/*filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#b2b2b2', endColorstr='#606060',GradientType=0 );*/
 }
-.css_section_list_table_relation TD {
+.css_section_list_table_relation td {
 	color: #333;
 	padding: 4px;
 	word-wrap: break-word;
@@ -220,18 +226,18 @@ TABLE.css_section_list_table {
 	border-left: none;
 	background-color: #F9F9F9;
 }
-TD.td_relation_info, TD.td_relation_fragment {
+td.td_relation_info, td.td_relation_fragment {
 	width: 45%;
 }
-TD.td_relation_reverse_info {
+td.td_relation_reverse_info {
 	width: 95%;
 	margin: 0;
 }
-TD.td_relation_reverse_info SPAN {
+td.td_relation_reverse_info SPAN {
 	/*width: 95%;*/
 	line-height: 1em !important;
 }
-TD.td_relation_reverse_info HR {
+td.td_relation_reverse_info HR {
 	margin: 0;
 	padding: 0;
 }
@@ -256,13 +262,13 @@ TD.td_relation_reverse_info HR {
 	}
 
 
-DIV.link_relation {
+div.link_relation {
 	cursor: pointer;
 	display: inline-block;
 	margin-left: 4px;
 	color: #AAABA4;
 }
-DIV.link_relation:hover {
+div.link_relation:hover {
 	color: #5D5E5A;
 }
 
@@ -314,14 +320,7 @@ DIV.link_relation:hover {
 }
 
 
-.css_button_delete,
-.delete_portal_link
-{
-	opacity: 0.25;
-	transform: scale(0.94);
-	top: 1px;
-	margin-left:2px;
-}
+
 
 /*DELETE DIALOG*/
 #delete_dialog {
@@ -365,7 +364,7 @@ td.td_dd551 div {
 
 /*VARIANTES EXCLUSIVAS DE ESTE COMPONENTE
 ------------------------------------------------------- */
-TABLE.css_section_list_table .column_test {
+table.css_section_list_table .column_test {
 	background-color:#d5e9e9;
 }
 

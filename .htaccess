@@ -1,0 +1,10 @@
+#/dedalo4/.htaccess
+#<IfModule mod_rewrite.c>
+#    RewriteEngine on
+#    RewriteRule  ^$ lib/dedalo/    [L]
+#    RewriteRule  ((?s).*) lib/dedalo/$1 [L]
+#</IfModule>
+php_value max_input_vars 3000
+php_value suhosin.get.max_vars 3000
+php_value suhosin.post.max_vars 3000
+php_value suhosin.request.max_vars 3000

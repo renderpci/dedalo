@@ -32,7 +32,7 @@
 	if (isset($_REQUEST['context_name'])) {
 		$context_name = $_REQUEST['context_name'];
 	}
-
+	
 
 	# Propiedades puede asignar valores de configuración del editor de texto (tinyMCE)
 	$propiedades = $this->get_propiedades();
@@ -59,12 +59,13 @@
 
 					$dato 				= TR::addTagImgOnTheFly($dato);
 					$ar_css				= $this->get_ar_css();
-					$last_tag_index_id	= $this->get_last_tag_index_id();		#dump($last_tag_index_id,'last_tag_index_id');
+					$last_tag_index_id	= $this->get_last_tag_index_id();
 					$id_wrapper 		= 'wrapper_'.$identificador_unico;
 					$input_name 		= "{$tipo}_{$parent}";
 					$text_area_tm 		= NULL;
 
 					$component_info 	= $this->get_component_info('json');
+					$context 			= $this->get_context();
 						
 					
 					# DATO_REFERENCE_LANG
@@ -76,8 +77,7 @@
 						$default_component = $this->get_default_component();
 							#dump($default_component,'$default_component');
 					}
-					*/										
-
+					*/
 					
 					# CANVAS ID : Resolve canvas_id for paper get tags
 					$canvas_id = null;
@@ -93,6 +93,18 @@
 							}
 						}	
 					}
+
+					#
+					# STATE PROCESS
+					# When propiedades->state is set, call to component_status for render status process options
+					switch (true) {
+						case (isset($context->context_name) && $context->context_name=='tool_time_machine'):
+							$component_state_html = '';
+							break;						
+						default:
+							$component_state_html = $this->get_state_process_html();	
+					}								
+
 					#dump($canvas_id,'canvas_id');					
 					break;
 
@@ -131,6 +143,7 @@
 					}
 					# Force file_name
 					$file_name  = 'edit';
+
 					break;
 						
 		case 'fragment_info' :

@@ -5,6 +5,12 @@ require_once( DEDALO_LIB_BASE_PATH . '/media_engine/class.ImageObj.php');
 
 $photo=$_REQUEST['f'];
 
+# Accept images with get vars
+$ar = explode('?', $photo);
+if (isset($ar[0])) {
+	$photo = $ar[0];
+}
+
 # Imagemagick path
 /*
 echo "<pre>";

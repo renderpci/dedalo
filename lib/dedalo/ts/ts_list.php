@@ -28,6 +28,8 @@ require_once(DEDALO_ROOT . '/lang_translate/class.LangTranslate.php');
 
 
 
+
+
 $area			= 'tesauro'; #verify_access_area($area);
 
 # set vars
@@ -174,8 +176,44 @@ if($t=='form' && $n==0) {
 
 };//if($t=='form')
 
+#css::$ar_url[] = DEDALO_LIB_BASE_URL."/tools/".$tool_name."/css/".$tool_name.".css";
+#js::$ar_url[]  = DEDALO_LIB_BASE_URL."/tools/".$tool_name."/js/".$tool_name.".js";
 
+# CSS
+css::$ar_url[] = DEDALO_LIB_BASE_URL .'/component_portal/css/component_portal.css';
+css::$ar_url[] = DEDALO_LIB_BASE_URL .'/tools/tool_av_versions/css/tool_av_versions.css';
+css::$ar_url[] = DEDALO_LIB_BASE_URL .'/diffusion/diffusion_index_ts/css/diffusion_index_ts.css';
+css::$ar_url[] = DEDALO_LIB_BASE_URL .'/ts/css/ts_list.css';
 
+# JS
+js::$ar_url[]  = DEDALO_LIB_BASE_URL . '/common/js/cookies.js';
+js::$ar_url[]  = DEDALO_LIB_BASE_URL . '/tools/tool_av_versions/js/tool_av_versions.js';
+js::$ar_url[]  = DEDALO_LIB_BASE_URL . '/component_portal/js/component_portal.js';
+js::$ar_url[]  = DEDALO_LIB_BASE_URL . '/common/js/lang/'.DEDALO_APPLICATION_LANG.'.js';
+js::$ar_url[]  = DEDALO_ROOT_WEB 	 . '/lib/jquery/AjaxQ-master/ajaxq.js';
+js::$ar_url[]  = DEDALO_LIB_BASE_URL .'/ts/js/ts_common.js';
+js::$ar_url[]  = DEDALO_LIB_BASE_URL .'/tools/tool_common/js/tool_common.js';
+js::$ar_url[]  = DEDALO_LIB_BASE_URL .'/tools/tool_diffusion/js/tool_diffusion.js';
+js::$ar_url[]  = DEDALO_LIB_BASE_URL .'/tools/tool_indexation/js/tool_indexation.js';
+js::$ar_url[]  = DEDALO_LIB_BASE_URL . '/ts/js/ts_list.js';
+/*
+	print js::build_tag(JQUERY_LIB_URL_JS);
+	print js::build_tag(JQUERY_UI_URL_JS);
+	print js::build_tag(DEDALO_LIB_BASE_URL . '/common/js/common.js');
+	print js::build_tag(DEDALO_LIB_BASE_URL . '/tools/tool_common/js/tool_common.js');
+	print js::build_tag(DEDALO_LIB_BASE_URL . '/login/js/login.js');
+	print js::build_tag(DEDALO_LIB_BASE_URL .'/component_portal/js/component_portal.js');
+	print js::build_tag(DEDALO_LIB_BASE_URL .'/tools/tool_av_versions/js/tool_av_versions.js');
+	print js::build_tag(DEDALO_LIB_BASE_URL . '/common/js/cookies.js');
+	print js::build_tag(DEDALO_LIB_BASE_URL . '/common/js/lang/'.DEDALO_APPLICATION_LANG.'.js');
+	#print js::build_tag(DEDALO_ROOT_WEB 	. '/lib/jquery/jquery.ajaxQueue.min.js');
+	print js::build_tag(DEDALO_ROOT_WEB 	. '/lib/jquery/AjaxQ-master/ajaxq.js');
+	#print js::build_tag(DEDALO_ROOT_WEB 	. '/inc/javascript.js');
+	print js::build_tag(DEDALO_LIB_BASE_URL . '/ts/js/ts_common.js');
+	print js::build_tag(DEDALO_LIB_BASE_URL .'/tools/tool_common/js/tool_common.js');
+	print js::build_tag(DEDALO_LIB_BASE_URL .'/tools/tool_indexation/js/tool_indexation.js');
+	print js::build_tag(DEDALO_LIB_BASE_URL . '/ts/js/ts_list.js');
+	*/
 # MENU
 $html_header ='';
 if($modo=='tesauro_rel') {

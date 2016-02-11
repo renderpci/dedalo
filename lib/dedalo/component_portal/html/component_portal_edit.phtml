@@ -18,7 +18,7 @@
 	data-component_name=\"{$component_name}\"
 	data-component_info='{$component_info}'
 	data-dato='{$valor}'
-	data-target_section_tipo=\"{$target_section_tipo}\"
+	data-target_section_tipo='{$ar_target_section_tipo_json}''
 	>";
 	
 		
@@ -49,42 +49,52 @@
 								# BUTTON NEW HTML
 								if( $permissions>=2 && $modo!='print') {
 
-									$button_new = "\n<div class=\"css_button_generic btn_new_ep\" 
-									data-portal_tipo=\"{$this->tipo}\" 
-									data-portal_parent=\"{$this->parent}\"
-									data-target_section_tipo=\"{$target_section_tipo}\" 
-									onclick=\"component_portal.new_portal_record(this)\"
-									title=\"parent:$parent - tipo:$tipo\" >";								
-									$button_new .= '+ '. ucfirst(label::get_label('nuevo')) ;#. " $label" ;
-									$button_new .= "</div>";
+									foreach ($ar_target_section_tipo as $current_target_section_tipo) {										
+									
+										$button_new = "\n<div class=\"css_button_generic btn_new_ep\" 
+										data-portal_tipo=\"{$this->tipo}\" 
+										data-portal_parent=\"{$this->parent}\"
+										data-target_section_tipo=\"{$current_target_section_tipo}\" 
+										onclick=\"component_portal.new_portal_record(this)\"
+										title=\"parent:$parent - tipo:$tipo\" >";
+										$button_new .= ''. RecordObj_dd::get_termino_by_tipo($current_target_section_tipo).': '.label::get_label('nuevo');#. " $label" ;
+										$button_new .= "</div>";
 
-									if (SHOW_DEBUG) {
-										$button_new .= "<span class=\"debug_info\">parent:$parent - tipo:$tipo </span>";
+										if (SHOW_DEBUG) {
+											$button_new .= "<span class=\"debug_info\">parent:$parent - tipo:$tipo </span>";
+										}
+										$html_contenido .= $button_new;
+
+										break; // Only first
 									}
-									$html_contenido .= $button_new;
 								}								
 
 								# BUTTON SELECT EXISTING RECORD HTML (BUTTON TOOL_PORTAL)
 								if($modo!='print') {
 									
-									$button_select = "\n<div class=\"css_button_generic btn_new_ep\" 
-									data-tipo=\"{$tipo}\"
-									data-top_tipo=\"".TOP_TIPO."\"
-									data-parent=\"{$parent}\"
-									data-section_tipo=\"{$section_tipo}\"						
-									onclick=\"tool_common.open_tool_portal(this)\"
-									title=\"parent:$parent - tipo:$tipo\" >";
-									$button_select .= '+ '. ucfirst(label::get_label('existente')) ;
+									foreach ($ar_target_section_tipo as $current_target_section_tipo) {	
 
-									if(SHOW_DEBUG) {
-										$button_select .= ' '.TOP_TIPO.'.'.$target_section_tipo.'.'.$this->tipo;
-									}
-									$button_select .= "</div>";
+										$button_select = "\n<div class=\"css_button_generic btn_new_ep\" 
+										data-tipo=\"{$tipo}\"
+										data-top_tipo=\"".TOP_TIPO."\"
+										data-parent=\"{$parent}\"
+										data-section_tipo=\"{$section_tipo}\"
+										data-target_section_tipo=\"{$current_target_section_tipo}\"
+										onclick=\"tool_common.open_tool_portal(this)\"
+										title=\"parent:$parent - tipo:$tipo\" >";
+										$button_select .= ''. RecordObj_dd::get_termino_by_tipo($current_target_section_tipo).': '.label::get_label('existente');
 
-									if (SHOW_DEBUG) {
-										$button_select .= "<span class=\"debug_info\">parent:$parent - tipo:$tipo </span>";
-									}
-									$html_contenido .= $button_select;
+										if(SHOW_DEBUG) {
+											$button_select .= ' '.TOP_TIPO.'.'.$current_target_section_tipo.'.'.$this->tipo;
+										}
+										$button_select .= "</div>";
+
+										if (SHOW_DEBUG) {
+											$button_select .= "<span class=\"debug_info\">parent:$parent - tipo:$tipo </span>";
+										}
+										$html_contenido .= $button_select;
+
+									}//end foreach ($ar_target_section_tipo as $current_target_section_tipo) {	
 								}								
 
 							}//END if ($show_button_new===true || !is_array($dato))
@@ -120,49 +130,72 @@
 	
 						# ROWS (TD)
 						$row_number=1;
-						if ($this->html_options->rows && !empty($rows_data->result)) {
-						foreach ($rows_data->result as $key => $table_rows) {
-						foreach ($table_rows as $current_id => $rows) {
-							//echo "<hr> $current_id - ".print_r($rows,true);
+
+						#if ($this->html_options->rows && !empty($rows_data->result)) {
+						#foreach ($rows_data->result as $key => $table_rows) {
+						#foreach ($table_rows as $current_id => $rows) {
+						#dump($dato, ' dato ++ '.to_string());
+						/**/
+						foreach ((array)$dato as $key => $current_locator) {
+
+
+							$current_section_id 	= $current_locator->section_id;
+							$current_section_tipo 	= $current_locator->section_tipo;
+							$current_tag_id 		= isset($current_locator->tag_id) ? $current_locator->tag_id : null;
+
+							$current_row = $this->row_in_result( $current_locator, $rows_data->result );						
+								#dump($current_row, ' current_row ++ '.to_string());							
+							//continue;
+							
 
 							if ($this->html_options->rows_limit && $row_number > $this->html_options->rows_limit) {
 								break; # Limit number of records to sowh
 							}
 
 							# REL_LOCATOR : The current_id can be id matrix or locator like object
-								$rel_locator = $current_id;	// Default							
-								if (isset($rows['lc_object'])) { // Locator object
-									$rel_locator = $rows['lc_object'];
+								/*
+								$rel_locator = $current_row['current_id'];	// Default							
+								if (isset($current_row['lc_object'])) { // Locator object
+									$rel_locator = $current_row['lc_object'];
 									$rel_locator = json_handler::encode($rel_locator);
 									if(SHOW_DEBUG) {
 										#dump($rel_locator," rel_locator from lc_object "); 
 									}
 								}
+								*/
+								$rel_locator = json_encode($current_locator);
 
 							# ROW
-								$section_id = $rows['id']; 	#dump($section_id," id");
-								if (empty($section_id)) {
-									dump("Se ha recibido un row de id 0 en component portal edit. Se ha omitido pero algo va mal, probablemente haya un proyecto de parent 0 creado por error");
-									continue;
+								/*						
+								if (empty($current_row['id'])) {
+									if(SHOW_DEBUG) {
+										#dump("Se ha recibido un row de id null en component portal edit. Se ha omitido pero algo va mal, probablemente haya un proyecto de parent 0 creado por error o se ha borrado un registro al cual el portal hace referencia","DEBUG INFO");										
+									}									
+									#continue;
 								}
+								*/
 
 							# SECTION ID
-								$section_id = $rows['section_id'];
+								$section_id 		= $current_section_id;	//$current_row['section_id'];
+								$target_section_tipo= $current_section_tipo;
 
 
 							# COLUMNS
-								#dump($rows['rsc29']," rows");
-								$table .= "<tr class=\"tr_sortable\" data-dato='$rel_locator'>";
-								#foreach ((array)$rows as $key => $current_value) {
-
+								#dump($current_row['rsc29']," rows");
+								$sort_id = !empty($rel_locator) ? $rel_locator : 0;
+								$table .= "<tr class=\"tr_sortable\" data-dato='$sort_id'>";
+								#foreach ((array)$current_row as $key => $current_value) {								
 								foreach ($ar_columns as $column_tipo => $column_label) {										
-
+	
 									#
 									# EDIT COLUMN
 									if ($column_tipo=='edit') {
 										if (!$this->html_options->id_column) continue;
 
 										$table .= "<td class=\"id_column\">";
+
+										# SECTION_ID TEXT
+										#$table .= " $section_id ";
 
 										#
 										# EDIT BUTTON
@@ -181,51 +214,81 @@
 												#dump($section_id_path,"id_path - $section_id");
 											$url 	.= "&id_path=". $id_path;
 
-											$title 	= "Goto resource section_id $section_id [$target_section_tipo]";
+											#$title 	= "Goto resource section_id $section_id [$target_section_tipo]";
+											$title = label::get_label('editar_registro').' '.$section_id;
 											if(SHOW_DEBUG) $title .= "\n url:$url \n modo $modo, context $context->context_name";
-											$table .= "<div class='button_edit div_image_link link' title=\"$title\" onclick=\"window.open('$url', '_blank', 'toolbar=0,location=0,menubar=0')\"></div>";
+											if (empty($current_row['id'])) {
+												$table .= "<div class='div_image_link link' title=\"$title\" onclick=\"alert('Deleted record')\"> ! </div>";
+											}else{
+											/*	$table .= "<div class='button_edit div_image_link link' title=\"$title\" onclick=\"component_portal.open_record('$url')\"></div>";
 											
+											*/	$additional_css_style = $permissions <2 ? 'height: 100%;' : '' ;
+												$table .= "<a href=\"javascript:component_portal.open_record('$url')\" class=\"id_column_buttons button_edit link\" title=\"$title\" style=\"$additional_css_style\">";
+													# SECTION_ID TEXT
+													$table .= "<span class=\"section_id_number\">";
+													$table .= " $section_id ";													
+													$table .= "</span>"; 
+												$table .= "</a>"; 
+											
+											}
 										#
 										# DELETE RECORD BUTTON
 											if ($permissions>=2) {
-												$btn_title	 = label::get_label('borrar') .' '. label::get_label('recurso');
+												$title	 = label::get_label('borrar') .' '. label::get_label('recurso');
+												/*
 												$table 		.= " <div class=\"delete_portal_link icon_bs link image_delete_icon\"
-										    	data-rel_locator='$rel_locator'
-										    	title=\"$btn_title\"
-										    	onclick=\"$('#delete_dialog_portal').data('button_obj',this).dialog('open')\"
-										    	></div>";
+												data-rel_locator='$rel_locator'
+												title=\"$btn_title\"
+												onclick=\"$('#delete_dialog_portal').data('button_obj',this).dialog('open')\"
+												></div>";*/
+												$table .= "<a href=\"javascript:void(0);\" class=\"id_column_buttons button_delete link\" onclick=\"$('#delete_dialog_portal').data('button_obj',this).dialog('open')\"
+												data-rel_locator='{$rel_locator}'
+												title=\"$title\">";
+												if(SHOW_DEBUG) {
+													$table .= "<mark class=\"row_debug_info\">";
+													$table .= "$target_section_tipo $current_section_id";
+													if ($current_tag_id) {
+													 $table .= "-$current_tag_id";
+													}
+													$table .= "</mark>";
+												}
+												$table .= "</a>";
 											}
-
+										/*
 										if(SHOW_DEBUG) {
-											# ID MATRIX
-											$table .= "<br><mark class=\"row_debug_info\">$current_id</mark>";
+											$table .= " <br><mark class=\"row_debug_info\">";
+											$table .= "$target_section_tipo $current_section_id";
+											if ($current_tag_id) {
+											 $table .= "-$current_tag_id";
+											}
+											$table .= "</mark>";
 										}
+										*/
 
 										$table .= "</td>";
 
 
+									#
 									# COMPONENTS COLUMNS
 									}else{
 
 										$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($column_tipo, true);
 
 										# Row value default
-										if (!isset($rows[$column_tipo])) {
+										if (!isset($current_row[$column_tipo])) {
 											$table .= "<td class=\"\">";
-											$table .= ''; // User with NO access to this column
+											$table .= ' '; // User with NO access to this column
 											$table .= "</td>";
 											continue;
 										}
-																		
-										$value = $rows[$column_tipo];
-										#dump($rows,"rows $this->tipo");
+										
+										$value = $current_row[$column_tipo];									
 
 										# Row value overwrite on special cases
 										switch ($modelo_name) {
 
 											# COMPONENT_PORTAL
 											case ('component_portal'):
-												#if (empty($value)) break; // Avoid resolve empty portals
 												# Portal with locators
 												$parent 		 = null; // $section_id / null
 												$component_portal = component_common::get_instance('component_portal',$column_tipo,$parent,'list',DEDALO_DATA_NOLAN,$target_section_tipo);
@@ -237,6 +300,7 @@
 													$component_portal->set_identificador_unico($component_portal->get_identificador_unico().'_'.$section_id); // Set unic id for build search_options_session_key used in sessions
 												}
 												$value = $component_portal->get_html();
+													#dump($value, ' value ++ '.to_string());
 												break;
 
 											# COMPONENTS WITH LOCATORS
@@ -272,24 +336,22 @@
 											case ('component_text_area'):
 												/*
 												# TO VERIFY THIS SELECTOR..
-												$rel_locator = $rows['lc_object'];	//(object)json_handler::decode($rel_locator);
+												$rel_locator = $current_row['lc_object'];	//(object)json_handler::decode($rel_locator);
 
 												if (!property_exists($rel_locator, 'tag_id')) {										
 													$ar_records = (array)json_handler::decode($value);
 													$value 		= reset($ar_records);
 												}
 												*/
-												$obj_value = json_decode($rows[$column_tipo]); # Evitamos los errores del handler accediendo directamente al json_decode de php
+												$obj_value = json_decode($current_row[$column_tipo]); # Evitamos los errores del handler accediendo directamente al json_decode de php
 												$current_tag = 0;
 												if (is_object($obj_value) && isset($obj_value->$current_tag)) {
 													$value = $obj_value->$current_tag;
 												}else{
-													$value = $rows[$column_tipo];
+													$value = $current_row[$column_tipo];
 												}
 												break;
-
-
-												
+	
 											default:
 												$parent 		   = $section_id; // $section_id / null
 
@@ -299,7 +361,12 @@
 												}else{
 													$lang = DEDALO_DATA_LANG;
 												}
-												$current_component = component_common::get_instance($modelo_name,$column_tipo,$parent,'list',$lang,$target_section_tipo);
+												$current_component = component_common::get_instance($modelo_name,
+																									$column_tipo,
+																									$parent,
+																									'list',
+																									$lang,
+																									$target_section_tipo);
 												$value = $current_component->get_html();
 
 										}//end switch (true)
@@ -314,7 +381,7 @@
 										}else{
 											$table .= to_string($value);
 										}
-																			
+										
 										$table .= "</td>";
 
 									}//end if ($modelo_name=='component_portal')
@@ -326,21 +393,23 @@
 						$row_number++;
 
 
-						}//END foreach ($table_rows as $current_id => $rows)
-						}//END foreach ($rows_data->result as $key => $table_rows)
+						#}//END foreach ($table_rows as $current_id => $rows)
+						#}//END foreach ($rows_data->result as $key => $table_rows)
 						}//end if ($this->html_options->header)
 
 
 						# When no result, Empty row is render for drag
+						/*
 						if (empty($rows_data->result) && !empty($dato)) {
 							$table .= "<tr><td colspan=\"".count($ar_columns)."\">";
 							if(SHOW_DEBUG) {
-								$table .= "<div class=\"warning\">Sorry. I can't resolve this locator: <blockquote> ".to_string($dato,true)."</blockquote></div>";
+								$table .= "<div class=\"warning\">DEBUG INFO: I can't resolve this locator: <blockquote> ".to_string($dato,true)."</blockquote></div>";
 							}else{
-								$table .= "<div class=\"warning\">Sorry. I can't resolve this link data</div>";
+								$table .= " ";
 							}							
 							$table .= "</td></tr>";
-						}						
+						}
+						*/					
 
 						$table .= "</tbody>";
 						$table .= '</table>';

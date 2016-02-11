@@ -136,7 +136,7 @@ class tool_lang extends tool_common {
 			#dump($matrix_table,'$matrix_table');
 
 		# Section
-		$current_tipo 		= component_common::get_section_tipo_from_component_tipo($tipo);
+		$current_tipo 		= $this->source_component->get_section_tipo();
 		$section 			= section::get_instance($parent,$current_tipo);
 			#dump($section,'section');
 		$ar_all_project_langs = $section->get_ar_all_project_langs();
@@ -242,8 +242,8 @@ class tool_lang extends tool_common {
 		
 		$parent 		= $this->source_component->get_parent(); 	
 		$tipo 			= $this->source_component->get_tipo();		
-		$section_tipo	= component_common::get_section_tipo_from_component_tipo($tipo); 
-		$section_tipo	= section::get_section_real_tipo_static($section_tipo);
+		$section_tipo	= $this->source_component->get_section_tipo();	//component_common::get_section_tipo_from_component_tipo($tipo); 
+		#$section_tipo	= section::get_section_real_tipo_static($section_tipo);
 		
 		$section		= section::get_instance($parent, $section_tipo);
 			#dump($section,'section');

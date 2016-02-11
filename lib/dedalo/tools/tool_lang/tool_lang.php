@@ -5,9 +5,12 @@
 	#$id 					= $this->source_component->get_id();
 	$tipo 					= $this->source_component->get_tipo();
 	$parent 				= $this->source_component->get_parent();
+	$section_id 			= $parent;
+	$section_tipo 			= $this->source_component->get_section_tipo();
 	$lang 					= $this->source_component->get_lang();
 	$label 					= $this->source_component->get_label();
 	$traducible 			= $this->source_component->get_traducible();	
+	$tool_locator			= DEDALO_TOOL_INVESTIGATION_SECTION_TIPO.'_'.DEDALO_TOOL_TRANSLATE_ID;//
 	$tool_name 				= get_class($this);
 	$modo 					= $this->get_modo();
 	$file_name 				= $modo;
@@ -24,12 +27,17 @@
 
 					break;
 		case 'button':
-					# Si el component no tiene id, y no hay registross en ningún idioma,  NO se crea el html de tool 
+					# Si el component no tiene id, y no hay registros en ningún idioma,  NO se crea el html de tool 
 					$component_ar_langs = $this->source_component->get_component_ar_langs();
 						#dump($component_ar_langs,"component_ar_langs");
 
-					if(empty($component_ar_langs)) return NULL;
-					if ($traducible=='no') return NULL;				
+					if(empty($component_ar_langs)) {
+						echo "";
+						return NULL;
+					}
+					if ($traducible=='no') {
+						return NULL;
+					}				
 					break;
 
 		case 'selector_source':
@@ -89,7 +97,13 @@
 					$header_html 	= '';
 
 					$permissions = common::get_permissions($tipo);
-						#dump($permissions," $tipo");				
+						#dump($permissions," $tipo");
+
+					#
+					# STATE
+					# Note: component_state is loaded by ajax because when target lang is changed (on change target lang selector),
+					# component_state options tool lang must be updated to new lang					
+
 					break;							
 		
 	}#end switch

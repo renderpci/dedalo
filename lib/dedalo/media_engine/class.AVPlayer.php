@@ -63,6 +63,13 @@ class AVPlayer extends Accessors {
 		$this->controls				= true;			# 'controls'
 		$this->autoplay				= false;		# 'autoplay'					
 		$this->src					= $this->AVObj->get_url();
+
+		# When request, add to source url
+		# Need streamer
+		if ( isset($_GET['vbegin']) && isset($_GET['vend']) ) {
+			$this->src .= "&vbegin=".$_GET['vbegin'].'&vend='.$_GET['vend'];
+		}
+
 		$this->preload				= 'metadata'; # auto|metadata|none	
 		$this->type					= $this->AVObj->get_mime_type();	#if($this->codecs) $this->type = $this->type .';'. $this->codecs;	
 		$this->codecs				= $this->AVObj->get_codecs();	
@@ -90,13 +97,19 @@ class AVPlayer extends Accessors {
 		#dump($this, ' this');
 	}
 	
-	function get_PosterFrameObj_from_AVObj($AVObj) {
-					
+	function get_PosterFrameObj_from_AVObj($AVObj) {					
 		$PosterFrameObj	= new PosterFrameObj($AVObj->get_name());
 		return $PosterFrameObj;
 	}
 	
-	
+	/**
+	* GET_STREAMER
+	* @return 
+	*/
+	public function get_streamer() {
+		//http://192.168.0.7
+		return 'http://'.DEDALO_HOST;
+	}#end get_streamer
 	
 	
 	# BUILD PLAYER 
@@ -127,9 +140,9 @@ class AVPlayer extends Accessors {
 			return "<div style=\"margin:0px;padding-top:200px;font-size:14px; color:#999999\"> Media not available <br> $info_path </div>"; #{$this->AVObj->get_media_path()}
 		}
 		if(!$this->PosterFrameObj->get_file_exists())	
-		$this->poster = $this->PosterFrameObj->get_media_path() ."0.jpg";			#dump($this->poster);	
-		
-				
+		$this->poster = $this->PosterFrameObj->get_media_path() ."0.jpg";
+
+
 		# STREAMER . IF STREAMER IS DEFINED IN CONFIG FILE, USE THIS PATH AND ACCEPT TCIN AND TCOUT		
 		if($this->AVObj->get_streamer() && ($modo=='subtitles' || $modo=='public') ) {
 			#$this->src = $this->AVObj->get_streamer() . substr($this->src,3);			
@@ -233,15 +246,9 @@ class AVPlayer extends Accessors {
 		$html .= "\n</video>";
 		
 		return $html;	
-	}
-	
+	}	
     
-    function pepelee() {
-        
-        foreach($ar_l as $gg) {
-            
-        }
-    }
+    
 
 	
 	# MEDIAELEMENT PLAYER TYPE
@@ -296,24 +303,28 @@ class AVPlayer extends Accessors {
 	
 	# QT PLAYER TYPE
 	protected function get_video_tag_fallback_qt_code() {
-						
-		$html5type  = "type=\"{$this->type}";		
-		if($this->codecs)
-			$html5type .= ";codecs=\'{$this->codecs}\'";
-		$html5type .= "\"";
-		$src = $this->src;		
 		
+		$html5type  = "type=\"{$this->type}";
+		if($this->codecs) {
+			$html5type .= ";codecs=\'{$this->codecs}\'";
+		}
+		$html5type .= "\"";
+		$src = $this->src;
+		$html5_source_type_code = $this->get_html5_source_type_code();
+			#dump($_REQUEST, ' _REQUEST ++ '.to_string());
+			#dump($src, ' src ++ '.to_string());		
+				
 		$html  = "<!-- HTML 5 TAG CODE WITH FALLBACK QUICKTIME PLUG-IN -->\n";
 		$html .= "<script type=\"text/javascript\">
 		
-					var videoCode	= new String('');
+					var videoCode = new String('');
 								
 					if( navigator.userAgent.indexOf('Chrome') != -1 || navigator.userAgent.indexOf('AppleWebKit') != -1 ) {
 			
 						modo = 'html5' ;	//alert('{$src}')
 						
 						videoCode += '<video id=\"{$this->playerID}\" width=\"{$this->width}\" height=\"{$this->height}\" preload=\"{$this->preload}\" {$this->get_html5_controls_code()} poster=\"{$this->poster}\" {$this->autoplay} onerror=\"failed(event)\" >';	      					
-						videoCode += ' <source id=\"video_mp4\" src=\"\" {$this->get_html5_source_type_code()} >';
+						videoCode += ' <source id=\"video_mp4\" src=\"\" {$html5_source_type_code} >';
 						videoCode += ' <img src=\"{$this->poster}\" width=\"{$this->width}\" height=\"{$this->height}\" alt=\"Posterframe\" title=\"No video playback capabilities\" />';
 						videoCode += '</video>';			
 						
@@ -358,7 +369,7 @@ class AVPlayer extends Accessors {
 											break;
 						}																				
 					});
-					if(nivel==10) console.log('-> url: {$src}, ".__METHOD__." ');
+					if(DEBUG) console.log('-> url: {$src}, ".__METHOD__." ');
 				</script>";
 				
 		return $html;

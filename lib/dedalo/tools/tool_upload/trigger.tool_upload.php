@@ -7,7 +7,7 @@ require_once( dirname(dirname(dirname(__FILE__))) .'/config/config4.php');
 
 if(login::is_logged()!==true) {
 	$string_error = "Auth error: please login";
-	print Error::wrap_error($string_error);
+	print dd_error::wrap_error($string_error);
 	die();
 }
 
@@ -43,7 +43,7 @@ if( $mode=='upload_file' ) {
 	$tool_upload 	= new tool_upload($component_obj);
 		#dump($tool_upload,'$tool_upload');
 
-	$html 			= $tool_upload->upload_file($quality);
+	$html 			= $tool_upload->upload_file( $quality );
 
 
 	# Save component for update component 'valor_list'

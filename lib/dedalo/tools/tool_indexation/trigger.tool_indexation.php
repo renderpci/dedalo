@@ -100,7 +100,7 @@ if($mode=='remove_index') {
 
 		$RecordObj_descriptors->Save();
 
-		error_log("Removed rel_locator ". json_encode($rel_locator) ." from matrix_descriptors parent $terminoID");
+		debug_log(" Removed rel_locator ". json_encode($rel_locator) ." from matrix_descriptors parent $terminoID");
 
 	print 'ok';
 	exit();
@@ -235,7 +235,7 @@ if($mode=='delete_tag') {
 	# Remove current locator from array data of all rows in matrix_descriptors
 	$ar_deleted = RecordObj_descriptors::delete_rel_locator_from_all_indexes($rel_locator);
 	if(SHOW_DEBUG) {
-		error_log("INFO: Deleted rel_locator_from_all_indexes (RecordObj_descriptors): ".to_string($ar_deleted));
+		debug_log(" INFO: Deleted rel_locator_from_all_indexes (RecordObj_descriptors): ".to_string($ar_deleted));
 	}
 		#dump($ar_deleted, ' ar_deleted');die();
 
@@ -260,7 +260,7 @@ if($mode=='delete_tag') {
 	$component_text_area = component_common::get_instance('component_text_area',$tipo,$parent,'edit',DEDALO_DATA_LANG,$section_tipo);		
 	$ar_deleted 		 = $component_text_area->delete_tag_from_all_langs($tag);
 	if(SHOW_DEBUG) {
-		error_log("INFO: Deleted tag $tag from component text area langs: ".to_string($ar_deleted));
+		debug_log(" INFO: Deleted tag $tag from component text area langs: ".to_string($ar_deleted));
 	}
 
 

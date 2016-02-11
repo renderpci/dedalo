@@ -346,6 +346,78 @@
 	Valencia 05-11-2015 v4.0.000
 		Released current version (4.0 RC 4.35) as version 4.0 official launch
 
+	Valencia 09-11-2015 v4.0.008		
+		section: added inverse_locators concept. Opened section data property and methods to manage inverse_locators of portals
+		component_portal: add inverse_locators manager
+		component_portal: changed way of iterate records. Now component dato locators are iterated instead database search results. This maintain rows consistency when referenced section are deleted
+		component_state: working here to update behaviour and features
+
+	Valencia 13-11-2015 v4.0.009
+		Add new state_component 
+		Fixed images cache issue 
+
+	Valencia 25-11-2015 v4.0.2
+		component_portal: multiple souces support
+		component_autocomplete: multiple sources support
+		
+	
+	Valencia 12-12-2015 v4.0.2.6
+		tool_posterframe: added create identifying image support
+		maintanance : added maintance mode (add config var DEDALO_MAINTENANCE_MODE)
+		
+		
+	Valencia 02-01-2016 v4.0.2.8
+		tool_diffusion: added tool_diffusion to control export to mysql flow
+		diffusion : added support to export thesaurus and new tool tool_diffusion. Beter memory control when process large sections / thesaurus
+		
+	Valencia 02-01-2016 v4.0.2.8c
+		core_functions : added isSerialized function to test valid serialized data (e.g. dedalo_decryptStringArray data)
+		dd_error : removed show errors options to users when not in DEBUG mode
+
+	Valencia 13-01-2016 v4.0.2.9
+		component_text_area : enable create tragments anywhere (not only in indexaxtion mode)
+		dd : minor changes on related terms selection when edit
+
+	Valencia 14-01-2016 v4.0.2.10
+		tool_diffusion : opened to all users with tool auth access (not only admin)
+
+	Valencia 18-01-2016 v4.0.2.11
+		tool_portal : solved bug that enable add section locator to portal incorrectly
+		component_portal : fix issue with empty columns in component_portal_list.phtml
+
+	Valencia 19-01-2016 v4.0.2.12
+		tinymce : updated to 4.3.3
+		jquery : updated to 2.2.0
+		component_common js : changed various jquery methods to pure javascript
+		component_pdf : auto open tool_upload on empty file
+		config : add optionsl contant 'DEDALO_BYPASS_FILTER' to allow skip projects filter if is needed
+
+
+	Valencia 19-01-2016 v4.0.2.16
+		component_input_text : for compatibility with lastest Chrome versions, changed event onchange to direct input and set readonly default state and onfocus enable write
+		diffusion : minor changes and fix errors in method update_record to enable deep recursion when publish. Now recursion levels don't have limitation
+
+	Valencia 19-01-2016 v4.0.2.17
+		component_common : js load_component_by_wrapper_id restored jquery handler (pure javascript generate some problems with tool_lang for example)
+		dd_init_test : add force create folders for all av / image quality (needed for recompressions of ffmpeg)
+
+	Valencia 31-01-2016 v4.0.2.18
+		component_state : fixed bug when component is reloaded in 'edit_component' mode (was disappeared from DOM)
+
+	Valencia 01-02-2016 v4.0.2.19
+		search : fixed bug in defaults of search operators when not defined operator in component (now uses defult options)
+		
+	Valencia 04-02-2016 v4.0.2.20
+		component_image : changed thumb behaviour and show mode. No longer is used tag img (current div) Now is defined in config (DEDALO_IMAGE_THUMB_WIDTH x DEDALO_IMAGE_THUMB_WIDTH)
+		class Imagemagick uses this config constants to made thumbs
+		
+	Valencia 04-02-2016 v4.0.2.21
+		component_date : fix issue when negative big years are used
+		dd_date : changed method 'get_dd_timestamp' for support non standar timestamps (negative years, etc..)
+
+	Valencia 04-02-2016 v4.0.3
+		component_profile : added support to replace user permissions data. Now users no longer have own permission. Instead, users will have profiles always (mandatory)
+							utility is added for compatibility to previous mode
 
 
 	/**
@@ -363,8 +435,8 @@
 	
 	
 	# Version
-	define('DEDALO_VERSION'	, '4.0.004');
-	define('DEDALO_BUILD'	, '06-11-2015');
+	define('DEDALO_VERSION'	, '4.0.3');
+	define('DEDALO_BUILD'	, '09-02-2016');
 	
 	/*
 	# Build

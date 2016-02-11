@@ -3,19 +3,25 @@
 	# CONTROLLER
 
 
-	$modo	 = $this->section_records_obj->options->modo;
-	$context = (object)$this->section_records_obj->rows_obj->options->context; # inyectado a la sección y usado para generar pequeñas modificaciones en la visualización del section list como por ejemplo el link de enlazar un registro con un portal
-	if (!isset($context->context_name)) {
-		$context->context_name = false;
-	}
-	#dump($context,"context");
+	$modo	 		= $this->section_records_obj->options->modo;
 	$result	 		= $this->section_records_obj->rows_obj->result;
 	$tipo			= $this->section_records_obj->get_tipo();
 	$permissions 	= common::get_permissions($tipo);
 	
 	$ar_component_resolved = array();
 	$button_delete_permissions = (int)$this->section_records_obj->button_delete_permissions;
+		#dump($button_delete_permissions, ' button_delete_permissions ++ '.to_string());
+		#dump($this->section_records_obj, ' result ++ '.to_string());
 
+	#
+	# CONTEXT
+	# inyectado a la sección y usado para generar pequeñas modificaciones en la visualización del section list como por ejemplo el link de enlazar un registro con un portal
+	$context = (object)$this->section_records_obj->rows_obj->options->context; 
+	if (!isset($context->context_name)) {
+		$context->context_name = false;
+	}
+	#dump($context,"context");
+	#dump($this, '$this->section_records_ob ++ '.to_string());
 
 	switch($modo) {		
 		
@@ -250,11 +256,38 @@
 						
 
 						switch (true) {
+							case ( $modelo_name=='component_info' ):
+									#
+									# COMPONENT_INFO :									
+									$component_info = component_common::get_instance($modelo_name,
+																					  $current_component_tipo,
+																					  $section_id,
+																					  'list',
+																					  DEDALO_DATA_NOLAN,
+																					  $section_tipo);									
+									/* NO SPEED INCREMENT IS APPRECIATED
+										foreach ($component_info->propiedades as $key => $prop_value) {
+											if(isset($prop_value->data_source_list) && in_array($prop_value->data_source_list, $ar_columnas_tipo)) {
+												#dump($rows[$prop_value->data_source_list], ' $ar_columnas_tipo ++ '.to_string());
+												$component_info->propiedades[$key]->ar_locators = json_decode($rows[$prop_value->data_source_list]);
+													#dump($component_info->propiedades[$key], '$component_info->get_propiedades()[$key] ++ '.to_string());
+												break;
+											}
+										}
+										*/
+									$ar_valor[$current_component_tipo] = (string)$component_info->get_html();
+									break;
+
 							case ( $modelo_name=='component_portal' ): //&& ($modo=='list' || $modo=='portal_list') 
 									#
 									# COMPONENT_PORTAL : Portal with locators
-									$parent 		 = $section_id;
-									$component_portal = component_common::get_instance('component_portal',$current_component_tipo,$parent,'list',DEDALO_DATA_NOLAN, $section_tipo);
+									$parent 		  = $section_id;
+									$component_portal = component_common::get_instance('component_portal',
+																						$current_component_tipo,
+																						$parent,
+																						'list',
+																						DEDALO_DATA_NOLAN,
+																						$section_tipo);
 									$component_portal->html_options->rows_limit	= 1; 
 									if ($parent===null) {
 										# Use already query calculated values for speed
@@ -362,12 +395,25 @@
 									#}
 									break;
 							case ($modelo_name=='component_filter'):
-							case ($modelo_name=='component_filter_master'):											
+							case ($modelo_name=='component_filter_master'):										
 									$current_valor  = $rows[$current_component_tipo];
-									$ar_val 		= json_decode($current_valor);											
+									$ar_val 		= json_decode($current_valor);
 									$component = component_common::get_instance($modelo_name, $current_component_tipo, null, 'list', DEDALO_DATA_LANG, $section_tipo);
 									$component->set_dato($ar_val);											
 									$ar_valor[$current_component_tipo] = (string)$component->get_valor();
+									break;
+							case ($modelo_name=='component_state'):
+									$current_valor  = $rows[$current_component_tipo];
+									$valor 		= (string)'';
+									if(!empty($current_valor)) {									
+										$ar_val 	= json_decode($current_valor);																
+										$component  = component_common::get_instance($modelo_name, $current_component_tipo, null, 'list', DEDALO_DATA_LANG, $section_tipo);
+										$component->set_valor($ar_val);								
+										$valor 		= (string)$component->get_html();
+										#$valor = $rows[$current_component_tipo];
+											#dump($valor, ' valor ++ '.to_string());
+									}								
+									$ar_valor[$current_component_tipo] = (string)$valor;
 									break;
 							default:
 									#
@@ -605,8 +651,11 @@
 							
 							case ($modelo_name=='component_av'):
 							case ($modelo_name=='component_image'):
-							case ($modelo_name=='component_image'):							
-									$ar_valor[$current_component_tipo] = (string)$rows[$current_component_tipo];									
+							case ($modelo_name=='component_image'):
+									$image_value = (string)$rows[$current_component_tipo];
+										#dump($ar_valor[$current_component_tipo], '$ar_valor[$current_component_tipo] ++ '.to_string());	
+									$image_value = component_image::image_value_in_time_machine( $image_value );
+									$ar_valor[$current_component_tipo] = $image_value;																	
 									break;
 							default:
 									#

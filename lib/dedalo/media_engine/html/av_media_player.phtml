@@ -36,7 +36,9 @@ var page_globals = new Object();
 <body>
 <div id="wrap_edit_video">
 		 
-	   
+	  
+	
+
 	<!-- PLAYER HTML Media container -->
 	<div class="videoContainer" >
 	<?php echo $player ?>    
@@ -97,8 +99,7 @@ var page_globals = new Object();
 							}
 						  </script>";
 					echo $quality_selector_html;					
-					break;
-			
+					break;			
 		}		
 		?>   
 		
@@ -125,9 +126,15 @@ var page_globals = new Object();
 				<a class=" " href="javascript:load_player_type('jwplayer')">jwplayer</a>
 			</div>
 		</div>
+
+		<?php
+		if (isset($url_public)) {
+			echo "<div id=\"public_url\">Public URL <input tipe=\"text\" value=\"$url_public\" onclick=\"select()\" ></div>";
+		}
+		?>
 		
 		<!-- DEBUG -->
-		<?php #if( SHOW_DEBUG ){?>    
+		<?php if( SHOW_DEBUG ){?>    
 		<div class="debugDIV">
 			TC 
 			<?php echo "tcin: $tcin - tcout: $tcout "; ?><br>
@@ -140,7 +147,7 @@ var page_globals = new Object();
 			   
 			<div id="debugMovie">  </div>
 		</div>                 
-		<?php #}//if( SHOW_DEBUG ){?>  
+		<?php }//if( SHOW_DEBUG ){?>  
 
 		<?php
 		print "</div><!-- /config_player_content -->";

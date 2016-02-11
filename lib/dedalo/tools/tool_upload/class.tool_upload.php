@@ -79,6 +79,7 @@ class tool_upload extends tool_common {
 					$ar_allowed_extensions 	= unserialize(DEDALO_PDF_EXTENSIONS_SUPPORTED);
 					break;
 		}
+		
 				
 
 		# VARS : Verify
@@ -141,7 +142,8 @@ class tool_upload extends tool_common {
 
 		$this->file_obj->uploaded_file_path = $folder_path . $nombre_archivo;	
 	
-
+		# DEBUG MSG
+		debug_log(__METHOD__." Uploading file $component_name - quality: $quality - path: ".$this->file_obj->uploaded_file_path .to_string(), logger::DEBUG);
 
 		# Move temp uploaded file to final dir 
 		if(file_exists($f_temp_name)) {
@@ -199,6 +201,7 @@ class tool_upload extends tool_common {
 					$zip->close();
 			 
 				}
+
 			}else{
 
 				$move_file = (bool)move_uploaded_file($f_temp_name, $this->file_obj->uploaded_file_path);
@@ -467,16 +470,20 @@ class tool_upload extends tool_common {
 						$AVObj = new AVObj($SID, $quality);
 
 						#
+						# NOTE: VAR QUALITY IF THE QUALITY SELECTED WHEN USER LOAD UPLOAD TOOL. BY DEFAULT IS ORIGINAL
+						#
+	
+						#
 						# AUDIO CASE
 						if ($quality=='audio') {
 							# AUDIO Extensions supported
 							$ar_audio_only_ext = array('mp3','aiff','aif','wave','wav');
 							if (in_array($file_ext, $ar_audio_only_ext)) {
-								# Audio conversion							
+								# Audio conversion
 								$Ffmpeg = new Ffmpeg();
 								$Ffmpeg->convert_audio($AVObj, $this->file_obj->uploaded_file_path);
 							}else{
-								throw new Exception("Error Processing Request. Current audio extension is not supported", 1);								
+								throw new Exception("Error Processing Request. Current audio extension is not supported", 1);
 							}
 						#
 						# VIDEO CASE
@@ -486,6 +493,8 @@ class tool_upload extends tool_common {
 							# DEDALO_AV_RECOMPRESS_ALL
 							# When config DEDALO_AV_RECOMPRESS_ALL is set to 1, all video files are re-compressed to 960k/s variable bit rate and keyframe every 75 frames
 							if (defined('DEDALO_AV_RECOMPRESS_ALL') && DEDALO_AV_RECOMPRESS_ALL==1) {
+
+								debug_log(__METHOD__." RECOMPRESSING AV PLEASE WAIT.. ".to_string(), logger::DEBUG);
 								
 								# If default quality file not exists, generate default quality version now
 								# $target_file  = $AVObj->get_local_full_path(); ???????????????????????????????? SURE ???????
@@ -493,6 +502,9 @@ class tool_upload extends tool_common {
 								$target_file  = $AVObj_target->get_local_full_path();
 								if (!file_exists($target_file)) {
 									$source_file = $this->file_obj->uploaded_file_path;
+									if (!file_exists($source_file)) {
+										debug_log(__METHOD__." ERROR: Source file not exists ($source_file) ".to_string(), logger::WARNING);
+									}
 									/*
 									$source_file2= $source_file.'_original.'.$file_ext;
 									if( !rename($source_file, $source_file2) ) {
@@ -521,8 +533,34 @@ class tool_upload extends tool_common {
 							# CONFORM HEADERS
 							# Apply qt-faststart to optimize file headers position						
 							#$Ffmpeg = new Ffmpeg();
-							#$Ffmpeg->conform_header($AVObj);							
-						}						
+							#$Ffmpeg->conform_header($AVObj);
+
+						}//end if ($quality=='audio') {
+
+
+						#
+						# AUDIO FILES
+						# Audio files generate allways a audio file
+						if ($quality==DEDALO_AV_QUALITY_ORIGINAL) {
+							$ar_audio_only_ext = array('mp3','aiff','aif','wave','wav');
+							if (in_array($file_ext, $ar_audio_only_ext)) {
+								
+								# Audio conversion
+								$AVObj_target = new AVObj($SID, 'audio');
+								$target_file  = $AVObj_target->get_local_full_path();
+								if (!file_exists($target_file)) {
+									$source_file = $this->file_obj->uploaded_file_path;
+									if (!file_exists($source_file)) {
+										debug_log(__METHOD__." ERROR: Source file not exists ($source_file) 2 ".to_string(), logger::WARNING);
+									}									
+									Ffmpeg::convert_to_dedalo_av( $source_file, $target_file );
+									debug_log(__METHOD__." Converted source audio file to 'audio' quality ".to_string(), logger::DEBUG);
+								}//end if (!file_exists($target_file)) {
+
+							}else{
+								throw new Exception("Error Processing Request. Current audio extension is not supported (2)", 1);
+							}
+						}//end if ($quality==DEDALO_AV_QUALITY_ORIGINAL) {					
 												
 
 					} catch (Exception $e) {
@@ -583,7 +621,7 @@ class tool_upload extends tool_common {
 					if(!isset($this->file_obj->aditional_path)) $this->file_obj->aditional_path=null;				
 					$source_file 	= DEDALO_MEDIA_BASE_PATH.DEDALO_PDF_FOLDER.'/'.DEDALO_PDF_QUALITY_DEFAULT.$this->file_obj->aditional_path.'/'.$SID.'.'.DEDALO_PDF_EXTENSION;
 					$target_file 	= DEDALO_MEDIA_BASE_PATH.DEDALO_PDF_FOLDER.'/thumb'.$this->file_obj->aditional_path.'/'.$SID.'.'.DEDALO_IMAGE_EXTENSION;
-					$dimensions 	= '102x57';					
+					$dimensions 	= false;	//'102x57';					
 					$command = MAGICK_PATH."convert \"$source_file\"[0] \
          									-thumbnail {$dimensions} -gravity center -extent {$dimensions} -unsharp 0x.5 jpg -quality 90 \"$target_file\" ";
          			$output   = shell_exec( $command );

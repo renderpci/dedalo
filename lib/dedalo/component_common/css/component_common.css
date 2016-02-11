@@ -26,8 +26,17 @@
 	margin: 0;
 	display: inline-block;
 	width: 83%;
+	position: relative;
 	/*background-color:#fff7e0;*/
-}
+	}
+	/**/
+	@media screen and (max-width: 736px) {
+		.content_data {
+			display: block !important;
+			width: 100% !important;
+		}
+	}
+
 
 input[type="text"], input[type="password"] {
 	padding: 3px;
@@ -57,7 +66,7 @@ input[type="text"], input[type="password"] {
 /* LABEL
 ------------------------------------------------------- */
 label.css_label {
-	display: none;
+	display: inline-block;
 	padding: 4px;
 	padding-top: 3px;
 	/*min-width:140px;
@@ -69,8 +78,7 @@ label.css_label {
 	text-overflow: ellipsis;
 	white-space: nowrap;
 	*/
-	text-align: left;
-	display: inline-block;
+	text-align: left;	
 	word-wrap: break-word;
 	vertical-align: top;
 	cursor: pointer;

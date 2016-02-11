@@ -113,7 +113,7 @@
 						$tool_layout_print_records = reset($ar_records->result);
 						if (empty($tool_layout_print_records)) {
 							$msg = "<div class=\"error\">Sorry. No records found</div>";
-							print Error::wrap_error($msg);
+							print dd_error::wrap_error($msg);
 							return;
 						}
 							#dump($tool_layout_print_records, ' tool_layout_print_records');	# die();
@@ -195,7 +195,7 @@
 							$n_records = $_SESSION['dedalo4']['config']['search_options'][$search_options_key]->full_count;
 						}
 						$n_records 	= isset($n_records) ? $n_records : count($ar_records->result);					
-						$n_pages 	= count($result->ar_pages)*$n_records;
+						$n_pages 	= isset($result->ar_pages) ? count($result->ar_pages)*$n_records : '';
 						
 
 						ob_start();

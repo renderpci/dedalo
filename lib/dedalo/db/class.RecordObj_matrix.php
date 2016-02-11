@@ -175,9 +175,8 @@ class RecordObj_matrix extends RecordDataBoundObject {
 	* TEST CAN SAVE
 	* Test data before save to avoid write malformed matrix data
 	*/
-	private function test_can_save() {
+	private function test_can_save() {	
 		
-		global $log_messages ;
 		
 		# CURRENT OBJ TEST COPY
 		if (!empty($this->ID) ) {
@@ -193,8 +192,8 @@ class RecordObj_matrix extends RecordDataBoundObject {
 			if (empty($this->tipo) || strlen($this->tipo)<3 ) {
 				dump($RecordObj_matrix_test,'this en matrix RecordObj_matrix id:'.$this->ID );
 				$msg = "Save matrix: valid 'tipo' value is mandatory! (tipo:$this->tipo) No data is saved!";
-				error_log($msg);
-				$log_messages .= $msg;
+				debug_log(__METHOD__.$msg);
+				$GLOBALS['log_messages'][] = $msg;
 				throw new Exception($msg, 1);
 				return false;	
 			}
@@ -207,8 +206,8 @@ class RecordObj_matrix extends RecordDataBoundObject {
 			# Si no existe o no existe en matrix test, lanzamos una excepción
 			if (empty($this->lang) || strlen($this->lang)<5) {
 				$msg = "Save matrix: valid 'lang' value is mandatory! (lang:$this->lang) No data is saved! <br>";
-				error_log($msg);				
-				$log_messages .= $msg;
+				debug_log(__METHOD__.$msg);				
+				$GLOBALS['log_messages'][] = $msg;
 				throw new Exception($msg, 1);
 				return false;
 			}
@@ -221,8 +220,8 @@ class RecordObj_matrix extends RecordDataBoundObject {
 			# Si no existe o no existe en matrix test, lanzamos una excepción
 			if (strlen($this->parent)<1) {
 				$msg = "Save matrix: valid 'parent' value is mandatory! (parent:$this->parent) No data is saved! ($this->tipo)";
-				error_log($msg);
-				$log_messages .= $msg;
+				debug_log(__METHOD__.$msg);
+				$GLOBALS['log_messages'][] = $msg;
 				throw new Exception($msg, 1);
 				return false;
 			}
@@ -240,7 +239,7 @@ class RecordObj_matrix extends RecordDataBoundObject {
 				#dump($this," matrix_table: $this->matrix_table ");
 			#}
 			#error_log($msg);
-			#$log_messages .= $msg;
+			#$GLOBALS['log_messages'][] = $msg;
 			throw new Exception($msg, 1);
 			return false;		
 		}
@@ -283,7 +282,7 @@ class RecordObj_matrix extends RecordDataBoundObject {
 				trigger_error($msg, E_USER_ERROR);   
 				exit($msg);
 			}
-
+			
 
 		# MATRIX SAVE (with parent RecordDataBoundObject)
 		$id = parent::Save();

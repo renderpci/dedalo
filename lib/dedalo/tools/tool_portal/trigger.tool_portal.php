@@ -52,10 +52,16 @@ if($mode=='add_resource') {
 		}		
 		exit();
 	}
-
+	$rel_locator = json_decode($rel_locator);
 	#$component_portal 	= new component_portal($portal_tipo, $portal_parent);
-	$component_portal 	= component_common::get_instance('component_portal', $portal_tipo, $portal_parent, 'edit',DEDALO_DATA_NOLAN, $portal_section_tipo);
-	$locator_added 		= $component_portal->add_locator($rel_locator);
+	$component_portal 	= component_common::get_instance('component_portal',
+														 $portal_tipo,
+														 $portal_parent,
+														 'edit',
+														 DEDALO_DATA_NOLAN,
+														 $portal_section_tipo);
+
+	$locator_added 		= $component_portal->add_locator( $rel_locator );
 		#dump($locator_added,"locator_added");
 		#dump($component_portal->get_dato(),"component_portal dato");
 	
@@ -70,6 +76,8 @@ if($mode=='add_resource') {
 
 	# Save
 	$component_portal->Save();
+
+	$state = $component_portal->update_state($rel_locator);
 
 	#dump($component_portal,"component_portal");
 
@@ -93,14 +101,10 @@ if ($mode=='show_full') {
 
 	if (isset($_SESSION['dedalo4']['config']['search_options'][$search_options_session_key]->filter_by_section_creator_portal_tipo)) {
 		unset($_SESSION['dedalo4']['config']['search_options'][$search_options_session_key]->filter_by_section_creator_portal_tipo);
-		if(SHOW_DEBUG) {
-			#error_log("Removed 'filter_by_section_creator_portal_tipo' from session var SESSION[config4][search_options][$search_options_session_key]");
-		}
-	}else{
-		error_log("Error on portal_tool show_full. Session key received not exists: $search_options_session_key ");
-		if(SHOW_DEBUG) {
-			#dump($_SESSION['dedalo4']['config']['search_options'][$search_options_session_key], ' var');;
-		}
+		debug_log(__METHOD__." Trigger: Removed 'filter_by_section_creator_portal_tipo' from session var SESSION[config4][search_options][$search_options_session_key] ".to_string(), logger::DEBUG);
+		
+	}else{		
+		debug_log(__METHOD__." Trigger: Error on portal_tool show_full. Session key received not exists: $search_options_session_key ".to_string(), logger::DEBUG);
 	}
 	exit();
 }
@@ -116,12 +120,10 @@ if ($mode=='show_filtered') {
 	}
 
 	if (isset($_SESSION['dedalo4']['config']['search_options'][$search_options_session_key])) {
-		unset($_SESSION['dedalo4']['config']['search_options'][$search_options_session_key]);
-		if(SHOW_DEBUG) {
-			#error_log("Removed full var SESSION[config4][search_options][$search_options_session_key]. Reloading page to recreate var");
-		}
+		unset($_SESSION['dedalo4']['config']['search_options'][$search_options_session_key]);		
+		debug_log(__METHOD__." Trigger Removed full var SESSION[config4][search_options][$search_options_session_key]. Reloading page to recreate var ".to_string(), logger::DEBUG);
 	}else{
-		error_log("Trigger Error: on portal_tool show_filtered [$search_options_session_key]");
+		debug_log(__METHOD__." Trigger Error: on portal_tool show_filtered [$search_options_session_key] ".to_string(), logger::DEBUG);
 	}
 	exit();
 }

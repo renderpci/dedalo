@@ -30,7 +30,7 @@ if (!file_exists( DEDALO_MEDIA_BASE_PATH.DEDALO_IMAGE_FOLDER.$initial_media_path
 		$target = DEDALO_MEDIA_BASE_PATH.DEDALO_IMAGE_FOLDER.$initial_media_path.'/'.DEDALO_IMAGE_THUMB_DEFAULT.'/'.$f;
 		
 		# CONVERT
-		ImageMagick::dd_thumb('edit',$source, $target, $dimensions="102x57", $initial_media_path); // dd_thumb( $mode, $source_file, $target_file, $dimensions="102x57", $initial_media_path) 
+		ImageMagick::dd_thumb('edit',$source, $target, false, $initial_media_path); // dd_thumb( $mode, $source_file, $target_file, $dimensions="102x57", $initial_media_path) 
 
 		# URL THUMB FILE
 		$url_thumb_file = DEDALO_MEDIA_BASE_URL.DEDALO_IMAGE_FOLDER.$initial_media_path.'/'.DEDALO_IMAGE_THUMB_DEFAULT.'/'.$f;

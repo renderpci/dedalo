@@ -87,13 +87,26 @@ class component_layout extends component_common {
 
 
 		$modo 			= $section_obj->get_modo();
-		$section_tipo 	= $section_obj->get_tipo();		
+		$section_tipo 	= $section_obj->get_tipo();
+		
+		#
+		# SECTION TOOL CASE
+		# When current section is 'section_tool', $section_obj->section_tool was set with section_tool propiedades. In this case
+		# section list of referenced 'tool_section_tipo' is used for create this layout_map and var section_tipo is changed here with it
+		if (isset($section_obj->context->tool_section_tipo)) {	
+			#dump($section_obj->section_tool, ' var ++ '.to_string());
+			$section_tipo 	= $section_obj->context->tool_section_tipo;	// Override section tipo
+				#dump($section_tipo, ' section_tipo ++ '.to_string());	
+		}
+		
 
 		$cache_uid = $section_tipo.'_'.$modo;
 		if ($from_cache && isset($_SESSION['dedalo4']['config']['get_layout_map_from_section'][$cache_uid])) {
-			error_log("From cache $terminoID.$lang");
-			return unserialize($_SESSION['dedalo4']['config']['get_layout_map_from_section'][$cache_uid]);
+			error_log("DEBUG INFO ".__METHOD__." From cache $terminoID.$lang");
+			#return unserialize($_SESSION['dedalo4']['config']['get_layout_map_from_section'][$cache_uid]);
 		}
+
+
 
 		if(SHOW_DEBUG) {
 			global$TIMER;$TIMER[__METHOD__.'_IN_'.$section_tipo.'_'.$modo.'_'.microtime(1)]=microtime(1);
@@ -926,7 +939,7 @@ class component_layout extends component_common {
 					$portal_tipo 	  = $ar_tipos[0];
 					$portal_component = $ar_tipos[1];
 
-					$component_portal = component_common::get_instance('component_portal',$portal_tipo,$parent,'print');
+					$component_portal = component_common::get_instance('component_portal', $portal_tipo, $parent, 'print', DEDALO_DATA_NOLAN );
 					$dato = $component_portal->get_dato();
 
 					if(!isset($dato[0]->section_id)) {

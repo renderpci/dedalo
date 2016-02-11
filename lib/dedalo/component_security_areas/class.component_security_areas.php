@@ -35,21 +35,16 @@ class component_security_areas extends component_common {
 	*/
 	public function Save() {
 
-		$dato 	= (array)$this->get_dato();
-		$parent = $this->get_parent();
-		$tipo 	= $this->get_tipo();
-
-		# Calculate parent tipo
-		# parent is section parent . look structure for know section parent tipo of this element
-		# Calculated from component_common
-		$parent_section_tipo = component_common::get_section_tipo_from_component_tipo($tipo);
-			#dump($parent_section_tipo,"parent_section_tipo");#die();
+		$dato 			= (array)$this->get_dato();
+		$parent 		= $this->get_parent();
+		$tipo 			= $this->get_tipo();
+		$section_tipo 	= $this->get_section_tipo();
 
 		##
 		# SAVE DATO
 		# El estado será 1 para 'indeterminate' y 2 para 'checked'
 		# Los checks de admin se guardan en formato: 'tipo-admin=>estado' como '"dd78-admin":"2"'		
-			#dump($dato, "parent:$parent, parent_section_tipo:$parent_section_tipo"); return;
+			#dump($dato, "parent:$parent, section_tipo:$section_tipo"); return;
 		$result = parent::Save();
 
 
@@ -68,7 +63,7 @@ class component_security_areas extends component_common {
 			# @return $propagate_areas_to_access (not used here)
 			#	Array full (areas,sections and childrens) not used here
 			#
-			$propagate_areas_to_access = component_security_access::propagate_areas_to_access($dato, $parent, $parent_section_tipo);
+			$propagate_areas_to_access = component_security_access::propagate_areas_to_access($dato, $parent, $section_tipo);
 				#dump($propagate_areas_to_access,'propagate_areas_to_access',"array completo con hijos");			
 		}
 
@@ -108,17 +103,19 @@ class component_security_areas extends component_common {
 			#dump($current_security_areas_tipo," tipo in get tree");die();
 
 		# Section
-		$parent_tipo = component_common::get_section_tipo_from_component_tipo($current_security_areas_tipo);	
+		$parent_tipo = $this->get_section_tipo();
 
 		# Section id
 		$parent = $this->get_parent();
 		
 		# Context : calculate current context (editing users, profiles, etc.)
 		switch (true) {
+			
 			case ($current_security_areas_tipo==DEDALO_COMPONENT_SECURITY_AREAS_USER_TIPO):
 				# We are in Users
 				$arguments_tree['context']	= 'users';
-				break;			
+				break;
+					
 			case ($current_security_areas_tipo==DEDALO_COMPONENT_SECURITY_AREAS_PROFILES_TIPO):
 				# We are in Profiles
 				$arguments_tree['context']	= 'profiles';
@@ -127,6 +124,7 @@ class component_security_areas extends component_common {
 				die("Security problem detected: Current tipo is not valid ($current_security_areas_tipo)");
 				break;
 		}
+
 		
 
 		/**
@@ -142,7 +140,7 @@ class component_security_areas extends component_common {
 		if($logged_user_is_global_admin != true) {
 	
 			# Sólo mostraremos las que el usuario actual tiene acceso. Nunca más de esas, salvo que seamos admin global
-			$ar_authorized_areas_for_user = component_security_areas::get_ar_authorized_areas_for_user($user_id_logged, $mode_result='full', $current_security_areas_tipo);
+			$ar_authorized_areas_for_user = component_security_areas::get_ar_authorized_areas_for_user($user_id_logged, $mode_result='full');
 		
 			#dump($ar_authorized_areas_for_user,'$ar_authorized_areas_for_user',"user $user_id_logged"); #die();
 
@@ -186,18 +184,27 @@ class component_security_areas extends component_common {
 	*	mode_result->simple: Array of area tipo clean like array('dd15','dd146')
 	*	mode_result->full: Array of array area tipo with '-admin' and check state like array('dd15=>2','dd15-admin=>2')
 	*/
-	static public function get_ar_authorized_areas_for_user($user_id, $mode_result='full', $security_areas_tipo) {
+	public static function get_ar_authorized_areas_for_user__OLD($user_id, $mode_result='full', $security_areas_tipo, $section_tipo) {
 
 		# Nota: Hay dos component_security_areas en estructura. el de usuario y el de proyecto.
 		# Según se cree, se usará uno u otro al pasarlo en '$security_areas_tipo'
 		# La variable '$user_id', realmente será el id matrix de la sección del proyecto en el caso en que estemos en projectos, aunque mantenemos el nombre.
+		
+		if ($section_tipo!=DEDALO_SECTION_USERS_TIPO) {
+			debug_log(__METHOD__." Called section_tipo: $section_tipo ".to_string(), logger::DEBUG);
+		}
 		
 		$ar_authorized_areas = array();
 
 		if(empty($user_id)) return $ar_authorized_areas;
 
 		#$component_security_areas = new component_security_areas($security_areas_tipo,$user_id);
-		$component_security_areas = component_common::get_instance('component_security_areas', $security_areas_tipo,$user_id, 'edit', DEDALO_DATA_NOLAN, DEDALO_SECTION_USERS_TIPO);
+		$component_security_areas = component_common::get_instance('component_security_areas',
+																	$security_areas_tipo,
+																	$user_id,
+																	'edit',
+																	DEDALO_DATA_NOLAN,
+																	$section_tipo);
 		$dato = (array)$component_security_areas->get_dato();
 			#dump($dato,"dato - $user_id - ".$security_areas_tipo);die();		
 
@@ -237,6 +244,80 @@ class component_security_areas extends component_common {
 
 		return $ar_authorized_areas;
 	}
+
+
+	/**
+	* GET_AR_AUTHORIZED_AREAS_FOR_USER
+	* @return 
+	*/
+	public static function get_ar_authorized_areas_for_user($user_id, $mode_result='full') {
+		
+		$ar_authorized_areas = array();
+
+		if(empty($user_id)) return $ar_authorized_areas;
+
+
+		#
+		# USER PROFILE
+		$component_profile = component_common::get_instance('component_profile',
+														  	DEDALO_USER_PROFILE_TIPO,
+														  	$user_id,
+														  	'edit',
+														  	DEDALO_DATA_NOLAN,
+														  	DEDALO_SECTION_USERS_TIPO);
+		$profile_id = (int)$component_profile->get_dato();
+		if (empty($profile_id)) {
+			return $ar_authorized_areas;
+		}
+
+		#
+		# GET PROFILE DATA
+		$component_security_areas = component_common::get_instance('component_security_areas',
+																	DEDALO_COMPONENT_SECURITY_AREAS_PROFILES_TIPO,
+																	$profile_id,
+																	'edit',
+																	DEDALO_DATA_NOLAN,
+																	DEDALO_SECTION_PROFILES_TIPO);
+		$dato = (array)$component_security_areas->get_dato();
+			#dump($dato,"dato - $user_id - ".$security_areas_tipo);die();		
+
+		# $dato is one array like  [dd13-admin] => 2, [dd13] => 2, [dd355-admin] => 2,..
+		# Remove elements xxx-admin by default (simple)		
+		switch ($mode_result) {
+			
+			case 'simple':
+				# Modo simple return an simple array excluding 'xxx-admin' and 'estado' info  
+				if( is_array($dato) ) {
+					foreach ($dato as $tipo => $estado) {
+					if(strpos($tipo, '-admin')===false && $estado>=1){
+						$ar_authorized_areas[] = $tipo;
+						}
+					}
+				}
+				break;
+
+			case 'admin':
+				#return de athotized admin areas ONLY 
+				if( is_array($dato) ) {
+					foreach ($dato as $tipo => $estado) {
+					if(strpos($tipo, '-admin')!==false && $estado>=1){
+						$tipo_clean = str_replace('-admin','', $tipo);
+						$ar_authorized_areas[] = $tipo_clean;#dump($tipo,'tipo');
+						}
+					}
+				}
+				break;
+
+			case 'full':
+			default:
+				# full... with admin and state
+				$ar_authorized_areas = $dato;
+				break;
+		}
+
+		return $ar_authorized_areas;
+
+	}#end get_ar_authorized_areas_for_user
 
 
 	/**
@@ -531,7 +612,7 @@ class component_security_areas extends component_common {
 	public function get_permisions_of_this_area() {
 
 		#$current_area		= navigator::get_selected('area');	#dump($current_area,'current_area');
-		$current_area		= component_common::get_section_tipo_from_component_tipo($this->tipo);
+		$current_area		= $this->get_section_tipo();
 			#dump($current_area,"current_area ".DEDALO_SECTION_USERS_TIPO);
 
 		if(empty($current_area)) throw new Exception(" Current area is not defined! ");
@@ -549,9 +630,9 @@ class component_security_areas extends component_common {
 			default:
 				$permissions = 0; # No access from other areas
 				break;
-		}	
+		}
 
-		return (int) $permissions;
+		return (int)$permissions;
 		
 		/* OLD WORLD
 		$RecordObj_dd		= new RecordObj_dd($current_area);
@@ -594,7 +675,7 @@ class component_security_areas extends component_common {
 		# REGULAR USERS
 		$ar_area_name  = NULL;
 
-		$ar_authorized_areas_for_user = component_security_areas::get_ar_authorized_areas_for_user($user_id, $mode_result='simple', $this->tipo);
+		$ar_authorized_areas_for_user = component_security_areas::get_ar_authorized_areas_for_user($user_id, $mode_result='simple');
 
 		if(is_array($ar_authorized_areas_for_user)) foreach ($ar_authorized_areas_for_user as $key => $tipo) {
 

@@ -56,8 +56,7 @@
 					
 					$disabled = null;
 					
-					if (is_array ($ar_tools)) foreach ($ar_tools as $tool_name) {
-
+					if (is_array ($ar_tools)) foreach ($ar_tools as $tool_name => $tool_label) {
 						
 						
 						if( is_array($dato) && array_key_exists($tool_name,$dato) ) {
@@ -65,8 +64,7 @@
 						}else {
 							$checked = "";
 						}
-
-						$tool_label = label::get_label($tool_name);
+						
 						$html_contenido .= "\n <input class=\"css_check_box_security_tools\" type=\"checkbox\" 
 						name=\"{$input_name}\"
 						data-tipo=\"{$tipo}\"
@@ -78,6 +76,10 @@
 
 						$html_contenido .= "\n<div class=\"icon_bs {$tool_name}_icon icon_tool_preview\"> </div>";
 
+						#$tool_label = label::get_label($tool_name);
+						if(SHOW_DEBUG) {
+							$tool_label .= " <small class=\"notas\">[$tool_name]</small>";
+						}
 						$html_contenido .= "\n <label class=\"css_check_box_security_tools_rotulo {$ar_css['css_check_box_security_tools_rotulo']}\" $required >$tool_label</label><br>";
 						
 					}

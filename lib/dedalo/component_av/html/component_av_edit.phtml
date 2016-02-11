@@ -33,10 +33,37 @@
 			case ($permissions>=1) :
 			
 						# POSTERFRAME
-						#$html_contenido .= $posterframe_html	;
+
+						$open_tool_default='';
+						$add_class='';
+	
+						# A NOT EXISTS. PLACE DEDALO IMAGE WITH LINK TO DEFAULT TOOL
+						# dump( component_security_tools::is_authorized_tool_for_logged_user('open_tool_upload'), ' is_authorized_tool_for_logged_user($tool_name) ++ '.to_string());
+						if ( !file_exists($this->get_video_path()) && component_security_tools::is_authorized_tool_for_logged_user('tool_upload')) {
+							$open_tool_default ="data-video_id=\"$video_id\"
+							data-quality=\"".DEDALO_AV_QUALITY_ORIGINAL."\"
+							data-aditional_path=\"$aditional_path\"
+							data-initial_media_path=\"$initial_media_path\"
+							data-tipo=\"$tipo\"
+							data-parent=\"$parent\"
+							data-section_tipo=\"$section_tipo\"
+							onclick=\"tool_common.open_tool_upload(this)\" 
+							title=\"Upload file in original quality\" ";
+
+							$add_class = 'no_file';
+						}
 
 						# PLAYER
-						$html_contenido .= $player_html	; # Rendered in player mode
+						#$html_contenido .= $player_html	; # Rendered in player mode
+						# PLAYER
+						$html_contenido .= "\n<div class=\"css_posterframe_wrap $add_class\" $open_tool_default >";
+
+							# POSTERFRAME 
+							$html_contenido .= "\n <img class=\"av_posterframe\" src=\"$posterframe_url\"
+							data-video_id=\"$video_id\"									
+							/>";
+							
+						$html_contenido .= "\n</div><!-- /css_posterframe_wrap -->";
 
 						# VERSIONS
 						#$html_contenido .= $versions_html ;												

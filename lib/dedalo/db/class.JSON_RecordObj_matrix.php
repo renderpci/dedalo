@@ -148,6 +148,7 @@ class JSON_RecordObj_matrix extends JSON_RecordDataBoundObject {
 			# Exec time machine save and set returned id
 			$this->time_machine_last_id = $this->save_time_machine( $save_options );
 		}
+
 /**/
 		return $id;
 	}
@@ -168,7 +169,7 @@ class JSON_RecordObj_matrix extends JSON_RecordDataBoundObject {
 			#dump($save_options,"save_time_machine save_options");
 			#trigger_error("Warning: Nothing to save in  time machine: time_machine_data is empty");
 			if(SHOW_DEBUG) {
-				error_log(__METHOD__ . " Empty save_options->time_machine_data. No time machine saved data");
+				#error_log("DEBUG INFO: ".__METHOD__ . " Empty save_options->time_machine_data. No time machine saved data. section_tipo:$this->section_tipo, section_id:$this->section_id");
 			}
 			return false;
 		}

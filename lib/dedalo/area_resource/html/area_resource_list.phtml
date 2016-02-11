@@ -29,9 +29,12 @@
 		case ($permissions>=1)	:
 		
 					$html_contenido .= "\n <blockquote> ";
-					foreach ($ar_children_areas as $key => $value) {
-						$section_name = RecordObj_dd::get_termino_by_tipo($key,DEDALO_APPLICATION_LANG);
-						$html_contenido .= "<a href=\"?t=$key\">$section_name</a><br>";
+					foreach ($ar_children_areas as $tipo => $value) {
+						
+						$section_name = RecordObj_dd::get_termino_by_tipo($tipo,DEDALO_APPLICATION_LANG,true);
+						$modelo_name  = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+						
+						$html_contenido .= menu::create_link($tipo, $section_name, $modelo_name, null).'<br>';
 					}
 					$html_contenido .= "\n </blockquote> ";
 					

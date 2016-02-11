@@ -1,0 +1,57 @@
+<?php
+
+	# VISUALIZADOR HTML	
+	
+	
+	print "\n<!-- COMPONENT_INFO [tipo:$tipo section_id:$parent] $label -->";
+	print "\n<div class=\"css_wrap_COMPONENT_INFO wrap_component\" id=\"{$id_wrapper}\"
+	data-tipo=\"{$tipo}\"
+	data-lang=\"{$lang}\"
+	data-section_tipo=\"{$section_tipo}\"
+	data-parent=\"{$parent}\"
+	data-modo=\"{$modo}\"
+	data-component_name=\"{$component_name}\"
+	data-component_info='{$component_info}' >";
+	
+		
+		# ETIQUETA (LABEL)
+		$html_label = component_common_draw::draw_label($this);
+		
+		# CONTENIDO (INPUT)
+		$html_contenido = '';
+		switch($permissions) {
+				
+			case 0	:	$html_contenido .= "";
+						break;
+							
+			case 1	: 	$html_contenido .= "";
+						break;	
+							
+			case ($permissions>=2)	:			
+						
+						#$html_contenido .= "Info: <br>";
+						foreach ((array)$ar_widget_html as $key => $widget_html) {
+							$html_contenido .= $widget_html;
+							#$html_contenido .= "<hr>";
+						}
+		}
+
+		if(SHOW_DEBUG) {
+			$html_contenido .= "<span class=\"portal_debug_info\">".exec_time($start_time)."</span>";
+		}
+	
+		# Prepare content to show in page
+		tools::prepare_content($html_contenido);	
+		
+
+		# PRINT HTML
+		print $html_label;
+		print $html_contenido;
+	
+	
+	
+
+	print "\n</div><!-- /css_wrap_COMPONENT_INFO COMPONENT_INFO [tipo:$tipo section_id:$parent] $label -->\n"; //wrap
+
+
+?>

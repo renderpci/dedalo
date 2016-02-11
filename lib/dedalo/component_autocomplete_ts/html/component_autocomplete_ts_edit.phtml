@@ -52,7 +52,7 @@
 
 						$html_contenido .= $value;
 						if(SHOW_DEBUG) {
-							$html_contenido .= " <span class=\"notes\">$current_value</span>";
+							#$html_contenido .= " <span class=\"notes\">$current_value</span>";
 						}
 
 						$html_contenido .= "</li>";
@@ -67,6 +67,11 @@
 					data-ar_tipo_to_search='{$ar_referenced_tipo_json}'
 					onclick=\"component_autocomplete_ts.activate(this)\"
 					/>";
+
+					if(SHOW_DEBUG) {
+						$html_contenido .= "<div class=\"notes\">ar_referenced_tipo: ".implode(', ', $ar_referenced_tipo)."</div>";
+						$html_contenido .= "<div class=\"notes\">".str_replace('},', '},<br>', $dato_json) ."</div>";
+					}
 					
 
 					#
@@ -74,8 +79,7 @@
 					#$html_contenido .= "\n <div id=\"autocomplete_ts_tree_stats_{$tipo}\" class=\"css_autocomplete_ts_tree_stats\"> Calculating.. </div>";
 					
 					# INPUT DATA HIDDEN
-					$css_add = SHOW_DEBUG ? 'debug' : '';
-					$html_contenido .= "\n <input type=\"text\" name=\"{$input_name}\" class=\"css_autocomplete_ts_dato_hidden $css_add\" style=\"width:300px\"
+					$html_contenido .= "\n<input type=\"text\" name=\"{$input_name}\" class=\"css_autocomplete_ts_dato_hidden\" style=\"width:300px\"
 					data-tipo=\"{$tipo}\"
 					data-section_tipo=\"{$section_tipo}\"
 					data-parent=\"{$parent}\"

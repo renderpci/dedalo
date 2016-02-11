@@ -1,6 +1,6 @@
 
-/*INSPECTOR
-********************************************************************************/
+/* INSPECTOR
+---------------------------------------- */
 #inspector_div {
 	display:block;
 	padding: 0px;
@@ -72,8 +72,8 @@
 	text-transform: capitalize;
 }
 
-/*INSPECTOR INFO
-********************************************************************************/
+/* INSPECTOR INFO
+---------------------------------------- */
 .inspector_info_body {
 	min-height: 13px;	
 	width: auto;
@@ -87,13 +87,13 @@
 	min-height: 48px;
 	padding-left: 5px;
 }
-/*INSPECTOR TOOLS
-********************************************************************************/
+/* INSPECTOR TOOLS
+---------------------------------------- */
 #inspector_tools {
 	padding-left: 6px;
 }
-/*INSPECTOR RELATIONS
-********************************************************************************/
+/* INSPECTOR RELATIONS
+---------------------------------------- */
 #inspector_relations {
 	padding-left: 6px;
 }
@@ -117,15 +117,15 @@
 	text-transform: uppercase;
 	color: #222222;
 }
-/*INSPECTOR INDEXATIONS
-********************************************************************************/
+/* INSPECTOR INDEXATIONS
+---------------------------------------- */
 #inspector_indexations {
 	padding-left: 6px;
 	max-height: 250px;
 	overflow: auto;
 }
-/*INSPECTOR DEBUG
-********************************************************************************/
+/* INSPECTOR DEBUG
+---------------------------------------- */
 #inspector_debug {
 	
 }
@@ -137,20 +137,20 @@
 	color: #999999;
 	font-size: smaller;
 }
-/*INSPECTOR EVENTS
-********************************************************************************/
+/* INSPECTOR EVENTS
+---------------------------------------- */
 #inspector_events {
 	min-height: 16px;
 	padding-left: 4px;
 }
-/*INSPECTOR OTHERS
-********************************************************************************/
+/* INSPECTOR OTHERS
+---------------------------------------- */
 #inspector_others {
 	min-height: 16px;
 	padding-left: 4px;
 }
-/*INSPECTOR ACTIVITY LOG
-********************************************************************************/
+/* INSPECTOR ACTIVITY LOG
+---------------------------------------- */
 #inspector_log {
 	display: block;
 	margin-top: 2px;
@@ -161,7 +161,7 @@
 #inspector_log .ok, #inspector_log .error {
 	margin: 0px;
 	width: 99.9%;
-	display: block;
+	/*display: block;*/
 }
 #inspector_log .span_save {
 	margin-top: 2px;
@@ -174,7 +174,7 @@
 	left:130px;*/
 }
 
-/*INSPECTOR COMMONS*/
+/* INSPECTOR COMMONS*/
 #inspector_info, #inspector_relations, #inspector_debug, #inspector_others {
 	max-height: 158px;
 	overflow: auto;
@@ -189,23 +189,28 @@
 }
 
 /* TOOLS COMMON
-********************************************************************************/
-DIV.tool_inspector_div {
+---------------------------------------- */
+div.tool_inspector_div {
 	display:block;
 	margin: 0px;
 	margin-bottom: 4px;
 	margin-top: 2px;
 	padding-top: 2px;
-	border-bottom:1px solid #c9c9c9;	
+	border-bottom:1px solid #c9c9c9;
+	line-height: 1.6em;	
 	}
-	DIV.tool_inspector_div:first-letter {
+	div.tool_inspector_div:first-letter {
 		text-transform: capitalize;
 	}
+	div.tool_inspector_div > .icon_bs {
+		top: -1px;
+	}
+
 /* Elimina la última línea separadora del bottom */
 DIV#inspector_tools .tool_inspector_div:last-of-type {
     border-bottom:none;
 }
-DIV.tool_inspector_div .icon_bs {
+div.tool_inspector_div .icon_bs {
 	margin-right: 3px;
 }
 

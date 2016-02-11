@@ -47,6 +47,10 @@ if($mode=='generate_version') {
 	if ( empty($parent) ) {
 		throw new Exception("Error Processing Request. Few vars! (parent)", 1);
 	}
+
+	#
+	# NOTA: YA EXISTE en component_image un método de conversión. Actualizar esto cuando sea posible en algo corto de tipo:
+	# $component_image->convert_quality( $source_quality, $target_quality );
 	
 
 	# Image source
@@ -63,6 +67,12 @@ if($mode=='generate_version') {
 	$target_pixels_width 	= (int)$ar_target[0];
 	$target_pixels_height 	= (int)$ar_target[1];
 		#dump($ar_target,"$target_pixels_width x $target_pixels_height - source_quality:$source_quality - target_quality:$target_quality ($source_pixels_width x $source_pixels_height)"); die();
+
+	# AVOID ENLARGE IMAGES
+		if ( ($source_pixels_width*$source_pixels_height)<($target_pixels_width*$target_pixels_height) ) {
+			$target_pixels_width  = $source_pixels_width;
+			$target_pixels_height = $source_pixels_height;
+		}
 	
 
 	# TARGET FOLDER VERIFY (EXISTS AND PERMISSIONS)
@@ -84,7 +94,7 @@ if($mode=='generate_version') {
 		}				
 	} catch (Exception $e) {
 		$msg = '<span class="error">'.$e->getMessage().'</span>';
-		echo Error::wrap_error($msg);
+		echo dd_error::wrap_error($msg);
 	}
 
 	$response=0;
@@ -92,7 +102,7 @@ if($mode=='generate_version') {
 
 		case ($target_quality==DEDALO_IMAGE_THUMB_DEFAULT):
 			# Thumb. Normalized thumd is made
-			$r = ImageMagick::dd_thumb('list', $source_image, $target_image, $dimensions="102x57", $initial_media_path);	// dd_thumb( $mode, $source_file, $target_file, $dimensions="102x57", $initial_media_path) 
+			$r = ImageMagick::dd_thumb('list', $source_image, $target_image, false, $initial_media_path);	// dd_thumb( $mode, $source_file, $target_file, $dimensions="102x57", $initial_media_path) 
 			error_log($r);
 			$response=1;
 			break;
@@ -237,7 +247,7 @@ if($mode=='rotate_image') {
 	}
 
 	# Save component refresh 'valor_list'
-	$component_obj = component_common::get_instance(null,$tipo,$parent,'edit');
+	$component_obj = component_common::get_instance(null, $tipo, $parent, 'edit');
 	$component_obj->Save();
 
 	print $html;
@@ -350,7 +360,7 @@ die("trigger.tool image versions get_thumb en proceso");
 
 	# Create new component_image to build standar thumb
 	#$component_image = new component_image($tipo,$parent);
-	$component_image = component_common::get_instance('component_image',$tipo,$parent);
+	$component_image = component_common::get_instance('component_image', $tipo, $parent, 'edit', DEDALO_DATA_NOLAN);
 
 	# THUMB (PLAYER)
 	$component_image->set_modo('thumb');

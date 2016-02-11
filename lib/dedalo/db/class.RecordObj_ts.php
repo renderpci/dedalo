@@ -12,7 +12,7 @@ class RecordObj_ts extends RecordDataBoundObject {
 	protected $modelo;
 	protected $esmodelo;
 	protected $esdescriptor;
-	#protected $visible ;
+	protected $visible ;
 	protected $norden ;
 	protected $usableIndex ;
 	protected $traducible ;
@@ -101,7 +101,7 @@ class RecordObj_ts extends RecordDataBoundObject {
 			"modelo" 						=> "modelo",
 			"esmodelo" 						=> "esmodelo",
 			"esdescriptor" 					=> "esdescriptor",
-			#"visible" 						=> "visible",
+			"visible" 						=> "visible",
 			"norden" 						=> "norden",
 			"usableIndex" 					=> "usableIndex",
 			"traducible" 					=> "traducible",
@@ -406,8 +406,7 @@ class RecordObj_ts extends RecordDataBoundObject {
 	public function get_ar_childrens_of_this($esdescriptor='si', $esmodelo=NULL, $order_by='norden') {
 			
 		# COMPROBACIÓN
-		if(!$this->terminoID) 	return false;
-		if(!$this->prefijo) 	return false;
+		if(!$this->terminoID || !$this->prefijo) return false;		
 
 		# STATIC CACHE
 		static $ar_childrens_of_this_stat_data;
@@ -430,7 +429,7 @@ class RecordObj_ts extends RecordDataBoundObject {
 		
 		if (!empty($order_by)) {
 			$arguments['order_by_asc']	= $order_by;
-		}		
+		}			
 				
 		$ar_childrens_of_this = (array)$this->search($arguments);
 				
@@ -481,18 +480,18 @@ class RecordObj_ts extends RecordDataBoundObject {
 		# creamos una instancia independiente de RecordObj_ts y sacamos los hijos directos		
 		$ar_childrens_of_this 	= array();	# reset value every cycle
 		$RecordObj_ts 			= new RecordObj_ts($terminoID);
-		$ar_childrens_of_this 	= (array)$RecordObj_ts->get_ar_childrens_of_this(null, null, null);	#print_r($ar_childrens_of_this);
+		$ar_childrens_of_this 	= (array)$RecordObj_ts->get_ar_childrens_of_this(null, null, null);
 				
 		foreach($ar_childrens_of_this as $children_terminoID) {
 			
 			# Add current element		
-			$this->ar_recursive_childrens_of_this[] = $children_terminoID;			
+			$this->ar_recursive_childrens_of_this[] = $children_terminoID;		
 
 			# Recursion
-			$this->get_ar_recursive_childrens_of_this($children_terminoID,1);
+			$this->get_ar_recursive_childrens_of_this($children_terminoID, 1);
 		}
 
-		if(isset($this->ar_recursive_childrens_of_this)) return $this->ar_recursive_childrens_of_this ;		
+		if(isset($this->ar_recursive_childrens_of_this)) return $this->ar_recursive_childrens_of_this;
 	}
 	/**
 	* GET_AR_RECURSIVE_CHILDRENS : Static version
@@ -860,10 +859,77 @@ class RecordObj_ts extends RecordDataBoundObject {
 	
 
 	
+
+
+
+
+	/**
+	* GET_AR_CHILDRENS_WITH_OPTIONS
+	* Get array of terms (terminoID) with parent = $this->terminoID and filter options
+	* @return array $ar_childrens_with_options
+	* @see class.diffusion.php
+	*/
+	public function get_ar_childrens_with_options( $request_options ) {
+			
+		# COMPROBACIÓN
+		if(!$this->terminoID || !$this->prefijo) return false;
+
+		$options = new stdClass();
+			$options->visible  		= null;
+			$options->esmodelo 		= null;
+			$options->esdescriptor 	= null;
+			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}				
+		
+		# SEARCH
+		$arguments=array();
+		$arguments['strPrimaryKeyName']	= 'terminoID';
+		$arguments['parent']			= $this->terminoID;
+
+		if( !empty($options->visible) )
+			$arguments['visible']		= $options->visible;
+
+		if( !empty($options->esdescriptor) )
+			$arguments['esdescriptor']	= $options->esdescriptor;
+		
+		if( !empty($options->esmodelo) )
+			$arguments['esmodelo']		= $options->esmodelo;					
+				
+		$ar_childrens_with_options = (array)$this->search($arguments);	
+		
+		return $ar_childrens_with_options;
+
+	}//end get_ar_childrens_with_options
 	
 	
-	
-	
+	/**
+	* GET_AR_RECURSIVE_CHILDRENS_WITH_OPTIONS
+	* @return array $ar_recursive_childrens_with_options
+	* @see class.diffusion.php
+	*/
+	public function get_ar_recursive_childrens_with_options($terminoID, $is_recursion=0, $options=null) {
+		
+		static $ar_recursive_childrens_with_options ;
+
+		if ($is_recursion==0) {
+			$ar_recursive_childrens_with_options = array(); // reset on first loop
+		}
+
+		# creamos una instancia independiente de RecordObj_ts y sacamos los hijos directos		
+		$ar_childrens_of_this 	= array();	# reset value every cycle
+		$RecordObj_ts 			= new RecordObj_ts($terminoID);
+		$ar_childrens_of_this 	= (array)$RecordObj_ts->get_ar_childrens_with_options( $options );
+				
+		foreach($ar_childrens_of_this as $children_terminoID) {
+			
+			# Add current element		
+			$ar_recursive_childrens_with_options[] = $children_terminoID;		
+
+			# Recursion
+			$this->get_ar_recursive_childrens_with_options( $children_terminoID, 1, $options );
+		}
+
+		return $ar_recursive_childrens_with_options;
+	}
 	
 	
 	

@@ -4,26 +4,53 @@ require_once( DEDALO_LIB_BASE_PATH . '/media_engine/class.AVObj.php');
 require_once( DEDALO_LIB_BASE_PATH . '/media_engine/class.PosterFrameObj.php');
 require_once( DEDALO_LIB_BASE_PATH . '/media_engine/class.AVPlayer.php');
 
+$share = isset($_GET['share']) ? $_GET['share'] : false;
+if ($share) {
 
-if(login::is_logged()!==true) {
-	$string_error = "Auth error: please login";
-	print Error::wrap_error($string_error);
-	die();
-}
-#die("<span class='error'> Auth error: please login </span>");
+	# Decode vars
+	$share_decoded = base64_decode($share);
 
+	if(SHOW_DEBUG) {
+		dump($share_decoded, 'DEBUG INFO: share ++ '.to_string());
+	}	
 
-# set vars
-$vars = array('reelID','quality','tcin','tcout','media','modo');
-foreach($vars as $name) $$name = common::setVar($name);	
+	parse_str($share_decoded);
 
-#dump($_REQUEST, ' _REQUEST');
+	$_REQUEST['player_type'] = 'mediaelement';	// Overwrite request var
 
+}else{
 
+	# Login is mandatory
+	if(login::is_logged()!==true) {
+		$string_error = "Auth error: please login";
+		print dd_error::wrap_error($string_error);
+		die();
+	}
 
+	# set vars
+	$vars = array('reelID','quality','tcin','tcout','media','modo','vbegin','vend');
+		foreach($vars as $name) $$name = common::setVar($name);
 
+	#
+	# SHARE VIDEO
+		#dump($_SERVER , '$_SERVER  ++ '.to_string());
+		$base_url  		= $_SERVER['PHP_SELF'];		// Like '/dedalo4/lib/dedalo/media_engine/av_media_player.php'
+		$url_query 		= $_SERVER['QUERY_STRING'];	// Like 'reelID=rsc35_rsc167_3&quality=404&top_tipo=rsc167&top_id='
+		$url_query_b64 	= base64_encode($url_query);
+
+		$url_public 	= 'http://'.$_SERVER['HTTP_HOST'].$base_url.'?share='.$url_query_b64;
+			#dump($url_public, ' url_public ++ '.to_string( ));
+
+}//end if ($share) {
+
+if(!isset($tcin))  $tcin  = false;
+if(!isset($tcout)) $tcout = false;
+if(!isset($tcin))  $tcin  = false;
+if(!isset($media)) $media = false;
 
 if($media=='audio') $quality = 'audio';
+
+
 
 # AVOBJ		
 $AVObj = new AVObj($reelID, $quality, $tcin, $tcout);
@@ -32,6 +59,8 @@ $AVObj = new AVObj($reelID, $quality, $tcin, $tcout);
 $PosterFrameObj = new PosterFrameObj($reelID);
 	
 
+	#
+	# QUALITY FALLBACK
 	# Si no existe el fichero default quality, lo intentaremos con alguno que exista, empezando por la calidad más alta
 	$file_path = $AVObj->get_media_path_abs() . $AVObj->get_name() .'.'. $AVObj->get_extension();	#dump($file_path, ' file_path');
 	if (!file_exists($file_path)) {
@@ -92,10 +121,10 @@ $recargar_title = 'Recargar';
 
 
 # JAVASCRIPT LINKS
-		$js_link_code	= js::get_js_link_code();
+	$js_link_code	= js::get_js_link_code();
 
 # CSS LINKS		
-		$css_link_code	= css::get_css_link_code();
+	$css_link_code	= css::get_css_link_code();
 
 # LOAD VISTA TEMPLATE CODE
 $page_html	= DEDALO_LIB_BASE_PATH .'/media_engine/html/av_media_player.phtml';

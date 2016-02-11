@@ -6,41 +6,78 @@
 	# CONTENIDO 
 	$html_contenido = '';
 
-	$html_contenido .= "<div class=\"leaflet_map_player\">";
-	$html_contenido .= "\n <div class=\"leaflet_map\" id=\"$identificador_unico\"><!-- Content here --></div>";
-	#$html_contenido .= "<div onclick=\"component_geolocation.get_data()\">Get current data</div>";
-	#$html_contenido .= "<div onclick=\"component_geolocation.set_stored_data()\">Set stored data</div>";
-	$html_contenido .= "</div>";					
-		
+	#$html_contenido .= "<div class=\"leaflet_map_player\">";
+	echo "\n<!-- GEOLOCATION [tipo:$tipo] -->";
+	echo "\n<div class=\"css_wrap_geolocation wrap_component leaflet_map_player\" id=\"{$id_wrapper}\"
+	data-tipo=\"{$tipo}\"
+	data-lang=\"{$lang}\"
+	data-section_tipo=\"{$section_tipo}\"
+	data-parent=\"{$parent}\"
+	data-modo=\"{$modo}\"
+	data-label=\"{$label}\"
+	data-dato='{$dato_json}'
+	data-component_name=\"{$component_name}\"
+	data-component_info='{$component_info}'
+	>";
+	
+
+	# CONTENIDO (INPUT)
+	$html_contenido = '';
+	switch($permissions) {
+			
+		case 0	:	$html_contenido .= "";
+					break;
+						
+		case 1	: 	$html_contenido .= "\n <span class=\"css_span_dato\"> Under construction </span>";
+					break;	
+						
+		case ($permissions>=2) :
+
+					#
+					# INPUTS
+					$html_contenido .= "\n <div class=\"map_inputs\">";
+
+						$html_contenido .= "\n <span>".label::get_label('latitud')."</span>";
+						$html_contenido .= "\n <input type=\"text\" name=\"lat\" value =\"{$dato->lat}\"
+						data-tipo=\"{$tipo}\"
+						data-lang=\"{$lang}\"
+						data-section_tipo=\"{$section_tipo}\"
+						data-parent=\"{$parent}\"
+						data-modo=\"{$modo}\"
+						data-name=\"lat\"
+						/>";
+
+						$html_contenido .= "\n <span>".label::get_label('longitud')."</span>";
+						$html_contenido .= "\n <input type=\"text\" name=\"lon\" value=\"{$dato->lon}\" data-name=\"lon\"/>";
+
+						$html_contenido .= "\n <span>".label::get_label('mapa_zoom')."</span>";
+						$html_contenido .= "\n <input type=\"text\" name=\"zoom\" value=\"{$dato->zoom}\" data-name=\"zoom\"/>";
+
+					$html_contenido .= "\n </div>";//end map_inputs
+
+
+					#
+					# MAP
+						$html_contenido .= "\n <div class=\"leaflet_map\" id=\"$identificador_unico\"><!-- Map content here --></div>";	
+					
+					break;										
+														
+	}
+
+
+
+	# Prepare content to show in page
+	tools::prepare_content($html_contenido);
+
 
 	# PRINT HTML
-	print $html_contenido;	
-
-
-	/*
-	# CSS
-	print css::build_tag(DEDALO_ROOT_WEB .'/lib/leaflet/leaflet.css');
-	print css::build_tag(DEDALO_ROOT_WEB .'/lib/leaflet/Leaflet.draw-master/dist/leaflet.draw.css');
+	print $html_contenido;
 	
-	# JS	
-	#print js::build_tag(DEDALO_ROOT_WEB	 . '/lib/leaflet/leaflet.js');
-	print js::build_tag('http://cdn.leafletjs.com/leaflet-0.7.1/leaflet.js');
-	print js::build_tag(DEDALO_ROOT_WEB . '/lib/leaflet/leaflet-google.js');
 
-	print js::build_tag(DEDALO_ROOT_WEB . '/lib/leaflet/Leaflet.draw-master/dist/leaflet.draw.js');
+	echo "</div>";//end wrapper		
+
 	
-	switch (DEDALO_GEO_PROVIDER) {
-		case 'GOOGLE':			
-			#print js::build_tag('http://cdn.leafletjs.com/leaflet-0.7.1/leaflet.js');
-			#print js::build_tag('http://matchingnotes.com/javascripts/leaflet-google.js');
-			#print js::build_tag('http://maps.google.com/maps/api/js?v=3.2&sensor=false');
-			print js::build_tag(DEDALO_ROOT_WEB . '/lib/leaflet/leaflet-google.js');
-			break;
-		
-		default:			
-			break;
-	}	
-	*/
+
 
 ?>
 <script type="text/javascript">

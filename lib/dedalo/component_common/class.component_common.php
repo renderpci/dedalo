@@ -68,8 +68,9 @@ abstract class component_common extends common {
     	# SECTION_TIPO : OPTIONAL (if empty, section_tipo is calculated from: 1. page globals, 2. structure -only useful for real sections-)
 		if (empty($section_tipo)) {
 			$section_tipo = component_common::resolve_section_tipo($tipo);
+			debug_log(__METHOD__." Called component without section tipo ".to_string($tipo), logger::DEBUG);
 			if(SHOW_DEBUG && DEDALO_ENTITY=='development') {
-				dump($section_tipo, ' resolve_section_tipo from: '.to_string($tipo));
+				dump($section_tipo, ' DEBUG WARNING: TRIGGERED resolve_section_tipo from: '.to_string($tipo));
 				dump(debug_backtrace(), ' debug_backtrace '.to_string());			
 			}			
 		}
@@ -90,16 +91,39 @@ abstract class component_common extends common {
 				dump($parent," parent");
 				throw new Exception("Error Processing Request. trying to use wrong var: '$parent' as parent to load as component", 1);				
 			}			
-			$ar_valid_modo = array("edit","list","search","simple","list_tm","tool_portal","tool_lang","edit_tool","indexation","selected_fragment","tool_indexation",'tool_transcription','print');
+			$ar_valid_modo = array("edit","list","search","simple","list_tm","tool_portal","tool_lang","edit_tool","indexation","selected_fragment","tool_indexation",'tool_transcription','print','edit_component');
 			if ( empty($modo) || !in_array($modo, $ar_valid_modo) ) {
 				#dump($modo," modo");
 				#throw new Exception("Error Processing Request. trying to use wrong var: '$modo' as modo to load as component", 1);
-				error_log(__METHOD__. " trying to use wrong var: '$modo' as modo to load as component")	;		
+				debug_log(__METHOD__. " trying to use wrong var: '$modo' as modo to load as component")	;		
 			}
 			if ( empty($lang) || strpos($lang, 'lg-')===false ) {
 				dump($lang," lang");
 				throw new Exception("Error Processing Request. trying to use wrong var: '$lang' as lang to load as component", 1);				
-			}			
+			}
+			if (!empty($section_tipo)) {
+				# Verify modelo_name is section
+				$section_modelo_name = RecordObj_dd::get_modelo_name_by_tipo($section_tipo,true);
+				if ($section_modelo_name!='section') {
+					dump($section_tipo," section_tipo - section_modelo_name: $section_modelo_name");
+					throw new Exception("Error Processing Request. Trying to use: $section_modelo_name ($section_tipo) as section. Verified modelo is: $section_modelo_name", 1);
+				}				
+				# Verify this section is a invalid resource call
+				$ar_resources = array('rsc2','rsc75','rsc3','rsc4');
+				if (in_array($section_tipo, $ar_resources) && $tipo!='rsc88') {
+					dump(debug_backtrace(), ' debug_backtrace '.to_string());
+					throw new Exception("Error Processing Request. Direct call to resource section_tipo ($section_tipo) is not legal", 1);
+				}else if($tipo!='dd200'){
+					# Verify this section is from current component tipo
+					$calculated_section_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($tipo, 'section', 'parent')[0];
+					$real_section 			 = section::get_section_real_tipo_static($section_tipo);
+					$is_real 				 = $real_section==$section_tipo ? true : false;
+					if ( $is_real && $section_tipo!=$calculated_section_tipo && $modo!='search' && SHOW_DEBUG) {
+						#dump(debug_backtrace(), ' debug_backtrace '.to_string());
+						#throw new Exception("Error Processing Request. Current component ($tipo) is not children of received section_tipo: $section_tipo.<br> Real section_tipo is: $real_section and calculated_section_tipo: $calculated_section_tipo ", 1);
+					}
+				}				
+			}
 		}
 		
 		static $ar_component_instances;
@@ -122,7 +146,7 @@ abstract class component_common extends common {
     		#unset($first);
     		$ar_component_instances = array_slice($ar_component_instances,50,null,true); //50
     		if(SHOW_DEBUG) {
-    			#error_log(__METHOD__." Overload components prevent. Unset first cache item [$key]");
+    			#debug_log(__METHOD__." Overload components prevent. Unset first cache item [$key]");
     		}
     	}
 
@@ -133,14 +157,21 @@ abstract class component_common extends common {
     		if (empty($component_name)) {
 				$component_name = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 					#dump($current_component_name, ' current_component_name');
-			}					
+			}
+			if (strpos($component_name, 'component_')===false) {
+				if(SHOW_DEBUG) {
+					throw new Exception("Error Processing Request. Ilegal component: '$component_name' on ".__METHOD__, 1);					
+				}
+				return null;
+			}
+
 	
 			# __CONSTRUCT : Store new component in static array var
 			$ar_component_instances[$key] = new $component_name($tipo, $parent, $modo, $lang, $section_tipo);
 
 			if(SHOW_DEBUG) {
 				#$label = RecordObj_dd::get_termino_by_tipo($tipo,null, true);
-    			#error_log("-- NO exite una instancia de la sección $key ($component_name - $label). Se crea un nuevo componente");
+    			#debug_log("-- NO exite una instancia de la sección $key ($component_name - $label). Se crea un nuevo componente");
     		}
     		   		
     	}else{
@@ -152,7 +183,7 @@ abstract class component_common extends common {
     		
     		if(SHOW_DEBUG) {
     			#$label = RecordObj_dd::get_termino_by_tipo($tipo,null, true);
-    			#error_log("++ SI exite una instancia del componente $key ($component_name - ). Se devuelve el componente estático en caché");
+    			#debug_log("++ SI exite una instancia del componente $key ($component_name - ). Se devuelve el componente estático en caché");
     		}    		   			
     	}
     	
@@ -165,7 +196,7 @@ abstract class component_common extends common {
     								 Expected model is ($modelo_name) and received model is ($component_name)", 1);
     		}
     		#if (isset($ar_component_instances)) dump( array_keys($ar_component_instances), ' ar_component_instances');
-    		#error_log('ar_component_instances: '.count($ar_component_instances));
+    		#debug_log('ar_component_instances: '.count($ar_component_instances));
     			#dump($key," key");
     	}
     	return $ar_component_instances[$key];
@@ -187,16 +218,15 @@ abstract class component_common extends common {
 			# DEBUG ONLY
 			$component_name = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 			$label = RecordObj_dd::get_termino_by_tipo($tipo,null, true);			
-			error_log("Construido componente '$component_name' ($label) tipo: $tipo, parent: $parent, modo: $modo, lang: $lang");
-			#error_log( print_r(debug_backtrace(null,1),true) );
+			debug_log("Construido componente '$component_name' ($label) tipo: $tipo, parent: $parent, modo: $modo, lang: $lang");
+			#debug_log( print_r(debug_backtrace(null,1),true) );
 			*/
-
-		global $log_messages;
+		
 
 		# TIPO : Test valid tipo
 		if ( empty($tipo) || !strlen($tipo) ) {
 			$msg = "Component common: valid 'tipo' value is mandatory!";
-			$log_messages .= $msg;
+			$GLOBALS['log_messages'][] = $msg;
 			throw new Exception($msg, 1);
 		}
 		# PARENT : Test valid parent
@@ -213,7 +243,7 @@ abstract class component_common extends common {
 		# LANG : Test valid lang
 		if ( empty($lang) ) {
 			$msg = "Component common: valid 'lang' value is mandatory!";
-			$log_messages .= $msg;
+			$GLOBALS['log_messages'][] = $msg;
 			throw new Exception($msg, 1);
 		}
 		# LANG : Overwrite var '$lang' with previous component declatarion of '$this->lang'
@@ -283,8 +313,8 @@ abstract class component_common extends common {
 
 					# INFO LOG
 					if(SHOW_DEBUG) {
-						$msg = "INFO: component_common. Created ".get_called_class()." $this->id [$tipo] with default data from 'propiedades' (".to_string($propiedades->dato_default).") - modo:$this->modo ";
-						error_log($msg);
+						$msg = " Created ".get_called_class()." $this->label id:$this->id, tipo:$tipo, section_tipo:$section_tipo, modo:$modo with default data from 'propiedades': ".to_string($propiedades->dato_default);
+						debug_log(__METHOD__.$msg);
 					}
 
 					$this->load_component_dato();
@@ -315,7 +345,7 @@ abstract class component_common extends common {
 
 		if(isset($this->dato_resolved)) {
 			if(SHOW_DEBUG) {
-				error_log(__METHOD__." Dato already resolved");
+				debug_log(__METHOD__." Dato already resolved");
 			}
 			return $this->dato_resolved;
 		}
@@ -374,9 +404,9 @@ abstract class component_common extends common {
 							
 				if (empty($this->section_tipo)) {
 					if(SHOW_DEBUG) {
-						$msg = __METHOD__." Error Processing Request. section tipo not found for component $this->tipo";
+						$msg = " Error Processing Request. section tipo not found for component $this->tipo";
 						#throw new Exception("$msg", 1);
-						error_log($msg);											
+						debug_log(__METHOD__.$msg);									
 					}
 				}					
 				$section = section::get_instance($this->parent, $this->section_tipo);
@@ -412,10 +442,10 @@ abstract class component_common extends common {
 			# 2 calculate from structure -only useful for real sections-
 			$section_tipo = component_common::get_section_tipo_from_component_tipo($tipo);
 			if(SHOW_DEBUG) {
-				error_log(__METHOD__." WARNING: calculate_section_tipo:$section_tipo from structure for component $tipo Called by:".debug_backtrace()[0]['function']);
+				debug_log(__METHOD__." WARNING: calculate_section_tipo:$section_tipo from structure for component $tipo Called by:".debug_backtrace()[0]['function']);
 				#dump(debug_backtrace()," debug_backtrace");
 				if ($section_tipo==DEDALO_SECTION_USERS_TIPO || $section_tipo==DEDALO_SECTION_PROJECTS_TIPO) {
-					error_log("WARNING SECTION BÁSICA!! Called by:".debug_backtrace()[0]['function'], 1);					
+					debug_log(__METHOD__." WARNING SECTION BÁSICA!! Called by:".debug_backtrace()[0]['function'], 1);					
 				}
 			}
 		}
@@ -467,7 +497,7 @@ abstract class component_common extends common {
 					$cache_key_name = $this->get_component_cache_key_name();					
 					if (cache::exists($cache_key_name)) {
 						#dump($cache_key_name,"COMPONENT SHOW FROM CACHE");
-						#error_log("INFO: readed data from component cache key: $cache_key_name");
+						#debug_log("INFO: readed data from component cache key: $cache_key_name");
 						# Notify for load component js/css
 						# Ojo! los portales auto-notifican a sus componentes, (notify_load_lib_element_tipo_of_portal) por lo que 
 						# haría falta una forma de ejecutar esto aun cuando se usan desde cache..
@@ -558,7 +588,7 @@ abstract class component_common extends common {
 			$temp_data_uid = $tipo.'_'.$parent.'_'.$lang.'_'.$section_tipo;
 			$_SESSION['dedalo4']['component_temp_data'][$temp_data_uid] = $dato ;
 			if(SHOW_DEBUG) {
-				error_log("INFO: IS_TEMP: saved dato from component $temp_data_uid");
+				debug_log("INFO: IS_TEMP: saved dato from component $temp_data_uid");
 			}
 			dump($dato, ' dato ++ '.to_string($temp_data_uid));
 			return false;
@@ -615,7 +645,7 @@ abstract class component_common extends common {
 				# Delete all caches of current tipo
 				cache::del_contains($this->tipo);
 			}
-			#error_log("Saved dato of component $this->tipo ($this->label) ");
+			#debug_log(__METHOD__." Saved dato of component $this->tipo ($this->label) ");
 		}
 
 		# RETURN MATRIX ID
@@ -774,7 +804,7 @@ trigger_error("!!! DEPRECATED ".__METHOD__);
 		if ($traducible=='no') {
 			$lang = DEDALO_DATA_NOLAN;
 			if(SHOW_DEBUG) {
-				#error_log("Corregida llamada a 'get_id_by_tipo_parent' con incorect '$lang' - tipo:$tipo");
+				#debug_log(__METHOD__." Corregida llamada a 'get_id_by_tipo_parent' con incorect '$lang' - tipo:$tipo");
 			}
 		}
 
@@ -817,7 +847,7 @@ trigger_error("!!! DEPRECATED ".__METHOD__);
 		# realmente es necesaria cuando sea posible.
 		if(SHOW_DEBUG) {
 			#$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($this->tipo);
-			#error_log("get_filter_authorized_record result is provisional. Please review this method ASAP [".__METHOD__."] ".$this->tipo ." ($modelo_name)");
+			#debug_log(__METHOD__." get_filter_authorized_record result is provisional. Please review this method ASAP [".__METHOD__."] ".$this->tipo ." ($modelo_name)");
 		}		
 		return true;
 		
@@ -900,7 +930,7 @@ trigger_error("!!! DEPRECATED ".__METHOD__);
 
 		if ($tool_name=='tool_relation') {
 			if(SHOW_DEBUG) {
-				#error_log("DESACTIVA LA CARGA DE TOOL RELATION ".__METHOD__);				
+				#debug_log(__METHOD__." DESACTIVA LA CARGA DE TOOL RELATION ".__METHOD__);				
 			}
 			return null;
 		}
@@ -1365,7 +1395,7 @@ trigger_error("!!! DEPRECATED ".__METHOD__);
 			$current_section_id 	= $current_locator->section_id;
 			$current_section_tipo 	= $current_locator->section_tipo;
 			
-			$strQuery_where .= "\n section_id = $current_section_id AND section_tipo = '$current_section_tipo' OR";			
+			$strQuery_where .= "\n (section_id = $current_section_id AND section_tipo = '$current_section_tipo') OR";			
 		}
 		if (!empty($strQuery_where)) {
 			$strQuery_where = substr($strQuery_where, 0, -2);
@@ -1404,9 +1434,9 @@ trigger_error("!!! DEPRECATED ".__METHOD__);
 			$html_info .= "</div>";		
 			$valor_from_ar_locators->debug = $html_info;			
 			if ($total_list_time>$limit_time) {
-				error_log($total_list_time."ms. SLOW QUERY: ".__METHOD__.' '.$strQuery);
+				debug_log(__METHOD__.' '.$total_list_time."ms. SLOW QUERY: ".$strQuery);
 			}
-			#error_log(__METHOD__.' '.$total_list_time."ms. QUERY: ".$strQuery);
+			#debug_log(__METHOD__.' '.$total_list_time."ms. QUERY: ".$strQuery);
 		}#end if(SHOW_DEBUG)
 
 		return (object)$valor_from_ar_locators;
@@ -1442,31 +1472,31 @@ trigger_error("!!! DEPRECATED ".__METHOD__);
 		if ($this->modo=='list') {
 			$use_cache = true; // Used in section list for speed
 		}
-
+	
 		if(SHOW_DEBUG) {
 			global$TIMER;$TIMER[__METHOD__.'_IN_'.$this->tipo.'_'.$this->modo.'_'.$this->parent.'_'.microtime(1)]=microtime(1);;
 		}
 
 		if(isset($this->ar_list_of_values)) {
 			if(SHOW_DEBUG) {
-				#error_log("get_ar_list_of_values already is calculated..");
+				#debug_log(__METHOD__." get_ar_list_of_values already is calculated..");
 			}
 			return $this->ar_list_of_values;
 		}
 
 		static $list_of_values_cache;
 	
-		$uid = $this->tipo.'_'.$this->modo.'_'.$this->lang.'_'.rawurlencode($filter_custom);	//.'_'.$this->parent
+		$uid = $this->tipo.'_'.$this->modo.'_'.$this->lang.'_'.$referenced_section_tipo.'_'.rawurlencode($filter_custom);	//.'_'.$this->parent
 			#dump($uid, ' uid ++ '.to_string());
 		if($use_cache===true && isset($list_of_values_cache[$uid])) {
 			if(SHOW_DEBUG) {
-				//error_log("+++ Returned get_ar_list_of_values already is calculated in list_of_values_cache.. ($uid)");
+				//debug_log(__METHOD__." +++ Returned get_ar_list_of_values already is calculated in list_of_values_cache.. ($uid)");
 				//dump($uid, ' uid :: '.to_string($referenced_section_tipo));
 			}
 			return $this->ar_list_of_values = $list_of_values_cache[$uid];
 		}
 
-		
+	
 		#if ($this->modo =='list' && isset($_SESSION['config4']['get_ar_list_of_values'][$uid]) ) {
 		#	return $_SESSION['config4']['get_ar_list_of_values'][$uid];
 		#}
@@ -1484,6 +1514,7 @@ trigger_error("!!! DEPRECATED ".__METHOD__);
 		#
 		# AR_TERMINOS_RELACIONADOS
 		$ar_terminos_relacionados = (array)$this->RecordObj_dd->get_relaciones();
+			#dump($ar_terminos_relacionados, ' ar_terminos_relacionados ++ '.to_string());
 			if (empty($ar_terminos_relacionados)) {
 				#throw new Exception("Error Processing Request. List of values without TR. Please review structure ($tipo)", 1);
 				$msg = "Error Processing Request. List of values without TR. Please review structure ($tipo) <br> Nota: esta función NO está acabada. Falta contemplar los casos en que el dato se accede directamente (Ver versión anterior abajo)"; 
@@ -1494,7 +1525,7 @@ trigger_error("!!! DEPRECATED ".__METHOD__);
 				return $list_of_values;
 			}
 			$fields 				= array();
-			$section_tipo_related 	= false;
+			$section_tipo_related 	= $referenced_section_tipo;
 			$matrix_table 			= false;
 			foreach ($ar_terminos_relacionados as $key => $ar_value) {
 				$modelo = key($ar_value);
@@ -1502,17 +1533,20 @@ trigger_error("!!! DEPRECATED ".__METHOD__);
 
 				#$modelo_name = RecordObj_dd::get_termino_by_tipo($modelo);
 				#if ($modelo_name=='section') {
-				if ($modelo==MODELO_SECTION) { // 
+				if ($modelo==MODELO_SECTION && !$section_tipo_related) { //
+
 					$section_tipo_related 	= $tipo;	// Fix section tipo related	
 					$matrix_table 			= common::get_matrix_table_from_tipo($section_tipo_related); // Fix matrix table
+
 				}else{
 					$fields[] = $tipo;
 				}
+
 			}
 			$terminoID_valor = reset($fields); // Select first field tipo
-			if (!$section_tipo_related) {					
-				$section_tipo_related = $this->get_section_tipo_from_component_tipo($terminoID_valor); // // Fix section tipo related
-			}
+			#if (!$section_tipo_related) {					
+			#	$section_tipo_related = $this->get_section_tipo_from_component_tipo($terminoID_valor); // // Fix section tipo related
+			#}
 			if (!$matrix_table) {
 				$matrix_table = common::get_matrix_table_from_tipo($terminoID_valor); // Fix matrix table
 			}
@@ -1570,8 +1604,7 @@ trigger_error("!!! DEPRECATED ".__METHOD__);
 				*/							
 				# 1 Obtenemos el valor actual del value_component_tipo 
 				$value_component_tipo  	 		= reset($this->propiedades->filtered_by_field_value);
-				$matrix_table_tipo 				= common::get_matrix_table_from_tipo($value_component_tipo);
-				#$value_component_section_tipo   = component_common::get_section_tipo_from_component_tipo($value_component_tipo);							
+				$matrix_table_tipo 				= common::get_matrix_table_from_tipo($value_component_tipo);				
 				if (!$id_path) {
 				$id_path 						= (string)tools::get_id_path(null);
 				}
@@ -1608,7 +1641,7 @@ trigger_error("!!! DEPRECATED ".__METHOD__);
 											
 				#$component  = component_common::get_instance(null, $value_component_tipo, $parent_id, 'edit', DEDALO_DATA_LANG, $value_component_section_tipo);
 				if(SHOW_DEBUG) {
-					error_log(__METHOD__." Verificar section tipo en la llamada del componente..");
+					debug_log(__METHOD__." Verificar section tipo en la llamada del componente..");
 				}
 				#$p_value 	= $component->get_dato_unchanged();
 				#if(SHOW_DEBUG) {
@@ -1667,7 +1700,10 @@ trigger_error("!!! DEPRECATED ".__METHOD__);
 			#
 			# filtered by REFERENCED_SECTION_TIPO (optional)
 			if ($referenced_section_tipo) {
-				$filter_propiedades .= "\n AND section_tipo = '$referenced_section_tipo' ";
+				#dump($referenced_section_tipo, ' referenced_section_tipo ++ '.to_string());
+				foreach ((array)$referenced_section_tipo as $current_section_tipo) {
+					$filter_propiedades .= "\n-- referenced_section_tipo \n AND section_tipo = '$current_section_tipo' ";
+				}				
 			}
 			
 
@@ -1687,6 +1723,8 @@ trigger_error("!!! DEPRECATED ".__METHOD__);
 
 		$ar_final = array();		
 		while ($rows = pg_fetch_assoc($result)) {
+			
+			#dump($rows, ' rows ++ '.to_string($referenced_section_tipo));
 			
 			$locator  = new locator();
 				$locator->set_section_id( $rows['section_id'] );
@@ -1723,7 +1761,7 @@ trigger_error("!!! DEPRECATED ".__METHOD__);
 				switch (true) {
 					# COMPONENT HAS CHANGED TRANSLATABLE / NON TRANSLATABLE AND TWO DATA IS STORED
 					case (isset($val->$lang_nolang) && isset($val->$lang_current) && $val->$lang_nolang!=$val->$lang_current):
-						error_log("WARNING: (".__METHOD__.") component current_tipo:$current_tipo parent:$this->parent referenced_section_tipo:$referenced_section_tipo have double data ($lang_current / $lang_nolang). $lang_current was used, but please review this ASAP to avoid inconsistencies");
+						debug_log(__METHOD__." component current_tipo:$current_tipo parent:$this->parent referenced_section_tipo:$referenced_section_tipo have double data ($lang_current / $lang_nolang). $lang_current was used, but please review this ASAP to avoid inconsistencies", logger::WARNING);
 						# Don't break here
 
 					# SET NOLAN (current component is not translatable)
@@ -1798,9 +1836,9 @@ trigger_error("!!! DEPRECATED ".__METHOD__);
 			#}
 			#dump($strQuery," strQuery");
 			if ($total_list_time>$limit_time) {
-				error_log($total_list_time."ms. SLOW QUERY: ".__METHOD__.' '.$strQuery);
+				debug_log(__METHOD__.' '.$total_list_time."ms. SLOW QUERY: ".$strQuery);
 			}
-			#error_log("QUERY: $strQuery total_list_time:$total_list_time - uid:$uid");
+			#debug_log(__METHOD__." QUERY: $strQuery total_list_time:$total_list_time - uid:$uid");
 		}#end if(SHOW_DEBUG)
 
 		#if ($this->modo =='list') {
@@ -2147,17 +2185,23 @@ trigger_error("!!! DEPRECATED ".__METHOD__);
 				break;
 			}
 			if ((object)$std_object==(object)$current_object_obj) {
-				$remove_key=$key; break;							
+				$remove_key=$key;
+				break;							
 			}
 		}
 
+		#dump($dato, ' dato MATHC FOUND TO REMOVE ++ '.to_string());
+		#dump($std_object, ' found MATHC FOUND TO REMOVE ++ '.to_string());
+
 		if ($remove_key!==false) {
+			
 			unset($dato[$remove_key]);
 			$dato = array_values($dato); # Re-index array dato (IMPORTANT FOR MAINTAIN JSON ARRAY FORMAT !!)
+			
 			if(SHOW_DEBUG) {
-				error_log("DEBUG INFO: ".__METHOD__." Removed key $remove_key from dato");
+				#debug_log(__METHOD__." Removed key $remove_key from dato. std_object:".to_string($std_object));
 			}			
-		}
+		}		
 		#dump($dato,"dato - remove_key:$remove_key - ".print_r($std_object,true));
 
 		return $dato;
@@ -2205,6 +2249,12 @@ trigger_error("!!! DEPRECATED ".__METHOD__);
 	* GET_SECTION_TIPO_FROM_COMPONENT_TIPO
 	*/
 	public static function get_section_tipo_from_component_tipo($component_tipo) {
+
+		if(SHOW_DEBUG) {
+			#dump(debug_backtrace(), ' debug_backtrace '.to_string());
+			#debug_log(__METHOD__." Please avoid call this method. Will be DEPRECATED soon ".to_string()); // sorry: ar_list_of_values uses this method..
+		}
+		
 
 		$section_tipo = NULL;
 
@@ -2489,9 +2539,14 @@ trigger_error("!!! DEPRECATED ".__METHOD__);
 	* GET_METHOD
 	* Return the result of the method calculation into the component 
 	*/
-	public function get_method( string $param ){
+	public function get_method( $name ){
+		/*
+		if (method_exists($this,$name)) {
+			return $this->$$name();
+		}
+		*/
 		if (SHOW_DEBUG) {
-			error_log('This component don\'t have one method defined: '.$param);
+			debug_log(__METHOD__.' This component don\'t have one method defined: '.$name, logger::WARNING);
 		}
 		return false;
 	}
@@ -2564,8 +2619,9 @@ trigger_error("!!! DEPRECATED ".__METHOD__);
 	/**
 	* GET_TARGET_SECTION_TIPO
 	* Sección de la que se alimenta de registros el portal. No confundir con la sección en la que está el portal
+	* OJO !! Se deprecó sin verificar las llamadas a ella (diffusion). Pasada a component portal que es quien la usa ahora mismo
 	*/
-	public function get_target_section_tipo() {
+	public function get_target_section_tipo__DEPRECATED() {
 		
 		if (!$this->tipo) return NULL;
 
@@ -2599,6 +2655,64 @@ trigger_error("!!! DEPRECATED ".__METHOD__);
 		
 		return $target_section_tipo;
 	}
+
+	/**
+	* GET_TARGET_SECTION_TIPO --> TO DEPRECATE
+	* Sección de la que se alimenta de registros el portal. No confundir con la sección en la que está el portal
+	* OJO !! SE DEPRECÓ EN COMPONENT_COMMON SIN VERIFICAR LAS LLAMADAS A ELLA (DIFFUSION POR EJEMPLO). la vuelvo a activar en el componente portal porque es necesaria aquí.. (Paco 04-12-2015
+	* Se desactivó porque ahora un portal puede tener más de 1 target_section (multi target..). Mantendremos este método por compatibilidad con lo anterior hasta solucionar el tema
+	* de forma más "elegante". Se devolverá un array con todas, en orden. Por tanto es importante poner la principal la primera !!!
+	* @return string tipo . first element of ar_target_section_tipo 
+	* @see TO DEPRECATE
+	*/
+	public function get_target_section_tipo() {
+		$ar_target_section_tipo = $this->get_ar_target_section_tipo();
+		$main_target_section 	= reset($ar_target_section_tipo);		
+		#
+		# DEPRECATED SOON WARNING
+		trigger_error("WARNING: this method: 'get_target_section_tipo' will be deprecated soon. First element is returned now, but, PLEASE USE 'get_ar_target_section_tipo' AND SELECT THE ELEMENT THAT YOU NEED ");
+		
+		return $main_target_section;
+	}#end get_target_section_tipo
+
+
+	/**
+	* GET_AR_TARGET_SECTION_TIPO
+	* Sección/es de la que se alimenta de registros el portal. No confundir con la sección en la que está el portal
+	*/
+	public function get_ar_target_section_tipo() {
+		
+		if (!$this->tipo) return NULL;
+
+		if(isset($this->ar_target_section_tipo)) {
+			#dump($this->target_section_tipo,"Already calculated [target_section_tipo]");
+			return $this->ar_target_section_tipo;
+		}
+
+		$ar_terminoID_by_modelo_name = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($this->tipo, 'section', 'termino_relacionado', $search_exact=true);
+			#dump($ar_terminoID_by_modelo_name,'$ar_terminoID_by_modelo_name');
+
+		if(SHOW_DEBUG) {
+
+			if ( empty( $ar_terminoID_by_modelo_name)) {
+				$component_name = RecordObj_dd::get_termino_by_tipo($this->tipo,null,true);
+				throw new Exception("Error Processing Request. Please, define target section structure for component: $component_name - $this->tipo", 1);
+			}
+			
+			#dump(count($ar_terminoID_by_modelo_name), 'count(var)');
+		}
+
+		$ar_target_section_tipo = $ar_terminoID_by_modelo_name;
+			#dump($ar_target_section_tipo, '$ar_target_section_tipo');
+	
+
+		# Fix value
+		$this->ar_target_section_tipo = $ar_target_section_tipo;
+		
+		return $ar_target_section_tipo;
+	}
+
+
 
 
 	
@@ -2768,6 +2882,196 @@ trigger_error("!!! DEPRECATED ".__METHOD__);
 		}
 		return $search_query;
 	}
+
+	/**
+	* UPDATE_STATE
+	* (common because is used by various components and tools, ..)
+	* @param object $state_obj ("lang":"toolXXX":1)
+	* @return object $this->component_state set and store component_state)
+	*/
+	protected function update_state_OLD($state_obj) {
+
+		if(!is_object($state_obj)){
+			throw new Exception("Error Processing Request this no is a object".to_string($state_obj), 1);
+		}
+
+		$section_id 	= $this->component_obj->get_parent();
+		$component_tipo = $this->component_obj->get_tipo();
+		$section_tipo	= $this->component_obj->get_section_tipo();
+
+		$locator_state 	= new locator();
+			$locator->set_section_tipo($section_tipo);
+			$locator->set_section_id($section_id);
+			$locator->set_component_tipo($component_tipo);
+			$locator->set_status($state_obj);
+
+		$component_state = $this->component_obj->get_component_state_obj();
+
+		return $component_state->update_state($locator_state);
+			#dump($ar_result,'get_ar_children_tipo_by_modelo_name_in_section '.$section_tipo);			
+	}
+
+	/**
+	* GET_STATE
+	* (common because is used by various components and tools, ..)
+	* @param object $state_obj ("lang":"toolXXX":1)
+	* @return object $this->component_state set and store component_state)
+	*/
+	protected function get_state_OLD($tool_name=null,$lang=DEDALO_DATA_LANG) {
+
+		$component_state = $this->component_obj->get_component_state_obj();
+
+		$section_id 	= $this->component_obj->get_parent();
+		$component_tipo = $this->component_obj->get_tipo();
+		$section_tipo	= $this->component_obj->get_section_tipo();
+
+		$locator_state 	= new locator();
+			$locator->set_section_tipo($section_tipo);
+			$locator->set_section_id($section_id);
+			$locator->set_component_tipo($component_tipo);
+
+		$my_state 		= $component_state->get_my_state($locator_state);
+
+		if(!empty($tool_name)){
+			$my_state = $my_state->state->$lang->$tool_name;
+		}
+
+		return $my_state;
+	}
+
+
+
+	/**
+	* GET_STATE
+	* (common because is used by various components and tools, ..)
+	* @param object $state_obj ("lang":"toolXXX":1)
+	* @return object $this->component_state set and store component_state)
+	*/
+	public function get_component_state($tool_locator=null,$lang=DEDALO_DATA_LANG) {
+
+		$component_state 	 = $this->get_component_state_obj();
+
+		if (empty($component_state) || !is_object($component_state)) {
+			if(SHOW_DEBUG) {
+				dump($component_state, ' empty component_state ++ '.to_string($tool_locator));;
+			}
+			return false;
+		}
+		$section_id 		 = $component_state->get_parent();
+		$component_tipo 	 = $this->get_tipo();
+		$section_tipo		 = $component_state->get_section_tipo();
+		
+		$options 	= new stdClass();
+			$options->section_tipo 		= $section_tipo;
+			$options->section_id 		= $section_id;
+			$options->component_tipo 	= $component_tipo;
+			$options->lang 				= $lang;
+			$options->tool_locator 		= $tool_locator;
+		
+		$component_state->set_options($options);
+
+		return $component_state;
+	}//end get_component_state
+
+
+	/**
+	* GET_COMPONENT_STATE_OBJ
+	* (common because is used by various components and tools, ..)
+	* @return object $this->component_state (get and store component_state)
+	*/
+	protected function get_component_state_obj($modo='edit_tool') {
+
+		if(isset($this->component_state)) return $this->component_state;
+
+		$section_id 			= $this->get_parent();
+		$component_tipo 		= $this->get_tipo();
+		$section_tipo			= $this->get_section_tipo();
+		$component_state_tipo 	= $this->get_component_state_tipo();			
+
+		if (!$component_state_tipo) {
+			return null;
+		}else{
+			$this->component_state  = component_common::get_instance('component_state',
+																	  $component_state_tipo,
+																	  $section_id,
+																	  $modo,
+																	  DEDALO_DATA_NOLAN,
+																	  $section_tipo);
+		}	
+
+		return (object)$this->component_state;
+
+	}//end get_component_state_obj
+
+
+	/**
+	* GET_COMPONENT_STATE_TIPO
+	* @return 
+	*/
+	public function get_component_state_tipo() {
+
+		if(isset($this->component_state_tipo)) return $this->component_state_tipo;
+
+		$section_id 	= $this->get_parent();
+		$component_tipo = $this->get_tipo();
+		$section_tipo	= $this->get_section_tipo();
+		$ar_result 		= section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, 'component_state', true, true);
+			#dump($ar_result,'get_ar_children_tipo_by_modelo_name_in_section '.$section_tipo);			
+
+		if (empty($ar_result[0])) {
+			return false;
+		}else{
+			$this->component_state_tipo = $ar_result[0];
+		}	
+
+		return (string)$this->component_state_tipo;
+
+	}#end get_component_state_tipo
+
+
+
+	/**
+	* GET_STATE_PROCESS_HTML
+	* @return string $state_process_html
+	*/
+	public function get_state_process_html() {
+		#dump($this->propiedades, ' $this->propiedades ++ '.to_string());
+		if (!isset($this->propiedades->state->edit_component)) {
+			return null;
+		}
+
+		$ar_children_tipo_by_modelo = section::get_ar_children_tipo_by_modelo_name_in_section($this->section_tipo, 'component_state', true, true);
+		if (empty($ar_children_tipo_by_modelo)) {
+			if(SHOW_DEBUG) {
+				debug_log(__METHOD__." Section without component_state defined in structure");
+			}
+			return null;
+		}
+		$component_state_tipo = $ar_children_tipo_by_modelo[0];
+		$component_state 	  = component_common::get_instance('component_state',
+															   $component_state_tipo,
+															   $this->parent,
+															   'edit_component',
+															   DEDALO_DATA_NOLAN,
+															   $this->section_tipo);
+		/**/
+		$state = $this->propiedades->state->edit_component;
+			#dump($state, ' state ++ '.to_string());
+		$component_state->configure_for_component( $state, $this->tipo, $this->parent, $this->section_tipo, $this->lang );
+		
+		$state_process_html = $component_state->get_html();
+
+		return $state_process_html;
+
+	}#end get_state_process_html
+
+
+
+
+	
+
+
+
 
 
 }

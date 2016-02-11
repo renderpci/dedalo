@@ -40,6 +40,7 @@
 				
 						# pdf THUMB
 						if($file_exists) { 
+
 							$html_contenido .= "\n <div class=\"css_wrap_pdf_thumb\" onclick=\"\" >";
 							/*
 							#Embed PDF File
@@ -52,9 +53,24 @@
 							
 							$html_contenido .= $pdf_thumb_html ; # Rendered in thumb mode
 							$html_contenido .= "\n </div>";
+
 						}else{
-							$html_contenido .= "\n <div class=\"css_wrap_pdf_thumb\" >";
-							$html_contenido .= "  <span class=\"notas\">No file is loaded</span>" ;
+
+							$open_tool_default='';
+							$add_class='';
+							# FILE NOT EXISTS. PLACE DEDALO PDF WITH LINK TO DEFAULT TOOL							
+							$open_tool_default ="data-pdf_id=\"$pdf_id\"
+							data-quality=\"".DEDALO_PDF_QUALITY_DEFAULT."\"
+							data-aditional_path=\"$aditional_path\"
+							data-initial_media_path=\"$initial_media_path\"
+							data-tipo=\"$tipo\"
+							data-parent=\"$parent\"
+							data-section_tipo=\"$section_tipo\"
+							onclick=\"tool_common.open_tool_upload(this)\"
+							title=\"Upload file in original quality\" ";
+
+							$html_contenido .= "\n <div class=\"css_wrap_pdf_thumb no_pdf_file\" $open_tool_default>";
+							$html_contenido .= "  <span class=\"\">No file is loaded. Click to upload PDF</span>" ;
 							$html_contenido .= "\n </div>";
 						}	
 												

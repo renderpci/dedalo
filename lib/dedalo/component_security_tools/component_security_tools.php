@@ -31,12 +31,26 @@
 	
 	switch($modo) {
 
-		case 'edit'		:	$id_wrapper = 'wrapper_'.$identificador_unico;
-							$input_name = "{$tipo}_{$parent}";
-							$ar_tools = $this->get_ar_tools();	#dump($ar_tools,'ar_tools');	
-							$component_info 	= $this->get_component_info('json');						
-							break;				
-		case 'list'		:  	return null;				
+		case 'edit'		:	
+
+				if ($section_tipo==DEDALO_SECTION_USERS_TIPO) {
+					if(SHOW_DEBUG) {
+						echo "DEBUG MODE ONLY:";
+					}else{
+						return null;
+					}					
+				}
+				
+				$id_wrapper 	= 'wrapper_'.$identificador_unico;
+				$input_name 	= "{$tipo}_{$parent}";					
+				$component_info = $this->get_component_info('json');
+
+				$ar_tools = $this->get_ar_tools_resolved();	#dump($ar_tools,'ar_tools');					
+				break;	
+
+		case 'list' : 
+				return null;	
+				break;			
 			
 	}
 		

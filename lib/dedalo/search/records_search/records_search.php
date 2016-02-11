@@ -2,15 +2,32 @@
 	
 	# CONTROLLER
 	$modo							= $this->get_modo();
-	$section_tipo 					= $this->section_tipo;
-	$search_options_session_key	 	= 'section_'.$section_tipo;
+	$section_tipo 					= $this->section_tipo;	
 	$permissions					= common::get_permissions($this->search_list_tipo);		#dump($permissions, ' permissions');
 		
-	$context = (object)$this->section_obj->context; # inyectado a la sección y usado para generar pequeñas modificaciones en la visualización del section list como por ejemplo el link de enlazar un registro con un portal
+	
+	
+
+	#
+	# OPTIONS CUSTOM
+	# inyectado a la sección y usado para generar pequeñas modificaciones en la visualización del section list como por ejemplo el link de enlazar un registro con un portal
+	$context = (object)$this->section_obj->context; 
+	switch (true) {		
+		case ( isset($context->context_name) && $context->context_name=='section_tool' && isset($context->tool_section_tipo) ):
+			#
+			# SECTION TOOL CASE
+			# When current section is 'section_tool', $section_obj->context->section_tool was set with section_tool propiedades. In this case
+			# section list of referenced 'tool_section_tipo' is used for create this session_key
+			$search_options_session_key = 'section_'.$context->tool_section_tipo;
+			break;
+		default:
+			$search_options_session_key	= 'section_'.$section_tipo;			
+			break;
+	}
+
 	if (!isset($context->context_name)) {
 		$context->context_name = false;
 	}
-	
 
 	/**
 	* TEMPORAL !!
@@ -78,7 +95,8 @@
 				$ar_search_fields = $this->get_ar_search_fields();
 
 				# BUTTONS						
-				$ar_tools_search = $this->get_ar_tools_search();				
+				$ar_tools_search = $this->get_ar_tools_search();
+					#dump($ar_tools_search, ' ar_tools_search ++ '.to_string());				
 				break;
 
 		case 'relation':

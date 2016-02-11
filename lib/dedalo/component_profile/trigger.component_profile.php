@@ -20,6 +20,8 @@ if(empty($mode)) exit("<span class='error'> Trigger: Error Need mode..</span>");
 */
 if($mode=='apply_profile') {
 
+	die("DEPRECATED 09-02-2016");
+
 	if (empty($selected_option)) {
 		exit("Error: selected profile is empty");
 	}

@@ -35,12 +35,16 @@
 		case ($permissions>=2)	:					
 
 					#
-					# Text area
+					# TEXT AREA
 					#
 					$html_contenido .= "\n <textarea class=\"css_text_area {$ar_css['css_text_area']} text_area_transcription\"
 					id=\"{$identificador_unico}\"
 					name=\"{$input_name}\"
-					data-tipo=\"{$tipo}\" data-lang=\"{$lang}\" data-section_tipo=\"{$section_tipo}\" data-parent=\"{$parent}\" data-last_tag_index_id=\"{$last_tag_index_id}\"
+					data-tipo=\"{$tipo}\"
+					data-lang=\"{$lang}\"
+					data-section_tipo=\"{$section_tipo}\"
+					data-parent=\"{$parent}\"
+					data-last_tag_index_id=\"{$last_tag_index_id}\"
 					title=\"$html_title\">$dato</textarea>";
 
 					# Init text editor

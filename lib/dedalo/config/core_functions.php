@@ -1,4 +1,6 @@
 <?php
+#namespace dedalo4;
+
 /**
 * DUMP
 * @param $val
@@ -92,13 +94,11 @@ function dump($val, $var_name=NULL, $arguments=array()){
 	}
 
 	# LOG MESSAGE
-	#global $log_messages ;
-	#$log_messages .= wrap_pre($html);
+	#$GLOBALS['log_messages'][] = wrap_pre($html);
 
 	# CONSOLE ERROR LOG
 	error_log('-->'.$html);
 
-	
 
 	return wrap_pre($html);
 }
@@ -108,12 +108,39 @@ function wrap_pre($string) {
 	#$html .= "\n<html xmlns=\"http://www.w3.org/1999/xhtml\" ><body>";	
 	$html .= "\n<!DOCTYPE html>";
 	$html .= "\n<meta http-equiv=\"Content-Type\" content=\"text/html; charset=UTF-8\" />";
-	$html .= "<pre class=\"dump\" style=\"font-family:monospace;color:#4B5D5E;font-size:0.9em;background-color:rgba(217, 227, 255, 0.8);border-radius:5px;padding:10px;position:relative;z-index:9999\">";
+	$html .= "<pre class=\"dump\" style=\"min-width:500px;font-family:monospace;color:#4B5D5E;font-size:0.8em;background-color:rgba(217, 227, 255, 0.8);border-radius:5px;padding:10px;position:relative;z-index:9999\">";
 	$html .= "<div class=\"icon_warning\" ></div>";
 	$html .= stripslashes($string);
 	$html .= "\n</pre>";
 	#$html .= "\n</body></html>";
 	return $html;
+}
+
+function wrap_html($string) {
+	$html='';
+	$html .= "\n<!DOCTYPE html>";
+	$html .= "\n<meta http-equiv=\"Content-Type\" content=\"text/html; charset=UTF-8\" />";
+	$html .= "\n<html><body>";
+	$html .= nl2br( htmlspecialchars($string) );
+	$html .= "\n</body></html>";
+	return $html;
+}
+
+
+function debug_log($info, $level=logger::DEBUG) {
+	if(!SHOW_DEBUG) return false;
+	/* level ref
+	const DEBUG 	= 100;
+	const INFO 		= 75;
+	const NOTICE 	= 50; 
+	const WARNING 	= 25;
+	const ERROR 	= 10;
+	const CRITICAL 	= 5;
+	*/
+	$msg = "DEBUG_LOG [".logger::level_to_string($level)."] $info";
+	error_log($msg);
+
+	$GLOBALS['log_messages'][] = $msg;
 }
 
 
@@ -133,23 +160,23 @@ function file_get_contents_curl($url) {
 # START_TIME
 function start_time() {
 	$mtime = explode(' ',microtime());
-    return $mtime[1]+$mtime[0];
+	return $mtime[1]+$mtime[0];
 }
 # EXEC_TIME
 function exec_time($start, $method=NULL, $result=NULL) {
-    $end = start_time();
-    $total = $end - $start;
-    $total = $total*1000;
-    if($total>100){
-    	$exec  = sprintf(' Exec in <span style=\'color:red\'>%.3f ms.</span>', $total) ;
-    }else{
-    	$exec  = sprintf(' Exec in %.3f ms.', $total) ;
-    }    
+	$end = start_time();
+	$total = $end - $start;
+	$total = $total*1000;
+	if($total>100){
+		$exec  = sprintf(' Exec in <span style=\'color:red\'>%.3f ms.</span>', $total) ;
+	}else{
+		$exec  = sprintf(' Exec in %.3f ms.', $total) ;
+	}    
 
-    $final_string = '<b>' . $method . '</b>' . $exec ;
+	$final_string = '<b>' . $method . '</b>' . $exec ;
 
-    if(!empty($result))
-    $final_string .= ' Res '.to_string($result) ;
+	if(!empty($result))
+	$final_string .= ' Res '.to_string($result) ;
 
 	#return $final_string ;
 	return '<pre>'.$final_string.'</pre>' ;
@@ -157,13 +184,13 @@ function exec_time($start, $method=NULL, $result=NULL) {
 # EXEC_TIME_UNIT
 function exec_time_unit($start, $unit='ms', $round=3) {
 	$end = start_time();
-    $total = $end - $start;
-    if($unit=='ms') {
-    	$total = $total*1000; 
+	$total = $end - $start;
+	if($unit=='ms') {
+		$total = $total*1000; 
 	}else if($unit=='sec') {
 		$total = $total; 
 	}  
-    return round($total,3);
+	return round($total,3);
 }
 
 # TO_STRING
@@ -187,7 +214,7 @@ function to_string($var=null) {
 			return 'Array(empty)';
 		}
 		return print_r($var,true);	
-		 	
+			
 	}else if (is_object($var)) {
 		return '<pre>'.print_r($var,true).'</pre>';
 	}	
@@ -208,41 +235,64 @@ function get_last_modification_date($path, $allowedExtensions=null, $ar_exclude=
 		  'css'
 		);
 	}
-    
-    if (!file_exists($path))
-        return 0;
+	
+	if (!file_exists($path))
+		return 0;
 
 	foreach ($ar_exclude as $exclude) {
 		if ( strpos($path, $exclude)!==false ) return 0;
 	}    
-    
-    $ar_bits = explode(".", $path);
-    $extension = end($ar_bits);
-    if (is_file($path) && in_array($extension, $allowedExtensions))
-        return filemtime($path);
-    $ret = 0;
-    
-    if (is_array(glob($path."/*"))) foreach (glob($path."/*") as $fn)
+	
+	$ar_bits = explode(".", $path);
+	$extension = end($ar_bits);
+	if (is_file($path) && in_array($extension, $allowedExtensions))
+		return filemtime($path);
+	$ret = 0;
+	
+	if (is_array(glob($path."/*"))) foreach (glob($path."/*") as $fn)
 	{
-        if (get_last_modification_date($fn,$allowedExtensions,$ar_exclude) > $ret)
-            $ret = get_last_modification_date($fn,$allowedExtensions,$ar_exclude);    
-            // This will return a timestamp, you will have to use date().
+		if (get_last_modification_date($fn,$allowedExtensions,$ar_exclude) > $ret)
+			$ret = get_last_modification_date($fn,$allowedExtensions,$ar_exclude);    
+			// This will return a timestamp, you will have to use date().
 	}
 	#dump($ret,'$ret');
-    return $ret;
+	return $ret;
 }
 
 # CRIPTO : if (!function_exists('mcrypt_encrypt'))
-function dedalo_encryptStringArray ($stringArray, $key = DEDALO_INFORMACION) {	
-	if (!function_exists('mcrypt_encrypt')) throw new Exception("Error Processing Request: Lib MCRYPT unavailable.", 1);	
+function dedalo_encryptStringArray ($stringArray, $key = DEDALO_INFORMACION) {
+	
+	if (!function_exists('mcrypt_encrypt')) throw new Exception("Error Processing Request: Lib MCRYPT unavailable.", 1);
 	$s = strtr(base64_encode(mcrypt_encrypt(MCRYPT_RIJNDAEL_256, md5($key), serialize($stringArray), MCRYPT_MODE_CBC, md5(md5($key)))), '+/=', '-_,');	
 	return $s;
 }
-function dedalo_decryptStringArray ($stringArray, $key = DEDALO_INFORMACION) {	
+function dedalo_decryptStringArray ($stringArray, $key = DEDALO_INFORMACION) {
+	
 	if (!function_exists('mcrypt_encrypt')) throw new Exception("Error Processing Request: Lib MCRYPT unavailable.", 1);
- 	$s = unserialize(rtrim(mcrypt_decrypt(MCRYPT_RIJNDAEL_256, md5($key), base64_decode(strtr($stringArray, '-_,', '+/=')), MCRYPT_MODE_CBC, md5(md5($key))), "\0")); 	
- 	return $s;
+	$s = rtrim(mcrypt_decrypt(MCRYPT_RIJNDAEL_256, md5($key), base64_decode(strtr($stringArray, '-_,', '+/=')), MCRYPT_MODE_CBC, md5(md5($key))), "\0");	
+	if ( is_serialized($s) ) {
+		return unserialize($s);
+	}else{
+		debug_log(__METHOD__." Current string is not correctly serialized ! ".to_string(), logger::DEBUG);
+		return false;
+	}
+	/*
+	try {
+		if ($s == serialize(false)) {
+			$s = unserialize($s);
+		}		
+	} catch (Exception $e) {
+		$s = false;
+	}
+		
+	return $s;
+	*/
 }
+
+function is_serialized($str) {
+	return ($str == serialize(false) || @unserialize($str) !== false);
+}
+
 
 /**
 * Search for a key in an array, returning a path to the entry.
@@ -261,15 +311,15 @@ function dedalo_decryptStringArray ($stringArray, $key = DEDALO_INFORMACION) {
 */
 function array_key_path($needle, $haystack, $forbidden = array(), $path = array()) {
   foreach ($haystack as $key => $val) {
-    if (in_array($key, $forbidden)) {
-      continue;
-    }
-    if (is_array($val) && is_array($sub = array_key_path($needle, $val, $forbidden, array_merge($path, (array)$key)))) {
-      return $sub;
-    }
-    elseif ($key === $needle) {
-      return array_merge($path, (array)$key);
-    }
+	if (in_array($key, $forbidden)) {
+	  continue;
+	}
+	if (is_array($val) && is_array($sub = array_key_path($needle, $val, $forbidden, array_merge($path, (array)$key)))) {
+	  return $sub;
+	}
+	elseif ($key === $needle) {
+	  return array_merge($path, (array)$key);
+	}
   }
   return FALSE;
 }
@@ -288,7 +338,7 @@ function array_key_path($needle, $haystack, $forbidden = array(), $path = array(
 function &array_path(&$array, $path) {
   $offset =& $array;
   if ($path) foreach ($path as $index) {
-    $offset =& $offset[$index];
+	$offset =& $offset[$index];
   }
   return $offset;
 }
@@ -300,7 +350,7 @@ function &array_path(&$array, $path) {
 function alist ($array) {  //This function prints a text array as an html list.
   $alist = "<ul>";
   for ($i = 0; $i < sizeof($array); $i++) {
-    $alist .= "<li>$array[$i]";
+	$alist .= "<li>$array[$i]";
   }
   $alist .= "</ul>";
   return $alist;
@@ -309,16 +359,16 @@ function alist ($array) {  //This function prints a text array as an html list.
 # ARRAY_KEYS_RECURSIVE : FLAT ARRAY
 function array_keys_recursive(array $array) {
 
-    $keys = array();
+	$keys = array();
  
-    foreach ($array as $key => $value) {
-        $keys[] = $key;
+	foreach ($array as $key => $value) {
+		$keys[] = $key;
  
-        if (is_array($array[$key])) {
-            $keys = array_merge($keys, array_keys_recursive($array[$key]));
-        }
-    } 
-    return $keys;
+		if (is_array($array[$key])) {
+			$keys = array_merge($keys, array_keys_recursive($array[$key]));
+		}
+	} 
+	return $keys;
 }
 
 $codHeader = '<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />';
@@ -388,18 +438,18 @@ function clean_url_vars($current_var=array()) {
 # SANITIZE_OUTPUT
 function sanitize_output($buffer) {
 
-    $search = array(
-        '/\>[^\S ]+/s', //strip whitespaces after tags, except space
-        '/[^\S ]+\</s', //strip whitespaces before tags, except space
-        '/(\s)+/s'  // shorten multiple whitespace sequences
-        );
-    $replace = array(
-        '>',
-        '<',
-        '\\1'
-        );
-  	$buffer = preg_replace($search, $replace, $buffer);
-    return $buffer;
+	$search = array(
+		'/\>[^\S ]+/s', //strip whitespaces after tags, except space
+		'/[^\S ]+\</s', //strip whitespaces before tags, except space
+		'/(\s)+/s'  // shorten multiple whitespace sequences
+		);
+	$replace = array(
+		'>',
+		'<',
+		'\\1'
+		);
+	$buffer = preg_replace($search, $replace, $buffer);
+	return $buffer;
 }
 
 # SANITIZE_QUERY
@@ -440,8 +490,8 @@ function array_flatten($array) {
 
    $return = array();
    foreach ($array as $key => $value) {
-       if (is_array($value)){ $return = array_merge($return, array_flatten($value));}
-       else {$return[$key] = $value;}
+	   if (is_array($value)){ $return = array_merge($return, array_flatten($value));}
+	   else {$return[$key] = $value;}
    }
    return $return;
 }
@@ -491,13 +541,13 @@ function log_messages($vars,$level='error') {
 * @return order
 */
 function build_sorter($key) {
-    return function ($a, $b) use ($key) {
-    	if (!isset($a[$key]) || !isset($b[$key])) {
-    		return;
-    	}
-        return strnatcmp($a[$key], $b[$key]);
-        #return strcmp($a[$key], $b[$key]);
-    };
+	return function ($a, $b) use ($key) {
+		if (!isset($a[$key]) || !isset($b[$key])) {
+			return;
+		}
+		return strnatcmp($a[$key], $b[$key]);
+		#return strcmp($a[$key], $b[$key]);
+	};
 }
 
 
@@ -505,9 +555,9 @@ function search_string_in_array($array, $search_string) {
 		
 	$matches = array();
 	foreach($array as $k=>$v) {
-	    if(preg_match("/\b$search_string/i", $v)) {
-	        $matches[$k] = $v;
-	    }
+		if(preg_match("/\b$search_string/i", $v)) {
+			$matches[$k] = $v;
+		}
 	}
 	return $matches;
 }
@@ -562,51 +612,51 @@ function decbin32 ($dec) {
 // use one of the above 3 formats.
 function ip_in_range($ip, $range) {
   if (strpos($range, '/') !== false) {
-    // $range is in IP/NETMASK format
-    list($range, $netmask) = explode('/', $range, 2);
-    if (strpos($netmask, '.') !== false) {
-      // $netmask is a 255.255.0.0 format
-      $netmask = str_replace('*', '0', $netmask);
-      $netmask_dec = ip2long($netmask);
-      return ( (ip2long($ip) & $netmask_dec) == (ip2long($range) & $netmask_dec) );
-    } else {
-      // $netmask is a CIDR size block
-      // fix the range argument
-      $x = explode('.', $range);
-      while(count($x)<4) $x[] = '0';
-      list($a,$b,$c,$d) = $x;
-      $range = sprintf("%u.%u.%u.%u", empty($a)?'0':$a, empty($b)?'0':$b,empty($c)?'0':$c,empty($d)?'0':$d);
-      $range_dec = ip2long($range);
-      $ip_dec = ip2long($ip);
+	// $range is in IP/NETMASK format
+	list($range, $netmask) = explode('/', $range, 2);
+	if (strpos($netmask, '.') !== false) {
+	  // $netmask is a 255.255.0.0 format
+	  $netmask = str_replace('*', '0', $netmask);
+	  $netmask_dec = ip2long($netmask);
+	  return ( (ip2long($ip) & $netmask_dec) == (ip2long($range) & $netmask_dec) );
+	} else {
+	  // $netmask is a CIDR size block
+	  // fix the range argument
+	  $x = explode('.', $range);
+	  while(count($x)<4) $x[] = '0';
+	  list($a,$b,$c,$d) = $x;
+	  $range = sprintf("%u.%u.%u.%u", empty($a)?'0':$a, empty($b)?'0':$b,empty($c)?'0':$c,empty($d)?'0':$d);
+	  $range_dec = ip2long($range);
+	  $ip_dec = ip2long($ip);
 
-      # Strategy 1 - Create the netmask with 'netmask' 1s and then fill it to 32 with 0s
-      #$netmask_dec = bindec(str_pad('', $netmask, '1') . str_pad('', 32-$netmask, '0'));
+	  # Strategy 1 - Create the netmask with 'netmask' 1s and then fill it to 32 with 0s
+	  #$netmask_dec = bindec(str_pad('', $netmask, '1') . str_pad('', 32-$netmask, '0'));
 
-      # Strategy 2 - Use math to create it
-      $wildcard_dec = pow(2, (32-$netmask)) - 1;
-      $netmask_dec = ~ $wildcard_dec;
+	  # Strategy 2 - Use math to create it
+	  $wildcard_dec = pow(2, (32-$netmask)) - 1;
+	  $netmask_dec = ~ $wildcard_dec;
 
-      return (($ip_dec & $netmask_dec) == ($range_dec & $netmask_dec));
-    }
+	  return (($ip_dec & $netmask_dec) == ($range_dec & $netmask_dec));
+	}
   } else {
-    // range might be 255.255.*.* or 1.2.3.0-1.2.3.255
-    if (strpos($range, '*') !==false) { // a.b.*.* format
-      // Just convert to A-B format by setting * to 0 for A and 255 for B
-      $lower = str_replace('*', '0', $range);
-      $upper = str_replace('*', '255', $range);
-      $range = "$lower-$upper";
-    }
+	// range might be 255.255.*.* or 1.2.3.0-1.2.3.255
+	if (strpos($range, '*') !==false) { // a.b.*.* format
+	  // Just convert to A-B format by setting * to 0 for A and 255 for B
+	  $lower = str_replace('*', '0', $range);
+	  $upper = str_replace('*', '255', $range);
+	  $range = "$lower-$upper";
+	}
 
-    if (strpos($range, '-')!==false) { // A-B format
-      list($lower, $upper) = explode('-', $range, 2);
-      $lower_dec = (float)sprintf("%u",ip2long($lower));
-      $upper_dec = (float)sprintf("%u",ip2long($upper));
-      $ip_dec = (float)sprintf("%u",ip2long($ip));
-      return ( ($ip_dec>=$lower_dec) && ($ip_dec<=$upper_dec) );
-    }
+	if (strpos($range, '-')!==false) { // A-B format
+	  list($lower, $upper) = explode('-', $range, 2);
+	  $lower_dec = (float)sprintf("%u",ip2long($lower));
+	  $upper_dec = (float)sprintf("%u",ip2long($upper));
+	  $ip_dec = (float)sprintf("%u",ip2long($ip));
+	  return ( ($ip_dec>=$lower_dec) && ($ip_dec<=$upper_dec) );
+	}
 
-    echo 'Range argument is not in 1.2.3.4/24 or 1.2.3.4/255.255.255.0 format';
-    return false;
+	echo 'Range argument is not in 1.2.3.4/24 or 1.2.3.4/255.255.255.0 format';
+	return false;
   }
 
 }
@@ -634,6 +684,17 @@ function get_top_tipo() {
 
 
 
-
+function dd_memory_usage() { 
+	$mem_usage = memory_get_usage(true); 
+	$total='';
+	if ($mem_usage < 1024) 
+		$total .= $mem_usage." BYTES";
+	elseif ($mem_usage < 1048576) 
+		$total .= round($mem_usage/1024,2)." KB";
+	else 
+		$total .= round($mem_usage/1048576,2)." MB";
+		
+	return $total; 
+}
 
 ?>

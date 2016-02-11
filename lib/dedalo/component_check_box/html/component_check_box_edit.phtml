@@ -45,6 +45,7 @@
 						
 		case ($permissions>=2) :					
 		
+					$html_contenido .= "<ul class=\"group\">";
 					foreach ($ar_list_of_values->result as $value => $rotulo) {
 
 						$value   = (string)$value; 
@@ -63,18 +64,26 @@
 							$checked = "";
 						}
 						*/
-						$html_contenido .= "\n <input class=\"css_check_box {$ar_css['css_check_box']}\" type=\"checkbox\" 
+						$html_contenido .= "<li>";
+
+						# 
+						# INPUT
+						$html_contenido .= "\n <input type=\"checkbox\" class=\"css_check_box\"
 						name=\"{$input_name}\"
 						data-tipo=\"{$tipo}\"
 						data-lang=\"{$lang}\"
 						data-section_tipo=\"{$section_tipo}\"
 						data-parent=\"{$parent}\"
-						value='$value' 
+						value='$value'
 						title=\"$html_title\" $checked />";	#id=\"{$identificador_unico}\" 
-												
-						$html_contenido .= "\n <label class=\"css_check_box_rotulo {$ar_css['css_check_box_rotulo']}\" $required_code >$rotulo</label>";
-						$html_contenido .= "\n <br>";	
-					}							
+						
+						#
+						# LABEL				
+						$html_contenido .= " <label class=\"css_check_box_rotulo\" $required_code >$rotulo</label>";
+
+						$html_contenido .= "</li>";
+					}
+					$html_contenido .= "</ul>";						
 							
 	}
 

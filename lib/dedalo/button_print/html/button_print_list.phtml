@@ -22,15 +22,13 @@
 		case ($permissions>=2)	:
 
 					$html_contenido .= "\n <div class=\"css_button_generic css_button_print link\"
-					onclick=\"tool_common.open_tool_layout_print(this)\" 
-					data-tipo=\"{$tipo}\" data-target_section_tipo=\"{$target_section_tipo}\" 
+					onclick=\"tool_common.open_tool_layout_print(this)\"
+					data-tipo=\"{$tipo}\"
+					data-target_section_tipo=\"{$target_section_tipo}\"
 					title=\"$html_title\" >";
 					$html_contenido .= $label;
-					$html_contenido .= "</div>";					
+					$html_contenido .= "</div>";
 	
-					
-			if($permissions==3)		
-					$html_contenido .= "\n <span class=\"css_span_debugger\" id=\"debugger_{$tipo}\" >{$debugger}</span>";	
 	}
 	
 	

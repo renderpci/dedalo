@@ -20,6 +20,7 @@ class tool_import_zotero extends tool_common {
 	protected $button_import_propiedades;	# used to store custom options (script path, etc.)
 	protected $valid_extensions;
 
+	public static $process_script = false;
 
 	public function __construct( $section_obj, $modo ) {
 
@@ -51,8 +52,9 @@ class tool_import_zotero extends tool_common {
 				if ( !include_once(DEDALO_LIB_BASE_PATH.$propiedades->process_script) ) {
 					throw new Exception("Error Processing Request. Error in button import zotero config. Wrong process_script path", 1);
 				}
+				tool_import_zotero::$process_script = $propiedades->process_script;	// Fix current path
 				if(SHOW_DEBUG) {
-					#error_log(__METHOD__."NOTICE: Loaded custom tool options: ".DEDALO_LIB_BASE_PATH.$propiedades->process_script);
+					error_log("DEBUG INFO ".__METHOD__." Loaded custom tool options: ".DEDALO_LIB_BASE_PATH.$propiedades->process_script);
 				}
 			}
 
@@ -387,7 +389,7 @@ class tool_import_zotero extends tool_common {
 			if ($section_id<1) throw new Exception("Error Processing Request. section_id is empty", 1);
 
 			#
-			# SECTION : Force create section record if not exits
+			# SECTION : Force create secti0on record if not exits
 			$section = section::get_instance($section_id, $section_tipo);
 			$forced_create_record = $section->forced_create_record();
 
@@ -408,7 +410,7 @@ class tool_import_zotero extends tool_common {
 					$component_tipo	 		= key($propiedades_current_setion->filtered_by);
 						#dump($propiedades_current_setion," propiedades_current_setion - component_tipo: $component_tipo");					
 					$component_dato 		= $propiedades_current_setion->filtered_by->$component_tipo;
-					$component_modelo_name  = RecordObj_dd::get_modelo_name_by_tipo($component_tipo);	
+					$component_modelo_name  = RecordObj_dd::get_modelo_name_by_tipo($component_tipo);
 					$current_component 		= component_common::get_instance($component_modelo_name, $component_tipo, $parent, 'edit', DEDALO_DATA_NOLAN, $section_tipo);
 					$current_component->set_dato($component_dato);
 					#$current_component->Save();

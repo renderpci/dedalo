@@ -180,10 +180,10 @@ abstract class JSON_RecordDataBoundObject {
 			}
 		}
 		*/
-		
 
 		# DATOS : JSON ENCODE ALWAYS !!!
 		$datos = json_handler::encode($this->datos);
+
 		
 		#
 		# SAVE UPDATE : Record already exists

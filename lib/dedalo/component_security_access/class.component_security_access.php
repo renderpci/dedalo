@@ -138,7 +138,7 @@ class component_security_access extends component_common {
 			*/
 		# Get array of authorized areas for current user id
 			//dump(DEDALO_COMPONENT_SECURITY_AREAS_USER_TIPO); die();
-		$ar_authorized_areas_for_user = (array)component_security_areas::get_ar_authorized_areas_for_user($user_id, $mode_result='full', DEDALO_COMPONENT_SECURITY_AREAS_USER_TIPO);
+		$ar_authorized_areas_for_user = (array)component_security_areas::get_ar_authorized_areas_for_user($user_id, $mode_result='full', DEDALO_COMPONENT_SECURITY_AREAS_USER_TIPO, DEDALO_SECTION_USERS_TIPO);
 			#dump($ar_authorized_areas_for_user,'ar_authorized_areas_for_user');
 
 		
@@ -382,11 +382,16 @@ class component_security_access extends component_common {
 		
 
 		# OPTION 0 
-		$html .= "\n <input class=\"css_security_radio_button\" type=\"radio\" 
+		$html .= "\n <input class=\"css_security_radio_button\" type=\"radio\" onchange=\"component_security_access.Save(this)\"
 						name=\"{$tipo}_{$parent}_tm\" 
-						data-tipo=\"{$tipo}\" data-parent=\"{$caller_id}\" data-id_matrix=\"{$parent}\" data-lang=\"{$lang}\" data-caller_tipo=\"{$caller_tipo}\" data-flag=\"component_security_access\"
+						data-tipo=\"{$tipo}\"
+						data-parent=\"{$caller_id}\"
+						data-id_matrix=\"{$parent}\"
+						data-lang=\"{$lang}\"
+						data-caller_tipo=\"{$caller_tipo}\"
+						data-flag=\"component_security_access\"
 						value=\"0\"
-						title=\"No access\"						
+						title=\"No access\"
 						$checked $disabled /> <span class=\"span_property\">X</span> ";
 		
 		# OPTION 1 . READ ONLY
@@ -395,9 +400,14 @@ class component_security_access extends component_common {
 		/*
 		$html .= "\n  <input class=\"css_security_radio_button\" type=\"radio\" name=\"{$tipo}_{$name_tm}\" data-tipo=\"{$tipo}\" value=\"1\" id=\"{$id}\" title=\"Read only\" flag=\"component_security_access\" $checked $disabled />r";
 		*/
-		$html .= "\n <input class=\"css_security_radio_button\" type=\"radio\" 
+		$html .= "\n <input class=\"css_security_radio_button\" type=\"radio\" onchange=\"component_security_access.Save(this)\" 
 						name=\"{$tipo}_{$parent}_tm\" 
-						data-tipo=\"{$tipo}\" data-parent=\"{$caller_id}\" data-id_matrix=\"{$parent}\" data-lang=\"{$lang}\" data-caller_tipo=\"{$caller_tipo}\" data-flag=\"component_security_access\"
+						data-tipo=\"{$tipo}\"
+						data-parent=\"{$caller_id}\"
+						data-id_matrix=\"{$parent}\"
+						data-lang=\"{$lang}\"
+						data-caller_tipo=\"{$caller_tipo}\"
+						data-flag=\"component_security_access\"
 						value=\"1\"
 						title=\"Read only\"
 						$checked $disabled /> <span class=\"span_property\">R</span> ";
@@ -408,9 +418,14 @@ class component_security_access extends component_common {
 		/*
 		$html .= "\n  <input class=\"css_security_radio_button\" type=\"radio\" name=\"{$tipo}_{$name_tm}\" data-tipo=\"{$tipo}\" value=\"2\" id=\"{$id}\" title=\"Read and write\" flag=\"component_security_access\" $checked $disabled />w ";
 		*/
-		$html .= "\n <input class=\"css_security_radio_button\" type=\"radio\" 
+		$html .= "\n <input class=\"css_security_radio_button\" type=\"radio\" onchange=\"component_security_access.Save(this)\"
 						name=\"{$tipo}_{$parent}_tm\" 
-						data-tipo=\"{$tipo}\" data-parent=\"{$caller_id}\" data-id_matrix=\"{$parent}\" data-lang=\"{$lang}\" data-caller_tipo=\"{$caller_tipo}\" data-flag=\"component_security_access\"
+						data-tipo=\"{$tipo}\"
+						data-parent=\"{$caller_id}\"
+						data-id_matrix=\"{$parent}\"
+						data-lang=\"{$lang}\"
+						data-caller_tipo=\"{$caller_tipo}\"
+						data-flag=\"component_security_access\"
 						value=\"2\"
 						title=\"Read and write\"
 						$checked $disabled /> <span class=\"span_property\">RW</span> ";
@@ -597,7 +612,7 @@ class component_security_access extends component_common {
 			
 			# Create object ($component_security_access_tipo created at first)
 			#$component_security_access = new component_security_access($component_security_access_tipo, $user_id, 'edit', DEDALO_DATA_NOLAN);
-			$component_security_access = component_common::get_instance('component_security_access', $component_security_access_tipo, $parent, 'edit', DEDALO_DATA_NOLAN, DEDALO_SECTION_USERS_TIPO);
+			$component_security_access = component_common::get_instance('component_security_access', $component_security_access_tipo, $parent, 'edit', DEDALO_DATA_NOLAN, $parent_section_tipo); //DEDALO_SECTION_USERS_TIPO
 				#dump($component_security_access,'$component_security_access'); return;
 
 

@@ -11,21 +11,37 @@
 
 
 /*-- PDF --*/
-DIV.pdf_thumb_icon {
+div.pdf_thumb_icon {
 	width: 52px;
 	height: 56px;
 	display: inline-block;
 	background-image: url('../../themes/default/pdf_icon.png');
 	background-repeat: no-repeat;
 	background-position: center;
+	cursor: pointer;
 	}	
-	DIV.pdf_thumb_icon:hover {
-		cursor: pointer;
+	div.pdf_thumb_icon:hover {		
 	}
 
+.no_pdf_file {
+	width: 52px;
+	height: 56px;
+	display: inline-block;
+	background-image: url('../../themes/default/pdf_icon.png');
+	background-repeat: no-repeat;
+	background-position: left;
+	padding-left: 56px;
+	padding-top: 19px;
+	font-size: 1.0em;
+	cursor: pointer;
+	opacity: 0.4;
+	margin-bottom: 10px;
+	}
+	.no_pdf_file:hover {
+		opacity: 0.2
+	}
 
-
-DIV.pdf_thumb_icon_default {
+div.pdf_thumb_icon_default {
 	width: 52px;
 	height: 56px;
 	
@@ -35,7 +51,7 @@ DIV.pdf_thumb_icon_default {
 	background-size:96px 56px;
 	opacity: 0.3;
 }
-DIV.pdf_text_no_file {
+div.pdf_text_no_file {
 	opacity: 0.4;
 }
 /*-- OBJECT TRANSCRIPTION --*/

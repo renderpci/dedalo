@@ -77,6 +77,7 @@ class component_autocomplete_ts extends component_common {
 
 	# SET_DATO . With regex verification
 	public function set_dato($dato) {
+		
 		if (is_string($dato)) {
 			$dato = json_decode($dato);
 		}
@@ -87,7 +88,7 @@ class component_autocomplete_ts extends component_common {
 
 		# Remove possible duplicates
 		$dato_unique=array();
-		foreach ($dato as $locator) {
+		foreach ((array)$dato as $locator) {
 			if (!in_array($locator, $dato_unique)) {
 				$dato_unique[] = $locator;
 			}		
@@ -144,6 +145,9 @@ class component_autocomplete_ts extends component_common {
 			$current_valor .= RecordObj_ts::get_termino_by_tipo($terminoID, $lang, true);
 				#dump($current_valor, ' current_valor ++ '.to_string($lang));
 
+			
+
+
 			#if (!empty($propiedades->jer_tipo) && $propiedades->jer_tipo==2) {
 				# Show with childrens like "Benimamet - Valencia - Spain"
 				$RecordObj_ts = new RecordObj_ts($terminoID);
@@ -155,6 +159,11 @@ class component_autocomplete_ts extends component_common {
 					}
 			#}
 			#dump($current_locator, ' current_locator ++ '.to_string());
+
+			#
+			# REMOVE TAGS FROM NON TRANSLATED TERMS
+			$current_valor = strip_tags($current_valor);
+
 			$ar_valor[$current_locator_string] = $current_valor;
 
 		}//end foreach ($dato as $key => $current_locator) {
@@ -487,8 +496,7 @@ class component_autocomplete_ts extends component_common {
 			$ar_result[$current_terminoID] 	= $termino .' '. $modelo_name;
 		}
 		#dump($ar_result,'$ar_result');
-
-		#if(SHOW_DEBUG) $GLOBALS['log_messages'] .= exec_time($start_time, __METHOD__, "ar_recursive_childrens: ".count($ar_recursive_childrens) );		
+	
 		#if(SHOW_DEBUG) error_log( exec_time($start_time, __METHOD__, " string_to_search:$string_to_search ") );
 		
 		return $ar_result;
@@ -539,9 +547,7 @@ class component_autocomplete_ts extends component_common {
 			if ($pos===0) {
 				$ar_result[$terminoID] = $termino ;
 			}
-		}
-
-		#if(SHOW_DEBUG) $GLOBALS['log_messages'] .= exec_time($start_time, __METHOD__, "ar_recursive_childrens: ".count($ar_recursive_childrens) );
+		}	
 		
 
 		return $ar_result;		

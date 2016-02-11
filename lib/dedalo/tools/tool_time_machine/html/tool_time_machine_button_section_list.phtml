@@ -9,15 +9,19 @@
 	$html_time_machine   .= "\n<div class=\"tm_list_wrap\">";
 
 	$btn_title	  		  = label::get_label('abrir').' '.label::get_label('herramienta');
-	$html_time_machine   .= "\n<div class=\"icon_bs tool_time_machine_icon link\" 
-								data-tab_id=\"btn_time_machine_{$tipo}\" data-tipo=\"{$tipo}\" data-parent=\"{$parent}\" data-lang=\"{$lang}\"
+	$html_time_machine   .= "\n<div class=\"icon_bs tool_time_machine_icon link\"
+								data-tab_id=\"btn_time_machine_{$tipo}\"
+								data-tipo=\"{$tipo}\"
+								data-section_tipo=\"{$section_tipo}\"
+								data-parent=\"{$parent}\"
+								data-lang=\"{$lang}\"
 								title=\"$btn_title\"
 								onclick=\"tool_common.open_tool_time_machine(this)\"
-								> </div> ";
+								></div> ";
 
 
 	$html_time_machine   .= "<div class=\"tm_btn_label\">";							
-	$html_time_machine   .= label::get_label('tool_time_machine');	#" Time machine ";
+	$html_time_machine   .=  label::get_label('tool_time_machine');	#" Time machine ";
 	$html_time_machine   .= "</div>";
 	
 	$html_time_machine   .= "<div id=\"tm_list_container\" class=\"tm_list_container\" style=\"display:none\"><!-- Ajax load --></div>";

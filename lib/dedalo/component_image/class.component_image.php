@@ -134,7 +134,7 @@ class component_image extends component_common {
 		$thumb 	 = $this->generate_thumb();
 
 		if(SHOW_DEBUG) {
-			error_log("SAVING COMPONENT IMAGE: generate_thumb response: ".to_string($thumb));
+			debug_log(__METHOD__." SAVING COMPONENT IMAGE: generate_thumb response: ".to_string($thumb), logger::DEBUG);
 		}
 
 		return parent::Save();
@@ -223,7 +223,12 @@ class component_image extends component_common {
 			$component_tipo 	= $propiedades->image_id;
 			$component_modelo 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo, true);
 
-			$component 	= component_common::get_instance($component_modelo, $component_tipo, $this->parent, 'edit', DEDALO_DATA_NOLAN, $this->section_tipo);
+			$component 	= component_common::get_instance($component_modelo,
+														 $component_tipo,
+														 $this->parent,
+														 'edit',
+														 DEDALO_DATA_NOLAN,
+														 $this->section_tipo);
 			$dato 		= trim($component->get_dato());
 				#dump($dato,"dato - compoent tipo $this->tipo - section_tipo: ".$this->section_tipo);
 
@@ -274,7 +279,12 @@ class component_image extends component_common {
 					$component_tipo 	= $propiedades->aditional_path;
 					$component_modelo 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo);
 
-					$component 	= component_common::get_instance($component_modelo, $component_tipo, $this->parent, 'edit', DEDALO_DATA_NOLAN, $this->section_tipo);
+					$component 	= component_common::get_instance($component_modelo,
+																 $component_tipo,
+																 $this->parent,
+																 'edit',
+																 DEDALO_DATA_NOLAN,
+																 $this->section_tipo);
 					$dato 		= trim($component->get_dato());			
 
 					# Add / at begin if not exits
@@ -369,7 +379,7 @@ class component_image extends component_common {
 		$file 		= $ImageObj->get_local_full_path();
 		if(!file_exists($file)) $image_id = '0';
 	
-		return $ImageObj->get_media_path() . $image_id .'.'. $ImageObj->get_extension() ;		
+		return $ImageObj->get_media_path() . $image_id .'.'. $ImageObj->get_extension();		
 	}
 
 	
@@ -377,7 +387,8 @@ class component_image extends component_common {
 	public function get_ar_tools_obj() {
 		
 		# Remove common tools (time machine and lang)
-		unset($this->ar_tools_name);
+		#unset($this->ar_tools_name);
+		$this->ar_tools_name = array();
 
 		# Add tool_transcription
 		$this->ar_tools_name[] = 'tool_transcription';
@@ -519,6 +530,12 @@ class component_image extends component_common {
 			if(!mkdir($target_dir, 0777,true)) throw new Exception(" Error on read or create directory \"$target_quality\". Permission denied $target_dir (2)");
 		}			
 		
+		# AVOID ENLARGE IMAGES
+		if ( ($source_pixels_width*$source_pixels_height)<($target_pixels_width*$target_pixels_height) ) {
+			$target_pixels_width  = $source_pixels_width;
+			$target_pixels_height = $source_pixels_height;
+		}
+
 		if($target_pixels_width<1)  $target_pixels_width  = 720;
 		if($target_pixels_height<1) $target_pixels_height = 720;
 
@@ -571,10 +588,6 @@ class component_image extends component_common {
 	*/
 	public function generate_thumb() {
 
-		if(SHOW_DEBUG) {
-			error_log("DEBUG INFO (generate_thumb): Called generate_thumb");
-		}
-
 		# common data
 		$image_id 			 = $this->get_image_id();
 		$aditional_path 	 = $this->get_aditional_path();
@@ -585,12 +598,11 @@ class component_image extends component_common {
 		$default_image_path  = $source_ImageObj->get_local_full_path();
 
 		if (!file_exists($default_image_path)) {
-			if(SHOW_DEBUG) {
-				error_log("DEBUG INFO (generate_thumb): Default image quality don't exists. Skip create thumb.");
+			if(SHOW_DEBUG) {				
+				debug_log(__METHOD__." Default image quality don't exists. Skip create thumb. ".to_string(), logger::DEBUG);
 			}
 			return false;
 		}
-		#error_log("DEBUG INFO: Default image quality exists. Building thumb.");
 		
 		# target data (target quality is thumb)
 		$ImageObj			 = new ImageObj($image_id, DEDALO_IMAGE_THUMB_DEFAULT, $aditional_path, $initial_media_path);
@@ -600,13 +612,13 @@ class component_image extends component_common {
 			#unlink($image_thumb_path);
 			$image_thumb_path_des = $image_thumb_path.'_DES';
 			shell_exec("mv $image_thumb_path $image_thumb_path_des");
-			#error_log("DEBUG INFO: thumb exists. renaming thumb.");
 		}
 		
 		# thumb generate
-		$dd_thumb = ImageMagick::dd_thumb('list', $default_image_path, $image_thumb_path, $dimensions="102x57", $initial_media_path);
+		$dd_thumb = ImageMagick::dd_thumb('list', $default_image_path, $image_thumb_path, false, $initial_media_path);
 
-		if(SHOW_DEBUG) error_log("DEBUG INFO (generate_thumb): dd_thumb function called and executed.");
+		
+		debug_log(__METHOD__." dd_thumb function called and executed. ".to_string(), logger::DEBUG);
 
 
 		return array('path'=>$image_thumb_path,
@@ -757,7 +769,7 @@ class component_image extends component_common {
 			# media_path
 			$media_path = $this->get_image_path($current_quality);
 			if(SHOW_DEBUG) {
-				dump($media_path, ' media_path $current_quality:'.$current_quality." - ".$this->get_target_dir() );
+				#dump($media_path, "DEBUG INFO ".__METHOD__.' media_path $current_quality:'.$current_quality." - ".$this->get_target_dir() );
 			}
 			if (!file_exists($media_path)) continue; # Skip
 			
@@ -773,12 +785,9 @@ class component_image extends component_common {
 			$image_name 		= $this->get_image_id();
 			$media_path_moved 	= $folder_path_del . "/$image_name" . '_deleted_' . $date . '.' . DEDALO_IMAGE_EXTENSION;			
 			if( !rename($media_path, $media_path_moved) ) throw new Exception(" Error on move files to folder \"deleted\" . Permission denied . The files are not deleted");
-
-			if(SHOW_DEBUG) {
-				$msg=__METHOD__." \nMoved file \n$media_path to \n$media_path_moved";
-				error_log($msg);
-				#dump($msg, ' msg');
-			}
+							
+			debug_log(__METHOD__." Moved file \n$media_path to \n$media_path_moved ".to_string(), logger::DEBUG);
+						
 		}#end foreach
 
 		#
@@ -810,7 +819,7 @@ class component_image extends component_common {
 			$media_path = pathinfo($media_path,PATHINFO_DIRNAME).'/deleted';
 			$image_id 	= $this->get_image_id();
 			if(SHOW_DEBUG) {
-				dump($media_path, "media_path current_quality:$current_quality - get_image_id:$image_id");
+				#dump($media_path, "media_path current_quality:$current_quality - get_image_id:$image_id");
 			}
 			$file_pattern 	= $media_path.'/'.$image_id.'_*.'.DEDALO_IMAGE_EXTENSION;
 			$ar_files 		= glob($file_pattern);
@@ -818,26 +827,80 @@ class component_image extends component_common {
 				#dump($ar_files, ' ar_files');#continue;
 			}
 			if (empty($ar_files)) {
-				error_log("No files to restore were found for image_id:$image_id. Nothing was restored (1)");
+				debug_log(__METHOD__."  No files to restore were found for image_id:$image_id in quality:$current_quality. Nothing was restored for this quality ".to_string(), logger::DEBUG);
 				continue; // Skip
 			}
 			natsort($ar_files);	# sort the files from newest to oldest
 			$last_file_path = end($ar_files);
 			$new_file_path 	= $this->get_image_path($current_quality);		
 			if( !rename($last_file_path, $new_file_path) ) throw new Exception(" Error on move files to restore folder. Permission denied . Nothing was restored (2)");
-
-			if(SHOW_DEBUG) {
-				$msg=__METHOD__." \nMoved file \n$last_file_path to \n$new_file_path";
-				error_log($msg);
-				#dump($msg, ' msg');
-			}
-
+							
+			debug_log(__METHOD__." Successful Moved file \n$last_file_path to \n$new_file_path ".to_string(), logger::DEBUG);			
+			
 		}#end foreach
 
 		return true;
 	}#end restore_component_media_files
 
 
+
+
+	/**
+	* IMAGE_VALUE_IN_TIME_MACHINE
+	* @param string $image_value . Is valor_list of current image. We need replace path to enable view deleted image
+	* @return 
+	*/
+	public static function image_value_in_time_machine( $image_value ) {
+		
+		# Example of url: /dedalo4/media_test/media_development/image/thumb/rsc29_rsc170_33.jpg
+
+		preg_match("/src=\"(.+)\"/", $image_value, $output_array);
+		if(!isset($output_array[1])) return $image_value;
+		$image_url = $output_array[1];
+
+		$image_id = pathinfo($image_url,PATHINFO_FILENAME);
+			#dump($name, ' name ++ '.to_string());
+
+		$image_deleted = self::get_deleted_image( $quality=DEDALO_IMAGE_THUMB_DEFAULT, $image_id );
+			#dump($image_deleted, ' image_deleted ++ '.to_string());
+
+		$ar_parts 		 = explode(DEDALO_MEDIA_BASE_PATH, $image_deleted);
+		if(!isset($ar_parts[1])) return $image_value;
+		$final_image_url = DEDALO_MEDIA_BASE_URL .$ar_parts[1];
+			#dump($final_image_url, ' final_image_url ++ '.to_string());
+
+		$final_image_value = str_replace($image_url, $final_image_url, $image_value);
+			#dump($final_image_value, ' final_image_value ++ '.to_string());
+		
+		return $final_image_value;
+
+	}#end image_value_in_time_machine
+
+
+
+	/**
+	* GET_DELETED_IMAGE
+	* @return string $last_file_path
+	*/
+	public static function get_deleted_image( $quality, $image_id ) {
+
+		$media_path 	= DEDALO_MEDIA_BASE_PATH . DEDALO_IMAGE_FOLDER .'/'.$quality.'/deleted';
+		$file_pattern 	= $media_path.'/'.$image_id.'_*.'.DEDALO_IMAGE_EXTENSION;
+		$ar_files 		= glob($file_pattern);
+		if(SHOW_DEBUG) {
+			#dump($ar_files, ' ar_files');#continue;
+		}
+		if (empty($ar_files)) {			
+			debug_log(__METHOD__." No files were found for image_id:$image_id in quality:$quality. ".to_string(), logger::DEBUG);
+			return false; 
+		}
+		natsort($ar_files);	# sort the files from newest to oldest
+		$last_file_path = end($ar_files);		
+
+		return $last_file_path;
+
+	}#end get_deleted_image
+		
 
 
 
@@ -864,4 +927,5 @@ class component_image extends component_common {
 
 
 }
+
 ?>

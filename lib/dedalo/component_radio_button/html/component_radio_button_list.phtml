@@ -49,6 +49,8 @@
 		case ($permissions>=2)	:
 					#dump($ar_list_of_values,'ar_list_of_values');
 					#$html_contenido .= "<div class=\"$tipo\">";
+
+					$html_contenido .= "<ul>";
 					foreach ($ar_list_of_values->result as $value => $rotulo) {
 
 						$value   = (string)$value; 
@@ -61,21 +63,24 @@
 							$checked = "";
 						}
 
+						$html_contenido .= "<li>";
 						
-						$html_contenido .= "\n <input class=\"css_radio_button\" type=\"radio\" 
-						name=\"{$input_name}\" 
-						data-tipo=\"{$tipo}\"
-						data-lang=\"{$lang}\"
-						data-section_tipo=\"{$section_tipo}\"
-						data-parent=\"{$parent}\"
-						value='$value'
-						title=\"$html_title\" $checked />";
-						$html_contenido .= "\n <label class=\"css_radio_button_rotulo {$ar_css['css_radio_button_rotulo']}\" $required_code >$rotulo</label>";
+							$html_contenido .= "\n <input class=\"css_radio_button\" type=\"radio\" 
+							name=\"{$input_name}\" 
+							data-tipo=\"{$tipo}\"
+							data-lang=\"{$lang}\"
+							data-section_tipo=\"{$section_tipo}\"
+							data-parent=\"{$parent}\"
+							value='$value'
+							title=\"$html_title\" $checked />";
+							$html_contenido .= "\n <label class=\"css_radio_button_rotulo {$ar_css['css_radio_button_rotulo']}\" $required_code >$rotulo</label>";
 
-						if ($rotulo!=end($ar_list_of_values->result)) {
-							#$html_contenido .= "<br>";
-						}					
+							if ($rotulo!=end($ar_list_of_values->result)) {
+								#$html_contenido .= "<br>";
+							}
+						$html_contenido .= "</li>";					
 					}
+					$html_contenido .= "</ul>";
 					#$html_contenido .= "</div>";
 					#$html_contenido .= "\n <span class=\"css_span_log\"></span>";
 					#$html_contenido .= "\n <span  class=\"css_span_ejemplo {$ar_css['css_span_ejemplo']}\">$ejemplo</span>";					

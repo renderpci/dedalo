@@ -33,8 +33,7 @@
 	$image_id 				= $this->get_image_id();
 	$quality				= $this->get_quality();
 	$aditional_path			= $this->get_aditional_path();
-	$initial_media_path		= $this->get_initial_media_path();
-	#$image_url				= $this->get_image_url();
+	$initial_media_path		= $this->get_initial_media_path();	
 
 	#dump("$id,$tipo,$parent");
 
@@ -52,11 +51,23 @@
 				$component_info = $this->get_component_info('json');
 
 				#
-				# THUMB . Change temporally modo to get html
-					$this->modo 	  = 'thumb';
-					$image_thumb_html = $this->get_html();					
-					$this->modo 	  = 'edit'; # restore modo
+				# IMAGE FOR CANVAS
+					# ImageObj				
+					$maxWidht 	= $widht ;
+					$maxHeight 	= $height  ;
+					$image_url	= $this->ImageObj->get_thumb_url($maxWidht, $maxHeight, 'resize', null, 'height');	#$m $maxWidht, $maxHeight, $fx=null, $p=null, $prop=null
+						#dump($ImageObj,'$ImageObj');
+					
+					# Force refresh always 
+					$image_url	.= '&t=' . start_time();
 
+					# IMG : Dimensions w/h
+					$image_dimensions 	= $this->ImageObj->get_image_dimensions();
+						#dump($image_dimensions,'image_dimensions');
+					$img_width  = $image_dimensions[0];
+					$img_height = $image_dimensions[1];
+						#dump($image_dimensions ,'$image_dimensions ');
+					
 				break;
 
 		case 'player':
@@ -139,7 +150,7 @@
 				break;
 
 		case 'print': 
-				$image_url				= $this->get_image_url();
+				$image_url				= $this->get_image_url();	// With '0.jpg' fallback
 				break;
 	}
 

@@ -763,7 +763,7 @@ class diffusion_section_stats extends diffusion {
 							}							
 							break;
 						
-						# COMPONENT SELECT : component_select, component_select_lang
+						# COMPONENT_DATE
 						case ($modelo_name=='component_date'):
 							#dump($tvalue,'$tvalue');
 							if(isset($propiedades->valor_arguments)){
@@ -772,46 +772,76 @@ class diffusion_section_stats extends diffusion {
 							}else{
 								$current_component 	= component_common::get_instance($modelo_name, $first_key, NULL, 'list', DEDALO_DATA_NOLAN);
 								$current_component->set_dato($key);
-								#$key_resolved 		= $current_component->get_valor();							
+								#$key_resolved 		= $current_component->get_valor();			
 								$key_resolved 	= $current_component->get_valor_local();
-									dump($key_resolved, "key_resolved - key: $key - value: ".$value);
+									#dump($key_resolved, "key_resolved - key: $key - value: ".$value);
 							}
 								$current_value_obj=new stdClass();
-								$current_value_obj->$x_axis = (string)$key_resolved;								
+								$current_value_obj->$x_axis = (string)$key_resolved;
 								$current_value_obj->$y_axis = (int)$value;
 								$current_obj->values[] = $current_value_obj;
-								
+							break;
 
+						# COMPONENT_AUTOCOMPLETE_TS
+						case ($modelo_name=='component_autocomplete_ts'):
+							#dump($key, ' key ++ modelo_name: '.to_string($modelo_name));						
+							$key_json = json_decode($key); 
+							if ($key_json && is_array($key_json)) {
+								foreach ($key_json as $current_locator) {															
+								
+									$c_terminoID = component_autocomplete_ts::get_terminoID_by_locator( $current_locator );
+									#dump($c_terminoID, ' c_terminoID ++ '.to_string($key_json));
+									$key_resolved = RecordObj_ts::get_termino_by_tipo($c_terminoID, DEDALO_DATA_LANG, true, true); //$terminoID, $lang=NULL, $from_cache=false, $fallback=true
+									$key_resolved = strip_tags($key_resolved);
+									$current_value_obj=new stdClass();
+										$current_value_obj->$x_axis = (string)$key_resolved;
+										$current_value_obj->$y_axis = (int)$value;
+									$current_obj->values[] = $current_value_obj;
+										#dump($current_value_obj, ' current_value_obj ++ '.to_string());
+
+									break; // For now only first element..
+								}
+							}							
 							break;
 
 						# DEFAULT BEHAVIOR
 						default:
 							
 							#dump($key, "key first_key: $first_key - value : $value");
-							if ($key!='count') {//&& strpos($key, 'dd')===0
-								try {
-									if (intval($key)>0) {
-										$current_component 	= component_common::get_instance($modelo_name, $first_key, NULL, 'list');
-										#$current_component 	= new $modelo_name($first_key, NULL, 'list', DEDALO_DATA_LANG);
-										$current_component->set_dato($key);
-										$key_resolved 		= $current_component->get_valor();
-										//dump($first_key, ' first_key');
-									}else{
-										# Resolve key name ($key_resolved) by get_termino_by_tipo 
-										#if( is_string($key) && strlen($key)>2 ) {
-										$prefix_from_tipo = RecordObj_dd::get_prefix_from_tipo($key);
-										#}										
-										if (in_array($prefix_from_tipo, unserialize(DEDALO_PREFIX_TIPOS))) {
-											# DEDALO TIPOS (Managed by RecordObj_dd)
-											$key_resolved = RecordObj_dd::get_termino_by_tipo( $key, DEDALO_DATA_LANG, true );
-										}else{
-											# TESAURUS TIPOS (Managed by RecordObj_dd)
-											if( is_string($key) && strlen($key)>2 )
-											$key_resolved = RecordObj_ts::get_termino_by_tipo( $key, DEDALO_DATA_LANG, true );
-										}
-										#$key_resolved = RecordObj_ts::get_termino_by_tipo( $key, DEDALO_DATA_LANG, true );
-										#dump($key_resolved, ' key_resolved');									
-									}									
+							if ($key!='count') {//&& strpos($key, 'dd')===0																
+
+								try {																	
+
+									switch (true) {										
+										case (intval($key)>0):
+											$current_component 	= component_common::get_instance($modelo_name,
+																								 $first_key,
+																							 	 NULL,
+																							 	 'list'
+																							 	 );
+											#$current_component 	= new $modelo_name($first_key, NULL, 'list', DEDALO_DATA_LANG);
+											$current_component->set_dato($key);
+											$key_resolved 		= $current_component->get_valor();
+											//dump($first_key, ' first_key');
+											break;
+										default:
+											# Resolve key name ($key_resolved) by get_termino_by_tipo 
+											#if( is_string($key) && strlen($key)>2 ) {
+											$prefix_from_tipo = RecordObj_dd::get_prefix_from_tipo($key);
+											#}										
+											if (in_array($prefix_from_tipo, unserialize(DEDALO_PREFIX_TIPOS))) {
+												# DEDALO TIPOS (Managed by RecordObj_dd)
+												$key_resolved = RecordObj_dd::get_termino_by_tipo( $key, DEDALO_DATA_LANG, true );
+											}else{
+												# TESAURUS TIPOS (Managed by RecordObj_dd)
+												if( is_string($key) && strlen($key)>2 )
+												$key_resolved = RecordObj_ts::get_termino_by_tipo( $key, DEDALO_DATA_LANG, true );
+											}
+											#$key_resolved = RecordObj_ts::get_termino_by_tipo( $key, DEDALO_DATA_LANG, true );
+											#dump($key_resolved, ' key_resolved');
+											break;
+									}
+															
 								} catch (Exception $e) {
 									//dump($first_key, ' first_key');
 									if(SHOW_DEBUG) {
@@ -825,12 +855,24 @@ class diffusion_section_stats extends diffusion {
 									# Get value of 'component_input_text' from section project id (tipo is fixed: DEDALO_PROJECTS_NAME_TIPO)
 									
 									$current_key_obj = json_decode($key);
+									
 									$current_section_tipo = (is_array($current_key_obj) && isset(reset($current_key_obj)->section_tipo)) ? reset($current_key_obj)->section_tipo : null;
-									if (SHOW_DEBUG && $current_section_tipo==null) {
-										dump($current_key_obj, "$first_key + ".to_string($value));
+									if(SHOW_DEBUG) {
+										if ($current_section_tipo=='dd861') {
+											#dump($current_key_obj, ' var ++ '.to_string($first_key));
+										}
+										if ($current_section_tipo==null) {
+											dump($current_key_obj, "current_section_tipo is nul $first_key + ".to_string($value));
+										}
 									}
+									
 
-									$current_component 	= component_common::get_instance($modelo_name, $first_key, NULL, 'list', DEDALO_DATA_LANG, $current_section_tipo);		//dump($key, "$first_key + ".to_string($value));
+									$current_component 	= component_common::get_instance($modelo_name,
+																						 $first_key,
+																						 NULL,
+																						 'list',
+																						 DEDALO_DATA_LANG,
+																						 $current_section_tipo);		//dump($key, "$first_key + ".to_string($value));
 									#$current_component 	= new $modelo_name($first_key, NULL, 'list');									
 									$current_component->set_dato($key);
 									$key_resolved 		= $current_component->get_valor();

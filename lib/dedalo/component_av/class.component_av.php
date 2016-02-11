@@ -36,20 +36,21 @@ class component_av extends component_common {
 		# Creamos el componente normalmente
 		parent::__construct($tipo, $parent, $modo, $lang, $section_tipo);
 
+
 		# Dato : Verificamos que hay un dato. Si no, asignamos el dato por defecto en el idioma actual
 		# Force calculate and set initial dato
 		$dato = $this->get_dato();
-			#dump(empty($dato)," dato $modo");
+			#dump($dato," dato 1 $modo");
 
 		$need_save=false;
-		if($this->parent>0 && !isset($dato->section_id)) {
+		if((int)$this->parent>0 && !isset($dato->section_id)) {
 
 			#####################################################################################################
 			# DEFAULT DATO
 			$locator = new locator();
 				$locator->set_component_tipo($this->tipo);
 				$locator->set_section_tipo($this->section_tipo);
-				$locator->set_section_id($this->parent);			
+				$locator->set_section_id($this->parent);		
 			# END DEFAULT DATO
 			######################################################################################################
 
@@ -60,7 +61,7 @@ class component_av extends component_common {
 
 
 			#
-			# CONFIGURACIÓN NECESARIA PARA PODER SALVAR (Al salvar se guarda una versión valor_list html que no funciona si no no están estas variables asignadas)
+			# CONFIGURACIÓN NECESARIA PARA PODER SALVAR (Al salvar se guarda una versión valor_list html que no funciona si no están estas variables asignadas)
 			#
 				# Set and fix current video_id
 				$this->video_id = $this->get_video_id();
@@ -70,9 +71,11 @@ class component_av extends component_common {
 			# result devuelve el id de la sección parent creada o editada
 			$result = $this->Save();
 			if(SHOW_DEBUG) {
-				error_log("Updated ".RecordObj_dd::get_termino_by_tipo($this->tipo)." locator (to ".$locator->get_flat().") of current ".get_called_class()." (tipo:$this->tipo - section_tipo:$this->section_tipo - parent:$this->parent - lang:$this->lang)");
+				debug_log(__METHOD__." CREATED/UPDATED ".RecordObj_dd::get_termino_by_tipo($this->tipo)." locator (to ".$locator->get_flat().") of current ".get_called_class()." (tipo:$this->tipo - section_tipo:$this->section_tipo - parent:$this->parent - lang:$this->lang)");
 			}			
 		}#end if ($need_save)
+
+			#dump($this->get_dato(), '$this->get_dato() 2 ++ '.to_string());
 		
 
 		if(SHOW_DEBUG) {
@@ -98,7 +101,8 @@ class component_av extends component_common {
 	public function get_ar_tools_obj() {
 		
 		# Remove common tools (time machine and lang)
-		unset($this->ar_tools_name);
+		#unset($this->ar_tools_name);
+		$this->ar_tools_name = array();
 
 		# Add tool_transcription
 		$this->ar_tools_name[] = 'tool_transcription';
@@ -133,7 +137,7 @@ class component_av extends component_common {
 		$dato = $this->get_dato();
 		if (!isset($dato->section_id)) {
 			if(SHOW_DEBUG) {
-				trigger_error(__METHOD__." Component dato is empty");
+				debug_log(__METHOD__." Component dato is empty from tipo:$this->tipo, parent:$this->parent, section_tipo:$this->section_tipo", logger::WARNING);
 			}
 			return 0;	
 		}
@@ -449,8 +453,8 @@ class component_av extends component_common {
 			if( !rename($media_path, $media_path_moved) ) throw new Exception(" Error on move files to folder \"deleted\" . Permission denied . The files are not deleted");
 
 			if(SHOW_DEBUG) {
-				$msg=__METHOD__." \nMoved file \n$media_path to \n$media_path_moved";
-				error_log($msg);
+				$msg=__METHOD__." Moved file \n$media_path to \n$media_path_moved";
+				debug_log($msg);
 				#dump($msg, ' msg');
 			}
 		}#end foreach
@@ -474,7 +478,7 @@ class component_av extends component_common {
 
 			if(SHOW_DEBUG) {
 				$msg=__METHOD__." \nMoved file \n$media_path to \n$media_path_moved";
-				error_log($msg);
+				debug_log($msg);
 				#dump($msg, ' msg');
 			}
 		}
@@ -510,7 +514,7 @@ class component_av extends component_common {
 				#dump($ar_files, ' ar_files');#continue;
 			}
 			if (empty($ar_files)) {
-				error_log("No files to restore were found for video_id:$video_id. Nothing was restored (1)");
+				debug_log(__METHOD__." No files to restore were found for video_id:$video_id. Nothing was restored (1)");
 				continue; // Skip
 			}
 			natsort($ar_files);	# sort the files from newest to oldest
@@ -519,8 +523,8 @@ class component_av extends component_common {
 			if( !rename($last_file_path, $new_file_path) ) throw new Exception(" Error on move files to restore folder. Permission denied . Nothing was restored (2)");
 
 			if(SHOW_DEBUG) {
-				$msg=__METHOD__." \nMoved file \n$last_file_path to \n$new_file_path";
-				error_log($msg);
+				$msg=__METHOD__." Moved file \n$last_file_path to \n$new_file_path";
+				debug_log($msg);
 				#dump($msg, ' msg');
 			}
 			
@@ -541,7 +545,7 @@ class component_av extends component_common {
 			#dump($ar_files, ' ar_files');#continue;
 		}
 		if (empty($ar_files)) {
-			error_log("No files to restore were found for posterframe:$video_id. Nothing was restored (3)");			
+			debug_log(__METHOD__." No files to restore were found for posterframe:$video_id. Nothing was restored (3)");			
 		}else {
 			natsort($ar_files);	# sort the files from newest to oldest
 			$last_file_path = end($ar_files);
@@ -550,7 +554,7 @@ class component_av extends component_common {
 
 			if(SHOW_DEBUG) {
 				$msg=__METHOD__." \nMoved file \n$last_file_path to \n$new_file_path";
-				error_log($msg);
+				debug_log($msg);
 				#dump($msg, ' msg');
 			}
 		}

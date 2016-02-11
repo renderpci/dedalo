@@ -18,6 +18,9 @@ body,td,th {
 	text-align:center;
 }
 */
+body {
+	overflow: hidden;
+}
 a:link {
 	color: #FFFFFF;
 	text-decoration: none;
@@ -66,7 +69,12 @@ a:active {
 
 
 /* LOADING MSG */
-#loading_msg { height:28px;padding-top:20px;color:#666;font-size:11px;}
+#loading_msg {
+	height:28px;
+	padding-top:20px;
+	color:#666;
+	font-size:11px;
+}
 
 	
 /* VIDEO CONTROLS AND BUTTONS */
@@ -81,7 +89,8 @@ a:active {
 .video_btn {
 	font-size:10px;
 	font-family: Arial,Helvetica, sans-serif; 
-	background-image:url('../../themes/default/ramp_grey_video.png'); background-repeat:repeat-x;
+	background-image:url('../../themes/default/ramp_grey_video.png');
+	background-repeat:repeat-x;
 	display: inline-block;
 	margin:0px;
 	margin-left:4px;
@@ -98,8 +107,13 @@ a:active {
 	color: #A2A2A2 !important;
 	cursor:pointer !important;
 }
-.video_btn:hover { color:#FFFFFF !important;  } 
-.video_btn:active {background-image:url('../../themes/default/ramp_grey_video_hover.png');color: #A2A2A2 !important;}
+.video_btn:hover {
+	color:#FFFFFF !important;
+} 
+.video_btn:active {
+	background-image: url('../../themes/default/ramp_grey_video_hover.png');
+	color: #A2A2A2 !important;
+}
 .play_pause {
 	min-width: 33px;
 }
@@ -122,7 +136,14 @@ a:active {
 	position: relative;
 	top: 2px;
 }
-#TCdiv .loading_msg { display:inline-block; vertical-align:bottom;margin-top:8px;color:#666;font-size:11px; text-shadow:none}
+#TCdiv .loading_msg {
+	display:inline-block;
+	vertical-align:bottom;
+	margin-top:8px;
+	color:#666;
+	font-size:11px;
+	text-shadow:none;
+}
 /* QUALITY SELECTOR */
 .quality_selector {		
 	border:none;
@@ -130,7 +151,8 @@ a:active {
 	border-radius:3px;
 	float: right;
 	position: relative;
-	top: -3px;
+	top: 3px;
+    height: 25px;
 }
 .btn_posterframe {
 	float:right;	
@@ -143,12 +165,12 @@ a:active {
 
 
 .select_none {
--webkit-user-select: none;
--khtml-user-select: none;
--moz-user-select: none;
--ms-user-select: none;
--o-user-select: none;
-user-select: none;
+	-webkit-user-select: none;
+	-khtml-user-select: none;
+	-moz-user-select: none;
+	-ms-user-select: none;
+	-o-user-select: none;
+	user-select: none;
 }
 
 
@@ -157,7 +179,7 @@ user-select: none;
 	display: inline-block;	
 	background-repeat: no-repeat;
 	cursor: pointer;
-	opacity: 0.4
+	opacity: 0.4;
 }
 .player_icon:hover {
 	opacity: 1;
@@ -170,7 +192,7 @@ user-select: none;
 	height: 14px;
 	float: left;	
 	position: relative;	
-	top:-20px;
+	top:-14px;
 	left: 5px;
 	z-index: 0;
 }
@@ -178,7 +200,7 @@ user-select: none;
 
 .config_player_content {
 	position: relative;
-	margin-left:20px;
+	/*margin-left:20px;*/
 	display: block;
 	min-height: 60px;
 	padding: 0;
@@ -189,21 +211,28 @@ user-select: none;
 .player_type_links {
 	display: block;
 	padding: 0p;	
-	margin-top:15px;
+	margin-top:23px;
 	text-align:right;
 	line-height: 1.2em;
-	font-size: 90%
+	font-size: 90%;
 }
-.player_type_links, .player_type_links a { color:#a7a7a7}
+.player_type_links, .player_type_links a {
+	color:#a7a7a7;
+}
 
 
 /* CONFIGURE KEYS TABLE */
-TABLE.table_configure_keys {
+table.table_configure_keys {
 	display: block;
 	float: left;
-	border:1px solid #cbcbcb; padding:0; border-collapse: separate; border-radius:3px; border-spacing:0;
+	border:1px solid #cbcbcb;
+	padding:0;
+	border-collapse: separate;
+	border-radius:3px;
+	border-spacing:0;
 	position: relative;
 	left: -16px;
+	top: 6px;
 }
 .table_configure_keys th {
 	background-color: #cbcbcb;
@@ -250,16 +279,39 @@ span.keycode_name {
 	position: relative;
 	top: 10px;
 } /* position:absolute; bottom:0px; */
-.debugDIV , .debugDIV a {color:#afafaf !important; font-size: 90%}
-.debugDIV #debugMovie { visibility:hidden; padding:5px; overflow:auto}
-
+.debugDIV, .debugDIV a {
+	color:#afafaf !important;
+	font-size: 90%;
+}
+.debugDIV #debugMovie {
+	visibility:hidden;
+	padding:5px;
+	overflow:auto;
+}
 
 
 
 .image_player {
 	max-width:100%; 
-	max-height:100%
+	max-height:100%;
 }
 
 
+#public_url {
+	display: block;
+    clear: both;
+    /* background-color: #B5E276; */
+    float: left;
+    position: relative;
+    top: 10px;
+    /* left: 0; */
+    /* margin: 0; */
+    width: 100%;
+    text-align: left;
+    padding: 0px;
+    padding-bottom: 5px;
+	}
+	#public_url input {
+		width: 90%;
+	}
 

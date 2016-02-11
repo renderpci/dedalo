@@ -76,13 +76,41 @@ class component_date extends component_common {
 		if (is_string($dato) && strpos($dato, '{')!==false ) {
 			$dato = json_decode($dato);
 		}
+		if (is_null($dato)) {
+			$dato = new dd_date();
+		}
 		
-		if (!is_object($dato)) {
-			throw new Exception("Error Processing Request. Only objects are accepted. Type: ".gettype($dato), 1);
+		if ( !is_object($dato) ) {
+			if(SHOW_DEBUG) {
+				throw new Exception("Error Processing Request. Only objects are accepted. Type: ".gettype($dato), 1);
+			}
+			return false;
 		}
 		parent::set_dato( (object)$dato );
 	}
 
+
+
+	/**
+	* GET_DATE_NOW
+	* Get current full date (with hours, minutes and seconds) as dd_date object
+	* @return object dd_date 
+	*/
+	public static function get_date_now() {
+		
+		$date = new DateTime();
+
+		$dato = new dd_date();
+			$dato->set_year( 	$date->format('Y') );	// 	 $date->format('Y-m-d H:i:s'); # Default as DB format 
+			$dato->set_month( 	$date->format('m') );
+			$dato->set_day( 	$date->format('d') );
+			$dato->set_hour( 	$date->format('H') );
+			$dato->set_minute( 	$date->format('i') );
+			$dato->set_second( 	$date->format('s') );
+
+		return (object)$dato;
+
+	}#end get_date_now
 	
 
 	/**
@@ -172,6 +200,7 @@ class component_date extends component_common {
 		$valor='';
 
 		$dato = $this->get_dato();
+			#dump($dato, ' dato ++ '.to_string());
 
 		if (empty($dato)) return $valor;
 
@@ -361,10 +390,11 @@ class component_date extends component_common {
 	* GET_METHOD
 	* Return the result of the method calculation into the component 
 	*/
-	public function get_method( string $param ){
+	public function get_method( $param ){
 		switch ($param) {
 			case 'Today':
-				return self::get_timestamp_now_for_db();
+				//return self::get_timestamp_now_for_db();
+				return self::get_date_now();
 				break;
 			
 			default:

@@ -62,27 +62,9 @@ class ImageMagick {
 					$source = $f;
 				}else{
 					$source = $source_base . $f;
-				}
-				if(SHOW_DEBUG) {
-					/*
-					error_log('get_thumb received f: '.$f);
-					error_log('get_thumb final source: '.$source);
-						dump(file_exists( $source )," file_exists( $source )");
-					if (file_exists( $source )) {
-						error_log('get_thumb file_exists source: YES');
-					}else{
-						error_log('get_thumb file_exists source: NO');
-					}
-					*/
-				}		
-				#dump($f,'get_thumb f');
-				#dump($source,'get_thumb source');
-				#error_log(DEDALO_MEDIA_BASE_PATH.DEDALO_IMAGE_FOLDER.'/'.DEDALO_IMAGE_QUALITY_DEFAULT.'/'.$f);
-			if (file_exists( $source )) {
-
-				if(SHOW_DEBUG) {
-					#error_log("DEFAULT QUALITY EXISTS: CREATING THUMB");
-				}
+				}					
+				
+			if (file_exists( $source )) {				
 
 				# Target folder exists test	
 				$aditional_path = substr($f, 0, strrpos($f,'/')); 
@@ -94,13 +76,11 @@ class ImageMagick {
 				}
 
 				# TARGET FILE
-				$target = $thumb_file_path;
-				if(SHOW_DEBUG) {
-					error_log('get_thumb creating thumb with target: '.$thumb_file_path);
-				}
+				$target = $thumb_file_path;				
+				debug_log(__METHOD__." Creating thumb with target: $thumb_file_path ".to_string(), logger::DEBUG);				
 				
 				# CONVERT
-				ImageMagick::dd_thumb($mode, $source, $target, $dimensions="102x57", $initial_media_path);
+				ImageMagick::dd_thumb($mode, $source, $target, false, $initial_media_path);
 
 			}else{
 				#throw new Exception("Error Processing Request. Sorry, source file from default quality (".DEDALO_IMAGE_QUALITY_DEFAULT.") not found", 1);
@@ -128,7 +108,7 @@ class ImageMagick {
 	* @param $source_file (full sourcefile path)
 	* @param $target_file (full target thumb file path)
 	*/
-	public static function dd_thumb( $mode, $source_file, $target_file, $dimensions="102x57", $initial_media_path) {
+	public static function dd_thumb( $mode, $source_file, $target_file, $dimensions=false, $initial_media_path) {
 
 		# Valid path verify
 		$folder_path = pathinfo($target_file)['dirname'];
@@ -141,6 +121,15 @@ class ImageMagick {
 		# Dimensions (original 102x57)
 		#$dimensions = (string)"102x90";
 		# Nota: para ejecutar un crop, definir como {$dimensions}^ .Desactivado el crop por interferir demasiado con las fotos verticales
+		#if (!$dimensions) {
+
+			$width  = defined('DEDALO_IMAGE_THUMB_WIDTH')  ? DEDALO_IMAGE_THUMB_WIDTH  : 102;
+			$height = defined('DEDALO_IMAGE_THUMB_HEIGHT') ? DEDALO_IMAGE_THUMB_HEIGHT : 57;
+
+			# Like "102x57"
+			$dimensions = $width.'x'.$height;
+			#$dimensions = "200x200";		
+		#}
 
 		switch ($mode) {
 			case 'list':
@@ -167,7 +156,7 @@ class ImageMagick {
 				dump($worked_result, ' worked_result. output: '.to_string($output));
 			}
 			if (!empty($result)) {
-				error_log("COMMAND DD_THUMB WARNING (not empty result): ".to_string($result));
+				debug_log(__METHOD__." WARNING expected result empty but received result: ".to_string($result), logger::WARNING);
 			}
 		}
 
@@ -277,7 +266,7 @@ class ImageMagick {
 				dump($worked_result, ' worked_result ++ '.to_string($output));
 			}
 			if (!empty($result)) {
-				error_log("COMMAND CONVERT WARNING (not empty result): ".to_string($result));
+				debug_log(__METHOD__." Command convert warning (not empty result): ".to_string($result), logger::WARNING);
 			}
 		}
 

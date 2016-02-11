@@ -2,9 +2,10 @@
 
 	# CONTROLLER TOOL LANG
 
-	#$id 					= $this->component_obj->get_id();		#dump($id,'id');
+	#dump($this, ' this ++ '.to_string());
 	$tipo 					= $this->component_obj->get_tipo();
 	$parent 				= $this->component_obj->get_parent();	#dump($tipo,$parent);
+	$section_id				= $parent;
 	$section_tipo			= $this->component_obj->get_section_tipo();
 	$lang 					= $this->component_obj->get_lang();
 	$label 					= $this->component_obj->get_label();
@@ -12,6 +13,7 @@
 	$component_name			= get_class($this->component_obj);
 	$context_name			= $this->get_context();
 	$tool_name 				= get_class($this);
+	$tool_locator			= DEDALO_TOOL_INVESTIGATION_SECTION_TIPO.'_'.DEDALO_TOOL_INDEXATION_ID;//
 
 
 	$selected_tagName 		= $this->selected_tagName;
@@ -21,27 +23,60 @@
 
 		#dump( $this->component_obj );
 	
-	if (strpos(TOP_TIPO, 'rsc')===0) {
-		//trigger_error("Warning: Indexing resource");
-		echo "<div class=\"warning\">".label::get_label('por_favor_indexe_desde_una_seccion_de_inventario')."</div>";
-		return ;
-	}
-
-
-	# TOOL CSS / JS MAIN FILES
-	css::$ar_url[] = DEDALO_LIB_BASE_URL."/tools/".$tool_name."/css/".$tool_name.".css";
-	js::$ar_url[]  = DEDALO_LIB_BASE_URL."/tools/".$tool_name."/js/".$tool_name.".js";
 
 	
 	switch($modo) {	
 		
-		case 'button': 
-					# Nothing to do
-					break;
+		case 'button':
+				$section = section::get_instance( $parent, $section_tipo );
+				$inverse_locators = $section->get_inverse_locators();
+					#dump($inverse_locators, ' inverse_locators ++ '."$parent, $section_tipo ".to_string());				
+				
+				$contain_references = false;
+				foreach ((array)$inverse_locators as $key => $current_locator) {
+					if ($current_locator->section_tipo==TOP_TIPO) {
+						$contain_references = true;
+						break;
+					}
+				}
+				
+				break;
 
 		
 		case 'page':
+
+				# TOOL CSS / JS MAIN FILES
+				css::$ar_url[] = DEDALO_LIB_BASE_URL."/tools/".$tool_name."/css/".$tool_name.".css";				
+
+				js::$ar_url[]  = DEDALO_LIB_BASE_URL."/tools/".$tool_name."/js/split.min.js";
+				js::$ar_url[]  = DEDALO_LIB_BASE_URL."/tools/".$tool_name."/js/".$tool_name.".js";
+
+				if (strpos(TOP_TIPO, 'rsc')===0) {
+					//trigger_error("Warning: Indexing resource");
+					echo "<div class=\"warning\">".label::get_label('por_favor_indexe_desde_una_seccion_de_inventario')." [1]</div>";
+					return ;
+				}
+
+
+				#
+				# TOP_ID
+				# Calculate TOP_ID from inverse data
+				# dump(TOP_ID, 'TOP_ID ++ '.to_string());
+				if (!TOP_ID) {
+					#dump($this, ' this ++ '.to_string());
+					$section = section::get_instance( $parent, $section_tipo );
+					$inverse_locators = $section->get_inverse_locators();
+						#dump($inverse_locators, ' inverse_locators ++ '."$parent, $section_tipo ".to_string());
+
+					if (empty($inverse_locators)) {
+						//trigger_error("Warning: Indexing resource");
+						echo "<div class=\"warning\">".label::get_label('por_favor_indexe_desde_una_seccion_de_inventario')." [2]</div>";
+						return ;
+					}
+				}//end if (!TOP_ID) {
+
 				
+
 
 				# Because components are loaded by ajax, we need prepare js/css elements from tool
 				#
@@ -55,24 +90,15 @@
 
 				$this->component_obj->set_modo('indexation');
 				$component_text_area_html = $this->component_obj->get_html();
-
-				# HEADER TOOL
-				$this->set_modo('header');
-				$header_html 	= $this->get_html();
-				$this->set_modo('page');
 				
-				break;
 
-		case 'header':
-					# Creamos un componente state
-					$component_state 		= $this->get_component_state_obj($parent);
-
-					# Si no está definido en estructura
-					if(!is_object($component_state)) return null;
-					
-					# Configuramos
-					$component_state_html 	= $component_state->get_html();
-					break;	
+				#
+				# STATE
+				# Create component_state configurated
+				$component_state 		= $this->component_obj->get_component_state( $tool_locator, $this->component_obj->get_lang() );
+				$component_state_html 	= $component_state->get_html();		
+				
+				break;		
 
 
 		case 'fragment_info':

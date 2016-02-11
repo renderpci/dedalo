@@ -55,6 +55,7 @@
 		case 'search' :	
 				$id_wrapper = 'wrapper_'.$identificador_unico;
 				$input_name = $tipo;
+				$valor 		= $this->get_valor($lang);
 				# Valor searched
 				$valor_searched 		= NULL;
 				$valor_searched_string 	= NULL;

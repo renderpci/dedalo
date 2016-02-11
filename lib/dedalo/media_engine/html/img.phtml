@@ -80,11 +80,16 @@ switch ($fx) {
 
 
 # HEADERS
-/**/
 header("Cache-Control: private, max-age=10800, pre-check=10800");
 header("Pragma: private");
 header("Expires: " . date(DATE_RFC822,strtotime(" 120 day")));
-
+/*
+header("Pragma-directive: no-cache");
+header("Cache-directive: no-cache");
+header("Cache-control: no-cache");
+header("Pragma: no-cache");
+header("Expires: 0");
+*/
 # show header for jpg
 header('Content-Type: image/jpeg');
 

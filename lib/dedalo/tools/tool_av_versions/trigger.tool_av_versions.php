@@ -10,7 +10,7 @@ if(login::is_logged()!==true) die("<span class='error'> Auth error: please login
 
 
 # set vars
-	$vars = array('mode','video_id','quality','source_quality','target_quality','timecode','tc_in','tc_out','watermark','tag_id','parent','tipo','top_tipo','top_id','file_path');
+	$vars = array('mode','video_id','quality','source_quality','target_quality','timecode','tc_in','tc_out','watermark','tag_id','parent','tipo','section_tipo','top_tipo','top_id','file_path');
 		foreach($vars as $name) $$name = common::setVar($name);
 
 # mode
@@ -343,17 +343,45 @@ if($mode=='download_file') {
 	if ( empty($tipo) ) {
 		throw new Exception("Error Processing Request. Few vars! (tipo)", 1);
 	}
+	if ( empty($section_tipo) ) {
+		throw new Exception("Error Processing Request. Few vars! (section_tipo)", 1);
+	}
 
-	$reelID = $video_id;
+	
 
 	# AVOBJ
+	$reelID = $video_id;
 	$AVObj = new AVObj($reelID, $quality);
+
+	
+	#
+	# EXTENSION
+	if ($quality==DEDALO_AV_QUALITY_ORIGINAL) {
+		$component_av = component_common::get_instance( 'component_av',
+														$tipo,
+														$parent,
+														'edit',
+														DEDALO_DATA_NOLAN,
+														$section_tipo);
+
+		$file_path = $component_av->get_original_file_path(DEDALO_AV_QUALITY_ORIGINAL);
+			#dump($component_av->get_original_file_path('original'), ' component_av ++ '.to_string());
+
+		$extension = pathinfo($file_path, PATHINFO_EXTENSION);
+			#dump($extension, ' $extension ++ '.to_string()); die();
+
+	}else{
+		$extension = $AVObj->get_extension();
+	}
 
 	# LIB DOWNLOAD PREPARE
 	# VARS FOR LIB 'donwload.php'
 	$base_dir			= $AVObj->get_media_path_abs();	 #$AVObj->get_media_path(); 	
 	$allowed_referrer	= DEDALO_HOST;
-	$file_name			= $AVObj->get_name() . '.' . $AVObj->get_extension();
+	$file_name			= $AVObj->get_name() . '.' . $extension;
+
+
+	
 	$file_name_showed	= 'media_downloaded_' . $file_name ;
 
 	# Extract tipo from video_id like dd732-1.mp4 => dd732

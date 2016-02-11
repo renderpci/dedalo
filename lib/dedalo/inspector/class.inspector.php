@@ -79,7 +79,12 @@ class inspector {
 
 
 		$component_relation_tipo = $ar_component_relation_tipo[0];
-		$component_relation 	 = component_common::get_instance('component_relation',$component_relation_tipo,$current_section_id,'edit',DEDALO_DATA_LANG);	#($component_name=null, $tipo, $parent=NULL, $modo='edit', $lang=DEDALO_DATA_LANG)
+		$component_relation 	 = component_common::get_instance('component_relation',
+																  $component_relation_tipo,
+																  $current_section_id,
+																  'edit',
+																  DEDALO_DATA_LANG,
+																  $current_section_tipo);
 
 		$tool_relation_obj 	= $component_relation->load_specific_tool('tool_relation');
 

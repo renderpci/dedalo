@@ -119,7 +119,7 @@ class Tesauro extends TesauroElements {
 									}		
 		} #echo "arrayTablas: tipo:$this->type , filtro:$filtro <br>";
 		
-		$idString		= RecordObj_jer_tipos::order_by_tipo_sql_string(); # sql string for ordenate later
+		$idString		= RecordObj_jer_tipos::order_by_tipo_sql_string(); # sql string for sort later
 			#dump($idString,"idString ");
 
 
@@ -444,6 +444,7 @@ class Tesauro extends TesauroElements {
 				$usableIndex 	= $RecordObj_ts->get_usableIndex();
 				$norden			= $RecordObj_ts->get_norden();
 				$traducible		= $RecordObj_ts->get_traducible();
+				$visible 		= $RecordObj_ts->get_visible();
 								
 				$RecordObj_ts2	= new RecordObj_ts($terminoID);
 				$hijosND		= count($RecordObj_ts2->get_ar_childrens_of_this('no'));
@@ -478,7 +479,7 @@ class Tesauro extends TesauroElements {
 				$html .= "\n<div id=\"divCont$terminoID\" class=\"divCont\" style=\"padding-left:$marginLeft" . "px;$display\" >";
 									
 					# generamos la linea con los iconos, etc..
-					$html .= $this->makeTSline($terminoID,$termino,$parent,$children,$def,$obs,$hijosD,$hijosND,$nIndexaciones,$ncaptaciones,$nordenV,$resalte,$modelo,$usableIndex,$traducible);
+					$html .= $this->makeTSline($terminoID,$termino,$parent,$children,$def,$obs,$hijosD,$hijosND,$nIndexaciones,$ncaptaciones,$nordenV,$resalte,$modelo,$usableIndex,$traducible,$visible);
 					
 					# recursive 										
 					if( $children >0 ) {
@@ -550,7 +551,7 @@ class Tesauro extends TesauroElements {
 			} else {						
 				# caso general
 				$html .= TesauroElements::renderBtnMas($parent0);
-				$html .= "<div id=\"divCont{$parent0}\"></div>";				
+				$html .= "<div id=\"divCont{$parent0}\"></div>";							
 			}		
 			$html .= "\n</div>";
 		
@@ -985,7 +986,7 @@ class Tesauro extends TesauroElements {
 	* @return array $ar_ts_map
 	*/
 	public static function get_ar_ts_map( $csv_file_name, $delimiter=';' ) {
-
+	
 		static $ar_ts_map;
 
 		if (isset($ar_ts_map)) {

@@ -2,7 +2,6 @@
 	
 	# CONTROLLER
 
-
 	$tipo 					= $this->get_tipo();
 	$parent 				= $this->get_parent();
 	$section_tipo 			= $this->get_section_tipo();
@@ -23,10 +22,10 @@
 	
 	switch($modo) {		
 	
-		case 'edit':				
+		case 'edit':
 				$id_wrapper 	= 'wrapper_'.$identificador_unico;
 				$input_name 	= "{$tipo}_{$parent}";				
-				$component_info = '';//$this->get_component_info('json');
+				$component_info = $this->get_component_info('json');
 					#dump($component_info, ' component_info'.to_string());
 				break;
 

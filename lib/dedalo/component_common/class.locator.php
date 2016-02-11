@@ -12,6 +12,7 @@
 	$locator->section_tipo		= (string)$section_tipo; 
 	$locator->component_tipo	= (string)$component_tipo;
 	$locator->tag_id			= (string)$tag_id;
+	$locator->state				= (object)$state;
 
 	Note that properties can exists or not (are created on the fly). Final result object only contain set properties and locator object can be empty or partially set.
 	For example, component portal only use section_tipo an section_id in many cases
@@ -28,6 +29,7 @@ class locator extends stdClass {
 		private $section_tipo;
 		private $component_tipo;
 		private $tag_id;
+		private $state;
 	*/
 
 	# Mandatory and protected (use set/get to access)
@@ -107,7 +109,12 @@ class locator extends stdClass {
 		$this->tag_id = (string)$value;
 	}
 
-
+	public function set_state($value) {
+		if(!is_object($value)) {
+			throw new Exception("Error Processing Request. Invalid state: $value", 1);
+		}
+		$this->state = (object)$value;
+	}
 
 	/**
 	* GET_FLA

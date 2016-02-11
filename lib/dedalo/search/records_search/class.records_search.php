@@ -117,7 +117,7 @@ class records_search extends common {
 
 	/**
 	* GET_AR_SEARCH_FIELDS
-	* Localiza los componentes de la sección actual (todos) que serán disponibles como filtros para las búsquedas
+	* Localiza los componentes de la sección actual que quedarán disponibles como filtros para las búsquedas
 	*/
 	protected function get_ar_search_fields() {
 
@@ -145,7 +145,14 @@ class records_search extends common {
 				#$section_tipo = component_common::get_section_tipo_from_component_tipo($current_element_tipo);
 					#dump($section_tipo,'section_tipo current_element_tipo:'.$current_element_tipo);
 
-				$ar_search_fields[$current_element_tipo] = component_common::get_instance($current_modelo_name, $current_element_tipo, NULL, 'search', DEDALO_DATA_LANG, $this->section_tipo);	#($tipo=NULL, $parent=NULL, $modo='edit', $lang=DEDALO_DATA_LANG)
+				# NOTA: Se pasará SIEMPRE '$this->section_tipo' como sección aunque el componente relacionado pertenezaca a otra sección (nombre del informante por ejemplo)
+				# Esto no es correcto pero no afecta el funcionamiento en este ámbito ya que los componentes no manejan datos en modo search
+				$ar_search_fields[$current_element_tipo] = component_common::get_instance($current_modelo_name,
+																						  $current_element_tipo,
+																						  NULL,
+																						  'search',
+																						  DEDALO_DATA_LANG,
+																						  $this->section_tipo);	#($tipo=NULL, $parent=NULL, $modo='edit', $lang=DEDALO_DATA_LANG)
 					#dump($ar_search_fields[$current_element_tipo],'$ar_search_fields[$current_element_tipo]');
 			}
 		}
@@ -204,14 +211,14 @@ class records_search extends common {
 
 				case ( strpos($current_modelo_name, 'button_')!==false ) :
 					$current_element 	 = new $current_modelo_name($current_element_tipo,null);
+					$ar_tools_search[$current_element_tipo] = $current_element;
 					break;
 
 				case ( strpos($current_modelo_name, 'component_')!==false ) :
 					$current_element 	 = component_common::get_instance($current_modelo_name, $current_element_tipo, NULL, $this->modo, DEDALO_DATA_LANG, $this->section_tipo);
+					$ar_tools_search[$current_element_tipo] = $current_element;
 					break;
-			}
-
-			$ar_tools_search[$current_element_tipo] = $current_element;
+			}			
 		}
 
 		# CACHE

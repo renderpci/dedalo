@@ -187,7 +187,7 @@ if (strpos($_SERVER['HTTP_HOST'], '8888')!==false) {
 		case 'index':
 			break;
 	}
-}//end if (strpos($_SERVER['HTTP_HOST'], '8888')!==false)
+}//end if (DEDALO_ENTITY=='development')
 
 
 // Set the background to be white

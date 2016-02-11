@@ -38,9 +38,8 @@ class component_select_lang extends component_common {
 		$ar_final 	= array();
 		$section_id = $this->get_parent();
 
-		if($section_id > 1) {
+		if($section_id > 1) {			
 			
-			#$section_tipo		 	= component_common::get_section_tipo_from_component_tipo($this->tipo);	
 			$section_tipo		 	= $this->get_section_tipo();
 			$section 				= section::get_instance($section_id,$section_tipo);
 			$ar_all_project_langs 	= $section->get_ar_all_project_langs();
@@ -57,7 +56,7 @@ class component_select_lang extends component_common {
 
 		# FINAL FORMATED ARRAY
 		foreach ($ar_all_project_langs as $current_lang) {			
-			$ar_final[$current_lang] = RecordObj_ts::get_termino_by_tipo($current_lang,DEDALO_APPLICATION_LANG); # $terminoID, $lang=NULL, $from_cache=false, $fallback=true
+			$ar_final[$current_lang] = RecordObj_ts::get_termino_by_tipo($current_lang, DEDALO_APPLICATION_LANG, true); # $terminoID, $lang=NULL, $from_cache=false, $fallback=true
 		}
 		if(SHOW_DEBUG) {
 			#dump($ar_final," ar_final ".DEDALO_APPLICATION_LANG);		

@@ -174,7 +174,7 @@ class dd_date extends stdClass {
 
 
 	# year
-	if (!isset($year) || $year<1) {
+	if (!isset($year) || empty($year)) {
 	  $year = 0;
 	}
 	$year = sprintf("%04d", $year);
@@ -209,13 +209,22 @@ class dd_date extends stdClass {
 	}
 	$second = sprintf("%02d", $second);
 
-	# ms
+	# ms	
 	if (isset($ms)) {
-	$ms = sprintf("%03d", $ms);
-	}   
+		$ms = sprintf("%03d", $ms);
+	}else{
+		$ms=null;	
+	}
 
+	/* OLD WORLD no compatible with negative years, etc..
 	$time       	= mktime($hour,$minute,$second,$month,$day,$year);
 	$dd_timestamp   = date($date_format, $time);
+	*/
+
+	$dd_timestamp = str_replace( array('Y','m','d','H','i','s','u'), 
+								 array($year,$month,$day,$hour,$minute,$second,$ms),
+								 $date_format);
+
 
 	return (string)$dd_timestamp;
 

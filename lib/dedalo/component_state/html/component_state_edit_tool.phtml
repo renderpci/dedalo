@@ -9,50 +9,99 @@
 	if(!isset ($ar_css['css_span_debugger']))		$ar_css['css_span_debugger']='';
 	if(!isset ($ar_css['css_wrap_state']))			$ar_css['css_wrap_state']='';
 	if(!isset ($ar_css['css_state_rotulo']))		$ar_css['css_state_rotulo']='';
-		
+
 	
 	print "\n<!-- STATE [tipo:$tipo section_id_matrix:$parent] $label -->";
-	print "\n<div class=\"css_wrap_state wrap_component {$ar_css['css_wrap_state']}\" id=\"{$id_wrapper}\"
-	data-tipo=\"{$tipo}\" data-lang=\"{$lang}\" data-section_tipo=\"{$section_tipo}\" data-parent=\"{$parent}\" data-modo=\"{$modo}\" data-dato=\"{$dato_string}\" data-component_name=\"{$component_name}\">";
+	print "\n<div id=\"{$id_wrapper}\" class=\"css_wrap_state css_wrap_state_edit_tool wrap_component {$ar_css['css_wrap_state']}\"
+	data-tipo=\"{$tipo}\"
+	data-lang=\"{$lang}\"
+	data-label=\"{$label}\"
+	data-section_tipo=\"{$section_tipo}\"
+	data-parent=\"{$parent}\"
+	data-modo=\"{$modo}\"
+	data-component_name=\"{$component_name}\">";
 	
 	# ETIQUETA (LABEL)
 	$html_label = component_common_draw::draw_label($this);
-
-	$required_code 	= NULL;
-	#if($required)
-	#	$required_code = 'style="font-weight:bold"';
 	
 	# CONTENIDO (INPUT)
 	$html_contenido = '';
+	//	dump($_SESSION['dedalo4']['auth']['permissions_table'], '$_SESSION'.to_string());
+			#dump($permissions_admin, ' permissions_admin'.to_string());
 	switch($permissions) {
 			
-		case 0	:	$html_contenido .= "\n <span class=\"css_span_dato {$ar_css['css_span_dato']}\"> ".label::get_label('sin_acceso')." (checkbox)</span>"; 
+		case 0	:	$html_contenido .= "\n <span class=\"css_span_dato {$ar_css['css_span_dato']}\"> ".label::get_label('sin_acceso')." ".get_class()."</span>"; 
 					break;
 						
-		case 1	: 	$html_contenido .= $valor;											
-					$html_contenido .= "\n <label class=\"css_state_rotulo {$ar_css['css_state_rotulo']}\" $required_code >". label::get_label($this->caller_element) ."</label>";
+		case 1	: 	$html_contenido .= $valor;
+					$html_contenido .= "\n <label class=\"css_state_rotulo {$ar_css['css_state_rotulo']}\">". label::get_label($this->caller_element) ."</label>";
 					break;
 						
 		case ($permissions>=2)	:
-						
-					if($estado) {
-						$checked = 'checked="checked"';
-					}else {
-						$checked = "";
-					}
-					$html_contenido .= "\n <input class=\"css_state {$ar_css['css_state']}\" type=\"checkbox\" 
-					name=\"{$input_name}\"
-					data-tipo=\"{$tipo}\" data-section_tipo=\"{$section_tipo}\" data-parent=\"{$parent}\" data-lang=\"{$lang}\" data-dato='".$valor_for_checkbox."' data-caller_component_tipo=\"$this->caller_component_tipo\"
-					value=\"$this->caller_element\"
-					title=\"$html_title\" $checked />";
-
-											
-					$html_contenido .= "\n <label class=\"css_state_rotulo {$ar_css['css_state_rotulo']}\" $required_code >";
-					$html_contenido .= $rotulo ;
-
-					#$html_contenido .= "</label> valor: $valor - valor_for_checkbox: $valor_for_checkbox ";							
 					
-		
+					# User options
+					$checked = $valor_for_checkbox[0]>=1 ? 'checked="checked"' : '';					
+					$html_contenido .= "\n <input type=\"checkbox\" class=\"css_state {$ar_css['css_state']}\"
+					data-tipo=\"{$tipo}\"
+					data-section_tipo=\"{$section_tipo}\"
+					data-parent=\"{$parent}\"
+					data-lang=\"{$lang}\"
+					data-id_wrapper=\"{$id_wrapper}\"
+					data-options='".$options_json."'
+					data-type='user'					
+					value=\"".$valor_for_checkbox[0]."\"
+					title=\"$html_title\" $checked
+					onchange=\"component_state.update_state_locator(this)\" />";
+											
+					#$html_contenido .= "\n <label class=\"css_state_rotulo {$ar_css['css_state_rotulo']}\" $required_code >";
+					$html_contenido .= "<span> ".label::get_label('acabado')." </span>";
+					if(SHOW_DEBUG) {
+					//	$html_contenido .= " [".$this->options->lang."] ";
+					}
+					#$html_contenido .= "</label> valor: $valor - valor_for_checkbox: $valor_for_checkbox ";
+
+					if ($permissions_admin<2) {
+
+						# USER: Label to info user about current admin options values (read only)
+						switch (true) {
+							case $valor_for_checkbox[1]==50:
+								$html_contenido .= " <strong>".label::get_label('para_revisar')."</strong>";
+								break;
+							case $valor_for_checkbox[1]==100:
+								$html_contenido .= " <strong>".label::get_label('validado')."</strong>";
+								break;
+							default:
+								$html_contenido .= " <strong>".''."</strong>";
+								break;
+						}
+						
+					}else if ($permissions_admin>=2) {
+
+						# Admin options
+						$html_contenido .= "\n <select onchange=\"component_state.update_state_locator(this)\"
+						data-tipo=\"{$tipo}\"
+						data-section_tipo=\"{$section_tipo}\"
+						data-parent=\"{$parent}\"
+						data-lang=\"{$lang}\"
+						data-id_wrapper=\"{$id_wrapper}\"
+						data-options='".$options_json."'
+						data-type='admin'												
+						>";
+						$html_contenido .= "<option value=\"0\"> </option>";
+						$selected = ($valor_for_checkbox[1]==50) ? 'selected="selected"' : '';
+						$html_contenido .= "<option value=\"50\" $selected >".label::get_label('para_revisar')."</option>";
+						$selected = ($valor_for_checkbox[1]==100) ? 'selected="selected"' : '';
+						$html_contenido .= "<option value=\"100\" $selected >".label::get_label('validado')."</option>";
+						$html_contenido .= "</select> ";
+												
+						#$html_contenido .= "\n <label class=\"css_state_rotulo {$ar_css['css_state_rotulo']}\" $required_code >";
+						#$html_contenido .= label::get_label('validado') ;
+						if(SHOW_DEBUG) {
+							#$html_contenido .= " [".$this->options->lang."]";
+						}
+						#$html_contenido .= "</label> valor: $valor - valor_for_checkbox: $valor_for_checkbox ";
+					}
+
 			if($permissions==3)
 			
 					$html_contenido .= "\n <span class=\"css_span_debugger {$ar_css['css_span_debugger']}\" id=\"debugger_{$tipo}\" >{$debugger}</span>";	

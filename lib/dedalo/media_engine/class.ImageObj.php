@@ -129,6 +129,7 @@ class ImageObj extends MediaObj {
 	
 	/**
 	* GET_THUMB_URL
+	* Build onthefly image at request size
 	*/
 	public function get_thumb_url($maxWidht, $maxHeight, $fx=null, $p=null, $prop=null) {
 

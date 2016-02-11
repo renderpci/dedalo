@@ -267,7 +267,7 @@ abstract class common extends Accessors {
 		# Cache
 		$matrix_table_from_tipo[$tipo] = $matrix_table;
 
-		#if(SHOW_DEBUG) $GLOBALS['log_messages'] .= exec_time($start_time, __METHOD__, 'logger_backend_activity '.$tipo);
+		#if(SHOW_DEBUG) $GLOBALS['log_messages'][] = exec_time($start_time, __METHOD__, 'logger_backend_activity '.$tipo);
 
 		return $matrix_table;
 	}
@@ -358,14 +358,17 @@ abstract class common extends Accessors {
 	*/
 	public function get_identificador_unico() {
 
-		if (isset($this->identificador_unico)) return $this->identificador_unico;
+		# Nota: estaba desactivo ¿? en 25-11-2015. Cambiado portque tool_time_machine lo necesita activo (ver trigger.tool_time_machine )
+		if (isset($this->identificador_unico) && $this->get_modo()=='tool_time_machine') {
+			return $this->identificador_unico;
+		}
 
 		$permissions=null;
 		if(!empty($this->tipo)) {
 			$permissions = common::get_permissions($this->tipo);
 		}
 
-		$this->identificador_unico = self::get_id().'_'.self::get_tipo().'_'.self::get_parent().'_'.self::get_lang().'_'.self::get_modo().'_'.self::get_variant().'_'.$permissions.'_'.self::get_section_tipo();	# .'_'.mt_rand(1,999); #dump($identificador_unico);
+		$this->identificador_unico = $this->get_id().'_'.$this->get_tipo().'_'.$this->get_parent().'_'.$this->get_lang().'_'.$this->get_modo().'_'.$this->get_variant().'_'.$permissions.'_'.$this->get_section_tipo();	# .'_'.mt_rand(1,999); #dump($identificador_unico);
 			#$identificador_unico = $this->get_tipo() . '_' . $this->get_id() . '_' . $this->get_lang() . '_' . $this->get_modo();	#dump($identificador_unico);		
 			#dump($this->identificador_unico,'$this->identificador_unico');	
 
@@ -571,7 +574,7 @@ abstract class common extends Accessors {
 
 
 		if(SHOW_DEBUG) {
-			#$GLOBALS['log_messages'] .= exec_time($start_time, __METHOD__. ' ', "html");
+			#$GLOBALS['log_messages'][] = exec_time($start_time, __METHOD__. ' ', "html");
 			global$TIMER;$TIMER[__METHOD__.'_'.get_called_class().'_'.$this->tipo.'_'.$this->modo.'_'.microtime(1)]=microtime(1);
 		}
 		
@@ -674,8 +677,7 @@ abstract class common extends Accessors {
 		}
 		#dump($ar_all_langs,'$ar_all_langs');
 
-		if(SHOW_DEBUG) {
-			#$GLOBALS['log_messages'] .= exec_time($start_time, __METHOD__, $ar_all_langs);
+		if(SHOW_DEBUG) {			
 			#dump( exec_time($start_time, __METHOD__, $ar_all_langs) , 'exec_time');
 			#error_log(exec_time($start_time, __METHOD__, $ar_all_langs));
 		}
@@ -754,7 +756,7 @@ abstract class common extends Accessors {
 	*
 	* NOTA : Se buscan (to_find) 'section_id' pero el resultado devuelto es organizado por id_matrix !!!
 	*/
-	public static function get_references( stdClass $new_options ) {
+	public static function get_references__DEPRECATED( stdClass $new_options ) {
 		$ar_references=array();
 
 		if(SHOW_DEBUG) {

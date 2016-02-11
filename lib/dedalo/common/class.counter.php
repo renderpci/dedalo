@@ -51,13 +51,10 @@ abstract class counter extends Accessors {
 				$counter_number = pg_fetch_result($result, 0, 0);
 			}else{
 				if(SHOW_DEBUG) {
-					error_log(__METHOD__." counter not found in db ($matrix_table). Value $counter_number is returned instead ($strQuery)");
+					debug_log(__METHOD__." counter not found in db ($matrix_table). Value $counter_number is returned instead ($strQuery) ".to_string(), logger::DEBUG);
 				}
 			}
 			
-			if(SHOW_DEBUG) {
-				#error_log(__METHOD__." counter_number:$counter_number ($strQuery)");
-			}
 			return (int)$counter_number;
 		}
 
@@ -142,7 +139,7 @@ abstract class counter extends Accessors {
 				$strQuery = "INSERT INTO \"$matrix_table\" (parent, dato, tipo, lang, ref) VALUES ($1, $2, $3, $4, $5)";
 				$result   = pg_query_params(DBi::_getConnection(), $strQuery, array($parent, $dato, $tipo, $lang, $ref));
 				if(SHOW_DEBUG) {
-					error_log(__METHOD__." CREATED NEW COUNTER with value: counter_number:$dato ($strQuery)");
+					debug_log(__METHOD__." CREATED NEW COUNTER with value: counter_number:$dato ($strQuery) ".to_string(), logger::DEBUG);
 					if (!$result) {
 						trigger_error("VARS: parent:$parent, dato:$dato, tipo:$tipo, lang:$lang, ref:$ref");
 					}
@@ -151,7 +148,7 @@ abstract class counter extends Accessors {
 				$strQuery = "UPDATE \"$matrix_table\" SET dato = $1 WHERE tipo = $2";
 				$result   = pg_query_params(DBi::_getConnection(), $strQuery, array( $dato, $tipo ));
 				if(SHOW_DEBUG) {
-					error_log(__METHOD__." UPDATED COUNTER with value: counter_number:$dato ($strQuery)");
+					debug_log(__METHOD__." Updated counter with value: dato:$dato, tipo:$tipo ($strQuery) ".to_string(), logger::DEBUG);
 					if (!$result) {
 						trigger_error("VARS: dato:$dato, tipo:$tipo");
 					}
@@ -159,11 +156,7 @@ abstract class counter extends Accessors {
 			}			
 			if (!$result) {
 				throw new Exception("Error Processing Request. DB error on update counter", 1);
-			}
-
-			if(SHOW_DEBUG) {
-				#error_log(__METHOD__." counter_number:$dato ($strQuery)");
-			}
+			}			
 
 			return (int)$counter_dato_updated;
 			
@@ -224,10 +217,8 @@ abstract class counter extends Accessors {
 				counter::update_counter($section_tipo, $counter_matrix_table, $current_value);
 			}			
 			
-			
-			if(SHOW_DEBUG) {
-				error_log(__METHOD__." Triggered consolidate_counter and update_counter with value: $current_value [$section_tipo - $matrix_table]");
-			}
+			debug_log(__METHOD__." Triggered consolidate_counter and update_counter with value: $current_value [$section_tipo - $matrix_table] ".to_string(), logger::DEBUG);
+						
 			
 			return true;
 

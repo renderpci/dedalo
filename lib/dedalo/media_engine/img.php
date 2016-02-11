@@ -12,7 +12,7 @@ require_once(DEDALO_LIB_BASE_PATH . '/media_engine/class.Thumb.php');
 /*
 if(login::is_logged()!==true) {
 	$string_error = "Auth error: please login";
-	print Error::wrap_error($string_error);
+	print dd_error::wrap_error($string_error);
 	die();
 }
 */

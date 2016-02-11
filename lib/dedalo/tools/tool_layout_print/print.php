@@ -40,7 +40,7 @@ require_once( dirname(__FILE__) .'/class.tool_layout_print.php');
 
 			if(login::is_logged()!==true) {
 				$string_error = "Auth error: please login";
-				print Error::wrap_error($string_error);
+				print dd_error::wrap_error($string_error);
 				die();
 			}
 			$autologged=true;

@@ -27,8 +27,8 @@
 					
 					if( !is_array($ar_valor) || count($ar_valor)==0 ) {
 						
-						$html_contenido .= "\n <td class=\"section_list_td_border\">";
-						#$html_contenido .= "No records found.. ";
+						$html_contenido .= "\n <td class=\"section_list_td_border\" data-tipo=\"$component_tipo\">"; 
+						$html_contenido .= " No records found.. ";
 						$html_contenido .= "\n </td>";
 						
 					}else{
@@ -38,129 +38,146 @@
 						if(SHOW_DEBUG) $title .= "matrix id: $id";
 						$html_contenido .= "\n <td class=\"section_list_td_border section_list_td_row id_column\" title=\"$title\">";
 							
-							
 							#
-							# BUTTON EDIT
-							# If isset caller_id add link var caller_id				
-							switch ($context->context_name) {								
+							# BUTTONS
+							# 
+							# dump($context, ' context ++ '.to_string());		
+							switch ($context->context_name) {
 								
 								# LIST_INTO_TOOL_PORTAL : 
 								# Listado de un sección mostrado en la ventana flotante de tool_portal para seleccionar un registro desde el portal
-								case 'list_into_tool_portal':
-									#dump($_GET['section_tipo']," section_tipo");
-									# modo tool_portal
-									$context_http_query = http_build_query($context); 	#dump($context_http_query," context_http_query");
-									$url  = htmlspecialchars("?t=$section_tipo&id=$id&m=edit&{$context_http_query}");
-									$url .= "&top_tipo=".TOP_TIPO."&top_id=".TOP_ID;
-									$url .= "&exclude_elements=".$context->exclude_elements;
-									#echo $url." <br>";
-									$title 	= "Goto resource $section_id [$id]";
-									if(SHOW_DEBUG) $title .= "\n url:$url \n modo $modo, context $context->context_name";
-									$html_contenido .= "<div class='button_edit div_image_link link' title=\"$title\" onclick=\"goto_url('$url')\"></div>";
-									break;
+								case 'list_into_tool_portal':									
+									#
+									# BUTTON EDIT
+										$context_http_query = http_build_query($context); 	#dump($context_http_query," context_http_query");
+										$url  = htmlspecialchars("?t=$section_tipo&id=$id&m=edit&{$context_http_query}");
+										$url .= "&top_tipo=".TOP_TIPO."&top_id=".TOP_ID;
+										$url .= "&exclude_elements=".$context->exclude_elements;
+										#echo $url." <br>";
+										$title 	= "Goto resource $section_id [$id]";
+										if(SHOW_DEBUG) $title .= "\n url:$url \n modo $modo, context $context->context_name";										
+										
+										$html_contenido .= "<a href=\"$url\" class=\"id_column_buttons button_edit link\" title=\"$title\">";
+											# SECTION_ID TEXT
+											$html_contenido .= "<span class='section_id_number'>";
+											$html_contenido .= " $section_id ";
+											$html_contenido .= "</span>"; 
+										$html_contenido .= "</a>"; 								
+									#
+									# ADD RESOURCE BUTTON
+										# Get vars from context obj									
+										$portal_parent 		 = $context->portal_parent;		
+										$portal_tipo 		 = $context->portal_tipo;
+										$portal_section_tipo = $context->portal_section_tipo;
+										/*
+										$portal_parent 		= isset($_GET['parent']) ? $_GET['parent'] : '';
+										$portal_tipo  		= isset($_GET['t']) ? $_GET['t'] : '';
+										$portal_section_tipo= isset($_GET['section_tipo']) ? $_GET['section_tipo'] : '';										
+										*/
 
-								case 'list_into_tool_relation':									
-									# modo tool_relation
-									/*
-									$url 	= htmlspecialchars("?t=$section_tipo&id=$id&m=edit&context_name=$context->context_name");
-									$title 	= "Goto record $section_id [$id]";
-									if(SHOW_DEBUG) $title .= "\n url:$url \n modo $modo, context_name $context->context_name";
-									$html_contenido .= "<div class='button_edit div_image_link link' title=\"$title\" onclick=\"goto_url('$url')\"></div>";
-									*/
-									$html_contenido .= "Por revisar";
+										# LOCATOR
+										$locator = new locator();
+											$locator->set_section_id($id);
+											$locator->set_section_tipo($section_tipo);
+										
+										$rel_locator = json_handler::encode($locator);
+											
+
+										$title = "Add resource to $portal_parent ";
+										$html_contenido .= "<a href=\"javascript:void(0);\" class=\"id_column_buttons button_add_resource link\" onclick=\"tool_portal.add_resource(this)\"
+										data-portal_parent=\"{$portal_parent}\"
+										data-portal_tipo=\"{$portal_tipo}\"
+										data-portal_section_tipo=\"{$portal_section_tipo}\"
+										data-rel_locator='$rel_locator'
+										data-section_tipo='$portal_section_tipo'
+										title=\"$title\">";
+										if(SHOW_DEBUG) {
+											#$html_contenido .= $portal_parent;
+										}
+										$html_contenido .= "</a>";
 									break;
 								
-								default:
-									# modo normal (list)
-
-									# SECTION_ID TEXT
-									$html_contenido .= "\n  $section_id ";
-
-									switch ($section_tipo) {
-										case DEDALO_ACTIVITY_SECTION_TIPO:
-											# nothing to show...
-											break;
-										default:
-											$url  = htmlspecialchars("?t=$section_tipo&id=$id&m=edit");
-											$url .= "&top_tipo=".TOP_TIPO."&top_id=".TOP_ID."&offset=$offset";
-											$title 	= "Edit record $section_id [$id]";
-											if(SHOW_DEBUG) $title .= "\n url:$url \n modo $modo, context_name $context->context_name ";
-											$html_contenido .= "<div class='button_edit div_image_link link' title=\"$title\" onclick=\"goto_url('$url')\"></div>";
-											break;
-									}
-							}
-
-							
-							#
-							# BUTTON DELETE / ADD RELATION
-							# If isset caller_id hide btn delete and show btn 'add relation'
-							# dump($context->context_name,"context->name");					
-							switch ($context->context_name) {								
-
-								case 'list_into_tool_portal':
-									# ADD RESOURCE BUTTON
-									# Get vars from context obj
-									#dump($context," context");
-									$portal_parent 		 = $context->portal_parent;		
-									$portal_tipo 		 = $context->portal_tipo;
-									$portal_section_tipo = $context->portal_section_tipo;																	
-
-									$section_tipo_get = isset($_GET['section_tipo']) ? $_GET['section_tipo'] : '';
-
-									# LOCATOR
-									$locator = new locator();
-										$locator->set_section_id($id);
-										$locator->set_section_tipo($section_tipo);
-									
-									$rel_locator = json_handler::encode($locator);
-
-									$title = "Add resource [$rel_locator]";
-									$html_contenido .= " <div class=\"icon_bs tool_add_portal_icon link\"
-									data-portal_parent=\"{$portal_parent}\"
-									data-portal_tipo=\"{$portal_tipo}\"
-									data-portal_section_tipo=\"{$portal_section_tipo}\"
-									data-rel_locator='$rel_locator'
-									data-section_tipo='$section_tipo_get'									
-									onclick=\"tool_portal.add_resource(this)\"
-									title=\"$title\";
-									>";
-									#dump($_REQUEST,"tipo $tipo");
-									#$html_contenido .= "Add resource ";
-									$html_contenido .= "</div>";																		
+								case 'section_tool':
+									#
+									# SECTION TOOL: 
+									# Buttons calculated for section tool
+										$tool_name  = $context->target_tool;										
+										$modelo_name= RecordObj_dd::get_modelo_name_by_tipo( $context->target_component_tipo, true ); 
+										$component 	= component_common::get_instance( $modelo_name,
+																					  $context->target_component_tipo,
+																					  $section_id,
+																					  $modo,
+																					  DEDALO_DATA_LANG,
+																					  $section_tipo);
+										$tool = new $tool_name($component,'button');
+											#dump($tool, ' tool ++ '.to_string());
+										$html_contenido .= $tool->get_html();
 									break;
 
 								case 'list_into_tool_relation':
-									# ADD RELATION BUTTON
-									$title = "Add relation [$rel_locator]";
-									$html_contenido .= " <div class=\"icon_bs tool_relation_icon link\"
-									data-id_matrix=\"{$id}\" data-caller_tipo=\"{$section_tipo}\" data-rel_locator='$rel_locator' data-tipo=\"$tipo\" 
-									onclick=\"parent.tool_relation.add_relation(this)\"
-									title=\"$title\";
-									>";
-									#$html_contenido .= "Add relation ";
-									$html_contenido .= "</div>";
-									break;								
-
+									#
+									# BUTTON EDIT
+										/*
+										$url 	= htmlspecialchars("?t=$section_tipo&id=$id&m=edit&context_name=$context->context_name");
+										$title 	= "Goto record $section_id [$id]";
+										if(SHOW_DEBUG) $title .= "\n url:$url \n modo $modo, context_name $context->context_name";
+										$html_contenido .= "<div class='button_edit div_image_link link' title=\"$title\" onclick=\"goto_url('$url')\"></div>";
+										*/
+										$html_contenido .= "Por revisar";
+									#
+									# BUTTON ADD RELATION 
+										$title = "Add relation [$rel_locator]";
+										$html_contenido .= " <div class=\"icon_bs tool_relation_icon link\"
+										data-id_matrix=\"{$id}\"
+										data-caller_tipo=\"{$section_tipo}\"
+										data-rel_locator='$rel_locator'
+										data-tipo=\"$tipo\"
+										onclick=\"parent.tool_relation.add_relation(this)\"
+										title=\"$title\"></div>";
+									break;
+								
 								default:
-									#$html_contenido .= $button_delete_html; delete_portal_link icon_bs link image_delete_icon
-									#$html_contenido .= "<div class=\"css_button_delete div_image_link link\" data-tipo=\"{$section_tipo}\" data-id_matrix=\"{$id}\" title=\"$id\"></div>";
-									if($button_delete_permissions >1){
-										$html_contenido .= "<div class=\"css_button_delete icon_bs link image_delete_icon\" data-tipo=\"{$section_tipo}\" data-section_id=\"{$id}\" title=\"$id\"></div>";
-									}
-
-							}
-
-							#$html_contenido .= "context:$context ";
-
+									#
+									# BUTTON EDIT
+										switch ($section_tipo) {
+											case DEDALO_ACTIVITY_SECTION_TIPO:
+													# SECTION_ID TEXT										
+													$html_contenido .= " $section_id ";							
+												break;
+											default:
+												$url  = htmlspecialchars("?t=$section_tipo&id=$id&m=edit");
+												$url .= "&top_tipo=".TOP_TIPO."&top_id=".TOP_ID."&offset=$offset";
+												$title = label::get_label('editar_registro').' '.$section_id;
+												#if(SHOW_DEBUG) $title .= "\n url:$url \n modo $modo, context_name $context->context_name ";
+												$additional_css_style = $button_delete_permissions <=1 ? 'height: 100%;' : '' ;
+												$html_contenido .= "<a href=\"$url\" class=\"id_column_buttons button_edit link\" title=\"$title\" style=\"$additional_css_style\">";
+													# SECTION_ID TEXT
+													$html_contenido .= "<span class=\"section_id_number\">";
+													$html_contenido .= " $section_id ";													
+													$html_contenido .= "</span>";
+												$html_contenido .= "</a>";
 							
-							if(SHOW_DEBUG) {
-								# ID MATRIX
-								$html_contenido .= "<br><mark class=\"row_debug_info\">$current_id</mark>";
-							}
+												break;
+										}
+									#
+									# BUTTON DELETE 
+										if($button_delete_permissions >1){
+											$title = label::get_label('borrar').' '.$section_id;
+											$html_contenido .= "<a href=\"javascript:;\" class=\"id_column_buttons button_delete link\"
+											data-tipo=\"{$section_tipo}\"
+											data-section_id=\"{$id}\"
+											title=\"$title\">";
+											if(SHOW_DEBUG) {
+												$html_contenido .= "<mark class=\"row_debug_info\">$section_tipo $section_id</mark>";
+											}
+											$html_contenido .= "</a>";
+										}
+							}//end switch ($context->context_name) {						
+							
 
 							# DEBUG INFO
-							if($permissions==3)		
-							$html_contenido .= "\n <span class=\"css_span_debugger {$ar_css['css_span_debugger']}\" id=\"debugger_{$id}\" >{$id}</span>";
+							#if($permissions==3)		
+								#$html_contenido .= "\n <span class=\"css_span_debugger {$ar_css['css_span_debugger']}\" id=\"debugger_{$id}\" >{$id}</span>";
 							
 
 						$html_contenido .= "\n </td>";
@@ -203,7 +220,7 @@
 								#dump($propiedades->$component_tipo->CSS->class,"");
 							}
 
-							$html_contenido .= "\n <td class=\"section_list_td_border section_list_td_row $td_css_selector $css_class\" $style data-tipo=\"$component_tipo\">";														
+							$html_contenido .= "\n <td class=\"section_list_td_border section_list_td_row $td_css_selector $css_class\" $style data-tipo=\"$component_tipo\">";
 								$html_contenido .= $valor_list ;
 								if(SHOW_DEBUG) {
 									if (strpos($valor_list, 'thumb_in_list')!==false) {
@@ -212,11 +229,13 @@
 									}
 								}
 							$html_contenido .= "\n </td>";
-						}
+
+						}//end foreach($ar_valor as $component_tipo => $valor_list) {
 
 
-					}
-	}
+					}//end if( !is_array($ar_valor) || count($ar_valor)==0 ) {
+
+	}//end switch($permissions) {
 	$html_contenido .= "\n</tr>";
 	
 	# PRINT HTML

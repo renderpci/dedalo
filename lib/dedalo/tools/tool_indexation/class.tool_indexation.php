@@ -32,7 +32,26 @@ class tool_indexation extends tool_common {
 	
 	
 	
+	/**
+	* GET_AR_INVERSE
+	* Format, filter and sort inverse_locators values for use in selector
+	* @return array $ar_inverse
+	*/
+	public function get_ar_inverse( $inverse_locators ) {
+		$ar_inverse=array();
 
+		$section_name = RecordObj_dd::get_termino_by_tipo( TOP_TIPO );
+		foreach ((array)$inverse_locators as $current_locator) {
+			if ($current_locator->section_tipo!=TOP_TIPO) {
+				continue;
+			}			
+			$ar_inverse[$current_locator->section_id] = "$section_name - $current_locator->section_id";				
+		}
+		natsort($ar_inverse);
+		
+		return $ar_inverse;
+
+	}#end get_ar_inverse
 	
 	
 

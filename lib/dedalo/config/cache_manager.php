@@ -15,7 +15,7 @@ if(DEDALO_CACHE_MANAGER=='redis') {
     new cache();
 
     # Avoid use redis to sessions in debug mode
-    #if (strpos($_SERVER['HTTP_HOST'],'8888')!==false) {
+    #if (DEDALO_ENTITY=='development') {
         return;
     #}
 

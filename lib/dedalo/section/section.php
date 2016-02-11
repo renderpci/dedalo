@@ -17,18 +17,9 @@
 	$identificador_unico	= $this->get_identificador_unico();	
 	$caller_id 				= $this->get_caller_id();
 	
-	$context 				= $this->get_context();
-		#dump($context,'context');
+	$context 				= $this->get_context();	
+	$file_name 				= $modo;	
 
-	#$ar_section_list_obj	= $this->get_ar_section_list_obj();
-		#dump($ar_section_list_obj,'ar_section_list_obj',"ar_section_list_obj en section controller ");
-		#dump($ar_section_group_obj,'ar_section_group_obj',"ar_section_group_obj en section controller ");
-	
-	$file_name = $modo;	#dump($modo,'modo');
-
-	#dump(filter::$ar_records_unassigned);
-	#echo "section modo: $modo";
-	#$this->restore_deleted_section_media_files();
 	
 
 	# COMPONENTS HTML
@@ -46,6 +37,16 @@
 				$section_real_tipo  	= $this->get_section_real_tipo();	# Important: Fija $this->section_real_tipo que es necesario luego
 					#dump($section_real_tipo,"section_real_tipo ");
 				$id_wrapper 			= 'wrap_section_'.$identificador_unico;
+
+
+				#
+				# CSS includes
+					$propiedades = $this->get_propiedades();
+						#dump($propiedades, ' $propiedades ++ '.to_string());
+					if (isset($propiedades->aditional_css)) {
+						css::$ar_url[] = DEDALO_LIB_BASE_URL . $propiedades->aditional_css;
+					}
+					
 				
 					
 				#
@@ -57,23 +58,7 @@
 					$search_form_html 	= $records_search->get_html();
 						#dump($search_form_html, " search_form_html ".to_string());
 				*/
-
-				#
-				# INSPECTOR HTML
-				# Render inspector html
-					$inspector_html = '';
-					$show_inspector	= $this->get_show_inspector();
-					if ($show_inspector) {
-						
-						# Change modo temporally to get inspector html
-						#$this->modo 	= 'edit_inspector';
-						#$inspector_html = $this->get_html();
-						# Restore original modo and continue
-						$this->modo 	= 'edit';
-						
-						$inspector 		= new inspector($modo, $tipo);
-						$inspector_html = $inspector->get_html();
-					}				
+							
 
 				#
 				# RECORDS_HTML
@@ -148,6 +133,25 @@
 				$section_records 	  = new section_records($this->tipo, $options);				
 				$section_records_html = $section_records->get_html();
 					
+					#dump($section_records->rows_obj->result, ' section_records->rows_obj->result ++ '.to_string());
+
+				#
+				# INSPECTOR HTML
+				# Render inspector html
+					$inspector_html = '';
+					$show_inspector	= $this->get_show_inspector();
+					if ($show_inspector && !empty($section_records->rows_obj->result)) {
+						
+						# Change modo temporally to get inspector html
+						#$this->modo 	= 'edit_inspector';
+						#$inspector_html = $this->get_html();
+						# Restore original modo and continue
+						$this->modo 	= 'edit';
+						
+						$inspector 		= new inspector($modo, $tipo);
+						$inspector_html = $inspector->get_html();
+					}
+
 
 
 				# OLD MODE
@@ -271,7 +275,7 @@
 
 				break;
 
-		case 'list'	:										
+		case 'list'	:
 						
 				#
 				# ROWS_LIST . SECTION LIST
@@ -279,10 +283,27 @@
 					$rows_list_html 	= '';
 					#$search_options_session_key = $this->tipo.'_'.$this->modo.'_'.TOP_TIPO;	//get_class().'_'.
 					$search_options_session_key = 'section_'.$this->tipo;
-					if (isset($_REQUEST['m']) && $_REQUEST['m']=='tool_portal') {
-						$search_options_session_key = 'tool_portal_'.$this->tipo;
-					}										
-					if (!empty($_SESSION['dedalo4']['config']['search_options'][$search_options_session_key])) {
+
+					# SESSION_KEY OVERRIDES DEFAULT IN SOME CONTEXTS
+					switch (true) {
+						case ( isset($_REQUEST['m']) && $_REQUEST['m']=='tool_portal' ):
+							#
+							# TOOL PORTAL CASE
+							# Override on tool_portal context 
+							#$search_options_session_key = 'tool_portal_'.$this->tipo;
+							$search_options_session_key = $context->search_options_session_key; // Get from tool portal context like 'tool_portal_oh1';
+							break;
+						case ( isset($this->context->context_name) && $this->context->context_name=='section_tool' && isset($this->context->tool_section_tipo) ):
+							#
+							# SECTION TOOL CASE
+							# When current section is 'section_tool', $section_obj->context->section_tool was set with section_tool propiedades. In this case
+							# section list of referenced 'tool_section_tipo' is used for create this session_key
+							$search_options_session_key = 'section_'.$this->context->tool_section_tipo;
+							break;
+					}					
+
+
+					if ( !empty($_SESSION['dedalo4']['config']['search_options'][$search_options_session_key]) ) {						
 						
 						$options = (object)$_SESSION['dedalo4']['config']['search_options'][$search_options_session_key];
 							$options->full_count = false; # Force update count records on non ajax call
@@ -318,13 +339,27 @@
 							$options->search_options_session_key = $search_options_session_key;
 								#dump($options);#die();
 
-							#
-							# FILTER_BY_SECTION_CREATOR_PORTAL_TIPO
-							# When received request 'm=tool_portal', options is set with filter filter_by_section_creator_portal_tipo=$portal_tipo
-							if (isset($_REQUEST['m']) && $_REQUEST['m']=='tool_portal') {
-								$portal_tipo = $_REQUEST['t'];
-								$options->filter_by_section_creator_portal_tipo = $portal_tipo;
+							# OPTIONS CUSTOM
+							switch (true) {
+								case (isset($_REQUEST['m']) && $_REQUEST['m']=='tool_portal'):
+									#
+									# FILTER_BY_SECTION_CREATOR_PORTAL_TIPO
+									# When received request 'm=tool_portal', options is set with param filter_by_section_creator_portal_tipo=$portal_tipo
+									$portal_tipo = $_REQUEST['t'];
+									$options->filter_by_section_creator_portal_tipo = $portal_tipo;
+									break;
+								case ( isset($this->context->context_name) && $this->context->context_name=='section_tool' && isset($this->context->top_tipo) ):
+									#
+									# SECTION TOOL CASE
+									# When current section is 'section_tool', $section_obj->context->section_tool was set with section_tool propiedades. In this case
+									# section list of referenced 'tool_section_tipo' is used for create this session_key
+									$options->filter_by_inverse_locators = array('section_tipo' => $this->context->top_tipo);
+									break;
+								default:
+									# code...
+									break;
 							}
+							
 
 							#
 							# ACTIVITY CASE
@@ -333,12 +368,14 @@
 								$options->tipo_de_dato_order	= 'dato';
 								$options->order_by				= 'id DESC';	#section_id ASC
 							}
+
+							#dump($options->layout_map_list, '$options->layout_map_list ++ '.to_string());
 					}
 
 					# Override some specific options
 						$options->modo	= $modo;
 						//dump($_SESSION['dedalo4']['config']['search_options'][$search_options_session_key], "$search_options_session_key ".to_string());
-
+							#dump($options, ' options ++ '.to_string());
 
 					$section_rows 	= new section_records($this->tipo, $options);
 					$rows_list_html = $section_rows->get_html();
@@ -424,7 +461,7 @@
 					$html_section_add = $generated_content_html;
 					break;		
 
-		default: return "Error: modo '$modo' is not valid! ";
+		default:  echo "<blockquote> Error: modo '$modo' is not valid! </blockquote>"; return;
 	}
 		
 

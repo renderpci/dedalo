@@ -11,13 +11,27 @@
 	print "\n<!-- LOGIN [tipo:$tipo id_matrix:$id] -->";
 	print "\n<div class=\"login_body\">";		
 	print "\n<div class=\"css_wrap_login {$ar_css['css_wrap_login']}\" id=\"wrap_login\">";	
-	print "\n<form class=\"css_form\" name=\"form_login\" id=\"form_login\" action=\"\" onsubmit=\"login.Login()\" method=\"post\" >";
+
+	#
+	# MAINTENANCE
+	$maintenance_mode_class='';
+	if (DEDALO_MAINTENANCE_MODE) {
+		$label = label::get_label('sitio_en_mantenimiento');		
+		if ( strpos($label, '.')!==false ) {
+			$label = substr($label, 0, strpos($label, '.') );
+		}
+		echo "\n<div class=\"maintenance_advice main_font_light\"> $label </div>";
+		$maintenance_mode_class = 'maintenance_mode_class';
+	}
+
+	print "\n<form class=\"css_form $maintenance_mode_class\" name=\"form_login\" id=\"form_login\" action=\"\" onsubmit=\"login.Login()\" method=\"post\" >";
 
 
 		# CONTENIDO (INPUT)
 		$html_contenido = '';
 
 
+			
 
 			# LANG JUMP
 			$html_contenido .= $dedalo_aplication_langs_selector_html;
@@ -29,6 +43,7 @@
 			$html_contenido .= "<input type=\"text\"
 			class=\"login_input\"
 			id=\"login_username\"
+			name=\"login_username\"
 			value=\"$username_value\"
 			placeholder=\"".$username_label."\"
 			/>";
@@ -40,6 +55,7 @@
 			$html_contenido .= "<input type=\"password\"
 			class=\"login_input\"
 			id=\"login_password\"
+			name=\"login_password\"
 			value=\"$username_password\"
 			placeholder=\"".$password_label."\"
 			/>";
@@ -51,18 +67,21 @@
 			$html_contenido .= "\n<input type=\"hidden\" id=\"tipo_password\"		value=\"$tipo_password\" >";	
 			$html_contenido .= "\n<input type=\"hidden\" id=\"tipo_active_account\"	value=\"$tipo_active_account\" >";
 
+
 						
 			#
 			# AJAX RESPONSE	
 			$html_contenido .= "\n<div class=\"login_ajax_response\">  </div>";
 
 
+			
+
 			#
 			# VERSION : Dedalo verrsion info
 			$html_contenido .= "<div class=\"dedalo_version\"> Dédalo version ".DEDALO_VERSION. " - Build " .DEDALO_BUILD ;
 
 				# Postgres user and db name
-				if(strpos($_SERVER['HTTP_HOST'],'8888')!==false) {
+				if(DEDALO_ENTITY=='development') {
 					$html_contenido .= "<br> ".DEDALO_USERNAME_CONN." -> ".DEDALO_DATABASE_CONN ;
 				}
 				if(SHOW_DEBUG) {			

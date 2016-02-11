@@ -9,7 +9,7 @@ if(login::is_logged()!==true) die("<span class='error'> Auth error: please login
 
 
 # set vars
-	$vars = array('mode','video_id','quality','source_quality','target_quality','timecode', 'parent');
+	$vars = array('mode','video_id','quality','source_quality','target_quality','timecode','parent','select_val');
 		foreach($vars as $name) $$name = common::setVar($name);
 	
 
@@ -18,7 +18,7 @@ if(login::is_logged()!==true) die("<span class='error'> Auth error: please login
 
 
 /**
-* GENERATE POSTERFRAME
+* GENERATE_POSTERFRAME
 * Build a posterframe from current video tc
 * @param $quality
 * @param $video_id
@@ -77,7 +77,7 @@ if($mode=='generate_posterframe') {
 	
 	print 'Posterframe generated';
 	die();
-}
+}//end generate_posterframe
 
 /**
 * DELETE POSTERFRAME
@@ -134,6 +134,98 @@ if($mode=='delete_posterframe') {
 	print "Posterframe deleted" ;
 	exit();
 }
+
+
+
+/**
+* GENERATE_IDENTIFYING_IMAGE
+* Build a posterframe from current video tc
+* @param $quality
+* @param $video_id
+* @param $timecode
+*/
+if($mode=='generate_identifying_image') {
+
+	if (empty($quality)) {
+		die("Error: quality is not defined!");
+	}
+	if (empty($video_id) || strlen($video_id)<4) {
+		die("Error: video_id is not defined!");
+	}
+	if (empty($timecode) || strlen($timecode)<1) {
+		die("Error: timecode is not defined!");
+	}
+	if ( empty($parent) ) {
+		die("Error Processing Request. Few vars! (parent)");
+	}
+	if ( empty($select_val) ) {
+		die("Error Processing Request. Few vars! (select_val)");
+	}
+	if (!$select_val = json_decode($select_val)) die("Error Processing Request. Invalid val (select_val)");
+
+
+	#
+	# COMPONENT PORTAL	
+	$modelo_name 	  = 'component_portal';
+	$component_portal = component_common::get_instance($modelo_name,
+													   $select_val->component_portal,
+													   $select_val->section_id,
+													   'edit',
+													   DEDALO_DATA_NOLAN,
+													   $select_val->section_tipo);													   
+	
+	$portal_parent  			= $component_portal->get_parent();
+	$portal_tipo 				= $component_portal->get_tipo();
+	$portal_section_target_tipo = $component_portal->get_ar_target_section_tipo()[0]; // First only
+	$top_tipo 					= $select_val->section_tipo;
+	$top_id 					= $select_val->section_id;
+	$section_tipo 				= $component_portal->get_section_tipo();
+	$new_section_id 			= (int)component_portal::create_new_portal_record( $portal_parent, $portal_tipo, $portal_section_target_tipo, $top_tipo, $top_id, $section_tipo );
+		#dump($new_section_id, ' new_section_id ++ '.to_string());
+	if($new_section_id<1) die("Error on create portal new record");
+
+
+	#
+	# COMPONENT IMAGE
+	$modelo_name = 'component_image';
+	$component_image = component_common::get_instance($modelo_name,
+													  $select_val->component_image,
+													  $new_section_id,
+													  'edit',
+													  DEDALO_DATA_LANG,
+													  $portal_section_target_tipo);
+	# Desired image is 'original' quality
+	$component_image->set_quality(DEDALO_IMAGE_QUALITY_ORIGINAL);
+
+	#
+	# IMAGE FROM VIDEO
+	$reelID		 = $video_id;
+	$target_path = $component_image->get_target_dir();
+	$target_file = $component_image->get_image_path();	
+	$ar_target 	 = array('target_path' => $target_path,  // Absolute path to image dir
+							'target_file' => $target_file,  // Absolute final path of file (included target_path)
+							);
+	#dump($reelID, ' reelID ++ '.to_string($quality)); die();
+
+	# AVObj
+	$AVObj		 = new AVObj($reelID, $quality);
+	
+	# Ffmpeg create original quality version ('original')
+	$Ffmpeg		 = new Ffmpeg();	
+	$render		 = $Ffmpeg->create_posterframe($AVObj, $timecode, $ar_target);			#create_posterframe(AVObj $AVObj, $timecode)
+
+	
+	#
+	# ORIGINAL TO DEFAULT QUALITY CONVERSION
+	$source_quality = DEDALO_IMAGE_QUALITY_ORIGINAL;
+	$target_quality = DEDALO_IMAGE_QUALITY_DEFAULT;
+	$component_image->convert_quality( $source_quality, $target_quality );
+	$component_image->Save(); // Force update list value
+	
+	
+	print "Identifying image created from video ($new_section_id)";
+	die();
+}//end generate_identifying_image
 
 
 ?>

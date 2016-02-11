@@ -23,8 +23,8 @@ class RecordObj_descriptors extends RecordObj_matrix {
 	function __construct($matrix_table=null, $id=NULL, $parent=NULL, $lang=NULL, $tipo='termino', $fallback=false) { 
 		
 		if(empty($matrix_table)) {
-			if(SHOW_DEBUG)	dump($matrix_table,"id:$id - parent:$parent - tipo:$tipo - lang:$lang");
-			throw new Exception("Error Processing Request. Matrix wrong name ", 1);			
+			if(SHOW_DEBUG) dump($matrix_table,"id:$id - parent:$parent - tipo:$tipo - lang:$lang");
+			throw new Exception("Error Processing Request. Matrix wrong name ", 1);
 		}
 
 		if(SHOW_DEBUG) {
@@ -38,18 +38,15 @@ class RecordObj_descriptors extends RecordObj_matrix {
 				
 		#dump($id,'$id',"id:$id, parent:$parent, lang:$lang, tipo:$tipo, fallback:$fallback");
 		$this->unTranslated	= false;
-		
 
 
 		if ($id>0) {
 
-			#dump($id,"called with: id:$id, parent:$parent, lang:$lang, tipo:$tipo, fallback:$fallback");
-
 			# parent construct formato: ($matrix_table=null, $id=NULL, $parent=NULL, $tipo=NULL, $lang=NULL)
-			parent::__construct($matrix_table, $id, NULL, NULL, NULL);		#echo " $id, $parent, $tipo, $lang, $this <hr>";
+			parent::__construct($matrix_table, $id, NULL, NULL, NULL);
 
 		}else{
-			#dump("","matrix_table:$matrix_table, id:$id, parent:$parent, lang:$lang, tipo:$tipo, fallback:$fallback");
+
 			# SI NO RECIBE ID PERO RECIBE LANG, VERIFICA QUE EXISTE EL REGISTRO Y SI NO LO ENCUENTRA, 
 			# PASA EL LENGUAJE PRINCIPAL DE LA JERARQUÍA PARA QUE SE USE EL DATO DEL REGISTRO PRINCIPAL EN SU LUGAR. 
 			# AÑADE EL ESTILO PITUFO (unTranslated=TRUE)
@@ -72,7 +69,6 @@ class RecordObj_descriptors extends RecordObj_matrix {
 					$id 	= $ar_id[0];	# ya que tenemos el id, lo usamos para agilizar el siguiente paso.
 				}					
 			}
-
 
 			# LANG . SI NO TENEMOS LANG, USAMOS EL LANG PRINCIPAL DE SU JERARQUIA
 			if(empty($lang) && !empty($parent)) {
@@ -97,7 +93,7 @@ class RecordObj_descriptors extends RecordObj_matrix {
 			
 			
 			# CONSTRUCT . parent construct formato: ($id=NULL, $parent=false, $tipo=false, $lang=DEDALO_DATA_LANG, $this='matrix')
-			parent::__construct($matrix_table, $id, $parent, $tipo, $lang);		#echo " id:$id, parent:$parent, tipo:$tipo, lang:$lang <hr>";
+			parent::__construct($matrix_table, $id, $parent, $tipo, $lang);
 			
 			
 			/*
@@ -120,15 +116,14 @@ class RecordObj_descriptors extends RecordObj_matrix {
 			# Forzamos el calculo del ID si es viable
 			if( $id<1 && (!empty($parent) && !empty($lang)) ) {					
 				$result = parent::calculate_ID();
-				if(SHOW_DEBUG) {
-					#dump($this," this");
+				if(SHOW_DEBUG) {					
 					#dump($result," result from calculate id");
 				}					
 			}
 			
-		}		
+		}//end if ($id>0) 		
 		
-	}
+	}//end __construct
 
 
 	public function get_mainLang() {
@@ -327,7 +322,7 @@ class RecordObj_descriptors extends RecordObj_matrix {
 
 	/**
 	* DELETE_REL_LOCATOR_FROM_ALL_INDEXES
-	* Busca las indexaciones en los descriptes que usan este 'rel_locator' y lo elimina de todos ellos guardando los datos actualizados
+	* Busca las indexaciones en los descriptores que usan este 'rel_locator' y lo elimina de todos ellos guardando los datos actualizados
 	* @param object $rel_locator
 	* @param string $tipo like 'dd45'
 	* @return array $ar_id (array of id matrix afected by this method)
@@ -401,6 +396,54 @@ class RecordObj_descriptors extends RecordObj_matrix {
 		return true;
 
 	}#end remove_index
+
+
+	/**
+	* GET_INDEXATIONS_FOR_LOCATOR
+	* ! OJO !! Como el dato de matrix-descriptors todavía NO es JSON, las indexaciones se guardan como texto. Por ello es MUY IMPORTANTE el ORDEN de los elementos del locator
+	* Ver documentación acerca de locators 
+	* @return array 
+	*/
+	public static function get_indexations_for_locator( $locator ) {
+		
+		if (!is_object($locator) || !isset($locator->section_tipo) || !isset($locator->section_id)) {
+			if(SHOW_DEBUG) {
+				dump($locator, 'locator');
+			}
+			throw new Exception("Error Processing Request. Wrong locator", 1);			
+		}
+
+		$arguments=array();
+		#$arguments['strPrimaryKeyName']	= 'parent';
+		$arguments['sql_code']			= "tipo = 'index' AND dato LIKE '%\"section_tipo\":\"$locator->section_tipo\",\"section_id\":\"$locator->section_id\"%' ";
+		$matrix_table					= 'matrix_descriptors';	//(string)RecordObj_descriptors::get_matrix_table_from_tipo($locator->section_tipo);
+		$RecordObj_descriptors 			= new RecordObj_descriptors($matrix_table, NULL);		
+		$ar_id							= (array)$RecordObj_descriptors->search($arguments);
+			#dump($ar_id, ' ar_id '.print_r($arguments, true));	return;
+
+		$ar_indexations=array();
+		foreach ($ar_id as $current_id) {
+			
+			$RecordObj_descriptors 	= new RecordObj_descriptors('matrix_descriptors', $current_id, $parent=NULL, DEDALO_DATA_NOLAN, 'index', $fallback=false);
+			$dato 					= json_decode($RecordObj_descriptors->get_dato());
+			$terminoID 				= $RecordObj_descriptors->get_parent();
+				#dump($dato, ' RecordObj_descriptors ++ '.to_string($terminoID));
+			$count = 0;
+			foreach ((array)$dato as $key => $current_locator) {
+				if( $current_locator->section_tipo == $locator->section_tipo &&
+					$current_locator->section_id == $locator->section_id
+					)
+					$count++;
+			}
+			$ar_indexations[$terminoID] = $count;
+		}
+		#dump($ar_indexations, ' ar_indexations ++ '.to_string());
+		
+		return $ar_indexations;
+
+	}#end get_indexations_for_locator
+
+
 
 
 

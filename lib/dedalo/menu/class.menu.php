@@ -15,7 +15,10 @@ class menu extends common {
 	}
 
 
-	# HTML
+
+	/**
+	* GET_HTML
+	*/
 	public function get_html() {
 
 		if(SHOW_DEBUG) $start_time = start_time();
@@ -27,7 +30,7 @@ class menu extends common {
 		$is_global_admin 		= component_security_administrator::is_global_admin($user_id_logged);
 		if( $is_global_admin === false ) {
 			# Get array of authorized areas for current logged user
-			$ar_authorized_areas 	= component_security_areas::get_ar_authorized_areas_for_user($user_id_logged, $mode_result='full', DEDALO_COMPONENT_SECURITY_AREAS_USER_TIPO);
+			$ar_authorized_areas 	= component_security_areas::get_ar_authorized_areas_for_user($user_id_logged, $mode_result='full');
 			$arguments_tree['dato'] = $ar_authorized_areas;
 				#dump($ar_authorized_areas,'ar_authorized_areas');
 		}
@@ -71,8 +74,10 @@ class menu extends common {
 				if(SHOW_DEBUG) {
 					# nothing to do;
 					#dump($uid, '$uid');
-				}
-				return $_SESSION['dedalo4']['config']['menu_structure_html'][$uid][DEDALO_APPLICATION_LANG];								
+					return $_SESSION['dedalo4']['config']['menu_structure_html'][$uid][DEDALO_APPLICATION_LANG];	
+				}else{
+					return $_SESSION['dedalo4']['config']['menu_structure_html'][$uid][DEDALO_APPLICATION_LANG];	
+				}											
 			}				
 		}
 
@@ -170,13 +175,27 @@ class menu extends common {
 	}//end public static function get_menu_structure_html($option, $arguments_tree) {
 
 	# CREATE LINK FOR MENU
-	public static function create_link($tipo, $termino, $modelo_name=NULL, $arguments_tree) {
+	public static function create_link($tipo, $termino, $modelo_name=NULL, $arguments_tree=null) {			
+
 		if($tipo == navigator::get_selected('area'))
 		$termino= "<span class=\"menu_a_span_hilite\">$termino</span>";
 
-		#$link = "<a href=\"?t=$tipo\">$termino<span class=\"menu_a_span\"> [$tipo] [$modelo_name] </span></a>";
 		$path = DEDALO_LIB_BASE_URL .'/main/';
-		$link = "<a href='{$path}?t=$tipo'> $termino </a>";	#class='link'
+		$url  = "{$path}?t=$tipo";
+
+		
+		if ($modelo_name=='section_tool') {
+
+			$RecordObj_dd = new RecordObj_dd($tipo);
+			$propiedades  = json_decode($RecordObj_dd->get_propiedades());
+			if ($propiedades) {
+				$url = "{$path}?t={$tipo}&top_tipo={$propiedades->context->top_tipo}";
+			}
+			//dump($propiedades, ' propiedades ++ '.to_string());
+		}
+
+		
+		$link = "<a href=\"$url\">$termino</a>";
 
 		return $link;
 	}

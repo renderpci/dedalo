@@ -9,7 +9,7 @@ if(login::is_logged()!==true) die("<span class='error'> Auth error: please login
 # UPLOAD_DIR_CUSTOM is button_tipo
 $upload_dir_custom = isset($_REQUEST['button_tipo']) ? '/'.$_REQUEST['button_tipo'] : '';
 if (empty($upload_dir_custom)) {
-	error_log("WARNING TOOL_IMPORT_IMAGES: EMPTY upload_dir_custom: $upload_dir_custom");
+	debug_log(__METHOD__." WARNING TOOL_IMPORT_IMAGES: EMPTY upload_dir_custom: $upload_dir_custom".to_string(), logger::WARNING);
 }
 
 # TOOL IMPORT IMAGES
@@ -73,8 +73,7 @@ class tool_import_images extends tool_common {
 
 		# Fix propiedades
 		$this->button_import_propiedades = $propiedades;
-
-			dump($propiedades, ' propiedades ++ '.to_string());
+			#dump($propiedades, ' propiedades ++ '.to_string());
 
 		return $button_import_obj;
 	}

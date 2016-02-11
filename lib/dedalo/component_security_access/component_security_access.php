@@ -38,6 +38,16 @@
 						break;
 		
 		case 'edit':	
+
+						if ($section_tipo==DEDALO_SECTION_USERS_TIPO) {
+						if(SHOW_DEBUG) {
+								echo "DEBUG MODE ONLY:";
+							}else{
+								return null;
+							}							
+						}
+
+
 						$dato_string 		= substr($this->get_dato_as_string(),0,150);		#dump($dato_string,"dato");
 						
 						$id_wrapper 		= 'wrapper_'.$identificador_unico;

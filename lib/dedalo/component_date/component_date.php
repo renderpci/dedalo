@@ -27,9 +27,6 @@
 	$ar_css					= false;
 
 
-	#$section_tipo = component_common::get_section_tipo_from_component_tipo($tipo);
-		#dump($section_tipo,'section_tipo');
-
 
 	$propiedades = $this->get_propiedades();
 	if(SHOW_DEBUG) {
@@ -41,7 +38,7 @@
 	if (isset($propiedades->method->get_valor_local)) {
 		$valor	= $this->get_valor_local( reset($propiedades->method->get_valor_local) );		#dump($valor," valor");
 	}else{
-		$valor	= $this->get_valor_local(false);
+		$valor	= $this->get_valor_local(false);		
 	}
 	if(SHOW_DEBUG) {
 	 	#dump($valor,'valor');

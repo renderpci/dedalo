@@ -47,12 +47,13 @@ class component_filter extends component_common {
 		# Dato : Verificamos que hay un dato. Si no, asignamos el dato por defecto definido en config 
 		if ($modo=='edit' && defined('DEDALO_DEFAULT_PROJECT')) {
 			$dato = $this->get_dato();
-				#dump($dato," $this->parent - $this->tipo");
+				
 			if(empty($dato)) {
+				#dump($dato," EMPTY DATO:  $this->parent - $this->tipo - $this->section_tipo");
 				$this->set_dato(array(DEDALO_DEFAULT_PROJECT => 2));
 				$this->Save();
-				if(SHOW_DEBUG) {
-					error_log(__METHOD__." Saved component filter (parent:$parent) DEDALO_DEFAULT_PROJECT as ".DEDALO_DEFAULT_PROJECT);
+				if(SHOW_DEBUG) {					
+					debug_log(__METHOD__." Saved component filter (tipo:$tipo, parent:$parent, section_tipo:$section_tipo) DEDALO_DEFAULT_PROJECT as ".DEDALO_DEFAULT_PROJECT);
 				}
 			}
 		}#end if ($modo=='edit' && defined('DEDALO_DEFAULT_PROJECT'))
@@ -90,20 +91,21 @@ class component_filter extends component_common {
 		# Salvamos normalmente pero guardamos el resultado
 		$parent_save_result = parent::Save();
 
-		# Logger only
+		# 
+		# ACTIVITY CASE Logger only
 		if( $this->tipo == logger_backend_activity::$_COMPONENT_PROYECTOS['tipo'] ) return $parent_save_result; 
 
 		
-			##
-			# PORTAL CASE
-			# Si la sección a que pertenece este componente tiene portal, propagaremos los cambios a todos los recursos existentes en el portal de esta sección (si los hay)
-			if ($this->propagate_filter) {
-				
-				$this->propagate_filter();				
-				
-			}# /if ($propagate_filter) {
+		#
+		# PORTAL CASE
+		# Si la sección a que pertenece este componente tiene portal, propagaremos los cambios a todos los recursos existentes en el portal de esta sección (si los hay)
+		if ($this->propagate_filter) {
+			
+			$this->propagate_filter();				
+			
+		}# /if ($propagate_filter) {
 
-			#dump($parent_save_result,'$parent_save_result for component_filter Save tipo:'.$this->tipo." parent: ".$this->parent);
+		#dump($parent_save_result,'$parent_save_result for component_filter Save tipo:'.$this->tipo." parent: ".$this->parent);
 
 		# Devolvemos el resultado del save
 		return $parent_save_result;
@@ -119,8 +121,7 @@ class component_filter extends component_common {
 	*/
 	function propagate_filter() {
 
-		$section_id 	= $this->get_parent();
-		#$section_tipo 	= component_common::get_section_tipo_from_component_tipo($this->tipo);
+		$section_id 	= $this->get_parent();		
 		$section_tipo 	= $this->get_section_tipo();
 		$section 		= section::get_instance($section_id, $section_tipo);
 		$dato_filter   	= $this->get_dato();
@@ -134,7 +135,9 @@ class component_filter extends component_common {
 			}			
 		}
 		#component_portal::propagate_filter_static($section_tipo, $dato_filter);
-	}
+
+	}//end propagate_filter
+
 
 	
 	/**
@@ -159,7 +162,7 @@ class component_filter extends component_common {
 				#if($section_id != end($ar_proyectos_for_current_section))
 				#	$html .= '<br>';
 			}
-		}
+		}//end foreach ($ar_proyectos_for_current_section as $section_id => $name) {
 
 		if ($format=='array') {
 			
@@ -185,7 +188,8 @@ class component_filter extends component_common {
 			
 			return $html;
 		}
-	}
+
+	}//end get_valor
 	
 
 
@@ -233,34 +237,26 @@ class component_filter extends component_common {
 			# SÓLO PARA ADMINISTRADORES. 
 			# BYPASS EL FILTRO Y ACCEDE A TODOS LOS PROYECTOS
 			# Buscamos TODOS los registros de section tipo DEDALO_SECTION_PROJECTS_TIPO
-			/*
-			$arguments=array();
-			$arguments["datos#>>'{section_tipo}'"]	= DEDALO_SECTION_PROJECTS_TIPO;
-			$matrix_table 							= common::get_matrix_table_from_tipo(DEDALO_SECTION_PROJECTS_TIPO);		
-			$JSON_RecordObj_matrix					= new JSON_RecordObj_matrix($matrix_table,NULL,DEDALO_SECTION_PROJECTS_TIPO);
-			$ar_records								= $JSON_RecordObj_matrix->search($arguments);	#dump($arguments,'$arguments');
-			*/
+				$strQuery   = "-- ".__METHOD__."\n SELECT id \n FROM \"matrix_projects\" ";	//WHERE $sql_filtro
+				$result		= JSON_RecordObj_matrix::search_free($strQuery);
 
-			$strQuery   = "-- ".__METHOD__."\n SELECT id \n FROM \"matrix_projects\" ";	//WHERE $sql_filtro
-			$result		= JSON_RecordObj_matrix::search_free($strQuery);
-
-			$ar_proyectos_section_id=array();
-			while ($rows = pg_fetch_assoc($result)) {
-				$ar_proyectos_section_id[] = $rows['id'];
-			}
-			#dump($ar_proyectos_section_id	, ' ar_proyectos_section_id');
+				$ar_proyectos_section_id=array();
+				while ($rows = pg_fetch_assoc($result)) {
+					$ar_proyectos_section_id[] = $rows['id'];
+				}
+				#dump($ar_proyectos_section_id	, ' ar_proyectos_section_id');
 			
 		}else{
 
 			# USUARIOS COMUNES. 
 			# DEVUELVE SÓLO LOS PROYECTOS DEL USUARIO (filter master)
 			# Los proyectos autorizados al usuario actual, de tipo '{"212":2,"250":2,"274":2,"783":2,"791":2,"803":2}'
-			$component_filter_master 	= component_common::get_instance('component_filter_master', DEDALO_FILTER_MASTER_TIPO, $user_id, 'edit', DEDALO_DATA_NOLAN, DEDALO_SECTION_USERS_TIPO);
-			$dato						= (array)$component_filter_master->get_dato();
-				#dump($component_filter_master, ' dato');
+				$component_filter_master 	= component_common::get_instance('component_filter_master', DEDALO_FILTER_MASTER_TIPO, $user_id, 'edit', DEDALO_DATA_NOLAN, DEDALO_SECTION_USERS_TIPO);
+				$dato						= (array)$component_filter_master->get_dato();
+					#dump($component_filter_master, ' dato');
 
-			$ar_proyectos_section_id = array_keys($dato);	
-				#dump($ar_proyectos_section_id,'ar_proyectos_section_id',"resultado de component_check_box::get_array_dato_from_js_dato(dato)");					
+				$ar_proyectos_section_id = array_keys($dato);	
+					#dump($ar_proyectos_section_id,'ar_proyectos_section_id',"resultado de component_check_box::get_array_dato_from_js_dato(dato)");					
 		}
 
 
@@ -282,15 +278,14 @@ class component_filter extends component_common {
 		$cache_ar_proyectos_for_current_section[$this->tipo] = $ar_proyectos_for_current_section;
 		#$_SESSION['dedalo4']['config']['ar_proyectos_for_current_section'][DEDALO_DATA_LANG] = $ar_proyectos_for_current_section;
 
-		if(SHOW_DEBUG) {
-			#$GLOBALS['log_messages'] .= exec_time($start_time, __METHOD__, to_string(array_keys($ar_proyectos_for_current_section)) );
+		if(SHOW_DEBUG) {			
 			global$TIMER;$TIMER[__METHOD__.'_'.get_called_class().'_OUT_'.$this->tipo.'_'.microtime(1)]=microtime(1);
-		}
+			#dump($ar_proyectos_for_current_section,'$ar_proyectos_for_current_section');
+		}		
 
-		#dump($ar_proyectos_for_current_section,'$ar_proyectos_for_current_section');
+		return (array)$ar_proyectos_for_current_section;
 
-		return $ar_proyectos_for_current_section;
-	}
+	}//end get_ar_proyectos_for_current_section
 
 
 
@@ -544,7 +539,9 @@ class component_filter extends component_common {
 		return $ar_final;
 	}
 
-
+	/**
+	* GET_STATS_VALUE_RESOLVED_ACTIVITY
+	*/
 	public static function get_stats_value_resolved_activity( $value ) {
 
 		$caller_component = get_called_class();	

@@ -119,7 +119,7 @@ foreach ($ar_image_valid_group as $key => $ar_data) {
 						foreach ($value as $image_key => $image_value) {
 							switch ($image_key) {
 								case 'image_url':
-									$img_url = $image_value;
+									$img_url = $image_value .'?t='.time();
 									$html .= "<div class=\"image_source\">";
 									$html .= " <div class=\"image_source_title\">".label::get_label('original')."</div>";
 									$html .= " <a href=\"$img_url\" target=\"_blank\">";
@@ -132,7 +132,7 @@ foreach ($ar_image_valid_group as $key => $ar_data) {
 									$html .= "</div>";#/image_source;
 									break;
 								case 'image_preview_url':
-									$img_url = $image_value;
+									$img_url = $image_value .'?t='.time();;
 									$html .= "<div class=\"image_source\">";
 									$html .= " <div class=\"image_source_title\">".label::get_label('preview')."</div>";
 									$html .= " <a href=\"$img_url\" target=\"_blank\"><img src=\"".$img_url."\"/></a>";
@@ -292,7 +292,7 @@ if(empty($ar_image_valid_group)) {
 
 			#
 			# PROCESS BUTTON
-			$html .= "<input type=\"submit\" class=\"css_button_generic submit_import\" value=\" PROCESAR \" onclick=\"return tool_import_images.process_files(this)\">";
+			$html .= "<input type=\"submit\" class=\"css_button_generic submit_import\" value=\" ".label::get_label('procesar')." \" onclick=\"return tool_import_images.process_files(this)\">";
 
 		$html .= "</div>";
 	

@@ -42,10 +42,10 @@ class security {
 			$this->user_id = $_SESSION['dedalo4']['auth']['user_id'];
 		}
 
-		# temporal (actualizar)
+		# DEDALO_PERMISSIONS_ROOT CONSTANT verify
 		if( !defined('DEDALO_PERMISSIONS_ROOT') ) {
 			define('DEDALO_PERMISSIONS_ROOT' , 1);
-			error_log("Please, define DEDALO_PERMISSIONS_ROOT in config !");
+			debug_log(__METHOD__." CAUTION: Please, define DEDALO_PERMISSIONS_ROOT in config !",logger::WARNING);			
 		}
 
 
@@ -62,8 +62,9 @@ class security {
 
 
 		# FILENAME_USER_AR_PERMISSIONS_TABLE
-		$this->filename_user_ar_permissions_table = DEDALO_LIB_BASE_PATH . '/backup/users/user_ar_permissions_table_' . $this->user_id . '.data';		
+		# $this->filename_user_ar_permissions_table = DEDALO_LIB_BASE_PATH . '/backup/users/user_ar_permissions_table_' . $this->user_id . '.data';		
 	}
+
 	
 	
 	
@@ -74,13 +75,8 @@ class security {
 	public function get_security_permissions($tipo=NULL) {
 		
 		if(SHOW_DEBUG) {
-			#unset($_SESSION['dedalo4']['auth']['permissions_table']);
-			#dump($_SESSION['dedalo4']['auth']['permissions_table']," permissions_table");die();
-			if ($tipo=='oh1') {
-				#dump(security::$ar_permissions_table[$tipo],"ar_permissions_table for tipo: $tipo");
-			}
-		}		
-			
+			#unset($_SESSION['dedalo4']['auth']['permissions_table']);			
+		}			
 		
 		# Tipo verification
 		if(!(bool)verify_dedalo_prefix_tipos($tipo)){
@@ -100,14 +96,16 @@ class security {
 		#}
 		$ar_permissions_table = security::get_permissions_table();
 
-		#dump(security::$ar_permissions_table," ar_permissions_table");
 		
 		# PERMISSIONS FOR CURRENT ELEMENT TIPO
-		if( array_key_exists($tipo, (array)$ar_permissions_table) ) {			
+		if( array_key_exists($tipo, (array)$ar_permissions_table) ) {
+				
 			# Permission located
 			return intval($ar_permissions_table[$tipo]);
 			
 		}else{
+
+			return 0;
 			
 			# Permission not found
 			# Permissions for this tipo are not defined. Maybe is a structure new tipo.
@@ -118,7 +116,7 @@ class security {
 			if(SHOW_DEBUG) {
 				trigger_error($msg);
 			}
-			die("Error: You don't have permissions to enter here [$tipo]");
+			die("Error: Sorry, you don't have permissions to enter here [$tipo]");
 			
 
 				# Redirect to home
@@ -168,7 +166,7 @@ class security {
 		switch (true) {
 			# STATIC CACHE (RAM)
 			case (isset($ar_permissions_table)):
-				#error_log("Loaded ar_permissions_table static");
+				#debug_log(__METHOD__." Loaded ar_permissions_table static");
 				if(SHOW_DEBUG) {
 					#dump($ar_permissions_table , '$ar_permissions_table  ++ '.to_string( count($ar_permissions_table) ));	die();
 				}
@@ -176,7 +174,7 @@ class security {
 				break;			
 			# SESSION CACHE (HD)
 			case (isset($_SESSION['dedalo4']['auth']['permissions_table'])):
-				#error_log("Loaded ar_permissions_table session");
+				#debug_log(__METHOD__." Loaded ar_permissions_table session");
 				$ar_permissions_table = $_SESSION['dedalo4']['auth']['permissions_table'];
 				return $ar_permissions_table;
 				break;
@@ -199,8 +197,7 @@ class security {
 		$ar_excluded			= array(
 									'dd193', # Herramientas
 									'dd3',	 # Difusión
-									);		
-		#$ar_permissions_table	= array();	
+									);
 		
 		#
 		# AR_TESAURO 
@@ -209,7 +206,7 @@ class security {
 			if(SHOW_DEBUG) {
 				$n_elements = count($ar_tesauro);
 				$time_ms 	= exec_time_unit($start_time);
-				error_log(__METHOD__." Calculated recursive_childrens: $n_elements elements in $time_ms ms. Ratio: " .$n_elements/$time_ms  );
+				debug_log(__METHOD__." Calculated recursive_childrens: $n_elements elements in $time_ms ms. Ratio: " .$n_elements/$time_ms );
 			}			
 			#dump($ar_tesauro,"ar_tesauro");	#die();
 			#echo exec_time($start_time, __METHOD__);
@@ -222,8 +219,8 @@ class security {
 		#
 			# Global admin
 			$is_global_admin = (bool)component_security_administrator::is_global_admin($this->user_id);
-				#dump($is_global_admin,'$is_global_admin');		
-			
+				#dump($is_global_admin,'$is_global_admin');			
+
 			# GET USER PERMISSIONS DATA FROM DB MATRIX
 			$ar_permissions_in_matrix_for_current_user=array();
 			if(	$is_global_admin===TRUE ) {
@@ -232,7 +229,14 @@ class security {
 				#if(SHOW_DEBUG===TRUE) $n=3;
 				foreach($ar_tesauro as $current_tipo) {
 					$ar_permissions_in_matrix_for_current_user[$current_tipo] = $n;
-				}			
+				}
+
+				# Add areas permissions like xx-admin to final array
+				$areas = area::get_ar_ts_children_all_areas_plain();
+				foreach ($areas as $current_area) {
+					$ar_permissions_in_matrix_for_current_user[$current_area.'-admin'] = $n;
+				}
+
 			}else{
 				# Calculate matrix record data permissions
 				$ar_permissions_in_matrix_for_current_user	= (array)$this->get_ar_permissions_in_matrix_for_current_user();
@@ -257,8 +261,7 @@ class security {
 		#dump($ar_permissions_in_matrix_for_current_user,'ar_permissions_in_matrix_for_current_user');	die();
 		
 		# RECORREMOS LOS TIPOS (terminoID) GUARDADOS EN EL REGISTRO DE MATRIX CON SUS PERMISOS CORRESPONDIENTES
-		# PARA DESPEJAR LA 'HERENCIA DE PERMISOS' A PADRES E HIJOS
-		# $ar_permissions_table = array();
+		# PARA DESPEJAR LA 'HERENCIA DE PERMISOS' A PADRES E HIJOS		
 		foreach($ar_permissions_in_matrix_for_current_user as $terminoID => $permission_value) {
 			
 			$ar_permissions_table[$terminoID] = $permission_value;			
@@ -302,7 +305,7 @@ class security {
 			if( !array_key_exists($current_terminoID, $ar_permissions_table) ) {
 				$ar_permissions_table[$current_terminoID] = 0;
 				if(SHOW_DEBUG) {
-					#error_log("Assigned permissions 0 to $current_terminoID");
+					#debug_log(__METHOD__." Assigned permissions 0 to $current_terminoID");
 				}
 			}
 		}		
@@ -363,30 +366,45 @@ class security {
 
 		$dato=array();
 
+		$user_id = $this->user_id;
+
+		#
+		# USER PROFILE
+		$component_profile = component_common::get_instance('component_profile',
+														  	DEDALO_USER_PROFILE_TIPO,
+														  	$user_id,
+														  	'edit',
+														  	DEDALO_DATA_NOLAN,
+														  	DEDALO_SECTION_USERS_TIPO);
+		$profile_id = (int)$component_profile->get_dato();
+		if (empty($profile_id)) {
+			return $dato;
+		}
+
 		# COMPONENT_SECURITY_ACCESS
 		$component_security_access = component_common::get_instance('component_security_access',
-																	DEDALO_COMPONENT_SECURITY_ACCESS_USER_TIPO,
-																	$this->user_id,
+																	DEDALO_COMPONENT_SECURITY_ACCESS_PROFILES_TIPO,
+																	$profile_id,
 																	'edit',
 																	DEDALO_DATA_NOLAN,
-																	DEDALO_SECTION_USERS_TIPO
+																	DEDALO_SECTION_PROFILES_TIPO
 																	);
 		$dato_access = (array)$component_security_access->get_dato();
 			#dump($dato_access,"dato_access");die();
 
 		# COMPONENT_SECURITY_AREAS
 		$component_security_areas = component_common::get_instance('component_security_areas',
-																	DEDALO_COMPONENT_SECURITY_AREAS_USER_TIPO,
-																	$this->user_id,
+																	DEDALO_COMPONENT_SECURITY_AREAS_PROFILES_TIPO,
+																	$profile_id,
 																	'edit',
 																	DEDALO_DATA_NOLAN,
-																	DEDALO_SECTION_USERS_TIPO);
+																	DEDALO_SECTION_PROFILES_TIPO);
 		$dato_area = (array)$component_security_areas->get_dato();
 		
 
 		$dato_area_final=array();
 		foreach ($dato_area as $key => $value) {
-			if (strpos($key, '-admin')) continue;
+			//if (strpos($key, '-admin')) continue;
 			$dato_area_final[$key] = $value;
 		}
 

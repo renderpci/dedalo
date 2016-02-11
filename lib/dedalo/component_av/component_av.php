@@ -30,6 +30,8 @@
 	$video_id 				= $this->get_video_id();
 	$quality				= $this->get_quality();
 	$video_url				= $this->get_video_url();
+	$aditional_path			= $this->get_aditional_path();
+	$initial_media_path		= $this->get_initial_media_path();
 	
 	#$coef 					= "2.3";
 	#$video_width			= round(720/$coef) ;#.'px';
@@ -45,21 +47,12 @@
 						$input_name 	= "{$tipo}_{$parent}";
 						$component_info = $this->get_component_info('json');
 											
-						# POSTERFRAME HTML . Change temporally modo to get html
-						#$this->modo 		= 'posterframe';
-						#$posterframe_html 	= $this->get_html();
-						$posterframe_html 	= '';
-						
-						# PLAYER HTML . Change temporally modo to get html
-						#$this->modo 		= 'player_stand_alone';
-						#$player_html 		= $this->get_html();
-
-						# PLAYER HTML . Change temporally modo to get html
-						$this->modo 		= 'posterframe';
-						$player_html 		= $this->get_html();
-						
-						# restore modo
-						$this->modo 	= 'edit';														
+						# POSTERFRAME 				
+						$PosterFrameObj 	= new PosterFrameObj($video_id);						
+						$maxWidht 			= 540 ;
+						$maxHeight 			= 303 ;
+						$posterframe_url 	= $PosterFrameObj->get_thumb_url($maxWidht, $maxHeight, $fx='crop').'&t='.start_time();	
+						$posterframe_url 	= str_replace('&', '&amp;', $posterframe_url);												
 						break;
 
 		case 'posterframe':
@@ -115,7 +108,8 @@
 								$quality		= $this->get_quality();
 								$posterframe_url= DEDALO_LIB_BASE_URL.'/themes/default/0_audio.jpg';
 							}
-						}						
+						}
+						$video_url .= '?&t='.start_time();	# Avoid cache file				
 						break;		
 		
 		case 'portal_list':
@@ -130,7 +124,7 @@
 						$PosterFrameObj 	= new PosterFrameObj($video_id);
 						$maxWidht 			= 102 ;
 						$maxHeight 			= 57  ; # 90
-						$posterframe_url 	= $PosterFrameObj->get_thumb_url($maxWidht, $maxHeight, $fx='crop');#.'&t='.start_time();
+						$posterframe_url 	= $PosterFrameObj->get_thumb_url($maxWidht, $maxHeight, $fx='crop').'?&t='.start_time();
 						$posterframe_url 	= str_replace('&', '&amp;', $posterframe_url);
 							#dump($posterframe_url,$video_id);
 						break;

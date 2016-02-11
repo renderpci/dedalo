@@ -1,15 +1,10 @@
 <?php
 
-	# VISUALIZADOR HTML	
-	
-	if(!isset ($ar_css['css_wrap_time_machine']))		$ar_css['css_wrap_time_machine']='';
-	if(!isset ($ar_css['css_div_time_machine']))		$ar_css['css_div_time_machine']='';
-	
-
-	$html    = "\n<!-- TOOL TIME MACHINE PREVIEW COMPONENT [tipo:$tipo id_matrix:$id] -->";
+	# VISUALIZADOR HTML
+	$html    = "\n<!-- TOOL TIME MACHINE PREVIEW COMPONENT [tipo:$tipo section_id:$id] -->";
 	
 	# Wrap
-	$html   .= "\n<div class=\"css_wrap_time_machine {$ar_css['css_wrap_time_machine']}\" >";
+	$html   .= "\n<div class=\"css_wrap_time_machine\" >";
 		
 		# Header
 		$html 	.= "\n<div class=\"css_time_machine_label css_tool_label text_shadow_inset\">".label::get_label('tool_time_machine')." ".label::get_label('preview')."</div>";
@@ -26,8 +21,9 @@
 	# Script
 	$html   .= "<script>
 					// Fix current id_time_machine value					 	
-					tool_time_machine.current_id_time_machine = '$id_time_machine' ;								
-				</script>";	
+					tool_time_machine.current_id_time_machine = '$id_time_machine';								
+				</script>";
+
 
 	print $html;
 		

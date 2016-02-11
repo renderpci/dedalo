@@ -1,0 +1,42 @@
+<?php
+
+	# VISUALIZADOR HTML	
+	$html ='';	
+
+	
+	$html .= "<ul class=\"widget_descriptors\">";
+
+	#
+	# HEADER
+	$html .= "<li class=\"tab_title\">";
+	#$html .= "  <div class=\"label_first header\">".label::get_label('total')."</div>";
+	$total_terms = count($ar_terms);	
+	$additional_style = $total_terms<1 ? 'style="background:none"' : '';	
+	$html .= "  <div class=\"label_second header\" $additional_style>".label::get_label('terminos')." : $total_terms / $total_index</div>";
+	$html .= "</li>";
+
+	#
+	# ROWS
+	if ($total_terms>0) {		
+		$html .= "<span class=\"tab_content\">";
+		foreach ($ar_terms_resolved as $term => $total) {
+
+			$html .= "<li class=\"\">";
+
+				#$termino = RecordObj_ts::get_termino_by_tipo($terminoID, DEDALO_DATA_LANG, true, true);
+				
+				$html .= " <div class=\"label_first\">".$total."</div>";
+				$html .= " <div class=\"label_second\">".$term."</div>";				
+				
+			$html .= "</li>";
+
+		}//end foreach ($ar_terms as $terminoID => $total) {
+		$html .= "</span>";
+	}//end if ($total_terms>0) {
+
+	$html .= "</ul>";
+
+
+	print $html;
+
+?>

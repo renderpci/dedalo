@@ -104,7 +104,12 @@ class component_filter_master extends component_common {
 
 			if($state!=2) continue;
 
-			$current_component = component_common::get_instance('component_input_text', DEDALO_PROJECTS_NAME_TIPO, $section_id, 'list', DEDALO_DATA_LANG, DEDALO_SECTION_PROJECTS_TIPO);
+			$current_component = component_common::get_instance('component_input_text',
+																DEDALO_PROJECTS_NAME_TIPO,
+																$section_id,
+																'list',
+																DEDALO_DATA_LANG,
+																DEDALO_SECTION_PROJECTS_TIPO);
 			$name = $current_component->get_valor();
 				
 			$html .= $name ;
@@ -142,7 +147,12 @@ class component_filter_master extends component_common {
 			#dump($ar_proyectos_section_id, ' ar_proyectos_section_id');#die();
 		}else{
 			# ONLY PROJECTS THAT CURRENT USER HAVE AUTHORIZED
-			$component_filter_master = component_common::get_instance('component_filter_master', DEDALO_FILTER_MASTER_TIPO, $user_id, 'list', DEDALO_DATA_NOLAN, DEDALO_SECTION_USERS_TIPO);
+			$component_filter_master = component_common::get_instance('component_filter_master',
+																	  DEDALO_FILTER_MASTER_TIPO,
+																	  $user_id,
+																	  'list',
+																	  DEDALO_DATA_NOLAN,
+																	  DEDALO_SECTION_USERS_TIPO);
 				#dump($component_filter_master, ' component_filter_master');
 			$dato = $component_filter_master->get_dato();
 			if (empty($dato)) {

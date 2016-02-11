@@ -143,8 +143,7 @@ require_once( dirname(dirname(__FILE__)) .'/config/config4.php');
 		}
 		
 		if(SHOW_DEBUG) {
-			global$TIMER;$TIMER[__METHOD__.'_IN_'.microtime(1)]=microtime(1);
-			error_log("set_static_label_vars lang: $lang");
+			global$TIMER;$TIMER[__METHOD__.'_IN_'.microtime(1)]=microtime(1);			
 		}		
 		
 		$ar_terminoID_by_modelo_name = (array)RecordObj_dd::get_ar_terminoID_by_modelo_name($modelo_name='label'); 
@@ -171,15 +170,13 @@ require_once( dirname(dirname(__FILE__)) .'/config/config4.php');
 
 			# Set value			
 			$ar_label[$vars_obj->name] 	= RecordObj_dd::get_termino_by_tipo($current_terminoID, $lang, $cached, $fallback);
-		}
-		#dump($ar_label,'$ar_label');
-		#error_log("INFO: calculated labels from structure");
-
+		}		
 		
 
 		if(SHOW_DEBUG) {
 			global$TIMER;$TIMER[__METHOD__.'_OUT_'.microtime(1)]=microtime(1);
 			#error_log("Calculated labels ".count($ar_terminoID_by_modelo_name));
+			debug_log(__METHOD__." for lang: $lang");
 		}
 			
 		return $ar_label;

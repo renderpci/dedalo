@@ -29,15 +29,16 @@
 .css_player_wrap {
 	/*background-color: #abf5be;*/
 	text-align: center;
-	display: inline-block;
+	display: block;
 	/*width: 720px;*/
 	/*height:607px;*/
 	}
-	.css_player_wrap IFRAME.videoFrame {
+	.css_player_wrap iframe.videoFrame {
 		width: 732px;
 		/*height: 607px;*/
 		height: 570px;
-	}
+		}
+		
 
 
 /*-- AVPLAYER STAND ALONE --*/
@@ -83,7 +84,12 @@ IMG.av_posterframe {
 
 
 
-
+.css_wrap_av .no_file {
+	cursor: pointer;
+	}
+	.css_wrap_av .no_file:hover {
+		opacity: 0.7;
+	}
 
 
 

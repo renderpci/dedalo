@@ -218,7 +218,7 @@ abstract class tools extends common {
 		#$html 	= str_replace(array("\n","\r","  "),' ',$html);
 
 
-		$html 	= "\n <div class=\"content_data\"> $html \n</div><!-- /content_data -->";
+		$html = "\n <div class=\"content_data\"> $html \n</div><!-- /content_data -->";
 
 		return $html;
 	}

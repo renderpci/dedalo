@@ -42,7 +42,17 @@ WRAP DIV CONTAINER*/
 	box-shadow: none;
 	/*z-index: 9000 !important;*/
 }
-
+.show_more_link {
+	text-transform: capitalize;
+	position: relative;
+	top: -2px;
+	/*background-color: rgba(204, 204, 204, 0.22);*/
+    width: 100%;
+    display: inline-block;
+	}
+	.show_more_link:hover {
+		color: #ff9439;
+	}
 
 
 

@@ -4,6 +4,12 @@ if(isset($_REQUEST['source']))	$source = $_REQUEST['source'];
 if(isset($_REQUEST['s']))		$source = $_REQUEST['s'];
 if(!$source) die("Not source! $source");
 
+# Accept images with get vars
+$ar = explode('?', $source);
+if (isset($ar[0])) {
+	$source = $ar[0];
+}
+
 # set sone time
 $myDateTimeZone 		= 'Europe/Madrid';
 date_default_timezone_set($myDateTimeZone);
