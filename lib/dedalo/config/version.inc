@@ -473,7 +473,7 @@
 	
 	
 	# Version
-	define('DEDALO_VERSION'	, '4.0.7b4');
+	define('DEDALO_VERSION'	, '4.0.7b5');
 	define('DEDALO_BUILD'	, '21-03-2016');
 	
 	/*

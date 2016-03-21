@@ -531,8 +531,8 @@ class login extends common {
 
 		if (self::is_logged()) {
 
-			$user_id = $_SESSION['dedalo4']['auth']['user_id'];
-			$username 		= $_SESSION['dedalo4']['auth']['username'];
+			$user_id 	= $_SESSION['dedalo4']['auth']['user_id'];
+			$username	= $_SESSION['dedalo4']['auth']['username'];
 
 			$activity_datos['result'] 	= "quit";
 			$activity_datos['cause'] 	= "called quit method";

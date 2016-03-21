@@ -481,7 +481,8 @@ abstract class backup {
 				$res_html .= '<div style="color:white;background-color:red;padding:10px;font-family:arial;font-size:14px;word-wrap:break-word;border-radius:5px;">
 				There was a problem during the export of <b>' .DEDALO_DATABASE_CONN .'</b> to <b>' .$mysqlExportPath .'</b></div>';
 				if(SHOW_DEBUG) {
-					dump($output, ' worked_result: '.to_string($worked_result));
+					dump($output, 'output - worked_result: '.to_string($worked_result));
+					$res_html .= "<span class=\"warning\">If you are using pgpass, check config, owner an permissions</span>";
 				}
 				break;
 			case 2:

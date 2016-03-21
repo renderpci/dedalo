@@ -1,4 +1,3 @@
-
 <?php
 $TOP_TIPO=false;
 require_once( dirname(dirname(dirname(__FILE__))) .'/lib/dedalo/config/config4.php');
