@@ -78,7 +78,13 @@ class tool_transcription extends tool_common {
 		}
 
 		# Create final related component
-		$component_text_area = component_common::get_instance('component_text_area', $termino_relacionado_tipo, $parent, 'edit', DEDALO_DATA_LANG, $section_tipo);
+		$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($termino_relacionado_tipo,true);
+		$component_text_area = component_common::get_instance($modelo_name,
+															  $termino_relacionado_tipo,
+															  $parent,
+															  'edit',
+															  DEDALO_DATA_LANG,
+															  $section_tipo);
 
 
 		$this->component_related_obj = $component_text_area;

@@ -3,7 +3,7 @@
 	# VISUALIZADOR HTML	
 
 	
-	print "\n\n<!-- ROWS [$id] -->";		
+	print "\n\n<!-- ROWS ACTIVITY [$id] -->";		
 	
 
 	# CONTENIDO (INPUT)
@@ -26,7 +26,7 @@
 				# TD ID
 				$title=null;
 				if(SHOW_DEBUG) $title .= "matrix id: $id";
-				$html_contenido .= "\n <td class=\"section_list_td_border section_list_td_row \" title=\"$title\">";					
+				$html_contenido .= "\n <td class=\"section_list_td_border section_list_td_row\">";					
 											
 					# ID TEXT
 					#$html_contenido .= "\n  $section_id ";
@@ -102,7 +102,7 @@
 						# WHERE TD
 						case (logger_backend_activity::$_COMPONENT_DONDE['tipo']):
 							#$html_contenido .= $valor;
-							if (!isset($ar_component_resolved[$component_tipo][$valor])) {
+							if (!isset($ar_component_resolved[$component_tipo][$valor]) && is_string($valor)) {
 								#$component = component_common::get_instance('component_input_text',$component_tipo,null,'list');
 								#$valor_final = $component->get_dato(); 	dump($valor_final," valor_final");
 								#$ar_component_resolved[$component_tipo][$valor] = $component->get_html();
@@ -113,7 +113,9 @@
 						
 						# WHEN TD
 						case (logger_backend_activity::$_COMPONENT_CUANDO['tipo']):
-							$html_contenido .= $valor;
+
+							#$date = dd_date::get_date_with_format( $valor, $format="d-m-Y H:i:s" );	//Y-m-d H:i:s
+							$html_contenido .= "<div class=\"activity_date\">".$valor."</div>";
 							/*
 							if (!isset($ar_component_resolved[$component_tipo][$valor])) {
 								$component = component_common::get_instance('component_date',$component_tipo,null,'list');
@@ -127,7 +129,13 @@
 						# DATOS TD
 						case (logger_backend_activity::$_COMPONENT_DATOS['tipo']):
 							$ar_dato_valors = (array)json_handler::decode($valor,true); 	#dump($valor,"");
-							$html_contenido .='<div>';
+
+							if (array_key_exists('msg', $ar_dato_valors)) {
+								$ar_dato_valors = array('msg' => $ar_dato_valors['msg']) + $ar_dato_valors;
+							}
+							
+
+							$html_contenido .='<div class="datos_activity" onclick="toogle_height(this,\'1.2em\')">';
 							foreach ($ar_dato_valors as $datos_key => $datos_value) {
 								$html_contenido .= "$datos_key: $datos_value<br>";
 								#echo "$key - $value<br>";
@@ -137,7 +145,9 @@
 						
 						# PROJECTS TD
 						case (logger_backend_activity::$_COMPONENT_PROYECTOS['tipo']):
+							$html_contenido .='<div class="datos_activity" onclick="toogle_height(this,\'1.2em\')">';
 							$html_contenido .= $valor;
+							$html_contenido .='</div>';
 							/*					
 							$dato = (object)json_handler::decode($valor);						
 								#dump($valor,"valor");

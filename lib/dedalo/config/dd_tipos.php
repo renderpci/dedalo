@@ -8,6 +8,7 @@ define('DEDALO_MEDIA_AREA_TIPO'							, 'rsc1');
 
 # Activity 
 define('DEDALO_ACTIVITY_SECTION_TIPO'					, 'dd542');
+define('DEDALO_ACTIVITY_WHEN'							, 'dd547'); // component_date
 
 # Users
 define('DEDALO_SECTION_USERS_TIPO'						, 'dd128');
@@ -52,18 +53,24 @@ define('DEDALO_MEDIA_COLLECTION_TIPO'					, 'rsc25'); # TIPO of the collection c
 # Modelos
 define('MODELO_SECTION'									, 'dd6');
 
-# Tools / procesos
-
+# State
 define('DEDALO_STATE_GENERAL_SECTION_ID'					, '1');
 define('DEDALO_STATE_GENERAL_SECTION_TIPO'				, 'dd174');
 define('DEDALO_STATE_GENERAL_COMPONENT_TIPO'			, 'dd185');
 
-
+# Tools / procesos
 define('DEDALO_TOOL_TRANSCRIPTION_ID'						, '1');
 define('DEDALO_TOOL_INDEXATION_ID'							, '2');
 define('DEDALO_TOOL_TRANSLATE_ID'							, '3');
 define('DEDALO_TOOL_INVESTIGATION_SECTION_TIPO'			, 'dd90');
 define('DEDALO_TOOL_INVESTIGATION_COMPONENT_TIPO'		, 'dd127');
+
+define('DEDALO_TEXTAREA_FIX_BROQUEN_TAGS_TIPOS'			, serialize( array('rsc36')) );
+
+
+if (!defined('DEDALO_PROTOCOL')) {
+	define('DEDALO_PROTOCOL', 'http://');
+}
 
 
 # TOP_TIPO

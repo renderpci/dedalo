@@ -81,6 +81,12 @@ class diffusion_index_ts extends diffusion {
 			$component_tipo			= $current_locator->component_tipo;
 			$tag_id					= $current_locator->tag_id;
 
+			# SECTION_TOP_ID recalculate
+			# Como un recurso puede cambiar de 'bien', el locator 'section_top_id' de la indexación NO ES FIABLE !!
+			# Hacemos un cálculo inverso para evitar inconsistencias
+			#$section = section::get_instance($section_id=null, $tipo=false, $modo='edit') {;
+
+
 			# AR_SECTION_TOP_TIPO MAP
 			$ar_section_top_tipo[$section_top_tipo][$section_top_id][] = $current_locator;	#$current_locator ;#substr($current_locator, strlen($id_section)+1);
 		}

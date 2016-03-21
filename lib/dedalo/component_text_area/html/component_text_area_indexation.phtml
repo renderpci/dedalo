@@ -52,6 +52,14 @@
 					# ETIQUETA (LABEL)
 					$html_contenido = component_common_draw::draw_label($this);
 
+
+					#
+					# BROKEN INDEX TAGS WARNING
+					if (isset($component_warning)) {
+						$html_contenido .= "<div class=\"text_area_warning\"><span class=\"warning\">".$component_warning."</span></div>";
+					}
+					
+
 					#
 					# TEXT AREA
 					#
@@ -63,6 +71,7 @@
 					data-lang=\"{$lang}\"
 					data-section_tipo=\"{$section_tipo}\"
 					data-last_tag_index_id=\"{$last_tag_index_id}\"
+					data-id_wrapper=\"$id_wrapper\"
 					title=\"$html_title\">$dato</textarea>";
 
 					

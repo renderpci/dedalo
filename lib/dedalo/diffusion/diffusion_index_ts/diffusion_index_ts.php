@@ -15,6 +15,7 @@
 		#dump($layout_map,'$layout_map 2');
 
 	foreach ($ar_section_top_tipo as $current_section_tipo => $ar_values) {
+
 		
 		$html_group 	= '';
 		$section_name 	= RecordObj_dd::get_termino_by_tipo($current_section_tipo,null,true);
@@ -35,7 +36,8 @@
 		#
 		# SECTION
 		# dump($ar_values,'$ar_values');	
-		foreach ($ar_values as $current_section_id => $ar_head) {					
+		foreach ($ar_values as $current_section_id => $ar_head) {
+			#dump($current_section_id, ' current_section_id ++ '.to_string());					
 			/**/
 			#
 			# SECTION HEAD

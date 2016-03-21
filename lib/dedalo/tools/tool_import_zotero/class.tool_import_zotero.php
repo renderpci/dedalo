@@ -57,18 +57,21 @@ class tool_import_zotero extends tool_common {
 					error_log("DEBUG INFO ".__METHOD__." Loaded custom tool options: ".DEDALO_LIB_BASE_PATH.$propiedades->process_script);
 				}
 			}
+		}
 
-		}else{
+		# If not already defined in custom import script, define here
+		if (!defined('ZOTERO_COMPONENT_TIPO_BIBLIOGRAFIA_CODIGO')) {
+			
 			# BIBLIOGRAPHY DEDALO STANDAR TIPOS
-			define('ZOTERO_COMPONENT_TIPO_BIBLIOGRAFIA_CODIGO'					, 'rsc137');
-			define('ZOTERO_SECTION_TIPO_VIRTUAL_BIBLIOGRAFIA' 					, 'rsc205');
-			define('ZOTERO_COMPONENT_TIPO_BIBLIOGRAFIA_FILTER'					, 'rsc148');
-			define('ZOTERO_SECTION_TIPO_SERIES_COLECCIONES'	  					, 'rsc212');	# Lista de valores Series / colecciones
-			define('ZOTERO_COMPONENT_TIPO_SERIES_COLECCIONES' 					, 'rsc214');	# component_input_text in Lista de valores Series / colecciones
-			define('ZOTERO_COMPONENT_TIPO_BIBLIOGRAFIA_DESCRIPCION_TRANSCRIPCION', 'rsc210');	# rsc210 Transcripción / descripción 
-			define('ZOTERO_COMPONENT_TIPO_BIBLIOGRAFIA_DESCRIPCION_TRANSCRIPCION_REVISION', 'rsc260');	# rsc210 Transcripción / descripción 
-			define('ZOTERO_COMPONENT_TIPO_BIBLIOGRAFIA_DOCUMENTO'				, 'rsc209');	# Bibliografía Documento [rsc209]
-			define('ZOTERO_SECTION_TIPO_LISTA_TIPOLOGIA_BIBLIOGRAFIA'			, 'dd810'); 	# dd810 Lista valores privada tipologia de bibliografía
+			define('ZOTERO_COMPONENT_TIPO_BIBLIOGRAFIA_CODIGO'								, 'rsc137');
+			define('ZOTERO_SECTION_TIPO_VIRTUAL_BIBLIOGRAFIA' 								, 'rsc205');
+			define('ZOTERO_COMPONENT_TIPO_BIBLIOGRAFIA_FILTER'								, 'rsc148');
+			define('ZOTERO_SECTION_TIPO_SERIES_COLECCIONES'	  								, 'rsc212');	# Lista de valores Series / colecciones
+			define('ZOTERO_COMPONENT_TIPO_SERIES_COLECCIONES' 								, 'rsc214');	# component_input_text in Lista de valores Series / colecciones
+			define('ZOTERO_COMPONENT_TIPO_BIBLIOGRAFIA_DESCRIPCION_TRANSCRIPCION'			, 'rsc210');	# rsc210 Transcripción / descripción 
+			define('ZOTERO_COMPONENT_TIPO_BIBLIOGRAFIA_DESCRIPCION_TRANSCRIPCION_REVISION' 	, 'rsc260');	# rsc210 Transcripción / descripción 
+			define('ZOTERO_COMPONENT_TIPO_BIBLIOGRAFIA_DOCUMENTO'							, 'rsc209');	# Bibliografía Documento [rsc209]
+			define('ZOTERO_SECTION_TIPO_LISTA_TIPOLOGIA_BIBLIOGRAFIA'						, 'dd810'); 	# dd810 Lista valores privada tipologia de bibliografía
 
 			## DEDALO
 			define('ZOTERO_COMPONENT_TIPO_TIPOLOGIA_DE_BIBLIORAFIA' 	, 'rsc138'); # Tipología bibliográfica select (Nota: Establecer correspondencias tipo 'entry-encyclopedia' => 'Libro electrónico')
@@ -339,12 +342,23 @@ class tool_import_zotero extends tool_common {
 			# DEFAULTS : Using section_id 
 			$map = array(
 				'book' 				=> 1,  # Book
+				'magazine' 			=> 2,  # magazine
 				'article-journal' 	=> 8,  # articluo en revista científica
+				'article' 			=> 8,  # articluo en revista científica <<<<< TEMPORAL ??? (usado po mendeley. Confirmar destino)
 				'article-magazine'  => 11, # Articulo en revista
 				'thesis' 			=> 4,  # Tesis
 				'motion_picture' 	=> 6,  # Movies
+				'film' 				=> 6,  # film
 				'song' 				=> 7,  # Podcast
-				);
+				'conference'		=> 9,  # Articulo en conferencia
+				'inproceedings'		=> 9,  # Articulo en conferencia
+				'proceedings'		=> 14, # Actas
+				'mastersthesis'		=> 15, # Proyecto fin de carrera
+				'misc'				=> 16, # Misceláneos
+				'techreport'		=> 13, # Informe técnico
+				'incollection' 		=> 17, # Colección (def: A part of a book having its own title)
+				'unpublished'		=> 18, # Sin publicar
+				);			
 		}
 		
 		$result = isset($map[$type]) ? $map[$type] : null;

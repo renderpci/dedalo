@@ -464,6 +464,22 @@ class component_state extends component_common {
 		return (array)$valor_for_checkbox;
 	}
 
+
+
+	/**
+	* GET_VALOR_EXPORT
+	* Return component value sended to export data
+	* @return string $valor
+	*/
+	public function get_valor_export( $valor=null, $lang=DEDALO_DATA_LANG ) {
+		
+		if(SHOW_DEBUG) {
+			#return "STATE: n/a";
+		}
+		return "n/a";
+
+	}#end get_valor_export
+
 	
 	/**
 	* COMPARE

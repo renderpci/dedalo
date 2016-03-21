@@ -184,7 +184,7 @@ class records_search extends common {
 		$search_list_tipo = $this->get_search_list_tipo();
 
 
-		$tools_search_tipo 	= RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($search_list_tipo, 'tools_search', 'termino_relacionado');
+		$tools_search_tipo 	= RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($search_list_tipo, 'tools_search', 'termino_relacionado', $search_exact=true);
 		if(empty($tools_search_tipo[0])) {			
 			if(SHOW_DEBUG) {
 				#throw new Exception("Error Processing Request: tools_search:tools_search_tipo not found in structure ($search_list_tipo)", 1);
@@ -200,7 +200,7 @@ class records_search extends common {
 
 		#$ar_childrens	= RecordObj_dd::get_ar_childrens($tools_search_tipo, false);
 		$RecordObj_dd 	= new RecordObj_dd($tools_search_tipo);
-		$ar_childrens 	= $RecordObj_dd->get_ar_childrens_of_this('si',null,null);
+		$ar_childrens 	= $RecordObj_dd->get_ar_childrens_of_this('si', null, 'norden');
 			#dump($ar_childrens,'ar_childrens '.$tools_search_tipo);
 
 		foreach ($ar_childrens as $current_element_tipo) {

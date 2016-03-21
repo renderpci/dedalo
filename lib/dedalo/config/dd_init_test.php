@@ -117,6 +117,28 @@ if( !is_dir($folder_path) ) {
 }}
 
 
+# MEDIA WEB IMAGES folder
+# Target folder exists test	
+if(defined('DEDALO_IMAGE_WEB_FOLDER')) {
+$folder_path = DEDALO_MEDIA_BASE_PATH . DEDALO_IMAGE_FOLDER . DEDALO_IMAGE_WEB_FOLDER;
+if( !is_dir($folder_path) ) {
+	if(!mkdir($folder_path, 0777,true)) {
+		die(" Error on read or create media DEDALO_IMAGE_WEB_FOLDER default directory. Permission denied ");
+	}
+	debug_log(__METHOD__." CREATED DIR: $folder_path  ".to_string(), logger::DEBUG);
+}}
+
+# MEDIA EXPORT folder
+# Target folder exists test	
+if(defined('DEDALO_TOOL_EXPORT_FOLDER_PATH')) {
+$folder_path = DEDALO_TOOL_EXPORT_FOLDER_PATH;
+if( !is_dir($folder_path) ) {
+	if(!mkdir($folder_path, 0775,true)) {
+		die(" Error on read or create media DEDALO_TOOL_EXPORT_FOLDER_PATH default directory. Permission denied ");
+	}
+	debug_log(__METHOD__." CREATED DIR: $folder_path  ".to_string(), logger::DEBUG);
+}}
+
 
 # LOGS folder
 # Target folder exists test	
@@ -178,14 +200,14 @@ if (!function_exists('mcrypt_encrypt')) {
 	$folder_path = DEDALO_LIB_BASE_PATH.'/common/js/lang';
 	if( !is_dir($folder_path) ) {
 		if(!mkdir($folder_path, 0777,true)) {
-			die(" Error on read or create thumbs directory. Permission denied");
+			die(" Error on read or create js/lang directory. Permission denied");
 		}
 		debug_log(__METHOD__." CREATED DIR: $folder_path  ".to_string(), logger::DEBUG);
 	}
 	$ar_langs 	 = (array)unserialize(DEDALO_APPLICATION_LANGS);
 	foreach ($ar_langs as $lang => $label) {
-		$label_path  = '/common/js/lang/' . $lang . '.js';		
-		if (!file_exists(DEDALO_LIB_BASE_PATH.$label_path)) {			
+		$label_path  = '/common/js/lang/' . $lang . '.js';	
+		if (!file_exists(DEDALO_LIB_BASE_PATH.$label_path) || (SHOW_DEBUG && strpos(DEDALO_HOST, 'localhost')!==false) ) {		 	
 			$ar_label = label::get_ar_label($lang); // Get all properties
 				#dump($ar_label, ' ar_label');
 			

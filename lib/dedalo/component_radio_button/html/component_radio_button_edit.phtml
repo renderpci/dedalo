@@ -80,7 +80,8 @@
 
 							#
 							# INPUT
-							$html_contenido .= "\n <input class=\"css_radio_button {$ar_css['css_radio_button']}\" type=\"radio\" 
+							$html_contenido .= "\n <input class=\"css_radio_button {$ar_css['css_radio_button']}\" type=\"radio\"
+							onfocus=\"component_common.select_wrap(null,'$id_wrapper');\"
 							name=\"{$input_name}\" 
 							data-tipo=\"{$tipo}\"
 							data-lang=\"{$lang}\"

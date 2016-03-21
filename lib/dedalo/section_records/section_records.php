@@ -141,7 +141,12 @@
 
 							#js::$ar_url[] = DEDALO_ROOT_WEB.'/lib/jquery/jquery.resizableColumns.min.js';
 							#js::$ar_url[] = DEDALO_ROOT_WEB.'/lib/store.js-master/store.min.js';
-				}		
+				}
+
+				# ACTIVITY DEDALO_ACTIVITY_SECTION_TIPO
+					if ($tipo==DEDALO_ACTIVITY_SECTION_TIPO) {
+						$file_name = 'list_activity';
+					}	
 				break;
 
 		/*

@@ -84,7 +84,8 @@ if($mode=='generate_version') {
 	);
 	
 	
-	$html = "Processing media in background (target quality: $quality - setting: $setting_name). You can continue working" ;
+	// $html = "Processing media in background (target quality: $quality - setting: $setting_name). You can continue working" ;
+	$html = sprintf(label::get_label('procesando_media_en_background')." [setting:$setting_name] ",$quality);
 	if(SHOW_DEBUG) {
 		$html .= "<div class=\"debug_info\">Debug Command response: $render </div>" ;
 	}	
@@ -95,7 +96,7 @@ if($mode=='generate_version') {
 
 
 /**
-* conform_header
+* CONFORM_HEADER
 *
 */
 if($mode=='conform_header') {
@@ -114,15 +115,15 @@ if($mode=='conform_header') {
 	}
 
 	$reelID		= $video_id ;
-	$quality 	= $target_quality ;
+	#$quality 	= $target_quality ;
 			
 	# AVObj
 	$AVObj		= new AVObj($reelID, $quality);
 	
 	# Ffmpeg
 	$Ffmpeg		= new Ffmpeg();
-	$render		= $Ffmpeg->conform_header($AVObj);
-		#dump($render, " render ".to_string($AVObj));
+	$result		= $Ffmpeg->conform_header($AVObj);
+		#dump($result, " result ".to_string($AVObj));
 
 	if(SHOW_DEBUG) {
 		#die("N3 STOP setting_name:$setting_name - reelID:$reelID, quality:$quality");	#dump($setting_name,'setting_name'); die($setting_name);
@@ -150,14 +151,15 @@ if($mode=='conform_header') {
 			)
 	);
 	
-	
-	$html = "Processing media in background (target quality: $quality). You can continue working" ;
+	// MSG: "Processing media in background (target quality: $quality). You can continue working" ;
+	$html = sprintf(label::get_label('procesando_media_en_background'),$quality);
 	if(SHOW_DEBUG) {
-		$html .= "<div class=\"debug_info\">Debug Command response: $render </div>" ;
+		$html .= "\n<div class=\"debug_info\">Debug Command response: $result </div>" ;
 	}	
 
 	print $html;
-	die();
+	exit();
+
 }//end conform_header
 
 

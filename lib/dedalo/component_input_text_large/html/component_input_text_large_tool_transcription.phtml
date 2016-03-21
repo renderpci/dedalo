@@ -1,0 +1,60 @@
+<?php
+
+	# VISUALIZADOR HTML	
+
+	# ELEMENTOS
+	
+	
+	print "\n<!-- INPUT_TEXT_LARGE [tipo:$tipo section_id_matrix:$parent] $label -->";
+	print "\n<div class=\"css_wrap_input_text_large css_wrap_input_text_large_transcription wrap_component\" id=\"{$id_wrapper}\"
+	data-tipo=\"{$tipo}\"
+	data-lang=\"{$lang}\"
+	data-section_tipo=\"{$section_tipo}\"
+	data-parent=\"{$parent}\"
+	data-modo=\"{$modo}\"
+	data-dato=\"\"
+	data-component_name=\"{$component_name}\"
+	data-component_info='{$component_info}'
+	>";
+	
+		
+		# ETIQUETA (LABEL)
+		#$html_label = component_common_draw::draw_label($this);
+		
+		# CONTENIDO (INPUT)
+		$html_contenido = '';
+		switch($permissions) {
+				
+			case 0	:	
+				$html_contenido .= "\n <span class=\"css_span_dato\"> ".label::get_label('sin_acceso')." (input_text_large)</span>";
+				break;
+							
+			case 1	: 	
+				$html_contenido .= "\n <span class=\"css_span_dato\">$dato</span>";
+				break;	
+							
+			case ($permissions>=2)	:			
+
+				$html_contenido .= "\n <textarea class=\"css_input_text_large css_input_text_large_transcription $aditional_css\" name=\"{$input_name}\"
+				id=\"$identificador_unico\"
+				data-tipo=\"{$tipo}\"
+				data-parent=\"{$parent}\"
+				data-section_tipo=\"{$section_tipo}\"
+				data-lang=\"{$lang}\"
+				title=\"$html_title\"				
+				>$dato</textarea>";												
+		}
+
+		# Prepare content to show in page
+		tools::prepare_content($html_contenido);
+		
+
+		# PRINT HTML
+		#print $html_label;
+		print $html_contenido;
+	
+	
+	print "\n</div><!-- /css_wrap_input_text_large INPUT_TEXT_large [tipo:$tipo section_id_matrix:$parent] $label -->\n"; //wrap
+
+
+?>

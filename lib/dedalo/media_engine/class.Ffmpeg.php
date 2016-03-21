@@ -305,7 +305,25 @@ class Ffmpeg {
 		
 		# target quality
 		$target_quality = $this->get_quality_from_setting($setting);
-		$prgfile 		= $tmp_folder .'/' . $target_quality .'_'. $AVObj->get_name() . '.sh';	 
+		$prgfile 		= $tmp_folder .'/' . $target_quality .'_'. $AVObj->get_name() . '.sh';	
+
+
+
+		#
+		# FFPROBE GET STREAMS INFO
+		$media_streams = self::get_media_streams( $src_file );
+		$source_with_video = false;
+		$source_with_audio = false;
+
+		foreach ( reset($media_streams) as $stream_obj) {
+			$codec_type = $stream_obj->codec_type;
+			if ($codec_type=='audio') {
+				$source_with_audio = true;
+			}else if ($codec_type=='video') {
+				$source_with_video = true;
+			}
+		}
+
 
 		
 		# COMMANDS SHELL
@@ -313,45 +331,75 @@ class Ffmpeg {
 		
 		if($setting=='audio') {
 			
-			# paso 1 extraer el audio		
-			#$command	.= "nice -n 19 ".DEDALO_AV_FFMPEG_PATH." -i $src_file -vn -acodec copy $tmp_file ";			
-			# convert format always
-			$command	.= "nice -n 19 ".DEDALO_AV_FFMPEG_PATH." -i $src_file -vn -acodec libvo_aacenc -ar 44100 -ab 128k -ac 2 $target_file ";
-			# fast-start
-			#$command	.= "&& ".DEDALO_AV_FASTSTART_PATH." $tmp_file $target_file ";			
-			# delete media temp
-			#$command	.= "&& rm -f $tmp_file ";
-			# delete self sh file
-			$command	.= "&& rm -f " . $prgfile;
+			switch (true) {
+				case ($source_with_audio==false):
+					#
+					# SOURCE NOT CONTAINS ANY AUDIO TRACK
+					return false;
+					break;
+				
+				default:
+					#
+					# SOURCE CONTAINS ANY AUDIO TRACK
+
+					# paso 1 extraer el audio		
+					#$command	.= "nice -n 19 ".DEDALO_AV_FFMPEG_PATH." -i $src_file -vn -acodec copy $tmp_file ";			
+					# convert format always
+					$command	.= "nice -n 19 ".DEDALO_AV_FFMPEG_PATH." -i $src_file -vn -acodec libvo_aacenc -ar 44100 -ab 128k -ac 2 $target_file ";
+					# fast-start
+					#$command	.= "&& ".DEDALO_AV_FASTSTART_PATH." $tmp_file $target_file ";			
+					# delete media temp
+					#$command	.= "&& rm -f $tmp_file ";
+					# delete self sh file
+					$command	.= "&& rm -f " . $prgfile;
+					break;
+			}
+			
 		
 		}else{
 			
-			# paso 1 sólo video			
-			$command	.= "nice -n 19 ".DEDALO_AV_FFMPEG_PATH." -i $src_file -an -pass 1 -vcodec $vcodec -vb $vb -s $s -g $g $progresivo $gammma -f $force -passlogfile $log_file -y /dev/null ";
 			
-			# paso 2 video
-			$command	.= "&& nice -n 19 ".DEDALO_AV_FFMPEG_PATH." -i $src_file -pass 2 -vcodec $vcodec -vb $vb -s $s -g $g $progresivo $gammma -f $force -passlogfile $log_file -y ";			
-			
-			# paso 2 audio
-			$command	.= "-acodec $acodec -ar $ar -ab $ab -ac $ac -y $tmp_file ";													
-			
-			# fast-start
-			$command	.= "&& nice -n 19 ".DEDALO_AV_FASTSTART_PATH." $tmp_file $target_file ";														
-			
-			# delete media temp
-			$command	.= "&& rm -f $tmp_file ";
-			
-			# delete log temps (all generated logs files)
-			$command	.= "&& rm -f $log_file* ";
+			switch (true) {
 
-			# delete self sh file
-			$command	.= "&& rm -f " . $prgfile;
-		}
+				case ($source_with_video==false):
+					#
+					# CASE ORIGINAL HAVE ONLY AUDIO
+					$command	.= "nice -n 19 ".DEDALO_AV_FFMPEG_PATH." -i $src_file -vn -acodec libvo_aacenc -ar 44100 -ab 128k -ac 2 $target_file ";
+					break;
+				
+				default:
+					#
+					# CASE ORIGINAL HAVE AUDIO AND VIDEO OR ONLY VIDEO
+					# paso 1 sólo video			
+					$command	.= "nice -n 19 ".DEDALO_AV_FFMPEG_PATH." -i $src_file -an -pass 1 -vcodec $vcodec -vb $vb -s $s -g $g $progresivo $gammma -f $force -passlogfile $log_file -y /dev/null ";
+					
+					# paso 2 video
+					$command	.= "&& nice -n 19 ".DEDALO_AV_FFMPEG_PATH." -i $src_file -pass 2 -vcodec $vcodec -vb $vb -s $s -g $g $progresivo $gammma -f $force -passlogfile $log_file -y ";			
+					
+					# paso 2 audio
+					$command	.= "-acodec $acodec -ar $ar -ab $ab -ac $ac -y $tmp_file ";													
+					
+					# fast-start
+					$command	.= "&& nice -n 19 ".DEDALO_AV_FASTSTART_PATH." $tmp_file $target_file ";														
+					
+					# delete media temp
+					$command	.= "&& rm -f $tmp_file ";
+					
+					# delete log temps (all generated logs files)
+					$command	.= "&& rm -f $log_file* ";
+
+					# delete self sh file
+					$command	.= "&& rm -f " . $prgfile;
+					break;
+			}		
+			
+			
+		}//end if($setting=='audio') {
 		
 		
 		if(SHOW_DEBUG) {
-			#dump($command, "sudo -u _www $command");
-			error_log($command);
+			#dump($command, "sudo -u _www $command");			
+			debug_log(__METHOD__." Creating AV version:\n ".to_string($command), logger::DEBUG);
 		}
 		#$av_alternate_command_exc = exec_::exec_command($command);
 					
@@ -365,7 +413,8 @@ class Ffmpeg {
 		if(file_exists($prgfile)) {
 			chmod($prgfile, 0755);
 		}else{
-			throw new Exception("Error Processing Media. Script file not exists or is not accessible", 1);			
+			throw new Exception("Error Processing Media. Script file not exists or is not accessible", 1);	
+			#trigger_error("Error Processing Media. Script file not exists or is not accessible");	
 		}
 		#exec("sh $prgfile > /dev/null &",$rv); # funciona!!! <<<<
 		#unlink($prgfile);
@@ -577,9 +626,13 @@ class Ffmpeg {
 		$file_path_original = $AVObj->get_name() . '_untouched.' . $AVObj->get_extension();;	//str_replace('.mp4', '_.mp4', $file_path);
 			#dump($file_path, " file_path - ".to_string($file_path_temp));return;
 
+		$source_file_path = $AVObj->get_local_full_path();
+
+		$path_parts 	  = pathinfo($source_file_path);
+		$target_file_path = $path_parts['dirname'].'/'.$path_parts['filename'].'-b.'.$path_parts['extension'];
 	
 		$command  = '';
-
+		/*
 		$command .= "cd ".$AVObj->get_media_path_abs()." ";
 		
 		# Copy file
@@ -590,15 +643,14 @@ class Ffmpeg {
 		
 		# Rename new file as source
 		$command .= "&& mv $file_path_temp $file_path ";
-
+		*/
 		# Faststart
-		#$command .= "&& $qt_faststart_installed_path $file_path $file_path ";
-
+		$command .= "$qt_faststart_installed_path $source_file_path $target_file_path ";
 
 		# Remove temp file
 		#$command .= "&& rm -f $file_path_temp ";
 
-			dump($command, ' command'.to_string()); die();
+		#dump($command, ' command'.to_string()); die();
 		
 		try {
 
@@ -614,8 +666,9 @@ class Ffmpeg {
 		#$conform_header_command_exc = Exec::exec_command($command);
 
 		if(SHOW_DEBUG) {
-			error_log("Admin Debug command for ".__METHOD__."<div class=\"notas\">sudo -u _www $command </div><hr>");
-			dump($result, " result ".to_string($command));
+			debug_log(__METHOD__." Exec command conform headers: sudo -u _www $command .".to_string($result), logger::DEBUG);
+			#error_log("Admin Debug command for ".__METHOD__."<div class=\"notas\">sudo -u _www $command </div><hr>");
+			#dump($result, " result ".to_string($command));
 		}
 
 		return $result;
@@ -736,6 +789,22 @@ class Ffmpeg {
 	   	return $output;
 
 	}#end get_media_attributes
+
+
+
+	/**
+	* GET_MEDIA_STREAMS
+	*/
+	public static function get_media_streams( $source_file ) {		
+		
+	    $command = DEDALO_AV_FFPROBE_PATH . ' -v quiet -show_streams -print_format json ' . $source_file . ' 2>&1';  
+	    $output  = json_decode( shell_exec($command) );  
+	   		#dump($output, ' output ++ '.to_string( $command ));
+
+	   	return $output;
+
+	}#end get_media_streams
+	
 
 
 

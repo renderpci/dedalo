@@ -5,7 +5,7 @@
 }
 /*.text_area_content { width:82.6%;padding:0; vertical-align:top; display:inline-block; }*/
 .css_wrap_text_area .content_data {
-	width: 82.6%;
+	width: 83.6%;
 	padding: 0;
 	vertical-align: top;
 	display: inline-block;
@@ -108,7 +108,7 @@
 	display:inline-block;
 	position: relative;
 	left: -4px;
-	margin-top: 8px;
+	margin-top: 4px;
 	margin-bottom: 8px;
 	text-shadow:none;
 	
@@ -268,7 +268,7 @@ div.selected_fragment {
 	margin: 0;
 	max-height: 120px;
 	overflow: auto;
-	width: 100.5%;
+	width: 100%;
 	margin-bottom: 5px;
 }
 
@@ -282,6 +282,17 @@ div.selected_fragment {
 	background-image: url('../../themes/default/button_drop.png');
 	background-position: center 0;
 }
+
+
+.text_area_warning {
+	width: 100%;
+	}
+	.text_area_warning span {
+		margin: 0;
+		padding: 10px;
+		width: 100.25%;
+		border-radius: 0;
+	}
 
 
 /* FIX TEXT AREA FULLSCREEN WIDTH PROBLEM

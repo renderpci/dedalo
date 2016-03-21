@@ -1,0 +1,17 @@
+<?php
+
+	# VISUALIZADOR HTML
+	$html_tool  ='';
+	$html_tool .= "\n <div id=\"button_tool_export_list\" class=\"btn_inside_section_buttons_container tool_export\"
+	data-section_tipo='$section_tipo'
+	data-tool_name='$tool_name'
+	data-context_name='$context_name'
+	onclick=\"tool_common.open_tool_export(this)\">".label::get_label('tool_export')."
+	</div>";
+	#$html_tool .= "<div id=\"tool_diffusion_response\"></div>";
+
+		
+	# PRINT HTML
+	echo $html_tool;
+	
+?>

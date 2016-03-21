@@ -56,8 +56,8 @@ class widget {
     * @return 
     */
     public function get_html() {
-    	ob_start();		
-        include( dirname(__FILE__) . '/' . $this->widget_name .'/'. $this->widget_name . '.php' );	
+    	ob_start();	
+        include( dirname(__FILE__) . '/' . $this->widget_name .'/'. $this->widget_name . '.php' );
 		$html = ob_get_clean();
 		return $html;
     }#end get_html

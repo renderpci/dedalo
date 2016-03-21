@@ -55,6 +55,10 @@ if($mode=='export_list') {
 
 	$records_data = search::get_records_data($options);
 		#dump($records_data, ' records_data ++ '.to_string());
+
+	#
+	# Close session to liberate browser
+	session_write_close();
 	
 	$diffusion 			= new diffusion();
 	$result 			= false;
@@ -121,6 +125,10 @@ if($mode=='export_record') {
 	}else{
 		$ar_section = array( $section_id );
 	}
+
+	#
+	# Close session to liberate browser
+	session_write_close();
 	
 	
 	$diffusion = new diffusion();

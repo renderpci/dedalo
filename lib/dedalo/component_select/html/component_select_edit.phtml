@@ -40,7 +40,9 @@
 		
 		case ($permissions>=2)	:
 		
-					$html_contenido .= "\n <select class=\"css_select {$ar_css['css_select']}\" onchange=\"component_select.Save(this)\"
+					$html_contenido .= "\n <select class=\"css_select {$ar_css['css_select']}\"
+					onchange=\"component_select.Save(this)\"
+					onfocus=\"component_common.select_wrap(null,'$id_wrapper');\"
 					name=\"{$input_name}\"
 					data-tipo=\"{$tipo}\"
 					data-lang=\"{$lang}\"

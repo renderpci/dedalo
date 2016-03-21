@@ -662,6 +662,10 @@ function ip_in_range($ip, $range) {
 }
 
 
+function br2nl($string) {
+	return str_replace( array('<br>','<br />'), "\n", $string );
+}
+
 /**
 * GET_TOP_TIPO
 *//* EN PROCESO
@@ -681,6 +685,22 @@ function get_top_tipo() {
 			break;
 	}
 }*/
+
+/**
+* GET_HTTP_RESPONSE_CODE
+*/
+function get_http_response_code($theURL) {
+	stream_context_set_default(
+    	array(
+	        'http' => array(
+	            'method' => 'HEAD'
+	        )
+	    )
+	);
+    $headers = get_headers($theURL);
+    	#dump($headers, ' headers ++ '.to_string());
+    return (int)substr($headers[0], 9, 3);
+}
 
 
 

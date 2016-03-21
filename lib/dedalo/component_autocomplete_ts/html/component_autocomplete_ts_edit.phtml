@@ -66,6 +66,7 @@
 					$html_contenido .= "\n <input class=\"css_autocomplete_ts_search_field\" type=\"text\" placeholder=\"".label::get_label('buscar')."...\"
 					data-ar_tipo_to_search='{$ar_referenced_tipo_json}'
 					onclick=\"component_autocomplete_ts.activate(this)\"
+					onfocus=\"component_common.select_wrap(null,'$id_wrapper');\"
 					/>";
 
 					if(SHOW_DEBUG) {

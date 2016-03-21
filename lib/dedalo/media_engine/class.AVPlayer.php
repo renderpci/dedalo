@@ -313,6 +313,12 @@ class AVPlayer extends Accessors {
 		$html5_source_type_code = $this->get_html5_source_type_code();
 			#dump($_REQUEST, ' _REQUEST ++ '.to_string());
 			#dump($src, ' src ++ '.to_string());		
+		$subtitle_track = null;
+
+		if(isset($_GET['subtitles_url'])){
+			$subtitles_url = $_GET['subtitles_url'];
+			$subtitle_track= "<track label=\"English\" kind=\"subtitles\" srclang=\"en\" src=\"$subtitles_url\" default>";
+		}
 				
 		$html  = "<!-- HTML 5 TAG CODE WITH FALLBACK QUICKTIME PLUG-IN -->\n";
 		$html .= "<script type=\"text/javascript\">
@@ -326,6 +332,7 @@ class AVPlayer extends Accessors {
 						videoCode += '<video id=\"{$this->playerID}\" width=\"{$this->width}\" height=\"{$this->height}\" preload=\"{$this->preload}\" {$this->get_html5_controls_code()} poster=\"{$this->poster}\" {$this->autoplay} onerror=\"failed(event)\" >';	      					
 						videoCode += ' <source id=\"video_mp4\" src=\"\" {$html5_source_type_code} >';
 						videoCode += ' <img src=\"{$this->poster}\" width=\"{$this->width}\" height=\"{$this->height}\" alt=\"Posterframe\" title=\"No video playback capabilities\" />';
+						videoCode += '$subtitle_track';
 						videoCode += '</video>';			
 						
 					}else{

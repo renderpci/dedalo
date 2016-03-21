@@ -18,6 +18,7 @@
 ################################################################
 # DEDALO 4 MAIN VARS	
 	define('DEDALO_HOST'			, $_SERVER['HTTP_HOST'] );
+	define('DEDALO_PROTOCOL'		, stripos( $_SERVER['SERVER_PROTOCOL'],'https') === true ? 'https://' : 'http://' );
 	
 	# Dedalo paths
 	define('DEDALO_ROOT'			, dirname(dirname(dirname(dirname(__FILE__)))));
@@ -47,67 +48,117 @@ define('DEDALO_ENTITY', 'my_entity_name'); # Like 'dedalo4'
 
 
 ################################################################
-# LOG AND ERRORS : STORE APPLICATION DATA INFO AND ERRORS
-
-	# Log data	
-	require(DEDALO_LIB_BASE_PATH . '/logger/class.logger.php');
-	define('LOGGER_LEVEL', logger::ERROR);
-
-	# Log messages in page
-	$log_messages = array();
-	global $log_messages;		
-	
-	# APP : LOG APPLICATION INFO IN DB
-	#logger::register('activity'	, 'mysql://auto:auto@auto:3306/log_data?table=log_data');
-	logger::register('activity'	, 'activity://auto:auto@auto:3306/log_data?table=matrix_activity');
-	# Store in logger static array var
-	logger::$obj['activity']	= logger::get_instance('activity');		
-	
-	# ERROR : LOG APLICATION ERRORS IN FILE
-	# Logs dir (Maintain this directory unaccessible for security)
-	define('DEDALO_LOGS_DIR'			, DEDALO_LIB_BASE_PATH . '/logs');	# !! In production mode log MUST BE out of site
-
-	logger::register('error', 'file://'.DEDALO_LOGS_DIR.'/dedalo_errors.log');	# In production mode log MUST BE out of site
-	
-	# Store in logger static array var
-	logger::$obj['error']	= logger::get_instance('error');
-
-
-
-
-################################################################
 # CACHE MANAGER
 	define('DEDALO_CACHE_MANAGER', false );	# redis / memcached / zebra_db / false
 	if(DEDALO_CACHE_MANAGER) {
 		define('DEDALO_CACHE_MANAGER_DB', 'cache_'.substr(DEDALO_HOST, 0,-5) );
-		require('cache_manager.php');
+		include(DEDALO_LIB_BASE_PATH.'/config/cache_manager.php');
+	}
+
+
+################################################################
+# SESSION
+	if(!isset($_SESSION)) {
+		
+		# HANDLER
+		$SESSION_HANDLER = 'memcached';		
+		define('DEDALO_SESSION_HANDLER', $SESSION_HANDLER);	// files | memcached | user
+		switch (DEDALO_SESSION_HANDLER) {
+			case 'memcached' :
+				ini_set( 'session.save_handler' , 'memcached');
+				ini_set( 'session.save_path'	, '127.0.0.1:11211');
+				break;
+			default:
+				ini_set( 'session.save_handler' , 'files');
+				ini_set( 'session.save_path'	, '/tmp/php');
+		}
+
+
+		# LIFETIME
+		# Set max duration of dedalo user session
+		# Use ini directive to set session.gc_maxlifetime (Garbage Collection lifetime)
+		# Use session_cache_expire to set duration of session 
+		# Set duration max of session data in hours (default 5 hours)
+		# Set before session start
+		if(!isset($session_duration_hours)) $session_duration_hours = 8;
+		ini_set( 'session.gc_maxlifetime', intval($session_duration_hours*3600) );	#in secs (*3600)	Defaul php usually : 1440
+		session_cache_expire( intval($session_duration_hours*60) );	#in minues (*60)					Defaul php usually : 180	
+	
+		session_start();
 	}
 
 
 
 ################################################################
-# SESSION 
-	# LIFETIME
-	# Set max duration of dedalo user session
-	# Use ini directive to set session.gc_maxlifetime (Garbage Collection lifetime)
-	# Use session_cache_expire to set duration of session 
-	# Set duration max of session data in hours (default 5 hours)
-	# Set before session start
-	if(!isset($session_duration_hours)) $session_duration_hours = 5;
-	ini_set( 'session.gc_maxlifetime', intval($session_duration_hours*3600) );	# in secs (*3600)	Defaul php usually : 1440
-	session_cache_expire( intval($session_duration_hours*60) );	# in minues (*60)					Defaul php usually : 180	
-
-	if(!isset($_SESSION)) session_start();
+# CORE REQUIRE
+	# BASIC FUNCTIONS	
+	include(DEDALO_LIB_BASE_PATH.'/config/core_functions.php');
+	# VERSION
+	include(DEDALO_LIB_BASE_PATH.'/config/version.inc');
+	# Dedalo str tipos
+	include(DEDALO_LIB_BASE_PATH.'/config/dd_tipos.php');
 
 
 
 ################################################################
-# CORE REQUIRE
-	# BASIC FUNCTIONS
-	require('core_functions.php');
-	# VERSION
-	require('version.inc');
+# DEBUG : Application debug config
+	$show_debug = false;	
+	if(
+		# SUPERUSER IS LOGGED
+		(
+			isset($_SESSION['dedalo4']['auth']['user_id'])
+			&& 	 ($_SESSION['dedalo4']['auth']['user_id']==DEDALO_SUPERUSER)
+		)		
+	) {
+		$show_debug = true;
+	}	
+	define('SHOW_DEBUG', $show_debug);
+
+
+
+
+################################################################
+# LOG AND ERRORS : STORE APPLICATION DATA INFO AND ERRORS
+
+	# Log data
+	include(DEDALO_LIB_BASE_PATH . '/logger/class.logger.php');
+	/*
+	DEBUG 	 = 100;
+	INFO 	 = 75;
+	NOTICE 	 = 50; 
+	WARNING  = 25;
+	ERROR 	 = 10;
+	CRITICAL = 5;
+
+	Debug default: DEBUG
+	Production default: ERROR
+	*/
+	define('LOGGER_LEVEL', logger::DEBUG); 
 	
+
+	# Log messages in page
+	$log_messages = array();
+	global $log_messages;		
+	
+	# ACTIVITY LOG DB
+	# Log application info in db
+		logger::register('activity'	, 'activity://auto:auto@auto:3306/log_data?table=matrix_activity');
+		# Store object in logger static array var
+		logger::$obj['activity'] = logger::get_instance('activity');
+	
+	# ERROR LOG FILE 
+	# Log aplication errors in file
+		# Logs dir (Maintain this directory unaccessible for security)	
+		define('DEDALO_LOGS_DIR'  , dirname(dirname(DEDALO_ROOT)) . '/logs');	# !! In production mode log MUST BE out of site	
+		# Set file. In production mode log MUST BE out of site
+		logger::register('error', 'file://'.DEDALO_LOGS_DIR.'/dedalo_errors.log');		
+		# Store object in logger static array var
+		logger::$obj['error'] = logger::get_instance('error');
+
+	# ERROR : Handler class
+	include(DEDALO_LIB_BASE_PATH.'/config/class.Error.php');
+
+
 
 
 ################################################################
@@ -119,8 +170,10 @@ define('DEDALO_ENTITY', 'my_entity_name'); # Like 'dedalo4'
 
 ################################################################
 # BACKUP : Automatic backups control
+	# DEDALO_BACKUP_ON_LOGIN : true / false	
 	define('DEDALO_BACKUP_ON_LOGIN'	, true);
-
+	# DEDALO_BACKUP_TIME_RANGE Minimun lapse of time (in hours) for run backup script again. Default: (int) 4
+	define('DEDALO_BACKUP_TIME_RANGE', 8);
 
 
 ################################################################
@@ -144,25 +197,21 @@ define('DEDALO_ENTITY', 'my_entity_name'); # Like 'dedalo4'
 	# Projects langs
 	define('DEDALO_PROJECTS_DEFAULT_LANGS'		, serialize(array(
 													'lg-spa',
-													'lg-cat',
-													'lg-eus',
-													'lg-eng',
-													'lg-fra',
+													'lg-cat',													
+													'lg-eng',													
 													)));
 
 	# TRANSLATOR
-	define('DEDALO_TRANSLATOR_URL'				, '');	# Apertium, Google translator, etc..
+	define('DEDALO_TRANSLATOR_URL'				, 'http://babel.antropolis.net/babel_engine/');	# Apertium, Google translator, etc..
 
 
 
 ################################################################
 # DEDALO 4 DEFAULT CONFIG VALUES
-	# Dedalo str tipos
-	require('dd_tipos.php');
 
 	#
 	# DEDALO_PREFIX_TIPOS
-	define('DEDALO_PREFIX_TIPOS', serialize( array('dd','rsc','oh','ich') ));
+	define('DEDALO_PREFIX_TIPOS', serialize( array('dd','rsc','oh') ));
 
 	# Fallback section
 	define('MAIN_FALLBACK_SECTION'				,'oh1');		# go after login (tipo inventory)
@@ -174,26 +223,9 @@ define('DEDALO_ENTITY', 'my_entity_name'); # Like 'dedalo4'
 	define('DEDALO_PERMISSIONS_ROOT'			, 1);
 	# MAX ROWS . ROWS LIST MAX RECORDS PER PAGE
 	define('DEDALO_MAX_ROWS_PER_PAGE'			, 10);
+	# USER PROFLE BY DEFAULT
+	define('DEDALO_PROFILE_DEFAULT'				, 2); // Usuario
 	
-
-################################################################
-# DEBUG : Application debug config
-	$show_debug = false;
-	/*
-	if(
-		# SUPERUSER IS LOGGED
-		(
-			isset($_SESSION['dedalo4']['auth']['user_id'])
-			&& 	 ($_SESSION['dedalo4']['auth']['user_id']==DEDALO_SUPERUSER)
-		)		
-	) {
-		$show_debug = true;
-	}
-	*/
-	define('SHOW_DEBUG'				, $show_debug);
-
-	# ERROR : Handler class
-	require('class.Error.php');
 
 
 
@@ -201,7 +233,7 @@ define('DEDALO_ENTITY', 'my_entity_name'); # Like 'dedalo4'
 ################################################################
 # LIBS PATH
 	# JQUERY JS LIB
-	define('JQUERY_LIB_URL_JS'		, DEDALO_ROOT_WEB . '/lib/jquery/jquery-2.1.4.min.js');
+	define('JQUERY_LIB_URL_JS'		, DEDALO_ROOT_WEB . '/lib/jquery/jquery.min.js');
 	# JQUERY UI
 	define('JQUERY_UI_URL_JS'		, DEDALO_ROOT_WEB . '/lib/jquery/jquery-ui/jquery-ui.min.js');
 	define('JQUERY_UI_URL_CSS'		, DEDALO_ROOT_WEB . '/lib/jquery/jquery-ui/jquery-ui.min.css');
@@ -228,8 +260,7 @@ define('DEDALO_ENTITY', 'my_entity_name'); # Like 'dedalo4'
 # MEDIA CONFIG
 	# MEDIA_BASE PATH
 	define('DEDALO_MEDIA_BASE_PATH'		, DEDALO_ROOT 		. '/media');
-	define('DEDALO_MEDIA_BASE_URL'		, DEDALO_ROOT_WEB 	. '/media');
-	define('DEDALO_MEDIA_COLLECTION_PATH', false);
+	define('DEDALO_MEDIA_BASE_URL'		, DEDALO_ROOT_WEB 	. '/media');	
 	
 
 	# AV MEDIA
@@ -238,7 +269,7 @@ define('DEDALO_ENTITY', 'my_entity_name'); # Like 'dedalo4'
 		# EXTENSION normally mp4, mov
 		define('DEDALO_AV_EXTENSION'				, 'mp4');
 		# DEDALO_IMAGE_EXTENSIONS_SUPPORTED
-		define('DEDALO_AV_EXTENSIONS_SUPPORTED'		, serialize( array('mp4','mov','avi','mpg','mpeg') ));
+		define('DEDALO_AV_EXTENSIONS_SUPPORTED'		, serialize( array('mp4','wave','wav','aiff','aif','mp3','mov','avi','mpg','mpeg') ));
 		# MIME normally video/mp4, quicktime/mov
 		define('DEDALO_AV_MIME_TYPE'				, 'video/mp4');
 		# TYPE normally h264/AAC
@@ -257,12 +288,20 @@ define('DEDALO_ENTITY', 'my_entity_name'); # Like 'dedalo4'
 		define('DEDALO_AV_FFMPEG_SETTINGS'			, DEDALO_LIB_BASE_PATH . '/media_engine/lib/ffmpeg_settings');
 		# FAST START PATH usualmente /usr/bin/qt-faststart
 		define('DEDALO_AV_FASTSTART_PATH'			, '/usr/bin/qt-faststart');		# Like '/usr/bin/qt-faststart';
+		# DEDALO_AV_FFPROBE_PATH PATH usualmente /usr/local/bin/ffprobe
+		define('DEDALO_AV_FFPROBE_PATH'				, '/usr/bin/ffprobe');
 		# AV STREAMER
 		define('DEDALO_AV_STREAMER'					, NULL);
 		# AV STREAMER
 		define('DEDALO_AV_WATERMARK_FILE'			, DEDALO_MEDIA_BASE_PATH .'/'. DEDALO_AV_FOLDER . '/watermark/watermark.png');
+		
 		# TEXT_SUBTITLES_ENGINE (tool_subtitles)
 		define('TEXT_SUBTITLES_ENGINE'				, DEDALO_LIB_BASE_PATH . '/tools/tool_subtitles');
+		# DEDALO_SUBTITLES_FOLDER (tool_subtitles)
+		define('DEDALO_SUBTITLES_FOLDER'			, '/subtitles');
+		# EXTENSION normally vtt
+		define('DEDALO_AV_SUBTITLES_EXTENSION'		, 'vtt');
+		
 		# DEDALO_AV_RECOMPRESS_ALL
 		define('DEDALO_AV_RECOMPRESS_ALL'			, 1); // 1 re re-compress all av files uploaded, 0 to only copy av files uploaded (default 0)
 		
@@ -297,6 +336,9 @@ define('DEDALO_ENTITY', 'my_entity_name'); # Like 'dedalo4'
 		define('MAGICK_PATH'						, '/usr/bin/'); 	# Like '/usr/bin/';
 		define('COLOR_PROFILES_PATH'				, DEDALO_LIB_BASE_PATH . '/media_engine/lib/color_profiles_icc/');
 
+		# DEDALO_IMAGE_WEB_FOLDER normally '/web' Used to save uploaded files from component_html_text
+		define('DEDALO_IMAGE_WEB_FOLDER'			, '/web');
+
 	
 	# PDF MEDIA
 		# PDF FOLDER normally '/image'
@@ -329,7 +371,6 @@ define('DEDALO_ENTITY', 'my_entity_name'); # Like 'dedalo4'
 
 ################################################################
 # UPLOADER CONFIG
-
 	define('DEDALO_UPLOADER_DIR'			, DEDALO_ROOT 		. '/lib/jquery/jQuery-File-Upload');
 	define('DEDALO_UPLOADER_URL'			, DEDALO_ROOT_WEB	. '/lib/jquery/jQuery-File-Upload');	
 	
@@ -341,7 +382,8 @@ define('DEDALO_ENTITY', 'my_entity_name'); # Like 'dedalo4'
 
 ################################################################
 # LOADER (AUTO LOAD CALLED CLASSES)
-	require('class.loader.php');
+	include(DEDALO_LIB_BASE_PATH.'/config/class.loader.php');
+
 
 ################################################################
 # MEDIA ENTITY
@@ -356,6 +398,15 @@ define('DEDALO_TEST_INSTALL', true);
 
 # DEDALO_SECTION_ID_TEMP : Name / prefix of section_id temporals used to store special sections in memory or session
 define('DEDALO_SECTION_ID_TEMP', 'tmp');
+
+
+################################################################
+# TOOLS VARS
+	# TOOL EXPORT
+	define('DEDALO_TOOL_EXPORT_FOLDER_PATH',	DEDALO_MEDIA_BASE_PATH . '/export/files');
+	define('DEDALO_TOOL_EXPORT_FOLDER_URL' ,	DEDALO_MEDIA_BASE_URL  . '/export/files');
+	
+
 
 
 ################################################################

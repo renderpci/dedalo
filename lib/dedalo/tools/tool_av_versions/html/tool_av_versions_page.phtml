@@ -138,10 +138,11 @@
 		    if ($permissions>=2) {
 
 			    $html .= "\n <tr>";
-			    $html .= "\n <td>". label::get_label('descargar')."</td>" ;
+			    $html .= "\n <td>". label::get_label('descargar')."</td>";
+			    
 			    foreach ($ar_all_files_by_quality as $quality => $file_path) {
 			    	$td_style = null; if($quality==DEDALO_AV_QUALITY_DEFAULT) $td_style = 'td_default_quality';
-		    	$html .= "\n <td class=\"$td_style\">";
+		    		$html .= "\n <td class=\"$td_style\">";
 
 			    	$style = '';
 		    		if( $this->component_obj->get_original_file_path($quality)==false ) {
@@ -236,12 +237,10 @@
 
 			#
 		    # CONFORM HEADER
-		    if(SHOW_DEBUG) {
-		    # WORKING HERE (12-09-2015)
 		    if ( $permissions>=2 && strlen(DEDALO_AV_FFMPEG_PATH)>4 ) {
 
 			    $html .= "\n <tr>";
-			    $html .= "\n <td>". label::get_label('conformar') .' '.label::get_label('cabecera'). "</td>" ;
+			    $html .= "\n <td>". label::get_label('conformar_cabeceras'). "</td>" ;
 			    foreach ($ar_all_files_by_quality as $quality => $file_path) {
 			    	
 			    	$td_style = null; if($quality==DEDALO_AV_QUALITY_DEFAULT) $td_style = 'td_default_quality';
@@ -249,7 +248,7 @@
 		    		$html .= "\n <td class=\"$td_style\">";			    	
 			    	$source_quality_file = $file_path;	//$this->component_obj->get_video_path($quality);	
 			    			    	
-			    		if ($file_path && file_exists($source_quality_file)) {
+			    		if ($quality!=DEDALO_AV_QUALITY_ORIGINAL && $file_path && file_exists($source_quality_file)) {
 
 			    			$source_quality = $this->component_obj->get_source_quality_to_build($quality);						
 							
@@ -270,7 +269,7 @@
 				}//end foreach ($ar_all_files_by_quality as $quality => $file_path) {
 			    $html .= "\n </tr>";
 			}
-			}
+			
 
 
 		$html .= "\n</table><!-- /table_versions -->";

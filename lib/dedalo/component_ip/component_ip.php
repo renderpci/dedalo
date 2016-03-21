@@ -25,8 +25,8 @@
 
 	$ip						= $dato;
 
-	
-	$geoip_mm_mode = 'city';
+
+	$geoip_mm_mode = 'country';
 	
 	# GEO-IP FLAGS
 	if($geoip_mm_mode == 'city') {
@@ -40,8 +40,8 @@
 
 	# geo-ip tool
 	$geoiptoolURL 			= 'http://whatismyipaddress.com/ip/'; #'http://geotool.flagfox.net/?lang=es-ES&ip=',"http://www.geoiptool.com/es/?IP="
-	$geoip_mm_mode			= 'city';
-	
+	#$geoip_mm_mode			= 'city';
+
 
 	# Verify component content record is inside section record filter
 	if ($this->get_filter_authorized_record()===false) return NULL ;

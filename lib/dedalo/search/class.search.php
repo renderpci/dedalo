@@ -86,6 +86,14 @@ class search extends common {
 			$sql_options->limit_list			= (int)DEDALO_MAX_ROWS_PER_PAGE;
 			$sql_options->layout_map_list		= (bool)false;
 
+			if($sql_options->section_tipo == DEDALO_ACTIVITY_SECTION_TIPO){
+				$limit_activity = DEDALO_MAX_ROWS_PER_PAGE*3;
+				$sql_options->limit 	 = $sql_options->limit > $limit_activity 	  ? $sql_options->limit 	 : $limit_activity;
+				$sql_options->limit_list = $sql_options->limit_list > $limit_activity ? $sql_options->limit_list : $limit_activity;
+				$sql_options->order_by   = $sql_options->order_by ? $sql_options->order_by : "id DESC";
+			}
+
+
 			# Options overwrite sql_options defaults
 			foreach ((object)$options as $key => $value) {
 				# Si la propiedad recibida en el array options existe en sql_options, la sobreescribimos
@@ -125,7 +133,7 @@ class search extends common {
 			 	//
 			$section 				 = section::get_instance(null,$sql_options->section_tipo,'list');
 			$sql_options->layout_map = (array)component_layout::get_layout_map_from_section( $section );
-				#dump($layout_map, 'layout_map for section '.$sql_options->section_tipo, array());				
+				#dump($layout_map, 'layout_map for section '.$sql_options->section_tipo, array());
 		}
 		if ($sql_options->modo!='edit' && empty($sql_options->layout_map)) {
 			if(SHOW_DEBUG) {

@@ -181,6 +181,30 @@ class component_radio_button extends component_common {
 
 
 	/**
+	* GET_VALOR_EXPORT
+	* Return component value sended to export data
+	* @return string $valor
+	*/
+	public function get_valor_export( $valor=null, $lang=DEDALO_DATA_LANG ) {
+		
+		if (is_null($valor)) {
+			$dato = $this->get_dato();				// Get dato from DB
+		}else{
+			$this->set_dato( json_decode($valor) );	// Use parsed json string as dato
+		}
+
+		$valor = $this->get_valor($lang);
+		
+		if(SHOW_DEBUG) {
+			#return "RADIO_BUTTON: ".$valor;
+		}
+		return $valor;
+
+	}#end get_valor_export
+
+
+
+	/**
 	* BUILD_SEARCH_COMPARISON_OPERATORS 
 	* Note: Override in every specific component
 	* @param array $comparison_operators . Like array('=','!=')

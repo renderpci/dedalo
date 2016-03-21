@@ -278,29 +278,29 @@ if($mode=='delete_version') {
 	
 	
 	$ImageObj 			= new ImageObj($image_id, $quality, $aditional_path, $initial_media_path);		
-	$folder_path		= $ImageObj->get_media_path_abs(); # incluye / final
-	$folder_path_del	= $folder_path . "deleted/";
+	$folder_path		= $ImageObj->get_media_path_abs(); # incluye / final	
 	$file				= $folder_path . $image_id . '.' . $ImageObj->get_extension();
 	
 	if(file_exists($file)) {
 		
 		try{
-			
-			# delete folder exists ?	
-			if( !is_dir($folder_path_del) ) {
-			$create_dir 	= mkdir($folder_path_del, 0777,true);
-			if(!$create_dir) throw new Exception(" Error on read or create directory \"deleted\". Permission denied . The files are not deleted") ;
-			}
-			
-			# delete folder set permissions
-			$wantedPerms 	= 0777;
-			$actualPerms 	= fileperms($folder_path_del);
-			if($actualPerms < $wantedPerms) chmod($folder_path_del, $wantedPerms);
-			
-			# move / rename file
-			$rename 		= rename($file, $folder_path_del . "/$image_id" . '_deleted_' . date("Y-m-d") . '.' . $ImageObj->get_extension() );
-			if(!$rename) 	throw new Exception(" Error on move files to folder \"deleted\" . Permission denied . The files are not deleted");
-
+			/* OLD WAY
+				# delete folder exists ?
+				$folder_path_del	= $folder_path . "deleted/";	
+				if( !is_dir($folder_path_del) ) {
+				$create_dir 	= mkdir($folder_path_del, 0777,true);
+				if(!$create_dir) throw new Exception(" Error on read or create directory \"deleted\". Permission denied . The files are not deleted") ;
+				}
+				
+				# delete folder set permissions
+				$wantedPerms 	= 0777;
+				$actualPerms 	= fileperms($folder_path_del);
+				if($actualPerms < $wantedPerms) chmod($folder_path_del, $wantedPerms);
+				
+				# move / rename file
+				$rename 		= rename($file, $folder_path_del . "/$image_id" . '_deleted_' . date("Y-m-d") . '.' . $ImageObj->get_extension() );
+				if(!$rename) 	throw new Exception(" Error on move files to folder \"deleted\" . Permission denied . The files are not deleted");			
+				*/
 
 			# Save component (update valor list)
 			$component_image = component_common::get_instance(	'component_image',
@@ -310,6 +310,10 @@ if($mode=='delete_version') {
 																DEDALO_DATA_NOLAN,
 																$section_tipo
 																);
+			// REMOVE This quality file
+			$component_image->remove_component_media_files( $ar_quality=array($quality) );
+
+			// SAVE To update valor_list
 			$component_image->Save();
 			
 

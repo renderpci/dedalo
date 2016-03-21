@@ -103,6 +103,11 @@ table.css_section_list_table {
 		background-color: rgba(249, 249, 249, 0.82);
 		*/
 	}
+	.activity_date {
+		font-family: Menlo, monospace;
+    	color: #505050;
+		font-size: 11.6px;
+	}
 	table.css_section_list_table .section_list_td_row {
 		padding: 5px;
 		vertical-align: top;
@@ -460,6 +465,7 @@ table.css_section_list_table .column_test {
 		background-position: -360px -144px;
 		position: absolute;
 		right: 10px;
+		z-index: 9999;
 	}
 	.comparison_operator, .logical_operator {
 		opacity: 0.6;

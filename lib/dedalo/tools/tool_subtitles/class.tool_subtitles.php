@@ -494,7 +494,11 @@ class tool_subtitles extends tool_common {
 			
 
 			$ar_lines[$i]['text']	= trim($current_line_cut);
-			$current_tcin_secs		= $offsetSecs - ($this->tcin/1000);	// Eliminada esta parte (verificar su influencia): + ($this->dif_ms_in/1000);
+			$current_tcin_secs		= (int)$offsetSecs - ($this->tcin);	// Eliminada esta parte (verificar su influencia): + ($this->dif_ms_in/1000);
+			#$current_tcin_secs	= floatval(number_format($current_tcin_secs, 3));
+				#dump($current_tcin_secs, ' current_tcin_secs');	
+
+
 				/*
 				dump($current_tcin_secs,'current_tcin_secs',array(
 					'offsetSecs'=>$offsetSecs,
@@ -506,7 +510,7 @@ class tool_subtitles extends tool_common {
 					'tcout'=>$tcout,				
 					));
 				*/
-			$ar_lines[$i]['tcin']	= OptimizeTC::seg2tc_ms($current_tcin_secs);
+			$ar_lines[$i]['tcin']	= OptimizeTC::ms_format($current_tcin_secs);
 				#dump($this->dif_ms_in, " $offsetSecs - this->tcin: ".$this->tcin/1000 ." +++");
 				#$tc_ms = OptimizeTC::ms2tc($ar_lines[$i]['tcin']);
 					#dump($tc_ms,'$tc_ms '.$ar_lines[$i]['tcin']);

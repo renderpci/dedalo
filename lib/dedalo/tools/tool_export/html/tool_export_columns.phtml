@@ -1,0 +1,104 @@
+<?php
+/**
+* TOOL_EXPORT PAGE
+*/
+
+$html='';
+
+	
+	#
+	# WRAP_TOOL_EXPORT
+	$html .= "<div id=\"wrap_columns_selector\">";
+	
+		
+		
+
+		#
+		# COL1
+		$html .= "<div id=\"col1\" class=\"col\">";
+
+			#
+			# SOURCE LIST
+			$html .= "<div class=\"list_title\">".label::get_label('elementos_desactivos')."</div>";
+			$html .= "<ul id=\"source_list\" class=\"connectedSortable\">";			
+			foreach ($source_list as $tipo => $name) {
+				$html .= "<li data-tipo=\"$tipo\">";
+				$html .= $name;
+				if(SHOW_DEBUG) {
+					$html .= " [$tipo]";
+				}
+				$html .= "</li>";
+			}
+			$html .= "</ul>";
+
+		$html .= "</div>";//end col1
+
+
+		#
+		# COL2
+		$html .= "<div id=\"col2\" class=\"col\"></div>";
+
+
+		#
+		# COL3
+		$html .= "<div id=\"col3\" class=\"col\">";
+
+			#
+			# TARGET LIST
+			$html .= "<div class=\"list_title\">".label::get_label('elementos_activos')."</div>";
+			$html .= "<ul id=\"target_list\" class=\"connectedSortable\" data-section_tipo=\"$section_tipo\">";			
+			foreach ($target_list as $tipo => $name) {
+				$html .= "<li data-tipo=\"$tipo\" class=\"ui-icon ui-icon-arrow-4\" >";
+				$html .= $name;
+				if(SHOW_DEBUG) {
+					$html .= " [$tipo]";
+				}
+				$html .= "</li>";
+			}
+			$html .= "</ul>";
+
+		$html .= "</div>";//end col3
+
+
+		#
+		# COL4
+		$html .= "<div id=\"col4\" class=\"col\">";
+
+			#
+			# BUTTON EXPORT
+			$html .= "<a id=\"button_export\" class=\"btn btn-success fileinput-button\" onclick=\"tool_export.export_data(this);\">
+						<strong>".label::get_label('tool_export')."</strong>
+			  		 </a>";
+
+		 	#
+			# INFO
+			$html .= "<div id=\"records_info\">";
+			$html .= " <h1>$section_label</h1><span> ".label::get_label('total_records')." $total_records </span>"; 
+			$html .= "</div>";
+
+		$html .= "</div>";//end col4
+
+
+
+	$html .= "</div>";//end wrap_columns_selector
+
+
+	#
+	# DOWNLOAD_FILE
+	$html .= "<div id=\"download_file\">";
+	$html .= "	<h2><a href=\"\" target=\"_blank\" id=\"download_file_link\">".label::get_label("descargar")."</a></h2>";
+	$html .= "</div>";
+
+
+	#
+	# TABLE_DATA_PREVIEW
+	$html .= "<div id=\"table_data_preview\"></div>";
+
+	
+	
+
+echo $html;
+?>
+<script>  
+  tool_export.init();
+</script>

@@ -1,5 +1,11 @@
 /*CSS Document*/
 
+
+hr {
+	height: 1px;
+	background-color: #DADADA;
+	border: 0;
+}
 /* LINK GLOBAL */
 .link {	
 	-webkit-transition: all 0.25s ease-in-out;
@@ -438,6 +444,10 @@ mark {
 	border-radius: 1px;
 	width: 102px;
 	height: 57px;
+	background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+    background-color: white;
 }
 
 
@@ -451,9 +461,13 @@ mark {
 	margin-top: 5px;
 	box-shadow: 2px 2px 7px #D4D4D4;
 	border-radius: 4px;
-	}	
+	}
+	.table_portal_rows_list {		
+	    table-layout: fixed;
+	}
 	.table_rows_list tr {
-		
+		background-color: #F9F9F9;
+  		background-color: rgba(249, 249, 249, 0.85);
 	}
 	.table_rows_list th {
 		padding: 5px;
@@ -502,37 +516,95 @@ mark {
 		border-left-color: #CCC;
 		border-left: none;
 		vertical-align: top;
-		padding: 3px;
-		background-color: #F9F9F9;
-  		background-color: rgba(249, 249, 249, 1.0);
-		}	
+		padding: 3px;		
+		}
+
+	/* ACTIVITY LIST TABLE
+	--------------------------------------------------------------------- */
+	.table_rows_list_activity {
+		table-layout: fixed;
+		}
+		.table_rows_list_activity th:nth-of-type(1) {
+			width: 50px;
+		}
+		.table_rows_list_activity td:nth-of-type(1) {
+			text-align: right;
+			background-color: #C9EDB8;
+		}
+		.table_rows_list_activity th:nth-of-type(2) {
+			text-align: right;
+			width: 120px;
+		}
+		.table_rows_list_activity th:nth-of-type(3) {
+			width: 82px;
+		}
+		.table_rows_list_activity th:nth-of-type(4), .table_rows_list_activity td:nth-of-type(4) {
+			width: 95px;
+			white-space: nowrap;
+			overflow: hidden;
+			text-overflow: ellipsis;
+		}
+		.table_rows_list_activity th:nth-of-type(5), .table_rows_list_activity td:nth-of-type(5) {
+			width: 150px;
+			white-space: nowrap;
+			overflow: hidden;
+			text-overflow: ellipsis;
+		}
+		.table_rows_list_activity th:nth-of-type(6), .table_rows_list_activity td:nth-of-type(6) {
+			width: 143px;
+			white-space: nowrap;
+		}
+		.table_rows_list_activity th:nth-of-type(7) {
+		}
+		.table_rows_list_activity th:nth-of-type(8) {
+			width: 12%;
+		}
+		.table_rows_list_activity td {
+			padding: 2px;
+			padding-bottom: 0;
+			}
+			.table_rows_list_activity tr:hover {
+				background-color: #C9EDB8
+			}
+		
+		/*.table_rows_list_activity td div {*/
+		.table_rows_list_activity .datos_activity {
+			height: 16px;
+			overflow: hidden;
+			cursor: s-resize;
+			}
+			.table_rows_list_activity .datos_activity:hover {
+				
+			}
+
+
 
 		/*-- td_css_selector --*/
-		.table_rows_list td.td_component_av ,
-		.table_rows_list td.td_component_image,
-		.table_rows_list td.td_component_portal
+		.table_rows_list .td_component_av ,
+		.table_rows_list .td_component_image,
+		.table_rows_list .td_component_portal
 		{
-			width: 102px;
+			width: 106px;
 		}
-		.table_rows_list td.td_component_state {
+		.table_rows_list .td_component_state {
 			/*width: 80px !important;*/
 		}
-		.table_rows_list td.td_component_security_administrator {
+		.table_rows_list .td_component_security_administrator {
 			width: 100px !important;
 		}
-		.table_rows_list td.td_component_image img {
+		.table_rows_list .td_component_image img {
 			/*box-shadow: none;*/
 		}
-		.table_rows_list td.td_component_pdf {
+		.table_rows_list .td_component_pdf {
 			width: 80px;
-		}
-		.table_rows_list th.id_column,
-		.table_rows_list td.id_column {
+		}		
+		.table_rows_list .id_column {
 			text-align: right;
-			white-space: nowrap;
+			/*white-space: nowrap;*/
 			/*width: 74px;
 			padding-left: 40px;*/
 			width: 30px;
+			width: 70px;
 			padding-left: 10px;
 			padding-right: 10px;
 		}
@@ -553,10 +625,10 @@ mark {
 			height: 50%;
 			/*min-height: 32px;	*/		
 			background-repeat: no-repeat;
-			background-position:right 5px top 50%;
-			opacity: 0.8;
+			background-position:right 5px top 50%;			
 			background-color: #EDEDED;
 			color: #000000;
+			opacity: 0.8;
 			}
 			.id_column_buttons:hover {
 				color: #ffffff !important;
@@ -596,7 +668,8 @@ mark {
 				background-color: #bb3249;				
 			}
 			.table_rows_list a.button_delete mark.row_debug_info {
-				display:table-cell;
+				/*display:table-cell;*/
+				display:table;
 				vertical-align: middle;
 				padding-right: 30px;
 				padding-left: 4px;

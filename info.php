@@ -73,9 +73,74 @@ echo "<pre>";
 print_r($result);
 echo "</pre>";
 
+#
+# TINYMCE
+$path = DEDALO_ROOT.'/lib/tinymce/js/tinymce/tinymce.min.js';
+$f = fopen($path, 'r');
+$result = fgets($f);
+fclose($f);
+print "TINYMCE: <b>".$path."</b>";
+echo "<pre>";
+print_r($result);
+echo "</pre>";
 
-?>
-<?php 
+#
+# JQUERY
+$path = DEDALO_ROOT.'/lib/jquery/jquery.min.js';
+$f = fopen($path, 'r');
+$result = fgets($f);
+fclose($f);
+print "JQUERY: <b>".$path."</b>";
+echo "<pre>";
+print_r($result);
+echo "</pre>";
+
+#
+# PAPER
+$path = DEDALO_ROOT.'/lib/paper/dist/paper-full.min.js';
+$lines = file($path);//file in to an array
+$result = $lines[1]; //line 2
+print "PAPER: <b>".$path."</b>";
+echo "<pre>";
+print_r($result);
+echo "</pre>";
+
+#
+# LEAFLET
+$path = DEDALO_ROOT.'/lib/leaflet/stable_versions/leaflet.js';
+$lines = file($path);//file in to an array
+$result = $lines[5]; //line 2
+preg_match("/version=\"([0-9]+.[0-9]+.[0-9]+)\"/", $result, $output_array);
+$result = $output_array[1];
+print "LEAFLET: <b>".$path."</b>";
+echo "<pre>";
+print_r($result);
+echo "</pre>";
+
+#
+# ENCODING mb_internal_encoding
+$result = mb_internal_encoding();
+print "ENCODING: <b>mb_internal_encoding</b>";
+echo "<pre>";
+print_r($result);
+echo "</pre>";
+
+#
+# ENCODING mb_regex_encoding
+$result = mb_regex_encoding();
+print "ENCODING: <b>mb_regex_encoding</b>";
+echo "<pre>";
+print_r($result);
+echo "</pre>";
+
+#
+# SESSION MAX LIFE TIME
+$maxlifetime = ini_get("session.gc_maxlifetime");
+print "SESSION MAX LIFE TIME: <b></b>";
+echo "<pre>";
+print $maxlifetime/60 ." min (".$maxlifetime/3600 ." hours)";
+echo "</pre>";
+
 #
 # PHP INFO
 echo phpinfo();

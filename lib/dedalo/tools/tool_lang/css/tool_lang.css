@@ -101,8 +101,9 @@ DIV.nParagrapsRight_div {
 	text-align: center;
 }
 
-
-
+label.css_label.tooltips{
+	max-width: 250px;
+}
 
 
 

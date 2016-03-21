@@ -30,9 +30,9 @@
 				# CURRENT TAG STATE SELECTOR
 				#
 				$name = 'tag_state_selector_' .$tag;	
-				$ar_states = array(	'n'=>'Normal',
-									#'u'=>'Used',
-									'r'=>'To review' 
+				$ar_states = array(	'n'=> label::get_label('etiqueta_normal'), // Normal
+									'd'=> label::get_label('etiqueta_borrada'), // Deleted
+									'r'=> label::get_label('etiqueta_revisar') // To review
 								  );
 				$html_contenido .= ucfirst(label::get_label('estado')) ;
 				$html_contenido .= "

@@ -18,7 +18,11 @@
 	$caller_id 				= $this->get_caller_id();
 	
 	$context 				= $this->get_context();	
-	$file_name 				= $modo;	
+	$file_name 				= $modo;
+
+
+	# Test is a complete section or process
+	$is_process_section = (isset($_REQUEST['t']) && $_REQUEST['t']!= $tipo) ? true : false;
 
 	
 
@@ -330,7 +334,7 @@
 						
 						$options = new stdClass();
 							$options->section_tipo 		= $this->tipo;
-							$options->section_real_tipo = $this->get_section_real_tipo(); # es mas rápido calcularlo aquí que en la stática;
+							$options->section_real_tipo = $this->get_section_real_tipo(); # es mas rápido calcularlo aquí que en la estática;
 							$options->layout_map 		= component_layout::get_layout_map_from_section( $this );
 							$options->layout_map_list 	= $options->layout_map;
 							$options->offset_list 		= (int)0;
@@ -367,6 +371,7 @@
 								$options->tipo_de_dato 			= 'dato';
 								$options->tipo_de_dato_order	= 'dato';
 								$options->order_by				= 'id DESC';	#section_id ASC
+								$options->limit					= DEDALO_MAX_ROWS_PER_PAGE*3;
 							}
 
 							#dump($options->layout_map_list, '$options->layout_map_list ++ '.to_string());
@@ -380,6 +385,8 @@
 					$section_rows 	= new section_records($this->tipo, $options);
 					$rows_list_html = $section_rows->get_html();
 						#dump($section_rows, " section_rows ".to_string());
+						#dump($this->tipo, ' this->tipo ++ '.to_string());
+						#dump($_REQUEST['t'], ' tipo ++ '.to_string());
 
 				#
 				# SEARCH FORM . ROWS_SEARCH 

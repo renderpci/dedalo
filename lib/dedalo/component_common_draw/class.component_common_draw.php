@@ -26,7 +26,12 @@ abstract class component_common_draw {
 			}
 		}else{
 			$def = null;
-		}		
+		}
+		#WIDTH LARGE IN TOOLS
+		/*$max_width 	= NULL;
+		if($modo=='tool_lang'){
+			$max_width = 'style="max-width: 250px;"';
+		}*/		
 		
 		$html 	 = '';
 		#$html 	.= "\n <label class=\"css_label {$ar_css['css_label']}\" $required_code title=\"".$def."\" >$label</label>";

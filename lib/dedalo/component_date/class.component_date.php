@@ -248,7 +248,26 @@ class component_date extends component_common {
 	}//end get_valor_local
 
 
-	
+	/**
+	* GET_VALOR_EXPORT
+	* Return component value sended to export data
+	* @return string $valor
+	*/
+	public function get_valor_export( $valor=null, $lang=DEDALO_DATA_LANG ) {
+		
+		if (is_null($valor)) {
+			$dato = $this->get_dato();				// Get dato from DB
+		}else{
+			$this->set_dato( json_decode($valor) );	// Use parsed json string as dato
+		}
+
+		$valor = $this->get_valor($lang);
+		if(SHOW_DEBUG) {
+			#return "DATE: ".$valor;
+		}
+		return $valor;
+
+	}#end get_valor_export
 
 	/**
 	* GET TIMESTAMP
@@ -402,6 +421,106 @@ class component_date extends component_common {
 				break;
 		}
 	}
+
+
+
+	/**
+	* GET_SEARCH_QUERY
+	* Build search query for current component . Overwrite for different needs in other components 
+	* (is static to enable direct call from section_records without construct component)
+	* Params
+	* @param string $json_field . JSON container column Like 'dato'
+	* @param string $search_tipo . Component tipo Like 'dd421'
+	* @param string $tipo_de_dato_search . Component dato container Like 'dato' or 'valor'
+	* @param string $current_lang . Component dato lang container Like 'lg-spa' or 'lg-nolan'
+	* @param string $search_value . Value received from search form request Like 'paco'
+	* @param string $comparison_operator . SQL comparison operator Like 'ILIKE'
+	*
+	* @see class.section_records.php get_rows_data filter_by_search
+	* @return string $search_query . POSTGRE SQL query (like 'datos#>'{components, oh21, dato, lg-nolan}' ILIKE '%paco%' )
+	*/
+	public static function get_search_query( $json_field, $search_tipo, $tipo_de_dato_search, $current_lang, $search_value, $comparison_operator='=') {
+		
+		if ( empty($search_value) ) {
+			return false;
+		}
+
+
+
+		$search_query='';
+		switch (true) {
+			
+			case ($search_tipo==DEDALO_ACTIVITY_WHEN):
+				
+				if ($comparison_operator=='=') {				
+					$search_value = str_replace('/', '-', $search_value);
+					$ar_parts = explode('-', $search_value);
+						#dump($ar_parts, ' ar_parts ++ '.to_string());
+					if (isset($ar_parts[0])) {
+						$year = $ar_parts[0];
+						$ar_filter[] = "extract(year FROM date) = $year";
+					}
+					if (isset($ar_parts[1])) {
+						$month = $ar_parts[1];
+						$ar_filter[] = "extract(month FROM date) = $month";
+					}
+					if (isset($ar_parts[2])) {
+						$day = $ar_parts[2];
+						$ar_filter[] = "extract(day FROM date) = $day";
+					}
+					if (!empty($ar_filter)) {
+						$search_query = implode(' AND ', $ar_filter);
+					}				
+				}//end if ($comparison_operator=='=') {				
+
+				
+				#$search_query = " CAST($json_field#>>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}' AS DATE) $comparison_operator CAST('$search_value' AS DATE)";
+				#$search_query = "CAST(date AS DATE) $comparison_operator '$search_value' ";
+				break;			
+
+			default:
+				$search_query = " $json_field#>>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}' $comparison_operator '$search_value' ";
+				break;
+		}
+
+		if (empty($search_query)) {
+			$search_query='id>0';
+		}
+		
+		if(SHOW_DEBUG) {
+			#dump($search_query, ' search_query ++ '.to_string());
+			$search_query = " -- filter_by_search $search_tipo ". get_called_class() ." \n".$search_query;			
+		}
+		return $search_query;
+	}
+
+	/**
+	* BUILD_SEARCH_COMPARISON_OPERATORS 
+	* @return object stdClass $search_comparison_operators
+	*/
+	public function build_search_comparison_operators( $comparison_operators=array('=','!=','>','<','>=','<=') ) {
+		$search_comparison_operators = new stdClass();
+
+		#
+		# Overwrite defaults with 'propiedades'->SQL_comparison_operators
+			if(SHOW_DEBUG) {
+				#dump($this->propiedades, " this->propiedades ".to_string());;
+			}		
+			if(isset($this->propiedades->SQL_comparison_operators)) {
+				$comparison_operators = (array)$this->propiedades->SQL_comparison_operators;
+			}
+
+
+		foreach ($comparison_operators as $current) {
+			# Get the name of the operator in current lang 
+			$operator = operator::get_operator($current);
+			$search_comparison_operators->$current = $operator;
+		}
+		return (object)$search_comparison_operators;
+
+	}#end build_search_comparison_operators
+
+
 
 }
 ?>

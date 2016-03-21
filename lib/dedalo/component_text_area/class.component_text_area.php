@@ -136,13 +136,13 @@ class component_text_area extends component_common {
 						$ar_fragmento = (array)component_text_area::get_fragment_text_from_tag($tag, $this->dato);
 								#dump($ar_fragmento,"ar_fragmento");
 						
-						if(strlen($ar_fragmento[0])>$max_char) {
+						if(isset($ar_fragmento[0]) && strlen($ar_fragmento[0])>$max_char) {
 							$fragmento_text = mb_substr($ar_fragmento[0],0,$max_char);
 							if (strlen($ar_fragmento[0])>$max_char) {
 								$fragmento_text .= '..';
 							}
 						} else{
-							$fragmento_text = $ar_fragmento[0];
+							$fragmento_text = isset($ar_fragmento[0]) ? $ar_fragmento[0] : '';
 						}
 						#dump ($fragmento_text); die();
 						$tag_id = $tags_en_texto[3][$key];
@@ -249,8 +249,7 @@ class component_text_area extends component_common {
 
 				$dato = TR::deleteMarks($dato, $deleteTC=true, $deleteIndex=true, $deleteIndex=true);
 				$dato = self::decode_dato_html($dato);
-				#$dato = addslashes($dato);
-					#dump($dato ,'$dato ');
+				#$dato = addslashes($dato);					
 
 				# Desactivo porque elimina el '<mar>'
 				$dato = filter_var($dato, FILTER_UNSAFE_RAW );	# FILTER_SANITIZE_STRING
@@ -259,6 +258,31 @@ class component_text_area extends component_common {
 
 		return $dato;
 	}
+
+
+	/**
+	* GET_VALOR_EXPORT
+	* Return component value sended to export data
+	* @return string $valor
+	*/
+	public function get_valor_export( $valor=null, $lang=DEDALO_DATA_LANG ) {
+		
+		if (is_null($valor)) {
+			$dato = $this->get_dato();				// Get dato from DB
+		}else{
+			$this->set_dato( $valor );	// Use parsed json string as dato
+		}
+
+		$valor_export = $this->get_valor($lang);
+		#$valor_export = br2nl($valor_export);
+
+
+		if(SHOW_DEBUG) {
+			#return "TEXT_AREA: ".$valor_export;
+		}
+		return $valor_export;
+
+	}#end get_valor_export
 	
 
 	/*
@@ -462,7 +486,7 @@ die(__METHOD__." EN PROCESO");
 
 		$matches = NULL;				
 
-		# Buscamos apariciones del patron de etiqueta indexIn (definido en class TR)
+		# Buscamos apariciones del patrón de etiqueta indexIn (definido en class TR)
 		$pattern = TR::get_mark_pattern($mark='indexIn',$standalone=true);
 
 		# Search math patern tags
@@ -654,6 +678,220 @@ die(__METHOD__." EN PROCESO");
 		
 		return (array)$ar_langs_changed;
 	}
+
+
+	/**
+	* FIX_BROKEN_INDEX_TAGS
+	* @return 
+	*/
+	public function fix_broken_index_tags( $save=false ) {
+
+		$start_time = start_time();
+
+		$response = new stdClass();
+			$response->result = false;
+			$response->msg 	  = null;
+
+		$changed_tags = 0;
+
+		$raw_text = $this->get_dato();
+
+		# INDEX IN
+		$pattern = TR::get_mark_pattern($mark='indexIn',$standalone=false);
+		preg_match_all($pattern,  $raw_text,  $matches_indexIn, PREG_PATTERN_ORDER);
+			#dump($matches_indexIn,"matches_indexIn ".to_string($pattern));		
+
+		# INDEX OUT
+		$pattern = TR::get_mark_pattern($mark='indexOut',$standalone=false);
+		preg_match_all($pattern,  $raw_text,  $matches_indexOut, PREG_PATTERN_ORDER);
+			#dump($matches_indexOut,"matches_indexOut ".to_string($pattern));
+		
+		# INDEX IN MISSING
+		$ar_missing_indexIn=array();
+		foreach ($matches_indexOut[2] as $key => $value) {
+			if (!in_array($value, $matches_indexIn[2])) {
+				$tag_out = $matches_indexOut[0][$key];		
+				$tag_in  = str_replace('[/', '[', $tag_out);
+				$ar_missing_indexIn[] = $tag_in;										
+
+				# Add deleted tag
+				$tag_in   = self::change_tag_state( $tag_in, $state='d', $tag_in );	// Change state to 'd'
+				$pair 	  = $tag_in.''.$tag_out;	// concatenate in-out
+				$raw_text = str_replace($tag_out, $pair, $raw_text);
+					#dump($raw_text, ' raw_text ++** '.$pair .to_string($tag_in));	
+				$changed_tags++;				
+			}
+		}
+		#dump($ar_missing_indexIn, ' ar_missing_indexIn ++ '.to_string());
+
+
+		# INDEX MISSING OUT
+		$ar_missing_indexOut=array();
+		foreach ($matches_indexIn[2] as $key => $value) {
+			if (!in_array($value, $matches_indexOut[2])) {
+				$tag_in  = $matches_indexIn[0][$key];	// As we only have the in tag, we create out tag
+				$tag_out = str_replace('[', '[/', $tag_in);
+				$ar_missing_indexOut[] = $tag_out;
+
+				# Add deleted tag
+				$tag_out   = self::change_tag_state( $tag_out, $state='d', $tag_out );	// Change state to 'd'
+				$pair 	  = $tag_in.''.$tag_out;	// concatenate in-out
+				$raw_text = str_replace($tag_in, $pair, $raw_text);
+					#dump($raw_text, ' raw_text ++** '.$pair .to_string($tag_in));
+				$changed_tags++;
+			}
+		}
+		#dump($ar_missing_indexOut, ' ar_missing_indexOut ++ '.to_string());
+
+
+		# TESAURUS INDEXATIONS INTEGRITY VERIFY
+		$ar_indexations = $this->get_component_indexations();
+		$ar_indexations_tag_id = array();
+		foreach ($ar_indexations as $current_index) {
+			#dump($current_index, ' $current_index ++ '.to_string());
+
+			$ar_locator = json_decode($current_index);
+			foreach ($ar_locator as $locator) {
+				#dump($locator, ' locator ++ '.to_string());
+				if(!property_exists($locator,'tag_id')) continue;
+				
+				$l_section_tipo 	= $locator->section_tipo;
+				$l_section_id 		= $locator->section_id;
+				$l_component_tipo 	= $locator->component_tipo;
+				if ($l_section_tipo  == $this->section_tipo && 
+					$l_section_id    == $this->parent &&
+					$l_component_tipo== $this->tipo
+					) {
+					# code...
+					$tag_id = $locator->tag_id;
+						#dump($tag_id, ' $tag_id ++ '.to_string());
+					$ar_indexations_tag_id[] = $tag_id;
+
+				}
+			}//end foreach ($ar_locator as $locator) {				
+		}
+		$ar_indexations_tag_id = array_unique($ar_indexations_tag_id);
+		#dump($ar_indexations_tag_id, ' $ar_indexations_tag_id ++ '.to_string());
+
+		$added_tags = 0;
+		if (!empty($ar_indexations_tag_id)) {
+
+			$all_text_tags = array_unique(array_merge($matches_indexIn[2], $matches_indexOut[2]));
+				#dump($all_text_tags, ' $all_text_tags ++ '.to_string());
+
+			foreach ($ar_indexations_tag_id as $current_tag) {
+				if (!in_array($current_tag, $all_text_tags)) {
+					#dump($current_tag, ' current_tag +++++++++ '.to_string());
+					$new_pair = "[index-d-{$current_tag}][/index-d-{$current_tag}] ";					
+
+					$raw_text = $new_pair . $raw_text;
+					$added_tags++;
+				}
+			}
+		}//end if (!empty($ar_indexations_tag_id)) {
+						
+
+
+		if ($added_tags>0 || $changed_tags>0) {
+
+			$response->result = true;
+			$response->msg 	  = strtoupper(label::get_label('atencion')).": ";	// WARNING
+			
+			if($added_tags>0)
+			$response->msg .= sprintf(" %s ".label::get_label('etiquetas_index_borradas'),$added_tags);	// deleted index tags was created at beginning of text.
+
+			if($changed_tags>0)
+			$response->msg .= sprintf(" %s ".label::get_label('etiquetas_index_fijadas'),$changed_tags); // broken index tags was fixed.
+
+			$response->msg .= " ".label::get_label('etiquetas_revisar');	// Please review position of blue tags
+			
+			# UPDATE MAIN DATO
+			$this->set_dato($raw_text);
+
+			# SAVE
+			if($save===true) {
+				$this->Save();
+				#$response->msg .= ". Text repaired, has been saved.";
+			}else{
+				$response->msg .= " ".label::get_label('etiqueta_salvar_texto'); // and saved text
+			}
+
+			$response->total = round(microtime(1)-$start_time,4)*1000 ." ms";
+		}	
+			
+		return $response;
+		
+	}#end fix_broken_index_tags
+
+
+
+	/**
+	* GET_RELATED_COMPONENT_AV_TIPO
+	* @return 
+	*/
+	public function get_related_component_av_tipo() {
+		$current_elated_component_av = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($this->tipo, $modelo_name='component_av', $relation_type='termino_relacionado');
+		if (isset($current_elated_component_av[0])) {
+			return $current_elated_component_av[0];
+		}else{
+			return null;
+		}
+	}#end get_related_component_av_tipo
+
+
+	/**
+	* GET_COMPONENT_INDEXATIONS
+	* @return 
+	*/
+	protected function get_component_indexations() {
+		
+		# Format: 	"section_tipo":"rsc167","section_id":"2","component_tipo":"rsc36","tag_id"
+		$section_tipo 	= $this->section_tipo;
+		$section_id 	= $this->parent;
+		$component_tipo = $this->tipo;
+
+		#$arguments['strPrimaryKeyName']	= 'dato';
+		$arguments['strPrimaryKeyName']	= 'parent';
+		$arguments['tipo']				= 'index';
+		$arguments['dato:%like%']		= "\"section_tipo\":\"$section_tipo\",\"section_id\":\"$section_id\",\"component_tipo\":\"$component_tipo\",\"tag_id\"";
+		$RecordObj_descriptors			= new RecordObj_descriptors('matrix_descriptors');
+		$ar_indexations					= $RecordObj_descriptors->search($arguments);
+			#dump($ar_indexations, ' ar_indexations ++ '.to_string($arguments));
+
+		# VERIFY . Verify term exists (not only index)
+		$ar_final = array();
+		foreach ($ar_indexations as $parent) {
+			
+			$arguments=array();
+			$arguments['strPrimaryKeyName']	= 'parent';
+			$arguments['tipo']				= 'termino';
+			$arguments['parent']			= $parent;
+			$RecordObj_descriptors			= new RecordObj_descriptors('matrix_descriptors');
+			$ar_indexations_verify			= $RecordObj_descriptors->search($arguments);
+				#dump($ar_indexations_verify, ' ar_indexations_verify ++ '.to_string($arguments));
+			
+			if (empty($ar_indexations_verify)) {
+				if(SHOW_DEBUG) {
+					dump($ar_indexations_verify, ' ar_indexations_verify empty ++ '.to_string());
+				}			
+			}else{
+
+				$arguments=array();
+				$arguments['strPrimaryKeyName']	= 'dato';				
+				$arguments['tipo']				= 'index';
+				$arguments['parent']			= $parent;
+				$RecordObj_descriptors			= new RecordObj_descriptors('matrix_descriptors');
+				$ar_indexations_ok				= $RecordObj_descriptors->search($arguments);
+					#dump($ar_indexations, ' ar_indexations ++ '.to_string($arguments));
+				$ar_final[] = reset($ar_indexations_ok);
+			}
+
+		}//end foreach ($ar_indexations as $parent) {
+		#dump($ar_final, ' $ar_final ++ '.to_string());
+
+		return $ar_final;
+
+	}#end get_component_indexations
 
 
 	

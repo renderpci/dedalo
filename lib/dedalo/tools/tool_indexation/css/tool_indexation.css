@@ -120,6 +120,12 @@ li.tool_indexation_index_list_termino {
 	float: left;
 }
 
+label.css_label.tooltips{
+	max-width: 250px;
+}
+
+
+
 
 
 /* SPLIT PANES

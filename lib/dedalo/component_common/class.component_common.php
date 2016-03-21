@@ -91,11 +91,11 @@ abstract class component_common extends common {
 				dump($parent," parent");
 				throw new Exception("Error Processing Request. trying to use wrong var: '$parent' as parent to load as component", 1);				
 			}			
-			$ar_valid_modo = array("edit","list","search","simple","list_tm","tool_portal","tool_lang","edit_tool","indexation","selected_fragment","tool_indexation",'tool_transcription','print','edit_component');
+			$ar_valid_modo = array("edit","list","search","simple","list_tm","tool_portal","tool_lang","edit_tool","indexation","selected_fragment","tool_indexation",'tool_transcription','print','edit_component','load_tr');
 			if ( empty($modo) || !in_array($modo, $ar_valid_modo) ) {
 				#dump($modo," modo");
 				#throw new Exception("Error Processing Request. trying to use wrong var: '$modo' as modo to load as component", 1);
-				debug_log(__METHOD__. " trying to use wrong var: '$modo' as modo to load as component")	;		
+				debug_log(__METHOD__. " trying to use empty or invalid modo: '$modo' as modo to load component")	;		
 			}
 			if ( empty($lang) || strpos($lang, 'lg-')===false ) {
 				dump($lang," lang");
@@ -1042,6 +1042,26 @@ trigger_error("!!! DEPRECATED ".__METHOD__);
 	}
 
 
+	/**
+	* GET_VALOR_EXPORT
+	* Return component value sended to export data
+	* @return string $valor
+	*/
+	public function get_valor_export( $valor=null, $lang=DEDALO_DATA_LANG ) {
+		
+		if (is_null($valor)) {
+			$valor = $this->get_valor($lang);
+		}
+
+		if(SHOW_DEBUG) {
+			#$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($this->tipo,true);
+			#return "COMMON[$modelo_name]: ".to_string($valor);
+		}
+
+		return to_string($valor);
+
+	}#end get_valor_export
+
 
 	
 	# DATO REAL
@@ -1324,7 +1344,7 @@ trigger_error("!!! DEPRECATED ".__METHOD__);
 
 	/**
 	* GET_VALOR_FROM_AR_LOCATORS
-	* Return resolved string of all values of all locators
+	* Return resolved string from all values of all locators
 	* @param object $request_options 
 	* @return object $valor_from_ar_locators {result,info}
 	*/
@@ -1417,6 +1437,7 @@ trigger_error("!!! DEPRECATED ".__METHOD__);
 			}
 			$ar_final[] = $string;
 		}//end while
+
 		$valor_from_ar_locators->result = implode($options->separator_rows, $ar_final);
 		#dump($valor, ' valor');
 
@@ -1466,7 +1487,7 @@ trigger_error("!!! DEPRECATED ".__METHOD__);
 	* 	} parent
 	*/
 	public function get_ar_list_of_values($lang=DEDALO_DATA_LANG, $id_path=false, $referenced_section_tipo=false, $filter_custom=false) {
-
+	
 		$use_cache = true; // Default false
 			#dump($this->modo, ' this->modo');
 		if ($this->modo=='list') {
@@ -2953,7 +2974,7 @@ trigger_error("!!! DEPRECATED ".__METHOD__);
 
 		if (empty($component_state) || !is_object($component_state)) {
 			if(SHOW_DEBUG) {
-				dump($component_state, ' empty component_state ++ '.to_string($tool_locator));;
+				#dump($component_state, ' empty component_state ++ '.to_string($tool_locator));;
 			}
 			return false;
 		}

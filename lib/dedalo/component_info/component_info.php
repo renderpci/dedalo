@@ -33,8 +33,8 @@
 		debug_log(__METHOD__." Empty defined widgets for $component_name : $label ".to_string($widgets), logger::WARNING);
 		return null;
 	}
-
 	#dump($widgets, ' widgets ++ '.to_string());
+
 	$ar_widget_html=array();
 	foreach ($widgets as $widget_obj) {
 		

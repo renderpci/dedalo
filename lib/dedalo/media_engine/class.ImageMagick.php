@@ -127,14 +127,14 @@ class ImageMagick {
 			$height = defined('DEDALO_IMAGE_THUMB_HEIGHT') ? DEDALO_IMAGE_THUMB_HEIGHT : 57;
 
 			# Like "102x57"
-			$dimensions = $width.'x'.$height;
-			#$dimensions = "200x200";		
+			$dimensions = $width.'x'.$height.'>';
+			#$dimensions = "200x200>";		
 		#}
 
 		switch ($mode) {
 			case 'list':
 				#$command = MAGICK_PATH."convert -define jpeg:size=400x400 \"$source_file\"[0] -thumbnail {$dimensions} -gravity center -extent {$dimensions} -unsharp 0x.5 jpg -quality 90 \"$target_file\" ";
-				$command = MAGICK_PATH."convert -define jpeg:size=400x400 \"$source_file\"[0] -thumbnail {$dimensions} -gravity center -extent {$dimensions} -unsharp 0x.5 -quality 90 \"$target_file\" ";
+				$command = MAGICK_PATH."convert -define jpeg:size=400x400 \"$source_file\"[0] -thumbnail '$dimensions' -gravity center -unsharp 0x.5 -quality 90 \"$target_file\" ";
 				break;
 			case 'edit':
 				#$command = MAGICK_PATH."convert -define jpeg:size=400x400 \"$source_file\" -thumbnail x404 -unsharp 0x.5 jpg -quality 72 \"$target_file\" ";

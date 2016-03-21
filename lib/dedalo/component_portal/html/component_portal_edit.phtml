@@ -109,7 +109,7 @@
 
 						$table_add_class = empty($rows_data->result) ? 'table_rows_list_empty' : null;
 												
-						$table = "<table id=\"portal_table_{$tipo}\" class=\"table_rows_list  $table_add_class\">";
+						$table = "<table id=\"portal_table_{$tipo}\" class=\"table_rows_list table_portal_rows_list $table_add_class\">";
 						$table .= "<tbody>";
 						
 
@@ -120,7 +120,17 @@
 							$table .= "<tr>";
 							foreach ($ar_columns as $column_tipo => $column_label) {
 								if ($column_tipo=='edit' && !$this->html_options->id_column) continue;
-								$table .= "<th><div class=\"th_title\" title=\"$column_label\">$column_label</div></th>";
+								# aditional td css selectors
+									if ($column_tipo=='edit') {
+										$td_css_selector = 'id_column';										
+									}else{
+										$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($column_tipo, true);
+										$td_css_selector = 'td_'.$modelo_name;
+									}									
+									
+								$table .= "<th class=\"$td_css_selector\">";
+								$table .= " <div class=\"th_title\" title=\"$column_label\">$column_label</div>";
+								$table .= "</th>";
 							}
 							$table .= "</tr>";
 							$table .= "</thead>";
@@ -326,7 +336,7 @@
 												$parent 		   = $section_id;	//null;
 												$current_component = component_common::get_instance($modelo_name, $column_tipo, $parent, 'list', DEDALO_DATA_NOLAN, $target_section_tipo);
 												# Use already query calculated values for speed
-												$ar_records   = (array)json_handler::decode($value);	#dump($ar_records,"ar_records for portal $column_tipo - id:$id");#die();
+												$ar_records   = (array)json_handler::decode($value);	#dump($ar_records,"ar_records for portal $column_tipo - id:$id");die();
 												$current_component->set_dato($ar_records);
 												$current_component->set_identificador_unico($current_component->get_identificador_unico().'_'.$section_id); // Set unic id for build
 												$value = $current_component->get_html();

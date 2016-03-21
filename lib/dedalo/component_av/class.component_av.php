@@ -124,6 +124,35 @@ class component_av extends component_common {
 	public function get_valor() {
 		return $this->valor = $this->get_video_id();
 	}
+
+	/**
+	* GET_VALOR_EXPORT
+	* Return component value sended to export data
+	* @return string $valor
+	*/
+	public function get_valor_export( $valor=null, $lang=DEDALO_DATA_LANG ) {
+			
+		if (is_null($valor)) {
+			$dato = $this->get_dato();				// Get dato from DB
+		}else{
+			$this->set_dato( json_decode($valor) );	// Use parsed json string as dato
+		}
+
+		$av_file_path = $this->get_valor() . '.'.DEDALO_AV_EXTENSION;	
+		
+		$test_file 		= true;	// output dedalo image placeholder when not file exists
+		$absolute 		= true;	// otuput absolute path like 'http://myhost/mypath/myimage.jpg'
+		
+		$posterframe_file_path	= $this->get_posterframe_url($test_file, $absolute);
+
+		$valor_export = $av_file_path .",".$posterframe_file_path;		
+		
+		if(SHOW_DEBUG) {
+			#return "AV: ".$valor_export;
+		}
+		return $valor_export;
+
+	}#end get_valor_export
 	
 
 	/**
@@ -187,7 +216,6 @@ class component_av extends component_common {
 	public function get_video_path($quality=false) {
 
 		#return $this->AVObj->get_media_path_abs();
-
 		if(!$quality){
 		$quality 	= $this->get_quality();	
 		}
@@ -201,7 +229,40 @@ class component_av extends component_common {
 	* GET_POSTERFRAME_PATH
 	*/
 	public function get_posterframe_path() {
-		return DEDALO_MEDIA_BASE_PATH . DEDALO_AV_FOLDER .'/posterframe/'. $this->get_video_id() .'.'.DEDALO_AV_POSTERFRAME_EXTENSION;
+		return DEDALO_MEDIA_BASE_PATH . DEDALO_AV_FOLDER .'/posterframe/'. $this->get_video_id() . '_' . DEDALO_DATA_LANG.'.'.DEDALO_AV_POSTERFRAME_EXTENSION;
+	}
+	
+	/**
+	* GET_POSTERFRAME_URL
+	*/
+	public function get_posterframe_url($test_file=true, $absolute=false) {
+		
+		$video_id 	= $this->get_video_id();		
+
+		$posterframe_url = DEDALO_MEDIA_BASE_URL . DEDALO_AV_FOLDER .'/posterframe/'. $video_id .'.'. DEDALO_AV_POSTERFRAME_EXTENSION;
+
+		# FILE EXISTS TEST : If not, show '0' dedalo image logo
+		if ($test_file) {
+			$file = DEDALO_MEDIA_BASE_PATH .DEDALO_AV_FOLDER.'/posterframe/'. $video_id .'.'. DEDALO_AV_POSTERFRAME_EXTENSION ;
+			if(!file_exists($file)) {
+				$posterframe_url = DEDALO_LIB_BASE_URL . '/themes/default/0.jpg';
+			}
+		}
+
+		# ABSOLUTE (Default false)
+		if ($absolute) {
+			$posterframe_url = DEDALO_PROTOCOL . DEDALO_HOST . $posterframe_url;
+		}		
+
+		return $posterframe_url;
+	}
+
+
+	/**
+	* GET_SUBTITLES_PATH
+	*/
+	public function get_subtitles_path() {
+		return DEDALO_MEDIA_BASE_PATH . DEDALO_AV_FOLDER . DEDALO_SUBTITLES_FOLDER.'/'. $this->get_video_id().'_'.DEDALO_DATA_LANG.'.'.DEDALO_AV_SUBTITLES_EXTENSION;
 	}
 	
 	/**
@@ -209,13 +270,13 @@ class component_av extends component_common {
 	* Si se sube un archivo de extensión distinta a DEDALO_IMAGE_EXTENSION, se convierte a DEDALO_IMAGE_EXTENSION. Los archivos originales
 	* se guardan renombrados pero conservando la terminación. Se usa esta función para localizarlos comprobando si hay mas de uno.
 	* @param string $quality
-	* @return string $result (original_file_path) with extension OR false
+	* @return bool | string (file extension)
 	*/
 	public function get_original_file_path($quality) {
 		$result = false;
 		$initial_quality = $this->get_quality();
 
-		$this->quality 	= $quality; // change current component quality temporally
+		$this->set_quality($quality); // change current component quality temporally
 		$ar_originals 	= array();
 		$target_dir 	= $this->get_target_dir();
 		
@@ -278,7 +339,8 @@ class component_av extends component_common {
 		$this->quality 	= $initial_quality;
 			
 		return $result;
-	}
+
+	}//end get_original_file_path
 
 
 
@@ -338,24 +400,16 @@ class component_av extends component_common {
 	
 
 
+	
+	
 	/**
-	* GET_POSTERFRAME_URL
+	* GET_SUBTITLES_URL
 	*/
-	public function get_posterframe_url() {	
+	public function get_subtitles_url() {
 		
-		$quality 	= $this->get_quality();
-		$video_id 	= $this->get_video_id();
-
-		$file 		= DEDALO_MEDIA_BASE_PATH .DEDALO_AV_FOLDER.'/posterframe/'. $video_id .'.'. DEDALO_AV_POSTERFRAME_EXTENSION ;
-
-		if(!file_exists($file)) {
-			return DEDALO_LIB_BASE_URL . '/themes/default/0.jpg';
-		}
-
-		return DEDALO_MEDIA_BASE_URL .DEDALO_AV_FOLDER.'/posterframe/'. $video_id .'.'. DEDALO_AV_POSTERFRAME_EXTENSION ;
+		return DEDALO_MEDIA_BASE_URL . DEDALO_AV_FOLDER . DEDALO_SUBTITLES_FOLDER. '/'. $this->get_video_id().'_'.DEDALO_DATA_LANG .'.'.DEDALO_AV_SUBTITLES_EXTENSION;
+		
 	}
-	
-	
 
 	/**
 	* GET_SOURCE_QUALITY_TO_BUILD

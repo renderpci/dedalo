@@ -175,7 +175,7 @@ class component_filter extends component_common {
 				$html .= $name;
 				$html .= '<br>';
 			}
-			$html = substr($html, 0,-4);				
+			$html = substr($html, 0,-4);			
 			
 			return $html;
 		}else if($format=='html_concat'){
@@ -190,6 +190,32 @@ class component_filter extends component_common {
 		}
 
 	}//end get_valor
+
+
+
+	/**
+	* GET_VALOR_EXPORT
+	* Return component value sended to export data
+	* @return string $valor
+	*/
+	public function get_valor_export( $valor=null, $lang=DEDALO_DATA_LANG ) {
+			
+		if (is_null($valor)) {
+			$dato = $this->get_dato();				// Get dato from DB
+		}else{
+			$this->set_dato( json_decode($valor) );	// Use parsed json string as dato
+		}
+
+		$valor_export = $this->get_valor('html');
+		$valor_export = trim(str_replace('<br>',', ',$valor_export));
+
+		
+		if(SHOW_DEBUG) {
+			#return "FILTER: ".$valor_export;
+		}
+		return $valor_export;
+
+	}#end get_valor_export
 	
 
 

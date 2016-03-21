@@ -13,7 +13,7 @@ class logger_backend_file extends logger_backend  {
 	public function __construct($url_data) {
 
 		# ANULADO DE MOMENTO
-		return null;
+		#return null;
 	
 		parent::__construct($url_data);
 
@@ -49,15 +49,14 @@ class logger_backend_file extends logger_backend  {
 	*/
 	public function log_message( $message, $log_level=logger::INFO, $module=NULL, $operations=NULL, $datos=NULL ) {	#$message, $log_level=logger::INFO, $tipo_donde=NULL, $projects=NULL, $datos=NULL
 
-		# ANULADO DE MOMENTO
-		return null;
-		
+		# ANULADO DE MOMENTO		
+		#return null;
 
 		if ( $log_level > $this->log_level ) {
 			return;
 		}
 
-		if(SHOW_DEBUG) $start_time = start_time();
+		$start_time = microtime(1);
 
 		# LINE VARS
 			# Module
@@ -71,24 +70,16 @@ class logger_backend_file extends logger_backend  {
 			$time 			= strftime('%x %X', time());
 
 			# User ID matrix
-			$userID 		= 'no logged';
-			if (isset($_SESSION['dedalo4']['auth']['user_id']))
-			$userID 		= $_SESSION['dedalo4']['auth']['user_id'];		
-
+			$userID 		= isset($_SESSION['dedalo4']['auth']['user_id']) ? $_SESSION['dedalo4']['auth']['user_id'] : 'no logged';
+			
 			# IP (user source ip)
-			$ip 			= 'unknow';
-			if (isset($_SERVER['REMOTE_ADDR']))
-			$ip 			= urldecode( $_SERVER["REMOTE_ADDR"] );
+			$ip 			= isset($_SERVER['REMOTE_ADDR']) ? urldecode($_SERVER['REMOTE_ADDR']) : 'unknow';			
 
 			# URL
-			$url 			= 'unknow';
-			if (isset($_SERVER['REQUEST_URI']))
-			$url 			= urldecode( 'http://'.$_SERVER['HTTP_HOST'].$_SERVER['REQUEST_URI'] );	# 
+			$url 			= isset($_SERVER['REQUEST_URI']) ? urldecode( 'http://'.$_SERVER['HTTP_HOST'].$_SERVER['REQUEST_URI'] ) : 'unknow';			
 
 			# Referrer
-			$referrer 		= 'unknow';
-			if (isset($_SERVER['HTTP_REFERER']))
-			$referrer 		= $_SERVER['HTTP_REFERER'];
+			$referrer 		= isset($_SERVER['HTTP_REFERER']) ? $_SERVER['HTTP_REFERER'] : 'unknow';			
 
 			# Message
 			#$message 		= str_replace("\t", ' ', $message);
@@ -119,9 +110,9 @@ class logger_backend_file extends logger_backend  {
 		#} catch (Exception $e) {
 		#	throw new Exception("Error Processing Request $e", 1);
 		#}
-		if(SHOW_DEBUG) {
+		#if(SHOW_DEBUG) {
 			#$GLOBALS['log_messages'] .= exec_time($start_time, __METHOD__, $log_line);
-		}
+		#}
 	}
 
 

@@ -36,10 +36,16 @@
 
 						$open_tool_default='';
 						$add_class='';
+
+						$av_file_exits = file_exists($this->get_video_path());
+						$av_subtitles_file_exits = file_exists($this->get_subtitles_path());
 	
 						# A NOT EXISTS. PLACE DEDALO IMAGE WITH LINK TO DEFAULT TOOL
 						# dump( component_security_tools::is_authorized_tool_for_logged_user('open_tool_upload'), ' is_authorized_tool_for_logged_user($tool_name) ++ '.to_string());
-						if ( !file_exists($this->get_video_path()) && component_security_tools::is_authorized_tool_for_logged_user('tool_upload')) {
+						if ( component_security_tools::is_authorized_tool_for_logged_user('tool_upload') &&
+							 !$av_file_exits &&
+							 !$this->get_original_file_path(DEDALO_AV_QUALITY_ORIGINAL)
+							) {
 							$open_tool_default ="data-video_id=\"$video_id\"
 							data-quality=\"".DEDALO_AV_QUALITY_ORIGINAL."\"
 							data-aditional_path=\"$aditional_path\"
@@ -58,10 +64,47 @@
 						# PLAYER
 						$html_contenido .= "\n<div class=\"css_posterframe_wrap $add_class\" $open_tool_default >";
 
-							# POSTERFRAME 
+
+						if ($av_file_exits) {
+							
+							# VIDEO
+							$html_contenido .= "<video class=\"css_av_video\" style=\"height:404px;\" onclick=\"component_av.video_play_toggle(this)\"
+							preload=\"none\"
+							controls=\"controls\"
+							poster=\"$posterframe_url\"
+							onerror=\"component_av.failed(event)\"
+							id=\"{$player_id}\"
+							data-tipo=\"{$tipo}\"
+							data-section_tipo=\"{$section_tipo}\"
+							data-parent=\"{$parent}\"
+							data-video_id=\"{$video_id}\"
+							>";
+
+								$html_contenido .= "\n <source id=\"video_mp4_{$tipo}\" src=\"$video_url\" type=\"video/mp4\" onerror=\"alert('Sorry. Unplayable media')\" >";	//onerror=\"alert('Sorry. Unplayable media')\" 
+								
+								# FALLBACK IMG (no html5 codec video support)
+								$html_contenido .= "\n <img src=\"$posterframe_url\" class=\"av_posterframe\" alt=\"Posterframe\" title=\"No video playback capabilities\" />";
+							
+								#
+								# VTT SUBTITLES TRACK
+								if($av_subtitles_file_exits){
+									$html_contenido .= "\n<track label=\"English\" kind=\"subtitles\" srclang=\"en\" src=\"$subtitles_url\" default>";
+								}
+
+							$html_contenido .= "\n</video>";
+
+
+						}else{
+							
+							# POSTERFRAME (When video file not exists)							
 							$html_contenido .= "\n <img class=\"av_posterframe\" src=\"$posterframe_url\"
-							data-video_id=\"$video_id\"									
-							/>";
+							data-video_id=\"$video_id\"
+							/>";							
+						}
+							
+
+
+
 							
 						$html_contenido .= "\n</div><!-- /css_posterframe_wrap -->";
 

@@ -59,6 +59,7 @@ class logger {
 	public static function register( $log_name, $connection_string ) {
 
 		$url_data = parse_url($connection_string);
+			#var_dump($url_data);
 
 		# Verify connection_string
 		if (!isset($url_data['scheme'])) {
@@ -73,9 +74,8 @@ class logger {
 			throw new Exception("No loggin backend available for ".$url_data['scheme'], 1);			
 		}
 
-		#dump($url_data);
-
 		$obj_back = new $class_name($url_data);
+		
 
 		# manage current backend class
 		logger::manage_backends($log_name, $obj_back);

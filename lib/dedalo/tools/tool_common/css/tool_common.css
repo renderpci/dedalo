@@ -13,6 +13,17 @@
 		width: auto;
 	}
 
+.tool_title {
+    margin: 40px;
+    font-size: 28px;
+}
+.wrap_tool {
+	background-image: url('../../../themes/default/dedalo_icon_big.png');
+	background-repeat: no-repeat;
+	background-position: 0px 0px;
+	min-height: 1004px;
+}
+
 
 /* BTN_INSIDE_SECTION_BUTTONS_CONTAINER
 ---------------------------------------- */
@@ -133,6 +144,12 @@
 		margin-left: 5px;
 		padding-left: 18px;
 	}
+.tool_export {
+	min-width: auto !important;
+	}
+	.tool_export:before {
+		background-position: -264px -24px;
+	}
 
 .tool_current_indexation_icon {
 	background-position: 0px -48px;
@@ -175,6 +192,9 @@
 	margin-right: 5px;
 	top: -3px;
 	display: inline;
+}
+#inspector_indexations .terminos_list_title {
+	top: 0;
 }
 
 

@@ -66,8 +66,12 @@ if ($mode=='load_rows') {
 		$options->tipo_de_dato_order	= 'dato';
 	}
 
+	# Reset offset
+	#$options->offset = 0;
+	#$options->offset_list = 0;
+
 	#$options = json_handler::decode(json_encode($options));	# Force array of objects instead default array of arrays format
-		#dump($options, 'options', array()); die();
+		#dump($options, 'options', array()); #die();
 
 	if (!defined('SECTION_TIPO')) {
 		define('SECTION_TIPO', $options->section_tipo);

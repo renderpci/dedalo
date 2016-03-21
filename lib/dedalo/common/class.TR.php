@@ -224,6 +224,30 @@ class TR {
 		return $string ;
 	}
 
+
+	/**
+	* CREATE_TEXT_EDITOR_IMAGE_FROM_TAG
+	* Create a usable in text editor image from tag
+	* @return string
+	*/
+	public static function create_text_editor_image_from_tag( $tag, $type ) {
+
+		switch ($type) {
+			case 'index':
+				$img = "<img id=\"$tag\" src=\"../../../inc/btn.php/$tag\" class=\"index mceNonEditable\" data-mce-src=\"../../../inc/btn.php/$tag\">";
+				break;
+			case 'tc':
+				$img = "<img id=\"$tag\" src=\"../../../inc/btn.php/$tag\" class=\"tc\" data-mce-src=\"../../../inc/btn.php/$tag\">";
+				break;
+			default:
+				trigger_error("Sorry. Type ($type) is not defined");
+				break;
+		}
+		
+		return $img;
+
+	}//end create_text_editor_image_from_tag
+
 	
 	# CONVERT TAGS LIKE INDEX,TC TO IMAGES
 	public static function addTagImgOnTheFly($text, $hilite=false, $indexEditable=false, $tcEditable=true, $svgEditable=true, $geoEditable=true, $pageEditable=true) {
@@ -463,6 +487,7 @@ class TR {
 		$rp	= array('<h6>','</h6>','<h5>','</h5>');
 		$string		= str_replace($rp,'', $string);
 		
+		/*
 		# <br />[indexOut]<br />	-->	<br />[indexOut]
 		$string		= preg_replace("/$patternBr {0,2}($patternIndexOut) {0,2}$patternBr/", "$1<br />", $string);
 		
@@ -472,8 +497,8 @@ class TR {
 		
 		# EXPERIMENTAL ..
 		# br
-		$string	= preg_replace("/ {0,3}$patternBr {0,3}($patternBr|)/"	, 	'<br />'	, $string);
-		
+		$string	= preg_replace("/ {0,3}$patternBr {0,3}($patternBr|)/", '<br />', $string);
+		*/
 		
 		# develop control					
 		#$string		= "V3 CONVERTED ($today) !!!!!!!!!!!!!!  <br />".$string ;
@@ -558,11 +583,23 @@ class TR {
 	
 	# maintains "correct order" in consecutives INDEX,TC . Always order like (TC,INDEX IN) AND (INDEX OUT,TC)
 	public static function fixOrderTags($string) {
-		
-		$patternIndexIn 	= TR::get_mark_pattern('indexIn',false);
-		$patternIndexOut 	= TR::get_mark_pattern('indexOut',false);
-		$patternTC		 	= TR::get_mark_pattern('tc',false);
+
+		#
+		# DESACTIVO DE MOMENTO 12-02-2016 PORQUE DA PROBLEMAS CON LAS COMBINATORIA DE TC - INDEX
+		return $string;
+
+
+
+		$patternIndexIn 	= TR::get_mark_pattern('indexIn',false);	// Like (\[index-([a-z])-([0-9]{1,6})\])
+		$patternIndexOut 	= TR::get_mark_pattern('indexOut',false);	// Like (\[\/index-([a-z])-([0-9]{1,6})\])
+		$patternTC		 	= TR::get_mark_pattern('tc',false);			// Like (\[TC_([0-9]{1,2}:[0-9]{1,2}:[0-9]{1,2})_TC\])
 		$patternBr		 	= TR::get_mark_pattern('br',false);
+
+			#dump($patternIndexIn,  ' patternIndexIn false ++ '.to_string($patternIndexIn));			
+			#dump($patternIndexOut, ' patternIndexOut ++ '.to_string($patternIndexOut));
+			#dump($patternTC, 	   ' patternTC ++ '.to_string($patternTC));	
+		
+
 			
 		$string 			= preg_replace("/$patternIndexIn {0,2}$patternTC/",  "$2"."$1", $string);	# invert INDEX,TC
 		$string 			= preg_replace("/$patternTC {0,2}$patternIndexOut/", "$2"."$1", $string);	# invert TC,INDEX

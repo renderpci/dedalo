@@ -51,7 +51,9 @@
 						# Avoid autocomplete input username in Users section
 						$remove_autocomplete = '';
 						if ($section_tipo==DEDALO_SECTION_USERS_TIPO) {
-							$remove_autocomplete = "readonly onfocus=\"this.removeAttribute('readonly');\"";
+							$remove_autocomplete = "readonly onfocus=\"this.removeAttribute('readonly');component_common.select_wrap(null,'$id_wrapper');\"";
+						}else{
+							$remove_autocomplete = "onfocus=\"component_common.select_wrap(null,'$id_wrapper');\"";
 						}
 						
 

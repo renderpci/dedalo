@@ -171,6 +171,81 @@ class component_portal extends component_common {
 	}//end get_valor
 
 
+	/**
+	* GET_VALOR_EXPORT
+	* Return component value sended to export data
+	* @return string $valor
+	*/
+	public function get_valor_export( $valor=null, $lang=DEDALO_DATA_LANG ) {
+		
+		if (is_null($valor)) {
+			$dato = $this->get_dato();				// Get dato from DB
+		}else{
+			$this->set_dato( json_decode($valor) );	// Use parsed json string as dato
+		}
+
+		#$valor = $this->get_valor($lang);
+		$dato = $this->get_dato();
+		if (empty($dato)) {
+			if(SHOW_DEBUG) {
+				#return "PORTAL: ";
+			}
+			return '';
+		}
+
+		#
+		# TERMINOS_RELACIONADOS . Obtenemos los terminos relacionados del componente actual	
+		$ar_terminos_relacionados = (array)$this->RecordObj_dd->get_relaciones();
+			#dump($ar_terminos_relacionados, ' ar_terminos_relacionados');
+		#
+		# FIELDS
+		$fields=array();
+		$ar_skip = array(MODELO_SECTION, $exclude_elements='dd1129');
+		foreach ($ar_terminos_relacionados as $key => $ar_value) {
+			$modelo = key($ar_value);
+			$tipo 	= $ar_value[$modelo];
+			if (!in_array($modelo, $ar_skip)) {				
+				$fields[] = $tipo;
+			}
+		}
+		#dump($fields, ' fields ');
+
+		$ar_resolved=array();
+		foreach( (array)$dato as $key => $value) {
+			#dump($value, ' value ++ '.to_string());
+			$section_tipo 	= $value->section_tipo;
+			$section_id 	= $value->section_id;
+
+			$ar_resolved[$section_id][] = $section_id;
+			
+			foreach ($fields as $current_tipo) {				
+			
+				$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($current_tipo);
+				$component 		= component_common::get_instance($modelo_name,
+																 $current_tipo,
+																 $section_id,
+																 'list',
+																 $lang,
+																 $section_tipo);
+				$ar_resolved[$section_id][] = $component->get_valor_export(null,$lang);
+			}
+		}
+		#dump($ar_resolved, ' $ar_resolved ++ '.to_string());
+
+		$valor_export='';
+		foreach ($ar_resolved as $key => $ar_value) {
+			$valor_export .= implode("\t", $ar_value) . "\n";
+		}
+		$valor_export = trim($valor_export);
+
+		if(SHOW_DEBUG) {
+			#return "PORTAL: ".$valor_export;
+		}
+		return $valor_export;
+
+	}#end get_valor_export
+
+
 	# GET_DATO_AS_STRING
 	public function get_dato_as_string() {
 		$dato = (array)$this->get_dato();

@@ -79,6 +79,19 @@
 				$ar_component_time_machine	= tool_time_machine::get_ar_component_time_machine($tipo, $parent, $lang, $section_tipo);
 					#dump($ar_component_time_machine,"ar_component_time_machine");die();
 
+				#add name resolution to the row
+				foreach ((array)$ar_component_time_machine as $tm_obj) {
+					$userID					= $tm_obj->get_userID();
+					if($userID == -1){
+						$tm_obj->user_name = 'Admin debuger';
+					}else{
+						$obj_user_name	= component_common::get_instance('component_input_text', DEDALO_FULL_USER_NAME_TIPO, $userID, 'edit', DEDALO_DATA_NOLAN, DEDALO_SECTION_USERS_TIPO);
+						$user_name = $obj_user_name->get_valor();
+						$tm_obj->user_name =$user_name;
+					};						
+						
+				}
+
 				# current_tipo_section is needed for relation tm !
 				$ar_rel_locator_for_current_tipo_section 	= array();
 				$current_tipo_section 						= common::setVar('current_tipo_section');

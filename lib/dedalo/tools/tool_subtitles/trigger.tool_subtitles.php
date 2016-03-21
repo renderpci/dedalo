@@ -56,7 +56,10 @@ if ($mode=='build_subtitles_text') {
 	}
 
 	$result   = $tool_subtitles->build_subtitles_text( $options );
-	$filename = $component_tipo.'_'.$section_tipo.'_'.$section_id.'.srt';
+	$component_av_related_tipo = $component_obj->get_related_component_av_tipo();
+
+
+	$filename = $component_av_related_tipo.'_'.$section_tipo.'_'.$section_id.'_'.DEDALO_DATA_LANG.'.vtt';
 	/* WITHOUT FILE OPTION
 	header("Content-Type: text/plain");
 	header('Content-Disposition: attachment; filename="'.$filename.'"');
@@ -64,8 +67,8 @@ if ($mode=='build_subtitles_text') {
 	echo $result;
 	exit;
 	*/
-	$base_dir 	= '/subtitles/temp';
-	$target_dir = DEDALO_MEDIA_BASE_PATH . $base_dir ;
+	$base_dir 	= DEDALO_SUBTITLES_FOLDER;
+	$target_dir = DEDALO_MEDIA_BASE_PATH . DEDALO_AV_FOLDER . $base_dir ;
 	if( !is_dir($target_dir) ) {
 		if(!mkdir($target_dir, 0777,true)) throw new Exception("Error on read or create directory. Permission denied \"$target_dir\" (1)");						
 	}
@@ -74,7 +77,7 @@ if ($mode=='build_subtitles_text') {
 	$response = new stdClass();
 		$response->result 	= 'ok';
 		$response->msg 		= 'Subtitles generated successfully';
-		$response->url 		= DEDALO_MEDIA_BASE_URL . $base_dir .'/'. $filename;
+		$response->url 		= DEDALO_MEDIA_BASE_URL .DEDALO_AV_FOLDER. $base_dir .'/'. $filename;
 	
 	echo json_encode($response);
 

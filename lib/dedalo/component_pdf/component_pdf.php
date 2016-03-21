@@ -58,7 +58,7 @@
 				break;		
 
 		case 'player':
-				$iframe_url 	= DEDALO_ROOT_WEB . '/lib/pdfjs/web/viewer.html?pdf_url='.$pdf_url;				
+				$iframe_url 	= DEDALO_ROOT_WEB . '/lib/pdfjs/web/dedalo_viewer.html?pdf_url='.$pdf_url;				
 				break;
 
 		case 'thumb':				

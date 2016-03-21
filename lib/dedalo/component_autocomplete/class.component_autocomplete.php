@@ -104,7 +104,7 @@ class component_autocomplete extends component_common {
 	* Get resolved string representation of current value (expected id_matrix of section or array)
 	* @return array $this->valor
 	*/
-	public function get_valor( $lang=DEDALO_DATA_LANG, $format='string' ) {
+	public function get_valor( $lang=DEDALO_DATA_LANG, $format='string', $ar_related_terms=false ) {
 		/*
 		if (isset($this->valor)) {
 			if(SHOW_DEBUG) {
@@ -112,7 +112,8 @@ class component_autocomplete extends component_common {
 			}
 			return $this->valor;
 		}
-		*/
+		*/	
+
 		
 		$dato = $this->get_dato();
 			#dump($dato,'dato '.gettype($dato) );
@@ -141,18 +142,25 @@ class component_autocomplete extends component_common {
 				return $this->valor = null;
 			}
 		}
-
-			#dump($this, ' this ++ '.to_string()); die();
-
-		$ar_terminos_relacionados = $this->RecordObj_dd->get_relaciones();
 		$ar_componets_related = array();
 
-		foreach ($ar_terminos_relacionados as $ar_value) foreach ($ar_value as $modelo => $component_tipo) {
-			$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($component_tipo, true);
-			if ($modelo_name !='section'){
-				$ar_componets_related[] = $component_tipo;
+		# By default, ar_related_terms ius calculated. In some cases (diffusion for example) is needed overwrite ar_related_terms to obtain especific 'valor' form component
+		if ($ar_related_terms===false) {
+			$ar_related_terms = $this->RecordObj_dd->get_relaciones();
+				
+			foreach ((array)$ar_related_terms as $ar_value) foreach ($ar_value as $modelo => $component_tipo) {
+				$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($component_tipo, true);
+				if ($modelo_name !='section'){
+					$ar_componets_related[] = $component_tipo;
+				}
 			}
+		}else{
+			$ar_componets_related = $ar_related_terms;
 		}
+		#dump($ar_componets_related, ' ar_componets_related ++ '.to_string($this->tipo));
+
+
+
 			
 		$ar_values=array();
 		foreach ($dato as $current_locator) {
@@ -165,7 +173,7 @@ class component_autocomplete extends component_common {
 																  $component_tipo,
 																  $current_locator->section_id,
 																  'edit',
-																  DEDALO_DATA_LANG,
+																  $lang,
 																  $current_locator->section_tipo);
 				$value[] = $current_component->get_valor();
 			}
@@ -181,7 +189,82 @@ class component_autocomplete extends component_common {
 		}
 		
 		return $valor;
-	}
+
+	}//end get valor
+
+
+
+	/**
+	* GET_VALOR_EXPORT
+	* Return component value sended to export data
+	* @return string $valor
+	*/
+	public function get_valor_export( $valor=null, $lang=DEDALO_DATA_LANG ) {
+		
+		if (is_null($valor)) {
+			$dato = $this->get_dato();				// Get dato from DB
+		}else{
+			$this->set_dato( json_decode($valor) );	// Use parsed json string as dato
+		}
+
+		#$valor = $this->get_valor($lang);
+		$dato = $this->get_dato();
+		if (empty($dato)) {
+			if(SHOW_DEBUG) {
+				#return "AUTOCOMPLETE: ";
+			}
+			return '';
+		}
+
+		#
+		# TERMINOS_RELACIONADOS . Obtenemos los terminos relacionados del componente actual	
+		$ar_terminos_relacionados = (array)$this->RecordObj_dd->get_relaciones();
+			#dump($ar_terminos_relacionados, ' ar_terminos_relacionados');
+		#
+		# FIELDS
+		$fields=array();
+		$ar_skip = array(MODELO_SECTION, $exclude_elements='dd1129');
+		foreach ($ar_terminos_relacionados as $key => $ar_value) {
+			$modelo = key($ar_value);
+			$tipo 	= $ar_value[$modelo];
+			if (!in_array($modelo, $ar_skip)) {				
+				$fields[] = $tipo;
+			}
+		}
+		#dump($fields, ' fields ');
+
+		$ar_resolved=array();
+		foreach( (array)$dato as $key => $value) {
+			#dump($value, ' value ++ '.to_string());
+			$section_tipo 	= $value->section_tipo;
+			$section_id 	= $value->section_id;
+
+			foreach ($fields as $current_tipo) {				
+			
+				$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($current_tipo);
+				$component 		= component_common::get_instance($modelo_name,
+																 $current_tipo,
+																 $section_id,
+																 'list',
+																 $lang,
+																 $section_tipo);
+				$ar_resolved[$section_id][] = $component->get_valor_export(null,$lang);
+			}
+		}
+		#dump($ar_resolved, ' $ar_resolved ++ '.to_string());
+
+		$valor_export='';
+		foreach ($ar_resolved as $key => $ar_value) {
+			$valor_export .= implode("\n", $ar_value) . "\n";
+		}
+		$valor_export = trim($valor_export);
+
+		if(SHOW_DEBUG) {
+			#return "AUTOCOMPLETE: ".$valor_export;
+		}
+		return $valor_export;
+
+	}#end get_valor_export
 
 
 

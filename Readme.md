@@ -1,5 +1,24 @@
 **README**
+*Ver 4.0.7 Final - 21-03-2016*
 
+Today we introduce the update of the V4 to 4.0.7
+
+Important: This update change the "language" of the user component: "dd452" - Full name. Now the component will change the behavior to NO TRANSLATE, and is necessary change the language into the postgreSQL component.
+
+for ex with this SQL:
+	SELECT  datos #> '{components,dd452,dato}' AS dato,
+	datos #> '{components,dd452,valor}' AS valor,
+	datos #> '{components,dd452,valor_list}' AS valor_list
+	FROM "matrix_users"
+	WHERE datos #> '{components,dd452,dato}' ? 'lg-spa'
+
+you can see all values in Spanish (lg-spa) that you need change to «lg-nolan».
+
+	lg-spa => lg-nolan
+	lg-eng => lg-nolan
+	etc
+
+This update fixed some issues and bugs for the V4.0.3.
 
 *Ver 4.0.3 Final - 11-02-2016*
 

@@ -38,26 +38,26 @@
 
 /*-- common --*/
 .tool_transcription_left, .tool_transcription_right {
-	display: block;
-	position: absolute;  
-	height: 96%;
+	display: block; 
+	height: 49.98%;
+	position: relative;
+	float: left;
+	height: 98%;
 }
 
 /*-- LEFT AREA (text) --*/
 .tool_transcription_left {
-	/*background-color: #86c4ca;*/	
-	float: left;
-  	width: 44.5%;  		
+	/*background-color: #86c4ca;*/
+	width: 44.5%;  
 }
 
 
 /*-- RIGHT AREA (media) --*/
 .tool_transcription_right {
-	/*background-color: #e08d90;*/	
-	margin-left: 44.5%;	
+	/*background-color: #e08d90;*/		
 	width: 55.3%;
 	overflow: hide;
-	float: left;
+	margin: 0;
 	}
 	/*-- image content --*/
 	.tool_transcription_right .css_wrap_image {

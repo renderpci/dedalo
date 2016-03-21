@@ -462,7 +462,8 @@ class diffusion  {
 							#$ar_field_data['ar_fields'][$current_section_id][$current_lang][] = self::create_data_field('lang',$current_lang);						
 
 							#
-							# COLUMNS . Normal table columns / fields					
+							# COLUMNS . Normal table columns / fields	
+							# NORMAL COLUMNS ITERATE ###################################################				
 							$RecordObj_dd 	= new RecordObj_dd($table_tipo);
 							$ar_children 	= $RecordObj_dd->get_ar_childrens_of_this();
 							foreach ((array)$ar_children as $curent_children_tipo) {								
@@ -497,8 +498,8 @@ class diffusion  {
 											#$options->section_tipo 	= ($pointer_type=='portal') ? $portal_section_tipo : $section_tipo; 
 											$options->section_tipo 	= $section_tipo; // Verificar esto !!
 											$options->caler_id 		= "2 - ".$section_tipo;	//$lang_target_section_tipo;									
-										$ar_portal_data = self::build_data_field( $options );										
-											#dump($ar_portal_data,"ar_portal_data - portal_tipo: $portal_tipo - section_tipo: $section_tipo - curent_children_tipo: ".$curent_children_tipo); #die();
+										$ar_portal_data = self::build_data_field( $options );																
+											#dump($ar_portal_data,"build_data_field: ar_portal_data - portal_tipo: $portal_tipo - section_tipo: $section_tipo - curent_children_tipo: ".$curent_children_tipo); //die();
 
 										# Añade el resultado de la generación del campo al array de campos generados (Vínculo con el portal)
 										# COLUMN ADD ###################################################
@@ -514,14 +515,15 @@ class diffusion  {
 											$current_ar_portal_section_id[] = $current_locator;
 										}
 
+										# Create ar_portal_records if not exits. curent_children_tipo es el tipo de la tabla de difusión, como oh94 para informant
 										if (!isset($ar_portal_records[$curent_children_tipo])) {
 											$ar_portal_records[$curent_children_tipo]=array();
-										}
-										
-										#dump($current_ar_portal_section_id, ' curent_children_tipo ++ '.to_string($section_tipo));
+										}										
+										#dump($current_ar_portal_section_id, ' curent_children_tipo: '.$curent_children_tipo.' ++ '.to_string($section_tipo));
 
 										$ar_portal_records[$curent_children_tipo] = array_merge($ar_portal_records[$curent_children_tipo], (array)$current_ar_portal_section_id);	# Mix with general portal array	for this tipo
-										$ar_portal_records[$curent_children_tipo] = self::clean_duplicates( $ar_portal_records[$curent_children_tipo] );	# Clean array removing duplicates																
+										$ar_portal_records[$curent_children_tipo] = self::clean_duplicates( $ar_portal_records[$curent_children_tipo] );	# Clean array removing duplicates
+											#dump($ar_portal_records[$curent_children_tipo], '$ar_portal_records[$curent_children_tipo] ++ '.to_string());														
 										break;
 									
 									default: # Normal field case
@@ -575,7 +577,8 @@ class diffusion  {
 													$options->parent 		= $current_section_id;
 													$options->lang 			= $current_lang;
 													$options->section_tipo 	= $section_tipo;	//$lang_target_section_tipo;
-													$options->caler_id 		= 3;												
+													$options->caler_id 		= 3;
+													$options->propiedades 	= $propiedades;												
 												$column = self::build_data_field( $options );											
 												#$column = self::create_data_field($curent_children_tipo, false, false, $current_section_id, $current_lang, false, $pointer_section_tipo); //$tipo, $value, $is_section_id=false, $parent=null, $lang=null, $is_portal=false, $section_tipo=null
 													#dump($column, ' column '.$curent_children_tipo);
@@ -915,6 +918,7 @@ class diffusion  {
 			$options->lang 			= null;
 			$options->section_tipo 	= null;
 			$options->caler_id 		= null;
+			$options->propiedades 	= null;
 
 			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
@@ -1111,7 +1115,14 @@ class diffusion  {
 									
 									$component_autocomplete_dato = $current_component->get_dato();		
 									$valor 						 = $current_component->get_valor( $options->lang );
-										//dump($component_autocomplete_dato, ' component_autocomplete_dato ++ '.to_string($valor));
+										if(SHOW_DEBUG) {
+											#dump($component_autocomplete_dato, ' component_autocomplete_dato ++ '.to_string($valor));
+											#dump($options->tipo, ' options->tipo ++ '.to_string());
+											#if ($options->tipo=='mupreva1998') {
+											#	dump($component_autocomplete_dato, ' component_autocomplete_dato ++ '.to_string());
+											#	dump($valor, ' component_autocomplete_dato mupreva1532 valor ++ '.to_string($options->lang));
+											#}
+										}																				
 
 									if (empty($valor) && !empty($component_autocomplete_dato) ) {
 
@@ -1360,6 +1371,11 @@ class diffusion  {
 		static $ar_unconfigured_diffusion_section;
 			#dump($ar_resolved_static, ' ar_resolved_static ++ '.to_string());
 
+		if(SHOW_DEBUG) {
+			static $ar_resolved_static_debug;
+		}
+		$start_time = start_time();
+
 
 		$options = new stdClass();
 			$options->section_tipo = null;
@@ -1368,13 +1384,13 @@ class diffusion  {
 
 		# Mandatory vars
 		if(empty($options->section_tipo) || empty($options->section_id)) return false;
-
-		if (is_array($options->section_id)) {
-			if(SHOW_DEBUG) {
-				dump($options->section_id, ' $options->section_id ++ '.to_string());
-			}			
-			throw new Exception("Error Processing Request. Sorry, array is not accepted to update_record anymore. Please use int as options->section_id ", 1);			
-		}
+			# Old code heritage control
+			if (is_array($options->section_id)) {
+				if(SHOW_DEBUG) {
+					dump($options->section_id, ' $options->section_id ++ '.to_string());
+				}			
+				throw new Exception("Error Processing Request. Sorry, array is not accepted to update_record anymore. Please use int as options->section_id ", 1);			
+			}
 
 
 		if ( isset($ar_resolved_static[$options->section_tipo]) &&  
@@ -1422,7 +1438,8 @@ class diffusion  {
 					$ar_diffusion_map = $this->get_ar_diffusion_map();
 					$database_tipo    = reset($ar_diffusion_map);
 				}
-				#dump($database_tipo, ' database_tipo ++ '.to_string()); die();				
+				#dump($database_tipo, ' database_tipo ++ '.to_string()); die();	
+				#dump($ar_diffusion_map, ' ar_diffusion_map ++ '.to_string());		
 
 				#
 				# TABLE FIELDS reference only	(not needed because tables are already created)
@@ -1454,7 +1471,10 @@ class diffusion  {
 			
 				# AR_RESOLVED . update				
 				$ar_resolved_static[$options->section_tipo][] = $options->section_id;
-								
+				if(SHOW_DEBUG) {
+					$time_complete = round(microtime(1)-$start_time,3);
+					$ar_resolved_static_debug[] = array($options->section_tipo, $options->section_id, $time_complete);
+				}			
 				#dump($ar_resolved_static, ' ar_resolved_static'); #die();
 
 		#
@@ -1502,8 +1522,8 @@ class diffusion  {
 									!in_array($current_section_id, $ar_resolved_static[$current_section_tipo]) ) { // If not exists in ar_resolved_static, add
 									
 										$group_by_section_tipo[$current_section_tipo][] = $current_section_id; 
-								}								
-							}						
+								}
+							}
 						}
 					}//end foreach ((array)$options->section_id as $section_id) {
 
@@ -1512,30 +1532,36 @@ class diffusion  {
 				}			
 				#dump($group_by_section_tipo, ' group_by_section_tipo 1 '); #die();				
 				
+
 				#
 				# RESOLVE REFERENCES RECURSION
-				foreach ($group_by_section_tipo as $current_section_tipo => $ar_section_id) {
-					if (empty($ar_section_id)) {
-						continue;
-					}
-					#dump($current_section_tipo, ' current_section_tipo '.to_string($ar_section_id));
-					
-					foreach ($ar_section_id as $current_section_id) {
+				# Look inside portals of portals, etc..					
+					foreach ($group_by_section_tipo as $current_section_tipo => $ar_section_id) {
+						if (empty($ar_section_id)) {
+							continue;
+						}
+						#dump($current_section_tipo, ' current_section_tipo '.to_string($ar_section_id));
 						
-						## Recursion with all references
-						$new_options = new stdClass();
-							$new_options->section_tipo = $current_section_tipo;
-							$new_options->section_id   = $current_section_id;
+						foreach ($ar_section_id as $current_section_id) {
+							
+							## Recursion with all references
+							$new_options = new stdClass();
+								$new_options->section_tipo = $current_section_tipo;
+								$new_options->section_id   = $current_section_id;
 
-						#$this->update_record( $new_options, $ar_resolved, false );
-						$this->update_record( $new_options, true );
-					}
-					
-				}//end foreach ($group_by_section_tipo as $current_section_tipo => $ar_section_id) {
+							$this->update_record( $new_options, true );
+						}
+						
+					}//end foreach ($group_by_section_tipo as $current_section_tipo => $ar_section_id) {
+									
 
 			}//end if ($resolve_references===true) {
 
 			#dump($ar_record_updated, ' ar_record_updated ++ '.to_string());
+			#dump($ar_resolved_static, ' ar_resolved_static ++ '.to_string());
+			if(SHOW_DEBUG) {
+				#dump($ar_resolved_static_debug, ' ar_resolved_static_debug ++ '.to_string());;
+			}
 
 			$this->ar_published_records = $ar_resolved_static;
 			return true;

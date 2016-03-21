@@ -14,6 +14,7 @@
 		# VARS
 		$label 	= $current_diffusion_obj->label;
 		$valor 	= $current_diffusion_obj->columns['valor'];
+			#dump($valor, ' valor ++ '.to_string());
 		
 
 		$current_css_class = '';
@@ -66,8 +67,8 @@
 		            #                [dd77] => Perez Ramírez
 		            #            )
 		            #    )
-					foreach ($valor as $section_id => $ar_section_id) {
-					
+					foreach ($valor as $id => $ar_section_id) {
+						#dump($section_id, ' section_id ++ '.to_string());
 						foreach ($ar_section_id as $component_tipo => $current_valor) {
 
 							# SWITCH component_modelo_name
@@ -102,7 +103,11 @@
 
 								default:									
 									if ($i==1) {
-										$html_head .= "<h5>$current_valor</h5>";
+										$html_head .= "<h5>$current_section_id</h5>";
+										if (!empty($current_valor)) {											
+											$html_head .= " [$current_valor]";
+										}										
+										#dump($var, ' var ++ '.to_string());
 									}else{
 										$html_head .= $current_valor;
 									}

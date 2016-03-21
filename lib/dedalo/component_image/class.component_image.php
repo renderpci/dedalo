@@ -207,6 +207,35 @@ class component_image extends component_common {
 	}
 
 	/**
+	* GET_VALOR_EXPORT
+	* Return component value sended to export data
+	* @return string $valor_export
+	*/
+	public function get_valor_export( $valor=null, $lang=DEDALO_DATA_LANG ) {
+			
+		if (is_null($valor)) {
+			$dato = $this->get_dato();				// Get dato from DB
+		}else{
+			$this->set_dato( json_decode($valor) );	// Use parsed json string as dato
+		}
+
+		#$valor = $this->get_valor();
+		#$valor .= '.'.DEDALO_IMAGE_EXTENSION;
+
+		$image_quality  = DEDALO_IMAGE_QUALITY_DEFAULT;	// DEDALO_IMAGE_THUMB_DEFAULT
+		$test_file 		= true;	// output dedalo image placeholder when not file exists
+		$absolute 		= true;	// otuput absolute path like 'http://myhost/mypath/myimage.jpg'
+		
+		$valor 			= $this->get_image_url($image_quality, $test_file, $absolute);
+		
+		if(SHOW_DEBUG) {
+			#return "IMAGE: ".$valor;
+		}
+		return $valor;
+
+	}#end get_valor_export
+
+	/**
 	* GET IMAGE ID
 	* Por defecto se construye con el tipo del component_image actual y el número de orden, ej. 'dd20_rsc750_1'
 	* Se puede sobreescribir en propiedades con json ej. {"image_id":"dd851"} y se leerá del contenido del componente referenciado
@@ -361,7 +390,7 @@ class component_image extends component_common {
 	* GET_IMAGE_URL
 	* @param string $quality optional default (bool)false
 	*/
-	public function get_image_url($quality=false) {
+	public function get_image_url($quality=false, $test_file=true, $absolute=false) {
 		
 		if(!$quality)
 		$quality 	= $this->get_quality();
@@ -375,11 +404,23 @@ class component_image extends component_common {
 		$ImageObj = (object)$this->ImageObj;
 		$ImageObj->set_quality($quality);
 
+		$image_url = $ImageObj->get_media_path() . $image_id .'.'. $ImageObj->get_extension();
+
 		# FILE EXISTS TEST : If not, show '0' dedalo image logo
-		$file 		= $ImageObj->get_local_full_path();
-		if(!file_exists($file)) $image_id = '0';
+		if($test_file) {
+			$file = $ImageObj->get_local_full_path();
+			if(!file_exists($file)) {
+				#$image_id = '0';
+				$image_url = DEDALO_LIB_BASE_URL . '/themes/default/0.jpg';
+			}
+		}		
+
+		# ABSOLUTE (Default false)
+		if ($absolute) {
+			$image_url = DEDALO_PROTOCOL . DEDALO_HOST . $image_url;
+		}
 	
-		return $ImageObj->get_media_path() . $image_id .'.'. $ImageObj->get_extension();		
+		return $image_url;
 	}
 
 	
@@ -434,47 +475,7 @@ class component_image extends component_common {
 		#return DEDALO_MEDIA_BASE_PATH . DEDALO_IMAGE_FOLDER .'/'. $this->get_quality() . $this->aditional_path  ;
 	}
 
-	/**
-	* GET_ORIGINAL
-	* Si se sube un archivo de extensión distinta a DEDALO_IMAGE_EXTENSION, se convierte a DEDALO_IMAGE_EXTENSION. Los archivos originales
-	* se guardan renombrados pero conservando la terminación. Se usa esta función para localizarlos comprobando si hay mas de uno.
-	*/
-	public function get_original() {
-
-		$ar_originals 	= array();
-		$target_dir 	= $this->get_target_dir();
-		
-		if(!file_exists($target_dir)) return null;
-
-		if ($handle = opendir($target_dir)) {
-		    while (false !== ($file = readdir($handle))) {		        
-		        // note that '.' and '..' is returned even
-		        $findme = $this->get_image_id() . '.';
-		        if( strpos($file, $findme)!==false && strpos($file, $this->get_target_filename())===false) {
-		        	$ar_originals[] = $file;
-		        }		        
-		    }
-		    closedir($handle);
-		}
-		$n = count($ar_originals);
-		if ($n==0) {
-			return null;
-		}elseif($n==1) {
-			#$path = $_FILES['image']['name'];
-			$ext = pathinfo($ar_originals[0], PATHINFO_EXTENSION);
-			return $ext;
-		}else{
-			foreach ($ar_originals as $current_original) {
-				$ext = pathinfo($current_original, PATHINFO_EXTENSION);
-				if(strtolower($ext)!=='jpg') return $ext;
-			}
-			throw new Exception("Error Processing Request. Too much original files found", 1);			
-		}
-
-		#foreach (glob($target_dir."$image_id.*") as $filename) {
-		#    echo "<br>$filename size " . filesize($filename) . "\n";
-		#}
-	}
+	
 
 	
 	/**
@@ -750,6 +751,74 @@ class component_image extends component_common {
 	}
 
 
+
+	/**
+	* GET_ORIGINAL
+	* Si se sube un archivo de extensión distinta a DEDALO_IMAGE_EXTENSION, se convierte a DEDALO_IMAGE_EXTENSION. Los archivos originales
+	* se guardan renombrados pero conservando la terminación. Se usa esta función para localizarlos comprobando si hay mas de uno.
+	* @return bool | string (file extension)
+	*/
+	public function get_original( $quality=false, $exclude_converted=true ) {
+
+		if (!$quality) {
+			$quality = $this->get_quality();
+		}
+		$result = false;
+		$initial_quality = $this->get_quality();
+
+		$this->set_quality($quality); // change current component quality temporally
+		$ar_originals 	= array();
+		$target_dir 	= $this->get_target_dir();
+		
+		if(!file_exists($target_dir)) return false;
+
+		if ($handle = opendir($target_dir)) {
+		    while (false !== ($file = readdir($handle))) {
+
+		        // note that '.' and '..' is returned even
+		        $findme = $this->get_image_id() . '.';	
+		        if( strpos($file, $findme) !== false ) {
+		        	if ($exclude_converted) {
+		        		# Verify too that extension is different to dedalo extension (like .tiff)
+		        		if (strpos($file, $this->get_target_filename()) === false) {
+		        			$ar_originals[] = $file;
+		        		}
+		        	}else{
+		        		# Included all originals (witl all extensions)
+		        		$ar_originals[] = $file;
+		        	}		        	
+		        }		        
+		    }
+		    closedir($handle);
+		}
+		#dump($ar_originals, ' target_dir ++ '.to_string($target_dir));
+		
+		$n = count($ar_originals);
+		if ($n==0) {
+			$result = false;
+		}elseif($n==1) {
+			#$path = $_FILES['image']['name'];
+			$ext = pathinfo($ar_originals[0], PATHINFO_EXTENSION);
+			$result = $ext;
+		}else{
+			foreach ($ar_originals as $current_original) {
+				$ext = pathinfo($current_original, PATHINFO_EXTENSION);
+				if(strtolower($ext)!=strtolower(DEDALO_IMAGE_EXTENSION)) {
+					$result = $ext;
+				}
+			}
+			if(!isset($ext)) {
+				trigger_error("Error Processing Request. Too much original files found ($n)");
+				#throw new Exception("Error Processing Request. Too much original files found", 1);	
+			}					
+		}
+
+		// return current component quality
+		$this->quality 	= $initial_quality;
+			
+		return $result;
+
+	}//end get_original_file_path
 	
 	
 	/**
@@ -758,13 +827,15 @@ class component_image extends component_common {
 	* Is triggered wen section tha contain media elements is deleted
 	* @see section:remove_section_media_files
 	*/
-	public function remove_component_media_files() {
+	public function remove_component_media_files( $ar_quality=array() ) {
 
 		$date=date("Y-m-d_Hi");
 
 		#
 		# Image remove
-		$ar_quality = (array)unserialize(DEDALO_IMAGE_AR_QUALITY);
+		if (empty($ar_quality)) {
+			$ar_quality = (array)unserialize(DEDALO_IMAGE_AR_QUALITY);
+		}		
 		foreach ($ar_quality as $current_quality) {
 			# media_path
 			$media_path = $this->get_image_path($current_quality);
@@ -784,9 +855,25 @@ class component_image extends component_common {
 
 			$image_name 		= $this->get_image_id();
 			$media_path_moved 	= $folder_path_del . "/$image_name" . '_deleted_' . $date . '.' . DEDALO_IMAGE_EXTENSION;			
-			if( !rename($media_path, $media_path_moved) ) throw new Exception(" Error on move files to folder \"deleted\" . Permission denied . The files are not deleted");
+			if( !rename($media_path, $media_path_moved) ) {
+				#throw new Exception(" Error on move files to folder \"deleted\" . Permission denied . The files are not deleted");
+				trigger_error(" Error on move files to folder \"deleted\" [1]. Permission denied . The files are not deleted");
+			}
 							
 			debug_log(__METHOD__." Moved file \n$media_path to \n$media_path_moved ".to_string(), logger::DEBUG);
+
+			// Move original files too (PNG,TIF,Etc.)
+			// NOTE : 'original files' are NOT 'original quality'. Are uploaded files with extension different to DEDALO_IMAGE_EXTENSION 
+			$original_extension = $this->get_original( $current_quality );
+			$path_parts 		= pathinfo($media_path);
+			$original_file  	= $path_parts['dirname'].'/'.$path_parts['filename'].'.'.$original_extension;
+			$original_file_moved= $path_parts['dirname'].'/'.$path_parts['filename'].'_deleted_'.$date.'.'.$original_extension;
+
+			if( !rename($original_file, $original_file_moved) ) {
+				#throw new Exception(" Error on move files to folder \"deleted\" . Permission denied . The files are not deleted");
+				trigger_error(" Error on move files to folder \"deleted\" [2]. Permission denied . The files are not deleted");
+			}
+
 						
 		}#end foreach
 

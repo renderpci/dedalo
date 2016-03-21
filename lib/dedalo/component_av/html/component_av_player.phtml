@@ -6,8 +6,12 @@
 	# PLAYER
 	$html_contenido = '';
 
-	$html_contenido .= "\n<div class=\"css_player_wrap\">";
-
+	$html_contenido .= "\n<div class=\"css_player_wrap\"							
+							data-tipo=\"{$tipo}\"
+							data-section_tipo=\"{$section_tipo}\"
+							data-parent=\"{$parent}\"
+							data-video_id=\"{$video_id}\"
+							>";
 
 		$html_contenido .= "\n <iframe id=\"videoFrame\" name=\"videoFrame\" class=\"videoFrame\" src=\"{$iframe_url}\" ></iframe>";
 

@@ -22,17 +22,26 @@ $text = strip_tags($text, '');
 #
 # TYPE
 $type = false;
-if(strpos($text,'[index-') !== false || strpos($text,'[/index-') !== false) 
-	$type = 'index' ;
-else if(strpos($text,'[TC_') !== false)
-	$type = 'tc' ;
-else if(strpos($text,'[svg-') !== false)
-	$type = 'svg' ;
-else if(strpos($text,'[geo-') !== false)
-	$type = 'geo' ;
-else if(strpos($text,'[page-') !== false)
-	$type = 'page' ;
-
+switch (true) {
+	case (strpos($text,'[index-') !== false || strpos($text,'[/index-') !== false):
+		$type = 'index' ;
+		break;
+	case (strpos($text,'[TC_')!==false):
+		$type = 'tc' ;
+		break;
+	case (strpos($text,'[svg-')!==false):
+		$type = 'svg' ;
+		break;
+	case (strpos($text,'[geo-')!==false):
+		$type = 'geo' ;
+		break;
+	case (strpos($text,'[page-')!==false):
+		$type = 'page' ;
+		break;
+	default:
+		die("Need type!");
+		break;
+}
 if(!$type) die("Need type!");
 
 # reformat text apperance

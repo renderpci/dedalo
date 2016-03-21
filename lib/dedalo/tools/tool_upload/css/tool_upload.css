@@ -15,6 +15,7 @@
 	/* white-space:nowrap;
 	background-color: #fdc06a;*/
 	position: relative;
+	background-image: none;
 }
 .wrap_tool_upload_page .content_data {
 	display:block;	
@@ -53,13 +54,18 @@
 		display:block;
 	}
 	#form_upload #fileToUpload {
-		width:378px; cursor:pointer;
+		cursor: pointer;
+		background-color: rgba(223, 115, 6, 0.72);
+		height: 50px;
+		width: 100%;
+		color: white;
+		font-size: 14px;
 	}
 
 #form_upload input[type=file] {
-	border:1px solid #ccc;	
-	padding: 5px 10px 5px 10px;	
-	border-radius: 10px;	
+	/*border:1px solid #ccc;*/
+	padding: 15px 13px 5px 15px;
+  	border-radius: 10px;	
 	}
 	#form_upload input[type=file]:focus {			
 		-webkit-box-shadow: 0 0 10px #ccc;	

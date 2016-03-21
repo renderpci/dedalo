@@ -301,8 +301,8 @@
 
 							case ( $modelo_name=='component_autocomplete_ts' ):
 									#
-									# COMPONENT_AUTOCOMPLETE_TS : 					
-									$ar_valor[$current_component_tipo] = (string)$rows[$current_component_tipo];									
+									# COMPONENT_AUTOCOMPLETE_TS :
+									$ar_valor[$current_component_tipo] = (string)$rows[$current_component_tipo];
 									break;
 
 							case ( $modelo_name=='component_autocomplete' ): //&& ($modo=='list' || $modo=='portal_list') 
@@ -320,7 +320,7 @@
 									$current_component->set_dato($ar_records);
 									$current_component->set_identificador_unico($current_component->get_identificador_unico().'_'.$id); // Set unic id for build search_options_session_key used in sessions
 									
-									$component_html = $current_component->get_valor(DEDALO_DATA_LANG);									 
+									$component_html = $current_component->get_valor(DEDALO_DATA_LANG);
 									$ar_valor[$current_component_tipo] = $component_html;
 									break;
 
@@ -382,6 +382,7 @@
 							case ($modelo_name=='component_pdf'):
 									$ar_valor[$current_component_tipo] = (string)$rows[$current_component_tipo];
 									break;
+
 							case ($modelo_name=='component_check_box'):
 									# Ex. '{"34": "2", "36": "2"}'
 									$current_valor = $rows[$current_component_tipo];
@@ -394,14 +395,20 @@
 									#	$ar_valor[$current_component_tipo] = (string)$rows[$current_component_tipo];
 									#}
 									break;
+
+							case ($modelo_name=='component_date'):									
+									$ar_valor[$current_component_tipo] = (string)$rows[$current_component_tipo];
+									break;
+
 							case ($modelo_name=='component_filter'):
-							case ($modelo_name=='component_filter_master'):										
+							case ($modelo_name=='component_filter_master'):
 									$current_valor  = $rows[$current_component_tipo];
 									$ar_val 		= json_decode($current_valor);
 									$component = component_common::get_instance($modelo_name, $current_component_tipo, null, 'list', DEDALO_DATA_LANG, $section_tipo);
-									$component->set_dato($ar_val);											
+									$component->set_dato($ar_val);
 									$ar_valor[$current_component_tipo] = (string)$component->get_valor();
 									break;
+
 							case ($modelo_name=='component_state'):
 									$current_valor  = $rows[$current_component_tipo];
 									$valor 		= (string)'';
@@ -415,9 +422,10 @@
 									}								
 									$ar_valor[$current_component_tipo] = (string)$valor;
 									break;
+
 							default:
 									#
-									# OTHER DEFAULT										
+									# OTHER (DEFAULT)										
 									if (isset($this->section_records_obj->rows_obj->columns_to_resolve->$current_component_tipo)) {
 
 										$columns_to_resolve = $this->section_records_obj->rows_obj->columns_to_resolve->$current_component_tipo;
@@ -437,7 +445,12 @@
 												#dump($current_valor," valor");
 											}
 											
-										$component = component_common::get_instance(null, $current_component_to_resolve_tipo, (int)$current_valor, 'edit', DEDALO_DATA_LANG, $section_tipo);
+										$component = component_common::get_instance(null,
+																					$current_component_to_resolve_tipo,
+																					(int)$current_valor,
+																					'edit',
+																					DEDALO_DATA_LANG,
+																					$section_tipo);
 											#$component = component_common::get_instance($modelo_name, $current_component_to_resolve_tipo, (int)$current_valor, 'edit', DEDALO_DATA_LANG, SECTION_TIPO);
 
 												
@@ -534,9 +547,8 @@
 				$ar_columnas_tipo 	= reset($this->section_records_obj->rows_obj->options->layout_map);
 					#dump($ar_columnas_tipo," ar_columnas_tipo");						
 				
-				#$propiedades 		= json_handler::decode($this->section_records_obj->get_propiedades());
-				$RecordObj_dd = new RecordObj_dd($section_list_tipo);
-				$propiedades  = json_decode($RecordObj_dd->get_propiedades());				
+				$RecordObj_dd 	= new RecordObj_dd($section_list_tipo);
+				$propiedades  	= json_decode($RecordObj_dd->get_propiedades());				
 	
 				$ar_valor=array();
 				#dump($result," result");
@@ -657,6 +669,41 @@
 									$image_value = component_image::image_value_in_time_machine( $image_value );
 									$ar_valor[$current_component_tipo] = $image_value;																	
 									break;
+
+							case ( $modelo_name=='component_autocomplete_ts' ):
+									#
+									# COMPONENT_AUTOCOMPLETE_TS :
+									$ar_valor[$current_component_tipo] = (string)$rows[$current_component_tipo];
+									break;
+
+							case ( $modelo_name=='component_autocomplete' ): //&& ($modo=='list' || $modo=='portal_list') 
+							case ( $modelo_name=='component_radio_button' ):
+							case ( $modelo_name=='component_check_box' ):
+							case ( $modelo_name=='component_select' ):
+							case ( $modelo_name=='component_relation' ):
+									#
+									# COMPONENT_AUTOCOMPLETE : With locators
+									$parent 		   = $section_id;	//null;
+									$current_component = component_common::get_instance($modelo_name, $current_component_tipo, $parent, 'list', DEDALO_DATA_NOLAN, $section_tipo);								
+									
+									# Use already query calculated values for speed
+									$ar_records   = (array)json_handler::decode($rows[$current_component_tipo]);	#dump($ar_records,"ar_records for portal $current_component_tipo - id:$id");#die();
+									$current_component->set_dato($ar_records);
+									$current_component->set_identificador_unico($current_component->get_identificador_unico().'_'.$id); // Set unic id for build search_options_session_key used in sessions
+									
+									$component_html = $current_component->get_valor(DEDALO_DATA_LANG);
+									$ar_valor[$current_component_tipo] = $component_html;
+									break;
+
+							case ($modelo_name=='component_filter'):
+							case ($modelo_name=='component_filter_master'):
+									$current_valor  = $rows[$current_component_tipo];
+									$ar_val 		= json_decode($current_valor);
+									$component = component_common::get_instance($modelo_name, $current_component_tipo, null, 'list', DEDALO_DATA_LANG, $section_tipo);
+									$component->set_dato($ar_val);
+									$ar_valor[$current_component_tipo] = (string)$component->get_valor();
+									break;
+
 							default:
 									#
 									# OTHER DEFAULT.

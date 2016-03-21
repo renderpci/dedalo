@@ -56,7 +56,7 @@
 
 				#
 				# CSS includes
-					css::$ar_url[] = DEDALO_ROOT_WEB.'/lib/bootstrap/3.1.1/css/bootstrap.min.css';
+					css::$ar_url[] = DEDALO_ROOT_WEB.'/lib/bootstrap/css/bootstrap.min.css';
 					css::$ar_url[] = DEDALO_ROOT_WEB.'/lib/jquery/blueimp-gallery/css/blueimp-gallery.min.css';
 					css::$ar_url[] = DEDALO_ROOT_WEB.'/lib/jquery/jQuery-File-Upload/css/jquery.fileupload.css';
 					css::$ar_url[] = DEDALO_ROOT_WEB.'/lib/jquery/jQuery-File-Upload/css/jquery.fileupload-ui.css';
@@ -72,7 +72,7 @@
 					js::$ar_url[] = DEDALO_ROOT_WEB.'/lib/javascript_load_image/js/load-image.min.js';
 
 					# Bootstrap JS is not required, but included for the responsive demo navigation
-					js::$ar_url[] = DEDALO_ROOT_WEB.'/lib/bootstrap/3.1.1/js/bootstrap.min.js';
+					js::$ar_url[] = DEDALO_ROOT_WEB.'/lib/bootstrap/js/bootstrap.min.js';
 					# blueimp Gallery script
 					js::$ar_url[] = DEDALO_ROOT_WEB.'/lib/jquery/blueimp-gallery/js/jquery.blueimp-gallery.min.js';
 

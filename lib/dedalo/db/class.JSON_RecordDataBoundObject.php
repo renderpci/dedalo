@@ -556,6 +556,7 @@ abstract class JSON_RecordDataBoundObject {
 		switch ($modo) {
 			case 'gin':
 				# ref: datos @>'{"components":{"rsc24":{"dato":{"lg-nolan":"114"}}}}'
+				$value = pg_escape_string(stripslashes($value));
 				return "$datos @>'{\"components\":{\"$tipo\":{\"dato\":{\"$lang\":\"$value\"}}}}'::jsonb ";
 				break;
 			

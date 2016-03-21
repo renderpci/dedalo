@@ -55,10 +55,14 @@
 						}else {
 							$checked = "";
 						}
-						$html_contenido .= "\n <input class=\"filter_checkbox {$ar_css['filter_checkbox']}\" type=\"checkbox\" 
+						$html_contenido .= "\n <input class=\"filter_checkbox {$ar_css['filter_checkbox']}\" type=\"checkbox\"
 						name=\"{$input_name}\"
-						data-tipo=\"{$tipo}\" data-lang=\"{$lang}\" data-section_tipo=\"{$section_tipo}\" data-parent=\"{$parent}\"
-						value=\"{$value}\" 
+						data-tipo=\"{$tipo}\"
+						data-lang=\"{$lang}\"
+						data-section_tipo=\"{$section_tipo}\"
+						data-parent=\"{$parent}\"
+						value=\"{$value}\"
+						onfocus=\"component_common.select_wrap(null,'$id_wrapper');\"
 						title=\"$html_title $value\" $checked />";	#id=\"{$identificador_unico}\" 
 												
 						$html_contenido .= "\n <label class=\"filter_checkbox_rotulo {$ar_css['filter_checkbox_rotulo']}\" $required_code >$rotulo</label>";

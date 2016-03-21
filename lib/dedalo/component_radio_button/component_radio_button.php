@@ -40,9 +40,10 @@
 				$ar_list_of_values	= $this->get_ar_list_of_values( DEDALO_DATA_LANG, null );
 				$ar_css				= $this->get_ar_css();	
 				#foreach($ar_tools_obj as $tool_obj) $html_tools .= $tool_obj->get_html();
-				$id_wrapper = 'wrapper_'.$identificador_unico;
-				$input_name = "{$tipo}_{$parent}";
-				$js_code	= $this->generate_js();
+				$id_wrapper 		= 'wrapper_'.$identificador_unico;
+				#$input_name 		= "{$tipo}_{$parent}";
+				$input_name 		= 'radio_button_'.$identificador_unico;
+				$js_code			= $this->generate_js();
 				$component_info 	= $this->get_component_info('json');
 				break;
 
@@ -78,9 +79,10 @@
 				$ar_list_of_values	= $this->get_ar_list_of_values( DEDALO_DATA_LANG, null );
 				$ar_css				= $this->get_ar_css();	
 				#foreach($ar_tools_obj as $tool_obj) $html_tools .= $tool_obj->get_html();
-				$id_wrapper = 'wrapper_'.$identificador_unico;
-				$input_name = "{$tipo}_{$parent}";
-				$js_code	= $this->generate_js();
+				$id_wrapper 		= 'wrapper_'.$identificador_unico;
+				#$input_name 		= "{$tipo}_{$parent}";
+				$input_name 		= 'radio_button_'.$identificador_unico;
+				$js_code			= $this->generate_js();
 				$component_info 	= $this->get_component_info('json');				
 				break;
 

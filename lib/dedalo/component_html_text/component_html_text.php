@@ -41,7 +41,7 @@
 
 	$file_name				= $modo;
 
-
+	js::$ar_url[]  = DEDALO_ROOT_WEB."/lib/tinymce/plupload/js/plupload.full.min.js";	
 	
 	switch($modo) {
 		
@@ -59,7 +59,7 @@
 							#$dato_reference_lang = $this->get_dato_default_lang();
 							$default_component = $this->get_default_component();
 								#dump($default_component,'$default_component');
-						}						
+						}			
 						break;
 
 		

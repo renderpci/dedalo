@@ -31,6 +31,7 @@ class tool_time_machine extends tool_common {
 
 
 	public $section_tipo;
+	public $user_name;
 
 	/*
 	* Queda unificar el comportamiento con tool lang ... <-----------------------

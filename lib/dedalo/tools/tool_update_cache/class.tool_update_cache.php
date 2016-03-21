@@ -85,7 +85,11 @@ class tool_update_cache {
 		# RECORDS
 		# Use actual list search options as base to build current search
 			$search_options_session_key = 'section_'.$this->section_tipo;
-			$search_options = clone($_SESSION['dedalo4']['config']['search_options'][$search_options_session_key]);	
+			if (!isset($_SESSION['dedalo4']['config']['search_options'][$search_options_session_key])) {
+				$search_options = new stdClass();
+			}else{
+				$search_options = clone($_SESSION['dedalo4']['config']['search_options'][$search_options_session_key]);	
+			}			
 			$search_options->modo 		= 'edit';	// Modo 'edit' allow use empty layout_map
 			$search_options->layout_map = array();
 			$search_options->offset 	= 0;

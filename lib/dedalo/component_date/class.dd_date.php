@@ -276,6 +276,23 @@ class dd_date extends stdClass {
   }
 
 
+
+  /**
+  * GET_DATE_WITH_FORMAT
+  * Format a date as is desired
+  * @param string $date
+  * @param string $format
+  * @return string $date_with_format
+  */
+  public static function get_date_with_format( $date, $format="Y-m-d H:i:s" ) {
+  	
+  	$date_with_format = date($format, strtotime($date));
+
+  	return $date_with_format;
+
+  }#end get_date_with_format
+
+
   /**
   * __DESTRUCT
   */

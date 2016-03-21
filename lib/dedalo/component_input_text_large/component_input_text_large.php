@@ -37,11 +37,14 @@
 		case 'tool_lang':
 						$file_name = 'edit';
 
-		case 'edit'	:	$ar_css		= $this->get_ar_css();
-						$id_wrapper = 'wrapper_'.$identificador_unico;
-						$input_name = "{$tipo}_{$parent}";
+		case 'tool_transcription':
+						#$file_name = 'edit';
+
+		case 'edit'	:	$ar_css			= $this->get_ar_css();
+						$id_wrapper 	= 'wrapper_'.$identificador_unico;
+						$input_name 	= "{$tipo}_{$parent}";
 						$aditional_css  = $this->get_element_aditional_css();
-						$component_info 	= $this->get_component_info('json');
+						$component_info = $this->get_component_info('json');
 											
 						if (empty($dato)) { # && $traducible=='si'
 							$dato_reference_lang = $this->get_dato_default_lang();#$this->get_ejemplo();	#RecordObj_dd::get_termino_by_tipo($tipo,DEDALO_DATA_LANG_DEFAULT);						

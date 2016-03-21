@@ -887,13 +887,17 @@ class section extends common {
 			# Si esta sección recien creada es un proyecto, se agrega este proyecto como autorizado al usuario que lo creó
 			# Usuario logeado actualmente
 			$user_id = navigator::get_user_id();
-			if ($this->tipo==DEDALO_SECTION_PROJECTS_TIPO && !component_security_administrator::is_global_admin($user_id) ) {
+			if ($this->tipo==DEDALO_SECTION_PROJECTS_TIPO) { // && !component_security_administrator::is_global_admin($user_id) 
 				
-				#$component_filter_master	= new component_filter_master(DEDALO_FILTER_MASTER_TIPO, $user_id, 'edit', DEDALO_DATA_NOLAN);
-				$component_filter_master	= component_common::get_instance('component_filter_master', DEDALO_FILTER_MASTER_TIPO, $user_id, 'edit', DEDALO_DATA_NOLAN, DEDALO_SECTION_PROJECTS_TIPO);
+				$component_filter_master	= component_common::get_instance('component_filter_master',
+																			 DEDALO_FILTER_MASTER_TIPO,
+																			 $user_id,
+																			 'edit',
+																			 DEDALO_DATA_NOLAN,
+																			 DEDALO_SECTION_USERS_TIPO);
 				$dato_filter_master 		= $component_filter_master->get_dato();				
-				$element 					= array($this->section_id=>"2");
-				$new_dato_filter_master		= (array)$dato_filter_master + (array)$element;				
+				$element 					= array($this->section_id => "2");
+				$new_dato_filter_master		= (array)$dato_filter_master + $element;	dump($new_dato_filter_master, ' new_dato_filter_master ++ '.to_string());			
 				$component_filter_master->set_dato($new_dato_filter_master);
 				$component_filter_master->Save();
 					#dump($component_filter_master,'component_filter_master');				
@@ -2403,6 +2407,7 @@ class section extends common {
 		return $inverse_locators;
 
 	}#end remove_all_inverse_references
+
 
 
 

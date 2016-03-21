@@ -70,7 +70,8 @@ class diffusion_rdf extends diffusion {
 		
 		#$parse .= self::resolve_rdf_object( $rdf_object );	
 		$resolved = (object)self::resolve_rdf_object( $rdf_object, $section_tipo, $section_id );
-			#dump($rdf_object->propiedades->is_header, ' rdf_object ++ '.to_string());		
+			#dump($rdf_object->propiedades->is_header, ' rdf_object ++ '.to_string());
+				#dump($resolved, ' resolved ++ '.to_string());	
 		
 		#
 		# IN TAG
@@ -93,7 +94,7 @@ class diffusion_rdf extends diffusion {
 				
 				$n_childrens=count($data);
 				
-				$i=1; foreach ($data as $data_obj) {
+				$i=1;foreach ($data as $data_obj) {
 					
 					
 					if ( $rdf_object->modelo_name=='rdf:subject' &&
@@ -124,11 +125,11 @@ class diffusion_rdf extends diffusion {
 
 				#
 				# OUT TAG
-				if ($n_childrens==1 && $data_obj->modelo_name=='rdf:predicate' && empty($rdf_object->ar_related)) {	//&& $rdf_object->modelo_name=='rdf:predicate'	&& empty($rdf_object->ar_related)					
-					$parse .= '/>';					
+				if ($n_childrens==1 && $data_obj->modelo_name=='rdf:predicate' && empty($rdf_object->ar_related)) {	//&& $rdf_object->modelo_name=='rdf:predicate'	&& empty($rdf_object->ar_related)		
+					$parse .= '/>';
 				}else{
 					$parse .= isset($resolved->out_tag) ? $resolved->out_tag : '';
-				}				
+				}
 				
 			}//end if (!empty($data)) {
 		
@@ -142,7 +143,7 @@ class diffusion_rdf extends diffusion {
 
 
 	/**
-	* RESOLVE_RSF_OBJECT
+	* RESOLVE_RDF_OBJECT
 	* @return object $resolved
 	*/
 	public static function resolve_rdf_object( $received_rdf_object, $section_tipo, $section_id ) {
@@ -162,7 +163,8 @@ class diffusion_rdf extends diffusion {
 		$ar_related  = $rdf_object->ar_related;
 		$propiedades = isset($rdf_object->propiedades) ? $rdf_object->propiedades : false;
 		$type 		 = isset($rdf_object->propiedades->type) ? $rdf_object->propiedades->type : 'default';
-		
+		$separator   = isset($rdf_object->propiedades->separator) ? $rdf_object->propiedades->separator : '/';
+		$format   	 = isset($rdf_object->propiedades->format) ? $rdf_object->propiedades->format : false;
 
 		#
 		# RESOLVE BY TYPE
@@ -229,28 +231,114 @@ class diffusion_rdf extends diffusion {
 				$base_uri = isset($propiedades->base_uri) ? $propiedades->base_uri : null;
 				$add_uri  = isset($propiedades->add_uri) ? $propiedades->add_uri : array();
 				
-				$add_uri_string='';foreach((array)$add_uri as $component_tipo) {
+				# iterate elements
+				$add_uri_string=''; foreach((array)$add_uri as $object_uri) {						
 					
+					$component_tipo = $object_uri->value; // Default behaviour									
+					// component_autocomplete cases overriding default list
+					if (isset($object_uri->source)) {
+						$component_tipo = $object_uri->source;
+					}
+
 					# Resolve value
 					$ct_modelo_name = RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
-					if ($ct_modelo_name=='component_section_id') {
-						$value = $section_id;
-					}else{
-						$ct_modelo_name = RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
-						$component_obj 	 = component_common::get_instance(	$ct_modelo_name,
-																			$component_tipo,
-																			$section_id,
-																			'list',
-																			DEDALO_DATA_LANG,
-																			$section_tipo);
-						$dato = $component_obj->get_valor();
-							#dump($dato, ' dato ++ '.to_string( $related_tipo ));
-						$value = $dato;	
-					}
+					switch ($ct_modelo_name) {
+						case 'component_section_id':
+							$value = $section_id;
+							break;
+
+						case 'component_autocomplete':
+							#dump($component_tipo, ' component_tipo ++ '.to_string());
+							$component_obj 	 = component_common::get_instance(	$ct_modelo_name,
+																				$component_tipo,
+																				$section_id,
+																				'list',
+																				DEDALO_DATA_LANG,
+																				$section_tipo);
+							$dato = $component_obj->get_valor(DEDALO_DATA_LANG, 'string', (array)$object_uri->value);	//  Ref. $lang=DEDALO_DATA_LANG, $format='string', $ar_related_terms=false
+								#dump($dato, ' dato ++ '.to_string( $object_uri->value ));
+							$value = $dato;
+							break;
+
+						default:
+							$component_obj 	 = component_common::get_instance(	$ct_modelo_name,
+																				$component_tipo,
+																				$section_id,
+																				'list',
+																				DEDALO_DATA_LANG,
+																				$section_tipo);
+							$dato = $component_obj->get_valor();
+								#dump($dato, ' dato ++ '.to_string( $related_tipo ));
+							$value = $dato;
+							break;
+					}					
 					$add_uri_string .= $value;
-					$add_uri_string .= $component_tipo!=end($add_uri) ? '/' : '';
+					$add_uri_string .= $object_uri!=end($add_uri) ? $separator : '';										
+					
 				}
-				$value = " $name=\"{$base_uri}{$add_uri_string}\"";			
+				if ($modelo_name=='rdf:predicate') {
+					$value = " $name=\"{$base_uri}{$add_uri_string}\"";
+
+					if(SHOW_DEBUG) {
+						if ($base_uri=='http://numismatics.org/ocre/id/ric.') {
+
+							self::test_method($base_uri, $add_uri_string, $section_id);
+							/* PASADO AL MÉTODO 'test_method' 
+								$url_test = $base_uri.$add_uri_string;
+								#dump($value, ' value ++ '.$section_id.' -> '.to_string($url_test));
+								$response = get_http_response_code($url_test);
+									#dump($response, ' response ++ '.to_string($url_test));
+								if ($response==404) {
+									echo "<div style=\"text-align:left\"> $section_id - OPS! PAGE NOT FOUND ($response) $url_test </div>";
+									$component_obj = component_common::get_instance('component_radio_button',
+																					'mupreva2232',
+																					$section_id,
+																					'edit',
+																					DEDALO_DATA_NOLAN,								
+																					'mupreva1');
+									$locator = new locator();
+										$locator->set_section_tipo('dd64');
+										$locator->set_section_id(2);
+
+									$component_obj->set_dato($locator);
+									$component_obj->Save();
+								}else{
+									echo "<div style=\"text-align:left\"> $section_id - OK. PAGE EXISTS ($response) $url_test </div>";
+									$jsonld_test = $url_test.'.jsonld';
+									#$response = file_get_contents($rdf_test);
+									$opts   = array( 
+	        									'http' => array( 
+									            'method'=>"GET", 
+									            'header'=>"Content-Type: text/html; charset=utf-8") 
+												);
+									$context 	  	= stream_context_create($opts);
+									$content_data 	= file_get_contents($jsonld_test,false,$context);
+
+									$jsonld  		= json_decode($content_data);
+									$graphs 		='@graph';
+									$isReplacedBy	= 'dcterms:isReplacedBy';
+									$ids 			='@id';
+									foreach ($jsonld->$graphs as $graph) {
+										$exists = isset($graph->$isReplacedBy)  ? true : false;
+										#echo "<div style=\"text-align:left\">aaaa ".print_r($exists)."</div>";
+										#dump($jsonld->$graphs);
+										if($exists){
+											echo "<div style=\"text-align:left\"> $section_id - OPS!. DEPRECATE URI $url_test </br>" ;
+											foreach ($graph->$isReplacedBy as $id) {
+												echo "CHANGE URI: ".$id->$ids;
+												echo "</br>";
+											}
+											echo " </div>";
+										}
+									}
+								}
+							*/
+						}
+					}//end if(SHOW_DEBUG) {
+
+				}else{
+					$value = "{$base_uri}{$add_uri_string}";	
+				}							
 				break;	
 
 			case 'var_uri';
@@ -286,13 +374,19 @@ class diffusion_rdf extends diffusion {
 								#dump($dato, ' dato ++ '.to_string( $ct_modelo_name ));
 							$value = $dato;
 						}
-						$var_uri_string .= "$key=$value";
+						#$var_uri_string .= "$key=$value";
+						if(empty($value)){
+							$var_uri_string .= "$value"; // Rewrite version
+						} else{
+							$var_uri_string .= "/$value"; // Rewrite version
+						}
+						
 					}
 					
-					$var_uri_string .= ($component_tipo!=end($var_uri)) ? '&' : '';
-					
+					$var_uri_string .= ($component_tipo!=end($var_uri)) ? '&' : '';					
 				}
-				$value = " $name=\"{$base_uri}?{$var_uri_string}\"";
+				#$value = " $name=\"{$base_uri}?{$var_uri_string}\"";
+				$value = " $name=\"{$base_uri}{$var_uri_string}\"";	// Rewrite version
 				break;
 		
 			default:
@@ -314,6 +408,18 @@ class diffusion_rdf extends diffusion {
 				#if(!isset($value)) $value = "\n>> Default value for ".$name." - $modelo_name - $tipo - $type" ;
 				break;
 		}
+
+		#
+		# FORMAT MODIFIERS
+		if ($format) {
+			#dump($format, ' format ++ '.to_string());
+			switch (true) {
+				case ( property_exists($format, 'find_replace') ):
+					debug_log(__METHOD__." Replacing value (".$format->find_replace->find." => ".$format->find_replace->replace.") in: ".to_string($value), logger::DEBUG);
+					$value = str_replace($format->find_replace->find, $format->find_replace->replace, $value);					
+					break;
+			}
+		}//end if ($format) {
 
 		/*
 		<nmo:hasDiameter 300 x 200
@@ -339,7 +445,7 @@ class diffusion_rdf extends diffusion {
 					$resolved->out_tag .= "";
 				}
 				if (empty($ar_related)) {
-					$resolved->out_tag .= "\n";
+					#$resolved->out_tag .= "\n";
 				}else{
 
 				}
@@ -348,8 +454,7 @@ class diffusion_rdf extends diffusion {
 			
 			case 'rdf:predicate':
 				$resolved->in_tag  	 = '';
-				$resolved->value_tag = $value;
-				
+				$resolved->value_tag = $value;				
 				$resolved->out_tag 	 = '';				
 				break;
 		}
@@ -489,9 +594,13 @@ class diffusion_rdf extends diffusion {
 		#
 		# XML. Verify xml format is valid and format output	
 		$xml_string = self::xml_object($rdf_wrapper_string, $options->xml_validate, $options->xml_format_output);
-
+		if (!$xml_string) {
+			$response->msg[]  = "xml_string error. bas format";	// .": \n".htmlspecialchars($xml_string);
+			$response->result = false;	//$xml_string;
+		}else{
 			$response->msg[]  = "xml_string created successfully";	// .": \n".htmlspecialchars($xml_string);
-			$response->result = true;	//$xml_string;			
+			$response->result = true;	//$xml_string;
+		}						
 
 		#
 		# SAVE FILE
@@ -516,7 +625,7 @@ class diffusion_rdf extends diffusion {
 	* @return string $xml_string
 	*/
 	public static function xml_object( $string, $xml_validate=true, $xml_format_output=true ) {
-		
+		#return $string;
 		#
 		# TIDY MODE
 		/* 
@@ -538,15 +647,123 @@ class diffusion_rdf extends diffusion {
 			$xml->validateOnParse 		= $xml_validate;	// Default: true
 			$xml->loadXML( $string );
 			$xml->formatOutput 			= $xml_format_output; // Default: true
-				#dump($xml, ' xml ++ '.to_string());
+				#dump($xml, ' xml ++ '.to_string());			
 
 			$xml_string = $xml->saveXml();
-
+			
+			/* validate dtd
+			debug_log(__METHOD__." XML->validate response: ".to_string( $xml->validate() ), logger::DEBUG);
+			if (!$xml->validate()) {
+			   #return false;
+			}
+			*/
 
 		return $xml_string;
 
 	}#end xml_object
 
+
+
+	/**
+	* TEST_METHOD
+	* @return 
+	*/
+	public static function test_method($base_uri, $add_uri_string, $section_id) {
+
+		if ($base_uri!='http://numismatics.org/ocre/id/ric.') return false;		
+		
+		$start_time = microtime(1);
+		
+		$url_test = $base_uri.$add_uri_string;
+
+		/*
+		$response = get_http_response_code($url_test);
+			#dump($response, ' response ++ '.to_string($url_test));
+		*/
+
+			$opts   = array( 
+						'http' => array( 
+			            'method'=>"GET", 
+			            'header'=>"Content-Type: text/html; charset=utf-8") 
+						);
+			$context 	  	= stream_context_create($opts);
+			$jsonld_test 	= $url_test.'.jsonld';
+			$content_data 	= file_get_contents($jsonld_test,false,$context);
+				#dump($content_data, ' content_data ++ '.to_string());
+			if (!$content_data) {
+				$response = 404;
+			}else{
+				$response=200;
+			}
+
+
+		$msg = '';
+
+		if ($response==404) {
+
+			$msg .= "<div style=\"text-align:left\"> $section_id - OPS! PAGE NOT FOUND ($response) $url_test </div>";
+			$component_obj = component_common::get_instance('component_radio_button',
+															'mupreva2232',
+															$section_id,
+															'edit',
+															DEDALO_DATA_NOLAN,								
+															'mupreva1');
+			$locator = new locator();
+				$locator->set_section_tipo('dd64');
+				$locator->set_section_id(2);
+
+			$component_obj->set_dato($locator);
+			$component_obj->Save();
+
+		}else{
+
+			$msg .= "<div style=\"text-align:left\"> $section_id - OK. PAGE EXISTS ($response) $url_test </div>";
+			/*
+				$jsonld_test = $url_test.'.jsonld';
+				$opts   = array( 
+							'http' => array( 
+				            'method'=>"GET", 
+				            'header'=>"Content-Type: text/html; charset=utf-8") 
+							);
+				$context 	  	= stream_context_create($opts);
+				$content_data 	= file_get_contents($jsonld_test,false,$context);
+					#dump($content_data, ' content_data ++ '.to_string());
+				*/
+
+			#if (!$content_data) {
+			#	$msg .= "<div style=\"text-align:left\"> $section_id - OPS!. PAGE EXISTS BUT CONTENTS ARE UNAVAILABLE: $url_test </br>" ;
+			#}else{
+
+				$jsonld  		= json_decode($content_data);
+				$graphs 		= '@graph';
+				$isReplacedBy	= 'dcterms:isReplacedBy';
+				$ids 			= '@id';
+				if(isset($jsonld->$graphs)) foreach ((array)$jsonld->$graphs as $graph) {
+					$exists = isset($graph->$isReplacedBy)  ? true : false;
+					#$msg .= "<div style=\"text-align:left\">aaaa ".print_r($exists)."</div>";
+					#dump($jsonld->$graphs);
+					if($exists){
+						$msg .= "<div style=\"text-align:left\"> $section_id - OPS!. DEPRECATED URI $url_test </br>" ;
+						foreach ((array)$graph->$isReplacedBy as $id) {
+							$msg .= "  CHANGE URI: ".$id->$ids;
+							$msg .= "</br>";
+						}
+						$msg .= " </div>";
+					}
+				}
+
+			#}//end if (!$content_data) {
+
+		}//end if ($response==404)
+
+		$total=round(microtime(1)-$start_time,3);
+		$msg .= " Time: $total";
+		
+		logger::$obj['error']->log_message($msg, logger::ERROR, __METHOD__);
+
+		echo $msg;
+
+	}#end test_method
 
 
 }//end class

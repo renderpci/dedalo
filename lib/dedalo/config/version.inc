@@ -419,6 +419,44 @@
 		component_profile : added support to replace user permissions data. Now users no longer have own permission. Instead, users will have profiles always (mandatory)
 							utility is added for compatibility to previous mode
 
+	Valencia 16-02-2016 v4.0.4
+		component_html_text : Added tinymce button 'upload' to manage locall images via plupload lib 
+		av_media_player.js  : Fixed bug with timecode generator when values pases from 01:07:59 to 01:08:00 (for example), calculate wrong value like 01:07:00
+		image_magick : thumb Changed to adjust to gigger side and used as div background instead image in lists
+
+	
+	Valencia 22-02-2016 v4.0.5
+		config : Added constants for subtitles DEDALO_SUBTITLES_FOLDER, DEDALO_AV_SUBTITLES_EXTENSION
+
+
+	Valencia 12-03-2016 v4.0.6
+		component_av : Added subtitles track
+		tool_import_bibtext : created new tool to import bibtex files (generated from Mendeley for example)
+		component_text_area : Now content is reloaded on save for updated and safe visualization
+		PDFjs lib updated from 1.1.1 to 1.3.91
+		tinymce : updated to 4.3.4 and fixed incompatibilities
+		component_common : Save: fix javascript problem on save over Chrome version <=39 
+		tool_export : new tool export added to generate csv files from section list results
+		tool_transcription : added aditional command to safe save text_area on before unload window event
+		section_list : solved issue when search. Pagination is set now to offset=0 and offset_list=0 to reset pagination results on every search
+		component_text_area : added support to maintain content and keep changes when broser session is closed
+		tinymce : updated to 4.3.7
+		component_autocomplete: fixed error that return 'valor' allways with DEDALO_DATA_LANG. Now respect received var $lang (affect diffusion mainly)
+		component_image : fix canvas zoom issue with retina displays
+		paper : updated paper js form 0.9.20 to 0.9.25
+		component_image : image vectors tool : added new big handlers and better points control
+
+		
+	Valencia 12-03-2016 v4.0.7
+		tool_image_versions : fixed bug on delete image of every quality file, not delete 'original' not dedalo extension (like .png) file. Now all files of current quality are moved to deleted files
+		tool_export : fixed bug in path name and minor visualizations fixes
+		lib bootstrap : fixed improper lib calls using path with version number (tools)
+		lib bootstrap : updated from 3.1.1 to 3.3.6
+		config : changed order of vars to allow use 'SHOW_DEBUG' in logger class
+		logger : activated again dedalo file log 
+
+
+
 
 	/**
 	* @todo
@@ -435,8 +473,8 @@
 	
 	
 	# Version
-	define('DEDALO_VERSION'	, '4.0.3');
-	define('DEDALO_BUILD'	, '09-02-2016');
+	define('DEDALO_VERSION'	, '4.0.7b4');
+	define('DEDALO_BUILD'	, '21-03-2016');
 	
 	/*
 	# Build

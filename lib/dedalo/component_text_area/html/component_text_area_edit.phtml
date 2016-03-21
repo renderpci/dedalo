@@ -59,6 +59,8 @@
 		
 		case ($permissions>=2)	:
 
+					#
+					# COMPONENT STATE
 					if (isset($component_state_html)) {
 						$html_contenido .= $component_state_html;
 					}
@@ -77,10 +79,16 @@
 						$html_contenido .= $tool_lang->get_html();
 					}
 					*/
+
+					#
+					# BROKEN INDEX TAGS WARNING
+					if (isset($component_warning)) {
+						$html_contenido .= "<div class=\"text_area_warning\"><span class=\"warning\">".$component_warning."</span></div>";
+					}
 					
-					/**/
-					##
-					# Text area  contenteditable=\"true\"
+					
+					#
+					# TEXTAREA  contenteditable=\"true\"
 					#					
 					$html_contenido .= "\n <textarea class=\"css_text_area $text_area_tm {$ar_css['css_text_area']}\" 
 					id=\"{$identificador_unico}\"
@@ -93,7 +101,10 @@
 					data-last_tag_index_id=\"{$last_tag_index_id}\"
 					data-canvas_id=\"$canvas_id\"
 					data-context_name=\"$context_name\"
+					data-id_wrapper=\"$id_wrapper\"
 					>$dato</textarea>";
+
+					
 					
 
 					/*
@@ -151,7 +162,24 @@
 						}	 
 					$html_contenido .= "</div>";
 					*/
-					
+
+
+					#
+					# BTN CREATE FRAGMENT  
+					#
+					$html_contenido .= "\n <div class=\"css_button_generic btn_create_fragment\" style=\"display:none\"
+					data-identificador_unico=\"$identificador_unico\"
+					data-parent=\"{$parent}\"
+					data-section_tipo=\"{$section_tipo}\"
+					onclick=\"tool_indexation.create_fragment(this);\"
+					>";				
+					$html_contenido .= label::get_label('crear_nuevo_fragmento');
+					if(SHOW_DEBUG) {
+						#$html_contenido .= " <span class=\"debug_info\">[last_tag_index_id:$last_tag_index_id - caller_id:$caller_id]</span>";
+					}
+					$html_contenido .= "</div>";
+
+
 
 					##
 					# WRAP CURRENT SELECTED FRAGMENT (RELATION / ADD PORTAL BUTTON) 
@@ -169,21 +197,7 @@
 					<div class=\"content_data\"><!-- AJAX CONTENT HERE (selected_fragment) --></div>
 					</div>";
 
-
-					#
-					# BTN CREATE FRAGMENT  
-					#
-					$html_contenido .= "\n <div class=\"css_button_generic btn_create_fragment\" style=\"display:none\"
-					data-identificador_unico=\"$identificador_unico\"
-					data-parent=\"{$parent}\"
-					data-section_tipo=\"{$section_tipo}\"
-					onclick=\"tool_indexation.create_fragment(this);\"
-					>";				
-					$html_contenido .= label::get_label('crear_nuevo_fragmento');
-					if(SHOW_DEBUG) {
-						#$html_contenido .= " <span class=\"debug_info\">[last_tag_index_id:$last_tag_index_id - caller_id:$caller_id]</span>";
-					}
-					$html_contenido .= "</div>";
+					
 
 		
 					if($permissions==3)	{

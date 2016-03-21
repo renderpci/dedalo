@@ -194,15 +194,21 @@
 					}
 
 					# ORIGINAL ICON (TIF, PSD, ETC.)
-			    	$original = $this->component_obj->get_original();
-			    		#dump($original,'original');
-			    	if($original) {
+		    		$original = $this->component_obj->get_original($quality);
+		    		if ($original) {
+
 			    		$html .= "<div class=\"original_icon\" title=\"original $original version\"
-				    	data-image_id=\"$image_id\" data-quality=\"$quality\" data-aditional_path=\"$aditional_path\" data-initial_media_path=\"$initial_media_path\" data-extension=\"$original\"
-				    	data-tipo=\"$tipo\" data-parent=\"$parent\"
+				    	data-image_id=\"$image_id\"
+				    	data-quality=\"$quality\"
+				    	data-aditional_path=\"$aditional_path\"
+				    	data-initial_media_path=\"$initial_media_path\"
+				    	data-extension=\"$original\"
+				    	data-tipo=\"$tipo\"
+				    	data-parent=\"$parent\"
 				    	onclick=\"tool_image_versions.download_file(this)\"
 				    	>$original</div>";
 			    	}
+			    	
 			    	    	
 			    	$html .= "\n </td>";
 			    }

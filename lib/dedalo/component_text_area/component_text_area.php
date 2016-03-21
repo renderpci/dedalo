@@ -6,8 +6,7 @@
 	$tipo 					= $this->get_tipo();
 	$parent 				= $this->get_parent();		#dump($parent,"parent");
 	$section_tipo 			= $this->get_section_tipo();	
-	$modo					= $this->get_modo();		
-	$dato 					= $this->get_dato();
+	$modo					= $this->get_modo();	
 	$caller_id 				= navigator::get_selected('caller_id');		
 	$caller_tipo 			= navigator::get_selected('caller_tipo');	
 
@@ -19,11 +18,11 @@
 	$ejemplo				= $this->get_ejemplo();
 	$html_title				= "Info about $tipo";
 	
-	$valor					= $this->get_valor();				
 	$lang					= $this->get_lang();
 	$lang_name				= $this->get_lang_name();
 	$identificador_unico	= $this->get_identificador_unico();
 	$component_name			= get_class($this);
+	$valor					= $this->get_valor();
 	$dato_raw 				= tools::truncate_text(htmlspecialchars($valor),300);	#tools::truncate_text($string, $limit, $break=" ", $pad="...")
 	#$context_name 			= $this->get_context();
 		#dump($context_name,'context_name');
@@ -48,6 +47,11 @@
 
 	
 	switch($modo) {
+
+		case 'load_tr':
+					$dato	= $this->get_dato();
+					$text	= TR::addTagImgOnTheFly($dato);							
+					break;
 		
 		#case 'portal_list'	:
 						#$file_name = 'edit';
@@ -57,6 +61,31 @@
 					# Verify component content record is inside section record filter
 					if ($this->get_filter_authorized_record()===false) return NULL ;
 
+					$component_info = $this->get_component_info('json');
+					$context 		= $this->get_context();
+						#dump($context, ' context ++ '.to_string($modo));
+						
+					#
+					# FIX BROKEN TAGS
+					$ar_tipos = unserialize(DEDALO_TEXTAREA_FIX_BROQUEN_TAGS_TIPOS);
+					if (  in_array($this->tipo, $ar_tipos) ) {	//($modo=='edit' || $modo=='indexation') &&
+						if (isset($context) && $context=='default') {							
+							$save=true;
+							if(SHOW_DEBUG) {
+								$save=false;
+							}
+							$broken_index_tags = $this->fix_broken_index_tags($save);
+							if ($broken_index_tags->result) {
+								$component_warning = $broken_index_tags->msg;
+								if(SHOW_DEBUG) {
+									$component_warning .= " (Fixed in ".$broken_index_tags->total.")";
+								}
+							}
+							#dump($broken_index_tags, ' broken_index_tags ++ '.to_string());	
+						}									
+					}//end if ($modo=='edit' && in_array($this->tipo, $ar_tipos) ) {
+
+					$dato 				= $this->get_dato();
 					$dato 				= TR::addTagImgOnTheFly($dato);
 					$ar_css				= $this->get_ar_css();
 					$last_tag_index_id	= $this->get_last_tag_index_id();
@@ -64,8 +93,7 @@
 					$input_name 		= "{$tipo}_{$parent}";
 					$text_area_tm 		= NULL;
 
-					$component_info 	= $this->get_component_info('json');
-					$context 			= $this->get_context();
+					
 						
 					
 					# DATO_REFERENCE_LANG
@@ -103,13 +131,14 @@
 							break;						
 						default:
 							$component_state_html = $this->get_state_process_html();	
-					}								
-
-					#dump($canvas_id,'canvas_id');					
+					}
+			
 					break;
 
 		
 		case 'tool_lang' :
+
+					$dato 				= $this->get_dato();
 					$dato 				= TR::addTagImgOnTheFly($dato);
 					$ar_css				= $this->get_ar_css();
 					$last_tag_index_id	= $this->get_last_tag_index_id();		#dump($last_tag_index_id,'last_tag_index_id');
@@ -122,7 +151,8 @@
 					#$file_name  = 'edit';
 					break;
 	
-		case 'tool_time_machine' :	
+		case 'tool_time_machine' :
+
 					$ar_css				= $this->get_ar_css();
 					$last_tag_index_id	= $this->get_last_tag_index_id();
 
@@ -186,7 +216,8 @@
 					#error_log('fragment_info fragment_text: '.$fragment_text);
 					break;
 
-		case 'selected_fragment' :						
+		case 'selected_fragment' :
+
 					$arguments = (object)$this->arguments;
 						#dump($arguments,"selected_fragment arguments");
 					if (!isset($arguments->tagName)) {
@@ -241,9 +272,13 @@
 					#error_log('selected_fragment rel_locator: '.$rel_locator);					
 					break;
 		
-		case 'search' :	$ar_css		= false;
-						$ar_comparison_operators 	= $this->build_search_comparison_operators();
-						$ar_logical_operators 		= $this->build_search_logical_operators();						
+		case 'search' :
+					$ar_css		= false;
+					$ar_comparison_operators 	= $this->build_search_comparison_operators();
+					$ar_logical_operators 		= $this->build_search_logical_operators();
+
+					$valor = isset($_GET['tipo']) ? $_GET['tipo'] : null;
+
 					break;
 		
 		case 'portal_list'	:
