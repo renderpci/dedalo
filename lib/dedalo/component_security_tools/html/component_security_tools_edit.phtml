@@ -2,15 +2,9 @@
 
 	# VISUALIZADOR HTML	
 	
-	# ELEMENTOS
-	if(!isset ($ar_css['css_span_dato'])) 						$ar_css['css_span_dato']='';
-	if(!isset ($ar_css['css_check_box_security_tools']))		$ar_css['css_check_box_security_tools']='';
-	if(!isset ($ar_css['css_check_box_security_tools_rotulo']))	$ar_css['css_check_box_security_tools_rotulo']='';
-	if(!isset ($ar_css['css_span_debugger']))					$ar_css['css_span_debugger']='';
-	
-	
 	print "\n<!-- SECURITY TOOLS [tipo:$tipo section_id_matrix:$parent] -->";
-	print "\n<div class=\"css_wrap_security_tools wrap_component\" id=\"{$id_wrapper}\"
+
+	print "\n<div class=\"wrap_component css_wrap_security_tools wrap_component_{$tipo}\" id=\"{$id_wrapper}\"
 	data-tipo=\"{$tipo}\"
 	data-lang=\"{$lang}\"
 	data-parent=\"{$parent}\"
@@ -31,7 +25,7 @@
 	$html_contenido = '';
 	switch($permissions) {
 			
-		case 0	:	$html_contenido .= "\n <span class=\"css_span_dato {$ar_css['css_span_dato']}\"> ".label::get_label('sin_acceso')." (security_tools)</span>"; 
+		case 0	:	$html_contenido .= "\n <span class=\"css_span_dato\"> ".label::get_label('sin_acceso')." (security_tools)</span>"; 
 					break;
 						
 		case 1	: 	if (is_array ($ar_tools)) foreach ($ar_tools as $tool_name) {
@@ -41,14 +35,14 @@
 						}else {
 							$checked = "";
 						}
-						$html_contenido .= "\n <input class=\"css_check_box_security_tools {$ar_css['css_check_box_security_tools']}\" type=\"checkbox\" 
+						$html_contenido .= "\n <input class=\"css_check_box_security_tools\" type=\"checkbox\" 
 						name=\"{$input_name}\"
 						data-tipo=\"{$tipo}\"
 						data-section_tipo=\"{$section_tipo}\"
 						data-parent=\"{$parent}\"
 						value=\"{$tool_name}\" title=\"$html_title\" 
 						$checked  disabled />";						
-						$html_contenido .= "\n <label class=\"css_check_box_security_tools_rotulo {$ar_css['css_check_box_security_tools_rotulo']}\" $required >$tool_name</label>";	
+						$html_contenido .= "\n <label class=\"css_check_box_security_tools_rotulo\" $required >$tool_name</label>";	
 					}
 					break;	
 						
@@ -58,21 +52,20 @@
 					
 					if (is_array ($ar_tools)) foreach ($ar_tools as $tool_name => $tool_label) {
 						
+						$checked = (is_array($dato) && array_key_exists($tool_name,$dato)) ? 'checked="checked"' : '';						
 						
-						if( is_array($dato) && array_key_exists($tool_name,$dato) ) {
-							$checked = 'checked="checked"';
-						}else {
-							$checked = "";
-						}
-						
-						$html_contenido .= "\n <input class=\"css_check_box_security_tools\" type=\"checkbox\" 
+						$html_contenido .= "\n <input class=\"css_check_box_security_tools\" type=\"checkbox\"
+						onchange=\"component_security_tools.Save(this)\"
 						name=\"{$input_name}\"
 						data-tipo=\"{$tipo}\"
 						data-lang=\"{$lang}\"
 						data-parent=\"{$parent}\"
 						data-section_tipo=\"{$section_tipo}\"
 						value=\"{$tool_name}\" 
-						title=\"$tool_name\" $checked $disabled />";
+						title=\"$tool_name\"
+						$checked
+						$disabled
+						/>";
 
 						$html_contenido .= "\n<div class=\"icon_bs {$tool_name}_icon icon_tool_preview\"> </div>";
 
@@ -80,19 +73,16 @@
 						if(SHOW_DEBUG) {
 							$tool_label .= " <small class=\"notas\">[$tool_name]</small>";
 						}
-						$html_contenido .= "\n <label class=\"css_check_box_security_tools_rotulo {$ar_css['css_check_box_security_tools_rotulo']}\" $required >$tool_label</label><br>";
-						
+						$html_contenido .= "\n <label class=\"css_check_box_security_tools_rotulo\" $required >$tool_label</label><br>";						
 					}
 					
 					#$html_contenido .= "\n <span class=\"css_span_log\"></span>";					
-					#$html_contenido .= "\n <span class=\"css_span_ejemplo {$ar_css['css_span_ejemplo']}\">$ejemplo</span>";
-					
-					#$html_contenido .= $html_tools;
-		
-			if($permissions==3)
-			
-					$html_contenido .= "\n <span class=\"css_span_debugger {$ar_css['css_span_debugger']}\" id=\"debugger_{$tipo}\" >{$debugger}</span>";	
-					
+					#$html_contenido .= "\n <span class=\"css_span_ejemplo\">$ejemplo</span>";
+							
+					if($permissions==3){
+						$html_contenido .= "\n <span class=\"css_span_debugger\" id=\"debugger_{$tipo}\" >{$debugger}</span>";
+					}
+					break;					
 							
 	}
 

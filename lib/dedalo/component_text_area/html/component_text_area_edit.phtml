@@ -1,18 +1,11 @@
 <?php
 
-	# VISUALIZADOR HTML	
+	# VISUALIZADOR HTML
+	
 
-	# ELEMENTOS
-	if(!isset ($ar_css['css_span_dato'])) 		$ar_css['css_span_dato']='';
-	if(!isset ($ar_css['css_text_area'])) 		$ar_css['css_text_area']='';
-	if(!isset ($ar_css['css_span_ejemplo'])) 	$ar_css['css_span_ejemplo']='';
-	if(!isset ($ar_css['css_span_debugger']))	$ar_css['css_span_debugger']='';
-	
-	if(!isset ($html_tools))					$html_tools='';
-	
-	
 	print "\n<!-- TEXT AREA [tipo:$tipo section_id:$parent modo:$modo] $label $identificador_unico -->";
-	print "\n<div class=\"css_wrap_text_area wrap_component\" id=\"{$id_wrapper}\"
+	
+	print "\n<div class=\"wrap_component css_wrap_text_area wrap_component_{$tipo}\" id=\"{$id_wrapper}\"
 	data-tipo=\"{$tipo}\"
 	data-section_tipo=\"{$section_tipo}\"
 	data-parent=\"{$parent}\"
@@ -21,26 +14,26 @@
 	data-dato=\"{$dato_raw}\"
 	data-context_name=\"{$context_name}\"
 	data-component_name=\"{$component_name}\"
-	data-component_info='{$component_info}' >";
-	
+	data-component_info='{$component_info}'>";
+
 	# ETIQUETA (LABEL)
 	$html_label = component_common_draw::draw_label($this);
-	
+
 	# CONTENIDO (INPUT)
 	$html_contenido = '';
-	switch($permissions) {	
-			
-		case 0	:	$html_contenido .= "";	
+	switch($permissions) {
+
+		case 0	:	$html_contenido .= "";
 					break;
-						
+
 		case 1	: 	#$html_contenido .= "\n<div class=\"text_area_content text_area_content_shadow\" >";
-					$html_contenido .= "\n <span class=\"css_span_dato {$ar_css['css_span_dato']}\">$dato</span>";
+					$html_contenido .= "\n <span class=\"css_span_dato\">$dato</span>";
 					#$html_contenido .= "\n</div>"; #end text_area_content
 
 					##
-					# WRAP CURRENT SELECTED FRAGMENT (RELATION / ADD PORTAL BUTTON) 
+					# WRAP CURRENT SELECTED FRAGMENT (RELATION / ADD PORTAL BUTTON)
 					#
-					$html_contenido .= "\n <div id=\"relations_ajax_div_{$tipo}\" class=\"wrap_fragment\" 
+					$html_contenido .= "\n <div id=\"relations_ajax_div_{$tipo}\" class=\"wrap_fragment\"
 					data-tipo=\"{$tipo}\"
 					data-section_tipo=\"{$section_tipo}\"
 					data-parent=\"{$parent}\"
@@ -53,10 +46,10 @@
 					<div class=\"content_data\"><!-- AJAX CONTENT HERE --></div>
 					</div>";
 
-						
-					break;	
-						
-		
+
+					break;
+
+
 		case ($permissions>=2)	:
 
 					#
@@ -67,11 +60,11 @@
 
 					#
 					# DATO REFERENCE DEFAULT LANG
-					/* DESACTIVO DE MOMENTO. VOLVER A ACTIVAR CUANDO LA B4 ESTÉ ESTABLE 
+					/* DESACTIVO DE MOMENTO. VOLVER A ACTIVAR CUANDO LA B4 ESTÉ ESTABLE
 					#if ($modo!='tool_lang' && !empty($default_component)) {
 					if ($modo=='edit' && !empty($default_component->dato)) {
 
-						#$html_contenido .= "\n <div class=\"dato_refecence_default_lang\">$dato_reference_lang</div>";						
+						#$html_contenido .= "\n <div class=\"dato_refecence_default_lang\">$dato_reference_lang</div>";
 						# Fijamos el lenguaje actual como el de destino para el tool_lang
 						$html_contenido .= "<script>set_localStorage('last_target_lang','$lang')</script>";
 						$tool_lang = new tool_lang($default_component,'button');
@@ -85,12 +78,12 @@
 					if (isset($component_warning)) {
 						$html_contenido .= "<div class=\"text_area_warning\"><span class=\"warning\">".$component_warning."</span></div>";
 					}
-					
-					
+
+
 					#
 					# TEXTAREA  contenteditable=\"true\"
-					#					
-					$html_contenido .= "\n <textarea class=\"css_text_area $text_area_tm {$ar_css['css_text_area']}\" 
+					#
+					$html_contenido .= "\n <textarea class=\"css_text_area $text_area_tm\"
 					id=\"{$identificador_unico}\"
 					name=\"{$input_name}\"
 					title=\"$html_title\"
@@ -102,16 +95,17 @@
 					data-canvas_id=\"$canvas_id\"
 					data-context_name=\"$context_name\"
 					data-id_wrapper=\"$id_wrapper\"
+					tabindex=\"1\"
 					>$dato</textarea>";
 
-					
-					
+
+
 
 					/*
 					##
-					# DIV 
-					#					
-					$html_contenido .= "\n <div class=\"css_text_area $text_area_tm {$ar_css['css_text_area']}\"
+					# DIV
+					#
+					$html_contenido .= "\n <div class=\"css_text_area $text_area_tm\"
 					id=\"{$identificador_unico}\"
 					name=\"{$input_name}\"
 					title=\"$html_title\"
@@ -124,15 +118,15 @@
 					data-context_name=\"$context_name\"
 					>$dato</div>";
 					*/
-					
-					
+
+
 					if (SHOW_DEBUG) {
 					#$html_contenido .= "<span class=\"debug_info\"> $identificador_unico</span>";
 					}
-					
-					
+
+
 					##
-					# BTN CREATE FRAGMENT  
+					# BTN CREATE FRAGMENT
 					#
 					/*
 					#if($caller_id>0)
@@ -144,13 +138,13 @@
 					$html_contenido .= "</div>";
 					*/
 
-					
 
-					
+
+
 					#
 					# RELATE BUTTON . Relate current selected text with caller_id section
 					# des: data-tipo=\"$caller_tipo\" data-caller_tipo=\"$caller_tipo\"	 data-caller_id=\"$caller_id\"
-					/*			
+					/*
 					$html_contenido .= "<div class=\"css_button_generic btn_relate_fragment\"
 					data-id_matrix=\"$parent\"
 					data-tagName=\"\"
@@ -159,20 +153,20 @@
 						$html_contenido .= "Relate selected fragment";
 						if(SHOW_DEBUG===true) {
 							$html_contenido .= " <span class=\"debug_info\">[parent:$parent - section_tipo:$section_tipo]</span>";	# caller_id:$caller_id -
-						}	 
+						}
 					$html_contenido .= "</div>";
 					*/
 
 
 					#
-					# BTN CREATE FRAGMENT  
+					# BTN CREATE FRAGMENT
 					#
 					$html_contenido .= "\n <div class=\"css_button_generic btn_create_fragment\" style=\"display:none\"
 					data-identificador_unico=\"$identificador_unico\"
 					data-parent=\"{$parent}\"
 					data-section_tipo=\"{$section_tipo}\"
 					onclick=\"tool_indexation.create_fragment(this);\"
-					>";				
+					>";
 					$html_contenido .= label::get_label('crear_nuevo_fragmento');
 					if(SHOW_DEBUG) {
 						#$html_contenido .= " <span class=\"debug_info\">[last_tag_index_id:$last_tag_index_id - caller_id:$caller_id]</span>";
@@ -182,7 +176,7 @@
 
 
 					##
-					# WRAP CURRENT SELECTED FRAGMENT (RELATION / ADD PORTAL BUTTON) 
+					# WRAP CURRENT SELECTED FRAGMENT (RELATION / ADD PORTAL BUTTON)
 					#
 					$html_contenido .= "\n <div id=\"relations_ajax_div_{$tipo}\" class=\"wrap_fragment\"
 					data-tipo=\"{$tipo}\"
@@ -197,31 +191,30 @@
 					<div class=\"content_data\"><!-- AJAX CONTENT HERE (selected_fragment) --></div>
 					</div>";
 
-					
 
-		
+
+
 					if($permissions==3)	{
-						#$html_contenido .= "\n <span class=\"css_span_debugger {$ar_css['css_span_debugger']}\" id=\"debugger_{$tipo}\" >{$debugger}</span>";
+						#$html_contenido .= "\n <span class=\"css_span_debugger\" id=\"debugger_{$tipo}\" >{$debugger}</span>";
 					}
-					
-					break;							
+
+					break;
 	}
 
-	# INIT : Init text editor	
+	# INIT : Init text editor
 	$html_contenido .= "\n<script>text_editor.init('$identificador_unico','$modo','$propiedades_json');</script>";
 	#$html_contenido .= "\n<script>tinymce.init({ selector:'textarea' });</script>";
-	
+
 	# Prepare content to show in page
 	tools::prepare_content($html_contenido);
 
-	
+
 	# PRINT HTML
 	print $html_label;
 	print $html_contenido;
-	
-	
-	print "\n</div><!-- /css_wrap_text_area  $label -->\n\n"; //wrap	
 
-	
+
+	print "\n</div><!-- /css_wrap_text_area  $label -->\n\n"; //wrap
+
+
 ?>
-

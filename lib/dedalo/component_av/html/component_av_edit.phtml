@@ -4,11 +4,10 @@
 
 
 	# ELEMENTOS
-	if(!isset ($ar_css['css_wrap_av']))			$ar_css['css_wrap_av']='';
 	
 	
 	print "\n<!-- AV [tipo:$tipo section_id_matrix:$parent] $label -->";
-	print "\n<div class=\"css_wrap_av wrap_component {$ar_css['css_wrap_av']}\"
+	print "\n<div class=\"wrap_component css_wrap_av wrap_component_{$tipo}\"
 	id=\"{$id_wrapper}\"
 	data-tipo=\"{$tipo}\"
 	data-lang=\"{$lang}\"
@@ -17,7 +16,8 @@
 	data-modo=\"{$modo}\"
 	data-dato=\"{$valor}\"
 	data-component_name=\"{$component_name}\"
-	data-component_info='{$component_info}' >";
+	data-component_info='{$component_info}'
+	>";
 	
 		
 		# ETIQUETA (LABEL)
@@ -46,7 +46,8 @@
 							 !$av_file_exits &&
 							 !$this->get_original_file_path(DEDALO_AV_QUALITY_ORIGINAL)
 							) {
-							$open_tool_default ="data-video_id=\"$video_id\"
+							$open_tool_default ="
+							data-video_id=\"$video_id\"
 							data-quality=\"".DEDALO_AV_QUALITY_ORIGINAL."\"
 							data-aditional_path=\"$aditional_path\"
 							data-initial_media_path=\"$initial_media_path\"
@@ -68,16 +69,13 @@
 						if ($av_file_exits) {
 							
 							# VIDEO
-							$html_contenido .= "<video class=\"css_av_video\" style=\"height:404px;\" onclick=\"component_av.video_play_toggle(this)\"
-							preload=\"none\"
-							controls=\"controls\"
-							poster=\"$posterframe_url\"
+							$html_contenido .= "<video id=\"{$player_id}\" class=\"css_av_video\" style=\"height:404px;\" poster=\"$posterframe_url\" preload=\"none\" controls=\"controls\"
+							onclick=\"component_av.video_play_toggle(this)\"
 							onerror=\"component_av.failed(event)\"
-							id=\"{$player_id}\"
 							data-tipo=\"{$tipo}\"
 							data-section_tipo=\"{$section_tipo}\"
 							data-parent=\"{$parent}\"
-							data-video_id=\"{$video_id}\"
+							data-video_id=\"{$video_id}\"							
 							>";
 
 								$html_contenido .= "\n <source id=\"video_mp4_{$tipo}\" src=\"$video_url\" type=\"video/mp4\" onerror=\"alert('Sorry. Unplayable media')\" >";	//onerror=\"alert('Sorry. Unplayable media')\" 
@@ -92,6 +90,14 @@
 								}
 
 							$html_contenido .= "\n</video>";
+
+
+							if(SHOW_DEBUG) {
+								require_once(DEDALO_LIB_BASE_PATH.'/media_engine/class.Ffmpeg.php');
+								$media_streams = Ffmpeg::get_media_streams($video_path);
+
+								$html_contenido .= "<div class=\"info_video_debug\" onclick=\"$(this).children('pre').toggle()\">Info video<pre style=\"display:none\">". print_r($media_streams,true)."</pre></div>";;
+							}
 
 
 						}else{

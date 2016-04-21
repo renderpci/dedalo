@@ -7,7 +7,7 @@ WRAP DIV CONTAINER*/
 	/* > select only the first '.content_data' inside css_wrap_portal */
 	.css_wrap_portal > .content_data {
 		width: 100%;		
-		display: block;
+		display: table;
 		position: relative;
 		top: -25px;
 		margin-bottom: -20px;
@@ -41,6 +41,8 @@ WRAP DIV CONTAINER*/
 	/*background-color: #6e6e6e;*/
 	box-shadow: none;
 	/*z-index: 9000 !important;*/
+	position: relative;
+	top:7px;
 }
 .show_more_link {
 	text-transform: capitalize;

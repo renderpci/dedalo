@@ -197,16 +197,30 @@ class login extends common {
 
 							# USER : TEST FILTER MASTER VALUES
 							# Comprobamos que el usuario tiene algún proyecto asignado antes de dejarlo entrar (los administradores suelen olvidarse de hacerlo)
-							$component_filter_master 	= component_common::get_instance('component_filter_master', DEDALO_FILTER_MASTER_TIPO, $user_id, 'edit', DEDALO_DATA_LANG, DEDALO_SECTION_USERS_TIPO); 
+							$component_filter_master 	= component_common::get_instance('component_filter_master',
+																						 DEDALO_FILTER_MASTER_TIPO,
+																						 $user_id,
+																						 'edit',
+																						 DEDALO_DATA_LANG, DEDALO_SECTION_USERS_TIPO); 
 							$filter_master_dato 		= (array)$component_filter_master->get_dato();								
 							if (empty($filter_master_dato) || count($filter_master_dato)<1) {
 								exit(label::get_label('error_usuario_sin_proyectos'));
 							}
-						}						
+						}
+
+					#
+					# FULL_USERNAME
+					$component = component_common::get_instance('component_input_text',
+																DEDALO_FULL_USER_NAME_TIPO,
+																$user_id,
+																'edit',
+																DEDALO_DATA_NOLAN,
+																DEDALO_SECTION_USERS_TIPO);
+					$full_username = $component->get_valor();						
 
 					#
 					# LOGIN (ALL IS OK) - INIT LOGIN SECUENCE WHEN ALL IS OK					
-					$init_user_login_secuence = login::init_user_login_secuence($user_id, $username);
+					$init_user_login_secuence = login::init_user_login_secuence($user_id, $username, $full_username);
 
 
 					# RETURN OK AND RELOAD PAGE
@@ -306,7 +320,7 @@ class login extends common {
 	* @param string $username
 	* @return bool 
 	*/
-	private static function init_user_login_secuence($user_id, $username) {
+	private static function init_user_login_secuence($user_id, $username, $full_username) {
 
 		#ob_implicit_flush(true);
 		
@@ -321,9 +335,10 @@ class login extends common {
 		
 
 		# SESSION : If backup is ok, fix session data
-		$_SESSION['dedalo4']['auth']['user_id']		= $user_id;
-		$_SESSION['dedalo4']['auth']['username']	= $username;
-		$_SESSION['dedalo4']['auth']['is_logged']	= 1;
+		$_SESSION['dedalo4']['auth']['user_id']			= $user_id;
+		$_SESSION['dedalo4']['auth']['username']		= $username;
+		$_SESSION['dedalo4']['auth']['full_username'] 	= $full_username;
+		$_SESSION['dedalo4']['auth']['is_logged']		= 1;
 
 		# CONFIG KEY
 		$_SESSION['dedalo4']['auth']['salt_secure']	= dedalo_encryptStringArray(DEDALO_SALT_STRING);
@@ -335,6 +350,11 @@ class login extends common {
 			$backup_info = backup::init_backup_secuence($user_id, $username);
 		}else{
 			$backup_info = 'Deactivated "on login backup" for this domain';
+		}
+
+		# REMOVE LOCK_COMPONENTS ELEMENTS
+		if (defined('DEDALO_LOCK_COMPONENTS') && DEDALO_LOCK_COMPONENTS===true) {
+			lock_components::force_unlock_all_components($user_id);
 		}
 	
 
@@ -475,7 +495,7 @@ class login extends common {
 				case 'component_active_account'		:
 
 						if(isset($ar_terminos_relacionados[0])) foreach($ar_terminos_relacionados[0] as $key => $current_tipo) {
-							$this->tipo_active_account	= $current_tipo;					#echo " - ".$current_tipo;
+							$this->tipo_active_account	= $current_tipo;	#echo " - ".$current_tipo;
 							break;
 						}
 						break;
@@ -537,6 +557,11 @@ class login extends common {
 			$activity_datos['result'] 	= "quit";
 			$activity_datos['cause'] 	= "called quit method";
 			$activity_datos['username']	= $username;
+
+			# REMOVE LOCK_COMPONENTS ELEMENTS
+			if (defined('DEDALO_LOCK_COMPONENTS') && DEDALO_LOCK_COMPONENTS===true) {
+				lock_components::force_unlock_all_components($user_id);
+			}
 
 			# LOGIN ACTIVITY REPORT
 			self::login_activity_report(

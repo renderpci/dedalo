@@ -103,25 +103,30 @@ function dump($val, $var_name=NULL, $arguments=array()){
 	return wrap_pre($html);
 }
 
-function wrap_pre($string) {
+function wrap_pre($string, $add_header_html=true) {
 	$html='';
-	#$html .= "\n<html xmlns=\"http://www.w3.org/1999/xhtml\" ><body>";	
-	$html .= "\n<!DOCTYPE html>";
-	$html .= "\n<meta http-equiv=\"Content-Type\" content=\"text/html; charset=UTF-8\" />";
-	$html .= "<pre class=\"dump\" style=\"min-width:500px;font-family:monospace;color:#4B5D5E;font-size:0.8em;background-color:rgba(217, 227, 255, 0.8);border-radius:5px;padding:10px;position:relative;z-index:9999\">";
-	$html .= "<div class=\"icon_warning\" ></div>";
+	#$html .= "\n<html xmlns=\"http://www.w3.org/1999/xhtml\" ><body>";
+	if ($add_header_html) {			
+		$html .= "\n<!DOCTYPE html>";
+		$html .= "\n<meta charset=\"utf-8\">";
+	}
+	$html .= "<pre class=\"dump\" style=\"min-width:500px;font-family:monospace;color:#4B5D5E;font-size:0.8em;background-color:rgba(217, 227, 255, 0.8);border-radius:5px;padding:10px;position:relative;z-index:1\">";
+	$html .= "<div class=\"icon_warning\"></div>";
 	$html .= stripslashes($string);
-	$html .= "\n</pre>";
+	$html .= "</pre>";
 	#$html .= "\n</body></html>";
 	return $html;
 }
 
-function wrap_html($string) {
+function wrap_html($string, $htmlspecialchars=true) {
 	$html='';
 	$html .= "\n<!DOCTYPE html>";
 	$html .= "\n<meta http-equiv=\"Content-Type\" content=\"text/html; charset=UTF-8\" />";
 	$html .= "\n<html><body>";
-	$html .= nl2br( htmlspecialchars($string) );
+	if ($htmlspecialchars) {
+		$string = htmlspecialchars($string);
+	}
+	$html .= nl2br( $string );
 	$html .= "\n</body></html>";
 	return $html;
 }
@@ -715,6 +720,34 @@ function dd_memory_usage() {
 		$total .= round($mem_usage/1048576,2)." MB";
 		
 	return $total; 
+}
+
+
+/**
+* APP_LANG_TO_TLD2
+* Use only for fast application lang tld resolve
+*/
+function app_lang_to_tld2($lang) {
+
+	switch ($lang) {
+		case 'lg-spa':
+			$tld2='es';
+			break;
+		case 'lg-eng':
+			$tld2='en';
+			break;
+		case 'lg-cat':
+		case 'lg-vlca':
+			$tld2='ca';
+			break;
+		case 'lg-fra':
+			$tld2='fr';
+			break;	
+		default:
+			$tld2='es';
+			break;
+	}
+	return $tld2;
 }
 
 ?>

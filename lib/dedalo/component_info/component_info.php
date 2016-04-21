@@ -20,11 +20,7 @@
 
 	if ($permissions<1) {
 		return null;
-	}
-
-	if ($modo!='list' && !SHOW_DEBUG) {
-		return null;
-	}
+	}	
 
 	include_once( dirname(__FILE__) . '/widgets/class.widget.php' );
 

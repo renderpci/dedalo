@@ -188,6 +188,17 @@
 	 text-transform: uppercase;
 }
 
+
+/* PAGINATOR
+---------------------------------------- */
+#wrap_inspector_paginator {
+	margin-bottom: 5px;
+	}
+	#wrap_inspector_paginator .css_rows_paginator_content {
+		padding: 5px;
+	}
+
+
 /* TOOLS COMMON
 ---------------------------------------- */
 div.tool_inspector_div {

@@ -1,19 +1,19 @@
 <?php
 
 	# VISUALIZADOR HTML	
-
-	# ELEMENTOS
-	if(!isset ($ar_css['css_span_dato'])) 			$ar_css['css_span_dato']='';
-	if(!isset ($ar_css['css_html_file'])) 				$ar_css['css_html_file']='';
-	if(!isset ($ar_css['css_span_ejemplo'])) 		$ar_css['css_span_ejemplo']='';
-	if(!isset ($ar_css['css_span_debugger']))		$ar_css['css_span_debugger']='';
-	if(!isset ($ar_css['css_wrap_html_file']))			$ar_css['css_wrap_html_file']='';	
 	
 	
 	print "\n<!-- html_file [tipo:$tipo section_id_matrix:$parent] $label -->";
-	print "\n<div class=\"css_wrap_html_file wrap_component {$ar_css['css_wrap_html_file']}\" id=\"{$id_wrapper}\"
-	data-tipo=\"{$tipo}\" data-lang=\"{$lang}\" data-section_tipo=\"{$section_tipo}\" data-parent=\"{$parent}\" data-modo=\"{$modo}\" data-dato=\"{$valor}\" data-component_name=\"{$component_name}\"
-	data-component_info='{$component_info}' >";
+
+	print "\n<div class=\"wrap_component css_wrap_html_file wrap_component_{$tipo}\" id=\"{$id_wrapper}\"
+	data-tipo=\"{$tipo}\" data-lang=\"{$lang}\"
+	data-section_tipo=\"{$section_tipo}\"
+	data-parent=\"{$parent}\"
+	data-modo=\"{$modo}\"
+	data-dato=\"{$valor}\"
+	data-component_name=\"{$component_name}\"
+	data-component_info='{$component_info}'
+	>";
 	
 		
 		# ETIQUETA (LABEL)
@@ -23,7 +23,7 @@
 		$html_contenido = '';
 		switch($permissions) {
 				
-			case 0 :	$html_contenido .= "\n <span class=\"css_span_dato {$ar_css['css_span_dato']}\"> ".label::get_label('sin_acceso')." (av)</span>";
+			case 0 :	$html_contenido .= "";
 						break;
 							
 			case ($permissions>=1) :
@@ -44,7 +44,7 @@
 						$html_contenido .= "\n </div>";		
 						
 				if($permissions==3)		
-						$html_contenido .= "\n <span class=\"css_span_debugger {$ar_css['css_span_debugger']}\" id=\"debugger_{$tipo}\" >{$debugger}</span>";	
+						$html_contenido .= "\n <span class=\"css_span_debugger\" id=\"debugger_{$tipo}\" >{$debugger}</span>";	
 												
 		}
 

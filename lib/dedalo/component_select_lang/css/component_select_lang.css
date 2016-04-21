@@ -1,7 +1,7 @@
 /*CSS Document
 WRAP DIV CONTAINER*/
 .css_wrap_select_lang {
-	
+
 }
 .css_wrap_select_lang .content_data {
 }
@@ -18,7 +18,7 @@ select.css_select_lang {
 	}
 	select.css_select_lang:active {
 	}
-	
+
 .current_lang_info {
 	float: right;
 	color: #aaaaaa;

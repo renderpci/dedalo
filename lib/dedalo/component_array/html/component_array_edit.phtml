@@ -6,9 +6,14 @@
 	
 	
 	print "\n<!-- COMPONENT_ARRAY [tipo:$tipo section_id:$parent] $label -->";
-	print "\n<div class=\"css_wrap_component_array wrap_component\" id=\"{$id_wrapper}\"
-	data-tipo=\"{$tipo}\" data-lang=\"{$lang}\" data-section_tipo=\"{$section_tipo}\" data-parent=\"{$parent}\" data-modo=\"{$modo}\" data-component_name=\"{$component_name}\"
-	data-component_info='{$component_info}' >";
+	print "\n<div class=\"wrap_component css_wrap_component_array wrap_component_{$tipo}\" id=\"{$id_wrapper}\"
+	data-tipo=\"{$tipo}\" data-lang=\"{$lang}\"
+	data-section_tipo=\"{$section_tipo}\"
+	data-parent=\"{$parent}\"
+	data-modo=\"{$modo}\"
+	data-component_name=\"{$component_name}\"
+	data-component_info='{$component_info}'
+	>";
 	
 		
 		# ETIQUETA (LABEL)

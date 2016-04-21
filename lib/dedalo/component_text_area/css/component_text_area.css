@@ -1,16 +1,21 @@
 
 
 .css_wrap_text_area, .css_wrap_text_area_tm {
-	
-}
-/*.text_area_content { width:82.6%;padding:0; vertical-align:top; display:inline-block; }*/
-.css_wrap_text_area .content_data {
-	width: 83.6%;
-	padding: 0;
-	vertical-align: top;
-	display: inline-block;
+	min-width: 262px;
 	}
-	
+	/*.text_area_content { width:82.6%;padding:0; vertical-align:top; display:inline-block; }*/
+	.css_wrap_text_area .content_data {	
+		padding: 0;
+		vertical-align: top;
+		display: inline-block;		
+	}
+
+
+/* TOOL TIME MACHINE CONTEXT
+----------------------------------------------- */
+.css_wrap_time_machine .css_wrap_text_area .content_data {
+	width: 100%;
+}
 
 /* PORTAL LIST MODE */
 .section_edit_in_portal_td_row .content_data {
@@ -50,8 +55,8 @@
 }
 .text_area_content_shadow {
 	-webkit-box-shadow: 0 0 10px #ccc;
-	-moz-box-shadow: 0 0 10px #ccc;
-	box-shadow: 0 0 5px #CCC;
+	   -moz-box-shadow: 0 0 10px #ccc;
+		     box-shadow: 0 0 5px #CCC;
 }
 
 /*TEXT AREA*/
@@ -59,9 +64,9 @@
 	padding: 3px;
 	border: 1px solid #9E9E9E;
 	border-radius: 3px;
-	-webkit-box-shadow: 0 0 6px #999999 inset;
-	-moz-box-shadow: 0 0 6px #999999;
-	box-shadow: inset 0 0 6px #999999;
+	-webkit-box-shadow: inset 0 0 6px #999999;
+	   -moz-box-shadow: inset 0 0 6px #999999;
+	        box-shadow: inset 0 0 6px #999999;
 	width: 81.5%;
 	height: 300px;
 	vertical-align: top;
@@ -247,6 +252,7 @@ div.selected_fragment {
 
 /*-- FRAGMENT --*/
 .wrap_fragment {
+	height: 1px;
 	min-height: 1px;
 	}
 	.wrap_fragment .content_data {

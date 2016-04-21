@@ -92,7 +92,6 @@
 					$id_wrapper 		= 'wrapper_'.$identificador_unico;
 					$input_name 		= "{$tipo}_{$parent}";
 					$text_area_tm 		= NULL;
-
 					
 						
 					

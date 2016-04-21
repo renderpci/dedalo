@@ -15,3 +15,11 @@
 		white-space: nowrap;
     	float: left;
 	}
+
+
+/* EDIT
+--------------------------------------- */
+	a.update_info {
+		float: right;
+		vertical-align: bottom;
+	}

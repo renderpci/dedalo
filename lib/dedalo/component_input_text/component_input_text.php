@@ -24,6 +24,7 @@
 	$identificador_unico	= $this->get_identificador_unico();
 	$component_name			= get_class($this);
 	$visible				= $this->get_visible();
+	$propiedades			= $this->get_propiedades();
 
 	# VISIBLE
 	if ($visible===false) {

@@ -369,7 +369,8 @@ class search extends common {
 					if ($sql_options->filter_by_inverse_locators) {						
 						$filter_by_inverse_locators  = "\n-- filter_by_inverse_locators -- \n";
 						foreach ($sql_options->filter_by_inverse_locators as $key => $value) {
-							$filter_by_inverse_locators .= "AND $sql_options->json_field #> '{inverse_locators}' @> '[{\"$key\":\"".$value."\"}]'::jsonb ";
+							#$filter_by_inverse_locators .= "AND $sql_options->json_field #> '{inverse_locators}' @> '[{\"$key\":\"".$value."\"}]'::jsonb ";
+							$filter_by_inverse_locators .= "AND $sql_options->json_field -> 'inverse_locators' @> '[{\"$key\":\"".$value."\"}]'::jsonb ";	// Por compatibilidad con 9.4
 						}												
 						if(SHOW_DEBUG) {
 							#log_messages("Used: $filter_by_inverse_locators",'');

@@ -3,6 +3,7 @@
 class js {
 
 	static $ar_url = array();
+	static $ar_url_basic = array();
 	
 	
 	# JS LINK CODE . RETURN COMBINATED JS LINKS FOR INSERT IN HEADER  
@@ -12,55 +13,50 @@ class js {
 		$html 	= '';		
 		
 		# Insertamos las librerías principales			
-			$ar_url_basic 	= array();
 
 			# JQUERY LIBS
-			$ar_url_basic[] = JQUERY_LIB_URL_JS;
-			$ar_url_basic[] = JQUERY_UI_URL_JS;
-			#$ar_url_basic[] = JQUERY_TABLESORTER_JS;
-			$ar_url_basic[] = DEDALO_ROOT_WEB . '/lib/jquery/jquery.cookie.js' ;
-			#$ar_url_basic[] = DEDALO_ROOT_WEB . '/lib/head/head.load.min.js' ;
-			#$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/component_image/js/component_image_read.js' ;
-			#$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/component_geolocation/js/component_geolocation_read.js' ;
-			#$ar_url_basic[] = DEDALO_ROOT_WEB .'/lib/jquery/jquery.fullscreen-min.js';
-			#$ar_url_basic[] = DEDALO_ROOT_WEB .'/lib/paper/dist/paper-full.min.js';
+			js::$ar_url_basic[] = JQUERY_LIB_URL_JS;
+			js::$ar_url_basic[] = JQUERY_UI_URL_JS;
+			#js::$ar_url_basic[] = JQUERY_TABLESORTER_JS;
+			js::$ar_url_basic[] = DEDALO_ROOT_WEB . '/lib/jquery/jquery.cookie.js' ;
+			#js::$ar_url_basic[] = DEDALO_ROOT_WEB . '/lib/head/head.load.min.js' ;			
 			
 			# GRIDSTER
-			#$ar_url_basic[] = DEDALO_ROOT_WEB .'/lib/jquery/gridster/jquery.gridster.min.js';
+			#js::$ar_url_basic[] = DEDALO_ROOT_WEB .'/lib/jquery/gridster/jquery.gridster.min.js';
 
 			# PAGE LIBS
-			$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/html_page/js/html_page.js';
+			js::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/html_page/js/html_page.js';
 
 			# LOGIN
-			$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/login/js/login.js';
+			js::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/login/js/login.js';
 
 			# MENU
-			# $ar_url_basic[] = DEDALO_LIB_BASE_URL . '/menu/js/menu.js' ;
+			# js::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/menu/js/menu.js' ;
 
 			# COMMON LIBS
-			$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/common/js/common.js';
-			$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/tools/tool_common/js/tool_common.js';
-			$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/tools/tool_portal/js/tool_portal.js'; // Cuando añadimos un fragmento, no está disponible..
-			#$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/common/js/labels.php';
-			$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/common/js/lang/'.DEDALO_APPLICATION_LANG.'.js';
+			js::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/common/js/common.js';
+			js::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/tools/tool_common/js/tool_common.js';
+			js::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/tools/tool_portal/js/tool_portal.js'; // Cuando añadimos un fragmento, no está disponible..
+			#js::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/common/js/labels.php';
+			js::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/common/js/lang/'.DEDALO_APPLICATION_LANG.'.js';
 			
 			# SEARCH		
-			$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/search/js/search.js' ;
+			js::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/search/js/search.js' ;
 
 			# COMPONENT_PORTAL
-			#$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/component_portal/js/component_portal.js';
+			#js::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/component_portal/js/component_portal.js';
 
 			switch ($modo) {
 				case 'edit':
-					$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/tools/tool_indexation/js/tool_indexation.js';
+					js::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/tools/tool_indexation/js/tool_indexation.js';
 				case 'list':
-					$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/tools/tool_time_machine/js/tool_time_machine.js';
-					$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/tools/tool_update_cache/js/tool_update_cache.js';
+					js::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/tools/tool_time_machine/js/tool_time_machine.js';
+					js::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/tools/tool_update_cache/js/tool_update_cache.js';
 					break;
 			}
 				
 			# Ponemos las librerías básicas al principio de la lista
-			js::$ar_url = array_merge($ar_url_basic, js::$ar_url);
+			js::$ar_url = array_merge(js::$ar_url_basic, js::$ar_url);
 
 		
 		# Recorremos los elemetos usados, por modeloID es decir: root=dd117, etc..
@@ -75,49 +71,6 @@ class js {
 				js::$ar_url[] 	= DEDALO_LIB_BASE_URL . '/'. $modelo_name .'/js/'. $modelo_name .'.js';				
 			}			
 		}
-		# Portales
-		if (in_array(DEDALO_LIB_BASE_URL . '/component_portal/js/component_portal.js', js::$ar_url)) {
-
-			js::$ar_url[] = DEDALO_LIB_BASE_URL . '/tools/tool_portal/js/tool_portal.js';
-
-			/**
-			* PROVISIONAL !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-			*//*		
-			#dump(js::$ar_url,'js::$ar_url');
-			# Si se carga 'component_score' desde un portal, cargar todas sus librerías
-			foreach (js::$ar_url as $current_url) {
-				switch (true) {
-					case (strpos($current_url, 'component_score_DES')!==false):
-						# JS includes SCORE	
-							# MIDI
-							js::$ar_url[] = DEDALO_ROOT_WEB.'/lib/vexflow/MIDI/MIDI.min.js';
-							# MIDI BYNARY
-							js::$ar_url[] = DEDALO_ROOT_WEB.'/lib/vexflow/MIDI/inc/base64binary.js';
-							# VEXFLOW
-							js::$ar_url[] = DEDALO_ROOT_WEB.'/lib/vexflow/vexflow/vexflow-min.js';
-							# UNDERSCORE
-							js::$ar_url[] = DEDALO_ROOT_WEB.'/lib/vexflow/vextab/support/underscore-min.js';
-							# TAB-DIV
-							js::$ar_url[] = DEDALO_ROOT_WEB.'/lib/vexflow/vextab/tabdiv-min.js';
-							# PLAYER
-							js::$ar_url[] = DEDALO_ROOT_WEB.'/lib/vexflow/vextab/output/player.js';							
-							break;
-					case (strpos($current_url, 'component_image')!==false && $modo=='edit'):
-						# JS includes IMAGE	
-							js::$ar_url[] = DEDALO_LIB_BASE_URL.'/component_image/js/component_image_read.js';
-							break;
-					default:
-						# code...
-							break;
-				}#end switch (true) {
-			}#foreach (js::$ar_url as $current_url)	
-			*/
-		}#END if (in_array(DEDALO_LIB_BASE_URL . '/component_portal/js/component_portal.js', js::$ar_url)) {
-
-		# TOOLS SPECIFIC
-		#if (strpos($modo, 'tool_')!==false) {
-		#	js::$ar_url[] = DEDALO_LIB_BASE_URL . '/tools/'.$modo.'/js/'.$modo.'.js?'.DEDALO_VERSION;
-		#}
 
 
 		# eliminamos las duplicidades de links	
@@ -179,13 +132,7 @@ class js {
 				#$html .= self::build_tag( DEDALO_LIB_BASE_URL . '/tools/tool_indexation/js/tool_indexation.js' );						
 				$added_component_html_text_commons = true;		
 			}
-
-			# Si se carga un componente av cargamos el tool
-			if( strpos($url,'component_av')!== false && !isset($added_component_av_commons) ) {
-				#$html .= self::build_tag( DEDALO_UPLOADER_URL . '/js/jquery.fileupload.js');						
-				#$html .= self::build_tag( DEDALO_LIB_BASE_URL . '/tools/tool_upload/js/tool_upload.js' );	
-				#$added_component_av_commons = true;		
-			}			
+				
 
 			# EVITA DUPLICIDADES
 			if(strpos($html,$url)===false)					
@@ -215,7 +162,8 @@ class js {
 			}
 			*/
 			$url = $url.'?v='.DEDALO_VERSION;
-			return "\n<script src=\"$url\" type=\"text/javascript\" charset=\"utf-8\"></script>";
+			#return "\n<script src=\"$url\" type=\"text/javascript\" charset=\"utf-8\"></script>";
+			return "\n<script src=\"$url\"></script>";
 		}
 
 		// CDN VERSIONS

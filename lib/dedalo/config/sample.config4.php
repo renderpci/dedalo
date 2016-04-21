@@ -5,7 +5,7 @@
 /*
 	BAJO LICENCIA PÚBLICA GNU
 	http://www.gnu.org/licenses/licenses.es.html
-	Versión 4, 23 de Junio de 2015
+	Versión 4, 14 de marzo de 2012 / 21 Abril 2015
 	
 	© Fundación MOMO 
 	Juan Francisco Onielfa Veneros
@@ -13,6 +13,7 @@
 	http://www.fmomo.org/
 	http://dedalo.antropolis.net/
 */
+
 
 
 ################################################################
@@ -101,6 +102,21 @@ define('DEDALO_ENTITY', 'my_entity_name'); # Like 'dedalo4'
 
 
 ################################################################
+# DB : CONEXIÓN CON LA BASE DE DATOS MYSQL	
+	include(DEDALO_LIB_BASE_PATH.'/config/config4_db.php');	
+	define('SLOW_QUERY_MS'	, 1200);
+
+
+################################################################
+# BACKUP : Automatic backups control
+	# DEDALO_BACKUP_ON_LOGIN : true / false	
+	define('DEDALO_BACKUP_ON_LOGIN'	 , true);
+	# DEDALO_BACKUP_TIME_RANGE Minimun lapse of time (in hours) for run backup script again. Default: (int) 4
+	define('DEDALO_BACKUP_TIME_RANGE', 4);
+
+
+
+################################################################
 # DEBUG : Application debug config
 	$show_debug = false;	
 	if(
@@ -178,6 +194,7 @@ define('DEDALO_ENTITY', 'my_entity_name'); # Like 'dedalo4'
 
 ################################################################
 # LANG
+
 	# APPLICATION LANG : Dedalo application lang
 	define('DEDALO_APPLICATION_LANGS'			, serialize( array(
 													"lg-spa"=> "Castellano",
@@ -232,37 +249,40 @@ define('DEDALO_ENTITY', 'my_entity_name'); # Like 'dedalo4'
 
 ################################################################
 # LIBS PATH
+
 	# JQUERY JS LIB
-	define('JQUERY_LIB_URL_JS'		, DEDALO_ROOT_WEB . '/lib/jquery/jquery.min.js');
-	# JQUERY UI
-	define('JQUERY_UI_URL_JS'		, DEDALO_ROOT_WEB . '/lib/jquery/jquery-ui/jquery-ui.min.js');
-	define('JQUERY_UI_URL_CSS'		, DEDALO_ROOT_WEB . '/lib/jquery/jquery-ui/jquery-ui.min.css');
-	
-	define('JQUERY_TABLESORTER_JS'	, DEDALO_ROOT_WEB . '/lib/jquery/jquery-tablesorter/jquery.tablesorter.min.js');
-
+	define('JQUERY_LIB_URL_JS'			, DEDALO_ROOT_WEB . '/lib/jquery/jquery.min.js');	
+	# JQUERY UI	
+	define('JQUERY_UI_URL_JS'			, DEDALO_ROOT_WEB . '/lib/jquery/jquery-ui/jquery-ui.min.js');
+	define('JQUERY_UI_URL_CSS'			, DEDALO_ROOT_WEB . '/lib/jquery/jquery-ui/jquery-ui.min.css');
+	# TABLESORTER
+	define('JQUERY_TABLESORTER_JS'		, DEDALO_ROOT_WEB . '/lib/jquery/jquery-tablesorter/jquery.tablesorter.min.js');
 	# Text editor
-	define('TEXT_EDITOR_URL_JS'		, DEDALO_ROOT_WEB . '/lib/tinymce/js/tinymce/tinymce.min.js');
-
+	define('TEXT_EDITOR_URL_JS'			, DEDALO_ROOT_WEB . '/lib/tinymce/js/tinymce/tinymce.min.js');
+	#define('TEXT_EDITOR_URL_JS'			, DEDALO_ROOT_WEB . '/vendor/tinymce/tinymce/tinymce.min.js');
 	# PAPER
-	define('PAPER_JS_URL'			, DEDALO_ROOT_WEB .'/lib/paper/dist/paper-full.min.js');
-
+	define('PAPER_JS_URL' 				, DEDALO_ROOT_WEB .'/lib/paper/dist/paper-full.min.js');
+	# LEAFLET
+	define('LEAFLET_JS_URL' 			, DEDALO_ROOT_WEB .'/lib/leaflet/stable_versions/leaflet.js');
 	# D3
-	define('D3_URL_JS'				, DEDALO_ROOT_WEB.'/lib/nvd3/lib/d3.v3.min.js');
+	define('D3_URL_JS' 					, DEDALO_ROOT_WEB .'/lib/nvd3/lib/d3.v3.min.js');
 	# NVD3
-	define('NVD3_URL_JS'			, DEDALO_ROOT_WEB .'/lib/nvd3/nv.d3.min.js');
-
+	define('NVD3_URL_JS' 				, DEDALO_ROOT_WEB .'/lib/nvd3/build/nv.d3.min.js');
+	define('NVD3_URL_CSS' 				, DEDALO_ROOT_WEB .'/lib/nvd3/build/nv.d3.min.css');
 	# CDN USE BOOL
-	define('USE_CDN', false);
+	define('USE_CDN' 					, false);
 
 
 
 ################################################################
 # MEDIA CONFIG
+
 	# MEDIA_BASE PATH
 	define('DEDALO_MEDIA_BASE_PATH'		, DEDALO_ROOT 		. '/media');
 	define('DEDALO_MEDIA_BASE_URL'		, DEDALO_ROOT_WEB 	. '/media');	
 	
 
+	#
 	# AV MEDIA
 		# AV FOLDER normally '/media/av'
 		define('DEDALO_AV_FOLDER'					, '/av');
@@ -306,6 +326,7 @@ define('DEDALO_ENTITY', 'my_entity_name'); # Like 'dedalo4'
 		define('DEDALO_AV_RECOMPRESS_ALL'			, 1); // 1 re re-compress all av files uploaded, 0 to only copy av files uploaded (default 0)
 		
 
+	#
 	# IMAGE MEDIA
 		# IMAGE FOLDER normally '/image'
 		define('DEDALO_IMAGE_FOLDER'				, '/image');
@@ -340,6 +361,7 @@ define('DEDALO_ENTITY', 'my_entity_name'); # Like 'dedalo4'
 		define('DEDALO_IMAGE_WEB_FOLDER'			, '/web');
 
 	
+	#
 	# PDF MEDIA
 		# PDF FOLDER normally '/image'
 		define('DEDALO_PDF_FOLDER'					, '/pdf');
@@ -363,6 +385,7 @@ define('DEDALO_ENTITY', 'my_entity_name'); # Like 'dedalo4'
 		define('PDF_AUTOMATIC_TRANSCRIPTION_ENGINE'	, '/usr/bin/pdftotext');		# Like '/usr/bin/pdftotext'
 		
 	
+	#
 	# HTML_FILES
 		define('DEDALO_HTML_FILES_FOLDER'			, '/html_files');
 		define('DEDALO_HTML_FILES_EXTENSION'		, 'html');
@@ -375,14 +398,17 @@ define('DEDALO_ENTITY', 'my_entity_name'); # Like 'dedalo4'
 	define('DEDALO_UPLOADER_URL'			, DEDALO_ROOT_WEB	. '/lib/jquery/jQuery-File-Upload');	
 	
 
+
 ################################################################
 # GEO LOCATION
 	define('DEDALO_GEO_PROVIDER'			, 'VARIOUS');	# OSM, ARCGIS, GOOGLE, VARIOUS, ARCGIS
 
 
+
 ################################################################
 # LOADER (AUTO LOAD CALLED CLASSES)
 	include(DEDALO_LIB_BASE_PATH.'/config/class.loader.php');
+
 
 
 ################################################################
@@ -393,11 +419,16 @@ define('DEDALO_ENTITY', 'my_entity_name'); # Like 'dedalo4'
 	define('DEDALO_ENTITY_MENU_SKIP_TIPOS'			, serialize( array()));
 
 
+
 # DEDALO_TEST_INSTALL
-define('DEDALO_TEST_INSTALL', true);
+# If is true, check current admin user password on login page
+	define('DEDALO_TEST_INSTALL' 					, true);
+
+
 
 # DEDALO_SECTION_ID_TEMP : Name / prefix of section_id temporals used to store special sections in memory or session
-define('DEDALO_SECTION_ID_TEMP', 'tmp');
+	define('DEDALO_SECTION_ID_TEMP' 				, 'tmp');
+
 
 
 ################################################################
@@ -405,7 +436,27 @@ define('DEDALO_SECTION_ID_TEMP', 'tmp');
 	# TOOL EXPORT
 	define('DEDALO_TOOL_EXPORT_FOLDER_PATH',	DEDALO_MEDIA_BASE_PATH . '/export/files');
 	define('DEDALO_TOOL_EXPORT_FOLDER_URL' ,	DEDALO_MEDIA_BASE_URL  . '/export/files');
-	
+
+
+
+################################################################
+# LOCK_COMPONENTS
+	define('DEDALO_LOCK_COMPONENTS' 		, false);
+
+
+
+################################################################
+# NOTIFICATIONS
+	define('DEDALO_NOTIFICATIONS'			, false);
+	define('DEDALO_NODEJS'					, '/usr/local/bin/node');
+	define('DEDALO_NODEJS_PM2'				, '/usr/local/bin/pm2');
+
+
+
+################################################################
+# STRUCTURE CSS
+	define('DEDALO_STRUCTURE_CSS'			, true);
+	define('DEDALO_ADITIONAL_CSS'			, false);
 
 
 
@@ -416,4 +467,5 @@ define('DEDALO_SECTION_ID_TEMP', 'tmp');
 	if (DEDALO_MAINTENANCE_MODE) {
 		include(DEDALO_LIB_BASE_PATH.'/maintenance/maintenance.php');
 	}
+
 ?>

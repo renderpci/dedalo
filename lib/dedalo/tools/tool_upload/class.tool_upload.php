@@ -44,7 +44,13 @@ class tool_upload extends tool_common {
 
 		$start_time = start_time();
 
-		$html ='';
+		$response = new stdClass();
+			$response->result 			 = 0;
+			$response->html 			 = null;
+			$response->update_components = [];
+
+		
+		
 
 		# Current component name
 		$component_name = get_class( $this->component_obj );
@@ -169,9 +175,9 @@ class tool_upload extends tool_common {
 					# See al .zip files for located the VIDEO_TS and AUDIO_TS folders
 					for ($i=0; $i < $zip->numFiles; $i++) {
 
-						  $filename = $zip->getNameIndex($i);
+						$filename = $zip->getNameIndex($i);
 						  
-						  if(strpos($filename,'VIDEO_TS')!== false){
+						if(strpos($filename,'VIDEO_TS')!== false){
 
 						  	$fileinfo = pathinfo($filename);
 						  	# Don't copy the original VIDEO_TS in the zip file
@@ -184,7 +190,7 @@ class tool_upload extends tool_common {
 					        $fileUploadOK = 1;
 
 
-						  }else if(strpos($filename,'AUDIO_TS')!== false){
+						}else if(strpos($filename,'AUDIO_TS')!== false){
 							$fileinfo = pathinfo($filename);
 							# Don't copy the original AUDIO_TS in the zip file
 							if ($fileinfo['basename'] == 'AUDIO_TS') {
@@ -194,9 +200,9 @@ class tool_upload extends tool_common {
 					        copy("zip://".$f_temp_name.'#'.$filename, $folder_path.$SID.'/AUDIO_TS/'.$fileinfo['basename']);
 					        $fileUploadOK = 1;
 
-						  }else{
+						}else{
 						  	$fileUploadOK = 0;
-						  }
+						}
 					}
 					$zip->close();
 			 
@@ -215,9 +221,11 @@ class tool_upload extends tool_common {
 			trigger_error($msg);
 			exit($msg);	
 		}
+		//dump($fileUploadOK, ' fileUploadOK'.to_string());
 
-
-			//dump($fileUploadOK, ' fileUploadOK'.to_string());
+		
+		$html ='';
+			
 		#
 		# ERROR : FILE NOT FOUND
 		if( !file_exists($this->file_obj->uploaded_file_path) && $fileUploadOK == 0 ) {		
@@ -238,6 +246,7 @@ class tool_upload extends tool_common {
 				}
 			$html .= "</div>";
 
+			$response->result 	= 0; # result set to false
 
 			$time_sec 	= exec_time_unit($start_time,'sec');
 			
@@ -269,23 +278,23 @@ class tool_upload extends tool_common {
 			
 			# AJUSTAMOS LOS PERMISOS
 			/*
-			try{
-				$ajust_permissions = chmod($this->file_obj->uploaded_file_path, 0775);
-				if (!$ajust_permissions) {
-					$msg = "Error[upload_trigger]: Error on set permissions [2]";
-					trigger_error($msg);		
+				try{
+					$ajust_permissions = chmod($this->file_obj->uploaded_file_path, 0775);
+					if (!$ajust_permissions) {
+						$msg = "Error[upload_trigger]: Error on set permissions [2]";
+						trigger_error($msg);		
+					}
+				} catch (Exception $e) {
+					$msg = 'Exception[upload_trigger][SET_PERMISSIONS]: ' . $e->getMessage() . "\n";
+					trigger_error($msg);
 				}
-			} catch (Exception $e) {
-				$msg = 'Exception[upload_trigger][SET_PERMISSIONS]: ' . $e->getMessage() . "\n";
-				trigger_error($msg);
-			}
-			*/
+				*/
 
 			
-			$html .= " <!-- UPLOAD MSG OK -->";
-			$html .= "<div class=\"uploadMsg\">";
-			$html .= "<div class=\"uploadMsg_ok\">";
-			$html .= 'Ok. '. label::get_label('fichero_subido_con_exito');
+			$html .= "<!-- UPLOAD MSG OK -->";
+			$html .= " <div class=\"uploadMsg\">";
+			$html .= " <div class=\"uploadMsg_ok\">";
+			$html .= ' Ok. '. label::get_label('fichero_subido_con_exito');
 
 			if (defined('DEDALO_AV_RECOMPRESS_ALL') && DEDALO_AV_RECOMPRESS_ALL==1) {
 				if ($file_size_mb>10) {
@@ -297,26 +306,26 @@ class tool_upload extends tool_common {
 			}//end if (defined('DEDALO_AV_RECOMPRESS_ALL') && DEDALO_AV_RECOMPRESS_ALL==1) {
 
 
+				#
 				# POSTPROCESSING_FILE : Procesos a activar tras la carga del archivo
-				$postprocessing_result = $this->postprocessing_file($component_name, $SID, $quality);
+				$postprocessing_result = $this->postprocessing_file($component_name, $SID, $quality, $response);
 				# POSTPROCESSING_FILE NOTIFICATIONS
 				if ( strpos( strtolower($postprocessing_result), 'error')!==false || strpos( strtolower($postprocessing_result), 'exception')!==false ) {
-				$html .= "<div class=\"warning\">";
-				$html .= ' File was uploaded correctly but an ERROR was found in the processing: '. $postprocessing_result;
-				$html .= "</div>";
+					$html .= "<div class=\"warning\">";
+					$html .= ' File was uploaded correctly but an ERROR was found in the processing: '. $postprocessing_result;
+					$html .= "</div>";
 				}
 
-			$html .= "</div>";	
-			
+			$html .= "</div>";			
 									
 				
 			# FILE EXISTS BUT ERROR OCURRED
-			if($f_error>0)
-			$html .= "Error {$f_error}: $f_error_text. Notify this error to your administrator<br />";	            	
-				
-			$html .= " <a class=\"cerrar_link\" onclick=\"tool_upload.cerrar()\">".label::get_label('cerrar')."</a>";            
-			$html .= " \n</div>";
+			if($f_error>0) $html .= "Error {$f_error}: $f_error_text. Notify this error to your administrator<br />";				
+			
+			$html .= " <a class=\"cerrar_link\" onclick=\"tool_upload.cerrar()\">".label::get_label('cerrar')."</a>";			
+			$html .= "\n</div>";
 
+			$response->result 	= 1; # result set to true
 
 			$time_sec 	= exec_time_unit($start_time,'sec');
 
@@ -343,8 +352,10 @@ class tool_upload extends tool_common {
 
 		# Save component refresh 'valor_list'
 		$this->component_obj->Save();
+		
+		$response->html = $html;
 
-		return $html;
+		return $response;
 
 	}#end upload_file
 
@@ -448,7 +459,7 @@ class tool_upload extends tool_common {
 	* @param $SID string 
 	* @param $quality string
 	*/
-	protected function postprocessing_file($component_name, $SID, $quality) {
+	protected function postprocessing_file($component_name, $SID, $quality, $response) {
 		$result=null;
 
 		switch ($component_name) {
@@ -483,7 +494,7 @@ class tool_upload extends tool_common {
 								$Ffmpeg = new Ffmpeg();
 								$Ffmpeg->convert_audio($AVObj, $this->file_obj->uploaded_file_path);
 							}else{
-								throw new Exception("Error Processing Request. Current audio extension is not supported", 1);
+								throw new Exception("Error Processing Request. Current audio extension [$file_ext] is not supported (q:$quality)", 1);
 							}
 						#
 						# VIDEO CASE
@@ -535,6 +546,7 @@ class tool_upload extends tool_common {
 							#$Ffmpeg = new Ffmpeg();
 							#$Ffmpeg->conform_header($AVObj);
 
+
 						}//end if ($quality=='audio') {
 
 
@@ -558,9 +570,42 @@ class tool_upload extends tool_common {
 								}//end if (!file_exists($target_file)) {
 
 							}else{
-								throw new Exception("Error Processing Request. Current audio extension is not supported (2)", 1);
+								#throw new Exception("Error Processing Request. Current audio extension [$file_ext] is not supported (q:$quality) (2)", 1);
 							}
-						}//end if ($quality==DEDALO_AV_QUALITY_ORIGINAL) {					
+						}//end if ($quality==DEDALO_AV_QUALITY_ORIGINAL) {	
+
+
+
+						#
+						# SET DURATION (RESOURCES AV)
+						if( $this->component_obj->get_tipo()==DEDALO_COMPONENT_RESOURCES_AV_TIPO 
+						 && $this->component_obj->get_section_tipo()==DEDALO_SECTION_RESOURCES_AV_TIPO ) {
+
+							$source_file = $this->file_obj->uploaded_file_path;
+							$media_attributes = Ffmpeg::get_media_attributes( $source_file );
+								#dump($media_attributes, ' $media_attributes ++ '.to_string());
+
+							if (isset($media_attributes->format) && isset($media_attributes->format->duration)) {
+								$duration_secs = (float)$media_attributes->format->duration;
+									#dump($duration_secs, ' duration_secs ++ '.to_string());
+								if ($duration_secs && $duration_secs>0) {
+									$modelo_name = RecordObj_dd::get_modelo_name_by_tipo(DEDALO_COMPONENT_RESOURCES_MINUTES_TIPO,true);
+									$component 	 = component_common::get_instance($modelo_name,
+																				  DEDALO_COMPONENT_RESOURCES_MINUTES_TIPO,
+																				  $this->component_obj->get_parent(),
+																				  'edit',
+																				  DEDALO_DATA_NOLAN,
+																				  DEDALO_SECTION_RESOURCES_AV_TIPO);
+									$minutes = $duration_secs ;
+									$component->set_dato($minutes);
+									$component->Save();
+									debug_log(__METHOD__." Saved duration (secs) info from media streams to component: $minutes ".to_string(), logger::DEBUG);
+
+									$response->update_components[] = DEDALO_COMPONENT_RESOURCES_MINUTES_TIPO;
+								}
+							}
+						}
+				
 												
 
 					} catch (Exception $e) {

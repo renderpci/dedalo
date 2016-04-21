@@ -13,7 +13,7 @@
 							data-video_id=\"{$video_id}\"
 							>";
 
-		$html_contenido .= "\n <iframe id=\"videoFrame\" name=\"videoFrame\" class=\"videoFrame\" src=\"{$iframe_url}\" ></iframe>";
+		$html_contenido .= "\n <iframe id=\"videoFrame\" name=\"videoFrame\" class=\"videoFrame\" src=\"{$iframe_url}\" onload=\"resizeIframe(this)\"></iframe>";
 
 
 	$html_contenido .= "\n</div><!-- /css_player_wrap -->";

@@ -4,14 +4,15 @@
 	
 	
 	print "\n<!-- COMPONENT_INFO [tipo:$tipo section_id:$parent] $label -->";
-	print "\n<div class=\"css_wrap_COMPONENT_INFO wrap_component\" id=\"{$id_wrapper}\"
+	print "\n<div class=\"wrap_component css_wrap_component_info wrap_component_{$tipo}\" id=\"{$id_wrapper}\"
 	data-tipo=\"{$tipo}\"
 	data-lang=\"{$lang}\"
 	data-section_tipo=\"{$section_tipo}\"
 	data-parent=\"{$parent}\"
 	data-modo=\"{$modo}\"
 	data-component_name=\"{$component_name}\"
-	data-component_info='{$component_info}' >";
+	data-component_info='{$component_info}'
+	>";
 	
 		
 		# ETIQUETA (LABEL)
@@ -34,6 +35,10 @@
 							$html_contenido .= $widget_html;
 							#$html_contenido .= "<hr>";
 						}
+
+						$html_contenido .= "<a href=\"javascript:;\" class=\"update_info\" onclick=\"component_info.update_info(this);\"
+						data-wrapper_id=\"$id_wrapper\"
+						>".label::get_label('actualizar')."</a>";
 		}
 
 		if(SHOW_DEBUG) {

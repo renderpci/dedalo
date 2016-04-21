@@ -6,15 +6,18 @@
 	if(!isset ($ar_css['css_span_dato'])) 		$ar_css['css_span_dato']='';
 	if(!isset ($ar_css['css_text_area'])) 		$ar_css['css_text_area']='';
 	if(!isset ($ar_css['css_span_ejemplo'])) 	$ar_css['css_span_ejemplo']='';
-	if(!isset ($ar_css['css_span_debugger']))	$ar_css['css_span_debugger']='';
-	if(!isset ($ar_css['css_wrap_text_area']))	$ar_css['css_wrap_text_area']='';
-	
-	if(!isset ($html_tools))					$html_tools='';
+	if(!isset ($ar_css['css_span_debugger']))	$ar_css['css_span_debugger']='';	
 	
 	
 	print "\n<!-- TEXT AREA [tipo:$tipo section_id_matrix:$parent] -->";
-	print "\n<div class=\"css_wrap_text_area wrap_component {$ar_css['css_wrap_text_area']}\" 
-	data-tipo=\"{$tipo}\" data-lang=\"{$lang}\" data-section_tipo=\"{$section_tipo}\" data-parent=\"{$parent}\" data-dato=\"{$dato_raw}\" data-component_name=\"{$component_name}\" >";
+	print "\n<div class=\"wrap_component css_wrap_text_area wrap_component_{$tipo}\" 
+	data-tipo=\"{$tipo}\"
+	data-lang=\"{$lang}\"
+	data-section_tipo=\"{$section_tipo}\"
+	data-parent=\"{$parent}\"
+	data-dato=\"{$dato_raw}\"
+	data-component_name=\"{$component_name}\"
+	>";
 	
 	# ETIQUETA (LABEL)
 	$html_label = component_common_draw::draw_label($this);

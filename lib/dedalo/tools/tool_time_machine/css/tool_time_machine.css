@@ -129,8 +129,20 @@
 					opacity: 0.4;
 				}
 
-
-
+	
+	
+	/* COMPONENTS SHOWED IN TIME MACHINE
+	--------------------------------------------------------------------------------------- */
+	.css_wrap_time_machine .wrap_component {
+			width: 100% !important;
+		}
+		/* PORTAL CASE
+		--------------------------------------------------------------------------------------- */
+		.css_wrap_time_machine > .css_wrap_portal .content_data {
+			top: 0;
+			margin: 0;
+		}
+		
 
 
 

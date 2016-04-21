@@ -34,8 +34,7 @@ abstract class component_common_draw {
 		}*/		
 		
 		$html 	 = '';
-		#$html 	.= "\n <label class=\"css_label {$ar_css['css_label']}\" $required_code title=\"".$def."\" >$label</label>";
-		$html 	.= "\n <label class=\"css_label tooltips\" $required_code title=\"$label $def\">$label</label>"; //data-title=\"". $label . $def . "\" 
+		$html 	.= "\n <label class=\"css_label tooltips label\" $required_code title=\"$label $def\">$label</label>"; //data-title=\"". $label . $def . "\" 
 		#$html 	.= "\n <label class=\"css_label tooltips\" $required_code >$label<span>$label $def</span></label>"; //data-title=\"". $label . $def . "\" 	
 		
 		return $html;

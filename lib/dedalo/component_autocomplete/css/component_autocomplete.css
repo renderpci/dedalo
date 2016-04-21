@@ -4,7 +4,7 @@ WRAP DIV CONTAINER*/
 
 	}
 	.css_wrap_autocomplete .content_data {
-		width: 84%;
+		
 	}
 
 /* VALOR TEXT */
@@ -13,7 +13,7 @@ WRAP DIV CONTAINER*/
 	color: #1a1a1a;
 	padding: 3px;
 	padding-left: 0px;
-	padding-right: 5px;
+	padding-right: 5px;	
 }
 
 
@@ -32,7 +32,7 @@ input.css_autocomplete_search_field {
 	}
 	input.css_autocomplete_search_field:focus {
 		opacity: 1;
-		width: 190px;
+		width: 100px;
 	}
 
 /* DATO HIDDEN INPUT */

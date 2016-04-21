@@ -1,21 +1,20 @@
 <?php
 
-	# VISUALIZADOR HTML	
-
-	# ELEMENTOS
-	if(!isset ($ar_css['css_span_dato'])) 				$ar_css['css_span_dato']='';
-	if(!isset ($ar_css['css_input_text_large'])) 		$ar_css['css_input_text_large']='';
-	if(!isset ($ar_css['css_span_ejemplo'])) 			$ar_css['css_span_ejemplo']='';
-	if(!isset ($ar_css['css_span_debugger']))			$ar_css['css_span_debugger']='';
-	if(!isset ($ar_css['css_wrap_input_text_large']))	$ar_css['css_wrap_input_text_large']='';
-	
-	if(!isset ($html_tools))							$html_tools='';
+	# VISUALIZADOR HTML
 	
 	
 	print "\n<!-- INPUT_TEXT_LARGE [tipo:$tipo section_id_matrix:$parent] $label -->";
-	print "\n<div class=\"css_wrap_input_text_large wrap_component {$ar_css['css_wrap_input_text_large']}\" id=\"{$id_wrapper}\"
-	data-tipo=\"{$tipo}\" data-lang=\"{$lang}\" data-section_tipo=\"{$section_tipo}\" data-parent=\"{$parent}\" data-modo=\"{$modo}\" data-dato=\"{$dato}\" data-component_name=\"{$component_name}\"
-	data-component_info='{$component_info}' >";
+
+	print "\n<div class=\"wrap_component css_wrap_input_text_large wrap_component_{$tipo}\" id=\"{$id_wrapper}\"
+	data-tipo=\"{$tipo}\"
+	data-lang=\"{$lang}\"
+	data-section_tipo=\"{$section_tipo}\"
+	data-parent=\"{$parent}\"
+	data-modo=\"{$modo}\"
+	data-dato=\"{$dato}\"
+	data-component_name=\"{$component_name}\"
+	data-component_info='{$component_info}'
+	>";
 	
 		
 		# ETIQUETA (LABEL)
@@ -26,11 +25,11 @@
 		switch($permissions) {
 				
 			case 0	:	
-				$html_contenido .= "\n <span class=\"css_span_dato {$ar_css['css_span_dato']}\"> ".label::get_label('sin_acceso')." (input_text_large)</span>";
+				$html_contenido .= "";
 				break;
 							
 			case 1	: 	
-				$html_contenido .= "\n <span class=\"css_span_dato {$ar_css['css_span_dato']}\">$dato</span>";
+				$html_contenido .= "\n <span class=\"css_span_dato\">$dato</span>";
 				break;	
 							
 			case ($permissions>=2)	:
@@ -42,6 +41,7 @@
 				
 
 				$html_contenido .= "\n <textarea class=\"css_input_text_large $aditional_css\" name=\"{$input_name}\"
+				onchange=\"component_input_text_large.Save(this)\"
 				id=\"$identificador_unico\"
 				data-tipo=\"{$tipo}\"
 				data-parent=\"{$parent}\"
@@ -50,11 +50,13 @@
 				title=\"$html_title\" style=\"overflow: visible\">$dato</textarea>";				
 				
 				#$html_contenido .= "\n <span  class=\"css_span_log\"></span>";
-				#$html_contenido .= "\n <span  class=\"css_span_ejemplo {$ar_css['css_span_ejemplo']}\">$ejemplo</span>";
+				#$html_contenido .= "\n <span  class=\"css_span_ejemplo \">$ejemplo</span>";
 						
-				if($permissions==3)	
-				
-						$html_contenido .= "\n <span class=\"css_span_debugger {$ar_css['css_span_debugger']}\" id=\"debugger_{$tipo}\" >{$debugger}</span>";	
+				if($permissions==3)	{
+					$html_contenido .= "\n <span class=\"css_span_debugger\" id=\"debugger_{$tipo}\" >{$debugger}</span>";
+				}
+				break;
+							
 												
 		}
 

@@ -2,10 +2,10 @@
 
 	# VISUALIZADOR HTML	
 
-	# ELEMENTOS
 	
 	print "\n<!-- COMPONENT_LAYOUT [tipo:$tipo section_id_matrix:$parent] $label -->";
-	print "\n<div class=\"css_wrap_html_text wrap_component\" id=\"{$id_wrapper}\"
+
+	print "\n<div class=\"wrap_component css_wrap_html_text wrap_component_{$tipo}\" id=\"{$id_wrapper}\"
 	data-tipo=\"{$tipo}\"
 	data-section_tipo=\"{$section_tipo}\"
 	data-parent=\"{$parent}\"
@@ -44,16 +44,18 @@
 
 					##
 					# Text area
-					$html_contenido .= "\n <textarea class=\"css_input_text_layout\" 
+					$html_contenido .= "\n <textarea class=\"css_input_text_layout\"
+					onchange=\"component_layout.Save(this)\"
 					id=\"{$editor_id}\" 
 					name=\"{$input_name}\"
+					title=\"$html_title\"
 					data-tipo=\"{$tipo}\"
 					data-lang=\"{$lang}\"
 					data-section_tipo=\"{$section_tipo}\"
 					data-parent=\"{$parent}\"
 					data-key_name=\"{$key}\"
 					data-context_name=\"$context_name\"
-					title=\"$html_title\">$value</textarea>";
+					>$value</textarea>";
 					
 					
 					#

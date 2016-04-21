@@ -26,7 +26,7 @@
 
 	$html .= "<div class=\"tool_subtitles_wrap\">";
 		
-		$html .= "<div id=\"subtitles_response\"> </div>";
+		
 		
 		$html .= "<div id=\"button_build_subtitles\" class=\"css_button_generic\" onclick=\"tool_subtitles.build_subtitles_text(this)\"
 		data-component_tipo=\"$component_tipo\"
@@ -38,7 +38,7 @@
 
 		$html .= " <input type=\"text\" id=\"tool_subtitles_line_lenght\" value=\"$line_lenght\" /> " . label::get_label('caracteres_por_linea') ;
 
-		
+		$html .= "<div id=\"subtitles_response\"> </div>";
 
 	$html .= "</div>";
 

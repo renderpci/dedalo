@@ -17,7 +17,7 @@
 		
 	# set vars
 	$vars = array('caller_tipo','id','t','tipo','m','modo','context_name','parent');
-	foreach($vars as $name) $$name = common::setVar($name);
+		foreach($vars as $name) $$name = common::setVar($name);
 	if($t) $tipo = $t;
 	if($m) $modo = $m;
 
@@ -42,10 +42,10 @@
 	}
 
 
-	# DEBUG
-	unset($_SESSION['debug_content']);
+	# DEBUG	
 	if(SHOW_DEBUG===true) {
-		
+		unset($_SESSION['debug_content']);
+
 		if(!empty($_SESSION['dedalo4']['auth']))
 		$_SESSION['debug_content']['SESSION AUTH4']		= $_SESSION['dedalo4']['auth'];
 		
@@ -85,7 +85,7 @@
 				$username	= NULL;
 				$user_id	= NULL;	
 				
-				# BUILD LOGIN HTML		
+				# BUILD LOGIN HTML
 				$login	= new login($modo='edit');
 				$html	= $login->get_html();
 				break;
@@ -109,91 +109,34 @@
 					}
 				}
 
-				$username	= $_SESSION['dedalo4']['auth']['username'];
-				$user_id	= $_SESSION['dedalo4']['auth']['user_id'];
-
+				$username		= $_SESSION['dedalo4']['auth']['username'];
+				$user_id		= $_SESSION['dedalo4']['auth']['user_id'];
+				$full_username 	= $_SESSION['dedalo4']['auth']['full_username'];
 			
 				##############################################################################
-				# ACTIVITY
-				# Prevent infinite loop saving self
-				if (in_array($tipo, logger_backend_activity::$ar_elements_activity_tipo)) break;
-					
-				# Modo activity.
-				# En casos como 'tool_transcription' el modo pasado no es 'edit' ni 'list' por lo que forzaremos 'edit' en el logger ya que
-				# sólo existen 2 opciones de carga de página definidas: 'LOAD EDIT' y 'LOAD LIST'
-				$modo_to_activity = $modo;
-				if ( strpos($modo, 'edit')===false && strpos($modo, 'list')===false ) {
-					$modo_to_activity = 'edit';
-				}
-			
-				# ACTIVITY DATO
-					# Array data
-					$dato_activity['msg']	= "HTML Page is loaded in mode: ".$modo_to_activity ." [$modo]";
-					
-					switch (true) {
+				# ACTIVITY : LOG VISIT TO CURRENT PAGE
+				html_page::log_page_visit($modo, $id, $tipo, $parent);
 
-						case ($modo=='edit'):
-							
-							$dato_activity['id']		= $id;
-							$dato_activity['tipo']		= $tipo;
-							$dato_activity['top_id'] 	= TOP_ID;	#$_SESSION['dedalo4']['config']['top_id'];
-							$dato_activity['top_tipo'] 	= TOP_TIPO;	#$_SESSION['dedalo4']['config']['top_tipo'];
-							break;
-
-						case ($modo=='list') :
-							#$dato_activity['id']		= null;
-							$dato_activity['tipo']		= $tipo;
-							#$dato_activity['top_id'] 	= null;
-							$dato_activity['top_tipo'] 	= TOP_TIPO;	#$tipo;
-							break;	
-
-						case ( strpos($modo, 'tool_portal')!==false ) :
-							#$dato_activity['id']		= $id;
-							$dato_activity['tipo']		= $tipo;
-							$dato_activity['top_id'] 	= $parent;	#$_SESSION['dedalo4']['config']['top_id'];
-							$dato_activity['top_tipo'] 	= TOP_TIPO;	#$_SESSION['dedalo4']['config']['top_tipo'];
-							break;
-
-						case ( strpos($modo, 'tool_')!==false ) :
-							#$dato_activity['id']		= $id;
-							$dato_activity['tipo']		= $tipo;
-							$dato_activity['top_id'] 	= $parent;	#$_SESSION['dedalo4']['config']['top_id'];
-							$dato_activity['top_tipo'] 	= TOP_TIPO;	#$_SESSION['dedalo4']['config']['top_tipo'];
-							break;
-
-						default:
-							break;
-					}
-					#dump($dato_activity,'$dato_activity');
-				
-				# LOGGER ACTIVITY : QUE(action normalized like 'LOAD EDIT'), LOG LEVEL(default 'logger::INFO'), TIPO(like 'dd120'), DATOS(array of related info)	
-				logger::$obj['activity']->log_message(
-					'LOAD'.' '.strtoupper($modo_to_activity),
-					logger::INFO,
-					$tipo,
-					null,
-					$dato_activity
-				);				
 				break;
 			
-	}#end switch (true) 
+	}#end switch (true)
 
 
 
 
-	# Fix navigator modo (needed for buttons)
-	navigator::set_selected('modo', $modo);
+	# SELECTED MODO . Fix navigator modo (needed for buttons)
+		navigator::set_selected('modo', $modo);
 
-	# Fix navigator caller_id (needed for relations)
-	navigator::set_selected('caller_tipo', $caller_tipo);	#dump($caller_tipo,'caller_tipo');
+	# CALLER_TIPO Fix navigator caller_id (needed for relations)
+		navigator::set_selected('caller_tipo', $caller_tipo);	#dump($caller_tipo,'caller_tipo');
+
+	# lang tld2
+		$lang_tld2 = app_lang_to_tld2(DEDALO_APPLICATION_LANG);
+
+		
 	
-
-	
-	
-	
-	/**
-	* JAVASCRIPT 
-	*/
+	#
+	# JAVASCRIPT
 		# PARENT (JAVASCRIPT VAR) NEEDED FOR TIME MACHINE
 		if(isset($_REQUEST['parent'])) {
 			$parent = $_REQUEST['parent'];
@@ -204,17 +147,14 @@
 			$parent = $_SESSION['dedalo4']['config']['id'];
 		}else{
 			$parent = NULL;
-		}
-
-		
+		}		
 
 		# JAVASCRIPT LINKS
 		$js_link_code	= js::get_js_link_code();		#dump($js_link_code,'js_link_code');
 
 
-	/**
-	* CSS 
-	*/
+	#
+	# CSS
 		# CSS LINKS		
 		$css_link_code	= css::get_css_link_code();
 
@@ -225,32 +165,51 @@
 
 
 		
-	/**
-	* PAGE HEADER
-	*/		
-		$html_header = '';		
-		if (empty($context_name) && strpos($m, 'tool_')===false) {
-			# MENU
-			$menu_html = NULL;
-			if(empty($caller_id)) {
+	#
+	# PAGE HEADER
+		$html_header = '';
+		switch (true) {
+
+			case (isset($_REQUEST['menu']) && $_REQUEST['menu']==1):
+				# MENU
 				$menu 		= new menu($modo);
-				$menu_html 	= $menu->get_html();	
-			}
-			ob_start();
-			include ( DEDALO_LIB_BASE_PATH . '/' . get_class() .'/html/' . get_class() . '_header.phtml' );
-			$html_header =  ob_get_contents();
-			ob_get_clean();
-		}else if ($context_name=='list_in_portal') {			
+				$menu_html 	= $menu->get_html();			
+				ob_start();
+				include ( DEDALO_LIB_BASE_PATH . '/' . get_class() .'/html/' . get_class() . '_header.phtml' );
+				$html_header = ob_get_clean();
+				break;
 
-			$html_header .= "<div class=\"breadcrumb\">";
+			case (empty($context_name) && strpos($m, 'tool_')===false):
 
-			$html_header .= strip_tags( tools::get_bc_path() ); // Remove possible <mark> tags
-			#dump(tools::get_bc_path(), 'tools::get_bc_path()');
-			$html_header .= "<div class=\"icon_bs close_window\" title=\"".label::get_label('cerrar')."\"></div>";
-			$html_header .= "</div>";
-			$html_header .= "<div class=\"breadcrumb_spacer\"></div>";
-		}		
+				# MENU
+				$menu_html = NULL;
+				if(empty($caller_id)) {
+					$menu 		= new menu($modo);
+					$menu_html 	= $menu->get_html();	
+				}
+				ob_start();
+				include ( DEDALO_LIB_BASE_PATH . '/' . get_class() .'/html/' . get_class() . '_header.phtml' );
+				$html_header = ob_get_clean();
+				break;
 
+			case ($context_name=='list_in_portal'):
+
+				$html_header .= "<div class=\"breadcrumb\">";
+				$html_header .=   strip_tags( tools::get_bc_path() ); // Remove possible <mark> tags
+				#dump(tools::get_bc_path(), 'tools::get_bc_path()');
+				$html_header .= " <div class=\"icon_bs close_window\" title=\"".label::get_label('cerrar')."\"></div>";
+				$html_header .= "</div>";
+				$html_header .= "<div class=\"breadcrumb_spacer\"></div>";
+				break;
+			
+			default:
+				$html_header = '';
+				break;
+		}
+			
+
+	#
+	# PAGE TITLE
 		$page_title = RecordObj_dd::get_termino_by_tipo($tipo,DEDALO_APPLICATION_LANG,true);
 		$page_title = strip_tags($page_title);
 		if (isset($id)) {
@@ -258,31 +217,9 @@
 		}
 
 
+	#
 	# HTML PAGE
-		include('html/' . get_class() . '.phtml');
+		include(DEDALO_LIB_BASE_PATH . '/' . get_class() .'/html/' . get_class() . '.phtml');
 	
 
-
-	# CLOSE DB CONNECTION
-	# dump(DBi::_getConnection());
-	#DBi::_getConnection()->close();
-	//pg_close(DBi::_getConnection());
-
-
-
-/*
-function myfunction_A($var='8888') {
-	$response = "La respuesta es $var";
-		dump($response, 'var', array());
-	return $response;
-}
-// listen
-mThread::listen();
-// start time
-$time = time() ;
-//start thread 
-mThread::start( 'myfunction_A', "leche ") ;
-// running till completed
-//while ( mThread::runing () ) ;	
-*/
 ?>

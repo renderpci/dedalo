@@ -1,55 +1,53 @@
 <?php
 	
 	# VISUALIZADOR HTML	
-
-	# ELEMENTOS
-	if(!isset ($ar_css['css_section_wrap']))		$ar_css['css_section_wrap']='';
-	if(!isset ($ar_css['css_section_titulo']))		$ar_css['css_section_titulo']='';
-	if(!isset ($ar_css['css_span_dato'])) 			$ar_css['css_span_dato']='';	
-	
 	
 	print "\n\n<!-- SECTION [tipo:$tipo modo:$modo] -->";
-	print "\n<div class=\"css_section_wrap {$ar_css['css_section_wrap']}\" id=\"section_wrap_{$tipo}\" data-modo=\"$modo\" data-options=\"\" >";
-	
-	
-	# ETIQUETA (LABEL)
-	#print $context;
-	$html_label='';
-	switch ($context) {
 
-		case 'list_into_tool_portalXX':
-			$html_label 	= '';
-			break;
+	print "\n<div class=\"css_section_wrap\" id=\"section_wrap_{$tipo}\" data-modo=\"$modo\" data-options=\"\">";
+	
+	
+		# ETIQUETA (LABEL)
+		#print $context;
+		$html_label='';
+		switch ($context) {
 
-		default:
-			/*
-			$html_label 	.= "\n<div class=\"css_section_titulo\" >";
-			$html_label 	.= component_common_draw::draw_label($this);
-			if(SHOW_DEBUG)
-			$html_label 	.= " [context:$context] ";
-			$html_label 	.= "</div>";
-			#$html_label  	.= "\n<div class=\"css_section_titulo\" > Número: ".$dato." </div>";
-			*/
-			#print "\n<script>$('#current_section_label').html('$label').css('right','8px')</script>";
-			break;
-	}
-	
-	
-	
-	
-	# CONTENIDO (INPUT)
-	$html_contenido = "\n<div class=\"css_section_content section_content_list section_list_rows_content_div\" >";
-	switch($permissions) {
-			
-		case 0	:	$html_contenido .= "\n <span class=\"css_span_dato sin_acceso {$ar_css['css_span_dato']}\"> ".label::get_label('contenido_no_autorizado')." </span>";
-					break;
-						
-		case ($permissions>=1) :	
+			case 'list_into_tool_portalXX':
+				$html_label 	= '';
+				break;
 
-					#
-					# BUTTONS
-					#
-					$html_buttons=(string)'';
+			default:
+				/*
+				$html_label 	.= "\n<div class=\"css_section_titulo\" >";
+				$html_label 	.= component_common_draw::draw_label($this);
+				if(SHOW_DEBUG)
+				$html_label 	.= " [context:$context] ";
+				$html_label 	.= "</div>";
+				#$html_label  	.= "\n<div class=\"css_section_titulo\" > Número: ".$dato." </div>";
+				*/
+				#print "\n<script>$('#current_section_label').html('$label').css('right','8px')</script>";
+				break;
+		}
+		
+		
+		
+		
+		# CONTENIDO (INPUT)
+		$html_contenido = "\n<div class=\"css_section_content section_content_list section_list_rows_content_div\">";
+		
+		switch($permissions) {
+				
+			case 0	:
+
+				$html_contenido .= "\n<span class=\"css_span_dato sin_acceso\"> ".label::get_label('contenido_no_autorizado')." </span>";
+				break;
+							
+			case ($permissions>=1) :	
+
+				#
+				# BUTTONS
+				#
+					$html_buttons='';
 					$html_buttons .= "\n<div class=\"section_buttons_container\">";
 
 						#
@@ -86,7 +84,8 @@
 						foreach((array)$ar_buttons as $current_button_modelo_name => $current_ar_button_obj_model) {
 							# Skip delete button
 							#if($current_button_modelo_name=='button_stats') continue;
-							foreach($current_ar_button_obj_model as $current_button_obj) {								
+							foreach($current_ar_button_obj_model as $current_button_obj) {
+								#dump($current_button_obj, ' $current_button_obj ++ '.to_string());								
 								# Set buton target tipo
 								$current_button_obj->set_target($tipo);
 								$html_buttons .= $current_button_obj->get_html();
@@ -102,8 +101,7 @@
 							$tool_export = new tool_export($tipo,'button');
 							$html_buttons  .= $tool_export->get_html();
 						}
-						}
-						
+						}						
 
 						
 						#
@@ -117,6 +115,7 @@
 								$html_buttons  .= $tool_diffusion->get_html();									
 							}
 						}
+
 
 						#
 						# DEBUG BUTTONS
@@ -141,34 +140,31 @@
 								}							
 							}
 																					
-						}						
-						
+						}					
 
-					$html_buttons .= "\n</div>";#end section_buttons_container
+					$html_buttons .= "\n</div>";//end section_buttons_container
 					$html_contenido .= $html_buttons;
-					
+				
 
-					#$html_contenido .= "\n<div id=\"stats_info\"><!-- Stats content here --></div>";
+				#$html_contenido .= "\n<div id=\"stats_info\"><!-- Stats content here --></div>";
 
 
-					#
-					# Content html
-					
-						# SEARCH_FORM_HTML
-						$html_contenido .= $search_form_html;
+				#
+				# CONTENT HTML
+				#
+					# SEARCH_FORM_HTML
+					$html_contenido .= $search_form_html;
 
-						# ROWS_LIST_HTML
-						$html_contenido .= $rows_list_html;
-					
+					# ROWS_LIST_HTML
+					$html_contenido .= $rows_list_html;
+				
 
-					# Time machine section button
-					#$html_contenido .= "\n $html_section_tm ";
-						
-		case 2	: 
-		case 3	:	
-					break;			
-	}
-	$html_contenido .= "\n</div><!-- /css_section_content -->";
+				# Time machine section button
+				#$html_contenido .= "\n $html_section_tm ";
+				break;			
+		}
+
+		$html_contenido .= "\n</div><!-- /css_section_content -->";
 
 	
 	

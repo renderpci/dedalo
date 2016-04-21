@@ -5,7 +5,8 @@
 <title>"Geo"</title>
 <?php
 print css::build_tag(DEDALO_ROOT_WEB .'/lib/leaflet/leaflet.css');
-print js::build_tag(DEDALO_ROOT_WEB .'/lib/leaflet/leaflet.js');
+$leaflet_url = defined('LEAFLET_JS_URL') ? LEAFLET_JS_URL : DEDALO_ROOT_WEB . "/lib/leaflet/stable_versions/leaflet.js";
+print js::build_tag($leaflet_url);
 ?>
 
 </head>

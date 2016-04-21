@@ -2212,7 +2212,12 @@ class section extends common {
 				throw new Exception("Error Processing Request. component_filter not found in this section ($this->tipo - $this->section_id)", 1);			
 			}
 			$filter_tipo 	  = $ar_filter_tipo[0];
-			$component_filter = component_common::get_instance('component_filter', $filter_tipo, $this->section_id, 'edit', DEDALO_DATA_NOLAN, $this->tipo);
+			$component_filter = component_common::get_instance('component_filter',
+																$filter_tipo,
+																$this->section_id,
+																'edit',
+																DEDALO_DATA_NOLAN,
+																$this->tipo);
 			$dato 			  = array(DEDALO_DEFAULT_PROJECT=>2);
 			$component_filter->set_dato($dato);
 			$component_filter->Save();

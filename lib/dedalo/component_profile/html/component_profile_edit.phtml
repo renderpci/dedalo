@@ -2,12 +2,11 @@
 
 	# VISUALIZADOR HTML	
 
-	# ELEMENTOS
-	if(!isset ($ar_css['css_span_dato'])) 			$ar_css['css_span_dato']='';
 	
 	
 	print "\n<!-- PROFILE [tipo:$tipo section_id_matrix:$parent] $label -->";
-	print "\n<div class=\"css_wrap_profile wrap_component\" id=\"{$id_wrapper}\" 
+	
+	print "\n<div class=\"wrap_component css_wrap_profile wrap_component_{$tipo}\" id=\"{$id_wrapper}\" 
 	data-tipo=\"{$tipo}\"
 	data-lang=\"{$lang}\"
 	data-parent=\"{$parent}\"
@@ -26,7 +25,7 @@
 	switch($permissions) {
 			
 		case 0:	
-			$html_contenido .= "\n <span class=\"css_span_dato {$ar_css['css_span_dato']}\"> ".label::get_label('sin_acceso')." </span>";
+			$html_contenido .= "";
 			break;					
 		
 		case ($permissions>=1):		

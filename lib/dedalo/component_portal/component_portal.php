@@ -217,6 +217,9 @@
 				
 				# Daggable
 				$dragable_connectWith = isset($propiedades->dragable_connectWith) ? "portal_table_".$propiedades->dragable_connectWith : null ;
+
+				# JS ADD
+				js::$ar_url[]  = DEDALO_LIB_BASE_URL."/tools/tool_portal/js/tool_portal.js";
 				
 				break;
 

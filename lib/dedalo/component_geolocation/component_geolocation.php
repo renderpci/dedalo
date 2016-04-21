@@ -34,8 +34,8 @@
 					css::$ar_url[] = DEDALO_ROOT_WEB ."/lib/leaflet/$leaflet_dist/leaflet.css";
 					css::$ar_url[] = DEDALO_ROOT_WEB ."/lib/leaflet/$leaflet_dist/leaflet.draw/leaflet.draw.css";
 
-				# JS	
-					js::$ar_url[] = DEDALO_ROOT_WEB . "/lib/leaflet/$leaflet_dist/leaflet.js";
+				# JS
+					js::$ar_url[] = defined('LEAFLET_JS_URL') ? LEAFLET_JS_URL : DEDALO_ROOT_WEB . "/lib/leaflet/$leaflet_dist/leaflet.js";									
 					js::$ar_url[] = DEDALO_ROOT_WEB . "/lib/leaflet/$leaflet_dist/leaflet.draw/leaflet.draw.js";
 					switch (DEDALO_GEO_PROVIDER) {
 						case 'GOOGLE':

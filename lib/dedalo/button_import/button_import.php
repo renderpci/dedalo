@@ -14,10 +14,13 @@
 	$propiedades 			= $this->get_propiedades();
 	if(SHOW_DEBUG) {
 		if (!isset($propiedades->section_tipo)) {
-			dump($propiedades , ' propiedades - button_tipo:'.$tipo );
+			dump($propiedades , ' propiedades - button_tipo: '.$tipo );
 		}
 	}
+	$tool_name 	  			= $propiedades->tool_name;
+	$context_name 			= $propiedades->context_name;
 	$target_section_tipo	= $propiedades->section_tipo;
+	
 	
 	if(SHOW_DEBUG) {
 		if (!property_exists($propiedades, 'tool_name')) {
@@ -29,8 +32,7 @@
 	switch($modo) {
 						
 		case 'list'	:
-				$tool_name 	  = $propiedades->tool_name;
-				$context_name = $propiedades->context_name;
+				
 				break;
 
 		default: 

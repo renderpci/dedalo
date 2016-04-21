@@ -1,20 +1,11 @@
 <?php
 
 	# VISUALIZADOR HTML	
-
-	# ELEMENTOS
-	if(!isset ($ar_css['css_span_dato'])) 			$ar_css['css_span_dato']='';
-	if(!isset ($ar_css['css_radio_button'])) 		$ar_css['css_radio_button']='';
-	if(!isset ($ar_css['css_span_ejemplo'])) 		$ar_css['css_span_ejemplo']='';
-	if(!isset ($ar_css['css_span_debugger']))		$ar_css['css_span_debugger']='';
-	if(!isset ($ar_css['css_wrap_radio_button']))	$ar_css['css_wrap_radio_button']='';
-	if(!isset ($ar_css['css_radio_button_rotulo']))	$ar_css['css_radio_button_rotulo']='';
-	
-	if(!isset ($tools_html))						$tools_html='';
 	
 
 	print "\n<!-- RADIO BUTTON [tipo:$tipo parent:$parent] $label -->";
-	print "\n<div class=\"css_wrap_radio_button wrap_component {$ar_css['css_wrap_radio_button']}\" id=\"{$id_wrapper}\"
+
+	print "\n<div class=\"css_wrap_radio_button wrap_component\" id=\"{$id_wrapper}\"
 	data-tipo=\"{$tipo}\"
 	data-section_tipo=\"{$section_tipo}\"
 	data-parent=\"{$parent}\"
@@ -35,61 +26,54 @@
 	$html_contenido = '';
 	switch($permissions) {
 			
-		case 0	:	$html_contenido .= "";
-					break;
+		case 0	:	
+				$html_contenido .= "";
+				break;
 						
-		case 1	: 	foreach ($ar_list_of_values->result as $value => $rotulo) {						
-						if( $value == $dato ) {
-							$html_contenido .= "\n <label class=\"css_radio_button_rotulo {$ar_css['css_radio_button_rotulo']}\" $required_code >$rotulo</label>";
-						}						
+		case 1	: 
+				foreach ($ar_list_of_values->result as $value => $rotulo) {						
+					if( $value == $dato ) {
+						$html_contenido .= "\n <label class=\"css_radio_button_rotulo\" $required_code >$rotulo</label>";
 					}
-					break;	
+				}
+				break;	
 						
 		
-		case ($permissions>=2)	:
-					#dump($ar_list_of_values,'ar_list_of_values');
-					#$html_contenido .= "<div class=\"$tipo\">";
+		case ($permissions>=2) :					
 
-					$html_contenido .= "<ul>";
-					foreach ($ar_list_of_values->result as $value => $rotulo) {
+				$html_contenido .= "<ul>";
+				foreach ($ar_list_of_values->result as $value => $rotulo) {
 
-						$value   = (string)$value; 
-						$locator = (object)json_handler::decode($value);	# Locator is json encoded object
-						#dump($locator," locator"); #dump($dato," dato");
+					$value   = (string)$value; 
+					$locator = (object)json_handler::decode($value);	# Locator is json encoded object
+					#dump($locator," locator"); #dump($dato," dato");
 
-						if (in_array($locator, $dato)) {	# dato is array always
-							$checked = 'checked="checked"';
-						}else{
-							$checked = "";
-						}
-
-						$html_contenido .= "<li>";
-						
-							$html_contenido .= "\n <input class=\"css_radio_button\" type=\"radio\" 
-							name=\"{$input_name}\" 
-							data-tipo=\"{$tipo}\"
-							data-lang=\"{$lang}\"
-							data-section_tipo=\"{$section_tipo}\"
-							data-parent=\"{$parent}\"
-							value='$value'
-							title=\"$html_title\" $checked />";
-							$html_contenido .= "\n <label class=\"css_radio_button_rotulo {$ar_css['css_radio_button_rotulo']}\" $required_code >$rotulo</label>";
-
-							if ($rotulo!=end($ar_list_of_values->result)) {
-								#$html_contenido .= "<br>";
-							}
-						$html_contenido .= "</li>";					
+					if (in_array($locator, $dato)) {	# dato is array always
+						$checked = 'checked="checked"';
+					}else{
+						$checked = "";
 					}
-					$html_contenido .= "</ul>";
-					#$html_contenido .= "</div>";
-					#$html_contenido .= "\n <span class=\"css_span_log\"></span>";
-					#$html_contenido .= "\n <span  class=\"css_span_ejemplo {$ar_css['css_span_ejemplo']}\">$ejemplo</span>";					
-					#$html_contenido .= 	$html_tools;
 
+					$html_contenido .= "<li>";
 					
-			#if($permissions==3)			
-					#$html_contenido .= "\n <span class=\"css_span_debugger {$ar_css['css_span_debugger']}\" id=\"debugger_{$tipo}\" >{$debugger}</span>";											
-							
+						$html_contenido .= "\n <input class=\"css_radio_button\" type=\"radio\"
+						onchange=\"component_radio_button.Save(this)\"
+						name=\"{$input_name}\" 
+						data-tipo=\"{$tipo}\"
+						data-lang=\"{$lang}\"
+						data-section_tipo=\"{$section_tipo}\"
+						data-parent=\"{$parent}\"
+						value='$value'
+						title=\"$html_title\" $checked />";
+						$html_contenido .= "\n <label class=\"css_radio_button_rotulo\" $required_code >$rotulo</label>";
+
+						if ($rotulo!=end($ar_list_of_values->result)) {
+							#$html_contenido .= "<br>";
+						}
+					$html_contenido .= "</li>";
+				}
+				$html_contenido .= "</ul>";
+				break;
 	}
 
 	$html_contenido .= $js_code;

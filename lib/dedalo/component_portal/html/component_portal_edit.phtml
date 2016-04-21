@@ -2,14 +2,11 @@
 
 	# VISUALIZADOR HTML	
 
-	# ELEMENTOS
-	if(!isset ($ar_css['css_span_dato'])) 		$ar_css['css_span_dato']='';
-	if(!isset ($ar_css['css_wrap_portal'])) 	$ar_css['css_wrap_portal']='';
-	if(!isset ($html_tools))					$html_tools='';
 	
 	
 	print "\n<!-- PORTAL [tipo:$tipo section_id_matrix:$parent] $label -->";
-	print "\n <div class=\"css_wrap_portal wrap_component {$ar_css['css_wrap_portal']}\" id=\"{$id_wrapper}\"
+	
+	print "\n <div class=\"wrap_component css_wrap_portal wrap_component_{$tipo}\" id=\"{$id_wrapper}\"
 	data-tipo=\"{$tipo}\"
 	data-lang=\"{$lang}\"
 	data-section_tipo=\"{$section_tipo}\"
@@ -18,7 +15,7 @@
 	data-component_name=\"{$component_name}\"
 	data-component_info='{$component_info}'
 	data-dato='{$valor}'
-	data-target_section_tipo='{$ar_target_section_tipo_json}''
+	data-target_section_tipo='{$ar_target_section_tipo_json}'
 	>";
 	
 		
@@ -32,7 +29,7 @@
 			case 0	:	$html_contenido .= "";
 						break;
 							
-			#case 1	: 	$html_contenido .= "\n <span class=\"css_span_dato {$ar_css['css_span_dato']}\">$valor</span>";
+			#case 1	: 	$html_contenido .= "\n <span class=\"css_span_dato\">$valor</span>";
 			#			break;	
 							
 			case ($permissions>=1)	:
@@ -460,7 +457,7 @@
 			if ($total_list_time>$limit_time) {
 				$style = "color:red";
 			}			
-			$html_info .= "<div class=\"portal_debug_info\" style=\"{$style}\" onclick=\"$(this).children('pre').toggle()\"> Time: ";
+			$html_info .= "<div class=\"debug_info portal_debug_info\" style=\"{$style}\" onclick=\"$(this).children('pre').toggle()\"> Time: ";
 			$html_info .= $total_list_time;
 			#$html_info .= ", get_rows_data:".$rows_data->generated_time['get_rows_data']." (over {$rows_data->options->full_count} records)";
 			#$html_info .= ", HTML section list: ".round(microtime(1)-$start_time,3);

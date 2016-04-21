@@ -1,0 +1,304 @@
+<?php
+
+	# VISUALIZADOR HTML		
+
+	$html    = "\n<!-- TOOL ADMINISTRATION -->";	
+	$html   .= "\n<div class=\"wrap_tool wrap_tool_administration_page\" >";	
+
+
+	#$html   .= $header_html;
+
+
+	#
+	# ADMIN UTILS
+	$html   .= "\n<div class=\"content_data block-content-1\" >";
+
+		# PANELS
+		$html   .= "<div class=\"panel panel-primary\">";
+		$html   .= "  <div class=\"panel-heading\">";
+		$html   .= "    <h3 class=\"panel-title\"> ADMIN UTILS </h3>";
+		$html   .= "  </div>";
+		$html   .= "  <div class=\"panel-body\">";		
+
+			#
+			# FORCE_UNLOCK_ALL_COMPONENTS
+			$html   .= "  <div class=\"panel_option\">
+							<span class=\"glyphicon glyphicon-triangle-right\" aria-hidden=\"true\"></span> 
+							<a href=\"javascript:;\" onclick=\"tool_administration.update_structure(this)\">".label::get_label('actualizar_estructura')."</a>
+						  </div>";
+			$html   .= "  <div id=\"update_structure_response\"></div>";
+
+
+			#
+			# FORCE_UNLOCK_ALL_COMPONENTS
+			$html   .= "  <div class=\"panel_option\">
+							<span class=\"glyphicon glyphicon-triangle-right\" aria-hidden=\"true\"></span> 
+							<a href=\"javascript:;\" onclick=\"tool_administration.force_unlock_all_components(this)\">".label::get_label('desbloquear_todos_los_componentes')."</a>
+						  </div>";
+			$html   .= "  <div id=\"force_unlock_all_components_response\"></div>";
+
+
+			#
+			# build_structure_css
+			$html   .= "  <div class=\"panel_option\">
+							<span class=\"glyphicon glyphicon-triangle-right\" aria-hidden=\"true\"></span> 
+							<a href=\"javascript:;\" onclick=\"tool_administration.build_structure_css(this)\">".label::get_label('build_structure_css')."</a>
+						  </div>";
+			$html   .= "  <div id=\"build_structure_css_response\"></div>";
+
+		$html   .= "  </div>";//end panel-body
+		$html   .= "</div>";//end panel-primary
+		
+
+	$html   .= "\n</div>";//end content_data block-content-1
+
+
+	
+	#
+	# USERS INFO
+	$html   .= "\n<div class=\"content_data\" >";	// text_shadow_inset
+
+		# PANELS
+		$html   .= "<div class=\"panel panel-info\">";
+		$html   .= "  <div class=\"panel-heading\">";
+		$html   .= "    <h3 class=\"panel-title\"> USERS INFO </h3>";
+		$html   .= "  </div>";
+		$html   .= "  <div class=\"panel-body\">";
+		
+			#
+			# ACTIVE_USERS
+			if (defined('DEDALO_LOCK_COMPONENTS') && DEDALO_LOCK_COMPONENTS===true) {		
+				$html   .= "<div>";
+				$html   .= " <span class=\"glyphicon glyphicon-info-sign\" aria-hidden=\"true\"></span> ";
+				$html   .= " <a href=\"javascript:;\" onclick=\"tool_administration.get_active_users(this)\">".label::get_label('usuarios_activos')."</a>";
+				$html   .= "</div>";
+				$html   .= "<div id=\"active_users\"></div>";
+			}
+
+		$html   .= "  </div>";//end panel-body
+		$html   .= "</div>";//end panel-info
+
+	$html   .= "\n</div>";//end content_data
+
+	
+	#
+	# SYSTEM INFO
+	$html   .= "\n<div class=\"content_data block-content-2\" >";	// text_shadow_inset
+
+
+		$html   .= "<div class=\"panel panel-info\">";
+		$html   .= "  <div class=\"panel-heading\">";
+		$html   .= "    <h3 class=\"panel-title\"> SYSTEM INFO </h3>";
+		$html   .= "  </div>";
+		#$html   .= "  <div class=\"panel-body\">";
+		$html   .= "<ul class=\"list-group panel-body\">";
+
+
+			#
+			# DEDALO STRUCTURE
+			$dedalo_structure_info = RecordObj_dd::get_termino_by_tipo(DEDALO_ROOT_TIPO);
+			$prefix_tipos  = unserialize(DEDALO_PREFIX_TIPOS);
+			$dedalo_structure_info .= "\n".'Prefix: '. implode(",",$prefix_tipos);
+			$info_database = pg_version(DBi::_getConnection());	
+			$html .= tool_administration::show_info( "Dedalo structure current review ",
+													 '',
+													 $dedalo_structure_info
+													);
+
+
+			#
+			# DATABASE
+			$info_database = pg_version(DBi::_getConnection());	
+			$html .= tool_administration::show_info( "Database",
+													 $info_database['IntervalStyle']. " ". $info_database['server'],
+													 $info_database
+													);
+
+			#
+			# PHP USER
+			$processUser = posix_getpwuid(posix_geteuid());
+			$html .= tool_administration::show_info( "PHP user",
+													 $processUser['name'],
+													 $processUser
+													);
+
+			
+			#
+			# ENCODING mb_internal_encoding
+			$result = mb_internal_encoding();
+			$html .= tool_administration::show_info( "PHP ENCODING",
+													 "mb_internal_encoding",
+													 $result
+													);
+			
+
+			#
+			# ENCODING mb_regex_encoding
+			$result = mb_regex_encoding();
+			$html .= tool_administration::show_info( "PHP ENCODING",
+													 "mb_regex_encoding",
+													 $result
+													);
+			
+
+			#
+			# SESSION MAX LIFE TIME
+			$maxlifetime = ini_get("session.gc_maxlifetime");
+			$html .= tool_administration::show_info( "PHP SESSION MAX LIFE TIME",
+													 "session.gc_maxlifetime",
+													 $maxlifetime/60 ." min (".$maxlifetime/3600 ." hours)"
+													);
+
+
+			#
+			# FFMPEG
+			$ffmpeg = shell_exec(DEDALO_AV_FFMPEG_PATH." -version ");
+			preg_match("/ffmpeg version (.*) Copyright/", $ffmpeg, $output_array);
+			$html .= tool_administration::show_info( "FFMPEG",
+													 $output_array[1] ." - ". DEDALO_AV_FFMPEG_PATH,
+													 $ffmpeg
+													);
+
+
+			#
+			# FFPROBE
+			$ffprobe = shell_exec(DEDALO_AV_FFPROBE_PATH." -version ");	
+			preg_match("/ffprobe version (.*) Copyright/", $ffprobe, $output_array);
+			$html .= tool_administration::show_info( "PROBE",
+													 $output_array[1] ." - ". DEDALO_AV_FFPROBE_PATH,
+													 $ffprobe
+													);
+
+			#
+			# DEDALO_AV_FASTSTART_PATH
+			$faststart = shell_exec(DEDALO_AV_FASTSTART_PATH." -v ");
+			$html .= tool_administration::show_info( "FASTSTART",
+													 DEDALO_AV_FASTSTART_PATH,
+													 $faststart
+													);
+
+
+
+			#
+			# IMAGE MAGICK
+			$result = shell_exec(MAGICK_PATH."convert -version ");
+			preg_match("/Version: ImageMagick (\S*)\s/", $result, $output_array);
+			$html .= tool_administration::show_info( "IMAGE MAGICK",
+													 $output_array[1] ." - ". MAGICK_PATH,
+													 $result
+													);
+
+
+			#
+			# NODE JS
+			$result = shell_exec(DEDALO_NODEJS." -v ");
+			$html .= tool_administration::show_info( "NODE JS",
+													 $result." - ".DEDALO_NODEJS,
+													 $result
+													);
+			
+
+			#
+			# TINYMCE
+			#$path = DEDALO_ROOT.'/lib/tinymce/js/tinymce/tinymce.min.js';
+			$path = str_replace(DEDALO_ROOT_WEB, DEDALO_ROOT, TEXT_EDITOR_URL_JS);
+			$f = fopen($path, 'r');
+			$result = fgets($f);
+			fclose($f);
+			preg_match("/\/\/\s(\S*)\s/", $result, $output_array);
+			$html .= tool_administration::show_info( "TINYMCE",
+													 $output_array[1]." - ".$path,
+													 $result
+													);
+
+
+
+			#
+			# JQUERY
+			#$path = DEDALO_ROOT.'/lib/jquery/jquery.min.js';
+			$path = str_replace(DEDALO_ROOT_WEB, DEDALO_ROOT, JQUERY_LIB_URL_JS);
+			$f = fopen($path, 'r');
+			$result = fgets($f);
+			fclose($f);
+			preg_match("/\*\!\sjQuery v(\S*)\s/", $result, $output_array);
+			$html .= tool_administration::show_info( "JQUERY",
+													 $output_array[1]." - ".$path,
+													 $result
+													);
+
+
+			#
+			# PAPER
+			#$path = DEDALO_ROOT.'/lib/paper/dist/paper-full.min.js';
+			$path = str_replace(DEDALO_ROOT_WEB, DEDALO_ROOT, PAPER_JS_URL);
+			$lines = file($path);//file in to an array
+			$result = $lines[1]; //line 2
+			preg_match("/js v(\S*)\s-/", $result, $output_array);
+			$html .= tool_administration::show_info( "PAPER",
+													 $output_array[1]." - ".$path,
+													 $result
+													);
+
+
+			#
+			# LEAFLET
+			#$path = DEDALO_ROOT.'/lib/leaflet/stable_versions/leaflet.js';
+			$path = str_replace(DEDALO_ROOT_WEB, DEDALO_ROOT, LEAFLET_JS_URL);
+			$lines = file($path);//file in to an array
+			$result = $lines[5]; //line 2
+			preg_match("/version=\"([0-9]+.[0-9]+.[0-9]+)\"/", $result, $output_array);
+			$result = $output_array[1];
+			$html .= tool_administration::show_info( "LEAFLET",
+													 $output_array[1]." - ".$path,
+													 $result
+													);		
+		
+
+
+			#
+			# DB DATA CHECK
+			if(SHOW_DEBUG) {			
+				require(DEDALO_LIB_BASE_PATH.'/db/class.data_check.php');
+				$data_check = new data_check();
+				$response 	= $data_check->check_sequences();
+				if ($response->result!=true) {
+					debug_log(__METHOD__." $response->msg ".to_string(), logger::WARNING);
+					if(SHOW_DEBUG) {
+						die("Error on ".$response->msg);
+					}
+				}
+				$html .= tool_administration::show_info( "DB SEQUENCES STATE",
+														 "",
+														 $response->msg
+														);
+			}		
+		
+
+
+			#
+			# PHPINFO
+			$html   .= "<li>";
+			$html   .= "\n<iframe id=\"phpinfo\"
+			src=\"".DEDALO_LIB_BASE_URL."/tools/tool_administration/html/phpinfo.php\"
+			frameborder=\"0\"
+			scrolling=\"no\"
+			onload=\"resizeIframe(this)\"
+			></iframe>";
+			$html   .= "</li>";
+
+
+		$html   .= "</ul>";//end list-group
+
+
+		#$html   .= "  </div>";//end panel-body		
+		$html   .= "</div>";//end #system_info_content
+	
+
+	$html .= "\n</div><!-- /content_data block-content-2 -->";
+	$html .= "\n</div><!-- /wrap_tool -->"; //wrap_tool
+
+	
+
+	print $html;
+		
+?>

@@ -158,14 +158,21 @@
 	margin-right: 2px;
 	}
 	.tool_current_indexation_icon:hover { opacity: 0.3}
-/**/
 .tool_relation_icon {
 	background-position: -384px -96px;
 }
-
 .tool_replace_component_data_icon {
 	background-position: -336px -120px;
 }
+.tool_administration_icon {
+	background-position: -432px 0;
+}
+
+
+
+
+
+
 .icon_share {
 	background-position: -336px -96px;
 }

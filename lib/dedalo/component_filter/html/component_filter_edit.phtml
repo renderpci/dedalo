@@ -2,21 +2,18 @@
 
 	# VISUALIZADOR HTML	
 
-	# ELEMENTOS
-	if(!isset ($ar_css['css_span_dato'])) 				$ar_css['css_span_dato']='';
-	if(!isset ($ar_css['filter_checkbox'])) 			$ar_css['filter_checkbox']='';
-	if(!isset ($ar_css['css_span_ejemplo'])) 			$ar_css['css_span_ejemplo']='';
-	if(!isset ($ar_css['css_span_debugger']))			$ar_css['css_span_debugger']='';
-	if(!isset ($ar_css['css_wrap_component_filter']))	$ar_css['css_wrap_component_filter']='';
-	if(!isset ($ar_css['filter_checkbox_rotulo']))		$ar_css['filter_checkbox_rotulo']='';
-	
-	if(!isset ($tools_html))							$tools_html='';
-	
-	print "\n<!-- COMPONENT FILTER CHECK BOX [tipo:$tipo section_id_matrix:$parent] $label -->";
-	
-	print "\n<div class=\"css_wrap_filter css_wrap_component_filter wrap_component {$ar_css['filter_checkbox_rotulo']}\" id=\"{$id_wrapper}\"
-	data-tipo=\"{$tipo}\" data-lang=\"{$lang}\" data-section_tipo=\"{$section_tipo}\" data-parent=\"{$parent}\" data-modo=\"{$modo}\" data-dato=\"{$dato_string}\" data-component_name=\"{$component_name}\"
-	data-component_info='{$component_info}' >";
+		
+	print "\n<!-- COMPONENT FILTER CHECK BOX [tipo:$tipo section_id_matrix:$parent] $label -->";	
+	print "\n<div class=\"wrap_component css_wrap_filter wrap_component_{$tipo}\" id=\"{$id_wrapper}\"
+	data-tipo=\"{$tipo}\"
+	data-lang=\"{$lang}\"
+	data-section_tipo=\"{$section_tipo}\"
+	data-parent=\"{$parent}\"
+	data-modo=\"{$modo}\"
+	data-dato=\"{$dato_string}\"
+	data-component_name=\"{$component_name}\"
+	data-component_info='{$component_info}'
+	>";
 	
 	
 	# ETIQUETA (LABEL)
@@ -30,7 +27,7 @@
 	$html_contenido .= "\n <div class=\"wrap_dato_component_filter\"> ";	
 	switch($permissions) {
 			
-		case 0 :	$html_contenido .= "\n <span class=\"css_span_dato {$ar_css['css_span_dato']}\"> ".label::get_label('sin_acceso')." ($component_name)</span>"; 
+		case 0 :	$html_contenido .= "\n <span class=\"css_span_dato\"> ".label::get_label('sin_acceso')." ($component_name)</span>"; 
 					break;
 						
 		case 1 : 	
@@ -38,7 +35,7 @@
 					if (is_array ($ar_proyectos_section)) foreach ($ar_proyectos_section as $value => $rotulo) {
 						
 						if( is_array($dato) && in_array($value, array_keys($dato)) ) {													
-							$html_contenido .= "\n <label class=\"filter_checkbox_rotulo {$ar_css['filter_checkbox_rotulo']}\" $required_code >$rotulo</label>";
+							$html_contenido .= "\n <label class=\"filter_checkbox_rotulo\" $required_code >$rotulo</label>";
 							$html_contenido .= "\n <br>";
 						}	
 					}
@@ -48,37 +45,49 @@
 					#dump($ar_proyectos_section,"ar_proyectos_section");
 					#dump($dato,"dato");
 					
-					if (is_array ($ar_proyectos_section)) foreach ($ar_proyectos_section as $value => $rotulo) {
+					$html_contenido .= "<ul class=\"filter_projects_list\">";
+					
+					$i=1; foreach((array)$ar_proyectos_section as $value => $rotulo) {
 						
-						if( is_array($dato) && in_array($value, array_keys($dato)) ) {
-							$checked = 'checked="checked"';
-						}else {
-							$checked = "";
-						}
-						$html_contenido .= "\n <input class=\"filter_checkbox {$ar_css['filter_checkbox']}\" type=\"checkbox\"
+						$html_contenido .= "<li>";
+						
+						$checked  = is_array($dato) && in_array($value, array_keys($dato)) ? 'checked="checked"' : '';
+						$tabindex = $i==1 ? 'tabindex="1"' : '';
+
+
+						$html_contenido .= "\n <input type=\"checkbox\" class=\"filter_checkbox\"
+						onfocus=\"component_common.select_wrap(null,'$id_wrapper')\"
+						onchange=\"component_filter.Save(this)\"
 						name=\"{$input_name}\"
+						value=\"{$value}\"
+						title=\"$html_title $value\"
 						data-tipo=\"{$tipo}\"
 						data-lang=\"{$lang}\"
 						data-section_tipo=\"{$section_tipo}\"
 						data-parent=\"{$parent}\"
-						value=\"{$value}\"
-						onfocus=\"component_common.select_wrap(null,'$id_wrapper');\"
-						title=\"$html_title $value\" $checked />";	#id=\"{$identificador_unico}\" 
-												
-						$html_contenido .= "\n <label class=\"filter_checkbox_rotulo {$ar_css['filter_checkbox_rotulo']}\" $required_code >$rotulo</label>";
-						$html_contenido .= "\n <span class=\"debug_info\">id: $value</span>";
-						$html_contenido .= "\n <br>";	
-					}					
+						$checked
+						$tabindex
+						/>";	#id=\"{$identificador_unico}\" 
+						
+						$html_contenido .= "\n <label class=\"filter_checkbox_rotulo\" $required_code >$rotulo</label>";
+						#$html_contenido .= "\n <span class=\"debug_info\">id: $value</span>";
+						
+						$html_contenido .= "</li>";
+						$i++;	
+					}
+
+					$html_contenido .= "</ul>";					
 					break;
 		
 		case 3 :			
 					#$html_contenido .= "\n ".to_string($valor);
-					#$html_contenido .= "\n <span class=\"css_span_debugger {$ar_css['css_span_debugger']}\" id=\"debugger_{$id}\" >{$debugger}</span>";
+					#$html_contenido .= "\n <span class=\"css_span_debugger\" id=\"debugger_{$id}\" >{$debugger}</span>";
 					break;	
 					
 							
 	}
 	$html_contenido .= "\n </div><!-- /wrap_dato_component_filter -->";#end wrap_dato_component_filter
+	
 	
 	# Prepare content to show in page
 	tools::prepare_content($html_contenido);

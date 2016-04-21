@@ -184,7 +184,7 @@
 		if ($total_list_time>$limit_time) {
 			$style = "color:red";
 		}			
-		$html_info .= "<div class=\"portal_debug_info\" style=\"{$style}\" onclick=\"$(this).children('pre').toggle()\"> Time: ";
+		$html_info .= "<div class=\"debug_info portal_debug_info\" style=\"{$style}\" onclick=\"$(this).children('pre').toggle()\"> Time: ";
 		$html_info .= $total_list_time;
 		#$html_info .= ", get_rows_data:".$rows_data->generated_time['get_rows_data']." (over {$rows_data->options->full_count} records)";
 		#$html_info .= ", HTML section list: ".round(microtime(1)-$start_time,3);

@@ -1,20 +1,10 @@
 <?php
 
 	# VISUALIZADOR HTML	
-
-	# ELEMENTOS
-	if(!isset ($ar_css['css_span_dato'])) 				$ar_css['css_span_dato']='';
-	if(!isset ($ar_css['css_check_box'])) 				$ar_css['css_check_box']='';
-	if(!isset ($ar_css['css_span_ejemplo'])) 			$ar_css['css_span_ejemplo']='';
-	if(!isset ($ar_css['css_span_debugger']))			$ar_css['css_span_debugger']='';
-	if(!isset ($ar_css['css_wrap_check_box']))			$ar_css['css_wrap_check_box']='';
-	if(!isset ($ar_css['css_check_box_rotulo']))		$ar_css['css_check_box_rotulo']='';
-	
-	if(!isset ($tools_html))							$tools_html='';
-	
 	
 	print "\n<!-- CHECK BOX [tipo:$tipo section_id_matrix:$parent] $label -->";
-	print "\n<div class=\"css_wrap_check_box wrap_component {$ar_css['css_check_box_rotulo']}\"
+
+	print "\n<div class=\"wrap_component css_wrap_check_box wrap_component_{$tipo}\"
 	id=\"{$id_wrapper}\"
 	data-tipo=\"{$tipo}\"
 	data-section_tipo=\"{$section_tipo}\"
@@ -23,7 +13,8 @@
 	data-modo=\"{$modo}\"
 	data-dato='$dato_string'
 	data-component_name=\"{$component_name}\"
-	data-component_info='{$component_info}' >";
+	data-component_info='{$component_info}'
+	>";
 	
 	# ETIQUETA (LABEL)
 	$html_label = component_common_draw::draw_label($this);
@@ -46,44 +37,41 @@
 		case ($permissions>=2) :					
 		
 					$html_contenido .= "<ul class=\"group\">";
-					foreach ($ar_list_of_values->result as $value => $rotulo) {
+					$i=1; foreach ($ar_list_of_values->result as $value => $rotulo) {
 
 						$value   = (string)$value; 
 						$locator = (object)json_handler::decode($value);	# Locator is json encoded object
 						#dump($locator," locator"); #dump($dato," dato");
-
-						if (in_array($locator, $dato)) {	# dato is array always
-							$checked = 'checked="checked"';
-						}else{
-							$checked = "";
-						}
-						/* OLD
-						if( is_array($dato) && in_array($value, array_keys($dato)) ) {
-							$checked = 'checked="checked"';
-						}else {
-							$checked = "";
-						}
-						*/
+						
+						$checked  = in_array($locator, $dato) ? 'checked="checked"' : '';
+						$tabindex = $i==1 ? 'tabindex="1"' : '';
+						
 						$html_contenido .= "<li>";
 
 						# 
 						# INPUT
 						$html_contenido .= "\n <input type=\"checkbox\" class=\"css_check_box\"
+						onfocus=\"component_common.select_wrap(null,'$id_wrapper');\"
+						onchange=\"component_check_box.Save(this)\"
 						name=\"{$input_name}\"
 						data-tipo=\"{$tipo}\"
 						data-lang=\"{$lang}\"
 						data-section_tipo=\"{$section_tipo}\"
 						data-parent=\"{$parent}\"
 						value='$value'
-						title=\"$html_title\" $checked />";	#id=\"{$identificador_unico}\" 
+						title=\"$html_title\"
+						$checked
+						$tabindex
+						/>";	#id=\"{$identificador_unico}\" 
 						
 						#
 						# LABEL				
 						$html_contenido .= " <label class=\"css_check_box_rotulo\" $required_code >$rotulo</label>";
 
 						$html_contenido .= "</li>";
+						$i++;
 					}
-					$html_contenido .= "</ul>";						
+					$html_contenido .= "</ul>";
 							
 	}
 

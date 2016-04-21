@@ -99,8 +99,7 @@
 
 				break;
 
-		case 'upload':
-				
+		case 'upload':				
 
 				break; #end modo page / upload
 

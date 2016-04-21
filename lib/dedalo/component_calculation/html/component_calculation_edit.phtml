@@ -2,19 +2,20 @@
 
 	# VISUALIZADOR HTML	
 
-	# ELEMENTOS
-	if(!isset ($ar_css['css_span_dato'])) 			$ar_css['css_span_dato']='';
-	if(!isset ($ar_css['css_calculation']))			$ar_css['css_calculation']='';
-	if(!isset ($ar_css['css_span_ejemplo'])) 		$ar_css['css_span_ejemplo']='';
-	if(!isset ($ar_css['css_span_debugger']))		$ar_css['css_span_debugger']='';
-	if(!isset ($ar_css['css_wrap_calculation']))	$ar_css['css_wrap_calculation']='';
 	
 	
 	
 	print "\n<!-- NUMBER [tipo:$tipo section_id_matrix:$parent] $label -->";
-	print "\n<div class=\"css_wrap_calculation wrap_component {$ar_css['css_wrap_calculation']}\" id=\"{$id_wrapper}\"
-	data-tipo=\"{$tipo}\" data-lang=\"{$lang}\" data-section_tipo=\"{$section_tipo}\" data-parent=\"{$parent}\" data-modo=\"{$modo}\" data-dato=\"{$dato}\" data-component_name=\"{$component_name}\"
-	data-component_info='{$component_info}' >";
+	print "\n<div class=\"wrap_component css_wrap_calculation wrap_component_{$tipo}\" id=\"{$id_wrapper}\"
+	data-tipo=\"{$tipo}\"
+	data-lang=\"{$lang}\"
+	data-section_tipo=\"{$section_tipo}\"
+	data-parent=\"{$parent}\"
+	data-modo=\"{$modo}\"
+	data-dato=\"{$dato}\"
+	data-component_name=\"{$component_name}\"
+	data-component_info='{$component_info}'
+	>";
 	
 		
 		# ETIQUETA (LABEL)
@@ -24,27 +25,31 @@
 		$html_contenido = '';
 		switch($permissions) {
 				
-			case 0	:	$html_contenido .= "\n <span class=\"css_span_sin_acceso\">".label::get_label('sin_acceso')."</span>";
+			case 0	:	$html_contenido .= "";
 						break;
 							
-			case 1	: 	$html_contenido .= "\n <span class=\"css_span_dato {$ar_css['css_span_dato']}\">$dato</span>";
+			case 1	: 	$html_contenido .= "\n <span class=\"css_span_dato\">$dato</span>";
 						break;	
 							
 			case ($permissions>=2)	:
 		
 					
-						$html_contenido .= "\n <input class=\"css_calculation {$ar_css['css_calculation']}\" type=\"text\" 
+						$html_contenido .= "\n <input class=\"css_calculation\" type=\"text\"
+						onchange=\"component_number.Save(this)\" 
 						name=\"{$input_name}\" 
-						data-tipo=\"{$tipo}\" data-section_tipo=\"{$section_tipo}\" data-parent=\"{$parent}\" data-lang=\"{$lang}\" 
+						data-tipo=\"{$tipo}\"
+						data-section_tipo=\"{$section_tipo}\"
+						data-parent=\"{$parent}\"
+						data-lang=\"{$lang}\" 
 						value=\"{$dato}\" 
 						title=\"$html_title\"
 						/>";			
 						
 						#$html_contenido .= "\n <span  class=\"css_span_log\"></span>";					
-						#$html_contenido .= "\n <span  class=\"css_span_ejemplo {$ar_css['css_span_ejemplo']}\">$ejemplo</span>";						
+						#$html_contenido .= "\n <span  class=\"css_span_ejemplo\">$ejemplo</span>";						
 						
 				if($permissions==3)		
-						$html_contenido .= "\n <span class=\"css_span_debugger {$ar_css['css_span_debugger']}\" id=\"debugger_{$tipo}\" >{$debugger}</span>";	
+						$html_contenido .= "\n <span class=\"css_span_debugger\" id=\"debugger_{$tipo}\" >{$debugger}</span>";	
 												
 		}
 

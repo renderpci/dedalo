@@ -15,20 +15,14 @@
 	$file_name 				= $modo;
 
 
+
 	switch($modo) {	
 		
 		case 'button':
 				
 				break;
 
-		case 'page':
-
-				# TOOL CSS / JS MAIN FILES
-				# CSS
-				css::$ar_url[] = DEDALO_LIB_BASE_URL."/tools/".$tool_name."/css/".$tool_name.".css";
-				# JS
-				js::$ar_url[]  = DEDALO_LIB_BASE_URL."/tools/tool_lang/js/tool_lang.js";
-				js::$ar_url[]  = DEDALO_LIB_BASE_URL."/tools/".$tool_name."/js/".$tool_name.".js";
+		case 'page':				
 
 				# Fix related component (text)
 				$this->component_related_obj = $this->get_component_related_obj();
@@ -49,6 +43,12 @@
 				# JS includes
 					js::$ar_url[] = DEDALO_LIB_BASE_URL.'/component_text_area/js/component_text_area.js';
 					js::$ar_url[] = DEDALO_LIB_BASE_URL."/$component_name/js/$component_name.js";
+
+				#
+				# JS aditional
+					if (defined('DEDALO_LOCK_COMPONENTS') && DEDALO_LOCK_COMPONENTS===true) {
+						js::$ar_url[]  = DEDALO_LIB_BASE_URL."/lock_components/js/lock_components.js";
+					}
 					
 
 				# TEXT (EDITOR) LEFT SIDE
@@ -87,14 +87,22 @@
 				$component_state_html 	= '';	
 				if ( is_object($component_state) ) {
 					$component_state_html 	= $component_state->get_html();	
-				}					
+				}
 
 
 				# BUTTON TOOL SUBTITLES
 				if (defined('TEXT_SUBTITLES_ENGINE')) {
 					$tool_subtitles 		= new tool_subtitles($this->component_related_obj,'button');
-					$button_subtitles_html 	=  $tool_subtitles->get_html();
+					$button_subtitles_html 	= $tool_subtitles->get_html();
 				}
+
+				# TOOL CSS / JS MAIN FILES
+				# CSS
+				css::$ar_url[] = DEDALO_LIB_BASE_URL."/tools/".$tool_name."/css/".$tool_name.".css";
+				# JS
+				js::$ar_url[]  = DEDALO_LIB_BASE_URL."/tools/tool_lang/js/tool_lang.js";
+				js::$ar_url[]  = DEDALO_LIB_BASE_URL."/tools/".$tool_name."/js/".$tool_name.".js";
+				
 				break;				
 		
 	}#end switch		

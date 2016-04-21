@@ -1,21 +1,19 @@
 <?php
 
 	# VISUALIZADOR HTML	
-
-	# ELEMENTOS
-	if(!isset ($ar_css['css_span_dato'])) 		$ar_css['css_span_dato']='';
-	if(!isset ($ar_css['css_email'])) 			$ar_css['css_email']='';
-	if(!isset ($ar_css['css_span_ejemplo'])) 	$ar_css['css_span_ejemplo']='';
-	if(!isset ($ar_css['css_span_debugger']))	$ar_css['css_span_debugger']='';
-	if(!isset ($ar_css['css_wrap_email']))		$ar_css['css_wrap_email']='';
-	
-	if(!isset ($html_tools))					$html_tools='';
 	
 	
 	print "\n<!-- EMAIL [tipo:$tipo section_id_matrix:$parent] -->";
-	print "\n<div class=\"css_wrap_email wrap_component {$ar_css['css_wrap_email']}\" id=\"{$id_wrapper}\"
-	data-tipo=\"{$tipo}\" data-lang=\"{$lang}\" data-section_tipo=\"{$section_tipo}\" data-parent=\"{$parent}\" data-modo=\"{$modo}\" data-dato=\"{$dato}\" data-component_name=\"{$component_name}\"
-	data-component_info='{$component_info}' >";
+	print "\n<div class=\"wrap_component css_wrap_email wrap_component_{$tipo}\" id=\"{$id_wrapper}\"
+	data-tipo=\"{$tipo}\"
+	data-lang=\"{$lang}\"
+	data-section_tipo=\"{$section_tipo}\"
+	data-parent=\"{$parent}\"
+	data-modo=\"{$modo}\"
+	data-dato=\"{$dato}\"
+	data-component_name=\"{$component_name}\"
+	data-component_info='{$component_info}'
+	>";
 	
 	# ETIQUETA (LABEL)
 	$html_label = component_common_draw::draw_label($this);
@@ -24,28 +22,33 @@
 	$html_contenido = '';
 	switch($permissions) {
 			
-		case 0	:	$html_contenido .= "\n <span class=\"css_span_dato {$ar_css['css_span_dato']}\"> ".label::get_label('sin_acceso')." (email)</span>";
-					break;
+		case 0	:
+				$html_contenido .= "";
+				break;
 						
-		case 1	: 	$html_contenido .= "\n <span class=\"css_span_dato {$ar_css['css_span_dato']}\">$dato</span>";
-					break;	
+		case 1	: 	
+				$html_contenido .= "\n <span class=\"css_span_dato\">$dato</span>";
+				break;	
 						
 		case ($permissions>=2)	:
 		
-					$html_contenido .= "\n <input class=\"css_email bg_email {$ar_css['css_email']}\" type=\"text\"
-					name=\"{$input_name}\" 
-					data-tipo=\"{$tipo}\" data-section_tipo=\"{$section_tipo}\" data-parent=\"{$parent}\" data-lang=\"{$lang}\"
-					value=\"{$dato}\" title=\"$html_title\" />";
-					
-					#$html_contenido .= "\n <span	class=\"css_span_ejemplo {$ar_css['css_span_ejemplo']}\">$ejemplo</span>";					
-					#$html_contenido .= "\n <span	class=\"css_span_log\"></span>";
-					
-					#$html_contenido .= $html_tools;	
-					
-			if($permissions==3)		
-					$html_contenido .= "\n <span class=\"css_span_debugger {$ar_css['css_span_debugger']}\" id=\"debugger_{$tipo}\" >{$debugger}</span>";	
-					
-											
+				$html_contenido .= "\n <input class=\"css_email bg_email\" type=\"text\"
+				onfocus=\"component_common.select_wrap(null,'$id_wrapper');\"
+				onchange=\"component_email.Save(this)\"
+				name=\"{$input_name}\"
+				data-tipo=\"{$tipo}\"
+				data-section_tipo=\"{$section_tipo}\"
+				data-parent=\"{$parent}\"
+				data-lang=\"{$lang}\"
+				value=\"{$dato}\"
+				title=\"$html_title\"
+				tabindex=\"1\"
+				/>";					
+				
+				if($permissions==3)	{
+					$html_contenido .= "\n <span class=\"css_span_debugger\" id=\"debugger_{$tipo}\">{$debugger}</span>";
+				}
+				break;								
 	}
 
 	# Prepare content to show in page

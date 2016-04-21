@@ -1449,7 +1449,7 @@ trigger_error("!!! DEPRECATED ".__METHOD__);
 			if ($total_list_time>$limit_time || $total_list_time>0.020) {
 				$style = "color:red";
 			}			
-			$html_info .= "<div class=\"ar_list_of_values_debug_info\" style=\"{$style}\" onclick=\"$(this).children('pre').toggle()\"> Time: ";
+			$html_info .= "<div class=\"debug_info ar_list_of_values_debug_info\" style=\"{$style}\" onclick=\"$(this).children('pre').toggle()\"> Time: ";
 			$html_info .= $total_list_time;
 			$html_info .= "<pre style=\"display:none\"> ".$strQuery ."</pre>";
 			$html_info .= "</div>";		
@@ -1845,7 +1845,7 @@ trigger_error("!!! DEPRECATED ".__METHOD__);
 			if ($total_list_time>$limit_time || $total_list_time>0.020) {
 				$style = "color:red";
 			}			
-			$html_info .= "<div class=\"ar_list_of_values_debug_info\" style=\"{$style}\" onclick=\"$(this).children('pre').toggle()\"> Time: ";
+			$html_info .= "<div class=\"debug_info ar_list_of_values_debug_info\" style=\"{$style}\" onclick=\"$(this).children('pre').toggle()\"> Time: ";
 			$html_info .= $total_list_time;
 			$html_info .= "<pre style=\"display:none\"> ".$strQuery ."</pre>";
 			$html_info .= "</div>";

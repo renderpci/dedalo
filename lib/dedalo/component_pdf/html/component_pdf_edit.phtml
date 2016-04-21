@@ -1,17 +1,11 @@
 <?php
 
-	# VISUALIZADOR HTML	
+	# VISUALIZADOR HTML
 
-	# ELEMENTOS
-	if(!isset ($ar_css['css_span_dato'])) 			$ar_css['css_span_dato']='';
-	if(!isset ($ar_css['css_pdf'])) 				$ar_css['css_pdf']='';
-	if(!isset ($ar_css['css_span_ejemplo'])) 		$ar_css['css_span_ejemplo']='';
-	if(!isset ($ar_css['css_span_debugger']))		$ar_css['css_span_debugger']='';
-	if(!isset ($ar_css['css_wrap_pdf']))			$ar_css['css_wrap_pdf']='';	
-	
-	
+
 	print "\n<!-- PDF [tipo:$tipo section_id_matrix:$parent] $label -->";
-	print "\n<div class=\"css_wrap_pdf wrap_component {$ar_css['css_wrap_pdf']}\"
+	
+	print "\n<div class=\"wrap_component css_wrap_pdf wrap_component_{$tipo}\"
 	id=\"{$id_wrapper}\"
 	data-tipo=\"{$tipo}\"
 	data-lang=\"{$lang}\"
@@ -24,33 +18,33 @@
 	data-initial_media_path=\"$initial_media_path\"
 	data-component_info='{$component_info}'
 	>";
-	
-		
+
+
 		# ETIQUETA (LABEL)
 		$html_label = component_common_draw::draw_label($this);
-		
+
 		# CONTENIDO (INPUT)
 		$html_contenido = '';
 		switch($permissions) {
-				
+
 			case 0 :	$html_contenido .= "";
 						break;
-							
+
 			case ($permissions>=1) :
-				
+
 						# pdf THUMB
-						if($file_exists) { 
+						if($file_exists) {
 
 							$html_contenido .= "\n <div class=\"css_wrap_pdf_thumb\" onclick=\"\" >";
 							/*
 							#Embed PDF File
-							$html_contenido .= "<object class=\"pdf_object_thumb\" type=\"application/pdf\" 
+							$html_contenido .= "<object class=\"pdf_object_thumb\" type=\"application/pdf\"
 													data=\"$pdf_url\"?>?#zoom=50&scrollbar=1&toolbar=0&navpanes=0\" id=\"pdf_content\">
 													<param name=\"zoom\" value=\"50%\" />
 						    						<p>Your browser does not support pdf view.</p>
 						    					</object>";
 							*/
-							
+
 							$html_contenido .= $pdf_thumb_html ; # Rendered in thumb mode
 							$html_contenido .= "\n </div>";
 
@@ -58,7 +52,7 @@
 
 							$open_tool_default='';
 							$add_class='';
-							# FILE NOT EXISTS. PLACE DEDALO PDF WITH LINK TO DEFAULT TOOL							
+							# FILE NOT EXISTS. PLACE DEDALO PDF WITH LINK TO DEFAULT TOOL
 							$open_tool_default ="data-pdf_id=\"$pdf_id\"
 							data-quality=\"".DEDALO_PDF_QUALITY_DEFAULT."\"
 							data-aditional_path=\"$aditional_path\"
@@ -69,22 +63,22 @@
 							onclick=\"tool_common.open_tool_upload(this)\"
 							title=\"Upload file in original quality\" ";
 
-							$html_contenido .= "\n <div class=\"css_wrap_pdf_thumb no_pdf_file\" $open_tool_default>";
-							$html_contenido .= "  <span class=\"\">No file is loaded. Click to upload PDF</span>" ;
-							$html_contenido .= "\n </div>";
-						}	
-												
+							$html_contenido .= "\n <a class=\"css_wrap_pdf_thumb no_pdf_file\" $open_tool_default tabindex=\"1\">";
+							$html_contenido .= "  <span class=\"\" >No file is loaded. Click to upload PDF</span>" ;
+							$html_contenido .= "\n </a>";
+						}
+
 		}
 
 		# Prepare content to show in page
-		tools::prepare_content($html_contenido);	
-		
+		tools::prepare_content($html_contenido);
+
 
 		# PRINT HTML
 		print $html_label;
 		print $html_contenido;
-	
-	
+
+
 	print "\n</div><!-- /css_wrap_pdf [tipo:$tipo section_id_matrix:$parent] $label -->\n"; //wrap
 
 

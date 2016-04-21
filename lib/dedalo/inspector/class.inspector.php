@@ -9,10 +9,13 @@ class inspector {
 	protected $modo;
 	protected $tipo;
 
+
 	public function __construct($modo, $tipo) {
-		$this->modo = $modo;
-		$this->tipo = $tipo;
+
+		$this->modo	= $modo;
+		$this->tipo	= $tipo;	
 	}
+
 
 	/**
 	* HTML

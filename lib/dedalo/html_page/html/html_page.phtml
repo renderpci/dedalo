@@ -8,16 +8,20 @@ header('Content-Type: text/html');
 */
 ?>
 <!DOCTYPE html>
-<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en-US" lang="en-US">
+<?php /*<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en-US" lang="en-US">*/ ?>
+<html lang="<?php echo $lang_tld2 ?>">
 <head>
-<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<?php /*<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />*/?>
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title><?php echo $page_title ?></title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="shortcut icon" href="<?php echo DEDALO_ROOT_WEB ?>/favicon.ico" />
-<?php echo $css_link_code ?>
+<?php echo trim($css_link_code); ?>
 
 <script>
-var DEDALO_LIB_BASE_URL	= '<?php echo DEDALO_LIB_BASE_URL ?>', DEDALO_ROOT_WEB = '<?php echo DEDALO_ROOT_WEB ?>';
+var DEDALO_LIB_BASE_URL='<?php echo DEDALO_LIB_BASE_URL ?>',DEDALO_ROOT_WEB='<?php echo DEDALO_ROOT_WEB ?>',DEBUG=<?php var_export(SHOW_DEBUG); ?>;
 var page_globals = {
 	dedalo_version:'<?php echo DEDALO_VERSION ?>',
 	dedalo_application_lang:'<?php echo DEDALO_APPLICATION_LANG ?>',
@@ -33,6 +37,8 @@ var page_globals = {
 	top_id:'<?php echo TOP_ID;	#if(isset($top_id)) echo $top_id ?>',
 	tag_id:'<?php echo isset($_REQUEST["tag_id"]) ? $_REQUEST["tag_id"] : "" ?>',
 	user_id:'<?php if(isset($user_id)) echo $user_id ?>',
+	username:'<?php if(isset($username)) echo $username ?>',
+	full_username:'<?php if(isset($full_username)) echo $full_username ?>',
 <?php if (isset($_REQUEST["portal_tipo"])) { ?>
 	portal_tipo:'<?php echo $_REQUEST["portal_tipo"] ?>',
 <?php } ?>
@@ -45,8 +51,8 @@ var page_globals = {
 <?php #if (isset($_REQUEST["id_path"])) {   ?>
 	id_path:'<?php echo isset($_REQUEST["id_path"]) ? $_REQUEST["id_path"]:'' ?>',
 <?php #} ?>
+	DEDALO_NOTIFICATIONS:<?php echo defined("DEDALO_NOTIFICATIONS") ? (int)DEDALO_NOTIFICATIONS : 0 ?>,
 }
-DEBUG = <?php var_export(SHOW_DEBUG); ?>;
 <?php if(SHOW_DEBUG) {?>
 
 	//console.log("section_tipo: "+page_globals.section_tipo)
@@ -56,28 +62,30 @@ DEBUG = <?php var_export(SHOW_DEBUG); ?>;
 	//console.log("id_path:"+page_globals.id_path)
 	
 <?php } //if(SHOW_DEBUG) {?>
-</script><?php echo $js_link_code ?>
+</script>
+<?php echo trim($js_link_code) ?>
 </head>
 
 <body>
-<div id="html_page_wrap">
+<div id="html_page_wrap" class="<?php echo "html_page_wrap_{$modo} html_page_wrap_{$tipo}"; ?>">
 
-	<?php	
-
-	# PAGE HEADER HTML
-		print $html_header;
-
-	# dump(NULL, 'TOP_TIPO '.TOP_TIPO.' - TOP_ID:'.TOP_ID);
-	if(SHOW_DEBUG) {
-		if (!TOP_TIPO) {
-			echo "<div class=\"warning\">Error: TOP_TIPO is empty</div>";
-		}		
-	}
+	<?php
 
 
+	#
+	# HEADER . PAGE HEADER HTML
+		print $html_header;	
+
+
+	#
 	# LOG MESSAGES		
 		print '<!-- LOG MESSAGES HTML -->';
 		print '<div id="log_messages" ondblclick="this.innerHTML=\'\';">';
+		if(SHOW_DEBUG) {
+			if (!TOP_TIPO) {
+				print "<div class=\"warning\">Error: TOP_TIPO is empty</div>";
+			}		
+		}
 		print implode('<br>', (array)$log_messages);
 		if(error_get_last()) {
 			print "Last Error: <pre>";
@@ -87,12 +95,14 @@ DEBUG = <?php var_export(SHOW_DEBUG); ?>;
 		print "</div><!-- /log_messages -->\n\n";
 		
 	
+	#
 	# GLOBAL INFO
 		print '<!-- GLOBAL INFO-->';
 		print '<div id="global_info" ondblclick="this.innerHTML=\'\';">';
 		print '</div>';
 
 
+	#
 	# CONTENT HTML
 		print '<!-- CONTENT HTML -->';
 		print "\n<div class=\"content_html\">";
@@ -100,7 +110,7 @@ DEBUG = <?php var_export(SHOW_DEBUG); ?>;
 		print "\n</div><!-- /content_html -->\n\n";
 
 
-
+	#
 	# FOOTER
 		print '<!-- FOOTER HTML -->';
 
@@ -119,34 +129,31 @@ DEBUG = <?php var_export(SHOW_DEBUG); ?>;
 		}
 
 
-
+		#
 		# DIALOG FRAME
 		#if(empty($caller_id))
 		print "\n <iframe id=\"dialog_page_iframe\" class=\"dialog_page_iframe\" src=\"about:blank\"></iframe><!-- /dialog_page_iframe -->\n\n";
-
-
 		
 
 
-
+		#
 		# TIME TO LOAD
-		if($modo!='relation')
-		require_once('html_page_time_to_load.phtml');
+		if(SHOW_DEBUG===true) {
+			if($modo!='relation') include(DEDALO_LIB_BASE_PATH.'/html_page/html/html_page_time_to_load.phtml');
+		}
 	?>
 
 </div><!-- /html_page_wrap -->
 
 <?php
-		# DEBUG
-		if(SHOW_DEBUG===true) {
+	# DEBUG
+	if(SHOW_DEBUG===true) {
 
-			# DEBUGGER INFO
-			if($modo!='relation') {
-				require_once('html_page_debug.phtml');
-			}
-			
-			
-		}#if(SHOW_DEBUG===true)
+		# DEBUGGER INFO
+		if($modo!='relation') include(DEDALO_LIB_BASE_PATH.'/html_page/html/html_page_debug.phtml');
+		
+		
+	}#if(SHOW_DEBUG===true)
 ?>
 </body>
 </html>

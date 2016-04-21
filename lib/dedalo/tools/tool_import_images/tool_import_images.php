@@ -2,7 +2,7 @@
 # SESSION LIFETIME
 # Set session_duration_hours before load 'config' file (override default value)
 #$session_duration_hours = 18;
-require_once( dirname(dirname(dirname(__FILE__))) .'/config/config4.php');
+#require_once( dirname(dirname(dirname(__FILE__))) .'/config/config4.php');
 
 
 

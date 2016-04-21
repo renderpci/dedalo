@@ -1,14 +1,11 @@
 <?php
 
-	# VISUALIZADOR HTML	
+	# VISUALIZADOR HTML
 
 	# ELEMENTOS
-	if(!isset ($ar_css['css_wrap_autocomplete']))	$ar_css['css_wrap_autocomplete']='';
 
-			
-	
 	print "\n<!-- COMPONENT_AUTOCOMPLETE [tipo:$tipo section_id:$parent] $label -->";
-	print "\n<div class=\"css_wrap_autocomplete wrap_component {$ar_css['css_wrap_autocomplete']}\" id=\"{$id_wrapper}\"
+	print "\n<div class=\"wrap_component css_wrap_autocomplete wrap_component_{$tipo}\" id=\"{$id_wrapper}\"
 	data-tipo=\"{$tipo}\"
 	data-lang=\"{$lang}\"
 	data-parent=\"{$parent}\"
@@ -20,33 +17,33 @@
 	data-component_name=\"{$component_name}\"
 	data-component_info='{$component_info}'
 	>";
-	
+
 	# ETIQUETA (LABEL)
 	$html_label = component_common_draw::draw_label($this);
-	
+
 	# CONTENIDO (INPUT)
 	$html_contenido = '';
 	switch($permissions) {
-			
+
 		case 0	:	$html_contenido .= "";
 					break;
-						
+
 		case 1	: 	$html_contenido .= $valor;
-					break;						
-		
+					break;
+
 		case ($permissions>=2)	:
-				
+
 					# VALOR . STRING RESOLVED TO SHOW
 					$html_contenido .= "\n <ul class=\"css_autocomplete_valor\">";
 					foreach ($ar_valor as $current_value => $value) {
-						
+
 						$current_value_obj  	= json_decode($current_value);
 						$current_section_id 	= $current_value_obj->section_id;
 						$current_section_tipo 	= $current_value_obj->section_tipo;
 
 						$html_contenido .= "<li>";
 
-						
+
 						#
 						# BTN DELETE
 						if (!$in_time_machine) {
@@ -57,11 +54,11 @@
 						title=\"$label $parent\"
 						onclick=\"component_autocomplete.delete(this)\"></div>";
 						}
-						
+
 						#
 						# LABEL
 						$html_contenido .= $value;
-						
+
 						#
 						# BTN EDIT
 						if (!$in_time_machine) {
@@ -78,9 +75,9 @@
 					}
 					$html_contenido .= "</ul>";
 
-					
+
 					if (!$in_time_machine) {
-				
+
 						#
 						# BTN EDIT WHOLE SECTION
 						$url_edit = "?t=".reset($ar_target_section_tipo);	// To first section only  onclick=\"window.open('$url_edit')\"
@@ -99,9 +96,10 @@
 							data-tipo='{$tipo}'
 							data-section_tipo=\"{$section_tipo}\"
 							data-parent='{$parent}'
-							data-ar_target_section_tipo='{$ar_target_section_tipo_json}'					
+							data-ar_target_section_tipo='{$ar_target_section_tipo_json}'
 							data-tipo_to_search='{$tipo_to_search}'
 							onfocus=\"component_autocomplete.activate(this)\"
+							tabindex=\"1\"
 							/>";
 
 
@@ -114,13 +112,13 @@
 							if (isset($propiedades->filtered_by)) {
 								$html_contenido .= "<div class=\"notes\">filtered_by: ".json_encode($propiedades->filtered_by)."</div>";	// filtered_by
 							}
-							$html_contenido .= "<div class=\"notes\">".str_replace('},', '},<br>', $dato_json) ."</div>";												
+							$html_contenido .= "<div class=\"notes\">".str_replace('},', '},<br>', $dato_json) ."</div>";
 						}
 					}
 
 
 					#
-					# INPUT DATA HIDDEN					
+					# INPUT DATA HIDDEN
 					$html_contenido .= "\n <input type=\"text\" class=\"css_autocomplete_dato_hidden\"
 						name=\"{$input_name}\"
 						data-type=\"autocomplete_dato_hidden\"
@@ -135,28 +133,28 @@
 						title=''
 						disabled=\"disabled\"
 						/>";
-					
+
 
 			if($permissions==3)
-					
-					$html_contenido .= "\n <span class=\"css_span_debugger\" id=\"debugger_{$tipo}\" >{$debugger}</span>";	
-				
-											
+
+					$html_contenido .= "\n <span class=\"css_span_debugger\" id=\"debugger_{$tipo}\" >{$debugger}</span>";
+
+
 	}
 
 	# Prepare content to show in page
 	tools::prepare_content($html_contenido);
-	
-	
+
+
 	# PRINT HTML
 	print $html_label;
 	print $html_contenido;
-	
+
 	if(SHOW_DEBUG) {
 		if (isset($this->ar_list_of_values->debug)) {
 			echo $this->ar_list_of_values->debug;
-		}		
+		}
 	}
-	
+
 	print "\n</div><!-- /css_wrap_component_autocomplete COMPONENT_AUTOCOMPLETE [tipo:$tipo section_id:$parent] $label -->\n\n"; //wrap
 ?>

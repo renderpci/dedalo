@@ -16,11 +16,12 @@
 
 		case 'edit':
 
-				require_once(DEDALO_LIB_BASE_PATH . '/section_records/record/class.record.php');
-				require_once(DEDALO_LIB_BASE_PATH . '/search/records_navigator/class.records_navigator.php');
+				include_once(DEDALO_LIB_BASE_PATH . '/section_records/record/class.record.php');
+				
 
 				#
-				# PAGINATOR HTML
+				# PAGINATOR HTML					
+					include_once(DEDALO_LIB_BASE_PATH . '/search/records_navigator/class.records_navigator.php');
 					$rows_paginator_html= '';
 					$context_name 		= isset($_GET['context_name']) ? $_GET['context_name'] : false;
 					switch (true) {
@@ -34,7 +35,8 @@
 							$rows_paginator 		= new records_navigator($this->rows_obj, $modo);
 							$rows_paginator_html	= $rows_paginator->get_html();
 							break;
-					}					
+					}
+
 				
 				#
 				# ROW HTML
@@ -50,8 +52,8 @@
 
 		case 'list':
 
-				require_once(DEDALO_LIB_BASE_PATH . '/section_records/rows_header/class.rows_header.php');
-				require_once(DEDALO_LIB_BASE_PATH . '/section_records/rows/class.rows.php');
+				include_once(DEDALO_LIB_BASE_PATH . '/section_records/rows_header/class.rows_header.php');
+				include_once(DEDALO_LIB_BASE_PATH . '/section_records/rows/class.rows.php');
 
 				/*
 				$tool_update_cache = new tool_update_cache($tipo);
@@ -120,27 +122,16 @@
 				}else{
 					#
 					# CSS
-							css::$ar_url[] = DEDALO_ROOT_WEB.'/lib/nvd3/nv.d3.min.css';
-							css::$ar_url[] = DEDALO_LIB_BASE_URL.'/diffusion/diffusion_section_stats/css/diffusion_section_stats.css';
+						css::$ar_url[] = NVD3_URL_CSS;
+						css::$ar_url[] = DEDALO_LIB_BASE_URL.'/diffusion/diffusion_section_stats/css/diffusion_section_stats.css';
 
 					#
 					# JS includes
-							js::$ar_url[] = D3_URL_JS;
-							js::$ar_url[] = NVD3_URL_JS;
-							/*										
-							js::$ar_url[] = DEDALO_ROOT_WEB.'/lib/nvd3/src/models/axis.js';
-							js::$ar_url[] = DEDALO_ROOT_WEB.'/lib/nvd3/src/models/pieChart.js';
-							js::$ar_url[] = DEDALO_ROOT_WEB.'/lib/nvd3/src/models/discreteBarChart.js';
-							#js::$ar_url[] = DEDALO_ROOT_WEB.'/lib/nvd3/src/models/multiBarHorizontal.js';
-							js::$ar_url[] = DEDALO_ROOT_WEB.'/lib/nvd3/src/models/multiBarHorizontalChart.js';
-							js::$ar_url[] = DEDALO_ROOT_WEB.'/lib/nvd3/src/utils.js';
-							js::$ar_url[] = DEDALO_ROOT_WEB.'/lib/nvd3/src/tooltip.js';
-							js::$ar_url[] = DEDALO_ROOT_WEB.'/lib/nvd3/src/models/legend.js';
-							*/
-							js::$ar_url[] = DEDALO_LIB_BASE_URL.'/diffusion/diffusion_section_stats/js/diffusion_section_stats.js';
-
-							#js::$ar_url[] = DEDALO_ROOT_WEB.'/lib/jquery/jquery.resizableColumns.min.js';
-							#js::$ar_url[] = DEDALO_ROOT_WEB.'/lib/store.js-master/store.min.js';
+						js::$ar_url[] = D3_URL_JS;
+						js::$ar_url[] = NVD3_URL_JS;							
+						js::$ar_url[] = DEDALO_LIB_BASE_URL.'/diffusion/diffusion_section_stats/js/diffusion_section_stats.js';
+						#js::$ar_url[] = DEDALO_ROOT_WEB.'/lib/jquery/jquery.resizableColumns.min.js';
+						#js::$ar_url[] = DEDALO_ROOT_WEB.'/lib/store.js-master/store.min.js';
 				}
 
 				# ACTIVITY DEDALO_ACTIVITY_SECTION_TIPO

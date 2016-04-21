@@ -107,12 +107,13 @@ $PosterFrameObj = new PosterFrameObj($reelID);
 	#
 	# CONFIGURE KEYS 
 	$configure_keys_html	= null;
+		/*
 		$file = DEDALO_LIB_BASE_PATH .'/media_engine/html/av_media_player_configure_keys.phtml';
 		ob_start();
 		include ( $file );
 		$configure_keys_html =  ob_get_contents();
 		ob_get_clean();
-	
+		*/
 
 
 

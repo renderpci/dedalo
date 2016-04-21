@@ -17,11 +17,9 @@
 	position: relative;*/
 }
 .section_buttons_container {
-	float: right;
 	position: relative;
+	float: right;	
 	min-height: 28px;
-	right: 10px;	
-	top: -4px;
 	z-index: 1;
 }
 

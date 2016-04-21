@@ -1,16 +1,8 @@
 <?php
 
-	# VISUALIZADOR HTML	
+	# VISUALIZADOR HTML
 
-	# ELEMENTOS
-	if(!isset ($ar_css['css_span_dato'])) 		$ar_css['css_span_dato']='';
-	if(!isset ($ar_css['css_input_text'])) 		$ar_css['css_input_text']='';
-	if(!isset ($ar_css['css_span_ejemplo'])) 	$ar_css['css_span_ejemplo']='';
-	if(!isset ($ar_css['css_span_debugger']))	$ar_css['css_span_debugger']='';
-	if(!isset ($ar_css['css_wrap_input_text']))	$ar_css['css_wrap_input_text']='';
-	
-	
-	
+
 	print "\n<!-- INPUT_TEXT [tipo:$tipo section_id_matrix:$parent] $label -->";
 	print "\n<div class=\"css_wrap_input_text wrap_component wrap_component_{$tipo}\" id=\"{$id_wrapper}\"
 	data-tipo=\"{$tipo}\"
@@ -21,74 +13,87 @@
 	data-dato=\"{$dato}\"
 	data-component_name=\"{$component_name}\"
 	data-component_info='{$component_info}' >";
-	
-		
+
+
 		# ETIQUETA (LABEL)
 		$html_label = component_common_draw::draw_label($this);
-		
+
 		# CONTENIDO (INPUT)
 		$html_contenido = '';
 		switch($permissions) {
-				
-			case 0	:	$html_contenido .= "\n <span class=\"css_span_sin_acceso\">".label::get_label('sin_acceso')."</span>";
-						break;
-							
-			case 1	: 	$html_contenido .= "\n <span class=\"css_span_dato {$ar_css['css_span_dato']}\">$dato</span>";
-						break;	
-							
-			case ($permissions>=2)	:
-			
-						# Dato reference default lang
-						if ($modo!='tool_lang' && !empty($default_component)) {
-							#$html_contenido .= "\n <div class=\"dato_refecence_default_lang\">$dato_reference_lang</div>";
-							# Fijamos el lenguaje actual como el de destino para el tool_lang
-							$html_contenido .= "<script>set_localStorage('last_target_lang','$lang')</script>";
-							$tool_lang = new tool_lang($default_component,'button');
-								#dump($tool_lang,'$tool_lang');
-							$html_contenido .= $tool_lang->get_html();
-						}
 
-						# Avoid autocomplete input username in Users section
-						$remove_autocomplete = '';
-						if ($section_tipo==DEDALO_SECTION_USERS_TIPO) {
-							$remove_autocomplete = "readonly onfocus=\"this.removeAttribute('readonly');component_common.select_wrap(null,'$id_wrapper');\"";
-						}else{
-							$remove_autocomplete = "onfocus=\"component_common.select_wrap(null,'$id_wrapper');\"";
-						}
-						
+			case 0 :
+					$html_contenido .= "";
+					break;
 
-						$html_contenido .= "\n<input class=\"css_input_text {$ar_css['css_input_text']}\" type=\"text\"
-						data-tipo=\"{$tipo}\"
-						data-section_tipo=\"{$section_tipo}\"
-						data-parent=\"{$parent}\"
-						data-lang=\"{$lang}\"
-						value=\"{$dato}\"
-						title=\"$html_title\"
-						name=\"{$input_name}\"
-						autocomplete=\"off\"
-						onchange=\"component_input_text.Save(this)\"
-						$remove_autocomplete />";
-						#$html_contenido .= "<script>setAttribute(“autocomplete”,”off”)</script>";
+			case 1 :
+					$html_contenido .= "\n <span class=\"css_span_dato\">$dato</span>";
+					break;
 
-						#readonly onfocus=\"this.removeAttribute('readonly');\"
-						
-						#$html_contenido .= "\n <span  class=\"css_span_log\"></span>";					
-						#$html_contenido .= "\n <span  class=\"css_span_ejemplo {$ar_css['css_span_ejemplo']}\">$ejemplo</span>";						
-						
-				if($permissions==3)		
-						$html_contenido .= "\n <span class=\"css_span_debugger {$ar_css['css_span_debugger']}\" id=\"debugger_{$tipo}\" >{$debugger}</span>";	
-												
+			case ($permissions>=2) :
+
+					# Dato reference default lang
+					if ($modo!='tool_lang' && !empty($default_component)) {
+						#$html_contenido .= "\n <div class=\"dato_refecence_default_lang\">$dato_reference_lang</div>";
+						# Fijamos el lenguaje actual como el de destino para el tool_lang
+						$html_contenido .= "<script>set_localStorage('last_target_lang','$lang')</script>";
+						$tool_lang = new tool_lang($default_component,'button');
+							#dump($tool_lang,'$tool_lang');
+						$html_contenido .= $tool_lang->get_html();
+					}
+
+					# Avoid autocomplete input username in Users section
+					$remove_autocomplete = null;
+					if ($section_tipo==DEDALO_SECTION_USERS_TIPO) {
+						$remove_autocomplete = "readonly onfocus=\"this.removeAttribute('readonly');component_common.select_wrap(null,'$id_wrapper');\"";
+					}else{
+						$remove_autocomplete = '';//"onfocus=\"component_common.select_wrap(null,'$id_wrapper')\";\"";
+						$remove_autocomplete = "onfocus=\"component_common.select_wrap_on_tab_focus(this,'$id_wrapper')\";\"";
+					}
+
+					# Read only mode (set in propiedades)
+					$read_only = null;
+					if (isset($propiedades->read_only) && $propiedades->read_only==true) {
+						$read_only = 'readonly';
+					}
+
+					$html_contenido .= "\n<input class=\"css_input_text\" type=\"text\"
+					data-tipo=\"{$tipo}\"
+					data-section_tipo=\"{$section_tipo}\"
+					data-parent=\"{$parent}\"
+					data-lang=\"{$lang}\"
+					value=\"{$dato}\"
+					title=\"$html_title\"
+					name=\"{$input_name}\"
+					autocomplete=\"off\"
+					onchange=\"component_input_text.Save(this)\"
+					$remove_autocomplete
+					$read_only
+					tabindex=\"1\"
+					/>";
+					#$html_contenido .= "<script>setAttribute(“autocomplete”,”off”)</script>";
+
+					#readonly onfocus=\"this.removeAttribute('readonly');\"
+
+					#$html_contenido .= "\n <span  class=\"css_span_log\"></span>";
+					#$html_contenido .= "\n <span  class=\"css_span_ejemplo\">$ejemplo</span>";
+
+					if($permissions==3) {
+						$html_contenido .= "\n <span class=\"css_span_debugger\" id=\"debugger_{$tipo}\" >{$debugger}</span>";
+					}
+					break;
+
 		}
 
 		# Prepare content to show in page
-		tools::prepare_content($html_contenido);	
-		
+		tools::prepare_content($html_contenido);
+
 
 		# PRINT HTML
 		print $html_label;
 		print $html_contenido;
-	
-	
+
+
 	print "\n</div><!-- /css_wrap_input_text INPUT_TEXT [tipo:$tipo section_id_matrix:$parent] $label -->\n"; //wrap
 
 

@@ -43,13 +43,14 @@ if( $mode=='upload_file' ) {
 	$tool_upload 	= new tool_upload($component_obj);
 		#dump($tool_upload,'$tool_upload');
 
-	$html 			= $tool_upload->upload_file( $quality );
-
+	$response = $tool_upload->upload_file( $quality );
+		#dump($response, ' response ++ '.to_string());
 
 	# Save component for update component 'valor_list'
 	$component_obj->Save();
+		
 
-	print $html;
+	echo json_encode($response);
 	exit();
 }
 

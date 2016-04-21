@@ -45,18 +45,22 @@ if($action=='import') {
 	# LOGIN VERIFICATION
 	if(login::is_logged()!==true) die("<span class='error'> Auth error: please login </span>");
 
+	$html ='';
+
 	# Before import, EXPORT ;-)
 	$db_name = 'dedalo4_development_str_'.date("Y-m-d_Hi").'.custom';
 	$exp 	 = backup::export_structure($db_name, $exclude_tables=false);	// Full backup
-	echo $exp->msg;
-	echo '<br>';
+	$html .= $exp->msg;
+	$html .= '<br>';
 	if ($exp->code!=0) {
 		echo "<pre>Sorry. Nex step import_structure stopped ($exp->code)</pre>";
 		exit();
 	}
 
-	$res = backup::import_structure();	
-	echo $res;
+	$res = backup::import_structure();
+
+	$html .= $res;	
+	echo wrap_html($html, false);
 	exit();
 	
 }#if($action=='import') 

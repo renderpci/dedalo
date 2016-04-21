@@ -1,18 +1,19 @@
-/*CSS Document*/
+
+
+
 .css_wrap_section_id, .css_wrap_section_id_tm {
-	
-}
-.css_wrap_section_id .content_data {
-	display: inline;
-}
-.css_section_id {
-	padding: 5px;
-	padding-left: 5px;
-	font-weight: bold;
-	display: inline-block;
-	font-size: 115%;
-}
-input.input_css_section_id {
-	width: 7.8em;
-	text-align: center;
-}
+	min-width: 62px;
+	}
+	.css_wrap_section_id .content_data {
+		display: inline;
+		text-align: center;
+		}
+		.css_wrap_section_id .content_data .css_section_id {
+			padding: 0;
+			display: inline-block;
+			font-size: 140%;
+			font-family: "Oxygen-Bold", "Helvetica Neue", Helvetica, Arial, sans-serif;
+			font-weight: bold;
+
+		}
+		

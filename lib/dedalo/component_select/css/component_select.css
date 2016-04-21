@@ -1,61 +1,39 @@
-/*CSS Document
-WRAP DIV CONTAINER*/
+
+
+/* WRAP SELECT
+---------------------------------------- */
 .css_wrap_select {
-
-}
-.css_wrap_select .content_data {
-}
-/*INPUT*/
-select.css_select {
-	padding: 2px;
-	cursor: pointer;
-	margin-left: 0px;
-	max-width: 99.9%;
-	/*
-	border:solid 1px #9E9E9E;
-	border-radius        : 3px;
-
-	-webkit-box-shadow    : 0 0 6px #999999 inset;
-	-moz-box-shadow        : 0 0 6px #999999;
-	box-shadow            : 0 0 6px #999999 inset;
-
-	-webkit-transition    : all 0.03s ease-in-out;
-	-moz-transition        : all 0.03s ease-in-out;
-	transition            : all 0.03s ease-in-out;
-	*/
 	}
-	select.css_select:hover {
-		/*
-		background-color: #F1F1F1;
-		-moz-transform: scale(1.05);
-		-webkit-transform: scale(1.05);
-		cursor: pointer;
-	*/
+	.css_wrap_select .content_data {
 	}
-	select.css_select:focus {
-	/*
-	-webkit-box-shadow    : 0 0 10px #ccc;
-	-moz-box-shadow        : 0 0 10px #ccc;
-	box-shadow            : 0 0 5px #ccc;
 
-	-webkit-transform    : scale(1.08);
-	-moz-transform        : scale(1.08);
-	-op-transform        : scale(1.08);
-	transform            : scale(1.08);
-	*/
-	}
-	select.css_select:active {
-	}
 	
-.css_select_rotulo {
-	background-color: #FFFF00;
-}
+	/* SELECT
+	---------------------------------------- */
+	.css_wrap_select select.css_select {
+		padding: 2px;
+		cursor: pointer;
+		margin-left: 0px;
+		max-width: 99.9%;
+		}
+		.css_wrap_select select.css_select:hover {
+			/*
+			background-color: #F1F1F1;
+			-moz-transform: scale(1.05);
+			-webkit-transform: scale(1.05);
+			cursor: pointer;
+			*/
+		}
+		.css_wrap_select select.css_select:focus {
+		}
+		.css_wrap_select select.css_select:active {
+		}
+	
+
+	/* LABEL
+	---------------------------------------- */
+	.css_wrap_select .css_select_rotulo {
+		background-color: #FFFF00;
+	}
 
 
-/*VARIANTES ***************************************************************************************************************************************/
-.css_select_amarillo_bg {
-	background-color: #FFFF00;
-}
-.css_select_naranja_bg {
-	background-color: #F60;
-}

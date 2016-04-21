@@ -1,18 +1,38 @@
-/* 
-component_filter _________________________________*/
+
+
+/* COMPONENT_FILTER
+------------------------------------------------------- */
 .css_wrap_component_filter {
 	line-height: 1.1em;
 	}
 	.css_wrap_filter .content_data {
 		line-height: 1.6em;
+		/*
 			-moz-column-count: 3;
 		 -webkit-column-count: 3;
 				 column-count: 3;
+		*/
+		max-height: 286px;
+		overflow: auto;
 	}
+	.css_wrap_filter .content_data ul.filter_projects_list {
+		display: table;
+		}
+		ul.filter_projects_list li {
+			list-style: none;
+			display: table-row;
+			margin: 0;			
+			}
+			ul.filter_projects_list li::before {
+			   
+			}
+			ul.filter_projects_list li:hover{
+				color: #000000;				
+			}
 
 
-
-	/*-- input --*/
+	/*	INPUT 
+	------------------------------------------------------- */
 	input.filter_checkbox {
 		padding: 2px;
 		border: 1px solid #9E9E9E;
@@ -30,7 +50,10 @@ component_filter _________________________________*/
 		input.filter_checkbox:active {
 		}
 
-
+	label.filter_checkbox_rotulo {
+		padding-left: 5px;
+		display: table-cell;
+	}
 
 
 	.filter_without_selection {

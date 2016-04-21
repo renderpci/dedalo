@@ -1,19 +1,21 @@
 <?php
 
 	# VISUALIZADOR HTML	
-
-	# ELEMENTOS
-	if(!isset ($ar_css['css_span_dato'])) 			$ar_css['css_span_dato']='';
-	if(!isset ($ar_css['css_image'])) 				$ar_css['css_image']='';
-	if(!isset ($ar_css['css_span_ejemplo'])) 		$ar_css['css_span_ejemplo']='';
-	if(!isset ($ar_css['css_span_debugger']))		$ar_css['css_span_debugger']='';
-	if(!isset ($ar_css['css_wrap_image']))			$ar_css['css_wrap_image']='';	
 	
 	
 	print "\n<!-- SCORE [tipo:$tipo section_id_matrix:$parent] $label -->";
-	print "\n<div class=\"css_wrap_score wrap_component\" id=\"{$id_wrapper}\"
-	data-tipo=\"{$tipo}\" data-lang=\"{$lang}\" data-section_tipo=\"{$section_tipo}\" data-parent=\"{$parent}\" data-modo=\"{$modo}\" data-dato=\"{$valor}\" data-textarea_rel_tipo=\"{$textarea_rel_tipo}\" data-component_name=\"{$component_name}\"
-	data-component_info='{$component_info}' >";
+
+	print "\n<div class=\"wrap_component css_wrap_score wrap_component_{$tipo}\" id=\"{$id_wrapper}\"
+	data-tipo=\"{$tipo}\"
+	data-lang=\"{$lang}\"
+	data-section_tipo=\"{$section_tipo}\"
+	data-parent=\"{$parent}\"
+	data-modo=\"{$modo}\"
+	data-dato=\"{$valor}\"
+	data-textarea_rel_tipo=\"{$textarea_rel_tipo}\"
+	data-component_name=\"{$component_name}\"
+	data-component_info='{$component_info}'
+	>";
 	
 		
 		# ETIQUETA (LABEL)
@@ -23,32 +25,36 @@
 		$html_contenido = '';
 		switch($permissions) {
 				
-			case 0 :	$html_contenido .= "\n <span class=\"css_span_dato {$ar_css['css_span_dato']}\"> ".label::get_label('sin_acceso')." (score)</span>";
-						break;
+			case 0 :	
+					$html_contenido .= "";
+					break;
 							
 			case ($permissions>=1) :
 
-						#$html_contenido .= "<div class=\"vex-tabdiv \" >";
-						
-						$html_contenido .= " <canvas class=\"vextab-player\" width=\"\" height=\"112\" id=\"view-0\" style=\"\"></canvas>";						
-						#$html_contenido .= " <textarea class=\"editor\" style=\"width: 750px; height: 200px;\"></textarea>";
-						$html_contenido .= " <canvas id=\"$canvas_id\" class=\"canvas-score\"></canvas>";
-						$html_contenido .= " <div class=\"div_error_score\" id=\"$div_error_id\">Error</div>";
+					#$html_contenido .= "<div class=\"vex-tabdiv \" >";
+					
+					$html_contenido .= " <canvas class=\"vextab-player\" width=\"\" height=\"112\" id=\"view-0\" style=\"\"></canvas>";						
+					#$html_contenido .= " <textarea class=\"editor\" style=\"width: 750px; height: 200px;\"></textarea>";
+					$html_contenido .= " <canvas id=\"$canvas_id\" class=\"canvas-score\"></canvas>";
+					$html_contenido .= " <div class=\"div_error_score\" id=\"$div_error_id\">Error</div>";
 
-						#$html_contenido .= "<div class=\"vex-tabdiv\">vex-tabdiv</div>";	
-						
-						#$html_contenido .= "</div><!-- /vex-tabdiv -->";
+					#$html_contenido .= "<div class=\"vex-tabdiv\">vex-tabdiv</div>";	
+					
+					#$html_contenido .= "</div><!-- /vex-tabdiv -->";
 
-
-								
+							
 						
-				if($permissions==3)		
-						$html_contenido .= "\n <span class=\"css_span_debugger {$ar_css['css_span_debugger']}\" id=\"debugger_{$tipo}\" >{$debugger}</span>";	
-												
+					if($permissions==3)	{
+						$html_contenido .= "\n <span class=\"css_span_debugger\" id=\"debugger_{$tipo}\" >{$debugger}</span>";	
+					}	
+					break;
+									
 		}
+
 
 		# INIT : Init text editor 
 		$html_contenido .= "\n<script>component_score.init('$id_wrapper')</script>";
+
 
 		# Prepare content to show in page
 		tools::prepare_content($html_contenido);
@@ -60,4 +66,5 @@
 	
 	
 	print "\n</div><!-- /css_wrap_image SCORE [tipo:$tipo section_id_matrix:$parent] $label -->\n"; //wrap
+	
 ?>

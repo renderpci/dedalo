@@ -7,14 +7,20 @@
 	if(!isset ($ar_css['css_number']))			$ar_css['css_number']='';
 	if(!isset ($ar_css['css_span_ejemplo'])) 	$ar_css['css_span_ejemplo']='';
 	if(!isset ($ar_css['css_span_debugger']))	$ar_css['css_span_debugger']='';
-	if(!isset ($ar_css['css_wrap_number']))		$ar_css['css_wrap_number']='';
 	
 	
 	
 	print "\n<!-- NUMBER [tipo:$tipo section_id_matrix:$parent] $label -->";
-	print "\n<div class=\"css_wrap_number wrap_component {$ar_css['css_wrap_number']}\" id=\"{$id_wrapper}\"
-	data-tipo=\"{$tipo}\" data-lang=\"{$lang}\" data-section_tipo=\"{$section_tipo}\" data-parent=\"{$parent}\" data-modo=\"{$modo}\" data-dato=\"{$dato}\" data-component_name=\"{$component_name}\"
-	data-component_info='{$component_info}' >";
+	print "\n<div class=\"wrap_component css_wrap_number wrap_component_{$tipo}\" id=\"{$id_wrapper}\"
+	data-tipo=\"{$tipo}\"
+	data-lang=\"{$lang}\"
+	data-section_tipo=\"{$section_tipo}\"
+	data-parent=\"{$parent}\"
+	data-modo=\"{$modo}\"
+	data-dato=\"{$dato}\"
+	data-component_name=\"{$component_name}\"
+	data-component_info='{$component_info}'
+	>";
 	
 		
 		# ETIQUETA (LABEL)
@@ -24,7 +30,7 @@
 		$html_contenido = '';
 		switch($permissions) {
 				
-			case 0	:	$html_contenido .= "\n <span class=\"css_span_sin_acceso\">".label::get_label('sin_acceso')."</span>";
+			case 0	:	$html_contenido .= "";
 						break;
 							
 			case 1	: 	$html_contenido .= "\n <span class=\"css_span_dato {$ar_css['css_span_dato']}\">$dato</span>";

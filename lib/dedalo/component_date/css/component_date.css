@@ -1,45 +1,52 @@
-/*CSS Document
-WRAP DIV CONTAINER*/
+
+/* CSS_WRAP_DATE
+------------------------------------------------------- */
 .css_wrap_date, .css_wrap_date_tm {
 	padding: 0px;
 	padding: 5px;
 	position: relative;
-}
-.css_wrap_date_tm .content_data {
-}
-
-/*-- INPUT --*/
-input.css_date {
-	width: 7.5em;
-	text-align: center;
 	}
-	input.css_date.full {
-		width: 12em ;
+	.css_wrap_date_tm .content_data {
 	}
 
-/*-- CALENDAR IMAGE --*/	
-.css_wrap_date .content_data .ui-datepicker-trigger {
-	margin-left: 5px;
-	margin-right: 5px;
-	position: relative;
-	top: 3px;
-	cursor: pointer;
-}
 
-.current_date_info {
-	float: right;
-	color: #aaaaaa;
-	margin-right: 10px;
-	position: relative;
-	top: 4px;
-}
+	/* INPUT
+	------------------------------------------------------- */
+	.css_wrap_date input.css_date {
+		width: 100%;
+		max-width: 7.5em;
+		text-align: center;
+	}
+	.css_wrap_date input.css_date.full {		
+		max-width: 12em ;
+	}
 
 
-TD.td_component_date {	
-	width: 110px;	
+	/* CALENDAR IMAGE
+	------------------------------------------------------- */	
+	.css_wrap_date .content_data .ui-datepicker-trigger {
+		margin-left: 5px;
+		margin-right: 5px;
+		position: relative;
+		top: 3px;
+		cursor: pointer;
 	}
-	TD.td_component_date:hover {
+
+
+	.current_date_info {
+		float: right;
+		color: #aaaaaa;
+		margin-right: 10px;
+		position: relative;
+		top: 4px;
 	}
-	TD.td_component_date .date_in_list {
-		white-space:nowrap !important;
-	}
+
+
+	td.td_component_date {	
+		width: 110px;
+		}
+		td.td_component_date:hover {
+		}
+		td.td_component_date .date_in_list {
+			white-space:nowrap !important;
+		}

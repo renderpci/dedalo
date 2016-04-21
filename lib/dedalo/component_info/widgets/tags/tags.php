@@ -22,10 +22,10 @@
 
 		switch ($modo) {
 
-			case 'list':
+			case 'list':			
 				$filename = 'edit';
+			
 			case 'edit':
-
 
 				#
 				# RAW TEXT

@@ -8,7 +8,6 @@
 	if(!isset ($ar_css['css_relation'])) 		$ar_css['css_relation']='';
 	if(!isset ($ar_css['css_span_ejemplo'])) 	$ar_css['css_span_ejemplo']='';
 	if(!isset ($ar_css['css_span_debugger']))	$ar_css['css_span_debugger']='';
-	if(!isset ($ar_css['css_wrap_relation']))	$ar_css['css_wrap_relation']='';
 	
 
 
@@ -16,10 +15,17 @@
 	print "\n<!-- RELATION EDIT [current_tipo_section:$current_tipo_section section_name:$section_name] -->";
 
 	
-	print "\n<div class=\"css_wrap_relation wrap_component {$ar_css['css_wrap_relation']}\" id=\"{$id_wrapper}\" 
-	data-tipo=\"{$tipo}\" data-lang=\"{$lang}\" data-section_tipo=\"{$section_tipo}\" data-parent=\"{$parent}\" data-modo=\"{$modo}\" data-dato=\"{$dato_string}\" 
-	data-current_tipo_section=\"{$current_tipo_section}\" data-component_name=\"{$component_name}\"
-	data-component_info='{$component_info}' >";
+	print "\n<div class=\"wrap_component css_wrap_relation wrap_component_{$tipo}\" id=\"{$id_wrapper}\" 
+	data-tipo=\"{$tipo}\"
+	data-lang=\"{$lang}\"
+	data-section_tipo=\"{$section_tipo}\"
+	data-parent=\"{$parent}\"
+	data-modo=\"{$modo}\"
+	data-dato=\"{$dato_string}\" 
+	data-current_tipo_section=\"{$current_tipo_section}\"
+	data-component_name=\"{$component_name}\"
+	data-component_info='{$component_info}'
+	>";
 
 
 	# CONTENIDO
@@ -28,7 +34,7 @@
 
 	switch($permissions) {
 			
-		case 0	:	$html_contenido .= "\n <span class=\"css_span_dato {$ar_css['css_span_dato']}\"> No access here (relation)! </span>";
+		case 0	:	$html_contenido .= "";
 					break;
 		
 						

@@ -1,22 +1,20 @@
 <?php
 
 	# VISUALIZADOR HTML	
-	
-	# ELEMENTOS
-	if(!isset ($ar_css['css_span_dato'])) 						$ar_css['css_span_dato']='';
-	if(!isset ($ar_css['css_check_box_filter_master'])) 		$ar_css['css_check_box_filter_master']='';
-	if(!isset ($ar_css['css_span_ejemplo'])) 					$ar_css['css_span_ejemplo']='';
-	if(!isset ($ar_css['css_span_debugger']))					$ar_css['css_span_debugger']='';
-	if(!isset ($ar_css['css_wrap_check_box']))					$ar_css['css_wrap_check_box']='';
-	if(!isset ($ar_css['css_check_box_filter_master_rotulo']))	$ar_css['css_check_box_filter_master_rotulo']='';
-	
-	if(!isset ($tools_html))									$tools_html='';
-	
+			
 	
 	print "\n<!-- FILTER MASTER [tipo:$tipo section_id_matrix:$parent] -->";
-	print "\n<div class=\"css_wrap_filter_master wrap_component {$ar_css['css_check_box_filter_master_rotulo']}\" id=\"{$id_wrapper}\"
-	data-tipo=\"{$tipo}\" data-lang=\"{$lang}\" data-section_tipo=\"{$section_tipo}\" data-parent=\"{$parent}\" data-parent=\"{$parent}\" data-modo=\"{$modo}\" data-dato=\"{$dato_string}\" data-component_name=\"{$component_name}\"
-	data-component_info='{$component_info}' >";
+
+	print "\n<div class=\"wrap_component css_wrap_filter_master wrap_component_{$tipo}\" id=\"{$id_wrapper}\"
+	data-tipo=\"{$tipo}\"
+	data-lang=\"{$lang}\"
+	data-section_tipo=\"{$section_tipo}\"
+	data-parent=\"{$parent}\"
+	data-parent=\"{$parent}\"
+	data-modo=\"{$modo}\"
+	data-dato=\"{$dato_string}\" data-component_name=\"{$component_name}\"
+	data-component_info='{$component_info}'
+	>";
 	
 	//data-id_matrix=\"{$id}\" data-tipo=\"{$tipo}\" data-parent=\"{$parent}\" data-modo=\"ajax\"
 	
@@ -27,7 +25,7 @@
 	$html_contenido = '';
 	switch($permissions) {
 			
-		case 0	:	$html_contenido .= "\n <span class=\"css_span_dato {$ar_css['css_span_dato']}\"> ".label::get_label('sin_acceso')." (checkbox)</span>"; 
+		case 0	:	$html_contenido .= ""; 
 					break;
 						
 		case 1	: 	if (is_array ($ar_proyectos_section)) foreach ($ar_proyectos_section as $value => $rotulo) {
@@ -37,12 +35,12 @@
 						}else {
 							$checked = "";
 						}
-						$html_contenido .= "\n <input class=\"css_check_box_filter_master {$ar_css['css_check_box_filter_master']}\" type=\"checkbox\" 
+						$html_contenido .= "\n <input class=\"css_check_box_filter_master\" type=\"checkbox\" 
 						name=\"{$input_name}\"
 						data-tipo=\"{$tipo}\" data-section_tipo=\"{$section_tipo}\" data-parent=\"{$parent}\"
 						value=\"{$value}\" title=\"$html_title\" 
 						$checked  disabled />";						
-						$html_contenido .= "\n <label class=\"css_check_box_filter_master_rotulo {$ar_css['css_check_box_filter_master_rotulo']}\" $required >$rotulo</label>";	
+						$html_contenido .= "\n <label class=\"css_check_box_filter_master_rotulo\" $required >$rotulo</label>";	
 					}
 					break;	
 						
@@ -57,6 +55,7 @@
 							$disabled = "disabled";
 						#dump($dato,"dato");
 						#dump($ar_proyectos_section,"");
+
 					foreach ($ar_proyectos_section as $value => $rotulo) {
 						
 						if( in_array($value, array_keys($dato)) ) {
@@ -64,28 +63,39 @@
 						}else {
 							$checked = "";
 						}
-						$html_contenido .= "\n <input class=\"css_check_box_filter_master {$ar_css['css_check_box_filter_master']}\" type=\"checkbox\" 
+						$html_contenido .= "\n <input class=\"css_check_box_filter_master\" type=\"checkbox\"
+						onchange=\"component_filter_master.Save(this)\"
 						name=\"{$input_name}\"
-						data-tipo=\"{$tipo}\" data-lang=\"{$lang}\" data-section_tipo=\"{$section_tipo}\" data-parent=\"{$parent}\"
-						value=\"{$value}\" title=\"$html_title\" $checked $disabled />";
-												
-						$html_contenido .= "\n <label class=\"css_check_box_filter_master_rotulo {$ar_css['css_check_box_filter_master_rotulo']}\" $required >$rotulo</label><br>";	
+						data-tipo=\"{$tipo}\"
+						data-lang=\"{$lang}\"
+						data-section_tipo=\"{$section_tipo}\"
+						data-parent=\"{$parent}\"
+						value=\"{$value}\"
+						title=\"$html_title\"
+						$checked
+						$disabled
+						/>";
+						
+						$html_contenido .= "\n <label class=\"css_check_box_filter_master_rotulo\" $required >$rotulo</label><br>";	
 					}					
 					
 		
-			if($permissions==3)
-			
-					$html_contenido .= "\n <span class=\"css_span_debugger {$ar_css['css_span_debugger']}\" id=\"debugger_{$tipo}\" >{$debugger}</span>";	
-					
+					if($permissions==3) {
+						$html_contenido .= "\n <span class=\"css_span_debugger\" id=\"debugger_{$tipo}\" >{$debugger}</span>";
+					}
+					break;					
 							
 	}
 
+
 	# Prepare content to show in page
 	tools::prepare_content($html_contenido);
+
 	
 	# PRINT HTML
 	print $html_label;
 	print $html_contenido;
+
 
 	print "\n</div>\n\n"; //wrap
 

@@ -1,82 +1,126 @@
 <?php
 
-	# VISUALIZADOR HTML	
-	
-	if(!isset ($ar_css['css_wrap_tool_transcription']))		$ar_css['css_wrap_tool_transcription']='';
-	if(!isset ($ar_css['css_div_tool_transcription']))		$ar_css['css_div_tool_transcription']='';
-	
-
+	# VISUALIZADOR HTML
 	$html    = "\n<!-- TOOL TRANSCRIPTION PAGE [tipo:$tipo] -->";
-	#$html   .= $header_html;
-	$html   .= "\n<div class=\"header_tool\">";
+	
 
-		# LANG SELECTOR (PROVISIONAL)
+	#
+	# TOOL HEADER
+	$html .= "\n<div class=\"header_tool\">";
+
+		#
+		# LANG SELECTOR
 		$html .= "<div class=\"lang_selector_in_header\">". label::get_label('idioma');		
 		$html .= "<select name=\"dedalo_data_lang\" id=\"dedalo_data_lang\"		
 		data-tipo=\"$component_related_tipo\"
 		data-section_tipo=\"{$section_tipo}\"
 		data-parent=\"$parent\"
 		data-type_of_lang=\"dedalo_data_lang\"
-		onchange=\"tool_transcription.change_text_editor_lang(this)\">";
-
+		onchange=\"tool_transcription.change_text_editor_lang(this)\"
+		>";
 			foreach($ar_all_project_langs as $lg) {
 				$selected = null;
 				if(DEDALO_DATA_LANG==$lg) $selected = 'selected="selected"';
 				$html .= "<option value=\"$lg\" {$selected}>".RecordObj_ts::get_termino_by_tipo($lg,DEDALO_APPLICATION_LANG)."</option>";
 			}			
-			
 		$html .= "</select>";
 		$html .= "</div>";#end lang_selector_in_header
 
-
+		#
 		# HEADER_INFO
 		$html .= "\n <div id=\"header_info\"> Info: </div>";
 		
+		#
 		# COMPONENT STATE
 		$html   .= $component_state_html ;
 
+	$html .= "</div><!-- /header_tool -->";
 
-	$html   .= "</div><!-- /header_tool -->";
-	$html   .= "\n<div class=\"wrap_tool_transcription_page\" >";
+
+	#
+	# TOOL BODY
+	$html .= "\n<div class=\"wrap_tool_transcription_page\" >";
 
 		
+		#
 		# LEFT DIV TEXT AREA
-		$html 	.= "\n<div class=\"tool_transcription_left\">";
-		$html 	.= $html_text;
-		$html 	.= "\n</div><!-- /tool_transcription_left -->";
+		$html .= "\n<div class=\"tool_transcription_left\">";
+
+			#
+			# TEXT EDITOR FROM COMPONENT_TEXT_AREA
+			$html 	.= $html_text;
+
+		$html .= "\n</div><!-- /tool_transcription_left -->";
+
 
 		
+		#
 		# RIGHT DIV MEDIA
-		$html 	.= "\n<div class=\"tool_transcription_right\">";		
-		#$html 	.= "<iframe id=\"videoFrame\" name=\"videoFrame\" class=\"videoFrame\" src=\"{$iframe_url}\" ></iframe>";
-		$html 	.= $html_media;
+		$html .= "\n<div class=\"tool_transcription_right\">";
 
-		# PDF AUTOMATIC TRANCRIPTION 
-		if(	$component_name === 'component_pdf' && 
-			defined('PDF_AUTOMATIC_TRANSCRIPTION_ENGINE') 
-		){
-			$html .= "\n<div class=\"css_button_generic\"
-			data-source_tipo=\"$source_tipo\"
-			data-target_tipo=\"$target_tipo\"
-			data-section_tipo=\"$section_tipo\"
-			data-section_id=\"$parent\"
-			onclick=\"tool_transcription.pdf_automatic_transcription(this)\">".label::get_label("transcripcion_automatica")."</div>";
-		};
+			#
+			# IFRAME MEDIA ENGINE FROM COMPONENT AV
+			$html .= $html_media;
 
 
-		# BUTTON_SUBTITLES_HTML
-		if ($component_name === 'component_av' && isset($button_subtitles_html)) {
-			$html .= $button_subtitles_html;	
-		}			
-		
+			#
+			# SPECIFIC COMPONENT ADD-ON
+			switch ($component_name) {
+				case 'component_av':
 
-		$html 	.= "\n</div><!-- /tool_transcription_right -->";
+					#ob_start();
+					include __DIR__ .'/tool_transcription_av_add_on.phtml';
+					#$html .= ob_get_clean();
+				
+					/*
+					#
+					# SLIDER FOR SPEED CONTROL OF COMPONENT_AV
+					$html .= "<div class='container'>";
+					$html .= " <div class='slider_label'>". label::get_label('velocidad_de_reproduccion'). "</div>";
+					$html .= " <div class='slider'>";
+					$html .= "  <input type='range' min='0' max='2' step='0.1' onchange='tool_transcription.speed_range_value_change(value)'/>";
+					$html .= "  <output id='speed_range_value'>1</output>";
+					$html .= " </div>";
+					$html .= "</div>";
+					
+					#
+					# BUTTON_SUBTITLES_HTML
+					if (isset($button_subtitles_html)) {
+						$html .= $button_subtitles_html;	
+					}
+					*/
+					break;
+				
+				case 'component_pdf':
+					#
+					# PDF AUTOMATIC TRANCRIPTION 
+					if(	defined('PDF_AUTOMATIC_TRANSCRIPTION_ENGINE') ){
+						$html .= "\n<div class=\"css_button_generic\"
+						data-source_tipo=\"$source_tipo\"
+						data-target_tipo=\"$target_tipo\"
+						data-section_tipo=\"$section_tipo\"
+						data-section_id=\"$parent\"
+						onclick=\"tool_transcription.pdf_automatic_transcription(this)\"
+						>".label::get_label("transcripcion_automatica")."</div>";
+					}
+					break;
+				default:
+					# code...
+					break;
+			}
+			
+			
+			
+
+					
+
+		$html .= "\n</div><!-- /tool_transcription_right -->";
 
 	
-	$html   .= "\n</div><!-- /wrap_tool_transcription_page -->"; //page wrap
+	$html .= "\n</div><!-- /wrap_tool_transcription_page -->"; //page body wrap
 
 
-	
+	#
 	# INSPECTOR LOG tool_transcription 
 	$html 	.= "\n<div id=\"inspector_log\" class=\"tool_transcription_inspector_log\"> </div>";
 

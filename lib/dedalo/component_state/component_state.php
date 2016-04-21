@@ -51,7 +51,7 @@
 				# GRAPHICS
 					$ar_graph 	= $this->get_ar_graph();					
 					# CSS includes
-						css::$ar_url[] = DEDALO_ROOT_WEB.'/lib/nvd3/nv.d3.min.css';					
+						css::$ar_url[] = NVD3_URL_CSS;					
 					# JS includes
 						js::$ar_url[] = D3_URL_JS;
 						js::$ar_url[] = NVD3_URL_JS;

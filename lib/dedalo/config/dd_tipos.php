@@ -5,6 +5,7 @@
 define('DEDALO_ROOT_TIPO'								, 'dd1');
 define('DEDALO_TESAURO_TIPO'							, 'dd100');
 define('DEDALO_MEDIA_AREA_TIPO'							, 'rsc1');
+define('DEDALO_AREA_ROOT_TIPO'							, 'dd242');
 
 # Activity 
 define('DEDALO_ACTIVITY_SECTION_TIPO'					, 'dd542');
@@ -64,6 +65,14 @@ define('DEDALO_TOOL_INDEXATION_ID'							, '2');
 define('DEDALO_TOOL_TRANSLATE_ID'							, '3');
 define('DEDALO_TOOL_INVESTIGATION_SECTION_TIPO'			, 'dd90');
 define('DEDALO_TOOL_INVESTIGATION_COMPONENT_TIPO'		, 'dd127');
+
+
+# Video components resources
+define('DEDALO_SECTION_RESOURCES_AV_TIPO'				, 'rsc167');
+define('DEDALO_COMPONENT_RESOURCES_AV_TIPO'				, 'rsc35');
+define('DEDALO_COMPONENT_RESOURCES_MINUTES_TIPO'		, 'rsc54');
+
+
 
 define('DEDALO_TEXTAREA_FIX_BROQUEN_TAGS_TIPOS'			, serialize( array('rsc36')) );
 

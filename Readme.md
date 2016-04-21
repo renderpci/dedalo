@@ -1,307 +1,25 @@
 **README**
-*Ver 4.0.7 Final - 21-03-2016*
 
-Today we introduce the update of the V4 to 4.0.7
+*Dédalo Ver 4*
 
-Important: This update change the "language" of the user component: "dd452" - Full name. Now the component will change the behavior to NO TRANSLATE, and is necessary change the language into the postgreSQL component.
+<img src="http://dedalo4.antropolis.net/dedalo/images/logos/dedalo_logo.png" alt="Dédalo logo" />
 
-for ex with this SQL:
-	SELECT  datos #> '{components,dd452,dato}' AS dato,
-	datos #> '{components,dd452,valor}' AS valor,
-	datos #> '{components,dd452,valor_list}' AS valor_list
-	FROM "matrix_users"
-	WHERE datos #> '{components,dd452,dato}' ? 'lg-spa'
+Dédalo is a knowledge management system for Cultural Heritage (tangible and intangible), Natural Heritage and Oral History/Memory. 
 
-you can see all values in Spanish (lg-spa) that you need change to «lg-nolan».
+Dédalo is a Open Source software based in a new paradigm of programing: develop objects with a ontology model and control the app flow with the ontology descriptors, related terms, no descriptors, TG, TE, etc. The objects have a MVC structure linked to the ontology and the database is a NoSQL model. The data is stored in JSONB (binary).
 
-	lg-spa => lg-nolan
-	lg-eng => lg-nolan
-	etc
+Dédalo use the structure Ontology for three things:
+	1; Make the data structured. (user data is stored without fixed structure)
+	2; Do the programing objects in the execution time (in real time).
+	3; Interpret the code and the data and translate to multiple formats (RDF, JSON-LD, SQL, CSV, XML, Dublin Core, HTML, PDF, etc)
 
-This update fixed some issues and bugs for the V4.0.3.
+The ontology can be change in the time and this will change the data and the programing code; you can develop new functionalities without change the data, and you can change the metadata without change the code and the data.
 
-*Ver 4.0.3 Final - 11-02-2016*
+Dédalo is a real multilingual app (Dédalo can use any language) in the interface and the managed data, with a multi-thesaurus and manage multiple resources and resolutions for video, image, pdf, notation scores, etc. 
 
-Today we introduce the update of the V4 to 4.0.3
+Dédalo has a geo-reference for the cultural goods, interviews, etc. withh points, areas, paths, etc and have a indexation and related model of multiple data sources with the thesaurus.
 
-Important: This update change the "profiles" and user behavior. 
-
-1. Download and Update all files of Dédalo
-2. Create the profiles 
-3. Assign users (users can not be without profile)
-
-The componet_security_areas, componet_security_acces and componet_security_tools ONLY work for the profiles and are deprecated for Users.
-The root user (dev-user) can see this componets for some time in the Users records.
-
-This update fixed some issues and bugs for the V4.
-
-New user inteface.
-
-*Ver 4.0 Final - 05-11-2015*
-
-We are very pleased to introduce the final of the version 4 of Dédalo.
-
-VERY IMPORTANT:
-- The final version is the first oficial version of Dédalo with Postgres.
-
-- The new version will run in PostgreSQL 9.4+ ONLY.
-
-- Support for MySQL is fully removed for the investigation system.
-
-- But you can use MySQL with the publication part (only with the publication).
-
-
-** MySQL and the future of Dédalo **
-
-*NOTE: Run the Beta 1 if you want to run with MySQL, but think that the development of Dédalo will not come back to MySQL.*
-
-Finally Postgres comunity has made a impresionant job with the JSONB.
-We have some versions of Dédalo with the new schema of "Matrix" (id, parent, dato, tipo, lang) in MySQL, that run very very slowly. We are working in the new format the last 4 years and the Beta 1 of Dédalo can run acceptably well. Dédalo does some caches for run the searchers but this version don't work "fine" with a large amount of data >100.000 rows (>100.000 interviews, or >100.000 heritage goods...).
-
-But
-
-Postgres with JSONB run ~1000 times faster!!!! and the GIN index have very good optimization for the new schema model of Dédalo.
-
-We think that the new model is a future for Dédalo, and with PostgreSQL 9.4+ is possible!!!!
-
-We are very exited with the new JSONB and are expectant and waiting VODKA!
-
-Very, very thanks for the excelent work of Oleg Bartunov, Teodor Sigaev and Alexander Korotkov.
-
-*For install with PostgreSQL:*
-
-The schema of "matrix" into the database has significant changes:
-  - The fields: 
-  	parent, dato, tipo, lang
-    are removed, now the schema only have the field "data" in JSON format, with all previous data
-    The final schema of matrix for version 4 is:
-
-**TABLES FOR THE DATABASE**
-
-- jer_xx (you can change the "xx" with the TLD of the country, for ex: «es» for Spain or «fr» for France, etc)
-- jer_ts
-- jerarquia
-- jerarquia_tipos
-- main_dd
-- matrix
-- matrix_activities
-- matrix_activity
-- matrix_counter
-- matrix_counter_dd
-- matrix_dd
-- matrix_descriptors
-- matrix_descriptors_dd
-- matrix_layout
-- matrix_layout_dd
-- matrix_list
-- matrix_profiles
-- matrix_projects
-- matrix_stat
-- matrix_time_machine
-- matrix_users
-
-**Structures of the Tables**
-
-*jer_xx:(you can change the "xx" with the TLD of the country, for ex: «es» for Spain or «fr» for France, etc. The structure is the same for all countries)*
-
-Column  |  Type Comment
---------- | ---------
-id  |  integer Auto Increment [nextval('jer_es_id_seq')]
-terminoID  | character varying(8) NULL
-parent  |  character varying(8)
-modelo  |  character varying(8) NULL
-esmodelo  |  sino NULL
-esdescriptor  |  sino NULL
-visible  | sino NULL
-norden	|	numeric(4,0) NULL
-usableIndex	|	sino NULL
-traducible	|	sino NULL
-relaciones	|	text NULL
-propiedades	|	text NULL
-
-*jerarquia:*
-
-Column	|	Type Comment
---------- | ---------
-id	|	integer Auto Increment [nextval('jerarquia_id_seq')]	 
-alpha3	|	character varying(3) NULL	 
-alpha2	|	character varying(2)	 
-nombre	|	character varying(255)	 
-tipo	|	numeric(8,0)	 
-activa	|	sino [si]	 
-mainLang|	character varying(8)
-
-*jerarquia_tipos:*
-
-Column	|	Type Comment
---------- | ---------
-id	|	integer Auto Increment [nextval('jerarquia_tipos_id_seq')]	 
-nombre	|	character varying(256)	 
-orden	|	numeric(4,0)
-
-*main_dd:*
-
-Column	|	Type Comment
---------- | ---------
-id	|	integer Auto Increment [nextval('main_dd_id_seq')]	 
-tld	|	character varying(32) NULL	 
-counter	|	integer NULL	 
-name	|	character varying(255) NULL
-
-*matrix:*
-
-Column	|Type	Comment
---------- | ---------
-id	|	integer Auto Increment [nextval('matrix_id_seq')]	 
-section_id	|	integer NULL	 
-section_tipo	|	character varying NULL	 
-datos	|	jsonb NULL
-
-*matrix_activities:*
-
-Column	|Type	Comment
---------- | ---------
-id	|	integer Auto Increment [nextval('matrix_activities_id_seq')]	 
-section_id	|	integer NULL	 
-section_tipo	|	character varying NULL	 
-datos	|	jsonb NULL
-
-*matrix_activity:*
-
-Column	|	Type	Comment
---------- | ---------
-id	|	integer Auto Increment [nextval('matrix_activity_id_seq')]	 
-date	|	timestamp NULL [now()]	 
-section_id	|	integer NULL Auto Increment [nextval('matrix_activity_section_id_seq')]	 
-section_tipo	|	character varying [dd542]	 
-datos	|	jsonb NULL
-
-*matrix_counter:*
-
-Column	|	Type	Comment
---------- | ---------
-id	|	integer Auto Increment [nextval('matrix_counter_id_seq')]	 
-parent	|	integer	 
-dato	|	integer NULL	 
-tipo	|	character varying(16)	 
-lang	|	character varying(16)	 
-ref	|	text NULL
-
-*matrix_counter_dd:*
-
-Column	|	Type	Comment
---------- | ---------
-id	|	integer Auto Increment [nextval('matrix_counter_dd_id_seq')]	 
-parent	|	integer	NULL 
-dato	|	integer NULL	 
-tipo	|	character varying(16) NULL	 
-lang	|	character varying(16) NULL	 
-ref	|	text NULL
-
-*matrix_dd:*
-
-Column	|	Type	Comment
---------- | ---------
-id	|	integer Auto Increment [nextval('matrix_dd_id_seq')]	 
-section_id	|	integer NULL	 
-section_tipo	|	character varying NULL	 
-datos	|	jsonb NULL
-
-*matrix_descriptors:*
-
-Column	|	Type	Comment
---------- | ---------
-id	|	integer Auto Increment [nextval('matrix_descriptors_id_seq')]	 
-parent	|	character varying(8)	 
-dato	|	text NULL	 
-tipo	|	character varying(16)	 
-lang	|	character varying(8)
-
-*matrix_descriptors_dd:*
-
-Column	|	Type	Comment
---------- | ---------
-id	|	integer Auto Increment [nextval('matrix_descriptors_dd_id_seq')]	 
-parent	|	character varying(32)	 
-dato	|	text NULL	 
-tipo	|	character varying(8)	 
-lang	|	character varying(8)
-
-*matrix_layout:*
-
-Column	|	Type	Comment
---------- | ---------
-id	|	integer Auto Increment [nextval('matrix_layout_id_seq')]	 
-section_id	|	integer NULL	 
-section_tipo	|	character varying NULL	 
-datos	|	jsonb NULL
-
-*matrix_layout_dd:*
-
-Column	|	Type	Comment
---------- | ---------
-id	|	integer Auto Increment [nextval('matrix_layout_dd_id_seq')]	 
-section_id	|	integer NULL	 
-section_tipo	|	character varying NULL	 
-datos	|	jsonb NULL
-
-*matrix_list:*
-
-Column	|	Type	Comment
---------- | ---------
-id	|	integer Auto Increment [nextval('matrix_list_id_seq')]	 
-section_id	|	integer NULL	 
-section_tipo	|	character varying NULL	 
-datos	|	jsonb NULL
-
-*matrix_profiles:*
-
-Column	|	Type	Comment
---------- | ---------
-id	|	integer Auto Increment [nextval('matrix_profiles_id_seq')]	 
-section_id	|	integer NULL	 
-section_tipo	|	character varying NULL	 
-datos	|	jsonb NULL
-
-*matrix_projects:*
-
-Column	|	Type	Comment
---------- | ---------
-id	|	integer Auto Increment [nextval('matrix_projects_id_seq')]	 
-section_id	|	integer NULL	 
-section_tipo	|	character varying NULL	 
-datos	|	jsonb NULL
-
-*matrix_stat:*
-
-Column	|	Type	Comment
---------- | ---------
-id	|	integer Auto Increment [nextval('matrix_stat_id_seq')]	 
-datos	|	jsonb NULL
-
-*matrix_time_machine:*
-
-Column	|	Type	Comment
---------- | ---------
-id	|	integer Auto Increment [nextval('matrix_time_machine_id_seq')]	 
-id_matrix	|	integer NULL	 
-section_id	|	integer NULL	 
-tipo	|	character varying NULL	 
-lang	|	character varying NULL	 
-timestamp	|	timestamp NULL	 
-userID	|	integer NULL	 
-state	|	character(32) NULL	 
-dato	|	jsonb NULL
-
-*matrix_users:*
-
-Column	|	Type	Comment
---------- | ---------
-id	|	integer Auto Increment [nextval('matrix_users_id_seq')]	 
-section_id	|	integer NULL	 
-section_tipo	|	character varying NULL	 
-datos	|	jsonb NULL
-
+Dédalo can handle and cut video in real time for find thematic parts of interviews or cultural goods (fragments of interviews / cultural goods), for 4k, HD 1080, 720, 404 resolutions.
 
 **DEPENDENCES**
 
@@ -364,6 +82,23 @@ datos	|	jsonb NULL
 10. Create one Administrator user account with all access to the system.(this user will be the administrator of the system)
 11. Logout and login with the Administrator acount.
 12. Create Users and Projects as you need.
+
+**UPDATE**
+
+Dédalo have two updates procedures:
+
+1. Update the code files (php, js, css, html, etc)
+	a. Make backup of all files.
+	b. Download the new files and change the files in your server
+	c. You need see the new config files and put the changes into your own config files (/lib/dedalo/config4.php and /lib/dedalo/config4_db.php). If you don't change the config files, Dédalo will require the new "define" variables and will stop the app.
+
+2. Update the structure with the sections, components, list, etc
+	a. Do the first update step
+	b. Log-in as "superuser-developer"
+	c. You will see the menu in "orange" or "red" (if you have the debugger active) and a "grey" sub-menu with a "tool administrator" (or in translation of the app language) button, press the info button to go "admin utils"
+	d. Press the "import structure" button, if all go well you will see a "green" alert.
+	e. Log-out and log-in with normal admin user.
+	f. Optional: in the inventory pages (OH, PCI, etc) press the "Update Cache" for update some changes into the components (this task force to update all components with the new model no 1 to 1), and will apply the changes to the data into the databases.
 
 **SERVER SYSTEM**
 

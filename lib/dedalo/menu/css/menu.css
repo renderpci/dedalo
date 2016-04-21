@@ -44,7 +44,7 @@ background-color: #FFFF00;
 ------------------------------------------------------- */
 .menu_wrapper_space {
 	height: 29px;
-	margin-bottom: 10px;
+	/*margin-bottom: 10px;*/
 	/*background-color:#7f7f7f;*/	
 }
 #menu_wrapper {
@@ -358,25 +358,30 @@ HTML[xmlns] #menu_wrapper #menu {
 /* DEBUG_LINE_WRAP
 ------------------------------------------------- */
 .debug_line_wrap {
+	width: 100%;
 	height: 24px;
 	background-color: rgb(107, 107, 107);
 	margin-top: 29px;
+	margin-bottom: 24px;
 	text-align: left;
 	padding: 4px;
 	padding-left: 0px;
-	z-index: 0;
 	color: #ECF4F8 !important;
+	position: fixed;
+    left: 0;
+    top: 0;
+    z-index: 2;
+    opacity: 0.95;
 	}
-	.debug_line_wrap a,
-	.debug_line_wrap span
-	 {
+	.debug_line_wrap a,	.debug_line_wrap span {
 		color: #ECF4F8 !important;
 		text-decoration: none;
-		padding: 4px;
+		margin: 0;
+		padding: 2px;
 		padding-left: 9px;
 		padding-right: 9px;
-		margin-right: 0px;
-		line-height: 1em;	
+		display: inline;
+		line-height: 1em;		
 		}
 		.debug_line_wrap a {
 			background-color: #5B5B5B;
@@ -385,7 +390,9 @@ HTML[xmlns] #menu_wrapper #menu {
 			.debug_line_wrap a:hover {
 				background-color: #7E8284
 			}
-
+	.debug_line_wrap_spacer {
+		height: 24px;
+	}
 
 
 

@@ -1,17 +1,10 @@
 <?php
 	
 	# VISUALIZADOR HTML	
-
-	# ELEMENTOS
-	if(!isset ($ar_css['css_section_group_wrap']))		$ar_css['css_section_group_wrap']='';
-	if(!isset ($ar_css['css_section_group_titulo']))	$ar_css['css_section_group_titulo']='';
-	if(!isset ($ar_css['css_span_dato'])) 				$ar_css['css_span_dato']='';;
-	
-	
 	
 	print "\n\n<!-- SECTION GROUP [tipo:$tipo] $label -->";
 
-	print "\n<div id=\"$section_group_id\" class=\"css_section_group_wrap box_shadow_1 box_border_radius_1 {$ar_css['css_section_group_wrap']}\" >";
+	print "\n<div id=\"$section_group_id\" class=\"css_section_group_wrap wrap_section_group wrap_section_group_{$tipo} box_shadow_1 box_border_radius_1\" >";
 	
 	# ETIQUETA (LABEL)	
 	$html_label  = "\n<div class=\"css_section_group_titulo tab_title title_down_box text_unselectable\" data-tab_id=\"{$tipo}\" > ";
@@ -28,7 +21,7 @@
 	
 	switch($permissions) {
 			
-		case 0	:	$html_contenido .= "\n <span class=\"css_span_dato {$ar_css['css_span_dato']}\"> ".label::get_label('sin_acceso')." (group)</span>"; 		
+		case 0	:	$html_contenido .= "\n <span class=\"css_span_dato\"> ".label::get_label('sin_acceso')." (group)</span>"; 		
 					break;
 						
 		case ($permissions>=1)	:

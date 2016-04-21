@@ -178,6 +178,25 @@ if (empty($ffprobe)) {
 	die("Error on system test. ffprobe lib not found");
 }
 
+# NODE
+if (defined('DEDALO_NOTIFICATIONS') && DEDALO_NOTIFICATIONS===true) {
+	$node = trim(shell_exec('type -P '.DEDALO_NODEJS));
+	if (empty($node)) {
+		die("Error on system test. node lib not found");
+	}
+	/*
+	$pm2 = trim(shell_exec('type -P '.DEDALO_NODEJS_PM2));
+	if (empty($pm2)) {
+		die("Error on system test. npm pm2 lib not found");
+	}
+	# pm2 start server.js --name "dd_node_"DEDALO_ENTITY --watch
+	#$pm2_test = trim(shell_exec(DEDALO_NODEJS_PM2.' describe dd_node_'.DEDALO_ENTITY));
+	#error_log($pm2_test);
+	#error_log( DEDALO_NODEJS_PM2.' describe dd_node_'.DEDALO_ENTITY );
+	*/
+}
+
+
 # DEFAULT PROJECT
 if (!defined('DEDALO_DEFAULT_PROJECT')) {
     #die("Error Processing Request. Please define DEDALO_DEFAULT_PROJECT");  

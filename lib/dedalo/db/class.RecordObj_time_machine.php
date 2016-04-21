@@ -23,15 +23,11 @@ class RecordObj_time_machine extends RecordDataBoundObject {
 	# TABLE  matrix_table
 	protected static $time_machine_matrix_table = 'matrix_time_machine';
 
-
 	static $save_time_machine_version = true;
 
 	
-	public function __construct($id=NULL) {
-		
-		parent::__construct($id);
-
-		//throw new Exception("Error Processing Request. OLD TIME MACHIONE", 1);		
+	public function __construct($id=NULL) {		
+		parent::__construct($id);		
 	}
 		
 	# define current table (tr for this obj)
@@ -61,8 +57,6 @@ class RecordObj_time_machine extends RecordDataBoundObject {
 
 
 
-
-
 	public function get_dato() {
 		$dato = parent::get_dato();
 		$dato = json_handler::decode($dato);
@@ -77,8 +71,7 @@ class RecordObj_time_machine extends RecordDataBoundObject {
 	}
 	
 	
-	
-	
+		
 	# AR TIME MACHINE : Array de registros de time_machine para el id_matrix recibido
 	public static function get_ar_time_machine_of_this($tipo, $parent, $lang=NULL, $section_tipo) {
 				

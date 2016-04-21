@@ -391,7 +391,8 @@ abstract class backup {
 					$res1 = exec($command);
 				}else{
 					#throw new Exception("Error Processing Request. File not found: ".$path.'/jer_dd_'.$current_dir.'.copy', 1);
-				}				# MATRIX_DESCRIPTORS_DD
+				}
+				# MATRIX_DESCRIPTORS_DD
 				if (file_exists($path.'/matrix_descriptors_dd_'.$current_dir.'.copy')) {
 					$strQuery = "DELETE FROM \"matrix_descriptors_dd\" WHERE \"parent\" LIKE '{$current_dir}%';"; // COPY \"matrix_descriptors_dd\" FROM '{$path}/matrix_descriptors_dd_{$current_dir}.copy';"
 					pg_query(DBi::_getConnection(), $strQuery);
@@ -470,15 +471,15 @@ abstract class backup {
 		$res_html='';
 		if(SHOW_DEBUG) {
 			#$res_html .= "<div>command otuput: ".var_export($worked_result,true)."</div>";
-			$res_html .= "<div style=\"font-family:courier;font-size:11px;word-wrap:break-word;padding:3px;\">$command</div>";
+			#$res_html .= "<div style=\"font-family:courier;font-size:11px;word-wrap:break-word;padding:3px;\">$command</div>";
 		}
 		switch($worked_result){
 			case 0:
-				$res_html .= '<div style="color:white;background-color:green;padding:10px;font-family:arial;font-size:14px;word-wrap:break-word;border-radius:5px;">
+				$res_html .= '<div style="color:white;background-color:green;padding:10px;font-family:arial;font-size:13px;word-wrap:break-word;border-radius:5px;margin:5px;width:100%">
 				EXPORT to file: <br>Database <br> <b>' .DEDALO_DATABASE_CONN .'</b><br> successfully exported to file<br> <b>' .$mysqlExportPath .'</b></div>';
 				break;
 			case 1:
-				$res_html .= '<div style="color:white;background-color:red;padding:10px;font-family:arial;font-size:14px;word-wrap:break-word;border-radius:5px;">
+				$res_html .= '<div style="color:white;background-color:red;padding:10px;font-family:arial;font-size:13px;word-wrap:break-word;border-radius:5px;margin:5px;width:100%">
 				There was a problem during the export of <b>' .DEDALO_DATABASE_CONN .'</b> to <b>' .$mysqlExportPath .'</b></div>';
 				if(SHOW_DEBUG) {
 					dump($output, 'output - worked_result: '.to_string($worked_result));
@@ -486,7 +487,7 @@ abstract class backup {
 				}
 				break;
 			case 2:
-				$res_html .= '<div style="color:white;background-color:red;padding:10px;font-family:arial;font-size:14px;word-wrap:break-word;border-radius: 5px;">
+				$res_html .= '<div style="color:white;background-color:red;padding:10px;font-family:arial;font-size:13px;word-wrap:break-word;border-radius:5px;margin:5px;width:100%">
 				There was an error during export. Please check your values:<br/><br/>
 				<table>
 				<tr><td>DB Database Name:</td><td><b>' .DEDALO_DATABASE_CONN .'</b></td></tr>
@@ -590,13 +591,13 @@ abstract class backup {
 		if(SHOW_DEBUG) {
 			#dump($worked_result," console response code for:\n $command ");
 			#dump($output," console output for:\n $command");
-			$res_html .= "<div style=\"font-family:courier;font-size:11px;word-wrap:break-word;padding:3px;\">$command</div>";
+			#$res_html .= "<div style=\"font-family:courier;font-size:11px;word-wrap:break-word;padding:3px;\">$command</div>";
 		}
 		switch($worked_result){
 			
 			# OK (0)
 			case 0:
-				$res_html .= '<div style="color:white;background-color:green;padding:10px;font-family:arial;font-size:14px;word-wrap:break-word;border-radius:5px;">';
+				$res_html .= '<div style="color:white;background-color:green;padding:10px;font-family:arial;font-size:13px;word-wrap:break-word;border-radius:5px;margin:5px;width:100%">';
 				$res_html .= 'IMPORT file:<br> File <br><b>' .$mysqlImportFilename .'</b><br> successfully imported to database<br> <b>' . DEDALO_DATABASE_CONN .'</b>';
 				$res_html .= '</div>';
 
@@ -607,7 +608,7 @@ abstract class backup {
 					#sleep(2);
 					$ar_response 		= self::load_dedalo_str_tables_data();	
 					$ar_response_html 	= implode('<hr>', (array)$ar_response);
-					$res_html .= wrap_pre($ar_response_html);
+					$res_html .= wrap_pre($ar_response_html, false);
 				#}
 
 				#
@@ -638,14 +639,14 @@ abstract class backup {
 
 					}//end foreach ($ar_recursive_childrens as $key => $terminoID)
 
-					$res_html .= wrap_pre( "Removed development elements: ".count($ar_recursive_childrens)." from parents: ".implode(',', $ar_parents) );
+					$res_html .= wrap_pre( "Removed development elements: ".count($ar_recursive_childrens)." from parents: ".implode(',', $ar_parents) , false);
 
 				}//end if (DEDALO_DATABASE_CONN!='dedalo4_development')
 				break;
 
 			# ERROR (1)
 			case 1:
-				$res_html .= '<div style="color:white;background-color:red;padding:10px;font-family:arial;font-size:14px;word-wrap:break-word;border-radius: 5px;">
+				$res_html .= '<div style="color:white;background-color:red;padding:10px;font-family:arial;font-size:13px;word-wrap:break-word;border-radius:5px;margin:5px;width:100%">
 				There was an error during import. Please make sure the import file is saved in the same folder as this script and check your values:<br/>
 				<br/>
 				<table>

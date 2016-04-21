@@ -509,7 +509,7 @@ abstract class RecordDataBoundObject {
 									$campo = substr($key, 0, strpos($key,':begins_or'));
 									$strQuery_temp ='';
 									if(is_array($value)) foreach ($value as $value_string) {
-										$strQuery_temp .= "$campo LIKE '{$value_string}%' OR ";
+										$strQuery_temp .= "$campo ILIKE '{$value_string}%' OR ";
 									}
 									$strQuery .= 'AND ('. substr($strQuery_temp, 0,-4) .') ';
 									break;

@@ -1,18 +1,11 @@
 <?php
 
 	# VISUALIZADOR HTML	
-
-	# ELEMENTOS
-	if(!isset ($ar_css['css_span_dato'])) 			$ar_css['css_span_dato']='';
-	if(!isset ($ar_css['css_state'])) 				$ar_css['css_state']='';
-	if(!isset ($ar_css['css_span_ejemplo'])) 		$ar_css['css_span_ejemplo']='';
-	if(!isset ($ar_css['css_span_debugger']))		$ar_css['css_span_debugger']='';
-	if(!isset ($ar_css['css_wrap_state']))			$ar_css['css_wrap_state']='';
-	if(!isset ($ar_css['css_state_rotulo']))		$ar_css['css_state_rotulo']='';	
 	
 	
 	print "\n<!-- STATE [tipo:$tipo section_id:$parent $modo] -->";
-	print "\n<div  id=\"{$id_wrapper}\" class=\"css_wrap_state css_wrap_state_edit wrap_component {$ar_css['css_wrap_state']}\"
+
+	print "\n<div class=\"wrap_component css_wrap_state css_wrap_state_edit wrap_component_{$tipo}\" id=\"{$id_wrapper}\" 
 	data-tipo=\"{$tipo}\"
 	data-section_tipo=\"{$section_tipo}\"
 	data-parent=\"{$parent}\"
@@ -29,125 +22,131 @@
 	$html_contenido = '';
 	switch($permissions) {
 			
-		case 0	:	$html_contenido .= "\n <span class=\"css_span_dato {$ar_css['css_span_dato']}\"> No access here (state)! </span>";
-					break;						
+		case 0	:
+				$html_contenido .= "";
+				break;						
 		
 		case ($permissions>=2)	:
 					
-					$checked = $valor_for_checkbox[0]>=1 ? 'checked="checked"' : '';
-					$html_contenido .= "\n<input type=\"checkbox\" class=\"css_state\" onchange=\"component_state.update_state_locator(this)\"
+				$checked = $valor_for_checkbox[0]>=1 ? 'checked="checked"' : '';
+
+				$html_contenido .= "\n<input type=\"checkbox\" class=\"css_state\"
+				onchange=\"component_state.update_state_locator(this)\"
+				onfocus=\"component_common.select_wrap(null,'$id_wrapper');\"
+				data-tipo=\"{$tipo}\"
+				data-section_tipo=\"{$section_tipo}\"
+				data-parent=\"{$parent}\"
+				data-lang=\"{$lang}\"
+				data-label=\"{$label}\"
+				data-id_wrapper=\"{$id_wrapper}\"
+				data-options='".$options_json."'
+				data-type='user'					
+				value=\"".$valor_for_checkbox[0]."\"
+				title=\"$html_title\"
+				$checked
+				tabindex=\"1\"
+				/>";
+
+				$html_contenido .= "<span> ".label::get_label('acabado')." </span>";
+				if(SHOW_DEBUG) {
+					$html_contenido .= "<span class=\"notas\"> [".$this->options->lang."] </span>";
+				}					
+
+				
+				if ($permissions_admin<2) {
+
+					# USER: Label to info user about current admin options values (read only)
+					switch (true) {
+						case $valor_for_checkbox[1]==50:
+							$html_contenido .= " <strong>".label::get_label('para_revisar')."</strong>";
+							break;
+						case $valor_for_checkbox[1]==100:
+							$html_contenido .= " <strong>".label::get_label('validado')."</strong>";
+							break;
+						default:
+							$html_contenido .= " <strong>".''."</strong>";
+							break;
+					}
+					
+				}else if ($permissions_admin>=2) {
+
+					# Admin options
+					$html_contenido .= "\n <select onchange=\"component_state.update_state_locator(this)\"
 					data-tipo=\"{$tipo}\"
 					data-section_tipo=\"{$section_tipo}\"
 					data-parent=\"{$parent}\"
 					data-lang=\"{$lang}\"
-					data-label=\"{$label}\"
 					data-id_wrapper=\"{$id_wrapper}\"
 					data-options='".$options_json."'
-					data-type='user'					
-					value=\"".$valor_for_checkbox[0]."\"
-					title=\"$html_title\" $checked
-					/>";
-
-					$html_contenido .= "<span> ".label::get_label('acabado')." </span>";
+					data-type='admin'						
+					data-dato='".$dato_json."'
+					>";
+					$html_contenido .= "<option value=\"0\"> </option>";
+					$selected = ($valor_for_checkbox[1]==50) ? 'selected="selected"' : '';
+					$html_contenido .= "<option value=\"50\" $selected >".label::get_label('para_revisar')."</option>";
+					$selected = ($valor_for_checkbox[1]==100) ? 'selected="selected"' : '';
+					$html_contenido .= "<option value=\"100\" $selected >".label::get_label('validado')."</option>";
+					$html_contenido .= "</select> ";
+											
+					#$html_contenido .= "\n <label class=\"css_state_rotulo\" $required_code >";
+					#$html_contenido .= label::get_label('validado') ;
 					if(SHOW_DEBUG) {
-						$html_contenido .= "<span class=\"notas\"> [".$this->options->lang."] </span>";
-					}					
-
-					
-					if ($permissions_admin<2) {
-
-						# USER: Label to info user about current admin options values (read only)
-						switch (true) {
-							case $valor_for_checkbox[1]==50:
-								$html_contenido .= " <strong>".label::get_label('para_revisar')."</strong>";
-								break;
-							case $valor_for_checkbox[1]==100:
-								$html_contenido .= " <strong>".label::get_label('validado')."</strong>";
-								break;
-							default:
-								$html_contenido .= " <strong>".''."</strong>";
-								break;
-						}
-						
-					}else if ($permissions_admin>=2) {
-
-						# Admin options
-						$html_contenido .= "\n <select onchange=\"component_state.update_state_locator(this)\"
-						data-tipo=\"{$tipo}\"
-						data-section_tipo=\"{$section_tipo}\"
-						data-parent=\"{$parent}\"
-						data-lang=\"{$lang}\"
-						data-id_wrapper=\"{$id_wrapper}\"
-						data-options='".$options_json."'
-						data-type='admin'						
-						data-dato='".$dato_json."'
-						>";
-						$html_contenido .= "<option value=\"0\"> </option>";
-						$selected = ($valor_for_checkbox[1]==50) ? 'selected="selected"' : '';
-						$html_contenido .= "<option value=\"50\" $selected >".label::get_label('para_revisar')."</option>";
-						$selected = ($valor_for_checkbox[1]==100) ? 'selected="selected"' : '';
-						$html_contenido .= "<option value=\"100\" $selected >".label::get_label('validado')."</option>";
-						$html_contenido .= "</select> ";
-												
-						#$html_contenido .= "\n <label class=\"css_state_rotulo {$ar_css['css_state_rotulo']}\" $required_code >";
-						#$html_contenido .= label::get_label('validado') ;
-						if(SHOW_DEBUG) {
-							#$html_contenido .= " [".$this->options->lang."]";
-						}
-						#$html_contenido .= "</label> valor: $valor - valor_for_checkbox: $valor_for_checkbox ";
+						#$html_contenido .= " [".$this->options->lang."]";
 					}
-					
-					if(SHOW_DEBUG) {
-						/**/
-						$html_contenido .= " <div class=\"state_debug_info\" onclick=\"$(this).children('pre').toggle()\"> State data: ";
-						$html_contenido .= "<pre style=\"display:none\">";
-						foreach ($this->get_dato() as $current_state_locator) {
-							#$html_contenido .= json_encode($current_state_locator)."\n";
-							$html_contenido .= print_r($current_state_locator,true)."\n";
-						}						
-						$html_contenido .= "</pre>";
-						$html_contenido .= "</div>";
-						
-					}
+					#$html_contenido .= "</label> valor: $valor - valor_for_checkbox: $valor_for_checkbox ";
+				}
 
-					# 
-					# GRAPH
-					$html_contenido .= "\n <div class=\"togge_state_graphs\" onclick=\"component_state.toggle_graphs(this);\" data-state_graphs_button=\"1\"></div>";
-					$html_contenido .= "\n <div class=\"state_graphs_content\" style=\"display:none\">";
-					foreach ($ar_graph as $key => $ar_value) {						
-						# Current_stats_item div
-						$html_contenido .= "\n <div class=\"current_stats_item\" id=\"current_stats_item_$key\">";
-						#
-						# SVG GRAPHIC BUILDED BY JS
-						$html_contenido .= "<script>";
-						$html_contenido .= "var current_chart = {'graph':".json_handler::encode($ar_value).", 'key':$key}; 	";
-						$html_contenido .= "component_state.ar_charts.push(current_chart);";						
-						#$html_contenido .= "window.onload = function(){";
-						#$html_contenido .= " component_state.build_charts(".json_handler::encode($ar_value).", '$key')";
-						#$html_contenido .= "}";
-						$html_contenido .= "</script>";
+				
+				if(SHOW_DEBUG) {					
+					$html_contenido .= " <div class=\"state_debug_info\" onclick=\"$(this).children('pre').toggle()\"> State data: ";
+					$html_contenido .= "<pre style=\"display:none\">";
+					foreach ($this->get_dato() as $current_state_locator) {
+						#$html_contenido .= json_encode($current_state_locator)."\n";
+						$html_contenido .= print_r($current_state_locator,true)."\n";
+					}						
+					$html_contenido .= "</pre>";
+					$html_contenido .= "</div>";					
+				}
 
-						$html_contenido .= "</div>";
-					}
-					/*
-					$html_contenido .= "\n<script>";
-					//$html_contenido .= "window.onload = function(){";
-					#$html_contenido .= "$(function(){";
-					foreach ($ar_graph as $key => $ar_value) {
-						# SVG GRAPHIC BUILDED BY JS		
-						$html_contenido .= "$(function(){component_state.build_charts(".json_handler::encode($ar_value).",'$key')});";
-					}
-					//$html_contenido .= "}";
-					#$html_contenido .= "})";
-					$html_contenido .= "\n</script>";
-					*/
+
+				# 
+				# GRAPH
+				$html_contenido .= "\n <div class=\"togge_state_graphs\" onclick=\"component_state.toggle_graphs(this);\" data-state_graphs_button=\"1\"></div>";
+				$html_contenido .= "\n <div class=\"state_graphs_content\" style=\"display:none\">";
+				foreach ($ar_graph as $key => $ar_value) {						
+					# Current_stats_item div
+					$html_contenido .= "\n <div class=\"current_stats_item\" id=\"current_stats_item_$key\">";
+					#
+					# SVG GRAPHIC BUILDED BY JS
+					$html_contenido .= "<script>";
+					$html_contenido .= "var current_chart = {'graph':".json_handler::encode($ar_value).", 'key':$key}; 	";
+					$html_contenido .= "component_state.ar_charts.push(current_chart);";						
+					#$html_contenido .= "window.onload = function(){";
+					#$html_contenido .= " component_state.build_charts(".json_handler::encode($ar_value).", '$key')";
+					#$html_contenido .= "}";
+					$html_contenido .= "</script>";
+
 					$html_contenido .= "</div>";
-
+				}
+				/*
+				$html_contenido .= "\n<script>";
+				//$html_contenido .= "window.onload = function(){";
+				#$html_contenido .= "$(function(){";
+				foreach ($ar_graph as $key => $ar_value) {
+					# SVG GRAPHIC BUILDED BY JS		
+					$html_contenido .= "$(function(){component_state.build_charts(".json_handler::encode($ar_value).",'$key')});";
+				}
+				//$html_contenido .= "}";
+				#$html_contenido .= "})";
+				$html_contenido .= "\n</script>";
+				*/
+				$html_contenido .= "</div>";
 					
 		
-			if($permissions==3)
-			
-					$html_contenido .= "\n <span class=\"css_span_debugger {$ar_css['css_span_debugger']}\" id=\"debugger_{$tipo}\" >{$debugger}</span>";											
+				if($permissions==3) {
+					$html_contenido .= "\n <span class=\"css_span_debugger\" id=\"debugger_{$tipo}\" >{$debugger}</span>";	
+				}
+				break;															
 							
 	}
 

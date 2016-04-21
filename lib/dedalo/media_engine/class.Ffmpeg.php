@@ -325,6 +325,19 @@ class Ffmpeg {
 		}
 
 
+		#
+		# FFMPEG AUDIO CODEC TEST
+		$ffmpeg_info = shell_exec(DEDALO_AV_FFMPEG_PATH .' -buildconf');
+		if (strpos($ffmpeg_info, '--enable-libfdk-aac')!==false) {
+			$acodec = 'libfdk_aac';
+		}else{
+			if(empty($acodec)) {
+				$acodec = 'libvo_aacenc'; // Default only with version <3
+			} 
+		}
+		debug_log(__METHOD__." Using audio codec $acodec from ffmpeginfo : ".to_string($ffmpeg_info), logger::DEBUG);
+
+
 		
 		# COMMANDS SHELL
 		$command	 = '';			
@@ -345,7 +358,7 @@ class Ffmpeg {
 					# paso 1 extraer el audio		
 					#$command	.= "nice -n 19 ".DEDALO_AV_FFMPEG_PATH." -i $src_file -vn -acodec copy $tmp_file ";			
 					# convert format always
-					$command	.= "nice -n 19 ".DEDALO_AV_FFMPEG_PATH." -i $src_file -vn -acodec libvo_aacenc -ar 44100 -ab 128k -ac 2 $target_file ";
+					$command	.= "nice -n 19 ".DEDALO_AV_FFMPEG_PATH." -i $src_file -vn -acodec $acodec -ar 44100 -ab 128k -ac 2 $target_file ";
 					# fast-start
 					#$command	.= "&& ".DEDALO_AV_FASTSTART_PATH." $tmp_file $target_file ";			
 					# delete media temp
@@ -364,7 +377,7 @@ class Ffmpeg {
 				case ($source_with_video==false):
 					#
 					# CASE ORIGINAL HAVE ONLY AUDIO
-					$command	.= "nice -n 19 ".DEDALO_AV_FFMPEG_PATH." -i $src_file -vn -acodec libvo_aacenc -ar 44100 -ab 128k -ac 2 $target_file ";
+					$command	.= "nice -n 19 ".DEDALO_AV_FFMPEG_PATH." -i $src_file -vn -acodec $acodec -ar 44100 -ab 128k -ac 2 $target_file ";
 					break;
 				
 				default:
@@ -728,9 +741,18 @@ class Ffmpeg {
 		
 		$ffmpeg_path 		= DEDALO_AV_FFMPEG_PATH;
 		$qt_faststart_path  = DEDALO_AV_FASTSTART_PATH;
+
+		#
+		# FFMPEG AUDIO CODEC TEST
+		$ffmpeg_info = shell_exec(DEDALO_AV_FFMPEG_PATH .' -buildconf');
+		if (strpos($ffmpeg_info, '--enable-libfdk-aac')!==false) {
+			$acodec = 'libfdk_aac';
+		}else{			
+			$acodec = 'libvo_aacenc'; // Default only with version <3			 
+		}
 		
 		# COMMAND: Full process
-		$command = "nice $ffmpeg_path -y -i $source_file -vf \"yadif=0:-1:0, scale=720:404:-1\" -vb 960k -g 75 -f mp4 -vcodec libx264 -acodec libvo_aacenc -ar 44100 -ab 128k -ac 2 -movflags faststart $target_file";
+		$command = "nice $ffmpeg_path -y -i $source_file -vf \"yadif=0:-1:0, scale=720:404:-1\" -vb 960k -g 75 -f mp4 -vcodec libx264 -acodec $acodec -ar 44100 -ab 128k -ac 2 -movflags faststart $target_file";
 		
 		# Comando procesado sólo fast start
 		#$command = "nice $qt_faststart_path $source_file $target_file";

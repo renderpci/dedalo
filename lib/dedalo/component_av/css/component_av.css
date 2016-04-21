@@ -35,8 +35,7 @@
 	}
 	.css_player_wrap iframe.videoFrame {
 		width: 732px;
-		/*height: 607px;*/
-		height: 570px;
+		height: 540px;
 		}
 		
 
@@ -93,7 +92,14 @@ IMG.av_posterframe {
 
 
 
-/*LANG*/
-
-/*SEARCH*/
+.info_video_debug {
+	padding-top: 5px;
+	cursor: pointer;
+	text-align: left;
+	color: #C97A3E;
+    font-size: 90%;
+	}
+	.info_video_debug pre {
+		/*display: none;*/
+	}
 

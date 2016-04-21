@@ -7,14 +7,20 @@
 	if(!isset ($ar_css['css_component_eval_code'])) 		$ar_css['css_component_eval_code']='';
 	if(!isset ($ar_css['css_span_ejemplo'])) 				$ar_css['css_span_ejemplo']='';
 	if(!isset ($ar_css['css_span_debugger']))				$ar_css['css_span_debugger']='';
-	if(!isset ($ar_css['css_wrap_component_eval_code']))	$ar_css['css_wrap_component_eval_code']='';
 	
 	
 	
 	print "\n<!-- COMPONENT_EVAL_CODE [tipo:$tipo section_id_matrix:$parent] -->";
-	print "\n<div class=\"css_wrap_component_eval_code wrap_component {$ar_css['css_wrap_component_eval_code']}\"
-	data-tipo=\"{$tipo}\" data-lang=\"{$lang}\" data-section_tipo=\"{$section_tipo}\" data-parent=\"{$parent}\" data-modo=\"{$modo}\" data-dato=\"{$valor}\" data-component_name=\"{$component_name}\"
-	data-component_info='{$component_info}' >";
+	print "\n<div class=\"wrap_component css_wrap_component_eval_code wrap_component_{$tipo}\"
+	data-tipo=\"{$tipo}\"
+	data-lang=\"{$lang}\"
+	data-section_tipo=\"{$section_tipo}\"
+	data-parent=\"{$parent}\"
+	data-modo=\"{$modo}\"
+	data-dato=\"{$valor}\"
+	data-component_name=\"{$component_name}\"
+	data-component_info='{$component_info}'
+	>";
 	
 	# ETIQUETA (LABEL)
 	$html_label = component_common_draw::draw_label($this);
@@ -24,7 +30,7 @@
 	$html_contenido = '';
 	switch($permissions) {
 			
-		case 0	:	$html_contenido .= "\n <span class=\"css_span_dato {$ar_css['css_span_dato']}\"> ".label::get_label('sin_acceso')." (component_eval_code)</span>";
+		case 0	:	$html_contenido .= "";
 					break;
 						
 		case 1	: 	$html_contenido .= "\n <span class=\"css_span_dato {$ar_css['css_span_dato']}\">$dato</span>";

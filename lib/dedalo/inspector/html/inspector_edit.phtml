@@ -4,44 +4,48 @@
 
 		
 	# INSPECTOR DIV
-	$html .= "\n <div id=\"inspector_div\" class=\"inspector_div box_shadow_1 box_border_radius_1 \">";			
+	$html .= "\n <div id=\"inspector_div\" class=\"inspector_div box_shadow_1 box_border_radius_1 \">";
+
+	
 		
 		
 		#
 		# INFO
 		#
-		$html .= "\n<div class=\"css_section_group_titulo tab_title title_down_box text_unselectable\">
-								<label class=\"css_label\">INFO</label>
-							</div>";
-		$html .= "\n<div class=\"css_section_group_content tab_content inspector_div_content \" >";
-		$html .= "\n <div id=\"inspector_info\" class=\"inspector_info_body\"></div>";	
-		# Records navigator container ready
-		$html .= "\n <div id=\"inspector_records_navigator\"></div>";
+		# Header
+		$html .= "<div class=\"css_section_group_titulo tab_title title_down_box text_unselectable\">";
+		$html .= " <label class=\"css_label\">INFO</label>";
+		$html .= "</div>";
+		# Body
+		$html .= "\n<div class=\"css_section_group_content tab_content inspector_div_content\">";
+
+			# paginator placeholder
+			$html .= "\n<div id=\"wrap_inspector_paginator\">Loading..</div>";
+		
+			# inspector_info
+			$html .= "\n <div id=\"inspector_info\" class=\"inspector_info_body\"></div>";
+			
+			# Records navigator container ready		
+			$html .= "\n <div id=\"inspector_records_navigator\"></div>";
+		
 		$html .= "\n</div>";
 		
 		
 		#
 		# TOOLS
 		#
-		$html .= "\n<div class=\"css_section_group_titulo tab_title title_down_box text_unselectable border_radius_0\" 
-							data-tab_id=\"Inspector_tools_tap\">
-							<label class=\"css_label\">".label::get_label('heramientas')."</label>
-							</div>";
+		# Header
+		$html .= "<div class=\"css_section_group_titulo tab_title title_down_box text_unselectable border_radius_0\" data-tab_id=\"Inspector_tools_tap\">";
+		$html .= "  <label class=\"css_label\">".label::get_label('heramientas')."</label>";
+		$html .= "</div>";
+		# Body
 		$html .= "\n<div class=\"css_section_group_content tab_content inspector_div_content \" >";
 			
-			# FIXED SECTION TOOLS
-			#if ($fixed_tools) {
-			#$html .= "\n <div id=\"inspector_tools_section\" class=\"inspector_info_body inspector_info_body_fixed\">";
-			#$html .= $tool_relation_button_html;
-			#$html .= "</div>";#/inspector_info_body
-			#}
-			#if( SHOW_DEBUG || component_security_administrator::is_global_admin(navigator::get_user_id())===true ) {
+			#
+			# FIXED SECTION TOOLS				
 				
-				#
 				# TOOL_DIFFUSION for export to mysql
-				$authorized_tool = (bool)component_security_tools::is_authorized_tool_for_logged_user('tool_diffusion');
-					#dump($authorized_tool," authorized_tool");		
-				if ($authorized_tool && defined('DEDALO_DIFFUSION_MAP')) {
+				if (defined('DEDALO_DIFFUSION_MAP') && (bool)component_security_tools::is_authorized_tool_for_logged_user('tool_diffusion')) {				
 					$DEDALO_DIFFUSION_MAP = unserialize(DEDALO_DIFFUSION_MAP);
 					if (isset($DEDALO_DIFFUSION_MAP[$section_tipo])) {
 						$tool_diffusion = new tool_diffusion($section_tipo,'button_inspector');
@@ -49,75 +53,72 @@
 						$html  .= $tool_diffusion->get_html();
 					}
 				}
-			#}
-						
-			# SPECIFIC COMPONENT TOOLS
-			$html .= "\n <div id=\"inspector_tools\" class=\"inspector_info_body\"></div>";
-
-
-			# DEDALO_INSPECTOR_EXTRAS (Optional defined in config)
-			if (defined('DEDALO_INSPECTOR_EXTRAS')) {
-				ob_start();
-				include(DEDALO_INSPECTOR_EXTRAS);
-				$html .= ob_get_clean();				
-			}
 			
-			#$html .= "\n <div id=\"inspector_tools_log\" ></div>";
+			#		
+			# SPECIFIC COMPONENT TOOLS
+				$html .= "\n <div id=\"inspector_tools\" class=\"inspector_info_body\">";
+				$html .= " <!-- Ajax load --> ";
+				$html .= "</div>";
 
-		$html .= "\n</div>";#/css_section_group_content	end tools
+
+			#
+			# DEDALO_INSPECTOR_EXTRAS (Optional defined in config)
+				if (defined('DEDALO_INSPECTOR_EXTRAS')) {
+					ob_start();
+					include(DEDALO_INSPECTOR_EXTRAS);
+					$html .= ob_get_clean();
+				}
+		
+		$html .= "\n</div>";//end body tools
 
 
 		#
 		# INDEXATIONS
-		#			
-		$html .= "\n<div class=\"css_section_group_titulo tab_title title_down_box text_unselectable border_radius_0\" 
-							data-tab_id=\"Inspector_relations_tap\">
-							<label class=\"css_label\">".label::get_label('indexaciones')."</label>
-							</div>";
+		#
+		# Header
+		$html .= "\n<div class=\"css_section_group_titulo tab_title title_down_box text_unselectable border_radius_0\" data-tab_id=\"Inspector_relations_tap\">";
+		$html .= "\n <label class=\"css_label\">".label::get_label('indexaciones')."</label>";
+		$html .= "\n</div>";
+		# Body
 		$html .= "\n<div class=\"css_section_group_content tab_content inspector_div_content \" >";
 		$html .= "\n <div id=\"inspector_indexations\" class=\"inspector_info_body\"> </div>";
 		$html .= "\n</div>";
 	
-		
-
+	
 		#
 		# RELATIONS
 		#
-		/* DESACTIVO TEMPORALMENTE				
-		$html .= "\n<div class=\"css_section_group_titulo tab_title title_down_box text_unselectable border_radius_0\" 
-							data-tab_id=\"Inspector_relations_tap\">
-							<label class=\"css_label\">".label::get_label('relaciones')."</label>
-							</div>";
-		$html .= "\n<div class=\"css_section_group_content tab_content inspector_div_content \" >";
+		/* DESACTIVO TEMPORALMENTE
+			$html .= "\n<div class=\"css_section_group_titulo tab_title title_down_box text_unselectable border_radius_0\" 
+								data-tab_id=\"Inspector_relations_tap\">
+								<label class=\"css_label\">".label::get_label('relaciones')."</label>
+								</div>";
+			$html .= "\n<div class=\"css_section_group_content tab_content inspector_div_content \" >";
 
-			# Relations tag (dynamic)
-			#$html .= "\n <div id=\"inspector_relation_list_tag\" class=\"inspector_info_body\"> $tool_relation_button_html </div>";
-			
-			# Relations section (fixed)
-			$html .= "\n <div id=\"inspector_relation_list_sections\" class=\"inspector_info_body\">";
-			$html .= "\n<div class=\"relaciones_list_title\">".label::get_label('ficha')."</div>";
-			$html .= $relation_list_html ;
-			$html .= "</div>";
+				# Relations tag (dynamic)
+				#$html .= "\n <div id=\"inspector_relation_list_tag\" class=\"inspector_info_body\"> $tool_relation_button_html </div>";
+				
+				# Relations section (fixed)
+				$html .= "\n <div id=\"inspector_relation_list_sections\" class=\"inspector_info_body\">";
+				$html .= "\n<div class=\"relaciones_list_title\">".label::get_label('ficha')."</div>";
+				$html .= $relation_list_html ;
+				$html .= "</div>";
 
-		$html .= "\n</div>";
-		*/
+			$html .= "\n</div>";
+			*/
 
 
 		#
 		# ACTIVITY LOG
 		#
-		$html .= "\n<div class=\"css_section_group_titulo tab_title title_down_box text_unselectable\">
-							<label class=\"css_label\">ACTIVITY LOG</label>
-							</div>";
+		# Header
+		$html .= "\n<div class=\"css_section_group_titulo tab_title title_down_box text_unselectable\">";
+		$html .= "\n <label class=\"css_label\">ACTIVITY LOG</label>";
+		$html .= "\n</div>";
+		# Body				
 		$html .= "\n<div class=\"css_section_group_content tab_content inspector_div_content \" >";
 		$html .= "\n <div id=\"inspector_log\" class=\"inspector_info_body\"></div>";			
 		$html .= "\n</div>";
-
-
-
-		
-		
-		
 
 
 		#
@@ -125,119 +126,120 @@
 		#
 		# If any 'component_text_area' is loaded, show TINYMCE EVENTS inspector tap
 		/*
-		if (isset($ar_loaded_modelos) && in_array('component_text_area', $ar_loaded_modelos)) {
-			
-			$html .= "\n<div class=\"css_section_group_titulo tab_title title_down_box text_unselectable border_radius_0\" 
-								data-tab_id=\"Inspector_events_tap\">
-								<label class=\"css_label\">Events</label>
-								</div>";
-			$html .= "\n<div class=\"css_section_group_content tab_content inspector_div_content \" >";
-			$html .= "\n <div id=\"inspector_events\" class=\"inspector_info_body\"></div>";
-			$html .= "\n</div>";
-		}
-		*/
+			if (isset($ar_loaded_modelos) && in_array('component_text_area', $ar_loaded_modelos)) {
+				
+				$html .= "\n<div class=\"css_section_group_titulo tab_title title_down_box text_unselectable border_radius_0\" 
+									data-tab_id=\"Inspector_events_tap\">
+									<label class=\"css_label\">Events</label>
+									</div>";
+				$html .= "\n<div class=\"css_section_group_content tab_content inspector_div_content \" >";
+				$html .= "\n <div id=\"inspector_events\" class=\"inspector_info_body\"></div>";
+				$html .= "\n</div>";
+			}
+			*/
 
-		#
-		# OTHERS
-		#
+		
+
 		if(SHOW_DEBUG===true) {
-			$iconv = iconv_get_encoding('all');
-			$html .= "\n<div class=\"css_section_group_titulo tab_title title_down_box text_unselectable border_radius_0\" 
-								data-tab_id=\"Inspector_others_tap\">
-								<label class=\"css_label\">Others</label>
-								</div>";
-			$html .= "\n<div class=\"css_section_group_content tab_content inspector_div_content \" >";
-			$html .= "\n <div id=\"inspector_others\" class=\"inspector_info_body\">";
-
-			$html .= " Dédalo version ".DEDALO_VERSION. " - Build " .DEDALO_BUILD. "<br>";
-			$html .= " <span class=\"key\">TOP_TIPO:</span> <span class=\"value\"><b>". TOP_TIPO . "</b></span> ";
-			$html .= " <span class=\"key\">TOP_ID:</span> <span class=\"value\"><b>".TOP_ID."</b></span><br>";
-			$html .= " DB info: ".$db_info ."<br>";
-			$html .= " PHP version: ". $php_info. " - cache: $php_check_cache <br>";
-			$html .= " PHP memory usage: ". tools::get_memory_usage('pid') ."<br>";		
-			if (defined('DEDALO_CACHE_MANAGER') && !empty(DEDALO_CACHE_MANAGER)) {
-				$html .= " Dedalo cache manager: ". DEDALO_CACHE_MANAGER ;		
-			}
-			if (defined('DEDALO_CACHE_MANAGER_DB') && DEDALO_CACHE_MANAGER_DB) {
-				$html .= ' : '.DEDALO_CACHE_MANAGER_DB.'<br>';
-			}
-			if (defined('DEDALO_ENTITY')) {
-				$html .= "DEDALO_ENTITY: ".DEDALO_ENTITY.'<br>';
-			}
-			
 
 			#
-			# INVERSE LOCATORS
-			if (isset($inverse_locators)) {
-				$html .= "Inverse locators:<br>";
-				foreach ((array)$inverse_locators as $current_locator) {
-					$html .= $current_locator->section_tipo."->".$current_locator->component_tipo."->".$current_locator->section_id.'<br>';
+			# OTHERS
+			#
+			# Header
+			$html .= "\n<div class=\"css_section_group_titulo tab_title title_down_box text_unselectable border_radius_0\" data-tab_id=\"Inspector_others_tap\">";
+			$html .= "\n <label class=\"css_label\">OTHERS</label>";
+			$html .= "\n</div>";
+			# Body
+			$html .= "\n<div class=\"css_section_group_content tab_content inspector_div_content\" >";
+			$html .= "\n <div id=\"inspector_others\" class=\"inspector_info_body\">";
+
+				# Dédalo version
+				$html .= " Dédalo version ".DEDALO_VERSION. " - Build " .DEDALO_BUILD. "<br>";
+			
+				/*
+					$html .= " <span class=\"key\">TOP_TIPO:</span> <span class=\"value\"><b>". TOP_TIPO . "</b></span> ";
+					$html .= " <span class=\"key\">TOP_ID:</span> <span class=\"value\"><b>".TOP_ID."</b></span><br>";
+					$html .= " DB info: ".$db_info ."<br>";
+					$html .= " PHP version: ". $php_info. " - cache: $php_check_cache <br>";
+					$html .= " PHP memory usage: ". tools::get_memory_usage('pid') ."<br>";		
+					if (defined('DEDALO_CACHE_MANAGER') && !empty(DEDALO_CACHE_MANAGER)) {
+						$html .= " Dedalo cache manager: ". DEDALO_CACHE_MANAGER ;		
+					}
+					if (defined('DEDALO_CACHE_MANAGER_DB') && DEDALO_CACHE_MANAGER_DB) {
+						$html .= ' : '.DEDALO_CACHE_MANAGER_DB.'<br>';
+					}
+					if (defined('DEDALO_ENTITY')) {
+						$html .= "DEDALO_ENTITY: ".DEDALO_ENTITY.'<br>';
+					}
+					*/
+			
+				# Inverse locators
+				if (isset($inverse_locators)) {
+					$html .= "Inverse locators:<br>";
+					foreach ((array)$inverse_locators as $current_locator) {
+						$html .= $current_locator->section_tipo."->".$current_locator->component_tipo."->".$current_locator->section_id.'<br>';
+					}
 				}
-			}
-			
-								/*
-								if(isset($_SESSION['debug_content'])) {							
-									foreach ($_SESSION['debug_content'] as $key => $value) {
-										if(strpos($key, 'RecordDataBoundObject')!==false) {
-											$key = str_replace('RecordDataBoundObject', 'RDBO', $key);
-											$html .= "$key : ". count($value) ."<br>";
-										}
-										
-									}
-								}
-								#$html .= print_r($_SESSION['debug_content']['common::show_loaded_modelos']);
-								
-								$_SESSION['debug_content']['Load'.' cache']
-								$_SESSION['debug_content']['Load']
-								$_SESSION['debug_content']['search'.' cache']
-								$_SESSION['debug_content']['search']
-								$_SESSION['common::show_loaded_modelos']
-								*/
-			/*
-			$html .= "	PHP iconv input_encoding ". iconv_get_encoding('input_encoding'). "<br>
-								PHP iconv output_encoding ". iconv_get_encoding('output_encoding') . "<br>	
-								PHP iconv internal_encoding ". iconv_get_encoding('internal_encoding') . "<br>
-								";
-								*/
-			$processUser = posix_getpwuid(posix_geteuid());
-			$html .= "User running php: <b>".$processUser['name']."</b>";
-			$html .= "<pre>";
-			$html .= print_r($processUser,true);
-			$html .= "</pre>";
+				
+				/*
+					if(isset($_SESSION['debug_content'])) {							
+						foreach ($_SESSION['debug_content'] as $key => $value) {
+							if(strpos($key, 'RecordDataBoundObject')!==false) {
+								$key = str_replace('RecordDataBoundObject', 'RDBO', $key);
+								$html .= "$key : ". count($value) ."<br>";
+							}
+							
+						}
+					}
+					#$html .= print_r($_SESSION['debug_content']['common::show_loaded_modelos']);
+					
+					$_SESSION['debug_content']['Load'.' cache']
+					$_SESSION['debug_content']['Load']
+					$_SESSION['debug_content']['search'.' cache']
+					$_SESSION['debug_content']['search']
+					$_SESSION['common::show_loaded_modelos']
+					*/
 
-			
+				/*
+					$iconv = iconv_get_encoding('all');
+					$html .= "	PHP iconv input_encoding ". iconv_get_encoding('input_encoding'). "<br>
+										PHP iconv output_encoding ". iconv_get_encoding('output_encoding') . "<br>	
+										PHP iconv internal_encoding ". iconv_get_encoding('internal_encoding') . "<br>
+										";
+					*/
 
-			$html .= "	</div><!-- /inspector_others -->";
-			$html .= "	<div id=\"load_time_inspector\"></div>";			
+				/*
+					$processUser = posix_getpwuid(posix_geteuid());
+					$html .= "User running php: <b>".$processUser['name']."</b>";
+					$html .= "<pre>";
+					$html .= print_r($processUser,true);
+					$html .= "</pre>";
+					*/
+			
+				$html .= "	<div id=\"load_time_inspector\"></div>";
+
+			$html .= "\n </div><!-- /inspector_others -->";						
 			$html .= "\n</div><!-- /css_section_group_content -->";
+
 		}#if(SHOW_DEBUG===true)
 
 
 		
-		#
-		# DEBUG
-		#
-		if(SHOW_DEBUG===true || DEDALO_ENTITY=='development') {
-		$html .= "\n<div class=\"css_section_group_titulo tab_title title_down_box text_unselectable border_radius_0\" data-tab_id=\"Inspector_debug_tap\">
-							<label class=\"css_label\">Debug</label>
-					</div>";
-		$html .= "\n<div id=\"inspector_debug\" class=\"inspector_info_body css_section_group_content tab_content inspector_div_content \" ></div>";
 		
-		/*
-			$html .= "<div class=\"css_section_group_content tab_content inspector_div_content inspector_info_body \" >";			
-			
+		if(SHOW_DEBUG===true || DEDALO_ENTITY=='development') {
 
-			$html .= "<div class=\"label_lang_data_selector\">".label::get_label('idioma') .' '. label::get_label('datos').'</div>';
-			$html .= "<select data-type_of_lang=\"dedalo_data_lang\" onchange=\"common.jump_select_lang(this)\">";
-				foreach($ar_all_project_langs as $lg) {
-					$selected = DEDALO_DATA_LANG==$lg ? 'selected="selected"' : null;
-					$html .= "<option value=\"$lg\" {$selected}>".RecordObj_ts::get_termino_by_tipo($lg,DEDALO_APPLICATION_LANG,true,true)."</option>";
-				}			
-			$html .= "</select>";
-			$html .="</div>";
-			*/
+			#
+			# DEBUG
+			#
+			# Header
+			$html .= "\n<div class=\"css_section_group_titulo tab_title title_down_box text_unselectable border_radius_0\" data-tab_id=\"Inspector_debug_tap\">";
+			$html .= "\n <label class=\"css_label\">Debug</label>";
+			$html .= "\n</div>";
+			# Body
+			$html .= "\n<div id=\"inspector_debug\" class=\"inspector_info_body css_section_group_content tab_content inspector_div_content \" ></div>";
+						
 
-		}#end if(SHOW_DEBUG===true) {
+		}#end iif(SHOW_DEBUG===true || DEDALO_ENTITY=='development') 
 		
 		
 	$html .= "\n </div>";#/inspector_div

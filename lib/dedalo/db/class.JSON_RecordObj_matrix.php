@@ -156,14 +156,9 @@ class JSON_RecordObj_matrix extends JSON_RecordDataBoundObject {
 
 	/**
 	* SAVE TIME MACHINE
+	* @param object $save_options
 	*/
 	protected function save_time_machine( $save_options ) {
-
-		if( $this->test_can_save()!==true ) {
-			$msg = "Error. No tm data can be saved!";
-			trigger_error($msg);
-			return false;
-		}
 
 		if (empty($save_options->time_machine_data)) {
 			#dump($save_options,"save_time_machine save_options");

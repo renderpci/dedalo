@@ -4,7 +4,7 @@ WRAP DIV CONTAINER*/
 
 	}
 	.css_wrap_autocomplete_ts .content_data {
-		width: 84%;
+			
 	}
 
 /* VALOR TEXT */
@@ -14,6 +14,7 @@ WRAP DIV CONTAINER*/
 	padding: 3px;
 	padding-left: 0px;
 	padding-right: 5px;
+	width: 61%;
 }
 
 
@@ -40,7 +41,7 @@ input.css_autocomplete_ts_search_field {
 	}
 	input.css_autocomplete_ts_search_field:focus {
 		opacity: 1;
-		width: 190px;
+		width: 110px;
 	}
 
 /* DATO HIDDEN INPUT */
