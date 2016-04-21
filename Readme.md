@@ -33,16 +33,15 @@ Dédalo can handle and cut video in real time for find thematic parts of intervi
 
 *libs required for the Dédalo*
 
-- Jquery 2.1.4
+- Jquery 2.2.3
 - bootstrap 3.1.1
 - calendar 1.25
 - Captionator 0.5.1
-- ffmpeg 2.6.1
+- ffmpeg 2.6.1+
 - qtfaststart 1.0
 - ImageMagick 6.9+
 - FullCalendar v2.3.1
-- geoip
-- gruntfile
+- geoip2
 - jshash md5 v2.2
 - SWFObject v1.5
 - jwplayer 5.9.2118
@@ -50,13 +49,13 @@ Dédalo can handle and cut video in real time for find thematic parts of intervi
 - lessphp v0.4.0
 - MediaElement 2.14.2
 - nvd3 1.7.1
-- paper 0.9.20
+- NodeJS 5.10.1
+- paper 0.9.25
 - pdfjs 1.1.1
 - pdfkit
-- predis 0.8.5
 - PdfParser (2014)
 - tcpdf 6.2.5
-- tinymce 4.1.10
+- tinymce 4.3.10
 - wexflow 1.2
 - videojs 3.0r2
 - wkhtmltopdf 0.12.1-08b0817
