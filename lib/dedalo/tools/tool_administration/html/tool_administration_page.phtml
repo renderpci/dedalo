@@ -95,12 +95,24 @@
 
 
 			#
+			# DEDALO VERSION
+			$dedalo_structure_info = RecordObj_dd::get_termino_by_tipo(DEDALO_ROOT_TIPO);
+			$prefix_tipos  = unserialize(DEDALO_PREFIX_TIPOS);
+			$dedalo_structure_info .= "\n".'Prefix: '. implode(",",$prefix_tipos);
+			$info_database = pg_version(DBi::_getConnection());	
+			$html .= tool_administration::show_info( "Dedalo version",
+													 DEDALO_VERSION,
+													 "v".DEDALO_VERSION ." | Build: ".DEDALO_BUILD
+													);
+
+
+			#
 			# DEDALO STRUCTURE
 			$dedalo_structure_info = RecordObj_dd::get_termino_by_tipo(DEDALO_ROOT_TIPO);
 			$prefix_tipos  = unserialize(DEDALO_PREFIX_TIPOS);
 			$dedalo_structure_info .= "\n".'Prefix: '. implode(",",$prefix_tipos);
 			$info_database = pg_version(DBi::_getConnection());	
-			$html .= tool_administration::show_info( "Dedalo structure current review ",
+			$html .= tool_administration::show_info( "Dedalo structure review",
 													 '',
 													 $dedalo_structure_info
 													);

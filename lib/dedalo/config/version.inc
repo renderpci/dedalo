@@ -503,7 +503,7 @@
 
 
 	# Version
-	define('DEDALO_VERSION'	, '4.0.95');
+	define('DEDALO_VERSION'	, '4.0.9a6');
 	define('DEDALO_BUILD'	, '21-04-2016');
 
 

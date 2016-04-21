@@ -107,6 +107,7 @@ li.tool_indexation_index_list_termino {
 
 .top_id_selector {
 	padding: 2px;
+	display: inline-block;
 	}
 	.top_id_selector label {
 		padding-left: 10px;
