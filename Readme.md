@@ -1,17 +1,17 @@
+<img src="http://dedalo4.antropolis.net/dedalo/images/logos/dedalo_logo.png" alt="Dédalo logo" />
+
 **README**
 
 *Dédalo Ver 4*
-
-<img src="http://dedalo4.antropolis.net/dedalo/images/logos/dedalo_logo.png" alt="Dédalo logo" />
 
 Dédalo is a knowledge management system for Cultural Heritage (tangible and intangible), Natural Heritage and Oral History/Memory. 
 
 Dédalo is a Open Source software based in a new paradigm of programing: develop objects with a ontology model and control the app flow with the ontology descriptors, related terms, no descriptors, TG, TE, etc. The objects have a MVC structure linked to the ontology and the database is a NoSQL model. The data is stored in JSONB (binary).
 
 Dédalo use the structure Ontology for three things:
-	1; Make the data structured. (user data is stored without fixed structure)
-	2; Do the programing objects in the execution time (in real time).
-	3; Interpret the code and the data and translate to multiple formats (RDF, JSON-LD, SQL, CSV, XML, Dublin Core, HTML, PDF, etc)
+	1. Make the data structured. (user data is stored without fixed structure)
+	2. Do the programing objects in the execution time (in real time).
+	3. Interpret the code and the data and translate to multiple formats (RDF, JSON-LD, SQL, CSV, XML, Dublin Core, HTML, PDF, etc)
 
 The ontology can be change in the time and this will change the data and the programing code; you can develop new functionalities without change the data, and you can change the metadata without change the code and the data.
 
@@ -88,17 +88,17 @@ Dédalo can handle and cut video in real time for find thematic parts of intervi
 Dédalo have two updates procedures:
 
 1. Update the code files (php, js, css, html, etc)
-	a. Make backup of all files.
-	b. Download the new files and change the files in your server
-	c. You need see the new config files and put the changes into your own config files (/lib/dedalo/config4.php and /lib/dedalo/config4_db.php). If you don't change the config files, Dédalo will require the new "define" variables and will stop the app.
+	-  Make backup of all files.
+	-  Download the new files and change the files in your server
+	-  You need see the new config files and put the changes into your own config files (/lib/dedalo/config4.php and /lib/dedalo/config4_db.php). If you don't change the config files, Dédalo will require the new "define" variables and will stop the app.
 
 2. Update the structure with the sections, components, list, etc
-	a. Do the first update step
-	b. Log-in as "superuser-developer"
-	c. You will see the menu in "orange" or "red" (if you have the debugger active) and a "grey" sub-menu with a "tool administrator" (or in translation of the app language) button, press the info button to go "admin utils"
-	d. Press the "import structure" button, if all go well you will see a "green" alert.
-	e. Log-out and log-in with normal admin user.
-	f. Optional: in the inventory pages (OH, PCI, etc) press the "Update Cache" for update some changes into the components (this task force to update all components with the new model no 1 to 1), and will apply the changes to the data into the databases.
+	-  Do the first update step
+	-  Log-in as "superuser-developer"
+	-  You will see the menu in "orange" or "red" (if you have the debugger active) and a "grey" sub-menu with a "tool administrator" (or in translation of the app language) button, press the info button to go "admin utils"
+	-  Press the "import structure" button, if all go well you will see a "green" alert.
+	-  Log-out and log-in with normal admin user.
+	-  Optional: in the inventory pages (OH, PCI, etc) press the "Update Cache" for update some changes into the components (this task force to update all components with the new model no 1 to 1), and will apply the changes to the data into the databases.
 
 **SERVER SYSTEM**
 
