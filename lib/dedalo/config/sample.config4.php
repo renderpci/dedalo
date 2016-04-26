@@ -212,7 +212,7 @@ define('DEDALO_ENTITY', 'my_entity_name'); # Like 'dedalo4'
 
 	#
 	# DEDALO_PREFIX_TIPOS
-	define('DEDALO_PREFIX_TIPOS', serialize( array('dd','rsc','oh') ));
+	define('DEDALO_PREFIX_TIPOS', serialize( array('dd','rsc','oh','ich') ));
 
 	# Fallback section
 	define('MAIN_FALLBACK_SECTION'				,'oh1');		# go after login (tipo inventory)
