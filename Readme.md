@@ -85,6 +85,8 @@ Dédalo can handle and cut video in real time for find thematic parts of intervi
 
 **UPDATE**
 
+*Please read the "Updates.md" file for specific notes, procedures, etc, of the versions.*
+
 Dédalo have two updates procedures:
 
 1. Update the code files (php, js, css, html, etc)
