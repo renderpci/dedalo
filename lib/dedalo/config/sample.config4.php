@@ -176,22 +176,6 @@ define('DEDALO_ENTITY', 'my_entity_name'); # Like 'dedalo4'
 
 
 
-
-################################################################
-# DB : CONEXION TO DATABASE		
-	require('config4_db.php');
-	define('SLOW_QUERY_MS'	, 1200);
-
-
-
-################################################################
-# BACKUP : Automatic backups control
-	# DEDALO_BACKUP_ON_LOGIN : true / false	
-	define('DEDALO_BACKUP_ON_LOGIN'	, true);
-	# DEDALO_BACKUP_TIME_RANGE Minimun lapse of time (in hours) for run backup script again. Default: (int) 4
-	define('DEDALO_BACKUP_TIME_RANGE', 8);
-
-
 ################################################################
 # LANG
 
