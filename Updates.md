@@ -2,7 +2,7 @@
 
 *Ver 4.0.9 Final - 21-04-2016*
 
-Today we introduce the update of the V4 to 4.0.8
+Today we introduce the update of the V4 to 4.0.9
 
 This update fixed some issues and bugs for the V4.0.7.
 
