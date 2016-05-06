@@ -460,4 +460,6 @@ define('DEDALO_ENTITY', 'my_entity_name'); # Like 'dedalo4'
 		include(DEDALO_LIB_BASE_PATH.'/maintenance/maintenance.php');
 	}
 
+
+
 ?>
