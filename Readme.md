@@ -106,9 +106,7 @@ Some projects using Dédalo to manage their Cultural Heritage or Oral Archive:
 
 *Please read the "Updates.md" file for specific notes, procedures, etc, of the versions.*
 
-
-Dédalo have two updates procedures:
-
+Dédalo have three updates procedures:
 
 1. Update the code files (php, js, css, html, etc)
 	-  Make backup of all files.
