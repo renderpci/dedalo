@@ -43,7 +43,7 @@
 
 ################################################################
 # DEDALO 4 ENTITY
-define('DEDALO_ENTITY', 'my_entity_name'); # Like 'dedalo4'
+	define('DEDALO_ENTITY', 'my_entity_name'); # Like 'dedalo4'
 
 
 
