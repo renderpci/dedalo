@@ -1,21 +1,12 @@
 <?php
 
-	# VISUALIZADOR HTML	
-
-	# ELEMENTOS
-	if(!isset ($ar_css['css_span_dato'])) 			$ar_css['css_span_dato']='';
-	if(!isset ($ar_css['css_calculation'])) 		$ar_css['css_calculation']='';
-	if(!isset ($ar_css['css_span_ejemplo'])) 		$ar_css['css_span_ejemplo']='';
-	if(!isset ($ar_css['css_span_debugger']))		$ar_css['css_span_debugger']='';
-	if(!isset ($ar_css['css_wrap_calculation']))	$ar_css['css_wrap_calculation']='';
+	# VISUALIZADOR HTML
 	
-	if(!isset ($html_tools))					$html_tools='';
-	
-	if(isset($_REQUEST[$tipo]))					$dato = $_REQUEST[$tipo];		#var_dump($_REQUEST[$tipo]);
+	if(isset($_REQUEST[$tipo])) $dato = $_REQUEST[$tipo];		#var_dump($_REQUEST[$tipo]);
 	
 	
 	#print "\n<!-- INPUT_TEXT [tipo:$tipo id_matrix:$id] -->";
-	#print "\n<div class=\"css_wrap_calculation {$ar_css['css_wrap_calculation']}\" id=\"wrap_{$tipo}\">";
+	#print "\n<div class=\"css_wrap_calculation\" id=\"wrap_{$tipo}\">";
 	
 	# ETIQUETA (LABEL)
 	$html_label = component_common_draw::draw_label($this);
@@ -24,12 +15,12 @@
 	$html_contenido = '';
 	switch($permissions) {
 			
-		case 0	:	$html_contenido .= "\n <span class=\"css_span_sin_acceso\">".label::get_label('sin_acceso')."</span>";
+		case 0	:	$html_contenido .= "";
 					break;
 						
 		case ($permissions>=1) :
 		
-					$html_contenido .= "\n <input class=\"css_calculation {$ar_css['css_calculation']}\" type=\"text\" 
+					$html_contenido .= "\n <input class=\"css_calculation\" type=\"text\" 
 					name=\"{$tipo}\" 
 					data-tipo=\"{$tipo}\"
 					value=\"{$dato}\" title=\"$html_title\" />";

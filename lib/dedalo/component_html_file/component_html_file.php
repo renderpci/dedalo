@@ -16,7 +16,6 @@
 	$permissions			= common::get_permissions($tipo); 	
 	$ejemplo				= $this->get_ejemplo();
 	$html_title				= "Info about $tipo";		
-	$html_tools				= '';
 	$valor					= $this->get_valor();				
 	$lang					= $this->get_lang();
 	#$lang_name				= $this->get_lang_name();
@@ -31,13 +30,11 @@
 	$html_file_id 			= $this->get_html_file_id();
 	$html_file_url			= $this->get_html_file_url();
 	$html_file_path 		= $this->get_html_file_path();
-		#dump($html_file_path, 'html_file_path', array());
 
 
 	switch($modo) {
 
-		case 'edit'	:	
-			$ar_css		= $this->get_ar_css();
+		case 'edit'	:
 			$id_wrapper = 'wrapper_'.$identificador_unico;
 			$component_info 	= $this->get_component_info('json');
 			

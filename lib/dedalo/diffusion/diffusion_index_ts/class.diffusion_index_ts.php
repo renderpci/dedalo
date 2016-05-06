@@ -32,6 +32,105 @@ class diffusion_index_ts extends diffusion {
 	}
 
 
+
+	/**
+	* get_ar_diffusion_map_index_ts : Overrides diffusion method
+	* Specific for thesaurus only
+	*/
+	public function get_ar_diffusion_map_index_ts( $ar_section_top_tipo=array() ) {
+				
+		if (isset($this->ar_diffusion_map)) {
+			return $this->ar_diffusion_map;
+		}
+
+		if(SHOW_DEBUG) $start_time = start_time();
+
+		$ar_diffusion_map = array();
+
+		# DIFFUSION STRUCTURE
+
+			# DIFFUSION_DOMAIN : Get structure tipo of current ('dedalo') diffusion_index_ts
+			$diffusion_domain = diffusion::get_my_diffusion_domain($this->domain, get_called_class());
+				#dump($diffusion_domain,'$diffusion_domain');
+
+			# DIFFUSION_SECTIONS : Get sections defined in structure to view
+			$ar_diffusion_section = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($diffusion_domain, 'diffusion_section', 'children');
+				#dump($ar_diffusion_section,'$ar_diffusion_section');
+
+			# DIFFUSION_SECTIONS : Recorremos las secciones de difusión para localizar las coincidencias con los tipos de sección de las indexaciones
+			foreach ($ar_diffusion_section as $diffusion_section_tipo) {
+
+				# diffusion_section_tipo ar_relateds_terms
+				$ar_current_section_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($diffusion_section_tipo, 'section', 'termino_relacionado');
+					#dump($ar_current_section_tipo,'$ar_current_section_tipo');
+				
+				# ar_current_section_tipo : Verify
+				if ( empty($ar_current_section_tipo[0]) ) {
+					if(SHOW_DEBUG) {
+						$ar_related = (array)RecordObj_dd::get_ar_terminos_relacionados($diffusion_section_tipo);
+						#dump($ar_related, 'ar_related termns');
+						foreach ($ar_related as $key => $value)
+						foreach ($value as $current_modelo => $terminoID) {
+							#echo " $current_modelo - $terminoID ";
+							$RecordObj_dd = new RecordObj_dd($terminoID);
+							$modelo 	  = $RecordObj_dd->get_modelo();	
+							if ($current_modelo!=$modelo) {
+								throw new Exception("Error Processing Request. Inconsistency detected: relation model ($current_modelo) and target real model ($modelo) are differents!", 1);								
+							}
+						}						
+					}
+					$msg  = "Error Processing Request get_ar_diffusion_map_index_ts: diffusion section related is empty. Please configure structure with one true diffusion section related ($diffusion_section_tipo) ";
+					$msg .= "Please check the consistency and model of related term. diffusion_section_tipo:$diffusion_section_tipo must be a section (verify target element too) ";
+					throw new Exception($msg, 1);
+				}else{
+					$current_section_tipo = $ar_current_section_tipo[0];
+						#dump($current_section_tipo, ' current_section_tipo');
+				}
+				#dump($ar_section_top_tipo, '$ar_section_top_tipo');
+				
+				# IN ARRAY ?					
+				if ( array_key_exists($current_section_tipo, $ar_section_top_tipo) ) {
+					
+					#
+					# HEAD 
+					$diffusion_head_tipo 		= RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($diffusion_section_tipo, $modelo_name='diffusion_head', $relation_type='children')[0];
+						#dump($diffusion_section_tipo,'$diffusion_section_tipo');
+					#$ar_diffusion_head_related 	= RecordObj_dd::get_ar_terminos_relacionados($diffusion_head_tipo, $cache=false, $simple=true);
+					$ar_diffusion_head_childrens 	= RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($diffusion_head_tipo, $modelo_name='diffusion_component', $relation_type='children');
+						#dump($ar_diffusion_head_childrens,'$ar_diffusion_head_childrens');
+
+					$ar_diffusion_map['head'][$current_section_tipo] =  $ar_diffusion_head_childrens ;
+						#dump($ar_diffusion_map,'$ar_diffusion_map');
+
+					#
+					# ROW
+					$ar_diffusion_row_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($diffusion_section_tipo, $modelo_name='diffusion_row', $relation_type='children');
+					if (!empty($ar_diffusion_row_tipo[0])) {
+
+						$diffusion_row_tipo = $ar_diffusion_row_tipo[0];
+
+						$ar_diffusion_row_related 	= RecordObj_dd::get_ar_terminos_relacionados($diffusion_row_tipo, $cache=false, $simple=true);
+							#dump($ar_diffusion_row_related,'$ar_diffusion_row_related');
+
+						$ar_diffusion_map['row'][$current_section_tipo] =  $ar_diffusion_row_related ;
+							#dump($ar_diffusion_map,'$ar_diffusion_map');
+					}					
+
+				}#end if ( array_key_exists($current_section_tipo, $ar_section_top_tipo) )
+				
+			}#end foreach ($ar_diffusion_section as $diffusion_section_tipo
+
+		if(SHOW_DEBUG) {
+			#dump( $ar_diffusion_map, 'ar_diffusion_map' );
+			#echo "<span style=\"position:absolute;right:30px;margin-top:-25px\">".exec_time($start_time)."</span>";
+		}
+
+		return $this->ar_diffusion_map = $ar_diffusion_map;
+		
+	}//end get_ar_diffusion_map_index_ts
+
+
+
 	/**
 	* GET_AR_LOCATORS
 	* Get all indexations (locators) of current termino (terminoID like ts574)
@@ -55,6 +154,7 @@ class diffusion_index_ts extends diffusion {
 
 		return $this->ar_locators = $ar_indexations;
 	}
+
 
 
 	/**
@@ -158,21 +258,6 @@ class diffusion_index_ts extends diffusion {
 	}//end get_ar_section_top_tipo
 
 
-
-	/**
-	* GET_LAYOUT_MAP
-	* @return 
-	*/
-	public function get_layout_map( $section_tipo ) {
-		
-		$ar_diffusion_map = $this->get_single_diffusion_map( $section_tipo );
-			dump($ar_diffusion_map, ' ar_diffusion_map ++ '.to_string($section_tipo));
-
-		foreach ($ar_diffusion_map['head'] as $key => $value) {
-			# code...
-		}
-
-	}#end get_layout_map
 
 	/**
 	* GET_LIST_DATA

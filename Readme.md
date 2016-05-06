@@ -14,13 +14,32 @@ Dédalo use the structure Ontology for three things:
 	2. Do the programing objects in the execution time (in real time).
 	3. Interpret the code and the data and translate to multiple formats (RDF, JSON-LD, SQL, CSV, XML, Dublin Core, HTML, PDF, etc)
 
-The ontology can be change in the time and this will change the data and the programing code; you can develop new functionalities without change the data, and you can change the metadata without change the code and the data.
+The ontology can be change in the time and this will change the data and the programing code; you can develop new functionalities without change the data, and you can change the metadata without change the code or the data.
 
 Dédalo is a real multilingual app (Dédalo can use any language) in the interface and the managed data, with a multi-thesaurus and manage multiple resources and resolutions for video, image, pdf, notation scores, etc. 
 
-Dédalo has a geo-reference for the cultural goods, interviews, etc. withh points, areas, paths, etc and have a indexation and related model of multiple data sources with the thesaurus.
+Dédalo has a geo-reference for the cultural goods, interviews, etc. with points, areas, paths, etc and have a indexation and related model of multiple data sources with the thesaurus.
 
 Dédalo can handle and cut video in real time for find thematic parts of interviews or cultural goods (fragments of interviews / cultural goods), for 4k, HD 1080, 720, 404 resolutions.
+
+**DEMO**
+
+You can see Dédalo in action:
+
+<p><a href="http://dedalo4.antropolis.net/dedalo/lib/dedalo/main/?t=oh1" target="_blank">Dédalo demo</a></p>
+
+Some projects using Dédalo to manage their Cultural Heritage or Oral Archive:
+
+<p><strong>Projects: </strong> 
+
+<p><a href="http://museoprehistoriavalencia.org/web_mupreva/?q=en" target="_blank">Museu de Prehistòria de València</a></p>	
+<p><a href="http://bancmemorial.gencat.cat/web/home/?&amp;lang=eng" target="_blank">Memorial Democràtic</a> (Banco audiovisual de la Memoria Colectiva)</p>
+<p><a href="http://www.mujerymemoria.org" target="_blank">Mujer y Memoria</a> (Woman and Memory - Mothers and daughters of the Spanish transition. An oral history project)</p>	
+<p><a href="http://memorialdemocratic.gencat.cat/ca/exposicions/expcicions_virtuals/catalunya_en_transicio/" target="_blank">
+	Catalonia in transition</a> (Transition in Catalonia - Memorial Democràtic)</p>
+<p><a href="http://www.museudelaparaula.es" target="_blank">Museu de la Paraula</a> (Archivo de la Memoria Oral Valenciana)</p>
+<p><a href="http://www.museudelaparaula.es/colecciones/?lang=es" target="_blank">Collection of funds from MUVAET</a> (Museu Valencià d'Etnologia)</p>
+
 
 **DEPENDENCES**
 
@@ -85,7 +104,9 @@ Dédalo can handle and cut video in real time for find thematic parts of intervi
 
 **UPDATE**
 
-Dédalo have two updates procedures:
+*Please read the "Updates.md" file for specific notes, procedures, etc, of the versions.*
+
+Dédalo have three updates procedures:
 
 1. Update the code files (php, js, css, html, etc)
 	-  Make backup of all files.
@@ -95,10 +116,20 @@ Dédalo have two updates procedures:
 2. Update the structure with the sections, components, list, etc
 	-  Do the first update step
 	-  Log-in as "superuser-developer"
-	-  You will see the menu in "orange" or "red" (if you have the debugger active) and a "grey" sub-menu with a "tool administrator" (or in translation of the app language) button, press the info button to go "admin utils"
+	-  You will see the menu in "orange" or "red" (if you have the debugger active) and a "grey" sub-menu with a "tool administrator" (or in translation version of the app language) button, press it to go to the "admin utils" page.
 	-  Press the "import structure" button, if all go well you will see a "green" alert.
 	-  Log-out and log-in with normal admin user.
 	-  Optional: in the inventory pages (OH, PCI, etc) press the "Update Cache" for update some changes into the components (this task force to update all components with the new model no 1 to 1), and will apply the changes to the data into the databases.
+
+3. Update the data in your instalation
+	- Do the first and second update steps
+	-  Log-in as "superuser-developer"
+	-  You will see the menu in "orange" or "red" (if you have the debugger active) and a "grey" sub-menu with a "tool administrator" (or in translation version of the app language) button, press it to go to the "admin utils" page.
+	- If your data version is different that the "code files" version, Dédalo will show that you need update, press the «update» link and wait for notifications.
+	- If all go well you will see a repport with the changes.
+	- Reload the page 'Administration Tools'. Sometimes, if the update differs in several versions, you will need to update the data to each of the intermediate versions (v4.0.9 pass from v4.0.9 to -> v4.0.10, v4.0.10 to -> v4.0.11, etc) when the data and "code files" are in the same version, Dédalo will show that is consistent and stop the upgrade process.
+	- Log-out and log-in with normal admin user.
+
 
 **SERVER SYSTEM**
 
@@ -113,13 +144,17 @@ Windows: is possible that Dédalo can run, but NO TESTED.
 
 **USE**
 
-Dédalo version 4, is only certificated and proved into the webkit browsers (Chrome, Safari,...). Is possible use Firefox but no is tested and maybe Dédalo can't run fine.
+Dédalo version 4, is only certificated and proved into the webkit browsers (Chrome, Safari,...). 
+Is possible use Firefox but no is tested and maybe Dédalo can't run fine.
 
-*Notes of Beta 1 for MySQL:*
-
-- If you need install the beta 1, we recomended MySQL 5.6 and PHP 5.6.
-
-- For Intangible Heritage with the Render model (standar schema) for the IPCE you will need install Memcache or Redis.
-
-- For the Oral History no is necessary Memcache or Redis.
-
+Browser	|	Version |	certificated
+--------- | --------- | ---------
+Chrome	|	40+ | YES - recomended
+Chrome	|	30 to 40 | Deprecated (Please update as soon as posible)	 
+Chrome	|	0 to 30 | NO	 
+Safari	|	6+ | YES
+Safari	|	3 to 5 | Deprecated (Please update as soon as posible)
+Safari	|	0 to 3 | NO	 
+Firefox	|	40+ | NO, but now we start to test it (29-04-2016), please feedback.
+Firefox	|	0-40 | NO
+IExplorer	| All 	| NO

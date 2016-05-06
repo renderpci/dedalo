@@ -1,14 +1,6 @@
 <?php
 
 	# VISUALIZADOR HTML	
-
-	# ELEMENTOS
-	if(!isset ($ar_css['css_span_dato'])) 			$ar_css['css_span_dato']='';
-	if(!isset ($ar_css['css_state'])) 				$ar_css['css_state']='';
-	if(!isset ($ar_css['css_span_ejemplo'])) 		$ar_css['css_span_ejemplo']='';
-	if(!isset ($ar_css['css_span_debugger']))		$ar_css['css_span_debugger']='';
-	if(!isset ($ar_css['css_wrap_state']))			$ar_css['css_wrap_state']='';
-	if(!isset ($ar_css['css_state_rotulo']))		$ar_css['css_state_rotulo']='';	
 	
 	
 	print "\n<!-- COMPONENT STATE [tipo:$tipo section_id:$parent $modo] $label -->";
@@ -49,7 +41,7 @@
 						$html_contenido .= " <span class=\"\"> ".label::get_label('acabado')."</span>";
 
 						$checked = $valor_for_checkbox[0]>=1 ? 'checked="checked"' : '';
-						$html_contenido .= "\n <input type=\"checkbox\" class=\"css_state {$ar_css['css_state']}\" onchange=\"component_state.update_state_locator(this)\"
+						$html_contenido .= "\n <input type=\"checkbox\" class=\"css_state\" onchange=\"component_state.update_state_locator(this)\"
 						data-tipo=\"{$tipo}\"
 						data-section_tipo=\"{$section_tipo}\"
 						data-parent=\"{$parent}\"
@@ -101,30 +93,16 @@
 							$html_contenido .= "<option value=\"100\" $selected >".label::get_label('validado')."</option>";
 							$html_contenido .= "</select>";
 													
-							#$html_contenido .= "\n <label class=\"css_state_rotulo {$ar_css['css_state_rotulo']}\" $required_code >";
-							#$html_contenido .= label::get_label('validado') ;
 							if(SHOW_DEBUG) {
 								#$html_contenido .= " [".$options->lang."]";
 							}
 							#$html_contenido .= "</label> valor: $valor - valor_for_checkbox: $valor_for_checkbox ";
 						}
-						
-						/*
-						if(SHOW_DEBUG) {
-							$html_contenido .= " <div class=\"state_debug_info\" onclick=\"$(this).children('pre').toggle()\"> State data: ";
-							$html_contenido .= "<pre style=\"display:block\">";
-							foreach ($this->get_dato() as $current_state_locator) {
-								#$html_contenido .= json_encode($current_state_locator)."\n";
-								$html_contenido .= print_r($current_state_locator,true)."\n";
-							}						
-							$html_contenido .= "</pre>";
-							$html_contenido .= "</div>";
-						}
-						*/
 
 						$html_contenido .= "</div>";//end state_group div
 
-					}//end foreach ($ar_state_id as $key => $value) {							
+					}//end foreach ($ar_state_id as $key => $value) {
+					break;						
 	}
 
 	# Prepare content to show in page

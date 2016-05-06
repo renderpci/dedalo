@@ -1,20 +1,13 @@
 <?php
 
-	# VISUALIZADOR HTML	
-
-	# ELEMENTOS
-	if(!isset ($ar_css['css_span_dato'])) 		$ar_css['css_span_dato']='';
-	if(!isset ($ar_css['css_max_rows'])) 		$ar_css['css_max_rows']='';
-	if(!isset ($ar_css['css_span_ejemplo'])) 	$ar_css['css_span_ejemplo']='';
-	if(!isset ($ar_css['css_span_debugger']))	$ar_css['css_span_debugger']='';
-	if(!isset ($ar_css['css_wrap_max_rows']))	$ar_css['css_wrap_max_rows']='';
+	# VISUALIZADOR HTML		
 	
 	
-	if(isset($_REQUEST[$tipo]))					$dato = $_REQUEST[$tipo];		#var_dump($_REQUEST[$tipo]);
+	if(isset($_REQUEST[$tipo])) $dato = $_REQUEST[$tipo];		#var_dump($_REQUEST[$tipo]);
 	
 	
 	#print "\n<!-- MAX ROWS [tipo:$tipo] -->";
-	print "\n<div class=\"css_wrap_max_rows {$ar_css['css_wrap_max_rows']}\" id=\"wrap_{$tipo}\">";
+	print "\n<div class=\"css_wrap_max_rows\" id=\"wrap_{$tipo}\">";
 	
 	# ETIQUETA (LABEL)
 	$html_label = component_common_draw::draw_label($this);
@@ -23,13 +16,13 @@
 	$html_contenido = '';
 	switch($permissions) {
 			
-		case 0	:	$html_contenido .= "\n <span class=\"css_span_dato {$ar_css['css_span_dato']}\"> ".label::get_label('sin_acceso')." (max_rows) [$tipo] </span>";
+		case 0	:	$html_contenido .= "";
 					break;		
 						
 		case ($permissions>=1)	:
 		
-					$html_contenido .= "\n <input class=\"css_max_rows {$ar_css['css_max_rows']}\" type=\"text\" name=\"max_rows\" value=\"{$valor}\" title=\"$html_title\" />";
-											
+					$html_contenido .= "\n <input class=\"css_max_rows\" type=\"text\" name=\"max_rows\" value=\"{$valor}\" title=\"$html_title\" />";
+					break;					
 	}
 	
 	

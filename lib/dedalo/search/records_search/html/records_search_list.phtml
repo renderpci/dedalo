@@ -2,12 +2,6 @@
 
 	# VISUALIZADOR HTML
 
-	# ELEMENTOS
-	if(!isset ($ar_css['css_span_dato'])) 					$ar_css['css_span_dato']='';
-	if(!isset ($ar_css['css_button_search'])) 				$ar_css['css_button_search']='';
-
-
-
 	print "\n<!-- RECORDS_SEARCH -->";
 	print "\n<div class=\"css_wrap_rows_search\">";
 
@@ -18,12 +12,12 @@
 
 		switch($permissions) {
 
-			case 0	:	$html_contenido .= "\n <span class=\"css_span_dato {$ar_css['css_span_dato']}\"> ".label::get_label('sin_acceso')." </span>";
+			case 0	:	$html_contenido .= "\n <span class=\"css_span_dato\"> ".label::get_label('sin_acceso')." </span>";
 						break;
 
 			case ($permissions>=1)	:
 
-						$display_content  = false;	#if(isset($_REQUEST['search']) && empty($_REQUEST['reset'])) $display_content = "style=\"display:block\" ";
+						$display_content  = false;
 
 						$html_contenido  .= "\n<div class=\"tab_content css_rows_search_content\" $display_content >";
 
@@ -32,7 +26,6 @@
 
 
 						# FORM
-						#$html_contenido  .= "\n<form class=\"css_rows_search_form\" id=\"search_form\" name=\"search_form\" method=\"POST\" action=\"?".clean_url_vars()."\" >";
 						$html_contenido  .= "\n<form class=\"css_rows_search_form\" id=\"search_form\" name=\"search_form\" method=\"POST\" action=\"\" onKeyPress=\"return search.check_submit(this, event)\">";
 
 
@@ -45,13 +38,9 @@
 
 							# BUTTONS ACC SEARCH COMPONENTS (MAX PER PAGE,SEARCH BUTTON, RESET...)
 							foreach($ar_tools_search as $current_tool_search) {
-								#dump($current_tool_search, ' current_tool_search');
-								#$current_tool_search->set_modo('search');
 								$html_contenido .= $current_tool_search->get_html();
 							}
 							
-
-							#$html_contenido  .= "\n <input type=\"hidden\" name=\"search\" value=\"y\">";
 							$html_contenido  .= "\n <input type=\"hidden\" name=\"section_tipo\" value=\"$section_tipo\">";
 							$html_contenido  .= "\n <input type=\"hidden\" name=\"modo\" value=\"$modo\">";
 							$html_contenido  .= "\n <input type=\"hidden\" name=\"search_options_session_key\" value=\"$search_options_session_key\">";

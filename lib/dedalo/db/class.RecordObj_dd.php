@@ -2,6 +2,10 @@
 #require_once(DEDALO_LIB_BASE_PATH . '/db/class.RecordDataBoundObject.php');
 #require_once(DEDALO_LIB_BASE_PATH . '/db/class.RecordObj_descriptors_dd.php');
 
+if (!defined('DEDALO_STRUCTURE_LANG')) {
+	define('DEDALO_STRUCTURE_LANG',   'lg-spa');
+}
+
 
 class RecordObj_dd extends RecordDataBoundObject {
 	
@@ -761,7 +765,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 	* @param string $relation_type like 'termino_relacionado'
 	* @return array $result 
 	*/
-	static public function get_ar_terminoID_by_modelo_name_and_relation($tipo, $modelo_name, $relation_type, $search_exact=false) {
+	public static function get_ar_terminoID_by_modelo_name_and_relation($tipo, $modelo_name, $relation_type, $search_exact=false) {
 		
 		$result	= array();
 		
@@ -865,7 +869,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 
 						if(empty($modelo)) {
 							$name = RecordObj_dd::get_termino_by_tipo($terminoID);
-							throw new Exception("Error Processing Request. Modelo is empty. Please define modelo for this component $terminoID ($name)", 1);							
+							throw new Exception("Error Processing Request. Modelo is empty. Please define modelo for this terminoID: $terminoID (name: $name)", 1);							
 						}
 						$current_modelo_name	= $RecordObj_dd->get_termino_by_tipo($modelo);		#dump($modelo_name);
 						

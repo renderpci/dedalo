@@ -1,19 +1,10 @@
 <?php
 
-	# VISUALIZADOR HTML	
-
-	# ELEMENTOS
-	if(!isset ($ar_css['css_span_dato'])) 		$ar_css['css_span_dato']='';
-	if(!isset ($ar_css['css_text_area'])) 		$ar_css['css_text_area']='';
-	if(!isset ($ar_css['css_span_ejemplo'])) 	$ar_css['css_span_ejemplo']='';
-	if(!isset ($ar_css['css_span_debugger']))	$ar_css['css_span_debugger']='';
-	if(!isset ($ar_css['css_wrap_text_area']))	$ar_css['css_wrap_text_area']='';
-	
-	if(!isset ($html_tools))					$html_tools='';
+	# VISUALIZADOR HTML
 	
 	
 	print "\n<!-- TEXT AREA [tipo:$tipo parent:$parent] $label -->";
-	print "\n<div class=\"css_wrap_text_area wrap_component text_area_tool_lang {$ar_css['css_wrap_text_area']}\" id=\"{$id_wrapper}\"
+	print "\n<div class=\"css_wrap_text_area wrap_component text_area_tool_lang\" id=\"{$id_wrapper}\"
 	data-tipo=\"{$tipo}\"
 	data-section_tipo=\"{$section_tipo}\"
 	data-parent=\"{$parent}\"
@@ -32,13 +23,13 @@
 			
 		case 0	:	
 
-			$html_contenido .= "\n <span class=\"css_span_dato {$ar_css['css_span_dato']}\"> No access here (text_area)! </span>";	
+			$html_contenido .= "\n <span class=\"css_span_dato\"> No access here (text_area)! </span>";	
 			break;
 						
 		case 1	: 	
 
 			$html_contenido .= "\n<div class=\"text_area_content text_area_content_shadow\" >";
-			$html_contenido .= "\n <span class=\"css_span_dato {$ar_css['css_span_dato']}\">$dato</span>";
+			$html_contenido .= "\n <span class=\"css_span_dato\">$dato</span>";
 			$html_contenido .= "\n</div>"; #end text_area_content			
 			break;						
 		
@@ -75,9 +66,9 @@
 			><div class=\"content_data\"><!-- AJAX CONTENT HERE --></div></div>";
 			
 
-			#if($permissions==3)						
-			#$html_contenido .= "\n <span class=\"css_span_debugger {$ar_css['css_span_debugger']}\" id=\"debugger_{$tipo}\" >{$debugger}</span>";
-			
+			if($permissions==3){
+				#$html_contenido .= "\n <span class=\"css_span_debugger\" id=\"debugger_{$tipo}\" >{$debugger}</span>";
+			}			
 			break;							
 	}
 

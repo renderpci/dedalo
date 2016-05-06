@@ -1,17 +1,12 @@
 <?php
 
 	# VISUALIZADOR HTML	
-
-	# ELEMENTOS
-	if(!isset ($ar_css['css_span_dato'])) 			$ar_css['css_span_dato']='';
-	if(!isset ($ar_css['css_ref'])) 				$ar_css['css_ref']='';
-	if(!isset ($ar_css['css_span_ejemplo'])) 		$ar_css['css_span_ejemplo']='';
-	if(!isset ($ar_css['css_span_debugger']))		$ar_css['css_span_debugger']='';
-	if(!isset ($ar_css['css_wrap_autocomplete_ts']))$ar_css['css_wrap_autocomplete_ts']='';
+	
 		
 	
 	print "\n<!-- COMPONENT_AUTOCOMPLETE_TS [tipo:$tipo id_matrix:$parent] $label -->";
-	print "\n<div class=\"css_wrap_autocomplete_ts wrap_component {$ar_css['css_wrap_autocomplete_ts']}\" id=\"{$id_wrapper}\" >";
+
+	print "\n<div class=\"css_wrap_autocomplete_ts wrap_component\" id=\"{$id_wrapper}\" >";
 	
 	# ETIQUETA (LABEL)
 	$html_label = component_common_draw::draw_label($this);
@@ -20,7 +15,7 @@
 	$html_contenido = '';
 	switch($permissions) {
 			
-		case 0	:	$html_contenido .= "\n <span class=\"css_span_dato {$ar_css['css_span_dato']}\"> ".label::get_label('sin_acceso')." (ref)</span>";
+		case 0	:	$html_contenido .= "";
 					break;
 						
 		case 1	: 	$html_contenido .= $valor;
@@ -80,13 +75,7 @@
 					# LOGICAL OPERATORS
 					$html_contenido .= operator::get_search_logical_operators_html($tipo,$ar_logical_operators);
 
-					break;
-
-					
-			if($permissions==3)
-					
-					$html_contenido .= "\n <span class=\"css_span_debugger {$ar_css['css_span_debugger']}\" id=\"debugger_{$parent}\" >{$debugger}</span>";	
-				
+					break;				
 											
 	}
 

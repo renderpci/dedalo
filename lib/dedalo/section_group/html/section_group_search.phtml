@@ -1,16 +1,9 @@
 <?php
 	
 	# VISUALIZADOR HTML	
-
-	# ELEMENTOS
-	if(!isset ($ar_css['css_section_group_wrap']))		$ar_css['css_section_group_wrap']='';
-	if(!isset ($ar_css['css_section_group_titulo']))	$ar_css['css_section_group_titulo']='';
-	if(!isset ($ar_css['css_span_dato'])) 				$ar_css['css_span_dato']='';;
-	
-	
 	
 	print "\n\n<!-- SECTION GROUP [tipo:$tipo] -->";
-	print "\n<div class=\"css_section_group_wrap {$ar_css['css_section_group_wrap']}\" >";
+	print "\n<div class=\"css_section_group_wrap\" >";
 	
 	# ETIQUETA (LABEL)	
 	$html_label = "\n<div class=\"css_section_group_titulo tab_title\" > ".component_common_draw::draw_label($this)." SEARCH </div>";	
@@ -21,7 +14,7 @@
 	
 	switch($permissions) {
 			
-		case 0	:	$html_contenido .= "\n <span class=\"css_span_dato {$ar_css['css_span_dato']}\"> ".label::get_label('sin_acceso')." (group)</span>"; 		
+		case 0	:	$html_contenido .= "\n <span class=\"css_span_dato\"> ".label::get_label('sin_acceso')." (group)</span>"; 		
 					break;
 						
 		case ($permissions>=1)	:

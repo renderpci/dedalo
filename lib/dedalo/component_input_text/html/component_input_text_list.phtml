@@ -2,9 +2,7 @@
 
 	# VISUALIZADOR HTML	
 
-	# ELEMENTOS
-	#if(!isset ($ar_css['css_span_dato'])) 		$ar_css['css_span_dato']='';
-	#if(!isset ($ar_css['css_span_debugger']))	$ar_css['css_span_debugger']='';
+
 	
 	#echo "\n<!-- INPUT_TEXT [tipo:$tipo parent:$parent] -->";	
 		
@@ -12,17 +10,14 @@
 	$html_contenido = '';
 	switch($permissions) {
 			
-		case 0	:	$html_contenido .= "\n <span class=\"css_span_sin_acceso\">".label::get_label('sin_acceso')."</span>";		
+		case 0	:	$html_contenido .= "";		
 					break;
 					
 		case ($permissions>=1)	:
 			
-					$html_contenido .= "\n <span class=\"css_span_dato\">$valor</span>";
-					
-			if($permissions==3)
+					$html_contenido .= "\n <span class=\"css_span_dato\">$valor</span>";			
 					break;
-					#$html_contenido .= "\n <span class=\"css_span_debugger {$ar_css['css_span_debugger']}\" id=\"debugger_{$id}\" >{$debugger}</span>";	
-							
+					
 	}	
 
 	

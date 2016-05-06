@@ -396,7 +396,7 @@ class component_layout extends component_common {
 		
 		# Modelo name's searched
 		# Buscamos sólo los elementos raiz, no los elementos específicos como componentes o botones
-		$ar_include_modelo_name = array('section_group','section_tab','section_group_relation','section_group_portal');
+		$ar_include_modelo_name = array('section_group','section_tab','section_group_relation','section_group_portal','section_group_div');
 		$ar_current 			= array();
 		$RecordObj_dd			= new RecordObj_dd($section_tipo);				
 		$ar_ts_childrens		= $RecordObj_dd->get_ar_childrens_of_this();
@@ -488,7 +488,7 @@ class component_layout extends component_common {
 
 			# Resolvemos el elemento actual (será alguno de modelo 'section_group','section_tab','section_group_relation','section_group_portal')
 			$RecordObj_dd 			= new RecordObj_dd($terminoID);
-			$element_modelo_name	= $RecordObj_dd->get_modelo_name();	#dump($element_modelo_name,'switch element_modelo_name '.$terminoID);
+			$element_modelo_name	= $RecordObj_dd->get_modelo_name();		#dump($element_modelo_name,'switch element_modelo_name '.$terminoID);
 			$element_tipo 			= $terminoID;
 			$element_lang 			= DEDALO_DATA_LANG;	if($RecordObj_dd->get_traducible()=='no') $element_lang = DEDALO_DATA_NOLAN;
 			$html_elements			= '';	# Important: reset html_elements every iteration
@@ -497,6 +497,63 @@ class component_layout extends component_common {
 				#dump($ar_tipo_next_level,"ar_tipo - $terminoID - ar_tipo:\n".print_r($ar_tipo,true) );
 
 			switch (true) {
+
+				case ($element_modelo_name=='section_group_div'):
+
+						# El html a incluir será el resultado de la recursión de sus hijos
+						$ar_children_elements = $RecordObj_dd->get_ar_childrens_of_this();
+						#$ar_children_elements = RecordObj_dd::get_ar_childrens($terminoID);
+							#dump($ar_children_elements,'ar_children_elements' );
+
+						foreach ($ar_children_elements as $children_tipo) {
+							
+							$children_modelo_name = RecordObj_dd::get_modelo_name_by_tipo($children_tipo,true);
+								#dump($children_modelo_name,'children_modelo_name');
+
+							if ($children_modelo_name=='section_group_div') {
+								#dump($children_modelo_name,'$children_modelo_name');
+
+								# Extraemos el html del conjunto recursivamente
+								$html_elements .= component_layout::walk_layout_map($section_obj, $ar_tipo_next_level, $ar_resolved_elements, $ar_exclude_elements);
+
+							}# if ($children_modelo_name=='section_group')
+							else if ( strpos($children_modelo_name, 'component_')!==false ) { 
+								#dump($children_modelo_name,'children_modelo_name');
+
+								# Skip to remove elements
+								# dump($ar_exclude_elements,'ar_exclude_elements');
+								if( is_array($ar_exclude_elements) && in_array($children_tipo, $ar_exclude_elements) ) {
+									#if(SHOW_DEBUG) dump($children_tipo,"removed 3 $children_tipo");
+									continue; # skip
+								}
+								
+								$RecordObj_dd2	= new RecordObj_dd($children_tipo);								
+								$children_lang 	= $RecordObj_dd2->get_traducible()=='no' ? DEDALO_DATA_NOLAN : DEDALO_DATA_LANG;
+								$component_obj	= component_common::get_instance($children_modelo_name,
+																				 $children_tipo,
+																				 $section_id,
+																				 'edit',
+																				 $children_lang,
+																				 $section_obj->get_tipo());								
+
+								$component_obj->current_tipo_section = $section_obj->get_tipo();//$current_tipo_section;
+
+								$current_element_html = $component_obj->get_html();							
+								$html_elements	.= $current_element_html;								
+							}							
+							array_push($ar_resolved_elements, $children_tipo);
+							
+						}#foreach ($ar_children_elements as $children_tipo)
+
+						# Encapsulamos el resultado en un section group
+						# SECTION GROUP
+						$section_group 		= new section_group_div($element_tipo, $section_obj->get_tipo(), $modo, $html_elements);
+							#dump($section_group,'section_group',"section group tipo $element_tipo ");
+
+						$current_element_html = $section_group->get_html();
+						#$current_element_html = '<div class="gridster"><ul>'.$current_element_html.'</ul></div>';
+						$html .= $current_element_html;
+						break;
 
 				# SECTION GROUP
 				case ($element_modelo_name=='section_group' || $element_modelo_name=='section_group_portal') :
@@ -511,7 +568,7 @@ class component_layout extends component_common {
 							$children_modelo_name = RecordObj_dd::get_modelo_name_by_tipo($children_tipo,true);
 								#dump($children_modelo_name,'children_modelo_name');
 
-							if ($children_modelo_name=='section_group' || $children_modelo_name=='section_portal' || $children_modelo_name=='section_tab') {
+							if ($children_modelo_name=='section_group' || $children_modelo_name=='section_portal' || $children_modelo_name=='section_tab' || $children_modelo_name=='section_group_div') {
 								#dump($children_modelo_name,'$children_modelo_name');
 
 								# Extraemos el html del conjunto recursivamente
@@ -576,7 +633,7 @@ class component_layout extends component_common {
 
 						$current_element_html = $section_group->get_html();
 						#$current_element_html = '<div class="gridster"><ul>'.$current_element_html.'</ul></div>';
-						$html .= $current_element_html;					
+						$html .= $current_element_html;				
 						break;
 
 				# SECTION TAB					

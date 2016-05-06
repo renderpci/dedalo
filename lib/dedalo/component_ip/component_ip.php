@@ -16,7 +16,6 @@
 	$permissions			= common::get_permissions($tipo); 	
 	$ejemplo				= $this->get_ejemplo();
 	$html_title				= "Info about $tipo";		
-	$html_tools				= '';
 	$valor					= $this->get_valor();				
 	$lang					= $this->get_lang();
 	$lang_name				= $this->get_lang_name();

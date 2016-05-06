@@ -1,15 +1,10 @@
 <?php
 
 	# VISUALIZADOR HTML	
-
-	# ELEMENTOS
-	if(!isset ($ar_css['css_section_list_wrap']))		$ar_css['css_section_list_wrap']='';
-	if(!isset ($ar_css['css_span_dato'])) 				$ar_css['css_span_dato']='';	
-	
 	
 	print "\n <!-- SECTION RECORDS LIST [tipo:$tipo modo:$modo] -->";
 	print "\n<div class=\"div_main_list\"></div>";
-	print "\n <div class=\"css_section_list_wrap {$ar_css['css_section_list_wrap']}\" id=\"wrap_{$tipo}_{$modo}\" data-options='".json_handler::encode($this->options)."' >";
+	print "\n <div class=\"css_section_list_wrap\" id=\"wrap_{$tipo}_{$modo}\" data-options='".json_handler::encode($this->options)."' >";
 	
 	
 	# CONTENIDO
@@ -19,25 +14,10 @@
 	
 	switch($permissions) {
 			
-		case 0	:	$html_contenido .= "\n <span class=\"css_span_dato {$ar_css['css_span_dato']}\"> ".label::get_label('sin_acceso')." </span>";
+		case 0	:	$html_contenido .= "\n <span class=\"css_span_dato\"> ".label::get_label('sin_acceso')." </span>";
 					break;
 						
 		case ($permissions>=1)	:
-				/*
-				# BUTTONS
-					$html_contenido .= "\n<div class=\"section_buttons_container\">";
-					foreach ($this->section_obj->ar_buttons as $current_button_modelo_name => $current_ar_button_obj_model) {
-						# Skip delete button
-						if($current_button_modelo_name=='button_delete') continue;
-						foreach($current_ar_button_obj_model as $current_button_obj) {
-							# Se buuton target tipo
-							$current_button_obj->set_target($section_tipo);
-							$html_contenido .= $current_button_obj->get_html();
-						}
-							
-					}
-					$html_contenido .= "\n</div>";#end section_buttons_container
-					*/
 
 				#$html_contenido .= "\n<div id=\"stats_info\"><!-- Stats content here --></div>";
 				
@@ -66,15 +46,6 @@
 						$html_contenido .= $rows_html;
 						$html_contenido .= '</tbody>';				
 						
-						/*
-						# DELETE DIALOG
-						$html_contenido .= "<!-- ui-dialog -->
-											<div id=\"delete_dialog\" title=\"Delete\">								
-												<p>Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. 
-												Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.</p>								
-											</div>
-											";
-						*/
 					$html_contenido .= "\n</table>";
 
 

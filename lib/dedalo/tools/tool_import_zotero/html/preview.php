@@ -176,7 +176,7 @@ if (empty($ar_files[0])) {
 					if ($name=='issued' || $name=='accessed') {				             
 						$value = tool_import_zotero::zotero_date_to_dd_date($value);						
 						if(SHOW_DEBUG) {
-							$value .= "<br>".to_string($prev_value);
+							#$html .= "<br>".to_string($prev_value);
 						}
 					}
 					if ($name=='author' || $name=='editor') {   

@@ -14,9 +14,6 @@
 	$permissions			= common::get_permissions($tipo);
 	$ejemplo				= NULL;
 	$html_title				= "Info about $tipo";
-	#$ar_tools_obj			= $this->get_ar_tools_obj();	
-	$html_tools				= '';
-	#$valor					= $this->get_valor();
 	$lang					= $this->get_lang();
 	$identificador_unico	= $this->get_identificador_unico();
 	$component_name			= get_class($this);
@@ -33,8 +30,6 @@
 
 				$referenced_tipo 	= $this->get_referenced_tipo();
 				$ar_list_of_values  = $this->get_ar_list_of_values( DEDALO_DATA_LANG, null );
-				$ar_css 			= null;//$this->get_ar_css();
-				#foreach($ar_tools_obj as $tool_obj) $html_tools .= $tool_obj->get_html();
 				$id_wrapper 		= 'wrapper_'.$identificador_unico;
 				$input_name 		= "{$tipo}_{$parent}";	
 				$component_info 	= $this->get_component_info('json');	
@@ -44,15 +39,12 @@
 				break;
 
 		case 'tool_time_machine' :
-				$ar_css		= $this->get_ar_css();
 				$id_wrapper = 'wrapper_'.$identificador_unico.'_tm';
 				$input_name = "{$tipo}_{$parent}_tm";
 				$file_name 	= 'edit';
 				break;
 						
 		case 'search':
-				$ar_css		= false;
-				
 				$referenced_tipo 	= $this->get_referenced_tipo();
 				$ar_list_of_values	= $this->get_ar_list_of_values( DEDALO_DATA_LANG, null );
 				
@@ -64,15 +56,13 @@
 		case 'list_tm' :
 				$file_name = 'list';
 						
-		case 'list'	:	
-				$ar_css	= false;
+		case 'list'	:
 				$valor	= $this->get_valor();				
 				break;
 
 		case 'relation':
 				# Force file_name to 'list'
 				$file_name  = 'list';
-				$ar_css		= false;
 				break;
 		
 		case 'tool_lang':

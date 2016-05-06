@@ -128,6 +128,39 @@ div.portal_more_elements_content {
 	word-wrap: break-word;
 }
 
+.portal_table_wraper {
+	/*
+	max-height: 365px;
+	overflow-y: auto;
+	*/
+}
+
+
+/* TABLE_PORTAL_ROWS_LIST HEAD / BODY
+------------------------------------------------------- */
+	.table_portal_rows_list thead {
+		
+	}		
+	.table_portal_rows_list tbody {
+
+	}
+	/* TABLE SCROLL ALLOW
+	------------------------------------------------------- */
+	.table_portal_rows_list thead, .table_portal_rows_list tbody { 
+		
+	}
+	.table_portal_rows_list tbody {		
+		
+	}
+	.table_portal_rows_list tr {	
+	
+	}
+	.table_portal_rows_list th, .table_portal_rows_list td {
+		
+	}
+	
+
+
 
 .table_rows_list tr {
 	/*cursor: move;*/	

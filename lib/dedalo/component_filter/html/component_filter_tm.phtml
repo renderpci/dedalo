@@ -2,19 +2,9 @@
 /*
 	# VISUALIZADOR HTML	
 
-	# ELEMENTOS
-	if(!isset ($ar_css['css_span_dato'])) 			$ar_css['css_span_dato']='';
-	if(!isset ($ar_css['filter_checkbox'])) 		$ar_css['filter_checkbox']='';
-	if(!isset ($ar_css['css_span_ejemplo'])) 		$ar_css['css_span_ejemplo']='';
-	if(!isset ($ar_css['css_span_debugger']))		$ar_css['css_span_debugger']='';
-	if(!isset ($ar_css['css_wrap_check_box']))		$ar_css['css_wrap_check_box']='';
-	if(!isset ($ar_css['css_check_box_rotulo']))	$ar_css['css_check_box_rotulo']='';
-	
-	if(!isset ($tools_html))						$tools_html='';
-	
 	
 	print "\n<!-- CHECK BOX [tipo:$tipo id_matrix:$id] -->";
-	print "\n<div class=\"css_wrap_filter css_wrap_check_box wrap_component {$ar_css['css_check_box_rotulo']}\" 
+	print "\n<div class=\"css_wrap_filter css_wrap_check_box wrap_component\" 
 	data-id_matrix=\"{$id}\" data-tipo=\"{$tipo}\" data-lang=\"{$lang}\" data-modo=\"{$modo}\" data-dato=\"{$dato_string}\" data-component_name=\"{$component_name}\" >";
 	
 	# ETIQUETA (LABEL)
@@ -24,7 +14,7 @@
 	$html_contenido  = '';
 	switch($permissions) {
 			
-		case 0	:	$html_contenido .= "\n <span class=\"css_span_dato {$ar_css['css_span_dato']}\"> ".label::get_label('sin_acceso')." (checkbox)</span>"; 
+		case 0	:	$html_contenido .= "\n <span class=\"css_span_dato\"> ".label::get_label('sin_acceso')." (checkbox)</span>"; 
 					break;
 						
 		case 1	: 	if (is_array ($ar_proyectos_section)) foreach ($ar_proyectos_section as $value => $rotulo) {
@@ -34,11 +24,11 @@
 						}else {
 							$checked = "";
 						}
-						$html_contenido .= "\n <input class=\"filter_checkbox {$ar_css['filter_checkbox']}\" type=\"checkbox\" 
+						$html_contenido .= "\n <input class=\"filter_checkbox\" type=\"checkbox\" 
 						id=\"{$identificador_unico}_tm\" name=\"{$tipo}_{$id}_tm\" 
 						data-tipo=\"{$tipo}\" value=\"{$value}\" id=\"{$id}\" 
 						title=\"$html_title\" $checked  disabled />";						
-						$html_contenido .= "\n <label class=\"css_check_box_rotulo {$ar_css['css_check_box_rotulo']}\" $required >$rotulo</label>";	
+						$html_contenido .= "\n <label class=\"css_check_box_rotulo\" $required >$rotulo</label>";	
 					}
 					break;	
 						
@@ -51,24 +41,25 @@
 						}else {
 							$checked = "";
 						}
-						$html_contenido .= "\n <input class=\"filter_checkbox {$ar_css['filter_checkbox']}\" type=\"checkbox\" 
+						$html_contenido .= "\n <input class=\"filter_checkbox\" type=\"checkbox\" 
 						id=\"{$identificador_unico}_tm\" name=\"{$tipo}_{$id}_tm\"
 						data-tipo=\"{$tipo}\" data-id_matrix=\"{$id}\" data-lang=\"{$lang}\"
 						value=\"{$value}\" 
 						title=\"$html_title\" $checked />";
 												
-						$html_contenido .= "\n <label class=\"css_check_box_rotulo {$ar_css['css_check_box_rotulo']}\">$rotulo</label>";
+						$html_contenido .= "\n <label class=\"css_check_box_rotulo\">$rotulo</label>";
 						$html_contenido .= "\n <br>";	
 					}
 					
 					#$html_contenido .= "\n <span class=\"css_span_log\"></span>";										
-					#$html_contenido .= "\n <span class=\"css_span_ejemplo {$ar_css['css_span_ejemplo']}\">$ejemplo</span>";
-					
-					$html_contenido .= $html_tools;
-		
-			if($permissions==3)
+					#$html_contenido .= "\n <span class=\"css_span_ejemplo\">$ejemplo</span>";
+							
+					if($permissions==3){
+						$html_contenido .= "\n <span class=\"css_span_debugger\" id=\"debugger_{$id}\" >{$debugger}</span>";
+					}
+					break;
 			
-					$html_contenido .= "\n <span class=\"css_span_debugger {$ar_css['css_span_debugger']}\" id=\"debugger_{$id}\" >{$debugger}</span>";	
+						
 					
 							
 	}

@@ -2,10 +2,6 @@
 	
 	# VISUALIZADOR HTML	
 
-	# ELEMENTOS	
-	if(!isset ($ar_css['css_span_dato'])) 				$ar_css['css_span_dato']='';
-	if(!isset ($ar_css['css_span_debugger'])) 			$ar_css['css_span_debugger']='';
-	
 	print "\n\n<!-- ROWS [$id] $modo + -->";
 		
 	# Hilight unassigned (to projects filter) records
@@ -20,7 +16,7 @@
 	
 	switch($permissions) {
 			
-		case 0	:	$html_contenido .= "\n <span class=\"css_span_dato {$ar_css['css_span_dato']}\"> ".label::get_label('sin_acceso')." </span>";
+		case 0	:	$html_contenido .= "\n <span class=\"css_span_dato\"> ".label::get_label('sin_acceso')." </span>";
 					break;
 						
 		case ($permissions>=1)	:
@@ -176,8 +172,10 @@
 							
 
 							# DEBUG INFO
-							#if($permissions==3)		
-								#$html_contenido .= "\n <span class=\"css_span_debugger {$ar_css['css_span_debugger']}\" id=\"debugger_{$id}\" >{$id}</span>";
+							if($permissions==3){
+								#$html_contenido .= "\n <span class=\"css_span_debugger\" id=\"debugger_{$id}\" >{$id}</span>";
+							}		
+								
 							
 
 						$html_contenido .= "\n </td>";
@@ -191,36 +189,7 @@
 							$modelo_name 	 = RecordObj_dd::get_modelo_name_by_tipo($component_tipo, true);
 							$td_css_selector = 'td_'.$modelo_name;
 
-							# CSS modificadores de estilos en las propiedades del section list (estructura)
-							# Formato 
-							# {
-							#    "dd83": {
-							#        "CSS": {
-							#            "style": {
-							#                "width": "5%"
-							#            },
-							#            "class": "column_test"
-							#        }
-							#    }
-							# }
-							# dump($propiedades,"");
-							$style = '';
-							if (isset($propiedades->$component_tipo->CSS->style)) {
-								$style .= 'style="';
-								foreach ((array)$propiedades->$component_tipo->CSS->style as $prop => $value) {
-									$style .= $prop.':'.$value.';';
-								}
-								$style .= '"';
-							}
-							$css_class = '';
-							if (isset($propiedades->$component_tipo->CSS->class)) {
-								foreach ((array)$propiedades->$component_tipo->CSS->class as $current_class) {
-									$css_class .= $current_class.' ';
-								}
-								#dump($propiedades->$component_tipo->CSS->class,"");
-							}
-
-							$html_contenido .= "\n <td class=\"section_list_td_border section_list_td_row $td_css_selector $css_class\" $style data-tipo=\"$component_tipo\">";
+							$html_contenido .= "\n <td class=\"section_list_td_border section_list_td_row $td_css_selector\" data-tipo=\"$component_tipo\">";
 								$html_contenido .= $valor_list ;
 								if(SHOW_DEBUG) {
 									if (strpos($valor_list, 'thumb_in_list')!==false) {

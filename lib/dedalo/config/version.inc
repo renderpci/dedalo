@@ -469,7 +469,7 @@
 		component_html_text : fix bug when spellchecker is called from Chrome. Reenabled browser spellchecker in text_editor
 
 
-	Valencia 13-04-2016 v4.0.9
+	Valencia 21-10-2016 v4.0.9
 		login : added login and logout calls to remove user locked components on both process
 		component_ip : added support to maxmind geoip2 (https://github.com/maxmind/GeoIP2-php/releases)
 		lib : geoip2 added library
@@ -485,7 +485,28 @@
 		component_password : added control to avoid autocomplete
 		tool_administration : added new tool 'tool_administration' for technical administrative and debug tasks
 
-		
+	
+	Valencia 06-05-2016 v4.0.10
+		structure : added new model 'component_publication'
+					changed all elements 'Difussion' from model 'component_radio_button' to 'component_publication'
+		component_publication : added new component to manage publication state. Current radio buttons used to set values of publication, change model to component_publication. Data is maintained
+		component_portal : fixed bug where images are not showed properly in portal list mode
+		config: added var DEDALO_STRUCTURE_LANG
+		component_select_lang : changes data format from current string like 'lg-spa' to array like '["lg-spa"]'
+								added option to link to component_text_area and override component_text_area lang
+		component_info : changed propiedades widgets format from array to object with array inside
+		propiedades : add control to set state of the component. E.g. 'deprecated'
+		component_common_draw : add label conditional to manage state of componente warnings. New «update» state for control the update data
+		component_portal : Fixed issue where section list don't show images properly
+		component_geolocation : fixed save data when change the map re-position or zoom
+		componet_date : New control for update the data of the component
+		diffusion : added behaviour to skip non publicable records and delete sql records with same section_id. Now all records stored in publication database are difundible = yes
+		section : added control of publication state. New 'diffusion_info' is a first level section dato variable for store an array of objects (diffusion_element_tipo and his relevant data)
+				  When any componet save, clear this var to indicate tha current section is outdated in diffusion data places. Whe is published, element_diffusiion object is stored in this array var
+		resources schema : added component_publication elements to bibliograpy and informants
+		section_group_div : added new dedalo element 'section_group_div' similar to section_group but without headers and labels, only a wrapper div to free group components
+		tool_administrator: new "update.php" file with control of the updates procedures. New «delete all data of the component» that can delete all data of the component or your language.
+		Schema of the DB : new «matrix_updates» table with «id», «datos», for control the update process.
 
 
 	
@@ -503,8 +524,8 @@
 
 
 	# Version
-	define('DEDALO_VERSION'	, '4.0.9a6');
-	define('DEDALO_BUILD'	, '21-04-2016');
+	define('DEDALO_VERSION'	, '4.0.10.a2');
+	define('DEDALO_BUILD'	, '06-05-2016');
 
 
 	/*

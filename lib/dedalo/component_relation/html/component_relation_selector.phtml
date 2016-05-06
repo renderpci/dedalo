@@ -9,10 +9,10 @@
 
 	switch($permissions) {
 			
-		case 0	:	$html_contenido .= "\n <span class=\"css_span_dato {$ar_css['css_span_dato']}\"> No access here (relation)! </span>";
+		case 0	:	$html_contenido .= "\n <span class=\"css_span_dato\"> No access here (relation)! </span>";
 					break;
 						
-		case 1	: 	$html_contenido .= "\n <span class=\"css_span_dato {$ar_css['css_span_dato']}\">$dato</span>";
+		case 1	: 	$html_contenido .= "\n <span class=\"css_span_dato\">$dato</span>";
 					break;	
 						
 		case ($permissions>=2)	:					

@@ -1,0 +1,110 @@
+<?php
+
+	# VISUALIZADOR HTML
+
+
+	print "\n<!-- COMPONENT_PUBLICATION [tipo:$tipo parent:$parent] $label -->";
+
+	print "\n<div class=\"wrap_component css_wrap_component_publication wrap_component_{$tipo}\" id=\"{$id_wrapper}\"
+	data-tipo=\"{$tipo}\"
+	data-section_tipo=\"{$section_tipo}\"
+	data-parent=\"{$parent}\"
+	data-lang=\"{$lang}\"
+	data-modo=\"{$modo}\"
+	data-dato='{$dato_json}'
+	data-component_name=\"{$component_name}\"
+	data-component_info='{$component_info}'
+	>";
+
+
+
+	# ETIQUETA (LABEL)
+	$html_label = component_common_draw::draw_label($this);
+
+	$required_code 	= null;
+	#if($required)
+	#	$required_code = 'style="font-weight:bold"';
+
+	# CONTENIDO (INPUT)
+	$html_contenido = '';
+	switch($permissions) {
+
+		case 0	:	$html_contenido .= "";
+					break;
+
+		case 1	: 	foreach ($ar_list_of_values->result as $value => $rotulo) {						
+						if( $value == $dato ) {
+							$html_contenido .= "\n <label class=\"css_component_publication_rotulo\" $required_code >$rotulo</label>";
+						}
+					}
+					break;
+
+
+		case ($permissions>=2) :
+
+					$html_contenido .= "<ul>";
+					$i=1; foreach((array)$ar_list_of_values->result as $value => $rotulo) {
+
+						$value   = (string)$value;
+						$locator = (object)json_handler::decode($value);	# Locator is json encoded object						
+						
+
+						$checked  = is_array($dato) && in_array($locator, $dato) ? 'checked="checked"' : '';
+						$tabindex = $i==1 ? 'tabindex="1"' : '';
+
+						$html_contenido .= "<li>";
+
+							#
+							# INPUT
+							$html_contenido .= "\n <input class=\"css_component_publication\" type=\"radio\"
+							onfocus=\"component_common.select_wrap(null,'$id_wrapper');\"
+							onchange=\"component_publication.Save(this)\"
+							name=\"{$input_name}\"
+							data-tipo=\"{$tipo}\"
+							data-lang=\"{$lang}\"
+							data-section_tipo=\"{$section_tipo}\"
+							data-parent=\"{$parent}\"
+							value='$value'
+							title=\"$html_title\"
+							$checked
+							$tabindex
+							/>";
+
+							#
+							# LABEL
+							$html_contenido .= "\n <label class=\"css_component_publication_rotulo\" $required_code >$rotulo</label>";
+
+						$html_contenido .= "</li>";
+						
+					$i++;}
+					$html_contenido .= "</ul>";
+
+					if(SHOW_DEBUG) {
+						$html_contenido .= "\n <span class=\"notas\">dato: $dato_json</span>";;
+					}
+
+					if($permissions==3) {
+						$html_contenido .= "\n <span class=\"css_span_debugger\" id=\"debugger_{$tipo}\" >{$debugger}</span>";
+					}
+					break;					
+
+	}
+
+	if(isset($js_code)) $html_contenido .= $js_code;
+
+	# Prepare content to show in page
+	tools::prepare_content($html_contenido);
+
+
+	# PRINT HTML
+	print $html_label;
+	print $html_contenido;
+
+
+
+	if(SHOW_DEBUG) {
+		echo $ar_list_of_values->debug;
+	}
+
+	print "\n</div>\n\n"; //wrap
+?>

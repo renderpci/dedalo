@@ -15,7 +15,6 @@
 	$permissions			= common::get_permissions($tipo);			
 	
 	$html_title				= "Info about $tipo";
-	$ar_css					= false;
 	
 	$valor					= $this->get_valor();
 	$lang					= $this->get_lang();

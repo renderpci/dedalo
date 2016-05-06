@@ -2,10 +2,6 @@
 
 	# VISUALIZADOR HTML	
 
-	# ELEMENTOS
-	if(!isset ($ar_css['css_span_dato'])) 			$ar_css['css_span_dato']='';
-	if(!isset ($ar_css['css_span_debugger']))		$ar_css['css_span_debugger']='';
-	
 	print "\n<!-- COMPONENT_EVAL_CODE [tipo:$tipo section_id_matrix:$parent] -->";	
 		
 	# CONTENIDO (INPUT)
@@ -17,11 +13,12 @@
 					
 		case ($permissions>=1)	:
 			
-					$html_contenido .= "\n <span class=\"css_span_dato {$ar_css['css_span_dato']}\">$valor</span>";
+					$html_contenido .= "\n <span class=\"css_span_dato\">$valor</span>";
 					
-			if($permissions==3)
-					
-					$html_contenido .= "\n <span class=\"css_span_debugger {$ar_css['css_span_debugger']}\" id=\"debugger_{$tipo}\" >{$debugger}</span>";	
+					if($permissions==3){
+						$html_contenido .= "\n <span class=\"css_span_debugger\" id=\"debugger_{$tipo}\" >{$debugger}</span>";	
+					}
+					break;
 							
 	}	
 

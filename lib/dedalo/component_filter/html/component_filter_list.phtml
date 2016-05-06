@@ -2,18 +2,6 @@
 
 	# VISUALIZADOR HTML	
 
-	# ELEMENTOS
-	if(!isset ($ar_css['css_span_dato'])) 			$ar_css['css_span_dato']='';
-	if(!isset ($ar_css['css_check_box'])) 			$ar_css['css_check_box']='';
-	if(!isset ($ar_css['css_span_ejemplo'])) 		$ar_css['css_span_ejemplo']='';
-	if(!isset ($ar_css['css_span_debugger']))		$ar_css['css_span_debugger']='';
-	if(!isset ($ar_css['css_wrap_check_box']))		$ar_css['css_wrap_check_box']='';
-	if(!isset ($ar_css['css_check_box_rotulo']))	$ar_css['css_check_box_rotulo']='';
-	
-	
-	
-	#echo "\n<!-- COMPONENT_FILTER [$tipo $parent] -->";
-	#echo "\n<div class=\"css_wrap_filter css_wrap_check_box {$ar_css['css_check_box_rotulo']}\" style=\"white-space:nowrap\" >";
 	
 	# ETIQUETA (LABEL)
 	#$html_label = component_common_draw::draw_label($this);
@@ -27,18 +15,6 @@
 						
 		case ($permissions>=1)	:
 		
-					
-					#$html_contenido .= "\n <span class=\"css_span_dato {$ar_css['css_span_dato']}\">$valor</span>";
-					
-					/*
-					$html_contenido .= "<ul>";
-					foreach ($ar_proyectos_for_current_section as $project_id => $project_name) {
-						#$html_contenido .= "\n <span class=\"css_span_dato\" title=\"$project_id\">$project_name</span>, ";
-						$html_contenido .= "<li title=\"project_id: $project_id\">$project_name</li>";
-					}
-					$html_contenido .= "</ul>";
-					*/
-					#dump($dato,"dato");
 					if (!empty($dato)) {
 
 						$dato_keys = array_keys((array)$dato);	
@@ -58,19 +34,16 @@
 					}
 
 		
-					#if($permissions==3)		
-					#$html_contenido .= "\n <span class=\"css_span_debugger {$ar_css['css_span_debugger']}\" id=\"debugger_{$tipo}\" >{$debugger}</span>";	
-					
-					
+					/*if($permissions==3){
+						$html_contenido .= "\n <span class=\"css_span_debugger\" id=\"debugger_{$tipo}\" >{$debugger}</span>";	
+					}*/		
+					break;					
 										
 	}
 	
 	
 	# PRINT HTML
-	#print $html_label;
 	print $html_contenido;
-	#print $html_tools;
 	
 	
-	#echo "\n</div>\n\n"; //wrap
 ?>

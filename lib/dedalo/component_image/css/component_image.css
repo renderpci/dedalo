@@ -1,6 +1,8 @@
 /*@import url('component_image_canvas.css');*/
 
-/*-- Wrap div container --*/
+
+/* WRAP DIV CONTAINER
+------------------------------------------------------- */
 .css_wrap_image, .css_wrap_image_tm {	
 	vertical-align: top;
 	}
@@ -9,8 +11,28 @@
 		/*height: 600px;*/
 	}
 
+.css_wrap_image .loading_image {
+	position: absolute;
+	top: 45%;
+	left: 25%;
+}
 
-/*-- Edit mode --*/
+
+
+/* WRAP IMAGE IN PORTAL LIST MODE
+------------------------------------------------------- */
+.css_wrap_image_portal_list {
+	padding: 0;
+	margin: 0;
+	}
+	.css_wrap_image_portal_list:before {
+		content: none;
+	}
+
+
+
+/* EDIT MODE
+------------------------------------------------------- */
 .canvas_edit {
 	box-shadow: 0 2px 8px #999999;
 	/*
@@ -18,9 +40,12 @@
 	max-height: 404px;
 	*/
 	max-width: 100%;
+	height: 400px;
+	/*display: none;*/
+	visibility: hidden;
 	}
 	/* IMAGE */
-	.canvas_edit IMG.css_image {
+	.canvas_edit img.css_image {
 		/*box-shadow: 0 2px 8px #999999;*/
 	}
 	.image_buttons {
@@ -59,7 +84,18 @@
 			box-shadow: 0 2px 8px #999999 inset;
 		}
 
-/*-- PLayer container (for transcription) --*/
+		/*  CANVAS TRASCRIPTION
+		--------------------------------------------------- */
+		.canvas_transcription_edit {
+			width: auto;
+			height: auto;
+			/*background-color: #caf5ab;*/
+		}
+
+
+
+/* PLAYER CONTAINER (for transcription)
+------------------------------------------------------- */
 .player_container {
 	text-align: center;
 	padding: 0;
@@ -68,7 +104,9 @@
 }
 
 
-/*-- URL defined in style --*/
+
+/* URL DEFINED IN STYLE
+------------------------------------------------------- */
 .div_image_image_in_list {
 	display:inline-block;
 	width: 102px;
@@ -91,7 +129,8 @@
 		
 	}
 
-/*-- Original --*/
+/* Original
+------------------------------------------------------- */
 .original_icon {	
 	display: inline-block;
 	height: 13px;
@@ -141,13 +180,7 @@
 	}
 
 
-/*  CANVAS 
---------------------------------------------------- */
-.canvas_transcription_edit {
-	width: auto;
-	height: auto;
-	/*background-color: #caf5ab;*/
-}
+
 
 
 

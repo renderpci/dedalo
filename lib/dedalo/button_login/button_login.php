@@ -15,8 +15,9 @@
 	
 	switch($modo) {
 		
-		case 'edit'	:	$ar_css		= false;	
-						break;
+		case 'edit'	:
+
+				break;
 	}
 
 	$file_name = $modo;

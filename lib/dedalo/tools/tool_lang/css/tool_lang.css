@@ -4,7 +4,6 @@
 
 /* PAGE */
 .wrap_tool_lang_page {	
-	
 	min-height: 500px;
 }
 #tool_lang_component_source, #tool_lang_component_target
@@ -101,7 +100,7 @@ DIV.nParagrapsRight_div {
 	text-align: center;
 }
 
-label.css_label.tooltips{
+.wrap_tool_lang_page label.css_label.tooltips{
 	max-width: 250px;
 }
 

@@ -1,20 +1,19 @@
 <?php
 
 	# VISUALIZADOR HTML	
-
-	# ELEMENTOS
-	if(!isset ($ar_css['css_span_dato'])) 		$ar_css['css_span_dato']='';
-	if(!isset ($ar_css['css_html_text'])) 		$ar_css['css_html_text']='';
-	if(!isset ($ar_css['css_span_ejemplo'])) 	$ar_css['css_span_ejemplo']='';
-	if(!isset ($ar_css['css_span_debugger']))	$ar_css['css_span_debugger']='';
-	if(!isset ($ar_css['css_wrap_html_text']))	$ar_css['css_wrap_html_text']='';
-	
-	if(!isset ($html_tools))					$html_tools='';
 	
 	
 	print "\n<!-- HTML_TEXT [tipo:$tipo section_id_matrix:$parent] $label -->";
-	print "\n<div class=\"css_wrap_html_text wrap_component html_text_tool_lang {$ar_css['css_wrap_html_text']}\" id=\"{$id_wrapper}\"
-	data-tipo=\"{$tipo}\" data-section_tipo=\"{$section_tipo}\" data-parent=\"{$parent}\" data-lang=\"{$lang}\" data-modo=\"{$modo}\" data-dato=\"{$dato_raw}\" data-component_name=\"{$component_name}\" >";
+
+	print "\n<div class=\"css_wrap_html_text wrap_component html_text_tool_lang\" id=\"{$id_wrapper}\"
+	data-tipo=\"{$tipo}\"
+	data-section_tipo=\"{$section_tipo}\"
+	data-parent=\"{$parent}\"
+	data-lang=\"{$lang}\"
+	data-modo=\"{$modo}\"
+	data-dato=\"{$dato_raw}\"
+	data-component_name=\"{$component_name}\"
+	>";
 	
 	# ETIQUETA (LABEL)
 	$html_label = component_common_draw::draw_label($this);#."<span class=\"debug_info\"> $identificador_unico</span>";
@@ -25,13 +24,13 @@
 			
 		case 0	:	
 
-			$html_contenido .= "\n <span class=\"css_span_dato {$ar_css['css_span_dato']}\"> No access here (html_text)! </span>";	
+			$html_contenido .= "\n <span class=\"css_span_dato\"> No access here (html_text)! </span>";	
 			break;
 						
 		case 1	: 	
 
 			$html_contenido .= "\n<div class=\"html_text_content html_text_content_shadow\" >";
-			$html_contenido .= "\n <span class=\"css_span_dato {$ar_css['css_span_dato']}\">$dato</span>";
+			$html_contenido .= "\n <span class=\"css_span_dato\">$dato</span>";
 			$html_contenido .= "\n</div>"; #end html_text_content			
 			break;						
 		
@@ -40,10 +39,13 @@
 			#
 			# Text area
 			#
-			$html_contenido .= "\n <textarea class=\"css_html_text \" 
-			id=\"{$identificador_unico}\" 
-			name=\"{$input_name}\" 
-			data-tipo=\"{$tipo}\" data-lang=\"{$lang}\" data-section_tipo=\"{$section_tipo}\" data-parent=\"{$parent}\"
+			$html_contenido .= "\n <textarea class=\"css_html_text \"
+			id=\"{$identificador_unico}\"
+			name=\"{$input_name}\"
+			data-tipo=\"{$tipo}\"
+			data-lang=\"{$lang}\"
+			data-section_tipo=\"{$section_tipo}\"
+			data-parent=\"{$parent}\"
 			title=\"$html_title\">$dato</textarea>";
 
 			# Init text editor
@@ -55,9 +57,9 @@
 			}			
 
 
-			if($permissions==3)						
-			$html_contenido .= "\n <span class=\"css_span_debugger {$ar_css['css_span_debugger']}\" id=\"debugger_{$tipo}\" >{$debugger}</span>";
-			
+			if($permissions==3){
+				$html_contenido .= "\n <span class=\"css_span_debugger\" id=\"debugger_{$tipo}\" >{$debugger}</span>";
+			}					
 			break;							
 	}
 

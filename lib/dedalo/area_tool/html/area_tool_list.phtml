@@ -1,16 +1,9 @@
 <?php
 	
 	# VISUALIZADOR HTML	
-
-	# ELEMENTOS
-	if(!isset ($ar_css['css_area_wrap']))				$ar_css['css_area_wrap']='';
-	if(!isset ($ar_css['css_area_titulo']))				$ar_css['css_area_titulo']='';
-	if(!isset ($ar_css['css_span_dato'])) 				$ar_css['css_span_dato']='';;
-	
-	
 	
 	print "\n\n<!-- AREA [tipo:$tipo] -->";
-	print "\n<div class=\"css_area_wrap {$ar_css['css_area_wrap']}\" > ";
+	print "\n<div class=\"css_area_wrap\" > ";
 	
 	
 	# ETIQUETA (LABEL)
@@ -23,7 +16,7 @@
 	
 	switch($permissions) {
 			
-		case 0	:	$html_contenido .= "\n <span class=\"css_span_dato {$ar_css['css_span_dato']}\"> ".label::get_label('sin_acceso')." </span>";
+		case 0	:	$html_contenido .= "\n <span class=\"css_span_dato\"> ".label::get_label('sin_acceso')." </span>";
 					break;
 						
 		case ($permissions>=1)	:

@@ -1,19 +1,9 @@
 <?php
 
 	# VISUALIZADOR HTML	
-
-	# ELEMENTOS
-	if(!isset ($ar_css['css_span_dato'])) 		$ar_css['css_span_dato']='';
-	if(!isset ($ar_css['css_text_area'])) 		$ar_css['css_text_area']='';
-	if(!isset ($ar_css['css_span_ejemplo'])) 	$ar_css['css_span_ejemplo']='';
-	if(!isset ($ar_css['css_span_debugger']))	$ar_css['css_span_debugger']='';
-	if(!isset ($ar_css['css_wrap_text_area']))	$ar_css['css_wrap_text_area']='';
-	
-	if(!isset ($html_tools))					$html_tools='';
-	
 	
 	print "\n<!-- TEXT AREA [tipo:$tipo section_id:$parent section_tipo:$section_tipo] $label -->";
-	print "\n<div class=\"css_wrap_text_area wrap_component {$ar_css['css_wrap_text_area']} text_area_tool_indexation\" id=\"{$id_wrapper}\"
+	print "\n<div class=\"css_wrap_text_area wrap_component text_area_tool_indexation\" id=\"{$id_wrapper}\"
 	data-tipo=\"{$tipo}\"
 	data-section_tipo=\"{$section_tipo}\"
 	data-parent=\"{$parent}\"
@@ -29,11 +19,11 @@
 	$html_contenido = '';
 	switch($permissions) {
 			
-		case 0	:	$html_contenido .= "\n <span class=\"css_span_dato {$ar_css['css_span_dato']}\"> No access here (text_area)! </span>";	
+		case 0	:	$html_contenido .= "\n <span class=\"css_span_dato\"> No access here (text_area)! </span>";	
 					break;
 						
 		case 1	: 	$html_contenido .= "\n<div class=\"text_area_content text_area_content_shadow\" >";
-					$html_contenido .= "\n <span class=\"css_span_dato {$ar_css['css_span_dato']}\">$dato</span>";
+					$html_contenido .= "\n <span class=\"css_span_dato\">$dato</span>";
 					$html_contenido .= "\n</div>"; #end text_area_content
 
 					/**
@@ -63,7 +53,7 @@
 					#
 					# TEXT AREA
 					#
-					$html_contenido .= "\n <textarea class=\"css_text_area $text_area_tm {$ar_css['css_text_area']} text_area_tool_indexation\"
+					$html_contenido .= "\n <textarea class=\"css_text_area $text_area_tm text_area_tool_indexation\"
 					id=\"{$identificador_unico}\"
 					name=\"{$input_name}\"
 					data-tipo=\"{$tipo}\"
@@ -115,8 +105,9 @@
 					//fragment_info = function(tagName, tipo, parent)
 
 		
-				#if($permissions==3)					
-					#$html_contenido .= "\n <span class=\"css_span_debugger {$ar_css['css_span_debugger']}\" id=\"debugger_{$tipo}\" >{$debugger}</span>";
+					if($permissions==3){
+						#$html_contenido .= "\n <span class=\"css_span_debugger\" id=\"debugger_{$tipo}\" >{$debugger}</span>";
+					}
 					break;
 							
 	}

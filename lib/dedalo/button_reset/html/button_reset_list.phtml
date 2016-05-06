@@ -1,16 +1,11 @@
 <?php
 
 	# VISUALIZADOR HTML	
-
-	# ELEMENTOS
-	if(!isset ($ar_css['css_span_dato'])) 			$ar_css['css_span_dato']='';
-	if(!isset ($ar_css['css_button_reset'])) 		$ar_css['css_button_reset']='';
-	if(!isset ($ar_css['css_span_debugger']))		$ar_css['css_span_debugger']='';
-	if(!isset ($ar_css['css_wrap_button_reset']))	$ar_css['css_wrap_button_reset']='';
-		
+	
 	
 	print "\n<!-- BUTTON RESET [tipo:$tipo id_matrix:$id] -->";
-	print "\n<div class=\"css_wrap_button_reset {$ar_css['css_wrap_button_reset']}\">";
+
+	print "\n<div class=\"css_wrap_button_reset\">";
 	
 	# ETIQUETA (LABEL)
 	//$html_label = component_common_draw::draw_label($this);
@@ -20,12 +15,12 @@
 	
 	switch($permissions) {
 			
-		case 0	:	$html_contenido .= "\n <span class=\"css_span_dato {$ar_css['css_span_dato']}\"> ".label::get_label('sin_acceso')." (button_reset)</span>";
+		case 0	:	$html_contenido .= "\n <span class=\"css_span_dato\"> ".label::get_label('sin_acceso')." (button_reset)</span>";
 					break;					
 						
 		case ($permissions>=1)	:
 		
-					$html_contenido .= "\n <input class=\"css_button_reset {$ar_css['css_button_reset']}\" type=\"button\" onclick=\"search.reset_form(this.form)\" 
+					$html_contenido .= "\n <input class=\"css_button_reset\" type=\"button\" onclick=\"search.reset_form(this.form)\" 
 					data-tipo=\"{$target_tipo}\" value=\"$label\" title=\"$html_title\" />";					
 											
 	}

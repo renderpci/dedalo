@@ -69,16 +69,12 @@
 					$html_contenido .= "\n <div class=\"css_btn_add_lang css_button_generic drag_disabled\"> Add lang </div>";
 					
 					
-					#$html_contenido .= "\n <span  class=\"css_span_log\"></span>";						
-					#$html_contenido .= $html_tools;
-					
 					if($permissions==3)	{
 						$html_contenido .= "\n <span class=\"css_span_debugger\" id=\"debugger_{$tipo}\" >{$debugger}</span>";
 					}
 					break;				
 											
 	}
-
 
 	# Prepare content to show in page
 	tools::prepare_content($html_contenido);

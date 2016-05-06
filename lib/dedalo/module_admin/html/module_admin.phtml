@@ -1,17 +1,9 @@
 <?php
 	
 	# VISUALIZADOR HTML	
-
-	# ELEMENTOS
-	if(!isset ($ar_css['css_module_wrap']))				$ar_css['css_module_wrap']='';
-	if(!isset ($ar_css['css_module_titulo']))			$ar_css['css_module_titulo']='';
-
-	if(!isset ($ar_css['css_span_dato'])) 				$ar_css['css_span_dato']='';;
-	
-	
 	
 	print "\n\n<!-- MODULE [tipo:$tipo id_matrix:$id] -->";
-	print "\n<div class=\"css_module_wrap {$ar_css['css_module_wrap']}\" >";
+	print "\n<div class=\"css_module_wrap\" >";
 	
 	
 	# ETIQUETA (LABEL)
@@ -25,7 +17,7 @@
 	$html_contenido = "\n<div class=\"css_module_content\" >";
 	switch($permissions) {
 			
-		case 0	:	$html_contenido .= "\n <span class=\"css_span_dato {$ar_css['css_span_dato']}\"> ".label::get_label('sin_acceso')." </span>"; 		
+		case 0	:	$html_contenido .= "\n <span class=\"css_span_dato\"> ".label::get_label('sin_acceso')." </span>"; 		
 					break;
 						
 		case ($permissions>=1)	:

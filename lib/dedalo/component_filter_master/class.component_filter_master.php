@@ -199,9 +199,46 @@ class component_filter_master extends component_common {
 		}else{
 			$lang = DEDALO_DATA_LANG;
 		}
-		return $lang;
 
+		return $lang;
 	}
+
+
+
+	/**
+	* RENDER_LIST_VALUE
+	* Overwrite for non default behaviour
+	* Receive value from section list and return proper value to show in list
+	* Sometimes is the same value (eg. component_input_text), sometimes is calculated (e.g component_portal)
+	* @param string $value
+	* @param string $tipo
+	* @param int $parent
+	* @param string $modo
+	* @param string $lang
+	* @param string $section_tipo
+	* @param int $section_id
+	*
+	* @return string $list_value
+	*/
+	public static function render_list_value($value, $tipo, $parent, $modo, $lang, $section_tipo, $section_id) {
+
+		$current_valor  = $value;
+		$ar_val 		= json_decode($current_valor);
+		$component  	= component_common::get_instance(__CLASS__,
+														 $tipo,
+													 	 $parent,
+													 	 'list',
+														 DEDALO_DATA_NOLAN,
+													 	 $section_tipo);
+		$component->set_dato($ar_val);
+		$valor = $component->get_valor();
+		
+		return $valor;
+		
+	}#end render_list_value
+
+
+	
 	
 	
 }

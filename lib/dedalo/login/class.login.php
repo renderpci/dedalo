@@ -352,11 +352,23 @@ class login extends common {
 			$backup_info = 'Deactivated "on login backup" for this domain';
 		}
 
-		# REMOVE LOCK_COMPONENTS ELEMENTS
-		if (defined('DEDALO_LOCK_COMPONENTS') && DEDALO_LOCK_COMPONENTS===true) {
-			lock_components::force_unlock_all_components($user_id);
+		
+		try {
+			
+			# REMOVE LOCK_COMPONENTS ELEMENTS
+			if (defined('DEDALO_LOCK_COMPONENTS') && DEDALO_LOCK_COMPONENTS===true) {
+				lock_components::force_unlock_all_components($user_id);
+			}
+
+			# GET ENTITY DIFFUSION TABLES / SECTIONS . Store for speed
+			#$entity_diffusion_tables = diffusion::get_entity_diffusion_tables(DEDALO_DIFFUSION_DOMAIN);
+			#$_SESSION['dedalo4']['config']['entity_diffusion_tables'] = $entity_diffusion_tables;
+
+		} catch (Exception $e) {
+			debug_log(__METHOD__." $e ", logger::CRITICAL);
 		}
-	
+		
+
 
 		# LOG : Prepare and save login action
 		$browser = $_SERVER["HTTP_USER_AGENT"];

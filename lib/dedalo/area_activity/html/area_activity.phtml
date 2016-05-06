@@ -1,11 +1,10 @@
 <?php
 	
-	# VISUALIZADOR HTML	
-
-	# ELEMENTOS
-	if(!isset ($ar_css['css_span_dato'])) 		$ar_css['css_span_dato']='';
+	# VISUALIZADOR HTML
+	
 	
 	print "\n<!-- area_activity [tipo:$tipo modo:$modo] -->";
+
 	print "\n<div class=\"css_wrap_area_activity\" 
 	data-tipo=\"{$tipo}\" data-lang=\"{$lang}\" data-component_name=\"{$component_name}\" >";
 	
@@ -16,10 +15,10 @@
 	$html_contenido = '';
 	switch($permissions) {
 			
-		case 0	:	$html_contenido .= "\n <span class=\"css_span_dato {$ar_css['css_span_dato']}\"> ".label::get_label('sin_acceso')." (input_text)</span>";
+		case 0	:	$html_contenido .= "\n <span class=\"css_span_dato\"> ".label::get_label('sin_acceso')." (input_text)</span>";
 					break;
 						
-		#case 1	: 	$html_contenido .= "\n <span class=\"css_span_dato {$ar_css['css_span_dato']}\">Read only access</span>";
+		#case 1	: 	$html_contenido .= "\n <span class=\"css_span_dato\">Read only access</span>";
 		#			break;	
 						
 		case ($permissions>=1)	:
@@ -36,15 +35,13 @@
 					foreach ($ar_sections as $tipo => $name) {
 						$html_contenido .= "<br> <a href=\"?t=$tipo\" class=\"link\">$name</a> ";
 					}
-					$html_contenido .= "\n </blockquote>";
+					$html_contenido .= "\n </blockquote>";					
+										
 					
-					#$html_contenido .= "\n <span  class=\"css_span_log\"></span>";					
-					#$html_contenido .= "\n <span  class=\"css_span_ejemplo {$ar_css['css_span_ejemplo']}\">$ejemplo</span>";						
+					if($permissions==3) {
+						$html_contenido .= "\n <span class=\"css_span_debugger\" id=\"debugger_{$id}\" >{$debugger}</span>";	
+					}		
 					
-					#$html_contenido .= $html_tools;
-					
-			if($permissions==3)		
-					$html_contenido .= "\n <span class=\"css_span_debugger {$ar_css['css_span_debugger']}\" id=\"debugger_{$id}\" >{$debugger}</span>";	
 					
 											
 	}	

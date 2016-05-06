@@ -91,7 +91,7 @@ abstract class component_common extends common {
 				dump($parent," parent");
 				throw new Exception("Error Processing Request. trying to use wrong var: '$parent' as parent to load as component", 1);				
 			}			
-			$ar_valid_modo = array("edit","list","search","simple","list_tm","tool_portal","tool_lang","edit_tool","indexation","selected_fragment","tool_indexation",'tool_transcription','print','edit_component','load_tr');
+			$ar_valid_modo = array("edit","list","search","simple","list_tm","tool_portal","tool_lang","edit_tool","indexation","selected_fragment","tool_indexation",'tool_transcription','print','edit_component','load_tr','update');
 			if ( empty($modo) || !in_array($modo, $ar_valid_modo) ) {
 				#dump($modo," modo");
 				#throw new Exception("Error Processing Request. trying to use wrong var: '$modo' as modo to load as component", 1);
@@ -112,7 +112,8 @@ abstract class component_common extends common {
 				$ar_resources = array('rsc2','rsc75','rsc3','rsc4');
 				if (in_array($section_tipo, $ar_resources) && $tipo!='rsc88') {
 					dump(debug_backtrace(), ' debug_backtrace '.to_string());
-					throw new Exception("Error Processing Request. Direct call to resource section_tipo ($section_tipo) is not legal", 1);
+					#throw new Exception("Error Processing Request. Direct call to resource section_tipo ($section_tipo) is not legal", 1);
+					debug_log(__METHOD__." ERROR - Error Processing Request. Direct call to resource section_tipo ($section_tipo) is not legal".to_string(), logger::ERROR);
 				}else if($tipo!='dd200'){
 					# Verify this section is from current component tipo
 					$calculated_section_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($tipo, 'section', 'parent')[0];
@@ -124,7 +125,7 @@ abstract class component_common extends common {
 					}
 				}				
 			}
-		}
+		}//end if(SHOW_DEBUG) 
 		
 		static $ar_component_instances;
 
@@ -343,13 +344,9 @@ abstract class component_common extends common {
 	# GET DATO	
 	protected function get_dato() {
 
-		if(isset($this->dato_resolved)) {
-			if(SHOW_DEBUG) {
-				debug_log(__METHOD__." Dato already resolved");
-			}
+		if(isset($this->dato_resolved)) {			
 			return $this->dato_resolved;
 		}
-
 
 		/*
 		#
@@ -3089,10 +3086,43 @@ trigger_error("!!! DEPRECATED ".__METHOD__);
 
 
 
-	
+	/**
+	* RENDER_LIST_VALUE
+	* Overwrite for non default behaviour
+	* Receive value from section list and return proper value to show in list
+	* Sometimes is the same value (eg. component_input_text), sometimes is calculated (e.g component_portal)
+	* @param string $value
+	* @param string $tipo
+	* @param int $parent
+	* @param string $modo
+	* @param string $lang
+	* @param string $section_tipo
+	* @param int $section_id
+	*
+	* @return string $list_value
+	*/
+	public static function render_list_value($value, $tipo, $parent, $modo, $lang, $section_tipo, $section_id) {
+		
+		return $value;
+
+	}#end render_list_value
 
 
 
+	/**
+	* UPDATE_DATO_VERSION
+	* @return $response->result =0; // the component don't have the function "update_dato_version"
+	* @return $response->result =1; // the component do the update"
+	* @return $response->result =2; // the component try the update but the dato don't need change"
+	*/
+	public static function update_dato_version($update_version, $dato_unchanged) {
+		$response = new stdClass();
+		$modelo_name = get_called_class();
+		$response->result =0;
+		$response->msg = "This component $modelo_name don't have update_dato_version, please check the class of the component <br />";
+		return $response;
+		
+	}#end update_dato_version
 
 
 }

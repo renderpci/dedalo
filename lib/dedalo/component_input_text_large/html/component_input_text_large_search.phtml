@@ -1,21 +1,13 @@
 <?php
 
-	# VISUALIZADOR HTML	
-
-	# ELEMENTOS
-	if(!isset ($ar_css['css_span_dato'])) 		$ar_css['css_span_dato']='';
-	if(!isset ($ar_css['css_input_text'])) 		$ar_css['css_input_text']='';
-	if(!isset ($ar_css['css_span_ejemplo'])) 	$ar_css['css_span_ejemplo']='';
-	if(!isset ($ar_css['css_span_debugger']))	$ar_css['css_span_debugger']='';
-	if(!isset ($ar_css['css_wrap_input_text']))	$ar_css['css_wrap_input_text']='';
+	# VISUALIZADOR HTML		
 	
-	if(!isset ($html_tools))					$html_tools='';
-	
-	if(isset($_REQUEST[$tipo]))					$dato = $_REQUEST[$tipo];		#var_dump($_REQUEST[$tipo]);
+	if(isset($_REQUEST[$tipo])) $dato = $_REQUEST[$tipo];		#var_dump($_REQUEST[$tipo]);
 	
 	
 	print "\n<!-- INPUT_TEXT [tipo:$tipo section_id_matrix:$parent] -->";
-	print "\n<div class=\"css_wrap_input_text {$ar_css['css_wrap_input_text']}\" id=\"wrap_{$tipo}\">";
+
+	print "\n<div class=\"css_wrap_input_text\" id=\"wrap_{$tipo}\">";
 	
 	# ETIQUETA (LABEL)
 	$html_label = component_common_draw::draw_label($this);
@@ -24,24 +16,24 @@
 	$html_contenido = '';
 	switch($permissions) {
 			
-		case 0	:	$html_contenido .= "\n <span class=\"css_span_dato {$ar_css['css_span_dato']}\"> ".label::get_label('sin_acceso')." (input_text)</span>";
+		case 0	:	$html_contenido .= "";
 					break;
 						
-		case 1	: 	$html_contenido .= "\n <span class=\"css_span_dato {$ar_css['css_span_dato']}\">$dato</span>";
+		case 1	: 	$html_contenido .= "\n <span class=\"css_span_dato\">$dato</span>";
 					break;	
 						
 		case ($permissions>=2)	:
 					# COMPARISON OPERATORS
 					$html_contenido .= operator::get_search_comparison_operators_html($tipo,$ar_comparison_operators);
 		
-					$html_contenido .= "\n <input class=\"css_input_text {$ar_css['css_input_text']}\" type=\"text\" 
+					$html_contenido .= "\n <input class=\"css_input_text\" type=\"text\" 
 					id=\"{$identificador_unico}\" name=\"{$tipo}\" 
 					data-tipo=\"{$tipo}\" data-lang=\"{$lang}\"
 					value=\"{$dato}\" title=\"$html_title\" />";
 
 					# LOGICAL OPERATORS
 					$html_contenido .= operator::get_search_logical_operators_html($tipo,$ar_logical_operators);
-											
+					break;				
 	}
 	
 	

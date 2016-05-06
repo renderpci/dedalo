@@ -4,8 +4,7 @@
 	if ($this->modo=='list') {
 		return null;
 	}
-
-	#$id 					= $this->get_id();				
+					
 	$tipo 					= $this->get_tipo();
 	$modo					= $this->get_modo();
 	#$parent 				= $this->get_parent();
@@ -18,8 +17,6 @@
 	$permissions			= common::get_permissions($tipo);
 	$ejemplo				= $this->get_ejemplo();
 	$html_title				= "Info about $tipo";
-		
-	$html_tools				= '';	
 	$tree_html				= '';
 	$html					= '';
 	$caller_id 				= $this->get_caller_id();		
@@ -32,8 +29,7 @@
 		
 	switch($modo) {
 		
-		case 'tool_time_machine'	:	
-						$ar_css		= false;
+		case 'tool_time_machine'	:
 						die("Dead here tm ");	
 						break;
 		
@@ -122,17 +118,15 @@
 							#$tree_html .= "<hr>";
 
 						}
-						$ar_css		= $this->get_ar_css();
-						#foreach($ar_tools_obj as $tool_obj) $html_tools .= $tool_obj->get_html();	
 
 						#dump($tree_html,'','',true);
 						break;
 
 		
-		case 'search' :	$ar_css		= false;		
+		case 'search' :	
 						break;
 						
-		case 'list'	:	$ar_css		= false;
+		case 'list'	:
 						return null;
 						break;
 						

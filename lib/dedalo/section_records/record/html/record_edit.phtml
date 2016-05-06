@@ -1,11 +1,6 @@
 <?php
 	
-	# VISUALIZADOR HTML	
-
-	# ELEMENTOS	
-	if(!isset ($ar_css['css_section_content']))				$ar_css['css_section_content']='';
-	if(!isset ($ar_css['css_span_dato'])) 					$ar_css['css_span_dato']='';
-
+	# VISUALIZADOR HTML
 	
 	print "\n\n<!-- SECTION ROWS EDIT [section_id:$section_id tipo:$tipo] -->";
 	print "\n<div id=\"current_record_wrap\" class=\"records main_section_{$modo}\"
@@ -21,9 +16,8 @@
 			# Fields
 			switch($permissions) {
 					
-				case 0	:	$html_contenido .= "\n <span class=\"css_span_dato {$ar_css['css_span_dato']}\">";
+				case 0	:	$html_contenido .= "\n <span class=\"css_span_dato\">";
 							$html_contenido .= label::get_label('contenido_no_autorizado');
-								#dump(security::$ar_permissions_table," security::ar_permissions_table");
 							$html_contenido .= " (Section $tipo - $modo)</span>";
 							break;
 								

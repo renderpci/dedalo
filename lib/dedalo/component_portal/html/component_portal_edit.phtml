@@ -21,6 +21,7 @@
 		
 		# ETIQUETA (LABEL)
 		$html_label = component_common_draw::draw_label($this);
+
 		
 		# CONTENIDO (INPUT)
 		$html_contenido = '';
@@ -64,7 +65,7 @@
 
 										break; // Only first
 									}
-								}								
+								}
 
 								# BUTTON SELECT EXISTING RECORD HTML (BUTTON TOOL_PORTAL)
 								if($modo!='print') {
@@ -102,14 +103,14 @@
 						#
 						# SECTION HTML (LIST ROWS)
 						#
-						$html_contenido .= "<div id=\"section_list_rows_content_div_{$this->tipo}\" class=\"section_list_rows_content_div\" >";
+						$html_contenido .= "<div id=\"section_list_rows_content_div_{$this->tipo}\" class=\"section_list_rows_content_div portal_table_wraper\" >";
 
 						$table_add_class = empty($rows_data->result) ? 'table_rows_list_empty' : null;
 												
 						$table = "<table id=\"portal_table_{$tipo}\" class=\"table_rows_list table_portal_rows_list $table_add_class\">";
-						$table .= "<tbody>";
 						
 
+						#
 						# HEADERS (TH)
 						if ($this->html_options->header && !empty($rows_data->result)) {
 						
@@ -122,7 +123,7 @@
 										$td_css_selector = 'id_column';										
 									}else{
 										$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($column_tipo, true);
-										$td_css_selector = 'td_'.$modelo_name;
+										$td_css_selector = 'th_'.$modelo_name.' th_'.$column_tipo;
 									}									
 									
 								$table .= "<th class=\"$td_css_selector\">";
@@ -134,44 +135,35 @@
 						}//end if ($this->html_options->header)
 
 						#dump($rows_data->result," rows_data->result");
+
+						
+						
 	
 						# ROWS (TD)
-						$row_number=1;
+						$table .= "<tbody>";						
+						
+						$row_number=0; foreach((array)$dato as $key => $current_locator) {
 
-						#if ($this->html_options->rows && !empty($rows_data->result)) {
-						#foreach ($rows_data->result as $key => $table_rows) {
-						#foreach ($table_rows as $current_id => $rows) {
-						#dump($dato, ' dato ++ '.to_string());
-						/**/
-						foreach ((array)$dato as $key => $current_locator) {
-
+							$row_number++;
 
 							$current_section_id 	= $current_locator->section_id;
 							$current_section_tipo 	= $current_locator->section_tipo;
 							$current_tag_id 		= isset($current_locator->tag_id) ? $current_locator->tag_id : null;
 
 							$current_row = $this->row_in_result( $current_locator, $rows_data->result );						
-								#dump($current_row, ' current_row ++ '.to_string());							
-							//continue;
 							
 
+							#
+							# Limit showed rows
 							if ($this->html_options->rows_limit && $row_number > $this->html_options->rows_limit) {
 								break; # Limit number of records to sowh
 							}
 
-							# REL_LOCATOR : The current_id can be id matrix or locator like object
-								/*
-								$rel_locator = $current_row['current_id'];	// Default							
-								if (isset($current_row['lc_object'])) { // Locator object
-									$rel_locator = $current_row['lc_object'];
-									$rel_locator = json_handler::encode($rel_locator);
-									if(SHOW_DEBUG) {
-										#dump($rel_locator," rel_locator from lc_object "); 
-									}
-								}
-								*/
+							#
+							# REL_LOCATOR : The current_id can be id matrix or locator like object								
 								$rel_locator = json_encode($current_locator);
 
+							#
 							# ROW
 								/*						
 								if (empty($current_row['id'])) {
@@ -182,17 +174,17 @@
 								}
 								*/
 
+							#
 							# SECTION ID
-								$section_id 		= $current_section_id;	//$current_row['section_id'];
-								$target_section_tipo= $current_section_tipo;
+								$section_id 		 = $current_section_id;
+								$target_section_tipo = $current_section_tipo;
 
 
+							#
 							# COLUMNS
-								#dump($current_row['rsc29']," rows");
 								$sort_id = !empty($rel_locator) ? $rel_locator : 0;
-								$table .= "<tr class=\"tr_sortable\" data-dato='$sort_id'>";
-								#foreach ((array)$current_row as $key => $current_value) {								
-								foreach ($ar_columns as $column_tipo => $column_label) {										
+								$table .= "<tr class=\"tr_sortable\" data-dato='$sort_id'>";															
+								foreach ($ar_columns as $column_tipo => $column_label) {									
 	
 									#
 									# EDIT COLUMN
@@ -226,11 +218,12 @@
 											if(SHOW_DEBUG) $title .= "\n url:$url \n modo $modo, context $context->context_name";
 											if (empty($current_row['id'])) {
 												$table .= "<div class='div_image_link link' title=\"$title\" onclick=\"alert('Deleted record')\"> ! </div>";
-											}else{
-											/*	$table .= "<div class='button_edit div_image_link link' title=\"$title\" onclick=\"component_portal.open_record('$url')\"></div>";
-											
-											*/	$additional_css_style = $permissions <2 ? 'height: 100%;' : '' ;
-												$table .= "<a href=\"javascript:component_portal.open_record('$url')\" class=\"id_column_buttons button_edit link\" title=\"$title\" style=\"$additional_css_style\">";
+											}else{																						
+												$additional_css_style = $permissions <2 ? 'height: 100%;' : '' ;
+												$table .= "<a href=\"javascript:component_portal.open_record('$url')\" id=\"portal_link_open_{$section_tipo}_{$section_id}\" class=\"id_column_buttons button_edit link\" style=\"$additional_css_style\"
+												title=\"$title\"
+												data-
+												>";
 													# SECTION_ID TEXT
 													$table .= "<span class=\"section_id_number\">";
 													$table .= " $section_id ";													
@@ -281,14 +274,33 @@
 
 										$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($column_tipo, true);
 
+										# aditional td css selectors
+										$td_css_selector = 'td_'.$modelo_name.' td_'.$column_tipo;
+
 										# Row value default
+										/*
 										if (!isset($current_row[$column_tipo])) {
-											$table .= "<td class=\"\">";
+											$table .= "<td class=\"$td_css_selector\">"; 	dump($current_row[$column_tipo], ' excluded column_tipo ++ '.to_string($column_tipo));
 											$table .= ' '; // User with NO access to this column
 											$table .= "</td>";
 											continue;
 										}
+										*/
+										#dump($modelo_name, ' PORTAL EDIT modelo_name ++ '.to_string($column_tipo));
 										
+										/**/
+										$column_value = $current_row[$column_tipo];
+										$value = (string)$modelo_name::render_list_value($column_value, // value string from db
+																						 $column_tipo, // current component tipo
+																						 $section_id, // current portal row section id
+																						 'portal_list', // mode fixed list
+																						 DEDALO_DATA_LANG, // current data lang
+																						 $target_section_tipo, // current section tipo
+																						 $section_id // Current portal parent
+																						);
+
+										
+										/*
 										$value = $current_row[$column_tipo];									
 
 										# Row value overwrite on special cases
@@ -317,19 +329,19 @@
 											case ('component_select'):
 											case ('component_relation'):
 												#if (empty($value)) break; // Avoid resolve empty vars
-												/*
-												$parent 		   = $section_id; // $section_id / null
-												$current_component = component_common::get_instance($modelo_name,$column_tipo,$parent,'list',DEDALO_DATA_NOLAN,$target_section_tipo);	
+												
+												#$parent 		   = $section_id; // $section_id / null
+												#$current_component = component_common::get_instance($modelo_name,$column_tipo,$parent,'list',DEDALO_DATA_NOLAN,$target_section_tipo);	
 													#dump($target_section_tipo, ' target_section_tipo');
 												#$current_component->html_options->rows_limit	= 1;
 												#if ($parent===null) {
 													# Use already query calculated values for speed
-													$ar_records   = (array)json_handler::decode($value);	#dump($ar_records,"ar_records for portal $current_component_tipo - id:$section_id");#die();
-													$current_component->set_dato($ar_records); 				#dump($value, 'ar_records');
-													$current_component->set_identificador_unico($current_component->get_identificador_unico().'_'.$section_id); // Set unic id for build search_options_session_key used in sessions
+												#	$ar_records   = (array)json_handler::decode($value);	#dump($ar_records,"ar_records for portal $current_component_tipo - id:$section_id");#die();
+												#	$current_component->set_dato($ar_records); 				#dump($value, 'ar_records');
+												#	$current_component->set_identificador_unico($current_component->get_identificador_unico().'_'.$section_id); // Set unic id for build search_options_session_key used in sessions
 												#}
 												$value = $current_component->get_html();
-												*/
+												
 												$parent 		   = $section_id;	//null;
 												$current_component = component_common::get_instance($modelo_name, $column_tipo, $parent, 'list', DEDALO_DATA_NOLAN, $target_section_tipo);
 												# Use already query calculated values for speed
@@ -341,15 +353,15 @@
 
 											# COMPONENT_TEXT_AREA
 											case ('component_text_area'):
-												/*
+											
 												# TO VERIFY THIS SELECTOR..
-												$rel_locator = $current_row['lc_object'];	//(object)json_handler::decode($rel_locator);
+												#$rel_locator = $current_row['lc_object'];	//(object)json_handler::decode($rel_locator);
 
-												if (!property_exists($rel_locator, 'tag_id')) {										
-													$ar_records = (array)json_handler::decode($value);
-													$value 		= reset($ar_records);
-												}
-												*/
+												#if (!property_exists($rel_locator, 'tag_id')) {										
+												#	$ar_records = (array)json_handler::decode($value);
+												#	$value 		= reset($ar_records);
+												#}
+											
 												$obj_value = json_decode($current_row[$column_tipo]); # Evitamos los errores del handler accediendo directamente al json_decode de php
 												$current_tag = 0;
 												if (is_object($obj_value) && isset($obj_value->$current_tag)) {
@@ -377,18 +389,17 @@
 												$value = $current_component->get_html();
 
 										}//end switch (true)
+										*/
 
-										# aditional td css selectors										
-										$td_css_selector = 'td_'.$modelo_name;
-
+										
+										#
 										# TD COLUMN
 										$table .= "<td class=\"$td_css_selector\">";
 										if (is_string($value)) {
 											$table .= $value;
 										}else{
 											$table .= to_string($value);
-										}
-										
+										}										
 										$table .= "</td>";
 
 									}//end if ($modelo_name=='component_portal')
@@ -396,12 +407,6 @@
 								}//end foreach ($ar_columns as $column_tipo => $column_label)
 								$table .= "</tr>";	
 
-						
-						$row_number++;
-
-
-						#}//END foreach ($table_rows as $current_id => $rows)
-						#}//END foreach ($rows_data->result as $key => $table_rows)
 						}//end if ($this->html_options->header)
 
 
@@ -435,8 +440,9 @@
 							$html_contenido .= "<script>component_portal.active_portal_table_sortable('portal_table_{$tipo}', '$dragable_connectWith')</script>";
 						}
 						break;
-												
-		}
+
+		}//end switch($permissions)
+
 
 		# Prepare content to show in page
 		tools::prepare_content($html_contenido);	
@@ -446,6 +452,7 @@
 		if ($show_button_new && $this->html_options->buttons) {
 			print $html_label;
 		}
+
 
 		if(SHOW_DEBUG && !empty($rows_data->result)) {
 			#dump($this, ' this 1 ');
@@ -457,7 +464,7 @@
 			if ($total_list_time>$limit_time) {
 				$style = "color:red";
 			}			
-			$html_info .= "<div class=\"debug_info portal_debug_info\" style=\"{$style}\" onclick=\"$(this).children('pre').toggle()\"> Time: ";
+			$html_info .= "<div class=\"debug_info99 portal_debug_info\" style=\"{$style}\" onclick=\"$(this).children('pre').toggle()\"> Time: ";
 			$html_info .= $total_list_time;
 			#$html_info .= ", get_rows_data:".$rows_data->generated_time['get_rows_data']." (over {$rows_data->options->full_count} records)";
 			#$html_info .= ", HTML section list: ".round(microtime(1)-$start_time,3);

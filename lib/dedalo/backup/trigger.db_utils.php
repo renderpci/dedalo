@@ -32,9 +32,7 @@ if($action=='export') {
 	
 	# Dump official structure version 'dedalo4_development_str.custom' (partial backup)
 	$res = backup::export_structure(null, $exclude_tables=true);	 // Partial backup
-	echo $res->msg;
-
-	
+	echo $res->msg;	
 	exit();
 }
 
@@ -58,6 +56,12 @@ if($action=='import') {
 	}
 
 	$res = backup::import_structure();
+
+	# Delete session config (force to recalculate)
+	unset($_SESSION['dedalo4']['config']);
+
+	# Delete session permissions table (force to recalculate)
+	unset($_SESSION['dedalo4']['auth']['permissions_table']);
 
 	$html .= $res;	
 	echo wrap_html($html, false);

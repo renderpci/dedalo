@@ -1,8 +1,27 @@
 **UPDATES AND CHANGES**
 
+*Ver 4.0.10 Final - 06-05-2016*
+
+Today we introduce the update of the V4 to 4.0.10
+
+This update fixed some issues and bugs for the V4.0.9
+
+Changes:
+- New 'sample_config4_db.php' that include the standar connection of MySQL for publication.
+- New 'sample_config4.php' that include the default difusion_domain for MySQL publication with OH.
+- New update paradigm, with new version of the components.
+- New file «update.php» in "lib/dedalo/tools/tool_administration/updates/update.php" that have the controls and procedures for update versions.
+- New css options and changes, for include 'Less css' into de development.
+- New menu!
+- New state_of_component that can put the field in "active", "deprecated", "delete"
+- Changes in the administration_tool.
+- Changes into the component_geolocation.
+
+For update from v4.0.9 you need to do the 3 update procedures; Change the files (php, js,..), update the ontology and update the data.
+
 *Ver 4.0.9 Final - 21-04-2016*
 
-Today we introduce the update of the V4 to 4.0.8
+Today we introduce the update of the V4 to 4.0.9
 
 This update fixed some issues and bugs for the V4.0.7.
 
@@ -341,4 +360,14 @@ id	|	integer Auto Increment [nextval('matrix_users_id_seq')]
 section_id	|	integer NULL	 
 section_tipo	|	character varying NULL	 
 datos	|	jsonb NULL
+
+
+*Notes of Beta 1 for MySQL:*
+
+- If you need install the beta 1, we recomended MySQL 5.6 and PHP 5.6.
+
+- For Intangible Heritage with the Render model (standar schema) for the IPCE you will need install Memcache or Redis.
+
+- For the Oral History no is necessary Memcache or Redis.
+
 

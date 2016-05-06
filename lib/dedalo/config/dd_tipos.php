@@ -77,6 +77,7 @@ define('DEDALO_COMPONENT_RESOURCES_MINUTES_TIPO'		, 'rsc54');
 define('DEDALO_TEXTAREA_FIX_BROQUEN_TAGS_TIPOS'			, serialize( array('rsc36')) );
 
 
+
 if (!defined('DEDALO_PROTOCOL')) {
 	define('DEDALO_PROTOCOL', 'http://');
 }

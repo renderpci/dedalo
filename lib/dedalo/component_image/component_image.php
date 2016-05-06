@@ -2,7 +2,6 @@
 
 	# CONTROLLER
 
-	#$id 					= $this->get_id();
 	$tipo 					= $this->get_tipo();
 	$parent 				= $this->get_parent();
 	$section_tipo 			= $this->get_section_tipo();
@@ -16,7 +15,6 @@
 	$permissions			= common::get_permissions($tipo);
 	$ejemplo				= $this->get_ejemplo();
 	$html_title				= "Info about $tipo";
-	$html_tools				= '';
 	$valor					= $this->get_valor();
 	$lang					= $this->get_lang();
 	#$lang_name				= $this->get_lang_name();
@@ -42,11 +40,9 @@
 		case 'edit'	:	
 				#
 				# JS includes additionals
-				#	js::$ar_url[] = DEDALO_LIB_BASE_URL.'/component_image/js/component_image_read.js';
 					js::$ar_url[] = PAPER_JS_URL;
 					js::$ar_url[] = DEDALO_LIB_BASE_URL . '/component_image/js/component_image_read.js' ;
 				
-				$ar_css			= $this->get_ar_css();
 				$id_wrapper 	= 'wrapper_'.$identificador_unico;
 				$component_info = $this->get_component_info('json');
 
@@ -66,8 +62,17 @@
 						#dump($image_dimensions,'image_dimensions');
 					$img_width  = $image_dimensions[0];
 					$img_height = $image_dimensions[1];
-						#dump($image_dimensions ,'$image_dimensions ');
-					
+						#dump($image_dimensions ,'$image_dimensions ');					
+				break;
+
+		case 'portal_list':
+				$id_wrapper 	= 'wrapper_'.$identificador_unico;
+				$component_info = $this->get_component_info('json');
+
+				# ImageObj				
+					$maxWidht 	= DEDALO_IMAGE_THUMB_WIDTH ;
+					$maxHeight 	= DEDALO_IMAGE_THUMB_HEIGHT  ;
+					$image_url	= $this->ImageObj->get_thumb_url($maxWidht, $maxHeight, 'resize', null, 'height');	#$m $maxWidht, $maxHeight, $fx=null, $p=null, $prop=null
 				break;
 
 		case 'player':
@@ -79,7 +84,6 @@
 				$file_name		= $this->modo;				
 
 		case 'edit_canvas'	:
-				$ar_css		= $this->get_ar_css();
 				$id_wrapper = 'wrapper_'.$identificador_unico;
 				
 				$img_src 	= $this->ImageObj->get_url();
@@ -90,7 +94,6 @@
 					#dump($image_dimensions,'image_dimensions');
 				$img_width  = $image_dimensions[0];
 				$img_height = $image_dimensions[1];
-
 				break;
 
 		case 'thumb':
@@ -109,21 +112,11 @@
 				$img_width  = $image_dimensions[0];
 				$img_height = $image_dimensions[1];
 					#dump($image_dimensions ,'$image_dimensions ');
-
-				break;
-
-		case 'portal_list':
-				$file_name = 'list';
-				# JS includes
-					js::$ar_url[] = DEDALO_LIB_BASE_URL.'/component_image/js/component_image_read.js';
-
-
-				break;
-
+				break;		
+				
 		case 'list_tm':
 				$file_name = 'list';
 		case 'list':
-
 				#
 				# DEFAULT QUALITY IMAGE URL (onclick go to)
 				$image_full_url = $this->ImageObj->get_url();
@@ -134,8 +127,7 @@
 				if (!file_exists($thumb_path)) {
 					return null;
 				}
-				$thumb_file_url = $this->get_thumb_url();
-								
+				$thumb_file_url = $this->get_thumb_url();								
 				break;
 
 		case 'list_ts':

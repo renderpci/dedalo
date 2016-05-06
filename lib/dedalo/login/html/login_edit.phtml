@@ -1,16 +1,10 @@
 <?php
 
 	# VISUALIZADOR HTML	
-
-	# ELEMENTOS
-	if(!isset ($ar_css['css_span_dato'])) 		$ar_css['css_span_dato']='';	
-	if(!isset ($ar_css['css_span_debugger']))	$ar_css['css_span_debugger']='';
-	if(!isset ($ar_css['css_wrap_login']))		$ar_css['css_wrap_login']='';	//bg_gradient1
-	
 	
 	print "\n<!-- LOGIN [tipo:$tipo id_matrix:$id] -->";
 	print "\n<div class=\"login_body\">";		
-	print "\n<div class=\"css_wrap_login {$ar_css['css_wrap_login']}\" id=\"wrap_login\">";	
+	print "\n<div class=\"css_wrap_login\" id=\"wrap_login\">";	
 
 	#
 	# MAINTENANCE
@@ -29,9 +23,6 @@
 
 		# CONTENIDO (INPUT)
 		$html_contenido = '';
-
-
-			
 
 			# LANG JUMP
 			$html_contenido .= $dedalo_aplication_langs_selector_html;
@@ -67,14 +58,10 @@
 			$html_contenido .= "\n<input type=\"hidden\" id=\"tipo_password\"		value=\"$tipo_password\" >";	
 			$html_contenido .= "\n<input type=\"hidden\" id=\"tipo_active_account\"	value=\"$tipo_active_account\" >";
 
-
-						
+		
 			#
 			# AJAX RESPONSE	
 			$html_contenido .= "\n<div class=\"login_ajax_response\">  </div>";
-
-
-			
 
 			#
 			# VERSION : Dedalo verrsion info

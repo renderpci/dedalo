@@ -21,7 +21,8 @@ if (login::is_logged()) {
 	echo "<div id=\"menu_wrapper\" class=\"$menu_wrapper_css\" >";
 
 		# Quit button
-		echo "<div id=\"quit\" class=\"button_in_menu icon_bs link\" title=\"".label::get_label('salir')."\" onclick=\"login.Quit()\"></div>";
+		echo "<div id=\"quit\" class=\"glyphicon glyphicon-off link\" title=\"".label::get_label('salir')."\" onclick=\"login.Quit()\"></div>";
+
 
 		# Icon Dédalo
 		echo "\n<a href=\"http://www.fmomo.org/\" target=\"_blank\" class=\"dedalo_icon_top\" title=\"Dédalo version ".DEDALO_VERSION." ( build ".DEDALO_BUILD.")\"></a>";
@@ -48,7 +49,7 @@ if (login::is_logged()) {
 		if( empty($caller_id) && $modo=='edit' ) {
 			echo "<!-- Inspector toggle button -->";
 			#echo "<div id=\"button_toggle_inspector\" class=\"button_in_menu text_unselectable'\" onclick=\"inspector.toggle_sidebar()\">INSPECTOR $caller_id</div>";
-			echo "<div id=\"button_toggle_inspector\" class=\"button_in_menu icon_bs link'\" title=\"".label::get_label('mostrar_inspector')."\" onclick=\"inspector.toggle_sidebar()\"></div>";
+			echo "<div id=\"button_toggle_inspector\" class=\"link'\" title=\"".label::get_label('mostrar_inspector')."\" onclick=\"inspector.toggle_sidebar()\"></div>";
 		}
 
 		#
@@ -69,9 +70,9 @@ if (login::is_logged()) {
 			}		
 			echo "<!-- Section label -->";
 			if( !empty($section_tipo) && $modo=='list' ) {
-				echo "<div id=\"current_section_label\" class=\"button_in_menu css_label text_unselectable cursor_default\">$section_name</div>";
+				echo "<div id=\"current_section_label\" class=\"button_in_menu css_label text_unselectable section_label_list \">$section_name</div>";
 			}else if(!empty($section_tipo)) {
-				echo "<div id=\"current_section_label\" class=\"button_in_menu css_label text_unselectable\" title=\"".label::get_label('ir_a_seccion')."\" onclick=\"goto_url('?m=list&t=$section_tipo')\">";				
+				echo "<div id=\"current_section_label\" class=\"button_in_menu css_label text_unselectable section_label_edit\" title=\"".label::get_label('ir_a_seccion')."\" onclick=\"goto_url('?m=list&t=$section_tipo')\">";				
 				echo $section_name;
 				echo ' <span id="current_section_id_label">'.section::$active_section_id.'</span>';
 				echo "</div>";

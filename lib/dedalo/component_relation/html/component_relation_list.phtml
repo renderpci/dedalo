@@ -2,18 +2,12 @@
 
 	# VISUALIZADOR HTML	
 
-	# ELEMENTOS
-	if(!isset ($ar_css['css_span_dato'])) 		$ar_css['css_span_dato']='';
-	if(!isset ($ar_css['css_relation'])) 		$ar_css['css_relation']='';
-	if(!isset ($ar_css['css_span_ejemplo'])) 	$ar_css['css_span_ejemplo']='';
-	if(!isset ($ar_css['css_span_debugger']))	$ar_css['css_span_debugger']='';
-	if(!isset ($ar_css['css_wrap_relation']))	$ar_css['css_wrap_relation']='';
 	
 	if(!isset ($tools_html))					$tools_html='';
 	
 	
 	echo "\n<!-- RELATION [tipo:$tipo section_id_matrix:$parent] -->";
-	echo "\n<div class=\"css_wrap_relation {$ar_css['css_wrap_relation']}\" >";
+	echo "\n<div class=\"css_wrap_relation\" >";
 	
 	# ETIQUETA (LABEL)
 	#$html_label = component_common_draw::draw_label($this);
@@ -22,10 +16,10 @@
 	$html_contenido = '';
 	switch($permissions) {
 			
-		case 0	:	$html_contenido .= "\n <span class=\"css_span_dato {$ar_css['css_span_dato']}\"> No access here (relation_list)! </span>";
+		case 0	:	$html_contenido .= "\n <span class=\"css_span_dato\"> No access here (relation_list)! </span>";
 					break;
 						
-		case 1	: 	$html_contenido .= "\n <span class=\"css_span_dato {$ar_css['css_span_dato']}\">$dato</span>";
+		case 1	: 	$html_contenido .= "\n <span class=\"css_span_dato\">$dato</span>";
 					break;	
 						
 		case ($permissions>=2)	:
@@ -33,7 +27,7 @@
 					$html_contenido .= "";
 					/*
 					if(is_array($ar_etiquetas_de_los_campos)) foreach ($ar_etiquetas_de_los_campos as $etiqueta_campo){
-						$html_contenido .= "\n <span class=\"css_span_dato {$ar_css['css_span_dato']}\">$etiqueta_campo</span>";
+						$html_contenido .= "\n <span class=\"css_span_dato\">$etiqueta_campo</span>";
 					}
 					*/
 					$html_contenido .= " Working in this visualizer (relation list) ...";	
@@ -55,24 +49,25 @@
 						}
 					}
 					*/
-					//$html_contenido .= "\n <span class=\"css_span_dato {$ar_css['css_span_dato']}\">$dato</span>";
-					//$html_contenido .= "\n <input class=\"css_input_text {$ar_css['css_relation']}\" type=\"text\" name=\"{$tipo}\" data-tipo=\"{$tipo}\" id=\"{$id}\" value=\"{$dato}\" title=\"$html_title\" />";
+					//$html_contenido .= "\n <span class=\"css_span_dato\">$dato</span>";
+					//$html_contenido .= "\n <input class=\"css_input_text\" type=\"text\" name=\"{$tipo}\" data-tipo=\"{$tipo}\" id=\"{$id}\" value=\"{$dato}\" title=\"$html_title\" />";
 		
 					#$html_contenido .= $tools_html;
-					//$html_contenido .= "\n <span  class=\"css_span_ejemplo {$ar_css['css_span_ejemplo']}\">$ejemplo</span>";
+					//$html_contenido .= "\n <span  class=\"css_span_ejemplo\">$ejemplo</span>";
 						
-			if($permissions==3)
+					if($permissions==3){
+						$html_contenido .= "\n <span class=\"css_span_debugger\" id=\"debugger_{$tipo}\" >{$debugger}</span>";	
+					}
+					break;
 					
-					$html_contenido .= "\n <span class=\"css_span_debugger {$ar_css['css_span_debugger']}\" id=\"debugger_{$tipo}\" >{$debugger}</span>";	
+					
 					
 					
 	}
 	
 	
 	# PRINT HTML
-	#print $html_label;
 	print $html_contenido;
-	#print $html_tools;
 	
 	
 	echo "\n</div>\n\n"; //wrap

@@ -52,7 +52,7 @@ class component_date extends component_common {
 	*/
 	public function get_dato() {
 		$dato = parent::get_dato();
-	
+		
 		if (empty($dato) || (is_object($dato) && empty(get_object_vars($dato))) ) {
 			#$dd_date = new dd_date();
 				#dump($dd_date, ' dd_date');
@@ -60,12 +60,12 @@ class component_date extends component_common {
 		}
 
 		# Compatibility old dedalo instalations
-		if (is_string($dato)) {
+		/*if (is_string($dato)) {
 			$dd_date    = new dd_date();
 			$this->dato = (object)$dd_date->get_date_from_timestamp( $dato );
 			$this->Save();
 			$dato = parent::get_dato();
-		}
+		}*/
 
 		return (object)$dato;
 	}
@@ -519,6 +519,50 @@ class component_date extends component_common {
 		return (object)$search_comparison_operators;
 
 	}#end build_search_comparison_operators
+
+	/**
+	* UPDATE_DATO_VERSION
+	* @return 
+	*/
+	public static function update_dato_version($update_version, $dato_unchanged) {
+
+		$update_version = implode(".", $update_version);
+
+		switch ($update_version) {
+			case '4.0.10':
+				#$dato = $this->get_dato_unchanged();
+					
+				# Compatibility old dedalo instalations
+				if (is_string($dato_unchanged) && !empty($dato_unchanged)) {
+						#dump($dato, ' dato '.to_string($this->parent).' '. to_string($this->section_tipo));
+					$dd_date    = new dd_date();
+					$new_dato 	= (object)$dd_date->get_date_from_timestamp( $dato_unchanged );
+											
+					$response = new stdClass();
+					$response->result =1;
+					$response->new_dato = $new_dato;
+					return $response;
+					
+
+				}else{
+					$response = new stdClass();
+					$response->result = 2;
+					$response->msg = to_string($dato_unchanged)." : The dato don't need update.<br />";
+					return $response;
+				}
+				break;
+			case '4.0.10':
+				$result = true;
+				return $result;
+				break;
+			default:
+				# code...
+				break;
+		}
+
+		
+		
+	}#end update_dato_version
 
 
 

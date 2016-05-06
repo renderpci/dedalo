@@ -177,7 +177,8 @@ class dd_error {
 if(SHOW_DEBUG===true) {
 
 	ini_set( 'display_errors', 1 );     // Default 1
-	error_reporting(E_ALL);             // Default -1 or E_ALL (Report all PHP errors)
+	#error_reporting(E_ALL);             // Default -1 or E_ALL (Report all PHP errors)
+	error_reporting(E_ALL ^ E_DEPRECATED);
 
 }else{
 

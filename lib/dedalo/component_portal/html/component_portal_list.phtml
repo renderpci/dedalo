@@ -74,15 +74,29 @@
 							# COLUMNS
 								$table .= "<div class=\"\" data-section_id=\"$section_id\">";
 								foreach ($ar_columns as $column_tipo => $column_label) {
-									if($column_tipo=='edit') continue;
+
+									if($column_tipo=='edit') continue; // Skip edit column
 									
 									#
 									# COMPONENTS COLUMNS
 									$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($column_tipo, true);
 									
-									$value = isset($current_row[$column_tipo]) ? $current_row[$column_tipo] : '';
 
+									/**/
+									$column_value = isset($current_row[$column_tipo]) ? $current_row[$column_tipo] : '';
+										#dump($column_value, ' column_value ++ '.to_string($rows_data->strQuery));
+									$value = (string)$modelo_name::render_list_value($column_value, // value string from db
+																					 $column_tipo, // current component tipo
+																					 $section_id, // current row section id
+																					 'list', // mode fixed list
+																					 DEDALO_DATA_LANG, // current data lang
+																					 $target_section_tipo, // current section tipo
+																					 null
+																					);									
+									
+									/*
 									# Row value overwrite on special cases
+									$value = isset($current_row[$column_tipo]) ? $current_row[$column_tipo] : '';
 									switch ($modelo_name) {
 
 										case 'component_portal':											
@@ -97,6 +111,7 @@
 												$component_portal->set_identificador_unico($component_portal->get_identificador_unico().'_'.$id); // Set unic id for build search_options_session_key used in sessions
 											}											
 											$value = $component_portal->get_html();
+												dump($id, ' id ++ '.to_string());
 											break;
 										
 										case ( $modelo_name=='component_autocomplete' ):
@@ -143,12 +158,15 @@
 																								$lang,
 																								$target_section_tipo);
 											$value = $current_component->get_html();
-										/**/										
+																			
 									}
 									#dump($ar_columns, ' ar_columns ++ '.to_string($modelo_name));
+									*/
 
+									
+									# DIV COLUMN	
 									# aditional td css selectors
-									$td_css_selector = 'td_'.$modelo_name;
+									$td_css_selector = 'column_'.$modelo_name.' column_'.$column_tipo;							
 									$table .= "<div class=\"$td_css_selector\">";
 									if (is_string($value)) {
 										$table .= $value;

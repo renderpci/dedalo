@@ -1,10 +1,5 @@
 <?php
 	
-	#$cwd = basename(__DIR__);
-	#css::$ar_url[] = DEDALO_LIB_BASE_URL."/$cwd/css/$cwd.css";
-	#js::$ar_url[]  = DEDALO_LIB_BASE_URL."/$cwd/js/$cwd.js";
-
-	
 	switch($modo) {
 		
 		case 'tool_lang':
@@ -20,7 +15,6 @@
 				# Verify component content record is inside section record filter
 				if ($this->get_filter_authorized_record()===false) return NULL ;
 					
-				$ar_css		= $this->get_ar_css();
 				$id_wrapper = 'wrapper_'.$identificador_unico;
 				$input_name = "{$tipo}_{$parent}";
 
@@ -35,8 +29,6 @@
 				}
 				$component_info 	= $this->get_component_info('json');
 				
-				#$ar_tools_obj			= $this->get_ar_tools_obj();
-				#foreach($ar_tools_obj as $tool_obj) $html_tools .= $tool_obj->get_html();
 				#$file_name	= 'edit';								
 				break;
 		case 'print' :
@@ -44,7 +36,6 @@
 
 				break;
 		case 'tool_time_machine'	:	
-				$ar_css		= $this->get_ar_css();
 				$id_wrapper = 'wrapper_'.$identificador_unico.'_tm';
 				$input_name = "{$tipo}_{$parent}_tm";	
 				# Force file_name
@@ -60,27 +51,22 @@
 				break;
 						
 		case 'list_of_values'	:
-				$ar_css		= false;
 				break;
 
 		case 'relation':
 				# Force file_name to 'list'
 				$file_name  = 'list';
-				$ar_css		= false;
 				break;
 						
-		case 'lang'	:
-				$ar_css = $this->get_ar_css();										
+		case 'lang'	:									
 				break;
 		
 		case 'search':
 				$ar_comparison_operators 	= $this->build_search_comparison_operators();
-				$ar_logical_operators 		= $this->build_search_logical_operators();
-				$ar_css = false;		
+				$ar_logical_operators 		= $this->build_search_logical_operators();	
 				break;
 						
 		case 'simple':
-				$ar_css = false;	
 				break;						
 	}
 	

@@ -2,12 +2,60 @@
 
 	# VISUALIZADOR HTML
 	$html_tool  ='';
+
+	#
+	# GROUPS
+	foreach ($ar_diffusion_map as $diffusion_group_tipo => $ar_diffusion_element) {
+	
+		#$html_tool .= "<div class=\"diffusion_group\">";
+			
+			#$html_tool .= label::get_label('tool_diffusion');		
+			#$html_tool .= "<div class=\"diffusion_group_name\">";
+			#$html_tool .= RecordObj_dd::get_termino_by_tipo($diffusion_group_tipo, DEDALO_DATA_LANG, true, false);
+			#$html_tool .= "</div>";
+
+			#$html_tool .= "<ul>"; 
+			foreach ($ar_diffusion_element as $obj_value) {				
+	
+				if ($obj_value->class_name=='diffusion_rdf') {
+					continue; # Skip rdf for now
+				}
+
+				#$html_tool .= "<li>";
+
+				$options = new stdClass();
+					$options->section_tipo  		= $this->section_tipo;
+					$options->mode 					='export_list';
+					$options->diffusion_element_tipo= $obj_value->element_tipo;
+
+				$options_json = json_encode($options);
+
+				$html_tool .= "\n <div class=\"btn_inside_section_buttons_container tool_diffusion\"
+				data-options='$options_json'
+				onclick=\"tool_diffusion.export_list(this)\"
+				>";
+				$html_tool .= RecordObj_dd::get_termino_by_tipo($obj_value->element_tipo, DEDALO_DATA_LANG, true, false);
+				$html_tool .= "</div>";
+
+				/*
+				$checked  = isset($obj_value->checked) && $obj_value->checked===true ? 'checked="checked"' : ''; // Default is not chechecd
+				$html_tool .= " <input type=\"checkbox\" name=\"diffusion_element_checkbox\" value=\"".$obj_value->element_tipo."\" $checked />";
+				$html_tool .= " <span title=\"".$obj_value->class_name."\">".$obj_value->name."</span>";
+				*/
+				#$html_tool .= "</li>";
+			}
+			#$html_tool .= "</ul>";			
+
+		#$html_tool .= "</div>";//end diffusion_group
+	}
+
+	/*
 	$html_tool .= "\n <div id=\"button_difussion_export_list\" class=\"btn_inside_section_buttons_container tool_diffusion\"
 	data-options='$options_json'
 	onclick=\"tool_diffusion.export_list(this,'')\">".label::get_label('tool_diffusion')."
 	</div>";
 	#$html_tool .= "<div id=\"tool_diffusion_response\"></div>";
-	
+	*/
 	
 	# PRINT HTML
 	echo $html_tool;

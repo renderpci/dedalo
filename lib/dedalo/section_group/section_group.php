@@ -12,7 +12,6 @@
 	$label					= $this->get_label();
 	$modo					= $this->get_modo();
 	$label_name				= $this->get_label();
-	$ar_css					= $this->get_ar_css();
 	$component_name			= get_class($this);
 	$components_html		= $this->get_components_html();					#dump($id);
 	$section_tipo			= $this->get_section_tipo();

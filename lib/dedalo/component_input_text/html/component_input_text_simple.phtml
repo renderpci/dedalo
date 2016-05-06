@@ -1,35 +1,33 @@
 <?php
 
 	# VISUALIZADOR HTML	
-
-	# ELEMENTOS
-	if(!isset ($ar_css['css_span_dato'])) 			$ar_css['css_span_dato']='';
-	if(!isset ($ar_css['css_input_text'])) 			$ar_css['css_input_text']='';
-	if(!isset ($ar_css['css_wrap_input_text']))		$ar_css['css_wrap_input_text']='';	
+	
 	
 	print "\n<!-- INPUT_TEXT [$tipo][$parent] -->";
-	print "\n<div class=\"css_wrap_input_text {$ar_css['css_wrap_input_text']}\" >";
-	
-	# ETIQUETA (LABEL)
-	$html_label = component_common_draw::draw_label($this);
-	
-	# CONTENIDO (INPUT)
-	$html_contenido = '';
 
-	$html_contenido .= "\n <input class=\"css_input_text {$ar_css['css_input_text']}\" type=\"text\"
-	id=\"{$identificador_unico}\" name=\"{$tipo}_{$parent}\"
-	data-tipo=\"{$tipo}\"
-	data-modo=\"login\"
-	value=\"\"
-	title=\"$html_title\"
-	placeholder=\"$label\"
-	onchange=\"component_input_text.Save(this)\"
-	/>";
+	print "\n<div class=\"css_wrap_input_text\" >";
 	
-	
-	# PRINT HTML
-	print $html_label;
-	print $html_contenido;
+		# ETIQUETA (LABEL)
+		$html_label = component_common_draw::draw_label($this);
+		
+		# CONTENIDO (INPUT)
+		$html_contenido = '';
+
+		$html_contenido .= "\n <input class=\"css_input_text\" type=\"text\"
+		onchange=\"component_input_text.Save(this)\"
+		id=\"{$identificador_unico}\"
+		name=\"{$tipo}_{$parent}\"
+		data-tipo=\"{$tipo}\"
+		data-modo=\"login\"
+		value=\"\"
+		title=\"$html_title\"
+		placeholder=\"$label\"	
+		/>";
+		
+		
+		# PRINT HTML
+		print $html_label;
+		print $html_contenido;
 	
 	
 	print "\n</div>\n\n"; //wrap

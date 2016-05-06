@@ -7,7 +7,6 @@
 	$permissions		= common::get_permissions($tipo);
 	$label				= $this->get_label();
 	$modo				= $this->get_modo();
-	$ar_css				= $this->get_ar_css();
 	$ar_section			= $this->get_ar_section();
 	$selected_section 	= navigator::get_selected('section');
 	
@@ -32,10 +31,10 @@
 	# LOAD PAGE	
 	switch($modo) {
 		
-		case 'edit'		:	$ar_css		= $this->get_ar_css();							
+		case 'edit'		:							
 							break;								
 						
-		case 'list'		:	$ar_css		= $this->get_ar_css();
+		case 'list'		:
 							break;	
 						
 	}

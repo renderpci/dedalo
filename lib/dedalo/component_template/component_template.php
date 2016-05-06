@@ -1,8 +1,6 @@
 <?php
 	
 	# CONTROLLER
-
-	#$id 					= $this->get_id();
 	$tipo 					= $this->get_tipo();
 	$parent 				= $this->get_parent();
 	$section_tipo			= $this->get_section_tipo();
@@ -32,38 +30,27 @@
 	
 	switch($modo) {
 		
-		case 'edit'	:	$ar_css		= $this->get_ar_css();
-						#foreach($ar_tools_obj as $tool_obj) $html_tools .= $tool_obj->get_html();
+		case 'edit'	:
 						break;
 		
-		case 'search' :	$ar_css		= false; 							
+		case 'search' :						
 						break;
 						
-		case 'list'	:	$ar_css		= false;
+		case 'list'	:
 						$max_char = 256;
 						if(strlen($dato)>$max_char) $dato = substr($dato,0,$max_char).'..';
 						break;
 
 		case 'relation':# Force modo list
 						$file_name 	= 'list';
-						$ar_css		= false;
 						$max_char 	= 256;
 						if(strlen($dato)>$max_char) $dato = substr($dato,0,$max_char).'..';
 						break;
 						
 		case 'tool_time_machine' :
-						$ar_css		= $this->get_ar_css();
 						break;
 						
-		case 'lang'	:	$ar_css		= $this->get_ar_css();
-						$ar_tools_obj			= $this->get_ar_tools_obj();	
-						$html_tools				= '';
-						# load only time machime tool
-						foreach($ar_tools_obj as $tool_obj) {
-							if( get_class($tool_obj) == 'tool_time_machine') {																		
-								$html_tools .= $tool_obj->get_html();								
-							}
-						}
+		case 'lang'	:
 						break;	
 	}
 		

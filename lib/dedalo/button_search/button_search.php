@@ -11,26 +11,25 @@
 	$html_title				= "Info about $tipo";
 	
 	# Fixed to 1
-	$permissions			= 1; #common::get_permissions($tipo); 	
+	$permissions			= 1;	
 	
 	$file_name = $modo;
 
 	
 	switch($modo) {
 		
-		case 'edit'		:	$ar_css		= $this->get_ar_css();							
-							break;
+		case 'edit':				
+				break;
 
 		case 'tool_portal':
-							$file_name  = 'list';
-							break;
+				$file_name  = 'list';
+				break;
 						
-		case 'list'		:	$ar_css		= false;	
-							break;
+		case 'list':
+				break;
 						
-		case 'search'	:	$ar_css		= false;
-							break;	
-						
+		case 'search':
+				break;							
 						
 	}
 		

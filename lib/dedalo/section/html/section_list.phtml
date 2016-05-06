@@ -2,9 +2,12 @@
 	
 	# VISUALIZADOR HTML	
 	
-	print "\n\n<!-- SECTION [tipo:$tipo modo:$modo] -->";
+	print "\n\n<!-- SECTION LIST [tipo:$tipo modo:$modo] -->";
 
-	print "\n<div class=\"css_section_wrap\" id=\"section_wrap_{$tipo}\" data-modo=\"$modo\" data-options=\"\">";
+	print "\n<div class=\"css_section_wrap css_section_wrap_{$modo} wrap_section wrap_section_{$tipo}\"	id=\"section_wrap_{$tipo}\"
+	data-modo=\"$modo\"
+	data-options=\"\"
+	>";
 	
 	
 		# ETIQUETA (LABEL)
@@ -94,7 +97,7 @@
 
 
 						#
-						# TOOL_EXPORT button for export to mysql
+						# TOOL_EXPORT button for export to csv, etc.
 						if(SHOW_DEBUG) {
 						$authorized_tool = (bool)component_security_tools::is_authorized_tool_for_logged_user('tool_export');
 						if ($authorized_tool && defined('DEDALO_TOOL_EXPORT_FOLDER_PATH') && !$is_process_section) {
@@ -102,19 +105,28 @@
 							$html_buttons  .= $tool_export->get_html();
 						}
 						}						
-
+					
+					
 						
+						/* # TOOL_DIFFUSION button for export to mysql OLD
+							$authorized_tool = (bool)component_security_tools::is_authorized_tool_for_logged_user('tool_diffusion');						
+							if ($authorized_tool && defined('DEDALO_DIFFUSION_MAP')) {
+								$DEDALO_DIFFUSION_MAP = unserialize(DEDALO_DIFFUSION_MAP);
+								#dump($DEDALO_DIFFUSION_MAP, ' DEDALO_DIFFUSION_MAP ++ '.to_string($tipo));
+								if (isset($DEDALO_DIFFUSION_MAP[$tipo]) && !$is_process_section) {								
+									$tool_diffusion = new tool_diffusion($tipo,'button');
+									$html_buttons  .= $tool_diffusion->get_html();									
+								}
+							}
+							*/
 						#
 						# TOOL_DIFFUSION button for export to mysql
-						$authorized_tool = (bool)component_security_tools::is_authorized_tool_for_logged_user('tool_diffusion');						
-						if ($authorized_tool && defined('DEDALO_DIFFUSION_MAP')) {
-							$DEDALO_DIFFUSION_MAP = unserialize(DEDALO_DIFFUSION_MAP);
-							#dump($DEDALO_DIFFUSION_MAP, ' DEDALO_DIFFUSION_MAP ++ '.to_string($tipo));
-							if (isset($DEDALO_DIFFUSION_MAP[$tipo]) && !$is_process_section) {								
-								$tool_diffusion = new tool_diffusion($tipo,'button');
-								$html_buttons  .= $tool_diffusion->get_html();									
-							}
+						if ((bool)component_security_tools::is_authorized_tool_for_logged_user('tool_diffusion') &&
+							(bool)tool_diffusion::have_section_diffusion($tipo)) {
+							$tool_diffusion = new tool_diffusion($tipo,'button');							
+							$html_buttons  .= $tool_diffusion->get_html();
 						}
+						
 
 
 						#

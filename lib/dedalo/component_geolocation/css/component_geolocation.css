@@ -7,6 +7,19 @@ WRAP DIV CONTAINER*/
 
 }
 
+/* FIELDS 
+-------------------------------------------------- */
+.geolocation_text{
+	font-size: 14px;
+	top: 2px;
+	margin-right: 5px;
+}
+.geolocation_separator{
+	border-left: 1px solid;
+	border-color: #333333;
+	margin-left: 5px;
+}
+
 /* MAP 
 -------------------------------------------------- */
 .leaflet_map {
@@ -21,10 +34,16 @@ WRAP DIV CONTAINER*/
 		font-weight: bold;
 	}
 	.map_inputs {
+		-webkit-touch-callout: none;
+	    -webkit-user-select: none;
+	    -khtml-user-select: none;
+	    -moz-user-select: none;
+	    -ms-user-select: none;
+	    user-select: none;
 		position: absolute;
 		top: 10px;
 		left: 50px;
-		z-index: 9999;
+		z-index: 10;
 		background-color: rgb(255, 255, 255);
 		padding: 5px;
 		border-radius: 4px;
@@ -62,7 +81,7 @@ WRAP DIV CONTAINER*/
 .leaflet-top,
 .leaflet-bottom {
 	/* bajamos el z-index (1000 por defecto), a 100 para evitar problemas */
-	z-index: 2001 !important;
+	z-index: 10 !important;
 }
 
 .leaflet-draw-draw-circle {

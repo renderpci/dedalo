@@ -5,6 +5,9 @@ if(login::is_logged()!==true) return;
 //die("<span class='error'> Auth error: please login </span>");
 
 
+ignore_user_abort(true);
+
+
 # set vars
 	$vars = array('mode',);
 		foreach($vars as $name) $$name = common::setVar($name);

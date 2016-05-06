@@ -2,18 +2,10 @@
 
 	# VISUALIZADOR HTML	
 
-	# ELEMENTOS
-	if(!isset ($ar_css['css_span_dato'])) 		$ar_css['css_span_dato']='';
-	if(!isset ($ar_css['css_text_area'])) 		$ar_css['css_text_area']='';
-	if(!isset ($ar_css['css_span_ejemplo'])) 	$ar_css['css_span_ejemplo']='';
-	if(!isset ($ar_css['css_span_debugger']))	$ar_css['css_span_debugger']='';
-	if(!isset ($ar_css['css_wrap_text_area']))	$ar_css['css_wrap_text_area']='';
-	
-	if(!isset ($html_tools))					$html_tools='';
 	if(isset($_REQUEST[$tipo]))					$dato = $_REQUEST[$tipo];		#var_dump($_REQUEST[$tipo]);
 	
 	print "\n<!-- TEXT AREA [tipo:$tipo section_id_matrix:$tipo] -->";
-	print "\n<div class=\"css_wrap_text_area {$ar_css['css_wrap_text_area']}\" >";
+	print "\n<div class=\"css_wrap_text_area\" >";
 	
 	# ETIQUETA (LABEL)
 	$html_label = component_common_draw::draw_label($this);
@@ -22,19 +14,20 @@
 	$html_contenido = '';
 	switch($permissions) {
 			
-		case 0	:	$html_contenido .= "\n <span class=\"css_span_dato {$ar_css['css_span_dato']}\"> No access here (text_area)! </span>";	
+		case 0	:	$html_contenido .= "\n <span class=\"css_span_dato\"> No access here (text_area)! </span>";	
 					break;
 						
-		case 1	: 	$html_contenido .= "\n <span class=\"css_span_dato {$ar_css['css_span_dato']}\">$dato</span>";
+		case 1	: 	$html_contenido .= "\n <span class=\"css_span_dato\">$dato</span>";
 					break;	
 						
 		
 		case ($permissions>=2)	:
 		
-					$html_contenido .= "\n <textarea class=\"css_text_area {$ar_css['css_text_area']}\" 
+					$html_contenido .= "\n <textarea class=\"css_text_area\" 
 					id=\"{$identificador_unico}\" name=\"{$tipo}\" 
 					data-tipo=\"{$tipo}\" 
 					title=\"$html_title\">$dato</textarea>";
+					break;
 				
 	}
 	

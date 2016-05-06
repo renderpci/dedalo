@@ -22,17 +22,10 @@
 	/*
 
 	# VISUALIZADOR HTML	
-
-	# ELEMENTOS
-	if(!isset ($ar_css['css_span_dato'])) 			$ar_css['css_span_dato']='';
-	if(!isset ($ar_css['css_pdf'])) 				$ar_css['css_pdf']='';
-	if(!isset ($ar_css['css_span_ejemplo'])) 		$ar_css['css_span_ejemplo']='';
-	if(!isset ($ar_css['css_span_debugger']))		$ar_css['css_span_debugger']='';
-	if(!isset ($ar_css['css_wrap_pdf']))			$ar_css['css_wrap_pdf']='';	
 	
 	
 	print "\n<!-- PDF [tipo:$tipo section_id_matrix:$parent] $label -->";
-	print "\n<div class=\"css_wrap_pdf wrap_component {$ar_css['css_wrap_pdf']}\" id=\"{$id_wrapper}\"
+	print "\n<div class=\"css_wrap_pdf wrap_component\" id=\"{$id_wrapper}\"
 	data-tipo=\"{$tipo}\" data-lang=\"{$lang}\" data-parent=\"{$parent}\" data-modo=\"{$modo}\" data-dato=\"{$valor}\" data-component_name=\"{$component_name}\" data-path=\"{$pdf_url}\"
 	 >";
 	
@@ -41,7 +34,7 @@
 		$html_contenido = '';
 		switch($permissions) {
 				
-			case 0 :	$html_contenido .= "\n <span class=\"css_span_dato {$ar_css['css_span_dato']}\"> ".label::get_label('sin_acceso')." (av)</span>";
+			case 0 :	$html_contenido .= "\n <span class=\"css_span_dato\"> ".label::get_label('sin_acceso')." (av)</span>";
 						break;
 							
 			case ($permissions>=1) :
@@ -62,8 +55,11 @@
 							$html_contenido .= "\n </div>";
 						}
 						
-				if($permissions==3)		
-						$html_contenido .= "\n <span class=\"css_span_debugger {$ar_css['css_span_debugger']}\" id=\"debugger_{$tipo}\" >{$debugger}</span>";	
+				if($permissions==3){
+					$html_contenido .= "\n <span class=\"css_span_debugger\" id=\"debugger_{$tipo}\" >{$debugger}</span>";	
+				}
+				break;
+						
 												
 		}
 

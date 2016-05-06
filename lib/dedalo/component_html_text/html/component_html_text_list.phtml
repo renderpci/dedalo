@@ -1,14 +1,9 @@
 <?php
 
-	# VISUALIZADOR HTML	
+	# VISUALIZADOR HTML
 
-	# ELEMENTOS
-	if(!isset ($ar_css['css_html_text_wrap'])) 		$ar_css['css_html_text_wrap']='';
-	if(!isset ($ar_css['css_span_dato'])) 			$ar_css['css_span_dato']=''; 
-	if(!isset ($ar_css['css_span_debugger']))		$ar_css['css_span_debugger']='';
-	
-	
 	#echo "\n<!-- TEXT AREA [tipo:$tipo id_matrix:$id] -->";
+
 	echo "<div class=\"css_html_text_wrap\" >";
 	
 	# ETIQUETA (LABEL)
@@ -19,17 +14,18 @@
 	switch($permissions) {
 			
 		case 0:		
-			$html_contenido .= "\n <span class=\"css_span_dato {$ar_css['css_span_dato']}\"> No access here (html_text)! </span>";	
+			$html_contenido .= "\n <span class=\"css_span_dato\"> No access here (html_text)! </span>";	
 					break;
 						
 		case ($permissions>=1):
 		
-			$html_contenido .= "<span class=\"css_span_dato {$ar_css['css_span_dato']}\" data-tipo=\"{$tipo}\" data-section_tipo=\"{$section_tipo}\" data-parent=\"{$parent}\" data-lang=\"{$lang}\">$valor</span>";
+			$html_contenido .= "<span class=\"css_span_dato\" data-tipo=\"{$tipo}\" data-section_tipo=\"{$section_tipo}\" data-parent=\"{$parent}\" data-lang=\"{$lang}\">$valor</span>";
 			
 			
 			if($permissions==3) {
-				$html_contenido .= "<span class=\"css_span_debugger {$ar_css['css_span_debugger']}\" id=\"debugger_{$tipo}\" >{$debugger}</span>";	
+				$html_contenido .= "<span class=\"css_span_debugger\" id=\"debugger_{$tipo}\" >{$debugger}</span>";	
 			}
+			break;
 	}
 	
 	

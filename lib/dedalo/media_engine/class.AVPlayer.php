@@ -325,7 +325,7 @@ class AVPlayer extends Accessors {
 		
 					var videoCode = new String('');
 								
-					if( navigator.userAgent.indexOf('Chrome') != -1 || navigator.userAgent.indexOf('AppleWebKit') != -1 ) {
+					if( navigator.userAgent.indexOf('Chrome') != -1 || navigator.userAgent.indexOf('AppleWebKit') != -1  || navigator.userAgent.indexOf('Gecko') != -1 ) {
 			
 						modo = 'html5' ;	//alert('{$src}')
 						

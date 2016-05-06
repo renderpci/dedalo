@@ -1,18 +1,10 @@
 <?php
 
 	# VISUALIZADOR HTML	
-
-	# ELEMENTOS
-	if(!isset ($ar_css['css_span_dato'])) 							$ar_css['css_span_dato']='';
-	if(!isset ($ar_css['css_component_security_areas'])) 			$ar_css['css_component_security_areas']='';
-	if(!isset ($ar_css['css_span_ejemplo'])) 						$ar_css['css_span_ejemplo']='';
-	if(!isset ($ar_css['css_span_debugger']))						$ar_css['css_span_debugger']='';
-	if(!isset ($ar_css['css_wrap_component_security_areas']))		$ar_css['css_wrap_component_security_areas']='';
-	if(!isset ($ar_css['css_component_security_areas_rotulo']))		$ar_css['css_component_security_areas_rotulo']='';
 	
 	
 	#print "\n<!-- SECURITY AREAS (CHECK BOX) [tipo:$tipo section_id_matrix:$parent] -->";
-	#print "\n<div class=\"css_component_security_areas {$ar_css['css_component_security_areas_rotulo']}\" >";
+	#print "\n<div class=\"css_component_security_areas\" >";
 	
 	# ETIQUETA (LABEL)
 	#$html_label = component_common_draw::draw_label($this);
@@ -22,7 +14,7 @@
 	#dump($permissions'permissions');
 	switch($permissions) {
 			
-		case 0	:	$html_contenido .= "\n <span class=\"css_span_dato {$ar_css['css_span_dato']}\"> ".label::get_label('sin_acceso')." (component security areas) $valor</span>"; 
+		case 0	:	$html_contenido .= "\n <span class=\"css_span_dato\"> ".label::get_label('sin_acceso')." (component security areas) $valor</span>"; 
 					break;
 						
 		case ($permissions>=1)	:

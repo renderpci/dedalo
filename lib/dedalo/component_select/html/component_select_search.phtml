@@ -2,19 +2,11 @@
 
 	# VISUALIZADOR HTML	
 
-	# ELEMENTOS
-	if(!isset ($ar_css['css_span_dato'])) 			$ar_css['css_span_dato']='';
-	if(!isset ($ar_css['css_select'])) 				$ar_css['css_select']='';
-	if(!isset ($ar_css['css_span_ejemplo'])) 		$ar_css['css_span_ejemplo']='';
-	if(!isset ($ar_css['css_span_debugger']))		$ar_css['css_span_debugger']='';
-	if(!isset ($ar_css['css_wrap_select']))			$ar_css['css_wrap_select']='';
-	//if(!isset ($ar_css['css_select_rotulo']))		$ar_css['css_select_rotulo']='';
 	
-	if(isset($_REQUEST[$tipo]))						$dato = $_REQUEST[$tipo];		#var_dump($_REQUEST[$tipo]);
+	if(isset($_REQUEST[$tipo]))						$dato = $_REQUEST[$tipo];
 	
 	
-	#print "\n<!-- SELECT [tipo:$tipo id_matrix:$id] $label -->";
-	print "\n<div class=\"css_wrap_select {$ar_css['css_wrap_select']}\" >";
+	print "\n<div class=\"css_wrap_select\" >";
 	
 	# ETIQUETA (LABEL)
 	$html_label = component_common_draw::draw_label($this);
@@ -34,7 +26,7 @@
 
 					
 					# SELECT
-					$html_contenido .= "\n <select class=\"css_select {$ar_css['css_select']}\" name=\"{$tipo}\" data-tipo=\"{$tipo}\" title=\"$html_title\"> ";
+					$html_contenido .= "\n <select class=\"css_select\" name=\"{$tipo}\" data-tipo=\"{$tipo}\" title=\"$html_title\"> ";
 						if(empty($dato)) {
 							$checked = 'selected';
 						}else{

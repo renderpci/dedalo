@@ -215,6 +215,7 @@
 		if (isset($id)) {
 			$page_title .= " $id";
 		}
+		$page_title = DEDALO_ENTITY .' '.$page_title;
 
 
 	#

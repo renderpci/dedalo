@@ -17,7 +17,6 @@
 	$permissions			= common::get_permissions($tipo); 	
 	$ejemplo				= $this->get_ejemplo();
 	$html_title				= "Info about $tipo";		
-	$html_tools				= '';
 	$valor					= $this->get_valor();				
 	$lang					= $this->get_lang();
 	$lang_name				= $this->get_lang_name();
@@ -54,7 +53,6 @@
 				# Verify component content record is inside section record filter
 				if ($this->get_filter_authorized_record()===false) return NULL ;
 				
-				$ar_css		= $this->get_ar_css();
 				$id_wrapper = 'wrapper_'.$identificador_unico;
 				$input_name = "{$tipo}_{$parent}";
 
@@ -68,17 +66,13 @@
 						#dump($default_component,'$default_component');			
 				}
 				$component_info 	= $this->get_component_info('json');
-				
-				#$ar_tools_obj			= $this->get_ar_tools_obj();
-				#foreach($ar_tools_obj as $tool_obj) $html_tools .= $tool_obj->get_html();
-				#$file_name	= 'edit';								
+												
 				break;
 		case 'print' :
 				$dato = htmlentities($dato);
 
 				break;
 		case 'tool_time_machine'	:	
-				$ar_css		= $this->get_ar_css();
 				$id_wrapper = 'wrapper_'.$identificador_unico.'_tm';
 				$input_name = "{$tipo}_{$parent}_tm";	
 				# Force file_name
@@ -94,26 +88,21 @@
 				break;
 						
 		case 'list_of_values'	:
-				$ar_css		= false;
 				break;
 
 		case 'relation':
 				# Force file_name to 'list'
 				$file_name  = 'list';
-				$ar_css		= false;
 				break;
 						
-		case 'lang'	:
-				$ar_css = $this->get_ar_css();										
+		case 'lang'	:									
 				break;
 		
 		case 'search':
-				$ar_css = false;
 				$dato = empty($dato) ? '' : $dato;		
 				break;
 						
 		case 'simple':
-				$ar_css = false;	
 				break;						
 	}
 	

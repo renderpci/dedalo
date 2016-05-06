@@ -1,16 +1,10 @@
 <?php
 
-	# VISUALIZADOR HTML	
-
-	# ELEMENTOS
-	if(!isset ($ar_css['css_span_dato'])) 		$ar_css['css_span_dato']='';
-	if(!isset ($ar_css['css_number']))			$ar_css['css_number']='';
-	if(!isset ($ar_css['css_span_ejemplo'])) 	$ar_css['css_span_ejemplo']='';
-	if(!isset ($ar_css['css_span_debugger']))	$ar_css['css_span_debugger']='';
-	
+	# VISUALIZADOR HTML		
 	
 	
 	print "\n<!-- NUMBER [tipo:$tipo section_id_matrix:$parent] $label -->";
+
 	print "\n<div class=\"wrap_component css_wrap_number wrap_component_{$tipo}\" id=\"{$id_wrapper}\"
 	data-tipo=\"{$tipo}\"
 	data-lang=\"{$lang}\"
@@ -33,13 +27,12 @@
 			case 0	:	$html_contenido .= "";
 						break;
 							
-			case 1	: 	$html_contenido .= "\n <span class=\"css_span_dato {$ar_css['css_span_dato']}\">$dato</span>";
+			case 1	: 	$html_contenido .= "\n <span class=\"css_span_dato\">$dato</span>";
 						break;	
 							
-			case ($permissions>=2)	:
-		
+			case ($permissions>=2) :		
 					
-						$html_contenido .= "\n <input class=\"css_number {$ar_css['css_number']}\" type=\"text\" 
+						$html_contenido .= "\n <input class=\"css_number\" type=\"text\" 
 						name=\"{$input_name}\" 
 						data-tipo=\"{$tipo}\" data-section_tipo=\"{$section_tipo}\" data-parent=\"{$parent}\" data-lang=\"{$lang}\" 
 						value=\"{$dato}\" 
@@ -47,11 +40,12 @@
 						/>";			
 						
 						#$html_contenido .= "\n <span  class=\"css_span_log\"></span>";					
-						#$html_contenido .= "\n <span  class=\"css_span_ejemplo {$ar_css['css_span_ejemplo']}\">$ejemplo</span>";						
+						#$html_contenido .= "\n <span  class=\"css_span_ejemplo\">$ejemplo</span>";						
 						
-				if($permissions==3)		
-						$html_contenido .= "\n <span class=\"css_span_debugger {$ar_css['css_span_debugger']}\" id=\"debugger_{$tipo}\" >{$debugger}</span>";	
-												
+						if($permissions==3)	{
+							$html_contenido .= "\n <span class=\"css_span_debugger\" id=\"debugger_{$tipo}\" >{$debugger}</span>";	
+						}	
+						break;									
 		}
 
 		# Prepare content to show in page

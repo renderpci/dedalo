@@ -302,7 +302,9 @@ class component_relation extends component_common {
 		#$log->log_message("Calculated all_authorized_content_sections. Time to generate:" . round( microtime(TRUE) - tools::get_request_time() ,4), logger::DEBUG, __METHOD__);
 	
 		return $ar_mix;
-	}
+	}//end get_all_authorized_content_sections
+
+	
 
 	/**
 	* GET AR ALL RELATION SECTIONS (BY TIPO)
@@ -436,8 +438,7 @@ class component_relation extends component_common {
 				return $ar_section_relations;
 				break;
 		}
-	}
-
+	}//end get_ar_section_relations_for_current_tipo_section_static
 
 
 
@@ -468,10 +469,6 @@ die("EN PROCESO");
 				#dump($RecordObj_matrix,"After");
 		}	
 	}
-	
-
-
-
 
 
 
@@ -561,6 +558,7 @@ die("EN PROCESO");
 	}#load_relation_data
 	*/
 	
+
 	
 	# GET VALUE . DEFAULT IS GET DATO . OVERWRITE IN EVERY DIFFERENT SPECIFIC COMPONENT
 	public function get_valor() {
@@ -585,10 +583,7 @@ die("EN PROCESO");
 		
 		$this->valor = $valor; 
 		return $this->valor;
-	}
-	
-
-	
+	}	
 
 	
 
@@ -718,7 +713,43 @@ die("EN PROCESO");
 
 		return $relation_list_html;
 		*/
-	}
+	}//end get_relation_reverse_records_from_id_section__DESACTIVA
+
+
+
+	/**
+	* RENDER_LIST_VALUE
+	* Overwrite for non default behaviour
+	* Receive value from section list and return proper value to show in list
+	* Sometimes is the same value (eg. component_input_text), sometimes is calculated (e.g component_portal)
+	* @param string $value
+	* @param string $tipo
+	* @param int $parent
+	* @param string $modo
+	* @param string $lang
+	* @param string $section_tipo
+	* @param int $section_id
+	*
+	* @return string $list_value
+	*/
+	public static function render_list_value($value, $tipo, $parent, $modo, $lang, $section_tipo, $section_id) {
+
+		$component 	= component_common::get_instance(__CLASS__,
+													 $tipo,
+												 	 $parent,
+												 	 'list',
+													 DEDALO_DATA_NOLAN,
+												 	 $section_tipo);
+
+		
+		# Use already query calculated values for speed
+		$ar_records   = (array)json_handler::decode($value);
+		$component->set_dato($ar_records);
+		$component->set_identificador_unico($component->get_identificador_unico().'_'.$section_id); // Set unic id for build search_options_session_key used in sessions
+		
+		return  $component->get_valor($lang);
+		
+	}#end render_list_value
 
 
 

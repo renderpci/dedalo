@@ -2,14 +2,10 @@
 
 	# VISUALIZADOR HTML
 
-	# ELEMENTOS
-	if(!isset ($ar_css['css_span_dato'])) 			$ar_css['css_span_dato']='';
-	if(!isset ($ar_css['css_ref'])) 				$ar_css['css_ref']='';
-	if(!isset ($ar_css['css_span_ejemplo'])) 		$ar_css['css_span_ejemplo']='';
-	if(!isset ($ar_css['css_span_debugger']))		$ar_css['css_span_debugger']='';
 
 
 	print "\n<!-- COMPONENT_AUTOCOMPLETE_TS [tipo:$tipo] -->";
+	
 	print "\n<div class=\"wrap_component css_wrap_autocomplete_ts wrap_component_{$tipo}\" id=\"{$id_wrapper}\"
 	data-tipo=\"{$tipo}\"
 	data-lang=\"{$lang}\"
@@ -28,7 +24,7 @@
 	$html_contenido = '';
 	switch($permissions) {
 
-		case 0	:	$html_contenido .= "\n <span class=\"css_span_dato {$ar_css['css_span_dato']}\"> ".label::get_label('sin_acceso')." (ref)</span>";
+		case 0	:	$html_contenido .= "";
 					break;
 
 		case 1	: 	$html_contenido .= $valor;
@@ -93,9 +89,10 @@
 					disabled=\"disabled\"
 					/>";
 
-			if($permissions==3)
-
-					$html_contenido .= "\n <span class=\"css_span_debugger {$ar_css['css_span_debugger']}\" id=\"debugger_{$parent}\" >{$debugger}</span>";
+					if($permissions==3) {
+						$html_contenido .= "\n <span class=\"css_span_debugger\" id=\"debugger_{$parent}\" >{$debugger}</span>";
+					}
+					break;					
 
 	}
 

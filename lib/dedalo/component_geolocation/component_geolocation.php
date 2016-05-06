@@ -45,7 +45,6 @@
 							break;
 					}
 
-				$ar_css		= $this->get_ar_css();
 				$id_wrapper = 'wrapper_'.$identificador_unico;
 				$component_info 	= $this->get_component_info('json');
 				$dato_json			= json_encode($dato);		

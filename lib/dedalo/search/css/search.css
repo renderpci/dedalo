@@ -67,12 +67,17 @@
 		min-height: 1.5em;
 		margin: 0;
 		padding: 0;
-		padding-left: 15px;	
+		padding-left: 15px;
+		position: relative;    
 	}
 	.css_wrap_rows_paginator_edit {
 		position: relative;
 		left: 80px;
 		top: 10px;
+	}
+	/* navigator showed in section list */
+	.css_section_wrap_list .css_wrap_rows_paginator .css_rows_paginator_content {		
+		top: 4px;
 	}
 
 	.css_wrap_rows_paginator .css_rows_paginator_content .css_rows_paginator_info {

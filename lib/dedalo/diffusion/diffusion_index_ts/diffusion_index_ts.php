@@ -7,7 +7,7 @@
 
 	$terminoID 				= $this->terminoID;	
 	$ar_section_top_tipo 	= $this->get_ar_section_top_tipo();
-	$ar_diffusion_map 		= $this->get_ar_diffusion_map($ar_section_top_tipo);
+	$ar_diffusion_map 		= $this->get_ar_diffusion_map_index_ts($ar_section_top_tipo);
 		#dump($ar_section_top_tipo,'$ar_section_top_tipo');
 		#dump($ar_diffusion_map,'$ar_diffusion_map');
 
@@ -15,7 +15,6 @@
 		#dump($layout_map,'$layout_map 2');
 
 	foreach ($ar_section_top_tipo as $current_section_tipo => $ar_values) {
-
 		
 		$html_group 	= '';
 		$section_name 	= RecordObj_dd::get_termino_by_tipo($current_section_tipo,null,true);

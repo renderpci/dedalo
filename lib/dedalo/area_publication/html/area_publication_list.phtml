@@ -2,10 +2,9 @@
 	
 	# VISUALIZADOR HTML	
 
-	# ELEMENTOS
-	if(!isset ($ar_css['css_span_dato'])) 		$ar_css['css_span_dato']='';
 	
 	print "\n<!-- AREA_ACTIVITY [tipo:$tipo modo:$modo] -->";
+
 	print "\n<div class=\"css_wrap_area_activity\" 
 	data-tipo=\"{$tipo}\" data-lang=\"{$lang}\" data-component_name=\"{$component_name}\" >";
 	
@@ -16,7 +15,7 @@
 	$html_contenido = '';
 	switch($permissions) {
 			
-		case 0	:	$html_contenido .= "\n <span class=\"css_span_dato {$ar_css['css_span_dato']}\"> ".label::get_label('sin_acceso')." (input_text)</span>";
+		case 0	:	$html_contenido .= "\n <span class=\"css_span_dato\"> ".label::get_label('sin_acceso')." (input_text)</span>";
 					break;
 												
 		case ($permissions>=1)	:

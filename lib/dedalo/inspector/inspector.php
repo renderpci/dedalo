@@ -20,14 +20,14 @@
 		case 'edit' :
 			
 			#
-			# LOADED COMPONENTS 				
+			# LOADED COMPONENTS	
 			$ar_loaded_modelos_name = array_unique(common::$ar_loaded_modelos_name);
 			#$ar_loaded_modelos = common::get_ar_loaded_modelos_resolved();	#dump($ar_loaded_modelos,'$ar_loaded_modelos');#dump(common::get_ar_loaded_modelos());
 
 			if(SHOW_DEBUG) {
 				$section = section::get_instance($section_id, $section_tipo);
 				$inverse_locators = $section->get_inverse_locators();
-			}				
+			}			
 
 
 			# FIXED TOOLS 
@@ -65,10 +65,11 @@
 
 			#
 			# PHP : Info version
-			$php_info = phpversion();
+			#$php_info = phpversion();
 
 			#
 			# PHP CACHE : Detect cache
+			/*
 			$php_check_cache = 'none';
 			if(SHOW_DEBUG) {
 				include_once( DEDALO_LIB_BASE_PATH . '/common/class.DetectOpCodeCache.php');				
@@ -89,13 +90,15 @@
 				}
 				#dump($php_check_cache, ' php_check_cache'); die();
 			}
-			
+			*/
 			
 			#
 			# DB : Info version
+			/*
 			$db_info  = 'PostgreSQL ';
 			$db_info .= pg_version(DBi::_getConnection())['server'];
-				#dump($db_info,'$db_info');				
+				#dump($db_info,'$db_info');
+			*/		
 			break;
 
 		case 'list'	:

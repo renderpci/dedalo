@@ -2,15 +2,9 @@
 
 	# VISUALIZADOR HTML	
 
-	# ELEMENTOS
-	if(!isset ($ar_css['css_span_dato'])) 		$ar_css['css_span_dato']='';
-	if(!isset ($ar_css['css_button_stats'])) 		$ar_css['css_button_stats']='';
-	if(!isset ($ar_css['css_span_debugger']))	$ar_css['css_span_debugger']='';
-	if(!isset ($ar_css['css_wrap_button_new']))	$ar_css['css_wrap_button_new']='';
-		
 	
 	#print "\n\n<!-- BUTTON NEW [tipo:$tipo id_matrix:$id] -->";
-	#print "\n<div class=\"css_wrap_button_new {$ar_css['css_wrap_button_new']}\">";
+	#print "\n<div class=\"css_wrap_button_new\">";
 	
 	# ETIQUETA (LABEL)
 	#$html_label = component_common_draw::draw_label($this);
@@ -20,7 +14,7 @@
 		
 	switch($permissions) {
 			
-		case 0	:	$html_contenido .= "\n <span class=\"css_span_dato {$ar_css['css_span_dato']}\"> ".label::get_label('sin_acceso')." (button_new)</span>";
+		case 0	:	$html_contenido .= "\n <span class=\"css_span_dato\"> ".label::get_label('sin_acceso')." (button_new)</span>";
 					break;
 						
 		case 1	: 	$html_contenido .= "<div>No data</div>";
@@ -29,7 +23,7 @@
 		case ($permissions>=2)	:
 					
 					# BUTTON SHOW STATS
-					$html_contenido .= "\n <div class=\"css_button_generic css_button_stats {$ar_css['css_button_stats']} link\" onclick=\"button_stats.Stats(this)\" 
+					$html_contenido .= "\n <div class=\"css_button_generic css_button_stats link\" onclick=\"button_stats.Stats(this)\" 
 					data-tipo=\"{$context_tipo}\"					
 					title=\"$html_title\" >";
 					$html_contenido .= $label;
@@ -65,9 +59,10 @@
 					}
 					*/
 
-			if($permissions==3)		
-					$html_contenido .= "\n <span class=\"css_span_debugger {$ar_css['css_span_debugger']}\" id=\"debugger_{$tipo}\" >{$debugger}</span>";				
-											
+					if($permissions==3)	{
+						$html_contenido .= "\n <span class=\"css_span_debugger\" id=\"debugger_{$tipo}\" >{$debugger}</span>";	
+					}	
+					break;											
 	}
 	
 	

@@ -987,6 +987,45 @@ class component_image extends component_common {
 		return $last_file_path;
 
 	}#end get_deleted_image
+
+
+
+	/**
+	* RENDER_LIST_VALUE
+	* Overwrite for non default behaviour
+	* Receive value from section list and return proper value to show in list
+	* Sometimes is the same value (eg. component_input_text), sometimes is calculated (e.g component_portal)
+	* @param string $value
+	* @param string $tipo
+	* @param int $parent
+	* @param string $modo
+	* @param string $lang
+	* @param string $section_tipo
+	* @param int $section_id
+	*
+	* @return string $list_value
+	*/
+	public static function render_list_value($value, $tipo, $parent, $modo, $lang, $section_tipo, $section_id) {
+		
+		if (empty($value) && $modo=='portal_list') {
+			$component	= component_common::get_instance(__CLASS__,
+														 $tipo,
+														 $parent,
+														 $modo,
+														 $lang,
+														 $section_tipo);
+			$value 		= $component->get_html();
+			if(SHOW_DEBUG) {
+				$value .= "*($modo)";
+			}
+			debug_log(__METHOD__." Calculated image from empty value ".to_string(), logger::DEBUG);
+		}
+
+		#dump($value, ' value ++ '.to_string());
+
+		return $value;
+
+	}#end render_list_value
 		
 
 

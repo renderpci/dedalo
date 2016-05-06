@@ -1,10 +1,7 @@
 <?php
-
-
 	
 	# CONTROLLER
-
-	#$id 					= $this->get_id();
+	
 	$tipo 					= $this->get_tipo();
 	$parent 				= $this->get_parent();
 	$section_tipo			= $this->get_section_tipo();
@@ -18,13 +15,10 @@
 	$ejemplo				= NULL;
 	$html_title				= "Info about $tipo";
 	$ar_tools_obj			= $this->get_ar_tools_obj();	
-	$html_tools				= '';
-	
 	$valor_string			= $dato;
 	$lang					= $this->get_lang();
 	$identificador_unico	= $this->get_identificador_unico();
 	$component_name			= get_class($this);
-
 	
 
 	# Verify component content record is inside section record filter
@@ -34,13 +28,11 @@
 	
 	switch($modo) {
 	
-		case 'edit'	:				
-					
+		case 'edit'	:					
 				$ar_target_section_tipo 	 = $this->get_ar_target_section_tipo();		
 				$ar_target_section_tipo_json = json_encode($ar_target_section_tipo);	#dump($ar_target_section_tipo, ' ar_target_section_tipo ++ '.to_string());
 				
-				$tipo_to_search			= $this->get_tipo_to_search(); 	
-				$ar_css					= false;
+				$tipo_to_search			= $this->get_tipo_to_search();				
 				$valor 					= $this->get_valor();		#dump($valor,"$label valor");
 				$ar_valor 				= $this->get_valor($lang,'array');		#dump($ar_valor, ' ar_valor ++ '.to_string());
 				$id_wrapper 			= 'wrapper_'.$identificador_unico;
@@ -49,13 +41,11 @@
 				$dato_json 				= json_handler::encode($dato);
 
 				$in_time_machine =  (isset($_REQUEST['m']) && $_REQUEST['m']=='tool_time_machine') || 
-									(isset($_REQUEST['mode']) && $_REQUEST['mode']=='load_preview_component') ? true : false;
-				
+									(isset($_REQUEST['mode']) && $_REQUEST['mode']=='load_preview_component') ? true : false;				
 				break;
 
 		case 'tool_time_machine' :	
 				return NULL;
-				$ar_css		= $this->get_ar_css();
 				$id_wrapper = 'wrapper_'.$identificador_unico.'_tm';
 				$input_name = "{$tipo}_{$parent}_tm";
 				$file_name 	= 'edit';
@@ -66,27 +56,25 @@
 				$ar_list_of_values		= $this->get_ar_list_of_values(DEDALO_DATA_LANG, null); // $this->get_ar_list_of_values( $lang, null, $this->ar_referenced_section_tipo, $filter_custom );
 
 				$ar_comparison_operators = $this->build_search_comparison_operators();
-				$ar_logical_operators 	 = $this->build_search_logical_operators();
-
-				$ar_css		= false;
+				$ar_logical_operators 	 = $this->build_search_logical_operators();				
 				break;
+
 		case 'dummy' :
 				$file_name = 'search';
-				break;				
+				break;
+
 		case 'list_tm' :
 				$file_name = 'list';
 		case 'portal_list':
 				$file_name 	= 'list';
-		case 'list'	:
-				$ar_css		= false;
+		case 'list'	:				
 				$valor 	= $this->get_valor($lang,'string');
 				break;
 
 		case 'relation':
 				return NULL;
 				# Force file_name to 'list'
-				$file_name  = 'list';
-				$ar_css		= false;
+				$file_name  = 'list';				
 				break;
 				
 		case 'print' :

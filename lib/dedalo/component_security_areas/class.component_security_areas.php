@@ -94,8 +94,9 @@ class component_security_areas extends component_common {
 		$arguments_tree['parent_tipo'] 			= $this->get_tipo();
 		$arguments_tree['lang'] 				= $this->get_lang();	
 		$arguments_tree['identificador_unico']	= $this->get_identificador_unico();	
-		$arguments_tree['disabled']				= $disabled;		
-			#dump($arguments_tree,"arguments_tree");#die();			
+		$arguments_tree['disabled']				= $disabled;	
+		$arguments_tree['ul_id']				= 'component_security_areas_ul';	// Attr id of tag 'ul'
+			#dump($arguments_tree,"arguments_tree");#die();
 	
 		
 		# CURRENT_SECURITY_AREAS_TIPO : tipo sólo puede ser dd243 (profiles) o dd245 (usuarios)

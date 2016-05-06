@@ -95,14 +95,14 @@
 	
 	switch($modo) {
 		
-		case 'edit'		:	$ar_css		= $this->get_ar_css();							
+		case 'edit'		:						
 							break;
 
-		case 'simple'	:	$ar_css		= $this->get_ar_css();	
+		case 'simple'	:
 							$file_name  = 'edit';					
 							break;
 						
-		case 'recover'	:	$ar_css		= $this->get_ar_css();							
+		case 'recover'	:						
 							break; false;
 	}
 		

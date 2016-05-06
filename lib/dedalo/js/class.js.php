@@ -26,18 +26,26 @@ class js {
 
 			# PAGE LIBS
 			js::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/html_page/js/html_page.js';
+			js::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/html_page/js/keyboard_shortcuts.js';
+
 
 			# LOGIN
 			js::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/login/js/login.js';
 
 			# MENU
-			# js::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/menu/js/menu.js' ;
+			js::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/menu/js/menu.js' ;
 
 			# COMMON LIBS
 			js::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/common/js/common.js';
+			js::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/common/js/cookies.js';
 			js::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/tools/tool_common/js/tool_common.js';
-			js::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/tools/tool_portal/js/tool_portal.js'; // Cuando añadimos un fragmento, no está disponible..
-			#js::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/common/js/labels.php';
+
+			# component common functions	
+			js::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/component_common/js/component_common.js';
+
+			
+		
+			js::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/tools/tool_portal/js/tool_portal.js'; // Cuando añadimos un fragmento, no está disponible..			
 			js::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/common/js/lang/'.DEDALO_APPLICATION_LANG.'.js';
 			
 			# SEARCH		
@@ -82,10 +90,7 @@ class js {
 				
 			# Si hay algún componente, le insertamos antes el component_common (una vez)
 			if( strpos($url,'component_')!==false && !isset($added_component_commons) ) {
-
-				# component common functions	
-				$html .= self::build_tag( DEDALO_LIB_BASE_URL . '/component_common/js/component_common.js' );
-
+				
 				# inspector functions
 				#if($modo=='edit')
 				$html .= self::build_tag( DEDALO_LIB_BASE_URL . '/inspector/js/inspector.js' );						
@@ -161,7 +166,8 @@ class js {
 				}				
 			}
 			*/
-			$url = $url.'?v='.DEDALO_VERSION;
+			#$url = $url.'?v='.DEDALO_VERSION;
+			$url = $url.'?'.DEDALO_VERSION;
 			#return "\n<script src=\"$url\" type=\"text/javascript\" charset=\"utf-8\"></script>";
 			return "\n<script src=\"$url\"></script>";
 		}

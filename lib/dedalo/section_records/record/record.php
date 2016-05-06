@@ -126,7 +126,7 @@
 					# Consulta el listado de componentes a mostrar en el listado / grupo actual
 						#dump($current_section_obj,"current_section_obj");die();					
 						$layout_map = component_layout::get_layout_map_from_section($current_section_obj); # Important: send obj section with REAL tipo to allow resolve structure
-							#dump($layout_map,"layout ".$current_section_obj->tipo);
+							#dump($layout_map,"layout ");
 							#dump($section->permissions, ' $section->permissions');
 
 						#$layout_map = array( 'divalcdi36' => array(), 'divalcdi44' => array() );

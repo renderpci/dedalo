@@ -21,7 +21,6 @@
 	$dato_string			= $this->get_dato_as_string();
 	$called_class			= get_called_class();
 	$identificador_unico	= $this->get_identificador_unico();
-	$ar_css					= false;
 	# Verify component content record is inside section record filter
 	if ($this->get_filter_authorized_record()===false) return NULL ;
 
@@ -157,8 +156,7 @@
 		case 'list_tm' :
 					$file_name = 'list';
 
-		case 'list'	:	
-					$ar_css		= false;	
+		case 'list'	:
 					break;
 						
 		case 'tool_time_machine'	:	

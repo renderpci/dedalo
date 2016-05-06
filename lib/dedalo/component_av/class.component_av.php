@@ -2,8 +2,8 @@
 /*
 * CLASS COMPONENT AV
 */
-require_once( DEDALO_LIB_BASE_PATH . '/media_engine/class.AVObj.php');
-require_once( DEDALO_LIB_BASE_PATH . '/media_engine/class.PosterFrameObj.php');
+include_once( DEDALO_LIB_BASE_PATH . '/media_engine/class.AVObj.php');
+include_once( DEDALO_LIB_BASE_PATH . '/media_engine/class.PosterFrameObj.php');
 
 
 class component_av extends component_common {
@@ -57,6 +57,7 @@ class component_av extends component_common {
 			# Dato
 			$this->set_dato($locator);
 			$need_save=true;
+
 		}#end if(empty($dato->counter) && $this->parent>0)
 
 
@@ -69,13 +70,10 @@ class component_av extends component_common {
 			
 		if ($need_save) {
 			# result devuelve el id de la sección parent creada o editada
-			$result = $this->Save();
-			if(SHOW_DEBUG) {
-				debug_log(__METHOD__." CREATED/UPDATED ".RecordObj_dd::get_termino_by_tipo($this->tipo)." locator (to ".$locator->get_flat().") of current ".get_called_class()." (tipo:$this->tipo - section_tipo:$this->section_tipo - parent:$this->parent - lang:$this->lang)");
-			}			
+			$result = $this->Save();			
+			debug_log(__METHOD__." CREATED/UPDATED ".RecordObj_dd::get_termino_by_tipo($this->tipo)." locator (to ".$locator->get_flat().") of current ".get_called_class()." (tipo:$this->tipo - section_tipo:$this->section_tipo - parent:$this->parent - lang:$this->lang)");
+					
 		}#end if ($need_save)
-
-			#dump($this->get_dato(), '$this->get_dato() 2 ++ '.to_string());
 		
 
 		if(SHOW_DEBUG) {
@@ -85,17 +83,18 @@ class component_av extends component_common {
 	}#end __construct
 
 
+
 	# GET DATO : Format {"counter":1}
 	public function get_dato() {
 		$dato = parent::get_dato();
 		return (object)$dato;
 	}
-
 	# SET_DATO
 	public function set_dato($dato) {
 		parent::set_dato( (object)$dato );
 	}
 	
+
 	
 	# OVERRIDE COMPONENT_COMMON METHOD
 	public function get_ar_tools_obj() {
@@ -116,6 +115,8 @@ class component_av extends component_common {
 		return parent::get_ar_tools_obj();
 	}
 
+
+
 	/**
 	* GET VALOR
 	* LIST:
@@ -124,6 +125,8 @@ class component_av extends component_common {
 	public function get_valor() {
 		return $this->valor = $this->get_video_id();
 	}
+
+
 
 	/**
 	* GET_VALOR_EXPORT
@@ -155,6 +158,7 @@ class component_av extends component_common {
 	}#end get_valor_export
 	
 
+
 	/**
 	* GET VIDEO ID
 	* 
@@ -178,6 +182,8 @@ class component_av extends component_common {
 	}
 	public function get_av_id() { return $this->get_video_id();	} // Alias of get_video_id()
 
+
+
 	/**
 	* GET QUALITY
 	*/
@@ -185,6 +191,8 @@ class component_av extends component_common {
 		if(!isset($this->quality))	return DEDALO_AV_QUALITY_DEFAULT;
 		return $this->quality;
 	}
+
+
 
 	/**
 	* UPLOAD NEEDED
@@ -197,6 +205,8 @@ class component_av extends component_common {
 		#return $this->AVObj->get_media_path_abs();
 	}
 	
+
+
 	/**
 	* GET_VIDEO_URL
 	*/
@@ -209,6 +219,8 @@ class component_av extends component_common {
 
 		return DEDALO_MEDIA_BASE_URL . DEDALO_AV_FOLDER .'/'. $quality . '/'. $video_id .'.'. DEDALO_AV_EXTENSION ;
 	}
+
+
 	
 	/**
 	* GET_VIDEO_PATH
@@ -225,6 +237,8 @@ class component_av extends component_common {
 		return DEDALO_MEDIA_BASE_PATH . DEDALO_AV_FOLDER .'/'. $quality . '/'. $video_id .'.'. DEDALO_AV_EXTENSION ;
 	}
 
+
+
 	/**
 	* GET_POSTERFRAME_PATH
 	*/
@@ -232,6 +246,8 @@ class component_av extends component_common {
 		return DEDALO_MEDIA_BASE_PATH . DEDALO_AV_FOLDER .'/posterframe/'. $this->get_video_id() . '_' . DEDALO_DATA_LANG.'.'.DEDALO_AV_POSTERFRAME_EXTENSION;
 	}
 	
+
+
 	/**
 	* GET_POSTERFRAME_URL
 	*/
@@ -258,6 +274,7 @@ class component_av extends component_common {
 	}
 
 
+
 	/**
 	* GET_SUBTITLES_PATH
 	*/
@@ -265,6 +282,8 @@ class component_av extends component_common {
 		return DEDALO_MEDIA_BASE_PATH . DEDALO_AV_FOLDER . DEDALO_SUBTITLES_FOLDER.'/'. $this->get_video_id().'_'.DEDALO_DATA_LANG.'.'.DEDALO_AV_SUBTITLES_EXTENSION;
 	}
 	
+
+
 	/**
 	* GET_ORIGINAL_FILE_PATH
 	* Si se sube un archivo de extensión distinta a DEDALO_IMAGE_EXTENSION, se convierte a DEDALO_IMAGE_EXTENSION. Los archivos originales
@@ -396,20 +415,19 @@ class component_av extends component_common {
 		if($size_kb <= 1024) return $size_kb . ' KB' ;
 				
 		return round($size_kb / 1024) . ' MB' ;
-	}
+
+	}//edn get_video_size
 	
-
-
 	
 	
 	/**
 	* GET_SUBTITLES_URL
 	*/
-	public function get_subtitles_url() {
-		
-		return DEDALO_MEDIA_BASE_URL . DEDALO_AV_FOLDER . DEDALO_SUBTITLES_FOLDER. '/'. $this->get_video_id().'_'.DEDALO_DATA_LANG .'.'.DEDALO_AV_SUBTITLES_EXTENSION;
-		
+	public function get_subtitles_url() {		
+		return DEDALO_MEDIA_BASE_URL . DEDALO_AV_FOLDER . DEDALO_SUBTITLES_FOLDER. '/'. $this->get_video_id().'_'.DEDALO_DATA_LANG .'.'.DEDALO_AV_SUBTITLES_EXTENSION;		
 	}
+
+
 
 	/**
 	* GET_SOURCE_QUALITY_TO_BUILD
@@ -446,6 +464,7 @@ class component_av extends component_common {
 	}
 
 
+
 	/**
 	* GET_AR_ALL_FILES_BY_QUALITY
 	* @param array $ar_quality optional
@@ -465,11 +484,7 @@ class component_av extends component_common {
 		return (array)$ar_all_files_by_quality;
 		
 	}#end get_ar_all_files_by_quality
-	
-	
-
-
-	
+		
 
 
 	/**
@@ -611,10 +626,10 @@ class component_av extends component_common {
 				debug_log($msg);
 				#dump($msg, ' msg');
 			}
-		}
-		
+		}		
 
 		return true;
+		
 	}#end restore_component_media_files
 
 

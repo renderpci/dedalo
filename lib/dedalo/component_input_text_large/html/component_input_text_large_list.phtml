@@ -2,9 +2,6 @@
 
 	# VISUALIZADOR HTML	
 
-	# ELEMENTOS
-	if(!isset ($ar_css['css_span_dato'])) 		$ar_css['css_span_dato']='';
-	if(!isset ($ar_css['css_span_debugger']))	$ar_css['css_span_debugger']='';
 	
 	echo "\n<!-- INPUT_TEXT [tipo:$tipo section_id_matrix:$parent] -->";	
 		
@@ -17,12 +14,12 @@
 					
 		case ($permissions>=1)	:
 			
-					$html_contenido .= "\n <span class=\"css_span_dato {$ar_css['css_span_dato']}\" data-tipo=\"{$tipo}\" data-section_tipo=\"{$section_tipo}\" data-parent=\"{$parent}\" data-lang=\"{$lang}\" >$valor</span>";
+					$html_contenido .= "\n <span class=\"css_span_dato\" data-tipo=\"{$tipo}\" data-section_tipo=\"{$section_tipo}\" data-parent=\"{$parent}\" data-lang=\"{$lang}\" >$valor</span>";
 					
-			if($permissions==3)
-					
-					$html_contenido .= "\n <span class=\"css_span_debugger {$ar_css['css_span_debugger']}\" id=\"debugger_{$tipo}\" >{$debugger}</span>";	
-							
+					if($permissions==3) {
+						$html_contenido .= "\n <span class=\"css_span_debugger \" id=\"debugger_{$tipo}\" >{$debugger}</span>";	
+					}
+					break;							
 	}	
 
 	

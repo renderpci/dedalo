@@ -220,7 +220,9 @@ function to_string($var=null) {
 		}
 		return print_r($var,true);	
 			
-	}else if (is_object($var)) {
+	}else if (is_object($var)) {		
+		$var = json_encode($var);
+		$var = json_decode($var);
 		return '<pre>'.print_r($var,true).'</pre>';
 	}	
 	return $var;

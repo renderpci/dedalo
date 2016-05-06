@@ -3,7 +3,8 @@
 	# VISUALIZADOR HTML	
 
 		
-	print "\n<!-- COMPONENT FILTER CHECK BOX [tipo:$tipo section_id_matrix:$parent] $label -->";	
+	print "\n<!-- COMPONENT FILTER CHECK BOX [tipo:$tipo section_id_matrix:$parent] $label -->";
+
 	print "\n<div class=\"wrap_component css_wrap_filter wrap_component_{$tipo}\" id=\"{$id_wrapper}\"
 	data-tipo=\"{$tipo}\"
 	data-lang=\"{$lang}\"
@@ -19,41 +20,36 @@
 	# ETIQUETA (LABEL)
 	$html_label = component_common_draw::draw_label($this);
 
-	$required_code 	= NULL;
-	#if($required)	$required_code = 'style="font-weight:bold"';
 	
 	# CONTENIDO (INPUT)
 	$html_contenido  = '';
 	$html_contenido .= "\n <div class=\"wrap_dato_component_filter\"> ";	
 	switch($permissions) {
 			
-		case 0 :	$html_contenido .= "\n <span class=\"css_span_dato\"> ".label::get_label('sin_acceso')." ($component_name)</span>"; 
-					break;
+		case 0 :	
+				$html_contenido .= "\n <span class=\"css_span_dato\"> ".label::get_label('sin_acceso')." ($component_name)</span>"; 
+				break;
 						
-		case 1 : 	
-
-					if (is_array ($ar_proyectos_section)) foreach ($ar_proyectos_section as $value => $rotulo) {
-						
-						if( is_array($dato) && in_array($value, array_keys($dato)) ) {													
-							$html_contenido .= "\n <label class=\"filter_checkbox_rotulo\" $required_code >$rotulo</label>";
-							$html_contenido .= "\n <br>";
-						}	
-					}
-					break;	
+		case 1 :
+				if (is_array ($ar_proyectos_section)) foreach ($ar_proyectos_section as $value => $rotulo) {
+					
+					if( is_array($dato) && in_array($value, array_keys($dato)) ) {													
+						$html_contenido .= "\n <label class=\"filter_checkbox_rotulo\">$rotulo</label>";
+						$html_contenido .= "\n <br>";
+					}	
+				}
+				break;	
 						
 		case 2 :
-					#dump($ar_proyectos_section,"ar_proyectos_section");
-					#dump($dato,"dato");
 					
-					$html_contenido .= "<ul class=\"filter_projects_list\">";
+				$html_contenido .= "<ul class=\"filter_projects_list\">";
+				
+				$i=1;foreach((array)$ar_proyectos_section as $value => $rotulo) {
 					
-					$i=1; foreach((array)$ar_proyectos_section as $value => $rotulo) {
-						
-						$html_contenido .= "<li>";
-						
+					$html_contenido .= "<li>";
+					
 						$checked  = is_array($dato) && in_array($value, array_keys($dato)) ? 'checked="checked"' : '';
 						$tabindex = $i==1 ? 'tabindex="1"' : '';
-
 
 						$html_contenido .= "\n <input type=\"checkbox\" class=\"filter_checkbox\"
 						onfocus=\"component_common.select_wrap(null,'$id_wrapper')\"
@@ -67,23 +63,21 @@
 						data-parent=\"{$parent}\"
 						$checked
 						$tabindex
-						/>";	#id=\"{$identificador_unico}\" 
+						/>";
 						
-						$html_contenido .= "\n <label class=\"filter_checkbox_rotulo\" $required_code >$rotulo</label>";
+						$html_contenido .= "\n <label class=\"filter_checkbox_rotulo\">$rotulo</label>";
 						#$html_contenido .= "\n <span class=\"debug_info\">id: $value</span>";
 						
 						$html_contenido .= "</li>";
-						$i++;	
-					}
+						
+				$i++;}
 
-					$html_contenido .= "</ul>";					
-					break;
+				$html_contenido .= "</ul>";				
 		
-		case 3 :			
-					#$html_contenido .= "\n ".to_string($valor);
-					#$html_contenido .= "\n <span class=\"css_span_debugger\" id=\"debugger_{$id}\" >{$debugger}</span>";
-					break;	
-					
+				if($permissions==3) {				
+					$html_contenido .= "\n <span class=\"css_span_debugger\" id=\"debugger_{$id}\" >{$debugger}</span>";
+				}
+				break;					
 							
 	}
 	$html_contenido .= "\n </div><!-- /wrap_dato_component_filter -->";#end wrap_dato_component_filter
@@ -99,5 +93,5 @@
 
 
 
-	print "\n</div><!-- /css_wrap_filter COMPONENT FILTER CHECK BOX [tipo:$tipo section_id_matrix:$parent] $label -->\n\n"; //wrap
+	print "\n</div><!-- /css_wrap_filter COMPONENT FILTER [tipo:$tipo section_id_matrix:$parent] $label -->\n\n"; //wrap
 ?>

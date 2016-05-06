@@ -1,17 +1,20 @@
 <?php
+/*
 $js_url = DEDALO_LIB_BASE_URL.'/component_image/js/component_image_read.js';
 ?>
 <script>var url = '<?php echo $js_url ?>';</script>
 <?php
+*/
 
 	# VISUALIZADOR HTML	
 
 		
 	print "\n<!-- IMAGE [tipo:$tipo section_id_matrix:$parent] $label -->";
-	print "\n<div class=\"wrap_component css_wrap_image wrap_component_{$tipo}\" 
+
+	print "\n<div class=\"wrap_component css_wrap_image wrap_component_{$tipo}\"
 	id=\"{$id_wrapper}\"
 	data-tipo=\"{$tipo}\"
-	data-lang=\"{$lang}\"	
+	data-lang=\"{$lang}\"
 	data-parent=\"{$parent}\"
 	data-section_tipo=\"{$section_tipo}\"
 	data-modo=\"{$modo}\"
@@ -60,9 +63,10 @@ $js_url = DEDALO_LIB_BASE_URL.'/component_image/js/component_image_read.js';
 
 						$add_class = 'no_file';
 					}
+
+					$html_contenido .= "<div class=\"loading_image blink\">Loading image..</div>";
 					
-					# CANVAS : IMAGE 
-					
+					# CANVAS : IMAGE					
 					$html_contenido .= "<canvas id=\"$identificador_unico\" class=\"canvas_edit $add_class\" $open_tool_default resize hidpi=\"on\">";
 					#$html_contenido .= $image_thumb_html ; # Rendered in thumb mode
 					$html_contenido .= "\n <img class=\"css_image\"

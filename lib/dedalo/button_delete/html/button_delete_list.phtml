@@ -56,15 +56,10 @@
 
 	# VISUALIZADOR HTML	
 
-	# ELEMENTOS
-	if(!isset ($ar_css['css_span_dato'])) 			$ar_css['css_span_dato']='';
-	if(!isset ($ar_css['css_button_delete'])) 		$ar_css['css_button_delete']='';
-	if(!isset ($ar_css['css_span_debugger']))		$ar_css['css_span_debugger']='';
-	if(!isset ($ar_css['css_wrap_button_delete']))	$ar_css['css_wrap_button_delete']='';
 		
 	
 	#print "\n<!-- BUTTON DELETE [tipo:$tipo section_id:$id] -->";
-	print "<div class=\"css_wrap_button_delete {$ar_css['css_wrap_button_delete']}\">";
+	print "<div class=\"css_wrap_button_delete\">";
 	
 	# ETIQUETA (LABEL)
 	#$html_label = component_common_draw::draw_label($this);
@@ -74,7 +69,7 @@
 	
 	switch($permissions) {
 			
-		case 0	:	$html_contenido .= "\n <span class=\"css_span_dato {$ar_css['css_span_dato']}\"> ".label::get_label('sin_acceso')." (button_new)</span>";
+		case 0	:	$html_contenido .= "\n <span class=\"css_span_dato\"> ".label::get_label('sin_acceso')." (button_new)</span>";
 					break;
 						
 		case 1	: 	$html_contenido .= "";
@@ -82,10 +77,13 @@
 						
 		case ($permissions>=2)	:
 		
-			$html_contenido .= "<div class=\"css_button_delete div_image_link link {$ar_css['css_button_delete']}\" data-tipo=\"{$section_tipo}\" data-section_id=\"{$id}\" title=\"$label $id\"></div>";
+					$html_contenido .= "<div class=\"css_button_delete div_image_link link \" data-tipo=\"{$section_tipo}\" data-section_id=\"{$id}\" title=\"$label $id\"></div>";
 
-			#if($permissions==3)
-					#$html_contenido .= "<span class=\"css_span_debugger {$ar_css['css_span_debugger']}\" id=\"debugger_{$tipo}\" >{$debugger}</span>";	
+					if($permissions==3){
+						$html_contenido .= "<span class=\"css_span_debugger\" id=\"debugger_{$tipo}\" >{$debugger}</span>";
+					}
+					break;
+								
 	}
 	
 	

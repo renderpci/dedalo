@@ -17,7 +17,6 @@
 	$ejemplo				= $this->get_ejemplo();
 	$html_title				= "Info about $tipo";
 	$ar_tools_obj			= $this->get_ar_tools_obj();	
-	$html_tools				= '';
 	$valor					= $this->get_valor();
 	$lang					= $this->get_lang();
 	$identificador_unico	= $this->get_identificador_unico();
@@ -34,20 +33,16 @@
 				return null;
 				break;
 				
-		case 'edit':	
-				$ar_css			= $this->get_ar_css();
-				#foreach($ar_tools_obj as $tool_obj) $html_tools .= $tool_obj->get_html();
+		case 'edit':
 				$id_wrapper 	= 'wrapper_'.$identificador_unico;
 				$input_name 	= "{$tipo}_{$parent}";
 				$component_info	= $this->get_component_info('json');
 				break;
 						
-		case 'simple':	
-				$ar_css = false;
+		case 'simple':
 				break;									
 		
-		case 'tool_time_machine':	
-				$ar_css		= false;
+		case 'tool_time_machine':
 				$id_wrapper = 'wrapper_'.$identificador_unico.'_tm';
 				$input_name = "{$tipo}_{$parent}_tm";
 				# Force filenam

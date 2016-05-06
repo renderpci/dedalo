@@ -1,16 +1,16 @@
 <?php
+
+
 /*
 * CLASS MENU
 */
-
-
 class menu extends common {
+
 
 	protected $modo;
 
 	
 	public function __construct($modo) {
-
 		$this->modo = $modo;
 	}
 
@@ -23,12 +23,13 @@ class menu extends common {
 
 		if(SHOW_DEBUG) $start_time = start_time();
 
-		if(!login::is_logged()) return NULL;
+		if(!login::is_logged()) return null;
 
 		$user_id_logged 		= navigator::get_user_id();
-		$arguments_tree			= NULL;
-		$is_global_admin 		= component_security_administrator::is_global_admin($user_id_logged);
-		if( $is_global_admin === false ) {
+		$arguments_tree			= array();	
+		$arguments_tree['ul_id']= 'menu';	
+
+		if( (bool)component_security_administrator::is_global_admin($user_id_logged) !== true ) {
 			# Get array of authorized areas for current logged user
 			$ar_authorized_areas 	= component_security_areas::get_ar_authorized_areas_for_user($user_id_logged, $mode_result='full');
 			$arguments_tree['dato'] = $ar_authorized_areas;
@@ -36,16 +37,13 @@ class menu extends common {
 		}
 
 		$html = self::get_menu_structure_html($option='create_link', $arguments_tree);
-
 		
 		if(SHOW_DEBUG) {
-			#$GLOBALS['log_messages'] .= exec_time($start_time, __METHOD__. ' [element '.get_called_class().']', "html");
 			global$TIMER;$TIMER[__METHOD__.'_'.get_called_class().'_'.$this->modo.'_'.microtime(1)]=microtime(1);
 		}
 
 		return $html;
 	}
-
 
 
 
@@ -74,7 +72,7 @@ class menu extends common {
 				if(SHOW_DEBUG) {
 					# nothing to do;
 					#dump($uid, '$uid');
-					return $_SESSION['dedalo4']['config']['menu_structure_html'][$uid][DEDALO_APPLICATION_LANG];	
+					#return $_SESSION['dedalo4']['config']['menu_structure_html'][$uid][DEDALO_APPLICATION_LANG];	
 				}else{
 					return $_SESSION['dedalo4']['config']['menu_structure_html'][$uid][DEDALO_APPLICATION_LANG];	
 				}											
@@ -84,8 +82,9 @@ class menu extends common {
 		if(SHOW_DEBUG) {
 			$start_time = microtime(1);
 		}
+		$ul_id = isset($arguments_tree['ul_id']) ? $arguments_tree['ul_id'] : 'menu';
 
-		$menu_structure_html = "\n\n<!-- MENU --> \n<ul id=\"menu\" class=\"menu_ul_{$option}\">";
+		$menu_structure_html = "\n\n<!-- MENU --> \n<ul id=\"$ul_id\" class=\"menu_ul_{$option}\">";
 		
 			/*
 			# INVENTARIO MENU (area_root)
@@ -109,6 +108,7 @@ class menu extends common {
 			$ar_ts_children_areas = area::get_ar_ts_children_all_areas_hierarchized();
 				#dump($ar_ts_children_areas,"ar_ts_children_areas");
 
+			# BUILD MENU RECURSIVELY
 			$menu_structure_html .= self::walk_ar_tesauro($ar_ts_children_areas, $arguments_tree, $option);
 
 
@@ -174,7 +174,12 @@ class menu extends common {
 
 	}//end public static function get_menu_structure_html($option, $arguments_tree) {
 
-	# CREATE LINK FOR MENU
+
+
+
+	/**
+	* CREATE_LINK
+	*/
 	public static function create_link($tipo, $termino, $modelo_name=NULL, $arguments_tree=null) {			
 
 		if($tipo == navigator::get_selected('area'))
@@ -200,7 +205,12 @@ class menu extends common {
 		return $link;
 	}
 
-	# TEMPORAL .PASAR EN SU MOMENTO A COMPONENT_SECURITY_AREAS
+
+
+	/**
+	* CREATE_CHECKBOX
+	* TEMPORAL .PASAR EN SU MOMENTO A COMPONENT_SECURITY_AREAS
+	*/
 	public static function create_checkbox($tipo, $termino, $modelo_name=NULL, $arguments_tree) {
 		return component_security_areas::create_checkbox($tipo, $termino, $modelo_name, $arguments_tree) ;
 	}
@@ -229,19 +239,18 @@ class menu extends common {
 				$user_id_logged 			= navigator::get_user_id();
 				$logged_user_is_global_admin 	= component_security_administrator::is_global_admin($user_id_logged);
 			}
-
-		$open_group 	= "\n <ul>";
-		$close_group 	= "\n </ul>\n";
-
-		$open_term		= "\n <li>";
-		$close_term		= "</li>";
-
-		#$html 			.= $open_group ;
-		//dump($ar_tesauro ,'$ar_tesauro ');
+		
 		foreach($ar_tesauro as $tipo => $value) {
 
 			$show = true;
 			$skip = false;
+
+			// OPEN/CLOSE GROUP RESET
+			$open_group 	= "\n <ul>";
+			$close_group 	= "\n </ul>\n";
+			// OPEN/CLOSE TERM RESET
+			$open_term		= "\n <li>";
+			$close_term		= "</li>";
 
 			/*
 			* UNATHORIZED AREAS . REMOVE AREAS NOT AUTHORIZED FOR CURRENT USER
@@ -277,6 +286,11 @@ class menu extends common {
 						break;
 			}
 			
+			# MODELO
+			$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+
+			# TERMINO (In current data lang with fallback)
+			$termino	 = RecordObj_dd::get_termino_by_tipo($tipo, DEDALO_APPLICATION_LANG, true);
 
 			/*
 			* PROJECTS . REMOVE ADMIN ELEMENTS
@@ -294,22 +308,21 @@ class menu extends common {
 			}
 			*/
 
+			
+			if (!empty($value) && $modelo_name!='section') {
+				$open_term = "\n <li class=\"has-sub\">";
+			}
 
 			# AREA ADMIN ELEMENTS diferenciate with class 'global_admin_element'
 			if(isset($arguments_tree['context']) && $arguments_tree['context']=='users' && in_array($tipo, component_security_areas::get_ar_tipo_admin()) )	{
 				$open_term	= "\n <li class=\"global_admin_element\" >";
 			}
 
-
 			$dato_current	= NULL;
 			if(isset($dato[$tipo]))
 			$dato_current	= intval($dato[$tipo]);
 
-			# MODELO
-			$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
-
-			# TERMINO (In current data lang with fallback)
-			$termino	 = RecordObj_dd::get_termino_by_tipo($tipo, DEDALO_APPLICATION_LANG, true);
+			
 			
 			if($skip===true) {
 
@@ -318,14 +331,15 @@ class menu extends common {
 					#dump($html,'$html');
 				}
 
-			}else if($show===true) {
+			}else if($show===true) {			
+				
 
 				$html	.= $open_term;
 
 				# Decorate term
 				$html 	.= self::$option($tipo, $termino, $modelo_name, $arguments_tree);
 
-				if(is_array($value) && $modelo_name!='section') {
+				if(is_array($value) && $modelo_name!='section') {					
 					
 					$current_html = self::walk_ar_tesauro($value, $arguments_tree, $option);	# Recursion walk_ar_tesauro
 					if (strlen($current_html)) {
@@ -337,8 +351,8 @@ class menu extends common {
 
 				$html .= $close_term;
 			}
-
-		}//end foreach($ar_tesauro as $tipo => $value) {
+			
+		}//end foreach($ar_tesauro as $tipo => $value) {		
 		
 		return $html;
 
@@ -356,5 +370,5 @@ class menu extends common {
 
 
 
-}
+}//end class
 ?>

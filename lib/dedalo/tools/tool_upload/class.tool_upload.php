@@ -595,11 +595,10 @@ class tool_upload extends tool_common {
 																				  $this->component_obj->get_parent(),
 																				  'edit',
 																				  DEDALO_DATA_NOLAN,
-																				  DEDALO_SECTION_RESOURCES_AV_TIPO);
-									$minutes = $duration_secs ;
-									$component->set_dato($minutes);
+																				  DEDALO_SECTION_RESOURCES_AV_TIPO);									
+									$component->set_dato($duration_secs);
 									$component->Save();
-									debug_log(__METHOD__." Saved duration (secs) info from media streams to component: $minutes ".to_string(), logger::DEBUG);
+									debug_log(__METHOD__." Saved duration (secs) info from media streams to component: $duration_secs ".to_string(), logger::DEBUG);
 
 									$response->update_components[] = DEDALO_COMPONENT_RESOURCES_MINUTES_TIPO;
 								}

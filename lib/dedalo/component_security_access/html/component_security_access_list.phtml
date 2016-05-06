@@ -1,20 +1,10 @@
 <?php
 
 	# VISUALIZADOR HTML	
-
-	# ELEMENTOS
-	if(!isset ($ar_css['css_span_dato'])) 			$ar_css['css_span_dato']='';
-	if(!isset ($ar_css['css_radio_button'])) 		$ar_css['css_radio_button']='';
-	if(!isset ($ar_css['css_span_ejemplo'])) 		$ar_css['css_span_ejemplo']='';
-	if(!isset ($ar_css['css_span_debugger']))		$ar_css['css_span_debugger']='';
-	if(!isset ($ar_css['css_wrap_radio_button']))	$ar_css['css_wrap_radio_button']='';
-	if(!isset ($ar_css['css_radio_button_rotulo']))	$ar_css['css_radio_button_rotulo']='';
-	
-	if(!isset ($tools_html))						$tools_html='';
 	
 	
 	print "\n<!-- SECURITY ACCESS [tipo:$tipo section_id_matrix:$parent] -->";
-	print "\n<div class=\"css_wrap_radio_button {$ar_css['css_wrap_radio_button']}\" >";
+	print "\n<div class=\"css_wrap_radio_button\" >";
 	
 	# ETIQUETA (LABEL)
 	$html_label = component_common_draw::draw_label($this);
@@ -23,16 +13,16 @@
 	$html_contenido = '';
 	switch($permissions) {
 			
-		case 0	:	$html_contenido .= "\n <span class=\"css_span_dato {$ar_css['css_span_dato']}\"> No access here (security_access)! </span>";
+		case 0	:	$html_contenido .= "\n <span class=\"css_span_dato\"> No access here (security_access)! </span>";
 					break;
 						
-		case 1	: 	$html_contenido .= "\n <span class=\"css_span_dato {$ar_css['css_span_dato']}\">$dato</span>";
+		case 1	: 	$html_contenido .= "\n <span class=\"css_span_dato\">$dato</span>";
 					break;	
 						
 		case ($permissions>=2)	:
 					
 					if(!isset($valor)) $valor = 'En construccion';
-					$html_contenido .= "\n <span class=\"css_span_dato {$ar_css['css_span_dato']}\">$valor</span>";	
+					$html_contenido .= "\n <span class=\"css_span_dato\">$valor</span>";	
 					/*
 					foreach ($ar_list_of_values->result as $value => $rotulo) {
 						
@@ -41,8 +31,8 @@
 						}else {
 							$checked = "";
 						}
-						$html_contenido .= "\n <input class=\"css_radio_button {$ar_css['css_radio_button']}\" type=\"radio\" name=\"{$tipo}\" data-tipo=\"{$tipo}\" value=\"{$value}\" id=\"{$id}\" title=\"$html_title\" $checked />";
-						$html_contenido .= "\n <label class=\"css_radio_button_rotulo {$ar_css['css_radio_button_rotulo']}\" $required >$rotulo</label>";	
+						$html_contenido .= "\n <input class=\"css_radio_button\" type=\"radio\" name=\"{$tipo}\" data-tipo=\"{$tipo}\" value=\"{$value}\" id=\"{$id}\" title=\"$html_title\" $checked />";
+						$html_contenido .= "\n <label class=\"css_radio_button_rotulo\" $required >$rotulo</label>";	
 					}
 					*/		
 	}	
@@ -51,8 +41,6 @@
 	# PRINT HTML
 	#print $html_label;
 	print $html_contenido;
-	#print $html_tools;
-	
 	
 	echo "\n</div>\n\n"; //wrap
 ?>

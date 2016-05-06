@@ -1,20 +1,10 @@
 <?php
 /*
 	# VISUALIZADOR HTML	
-
-	# ELEMENTOS
-	if(!isset ($ar_css['css_span_dato'])) 			$ar_css['css_span_dato']='';
-	if(!isset ($ar_css['css_select'])) 				$ar_css['css_select']='';
-	if(!isset ($ar_css['css_span_ejemplo'])) 		$ar_css['css_span_ejemplo']='';
-	if(!isset ($ar_css['css_span_debugger']))		$ar_css['css_span_debugger']='';
-	if(!isset ($ar_css['css_wrap_select']))			$ar_css['css_wrap_select']='';
-	//if(!isset ($ar_css['css_select_rotulo']))		$ar_css['css_select_rotulo']='';
-	
-	if(!isset ($tools_html))						$tools_html='';
 	
 	
 	echo "\n<!-- SELECT [tipo:$tipo id_matrix:$id] $label -->";
-	echo "\n<div class=\"css_wrap_select {$ar_css['css_wrap_select']}\" id=\"wrap_{$identificador_unico}\">";
+	echo "\n<div class=\"css_wrap_select\" id=\"wrap_{$identificador_unico}\">";
 	
 	# ETIQUETA (LABEL)
 	$html_label = component_common_draw::draw_label($this);
@@ -26,12 +16,12 @@
 		case 0	:	$html_contenido .= ''; 		
 					break;
 						
-		case 1	: 	$html_contenido .= "\n <span class=\"css_span_dato {$ar_css['css_span_dato']}\">$dato</span>";
+		case 1	: 	$html_contenido .= "\n <span class=\"css_span_dato\">$dato</span>";
 					break;	
 						
 		case ($permissions>=2)	:
 		
-					$html_contenido .= "\n <select class=\"css_select {$ar_css['css_select']}\" 
+					$html_contenido .= "\n <select class=\"css_select\" 
 					id=\"{$identificador_unico}\" name=\"{$tipo}_{$id}_tm\" 
 					data-tipo=\"{$tipo}\" data-id_matrix=\"{$id}\" data-lang=\"{$lang}\" 
 					title=\"$html_title\" disabled > ";
@@ -47,9 +37,10 @@
 					
 					$html_contenido .= "\n </select>";
 		
-			if($permissions==3)
-		
-					$html_contenido .= "\n <span class=\"css_span_debugger {$ar_css['css_span_debugger']}\" id=\"debugger_{$id}\" >{$debugger}</span>";	
+					if($permissions==3){
+						$html_contenido .= "\n <span class=\"css_span_debugger\" id=\"debugger_{$id}\" >{$debugger}</span>";	
+					}
+					break;	
 											
 	}
 	

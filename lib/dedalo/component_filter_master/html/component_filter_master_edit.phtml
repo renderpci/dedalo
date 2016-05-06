@@ -12,11 +12,11 @@
 	data-parent=\"{$parent}\"
 	data-parent=\"{$parent}\"
 	data-modo=\"{$modo}\"
-	data-dato=\"{$dato_string}\" data-component_name=\"{$component_name}\"
+	data-dato=\"{$dato_string}\"
+	data-component_name=\"{$component_name}\"
 	data-component_info='{$component_info}'
 	>";
 	
-	//data-id_matrix=\"{$id}\" data-tipo=\"{$tipo}\" data-parent=\"{$parent}\" data-modo=\"ajax\"
 	
 	# ETIQUETA (LABEL)
 	$html_label = component_common_draw::draw_label($this);
@@ -47,37 +47,41 @@
 		case ($permissions>=2)	:
 
 					# VERIFY USER LOGGED IS CURRENT VIEWED USER			
-						$user_id_logged = navigator::get_user_id();							#dump($user_id_logged,'user_id_logged');
+						$user_id_logged = navigator::get_user_id();
 						$user_id_viewed = $parent;
-						
-						$disabled = NULL;
-						if($user_id_logged==$user_id_viewed)
-							$disabled = "disabled";
-						#dump($dato,"dato");
-						#dump($ar_proyectos_section,"");
 
-					foreach ($ar_proyectos_section as $value => $rotulo) {
+					$disabled = ($user_id_logged==$user_id_viewed) ? 'disabled' : '';	
+
+					$html_contenido .= "<ul class=\"filter_master_list\">";
+
+					$i=1;foreach ($ar_proyectos_section as $value => $rotulo) {
 						
-						if( in_array($value, array_keys($dato)) ) {
-							$checked = 'checked="checked"';
-						}else {
-							$checked = "";
-						}
-						$html_contenido .= "\n <input class=\"css_check_box_filter_master\" type=\"checkbox\"
-						onchange=\"component_filter_master.Save(this)\"
-						name=\"{$input_name}\"
-						data-tipo=\"{$tipo}\"
-						data-lang=\"{$lang}\"
-						data-section_tipo=\"{$section_tipo}\"
-						data-parent=\"{$parent}\"
-						value=\"{$value}\"
-						title=\"$html_title\"
-						$checked
-						$disabled
-						/>";
-						
-						$html_contenido .= "\n <label class=\"css_check_box_filter_master_rotulo\" $required >$rotulo</label><br>";	
-					}					
+						$html_contenido .= "<li>";
+
+							$checked  = is_array($dato) && in_array($value, array_keys($dato)) ? 'checked="checked"' : '';
+							$tabindex = $i==1 ? 'tabindex="1"' : '';
+
+							$html_contenido .= "\n <input class=\"css_check_box_filter_master\" type=\"checkbox\"
+							onchange=\"component_filter_master.Save(this)\"
+							name=\"{$input_name}\"
+							value=\"{$value}\"
+							title=\"$html_title\"
+							data-tipo=\"{$tipo}\"
+							data-lang=\"{$lang}\"
+							data-section_tipo=\"{$section_tipo}\"
+							data-parent=\"{$parent}\"
+							$checked
+							$disabled
+							$tabindex
+							/>";
+							
+							$html_contenido .= "\n <label class=\"css_check_box_filter_master_rotulo\" $required >$rotulo</label><br>";	
+							
+						$html_contenido .= "</li>";
+
+					$i++;}
+
+					$html_contenido .= "</ul>";				
 					
 		
 					if($permissions==3) {

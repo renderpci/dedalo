@@ -7,6 +7,68 @@
 class component_text_area extends component_common {
 
 	public $arguments;
+
+
+	function __construct($tipo=null, $parent=null, $modo='edit', $lang=DEDALO_DATA_LANG, $section_tipo=null) {
+
+		// Overwrite lang when component_select_lang is present
+		if ($modo=='edit' && !empty($parent) && !empty($section_tipo)) {
+			$lang = self::force_change_lang($tipo, $parent, $modo, $lang, $section_tipo);			
+		}
+
+		# Creamos el componente normalmente
+		parent::__construct($tipo, $parent, $modo, $lang, $section_tipo);
+		
+
+	}//end __construct
+
+
+
+	/**
+	* FORCE_CHANGE_LANG
+	* If defined component_select_lang as related term of current component, the lag of the component
+	* gets from component_select_lang value. Else, received lag is used normally
+	* @return string $lang
+	*/
+	public static function force_change_lang($tipo, $parent, $modo, $lang, $section_tipo) {
+		
+		$ar_related_by_model = common::get_ar_related_by_model('component_select_lang',$tipo);
+			#dump($ar_related_by_model, ' $ar_related_by_model ++ '.to_string());
+		if (!empty($ar_related_by_model)) {
+			switch (true) {
+				case count($ar_related_by_model)==1 :
+					$related_component_select_lang = reset($ar_related_by_model);
+					break;
+				case count($ar_related_by_model)>1 :
+					debug_log(__METHOD__." More than one ar_related_by_model are found. Please fix this ASAP ".to_string(), logger::ERROR);
+					break;
+				default:
+					debug_log(__METHOD__." Var ar_related_by_model value is invalid. Please fix this ASAP ".to_string($ar_related_by_model), logger::ERROR);
+					break;
+			}
+			if (isset($related_component_select_lang)) {				
+				$component_select_lang = component_common::get_instance('component_select_lang',
+																	    $related_component_select_lang,
+																	    $parent,
+																	    $modo,
+																	    DEDALO_DATA_NOLAN,
+																	    $section_tipo);
+				$component_select_lang_dato = $component_select_lang->get_dato();
+					#dump($component_select_lang_dato, ' component_select_lang_dato ++ '.to_string());
+				if (!empty($component_select_lang_dato) && $component_select_lang_dato!=$lang) {
+					debug_log(__METHOD__." Changed lang: $lang to $component_select_lang_dato ", logger::DEBUG);
+					$lang = $component_select_lang_dato;
+				}
+			}
+		}
+
+		return $lang;
+
+	}#end force_change_lang
+
+	
+
+
 	
 	# GET DATO : Format "lg-spa"
 	public function get_dato() {
@@ -985,11 +1047,74 @@ die(__METHOD__." EN PROCESO");
 					throw new Exception("Error Processing Request. Current related $related_modelo_name is not valid. Please configure textarea for this media ", 1);					
 			}
 			#dump($diffusion_obj,'$diffusion_obj');
-		}
-		
+		}		
 		
 		return $diffusion_obj;
-	}
+
+	}//end get_diffusion_obj 
+
+
+
+	/**
+	* RENDER_LIST_VALUE
+	* Overwrite for non default behaviour
+	* Receive value from section list and return proper value to show in list
+	* Sometimes is the same value (eg. component_input_text), sometimes is calculated (e.g component_portal)
+	* @param string $value
+	* @param string $tipo
+	* @param int $parent
+	* @param string $modo
+	* @param string $lang
+	* @param string $section_tipo
+	* @param int $section_id
+	*
+	* @return string $list_value
+	*/
+	public static function render_list_value($value, $tipo, $parent, $modo, $lang, $section_tipo, $section_id) {
+
+		$obj_value = json_decode($value); # Evitamos los errores del handler accediendo directamente al json_decode de php
+		$current_tag = 0;
+		if (is_object($obj_value) && isset($obj_value->$current_tag)) {
+			$list_value = $obj_value->$current_tag;
+		}else{
+			$list_value = $value;
+		}		
+
+		# TRUNCATE ALL FRAGMENTS		
+		TR::limpiezaFragmentoEnListados($list_value,160);
+
+		return $list_value;
+		
+	}#end render_list_value
+
+
+
+	/**
+	* GET_RELATED_COMPONENT_select_lang
+	* @return string $tipo | null
+	*/
+	public function get_related_component_select_lang() {
+
+		$tipo = null;
+		$related_terms = $this->get_ar_related_by_model('component_select_lang');
+			#dump($related_terms, ' related_terms ++ '.to_string());
+
+		switch (true) {
+			case count($related_terms)==1 :
+				$tipo = reset($related_terms);
+				break;
+			case count($related_terms)>1 :
+				debug_log(__METHOD__." More than one related component_select_lang are found. Please fix this ASAP ".to_string(), logger::ERROR);
+				break;
+			default:
+				break;
+		}	
+
+		return $tipo;
+		
+	}#end get_related_component_select_lang
+
+
 
 
 	

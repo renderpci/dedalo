@@ -16,7 +16,6 @@
 	$ejemplo				= NULL;
 	$html_title				= "Info about $tipo";
 	$ar_tools_obj			= NULL;	
-	$html_tools				= '';
 	$valor					= $this->get_valor();				
 	$lang					= $this->get_lang();
 	$lang_name				= $this->get_lang_name();
@@ -32,14 +31,14 @@
 	
 	switch($modo) {
 		
-		case 'edit'	:	$ar_css		= $this->get_ar_css();
+		case 'edit'	:	
 						$component_info 	= $this->get_component_info('json');															
 						break;
 						
 		case 'list_tm' :
 						$file_name = 'list';
 						
-		case 'list'	:	$ar_css		= false;
+		case 'list'	:	
 						break;
 												
 	}

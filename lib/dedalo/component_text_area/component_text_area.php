@@ -1,8 +1,6 @@
 <?php
 	
 	# CONTROLLER
-
-	#$id 					= $this->get_id();
 	$tipo 					= $this->get_tipo();
 	$parent 				= $this->get_parent();		#dump($parent,"parent");
 	$section_tipo 			= $this->get_section_tipo();	
@@ -23,11 +21,9 @@
 	$identificador_unico	= $this->get_identificador_unico();
 	$component_name			= get_class($this);
 	$valor					= $this->get_valor();
-	$dato_raw 				= tools::truncate_text(htmlspecialchars($valor),300);	#tools::truncate_text($string, $limit, $break=" ", $pad="...")
-	#$context_name 			= $this->get_context();
-		#dump($context_name,'context_name');
-		#echo "context_name:$context_name - $modo";
-	$context_name = null;
+	$dato_raw 				= tools::truncate_text(htmlspecialchars($valor),300);
+
+	$context_name 			= null;
 	if (isset($_REQUEST['context_name'])) {
 		$context_name = $_REQUEST['context_name'];
 	}
@@ -38,9 +34,8 @@
 	$propiedades_json = json_handler::encode($propiedades);
 		#dump($propiedades,'propiedades');
 
+	
 
-	
-	
 
 	$file_name = $modo;
 		#dump($file_name,"");
@@ -59,7 +54,8 @@
 		case 'indexation':
 		case 'edit'	:	
 					# Verify component content record is inside section record filter
-					if ($this->get_filter_authorized_record()===false) return NULL ;
+					if ($this->get_filter_authorized_record()===false) return NULL;
+					
 
 					$component_info = $this->get_component_info('json');
 					$context 		= $this->get_context();
@@ -87,7 +83,6 @@
 
 					$dato 				= $this->get_dato();
 					$dato 				= TR::addTagImgOnTheFly($dato);
-					$ar_css				= $this->get_ar_css();
 					$last_tag_index_id	= $this->get_last_tag_index_id();
 					$id_wrapper 		= 'wrapper_'.$identificador_unico;
 					$input_name 		= "{$tipo}_{$parent}";
@@ -130,8 +125,7 @@
 							break;						
 						default:
 							$component_state_html = $this->get_state_process_html();	
-					}
-			
+					}					
 					break;
 
 		
@@ -139,7 +133,6 @@
 
 					$dato 				= $this->get_dato();
 					$dato 				= TR::addTagImgOnTheFly($dato);
-					$ar_css				= $this->get_ar_css();
 					$last_tag_index_id	= $this->get_last_tag_index_id();		#dump($last_tag_index_id,'last_tag_index_id');
 
 					$id_wrapper 		= 'wrapper_'.$identificador_unico.'_tool_lang';
@@ -151,8 +144,6 @@
 					break;
 	
 		case 'tool_time_machine' :
-
-					$ar_css				= $this->get_ar_css();
 					$last_tag_index_id	= $this->get_last_tag_index_id();
 
 					$component_info 	= $this->get_component_info('json');
@@ -272,7 +263,6 @@
 					break;
 		
 		case 'search' :
-					$ar_css		= false;
 					$ar_comparison_operators 	= $this->build_search_comparison_operators();
 					$ar_logical_operators 		= $this->build_search_logical_operators();
 
@@ -347,21 +337,12 @@
 
 		case 'relation':# Force modo list
 					$file_name 	= 'list';
-					$ar_css		= false;
 					$max_char 	= 256;
 					if(strlen($valor)>$max_char) $valor = mb_substr($valor,0,$max_char).'..';
 					break;						
 		
 		case 'lang'	:
-					$ar_css		= $this->get_ar_css();
-					$ar_tools_obj			= $this->get_ar_tools_obj();	
-					$html_tools				= '';
-					# load only time machime tool
-					foreach($ar_tools_obj as $tool_obj) {
-						if( get_class($tool_obj) == 'tool_time_machine') {																		
-							$html_tools .= $tool_obj->get_html();								
-						}
-					}
+					break;
 		case 'diffusion':
 					$diffusion_obj = new diffusion_component_obj();
 
@@ -372,10 +353,6 @@
 					$diffusion_obj->columns['texto'] 	= $dato;
 					break;	
 	}
-
-
-	
-		
 		
 	#$page_html	= DEDALO_LIB_BASE_PATH .'/'. get_class($this) . '/html/' . get_class($this) . '_' . $file_name . '.phtml';
 	$page_html	= dirname(__FILE__) . '/html/' . $component_name . '_' . $file_name . '.phtml';	

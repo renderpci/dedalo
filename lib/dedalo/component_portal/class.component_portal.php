@@ -304,17 +304,21 @@ class component_portal extends component_common {
 			if (isset($_SESSION['dedalo4']['config']['search_options'])) {
 
 				$component_portal_tipo  = $this->get_tipo();
-				#$ar_target_section_tipo 	= $this->get_ar_target_section_tipo();
-					#dump($ar_target_section_tipo," ar_target_section_tipo");
+				$section_tipo 			= $this->get_section_tipo();
+				$tipo 					= $this->get_tipo();
+				$parent 				= $this->get_parent();
+				$modo 					= $this->get_modo();
 
-				#dump($_SESSION['dedalo4']['config']['search_options'], '$_SESSION[dedalo4][config][search_options] ++ '.to_string());
+				#
+				# REFERENCE SEARCH_OPTIONS_SESSION_KEY: 'portal_'.$modo.'_'.$section_tipo.'_'.$tipo.'_'.$parent;				
 
-				$current_search_options_key = 'portal_edit_'.$this->get_section_tipo().'_'.$this->get_tipo().'_'.$this->get_parent();
+				$search_options_key = 'portal_'.$modo .'_'.$section_tipo.'_'.$tipo.'_';//.$parent;
 					#dump($current_search_options_key, ' current_search_options_key ++ '.to_string());
-				foreach ($_SESSION['dedalo4']['config']['search_options'] as $search_options_key => $value) {
-					if ( $search_options_key == $current_search_options_key ) {
-						unset($_SESSION['dedalo4']['config']['search_options'][$search_options_key]);						
-						debug_log(__METHOD__." Deleted session search_options_key: $search_options_key ".to_string(), logger::DEBUG);						
+				foreach ($_SESSION['dedalo4']['config']['search_options'] as $current_search_options_key => $value) {
+					
+					if (strpos($current_search_options_key, $search_options_key)!==false ) {
+						unset($_SESSION['dedalo4']['config']['search_options'][$current_search_options_key]);					
+						debug_log(__METHOD__." Deleted session search_options_key: $current_search_options_key ", logger::DEBUG);
 					}
 				}
 			}		
@@ -1274,6 +1278,45 @@ class component_portal extends component_common {
 
 	}//end get_ar_target_section_tipo
 
+
+
+	/**
+	* RENDER_LIST_VALUE
+	* Overwrite for non default behaviour
+	* Receive value from section list and return proper value to show in list
+	* Sometimes is the same value (eg. component_input_text), sometimes is calculated (e.g component_portal)
+	* @param string $value
+	* @param string $tipo
+	* @param int $parent
+	* @param string $modo
+	* @param string $lang
+	* @param string $section_tipo
+	* @param int $section_id
+	*
+	* @return string $list_value
+	*/
+	public static function render_list_value($value, $tipo, $parent, $modo, $lang, $section_tipo, $section_id) {		
+		#dump($value, " value ++ parent:$parent - tipo:$tipo - section_id:$section_id ".to_string());
+
+		$parent    = null; // Force null always !important
+		$component = component_common::get_instance(__CLASS__,
+													$tipo,
+													$parent,
+													'list',
+													DEDALO_DATA_NOLAN,
+													$section_tipo);
+		
+		$component->html_options->rows_limit = 1; 
+		
+		# Use already query calculated values for speed
+		$ar_records   = (array)json_handler::decode($value);	#dump($ar_records,"ar_records for portal $current_component_tipo - id:$id");#die();
+		$component->set_dato($ar_records);
+		$component->set_identificador_unico($component->get_identificador_unico().'_'.$section_id); // Set unic id for build search_options_session_key used in sessions
+		$html = $component->get_html();		
+
+		return $component->get_html();
+
+	}#end render_list_value
 
 	
 	

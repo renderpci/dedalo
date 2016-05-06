@@ -43,17 +43,30 @@
 			
 			#
 			# FIXED SECTION TOOLS				
-				
-				# TOOL_DIFFUSION for export to mysql
-				if (defined('DEDALO_DIFFUSION_MAP') && (bool)component_security_tools::is_authorized_tool_for_logged_user('tool_diffusion')) {				
-					$DEDALO_DIFFUSION_MAP = unserialize(DEDALO_DIFFUSION_MAP);
-					if (isset($DEDALO_DIFFUSION_MAP[$section_tipo])) {
-						$tool_diffusion = new tool_diffusion($section_tipo,'button_inspector');
-						$tool_diffusion->section_id = $section_id;
-						$html  .= $tool_diffusion->get_html();
-					}
-				}
 			
+				
+				/* # TOOL_DIFFUSION for export to mysql OLD 
+					if (defined('DEDALO_DIFFUSION_MAP') && (bool)component_security_tools::is_authorized_tool_for_logged_user('tool_diffusion')) {				
+						$DEDALO_DIFFUSION_MAP = unserialize(DEDALO_DIFFUSION_MAP);
+						if (isset($DEDALO_DIFFUSION_MAP[$section_tipo])) {
+							$tool_diffusion = new tool_diffusion($section_tipo,'button_inspector');
+							$tool_diffusion->section_id = $section_id;
+							$html  .= $tool_diffusion->get_html();
+						}
+					}
+					*/				
+				# TOOL_DIFFUSION BUTTONS (for export to database, etc.) 
+				if ((bool)component_security_tools::is_authorized_tool_for_logged_user('tool_diffusion') &&
+					(bool)tool_diffusion::have_section_diffusion($section_tipo)) {
+					#$html .= tool_diffusion::get_diffusion_buttons('edit', $section_tipo, $section_id);
+					$tool_diffusion = new tool_diffusion($section_tipo,'button_inspector');
+					$tool_diffusion->section_id = $section_id;
+					$html  .= $tool_diffusion->get_html();
+				}
+
+				
+				
+
 			#		
 			# SPECIFIC COMPONENT TOOLS
 				$html .= "\n <div id=\"inspector_tools\" class=\"inspector_info_body\">";
@@ -226,7 +239,7 @@
 
 		
 		
-		if(SHOW_DEBUG===true || DEDALO_ENTITY=='development') {
+		if(SHOW_DEBUG===true) {
 
 			#
 			# DEBUG

@@ -123,6 +123,7 @@ if( $mode=='process_file' ) {
 	RecordObj_time_machine::$save_time_machine_version = true;
 
 
+	#
 	# Custom potprocessing file	
 	if (!empty(tool_import_zotero::$process_script)) {
 		$ar_section_id = array_keys($process_file);	// Keys are section id of each created/updated record

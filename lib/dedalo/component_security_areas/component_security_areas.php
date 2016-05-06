@@ -1,10 +1,6 @@
 <?php
 	
 	# CONTROLLER
-	
-	
-	/**/
-	#$id 					= $this->get_id(); 
 	$tipo 					= $this->get_tipo();
 	$parent 				= $this->get_parent();
 	$section_tipo 			= $this->get_section_tipo();
@@ -31,7 +27,6 @@
 	switch($modo) {
 		
 		case 'tool_time_machine' :
-					$ar_css		= false;	
 					#break;
 		case 'edit' :
 					if ($section_tipo==DEDALO_SECTION_USERS_TIPO) {
@@ -42,30 +37,21 @@
 						}
 					}
 
-					$permissions	= $this->get_permisions_of_this_area();		#dump($permissions,"permissions");
-					$ar_css			= array();#$this->get_ar_css();
-					$component_info	= $this->get_component_info('json');		#dump($component_info,"component_info");
-					#$ar_tools_obj	= $this->get_ar_tools_obj();
-					#foreach($ar_tools_obj as $tool_obj) $html_tools .= $tool_obj->get_html();
+					$permissions	= $this->get_permisions_of_this_area();	
+					$component_info	= $this->get_component_info('json');
 
-					#dump($this); die("44- $permissions");
 					switch($permissions) {												
 						case 1 :			 	$html_tree = $this->get_tree($disabled='disabled'); break;												
 						case ($permissions>=2):	$html_tree = $this->get_tree($disabled=NULL); 		break;													
 					}
-
-
-
 					break;
 						
 		case 'search' :	
 					# Force file_name to 'list'
 					$file_name 	= 'list';
-					$ar_css		= false;	
 					break;
 						
 		case 'list' :	
-					$ar_css			= false;
 					$permissions	= $this->get_permisions_of_this_area();	
 
 					$dato_array = (array)$dato;
@@ -85,8 +71,7 @@
 					}
 					break;
 
-		case 'relation'	:	
-					$ar_css		= false;
+		case 'relation'	:
 					$file_name  = 'list';
 					break;						
 			

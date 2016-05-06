@@ -466,15 +466,6 @@ abstract class common extends Accessors {
 	
 	
 	
-	
-	# GET ARRAY CSS
-	protected function get_ar_css() {
-		if (isset($this->RecordObj_dd)) {
-			return css::get_ar_css($this->RecordObj_dd);
-		}
-	}
-	
-	
 	# __TOSTRING
 	public function __toString() {
         return 'Obj: '.get_called_class();
@@ -734,7 +725,7 @@ abstract class common extends Accessors {
 	}
 
 	/**
-	* GET_RELACIONES : Obtiene las relaciones del tipo del componente actual decodificandop el json de '$this->RecordObj_dd->get_relaciones()'
+	* GET_RELACIONES : Obtiene las relaciones del tipo del componente actual decodificando el json de '$this->RecordObj_dd->get_relaciones()'
 	*/
 	public function get_relaciones() {
 		$relaciones = $this->RecordObj_dd->get_relaciones();
@@ -744,7 +735,38 @@ abstract class common extends Accessors {
 		}
 		
 		return (array)$relaciones[0];
-	}
+	}	
+
+
+
+	/**
+	* GET_AR_RELATED_BY_MODEL
+	* @return 
+	*/
+	public static function get_ar_related_by_model($modelo_name, $tipo) {
+		
+		$RecordObj_dd = new RecordObj_dd($tipo);
+		$relaciones   = (array)$RecordObj_dd->get_relaciones();
+
+		$related_terms  = array();		
+		foreach ($relaciones as $relation) foreach ($relation as $modelo_tipo => $tipo) {
+			
+			# Calcularlo desde el modelo_tipo no es seguro, ya que el modelo de un componente pude cambiar y esto no actualiza el modelo_tipo de la relación
+			#$related_terms[$tipo] = RecordObj_dd::get_termino_by_tipo($modelo_tipo, DEDALO_STRUCTURE_LANG, true, false);	//$terminoID, $lang=NULL, $from_cache=false, $fallback=true
+			# Calcular siempre el modelo por seguridad
+			$related_terms[$tipo]  = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+		}
+
+		$ar_related_by_model=array();
+		foreach ($related_terms as $tipo => $current_modelo_name) {
+			if ($current_modelo_name==$modelo_name) {
+				$ar_related_by_model[] = $tipo;
+			}
+		}
+
+		return $ar_related_by_model;
+
+	}#end get_ar_related_by_model
 
 
 

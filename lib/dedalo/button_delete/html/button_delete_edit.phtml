@@ -55,16 +55,11 @@
 
 
 	# VISUALIZADOR HTML	
-
-	# ELEMENTOS
-	if(!isset ($ar_css['css_span_dato'])) 			$ar_css['css_span_dato']='';
-	if(!isset ($ar_css['css_button_delete'])) 		$ar_css['css_button_delete']='';
-	if(!isset ($ar_css['css_span_debugger']))		$ar_css['css_span_debugger']='';
-	if(!isset ($ar_css['css_wrap_button_delete']))	$ar_css['css_wrap_button_delete']='';
-		
+			
 	
 	print "\n<!-- BUTTON DELETE [tipo:$tipo id_matrix:$id] -->";
-	print "\n<div class=\"css_wrap_button_delete {$ar_css['css_wrap_button_delete']}\">";
+
+	print "\n<div class=\"css_wrap_button_delete\">";
 	
 	# ETIQUETA (LABEL)
 	#$html_label = component_common_draw::draw_label($this);
@@ -74,7 +69,7 @@
 	
 	switch($permissions) {
 			
-		case 0	:	$html_contenido .= "\n <span class=\"css_span_dato {$ar_css['css_span_dato']}\"> ".label::get_label('sin_acceso')." (button_delete)</span>";
+		case 0	:	$html_contenido .= "\n <span class=\"css_span_dato\"> ".label::get_label('sin_acceso')." (button_delete)</span>";
 					break;
 						
 		case 1	: 	$html_contenido .= "";
@@ -82,17 +77,17 @@
 						
 		case ($permissions>=2)	:
 		
-					#$html_contenido .= "\n <input class=\"css_button_delete {$ar_css['css_button_delete']}\" type=\"button\" onclick=\"Del(this)\" data-tipo=\"{$target_tipo}\" value=\"$label\" title=\"$html_title\" />";
-					$html_contenido .= "\n <div class=\"css_button_delete div_image_link {$ar_css['css_button_delete']} link\" 
+					#$html_contenido .= "\n <input class=\"css_button_delete\" type=\"button\" onclick=\"Del(this)\" data-tipo=\"{$target_tipo}\" value=\"$label\" title=\"$html_title\" />";
+					$html_contenido .= "\n <div class=\"css_button_delete div_image_link link\" 
 					data-tipo=\"{$tipo}\"
 					data-section_id=\"{$id}\"
 					title=\"$label $id\"></div>";
-							
 					
-										
+					if($permissions==3){
+						$html_contenido .= "\n <span class=\"css_span_debugger\" id=\"debugger_{$tipo}\" >{$debugger}</span>";	
+					}
+					break;
 					
-			if($permissions==3)		
-					$html_contenido .= "\n <span class=\"css_span_debugger {$ar_css['css_span_debugger']}\" id=\"debugger_{$tipo}\" >{$debugger}</span>";	
 					
 											
 	}

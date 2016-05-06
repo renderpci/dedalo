@@ -82,6 +82,23 @@ hr {
 }
 
 
+/* BLINK
+----------------------------------------- */
+.blink {
+	animation: blink-animation 1s steps(5, start) infinite;
+	-webkit-animation: blink-animation 1s steps(5, start) infinite;
+	}
+	@keyframes blink-animation {
+	  to {
+	    visibility: hidden;
+	  }
+	}
+	@-webkit-keyframes blink-animation {
+	  to {
+	    visibility: hidden;
+	  }
+	}
+
 	
 /* GRADIENT
 ----------------------------------------- */
@@ -457,23 +474,24 @@ mark {
 			}
 
 
-		/*-- td_css_selector --*/
-		.table_rows_list .td_component_av ,
-		.table_rows_list .td_component_image,
-		.table_rows_list .td_component_portal
+		/* TD_CSS_SELECTOR
+		--------------------------------------------------------------------- */
+		.table_rows_list .th_component_av ,
+		.table_rows_list .th_component_image,
+		.table_rows_list .th_component_portal
 		{
 			width: 106px;
 		}
-		.table_rows_list .td_component_state {
+		.table_rows_list .th_component_state {
 			/*width: 80px !important;*/
 		}
-		.table_rows_list .td_component_security_administrator {
+		.table_rows_list .th_component_security_administrator {
 			width: 100px !important;
 		}
-		.table_rows_list .td_component_image img {
+		.table_rows_list .th_component_image img {
 			/*box-shadow: none;*/
 		}
-		.table_rows_list .td_component_pdf {
+		.table_rows_list .th_component_pdf {
 			width: 80px;
 		}		
 		.table_rows_list .id_column {
@@ -641,48 +659,63 @@ mark.row_debug_info {
 }
 
 
-/* TOOLTIPS
+/* TOOLTIPS : PSEUDO TOOLTIPS WITH CSS
 ------------------------------------------------------- */
 label.css_label.tooltips {
   /*position: relative;
   display: inline;*/
   //min-height: 30px;
-}
-label.css_label.tooltips span {
-  position: absolute;
-  min-width:140px;
-  color: #FFFFFF;
-  background: #424242;
-  min-height: 39px;
-  line-height: 39px;
-  text-align: center;
-  visibility: hidden;/**/
-  border-radius: 4px;
-  padding-left: 7px;
-  padding-right: 7px;
-  z-index: 10000;
-}
-label.css_label.tooltips span:after {
-  content: '';
-  position: absolute;
-  top: 100%;
-  left: 50%;
-  margin-left: -8px;
-  width: 0; height: 0;
-  border-top: 8px solid #424242;
-  border-right: 8px solid transparent;
-  border-left: 8px solid transparent;
-}
-label.css_label:hover.tooltips span {
-  visibility: visible;
-  opacity: 0.9;
-  /*bottom: 35px;*/
-  top: -40px;
-  left: 7%;
-  left: 70px;
-  margin-left: -76px;
-  z-index: 999;
-}
+	}
+	/*
+	label.css_label.tooltips span {
+	  position: absolute;
+	  min-width:140px;
+	  color: #FFFFFF;
+	  background: #424242;
+	  min-height: 39px;
+	  line-height: 39px;
+	  text-align: center;
+	  visibility: hidden;
+	  border-radius: 4px;
+	  padding-left: 7px;
+	  padding-right: 7px;
+	  z-index: 10000;
+	}
+	label.css_label.tooltips span:after {
+	  content: '';
+	  position: absolute;
+	  top: 100%;
+	  left: 50%;
+	  margin-left: -8px;
+	  width: 0; height: 0;
+	  border-top: 8px solid #424242;
+	  border-right: 8px solid transparent;
+	  border-left: 8px solid transparent;
+	}
+	label.css_label:hover.tooltips span {
+	  visibility: visible;
+	  opacity: 0.9;
+	  // bottom: 35px;
+	  top: -40px;
+	  left: 7%;
+	  left: 70px;
+	  margin-left: -76px;
+	  z-index: 999;
+	}
+	*/
+
+	/* LABEL_WARNING (STATE DEPRECATED, ETC)
+	----------------------------------------- */
+	label.label_warning {		
+		}
+		label.label_warning span {
+			//cursor: help;
+			font-size: 10px;
+			color: #FF3900;
+			opacity: 0.85;
+			padding-left: 1px;
+			margin-right: 5px;
+		}
 
 
 
@@ -861,5 +894,28 @@ label.css_label:hover.tooltips span {
 		margin-left: 2px;
 		opacity: 0.85;
 	}
+
+
+
+/* WRAP_SECTION_GROUP_DIV  
+----------------------------------------- */
+.wrap_section_group_div {
+	position: relative;
+    padding: 0;
+    border: none;
+    margin: 0;
+    float: left;
+    min-height: 2.333em;
+    width: 100%;
+	//background-color: rgba(176, 246, 218, 0.16);
+	}
+	.wrap_component::before {
+		//content: " ";
+		//clear: left;
+	}
+	
+
+
+
 
 

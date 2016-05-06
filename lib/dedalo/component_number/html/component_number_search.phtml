@@ -1,14 +1,11 @@
 <?php
 
 	# VISUALIZADOR HTML	
-
-	# ELEMENTOS
-	if(!isset ($ar_css['css_number'])) 			$ar_css['css_number']='';	
 	//if(isset($_REQUEST[$tipo]))					$dato = $_REQUEST[$tipo];		#var_dump($_REQUEST[$tipo]);
 	
 	
 	#print "\n<!-- NUMBER [tipo:$tipo id_matrix:$id] -->";
-	#print "\n<div class=\"css_wrap_number {$ar_css['css_wrap_number']}\" id=\"wrap_{$tipo}\">";
+	#print "\n<div class=\"css_wrap_number\" id=\"wrap_{$tipo}\">";
 	
 	# ETIQUETA (LABEL)
 	$html_label = component_common_draw::draw_label($this);
@@ -22,7 +19,7 @@
 						
 		case ($permissions>=1):
 		
-					$html_contenido .= "\n <input class=\"css_number {$ar_css['css_number']}\" type=\"text\" 
+					$html_contenido .= "\n <input class=\"css_number\" type=\"text\" 
 					name=\"{$tipo}\" 
 					data-tipo=\"{$tipo}\"
 					value=\"{$dato}\" title=\"$html_title\" />";											

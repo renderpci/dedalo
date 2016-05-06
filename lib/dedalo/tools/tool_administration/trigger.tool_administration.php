@@ -11,7 +11,7 @@ if(login::is_logged()!==true) die("<span class='error'> Auth error: please login
 
 
 # set vars
-	$vars = array('mode');
+	$vars = array('mode','component_tipo','section_tipo','language','save');
 		foreach($vars as $name) $$name = common::setVar($name);
 
 # mode
@@ -92,11 +92,76 @@ if($mode=='update_structure') {
 		#$response->info = $res;
 	}
 	#dump($response->msg, '$response->msg ++ '.to_string());
+
+	# Delete session config (force to recalculate)
+	unset($_SESSION['dedalo4']['config']);
+
+	# Delete session permissions table (force to recalculate)
+	unset($_SESSION['dedalo4']['auth']['permissions_table']);
+	
 	
 	echo json_encode($response);
 	exit();
 
 }//end update_structure
+
+
+/**
+* BUILD_STRUCTURE_CSS
+* Force unlock all components
+*/
+if($mode=='delete_component_tipo_in_matrix_table') {
+
+	$response = new stdClass();
+		$response->result 	= false;
+		$response->msg 		= '';
+
+	$component_tipo = json_decode($component_tipo);
+	$section_tipo 	= json_decode($section_tipo);
+	$language 		= json_decode($language);
+	$save 			= json_decode($save);
+
+
+	if(empty($component_tipo)){
+		$response->msg .= "<span class='error'> Error: '".label::get_label('component_tipo')."' is mandatory</span>";
+		exit(json_encode($response));
+	}else if(empty($section_tipo)){
+		$response->msg .= "<span class='error'> Error: '".label::get_label('section_tipo')."' is mandatory</span>";
+		exit(json_encode($response));
+	}
+	if(!empty($language) && (empty($component_tipo) || empty($section_tipo)) ){
+		$response->msg .= "<span class='error'> Error: Need component_tipo and section_tipo for delete Language</span>";
+		exit(json_encode($response));
+	}
+
+	$result = tool_administration::delete_component_tipo_in_matrix_table($section_tipo,$component_tipo,$language,$save);
+
+	echo json_encode($result);
+	exit();
+
+}//end build_structure_css
+
+
+/**
+* UPDATE_VERSION
+* Update the version, components, SQL, etc, the script look the updates.php file and apply to the current installation data
+*/
+if($mode=='update_version') {
+
+	set_time_limit (0);
+
+	$response = new stdClass();
+		$response->result 	= false;
+		$response->msg 		= '';
+
+	$result = tool_administration::update_version();
+
+	
+	echo json_encode($result);
+	exit();
+
+}//end update_version
+
 
 
 ?>

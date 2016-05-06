@@ -15,8 +15,6 @@
 	$permissions			= common::get_permissions($tipo);
 	$ejemplo				= NULL;
 	$html_title				= "Info about $tipo";
-	
-	$html_tools				= '';	
 	$valor					= $this->get_valor();
 	$lang					= $this->get_lang();
 	$identificador_unico	= $this->get_identificador_unico();
@@ -30,65 +28,53 @@
 
 	switch($modo) {
 		
-		case 'edit'		:	$ar_css		= $this->get_ar_css();
-							$ar_proyectos_section = (array)$this->get_ar_proyectos_section();	
-								#dump($ar_proyectos_section,'ar_proyectos_section'); die();
-							#foreach($ar_tools_obj as $tool_obj) $html_tools .= $tool_obj->get_html();
-							$id_wrapper = 'wrapper_'.$identificador_unico;
-							$input_name = "{$tipo}_{$parent}";
-							$component_info 	= $this->get_component_info('json');
-							break;
+		case 'edit'	:	
+				$ar_proyectos_section = (array)$this->get_ar_proyectos_section();
+				$id_wrapper = 'wrapper_'.$identificador_unico;
+				$input_name = "{$tipo}_{$parent}";
+				$component_info 	= $this->get_component_info('json');
+				break;
 
-		case 'tool_time_machine'		:	
-							$ar_css		= $this->get_ar_css();
-							$id_wrapper = 'wrapper_'.$identificador_unico.'_tm';
-							$input_name = "{$tipo}_{$parent}_tm";
-							# Force file_name
-							$file_name 	= 'edit';	
-							break;
+		case 'tool_time_machine' :	
+				
+				$id_wrapper = 'wrapper_'.$identificador_unico.'_tm';
+				$input_name = "{$tipo}_{$parent}_tm";
+				# Force file_name
+				$file_name 	= 'edit';	
+				break;
 
-		case 'ajax'		:	$ar_css		= $this->get_ar_css();
-							$ar_proyectos_section = $this->get_ar_proyectos_section(); #die();
-							#foreach($ar_tools_obj as $tool_obj) $html_tools .= $tool_obj->get_html();		
-							break;
+		case 'ajax'		:	
+				$ar_proyectos_section = $this->get_ar_proyectos_section(); #die();
+				break;
 						
-		case 'search'	:	# Force file_name to 'list'
-							$file_name 	= 'list';
-							$ar_css		= false;
-							break;
+		case 'search'	:	
+				# Force file_name to 'list'
+				$file_name 	= 'list';
+				break;
 						
 		case 'list_tm' :
-							$file_name = 'list';
+				$file_name = 'list';
 
-		case 'list'		:	$ar_css		= false;
-							if (empty($dato) || count($dato)<1) {
-								echo "<span class=\"error\">Proyects is empty.<br>Please set at least one</span>";
-								return;
-							}
-							$ar_proyectos_section = (array)$this->get_ar_proyectos_section();
-							if(SHOW_DEBUG) {
-								#dump($ar_proyectos_section, " ar_proyectos_section ".to_string());
-							}
-							break;
+		case 'list'		:	
+				if (empty($dato) || count($dato)<1) {
+					echo "<span class=\"error\">Proyects is empty.<br>Please set at least one</span>";
+					return;
+				}
+				$ar_proyectos_section = (array)$this->get_ar_proyectos_section();
+				if(SHOW_DEBUG) {
+					#dump($ar_proyectos_section, " ar_proyectos_section ".to_string());
+				}
+				break;
 
-		case 'relation':	# Force file_name to 'list'
-							$file_name 	= 'list';
-							$ar_css		= false;
-							break;
-						
-		
+		case 'relation':	
+				# Force file_name to 'list'
+				$file_name 	= 'list';
+				break;		
 							
-		case 'lang'		:	$ar_css		= $this->get_ar_css();
-							# load only time machime tool
-							/*
-							foreach($ar_tools_obj as $tool_obj) {
-								if( get_class($tool_obj) == 'tool_time_machine') {																				
-									$html_tools .= $tool_obj->get_html();								
-								}
-							}
-							*/
-							break;
+		case 'lang'		:
+				break;
 	}
+	
 		
 	$page_html	= DEDALO_LIB_BASE_PATH .'/'. get_class($this) . '/html/' . get_class($this) . '_' . $file_name . '.phtml';
 	if( !include($page_html) ) {

@@ -22,7 +22,7 @@ select.css_select_lang {
 .current_lang_info {
 	float: right;
 	color: #aaaaaa;
-	margin-right: 10px;
+	/*margin-right: 10px;*/
 	position: relative;
 	top: 4px;
 }

@@ -2,16 +2,15 @@
 ################################################################
 ################### DEDALO VERSION V4 ##########################
 ################################################################
-/*
-	BAJO LICENCIA PÚBLICA GNU
+/*	
+	UNDER GNU PUBLIC LICENSE / BAJO LICENCIA PÚBLICA GNU
 	http://www.gnu.org/licenses/licenses.es.html
-	Versión 4, 14 de marzo de 2012 / 21 Abril 2015
+	Version 4, 14 de marzo de 2012 / 5 May 2016
 	
-	© Fundación MOMO 
 	Juan Francisco Onielfa Veneros
 	Alejandro Peña Carbonell
 	http://www.fmomo.org/
-	http://dedalo.antropolis.net/
+	http://dedalo4.antropolis.net/
 */
 
 
@@ -107,6 +106,7 @@ define('DEDALO_ENTITY', 'my_entity_name'); # Like 'dedalo4'
 	define('SLOW_QUERY_MS'	, 1200);
 
 
+
 ################################################################
 # BACKUP : Automatic backups control
 	# DEDALO_BACKUP_ON_LOGIN : true / false	
@@ -176,24 +176,10 @@ define('DEDALO_ENTITY', 'my_entity_name'); # Like 'dedalo4'
 
 
 
-
-################################################################
-# DB : CONEXION TO DATABASE		
-	require('config4_db.php');
-	define('SLOW_QUERY_MS'	, 1200);
-
-
-
-################################################################
-# BACKUP : Automatic backups control
-	# DEDALO_BACKUP_ON_LOGIN : true / false	
-	define('DEDALO_BACKUP_ON_LOGIN'	, true);
-	# DEDALO_BACKUP_TIME_RANGE Minimun lapse of time (in hours) for run backup script again. Default: (int) 4
-	define('DEDALO_BACKUP_TIME_RANGE', 8);
-
-
 ################################################################
 # LANG
+	# DEDALO STRUCTURE LANG (default 'lg-spa')
+	define('DEDALO_STRUCTURE_LANG'				, 'lg-spa');
 
 	# APPLICATION LANG : Dedalo application lang
 	define('DEDALO_APPLICATION_LANGS'			, serialize( array(
@@ -228,7 +214,7 @@ define('DEDALO_ENTITY', 'my_entity_name'); # Like 'dedalo4'
 
 	#
 	# DEDALO_PREFIX_TIPOS
-	define('DEDALO_PREFIX_TIPOS', serialize( array('dd','rsc','oh') ));
+	define('DEDALO_PREFIX_TIPOS', serialize( array('dd','rsc','oh','ich') ));
 
 	# Fallback section
 	define('MAIN_FALLBACK_SECTION'				,'oh1');		# go after login (tipo inventory)
@@ -245,8 +231,6 @@ define('DEDALO_ENTITY', 'my_entity_name'); # Like 'dedalo4'
 	
 
 
-
-
 ################################################################
 # LIBS PATH
 
@@ -258,8 +242,7 @@ define('DEDALO_ENTITY', 'my_entity_name'); # Like 'dedalo4'
 	# TABLESORTER
 	define('JQUERY_TABLESORTER_JS'		, DEDALO_ROOT_WEB . '/lib/jquery/jquery-tablesorter/jquery.tablesorter.min.js');
 	# Text editor
-	define('TEXT_EDITOR_URL_JS'			, DEDALO_ROOT_WEB . '/lib/tinymce/js/tinymce/tinymce.min.js');
-	#define('TEXT_EDITOR_URL_JS'			, DEDALO_ROOT_WEB . '/vendor/tinymce/tinymce/tinymce.min.js');
+	define('TEXT_EDITOR_URL_JS'			, DEDALO_ROOT_WEB . '/lib/tinymce/js/tinymce/tinymce.min.js');	
 	# PAPER
 	define('PAPER_JS_URL' 				, DEDALO_ROOT_WEB .'/lib/paper/dist/paper-full.min.js');
 	# LEAFLET
@@ -269,7 +252,7 @@ define('DEDALO_ENTITY', 'my_entity_name'); # Like 'dedalo4'
 	# NVD3
 	define('NVD3_URL_JS' 				, DEDALO_ROOT_WEB .'/lib/nvd3/build/nv.d3.min.js');
 	define('NVD3_URL_CSS' 				, DEDALO_ROOT_WEB .'/lib/nvd3/build/nv.d3.min.css');
-	# CDN USE BOOL
+	# USE_CDN (BOOL)
 	define('USE_CDN' 					, false);
 
 
@@ -302,13 +285,13 @@ define('DEDALO_ENTITY', 'my_entity_name'); # Like 'dedalo4'
 		define('DEDALO_AV_AR_QUALITY'				, serialize( array(DEDALO_AV_QUALITY_ORIGINAL,'1080','720','576',DEDALO_AV_QUALITY_DEFAULT,'240','audio') ));		
 		# EXTENSION normally mp4, mov
 		define('DEDALO_AV_POSTERFRAME_EXTENSION'	, 'jpg');
-		# FFMPEG PATH usualmente /usr/bin/ffmpeg
+		# FFMPEG PATH
 		define('DEDALO_AV_FFMPEG_PATH'				, '/usr/bin/ffmpeg');			# Like '/usr/bin/ffmpeg'
 		# FFMPEG SETTINGS
 		define('DEDALO_AV_FFMPEG_SETTINGS'			, DEDALO_LIB_BASE_PATH . '/media_engine/lib/ffmpeg_settings');
-		# FAST START PATH usualmente /usr/bin/qt-faststart
+		# FAST START PATH
 		define('DEDALO_AV_FASTSTART_PATH'			, '/usr/bin/qt-faststart');		# Like '/usr/bin/qt-faststart';
-		# DEDALO_AV_FFPROBE_PATH PATH usualmente /usr/local/bin/ffprobe
+		# DEDALO_AV_FFPROBE_PATH PATH usualmente /usr/bin/ffprobe
 		define('DEDALO_AV_FFPROBE_PATH'				, '/usr/bin/ffprobe');
 		# AV STREAMER
 		define('DEDALO_AV_STREAMER'					, NULL);
@@ -323,7 +306,7 @@ define('DEDALO_ENTITY', 'my_entity_name'); # Like 'dedalo4'
 		define('DEDALO_AV_SUBTITLES_EXTENSION'		, 'vtt');
 		
 		# DEDALO_AV_RECOMPRESS_ALL
-		define('DEDALO_AV_RECOMPRESS_ALL'			, 1); // 1 re re-compress all av files uploaded, 0 to only copy av files uploaded (default 0)
+		define('DEDALO_AV_RECOMPRESS_ALL'			, 1); // 1 re-compress all av files uploaded, 0 to only copy av files uploaded (default 0)
 		
 
 	#
@@ -378,11 +361,11 @@ define('DEDALO_ENTITY', 'my_entity_name'); # Like 'dedalo4'
 		# TYPE normally jpeg
 		define('DEDALO_PDF_TYPE'					, 'pdf');
 		
-		# DEDALO_PDF_RENDERER (daemon generador de pdf a partir de html)
+		# DEDALO_PDF_RENDERER (daemon for generate pdf from html files)
 		define('DEDALO_PDF_RENDERER'				, '/usr/bin/wkhtmltopdf');	# Like '/usr/bin/wkhtmltopdf'
 
-		# PDF_AUTOMATIC_TRANSCRIPTION_ENGINE (daemon generador de ficheros de texto a partir de pdf)
-		define('PDF_AUTOMATIC_TRANSCRIPTION_ENGINE'	, '/usr/bin/pdftotext');		# Like '/usr/bin/pdftotext'
+		# PDF_AUTOMATIC_TRANSCRIPTION_ENGINE (daemon for generate text files from pdf files)
+		define('PDF_AUTOMATIC_TRANSCRIPTION_ENGINE'	, '/usr/bin/pdftotext');	# Like '/usr/bin/pdftotext'
 		
 	
 	#
@@ -413,15 +396,15 @@ define('DEDALO_ENTITY', 'my_entity_name'); # Like 'dedalo4'
 
 ################################################################
 # MEDIA ENTITY
-# DEDALO_ENTITY_MEDIA_AREA_TIPO = remove the Real sections from menu ALL sections
-# DEDALO_ENTITY_MENU_SKIP_TIPOS = skip the array of tipos but walk the childrens, used for agrupations that don't want see into the menu "Oral History" "list of values"...
+	# DEDALO_ENTITY_MEDIA_AREA_TIPO = remove the Real sections from menu ALL sections
 	define('DEDALO_ENTITY_MEDIA_AREA_TIPO'			, '');
+	# DEDALO_ENTITY_MENU_SKIP_TIPOS = skip the array of tipos but walk the childrens, used for agrupations that don't want see into the menu "Oral History" "list of values"...	
 	define('DEDALO_ENTITY_MENU_SKIP_TIPOS'			, serialize( array()));
 
 
 
 # DEDALO_TEST_INSTALL
-# If is true, check current admin user password on login page
+# If true, check current admin user password on login page
 	define('DEDALO_TEST_INSTALL' 					, true);
 
 
@@ -441,12 +424,14 @@ define('DEDALO_ENTITY', 'my_entity_name'); # Like 'dedalo4'
 
 ################################################################
 # LOCK_COMPONENTS
-	define('DEDALO_LOCK_COMPONENTS' 		, false);
+	# Lock and unlock components to avoid replacement data when more than one user edit the same component
+	define('DEDALO_LOCK_COMPONENTS' 		, false);	# Default (bool)false
 
 
 
 ################################################################
 # NOTIFICATIONS
+	# Send notifications to user browser. E.g. Current lock components..
 	define('DEDALO_NOTIFICATIONS'			, false);
 	define('DEDALO_NODEJS'					, '/usr/local/bin/node');
 	define('DEDALO_NODEJS_PM2'				, '/usr/local/bin/pm2');
@@ -455,9 +440,16 @@ define('DEDALO_ENTITY', 'my_entity_name'); # Like 'dedalo4'
 
 ################################################################
 # STRUCTURE CSS
+	# Aditional css precessed from structure or created in aditional external files
 	define('DEDALO_STRUCTURE_CSS'			, true);
 	define('DEDALO_ADITIONAL_CSS'			, false);
 
+
+
+################################################################
+# DIFFUSION DOMAIN
+	define('DEDALO_DIFFUSION_DOMAIN'	, 'default');
+	
 
 
 ################################################################

@@ -11,8 +11,7 @@
 	$this->set_permissions($permissions);	// Fix permissions for current element (important)
 
 	$label					= $this->get_label();
-	$modo					= $this->get_modo();				
-	$ar_css					= $this->get_ar_css();
+	$modo					= $this->get_modo();
 	$component_name			= get_class($this);
 	$identificador_unico	= $this->get_identificador_unico();	
 	$caller_id 				= $this->get_caller_id();
@@ -25,7 +24,7 @@
 	# Test is a complete section or process
 	$is_process_section = (isset($_REQUEST['t']) && $_REQUEST['t']!= $tipo) ? true : false;
 
-	
+
 
 	# COMPONENTS HTML
 	$html_section_add  ='';
@@ -114,9 +113,7 @@
 
 					}//end if (empty($_REQUEST['offset'])) {
 
-					
-					#$records_data =	search::get_records_data($options);
-						#dump($records_data, ' records_data');die();
+		
 
 
 				#
@@ -188,6 +185,8 @@
 					if (defined('DEDALO_LOCK_COMPONENTS') && DEDALO_LOCK_COMPONENTS===true) {
 						js::$ar_url[]  = DEDALO_LIB_BASE_URL."/lock_components/js/lock_components.js";
 					}
+
+					#js::$ar_url[]  = DEDALO_ROOT_WEB . "/lib/jquery/jquery.matchHeight-min.js";
 					
 
 				break;

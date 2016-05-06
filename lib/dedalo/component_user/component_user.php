@@ -2,7 +2,6 @@
 	
 	# CONTROLLER
 
-	#$id 					= $this->get_id();
 	$tipo 					= $this->get_tipo();
 	$parent 				= $this->get_parent();
 	$section_tipo			= $this->get_section_tipo();
@@ -17,7 +16,6 @@
 	$permissions			= common::get_permissions($tipo); 	
 	$ejemplo				= $this->get_ejemplo();
 	$html_title				= "Info about $tipo";		
-	$html_tools				= '';
 	$valor					= $this->get_valor();				
 	$lang					= $this->get_lang();
 	$lang_name				= $this->get_lang_name();
@@ -39,7 +37,7 @@
 		case 'search' :	$file_name = 'list';
 						return NULL;
 
-		case 'list'	:	$ar_css		= false;
+		case 'list'	:
 						break;
 						
 						

@@ -14,9 +14,6 @@
 	$permissions_admin		= common::get_permissions($section_tipo.'-admin');
 	$ejemplo				= NULL;
 	$html_title				= "Info about $tipo";
-	#$ar_tools_obj			= $this->get_ar_tools_obj();	dump($ar_tools_obj," ar_tools_obj");
-	$html_tools				= '';
-	#$valor					= $this->get_valor();			#dump($valor," valor");
 	
 	$lang					= $this->get_lang();	
 	$component_name			= get_class($this);
@@ -37,7 +34,6 @@
 				#
 				# MAIN SECTION STATE
 				# Whole section state					
-				$ar_css				= $this->get_ar_css();
 				$id_wrapper 		= 'wrapper_'.$this->get_identificador_unico();	// add current modo to avoid rehuse cached uid
 				$input_name 		= "{$tipo}_{$tipo}";
 				$valor_for_checkbox	= $this->get_valor_for_checkbox();
@@ -45,8 +41,7 @@
 				$options_json 		= json_encode($this->get_options());
 				$dato_json 			= json_encode($this->get_dato());	
 				$component_info 	= $this->get_component_info('json');
-					#dump($component_info, ' component_info ++ '.to_string());
-
+				
 				#
 				# GRAPHICS
 					$ar_graph 	= $this->get_ar_graph();					
@@ -62,7 +57,6 @@
 				# COMPONENT SPECIFIC STATE
 				# WARNING : NOT USE RELOAD COMPONENT METHODS LIKE 'component_common.load_component_by_wrapper_id' TO UPDATE CURRENT 
 				# COMPONENT IN THIS MODE. Component in 'edit_component' mode is called only by related component (normally text area)			
-				$ar_css		= $this->get_ar_css();
 				$id_wrapper = 'wrapper_'.$this->get_identificador_unico();	// add current modo to avoid rehuse cached uid
 
 				$component_info = $this->get_component_info('json');
@@ -72,7 +66,6 @@
 				#
 				# TOOL STATE
 				# Like transcription, indexation, lang ..
-				$ar_css		= $this->get_ar_css();
 				$id_wrapper = 'wrapper_'.$this->get_identificador_unico();	// add current modo to avoid rehuse cached uid
 				$input_name = "{$tipo}_{$tipo}";
 
@@ -88,9 +81,6 @@
 																		DEDALO_TOOL_INVESTIGATION_SECTION_TIPO);
 				$current_label 		= $component_input_text->get_valor();
 
-				# Bool estado actual
-				#$estado = (bool)$this->map_dato_to_current_element();							
-					#dump($estado,"estado $rotulo");
 				break;		
 						
 		case 'portal_list' :

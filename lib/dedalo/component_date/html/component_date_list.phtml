@@ -1,10 +1,7 @@
 <?php
 
 	# VISUALIZADOR HTML	
-
-	# ELEMENTOS
-	if(!isset ($ar_css['css_span_dato'])) 		$ar_css['css_span_dato']='';
-	if(!isset ($ar_css['css_span_debugger']))	$ar_css['css_span_debugger']='';
+	
 	
 	#echo "\n<!-- DATE [tipo:$tipo id_matrix:$id] -->";	
 		
@@ -17,18 +14,12 @@
 					
 		case ($permissions>=1)	:
 			
-					$html_contenido .= "\n <span class=\"date_in_list css_span_dato {$ar_css['css_span_dato']}\"
+					$html_contenido .= "\n <span class=\"date_in_list css_span_dato\"
 					data-tipo=\"{$tipo}\" data-parent=\"{$parent}\" data-lang=\"{$lang}\" 
 					>";
 					$html_contenido .= $valor ;
 					$html_contenido .= "</span>";
-
-					#dump($valor);
-					
-			if($permissions==3)
-					
-					$html_contenido .= "\n <span class=\"css_span_debugger {$ar_css['css_span_debugger']}\" id=\"debugger_{$tipo}\" >{$debugger}</span>";	
-							
+					break;							
 	}	
 
 	

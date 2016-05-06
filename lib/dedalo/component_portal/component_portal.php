@@ -225,10 +225,12 @@
 
 		# LIST MODE
 		# Build section list from array of section's id stored in component_portal dato
-		case 'list' :					
+		case 'list' :	
 				$dato = $this->get_dato();		#dump($dato); #dump($dato," dato $this->tipo - ". print_r($this,true) );				
-				if (empty($dato)) return null;				
-
+				if (empty($dato)) return null;		
+				
+				#unset($_SESSION['dedalo4']['config']['search_options'][$search_options_session_key]);
+				
 				if (isset($_SESSION['dedalo4']['config']['search_options'][$search_options_session_key])) {						
 					$options = $_SESSION['dedalo4']['config']['search_options'][$search_options_session_key];		
 					$options->full_count = false; # Force update count records on non ajax call						
@@ -236,6 +238,7 @@
 					$context = $options->context;
 
 					$options->filter_by_id  = (array)$dato;
+					$options->filter_by_locator  = null;
 
 				}else{						
 					
@@ -253,7 +256,8 @@
 						$options->filter_by_locator  = (array)$dato;
 						$options->layout_map  		 = $layout_map_virtual;
 						$options->modo  			 = 'portal_list';
-						$options->limit 			 = false; # IMPORTANT : No limit is applicated to portal list. All records are viewed always						
+						$options->limit 			 = false; # IMPORTANT : No limit is applicated to portal list. All records are viewed always
+						#$options->limit 			 = 1;						
 						$options->search_options_session_key = $search_options_session_key;
 
 						# OPTIONS CONTEXT : Configure section context
@@ -265,7 +269,7 @@
 						$options->context = $context;
 							#dump($options,"options");									
 				}//end if (!empty($_SESSION['dedalo4']['config']['search_options'][$search_options_session_key]))
-				#dump($options, ' options ++ '.to_string());
+				#dump($options, ' options ++ '.to_string($search_options_session_key));
 				
 				$rows_data = search::get_records_data($options);
 					#dump($rows_data," rows_data");

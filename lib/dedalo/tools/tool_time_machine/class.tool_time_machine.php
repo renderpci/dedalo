@@ -278,7 +278,35 @@ class tool_time_machine extends tool_common {
 	}#end user_can_recover_sections
 
 
+	/**
+	* UPDATE_RECORDS_IN_TIME_MACHINE
+	* @return 
+	*/
+	public static function update_records_in_time_machine($tipo, $parent, $lang=NULL, $section_tipo) {
 
+		# Creamos un objeto time_machine con los datos recibidos
+		$RecordObj_time_machine		= new RecordObj_time_machine(NULL);
+
+		# creamos un array con las coincidencias existentes
+		$ar_time_machine_records	= $RecordObj_time_machine->get_ar_time_machine_of_this($tipo, $parent, $lang, $section_tipo);
+			#dump($ar_time_machine_records,'ar_time_machine_records'); exit();
+
+		$ar_time_machine_obj = array();
+
+		# Create an array of objects corresponding to time_machine id's found
+		if( is_array($ar_time_machine_records)) foreach($ar_time_machine_records as $id)  {
+
+			# Build new time_machine object
+			$RecordObj_time_machine	= new RecordObj_time_machine($id);
+
+			# Add current TM object
+			$ar_time_machine_obj[]	= $RecordObj_time_machine;
+		}
+		#dump($ar_time_machine_obj,"ar_time_machine_obj");exit();
+
+		return $ar_time_machine_obj;
+		
+	}#end update_records_in_time_machine
 
 
 

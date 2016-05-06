@@ -2,9 +2,6 @@
 
 	# VISUALIZADOR HTML	
 
-	# ELEMENTOS
-	if(!isset ($ar_css['css_span_dato'])) 		$ar_css['css_span_dato']='';
-	if(!isset ($ar_css['css_span_debugger']))	$ar_css['css_span_debugger']='';
 	
 	echo "\n<!-- EMAIL [tipo:$tipo section_id_matrix:$parent] -->";	
 		
@@ -12,16 +9,15 @@
 	$html_contenido = '';
 	switch($permissions) {
 			
-		case 0	:	$html_contenido .= ''; 		
-					break;
+		case 0	:
+			
+				$html_contenido .= ''; 		
+				break;
 					
 		case ($permissions>=1)	:
-			
-					$html_contenido .= "\n <span class=\"css_span_dato {$ar_css['css_span_dato']}\">$valor</span>";
-					
-			if($permissions==3)
-					
-					$html_contenido .= "\n <span class=\"css_span_debugger {$ar_css['css_span_debugger']}\" id=\"debugger_{$tipo}\" >{$debugger}</span>";	
+
+				$html_contenido .= "\n <span class=\"css_span_dato\">$valor</span>";					
+				break;
 							
 	}	
 

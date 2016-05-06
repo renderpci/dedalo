@@ -62,7 +62,7 @@
 						
 
 						$checked  = is_array($dato) && in_array($locator, $dato) ? 'checked="checked"' : '';
-						$tabindex = $i>=1 ? 'tabindex="1"' : '';
+						$tabindex = $i==1 ? 'tabindex="1"' : '';
 
 						$html_contenido .= "<li>";
 
@@ -94,14 +94,12 @@
 					if(SHOW_DEBUG) {
 						$html_contenido .= "\n <span class=\"notas\">dato: $dato_json</span>";;
 					}
-					#
-					#$html_contenido .= "\n <span  class=\"css_span_ejemplo\">$ejemplo</span>";
 
-					$html_contenido .= 	$html_tools;
+					if($permissions==3){
+						$html_contenido .= "\n <span class=\"css_span_debugger\" id=\"debugger_{$tipo}\" >{$debugger}</span>";
+					}
+					break;
 
-			if($permissions==3)
-
-					$html_contenido .= "\n <span class=\"css_span_debugger\" id=\"debugger_{$tipo}\" >{$debugger}</span>";
 
 	}
 

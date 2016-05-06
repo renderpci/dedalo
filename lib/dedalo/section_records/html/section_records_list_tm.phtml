@@ -3,17 +3,11 @@
 
 
 	/*
-	# VISUALIZADOR HTML	
-
-	# ELEMENTOS
-	if(!isset ($ar_css['css_section_list_wrap']))		$ar_css['css_section_list_wrap']='';
-	if(!isset ($ar_css['css_section_list_titulo']))		$ar_css['css_section_list_titulo']='';
-	if(!isset ($ar_css['css_span_dato'])) 				$ar_css['css_span_dato']='';;
-	
+	# VISUALIZADOR HTML
 	
 	
 	print "\n\n<!-- SECTION LIST LIST_TM [tipo:$tipo modo:$modo] -->";
-	print "\n <div class=\"css_section_list_wrap {$ar_css['css_section_list_wrap']}\" id=\"wrap_{$tipo}_tm\">";
+	print "\n <div class=\"css_section_list_wrap\" id=\"wrap_{$tipo}_tm\">";
 	
 	# USADO PARA ORDENAR (JS)
 	#print "\n<script>var page_query_string='$page_query_string';</script>";
@@ -32,7 +26,7 @@
 	
 	switch($permissions) {
 			
-		case 0	:	$html_contenido .= "\n <span class=\"css_span_dato {$ar_css['css_span_dato']}\"> ".label::get_label('sin_acceso')." </span>";
+		case 0	:	$html_contenido .= "\n <span class=\"css_span_dato\"> ".label::get_label('sin_acceso')." </span>";
 					break;
 						
 		case ($permissions>=1)	:		

@@ -1,17 +1,15 @@
 <?php
 
 	# VISUALIZADOR HTML	
-
-	# ELEMENTOS	
-	if(!isset ($ar_css['css_input_text'])) 		$ar_css['css_input_text']='';
-	if(!isset ($ar_css['css_wrap_input_text']))	$ar_css['css_wrap_input_text']='';
+	
 
 	
-	if(isset($_REQUEST[$tipo]))					$dato = $_REQUEST[$tipo];		#var_dump($_REQUEST[$tipo]);
+	if(isset($_REQUEST[$tipo])) $dato = $_REQUEST[$tipo];		#var_dump($_REQUEST[$tipo]);
 	
 	
 	#print "\n<!-- INPUT_TEXT [tipo:$tipo id_matrix:$id] -->";
-	print "\n<div class=\"css_wrap_input_text {$ar_css['css_wrap_input_text']}\" id=\"wrap_{$tipo}\">";
+
+	print "\n<div class=\"css_wrap_input_text\" id=\"wrap_{$tipo}\">";
 	
 	# ETIQUETA (LABEL)
 	$html_label = component_common_draw::draw_label($this);
@@ -30,11 +28,12 @@
 
 					# INPUT 
 					$html_contenido .= "<span id=\"search_component_$tipo\">";
-					$html_contenido .= "\n <input class=\"css_input_text_search {$ar_css['css_input_text']}\" type=\"text\" 
-					name=\"{$tipo}\" 
+					$html_contenido .= "\n <input class=\"css_input_text_search\" type=\"text\"
+					name=\"{$tipo}\"
 					data-tipo=\"{$tipo}\"
 					value=\"{$dato}\"
-					title=\"$html_title\" />";
+					title=\"$html_title\"
+					/>";
 					$html_contenido .= "</span>";
 
 					# LOGICAL OPERATORS

@@ -1,20 +1,7 @@
 <?php
 
 	# VISUALIZADOR HTML	
-
-	# ELEMENTOS
-	if(!isset ($ar_css['css_span_dato'])) 			$ar_css['css_span_dato']='';
-	if(!isset ($ar_css['css_check_box'])) 			$ar_css['css_check_box']='';
-	if(!isset ($ar_css['css_span_ejemplo'])) 		$ar_css['css_span_ejemplo']='';
-	if(!isset ($ar_css['css_span_debugger']))		$ar_css['css_span_debugger']='';
-	if(!isset ($ar_css['css_wrap_check_box']))		$ar_css['css_wrap_check_box']='';
-	if(!isset ($ar_css['css_check_box_rotulo']))	$ar_css['css_check_box_rotulo']='';
 	
-	if(!isset ($tools_html))						$tools_html='';
-	
-	
-	#echo "\n<!-- COMPONENT FILTER MASTER [$tipo $parent] -->";
-	#echo "\n<div class=\"css_wrap_check_box {$ar_css['css_check_box_rotulo']}\" style=\"white-space:nowrap\" >";
 	
 	# ETIQUETA (LABEL)
 	#$html_label = component_common_draw::draw_label($this);
@@ -29,7 +16,7 @@
 		case ($permissions>=1):
 		
 					
-					#$html_contenido .= "\n <span class=\"css_span_dato {$ar_css['css_span_dato']}\">$valor</span>";			
+					#$html_contenido .= "\n <span class=\"css_span_dato\">$valor</span>";			
 					if (!empty($dato)) {
 
 						$dato_keys = array_keys((array)$dato);	
@@ -53,10 +40,6 @@
 	
 	
 	# PRINT HTML
-	#print $html_label;
 	print $html_contenido;
-	#print $html_tools;
 	
-	
-	#echo "\n</div>\n\n"; //wrap
 ?>

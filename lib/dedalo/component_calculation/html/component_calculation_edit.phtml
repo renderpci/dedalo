@@ -48,8 +48,11 @@
 						#$html_contenido .= "\n <span  class=\"css_span_log\"></span>";					
 						#$html_contenido .= "\n <span  class=\"css_span_ejemplo\">$ejemplo</span>";						
 						
-				if($permissions==3)		
-						$html_contenido .= "\n <span class=\"css_span_debugger\" id=\"debugger_{$tipo}\" >{$debugger}</span>";	
+						if($permissions==3){
+							$html_contenido .= "\n <span class=\"css_span_debugger\" id=\"debugger_{$tipo}\" >{$debugger}</span>";	
+						}
+						break;
+						
 												
 		}
 

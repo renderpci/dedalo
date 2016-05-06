@@ -18,11 +18,11 @@
 	/*
 	switch($modo) {
 								
-		case 'list'	:	$ar_css		= false;	
+		case 'list'	:
 						break;
 						
 						
-		case 'search':	$ar_css		= false;
+		case 'search':
 						break;					
 						
 	}

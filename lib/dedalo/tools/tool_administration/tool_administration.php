@@ -35,6 +35,19 @@
 				#
 				# JS includes
 					#js::$ar_url[] = DEDALO_ROOT_WEB.'/lib/bootstrap/dist/js/bootstrap.min.js';
+
+				$current_dedalo_version = $this->get_dedalo_version();
+				$current_dedalo_version = implode(".", $current_dedalo_version);
+
+
+				$current_version = tool_administration::get_current_version_in_db();
+				$current_version = implode(".", $current_version);
+
+
+				$update_version = $this->get_update_version();
+				if($update_version){
+					$update_version = implode(".", $update_version);
+				}
 				
 				break;		
 		

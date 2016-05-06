@@ -1,4 +1,5 @@
 <?php
+require_once(DEDALO_LIB_BASE_PATH . '/diffusion/class.diffusion.php');
 /*
 * CLASS DIFFUSION_rdf
 * Se encarga de gestionar el trasvase de datos desde Dédalo 4 hacia ficheros RDF
@@ -16,6 +17,25 @@ class diffusion_rdf extends diffusion {
 
 	public $section_id;
 	public $rdf_wrapper;	// Array of rdf wrapper lines to inject body content at element $rdf_wrapper[rdf_value]
+
+
+	/**
+	* CONSTRUCT
+	* @param object $options . Default null
+	*/
+	function __construct($options=null) {
+		
+		parent::__construct($options=null);
+	}
+
+
+
+	/**
+	* UPDATE_RECORD
+	*/
+	public function update_record( $request_options, $resolve_references=false ) {
+		// Working here
+	}
 
 
 	/**
@@ -50,8 +70,6 @@ class diffusion_rdf extends diffusion {
 		return $rdf_object;
 		
 	}#end build_rdf_object
-
-
 
 
 
@@ -764,6 +782,36 @@ class diffusion_rdf extends diffusion {
 		echo $msg;
 
 	}#end test_method
+
+
+
+	/**
+	* DIFFUSION_COMPLETE_DUMP
+	* @return 
+	*/
+	public function diffusion_complete_dump($diffusion_element, $resolve_references = true) {
+		// Working here
+		debug_log(__METHOD__." Called unfinished class. Nothing is done ".to_string(), logger::DEBUG);
+	}#end diffusion_complete_dump
+
+
+
+	/**
+	* GET_DIFFUSION_ELEMENT_TABLES_MAP
+	* @return 
+	*/
+	public function get_diffusion_element_tables_map() {
+
+		$diffusion_element_tables_map = new stdClass();
+
+		# Working here
+
+		return $diffusion_element_tables_map;
+		
+	}#end get_diffusion_element_tables_map
+
+
+	
 
 
 }//end class

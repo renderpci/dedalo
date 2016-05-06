@@ -8,7 +8,6 @@
 	$label					= $this->get_label();
 	$modo					= $this->get_modo();
 	$label_name				= $this->get_label();
-	$ar_css					= $this->get_ar_css();
 	$component_name			= get_class($this);
 	$ar_tab_html			= $this->ar_tab_html;					#dump($id);
 

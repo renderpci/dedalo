@@ -1,13 +1,9 @@
 <?php
 
 	# VISUALIZADOR HTML	
-
-	# ELEMENTOS
-	if(!isset($ar_css['css_wrap_geolocation']))		$ar_css['css_wrap_geolocation'] = null;
-	
 	
 	print "\n<!-- GEOLOCATION [tipo:$tipo section_id_matrix:$parent] $label -->";
-	print "\n<div class=\"css_wrap_geolocation wrap_component {$ar_css['css_wrap_geolocation']}\" id=\"{$id_wrapper}\"
+	print "\n<div class=\"css_wrap_geolocation wrap_component\" id=\"{$id_wrapper}\"
 	data-tipo=\"{$tipo}\" data-lang=\"{$lang}\" data-section_tipo=\"{$section_tipo}\" data-parent=\"{$parent}\" data-modo=\"{$modo}\" data-dato=\"{$valor}\" data-component_name=\"{$component_name}\" >";
 	
 		

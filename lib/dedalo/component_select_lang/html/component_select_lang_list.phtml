@@ -1,33 +1,24 @@
 <?php
 
 	# VISUALIZADOR HTML	
-
-	# ELEMENTOS
-	if(!isset ($ar_css['css_span_dato'])) 			$ar_css['css_span_dato']='';
-	if(!isset ($ar_css['css_select'])) 				$ar_css['css_select']='';
-	if(!isset ($ar_css['css_span_ejemplo'])) 		$ar_css['css_span_ejemplo']='';
-	if(!isset ($ar_css['css_span_debugger']))		$ar_css['css_span_debugger']='';
-	if(!isset ($ar_css['css_wrap_select_lang']))	$ar_css['css_wrap_select_lang']='';
-	//if(!isset ($ar_css['css_select_rotulo']))		$ar_css['css_select_rotulo']='';
-	
-	
-	#echo "\n<!-- SELECT [tipo:$tipo section_id_matrix:$parent] $label -->";
-	#echo "\n<div class=\"css_wrap_select_lang {$ar_css['css_wrap_select_lang']}\" >";	
 	
 	# CONTENIDO (INPUT)
 	$html_contenido = '';
 	switch($permissions) {
 			
-		case 0	:	$html_contenido .= "\n <span class=\"css_span_dato {$ar_css['css_span_dato']}\"> No access here (select_lang)! </span>";		
+		case 0	:	$html_contenido .= "\n <span class=\"css_span_dato\"> No access here (select_lang)! </span>";		
 					break;
 											
 		case ($permissions>=1)	:
 										
 					$html_contenido .= $valor;
 
-			if($permissions==3)
+					if($permissions==3){
+						$html_contenido .= "\n <span class=\"css_span_debugger\" id=\"debugger_{$tipo}\" >{$debugger}</span>";	
+					}
+					break;
 			
-					$html_contenido .= "\n <span class=\"css_span_debugger {$ar_css['css_span_debugger']}\" id=\"debugger_{$tipo}\" >{$debugger}</span>";	
+					
 											
 	}	
 	

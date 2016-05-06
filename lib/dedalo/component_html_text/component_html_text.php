@@ -47,7 +47,7 @@
 		
 		#case 'portal_list'	:
 						#$file_name = 'edit';
-		case 'edit'	:	$ar_css				= $this->get_ar_css();
+		case 'edit'	:
 						$id_wrapper 		= 'wrapper_'.$identificador_unico;
 						$input_name 		= "{$tipo}_{$parent}";
 						$text_area_tm 		= NULL;
@@ -63,9 +63,7 @@
 						break;
 
 		
-		case 'tool_lang' :	
-						$ar_css				= $this->get_ar_css();
-
+		case 'tool_lang' :
 						$id_wrapper 		= 'wrapper_'.$identificador_unico.'_tool_lang';
 						$input_name 		= "{$tipo}_{$parent}";
 						$text_area_tm 		= NULL;
@@ -75,9 +73,7 @@
 						break;
 
 		
-		case 'tool_time_machine' :	
-						$ar_css				= $this->get_ar_css();
-						
+		case 'tool_time_machine' :
 						# Asignado al componente en trigger time machine
 						#$version_date 		= $this->get_version_date();	#dump($version_date,'version_date');
 
@@ -92,7 +88,7 @@
 						$file_name  = 'edit';	
 						break;
 		
-		case 'search' :	$ar_css		= false; 							
+		case 'search' :							
 						break;					
 		
 		case 'portal_list'	:
@@ -101,7 +97,7 @@
 		case 'list_tm' :
 						$file_name = 'list';
 						
-		case 'list'	:	$ar_css		= false;
+		case 'list'	:
 						$max_char = 256;
 						#if(strlen($valor)>$max_char) $valor = substr($valor,0,$max_char).'..';
 						$fragmento_text = tools::truncate_text($valor,$max_char);
@@ -109,15 +105,8 @@
 						return;
 						break;						
 		
-		case 'lang'	:	$ar_css		= $this->get_ar_css();
-						$ar_tools_obj			= $this->get_ar_tools_obj();	
-						$html_tools				= '';
-						# load only time machime tool
-						foreach($ar_tools_obj as $tool_obj) {
-							if( get_class($tool_obj) == 'tool_time_machine') {																		
-								$html_tools .= $tool_obj->get_html();								
-							}
-						}
+		case 'lang'	:
+						break;
 		case 'diffusion' :						
 
 						break;	

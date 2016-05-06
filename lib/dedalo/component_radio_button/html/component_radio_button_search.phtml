@@ -2,13 +2,6 @@
 
 	# VISUALIZADOR HTML	
 
-	# ELEMENTOS
-	if(!isset ($ar_css['css_span_dato'])) 			$ar_css['css_span_dato']='';
-	if(!isset ($ar_css['css_radio_button'])) 		$ar_css['css_radio_button']='';
-	if(!isset ($ar_css['css_span_ejemplo'])) 		$ar_css['css_span_ejemplo']='';
-	if(!isset ($ar_css['css_span_debugger']))		$ar_css['css_span_debugger']='';
-	if(!isset ($ar_css['css_wrap_radio_button']))	$ar_css['css_wrap_radio_button']='';
-	if(!isset ($ar_css['css_radio_button_rotulo']))	$ar_css['css_radio_button_rotulo']='';
 	
 	if(isset($_REQUEST[$tipo]))						$dato = $_REQUEST[$tipo];		#var_dump($_REQUEST[$tipo]);
 	
@@ -43,12 +36,12 @@
 						}else {
 							$checked = "";
 						}
-						$html_contenido .= "\n <input class=\"css_radio_button {$ar_css['css_radio_button']}\" type=\"radio\" name=\"{$tipo}\"
+						$html_contenido .= "\n <input class=\"css_radio_button\" type=\"radio\" name=\"{$tipo}\"
 						data-tipo=\"{$tipo}\" 
 						value='$value' 
 						title=\"$html_title\" $checked
 						/>";
-						$html_contenido .= "\n <label class=\"css_radio_button_rotulo {$ar_css['css_radio_button_rotulo']}\" $required_code >$rotulo</label>";						
+						$html_contenido .= "\n <label class=\"css_radio_button_rotulo\" $required_code >$rotulo</label>";						
 					}
 					$html_contenido .= "</span>";
 

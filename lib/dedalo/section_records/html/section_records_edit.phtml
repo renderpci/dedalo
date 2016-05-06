@@ -1,15 +1,9 @@
 <?php
 
-	# VISUALIZADOR HTML	
-
-	# ELEMENTOS
-	if(!isset ($ar_css['css_section_list_wrap']))		$ar_css['css_section_list_wrap']='';
-	if(!isset ($ar_css['css_span_dato'])) 				$ar_css['css_span_dato']='';;
-	
-	
+	# VISUALIZADOR HTML
 	
 	print "\n <!-- SECTION RECORDS EDIT [tipo:$tipo modo:$modo] -->";
-	print "\n <div class=\"css_section_list_wrap {$ar_css['css_section_list_wrap']}\" id=\"wrap_{$tipo}_{$modo}\" data-options='".json_handler::encode($this->options)."' >";
+	print "\n <div class=\"css_section_list_wrap\" id=\"wrap_{$tipo}_{$modo}\" data-options='".json_handler::encode($this->options)."' >";
 	
 	
 	# CONTENIDO 
@@ -18,7 +12,7 @@
 	
 	switch($permissions) {
 			
-		case 0	:	$html_contenido .= "\n <span class=\"css_span_dato {$ar_css['css_span_dato']}\"> ".label::get_label('sin_acceso')." </span>";
+		case 0	:	$html_contenido .= "\n <span class=\"css_span_dato\"> ".label::get_label('sin_acceso')." </span>";
 					break;
 						
 		case ($permissions>=1) :

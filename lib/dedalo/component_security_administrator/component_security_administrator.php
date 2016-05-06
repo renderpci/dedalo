@@ -16,7 +16,6 @@
 	$permissions			= common::get_permissions($tipo);
 	$html_title				= "Info about $tipo";
 	$ar_tools_obj			= $this->get_ar_tools_obj();	
-	$html_tools				= '';
 	$valor					= $this->get_valor();				
 	$ar_list_of_values[]	= $valor; 
 	
@@ -25,9 +24,9 @@
 	$component_name			= get_class($this);
 
 
-	$edited_user_id 		= $this->get_edited_user_id();										#dump($edited_user_id,'edited_user_id');
-	$logged_user_id 		= navigator::get_user_id();											#dump($logged_user_id,'logged_user_id');
-	$is_global_admin 		= component_security_administrator::is_global_admin($logged_user_id);#dump($is_global_admin,'is_global_admin');	
+	$edited_user_id 		= $this->get_edited_user_id();
+	$logged_user_id 		= navigator::get_user_id();
+	$is_global_admin 		= component_security_administrator::is_global_admin($logged_user_id);
 
 	
 	#if($visible!==true) 
@@ -38,29 +37,26 @@
 	switch($modo) {
 		
 		
-		case 'edit'		:	$ar_css		= $this->get_ar_css();
-							#foreach($ar_tools_obj as $tool_obj) $html_tools .= $tool_obj->get_html();
+		case 'edit'		:
 							$id_wrapper = 'wrapper_'.$identificador_unico;
 							$input_name = "{$tipo}_{$parent}";	
 							$component_info 	= $this->get_component_info('json');
 							break;
 
 		case 'tool_time_machine'		:	
-							$ar_css		= $this->get_ar_css();
-							#foreach($ar_tools_obj as $tool_obj) $html_tools .= $tool_obj->get_html();
 							$id_wrapper = 'wrapper_'.$identificador_unico.'_tm';
 							$input_name = "{$tipo}_{$parent}_tm";
 							# Force filename
 							$file_name  = 'edit';
 							break;					
 						
-		case 'search'	:	$ar_css		= false;
+		case 'search'	:
 							break;
 						
-		case 'list'		:	$ar_css		= false;	
+		case 'list'		:
 							break;
 
-		case 'relation'	:	$ar_css		= false;
+		case 'relation'	:
 							$file_name  = 'list';	
 							break;
 	}

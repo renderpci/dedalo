@@ -44,12 +44,12 @@ class diffusion_section_stats extends diffusion {
 
 
 	/**
-	* GET_AR_DIFFUSION_MAP
+	* GET_AR_DIFFUSION_MAP_SECTION_STATS
 	* Retrieves the configuration defined in the thesaurus (structure) for the given section statistics (ar_section_top_tipo)
 	* Format example:
 	* ..
 	*/
-	public function get_ar_diffusion_map( $ar_section_top_tipo=array() ) {	
+	public function get_ar_diffusion_map_section_stats( $ar_section_top_tipo=array() ) {	
 		#dump($ar_section_top_tipo,'$ar_section_top_tipo');
 
 		if (isset($this->ar_diffusion_map)) {
@@ -194,7 +194,7 @@ class diffusion_section_stats extends diffusion {
 			#dump($options,"options");
 
 		# AR_DIFFUSION_MAP : Full map
-		$ar_diffusion_map = $this->get_ar_diffusion_map( $options->section_tipo );	#$options->section_tipo - dd542
+		$ar_diffusion_map = $this->get_ar_diffusion_map_section_stats( $options->section_tipo );	#$options->section_tipo - dd542
 			#dump($ar_diffusion_map,'$ar_diffusion_map '); die();
 
 		$this->diffusion_map_object = new stdClass();		

@@ -16,7 +16,6 @@
 	$ejemplo				= $this->get_ejemplo();
 	$html_title				= NULL;
 	$ar_tools_obj			= $this->get_ar_tools_obj();	
-	$html_tools				= NULL;
 	$valor					= $this->get_valor();				
 	$lang					= $this->get_lang();
 	$lang_name				= $this->get_lang_name();
@@ -32,15 +31,8 @@
 	switch($modo) {
 		
 		case 'edit'	:
-				$ar_langs		= $this->get_ar_langs();			#dump($ar_langs);
-				$ar_css			= $this->get_ar_css();
+				$ar_langs		= $this->get_ar_langs();
 				$component_info	= $this->get_component_info('json');
-				/*
-				foreach($ar_tools_obj as $tool_obj) {
-					if( get_class($tool_obj) != 'tool_lang' )
-					$html_tools .= $tool_obj->get_html();
-				}
-				*/
 				$dedalo_projects_default_langs = (array)unserialize(DEDALO_PROJECTS_DEFAULT_LANGS);
 				break;
 						
@@ -49,8 +41,7 @@
 				break;						
 		case 'list_of_values':				
 				break;						
-		case 'tool_time_machine'	:	
-				$ar_css	= $this->get_ar_css();	
+		case 'tool_time_machine'	:
 				break;
 		
 		case 'search':

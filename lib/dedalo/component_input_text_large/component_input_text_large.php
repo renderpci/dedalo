@@ -2,7 +2,6 @@
 	
 	# CONTROLLER
 
-	#$id 					= $this->get_id();
 	$tipo 					= $this->get_tipo();
 	$parent 				= $this->get_parent();
 	$section_tipo 			= $this->get_section_tipo();
@@ -12,12 +11,11 @@
 	$traducible 			= $this->get_traducible();
 	$label 					= $this->get_label();				
 	$required				= $this->get_required();
-	$debugger				= $this->get_debugger();		#dump($this);
+	$debugger				= $this->get_debugger();
 	if($modo != 'simple')
 	$permissions			= common::get_permissions($tipo); 	
 	$ejemplo				= $this->get_ejemplo();
 	$html_title				= "Info about $tipo";		
-	$html_tools				= '';
 	$valor					= $this->get_valor();				
 	$lang					= $this->get_lang();
 	#$lang_name				= $this->get_lang_name();
@@ -35,54 +33,47 @@
 	switch($modo) {
 		
 		case 'tool_lang':
-						$file_name = 'edit';
-
+				$file_name = 'edit';
 		case 'tool_transcription':
-						#$file_name = 'edit';
+				#$file_name = 'edit';
+		case 'edit'	:	
+				$id_wrapper 	= 'wrapper_'.$identificador_unico;
+				$input_name 	= "{$tipo}_{$parent}";
+				$aditional_css  = $this->get_element_aditional_css();
+				$component_info = $this->get_component_info('json');
+									
+				if (empty($dato)) { # && $traducible=='si'
+					$dato_reference_lang = $this->get_dato_default_lang();#$this->get_ejemplo();	#RecordObj_dd::get_termino_by_tipo($tipo,DEDALO_DATA_LANG_DEFAULT);						
+				}												
+				break;
 
-		case 'edit'	:	$ar_css			= $this->get_ar_css();
-						$id_wrapper 	= 'wrapper_'.$identificador_unico;
-						$input_name 	= "{$tipo}_{$parent}";
-						$aditional_css  = $this->get_element_aditional_css();
-						$component_info = $this->get_component_info('json');
-											
-						if (empty($dato)) { # && $traducible=='si'
-							$dato_reference_lang = $this->get_dato_default_lang();#$this->get_ejemplo();	#RecordObj_dd::get_termino_by_tipo($tipo,DEDALO_DATA_LANG_DEFAULT);						
-						}
-														
-						break;
-
-		case 'tool_time_machine'	:	
-						$ar_css		= $this->get_ar_css();
-						$id_wrapper = 'wrapper_'.$identificador_unico.'_tm';
-						$input_name = "{$tipo}_{$parent}_tm";	
-						# Force file_name
-						$file_name  = 'edit';
-						break;
+		case 'tool_time_machine' :						
+				$id_wrapper = 'wrapper_'.$identificador_unico.'_tm';
+				$input_name = "{$tipo}_{$parent}_tm";	
+				# Force file_name
+				$file_name  = 'edit';
+				break;
 						
 		case 'portal_list':						
 		case 'list_tm' :
-						$file_name = 'list';
+				$file_name = 'list';						
+		case 'list'	:	
+				break;
 						
-		case 'list'	:	$ar_css		= false;
-						break;
-						
-		case 'list_of_values'	:
-						$ar_css		= false;
-						break;
+		case 'list_of_values' :						
+				break;
 
 		case 'relation':# Force file_name to 'list'
-						$file_name  = 'list';
-						$ar_css		= false;
-						break;
+				$file_name  = 'list';
+				break;
 						
-		case 'lang'	:	$ar_css		= $this->get_ar_css();						
-						break;
+		case 'lang'	:	
+				break;
 		
-		case 'search':	$ar_css		= false;
-						$ar_comparison_operators 	= $this->build_search_comparison_operators();
-						$ar_logical_operators 		= $this->build_search_logical_operators();	
-						break;
+		case 'search':	
+				$ar_comparison_operators 	= $this->build_search_comparison_operators();
+				$ar_logical_operators 		= $this->build_search_logical_operators();	
+				break;
 										
 	}
 	

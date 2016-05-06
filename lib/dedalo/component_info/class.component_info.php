@@ -39,7 +39,42 @@ class component_info extends component_common {
 	}
 
 
+	/**
+	* RENDER_LIST_VALUE
+	* Overwrite for non default behaviour
+	* Receive value from section list and return proper value to show in list
+	* Sometimes is the same value (eg. component_input_text), sometimes is calculated (e.g component_portal)
+	* @param string $value
+	* @param string $tipo
+	* @param int $parent
+	* @param string $modo
+	* @param string $lang
+	* @param string $section_tipo
+	* @param int $section_id
+	*
+	* @return string $list_value
+	*/
+	public static function render_list_value($value, $tipo, $parent, $modo, $lang, $section_tipo, $section_id) {
+		
+		$component_info  = component_common::get_instance(__CLASS__,
+														  $tipo,
+														  $parent,
+														  $modo,
+														  $lang,
+														  $section_tipo);
+		/* NO SPEED INCREMENT IS APPRECIATED
+			foreach ($component_info->propiedades as $key => $prop_value) {
+				if(isset($prop_value->data_source_list) && in_array($prop_value->data_source_list, $ar_columnas_tipo)) {
+					#dump($rows[$prop_value->data_source_list], ' $ar_columnas_tipo ++ '.to_string());
+					$component_info->propiedades[$key]->ar_locators = json_decode($rows[$prop_value->data_source_list]);
+						#dump($component_info->propiedades[$key], '$component_info->get_propiedades()[$key] ++ '.to_string());
+					break;
+				}
+			}
+			*/
+		return $component_info->get_html();
 
+	}#end render_list_value
 
 
 

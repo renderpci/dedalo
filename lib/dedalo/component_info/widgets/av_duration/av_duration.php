@@ -60,7 +60,8 @@
 
 
 					$duration_secs = 0;
-
+					
+					
 					$cache_key = $current_locator->section_tipo.'_'.$current_locator->section_id;
 					if (in_array($cache_key, $ar_resolved)) {
 						continue;
@@ -68,27 +69,48 @@
 					if ($use_cache && isset($_SESSION['dedalo4']['config']['av_duration'][$cache_key])) {
 
 						$duration_secs = $_SESSION['dedalo4']['config']['av_duration'][$cache_key];						
-					
+						#debug_log(__METHOD__." GET DUTARION FROM SESSION $current_locator->section_id ".to_string($duration_secs), logger::DEBUG);
+
 					}else{
+						/* DEACTIVATED
+						$modelo_name = RecordObj_dd::get_modelo_name_by_tipo(DEDALO_COMPONENT_RESOURCES_MINUTES_TIPO,true);
+						$component 	 = component_common::get_instance($modelo_name,
+																	  DEDALO_COMPONENT_RESOURCES_MINUTES_TIPO,
+																	  $current_locator->section_id,
+																	  'edit',
+																	  DEDALO_DATA_NOLAN,
+																	  $current_locator->section_tipo);
 
-						$component_av = component_common::get_instance('component_av',
-																	   $component_av_tipo,
-																	   $current_locator->section_id,
-																	   'list',
-																	   DEDALO_DATA_NOLAN,
-																	   $current_locator->section_tipo);					
-						$video_path   = $component_av->get_video_path(DEDALO_AV_QUALITY_DEFAULT);
-						if ( file_exists( $video_path) ) {
+						$dato = $component->get_dato();
+						*/
+						if (!empty($dato)) {
+							
+							$duration_secs = $dato;
+							if($use_cache) $_SESSION['dedalo4']['config']['av_duration'][$cache_key] = $duration_secs;
+							#debug_log(__METHOD__." GET DUTARION FROM DEDALO_COMPONENT_RESOURCES_MINUTES_TIPO $current_locator->section_id ".to_string($duration_secs), logger::DEBUG);
+						
+						}else{													
 
-							$media_attributes = ffmpeg::get_media_attributes($video_path);
-								#dump($media_attributes, ' media_attributes ++ '.to_string());							
-							if (isset($media_attributes->format->duration)) {
-								$duration_secs = $media_attributes->format->duration;
+							$component_av = component_common::get_instance('component_av',
+																		   $component_av_tipo,
+																		   $current_locator->section_id,
+																		   'list',
+																		   DEDALO_DATA_NOLAN,
+																		   $current_locator->section_tipo);					
+							$video_path   = $component_av->get_video_path(DEDALO_AV_QUALITY_DEFAULT);
+							if ( file_exists( $video_path) ) {
 
-								if($use_cache) $_SESSION['dedalo4']['config']['av_duration'][$cache_key] = $duration_secs;
-							}							
-						}//end if (file_exists
-					}
+								$media_attributes = ffmpeg::get_media_attributes($video_path);
+									#dump($media_attributes, ' media_attributes ++ '.to_string());							
+								if (isset($media_attributes->format->duration)) {
+									$duration_secs = $media_attributes->format->duration;
+
+									if($use_cache) $_SESSION['dedalo4']['config']['av_duration'][$cache_key] = $duration_secs;
+								}							
+							}//end if (file_exists
+							#debug_log(__METHOD__." GET DUTARION FROM FILE MEDIA_ATTRIBUTES $current_locator->section_id ".to_string($duration_secs), logger::DEBUG);
+						}//end if (empty($dato)) {
+					}					
 					
 					$ar_duration[$current_locator->section_id] = $duration_secs;
 					

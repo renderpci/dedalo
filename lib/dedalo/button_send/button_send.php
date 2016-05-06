@@ -14,10 +14,10 @@
 	
 	switch($modo) {
 		
-		case 'edit'	:	$ar_css		= $this->get_ar_css();	
+		case 'edit'	:
 						break;
 						
-		case 'list'	:	$ar_css		= false;
+		case 'list'	:
 						break;	
 						
 	}

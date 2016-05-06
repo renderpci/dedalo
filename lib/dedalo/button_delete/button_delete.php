@@ -14,8 +14,6 @@
 
 	$file_name 				= $modo;
 
-
-	$ar_css		= $this->get_ar_css();
 	
 	switch($modo) {
 		
@@ -33,15 +31,14 @@
 						$file_name  = 'edit';
 						break;
 
-		case 'selected_fragment':$ar_css		= $this->get_ar_css();
+		case 'selected_fragment':
 						$file_name  = 'edit';
 						break;
 
-		case 'list'	:	$ar_css		= $this->get_ar_css();
+		case 'list'	:	
 						break;
 						
-		case 'list_of_values'	:	
-						$ar_css		= $this->get_ar_css();
+		case 'list_of_values'	:
 						break;							
 						
 	}

@@ -13,6 +13,9 @@ class component_select_lang extends component_common {
 	# GET DATO : Format "lg-spa"
 	public function get_dato() {
 		$dato = parent::get_dato();
+		#if (is_string($dato)) {
+		#	$dato = (array)$dato;
+		#}
 		return (string)$dato;
 	}
 
@@ -115,6 +118,33 @@ class component_select_lang extends component_common {
 	public function build_search_comparison_operators( $comparison_operators=array('=','!=') ) {
 		return (object)parent::build_search_comparison_operators($comparison_operators);
 	}#end build_search_comparison_operators
+
+
+
+	/**
+	* GET_RELATED_COMPONENT_TEXT_AREA
+	* @return string $tipo | null
+	*/
+	public function get_related_component_text_area() {
+
+		$tipo = null;
+		$related_terms = common::get_ar_related_by_model('component_text_area', $this->tipo);
+			#dump($related_terms, ' related_terms ++ '.to_string());
+
+		switch (true) {
+			case count($related_terms)==1 :
+				$tipo = reset($related_terms);
+				break;
+			case count($related_terms)>1 :
+				debug_log(__METHOD__." More than one related component_text_area are found. Please fix this ASAP ".to_string(), logger::ERROR);
+				break;
+			default:
+				break;
+		}
+
+		return $tipo;
+		
+	}#end get_related_component_text_area
 	
 
 }

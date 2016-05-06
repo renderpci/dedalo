@@ -1,19 +1,10 @@
 <?php
 
 	# VISUALIZADOR HTML	
-
-	# ELEMENTOS
-	if(!isset ($ar_css['css_span_dato'])) 				$ar_css['css_span_dato']='';
-	if(!isset ($ar_css['css_component_project_langs']))	$ar_css['css_component_project_langs']='';
-	if(!isset ($ar_css['css_span_ejemplo'])) 			$ar_css['css_span_ejemplo']='';
-	if(!isset ($ar_css['css_span_debugger']))			$ar_css['css_span_debugger']='';
-	if(!isset ($ar_css['css_wrap_component_project_langs']))	$ar_css['css_wrap_component_project_langs']='';
-	
-	if(!isset ($html_tools))					$html_tools='';
 	
 	
 	print "\n<!-- COMPONENT_PROJECT_LANGS TM [tipo:$tipo section_id_matrix:$parent] -->";
-	print "\n<div class=\"css_wrap_component_project_langs_tm text_unselectable {$ar_css['css_wrap_component_project_langs']}\" id=\"wrap_{$identificador_unico}\" >";
+	print "\n<div class=\"css_wrap_component_project_langs_tm text_unselectable\" id=\"wrap_{$identificador_unico}\" >";
 	
 	# ETIQUETA (LABEL)
 	$html_label = component_common_draw::draw_label($this);
@@ -22,23 +13,23 @@
 	$html_contenido = '';
 	switch($permissions) {
 			
-		case 0	:	$html_contenido .= "\n <span class=\"css_span_dato {$ar_css['css_span_dato']}\"> ".label::get_label('sin_acceso')." (component_project_langs)</span>";
+		case 0	:	$html_contenido .= "\n <span class=\"css_span_dato\"> ".label::get_label('sin_acceso')." (component_project_langs)</span>";
 					break;
 						
-		case 1	: 	$html_contenido .= "\n <span class=\"css_span_dato {$ar_css['css_span_dato']}\">$dato</span>";
+		case 1	: 	$html_contenido .= "\n <span class=\"css_span_dato\">$dato</span>";
 					break;	
 						
 		case ($permissions>=2)	:
 					
 					/*
-					$html_contenido .= "\n <input class=\"css_component_project_langs {$ar_css['css_component_project_langs']}\" type=\"text\" 
+					$html_contenido .= "\n <input class=\"css_component_project_langs\" type=\"text\" 
 					id=\"{$identificador_unico}\" name=\"{$tipo}_{$id}\" 
 					data-tipo=\"{$tipo}\" data-id_matrix=\"{$id}\" data-lang=\"{$lang}\" 
 					value=\"{$dato}\" title=\"$html_title\" />";
 					*/
 					
 					$html_contenido .= "\n
-					<ul id=\"sortable_project_langs_tm\" class=\"css_component_project_langs {$ar_css['css_component_project_langs']}\"  
+					<ul id=\"sortable_project_langs_tm\" class=\"css_component_project_langs\"  
 					name=\"{$tipo}_{$parent}_tm\" data-tipo=\"{$tipo}\" data-lang=\"{$lang}\" data-section_tipo=\"{$section_tipo}\" data-parent=\"{$parent}\" 
 					style=\"opacity:0.7;padding-bottom:10px;\">";
 					
@@ -53,14 +44,13 @@
 							$html_contenido .= "";
 						}
 					
-					$html_contenido .= "\n </ul>";					
+					$html_contenido .= "\n </ul>";
 					
-					#$html_contenido .= "\n <span  class=\"css_span_log\"></span>";	
+					if($permissions==3){
+						$html_contenido .= "\n <span class=\"css_span_debugger\" id=\"debugger_{$id}\" >{$debugger}</span>";	
+					}
+					break;
 					
-					$html_contenido .= $html_tools;
-					
-			if($permissions==3)		
-					$html_contenido .= "\n <span class=\"css_span_debugger {$ar_css['css_span_debugger']}\" id=\"debugger_{$id}\" >{$debugger}</span>";	
 					
 											
 	}

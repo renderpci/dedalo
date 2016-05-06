@@ -10,8 +10,7 @@
 
 	$debugger				= $this->get_debugger();
 	$permissions			= common::get_permissions($tipo); 	
-	$html_title				= "Info about $tipo";
-	$ar_css					= $this->get_ar_css();	
+	$html_title				= "Info about $tipo";	
 	$file_name 				= $modo;
 
 

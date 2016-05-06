@@ -2,12 +2,6 @@
 
 	# VISUALIZADOR HTML	
 
-	# ELEMENTOS
-	if(!isset ($ar_css['css_span_dato'])) 		$ar_css['css_span_dato']='';
-	if(!isset ($ar_css['css_wrap_portal'])) 	$ar_css['css_wrap_portal']='';
-
-		
-		
 		# CONTENIDO (INPUT)
 		$html_contenido = '';
 		switch($permissions) {
@@ -15,7 +9,7 @@
 			case 0	:	$html_contenido .= "";
 						break;
 							
-			#case 1	: 	$html_contenido .= "\n <span class=\"css_span_dato {$ar_css['css_span_dato']}\">$valor</span>";
+			#case 1	: 	$html_contenido .= "\n <span class=\"css_span_dato\">$valor</span>";
 			#			break;	
 							
 			case ($permissions>=1)	:

@@ -11,7 +11,6 @@
 	$label 					= $this->get_label();
 	$permissions			= 1;	//common::get_permissions($tipo);
 	$html_title				= "Info about $tipo";		
-	$html_tools				= '';
 	$valor					= $this->get_valor();				
 	$lang					= $this->get_lang();
 	$identificador_unico	= $this->get_identificador_unico();

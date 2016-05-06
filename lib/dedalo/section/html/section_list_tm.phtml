@@ -2,14 +2,9 @@
 	
 	# VISUALIZADOR HTML	
 
-	# ELEMENTOS
-	if(!isset ($ar_css['css_section_wrap']))		$ar_css['css_section_wrap']='';
-	if(!isset ($ar_css['css_section_titulo']))		$ar_css['css_section_titulo']='';
-	if(!isset ($ar_css['css_span_dato'])) 			$ar_css['css_span_dato']='';	
-	
 	
 	print "\n\n<!-- SECTION LIST_TM [tipo:$tipo modo:$modo] -->";
-	print "\n<div class=\"css_section_wrap {$ar_css['css_section_wrap']}\" id=\"section_wrap_{$tipo}_{$modo}\" data-modo=\"$modo\" data-options=\"\" >";
+	print "\n<div class=\"css_section_wrap\" id=\"section_wrap_{$tipo}_{$modo}\" data-modo=\"$modo\" data-options=\"\" >";
 	
 	
 	# ETIQUETA (LABEL)
@@ -21,7 +16,7 @@
 	$html_contenido = "\n<div class=\"css_section_content section_content_list section_list_rows_content_div\" style=\"margin:0\" >";
 	switch($permissions) {
 			
-		case 0	:	$html_contenido .= "\n <span class=\"css_span_dato {$ar_css['css_span_dato']}\"> ".label::get_label('contenido_no_autorizado')." </span>";
+		case 0	:	$html_contenido .= "\n <span class=\"css_span_dato\"> ".label::get_label('contenido_no_autorizado')." </span>";
 					break;
 						
 		case ($permissions>=1)	:

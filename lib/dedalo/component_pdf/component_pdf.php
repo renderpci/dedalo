@@ -16,7 +16,6 @@
 	$permissions			= common::get_permissions($tipo); 	
 	$ejemplo				= $this->get_ejemplo();
 	$html_title				= "Info about $tipo";		
-	$html_tools				= '';
 	$valor					= $this->get_valor();				
 	$lang					= $this->get_lang();
 	$lang_name				= $this->get_lang_name();
@@ -43,8 +42,6 @@
 	switch($modo) {
 
 		case 'edit' :
-
-				$ar_css			= $this->get_ar_css();
 				$id_wrapper 	= 'wrapper_'.$identificador_unico;
 				$component_info	= $this->get_component_info('json');
 				

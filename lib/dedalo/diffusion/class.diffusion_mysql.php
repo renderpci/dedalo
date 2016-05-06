@@ -1,4 +1,5 @@
 <?php
+require_once(DEDALO_LIB_BASE_PATH . '/diffusion/class.diffusion_sql.php');
 /*
 * CLASS DIFFUSION_MYSQL
 * Se encarga de gestionar la comunicación y el trasvase de datos desde Dédalo 4 hacia bases de datos de diffusión
@@ -6,7 +7,50 @@
 */
 
 
-abstract class diffusion_mysql  {	
+class diffusion_mysql extends diffusion_sql  {	
+
+	/**
+	* CONSTRUCT
+	* @param object $options . Default null
+	*/
+	function __construct($options=null) {
+		
+		parent::__construct($options=null);
+	}
+
+
+
+	/**
+	* EXEC_MYSQL_QUERY
+	* @return 
+	*/
+	public static function exec_mysql_query( $sql, $table_name=null, $database_name ) {
+		
+		$mysql_conn = DBi::_getConnection_mysql(MYSQL_DEDALO_HOSTNAME_CONN,
+										 		MYSQL_DEDALO_USERNAME_CONN,
+										 		MYSQL_DEDALO_PASSWORD_CONN,
+										 		$database_name,
+										 		MYSQL_DEDALO_DB_PORT_CONN,
+										 		MYSQL_DEDALO_SOCKET_CONN);
+
+		$result = $mysql_conn->query( $sql );
+		if (!$result) {
+			#debug_log(__METHOD__." Skipped (key:$key) db_data value for database: $database_name : ".to_string($mysql_conn->error), logger::WARNING);
+			if(SHOW_DEBUG) {
+				#dump( $mysql_conn->error, "error".to_string() );
+				dump( str_replace('\\', '', $sql) , '$sql ERROR: '.to_string($mysql_conn->error) );
+				#throw new Exception("Error Processing Request. MySQL query_insert_data error ".to_string($mysql_conn->error), 1);
+			}
+			$msg = "INFO: Data skipped in SQL table : ". $table_name .' : '. to_string($mysql_conn->error);
+			debug_log(__METHOD__." $msg ".to_string(), logger::DEBUG);
+			#die();							
+		}
+		#$mysql_conn->close();
+
+		return $result;
+
+	}#end exec_mysql_query	
+
 
 
 	/**
@@ -34,8 +78,7 @@ abstract class diffusion_mysql  {
 		
 		$database_name 	= $table_data['database_name'];	# nombre base de datos	
 		$table_name 	= $table_data['table_name'];	# nombre tabla
-		$ar_fields 		= $table_data['ar_fields'];		# campos de la tabla
-			#dump($database_name,'$database_name');die();	
+		$ar_fields 		= $table_data['ar_fields'];		# campos de la tabla			
 
 		#
 		# DROP (default is true)
@@ -44,7 +87,7 @@ abstract class diffusion_mysql  {
 				$sql_query .= "DROP TABLE IF EXISTS `$database_name`.`$table_name` ; ";
 				#
 				# EXEC SINGLE QUERY TO DATABASE
-				$result = self::exec_mysql_query( $sql_query, $table_name );
+				$result = self::exec_mysql_query( $sql_query, $table_name, $database_name );
 			}			
 
 
@@ -58,7 +101,7 @@ abstract class diffusion_mysql  {
 		
 			#
 			# EXEC SINGLE QUERY TO DATABASE
-			$result = self::exec_mysql_query( $sql_query, $table_name );
+			$result = self::exec_mysql_query( $sql_query, $table_name, $database_name );
 
 			debug_log(__METHOD__." Created new table $database_name.$table_name ".to_string(), logger::DEBUG);
 
@@ -160,7 +203,7 @@ abstract class diffusion_mysql  {
 		
 			#
 			# EXEC SINGLE QUERY TO DATABASE
-			$result = self::exec_mysql_query( $sql_query_line, $table_name );
+			$result = self::exec_mysql_query( $sql_query_line, $table_name, $database_name );
 			
 			debug_log(__METHOD__." Exec chunk query $chunk_key of $n_ar_chunk (max. $max_insert_chunk of total $n_ar_fields) to $table_name ".to_string(), logger::DEBUG);
 			
@@ -172,41 +215,16 @@ abstract class diffusion_mysql  {
 
 		return true;	//$sql_query;
 
-	}#end insert_data
-
+	}#end insert_data	
 
 	
-
-	/**
-	* EXEC_MYSQL_QUERY
-	* @return 
-	*/
-	public static function exec_mysql_query( $sql, $table_name=null ) {
-		
-		$result = DBi::_getConnection_mysql()->query( $sql );
-		if (!$result) {
-			#debug_log(__METHOD__." Skipped (key:$key) db_data value for database: $database_name : ".to_string(DBi::_getConnection_mysql()->error), logger::WARNING);
-			if(SHOW_DEBUG) {
-				#dump( DBi::_getConnection_mysql()->error, "error".to_string() );
-				dump( str_replace('\\', '', $sql) , '$sql ERROR: '.to_string(DBi::_getConnection_mysql()->error) );
-				#throw new Exception("Error Processing Request. MySQL query_insert_data error ".to_string(DBi::_getConnection_mysql()->error), 1);
-			}
-			$msg = "INFO: Data skipped in SQL table : ". $table_name .' : '. to_string(DBi::_getConnection_mysql()->error);
-			debug_log(__METHOD__." $msg ".to_string(), logger::DEBUG);
-			die();							
-		}
-		#DBi::_getConnection_mysql()->close();
-
-	}#end exec_mysql_query
-
-
 
 	/**
 	* exec_mysql_multi_query
 	* @param string $sql_query
 	* @return resource $result
-	*/
-	public static function exec_mysql_multi_query($sql_query) {
+	*//*
+	public static function exec_mysql_multi_query__DEPECATED($sql_query) {
 
 		$db = DBi::_getConnection_mysql();
 
@@ -225,13 +243,10 @@ abstract class diffusion_mysql  {
 		# NEXT RESULT : desbloquea la conexión para la siguiente petición (multi_query)
 		$db->next_result();
 	
-		if(SHOW_DEBUG) {
-			#dump($db,'$db');
-		}		
-
 		return $result;
-	}
 
+	}//end multi
+	*/
 
 	
 	/**
@@ -366,28 +381,36 @@ abstract class diffusion_mysql  {
 
 
 
-
 	/**
 	* SAVE_RECORD
 	* Insert / Update one MySQL row (one for lang)
 	* @return 
 	*/
 	public static function save_record( $request_options ) {
-		$response = new stdClass();		
+		
+		$response = new stdClass();
+			$response->result = false;	
 
 		$options = new stdClass();
 			$options->record_data 		= null;
 			$options->typology 	  		= null;			
-			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}	
+			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}				
 
 	
 		if(SHOW_DEBUG) $start_time=microtime(1);
 
-		$database_name  = $options->record_data['database_name'];
-		$table_name 	= $options->record_data['table_name'];
-		$ar_section_id 	= $options->record_data['ar_fields'];		
+		$database_name  	= $options->record_data['database_name'];
+		$table_name 		= $options->record_data['table_name'];
+		$ar_section_id 		= $options->record_data['ar_fields'];
+		$diffusion_section 	= $options->record_data['diffusion_section'];
+		$typology 			= $options->typology;
 			#dump( array_keys($ar_section_id), " section_id ".to_string($table_name )); #die();
-			#dump($options->record_data, ' record_data ++ '.to_string()); die();
+			#dump($options->record_data, ' record_data ++ '.to_string($database_name)); die();
+			#dump($database_name, ' $database_name ++ '.to_string()); die();
+
+		if (empty($database_name) || empty($table_name)) {
+			throw new Exception("Error Processing Request. Database / table_name name not found (database_name:$database_name / table_name:$table_name)", 1);	
+		}
 
 		#
 		# CREATE TABLE IF NOT EXITS
@@ -396,12 +419,12 @@ abstract class diffusion_mysql  {
 			if(!self::table_exits($database_name, $table_name)) {
 
 				# Call to diffusion to optain fields for generate the table
-				if ($options->typology=='thesaurus') {
+				if ($typology=='thesaurus') {
 					$ts_options = new stdClass();
-						$ts_options->table_name = $options->record_data['table_name'];
-					$create_table_ar_fields = diffusion::build_thesaurus_columns( $ts_options );
+						$ts_options->table_name = $table_name;
+					$create_table_ar_fields = self::build_thesaurus_columns( $ts_options );
 				}else{
-					$create_table_ar_fields = diffusion::build_table_columns( $options->record_data['diffusion_section'], $options->record_data['database_tipo']);
+					$create_table_ar_fields = self::build_table_columns( $diffusion_section, $database_name);
 				}
 				
 					#dump($create_table_ar_fields['ar_fields'], ' create_table_ar_fields ++ '.to_string());die();			
@@ -412,29 +435,40 @@ abstract class diffusion_mysql  {
 			}
 			$ar_verified_tables[] = $table_name; // Store state to avoid verify every time for every record
 		}//end if ( !in_array($table_name, (array)$ar_verified_tables) ) {
+
 		
 
 		foreach ((array)$ar_section_id as $section_id => $ar_fields) {
 			# Iterate one or more records
 			#$ar_fields 	= $options->record_data['ar_fields'][$section_id];
-				#dump($ar_fields, ' ar_fields ++ '.to_string($section_id));	 //continue;	
+				#dump($ar_fields, ' ar_fields ++ section_id: '.to_string($section_id));	continue;			
+			
 
 			# First, delete current record in all langs if exists
-				if ($options->typology=='thesaurus') {
-					$strQuery="DELETE FROM `$database_name`.`$table_name` WHERE `terminoID` = '$section_id' ";
-				}else{
-					$strQuery="DELETE FROM `$database_name`.`$table_name` WHERE `section_id` = '$section_id' ";
-				}				
-				$result  = DBi::_getConnection_mysql()->query( $strQuery );					
-					if (!$result) {
-						if(SHOW_DEBUG) { dump($strQuery, 'ERROR ON $strQuery '.to_string(DBi::_getConnection_mysql()->error)); }
-						$response->result = false;
-						$response->msg    = "Error Processing Request. Nothing is deleted. MySQL error".DBi::_getConnection_mysql()->error;
-						return (object)$response;						
-					}
-					$response->msg[] = "Deleted record section_id:$section_id, table:$table_name, all langs. Affected rows:".DBi::_getConnection_mysql()->affected_rows;
-					
-					
+				$delete_result = self::delete_sql_record($section_id, $database_name, $table_name, $typology);
+				$response->msg[] = $delete_result->msg;
+				/*
+					if ($typology=='thesaurus') {
+						$strQuery="DELETE FROM `$database_name`.`$table_name` WHERE `terminoID` = '$section_id' ";
+					}else{
+						$strQuery="DELETE FROM `$database_name`.`$table_name` WHERE `section_id` = '$section_id' ";
+					}			
+					$result  = DBi::_getConnection_mysql()->query( $strQuery );					
+						if (!$result) {
+							if(SHOW_DEBUG) { dump($strQuery, 'ERROR ON $strQuery '.to_string(DBi::_getConnection_mysql()->error)); }
+							$response->result = false;
+							$response->msg    = "Error Processing Request. Nothing is deleted. MySQL error".DBi::_getConnection_mysql()->error;
+							return (object)$response;						
+						}
+						$response->msg[] = "Deleted record section_id:$section_id, table:$table_name, all langs. Affected rows:".DBi::_getConnection_mysql()->affected_rows;
+					*/
+			
+			#
+			# IS_PUBLICABLE : Skip non publicable records
+			if ( (bool)self::is_publicable($section_id, $ar_fields)!==true ) {
+				debug_log(__METHOD__." Skipped record $section_id from table $table_name (publication=no)".to_string(), logger::DEBUG);
+				continue; // Skip publish records widh value of field 'publication' as 'no'
+			}	
 
 			# Create records . Iterate langs
 			foreach ($ar_fields as $lang => $fields) {
@@ -457,11 +491,9 @@ abstract class diffusion_mysql  {
 			
 				# Insert mysql record
 				$strQuery = "INSERT INTO `$database_name`.`$table_name` VALUES (NUll,'".implode("','", $ar_field_value)."');";
-				$result   = DBi::_getConnection_mysql()->query( $strQuery );
-					if (!$result) {
-						if(SHOW_DEBUG) {
-							dump($strQuery, "ERROR ON MySQL insert: ".DBi::_getConnection_mysql()->error);
-						}
+				#$result   = DBi::_getConnection_mysql()->query( $strQuery );
+				$result = self::exec_mysql_query( $strQuery, $table_name, $database_name );
+					if (!$result) {						
 						#throw new Exception("Error Processing Request. MySQL insert error".DBi::_getConnection_mysql()->error, 1);
 						$response->result = false;
 						$response->msg    = "Error Processing Request. Nothing is saved. MySQL insert error".DBi::_getConnection_mysql()->error;
@@ -482,11 +514,6 @@ abstract class diffusion_mysql  {
 		return (object)$response;
 
 	}#end save_record
-
-
-
-
-
 
 
 
@@ -556,7 +583,6 @@ abstract class diffusion_mysql  {
 				#dump($sql_options);
 			}
 	
-		#$result = DBi::_getConnection_mysql()->query($strQuery);
 		$result = $sql_options->conn->query($strQuery);
 
 		if (!$result) {
@@ -601,9 +627,8 @@ abstract class diffusion_mysql  {
 		#DBi::_getConnection_mysql()->close();
 
 		return $ar_data;
-	}
 
-
+	}//end get_rows_data
 
 
 
@@ -619,14 +644,12 @@ abstract class diffusion_mysql  {
 		SELECT COUNT(*) AS total
 		FROM information_schema.tables 
 		WHERE 
-		table_schema = '$database_name' 
+		(table_schema = '$database_name' OR table_catalog = '$database_name')
 		AND table_name = '$table_name'
 		";
-		$result   = DBi::_getConnection_mysql()->query( $strQuery );
-		if (!$result) {
-			if(SHOW_DEBUG) {
-				dump($strQuery, "ERROR ON MySQL insert: ".DBi::_getConnection_mysql()->error);
-			}
+		#$result  = DBi::_getConnection_mysql()->query( $strQuery );
+		$result   = self::exec_mysql_query( $strQuery, $table_name, $database_name );
+		if (!$result) {			
 			return false;		
 		}
 		
@@ -642,6 +665,72 @@ abstract class diffusion_mysql  {
 		return (bool)$table_exits;
 
 	}#end table_exits
+
+
+
+	/**
+	* IS_PUBLICABLE
+	* Check is field 'publication' is present and if value is 'no' return false. Else return true
+	* @return bool
+	*/
+	public static function is_publicable($section_id, $ar_fields) {
+		
+		$ar_fields = reset($ar_fields); // Only need first lang
+
+		foreach ($ar_fields as $key => $ar_value) {
+			#dump($ar_value, ' $ar_value ++ '.to_string());
+			if ( 
+				($ar_value['field_name']=='publication' || $ar_value['field_name']=='publicacion') &&
+				($ar_value['field_value']=='no' || empty($ar_value['field_value']))
+				) {
+				return false;
+			}			
+		}
+
+		return true;
+
+	}#end is_publicable
+
+
+
+	/**
+	* DELETE_SQL_RECORD
+	* @return 
+	*/
+	public static function delete_sql_record($section_id, $database_name, $table_name, $typology=null) {
+
+		$response = new stdClass();
+			$response->result 	= false;
+			$response->msg 		= '';
+		
+		if ($typology=='thesaurus' || $table_name=='thesaurus') {
+			$strQuery="DELETE FROM `$database_name`.`$table_name` WHERE `terminoID` = '$section_id' ";
+		}else{
+			$strQuery="DELETE FROM `$database_name`.`$table_name` WHERE `section_id` = '$section_id' ";
+		}			
+		#$result  = DBi::_getConnection_mysql()->query( $strQuery );
+		$result  = self::exec_mysql_query( $strQuery, $table_name, $database_name );
+			if (!$result) {
+				if(SHOW_DEBUG) { dump($strQuery, 'ERROR ON $strQuery '.to_string(DBi::_getConnection_mysql()->error)); }
+				$response->result = false;
+				$response->msg    = "Error Processing Request. Nothing is deleted. MySQL error".DBi::_getConnection_mysql()->error;
+				return (object)$response;						
+			}
+
+		$affected_rows = isset(DBi::_getConnection_mysql()->affected_rows) ? DBi::_getConnection_mysql()->affected_rows : 0;
+		
+		if ($affected_rows>0) {
+			$response->result = true;
+			$response->msg 	  = "Deleted record section_id:$section_id, table:$table_name, all langs. Affected rows:".DBi::_getConnection_mysql()->affected_rows;
+		}
+
+		return $response;
+
+	}#end delete_sql_record
+
+
+
+	
 
 
 

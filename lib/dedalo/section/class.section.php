@@ -27,7 +27,6 @@ class section extends common {
 	protected $norden ;
 	protected $label ;
 
-	public $ar_css ;
 	public $ar_section_list_obj ;
 	public $ar_section_group_obj ;
 	public $ar_section_relations;			# array de etiquetas de esta sección (en relaciones)
@@ -72,6 +71,12 @@ class section extends common {
 	# Default is 'database'. Other options like 'session' are accepted
 	# Note that section change automatically this value (to 'session' for example) when received section_id is like 'temp1' for manage this cases as temporal section
 	public $save_handler = 'database';
+
+
+	# DIFFUSION INFO
+	# Store section diffusion info. If empty, current section is not publish.
+	# Format is array or null
+	# protected $diffusion_info;
 	
 
 	# INVERSE RELATIONS
@@ -100,14 +105,17 @@ class section extends common {
     	# key for cache
     	$key = $section_id .'_'. $tipo;
 
+    	$max_cache_instances = 250;
+    	$cache_slice_on 	 = 100;//$max_cache_instances/2;
+
     	# OVERLOAD : If ar_section_instances > 99 , not add current section to cache to avoid overload
     	# array_slice ( array $array , int $offset [, int $length = NULL [, bool $preserve_keys = false ]] )
-    	if (isset($ar_section_instances) && count($ar_section_instances)>250) { // 100 | 200
+    	if (isset($ar_section_instances) && count($ar_section_instances)>$max_cache_instances) { // 200 | 300
 			#$first_section = reset($ar_section_instances);
     		#unset($first_section);
-    		$ar_section_instances = array_slice($ar_section_instances,100,null,true); // 50 | 100
+    		$ar_section_instances = array_slice($ar_section_instances, $cache_slice_on, null, true); // 100 | 150
     		if(SHOW_DEBUG) {
-    			debug_log(__METHOD__." Overload secions prevent (max 250). Unset first 100 cache items [$key]");
+    			debug_log(__METHOD__." Overload secions prevent (max $max_cache_instances). Unset first $cache_slice_on cache items [$key]");
     		}
 
     		// let GC do the memory job
@@ -479,6 +487,7 @@ class section extends common {
 				case 'component_portal':
 				case 'component_autocomplete':
 				case 'component_radio_button':
+				case 'component_publication':
 				case 'component_check_box':
 				case 'component_select':
 				case 'component_relation':
@@ -535,11 +544,16 @@ class section extends common {
 		if (!isset($dato->components->$component_tipo)) {
 			if (!isset($dato->components)) {
 				$dato->components = new stdClass();
-			}		
+			}
 			$dato->components->$component_tipo = new stdClass();
 		}
 		$dato->components->$component_tipo = $component_global_dato;
 			#dump($component_global_dato,"dato del componente");
+
+
+		#
+		# DIFFUSION_INFO
+		$dato->diffusion_info = null;	// Always reset section diffusion_info on save components	
 
 
 		#
@@ -555,8 +569,17 @@ class section extends common {
 			$save_options->time_machine_lang = $component_lang;
 			$save_options->time_machine_tipo = $component_tipo;
 
+		
+		$result = $this->Save( $save_options );
 
-		return $this->Save( $save_options );
+		#
+		# DIFFUSION_INFO
+		#$dato->diffusion_info = null;	// Always reset section diffusion_info on save components
+		#register_shutdown_function( array($this, 'diffusion_info_propagate_changes') ); // exec on __destruct current section
+		$this->diffusion_info_propagate_changes();
+		debug_log(__METHOD__." Deleted diffusion_info data for section $this->tipo - $this->section_id ", logger::DEBUG);
+
+		return $result;
 
 	}#end save_component_dato
 
@@ -774,6 +797,9 @@ class section extends common {
 					
 					# Section created date
 					$section_obj->created_date 		= (string)component_date::get_timestamp_now_for_db();	# Format 2012-11-05 19:50:44
+
+					# diffusion_info
+					$section_obj->diffusion_info 	= array(); // Empty array by default
 
 					# Inverse locators
 					if (isset($this->dato->inverse_locators)) {
@@ -2413,6 +2439,109 @@ class section extends common {
 
 	}#end remove_all_inverse_references
 
+
+
+	/**
+	* GET_DIFFUSION_INFO
+	* @return 
+	*/
+	public function get_diffusion_info() {
+		$dato = $this->get_dato();
+		if(property_exists($dato, 'diffusion_info')) return $dato->diffusion_info;
+		return null;	
+	}#end get_diffusion_info
+
+
+
+	/**
+	* DIFFUSION_INFO_ADD
+	* @param string $diffusion_element_tipo
+	*/
+	public function diffusion_info_add( $diffusion_element_tipo ) {
+		$dato = $this->get_dato();
+
+		if (!isset($dato->diffusion_info) || !is_object($dato->diffusion_info)) {	// property_exists($dato, 'diffusion_info')
+			$dato->diffusion_info = new stdClass();
+		}
+		if (!isset($dato->diffusion_info->$diffusion_element_tipo)) {
+	
+			$diffusion_element_data = new stdClass();
+				$diffusion_element_data->date 	 = date('Y-m-d H:i:s');;
+				$diffusion_element_data->user_id = $_SESSION['dedalo4']['auth']['user_id'];
+
+			$dato->diffusion_info->$diffusion_element_tipo = $diffusion_element_data;
+			
+			$this->set_dato($dato); // Force update section dato
+		}		
+
+	}#end diffusion_info_add
+
+
+
+	/**
+	* DIFFUSION_INFO_PROPAGATE_CHANGES
+	*/
+	public function diffusion_info_propagate_changes() {
+		
+		$inverse_locators = $this->get_inverse_locators();
+		foreach((array)$inverse_locators as $locator) {
+
+			$section = section::get_instance($locator->section_id, $locator->section_tipo, $modo='list');
+			$dato = $section->get_dato();
+			if (!empty($dato->diffusion_info)) {
+				$dato->diffusion_info = null; // Default value
+				$section->set_dato($dato);
+				$section->Save();
+				debug_log(__METHOD__." Propagated diffusion_info changes to section  $locator->section_tipo, $locator->section_id ".to_string(), logger::DEBUG);						
+			}else{
+				debug_log(__METHOD__." Unnecessary do diffusion_info changes to section  $locator->section_tipo, $locator->section_id ".to_string(), logger::DEBUG);
+			}			
+		}
+
+	}#end diffusion_info_propagate_changes
+
+
+
+	/**
+	* DIFFUSION_INFO_REMOVE
+	* @param string $diffusion_element_tipo
+	*//*
+	public function diffusion_info_remove__DES( $diffusion_element_tipo ) {
+		$dato = $this->get_dato();
+
+		if (!property_exists($dato, 'diffusion_info')) return false;
+
+		if (isset($dato->diffusion_info->$diffusion_element_tipo)) {
+			
+			# Remove diffusion element info
+			unset($dato->diffusion_info->$current_diffusion_element_tipo);
+			$this->set_dato($dato); // Force update section dato	
+
+			# Propagate changes to parent sections (inverse_locators)
+			#register_shutdown_function($this->diffusion_info_propagate_changes);
+			$this->diffusion_info_propagate_changes();
+		}	
+
+	}#end diffusion_info_remove
+	*/
+
+
+	/**
+	* DIFFUSION_INFO_RESET
+	* @return bool
+	*//*
+	public function diffusion_info_reset__DES() {
+		$dato = $this->get_dato();
+
+		if (!empty($dato->diffusion_info)) {
+			$dato->diffusion_info = null; // Default value
+			$this->set_dato($dato);
+			return true;
+		}
+		return false;
+
+	}#end diffusion_info_reset
+	*/
 
 
 

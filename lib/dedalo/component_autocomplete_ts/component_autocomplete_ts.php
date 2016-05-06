@@ -2,12 +2,11 @@
 	
 	# CONTROLLER
 
-	#$id 					= $this->get_id();
 	$tipo 					= $this->get_tipo();
 	$parent 				= $this->get_parent();
 	$section_tipo			= $this->get_section_tipo();
 	$modo					= $this->get_modo();		
-	$dato 					= $this->get_dato();			#dump($dato);
+	$dato 					= $this->get_dato();
 	$label 					= $this->get_label();
 	$required				= $this->get_required();
 	$debugger				= $this->get_debugger();
@@ -15,9 +14,6 @@
 	$ejemplo				= NULL;
 	$html_title				= "Info about $parent";
 	$ar_tools_obj			= $this->get_ar_tools_obj();	
-	$html_tools				= '';
-	
-	#$valor_string			= $dato;
 	$lang					= $this->get_lang();
 	$identificador_unico	= $this->get_identificador_unico();
 	$ar_referenced_tipo 	= $this->get_ar_referenced_tipo();
@@ -33,8 +29,7 @@
 	
 	switch($modo) {		
 
-		case 'edit'	:
-				$ar_css			= false;						
+		case 'edit'	:									
 				$id_wrapper 	= 'wrapper_'.$identificador_unico;
 				$input_name 	= $tipo;
 				$valor 			= $this->get_valor($lang);
@@ -45,8 +40,7 @@
 				break;
 
 		case 'tool_time_machine'	:	
-				return NULL;
-				$ar_css		= $this->get_ar_css();
+				return NULL;				
 				$id_wrapper = 'wrapper_'.$identificador_unico.'_tm';
 				$input_name = "{$tipo}_{$id}_tm";
 				$file_name 	= 'edit';
@@ -71,13 +65,10 @@
 				break;
 						
 		case 'list_tm' :
-				$file_name = 'list';
-						
+				$file_name = 'list';						
 		case 'portal_list':
 				$file_name 	= 'list';
-
-		case 'list'	:	
-				$ar_css		= false;
+		case 'list'	:				
 				$valor 		= $this->get_valor($lang,'string');				
 					#dump($valor, ' valor ++ '.to_string());
 				# Return direct value for store in 'valor_list'
@@ -87,8 +78,7 @@
 		case 'relation':
 				return NULL;
 				# Force file_name to 'list'
-				$file_name  = 'list';
-				$ar_css		= false;
+				$file_name  = 'list';				
 				break;
 		
 		case 'print' :

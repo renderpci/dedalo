@@ -9,7 +9,7 @@
 	data-tipo=\"{$tipo}\"
 	data-lang=\"{$lang}\"
 	data-parent=\"{$parent}\"
-	data-section_tipo=\"{$section_tipo}\"	
+	data-section_tipo=\"{$section_tipo}\"
 	data-modo=\"{$modo}\"
 	data-dato=\"{$valor_string}\"
 	data-component_name=\"{$component_name}\"
@@ -31,7 +31,6 @@
 				$html_contenido .= $this->valor;
 				break;
 
-
 		case ($permissions>=2)	:
 
 				$html_contenido .= "\n <select class=\"css_select_lang\"
@@ -42,28 +41,27 @@
 				data-lang=\"{$lang}\"
 				data-section_tipo=\"{$section_tipo}\"
 				data-parent=\"{$parent}\"
+				data-related_component_text_area=\"{$related_component_text_area}\"
 				title=\"$html_title\"
 				tabindex=\"1\"
 				> ";
 
-				
-				$selected = empty($dato) ? 'selected' : '';
+					#
+					# OPTIONS
 
-				$html_contenido .= "\n <option value=\"\" {$selected}> </option>";
+					# OPTIONS EMPTY
+					$selected = empty($dato) ? 'selected' : '';
+					$html_contenido .= "\n <option value=\"\" {$selected}> </option>";
 
-				if (is_array ($ar_all_project_select_langs)) foreach ($ar_all_project_select_langs as $value => $rotulo) {
-					
-					$selected = ($dato == $value) ? 'selected' : '';
+					# OPTIONS VALUES
+					if (is_array ($ar_all_project_select_langs)) foreach ($ar_all_project_select_langs as $value => $value_label) {						
+						$selected = ($dato == $value) ? 'selected' : '';
+						$html_contenido .= "\n <option value=\"{$value}\" {$selected}> {$value_label}</option>";
+					}
 
-					$html_contenido .= "\n <option value=\"{$value}\" {$selected}> {$rotulo}</option>";
-				}
 				$html_contenido .= "\n </select>";
 
 
-				if(SHOW_DEBUG) {
-					#$html_contenido .= "\n <div class=\"debug_info current_lang_info\"> Current lang: <strong>$valor</strong></div>";
-				}
-				
 
 				if($permissions==3) {
 					$html_contenido .= "\n <span class=\"css_span_debugger\" id=\"debugger_{$tipo}\" >{$debugger}</span>";

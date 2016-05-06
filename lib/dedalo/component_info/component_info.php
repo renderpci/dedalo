@@ -20,13 +20,23 @@
 
 	if ($permissions<1) {
 		return null;
-	}	
+	}
+
+
+	#if(!SHOW_DEBUG) {
+		$show_in_modes = isset($propiedades->show_in_modes) ? (array)$propiedades->show_in_modes : array();
+			#dump($show_in_modes, ' show_in_modes ++ '.to_string());
+		if (!in_array($modo, $show_in_modes)) {		
+			return null;	
+		}
+	#}
+
 
 	include_once( dirname(__FILE__) . '/widgets/class.widget.php' );
 
-	$widgets = $propiedades;
+	$widgets = isset($propiedades->widgets) ? $propiedades->widgets : null;
 	if (empty($widgets) || !is_array($widgets)) {
-		debug_log(__METHOD__." Empty defined widgets for $component_name : $label ".to_string($widgets), logger::WARNING);
+		debug_log(__METHOD__." Empty defined widgets for $component_name : $label [$tipo] ".to_string($widgets), logger::WARNING);
 		return null;
 	}
 	#dump($widgets, ' widgets ++ '.to_string());

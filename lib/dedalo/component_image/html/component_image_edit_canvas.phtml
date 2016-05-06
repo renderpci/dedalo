@@ -1,18 +1,19 @@
 <?php
 
 	# VISUALIZADOR HTML	
-
-	# ELEMENTOS
-	#if(!isset ($ar_css['css_span_dato'])) 			$ar_css['css_span_dato']='';
-	#if(!isset ($ar_css['css_image'])) 				$ar_css['css_image']='';
-	#if(!isset ($ar_css['css_span_ejemplo'])) 		$ar_css['css_span_ejemplo']='';
-	#if(!isset ($ar_css['css_span_debugger']))		$ar_css['css_span_debugger']='';
-	if(!isset ($ar_css['css_wrap_image']))			$ar_css['css_wrap_image']='';	
 	
 	
 	print "\n<!-- IMAGE [tipo:$tipo section_id_matrix:$parent] $label -->";
-	print "\n<div class=\"css_wrap_image wrap_component {$ar_css['css_wrap_image']}\" id=\"{$id_wrapper}\"
-	data-tipo=\"{$tipo}\" data-lang=\"{$lang}\" data-section_tipo=\"{$section_tipo}\" data-parent=\"{$parent}\" data-modo=\"{$modo}\" data-dato=\"{$valor}\" data-component_name=\"{$component_name}\" >";
+
+	print "\n<div class=\"css_wrap_image wrap_component\" id=\"{$id_wrapper}\"
+	data-tipo=\"{$tipo}\"
+	data-lang=\"{$lang}\"
+	data-section_tipo=\"{$section_tipo}\"
+	data-parent=\"{$parent}\"
+	data-modo=\"{$modo}\"
+	data-dato=\"{$valor}\"
+	data-component_name=\"{$component_name}\"
+	>";
 	
 		
 		# ETIQUETA (LABEL)
@@ -59,19 +60,16 @@
 							</select>
 							';
 							$html_buttons .= "<span class=\"main_buttons\">";
-							$html_buttons .= "<input type=\"button\" value=\"cuadrado\" onclick=\"cuadrado.activate()\">";
-							$html_buttons .= "<input type=\"button\" value=\"circulo\" onclick=\"circulo.activate()\">";
-							$html_buttons .= "<input type=\"button\" value=\"vectores\" onclick=\"vectores.activate()\">";
-							$html_buttons .= "<input type=\"button\" value=\"puntero\" onclick=\"puntero.activate()\">";							
+							$html_buttons .= "<input type=\"button\" value=\"cuadrado\" onclick=\"component_image.cuadrado.activate()\">";
+							$html_buttons .= "<input type=\"button\" value=\"circulo\" onclick=\"component_image.circulo.activate()\">";
+							$html_buttons .= "<input type=\"button\" value=\"vectores\" onclick=\"component_image.vectores.activate()\">";
+							$html_buttons .= "<input type=\"button\" value=\"puntero\" onclick=\"component_image.puntero.activate()\">";							
 							#$html_buttons .= "<input type=\"button\" value=\"anadido\" onclick=\"anadido.activate()\">";
-							$html_buttons .= "<input type=\"button\" value=\"salvar\" class=\"save_image_path\" onclick=\"salvar()\">";
+							$html_buttons .= "<input type=\"button\" value=\"salvar\" class=\"save_image_path\" onclick=\"component_image.salvar()\">";
 							$html_buttons .= "</span>";
 
-						$html_buttons .= "</div>";
-			
-						
-				#if($permissions==3)		
-						#$html_contenido .= "\n <span class=\"css_span_debugger {$ar_css['css_span_debugger']}\" id=\"debugger_{$tipo}\" >{$debugger}</span>";	
+						$html_buttons .= "</div>";			
+						break;
 												
 		}
 
