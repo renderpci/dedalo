@@ -4,7 +4,13 @@
 
 Today we introduce the update of the V4 to 4.0.11
 
+This update fixed some issues and bugs for the V4.0.10
+
+
 Changes comments are coming soon
+
+
+
 
 
 Today we introduce the update of the V4 to 4.0.10
