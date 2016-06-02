@@ -6,12 +6,11 @@ Today we introduce the update of the V4 to 4.0.11
 
 This update fixed some issues and bugs for the V4.0.10
 
-
 Changes comments are coming soon
 
 
 
-
+*Ver 4.0.11 - 02-06-2016*
 
 Today we introduce the update of the V4 to 4.0.10
 
