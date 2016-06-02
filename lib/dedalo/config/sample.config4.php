@@ -364,6 +364,8 @@
 		define('DEDALO_PDF_MIME_TYPE'				, 'application/pdf');
 		# TYPE normally jpeg
 		define('DEDALO_PDF_TYPE'					, 'pdf');
+		# DEDALO_PDF_THUMB_DEFAULT
+		define('DEDALO_PDF_THUMB_DEFAULT'			, 'thumb');
 		
 		# DEDALO_PDF_RENDERER (daemon for generate pdf from html files)
 		define('DEDALO_PDF_RENDERER'				, '/usr/bin/wkhtmltopdf');	# Like '/usr/bin/wkhtmltopdf'
