@@ -25,14 +25,20 @@ if($mode=='Save') {
 	# DATA VERIFY
 	if(empty($parent)) exit("Trigger Error: Nothing to save.. (parent:$parent)");
 	if(empty($tipo) || strlen($tipo)<3) exit("Trigger Error: tipo is mandatory (tipo:$tipo)");
-
 	if(empty($section_tipo) || strlen($section_tipo)<3) exit("Trigger Error: section_tipo is mandatory $tipo");
+	
+	
+	# DATO . JSON DECODE TRY
+	#dump($dato, ' dato ++ '.to_string());
+	if (!$dato_clean = json_decode($dato)) {
+		$dato_clean = $dato;
+	}
+	#dump($dato_clean, ' dato_clean ++ '.to_string());
 	
 	$component_name = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 
 	# CALLABLE : Verify component name is callable
-	if (!class_exists($component_name))
-		throw new Exception("Trigger Error: class: $component_name not found", 1);
+	if (!class_exists($component_name)) throw new Exception("Trigger Error: class: $component_name not found", 1);
 
 	if (empty($modo)) {
 		$modo='edit';
@@ -41,11 +47,15 @@ if($mode=='Save') {
 	# COMPONENT : Build component as construct ($id=NULL, $tipo=false, $modo='edit', $parent=NULL) 
 	# NOTE: singleton instance here ???
 	#$component_obj = new $component_name($tipo, $parent, $modo, $lang);
-	$component_obj = component_common::get_instance($component_name, $tipo, $parent, $modo, $lang, $section_tipo);
-
+	$component_obj = component_common::get_instance($component_name,
+													$tipo,
+													$parent,
+													$modo,
+													$lang,
+													$section_tipo);
 	
 	# Assign dato
-	$component_obj->set_dato($dato);
+	$component_obj->set_dato( $dato_clean );
  
 
 	# Call the specific function of the current component that handles the data saving with your specific preprocessing language, etc ..

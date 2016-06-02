@@ -11,8 +11,7 @@ if($is_logged!==true) {
 	header("Location: $url");
 	exit();
 }
-$security 	 = new security();
-$permissions = (int)$security->get_security_permissions(DEDALO_TESAURO_TIPO);
+$permissions = (int)security::get_security_permissions(DEDALO_TESAURO_TIPO,DEDALO_TESAURO_TIPO);
 if ($permissions<1) {
 	$url =  DEDALO_ROOT_WEB ."/main/";
 	header("Location: $url");

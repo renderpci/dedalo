@@ -94,6 +94,7 @@
 		$current_tipo 					= RecordObj_dd::get_ar_terminoID_by_modelo_name('area_root')[0];
 		$area_root 						= new area_root($current_tipo);
 		$ar_ts_childrens_root 			= $area_root->get_ar_ts_children_areas($include_main_tipo);
+			#dump($ar_ts_childrens_root, ' ar_ts_childrens_root ++ '.to_string());
 
 		# AREA_ACTIVITY
 		$ar_ts_childrens_activity=array();
@@ -139,18 +140,82 @@
 		$area_admin 					= new area_admin($current_tipo);
 		$ar_ts_childrens_admin 			= $area_admin->get_ar_ts_children_areas($include_main_tipo);
 
+		
 		$ar_all = array_merge($ar_ts_childrens_root, $ar_ts_childrens_activity, $ar_ts_childrens_publication, $ar_ts_childrens_resource, $ar_ts_childrens_thesaurus, $ar_ts_childrens_tools, $ar_ts_childrens_admin);
-			#dump($ar_all,'ar_all');
+			
+
+		#
+		# ALLOW DENY AREAS
+		if (!SHOW_DEBUG) {
+			$ar_all = self::walk_recursive_remove($ar_all, 'area::area_to_remove');			
+				#dump($ar_all,'ar_all AFTER ');
+		}		
+
 
 		# Store for speed
 		$_SESSION['dedalo4']['config']['ar_ts_children_all_areas_hierarchized'] = $ar_all;
 
 		if(SHOW_DEBUG) {
-			$total=round(microtime(1)-$start_time,3); #dump($total, 'total');	#dump($ar_all, 'ar_all');				
+			$total=round(microtime(1)-$start_time,3); #dump($total, 'total');	#dump($ar_all, 'ar_all');
+			debug_log(__METHOD__." Total: (get_ar_ts_children_all_areas_hierarchized) ".exec_time($start_time), logger::DEBUG);			
 		}
 
-		return $ar_all;	
-	}
+		return $ar_all;
+
+	}//end get_ar_ts_children_all_areas_hierarchized
+
+
+
+	/**
+	* AREA_TO_REMOVE
+	* @return bool 
+	*/
+	public static function area_to_remove($tipo) {
+
+		if( !include(DEDALO_LIB_BASE_PATH . '/config/config4_areas.php') ) {
+			debug_log(__METHOD__." ERROR ON LOAD FILE config4_areas ".to_string(), logger::ERROR);
+
+			$areas_deny=arra();
+			$areas_allow=array();
+		}
+		#dump($areas_deny, ' areas_deny ++ '.to_string($areas_allow));
+
+
+		if ( in_array($tipo, $areas_deny) && !in_array($tipo, $areas_allow) ) {
+			return true;
+		}
+
+		return false;
+
+	}#end area_to_remove
+
+
+
+	/** 
+	* http://uk1.php.net/array_walk_recursive implementation that is used to remove nodes from the array. 
+	* array_walk_recursive itself cannot unset values. Even though you can pass array by reference, unsetting the value in 
+	* the callback will only unset the variable in that scope. 
+	* @param array The input array. 
+	* @param callable $callback Function must return boolean value indicating whether to remove the node. 
+	* @return array 
+	*/ 
+	public static function walk_recursive_remove(array $array, callable $callback) {
+
+	    foreach ($array as $k => $v) {
+	    	
+	    	#$to_remove = $callback($k); 
+	    	$to_remove = area::area_to_remove($k);      		
+            if ($to_remove) { 
+            	#dump($to_remove, ' $to_remove ++ k: '.to_string($k));
+                unset($array[$k]);
+            }else if(is_array($v)) {
+            	$array[$k] = area::walk_recursive_remove($v, $callback);
+            }
+	    } 
+
+	    return $array; 
+
+	}//end walk_recursive_remove
 
 
 

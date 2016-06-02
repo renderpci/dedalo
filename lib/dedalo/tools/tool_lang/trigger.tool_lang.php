@@ -165,7 +165,7 @@ if($mode=='update_tool_header') {
 	# Create component_state configurated
 	$component_state 		= $component_obj->get_component_state( $tool_locator, $component_obj->get_lang() );
 	$component_state_html 	= '';
-	if (!empty($component_state)) {
+	if ( !empty($component_state) && is_object($component_state) ) {
 		$component_state_html = $component_state->get_html();
 	}
 	

@@ -8,10 +8,11 @@
 class component_input_text extends component_common {
 	
 	# GET DATO
-	public function get_dato() {				
+	public function get_dato() {
+
 		$dato = parent::get_dato();
-		#if(SHOW_DEBUG && $this->tipo=='divalcdi42') {
-		#	dump($dato, ' dato ++ '.to_string($this->tipo.'-'.$this->parent.'-'.$this->section_tipo));
+		#if(SHOW_DEBUG && $this->tipo=='rsc22') {
+			#dump($dato, ' dato ++ '.to_string($this->tipo.'-'.$this->parent.'-'.$this->section_tipo));
 		#}
 			
 
@@ -25,6 +26,7 @@ class component_input_text extends component_common {
 
 	# SET_DATO
 	public function set_dato($dato) {
+		if($dato=='""') $dato = ''; // empty dato json encoded
 		parent::set_dato( (string)$dato );			
 	}
 	

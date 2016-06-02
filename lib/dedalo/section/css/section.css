@@ -38,13 +38,29 @@
 		margin: 0;
 		padding-left: 5px;
 	    padding-right: 5px;
-	    padding-top: 5px;
+	    padding-top: 4px;
 		}
 		.css_section_content a {
 			font-weight: normal;
-			text-decoration: none;
-			font-size: 90%;	
+			text-decoration: none;		
 		}
+
+	@media screen and (max-width: 980px) { /* 736 */
+		#sidebar {
+			width: 100%;
+			padding-left: 10px;
+			padding-right: 10px;
+			position: relative !important;
+			}
+			#inspector_div {
+				width: 100% !important;
+				padding-left: 10px;
+				padding-right: 10px;
+			}
+		.css_section_content {
+			width: 100%;
+		}
+	}
 
 	/* PORTAL
 	----------------------------------------- */
@@ -115,5 +131,19 @@
 
 
 
+/* COMPONENT INFO : LIST
+--------------------------------------- */
+	.widgets_wrapper {
+		white-space: nowrap;
+		padding-right: 5px;
+		padding-left: 5px;
+		width: 180px !important;
+	}
+	.component_info_debug {
+		font-size: 90%;
+		word-wrap: break-word;		
+		white-space: nowrap;
+    	float: left;
+	}
 
 

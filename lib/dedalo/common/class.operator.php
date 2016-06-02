@@ -179,8 +179,8 @@ require_once( dirname(dirname(__FILE__)) .'/config/config4.php');
 		}
 			
 		return (array)$ar_operator;
-	}
 
+	}//end set_static_operator_vars
 
 
 
@@ -191,21 +191,24 @@ require_once( dirname(dirname(__FILE__)) .'/config/config4.php');
 	public static function get_search_comparison_operators_html($tipo, $ar_comparison_operator) {
 		$selector_html='';
 		
-		$selector_html .= "\n <select class=\"css_operator_select comparison_operator\" name=\"{$tipo}_comparison_operator\" data-tipo=\"$tipo\" onchange=\"search.comparation_operator_options(this)\" ";
+		$selector_html .= "\n <select class=\"css_operator_select comparison_operator\" name=\"{$tipo}_comparison_operator\" data-tipo=\"$tipo\" onchange=\"search.comparation_operator_options(this)\">";
 
 
 			$checked = "";
-			$selector_html .= "\n <option value=\"\" {$checked}> </option>";
+
+			#$selector_html .= "\n <option value=\"\" {$checked}> </option>";
 				
 			foreach ($ar_comparison_operator as $value => $rotulo) {
 				#$value = urlencode($value);
 				$selector_html .= "\n<option value='$value' {$checked}>";
 				$selector_html .= trim($rotulo);
-		}
-		$selector_html .= "</option>";
+				$selector_html .= "</option>";
+			}
+		
 		$selector_html .= "\n </select> ";
 
 		return (string)$selector_html;
+
 	}#end get_search_comparison_operators_html
 
 
@@ -217,19 +220,21 @@ require_once( dirname(dirname(__FILE__)) .'/config/config4.php');
 	public static function get_search_logical_operators_html($tipo, $ar_logical_operator) {
 		$selector_html='';
 
-		$selector_html .= "\n <select class=\"css_operator_select logical_operator\" name=\"{$tipo}_logical_operator\"";
+		$selector_html .= "\n <select class=\"css_operator_select logical_operator\" name=\"{$tipo}_logical_operator\">";
 
 			$checked = "";
-			$selector_html .= "\n <option value=\"\" {$checked}> </option>";
+			#$selector_html .= "\n <option value=\"\" {$checked}> </option>";
 				
 			foreach ($ar_logical_operator as $value => $rotulo) {				
 				$selector_html .= "\n<option value='$value' {$checked}>";
 				$selector_html .= trim($rotulo);
-		}
-		$selector_html .= "</option>";
+				$selector_html .= "</option>";
+			}
+		
 		$selector_html .= "\n </select>";
 
 		return (string)$selector_html;
+
 	}#end get_search_logical_operators_html
 
 

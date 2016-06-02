@@ -25,16 +25,11 @@
 					
 					$html_contenido .= "\n <div class=\"css_button_generic css_button_new link\" onclick=\"button_new.New(this)\" 
 					data-tipo=\"{$target_tipo}\"
+					data-section_tipo=\"{$section_tipo}\"
 					title=\"$html_title\" >";
 					$html_contenido .= $label;
 					$html_contenido .= "</div>";
-
-					
-					if($permissions==3){
-						$html_contenido .= "\n <span class=\"css_span_debugger\" id=\"debugger_{$tipo}\" >{$debugger}</span>";	
-					}
-					break;
-				
+					break;				
 	}
 	
 	

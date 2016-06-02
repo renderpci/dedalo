@@ -7,13 +7,14 @@
 	$lang					= $this->get_lang();
 
 	$label					= $this->get_label();
-	$permissions			= common::get_permissions($tipo);
+	$permissions			= common::get_permissions($tipo,$tipo);
 	$component_name			= get_class($this);
 	$visible				= $this->get_visible();
 	#$ar_children_areas 		= $this->get_ar_children_areas();
 	$ar_children_areas 		= $this->get_ar_ts_children_areas_recursive($tipo);
 	
 	$file_name 				= $modo;
+
 
 	switch($modo) {
 		

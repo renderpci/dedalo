@@ -36,6 +36,8 @@ class component_autocomplete_ts extends component_common {
 		}
 	}
 
+
+
 	/**
 	* GET DATO : 
 	* OLD Format: "es967"
@@ -73,7 +75,10 @@ class component_autocomplete_ts extends component_common {
 		}
 		
 		return (array)$dato;
-	}
+
+	}//end get_dato
+
+
 
 	# SET_DATO . With regex verification
 	public function set_dato($dato) {
@@ -97,6 +102,7 @@ class component_autocomplete_ts extends component_common {
 		
 		parent::set_dato( (array)$dato );
 	}
+
 
 
 	/**
@@ -143,9 +149,7 @@ class component_autocomplete_ts extends component_common {
 		
 			$current_valor  = '';
 			$current_valor .= RecordObj_ts::get_termino_by_tipo($terminoID, $lang, true);
-				#dump($current_valor, ' current_valor ++ '.to_string($lang));
-
-			
+				#dump($current_valor, ' current_valor ++ '.to_string($lang));			
 
 
 			#if (!empty($propiedades->jer_tipo) && $propiedades->jer_tipo==2) {
@@ -277,15 +281,18 @@ class component_autocomplete_ts extends component_common {
 
 	/**
 	* GET_TERMINOID_BY_LOCATOR
+	* @param object $locator
 	* @return string $terminoID
 	*/
 	public static function get_terminoID_by_locator( $locator ) {
 		if(!isset($locator->section_tipo) || !isset($locator->section_id)) {
 			dump($locator, ' locator ++ '.to_string());
 		}
-		$terminoID = substr($locator->section_tipo,0,strlen($locator->section_tipo)-1).$locator->section_id;			
+		$terminoID = substr($locator->section_tipo,0,strlen($locator->section_tipo)-1).$locator->section_id;
 		return (string)$terminoID;
 	}#end get_terminoID_by_locator
+
+
 
 
 	# GET_REFERENCED_TIPO
@@ -294,12 +301,17 @@ class component_autocomplete_ts extends component_common {
 		$ar_referenced_tipo = array();
 
 		# COMPONENT PROPIEDADES VAR
-		#dump($this->RecordObj_dd,'$this->RecordObj_dd');
-		$tipo 			= $this->get_tipo();
-		$RecordObj_dd 	= new RecordObj_dd($tipo);
-		$ts_propiedades = $RecordObj_dd->get_propiedades();
-			#dump($ts_propiedades,'$ts_propiedades');
+		$propiedades = $this->get_propiedades();
+		if (isset($propiedades->jer_tipo)) {
+			$ar_tesauro_by_jer_tipo = RecordObj_jer::get_ar_tesauro_by_jer_tipo($propiedades->jer_tipo);
+			foreach ($ar_tesauro_by_jer_tipo as $tld) {
+				$ar_referenced_tipo[] = strtolower($tld)."1";
+			}
+		}
 
+		return $ar_referenced_tipo;
+
+		/*
 		if (!empty($ts_propiedades)) {
 			# PROPIEDADES VARS to JSON . Ojo: vars devuelto por 'json_decode' es un objeto (al contrario que 'json_handler::decode' que devuelve un array)
 			$vars = json_decode($ts_propiedades);
@@ -318,6 +330,7 @@ class component_autocomplete_ts extends component_common {
 
 			return $ar_referenced_tipo;
 		}
+		*/
 
 
 		/*
@@ -332,8 +345,14 @@ class component_autocomplete_ts extends component_common {
 		#dump($ar_referenced_tipo,'$ar_referenced_tipo');
 
 		return $ar_referenced_tipo;*/
-	}
 
+	}//end get_ar_referenced_tipo
+
+
+
+	/**
+	* GER_AR_LINK_FIELDS 
+	*/
 	public function ger_ar_link_fields(){
 		$ar_link_fields = array();
 

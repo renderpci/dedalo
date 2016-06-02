@@ -50,7 +50,6 @@ class menu extends common {
 	/**
 	* GET MENU STRUCTURE HTML (TREE)
 	*
-	* MÉTODO TEMPORAL .  SEPARAR EL HTML CUANDO SE PUEDA
 	* @param $option
 	*	Name of method to execute as decorator o every line
 	* @param $arguments_tree
@@ -72,7 +71,7 @@ class menu extends common {
 				if(SHOW_DEBUG) {
 					# nothing to do;
 					#dump($uid, '$uid');
-					#return $_SESSION['dedalo4']['config']['menu_structure_html'][$uid][DEDALO_APPLICATION_LANG];	
+					return $_SESSION['dedalo4']['config']['menu_structure_html'][$uid][DEDALO_APPLICATION_LANG];	
 				}else{
 					return $_SESSION['dedalo4']['config']['menu_structure_html'][$uid][DEDALO_APPLICATION_LANG];	
 				}											
@@ -117,7 +116,7 @@ class menu extends common {
 			$logged_user_is_global_admin = (bool)component_security_administrator::is_global_admin($user_id_logged);
 			
 			$security = new security();
-			$tesauro_permissions = $security->get_security_permissions(DEDALO_TESAURO_TIPO);
+			$tesauro_permissions = security::get_security_permissions(DEDALO_TESAURO_TIPO,DEDALO_TESAURO_TIPO);
 			if ( (array_key_exists(DEDALO_TESAURO_TIPO, $ar_ts_children_areas) && $tesauro_permissions==2) || $logged_user_is_global_admin===true) {			
 				#dump($ar_ts_children_areas,$ar_ts_children_areas);
 				switch (true) {
@@ -125,7 +124,7 @@ class menu extends common {
 
 						# TESAURO LINK IN MENU
 						$tesauro_html = '';
-						$tesauro_html .= "<li>";
+						$tesauro_html .= "<li class=\"has-sub menu_li_inactive\">";
 						$tesauro_html .= "<a href=\"".DEDALO_LIB_BASE_URL."/ts/ts_list.php?t=".DEDALO_TESAURO_TIPO."&modo=tesauro_edit&type=all\">". ucfirst(label::get_label('tesauro'))."</a>";
 							$tesauro_html .= "<ul>";
 							$tesauro_html .= "<li><a href=\"".DEDALO_LIB_BASE_URL."/ts/ts_list.php?t=".DEDALO_TESAURO_TIPO."&modo=tesauro_edit&type=all\">". ucfirst(label::get_label('terminos'))."</a></li>";
@@ -137,7 +136,7 @@ class menu extends common {
 
 						# STRUCTURE LINK IN MENU
 						if(SHOW_DEBUG===TRUE && $logged_user_is_global_admin===true && file_exists(DEDALO_LIB_BASE_PATH.'/dd')) {
-							$menu_structure_html .= "<li>";
+							$menu_structure_html .= "<li class=\"has-sub menu_li_inactive\">";
 								$menu_structure_html .= "<a href=\"".DEDALO_LIB_BASE_URL."/dd/dd_list.php?modo=tesauro_edit\">Structure</a>";
 								$menu_structure_html .= "<ul>";
 								$menu_structure_html .= "<li><a href=\"".DEDALO_LIB_BASE_URL."/dd/dd_list.php?modo=modelo_edit\">Modelo</a></li>";
@@ -182,8 +181,10 @@ class menu extends common {
 	*/
 	public static function create_link($tipo, $termino, $modelo_name=NULL, $arguments_tree=null) {			
 
-		if($tipo == navigator::get_selected('area'))
-		$termino= "<span class=\"menu_a_span_hilite\">$termino</span>";
+		#if($tipo == navigator::get_selected('area')) {
+			#$termino= "<span class=\"menu_a_span_hilite\">$termino</span>";
+		#}
+		
 
 		$path = DEDALO_LIB_BASE_URL .'/main/';
 		$url  = "{$path}?t=$tipo";
@@ -210,11 +211,11 @@ class menu extends common {
 	/**
 	* CREATE_CHECKBOX
 	* TEMPORAL .PASAR EN SU MOMENTO A COMPONENT_SECURITY_AREAS
-	*/
+	*//*
 	public static function create_checkbox($tipo, $termino, $modelo_name=NULL, $arguments_tree) {
 		return component_security_areas::create_checkbox($tipo, $termino, $modelo_name, $arguments_tree) ;
 	}
-
+	*/
 
 
 	/**
@@ -232,15 +233,13 @@ class menu extends common {
 
 		$html = '';		#dump($arguments_tree,'arguments_tree');
 
-			# VERIFY CURRENT LOGGED USER IS GLOBAL ADMIN OR NOT
-			# Testemos si este usuario es administrador global. Si no lo es, ocultaremos las áreas a las que no tiene acceso
-			if(isset($arguments_tree['dato'])) {
-				#extract($arguments_tree);
-				$user_id_logged 			= navigator::get_user_id();
-				$logged_user_is_global_admin 	= component_security_administrator::is_global_admin($user_id_logged);
-			}
+		# VERIFY CURRENT LOGGED USER IS GLOBAL ADMIN OR NOT
+		# Testemos si este usuario es administrador global. Si no lo es, ocultaremos las áreas a las que no tiene acceso
+			$user_id_logged 			 = navigator::get_user_id();
+			$logged_user_is_global_admin = component_security_administrator::is_global_admin($user_id_logged);
+
 		
-		foreach($ar_tesauro as $tipo => $value) {
+		foreach((array)$ar_tesauro as $tipo => $value) {
 
 			$show = true;
 			$skip = false;
@@ -262,7 +261,7 @@ class menu extends common {
 			if(isset($arguments_tree['dato'])) {
 
 				$dato = $arguments_tree['dato'];
-				if(is_array($dato) && !array_key_exists($tipo, $dato) && $logged_user_is_global_admin===false)	{
+				if( !isset($dato->$tipo) && $logged_user_is_global_admin===false)	{
 					$show = false;
 				}
 				#dump($arguments_tree,'$arguments_tree');
@@ -282,6 +281,9 @@ class menu extends common {
 						$show = false;
 						break;
 				case ($option=='create_link' && in_array($tipo, unserialize(DEDALO_ENTITY_MENU_SKIP_TIPOS))):
+						$skip = true;
+						break;
+				case ($tipo==DEDALO_SECTION_PROFILES_TIPO && $logged_user_is_global_admin!==true):
 						$skip = true;
 						break;
 			}
@@ -318,10 +320,7 @@ class menu extends common {
 				$open_term	= "\n <li class=\"global_admin_element\" >";
 			}
 
-			$dato_current	= NULL;
-			if(isset($dato[$tipo]))
-			$dato_current	= intval($dato[$tipo]);
-
+			$dato_current	= isset($dato->$tipo) ? intval($dato->$tipo) : null;
 			
 			
 			if($skip===true) {

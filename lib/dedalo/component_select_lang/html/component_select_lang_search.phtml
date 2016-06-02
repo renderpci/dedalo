@@ -4,7 +4,10 @@
 
 	
 	if(isset($_REQUEST[$tipo])) $dato = $_REQUEST[$tipo];
-		#dump($dato,'dato');
+		
+
+	print "\n<!-- COMPONENT SELECT -->";
+	print "\n<div class=\"wrap_component css_wrap_select_lang\" >";
 	
 	# ETIQUETA (LABEL)
 	$html_label = component_common_draw::draw_label($this);
@@ -49,5 +52,7 @@
 	# PRINT HTML
 	print $html_label;
 	print $html_contenido;
+
+	print "\n</div><!-- /css_wrap_select -->\n\n"; //wrap
 	
 ?>

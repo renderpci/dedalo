@@ -1,9 +1,9 @@
 <?php
+
+
 /*
 * CLASS COMPONENT PORTAL
 */
-
-
 class component_portal extends component_common {
 
 	# Overwrite __construct var lang passed in this component
@@ -122,6 +122,8 @@ class component_portal extends component_common {
 		return (array)$dato;
 	}
 
+
+
 	# SET_DATO
 	public function set_dato($dato) {
 		if (is_string($dato)) { # Tool Time machine case, dato is string
@@ -133,11 +135,16 @@ class component_portal extends component_common {
 		parent::set_dato( (array)$dato );
 	}
 
+
+
 	# GET_VALOR OLD
 	public function get_valor_OLD() {		
 		$dato = $this->get_dato();
 		return $dato;
 	}
+
+
+
 	/**
 	* GET VALOR 
 	* Get resolved string representation of current values (locators)	
@@ -169,6 +176,7 @@ class component_portal extends component_common {
 		return $this->valor = $valor_from_ar_locators->result;
 
 	}//end get_valor
+
 
 
 	/**
@@ -246,17 +254,20 @@ class component_portal extends component_common {
 	}#end get_valor_export
 
 
+
 	# GET_DATO_AS_STRING
 	public function get_dato_as_string() {
 		$dato = (array)$this->get_dato();
 		$string='';
 		foreach ($dato as $key => $value) {
 			foreach ($value as $current_key => $current_value) {
-				$string .= "[$key] $current_key -> $current_value \n";
+				$string .= "[$key] $current_key -> ".to_string($current_value)." \n";
 			}
 		}
 		return $string;
 	}
+
+
 
 	/**
 	* NOTIFY_LOAD_LIB_ELEMENT_TIPO_OF_PORTAL : Force notify portal related components load for give css/js support
@@ -284,13 +295,12 @@ class component_portal extends component_common {
 			}				
 		}
 
-		return;		
-	}
+		return true;	
+
+	}//end notify_load_lib_element_tipo_of_portal
 
 
 	
-
-
 	/**
 	* Save : Overwrite Save common
 	*/
@@ -326,6 +336,7 @@ class component_portal extends component_common {
 		return $result;
 
 	}//end Save
+
 
 
 	/**
@@ -364,7 +375,8 @@ class component_portal extends component_common {
 			}
 		}		
 		
-	}#end update_state
+	}//end update_state
+
 
 	
 	/**
@@ -385,15 +397,8 @@ class component_portal extends component_common {
 				debug_log(__METHOD__." Called remove_state_from_locator in section without component_state. ".to_string($rel_locator));
 			}
 		}
-	}
-	
 
-
-
-	
-
-
-
+	}//end remove_state_from_locator
 
 
 
@@ -424,18 +429,6 @@ class component_portal extends component_common {
 		
 	}#end remove_resource_from_portal
 	
-	
-
-
-
-
-
-	
-	
-
-	
-
-
 
 
 	/**
@@ -549,7 +542,8 @@ class component_portal extends component_common {
 		$component_portal->Save();
 
 		return $section_id;
-	}
+
+	}//end create_new_portal_record
 
 
 
@@ -610,7 +604,8 @@ class component_portal extends component_common {
 				return $ar_section_relations;
 				break;
 		}
-	}
+
+	}//end get_ar_section_relations_for_current_section_tipo_static
 
 
 	
@@ -639,7 +634,9 @@ class component_portal extends component_common {
 		debug_log(__METHOD__." Added portal locator and section inverse locator from portal. ".to_string($rel_locator), logger::DEBUG);
 
 		return true;
-	}
+
+	}//end add_locator
+
 
 
 	/**
@@ -667,7 +664,9 @@ class component_portal extends component_common {
 		debug_log(__METHOD__." Remove portal locator and section inverse locator from portal. ".to_string($rel_locator), logger::DEBUG);
 
 		return true;
-	}
+
+	}//end remove_locator
+
 
 
 	/**
@@ -693,7 +692,9 @@ class component_portal extends component_common {
 		debug_log(__METHOD__." Remove inverse_locator from portal dato (Not saved yet). ".to_string($rel_locator), logger::DEBUG);
 
 		return true;
-	}
+
+	}//end remove_inverse_locator_reference
+
 
 
 	/**
@@ -715,13 +716,6 @@ class component_portal extends component_common {
 		return true;
 	}# /remove_locator_from_portal
 	*/
-
-	
-
-	
-
-
-
 
 
 
@@ -789,42 +783,7 @@ class component_portal extends component_common {
 		return $this->layout_map;
 
 	}//end get_layout_map
-
-
-	/**
-	* GET_AR_COLUMNS
-	*/
-	public function get_ar_columns() {
-
-		if(isset($this->ar_columns)) return $this->ar_columns;
-		
-		#$ar_hcolumns = array_keys( reset($rows_data->result[0]) );
-		#$ar_hcolumns  = reset($rows_data->options->layout_map);
-
-		$layout_map  = $this->get_layout_map();
-		$ar_hcolumns = reset($layout_map);
-			#dump($ar_hcolumns,"ar_hcolumns ");
-
-		$ar_columns = array();
-
-		# First column (fixed)
-		$ar_columns['edit'] = label::get_label('edicion');
-
-		# Next columns
-		foreach ((array)$ar_hcolumns as $value) {			
-			$ar_columns[$value] = RecordObj_dd::get_termino_by_tipo($value,DEDALO_DATA_LANG,true);			
-		}
-		#dump($ar_columns,"ar_columns ");
-
-		$this->ar_columns = $ar_columns;
-		
-		return $this->ar_columns;
-
-	}//end get_ar_columns
-
-
-
-
+	
 
 
 	/**
@@ -904,7 +863,8 @@ class component_portal extends component_common {
 
 		return true;
 
-	}//END propagate_filter__DEPRECATED
+	}//end propagate_filter__DEPRECATED
+
 
 
 	/**
@@ -1054,8 +1014,6 @@ class component_portal extends component_common {
 
 
 
-
-
 	/**
 	* GET_STATS_OBJ
 	*/
@@ -1188,9 +1146,6 @@ class component_portal extends component_common {
 		return $this->exclude_elements = $exclude_elements;
 
 	}#end get_exclude_elements
-
-
-
 	
 
 
@@ -1317,6 +1272,71 @@ class component_portal extends component_common {
 		return $component->get_html();
 
 	}#end render_list_value
+
+	
+
+	/**
+	* GET_AR_COLUMNS
+	* @return array $ar_columns
+	*/
+	public function get_ar_columns() {		
+
+		if(isset($this->ar_columns)) return $this->ar_columns;
+		
+		#$ar_hcolumns = array_keys( reset($rows_data->result[0]) );
+		#$ar_hcolumns  = reset($rows_data->options->layout_map);
+
+
+		
+
+		$layout_map  = $this->get_layout_map();
+		$ar_hcolumns = reset($layout_map);
+			#dump($ar_hcolumns,"ar_hcolumns ");
+
+		$ar_columns = array();
+
+		# First column (fixed)
+		$ar_columns['edit'] = label::get_label('edicion');
+
+
+		# Tag column
+		if($this->modo=='edit') {
+			$dato = $this->get_dato();
+			$contain_tag=false;
+			foreach ((array)$dato as $current_locator) {
+				if (property_exists($current_locator, 'tag_id')) {
+					$contain_tag=true;
+					break;
+				}
+			}
+			if ($contain_tag) {
+				$ar_columns['tag_id'] = label::get_label('tag');
+			}
+		}
+		
+
+
+		# Semantic nodes columns
+		$semantic_nodes = $this->get_semantic_nodes();		
+		foreach ((array)$semantic_nodes as $semantic_node_tipo) {	
+			$ar_columns['ds_'.$semantic_node_tipo] = RecordObj_dd::get_termino_by_tipo($semantic_node_tipo);
+		}
+
+		# Regular columns
+		foreach ((array)$ar_hcolumns as $value) {			
+			$ar_columns[$value] = RecordObj_dd::get_termino_by_tipo($value,DEDALO_DATA_LANG,true);			
+		}
+		#dump($ar_columns,"ar_columns ");
+
+		$this->ar_columns = $ar_columns;
+		
+		return $this->ar_columns;
+
+	}//end get_ar_columns
+
+
+
+	
 
 	
 	

@@ -1,0 +1,27 @@
+<?php
+
+	# VISUALIZADOR HTML	
+
+
+	
+	#echo "\n<!-- COMPONENT_INPUT_TEXT_MULTI [tipo:$tipo parent:$parent] -->";	
+		
+	# CONTENIDO (INPUT)
+	$html_contenido = '';
+	switch($permissions) {
+			
+		case 0	:	$html_contenido .= "";		
+					break;
+					
+		case ($permissions>=1)	:
+			
+					$html_contenido .= "\n <span class=\"css_span_dato\">$valor</span>";			
+					break;
+					
+	}	
+
+	
+	# PRINT HTML	
+	print $html_contenido;	
+	
+?>

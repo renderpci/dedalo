@@ -139,7 +139,7 @@ class component_filter_master extends component_common {
 
 		if ($logged_user_is_global_admin===true) {
 			# ALL PROJECTS
-			$strQuery 	= "SELECT section_id FROM matrix_projects";
+			$strQuery 	= "SELECT section_id FROM matrix_projects ORDER BY section_id ASC";
 			$result		= JSON_RecordObj_matrix::search_free($strQuery);
 			while ($rows = pg_fetch_assoc($result)) {				
 				$ar_proyectos_section_id[] = $rows['section_id'];
@@ -169,10 +169,30 @@ class component_filter_master extends component_common {
 			return $ar_projects_final;
 		}
 
-		# Final returned array formated as id=>project_name 
-		# like: [250] => Proyecto de Historia Oral
-		$ar_projects_final = (array)component_common::get_ar_records_with_lang_fallback($ar_proyectos_section_id, DEDALO_PROJECTS_NAME_TIPO, DEDALO_SECTION_PROJECTS_TIPO);
-			#dump($ar_projects_final, ' ar_projects_final');
+
+		// Resolve projects names
+		$modelo_name = RecordObj_dd::get_modelo_name_by_tipo(DEDALO_PROJECTS_NAME_TIPO);		
+		foreach ($ar_proyectos_section_id as $current_section_id) {
+			
+			$component = component_common::get_instance($modelo_name,
+														DEDALO_PROJECTS_NAME_TIPO,
+														$current_section_id,
+														'list',
+														DEDALO_DATA_LANG,
+														DEDALO_SECTION_PROJECTS_TIPO);
+			$current_dato = $component->get_dato();
+			// Fallback to application default lang
+			if ( empty($current_dato) ) {
+				$component = component_common::get_instance($modelo_name,
+														DEDALO_PROJECTS_NAME_TIPO,
+														$current_section_id,
+														'list',
+														DEDALO_APPLICATION_LANGS_DEFAULT,
+														DEDALO_SECTION_PROJECTS_TIPO);
+				$current_dato = "<mark>".$component->get_dato()."</mark>";
+			}
+			$ar_projects_final[$current_section_id] = (string)$current_dato;
+		}
 		
 		return $ar_projects_final;
 	}

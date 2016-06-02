@@ -27,8 +27,8 @@
 					$html_contenido .= "$section_dato ";
 					$html_contenido .= "<div class=\"button_edit div_image_link\" onclick=\"goto_url('?modo=edit&id=$id')\"></div>";
 										
-					if($permissions==3){
-						$html_contenido .= " <span class=\"css_span_debugger\" id=\"debugger_{$id}\" >{$id}</span>";
+					if(SHOW_DEBUG) {
+						#$html_contenido .= " <span class=\"css_span_debugger\" id=\"debugger_{$id}\" >{$id}</span>";
 					}
 					
 					$html_contenido .= $button_delete_html;

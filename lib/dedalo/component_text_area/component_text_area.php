@@ -2,7 +2,7 @@
 	
 	# CONTROLLER
 	$tipo 					= $this->get_tipo();
-	$parent 				= $this->get_parent();		#dump($parent,"parent");
+	$parent 				= $this->get_parent();
 	$section_tipo 			= $this->get_section_tipo();	
 	$modo					= $this->get_modo();	
 	$caller_id 				= navigator::get_selected('caller_id');		
@@ -11,8 +11,7 @@
 	$label 					= $this->get_label();				
 	$required				= $this->get_required();
 	$debugger				= $this->get_debugger();
-	if($modo != 'simple')
-	$permissions			= common::get_permissions($tipo); 	#dump( round(microtime(1),1),"microtime");	
+	$permissions			= common::get_permissions($section_tipo,$tipo);
 	$ejemplo				= $this->get_ejemplo();
 	$html_title				= "Info about $tipo";
 	
@@ -33,8 +32,6 @@
 	$propiedades = $this->get_propiedades();
 	$propiedades_json = json_handler::encode($propiedades);
 		#dump($propiedades,'propiedades');
-
-	
 
 
 	$file_name = $modo;
@@ -206,7 +203,7 @@
 					#error_log('fragment_info fragment_text: '.$fragment_text);
 					break;
 
-		case 'selected_fragment' :
+		case 'selected_fragment__DES' :
 
 					$arguments = (object)$this->arguments;
 						#dump($arguments,"selected_fragment arguments");

@@ -36,6 +36,9 @@ class tool_import_av extends tool_common {
 		# Fix current component/section
 		$this->component_obj = $component_obj;
 
+
+		$this->section_tipo  = $component_obj->get_section_tipo();
+
 		/* pasado a controlador -> page
 		# Fix parameters
 		$button_import_obj = $this->get_button_import_obj();
@@ -63,9 +66,9 @@ class tool_import_av extends tool_common {
 
 		if(empty($button_tipo)) {
 			throw new Exception("Error Processing Request. button_tipo not found", 1);
-		}			
+		}		
 
-		$button_import_obj = new button_import($button_tipo,null);
+		$button_import_obj = new button_import($button_tipo, null, $this->section_tipo);
 			#dump($button_import_obj,'button_import_obj');
 
 		$propiedades = json_handler::decode($button_import_obj->RecordObj_dd->get_propiedades());

@@ -2,7 +2,6 @@
 	
 	# CONTROLLER
 
-	#$id 					= $this->get_id();
 	$tipo 					= $this->get_tipo();
 	$parent 				= $this->get_parent();
 	$section_tipo			= $this->get_section_tipo();
@@ -13,12 +12,11 @@
 	$label 					= $this->get_label();			
 	$required				= $this->get_required();
 	$debugger				= $this->get_debugger();	
-	$permissions			= common::get_permissions($tipo); 	
+	$permissions			= common::get_permissions($section_tipo,$tipo);
 	$ejemplo				= $this->get_ejemplo();
 	$html_title				= "Info about $tipo";		
 	$valor					= $this->get_valor();				
 	$lang					= $this->get_lang();
-	#$lang_name				= $this->get_lang_name();
 	$identificador_unico	= $this->get_identificador_unico();
 	$component_name			= get_class($this);
 

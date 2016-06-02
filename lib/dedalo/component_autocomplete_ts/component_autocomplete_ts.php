@@ -10,14 +10,12 @@
 	$label 					= $this->get_label();
 	$required				= $this->get_required();
 	$debugger				= $this->get_debugger();
-	$permissions			= common::get_permissions($tipo);
+	$permissions			= common::get_permissions($section_tipo,$tipo);
 	$ejemplo				= NULL;
 	$html_title				= "Info about $parent";
 	$ar_tools_obj			= $this->get_ar_tools_obj();	
 	$lang					= $this->get_lang();
-	$identificador_unico	= $this->get_identificador_unico();
-	$ar_referenced_tipo 	= $this->get_ar_referenced_tipo();
-	$ar_referenced_tipo_json= json_handler::encode($this->get_ar_referenced_tipo());
+	$identificador_unico	= $this->get_identificador_unico();	
 	$component_name			= get_class($this);	
 
 	
@@ -36,7 +34,9 @@
 				$ar_valor 		= $this->get_valor($lang,'array');
 				$ar_link_fields	= json_handler::encode($this->ger_ar_link_fields());
 				$component_info = $this->get_component_info('json');
-				$dato_json 		= json_encode($dato);		
+				$dato_json 		= json_encode($dato);
+				$ar_referenced_tipo = $this->get_ar_referenced_tipo();
+			$ar_referenced_tipo_json= json_handler::encode($this->get_ar_referenced_tipo());	
 				break;
 
 		case 'tool_time_machine'	:	
@@ -55,6 +55,9 @@
 				$valor_searched_string 	= NULL;
 				$ar_valor 				= $this->get_valor($lang,'array');				
 				$dato_json 				= json_encode($dato);
+
+				$ar_referenced_tipo 	= $this->get_ar_referenced_tipo();
+				$ar_referenced_tipo_json= json_handler::encode($this->get_ar_referenced_tipo());
 							
 				if (!empty($_REQUEST[$tipo])) {
 					$valor_searched 		= $_REQUEST[$tipo];

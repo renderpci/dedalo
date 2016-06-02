@@ -367,10 +367,14 @@ class diffusion_sql extends diffusion  {
 					$section = section::get_instance($current_section_id, $section_tipo, $modo='list');
 					$diffusion_info = $section->get_diffusion_info();
 					if ( isset($diffusion_info->$diffusion_element_tipo) ) {
-						debug_log(__METHOD__." Skipped current record [{$section_tipo}-{$current_section_id}]. Already published ($diffusion_element_tipo). ".to_string(), logger::DEBUG);
-						continue;
-					}
 
+						if(isset($_SESSION['dedalo4']['config']['skip_publication_state_check']) && $_SESSION['dedalo4']['config']['skip_publication_state_check']==1) {
+							# Nothing to do. (Configurated from tool_administrator)
+						}else{
+							debug_log(__METHOD__." Skipped current record [{$section_tipo}-{$current_section_id}]. Already published ($diffusion_element_tipo). ".to_string(), logger::DEBUG);
+							continue;
+						}
+					}
 
 					
 					#
@@ -1116,7 +1120,7 @@ class diffusion_sql extends diffusion  {
 
 				
 				#
-				# SAVE RECORD . Insert MYSQL record (arrray) deleting before old data
+				# SAVE RECORD . Insert MYSQL record (array) deleting before old data
 				if(isset(self::$ar_table_data[$database_name][$diffusion_section]) && !empty(self::$ar_table_data[$database_name][$diffusion_section])) {
 					$save_options = new stdClass();
 						$save_options->record_data 					    = self::$ar_table_data[$database_name][$diffusion_section];		#dump($save_options, ' save_options ++ '.to_string());die();

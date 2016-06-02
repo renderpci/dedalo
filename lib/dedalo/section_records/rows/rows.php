@@ -6,7 +6,7 @@
 	$modo	 		= $this->section_records_obj->options->modo;
 	$result	 		= $this->section_records_obj->rows_obj->result;
 	$tipo			= $this->section_records_obj->get_tipo();
-	$permissions 	= common::get_permissions($tipo);
+	$permissions 	= common::get_permissions($tipo,$tipo);
 	
 	$ar_component_resolved = array();
 	$button_delete_permissions = (int)$this->section_records_obj->button_delete_permissions;
@@ -452,6 +452,7 @@
 							case ( $modelo_name=='component_check_box' ):
 							case ( $modelo_name=='component_select' ):
 							case ( $modelo_name=='component_relation' ):
+							case ( $modelo_name=='component_publication' ):
 									#
 									# COMPONENT_AUTOCOMPLETE : With locators
 									$parent 		   = $section_id;	//null;

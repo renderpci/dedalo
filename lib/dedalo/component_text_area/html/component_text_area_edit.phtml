@@ -25,15 +25,18 @@
 	$html_contenido = '';
 	switch($permissions) {
 
-		case 0	:	$html_contenido .= "";
-					break;
+		case 0 :
+				$html_contenido .= "";
+				break;
 
-		case 1	: 	#$html_contenido .= "\n<div class=\"text_area_content text_area_content_shadow\" >";
-					$html_contenido .= "\n <span class=\"css_span_dato\">$dato</span>";
-					#$html_contenido .= "\n</div>"; #end text_area_content
+		case 1 : 
+				#$html_contenido .= "\n<div class=\"text_area_content text_area_content_shadow\" >";
+				$html_contenido .= "\n <span class=\"css_span_dato text_area_read_only\">$dato</span>";
+				#$html_contenido .= "\n</div>"; #end text_area_content
 
-					##
-					# WRAP CURRENT SELECTED FRAGMENT (RELATION / ADD PORTAL BUTTON)
+				/*
+				##
+				# WRAP CURRENT SELECTED FRAGMENT (RELATION / ADD PORTAL BUTTON)
 					#
 					$html_contenido .= "\n <div id=\"relations_ajax_div_{$tipo}\" class=\"wrap_fragment\"
 					data-tipo=\"{$tipo}\"
@@ -47,22 +50,22 @@
 					>
 					<div class=\"content_data\"><!-- AJAX CONTENT HERE --></div>
 					</div>";
+					*/
 
+				break;
 
-					break;
+		case 2 :
+		case 3 :
 
+				#
+				# COMPONENT STATE
+				if (isset($component_state_html)) {
+					$html_contenido .= $component_state_html;
+				}
 
-		case ($permissions>=2)	:
-
-					#
-					# COMPONENT STATE
-					if (isset($component_state_html)) {
-						$html_contenido .= $component_state_html;
-					}
-
-					#
-					# DATO REFERENCE DEFAULT LANG
-					/* DESACTIVO DE MOMENTO. VOLVER A ACTIVAR CUANDO LA B4 ESTÉ ESTABLE
+				#
+				# DATO REFERENCE DEFAULT LANG
+				/* DESACTIVO DE MOMENTO. VOLVER A ACTIVAR CUANDO LA B4 ESTÉ ESTABLE
 					#if ($modo!='tool_lang' && !empty($default_component)) {
 					if ($modo=='edit' && !empty($default_component->dato)) {
 
@@ -75,82 +78,41 @@
 					}
 					*/
 
-					#
-					# BROKEN INDEX TAGS WARNING
-					if (isset($component_warning)) {
-						$html_contenido .= "<div class=\"text_area_warning\"><span class=\"warning\">".$component_warning."</span></div>";
-					}
+				#
+				# BROKEN INDEX TAGS WARNING
+				if (isset($component_warning)) {
+					$html_contenido .= "<div class=\"text_area_warning\"><span class=\"warning\">".$component_warning."</span></div>";
+				}
 
 
-					#
-					# TEXTAREA  contenteditable=\"true\"
-					#
-					$html_contenido .= "\n <textarea class=\"css_text_area $text_area_tm\"
-					id=\"{$identificador_unico}\"
-					name=\"{$input_name}\"
-					title=\"$html_title\"
-					data-tipo=\"{$tipo}\"
-					data-lang=\"{$lang}\"
-					data-section_tipo=\"{$section_tipo}\"
-					data-parent=\"{$parent}\"
-					data-last_tag_index_id=\"{$last_tag_index_id}\"
-					data-canvas_id=\"$canvas_id\"
-					data-context_name=\"$context_name\"
-					data-id_wrapper=\"$id_wrapper\"
-					tabindex=\"1\"
-					>$dato</textarea>";
+				#
+				# TEXTAREA			
+				$html_contenido .= "\n <textarea class=\"css_text_area $text_area_tm\" id=\"{$identificador_unico}\"
+				name=\"{$input_name}\"
+				title=\"$html_title\"
+				data-tipo=\"{$tipo}\"
+				data-lang=\"{$lang}\"
+				data-section_tipo=\"{$section_tipo}\"
+				data-parent=\"{$parent}\"
+				data-last_tag_index_id=\"{$last_tag_index_id}\"
+				data-canvas_id=\"$canvas_id\"
+				data-context_name=\"$context_name\"
+				data-id_wrapper=\"$id_wrapper\"
+				tabindex=\"1\"
+				>$dato</textarea>";
 
 
-
-
-					/*
-					##
-					# DIV
-					#
-					$html_contenido .= "\n <div class=\"css_text_area $text_area_tm\"
-					id=\"{$identificador_unico}\"
-					name=\"{$input_name}\"
-					title=\"$html_title\"
-					data-tipo=\"{$tipo}\"
-					data-lang=\"{$lang}\"
-					data-section_tipo=\"{$section_tipo}\"
-					data-parent=\"{$parent}\"
-					data-last_tag_index_id=\"{$last_tag_index_id}\"
-					data-canvas_id=\"$canvas_id\"
-					data-context_name=\"$context_name\"
-					>$dato</div>";
-					*/
-
-
-					if (SHOW_DEBUG) {
-					#$html_contenido .= "<span class=\"debug_info\"> $identificador_unico</span>";
-					}
-
-
-					##
-					# BTN CREATE FRAGMENT
-					#
-					/*
-					#if($caller_id>0)
-					$html_contenido .= "\n <div class=\"css_button_generic btn_create_fragment\" onclick=\"tool_indexation.create_fragment('$identificador_unico');\">";
-					$html_contenido .= "Create new fragment with selection";
-					if(SHOW_DEBUG===true) {
-					$html_contenido .= " <span class=\"debug_info\">[last_tag_index_id:$last_tag_index_id - caller_id:$caller_id]</span>";
-					}
-					$html_contenido .= "</div>";
-					*/
-
-
-
-
-					#
-					# RELATE BUTTON . Relate current selected text with caller_id section
-					# des: data-tipo=\"$caller_tipo\" data-caller_tipo=\"$caller_tipo\"	 data-caller_id=\"$caller_id\"
-					/*
-					$html_contenido .= "<div class=\"css_button_generic btn_relate_fragment\"
-					data-id_matrix=\"$parent\"
-					data-tagName=\"\"
-					onclick=\"component_text_area.relate_fragment(this);\">
+				#
+				# RELATE BUTTON . Relate current selected text with caller_id section
+				# des: data-tipo=\"$caller_tipo\" data-caller_tipo=\"$caller_tipo\"	 data-caller_id=\"$caller_id\"
+				/*
+					$html_contenido .= "<div class=\"css_button_generic btn_relate_fragment\"	
+					data-portal_tipo=\"$portal_tipo\"
+					data-portal_parent=\"$portal_parent\"
+					data-portal_section_tipo=\"$portal_section_tipo\"
+					data-rel_locator=\"$rel_locator\"
+					data-tagName=\"$tagName\"	
+					onclick=\"tool_portal.add_resource(this);\">
 					";
 						$html_contenido .= "Relate selected fragment";
 						if(SHOW_DEBUG===true) {
@@ -158,54 +120,67 @@
 						}
 					$html_contenido .= "</div>";
 					*/
+					#$html_contenido .= "<div id=\"relations_ajax_div_{$tipo}\" data-tipo=\"$tipo\" data-parent=\"$parent\" data-section-tipo=\"$section-tipo\">XXX</div>";
 
 
-					#
-					# BTN CREATE FRAGMENT
-					#
-					$html_contenido .= "\n <div class=\"css_button_generic btn_create_fragment\" style=\"display:none\"
-					data-identificador_unico=\"$identificador_unico\"
-					data-parent=\"{$parent}\"
-					data-section_tipo=\"{$section_tipo}\"
-					onclick=\"tool_indexation.create_fragment(this);\"
+				#
+				# BTN CREATE FRAGMENT				
+				$html_contenido .= "<div class=\"css_button_generic btn_create_fragment\" style=\"display:none\"
+				data-identificador_unico=\"$identificador_unico\"
+				data-parent=\"{$parent}\"
+				data-section_tipo=\"{$section_tipo}\"
+				onclick=\"tool_indexation.create_fragment(this);\"
+				>";
+				$html_contenido .= label::get_label('crear_nuevo_fragmento');
+				if(SHOW_DEBUG) {
+					#$html_contenido .= " <span class=\"debug_info\">[last_tag_index_id:$last_tag_index_id - caller_id:$caller_id]</span>";
+				}
+				$html_contenido .= "</div>";
+
+
+
+				#
+				# BUTTON PORTAL ADD RESOURCE
+				if ( isset($_GET['portal_tipo']) && strpos($context_name, 'portal')!==false ) {
+
+					$portal_tipo 		 = $_GET['portal_tipo'];
+					$portal_parent 		 = $_GET['portal_parent'];
+					$portal_section_tipo = $_GET['portal_section_tipo'];
+
+					$button_action 	= 'tool_portal.add_resource(this)';#"tool_portal.add_fragment_resource(this)";
+					
+					$html_contenido .= "<div class=\"css_button_generic btn_relate_fragment\" id=\"btn_relate_fragment_{$tipo}\" style=\"display:none\"
+					data-tipo=\"$tipo\"
+					data-portal_tipo=\"$portal_tipo\"
+					data-portal_parent=\"$portal_parent\"
+					data-portal_section_tipo=\"$portal_section_tipo\"
+					data-rel_locator=\"\"
+					onclick=\"{$button_action}\"
 					>";
-					$html_contenido .= label::get_label('crear_nuevo_fragmento');
+					$html_contenido .= label::get_label('relacionar_fragmento_seleccionado') . " (".label::get_label('etiqueta')." <span></span>)";
 					if(SHOW_DEBUG) {
-						#$html_contenido .= " <span class=\"debug_info\">[last_tag_index_id:$last_tag_index_id - caller_id:$caller_id]</span>";
+						#$rel_locator_js_pretty = json_encode($rel_locator);
+						#$html_contenido .= " <span class=\"debug_info\">[parent:$parent - rel_locator:$rel_locator_js_pretty]</span>";	# caller_id:$caller_id -
 					}
 					$html_contenido .= "</div>";
+				}
+				
 
 
+				if(SHOW_DEBUG) {
+					#$html_contenido .= "\n <span class=\"css_span_debugger\" id=\"debugger_{$tipo}\" >{$debugger}</span>";
+				}
+				break;
 
-					##
-					# WRAP CURRENT SELECTED FRAGMENT (RELATION / ADD PORTAL BUTTON)
-					#
-					$html_contenido .= "\n <div id=\"relations_ajax_div_{$tipo}\" class=\"wrap_fragment\"
-					data-tipo=\"{$tipo}\"
-					data-section_tipo=\"{$section_tipo}\"
-					data-parent=\"{$parent}\"
-					data-modo=\"selected_fragment\"
-					data-lang=\"{$lang}\"
-					data-context_name=\"$context_name\"
-					data-caller_id=\"$caller_id\"
-					data-component_name=\"$component_name\"
-					>
-					<div class=\"content_data\"><!-- AJAX CONTENT HERE (selected_fragment) --></div>
-					</div>";
+	}//end switch($permissions) {
 
-
-
-
-					if($permissions==3)	{
-						#$html_contenido .= "\n <span class=\"css_span_debugger\" id=\"debugger_{$tipo}\" >{$debugger}</span>";
-					}
-
-					break;
-	}
 
 	# INIT : Init text editor
-	$html_contenido .= "\n<script>text_editor.init('$identificador_unico','$modo','$propiedades_json');</script>";
-	#$html_contenido .= "\n<script>tinymce.init({ selector:'textarea' });</script>";
+	if ($permissions>=2) {
+		$html_contenido .= "\n<script>text_editor.init('$identificador_unico','$modo','$propiedades_json');</script>";
+		#$html_contenido .= "\n<script>tinymce.init({ selector:'textarea' });</script>";
+	}
+	
 
 	# Prepare content to show in page
 	tools::prepare_content($html_contenido);

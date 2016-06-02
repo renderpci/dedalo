@@ -240,11 +240,11 @@ class component_publication extends component_common {
 	* @return string $list_value
 	*/
 	public static function render_list_value($value, $tipo, $parent, $modo, $lang, $section_tipo, $section_id) {
-
+		
 		$component 	= component_common::get_instance(__CLASS__,
 													 $tipo,
 												 	 $parent,
-												 	 'list',
+												 	 $modo,
 													 DEDALO_DATA_NOLAN,
 												 	 $section_tipo);
 
@@ -254,7 +254,12 @@ class component_publication extends component_common {
 		$component->set_dato($ar_records);
 		$component->set_identificador_unico($component->get_identificador_unico().'_'.$section_id); // Set unic id for build search_options_session_key used in sessions
 		
-		return  $component->get_valor($lang);
+		if ($modo=='list') {
+			$result = $component->get_valor($lang);
+		}else{
+			$result = $component->get_html();
+		}
+		return  $result;
 		
 	}#end render_list_value
 

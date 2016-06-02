@@ -2,7 +2,6 @@
 	
 	# CONTROLLER
 
-	#$id 					= $this->get_id();
 	$tipo 					= $this->get_tipo();
 	$parent 				= $this->get_parent();
 	$section_tipo 			= $this->get_section_tipo();
@@ -13,7 +12,7 @@
 	$label 					= $this->get_label();			
 	$required				= $this->get_required();
 	$debugger				= $this->get_debugger();	
-	$permissions			= common::get_permissions($tipo); 	
+	$permissions			= common::get_permissions($section_tipo,$tipo);
 	$ejemplo				= $this->get_ejemplo();
 	$html_title				= "Info about $tipo";		
 	$valor					= $this->get_valor();				
@@ -34,10 +33,15 @@
 	$initial_media_path		= $this->get_initial_media_path();
 	$file_exists 			= $this->get_file_exists();
 
+	#
+	# PDF VIEVER URL
+	$pdf_viewer_url 		= DEDALO_LIB_BASE_URL . '/'. get_class($this) . '/html/component_pdf_viewer.php';
+
 	#dump($initial_media_path, " initial_media_path ".to_string($pdf_url));
 	#$media_width 	= '97%';
 	#$media_height 	= 400;
 
+	
 	
 	switch($modo) {
 
@@ -55,7 +59,8 @@
 				break;		
 
 		case 'player':
-				$iframe_url 	= DEDALO_ROOT_WEB . '/lib/pdfjs/web/dedalo_viewer.html?pdf_url='.$pdf_url;				
+				#$iframe_url 	= DEDALO_ROOT_WEB . '/lib/pdfjs/web/dedalo_viewer.html?pdf_url='.$pdf_url;
+				$iframe_url 	= $pdf_viewer_url .'?pdf_url='. $pdf_url;				
 				break;
 
 		case 'thumb':				
@@ -65,10 +70,10 @@
 		case 'print':
 		case 'portal_list':
 		case 'list_tm':
-				$file_name = 'list';
+				$file_name = 'list';									
 
-		case 'list':	
-				#return "under construction";
+		case 'list':
+				$pdf_thumb = $file_exists ? $this->get_pdf_thumb() : null;				
 				break;
 
 		case 'search':

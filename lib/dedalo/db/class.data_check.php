@@ -49,22 +49,22 @@ class data_check {
 			$response->msg .= "<hr><b>$table_name</b> - start_value: $start_value - seq last_value: $last_value [ last id: $last_id]";
 
 			if ($last_id>$last_value) {
-				$response->msg .= "<br><pre>   WARNING: seq last_id > last_value [$last_id > $last_value]</pre>";
+				$response->msg .= "<br><b>   WARNING: seq last_id > last_value [$last_id > $last_value]</b>";
 				$response->msg .= "<br>FIX AUTOMATIC TO $last_id start</pre>";
 				#$response->msg .= "Use: <pre>SELECT setval('public.{$table_name}_id_seq', $last_id, true);</pre>";
 
 				$sql2 	 = "SELECT setval('public.{$table_name}_id_seq', $last_id, true);";
 				$result2 = JSON_RecordObj_matrix::search_free($sql2);
 				if (!$result2) {
-					$response->msg .= "Use: <pre>SELECT setval('public.{$table_name}_id_seq', $last_id, true);</pre>";
+					$response->msg .= "Use: <b>SELECT setval('public.{$table_name}_id_seq', $last_id, true);</b>";
 				}
 
 				$response->result = false;
 			}
 
 			if ($start_value!=1) {
-				$response->msg .= "<br><pre>   WARNING: seq start_value != 1</pre>";
-				$response->msg .= "Use: <pre>ALTER SEQUENCE {$table_name}_id_seq START WITH 1 ;</pre>";
+				$response->msg .= "<br><b>   WARNING: seq start_value != 1</b>";
+				$response->msg .= "Use: <b>ALTER SEQUENCE {$table_name}_id_seq START WITH 1 ;</b>";
 
 				$response->result = false;
 			}

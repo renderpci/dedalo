@@ -8,7 +8,7 @@
 	$section_tipo 			= $this->component_obj->get_section_tipo();
 	$lang 					= $this->component_obj->get_lang();
 	$label 					= $this->component_obj->get_label();
-	$permissions			= common::get_permissions($tipo);
+	$permissions			= common::get_permissions($section_tipo,$tipo);
 	$component_name			= get_class($this->component_obj);
 	$tool_name 				= get_class($this);
 	$image_id 				= $this->component_obj->get_image_id();

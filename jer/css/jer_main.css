@@ -80,10 +80,8 @@ img.btnEdit { width:15px; height:15px;  margin:0px; margin-top:-1px;cursor:point
 .divZonaActual {
 	font-weight:bold; font-size:15px; margin-top:-7px; width:100%;
 	background-color:#ff9c00;
-	-webkit-border-top-left-radius: 8px;
-	-webkit-border-top-right-radius: 8px;
-	-moz-border-radius-topleft: 8px;
-	-moz-border-radius-topright: 8px;
+	border-top-left-radius: 8px;
+	border-top-right-radius: 8px;	
 	color:#fff;
 	font-variant:small-caps;
 }

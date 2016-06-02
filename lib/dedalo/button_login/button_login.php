@@ -4,12 +4,11 @@
 	
 	$tipo 					= $this->get_tipo();
 	$target_tipo			= $this->get_target();
+	$section_tipo			= $this->get_section_tipo();
 	$id 					= NULL;
 	$modo					= 'edit';		
 	$label 					= $this->get_label();
-	$debugger				= $this->get_debugger();
-	#if($modo != 'simple')
-	#$permissions			= common::get_permissions($tipo); 	
+	$debugger				= $this->get_debugger();	
 	$html_title				= "Click to login";
 		
 	

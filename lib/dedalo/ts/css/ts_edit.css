@@ -65,7 +65,15 @@ INPUT , TEXTAREA {
 
 #terminosTable { width:100%;border-collapse:collapse; }	
 #terminosTable th { text-align:left; background-color:#505050; color:#CCCCCC; padding:3px; text-transform:capitalize }
-#terminosTable td {padding:3px; }
+#terminosTable td {
+	padding:3px;
+	text-align: left;
+	}
+	#terminosTable td span {
+		width: 14.5%;
+		display: inline-block;
+	}
+
 
 .inputFocus { background-color:#FFFF99 !important }
 
@@ -87,7 +95,14 @@ INPUT , TEXTAREA {
 	height: 46px;
 }
 
-.dropBox { cursor:pointer }
+.dropBox {
+	cursor:pointer;
+    cursor: pointer;
+    float: left;
+    position: relative;
+    left: 8px;
+    top: -2px;
+}
 
 
 #div_keyup {display:none; width:99%; padding:4px; background-color: #FC9; margin:0px; }

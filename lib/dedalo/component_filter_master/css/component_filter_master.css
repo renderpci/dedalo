@@ -5,6 +5,10 @@
 .css_wrap_filter_master {
 	line-height: 1.1em;	
 	}
+	.css_wrap_filter_master_unactive {
+		opacity: 0.5;
+		pointer-events:none;
+	}
 	.css_wrap_filter_master .content_data {
 		line-height: 1.6em;
 		/*

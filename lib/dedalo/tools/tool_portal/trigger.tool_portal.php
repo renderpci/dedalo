@@ -8,7 +8,7 @@ if(login::is_logged()!==true) die("<span class='error'> Auth error: please login
 
 # set vars
 	$vars = array('mode','portal_tipo','portal_parent','rel_locator','search_options_session_key','portal_section_tipo');
-	foreach($vars as $name) $$name = common::setVar($name);
+		foreach($vars as $name) $$name = common::setVar($name);
 
 # mode
 	if(empty($mode)) exit("<span class='error'> Trigger: Error Need mode..</span>");
@@ -22,6 +22,9 @@ if(login::is_logged()!==true) die("<span class='error'> Auth error: please login
 * @param $rel_locator String like '1235.0.0'
 */
 if($mode=='add_resource') {
+
+	$vars = array('portal_tipo','portal_parent','portal_section_tipo','rel_locator','prev_locator');
+		foreach($vars as $name) $$name = common::setVar($name);
 
 	if(empty($portal_tipo)) {
 		trigger_error("Error : few vars. portal_tipo is mandatory");
@@ -37,14 +40,6 @@ if($mode=='add_resource') {
 		}		
 		exit();
 	}
-	if(empty($rel_locator)) {
-		trigger_error("Error : few vars. rel_locator is mandatory");
-		if(SHOW_DEBUG) {
-			throw new Exception("Error: rel_locator is empty ! ", 1);
-		}		
-		exit();
-	}
-
 	if(empty($portal_section_tipo)) {
 		trigger_error("Error : few vars. section_tipo is mandatory");
 		if(SHOW_DEBUG) {
@@ -52,8 +47,15 @@ if($mode=='add_resource') {
 		}		
 		exit();
 	}
-	$rel_locator = json_decode($rel_locator);
-	#$component_portal 	= new component_portal($portal_tipo, $portal_parent);
+	if(empty($rel_locator)) {
+		trigger_error("Error : few vars. rel_locator is mandatory");
+		if(SHOW_DEBUG) {
+			throw new Exception("Error: rel_locator is empty ! ", 1);
+		}		
+		exit();
+	}
+	
+	
 	$component_portal 	= component_common::get_instance('component_portal',
 														 $portal_tipo,
 														 $portal_parent,
@@ -61,10 +63,26 @@ if($mode=='add_resource') {
 														 DEDALO_DATA_NOLAN,
 														 $portal_section_tipo);
 
+	#
+	# REMOVE PREVIOUS LOCATOR WEN IS REQUIRED
+	if (!empty($prev_locator)) {
+		
+		$prev_locator = json_decode($prev_locator);
+
+		$remove_locator_result = $component_portal->remove_locator( $prev_locator );
+		#debug_log(__METHOD__." Removed prev locator ".to_string($prev_locator), logger::DEBUG);
+
+	}//end if (!empty($prev_locator)) 
+
+
+	#
+	# ADD NEW LOCATOR
+	$rel_locator 		= json_decode($rel_locator);
 	$locator_added 		= $component_portal->add_locator( $rel_locator );
 		#dump($locator_added,"locator_added");
 		#dump($component_portal->get_dato(),"component_portal dato");
 	
+
 
 	if ($locator_added!==true) {
 		trigger_error("Error : on add locator");
@@ -74,18 +92,19 @@ if($mode=='add_resource') {
 		exit();
 	}
 
+
 	# Save
 	$component_portal->Save();
 
+	# State update
 	$state = $component_portal->update_state($rel_locator);
 
 	#dump($component_portal,"component_portal");
 
 	echo 'ok';
 	exit();
-}
 
-
+}//end add_resource
 
 
 
@@ -94,6 +113,9 @@ if($mode=='add_resource') {
 * Show full list of section records unfiltered by section_creator_portal_tipo
 */
 if ($mode=='show_full') {
+
+	$vars = array('search_options_session_key');
+		foreach($vars as $name) $$name = common::setVar($name);
 	
 	if (empty($search_options_session_key)) {		
 		exit("Trigger Error: search_options_session_key is empty !");
@@ -107,13 +129,19 @@ if ($mode=='show_full') {
 		debug_log(__METHOD__." Trigger: Error on portal_tool show_full. Session key received not exists: $search_options_session_key ".to_string(), logger::DEBUG);
 	}
 	exit();
-}
+
+}//end show_full
+
+
 
 /**
 * SHOW_FILTERED
 * Show filtered list of section records by section_creator_portal_tipo
 */
 if ($mode=='show_filtered') {
+
+	$vars = array('search_options_session_key');
+		foreach($vars as $name) $$name = common::setVar($name);
 	
 	if (empty($search_options_session_key)) {		
 		exit("Trigger Error: search_options_session_key is empty !");
@@ -126,7 +154,8 @@ if ($mode=='show_filtered') {
 		debug_log(__METHOD__." Trigger Error: on portal_tool show_filtered [$search_options_session_key] ".to_string(), logger::DEBUG);
 	}
 	exit();
-}
+
+}//end show_filtered
 
 
 

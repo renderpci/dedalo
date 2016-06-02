@@ -12,12 +12,11 @@
 	$label 					= $this->get_label();
 	$required				= $this->get_required();
 	$debugger				= $this->get_debugger();
-	$permissions			= common::get_permissions($tipo);
+	$permissions			= common::get_permissions($section_tipo,$tipo);
 	$ejemplo				= $this->get_ejemplo();
 	$html_title				= "Info about $tipo";
 	$valor					= $this->get_valor();
 	$lang					= $this->get_lang();
-	#$lang_name				= $this->get_lang_name();
 	$identificador_unico	= $this->get_identificador_unico();
 	$component_name			= get_class($this);
 	$widht 					= $this->get_widht();
@@ -73,6 +72,18 @@
 					$maxWidht 	= DEDALO_IMAGE_THUMB_WIDTH ;
 					$maxHeight 	= DEDALO_IMAGE_THUMB_HEIGHT  ;
 					$image_url	= $this->ImageObj->get_thumb_url($maxWidht, $maxHeight, 'resize', null, 'height');	#$m $maxWidht, $maxHeight, $fx=null, $p=null, $prop=null
+
+
+				#
+				# DEFAULT QUALITY IMAGE URL (onclick go to)
+				$this->ImageObj->set_quality(DEDALO_IMAGE_QUALITY_DEFAULT); // Force default quality always
+				$image_full_url = $this->ImageObj->get_url();
+					#dump($this->ImageObj, ' ImageObj ++ '.to_string());
+				
+				#
+				# THUMB URL
+				$thumb_path 	= $this->get_thumb_path();				
+				$thumb_file_url = $this->get_thumb_url();	
 				break;
 
 		case 'player':
@@ -119,7 +130,9 @@
 		case 'list':
 				#
 				# DEFAULT QUALITY IMAGE URL (onclick go to)
+				$this->ImageObj->set_quality(DEDALO_IMAGE_QUALITY_DEFAULT); // Force default quality always
 				$image_full_url = $this->ImageObj->get_url();
+					#dump($this->ImageObj, ' ImageObj ++ '.to_string());
 				
 				#
 				# THUMB URL
@@ -127,7 +140,7 @@
 				if (!file_exists($thumb_path)) {
 					return null;
 				}
-				$thumb_file_url = $this->get_thumb_url();								
+				$thumb_file_url = $this->get_thumb_url();						
 				break;
 
 		case 'list_ts':

@@ -23,7 +23,7 @@ if(login::is_logged()!==true) {
 	$section_tipo  			= $this->component_obj->get_section_tipo();
 	$lang 					= $this->component_obj->get_lang();
 	$label 					= $this->component_obj->get_label();
-	$permissions			= common::get_permissions($tipo);
+	$permissions			= common::get_permissions($section_tipo,$tipo);
 	$tool_name 				= get_class($this);
 	$modo 					= $this->get_modo();
 	$modelo_name 			= RecordObj_dd::get_modelo_name_by_tipo($tipo);

@@ -7,7 +7,7 @@
 	$lang					= $this->get_lang();
 	$dato					= $this->dato;	
 
-	$permissions			= common::get_permissions($tipo);
+	$permissions			= common::get_permissions($tipo, $tipo);
 	$this->set_permissions($permissions);	// Fix permissions for current element (important)
 
 	$label					= $this->get_label();
@@ -23,6 +23,15 @@
 
 	# Test is a complete section or process
 	$is_process_section = (isset($_REQUEST['t']) && $_REQUEST['t']!= $tipo) ? true : false;
+
+	#
+	# GLOBAL ADMIN
+	$ar_restricted_areas = array(DEDALO_SECTION_PROFILES_TIPO);
+	$is_global_admin = (bool)component_security_administrator::is_global_admin( navigator::get_user_id() );
+	if (!$is_global_admin && in_array($tipo, $ar_restricted_areas)) {
+		echo "<div>".label::get_label('contenido_no_autorizado')."</div>";
+		return null;
+	}
 
 
 
@@ -112,8 +121,7 @@
 							}
 
 					}//end if (empty($_REQUEST['offset'])) {
-
-		
+			
 
 
 				#
@@ -123,9 +131,8 @@
 				
 			
 				$section_records 	  = new section_records($this->tipo, $options);				
-				$section_records_html = $section_records->get_html();
-					
-					#dump($section_records->rows_obj->result, ' section_records->rows_obj->result ++ '.to_string());
+				$section_records_html = $section_records->get_html();					
+					#dump($section_records->rows_obj, ' section_records->rows_obj->result ++ '.to_string());
 
 				
 				#
@@ -166,6 +173,10 @@
 						$inspector_html = $inspector->get_html();
 					}
 
+				if ( isset($_GET['context_name']) && strpos($_GET['context_name'], 'portal')!==false ) {
+					js::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/tools/tool_portal/js/tool_portal.js'; // Cuando añadimos un fragmento, no está disponible..	
+				}
+
 				#
 				# ADITIONAL_CSS
 					if (defined('DEDALO_ADITIONAL_CSS') && DEDALO_ADITIONAL_CSS===true && isset($propiedades->aditional_css)) {
@@ -199,10 +210,10 @@
 					$rows_list_html 	= '';
 					#$search_options_session_key = $this->tipo.'_'.$this->modo.'_'.TOP_TIPO;	//get_class().'_'.
 					$search_options_session_key = 'section_'.$this->tipo;
-
+	
 					# SESSION_KEY OVERRIDES DEFAULT IN SOME CONTEXTS
 					switch (true) {
-						case ( isset($_REQUEST['m']) && $_REQUEST['m']=='tool_portal' ):
+						case ( isset($_GET['m']) && $_GET['m']=='tool_portal' ):
 							#
 							# TOOL PORTAL CASE
 							# Override on tool_portal context 

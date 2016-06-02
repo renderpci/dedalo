@@ -30,13 +30,8 @@
 	margin: 20px;
 	padding:0px;	
 	border: 1px solid #cccccc;
-
-	-moz-border-radius:10px;
-		 border-radius:10px;	
-	
-	-webkit-box-shadow: 0 0 10px #999999;
-	   -moz-box-shadow: 0 0 10px #999999;
-			box-shadow: 0 0 10px #999999;	  
+	border-radius:10px;	
+	box-shadow: 0 0 10px #999999;	  
 	
 	background-image: -moz-linear-gradient(top, #ffffff,#f2f2f2);	
 	background-image: -webkit-gradient(linear, left top, left bottom, from(#FFFFFF), to(#eeeeee)); /* from(#f2f2f2), to(#eeeeee)); */
@@ -67,10 +62,8 @@
 	padding: 15px 13px 5px 15px;
   	border-radius: 10px;	
 	}
-	#form_upload input[type=file]:focus {			
-		-webkit-box-shadow: 0 0 10px #ccc;	
-		   -moz-box-shadow: 0 0 10px #ccc;
-				box-shadow: 0 0 5px #ccc;
+	#form_upload input[type=file]:focus {		
+		box-shadow: 0 0 5px #ccc;
 	}
 
 #btn_upload  {
@@ -127,8 +120,7 @@ hr { color:#CCC;background-color:#CCC;height:1px; border:none; }
 	overflow: hidden;	
 	display: none;	
 	border: 1px solid #ccc;	
-		 border-radius: 10px;	
-	-moz-border-radius: 10px;	
+	border-radius: 10px;	
 	box-shadow: 0 0 5px #ccc;	
 	background-image: -moz-linear-gradient(top, #ff9900, #c77801);	
 	background-image: -webkit-gradient(linear, left top, left bottom, from(#ff9900), to(#c77801));

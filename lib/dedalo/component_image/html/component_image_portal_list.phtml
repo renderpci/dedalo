@@ -9,8 +9,8 @@ $js_url = DEDALO_LIB_BASE_URL.'/component_image/js/component_image_read.js';
 	# VISUALIZADOR HTML	
 
 		
-	print "\n<!-- IMAGE [tipo:$tipo section_id_matrix:$parent] $label -->";
-
+	#print "\n<!-- IMAGE [tipo:$tipo section_id_matrix:$parent] $label -->";
+	
 	print "\n<div class=\"wrap_component css_wrap_image css_wrap_image_{$modo} wrap_component_{$tipo}\"
 	id=\"{$id_wrapper}\"
 	data-tipo=\"{$tipo}\"
@@ -27,48 +27,63 @@ $js_url = DEDALO_LIB_BASE_URL.'/component_image/js/component_image_read.js';
 		
 		# CONTENIDO (INPUT)
 		$html_contenido = '';
-		switch($permissions) {
+		switch(true) {
 				
-			case 0 :
+			case $permissions<1 :
 					$html_contenido .= "";
 					break;
 							
-			case ($permissions>=1) :					
+			case ($permissions>=1) :
 					
-					$open_tool_default='';
-					$add_class='';
-					# IMAGE NOT EXISTS. PLACE DEDALO IMAGE WITH LINK TO DEFAULT TOOL
-					if (component_security_tools::is_authorized_tool_for_logged_user('tool_upload') &&
-						!file_exists($this->get_image_path()) &&
-						!$this->get_original(DEDALO_IMAGE_QUALITY_ORIGINAL,false)
-						) {
-						$open_tool_default ="
-						data-image_id=\"$image_id\"
-						data-quality=\"".DEDALO_IMAGE_QUALITY_ORIGINAL."\"
-						data-aditional_path=\"$aditional_path\"
-						data-initial_media_path=\"$initial_media_path\"
-						data-tipo=\"$tipo\"
-						data-parent=\"$parent\"
-						data-section_tipo=\"$section_tipo\"
-						onclick=\"tool_common.open_tool_upload(this)\"
-						title=\"Upload file in original quality\" ";
 
-						$add_class = 'no_file';
-					}					
-					
-					# CANVAS : IMAGE					
-					#$html_contenido .= "<canvas id=\"$identificador_unico\" class=\"canvas_edit $add_class\" $open_tool_default resize hidpi=\"on\">";
-					#$html_contenido .= $image_thumb_html ; # Rendered in thumb mode
-					$html_contenido .= "\n <img class=\"css_image $add_class\" $open_tool_default
-					src=\"$image_url\"
-					id=\"img_$identificador_unico\"
-					data-image_id=\"$image_id\"
-					data-tipo=\"$tipo\"
-					data-section_tipo=\"{$section_tipo}\"
-					data-parent=\"$parent\"
-					data-lang=\"$lang\"					
-					alt=\"$image_id\"
-					/>";
+					if (file_exists($thumb_path)) {
+
+						/**/
+						# CLICK_ACTION
+						$click_action="onclick=\"tool_common.open_player(this,{'type':'component_image','image_full_url':'$image_full_url'});\" ";
+
+						$style = "background-image:url('$thumb_file_url')";
+						$html_contenido .= "<div class=\"thumb_in_list div_image_image_in_list\" style=\"$style\" $click_action
+						data-image_id=\"$image_id\"
+						data-parent_matrix=\"$parent\"
+						alt=\"$image_id\"
+						></div>";
+
+					}else{
+
+						$open_tool_default='';
+						$add_class='';
+						# IMAGE NOT EXISTS. PLACE DEDALO IMAGE WITH LINK TO DEFAULT TOOL
+						if (component_security_tools::is_authorized_tool_for_logged_user('tool_upload') &&
+							!file_exists($this->get_image_path()) &&
+							!$this->get_original(DEDALO_IMAGE_QUALITY_ORIGINAL,false)
+							) {
+							$open_tool_default ="
+							data-image_id=\"$image_id\"
+							data-quality=\"".DEDALO_IMAGE_QUALITY_ORIGINAL."\"
+							data-aditional_path=\"$aditional_path\"
+							data-initial_media_path=\"$initial_media_path\"
+							data-tipo=\"$tipo\"
+							data-parent=\"$parent\"
+							data-section_tipo=\"$section_tipo\"
+							onclick=\"tool_common.open_tool_upload(this)\"
+							title=\"Upload file in original quality\" ";
+
+							$add_class = 'no_file';
+						}
+
+						# IMAGE		
+						$html_contenido .= "\n <img class=\"css_image $add_class\" $open_tool_default
+						src=\"$image_url\"
+						id=\"img_$identificador_unico\"
+						data-image_id=\"$image_id\"
+						data-tipo=\"$tipo\"
+						data-section_tipo=\"{$section_tipo}\"
+						data-parent=\"$parent\"
+						data-lang=\"$lang\"
+						alt=\"$image_url\"
+						/>";
+					}
 					
 
 					#$html_contenido .= "<a href=\"$image_url\" target=\"_blank\" > + ";
@@ -76,16 +91,17 @@ $js_url = DEDALO_LIB_BASE_URL.'/component_image/js/component_image_read.js';
 											
 		}
 
-		# Prepare content to show in page
-		#tools::prepare_content($html_contenido);
+		#$html_contenido =  "<div>88888 88888 8888 888</div>";
 
+		# Prepare content to show in page
+		tools::prepare_content($html_contenido);
 		
 
 		# PRINT HTML
 		print $html_contenido;
 	
 	
-	print "\n</div><!-- /css_wrap_image IMAGE [tipo:$tipo section_id_matrix:$parent] $label -->\n"; //wrap
+	print "</div>"; //wrap
 
 
 	

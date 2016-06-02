@@ -1,0 +1,790 @@
+6337	dd360	dd785	dd395	no	si	si	72	dd	si	\N	{"name":"tool_semantic_nodes"}
+187	dd187	dd785	dd395	no	si	si	14	dd	si		{"name":"original"}
+1083	dd1083	dd785	dd395	no	si	si	37	dd	si		{"name":"el_archivo_subido_excede_de_la_directiva"}
+1085	dd1085	dd785	dd395	no	si	si	39	dd	si		{"name":"el_archivo_subido_fue_solo_parcialmente_cargado"}
+5971	dd291	dd785	dd395	no	si	si	62	dd	si	\N	{"name":"conservar_los_cambios_transcripcion"}
+5924	dd268	dd234	dd183	no	si	si	6	dd	no	\N	\N
+1	dd1	dd0	dd117	no	si	si	1	dd	si		
+6328	dd353	dd6	\N	si	si	si	6	dd	no	\N	\N
+6244	dd350	dd440	\N	si	si	si	40	dd	no	\N	\N
+6245	dd351	dd322	dd4	no	si	si	1	dd	si	\N	\N
+2147	dd1735	dd390	dd395	no	si	si	27	dd	si	\N	{"name":"mostrar_filtrados"}
+5547	dd140	dd90	dd91	no	si	si	3	dd	si	[{"dd9":"dd127"}]	
+5575	dd228	dd203	dd177	no	si	si	4	dd	no	\N	
+2199	dd1737	dd390	dd395	no	si	si	28	dd	si	\N	{"name":"ir_al_fragmento"}
+5558	dd182	dd174	dd8	no	si	si	1	dd	no	\N	
+5549	dd142	dd90	dd177	no	si	si	4	dd	no	\N	
+5560	dd185	dd182	dd9	no	si	si	1	dd	si	\N	
+605	dd605	dd6	null	si	si	si	17	dd	no		
+5561	dd186	dd174	dd247	no	si	si	2	dd	no	\N	
+5556	dd174	dd137	dd6	no	si	si	19	dd	no	[{"dd626":"dd963"}]	
+5566	dd203	dd137	dd6	no	si	si	20	dd	si	[{"dd626":"dd963"}]	
+100	dd100	dd1	dd50	no	si	si	6	dd	si		
+2190	dd1736	dd390	dd395	no	si	si	29	dd	si	\N	{"name":"salvar"}
+2229	dd1738	dd390	dd395	no	si	si	30	dd	si	\N	{"name":"update_cache"}
+24	dd24	dd465	dd440	no	si	no	2	dd	no	null	
+571	dd571	dd567	dd91	no	si	si	5	dd	si	[{"dd195":"dd196"},{"dd9":"dd570"}]	
+1321	dd1321	dd1318	dd247	no	si	si	2	dd	no		
+198	dd198	dd195	null	si	si	si	3	dd	no	null	
+1001	dd1001	dd996	dd177	no	si	si	4	dd	si		
+927	dd927	dd922	dd177	no	si	si	5	dd	no		
+886	dd886	dd882	dd91	no	si	si	5	dd	no	[{"dd9":"dd884"}]	
+885	dd885	dd882	dd247	no	si	si	2	dd	no		
+238	dd238	dd236	dd10	no	si	si	2	dd	si		
+1208	dd1208	dd15	dd19	no	si	si	4	dd	si	[{"dd6":"rsc167"}]	
+1706	dd1706	dd15	dd19	no	si	si	3	dd	si	[{"dd6":"rsc170"}]	
+5563	dd189	dd174	dd91	no	si	si	3	dd	no	[{"dd9":"dd185"}]	
+548	dd548	dd542	dd8	no	si	si	1	dd	si		
+549	dd549	dd542	dd91	no	si	si	2	dd	si	[{"dd9":"dd544"},{"dd9":"dd543"},{"dd9":"dd545"},{"dd9":"dd546"},{"dd9":"dd547"},{"dd247":"dd551"},{"dd9":"dd550"}]	
+1704	dd1704	dd542	dd1058	no	si	si	4	dd	si		
+249	dd249	dd1718	dd241	no	si	si	1	dd	no		
+636	dd636	dd193	dd440	no	si	si	1	dd	si		
+627	dd627	dd193	dd440	no	si	si	2	dd	si		
+38	dd38	dd33	dd9	no	si	si	2	dd	si	[{"dd6":"oh1"}]	
+148	dd148	dd361	dd149	no	si	si	6	dd	no		
+584	dd584	dd389	dd395	no	si	si	8	dd	si		{"name":"esta_seguro_de_sobreescribir_el_texto"}
+163	dd163	dd440	null	si	si	si	21	dd	no		
+55	dd55	dd30	dd177	no	si	si	4	dd	no		
+1132	dd1132	dd68	dd6	no	si	si	6	dd	si	[{"dd626":"dd22"}]	
+2921	dd1741	dd194	\N	si	si	si	5	dd	si	\N	
+2922	dd1742	dd440	\N	si	si	si	34	dd	no	\N	
+23	dd23	dd21	dd438	no	si	si	3	dd	no		
+59	dd59	dd17	null	si	si	si	1	dd	no		
+37	dd37	dd19	null	si	si	si	1	dd	si		
+151	dd151	dd48	null	si	si	si	1	dd	no		
+152	dd152	dd147	dd395	no	si	si	1	dd	si		{"name":"buscar"}
+164	dd164	dd6	null	si	si	si	11	dd	no		
+573	dd573	dd567	dd177	no	si	si	3	dd	si		
+574	dd574	dd567	dd183	no	si	si	4	dd	si		
+568	dd568	dd567	dd8	no	si	si	1	dd	si		
+749	dd749	dd440	null	si	si	si	1	dd	no		
+842	dd842	dd839	dd247	no	si	si	2	dd	no		
+834	dd834	dd833	dd8	no	si	si	1	dd	si		
+544	dd544	dd548	dd633	no	si	si	1	dd	no		
+5537	dd181	dd6	\N	si	si	si	22	dd	no	\N	
+545	dd545	dd548	dd634	no	si	si	3	dd	no		
+551	dd551	dd548	dd9	no	si	si	6	dd	no		
+736	dd736	dd391	dd395	no	si	si	26	dd	si		{"name":"crear"}
+737	dd737	dd391	dd395	no	si	si	27	dd	si		{"name":"extension_no_valida"}
+739	dd739	dd391	dd395	no	si	si	28	dd	si		{"name":"seleccione_el_fichero_a_subir"}
+740	dd740	dd391	dd395	no	si	si	29	dd	si		{"name":"fichero_subido_con_exito"}
+741	dd741	dd391	dd395	no	si	si	30	dd	si		{"name":"error_al_subir_el_archivo"}
+744	dd744	dd391	dd395	no	si	si	31	dd	si		{"name":"el_directorio_no_existe"}
+745	dd745	dd391	dd395	no	si	si	32	dd	si		{"name":"cerrar"}
+746	dd746	dd391	dd395	no	si	si	33	dd	si		{"name":"recargar"}
+748	dd748	dd391	dd395	no	si	si	35	dd	si		{"name":"carga_de_archivo_completada"}
+753	dd753	dd391	dd395	no	si	si	36	dd	si		{"name":"insertar"}
+754	dd754	dd391	dd395	no	si	si	37	dd	si		{"name":"accion"}
+803	dd803	dd391	dd395	no	si	si	51	dd	si		{"name":"completo"}
+92	dd92	dd85	dd88	no	si	si	6	dd	si		{"SQL_operator":"BETWEEN"}
+804	dd804	dd391	dd395	no	si	si	52	dd	si		{"name":"modo"}
+1021	dd1021	dd391	dd395	no	si	si	62	dd	si		{"name":"datos"}
+590	dd590	dd391	dd395	no	si	si	70	dd	si		{"name":"reemplazar_todas"}
+618	dd618	dd391	dd395	no	si	si	77	dd	si		{"name":"si"}
+619	dd619	dd391	dd395	no	si	si	78	dd	si		{"name":"no"}
+738	dd738	dd389	dd395	no	si	si	9	dd	si		{"name":"fichero_demasiado_grande"}
+742	dd742	dd389	dd395	no	si	si	10	dd	si		{"name":"seleccione_un_fichero"}
+126	dd126	dd153	dd8	no	si	si	4	dd	no		
+465	dd465	dd153	dd440	no	si	si	5	dd	si	[{"dd74":"dd169"}]	{"info":"Modelo section_group_relation"}
+743	dd743	dd389	dd395	no	si	si	11	dd	si		{"name":"abandonando_esta_pagina"}
+582	dd582	dd390	dd395	no	si	si	11	dd	si		{"name":"selecionar_texto"}
+583	dd583	dd390	dd395	no	si	si	12	dd	si		{"name":"traduccion_automatica"}
+882	dd882	dd68	dd6	no	si	si	9	dd	si	[{"dd626":"dd22"}]	
+586	dd586	dd390	dd395	no	si	si	13	dd	si		{"name":"copiar_a_destino"}
+587	dd587	dd390	dd395	no	si	si	14	dd	si		{"name":"propagar_marcas"}
+613	dd613	dd390	dd395	no	si	si	15	dd	si		{"name":"nuevo"}
+639	dd639	dd636	dd638	no	si	si	2	dd	si		
+1114	dd1114	dd390	dd395	no	si	si	1	dd	si		{"name":"ver_ficha_existente"}
+1308	dd1308	dd68	dd6	no	si	si	4	dd	no	[{"dd626":"dd22"}]	
+1538	dd1538	dd440	null	si	si	si	1	dd	no		
+1716	dd1716	dd1707	dd1041	no	si	si	3	dd	si	[{"dd9":"rsc23"}]	
+1314	dd1314	dd1313	dd8	no	si	si	1	dd	no		
+1316	dd1316	dd1313	dd247	no	si	si	2	dd	no		
+1319	dd1319	dd1318	dd8	no	si	si	1	dd	no		
+1044	dd1044	dd390	dd395	no	si	si	25	dd	si	null	{"name":"caracteres_por_linea"}
+1681	dd1681	dd17	null	si	si	si	1	dd	no		
+102	dd102	dd117	\N	si	si	si	2	dd	no		
+243	dd243	dd390	dd395	no	si	si	31	dd	si		{"name":"transcripcion_automatica"}
+12	dd12	dd627	dd626	no	si	si	9	dd	no		
+82	dd82	dd627	dd626	no	si	si	10	dd	no		
+830	dd830	dd390	dd395	no	si	si	21	dd	si		{"name":"borrar_solo_el_vinculo"}
+831	dd831	dd390	dd395	no	si	si	22	dd	si		{"name":"borrar_el_recurso"}
+693	dd693	dd692	dd395	no	si	si	4	dd	si		{"name":"listado"}
+694	dd694	dd692	dd395	no	si	si	5	dd	si		{"name":"edicion"}
+695	dd695	dd692	dd395	no	si	si	6	dd	si		{"name":"nuevo"}
+696	dd696	dd692	dd395	no	si	si	7	dd	si		{"name":"entrada"}
+692	dd692	dd383	dd392	no	si	si	6	dd	si		
+785	dd785	dd383	dd392	no	si	si	7	dd	si		
+1711	dd1711	dd383	dd395	no	si	si	8	dd	si		{"name":"fecha_o_rango_en_formato"}
+68	dd68	dd207	dd4	no	si	si	4	dd	no		
+837	dd837	dd833	dd91	no	si	si	3	dd	si	[{"dd9":"dd835"},{"dd195":"dd196"}]	
+836	dd836	dd833	dd247	no	si	si	2	dd	no		
+945	dd945	dd942	dd91	no	si	si	3	dd	si	[{"dd9":"dd944"},{"dd195":"dd196"}]	
+925	dd925	dd922	dd91	no	si	si	3	dd	no	[{"dd9":"dd924"},{"dd195":"dd196"}]	
+901	dd901	dd898	dd91	no	si	si	3	dd	si	[{"dd9":"dd900"},{"dd195":"dd196"}]	
+846	dd846	dd440	null	si	si	si	1	dd	no		
+231	dd231	dd117	null	si	si	si	4	dd	no		
+1120	dd1120	dd1117	dd91	no	si	si	6	dd	si	[{"dd9":"dd1119"}]	
+88	dd88	dd72		si	si	si	4	dd	si		
+1196	dd1196	dd1132	dd177	no	si	si	3	dd	si		
+1309	dd1309	dd1308	dd8	no	si	si	1	dd	si		
+1310	dd1310	dd1308	dd247	no	si	si	1	dd	no		
+1311	dd1311	dd1309	dd9	no	si	si	1	dd	si		
+1315	dd1315	dd1314	dd9	no	si	si	1	dd	si		
+1320	dd1320	dd1319	dd9	no	si	si	1	dd	si		
+833	dd833	dd137	dd6	no	si	si	7	dd	no	[{"dd626":"dd963"}]	
+839	dd839	dd137	dd6	no	si	si	9	dd	si	[{"dd626":"dd963"}]	
+861	dd861	dd137	dd6	no	si	si	8	dd	si	[{"dd626":"dd963"}]	
+875	dd875	dd137	dd6	no	si	si	14	dd	si	[{"dd626":"dd963"}]	
+889	dd889	dd137	dd6	no	si	si	10	dd	no	[{"dd626":"dd963"}]	
+957	dd957	dd137	dd6	no	si	si	12	dd	no	[{"dd626":"dd963"}]	
+976	dd976	dd137	dd6	no	si	si	13	dd	no	[{"dd626":"dd963"}]	
+1051	dd1051	dd389	dd395	no	si	si	4	dd	si	[{"dd9":"dd644"}]	{"name":"seguro"}
+1075	dd1075	dd63	dd1029	no	si	si	6	dd	si	[{"dd247":"dd550"}]	
+1093	dd1093	dd63	dd1029	no	si	si	7	dd	si	[{"dd9":"dd551"}]	
+852	dd852	dd785	dd395	no	si	si	1	dd	si	null	{\r\n  "name": "tool_layout_print"\r\n}
+874	dd874	dd785	dd395	no	si	si	2	dd	si	null	{\r\n  "name": "tool_update_cache"\r\n}
+1125	dd1125	dd383	dd392	no	si	si	1	dd	si	null	
+1046	dd1046	dd1125	dd395	no	si	si	33	dd	si	null	{"name":"longitud"}
+61	dd61	dd21	dd9	no	si	si	1	dd	no		
+29	dd29	dd21	dd9	no	si	si	2	dd	si		
+41	dd41	dd30	dd91	no	si	si	2	dd	no	[{"dd9":"dd38"},{"dd9":"dd67"},{"dd438":"dd39"}]	
+498	dd498	dd811	dd177	no	si	si	7	dd	si		
+1056	dd1056	dd1028	null	si	si	si	1	dd	no		
+192	dd192	dd785	dd395	no	si	si	16	dd	si		{"name":"nombre_fichero_completo"}
+1710	dd1710	dd1125	dd395	no	si	si	5	dd	si		{"name":"geolocalizacion"}
+1070	dd1070	dd63	dd1703	no	si	si	1	dd	si	[{"dd633":"dd544"}]	"Empty"
+1073	dd1073	dd63	dd1029	no	si	si	4	dd	si	[{"dd634":"dd546"}]	
+1071	dd1071	dd63	dd1029	no	si	si	2	dd	si	[{"dd530":"dd543"}]	{\r\n"key":"dd545",\r\n"x":"dd543",\r\n"y":"count"\r\n}
+355	dd355	dd242	dd4	no	si	si	1	dd	si		
+356	dd356	dd242	dd4	no	si	si	1	dd	si		
+1019	dd1019	dd390	dd395	no	si	si	1	dd	si	null	{"name":"operadores_de_busqueda"}
+1703	dd1703	dd1028	\N	si	si	si	2	dd	no		
+1047	dd1047	dd1125	dd395	no	si	si	4	dd	si	null	{"name":"latitud"}
+1707	dd1707	dd1706	dd31	no	si	si	1	dd	si		
+1722	dd1722	dd6	\N	si	si	si	9	dd	si		
+1724	dd1724	dd440	\N	si	si	si	1	dd	si		
+101	dd101	dd100	dd440	no	si	si	1	dd	no		
+1045	dd1045	dd1125	dd395	no	si	si	29	dd	si	null	{"name":"mapa_zoom"}
+242	dd242	dd1	dd341	no	si	si	1	dd	si		
+199	dd199	dd196	dd201	no	si	si	2	dd	si		
+1117	dd1117	dd137	dd6	no	si	si	16	dd	si	[{"dd626":"dd963"}]	
+567	dd567	dd137	dd6	no	si	si	17	dd	no	[{"dd626":"dd963"}]	
+225	dd225	dd440	null	si	si	si	8	dd	no		
+832	dd832	dd118	dd395	no	si	si	6	dd	si	null	{"name":"por_favor_espere"}
+341	dd341	dd117	null	si	si	si	6	dd	no		
+352	dd352	dd117	null	si	si	si	8	dd	no		
+357	dd357	dd117	null	si	si	si	5	dd	no		
+349	dd349	dd355	dd4	no	si	si	2	dd	si		
+386	dd386	dd194	null	si	si	si	1	dd	no		
+392	dd392	dd386	null	si	si	si	1	dd	no		
+395	dd395	dd392	null	si	si	si	1	dd	no		
+237	dd237	dd236	dd9	no	si	si	1	dd	si		
+1025	dd1025	dd638	null	si	si	si	1	dd	si		
+863	dd863	dd862	dd9	no	si	si	1	dd	si		
+866	dd866	dd861	dd177	no	si	si	1	dd	si		
+854	dd854	dd391	dd395	no	si	si	55	dd	si		{"name":"mostrar_inspector"}
+884	dd884	dd883	dd9	no	si	si	1	dd	si		
+891	dd891	dd890	dd9	no	si	si	1	dd	si		
+900	dd900	dd899	dd9	no	si	si	1	dd	si		
+904	dd904	dd440	null	si	si	si	1	dd	no		
+1226	dd1226	dd17	null	si	si	si	1	dd	no		
+1230	dd1230	dd1229	null	si	si	si	1	dd	si		
+1231	dd1231	dd1229	null	si	si	si	1	dd	si		
+1232	dd1232	dd1229	null	si	si	si	1	dd	si		
+1233	dd1233	dd1229	null	si	si	si	1	dd	si		
+1234	dd1234	dd1229	null	si	si	si	1	dd	si		
+1235	dd1235	dd1229	null	si	si	si	1	dd	si		
+1236	dd1236	dd1229	null	si	si	si	1	dd	si		
+438	dd438	dd440	null	si	si	si	3	dd	no		
+80	dd80	dd440	null	si	si	si	9	dd	no		
+706	dd706	dd391	dd395	no	si	si	14	dd	si		{"name":"recuperar"}
+589	dd589	dd391	dd395	no	si	si	71	dd	si		{"name":"solo_nuevas"}
+588	dd588	dd391	dd395	no	si	si	72	dd	si		{"name":"total_parrafos"}
+321	dd321	dd349	dd4	no	si	si	1	dd	si		
+401	dd401	dd389	dd395	no	si	si	5	dd	si		{"name":"esta_seguro_de_borrar_este_registro"}
+383	dd383	dd193	dd386	no	si	si	5	dd	si		
+402	dd402	dd389	dd395	no	si	si	6	dd	si		{"name":"contenido_no_autorizado"}
+990	dd990	dd985	dd177	no	si	si	3	dd	no		
+387	dd387	dd390	dd395	no	si	si	7	dd	si		{"name":"salir"}
+397	dd397	dd390	dd395	no	si	si	8	dd	si		{"name":"volver"}
+399	dd399	dd390	dd395	no	si	si	9	dd	si		{"name":"remove"}
+697	dd697	dd692	dd395	no	si	si	8	dd	si		{"name":"salida"}
+698	dd698	dd692	dd395	no	si	si	9	dd	si		{"name":"borrar"}
+1259	dd1259	dd5	null	si	si	si	1	dd	si		
+1088	dd1088	dd785	dd395	no	si	si	42	dd	si		{"name":"no_se_pudo_escribir_el_archivo_en_el_disco"}
+699	dd699	dd692	dd395	no	si	si	10	dd	si		{"name":"busqueda"}
+700	dd700	dd692	dd395	no	si	si	11	dd	si		{"name":"guardar"}
+110	dd110	dd785	dd395	no	si	si	48	dd	si		{"name":"contenido_actual"}
+390	dd390	dd383	dd392	no	si	si	3	dd	si		
+391	dd391	dd383	dd392	no	si	si	4	dd	si		
+215	dd215	dd785	dd395	no	si	si	17	dd	si		{"name":"numero_inventario"}
+216	dd216	dd785	dd395	no	si	si	18	dd	si		{"name":"numero_recurso"}
+217	dd217	dd785	dd395	no	si	si	19	dd	si		{"name":"extension"}
+328	dd328	dd906	dd395	no	si	si	7	dd	si	null	{"name":"new_fluid_page"}
+711	dd711	dd709	null	si	si	si	1	dd	si		
+722	dd722	dd440	null	si	si	si	1	dd	si		
+862	dd862	dd861	dd8	no	si	si	1	dd	si		
+626	dd626	dd638	null	si	si	si	1	dd	si		
+70	dd70	dd60	dd6	no	si	si	1	dd	si	[{"dd626":"dd46"}]	
+74	dd74	dd440	null	si	si	si	10	dd	no		
+864	dd864	dd861	dd247	no	si	si	1	dd	no		
+166	dd166	dd391	dd395	no	si	si	5	dd	si		{"name":"registros_modificados"}
+530	dd530	dd440	null	si	si	si	1	dd	no		
+570	dd570	dd568	dd9	no	si	si	1	dd	si		
+724	dd724	dd391	dd395	no	si	si	16	dd	si		{"name":"calidad"}
+144	dd144	dd6	null	si	si	si	15	dd	no		
+725	dd725	dd391	dd395	no	si	si	17	dd	si		{"name":"fichero"}
+726	dd726	dd391	dd395	no	si	si	18	dd	si		{"name":"tamano"}
+727	dd727	dd391	dd395	no	si	si	19	dd	si		{"name":"descargar"}
+728	dd728	dd391	dd395	no	si	si	20	dd	si		{"name":"subir"}
+729	dd729	dd391	dd395	no	si	si	21	dd	si		{"name":"borrar"}
+730	dd730	dd391	dd395	no	si	si	22	dd	si		{"name":"generar"}
+734	dd734	dd391	dd395	no	si	si	24	dd	si		{"name":"procesando"}
+521	dd521	dd391	dd395	no	si	si	73	dd	si		{"name":"fragmento"}
+219	dd219	dd785	dd395	no	si	si	20	dd	si		{"name":"nombre_automatico"}
+220	dd220	dd785	dd395	no	si	si	21	dd	si		{"name":"tamano_archivo"}
+221	dd221	dd785	dd395	no	si	si	22	dd	si		{"name":"formato_incorrecto"}
+8	dd8	dd6	null	si	si	si	19	dd	no	null	
+474	dd474	dd391	dd395	no	si	si	74	dd	si		{"name":"heramientas"}
+473	dd473	dd391	dd395	no	si	si	75	dd	si		{"name":"relaciones"}
+812	dd812	dd811	dd9	no	si	si	1	dd	si		
+542	dd542	dd207	dd6	no	si	si	5	dd	no	[{"dd626":"dd628"},{"dd638":"dd639"}]	
+265	dd265	dd153	dd8	no	si	si	6	dd	si		
+145	dd145	dd785	dd395	no	si	si	10	dd	si		{"name":"ahora"}
+146	dd146	dd785	dd395	no	si	si	11	dd	si		{"name":"aplicar_y_salvar"}
+1702	dd1702	dd785	dd395	no	si	si	27	dd	si		{"name":"tool_import_images"}
+1720	dd1720	dd627	dd626	no	si	si	3	dd	no		
+1719	dd1719	dd627	dd626	no	si	si	4	dd	no		
+7	dd7	dd3	dd17	no	si	si	1	dd	no		
+184	dd184	dd785	dd395	no	si	si	3	dd	no	null	{\r\n  "name": "tool_calendar"\r\n}
+911	dd911	dd137	dd6	no	si	si	11	dd	no	[{"dd626":"dd963"}]	
+190	dd190	dd64	dd8	no	si	si	1	dd	si		
+194	dd194	dd2	null	si	si	si	3	dd	no		
+195	dd195	dd194	null	si	si	si	1	dd	no		
+206	dd206	dd48	null	si	si	si	1	dd	no		
+149	dd149	dd440	null	si	si	si	2	dd	no		
+247	dd247	dd440	null	si	si	si	18	dd	no		
+260	dd260	dd194	null	si	si	si	1	dd	no		
+262	dd262	dd230	null	si	si	si	1	dd	no		
+269	dd269	dd230	null	si	si	si	1	dd	no		
+270	dd270	dd230	null	si	si	si	1	dd	no		
+271	dd271	dd229	dd270	no	si	si	2	dd	si	[{"dd57":"dd131"}]	
+167	dd167	dd391	dd395	no	si	si	6	dd	si		{"name":"proyecto"}
+172	dd172	dd391	dd395	no	si	si	7	dd	si		{"name":"que"}
+171	dd171	dd391	dd395	no	si	si	8	dd	si		{"name":"donde"}
+173	dd173	dd391	dd395	no	si	si	9	dd	si		{"name":"registros_creados"}
+175	dd175	dd391	dd395	no	si	si	10	dd	si		{"name":"directorio_de_destino"}
+218	dd218	dd391	dd395	no	si	si	11	dd	si		{"name":"registros_visualizados"}
+153	dd153	dd207	dd6	no	si	si	3	dd	no	[{"dd626":"dd1720"}]	
+21	dd21	dd20	dd8	no	si	si	1	dd	no		
+27	dd27	dd20	dd177	no	si	si	4	dd	no		
+43	dd43	dd440	dd19	si	si	si	3	dd	no	null	
+28	dd28	dd20	dd183	no	si	si	5	dd	no		
+67	dd67	dd33	dd9	no	si	si	1	dd	no	null	
+543	dd543	dd548	dd530	no	si	si	2	dd	no	[{"dd6":"dd128"},{"dd9":"dd132"}]	
+165	dd165	dd389	dd395	no	si	si	2	dd	si		{"name":"error_usuario_sin_proyectos"}
+168	dd168	dd389	dd395	no	si	si	3	dd	si		{"name":"verifique_datos_de_instalacion"}
+114	dd114	dd390	dd395	no	si	si	4	dd	si		{"name":"cancelar_la_carga"}
+1064	dd1064	dd85	dd88	no	si	si	1	dd	si	null	{"SQL_operator":"!="}
+978	dd978	dd977	dd9	no	si	si	1	dd	no		
+115	dd115	dd390	dd395	no	si	si	5	dd	si		{"name":"gestion_de_archivos"}
+116	dd116	dd390	dd395	no	si	si	6	dd	si		{"name":"preview_de_importacion"}
+147	dd147	dd383	dd392	no	si	si	2	dd	si		
+169	dd169	dd24	dd74	no	si	si	4	dd	no	[{"dd6":"dd128"}]	
+302	dd302	dd440	null	si	si	si	16	dd	no		
+303	dd303	dd48	null	si	si	si	1	dd	no		
+305	dd305	dd440	null	si	si	si	17	dd	no		
+308	dd308	dd2	null	si	si	si	5	dd	no		
+266	dd266	dd265	dd305	no	si	si	1	dd	no		{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".width_25",\r\n        ".vertical"\r\n      ],\r\n      "style": {}\r\n    },\r\n    ".label": {\r\n      "style": {}\r\n    },\r\n    ".content_data": {\r\n      "style": {}\r\n    }\r\n  }\r\n}
+320	dd320	dd356	dd4	no	si	si	1	dd	si		
+988	dd988	dd985	dd91	no	si	si	4	dd	si	[{"dd9":"dd987"},{"dd195":"dd196"}]	
+838	dd838	dd833	dd177	no	si	si	5	dd	si		
+999	dd999	dd996	dd91	no	si	si	3	dd	si	[{"dd9":"dd998"},{"dd195":"dd196"}]	
+943	dd943	dd942	dd8	no	si	si	1	dd	no		
+947	dd947	dd942	dd177	no	si	si	5	dd	si		
+946	dd946	dd942	dd247	no	si	si	2	dd	no		
+923	dd923	dd922	dd8	no	si	si	1	dd	no		
+928	dd928	dd922	dd183	no	si	si	6	dd	si		
+926	dd926	dd922	dd247	no	si	si	2	dd	no		
+899	dd899	dd898	dd8	no	si	si	1	dd	no		
+883	dd883	dd882	dd8	no	si	si	1	dd	no		
+902	dd902	dd898	dd247	no	si	si	2	dd	no		
+887	dd887	dd882	dd183	no	si	si	3	dd	si		
+888	dd888	dd882	dd177	no	si	si	4	dd	si		
+998	dd998	dd997	dd9	no	si	si	1	dd	si		
+230	dd230	dd117	null	si	si	si	9	dd	no		
+177	dd177	dd6	null	si	si	si	7	dd	no	null	
+1712	dd1712	dd1125	dd395	no	si	si	9	dd	si		{"name":"georeferenciacion_en_formato"}
+1017	dd1017	dd440	null	si	si	si	1	dd	si		
+1018	dd1018	dd440	null	si	si	si	1	dd	si		
+855	dd855	dd391	dd395	no	si	si	56	dd	si		{"name":"ir_a_seccion"}
+856	dd856	dd391	dd395	no	si	si	57	dd	si		{"name":"modelos"}
+857	dd857	dd391	dd395	no	si	si	58	dd	si		{"name":"jerarquias"}
+858	dd858	dd391	dd395	no	si	si	59	dd	si		{"name":"terminos"}
+1063	dd1063	dd85	dd88	no	si	si	1	dd	si	null	{"SQL_operator":"="}
+73	dd73	dd85	dd88	no	si	si	1	dd	si	null	{"SQL_operator":"NOT"}
+881	dd881	dd391	dd395	no	si	si	60	dd	si		{"name":"idioma"}
+1020	dd1020	dd391	dd395	no	si	si	61	dd	si		{"name":"sin_fichero"}
+1057	dd1057	dd1028	null	si	si	si	3	dd	no		
+1028	dd1028	dd6	null	si	si	si	21	dd	no		
+1024	dd1024	dd636	dd1025	no	si	si	3	dd	no		
+810	dd810	dd137	dd6	no	si	si	5	dd	si	[{"dd626":"dd963"}]	
+985	dd985	dd137	dd6	no	si	si	18	dd	no	[{"dd626":"dd963"}]	
+210	dd210	dd209	dd9	no	si	si	1	dd	si		
+987	dd987	dd986	dd9	no	si	si	1	dd	no		
+138	dd138	dd440	\N	si	si	si	1	dd	si		
+1713	dd1713	dd1125	dd395	no	si	si	11	dd	si		{"name":"mapa"}
+977	dd977	dd976	dd8	no	si	si	1	dd	si		
+981	dd981	dd976	dd183	no	si	si	5	dd	si		
+961	dd961	dd957	dd177	no	si	si	4	dd	si		
+983	dd983	dd976	dd247	no	si	si	2	dd	no		
+966	dd966	dd957	dd183	no	si	si	5	dd	si		
+995	dd995	dd875	dd177	no	si	si	4	dd	no		
+982	dd982	dd957	dd247	no	si	si	2	dd	no		
+989	dd989	dd985	dd247	no	si	si	2	dd	no		
+986	dd986	dd985	dd8	no	si	si	1	dd	no		
+991	dd991	dd985	dd183	no	si	si	5	dd	si		
+997	dd997	dd996	dd8	no	si	si	1	dd	no		
+1002	dd1002	dd996	dd183	no	si	si	5	dd	no		
+261	dd261	dd390	dd395	no	si	si	33	dd	no	null	{"name":"generar_turnos"}
+128	dd128	dd207	dd6	no	si	si	1	dd	no	[{"dd626":"dd1719"}]	
+403	dd403	dd389	dd395	no	si	si	16	dd	no		{"name":"atencion"}
+44	dd44	dd440	dd31	si	si	si	1	dd	si		
+264	dd264	dd229	dd11	no	si	si	3	dd	no		
+3172	dd1746	dd785	dd395	no	si	si	49	dd	si	\N	{"name":"procesar"}
+94	dd94	dd391	dd395	no	si	si	2	dd	si		{"name":"por_usuario"}
+105	dd105	dd391	dd395	no	si	si	4	dd	si		{"name":"modificado"}
+93	dd93	dd391	dd395	no	si	si	1	dd	si		{"name":"creado"}
+112	dd112	dd390	dd395	no	si	si	2	dd	si		{"name":"anadir_ficheros"}
+113	dd113	dd390	dd395	no	si	si	3	dd	si		{"name":"comenzar_la_carga"}
+1709	dd1709	dd383	dd395	no	si	si	1	dd	si		{"name":"tiempo"}
+1084	dd1084	dd785	dd395	no	si	si	38	dd	si		{"name":"el_archivo_subido_excede_el_tamano_maximo"}
+10	dd10	dd440	null	si	si	si	12	dd	no		
+979	dd979	dd976	dd91	no	si	si	3	dd	no	[{"dd9":"dd978"},{"dd195":"dd196"}]	
+552	dd552	dd389	dd395	no	si	si	7	dd	si		{"name":"no_se_encontraron_registros"}
+719	dd719	dd390	dd395	no	si	si	10	dd	si		{"name":"inicio"}
+610	dd610	dd610	dd605	no	si	si	10	dd	no	[{"dd592":"dd604"}]	
+136	dd136	dd363	dd8	no	si	si	3	dd	si		
+633	dd633	dd440	null	si	si	si	1	dd	si		
+634	dd634	dd440	null	si	si	si	1	dd	si		
+635	dd635	dd440	null	si	si	si	1	dd	si		
+638	dd638	dd194	null	si	si	si	1	dd	no		
+761	dd761	dd390	dd395	no	si	si	16	dd	si		{"name":"cancelar"}
+209	dd209	dd208	dd8	no	si	si	1	dd	si		
+550	dd550	dd548	dd247	no	si	si	7	dd	no		
+20	dd20	dd32	dd6	no	si	si	1	dd	no	[{"dd626":"dd12"}]	
+25	dd25	dd20	dd91	no	si	si	2	dd	no	[{"dd9":"dd29"},{"dd9":"dd61"},{"dd438":"dd23"}]	
+388	dd388	dd389	dd395	no	si	si	4	dd	si		{"name":"error_de_conexion"}
+546	dd546	dd548	dd634	no	si	si	4	dd	no		
+547	dd547	dd548	dd635	no	si	si	5	dd	no		
+398	dd398	dd391	dd395	no	si	si	12	dd	si		{"name":"secciones"}
+776	dd776	dd391	dd395	no	si	si	13	dd	si		{"name":"seccion"}
+707	dd707	dd391	dd395	no	si	si	15	dd	si		{"name":"registro"}
+731	dd731	dd391	dd395	no	si	si	23	dd	si		{"name":"version"}
+735	dd735	dd391	dd395	no	si	si	25	dd	si		{"name":"seleccione_fotograma"}
+747	dd747	dd391	dd395	no	si	si	34	dd	si		{"name":"por_favor_espere"}
+765	dd765	dd391	dd395	no	si	si	45	dd	si		{"name":"indexaciones"}
+1034	dd1034	dd391	dd395	no	si	si	64	dd	si		{"name":"seleccione_una_etiqueta_para_indexar"}
+3	dd3	dd1	dd5	no	si	si	8	dd	no		
+14	dd14	dd1	dd357	no	si	si	4	dd	si		
+1074	dd1074	dd63	dd1056	no	si	si	5	dd	si	[{"dd635":"dd547"}]	
+924	dd924	dd923	dd9	no	si	si	1	dd	si		
+944	dd944	dd943	dd9	no	si	si	1	dd	si		
+959	dd959	dd958	dd9	no	si	si	1	dd	no		
+890	dd890	dd889	dd8	no	si	si	1	dd	no		
+880	dd880	dd875	dd183	no	si	si	3	dd	si		
+958	dd958	dd957	dd8	no	si	si	1	dd	si		
+912	dd912	dd911	dd8	no	si	si	1	dd	no		
+844	dd844	dd839	dd177	no	si	si	5	dd	si		
+894	dd894	dd889	dd177	no	si	si	5	dd	si		
+895	dd895	dd889	dd183	no	si	si	6	dd	si		
+191	dd191	dd64	dd91	no	si	si	4	dd	no	[{"dd9":"dd62"},{"dd195":"dd196"}]	
+916	dd916	dd911	dd177	no	si	si	4	dd	no		
+783	dd783	dd440	null	si	si	si	1	dd	si		
+865	dd865	dd861	dd91	no	si	si	1	dd	si	[{"dd9":"dd863"},{"dd195":"dd196"}]	
+89	dd89	dd48	null	si	si	si	1	dd	no		
+835	dd835	dd834	dd9	no	si	si	1	dd	si		
+841	dd841	dd840	dd9	no	si	si	1	dd	si		
+960	dd960	dd957	dd91	no	si	si	3	dd	si	[{"dd9":"dd959"},{"dd195":"dd196"}]	
+913	dd913	dd911	dd247	no	si	si	2	dd	no		
+893	dd893	dd889	dd91	no	si	si	3	dd	no	[{"dd9":"dd891"},{"dd195":"dd196"}]	
+840	dd840	dd839	dd8	no	si	si	1	dd	si		
+843	dd843	dd839	dd91	no	si	si	3	dd	si	[{"dd9":"dd841"}]	
+788	dd788	dd785	dd395	no	si	si	30	dd	si		{"name":"tool_upload"}
+789	dd789	dd785	dd395	no	si	si	31	dd	si		{"name":"tool_indexation"}
+790	dd790	dd785	dd395	no	si	si	32	dd	si		{"name":"tool_lang"}
+791	dd791	dd785	dd395	no	si	si	33	dd	si		{"name":"tool_posterframe"}
+792	dd792	dd785	dd395	no	si	si	34	dd	si		{"name":"tool_relation"}
+135	dd135	dd129	dd1017	no	si	si	11	dd	no		
+878	dd878	dd875	dd91	no	si	si	5	dd	si	[{"dd9":"dd876"},{"dd195":"dd196"}]	
+755	dd755	dd391	dd395	no	si	si	38	dd	si		{"name":"tecla"}
+756	dd756	dd391	dd395	no	si	si	39	dd	si		{"name":"abrir"}
+757	dd757	dd391	dd395	no	si	si	40	dd	si		{"name":"herramienta"}
+758	dd758	dd391	dd395	no	si	si	41	dd	si		{"name":"visualizar"}
+759	dd759	dd391	dd395	no	si	si	42	dd	si		{"name":"rotar"}
+760	dd760	dd391	dd395	no	si	si	43	dd	si		{"name":"imagen"}
+764	dd764	dd391	dd395	no	si	si	44	dd	si		{"name":"indexacion"}
+914	dd914	dd912	dd9	no	si	si	1	dd	si		
+766	dd766	dd391	dd395	no	si	si	46	dd	si		{"name":"descriptores"}
+775	dd775	dd391	dd395	no	si	si	47	dd	si		{"name":"etiqueta"}
+777	dd777	dd391	dd395	no	si	si	48	dd	si		{"name":"tesauro"}
+778	dd778	dd391	dd395	no	si	si	49	dd	si		{"name":"ficha"}
+779	dd779	dd391	dd395	no	si	si	50	dd	si		{"name":"estado"}
+825	dd825	dd391	dd395	no	si	si	53	dd	si		{"name":"existente"}
+827	dd827	dd391	dd395	no	si	si	54	dd	si		{"name":"recurso"}
+1022	dd1022	dd391	dd395	no	si	si	63	dd	si		{"name":"guardado"}
+873	dd873	dd389	dd395	no	si	si	12	dd	si		{"name":"usuario_ya_existe"}
+762	dd762	dd390	dd395	no	si	si	17	dd	si		{"name":"borrar_solo_datos"}
+763	dd763	dd390	dd395	no	si	si	18	dd	si		{"name":"borrar_registro_completo"}
+780	dd780	dd390	dd395	no	si	si	19	dd	si		{"name":"relacionar_fragmento_seleccionado"}
+781	dd781	dd390	dd395	no	si	si	20	dd	si		{"name":"crear_nuevo_fragmento"}
+179	dd179	dd128	dd177	no	si	si	6	dd	si		
+234	dd234	dd207	dd6	no	si	si	2	dd	no	[{"dd626":"dd1721"}]	
+227	dd227	dd440	null	si	si	si	7	dd	no		
+876	dd876	dd879	dd9	no	si	si	2	dd	no		
+240	dd240	dd136	dd241	no	si	si	2	dd	no		
+1229	dd1229	dd1259	null	si	si	si	1	dd	no		
+1072	dd1072	dd63	dd1056	no	si	si	3	dd	si	[{"dd634":"dd545"}]	
+1041	dd1041	dd19	null	si	si	si	1	dd	si		
+1029	dd1029	dd1028	null	si	si	si	5	dd	no		
+524	dd524	dd103	null	si	si	si	14	dd	no		
+83	dd83	dd85	dd88	no	si	si	3	dd	no	null	{"SQL_operator":"ILIKE"}
+1119	dd1119	dd1118	dd9	no	si	si	1	dd	si		
+1135	dd1135	dd1133	dd9	no	si	si	1	dd	si		
+1209	dd1209	dd1208	dd31	no	si	si	1	dd	si		
+815	dd815	dd810	dd247	no	si	si	2	dd	no		
+964	dd964	dd1313	dd177	no	si	si	3	dd	no		
+965	dd965	dd1313	dd183	no	si	si	4	dd	si		
+1118	dd1118	dd1117	dd8	no	si	si	1	dd	si		
+1122	dd1122	dd1117	dd177	no	si	si	3	dd	si		
+1123	dd1123	dd1117	dd183	no	si	si	4	dd	si		
+1121	dd1121	dd1117	dd247	no	si	si	2	dd	no		
+1133	dd1133	dd1132	dd8	no	si	si	1	dd	si		
+1206	dd1206	dd17	null	si	si	si	1	dd	no		
+1212	dd1212	dd1209	dd1041	no	si	si	1	dd	si	[{"dd722":"dd732"}]	
+1214	dd1214	dd1209	dd1041	no	si	si	4	dd	si	[{"dd9":"dd967"}]	
+1215	dd1215	dd1209	dd1041	no	si	si	6	dd	si	[{"dd247":"dd364"}]	
+1216	dd1216	dd1209	dd1041	no	si	si	5	dd	si	[{"dd11":"dd969"}]	
+1136	dd1136	dd1132	dd91	no	si	si	4	dd	si	[{"dd9":"dd1135"}]	
+1313	dd1313	dd137	dd6	no	si	si	15	dd	no	[{"dd626":"dd963"}]	
+1322	dd1322	dd1318	dd91	no	si	si	3	dd	si	[{"dd9":"dd1320"}]	
+193	dd193	dd1	dd194	no	si	si	9	dd	si		
+222	dd222	dd1	dd36	no	si	si	3	dd	si		
+1080	dd1080	dd692	dd395	no	si	si	12	dd	si		{"name":"descarga"}
+1081	dd1081	dd692	dd395	no	si	si	13	dd	si		{"name":"nueva version"}
+1090	dd1090	dd692	dd395	no	si	si	14	dd	si		{"name":"carga"}
+4	dd4	dd117	null	si	si	si	7	dd	no	null	
+495	dd495	dd276	dd395	no	si	si	18	dd	si		{\r\n  "name": "eliminar_etiqueta"\r\n}
+5931	dd277	dd276	dd395	no	si	si	6	dd	si	\N	{\r\n  "name": "etiqueta_normal"\r\n}
+5932	dd278	dd276	dd395	no	si	si	7	dd	si	\N	{"name": "etiqueta_borrada"}
+5933	dd279	dd276	dd395	no	si	si	8	dd	si	\N	{\r\n  "name": "etiqueta_revisar"\r\n}
+5934	dd280	dd276	dd395	no	si	si	9	dd	si	\N	{\r\n  "name": "etiqueta_salvar_texto"\r\n}
+5935	dd281	dd276	dd395	no	si	si	10	dd	si	\N	{\r\n  "name": "etiquetas_perdidas"\r\n}
+201	dd201	dd195	null	si	si	si	2	dd	no	null	
+5975	dd293	dd292	dd8	no	si	si	1	dd	no	\N	
+5976	dd294	dd292	dd247	no	si	si	2	dd	no	\N	
+5977	dd295	dd292	dd91	no	si	si	3	dd	si	[{"dd9":"dd296"}]	
+5978	dd296	dd293	dd9	no	si	si	1	dd	no	\N	
+5979	dd297	dd292	dd177	no	si	si	4	dd	no	\N	
+6177	dd338	dd342	dd395	no	si	si	75	dd	si	\N	{\r\n  "name": "build_structure_css"\r\n}
+5982	dd298	dd810	dd177	no	si	si	4	dd	no	\N	
+5974	dd292	dd137	dd6	no	si	si	21	dd	no	[{"dd626":"dd963"}]	
+5992	dd299	dd137	dd6	no	si	si	23	dd	no	[{"dd626":"dd22"}]	\N
+64	dd64	dd137	dd6	no	si	si	4	dd	no	[{"dd626":"dd963"}]	
+90	dd90	dd137	dd6	no	si	si	22	dd	no	[{"dd626":"dd963"}]	
+5993	dd300	dd299	dd8	no	si	si	1	dd	si	\N	\N
+5994	dd301	dd299	dd247	no	si	si	2	dd	no	\N	\N
+5996	dd304	dd300	dd9	no	si	si	1	dd	si	\N	\N
+5998	dd306	dd299	dd91	no	si	si	3	dd	no	[{"dd9":"dd304"}]	\N
+5999	dd307	dd137	dd6	no	si	si	24	dd	no	[{"dd626":"dd22"}]	\N
+6001	dd309	dd307	dd8	no	si	si	1	dd	no	\N	\N
+6002	dd310	dd309	dd9	no	si	si	1	dd	si	\N	\N
+6003	dd311	dd307	dd247	no	si	si	2	dd	no	\N	\N
+6004	dd312	dd307	dd91	no	si	si	3	dd	no	[{"dd9":"dd310"}]	\N
+6005	dd313	dd299	dd177	no	si	si	4	dd	no	\N	\N
+6006	dd314	dd307	dd177	no	si	si	4	dd	no	\N	\N
+6176	dd337	dd342	dd395	no	si	si	74	dd	si	\N	{\r\n  "name": "actualizar_estructura"\r\n}
+60	dd60	dd7	dd1743	no	si	si	2	dd	no		{\r\n  "diffusion": {\r\n    "class_name": "diffusion_section_stats"\r\n  }\r\n}
+19	dd19	dd17	null	si	si	si	1	dd	si		
+5948	dd286	dd785	dd395	no	si	si	58	dd	si	\N	{"name":"elementos_activos"}
+5950	dd288	dd785	dd395	no	si	si	59	dd	si	\N	{"name":"elementos_desactivos"}
+5951	dd289	dd785	dd395	no	si	si	60	dd	si	\N	{\r\n  "name": "tool_export"\r\n}
+5952	dd290	dd785	dd395	no	si	si	61	dd	si	\N	{"name":"descargar"}
+45	dd45	dd3	dd17	no	si	si	3	dd	si		
+6201	dd348	dd45	dd18	no	si	si	2	dd	si	\N	\N
+6185	dd345	dd342	dd395	no	si	si	7	dd	si	\N	{\r\n  "name": "component_tipo"\r\n}
+6186	dd346	dd342	dd395	no	si	si	8	dd	si	\N	{\r\n  "name": "section_tipo"\r\n}
+143	dd143	dd6	null	si	si	si	18	dd	no		
+440	dd440	dd6	null	si	si	si	1	dd	no		
+103	dd103	dd6		si	si	no	2	dd	no		
+1129	dd1129	dd6	null	si	si	si	3	dd	si		
+799	dd799	dd6	null	si	si	si	4	dd	no		
+709	dd709	dd6	null	si	si	si	5	dd	si		
+183	dd183	dd6	null	si	si	si	6	dd	no	null	
+91	dd91	dd6	null	si	si	si	13	dd	no	null	
+6178	dd339	dd440	\N	si	si	si	39	dd	si	\N	\N
+6160	dd325	dd319	dd395	no	si	si	1	dd	si	\N	{"name":"velocidad_de_reproduccion"}
+794	dd794	dd319	dd395	no	si	si	35	dd	si		{\r\n  "name": "tool_transcription"\r\n}
+99	dd99	dd90	dd8	no	si	si	1	dd	no		
+2927	dd1743	dd17	\N	si	si	si	6	dd	no	\N	
+69	dd69	dd1	dd102	no	si	si	2	dd	si		
+400	dd400	dd391	dd395	no	si	si	76	dd	si		{"name":"sin_acceso"}
+322	dd322	dd349	dd4	no	si	si	2	dd	si		
+354	dd354	dd349	dd4	no	si	si	3	dd	si		
+363	dd363	dd128	dd440	no	si	si	2	dd	no		
+259	dd259	dd229	dd262	no	si	si	1	dd	si		
+255	dd255	dd229	dd269	no	si	si	4	dd	si	[{"dd9":"dd132"}]	
+256	dd256	dd229	dd225	no	si	si	5	dd	no	[{"dd225":"dd133"}]	
+257	dd257	dd229	dd227	no	si	si	6	dd	no	[{"dd227":"dd134"}]	
+6049	dd315	dd389	dd395	no	si	si	18	dd	si	\N	{\r\n  "name": "componente_en_uso"\r\n}
+200	dd200	dd196	dd204	no	si	si	1	dd	si		
+5927	dd273	dd276	dd395	no	si	si	20	dd	si	\N	{\r\n  "name": "etiquetas_index_borradas"\r\n}
+782	dd782	dd363	dd8	no	si	si	5	dd	si		
+361	dd361	dd363	dd8	no	si	si	4	dd	si		
+5928	dd274	dd276	dd395	no	si	si	21	dd	si	\N	{\r\n  "name": "etiquetas_index_fijadas"\r\n}
+42	dd42	dd363	dd8	no	si	si	2	dd	si		
+5929	dd275	dd276	dd395	no	si	si	22	dd	si	\N	{\r\n  "name": "etiquetas_revisar"\r\n}
+513	dd513	dd128	dd58	no	si	si	3	dd	no	[{"dd9":"dd132"},{"dd10":"dd135"}]	
+254	dd254	dd128	dd183	no	si	si	5	dd	si		
+129	dd129	dd128	dd8	no	si	si	1	dd	si		
+130	dd130	dd128	dd91	no	si	si	4	dd	si	[{"dd9":"dd132"},{"dd9":"dd134"},{"dd57":"dd131"},{"dd1724":"dd1725"},{"dd80":"dd170"},{"dd10":"dd135"},{"dd195":"dd196"}]	
+86	dd86	dd276	dd395	no	si	si	17	dd	no		{\r\n  "name": "borrara_la_etiqueta_seleccionada"\r\n}
+162	dd162	dd389	dd395	no	si	si	1	dd	si		{"name":"error_usuario_sin_perfil"}
+1048	dd1048	dd785	dd395	no	si	si	9	dd	si		{\r\n  "name": "tool_import_zotero"\r\n}
+941	dd941	dd785	dd395	no	si	si	12	dd	si		{"name":"import_zotero_help"}
+2260	dd1739	dd785	dd395	no	si	si	26	dd	si		{"name":"dir_path"}
+5930	dd276	dd785	dd392	no	si	si	53	dd	si	\N	
+5936	dd282	dd785	dd395	no	si	si	54	dd	si	\N	{"name":"conformar_cabeceras"}
+5946	dd284	dd785	dd395	no	si	si	56	dd	si	\N	{"name":"fichero_de_bibtex_procesado_correctamente"}
+5947	dd285	dd785	dd395	no	si	si	57	dd	si	\N	{\r\n  "name": "import_bibtex_help"\r\n}
+6161	dd326	dd785	dd395	no	si	si	63	dd	si	\N	{\r\n  "name": "tool_import_bibtex"\r\n}
+6154	dd319	dd785	dd392	no	si	si	64	dd	si	\N	\N
+6162	dd327	dd785	dd395	no	si	si	65	dd	si	\N	{\r\n  "name": "tool_subtitles"\r\n}
+5904	dd251	dd5	\N	si	si	si	3	dd	no	\N	
+5854	dd233	dd251	\N	si	si	si	6	dd	si	\N	\N
+5907	dd253	dd251	\N	si	si	si	3	dd	si	\N	
+5909	dd258	dd251	\N	si	si	si	4	dd	si	\N	
+5857	dd246	dd245	\N	si	si	si	1	dd	si	\N	
+6166	dd331	dd785	dd395	no	si	si	66	dd	si	\N	{"name":"play_pause_tecla"}
+6167	dd332	dd785	dd395	no	si	si	67	dd	si	\N	{"name":"auto_rebobinado"}
+6168	dd333	dd785	dd395	no	si	si	68	dd	si	\N	{"name":"insertar_etiqueta"}
+6169	dd334	dd785	dd395	no	si	si	69	dd	si	\N	{"name":"opciones"}
+6170	dd335	dd785	dd395	no	si	si	70	dd	si	\N	{"name":"tool_import_av"}
+5859	dd248	dd245	\N	si	si	si	2	dd	si	\N	\N
+197	dd197	dd196	dd198	no	si	si	3	dd	si		
+5861	dd250	dd245	\N	si	si	si	3	dd	si	\N	\N
+49	dd49	dd30	dd247	no	si	no	3	dd	no		
+5925	dd272	dd234	dd8	no	si	si	3	dd	no	\N	\N
+235	dd235	dd234	dd177	no	si	si	4	dd	si		
+239	dd239	dd234	dd91	no	si	si	5	dd	si	[{"dd9":"dd237"},{"dd10":"dd238"}]	
+323	dd323	dd355	dd4	no	si	si	3	dd	si		
+33	dd33	dd30	dd8	no	si	si	1	dd	no		
+5565	dd202	dd174	dd177	no	si	si	4	dd	no	\N	
+592	dd592	dd440	null	si	si	si	5	dd	no		
+996	dd996	dd68	dd6	no	si	si	14	dd	no	[{"dd626":"dd22"}]	
+39	dd39	dd33	dd438	no	si	si	3	dd	no		
+628	dd628	dd627	dd626	no	si	si	1	dd	no		
+963	dd963	dd627	dd626	no	si	si	2	dd	no		
+1721	dd1721	dd627	dd626	no	si	si	5	dd	no		
+46	dd46	dd627	dd626	no	si	no	6	dd	no		
+57	dd57	dd440	null	si	si	si	11	dd	no		
+5568	dd205	dd203	dd8	no	si	si	1	dd	no	\N	
+119	dd119	dd118	dd395	no	si	si	1	dd	no	null	{"name":"tool_do_replace"}
+107	dd107	dd118	dd395	no	si	si	2	dd	no	null	{"name":"tool_replace_component_data"}
+6171	dd336	dd147	dd395	no	si	si	6	dd	si	\N	{"name":"actualizar"}
+109	dd109	dd118	dd395	no	si	si	18	dd	no	null	{"name":"tool_replace_component_data_dialog"}
+6164	dd329	dd342	dd395	no	si	si	68	dd	no	\N	{\r\n  "name": "tool_administration"\r\n}
+6151	dd316	dd342	dd395	no	si	si	64	dd	si	\N	{\r\n  "name": "desbloquear_todos_los_componentes"\r\n}
+6152	dd317	dd342	dd395	no	si	si	65	dd	si	\N	{\r\n  "name": "usuarios_activos"\r\n}
+118	dd118	dd785	dd392	no	si	si	6	dd	si	null	
+1066	dd1066	dd85	dd88	no	si	si	6	dd	no		{"SQL_operator":"IS NOT NULL"}
+87	dd87	dd85	dd88	no	si	si	10	dd	no		{"SQL_operator":"IS NULL"}
+1318	dd1318	dd68	dd6	no	si	si	3	dd	no	[{"dd626":"dd22"}]	
+1094	dd1094	dd692	dd395	no	si	si	15	dd	si		{"name":"carga_completada"}
+1091	dd1091	dd692	dd395	no	si	si	16	dd	si		{"name":"recuperar_component"}
+1092	dd1092	dd692	dd395	no	si	si	17	dd	si		{"name":"recuperar_seccion"}
+318	dd318	dd440	null	si	si	si	14	dd	no		
+1213	dd1213	dd785	dd395	no	si	si	45	dd	si		{"name":"tool_pdf_versions"}
+1089	dd1089	dd785	dd395	no	si	si	43	dd	si		{"name":"una_extension_de_php_detuvo_la_carga_de_archivos"}
+1219	dd1219	dd785	dd395	no	si	si	46	dd	si		{"name":"idioma_de_origen"}
+85	dd85	dd193	dd72	no	si	si	53	dd	si		
+1062	dd1062	dd85	dd88	no	si	si	1	dd	si	null	{"SQL_operator":"LIKE"}
+1065	dd1065	dd85	dd88	no	si	si	1	dd	si	null	{"SQL_operator":">"}
+104	dd104	dd391	dd395	no	si	si	3	dd	si		{"name":"seleccionado"}
+483	dd483	dd118	dd395	no	si	si	47	dd	si	null	{"name":"vacio"}
+241	dd241	dd440	null	si	si	si	6	dd	no		
+252	dd252	dd440	null	si	si	si	4	dd	no		
+5639	dd65	dd391	dd395	no	si	si	81	dd	si	\N	{\r\n  "name": "sitio_en_mantenimiento"\r\n}
+1035	dd1035	dd391	dd395	no	si	si	65	dd	si		{"name":"para_crear_un_fragmento"}
+1077	dd1077	dd391	dd395	no	si	si	66	dd	si		{"name":"duracion"}
+1078	dd1078	dd391	dd395	no	si	si	67	dd	si		{"name":"total"}
+72	dd72	dd195		si	si	si	4	dd	no		
+204	dd204	dd195	null	si	si	si	1	dd	no		
+1079	dd1079	dd391	dd395	no	si	si	68	dd	si		{"name":"informacion"}
+1126	dd1126	dd391	dd395	no	si	si	69	dd	si		{"name":"extensiones_soportadas"}
+196	dd196	dd193	dd195	no	si	si	3	dd	si		
+229	dd229	dd193	dd230	no	si	si	4	dd	no		
+4259	dd1747	dd440		si	si	si	37	dd	no		
+1033	dd1033	dd389	\N	no	si	si	13	dd	si		{"name":"seleccione_un_idioma_de_destino"}
+1036	dd1036	dd389	dd395	no	si	si	14	dd	si		{"name":"relacion_anadida"}
+1217	dd1217	dd390	dd395	no	si	si	23	dd	si		{"name":"filtro"}
+1095	dd1095	dd692	dd395	no	si	si	1	dd	si		{"name":"eliminar_archivo"}
+1098	dd1098	dd692	dd395	no	si	si	2	dd	si		{"name":"estadisticas"}
+1097	dd1097	dd692	dd395	no	si	si	3	dd	si		{"name":"actividad_horaria"}
+1211	dd1211	dd1209	dd1041	no	si	si	2	dd	si	[{"dd9":"dd1115"}]	
+1060	dd1060	dd85	dd88	no	si	si	1	dd	si	null	{"SQL_operator":"AND"}
+1058	dd1058	dd6	null	si	si	si	8	dd	no		
+1221	dd1221	dd6	null	si	si	si	10	dd	si		
+75	dd75	dd6	null	si	si	si	12	dd	no		
+32	dd32	dd207	dd4	no	si	si	6	dd	no	null	
+5	dd5	dd2	null	si	si	si	4	dd	no		
+5922	dd263	dd147	dd395	no	si	si	5	dd	si	\N	{"name":"ir_al_perfil"}
+9	dd9	dd440	null	si	si	si	13	dd	no		
+11	dd11	dd440	null	si	si	si	15	dd	no		
+17	dd17	dd5	null	si	si	si	1	dd	si		
+18	dd18	dd17	null	si	si	si	1	dd	no		
+56	dd56	dd30	dd183	no	si	si	5	dd	no	null	
+31	dd31	dd19	null	si	si	si	1	dd	si		
+47	dd47	dd2	null	si	si	si	1	dd	no		
+48	dd48	dd47	null	si	si	si	1	dd	no		
+36	dd36	dd117	null	si	si	si	3	dd	no		
+50	dd50	dd117	\N	si	si	si	1	dd	no		
+1714	dd1714	dd1707	dd1041	no	si	si	1	dd	si	[{"dd749":"rsc29"}]	
+5642	dd81	dd785	dd395	no	si	si	51	dd	si	\N	{"name":"crear_imagen_identificativa"}
+5747	dd84	dd785	dd395	no	si	si	52	dd	si	\N	{"name":"tool_diffusion"}
+5937	dd283	dd785	dd395	no	si	si	55	dd	si	\N	{"name":"procesando_media_en_background"}
+1210	dd1210	dd1707	dd1041	no	si	si	4	dd	si	[{"dd247":"rsc28"}]	
+1715	dd1715	dd1707	dd1041	no	si	si	2	dd	si	[{"dd9":"rsc21"}]	
+6	dd6	dd4	null	si	si	si	1	dd	no	null	
+180	dd180	dd153	dd177	no	si	si	8	dd	si		
+5856	dd245	dd251	\N	si	si	si	7	dd	si	\N	\N
+922	dd922	dd68	dd6	no	si	si	8	dd	si	[{"dd626":"dd22"}]	
+942	dd942	dd68	dd6	no	si	si	10	dd	no	[{"dd626":"dd22"}]	
+898	dd898	dd68	dd6	no	si	si	13	dd	no	[{"dd626":"dd22"}]	
+6180	dd340	dd389	dd395	no	si	si	19	dd	si	\N	{\r\n  "name": "componente_deprecado"\r\n}
+6189	dd347	dd1259	\N	si	si	si	3	dd	no	\N	\N
+207	dd207	dd1	dd231	no	si	si	7	dd	si		
+6183	dd343	dd342	dd395	no	si	si	6	dd	si	\N	{\r\n  "name": "delete_component_tipo_of_section_tipo"\r\n}
+35	dd35	dd1	dd124	no	si	si	5	dd	si		
+774	dd774	dd1718	dd149	no	si	si	2	dd	no		
+5491	dd111	dd906	dd395	no	si	si	9	dd	si	\N	{"name":"number_page_of_total_pages"}
+5585	dd52	dd440	\N	si	si	si	38	dd	no	\N	
+5551	dd150	dd147	dd395	no	si	si	2	dd	si	\N	{"name":"acabado"}
+5579	dd232	dd391	dd395	no	si	si	79	dd	si	\N	{"name":"editar_registro"}
+137	dd137	dd68	dd4	no	si	si	1	dd	si		
+526	dd526	dd6	null	si	si	si	20	dd	no		
+5553	dd159	dd147	dd395	no	si	si	3	dd	si	\N	{\r\n  "name": "validado"\r\n}
+5554	dd161	dd147	dd395	no	si	si	4	dd	si	\N	{"name":"para_revisar"}
+5570	dd223	dd205	dd9	no	si	si	1	dd	si	\N	
+5571	dd224	dd203	dd247	no	si	si	2	dd	no	\N	
+5544	dd127	dd99	dd9	no	si	si	1	dd	si	\N	
+30	dd30	dd32	dd6	no	si	si	2	dd	no	[{"dd626":"dd16"}]	
+1317	dd1317	dd1313	dd91	no	si	si	5	dd	si	[{"dd9":"dd1315"}]	
+1000	dd1000	dd996	dd247	no	si	si	2	dd	no		
+1134	dd1134	dd1132	dd247	no	si	si	2	dd	no		
+1067	dd1067	dd272	dd783	no	si	si	3	dd	no		
+63	dd63	dd70	dd1028	no	si	si	3	dd	no	[{"dd6":"dd542"}]	
+410	dd410	dd64	dd247	no	si	si	3	dd	no		
+811	dd811	dd810	dd8	no	si	si	1	dd	si		
+816	dd816	dd810	dd91	no	si	si	4	dd	no	[{"dd9":"dd812"},{"dd195":"dd196"}]	
+212	dd212	dd208	dd91	no	si	si	6	dd	si	[{"dd9":"dd210"}]	
+980	dd980	dd976	dd177	no	si	si	4	dd	no		
+915	dd915	dd911	dd91	no	si	si	3	dd	si	[{"dd9":"dd914"},{"dd195":"dd196"}]	
+569	dd569	dd567	dd247	no	si	si	2	dd	no		
+5641	dd79	dd1259	\N	si	si	si	2	dd	no	\N	
+26	dd26	dd20	dd247	no	si	si	3	dd	no		
+1726	dd1726	dd390	dd395	no	si	si	24	dd	si		{"name":"aplicar"}
+1727	dd1727	dd390	dd395	no	si	si	25	dd	si		{"name":"preview_of_print"}
+2146	dd1734	dd390	dd395	no	si	si	26	dd	si	\N	{"name":"mostrar_todos"}
+5573	dd226	dd203	dd91	no	si	si	3	dd	no	[{"dd9":"dd223"}]	
+5546	dd139	dd90	dd247	no	si	si	2	dd	no	\N	
+2975	dd1744	dd389	dd395	no	si	si	15	dd	si	\N	{"name":"por_favor_indexe_desde_una_seccion_de_inventario"}
+1113	dd1113	dd390	dd395	no	si	si	32	dd	si	null	{"name":"importar_ficheros"}
+384	dd384	dd906	dd395	no	si	si	2	dd	no	null	{"name":"edit_template"}
+5503	dd120	dd906	dd395	no	si	si	10	dd	si	\N	{"name":"total_records"}
+5504	dd121	dd906	dd395	no	si	si	11	dd	si	\N	{"name":"total_pages"}
+5505	dd122	dd906	dd395	no	si	si	12	dd	si	\N	{"name":"rendering_pdf"}
+5506	dd123	dd906	dd395	no	si	si	13	dd	si	\N	{"name":"view_pdf"}
+1040	dd1040	dd906	dd395	no	si	si	3	dd	si	null	{"name":"nueva_plantilla_vacia"}
+287	dd287	dd906	dd395	no	si	si	4	dd	no	null	{"name":"save_template"}
+1049	dd1049	dd390	dd395	no	si	si	7	dd	si	null	{\r\n  "name": "crear_subtitulos"\r\n}
+2988	dd1745	dd906	dd395	no	si	si	5	dd	si	\N	{"name":"nombre"}
+472	dd472	dd906	dd395	no	si	si	6	dd	si	null	{"name":"new_fixed_page"}
+344	dd344	dd906	dd395	no	si	si	8	dd	si	null	{"name":"new_page"}
+5587	dd76	dd391	dd395	no	si	si	80	dd	si	\N	{"name":"mostrar"}
+2	dd2	dd0	null	si	si	si	5	dd	no		
+22	dd22	dd627	dd626	no	si	si	7	dd	no		
+16	dd16	dd627	dd626	no	si	si	8	dd	no		
+714	dd714	dd636	dd638	no	si	si	1	dd	si		
+1701	dd1701	dd785	dd395	no	si	si	4	dd	si		{"name":"tool_portal"}
+2261	dd1740	dd785	dd395	no	si	si	5	dd	si	\N	{"name":"file_path"}
+1082	dd1082	dd785	dd395	no	si	si	36	dd	si		{"name":"archivo_subido_con_exito"}
+208	dd208	dd137	dd6	no	si	si	6	dd	si	[{"dd626":"dd963"}]	
+1312	dd1312	dd1308	dd91	no	si	si	1	dd	no	[{"dd9":"dd1311"}]	
+141	dd141	dd785	dd395	no	si	si	7	dd	si		{"name":"historico"}
+906	dd906	dd785	dd392	no	si	si	8	dd	no	null	
+176	dd176	dd785	dd395	no	si	si	13	dd	si		{"name":"nombre_fichero"}
+188	dd188	dd785	dd395	no	si	si	15	dd	si		{"name":"eliminar_imagenes_tras_la_importacion"}
+407	dd407	dd785	dd395	no	si	si	23	dd	si		{"name":"imagen_info"}
+500	dd500	dd785	dd395	no	si	si	24	dd	si		{"name":"info_fichero"}
+786	dd786	dd785	dd395	no	si	si	25	dd	si		{"name":"tool_av_versions"}
+1220	dd1220	dd785	dd395	no	si	si	28	dd	si		{"name":"preview"}
+787	dd787	dd785	dd395	no	si	si	29	dd	si		{"name":"tool_image_versions"}
+5509	dd324	dd785	dd395	no	si	si	50	dd	si	\N	{"name":"tool_import_files"}
+6182	dd342	dd785	dd392	no	si	si	71	dd	si	\N	\N
+213	dd213	dd208	dd177	no	si	si	3	dd	si		
+211	dd211	dd208	dd247	no	si	si	2	dd	no		
+892	dd892	dd889	dd247	no	si	si	2	dd	no		
+879	dd879	dd875	dd8	no	si	si	1	dd	si		
+877	dd877	dd875	dd247	no	si	si	2	dd	no		
+214	dd214	dd208	dd183	no	si	si	4	dd	no		
+1086	dd1086	dd785	dd395	no	si	si	40	dd	si		{"name":"ningun_archivo_fue_subido"}
+1087	dd1087	dd785	dd395	no	si	si	41	dd	si		{"name":"carpeta_temporal_no_accesible"}
+1061	dd1061	dd85	dd88	no	si	si	1	dd	si	null	{"SQL_operator":"OR"}
+58	dd58	dd6	null	si	si	si	14	dd	no		
+96	dd96	dd47	null	si	si	si	1	dd	no		
+97	dd97	dd96	null	si	si	si	1	dd	no		
+98	dd98	dd96	null	si	si	si	1	dd	no		
+178	dd178	dd785	dd395	no	si	si	44	dd	si		{"name":"fichero_de_zotero_procesado_correctamente"}
+15	dd15	dd7	dd1743	no	si	si	1	dd	no		{\r\n  "diffusion": {\r\n    "class_name": "diffusion_index_ts"\r\n  }\r\n}
+124	dd124	dd117	null	si	si	si	1	dd	no		
+125	dd125	dd6	null	si	si	si	16	dd	no		
+108	dd108	dd785	dd395	no	si	si	47	dd	si		{"name":"idioma_de_destino"}
+117	dd117	dd2	null	si	si	si	2	dd	no		
+66	dd66	dd440	null	si	si	si	1	dd	si		
+1015	dd1015	dd118	dd395	no	si	si	5	dd	si	null	{"name":"registros_actualizados"}
+160	dd160	dd118	dd395	no	si	si	31	dd	si	null	{"name":"todos"}
+62	dd62	dd190	dd9	no	si	si	1	dd	si		
+389	dd389	dd383	dd392	no	si	si	10	dd	si		
+95	dd95	dd542	dd524	no	si	si	3	dd	si	[{"dd633":"dd544"},{"dd530":"dd543"},{"dd634":"dd546"},{"dd635":"dd547"},{"dd9":"dd551"},{"dd195":"dd196"}]	
+496	dd496	dd906	dd395	no	si	si	1	dd	si		{"name":"print"}
+77	dd77	dd85	dd88	no	si	si	3	dd	no		{"SQL_operator":"<"}
+236	dd236	dd234	dd8	no	si	si	1	dd	si		
+1718	dd1718	dd234	dd8	no	si	si	2	dd	si		
+131	dd131	dd129	dd57	no	si	si	3	dd	no	[{"dd6":"dd64"},{"dd9":"dd62"}]	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "12%"\r\n      }\r\n    },\r\n    ".content_data": {\r\n      "style": {}\r\n    }\r\n  }\r\n}
+1725	dd1725	dd129	dd1724	no	si	si	6	dd	no		{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "40%"\r\n      }\r\n    },\r\n    ".content_data": {\r\n      "style": {}\r\n    }\r\n  }\r\n}
+132	dd132	dd129	dd9	no	si	si	7	dd	no		{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "35%",\r\n        "background-color": "#FFE2AB",\r\n        "border-right": "1px solid #989898"\r\n      }\r\n    }\r\n  }\r\n}
+133	dd133	dd129	dd225	no	si	si	8	dd	no		{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "25%",\r\n        "background-color": "#FFE2AB",\r\n         "border-right": "1px solid #989898"\r\n      }\r\n    },\r\n    ".content_data": {\r\n      "style": {}\r\n    }\r\n  }\r\n}
+134	dd134	dd129	dd227	no	si	si	9	dd	no		{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "40%",\r\n        "background-color": "#FFE2AB"\r\n      }\r\n    },\r\n    ".content_data": {\r\n      "style": {}\r\n    }\r\n  }\r\n}
+170	dd170	dd129	dd163	no	si	si	10	dd	no	[{"dd9":"dd156"}]	
+452	dd452	dd129	dd9	no	si	si	5	dd	no		{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "25%"\r\n      }\r\n    },\r\n    ".content_data": {\r\n      "style": {}\r\n    }\r\n  }\r\n}
+244	dd244	dd129	dd252	no	si	no	4	dd	no		{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "15%"\r\n      }\r\n    },\r\n    ".content_data": {\r\n      "style": {}\r\n    }\r\n  }\r\n}
+330	dd330	dd129	dd1747	no	si	si	1	dd	si		{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical",\r\n        ".inverse"\r\n      ],\r\n      "style": {\r\n        "width": "8%",\r\n        "border-bottom-right-radius": "8px"\r\n      }\r\n    }\r\n  }\r\n}
+154	dd154	dd153	dd8	no	si	si	2	dd	si		
+158	dd158	dd153	dd91	no	si	si	7	dd	si	[{"dd9":"dd155"},{"dd9":"dd156"},{"dd9":"dd157"},{"dd195":"dd196"},{"dd9":"dd266"},{"dd10":"dd267"}]	
+784	dd784	dd154	dd1747	no	si	si	1	dd	no		{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical",\r\n        ".inverse"\r\n      ],\r\n      "style": {\r\n        "width": "8%",\r\n        "border-bottom-right-radius": "8px"\r\n      }\r\n    }\r\n  }\r\n}
+157	dd157	dd154	dd530	no	si	si	5	dd	no	[{"dd6":"dd1318"},{"dd9":"dd1320"}]	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".width_50",\r\n        ".vertical"\r\n      ],\r\n      "style": {}\r\n    },\r\n    ".label": {\r\n      "style": {}\r\n    },\r\n    ".content_data": {\r\n      "style": {}\r\n    }\r\n  }\r\n}
+40	dd40	dd154	dd339	no	si	si	2	dd	no	[{"dd6":"dd64"},{"dd9":"dd62"}]	{\r\n  "dato_default": [\r\n    {\r\n      "section_id": "2",\r\n      "section_tipo": "dd64"\r\n    }\r\n  ],\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "12%"\r\n      }\r\n    },\r\n    ".content_data": {\r\n      "style": {\r\n        "width": "120px"\r\n      }\r\n    }\r\n  }\r\n}
+155	dd155	dd154	dd9	no	si	si	3	dd	no		{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "30%"\r\n      }\r\n    },\r\n    ".content_data": {\r\n      "style": {}\r\n    }\r\n  }\r\n}
+156	dd156	dd154	dd9	no	si	si	4	dd	si		{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".width_50",\r\n        ".vertical"\r\n      ],\r\n      "style": {}\r\n    },\r\n    ".label": {\r\n      "style": {}\r\n    },\r\n    ".content_data": {\r\n      "style": {}\r\n    }\r\n  }\r\n}
+54	dd54	dd154	dd530	no	si	si	6	dd	no	[{"dd6":"dd1308"},{"dd9":"dd1311"}]	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".width_50",\r\n        ".vertical"\r\n      ],\r\n      "style": {}\r\n    },\r\n    ".label": {\r\n      "style": {}\r\n    },\r\n    ".content_data": {\r\n      "style": {}\r\n    }\r\n  }\r\n}
+793	dd793	dd785	dd395	no	si	si	35	dd	si		{"name":"tool_time_machine"}
+106	dd106	dd126	dd9	no	si	si	1	dd	si	null	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".width_25",\r\n        ".vertical"\r\n      ],\r\n      "style": {}\r\n    },\r\n    ".label": {\r\n      "style": {}\r\n    },\r\n    ".content_data": {\r\n      "style": {}\r\n    }\r\n  }\r\n}
+51	dd51	dd126	dd592	no	si	si	2	dd	no	[{"dd6":"rsc182"},{"dd9":"rsc161"},{"dd635":"rsc163"},{"dd1018":"rsc165"},{"dd10":"rsc166"}]	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".width_75",\r\n        ".vertical"\r\n      ],\r\n      "style": {}\r\n    },\r\n    ".label": {\r\n      "style": {}\r\n    },\r\n    ".content_data": {\r\n      "style": {}\r\n    }\r\n  }\r\n}
+267	dd267	dd265	dd302	no	si	si	3	dd	no		{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".width_75",\r\n        ".vertical"\r\n      ],\r\n      "style": {}\r\n    },\r\n    ".label": {\r\n      "style": {}\r\n    },\r\n    ".content_data": {\r\n      "style": {}\r\n    }\r\n  }\r\n}
+71	dd71	dd154	dd10	no	si	si	9	dd	si		{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".width_100",\r\n        ".vertical"\r\n      ],\r\n      "style": {}\r\n    },\r\n    ".label": {\r\n      "style": {}\r\n    },\r\n    ".content_data": {\r\n      "style": {}\r\n    }\r\n  }\r\n}
+53	dd53	dd154	dd592	no	si	si	7	dd	no	[{"dd6":"rsc194"},{"dd9":"rsc85"},{"dd9":"rsc86"},{"dd530":"rsc94"},{"dd592":"rsc88"}]	
+78	dd78	dd154	dd592	no	si	si	8	dd	no	[{"dd6":"rsc194"},{"dd9":"rsc85"},{"dd9":"rsc86"},{"dd530":"rsc94"},{"dd592":"rsc88"}]	
+6332	dd358	dd342	dd395	no	si	si	9	dd	si	\N	{\r\n  "name": "skip_publication_state_check"\r\n}
+6333	dd359	dd342	dd395	no	si	si	10	dd	si	\N	{"name":"remove_av_temporals"}

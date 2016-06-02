@@ -3,16 +3,10 @@
 	# VISUALIZADOR HTML	
 
 	print "\n\n<!-- ROWS [$id] $modo + -->";
-		
-	# Hilight unassigned (to projects filter) records
-	$class_td_id = NULL;
-	if( isset(filter::$ar_records_unassigned) && in_array($id, filter::$ar_records_unassigned) && $section_tipo!=DEDALO_ACTIVITY_SECTION_TIPO) 
-		$class_td_id = 'unassigned';
-		#dump(filter::$ar_records_unassigned);
 
 
 	# CONTENIDO (INPUT)
-	$html_contenido  = "\n<tr class=\"{$class_td_id}\" data-dato='$rel_locator'>";	
+	$html_contenido  = "\n<tr class=\"row_tr_{$id}\" data-dato='$rel_locator'>";	
 	
 	switch($permissions) {
 			
@@ -82,10 +76,10 @@
 										$title = "Add resource to $portal_parent ";
 										$html_contenido .= "<a href=\"javascript:void(0);\" class=\"id_column_buttons button_add_resource link\" onclick=\"tool_portal.add_resource(this)\"
 										data-portal_parent=\"{$portal_parent}\"
+										data-section_tipo=\"{$portal_section_tipo}\"
 										data-portal_tipo=\"{$portal_tipo}\"
 										data-portal_section_tipo=\"{$portal_section_tipo}\"
-										data-rel_locator='$rel_locator'
-										data-section_tipo='$portal_section_tipo'
+										data-rel_locator='{$rel_locator}'										
 										title=\"$title\">";
 										if(SHOW_DEBUG) {
 											#$html_contenido .= $portal_parent;
@@ -172,7 +166,7 @@
 							
 
 							# DEBUG INFO
-							if($permissions==3){
+							if(SHOW_DEBUG) {
 								#$html_contenido .= "\n <span class=\"css_span_debugger\" id=\"debugger_{$id}\" >{$id}</span>";
 							}		
 								

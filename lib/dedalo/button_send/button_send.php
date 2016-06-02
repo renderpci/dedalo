@@ -4,11 +4,12 @@
 
 	$tipo 					= $this->get_tipo();
 	$target_tipo			= $this->get_target();
+	$section_tipo			= $this->get_section_tipo();
 	$id						= NULL;
 	$modo					= 'edit';		
 	$label 					= $this->get_label();
 	$debugger				= $this->get_debugger();
-	$permissions			= common::get_permissions($tipo); 	
+	$permissions			= common::get_permissions($section_tipo, $tipo); 	
 	$html_title				= "Info about $tipo";
 		
 	

@@ -105,6 +105,20 @@ if( !is_dir($folder_path) ) {
 	debug_log(__METHOD__." CREATED DIR: $folder_path  ".to_string(), logger::DEBUG);
 }}
 
+
+# MEDIA PDF THUMBS folder
+# Target folder exists test
+if(defined('DEDALO_PDF_THUMB_DEFAULT')) {
+$folder_path = DEDALO_MEDIA_BASE_PATH.DEDALO_PDF_FOLDER.'/'.DEDALO_PDF_THUMB_DEFAULT;
+if( !is_dir($folder_path) ) {
+	if(!mkdir($folder_path, 0777,true)) {
+		die(" Error on read or create media pdf default directory. Permission denied ");
+	}
+	debug_log(__METHOD__." CREATED DIR: $folder_path  ".to_string(), logger::DEBUG);
+}}
+
+
+
 # MEDIA HTML FILES folder
 # Target folder exists test	
 if(defined('DEDALO_HTML_FILES_FOLDER')) {

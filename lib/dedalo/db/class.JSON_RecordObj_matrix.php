@@ -1,8 +1,5 @@
 <?php
-#require_once( dirname(dirname(__FILE__)) .'/config/config4.php');
-#require_once(DEDALO_LIB_BASE_PATH . '/common/class.common.php');
-#require_once(DEDALO_LIB_BASE_PATH . '/common/class.navigator.php');
-require(DEDALO_LIB_BASE_PATH . '/db/class.JSON_RecordDataBoundObject.php');
+include(DEDALO_LIB_BASE_PATH . '/db/class.JSON_RecordDataBoundObject.php');
 
 
 class JSON_RecordObj_matrix extends JSON_RecordDataBoundObject {
@@ -149,9 +146,9 @@ class JSON_RecordObj_matrix extends JSON_RecordDataBoundObject {
 			$this->time_machine_last_id = $this->save_time_machine( $save_options );
 		}
 
-/**/
 		return $id;
 	}
+
 
 
 	/**

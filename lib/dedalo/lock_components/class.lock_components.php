@@ -113,7 +113,8 @@ class lock_components {
 							$update_lock_elements = false;
 
 							$response->result = false;
-							$response->msg 	  = sprintf(label::get_label('componente_en_uso'),'<b>'.$current_event_element->full_username.'</b>');
+							$response->msg 	  = sprintf(label::get_label('componente_en_uso'),''.$current_event_element->full_username.'');
+							$response->dato   = $dato;
 							break;
 						}
 					}
@@ -178,6 +179,8 @@ class lock_components {
 		# update_lock_elements
 		if ($update_lock_elements) {
 
+			$new_dato_raw = $new_dato;
+
 			# recreate dato array keys
 			$new_dato = array_values($new_dato);	// Recreate array keys to avoid produce json objects instead array
 			$new_dato = json_encode($new_dato);		// Convert again to text before save to database
@@ -186,6 +189,7 @@ class lock_components {
 
 			$response->result = true;
 			$response->msg 	  = "Updated db lock elements";
+			$response->dato   = $dato;
 		}
 
 		return $response;
@@ -249,19 +253,22 @@ class lock_components {
 
 				if (isset($current_event_element->action) && $current_event_element->action=='focus') {
 
-					if ( !empty($user_id) && $current_event_element->user_id==$user_id ) {
-						# Only selected user elements (all sections)
-						debug_log(__METHOD__." Deleting element from user $user_id ".to_string($current_event_element), logger::DEBUG);	
-						unset($dato[$key]);
-						$removed_elements++;										
-
-					}else{
+					if ( empty($user_id) ) {
 						# All elements
 						# debug_log(__METHOD__." Deleting element from all users ".to_string($current_event_element), logger::DEBUG);	
 						unset($dato[$key]);
 						$removed_elements++;
-					}
-					
+
+					}else{
+
+						if ( $current_event_element->user_id==$user_id ) {
+							# Only selected user elements (all sections)
+							debug_log(__METHOD__." Deleting element from user $user_id ".to_string($current_event_element), logger::DEBUG);	
+							unset($dato[$key]);
+							$removed_elements++;
+						}
+
+					}//end if (empty($user_id)) {				
 				}
 			}
 

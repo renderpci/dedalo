@@ -3,7 +3,7 @@
 	# CONTROLLER
 
 	$tipo					= $this->get_tipo();
-	$permissions			= common::get_permissions($tipo);
+	$permissions			= common::get_permissions($tipo,$tipo);
 	$modo					= $this->options->modo;
 	$file_name				= $modo;
 
@@ -64,21 +64,18 @@
 				*/	
 
 				
-				# BUTTONS
-				# Calcula los bonones de esta sección y los deja disponibles como : $this->section_obj->ar_buttons
-				#$this->section_obj->set_ar_buttons();
-				#$section = section::get_instance(null, $this->options->section_tipo);
-				#$ar_delete_button = $section->get_ar_children_objects_by_modelo_name_in_section("button_delete");
-				# dump($this->button_delete_permissions, ' $this->button_delete_permissions ++ '.to_string());	
+				# BUTTON DELETE				
 				if (!$this->button_delete_permissions) {
 					$ar_children_tipo_by_modelo_name_in_section = section::get_ar_children_tipo_by_modelo_name_in_section($this->tipo, 'button_delete', $from_cache=true, $resolve_virtual=true); //$section_tipo, $ar_modelo_name_required, $from_cache=true, $resolve_virtual=false
 					# dump($ar_children_tipo_by_modelo_name_in_section, ' ar_children_tipo_by_modelo_name_in_section ++ '.to_string($this->tipo));
 					if (!empty($ar_children_tipo_by_modelo_name_in_section[0])) {
-						$security = new security();
-						$this->button_delete_permissions = $security->get_security_permissions($ar_children_tipo_by_modelo_name_in_section[0]);
+
+						$current_button_tipo = $ar_children_tipo_by_modelo_name_in_section[0];					
+						#dump($ar_children_tipo_by_modelo_name_in_section[0], ',$ar_children_tipo_by_modelo_name_in_section[0] ++ '.to_string());						
+						$this->button_delete_permissions = security::get_security_permissions( $tipo, $current_button_tipo);
 					}
 				}
-				
+				#dump($file_name, ' file_name ++ '.to_string());
 				
 				#dump($this);
 				#dump($button_delete_permissions," button_delete_permissions");

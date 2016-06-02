@@ -29,7 +29,7 @@ class security {
 	
 	
 	#  CONSTRUCT
-	function __construct() {		
+	function __construct() {
 		
 		# USER ID
 		if(empty($_SESSION['dedalo4']['auth']['user_id'])) {
@@ -71,38 +71,41 @@ class security {
 	/**
 	* GET_SECURITY_PERMISSIONS
 	* @param string $tipo
+	*	tipo of section / area
+	* @param string $sub_tipo
+	* 	tipo of element
 	*/
-	public function get_security_permissions($tipo=NULL) {
+	public static function get_security_permissions( $tipo, $sub_tipo ) {
 		
 		if(SHOW_DEBUG) {
-			#unset($_SESSION['dedalo4']['auth']['permissions_table']);			
-		}			
+			#unset($_SESSION['dedalo4']['auth']['permissions_table']);					
 		
-		# Tipo verification
-		if(!(bool)verify_dedalo_prefix_tipos($tipo)){
-			$msg = "Error Processing Request. Invalid tipo: $tipo ".gettype($tipo);
-			if(SHOW_DEBUG) {
-				dump($tipo,"GET_SECURITY_PERMISSIONS RECEIVED TIPO with invalid tipo ($tipo)");
-				throw new Exception($msg, 1);	
+			# Tipo verification
+			if(!(bool)verify_dedalo_prefix_tipos($tipo)){
+				$msg = "Error Processing Request. Invalid tipo: $tipo ".gettype($tipo);
+				if(SHOW_DEBUG) {
+					dump($tipo,"GET_SECURITY_PERMISSIONS RECEIVED TIPO with invalid tipo ($tipo)");
+					throw new Exception($msg, 1);	
+				}
+				die($msg);
 			}
-			die($msg);	
+		}
+
+		# IS_GLOBAL_ADMIN
+		$is_global_admin = (bool)component_security_administrator::is_global_admin($_SESSION['dedalo4']['auth']['user_id']);
+		if ( $is_global_admin===true ) {
+			return 3;
 		}
 	
-		# PERMISSIONS_TABLE
-		# Run calculate general permissions table once
-		#if(!isset(security::$ar_permissions_table)) {			
-		#	security::$ar_permissions_table = security::get_permissions_table();
-		#		#dump(security::$ar_permissions_table,'security::$ar_permissions_table');# die();		
-		#}
-		$ar_permissions_table = security::get_permissions_table();
+		# PERMISSIONS_TABLE		
+		$permissions_table = self::get_permissions_table();
 
 		
 		# PERMISSIONS FOR CURRENT ELEMENT TIPO
-		if( array_key_exists($tipo, (array)$ar_permissions_table) ) {
-				
-			# Permission located
-			return intval($ar_permissions_table[$tipo]);
+		if (isset($permissions_table->$tipo->$sub_tipo)) {
 			
+			return (int)$permissions_table->$tipo->$sub_tipo;
+		
 		}else{
 
 			return 0;
@@ -158,9 +161,9 @@ class security {
 	*
 	* @return array $ar_permissions_table
 	*	Array of permissions of ALL structure table elements from root 'dd1'
-	*/
-	private function get_permissions_table() {
-
+	*//*
+	private function get_permissions_table__OLD() {
+		
 		static $ar_permissions_table;
 		
 		switch (true) {
@@ -195,8 +198,8 @@ class security {
 
 		$root					= DEDALO_ROOT_TIPO ;
 		$ar_excluded			= array(
-									'dd193', # Herramientas
-									'dd3',	 # Difusión
+									DEDALO_TOOLS_TIPO, 		# Herramientas
+									DEDALO_DIFFUSION_TIPO,	# Difusión
 									);
 		
 		#
@@ -216,53 +219,24 @@ class security {
 		# Si el usuario es 'global_admin' le asignamos permisos 2 a todos los elementos de structure (si además está 
 		# activo el mode 'SHOW_DEBUG' -por ejemplo para el superuser- se asigna 3).
 		# Si el usuario no es 'global_admin', los extraemos del registro de matrix donde se almacenan
-		#
+
 			# Global admin
 			$is_global_admin = (bool)component_security_administrator::is_global_admin($this->user_id);
 				#dump($is_global_admin,'$is_global_admin');			
 
 			# GET USER PERMISSIONS DATA FROM DB MATRIX
-			$ar_permissions_in_matrix_for_current_user=array();
-			if(	$is_global_admin===TRUE ) {
-				# If current user is global admin, set all elements as accesible
-				$n=2;
-				#if(SHOW_DEBUG===TRUE) $n=3;
-				foreach($ar_tesauro as $current_tipo) {
-					$ar_permissions_in_matrix_for_current_user[$current_tipo] = $n;
-				}
-
-				# Add areas permissions like xx-admin to final array
-				$areas = area::get_ar_ts_children_all_areas_plain();
-				foreach ($areas as $current_area) {
-					$ar_permissions_in_matrix_for_current_user[$current_area.'-admin'] = $n;
-				}
-
-			}else{
+			$permissions_in_matrix_for_current_user=array();
+			if(	$is_global_admin!==true ) {			
 				# Calculate matrix record data permissions
-				$ar_permissions_in_matrix_for_current_user	= (array)$this->get_ar_permissions_in_matrix_for_current_user();
-					#dump($ar_permissions_in_matrix_for_current_user, 'ar_permissions_in_matrix_for_current_user', array());
+				$permissions_in_matrix_for_current_user	= (object)$this->get_ar_permissions_in_matrix_for_current_user();
+					#dump($permissions_in_matrix_for_current_user, 'permissions_in_matrix_for_current_user', array());
 			}
-			#dump($ar_permissions_in_matrix_for_current_user,'ar_permissions_in_matrix_for_current_user');
-
-		#
-		# PERMISOS FIJOS PARA LOS COMPONENTES TOOLS	
-		# INCORPORA EL PERMISO DE LOS TOOLS (MAX_SEARCH, RESET, ETC..) COMO SI EXISTIERAN EN EL REGISTRO DE LA BASE DE DATOS 
-		# Sacamos los hijos del root y uno de ellos de modelo 'tools' se asigna como permisos 2. Sus hijos heredarán este permiso en el cálculo posterior	
-		/*	
-		$ar_childrens		= $RecordObj_dd->get_ar_childrens_of_this();
-		if(is_array($ar_childrens)) foreach($ar_childrens as $modeloID_children) {
-			
-			$modelo = RecordObj_dd::get_modelo_name_by_tipo($modeloID_children,true);			
-			if($modelo == 'tools') {				
-				$ar_permissions_in_matrix_for_current_user[$modeloID_children] = 2 ;					
-			}
-		}
-		*/
-		#dump($ar_permissions_in_matrix_for_current_user,'ar_permissions_in_matrix_for_current_user');	die();
+			#dump($permissions_in_matrix_for_current_user,'permissions_in_matrix_for_current_user'); #die();
 		
 		# RECORREMOS LOS TIPOS (terminoID) GUARDADOS EN EL REGISTRO DE MATRIX CON SUS PERMISOS CORRESPONDIENTES
-		# PARA DESPEJAR LA 'HERENCIA DE PERMISOS' A PADRES E HIJOS		
-		foreach($ar_permissions_in_matrix_for_current_user as $terminoID => $permission_value) {
+		# PARA DESPEJAR LA 'HERENCIA DE PERMISOS' A PADRES E HIJOS
+		foreach ($permissions_in_matrix_for_current_user as $current_tipo => $value)
+		foreach($value as $terminoID => $permission_value) {
 			
 			$ar_permissions_table[$terminoID] = $permission_value;			
 						
@@ -274,27 +248,24 @@ class security {
 			foreach($ar_parents as $parent_terminoID ) {
 			
 				# SI NO ES UNO DE LOS DEFINIDOS EN LA BASE DE DATOS, Y LOS PERMISOS DEL ACTUAL ES > 0, LO ASIGNAMOS COMO 1 PARA PODER ACCEDER
-				if( !array_key_exists($parent_terminoID, $ar_permissions_in_matrix_for_current_user) && $permission_value > 0 ) {
+				#if( !array_key_exists($parent_terminoID, $ar_permissions_in_matrix_for_current_user) && $permission_value > 0 ) {
+				if( !isset($permissions_in_matrix_for_current_user->$current_tipo->$parent_terminoID) && $permission_value > 0 )	{
 					$permissions_padres = true;				#echo " <br> terminoID:$terminoID - permission_value:$permission_value";
 					break;	
 				}
 			}			
 			if($permissions_padres === true) {
-				foreach($ar_parents as $parent_terminoID ) {
-					if(	$is_global_admin===TRUE ) {
-						$ar_permissions_table[$parent_terminoID] = 2;
-					}else{
-						$ar_permissions_table[$parent_terminoID] = 1;	#echo " - $parent_terminoID <br>";
-					}					
+				foreach($ar_parents as $parent_terminoID ) {					
+					$ar_permissions_table[$parent_terminoID] = 1;	#echo " - $parent_terminoID <br>";										
 				}
 			}
 			
 			# HIJOS
-			/*
-			$ar_childrens_permissions	= security::get_ar_childrens_permissions($terminoID, $ar_permissions_in_matrix_for_current_user, $permission_value);
-				#dump($ar_childrens_permissions, 'ar_childrens_permissions of '.$terminoID, array());
-			$ar_permissions_table 		= array_merge($ar_permissions_table, $ar_childrens_permissions);
-			*/
+			#
+			#$ar_childrens_permissions	= security::get_ar_childrens_permissions($terminoID, $ar_permissions_in_matrix_for_current_user, $permission_value);
+			#	#dump($ar_childrens_permissions, 'ar_childrens_permissions of '.$terminoID, array());
+			#$ar_permissions_table 		= array_merge($ar_permissions_table, $ar_childrens_permissions);
+			#
 		}
 		
 		
@@ -323,20 +294,16 @@ class security {
 		
 
 		# DEBUG
-		if(SHOW_DEBUG) {
-			/*
-			if(is_array($ar_permissions_table)) foreach($ar_permissions_table as $terminoID => $permissions) {
-				str_replace('-admin', '', $terminoID);
-				$termino = RecordObj_dd::get_termino_by_tipo($terminoID,null,true);
-				$ar_permissions_table_debug[$terminoID] = "$permissions ($termino)";
-			}
-			$time = microtime(); $time = explode(" ", $time); $time = $time[1] + $time[0]; $finish = $time; $totaltime = ($finish - $start_time);			
-			array_unshift($ar_permissions_table_debug, $ar_permissions_table_debug['time_exec'] = "$totaltime secs");
-			$_SESSION['debug_content']['ar_permissions_table']	= $ar_permissions_table_debug;
-			#dump($ar_permissions_table, 'ar_permissions_table', array());die();
-			*/
-		}
-		
+		if(SHOW_DEBUG) {			
+			#if(is_array($ar_permissions_table)) foreach($ar_permissions_table as $terminoID => $permissions) {				
+			#	$termino = RecordObj_dd::get_termino_by_tipo($terminoID,null,true);
+			#	$ar_permissions_table_debug[$terminoID] = "$permissions ($termino)";
+			#}
+			#$time = microtime(); $time = explode(" ", $time); $time = $time[1] + $time[0]; $finish = $time; $totaltime = ($finish - $start_time);			
+			#array_unshift($ar_permissions_table_debug, $ar_permissions_table_debug['time_exec'] = "$totaltime secs");
+			#$_SESSION['debug_content']['ar_permissions_table']	= $ar_permissions_table_debug;
+			#dump($ar_permissions_table, 'ar_permissions_table', array());die();			
+		}		
 
 		#
 		# FILE STORE PERMISSIONS TABLE (DEACTIVATED)
@@ -345,15 +312,62 @@ class security {
 		return (array)$ar_permissions_table;
 
 	}#end get_permissions_table
-	
-	
-	
-
-
+	*/
 	
 
 	
+	/**
+	* PERMISSIONS TABLE
+	* Calculated once and stored in cache
+	* Optionalment stored in $_SESSION['dedalo4']['auth']['permissions_table']
+	*
+	* @return array $permissions_table
+	*	Array of permissions of ALL structure table elements from root 'dd1'
+	*/
+	private static function get_permissions_table() {
+
+		# DEBUG
+		if(SHOW_DEBUG) $start_time = start_time();
+
+		static $permissions_table;
+		
+		switch (true) {
+			# STATIC CACHE (RAM)
+			case (isset($permissions_table)):
+				#debug_log(__METHOD__." Loaded permissions_table static");
+				if(SHOW_DEBUG) {
+					#dump($permissions_table , '$permissions_table  ++ '.to_string( count($permissions_table) ));	die();
+				}
+				return $permissions_table ;
+				break;			
+			# SESSION CACHE (HD)
+			case (isset($_SESSION['dedalo4']['auth']['permissions_table'])):
+				#debug_log(__METHOD__." Loaded permissions_table session");
+				$permissions_table = $_SESSION['dedalo4']['auth']['permissions_table'];
+				return $permissions_table;
+				break;
+			# FILE DATA	
+			#case (file_exists($this->filename_user_permissions_table)):
+			#	#trigger_error("Loaded permissions_table from file");
+			#	return unserialize( file_get_contents($this->filename_user_permissions_table) );
+			#	break;
+			# DEFAULT	
+			default:
+				# Continue calculating
+				break;
+		}
+					
+		$permissions_table = self::get_ar_permissions_in_matrix_for_current_user();
+
+		# SESSION CACHED TABLE
+		$_SESSION['dedalo4']['auth']['permissions_table'] = $permissions_table;		
+
+		return (object)$permissions_table;
+
+	}#end get_permissions_table
+
 	
+
 	/**
 	* GET_AR_PERMISSIONS_IN_MATRIX_FOR_CURRENT_USER
 	* Search in matrix record with this id (user_id) as parent,
@@ -362,56 +376,64 @@ class security {
 	*	Array of all element=>level like array([dd12] => 2,[dd93] => 2,..)
 	*	Include areas and components permissions
 	*/ 
-	private function get_ar_permissions_in_matrix_for_current_user() {
+	private static function get_ar_permissions_in_matrix_for_current_user() {
 
 		$dato=array();
 
-		$user_id = $this->user_id;
+		$user_id = $_SESSION['dedalo4']['auth']['user_id'];
 
 		#
 		# USER PROFILE
-		$component_profile = component_common::get_instance('component_profile',
-														  	DEDALO_USER_PROFILE_TIPO,
-														  	$user_id,
-														  	'edit',
-														  	DEDALO_DATA_NOLAN,
-														  	DEDALO_SECTION_USERS_TIPO);
+		$component_profile 			= component_common::get_instance('component_profile',
+																  	DEDALO_USER_PROFILE_TIPO,
+																  	$user_id,
+																  	'edit',
+																  	DEDALO_DATA_NOLAN,
+																  	DEDALO_SECTION_USERS_TIPO);
 		$profile_id = (int)$component_profile->get_dato();
 		if (empty($profile_id)) {
 			return $dato;
 		}
 
+		$obj_mix = new stdClass;
+
+		# COMPONENT_SECURITY_AREAS
+		$component_security_areas 	= component_common::get_instance('component_security_areas',
+																	DEDALO_COMPONENT_SECURITY_AREAS_PROFILES_TIPO,
+																	$profile_id,
+																	'edit',
+																	DEDALO_DATA_NOLAN,
+																	DEDALO_SECTION_PROFILES_TIPO);
+		$dato_area = (object)$component_security_areas->get_dato();
+
+		# Format dato to compatibilize with access format
+		foreach ($dato_area as $tipo => $permissions) {
+			$value = new stdClass();
+				$value->$tipo = $permissions;
+			$obj_mix->$tipo = $value;
+		}
+
+
 		# COMPONENT_SECURITY_ACCESS
-		$component_security_access = component_common::get_instance('component_security_access',
+		$component_security_access 	= component_common::get_instance('component_security_access',
 																	DEDALO_COMPONENT_SECURITY_ACCESS_PROFILES_TIPO,
 																	$profile_id,
 																	'edit',
 																	DEDALO_DATA_NOLAN,
 																	DEDALO_SECTION_PROFILES_TIPO
 																	);
-		$dato_access = (array)$component_security_access->get_dato();
-			#dump($dato_access,"dato_access");die();
-
-		# COMPONENT_SECURITY_AREAS
-		$component_security_areas = component_common::get_instance('component_security_areas',
-																	DEDALO_COMPONENT_SECURITY_AREAS_PROFILES_TIPO,
-																	$profile_id,
-																	'edit',
-																	DEDALO_DATA_NOLAN,
-																	DEDALO_SECTION_PROFILES_TIPO);
-		$dato_area = (array)$component_security_areas->get_dato();
+		$dato_access = (object)$component_security_access->get_dato();
 		
 
-		$dato_area_final=array();
-		foreach ($dato_area as $key => $value) {
-			//if (strpos($key, '-admin')) continue;
-			$dato_area_final[$key] = $value;
-		}
-
-		$dato = array_merge($dato_access, $dato_area_final);
-			#dump($dato," dato");
-
-		return (array)$dato;
+		# FINAL OBJECT OF PERMISSIONS (MIXED DATA AREAS / ACCESS)
+		foreach ($dato_access as $tipo => $obj_elements) {
+			if (isset($obj_mix->$tipo)) foreach ($obj_elements as $key => $value) {
+				$obj_mix->$tipo->$key = $value;				
+			}			
+		}		
+		#dump($obj_mix, ' obj_mix ++ '.to_string());
+		
+		return (object)$obj_mix;
 
 	}//end get_ar_permissions_in_matrix_for_current_user
 

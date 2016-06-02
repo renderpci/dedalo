@@ -72,11 +72,11 @@ if ( strpos($_SERVER["REQUEST_URI"], '.php')!==false ) {
 	# Force id type as int
 	if(strlen($id)) $id = intval($id);
 	# If id==0, redirect to current section in list mode
-	if ($modo=='edit' && $id<1) {
+	if ($modo=='edit' && $id<1) {		
 		$msg = "Error Processing Request: Main Page id:'$id' is not valid! Main Page redirected to modo 'list' and requested tipo: ".$tipo. " ". RecordObj_dd::get_termino_by_tipo($tipo);
 		debug_log(__METHOD__." $msg ".to_string(), logger::DEBUG);
 		header("Location: ".DEDALO_LIB_BASE_URL."/main/?t=".$tipo."&m=list");
-		exit();
+		exit();		
 	}
 
 	

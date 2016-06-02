@@ -170,6 +170,9 @@
 		$html_header = '';
 		switch (true) {
 
+			case (isset($_REQUEST['menu']) && $_REQUEST['menu']==0):
+				$menu_html = null;
+				break;
 			case (isset($_REQUEST['menu']) && $_REQUEST['menu']==1):
 				# MENU
 				$menu 		= new menu($modo);
@@ -182,7 +185,7 @@
 			case (empty($context_name) && strpos($m, 'tool_')===false):
 
 				# MENU
-				$menu_html = NULL;
+				$menu_html = null;
 				if(empty($caller_id)) {
 					$menu 		= new menu($modo);
 					$menu_html 	= $menu->get_html();	
@@ -212,10 +215,14 @@
 	# PAGE TITLE
 		$page_title = RecordObj_dd::get_termino_by_tipo($tipo,DEDALO_APPLICATION_LANG,true);
 		$page_title = strip_tags($page_title);
+		$page_title .= ' '.$tipo;
 		if (isset($id)) {
 			$page_title .= " $id";
 		}
 		$page_title = DEDALO_ENTITY .' '.$page_title;
+
+
+	$is_global_admin = (bool)component_security_administrator::is_global_admin(navigator::get_user_id());
 
 
 	#

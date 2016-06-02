@@ -293,7 +293,7 @@ abstract class RecordDataBoundObject {
 
 				if(array_key_exists($value, $this->arModifiedRelations)) {
 
-					$current_val = $actualVal;#json_handler::encode($actualVal);
+					$current_val = $actualVal;#json_handler::encode($actualVal);						
 
 					if (is_object($current_val) || is_array($current_val)) {
 						$current_val = json_handler::encode($current_val);

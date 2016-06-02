@@ -27,9 +27,9 @@
 					title=\"$html_title\">$dato</textarea>";
 					$html_contenido .= "\n <div class=\"css_lang_image_delete div_image_link\" onclick=\"tool_lang.delete_lang(this)\" data-tipo=\"$tipo\" ></div>";
 		
-			if($permissions==3){
-				$html_contenido .= "\n <span class=\"css_span_debugger\" id=\"debugger_{$ipo}\" >{$debugger}</span>";	
-			}			
+					if(SHOW_DEBUG) {
+						$html_contenido .= "\n <span class=\"css_span_debugger\" id=\"debugger_{$ipo}\" >{$debugger}</span>";	
+					}			
 	}
 	
 	

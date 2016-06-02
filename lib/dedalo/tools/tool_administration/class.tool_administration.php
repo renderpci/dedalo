@@ -1,10 +1,10 @@
 <?php
-/*
-* CLASS TOOL_ADMINISTRATION
-*/
 require_once( dirname(dirname(dirname(__FILE__))) .'/config/config4.php');
 require_once(dirname(__FILE__) .'/updates/updates.php');
 
+/*
+* CLASS TOOL_ADMINISTRATION
+*/
 class tool_administration extends tool_common {
 	
 	protected $section_obj ;
@@ -17,11 +17,51 @@ class tool_administration extends tool_common {
 
 		# Fix current media component
 		$this->section_obj = $section_obj;
+
+		# Notifications test
+		$this->tests_table_notifications();
+
+		# CURRENT_VERSION_IN_DB : Force to create table and minimun data if not exists
+		self::get_current_version_in_db();
 	}
 
 
-	
-	
+
+	/**
+	* TESTS_TABLE_NOTIFICATIONS
+	* Before 4.0.11 create table 'matrix_notifications'
+	* @return bool
+	*/
+	public function tests_table_notifications() {
+
+		$version = self::get_current_version_in_db();
+		if (empty($version)) {
+			return false;
+		}
+
+		if ($version[0]==4 && $version[1]==0 && $version[2]<=10) {
+		
+			$query 	= ' CREATE TABLE IF NOT EXISTS "matrix_notifications" (
+						"id" serial NOT NULL,
+						"datos" jsonb NULL,
+						CONSTRAINT matrix_notifications_id PRIMARY KEY(id)
+					) ';
+
+			$result = self::SQL_update($query);
+
+			if ($result) {
+				$query_insert 	= ' INSERT INTO "matrix_notifications" ("id","datos") SELECT 1, \'[]\' WHERE NOT EXISTS (SELECT id FROM "matrix_notifications" WHERE id = 1) ';
+				self::SQL_update($query_insert);
+			}
+
+		}else{
+			$result=false;
+		}		
+
+		return $result;
+
+	}#end tests_table_notifications
+
 	
 
 	/**
@@ -198,6 +238,8 @@ class tool_administration extends tool_common {
 		
 	}#end get_current_version_in_db
 
+
+
 	/**
 	* GET_DEDALO_VERSION
 	* Get the program files version, the files need change for update the data.
@@ -219,6 +261,7 @@ class tool_administration extends tool_common {
 	}#end get_dedalo_version
 
 
+
 	/**
 	* GET_UPDATE_VERSION
 	* @return 
@@ -228,6 +271,11 @@ class tool_administration extends tool_common {
 			#dump($updates, ' updates'.to_string());
 		$update_version = array();
 		$current_version = self::get_current_version_in_db();
+		if (empty($current_version)) {
+			#$current_version = array(4,0,9);	// Default minimun version
+			#return $current_version;
+			return false;
+		}
 
 		foreach ($updates as $key => $version_to_update) {
 			if($current_version[0] == $version_to_update->update_from_major){
@@ -245,6 +293,7 @@ class tool_administration extends tool_common {
 		}
 
 	}#end get_update_version
+
 
 
 	/**
@@ -280,7 +329,9 @@ class tool_administration extends tool_common {
 			
 		}
 		if(isset( $update->SQL_update)){
-			$SQL_update 				= self::SQL_update($update->SQL_update);
+			foreach ((array)$update->SQL_update as $key => $current_query) {
+				$SQL_update = self::SQL_update($current_query);
+			}			
 		}
 		
 			$version_to_update = self::get_update_version();
@@ -298,7 +349,10 @@ class tool_administration extends tool_common {
 
 	/**
 	* COMPONENTS_UPDATE
-	* @return 
+	* @param string $modelo_name
+	* @param array $current_version
+	* @param array $update_version
+	* @return array $total_update
 	*/
 	public static function components_update($modelo_name, $current_version, $update_version) {
 
@@ -307,14 +361,16 @@ class tool_administration extends tool_common {
 		#$ar_modelo_tipo	= RecordObj_dd::get_ar_terminoID_by_modelo_name($modelo_name);
 
 		$ar_section_tipo = array();
-		$ar_section_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name('section');
+		$ar_section_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name('section');		
 
 		foreach ($ar_section_tipo as $current_section_tipo) {
+
 			if($current_section_tipo == DEDALO_ACTIVITY_SECTION_TIPO){
 				continue;
 			}
 
-			$ar_component_tipo =  RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($current_section_tipo, $modelo_name, 'children_recursive', $search_exact=true);
+			$ar_component_tipo =  (array)RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($current_section_tipo, $modelo_name, 'children_recursive', $search_exact=true);
+
 			if (!empty($ar_component_tipo)) {
 				$ar_modelo_tipo[$current_section_tipo] = $ar_component_tipo;
 				
@@ -324,6 +380,7 @@ class tool_administration extends tool_common {
 				$tm=0;
 				foreach ($ar_section_id as $section_id) {					
 					foreach ($ar_component_tipo as $current_component_tipo) {
+
 						$RecordObj_dd = new RecordObj_dd($current_component_tipo);
 						$translatable = $RecordObj_dd->get_traducible();
 						if($translatable =='no'){
@@ -336,11 +393,11 @@ class tool_administration extends tool_common {
 							
 							#Update component dato
 							$component = component_common::get_instance($modelo_name,
-													  $current_component_tipo,
-													  $section_id,
-													  'update',
-													  $current_lang,
-													  $current_section_tipo);
+																		$current_component_tipo,
+																		$section_id,
+																		'update',
+																		$current_lang,
+																		$current_section_tipo);
 							$dato_unchanged = $component->get_dato_unchanged();
 
 							$response = $modelo_name::update_dato_version($update_version, $dato_unchanged);
@@ -351,7 +408,7 @@ class tool_administration extends tool_common {
 								$component->Save();
 								#debug_log(__METHOD__." UPDATED dato from component [$modelo_name][{$current_section_tipo}-{$section_id}] ".to_string(), logger::DEBUG);
 								$i++;
-								$total_update[$current_section_tipo][$current_component_tipo][$current_lang]=$i;
+								$total_update[$current_section_tipo][$current_component_tipo][$current_lang]['i']=$i;
 							}else{
 								echo $response->msg;
 								if($response->result == 0){
@@ -367,10 +424,10 @@ class tool_administration extends tool_common {
 								#debug_log(__METHOD__." UPDATE_DATO_VERSION TIME_MACHINE RESPONSE [$modelo_name][{$current_section_tipo}-{$section_id}]: result: ".to_string($response->result), logger::DEBUG);
 								if($response->result == 1){
 									$current_time_machine_obj->set_dato($response->new_dato);
-									$current_time_machine_obj->Save();
-									#debug_log(__METHOD__." UPDATED TIME MACHINE dato from component [$modelo_name][{$current_section_tipo}-{$section_id}] ".to_string(), logger::DEBUG);
+									$current_time_machine_obj->Save();										
+									#debug_log(__METHOD__." UPDATED TIME MACHINE dato from component [$modelo_name][{$current_section_tipo}-{$current_component_tipo}-{$current_lang}-{$section_id}] ".to_string($tm), logger::DEBUG);
 									$tm++;
-									$total_update[$current_section_tipo][$current_component_tipo][$current_lang]['tm']=$tm;
+									$total_update[$current_section_tipo][$current_component_tipo][$current_lang]['tm'] = (int)$tm;
 								}else{
 									echo $response->msg;
 									if($response->result == 0){
@@ -383,31 +440,36 @@ class tool_administration extends tool_common {
 				}
 			}
 		}
-
+		
 		return $total_update;
 		
 	}#end components_update
 
+
+
 	/**
 	* SQL_UPDATE
-	* @return 
+	* @param string $SQL_update
 	*/
 	public static function SQL_update($SQL_update) {
 
 		$result = pg_query(DBi::_getConnection(), $SQL_update);		
-		#dump($result, " result ".to_string());
 		if(!$result) {
 			echo "Error: sorry an error ocurred on SQL_update code.";
 			if(SHOW_DEBUG) {
-				dump($SQL_update,"SQL_update");
-				throw new Exception("Error Processing SQL_update Request ". pg_last_error(), 1);;
+				trigger_error( "<span class=\"error\">Error Processing SQL_update Request </span>". pg_last_error() );
+				dump($SQL_update,"SQL_update ".to_string( pg_last_error()  ));				
+				#throw new Exception("Error Processing SQL_update Request ". pg_last_error(), 1);;
 			}
+			return false;
 		}
-		#debug_log(__METHOD__." Executed database update: ".to_string($SQL_update), logger::DEBUG);
+		debug_log(__METHOD__." Executed database update: ".to_string($SQL_update), logger::DEBUG);
 
 		return true;
 		
 	}#end SQL_update
+
+	
 
 	/**
 	* UPDATE_DEDALO_DATA_VERSION
@@ -421,8 +483,7 @@ class tool_administration extends tool_common {
 
 		$str_values = json_encode($values);
 
-		$SQL_update = 'INSERT INTO "matrix_updates" ("datos")
-						VALUES (\''.$str_values.'\');';
+		$SQL_update = 'INSERT INTO "matrix_updates" ("datos") VALUES (\''.$str_values.'\');';
 
 		self::SQL_update($SQL_update);
 		debug_log(__METHOD__." Updated table 'matrix_updates' with values: ".to_string($str_values), logger::DEBUG);
@@ -482,6 +543,55 @@ class tool_administration extends tool_common {
 		return true;
 
 	}#end create_table
+
+
+
+	/**
+	* SKIP_PUBLICATION_STATE_CHECK
+	* @return 
+	*/
+	public static function skip_publication_state_check( bool $value) {
+		
+		if ($value) {
+			$_SESSION['dedalo4']['config']['skip_publication_state_check'] = 1;
+		}else{
+			$_SESSION['dedalo4']['config']['skip_publication_state_check'] = 0;
+		}
+
+	}#end skip_publication_state_check
+
+
+
+	/**
+	* REMOVE_AV_TEMPORALS
+	* @return 
+	*/
+	public static function remove_av_temporals() {
+
+		$ar_deleted_files=array();
+		
+		$dir_path = DEDALO_MEDIA_BASE_PATH . DEDALO_AV_FOLDER . '/tmp';
+
+		$files = glob( $dir_path . '/*' ); // get all file names
+			#dump($files, ' files ++ '.to_string($dir_path));
+
+		foreach($files as $file){ // iterate files
+			if(is_file($file)) {
+
+				$extension = pathinfo($file,PATHINFO_EXTENSION);
+
+				if ($extension=='sh' || $extension=='log') {
+					$file_name = pathinfo($file,PATHINFO_BASENAME);
+			  		$ar_deleted_files[] = $file_name;
+
+			  		unlink($file); // delete file
+				}		  			  	
+			}		    
+		}
+
+		return $ar_deleted_files;
+
+	}#end remove_av_temporals
 
 
 

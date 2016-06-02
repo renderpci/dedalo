@@ -55,7 +55,7 @@ class component_text_area extends component_common {
 																	    $section_tipo);
 				$component_select_lang_dato = $component_select_lang->get_dato();
 					#dump($component_select_lang_dato, ' component_select_lang_dato ++ '.to_string());
-				if (!empty($component_select_lang_dato) && $component_select_lang_dato!=$lang) {
+				if (!empty($component_select_lang_dato) && strpos($component_select_lang_dato, 'lg-')!==false && $component_select_lang_dato!=$lang) {
 					debug_log(__METHOD__." Changed lang: $lang to $component_select_lang_dato ", logger::DEBUG);
 					$lang = $component_select_lang_dato;
 				}
@@ -89,6 +89,7 @@ class component_text_area extends component_common {
 
 	# SET_DATO
 	public function set_dato($dato) {
+		if($dato=='""') $dato = ''; // empty dato json encoded
 		parent::set_dato( (string)$dato );
 	}
 
@@ -1070,10 +1071,26 @@ die(__METHOD__." EN PROCESO");
 	*
 	* @return string $list_value
 	*/
-	public static function render_list_value($value, $tipo, $parent, $modo, $lang, $section_tipo, $section_id) {
+	public static function render_list_value($value, $tipo, $parent, $modo, $lang, $section_tipo, $section_id, $locator=null) {
+		#dump($value, ' value ++ '.$tipo.' - '.to_string($locator)); //get_fragment_text_from_tag( $tag, $raw_text ) {
 
 		$obj_value = json_decode($value); # Evitamos los errores del handler accediendo directamente al json_decode de php
+
+		# value from database is always an array of strings. default we select first element (complete text)
+		# other array index are fragments of complete text
 		$current_tag = 0;
+
+		#
+		# Portal tables can reference fragments of text inside components (tags). In this cases
+		# we verify current required text is from correct component and tag		
+		if ( isset($locator->component_tipo) && isset($locator->tag_id) ) {
+			$locator_component_tipo = $locator->component_tipo;
+			$locator_tag_id 		= $locator->tag_id;
+			if ($locator_component_tipo==$tipo) {
+				$current_tag = (int)$locator_tag_id;
+			}
+		}
+		
 		if (is_object($obj_value) && isset($obj_value->$current_tag)) {
 			$list_value = $obj_value->$current_tag;
 		}else{

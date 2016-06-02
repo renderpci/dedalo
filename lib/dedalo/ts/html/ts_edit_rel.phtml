@@ -27,17 +27,15 @@
 			$html = "<span style=\"color:grey\">$no_hay_terminos_relacionados_title</span>";
 		
 		}else{
-			//print_r($arTR);
+			#dump($arTR, ' arTR ++ '.to_string());
 			# recoremos el array		
-			foreach($arTR['termino'] as $key => $termino) {				
+			foreach($arTR as $terminoID => $termino) {				
 					
-				$terminoID		= $arTR['terminoID'][$key];
-				$terminoNjs		= urlencode($termino);				
+				$terminoNjs = urlencode($termino);				
 				
 				$html .= "<img src=\"../themes/default/delete.png\" hspace=\"4\" onClick=\"unlinkTS('$terminoID','$terminoNjs')\" title=\"$eliminar_relacion_title\" style=\"cursor:pointer\" />";
-				$html .= $termino ;
-				$html .= "<span class=\"terminoIDinList\" title=\"ID\"> [ $terminoID ]</span></br>";
-								
+				$html .= $termino;
+				$html .= "<span class=\"terminoIDinList\" title=\"ID\"> [ $terminoID ]</span></br>";								
 			}
 		}
 		echo $html; 

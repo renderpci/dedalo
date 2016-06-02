@@ -36,9 +36,12 @@ class locator extends stdClass {
 	#protected $section_id;
 	#protected $section_tipo;
 
+
+
 	/**
 	* __CONSTRUCT
-	* @param object $data optional
+	* @param object $data 
+	*	optional . Default is null
 	*/
 	public function __construct( $data=null ) {
 
@@ -57,12 +60,15 @@ class locator extends stdClass {
 
 /*
 			#$rel_locator->set_section_top_tipo( $section_top_tipo );
-						$rel_locator->set_section_top_id( $section_top_id );
-						$rel_locator->set_section_tipo( $section_tipo );
-						$rel_locator->set_section_id( $parent );
-						$rel_locator->set_component_tipo( $tipo );
-						$rel_locator->set_tag_id( $tag_value );
+			$rel_locator->set_section_top_id( $section_top_id );
+			$rel_locator->set_section_tipo( $section_tipo );
+			$rel_locator->set_section_id( $parent );
+			$rel_locator->set_component_tipo( $tipo );
+			$rel_locator->set_tag_id( $tag_value );
 */
+
+
+
 	/**
 	* SET  METHODDS
 	* Verify values and set property to current object
@@ -116,6 +122,20 @@ class locator extends stdClass {
 		$this->state = (object)$value;
 	}
 
+
+
+	/**
+	* SET_SEMANTIC
+	*/
+	public function set_ds($value) {
+		if(!is_array($value)) {
+			throw new Exception("Error Processing Request. Invalid dedalo semantic:". to_string($value), 1);
+		}
+		$this->semantic = (array)$value;
+	}
+
+
+
 	/**
 	* GET_FLA
 	* Compound a chained flat locator string for use as media componet name, etc..	
@@ -138,6 +158,8 @@ class locator extends stdClass {
 		return $name;
 	}
 
+
+
 	/**
 	* GET_STD_CLASS
 	* @return stdClass 
@@ -153,7 +175,9 @@ class locator extends stdClass {
 			$std_object->$key = $value;
 		}
 		return $std_object;
+
 	}#end get_std_class
+
 
 
 	/**

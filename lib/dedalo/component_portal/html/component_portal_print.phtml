@@ -150,7 +150,7 @@
 												$value = $component_portal->get_html();
 											}//end if ($modelo_name=='component_portal')
 											else{
-												if (isset($rows['lc_object']) && isset($rows['lc_object']->section_id) && isset($rows['lc_object']->section_tipo)) {
+												if (isset($rows['lc_object']) && isset($rows['lc_object']->section_id) && isset($rows['lc_object']->section_tipo) && strpos($column_tipo, 'ds_')===false) {
 													
 													#
 													# COMPONENT HTML IN PRINT MODE (ignore 'valor_list' and build every component data)
@@ -161,6 +161,7 @@
 																										DEDALO_DATA_LANG,
 																										$rows['lc_object']->section_tipo
 																										);
+														#dump($current_component, ' current_component ++ '.to_string());
 													$print_options = new stdClass();
 														$print_options->show_label = false;
 													$current_component->print_options = $print_options;

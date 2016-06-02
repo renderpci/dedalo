@@ -48,7 +48,7 @@
 						$remove_autocomplete = "readonly onfocus=\"this.removeAttribute('readonly');component_common.select_wrap(null,'$id_wrapper');\"";
 					}else{
 						$remove_autocomplete = '';//"onfocus=\"component_common.select_wrap(null,'$id_wrapper')\";\"";
-						$remove_autocomplete = "onfocus=\"component_common.select_wrap_on_tab_focus(this,'$id_wrapper')\";\"";
+						$remove_autocomplete = "onfocus=\"component_common.select_wrap_on_tab_focus(this,'$id_wrapper')\"";
 					}
 
 					# Read only mode (set in propiedades)
@@ -78,8 +78,8 @@
 					#$html_contenido .= "\n <span  class=\"css_span_log\"></span>";
 					#$html_contenido .= "\n <span  class=\"css_span_ejemplo\">$ejemplo</span>";
 
-					if($permissions==3) {
-						$html_contenido .= "\n <span class=\"css_span_debugger\" id=\"debugger_{$tipo}\" >{$debugger}</span>";
+					if(SHOW_DEBUG) {
+						#$html_contenido .= "\n <span class=\"css_span_debugger\" id=\"debugger_{$tipo}\" >{$debugger}</span>";
 					}
 					break;
 

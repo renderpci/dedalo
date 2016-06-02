@@ -421,6 +421,7 @@ class TesauroElements {
 
 
 	/*
+	* GET_HTML_LISTADOTR
 	* Genera el listado de términos relacionados con este terminoID
 	*/
 	protected static function get_html_listadoTR($terminoID) {
@@ -433,54 +434,50 @@ class TesauroElements {
 			#dump($ar_terminos_relacionados,'ar_terminos_relacionados '.$terminoID);
 
 		$html .= "<ul class=\"tesauro_tr_sortable\" id=\"tesauro_tr_sortable_{$terminoID}\" data-termino_id=\"$terminoID\">";
-		if( !empty($ar_terminos_relacionados) ) foreach($ar_terminos_relacionados as $key => $ar_tr) {
+		foreach((array)$ar_terminos_relacionados as $related_terminoID) {				
 
-				#dump($ar_tr,'ar_tr ');
-				if( is_array($ar_tr) ) foreach($ar_tr as $modeloID => $terminoID) {
+			if (is_array($related_terminoID)) {
+				dump($related_terminoID, '$related_terminoID is not string ++ '.to_string($ar_terminos_relacionados));
+				//throw new Exception("Error Processing Request", 1);
+				continue;				
+			}
+			$modelo_name = RecordObj_ts::get_modelo_name_by_tipo($related_terminoID, true);
+				#dump($modelo_name, ' $modelo_name ++ '.to_string());
 
-					if($modeloID=='0') {
-						if(SHOW_DEBUG) dump($ar_terminos_relacionados,'ar_terminos_relacionados '.$terminoID);
-						throw new Exception("Error Processing Request. Wrong format for related terms of terminoID:$terminoID", 1);
-					}
+			$html .= "<li class=\"\" data-tipo=\"$related_terminoID\">";
 
-					$modelo_text = RecordObj_ts::get_termino_by_tipo($modeloID);						#echo "$modeloID - $terminoID - $modelo_text <br>";
+				$termino = RecordObj_ts::get_termino_by_tipo($related_terminoID);
+				#$html .= "<span class=\"nOrden\" style=\"margin-left:20px\"> ". intval($key+1) ." </span> ";
+				$html .= " [TR] $termino ";
+				$html .= "<span class=\"terminoIDinList\"> [".$related_terminoID."] ";
+				$html .= "<div class=\"add_index_btn\" title=\"$ir_al_termino_relacionado_title\" ";
+				#$html .= "<img src=\"../themes/default/icon_go1.png\" title=\"$ir_al_termino_relacionado_title\" class=\"btnGo1\" ";
+				$html .= "onclick=\"ts.go2termino('$related_terminoID');\" ";
+				$html .= "></div>";
+				$html .= " <span class=\"listado_tr_modelo_name\" >$modelo_name</span> ";
+				$html .= "</span>";
+				$html .= "";
 
-					$html .= "<li class=\"\" data-tipo=\"$terminoID\" data-modelo=\"$modeloID\">";	#<span class="ui-icon ui-icon-arrowthick-2-n-s"></span>Item 1</li>
-
-					$termino = RecordObj_ts::get_termino_by_tipo($terminoID);
-					#$html .= "<span class=\"nOrden\" style=\"margin-left:20px\"> ". intval($key+1) ." </span> ";
-					$html .= " [TR] $termino ";
-					$html .= "<span class=\"terminoIDinList\"> [".$terminoID."] ";
-					$html .= "<div class=\"add_index_btn\" title=\"$ir_al_termino_relacionado_title\" ";
-					#$html .= "<img src=\"../themes/default/icon_go1.png\" title=\"$ir_al_termino_relacionado_title\" class=\"btnGo1\" ";
-					$html .= "onclick=\"ts.go2termino('$terminoID');\" ";
-					$html .= "></div>";
-					$html .= " <span class=\"listado_tr_modelo_text\" >$modelo_text</span> ";
-					$html .= "</span>";
-					$html .= "";
-
-					$html .= "</li>";
-				}
+			$html .= "</li>";
+				
 				#$html .= "<br>";
-
-
-
 			/*
-			<ul id="sortable">
-			  <li class="ui-state-default"><span class="ui-icon ui-icon-arrowthick-2-n-s"></span>Item 1</li>
-			  <li class="ui-state-default"><span class="ui-icon ui-icon-arrowthick-2-n-s"></span>Item 2</li>
-			  <li class="ui-state-default"><span class="ui-icon ui-icon-arrowthick-2-n-s"></span>Item 3</li>
-			  <li class="ui-state-default"><span class="ui-icon ui-icon-arrowthick-2-n-s"></span>Item 4</li>
-			  <li class="ui-state-default"><span class="ui-icon ui-icon-arrowthick-2-n-s"></span>Item 5</li>
-			  <li class="ui-state-default"><span class="ui-icon ui-icon-arrowthick-2-n-s"></span>Item 6</li>
-			  <li class="ui-state-default"><span class="ui-icon ui-icon-arrowthick-2-n-s"></span>Item 7</li>
-			</ul>
-			*/
+				<ul id="sortable">
+				  <li class="ui-state-default"><span class="ui-icon ui-icon-arrowthick-2-n-s"></span>Item 1</li>
+				  <li class="ui-state-default"><span class="ui-icon ui-icon-arrowthick-2-n-s"></span>Item 2</li>
+				  <li class="ui-state-default"><span class="ui-icon ui-icon-arrowthick-2-n-s"></span>Item 3</li>
+				  <li class="ui-state-default"><span class="ui-icon ui-icon-arrowthick-2-n-s"></span>Item 4</li>
+				  <li class="ui-state-default"><span class="ui-icon ui-icon-arrowthick-2-n-s"></span>Item 5</li>
+				  <li class="ui-state-default"><span class="ui-icon ui-icon-arrowthick-2-n-s"></span>Item 6</li>
+				  <li class="ui-state-default"><span class="ui-icon ui-icon-arrowthick-2-n-s"></span>Item 7</li>
+				</ul>
+				*/
 		}
 		$html .= "</ul>";
 
 		return $html ;
-	}
+
+	}//end get_html_listadoTR
 
 
 

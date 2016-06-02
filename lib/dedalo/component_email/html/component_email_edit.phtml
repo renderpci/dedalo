@@ -45,8 +45,8 @@
 				tabindex=\"1\"
 				/>";					
 				
-				if($permissions==3)	{
-					$html_contenido .= "\n <span class=\"css_span_debugger\" id=\"debugger_{$tipo}\">{$debugger}</span>";
+				if(SHOW_DEBUG) {
+					#$html_contenido .= "\n <span class=\"css_span_debugger\" id=\"debugger_{$tipo}\">{$debugger}</span>";
 				}
 				break;								
 	}

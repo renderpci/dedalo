@@ -65,33 +65,35 @@ class component_number extends component_common {
 	public function set_format_form_type ($dato){
 
 		$propiedades = $this->get_propiedades();
-		if(empty($propiedades)){
+	
+		if(empty($propiedades->type)){
 			return (float)$dato;
+		}else{
+			foreach ($propiedades->type as $key => $value) {
 
-		}
-		foreach ($propiedades->type as $key => $value) {
+				switch ($key) {
+					case 'int':
+						if($value === 0 || empty($value)){
+							return (int)$dato;
+						}
+						if ( strpos($dato, '-')===0 )  {
+							$dato = '-'.substr($dato,1,$value);
+							$dato = (int)$dato;
 
-			switch ($key) {
-				case 'int':
-					if($value === 0 || empty($value)){
-						return (int)$dato;
-					}
-					if ( strpos($dato, '-')===0 )  {
-						$dato = '-'.substr($dato,1,$value);
-						$dato = (int)$dato;
-
-					}else{
-						$dato = (int)substr($dato,0,$value);
-					}
+						}else{
+							$dato = (int)substr($dato,0,$value);
+						}
+						
+						break;
 					
-					break;
-				
-				default:
-					$dato = (float)number_format($dato,$value);
-					break;
+					default:
+						$dato = (float)number_format($dato,$value);
+						break;
+				};
+
 			};
 
-		};
+		}
 
 		return $dato;
 

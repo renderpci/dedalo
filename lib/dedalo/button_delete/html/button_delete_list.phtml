@@ -69,7 +69,7 @@
 	
 	switch($permissions) {
 			
-		case 0	:	$html_contenido .= "\n <span class=\"css_span_dato\"> ".label::get_label('sin_acceso')." (button_new)</span>";
+		case 0	:	$html_contenido .= "\n <span class=\"css_span_dato\"> ".label::get_label('sin_acceso')." (button_delete)</span>";
 					break;
 						
 		case 1	: 	$html_contenido .= "";
@@ -79,8 +79,8 @@
 		
 					$html_contenido .= "<div class=\"css_button_delete div_image_link link \" data-tipo=\"{$section_tipo}\" data-section_id=\"{$id}\" title=\"$label $id\"></div>";
 
-					if($permissions==3){
-						$html_contenido .= "<span class=\"css_span_debugger\" id=\"debugger_{$tipo}\" >{$debugger}</span>";
+					if(SHOW_DEBUG) {
+						#$html_contenido .= "<span class=\"css_span_debugger\" id=\"debugger_{$tipo}\" >{$debugger}</span>";
 					}
 					break;
 								

@@ -10,18 +10,10 @@
 .css_text_area {
 	
 	padding:3px;
-
 	border:solid 1px #9E9E9E;	
-	border-radius		: 3px;
-
-	-webkit-box-shadow	: 0 0 6px #999999 inset;	
-	-moz-box-shadow		: 0 0 6px #999999;	
-	box-shadow			: 0 0 6px #999999 inset;	
-	
-	-webkit-transition	: all 0.01s ease-in-out;	
-	-moz-transition		: all 0.01s ease-in-out;
-	transition			: all 0.01s ease-in-out;
-	
+	border-radius: 3px;	
+	box-shadow: 0 0 6px #999999 inset;	
+	transition: all 0.01s ease-in-out;	
 	width:70%;
 	vertical-align: top;
 	min-height:14px;
@@ -38,18 +30,12 @@
 	*/
 }
 
-.css_text_area:focus {
-	
-	-webkit-box-shadow	: 0 0 10px #ccc;	
-	-moz-box-shadow		: 0 0 10px #ccc;	
-	box-shadow			: 0 0 5px #ccc;
-	
-	/**/
+.css_text_area:focus {		
+	box-shadow: 0 0 5px #ccc;
 	-webkit-transform	: scale(1.01);	
 	-moz-transform		: scale(1.01);	
 	-op-transform		: scale(1.01);
-	transform			: scale(1.01);
-	
+	transform			: scale(1.01);	
 }
 
 .css_text_area:active {

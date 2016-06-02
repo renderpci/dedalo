@@ -8,11 +8,15 @@
 	$modo					= $this->get_modo();	
 	$label 					= $this->get_label();
 
+	$section_tipo 			= $this->get_section_tipo();	//!empty($target_tipo) ? $target_tipo : TOP_TIPO;
+	
+
 	$debugger				= $this->get_debugger();
-	$permissions			= common::get_permissions($tipo); 	
+	$permissions			= common::get_permissions($section_tipo, $tipo); 	
 	$html_title				= "Info about $tipo";	
 	$file_name 				= $modo;
 
+	
 
 	switch($modo) {
 		

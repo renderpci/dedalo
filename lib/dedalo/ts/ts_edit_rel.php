@@ -11,8 +11,7 @@ if($is_logged!==true) {
 	header("Location: $url");
 	exit();
 }
-$security 	 = new security();
-$permissions = (int)$security->get_security_permissions(DEDALO_TESAURO_TIPO);
+$permissions = (int)security::get_security_permissions(DEDALO_TESAURO_TIPO,DEDALO_TESAURO_TIPO);
 if ($permissions<1) {
 	$url =  DEDALO_ROOT_WEB ."/main/";
 	header("Location: $url");
@@ -39,31 +38,10 @@ if($accion=='linkTS') {
 		
 	#$ts->insertTR($terminoID,$terminoID_to_link);
 	if(!$terminoID || !$terminoID_to_link) exit("$accion Need more vars: terminoID: $terminoID, terminoID_to_link: $terminoID_to_link");
-	
-	$RecordObj_ts	= new RecordObj_ts($terminoID); 
-	
-	$ar_relaciones	= $RecordObj_ts->get_relaciones();								#var_dump($ar_relaciones); die();
-	
-	function in_array_r($needle, $haystack, $strict = true) {
-		if(is_array($haystack)) foreach ($haystack as $item) {
-			if (($strict ? $item === $needle : $item == $needle) || (is_array($item) && in_array_r($needle, $item, $strict))) {
-				return true;
-			}
-		}	
-		return false;
-	}
-	
-	# añadimos al array el nuevo valor
-	if( !in_array_r($terminoID_to_link, $ar_relaciones) && $terminoID_to_link!=$terminoID ) {
-		$RecordObj_ts2 		= new RecordObj_ts($terminoID_to_link);
-		$modeloID 			= $RecordObj_ts2->get_modelo();
-		$ar_relaciones[]	= array($modeloID => $terminoID_to_link);
-		
-		# guardamos el resultado
-		$RecordObj_ts->set_relaciones($ar_relaciones);									#var_dump($ar_relaciones); die();
-		$RecordObj_ts->Save();
-	}
-	
+		dump($terminoID_to_link, ' termin ++ '.to_string($terminoID));
+	$RecordObj_ts = new RecordObj_ts($terminoID);	
+	$RecordObj_ts->add_element_to_ar_terminos_relacionados($terminoID_to_link);	
+	$RecordObj_ts->Save();
 }
 
 
@@ -97,33 +75,25 @@ if($accion=='unlinkTS') {
 	$RecordObj_ts	= new RecordObj_ts($terminoID);	
 	$RecordObj_ts->remove_element_from_ar_terminos_relacionados($terminoID_to_unlink);
 	$RecordObj_ts->Save();
-	
-}
+
+}//end unlinkTS
 	
 
 # LIST
 # Búsqueda de descriptores relacionados con el actual
-$ar_terminos_relacionados 	= RecordObj_ts::get_ar_terminos_relacionados($terminoID,$cache=false);		#echo " n:".count($ar_terminos_relacionados)." <br>";print_r($ar_terminos_relacionados);die();
+$ar_terminos_relacionados 	= (array)RecordObj_ts::get_ar_terminos_relacionados($terminoID,$cache=false);
 $n_terminos_relacionados	= count($ar_terminos_relacionados); 
 $html = '';
-	
-if($n_terminos_relacionados > 0) {	
-	
-	$arTR = array();
-	foreach($ar_terminos_relacionados as $ar_terminos) {
-				
-		if(is_array($ar_terminos)) foreach($ar_terminos as $modeloID => $terminoID) {
-			
-			#echo " modelo:$modeloID => terminoID:$terminoID <br>";
-		
-			$arTR['terminoID'][]= $terminoID ;
-			$arTR['termino'][]	= RecordObj_ts::get_termino_by_tipo($terminoID) ;
-		}
-	}
-	
-	# ordenamos alfabéticamente el array obtenido
-	asort($arTR['termino']);	
-}	
+
+$arTR = array();	
+foreach($ar_terminos_relacionados as $terminoID) {	
+	$arTR[$terminoID] = RecordObj_ts::get_termino_by_tipo($terminoID);
+}
+
+# ordenamos alfabéticamente el array obtenido
+#asort($arTR['termino']);	
+
+
 	
 	
 $page_html	= 'html/ts_edit_rel.phtml';	

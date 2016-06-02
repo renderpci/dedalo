@@ -14,11 +14,8 @@
 		
 	switch($permissions) {
 			
-		case 0	:	$html_contenido .= "\n <span class=\"css_span_dato\"> ".label::get_label('sin_acceso')." (button_new)</span>";
+		case 0	:	$html_contenido .= "";	//\n <span class=\"css_span_dato\"> ".label::get_label('sin_acceso')." (button_stats)</span>";
 					break;
-						
-		case 1	: 	$html_contenido .= "<div>No data</div>";
-					break;	
 						
 		case ($permissions>=2)	:
 					
@@ -59,8 +56,8 @@
 					}
 					*/
 
-					if($permissions==3)	{
-						$html_contenido .= "\n <span class=\"css_span_debugger\" id=\"debugger_{$tipo}\" >{$debugger}</span>";	
+					if(SHOW_DEBUG) {
+						#$html_contenido .= "\n <span class=\"css_span_debugger\" id=\"debugger_{$tipo}\" >{$debugger}</span>";	
 					}	
 					break;											
 	}

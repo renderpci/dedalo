@@ -62,7 +62,8 @@
 
 					
 					# CSS includes
-						css::$ar_url[] = DEDALO_ROOT_WEB.'/lib/bootstrap/css/bootstrap.min.css';
+						#css::$ar_url[] = BOOTSTRAP_CSS_URL;
+						array_unshift(css::$ar_url_basic, BOOTSTRAP_CSS_URL);
 						#css::$ar_url[] = DEDALO_ROOT_WEB.'/lib/jquery/jQuery-File-Upload/css/style.css';
 						css::$ar_url[] = DEDALO_ROOT_WEB.'/lib/jquery/blueimp-gallery/css/blueimp-gallery.min.css';
 						css::$ar_url[] = DEDALO_ROOT_WEB.'/lib/jquery/jQuery-File-Upload/css/jquery.fileupload.css';

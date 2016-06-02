@@ -37,9 +37,10 @@
 					$html_contenido .= "\n <ul class=\"css_autocomplete_valor\">";
 					foreach ($ar_valor as $current_value => $value) {
 
-						$current_value_obj  	= json_decode($current_value);
-						$current_section_id 	= $current_value_obj->section_id;
-						$current_section_tipo 	= $current_value_obj->section_tipo;
+						$current_locator  		= json_decode($current_value);
+						$current_section_id 	= $current_locator->section_id;
+						$current_section_tipo 	= $current_locator->section_tipo;
+
 
 						$html_contenido .= "<li>";
 
@@ -55,16 +56,45 @@
 						onclick=\"component_autocomplete.delete(this)\"></div>";
 						}
 
+
 						#
 						# LABEL
-						$html_contenido .= $value;
+						$html_contenido .= "<span>$value</span>";
+
 
 						#
 						# BTN EDIT
 						if (!$in_time_machine) {
-						$url_edit = "?t=".$current_section_tipo.'&id='.$current_section_id.'&m=edit';	// To first section only onclick=\"window.open('$url_edit')\"
-						$html_contenido .= "<a href=\"$url_edit\" target=\"_blank\" class=\"icon_bs link edit_autocomplete edit_autocomplete_row\"></a>";
+						$html_contenido .= "<a href=\"javascript:;\" class=\"icon_bs link edit_autocomplete edit_autocomplete_row\" onclick=\"component_autocomplete.open_element(this)\"
+						data-section_tipo=\"$current_section_tipo\"
+						data-section_id=\"$current_section_id\"
+						data-modo=\"edit\"
+						data-menu=\"0\"
+						></a>";
 						}
+
+
+						#
+						# SEMANTICS
+						# Mandatory vars to create semantic_node column
+						if(!empty($this->semantic_nodes)) {
+							$html_contenido .= "<div class=\"autocomplete_semantic_nodes\">";
+							foreach ((array)$this->semantic_nodes as $semantic_node_tipo) {
+							
+								$semantic_node_title = RecordObj_dd::get_termino_by_tipo($semantic_node_tipo);
+
+								$ds_key 			 = $semantic_node_tipo;
+								$semantic_wrapper_id = $ds_key.'_'.$current_locator->section_tipo.'_'.$current_locator->section_id;
+								$ds_element 		 = isset($current_locator->ds->$ds_key) ? $current_locator->ds->$ds_key : null;
+								
+								ob_start();
+								include(DEDALO_LIB_BASE_PATH . '/tools/tool_semantic_nodes/html/tool_semantic_nodes_node.phtml');
+								$html_contenido .= ob_get_clean();
+								
+							}
+							$html_contenido .= "</div>";
+						}
+						
 
 						if(SHOW_DEBUG) {
 							#$html_contenido .= " <span class=\"notes\">$current_value</span>";
@@ -80,8 +110,15 @@
 
 						#
 						# BTN EDIT WHOLE SECTION
-						$url_edit = "?t=".reset($ar_target_section_tipo);	// To first section only  onclick=\"window.open('$url_edit')\"
-						$html_contenido .= "<a href=\"$url_edit\" target=\"_blank\" class=\"icon_bs link edit_autocomplete\"></a>";
+						#$url_edit = "?t=".reset($ar_target_section_tipo).'&menu=0';	// To first section only  onclick=\"window.open('$url_edit')\"
+						$open_section_tipo = reset($ar_target_section_tipo);
+						$open_section_id   = null;
+						$html_contenido .= "<a href=\"javascript:;\" class=\"icon_bs link edit_autocomplete\" onclick=\"component_autocomplete.open_element(this)\"
+						data-section_tipo=\"$open_section_tipo\"
+						data-section_id=\"$open_section_id\"
+						data-modo=\"list\"
+						data-menu=\"1\"
+						></a>";
 
 
 						#
@@ -135,8 +172,8 @@
 						/>";
 
 
-					if($permissions==3){
-						$html_contenido .= "\n <span class=\"css_span_debugger\" id=\"debugger_{$tipo}\" >{$debugger}</span>";
+					if(SHOW_DEBUG) {
+						#$html_contenido .= "\n <span class=\"css_span_debugger\" id=\"debugger_{$tipo}\" >{$debugger}</span>";
 					}
 					break;
 

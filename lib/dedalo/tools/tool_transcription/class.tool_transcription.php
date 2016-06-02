@@ -188,12 +188,12 @@ class tool_transcription extends tool_common {
 			return $response;			
 		}		
 		$pdf_text 	= json_handler::decode($pdf_text);	# JSON is valid. We turn object to string
+		$pdf_text 	= trim($pdf_text);	// Trim before check is empty
 		if (empty($pdf_text)) {			
 			$response->result = 'error';
 			$response->msg 	  = "Error Processing Request pdf_automatic_transcription: Empty text";
 			return $response;	
-		}
-
+		}	
 
 		#
 		# PAGES TAGS	
@@ -209,9 +209,9 @@ class tool_transcription extends tool_common {
 		    $i++;
 		}
 
-		$response->result = (string)$pdf_text;
-		$response->msg 	  = "Ok Processing Request pdf_automatic_transcription: text processed";
-		$response->original = $original_text;
+		$response->result  = (string)$pdf_text;
+		$response->msg 	   = "Ok Processing Request pdf_automatic_transcription: text processed";
+		$response->original = trim($original_text);
 		return $response;
 
 	}#end build_pdf_transcription

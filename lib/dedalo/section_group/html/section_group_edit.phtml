@@ -2,49 +2,49 @@
 	
 	# VISUALIZADOR HTML	
 	
-	print "\n\n<!-- SECTION GROUP [tipo:$tipo] $label -->";
+	print "\n<!-- SECTION GROUP [tipo:$tipo] $label -->";
 
-	print "\n<div id=\"$section_group_id\" class=\"css_section_group_wrap wrap_section_group wrap_section_group_{$tipo} box_shadow_1 box_border_radius_1\" >";
+	print "<div id=\"$section_group_id\" class=\"css_section_group_wrap wrap_section_group wrap_section_group_{$tipo} box_shadow_1 box_border_radius_1\" >";
 	
-	# ETIQUETA (LABEL)	
-	$html_label  = "\n<div class=\"css_section_group_titulo tab_title title_down_box text_unselectable\" data-tab_id=\"{$tipo}\" > ";
-	$html_label .= component_common_draw::draw_label($this);
-	if (SHOW_DEBUG) {
-	#$html_label .= "<span class=\"debug_info\"> $identificador_unico </span>";
-	}	
-	$html_label .= " </div>";	
-		
-	#dump( label::get_var_from_label($label), "$label" );
 
-	# CONTENIDO (INPUT)
-	$html_contenido = "\n<div class=\"css_section_group_content tab_content\" >";
-	
-	switch($permissions) {
+		#
+		# ETIQUETA (LABEL)	
+		$html_label  = "<div class=\"css_section_group_titulo tab_title title_down_box text_unselectable\" data-tab_id=\"{$tipo}\">";
+		$html_label .= component_common_draw::draw_label($this);		
+		$html_label .= "</div>";	
 			
-		case 0	:	$html_contenido .= "\n <span class=\"css_span_dato\"> ".label::get_label('sin_acceso')." (group)</span>"; 		
-					break;
-						
-		case ($permissions>=1)	:
 
+		#
+		# CONTENIDO (INPUT)
+		$html_contenido = "\n<div class=\"css_section_group_content tab_content\" >";
+
+		
+			switch($permissions) {
+					
+				case 0	:
+					$html_contenido .= "\n <span class=\"css_span_dato\"> ".label::get_label('sin_acceso')." (group)</span>"; 		
+					break;
+								
+				case 1	:
+				case 2	: 
+				case 3	:
 					#$html_contenido .= '<div class="gridster"><ul>';
 					$html_contenido .= "\n $components_html ";	
-					#$html_contenido .= '</ul></div>';				
-						
-		case 2	: 
-		case 3	:	
+					#$html_contenido .= '</ul></div>';		
 					break;			
-	}
-	
-	$html_contenido .= "\n</div><!-- /css_section_group_content -->";
+			}
+
+		
+		$html_contenido .= "\n</div><!-- /css_section_group_content -->";
 
 
-	# Prepare content to show in page
-	#tools::prepare_content($html_contenido);
-	
-	
-	# PRINT HTML
-	print $html_label;
-	print $html_contenido;
+		# Prepare content to show in page
+		#tools::prepare_content($html_contenido);
+		
+		
+		# PRINT HTML
+		print $html_label;
+		print $html_contenido;
 
 	
 	print "\n</div><!-- /css_section_group_wrap SECTION GROUP [tipo:$tipo] $label  -->\n\n"; //wrap

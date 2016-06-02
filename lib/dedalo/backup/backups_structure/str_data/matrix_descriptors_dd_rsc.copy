@@ -1,0 +1,815 @@
+11588	rsc285	Búsqueda	termino	lg-spa
+11589	rsc285	Search	termino	lg-eng
+11590	rsc285	Cerca	termino	lg-cat
+4006	rsc179	Partitura	termino	lg-spa
+4229	rsc179	Partitura	termino	lg-cat
+4112	rsc179	Score	termino	lg-eng
+11569	rsc283	Apellidos (matrimonio)	termino	lg-spa
+11570	rsc283	Gognom (matrimoni)	termino	lg-cat
+11571	rsc284	Lugar de defunción	termino	lg-spa
+11572	rsc284	Lloc de defunció	termino	lg-cat
+11461	rsc282	Fecha de defunción	termino	lg-spa
+11462	rsc282	Data de defunció	termino	lg-cat
+11463	rsc282	Death date	termino	lg-eng
+3818	rsc20	Difusión	termino	lg-spa
+11350	rsc263	Idioma original	termino	lg-spa
+11351	rsc263	Original language	termino	lg-eng
+11352	rsc263	Idioma original	termino	lg-cat
+11337	rsc261	ID	termino	lg-spa
+11338	rsc261	ID	termino	lg-cat
+11339	rsc261	ID	termino	lg-eng
+11340	rsc262	ID	termino	lg-spa
+11341	rsc262	ID	termino	lg-cat
+11342	rsc262	ID	termino	lg-fra
+6059	rsc227	Importar Zotero	termino	lg-spa
+6901	rsc227	Importació Zotero	termino	lg-cat
+11028	rsc248	Importar BibTex	termino	lg-spa
+6880	rsc247	Llistat	termino	lg-cat
+6696	rsc254	Dosier	termino	lg-spa
+11105	rsc252	Datos técnicos imagen	termino	lg-spa
+11106	rsc252	Dudes techniques d'imatge	termino	lg-cat
+11107	rsc252	Image technical data	termino	lg-eng
+6913	rsc181	Llistat	termino	lg-cat
+10492	rsc17	Relation	termino	lg-eng
+10493	rsc259	Search	termino	lg-eng
+10494	rsc199	List	termino	lg-eng
+10495	rsc196	List	termino	lg-eng
+9900	rsc202	Search	termino	lg-eng
+9901	rsc175	ID	termino	lg-eng
+4035	rsc201	Búsqueda	termino	lg-spa
+4232	rsc176	Document	termino	lg-cat
+9828	rsc260	Revisar transcripción	termino	lg-spa
+8330	rsc127	Address	termino	lg-eng
+6687	rsc245	Cuestionario	termino	lg-spa
+8422	rsc245	Questionnaire	termino	lg-eng
+8427	rsc255	Author	termino	lg-eng
+8428	rsc256	Authorship and responsibility	termino	lg-eng
+8429	rsc254	dossier	termino	lg-eng
+8430	rsc236	Dossiers	termino	lg-eng
+6698	rsc256	Autoría y responsabilidad	termino	lg-spa
+6678	rsc236	Dosieres	termino	lg-spa
+3893	rsc93	Género	termino	lg-spa
+4060	rsc93	Gènere	termino	lg-cat
+8288	rsc227	Import from Zotero	termino	lg-eng
+8289	rsc235	Archive / collection	termino	lg-eng
+8290	rsc211	Series / Collections	termino	lg-eng
+8291	rsc222	Copy	termino	lg-eng
+8292	rsc228	Identifying image	termino	lg-eng
+8293	rsc209	Document	termino	lg-eng
+8294	rsc210	Transcript / Description	termino	lg-eng
+8295	rsc212	Series / Collections	termino	lg-eng
+8296	rsc213	Series / Collections	termino	lg-eng
+8297	rsc214	Series / Collections	termino	lg-eng
+8298	rsc229	Archive / library collection	termino	lg-eng
+8299	rsc230	Archive / library collection	termino	lg-eng
+8300	rsc231	Archive / library collection	termino	lg-eng
+8301	rsc233	New Archive / library collection	termino	lg-eng
+8316	rsc106	Entity, group or community	termino	lg-eng
+8317	rsc107	Identification	termino	lg-eng
+8318	rsc116	Name	termino	lg-eng
+8319	rsc117	Can use the image?	termino	lg-eng
+8320	rsc118	Place	termino	lg-eng
+8321	rsc119	Location	termino	lg-eng
+8322	rsc120	Year Founded	termino	lg-eng
+8323	rsc121	Type of association / group	termino	lg-eng
+8324	rsc122	Operating structure	termino	lg-eng
+8325	rsc123	Project	termino	lg-eng
+8326	rsc124	Observations	termino	lg-eng
+8327	rsc108	Contact	termino	lg-eng
+8328	rsc125	email	termino	lg-eng
+8329	rsc126	Phone	termino	lg-eng
+8331	rsc128	Contact person	termino	lg-eng
+8332	rsc111	Find	termino	lg-eng
+8333	rsc113	New Entity, Group or Community	termino	lg-eng
+8334	rsc114	Delete	termino	lg-eng
+8335	rsc115	View Statistics	termino	lg-eng
+6701	rsc259	Búsqueda	termino	lg-spa
+3821	rsc23	Título	termino	lg-spa
+4001	rsc174	Excluidos Simple	termino	lg-spa
+6870	rsc202	Cerca	termino	lg-cat
+6871	rsc237	Exclosos	termino	lg-cat
+6872	rsc238	Llistat	termino	lg-cat
+6878	rsc245	Qüestionari	termino	lg-cat
+6879	rsc246	Exclosos	termino	lg-cat
+7383	rsc213	Sèries / Col·leccions	termino	lg-cat
+7384	rsc214	Sèries / Col·leccions	termino	lg-cat
+7385	rsc215	Llistat	termino	lg-cat
+6887	rsc254	dossier	termino	lg-cat
+7386	rsc216	Projecte	termino	lg-cat
+6888	rsc255	Autor	termino	lg-cat
+7387	rsc230	Arxiu / Col·lecció bibliogràfica	termino	lg-cat
+6889	rsc256	Autor	termino	lg-cat
+7388	rsc231	Arxiu / Col·lecció bibliogràfica	termino	lg-cat
+7389	rsc232	Projecte	termino	lg-cat
+7390	rsc233	Nou arxiu / Col·lecció	termino	lg-cat
+7391	rsc234	Llistat	termino	lg-cat
+4266	rsc37	Document	termino	lg-cat
+6893	rsc16	Llistat	termino	lg-cat
+6894	rsc235	Arxiu / Col·lecció	termino	lg-cat
+6895	rsc211	Sèries / Col·leccions	termino	lg-cat
+6896	rsc228	Imatge identificativa	termino	lg-cat
+6897	rsc209	Document	termino	lg-cat
+6898	rsc210	Transcripció / descripció	termino	lg-cat
+6899	rsc131	Llistat	termino	lg-cat
+6900	rsc133	Llistat relacions	termino	lg-cat
+6902	rsc155	Llistat	termino	lg-cat
+6903	rsc157	Llistat relacions	termino	lg-cat
+6904	rsc169	Llistat	termino	lg-cat
+7262	rsc212	Sèries / Col·leccions	termino	lg-cat
+6905	rsc168	Exclosos	termino	lg-cat
+6906	rsc172	Llistat	termino	lg-cat
+6907	rsc171	Exclosos	termino	lg-cat
+6908	rsc174	Exclosos Simple	termino	lg-cat
+6909	rsc175	ID	termino	lg-cat
+6910	rsc177	Exclosos	termino	lg-cat
+6911	rsc178	Llistat	termino	lg-cat
+6912	rsc180	Exclosos	termino	lg-cat
+6914	rsc206	Exclosos	termino	lg-cat
+6915	rsc207	Llistat	termino	lg-cat
+6916	rsc183	Exclosos	termino	lg-cat
+10974	rsc265	publication	termino	lg-spa
+6917	rsc184	Llistat	termino	lg-cat
+6918	rsc186	Exclosos	termino	lg-cat
+6919	rsc187	Llistat	termino	lg-cat
+6679	rsc237	Excluidos	termino	lg-spa
+6680	rsc238	Listado	termino	lg-spa
+6688	rsc246	Excluidos	termino	lg-spa
+6689	rsc247	Listado	termino	lg-spa
+6697	rsc255	Autor	termino	lg-spa
+3888	rsc88	Imagen	termino	lg-spa
+3908	rsc106	Entidad, grupo o comunidad	termino	lg-spa
+3860	rsc61	Digitalizado	termino	lg-spa
+3977	rsc155	Listado	termino	lg-spa
+3826	rsc28	Proyecto	termino	lg-spa
+3799	rsc1	Media	termino	lg-spa
+3804	rsc6	Imagen	termino	lg-spa
+3800	rsc2	Media recursos	termino	lg-spa
+3801	rsc3	Media bibliografía	termino	lg-spa
+3802	rsc4	Media administración	termino	lg-spa
+3803	rsc5	Identificación	termino	lg-spa
+3805	rsc7	Audiovisual	termino	lg-spa
+3806	rsc8	Documento	termino	lg-spa
+3807	rsc9	Partitura	termino	lg-spa
+3808	rsc10	Captación	termino	lg-spa
+3809	rsc11	Datos técnicos audiovisual	termino	lg-spa
+3810	rsc12	Procesado	termino	lg-spa
+3811	rsc13	Ubicación	termino	lg-spa
+3812	rsc14	Conservación	termino	lg-spa
+3813	rsc15	Cesión de derechos	termino	lg-spa
+3814	rsc16	Listado	termino	lg-spa
+3815	rsc17	Relación	termino	lg-spa
+3816	rsc18	Borrar recurso	termino	lg-spa
+3817	rsc19	Estado	termino	lg-spa
+3819	rsc21	Código	termino	lg-spa
+3820	rsc22	Código anterior	termino	lg-spa
+3822	rsc24	Tipología	termino	lg-spa
+3823	rsc25	Colección / archivo	termino	lg-spa
+3824	rsc26	Datación	termino	lg-spa
+3825	rsc27	Observaciones	termino	lg-spa
+3827	rsc29	Imagen	termino	lg-spa
+3940	rsc130	Relaciones	termino	lg-spa
+3941	rsc131	Listado	termino	lg-spa
+4032	rsc198	Excluidos	termino	lg-spa
+3828	rsc30	Descripción imagen	termino	lg-spa
+3872	rsc73	Acta de cesión	termino	lg-spa
+3829	rsc31	Pie de foto	termino	lg-spa
+3830	rsc32	Opciones de ficheros	termino	lg-spa
+3831	rsc33	Directorio	termino	lg-spa
+3832	rsc34	Nombre del fichero	termino	lg-spa
+3833	rsc35	Vídeo	termino	lg-spa
+6923	rsc193	Llistat	termino	lg-cat
+3835	rsc37	Documento	termino	lg-spa
+3836	rsc38	Descripción	termino	lg-spa
+3837	rsc39	Partitura	termino	lg-spa
+3838	rsc40	Notación	termino	lg-spa
+3839	rsc40	Sistema ABC	def	lg-spa
+3840	rsc41	Fuentes	termino	lg-spa
+3842	rsc43	Documento musical	termino	lg-spa
+3843	rsc44	Fecha de captación	termino	lg-spa
+3844	rsc45	Lugar de captación	termino	lg-spa
+3845	rsc46	Municipio	termino	lg-spa
+3846	rsc47	Copia de cortesía	termino	lg-spa
+3847	rsc48	Responsable	termino	lg-spa
+3849	rsc50	Entrevistador	termino	lg-spa
+3850	rsc51	Operador de cámara	termino	lg-spa
+3851	rsc52	Fotógrafo	termino	lg-spa
+3852	rsc53	Observaciones de la captación	termino	lg-spa
+3853	rsc54	Duración segs	termino	lg-spa
+3854	rsc55	TC offset	termino	lg-spa
+3855	rsc56	Tanda	termino	lg-spa
+3856	rsc57	Formato del original	termino	lg-spa
+3857	rsc58	Relación de aspecto	termino	lg-spa
+3858	rsc59	Color	termino	lg-spa
+3859	rsc60	Calidad del máster	termino	lg-spa
+3861	rsc62	Transcrito / descrito	termino	lg-spa
+3862	rsc63	Indexado	termino	lg-spa
+3863	rsc64	Contacto	termino	lg-spa
+3864	rsc65	Municipio	termino	lg-spa
+3865	rsc66	Ubiciación en almacén	termino	lg-spa
+3866	rsc67	Entidad	termino	lg-spa
+3867	rsc68	Conservación del original	termino	lg-spa
+3868	rsc69	Estado del original	termino	lg-spa
+3873	rsc74	Documento de cesión	termino	lg-spa
+3869	rsc70	Autor	termino	lg-spa
+3870	rsc71	Cesión de explotación	termino	lg-spa
+3871	rsc72	Cesión de Imagen	termino	lg-spa
+3894	rsc94	Profesión	termino	lg-spa
+3874	rsc75	Informantes / Participantes / Contactos	termino	lg-spa
+3875	rsc76	Identificación	termino	lg-spa
+3895	rsc95	Categoría laboral / cargo	termino	lg-spa
+3876	rsc77	Contacto	termino	lg-spa
+3878	rsc78	Relaciones	termino	lg-spa
+3879	rsc79	Listado	termino	lg-spa
+3902	rsc102	email	termino	lg-spa
+3881	rsc81	Listado relaciones	termino	lg-spa
+3882	rsc82	Nuevo informante	termino	lg-spa
+3883	rsc83	Borrar informante	termino	lg-spa
+3884	rsc84	Ver estadísticas	termino	lg-spa
+3885	rsc85	Nombre	termino	lg-spa
+3886	rsc86	Apellidos	termino	lg-spa
+3887	rsc87	Sobrenombre	termino	lg-spa
+3889	rsc89	Fecha de nacimiento	termino	lg-spa
+3890	rsc90	Tipología	termino	lg-spa
+3891	rsc91	Lugar de nacimiento	termino	lg-spa
+3892	rsc92	Lugar de residencia	termino	lg-spa
+3896	rsc96	Comunidad o grupo al que pertenece	termino	lg-spa
+3897	rsc97	Uso de imagen	termino	lg-spa
+3898	rsc98	Proyecto	termino	lg-spa
+3899	rsc99	Observaciones	termino	lg-spa
+3900	rsc100	Dirección	termino	lg-spa
+3901	rsc101	Teléfono	termino	lg-spa
+3841	rsc42	Documento audiovisual	termino	lg-spa
+3903	rsc103	Persona de contacto	termino	lg-spa
+11379	rsc277	video	termino	lg-spa
+3904	rsc104	Fecha de contacto	termino	lg-spa
+3905	rsc105	Relaciones	termino	lg-spa
+3909	rsc107	Identificación	termino	lg-spa
+3910	rsc108	Contacto	termino	lg-spa
+3911	rsc109	Relaciones	termino	lg-spa
+3912	rsc110	Listado	termino	lg-spa
+3914	rsc112	Listado relaciones	termino	lg-spa
+3916	rsc113	Nuevo Grupo o Comunidad	termino	lg-spa
+3918	rsc114	Borrar Grupo o Comunidad	termino	lg-spa
+3919	rsc115	Ver estadísticas	termino	lg-spa
+3920	rsc116	Nombre	termino	lg-spa
+3922	rsc117	Uso de imagen	termino	lg-spa
+3924	rsc118	Lugar	termino	lg-spa
+3880	rsc80	Búsqueda	termino	lg-spa
+3913	rsc111	Búsqueda	termino	lg-spa
+3925	rsc119	Localidad	termino	lg-spa
+3926	rsc120	Fecha de constitución	termino	lg-spa
+3928	rsc121	Tipo de asociación / grupo	termino	lg-spa
+3929	rsc122	Estructura de funcionamiento	termino	lg-spa
+3930	rsc123	Proyectos	termino	lg-spa
+3933	rsc124	Observaciones	termino	lg-spa
+3934	rsc125	email	termino	lg-spa
+3935	rsc126	Teléfono	termino	lg-spa
+3936	rsc127	Dirección	termino	lg-spa
+3937	rsc128	Persona de contacto	termino	lg-spa
+4003	rsc176	Documento	termino	lg-spa
+3939	rsc129	Bibliografía	termino	lg-spa
+3944	rsc134	Nueva bibliografía	termino	lg-spa
+3945	rsc135	Borrar bibliografía	termino	lg-spa
+3946	rsc136	Ver estadísticas	termino	lg-spa
+3947	rsc137	Código	termino	lg-spa
+3948	rsc137	Código del registro unívoco	def	lg-spa
+3950	rsc138	Campo de selección del tipo de publicación.	def	lg-spa
+3951	rsc139	Autoría y responsabilidad	termino	lg-spa
+3952	rsc139	Nombre del autor.	def	lg-spa
+4044	rsc206	Excluidos	termino	lg-spa
+4073	rsc78	Relacions	termino	lg-cat
+4074	rsc105	Relacions	termino	lg-cat
+4075	rsc82	Nou informant	termino	lg-cat
+4076	rsc83	Esborrar informant	termino	lg-cat
+4077	rsc84	Veure estadístiques	termino	lg-cat
+4079	rsc203	Individuals, Groups and Communities	termino	lg-eng
+3953	rsc139	] Los nombres de persona podrán abreviarse a sus iniciales. Cuando existan varios autores, se separarán por punto y coma y un espacio, y si son más de tres, se hará constar el primero seguido de la abreviatura et al. En el caso de obras anónimas, el primer elemento de referencia será el título. Después de los apellidos y nombre de los editores, directores, compiladores o coordinadores, hay que añadir la abreviatura correspondiente al tipo de función que realiza: comp., coord., ed., etc. Si el autor es una entidad se indicará el nombre de la misma tal y como aparece en la fuente	obs	lg-spa
+3954	rsc140	Título	termino	lg-spa
+6851	rsc220	Notes	termino	lg-cat
+3955	rsc140	Nombre oficial de la obra tal y como aparece en la fuente.	def	lg-spa
+3956	rsc141	Edición	termino	lg-spa
+3957	rsc141	Se hará constar en la forma que aparece en la publicación cuando sea edición distinta a la primera	def	lg-spa
+3958	rsc142	Datos de publicación	termino	lg-spa
+3959	rsc142	El lugar geográfico donde se ha publicado el documento se cita en la lengua de éste.	def	lg-spa
+3960	rsc143	Fecha de actualización o revisión	termino	lg-spa
+3961	rsc143	Si se trata de un documento electrónico, especificar la fecha de actualización o revisión. En su caso fecha de consulta.	def	lg-spa
+3962	rsc144	Extensión	termino	lg-spa
+4067	rsc77	Contacte	termino	lg-cat
+4069	rsc101	Telèfon	termino	lg-cat
+4070	rsc102	email	termino	lg-cat
+4071	rsc103	Persona de contacte	termino	lg-cat
+3963	rsc144	Para documentos impresos se hace constar el número de páginas, o de volúmenes en su caso. Ej: 439 p., 8 vol. Para documentos no impresos se hará constar la extensión en número de piezas. Ej: 4 diapositivas	def	lg-spa
+3964	rsc145	Notas	termino	lg-spa
+3965	rsc146	Disponibilidad y acceso	termino	lg-spa
+4078	rsc80	Cerca	termino	lg-cat
+3966	rsc146	Localización, formato de disponibilidad y acceso al documento (enlace al fichero)	def	lg-spa
+3967	rsc147	Número normalizado	termino	lg-spa
+3968	rsc147	ISBN o numeración para su localización	def	lg-spa
+3973	rsc151	Documento	termino	lg-spa
+3971	rsc149	Relaciones	termino	lg-spa
+3943	rsc133	Listado relaciones	termino	lg-spa
+3972	rsc150	Identificación	termino	lg-spa
+3974	rsc152	Proceso administrativo	termino	lg-spa
+3975	rsc153	Relaciones	termino	lg-spa
+3976	rsc154	Relaciones	termino	lg-spa
+3981	rsc159	Borrar documento	termino	lg-spa
+3978	rsc156	Búsqueda	termino	lg-spa
+3942	rsc132	Búsqueda	termino	lg-spa
+3982	rsc160	Ver estadísticas	termino	lg-spa
+3983	rsc161	Código	termino	lg-spa
+3984	rsc162	Tipología	termino	lg-spa
+3985	rsc163	Fecha	termino	lg-spa
+3986	rsc164	Proyecto	termino	lg-spa
+3987	rsc165	Documento	termino	lg-spa
+3988	rsc166	Descripción	termino	lg-spa
+3979	rsc157	Listado relaciones	termino	lg-spa
+3992	rsc167	Audiovisual	termino	lg-spa
+3993	rsc168	Excluidos	termino	lg-spa
+3994	rsc169	Listado	termino	lg-spa
+3996	rsc170	Imagen	termino	lg-spa
+3997	rsc171	Exclude	termino	lg-spa
+3999	rsc172	Listado	termino	lg-spa
+4002	rsc175	ID	termino	lg-spa
+4004	rsc177	Excluidos	termino	lg-spa
+4005	rsc178	Listado	termino	lg-spa
+4007	rsc180	Excluidos	termino	lg-spa
+4008	rsc181	Listado	termino	lg-spa
+4013	rsc183	Excluidos	termino	lg-spa
+4010	rsc182	Expediente administrativo	termino	lg-spa
+4121	rsc188	Official Newsletter or Journal	termino	lg-eng
+4016	rsc184	Listado	termino	lg-spa
+4017	rsc185	Informes	termino	lg-spa
+4019	rsc186	Excluidos	termino	lg-spa
+4020	rsc187	Listado	termino	lg-spa
+4021	rsc188	Boletín o Diario oficial	termino	lg-spa
+4023	rsc189	Excluidos	termino	lg-spa
+4024	rsc190	Listado	termino	lg-spa
+4025	rsc191	Acta de cesión	termino	lg-spa
+4026	rsc192	Excluidos	termino	lg-spa
+4027	rsc193	Listado	termino	lg-spa
+4029	rsc195	Excluidos	termino	lg-spa
+4030	rsc196	Listado	termino	lg-spa
+4031	rsc197	Informantes	termino	lg-spa
+4033	rsc199	Listado	termino	lg-spa
+4036	rsc202	Búsqueda	termino	lg-spa
+4037	rsc203	Personas, Grupos o Comunidades	termino	lg-spa
+4038	rsc204	Administración	termino	lg-spa
+4043	rsc205	Bibliografía	termino	lg-spa
+4045	rsc207	Listado	termino	lg-spa
+4046	rsc203	Persones, Grups o comunitats	termino	lg-cat
+4047	rsc194	Alres persones, contactes, profesionals...	termino	lg-cat
+4048	rsc197	Informants	termino	lg-cat
+4050	rsc75	Informants / Participants / Contactes	termino	lg-cat
+4051	rsc76	Identificació	termino	lg-cat
+4052	rsc85	Nom	termino	lg-cat
+4053	rsc86	Cognoms	termino	lg-cat
+4054	rsc87	Sobrenom	termino	lg-cat
+4055	rsc88	Imatge	termino	lg-cat
+4056	rsc89	Data de naixement	termino	lg-cat
+4057	rsc90	Tipologia	termino	lg-cat
+4058	rsc91	Lloc de naixement	termino	lg-cat
+4313	rsc129	Bibliografia	termino	lg-cat
+4059	rsc92	Lloc de residència	termino	lg-cat
+4061	rsc94	Professió	termino	lg-cat
+4062	rsc95	Categoria Laboral / Càrrec	termino	lg-cat
+4063	rsc96	Comunitat o grup al qual pertany	termino	lg-cat
+4064	rsc97	Ús d'imatge	termino	lg-cat
+4065	rsc98	Projecte	termino	lg-cat
+4066	rsc99	Observacions	termino	lg-cat
+4072	rsc104	Data de contacte	termino	lg-cat
+4195	rsc129	Bibliography	termino	lg-eng
+4081	rsc197	Informants	termino	lg-eng
+4083	rsc75	Informants / Participants / Contacts	termino	lg-eng
+4084	rsc76	Identification	termino	lg-eng
+4085	rsc85	Name	termino	lg-eng
+4086	rsc86	Surname	termino	lg-eng
+4087	rsc87	Nickname	termino	lg-eng
+4088	rsc88	Image	termino	lg-eng
+4089	rsc89	Date of birth	termino	lg-eng
+4090	rsc90	Tipology	termino	lg-eng
+4091	rsc91	Birthplace	termino	lg-eng
+4092	rsc92	Location	termino	lg-eng
+4093	rsc93	Gender	termino	lg-eng
+4094	rsc94	Profession	termino	lg-eng
+4095	rsc95	Job Category / Title	termino	lg-eng
+4096	rsc96	Community or group it belongs	termino	lg-eng
+4097	rsc97	Image rights	termino	lg-eng
+4098	rsc98	Project	termino	lg-eng
+4099	rsc99	Observations	termino	lg-eng
+4100	rsc77	Contact	termino	lg-eng
+4101	rsc100	Address	termino	lg-eng
+4102	rsc101	Phone	termino	lg-eng
+4103	rsc102	email	termino	lg-eng
+4104	rsc103	Contact person	termino	lg-eng
+4105	rsc104	Date of Contact	termino	lg-eng
+4106	rsc78	Relations	termino	lg-eng
+4107	rsc105	Relations	termino	lg-eng
+4108	rsc82	New informant	termino	lg-eng
+4109	rsc83	Delete informant	termino	lg-eng
+4110	rsc84	View Statistics	termino	lg-eng
+4111	rsc80	Search	termino	lg-eng
+4114	rsc167	Audiovisual	termino	lg-eng
+4115	rsc176	Document	termino	lg-eng
+4116	rsc170	Image	termino	lg-eng
+4117	rsc205	Bibliography	termino	lg-eng
+4118	rsc204	Administation	termino	lg-eng
+4119	rsc182	Administrative record	termino	lg-eng
+4120	rsc185	Reports	termino	lg-eng
+4122	rsc191	Certificate of Cession	termino	lg-eng
+4123	rsc1	Media	termino	lg-eng
+4125	rsc4	Administration Media	termino	lg-eng
+4126	rsc3	Bibliography Media	termino	lg-eng
+4124	rsc2	Resources Media	termino	lg-eng
+4127	rsc5	Identification	termino	lg-eng
+4129	rsc20	Diffusion	termino	lg-eng
+4130	rsc21	Code	termino	lg-eng
+4131	rsc22	Previous Code	termino	lg-eng
+4132	rsc23	Title	termino	lg-eng
+4133	rsc24	Typology	termino	lg-eng
+4134	rsc25	Collection / archive	termino	lg-eng
+4135	rsc26	Dating	termino	lg-eng
+4136	rsc27	Observations	termino	lg-eng
+4137	rsc28	Project	termino	lg-eng
+4138	rsc6	Image	termino	lg-eng
+4139	rsc29	Image	termino	lg-eng
+4140	rsc30	Img Description	termino	lg-eng
+4141	rsc31	Photo caption	termino	lg-eng
+4142	rsc32	Options file	termino	lg-eng
+4143	rsc33	Directory	termino	lg-eng
+4144	rsc34	Filename	termino	lg-eng
+4145	rsc7	Audiovisual	termino	lg-eng
+4146	rsc35	Video	termino	lg-eng
+4147	rsc36	Description / transcription	termino	lg-eng
+4148	rsc8	Document	termino	lg-eng
+4149	rsc37	Document	termino	lg-eng
+4150	rsc38	Description	termino	lg-eng
+4151	rsc9	Score	termino	lg-eng
+4152	rsc39	Score	termino	lg-eng
+4153	rsc40	Notation	termino	lg-eng
+4154	rsc41	Sources	termino	lg-eng
+4155	rsc42	Audiovisual document	termino	lg-eng
+4156	rsc43	Musical document	termino	lg-eng
+4157	rsc10	Capture	termino	lg-eng
+4158	rsc44	Date of capture	termino	lg-eng
+4159	rsc45	Place of capture	termino	lg-eng
+4160	rsc46	Municipality	termino	lg-eng
+4161	rsc47	Courtesy copy	termino	lg-eng
+4162	rsc48	Person in charge	termino	lg-eng
+4163	rsc49	Caption (preproduction)	termino	lg-eng
+4164	rsc50	Interviewed	termino	lg-eng
+4165	rsc51	Recorded	termino	lg-eng
+4166	rsc52	Photographer	termino	lg-eng
+4167	rsc53	Observations of the capture	termino	lg-eng
+4168	rsc11	Audiovisual technical data	termino	lg-eng
+4170	rsc55	TC Offset	termino	lg-eng
+4171	rsc56	Series	termino	lg-eng
+4172	rsc57	Master device	termino	lg-eng
+4173	rsc58	Aspect ratio	termino	lg-eng
+4174	rsc59	Color	termino	lg-eng
+4175	rsc60	Master quality	termino	lg-eng
+4176	rsc12	Process	termino	lg-eng
+4177	rsc61	Digital processing	termino	lg-eng
+4178	rsc62	Transcribed / descibed	termino	lg-eng
+4179	rsc63	Indexed	termino	lg-eng
+4180	rsc13	Location	termino	lg-eng
+4181	rsc64	Contact	termino	lg-eng
+4182	rsc65	Municipality	termino	lg-eng
+4183	rsc66	Storage location	termino	lg-eng
+4184	rsc67	Entity	termino	lg-eng
+4185	rsc14	Conservation	termino	lg-eng
+4186	rsc68	Conservation of the  original	termino	lg-eng
+4302	rsc14	Conservació	termino	lg-cat
+4187	rsc69	Status of the original reel	termino	lg-eng
+4188	rsc15	Cession of rights	termino	lg-eng
+4189	rsc70	Author	termino	lg-eng
+4190	rsc71	Cession of exploitation	termino	lg-eng
+4191	rsc74	Cession document	termino	lg-eng
+4192	rsc72	Cession of Image	termino	lg-eng
+4193	rsc73	Cession Act	termino	lg-eng
+4194	rsc18	Delete resource	termino	lg-eng
+4196	rsc137	Code	termino	lg-eng
+4197	rsc138	Tipology	termino	lg-eng
+4198	rsc139	Authorship and responsibility	termino	lg-eng
+4199	rsc140	Title	termino	lg-eng
+4200	rsc141	Edition	termino	lg-eng
+4201	rsc142	Publication details	termino	lg-eng
+4202	rsc143	Date of update or revision	termino	lg-eng
+4203	rsc144	Extension	termino	lg-eng
+4204	rsc145	Notes	termino	lg-eng
+4205	rsc146	Availability and access	termino	lg-eng
+4206	rsc147	Standard number	termino	lg-eng
+4207	rsc148	Projects	termino	lg-eng
+4208	rsc130	Relations	termino	lg-eng
+4209	rsc149	Relations	termino	lg-eng
+4210	rsc132	Search	termino	lg-eng
+4211	rsc134	New bibliography	termino	lg-eng
+4212	rsc135	Delete bibliography	termino	lg-eng
+4213	rsc136	View Statistics	termino	lg-eng
+4214	rsc150	Identification	termino	lg-eng
+4215	rsc161	Code	termino	lg-eng
+4216	rsc162	Tipology	termino	lg-eng
+4217	rsc163	Date	termino	lg-eng
+4218	rsc164	Project	termino	lg-eng
+4219	rsc151	Document	termino	lg-eng
+4220	rsc165	Document	termino	lg-eng
+4221	rsc166	Description	termino	lg-eng
+4222	rsc152	Administrative process	termino	lg-eng
+4223	rsc158	New document	termino	lg-eng
+4224	rsc159	Delete document	termino	lg-eng
+4225	rsc160	View Statistics	termino	lg-eng
+4226	rsc153	Relations	termino	lg-eng
+4227	rsc154	Relations	termino	lg-eng
+4228	rsc156	Search	termino	lg-eng
+4231	rsc167	Audiovisual	termino	lg-cat
+4233	rsc170	Imatge	termino	lg-cat
+4234	rsc205	Bibliografia	termino	lg-cat
+4235	rsc204	Administració	termino	lg-cat
+4236	rsc182	Document administratiu	termino	lg-cat
+4237	rsc185	Informes	termino	lg-cat
+4238	rsc188	Butlletí o Diari Oficial	termino	lg-cat
+4240	rsc1	Media	termino	lg-cat
+4241	rsc2	Media recursos	termino	lg-cat
+4716	rsc123	Projectes	termino	lg-cat
+4242	rsc3	Media bibliografia	termino	lg-cat
+4243	rsc4	Media administració	termino	lg-cat
+4244	rsc5	Identificació	termino	lg-cat
+4246	rsc20	Finalitzat	termino	lg-cat
+4247	rsc21	Codi	termino	lg-cat
+4248	rsc22	Codi Anterior	termino	lg-cat
+4249	rsc23	Títol	termino	lg-cat
+4250	rsc24	Tipologia	termino	lg-cat
+4251	rsc25	Col·lecció / arxiu	termino	lg-cat
+4252	rsc26	Datació	termino	lg-cat
+4253	rsc27	Observacions	termino	lg-cat
+4254	rsc28	Projecte	termino	lg-cat
+4255	rsc6	Imatge	termino	lg-cat
+4256	rsc29	Imatge	termino	lg-cat
+4257	rsc30	Descripció d'imatge	termino	lg-cat
+4258	rsc31	Peu de foto	termino	lg-cat
+4259	rsc32	Opcions de fitxers	termino	lg-cat
+4260	rsc33	Directori	termino	lg-cat
+4261	rsc34	Nom de fitxer	termino	lg-cat
+4262	rsc7	Audiovisual	termino	lg-cat
+4263	rsc35	Vídeo	termino	lg-cat
+4264	rsc36	Descripció / transcripció	termino	lg-cat
+4265	rsc8	Document	termino	lg-cat
+4267	rsc38	Descripció	termino	lg-cat
+4268	rsc9	Partitura	termino	lg-cat
+4269	rsc39	Partitura	termino	lg-cat
+4270	rsc40	Notació	termino	lg-cat
+4271	rsc41	Fons	termino	lg-cat
+4272	rsc42	Document audiovisual	termino	lg-cat
+4273	rsc43	Document musical	termino	lg-cat
+4274	rsc10	Captació	termino	lg-cat
+4275	rsc44	Data de captació	termino	lg-cat
+4276	rsc45	Lloc de captació	termino	lg-cat
+4277	rsc46	Municipi	termino	lg-cat
+4278	rsc47	Còpia de cortesia	termino	lg-cat
+4279	rsc48	Responsable	termino	lg-cat
+4280	rsc49	Captada (preproducció)	termino	lg-cat
+4281	rsc50	Entrevistador	termino	lg-cat
+4282	rsc51	Operador de càmera	termino	lg-cat
+4283	rsc52	Fotògraf	termino	lg-cat
+4284	rsc53	Observacions de la captació	termino	lg-cat
+4285	rsc11	Dades tècniques audiovisual	termino	lg-cat
+4286	rsc54	Duració segs	termino	lg-cat
+4287	rsc55	TC offset	termino	lg-cat
+4288	rsc56	Tanda	termino	lg-cat
+4289	rsc57	Format de l'original	termino	lg-cat
+4290	rsc58	Relació d'aspecte	termino	lg-cat
+4291	rsc59	Color	termino	lg-cat
+4292	rsc60	Qualitat del màster	termino	lg-cat
+4293	rsc12	Processat	termino	lg-cat
+4294	rsc61	Digitalitzat	termino	lg-cat
+4295	rsc62	Transcrit / descrit	termino	lg-cat
+4296	rsc63	Indexat	termino	lg-cat
+4297	rsc13	Ubicació	termino	lg-cat
+4298	rsc64	Contacte	termino	lg-cat
+4299	rsc65	Municipi	termino	lg-cat
+4300	rsc66	Ubicació en magatzem	termino	lg-cat
+4301	rsc67	Entitat	termino	lg-cat
+4303	rsc68	Conservació de l'original	termino	lg-cat
+4304	rsc69	Estat de l'original	termino	lg-cat
+4305	rsc15	Cessió de drets	termino	lg-cat
+4306	rsc70	Autor	termino	lg-cat
+4307	rsc71	Cessió d'Explotació	termino	lg-cat
+4308	rsc72	Cessió d'Imatge	termino	lg-cat
+4309	rsc73	Acta de cessió	termino	lg-cat
+4310	rsc74	Document de cessió	termino	lg-cat
+4311	rsc17	Relacions	termino	lg-cat
+4312	rsc18	Esborrar recurs	termino	lg-cat
+4314	rsc137	Codi	termino	lg-cat
+4315	rsc138	Tipologia	termino	lg-cat
+4316	rsc139	Autoria i responsabilitat	termino	lg-cat
+4317	rsc140	Títol	termino	lg-cat
+4318	rsc141	Edició	termino	lg-cat
+4319	rsc142	Dades de publicació	termino	lg-cat
+4320	rsc143	Data d'actualització o revisió	termino	lg-cat
+4321	rsc144	Extensió	termino	lg-cat
+4322	rsc145	Notes	termino	lg-cat
+4323	rsc146	Disponibilitat i accés	termino	lg-cat
+4324	rsc147	Número normalitzat	termino	lg-cat
+4325	rsc148	Projectes	termino	lg-cat
+4326	rsc130	Relacions	termino	lg-cat
+4327	rsc149	Relacions	termino	lg-cat
+4328	rsc132	Cerca	termino	lg-cat
+4329	rsc134	Nova bibliografia	termino	lg-cat
+4330	rsc135	Esborrar bibliografia	termino	lg-cat
+4331	rsc136	Veure estadístiques	termino	lg-cat
+4332	rsc150	Identificació	termino	lg-cat
+4333	rsc161	Codi	termino	lg-cat
+4334	rsc162	Tipologia	termino	lg-cat
+4335	rsc163	Data	termino	lg-cat
+4336	rsc164	Projecte	termino	lg-cat
+4337	rsc151	Document	termino	lg-cat
+4338	rsc165	Document	termino	lg-cat
+4339	rsc166	Descripció	termino	lg-cat
+4340	rsc152	Procés administratiu	termino	lg-cat
+4341	rsc153	Relacions	termino	lg-cat
+4342	rsc154	Relacions	termino	lg-cat
+4343	rsc156	Cerca	termino	lg-cat
+4344	rsc158	Nou document	termino	lg-cat
+4345	rsc159	Esborrar document	termino	lg-cat
+4346	rsc160	Veure estadístiques	termino	lg-cat
+3980	rsc158	Nuevo documento	termino	lg-spa
+4704	rsc106	Grup o comunitat	termino	lg-cat
+4705	rsc107	Identificació	termino	lg-cat
+4706	rsc108	Contacte	termino	lg-cat
+4707	rsc109	Relacions	termino	lg-cat
+4708	rsc111	Cerca	termino	lg-cat
+4709	rsc116	Nom	termino	lg-cat
+4710	rsc117	Ús d'imatge	termino	lg-cat
+4711	rsc118	Lloc	termino	lg-cat
+4712	rsc119	Localitat	termino	lg-cat
+4713	rsc120	Data de constitució	termino	lg-cat
+4714	rsc121	Tipus d'associació / grup	termino	lg-cat
+4715	rsc122	Estructura de funcionament	termino	lg-cat
+4717	rsc124	Observacions	termino	lg-cat
+4718	rsc125	email	termino	lg-cat
+4719	rsc126	Telèfon	termino	lg-cat
+4720	rsc127	Adreça	termino	lg-cat
+4721	rsc128	Persona de contacte	termino	lg-cat
+4722	rsc113	Nou Grup o Comunitat	termino	lg-cat
+4723	rsc114	Esborrar Grup o Comunitat	termino	lg-cat
+4724	rsc115	Veure estadístiques	termino	lg-cat
+4915	rsc208	List	termino	lg-spa
+5906	rsc219	Publisher	termino	lg-eng
+5874	rsc209	Documento	termino	lg-spa
+5875	rsc210	Transcripción / descripción	termino	lg-spa
+5877	rsc211	Series / colecciones	termino	lg-spa
+5880	rsc212	Series / colecciones	termino	lg-spa
+5881	rsc213	Series / colecciones	termino	lg-spa
+5882	rsc214	Series / colecciones	termino	lg-spa
+5883	rsc215	Listado	termino	lg-spa
+5884	rsc216	Proyecto	termino	lg-spa
+5888	rsc34	Sin la extensión (como foto_2)	def	lg-spa
+5889	rsc34	Without extension (like photo_2)	def	lg-eng
+5890	rsc34	Sin extensió (com foto_2)	def	lg-cat
+5891	rsc33	Comenzando por '/' como '/dirname/level2'	def	lg-spa
+5892	rsc33	Begins with '/' like '/dirname/level2'	def	lg-eng
+5893	rsc33	Començant per '/' como '/dirname/level2'	def	lg-cat
+5898	rsc217	URL	termino	lg-spa
+11108	rsc253	Formato del original	termino	lg-spa
+5899	rsc217	URL	termino	lg-cat
+5900	rsc217	URL	termino	lg-eng
+5901	rsc218	Fuente	termino	lg-spa
+5902	rsc218	Font	termino	lg-cat
+5903	rsc218	Source	termino	lg-eng
+5904	rsc219	Editor	termino	lg-spa
+5905	rsc219	Editor	termino	lg-cat
+3949	rsc138	Tipología bibliográfica	termino	lg-spa
+5960	rsc220	Notas	termino	lg-spa
+5995	rsc221	Resumen	termino	lg-spa
+5996	rsc221	Resum	termino	lg-cat
+5997	rsc221	Abstract	termino	lg-eng
+5998	rsc222	Ejemplar	termino	lg-spa
+5999	rsc222	Exemplar	termino	lg-cat
+6000	rsc223	Páginas	termino	lg-spa
+6001	rsc223	Pàgines	termino	lg-cat
+6002	rsc223	Pages	termino	lg-eng
+6003	rsc224	Fecha	termino	lg-spa
+6005	rsc224	Date	termino	lg-eng
+6004	rsc224	Data	termino	lg-cat
+6006	rsc225	Título corto	termino	lg-spa
+6007	rsc225	Títol curt	termino	lg-cat
+6008	rsc225	Short title	termino	lg-eng
+6020	rsc1	Global media resources container	def	lg-spa
+6021	rsc1	Always call indirectly using virtual sections	obs	lg-spa
+6022	rsc226	Búsqueda	termino	lg-spa
+6023	rsc226	Search	termino	lg-eng
+6211	rsc228	Imagen identificativa	termino	lg-spa
+3969	rsc148	Proyecto	termino	lg-spa
+6212	rsc229	Archivo / colección bibliográfica	termino	lg-spa
+6213	rsc230	Archivo / colección bibliográfica	termino	lg-spa
+6214	rsc231	Archivo / colección bibliográfica	termino	lg-spa
+6215	rsc232	Proyecto	termino	lg-spa
+6216	rsc233	Nuevo archivo / colección	termino	lg-spa
+6217	rsc234	Listado	termino	lg-spa
+6218	rsc235	Archivo / colección	termino	lg-spa
+6920	rsc189	Exclosos	termino	lg-cat
+6921	rsc190	Llistat	termino	lg-cat
+4239	rsc191	Acta de cessió	termino	lg-cat
+6850	rsc208	Llistat	termino	lg-cat
+6922	rsc192	Exclosos	termino	lg-cat
+4068	rsc100	Adreça	termino	lg-cat
+6852	rsc79	Llistat	termino	lg-cat
+6853	rsc81	Llistat relacions	termino	lg-cat
+6854	rsc110	Llistat	termino	lg-cat
+6855	rsc112	Llistat relacions	termino	lg-cat
+6856	rsc195	Exclosos	termino	lg-cat
+6863	rsc196	Llistat	termino	lg-cat
+6864	rsc236	Dossiers	termino	lg-cat
+6867	rsc198	Exclosos	termino	lg-cat
+6868	rsc199	Llistat	termino	lg-cat
+7297	rsc229	Arxiu / Col·lecció bibliogràfica	termino	lg-cat
+6869	rsc201	Cerca	termino	lg-cat
+10416	rsc79	List	termino	lg-eng
+10535	rsc173	Estado	termino	lg-spa
+10630	rsc240	Copia del máster	termino	lg-spa
+10537	rsc200	Estado	termino	lg-spa
+10631	rsc240	Còpia del master	termino	lg-cat
+10418	rsc220	Notes	termino	lg-eng
+10538	rsc239	Estado	termino	lg-spa
+10632	rsc240	Master copy	termino	lg-eng
+10419	rsc81	Relation list	termino	lg-eng
+10420	rsc208	List	termino	lg-eng
+10421	rsc131	List	termino	lg-eng
+10635	rsc241	Copy date of master	termino	lg-eng
+10422	rsc133	Relation List	termino	lg-eng
+10636	rsc242	Copia en formato estándar	termino	lg-spa
+10423	rsc155	List	termino	lg-eng
+10637	rsc242	Còpia en format estandar	termino	lg-cat
+10424	rsc157	Relation list	termino	lg-eng
+10638	rsc242	Copy in standar format	termino	lg-eng
+10425	rsc260	Check transcription	termino	lg-eng
+10639	rsc243	Fecha de la copia estándar	termino	lg-spa
+4245	rsc19	Estat	termino	lg-cat
+10640	rsc243	Data de la còpia estandar	termino	lg-cat
+4128	rsc19	State	termino	lg-eng
+10641	rsc243	Copy date of standar	termino	lg-eng
+4028	rsc194	Otras personas, contactos, profesionales	termino	lg-spa
+4080	rsc194	Other persones, contacts, professionals	termino	lg-eng
+10618	rsc260	Revisar transcripció	termino	lg-cat
+3848	rsc49	Captada (preproducción)	termino	lg-spa
+10622	rsc173	Estat	termino	lg-cat
+10623	rsc173	Estate	termino	lg-eng
+10624	rsc200	Estat	termino	lg-cat
+10625	rsc200	Estate	termino	lg-eng
+10626	rsc239	Estat	termino	lg-cat
+10627	rsc239	Estate	termino	lg-eng
+10628	rsc201	Search	termino	lg-eng
+10448	rsc232	Project	termino	lg-eng
+10449	rsc234	List	termino	lg-eng
+10454	rsc215	List	termino	lg-eng
+10455	rsc216	Project	termino	lg-eng
+10491	rsc16	List	termino	lg-eng
+6892	rsc259	Cerca	termino	lg-cat
+6865	rsc226	Cerca	termino	lg-cat
+10994	rsc244	Info	termino	lg-spa
+11030	rsc248	Import BIBTex	termino	lg-eng
+11029	rsc248	Importar BIBTex	termino	lg-cat
+10633	rsc241	Fecha de la copia master	termino	lg-spa
+10634	rsc241	Data de la còpia master	termino	lg-cat
+11090	rsc249	Tipología de número normalizado	termino	lg-spa
+11091	rsc249	Tipologia de nombre normalitzat	termino	lg-cat
+11092	rsc249	Type of standard number	termino	lg-eng
+11093	rsc250	Deposito Legal	termino	lg-spa
+11094	rsc250	Dipòsit Legal	termino	lg-cat
+11095	rsc250	Legal deposit	termino	lg-eng
+11099	rsc251	Idioma de la publicación	termino	lg-spa
+11100	rsc251	Idioma de la publicació	termino	lg-cat
+11101	rsc251	Publication language	termino	lg-eng
+11109	rsc253	Format de l'original	termino	lg-cat
+11110	rsc253	Original format	termino	lg-eng
+11111	rsc257	Tanda	termino	lg-spa
+11112	rsc257	Tanda	termino	lg-cat
+11113	rsc257	Series	termino	lg-eng
+11114	rsc258	Espacio de Color	termino	lg-spa
+11115	rsc258	Espai de color	termino	lg-cat
+11116	rsc258	Color space	termino	lg-eng
+3834	rsc36	Descripción / transcripción av	termino	lg-spa
+4169	rsc54	Duration secs	termino	lg-eng
+10819	rsc268	publication	termino	lg-spa
+10820	rsc268	(Uso de imagen)	obs	lg-spa
+10975	rsc276	publication	termino	lg-spa
+10813	rsc266	image	termino	lg-spa
+10818	rsc267	informant	termino	lg-spa
+10821	rsc269	name	termino	lg-spa
+10822	rsc270	surname	termino	lg-spa
+10823	rsc271	nickname	termino	lg-spa
+10824	rsc272	birthdate	termino	lg-spa
+10826	rsc273	birthplace	termino	lg-spa
+10827	rsc274	gender	termino	lg-spa
+10812	rsc264	image	termino	lg-spa
+10814	rsc275	audiovisual	termino	lg-spa
+10817	rsc278	Campo con la transcripción completa de la entrevista. Se utiliza el nombre del componente para su localización por parte del tesauro del LOCATOR estándar de Dédalo	obs	lg-spa
+10816	rsc278	rsc36	termino	lg-spa
+10815	rsc276	publication	termino	lg-spa
+11378	rsc264	image	termino	lg-spa
+11412	rsc279	Difusión	termino	lg-spa
+11416	rsc281	Difusión	termino	lg-spa
+11413	rsc279	Difusió	termino	lg-cat
+11417	rsc281	Difusió	termino	lg-cat
+11414	rsc279	Diffusion	termino	lg-eng
+11418	rsc281	Diffusion	termino	lg-eng
+11415	rsc280	Grupo DIV	termino	lg-spa

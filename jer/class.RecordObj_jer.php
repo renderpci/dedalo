@@ -64,17 +64,22 @@ class RecordObj_jer extends RecordDataBoundObject {
 	}
 	
 	
+	
 	# nombre functions
 	public function get_nombre() {
 		$string = parent::get_nombre();
 		if($string) stripslashes($string);
 		return $string;	
 	}
+
+
 	public function set_nombre($string) {
 		$string = stripslashes($string); 
 		$string = addslashes($string);
 		parent::set_nombre($string);
 	}
+
+
 	
 	protected function idExists($id) {
 		$sql = " 
@@ -93,6 +98,8 @@ class RecordObj_jer extends RecordDataBoundObject {
 			
 			return false;	
 	}
+
+
 	
 	protected function createRecord($id) {
 		$sql = " 
@@ -142,29 +149,17 @@ class RecordObj_jer extends RecordDataBoundObject {
 	
 	
 	# resolve main lang
-	public static function get_nombre_by_id($id) {
-		
+	public static function get_nombre_by_id($id) {		
 		$RecordObj_jer = new RecordObj_jer($id);
 		return $RecordObj_jer->get_nombre()	;
 	}
 
 	
 
-
 	# GET_ALL_TIPOS
 	public static function get_ar_all_tipos() {
 		
-		$ar_final 	= array();
-		/*
-		$sql 		= "SELECT id, nombre FROM jerarquia_tipos ORDER BY nombre ASC " ;
-		#$result 	= DBi::_getConnection()->query($sql);		
-		$result 	= pg_query(DBi::_getConnection(), $sql) or die("Cannot execute query: $query\n". pg_last_error());
-				#dump($result, 'result', array());
-
-		while ($rows = pg_fetch_assoc($result)) {
-			$ar_final[$rows['id']] = $rows['nombre'];
-		}
-		*/
+		$ar_final 	= array();	
 
 		$arguments=array();
 		$arguments['strPrimaryKeyName']	= 'id';
@@ -188,11 +183,14 @@ class RecordObj_jer extends RecordDataBoundObject {
 	}
 
 
+
 	/**
 	* GET_TESAURO_BY_JER_TIPO
 	* @see component_autocomplete_ts->get_ar_referenced_tipo
 	*/
 	public static function get_ar_tesauro_by_jer_tipo($tipo, $activa=true) {
+
+		#if(SHOW_DEBUG) $start_time = start_time();
 
 		$arguments=array();
 		$arguments['strPrimaryKeyName']	= 'alpha2';
@@ -202,9 +200,15 @@ class RecordObj_jer extends RecordDataBoundObject {
 
 		$RecordObj_jer					= new RecordObj_jer(NULL);
 		$ar_records						= $RecordObj_jer->search($arguments);
+
+		#if(SHOW_DEBUG) {
+			#$total=round(microtime(1)-$start_time,4);
+			#debug_log(__METHOD__." Total: ".$total, logger::DEBUG);			
+		#}
 		
 		return $ar_records;
-	}
+
+	}//end get_ar_tesauro_by_jer_tipo
 
 
 	

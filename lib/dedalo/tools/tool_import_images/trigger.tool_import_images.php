@@ -162,6 +162,7 @@ class CustomUploadHandler extends UploadHandler {
     }
 
     protected function imagemagick_create_scaled_image($file_name, $version, $options) {
+        
         list($file_path, $new_file_path) =
             $this->get_scaled_image_file_paths($file_name, $version);
         

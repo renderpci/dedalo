@@ -7,8 +7,7 @@
 	$id						= NULL;
 	$modo					= $this->get_modo();		
 	$label 					= $this->get_label();
-	$dato 					= $this->get_dato();
-	#$debugger				= $this->get_debugger();		
+	$dato 					= $this->get_dato();	
 	$html_title				= "Info about $tipo";
 
 	# Fixed to 1

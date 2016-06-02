@@ -45,7 +45,7 @@ class js {
 
 			
 		
-			js::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/tools/tool_portal/js/tool_portal.js'; // Cuando añadimos un fragmento, no está disponible..			
+			#js::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/tools/tool_portal/js/tool_portal.js'; // Cuando añadimos un fragmento, no está disponible..			
 			js::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/common/js/lang/'.DEDALO_APPLICATION_LANG.'.js';
 			
 			# SEARCH		
@@ -106,12 +106,11 @@ class js {
 				
 
 				# tool common
-				#$html .= self::build_tag( DEDALO_LIB_BASE_URL . '/tools/tool_common/js/tool_common.js' );
-				
-				$current_context = navigator::get_selected('context');
-				if (strpos($current_context, 'tool_portal')!==false) {
-					$html .= self::build_tag( DEDALO_LIB_BASE_URL . '/tools/tool_portal/js/tool_portal.js' );
-				}
+				#$html .= self::build_tag( DEDALO_LIB_BASE_URL . '/tools/tool_common/js/tool_common.js' );				
+				#$current_context = navigator::get_selected('context');
+				#if (strpos($current_context, 'tool_portal')!==false) {
+				#	$html .= self::build_tag( DEDALO_LIB_BASE_URL . '/tools/tool_portal/js/tool_portal.js' );
+				#}
 
 				$added_component_commons = true;		
 			}

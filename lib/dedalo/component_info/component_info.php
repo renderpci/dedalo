@@ -11,7 +11,7 @@
 	$lang					= $this->get_lang();
 	$label 					= $this->get_label();
 	$propiedades 			= $this->get_propiedades();
-	$permissions			= common::get_permissions($tipo);
+	$permissions			= common::get_permissions($section_tipo,$tipo);
 	$identificador_unico	= $this->get_identificador_unico();
 	$id_wrapper 			= 'wrapper_'.$identificador_unico;
 	$component_name			= get_class($this);

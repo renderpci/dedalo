@@ -32,7 +32,11 @@
 	if( defined('DEDALO_TEST_INSTALL') && defined('DEDALO_TEST_INSTALL')===true && $this->test_su_default_password()===true ) {
 		if(SHOW_DEBUG) {
 			#dump(DEDALO_TEST_INSTALL, ' DEDALO_TEST_INSTALL');
-		}	
+		}
+	
+		# CSS includes
+		array_unshift(css::$ar_url_basic, BOOTSTRAP_CSS_URL);
+
 		$page_html	= 'html/' . get_class($this) . '_set_psw.phtml';
 		include($page_html);
 		return;

@@ -1,18 +1,17 @@
 <?php
 	
 	# CONTROLLER
-	
-	#$id 					= $this->get_id();		
+		
 	$tipo 					= $this->get_tipo();
 	$parent 				= $this->get_parent();
 	$section_tipo			= $this->get_section_tipo();
 	$lang 					= $this->get_lang();
 	$modo					= $this->get_modo();		
-	$dato 					= $this->get_dato();	#dump($dato,'dato');
+	$dato 					= $this->get_dato();
 	$label 					= $this->get_label();
 	$required				= $this->get_required();
 	$debugger				= $this->get_debugger();
-	$permissions			= common::get_permissions($tipo);
+	$permissions			= common::get_permissions($section_tipo,$tipo);
 	$ejemplo				= NULL;
 	$html_title				= "Info about $tipo";
 	$valor					= $this->get_valor();
@@ -20,19 +19,24 @@
 	$identificador_unico	= $this->get_identificador_unico();
 	$component_name			= get_class($this);
 	$dato_string			= $this->get_dato_as_string();
-	$caller_id 				= $this->get_caller_id();				#dump($caller_id,'caller_id');	#die();
-
-	#$ar_tools_obj			= $this->get_ar_tools_obj();
-
+	$caller_id 				= $this->get_caller_id();
 	$file_name				= $modo;
+
 
 	switch($modo) {
 		
-		case 'edit'	:	
+		case 'edit'	:
 				$ar_proyectos_section = (array)$this->get_ar_proyectos_section();
 				$id_wrapper = 'wrapper_'.$identificador_unico;
 				$input_name = "{$tipo}_{$parent}";
 				$component_info 	= $this->get_component_info('json');
+
+				# VERIFY USER LOGGED IS CURRENT VIEWED USER			
+				$user_id_logged = navigator::get_user_id();
+				$user_id_viewed = $parent;
+				if($user_id_logged==$user_id_viewed) {
+					$permissions=1; // Read only
+				}
 				break;
 
 		case 'tool_time_machine' :	

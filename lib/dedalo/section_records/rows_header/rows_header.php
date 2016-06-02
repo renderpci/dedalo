@@ -3,7 +3,7 @@
 	# CONTROLLER
 	
 	$tipo				= $this->section_records_obj->get_tipo();
-	$permissions		= common::get_permissions($tipo);
+	$permissions		= common::get_permissions($tipo,$tipo);
 	$modo				= $this->get_modo();
 	$layout_map 		= $this->section_records_obj->rows_obj->options->layout_map;
 

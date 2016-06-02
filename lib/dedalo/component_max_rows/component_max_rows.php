@@ -11,7 +11,7 @@
 	$valor					= $this->get_valor();
 
 	# Fixed to 1
-	$permissions			= 1; #common::get_permissions($tipo);
+	$permissions			= 1;
 	
 	switch($modo) {	
 

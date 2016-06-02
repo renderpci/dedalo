@@ -392,7 +392,7 @@ class component_layout extends component_common {
 	*           [dd704] => Array ()
 	*       )
 	*/	
-	protected static function get_ar_layout_hierarchy($section_tipo) {
+	public static function get_ar_layout_hierarchy($section_tipo) {
 		
 		# Modelo name's searched
 		# Buscamos sólo los elementos raiz, no los elementos específicos como componentes o botones
@@ -460,7 +460,7 @@ class component_layout extends component_common {
 	*/
 	public static function walk_layout_map( $section_obj, $ar_tipo, &$ar_resolved_elements=array() ,$ar_exclude_elements) {
 
-		$section_id				= $section_obj->get_section_id();		#dump($section_obj->get_tipo(),"tipo -  section_id: $section_id");die();
+		$section_id				= $section_obj->get_section_id();
 		$modo 					= $section_obj->get_modo();
 		$current_tipo_section 	= $section_obj->get_tipo();
 		$html 					= '';
@@ -490,7 +490,7 @@ class component_layout extends component_common {
 			$RecordObj_dd 			= new RecordObj_dd($terminoID);
 			$element_modelo_name	= $RecordObj_dd->get_modelo_name();		#dump($element_modelo_name,'switch element_modelo_name '.$terminoID);
 			$element_tipo 			= $terminoID;
-			$element_lang 			= DEDALO_DATA_LANG;	if($RecordObj_dd->get_traducible()=='no') $element_lang = DEDALO_DATA_NOLAN;
+			$element_lang 			= ($RecordObj_dd->get_traducible()=='no') ? DEDALO_DATA_NOLAN : DEDALO_DATA_LANG;
 			$html_elements			= '';	# Important: reset html_elements every iteration
 			
 			$ar_tipo_next_level 	= $ar_tipo[$terminoID];
@@ -510,7 +510,7 @@ class component_layout extends component_common {
 							$children_modelo_name = RecordObj_dd::get_modelo_name_by_tipo($children_tipo,true);
 								#dump($children_modelo_name,'children_modelo_name');
 
-							if ($children_modelo_name=='section_group_div') {
+							if ($children_modelo_name=='section_group_div' || $children_modelo_name=='section_group') {
 								#dump($children_modelo_name,'$children_modelo_name');
 
 								# Extraemos el html del conjunto recursivamente
@@ -527,8 +527,8 @@ class component_layout extends component_common {
 									continue; # skip
 								}
 								
-								$RecordObj_dd2	= new RecordObj_dd($children_tipo);								
-								$children_lang 	= $RecordObj_dd2->get_traducible()=='no' ? DEDALO_DATA_NOLAN : DEDALO_DATA_LANG;
+								$RecordObj_dd2	= new RecordObj_dd($children_tipo);			
+								$children_lang 	= ($RecordObj_dd2->get_traducible()=='no') ? DEDALO_DATA_NOLAN : DEDALO_DATA_LANG;
 								$component_obj	= component_common::get_instance($children_modelo_name,
 																				 $children_tipo,
 																				 $section_id,
@@ -585,13 +585,15 @@ class component_layout extends component_common {
 									continue; # skip
 								}
 								
-								$RecordObj_dd2	= new RecordObj_dd($children_tipo);
-								$children_lang 	= DEDALO_DATA_LANG;	if($RecordObj_dd2->get_traducible()=='no') $children_lang = DEDALO_DATA_NOLAN;
-	
-								$component_obj	= component_common::get_instance($children_modelo_name, $children_tipo, $section_id, 'edit', $children_lang, $section_obj->get_tipo() );
-
+								$RecordObj_dd2 = new RecordObj_dd($children_tipo);
+								$children_lang = ($RecordObj_dd2->get_traducible()=='no') ? DEDALO_DATA_NOLAN : DEDALO_DATA_LANG;
 								
-
+								$component_obj = component_common::get_instance($children_modelo_name,
+																				$children_tipo,
+																				$section_id,
+																				'edit',
+																				$children_lang,
+																				$section_obj->get_tipo() );
 								if(SHOW_DEBUG) {
 									#dump($component_obj," component_obj");
 									#dump($section_obj->get_tipo()," section tipo  component $children_tipo ($children_modelo_name)");
@@ -600,8 +602,7 @@ class component_layout extends component_common {
 								$component_obj->current_tipo_section = $section_obj->get_tipo();//$current_tipo_section;
 
 								$current_element_html = $component_obj->get_html();
-								#$a++;$gg++; # GRIDSTER
-								#$current_element_html = '<li data-row="'.$a.'" data-col="1" data-sizex="5" data-sizey="2">'.$current_element_html.'</li>';
+									#dump($current_element_html, ' $current_element_html ++ '.to_string($children_modelo_name));
 								$html_elements	.= $current_element_html ;							
 								
 							}
@@ -731,17 +732,17 @@ class component_layout extends component_common {
 
 				# COMPONENTS
 				case (strpos($element_modelo_name, 'component_')!==false) :
-						
-						#$component_obj	= new $element_modelo_name($terminoID, $section_id, $modo, $element_lang);
-						$component_obj	= component_common::get_instance($element_modelo_name, $terminoID, $section_id, 'edit', $element_lang, $section_obj->get_tipo());
+
+						$component_obj	= component_common::get_instance($element_modelo_name,
+																		 $terminoID,
+																		 $section_id,
+																		 'edit',
+																		 $element_lang,
+																		 $section_obj->get_tipo());
 						$component_obj->current_tipo_section = $current_tipo_section;
-							#dump($section_obj->get_tipo()," section tipo  component $terminoID ($element_modelo_name)");die();
-
-												
-
+							#dump($section_obj->get_tipo()," section tipo  component $terminoID ($element_modelo_name)"); #die();
 						$html	.= $component_obj->get_html();
 							#dump($element_modelo_name,"component_obj");
-											
 						break;
 
 				# BUTTONS
@@ -752,8 +753,8 @@ class component_layout extends component_common {
 							#dump($button_obj,'button_obj');
 						$html	.= $button_obj->get_html();
 
-						break;		
-
+						break;
+				
 				# RELATION_LIST
 				case (strpos($element_modelo_name, 'relation_list')!==false):
 						# Nothing to do

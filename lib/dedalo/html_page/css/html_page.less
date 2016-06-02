@@ -1,3 +1,11 @@
+
+// Variables
+@common_css: "../../common/css";
+
+// Usage
+@import "@{common_css}/library.less";
+
+
 /*
 @import url(http://fonts.googleapis.com/css?family=Oxygen:400,300,700);
 */
@@ -184,7 +192,7 @@ q:before, q:after { content:''; content:none; }
 		//width: 97.6%;
 		overflow: auto;
 		max-height: 600px;
-		padding: 5px;
+		padding: 0;
 		padding-left: 5px;
 		padding-right: 5px;
 		color: #7f7f7f;
@@ -261,9 +269,7 @@ q:before, q:after { content:''; content:none; }
 	width: 100%;
 	height: 100%;
 	background-color: #F7F7F9;
-	filter: alpha(opacity=45);
-	-moz-opacity: 0.45;
-	-khtml-opacity: 0.45;
+	filter: alpha(opacity=45);	
 	opacity: 0.45;
 	z-index: 1;
 	cursor: wait;
@@ -309,6 +315,9 @@ span.ajax_loading_msg {
 	right: 15px;
 	bottom: 25px;
 	/*clear: both;*/
+	@media screen and (max-width: 980px) {
+		display: none !important;
+	}
 }
 
 

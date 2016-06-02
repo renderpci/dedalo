@@ -97,16 +97,14 @@
 
 
 						#
-						# TOOL_EXPORT button for export to csv, etc.
-						if(SHOW_DEBUG) {
+						# TOOL_EXPORT button for export to csv, etc.						
 						$authorized_tool = (bool)component_security_tools::is_authorized_tool_for_logged_user('tool_export');
 						if ($authorized_tool && defined('DEDALO_TOOL_EXPORT_FOLDER_PATH') && !$is_process_section) {
 							$tool_export = new tool_export($tipo,'button');
 							$html_buttons  .= $tool_export->get_html();
 						}
-						}						
-					
-					
+							
+										
 						
 						/* # TOOL_DIFFUSION button for export to mysql OLD
 							$authorized_tool = (bool)component_security_tools::is_authorized_tool_for_logged_user('tool_diffusion');						
@@ -119,6 +117,8 @@
 								}
 							}
 							*/
+
+
 						#
 						# TOOL_DIFFUSION button for export to mysql
 						if ((bool)component_security_tools::is_authorized_tool_for_logged_user('tool_diffusion') &&
@@ -150,9 +150,9 @@
 									#onclick=\"tool_update_cache.update_cache(this,{'section_tipo':'$this->tipo'})\">".label::get_label('update_cache')." $this->tipo *
 									#</div>";
 								}							
-							}
-																					
-						}					
+							}																					
+						}
+						
 
 					$html_buttons .= "\n</div>";//end section_buttons_container
 					$html_contenido .= $html_buttons;

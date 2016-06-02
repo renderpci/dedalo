@@ -37,7 +37,8 @@
 					break;	
 						
 		
-		case ($permissions>=2)	:
+		case 2	:
+		case 3	:
 
 					# ETIQUETA (LABEL)
 					$html_contenido = component_common_draw::draw_label($this);
@@ -105,7 +106,7 @@
 					//fragment_info = function(tagName, tipo, parent)
 
 		
-					if($permissions==3){
+					if(SHOW_DEBUG) {
 						#$html_contenido .= "\n <span class=\"css_span_debugger\" id=\"debugger_{$tipo}\" >{$debugger}</span>";
 					}
 					break;

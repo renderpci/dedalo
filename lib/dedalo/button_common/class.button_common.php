@@ -13,23 +13,24 @@ class button_common extends common {
 	protected $modo ;
 	protected $lang ;
 	protected $target ;
+	protected $section_tipo ;
 
 	public $context_tipo; //dependiendo de quien realice la llamada (area, seccion...) enviará su tipo, independiente de modelo, el tipo será el contexto de la llamada (dd12, dd323...)
 	
-	function __construct($tipo, $target) {
+	function __construct($tipo, $target, $section_tipo) {
 		
-		#dump($tipo,'tipo '. get_called_class() );
-		
+		$this->tipo 		= $tipo;
+		$this->target 		= $target;
+		$this->section_tipo = $section_tipo;
+
 		$this->define_id(NULL);
-		$this->define_tipo($tipo);
 		$this->define_lang(DEDALO_APPLICATION_LANG);	
-		$this->define_modo(navigator::get_selected('modo'));		#dump( navigator::get_selected('modo') );
+		$this->define_modo(navigator::get_selected('modo'));
 
 		parent::load_structure_data();
 
 		# Target is normally a int section id matrix
 		if(!empty($target) && !is_int($target)) throw new Exception("Error creating delete button (target $target is not valid int id matrix)", 1);		
-		$this->target = $target ;
 	}
 
 	# define id
@@ -46,7 +47,7 @@ class button_common extends common {
 	* GET_BUTTON_CACHE_KEY_NAME
 	*/
 	public function get_button_cache_key_name() {
-		return DEDALO_DATABASE_CONN.'_button_get_html_'.$this->modo.'_'.$this->lang.'_'.$this->tipo.'_'.common::get_permissions($this->tipo);
+		return DEDALO_DATABASE_CONN.'_button_get_html_'.$this->modo.'_'.$this->lang.'_'.$this->tipo; //.'_'.common::get_permissions($this->tipo);
 	}
 
 	# GET HTML CODE . RETURN INCLUDE FILE __CLASS__.PHP

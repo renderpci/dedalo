@@ -3,8 +3,10 @@
 	# VISUALIZADOR HTML	
 	
 	print "\n<!-- AREA_ROOT [tipo:$tipo modo:$modo] -->";
-	print "\n<div class=\"css_wrap_area_root\" 
-	data-tipo=\"{$tipo}\" data-lang=\"{$lang}\" data-component_name=\"{$component_name}\" >";
+	print "\n<div class=\"css_wrap_area css_wrap_area_root\" 
+	data-tipo=\"{$tipo}\"
+	data-lang=\"{$lang}\"
+	>";
 	
 	# ETIQUETA (LABEL)
 	$html_label = "\n<div class=\"css_area_titulo\" > ".component_common_draw::draw_label($this)." </div>";	
@@ -21,7 +23,7 @@
 						
 		case ($permissions>=1)	:
 		
-					$html_contenido .= "\n <blockquote>";
+					#$html_contenido .= "\n <blockquote>";
 					/*
 					#$menu = new menu('list');
 					#$html_contenido .= 	"<hr>".$menu->get_html();	
@@ -41,8 +43,8 @@
 					#$html_contenido .= "\n <span  class=\"css_span_log\"></span>";					
 					#$html_contenido .= "\n <span  class=\"css_span_ejemplo\">$ejemplo</span>";						
 										
-					if($permissions==3){
-						$html_contenido .= "\n <span class=\"css_span_debugger\" id=\"debugger_{$id}\" >{$debugger}</span>";	
+					if(SHOW_DEBUG) {
+						#$html_contenido .= "\n <span class=\"css_span_debugger\">{$debugger}</span>";	
 					}
 					break;			
 											

@@ -113,7 +113,7 @@ if($mode=='new_element') {
 				continue;
 			}
 			$title = RecordObj_dd::get_termino_by_tipo($current_tipo,$lang,true);
-			$html .= $title;
+			#html .= $title;
 			$html .= " <input type=\"text\" class=\"\" name=\"$current_tipo\" data-tipo=\"{$current_tipo}\" value=\"\" placeholder=\"$title\" /> ";
 		}
 

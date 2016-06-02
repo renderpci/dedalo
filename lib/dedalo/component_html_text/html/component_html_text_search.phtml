@@ -5,7 +5,7 @@
 	if(isset($_REQUEST[$tipo])) $dato = $_REQUEST[$tipo];		#var_dump($_REQUEST[$tipo]);
 	
 	#print "\n<!-- TEXT AREA [tipo:$tipo id_matrix:$id] -->";
-	#print "\n<div class=\"css_wrap_html_text\" >";
+	print "\n<div class=\"wrap_component css_wrap_html_text\" >";
 	
 	# ETIQUETA (LABEL)
 	$html_label = component_common_draw::draw_label($this);
@@ -42,5 +42,5 @@
 	print $html_contenido;
 	
 	
-	#print "\n</div>\n\n"; //wrap
+	print "\n</div>\n\n"; //wrap
 ?>

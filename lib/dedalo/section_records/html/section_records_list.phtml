@@ -3,13 +3,15 @@
 	# VISUALIZADOR HTML	
 	
 	print "\n <!-- SECTION RECORDS LIST [tipo:$tipo modo:$modo] -->";
+	
 	print "\n<div class=\"div_main_list\"></div>";
+	
 	print "\n <div class=\"css_section_list_wrap\" id=\"wrap_{$tipo}_{$modo}\" data-options='".json_handler::encode($this->options)."' >";
 	
 	
 	# CONTENIDO
 	$html_contenido='';	
-	$html_contenido  .= "\n<div class=\"css_section_group_content tab_content\">";	
+	$html_contenido  .= "\n<div class=\"css_section_group_content tab_content wrap_table_rows_list\">";	
 	#$html_contenido  = "\n<div class=\"content_ajax\">";
 	
 	switch($permissions) {

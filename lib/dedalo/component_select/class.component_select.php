@@ -70,11 +70,12 @@ class component_select extends component_common {
 	*/
 
 	
-	# GET VALUE . DEFAULT IS GET DATO . OVERWRITE IN EVERY DIFFERENT SPECIFIC COMPONENT
-	public function get_valor($lang=DEDALO_DATA_LANG) {
-		
-		# Always run list of values
-		$ar_list_of_values	= $this->get_ar_list_of_values( $lang, null ); # Importante: Buscamos el valor en el idioma actual		
+	/**
+	* GET_VALOR
+	* Get value . default is get dato . overwrite in every different specific component
+	* @return string | null $valor
+	*/
+	public function get_valor($lang=DEDALO_DATA_LANG) {				
 
 		if (isset($this->valor)) {
 			if(SHOW_DEBUG) {
@@ -83,30 +84,47 @@ class component_select extends component_common {
 			return $this->valor;
 		}
 
-		$dato = $this->get_dato();
-		if (empty($dato)) {
-			return $this->valor = null;
-		}
-		
-		# Test dato format (b4 changed to object)
-		foreach ($dato as $key => $value) {
-			if (!is_object($value)) {
-				if(SHOW_DEBUG) {
-					dump($dato," dato");
+		$valor  = null;		
+		$dato   = $this->get_dato();	#dump($dato, ' dato ++ '.$this->tipo.'  - '.to_string($this->parent));
+		if (!empty($dato)) {
+			
+			# Test dato format (b4 changed to object)
+			if(SHOW_DEBUG) {
+				foreach ($dato as $key => $value) {
+					if (!is_object($value)) {
+						if(SHOW_DEBUG) {
+							dump($dato," dato");
+						}
+						trigger_error(__METHOD__." Wrong dato format. OLD format dato in $this->label $this->tipo .Expected object locator, but received: ".gettype($value) .' : '. print_r($value,true) );
+						return $valor;
+					}
 				}
-				trigger_error(__METHOD__." Wrong dato format. OLD format dato in $this->label $this->tipo .Expected object locator, but received: ".gettype($value) .' : '. print_r($value,true) );
-				return $this->valor = null;
-			}
-		}
+			}		
 
-		foreach ($ar_list_of_values->result as $locator => $rotulo) {
-			$locator = json_handler::decode($locator);	# Locator is json encoded object
-			if (in_array($locator, $dato)) {
-				$this->valor = $rotulo;
-				return $this->valor;
+			# Always run list of values
+			$ar_list_of_values	= $this->get_ar_list_of_values( $lang, null ); # Importante: Buscamos el valor en el idioma actual
+
+			foreach ($ar_list_of_values->result as $locator => $rotulo) {
+				$locator = json_handler::decode($locator);	# Locator is json encoded object
+					#dump($rotulo, ' rotulo ++ '.to_string($locator));
+				if (in_array($locator, $dato)) {
+					$valor = $rotulo;
+					break;
+				}
 			}
-		}
+
+		}//end if (!empty($dato)) 
+
+		# Set valor
+		$this->valor = $valor;
+
+		#dump($valor, ' valor ++ '.to_string());	
+
+		return $valor;
+
 	}//end get_valor
+
+
 
 	/*
 	* GET_VALOR_LANG
@@ -183,6 +201,27 @@ class component_select extends component_common {
 		}
 		return $search_query;
 	}//end get_search_query
+
+
+
+	/**
+	* GET_VALOR_EXPORT
+	* Return component value sended to export data
+	* @return string $valor
+	*/
+	public function get_valor_export( $valor=null, $lang=DEDALO_DATA_LANG ) {
+
+		# When is received 'valor', set as dato to avoid trigger get_dato against DB 
+		# Received 'valor' is a json string (array of locators) from previous database search
+		if (!is_null($valor)) {
+			$dato = json_decode($valor);
+			$this->set_dato($dato);			
+		}
+		$valor = $this->get_valor($lang);
+		
+		return $valor;
+
+	}#end get_valor_export
 
 
 

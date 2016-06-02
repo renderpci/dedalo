@@ -20,9 +20,9 @@
 	
 	# CONTENIDO (INPUT)
 	$html_contenido = '';
-	switch($permissions) {
+	switch(true) {
 			
-		case 0	:
+		case ($permissions==0) :
 				$html_contenido .= "";
 				break;						
 		
@@ -53,7 +53,7 @@
 				}					
 
 				
-				if ($permissions_admin<2) {
+				if ($permissions<3) {
 
 					# USER: Label to info user about current admin options values (read only)
 					switch (true) {
@@ -68,7 +68,7 @@
 							break;
 					}
 					
-				}else if ($permissions_admin>=2) {
+				}else if ($permissions>=3) {
 
 					# Admin options
 					$html_contenido .= "\n <select onchange=\"component_state.update_state_locator(this)\"
@@ -143,12 +143,12 @@
 				$html_contenido .= "</div>";
 					
 		
-				if($permissions==3) {
-					$html_contenido .= "\n <span class=\"css_span_debugger\" id=\"debugger_{$tipo}\" >{$debugger}</span>";	
+				if(SHOW_DEBUG) {
+					#$html_contenido .= "\n <span class=\"css_span_debugger\" id=\"debugger_{$tipo}\" >{$debugger}</span>";	
 				}
-				break;															
-							
+				break;							
 	}
+	
 
 	# Prepare content to show in page
 	tools::prepare_content($html_contenido);	
@@ -158,9 +158,15 @@
 	print $html_label;
 	print $html_contenido;
 
+
+	#if(SHOW_DEBUG) {
+	#	$total=round(microtime(1)-$this->start_time,3);
+	#	echo "<span class=\"debug_info ar_list_of_values_debug_info\">Time: $total</span>";
+	#}
+
 	
 	
-	print "\n</div>\n\n"; //wrap
+	print "</div>"; //wrap
 
 	/*
 	$html_contenido='';

@@ -2,7 +2,6 @@
 	
 	# CONTROLLER
 
-
 	$modo	 = $this->section_records_obj->options->modo;
 	$context = (object)$this->section_records_obj->rows_obj->options->context; # inyectado a la sección y usado para generar pequeñas modificaciones en la visualización del section list como por ejemplo el link de enlazar un registro con un portal
 	if (!isset($context->context_name)) {
@@ -11,7 +10,8 @@
 	#dump($context,"context");
 	$result	 		= $this->section_records_obj->rows_obj->result;
 	$tipo			= $this->section_records_obj->get_tipo();
-	$permissions 	= common::get_permissions($tipo);
+	$section_tipo 	= $tipo;
+	$permissions 	= common::get_permissions($section_tipo, $tipo);
 	
 	$ar_component_resolved = array();
 	$button_delete_permissions = (int)$this->section_records_obj->button_delete_permissions;
@@ -38,9 +38,9 @@
 					# record is not valid 
 					if($section_id<1 && strpos($section_id, DEDALO_SECTION_ID_TEMP)===false) {
 						if(SHOW_DEBUG) {
-							dump($section_id, "DEBUG WARNING: section_id is <1 in result: ".to_string($result));;
-						}
-						return null;
+							dump($section_id, "DEBUG WARNING: section_id is <1 in result: ".to_string($result));						
+							return null;
+						}						
 					}		
 
 				#
@@ -57,7 +57,7 @@
 					$label					= $section->get_label();
 					$component_name			= get_class($section);
 					$section_info 			= $section->get_section_info('json');
-					$permissions			= common::get_permissions($tipo);
+					$permissions			= common::get_permissions($tipo, $tipo);
 						$section->set_permissions($permissions);	// Fix permissions for current element (important)
 
 				#
@@ -147,7 +147,7 @@
 							#dump($section->get_tipo(),"section_list"); #die();						
 
 							$record_layout_html .= component_layout::walk_layout_map($current_section_obj, $layout_map, $ar, $ar_exclude_elements); 
-								#dump($ar_exclude_elements,"layout ".$current_section_obj->tipo);							
+								#dump($ar_exclude_elements,"layout ".$current_section_obj->get_tipo());							
 
 							if(SHOW_DEBUG) {
 								global$TIMER;$TIMER['component_layout::walk_layout_map'.'_OUT_'.$section->get_tipo().'_'.$section->get_modo().'_'.microtime(1)]=microtime(1);

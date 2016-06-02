@@ -254,20 +254,21 @@ class tool_time_machine extends tool_common {
 		$ar_authorized_areas_for_user 	= component_security_areas::get_ar_authorized_areas_for_user($userID, $mode_result='full');
 			#dump($ar_authorized_areas_for_user, 'ar_authorized_areas_for_user', array());
 		if(is_array($ar_authorized_areas_for_user)) foreach ($ar_authorized_areas_for_user as $key => $value) {
-			if ($key == $tipo.'-admin' && $value == 2) {
+			#if ($key == $tipo.'-admin' && $value == 2) {
+			if ($key == $tipo && $value == 3) {
 				return (bool)true;				
 			}
 			#
 			# USERS / GROUPS / PROJECTS CASE 
 			# This areas don't have '-admin' parameter, so we accept only type as administrable (with state '2')
 			switch (true) {
-				case ($key==$tipo && $tipo==DEDALO_SECTION_USERS_TIPO && $value == 2):
+				case ($key==$tipo && $tipo==DEDALO_SECTION_USERS_TIPO && $value >= 2):
 					return (bool)true;
 					break;
-				case ($key==$tipo && $tipo==DEDALO_SECTION_PROFILES_TIPO && $value == 2):
+				case ($key==$tipo && $tipo==DEDALO_SECTION_PROFILES_TIPO && $value >= 2):
 					return (bool)true;
 					break;	
-				case ($key==$tipo && $tipo==DEDALO_SECTION_PROJECTS_TIPO && $value == 2):
+				case ($key==$tipo && $tipo==DEDALO_SECTION_PROJECTS_TIPO && $value >= 2):
 					return (bool)true;
 					break;
 			}

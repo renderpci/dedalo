@@ -32,7 +32,8 @@
 				break;
 
 
-		case ($permissions>=2) :
+		case 2 :
+		case 3 :
 
 				$html_contenido .= "\n <select class=\"css_select\"
 				onchange=\"component_select.Save(this)\"
@@ -70,15 +71,10 @@
 
 
 				if(SHOW_DEBUG) {
-					$html_contenido .= "\n <div class=\"debug_info\"> Current val: <strong>$valor</strong></div>";
+					#$html_contenido .= "\n <div class=\"debug_info\"> Current val: <strong>$valor</strong></div>";				
+					#$html_contenido .= "\n <span class=\"css_span_debugger\" id=\"debugger_{$tipo}\" >{$debugger}</span>";
 				}
-
-
-				if($permissions==3) {
-					$html_contenido .= "\n <span class=\"css_span_debugger\" id=\"debugger_{$tipo}\" >{$debugger}</span>";
-				}
-				break;				
-
+				break;
 	}
 
 	# Prepare content to show in page

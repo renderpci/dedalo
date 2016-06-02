@@ -6,12 +6,12 @@
 	$parent 				= $this->get_parent();
 	$section_tipo			= $this->get_section_tipo();
 	$modo					= $this->get_modo();		
-	$dato 					= $this->get_dato();			#dump($dato);
+	$dato 					= $this->get_dato();
 	$label 					= $this->get_label();
 	$required				= $this->get_required();
 	$propiedades			= $this->get_propiedades();
 	$debugger				= $this->get_debugger();
-	$permissions			= common::get_permissions($tipo);
+	$permissions			= common::get_permissions($section_tipo,$tipo);
 	$ejemplo				= NULL;
 	$html_title				= "Info about $tipo";
 	$ar_tools_obj			= $this->get_ar_tools_obj();	
@@ -39,6 +39,15 @@
 				$input_name 			= "{$tipo}_{$parent}";
 				$component_info 		= $this->get_component_info('json');				
 				$dato_json 				= json_handler::encode($dato);
+
+				#
+				# SEMANTIC NODES
+				$semantic_nodes = $this->get_semantic_nodes();
+				if ( !empty($this->semantic_nodes) ) {
+					# JS/CSS ADD
+					js::$ar_url[]  = DEDALO_LIB_BASE_URL."/tools/tool_semantic_nodes/js/tool_semantic_nodes.js";
+					css::$ar_url[] = DEDALO_LIB_BASE_URL."/tools/tool_semantic_nodes/css/tool_semantic_nodes.css";
+				}
 
 				$in_time_machine =  (isset($_REQUEST['m']) && $_REQUEST['m']=='tool_time_machine') || 
 									(isset($_REQUEST['mode']) && $_REQUEST['mode']=='load_preview_component') ? true : false;				

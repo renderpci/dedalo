@@ -752,4 +752,17 @@ function app_lang_to_tld2($lang) {
 	return $tld2;
 }
 
+
+
+function str_lreplace($search, $replace, $subject) {
+
+    $pos = strrpos($subject, $search);
+
+    if($pos !== false) {
+        $subject = substr_replace($subject, $replace, $pos, strlen($search));
+    }
+
+    return $subject;
+}
+
 ?>

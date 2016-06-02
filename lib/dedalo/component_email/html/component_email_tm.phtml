@@ -29,8 +29,8 @@
 					title=\"$html_title\" 
 					disabled />";
 										
-					if($permissions==3){
-						$html_contenido .= "\n <span class=\"css_span_debugger\" id=\"debugger_{$id}\" >{$debugger}</span>";	
+					if(SHOW_DEBUG) {
+						#$html_contenido .= "\n <span class=\"css_span_debugger\" id=\"debugger_{$id}\" >{$debugger}</span>";	
 					}
 					break;
 		

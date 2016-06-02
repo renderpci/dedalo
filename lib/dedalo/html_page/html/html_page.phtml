@@ -39,6 +39,8 @@ var page_globals = {
 	user_id:'<?php if(isset($user_id)) echo $user_id ?>',
 	username:'<?php if(isset($username)) echo $username ?>',
 	full_username:'<?php if(isset($full_username)) echo $full_username ?>',
+	is_global_admin:<?php var_export($is_global_admin); ?>,
+	components_to_refresh:[],
 <?php if (isset($_REQUEST["portal_tipo"])) { ?>
 	portal_tipo:'<?php echo $_REQUEST["portal_tipo"] ?>',
 <?php } ?>

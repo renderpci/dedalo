@@ -20,8 +20,9 @@
 		case 0	:	$html_contenido .= "\n <span class=\"css_span_dato\"> ".label::get_label('sin_acceso')." </span>"; 		
 					break;
 						
-		case ($permissions>=1)	:
-		
+		case 1	:						
+		case 2	: 		
+		case 3	:	
 					foreach ($ar_section as $key => $section){
 						
 						$label	= $section->get_label();
@@ -40,10 +41,6 @@
 					}					
 			
 					$html_contenido .= "\n $html_section ";	
-						
-		case 2	: 
-		
-		case 3	:	
 					break;			
 	}
 	$html_contenido .= "\n</div>";

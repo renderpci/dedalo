@@ -45,11 +45,11 @@
 
 				$html 	.= "  <span>[";
 				$html 	.= "  <span id=\"update_current_version\">Dédalo ver: $current_dedalo_version</span> - ";
-				$html 	.= "  <span id=\"update_current_version\">User data in PostgreSQL ver: $current_version</span>";
+				$html 	.= "  <span id=\"update_current_version\">User data in PostgreSQL ver: $current_version_in_db</span>";
 				$html 	.= "  ]</span>";
 				
 				$html   .= " <div class=\"panel_option_subcontent\">";
-				$html 	.= "  <span id=\"update_current_version\">$current_version</span>";
+				$html 	.= "  <span id=\"update_current_version\">$current_version_in_db</span>";
 				$html 	.= "  <span id=\"update_to_version\"> -----> $update_version</span>";
 				$html   .= "  <div id=\"update_version_response\"></div>";
 				$html   .= "  </div>";#end panel_option_subcontent
@@ -60,11 +60,12 @@
 
 				$html 		.= "  <span id=\"update_current_version\">$current_dedalo_version</span>";
 				$html   	.= " <div class=\"panel_option_subcontent\">";
-				if($current_dedalo_version == $current_version){
+				if($current_dedalo_version == $current_version_in_db){
 					$html 	.= "  <span class=\"glyphicon glyphicon-ok-circle\" aria-hidden=\"true\" style=\"color:#5cbd39\"></span> ";
+					$html 	.= "  <span class=\"\" style=\"color:#5cbd39\">Data format is updated</span> ";
 				}else{
 					$html 	.= "  <span class=\"glyphicon glyphicon-ban-circle\" aria-hidden=\"true\" style=\"color:#f72f19\"></span> ";
-					$html 	.= "  <span id=\"update_current_version\">User data in PostgreSQL ver: $current_version</span> </br>";
+					$html 	.= "  <span id=\"update_current_version\">User data in PostgreSQL ver: $current_version_in_db</span> </br>";
 					$html 	.= "  <span>ALERT: DON'T HAVE UPDATE!!</span> </br>";
 				}
 				$html  		.= "  </div>";#end panel_option_subcontent
@@ -115,9 +116,34 @@
 			$html   .= " </div>";#end panel_option_subcontent
 
 			$html   .= "</div>";#end panel_option
+
+
+			#
+			# SKIP_PUBLICATION_STATE_CHECK
+			$checked = (isset($_SESSION['dedalo4']['config']['skip_publication_state_check']) && $_SESSION['dedalo4']['config']['skip_publication_state_check']==1) ? 'checked="checked"' : '';
+			$html   .= "<div class=\"panel_option\">";
+			$html   .= " <span class=\"glyphicon glyphicon-cog\" aria-hidden=\"true\"></span>";
+			$html   .= " <span>".label::get_label('skip_publication_state_check')."</span>";
+			$html   .= " <div class=\"panel_option_subcontent panel_option_subcontent_inline\">";
+			$html   .= "   <div class=\"checkbox\"><label>
+							<input type=\"checkbox\" id=\"skip_publication_state_check\" class=\"\" name=\"skip_publication_state_check\" value=\"true\" $checked
+							onchange=\"tool_administration.skip_publication_state_check(this)\">
+							</label>
+						  </div>";
+			$html   .= "  <div id=\"skip_publication_state_check_response\"></div>";
+			$html   .= " </div>";#end panel_option_subcontent
+			$html   .= "</div>";#end panel_option
 			
 
-			
+			#
+			# REMOVE AV TEMPORALS
+			$html   .= "<div class=\"panel_option\">";
+			$html   .= " <span class=\"glyphicon glyphicon-cog\" aria-hidden=\"true\"></span>";
+			$html   .= " <a href=\"javascript:;\" data-mode=\"remove_av_temporals\" onclick=\"tool_administration.trigger_call(this,event)\">".label::get_label('remove_av_temporals')."</a>";
+			$html   .= " <div class=\"panel_option_subcontent\">";
+			$html   .= "  <div id=\"remove_av_temporals_response\"></div>";
+			$html   .= " </div>";#end panel_option_subcontent
+			$html   .= "</div>";#end panel_option
 			
 
 
@@ -192,6 +218,14 @@
 													 $dedalo_structure_info
 													);
 
+			#
+			# DEDALO DATA VERSION
+			$info_database = pg_version(DBi::_getConnection());	
+			$html .= tool_administration::show_info( "Dedalo data version",
+													 ' (matrix_update)',
+													 $current_version_in_db
+													);
+
 
 			#
 			# DATABASE
@@ -238,36 +272,42 @@
 
 			#
 			# HTTP HEADERS
-			# it could be useful if you using nginx instead of apache 
-			if (!function_exists('getallheaders')) { 
-			    function getallheaders() { 
-			           $headers = ''; 
-			       foreach ($_SERVER as $name => $value) { 
-			           if (substr($name, 0, 5) == 'HTTP_') { 
-			               $headers[str_replace(' ', '-', ucwords(strtolower(str_replace('_', ' ', substr($name, 5)))))] = $value; 
-			           } 
-			       } 
-			       return $headers; 
-			    } 
-			} 
-			$url 	 = DEDALO_PROTOCOL . $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI'];
-			$headers = array();
-			#$headers += headers_list();
-			$headers += get_headers($url, 1);
-			$headers += getallheaders();
-			$html .= tool_administration::show_info( "HTTP HEADER",
-													 " $url",
-													 $headers
-													);			
+			# it could be useful if you using nginx instead of apache
+			/*
+			if (function_exists('get_headers')) {		
+			
+				if (!function_exists('getallheaders')) { 
+					function getallheaders() { 
+						   $headers = ''; 
+						foreach ($_SERVER as $name => $value) { 
+							if (substr($name, 0, 5) == 'HTTP_') { 
+								$headers[str_replace(' ', '-', ucwords(strtolower(str_replace('_', ' ', substr($name, 5)))))] = $value; 
+						   }
+						} 
+					   return $headers; 
+					} 
+				} 
+				$url 	 = DEDALO_PROTOCOL . $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI'];
+				$headers = array();
+				#$headers += headers_list();
+				$headers += get_headers($url, 1);
+				$headers += getallheaders();
+				$html .= tool_administration::show_info( "HTTP HEADER",
+														 " $url",
+														 $headers
+														);
+			}//end if (function_exists('get_headers')) 
+			*/
 
 
 			#
 			# FFMPEG
 			$ffmpeg = shell_exec(DEDALO_AV_FFMPEG_PATH." -version ");
+			$ffmpeg_config = shell_exec(DEDALO_AV_FFMPEG_PATH." -buildconf ");
 			preg_match("/ffmpeg version (.*) Copyright/", $ffmpeg, $output_array);
 			$html .= tool_administration::show_info( "FFMPEG",
 													 $output_array[1] ." - ". DEDALO_AV_FFMPEG_PATH,
-													 $ffmpeg
+													 $ffmpeg . $ffmpeg_config 
 													);
 
 
@@ -375,7 +415,7 @@
 				if ($response->result!=true) {
 					debug_log(__METHOD__." $response->msg ".to_string(), logger::WARNING);
 					if(SHOW_DEBUG) {
-						die("Error on ".$response->msg);
+						#die("Error on ".$response->msg);
 					}
 				}
 				$html .= tool_administration::show_info( "DB SEQUENCES STATE",

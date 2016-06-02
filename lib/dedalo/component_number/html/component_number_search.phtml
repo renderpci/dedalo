@@ -4,8 +4,8 @@
 	//if(isset($_REQUEST[$tipo]))					$dato = $_REQUEST[$tipo];		#var_dump($_REQUEST[$tipo]);
 	
 	
-	#print "\n<!-- NUMBER [tipo:$tipo id_matrix:$id] -->";
-	#print "\n<div class=\"css_wrap_number\" id=\"wrap_{$tipo}\">";
+	print "\n<!-- NUMBER -->";
+	print "\n<div class=\"wrap_component css_wrap_number\" id=\"wrap_{$tipo}\">";
 	
 	# ETIQUETA (LABEL)
 	$html_label = component_common_draw::draw_label($this);
@@ -34,5 +34,5 @@
 	print $html_contenido;
 	
 	
-	#print "\n</div>\n\n"; //wrap
+	print "\n</div>\n\n"; //wrap
 ?>

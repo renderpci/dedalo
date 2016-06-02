@@ -107,7 +107,7 @@
 						#dump($ar_rel_locator_for_current_tipo_section,'$ar_rel_locator_for_current_tipo_section'," for id: $id - tipo_section:$current_tipo_section");
 				}
 
-				$permissions = common::get_permissions($tipo);
+				$permissions = common::get_permissions($section_tipo,$tipo);
 					#dump($permissions," permissions");				
 				break;
 		

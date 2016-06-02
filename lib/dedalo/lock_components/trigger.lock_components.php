@@ -44,7 +44,7 @@ if ($mode=='update_lock_components_state') {
 	$full_username 	= $_SESSION['dedalo4']['auth']['full_username'];
 	session_write_close();
 
-	if ($user_id==-1) {
+	if ($user_id<0) {
 		$full_username 	= "Debug user";
 	}
 

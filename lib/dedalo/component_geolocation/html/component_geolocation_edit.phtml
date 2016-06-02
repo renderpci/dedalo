@@ -30,8 +30,8 @@
 			case 1	: 	$html_contenido .= "\n <span class=\"css_span_dato\"> Under construction </span>";
 						break;	
 							
-			case ($permissions>=2) :
-
+			case 2 :
+			case 3 :
 						#
 						# INPUTS
 						$html_contenido .= "\n <div class=\"map_inputs\">";
@@ -85,8 +85,9 @@
 	// Set var geo provider fron config
 	component_geolocation.DEDALO_GEO_PROVIDER = '<?php echo DEDALO_GEO_PROVIDER ?>';
 	// Build map
-	
+	$(function() {
 		component_geolocation.init_map('<?php echo $identificador_unico ?>');
+	});
 	setTimeout(function(){	
 		//L.Util.requestAnimFrame(map.invalidateSize,map,!1,map._container);
 		//L.map.invalidateSize(false);

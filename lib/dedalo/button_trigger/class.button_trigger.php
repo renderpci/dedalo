@@ -10,12 +10,15 @@ class button_trigger extends button_common {
 
 	public $parent;
 
-	function __construct($tipo, $target='') {
+	function __construct($tipo, $target='', $section_tipo=null) {
+
+		if (empty($section_tipo)) {
+			$section_tipo = TOP_TIPO;
+		}
 
 		# common __construct
-		parent::__construct($tipo, $target);
+		parent::__construct($tipo, $target, $section_tipo);
 
-		#dump($this->propiedades);
 	}
 
 

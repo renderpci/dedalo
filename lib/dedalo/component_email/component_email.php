@@ -2,7 +2,6 @@
 	
 	# CONTROLLER	
 	
-	#$id 					= $this->get_id();
 	$tipo 					= $this->get_tipo();
 	$parent 				= $this->get_parent();
 	$section_tipo			= $this->get_section_tipo();
@@ -12,7 +11,7 @@
 	$required				= $this->get_required();
 	$debugger				= $this->get_debugger();
 	if($modo != 'simple')
-	$permissions			= common::get_permissions($tipo); 	
+	$permissions			= common::get_permissions($section_tipo,$tipo);
 	$ejemplo				= "example: 'user@server.org'";
 	$html_title				= "Info about $tipo";
 	$valor					= $this->get_valor();				
@@ -20,10 +19,7 @@
 	$lang_name				= $this->get_lang_name();
 	$identificador_unico	= $this->get_identificador_unico();
 	$component_name			= get_class($this);
-	$valor_string			= $dato;
-
-	
-	
+	$valor_string			= $dato;	
 	$file_name				= $modo;	
 	
 	switch($modo) {

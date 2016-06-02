@@ -19,7 +19,7 @@
 	# CONTENIDO (INPUT)
 	$html_contenido = '';
 	//	dump($_SESSION['dedalo4']['auth']['permissions_table'], '$_SESSION'.to_string());
-			#dump($permissions_admin, ' permissions_admin'.to_string());
+			#dump($permissions, ' permissions'.to_string());
 	switch($permissions) {
 			
 		case 0	:	$html_contenido .= "\n <span class=\"css_span_dato\"> ".label::get_label('sin_acceso')." ".get_class()."</span>"; 
@@ -51,7 +51,7 @@
 					}
 					#$html_contenido .= "</label> valor: $valor - valor_for_checkbox: $valor_for_checkbox ";
 
-					if ($permissions_admin<2) {
+					if ($permissions<3) {
 
 						# USER: Label to info user about current admin options values (read only)
 						switch (true) {
@@ -66,7 +66,7 @@
 								break;
 						}
 						
-					}else if ($permissions_admin>=2) {
+					}else if ($permissions>=3) {
 
 						# Admin options
 						$html_contenido .= "\n <select onchange=\"component_state.update_state_locator(this)\"
@@ -91,8 +91,8 @@
 						#$html_contenido .= "</label> valor: $valor - valor_for_checkbox: $valor_for_checkbox ";
 					}
 
-					if($permissions==3){
-						$html_contenido .= "\n <span class=\"css_span_debugger\" id=\"debugger_{$tipo}\" >{$debugger}</span>";	
+					if(SHOW_DEBUG) {
+						#$html_contenido .= "\n <span class=\"css_span_debugger\" id=\"debugger_{$tipo}\" >{$debugger}</span>";	
 					}
 					break;
 			

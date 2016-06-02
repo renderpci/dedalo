@@ -3,7 +3,7 @@
 	# VISUALIZADOR HTML	
 
 		
-	print "\n<!-- COMPONENT FILTER CHECK BOX [tipo:$tipo section_id_matrix:$parent] $label -->";
+	print "\n<!-- COMPONENT FILTER [tipo:$tipo parent:$parent] $label -->";
 
 	print "\n<div class=\"wrap_component css_wrap_filter wrap_component_{$tipo}\" id=\"{$id_wrapper}\"
 	data-tipo=\"{$tipo}\"
@@ -23,40 +23,43 @@
 	
 	# CONTENIDO (INPUT)
 	$html_contenido  = '';
-	$html_contenido .= "\n <div class=\"wrap_dato_component_filter\"> ";	
+	#$html_contenido .= "\n <div class=\"wrap_dato_component_filter\"> ";	
 	switch($permissions) {
 			
 		case 0 :	
-				$html_contenido .= "\n <span class=\"css_span_dato\"> ".label::get_label('sin_acceso')." ($component_name)</span>"; 
+				$html_contenido .= "";// "\n <span class=\"css_span_dato\"> ".label::get_label('sin_acceso')." ($component_name)</span>"; 
 				break;
 						
 		case 1 :
+				$html_contenido .= "<ul class=\"filter_projects_list\">";
 				if (is_array ($ar_proyectos_section)) foreach ($ar_proyectos_section as $value => $rotulo) {
 					
-					if( is_array($dato) && in_array($value, array_keys($dato)) ) {													
-						$html_contenido .= "\n <label class=\"filter_checkbox_rotulo\">$rotulo</label>";
-						$html_contenido .= "\n <br>";
-					}	
+					if( is_array($dato) && in_array($value, array_keys($dato)) ) {
+						$html_contenido .= "<li>";
+						$html_contenido .= "- <label class=\"filter_checkbox_rotulo\">$rotulo</label>";
+						$html_contenido .= "</li>";
+					}
 				}
+				$html_contenido .= "</ul>";
 				break;	
 						
 		case 2 :
-					
+		case 3 :					
 				$html_contenido .= "<ul class=\"filter_projects_list\">";
-				
-				$i=1;foreach((array)$ar_proyectos_section as $value => $rotulo) {
+					#dump($ar_proyectos_section, ' ar_proyectos_section ++ '.to_string());
+				$i=1;foreach((array)$ar_proyectos_section as $current_section_id => $rotulo) {
 					
 					$html_contenido .= "<li>";
 					
-						$checked  = is_array($dato) && in_array($value, array_keys($dato)) ? 'checked="checked"' : '';
+						$checked  = is_array($dato) && in_array($current_section_id, array_keys($dato)) ? 'checked="checked"' : '';
 						$tabindex = $i==1 ? 'tabindex="1"' : '';
 
 						$html_contenido .= "\n <input type=\"checkbox\" class=\"filter_checkbox\"
 						onfocus=\"component_common.select_wrap(null,'$id_wrapper')\"
 						onchange=\"component_filter.Save(this)\"
 						name=\"{$input_name}\"
-						value=\"{$value}\"
-						title=\"$html_title $value\"
+						value=\"{$current_section_id}\"
+						title=\"$html_title $current_section_id\"
 						data-tipo=\"{$tipo}\"
 						data-lang=\"{$lang}\"
 						data-section_tipo=\"{$section_tipo}\"
@@ -65,8 +68,13 @@
 						$tabindex
 						/>";
 						
-						$html_contenido .= "\n <label class=\"filter_checkbox_rotulo\">$rotulo</label>";
-						#$html_contenido .= "\n <span class=\"debug_info\">id: $value</span>";
+						$html_contenido .= "\n <label class=\"filter_checkbox_rotulo\">";
+						if(SHOW_DEBUG) {
+							$html_contenido .= "[$current_section_id] ";
+						}
+						$html_contenido .= $rotulo;
+						$html_contenido .= "</label>";
+						#$html_contenido .= "\n <span class=\"debug_info\">id: $current_section_id</span>";
 						
 						$html_contenido .= "</li>";
 						
@@ -74,13 +82,13 @@
 
 				$html_contenido .= "</ul>";				
 		
-				if($permissions==3) {				
-					$html_contenido .= "\n <span class=\"css_span_debugger\" id=\"debugger_{$id}\" >{$debugger}</span>";
+				if(SHOW_DEBUG) {			
+					#$html_contenido .= "\n <span class=\"css_span_debugger\" id=\"debugger_{$id}\" >{$debugger}</span>";
 				}
 				break;					
 							
 	}
-	$html_contenido .= "\n </div><!-- /wrap_dato_component_filter -->";#end wrap_dato_component_filter
+	#$html_contenido .= "\n </div><!-- /wrap_dato_component_filter -->";#end wrap_dato_component_filter
 	
 	
 	# Prepare content to show in page
@@ -90,7 +98,7 @@
 	# PRINT HTML
 	print $html_label;
 	print $html_contenido;
-
+	
 
 
 	print "\n</div><!-- /css_wrap_filter COMPONENT FILTER [tipo:$tipo section_id_matrix:$parent] $label -->\n\n"; //wrap

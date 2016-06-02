@@ -176,9 +176,9 @@ class login extends common {
 							/*
 							# Comprobamos que el usuario tiene algún área asignada antes de dejarlo entrar (los administradores suelen olvidarse de hacerlo)
 							$component_security_areas 	= component_common::get_instance('component_security_areas', DEDALO_COMPONENT_SECURITY_AREAS_USER_TIPO, $user_id, 'edit', DEDALO_DATA_LANG,DEDALO_SECTION_USERS_TIPO);
-							$security_areas_dato 		= (array)$component_security_areas->get_dato();
+							$security_areas_dato 		= (object)$component_security_areas->get_dato();
 								#dump($security_areas_dato,"security_areas_dato $user_id"); die();
-							if (empty($security_areas_dato) || count($security_areas_dato)<1) {
+							if (empty($security_areas_dato) || count((array)$security_areas_dato)<1) {
 								exit(label::get_label('error_usuario_sin_areas'));
 							}
 							*/
@@ -332,6 +332,10 @@ class login extends common {
 
 		# DEDALO INIT TEST SECUENCE
 		require(DEDALO_LIB_BASE_PATH.'/config/dd_init_test.php');
+
+
+		# IS_GLOBAL_ADMIN (before set user session vars)
+		$_SESSION['dedalo4']['auth']['is_global_admin'] = (bool)component_security_administrator::is_global_admin($user_id);
 		
 
 		# SESSION : If backup is ok, fix session data
@@ -342,6 +346,7 @@ class login extends common {
 
 		# CONFIG KEY
 		$_SESSION['dedalo4']['auth']['salt_secure']	= dedalo_encryptStringArray(DEDALO_SALT_STRING);
+		
 		
 
 		# BACKUP ALL
@@ -507,7 +512,7 @@ class login extends common {
 				case 'component_active_account'		:
 
 						if(isset($ar_terminos_relacionados[0])) foreach($ar_terminos_relacionados[0] as $key => $current_tipo) {
-							$this->tipo_active_account	= $current_tipo;	#echo " - ".$current_tipo;
+							$this->tipo_active_account	= $current_tipo;
 							break;
 						}
 						break;
@@ -522,7 +527,7 @@ class login extends common {
 
 				case 'button_login'			:
 
-						$ar_components['button_login']	= new button_login($terminoID, NULL,  $modo);
+						$ar_components['button_login']	= new button_login($terminoID, null,  null);
 						break;
 
 				#default	: print(__METHOD__ . "  <span class='error'>modelo: $modelo_current [$terminoID] is not valid !</span>");

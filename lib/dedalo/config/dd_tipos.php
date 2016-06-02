@@ -13,7 +13,7 @@ define('DEDALO_ACTIVITY_WHEN'							, 'dd547'); // component_date
 
 # Users
 define('DEDALO_SECTION_USERS_TIPO'						, 'dd128');
-#define('DEDALO_SECURITY_ADMINISTRATOR_TIPO'				, 'dd244');
+define('DEDALO_SECURITY_ADMINISTRATOR_TIPO'				, 'dd244');
 define('DEDALO_USER_NAME_TIPO'							, 'dd132');
 define('DEDALO_USER_PASSWORD_TIPO'						, 'dd133');
 define('DEDALO_CUENTA_ACTIVA_TIPO'						, 'dd131');
@@ -60,6 +60,7 @@ define('DEDALO_STATE_GENERAL_SECTION_TIPO'				, 'dd174');
 define('DEDALO_STATE_GENERAL_COMPONENT_TIPO'			, 'dd185');
 
 # Tools / procesos
+define('DEDALO_TOOLS_TIPO'								, 'dd193');
 define('DEDALO_TOOL_TRANSCRIPTION_ID'						, '1');
 define('DEDALO_TOOL_INDEXATION_ID'							, '2');
 define('DEDALO_TOOL_TRANSLATE_ID'							, '3');

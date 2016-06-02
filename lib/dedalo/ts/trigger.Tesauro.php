@@ -11,8 +11,7 @@ if($is_logged!==true) {
 	header("Location: $url");
 	exit();
 }
-$security 	 = new security();
-$permissions = (int)$security->get_security_permissions(DEDALO_TESAURO_TIPO);
+$permissions = (int)security::get_security_permissions(DEDALO_TESAURO_TIPO,DEDALO_TESAURO_TIPO);
 if ($permissions<1) {
 	$url =  DEDALO_ROOT_WEB ."/main/";
 	header("Location: $url");
@@ -41,7 +40,7 @@ $vars = array('accion','terminoID','parent','termino','terminoIDlist','terminoID
 if($accion=='show_indexations') {
 
 	# DATA VERIFY
-	if(empty($terminoID) || strlen($terminoID)<3) exit("Trigger Error: terminoID is mandatory");	
+	if(empty($terminoID) || strlen($terminoID)<3) exit("Trigger Error: terminoID is mandatory");
 
 	# DIFFUSION_INDEX_TS
 	$diffusion_index_ts = new diffusion_index_ts($terminoID);
@@ -160,7 +159,7 @@ if($accion=='update_tr_order') {
 
 	$html='';	
 		
-	$RecordObj_ts 	= new RecordObj_ts($terminoID);	
+	$RecordObj_ts = new RecordObj_ts($terminoID);	
 	$RecordObj_ts->set_relaciones($dato);	
 	
 	# SAVE 
@@ -171,11 +170,9 @@ if($accion=='update_tr_order') {
 
 	# LOGGER ACTIVITY : QUE(action normalized like 'LOAD EDIT'), LOG LEVEL(default 'logger::INFO'), TIPO(like 'dd120'), DATOS(array of related info)
 	$str_order='';
-	foreach ($dato as $key => $ar_value) {
-		foreach ($ar_value as $key2 => $value) {
-			$str_order .= $value;
-			$str_order .= ", ";
-		}
+	foreach ($dato as $key => $value) {		
+		$str_order .= $value;
+		$str_order .= ", ";
 	}
 	$str_order = substr($str_order, 0,-2);
 	$parent 	= $RecordObj_ts->get_parent();

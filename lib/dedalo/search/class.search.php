@@ -151,7 +151,7 @@ class search extends common {
 				}				
 				throw new Exception("Error Processing Request: current_component_tipo is empty in latout map_values:".print_r($map_values,true), 1);						
 			}
-			$current_permissions = common::get_permissions($current_component_tipo); #dump($current_permissions, 'permissions for $current_component_tipo:'.$current_component_tipo, array());
+			$current_permissions = common::get_permissions($section_tipo, $current_component_tipo); #dump($current_permissions, 'permissions for $current_component_tipo:'.$current_component_tipo, array());
 			if ($current_permissions<1) {
 				# Unset element from layout map to hide column in list
 				$ar_layout = reset($sql_options->layout_map);
@@ -535,7 +535,7 @@ class search extends common {
 							}else{
 								$current_lang = DEDALO_DATA_LANG;
 							}
-
+	
 							# SEARCH OPERATORS RESOLVE
 							$comparison_operator = "ILIKE";
 							if(isset($sql_options->operators->comparison_operator)){
@@ -617,7 +617,7 @@ class search extends common {
 								dump($search_value, ' search_value ++ '.to_string());
 								dump($comparison_operator, ' comparison_operator ++ '.to_string());
 								*/
-							}//end if ($component_section_tipo != $section_real_tipo)
+							}//end if ($component_section_tipo != $section_real_tipo)							
 
 							
 							# Add logical_operator each iteration
@@ -681,14 +681,27 @@ class search extends common {
 								$ar_parts 	 		 = explode(' ', $sql_options->order_by);
 								$current_column_tipo = $ar_parts[0];
 								$order_direction 	 = $ar_parts[1];
+								
 								if (isset($traducible[$current_column_tipo])) {
 									$current_lang = ($traducible[$current_column_tipo] =='no' ? DEDALO_DATA_NOLAN : DEDALO_DATA_LANG);
 								}else{
-									$current_lang = DEDALO_DATA_LANG;
+									$RecordObj_dd 	= new RecordObj_dd($current_column_tipo);
+									$traducible  	= $RecordObj_dd->get_traducible();
+									if ($traducible!='si') {
+										$current_lang = DEDALO_DATA_NOLAN;
+									}else{
+										$current_lang = DEDALO_DATA_LANG;
+									}
 								}								
 								$order_by_resolved = "$sql_options->json_field#>>'{components, $current_column_tipo, $sql_options->tipo_de_dato_order, $current_lang}' ".$order_direction;
 							}							
 							$order = "\n ORDER BY $order_by_resolved";
+
+							#
+							# ALWAYS ADD ORDER BY SECTION_ID (DESAMBIGUATE SAME DATA ORDER)
+							$last_order = !empty($order_direction) ? $order_direction : 'ASC'; 						
+							$order .= ', section_id '.$last_order;
+								#dump($order,"order last_order: $last_order  ");
 						}						
 						break;
 				}				
@@ -756,8 +769,8 @@ class search extends common {
 			#
 			#
 				$result	= JSON_RecordObj_matrix::search_free($strQuery);									
-				if (!$result) {							
-					trigger_error("Error Processing Request : Sorry cannot execute list query");
+				if (!$result) {					
+					trigger_error("Error Processing Request : Sorry cannot execute list query: $strQuery");
 				}
 				#echo "<hr> Time To Generate list html from section_list: section_tipo:$section_tipo): ".round(microtime(1)-$start_time,3);
 	
@@ -765,7 +778,7 @@ class search extends common {
 			#
 			# FULL COUNT IS A INDEPENDENT SEARCH FOR SPEED
 			#
-				if (!$sql_options->full_count && $sql_options->limit>0) {
+				if (!$sql_options->full_count && $sql_options->limit>0 && $sql_options->search_options_session_key!='current_edit') {
 					$start_time_full_count= microtime(1);
 					$sql_columns 	= "count(*) AS full_count"; // count(*) OVER() AS full_count
 					$strQuery_count	= "SELECT $sql_columns FROM \"$sql_options->matrix_table\" WHERE ".trim($sql_filtro)." \n;";	// LIMIT 1

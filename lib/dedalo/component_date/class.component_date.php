@@ -520,6 +520,8 @@ class component_date extends component_common {
 
 	}#end build_search_comparison_operators
 
+
+
 	/**
 	* UPDATE_DATO_VERSION
 	* @return 
@@ -558,9 +560,7 @@ class component_date extends component_common {
 			default:
 				# code...
 				break;
-		}
-
-		
+		}		
 		
 	}#end update_dato_version
 

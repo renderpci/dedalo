@@ -635,12 +635,16 @@ class tool_upload extends tool_common {
 							$result = custom_postprocessing_image($this);
 								#dump($result, ' result');
 						}
-						/*
+						
+						/* INNECESARIO !! (YA SE EJECUTA LUEGO)
+						# DEFAULT VERSION (1.5MB USSUALY)
 						if ($quality==DEDALO_IMAGE_QUALITY_ORIGINAL) {
 							# Create default version too
 							$this->component_obj->convert_quality( $quality, DEDALO_IMAGE_QUALITY_DEFAULT );
 							# Create thumb from default quality version
 							$this->component_obj->generate_thumb();
+							
+							debug_log(__METHOD__." Converted original image (".DEDALO_IMAGE_QUALITY_ORIGINAL.") to default quality (".DEDALO_IMAGE_QUALITY_DEFAULT.") ".to_string(), logger::DEBUG);
 						}
 						*/
 
@@ -655,22 +659,44 @@ class tool_upload extends tool_common {
 					
 			case 'component_pdf' :
 
-					# TO DO : Tumb of current pdf (first page) like filename.pdf[0] 
-					#dump($this->file_obj, ' this->file_obj->thumb_file');
-					#dump($SID, ' $SID');
-					
-					/*
 					#
-					# THUMB	
-					if(!isset($this->file_obj->aditional_path)) $this->file_obj->aditional_path=null;				
-					$source_file 	= DEDALO_MEDIA_BASE_PATH.DEDALO_PDF_FOLDER.'/'.DEDALO_PDF_QUALITY_DEFAULT.$this->file_obj->aditional_path.'/'.$SID.'.'.DEDALO_PDF_EXTENSION;
-					$target_file 	= DEDALO_MEDIA_BASE_PATH.DEDALO_PDF_FOLDER.'/thumb'.$this->file_obj->aditional_path.'/'.$SID.'.'.DEDALO_IMAGE_EXTENSION;
-					$dimensions 	= false;	//'102x57';					
-					$command = MAGICK_PATH."convert \"$source_file\"[0] \
-         									-thumbnail {$dimensions} -gravity center -extent {$dimensions} -unsharp 0x.5 jpg -quality 90 \"$target_file\" ";
-         			$output   = shell_exec( $command );
-         				#dump($output, ' output - '.$command);
-					*/
+					# THUMB : Create pdf_thumb
+					$this->component_obj->get_pdf_thumb( $force_create=true );
+
+					#
+					# TRANSCRIPTION TO TEXT AUTOMATIC
+					$ar_related_component_text_area_tipo = $this->component_obj->get_related_component_text_area_tipo();
+						#dump($ar_related_component_text_area_tipo, ' ar_related_component_text_area_tipo ++ '.$this->component_obj->get_tipo().to_string());
+					if (!empty($ar_related_component_text_area_tipo)) {
+						
+						$related_component_text_area_tipo = reset($ar_related_component_text_area_tipo);
+						$target_pdf_path 				  = $this->component_obj->get_pdf_path();						
+
+						try {
+							$options = new stdClass();
+								$options->path_pdf 	 = (string)$target_pdf_path;	# full source pdf file path
+								#$options->first_page = (int)$pagina_inicial;		# number of first page. default is 1
+							$response = (object)tool_transcription::get_text_from_pdf( $options );								
+								#debug_log(__METHOD__." tool_transcription response ".to_string($response), logger::DEBUG);
+								
+							if( $response->result!=='error' && strlen($response->original)>2  ) {
+
+								$component_text_area = component_common::get_instance('component_text_area',
+																					  $related_component_text_area_tipo,
+																					  $this->component_obj->get_parent(),
+																					  'edit',
+																					  DEDALO_DATA_LANG,
+																					  $this->component_obj->get_section_tipo());
+								$component_text_area->set_dato($response->result); // Text with page numbers
+								$component_text_area->Save();
+							}
+
+						} catch (Exception $e) {						  
+						    debug_log(__METHOD__." Caught exception:  ".$e->getMessage(), logger::ERROR);
+						}
+
+					}//end if (!empty($related_component_text_area_tipo)) {
+
 					break;
 		}
 

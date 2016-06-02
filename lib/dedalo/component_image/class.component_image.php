@@ -11,21 +11,21 @@ class component_image extends component_common {
 	protected $lang = DEDALO_DATA_NOLAN;
 
 	# file name formated as 'tipo'-'order_id' like dd732-1
-	public $image_id ;
-	public $image_url ;
-	public $quality ;
+	public $image_id;
+	public $image_url;
+	public $quality;
 
-	public $target_filename ;
-	public $target_dir ;
+	public $target_filename;
+	public $target_dir;
 	
 	public $aditional_path;
 	public $initial_media_path;	# A optional file path to files to conform path as /media/images/my_initial_media_path/<1.5MB/..
 
-	public $ImageObj ; # Instance of ImageObj with current data 
+	public $ImageObj; # Instance of ImageObj with current data 
 
 	# Default image dimensions (as showed in section edit)
-	public $widht 	= 539 ;
-	public $height 	= 404 ;
+	public $widht 	= 539;
+	public $height 	= 404;
 
 	
 
@@ -206,6 +206,8 @@ class component_image extends component_common {
 		return $this->valor = $this->get_image_id();	
 	}
 
+
+
 	/**
 	* GET_VALOR_EXPORT
 	* Return component value sended to export data
@@ -234,6 +236,8 @@ class component_image extends component_common {
 		return $valor;
 
 	}#end get_valor_export
+
+
 
 	/**
 	* GET IMAGE ID
@@ -284,7 +288,9 @@ class component_image extends component_common {
 		$image_id = $this->tipo.'_'.$this->section_tipo.'_'.$this->parent;
 
 		return $this->image_id = $image_id;
-	}
+
+	}//end get_image_id
+
 
 
 	/**
@@ -388,7 +394,13 @@ class component_image extends component_common {
 
 	/**
 	* GET_IMAGE_URL
-	* @param string $quality optional default (bool)false
+	* Get image url for current quality
+	* @param string | bool $quality
+	*	optional default (bool)false
+	* @param bool $test_file
+	*	Check if file exists. If not use 0.jpg as output. Default true
+	* @param bool $absolute
+	*	Return relative o absolute url. Default false (relative)
 	*/
 	public function get_image_url($quality=false, $test_file=true, $absolute=false) {
 		
@@ -837,29 +849,27 @@ class component_image extends component_common {
 			$ar_quality = (array)unserialize(DEDALO_IMAGE_AR_QUALITY);
 		}		
 		foreach ($ar_quality as $current_quality) {
-			# media_path
+			# media_path is full path of file like '/www/dedalo/media_test/media_development/image/thumb/rsc29_rsc170_77.jpg'
 			$media_path = $this->get_image_path($current_quality);
 			if(SHOW_DEBUG) {
 				#dump($media_path, "DEBUG INFO ".__METHOD__.' media_path $current_quality:'.$current_quality." - ".$this->get_target_dir() );
 			}
-			if (!file_exists($media_path)) continue; # Skip
+			if (!file_exists($media_path)) continue; # Skip 
 			
 			# move / rename file
 			$folder_path_del 	= $this->get_target_dir()  . 'deleted';
 
 			# delete folder exists ?
 			if( !is_dir($folder_path_del) ) {
-			$create_dir 	= mkdir($folder_path_del, 0777,true);
-			if(!$create_dir) throw new Exception(" Error on read or create directory \"deleted\". Permission denied.") ;
+				if( !mkdir($folder_path_del, 0777,true) ) throw new Exception(" Error on read or create directory \"deleted\". Permission denied.") ;
 			}
 
 			$image_name 		= $this->get_image_id();
-			$media_path_moved 	= $folder_path_del . "/$image_name" . '_deleted_' . $date . '.' . DEDALO_IMAGE_EXTENSION;			
+			$media_path_moved 	= $folder_path_del . '/' . $image_name . '_deleted_' . $date . '.' . DEDALO_IMAGE_EXTENSION;			
 			if( !rename($media_path, $media_path_moved) ) {
 				#throw new Exception(" Error on move files to folder \"deleted\" . Permission denied . The files are not deleted");
 				trigger_error(" Error on move files to folder \"deleted\" [1]. Permission denied . The files are not deleted");
-			}
-							
+			}							
 			debug_log(__METHOD__." Moved file \n$media_path to \n$media_path_moved ".to_string(), logger::DEBUG);
 
 			// Move original files too (PNG,TIF,Etc.)
@@ -868,22 +878,22 @@ class component_image extends component_common {
 			$path_parts 		= pathinfo($media_path);
 			$original_file  	= $path_parts['dirname'].'/'.$path_parts['filename'].'.'.$original_extension;
 			$original_file_moved= $path_parts['dirname'].'/'.$path_parts['filename'].'_deleted_'.$date.'.'.$original_extension;
-
-			if( !rename($original_file, $original_file_moved) ) {
-				#throw new Exception(" Error on move files to folder \"deleted\" . Permission denied . The files are not deleted");
-				trigger_error(" Error on move files to folder \"deleted\" [2]. Permission denied . The files are not deleted");
+			if (file_exists($original_file)) {				
+				if( !rename($original_file, $original_file_moved) ) {
+					#throw new Exception(" Error on move files to folder \"deleted\" . Permission denied . The files are not deleted");
+					trigger_error(" Error on move files to folder \"deleted\" [2]. Permission denied . The files are not deleted");
+				}
 			}
-
 						
 		}#end foreach
 
 		#
 		# Original image remove
 		# remove aditional source images like 'original_image.tif'
-		# WORK IN PROGRESS !!
-		
+		# WORK IN PROGRESS !!		
 
 		return true;
+
 	}#end remove_component_media_files
 
 	
@@ -1018,10 +1028,8 @@ class component_image extends component_common {
 			if(SHOW_DEBUG) {
 				$value .= "*($modo)";
 			}
-			debug_log(__METHOD__." Calculated image from empty value ".to_string(), logger::DEBUG);
+			#debug_log(__METHOD__." Calculated image from empty value ($tipo, $parent, $modo, $lang, $section_tipo, $section_id)".to_string(), logger::DEBUG);
 		}
-
-		#dump($value, ' value ++ '.to_string());
 
 		return $value;
 

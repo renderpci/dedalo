@@ -3,13 +3,13 @@
 	# CONTROLLER
 
 	$tipo 					= $this->get_tipo();
-	$section_tipo			= $this->get_context_tipo();
+	$section_tipo 			= $this->get_section_tipo();
 	$target_tipo			= $this->get_target();
 	$id 					= $this->get_target();
 	$modo					= $this->get_modo();		
 	$label 					= $this->get_label();
 	$debugger				= $this->get_debugger();
-	$permissions			= common::get_permissions($tipo); 	
+	$permissions			= common::get_permissions($section_tipo, $tipo);
 	$html_title				= "Info about $tipo";
 
 	$file_name 				= $modo;

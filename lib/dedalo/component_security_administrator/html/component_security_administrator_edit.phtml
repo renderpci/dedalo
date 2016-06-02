@@ -18,11 +18,9 @@
 	>";
 	
 	# ETIQUETA (LABEL)
-	$html_label = component_common_draw::draw_label($this);
+	$html_label = component_common_draw::draw_label($this);	
 	
-	
-	# ONLY ADMIN GLOBAL USERS CAN ACCESS THIS HTML CONTENT
-	if($is_global_admin!==true) $permissions = 0;
+
 
 	# CONTENIDO (INPUT)
 	$html_contenido = '';	
@@ -32,70 +30,68 @@
 				$html_contenido .= ""; 
 				break;
 						
-		case 1	:	
-				# CASE CHECKED
-				if(!empty($dato[$tipo]) && $dato[$tipo]==2) {
-					$checked = 'checked="checked"';					
-				}else {
-					$checked = "";
-				}
-				$html_contenido .= "\n <input class=\"css_security_administrator\" type=\"checkbox\" 
-				id=\"{$identificador_unico}\" name=\"{$tipo}_{$parent}\" 
-				data-tipo=\"{$tipo}\" data-lang=\"{$lang}\" data-section_tipo=\"{$section_tipo}\" data-parent=\"{$parent}\"
+		case 1	:
+
+				# CASE CHECKED				
+				$checked = (int)$dato===1 ? 'checked="checked"' : '';
+
+				$html_contenido .= "\n <input type=\"checkbox\" class=\"css_security_administrator\"
+				id=\"{$identificador_unico}\"
+				name=\"{$tipo}_{$parent}\"
 				value=\"{$tipo}\"
-				title=\"$html_title\" 
-				$checked  
-				disabled />";								
+				title=\"$html_title\"
+				$checked
+				disabled
+				/>";
 				break;	
-						
+				
 		case ($permissions>=2) :
 
 				/**
 				* Por defecto será 'disabled' o inactivo.
-				* Si el usuario  actal es global_admin y no está editándose a si mismo, 
+				* Si el usuario  actual es global_admin y no está editándose a si mismo, 
 				* se mostrará como editable
 				*/
+				# DISABLED
 				$disabled = 'disabled';
-				if($is_global_admin===true && $edited_user_id_matrix != $logged_user_id_matrix) $disabled = NULL;
+				if($is_global_admin===true && $parent != $logged_user_id) $disabled = '';
 
 				
-				# CASE CHECKED
-				if(!empty($dato[$tipo]) && $dato[$tipo]==2) {
-					$checked = 'checked="checked"';
-				}else {
-					$checked = "";
-				}
-				$html_contenido .= "\n <input class=\"css_security_administrator\" type=\"checkbox\"
-				onchange=\"component_security_administrator.Save(this)\"
+				# CASE CHECKED				
+				$checked = (int)$dato===1 ? 'checked="checked"' : '';
+
+
+				$html_contenido .= "\n <input type=\"checkbox\" class=\"css_security_administrator\"
+				onchange=\"component_security_administrator.Save(this)\"				
 				id=\"{$identificador_unico}\"
 				name=\"{$tipo}_{$parent}\"
+				value=\"{$tipo}\"
 				data-tipo=\"{$tipo}\"
 				data-lang=\"{$lang}\"
 				data-section_tipo=\"{$section_tipo}\"
 				data-parent=\"{$parent}\"
-				data-flag=\"component_security_administrator\"
-				value=\"{$tipo}\"
-				title=\"$html_title\"				
+				title=\"$html_title\"
 				$checked
 				$disabled
-				/>";							
+				/>";
 		
-				if($permissions==3) {
-					$html_contenido .= "\n <span class=\"css_span_debugger\" id=\"debugger_{$tipo}\" >{$debugger}</span>";	
+				if(SHOW_DEBUG) {
+					#$html_contenido .= "\n <span class=\"css_span_debugger\" id=\"debugger_{$tipo}\" >{$debugger}</span>";	
 				}
+				
 				break;							
 	}
 
 
 	# Prepare content to show in page
-	tools::prepare_content($html_contenido);
-	
+	tools::prepare_content($html_contenido);	
 	
 	# PRINT HTML
 	print $html_label;
 	print $html_contenido;
 
 
+	print "<script>$(function() { component_security_administrator.update_filter_master_view( + document.getElementById('$identificador_unico').checked ); })</script>";
 	
 	print "\n</div><!-- /css_wrap_security_administrator -->\n\n"; //wrap
 

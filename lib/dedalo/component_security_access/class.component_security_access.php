@@ -1,14 +1,14 @@
 <?php
+
+
 /*
 * CLASS COMPONENT SECURITY ACCESS
 */
-
-
 class component_security_access extends component_common {
+
 
 	# Overwrite __construct var lang passed in this component
 	protected $lang = DEDALO_DATA_NOLAN;
-
 	protected $caller_id;
 	
 	
@@ -16,7 +16,6 @@ class component_security_access extends component_common {
 	* CONSTRUCT
 	*/
 	function __construct($tipo=false, $parent=null, $modo='edit',  $lang=null, $section_tipo=null) {	#__construct($id=NULL, $tipo=false, $modo='edit', $parent=NULL, $lang=NULL)
-		
 
 		parent::__construct($tipo, $parent, $modo, $lang=$this->lang, $section_tipo);
 
@@ -29,52 +28,78 @@ class component_security_access extends component_common {
 	}
 
 
-	# GET DATO : Format {"dd242-admin":"2","dd242":"2"}
+
+	/**
+	* GET DATO 
+	* @return object $dato
+	* Format {"dd244":"2"}
+	*/
 	public function get_dato() {
 		$dato = parent::get_dato();
-		return (array)$dato;
+		if (!is_object($dato) && empty($dato)) {
+			$dato = new stdClass();
+		}
+		return (object)$dato;
 	}
 
-	# SET_DATO
-	public function set_dato($dato) {
-		parent::set_dato( (object)$dato );
+
+
+	/**
+	* SET_DATO
+	* @param object $dato
+	*/
+	public function set_dato($dato) {		
+		if (!is_object($dato)) {
+			if(empty($dato)) {
+				$dato = new stdClass();
+			}else{
+				$dato = (object)$dato;
+			}
+		}
+		parent::set_dato((object)$dato);
 	}
 	
+
+
 	/**
 	* SAVE OVERRIDE
 	* Overwrite component_common method to set always lang to config:DEDALO_DATA_NOLAN before save
 	*/
 	public function Save() {
 
-		$dato 	= $this->dato;		# Este dato ($this->dato) es inyectado y lo pasa trigger component_common Save (NO es el dato existente en matrix)
+
+		$dato = $this->dato;		# Este dato ($this->dato) es inyectado y lo pasa trigger component_common Save (NO es el dato existente en matrix)
 			if(SHOW_DEBUG) {
-				#dump($dato, 'dato received to save (stopped script for debug)'); #return null;
-			}			
+				#dump($dato, 'dato received to save (stopped script for debug)'); return null;
+			}		
 		
-		# Clean dato 
-		$clean_dato = component_security_access::clean_dato_for_save($dato);
-			#dump($clean_dato,"clean_dato");
-		$this->set_dato( $clean_dato );
+		$this->set_dato( $dato ); // Incluiremos los dato '0' para preservar los cambios al propagar
 
 		# A partir de aquí, salvamos de forma estándar
 		$result = parent::Save();
 
 		# reset session permisions table
-		# unset($_SESSION['dedalo4']['auth']['permissions_table']);	
+		# unset($_SESSION['dedalo4']['auth']['permissions_table']);
+
+			#dump($this->get_dato_unchanged(), ' this->get_dato_unchanged ++ '.to_string($this->dato));
 
 		return $result;
 	}
 
+
+
 	# CLEAN_DATO_FOR_SAVE : Remove values zero like [dd710] => 0 to reduce saved data size
 	private static function clean_dato_for_save($dato) {
-		$ar_clean = array();
 		
-		foreach ((array)$dato as $element_tipo => $state) {			
-			if ( (int)$state>=1 ) {
-				$ar_clean[$element_tipo] = $state;
+		$clean_dato = new stdClass();
+		
+		foreach ((object)$dato as $element_tipo => $state) {
+			$state = (int)$state;
+			if ( $state>=1 ) {
+				$clean_dato->$element_tipo = $state;
 			}
 		}
-		return $ar_clean;
+		return $clean_dato;
 	}
 
 	
@@ -84,10 +109,13 @@ class component_security_access extends component_common {
 		return NULL;
 	}
 
+
+
 	# GET_CALLER_ID
 	public function get_caller_id() {
 		return $this->caller_id ;
 	}
+	
 	
 	
 	/**
@@ -106,19 +134,20 @@ class component_security_access extends component_common {
 
 		$user_id = self::get_caller_id();			
 			
-				/*
-				# Verificamos que caller_id es llamado en el contexto 'Admin' es decir,
-				# uno de los padres en estructura, es de tipo 'area_admin'
+			/*
+			# Verificamos que caller_id es llamado en el contexto 'Admin' es decir,
+			# uno de los padres en estructura, es de tipo 'area_admin'
 
-				$matrix_table = common::get_matrix_table_from_tipo($this->tipo);
+			$matrix_table = common::get_matrix_table_from_tipo($this->tipo);
 
-				# Section
-				$current_tipo = common::get_tipo_by_id($user_id, $matrix_table);			
-					dump($current_tipo,"current_tipo");	
+			# Section
+			$current_tipo = common::get_tipo_by_id($user_id, $matrix_table);			
+				dump($current_tipo,"current_tipo");	
 
-				if (empty($current_tipo))
-					throw new Exception("get_user_authorized_areas: undefined 'tipo' for user:$user_id ", 1);
-				*/
+			if (empty($current_tipo))
+				throw new Exception("get_user_authorized_areas: undefined 'tipo' for user:$user_id ", 1);
+			*/
+
 			/*
 			$section_tipo 		= DEDALO_SECTION_USERS_TIPO;
 
@@ -140,184 +169,163 @@ class component_security_access extends component_common {
 			//dump(DEDALO_COMPONENT_SECURITY_AREAS_USER_TIPO); die();
 		$ar_authorized_areas_for_user = (array)component_security_areas::get_ar_authorized_areas_for_user($user_id, $mode_result='full', DEDALO_COMPONENT_SECURITY_AREAS_USER_TIPO, DEDALO_SECTION_USERS_TIPO);
 			#dump($ar_authorized_areas_for_user,'ar_authorized_areas_for_user');
-
 		
 		# Gets something:
 		# [dd321] => 2
 	    # [dd294-admin] => 2
 	    # [dd294] => 2	
 	    # Clean the result to return an only areas array
-	    $ar_dato = array();
+	    $ar_areas = array();
 	    foreach ($ar_authorized_areas_for_user as $tipo => $estado) {
 
 	    	if ($tipo==DEDALO_SECTION_PROFILES_TIPO) continue; # Skip section profiles
 	    
-	    	#if($estado>=2 && strpos($tipo, 'admin')===false && RecordObj_dd::get_modelo_name_by_tipo($tipo)=='section')
-	    	#	$ar_dato[] = $tipo ;
-
-	    	if($estado>=1 && strpos($tipo, 'admin')===false && RecordObj_dd::get_modelo_name_by_tipo($tipo,true)=='section'){ 
-/*******************************************************************PROVISIONAL DESACCTIVO, AHORA LAS VIRTUALES TIENEN POTESTAD**************************************************************
-	    		# Eliminamos las secciones virtuales
-	    		$section_real_tipo = section::get_section_real_tipo_static($tipo);
-
-	    		if ($section_real_tipo != $tipo) {
-	    			#dump($section_real_tipo,"section_real_tipo skipped ($tipo)");
-	    			continue; # Skip section
-	    		}
-				*/
-	    		$ar_dato[] = $tipo ;
-	    	}
-	    		
-	    }
-		$dato = $ar_dato;
-			#dump($dato,'dato',"dato of component_security_areas id=$component_security_areas_id "); 
-
-		if(SHOW_DEBUG) {
-			#$total=round(microtime(1)-$start_time,3); dump($total, 'total');	#dump($ar_authorized_areas_for_user, 'ar_authorized_areas_for_user');				
-		}
-
-		return (array)$dato;
+	    	$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+	    	if($estado>=2 && $modelo_name=='section'){			
+	    		$ar_areas[] = $tipo ;
+	    	}	    		
+	    }//end foreach ($ar_authorized_areas_for_user as $tipo => $estado)
+		
+		return $ar_areas;
 
 	}//end get_user_authorized_areas
-
 	
 
 
 	/**
 	* GET_AR_TS_CHILDRENS_RECURSIVE . TS TREE FULL FROM PARENT
+	* Le llegan los tipos de las secciones / areas y desglosa jeráquicamente sus section_group que luego
+	* serán recorridos con el walk_ar_elements_recursive
 	* @param string $terminoID
-	* @return $ar_tesauro OR null
+	* @return array $ar_tesauro
 	*	array recursive of tesauro structure childrens
 	*/
 	public static function get_ar_ts_childrens_recursive($terminoID) {
 
 		if(SHOW_DEBUG) {
 			#$start_time=microtime(1);
+			#dump($terminoID, ' terminoID ++ '.to_string());
 		}
 		
 		# STATIC CACHE
 		static $ar_stat_data;
 		$terminoID_source = $terminoID;		
-		if(isset($terminoID_source) && isset($ar_stat_data[$terminoID_source])) return $ar_stat_data[$terminoID_source];	
+		if(isset($ar_stat_data[$terminoID_source])) return $ar_stat_data[$terminoID_source];	
 		
 		$ar_current[$terminoID] = array();
-		$RecordObj_dd			= new RecordObj_dd($terminoID);				
-		$ar_ts_childrens		= $RecordObj_dd->get_ar_childrens_of_this(); 
-		
-		if (count($ar_ts_childrens)>0) {
+
+		$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($terminoID,true);
+		switch ($modelo_name) {
 			
-			foreach ($ar_ts_childrens as $children_terminoID) {				
-				
-				#$RecordObj_dd			= new RecordObj_dd($children_terminoID);
-				#$modeloID				= $RecordObj_dd->get_modelo($children_terminoID);				
-				#$modelo				= RecordObj_dd::get_termino_by_tipo($modeloID);				#echo " $modelo - ";	#if ($modelo == 'section_list' || $modelo == 'Admin' ) return false;
-				$modelo 				= RecordObj_dd::get_modelo_name_by_tipo($children_terminoID,true);
-								
-				$ar_exclude_modelo		= array('component_security_administrator','relation_list','section_list','box_elements','exclude_elements');		# ,'filter'	,'tools','search_list'
-				$exclude_this_modelo 	= false;
-				foreach($ar_exclude_modelo as $modelo_exclude) {					
-					if( strpos($modelo,$modelo_exclude)!==false ) {
-						$exclude_this_modelo = true;
-						break;	
-					}
-				}
-				#echo $modelo ; var_dump($exclude_this_modelo); echo "<br> "; 
-				
-				if ( $exclude_this_modelo === false ) {
+			case 'section':
+
+				$section_tipo 			 = $terminoID;
+				$ar_modelo_name_required = array('section_group','button_');
+				$ar_ts_childrens 		 = section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, $ar_modelo_name_required, $from_cache=true, $resolve_virtual=true, $recursive=false);	
+				break;
 			
-					$ar_temp = self::get_ar_ts_childrens_recursive($children_terminoID);					
-			
-					#if(count($ar_ts_childrens)>0) 				
-					$ar_current[$terminoID][$children_terminoID] = $ar_temp;		#echo " - $children_terminoID : " .count($ar_ts_childrens) ." $ar_temp <br>\n";					
-				}				
-			}
-			$ar_tesauro[$terminoID] = $ar_current[$terminoID];
-			
-			# STORE CACHE DATA
-			$ar_stat_data[$terminoID_source] = $ar_tesauro[$terminoID];
-		
-			return $ar_tesauro[$terminoID];			
+			default:
+				# AREAS
+				$RecordObj_dd			= new RecordObj_dd($terminoID);
+				$ar_ts_childrens		= $RecordObj_dd->get_ar_childrens_of_this();				
+				//if (count($ar_ts_childrens)<1) return array();				
+				break;
 		}
+		
+
+		$ar_exclude_modelo = array('component_security_administrator','relation_list','section_list','box_elements','exclude_elements');		# ,'filter'	,'tools','search_list'
+		foreach((array)$ar_ts_childrens as $children_terminoID) {			
+			$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($children_terminoID,true);			
+			foreach($ar_exclude_modelo as $exclude_modelo) {					
+				if( strpos($modelo_name, $exclude_modelo)!==false ) {					
+					continue 2;	
+				}
+			}		
+			$ar_temp = self::get_ar_ts_childrens_recursive($children_terminoID);
+	
+	
+			#if(count($ar_ts_childrens)>0) 				
+			$ar_current[$terminoID][$children_terminoID] = $ar_temp;		#echo " - $children_terminoID : " .count($ar_ts_childrens) ." $ar_temp <br>\n";		
+		}
+
+		
+		$ar_tesauro[$terminoID] = $ar_current[$terminoID];
+		
+		# STORE CACHE DATA
+		$ar_stat_data[$terminoID_source] = $ar_tesauro[$terminoID];
+			#dump($ar_tesauro[$terminoID], ' $ar_tesauro[$terminoID] ++ '.to_string());
 
 		if(SHOW_DEBUG) {
 			#$total=round(microtime(1)-$start_time,3); dump($total, 'total');	#dump($ar_authorized_areas_for_user, 'ar_authorized_areas_for_user');				
 		}
-
-		return NULL;
-
-	}//end get_ar_ts_childrens_recursive
 	
+		return $ar_tesauro[$terminoID];	
+		
+	}//end get_ar_ts_childrens_recursive	
 
 
 
 	/**
 	* WALK TS CHILDRENS RECURSIVE . DEPLOY TS TREE FULL ARRAY
 	*
-	* @param $ar_tesauro
-	*	array of childrens tipo like 'dd15'
+	* @param array $ar_elements
+	*	array of section childrens 
 	* @param $arguments
 	*	array of vars needed for construct final tree. default is empty array
 	*
 	* @return $tree_htm
 	*	html final of builded tree
 	*/
-	public static function walk_ar_ts_childrens_recursive($ar_tesauro, $arguments=array()) {
+	public static function walk_ar_elements_recursive($ar_elements, $arguments=array()) {
 
 		if(SHOW_DEBUG) {
 			#$start_time=microtime(1);
 		}	
 		
-		#dump($ar_tesauro,'ar_tesauro',"array of childrens tipo like 'dd15'");	
-		#dump($arguments,'arguments',"array of vars needed for construct final tree. default is empty array");	
+		$dato 				= $arguments['dato'];
+		$parent 			= $arguments['parent'];
+		$dato_section_tipo 	= $arguments['dato_section_tipo'];	
 
-		$html_tree = NULL;		
-
-		extract($arguments);
-		/* arguments example
-		[terminoID] => dd128
-		[dato] => Array (
-            [dd14] => 1
-            [dd40] => 2 ..)
-		[caller_id] => 1
-	    [caller_tipo] => dd148
-	    [parent] => 1
-	    [is_time_machine] => 
-	    [open_group] => "<ul class="menu">"
-	    [open_term] => "<!-- li dd148 --><li class="expanded">"
-	    [close_term] => "</li>"
-	    [close_group] => "</ul>"
-		*/						
+		$open_group		= "<ul class=\"menu\">";
+		$open_term		= "<li class=\"expanded\">";
 		
-		if(SHOW_DEBUG) {
-			#dump($arguments,'$arguments');
-			#dump($dato, ' dato');;
-		}
-		foreach((array)$ar_tesauro as $tipo => $value) {
+		$close_term		= "</li>";
+		$close_group	= "</ul>";
+
+
+		$html_tree='';
+		foreach((array)$ar_elements as $tipo => $value) {
+
+			#if ($tipo=='mupreva502') {
+			#	dump($dato->$dato_section_tipo->$tipo, ' $dato->$tipo ++ '.to_string());
+			#}		
 			
-			$dato_current	= NULL;						
-			if(isset($dato[$tipo])) {
-				$dato_current	= intval($dato[$tipo]);		
-			}	
+			$dato_current = isset($dato->$dato_section_tipo->$tipo) ? intval($dato->$dato_section_tipo->$tipo) : 0;
 
 			# TERMINO (In current data lang with fallback)
-			$termino	 = RecordObj_dd::get_termino_by_tipo($tipo, DEDALO_DATA_LANG, true);			
+			$termino	 = RecordObj_dd::get_termino_by_tipo($tipo, DEDALO_DATA_LANG, true);
+
+			$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);		
 			
 				$html_tree	.= $open_term;
 
-					$html_tree	.= "\n <a> ";
-					$html_tree	.= component_security_access::create_radio($dato_current, $terminoID, $tipo, $parent, $caller_id, $is_time_machine, $arguments);
-					$html_tree	.= "\n  $termino ";
-					$html_tree	.= "\n </a>\n <h7>[$tipo]  $parent - $dato_current</h7> ";
+					$html_tree	.= "<a> ";
+					$html_tree	.= component_security_access::create_radio($dato_current, $parent, $tipo, $dato_section_tipo);
+					$html_tree	.= "<label>$termino</label>";
+					if(SHOW_DEBUG) {
+						$html_tree	.=" <span>[$tipo:<b>$dato_current</b> $modelo_name]</span>";
+					}					
+					$html_tree	.= "</a>";
 					
 					if(is_array($value)) {												
 						$html_tree .= $open_group;
-						$html_tree .= component_security_access::walk_ar_ts_childrens_recursive($value, $arguments);					
+						$html_tree .= component_security_access::walk_ar_elements_recursive($value, $arguments);					
 						$html_tree .= $close_group;							
 					}
 			
 				$html_tree .= $close_term;
 
-		}//end foreach((array)$ar_tesauro as $tipo => $value) {
+		}//end foreach((array)$ar_elements as $tipo => $value) {
 
 		if(SHOW_DEBUG) {
 			#$total=round(microtime(1)-$start_time,3); dump($total, 'total');	#dump($ar_authorized_areas_for_user, 'ar_authorized_areas_for_user');				
@@ -325,333 +333,297 @@ class component_security_access extends component_common {
 
 		return (string)$html_tree;
 
-	}//end walk_ar_ts_childrens_recursive
-	
+	}//end walk_ar_elements_recursive	
 
 
 
 	/**
-	* CREATE RADIO BUTTON . USADO POR walk_ar_ts_childrens_recursive
+	* CREATE RADIO BUTTON . USADO POR walk_ar_elements_recursive
 	*/
-	public static function create_radio($dato_current, $terminoID, $tipo, $parent, $caller_id, $is_time_machine=false, $arguments) {
-		#dump($tipo,'dato_current');
-		$lang = DEDALO_DATA_LANG ;
+	public static function create_radio($dato_current, $parent, $dato_tipo, $dato_section_tipo) {
 
-		$caller_tipo = $arguments['caller_tipo'];
-		
-		# CASE TIME MACHINE
-		$disabled		= '';
-		$name_tm		= '';
-		if($is_time_machine == true) {
-			
-			$disabled 	= 'disabled';
-			$name_tm	= '_tm';
-		}
-		
-		$html = '';		
-		
-		# OPTION 0 . NOT ACCESS
-		$checked	= false;
-		if( $dato_current == 0) $checked = 'checked="checked"';						
-		/*
-		$html .= "\n  <input class=\"css_security_radio_button\" type=\"radio\" 
-		name=\"{$tipo}_{$name_tm}\" 
-		data-tipo=\"{$tipo}\" 
-		value=\"0\" id=\"{$id}\" 
-		title=\"No access\" 
-		data-flag=\"component_security_access\" 
-		$checked 
-		$disabled />-";
-		*/
-		# VERIFY USER LOGGED IS CURRENT VIEWED USER			
-			$user_id_logged = navigator::get_user_id();							#dump($parent,'parent');
-			$user_id_viewed = $caller_id;
-			if(!TOP_TIPO) trigger_error("Waring: TOP_TIPO is empty");
-			
-			switch (true) {
-				case (TOP_TIPO==DEDALO_SECTION_PROFILES_TIPO): # case editing profiles (order is important here)
-					$disabled = '';
-					break;
-				case ($user_id_logged==$user_id_viewed): # case editing users and current logged user is the edited user
-					$disabled = "disabled";
-					break;				
-				default:
-					$disabled = '';
-					break;
-			}
-		
+		$lang 			= DEDALO_DATA_NOLAN;
+		$section_tipo 	= DEDALO_SECTION_PROFILES_TIPO;
+		$tipo 			= DEDALO_COMPONENT_SECURITY_ACCESS_PROFILES_TIPO;
+		$name 			= $dato_section_tipo.'_'.$dato_tipo;
+		$disabled 		= '';	
+		$html 			= '';
 
-		# OPTION 0 
-		$html .= "\n <input class=\"css_security_radio_button\" type=\"radio\" onchange=\"component_security_access.Save(this)\"
-						name=\"{$tipo}_{$parent}_tm\" 
-						data-tipo=\"{$tipo}\"
-						data-parent=\"{$caller_id}\"
-						data-id_matrix=\"{$parent}\"
-						data-lang=\"{$lang}\"
-						data-caller_tipo=\"{$caller_tipo}\"
-						data-flag=\"component_security_access\"
-						value=\"0\"
-						title=\"No access\"
-						$checked $disabled /> <span class=\"span_property\">X</span> ";
+		//if($dato_tipo=='rsc12') dump($dato_current, ' dato_current ++ '.$dato_section_tipo.' - '.to_string($dato_tipo));
+
+		# OPTION 0  . NO ACCESS
+		$checked = ($dato_current==0) ? 'checked="checked"' : '';
+		$html .= "<input type=\"radio\" class=\"css_security_radio_button\" onchange=\"component_security_access.Save(this,event)\"
+		name=\"{$name}\"
+		data-tipo=\"{$tipo}\"
+		data-parent=\"{$parent}\"
+		data-lang=\"$lang\"
+		data-section_tipo=\"$section_tipo\"
+		data-dato_section_tipo=\"{$dato_section_tipo}\"
+		data-dato_tipo=\"{$dato_tipo}\"
+		value=\"0\"
+		title=\"No access\"
+		{$checked} {$disabled}/> <span class=\"span_property\">X</span> ";
 		
 		# OPTION 1 . READ ONLY
-		$checked	= false;
-		if( $dato_current == 1) $checked = 'checked="checked"';
-		/*
-		$html .= "\n  <input class=\"css_security_radio_button\" type=\"radio\" name=\"{$tipo}_{$name_tm}\" data-tipo=\"{$tipo}\" value=\"1\" id=\"{$id}\" title=\"Read only\" flag=\"component_security_access\" $checked $disabled />r";
-		*/
-		$html .= "\n <input class=\"css_security_radio_button\" type=\"radio\" onchange=\"component_security_access.Save(this)\" 
-						name=\"{$tipo}_{$parent}_tm\" 
-						data-tipo=\"{$tipo}\"
-						data-parent=\"{$caller_id}\"
-						data-id_matrix=\"{$parent}\"
-						data-lang=\"{$lang}\"
-						data-caller_tipo=\"{$caller_tipo}\"
-						data-flag=\"component_security_access\"
-						value=\"1\"
-						title=\"Read only\"
-						$checked $disabled /> <span class=\"span_property\">R</span> ";
+		$checked = ($dato_current==1) ? 'checked="checked"' : '';
+		$html .= "<input type=\"radio\" class=\"css_security_radio_button\" onchange=\"component_security_access.Save(this,event)\"
+		name=\"{$name}\"
+		data-tipo=\"{$tipo}\"
+		data-parent=\"{$parent}\"
+		data-lang=\"$lang\"
+		data-section_tipo=\"$section_tipo\"
+		data-dato_section_tipo=\"{$dato_section_tipo}\"
+		data-dato_tipo=\"{$dato_tipo}\"
+		value=\"1\"
+		title=\"Read only\"
+		{$checked} {$disabled}/> <span class=\"span_property\">R</span> ";
 		
 		# OPTION 2 . READ AND WRITE
-		$checked	= false;
-		if( $dato_current == 2) $checked = 'checked="checked"';
-		/*
-		$html .= "\n  <input class=\"css_security_radio_button\" type=\"radio\" name=\"{$tipo}_{$name_tm}\" data-tipo=\"{$tipo}\" value=\"2\" id=\"{$id}\" title=\"Read and write\" flag=\"component_security_access\" $checked $disabled />w ";
-		*/
-		$html .= "\n <input class=\"css_security_radio_button\" type=\"radio\" onchange=\"component_security_access.Save(this)\"
-						name=\"{$tipo}_{$parent}_tm\" 
-						data-tipo=\"{$tipo}\"
-						data-parent=\"{$caller_id}\"
-						data-id_matrix=\"{$parent}\"
-						data-lang=\"{$lang}\"
-						data-caller_tipo=\"{$caller_tipo}\"
-						data-flag=\"component_security_access\"
-						value=\"2\"
-						title=\"Read and write\"
-						$checked $disabled /> <span class=\"span_property\">RW</span> ";
+		$checked = ($dato_current==2) ? 'checked="checked"' : '';
+		$html .= "<input type=\"radio\" class=\"css_security_radio_button\" onchange=\"component_security_access.Save(this,event)\"
+		name=\"{$name}\"
+		data-tipo=\"{$tipo}\"
+		data-parent=\"{$parent}\"
+		data-lang=\"$lang\"
+		data-section_tipo=\"$section_tipo\"
+		data-dato_section_tipo=\"{$dato_section_tipo}\"
+		data-dato_tipo=\"{$dato_tipo}\"
+		value=\"2\"
+		title=\"Read and write\"
+		{$checked} {$disabled}/> <span class=\"span_property\">RW</span> ";
 		
-		return (string)$html;	
+		return $html;	
 
 	}//end create_radio
+
+
+
+	/**
+	* PROPAGATE_AREAS_TO_ACCESS
+	* @param object $areas_to_save
+	*	Contains mixed area an section tipos without suffix -admin
+	* @return bool
+	*/
+	public static function propagate_areas_to_access($areas_to_save, $parent) {
+
+		if (!is_object($areas_to_save)) {
+			trigger_error("Sorry, only objects are accepted as 'areas_to_save' [propagate_areas_to_access]");
+			return false;
+		}
+
+		// COMPONENT_SECURITY_ACCESS
+		$component_security_access = component_common::get_instance('component_security_access',
+																	DEDALO_COMPONENT_SECURITY_ACCESS_PROFILES_TIPO,
+																	$parent,
+																	'edit',
+																	DEDALO_DATA_NOLAN,
+																	DEDALO_SECTION_PROFILES_TIPO);
+		$security_access_dato = (object)$component_security_access->get_dato();		
+
+
+		// REMOVE ACCESS VARS WHEN NOT IN RECEIVED AREAS	
+		$rm=0;
+		foreach ($security_access_dato as $section_tipo => $elements) {
+			
+			if (!isset($areas_to_save->$section_tipo)) {
+				unset($security_access_dato->$section_tipo);
+				debug_log(__METHOD__." Removed $section_tipo from access - section tipo: $section_tipo".to_string(), logger::DEBUG);
+				$rm++;
+			}			
+		}
+
+		
+		// ADD AREAS TO ACCESS
+		$add=0;
+		foreach ((object)$areas_to_save as $current_tipo => $permissions) {
+			
+			$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
+			if ($modelo_name!='section') continue; # Ignore areas and others, only sections are used now
+			if (isset($security_access_dato->$current_tipo)) continue;	// Dato already exists. Nothing to do			
+
+			$security_access_dato->$current_tipo = new stdClass();
+
+			# ALL SHOWABLE ELEMENTS
+			$ar_ts_childrens_plain = self::get_ar_ts_childrens_plain($current_tipo);
+			foreach ((array)$ar_ts_childrens_plain as $children_tipo) {
+				
+				$security_access_dato->$current_tipo->$children_tipo = 2;	// Set all childrens to read/write (2) by default				
+				$add++;				
+			}
+			debug_log(__METHOD__." ADD section: $current_tipo - childres: ".count($ar_ts_childrens_plain), logger::DEBUG);		
+
+		}//end foreach ((array)$areas_to_save as $area_tipo => $permissions)
+		
+
+		// Update and save edited object dato
+		$component_security_access->set_dato($security_access_dato);
+		$component_security_access->Save();
+
+		debug_log(__METHOD__." Propagated areas to access. Added $add elements. Removed sections: $rm".to_string(), logger::DEBUG);
+		
+	}#end propagate_areas_to_access
 	
 
-
-
-
-	
 	
 	/**
-	* PROPAGATE AREAS TO ACCESS (SAVE COMPOSED DATA TO MATRIX)
-	* Receive array of areas (checkboxes) from edit section 'Users' page
-	* and compares with array of full areas ad components for build the
-	* complete table array of permissions for this user
-	* Nothing will be done when we are in context: Editing Projects
-	*
-	* @param $ar_areas_to_save
-	*	Array of areas format:
-	*		[dd321] => 2,[dd294-admin] => 2,[dd294] => 2 ..	
-	*	to save in matrix db. 
-	*	Note that the checkbox that no contain value will not be saved and area not in this value
-	* @param $parent
-	*	Section id matrix of current record. Equivalent to userID matrix (when edit Users) or Project id matrix (when edit Projects)
-	*
-	* @todo Special pseudo-areas admin like dd12-admin : USE ??????????????????????????????
-	* @see used in class.component_security_areas.php:Save() [line 56]
+	* GET_AR_TS_CHILDRENS_PLAIN (RECURSIVE)
+	* @return array $ar_ts_childrens_plain
 	*/
-	public static function propagate_areas_to_access($ar_areas_to_save, $parent, $parent_section_tipo) {
+	public static function get_ar_ts_childrens_plain( $parent_tipo, $ar_elements=null ) {
+
+		static $ar_ts_childrens_plain;
+
+		if (is_null($ar_elements)) {
+			$ar_elements = self::get_ar_ts_childrens_recursive($parent_tipo);
+				#dump($ar_elements, ' ar_elements ++ '.to_string($parent_tipo));
+		}
 		
-		# Verify if we are in 'Users' section or 'Projects' section
-		
-			/* Método anterior (a través de sección) lo sustituimos por una búsqueda real en estructura	
-			# Create a section with parent id and search children by modelo_name=component_security_access		
-			$section_obj 			= section::get_instance($parent, $parent_section_tipo);			
-			$ar_children_objects_by_modelo_name_in_section = $section_obj->get_ar_children_objects_by_modelo_name_in_section($modelo_name_required='component_security_access');	
-				#dump($ar_children_objects_by_modelo_name_in_section,'$ar_children_objects_by_modelo_name_in_section',"modelo $modelo_name_required , parent:$parent");
-			if(empty($ar_children_objects_by_modelo_name_in_section)) {
-				# We are editing 'Projects'
-				# Nothing to do
-				return NULL;
+
+		foreach ($ar_elements as $current_tipo => $ar_value) {
+			$ar_ts_childrens_plain[$parent_tipo][] = $current_tipo;
+				#dump($ar_value, ' $ar_value ++ '.to_string());
+			if (!empty($ar_value)) {
+				self::get_ar_ts_childrens_plain($parent_tipo, $ar_value);
 			}
-			*/
+		}
 
-			# STRUCTURE
-			# Buscamos recusivamente el elemento
-			# OBTENEMOS LOS ELEMENTOS HIJOS DE ESTA SECCIÓN
-			$RecordObj_dd			= new RecordObj_dd($parent_section_tipo);	
-			$ar_recursive_childrens = $RecordObj_dd->get_ar_recursive_childrens_of_this($parent_section_tipo);
+		if (isset($ar_ts_childrens_plain[$parent_tipo])) {
+			return $ar_ts_childrens_plain[$parent_tipo];
+		}else{
+			return array();
+		}	
 
-			foreach ($ar_recursive_childrens as $terminoID) {
-				$RecordObj_dd		= new RecordObj_dd($terminoID);				 
-				$modeloID			= $RecordObj_dd->get_modelo();	
-				$modelo_name		= $RecordObj_dd->get_modelo_name();		#dump($modelo_name,'modelo_name');
+	}#end get_ar_ts_childrens_plain
 
-				if ($modelo_name=='component_security_access') {
-					# Component matched
-					$component_security_access_tipo = $terminoID;	
-					break;
+
+
+	/**
+	* GET_SECURITY_AREAS_SECTIONS
+	* Fiter security_areas sections and calculate childrens elements of every section
+	* @return object $security_areas_sections_obj
+	*/
+	public function get_security_areas_sections() {
+
+		$security_areas_sections_obj 	= new stdClass();
+
+		$component_security_areas 		= component_common::get_instance('component_security_areas',
+																		DEDALO_COMPONENT_SECURITY_AREAS_PROFILES_TIPO,
+																		$this->get_parent(),
+																		'edit',
+																		DEDALO_DATA_NOLAN,
+																		DEDALO_SECTION_PROFILES_TIPO );
+		$component_security_areas_dato 	= (object)$component_security_areas->get_dato();
+								
+		foreach($component_security_areas_dato as $current_section_tipo => $permisions) {			
+
+			$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_section_tipo,true);
+			if ($modelo_name!='section') continue; # Skip
+			$security_areas_sections_obj->$current_section_tipo = component_security_access::get_ar_ts_childrens_recursive($current_section_tipo);
+		}
+
+		return $security_areas_sections_obj;			
+		
+	}#end get_security_areas_sections
+
+
+
+	/**
+	* GET_AR_CHILDREN_ELEMENTS
+	* @return array $ar_children_elements
+	*/
+	public static function get_ar_children_elements( $tipo ) {
+		
+		$get_ar_children_elements = array();
+
+		$RecordObj_dd			= new RecordObj_dd($tipo);
+		$ar_ts_childrens		= $RecordObj_dd->get_ar_childrens_of_this();
+			#dump($ar_ts_childrens, ' ar_ts_childrens ++ '.to_string());
+					
+		foreach ((array)$ar_ts_childrens as $children_terminoID) {				
+			
+			$modelo_name 			= RecordObj_dd::get_modelo_name_by_tipo($children_terminoID,true);								
+			$ar_exclude_modelo		= array('component_security_administrator','relation_list','section_list','box_elements','exclude_elements');		# ,'filter'	,'tools','search_list'
+			$exclude_this_modelo 	= false;
+			foreach($ar_exclude_modelo as $modelo_exclude) {					
+				if( strpos($modelo_name, $modelo_exclude)!==false ) {
+					$exclude_this_modelo = true;
+					break;	
 				}
 			}
-			#dump($component_security_access_tipo,'$component_security_access_tipo'); return;
-			if(empty($component_security_access_tipo)) {
-				# We are editing 'Projects'
-				# Nothing to do
-				return NULL;
-			}
-
-
-		# Verification
-		if(empty($ar_areas_to_save) || !is_array($ar_areas_to_save)) throw new Exception("Error Processing Request: ar_areas_to_save is empty!", 1);
-
-
-		#$user_id 	= $parent;
-		$ar_permissions = array();
-		
-
-		# 1 Get all major areas 
-		$ar_all_areas = area::get_ar_ts_children_all_areas_plain();
-			#dump($ar_all_areas,'ar_all_areas',"array plain of all major areas/sections in ts structure (from area_root,area_resource,area_admin and childrens) "); return;
-			#dump($ar_areas_to_save,'$ar_areas_to_save');
-		
-		# 2 Iterate all areas
-		if(is_array($ar_all_areas)) foreach ($ar_all_areas as $tipo) {
 			
-			# RESET ALL AREAS, SECTIONS AND CHILDRENS TO 0
-			
-				# Set current area to 0
-				$ar_permissions[$tipo] 		= 0;
- 
-					/* 
-					# Método anterior (a través de sección) lo sustituimos por una búsqueda real en estructura					
-					# Set current area childrens to 0
-					$ar_modelo_name_required 	= array('component_','button_','section_group');
-					$section_ar_children_tipo 	= section::get_section_ar_children_tipo($tipo, $ar_modelo_name_required);
-					if(is_array($section_ar_children_tipo)) foreach ($section_ar_children_tipo as $children_tipo) {
-						$ar_permissions[$children_tipo] = 0;
-					}
-					*/
-					# STRUCTURE
-					# OBTENEMOS TODOS LOS ELEMENTOS HIJOS DE ESTA ÁREA (RECURSIVE) !! Ojo: se reutilizan los valores abajo, en el siguiente paso
-					$RecordObj_dd				= new RecordObj_dd($tipo);	
-					$ar_recursive_childrens 	= (array)$RecordObj_dd->get_ar_recursive_childrens_of_this($tipo);
+			if ( $exclude_this_modelo !== true ) {		
+				#$ar_temp = self::get_ar_ts_childrens_recursive($children_terminoID);						
+				$get_ar_children_elements[] = $children_terminoID;				
+			}				
+		}
 
-					# Elementos para resetear (LOS SUSCEPTIBLES DE requerir permisos) !! Ojo: se reutilizan los valores abajo, en el siguiente paso
-					$ar_modelo_name_required	= array('component_','button_','section_group');
+		return $get_ar_children_elements;
 
-					foreach ($ar_recursive_childrens as $terminoID) {
-						$RecordObj_dd			= new RecordObj_dd($terminoID);				 
-						$modeloID				= $RecordObj_dd->get_modelo();	
-						$modelo_name			= $RecordObj_dd->get_modelo_name();		#dump($modelo_name,'modelo_name');
+	}#end get_ar_children_elements
 
-						# Iterate all ar_modelo_name_required substrings to find matches
-						foreach ($ar_modelo_name_required as $name_required) {
-						    if ( strpos($modelo_name, $name_required)!==false ) {
-						    	# Component matched (like 'component_' in 'component_input_text')
-								$ar_permissions[$terminoID] = 0;	#dump($terminoID,'$terminoID');
-						    }
+
+
+	/**
+	* UPDATE_DATO_VERSION
+	* @param array $update_version
+	* @param mixed $dato_unchanged
+	* @return object $response
+	*/
+	public static function update_dato_version($update_version, $dato_unchanged) {
+
+		$update_version = implode(".", $update_version);
+		#dump($dato_unchanged, ' dato_unchanged ++ -- '.to_string($update_version)); #die();
+
+		switch ($update_version) {
+
+			case '4.0.11':					
+				$data_changed=false;
+				if(!empty($dato_unchanged)) {
+
+					$new_dato = new stdClass();
+					foreach ((object)$dato_unchanged as $tipo => $value) {
+
+						if (is_object($value)) {
+							break; // Temporal !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! sólo para datos mezcados 4.0.10 y 4.0.11 en la instalación de desarrollo
 						}
-					}
-					#dump($tipo,'$tipo in area');
-					
-			# SET COINCIDENT AREAS (ar_areas_to_save / ar_all_areas) TO NEW VALUES
 
-				if (array_key_exists($tipo, $ar_areas_to_save)) {
-
-					# Set access permissions of current area as defined from received checkbox state (0,1,2) no access,read,write
-					$current_state 			= $ar_areas_to_save[$tipo];
-					$ar_permissions[$tipo] 	= $current_state;
-					
-					# Set current area childrens to same value
-					# If current tipo is section, propagate their permissions to children components
-					$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
-					if($modelo_name=='section') {
-
-						/*
-						# Método anterior (a través de sección) lo sustituimos por una búsqueda real en estructura	
-						$ar_modelo_name_required 	= array('component_','button_','section_group');
-						$section_ar_children_tipo 	= section::get_section_ar_children_tipo($tipo, $ar_modelo_name_required);
-							#dump($section_ar_children_tipo,'section_ar_children_tipo',"section_ar_children_tipo from tipo=$tipo");
-
-						#if(empty($ar_component_obj)) error_log("MESSAGE: Alert: current section ($tipo) has no children !", 1);
-						if(is_array($section_ar_children_tipo)) foreach ($section_ar_children_tipo as $children_tipo) {
-
-							$ar_permissions[$children_tipo] = $current_state;
-								#dump($component_obj_tipo,'component_obj_tipo'," add to ar_permissions : tipo:$component_obj_tipo , estado:$current_state");
-						}
-						*/
-						# $ar_recursive_childrens está calculado en el paso anterior. Volvemos a iterar asignando el estado de la sección actual a sus componentes hijos 
-						foreach ($ar_recursive_childrens as $terminoID) {
-							$RecordObj_dd			= new RecordObj_dd($terminoID);				 
-							$modeloID				= $RecordObj_dd->get_modelo();	
-							$modelo_name			= $RecordObj_dd->get_modelo_name();		#dump($modelo_name,'modelo_name');
-
-							# Iterate all ar_modelo_name_required substrings to find matches
-							foreach ($ar_modelo_name_required as $name_required) {
-							    if ( strpos($modelo_name, $name_required)!==false ) {
-							    	# Component matched (like 'component_' in 'component_input_text')
-									$ar_permissions[$terminoID] = $current_state ;	#dump($terminoID,'$terminoID');
-							    }
+						# Group elements by section
+						$ar_terminoID = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($tipo, 'section', 'parent', $search_exact=true);
+						if (!empty($ar_terminoID[0])) {
+							$section_tipo = $ar_terminoID[0];
+						
+							if (!isset($new_dato->$section_tipo)) {
+								$new_dato->$section_tipo = new stdClass();
 							}
-						}#end foreach ($ar_recursive_childrens as $terminoID)
-
-					}#if($modelo_name=='section')
+							$new_dato->$section_tipo->$tipo = (int)$value; // Convert values to int
+							$data_changed=true;
+						}					
+					}					
+				}
 					
-				}#if (array_key_exists($tipo, $ar_areas_to_save))
+				# Compatibility old dedalo instalations
+				if ($data_changed) {
+					$response = new stdClass();
+						$response->result =1;
+						$response->new_dato = $new_dato;
 
-		}#foreach ($ar_all_areas as $tipo)
-			#dump($ar_permissions,'$ar_permissions'," array of all areas + sections + components pairs tipo=>permission for user $user_id (Called by trigger.component.common->Save normally) ");
+					return $response;
+				}else{
+					$response = new stdClass();
+						$response->result = 2;
+						$response->msg = to_string($dato_unchanged)." : The dato don't need update.<br />";
+
+					return $response;
+				}
+				break;
+
+			default:
+				# code...
+				break;
+		}		
 		
-
-		# 3 Save dato to matrix
-			/*
-			# Método anterior (a través de sección) lo sustituimos por una búsqueda real en estructura	
-			# Create a section with id=$user_id (current user edit section) for find their children component_security_access structure element
-			$section 			 = section::get_instance($user_id,$parent_section_tipo);	
-			$ar_children_objects = $section->get_ar_children_objects_by_modelo_name_in_section($modelo_name_required='component_security_access');
-				#dump($ar_children_objects,'$ar_children_objects',"modelo $modelo_name_required , id_matrix:$user_id");
-			*/
-			
-			# Create object ($component_security_access_tipo created at first)
-			#$component_security_access = new component_security_access($component_security_access_tipo, $user_id, 'edit', DEDALO_DATA_NOLAN);
-			$component_security_access = component_common::get_instance('component_security_access', $component_security_access_tipo, $parent, 'edit', DEDALO_DATA_NOLAN, $parent_section_tipo); //DEDALO_SECTION_USERS_TIPO
-				#dump($component_security_access,'$component_security_access'); return;
-
-
-			# Verify component
-			if(empty($component_security_access) || !is_object($component_security_access) ) throw new Exception("ERROR: current section id=$parent has no component_security_access !", 1);
-		
-			# Configure component
-			# dump($component_security_access,'component_security_access');
-			/*
-			$id 	= $component_security_access->get_id();
-			$parent = $component_security_access->get_parent();
-			$tipo 	= $component_security_access->get_tipo();
-			$lang 	= $component_security_access->get_lang();
-
-			$matrix_table 		= common::get_matrix_table_from_tipo($tipo);
-			$RecordObj_matrix 	= new RecordObj_matrix($matrix_table,$id,$parent,$tipo,$lang);	#$matrix_table=null, $id=NULL, $parent=NULL, $tipo=NULL, $lang=NULL
-			$RecordObj_matrix->set_dato($ar_permissions);
-				#dump($ar_permissions,'$ar_permissions',"ar_permissions final for user $user_id , in matrix record ($tipo) id=$id");
-				#dump($RecordObj_matrix,'To save: $RecordObj_matrix');
-
-			$RecordObj_matrix->Save();			
-
-			$id = $RecordObj_matrix->get_id();
-				#error_log("MESSAGE: -> propagate_areas_to_access complete to component_security_access matrix id=$id !");
-			*/
-			$component_security_access->set_dato($ar_permissions);
-			$component_security_access->Save();
-
-		# reset session permisions table
-		# unset($_SESSION['dedalo4']['auth']['permissions_table']);		
-
-		return $ar_permissions;
-
-	}//end propagate_areas_to_access
-	
-
-
-
-
+	}#end update_dato_version
 
 
 	

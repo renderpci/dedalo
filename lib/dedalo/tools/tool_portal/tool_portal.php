@@ -1,5 +1,4 @@
 <?php
-	//dump($_REQUEST, ' _REQUEST ++ '.to_string()); return;
 
 	# CONTROLLER TOOL LANG
 
@@ -7,17 +6,15 @@
 	$parent 				= $this->component_obj->get_parent();
 	$lang 					= $this->component_obj->get_lang();
 	$label 					= $this->component_obj->get_label();
-	$section_tipo 			= $this->component_obj->get_section_tipo();
-				
-	$permissions			= common::get_permissions($tipo);
+	$section_tipo 			= $this->component_obj->get_section_tipo();				
+	$permissions			= common::get_permissions($section_tipo,$tipo);
 	$component_name			= get_class($this->component_obj);
 	$tool_name 				= get_class($this);
-
 	$button_row				= $this->button_row;
-	$target_section_tipo 	= $this->component_obj->target_section_tipo;
-	
+	$target_section_tipo 	= $this->component_obj->target_section_tipo;	
 	$modo 					= $this->get_modo();
 	$file_name 				= $modo;	
+
 
 	# TOOL CSS / JS MAIN FILES
 	css::$ar_url[] = DEDALO_LIB_BASE_URL."/tools/".$tool_name."/css/".$tool_name.".css";
@@ -71,14 +68,14 @@
 									debug_log(__METHOD__." Removed session key: ".to_string($key), logger::DEBUG);
 								}
 								break;
-							}							
+							}						
 						}
 					}
 					$section_html = $section->get_html();
 
 				#DEDALO_LIB_BASE_URL + "/main/?m=list&tipo="+current_tipo+"&caller_id="+caller_id+"&caller_tipo="+caller_tipo;
 				break;
-		
+
 		
 	}#end switch
 		

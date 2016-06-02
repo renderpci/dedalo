@@ -2,7 +2,7 @@
 # COMMON (ABSTRACT CLASS)
 # MÉTODOS COMPARTIDOS POR TODOS LOS COMPONENTES Y ZONAS
 # DECLARAR LOS MÉTODOS PUBLIC
-require_once(DEDALO_LIB_BASE_PATH . '/common/class.Accessors.php');
+include(DEDALO_LIB_BASE_PATH . '/common/class.Accessors.php');
 #require_once(DEDALO_LIB_BASE_PATH . '/component_common/class.locator.php');
 #require_once(DEDALO_LIB_BASE_PATH . '/db/class.RecordObj_matrix.php');
 
@@ -31,30 +31,44 @@ abstract class common extends Accessors {
 	#abstract protected function define_tipo();
 	#abstract protected function define_lang();
 	#abstract public function get_html();
-		
 	
-	# PERMISSIONS
-	public static function get_permissions( $tipo=null ) {
+	
+
+	/**
+	* GET_PERMISSIONS
+	* @param string $tipo
+	* @return int $permissions
+	*/
+	public static function get_permissions( $tipo=null, $sub_tipo=null ) {
 		
 		if(!login::is_logged()) {
-			return false;
+			return 0;
 		}
 
 		if( empty($tipo) ) {
 			if(SHOW_DEBUG) {
-				dump($tipo,tipo);
+				dump($tipo,'tipo');
 				throw new Exception("Error Processing Request. get_permissions: tipo is empty", 1);
 			}			
 			die("Error Processing Request. get_permissions: tipo is empty");
+		}		
+		if( empty($sub_tipo) ) {
+			if(SHOW_DEBUG) {
+				dump($sub_tipo,'sub_tipo');
+				throw new Exception("Error Processing Request. get_permissions: sub_tipo is empty", 1);
+			}			
+			die("Error Processing Request. get_permissions: sub_tipo is empty");
 		}
-		$security 		= new security();
-		$permissions 	= (int)$security->get_security_permissions($tipo);
-		if(SHOW_DEBUG) {
-			#dump($permissions, 'permissions for '.$tipo, array());
-		}			
+		$permissions = (int)security::get_security_permissions($tipo, $sub_tipo);		
 						
 		return $permissions;
 	}
+
+
+
+	/**
+	* SET_PERMISSIONS
+	*/
 	public function set_permissions( $number ) {
 		$this->permissions	= (int)$number;
 	}
@@ -71,7 +85,6 @@ abstract class common extends Accessors {
 			#dump($this,"");
 			throw new Exception("Error (3): tipo is mandatory!", 1);
 		}
-
 
 		
 		if( !$this->bl_loaded_structure_data) {
@@ -132,22 +145,19 @@ abstract class common extends Accessors {
 			#dump($this->RecordObj_dd->get_propiedades()," ");
 			$propiedades = $this->RecordObj_dd->get_propiedades();
 			$this->propiedades = !empty($propiedades) ? json_handler::decode($propiedades) : false;
-			
-
 
 			# MATRIX_TABLE
 			#if(!isset($this->matrix_table))
 			#$this->matrix_table = self::get_matrix_table_from_tipo($this->tipo);
-
 			
 			# NOTIFY : Notificamos la carga del elemento a common			
 			common::notify_load_lib_element_tipo($this->modelo, get_called_class(), $this->modo);		
 			
-
-
+			# BL_LOADED_STRUCTURE_DATA
 			$this->bl_loaded_structure_data = true;
 		}
-	}
+
+	}//end load_structure_data
 
 	/**
 	* LOAD MATRIX DATA
@@ -270,7 +280,9 @@ abstract class common extends Accessors {
 		#if(SHOW_DEBUG) $GLOBALS['log_messages'][] = exec_time($start_time, __METHOD__, 'logger_backend_activity '.$tipo);
 
 		return $matrix_table;
-	}
+
+	}//end get_matrix_table_from_tipo
+
 
 
 	/**
@@ -278,12 +290,10 @@ abstract class common extends Accessors {
 	* @param $id (int id_matrix)
 	* @param $table (str default 'matrix')
 	*/
-	static public function get_tipo_by_id($id, $current_matrix_table=NULL) {
-		
+	static public function get_tipo_by_id($id, $current_matrix_table=NULL) {		
 		
 		# DEPRECATED FUNCTION WARNING
 		throw new Exception("Error Processing Request. DEPRECATED FUNCTION!!", 1);
-
 
 
 		
@@ -329,9 +339,13 @@ abstract class common extends Accessors {
 		}
 		trigger_error("Error: record not found [id:$id] $current_matrix_table (get_tipo_by_id)");
 		return NULL;
-	}
+	}//end get_tipo_by_id
 
 	
+
+	/**
+	* SET_DATO
+	*/
 	public function set_dato($dato){
 
 		# UNSET previous calculated valor
@@ -340,17 +354,20 @@ abstract class common extends Accessors {
 		unset($this->ar_list_of_values);
 
 		$this->dato = $dato;
-	}
+
+	}//end set_dato	
 
 
+
+	/**
+	* SET_DEFAULT_VALUE
+	*/
 	protected function set_default_value() {
 
-	}
+	}//end set_default_value
 
 
 
-
-	
 	/**
 	* GET IDENTIFICADOR UNICO
 	* Se fija al hacer la primera llamada. 
@@ -364,16 +381,19 @@ abstract class common extends Accessors {
 		}
 
 		$permissions=null;
-		if(!empty($this->tipo)) {
-			$permissions = common::get_permissions($this->tipo);
-		}
+		#if(!empty($this->tipo)) {
+		#	$permissions = common::get_permissions($this->tipo);
+		#}
 
 		$this->identificador_unico = $this->get_id().'_'.$this->get_tipo().'_'.$this->get_parent().'_'.$this->get_lang().'_'.$this->get_modo().'_'.$this->get_variant().'_'.$permissions.'_'.$this->get_section_tipo();	# .'_'.mt_rand(1,999); #dump($identificador_unico);
 			#$identificador_unico = $this->get_tipo() . '_' . $this->get_id() . '_' . $this->get_lang() . '_' . $this->get_modo();	#dump($identificador_unico);		
 			#dump($this->identificador_unico,'$this->identificador_unico');	
 
 		return $this->identificador_unico;
-	}
+
+	}//end get_identificador_unico
+
+
 
 	/**
 	* SET IDENTIFICADOR UNICO
@@ -387,7 +407,9 @@ abstract class common extends Accessors {
 	
 	# LOADED OBJS
 	
-	# GET LOADED OBJS BY MODEL ID
+	/**
+	* GET_AR_LOADED_MODELOS
+	*/
 	public static function get_ar_loaded_modelos() {		
 		
 		if(is_array(common::$ar_loaded_modelos)){
@@ -398,8 +420,11 @@ abstract class common extends Accessors {
 		}
 	}
 
+
 	
-	# NOTIFY LOAD LIB ELEMET TIPO
+	/**
+	* NOTIFY_LOAD_LIB_ELEMENT_TIPO
+	*/
 	public static function notify_load_lib_element_tipo($tipo, $modelo_name, $modo) {
 			
 		if (empty($tipo) || in_array($tipo, common::$ar_loaded_modelos)) {
@@ -422,14 +447,21 @@ abstract class common extends Accessors {
 			}
 			common::$ar_loaded_modelos_name[] 	= $modelo_name;
 		}
-	}	
+
+	}//end notify_load_lib_element_tipo
+
+
 	
 	# GET_AR_ALL_LOADED_MODELOS
 	#public static function get_ar_all_loaded_modelos() {		
 	#	return common::$ar_loaded_modelos;
 	#}
 
-	# SHOW_LOADED_MODELOS
+
+
+	/**
+	* SHOW_LOADED_MODELOS
+	*/
 	public static function show_loaded_modelos() {
 		
 		$debug = '';
@@ -449,8 +481,10 @@ abstract class common extends Accessors {
 		}
 		
 		return $debug;	
-	}
+
+	}//end show_loaded_modelos
 	
+
 	
 	/**
 	* GET TIPO NAME OF CURRENT OBJECT
@@ -469,13 +503,13 @@ abstract class common extends Accessors {
 	# __TOSTRING
 	public function __toString() {
         return 'Obj: '.get_called_class();
-    }	
+    }
 	
 	
 	
-	
-	
-	# SETVAR
+	/**
+	* SETVAR
+	*/
 	public static function setVar($name, $default=false) {
 
 		if($name=='name') throw new Exception("Error Processing Request: Name 'name' is invalid", 1);
@@ -488,7 +522,10 @@ abstract class common extends Accessors {
 	}
 	
 	
-	# PAGE QUERY . REMOVED ORDER CODE BY DEFAULT
+
+	/**
+	* GET_PAGE_QUERY_STRING . REMOVED ORDER CODE BY DEFAULT
+	*/
 	public static function get_page_query_string($remove_optional_vars=true) {
 		
 		$queryString = $_SERVER['QUERY_STRING']; # like max=10
@@ -533,17 +570,11 @@ abstract class common extends Accessors {
 		$qs = str_replace($search, $replace, $qs);
 		
 		# if last char is & delete it
-		if(substr($qs, -1)=='&') $qs = substr($qs, 0, -1);
-		
-		#dump( $qs , 'qs');
+		if(substr($qs, -1)=='&') $qs = substr($qs, 0, -1);		
 
 		return $qs ;
-	}
 
-
-
-
-	
+	}//end get_page_query_string
 	
 
 
@@ -572,6 +603,8 @@ abstract class common extends Accessors {
 		return $html;
 	}
 
+
+
 	/*
 	public function get_caller_id() {
 		if(!empty($_REQUEST['caller_id'])) return $_REQUEST['caller_id'];
@@ -594,6 +627,7 @@ abstract class common extends Accessors {
 	*/
 
 
+
 	/**
 	* GET_CONTEXT
 	*/
@@ -606,7 +640,8 @@ abstract class common extends Accessors {
 			$context 			= 'default';
 		}
 		return $context;
-	}
+
+	}//end get_context
 
 
 
@@ -648,7 +683,12 @@ abstract class common extends Accessors {
 			foreach ($ar_result as $current_section_id) {
 				#dump(DEDALO_SECTION_PROJECTS_TIPO," DEDALO_SECTION_PROJECTS_TIPO");dd267
 				#$component_project_langs = new component_project_langs(DEDALO_COMPONENT_PROJECT_LANGS_TIPO,$current_section_id);
-				$component_project_langs = component_common::get_instance('component_project_langs', DEDALO_COMPONENT_PROJECT_LANGS_TIPO, $current_section_id, 'edit', DEDALO_DATA_NOLAN, DEDALO_SECTION_PROJECTS_TIPO);
+				$component_project_langs   = component_common::get_instance('component_project_langs',
+																			DEDALO_COMPONENT_PROJECT_LANGS_TIPO,
+																			$current_section_id,
+																			'edit',
+																			DEDALO_DATA_NOLAN,
+																			DEDALO_SECTION_PROJECTS_TIPO);
 				$dato 					 = (array)$component_project_langs->get_dato();
 					#dump($dato,"dato - $current_section_id - ".DEDALO_COMPONENT_PROJECT_LANGS_TIPO);
 				foreach ($dato as $current_lang) {
@@ -676,7 +716,8 @@ abstract class common extends Accessors {
 		$_SESSION['dedalo4']['config']['ar_all_langs'][$idu] = $ar_all_langs;
 	
 		return $ar_all_langs;
-	}
+
+	}//end get_ar_all_langs
 
 
 
@@ -693,7 +734,11 @@ abstract class common extends Accessors {
 		return self::get_main_section_id( $parent2 );
 	}
 
-	# GET_PROPIEDADES : Alias of $this->RecordObj_dd->get_propiedades() but json decoded
+
+
+	/**
+	* GET_PROPIEDADES : Alias of $this->RecordObj_dd->get_propiedades() but json decoded
+	*/
 	public function get_propiedades() {
 		$propiedades = $this->RecordObj_dd->get_propiedades();
 		if (!is_string($propiedades)) {
@@ -702,6 +747,9 @@ abstract class common extends Accessors {
 			return json_handler::decode($propiedades);
 		}		
 	}
+
+
+
 	/**
 	* GET_ELEMENT_ADITIONAL_CSS . En pruebas
 	* Obtiene css específico desde el campo 'propiedades' del componente actual
@@ -723,6 +771,8 @@ abstract class common extends Accessors {
 		#dump($aditional_css,'aditional_css ');
 		return $aditional_css;
 	}
+
+
 
 	/**
 	* GET_RELACIONES : Obtiene las relaciones del tipo del componente actual decodificando el json de '$this->RecordObj_dd->get_relaciones()'

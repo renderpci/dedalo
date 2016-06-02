@@ -3,10 +3,12 @@
 	# VISUALIZADOR HTML	
 
 	
-	print "\n<!-- AREA_ACTIVITY [tipo:$tipo modo:$modo] -->";
+	print "\n<!-- AREA_PUBLICATION [tipo:$tipo modo:$modo] -->";
 
-	print "\n<div class=\"css_wrap_area_activity\" 
-	data-tipo=\"{$tipo}\" data-lang=\"{$lang}\" data-component_name=\"{$component_name}\" >";
+	print "\n<div class=\"css_wrap_area css_wrap_area_publication\" 
+	data-tipo=\"{$tipo}\"
+	data-lang=\"{$lang}\"
+	>";
 	
 	# ETIQUETA (LABEL)
 	$html_label = "\n<div class=\"css_area_titulo\" > ".component_common_draw::draw_label($this)." </div>";	

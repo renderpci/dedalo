@@ -27,8 +27,8 @@
 						$html_contenido .= "\n <input class=\"css_button_send\" type=\"button\" onclick=\"New(this)\" data-tipo=\"{$target_tipo}\" value=\"$label\" title=\"$html_title\" />";
 						
 						
-						if($permissions==3)	{
-							$html_contenido .= "\n <span class=\"css_span_debugger\" id=\"debugger_{$tipo}\" >{$debugger}</span>";	
+						if(SHOW_DEBUG) {
+							#$html_contenido .= "\n <span class=\"css_span_debugger\" id=\"debugger_{$tipo}\" >{$debugger}</span>";	
 						}	
 						break;												
 		}

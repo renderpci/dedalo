@@ -59,7 +59,7 @@
 						}					
 
 						
-						if ($permissions_admin<2) {
+						if ($permissions<3) {
 
 							# USER: Label to info user about current admin options values (read only)
 							switch (true) {
@@ -74,7 +74,7 @@
 									break;
 							}
 							
-						}else if ($permissions_admin>=2) {
+						}else if ($permissions>=3) {
 
 							# Admin options
 							$html_contenido .= "\n<select onchange=\"component_state.update_state_locator(this)\"

@@ -10,7 +10,7 @@ WRAP DIV CONTAINER*/
 select.css_select_lang {
 	padding: 2px;
 	cursor: pointer;
-	margin-left: 0px;
+	margin: 0;
 	}
 	select.css_select_lang:hover {
 	}

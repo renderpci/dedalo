@@ -233,13 +233,16 @@ class ImageMagick {
 			# CMYK to RGB
 			# Si la imagen orgiginal es CMYK, la convertimos a RGB aignándole un perfil de salida para la conversión. Una vez convertida (y flateada en caso de psd)
 			# le eliminamos el perfil orginal (cmyk) para evitar incoherencia con el nuevo espacio de color (rgb)
-			case ( strpos($colorspace_info, 'CMYK')!==false ):
-
+			case ( strpos($colorspace_info, 'CMYK')!==false ) :
+			
 				# Profile full path
 				$profile_file = COLOR_PROFILES_PATH.'sRGB_Profile.icc';
 
 				# Test profile exists
-				if(!file_exists($profile_file)) throw new Exception("Error Processing Request. Color profile not found in: $profile_file", 1);				
+				if(!file_exists($profile_file)) throw new Exception("Error Processing Request. Color profile not found in: $profile_file", 1);
+
+				// Remove possible '-thumbnail' flag when profile is used
+				$flags = str_replace('-thumbnail', '', $flags);		
 
 				# Command flags
 				$profile_source  = '';#'-profile "'.COLOR_PROFILES_PATH.'Generic_CMYK_Profile.icc"';				
@@ -263,10 +266,11 @@ class ImageMagick {
 		$result = exec($command.' 2>&1', $output, $worked_result);
 		if(SHOW_DEBUG) {
 			if ($worked_result!=0) {
-				dump($worked_result, ' worked_result ++ '.to_string($output));
+				#dump($worked_result, ' worked_result ++ '.to_string($output));
+				debug_log(__METHOD__."  worked_result : output: ".to_string($output)." - worked_result:".to_string($worked_result), logger::DEBUG);
 			}
 			if (!empty($result)) {
-				debug_log(__METHOD__." Command convert warning (not empty result): ".to_string($result), logger::WARNING);
+				debug_log(__METHOD__." Command convert warning (not empty result): ".to_string($result) ." - output: ".to_string($output)." - worked_result: ".to_string($worked_result), logger::WARNING);
 			}
 		}
 

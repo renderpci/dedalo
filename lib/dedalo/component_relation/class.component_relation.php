@@ -114,7 +114,7 @@ class component_relation extends component_common {
 			$component_name			= get_class($this);
 			$dato_string			= $this->get_dato_as_string();
 			$identificador_unico	= $this->get_identificador_unico();
-			$permissions			= common::get_permissions($section_tipo);
+			$permissions			= common::get_permissions($section_tipo,$tipo);
 			$parent					= $this->get_parent();
 
 			
@@ -284,10 +284,9 @@ class component_relation extends component_common {
 		# 5 Eliminamos los que no son autorizados (en caso de NO ser admin global)
 		$user_id_logged = navigator::get_user_id();
 		if( !component_security_administrator::is_global_admin($user_id_logged) ) {			
-			$security 		= new security();
 			foreach ($ar_mix as $tipo => $section_name) {
 				# Si los permisos son inferiores a 2 (lectura/escritura) lo eliminamos del array final
-				if( $security->get_security_permissions($tipo)!=2 ) {
+				if( security::get_security_permissions($tipo)!=2 ) {
 					unset($ar_mix[$tipo]);
 				}
 			}

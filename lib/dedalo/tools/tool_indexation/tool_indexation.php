@@ -9,7 +9,7 @@
 	$section_tipo			= $this->component_obj->get_section_tipo();
 	$lang 					= $this->component_obj->get_lang();
 	$label 					= $this->component_obj->get_label();
-	$permissions			= common::get_permissions($tipo);
+	$permissions			= common::get_permissions($section_tipo,$tipo);
 	$component_name			= get_class($this->component_obj);
 	$context_name			= $this->get_context();
 	$tool_name 				= get_class($this);
@@ -96,7 +96,10 @@
 				# STATE
 				# Create component_state configurated
 				$component_state 		= $this->component_obj->get_component_state( $tool_locator, $this->component_obj->get_lang() );
-				$component_state_html 	= $component_state->get_html();		
+				$component_state_html 	= '';
+				if ( !empty($component_state) && is_object($component_state) ) {
+					$component_state_html = $component_state->get_html();
+				}
 				
 				break;		
 

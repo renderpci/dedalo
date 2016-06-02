@@ -1,6 +1,10 @@
 
 /* STATS_CONTAINER
 ------------------------------------------------------- */
+.css_wrap_diffusion_section_stats_graphics {
+	display: table;
+	width: 100%;
+}
 #stats_container {
 		margin: 20px;
 		margin-top: 10px;

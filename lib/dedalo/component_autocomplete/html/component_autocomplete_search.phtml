@@ -6,9 +6,9 @@
 	if(isset($_REQUEST[$tipo])) $dato = $_REQUEST[$tipo];		#var_dump($_REQUEST[$tipo]);
 	
 	
-	#print "\n<!-- SELECT [tipo:$tipo section_id:$parent] $label -->";
+	print "\n<!-- SELECT [tipo:$tipo section_id:$parent] $label -->";
 
-	print "\n<div class=\"css_wrap_select\" >";
+	print "\n<div class=\"wrap_component css_wrap_select\" >";
 
 	
 	# ETIQUETA (LABEL)
@@ -54,8 +54,7 @@
 					if (isset($ar_logical_operators)) {
 					$html_contenido .= operator::get_search_logical_operators_html($tipo,$ar_logical_operators);
 					}								
-					break;
-										
+					break;										
 	}
 	
 	
@@ -65,4 +64,5 @@
 	
 	
 	print "\n</div><!-- /css_wrap_select -->\n\n"; //wrap
+	
 ?>

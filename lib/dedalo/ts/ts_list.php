@@ -12,7 +12,7 @@ if($is_logged!==true) {
 	exit();
 }
 $security 	 = new security();
-$permissions = (int)$security->get_security_permissions(DEDALO_TESAURO_TIPO);
+$permissions = (int)security::get_security_permissions(DEDALO_TESAURO_TIPO,DEDALO_TESAURO_TIPO);
 if ($permissions<1) {
 	$url =  DEDALO_ROOT_WEB ."/main/";
 	header("Location: $url");
@@ -153,8 +153,7 @@ if($t=='form' && $n==0) {
 		/**/	
 		$tipoFix 		= false ;
 		
-					
-		if(is_array($arrayTablas)) foreach($arrayTablas['prefijo'] as $key => $prefijo) {
+		if(isset($arrayTablas['prefijo'])) foreach((array)$arrayTablas['prefijo'] as $key => $prefijo) {
 					
 			$parentInicialActual 	= $prefijo .'0';
 			$tipoActual 			= $arrayTablas['tipo'][$key];

@@ -2,7 +2,6 @@
 	
 	# CONTROLLER
 
-	#$id 					= $this->get_id();
 	$tipo 					= $this->get_tipo();
 	$parent 				= $this->get_parent();
 	$section_tipo 			= $this->get_section_tipo();
@@ -12,9 +11,8 @@
 	$traducible 			= $this->get_traducible();
 	$label 					= $this->get_label();				
 	$required				= $this->get_required();
-	$debugger				= $this->get_debugger();		#dump($this);
-	if($modo != 'simple')
-	$permissions			= common::get_permissions($tipo); 	
+	$debugger				= $this->get_debugger();
+	$permissions			= common::get_permissions($section_tipo,$tipo);
 	$ejemplo				= $this->get_ejemplo();
 	$html_title				= "Info about $tipo";		
 	$valor					= $this->get_valor();				
@@ -24,21 +22,7 @@
 	$component_name			= get_class($this);
 	$visible				= $this->get_visible();
 	$propiedades 			= $this->get_propiedades();
-
-
-	//dump($propiedades,'propiedades');
-
-	# VISIBLE
-	if ($visible===false) {
-		#return null;
-	}
-
-
-	
-
 	$file_name				= $modo;
-
-
 	
 	
 	switch($modo) {

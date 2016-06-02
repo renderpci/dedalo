@@ -13,7 +13,7 @@
 	data-section_tipo=\"{$section_tipo}\"
 	data-parent=\"{$parent}\"
 	data-modo=\"{$modo}\"
-	data-dato='{$dato_json}''
+	data-dato='{$dato_json}'
 	data-component_name=\"{$component_name}\"
 	data-component_info='{$component_info}'
 	>";
@@ -29,7 +29,7 @@
 			case 0	:	$html_contenido .= "";
 						break;
 
-			case 1	: 	$html_contenido .= "\n <span class=\"css_span_dato\">$dato_json</span>";
+			case 1	: 	$html_contenido .= "\n <span class=\"css_span_dato\">$valor</span>";
 						break;
 
 			case ($permissions>=2) :
@@ -57,19 +57,15 @@
 
 						#$html_contenido .= " <span class=\"css_span_ejemplo\">Format $ejemplo </span>";
 
-						if(SHOW_DEBUG) {
-							$html_contenido .= "\n <span class=\"current_date_info\">Current date: <span>$dato_json</span></span>";
-						}
-
 
 						#$html_contenido .= "\n <span  class=\"css_span_ejemplo\">$ejemplo</span>";
 
 						# Save handler js
 						#$html_contenido .= "<script>$('#$identificador_unico').on(\"change\",function(){component_date.Save(this);})</script>";
 
-						/**/
-						if($permissions==3) {
-							$html_contenido .= "\n <span class=\"css_span_debugger\" id=\"debugger_{$tipo}\" >{$debugger}</span>";
+						if(SHOW_DEBUG) {
+							$html_contenido .= "\n <span class=\"current_date_info\">Current date: <span>$dato_json</span></span>";
+							#$html_contenido .= "\n <span class=\"css_span_debugger\" id=\"debugger_{$tipo}\" >{$debugger}</span>";
 						}
 						break;
 		}

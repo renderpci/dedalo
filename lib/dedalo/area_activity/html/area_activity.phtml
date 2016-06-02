@@ -5,7 +5,7 @@
 	
 	print "\n<!-- area_activity [tipo:$tipo modo:$modo] -->";
 
-	print "\n<div class=\"css_wrap_area_activity\" 
+	print "\n<div class=\"css_wrap_area css_wrap_area_activity\" 
 	data-tipo=\"{$tipo}\" data-lang=\"{$lang}\" data-component_name=\"{$component_name}\" >";
 	
 	# ETIQUETA (LABEL)
@@ -38,8 +38,8 @@
 					$html_contenido .= "\n </blockquote>";					
 										
 					
-					if($permissions==3) {
-						$html_contenido .= "\n <span class=\"css_span_debugger\" id=\"debugger_{$id}\" >{$debugger}</span>";	
+					if(SHOW_DEBUG) {
+						#$html_contenido .= "\n <span class=\"css_span_debugger\" id=\"debugger_{$id}\" >{$debugger}</span>";	
 					}		
 					
 					

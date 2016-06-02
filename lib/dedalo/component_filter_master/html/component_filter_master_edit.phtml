@@ -10,7 +10,6 @@
 	data-lang=\"{$lang}\"
 	data-section_tipo=\"{$section_tipo}\"
 	data-parent=\"{$parent}\"
-	data-parent=\"{$parent}\"
 	data-modo=\"{$modo}\"
 	data-dato=\"{$dato_string}\"
 	data-component_name=\"{$component_name}\"
@@ -23,72 +22,73 @@
 	
 	# CONTENIDO (INPUT)
 	$html_contenido = '';
-	switch($permissions) {
+	switch(true) {
 			
-		case 0	:	$html_contenido .= ""; 
-					break;
+		case ($permissions==0) :
+
+				$html_contenido .= ""; 
+				break;
 						
-		case 1	: 	if (is_array ($ar_proyectos_section)) foreach ($ar_proyectos_section as $value => $rotulo) {
-						
-						if( is_array($dato) && in_array($value,$dato) ) {
-							$checked = 'checked="checked"';
-						}else {
-							$checked = "";
-						}
-						$html_contenido .= "\n <input class=\"css_check_box_filter_master\" type=\"checkbox\" 
-						name=\"{$input_name}\"
-						data-tipo=\"{$tipo}\" data-section_tipo=\"{$section_tipo}\" data-parent=\"{$parent}\"
-						value=\"{$value}\" title=\"$html_title\" 
-						$checked  disabled />";						
-						$html_contenido .= "\n <label class=\"css_check_box_filter_master_rotulo\" $required >$rotulo</label>";	
-					}
-					break;	
-						
-		case ($permissions>=2)	:
+		case ($permissions==1)	:
 
-					# VERIFY USER LOGGED IS CURRENT VIEWED USER			
-						$user_id_logged = navigator::get_user_id();
-						$user_id_viewed = $parent;
+				$html_contenido .= "<ul class=\"filter_master_list\">";
 
-					$disabled = ($user_id_logged==$user_id_viewed) ? 'disabled' : '';	
-
-					$html_contenido .= "<ul class=\"filter_master_list\">";
-
-					$i=1;foreach ($ar_proyectos_section as $value => $rotulo) {
-						
-						$html_contenido .= "<li>";
-
-							$checked  = is_array($dato) && in_array($value, array_keys($dato)) ? 'checked="checked"' : '';
-							$tabindex = $i==1 ? 'tabindex="1"' : '';
-
-							$html_contenido .= "\n <input class=\"css_check_box_filter_master\" type=\"checkbox\"
-							onchange=\"component_filter_master.Save(this)\"
-							name=\"{$input_name}\"
-							value=\"{$value}\"
-							title=\"$html_title\"
-							data-tipo=\"{$tipo}\"
-							data-lang=\"{$lang}\"
-							data-section_tipo=\"{$section_tipo}\"
-							data-parent=\"{$parent}\"
-							$checked
-							$disabled
-							$tabindex
-							/>";
-							
-							$html_contenido .= "\n <label class=\"css_check_box_filter_master_rotulo\" $required >$rotulo</label><br>";	
-							
-						$html_contenido .= "</li>";
-
-					$i++;}
-
-					$html_contenido .= "</ul>";				
+				$i=1;foreach ($ar_proyectos_section as $value => $rotulo) {
 					
-		
-					if($permissions==3) {
-						$html_contenido .= "\n <span class=\"css_span_debugger\" id=\"debugger_{$tipo}\" >{$debugger}</span>";
-					}
-					break;					
-							
+					$html_contenido .= "<li>";						
+					$html_contenido .= "- <label class=\"css_check_box_filter_master_rotulo\">$rotulo</label>";						
+					$html_contenido .= "</li>";
+
+				$i++;}
+
+				$html_contenido .= "</ul>";
+				break;	
+						
+		case ($permissions>=2)	:					
+
+				$disabled = ($user_id_logged==$user_id_viewed) ? 'disabled' : '';	
+
+				$html_contenido .= "<ul class=\"filter_master_list\">";
+
+				$i=1;foreach ($ar_proyectos_section as $current_section_id => $rotulo) {
+					
+					$html_contenido .= "<li>";
+
+						$checked  = is_array($dato) && in_array($current_section_id, array_keys($dato)) ? 'checked="checked"' : '';
+						$tabindex = ($i==1) ? 'tabindex="1"' : '';
+
+						$html_contenido .= "\n <input class=\"css_check_box_filter_master\" type=\"checkbox\"
+						onchange=\"component_filter_master.Save(this)\"
+						name=\"{$input_name}\"
+						value=\"{$current_section_id}\"
+						title=\"$html_title\"
+						data-tipo=\"{$tipo}\"
+						data-lang=\"{$lang}\"
+						data-section_tipo=\"{$section_tipo}\"
+						data-parent=\"{$parent}\"
+						$checked
+						$disabled
+						$tabindex
+						/>";
+						
+						$html_contenido .= "<label class=\"css_check_box_filter_master_rotulo\" $required >";
+						if(SHOW_DEBUG) {
+							$html_contenido .= "[$current_section_id] ";
+						}
+						$html_contenido .= $rotulo;
+						$html_contenido .= "</label>";	
+						
+					$html_contenido .= "</li>";
+
+				$i++;}
+
+				$html_contenido .= "</ul>";
+				
+	
+				if(SHOW_DEBUG) {
+					#$html_contenido .= "\n <span class=\"css_span_debugger\" id=\"debugger_{$tipo}\" >{$debugger}</span>";
+				}
+				break;							
 	}
 
 

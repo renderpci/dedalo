@@ -38,7 +38,8 @@
 				# COLUMNS
 				case 'columns':
 
-					css::$ar_url[] = DEDALO_ROOT_WEB.'/lib/bootstrap/css/bootstrap.min.css';
+					#css::$ar_url[] = BOOTSTRAP_CSS_URL;
+					array_unshift(css::$ar_url_basic, BOOTSTRAP_CSS_URL);
 					js::$ar_url[]  = DEDALO_ROOT_WEB.'/lib/jquery/grids/grids.min.js';
 
 					$section_label = RecordObj_dd::get_termino_by_tipo($section_tipo);

@@ -183,7 +183,7 @@ print js::build_tag(DEDALO_LIB_BASE_URL . '/ts/js/ts_edit.js');
 									<?php echo label::get_label('geolocalizacion'); ?>
 								</td>
 								<td>
-									<input type="text" name="geolocalizacion_<?php echo $id ?>" id="geolocalizacion_<?php echo $id ?>" style="width:72%" readonly="readonly"
+									<input type="text" name="geolocalizacion_<?php echo $id ?>" id="geolocalizacion_<?php echo $id ?>" style="width:auto" readonly="readonly"
 									value="<?php if(isset($geolocalizacion)) echo $geolocalizacion ?>" onKeyUp="codigoKeyUp(this);" onfocus="myfocus(this)" onBlur="myblur(this);" onChange="saveDescriptor(this,'<?php echo $id ?>');" >
 									<input value="<?php echo label::get_label('mapa') ?>" class="btnTesauro" onclick="javascript:abrir_mapa('geolocalizacion_<?php echo $id ?>');" type="button"  >
 								</td>

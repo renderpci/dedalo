@@ -2,15 +2,14 @@
 	
 	# CONTROLLER
 
-	#$id 					= $this->get_id();
 	$tipo 					= $this->get_tipo();
 	$parent 				= $this->get_parent();
 	$section_tipo			= $this->get_section_tipo();
 	$modo					= $this->get_modo();		
 	$dato 					= $this->get_dato();
 	$label 					= $this->get_label();
-	$debugger				= $this->get_debugger();		#dump($this);	
-	$permissions			= common::get_permissions($tipo);
+	$debugger				= $this->get_debugger();	
+	$permissions			= common::get_permissions($section_tipo,$tipo);
 	$html_title				= "Info about $tipo";
 	$valor					= $this->get_valor();
 	$lang					= $this->get_lang();
@@ -45,9 +44,9 @@
 							break;
 					}
 
-				$id_wrapper = 'wrapper_'.$identificador_unico;
-				$component_info 	= $this->get_component_info('json');
-				$dato_json			= json_encode($dato);		
+				$id_wrapper 	= 'wrapper_'.$identificador_unico;
+				$component_info = $this->get_component_info('json');
+				$dato_json		= json_encode($dato);		
 				break;
 
 		case 'search' :	

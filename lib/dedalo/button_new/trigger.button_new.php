@@ -26,6 +26,7 @@ if ($mode=='New') {
 		if(SHOW_DEBUG) {
 			throw new Exception("Error Processing Request. 'tipo' is mandatory (trigger button new)", 1);			
 		}
+		die();
 	}
 	
 	$section = section::get_instance( NULL, $tipo );

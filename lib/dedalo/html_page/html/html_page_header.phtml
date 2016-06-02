@@ -8,10 +8,13 @@ if (login::is_logged()) {
 	switch (true) {
 		case (SHOW_DEBUG===TRUE && DEDALO_DATABASE_CONN=='dedalo4_development' && DEDALO_ENTITY=='development'):
 			$menu_wrapper_css = 'menu_wrapper_debug_development';
-			break;
-		case (SHOW_DEBUG):
+			break;	
+		case (SHOW_DEBUG ):
 			$menu_wrapper_css = 'menu_wrapper_debug';
-			break;		
+			break;
+		case ( component_security_administrator::is_global_admin( navigator::get_user_id() ) ):
+			$menu_wrapper_css = 'menu_wrapper_global_admin';
+			break;
 		default:
 			$menu_wrapper_css='';
 			break;
@@ -20,29 +23,15 @@ if (login::is_logged()) {
 	
 	echo "<div id=\"menu_wrapper\" class=\"$menu_wrapper_css\" >";
 
+
+		#
 		# Quit button
 		echo "<div id=\"quit\" class=\"glyphicon glyphicon-off link\" title=\"".label::get_label('salir')."\" onclick=\"login.Quit()\"></div>";
 
-
-		# Icon Dédalo
+		#
+		# Icon Dédalo	
 		echo "\n<a href=\"http://www.fmomo.org/\" target=\"_blank\" class=\"dedalo_icon_top\" title=\"Dédalo version ".DEDALO_VERSION." ( build ".DEDALO_BUILD.")\"></a>";
-
-		# Menu tree
-		echo $menu_html;		
-
-		# Logged user
-		echo "\n<div class=\"button_in_menu logged_user_name\">".navigator::get_username()."</div>";
-
 		
-		# log messages in debug mode
-		/*
-		if(SHOW_DEBUG===TRUE) {
-			echo "\n<div class=\"button_in_menu div_log_messages_checkbox\">
-					<input type=\"checkbox\" id=\"log_messages_checkbox\" class=\"button_in_menu\" value=\"1\" > 
-					Messages
-				</div>";
-		}
-		*/	
 
 		# INSPECTOR : button open / hide sidebar 
 		$caller_id = navigator::get_selected('caller_id');
@@ -52,10 +41,39 @@ if (login::is_logged()) {
 			echo "<div id=\"button_toggle_inspector\" class=\"link'\" title=\"".label::get_label('mostrar_inspector')."\" onclick=\"inspector.toggle_sidebar()\"></div>";
 		}
 
+
+		#
+		# MENU TREE
+		#echo "<div id=\"menu_ul_container\">";
+		echo $menu_html;	
+		#echo "</div>";
+		
+		# Logged user
+		echo "\n<div class=\"button_in_menu logged_user_name\">".navigator::get_username()."</div>";	
+		
+		
 		#
 		# LANG JUMP
 		$dedalo_aplication_langs_selector_html = html_page::get_dedalo_aplication_langs_selector_html();
 		echo $dedalo_aplication_langs_selector_html;
+
+		
+
+		
+	
+
+		
+		# log messages in debug mode
+		/*
+			if(SHOW_DEBUG===TRUE) {
+				echo "\n<div class=\"button_in_menu div_log_messages_checkbox\">
+						<input type=\"checkbox\" id=\"log_messages_checkbox\" class=\"button_in_menu\" value=\"1\" > 
+						Messages
+					</div>";
+			}
+			*/	
+	
+		
 		
 
 		#
@@ -79,12 +97,10 @@ if (login::is_logged()) {
 
 			}
 		}#end if(!empty($current_selected_area))
-
-
-
 		
 	
 	echo "</div><!-- /menu_wrapper -->\n";
+
 
 
 

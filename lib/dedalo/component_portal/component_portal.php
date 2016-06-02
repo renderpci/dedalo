@@ -11,7 +11,7 @@
 	$traducible 			= $this->get_traducible();
 	$label 					= $this->get_label();
 	$debugger				= $this->get_debugger();
-	$permissions			= common::get_permissions($tipo);
+	$permissions			= common::get_permissions($section_tipo,$tipo);
 
 	if ($permissions<1) {
 		return '';
@@ -19,7 +19,7 @@
 
 	$lang					= $this->get_lang();
 	$lang_name				= $this->get_lang_name();
-	$identificador_unico	= $this->get_identificador_unico();		#dump($identificador_unico," identificador_unico");
+	$identificador_unico	= $this->get_identificador_unico();
 	$component_name			= get_class($this);
 	$context				= $this->get_context();
 
@@ -123,22 +123,16 @@
 		# EDIT MODE
 		# Build section list from array of section's id stored in component_portal dato
 		case 'edit':	
-				$dato = $this->get_dato();
-					#dump($dato," ");
-				#if (empty($dato)) return null;
-
-				$valor			= $this->get_dato_as_string();
-				$component_info = $this->get_component_info('json');
-
-
-				#$this->get_valor();
-
-				$exclude_elements = $this->get_exclude_elements();
+				$dato 				= $this->get_dato();
+				$valor				= $this->get_dato_as_string();
+				$component_info 	= $this->get_component_info('json');
+				$exclude_elements 	= $this->get_exclude_elements();
 					#dump($exclude_elements, ' exclude_elements');
 					#dump($dato, ' dato');
 				if(SHOW_DEBUG) {
 					#dump($_SESSION['dedalo4']['config']['search_options'][$search_options_session_key],"options for $tipo");				
-				}			
+				}
+
 				if (empty($dato)) {
 
 					# Empty object
@@ -151,10 +145,12 @@
 				}else{
 										
 					if (isset($_SESSION['dedalo4']['config']['search_options'][$search_options_session_key])) {						
+						
 						$options = $_SESSION['dedalo4']['config']['search_options'][$search_options_session_key];		
 						$options->full_count = false; # Force update count records on non ajax call						
 						# Set context
 						$context = $options->context;
+					
 					}else{						
 						
 						# LAYOUT_MAP : Calculate list for layout map
@@ -180,14 +176,14 @@
 								$context->portal_parent = $parent;
 
 							$options->context = $context;
-								#dump($options,"options");									
-					}//end if (!empty($_SESSION['dedalo4']['config']['search_options'][$search_options_session_key]))		
+								#dump($options,"options");	
+
+					}//end if(!empty($_SESSION['dedalo4']['config']['search_options'][$search_options_session_key]))		
 
 					$rows_data = search::get_records_data($options);
 					if(SHOW_DEBUG) {
 						#dump($rows_data->result," rows_data result ".to_string($options));
-					}
-					
+					}					
 
 					#
 					# COMPONENT STATE DATO
@@ -205,13 +201,23 @@
 					}
 					*/
 				}
-				
-					#dump($rows_data," rows_data");
-				$ar_columns = $this->get_ar_columns();				
+				#dump($rows_data," rows_data");
+
+				#
+				# COLUMNS
+				$ar_columns = $this->get_ar_columns();
+					#dump($ar_columns, ' ar_columns ++ '.to_string());
+
+				#
+				# SEMANTIC NODES
+				if ( !empty($this->semantic_nodes) ) {
+					# JS/CSS ADD
+					js::$ar_url[]  = DEDALO_LIB_BASE_URL."/tools/tool_semantic_nodes/js/tool_semantic_nodes.js";
+					css::$ar_url[] = DEDALO_LIB_BASE_URL."/tools/tool_semantic_nodes/css/tool_semantic_nodes.css";
+				}		
 			
 				!isset($ar_target_section_tipo) ? $ar_target_section_tipo = $this->get_ar_target_section_tipo() : array();
 				$ar_target_section_tipo_json = json_encode($ar_target_section_tipo);
-
 
 				$show_button_new = $this->get_show_button_new();					
 				
@@ -219,7 +225,7 @@
 				$dragable_connectWith = isset($propiedades->dragable_connectWith) ? "portal_table_".$propiedades->dragable_connectWith : null ;
 
 				# JS ADD
-				js::$ar_url[]  = DEDALO_LIB_BASE_URL."/tools/tool_portal/js/tool_portal.js";
+				#js::$ar_url[]  = DEDALO_LIB_BASE_URL."/tools/tool_portal/js/tool_portal.js";
 				
 				break;
 

@@ -30,7 +30,7 @@ class css {
 			css::$ar_url_basic[] = JQUERY_UI_URL_CSS ;
 
 			# BOOTSTRAP css
-			#css::$ar_url_basic[] = DEDALO_ROOT_WEB.'/lib/bootstrap/css/bootstrap.min.css';
+			#css::$ar_url_basic[] = BOOTSTRAP_CSS_URL;
 			#css::$ar_url_basic[] = 'https://cdnjs.cloudflare.com/ajax/libs/normalize/3.0.3/normalize.css';
 
 			# HTML PAGE css
@@ -238,8 +238,8 @@ class css {
 		#
 		# Write final file
 		$file_name = DEDALO_LIB_BASE_PATH . self::$structure_file_path;
-		$less->setFormatter("lessjs");	// lessjs (default) | compressed | classic
-		$less->setPreserveComments(true);		
+		$less->setFormatter("compressed");	// lessjs (default) | compressed | classic
+		$less->setPreserveComments(false);	// true | false	
 		try {
 			$compiled_css = $less->compile( $less_code );
 			#echo $compiled_css;

@@ -183,6 +183,7 @@ abstract class JSON_RecordDataBoundObject {
 
 		# DATOS : JSON ENCODE ALWAYS !!!
 		$datos = json_handler::encode($this->datos);
+			#dump($datos, ' save datos ++ '.to_string());
 
 		
 		#

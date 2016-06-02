@@ -2,7 +2,6 @@
 	
 	# CONTROLLER
 
-	#$id 					= $this->get_id();
 	$tipo 					= $this->get_tipo();
 	$parent 				= $this->get_parent();
 	$section_tipo 			= $this->get_section_tipo();
@@ -12,8 +11,8 @@
 	$traducible 			= $this->get_traducible();
 	$label 					= $this->get_label();				
 	$required				= $this->get_required();
-	$debugger				= $this->get_debugger();		#dump($this);	
-	$permissions			= common::get_permissions($tipo); 	
+	$debugger				= $this->get_debugger();
+	$permissions			= common::get_permissions($section_tipo,$tipo);
 	$ejemplo				= $this->get_ejemplo();
 	$html_title				= "Info about $tipo";		
 	$valor					= $this->get_valor();				

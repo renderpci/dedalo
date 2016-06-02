@@ -4,9 +4,7 @@
 */
 require_once( DEDALO_LIB_BASE_PATH . '/common/class.exec_.php');
 
-
 abstract class backup {
-
 
 
 	/**
@@ -279,10 +277,20 @@ abstract class backup {
 					$strQuery = "DELETE FROM \"jer_dd\" WHERE \"terminoID\" LIKE '{$current_tld}%'; ";	// COPY \"jer_dd\" FROM '{$path}/jer_dd_dd.copy';
 					pg_query(DBi::_getConnection(), $strQuery);
 
-					$command = DB_BIN_PATH."psql ".DEDALO_DATABASE_CONN." -U ".DEDALO_USERNAME_CONN." -p ".DEDALO_DB_PORT_CONN." -h ".DEDALO_HOSTNAME_CONN." -c \"\copy jer_dd from {$path}/jer_dd_{$current_tld}.copy\" ";
-					$res1 = exec($command);
+					$command = DB_BIN_PATH."psql ".DEDALO_DATABASE_CONN." -U ".DEDALO_USERNAME_CONN." -p ".DEDALO_DB_PORT_CONN." -h ".DEDALO_HOSTNAME_CONN." -c \"\copy jer_dd from {$path}/jer_dd_{$current_tld}.copy\" ";								
+					$res1 = shell_exec($command);
+						#dump($res1, ' res1 ++ '.to_string($current_tld));						
 				}else{
 					throw new Exception("Error Processing Request. File not found: $path/jer_dd_dd.copy", 1);
+				}
+				if (empty($res1)) {
+					$msg = "Error on import jer_dd_{$current_tld} . Please try again";
+					if(SHOW_DEBUG) {
+						dump($command, '$res1 ++ '.to_string($res1));
+						#throw new Exception("Error Processing Request: $msg", 1);
+					}
+					print("<div class=\"error\">$msg</div>");
+					$load_with_errors=true;
 				}
 
 				# MATRIX_DESCRIPTORS_DD
@@ -291,17 +299,29 @@ abstract class backup {
 					pg_query(DBi::_getConnection(), $strQuery);
 
 					$command = DB_BIN_PATH."psql ".DEDALO_DATABASE_CONN." -U ".DEDALO_USERNAME_CONN." -p ".DEDALO_DB_PORT_CONN." -h ".DEDALO_HOSTNAME_CONN." -c \"\copy matrix_descriptors_dd from {$path}/matrix_descriptors_dd_{$current_tld}.copy\" ";
-					$res2 = exec($command);
+					$res2 = shell_exec($command);
 				}else{
 					throw new Exception("Error Processing Request. File not found: $path/matrix_descriptors_dd_dd.copy", 1);			
+				}
+				if (empty($res2)) {
+					$msg = "Error on import matrix_descriptors_dd_{$current_tld} . Please try again";
+					if(SHOW_DEBUG) {
+						dump($command, '$res2 ++ '.to_string($res2));
+						#throw new Exception("Error Processing Request: $msg", 1);
+					}
+					print("<div class=\"error\">$msg</div>");
+					$load_with_errors=true;
 				}
 				
 				if(SHOW_DEBUG) {
 					$msg = "Importing dedalo core data";
-					$msg .= " (jer_dd_{$current_tld} [$res1],matrix_descriptors_dd_{$current_tld} [$res2]) ";
+					$msg .= " (jer_dd_{$current_tld} [".trim($res1)."],matrix_descriptors_dd_{$current_tld} [".trim($res2)."]) ";
 				}				
 
 				$ar_response[]=$msg;
+
+				// let GC do the memory job
+				time_nanosleep(0, 50000000); // 50 ms
 
 			}#end foreach
 

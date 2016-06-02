@@ -114,6 +114,8 @@ class tool_import_bibtex extends tool_common {
 		# Fix current component/section
 		$this->section_obj = $section_obj;
 
+		$this->section_tipo = $section_obj->get_tipo();
+
 		# Fix modo
 		$this->modo = $modo;
 		
@@ -128,7 +130,8 @@ class tool_import_bibtex extends tool_common {
 	static function set_up() {
 
 		if (isset($_REQUEST['button_tipo'])) {
-			$button_import_obj = new button_import($_REQUEST['button_tipo'],null);
+
+			$button_import_obj = new button_import($_REQUEST['button_tipo'], null, $this->section_tipo);
 			$propiedades 	   = json_handler::decode($button_import_obj->RecordObj_dd->get_propiedades());
 			if (isset($propiedades->process_script)) {
 				if ( !include_once(DEDALO_LIB_BASE_PATH.$propiedades->process_script) ) {

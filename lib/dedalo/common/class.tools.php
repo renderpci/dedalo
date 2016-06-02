@@ -216,9 +216,15 @@ abstract class tools extends common {
 
 		#$html 	= str_replace(array("\t\t"), "\t", $html);
 		#$html 	= str_replace(array("\n","\r","  "),' ',$html);
-
-
-		$html = "\n <div class=\"content_data\"> $html \n</div><!-- /content_data -->";
+		#$html 	= preg_replace("/\t{2,}/",' ',$html);
+		#$html 	= preg_replace("/\n/",' ',$html);
+		#$html 	= preg_replace("/ {2,}/",' ',$html);
+		/*
+		$html = preg_replace("/\t{1,}/", " ", $html);
+		$html = preg_replace("/\n{1,}/", " ", $html);
+		$html = preg_replace("/ {2,}/", " ", $html);
+		*/
+		$html = "\n <div class=\"content_data\">".trim($html)." \n</div><!-- /content_data -->";
 
 		return $html;
 	}

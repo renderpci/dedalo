@@ -8,11 +8,8 @@
 	}							
 		
 	
-	#print "\n<div class=\"css_wrap_filter css_wrap_component_filter wrap_component\" id=\"{$id_wrapper}\"
-	#data-id_matrix=\"{$id}\" data-tipo=\"{$tipo}\" data-lang=\"{$lang}\" data-parent=\"{$parent}\" data-modo=\"{$modo}\" data-dato=\"{$dato_string}\" data-component_name=\"{$component_name}\" >";
+	print "\n<div class=\"wrap_component css_wrap_filter wrap_component_{$modo}\">";
 	
-	#print "\n<!-- COMPONENT FILTER CHECK BOX [tipo:$tipo id_matrix:$id] $label -->";
-
 	
 	# ETIQUETA (LABEL)
 	$html_label = component_common_draw::draw_label($this);
@@ -22,7 +19,7 @@
 	
 	# CONTENIDO (INPUT)
 	$html_contenido  = '';
-	$html_contenido .= "\n <div class=\"wrap_dato_component_filter\"> ";
+	
 	switch($permissions) {
 			
 		case 0 :	$html_contenido .= ""; 
@@ -67,7 +64,7 @@
 					
 							
 	}
-	$html_contenido .= "\n </div><!-- /wrap_dato_component_filter -->";#end wrap_dato_component_filter
+
 	
 	# Prepare content to show in page
 	tools::prepare_content($html_contenido);
@@ -79,5 +76,5 @@
 
 
 
-	#print "\n</div><!-- /css_wrap_filter COMPONENT FILTER CHECK BOX [tipo:$tipo id_matrix:$id] $label -->\n\n"; //wrap
+	print "</div>"; //wrap
 ?>

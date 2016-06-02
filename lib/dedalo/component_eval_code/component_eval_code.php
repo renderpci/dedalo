@@ -2,7 +2,6 @@
 	
 	# CONTROLLER
 
-	#$id 					= $this->get_id();
 	$tipo 					= $this->get_tipo();
 	$parent 				= $this->get_parent();
 	$section_tipo			= $this->get_section_tipo();
@@ -12,7 +11,7 @@
 	$required				= $this->get_required();
 	$debugger				= $this->get_debugger();
 	if($modo != 'simple')
-	$permissions			= common::get_permissions($tipo); 	
+	$permissions			= common::get_permissions($section_tipo,$tipo);	
 	$ejemplo				= NULL;
 	$html_title				= "Info about $tipo";
 	$ar_tools_obj			= NULL;	

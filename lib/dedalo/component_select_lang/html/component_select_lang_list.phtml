@@ -1,29 +1,19 @@
 <?php
 
 	# VISUALIZADOR HTML	
-	
-	# CONTENIDO (INPUT)
-	$html_contenido = '';
-	switch($permissions) {
-			
-		case 0	:	$html_contenido .= "\n <span class=\"css_span_dato\"> No access here (select_lang)! </span>";		
-					break;
-											
-		case ($permissions>=1)	:
-										
-					$html_contenido .= $valor;
 
-					if($permissions==3){
-						$html_contenido .= "\n <span class=\"css_span_debugger\" id=\"debugger_{$tipo}\" >{$debugger}</span>";	
-					}
+	$html_contenido = '';
+	switch(true) {
+		
+		case ($permissions<1) :
+					$html_contenido .= "";
 					break;
 			
-					
-											
+		case ($permissions>=1) :
+					$html_contenido .= $valor;
+					break;
 	}	
 	
 	# PRINT HTML
-	print $html_contenido;	
-	
-	#echo "\n</div>\n\n"; //css_wrap_select_lang
+	print $html_contenido;
 ?>

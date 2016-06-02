@@ -3,11 +3,12 @@
 
 /* LIST
 --------------------------------------- */
+/* pasado al list
 	.widgets_wrapper {
 		white-space: nowrap;
 		padding-right: 5px;
 		padding-left: 5px;
-		width: 180px;
+		width: 180px !important;
 	}
 	.component_info_debug {
 		font-size: 90%;
@@ -15,7 +16,7 @@
 		white-space: nowrap;
     	float: left;
 	}
-
+*/
 
 /* EDIT
 --------------------------------------- */
@@ -23,3 +24,4 @@
 		float: right;
 		vertical-align: bottom;
 	}
+

@@ -12,9 +12,7 @@ require_once( dirname(dirname(__FILE__)) .'/config/config4.php');
 
 # set vars
 	$vars = array('mode');	#'username','password', 'tipo_login', 'tipo_username', 'tipo_password', 'tipo_active_account'
-	if(is_array($vars)) foreach($vars as $name) {
-		$$name = common::setVar($name);	#echo "<br>$name: ".$$name ;
-	}
+		foreach($vars as $name) $$name = common::setVar($name);	#echo "<br>$name: ".$$name ;	
 
 # mode
 if(empty($mode)) exit("<span class='error'> Trigger: Error Need mode..</span>");

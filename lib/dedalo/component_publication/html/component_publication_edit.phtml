@@ -5,7 +5,7 @@
 
 	print "\n<!-- COMPONENT_PUBLICATION [tipo:$tipo parent:$parent] $label -->";
 
-	print "\n<div class=\"wrap_component css_wrap_component_publication wrap_component_{$tipo}\" id=\"{$id_wrapper}\"
+	print "\n<div class=\"wrap_component css_wrap_component_publication wrap_component_{$modo} wrap_component_{$tipo}\" id=\"{$id_wrapper}\"
 	data-tipo=\"{$tipo}\"
 	data-section_tipo=\"{$section_tipo}\"
 	data-parent=\"{$parent}\"
@@ -29,64 +29,58 @@
 	$html_contenido = '';
 	switch($permissions) {
 
-		case 0	:	$html_contenido .= "";
-					break;
+		case 0	:
+				$html_contenido .= "";
+				break;
 
-		case 1	: 	foreach ($ar_list_of_values->result as $value => $rotulo) {						
-						if( $value == $dato ) {
-							$html_contenido .= "\n <label class=\"css_component_publication_rotulo\" $required_code >$rotulo</label>";
-						}
-					}
-					break;
+		case 1	: 	
+				$html_contenido .= "$valor";
+				break;
 
+		case 2 :
+		case 3 :
+				$html_contenido .= "<ul>";
+				$i=1; foreach((array)$ar_list_of_values->result as $value => $rotulo) {
 
-		case ($permissions>=2) :
+					$value   = (string)$value;
+					$locator = (object)json_handler::decode($value);	# Locator is json encoded object						
+					
 
-					$html_contenido .= "<ul>";
-					$i=1; foreach((array)$ar_list_of_values->result as $value => $rotulo) {
+					$checked  = is_array($dato) && in_array($locator, $dato) ? 'checked="checked"' : '';
+					$tabindex = $i==1 ? 'tabindex="1"' : '';
 
-						$value   = (string)$value;
-						$locator = (object)json_handler::decode($value);	# Locator is json encoded object						
-						
+					$html_contenido .= "<li>";
 
-						$checked  = is_array($dato) && in_array($locator, $dato) ? 'checked="checked"' : '';
-						$tabindex = $i==1 ? 'tabindex="1"' : '';
+						#
+						# INPUT
+						$html_contenido .= "\n <input class=\"css_component_publication\" type=\"radio\"
+						onfocus=\"component_common.select_wrap(null,'$id_wrapper');\"
+						onchange=\"component_publication.Save(this)\"
+						name=\"{$input_name}\"
+						data-tipo=\"{$tipo}\"
+						data-lang=\"{$lang}\"
+						data-section_tipo=\"{$section_tipo}\"
+						data-parent=\"{$parent}\"
+						value='$value'
+						title=\"$html_title\"
+						$checked
+						$tabindex
+						/>";
 
-						$html_contenido .= "<li>";
+						#
+						# LABEL
+						$html_contenido .= "\n <label class=\"css_component_publication_rotulo\" $required_code >$rotulo</label>";
 
-							#
-							# INPUT
-							$html_contenido .= "\n <input class=\"css_component_publication\" type=\"radio\"
-							onfocus=\"component_common.select_wrap(null,'$id_wrapper');\"
-							onchange=\"component_publication.Save(this)\"
-							name=\"{$input_name}\"
-							data-tipo=\"{$tipo}\"
-							data-lang=\"{$lang}\"
-							data-section_tipo=\"{$section_tipo}\"
-							data-parent=\"{$parent}\"
-							value='$value'
-							title=\"$html_title\"
-							$checked
-							$tabindex
-							/>";
+					$html_contenido .= "</li>";
+					
+				$i++;}
+				$html_contenido .= "</ul>";
 
-							#
-							# LABEL
-							$html_contenido .= "\n <label class=\"css_component_publication_rotulo\" $required_code >$rotulo</label>";
-
-						$html_contenido .= "</li>";
-						
-					$i++;}
-					$html_contenido .= "</ul>";
-
-					if(SHOW_DEBUG) {
-						$html_contenido .= "\n <span class=\"notas\">dato: $dato_json</span>";;
-					}
-
-					if($permissions==3) {
-						$html_contenido .= "\n <span class=\"css_span_debugger\" id=\"debugger_{$tipo}\" >{$debugger}</span>";
-					}
-					break;					
+				if(SHOW_DEBUG) {
+					#$html_contenido .= "\n <span class=\"notas\">dato: $dato_json</span>";				
+					#$html_contenido .= "\n <span class=\"css_span_debugger\" id=\"debugger_{$tipo}\" >{$debugger}</span>";
+				}
+				break;
 
 	}
 

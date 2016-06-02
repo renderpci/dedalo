@@ -11,8 +11,7 @@ if($is_logged!==true) {
 	header("Location: $url");
 	exit();
 }
-$security 	 = new security();
-$permissions = (int)$security->get_security_permissions(DEDALO_TESAURO_TIPO);
+$permissions = (int)security::get_security_permissions(DEDALO_TESAURO_TIPO,DEDALO_TESAURO_TIPO);
 if ($permissions<1) {
 	$url =  DEDALO_ROOT_WEB ."/main/";
 	header("Location: $url");
@@ -70,10 +69,15 @@ $codNomenclator	= $RecordObj_ts->get_codNomenclator();
 $type			= $RecordObj_ts->get_jerarquia_type();
 $traducible		= $RecordObj_ts->get_traducible();
 $propiedades	= $RecordObj_ts->get_propiedades();
+$tiempo			= $RecordObj_ts->get_tiempo();
+$geolocalizacion			= $RecordObj_ts->get_geolocalizacion();
+
 
 	
 # Consultamos si está relacionado
-$verificarTR = count(RecordObj_ts::get_ar_terminos_relacionados($terminoID)); #$ts->verificarTR($terminoID);	
+$arTR = RecordObj_ts::get_ar_terminos_relacionados($terminoID);
+	#dump($arTR, '$arTR ++ '.to_string());
+$verificarTR = count($arTR); #$ts->verificarTR($terminoID);	
 if($verificarTR >0){
 	$hasRelation = 'si';
 }else{

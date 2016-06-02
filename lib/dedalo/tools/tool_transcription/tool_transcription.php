@@ -85,7 +85,7 @@
 				$component_state 		= $this->component_obj->get_component_state( $tool_locator, $this->component_obj->get_lang() );
 					#dump($component_state, ' component_state ++ '.to_string());
 				$component_state_html 	= '';	
-				if ( is_object($component_state) ) {
+				if ( !empty($component_state) && is_object($component_state) ) {
 					$component_state_html 	= $component_state->get_html();	
 				}
 

@@ -149,7 +149,7 @@ class component_profile extends component_common {
 	/**
 	* APPLY_PROFILE
 	* @see trigger.component_profile
-	*/
+	*//*
 	public static function apply_profile__DEPRECATED($selected_option, $current_user_id) {
 		
 		$msg='';
@@ -158,10 +158,20 @@ class component_profile extends component_common {
 
 		# COMPONENT_SECURITY_AREAS
 			# SOURCE (PROFILE)
-			$component_security_areas_profiles 	= component_common::get_instance('component_security_areas',DEDALO_COMPONENT_SECURITY_AREAS_PROFILES_TIPO, $selected_option, 'edit', DEDALO_DATA_NOLAN, DEDALO_SECTION_PROFILES_TIPO);
+			$component_security_areas_profiles 	= component_common::get_instance('component_security_areas',
+																				 DEDALO_COMPONENT_SECURITY_AREAS_PROFILES_TIPO,
+																				 $selected_option,
+																				 'edit',
+																				 DEDALO_DATA_NOLAN,
+																				 DEDALO_SECTION_PROFILES_TIPO);
 			$security_areas_profiles_dato 		= $component_security_areas_profiles->get_dato();				
 			# TARGET (USER)
-			$component_security_areas_users 	= component_common::get_instance('component_security_areas',DEDALO_COMPONENT_SECURITY_AREAS_USER_TIPO, $current_user_id, 'edit', DEDALO_DATA_NOLAN, DEDALO_SECTION_USERS_TIPO);
+			$component_security_areas_users 	= component_common::get_instance('component_security_areas',
+																				DEDALO_COMPONENT_SECURITY_AREAS_USER_TIPO,
+																				$current_user_id,
+																				'edit',
+																				DEDALO_DATA_NOLAN,
+																				DEDALO_SECTION_USERS_TIPO);
 			$component_security_areas_users->set_dato($security_areas_profiles_dato);
 			$result = $component_security_areas_users->Save();
 
@@ -214,7 +224,7 @@ class component_profile extends component_common {
 		return $msg;
 
 	}#end apply_profile
-
+	*/
 
 
 
@@ -222,7 +232,7 @@ class component_profile extends component_common {
 	* CREATE_PROFILE_FROM_USER
 	* Transition method from dedalo 4.0.2 to 4.0.3 users data
 	* @return 
-	*/
+	*//*
 	public function create_profile_from_user_DEACTIVATED( $user_id ) {
 
 		# PROFILE TEST
@@ -329,7 +339,7 @@ class component_profile extends component_common {
 		return $section_profile_id;
 		
 	}#end create_profile_from_user
-
+	*/
 
 
 

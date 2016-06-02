@@ -106,9 +106,11 @@ class RecordObj_ts extends RecordDataBoundObject {
 			"usableIndex" 					=> "usableIndex",
 			"traducible" 					=> "traducible",
 			"relaciones" 					=> "relaciones",
-			#"propiedades" 					=> "propiedades",
 			));
 	}
+
+
+
 	# GET_JERARQUIA_TYPE	
 	function get_jerarquia_type() {	
 				
@@ -131,7 +133,9 @@ class RecordObj_ts extends RecordDataBoundObject {
 		$get_jerarquia_type_data[$this->terminoID] = $jerarquia_type;
 		
 		return $jerarquia_type ;
-	}	
+	}
+
+
 	
 	/**
 	* TERMINOID2ID : resolve id from terminoID, lang
@@ -158,8 +162,11 @@ class RecordObj_ts extends RecordDataBoundObject {
 			return intval(substr($terminoID, 2));
 		}
 		
-		return NULL ;
-	}
+		return null;
+
+	}//end terminoID2id
+
+
 
 	##
 	# SAVE
@@ -183,13 +190,14 @@ class RecordObj_ts extends RecordDataBoundObject {
 			error_log("-->".__METHOD__." Warning: second save triggered");
 		}
 		return $id;
-	}
+
+	}//end Save
 
 	
 
 	/**
 	* GET_DESCRIPTOR_DATO_BY_TIPO
-	* GET TERMINO DATO BY TIPO ('termino','def','obs') STATIC VERSION
+	* Get termino dato by tipo ('termino','def','obs') STATIC VERSION
 	*/
 	public static function get_descriptor_dato_by_tipo($terminoID, $lang, $tipo, $fallback=false) {
 
@@ -232,7 +240,11 @@ class RecordObj_ts extends RecordDataBoundObject {
 		}
 		*/	
 		return $dato;
-	}
+
+	}//end get_descriptor_dato_by_tipo
+
+
+
 	# GET_TERMINO_BY_TIPO STATIC VERSION
 	public static function get_termino_by_tipo($terminoID, $lang=NULL, $from_cache=false, $fallback=true) {
 		#$from_cache=false;
@@ -280,24 +292,50 @@ class RecordObj_ts extends RecordDataBoundObject {
 		return $this->get_termino_by_tipo($this->get_modelo(),$lang,true,false);
 	}
 
-	# GET MODELO NAME BY TIPO (STATIC)
+	/**
+	* GET_TIEMPO
+	* @return string $tiempo
+	*/
+	public function get_tiempo() {
+		$tipo = 'tiempo';
+		return $tiempo = self::get_descriptor_dato_by_tipo($this->terminoID, $this->lang, $tipo);
+	}#end get_tiempo
+
+
+
+	/**
+	* GET_geolocalizacion
+	* @return string $geolocalizacion
+	*/
+	public function get_geolocalizacion() {
+		$tipo = 'geolocalizacion';
+		return $geolocalizacion = self::get_descriptor_dato_by_tipo($this->terminoID, $this->lang, $tipo);
+	}#end get_tiempo
+
+
+
+	/**
+	* GET_MODELO_NAME_BY_TIPO (STATIC)
+	*/
 	public static function get_modelo_name_by_tipo($tipo, $from_cache=false) {
-		#$from_cache=false;
-		if ($from_cache && isset($_SESSION['dedalo4']['config']['modelo_name_by_tipo'][$tipo])) {
-			#error_log("From cache $tipo");
-			return $_SESSION['dedalo4']['config']['modelo_name_by_tipo'][$tipo];
-		}
+		
+		#if ($from_cache && isset($_SESSION['dedalo4']['config']['modelo_name_by_tipo'][$tipo])) {			
+		#	return $_SESSION['dedalo4']['config']['modelo_name_by_tipo'][$tipo];
+		#}
+
 		$RecordObj_ts	= new RecordObj_ts($tipo);
 		$modelo_name 	= (string)$RecordObj_ts->get_modelo_name();
-		if (substr($tipo, 0,2)=='dd') {
-			$_SESSION['dedalo4']['config']['modelo_name_by_tipo'][$tipo] = $modelo_name;
-		}
+		#if (substr($tipo, 0,2)=='dd') {
+		#	$_SESSION['dedalo4']['config']['modelo_name_by_tipo'][$tipo] = $modelo_name;
+		#}
 		return $modelo_name;
-	}
+
+	}//end get_modelo_name_by_tipo
 	
 
-
-	# GET AR TERMINO ID BY MODELO NAME (STATIC)
+	/**
+	* GET_AR_TERMINOID_BY_MODELO_NAME (STATIC)
+	*/
 	public static function get_ar_terminoID_by_modelo_name($modelo_name, $prefijo='dd') {
 	
 		if(SHOW_DEBUG) {
@@ -308,19 +346,7 @@ class RecordObj_ts extends RecordDataBoundObject {
 		static $ar_terminoID_by_modelo_name;
 		$unic_string = $modelo_name.'-'.$prefijo;		
 		if(isset($ar_terminoID_by_modelo_name[$unic_string])) return $ar_terminoID_by_modelo_name[$unic_string];
-		/*
-		global $client;
-		$retval = $client->get('ar_terminoID_by_modelo_name_cache');
-			#dump($retval,'$retval');
-		$client_ar_var = unserialize($retval);
-			#dump($var,'$var');
-		if( array_key_exists($unic_string, $client_ar_var) ) {
-			#dump($unic_string,'Returned from redis');
-			return $client_ar_var[$unic_string];		
-		}			
-		*/
-
-		#if(SHOW_DEBUG) $start_time = start_time();
+		
 
 		# 1 Despejamos el terminoID del modelo (ejemplo : 'area_root') que es el parent en matrix_descriptors
 		$arguments=array();
@@ -368,7 +394,9 @@ class RecordObj_ts extends RecordDataBoundObject {
 		}
 
 		return $ar_result;
-	}
+
+	}//end get_ar_terminoID_by_modelo_name
+
 
 	
 	# MODELOS ARRAY
@@ -394,10 +422,12 @@ class RecordObj_ts extends RecordDataBoundObject {
 		# STORE CACHE DATA
 		$ar_all_modelos_data[$this->terminoID]	= $ar_all_modelos;
 		
-		return $ar_all_modelos ;
-	}
+		return $ar_all_modelos;
+
+	}//end get_ar_all_modelos
 	
 	
+
 	/**
 	* GET_AR_CHILDRENS_OF_THIS
 	* Get array of terms (terminoID) with parent = $this->terminoID
@@ -437,7 +467,9 @@ class RecordObj_ts extends RecordDataBoundObject {
 		$ar_childrens_of_this_stat_data[$key] = $ar_childrens_of_this;
 		
 		return $ar_childrens_of_this ;
-	}
+	}//end get_ar_childrens_of_this
+
+
 
 	/**
 	* GET_AR_CHILDRENS
@@ -468,8 +500,11 @@ class RecordObj_ts extends RecordDataBoundObject {
 		# STORE CACHE DATA
 		$get_ar_childrens_data[$key] = $ar_childrens;
 		
-		return $ar_childrens ;
-	}
+		return $ar_childrens;
+
+	}//end get_ar_childrens
+
+
 
 	# CHILDRENS RECURSIVE ARRAY
 	# SACA TODOS LOS HIJOS DEL TERMINO ACTUAL RECURSIVAMENTE
@@ -492,7 +527,11 @@ class RecordObj_ts extends RecordDataBoundObject {
 		}
 
 		if(isset($this->ar_recursive_childrens_of_this)) return $this->ar_recursive_childrens_of_this;
-	}
+
+	}//end get_ar_recursive_childrens_of_this
+
+
+
 	/**
 	* GET_AR_RECURSIVE_CHILDRENS : Static version
 	* No hay aumento de velocidad apreciable entre la versión estática y dinámica. Sólo una reducción de unos 140 KB en el consumo de memoria
@@ -518,10 +557,14 @@ class RecordObj_ts extends RecordDataBoundObject {
 		}
 		
 		return $ar_resolved;
-	}
+
+	}//end get_ar_recursive_childrens
 	
 	
-	# GET PARENTS ARRAY
+
+	/**
+	* GET_AR_PARENTS_OF_THIS
+	*/
 	public function get_ar_parents_of_this($ksort=true) {
 		
 		# STATIC CACHE
@@ -553,11 +596,15 @@ class RecordObj_ts extends RecordDataBoundObject {
 		# STORE CACHE DATA
 		$ar_parents_of_this_data[$this->terminoID] = $ar_parents_of_this;
 		
-		return $ar_parents_of_this ;
-	}	
+		return $ar_parents_of_this;
+
+	}//end get_ar_parents_of_this
+
 	
 	
-	# GET SIBLINGS ARRAY [HERMANOS]
+	/**
+	* GET_AR_SIBLINGS_OF_THIS [HERMANOS]
+	*/
 	public function get_ar_siblings_of_this() {
 		
 		# STATIC CACHE
@@ -577,9 +624,11 @@ class RecordObj_ts extends RecordDataBoundObject {
 		# STORE CACHE DATA
 		$ar_siblings_of_this_data[$this->terminoID] = $ar_siblings_of_this;
 		
-		return $ar_siblings_of_this ;
-	}
+		return $ar_siblings_of_this;
+
+	}//end get_ar_siblings_of_this
 	
+
 	
 	# NUMERO DE HIJOS DESCRIPTORES
 	function get_n_hijos_descriptores() {	
@@ -600,6 +649,8 @@ class RecordObj_ts extends RecordDataBoundObject {
 		return $n_hijos_descriptores;
 	}
 	
+
+
 	# NUMERO DE HIJOS
 	function get_n_hijos() {	
 				
@@ -620,16 +671,16 @@ class RecordObj_ts extends RecordDataBoundObject {
 	
 	
 	
-	
-	
-
-	
-	# GET RELACIONES AS ARRAY (FROM JSON)
-	# Devuelve array en formato:
-	#	[0] => Array
-	#    (
-	#       [dd9] => dd296
-	#   )
+	/**
+	* GET_RELACIONES
+	* Get relaciones as array (FROM JSON)
+	* Devuelve array en formato:
+	*	Array
+	*    (
+	*       [0] => dd296,
+	* 		[1] => dd298
+	*   )
+	*/
 	public function get_relaciones() {
 		
 		$relaciones = null;
@@ -642,61 +693,98 @@ class RecordObj_ts extends RecordDataBoundObject {
 		}
 		#dump($dato,'dato en get_relaciones');
 
-		return $relaciones;	
+		return (array)$relaciones;	
 	}
 	
-	# SET RELACIONES AS JSON (MODELO: $ar_relaciones[$terminoID_source][] = array($modelo => $terminoID_rel))
-	public function set_relaciones($ar_relaciones) {		
-		return parent::set_relaciones(json_encode($ar_relaciones));
+
+
+	/**
+	* SET_RELACIONES
+	* Set relaciones as json string
+	*/
+	public function set_relaciones($ar_relaciones) {
+		if(is_array($ar_relaciones)) {
+			$ar_relaciones = array_values($ar_relaciones); // Reset keys for sure json array format
+		}
+
+		$this->get_relaciones(); // Force update var relaciones
+		
+		#$result = parent::set_relaciones( json_encode($ar_relaciones) );
+		$result = parent::set_relaciones( $ar_relaciones );
+			#dump($this->get_relaciones(), ' get_relaciones ++ '.to_string());
+			
+			
+		return $result;
 	}
-	# REMOVE_ELEMENT_FROM_AR_TERMINOS_RELACIONADOS
+
+
+
+	/**
+	* REMOVE_ELEMENT_FROM_AR_TERMINOS_RELACIONADOS
+	* @param string $terminoID_to_unlink
+	*	Like 'ts254'
+	* @return bool
+	*/
 	public function remove_element_from_ar_terminos_relacionados($terminoID_to_unlink) {
 		
 		# Recorremos los elementos en terminos relacionados para este objeto
-		$ar_relaciones = $this->get_relaciones();
+		$ar_relaciones = (array)$this->get_relaciones();
 		
-		# eliminamos del array el valor recibido
-		$ar_final = NULL;
-		if(is_array($ar_relaciones)) foreach($ar_relaciones as $key => $ar_values) {
-			
-			foreach($ar_values as $modeloID => $terminoID) {
-				
-				if($terminoID != $terminoID_to_unlink) $ar_final[] =  array($modeloID => $terminoID);	
-			}			
+		# eliminamos del array el valor recibido		
+		foreach ($ar_relaciones as $key => $current_terminoID) {
+			if ($current_terminoID==$terminoID_to_unlink) {
+				unset($ar_relaciones[$key]);
+			}
 		}
+		#$ar_relaciones = array_values($ar_relaciones); // Reset keys for sure json array format
 		
 		# guardamos el resultado
-		$this->set_relaciones($ar_final);					#dump($ar_relaciones); die();
+		$this->set_relaciones($ar_relaciones);
 		
 		return true;
-	}
+
+	}//end remove_element_from_ar_terminos_relacionados
+
+
+
+	/**
+	* ADD_ELEMENT_TO_AR_TERMINOS_RELACIONADOS
+	* @param string $terminoID_to_unlink
+	*	Like 'ts254'
+	* @return bool
+	*/
+	public function add_element_to_ar_terminos_relacionados( $terminoID ) {
 		
-	# AR_TERMINOS_RELACIONADOS JSON_VERSION
-	# En modo 'simple' devuelve sólo un array de 'terminoID'
-	public static function get_ar_terminos_relacionados($terminoID, $cache=false, $simple=false) {
+		# Recorremos los elementos en terminos relacionados para este objeto
+		$ar_relaciones = (array)$this->get_relaciones();
+		
+		if (!in_array($terminoID, $ar_relaciones)) {
+			$ar_relaciones[] = $terminoID;
+		}		
+		#$ar_relaciones = array_values($ar_relaciones); // Reset keys for sure json array format
+		
+		# guardamos el resultado
+		$this->set_relaciones($ar_relaciones);
+		
+		return true;
+
+	}#end add_element_to_ar_terminos_relacionados
+
+
+
+	/**
+	* GET_AR_TERMINOS_RELACIONADOS
+	* rr_terminos_relacionados json_version
+	* En modo 'simple' devuelve sólo un array de 'terminoID'
+	*/
+	public static function get_ar_terminos_relacionados($terminoID, $cache=false) {
 
 		#if(SHOW_DEBUG) $start_time = start_time();
-		# NO HACER CACHE EN ESTE MÉTODO		
-				
-		$ar_terminos_relacionados 	= array();
-		
+		# NO HACER CACHE EN ESTE MÉTODO	
 		$RecordObj_ts				= new RecordObj_ts($terminoID);
-		$ar_relaciones				= $RecordObj_ts->get_relaciones();	#echo " - get_ar_terminos_relacionados($terminoID): "; dump($ar_relaciones); echo "<hr>";	
+		$ar_terminos_relacionados	= (array)$RecordObj_ts->get_relaciones();		
 		
-		# SIMPLE . SOLO DEVUELVE EL ARRAY LIMPIO CON EL LISTADO DE terminoID
-		if($simple===true) {
-			
-			if(is_array($ar_relaciones)) foreach($ar_relaciones as $key => $ar_value) {
-				
-				foreach($ar_value as $modeloID => $terminoID) {
-					$ar_terminos_relacionados[]	= $terminoID;	
-				}					
-			}
-			$ar_relaciones	= $ar_terminos_relacionados;
-		}
-		#if(SHOW_DEBUG) $GLOBALS['log_messages'] .= exec_time($start_time, __METHOD__, $ar_relaciones);
-		
-		return $ar_relaciones;	
+		return $ar_terminos_relacionados;	
 	}
 
 	/* DESACTIVA PORQUE NO SE EXPERIMENTA INCREMENTO DE VELOCIDAD... 
@@ -713,10 +801,7 @@ class RecordObj_ts extends RecordDataBoundObject {
 
 		return $ar_recursive_childrens_of_this;
 	}
-	*/	
-	
-	
-
+	*/
 
 
 	
@@ -796,8 +881,7 @@ class RecordObj_ts extends RecordDataBoundObject {
 			case 'termino_relacionado' :
 				
 					# Obtenemos los tr
-					$RecordObj_ts				= new RecordObj_ts($tipo);
-					$ar_terminos_relacionados	= $RecordObj_ts->get_ar_terminos_relacionados($tipo, $cache=true, $simple=true);	#dump($ar_terminos_relacionados);
+					$ar_terminos_relacionados	= self::get_ar_terminos_relacionados($tipo, $cache=true);	#dump($ar_terminos_relacionados);
 					
 					# los recorremos para filtrar por modelo
 					if(is_array($ar_terminos_relacionados)) foreach($ar_terminos_relacionados as $terminoID) {

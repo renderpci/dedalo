@@ -3,8 +3,7 @@
 	# CONTROLLER
 	$modo							= $this->get_modo();
 	$section_tipo 					= $this->section_tipo;	
-	$permissions					= common::get_permissions($this->search_list_tipo);		#dump($permissions, ' permissions');
-		
+	$permissions					= common::get_permissions($section_tipo, $this->search_list_tipo);	
 	
 	
 

@@ -1,18 +1,30 @@
 /*CSS Document*/
 
+// Variables
+@common_css: "../../common/css";
+
+// Usage
+@import "@{common_css}/library.less";
+
+
 /* WRAP
 ------------------------------------------------------- */
 .wrap_component {
 	position: relative;
+	float: left;
+	overflow: hidden;
 	padding: 5px;	
 	border:none;
-	margin: 0;   
-	float: left;
+	margin: 0;	
 	min-height: 2.333em;
 	width: 100%;
 	transition: all .180s ease-in-out;
+	//pointer-events: initial;
 	//background-color: rgba(175, 204, 246, 0.16);
 	//border-top: 1px solid #EBEBEB;
+		@media screen and (max-width: @movil_max_width) {
+			width: 100% !important;
+		}
 	}
 	.wrap_component::before {
 		//content: " ";
@@ -20,20 +32,57 @@
 	}
 
 .selected_wrap {
-	background: rgb(230, 230, 230);
+	background: rgb(230, 230, 230) !important;
 }
 
 .locked_wrap {
-	/*background-color: #ED2112;*/
-	opacity: 0.35;
-	color: red;
-
+	/*background-color: #ED2112;*/	
 	user-select: none;
         -moz-user-select: none;
         -khtml-user-select: none;
         -webkit-user-select: none;
         -o-user-select: none;
-}
+    opacity: 0.80;    
+    //pointer-events:none;   
+	}
+	.locked_wrap > label {
+		color: red;
+	}
+	.locked_wrap > .content_data {
+		//opacity: 0.35;
+		//cursor: not-allowed;
+		//pointer-events:none; 
+		}
+		.locked_wrap > .content_data::before {
+			content: " ";
+			display: block;
+			position: absolute;
+			width: 100%;
+			height: 100%;
+			top: 0;
+			left: 0;
+			background-color: #ED5221;
+			z-index: 999;
+			opacity: 0.16;
+			//pointer-events:none; 
+		}
+	.locked_wrap::before {
+		content: "\e033";
+		position: absolute;
+		color: red;
+		right: 10px;
+		font-family: 'Glyphicons Halflings';
+	    font-style: normal;
+	    font-weight: 400;
+	    -webkit-font-smoothing: antialiased;
+	    z-index: 1;
+	}
+	.locked_wrap_username {
+		font-family: Arial, sans-serif;
+		font-size: 96%;
+		padding-left: 4px;
+	}
+	
 .locked_wrap_overlay {
 	background-color: #ED0019;
 	z-index: 2;
@@ -58,12 +107,14 @@
 	width: 83%;
 	height: 100%;
 	/*background-color:#fff7e0;*/
-	}
-	/**/
+	}	
 	@media screen and (max-width: 1280px) { /* 736 */
 		.content_data {
 			display: block !important;
 			width: 100% !important;
+		}
+		.css_wrap_image .content_data {
+			text-align: center;
 		}
 	}
 
@@ -128,6 +179,10 @@ input[type="text"], input[type="password"] {
 		/*font-weight: bold;*/
 		font-family: 'Oxygen-Bold', "Helvetica Neue", Helvetica, Arial, sans-serif;
 		font-weight: 300;
+		@media screen and (max-width: @movil_max_width) {
+			width: 100% !important;
+			max-width: 100%;
+		}
 		}
 		.wrap_component .label:hover {
 
@@ -223,5 +278,11 @@ DIV.dato_refecence_default_lang {
 
 
 
-
+.debug_component_total_time {
+	position: absolute;
+	padding: 0;
+	right: 5px;
+	top: -1px;
+	font-size: 80%;
+}
 

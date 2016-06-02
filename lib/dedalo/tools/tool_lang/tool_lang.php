@@ -2,11 +2,11 @@
 
 	# CONTROLLER TOOL LANG
 
-	#$id 					= $this->source_component->get_id();
 	$tipo 					= $this->source_component->get_tipo();
 	$parent 				= $this->source_component->get_parent();
 	$section_id 			= $parent;
 	$section_tipo 			= $this->source_component->get_section_tipo();
+	$permissions			= common::get_permissions($section_tipo,$tipo);
 	$lang 					= $this->source_component->get_lang();
 	$label 					= $this->source_component->get_label();
 	$traducible 			= $this->source_component->get_traducible();	
@@ -95,9 +95,6 @@
 					#$header_html 	= $this->get_html();
 					#$this->set_modo('page');
 					$header_html 	= '';
-
-					$permissions = common::get_permissions($tipo);
-						#dump($permissions," $tipo");
 
 					#
 					# STATE

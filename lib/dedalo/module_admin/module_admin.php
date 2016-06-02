@@ -4,7 +4,7 @@
 	
 	$id					= $this->get_id();
 	$tipo				= $this->get_tipo();
-	$permissions		= common::get_permissions($tipo);
+	$permissions		= common::get_permissions($tipo,$tipo);
 	$label				= $this->get_label();
 	$modo				= $this->get_modo();
 	$ar_section			= $this->get_ar_section();

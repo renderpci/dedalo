@@ -12,7 +12,7 @@
 	$required				= $this->get_required();
 	$debugger				= $this->get_debugger();
 	if($modo != 'simple')
-	$permissions			= common::get_permissions($tipo); 	
+	$permissions			= common::get_permissions($section_tipo,$tipo);
 	$ejemplo				= $this->get_ejemplo();
 	$html_title				= "Info about $tipo";
 	
@@ -27,6 +27,8 @@
 	if ($this->get_filter_authorized_record()===false) return NULL ;
 	
 	$file_name				= $modo;
+
+	js::$ar_url[]  = DEDALO_ROOT_WEB."/lib/jquery/autosize/jquery.autosize-min.js";
 	
 	switch($modo) {
 		

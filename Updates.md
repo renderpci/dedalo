@@ -352,6 +352,13 @@ userID	|	integer NULL
 state	|	character(32) NULL	 
 dato	|	jsonb NULL
 
+*matrix_updates:*
+
+Column	|	Type	Comment
+--------- | ---------
+id	|	integer Auto Increment [nextval('matrix_updates_id_seq')]	 
+datos	|	jsonb NULL
+
 *matrix_users:*
 
 Column	|	Type	Comment

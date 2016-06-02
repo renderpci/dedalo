@@ -26,7 +26,7 @@
 					}					
 					$html_contenido .= substr($html_langs,0,-2);				
 					
-					if($permissions==3){
+					if(SHOW_DEBUG) {
 						$html_contenido .= "\n <span class=\"css_span_debugger\" id=\"debugger_{$tipo}\" >{$debugger}</span>";
 					}
 					break;

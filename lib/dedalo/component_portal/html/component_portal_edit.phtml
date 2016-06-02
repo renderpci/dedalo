@@ -25,16 +25,13 @@
 		
 		# CONTENIDO (INPUT)
 		$html_contenido = '';
-		switch($permissions) {
+		switch(true) {
 				
-			case 0	:	$html_contenido .= "";
-						break;
+			case ($permissions<1)	:	
+				$html_contenido .= "";
+				break;
 							
-			#case 1	: 	$html_contenido .= "\n <span class=\"css_span_dato\">$valor</span>";
-			#			break;	
-							
-			case ($permissions>=1)	:
-
+			case ($permissions>=1):
 
 						#
 						# HEADER ROW HTML
@@ -44,43 +41,46 @@
 							# BUTTONS
 							if ($this->html_options->buttons && ($show_button_new===true || empty($dato)) ) {
 								
+								#
 								# BUTTON NEW HTML
 								if( $permissions>=2 && $modo!='print') {
 
-									foreach ($ar_target_section_tipo as $current_target_section_tipo) {										
-									
-										$button_new = "\n<div class=\"css_button_generic btn_new_ep\" 
+									foreach ($ar_target_section_tipo as $current_target_section_tipo) {
+										
+										$button_new = "\n<div class=\"css_button_generic btn_new_ep\" onclick=\"component_portal.new_portal_record(this)\"
 										data-portal_tipo=\"{$this->tipo}\" 
 										data-portal_parent=\"{$this->parent}\"
-										data-target_section_tipo=\"{$current_target_section_tipo}\" 
-										onclick=\"component_portal.new_portal_record(this)\"
+										data-portal_section_tipo=\"{$this->section_tipo}\"
+										data-target_section_tipo=\"{$current_target_section_tipo}\"
 										title=\"parent:$parent - tipo:$tipo\" >";
-										$button_new .= ''. RecordObj_dd::get_termino_by_tipo($current_target_section_tipo).': '.label::get_label('nuevo');#. " $label" ;
+										$button_new .= "<div class=\"icon_bs link new_portal_record\"></div> ";
+										$button_new .= ''. RecordObj_dd::get_termino_by_tipo($current_target_section_tipo);	//.': '.label::get_label('nuevo');#. " $label" ;
 										$button_new .= "</div>";
-
+										
 										if (SHOW_DEBUG) {
-											$button_new .= "<span class=\"debug_info\">parent:$parent - tipo:$tipo </span>";
+											#$button_new .= "<span class=\"debug_info\">parent:$parent - tipo:$tipo </span>";
 										}
-										$html_contenido .= $button_new;
 
-										break; // Only first
+										$html_contenido .= $button_new;
+										break; // Only first for now
 									}
 								}
 
+								#
 								# BUTTON SELECT EXISTING RECORD HTML (BUTTON TOOL_PORTAL)
 								if($modo!='print') {
 									
 									foreach ($ar_target_section_tipo as $current_target_section_tipo) {	
 
-										$button_select = "\n<div class=\"css_button_generic btn_new_ep\" 
+										$button_select = "\n<div class=\"css_button_generic btn_new_ep\" onclick=\"tool_common.open_tool_portal(this)\"
 										data-tipo=\"{$tipo}\"
 										data-top_tipo=\"".TOP_TIPO."\"
 										data-parent=\"{$parent}\"
 										data-section_tipo=\"{$section_tipo}\"
 										data-target_section_tipo=\"{$current_target_section_tipo}\"
-										onclick=\"tool_common.open_tool_portal(this)\"
 										title=\"parent:$parent - tipo:$tipo\" >";
-										$button_select .= ''. RecordObj_dd::get_termino_by_tipo($current_target_section_tipo).': '.label::get_label('existente');
+										$button_select .= "<div class=\"icon_bs link find_portal_record\"></div> ";
+										$button_select .= ''. RecordObj_dd::get_termino_by_tipo($current_target_section_tipo);	//.': '.label::get_label('existente');
 
 										if(SHOW_DEBUG) {
 											$button_select .= ' '.TOP_TIPO.'.'.$current_target_section_tipo.'.'.$this->tipo;
@@ -95,7 +95,7 @@
 									}//end foreach ($ar_target_section_tipo as $current_target_section_tipo) {	
 								}								
 
-							}//END if ($show_button_new===true || !is_array($dato))
+							}//end buttons if ($show_button_new===true || !is_array($dato))
 							
 							#$html_contenido .= "</div><!-- /portal_header_row -->";
 
@@ -120,7 +120,10 @@
 								if ($column_tipo=='edit' && !$this->html_options->id_column) continue;
 								# aditional td css selectors
 									if ($column_tipo=='edit') {
-										$td_css_selector = 'id_column';										
+										$td_css_selector = 'id_column';
+									}else if ($column_tipo=='tag_id') {
+										$td_css_selector = 'tag_id_column';
+										$column_label 	 = '';
 									}else{
 										$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($column_tipo, true);
 										$td_css_selector = 'th_'.$modelo_name.' th_'.$column_tipo;
@@ -138,7 +141,7 @@
 
 						
 						
-	
+						#
 						# ROWS (TD)
 						$table .= "<tbody>";						
 						
@@ -148,6 +151,7 @@
 
 							$current_section_id 	= $current_locator->section_id;
 							$current_section_tipo 	= $current_locator->section_tipo;
+							$current_component_tipo = isset($current_locator->component_tipo) ? $current_locator->component_tipo : null;
 							$current_tag_id 		= isset($current_locator->tag_id) ? $current_locator->tag_id : null;
 
 							$current_row = $this->row_in_result( $current_locator, $rows_data->result );						
@@ -160,7 +164,7 @@
 							}
 
 							#
-							# REL_LOCATOR : The current_id can be id matrix or locator like object								
+							# REL_LOCATOR : locator like object								
 								$rel_locator = json_encode($current_locator);
 
 							#
@@ -199,7 +203,8 @@
 										#
 										# EDIT BUTTON
 											$context_http_query = http_build_query($context);
-											$url  = htmlspecialchars("?t=$target_section_tipo&id=$section_id&m=edit&{$context_http_query}");
+											$url  = htmlspecialchars("?t=$target_section_tipo&id=$section_id&m=edit&portal_section_tipo={$section_tipo}&{$context_http_query}");
+											$url .= "&locator=". urlencode($rel_locator);
 											$url .= "&top_tipo=".TOP_TIPO."&top_id=".TOP_ID;
 											$url .= "&exclude_elements=".$exclude_elements;
 
@@ -212,25 +217,31 @@
 											$id_path = tools::get_id_path($section_tipo.'.'.$section_id);
 												#dump($section_id_path,"id_path - $section_id");
 											$url 	.= "&id_path=". $id_path;
+												
 
-											#$title 	= "Goto resource section_id $section_id [$target_section_tipo]";
+											# Title
 											$title = label::get_label('editar_registro').' '.$section_id;
+											if (!empty($current_tag_id)) {
+												$title .= ' - '.$current_component_tipo.' - '.$current_tag_id;
+											}
+
 											if(SHOW_DEBUG) $title .= "\n url:$url \n modo $modo, context $context->context_name";
 											if (empty($current_row['id'])) {
 												$table .= "<div class='div_image_link link' title=\"$title\" onclick=\"alert('Deleted record')\"> ! </div>";
-											}else{																						
-												$additional_css_style = $permissions <2 ? 'height: 100%;' : '' ;
-												$table .= "<a href=\"javascript:component_portal.open_record('$url')\" id=\"portal_link_open_{$section_tipo}_{$section_id}\" class=\"id_column_buttons button_edit link\" style=\"$additional_css_style\"
-												title=\"$title\"
-												data-
-												>";
+											}else{
+												$additional_css_style = $permissions <2 ? 'style="height: 100%;"' : '' ;
+												$table .= "<a href=\"javascript:component_portal.open_record('$url')\"
+												id=\"portal_link_open_{$section_tipo}_{$section_id}\"
+												class=\"id_column_buttons button_edit link\"
+												$additional_css_style
+												title=\"$title\">";
 													# SECTION_ID TEXT
 													$table .= "<span class=\"section_id_number\">";
-													$table .= " $section_id ";													
+													$table .= " $section_id ";
 													$table .= "</span>"; 
-												$table .= "</a>"; 
-											
+												$table .= "</a>";											
 											}
+
 										#
 										# DELETE RECORD BUTTON
 											if ($permissions>=2) {
@@ -246,10 +257,10 @@
 												title=\"$title\">";
 												if(SHOW_DEBUG) {
 													$table .= "<mark class=\"row_debug_info\">";
-													$table .= "$target_section_tipo $current_section_id";
-													if ($current_tag_id) {
-													 $table .= "-$current_tag_id";
-													}
+													$table .= $target_section_tipo;
+													$table .= '-'.$current_section_id;
+													$table .= isset($current_component_tipo) ? '-'.$current_component_tipo : '';
+													$table .= isset($current_tag_id) ? '-'.$current_tag_id : '';
 													$table .= "</mark>";
 												}
 												$table .= "</a>";
@@ -267,6 +278,41 @@
 
 										$table .= "</td>";
 
+
+									#
+									# TAG_ID
+									}else if($column_tipo=='tag_id') {
+
+										$table .= "<td class=\"td_tag_id\">";
+
+										if( isset($current_locator->component_tipo) && isset($current_locator->tag_id) ) {
+
+											$component_name = RecordObj_dd::get_termino_by_tipo($current_locator->component_tipo);
+
+											$table .= "<div class=\"tag_id tooltip_active\" title=\"$component_name\">";											
+											$table .= $current_locator->tag_id;
+											$table .= "</div>";
+										}
+						
+										$table .= "</td>";
+
+									#
+									# DEDALO SEMANTICS COLUMNS
+									}else if ( strpos($column_tipo, 'ds_')===0 ) {
+
+										# Convert column name from 'ds_myname' to 'myname'
+										$ds_key = substr($column_tipo, 3);
+
+										# Mandatory vars to create semantic_node column
+										$semantic_wrapper_id = $ds_key.'_'.$current_locator->section_tipo.'_'.$current_locator->section_id;
+										$ds_element 		 = isset($current_locator->ds->$ds_key) ? $current_locator->ds->$ds_key : null;
+											
+										$table .= "<td class=\"td_ds\">";
+										ob_start();
+										include(DEDALO_LIB_BASE_PATH . '/tools/tool_semantic_nodes/html/tool_semantic_nodes_node.phtml');
+										$table .= ob_get_clean();
+										$table .= "</td>";
+								
 
 									#
 									# COMPONENTS COLUMNS
@@ -287,16 +333,18 @@
 										}
 										*/
 										#dump($modelo_name, ' PORTAL EDIT modelo_name ++ '.to_string($column_tipo));
+
 										
 										/**/
-										$column_value = $current_row[$column_tipo];
+										$column_value = isset($current_row[$column_tipo]) ? $current_row[$column_tipo] : null;
 										$value = (string)$modelo_name::render_list_value($column_value, // value string from db
 																						 $column_tipo, // current component tipo
 																						 $section_id, // current portal row section id
 																						 'portal_list', // mode fixed list
 																						 DEDALO_DATA_LANG, // current data lang
 																						 $target_section_tipo, // current section tipo
-																						 $section_id // Current portal parent
+																						 $section_id, // Current portal parent
+																						 $current_locator // Used by text_area to select fragment
 																						);
 
 										

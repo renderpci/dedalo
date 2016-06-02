@@ -91,6 +91,7 @@ class component_pdf extends component_common {
 	}#end __construct
 
 
+
 	/**
 	* GET_ADITIONAL_PATH
 	* Calculate image aditional path from 'propiedades' json config.
@@ -132,6 +133,7 @@ class component_pdf extends component_common {
 	}
 
 
+
 	/**
 	* GET_INITIAL_MEDIA_PATH
 	*
@@ -163,11 +165,15 @@ class component_pdf extends component_common {
 		return (object)$dato;
 	}
 
+
+
 	# SET_DATO
 	public function set_dato($dato) {
 		parent::set_dato( (object)$dato );
 	}
 	
+
+
 	/**
 	* GET VALOR
 	* LIST:
@@ -177,6 +183,7 @@ class component_pdf extends component_common {
 		return $this->valor = $this->get_pdf_id() ;
 	}
 	
+
 
 	/**
 	* GET PDF ID
@@ -207,6 +214,7 @@ class component_pdf extends component_common {
 		return $this->pdf_id = $pdf_id;
 	}
 
+
 	
 	/**
 	* GET QUALITY
@@ -215,6 +223,8 @@ class component_pdf extends component_common {
 		if(!isset($this->quality))	return DEDALO_PDF_QUALITY_DEFAULT;
 		return $this->quality;
 	}
+
+
 
 	/**
 	* UPLOAD NEEDED
@@ -227,6 +237,7 @@ class component_pdf extends component_common {
 		return $this->PdfObj->get_media_path_abs();
 	}
 	
+
 
 	# OVERRIDE COMPONENT_COMMON METHOD
 	public function get_ar_tools_obj() {
@@ -241,6 +252,8 @@ class component_pdf extends component_common {
 		
 		return parent::get_ar_tools_obj();
 	}
+
+
 
 	/**
 	* GET_PDF_URL
@@ -277,6 +290,7 @@ class component_pdf extends component_common {
 	
 		return $PdfObj->get_media_path() . $pdf_id .'.'. $PdfObj->get_extension();
 	}
+
 
 	
 	/**
@@ -427,6 +441,151 @@ class component_pdf extends component_common {
 
 		return true;
 	}#end restore_component_media_files
+
+
+
+	/**
+	* GET_PDF_THUMB
+	*
+	* OSX Brew problem: [soource: http://www.imagemagick.org/discourse-server/viewtopic.php?t=29096]
+	* Looks like the issue is that because the PATH variable is not necessarily available to Apache, IM does not actually know where Ghostscript is located.
+	* So I modified my delegates.xml file, which in my case is located in [i]/usr/local/Cellar/imagemagick/6.9.3-0_1/etc/ImageMagick-6/delegates.xml[/] and replaced
+	* command="&quot;gs&quot;
+	* with
+	* command="&quot;/usr/local/bin/gs&quot;
+	* Once the full path is specified, the command is working as desired.
+	*
+	* @return string | false $result
+	*/
+	public function get_pdf_thumb($force_create=false, $absolute=false) {
+
+		$url = false;
+
+		if (!defined('DEDALO_PDF_THUMB_DEFAULT')) {
+			define('DEDALO_PDF_THUMB_DEFAULT', 'thumb');
+		}
+		
+		$file_name  = $this->get_pdf_id();
+		$thumb_path = DEDALO_MEDIA_BASE_PATH . DEDALO_PDF_FOLDER . '/' . DEDALO_PDF_THUMB_DEFAULT . '/' . $file_name . '.jpg';
+
+		#
+		# THUMB ALREADY EXISTS
+		if (!$force_create && file_exists($thumb_path)) {
+			$url = DEDALO_MEDIA_BASE_URL . DEDALO_PDF_FOLDER . '/' . DEDALO_PDF_THUMB_DEFAULT . '/' . $file_name . '.jpg';
+			# ABSOLUTE (Default false)
+			if ($absolute) {
+				$url = DEDALO_PROTOCOL . DEDALO_HOST . $url;
+			}
+			return $url;
+		}
+		
+		#
+		# THUMB NOT EXISTS: GENERATE FROM PDF
+		$path = $this->get_pdf_path();
+		if (file_exists($path)) {
+
+			$width  = defined('DEDALO_IMAGE_THUMB_WIDTH')  ? DEDALO_IMAGE_THUMB_WIDTH  : 102;
+			$height = defined('DEDALO_IMAGE_THUMB_HEIGHT') ? DEDALO_IMAGE_THUMB_HEIGHT : 57;
+
+			# Like "102x57"
+			$dimensions = $width.'x'.$height.'>';
+
+			#$flags 		= '-debug all';
+			#$flags 		= " -scale 200x200 -background white -flatten ";
+			$command 	= MAGICK_PATH ."convert -alpha off {$path}[0] -thumbnail '$dimensions' -background white -flatten -gravity center -unsharp 0x.5 -quality 90 $thumb_path";
+			
+			exec($command.' 2>&1', $output, $result);
+				#dump($command, ' $command ++ '.to_string()); dump($output, ' result ++ '.to_string($result));
+
+			if ($result==0) {
+				# All is ok
+				$url = DEDALO_MEDIA_BASE_URL . DEDALO_PDF_FOLDER . '/' . DEDALO_PDF_THUMB_DEFAULT . '/' . $file_name . '.jpg';
+
+				# ABSOLUTE (Default false)
+				if ($absolute) {
+					$url = DEDALO_PROTOCOL . DEDALO_HOST . $url;
+				}
+				return $url;
+			}else{
+				# An error occurred
+				$url = false;
+			}
+		}
+
+		return $url;
+		
+	}#end get_pdf_thumb
+
+
+
+	/**
+	* RENDER_LIST_VALUE
+	* Overwrite for non default behaviour
+	* Receive value from section list and return proper value to show in list
+	* Sometimes is the same value (eg. component_input_text), sometimes is calculated (e.g component_portal)
+	* @param string $value
+	* @param string $tipo
+	* @param int $parent
+	* @param string $modo
+	* @param string $lang
+	* @param string $section_tipo
+	* @param int $section_id
+	*
+	* @return string $list_value
+	*/
+	public static function render_list_value($value, $tipo, $parent, $modo, $lang, $section_tipo, $section_id) {
+		
+		$modelo_name = 'component_pdf';
+		$component 	 = component_common::get_instance($modelo_name,
+													  $tipo,
+													  $parent,
+													  $modo,
+													  $lang,
+													  $section_tipo);
+		$value = $component->get_html();
+
+		return $value;
+
+	}#end render_list_value
+
+
+
+	/**
+	* GET_VALOR_EXPORT
+	* Return component value sended to export data
+	* @return string $valor
+	*/
+	public function get_valor_export( $valor=null, $lang=DEDALO_DATA_LANG ) {
+		
+		if (is_null($valor)) {
+			$dato = $this->get_dato();				// Get dato from DB
+		}else{
+			$this->set_dato( json_decode($valor) );	// Use parsed json string as dato
+		}
+
+		$force_create 	= false;
+		$absolute 		= true;	// otuput absolute path like 'http://myhost/mypath/myimage.jpg';
+	
+		$valor 			= $this->get_pdf_thumb($force_create, $absolute);	// Note this absolute url is converted to image on export
+
+		return $valor;
+
+	}#end get_valor_export
+
+
+
+	/**
+	* GET_RELATED_COMPONENT_TEXT_AREA_TIPO
+	* @return string | null $related_component_text_area_tipo
+	*/
+	public function get_related_component_text_area_tipo() {		
+
+		$modelo_name = 'component_text_area';
+		$related_component_text_area_tipo = common::get_ar_related_by_model($modelo_name, $this->tipo);
+
+		return $related_component_text_area_tipo;
+		
+	}#end get_related_component_text_area_tipo
 
 
 

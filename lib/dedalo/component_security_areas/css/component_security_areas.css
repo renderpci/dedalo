@@ -5,12 +5,18 @@
 .css_wrap_component_security_areas {
 
 	}
+	.css_wrap_component_security_areas .content_data {
+		width: 100%;
+		padding-left: 40px;
+	}
 
 	.css_wrap_component_security_areas label {
 		white-space: nowrap;
 		max-width: 220px;	
 		text-overflow:ellipsis;
 		display: inline-block;
+		overflow-x: hidden;
+		vertical-align: bottom;
 	}
 
 	/* INPUT
@@ -23,28 +29,47 @@
 		}
 		input.css_component_security_areas:hover {
 		}
-		input.css_component_security_areas:focus {
-			-webkit-box-shadow: 0 0 10px #ccc;
-			-moz-box-shadow: 0 0 10px #ccc;
+		input.css_component_security_areas:focus {			
 			box-shadow: 0 0 5px #CCC;
 		}
 		input.css_component_security_areas:active {
 		}
 
+
+
 /* TREE
 ------------------------------------------------------- */
-div.security_areas_tree {
+#security_areas_tree {
 	margin: 4px;
-	/*margin-left: -40px;*/
 	min-width: 800px;
 	display: inline-block;
 	position: relative;	
-	width: auto;	
+	width: auto;
+	width: 95%;
+	-webkit-user-select: none;
+	user-select: none;
 	}
-	div.security_areas_tree li {
+	#security_areas_tree li {
 		margin-left: 40px;
 		list-style: none;
 	}
+	#security_areas_tree ul.areas_ul {
+		display: none;
+	}
+
+	.toggle_area_childrens {
+		vertical-align: bottom;
+		height: 14px;
+		padding-left: 3px;
+		cursor: pointer;
+		color: #2872C2;
+	}
+	.toggle_area_childrens.area_childrens_opened::before {
+		content:"\e113";		
+	}
+
+	
+
 
 .global_admin_element {
 	color: #5D9EDE;
@@ -66,6 +91,28 @@ span.security_areas_admin_checkbox {
 	color: #999999;	
 }
 
+
+/* ACCESS_ELEMENTS
+------------------------------------------------------- */
+.toggle_access_elements {
+	color: #121212;
+	width: 1em;
+	padding: 3px;
+	cursor: pointer;
+	vertical-align: text-bottom;
+	}
+.access_elements {
+	background-color: #EFEFEF;
+	padding: 5px;
+	padding-left: 0;
+	border-radius: 6px;
+	margin-top: 5px;
+	margin-bottom: 5px;
+	display: none;
+	}
+	.access_elements.access_elements_show {
+		display: block;
+	}
 
 
 /* LIST

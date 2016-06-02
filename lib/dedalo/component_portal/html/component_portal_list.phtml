@@ -29,7 +29,8 @@
 							$current_section_id 	= $current_locator->section_id;
 							$current_section_tipo 	= $current_locator->section_tipo;
 							$current_tag_id 		= isset($current_locator->tag_id) ? $current_locator->tag_id : null;
-
+							$current_component_tipo = isset($current_locator->component_tipo) ? $current_locator->component_tipo : null;
+							
 							$current_row = $this->row_in_result( $current_locator, $rows_data->result );
 
 
@@ -75,11 +76,12 @@
 								$table .= "<div class=\"\" data-section_id=\"$section_id\">";
 								foreach ($ar_columns as $column_tipo => $column_label) {
 
-									if($column_tipo=='edit') continue; // Skip edit column
+									if($column_tipo=='edit' || $column_tipo=='tag_id' || strpos($column_tipo, 'ds_')===0 ) continue; // Skip edit and semantic columns column
 									
 									#
 									# COMPONENTS COLUMNS
 									$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($column_tipo, true);
+										#dump($modelo_name, ' modelo_name ++ '.to_string($column_tipo));
 									
 
 									/**/
@@ -92,7 +94,7 @@
 																					 DEDALO_DATA_LANG, // current data lang
 																					 $target_section_tipo, // current section tipo
 																					 null
-																					);									
+																					);						
 									
 									/*
 									# Row value overwrite on special cases

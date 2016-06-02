@@ -16,10 +16,7 @@
 	padding: 2px;
 	padding-left: 5px;
 	border: 1px solid #9E9E9E;
-	border-radius: 3px;
-	
-	-webkit-transition: all 0.03s ease-in-out;
-	-moz-transition: all 0.03s ease-in-out;
+	border-radius: 3px;	
 	transition: all 0.03s ease-in-out;
 	width: 99.5%;	
 }

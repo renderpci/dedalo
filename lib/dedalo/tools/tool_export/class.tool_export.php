@@ -49,7 +49,7 @@ class tool_export extends tool_common {
 	static function set_up() {
 
 		if (isset($_REQUEST['button_tipo'])) {
-			$button_obj  = new button_import($_REQUEST['button_tipo'],null);
+			$button_obj  = new button_import($_REQUEST['button_tipo'], null, $this->section_tipo);
 			$propiedades = json_handler::decode($button_obj->RecordObj_dd->get_propiedades());
 
 			// en prodeso..		

@@ -2,12 +2,12 @@
 
 	# CONTROLLER TOOL LANG
 
-	#$id 					= $this->component_obj->get_id();		#dump($id,'id');
 	$tipo 					= $this->component_obj->get_tipo();
 	$parent 				= $this->component_obj->get_parent();
+	$section_tipo 			= $this->component_obj->get_section_tipo();
 	$lang 					= $this->component_obj->get_lang();
 	$label 					= $this->component_obj->get_label();
-	$permissions			= common::get_permissions($tipo);
+	$permissions			= common::get_permissions($section_tipo,$tipo);
 	$button_row				= $this->button_row;
 	$tool_name 				= get_class($this);
 	$modo 					= $this->get_modo();

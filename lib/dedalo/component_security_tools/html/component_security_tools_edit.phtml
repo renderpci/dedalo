@@ -25,34 +25,40 @@
 	$html_contenido = '';
 	switch($permissions) {
 			
-		case 0	:	$html_contenido .= "\n <span class=\"css_span_dato\"> ".label::get_label('sin_acceso')." (security_tools)</span>"; 
-					break;
+		case 0	:	
+				$html_contenido .= "\n <span class=\"css_span_dato\"> ".label::get_label('sin_acceso')." (security_tools)</span>"; 
+				break;
 						
-		case 1	: 	if (is_array ($ar_tools)) foreach ($ar_tools as $tool_name) {
+		case 1	: 	
+				if (is_array ($ar_tools)) foreach ($ar_tools as $tool_name) {
 						
-						if( is_array($dato) && in_array($tool_name,$dato) ) {
-							$checked = 'checked="checked"';
-						}else {
-							$checked = "";
-						}
-						$html_contenido .= "\n <input class=\"css_check_box_security_tools\" type=\"checkbox\" 
-						name=\"{$input_name}\"
-						data-tipo=\"{$tipo}\"
-						data-section_tipo=\"{$section_tipo}\"
-						data-parent=\"{$parent}\"
-						value=\"{$tool_name}\" title=\"$html_title\" 
-						$checked  disabled />";						
-						$html_contenido .= "\n <label class=\"css_check_box_security_tools_rotulo\" $required >$tool_name</label>";	
+					if( is_array($dato) && in_array($tool_name,$dato) ) {
+						$checked = 'checked="checked"';
+					}else {
+						$checked = "";
 					}
-					break;	
+					$html_contenido .= "\n <input class=\"css_check_box_security_tools\" type=\"checkbox\" 
+					name=\"{$input_name}\"
+					data-tipo=\"{$tipo}\"
+					data-section_tipo=\"{$section_tipo}\"
+					data-parent=\"{$parent}\"
+					value=\"{$tool_name}\" title=\"$html_title\" 
+					$checked  disabled />";						
+					$html_contenido .= "\n <label class=\"css_check_box_security_tools_rotulo\" $required >$tool_name</label>";	
+				}
+				break;	
 						
-		case ($permissions>=2)	:
+		case 2 :
+		case 3 :					
+				$disabled = null;
+				
+				$html_contenido .= "<ul>";
+
+				if (is_array ($ar_tools)) foreach ($ar_tools as $tool_name => $tool_label) {
 					
-					$disabled = null;
-					
-					if (is_array ($ar_tools)) foreach ($ar_tools as $tool_name => $tool_label) {
-						
-						$checked = (is_array($dato) && array_key_exists($tool_name,$dato)) ? 'checked="checked"' : '';						
+					$html_contenido .= "<li>";
+
+						$checked = (is_array($dato) && array_key_exists($tool_name,$dato)) ? 'checked="checked"' : '';					
 						
 						$html_contenido .= "\n <input class=\"css_check_box_security_tools\" type=\"checkbox\"
 						onchange=\"component_security_tools.Save(this)\"
@@ -73,18 +79,22 @@
 						if(SHOW_DEBUG) {
 							$tool_label .= " <small class=\"notas\">[$tool_name]</small>";
 						}
-						$html_contenido .= "\n <label class=\"css_check_box_security_tools_rotulo\" $required >$tool_label</label><br>";						
-					}
-					
-					#$html_contenido .= "\n <span class=\"css_span_log\"></span>";					
-					#$html_contenido .= "\n <span class=\"css_span_ejemplo\">$ejemplo</span>";
-							
-					if($permissions==3){
-						$html_contenido .= "\n <span class=\"css_span_debugger\" id=\"debugger_{$tipo}\" >{$debugger}</span>";
-					}
-					break;					
-							
+						$html_contenido .= "\n <label class=\"css_check_box_security_tools_rotulo\" $required >$tool_label</label><br>";
+
+						$html_contenido .= "</li>";		
+				}
+
+				$html_contenido .= "</ul>";
+				
+				#$html_contenido .= "\n <span class=\"css_span_log\"></span>";					
+				#$html_contenido .= "\n <span class=\"css_span_ejemplo\">$ejemplo</span>";
+						
+				if(SHOW_DEBUG) {
+					#$html_contenido .= "\n <span class=\"css_span_debugger\" id=\"debugger_{$tipo}\" >{$debugger}</span>";
+				}
+				break;							
 	}
+
 
 	# Prepare content to show in page
 	tools::prepare_content($html_contenido);

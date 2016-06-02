@@ -2,7 +2,6 @@
 	
 	# CONTROLLER
 
-	#$id 					= $this->get_id();
 	$tipo 					= $this->get_tipo();
 	$parent 				= $this->get_parent();
 	$section_tipo			= $this->get_section_tipo();
@@ -11,7 +10,7 @@
 	$label 					= $this->get_label();
 	$required				= $this->get_required();
 	$debugger				= $this->get_debugger();
-	$permissions			= common::get_permissions($tipo);
+	$permissions			= common::get_permissions($section_tipo,$tipo);
 	$ejemplo				= NULL;
 	$html_title				= "Info about $tipo";
 	$lang					= $this->get_lang();
@@ -38,6 +37,7 @@
 				$input_name 		= 'radio_button_'.$identificador_unico;
 				$js_code			= $this->generate_js();
 				$component_info 	= $this->get_component_info('json');
+				$component_info  	= rawurlencode($component_info);
 				break;
 
 		case 'tool_time_machine' :	
@@ -60,8 +60,7 @@
 		case 'list_tm' :
 				$file_name = 'list';
 							
-		case 'list' :
-		
+		case 'list' :		
 				$valor  			= $this->get_valor();
 				$referenced_tipo 	= $this->get_referenced_tipo();
 				$ar_list_of_values	= $this->get_ar_list_of_values( DEDALO_DATA_LANG, null );
@@ -80,9 +79,9 @@
 
 		case 'print' :
 				$valor = $this->get_valor();
-				break;			
-		
+				break;		
 	}
+
 		
 	$page_html	= DEDALO_LIB_BASE_PATH .'/'. get_class($this) . '/html/' . get_class($this) . '_' . $file_name . '.phtml';	
 	if( !include($page_html) ) {

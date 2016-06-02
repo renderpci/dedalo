@@ -3,8 +3,10 @@ WRAP DIV CONTAINER*/
 .css_wrap_autocomplete {
 
 	}
-	.css_wrap_autocomplete .content_data {
-		
+	.css_wrap_autocomplete > .content_data {
+		display: block;
+		width: 100%;
+		min-height: 21px;
 	}
 
 /* VALOR TEXT */
@@ -21,10 +23,12 @@ WRAP DIV CONTAINER*/
 input.css_autocomplete_search_field {
 	float: right;
 	width: 90px;
-	margin-right: 13px;	
+	right: -30px;
+    position: relative;
 	opacity: 0.5;
-	background: white url('../../themes/default/lupa2.gif') right center no-repeat;
+	background: white url('../../themes/default/lupa2.svg') right center no-repeat;
 	background-size: auto 100%;
+	background-position-x: 75%;
 	transition: all 0.25s ease-in-out;
 	}
 	input.css_autocomplete_search_field:hover {
@@ -32,7 +36,9 @@ input.css_autocomplete_search_field {
 	}
 	input.css_autocomplete_search_field:focus {
 		opacity: 1;
-		width: 100px;
+		width: 90px;
+		background-position-x: 95%;
+
 	}
 
 /* DATO HIDDEN INPUT */
@@ -68,7 +74,7 @@ input.css_autocomplete_dato_hidden {
 .edit_autocomplete {
 	float: right;
 	position: relative;
-	top: 5px;
+	top: -17px;
 	background-position: 0 -72px;
 	opacity: 0.3;
 }
@@ -81,7 +87,7 @@ input.css_autocomplete_dato_hidden {
 .new_autocomplete {
 	float: right;	
 	position: relative;
-	top: 5px;
+	top: -17px;
 	right: 5px;
 	background-position: 0 -96px;
 	opacity: 0.3;
@@ -90,21 +96,32 @@ input.css_autocomplete_dato_hidden {
 
 
 .component_autocomplete_new_element {
-	background-color: rgba(128, 128, 128, 0.1);
-	width: 99%;
+	
+	width: 100%;
 	display: block;
-	padding: 10px;
-	margin: 5px;
 	margin-top: 15px;
-	border-radius: 3px;
 	}
 	.component_autocomplete_new_element input[type="text"] {
 		padding: 3px;
 		padding-left: 5px;
 		border: 1px solid #9E9E9E;
 		border-radius: 3px;
-		box-shadow: inset 0 0 6px #999999;
 	}
 	.component_autocomplete_new_element input[type="button"] {
 		cursor: pointer;
 	}
+
+
+.autocomplete_semantic_nodes {
+	background-color: rgba(232, 232, 232, 0.81);
+	border-radius: 4px;
+	margin: 3px;
+	margin-left: 15px;
+	padding: 4px;	
+	display: block;
+	white-space: nowrap;
+	width: 100%;
+	min-height: 1.75em;
+}
+
+

@@ -26,9 +26,7 @@
 	padding-bottom: 4px;
 	
 	color: #999999;
-	font-family: Arial, Helvetica, sans-serif;
-	-webkit-box-shadow: 0px -2px 3px rgb(220,220,220) inset;
-	-moz-box-shadow: 0px -2px 3px rgb(220,220,220) inset;
+	font-family: Arial, Helvetica, sans-serif;	
 	box-shadow: inset 0px -2px 3px rgb(220, 220, 220);
 	width: 100%;
 	/*
@@ -67,6 +65,7 @@
 	overflow: hidden;
 	/*white-space: nowrap; Don't forget this one
 	display: inline-block;*/
+	word-break: break-all;
 }
 .capitalize {
 	text-transform: capitalize;

@@ -9,7 +9,7 @@
 	$dato 					= $this->get_dato();
 	$traducible 			= $this->get_traducible();
 	$label 					= $this->get_label();
-	$permissions			= 1;	//common::get_permissions($tipo);
+	$permissions			= common::get_permissions($section_tipo,$tipo);
 	$html_title				= "Info about $tipo";		
 	$valor					= $this->get_valor();				
 	$lang					= $this->get_lang();

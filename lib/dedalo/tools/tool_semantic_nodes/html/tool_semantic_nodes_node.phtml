@@ -1,0 +1,63 @@
+<?php
+
+	# VISUALIZADOR HTML	
+
+	#$semantic_wrapper_id = $ds_key.'_'.$current_locator->section_tipo.'_'.$current_locator->section_id;
+	#$ds_element 		 = isset($current_locator->ds->$ds_key) ? $current_locator->ds->$ds_key : null;
+
+	
+	$ds_html  = '';
+
+	$ds_html .= "<div id=\"$semantic_wrapper_id\" class=\"semantic_wrapper\">";
+
+	if (isset($semantic_node_title)) {
+		$ds_html .= "<span class=\"semantic_node_title\">$semantic_node_title</span>";
+	}
+
+	$ds_html .= "<div class=\"icon_bs link new_semantic_node\" onclick=\"tool_semantic_nodes.open_ts_window(this)\"
+	data-locator_section_tipo=\"{$current_locator->section_tipo}\"
+	data-locator_section_id=\"{$current_locator->section_id}\"
+	data-ds_key=\"{$ds_key}\"
+	data-semantic_wrapper_id=\"{$semantic_wrapper_id}\"
+	></div>";
+
+	if (!empty($ds_element)) {
+		#dump($current_locator->ds, '$current_locator->ds ++ '.to_string());		
+			
+		$ds_html .= "<ul class=\"ul_semantic_node\">";
+
+		foreach ((array)$ds_element as $locator_ds) {
+
+			$ds_terminoID = component_autocomplete_ts::get_terminoID_by_locator($locator_ds); // nota ahora es un terminoID pero cambiará su formato		
+		
+			$termino = RecordObj_ts::get_termino_by_tipo($ds_terminoID, DEDALO_DATA_LANG, true);
+				#dump($termino, ' termino ++ '.to_string(DEDALO_DATA_LANG));
+
+			$ds_html .= "<li>";
+
+			$ds_html .= "<div class=\"icon_bs link delete_semantic_node\" onclick=\"tool_semantic_nodes.remove_index(this,event)\"
+			data-termino_id=\"$ds_terminoID\"
+			data-locator_section_tipo=\"{$current_locator->section_tipo}\"
+			data-locator_section_id=\"{$current_locator->section_id}\"
+			data-ds_key=\"{$ds_key}\"
+			data-semantic_wrapper_id=\"{$semantic_wrapper_id}\"
+			></div>";
+
+			$ds_html .= "<span>";
+			$ds_html .= $termino;
+			if(SHOW_DEBUG) {
+				$ds_html .= " [$ds_terminoID]";
+			}
+			$ds_html .= "</span>";
+
+			$ds_html .= "</li>";
+		}
+
+		$ds_html .= "</ul>";
+	}
+
+	$ds_html .= "</div>"; //end semantic_wrapper
+
+
+	echo $ds_html;
+?>

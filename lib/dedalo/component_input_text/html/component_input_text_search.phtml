@@ -1,15 +1,9 @@
 <?php
 
 	# VISUALIZADOR HTML	
-	
-
-	
-	if(isset($_REQUEST[$tipo])) $dato = $_REQUEST[$tipo];		#var_dump($_REQUEST[$tipo]);
-	
-	
 	#print "\n<!-- INPUT_TEXT [tipo:$tipo id_matrix:$id] -->";
 
-	print "\n<div class=\"css_wrap_input_text\" id=\"wrap_{$tipo}\">";
+	print "\n<div class=\"wrap_component css_wrap_input_text\" id=\"wrap_{$tipo}\">";
 	
 	# ETIQUETA (LABEL)
 	$html_label = component_common_draw::draw_label($this);
@@ -24,7 +18,7 @@
 		case ($permissions>=1) :
 
 					# COMPARISON OPERATORS
-					$html_contenido .= operator::get_search_comparison_operators_html($tipo,$ar_comparison_operators);					
+					$html_contenido .= operator::get_search_comparison_operators_html($tipo,$ar_comparison_operators);
 
 					# INPUT 
 					$html_contenido .= "<span id=\"search_component_$tipo\">";

@@ -210,7 +210,7 @@ class records_search extends common {
 			switch (true) {
 
 				case ( strpos($current_modelo_name, 'button_')!==false ) :
-					$current_element 	 = new $current_modelo_name($current_element_tipo,null);
+					$current_element 	 = new $current_modelo_name($current_element_tipo,null,$this->section_tipo);
 					$ar_tools_search[$current_element_tipo] = $current_element;
 					break;
 

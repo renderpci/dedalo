@@ -106,6 +106,7 @@ if($mode=='update_structure') {
 }//end update_structure
 
 
+
 /**
 * BUILD_STRUCTURE_CSS
 * Force unlock all components
@@ -142,6 +143,7 @@ if($mode=='delete_component_tipo_in_matrix_table') {
 }//end build_structure_css
 
 
+
 /**
 * UPDATE_VERSION
 * Update the version, components, SQL, etc, the script look the updates.php file and apply to the current installation data
@@ -162,6 +164,45 @@ if($mode=='update_version') {
 
 }//end update_version
 
+
+
+/**
+* SKIP_PUBLICATION_STATE_CHECK
+* Update the version, components, SQL, etc, the script look the updates.php file and apply to the current installation data
+*/
+if($mode=='skip_publication_state_check') {
+
+	$vars = array('value');
+		foreach($vars as $name) $$name = common::setVar($name);
+
+		$value = json_decode($value);
+			#dump($value, ' value ++ '.to_string());
+
+	$result = tool_administration::skip_publication_state_check($value);
+	
+	echo json_encode($result);
+	exit();
+
+}//end skip_publication_state_check
+
+
+
+/**
+* REMOVE_AV_TEMPORALS
+* Remove av ffmpeg sh temprals
+*/
+if($mode=='remove_av_temporals') {
+
+	$result = tool_administration::remove_av_temporals();
+
+	$response = new stdClass();
+		$response->result 	= !empty($result) ? true : false;
+		$response->msg 		= !empty($result) ? "Removed files: <br>".implode('<br>', (array)$result) : "No files found";
+	
+	echo json_encode($response);
+	exit();
+
+}//end remove_av_temporals
 
 
 ?>

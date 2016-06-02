@@ -29,7 +29,7 @@ class component_filter extends component_common {
 	
 	# Constructor
 	function __construct( $tipo=false, $parent=null, $modo='list', $lang=DEDALO_DATA_NOLAN, $section_tipo=null) {	#__construct($id=NULL, $tipo=false, $modo='edit', $parent=NULL, $lang=NULL)
-		
+				
 		# Creamos el componente normalmente
 		parent::__construct($tipo, $parent, $modo, DEDALO_DATA_NOLAN, $section_tipo);
 
@@ -61,6 +61,18 @@ class component_filter extends component_common {
 	}#end __construct
 
 
+
+	/**
+	* GET_HTML
+	* @return 
+	*/
+	public function get_html() {
+		$this->start_time = microtime(1);	
+		return parent::get_html();
+	}#end get_html
+
+
+
 	/**
 	* GET DATO : Format {"7":2,"269":2,"298":2}
 	* @see component_filter_master->get_dato() for maintain unyfied format of projetcs
@@ -69,6 +81,8 @@ class component_filter extends component_common {
 		$dato = parent::get_dato();
 		return (array)$dato;
 	}
+
+
 
 	/**
 	* SET_DATO
@@ -87,14 +101,13 @@ class component_filter extends component_common {
 	* Overwrite component_common method 
 	*/
 	public function Save() {
-
+	
 		# Salvamos normalmente pero guardamos el resultado
 		$parent_save_result = parent::Save();
 
 		# 
 		# ACTIVITY CASE Logger only
 		if( $this->tipo == logger_backend_activity::$_COMPONENT_PROYECTOS['tipo'] ) return $parent_save_result; 
-
 		
 		#
 		# PORTAL CASE
@@ -109,12 +122,11 @@ class component_filter extends component_common {
 
 		# Devolvemos el resultado del save
 		return $parent_save_result;
-	}
+
+	}//end Save
 
 
 	
-
-
 	/**
 	* PROPAGATE_FILTER
 	* Propagate all current filter dato (triggered when save) to component_filters of children portals (recursive)
@@ -251,10 +263,7 @@ class component_filter extends component_common {
 
 		# Usuario logeado actualmente
 		$user_id = navigator::get_user_id();							
-			#dump($user_id,'user_id');	
-		
-		#$tipo 				= DEDALO_SECTION_USERS_TIPO;		
-		#$tipo_filter_master = DEDALO_FILTER_MASTER_TIPO;
+			#dump($user_id,'user_id');		
 
 		# Test is_global_admin
 		$is_global_admin = component_security_administrator::is_global_admin($user_id);
@@ -263,12 +272,12 @@ class component_filter extends component_common {
 			# SÓLO PARA ADMINISTRADORES. 
 			# BYPASS EL FILTRO Y ACCEDE A TODOS LOS PROYECTOS
 			# Buscamos TODOS los registros de section tipo DEDALO_SECTION_PROJECTS_TIPO
-				$strQuery   = "-- ".__METHOD__."\n SELECT id \n FROM \"matrix_projects\" ";	//WHERE $sql_filtro
+				$strQuery   = "-- ".__METHOD__."\n SELECT section_id \n FROM \"matrix_projects\" ORDER BY section_id ASC";	//WHERE $sql_filtro
 				$result		= JSON_RecordObj_matrix::search_free($strQuery);
 
 				$ar_proyectos_section_id=array();
 				while ($rows = pg_fetch_assoc($result)) {
-					$ar_proyectos_section_id[] = $rows['id'];
+					$ar_proyectos_section_id[] = $rows['section_id'];
 				}
 				#dump($ar_proyectos_section_id	, ' ar_proyectos_section_id');
 			
@@ -277,8 +286,13 @@ class component_filter extends component_common {
 			# USUARIOS COMUNES. 
 			# DEVUELVE SÓLO LOS PROYECTOS DEL USUARIO (filter master)
 			# Los proyectos autorizados al usuario actual, de tipo '{"212":2,"250":2,"274":2,"783":2,"791":2,"803":2}'
-				$component_filter_master 	= component_common::get_instance('component_filter_master', DEDALO_FILTER_MASTER_TIPO, $user_id, 'edit', DEDALO_DATA_NOLAN, DEDALO_SECTION_USERS_TIPO);
-				$dato						= (array)$component_filter_master->get_dato();
+				$component_filter_master 	= component_common::get_instance('component_filter_master',
+																			 DEDALO_FILTER_MASTER_TIPO,
+																			 $user_id,
+																			 'edit',
+																			 DEDALO_DATA_NOLAN,
+																			 DEDALO_SECTION_USERS_TIPO);
+				$dato = (array)$component_filter_master->get_dato();
 					#dump($component_filter_master, ' dato');
 
 				$ar_proyectos_section_id = array_keys($dato);	
@@ -286,19 +300,31 @@ class component_filter extends component_common {
 		}
 
 
-		# tipo para buscar la etiqueta (definido en estructura como relacion del filter_master)		
-		# Directo por velocidad
-		$termino_relacionado_tipo = DEDALO_PROJECTS_NAME_TIPO;
-
-		# Modelo del término donde buscamos los nombres (Expected: component_input_text)
-		#$tipo_proyectos_related_model_name = RecordObj_dd::get_modelo_name_by_tipo($tipo_proyectos_related,true);
-			#dump($tipo_proyectos_related_model_name,'$tipo_proyectos_related_model_name',"Expected: component_input_text");
-
-		#dump($ar_proyectos_section_id,'$ar_proyectos_section_id');
-		
-		# ID's de las secciones (registros) de tipo proyecto (component_filter)
-		$ar_proyectos_for_current_section = component_common::get_ar_records_with_lang_fallback($ar_proyectos_section_id, $termino_relacionado_tipo, DEDALO_SECTION_PROJECTS_TIPO);		
-			#dump($ar_proyectos_for_current_section,'$ar_proyectos_for_current_section');
+		// Resolve projects names
+		$modelo_name = RecordObj_dd::get_modelo_name_by_tipo(DEDALO_PROJECTS_NAME_TIPO);
+		$ar_proyectos_for_current_section=array();
+		foreach ($ar_proyectos_section_id as $current_section_id) {
+			
+			$component = component_common::get_instance($modelo_name,
+														DEDALO_PROJECTS_NAME_TIPO,
+														$current_section_id,
+														'list',
+														DEDALO_DATA_LANG,
+														DEDALO_SECTION_PROJECTS_TIPO);
+			$current_dato = $component->get_dato();
+			
+			// Fallback to application default lang
+			if ( empty($current_dato) ) {
+				$component = component_common::get_instance($modelo_name,
+														DEDALO_PROJECTS_NAME_TIPO,
+														$current_section_id,
+														'list',
+														DEDALO_APPLICATION_LANGS_DEFAULT,
+														DEDALO_SECTION_PROJECTS_TIPO);
+				$current_dato = "<mark>".$component->get_dato()."</mark>";
+			}
+			$ar_proyectos_for_current_section[$current_section_id] = (string)$current_dato;
+		}
 
 		# STATIC CACHE
 		$cache_ar_proyectos_for_current_section[$this->tipo] = $ar_proyectos_for_current_section;
@@ -315,226 +341,29 @@ class component_filter extends component_common {
 
 
 
-
 	/**
-	* PROPAGATE AREAS TO PROJECTS (SAVE COMPOSED DATA TO MATRIX)
-	* Receive array of areas (checkboxes) from edit section 'Users' page
-	* and rebuild data of current user projects
-	* If new array of areas is minor than previous, remove proyects associated
-	* to removed areas 
-	* Only aplicable in context: Editing User
-	* Nothing will be done when we are in context: Editing Projects
-	*
-	* @param $ar_areas_to_save
-	*	Array of areas format:
-	*		[dd321] => 2,[dd294-admin] => 2,[dd294] => 2 ..	
-	*	to save in matrix db. 
-	*	Note that the checkbox that no contain value will not be saved and area not in this value
-	* @param $parent
-	*	Section id matrix of current record. Equivalent to userID matrix (when edit Users)
-	*
+	* GET_STATS_VALUE
 	*/
-	public static function propagate_areas_to_projects_DEPERECATED($ar_areas_to_save, $parent, $parent_section_tipo) {
-		#dump($ar_areas_to_save, 'ar_areas_to_save', array()); return true;
-		# Verify if we are in 'Users' section or 'Projects' section
-		# Create a section with parent id and search children by modelo_name=component_security_access			
-			#$section_obj = section::get_instance($parent,$parent_section_tipo);
-			#$ar_children_objects_by_modelo_name_in_section = $section_obj->get_ar_children_objects_by_modelo_name_in_section('component_filter_master');	
-				#dump($ar_children_objects_by_modelo_name_in_section,'$ar_children_objects_by_modelo_name_in_section',"modelo $modelo_name_required , parent:$parent");
-
-			$ar_children_component_filter_master = section::get_ar_children_tipo_by_modelo_name_in_section($parent_section_tipo, 'component_filter_master', $from_cache=true);
-				#dump($ar_children_component_filter_master, 'ar_children_component_filter_master', array());
-
-			# Si no se encuentra el elemento hijo de tipo 'component_filter_master' paramos ya que estaremos editando proyectos y no debemos propagar nada.
-			if(empty($ar_children_component_filter_master)) {
-				
-				# Editing 'PROJECTS'
-				# Nothing to do
-				return NULL;
-
-			}else{
-
-				# Editing 'USERS'
-				# En este objeto (usualmente de tipo 'dd170') están los datos actuales de proyectos del usuario recibido ($parent) 
-				# ejemplo: 
-				# [dato:protected] => Array
-		        # (
-		        #    [250] => 2
-		        #    [803] => 2
-		        # )
-		        # Obtenemos el componente de tipo 'component_filter_master'
-				#$component_filter_master_obj = $ar_children_objects_by_modelo_name_in_section[0];
-				$component_filter_master_tipo = $ar_children_component_filter_master[0];
-			}
-
-		# Verification
-		if(empty($ar_areas_to_save) || !is_array($ar_areas_to_save)) throw new Exception("Error Processing Request: ar_areas_to_save is empty!", 1);
-		
-		$user_id 	= $parent;
-
-		# Convert '$ar_areas_to_save' array to simple array
-		# with only 'estado=2' areas
-		$ar_projects_authorized = array();
-		$ar_areas_authorized 	= array();
-		foreach ($ar_areas_to_save as $tipo => $estado) {
-			if ((int)$estado>=1) $ar_areas_authorized[] = $tipo;
-		}
-
-		
-		#
-		# 1 Buscamos TODOS los proyectos existentes y sus areas de actuación
-			/*
-			# Resolvemos el tipo del elemento 'component_filter_master' de la sección del usuario actual creada arriba
-			$tipo_proyectos				= DEDALO_FILTER_MASTER_TIPO;	# Fixed dd170  	# $component_filter_master_tipo;
-				#dump($tipo_proyectos, 'tipo_proyectos '.DEDALO_FILTER_MASTER_TIPO);
-			*/
-			/*
-			# Resolvemos el tipo del elemento 'component_input_text' relacionado con el (es un puntero a el elmento correspondiente de la sección Proyectos)
-			$ar_tipo_proyectos_related	= RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($tipo_proyectos, $modelo_name='component_input_text', $relation_type='termino_relacionado');	
-			
-			if(empty($ar_tipo_proyectos_related))
-				throw new Exception(__METHOD__ ." Error: Children (model component_security_areas) of User ($user_id) not found in structure!");
-			else
-				$tipo_proyectos_related = $ar_tipo_proyectos_related[0];
-			*/
-			/*
-			# Modo directo dd153
-			$tipo_proyectos_related = DEDALO_SECTION_PROJECTS_TIPO; # Fixed dd153
-			*/
-			/*
-			# Como ya tenemos el tipo del elemento 'Proyecto (nombre)' en proyectos, despejamos su parent section 'Proyectos' usualmente 'dd153'
-			$ar_section_tipo	= RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($tipo_proyectos, $modelo_name='section', $relation_type='parent');
-				dump($ar_section_tipo, '$ar_section_tipo', array()); #DEDALO_SECTION_USERS_TIPO
-			
-			if(empty($ar_section_tipo))
-				throw new Exception(__METHOD__ ." Error: parent (model section) of tipo ($tipo_proyectos_related) not found in structure!");
-			else
-				$section_proyectos_tipo = $ar_section_tipo[0];
-			*/
-			# Modo directo
-			#$section_proyectos_tipo = DEDALO_SECTION_USERS_TIPO; # Fixed dd128
-
-			# Buscamos TODOS los registros del tipo de la sección proyectos (usualmente 'dd153')
-			$arguments=array();
-			#$arguments["datos#>>'{section_tipo}'"]	= DEDALO_SECTION_PROJECTS_TIPO;	#dump($section_proyectos_tipo, 'section_proyectos_tipo '.$tipo_proyectos_related, array());
-			$arguments["section_tipo"]				= DEDALO_SECTION_PROJECTS_TIPO;
-			#$matrix_table 							= common::get_matrix_table_from_tipo($section_proyectos_tipo);		
-			$matrix_table 							= 'matrix_projects'; # Fixed always matrix_projects
-			$JSON_RecordObj_matrix					= new JSON_RecordObj_matrix($matrix_table,NULL,DEDALO_SECTION_PROJECTS_TIPO);
-			$ar_records								= $JSON_RecordObj_matrix->search($arguments);
-				#dump($ar_records, 'ar_records '.$matrix_table, $arguments);
-
-			$ar_all_proyectos_id 			= $ar_records;
-				#error_log( dump($ar_all_proyectos_id,'$ar_all_proyectos_id'," para section_proyectos_tipo: $section_proyectos_tipo") );
-
-		#
-		# 2 Recorremos TODOS los proyectos, almacenado los que estén guardados en el registro del usuario y tengan áreas existentes en '$ar_areas_authorized'
-		/*
-			if (is_array($ar_all_proyectos_id)) foreach ($ar_all_proyectos_id as $proyecto_id_matrix) {
-
-				#$current_tipo = common::get_tipo_by_id($proyecto_id_matrix,$table='matrix');
-				#$current_tipo = component_common::get_section_tipo_from_component_tipo($this->tipo); # Ver de resolver por estructura en lugar de por matrix !!!!!!!!!!!!!!!!!!!!!!!!!!!! <<<<<<<<<
-				
-				# Creamos la sección proyectos y buscamos su componente de tipo 'component_security_areas'						
-				#$project_obj 						= section::get_instance($proyecto_id_matrix, DEDALO_SECTION_PROJECTS_TIPO);
-				#$ar_children_objects_by_modelo_name = $project_obj->get_ar_children_objects_by_modelo_name_in_section('component_security_areas');
-				#	dump($ar_children_objects_by_modelo_name, 'component_security_areas', array());
-				#
-				#if(empty($ar_children_objects_by_modelo_name))
-				#	throw new Exception(__METHOD__ ." Error: ar_children_objects_by_modelo_name (model component_security_areas) of id ($proyecto_id_matrix) not found in matrix!");
-				#else
-				#	$component_security_areas_obj = $ar_children_objects_by_modelo_name[0];
-			
-				$component_security_areas_obj = component_common::get_instance('component_security_areas',DEDALO_COMPONENT_SECURITY_AREAS_PROJECTS_TIPO,$proyecto_id_matrix,'edit',DEDALO_DATA_NOLAN);	#($component_name, $tipo, $parent=NULL, $modo='edit', $lang=DEDALO_DATA_LANG)
-
-				$ar_areas_of_this_section = (array)$component_security_areas_obj->get_dato();
-					#error_log( dump($ar_areas_of_this_section,'$ar_areas_of_this_section'," para proyecto_id_matrix: $proyecto_id_matrix") );
-
-				# Recorremos las áreas de este proyecto y cotejamos las que tienen estado 2 con las autorizadas recibidas ($ar_areas_authorized) 
-				foreach ($ar_areas_of_this_section as $tipo => $estado) {
-					
-					if($estado==2) {
-						# Si son estado=2 y están en el array de las áreas salvadas, incluimos este proyecto
-						# en el array final, dejando fuera los proyectos que no coincidan:
-						# Esos proyectos serán los que teníamos checkeados anteriormente en áreas a las que ya no
-						# tenemos acceso y por tanto serán excluidos del array final
-						if (in_array($tipo, $ar_areas_authorized)) {
-							# Si no existe ya, lo añadimos
-							if (!in_array($proyecto_id_matrix, $ar_projects_authorized)) $ar_projects_authorized[] = $proyecto_id_matrix;						
-						}							
-					}
-				}
-			}
-			#error_log( dump($ar_projects_authorized,'$ar_projects_authorized'," ") );
-		*/
-		
-
-		#
-		# 3 Guardamos el resultado en el dato matrix del usuario editado (sobre-escribiendo los datos anteriores)
-
-			# Creamos la sección usuarios y buscamos su componente de tipo 'component_filter_master'
-			/*				
-			$usuario_section_obj 		= section::get_instance($user_id, DEDALO_SECTION_USERS_TIPO);
-			$ar_component_filter_master = $usuario_section_obj->get_ar_children_objects_by_modelo_name_in_section('component_filter_master');
-
-			if(empty($ar_component_filter_master))
-				throw new Exception(__METHOD__ ." Error: ar_children_objects_by_modelo_name (model component_filter_master) of id ($parent) not found in matrix!");
-			else
-				$component_filter_master_obj = $ar_component_filter_master[0];
-			*/
-			$component_filter_master_obj = component_common::get_instance('component_filter_master',DEDALO_FILTER_MASTER_TIPO, $user_id, 'edit', DEDALO_DATA_NOLAN, DEDALO_SECTION_USERS_TIPO);	#($component_name, $tipo, $parent=NULL, $modo='edit', $lang=DEDALO_DATA_LANG)
-
-
-			# Obtenemos sus datos actuales
-			$id 							= $component_filter_master_obj->get_parent();
-			$tipo_component_filter_master 	= $component_filter_master_obj->get_tipo();
-			$dato_actual 					= (array)$component_filter_master_obj->get_dato();
-			#error_log( dump($dato_actual,'$dato_actual') );
-
-			# Recorremos sus proyectos actualizados actualmente comparándolos con los autorizados calculados antes
-			# Los que no estén dentro de ese grupo ($ar_projects_authorized) serán excluidos
-			$ar_pr_final = array();
-			foreach ($dato_actual as $pr_id => $estado) {
-				if (in_array($pr_id, $ar_projects_authorized)) {
-					$ar_pr_final[$pr_id] = 2;
-				}
-			}
-
-			# Save updated component
-			$component_filter_master_obj->set_dato($ar_pr_final);
-			$component_filter_master_obj->Save();
-
-			#error_log( dump($ar_projects_authorized,'ar_projects_authorized'," 1 ") );
-			#error_log( dump($ar_pr_final,'ar_pr_final'," 2 ") );
-
-		return true;
-	}
-
-
-
-
-	# GET_STATS_VALUE
 	public static function get_stats_value( $tipo, $ar_value ) {
 
-		#dump($ar_value,'ar_value');
-
-		if(!isset($stats_value))
-		static $stats_value;
-		/**/
+		if(!isset($stats_value)) static $stats_value;
+	
 		if( !is_array($ar_value) ) $ar_value = array('' => 1 );
 
 		foreach ($ar_value as $key => $value) {
 
 			if(!isset($stats_value[$tipo][$key])) $stats_value[$tipo][$key] = 0;
-
 			$stats_value[$tipo][$key] = $stats_value[$tipo][$key] + 1;
 		}
 		
-		#dump($stats_value,'$stats_value');
 		return $stats_value[$tipo];
 	}
 
-	# GET_STATS_VALUE_RESOLVED
+
+
+	/**
+	* GET_STATS_VALUE_RESOLVED
+	*/
 	public static function get_stats_value_resolved( $tipo, $current_stats_value, $stats_model ,$stats_propiedades=NULL ) {
 
 		$caller_component = get_called_class();	
@@ -565,6 +394,8 @@ class component_filter extends component_common {
 		return $ar_final;
 	}
 
+
+
 	/**
 	* GET_STATS_VALUE_RESOLVED_ACTIVITY
 	*/
@@ -593,6 +424,8 @@ class component_filter extends component_common {
 		return $valor;
 	}
 
+
+
 	/*
 	* GET_VALOR_LANG
 	* Return the main component lang
@@ -602,7 +435,6 @@ class component_filter extends component_common {
 
 		$relacionados = (array)$this->RecordObj_dd->get_relaciones();
 		
-		#dump($relacionados,'$relacionados');
 		if(empty($relacionados)){
 			return $this->lang;
 		}

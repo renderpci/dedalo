@@ -13,7 +13,7 @@
 	.css_wrap_select select.css_select {
 		padding: 2px;
 		cursor: pointer;
-		margin-left: 0px;
+		margin: 0;
 		max-width: 99.9%;
 		}
 		.css_wrap_select select.css_select:hover {

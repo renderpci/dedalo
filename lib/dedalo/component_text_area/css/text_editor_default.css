@@ -25,10 +25,8 @@ img {
 }
 
 img:hover { 
-	opacity: 1;
-	-webkit-box-shadow	: 0 0 8px #dbdbdb ;	
-	-moz-box-shadow		: 0 0 8px #dbdbdb ;	
-	box-shadow			: 0 0 8px #dbdbdb ;		
+	opacity: 1;	
+	box-shadow: 0 0 8px #dbdbdb ;		
 } 
 
 .mceContentBody {
@@ -36,15 +34,9 @@ img:hover {
 	margin: 0px;
 
 	border: solid 1px #9E9E9E;	
-	border-radius		: 3px;
-
-	-webkit-box-shadow	: 0 0 6px #999999 inset;	
-	-moz-box-shadow		: 0 0 6px #999999;	
-	box-shadow			: 0 0 6px #999999 inset;	
-	
-	-webkit-transition	: all 0.03s ease-in-out;	
-	-moz-transition		: all 0.03s ease-in-out;
-	transition			: all 0.03s ease-in-out;
+	border-radius: 3px;	
+	box-shadow: 0 0 6px #999999 inset;	
+	transition: all 0.03s ease-in-out;
 
 }
 
