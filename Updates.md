@@ -6,7 +6,34 @@ Today we introduce the update of the V4 to 4.0.11
 
 This update fixed some issues and bugs for the V4.0.10
 
-Changes comments are coming soon
+Changes:
+- security_areas : changed format from array to object (see updates file in tool_administration) and removed '-admin' elements. Now areas have 3 permissions value: 0,2,3 (no access, access, admin)
+- security_access : changed format from array to object (see updates too)
+- security : solved issue when non global admin enter to users section list don't show available user records
+- lock_elements : added icon 'lock' on locked coponents 
+- tool_administrator : new option 'Remove av temporals' to delete ffmpeg temporal files in av/tmp folder
+- tool_administrator : new option 'Ignore temporarily the publication status when publishing' to passthru component_publication value in some necessary cases
+- tool_administrator : multiple sql querys are supporded now on dedalo data updates
+- component_filter : fixed bug when in global admin, projects are showed by id_matrix instead section_id
+- lock_components : fixed bug when force_unlock_all_components unset all DB locked elements, instead current user only components
+- search : fixed bug in order by json fields when change from list to edit view
+- tool_indexation : fixed bug when not is triggered autosave text on change tag tipo
+- install : solved some inconsistences when update from install version db
+- component_portal : fixed undesired behaviour when portal contains component_publications is selected
+- tool_import_files : fixed issue when components are selected and inspector is not available
+- component_pdf : add thumb for pdf files
+				  fixed correct output to tool_export
+- component_select : fixed correct output to tool_export
+- component_text_area : solved issue when button is not showed for link tag content from tool_portal
+- tool_upload : added default postprocessing create transcription when upload pdf media
+- tool_portal : added edit already existing portal links to enable, for example select a fragment when link is created in one user action (bibliography, etc..)
+- component_portal : fixed various issues related with refresh component in some context. Now centralized html_page page_globals engine is dedicated to manage components refresh
+- html_page : added zentralized control / management of page components to refresh when new windows are open by tools etc 
+- search : optimized 'current_edit' search . Removed count
+		   added always order by section_id clause to maintain pagination consistence over list and edit modes
+- tool_comom : adecuated to use html_page refresh components
+- config : add constant 'DEDALO_PDF_THUMB_DEFAULT' default value 'thumb' to store rendered pdf preview thumbs 
+
 
 
 
