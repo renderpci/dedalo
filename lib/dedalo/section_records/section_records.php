@@ -134,34 +134,11 @@
 				# ACTIVITY DEDALO_ACTIVITY_SECTION_TIPO
 					if ($tipo==DEDALO_ACTIVITY_SECTION_TIPO) {
 						$file_name = 'list_activity';
-					}	
+					}
+				
 				break;
 
-		/*
-		case 'portal_list' :
-		
-				# Mostrando portal dentro de un listado	(ej. listado imágenes identificativas en el listado de Historia Oral)	
-				$rows_paginator 		= new rows_paginator($this, $modo);
-				$rows_paginator_html	= $rows_paginator->get_html();
-					#dump($rows_paginator, 'rows_paginator_html', array());
-
-				$rows_header 			= new rows_header($this, $modo);
-				$rows_header_html		= $rows_header->get_html();
-					#dump($rows_header,"rows_header");
-
-				$rows 		= new rows($this, $modo);
-				$rows_html	= $rows->get_html();
-					#dump($rows_html,"rows html for $tipo");
-
-				break;
-		
-		case 'portal_list_in_list' :
-				$rows 		= new rows($this, $modo);
-				$rows_html	= $rows->get_html();
-					#dump($rows_html,"rows html for $tipo");						
-				break;
-		*/
-	}
+	}//end switch($modo)
 
 	
 

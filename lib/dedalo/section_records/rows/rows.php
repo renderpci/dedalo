@@ -189,7 +189,7 @@
 				
 				$section_tipo 		= $this->section_records_obj->rows_obj->options->section_tipo;
 				$section_list_tipo 	= key($this->section_records_obj->rows_obj->options->layout_map);					
-				$ar_columnas_tipo 	= reset($this->section_records_obj->rows_obj->options->layout_map);					
+				$ar_columns_tipo 	= reset($this->section_records_obj->rows_obj->options->layout_map);					
 
 				$RecordObj_dd = new RecordObj_dd($section_list_tipo);
 				$propiedades  = json_decode($RecordObj_dd->get_propiedades());				
@@ -244,20 +244,18 @@
 					#
 					# COLUMNS
 					#
-					#dump($ar_columnas_tipo,"ar_columnas_tipo");						
-					foreach($ar_columnas_tipo as $current_component_tipo) {
+					#dump($ar_columns_tipo,"ar_columns_tipo");
+					foreach($ar_columns_tipo as $current_component_tipo) {
 
-						$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_component_tipo,true);							
+						$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_component_tipo,true);
 						
 						# NOTIFY : Notificamos la carga del elemento a common
 						if (!$notify) {
-							common::notify_load_lib_element_tipo($current_component_tipo, $modelo_name, 'edit');	#dump($notify, '$notify');								
+							common::notify_load_lib_element_tipo($current_component_tipo, $modelo_name, 'edit');
 						}
 						
 						$value = $rows[$current_component_tipo];
-							#dump($value, ' value ++ '.to_string());
-							
-						/**/
+						
 						// Override db value with component value interpretation 'render_list_value'
 						$value = $modelo_name::render_list_value($value, // value string from db
 																 $current_component_tipo, // current component tipo
@@ -276,7 +274,7 @@
 					switch ($modo) {
 						#case 'portal_list':
 						#	$file_name = 'list';
-						#	break;							
+						#	break;
 						case 'portal_list_in_list':
 							$file_name = 'portal_list_in_list';
 							break;
@@ -313,13 +311,13 @@
 		# LIST_TM
 		#		
 		case 'list_tm':
+
 				$section_tipo 		= $this->section_records_obj->rows_obj->options->section_tipo;
-				$section_list_tipo 	= key($this->section_records_obj->rows_obj->options->layout_map);						
-				$ar_columnas_tipo 	= reset($this->section_records_obj->rows_obj->options->layout_map);
-					#dump($ar_columnas_tipo," ar_columnas_tipo");						
-				
-				$RecordObj_dd 	= new RecordObj_dd($section_list_tipo);
-				$propiedades  	= json_decode($RecordObj_dd->get_propiedades());				
+				$section_list_tipo 	= key($this->section_records_obj->rows_obj->options->layout_map);
+				$ar_columns_tipo 	= reset($this->section_records_obj->rows_obj->options->layout_map);
+								
+				$RecordObj_dd 		= new RecordObj_dd($section_list_tipo);
+				$propiedades  		= json_decode($RecordObj_dd->get_propiedades());
 	
 				$ar_valor=array();
 				#dump($result," result");
@@ -330,186 +328,27 @@
 					$rel_locator = $current_id;
 
 					# ROW		
-					$id = $rows['id'];	#dump($id,"id - $current_id");
-		
+					$id = $rows['id'];		
 
 					$section_id = $rows['section_id'];
-					foreach($ar_columnas_tipo as $current_component_tipo) {
+					foreach($ar_columns_tipo as $current_component_tipo) {
 						
 						$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_component_tipo,true);
-							#dump($modelo_name,"modelo_name ");					
-							#dump($rows[$current_component_tipo]," $current_component_tipo - $modelo_name");
-						switch (true) {
-							
-							case ($modelo_name=='component_portal'):
-									/*
-									#
-									# COMPONENT_PORTAL
-									# Filter modo = list, avoid recursion on portal list
-
-									# calculamos su valor (será un list)
-									$portal_valor = $rows[$current_component_tipo];
-										#dump($portal_valor,"portal_valor $current_component_tipo");#die();
-
-									$ar_records = (array)json_handler::decode($portal_valor);
-										#dump($ar_records,"ar_records for portal $current_component_tipo - id:$id");#die();
-									
-									if (empty($ar_records)) {
-										# Empty portal 
-										$ar_valor[$current_component_tipo] = '';
-									}else{
-										# Portal with locators
-
-											# Calculamos su list
-											#$section = section::get_instance(NULL, $section_tipo)
-											#
-											$relacionados = (array)RecordObj_dd::get_ar_terminos_relacionados($current_component_tipo, $cache=false, $simple=true);
-												#dump( $relacionados,"relacionados $current_component_tipo");die();
-
-											foreach ($relacionados as $key => $current_tipo) {
-												$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
-													#dump($modelo_name,"modelo_name $modelo");
-												if ($modelo_name=='section') {
-													$portal_section_tipo = $current_tipo;
-													unset($relacionados[$key]);
-													break;
-												}
-											}
-
-											$layout_map_virtual = array($current_component_tipo=>$relacionados);
-												#dump( $layout_map_virtual,"layout_map_virtual - $portal_section_tipo");die();										
-
-											$search_options_session_key = 'TM_'.$current_id.'_'.$current_component_tipo.'_'.$portal_section_tipo.'_'.$section_id. '_' .TOP_TIPO;	#'portal_list_in_list';
-											if (!empty($_SESSION['dedalo4']['config']['search_options'][$search_options_session_key])) {
-												$options = $_SESSION['dedalo4']['config']['search_options'][$search_options_session_key];
-												#$options->full_count = false; # Force update count records on non ajax call
-											}else{
-												$options = new stdClass();
-												$options->section_tipo 	= $portal_section_tipo;
-												$options->filter_by_id 	= $ar_records;
-												$options->layout_map 	= $layout_map_virtual;
-												$options->modo   		= 'portal_list_in_list';
-												$options->limit   		= 1;
-												$options->search_options_session_key = $search_options_session_key;
-													#dump($options,"options");
-											}
-										
-										
-										$section_list_portal 	= new section_records($current_component_tipo, $options);
-										$rows_html 		 		= $section_list_portal->get_html();
-										$component_html 		= $rows_html;
-											#dump($component_html,"html");
-
-										$ar_valor[$current_component_tipo] = $component_html;
-											#dump($current_component_tipo,"portal: current_component_tipo");
-
-									}
-									*/
-									# Portal with locators
-									$parent 		 = null;
-									$component_portal = component_common::get_instance('component_portal',$current_component_tipo,$parent,'list',DEDALO_DATA_NOLAN, $section_tipo);
-									$component_portal->html_options->rows_limit	= 1;
-									if ($parent===null) {
-										# Use already query calculated values for speed
-										$ar_records   = (array)json_handler::decode($rows[$current_component_tipo]);	#dump($ar_records,"ar_records for portal $current_component_tipo - id:$id");#die();
-										$component_portal->set_dato($ar_records);
-										$component_portal->set_identificador_unico($component_portal->get_identificador_unico().'_'.$id); // Set unic id for build search_options_session_key used in sessions
-									}
-									$component_html = $component_portal->get_html();
-									$ar_valor[$current_component_tipo] = $component_html;
-									break;#end portal
-							
-							case ($modelo_name=='component_text_area'):
-									#
-									# COMPONENT_TEXT_AREA
-									# Discriminate if we want a text fragment or whole									
-									$obj_value = json_decode($rows[$current_component_tipo]); # Evitamos los errores del handler accediendo directamente al json_decode de php
-									$current_tag = 0;
-									if (is_object($obj_value) && isset($obj_value->$current_tag)) {
-										$ar_valor[$current_component_tipo] = $obj_value->$current_tag;
-									}else{
-										$ar_valor[$current_component_tipo] = $rows[$current_component_tipo];
-									}
-									break;#end text area
-							
-							case ($modelo_name=='component_av'):
-							case ($modelo_name=='component_image'):
-							case ($modelo_name=='component_image'):
-									$image_value = (string)$rows[$current_component_tipo];
-										#dump($ar_valor[$current_component_tipo], '$ar_valor[$current_component_tipo] ++ '.to_string());	
-									$image_value = component_image::image_value_in_time_machine( $image_value );
-									$ar_valor[$current_component_tipo] = $image_value;																	
-									break;
-
-							case ( $modelo_name=='component_autocomplete_ts' ):
-									#
-									# COMPONENT_AUTOCOMPLETE_TS :
-									$ar_valor[$current_component_tipo] = (string)$rows[$current_component_tipo];
-									break;
-
-							case ( $modelo_name=='component_autocomplete' ): //&& ($modo=='list' || $modo=='portal_list') 
-							case ( $modelo_name=='component_radio_button' ):
-							case ( $modelo_name=='component_check_box' ):
-							case ( $modelo_name=='component_select' ):
-							case ( $modelo_name=='component_relation' ):
-							case ( $modelo_name=='component_publication' ):
-									#
-									# COMPONENT_AUTOCOMPLETE : With locators
-									$parent 		   = $section_id;	//null;
-									$current_component = component_common::get_instance($modelo_name, $current_component_tipo, $parent, 'list', DEDALO_DATA_NOLAN, $section_tipo);								
-									
-									# Use already query calculated values for speed
-									$ar_records   = (array)json_handler::decode($rows[$current_component_tipo]);	#dump($ar_records,"ar_records for portal $current_component_tipo - id:$id");#die();
-									$current_component->set_dato($ar_records);
-									$current_component->set_identificador_unico($current_component->get_identificador_unico().'_'.$id); // Set unic id for build search_options_session_key used in sessions
-									
-									$component_html = $current_component->get_valor(DEDALO_DATA_LANG);
-									$ar_valor[$current_component_tipo] = $component_html;
-									break;
-
-							case ($modelo_name=='component_filter'):
-							case ($modelo_name=='component_filter_master'):
-									$current_valor  = $rows[$current_component_tipo];
-									$ar_val 		= json_decode($current_valor);
-									$component = component_common::get_instance($modelo_name, $current_component_tipo, null, 'list', DEDALO_DATA_LANG, $section_tipo);
-									$component->set_dato($ar_val);
-									$ar_valor[$current_component_tipo] = (string)$component->get_valor();
-									break;
-
-							default:
-									#
-									# OTHER DEFAULT.
-									#dump($this->section_records_obj->rows_obj->columns_to_resolve->$current_component_tipo," ");
-									if (isset($this->section_records_obj->rows_obj->columns_to_resolve->$current_component_tipo)) {
-										$columns_to_resolve = $this->section_records_obj->rows_obj->columns_to_resolve->$current_component_tipo;
-											#dump($columns_to_resolve," columns_to_resolve");
-
-										$current_component_to_resolve_tipo = $columns_to_resolve->rel;
-											#dump($current_component_to_resolve_tipo," ");
-										
-										# CÁLCULO MEDIANTE COMPONENTE.
-										# NOTA: Se puede hacer también mediante sección si es necesario + velocidad
-										# $start_time=microtime(1);
-										$current_valor = $rows[$current_component_tipo];
-										if (!empty($current_valor)) {
-											#dump($current_valor," valor");
-											$component = component_common::get_instance(null, $current_component_to_resolve_tipo, (int)$current_valor, 'list', DEDALO_DATA_LANG, $section_tipo);
-												
-											$current_valor_final = $component->get_valor();
-												#dump($current_valor_final," $current_component_to_resolve_tipo - $section_tipo");
-											$ar_valor[$current_component_tipo] = (string)$current_valor_final;
-										}else{
-											$ar_valor[$current_component_tipo] = (string)$rows[$current_component_tipo];
-										}#echo $time=round(microtime(1)-$start_time,4).'<br>';											
-
-									}else{
-										$ar_valor[$current_component_tipo] = (string)$rows[$current_component_tipo];
-									}
-									break;
-						}
-																			
+						
+						$value = $rows[$current_component_tipo];
+						
+						// Override db value with component value interpretation 'render_list_value'
+						$value = $modelo_name::render_list_value($value, // value string from db
+																 $current_component_tipo, // current component tipo
+																 $section_id, // current row section id
+																 'list', // mode fixed list
+																 DEDALO_DATA_LANG, // current data lang
+																 $section_tipo, // current section tipo
+																 $id);
+						
+						$ar_valor[$current_component_tipo] = (string)$value;
+					
 					}#end foreach($ar_data as $section_dato => $ar_component_obj)
-					#dump($ar_valor,"ar_valor ");
 
 
 					# FILENAME : Varios modos comparten el script del controlador por lo que sólo cambiamos el fichero html final

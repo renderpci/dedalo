@@ -175,7 +175,7 @@
 		if( !include(DEDALO_LIB_BASE_PATH . '/config/config4_areas.php') ) {
 			debug_log(__METHOD__." ERROR ON LOAD FILE config4_areas ".to_string(), logger::ERROR);
 
-			$areas_deny=arra();
+			$areas_deny=array();
 			$areas_allow=array();
 		}
 		#dump($areas_deny, ' areas_deny ++ '.to_string($areas_allow));
