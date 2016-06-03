@@ -2,39 +2,52 @@
 
 	# VISUALIZADOR HTML
 	$html    = "\n<!-- TOOL TRANSCRIPTION PAGE [tipo:$tipo] -->";
-	
 
 	#
 	# TOOL HEADER
 	$html .= "\n<div class=\"header_tool\">";
 
+
 		#
 		# LANG SELECTOR
-		$html .= "<div class=\"lang_selector_in_header\">". label::get_label('idioma');		
-		$html .= "<select name=\"dedalo_data_lang\" id=\"dedalo_data_lang\"		
-		data-tipo=\"$component_related_tipo\"
-		data-section_tipo=\"{$section_tipo}\"
-		data-parent=\"$parent\"
-		data-type_of_lang=\"dedalo_data_lang\"
-		onchange=\"tool_transcription.change_text_editor_lang(this)\"
-		>";
-			foreach($ar_all_project_langs as $lg) {
-				$selected = null;
-				if(DEDALO_DATA_LANG==$lg) $selected = 'selected="selected"';
-				$html .= "<option value=\"$lg\" {$selected}>".RecordObj_ts::get_termino_by_tipo($lg,DEDALO_APPLICATION_LANG)."</option>";
-			}			
-		$html .= "</select>";
+		$html .= "<div class=\"lang_selector_in_header\">";
+
+			$html .= "<span>". label::get_label('idioma') ."</span>";
+
+			$html .= "<select name=\"dedalo_data_lang\" id=\"dedalo_data_lang\"	onchange=\"tool_transcription.change_text_editor_lang(this)\"
+			data-tipo=\"$component_related_tipo\"
+			data-section_tipo=\"{$section_tipo}\"
+			data-parent=\"$parent\"
+			data-type_of_lang=\"dedalo_data_lang\"
+			>";
+			
+			foreach($ar_all_project_langs as $current_lang) {
+				
+				# Note that component_textarea can change his lang ('force_change_lang') in some contexts
+				$selected = ($current_lang==$textarea_lang) ? 'selected="selected"' : '';			
+
+				$current_lang_name = RecordObj_ts::get_termino_by_tipo($current_lang,DEDALO_APPLICATION_LANG);
+
+				$html .= "<option value=\"$current_lang\" {$selected}>". $current_lang_name ."</option>";
+			}
+
+			$html .= "</select>";
+
 		$html .= "</div>";#end lang_selector_in_header
+
 
 		#
 		# HEADER_INFO
 		$html .= "\n <div id=\"header_info\"> Info: </div>";
+
 		
 		#
 		# COMPONENT STATE
-		$html   .= $component_state_html ;
+		$html   .= $component_state_html;
+
 
 	$html .= "</div><!-- /header_tool -->";
+
 
 
 	#

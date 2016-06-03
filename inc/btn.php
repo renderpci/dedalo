@@ -1,26 +1,26 @@
-<?php #session_start();
+<?php
 # set some time Important!
 $myDateTimeZone = 'Europe/Madrid';
 date_default_timezone_set($myDateTimeZone);
 
-#ini_set('error_reporting', E_ALL ^ E_NOTICE);
-#ini_set('display_errors', 1);
 
 #
 # TEXT
 $text = false;
-#if(isset($_REQUEST['t'])) $text = $_REQUEST['t'];
-// get last directory in $PATH
-$text = substr(strrchr($_SERVER["REQUEST_URI"], ".php/"), 5);
-	#die($text);
-if(!$text) die("Need text!");
 
+# TEXT STRING . Get last directory in $PATH
+if( !$text = substr(strrchr($_SERVER["REQUEST_URI"], ".php/"), 5) ) {
+	die("Need text!");
+}
 
-$text = trim(stripslashes(urldecode($text)));	// Texto a mostrar
+# Text to show
+$text = trim(stripslashes(urldecode($text)));
 $text = strip_tags($text, '');
 
+
+
 #
-# TYPE
+# TAG TYPE
 $type = false;
 switch (true) {
 	case (strpos($text,'[index-') !== false || strpos($text,'[/index-') !== false):
@@ -44,8 +44,7 @@ switch (true) {
 }
 if(!$type) die("Need type!");
 
-# reformat text apperance
-# background image
+# TAG PARTS . Format text apperance and background image
 switch($type) {
 		
 	case 'svg'	: 		# mode [svg-n-1-data:***]
@@ -93,73 +92,77 @@ switch($type) {
 #print_r($text);die();
 
 
-# Formateo del texto en 1 o 2 líneas en función de la cantidad de caracteres
+# Text formatting in 1 or 2 lines depending on the number of characters
 $maxchar 	= 16 ;
 $width 		= 66 ; 	# 88
-$angle 		= 0;		# 0
-$x 			= 0 ;		# 0
-$y 			= 0 ;		# 0
+$angle 		= 0;	# 0
+$x 			= 0 ;	# 0
+$y 			= 0 ;	# 0
 
 
-# Creamos una imagen a partir de la imagen base ($imgBase)
+# We create an image from the base image ($imgBase)
 $im = imagecreatefrompng($imgBase);
 
 
-# definimos colores
+# Define colors
 $black 		= imagecolorallocate($im, 0, 0, 0);
 $white 		= imagecolorallocate($im, 255, 255, 255);
 $grey 		= imagecolorallocate($im, 188, 188, 188);
 $colorH 	= imagecolorallocate($im, 141, 198, 63);
 $colorP		= imagecolorallocate($im, 0, 167, 157);
 
-# font color
+
+# Font config defaults
+$font_name 	= '/liberation/LiberationSans-Regular.ttf';
+$font_size 	= 8;
+
 switch($type) {
 	
 	case 'index':	$colorText	= $black ;
 					$colorBG 	= $black ;
-					$fontname	= 'arial.ttf'; // --
-					$fontsize	= 7.9  ; # 11 o 10.88
+					#$font_name	= $font; // --
+					#$font_size	= 7.9  ; # 11 o 10.88
 
 					if($state=='n') $colorText	= $white ;
 					break;
 					
 	case 'tc'	:	$colorText	= $colorH ;
 					$colorBG 	= $black ;
-					$fontname	= 'arial.ttf'; // --
-					$fontsize	= 7.9  ; # 11 o 10.88
+					#$font_name	= $font; // --
+					#$font_size	= 8  ; # 11 o 10.88
 					break;
 
 	case 'svg':		$colorText	= $black ;
 					$colorBG 	= $black ;
-					$fontname	= 'arial.ttf'; // --
-					$fontsize	= 7.9  ; # 11 o 10.88
+					#$font_name	= $font; // --
+					#$font_size	= 7.9  ; # 11 o 10.88
 
 	case 'geo':		$colorText	= $black ;
 					$colorBG 	= $black ;
-					$fontname	= 'arial.ttf'; // --
-					$fontsize	= 7.9  ; # 11 o 10.88
+					#$font_name	= $font; // --
+					#$font_size	= 7.9  ; # 11 o 10.88
 
 					if($state=='n') $colorText	= $white ;
 					break;
 
 	case 'page':	$colorText	= $black ;
 					$colorBG 	= $black ;
-					$fontname	= 'arial.ttf'; // --
-					$fontsize	= 7.9  ; # 11 o 10.88					
+					#$font_name	= $font; // --
+					#$font_size	= 7.9  ; # 11 o 10.88					
 }
 
-# activamos el alpha (24bit png)
+# We activate the alpha chanel (24bit png)
 imageAlphaBlending($im, true);
 imageSaveAlpha($im, true);
 
-#imagecolortransparent($im,$colorBG); // Making Image Transparent 
+# Making Image Transparent 
+#imagecolortransparent($im,$colorBG); 
 
-// Path to our font file
-$pathFonts 	= "../lib/fonts/truetype/";
+# FONT FILES . Path to our font file
+$path_fonts = dirname(dirname(__FILE__)) . '/lib/dedalo/themes/default/fonts';
+$fontfile	= $path_fonts . $font_name;
 
-
-$fontfile	= $pathFonts . $fontname ;
-
+# OFFSET
 $offsetX	= 3 ; # 0
 $offsetY	= 4 ; # 5
 
@@ -180,9 +183,9 @@ switch ($type) {
 		break;
 }
 
-# CUSTOM OFFSET FOR MAC
+# CUSTOM OFFSET FOR MAC DEVELOPMENT
 if (strpos($_SERVER['HTTP_HOST'], '8888')!==false) {
-	$offsetX	= 0 ; # 0
+	$offsetX	= 1 ; # 0
 	$offsetY	= 5 ; # 5
 
 	switch ($type) {
@@ -199,27 +202,28 @@ if (strpos($_SERVER['HTTP_HOST'], '8888')!==false) {
 }//end if (DEDALO_ENTITY=='development')
 
 
-// Set the background to be white
+# BACKGROUND. Set the background to be white
 #$bg = imagefilledrectangle($im, 0, 0, $width, $width, $colorBG); //( resource $image , int $x1 , int $y1 , int $x2 , int $y2 , int $color )
+
 
 $centroXimg = imagesx($im) / 2;
 $centroYimg	= imagesy($im) / 2;
 
 
-if($text) {	
+if($text) {
+
 	# First we create our bounding box for the first text
-	$bbox = imagettfbbox($fontsize, $angle, $fontfile, $text ); //( float $size , float $angle , string $fontfile , string $text )
+	$bbox = imagettfbbox($font_size, $angle, $fontfile, $text ); //( float $size , float $angle , string $fontfile , string $text )
 	
 	# This is our cordinates for X and Y
 	$x = $bbox[0] + $centroXimg  - ($bbox[2] / 2)	+ $offsetX ;
-	$y = $bbox[1] + $centroYimg  - ($bbox[6] / 2)	+ $offsetY ; 
-	
+	$y = $bbox[1] + $centroYimg  - ($bbox[6] / 2)	+ $offsetY ; 	
 		
-	// Write it text 1	
-	$imgText = imagettftext($im, $fontsize , $angle, $x, $y, $colorText, $fontfile, $text );
+	# Write it text1
+	$imgText = imagettftext($im, $font_size , $angle, $x, $y, $colorText, $fontfile, $text );
 	
-	// Verificamos si se ha creado correctamente
-	if (!$imgText) { /* See if it failed */
+	# Verify if it failed
+	if (!$imgText) {
 		imagestring($im, 1, 5, 5, "Error $text1", 0);
 	}	
 }
@@ -236,5 +240,6 @@ header("Expires: " . date(DATE_RFC822,strtotime(" 200 day")));
 header('Content-Type: image/png;');
 imagepng($im);
 
+# On finish destroy
 imagedestroy($im);
 ?>

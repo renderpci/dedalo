@@ -10,7 +10,7 @@ class component_text_area extends component_common {
 
 
 	function __construct($tipo=null, $parent=null, $modo='edit', $lang=DEDALO_DATA_LANG, $section_tipo=null) {
-
+	
 		// Overwrite lang when component_select_lang is present
 		if ($modo=='edit' && !empty($parent) && !empty($section_tipo)) {
 			$lang = self::force_change_lang($tipo, $parent, $modo, $lang, $section_tipo);			
@@ -21,7 +21,6 @@ class component_text_area extends component_common {
 		
 
 	}//end __construct
-
 
 
 	/**
