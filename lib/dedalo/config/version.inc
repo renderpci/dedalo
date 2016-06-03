@@ -558,7 +558,7 @@
 
 
 	# Version
-	define('DEDALO_VERSION'	, '4.0.11.rv');
+	define('DEDALO_VERSION'	, '4.0.11.rx');
 	define('DEDALO_BUILD'	, '03-06-2016');
 
 
