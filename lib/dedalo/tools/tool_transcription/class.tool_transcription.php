@@ -13,7 +13,6 @@ class tool_transcription extends tool_common {
 	# text component
 	protected $component_related_obj ;
 
-	
 
 	public function __construct($component_obj, $modo='button') {
 		

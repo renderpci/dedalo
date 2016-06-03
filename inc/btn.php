@@ -4,7 +4,6 @@ $myDateTimeZone = 'Europe/Madrid';
 date_default_timezone_set($myDateTimeZone);
 
 
-
 #
 # TEXT
 $text = false;
@@ -15,7 +14,7 @@ if( !$text = substr(strrchr($_SERVER["REQUEST_URI"], ".php/"), 5) ) {
 }
 
 # Text to show
-$text = trim(stripslashes(urldecode($text)));	
+$text = trim(stripslashes(urldecode($text)));
 $text = strip_tags($text, '');
 
 

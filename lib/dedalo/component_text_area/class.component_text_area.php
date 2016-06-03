@@ -23,7 +23,6 @@ class component_text_area extends component_common {
 	}//end __construct
 
 
-
 	/**
 	* FORCE_CHANGE_LANG
 	* If defined component_select_lang as related term of current component, the lag of the component

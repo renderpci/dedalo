@@ -12,7 +12,6 @@ class component_security_tools extends component_common {
 	public static $ar_tools ;
 	
 
-
 	# GET DATO : Format {"tool_indexation":"2","tool_upload":"2"}
 	public function get_dato() {
 		$dato = parent::get_dato();
