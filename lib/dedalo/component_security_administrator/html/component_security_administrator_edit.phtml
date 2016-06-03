@@ -91,7 +91,10 @@
 	print $html_contenido;
 
 
-	print "<script>$(function() { component_security_administrator.update_filter_master_view( + document.getElementById('$identificador_unico').checked ); })</script>";
+	if ($permissions>=2) {
+		print "<script>$(function() { component_security_administrator.update_filter_master_view( + document.getElementById('$identificador_unico').checked ); })</script>";
+	}
+	
 	
 	print "\n</div><!-- /css_wrap_security_administrator -->\n\n"; //wrap
 

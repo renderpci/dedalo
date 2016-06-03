@@ -264,26 +264,21 @@ class component_security_areas extends component_common {
 	
 	/**
 	* GET PERMISSIONS OF THIS CURRENT AREA
-	*
-	* @return $permissions
+	* Avoid this component appears on sections different to authorized
+	* @return int $permissions
 	*	Int value (0,1,2,3)
 	*/
 	public function get_permisions_of_this_area() {
 
-		#$current_area		= navigator::get_selected('area');	#dump($current_area,'current_area');
-		$current_area		= $this->get_section_tipo();
-			#dump($current_area,"current_area ".DEDALO_SECTION_USERS_TIPO);
+		$current_area = $this->get_section_tipo();
+			if(empty($current_area)) throw new Exception(" Current area is not defined! ");
 
-		if(empty($current_area)) throw new Exception(" Current area is not defined! ");
-
-		$permissions 		= 0;
+		$permissions = 0;
 
 		switch ($current_area) {
-			case DEDALO_SECTION_USERS_TIPO:
-			case DEDALO_SECTION_PROJECTS_TIPO:
 			case DEDALO_SECTION_PROFILES_TIPO:
 				$tipo 			= $this->get_tipo();
-				$permissions	= common::get_permissions($tipo,$tipo);
+				$permissions	= common::get_permissions($current_area, $tipo);
 				break;
 			
 			default:
@@ -292,28 +287,8 @@ class component_security_areas extends component_common {
 		}
 
 		return (int)$permissions;
-		
-		/* OLD WORLD
-		$RecordObj_dd		= new RecordObj_dd($current_area);
-		$parent 			= $RecordObj_dd->get_parent();		# Usaremos el parent (estaremos en 'Usuarios' y queremos 'Admin') 
 
-		#$RecordObj_dd		= new RecordObj_dd($parent);
-		#$modeloID			= $RecordObj_dd->get_modelo();
-		#$modelo				= RecordObj_dd::get_termino_by_tipo($modeloID,null,true);
-		$modelo_name 		= RecordObj_dd::get_modelo_name_by_tipo($parent, true);
-		
-		# Si el area parent es "area_admin" devolvemos "ADMIN" que elimina el filtro y muestra todos los registros, completo
-		if ($modelo_name == 'area_admin') {
-			
-			$tipo 			= $this->get_tipo();
-			$permissions	= common::get_permissions($tipo,$tipo);			
-		}
-
-			#dump($permissions,'permissions');
-				
-		return intval($permissions);
-		*/			
-	}
+	}//end get_permisions_of_this_area
 
 
 
