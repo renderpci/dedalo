@@ -537,7 +537,10 @@
 				 added always order by section_id clause to maintain pagination consistence over list and edit modes
 		tool_comom : adecuated to use html_page refresh components
 		config : add constant 'DEDALO_PDF_THUMB_DEFAULT' default value 'thumb' to store rendered pdf preview thumbs
-
+	Valencia 03-06-2016
+		component_text_area : fonts used for create labels (indexation, timecode, etc.) are moved from lib/fonts to lib/dedalo/themes/default/fonts for convenience
+		btn labels : changed font fron arial to 'liberation'
+		tool_transcription : fixed issue where lang selector it is out of sync with the language of the text area when component_textarea is forced to change lang
 
 
 
@@ -555,8 +558,8 @@
 
 
 	# Version
-	define('DEDALO_VERSION'	, '4.0.11.rs');
-	define('DEDALO_BUILD'	, '02-06-2016');
+	define('DEDALO_VERSION'	, '4.0.11.rv');
+	define('DEDALO_BUILD'	, '03-06-2016');
 
 
 	/*

@@ -55,6 +55,10 @@
 				$this->component_related_obj->set_modo('tool_transcription');
 				$component_related_obj_tipo = $this->component_related_obj->get_tipo();
 				$html_text 					= $this->component_related_obj->get_html();
+
+				# TEXTAREA_LANG
+				# Note that component_textarea can change his lang ('force_change_lang') in some contexts
+				$textarea_lang = $this->component_related_obj->get_lang();					
 				
 
 				# MEDIA (PLAYER) RIGHT SIDE

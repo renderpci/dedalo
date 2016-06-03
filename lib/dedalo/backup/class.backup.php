@@ -147,8 +147,10 @@ abstract class backup {
 
 
 
-
-	# DEDALO PRIVATE TABLES
+	/**
+	* GET_TABLES
+	* Dedalo private tables
+	*/
 	public static function get_tables() {
 		
 		$strQuery 	= "
@@ -173,7 +175,8 @@ abstract class backup {
 			$tableList[] = $rows['table_name'];
 		}
 		return $tableList;
-	}
+
+	}//end get_tables
 
 
 
@@ -191,7 +194,6 @@ abstract class backup {
 			define('DEDALO_EXTRAS_PATH'		, DEDALO_LIB_BASE_PATH .'/extras');
 			debug_log(__METHOD__." WARNING: DEDALO_EXTRAS_PATH is not defined. Using default.. ",logger::WARNING);
 		}
-
 
 		#
 		# MAIN TLDS
@@ -243,6 +245,7 @@ abstract class backup {
 		return (array)$ar_response;
 
 	}#end save_dedalo_str_tables_data
+
 
 
 	/**
@@ -548,9 +551,9 @@ abstract class backup {
 	}#end export_structure
 
 
+
 	/**
 	* DB_SYSTEM_CONFIG_VERIFY
-	* @return 
 	*/
 	public static function db_system_config_verify() {
 		
@@ -562,17 +565,18 @@ abstract class backup {
 
 		# File test
 		if (!file_exists($file)) {
-			die( wrap_pre("Error. Database system configuration not allow import (1)") );
+			die( wrap_pre("Error. Database system configuration not allow import (1). pgpass not found") );
 		}
 
 		# File permissions
 		$perms = decoct(fileperms($file) & 0777);
 			#dump($perms, ' perms ++ '.to_string());
 		if ($perms!='600') {
-			die( wrap_pre("Error. Database system configuration not allow import (2)") );
+			die( wrap_pre("Error. Database system configuration not allow import (2). pgpass invalid permissions") );
 		}
 
 	}#end db_system_config_verify
+
 
 
 	/**
@@ -691,7 +695,6 @@ abstract class backup {
 		#$res_html .= "<pre>";
 		#$res_html .= print_r($ar_dedalo_private_tables,true);
 		#$res_html .= "</pre>";
-
 
 		return $res_html;
 

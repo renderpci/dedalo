@@ -1,9 +1,9 @@
 <?php
+
+
 /*
 * CLASS COMPONENT SECURITY TOOLS
 */
-
-
 class component_security_tools extends component_common {
 
 	# Overwrite __construct var lang passed in this component
@@ -12,11 +12,14 @@ class component_security_tools extends component_common {
 	public static $ar_tools ;
 	
 
+
 	# GET DATO : Format {"tool_indexation":"2","tool_upload":"2"}
 	public function get_dato() {
 		$dato = parent::get_dato();
 		return (array)$dato;
 	}
+
+
 
 	# SET_DATO
 	public function set_dato($dato) {
@@ -61,11 +64,13 @@ class component_security_tools extends component_common {
 			return 	self::$ar_tools ;		
 		}
 
-	}#end get_ar_tools
+	}//end get_ar_tools
+
+
 
 	/**
 	* GET_AR_TOOLS_RESOLVED
-	* @return 
+	* @return array $ar_tools_resolved
 	*/
 	public function get_ar_tools_resolved( $sort=true ) {
 		
@@ -83,13 +88,19 @@ class component_security_tools extends component_common {
 	
 		return $ar_tools_resolved;
 
-	}#end get_ar_tools_resolved
+	}//end get_ar_tools_resolved
 
 
+
+	/**
+	* IS_AUTHORIZED_TOOL_FOR_LOGGED_USER
+	* @param string $tool_name
+	* @return bool
+	*/
 	public static function is_authorized_tool_for_logged_user($tool_name) {
 		
 		$auth_tools = (array)component_security_tools::get_ar_user_tools_by_user( navigator::get_user_id() );
-
+	
 		if (in_array($tool_name, $auth_tools)) {
 			return true;
 		}else{
@@ -97,8 +108,11 @@ class component_security_tools extends component_common {
 		}		
 	}
 
-	/*
+
+
+	/**
 	* GET_AR_USER_TOOLS
+	* @return array $ar_user_tools
 	*/
 	protected function get_ar_user_tools() {
 
@@ -112,11 +126,14 @@ class component_security_tools extends component_common {
 
 		return $ar_user_tools ;
 
-	}#end get_ar_user_tools
+	}//end get_ar_user_tools
 
 
-	/*
+
+
+	/**
 	* GET_AR_USER_TOOLS (STATIC)
+	* @param int $user_id
 	*/
 	protected static function get_ar_user_tools_by_user( $user_id ) {
 
@@ -137,21 +154,19 @@ class component_security_tools extends component_common {
 			return $ar_user_tools ;
 		}
 
-
 		#
 		# USER PROFILE
-		$component_profile = component_common::get_instance('component_profile',
-														  	DEDALO_USER_PROFILE_TIPO,
-														  	$user_id,
-														  	'edit',
-														  	DEDALO_DATA_NOLAN,
-														  	DEDALO_SECTION_USERS_TIPO);
+		$component_profile 		  = component_common::get_instance('component_profile',
+																  	DEDALO_USER_PROFILE_TIPO,
+																  	$user_id,
+																  	'edit',
+																  	DEDALO_DATA_NOLAN,
+																  	DEDALO_SECTION_USERS_TIPO);
 		$profile_id = (int)$component_profile->get_dato();
 		if (empty($profile_id)) {
 			return array();
 		}
 
-		#$component_security_tools = new component_security_tools(DEDALO_COMPONENT_SECURITY_TOOLS_USER_TIPO, $user_id,'edit',DEDALO_DATA_NOLAN);
 		$component_security_tools = component_common::get_instance('component_security_tools',
 																	DEDALO_COMPONENT_SECURITY_TOOLS_PROFILES_TIPO,
 																	$profile_id,
@@ -160,20 +175,19 @@ class component_security_tools extends component_common {
 																	DEDALO_SECTION_PROFILES_TIPO);
 		$dato 					  = $component_security_tools->get_dato();
 
+		$ar_user_tools=array();
 		if (is_array($dato)) foreach($dato as $tool_name => $value) {
-			$ar_user_tools[] 		= $tool_name;
-		}
-		#dump($ar_user_tools,'$ar_user_tools');		
+			$ar_user_tools[] = $tool_name;
+		}			
 
 		$_SESSION['dedalo4']['config']['ar_user_tools_by_user'][$user_id] = $ar_user_tools;
 
-		return $ar_user_tools ;
-	}
+		return $ar_user_tools;
+
+	}//end get_ar_user_tools_by_user
 
 
 
-
-	
 	
 }
 ?>
