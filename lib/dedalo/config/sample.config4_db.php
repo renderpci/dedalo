@@ -10,7 +10,7 @@ define('DEDALO_SOCKET_CONN'         ,  null);       //'/var/pgsql-socket'
 define('DEDALO_DATABASE_CONN'		, 'dedalo4_XXX');
 define('DEDALO_USERNAME_CONN'		, 'myusername');
 define('DEDALO_PASSWORD_CONN'		, 'mypassword');
-define('DEDALO_INFORMACION'			, 'Dédalo 4 install version 2015');
+define('DEDALO_INFORMACION'			, 'Dédalo 4 install version');
 
 #MySQL connection for publication
 define('MYSQL_DEDALO_HOSTNAME_CONN'	,'hostname');
