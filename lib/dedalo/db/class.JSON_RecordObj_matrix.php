@@ -135,13 +135,13 @@ class JSON_RecordObj_matrix extends JSON_RecordDataBoundObject {
 
 		# AUTOLOG STOP TIME MACHINE COPY SAVE
 		# Prevent time machine saving activity (if current tipo is a component logger, stop save)
-		if ($this->matrix_table=='matrix_activity') {
-			RecordObj_time_machine::$save_time_machine_version = false;			
-		}
+		#if ($this->matrix_table=='matrix_activity') {
+		#	RecordObj_time_machine::$save_time_machine_version = false;			
+		#}
 
 		# TIME MACHINE COPY SAVE (Return assigned id on save)
 		# Every record saved in matrix is saved as copy in 'matrix_time_machine' except logger and TM recover section
-		if(RecordObj_time_machine::$save_time_machine_version===true)	{
+		if(RecordObj_time_machine::$save_time_machine_version===true && $this->matrix_table!='matrix_activity')	{
 			# Exec time machine save and set returned id
 			$this->time_machine_last_id = $this->save_time_machine( $save_options );
 		}
