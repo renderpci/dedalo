@@ -97,7 +97,7 @@ Some projects using Dédalo to manage their Cultural Heritage or Oral Archive:
 6. Change the file /lib/dedalo/config/sample.config4_db.php with your DB configuration.
 7. Rename the /lib/dedalo/config/sample.config4_db.php to /lib/dedalo/config/config4_db.php.
 8. Run Dédalo into the browser. 
-9. Fix your admin password (you can change only once), the default account is: admin (this user is a root and only for development or debuger the application).
+9. Fix your admin password (you can change only once), the default account is: root (this user is only for development or debuger the application).
 10. Create one Administrator user account with all access to the system.(this user will be the administrator of the system)
 11. Logout and login with the Administrator acount.
 12. Create Users and Projects as you need.
