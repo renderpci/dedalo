@@ -46,6 +46,7 @@ abstract class component_common extends common {
 	# CACHE COMPONENTS INTANCES
 	#public static $ar_component_instances = array();	# array chache of called instances of components
 
+	public $render_vars;
 
 
 	/**
@@ -93,11 +94,11 @@ abstract class component_common extends common {
 				dump($parent," parent");
 				throw new Exception("Error Processing Request. trying to use wrong var: '$parent' as parent to load as component", 1);				
 			}			
-			$ar_valid_modo = array("edit","list","search","simple","list_tm","tool_portal","tool_lang","edit_tool","indexation","selected_fragment","tool_indexation",'tool_transcription','print','edit_component','load_tr','update','portal_list');
+			$ar_valid_modo = array("edit","list","search","simple","list_tm","tool_portal","tool_lang","edit_tool","indexation","selected_fragment","tool_indexation",'tool_transcription','print','edit_component','load_tr','update','portal_list','list_thesaurus');
 			if ( empty($modo) || !in_array($modo, $ar_valid_modo) ) {
 				#dump($modo," modo");
-				#throw new Exception("Error Processing Request. trying to use wrong var: '$modo' as modo to load as component", 1);
-				debug_log(__METHOD__. " trying to use empty or invalid modo: '$modo' as modo to load component")	;		
+				#throw new Exception("Error Processing Request. trying to use wrong var: '$modo' as modo to load as component", 1);			
+				debug_log(__METHOD__." trying to use empty or invalid modo: '$modo' as modo to load component. modo: ".to_string($modo), logger::DEBUG);	
 			}
 			if ( empty($lang) || strpos($lang, 'lg-')===false ) {
 				dump($lang," lang");
@@ -375,14 +376,18 @@ abstract class component_common extends common {
 		$this->load_component_dato();
 
 		return $this->dato; # <- Se aplicará directamente el fallback de idioma para el modo list
-	}
+	}//end get_dato
+
+
 
 	# GET_DATO_UNCHANGED
 	# Recover component var 'dato' without change type or other custom component changes
 	# This is a easy way to access internal protected var 'dato' from out of component (like section::save_component_dato) 
 	public function get_dato_unchanged() {
 		return $this->dato;
-	}
+	}//end get_dato_unchanged
+
+
 
 	/**
 	* LOAD MATRIX DATA
@@ -424,7 +429,6 @@ abstract class component_common extends common {
 
 			$this->bl_loaded_matrix_data = true;
 		}
-
 	}#end load_component_dato
 
 
@@ -451,7 +455,8 @@ abstract class component_common extends common {
 			}
 		}
 		return $section_tipo;		
-	}
+	}//end resolve_section_tipo
+
 
 
 	/**
@@ -467,7 +472,8 @@ abstract class component_common extends common {
 		$this->lang = DEDALO_DATA_NOLAN;
 		# Fix traducible
 		$this->traducible = 'no';
-	}
+	}//end fix_language_nolan
+
 
 
 	/**
@@ -475,7 +481,9 @@ abstract class component_common extends common {
 	*/
 	public function get_component_cache_key_name() {
 		return DEDALO_DATABASE_CONN.'_component_get_html_'.$this->get_identificador_unico();
-	}
+	}//end get_component_cache_key_name
+
+
 
 	/**
 	* GET HTML CODE . RETURN INCLUDE FILE __CLASS__.PHP
@@ -534,11 +542,10 @@ abstract class component_common extends common {
 			if ($total>0.080) {
 				#dump($total, ' total ++ '.$this->tipo .' '. get_called_class() );
 			}
-			$html = str_lreplace('</div>', "<span class=\"debug_component_total_time\">$total ms</span></div>", $html);
+			$html = str_lreplace('</div>', "<span class=\"debug_info debug_component_total_time\">$total ms $this->modo</span></div>", $html);
 		}		
 
-		return $html;
-		
+		return $html;		
 	}//end get_html
 
 
@@ -634,7 +641,8 @@ abstract class component_common extends common {
 							"top_id"		=> (TOP_ID ? TOP_ID : $section_id),
 							"top_tipo"		=> (TOP_TIPO ? TOP_TIPO : $section_tipo),
 							"component_name"=> get_called_class(),
-							"table"			=> $matrix_table
+							"table"			=> $matrix_table,
+							"section_tipo"	=> $this->section_tipo
 						 )
 				);
 			} catch (Exception $e) {
@@ -658,9 +666,7 @@ abstract class component_common extends common {
 
 		# RETURN MATRIX ID
 		return (int)$section_id;
-
 	}#end Save
-
 
 
 
@@ -700,7 +706,8 @@ abstract class component_common extends common {
 			return $js_code;
 
 		}#end if(isset($propiedades->js))
-	}
+	}//end generate_js
+
 
 
 	public function generate_js_OLD() {
@@ -785,7 +792,7 @@ abstract class component_common extends common {
 		}
 
 		return $js_code;
-	}
+	}//end generate_js_OLD
 
 
 	
@@ -799,7 +806,7 @@ abstract class component_common extends common {
 		# NOTA : Obviamos esta comprobación en la nueva estructura de sección (json). Evaluar si 
 		# realmente es necesaria cuando sea posible.				
 		return true;	
-	}
+	}//end get_filter_authorized_record
 	
 
 
@@ -808,19 +815,26 @@ abstract class component_common extends common {
 		return $this->debugger;
 		if(empty($this->ejemplo)) return "example: 'MO-15-5620-GANDIA'";
 		return parent::get_ejemplo();
-	}
+	}//end get_ejemplo
 
 
-	# GET_REQUIRED
+
+	/**
+	* GET_REQUIRED
+	*/
 	private function get_required() {
 		if($this->required=='si') {
 			return false;
 		}else{
 			return true;
 		}
-	}
+	}//end get_required
 
-	# GET TOOLS
+
+
+	/**
+	* GET_AR_TOOLS_OBJ
+	*/
 	public function get_ar_tools_obj() {
 		if($this->ar_tools_obj===false) {
 			$this->load_tools();
@@ -828,7 +842,10 @@ abstract class component_common extends common {
 		#dump(null,'called $this->ar_tools_obj');
 		#dump($this->ar_tools_obj," this->ar_tools_obj");
 		return $this->ar_tools_obj;
-	}
+	}//end get_ar_tools_obj
+
+
+
 	#
 	# LOAD SPECIFIC TOOL
 	# Note: Used in class.inspector to load relation tool
@@ -851,7 +868,9 @@ abstract class component_common extends common {
 			#$this->ar_tools_obj[$tool_name]	= $tool_obj;
 		}
 		return $tool_obj;
-	}
+	}//end load_specific_tool
+
+
 
 	/**
 	* GET_AR_TOOLS_NAME
@@ -864,7 +883,7 @@ abstract class component_common extends common {
 		$propiedades = $this->get_propiedades();
 		if (isset($propiedades->ar_tools_name)) {
 			#dump($propiedades->ar_tools_name, ' propiedades ++ '.to_string());
-			foreach ($propiedades->ar_tools_name as $current_name => $obj_tool) {				
+			foreach ($propiedades->ar_tools_name as $current_name => $obj_tool) {	
 				#dump( $obj_tool, ' obj_tool ++ '.to_string($current_name));
 				$ar_tools_name[] = $current_name;
 			}
@@ -876,7 +895,11 @@ abstract class component_common extends common {
 		return (array)$ar_tools_name;
 	}#end get_ar_tools_name
 
-	# LOAD TOOLS
+
+
+	/**
+	* LOAD TOOLS
+	*/
 	public function load_tools() {
 
 		if($this->modo!='edit'){
@@ -930,7 +953,7 @@ abstract class component_common extends common {
 		}
 		
 		return $this->ar_authorized_tool_name;
-	}
+	}//end load_tools
 	
 
 
@@ -942,9 +965,18 @@ abstract class component_common extends common {
 	public function get_valor() {
 
 		$valor = self::get_dato();
+
+		if(SHOW_DEBUG) {
+			if (!is_null($valor) && !is_string($valor) && !is_int($valor)) {
+				debug_log(__METHOD__." WARNING: CURRENT 'valor' is NOT valid. Type:".gettype($valor).' - valor:'.to_string($valor), logger::WARNING);
+			}
+		}
+			
 		if(!is_array($valor)) return $valor;
+
 		return "<em>No string value</em>";
-	}
+	}//end get_valor
+
 
 
 	/**
@@ -952,7 +984,7 @@ abstract class component_common extends common {
 	* Return component value sended to export data
 	* @return string $valor
 	*/
-	public function get_valor_export( $valor=null, $lang=DEDALO_DATA_LANG ) {
+	public function get_valor_export( $valor=null, $lang=DEDALO_DATA_LANG, $quotes, $add_id ) {
 		
 		if (is_null($valor)) {
 			$valor = $this->get_valor($lang);
@@ -964,7 +996,6 @@ abstract class component_common extends common {
 		}
 
 		return to_string($valor);
-
 	}#end get_valor_export
 
 
@@ -974,7 +1005,9 @@ abstract class component_common extends common {
 		$dato_real = parent::get_dato();
 			#dump($dato_real,'$dato_real');
 		return $dato_real;
-	}
+	}//end get_dato_real
+
+
 
 	/**
 	* DATO IN DEFAULT LANG
@@ -994,7 +1027,6 @@ abstract class component_common extends common {
 		$dato					= $component_obj->get_dato_real();
 
 		return $dato;
-
 
 		/* OLD WORLD
 		# No existe registro en este idioma. Buscamos con el idioma de datos por defecto DEDALO_DATA_LANG_DEFAULT
@@ -1027,7 +1059,9 @@ abstract class component_common extends common {
 
 		return $dato ;
 		*/
-	}
+	}//end get_dato_default_lang
+
+
 
 	/**
 	* GET_DATO_NO_TRADUCIBLE
@@ -1077,9 +1111,7 @@ abstract class component_common extends common {
 		}
 
 		return $dato ;
-	}
-
-
+	}//end get_dato_no_traducible
 
 
 
@@ -1110,7 +1142,8 @@ abstract class component_common extends common {
 			$string = 'Str: ' . $dato;
 		}
 		return $dato;
-	}
+	}//end get_dato_as_string
+
 
 
 	/**
@@ -1171,7 +1204,9 @@ abstract class component_common extends common {
 
 			return null;
 		}
-	}
+	}//end get_default_component
+
+
 
 	/**
 	* COMPONENT IS RELATIONABLE
@@ -1186,7 +1221,9 @@ abstract class component_common extends common {
 			return true;
 
 		return false;
-	}
+	}//end is_relationable
+
+
 
 	/**
 	* GET MODIFICATION DATE
@@ -1198,8 +1235,11 @@ abstract class component_common extends common {
 		if(is_object($RecordObj_time_machine)) {
 			return $RecordObj_time_machine->get_timestamp();
 		}
-		return NULL;
-	}
+		return null;
+	}//end get_mod_date
+
+
+
 	/**
 	* GET MODIFICATED BY USER
 	*/
@@ -1210,16 +1250,17 @@ abstract class component_common extends common {
 		if(is_object($RecordObj_time_machine)) {
 			return $RecordObj_time_machine->get_userID();
 		}
-		return NULL;
-	}
+		return null;
+	}//end get_mod_by_user_name
+
+
 
 	/**
 	* GET_LAST_TIME_MACHINE_OBJ
 	* @return object $RecordObj_time_machine
 	*/
 	function get_last_time_machine_obj() {		
-		/*return NULL;
-		*/
+		
 		if(empty($this->parent)) return null;
 
 		if (isset($this->RecordObj_time_machine)) {
@@ -1233,7 +1274,7 @@ abstract class component_common extends common {
 		$arguments['lang']			= $this->lang;
 		$arguments['order_by_desc']	= 'timestamp';
 		$arguments['sql_limit']		= 1;
-		$RecordObj_time_machine		= new RecordObj_time_machine(NULL);
+		$RecordObj_time_machine		= new RecordObj_time_machine(null);
 		$ar_id						= (array)$RecordObj_time_machine->search($arguments);				#dump($ar_id,'ar_id '.to_string($arguments));
 
 		if(count($ar_id)>0) {
@@ -1242,9 +1283,9 @@ abstract class component_common extends common {
 
 			return $this->RecordObj_time_machine;
 		}
-		return NULL;
-		
-	}
+		return null;		
+	}//end get_last_time_machine_obj
+
 
 
 	/**
@@ -1365,8 +1406,7 @@ abstract class component_common extends common {
 			#debug_log(__METHOD__.' '.$total_list_time."ms. QUERY: ".$strQuery);
 		}#end if(SHOW_DEBUG)
 
-		return (object)$valor_from_ar_locators;
-		
+		return (object)$valor_from_ar_locators;		
 	}#end get_valor_from_ar_locators
 	
 
@@ -1781,16 +1821,8 @@ abstract class component_common extends common {
 		}		
 		
 		# Fix var
-		return $this->ar_list_of_values = $list_of_values;
-	
+		return $this->ar_list_of_values = $list_of_values;	
 	}#end get_ar_list_of_values
-
-
-
-
-
-
-
 
 
 
@@ -1909,26 +1941,19 @@ abstract class component_common extends common {
 			$ar_list_of_values_formated[$key] =  substr($string,0,-2);
 		}
 		return $ar_list_of_values_formated;
-	}
+	}//end get_imploded_ar_list_of_values
 
 
 
 	/**
 	* DECORE UNTRANSLATED
 	*/
-	public static function decore_untranslated($string) {
-		if(SHOW_DEBUG) {
-			if (!is_string($string)) {
-				#dump($string, ' string ++ '.to_string());
-				#throw new Exception("Error Processing Request", 1);
-				#trigger_error(to_string($string));
-			}
-		}
-		
-		#return '<span class="untranslated">'.$string.'</span>';
-		#if(empty($string)) $string = 'untranslated';
+	public static function decore_untranslated($string) {		
 		return '<mark>'.to_string($string).'</mark>';
-	}
+	}//end decore_untranslated
+
+
+
 	/**
 	* GET LANG NAME
 	*/
@@ -1942,7 +1967,7 @@ abstract class component_common extends common {
 		}		
 
 		return $lang_name;
-	}
+	}//end get_lang_name
 
 
 
@@ -2007,14 +2032,6 @@ abstract class component_common extends common {
 			$std_object = locator::get_std_class( $object );
 		}else{
 			$std_object = $object;
-		}
-
-		if(SHOW_DEBUG) {
-			/*
-			dump( $std_object, 'std_object');
-			dump( $dato[0], 'dato[0]');
-			dump( $std_object==$dato[0], ' std_object == dato[0]');			
-			*/
 		}		
 
 		$object_exists=false;
@@ -2032,14 +2049,16 @@ abstract class component_common extends common {
 				$object_exists=true; break;				
 			}
 		}
-		#dump($dato,"object_exists");
 
 		if ($object_exists===false) {
 			$dato[] = $std_object;
 		}
 
 		return $dato;
-	}
+	}//end add_object_to_dato
+
+
+
 	/**
 	* REMOVE_OBJECT_IN_DATO
 	* Remove received object in objects array
@@ -2070,9 +2089,6 @@ abstract class component_common extends common {
 			}
 		}
 
-		#dump($dato, ' dato MATHC FOUND TO REMOVE ++ '.to_string());
-		#dump($std_object, ' found MATHC FOUND TO REMOVE ++ '.to_string());
-
 		if ($remove_key!==false) {
 			
 			unset($dato[$remove_key]);
@@ -2085,19 +2101,7 @@ abstract class component_common extends common {
 		#dump($dato,"dato - remove_key:$remove_key - ".print_r($std_object,true));
 
 		return $dato;
-	}
-
-	
-
-
-	
-
-
-	
-
-
-
-
+	}//end remove_object_in_dato
 
 
 
@@ -2122,7 +2126,8 @@ abstract class component_common extends common {
 		}else{
 			return false;
 		}
-	}
+	}//end dato_already_exists
+
 
 
 	/**
@@ -2174,11 +2179,10 @@ abstract class component_common extends common {
 			*/
 
 		return $section_tipo;
-	}
+	}//end get_section_tipo_from_component_tipo
 
 
 	
-
 	/**
 	* GET_DIFFUSION_OBJ
 	* @param stdClass Object $propiedades
@@ -2215,7 +2219,7 @@ abstract class component_common extends common {
 			#dump($diffusion_obj,'$diffusion_obj');
 
 		return $diffusion_obj;
-	}
+	}//end get_diffusion_obj
 
 
 
@@ -2225,15 +2229,16 @@ abstract class component_common extends common {
 	public function get_stats_obj( $propiedades ) {
 
 		$stats_obj = new diffusion_stats_component_obj();
-
 		$stats_obj = $this->get_dato();
-			#dump($stats_obj,'$stats_obj');
 
 		return $stats_obj;
-	}
+	}//end get_stats_obj
 
 
-	# GET_STATS_VALUE
+
+	/**
+	* GET_STATS_VALUE
+	*/
 	public static function get_stats_value( $tipo, $ar_value ) {
 
 		$caller_component = get_called_class();
@@ -2266,9 +2271,13 @@ abstract class component_common extends common {
 		#dump($stats_value[$tipo],'$stats_value - '.$caller_component." - tipo:".$tipo);
 
 		return $stats_value[$tipo];
-	}
+	}//end get_stats_value
 
-	# GET_STATS_VALUE_RESOLVED
+
+
+	/**
+	* GET_STATS_VALUE_RESOLVED
+	*/
 	public static function get_stats_value_resolved( $tipo, $current_stats_value, $stats_model ,$stats_propiedades=NULL ) {
 
 		$caller_component = get_called_class();
@@ -2303,9 +2312,7 @@ abstract class component_common extends common {
 			#dump($ar_final,'$ar_final '.$caller_component . " ".print_r($current_stats_value,true));
 
 		return $ar_final;
-	}
-
-
+	}//end get_stats_value_resolved
 
 
 
@@ -2351,7 +2358,8 @@ abstract class component_common extends common {
 		}		
 		
 		return (array)$component_ar_langs;	
-	}
+	}//end get_component_ar_langs
+
 
 
 	/**
@@ -2367,7 +2375,7 @@ abstract class component_common extends common {
 		}
 		
 		return (array)$this->ar_authorized_tool_name;
-	}
+	}//end get_ar_authorized_tool_name
 
 
 
@@ -2399,13 +2407,14 @@ abstract class component_common extends common {
 
 	
 
-
 	public static function build_locator() {
 		throw new Exception("DEPRECATED METHOD", 1);		
 	}
 	public static function build_locator_relation() {
 		throw new Exception("DEPRECATED METHOD", 1);		
 	}
+
+
 
 	/*
 	* GET_VALOR_LANG
@@ -2431,7 +2440,7 @@ abstract class component_common extends common {
 			debug_log(__METHOD__.' This component don\'t have one method defined: '.$name, logger::WARNING);
 		}
 		return false;
-	}
+	}//end get_method
 
 
 
@@ -2466,7 +2475,9 @@ abstract class component_common extends common {
 		#dump($referenced_tipo, ' referenced_tipo');
 				
 		return $this->referenced_tipo;
-	}
+	}//end get_referenced_tipo
+
+
 
 	/**
 	* GET_REFERENCED_SECTION_TIPO
@@ -2474,14 +2485,12 @@ abstract class component_common extends common {
 	* @return string $this->referenced_section_tipo from json propiedades section_tipo
 	*/
 	/*
-		ACABARÁ UNIFICANDOSE AL COMPORTAMIENTO DE PORTAL Y AUTOCOMPLETE
+		ACABARÁ UNIFICÁNDOSE AL COMPORTAMIENTO DE PORTAL Y AUTOCOMPLETE
 
 	*/
 	public function get_referenced_section_tipo($tipo) {
 
-		if (isset($this->referenced_section_tipo)) return $this->referenced_section_tipo;
-
-		return $this->get_section_tipo_from_component_tipo($tipo);
+		if (isset($this->referenced_section_tipo)) return $this->referenced_section_tipo;		
 
 		/* 
 			NOTA: La convertimos en una alias de get_section_tipo_from_component_tipo
@@ -2495,7 +2504,9 @@ abstract class component_common extends common {
 
 		return $this->referenced_section_tipo;
 		*/
-	}
+
+		return $this->get_section_tipo_from_component_tipo($tipo);
+	}//end get_referenced_section_tipo
 
 
 	/**
@@ -2536,7 +2547,9 @@ abstract class component_common extends common {
 		$this->target_section_tipo = $target_section_tipo;
 		
 		return $target_section_tipo;
-	}
+	}//get_target_section_tipo__DEPRECATED
+
+
 
 	/**
 	* GET_TARGET_SECTION_TIPO --> TO DEPRECATE
@@ -2560,7 +2573,7 @@ abstract class component_common extends common {
 
 	/**
 	* GET_AR_TARGET_SECTION_TIPO
-	* Sección/es de la que se alimenta de registros el portal. No confundir con la sección en la que está el portal
+	* Sección/es de la que se alimenta de registros el portal/autocomplete. No confundir con la sección en la que está el portal
 	*/
 	public function get_ar_target_section_tipo() {
 		
@@ -2591,15 +2604,9 @@ abstract class component_common extends common {
 		# Fix value
 		$this->ar_target_section_tipo = $ar_target_section_tipo;
 		
-		return $ar_target_section_tipo;
-	}
-
-
-
-
+		return (array)$ar_target_section_tipo;
+	}//end get_ar_target_section_tipo
 	
-	
-
 
 
 	/**
@@ -2610,8 +2617,6 @@ abstract class component_common extends common {
 	public function get_ar_components_with_references() {		
 		return array('component_portal','component_autocomplete','component_radio_button','component_check_box','component_select');
 	}#end get_ar_components_with_references
-
-
 
 
 
@@ -2634,7 +2639,6 @@ abstract class component_common extends common {
 		}
 
 		return (string)$sql_line;
-
 	}#end resolve_search_operators
 
 	
@@ -2663,7 +2667,6 @@ abstract class component_common extends common {
 			$search_comparison_operators->$current = $operator;
 		}
 		return (object)$search_comparison_operators;
-
 	}#end build_search_comparison_operators
 
 
@@ -2690,7 +2693,6 @@ abstract class component_common extends common {
 			$search_logical_operators->$current = $operator;
 		}
 		return (object)$search_logical_operators;
-
 	}#end build_search_logical_operators
 
 
@@ -2712,9 +2714,7 @@ abstract class component_common extends common {
 	*/
 	public static function get_search_query( $json_field, $search_tipo, $tipo_de_dato_search, $current_lang, $search_value, $comparison_operator='ILIKE') {//, $logical_operator = 'AND' 
 		
-		if ( empty($search_value) ) {
-			return false;
-		}
+		if (empty($search_value)) return false;
 
 		$search_query='';
 		switch (true) {
@@ -2725,21 +2725,21 @@ abstract class component_common extends common {
 				if ( $search_value[0] == $separator ) {
 					// Begin with * like
 					$search_value = str_replace($separator, '', $search_value);
-					$search_query = " $json_field#>>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}' $comparison_operator '%$search_value' ";
+					$search_query = " {$json_field}#>>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}' $comparison_operator '%$search_value' ";
 				
 				}else if ( $search_value[strlen($search_value) - 1] == $separator ) {
 					// End with *
 					$search_value = str_replace($separator, '', $search_value);
-					$search_query = " $json_field#>>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}' $comparison_operator '$search_value%' ";
+					$search_query = " {$json_field}#>>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}' $comparison_operator '$search_value%' ";
 					
 				}else{
 					// Contain
 					$search_value = str_replace($separator, '', $search_value);
-					$search_query = " $json_field#>>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}' $comparison_operator '%$search_value%' ";
+					$search_query = " {$json_field}#>>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}' $comparison_operator '%$search_value%' ";
 				}
 				break;
 			case ($comparison_operator=='=' || $comparison_operator=='!='):
-				$search_query = " $json_field#>>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}' $comparison_operator '$search_value' ";
+				$search_query = " {$json_field}#>>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}' $comparison_operator '$search_value' ";
 				break;
 
 			case ($comparison_operator=='IS NULL' || $comparison_operator=='IS NOT NULL'):
@@ -2750,20 +2750,22 @@ abstract class component_common extends common {
 					$comparison_operator2 = '!=';
 					$union_operator = 'AND';
 				}
-				$search_query = " (($json_field#>>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}') $comparison_operator $union_operator ";
-				$search_query .= "($json_field#>>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}') $comparison_operator2 '' )";
+				$search_query = " (({$json_field}#>>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}') $comparison_operator $union_operator ";
+				$search_query .= "({$json_field}#>>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}') $comparison_operator2 '' )";
 				break;
 
 			default:
-				$search_query = " $json_field#>>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}' $comparison_operator '%$search_value%' ";
+				$search_query = " {$json_field}#>>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}' $comparison_operator '%$search_value%' ";
 				break;
 		}
 		
 		if(SHOW_DEBUG) {
 			$search_query = " -- filter_by_search $search_tipo ". get_called_class() ." \n".$search_query;
 		}
-		return $search_query;
-	}
+		return (string)$search_query;
+	}//end get_search_query
+
+
 
 	/**
 	* UPDATE_STATE
@@ -2789,9 +2791,10 @@ abstract class component_common extends common {
 
 		$component_state = $this->component_obj->get_component_state_obj();
 
-		return $component_state->update_state($locator_state);
-			#dump($ar_result,'get_ar_children_tipo_by_modelo_name_in_section '.$section_tipo);			
-	}
+		return $component_state->update_state($locator_state);			
+	}//end update_state_OLD
+
+
 
 	/**
 	* GET_STATE
@@ -2819,7 +2822,7 @@ abstract class component_common extends common {
 		}
 
 		return $my_state;
-	}
+	}//end get_state_OLD
 
 
 
@@ -2856,6 +2859,7 @@ abstract class component_common extends common {
 	}//end get_component_state
 
 
+
 	/**
 	* GET_COMPONENT_STATE_OBJ
 	* (common because is used by various components and tools, ..)
@@ -2882,8 +2886,8 @@ abstract class component_common extends common {
 		}	
 
 		return (object)$this->component_state;
-
 	}//end get_component_state_obj
+
 
 
 	/**
@@ -2907,7 +2911,6 @@ abstract class component_common extends common {
 		}	
 
 		return (string)$this->component_state_tipo;
-
 	}#end get_component_state_tipo
 
 
@@ -2944,9 +2947,7 @@ abstract class component_common extends common {
 		$state_process_html = $component_state->get_html();
 
 		return $state_process_html;
-
 	}#end get_state_process_html
-
 
 
 
@@ -2968,7 +2969,6 @@ abstract class component_common extends common {
 	public static function render_list_value($value, $tipo, $parent, $modo, $lang, $section_tipo, $section_id) {
 		
 		return $value;
-
 	}#end render_list_value
 
 
@@ -2979,13 +2979,13 @@ abstract class component_common extends common {
 	* @return $response->result =1; // the component do the update"
 	* @return $response->result =2; // the component try the update but the dato don't need change"
 	*/
-	public static function update_dato_version($update_version, $dato_unchanged) {
+	public static function update_dato_version($update_version, $dato_unchanged, $reference_id) {
 		$response = new stdClass();
 		$modelo_name = get_called_class();
 		$response->result =0;
 		$response->msg = "This component $modelo_name don't have update_dato_version, please check the class of the component <br />";
-		return $response;
 		
+		return $response;		
 	}#end update_dato_version
 
 
@@ -3012,7 +3012,6 @@ abstract class component_common extends common {
 		}
 
 		return (array)$this->semantic_nodes;
-
 	}#end get_semantic_nodes
 
 
@@ -3061,8 +3060,7 @@ abstract class component_common extends common {
 
 		}//endforeach ((array)$dato as $current_locator) { 
 		
-		return (object)$response;
-		
+		return (object)$response;		
 	}#end add_index
 
 
@@ -3109,9 +3107,35 @@ abstract class component_common extends common {
 
 		}//endforeach ((array)$dato as $current_locator) { 
 		
-		return (object)$response;
-		
+		return (object)$response;		
 	}#end remove_index
+
+
+
+	/**
+	* GET_VALOR_LIST_HTML_TO_SAVE
+	* Usado por section:save_component_dato
+	* Devuelve a section el html a usar para rellenar el 'campo' 'valor_list' al guardar
+	* Por defecto será el html generado por el componente en modo 'list', pero en algunos casos
+	* es necesario sobre-escribirlo, como en component_portal, que ha de resolverse obigatoriamente en cada row de listado
+	* @see class.section.php
+	* @return string $html
+	*/
+	public function get_valor_list_html_to_save() {
+		# Store current modo
+		$modo_previous = $this->get_modo();
+
+		# Temporal modo
+		$this->set_modo('list');
+
+		# Get html from current component
+		$html = $this->get_html();
+		
+		# Return it to anterior mode after get the html
+		$this->set_modo($modo_previous);	# Important!
+		
+		return (string)$html;
+	}//end get_valor_list_html_to_save
 
 
 

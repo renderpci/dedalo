@@ -36,7 +36,7 @@
 		if(SHOW_DEBUG) {
 			$modelo_name = RecordObj_dd::get_modelo_name_by_tipo(SECTION_TIPO, true);
 			if ($modelo_name!='section' && strpos($modelo_name, 'area')===false ) {
-				throw new Exception("Error Processing Request current assigned SECTION_TIPO is not a section ($tipo - $modelo_name)", 1);				
+				throw new Exception("DEBUG INFO: Error Processing Request current assigned SECTION_TIPO is not a section ($tipo - $modelo_name)", 1);				
 			}
 		}
 	}
@@ -181,8 +181,16 @@
 				include ( DEDALO_LIB_BASE_PATH . '/' . get_class() .'/html/' . get_class() . '_header.phtml' );
 				$html_header = ob_get_clean();
 				break;
+			case ($context_name=='list_in_portal'):
 
-			case (empty($context_name) && strpos($m, 'tool_')===false):
+				$html_header .= "<div class=\"breadcrumb\">";
+				$html_header .=   strip_tags( tools::get_bc_path() ); // Remove possible <mark> tags
+				#dump(tools::get_bc_path(), 'tools::get_bc_path()');
+				$html_header .= " <div class=\"icon_bs close_window\" title=\"".label::get_label('cerrar')."\"></div>";
+				$html_header .= "</div>";
+				$html_header .= "<div class=\"breadcrumb_spacer\"></div>";
+				break;
+			case (strpos($m, 'tool_')===false): //empty($context_name) && 
 
 				# MENU
 				$menu_html = null;
@@ -193,17 +201,7 @@
 				ob_start();
 				include ( DEDALO_LIB_BASE_PATH . '/' . get_class() .'/html/' . get_class() . '_header.phtml' );
 				$html_header = ob_get_clean();
-				break;
-
-			case ($context_name=='list_in_portal'):
-
-				$html_header .= "<div class=\"breadcrumb\">";
-				$html_header .=   strip_tags( tools::get_bc_path() ); // Remove possible <mark> tags
-				#dump(tools::get_bc_path(), 'tools::get_bc_path()');
-				$html_header .= " <div class=\"icon_bs close_window\" title=\"".label::get_label('cerrar')."\"></div>";
-				$html_header .= "</div>";
-				$html_header .= "<div class=\"breadcrumb_spacer\"></div>";
-				break;
+				break;			
 			
 			default:
 				$html_header = '';

@@ -16,6 +16,11 @@ class js {
 
 			# JQUERY LIBS
 			js::$ar_url_basic[] = JQUERY_LIB_URL_JS;
+
+			# JQUERY TEST VERSION
+			#js::$ar_url_basic[] = DEDALO_ROOT_WEB . '/lib/jquery/acc/test/jquery.min.js' ;
+			#js::$ar_url_basic[] = DEDALO_ROOT_WEB . '/lib/jquery/acc/test/jquery-migrate-3.0.0.min.js' ;
+
 			js::$ar_url_basic[] = JQUERY_UI_URL_JS;
 			#js::$ar_url_basic[] = JQUERY_TABLESORTER_JS;
 			js::$ar_url_basic[] = DEDALO_ROOT_WEB . '/lib/jquery/jquery.cookie.js' ;
@@ -118,7 +123,7 @@ class js {
 			
 
 			# Si se carga un componente tex_area cargamos la librería tinymce y especiíficas
-			if( strpos($url,'component_text_area')!== false && !isset($added_component_text_area_commons) && navigator::get_selected('modo')!='list' ) {
+			if( strpos($url,'component_text_area')!== false && !isset($added_component_text_area_commons)  ) { //&& navigator::get_selected('modo')!='list'
 				# Tinymce
 				$html .= self::build_tag( TEXT_EDITOR_URL_JS );				
 				

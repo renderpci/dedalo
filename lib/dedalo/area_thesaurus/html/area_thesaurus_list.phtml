@@ -1,0 +1,93 @@
+<?php
+	
+	# VISUALIZADOR HTML	
+	
+	
+	print "\n\n<!-- AREA THESAURUS [tipo:$tipo] -->";
+	
+	print "\n<div class=\"css_wrap_area css_wrap_area_resource\" > ";
+
+/*
+		#
+		# TEST EXPERIMENTAL #############################################
+		$start_time=microtime(1);
+		$section_id   = '1'; 
+		$section_tipo = 'fr1';
+		$row_thesaurus = new row_thesaurus($section_id, $section_tipo);
+			#dump($row_thesaurus, ' row_thesaurus ++ '.to_string());
+		
+		echo "<hr><br>";
+		echo $row_thesaurus->get_html();
+
+		echo "\n<div id=\"inspector_log\"></div>";	#inspector_log
+
+		$total=round(microtime(1)-$start_time,3);
+	  	//debug_log(__METHOD__." ".exec_time_unit($start_time,'ms').' ms' , logger::DEBUG);
+		echo "<br><blockquote> - Total render row_thesaurus: $total ms</blockquote>";
+
+
+		#
+		# TEST EXPERIMENTAL #############################################
+		
+		$start_time=microtime(1);
+		$section_id   = '2';
+		$section_tipo = 'fr1';
+		$row_thesaurus = new row_thesaurus($section_id, $section_tipo);
+			#dump($row_thesaurus, ' row_thesaurus ++ '.to_string());
+		
+		echo "<hr><br>";
+		echo $row_thesaurus->get_html();
+
+		$total=round(microtime(1)-$start_time,3);
+	  	//debug_log(__METHOD__." ".exec_time_unit($start_time,'ms').' ms' , logger::DEBUG);
+		echo "<br><div>Total render row_thesaurus: $total ms</div>";
+		*/
+
+	
+	
+	# ETIQUETA (LABEL)
+	$html_label = "\n<div class=\"css_area_titulo\" > ".component_common_draw::draw_label($this)." </div>";	
+		
+	
+	# CONTENIDO (INPUT)
+	$html_contenido  ='';
+	$html_contenido .= "\n<div class=\"css_area_content\" >";
+	
+	switch($permissions) {
+			
+		case 0	:	$html_contenido .= "\n <span class=\"css_span_dato\"> ".label::get_label('sin_acceso')." </span>";
+					break;
+						
+		case ($permissions>=1)	:
+		
+					$html_contenido .= "\n <blockquote> ";
+					foreach ($ar_children_areas as $tipo => $value) {
+						
+						$section_name = RecordObj_dd::get_termino_by_tipo($tipo,DEDALO_APPLICATION_LANG,true);
+						$modelo_name  = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+						
+						$html_contenido .= menu::create_link($tipo, $section_name, $modelo_name, null).'<br>';
+					}
+					$html_contenido .= "\n </blockquote> ";
+					
+					break;			
+	}
+	
+	$html_contenido .= "\n</div>";
+
+
+	# Prepare content to show in page
+	tools::prepare_content($html_contenido);
+
+	
+	# PRINT HTML
+	print $html_label;
+	print $html_contenido;
+
+
+		
+		
+	
+	
+	print "\n</div><!-- /AREA [$tipo] -->\n\n"; //wrap
+?>

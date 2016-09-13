@@ -184,7 +184,7 @@ class component_portal extends component_common {
 	* Return component value sended to export data
 	* @return string $valor
 	*/
-	public function get_valor_export( $valor=null, $lang=DEDALO_DATA_LANG ) {
+	public function get_valor_export( $valor=null, $lang=DEDALO_DATA_LANG, $quotes, $add_id ) {
 		
 		if (is_null($valor)) {
 			$dato = $this->get_dato();				// Get dato from DB
@@ -205,15 +205,17 @@ class component_portal extends component_common {
 		# TERMINOS_RELACIONADOS . Obtenemos los terminos relacionados del componente actual	
 		$ar_terminos_relacionados = (array)$this->RecordObj_dd->get_relaciones();
 			#dump($ar_terminos_relacionados, ' ar_terminos_relacionados');
+			#dump(MODELO_SECTION, 'MODELO_SECTION ++ '.to_string());
 		#
 		# FIELDS
 		$fields=array();
-		$ar_skip = array(MODELO_SECTION, $exclude_elements='dd1129');
 		foreach ($ar_terminos_relacionados as $key => $ar_value) {
-			$modelo = key($ar_value);
-			$tipo 	= $ar_value[$modelo];
-			if (!in_array($modelo, $ar_skip)) {				
-				$fields[] = $tipo;
+			foreach ($ar_value as $current_tipo) {
+				
+				$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
+				if (strpos($modelo_name, 'component_')!==false) {
+					$fields[] = $current_tipo;
+				}
 			}
 		}
 		#dump($fields, ' fields ');
@@ -235,16 +237,16 @@ class component_portal extends component_common {
 																 'list',
 																 $lang,
 																 $section_tipo);
-				$ar_resolved[$section_id][] = $component->get_valor_export(null,$lang);
+				$ar_resolved[$section_id][] = $component->get_valor_export( null, $lang, $quotes, $add_id );
 			}
 		}
 		#dump($ar_resolved, ' $ar_resolved ++ '.to_string());
 
 		$valor_export='';
 		foreach ($ar_resolved as $key => $ar_value) {
-			$valor_export .= implode("\t", $ar_value) . "\n";
+			$valor_export .= implode("\t", $ar_value).PHP_EOL;
 		}
-		$valor_export = trim($valor_export);
+		#$valor_export = $quotes.trim($valor_export).$quotes;
 
 		if(SHOW_DEBUG) {
 			#return "PORTAL: ".$valor_export;
@@ -278,10 +280,17 @@ class component_portal extends component_common {
 
 		$ar_relaciones = (array)$this->RecordObj_dd->get_relaciones();
 			#dump($ar_relaciones, ' ar_relaciones');
-		foreach ($ar_relaciones as $key => $value) {
+		foreach ($ar_relaciones as $ar_value) {
 
-			$modeloID 	 = key($value);
-			$modelo_name = RecordObj_dd::get_termino_by_tipo($modeloID, null, true);
+			$current_terminoID = reset($ar_value);
+				#dump($current_terminoID, ' current_terminoID ++ '.to_string());
+
+			#$modeloID 	 = key($current_terminoID);
+			#$modelo_name = RecordObj_dd::get_termino_by_tipo($modeloID, null, true);
+			$RecordObj_dd = new RecordObj_dd($current_terminoID);
+			$modeloID 	  = $RecordObj_dd->get_modelo(); // Important use calculated modeloID, not relaciones 
+			$modelo_name  = RecordObj_dd::get_termino_by_tipo($modeloID, null, true);
+			#$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_terminoID,true);
 				#dump($modelo_name,"modelo_name $modeloID");
 
 			if ($modelo_name=='exclude_elements') {
@@ -295,8 +304,7 @@ class component_portal extends component_common {
 			}				
 		}
 
-		return true;	
-
+		return true;
 	}//end notify_load_lib_element_tipo_of_portal
 
 
@@ -726,8 +734,7 @@ class component_portal extends component_common {
 	* 	1. Modo 'edit' : Uses related terms to build layout map (default)
 	* 	2. Modo 'list' : Uses childrens to build layout map
 	*/
-	public function get_layout_map() {
-
+	public function get_layout_map($view = 'full') {
 		if (isset($this->layout_map) && !empty($this->layout_map)) return $this->layout_map;
 		
 		$ar_related=array();
@@ -754,8 +761,28 @@ class component_portal extends component_common {
 			
 			case 'edit':
 			default:
-				$ar_related = (array)RecordObj_dd::get_ar_terminos_relacionados($this->tipo, $cache=true, $simple=true);
-				break;
+				if($view == 'full'){
+					$ar_related = (array)RecordObj_dd::get_ar_terminos_relacionados($this->tipo, $cache=true, $simple=true);
+					break;
+				}else{
+					# CASE VIEW IS DEFINED
+					$ar_terms = (array)RecordObj_dd::get_ar_childrens($this->tipo); 	#dump($ar_terms, " childrens $this->tipo".to_string());				
+					foreach ($ar_terms as $current_term) {
+						# Locate 'edit_views' in childrens
+						$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_term,true);
+						if ($modelo_name=='edit_view') {
+							$view_name = RecordObj_dd::get_termino_by_tipo($current_term);
+
+							if($view ==$view_name){
+								# Use related terms as new list
+								$ar_related = (array)RecordObj_dd::get_ar_terminos_relacionados($current_term, $cache=true, $simple=true);
+								break;
+							}
+						}
+					}
+
+				}
+			break;
 		}	
 		#dump( $ar_related,"relacionados $this->tipo");#die();
 
@@ -776,11 +803,25 @@ class component_portal extends component_common {
 				unset($ar_related[$key]); // Remove self section_tipo from array of components
 			}
 		}
-		$this->layout_map = array($this->tipo => $ar_related);
-
+		$layout_map = array($this->tipo => $ar_related);
 		#dump($this->layout_map,"layout_map inmodo $this->modo");
 
-		return $this->layout_map;
+
+		#
+		# REMOVE_EXCLUDE_TERMS : CONFIG EXCLUDES
+		# If instalation config value DEDALO_AR_EXCLUDE_COMPONENTS is defined, remove elements from layout_map
+		if (defined('DEDALO_AR_EXCLUDE_COMPONENTS') && !empty($layout_map)) {
+			$DEDALO_AR_EXCLUDE_COMPONENTS = unserialize(DEDALO_AR_EXCLUDE_COMPONENTS);
+			foreach ($layout_map as $section_tipo => $ar_tipos) foreach ((array)$ar_tipos as $key => $current_tipo) {
+				if (in_array($current_tipo, $DEDALO_AR_EXCLUDE_COMPONENTS)) {
+					unset( $layout_map[$section_tipo][$key] );
+					debug_log(__METHOD__." DEDALO_AR_EXCLUDE_COMPONENTS: Removed portal layout_map term $current_tipo ".to_string(), logger::DEBUG);
+				}
+			}
+		}
+		#dump($layout_map, ' $layout_map 2 ++ '.to_string($layout_map));
+
+		return $this->layout_map = $layout_map;
 
 	}//end get_layout_map
 	
@@ -1279,7 +1320,7 @@ class component_portal extends component_common {
 	* GET_AR_COLUMNS
 	* @return array $ar_columns
 	*/
-	public function get_ar_columns() {		
+	public function get_ar_columns($view = 'full') {
 
 		if(isset($this->ar_columns)) return $this->ar_columns;
 		
@@ -1287,11 +1328,9 @@ class component_portal extends component_common {
 		#$ar_hcolumns  = reset($rows_data->options->layout_map);
 
 
-		
-
-		$layout_map  = $this->get_layout_map();
+		$layout_map  = $this->get_layout_map($view);
 		$ar_hcolumns = reset($layout_map);
-			#dump($ar_hcolumns,"ar_hcolumns ");
+			
 
 		$ar_columns = array();
 
@@ -1336,7 +1375,23 @@ class component_portal extends component_common {
 
 
 
-	
+	/**
+	* GET_VALOR_LIST_HTML_TO_SAVE
+	* Usado por section:save_component_dato
+	* Devuelve a section el html a usar para rellenar el 'campo' 'valor_list' al guardar
+	* Por defecto será el html generado por el componente en modo 'list', pero en algunos casos
+	* es necesario sobre-escribirlo, como en component_portal, que ha de resolverse obigatoriamente en cada row de listado
+	*
+	* En este caso, usaremos únicamente el valor en bruto devuelto por el método 'get_dato_unchanged'
+	*
+	* @see class.section.php
+	* @return mixed $result
+	*/
+	public function get_valor_list_html_to_save() {
+		$result = $this->get_dato_unchanged();
+
+		return $result;		
+	}//end get_valor_list_html_to_save	
 
 	
 	

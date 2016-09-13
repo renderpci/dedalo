@@ -1,9 +1,8 @@
 
 <?php
 /*
-* CLASS COMPONENT INPUT TEXT
+* CLASS COMPONENT_CALCULATION
 */
-
 
 class component_calculation extends component_common {
 	
@@ -57,6 +56,8 @@ class component_calculation extends component_common {
 		return parent::Save();
 		
 	}#end Save
+
+	
 
 	/*
 	* SET_FORMAT_FORM_TYPE

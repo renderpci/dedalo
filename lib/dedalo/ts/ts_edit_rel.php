@@ -24,7 +24,6 @@ require_once(DEDALO_ROOT . '/Connections/config.php');
 require_once(DEDALO_ROOT . '/inc/funciones.php'); 
 
 
-
 # set vars
 $vars = array('terminoID','terminoID_to_link','terminoID_to_unlink','ts_lang','type','accion');
 foreach($vars as $name)	$$name = setVar($name);
@@ -99,5 +98,9 @@ foreach($ar_terminos_relacionados as $terminoID) {
 $page_html	= 'html/ts_edit_rel.phtml';	
 include($page_html);
 #return $page_html;
+
+# Write session to unlock session file
+session_write_close();
+
 #exit();
 ?>

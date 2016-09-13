@@ -1,0 +1,118 @@
+<?php
+
+	# VISUALIZADOR HTML
+
+
+	print "\n<!-- RELATION_PARENT [tipo:$tipo section_id:$parent section_tipo:$section_tipo] $label -->";
+
+	print "\n<div class=\"wrap_component css_wrap_relation_parent wrap_component_{$modo} wrap_component_{$tipo}\" id=\"{$id_wrapper}\"
+	data-tipo=\"{$tipo}\"
+	data-lang=\"{$lang}\"
+	data-parent=\"{$parent}\"
+	data-section_tipo=\"{$section_tipo}\"
+	data-modo=\"{$modo}\"
+	data-dato='{$dato_string}'
+	data-component_name=\"{$component_name}\"
+	data-component_info='{$component_info}'
+	>";
+
+	# ETIQUETA (LABEL)
+	$html_label = component_common_draw::draw_label($this);
+
+	# CONTENIDO (INPUT)
+	$html_contenido = '';
+	switch($permissions) {
+
+		case 0 :
+				$html_contenido .= "";
+				break;
+
+		case 1 :
+				$html_contenido .= $this->valor;
+				break;
+
+
+		case 2 :
+		case 3 :
+
+				$html_contenido .= "<div class=\"wrap_relation_parent_values\">";
+
+				#
+				# CONTEXT
+				# Set as disabled on time machine context 
+				$disabled = (isset($context->context_name) && $context->context_name=='tool_time_machine') ? 'disabled="disabled"' : '';
+
+				# Inputs
+				function component_relation_parent_input($locator_string, $disabled, $tipo, $lang, $parent, $section_tipo, $modo) {
+					
+					return "\n<input class=\"css_relation_parent\" type=\"text\"
+					value='{$locator_string}'
+					data-role=\"component_relation_parent_input\"
+					data-tipo=\"{$tipo}\"
+					data-lang=\"{$lang}\"
+					data-parent=\"{$parent}\"
+					data-section_tipo=\"{$section_tipo}\"
+					data-modo=\"{$modo}\"
+					onchange=\"component_relation_parent.Save(this)\"
+					$disabled
+					tabindex=\"1\"
+					/>";
+				};
+
+				# Button remove
+				$button_remove = "<input type=\"button\" class=\"component_relation_parent_button_remove\" value=\"Remove parent\"
+				data-role=\"component_relation_parent_button_remove\" 
+				onclick=\"component_relation_parent.remove_locator(this)\" />";
+
+				if (empty($dato)) {
+						# Note : This line is only for javascript reference purposes (clone)
+						# Never is shown
+						$html_contenido .= "<div class=\"relation_parent_input_line\" style=\"display:none\">";
+						#$html_contenido .= component_relation_parent_input('', $disabled, $tipo, $lang, $parent, $section_tipo, $modo);
+						#$html_contenido .= $button_remove;
+						$html_contenido .= "</div>";//relation_parent_input_line
+				}else{
+					foreach ((array)$dato as $key => $current_locator) {
+						$locator_value = component_relation_parent::get_locator_value( $current_locator );
+
+						$current_locator_string = json_encode($current_locator);
+						$html_contenido .= "<div class=\"relation_parent_input_line\">";
+						#$html_contenido .= component_relation_parent_input($current_locator_string, $disabled, $tipo, $lang, $parent, $section_tipo, $modo);
+						#$html_contenido .= $button_remove;
+						$html_contenido .= '<span class="locator_label">'.$locator_value.'</span>';
+						$html_contenido .= "</div>";//relation_parent_input_line
+					}
+				}
+
+				$html_contenido .= "</div>";//end wrap_parent_values
+
+				/*
+				$html_contenido .= "<input type=\"button\" class=\"relation_parent_add_button\"	value=\"Add parent\"
+				data-target_tipo=\"$section_tipo\"
+				onclick=\"component_relation_parent.open_parent_selector_window(this,event)\" />";
+				*/
+
+
+
+				if(SHOW_DEBUG) {
+					#$html_contenido .= "\n <div class=\"debug_info\"> Current val: <strong>$valor</strong></div>";				
+					#$html_contenido .= "\n <span class=\"css_span_debugger\" id=\"debugger_{$tipo}\">{$debugger}</span>";
+					$html_contenido .= "\n <span class=\"debug_info\">";
+					$html_contenido .= "<br> locators in section relation (parent.tipo: ".$this->relation_tipo.") : ";
+					$html_contenido .= wrap_pre( to_string($this->get_my_section_relations($this->relation_tipo)), false );
+					$html_contenido .= "</span>";
+				}
+				break;
+	}
+
+	# Prepare content to show in page
+	tools::prepare_content($html_contenido);
+
+
+	# PRINT HTML
+	print $html_label;
+	print $html_contenido;
+
+
+	print "\n</div><!-- /css_wrap_relation_parent RELATION_PARENT [tipo:$tipo section_id:$parent] $label -->\n\n"; //wrap
+?>

@@ -3,26 +3,140 @@
 	# VISUALIZADOR HTML	
 	
 	
-	#echo "\n<!-- DATE [tipo:$tipo id_matrix:$id] -->";	
-		
+	print "\n<!-- DATE [tipo:$tipo section_id_matrix:$parent] $label -->";
+
+	print "\n<div class=\"wrap_component css_wrap_date wrap_portal_list\" id=\"{$id_wrapper}\"
+	data-tipo=\"{$tipo}\"
+	data-lang=\"{$lang}\"
+	data-section_tipo=\"{$section_tipo}\"
+	data-parent=\"{$parent}\"
+	data-modo=\"{$modo}\"
+	data-from_modo=\"{$from_modo}\"
+	data-dato='{$dato_json}'
+	data-component_name=\"{$component_name}\"
+	data-component_info='{$component_info}'
+	>";
+
 	# CONTENIDO (INPUT)
 	$html_contenido = '';
 	switch($permissions) {
 			
 		case 0	:	$html_contenido .= ''; 		
 					break;
+		case 1	:
+					$html_contenido .= "\n <span class=\"date_in_list css_span_dato\">";
+				
+
+					switch ($date_mode) {
+
+						case 'range':
+							$html_contenido .= $valor_start .' <> '. $valor_end;
+							break;
+
+						case 'period':
+							if(!empty($valor_year)) {
+									$html_contenido .= $valor_year;
+								if($valor_year>1){
+									$html_contenido .= ' '.label::get_label('anyos').' ';
+								}else{
+									$html_contenido .= ' '.label::get_label('anyo').' ';
+								}
+							}
+							
+							if(!empty($valor_month)) {
+								$html_contenido .= $valor_month;
+								if($valor_month>1){
+									$html_contenido .= ' '.label::get_label('meses').' ';
+								}else{
+									$html_contenido .= ' '.label::get_label('mes').' ';
+								}
+							}
+
+							if(!empty($valor_day)) {
+								$html_contenido .= $valor_day;
+								if($valor_day>1){
+									$html_contenido .= ' '.label::get_label('dias');
+								}else{
+									$html_contenido .= ' '.label::get_label('dia');
+								}
+							}
+							break;
+
+						case 'date':
+						default:
+							$html_contenido .= $valor ;
+							break;
+					}
 					
-		case ($permissions>=1)	:
-			
-					$html_contenido .= "\n <span class=\"date_in_list css_span_dato\"
-					data-tipo=\"{$tipo}\" data-parent=\"{$parent}\" data-lang=\"{$lang}\" 
-					>";
-					$html_contenido .= $valor ;
+					$html_contenido .= "</span>";
+					break;
+
+		case ($permissions>=2)	:
+
+					if($modo =='portal_list'){
+						if(empty($dato)){
+							$html_contenido .= "\n <span class=\"css_date_span_edit_in_portal\" onclick=\"component_common.change_mode_component(this, '$modo','edit')\">";
+							$html_contenido .= "</span>";
+							break;	
+							#$edit_class = 'css_date_span_edit_in_portal';	
+						}else{
+							$html_contenido .= "\n <span class=\"css_date_span\" onclick=\"component_common.change_mode_component(this, '$modo','edit')\">";
+							#$edit_class = 'css_date_span';
+						}
+						#$html_contenido .= "\n <span class=$edit_class onclick=\"component_common.change_mode_component(this, '$modo','edit')\">";
+							
+					}else{
+						$html_contenido .= "\n <span class=\"date_in_list css_span_dato\">";
+					}
+
+					switch ($date_mode) {
+
+						case 'range':
+							$html_contenido .= $valor_start .' <> '. $valor_end;
+							break;
+
+						case 'period':
+							if(!empty($valor_year)) {
+									$html_contenido .= $valor_year;
+								if($valor_year>1){
+									$html_contenido .= ' '.label::get_label('anyos').' ';
+								}else{
+									$html_contenido .= ' '.label::get_label('anyo').' ';
+								}
+							}
+							
+							if(!empty($valor_month)) {
+								$html_contenido .= $valor_month;
+								if($valor_month>1){
+									$html_contenido .= ' '.label::get_label('meses').' ';
+								}else{
+									$html_contenido .= ' '.label::get_label('mes').' ';
+								}
+							}
+
+							if(!empty($valor_day)) {
+								$html_contenido .= $valor_day;
+								if($valor_day>1){
+									$html_contenido .= ' '.label::get_label('dias');
+								}else{
+									$html_contenido .= ' '.label::get_label('dia');
+								}
+							}
+							break;
+
+						case 'date':
+						default:
+							$html_contenido .= $valor ;
+							break;
+					}
+					
 					$html_contenido .= "</span>";
 					break;							
 	}	
 
-	
+	# Prepare content to show in page
+	tools::prepare_content($html_contenido);
+
 	# PRINT HTML	
 	print $html_contenido;	
 	

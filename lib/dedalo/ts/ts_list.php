@@ -28,8 +28,6 @@ require_once(DEDALO_ROOT . '/lang_translate/class.LangTranslate.php');
 
 
 
-
-
 $area			= 'tesauro'; #verify_access_area($area);
 
 # set vars
@@ -79,7 +77,6 @@ if ($indexacionID)	$_SESSION['indexacionID']	= $indexacionID;
 if ($reelID)		$_SESSION['reelID'] 		= $reelID;
 if ($indexID)		$_SESSION['indexID']		= $indexID;
 if ($captacionID)	$_SESSION['captacionID']	= $captacionID;
-
 
 
 # search vars
@@ -150,7 +147,20 @@ if($t=='form' && $n==0) {
 		$arrayTablas 	= (array)$tsInicioList->get_arrayTablas();
 			#dump( $arrayTablas,'arrayTablas' );
 
-		/**/	
+
+		#
+		# HIDE_TYPES : Tipos de tesauros a excluir de la presentación (usado por autocomplete_ts)
+		$hide_types = isset($_REQUEST['hide_types']) ? $_REQUEST['hide_types'] : false;		
+		if ($hide_types && $hide_types=json_decode($hide_types)) {
+			foreach ((array)$arrayTablas['tipo'] as $key => $value) {
+				if (in_array($value, (array)$hide_types)) {
+					unset($arrayTablas['prefijo'][$key]);
+				}
+			}
+		}
+		#dump( $arrayTablas,'arrayTablas 2' );
+
+			
 		$tipoFix 		= false ;
 		
 		if(isset($arrayTablas['prefijo'])) foreach((array)$arrayTablas['prefijo'] as $key => $prefijo) {
@@ -252,4 +262,8 @@ require_once($page_html);
 				"ts_modo"		=> $modo
 				)
 	);
+
+# Write session to unlock session file
+session_write_close();
+
 ?>

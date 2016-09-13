@@ -10,8 +10,6 @@
 						#$file_name = 'edit';
 		case 'edit'	:
 
-
-
 				# Verify component content record is inside section record filter
 				if ($this->get_filter_authorized_record()===false) return NULL ;
 					
@@ -27,7 +25,7 @@
 					$default_component = $this->get_default_component();
 						#dump($default_component,'$default_component');			
 				}
-				$component_info 	= $this->get_component_info('json');
+				$component_info 	= $this->get_component_info('json');			
 				
 				#$file_name	= 'edit';								
 				break;

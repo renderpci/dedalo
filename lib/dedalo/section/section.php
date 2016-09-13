@@ -15,11 +15,18 @@
 	$component_name			= get_class($this);
 	$identificador_unico	= $this->get_identificador_unico();	
 	$caller_id 				= $this->get_caller_id();
-	$propiedades 			= $this->get_propiedades();
-	
-	$context 				= $this->get_context();	
+	$propiedades 			= $this->get_propiedades();	
 	$file_name 				= $modo;
 
+	#
+	# CONTEXT . Override context object when is requested
+	if(isset($_REQUEST['context_name']))  {
+		
+		$context_obj = new stdClass();
+			$context_obj->context_name = $_REQUEST['context_name'];
+		$this->set_context($context_obj);
+	}
+	$context = $this->get_context();
 
 	# Test is a complete section or process
 	$is_process_section = (isset($_REQUEST['t']) && $_REQUEST['t']!= $tipo) ? true : false;
@@ -34,7 +41,6 @@
 	}
 
 
-
 	# COMPONENTS HTML
 	$html_section_add  ='';
 	
@@ -42,6 +48,35 @@
 	switch($modo) {
 
 		case 'edit':
+				
+				/*
+				#
+				# test
+				$locator = new locator();
+					$locator->set_section_tipo($this->tipo);
+					$locator->set_section_id($this->section_id);
+				
+				$start_time = start_time();
+					$ar = relation::get_parents_recursive( $locator );
+				$out = exec_time_unit($start_time,'ms').' ms';	//exec_time($start_time);
+				dump($ar, ' ar relation 1 ++ '.to_string($out));
+				
+
+				#
+				# test
+				$locator = new locator();
+					$locator->set_section_tipo('es1');
+					$locator->set_section_id('18673');
+				
+				$start_time = start_time();
+					$ar = relation_test::get_parents_recursive2( $locator, '' );
+					#$ar = relation_test::get_recursive_branch( $locator );
+					#$ar = array_unique($ar, SORT_REGULAR);
+
+				$out = exec_time_unit($start_time,'ms').' ms';	//exec_time($start_time);
+				dump($ar, ' ar relation_test 2 ++ '.to_string($out));
+				*/
+						
 				
 				$section_id 			= $this->get_section_id();
 				$section_info 			= $this->get_section_info('json');
@@ -203,7 +238,12 @@
 				break;
 
 		case 'list'	:
-						
+
+				$list_line = isset($propiedades->section_config->list_line) ? $propiedades->section_config->list_line : 'double';
+
+				# SECTION_CONFIG
+				$_SESSION['dedalo4']['section_config'][$this->tipo]['list_line'] = $list_line;
+					
 				#
 				# ROWS_LIST . SECTION LIST
 				# Render rows html from section_rows
@@ -227,7 +267,7 @@
 							# section list of referenced 'tool_section_tipo' is used for create this session_key
 							$search_options_session_key = 'section_'.$this->context->tool_section_tipo;
 							break;
-					}					
+					}
 
 
 					if ( !empty($_SESSION['dedalo4']['config']['search_options'][$search_options_session_key]) ) {						
@@ -253,8 +293,8 @@
 						}
 
 	
-					}else{						
-						
+					}else{
+							
 						$options = new stdClass();
 							$options->section_tipo 		= $this->tipo;
 							$options->section_real_tipo = $this->get_section_real_tipo(); # es mas rápido calcularlo aquí que en la estática;
@@ -264,7 +304,7 @@
 							#$options->modo 			= $modo;
 							$options->context 			= $this->context;	# inyectado a la sección y usado para generar pequeñas modificaciones en la visualización del section list como por ejemplo el link de enlazar un registro con un portal
 							$options->search_options_session_key = $search_options_session_key;
-								#dump($options);#die();
+								#dump($options, ' options ++ '.to_string());
 
 							# OPTIONS CUSTOM
 							switch (true) {
@@ -300,10 +340,15 @@
 							#dump($options->layout_map_list, '$options->layout_map_list ++ '.to_string());
 					}
 
+
 					# Override some specific options
 						$options->modo	= $modo;
 						//dump($_SESSION['dedalo4']['config']['search_options'][$search_options_session_key], "$search_options_session_key ".to_string());
+
+						$options->context = $context;
 							#dump($options, ' options ++ '.to_string());
+
+
 
 					$section_rows 	= new section_records($this->tipo, $options);
 					$rows_list_html = $section_rows->get_html();
@@ -384,20 +429,34 @@
 				break;
 	
 		case 'relation':
-					#if(is_array($ar_section_list_obj)) foreach($ar_section_list_obj as $section_list) {
-					#	$html_section_add	.= $section_list->get_html();
-					#}					
-					return false;
-						$html_section_add = $generated_content_html;	
-					break;
+				#if(is_array($ar_section_list_obj)) foreach($ar_section_list_obj as $section_list) {
+				#	$html_section_add	.= $section_list->get_html();
+				#}					
+				return false;
+					$html_section_add = $generated_content_html;	
+				break;
 		case 'relation_reverse_sections':
-					$file_name = 'relation_reverse';
+				$file_name = 'relation_reverse';
 		case 'relation_reverse':
-					#if(is_array($ar_section_list_obj)) foreach($ar_section_list_obj as $section_list) {
-					#	$html_section_add	.= $section_list->get_html();
-					#}
-					$html_section_add = $generated_content_html;
-					break;		
+				#if(is_array($ar_section_list_obj)) foreach($ar_section_list_obj as $section_list) {
+				#	$html_section_add	.= $section_list->get_html();
+				#}
+				$html_section_add = $generated_content_html;
+				break;
+
+		case 'list_thesaurus':
+				$options = new stdClass();
+					$options->section_tipo 		= $this->tipo;
+					$options->section_real_tipo = $this->get_section_real_tipo(); # es mas rápido calcularlo aquí que en la estática;
+					$options->layout_map 		= component_layout::get_layout_map_from_section( $this );
+					$options->layout_map_list 	= $options->layout_map;
+					$options->offset_list 		= (int)0;
+					#$options->modo 			= $modo;
+					$options->context 			= $this->context;	# inyectado a la sección y usado para generar pequeñas modificaciones en la visualización del section list como por ejemplo el link de enlazar un registro con un portal
+					$options->search_options_session_key = $search_options_session_key;
+						#dump($options, ' options ++ '.to_string());
+
+				break;
 
 		default:  echo "<blockquote> Error: modo '$modo' is not valid! </blockquote>"; return;
 	}

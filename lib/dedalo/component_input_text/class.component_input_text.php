@@ -1,35 +1,42 @@
-
 <?php
 /*
-* CLASS COMPONENT INPUT TEXT
+* CLASS COMPONENT_INPUT_TEXT
 */
 
 
 class component_input_text extends component_common {
 	
-	# GET DATO
+
+
+	/**
+	* GET DATO
+	*/
 	public function get_dato() {
 
-		$dato = parent::get_dato();
-		#if(SHOW_DEBUG && $this->tipo=='rsc22') {
-			#dump($dato, ' dato ++ '.to_string($this->tipo.'-'.$this->parent.'-'.$this->section_tipo));
-		#}
-			
+		$dato = parent::get_dato();		
 
 		if(SHOW_DEBUG) {
 			if ( !is_null($dato) && !is_string($dato)  ) {
 				dump(parent::get_dato(), 'WRONG TYPE dato: '.$this->tipo);
 			}
 		}
-		return (string)$dato;
-	}
 
-	# SET_DATO
+		return (string)$dato;
+	}//end get_dato
+
+
+
+	/**
+	*  SET_DATO
+	*/
 	public function set_dato($dato) {
 		if($dato=='""') $dato = ''; // empty dato json encoded
+		
 		parent::set_dato( (string)$dato );			
-	}
-	
+	}//end set_dato
+
+
+
 	/**
 	* SAVE OVERRIDE
 	* Overwrite component_common method to set always lang to config:DEDALO_DATA_NOLAN before save
@@ -37,8 +44,7 @@ class component_input_text extends component_common {
 	public function Save() {
 
 		# Dato candidate to save
-		$dato = $this->dato;
-		
+		$dato = $this->dato;		
 
 		switch (true) {
 
@@ -61,13 +67,11 @@ class component_input_text extends component_common {
 		}
 
 		# A partir de aquí, salvamos de forma estándar
-		return parent::Save();
-		
-	}#end Save
+		return parent::Save();		
+	}//end Save
 
 
 	
-
 	/**
 	* GET_SEARCH_QUERY
 	* Build search query for current component . Overwrite for different needs in other components 
@@ -110,6 +114,85 @@ class component_input_text extends component_common {
 
 
 
+	/**
+	* RENDER_LIST_VALUE
+	* Overwrite for non default behaviour
+	* Receive value from section list and return proper value to show in list
+	* Sometimes is the same value (eg. component_input_text), sometimes is calculated (e.g component_portal)
+	* @param string $value
+	* @param string $tipo
+	* @param int $parent
+	* @param string $modo
+	* @param string $lang
+	* @param string $section_tipo
+	* @param int $section_id
+	*
+	* @return string $list_value
+	*/
+	public static function render_list_value($value, $tipo, $parent, $modo, $lang, $section_tipo, $section_id) {
+		
+		# Si el valor está vacío, es posible que este componente no tenga dato en este idioma. Si es así,
+		# verificamos que NO estamos en el lenguaje principal (de momento config:DEDALO_DATA_LANG_DEFAULT)
+		# creamos el componente para pedirle el valor en el lenguaje principal.
+		# Esto es más lento, pero proporciona un fallback al lenguaje principal en los listados (de agradecer en los tesauros, por ejemplo)
+		#
+		# NOTA: Valorar de recorrer más idiomas o discriminar el cálculo de main_lang desde jerarquías (hierarchy1) o desde config 
+		#
+		# FALLBACK TO MAIN_LANG
+		# dump($value, ' value ++ '.to_string());
+		$empty_list_value = "\n".' <span class="css_span_dato"></span>';
+		if (empty($value) || $value==$empty_list_value) {
+
+			$main_lang = self::get_main_lang( $section_tipo );
+			# main lang
+			# dump($main_lang, ' main_lang ++ '." $section_tipo ".to_string(DEDALO_DATA_LANG));
+			if ($main_lang!=$lang) {
+
+				$component 	= component_common::get_instance(__CLASS__,
+															 $tipo,
+														 	 $parent,
+														 	 $modo,
+															 $main_lang,
+														 	 $section_tipo); 
+				
+				$value = $component->get_valor($main_lang);
+				$value = component_common::decore_untranslated( $value );
+					#dump($value, ' value ++ '.to_string($main_lang));
+				
+				#$component->set_lang($main_lang);
+				#$valor = $component->get_valor($main_lang);
+				#$valor = component_common::decore_untranslated( $valor );				
+			}
+		}
+
+		return $value;
+	}//end render_list_value
+
+
+
+	/**
+	* GET_VALOR_LIST_HTML_TO_SAVE
+	* Usado por section:save_component_dato
+	* Devuelve a section el html a usar para rellenar el 'campo' 'valor_list' al guardar
+	* Por defecto será el html generado por el componente en modo 'list', pero en algunos casos
+	* es necesario sobre-escribirlo, como en component_portal, que ha de resolverse obigatoriamente en cada row de listado
+	*
+	* Usaremos get_valor para permitir importaciones de fichas en lenguajes distintos al actual. Ejemplo: importar
+	* Francia (jer_fr) en castellano (lg-spa)
+	*
+	* @see class.section.php
+	* @return string $html
+	*/
+	public function get_valor_list_html_to_save() {
+		
+		# Get html from current component
+		$html = $this->get_valor();		
+		
+		return (string)$html;
+	}//end get_valor_list_html_to_save
 	
-}
+
+
+	
+}//end class component_input_text
 ?>

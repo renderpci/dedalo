@@ -25,6 +25,7 @@
 	if ($this->get_filter_authorized_record()===false) return NULL ;
 
 	$file_name				= $modo;
+	$from_modo				= $modo;
 	
 	switch($modo) {
 	
@@ -40,6 +41,10 @@
 				$component_info 		= $this->get_component_info('json');				
 				$dato_json 				= json_handler::encode($dato);
 
+				if (isset($_REQUEST['from_modo'])) {
+					$from_modo = $_REQUEST['from_modo'];
+				}
+
 				#
 				# SEMANTIC NODES
 				$semantic_nodes = $this->get_semantic_nodes();
@@ -50,7 +55,9 @@
 				}
 
 				$in_time_machine =  (isset($_REQUEST['m']) && $_REQUEST['m']=='tool_time_machine') || 
-									(isset($_REQUEST['mode']) && $_REQUEST['mode']=='load_preview_component') ? true : false;				
+									(isset($_REQUEST['mode']) && $_REQUEST['mode']=='load_preview_component') ? true : false;	
+
+
 				break;
 
 		case 'tool_time_machine' :	
@@ -75,9 +82,24 @@
 		case 'list_tm' :
 				$file_name = 'list';
 		case 'portal_list':
+				$id_wrapper		= 'wrapper_'.$identificador_unico;
+				$tipo_to_search			= $this->get_tipo_to_search();	
+				$ar_target_section_tipo 	 = $this->get_ar_target_section_tipo();	
+				$dato_json 		= json_handler::encode($dato);
+				$component_info = $this->get_component_info('json');
+				$ar_target_section_tipo_json = json_encode($ar_target_section_tipo);
+
+				$valor 			= $this->get_valor($lang,'string');
+				$ar_valor 		= $this->get_valor($lang,'array');
+
 				$file_name 	= 'list';
-		case 'list'	:				
-				$valor 	= $this->get_valor($lang,'string');
+				break;
+				
+		case 'list'	:
+				# Return direct value for store in 'valor_list'
+				$valor = $this->get_valor($lang,'string');
+				echo (string)$valor; 	# Like "Catarroja, L'Horta Sud, Valencia/València, Comunidad Valenciana, España"
+				return; // NOT load html file
 				break;
 
 		case 'relation':

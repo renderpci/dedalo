@@ -28,14 +28,19 @@
 					$html_contenido .= operator::get_search_comparison_operators_html($tipo,$ar_comparison_operators);
 					
 					
-					$html_contenido .= "<span id=\"search_component_$tipo\">";	
-					$html_contenido .= "\n <input class=\"css_date\" type=\"text\" 
-						name=\"{$tipo}\" 
-						data-tipo=\"{$tipo}\" data-parent=\"{$parent}\" data-lang=\"{$lang}\" 
-						value=\"{$valor}\" 
+					$html_contenido .= "<span id=\"search_component_$tipo\">";
+
+					$html_contenido .= "\n <input class=\"css_date\" type=\"text\"
+						name=\"{$tipo}\"
+						data-tipo=\"{$tipo}\"
+						data-parent=\"{$parent}\"
+						data-lang=\"{$lang}\"
+						value=\"{$valor}\"
 						title=\"$html_title\"
 						/>";
-					$html_contenido .= "</span>";	
+					
+
+					$html_contenido .= "</span>";
 
 					$html_contenido .= " <span class=\"css_span_ejemplo\">Format $ejemplo </span>";	
 

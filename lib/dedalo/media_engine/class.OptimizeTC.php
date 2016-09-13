@@ -370,6 +370,8 @@ class OptimizeTC {
 			$frAnterior = substr($texto, 0, $indexPos); # fr desde inicio (0) hasta la pos de indexIN
 			#$tcLastPos 	= strrpos($frAnterior, "[TC_" ); # pos abs del último tc en el fragmento anterior al indexIn (por tanto es el TC anterior al indexIN) 
 
+			$prevTC = null;
+			
 			# Find last COMPLETE tc is this fragment
 			preg_match_all( $tc_pattern, $frAnterior, $matches, PREG_SET_ORDER);		#dump(end($matches), 'end($matches) ++ '.to_string());
 			if (isset(end($matches)[0])) {

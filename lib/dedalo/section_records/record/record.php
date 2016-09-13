@@ -120,6 +120,17 @@
 								}//end if (!empty($exclude_elements_tipo)) {
 							#dump($ar_exclude_elements,'ar_exclude_elements '.$section->tipo);
 						}#end if ($section->section_virtual==true )
+ 
+
+						#
+						# REMOVE_EXCLUDE_TERMS : CONFIG EXCLUDES
+						# If instalation config value DEDALO_AR_EXCLUDE_COMPONENTS is defined, add to current ar_exclude_elements
+						if (defined('DEDALO_AR_EXCLUDE_COMPONENTS')) {
+							$DEDALO_AR_EXCLUDE_COMPONENTS = unserialize(DEDALO_AR_EXCLUDE_COMPONENTS);
+							$ar_exclude_elements = array_merge($ar_exclude_elements,$DEDALO_AR_EXCLUDE_COMPONENTS);
+							debug_log(__METHOD__." DEDALO_AR_EXCLUDE_COMPONENTS: Added terms to ar_exclude_elements: ".to_string($DEDALO_AR_EXCLUDE_COMPONENTS), logger::DEBUG);
+						}
+						#dump($ar_exclude_elements, ' ar_exclude_elements ++ '.to_string($DEDALO_AR_EXCLUDE_COMPONENTS));
 
 					#
 					# LAYOUT MAP : PENDIENTE UNIFICAR MAQUETACIÓN CON LAYOUT MAP A PARTIR DEL MODO EDIT <------

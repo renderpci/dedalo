@@ -1,6 +1,6 @@
 // JavaScript Document
 
-$(window).load(function() {
+window.addEventListener("load", function (event) {	
     $('#wrapGeneral').fadeIn(250);
 });
 

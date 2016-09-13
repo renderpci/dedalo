@@ -110,17 +110,8 @@ class component_autocomplete_ts extends component_common {
 	* Get resolved string representation of current tesauro value
 	*/
 	public function get_valor( $lang=DEDALO_DATA_LANG, $format='string' ) {
-		/*
-		if (isset($this->valor)) {
-			if(SHOW_DEBUG) {
-				#error_log("Catched valor !!! from ".__METHOD__);
-			}
-			return $this->valor;
-		}
-		*/
-
+		
 		$dato = $this->get_dato();
-			#dump($dato,'dato '.gettype($dato) );
 
 		if ( empty($dato) ) {
 			if ($format=='array') {
@@ -130,23 +121,21 @@ class component_autocomplete_ts extends component_common {
 			}
 		}
 
-		if(!is_array($dato)) return "Sorry, type:" .gettype($dato). " not supported yet";
+		if(!is_array($dato)) return "Sorry, type:" .gettype($dato). " not supported yet (Only array format)";
 
 		# lang never must be DEDALO_DATA_NOLAN
 		if ($lang==DEDALO_DATA_NOLAN) {
-			$lang = DEDALO_DATA_LANG;
+			$lang = DEDALO_DATA_LANG; // Force current lang as lang
 		}
 
 		# Propiedades
 		$propiedades = $this->get_propiedades();
-		#dump($propiedades,'$propiedades');
 
 		$ar_valor = array();
-		foreach ($dato as $key => $current_locator) {
-				
-			$current_locator_string = json_encode($current_locator);
-			$terminoID = self::get_terminoID_by_locator($current_locator); // nota ahora es un terminoID			
-		
+		foreach ($dato as $key => $current_locator) {				
+			
+			$terminoID = self::get_terminoID_by_locator($current_locator); // nota ahora es un terminoID
+
 			$current_valor  = '';
 			$current_valor .= RecordObj_ts::get_termino_by_tipo($terminoID, $lang, true);
 				#dump($current_valor, ' current_valor ++ '.to_string($lang));			
@@ -167,8 +156,9 @@ class component_autocomplete_ts extends component_common {
 			#
 			# REMOVE TAGS FROM NON TRANSLATED TERMS
 			$current_valor = strip_tags($current_valor);
-
-			$ar_valor[$current_locator_string] = $current_valor;
+			
+			$current_locator_string 			= json_encode($current_locator);
+			$ar_valor[$current_locator_string]  = $current_valor;
 
 		}//end foreach ($dato as $key => $current_locator) {
 
@@ -178,13 +168,13 @@ class component_autocomplete_ts extends component_common {
 		}else{
 			$valor = implode("<br>", $ar_valor);
 		}
-		#dump($valor, ' valor ++ '.to_string());
-		
-		//$this->valor = $valor;
+		#dump($valor, ' valor ++ '.to_string());		
+		#$this->valor = $valor;
 
 		return $valor;
 
 	}//end get_valor
+
 
 
 	/**
@@ -192,7 +182,7 @@ class component_autocomplete_ts extends component_common {
 	* Return component value sended to export data
 	* @return string $valor
 	*/
-	public function get_valor_export( $valor=null, $lang=DEDALO_DATA_LANG ) {
+	public function get_valor_export( $valor=null, $lang=DEDALO_DATA_LANG, $quotes, $add_id ) {
 		
 		if (is_null($valor)) {
 			$dato = $this->get_dato();				// Get dato from DB
@@ -218,6 +208,7 @@ class component_autocomplete_ts extends component_common {
 	* @return 
 	*/
 	public function get_dato_search() {
+
 		$dato_search=array();
 
 		$dato = $this->get_dato();
@@ -243,6 +234,7 @@ class component_autocomplete_ts extends component_common {
 		return $dato_search;
 
 	}#end get_dato_search
+
 
 
 	/**
@@ -279,74 +271,109 @@ class component_autocomplete_ts extends component_common {
 	}#end convert_dato_to_locator
 
 
+
 	/**
 	* GET_TERMINOID_BY_LOCATOR
 	* @param object $locator
 	* @return string $terminoID
 	*/
 	public static function get_terminoID_by_locator( $locator ) {
+
 		if(!isset($locator->section_tipo) || !isset($locator->section_id)) {
 			dump($locator, ' locator ++ '.to_string());
+			debug_log(__METHOD__." Error on get terminoID_by_locator from locator: ".to_string($locator), logger::DEBUG);
+			return '';
 		}
-		$terminoID = substr($locator->section_tipo,0,strlen($locator->section_tipo)-1).$locator->section_id;
+		$section_tipo = $locator->section_tipo;
+		$section_id   = $locator->section_id;
+		$terminoID 	  = substr($section_tipo,0,strlen($section_tipo)-1).$section_id;
+		
 		return (string)$terminoID;
+
 	}#end get_terminoID_by_locator
 
 
 
-
-	# GET_REFERENCED_TIPO
+	/**
+	* GET_AR_REFERENCED_TIPO
+	*/
 	public function get_ar_referenced_tipo() {
+
+		if(isset($this->ar_referenced_tipo)) return $this->ar_referenced_tipo;
 		
 		$ar_referenced_tipo = array();
 
 		# COMPONENT PROPIEDADES VAR
 		$propiedades = $this->get_propiedades();
-		if (isset($propiedades->jer_tipo)) {
+		$source_mode = $this->get_source_mode();
+
+		if ( isset($propiedades->jer_tipo) ) {
+			
+			# TEMPORAL
 			$ar_tesauro_by_jer_tipo = RecordObj_jer::get_ar_tesauro_by_jer_tipo($propiedades->jer_tipo);
 			foreach ($ar_tesauro_by_jer_tipo as $tld) {
 				$ar_referenced_tipo[] = strtolower($tld)."1";
 			}
-		}
+			debug_log(__METHOD__." Deprecated source mode. Please use new format like 'propiedades->source->mode' ".to_string(), logger::ERROR);
 
-		return $ar_referenced_tipo;
+		}else if (isset($propiedades->source->mode) && isset($propiedades->source->value)) {
 
-		/*
-		if (!empty($ts_propiedades)) {
-			# PROPIEDADES VARS to JSON . Ojo: vars devuelto por 'json_decode' es un objeto (al contrario que 'json_handler::decode' que devuelve un array)
-			$vars = json_decode($ts_propiedades);
-				#dump($vars->jer_tipo,'$vars');
-
-			# JER_TIPO 
-			if ( !empty($vars->jer_tipo) ) {
-				$ar_tesauro_by_jer_tipo = RecordObj_jer::get_ar_tesauro_by_jer_tipo($vars->jer_tipo);
-					#dump($ar_tesauro_by_jer_tipo,'ar_tesauro_by_jer_tipo');
-
-				foreach ($ar_tesauro_by_jer_tipo as $tld) {
-					$ar_referenced_tipo[] = strtolower($tld)."1";
-				}
+			# New source format
+			switch ($propiedades->source->mode) {
+				case 'jer_tipo':
+					$ar_tesauro_by_jer_tipo = RecordObj_jer::get_ar_tesauro_by_jer_tipo( (int)$propiedades->source->value );
+					foreach ($ar_tesauro_by_jer_tipo as $tld) {
+						$ar_referenced_tipo[] = strtolower($tld)."1";
+					}
+					break;
+				case 'childrens_of':
+					$ar_parents = (array)$propiedades->source->value;
+					foreach ($ar_parents as $current_parent) {						
+						$ar_childrens = RecordObj_ts::get_ar_childrens($current_parent, $order_by='norden');
+						foreach ((array)$ar_childrens as $current_tipo) {
+							$ar_referenced_tipo[] = $current_tipo;
+						}
+					}
+					break;
+				case 'tree':
+					# Tipos to hide / exclude
+					$ar_referenced_tipo = json_decode($propiedades->source->value);
+					break;
+				default:
+					debug_log(__METHOD__." Invalid source->mode ".to_string($propiedades->source->mode), logger::ERROR);
 			}
-			#dump($ar_referenced_tipo,'$ar_referenced_tipo');
 
-			return $ar_referenced_tipo;
+		}else{			
+			debug_log(__METHOD__." Not defined source->mode (propiedades->source->mode)", logger::ERROR);
 		}
-		*/
-
-
-		/*
-		$relaciones = $this->RecordObj_dd->get_relaciones();
-		if (!empty($relaciones) && is_array($relaciones)) foreach($relaciones as $ar_relaciones) {
-
-			foreach($ar_relaciones as $tipo_modelo => $current_referenced_tipo) {
-				#dump($ar_referenced_tipo,'$ar_referenced_tipo');
-				$ar_referenced_tipo[] = $current_referenced_tipo;
-			}			
-		}
-		#dump($ar_referenced_tipo,'$ar_referenced_tipo');
-
-		return $ar_referenced_tipo;*/
-
+		#dump($ar_referenced_tipo, ' ar_referenced_tipo ++ '.to_string());		
+				
+		return $this->ar_referenced_tipo = $ar_referenced_tipo;
 	}//end get_ar_referenced_tipo
+
+
+
+	/**
+	* GET_SOURCE_MODE
+	* @return string|null
+	*/
+	public function get_source_mode() {
+		
+		# COMPONENT PROPIEDADES VAR
+		$propiedades = $this->get_propiedades();
+
+		if ( isset($propiedades->jer_tipo) ) {			
+			# TEMPORAL
+			debug_log(__METHOD__." Deprecated source mode format. Please use new format like 'propiedades->source->mode' ".to_string(), logger::ERROR);
+			return 'jer_tipo';
+		}else if (isset($propiedades->source->mode)) {
+			# New source format
+			return $propiedades->source->mode;
+		}else{
+			debug_log(__METHOD__." Not defined source->mode (propiedades->source->mode)", logger::ERROR);
+			return '';
+		}
+	}#end get_source_mode
 
 
 
@@ -372,16 +399,13 @@ class component_autocomplete_ts extends component_common {
 		//dump($ar_link_fields,'$ar_link_fields');
 
 		return $ar_link_fields;
-
-	}
-	
+	}//END ger_ar_link_fields
 
 	
-
 
 	/**
 	* FIRE_TREE_RESOLUTION
-	*/
+	*//*
 	public static function get_tree_resolution($tipo) {
 
 		$is_root = component_autocomplete_ts::is_root($tipo);
@@ -408,7 +432,10 @@ class component_autocomplete_ts extends component_common {
 		#dump($_SESSION['dedalo4']['config']['ar_recursive_childrens'][$tipo]);
 		return $ar_recursive_childrens ;
 	}
+	*/
 
+
+	/*
 	public static function is_root($tipo) {
 
 		$tipo_id = intval(substr($tipo, 2));
@@ -419,6 +446,7 @@ class component_autocomplete_ts extends component_common {
 			return false;
 		}	
 	}
+	*/
 
 	
 	/**
@@ -426,10 +454,10 @@ class component_autocomplete_ts extends component_common {
 	* Used by trigger on ajax call
 	* @param array ar_referenced_tipo like ['es1','fr1'] (parent where start to search)
 	* @param string_to_search
-	* @return ar_result 
+	* @return array ar_result 
 	*	Array format: id_matrix=>dato_string 
 	*/
-	public static function autocomplete_ts_search($ar_referenced_tipo, $string_to_search, $max_results=30, $show_modelo_name=true) {
+	public static function autocomplete_ts_search($ar_referenced_tipo, $string_to_search, $max_results=30, $show_modelo_name=true, $source_mode) {
 		#dump($ar_referenced_tipo, 'ar_referenced_tipo', array());
 		#if(SHOW_DEBUG) $start_time = start_time();
 
@@ -442,8 +470,7 @@ class component_autocomplete_ts extends component_common {
 
 		
 		$arguments=array();
-		$arguments['strPrimaryKeyName']	= 'parent';
-		
+		$arguments['strPrimaryKeyName']	= 'parent';		
 
 		#$arguments['dato:begins']		= $string_to_search;
 		$arguments['dato:begins_or']	= array($string_to_search, ucfirst($string_to_search) );
@@ -457,24 +484,42 @@ class component_autocomplete_ts extends component_common {
 		LIMIT 100;
 		*/
 		#$arguments['sql_code']			= "to_tsvector('english',dato) @@ to_tsquery('english','{$string_to_search}')";
-
 		
 		$arguments['tipo']				= 'termino';
 
+		#
 		# ar_referenced_tipo iterate to generate sql
-		$ar_prefijos = array();
-		foreach ($ar_referenced_tipo as $current_tipo) {
-			$prefijo 		= substr($current_tipo, 0,2);
-			$ar_prefijos[] 	= $prefijo;
+		switch ($source_mode) {
+			case 'jer_tipo':
+				$ar_prefijos = array();
+				foreach ($ar_referenced_tipo as $current_tipo) {					
+					$ar_prefijos[] = $current_tipo
+					;
+				}
+				$arguments['parent:begins_or']	= $ar_prefijos;
+				$prefix = substr( reset($ar_referenced_tipo), 0, 2 );
+				break;
+			case 'childrens_of':
+				$ar_prefijos = array();
+				foreach ($ar_referenced_tipo as $current_tipo) {
+					$ar_prefijos[] = $current_tipo;
+				}
+				$arguments['parent:or'] = $ar_prefijos;
+				$prefix = substr( reset($ar_referenced_tipo), 0, 2 );
+				break;
+			default:
+				debug_log(__METHOD__." Invalid filter mode ".to_string($source_mode), logger::ERROR);
+				break;
 		}
-		$arguments['parent:begins_or']	= $ar_prefijos;	
+			
 		
 		#$arguments['lang']				= DEDALO_DATA_LANG;
 		$arguments['sql_limit']			= $max_results;
-		$matrix_table					= RecordObj_descriptors::get_matrix_table_from_tipo($prefijo);
+		$matrix_table					= RecordObj_descriptors::get_matrix_table_from_tipo($prefix);
 		$RecordObj_descriptors			= new RecordObj_descriptors($matrix_table, NULL);
 		$ar_records						= $RecordObj_descriptors->search($arguments);
-			#dump($ar_records,'ar_records'." string_to_search:$string_to_search - sql_limit:$max_results - ".print_r($arguments,true) ) ;	
+			#dump($ar_records,'ar_records'." string_to_search:$string_to_search - sql_limit:$max_results - ".print_r($arguments,true) ) ;
+			#dump($arguments, ' arguments ++ '.to_string());	
 
 
 		# ESDESCRIPTOR : Removome non descriptors
@@ -533,71 +578,32 @@ class component_autocomplete_ts extends component_common {
 			$ar_records_dato				= $RecordObj_descriptors->search($arguments);
 			$termino 						= $ar_records_dato[0];
 
+
+			$label = $termino;
+
 			# Calculamos el modelo
 			$modelo_name = NULL;
-			if($show_modelo_name)
-				$modelo_name = ' - '.RecordObj_ts::get_modelo_name_by_tipo($current_terminoID,true);
+			if($show_modelo_name) {
+				if( $modelo_name = RecordObj_ts::get_modelo_name_by_tipo($current_terminoID,true) ) {
+					$label .= ' - '.$modelo_name;
+				}
+			}
 
-			$ar_result[$current_terminoID] 	= $termino .' '. $modelo_name;
+			# Calculamos el parent
+			$RecordObj_ts 	= new RecordObj_ts($current_terminoID);
+			$current_parent = $RecordObj_ts->get_parent();
+			if( $parent_name = RecordObj_ts::get_termino_by_tipo($current_parent) ) {
+				$label .= ' ('.$parent_name.')';
+			}
+
+			$ar_result[$current_terminoID] = $label;
 		}
 		#dump($ar_result,'$ar_result');
 	
 		#if(SHOW_DEBUG) error_log( exec_time($start_time, __METHOD__, " string_to_search:$string_to_search ") );
 		
-		return $ar_result;
-
+		return (array)$ar_result;
 	}//end autocomplete_ts_search
-
-
-
-
-
-	/**
-	* AUTOCOMPLETE_TS_SEARCH
-	* Used by trigger on ajax call
-	* @param tipo
-	* @param string_to_search
-	* @return ar_result 
-	*	Array format: id_matrix=>dato_string 
-	*/
-	/*
-	public static function autocomplete_ts_search_old($tipo, $string_to_search, $max_results=30) {		
-
-		if(SHOW_DEBUG) $start_time = start_time();
-
-		static $ar_records ;
-		
-		if(!isset($ar_records)) {
-
-			# Buscamos TODOS los hijos recursivamente
-			$RecordObj_dd 			= new RecordObj_dd($tipo);
-			$ar_recursive_childrens = $RecordObj_dd->get_ar_recursive_childrens_of_this($tipo);
-				#dump($ar_recursive_childrens,'ar_recursive_childrens');
-
-			# Resolvemos el nombre para cada uno y lo almacenamos en un array
-			foreach ($ar_recursive_childrens as $terminoID) {
-
-				$ar_records[$terminoID] = RecordObj_dd::get_termino_by_tipo($terminoID, DEDALO_DATA_LANG);
-			}
-			#dump(count($ar_recursive_childrens),"fired ar_records ".count($ar_recursive_childrens));		
-		}	
-		if(SHOW_DEBUG) error_log( exec_time($start_time, __METHOD__) );
-
-		# Recorremos el array de terminoID=>nombre filtrando por 'string_to_search'
-		$ar_result = array();
-		foreach ($ar_records as $terminoID => $termino) {
-
-			$pos = strpos( strtolower($termino), strtolower($string_to_search));
-
-			if ($pos===0) {
-				$ar_result[$terminoID] = $termino ;
-			}
-		}	
-		
-
-		return $ar_result;		
-	}
-	*/
 
 	
 
@@ -610,6 +616,7 @@ class component_autocomplete_ts extends component_common {
 	public function build_search_comparison_operators( $comparison_operators=array('=','!=') ) {
 		return (object)parent::build_search_comparison_operators($comparison_operators);
 	}#end build_search_comparison_operators
+
 
 
 	/**
@@ -660,6 +667,60 @@ class component_autocomplete_ts extends component_common {
 		}
 		return $search_query;
 	}//end get_search_query
+
+
+
+	/**
+	* RENDER_LIST_VALUE
+	* Overwrite for non default behaviour
+	* Receive value from section list and return proper value to show in list
+	* Sometimes is the same value (eg. component_input_text), sometimes is calculated (e.g component_portal)
+	* @param string $value
+	* @param string $tipo
+	* @param int $parent
+	* @param string $modo
+	* @param string $lang
+	* @param string $section_tipo
+	* @param int $section_id
+	*
+	* @return string $list_value
+	*/
+	public static function render_list_value($value, $tipo, $parent, $modo, $lang, $section_tipo, $section_id) {
+		
+		if ($modo=='portal_list') {
+			$component	= component_common::get_instance(__CLASS__,
+														 $tipo,
+														 $parent,
+														 $modo,
+														 $lang,
+														 $section_tipo);
+			$value 		= $component->get_html();
+		}
+
+		return $value;
+	}#end render_list_value
+
+
+
+	/**
+	* GET_VALOR_LIST_HTML_TO_SAVE
+	* Usado por section:save_component_dato
+	* Devuelve a section el html a usar para rellenar el 'campo' 'valor_list' al guardar
+	* Por defecto será el html generado por el componente en modo 'list', pero en algunos casos
+	* es necesario sobre-escribirlo, como en component_portal, que ha de resolverse obigatoriamente en cada row de listado
+	* @see class.section.php
+	* @return string $html
+	*//*
+	public function get_valor_list_html_to_save() {
+
+		# Return direct value for store in 'valor_list'. NOT read html file list
+		$html 	= $this->get_valor($lang,'string');
+		
+		return (string)$html;
+	}//end get_valor_list_html_to_save
+	*/
+
+
 
 }
 ?>

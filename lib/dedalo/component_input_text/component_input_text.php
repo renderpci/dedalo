@@ -24,10 +24,11 @@
 	$component_name			= get_class($this);
 	$visible				= $this->get_visible();
 	$file_name				= $modo;
-
+	
 
 	# Verify component content record is inside section record filter
 	if ($this->get_filter_authorized_record()===false) return null ;	
+	
 	
 	switch($modo) {
 		
@@ -58,10 +59,14 @@
 				break;
 				
 		case 'portal_list':
-				if(empty($valor)) return null;					
+				if(empty($valor)) return null;
+
 		case 'list_tm' :
-				$file_name = 'list';						
-		case 'list'	:	
+				$file_name = 'list';
+				# use list file to render value
+										
+		case 'list'	:
+				if(empty($valor)) return null;	
 				break;
 						
 		case 'list_of_values':
@@ -81,7 +86,10 @@
 				if(isset($_REQUEST[$tipo])) $dato = $_REQUEST[$tipo];
 				break;
 						
-		case 'simple':
+		case 'list_thesaurus':
+				$render_vars = $this->get_render_vars();
+					#dump($render_vars, ' render_vars ++ '.to_string());
+				$icon_label = isset($render_vars->icon) ? $render_vars->icon : '';
 				break;						
 	}
 	

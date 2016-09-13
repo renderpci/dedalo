@@ -26,6 +26,17 @@ class component_security_tools extends component_common {
 	}
 
 
+
+	/**
+	* GET_VALOR
+	* @return 
+	*/
+	public function get_valor() {
+		$dato = $this->get_dato(); 
+		return json_encode($dato);
+	}//end get_valor
+
+
 	
 	/*
 	* GET_AR_TOOLS

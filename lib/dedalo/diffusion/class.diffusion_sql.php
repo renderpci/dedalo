@@ -325,12 +325,8 @@ class diffusion_sql extends diffusion  {
 				if(empty($lang_target_section_tipo)) throw new Exception("Error Processing Request. lang_target_section_tipo is empty", 1);		
 				*/
 
-			# Por rehacer. hacer un método estático en section que devuelva TODOS los idiomas de todos los proyectos de la sección (todos los registros)
-			/*
-			$section 				= section::get_instance(NULL,$lang_target_section_tipo,'list');
-			$ar_all_project_langs 	= $section->get_ar_all_project_langs();	
-			*/
-			# Temporal, cogidos desde config :
+			
+			# From config :
 			$ar_all_project_langs 	= unserialize(DEDALO_PROJECTS_DEFAULT_LANGS);			
 			if(SHOW_DEBUG) {
 				#dump($ar_all_project_langs," ar_all_project_langs");die();	
@@ -546,7 +542,7 @@ class diffusion_sql extends diffusion  {
 													#dump($column, ' column '.$curent_children_tipo);
 												$ar_field_data['ar_fields'][$current_section_id][$current_lang][] = $column;
 												break;
-										}//end switch (true) { # DISCRIMINE BYH PROPIEDADES							
+										}//end switch (true) { # DISCRIMINE BY PROPIEDADES							
 											
 								}#end modelo_name switch							
 								
@@ -1070,8 +1066,8 @@ class diffusion_sql extends diffusion  {
 			 in_array($options->section_id, $ar_resolved_static[$options->section_tipo]) ) {
 				#dump($ar_record_updated, ' ar_record_updated ++ '.to_string());
 			 	#dump($options->section_id, ' options->section_id already resolved. Return false ++ '.to_string($options->section_tipo));
-			$response->msg .= 'Record already resolved';
-			return $response;		# Record already resolved
+			#$response->msg .= 'Record already resolved';
+			#return $response;		# Record already resolved
 		}
 
 		
@@ -1122,6 +1118,7 @@ class diffusion_sql extends diffusion  {
 				#
 				# SAVE RECORD . Insert MYSQL record (array) deleting before old data
 				if(isset(self::$ar_table_data[$database_name][$diffusion_section]) && !empty(self::$ar_table_data[$database_name][$diffusion_section])) {
+					
 					$save_options = new stdClass();
 						$save_options->record_data 					    = self::$ar_table_data[$database_name][$diffusion_section];		#dump($save_options, ' save_options ++ '.to_string());die();
 						$save_options->record_data['diffusion_section'] = $diffusion_section;

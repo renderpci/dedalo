@@ -338,7 +338,7 @@
 
 
 	Valencia 04-11-2015 v4.0 RC 4.35
-		component_image: changed save way. Now, on save, defult quality and thumb are created allways to ensure list view consistency. 'valor_list' now is set to null when file thumb not exists, instead a defaul 0.jpg image
+		component_image: changed save way. Now, on save, defult quality and thumb are created always to ensure list view consistency. 'valor_list' now is set to null when file thumb not exists, instead a defaul 0.jpg image
 		search : added ignore project behaviour when section is list of values (tables matrix_list and matrix_dd) to allow all users view all lists
 		backup: added control to export sequence for capture errors and stop next execution (avoid do import with bad auth conditions)
 				added db_system_config_verify for test pgpass file
@@ -441,7 +441,7 @@
 		section_list : solved issue when search. Pagination is set now to offset=0 and offset_list=0 to reset pagination results on every search
 		component_text_area : added support to maintain content and keep changes when broser session is closed
 		tinymce : updated to 4.3.7
-		component_autocomplete: fixed error that return 'valor' allways with DEDALO_DATA_LANG. Now respect received var $lang (affect diffusion mainly)
+		component_autocomplete: fixed error that return 'valor' always with DEDALO_DATA_LANG. Now respect received var $lang (affect diffusion mainly)
 		component_image : fix canvas zoom issue with retina displays
 		paper : updated paper js form 0.9.20 to 0.9.25
 		component_image : image vectors tool : added new big handlers and better points control
@@ -542,6 +542,85 @@
 		btn labels : changed font fron arial to 'liberation'
 		tool_transcription : fixed issue where lang selector it is out of sync with the language of the text area when component_textarea is forced to change lang
 
+	
+	Valencia 04-06-2016 v4.0.12
+		component_select_lang : multi and using locators (like component select)
+		component_project_langs : now use array of locators (like component select)
+		section : get_ar_all_project_langs modified to allow lang locators
+		config : added contant 'TOPONOMY_CENTRAL_SYNC' for define central toponomy manager url
+		ts : added central toponomy manager to set unic id to toponomy terms
+
+	Bengaluru 24-06-2016
+		tool_time_machine : changed behaviour when empty data is saved. Now blank data is saved to time machine record too.
+
+	Jodhpur 23-07-2016
+		tool_export : fixed output inconsistences on export component_filter and component_filter_master
+		lib : tinymce : updated from 4.3.12 to 4.4.0
+		lib : jquery : jquery-ui : updated from 1.11.4 to 1.12
+
+	Pushkar 26-07-2016
+		tool_difussion : add window scrool top on publish record
+		tool_image_versions : fixed loosed section_tipo var on trigger when rotate image
+		
+	Manali 06-08-2016
+		search : javascript coode conversions from jquey to pure javascript and optimized record navigation 
+	
+	Benimamet 17-08-2016
+		lib/json_editor : updated version from 5.1.5 to 5.5.6
+
+	Benimamet 22-08-2016
+		component_autocomplete_ts : implemented tesaurus source modes (defined in 'propiedades'). Current defined modes: 'jer_tipo' and 'childrens_of'
+
+	Benimamet 23-08-2016
+		dd_date : implemented date_modes to save dates, ranges and periods
+		component_date : allow manage ranges, periods and dates
+		component_common:Save : changed main source vars (tipo, parent, section_tipo, etc.) from component dataset to wrapper dataset
+
+	Benimamet 28-08-2016
+		locator : Add property 'type' to object locator
+		hierarchy : Added new hierarchy element to control new tesaurus model
+		json_handler : fixed bug when encoded result 0 was generated an error.
+	
+	Benimamet 01-09-2016
+		component_relation_common : created new class for manage common logic of relation components
+		component_relation_model : created new component to manage thesaurus model relations (extends component_relation_common)
+		component_relation_parent : created new component to manage thesaurus parent relations (extends component_relation_common)
+
+	Benimamet 03-09-2016
+		section : unified valor_list html source in method get_valor_list_html_to_save()
+		backup:init_backup_secuence : Added control to skip time range control
+		dd_date : fix bug when calculated reference time in seconds modify received dd_object subtracting 1 int to days and months
+		dd_date : moved class file from component_date dir to common (another elements but components are using this class now)
+		activity : changed column id. Now section_id is showed instead matrix id
+				   modified matrix_activity table indexes to optimize ordination (added to updates file 4.0.14 to 4.1.0)
+		search : performance : modified order_by when section activity is used. No longuer adds "order by section_id" at end of query
+		common : added get_main_lang method (gets the info from config)
+		component_input_text : now supports main_lang fallback on list mode
+		component_text_area : now supports main_lang fallback on list mode		
+		component_relation_common : added get_main_lang method (gets the info from hierarchy section data)
+		component_relation_parent : now supports main_lang fallback on list mode
+		component_relation_model : now supports main_lang fallback on list mode
+		tool_administration : update_version now make a forced full backup of the database before update data
+
+
+	Ruzafa 03-09-2016
+		common : 'thesaurus' main_lang. Added get_main_lang option to calculate main_lang from hierarchy when is 'thesaurus' section
+		tool_administration : before update section, build thesaurus section to avoid loose secction_tipo resolution when called later
+		component_relation_related : created new component to manage thesaurus terms relations (extends component_relation_common)
+
+	Ruzafa 07-09-2016
+		section : added experimental var $_SESSION['dedalo4']['section_config'][$this->tipo]['list_line'] to control list column ID type
+
+	Ruzafa 09-09-2016
+		config : DEDALO_AR_EXCLUDE_COMPONENTS . Added constant de set aray of components to hide in sections, etc.
+				 Removed action occurs in:	class.component_layout.php, 
+				 							record.php, 
+				 							class.records_search.php, 
+				 							class.component_portal.php, 
+				 							class:component_security_access.php
+		component_autocomplete_ts : added source type 'tree' to add terms directly from thesaurus
+
+
 
 
 	/**
@@ -558,8 +637,9 @@
 
 
 	# Version
-	define('DEDALO_VERSION'	, '4.0.11.rx');
-	define('DEDALO_BUILD'	, '03-06-2016');
+	#define('DEDALO_VERSION'	, '4.1.0.ba');
+	define('DEDALO_VERSION'	, '4.0.14.bc');
+	define('DEDALO_BUILD'	, '11-09-2016');
 
 
 	/*

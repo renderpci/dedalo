@@ -1,11 +1,11 @@
 <?php
-/*
-* CLASS FFMPEG
-*/
 require_once( dirname(dirname(__FILE__)) .'/config/config4.php');
 require_once( DEDALO_LIB_BASE_PATH . '/common/class.exec_.php');
 require_once( DEDALO_LIB_BASE_PATH . '/media_engine/class.PosterFrameObj.php');
 
+/*
+* CLASS FFMPEG
+*/
 class Ffmpeg {
 	
 	protected $settings_path	= DEDALO_AV_FFMPEG_SETTINGS ;
@@ -13,7 +13,17 @@ class Ffmpeg {
 
 	# supported qualitys array
 	static protected $ar_supported_qualitys = array('1080','720','576','480','404','240','audio');
+
+
+
+	public static function get_ffmpeg_installed_path() {	
+		return DEDALO_AV_FFMPEG_PATH;
+	}	
+	public static function get_qt_faststart_installed_path() {		
+		return DEDALO_AV_FASTSTART_PATH;		
+	}
 	
+
 	
 	# ARRAY LIST OF SETTING FILES INSIDE DIR 'ffmpeg_settings' 
 	public function get_ar_settings() {
@@ -30,10 +40,14 @@ class Ffmpeg {
 			return 	$this->ar_settings ;		
 		}
 		return false;
-	}
 
-	
-	# SETTING NAME FROM QUALITY
+	}//end get_ar_settings
+
+
+	/**
+	* GET_SETTING_NAME_FROM_QUALITY
+	* Setting name from quality
+	*/
 	public function get_setting_name_from_quality(AVObj $AVObj, $quality) {
 		
 		# CREATE A NEW AVOBJ AS MASTER MEDIA 
@@ -62,9 +76,11 @@ class Ffmpeg {
 		$setting = $quality . $media_standar . $aspect_ratio ;
 		
 		return $setting;
-	}
+
+	}//end get_setting_name_from_quality
 	
 	
+
 	# QUALITY FROM SETTING
 	public function get_quality_from_setting($setting) {
 		
@@ -77,19 +93,19 @@ class Ffmpeg {
 			$pos	= stripos($setting, $quality);			
 			if($pos!==false) return $quality;		
 		}
-		return false;	
-	}
+		return false;
+
+	}//end get_quality_from_setting
 	
-	
-	# GET MASTER MEDIA FILE FOR GENERATE ALTERNATIVE VERSION
+
+	/**
+	* GET_MASTER_MEDIA_FILE
+	* Get master media file for generate alternative version
+	*/
 	public function get_master_media_file($AVObj) {	
 	
 		$name	 	= $AVObj->get_name();
-		$extension	= $AVObj->get_extension();
-		if(SHOW_DEBUG) {
-			#dump($name, " NAME ".to_string());	
-		}
-				
+		$extension	= $AVObj->get_extension();					
 			
 		$ar_quality = unserialize(DEDALO_AV_AR_QUALITY);
 		
@@ -127,10 +143,16 @@ class Ffmpeg {
 			#}
 		}//end if(is_array($ar_quality)) foreach($ar_quality as $quality) {
 		return false;
-	}
+
+	}//end get_master_media_file
 	
+
 	
-	# GET MASTER MEDIA FILE QUALITY FROM FILE NAME
+	/**
+	* GET_MASTER_MEDIA_FILE_QUALITY
+	* Get master media file quality from file name
+	* @param object $AVObj
+	*/
 	public function get_master_media_file_quality($AVObj) {	
 	
 		$master_media_file = $this->get_master_media_file($AVObj);
@@ -141,10 +163,15 @@ class Ffmpeg {
 		$quality 	= $ar[$key];
 				
 		return $quality;
-	}
+
+	}//end get_master_media_file_quality
+
 	
 	
-	# GET MASTER MEDIA FILE QUALITY FROM FILE NAME
+	/**
+	* GET_MASTER_MEDIA_FILE_OBJ
+	* Get master media file quality from file name
+	*/
 	public function get_master_media_file_obj($AVObj) {	
 	
 		$reelID						= $AVObj->get_reelID();
@@ -153,7 +180,8 @@ class Ffmpeg {
 		$obj = new AVObj($reelID, $master_media_file_quality);
 				
 		return $obj;
-	}
+
+	}//end get_master_media_file_obj
 	
 	
 	
@@ -166,7 +194,6 @@ class Ffmpeg {
 	*
 	* @return $av_alternate_command_exc
 	*	Terminal commnad response
-	*
 	*/
 	public function create_av_alternate(AVObj $AVObj, $setting) {
 				
@@ -273,10 +300,6 @@ class Ffmpeg {
 		  				  		 		
 		}# End if source file is directory
 
-		if(SHOW_DEBUG) {
-			#dump($src_file, " src_file ".to_string($final_target_path));
-			#die();
-		}
 		
 		# SOME UTIL VARS		
 		$target_file		= $final_target_path 			. '/' .$AVObj->get_name() . '.' . DEDALO_AV_EXTENSION;
@@ -284,8 +307,7 @@ class Ffmpeg {
 		$tmp_file_base		= $tmp_folder . '/tmp_' . time();
 		$tmp_file			= $tmp_file_base .'_' . $AVObj->get_name() . '.' . DEDALO_AV_EXTENSION;		
 		$log_file 			= $tmp_file_base .'_' . $AVObj->get_name() . '_log';
-
-		#dump($target_file, "source file: ".$src_file); return null;		
+		
 		
 			# tmp dir exists	
 			if( !is_dir($tmp_folder) ) {
@@ -324,19 +346,9 @@ class Ffmpeg {
 			}
 		}
 
-
 		#
 		# FFMPEG AUDIO CODEC TEST
-		$ffmpeg_info = shell_exec(DEDALO_AV_FFMPEG_PATH .' -buildconf');
-		if (strpos($ffmpeg_info, '--enable-libfdk-aac')!==false) {
-			$acodec = 'libfdk_aac';
-		}else{
-			if(empty($acodec)) {
-				$acodec = 'libvo_aacenc'; // Default only with version <3
-			} 
-		}
-		debug_log(__METHOD__." Using audio codec $acodec from ffmpeginfo : ".to_string($ffmpeg_info), logger::DEBUG);
-
+		$acodec = self::get_audio_codec();
 
 		
 		# COMMANDS SHELL
@@ -429,17 +441,12 @@ class Ffmpeg {
 			throw new Exception("Error Processing Media. Script file not exists or is not accessible", 1);	
 			#trigger_error("Error Processing Media. Script file not exists or is not accessible");	
 		}
-		#exec("sh $prgfile > /dev/null &",$rv); # funciona!!! <<<<
-		#unlink($prgfile);
-		
+				
 		$av_alternate_command_exc = exec_::exec_sh_file($prgfile);		
-		
 
 		return $av_alternate_command_exc;
-	}
 
-
-
+	}//end create_av_alternate
 
 	
 	
@@ -536,20 +543,8 @@ class Ffmpeg {
 		$posterFrame_command_exc = exec_::exec_command($command);		
 		
 		return $posterFrame_command_exc;
-	}
-	
-	
-	
-	
-	
-	
-	public static function get_ffmpeg_installed_path() {	
-		return DEDALO_AV_FFMPEG_PATH;
-	}
-	
-	public static function get_qt_faststart_installed_path() {		
-		return DEDALO_AV_FASTSTART_PATH;		
-	}
+
+	}//end create_posterframe	
 	
 	
 	
@@ -611,19 +606,17 @@ class Ffmpeg {
 			$command_exc = exec_::exec_command($command);
 
 			error_log($command);
-		}		
-		#error_log($command_exc);
+		}
 
-		$file_url = 'http://' . $_SERVER['HTTP_HOST'] . $AVObj->get_media_path() .'fragments/'. $target_filename ;
-			#error_log("file_url ".$file_url);
+		$file_url = 'http://' . $_SERVER['HTTP_HOST'] . $AVObj->get_media_path() .'fragments/'. $target_filename;
 
 		return $file_url;
-	}
+
+	}//end build_fragment
 	
 	
 	
-	
-	/*
+	/**
 	* CONFORM_HEADER
 	*/
 	public function conform_header(AVObj $AVObj) {
@@ -690,8 +683,7 @@ class Ffmpeg {
 
 
 	
-	
-	/*
+	/**
 	* CONVERT_AUDIO
 	*/
 	public function convert_audio(AVObj $AVObj, $uploaded_file_path) {
@@ -708,9 +700,13 @@ class Ffmpeg {
 		# ffmpeg -i INPUT_FILE.EXT -aq 70 -acodec libfaac -map_meta_data OUTPUT_FILE.EXT:INPUT_FILE.EXT OUTPUT_FILE.EXT
 		# ffmpeg -i input.wav -c:a libfdk_aac -b:a 128k output.m4a
 		# ffmpeg -i input.wav -strict experimental -c:a aac -b:a 240k output.m4a
+
+		#
+		# FFMPEG AUDIO CODEC TEST
+		$acodec = self::get_audio_codec();
 		
 		# Convert file
-		$command .= "$ffmpeg_installed_path -i $uploaded_file_path -strict experimental -c:a aac -b:a 240k $output_file_path ";
+		$command .= "$ffmpeg_installed_path -i $uploaded_file_path -acodec $acodec -ar 44100 -ab 240k -ac 2 $output_file_path ";
 
 		# Faststart
 		$command .= "&& $qt_faststart_installed_path $output_file_path $output_file_path ";
@@ -730,8 +726,6 @@ class Ffmpeg {
 
 
 
-
-
 	/**
 	* CONVERT_TO_DEDALO_AV
 	* Transcode any media to dedalo standar quality (usually 404)
@@ -744,13 +738,7 @@ class Ffmpeg {
 
 		#
 		# FFMPEG AUDIO CODEC TEST
-		$ffmpeg_info = shell_exec(DEDALO_AV_FFMPEG_PATH .' -buildconf');
-		if (strpos($ffmpeg_info, '--enable-libfdk-aac')!==false) {
-			$acodec = 'libfdk_aac';	  // ffmpeg version >=3 need custom config: install ffmpeg --with-fdk-aac
-		}else{			
-			$acodec = 'libvo_aacenc'; // Default only with version <3 (--enable-libvo-aacenc)	 
-		}
-
+		$acodec = self::get_audio_codec();
 
 		$path_parts 	  = pathinfo($target_file);
 		$temp_target_file = $path_parts['dirname'] .'/'. $path_parts['filename'] .'_temp.' . $path_parts['extension'];
@@ -761,7 +749,6 @@ class Ffmpeg {
 		$command .= "&& mv $temp_target_file $target_file ";
 		# Comando procesado sólo fast start
 		#$command = "nice $qt_faststart_path $source_file $target_file";
-
 		
 		if ($async) {
 			# Exec without wait finish
@@ -769,14 +756,12 @@ class Ffmpeg {
 		}else{
 			# Exec wait finish
 			exec("$command");
-		}		
-		
-
-		if(SHOW_DEBUG) {
-			debug_log(__METHOD__." command: $command ", logger::DEBUG);
 		}	
 
-	}#end convert_to_dedalo_av
+		
+		debug_log(__METHOD__." command: $command ", logger::DEBUG);			
+
+	}//end convert_to_dedalo_av
 
 
 
@@ -815,7 +800,7 @@ class Ffmpeg {
 
 	   	return $output;
 
-	}#end get_media_attributes
+	}//end get_media_attributes
 
 
 
@@ -830,27 +815,37 @@ class Ffmpeg {
 
 	   	return $output;
 
-	}#end get_media_streams
+	}//end get_media_streams
 	
 
 
+	/**
+	* GET_AUDIO_CODEC
+	* @return string $acodec
+	*/
+	public static function get_audio_codec() {
+
+		#
+		# FFMPEG AUDIO CODEC TEST
+		$ffmpeg_info = shell_exec(DEDALO_AV_FFMPEG_PATH .' -buildconf');
+		if (strpos($ffmpeg_info, '--enable-libfdk-aac')!==false) {		
+			// Version >=3 with libfdk-aac installed
+			$acodec = 'libfdk_aac';
+		}else if (strpos($ffmpeg_info, 'libvo_aacenc')!==false) {
+			// Default only with version <3
+			$acodec = 'libvo_aacenc'; 
+		}else{
+			// Default native ffmpeg >= 3
+			$acodec = 'aac';
+		}
+		debug_log(__METHOD__." Using audio codec $acodec from ffmpeginfo : ".to_string($ffmpeg_info), logger::DEBUG);
+
+		return $acodec;
+		
+	}//end get_audio_codec
+
+
 
 	
-}
-
-
-
-# ffmpeg -i input.dv -r 1  -t 00:00:01 -f image2 images%05d.png
-
-# ffmpeg -i VideoFile.flv -ss 00:00:01.00 -vcodec mjpeg -vframes 1 -f image2 VideoFile.jpg
-
-
-/*
-		sudo -u _www /usr/local/bin/ffmpeg -i /Users/paco/Sites/dedalo/media/av/404/1.mp4 -an -pass 1 -vcodec libx264 -vb 256k -s 428x240 -g 75 -vf yadif -vf lutyuv="u=gammaval(1.01):v=gammaval(0.98):y=gammaval(0.97)" -f mp4 -passlogfile /Users/paco/Sites/dedalo/media/av/tmp/tmp_1328966200_1a -y /Users/paco/Sites/dedalo/media/av/tmp/tmp_1328966200_1.mp4  && sudo -u _www /usr/local/bin/ffmpeg -i /Users/paco/Sites/dedalo/media/av/404/1.mp4 -an -pass 2 -vcodec libx264 -vb 256k -s 428x240 -g 75 -vf yadif -vf lutyuv="u=gammaval(1.01):v=gammaval(0.98):y=gammaval(0.97)" -f mp4 -passlogfile /Users/paco/Sites/dedalo/media/av/tmp/tmp_1328966200_1a -y -acodec libvo_aacenc -ar 24000 -ab 28k -ac 1 -y /Users/paco/Sites/dedalo/media/av/tmp/tmp_1328966200_1.mp4  &&
-sudo -u _www /usr/local/bin/qt-faststart /Users/paco/Sites/dedalo/media/av/tmp/tmp_1328966200_1.mp4 /Users/paco/Sites/dedalo/media/av/240/1.mp4  && sudo -u _www rm -f /Users/paco/Sites/dedalo/media/av/tmp/tmp_1328966200_1.mp4
-		
-		
-		sudo -u www /usr/local/bin/ffmpeg -i /Users/paco/Sites/dedalo/media/av/404/1.mp4 -an -pass 1 -vcodec libx264 -vb 256k -s 428x240 -g 75 -vf yadif -vf lutyuv="u=gammaval(1.01):v=gammaval(0.98):y=gammaval(0.97)" -f mp4 -passlogfile /Users/paco/Sites/dedalo/media/av/tmp/tmp_1328966200_1a -y /Users/paco/Sites/dedalo/media/av/tmp/tmp_1328966200_1.mp4 2>&1 && sudo -u www /usr/local/bin/ffmpeg -i /Users/paco/Sites/dedalo/media/av/404/1.mp4 -an -pass 2 -vcodec libx264 -vb 256k -s 428x240 -g 75 -vf yadif -vf lutyuv="u=gammaval(1.01):v=gammaval(0.98):y=gammaval(0.97)" -f mp4 -passlogfile /Users/paco/Sites/dedalo/media/av/tmp/tmp_1328966200_1a -y -acodec libvo_aacenc -ar 24000 -ab 28k -ac 1 -y /Users/paco/Sites/dedalo/media/av/tmp/tmp_1328966200_1.mp4 2>&1 &&
-sudo -u www /usr/local/bin/qt-faststart /Users/paco/Sites/dedalo/media/av/tmp/tmp_1328966200_1.mp4 /Users/paco/Sites/dedalo/media/av/240/1.mp4  2>&1 && sudo -u www rm -f /Users/paco/Sites/dedalo/media/av/tmp/tmp_1328966200_1.mp4 2>&1  
-*/	
+}//end Ffmpeg class
 ?>

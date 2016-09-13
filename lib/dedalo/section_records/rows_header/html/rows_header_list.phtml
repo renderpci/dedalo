@@ -24,8 +24,10 @@
 					
 					# TD DATOS	
 					foreach($ar_label_html as $tipo => $label_html) {
+
+						$td_css_selector_tipo = 'th_column_'.$tipo;
 						
-						$html_contenido .= "\n <th data-resizable-column-id=\"$tipo\">";
+						$html_contenido .= "\n <th class=\"$td_css_selector_tipo\" data-resizable-column-id=\"$tipo\">";
 						
 							$html_contenido .= "<div class=\"th_title\" title=\"$label_html\">";
 							$html_contenido .= $label_html;

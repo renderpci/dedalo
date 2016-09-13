@@ -1,0 +1,47 @@
+<?php
+
+	# VISUALIZADOR HTML	
+
+	
+	if(isset($_REQUEST[$tipo])) $dato = $_REQUEST[$tipo];
+	
+	print "\n<!-- COMPONENT ".__CLASS__." -->";
+	print "\n<div class=\"wrap_component css_wrap_relation_children\" >";
+	
+	# ETIQUETA (LABEL)
+	$html_label = component_common_draw::draw_label($this);
+	
+	# CONTENIDO (INPUT)
+	$html_contenido = '';
+	switch($permissions) {
+			
+		case 0	:	$html_contenido .= "";
+					break;
+						
+		
+		case ($permissions>=1)	:
+
+					# COMPARISON OPERATORS
+					$html_contenido .= operator::get_search_comparison_operators_html($tipo,$ar_comparison_operators);
+
+					
+					# INPUT
+					$html_contenido .= "\n<input class=\"css_relation_children\" type=\"text\" value=\"\"/> ";
+					
+
+					# LOGICAL OPERATORS
+					$html_contenido .= operator::get_search_logical_operators_html($tipo,$ar_logical_operators);
+											
+	}
+	
+	# Prepare content to show in page
+	tools::prepare_content($html_contenido);
+	
+
+	# PRINT HTML
+	print $html_label;
+	print $html_contenido;	
+
+	
+	print "\n</div><!-- /css_wrap_relation_children -->\n\n"; //wrap
+?>

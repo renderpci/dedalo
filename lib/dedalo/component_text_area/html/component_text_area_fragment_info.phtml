@@ -8,11 +8,12 @@
 	switch($permissions) {
 			
 		case 0	:	
-			$html_contenido .= "\n <span class=\"css_span_dato\"> No access here (text_area)! </span>";	
-			break;
-						
+			$html_contenido .= "";	
+			break;						
 		
-		case ($permissions>=1)	:			
+		case 1	:
+		case 2	:
+		case 3	:		
 			
 			# Fragment info div
 			$html_contenido .= "
@@ -20,6 +21,7 @@
 			data-section_tipo=\"{$section_tipo}\"
 			data-parent=\"$parent\"
 			data-tipo=\"$tipo\"
+			data-modo=\"{$modo}\"
 			data-caller_id=\"$caller_id\"
 			data-rel_locator='$rel_locator'
 			> 

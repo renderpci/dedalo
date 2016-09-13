@@ -9,12 +9,16 @@ class component_select extends component_common {
 	# Overwrite __construct var lang passed in this component
 	protected $lang = DEDALO_DATA_NOLAN;
 
+
+	/**
+	* __CONSTRUCT
+	*/
 	function __construct($tipo=null, $parent=null, $modo='edit', $lang=DEDALO_DATA_NOLAN, $section_tipo=null) {
 
 		# Force always DEDALO_DATA_NOLAN
 		$lang = $this->lang;
 
-		# Creamos el componente normalmente
+		# Build the componente normally
 		parent::__construct($tipo, $parent, $modo, $lang, $section_tipo);
 
 		if(SHOW_DEBUG) {
@@ -23,9 +27,15 @@ class component_select extends component_common {
 				throw new Exception("Error Processing Request. Wrong component lang definition. This component $tipo (".get_class().") is not 'traducible'. Please fix this ASAP", 1);
 			}
 		}
-	}
+	}//end __construct
 
-	# GET DATO : 
+
+
+	/**
+	* GET DATO
+	* @return array $dato
+	*	$dato is always an array of locators
+	*/
 	public function get_dato() {
 		$dato = parent::get_dato();
 
@@ -38,36 +48,30 @@ class component_select extends component_common {
 		if ($dato==null) {
 			$dato=array();
 		}
-		#$dato = json_handler::decode(json_encode($dato));	# Force array of objects instead default array of arrays
-		#dump($dato," dato");
-		return (array)$dato;
-	}
 
-	# SET_DATO
+		return (array)$dato;
+	}//end get_dato
+
+
+
+	/**
+	* SET_DATO
+	* @param array|string $dato
+	*	When dato is string is because is a json encoded dato
+	*/
 	public function set_dato($dato) {
 		if (is_string($dato)) { # Tool Time machine case, dato is string
 			$dato = json_handler::decode($dato);
 		}
-		if(SHOW_DEBUG) {
-			#dump($dato," dato original");
-		}
 		if (is_object($dato)) {
-			$dato = array($dato);
+			$dato = array($dato);			
 		}
+		# Ensures is a real non-associative array (avoid json encode as object)
+		$dato = is_array($dato) ? array_values($dato) : (array)$dato;
 
 		parent::set_dato( (array)$dato );
-	}
-	/* OLD
-	# GET DATO : Format "43"
-	public function get_dato() {
-		$dato = parent::get_dato();
-		return (string)$dato;
-	}
-	# SET_DATO
-	public function set_dato($dato) {
-		parent::set_dato( (string)$dato );
-	}
-	*/
+	}//end set_dato
+
 
 	
 	/**
@@ -75,7 +79,7 @@ class component_select extends component_common {
 	* Get value . default is get dato . overwrite in every different specific component
 	* @return string | null $valor
 	*/
-	public function get_valor($lang=DEDALO_DATA_LANG) {				
+	public function get_valor($lang=DEDALO_DATA_LANG) {
 
 		if (isset($this->valor)) {
 			if(SHOW_DEBUG) {
@@ -85,43 +89,43 @@ class component_select extends component_common {
 		}
 
 		$valor  = null;		
-		$dato   = $this->get_dato();	#dump($dato, ' dato ++ '.$this->tipo.'  - '.to_string($this->parent));
+		$dato   = $this->get_dato();
 		if (!empty($dato)) {
 			
 			# Test dato format (b4 changed to object)
 			if(SHOW_DEBUG) {
-				foreach ($dato as $key => $value) {
-					if (!is_object($value)) {
+				foreach ($dato as $key => $current_value) {
+					if (!is_object($current_value)) {
 						if(SHOW_DEBUG) {
 							dump($dato," dato");
 						}
-						trigger_error(__METHOD__." Wrong dato format. OLD format dato in $this->label $this->tipo .Expected object locator, but received: ".gettype($value) .' : '. print_r($value,true) );
+						trigger_error(__METHOD__." Wrong dato format. OLD format dato in $this->label $this->tipo .Expected object locator, but received: ".gettype($current_value) .' : '. print_r($current_value,true) );
 						return $valor;
 					}
 				}
 			}		
 
 			# Always run list of values
-			$ar_list_of_values	= $this->get_ar_list_of_values( $lang, null ); # Importante: Buscamos el valor en el idioma actual
+			$referenced_tipo 	= $this->get_referenced_tipo();
+			$ar_list_of_values	= $this->get_ar_list_of_values( $lang, null, $referenced_tipo ); # Importante: Buscamos el valor en el idioma actual
 
-			foreach ($ar_list_of_values->result as $locator => $rotulo) {
+			foreach ($ar_list_of_values->result as $locator => $label) {
 				$locator = json_handler::decode($locator);	# Locator is json encoded object
-					#dump($rotulo, ' rotulo ++ '.to_string($locator));
-				if (in_array($locator, $dato)) {
-					$valor = $rotulo;
+					#dump($label, ' label ++ '.to_string($locator));
+				
+				$founded = locator::in_array_locator( $locator, $ar_locator=$dato, $ar_properties=array('section_tipo','section_id') );
+				if ($founded) {
+					$valor = $label;
 					break;
 				}
 			}
 
 		}//end if (!empty($dato)) 
 
-		# Set valor
+		# Set component valor
 		$this->valor = $valor;
 
-		#dump($valor, ' valor ++ '.to_string());	
-
 		return $valor;
-
 	}//end get_valor
 
 
@@ -148,8 +152,8 @@ class component_select extends component_common {
 		}else{
 			$lang = DEDALO_DATA_LANG;
 		}
-		return $lang;
 
+		return $lang;
 	}#end get_valor_lang
 
 
@@ -199,6 +203,7 @@ class component_select extends component_common {
 			$search_query = " -- filter_by_search $search_tipo ". get_called_class() ." \n".$search_query;
 			#dump($search_query, " search_query for search_value: ".to_string($search_value)); #return '';
 		}
+
 		return $search_query;
 	}//end get_search_query
 
@@ -209,18 +214,17 @@ class component_select extends component_common {
 	* Return component value sended to export data
 	* @return string $valor
 	*/
-	public function get_valor_export( $valor=null, $lang=DEDALO_DATA_LANG ) {
+	public function get_valor_export( $valor=null, $lang=DEDALO_DATA_LANG, $quotes, $add_id ) {
 
 		# When is received 'valor', set as dato to avoid trigger get_dato against DB 
 		# Received 'valor' is a json string (array of locators) from previous database search
 		if (!is_null($valor)) {
 			$dato = json_decode($valor);
-			$this->set_dato($dato);			
+			$this->set_dato($dato);
 		}
 		$valor = $this->get_valor($lang);
 		
 		return $valor;
-
 	}#end get_valor_export
 
 
@@ -255,11 +259,28 @@ class component_select extends component_common {
 		$component->set_dato($ar_records);
 		$component->set_identificador_unico($component->get_identificador_unico().'_'.$section_id); // Set unic id for build search_options_session_key used in sessions
 		
-		return  $component->get_valor($lang);
-		
+		return  $component->get_valor($lang);		
 	}#end render_list_value
 
 
+
+	/**
+	* GET_VALOR_LIST_HTML_TO_SAVE
+	* Usado por section:save_component_dato
+	* Devuelve a section el html a usar para rellenar el 'campo' 'valor_list' al guardar
+	* Por defecto será el html generado por el componente en modo 'list', pero en algunos casos
+	* es necesario sobre-escribirlo, como en component_portal, que ha de resolverse obigatoriamente en cada row de listado
+	*
+	* En este caso, usaremos únicamente el valor en bruto devuelto por el método 'get_dato_unchanged'
+	*
+	* @see class.section.php
+	* @return mixed $result
+	*/
+	public function get_valor_list_html_to_save() {
+		$result = $this->get_dato_unchanged();
+
+		return $result;
+	}//end get_valor_list_html_to_save
 
 	
 	

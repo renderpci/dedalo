@@ -34,18 +34,24 @@
 			$userID					= $tm_obj->get_userID();
 			$mod_user_name			= $tm_obj->get_user_name();
 			$id_time_machine		= $tm_obj->get_ID();
+			$component_tipo 		= $tm_obj->get_tipo();
 			$lang					= $tm_obj->get_lang();
 			$dato					= $tm_obj->get_dato();
 			$identificador_unico 	= $tm_obj->get_identificador_unico();		
 			$show_row 		 		= true;
 
-			if (is_string($dato)) {
-				$dato_string	= TR::deleteMarks($dato);
-				$dato_string	= strip_tags($dato_string);
-				$dato_string	= substr($dato_string, 0, 150);			
-			}else{
-				$dato_string	= "Sorry, no preview for scalar data: ".gettype($dato);
-			}			
+			$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+			switch ($modelo_name) {
+				case 'component_text_area':
+					$dato_string	= TR::deleteMarks($dato);
+					$dato_string	= strip_tags($dato_string);
+					$dato_string	= substr($dato_string, 0, 150);	
+					break;
+				
+				default:
+					$dato_string	= to_string($dato);
+					break;
+			}		
 
 			# ROW HTML
 			if ($show_row===true) {

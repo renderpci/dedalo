@@ -7,6 +7,7 @@
 	$section_tipo			= $this->get_section_tipo();
 	$modo					= $this->get_modo();		
 	$dato 					= $this->get_dato();
+	$propiedades 			= $this->get_propiedades();
 	$label 					= $this->get_label();
 	$required				= $this->get_required();
 	$debugger				= $this->get_debugger();
@@ -24,6 +25,7 @@
 	if ($this->get_filter_authorized_record()===false) return NULL ;
 
 	$file_name				= $modo;
+	$from_modo				= $modo;
 	
 	switch($modo) {		
 
@@ -35,8 +37,18 @@
 				$ar_link_fields	= json_handler::encode($this->ger_ar_link_fields());
 				$component_info = $this->get_component_info('json');
 				$dato_json 		= json_encode($dato);
-				$ar_referenced_tipo = $this->get_ar_referenced_tipo();
-			$ar_referenced_tipo_json= json_handler::encode($this->get_ar_referenced_tipo());	
+				$ar_referenced_tipo 	= $this->get_ar_referenced_tipo();
+				$ar_referenced_tipo_json= json_handler::encode($this->get_ar_referenced_tipo());
+					#dump($ar_referenced_tipo, ' $ar_referenced_tipo ++ '.to_string());
+
+				$hide_types = isset($propiedades->source->value) ? $propiedades->source->value : null;
+
+				if (isset($_REQUEST['from_modo'])) {
+					$from_modo = $_REQUEST['from_modo'];
+				}
+				# SOURCE_MODE
+				$source_mode = $this->get_source_mode();
+					#dump($source_mode, ' source_mode ++ '.to_string());
 				break;
 
 		case 'tool_time_machine'	:	
@@ -44,7 +56,7 @@
 				$id_wrapper = 'wrapper_'.$identificador_unico.'_tm';
 				$input_name = "{$tipo}_{$id}_tm";
 				$file_name 	= 'edit';
-				break;	
+				break;
 						
 		case 'search' :	
 				$id_wrapper = 'wrapper_'.$identificador_unico;
@@ -70,12 +82,20 @@
 		case 'list_tm' :
 				$file_name = 'list';						
 		case 'portal_list':
+				$id_wrapper 	= 'wrapper_'.$identificador_unico;
+				$dato_json 		= json_encode($dato);
+				$component_info = $this->get_component_info('json');
+				$valor 			= $this->get_valor($lang);
+				$ar_valor 		= $this->get_valor($lang,'array');
+				
 				$file_name 	= 'list';
-		case 'list'	:				
-				$valor 		= $this->get_valor($lang,'string');				
-					#dump($valor, ' valor ++ '.to_string());
+				break;
+				
+		case 'list'	:						
 				# Return direct value for store in 'valor_list'
-				#return (string)$valor; 	# Like "Catarroja, L'Horta Sud, Valencia/València, Comunidad Valenciana, España"
+				$valor = $this->get_valor($lang,'string');
+				echo (string)$valor; 	# Like "Catarroja, L'Horta Sud, Valencia/València, Comunidad Valenciana, España"
+				return; // NOT load html file
 				break;
 
 		case 'relation':

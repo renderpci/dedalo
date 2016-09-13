@@ -4,8 +4,7 @@ require_once( dirname(dirname(__FILE__)).'/config/config4.php');
 /**
 * LOGIN
 */
-$is_logged	= login::is_logged();
-	
+$is_logged	= login::is_logged();	
 if($is_logged!==true) {
 	$url =  DEDALO_ROOT_WEB ."/main/";
 	header("Location: $url");
@@ -42,6 +41,9 @@ if($accion=='show_indexations') {
 	# DATA VERIFY
 	if(empty($terminoID) || strlen($terminoID)<3) exit("Trigger Error: terminoID is mandatory");
 
+	# Write session to unlock session file
+	session_write_close();
+
 	# DIFFUSION_INDEX_TS
 	$diffusion_index_ts = new diffusion_index_ts($terminoID);
 	$html 				= $diffusion_index_ts->get_html();
@@ -58,33 +60,68 @@ if($accion=='show_indexations') {
 */
 if($accion=='insertTS') {
 	
-	if(!$parent)	exit("Need more vars: parent: $parent ");
-	if(!$modo)		exit("Need more vars: modo: $modo ");
+	if(empty($parent))	exit("Need more vars: parent: $parent ");
+	if(empty($modo))	exit("Need more vars: modo: $modo ");
 
-	$html ='';	
-	$prefijo 	= substr($parent,0,2);	
-	$esmodelo 	= 'no';
-	if($modo=='modelo_edit') $esmodelo	= 'si';
+	$html ='';
+
+	$prefix 	= substr($parent,0,2);
+	$esmodelo 	= ($modo=='modelo_edit') ? 'si' : 'no';
+
+	#
+	# CREATED_TERMINOID . Important: is null by default, but when is used TOPONOMY_CENTRAL_SYNC,
+	# is overwrited by the received terminoID
+	$created_terminoID = null;
+
+	#
+	# TOPONOMY_CENTRAL_SYNC
+	# Defined in config optional. When is set, a petition is made to central repository 
+	# of toponyms and returned is used for avoid id collisions	
+	if (defined('TOPONOMY_CENTRAL_SYNC') && strlen(TOPONOMY_CENTRAL_SYNC)) {
+
+		$created_terminoID = RecordObj_ts::update_toponomy_central_sync_jer( $prefix, $parent, $esmodelo );
 	
-	$RecordObj_ts 	= new RecordObj_ts(NULL,$prefijo);	
+	}//end defined('TOPONOMY_CENTRAL_SYNC') && strlen(TOPONOMY_CENTRAL_SYNC)
+
+	
+
+	#
+	# RECORDOBJ_TS : CREATE TERM	
+	$RecordObj_ts 	= new RecordObj_ts($created_terminoID, $prefix);
+
 		# Defaults
 		$RecordObj_ts->set_esdescriptor('si');
 		$RecordObj_ts->set_visible('si');
 		$RecordObj_ts->set_usableIndex('si');
 		$RecordObj_ts->set_parent($parent);
-		$RecordObj_ts->set_esmodelo($esmodelo);	
+		$RecordObj_ts->set_esmodelo($esmodelo);
+
+		if (!empty($created_terminoID)) {
+			
+			$id = $RecordObj_ts->terminoID2id($created_terminoID);				
+
+			$RecordObj_ts->set_ID($id);
+			$RecordObj_ts->set_terminoID($created_terminoID);
+			$RecordObj_ts->set_force_insert_on_save(true);
+
+			#dump($id, ' id ++ '.to_string($created_terminoID)); 
+			#dump($RecordObj_ts, ' RecordObj_ts ++ '.to_string());
+			#die();
+		}
+		
 	
-	# SAVE : After save, we can recover new created terminoID (prefix+autoIncrement)
-	$created_id_ts = $RecordObj_ts->Save();
-		#dump($created_id_ts,'created_id_ts'," "); #die();
-	
-	# TERMINOID : Seleccionamos el último terminoID recien creado		
-	$terminoID	= $RecordObj_ts->get_terminoID();
-		#dump($RecordObj_ts,'RecordObj_ts',"new obj created terminoID:$terminoID, id:$created_id_ts "); die( );	
-	
-	# DESCRIPTORS : finally we create one record in descriptors with this main info 
+		# SAVE : After save, we can recover new created terminoID (prefix+autoIncrement)
+		$created_id_ts = $RecordObj_ts->Save();
+			#dump($created_id_ts,'created_id_ts'," "); #die();
+		
+		# TERMINOID : Seleccionamos el último terminoID recien creado		
+		$terminoID	= $RecordObj_ts->get_terminoID();
+			#dump($RecordObj_ts,'RecordObj_ts',"new obj created terminoID:$terminoID, id:$created_id_ts "); die( );	
+
+	#
+	# DESCRIPTORS :  CREATE TERM . Finally we create one record in descriptors with this main info 
 		# Usaremos como lenguaje de creación, el lenguaje principal de la jerarquía actual. 
-		# (Ej. para 'je_dd', 'lg-spa' , definido en la tabla 'jerarquia')
+		# (Ej. para 'je_es', 'lg-spa' , definido en la tabla 'jerarquia')
 		$lang					= Jerarquia::get_mainLang($terminoID);
 			#dump($lang,'lang');
 
@@ -93,8 +130,11 @@ if($accion=='insertTS') {
 		$RecordObj_descriptors->set_tipo('termino');
 		$RecordObj_descriptors->set_parent($terminoID);
 		$RecordObj_descriptors->set_lang($lang);
+
 		$created_id_descriptors	= $RecordObj_descriptors->Save();
 
+
+	#
 	# ACTIVITY LOG
 	$matrix_table 			= RecordObj_descriptors::$descriptors_matrix_table;
 	$time_machine_last_id 	= $RecordObj_descriptors->get_time_machine_last_id();
@@ -143,54 +183,158 @@ if($accion=='insertTS') {
 		echo $html ;
 	}
 	
-	die();	
-}
+	die();
 
+}//end insertTS
 
 
 
 /**
-* UPDATE_TR_ORDER
+* EDIT V4
 */
-if($accion=='update_tr_order') {
-
-	if(empty($terminoID))	exit("Need more vars: terminoID");
-	if(empty($dato))		exit("Need more vars: dato");
-
-	$html='';	
-		
-	$RecordObj_ts = new RecordObj_ts($terminoID);	
-	$RecordObj_ts->set_relaciones($dato);	
+if($accion=='editTS') {
 	
-	# SAVE 
-	$RecordObj_ts->Save();				
-		#dump($RecordObj_ts,'$RecordObj_ts'); #die();
+	if(!$_POST) exit();
+					
+	# varibles recibidas obligatorias
+	$parentInicial 	= $_POST['parentInicial']; 
+	$parentPost 	= $_POST['parent'];
+	$esdescriptor	= $_POST['esdescriptor'];
+	$propiedades	= $_POST['propiedades'];
+	$nHijos			= intval($nHijos);
 
-	$html = 'ok';			
+	# required fields
+	if(!$parentInicial || !isset($nHijos) || !$esdescriptor) die("TS edit Error: \n few arguments !");
+	
+	# verificamos que parentPost está bien formado (Evita errores de ts25 por tp25...)
+	$parentPost			= Tesauro::prefijoFix2($terminoID, $parentPost);
+	$prefijo_compare	= Tesauro::prefijo_compare($terminoID, $parentPost);
+	if($prefijo_compare !== true) die("TS Edit Error: \n parentPost invalid! [$terminoID - $parentPost] (equal to self terminoID) \n Use a valid parent.");	
+	
+	# Imposibilita cambiar a NO descriptor un descriptor con hijos
+	if($esdescriptor =='no' && $nHijos>0 ) die(" $no_se_puede_cambiar_a_ND_title ");	
+		
+	# si el término es ND, forzamos usableIndex = 'no' ...
+	if($esdescriptor == 'no') {		
+		$usableIndex 	= 'no';
+		$esmodelo		= 'no';
+	}else{
+		$usableIndex 	= $_POST['usableIndex'];
+		$esmodelo 		= $_POST['esmodelo'];
+	}		
+	
+	$RecordObj_ts = new RecordObj_ts($terminoID);
+	$RecordObj_ts->get_ID(); # Force load		
+	$RecordObj_ts->set_parent($parentPost);
+	$RecordObj_ts->set_esmodelo($esmodelo);
+	$RecordObj_ts->set_usableIndex($usableIndex);
+	
+	if(isset($_POST['visible']))		$RecordObj_ts->set_visible($_POST['visible']);
+	if(isset($_POST['esdescriptor']))	$RecordObj_ts->set_esdescriptor($_POST['esdescriptor']);
+	if(isset($_POST['modelo']))			$RecordObj_ts->set_modelo($_POST['modelo']);	
+	if(isset($_POST['traducible']))		$RecordObj_ts->set_traducible($_POST['traducible']);
+	if(isset($_POST['propiedades']))	$RecordObj_ts->set_propiedades($_POST['propiedades']);	
+	
+	# Verificamos si el padre asignado existe. (Antes verificamos el prefijo)
+	$RecordObj_ts_parent	= new RecordObj_ts($parentPost);
+	$parent_id				= $RecordObj_ts_parent->get_ID();
+	
+	$prefijo = Tesauro::terminoID2prefix($terminoID);
+	if($parent_id> 0 || $parentPost ==  $prefijo .'0') {
+		
+		# El parent SI existe: Ejecutamos el UPDATE	
+		$current_id = $RecordObj_ts->Save();
+		
+	}else{
+
+		# El parent NO existe: Stop
+		die("TS Edit Error: \n Parent: $parentPost  does not exist! \n Use a valid parent.");	
+	}		
+	
 
 	# LOGGER ACTIVITY : QUE(action normalized like 'LOAD EDIT'), LOG LEVEL(default 'logger::INFO'), TIPO(like 'dd120'), DATOS(array of related info)
-	$str_order='';
-	foreach ($dato as $key => $value) {		
-		$str_order .= $value;
-		$str_order .= ", ";
-	}
-	$str_order = substr($str_order, 0,-2);
-	$parent 	= $RecordObj_ts->get_parent();
+	$ts_parent = $RecordObj_ts->get_parent();	
 	logger::$obj['activity']->log_message(
 		'SAVE',
 		logger::INFO,
 		DEDALO_TESAURO_TIPO,
 		null,
-		array(	"msg"			=> "Changed related terms order",
+		array(	"msg"			=> "Saved term",
 				"terminoID"		=> $terminoID,
-				"parent"		=> $parent,
-				"order"			=> $str_order			
+				"parent"		=> $ts_parent
 			)
 	);
 
-	exit($html);
-}
 
+	
+	# Al acabar la secuencia de actualización, recargamos el listado (opener) y cerramos esta ventana flotante		
+	# Si llegamos desde el listado plano
+	if($from=='flat') {
+
+		$html .= "
+			<script type=\"text/javascript\">
+				window.opener.location.reload(); 
+				window.close();	
+			</script>";
+		echo $codHeader . $html ;
+		exit();
+		
+	# Caso general (desde listado jerárquico)	
+	}else{
+		
+		$parentPostFix 		= Tesauro::prefijoFix2($terminoID, $parentPost); #die($parentPostFix);			
+		$prefijoActual 		= Tesauro::terminoID2prefix($terminoID); #die("$parentPostFix ,$prefijoActual , terminoID: $terminoID");					
+		$terminoIDpost		= trim($_REQUEST['terminoID']);		
+		
+		if($esdescriptor=='no') {
+			
+			$html .= "
+			<script type=\"text/javascript\">					
+				window.opener.openDivTrack('$parentPost',1,'$parentPost');
+				window.close(); 
+			</script>";
+		
+		# Si ha cambiado el parent		
+		}else if($parentPost!=$parentInicial) {
+			
+			$html .= "
+			<script type=\"text/javascript\">
+				// metemos en la cookie que abra el nuevo parent y luego recargaremos.
+				// Actualiza la nueva ubicación
+				window.opener.openDivTrack('$parentPost',1,'$terminoIDpost');
+				// Actualiza la antigua ubicación 
+				window.opener.openDivTrack('$parentInicial',1,'$terminoIDpost');
+				// Cierra la ventana de edición
+				window.close(); 
+			</script>";
+											
+		}else{
+			
+			if ($parentPost == $prefijo.'0') {
+				# Reload all page
+				$html .= "
+				<script type=\"text/javascript\">
+					//alert('parentPost:$parentPost - terminoIDpost:$terminoIDpost')
+					window.opener.location.reload();
+					window.close();	
+				</script>";
+			}else{
+				# Reload only de parent div
+				$html .= "
+				<script type=\"text/javascript\">
+					//alert('parentPost:$parentPost - terminoIDpost:$terminoIDpost')					
+					window.opener.openDivTrack('$parentPost',1,'$terminoIDpost');
+					window.close();	
+				</script>";
+			}
+			
+		}
+		
+		echo $codHeader . $html ;
+		exit();
+	}	
+
+}#end EDIT V4
 
 
 
@@ -239,9 +383,20 @@ if($accion=='saveDescriptorFromList') {
 				"descriptors_tm_id"	=> $time_machine_last_id
 			)
 	);
+
+	#
+	# TOPONOMY_CENTRAL_SYNC
+	# Defined in config optional. When is set, a petition is made to central repository 
+	# of toponyms and returned is used for avoid id collisions	
+	if (defined('TOPONOMY_CENTRAL_SYNC') && strlen(TOPONOMY_CENTRAL_SYNC) && $tipo=='termino') {
+
+		#$result = RecordObj_ts::update_toponomy_central_sync_descriptors( $termino, $parent, $lang, $tipo );
+	
+	}//end defined('TOPONOMY_CENTRAL_SYNC') && strlen(TOPONOMY_CENTRAL_SYNC)
 	
 	exit($html);
-}
+
+}//end saveDescriptorFromList
 
 
 
@@ -475,163 +630,66 @@ if($accion=='deleteTS') {
 	}
 	
 	echo $html;
-	exit();	
-}
+	exit();
+
+}//end deleteTS
+
 
 
 /**
-* EDIT V4
+* UPDATE_TR_ORDER
 */
-if($accion=='editTS') {
-	
-	if(!$_POST) exit();
-					
-	# varibles recibidas obligatorias
-	$parentInicial 	= $_POST['parentInicial']; 
-	$parentPost 	= $_POST['parent'];
-	$esdescriptor	= $_POST['esdescriptor'];
-	$propiedades	= $_POST['propiedades'];
-	$nHijos			= intval($nHijos);
+if($accion=='update_tr_order') {
 
-	# required fields
-	if(!$parentInicial || !isset($nHijos) || !$esdescriptor) die("TS edit Error: \n few arguments !");
-	
-	# verificamos que parentPost está bien formado (Evita errores de ts25 por tp25...)
-	$parentPost			= Tesauro::prefijoFix2($terminoID, $parentPost);
-	$prefijo_compare	= Tesauro::prefijo_compare($terminoID, $parentPost);
-	if($prefijo_compare !== true) die("TS Edit Error: \n parentPost invalid! [$terminoID - $parentPost] (equal to self terminoID) \n Use a valid parent.");	
-	
-	# Imposibilita cambiar a NO descriptor un descriptor con hijos
-	if($esdescriptor =='no' && $nHijos>0 ) die(" $no_se_puede_cambiar_a_ND_title ");	
-		
-	# si el término es ND, forzamos usableIndex = 'no' ...
-	if($esdescriptor == 'no') {		
-		$usableIndex 	= 'no';
-		$esmodelo		= 'no';
-	}else{
-		$usableIndex 	= $_POST['usableIndex'];
-		$esmodelo 		= $_POST['esmodelo'];
-	}		
-	
-	$RecordObj_ts = new RecordObj_ts($terminoID);
-	$RecordObj_ts->get_ID(); # Force load					
-	$RecordObj_ts->set_parent($parentPost);		
-	$RecordObj_ts->set_esmodelo($esmodelo);
-	$RecordObj_ts->set_usableIndex($usableIndex);
-	
-	if(isset($_POST['visible']))		$RecordObj_ts->set_visible($_POST['visible']);
-	if(isset($_POST['esdescriptor']))	$RecordObj_ts->set_esdescriptor($_POST['esdescriptor']);
-	if(isset($_POST['modelo']))			$RecordObj_ts->set_modelo($_POST['modelo']);	
-	if(isset($_POST['traducible']))		$RecordObj_ts->set_traducible($_POST['traducible']);
-	if(isset($_POST['propiedades']))	$RecordObj_ts->set_propiedades($_POST['propiedades']);	
-	
-	# Verificamos si el padre asignado existe. (Antes verificamos el prefijo)
-	$RecordObj_ts_parent	= new RecordObj_ts($parentPost);
-	$parent_id				= $RecordObj_ts_parent->get_ID();
-	
-	$prefijo = Tesauro::terminoID2prefix($terminoID);
-	if($parent_id> 0 || $parentPost ==  $prefijo .'0') {
-		
-		# El parent SI existe: Ejecutamos el UPDATE	
-		$current_id = $RecordObj_ts->Save();
-		
-	}else{
+	if(empty($terminoID))	exit("Need more vars: terminoID");
+	if(empty($dato))		exit("Need more vars: dato");
 
-		# El parent NO existe: Stop
-		die("TS Edit Error: \n Parent: $parentPost  does not exist! \n Use a valid parent.");	
-	}		
+	$html='';	
+		
+	$RecordObj_ts = new RecordObj_ts($terminoID);	
+	$RecordObj_ts->set_relaciones($dato);	
 	
+	# SAVE 
+	$RecordObj_ts->Save();				
+		#dump($RecordObj_ts,'$RecordObj_ts'); #die();
+
+	$html = 'ok';			
 
 	# LOGGER ACTIVITY : QUE(action normalized like 'LOAD EDIT'), LOG LEVEL(default 'logger::INFO'), TIPO(like 'dd120'), DATOS(array of related info)
-	$ts_parent = $RecordObj_ts->get_parent();	
+	$str_order='';
+	foreach ($dato as $key => $value) {		
+		$str_order .= $value;
+		$str_order .= ", ";
+	}
+	$str_order = substr($str_order, 0,-2);
+	$parent 	= $RecordObj_ts->get_parent();
 	logger::$obj['activity']->log_message(
 		'SAVE',
 		logger::INFO,
 		DEDALO_TESAURO_TIPO,
 		null,
-		array(	"msg"			=> "Saved term",
+		array(	"msg"			=> "Changed related terms order",
 				"terminoID"		=> $terminoID,
-				"parent"		=> $ts_parent
+				"parent"		=> $parent,
+				"order"			=> $str_order			
 			)
 	);
-	
-	# Al acabar la secuencia de actualización, recargamos el listado (opener) y cerramos esta ventana flotante		
-	# Si llegamos desde el listado plano
-	if($from=='flat') {
 
-		$html .= "
-			<script type=\"text/javascript\">
-				window.opener.location.reload(); 
-				window.close();	
-			</script>";
-		echo $codHeader . $html ;
-		exit();
-		
-	# Caso general (desde listado jerárquico)	
-	}else{
-		
-		$parentPostFix 		= Tesauro::prefijoFix2($terminoID, $parentPost); #die($parentPostFix);			
-		$prefijoActual 		= Tesauro::terminoID2prefix($terminoID); #die("$parentPostFix ,$prefijoActual , terminoID: $terminoID");					
-		$terminoIDpost		= trim($_REQUEST['terminoID']);		
-		
-		if($esdescriptor=='no') {
-			
-			$html .= "
-			<script type=\"text/javascript\">					
-				window.opener.openDivTrack('$parentPost',1,'$parentPost');
-				window.close(); 
-			</script>";
-		
-		# Si ha cambiado el parent		
-		}else if($parentPost!=$parentInicial) {
-			
-			$html .= "
-			<script type=\"text/javascript\">
-				// metemos en la cookie que abra el nuevo parent y luego recargaremos.
-				// Actualiza la nueva ubicación
-				window.opener.openDivTrack('$parentPost',1,'$terminoIDpost');
-				// Actualiza la antigua ubicación 
-				window.opener.openDivTrack('$parentInicial',1,'$terminoIDpost');
-				// Cierra la ventana de edición
-				window.close(); 
-			</script>";
-											
-		}else{
-			
-			if ($parentPost == $prefijo.'0') {
-				# Reload all page
-				$html .= "
-				<script type=\"text/javascript\">
-					//alert('parentPost:$parentPost - terminoIDpost:$terminoIDpost')
-					window.opener.location.reload();
-					window.close();	
-				</script>";
-			}else{
-				# Reload only de parent div
-				$html .= "
-				<script type=\"text/javascript\">
-					//alert('parentPost:$parentPost - terminoIDpost:$terminoIDpost')					
-					window.opener.openDivTrack('$parentPost',1,'$terminoIDpost');
-					window.close();	
-				</script>";
-			}
-			
-		}
-		
-		echo $codHeader . $html ;
-		exit();
-	}	
+	session_write_close();
 
-}#end EDIT V4
+	exit($html);
 
-
+}//end update_tr_order
 
 
 
 /**
 * LISTADOHIJOS : listados (al abrir la flecha,etc..)
 */
-if($accion=='listadoHijos') {	
+if($accion=='listadoHijos') {
+
+	# Write session to unlock session file
+	session_write_close();
 
 	if(!$terminoID) 	exit("Need more vars: terminoID: $terminoID ");
 	
@@ -639,12 +697,13 @@ if($accion=='listadoHijos') {
 	$terminoIDActual	= false ;	#echo "$modo,$type,$ts_lang";
 	
 	# init tesauro in requested modo
-	$ts 				= new Tesauro($modo,$type,$ts_lang);	
-	$html 				= $ts->buildTree($parentInicial, $terminoIDActual, $terminoIDresalte); 	
+	$ts 				= new Tesauro($modo,$type,$ts_lang);
+	$html 				= $ts->buildTree($parentInicial, $terminoIDActual, $terminoIDresalte);
 	
-	echo $html ;	
-	die();
+	echo $html;
+	exit();
 }
+
 
 
 /**
@@ -652,6 +711,9 @@ if($accion=='listadoHijos') {
 * Al recibir get accion = "searchTSform", buscamos recursivamente los padres de cada termino coincidente para crear la secuencia de apertura de divs. Guardamos el resultado en la cookie cookieOpenDivs
 */
 if($accion=='searchTSform') {
+
+	# Write session to unlock session file
+	session_write_close();
 	
 	$type = $nombre ;
 

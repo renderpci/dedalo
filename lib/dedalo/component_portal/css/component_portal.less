@@ -55,6 +55,24 @@ WRAP DIV CONTAINER*/
 	.show_more_link:hover {
 		color: #ff9439;
 	}
+.btn_view_toogle{
+	float: none;
+    width: 20px;
+    height: 17px;
+    right: 0px;
+    top: 12px;
+    display: inline-block;
+    position: relative;
+    opacity: .3;
+    background: url('../../themes/default/view_full.svg') center center no-repeat;
+    transition: all .25s ease-in-out;
+}.btn_view_toogle:hover{
+	 opacity: .7;
+}.btn_view_single{
+	background: url('../../themes/default/view_single_line.svg') center center no-repeat;
+}.btn_view_mosaic{
+	background: url('../../themes/default/view_mosaic.svg') center center no-repeat;
+}
 
 
 
@@ -168,7 +186,8 @@ div.portal_more_elements_content {
 	.table_portal_rows_list th, .table_portal_rows_list td {
 		
 	}
-	
+
+
 
 
 
@@ -242,3 +261,68 @@ th.tag_id_column {
 
 
 
+/* VIEWS
+------------------------------------------------------- */
+
+	/* VIEW_SINGLE_LINE
+	------------------------------------------------------- */
+	.wrap_component_view_single_line {
+
+		.table_rows_list td.id_column{
+			height: 32px;
+		}
+		.table_rows_list td.delete_column{
+			height: 32px;
+			padding: 0;
+			width: 40px;
+		}
+		.table_rows_list .id_column_buttons {
+			height: 100%;
+		}
+		.table_rows_list th:last-child {
+			width: 50px;
+		}
+		.table_rows_list a.button_delete {
+			background-position: right 50% top 50%;
+		}.table_rows_list td {
+			padding: 0;
+		}
+
+}
+
+
+
+
+	/* VIEW_SINGLE_LINE
+	------------------------------------------------------- */
+	.wrap_component_view_mosaic {
+
+		.mosaic_li{
+			width: 100px;
+			height: 100px;
+			display: inline-block;
+		}
+		.mosaic_ul{
+			-moz-column-count:3;
+			-moz-column-gap: 3%;
+			-moz-column-width: 30%;
+			-webkit-column-count:3;
+			-webkit-column-gap: 3%;
+			-webkit-column-width: 30%;
+			column-count: 3;
+			column-gap: 3%;
+			column-width: 30%;
+		}
+
+	}
+
+
+
+
+
+
+
+
+
+
+	

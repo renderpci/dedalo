@@ -1,0 +1,96 @@
+/*CSS Document
+WRAP DIV CONTAINER*/
+
+@elements_over_z_index : 1;
+
+.css_wrap_geolocation, .css_wrap_geolocation_tm {
+	
+}
+.css_wrap_geolocation_tm .content_data {
+
+}
+
+/* FIELDS 
+-------------------------------------------------- */
+.geolocation_text{
+	font-size: 14px;
+	top: 2px;
+	margin-right: 5px;
+}
+.geolocation_separator{
+	border-left: 1px solid;
+	border-color: #333333;
+	margin-left: 5px;
+}
+
+/* MAP 
+-------------------------------------------------- */
+.leaflet_map {
+	width: 100%;
+	height: 500px;
+	position: relative;	
+	padding: 0;
+	margin: 0;
+	}
+	.leaflet-control-zoom a {
+		font-size: initial !important;
+		font-weight: bold;
+	}
+	.map_inputs {
+		-webkit-touch-callout: none;
+	    -webkit-user-select: none;
+	    -khtml-user-select: none;
+	    -moz-user-select: none;
+	    -ms-user-select: none;
+	    user-select: none;
+		position: absolute;
+		top: 10px;
+		left: 50px;		
+		background-color: rgb(255, 255, 255);
+		padding: 5px;
+		border-radius: 4px;
+		box-shadow: 0 1px 5px rgba(0,0,0,0.65);
+		z-index: @elements_over_z_index;
+		}
+		.map_inputs span:not(:nth-of-type(1)) {
+			padding-left: 5px;
+		}
+		.map_inputs  input[name="zoom"] {
+			width:28px;
+			text-align: center;
+		}
+
+/* PLAYER container (Transcription) 
+-------------------------------------------------- */
+.leaflet_map_player {
+	padding: 0;
+	margin: 0px;
+	position: relative;
+	margin-top: 5px;
+	}
+	.leaflet_map_player .content_data {
+		width: 100%;
+		height: 100%;
+		margin: 0;
+		padding: 0;
+	}
+	.leaflet_map_player .leaflet_map {
+		min-height: 605px;
+	}
+	
+
+
+
+.leaflet-top,
+.leaflet-bottom {
+	/* bajamos el z-index (1000 por defecto), a 100 para evitar problemas */
+	z-index: @elements_over_z_index;
+}
+
+.leaflet-control-layers {
+	z-index: @elements_over_z_index;
+}
+
+.leaflet-draw-draw-circle {
+	display: none !important;
+}

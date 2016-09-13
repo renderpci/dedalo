@@ -433,7 +433,7 @@ class Tesauro extends TesauroElements {
 
 		if(count($ar_childrens_of_this)>0) foreach($ar_childrens_of_this as $terminoID) {				
 				
-				$RecordObj_ts	= new RecordObj_ts($terminoID);
+				$RecordObj_ts	= new RecordObj_ts($terminoID); 	
 				
 				$termino 		= RecordObj_ts::get_termino_by_tipo($terminoID,$this->ts_lang);		#echo $termino ;#if($this->ts_lang) $termino	= "[$this->ts_lang] ".$termino;				
 				$def 			= RecordObj_ts::get_def_by_tipo($terminoID,$this->ts_lang);			#if($this->ts_lang) $def 	= "[$this->ts_lang] ".$def;
@@ -445,7 +445,8 @@ class Tesauro extends TesauroElements {
 				$norden			= $RecordObj_ts->get_norden();
 				$traducible		= $RecordObj_ts->get_traducible();
 				$visible 		= $RecordObj_ts->get_visible();
-								
+				$ID 			= $RecordObj_ts->get_ID();
+
 				$RecordObj_ts2	= new RecordObj_ts($terminoID);
 				$hijosND		= count($RecordObj_ts2->get_ar_childrens_of_this('no'));
 				#$hijosND 		= $this->HNoDescriptores($terminoID);				
@@ -479,7 +480,7 @@ class Tesauro extends TesauroElements {
 				$html .= "\n<div id=\"divCont$terminoID\" class=\"divCont\" style=\"padding-left:$marginLeft" . "px;$display\" >";
 									
 					# generamos la linea con los iconos, etc..
-					$html .= $this->makeTSline($terminoID,$termino,$parent,$children,$def,$obs,$hijosD,$hijosND,$nIndexaciones,$ncaptaciones,$nordenV,$resalte,$modelo,$usableIndex,$traducible,$visible);
+					$html .= $this->makeTSline($terminoID,$termino,$parent,$children,$def,$obs,$hijosD,$hijosND,$nIndexaciones,$ncaptaciones,$nordenV,$resalte,$modelo,$usableIndex,$traducible,$visible,$ID);
 					
 					# recursive 										
 					if( $children >0 ) {

@@ -1,0 +1,20 @@
+<?php
+
+	# VISUALIZADOR HTML	
+	
+			
+	# CONTENIDO (INPUT)
+	$html_contenido  = '';
+	$html_contenido .= "<div class=\"list_thesaurus_icon number_list_thesaurus\" onclick=\"component_number.show_component_in_row_thesaurus(this)\"
+		data-section_tipo=\"$section_tipo\"
+		data-parent=\"$parent\"
+		data-tipo=\"$tipo\"
+		data-lang=\"$lang\"
+		data-modo=\"edit\"
+		>$icon_label</div>";
+	
+	
+	# PRINT HTML
+	print $html_contenido;	
+	
+?>

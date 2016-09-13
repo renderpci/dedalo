@@ -147,6 +147,7 @@ class tool_export extends tool_common {
 				foreach ($ar_records_deep_resolved as $key => $ar_alue) {
 					if (!$header_added) {
 						foreach ($ar_alue as $current_tipo => $cvalue) {
+
 							if ($current_tipo!='id' && $current_tipo!='section_id' && $current_tipo!='section_tipo') {
 								$current_tipo = RecordObj_dd::get_termino_by_tipo($current_tipo);
 							}
@@ -182,19 +183,19 @@ class tool_export extends tool_common {
 		
 		#dump($record, ' record ++ '.to_string());
 
-		$com ='"';
-		#$com ='';
+		$quotes ='"';
+		#$quotes ='';
 
 		$row_deep_resolved=array();
 		foreach ($record as $key => $value) {			
 			
 			if ($key=='id') continue;
 			if ($key=='section_id') {
-				$row_deep_resolved[$key] = $com.$value.$com;
+				$row_deep_resolved[$key] = $quotes.$value.$quotes;
 				continue;
 			}
 			if ($key=='section_tipo') {
-				#$row_deep_resolved[$key] = $com.$value.$com;
+				#$row_deep_resolved[$key] = $quotes.$value.$quotes;
 				continue;	// Skip resolve non field elements
 			}
 			
@@ -210,9 +211,10 @@ class tool_export extends tool_common {
 															  $lang,
 															  $section_tipo);
 
-			$valor_export 	 = $component->get_valor_export( $value, $lang );
+			$valor_export 	 = $component->get_valor_export( $value, $lang, $quotes, $add_id=false );
 			#$valor_export 	 = str_replace(PHP_EOL, '; ', $valor_export);
-			$valor_export 	 = $com.addslashes($valor_export).$com;
+			$valor_export 	 = addslashes($valor_export);
+			$valor_export 	 = $quotes.trim($valor_export).$quotes;
 			$row_deep_resolved[$key] = $valor_export;
 
 		}//end foreach ($record as $tipo => $value) {

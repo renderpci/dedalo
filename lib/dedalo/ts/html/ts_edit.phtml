@@ -169,11 +169,15 @@ print js::build_tag(DEDALO_LIB_BASE_URL . '/ts/js/ts_edit.js');
 									<?php echo label::get_label('tiempo'); ?>
 								</td>
 								<td>
-									<input type="text" name="tiempo_<?php echo $id ?>" id="tiempo_<?php echo $id ?>" style="width:99%" 
-									value="<?php if(isset($tiempo)) echo $tiempo ?>" onKeyUp="codigoKeyUp(this);" onfocus="myfocus(this)" onBlur="myblur(this);" onChange="saveDescriptor(this,'<?php echo $id ?>');" >
+									<input type="text" name="tiempo_<?php echo $id ?>" id="tiempo_<?php echo $id ?>" style="width:99%"
+									value="<?php if(isset($tiempo)) echo $tiempo ?>"
+									onKeyUp="codigoKeyUp(this)" onfocus="myfocus(this)" onBlur="myblur(this)"
+									data-parent="<?php echo $parent_desc ?>" data-lang="<?php echo $lang ?>" data-tipo="tiempo" 
+									onChange="saveDescriptor(this,'<?php echo $id ?>')"
+									>
 								</td>
 								<td colspan="2">
-									<?php echo label::get_label('fecha_o_rango_en_formato') ?>									
+									<?php echo label::get_label('fecha_o_rango_en_formato') ?>
 								</td>
 							</tr>
 

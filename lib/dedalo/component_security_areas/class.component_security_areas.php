@@ -264,26 +264,21 @@ class component_security_areas extends component_common {
 	
 	/**
 	* GET PERMISSIONS OF THIS CURRENT AREA
-	*
-	* @return $permissions
+	* Avoid this component appears on sections different to authorized
+	* @return int $permissions
 	*	Int value (0,1,2,3)
 	*/
 	public function get_permisions_of_this_area() {
 
-		#$current_area		= navigator::get_selected('area');	#dump($current_area,'current_area');
-		$current_area		= $this->get_section_tipo();
-			#dump($current_area,"current_area ".DEDALO_SECTION_USERS_TIPO);
+		$current_area = $this->get_section_tipo();
+			if(empty($current_area)) throw new Exception(" Current area is not defined! ");
 
-		if(empty($current_area)) throw new Exception(" Current area is not defined! ");
-
-		$permissions 		= 0;
+		$permissions = 0;
 
 		switch ($current_area) {
-			case DEDALO_SECTION_USERS_TIPO:
-			case DEDALO_SECTION_PROJECTS_TIPO:
 			case DEDALO_SECTION_PROFILES_TIPO:
 				$tipo 			= $this->get_tipo();
-				$permissions	= common::get_permissions($tipo,$tipo);
+				$permissions	= common::get_permissions($current_area, $tipo);
 				break;
 			
 			default:
@@ -292,28 +287,8 @@ class component_security_areas extends component_common {
 		}
 
 		return (int)$permissions;
-		
-		/* OLD WORLD
-		$RecordObj_dd		= new RecordObj_dd($current_area);
-		$parent 			= $RecordObj_dd->get_parent();		# Usaremos el parent (estaremos en 'Usuarios' y queremos 'Admin') 
 
-		#$RecordObj_dd		= new RecordObj_dd($parent);
-		#$modeloID			= $RecordObj_dd->get_modelo();
-		#$modelo				= RecordObj_dd::get_termino_by_tipo($modeloID,null,true);
-		$modelo_name 		= RecordObj_dd::get_modelo_name_by_tipo($parent, true);
-		
-		# Si el area parent es "area_admin" devolvemos "ADMIN" que elimina el filtro y muestra todos los registros, completo
-		if ($modelo_name == 'area_admin') {
-			
-			$tipo 			= $this->get_tipo();
-			$permissions	= common::get_permissions($tipo,$tipo);			
-		}
-
-			#dump($permissions,'permissions');
-				
-		return intval($permissions);
-		*/			
-	}
+	}//end get_permisions_of_this_area
 
 
 
@@ -460,9 +435,10 @@ class component_security_areas extends component_common {
 	*/
 	public static function walk_ar_areas($ar_areas, $arguments_tree) {
 
-		$html = '';		#dump($arguments_tree,'arguments_tree'); die();
+		$html = '';		#dump($arguments_tree,'arguments_tree'); #die();
 
-		#dump($ar_areas, ' ar_areas ++ '.to_string()); die();
+		# Iterate hierarchized areas
+		# dump($ar_areas, ' ar_areas ++ '.to_string()); die();
 		foreach((array)$ar_areas as $tipo => $value) {
 			
 			$skip = false;
@@ -520,11 +496,16 @@ class component_security_areas extends component_common {
 					$open_term	= "\n <li class=\"global_admin_element\" >";
 				}
 				*/
-	
+		
 			#
 			# DATO CURRENT
-			$dato 			= $arguments_tree['dato'];
-			$dato_current	= (isset($dato->$tipo)) ? intval($dato->$tipo) : null;
+			$dato 				= $arguments_tree['dato'];
+			$dato_tipo_current 	= isset($dato->$tipo) ? $dato->$tipo : false;
+			if(is_object($dato_tipo_current)) {				
+				$dato_tipo_current = false;
+				dump($dato, '$dato INCORRECTO - SOBRA UN NIVEL ++ '.to_string($tipo));
+			}
+			$dato_current		= $dato_tipo_current!==false ? (int)$dato_tipo_current : null;
 				#dump($dato_current, ' dato_current ++ '.to_string());
 
 			$do_recursion = (is_array($value) && $modelo_name!='section') ? true : false;
@@ -582,7 +563,6 @@ class component_security_areas extends component_common {
 		}//end foreach($ar_areas as $tipo => $value) {		
 		
 		return $html;
-
 	}//end walk_ar_areas
 
 
@@ -758,7 +738,7 @@ class component_security_areas extends component_common {
 	* UPDATE_DATO_VERSION
 	* @return 
 	*/
-	public static function update_dato_version($update_version, $dato_unchanged) {
+	public static function update_dato_version($update_version, $dato_unchanged, $reference_id) {
 
 		$update_version = implode(".", $update_version);
 		#dump($dato_unchanged, ' dato_unchanged ++ -- '.to_string($update_version)); #die();
@@ -792,12 +772,12 @@ class component_security_areas extends component_common {
 					$response = new stdClass();
 						$response->result =1;
 						$response->new_dato = $new_dato;
-
+						$response->msg = "[$reference_id] Dato is changed from ".to_string($dato_unchanged)." to ".to_string($new_dato).".<br />";
 					return $response;
 				}else{
 					$response = new stdClass();
 						$response->result = 2;
-						$response->msg = to_string($dato_unchanged)." : The dato don't need update.<br />";
+						$response->msg = "[$reference_id] Current dato don't need update.<br />";	// to_string($dato_unchanged)." 
 
 					return $response;
 				}
@@ -808,7 +788,27 @@ class component_security_areas extends component_common {
 				break;
 		}		
 		
-	}#end update_dato_version	
+	}#end update_dato_version
+
+
+
+	/**
+	* GET_VALOR_LIST_HTML_TO_SAVE
+	* Usado por section:save_component_dato
+	* Devuelve a section el html a usar para rellenar el 'campo' 'valor_list' al guardar
+	* Por defecto será el html generado por el componente en modo 'list', pero en algunos casos
+	* es necesario sobre-escribirlo, como en component_portal, que ha de resolverse obigatoriamente en cada row de listado
+	*
+	* En este caso, NO guardamos nada en 'valor_list'
+	*
+	* @see class.section.php
+	* @return string $html
+	*/
+	public function get_valor_list_html_to_save() {
+		$html='';
+		
+		return (string)$html;
+	}//end get_valor_list_html_to_save
 	
 	
 	

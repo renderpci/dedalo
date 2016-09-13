@@ -2,8 +2,6 @@
 
 	# VISUALIZADOR HTML
 
-
-
 	print "\n<!-- COMPONENT_AUTOCOMPLETE_TS [tipo:$tipo] -->";
 	
 	print "\n<div class=\"wrap_component css_wrap_autocomplete_ts wrap_component_{$tipo}\" id=\"{$id_wrapper}\"
@@ -12,6 +10,7 @@
 	data-section_tipo=\"{$section_tipo}\"
 	data-parent=\"{$parent}\"
 	data-modo=\"{$modo}\"
+	data-from_modo=\"{$from_modo}\"
 	data-dato='{$dato_json}'
 	data-component_name=\"{$component_name}\"
 	data-component_info='{$component_info}'
@@ -32,7 +31,12 @@
 
 
 		case ($permissions>=2)	:
+					if($from_modo != 'edit'){
+						$html_contenido .= "<div class=\"css_autocomplete_ts_button_close\" onclick=\"component_common.change_mode_component(this, 'edit', '$from_modo')\"></div>";
+					}
+					
 
+					#
 					# VALOR . STRING RESOLVED TO SHOW
 					$html_contenido .= "\n <ul class=\"css_autocomplete_ts_valor\">";
 					foreach ($ar_valor as $current_value => $value) {
@@ -43,6 +47,7 @@
 						$html_contenido .= "\n <div class=\"icon_bs link css_autocomplete_ts_button_delete\"
 						data-tipo=\"{$tipo}\"
 						data-current_value='$current_value'
+						data-role=\"autocomplete_ts_button_delete\"
 						title=\"$label $parent\"
 						onclick=\"component_autocomplete_ts.delete(this)\"></div>";
 
@@ -52,24 +57,48 @@
 						}
 
 						$html_contenido .= "</li>";
-
 					}
 					$html_contenido .= "</ul>";
 
 
-					#
-					# INPUT SEARCH FIELD
-					$html_contenido .= "\n <input class=\"css_autocomplete_ts_search_field\" type=\"text\" placeholder=\"".label::get_label('buscar')."...\"
-					data-id_wrapper=\"$id_wrapper\"
-					data-ar_tipo_to_search='{$ar_referenced_tipo_json}'
-					onfocus=\"component_autocomplete_ts.activate(this)\"					
-					tabindex=\"1\"
-					/>";
+					# SOURCE_MODE SWITCH
+					switch ($source_mode) {
+						case 'tree':
+							# BTN NEW ELEMENT
+							$html_contenido .= "<div class=\"icon_bs link new_autocomplete_ts\"
+							data-id_wrapper=\"$id_wrapper\"
+							data-hide_types='{$ar_referenced_tipo_json}'
+							data-source_mode=\"$source_mode\"							
+							onclick=\"component_autocomplete_ts.open_ts_window(this)\"></div>";
 
-					if(SHOW_DEBUG) {
-						$html_contenido .= "<div class=\"notes\">ar_referenced_tipo: ".implode(', ', $ar_referenced_tipo)."</div>";
-						$html_contenido .= "<div class=\"notes\">".str_replace('},', '},<br>', $dato_json) ."</div>";
-					}
+							/*
+							data-termino_id=\"$ds_terminoID\"
+							data-locator_section_tipo=\"{$current_locator->section_tipo}\"
+							data-locator_section_id=\"{$current_locator->section_id}\"
+							data-ds_key=\"{$ds_key}\"
+							data-semantic_wrapper_id=\"{$semantic_wrapper_id}\"
+							*/
+							break;
+						
+						default:
+							#
+							# INPUT SEARCH FIELD
+							$html_contenido .= "\n <input class=\"css_autocomplete_ts_search_field\" type=\"text\" placeholder=\"".label::get_label('buscar')."...\"
+							data-id_wrapper=\"$id_wrapper\"
+							data-ar_tipo_to_search='{$ar_referenced_tipo_json}'
+							data-source_mode=\"$source_mode\"
+							onfocus=\"component_autocomplete_ts.activate(this)\"
+							tabindex=\"1\"
+							autocomplete=\"off\"
+							autocorrect=\"off\"
+							/>";
+
+							if(SHOW_DEBUG) {
+								$html_contenido .= "<div class=\"debug_info notes\">ar_referenced_tipo: ".implode(', ', $ar_referenced_tipo)."</div>";
+								$html_contenido .= "<div class=\"debug_info notes\">".str_replace('},', '},<br>', $dato_json) ."</div>";
+							}
+							break;
+					}//end switch ($source_mode)				
 
 
 					#
@@ -77,13 +106,14 @@
 					#$html_contenido .= "\n <div id=\"autocomplete_ts_tree_stats_{$tipo}\" class=\"css_autocomplete_ts_tree_stats\"> Calculating.. </div>";
 
 					# INPUT DATA HIDDEN
-					$html_contenido .= "\n<input type=\"text\" name=\"{$input_name}\" class=\"css_autocomplete_ts_dato_hidden\" style=\"width:300px\"
+					$html_contenido .= "\n<input type=\"text\" name=\"{$input_name}\" class=\"css_autocomplete_ts_dato_hidden\" style=\"width:300px;\"
 					data-tipo=\"{$tipo}\"
 					data-section_tipo=\"{$section_tipo}\"
 					data-parent=\"{$parent}\"
 					data-lang=\"{$lang}\"
 					data-ar_tipo_to_search='{$ar_referenced_tipo_json}'
 					data-link_fields='{$ar_link_fields}'
+					data-role=\"autocomplete_ts_dato_hidden\"
 					value='{$dato_json}'
 					title='$ar_referenced_tipo_json'
 					disabled=\"disabled\"
@@ -92,7 +122,7 @@
 					if(SHOW_DEBUG) {
 						#$html_contenido .= "\n <span class=\"css_span_debugger\" id=\"debugger_{$parent}\" >{$debugger}</span>";
 					}
-					break;					
+					break;
 
 	}
 

@@ -134,7 +134,7 @@ class ImageMagick {
 		switch ($mode) {
 			case 'list':
 				#$command = MAGICK_PATH."convert -define jpeg:size=400x400 \"$source_file\"[0] -thumbnail {$dimensions} -gravity center -extent {$dimensions} -unsharp 0x.5 jpg -quality 90 \"$target_file\" ";
-				$command = MAGICK_PATH."convert -define jpeg:size=400x400 \"$source_file\"[0] -thumbnail '$dimensions' -gravity center -unsharp 0x.5 -quality 90 \"$target_file\" ";
+				$command = MAGICK_PATH."convert -define jpeg:size=400x400 \"$source_file\" -thumbnail '$dimensions' -gravity center -unsharp 0x.5 -quality 90 \"$target_file\" ";
 				break;
 			case 'edit':
 				#$command = MAGICK_PATH."convert -define jpeg:size=400x400 \"$source_file\" -thumbnail x404 -unsharp 0x.5 jpg -quality 72 \"$target_file\" ";

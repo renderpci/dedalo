@@ -6,8 +6,8 @@ if(login::is_logged()!==true) die("<span class='error'> Auth error: please login
 
 
 # set vars
-	$vars = array('mode','ar_tipo_to_search','string_to_search');
-	foreach($vars as $name) $$name = common::setVar($name);
+	$vars = array('mode');
+		foreach($vars as $name) $$name = common::setVar($name);
 
 # mode
 	if(empty($mode)) exit("<span class='error'> Trigger: Error Need mode..</span>");
@@ -22,17 +22,30 @@ if(login::is_logged()!==true) die("<span class='error'> Auth error: please login
 */
 if($mode=='autocomplete_ts') {
 
+	session_write_close();
+
+	$vars = array('ar_tipo_to_search','string_to_search','source_mode');
+		foreach($vars as $name) $$name = common::setVar($name);
+
 	if (empty($ar_tipo_to_search)) {
-		return "Error: ar_tipo_to_search is not defined!";
+		echo "Error: ar_tipo_to_search is not defined!";
+		exit();
 	}
 	if (strlen($string_to_search)<3) {
-		return null;
+		echo null;
+		exit();
+	}
+	if (empty($source_mode)) {
+		echo "Error: source_mode is not defined!";
+		throw new Exception("Error Processing Request", 1);
+		
+		exit();
 	}
 
-	$result = component_autocomplete_ts::autocomplete_ts_search($ar_tipo_to_search, $string_to_search);
+	$result = component_autocomplete_ts::autocomplete_ts_search($ar_tipo_to_search, $string_to_search, 30, true, $source_mode); //$ar_referenced_tipo, $string_to_search, $max_results=30, $show_modelo_name=true, $source_mode
 
 	print json_handler::encode($result);
-	die();
+	exit();
 }
 
 
@@ -40,7 +53,7 @@ if($mode=='autocomplete_ts') {
 * FIRE_TREE_RESOLUTION
 * Launch method to precalculate tesauro tree
 * @param $ar_tipo_to_search
-*/
+*//*
 if($mode=='fire_tree_resolution_DES') {
 
 	if (empty($ar_tipo_to_search)) {
@@ -54,9 +67,9 @@ if($mode=='fire_tree_resolution_DES') {
 	}else{
 		print "Ops.. Error on get_tree_resolution for $ar_tipo_to_search";
 	}	
-	die();
+	exit();
 }
-
+*/
 
 
 ?>

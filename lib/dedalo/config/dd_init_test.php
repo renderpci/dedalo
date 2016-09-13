@@ -20,7 +20,7 @@ if (!function_exists('mb_internal_encoding')) {
 # Target folder exists test	
 $folder_path = DEDALO_LIB_BASE_PATH.'/backup/backups';
 if( !is_dir($folder_path) ) {
-	if(!mkdir($folder_path, 0755,true)) {
+	if(!mkdir($folder_path, 0700,true)) {
 		die(" Error on read or create backups directory. Permission denied");
 	}
 	debug_log(__METHOD__." CREATED DIR: $folder_path  ".to_string(), logger::DEBUG);

@@ -1,7 +1,7 @@
 // JavaScript Document
 
-jQuery(document).ready(function()
-{
+$(function(){
+	
 	if(get_localStorage('jerListIframe')!=null) iframeFlat.location.href = get_localStorage('jerListIframe');
 	if(get_localStorage('jerListClick')!=null)
 	{

@@ -22,6 +22,8 @@ if(login::is_logged()!==true) die("<span class='error'> Auth error: please login
 */
 if($mode=='autocomplete') {
 
+	session_write_close();
+
 	if (strlen($string_to_search)<1) {
 		return null;
 	}	

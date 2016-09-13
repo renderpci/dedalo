@@ -1,6 +1,6 @@
 <?php
 /*
-* CLASS COMPONENT SELECT
+* CLASS COMPONENT_SELECT_LANG
 */
 
 
@@ -9,7 +9,26 @@ class component_select_lang extends component_common {
 	# Overwrite __construct var lang passed in this component
 	protected $lang = DEDALO_DATA_NOLAN;
 
+
+	function __construct($tipo=null, $parent=null, $modo='edit', $lang=DEDALO_DATA_NOLAN, $section_tipo=null) {
+
+		# Force always DEDALO_DATA_NOLAN
+		$lang = $this->lang;
+
+		# Build the componente normally
+		parent::__construct($tipo, $parent, $modo, $lang, $section_tipo);
+
+		if(SHOW_DEBUG) {
+			$traducible = $this->RecordObj_dd->get_traducible();
+			if ($traducible=='si') {
+				throw new Exception("Error Processing Request. Wrong component lang definition. This component $tipo (".get_class().") is not 'traducible'. Please fix this ASAP", 1);
+			}
+		}
+	}//end __construct
+
 	
+
+	/*
 	# GET DATO : Format "lg-spa"
 	public function get_dato() {
 		$dato = parent::get_dato();
@@ -22,55 +41,55 @@ class component_select_lang extends component_common {
 	# SET_DATO
 	public function set_dato($dato) {
 		parent::set_dato( (string)$dato );
-	}
+	*/
+
 
 
 	/**
-	* GET_AR_ALL_PROJECT_select_LANGS
-	* @return Array format id_matrix=>termino:
-	* Array
-	*		(
-	*	    	[lg-eng] => English
-	*	    	[lg-spa] => Spanish
-	*		)
+	* GET DATO
+	* @return array $dato
+	*	$dato is always an array of locators
 	*/
-	public function get_ar_all_project_select_langs() {
+	public function get_dato() {
+		$dato = parent::get_dato();
+
+		if (!empty($dato) && !is_array($dato)) {
 		
-		#if($this->modo != 'edit') return array();
-
-		$ar_final 	= array();
-		$section_id = $this->get_parent();
-
-		if($section_id > 1) {			
-			
-			$section_tipo		 	= $this->get_section_tipo();
-			$section 				= section::get_instance($section_id,$section_tipo);
-			$ar_all_project_langs 	= $section->get_ar_all_project_langs();
-				#dump($ar_all_project_langs," ar_all_project_langs ".DEDALO_APPLICATION_LANG);		
-
-		}else{
-
-			# UNDER CONSTRUCTION
-			# To do: calculate all projects langs of all records ??
-			$ar_all_project_langs 	= unserialize(DEDALO_PROJECTS_DEFAULT_LANGS);
+			trigger_error("Error: ".__CLASS__." dato type is wrong. Array expected and ".gettype($dato)." is received for tipo:$this->tipo, parent:$this->parent");			
+			$dato = array( locator::lang_to_locator($dato) );
 		}
-		#dump($ar_all_project_langs,'$ar_all_project_langs');
-
-
-		# FINAL FORMATED ARRAY
-		foreach ($ar_all_project_langs as $current_lang) {			
-			$ar_final[$current_lang] = RecordObj_ts::get_termino_by_tipo($current_lang, DEDALO_APPLICATION_LANG, true); # $terminoID, $lang=NULL, $from_cache=false, $fallback=true
-		}
-		if(SHOW_DEBUG) {
-			#dump($ar_final," ar_final ".DEDALO_APPLICATION_LANG);		
+		if ($dato==null) {
+			$dato=array();
 		}
 
-		return $ar_final;
-	}
+		return (array)$dato;
+
+	}//end get_dato
 
 
 
-	
+	/**
+	* SET_DATO
+	* @param array|string $dato
+	*	When dato is string is because is a json encoded dato
+	*/
+	public function set_dato($dato) {
+		if (is_string($dato)) { # Tool Time machine case, dato is string
+			$dato = json_handler::decode($dato);
+		}
+		if (is_object($dato)) {
+			$dato = array($dato);
+		}
+		# Ensures is a real non-associative array (avoid json encode as object)
+		$dato = is_array($dato) ? array_values($dato) : (array)$dato;
+
+		parent::set_dato( (array)$dato );
+		
+	}//end set_dato
+
+
+
+	/*
 	# GET VALUE . DEFAULT IS GET DATO . OVERWRITE IN EVERY DIFFERENT SPECIFIC COMPONENT
 	public function get_valor() {
 
@@ -83,14 +102,70 @@ class component_select_lang extends component_common {
 		}
 		return $dato;					
 	}
+	*/
+
+
+
+	/**
+	* GET_VALOR
+	* Get value . default is get dato . overwrite in every different specific component
+	* @return string | null $valor
+	*/
+	public function get_valor($lang=DEDALO_DATA_LANG) {				
+
+		if (isset($this->valor)) {
+			if(SHOW_DEBUG) {
+				//error_log("Catched valor !!! from ".__METHOD__);
+			}
+			return $this->valor;
+		}
+
+		$valor  = null;		
+		$dato   = $this->get_dato();
+		if (!empty($dato)) {
+			
+			# Test dato format (b4 changed to object)
+			if(SHOW_DEBUG) {
+				foreach ($dato as $key => $current_locator) {
+					if (!is_object($current_locator)) {
+						if(SHOW_DEBUG) {
+							dump($dato," dato");
+						}
+						trigger_error(__METHOD__." Wrong dato format. OLD format dato in $this->label $this->tipo .Expected object locator, but received: ".gettype($current_locator) .' : '. print_r($current_locator,true) );
+						return $valor;
+					}
+				}
+			}		
+
+			# Always run ar_all_project_select_langs
+			$ar_all_project_select_langs = $this->get_ar_all_project_select_langs( $lang, null );
+
+			foreach ((array)$ar_all_project_select_langs as $locator_json => $label) {
+				$locator = json_handler::decode($locator_json);	# Locator is json encoded object
+					#dump($locator, ' label ++ '.to_string($label));
+				if (in_array($locator, $dato)) {
+					$valor = $label;
+					break;
+				}
+			}
+
+		}//end if (!empty($dato))
+
+		# Set component valor
+		$this->valor = $valor;
+
+		return $valor;
+
+	}//end get_valor
+
 
 
 	/**
 	* GET_VALOR_EXPORT
 	* Return component value sended to export data
 	* @return string $valor
-	*/
-	public function get_valor_export( $valor=null, $lang=DEDALO_DATA_LANG ) {
+	*//*
+	public function get_valor_export( $valor=null, $lang=DEDALO_DATA_LANG, $quotes, $add_id ) {
 			
 		if (is_null($valor)) {
 			$dato = $this->get_dato();	// Get dato from DB
@@ -105,9 +180,82 @@ class component_select_lang extends component_common {
 		}
 		return $valor_export;
 
+	}//end get_valor_export
+	*/
+
+
+
+	/**
+	* GET_VALOR_EXPORT
+	* Return component value sended to export data
+	* @return string $valor
+	*/
+	public function get_valor_export( $valor=null, $lang=DEDALO_DATA_LANG, $quotes, $add_id ) {
+
+		# When is received 'valor', set as dato to avoid trigger get_dato against DB 
+		# Received 'valor' is a json string (array of locators) from previous database search
+		if (!is_null($valor)) {
+			$dato = json_decode($valor);
+			$this->set_dato($dato);
+		}
+		$valor = $this->get_valor($lang);
+		
+		return $valor;
+
 	}#end get_valor_export
 
 
+
+	/**
+	* GET_AR_ALL_PROJECT_SELECT_LANGS
+	* @param string $lang
+	*	default is DEDALO_APPLICATION_LANG
+	* @return array $ar_projects
+	*	format array( lang_locator => label )
+	*/
+	public function get_ar_all_project_select_langs( $lang=DEDALO_APPLICATION_LANG ) {
+		
+		$ar_projects = array();
+		$section_id  = $this->get_parent();
+
+		if($section_id > 1 ) {	 // Warning: Unactive for now 		
+			
+			$section_tipo		 	= $this->get_section_tipo();
+			$section 				= section::get_instance($section_id,$section_tipo);
+			$ar_all_project_langs 	= $section->get_ar_all_project_langs();
+				#dump($ar_all_project_langs," ar_all_project_langs ".DEDALO_APPLICATION_LANG);	
+
+			#dump($ar_all_project_langs,'$ar_all_project_langs from get_ar_all_project_langs'); #die();	
+
+		}else{
+
+			# UNDER CONSTRUCTION
+			# To do: calculate all projects langs of all records ??
+			$ar_projects_default_langs 	= unserialize(DEDALO_PROJECTS_DEFAULT_LANGS);
+			foreach ($ar_projects_default_langs as $current_lang) {
+				$ar_all_project_langs[] = locator::lang_to_locator($current_lang);
+			}
+			#dump($ar_all_project_langs,'$ar_all_project_langs from DEDALO_PROJECTS_DEFAULT_LANGS'); #die();
+		}		
+
+
+		# FINAL FORMATED ARRAY
+		foreach ($ar_all_project_langs as $current_lang_locator) {
+			if(isset($current_lang_locator->section_tipo)) {
+				$key 		  = json_encode($current_lang_locator);
+				$current_tipo = $current_lang_locator->section_tipo;
+				$ar_projects[$key] = RecordObj_ts::get_termino_by_tipo($current_tipo, $lang, true);
+			}			
+		}
+		if(SHOW_DEBUG) {
+			#dump($ar_projects," ar_projects ".DEDALO_APPLICATION_LANG);		
+		}
+
+		return $ar_projects;
+
+	}//end get_ar_all_project_select_langs
+
+	
 
 	/**
 	* BUILD_SEARCH_COMPARISON_OPERATORS 
@@ -118,6 +266,44 @@ class component_select_lang extends component_common {
 	public function build_search_comparison_operators( $comparison_operators=array('=','!=') ) {
 		return (object)parent::build_search_comparison_operators($comparison_operators);
 	}#end build_search_comparison_operators
+
+
+
+	/**
+	* GET_SEARCH_QUERY
+	* Build search query for current component . Overwrite for different needs in other components 
+	* (is static to enable direct call from section_records without construct component)
+	* Params
+	* @param string $json_field . JSON container column Like 'dato'
+	* @param string $search_tipo . Component tipo Like 'dd421'
+	* @param string $tipo_de_dato_search . Component dato container Like 'dato' or 'valor'
+	* @param string $current_lang . Component dato lang container Like 'lg-spa' or 'lg-nolan'
+	* @param string $search_value . Value received from search form request Like 'paco'
+	* @param string $comparison_operator . SQL comparison operator Like 'ILIKE'
+	*
+	* @see class.section_records.php get_rows_data filter_by_search
+	* @return string $search_query . POSTGRE SQL query (like 'datos#>'{components, oh21, dato, lg-nolan}' ILIKE '%paco%' )
+	*/
+	public static function get_search_query( $json_field, $search_tipo, $tipo_de_dato_search, $current_lang, $search_value, $comparison_operator='=') {
+		$search_query='';
+		if ( empty($search_value) ) {
+			return $search_query;
+		}
+		switch (true) {
+			case $comparison_operator=='=':
+				$search_query = " $json_field#>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}' @> '[$search_value]'::jsonb ";
+				break;
+			case $comparison_operator=='!=':
+				$search_query = " ($json_field#>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}' @> '[$search_value]'::jsonb)=FALSE ";
+				break;
+		}
+		
+		if(SHOW_DEBUG) {
+			$search_query = " -- filter_by_search $search_tipo ". get_called_class() ." \n".$search_query;
+			#dump($search_query, " search_query for search_value: ".to_string($search_value)); #return '';
+		}
+		return $search_query;
+	}//end get_search_query
 
 
 
@@ -145,6 +331,108 @@ class component_select_lang extends component_common {
 		return $tipo;
 		
 	}#end get_related_component_text_area
+
+
+
+	/**
+	* UPDATE_DATO_VERSION
+	* @param string $update_version
+	* 	like '4.0.11'
+	* @param string | array $dato_unchanged
+	* @return object $response
+	*/
+	public static function update_dato_version($update_version, $dato_unchanged, $reference_id) {
+
+		$update_version = implode(".", $update_version);
+		#dump($dato_unchanged, ' dato_unchanged ++ -- '.to_string($update_version)); #die();
+
+		switch ($update_version) {
+
+			case '4.0.12':
+				$new_dato = $dato_unchanged;
+				$data_changed=false;
+				if( empty($dato_unchanged) && !is_array($dato_unchanged) ) {
+
+					$new_dato = array();	// Empty array default
+					$data_changed=true;
+
+				}else if(!empty($dato_unchanged) && !is_array($dato_unchanged)) {
+
+					$new_dato = array();
+					$current_locator = locator::lang_to_locator($dato_unchanged);
+					debug_log(__METHOD__." dato_unchanged: $dato_unchanged - current_locator: ".to_string($current_locator), logger::DEBUG);				
+					if (is_object($current_locator)) {
+						# add_object_to_dato is safe for duplicates and object types
+						$new_dato = component_common::add_object_to_dato( $current_locator, $new_dato );
+						$data_changed=true;
+					}else{
+						# Something is wrong
+						dump($dato_unchanged, ' dato_unchanged ++ [Error en convert lang to locator] '.to_string());
+						debug_log(__METHOD__." Error en convert lang to locator . lang dato_unchanged: ".to_string($dato_unchanged), logger::DEBUG);
+					}					
+				}
+					
+				# Compatibility old dedalo instalations
+				if ($data_changed) {
+					$response = new stdClass();
+						$response->result =1;
+						$response->new_dato = $new_dato;
+						$response->msg = "[$reference_id] Dato is changed from ".to_string($dato_unchanged)." to ".to_string($new_dato).".<br />";
+
+					return $response;
+				}else{
+					$response = new stdClass();
+						$response->result = 2;
+						$response->msg = "[$reference_id] Current dato don't need update.<br />";	// to_string($dato_unchanged)." 
+
+					return $response;
+				}
+				break;
+
+			default:
+				# code...
+				break;
+		}		
+		
+	}#end update_dato_version
+
+
+
+	/**
+	* RENDER_LIST_VALUE
+	* Overwrite for non default behaviour
+	* Receive value from section list and return proper value to show in list
+	* Sometimes is the same value (eg. component_input_text), sometimes is calculated (e.g component_portal)
+	* @param string $value
+	* @param string $tipo
+	* @param int $parent
+	* @param string $modo
+	* @param string $lang
+	* @param string $section_tipo
+	* @param int $section_id
+	*
+	* @return string $list_value
+	*/
+	public static function render_list_value($value, $tipo, $parent, $modo, $lang, $section_tipo, $section_id) {
+		
+		return $value;
+		/*
+		$component 	= component_common::get_instance(__CLASS__,
+													 $tipo,
+												 	 $parent,
+												 	 'list',
+													 DEDALO_DATA_NOLAN,
+												 	 $section_tipo);
+
+		
+		# Use already query calculated values for speed
+		$ar_records   = (array)json_handler::decode($value);
+		$component->set_dato($ar_records);
+		$component->set_identificador_unico($component->get_identificador_unico().'_'.$section_id); // Set unic id for build search_options_session_key used in sessions
+		
+		return  $component->get_valor($lang);
+		*/
+	}#end render_list_value	
 	
 
 }

@@ -125,23 +125,18 @@ class JSON_RecordObj_matrix extends JSON_RecordDataBoundObject {
 
 		if( $this->test_can_save()!==true ) {
 			$msg = " Error (test_can_save). No matrix data is saved! ";
-			trigger_error($msg, E_USER_ERROR); 
+			trigger_error($msg, E_USER_ERROR);
+			debug_log(__METHOD__." $msg ".to_string(), logger::DEBUG);
 			return $msg;
 		}
 		
 		# MATRIX SAVE (with parent RecordDataBoundObject)
 		$id = parent::Save($save_options);
-
-
-		# AUTOLOG STOP TIME MACHINE COPY SAVE
-		# Prevent time machine saving activity (if current tipo is a component logger, stop save)
-		if ($this->matrix_table=='matrix_activity') {
-			RecordObj_time_machine::$save_time_machine_version = false;			
-		}
+		
 
 		# TIME MACHINE COPY SAVE (Return assigned id on save)
 		# Every record saved in matrix is saved as copy in 'matrix_time_machine' except logger and TM recover section
-		if(RecordObj_time_machine::$save_time_machine_version===true)	{
+		if(RecordObj_time_machine::$save_time_machine_version===true && $this->matrix_table!='matrix_activity')	{
 			# Exec time machine save and set returned id
 			$this->time_machine_last_id = $this->save_time_machine( $save_options );
 		}
@@ -157,14 +152,18 @@ class JSON_RecordObj_matrix extends JSON_RecordDataBoundObject {
 	*/
 	protected function save_time_machine( $save_options ) {
 
+		/*
 		if (empty($save_options->time_machine_data)) {
 			#dump($save_options,"save_time_machine save_options");
 			#trigger_error("Warning: Nothing to save in  time machine: time_machine_data is empty");
 			if(SHOW_DEBUG) {
 				#error_log("DEBUG INFO: ".__METHOD__ . " Empty save_options->time_machine_data. No time machine saved data. section_tipo:$this->section_tipo, section_id:$this->section_id");
+				#dump($save_options->time_machine_data, ' save_options->time_machine_data ++ '.to_string());
+				debug_log(__METHOD__." Empty save_options->time_machine_data. nothing is saved in TM  ".to_string(), logger::DEBUG);
 			}
 			return false;
 		}
+		*/
 			
 		$RecordObj_time_machine = new RecordObj_time_machine(null);
 		/* Fields sample

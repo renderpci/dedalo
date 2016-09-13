@@ -130,7 +130,7 @@ class component_image extends component_common {
 		# Generate default image quality from original if need
 		$default = $this->generate_default($overwrite=false);
 
-		# Generate thumb image quality from default allways (if default exits)
+		# Generate thumb image quality from default always (if default exits)
 		$thumb 	 = $this->generate_thumb();
 
 		if(SHOW_DEBUG) {
@@ -213,7 +213,7 @@ class component_image extends component_common {
 	* Return component value sended to export data
 	* @return string $valor_export
 	*/
-	public function get_valor_export( $valor=null, $lang=DEDALO_DATA_LANG ) {
+	public function get_valor_export( $valor=null, $lang=DEDALO_DATA_LANG, $quotes, $add_id ) {
 			
 		if (is_null($valor)) {
 			$dato = $this->get_dato();				// Get dato from DB

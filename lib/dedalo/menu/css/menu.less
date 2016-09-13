@@ -89,6 +89,20 @@ background-color: #FFFF00;
 		#menu_wrapper #quit:active {
 			color: #7F7F7F;
 		}
+	/*-- Toggle button --*/
+	#menu_wrapper #toggle_menu {
+		float: left;
+		top: 7px;
+		left: 40px;
+		z-index: 100;
+		color: #ffffff;
+		font-size: 32px;
+		transition: color 0s ease-in-out;
+		display: none;
+		/*background-color:#d4d4d4;
+		background-position: -120px -72px;
+		border-radius: 3px;*/
+		}
 
 	/*-- Dedalo icon top --*/
 	#menu_wrapper .dedalo_icon_top {
@@ -424,7 +438,7 @@ background-color: #FFFF00;
 		padding-left: 9px;
 		padding-right: 9px;
 		display: inline;
-		line-height: 1em;
+		line-height: 1em;		
 		}
 		.debug_line_wrap a {
 			background-color: #5B5B5B;
@@ -440,6 +454,11 @@ background-color: #FFFF00;
 
 
 
+@media screen and (min-width: 980px) {
+	#menu{
+		display: inline-block !important;
+	}
+}
 
 @media screen and (max-width: 1024px) {
 	#menu_wrapper .logged_user_name {
@@ -449,6 +468,14 @@ background-color: #FFFF00;
 
 @media screen and (max-width: 980px) {
 	#menu_wrapper {
+		position: relative;
+		min-height: 45px;
+		height: auto;
+		min-width: 0px;
+		background: #090909;
+		text-align: right;
+	}
+	#menu_wrapper .menu_background{
 		position: relative;
 		min-height: 45px;
 		height: auto;
@@ -470,12 +497,26 @@ background-color: #FFFF00;
 		text-align: center;
    		line-height: 45px;
 	}
+
+	#menu_wrapper #toggle_menu{
+	    top: 0px;
+		width: 45px;
+		height: 45px;
+		text-align: center;
+   		line-height: 45px;
+   		display: inline-block;
+   		-webkit-user-select: none;
+		-khtml-user-select: none;
+		-moz-user-select: none;
+		-o-user-select: none;
+		user-select: none;
+	}
 	#menu {
 		float: none;
 		margin-left: 0px;
 		margin-top: 0;
 		width: 100%;
-		//display: none;
+		display: none;
 	}
 	#menu li {
 		float: none;
@@ -569,6 +610,13 @@ background-color: #FFFF00;
 		margin: 0;
 		z-index: 100;
 	}
+	.menu_wrapper_space {
+		height: 0px;
+	}
+	.debug_line_wrap_spacer {
+		height: 0px;
+	}
+
 
 
 }//end @media screen and (max-width: 980px) {

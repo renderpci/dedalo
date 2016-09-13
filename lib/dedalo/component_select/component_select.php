@@ -16,7 +16,7 @@
 	$lang					= $this->get_lang();
 	$identificador_unico	= $this->get_identificador_unico();
 	$component_name			= get_class($this);
-	
+	$context 				= $this->get_context();
 	
 
 	$file_name = $modo;
@@ -28,7 +28,7 @@
 				if ($this->get_filter_authorized_record()===false) return NULL ;
 
 				$referenced_tipo 	= $this->get_referenced_tipo();
-				$ar_list_of_values  = $this->get_ar_list_of_values( DEDALO_DATA_LANG, null );
+				$ar_list_of_values  = $this->get_ar_list_of_values( DEDALO_DATA_LANG, null, $referenced_tipo );
 				$id_wrapper 		= 'wrapper_'.$identificador_unico;
 				$input_name 		= "{$tipo}_{$parent}";	
 				$component_info 	= $this->get_component_info('json');	

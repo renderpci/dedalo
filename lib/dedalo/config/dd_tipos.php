@@ -38,7 +38,6 @@ define('DEDALO_SECTION_PROJECTS_TIPO'					, 'dd153');
 define('DEDALO_PROJECTS_NAME_TIPO'						, 'dd156'); # remenber: is 'component_input_text' model
 define('DEDALO_COMPONENT_PROJECT_LANGS_TIPO'			, 'dd267');
 
-
 # dedalo_diffusion_tipo
 define('DEDALO_DIFFUSION_TIPO'							, 'dd3');
 define('DEDALO_COMPONENT_SI_NO_TIPO'					, 'dd62');	# Tipo del campo valor (no de la sección) lista privada con valores posibles: 1,2 (si,no) -traducible-
@@ -55,25 +54,37 @@ define('DEDALO_MEDIA_COLLECTION_TIPO'					, 'rsc25'); # TIPO of the collection c
 define('MODELO_SECTION'									, 'dd6');
 
 # State
-define('DEDALO_STATE_GENERAL_SECTION_ID'					, '1');
+define('DEDALO_STATE_GENERAL_SECTION_ID'				, '1');
 define('DEDALO_STATE_GENERAL_SECTION_TIPO'				, 'dd174');
 define('DEDALO_STATE_GENERAL_COMPONENT_TIPO'			, 'dd185');
 
 # Tools / procesos
 define('DEDALO_TOOLS_TIPO'								, 'dd193');
-define('DEDALO_TOOL_TRANSCRIPTION_ID'						, '1');
-define('DEDALO_TOOL_INDEXATION_ID'							, '2');
-define('DEDALO_TOOL_TRANSLATE_ID'							, '3');
+define('DEDALO_TOOL_TRANSCRIPTION_ID'					, '1');
+define('DEDALO_TOOL_INDEXATION_ID'						, '2');
+define('DEDALO_TOOL_TRANSLATE_ID'						, '3');
 define('DEDALO_TOOL_INVESTIGATION_SECTION_TIPO'			, 'dd90');
 define('DEDALO_TOOL_INVESTIGATION_COMPONENT_TIPO'		, 'dd127');
-
 
 # Video components resources
 define('DEDALO_SECTION_RESOURCES_AV_TIPO'				, 'rsc167');
 define('DEDALO_COMPONENT_RESOURCES_AV_TIPO'				, 'rsc35');
 define('DEDALO_COMPONENT_RESOURCES_MINUTES_TIPO'		, 'rsc54');
 
+# Hierarchy
+define('DEDALO_HIERARCHY_SECTION_TIPO'					, 'hierarchy1');
+define('DEDALO_HIERARCHY_ACTIVE_TIPO'					, 'hierarchy4');
+define('DEDALO_HIERARCHY_LANG_TIPO'						, 'hierarchy8');
+define('DEDALO_HIERARCHY_TIPOLOGY_TIPO'					, 'hierarchy9');
+define('DEDALO_HIERARCHY_TLD2_TIPO'						, 'hierarchy6');
+define('DEDALO_HIERARCHY_TERM_TIPO'						, 'hierarchy25');
 
+# Relation types
+define('DEDALO_RELATION_TYPE_PARENT_TIPO'				, 'dd47');
+define('DEDALO_RELATION_TYPE_CHILDREN_TIPO'				, 'dd48');
+define('DEDALO_RELATION_TYPE_RELATED_TIPO'				, 'dd89');
+define('DEDALO_RELATION_TYPE_INDEX_TIPO'				, 'dd96');
+define('DEDALO_RELATION_TYPE_MODEL_TIPO'				, 'dd98');
 
 define('DEDALO_TEXTAREA_FIX_BROQUEN_TAGS_TIPOS'			, serialize( array('rsc36')) );
 

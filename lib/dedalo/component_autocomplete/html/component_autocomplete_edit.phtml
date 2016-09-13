@@ -13,6 +13,7 @@
 	data-ar_target_section_tipo='{$ar_target_section_tipo_json}'
 	data-tipo_to_search='{$tipo_to_search}'
 	data-modo=\"{$modo}\"
+	data-from_modo=\"{$from_modo}\"
 	data-dato='{$dato_json}'
 	data-component_name=\"{$component_name}\"
 	data-component_info='{$component_info}'
@@ -32,6 +33,11 @@
 					break;
 
 		case ($permissions>=2)	:
+
+					if($from_modo != 'edit'){
+						$html_contenido .= "<div class=\"css_autocomplete_button_close\" onclick=\"component_common.change_mode_component(this, 'edit', '$from_modo')\"></div>";
+					}
+					
 
 					# VALOR . STRING RESOLVED TO SHOW
 					$html_contenido .= "\n <ul class=\"css_autocomplete_valor\">";
@@ -145,11 +151,11 @@
 						$html_contenido .= "<div class=\"new_element_container\" data-type=\"new_element_container\"></div>";
 
 						if(SHOW_DEBUG) {
-							$html_contenido .= "<div class=\"notes\">target_section_tipo: ".implode(', ', $ar_target_section_tipo)."</div>";
+							$html_contenido .= "<div class=\"debug_info notes\">target_section_tipo: ".implode(', ', $ar_target_section_tipo)."</div>";
 							if (isset($propiedades->filtered_by)) {
-								$html_contenido .= "<div class=\"notes\">filtered_by: ".json_encode($propiedades->filtered_by)."</div>";	// filtered_by
+								$html_contenido .= "<div class=\"debug_info notes\">filtered_by: ".json_encode($propiedades->filtered_by)."</div>";	// filtered_by
 							}
-							$html_contenido .= "<div class=\"notes\">".str_replace('},', '},<br>', $dato_json) ."</div>";
+							$html_contenido .= "<div class=\"debug_info notes\">".str_replace('},', '},<br>', $dato_json) ."</div>";
 						}
 					}
 

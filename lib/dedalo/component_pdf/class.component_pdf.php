@@ -104,6 +104,7 @@ class component_pdf extends component_common {
 		if(isset($this->aditional_path)) return $this->aditional_path;
 
 		$propiedades = $this->get_propiedades();
+
 		if (isset($propiedades->aditional_path)) {
 
 			$component_tipo 	= $propiedades->aditional_path;
@@ -124,6 +125,17 @@ class component_pdf extends component_common {
 			#dump($dato,'$dato');
 
 			$ar_aditional_path[$this->pdf_id] = $dato;
+			
+			if(isset($propiedades->max_items_folder) && empty($dato)) {
+
+						$max_items_folder  = $propiedades->max_items_folder;
+						$parent_section_id = $this->parent;
+
+						$ar_aditional_path[$this->pdf_id] = '/'.$max_items_folder*(floor($parent_section_id / $max_items_folder));
+
+						$component->set_dato( $ar_aditional_path[$this->pdf_id] );
+						$component->Save();
+					}
 
 		}else{
 			$ar_aditional_path[$this->pdf_id] = false;
@@ -555,7 +567,7 @@ class component_pdf extends component_common {
 	* Return component value sended to export data
 	* @return string $valor
 	*/
-	public function get_valor_export( $valor=null, $lang=DEDALO_DATA_LANG ) {
+	public function get_valor_export( $valor=null, $lang=DEDALO_DATA_LANG, $quotes, $add_id ) {
 		
 		if (is_null($valor)) {
 			$dato = $this->get_dato();				// Get dato from DB

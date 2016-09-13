@@ -5,19 +5,18 @@
 	$tipo 					= $this->get_tipo();
 	$parent 				= $this->get_parent();
 	$section_tipo			= $this->get_section_tipo();
-	$modo					= $this->get_modo();
-	$dato 					= $this->get_dato();
+	$modo					= $this->get_modo();	
 	$label 					= $this->get_label();
 	$required				= $this->get_required();
 	$debugger				= $this->get_debugger();
-	$permissions			= common::get_permissions($section_tipo,$tipo);
+	$permissions			= common::get_permissions($section_tipo, $tipo);
 	$ejemplo				= null;
 	$html_title				= "Info about $tipo";
 	$ar_tools_obj			= $this->get_ar_tools_obj();
 	$lang					= $this->get_lang();
 	$identificador_unico	= $this->get_identificador_unico();
 	$component_name			= get_class($this);
-	$valor_string			= $dato;		
+	$context 				= $this->get_context();
 
 	$file_name = $modo;
 	
@@ -27,6 +26,9 @@
 		case 'edit'	:
 				# Verify component content record is inside section record filter
 				if ($this->get_filter_authorized_record()===false) return null ;
+
+				$dato		= $this->get_dato();
+				$dato_json 	= json_encode($dato);
 
 				$valor							= $this->get_valor();
 				$ar_all_project_select_langs	= $this->get_ar_all_project_select_langs();

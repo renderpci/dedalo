@@ -132,9 +132,7 @@ if($mode=='generate_version') {
 			$Thumb->resize_basic($target_pixels_width,$target_pixels_height);	
 			$response = $Thumb->save($target_image, $quality = 100);
 			break;
-	}
-	
-	
+	}	
 	
 	
 
@@ -168,9 +166,9 @@ if($mode=='generate_version') {
 	}else{
 		$html = $response;	
 	}
-	
 
 	print $html;
+	session_write_close();
 	die();
 }#and generate_version
 
@@ -198,8 +196,10 @@ if($mode=='rotate_image') {
 	}
 	if ( empty($tipo) ) {
 		throw new Exception("Error Processing Request. Few vars! (tipo)", 1);
-	}	
-	
+	}
+	if ( empty($section_tipo) ) {
+		throw new Exception("Error Processing Request. Few vars! (section_tipo)", 1);
+	}
 
 
 	# Image source
@@ -247,12 +247,20 @@ if($mode=='rotate_image') {
 	}
 
 	# Save component refresh 'valor_list'
-	$component_obj = component_common::get_instance(null, $tipo, $parent, 'edit');
+	$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true); 
+	$component_obj 	= component_common::get_instance($modelo_name,
+													  $tipo,
+													  $parent,
+													  'edit',
+													  DEDALO_DATA_NOLAN,
+													  $section_tipo);
 	$component_obj->Save();
 
 	print $html;
+	session_write_close();
 	die();
 }#and generate_version
+
 
 
 /**
@@ -347,9 +355,11 @@ if($mode=='delete_version') {
 		} catch (Exception $e) {
 			echo 'Exception: ',  $e->getMessage(), "\n";
 		}
-	}		
+	}
+	session_write_close();	
 	exit();	
 }#end delete
+
 
 
 /**
@@ -369,10 +379,12 @@ die("trigger.tool image versions get_thumb en proceso");
 	# THUMB (PLAYER)
 	$component_image->set_modo('thumb');
 	$thumb_html = $this->component_obj->get_html();
+	
 	print $thumb_html;
+	session_write_close();
 	exit();
-
 }#end delete
+
 
 
 /**
@@ -382,7 +394,7 @@ die("trigger.tool image versions get_thumb en proceso");
 */
 if($mode=='file_exists') {
 	
-	#dump($aditional_path,'$aditional_path');
+	session_write_close();
 	
 	if ( empty($image_id) ) {
 		throw new Exception("Error Processing Request. Few vars! (image_id)", 1);
@@ -415,10 +427,11 @@ if($mode=='file_exists') {
 			#trigger_error( __METHOD__ . " " . $e->getMessage() , E_USER_NOTICE) ;			
 		}			
 	}
-	#dump($file_name, "file_size $file_size");
+	
 	print $file_size;
 	exit();
 }#end file exists
+
 
 
 /**

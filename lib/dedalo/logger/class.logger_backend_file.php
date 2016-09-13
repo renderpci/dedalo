@@ -13,7 +13,7 @@ class logger_backend_file extends logger_backend  {
 	public function __construct($url_data) {
 
 		# ANULADO DE MOMENTO
-		#return null;
+		return null;
 	
 		parent::__construct($url_data);
 
@@ -50,7 +50,7 @@ class logger_backend_file extends logger_backend  {
 	public function log_message( $message, $log_level=logger::INFO, $module=NULL, $operations=NULL, $datos=NULL ) {	#$message, $log_level=logger::INFO, $tipo_donde=NULL, $projects=NULL, $datos=NULL
 
 		# ANULADO DE MOMENTO		
-		#return null;
+		return null;
 
 		if ( $log_level > $this->log_level ) {
 			return;

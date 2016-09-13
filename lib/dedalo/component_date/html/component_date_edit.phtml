@@ -13,6 +13,7 @@
 	data-section_tipo=\"{$section_tipo}\"
 	data-parent=\"{$parent}\"
 	data-modo=\"{$modo}\"
+	data-from_modo=\"{$from_modo}\"
 	data-dato='{$dato_json}'
 	data-component_name=\"{$component_name}\"
 	data-component_info='{$component_info}'
@@ -34,26 +35,146 @@
 
 			case ($permissions>=2) :
 
-						$add_class='';
-						if ( !empty($propiedades) &&
-							 isset($propiedades->method->get_valor_local) &&
-							 reset($propiedades->method->get_valor_local)==true
-							) $add_class = 'full';
+					if($from_modo != 'edit'){
+						$html_contenido .= "<div class=\"css_date_button_close\" onclick=\"component_common.change_mode_component(this, 'edit', '$from_modo')\"></div>";
+					}
+					
+						
 
-						$html_contenido .= "\n <input type=\"text\" class=\"css_date full $add_class\" id=\"{$identificador_unico}\"
-						name=\"{$input_name}\"
-						data-tipo=\"{$tipo}\"
-						data-section_tipo=\"{$section_tipo}\"
-						data-parent=\"{$parent}\"
-						data-lang=\"{$lang}\"
-						value=\"{$valor}\"
-						title=\"$html_title\"
-						placeholder=\"Format $ejemplo\"
-						onclick=\"component_date.activate_datepicker(this)\"
-						onchange=\"component_date.Save(this)\"
-						onfocus=\"component_common.select_wrap(null,'$id_wrapper');\"
-						tabindex=\"1\"
-						/>";
+						switch ($date_mode) {
+							case 'range':
+								$html_contenido .= "\n <input type=\"text\" class=\"css_date full range_start\" id=\"{$uid_start}\"
+								name=\"{$input_name_start}\"
+								data-role=\"range_start\"
+								data-tipo=\"{$tipo}\"
+								data-lang=\"{$lang}\"
+								data-section_tipo=\"{$section_tipo}\"
+								data-parent=\"{$parent}\"
+								data-modo=\"{$modo}\"								
+								value=\"{$valor_start}\"
+								title=\"$html_title\"
+								placeholder=\"$ejemplo\"
+								onclick=\"component_date.activate_datepicker(this)\"
+								onchange=\"component_date.Save(this,'$date_mode')\"
+								onfocus=\"component_common.select_wrap(null,'$id_wrapper');\"
+								tabindex=\"1\"
+								/>";
+
+								$html_contenido .= " <> ";
+
+								$html_contenido .= "\n <input type=\"text\" class=\"css_date full range_end\" id=\"{$uid_end}\"
+								name=\"{$input_name_end}\"
+								data-role=\"range_end\"
+								data-tipo=\"{$tipo}\"
+								data-lang=\"{$lang}\"
+								data-section_tipo=\"{$section_tipo}\"
+								data-parent=\"{$parent}\"
+								data-modo=\"{$modo}\"
+								value=\"{$valor_end}\"
+								title=\"$html_title\"
+								placeholder=\"$ejemplo\"
+								onclick=\"component_date.activate_datepicker(this)\"
+								onchange=\"component_date.Save(this,'$date_mode')\"
+								onfocus=\"component_common.select_wrap(null,'$id_wrapper');\"
+								tabindex=\"1\"
+								/>";
+								break;
+
+							case 'period':
+								# YEAR
+								$html_contenido .= "\n <input type=\"text\" class=\"css_date period_year\"
+								name=\"{$input_name_year}\"
+								data-role=\"period_year\"
+								data-tipo=\"{$tipo}\"
+								data-lang=\"{$lang}\"
+								data-section_tipo=\"{$section_tipo}\"
+								data-parent=\"{$parent}\"
+								data-modo=\"{$modo}\"
+								value=\"{$valor_year}\"
+								title=\"$html_title\"
+								placeholder=\"$placeholder_year\"
+								onchange=\"component_date.Save(this,'$date_mode')\"
+								onfocus=\"component_common.select_wrap(null,'$id_wrapper');\"
+								tabindex=\"1\"
+								/> ";
+								if($valor_year>1){
+									$html_contenido .= '<span class="css_date label_range">'.label::get_label('anyos').'</span>';
+								}else{
+									$html_contenido .= '<span class="css_date label_range">'.label::get_label('anyo').'</span>';
+								}
+								# MONTH
+								$html_contenido .= "\n <input type=\"text\" class=\"css_date period_month\"
+								name=\"{$input_name_month}\"
+								data-role=\"period_month\"
+								data-tipo=\"{$tipo}\"
+								data-lang=\"{$lang}\"
+								data-section_tipo=\"{$section_tipo}\"
+								data-parent=\"{$parent}\"
+								data-modo=\"{$modo}\"
+								value=\"{$valor_month}\"
+								title=\"$html_title\"
+								placeholder=\"$placeholder_month\"
+								onchange=\"component_date.Save(this,'$date_mode')\"
+								onfocus=\"component_common.select_wrap(null,'$id_wrapper');\"
+								tabindex=\"1\"
+								/> ";
+								if($valor_month>1){
+									$html_contenido .= '<span class="css_date label_range label_range_34">'.label::get_label('meses').'</span>';
+								}else{
+									$html_contenido .= '<span class="css_date label_range label_range_34">'.label::get_label('mes').'</span>';
+								}
+								
+								# DAY
+								$html_contenido .= "\n <input type=\"text\" class=\"css_date period_day\"
+								name=\"{$input_name_day}\"
+								data-role=\"period_day\"
+								data-tipo=\"{$tipo}\"
+								data-lang=\"{$lang}\"
+								data-section_tipo=\"{$section_tipo}\"
+								data-parent=\"{$parent}\"
+								data-modo=\"{$modo}\"
+								value=\"{$valor_day}\"
+								title=\"$html_title\"
+								placeholder=\"$placeholder_day\"
+								onchange=\"component_date.Save(this,'$date_mode')\"
+								onfocus=\"component_common.select_wrap(null,'$id_wrapper');\"
+								tabindex=\"1\"
+								/> ";
+								if($valor_day>1){
+									$html_contenido .= '<span class="css_date label_range">'.label::get_label('dias').'</span>';
+								}else{
+									$html_contenido .= '<span class="css_date label_range">'.label::get_label('dia').'</span>';
+								}
+								break;
+
+							case 'date':
+							default:
+								// Single date case (end date)
+								$add_class='';
+								if ( !empty($propiedades) &&
+									 isset($propiedades->method->get_valor_local) &&
+									 reset($propiedades->method->get_valor_local)==true
+									) $add_class = 'full';
+
+								$html_contenido .= "\n <input type=\"text\" class=\"css_date full $add_class\" id=\"{$identificador_unico}\"
+								name=\"{$input_name}\"
+								data-tipo=\"{$tipo}\"
+								data-lang=\"{$lang}\"
+								data-section_tipo=\"{$section_tipo}\"
+								data-parent=\"{$parent}\"
+								data-modo=\"{$modo}\"
+								value=\"{$valor}\"
+								title=\"$html_title\"
+								placeholder=\"$ejemplo\"
+								onclick=\"component_date.activate_datepicker(this)\"
+								onchange=\"component_date.Save(this,'$date_mode')\"
+								onfocus=\"component_common.select_wrap(null,'$id_wrapper');\"
+								tabindex=\"1\"
+								/>";
+								break;
+						}
+						#$html_contenido .= "<div>$date_mode</div>";
+						
 
 						#$html_contenido .= " <span class=\"css_span_ejemplo\">Format $ejemplo </span>";
 
@@ -64,7 +185,7 @@
 						#$html_contenido .= "<script>$('#$identificador_unico').on(\"change\",function(){component_date.Save(this);})</script>";
 
 						if(SHOW_DEBUG) {
-							$html_contenido .= "\n <span class=\"current_date_info\">Current date: <span>$dato_json</span></span>";
+							$html_contenido .= "\n <span class=\"debug_info current_date_info\">date_mode: $date_mode  - current date: <span>$dato_json</span></span>";
 							#$html_contenido .= "\n <span class=\"css_span_debugger\" id=\"debugger_{$tipo}\" >{$debugger}</span>";
 						}
 						break;

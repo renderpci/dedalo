@@ -22,55 +22,55 @@
 	$html_contenido = '';
 	switch($permissions) {
 			
-		case 0	:	$html_contenido .= "\n <span class=\"css_span_dato\"> No access here (text_area)! </span>";	
-					break;
+		case 0	:	
+				$html_contenido .= "";	
+				break;
 						
-		case 1	: 	$html_contenido .= "\n<div class=\"text_area_content text_area_content_shadow\" >";
-					$html_contenido .= "\n <span class=\"css_span_dato\">$dato</span>";
-					$html_contenido .= "\n</div>"; #end text_area_content											
-					break;	
-						
+		case 1	: 	
+				$html_contenido .= "\n<div class=\"text_area_content text_area_content_shadow\" >";
+				$html_contenido .= "\n <span class=\"css_span_dato\">$dato</span>";
+				$html_contenido .= "\n</div>"; #end text_area_content											
+				break;						
 		
-		case ($permissions>=2)	:
+		case 2	:
+		case 3	:
+				#
+				# BROKEN INDEX TAGS WARNING
+				if (isset($component_warning)) {
+					$html_contenido .= "<div id=\"text_area_warning\" class=\"text_area_warning\"><span class=\"warning\">".$component_warning."</span></div>";
+				}										
 
-					#
-					# BROKEN INDEX TAGS WARNING
-					if (isset($component_warning)) {
-						$html_contenido .= "<div id=\"text_area_warning\" class=\"text_area_warning\"><span class=\"warning\">".$component_warning."</span></div>";
-					}
-										
+				#
+				# TEXT AREA
+				#
+				$html_contenido .= "\n <textarea class=\"css_text_area text_area_transcription\"
+				id=\"{$identificador_unico}\"
+				name=\"{$input_name}\"
+				data-parent=\"{$parent}\"
+				data-tipo=\"{$tipo}\"
+				data-lang=\"{$lang}\"
+				data-modo=\"{$modo}\"
+				data-section_tipo=\"{$section_tipo}\"					
+				data-last_tag_index_id=\"{$last_tag_index_id}\"					
+				data-rol=\"text_area_transcription\"
+				title=\"$html_title\">$dato</textarea>";
 
-					#
-					# TEXT AREA
-					#
-					$html_contenido .= "\n <textarea class=\"css_text_area text_area_transcription\"
-					id=\"{$identificador_unico}\"
-					name=\"{$input_name}\"
-					data-tipo=\"{$tipo}\"
-					data-lang=\"{$lang}\"
-					data-section_tipo=\"{$section_tipo}\"
-					data-parent=\"{$parent}\"
-					data-last_tag_index_id=\"{$last_tag_index_id}\"
-					data-id_wrapper=\"$id_wrapper\"
-					data-rol=\"text_area_transcription\"
-					title=\"$html_title\">$dato</textarea>";
+				# Init text editor
+				#$html_contenido .= '<script>text_editor.init("'.$identificador_unico.'","text_editor_tool_transcription.css");</script>';	
 
-					# Init text editor
-					#$html_contenido .= '<script>text_editor.init("'.$identificador_unico.'","text_editor_tool_transcription.css");</script>';	
+				
+				if (SHOW_DEBUG) {
+					$html_contenido .= "<span class=\"debug_info\"> $identificador_unico</span>";					
+					#$html_contenido .= "\n <span class=\"css_span_debugger\" id=\"debugger_{$tipo}\" >{$debugger}</span>";
+				}
+				
+				# INIT : Init text editor 
+				$html_contenido .= "\n<script>text_editor.init('$identificador_unico','$modo');</script>";					
+				break;
 
-					
-					if (SHOW_DEBUG) {
-						$html_contenido .= "<span class=\"debug_info\"> $identificador_unico</span>";					
-						#$html_contenido .= "\n <span class=\"css_span_debugger\" id=\"debugger_{$tipo}\" >{$debugger}</span>";
-					}
-					
-					
-					break;
-							
-	}	
+	}//end switch($permissions)	
 	
-	# INIT : Init text editor 
-	$html_contenido .= "\n<script>text_editor.init('$identificador_unico','$modo');</script>";
+	
 	
 	# Prepare content to show in page
 	tools::prepare_content($html_contenido);

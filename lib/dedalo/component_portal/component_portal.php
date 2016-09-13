@@ -6,7 +6,7 @@
 	$parent 				= $this->get_parent();
 	$section_tipo			= $this->get_section_tipo();
 	$modo					= $this->get_modo();
-	
+
 	$dato_reference_lang 	= NULL;
 	$traducible 			= $this->get_traducible();
 	$label 					= $this->get_label();
@@ -22,12 +22,10 @@
 	$identificador_unico	= $this->get_identificador_unico();
 	$component_name			= get_class($this);
 	$context				= $this->get_context();
-
 	
 	if (isset($context->context_name) && $context->context_name=='tool_time_machine') {
 		$this->set_show_button_new(false);
-	}
-	
+	}	
 
 	$propiedades			= $this->get_propiedades();
 	$id_wrapper 			= 'wrapper_'.$identificador_unico;	
@@ -127,6 +125,16 @@
 				$valor				= $this->get_dato_as_string();
 				$component_info 	= $this->get_component_info('json');
 				$exclude_elements 	= $this->get_exclude_elements();
+
+				#
+				# EDIT VIEW CONFIG (propiedades)
+				$edit_view 			= 'full'; // Default portal view if nothing is set about
+				if(isset($propiedades->edit_view)) {
+					$edit_view		= $propiedades->edit_view;
+					$file_view 		= $modo.'_'.$edit_view;
+					$file_name 		= $file_view;
+				}
+
 					#dump($exclude_elements, ' exclude_elements');
 					#dump($dato, ' dato');
 				if(SHOW_DEBUG) {
@@ -155,7 +163,7 @@
 						
 						# LAYOUT_MAP : Calculate list for layout map
 						# All related terms are selected except section that is unset from the array								
-						$layout_map_virtual  	= $this->get_layout_map();
+						$layout_map_virtual  	= $this->get_layout_map($edit_view);
 						$ar_target_section_tipo = $this->get_ar_target_section_tipo();
 							#dump( $layout_map_virtual,"layout_map_virtual - $ar_target_section_tipo"); #die();
 
@@ -205,7 +213,7 @@
 
 				#
 				# COLUMNS
-				$ar_columns = $this->get_ar_columns();
+				$ar_columns = $this->get_ar_columns($edit_view);
 					#dump($ar_columns, ' ar_columns ++ '.to_string());
 
 				#
@@ -226,7 +234,8 @@
 
 				# JS ADD
 				#js::$ar_url[]  = DEDALO_LIB_BASE_URL."/tools/tool_portal/js/tool_portal.js";
-				
+
+								
 				break;
 
 		# LIST MODE

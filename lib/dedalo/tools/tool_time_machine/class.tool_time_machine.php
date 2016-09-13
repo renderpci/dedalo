@@ -55,7 +55,8 @@ class tool_time_machine extends tool_common {
 			#dump($this->section_tipo," section_tipo");
 		#$this->load_data_from_component();
 		#$this->load_structure_data();
-	}
+		
+	}//end __construct
 
 
 	/**
@@ -86,7 +87,8 @@ class tool_time_machine extends tool_common {
 		#dump($ar_time_machine_obj,"ar_time_machine_obj");
 
 		return $ar_time_machine_obj;
-	}
+
+	}//end get_ar_component_time_machine
 
 
 
@@ -146,7 +148,8 @@ class tool_time_machine extends tool_common {
 		}
 
 		return $ar_sections_time_machine ;
-	}
+	}//end get_ar_sections_time_machine
+
 
 
 	/**
@@ -229,7 +232,7 @@ class tool_time_machine extends tool_common {
 		);
 
 		return true;
-	}
+	}//end recover_section_from_time_machine
 
 
 
@@ -276,7 +279,8 @@ class tool_time_machine extends tool_common {
 
 		return false;
 
-	}#end user_can_recover_sections
+	}//end user_can_recover_sections
+
 
 
 	/**

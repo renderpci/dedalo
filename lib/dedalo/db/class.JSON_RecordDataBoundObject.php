@@ -451,7 +451,7 @@ abstract class JSON_RecordDataBoundObject {
 				# DEFAULT . CASO GENERAL: USAREMOS EL KEY COMO CAMPO Y EL VALUE COMO VALOR TIPO 'campo = valor'
 				default :					
 
-						if(is_numeric($value) && strpos($key, 'datos')===false) {
+						if(is_int($value) && strpos($key, 'datos')===false) {	// changed  from is_numeric to is_int (06-06-2016)	
 							$strQuery 	.= "AND $key = $value ";
 						}else{
 							$value = pg_escape_string($value);

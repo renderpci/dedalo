@@ -11,7 +11,7 @@
 	$label 					= $this->get_label();
 	$required				= $this->get_required();
 	$debugger				= $this->get_debugger();	
-	$$permissions			= common::get_permissions($section_tipo,$tipo);
+	$permissions			= common::get_permissions($section_tipo,$tipo);
 	$html_title				= "Info about $tipo";
 	$dato 					= $this->get_dato();
 	$valor					= $this->get_valor();	

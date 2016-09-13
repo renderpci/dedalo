@@ -28,7 +28,10 @@ if ($mode=='export_data') {
 	# Verify mandatory vars
 	if (empty($section_tipo) || empty($columns)) {
 		exit("Error: Sorry few vars");
-	}	
+	}
+
+	# Write session to unlock session file
+	session_write_close();	
 
 	$tool_export  = new tool_export($section_tipo,'edit');
 

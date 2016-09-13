@@ -23,6 +23,10 @@ require_once(DEDALO_LIB_BASE_PATH.'/lock_components/class.lock_components.php');
 */
 if ($mode=='update_lock_components_state') {
 
+	if(SHOW_DEBUG) {
+		$start_time=microtime(1);
+	}
+
 	$vars = array('section_id','section_tipo','component_tipo','action');
 		foreach($vars as $name) $$name = common::setVar($name);
 	
@@ -42,6 +46,8 @@ if ($mode=='update_lock_components_state') {
 	
 	$user_id 		= $_SESSION['dedalo4']['auth']['user_id'];
 	$full_username 	= $_SESSION['dedalo4']['auth']['full_username'];
+	
+	# Write session to unlock session file
 	session_write_close();
 
 	if ($user_id<0) {
@@ -59,6 +65,11 @@ if ($mode=='update_lock_components_state') {
 		$event_element->date  			= date("Y-m-d H:i:s");
 
 	$result_obj = lock_components::update_lock_components_state( $event_element );
+
+	if(SHOW_DEBUG) {
+		$total=round(microtime(1)-$start_time,3);
+		debug_log(__METHOD__." Total: (update_lock_components_state) ".exec_time($start_time), logger::DEBUG);	;
+	}
 
 	echo json_encode($result_obj);
 	exit();

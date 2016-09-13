@@ -242,6 +242,21 @@ class component_security_access extends component_common {
 				}
 			}		
 			$ar_temp = self::get_ar_ts_childrens_recursive($children_terminoID);
+
+
+			#
+			# REMOVE_EXCLUDE_TERMS : CONFIG EXCLUDES
+			# If instalation config value DEDALO_AR_EXCLUDE_COMPONENTS is defined, remove from ar_temp
+			if (defined('DEDALO_AR_EXCLUDE_COMPONENTS')) {				
+				$DEDALO_AR_EXCLUDE_COMPONENTS = unserialize(DEDALO_AR_EXCLUDE_COMPONENTS);
+				foreach ($ar_temp as $current_key => $current_ar_value) {
+					if (in_array($current_key, $DEDALO_AR_EXCLUDE_COMPONENTS)) {
+						unset( $ar_temp[$current_key] );
+						debug_log(__METHOD__." DEDALO_AR_EXCLUDE_COMPONENTS: Removed security access term $current_key ".to_string(), logger::DEBUG);
+					}
+				}								
+			}
+			#dump($ar_temp, ' ar_temp 2 ++ '.to_string($DEDALO_AR_EXCLUDE_COMPONENTS));
 	
 	
 			#if(count($ar_ts_childrens)>0) 				
@@ -258,9 +273,9 @@ class component_security_access extends component_common {
 		if(SHOW_DEBUG) {
 			#$total=round(microtime(1)-$start_time,3); dump($total, 'total');	#dump($ar_authorized_areas_for_user, 'ar_authorized_areas_for_user');				
 		}
+
 	
-		return $ar_tesauro[$terminoID];	
-		
+		return $ar_tesauro[$terminoID];		
 	}//end get_ar_ts_childrens_recursive	
 
 
@@ -393,8 +408,7 @@ class component_security_access extends component_common {
 		title=\"Read and write\"
 		{$checked} {$disabled}/> <span class=\"span_property\">RW</span> ";
 		
-		return $html;	
-
+		return $html;
 	}//end create_radio
 
 
@@ -489,6 +503,7 @@ class component_security_access extends component_common {
 		}
 
 		if (isset($ar_ts_childrens_plain[$parent_tipo])) {
+				dump($ar_ts_childrens_plain, ' ar_ts_childrens_plain ++ '.to_string());
 			return $ar_ts_childrens_plain[$parent_tipo];
 		}else{
 			return array();
@@ -570,7 +585,7 @@ class component_security_access extends component_common {
 	* @param mixed $dato_unchanged
 	* @return object $response
 	*/
-	public static function update_dato_version($update_version, $dato_unchanged) {
+	public static function update_dato_version($update_version, $dato_unchanged, $reference_id) {
 
 		$update_version = implode(".", $update_version);
 		#dump($dato_unchanged, ' dato_unchanged ++ -- '.to_string($update_version)); #die();
@@ -607,12 +622,12 @@ class component_security_access extends component_common {
 					$response = new stdClass();
 						$response->result =1;
 						$response->new_dato = $new_dato;
-
+						$response->msg = "[$reference_id] Dato is changed from ".to_string($dato_unchanged)." to ".to_string($new_dato).".<br />";
 					return $response;
 				}else{
 					$response = new stdClass();
 						$response->result = 2;
-						$response->msg = to_string($dato_unchanged)." : The dato don't need update.<br />";
+						$response->msg = "[$reference_id] Current dato don't need update.<br />";	// to_string($dato_unchanged)." 
 
 					return $response;
 				}
@@ -624,6 +639,26 @@ class component_security_access extends component_common {
 		}		
 		
 	}#end update_dato_version
+
+
+
+	/**
+	* GET_VALOR_LIST_HTML_TO_SAVE
+	* Usado por section:save_component_dato
+	* Devuelve a section el html a usar para rellenar el 'campo' 'valor_list' al guardar
+	* Por defecto será el html generado por el componente en modo 'list', pero en algunos casos
+	* es necesario sobre-escribirlo, como en component_portal, que ha de resolverse obigatoriamente en cada row de listado
+	*
+	* En este caso, NO guardamos nada en 'valor_list'
+	*
+	* @see class.section.php
+	* @return string $html
+	*/
+	public function get_valor_list_html_to_save() {
+		$html='';
+		
+		return (string)$html;
+	}//end get_valor_list_html_to_save
 
 
 	

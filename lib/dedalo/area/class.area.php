@@ -120,10 +120,13 @@
 		$ar_ts_childrens_resource 		= $area_resource->get_ar_ts_children_areas($include_main_tipo);
 
 		# AREA_THESAURUS
-		$current_tipo 					= RecordObj_dd::get_ar_terminoID_by_modelo_name('area_tesauro')[0];
+		/*
+		$current_tipo 					= RecordObj_dd::get_ar_terminoID_by_modelo_name('area_thesaurus')[0];
 		$area_resource 					= new area_resource($current_tipo);
 		$ar_ts_childrens_thesaurus 		= $area_resource->get_ar_ts_children_areas($include_main_tipo);
 			#dump($ar_ts_childrens_thesaurus," ar_ts_childrens_thesaurus");
+			*/
+		$ar_ts_childrens_thesaurus 		= array();
 
 		# AREA_TOOLS
 		if (isset(RecordObj_dd::get_ar_terminoID_by_modelo_name('area_tool')[0])) {
@@ -157,7 +160,7 @@
 
 		if(SHOW_DEBUG) {
 			$total=round(microtime(1)-$start_time,3); #dump($total, 'total');	#dump($ar_all, 'ar_all');
-			debug_log(__METHOD__." Total: (get_ar_ts_children_all_areas_hierarchized) ".exec_time($start_time), logger::DEBUG);			
+			debug_log(__METHOD__." ".exec_time_unit($start_time,'ms').' ms' , logger::DEBUG);			
 		}
 
 		return $ar_all;

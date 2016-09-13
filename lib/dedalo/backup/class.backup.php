@@ -12,37 +12,52 @@ abstract class backup {
 	* Make backup (compresed mysql dump) of current dedalo DB before login
 	* @return $db_name." ($file_bk_size)";
 	*/
-	public static function init_backup_secuence($user_id_matrix, $username) {
+	public static function init_backup_secuence($user_id_matrix, $username, $skip_backup_time_range=false) {
 		
 		try {
 			# NAME : File name formated as date . (One hour resolution)
-			$user_id 		= isset($_SESSION['dedalo4']['auth']['user_id']) ? $_SESSION['dedalo4']['auth']['user_id'] : '';
-			$db_name 		= date("Y-m-d_H") .'.'. DEDALO_DATABASE_CONN .'.'. DEDALO_DB_TYPE .'_'. $user_id ;			
+			$user_id 		= isset($_SESSION['dedalo4']['auth']['user_id']) ? $_SESSION['dedalo4']['auth']['user_id'] : '';			
+			if($skip_backup_time_range===true) {
+				$db_name 		= date("Y-m-d_His") .'.'. DEDALO_DATABASE_CONN .'.'. DEDALO_DB_TYPE .'_'. $user_id .'_forced';
+			}else{
+				$db_name 		= date("Y-m-d_H") .'.'. DEDALO_DATABASE_CONN .'.'. DEDALO_DB_TYPE .'_'. $user_id ;
+			}	
 
 			$file_path		= DEDALO_LIB_BASE_PATH.'/backup/backups';
 
 			# Backups folder exists verify
-			if( !is_dir($file_path) ) {
-			$create_dir 	= mkdir($file_path, 0700, true);
-			if(!$create_dir) throw new Exception(" Error on read or create backup directory. Permission denied");
+			if( !is_dir($file_path) ) {		
+				if(!mkdir($file_path, 0700, true)) {
+					throw new Exception(" Error on read or create backup directory. Permission denied");
+				}
+				debug_log(__METHOD__." CREATED DIR: $folder_path  ".to_string(), logger::DEBUG);
+			}
+
+
+			if($skip_backup_time_range===true) {
+				#
+				# Direct backup is forced
+				debug_log(__METHOD__." Making backup without time range prevention ".to_string(), logger::DEBUG);
+
+			}else{
+				#
+				# Time range for backups in hours
+				if (!defined('DEDALO_BACKUP_TIME_RANGE')) {
+					define('DEDALO_BACKUP_TIME_RANGE', 4); // Minimun lapse of time (in hours) for run backup script again. Default: (int) 4
+				}			
+				$last_modification_time_secs = get_last_modification_date( $file_path, $allowedExtensions=array('backup'), $ar_exclude=array('/acc/'));
+				$current_time_secs 			 = time();
+				$difference_in_hours 		 = round( ($current_time_secs/3600) - round($last_modification_time_secs/3600), 0 );
+					#dump($difference_in_hours, ' difference_in_hours ++ '.to_string( ($current_time_secs/3600).' - '.($last_modification_time_secs/3600) ));
+				if ( $difference_in_hours < DEDALO_BACKUP_TIME_RANGE ) {
+					$msg = " Skipped backup. A recent backup (about $difference_in_hours hours early) already exists. Is not necessary build another";
+					if(SHOW_DEBUG) {
+						debug_log(__METHOD__." $msg ".to_string(), logger::DEBUG);
+					}
+					return $msg;
+				}
 			}
 			
-			#
-			# Time range for backups in hours
-			if (!defined('DEDALO_BACKUP_TIME_RANGE')) {
-				define('DEDALO_BACKUP_TIME_RANGE', 4); // Minimun lapse of time (in hours) for run backup script again. Default: (int) 4
-			}			
-			$last_modification_time_secs = get_last_modification_date( $file_path, $allowedExtensions=array('backup'), $ar_exclude=array('/acc/'));
-			$current_time_secs 			 = time();
-			$difference_in_hours 		 = round( ($current_time_secs/3600) - round($last_modification_time_secs/3600), 0 );
-				#dump($difference_in_hours, ' difference_in_hours ++ '.to_string( ($current_time_secs/3600).' - '.($last_modification_time_secs/3600) ));
-			if ( $difference_in_hours < DEDALO_BACKUP_TIME_RANGE ) {
-				$msg = " Skipped backup. A recent backup (about $difference_in_hours hours early) already exists. Is not necessary build another";
-				if(SHOW_DEBUG) {
-					debug_log(__METHOD__.$msg);
-				}
-				return $msg;
-			}
 			
 			#
 			# Backup file exists (less than an hour apart)
@@ -50,7 +65,7 @@ abstract class backup {
 			if (file_exists($mysqlExportPath)) {
 				$msg = " Skipped backup. A recent backup already exists ('$mysqlExportPath'). Is not necessary build another";
 				if(SHOW_DEBUG) {
-					debug_log(__METHOD__.$msg);
+					debug_log(__METHOD__." $msg ".to_string(), logger::DEBUG);
 				}
 				return $msg;
 			}
@@ -58,51 +73,58 @@ abstract class backup {
 			// Export the database and output the status to the page
 			$command='';	#'sleep 1 ;';	
 			$command = DB_BIN_PATH.'pg_dump -h '.DEDALO_HOSTNAME_CONN.' -p '.DEDALO_DB_PORT_CONN. ' -U "'.DEDALO_USERNAME_CONN.'" -F c -b -v '.DEDALO_DATABASE_CONN.'  > "'.$mysqlExportPath .'"';
-			$command = 'sleep 60s; nice -n 19 '.$command ;
-
 			
-	
+			if($skip_backup_time_range===true) {
+				
+				$command = 'nice -n 5 '.$command;				
+				debug_log(__METHOD__." Building direct backup file ($mysqlExportPath). Command:\n ".to_string($command), logger::DEBUG);				
 
-			# BUILD SH FILE WITH BACKUP COMMAND IF NOT EXISTS
-			$prgfile = DEDALO_LIB_BASE_PATH.'/backup/temp/backup_' . DEDALO_DB_TYPE . '_' . date("Y-m-d_H") . '_' . DEDALO_DATABASE_CONN  . '.sh';	//
-			if(!file_exists($prgfile)) {
+				# EXEC DIRECTLY AND WAIT RESULT
+				shell_exec($command);
+			
+			}else{
+				
+				$command = 'sleep 6s; nice -n 19 '.$command;
 
-				# TARGET FOLDER VERIFY (EXISTS AND PERMISSIONS)
-				try{
-					$target_folder_path = DEDALO_LIB_BASE_PATH.'/backup/temp'; ;
-					# folder exists
-					if( !is_dir($target_folder_path) ) {
-					$create_dir 	= mkdir($target_folder_path, 0775,true);
-					if(!$create_dir) throw new Exception(" Error on read or create backup temp directory. Permission denied");
+				# BUILD SH FILE WITH BACKUP COMMAND IF NOT EXISTS
+				$prgfile = DEDALO_LIB_BASE_PATH.'/backup/temp/backup_' . DEDALO_DB_TYPE . '_' . date("Y-m-d_His") . '_' . DEDALO_DATABASE_CONN  . '.sh';	//
+				if(!file_exists($prgfile)) {
+
+					# TARGET FOLDER VERIFY (EXISTS AND PERMISSIONS)
+					try{
+						$target_folder_path = DEDALO_LIB_BASE_PATH.'/backup/temp'; ;
+						# folder exists
+						if( !is_dir($target_folder_path) ) {
+							if(!mkdir($target_folder_path, 0775,true)) throw new Exception(" Error on read or create backup temp directory. Permission denied");
+						}
+					} catch (Exception $e) {
+						$msg = '<span class="error">'.$e->getMessage().'</span>';
+						echo dd_error::wrap_error($msg);
 					}
-				} catch (Exception $e) {
-					$msg = '<span class="error">'.$e->getMessage().'</span>';
-					echo dd_error::wrap_error($msg);
+
+					# SH FILE GENERATING
+					$fp = fopen($prgfile, "w"); 
+					fwrite($fp, "#!/bin/bash\n");
+					fwrite($fp, "$command\n");
+					fclose($fp);
+					# SH FILE PERMISSIONS
+					if(file_exists($prgfile)) {
+						chmod($prgfile, 0755);
+					}else{
+						throw new Exception("Error Processing backup. Script file not exists or is not accessible.Please check folder '../backup/temp' permissions", 1);
+					}
 				}
+				
+				debug_log(__METHOD__." Building delayed backup file ($mysqlExportPath). Command:\n ".to_string($command), logger::DEBUG);							
+				
+				# RUN DELAYED COMMAND
+				$res = exec_::exec_sh_file($prgfile);
 
-				# SH FILE GENERATING
-				$fp = fopen($prgfile, "w"); 
-				fwrite($fp, "#!/bin/bash\n");
-				fwrite($fp, "$command\n");
-				fclose($fp);
-				# SH FILE PERMISSIONS
-				if(file_exists($prgfile)) {
-					chmod($prgfile, 0755);
-				}else{
-					throw new Exception("Error Processing backup. Script file not exists or is not accessible.Please check folder '../backup/temp' permissions", 1);
-				}
-			}
+				#debug_log(__METHOD__." return:  ".to_string($res), logger::DEBUG);
+				#return $res;
 
-			if(SHOW_DEBUG) {
-				$msg = " Building backup file ($mysqlExportPath). Command:\n $command";
-				debug_log(__METHOD__.$msg);
-			}			
-			
-			# RUN COMMAND
-			$res = exec_::exec_sh_file($prgfile);
-			debug_log(__METHOD__." $res ".to_string(), logger::DEBUG);
-			return $res;
-
+			}//end if($skip_backup_time_range===true)	
+					
 
 			/*
 			# EXEC : Exec command
@@ -142,7 +164,6 @@ abstract class backup {
 		}
 
 		return $db_name." ($file_bk_size)";
-
 	}#end init_backup_secuence
 
 
@@ -232,6 +253,7 @@ abstract class backup {
 			if (!$result3) {
 				throw new Exception(" Error on read or create file. Permission denied ({$path}/matrix_descriptors_dd_{$current_tld}.copy)");
 			}
+		
 
 			$msg = " Saved str tables partial data to $current_tld ";
 			if(SHOW_DEBUG) {

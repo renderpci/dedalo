@@ -7,6 +7,9 @@
 */
 require_once( dirname(dirname(__FILE__)) .'/config/config4.php');
 
+# Write session to unlock session file
+session_write_close();
+
 $vars = array('f','initial_media_path');
 	foreach($vars as $name)$$name = common::setVar($name);
 #list($file,$ext) = explode('.',$_SERVER['QUERY_STRING']);

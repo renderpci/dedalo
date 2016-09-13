@@ -6,21 +6,19 @@
 	$tipo 					= $this->get_tipo();
 	$parent 				= $this->get_parent();
 	$section_tipo			= $this->get_section_tipo();
-	$modo					= $this->get_modo();		
-	$dato 					= $this->get_dato();				
+	$modo					= $this->get_modo();
+	$lang					= $this->get_lang();	
 	$label 					= $this->get_label();				
 	$required				= $this->get_required();
 	$debugger				= $this->get_debugger();
-	$permissions			= common::get_permissions($section_tipo,$tipo);
+	$permissions			= common::get_permissions($section_tipo, $tipo);
 	$ejemplo				= $this->get_ejemplo();
 	$html_title				= NULL;
 	$ar_tools_obj			= $this->get_ar_tools_obj();	
-	$valor					= $this->get_valor();				
-	$lang					= $this->get_lang();
 	$lang_name				= $this->get_lang_name();
 	$identificador_unico	= $this->get_identificador_unico();
-	$component_name			= get_class($this);	
-	
+	$component_name			= get_class($this);
+		
 
 	# Verify component content record is inside section record filter
 	if ($this->get_filter_authorized_record()===false) return NULL ;
@@ -30,17 +28,20 @@
 	switch($modo) {
 		
 		case 'edit'	:
+				$dato 			= $this->get_dato();
+				$valor 			= $this->get_valor();
 				$ar_langs		= $this->get_ar_langs();
 				$component_info	= $this->get_component_info('json');
 				$dedalo_projects_default_langs = (array)unserialize(DEDALO_PROJECTS_DEFAULT_LANGS);
 				break;
 						
 		case 'list'	:
-				$ar_langs = $this->get_ar_langs();
+				#$valor	  = $this->get_valor();
+				$ar_langs = $this->get_ar_langs(); 
 				break;						
 		case 'list_of_values':				
 				break;						
-		case 'tool_time_machine'	:
+		case 'tool_time_machine':
 				break;
 		
 		case 'search':

@@ -1,0 +1,140 @@
+/* tool_import_images css */
+
+BODY {
+	/**/
+	background-image: url('../../../themes/default/dedalo_icon_big.png');
+	background-repeat: no-repeat;
+	background-position: 0px 0px;
+	min-height: 1024px;
+}
+
+.tool_header {
+	/*background-color: #f3e3b6;*/
+	margin: 0;
+	padding: 5px;
+	padding-top: 10px;
+	line-height: 1.4em !important;
+	display: inline-block;
+	}
+	.h2_title {
+		font-size: 19px;
+		padding: 4px;
+		padding-top: 3px;
+		padding-left:20px;
+		min-width: 15%;
+		text-align: left;
+		display: inline-block;
+		vertical-align: top;	
+		height: auto;
+	}
+	.import_context_label {		
+		
+	}
+	.import_context_label_footer {
+		font-size: 159%;
+		margin-top: 30px;
+		margin-bottom: 70px;
+		text-align: center;
+	}
+	.import_context_label a {
+		margin-right: 10px;
+		font-size: 90%;
+	}
+	.debug_info {
+		/*
+		display: inline;
+		color: #9c9c9c;
+		font-size: 89%;
+		font-weight: normal;
+		*/
+	}
+
+
+/*-- import help --*/
+.import_help {
+	padding: 5px;
+	padding-top: 10px;
+	padding-left: 20px;
+	color: #938b78;
+	}	
+	.import_help::before {
+		background-position: -96px -96px !important;		
+	}
+
+
+
+/*-- process page --*/
+TABLE.import_options {	
+	background-color: rgba(232, 232, 232, 0.6);
+	box-shadow: 2px 0px 8px #7f7f7f inset;
+	font-size: 94%;
+	border-radius: 5px;
+	position: relative;
+	margin: 5px;
+	padding: 5px;
+	display: inline-block;
+	vertical-align: top;
+	left: 15%;
+	}
+	TABLE.import_options td, TABLE.import_options th {
+		padding: 4px;
+		padding-left: 8px;
+		line-height: 1.0em;
+		padding-right: 10px;
+	}
+
+
+
+/*-- JQUERY UPLOAD --*/
+.jquery_upload_wrapper {	
+    text-align: left;
+    margin: 10px;
+    background-color: rgba(232, 232, 232, 0.76);
+    width: 98.6%;
+    font-size: 96%;
+    border-radius: 5px;
+    min-width: 650px;
+    border: 1px solid transparent;
+    border-color: #d6d6d6;
+	}
+	.jquery_upload_wrapper .container {
+		/*background-color: #c4e363;*/
+		width: 100%;
+	}
+	.jquery_upload_wrapper .fileupload-buttonbar {
+		height: 50px;
+		margin: 20px;
+		margin-left: -15px;
+	}
+
+/*-- BOOTSTRAP OVERWRITE --*/
+body {
+	background-color: transparent !important; 
+	}
+	.table-striped>tbody>tr:nth-child(odd)>td, .table-striped>tbody>tr:nth-child(odd)>th {
+		background-color: #ececec !important;
+	}
+
+
+	/* SECTION TEMP
+	---------------------------------------------------------- */
+	.wrap_section_temp {
+
+		}
+		.wrap_section_temp #sidebar {
+			display:none;
+		}
+		.wrap_section_temp .css_section_content {
+			float: none;
+    		width: 99.8%;
+		}
+
+
+	.msg_wait {
+		z-index: 2;
+	    position: fixed;
+	    left: 43%;
+	    top: 41%;
+	    font-size: 220%;
+	}
+

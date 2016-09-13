@@ -86,8 +86,10 @@
 				$dato = empty($dato) ? '' : $dato;		
 				break;
 						
-		case 'simple':
-				break;						
+		case 'list_thesaurus':
+				$render_vars = $this->get_render_vars();
+				$icon_label = isset($render_vars->icon) ? $render_vars->icon : '';
+				break;					
 	}
 	
 

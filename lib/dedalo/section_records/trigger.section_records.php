@@ -4,30 +4,38 @@ require_once( dirname(dirname(__FILE__)).'/config/config4.php');
 
 if(login::is_logged()!==true) die("<span class='error'> Auth error: please login </span>");
 
-	#dump($_REQUEST);
+#dump($_REQUEST);
+//session_write_close();
 
 # set vars
 	$vars = array('mode','modo');	
-	if(is_array($vars)) foreach($vars as $name) {
-		$$name = common::setVar($name);		
-	}
+	foreach($vars as $name) $$name = common::setVar($name);		
+	
 
 # mode
 if(empty($mode)) exit("<span class='error'> Trigger: Error Need mode..</span>");
 
 
 
+# CALL FUNCTION
+if ( function_exists($mode) ) {
+	call_user_func($mode);
+}
+
+
 
 /**
 * LOAD_ROWS
 */
-if ($mode=='load_rows') {
+function load_rows() {
 
 	if(SHOW_DEBUG) {
 		#dump($_REQUEST,"_REQUEST");
+		$start_time=microtime(1);
 	}
+
 	
-	$options = $_POST['options'];
+	$options = $_REQUEST['options'];
 
 
 	# Received post var 'options' is a json object stringnified. Decode to regenrate original object
@@ -85,10 +93,16 @@ if ($mode=='load_rows') {
 	#$html 			= str_replace(':', '_', $html);
 	#$html = filter_var($html, FILTER_SANITIZE_STRING);
 
+	if(SHOW_DEBUG) {
+		$total=round(microtime(1)-$start_time,3);
+		debug_log(__METHOD__." Total: (load_rows) ".exec_time($start_time), logger::DEBUG);	;
+	}
+
 	echo $html;
-	die();
 
+	session_write_close();
 
-}#end if ($mode=='load_rows') 
+}//end load_rows
+
 
 ?>

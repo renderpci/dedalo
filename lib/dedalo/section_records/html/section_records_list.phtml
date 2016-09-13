@@ -6,12 +6,14 @@
 	
 	print "\n<div class=\"div_main_list\"></div>";
 	
-	print "\n <div class=\"css_section_list_wrap\" id=\"wrap_{$tipo}_{$modo}\" data-options='".json_handler::encode($this->options)."' >";
+	print "\n <div class=\"css_section_list_wrap wrap_section_{$tipo}\" id=\"wrap_{$tipo}_{$modo}\" data-options='".json_handler::encode($this->options)."' >";
 	
 	
 	# CONTENIDO
 	$html_contenido='';	
-	$html_contenido  .= "\n<div class=\"css_section_group_content tab_content wrap_table_rows_list\">";	
+	$html_contenido  .= "\n<div class=\"css_section_group_content tab_content wrap_table_rows_list section_records_{$modo} wrap_section_records_{$section_list_tipo}\"
+	data-rol=\"section_records\"
+	>";	
 	#$html_contenido  = "\n<div class=\"content_ajax\">";
 	
 	switch($permissions) {
@@ -69,7 +71,7 @@
 					if ($total_list_time>$limit_time) {
 						$style = "color:red";
 					}			
-					$html_info .= "<div style=\"display:table;margin:15px;margin-bottom:20px;padding:3px;{$style}\" onclick=\"$(this).children('pre').toggle()\"> Time To Generate section list: ";
+					$html_info .= "<div class=\"\" style=\"display:table;margin:15px;margin-bottom:20px;padding:3px;{$style}\" onclick=\"$(this).children('pre').toggle()\"> Time To Generate section list: ";
 					$html_info .= $total_list_time;
 					$html_info .= ", get_records_data:".$this->rows_obj->generated_time['get_records_data']." (over {$this->rows_obj->options->full_count} records)";
 					$html_info .= ", HTML section list: ".round(microtime(1)-$start_time,3);

@@ -2,6 +2,8 @@
 require_once( dirname(dirname(dirname(__FILE__))) .'/config/config4.php');
 require_once(dirname(__FILE__) .'/updates/updates.php');
 
+
+
 /*
 * CLASS TOOL_ADMINISTRATION
 */
@@ -10,6 +12,10 @@ class tool_administration extends tool_common {
 	protected $section_obj ;
 
 	
+	
+	/**
+	* __CONSTRUCT
+	*/
 	public function __construct($section_obj, $modo='button') {
 		
 		# Fix modo
@@ -59,8 +65,7 @@ class tool_administration extends tool_common {
 		}		
 
 		return $result;
-
-	}#end tests_table_notifications
+	}//end tests_table_notifications
 
 	
 
@@ -80,15 +85,13 @@ class tool_administration extends tool_common {
 		$html .= "</li>";
 		#$html .= "<br>";
 
-		return $html;
-		
-	}#end show_info
+		return $html;		
+	}//end show_info
 	
 
 
 	/**
 	* DELETE_COMPONENT_TIPO_IN_MATRIX_TABLE
-	* @return 
 	*/
 	public function delete_component_tipo_in_matrix_table($section_tipo ,$component_tipo, $language=false, $save=false) {
 
@@ -173,12 +176,10 @@ class tool_administration extends tool_common {
 				}else{
 					echo "<hr> (PREVIEW) Updated row id:$id   - section_id: $section_id 	- section_tipo: $section_tipo - component_tipo: $component_tipo <hr> <br> BEFORE: $before <br> AFTER: $after"; 
 				}
-				#dump($dato," dato");
-	
+				#dump($dato," dato");	
 			}
-		}#end while
-
-	}#end delete_component_tipo_in_matrix_table
+		}//end while
+	}//end delete_component_tipo_in_matrix_table
 	
 
 
@@ -187,7 +188,7 @@ class tool_administration extends tool_common {
 	* Get the version of the data into the DB
 	* The data version need to be compatible with the program files, but, 
 	* when Dédalo program change (for update), the data and the program is un-sync before admin run the update
-	* @return 
+	* @return string $current_version
 	*/
 	public static function get_current_version_in_db() {
 		$current_version = array();
@@ -234,9 +235,8 @@ class tool_administration extends tool_common {
 			$current_version[2] = (int)$ar_version[2];
 		}
 
-		return $current_version;
-		
-	}#end get_current_version_in_db
+		return $current_version;		
+	}//end get_current_version_in_db
 
 
 
@@ -244,7 +244,7 @@ class tool_administration extends tool_common {
 	* GET_DEDALO_VERSION
 	* Get the program files version, the files need change for update the data.
 	* Download the Dédalo files and run the update procedure.
-	* @return 
+	* @return string $current_version
 	*/
 	public static function get_dedalo_version() {
 
@@ -256,9 +256,8 @@ class tool_administration extends tool_common {
 		$current_version[1] = (int)$ar_version[1];
 		$current_version[2] = (int)$ar_version[2];
 		
-		return $current_version;
-		
-	}#end get_dedalo_version
+		return $current_version;		
+	}//end get_dedalo_version
 
 
 
@@ -291,8 +290,32 @@ class tool_administration extends tool_common {
 				}
 			}
 		}
+	}//end get_update_version
 
-	}#end get_update_version
+
+
+	/**
+	* MAKE_BACKUP
+	* @return object $response
+	*/
+	public static function make_backup() {
+		$response = new stdClass();
+			$response->result 	= false;
+			$response->msg 		= '';
+		
+		require(DEDALO_LIB_BASE_PATH.'/backup/class.backup.php');
+		$user_id  = $_SESSION['dedalo4']['auth']['user_id'];
+		$username = $_SESSION['dedalo4']['auth']['username'];
+		$backup_info = backup::init_backup_secuence($user_id, $username, $skip_backup_time_range=true);
+		debug_log(__METHOD__."  backup_info: $backup_info ".to_string(), logger::DEBUG);
+
+		if ($backup_info ) {
+			$response->result 	= true;
+			$response->msg 		= 'Backup is done: '.$backup_info;
+		}
+
+		return (object)$response;
+	}//end make_backup
 
 
 
@@ -304,6 +327,12 @@ class tool_administration extends tool_common {
 		global $updates;
 
 		$current_version 	= self::get_current_version_in_db();
+
+		#
+		# BACKUP
+		# Before update version dato, we force a backup of all database
+		//self::make_backup();
+
 
 		#Select the correct update from file updates
 		foreach ($updates as $key => $version_to_update) {
@@ -322,28 +351,34 @@ class tool_administration extends tool_common {
 			}
 		}
 
-		if(isset( $update->components_update)){
+
+		if(isset($update->SQL_update)){
+			foreach ((array)$update->SQL_update as $key => $current_query) {
+				$SQL_update = self::SQL_update($current_query);
+			}
+		}
+		if(isset($update->components_update)){
 			foreach ($update->components_update as $modelo_name) {
 				$components_update[]	= self::components_update($modelo_name, $current_version, $update_version);
 			}
 			
 		}
-		if(isset( $update->SQL_update)){
-			foreach ((array)$update->SQL_update as $key => $current_query) {
-				$SQL_update = self::SQL_update($current_query);
-			}			
+		if(isset($update->run_scripts)){
+			foreach ((array)$update->run_scripts as $current_script) {
+				$run_scripts = self::run_scripts($current_script);
+			}
 		}
 		
-			$version_to_update = self::get_update_version();
-			$version_to_update = implode(".", $version_to_update);
-			$new_version 	   = self::update_dedalo_data_version($version_to_update);
+		# TABLE MATRIX_UPDATES DATA
+		$version_to_update = self::get_update_version();
+		$version_to_update = implode(".", $version_to_update);
+		$new_version 	   = self::update_dedalo_data_version($version_to_update);
 		
 
-		$result = $components_update;
+		$result = isset($components_update) ? $components_update : null;
 
-		return $result;
-		
-	}#end update_version
+		return $result;		
+	}//end update_version
 
 
 
@@ -357,8 +392,6 @@ class tool_administration extends tool_common {
 	public static function components_update($modelo_name, $current_version, $update_version) {
 
 		$total_update = array();
-		#$ar_modelo_tipo	= array();
-		#$ar_modelo_tipo	= RecordObj_dd::get_ar_terminoID_by_modelo_name($modelo_name);
 
 		$ar_section_tipo = array();
 		$ar_section_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name('section');		
@@ -369,7 +402,9 @@ class tool_administration extends tool_common {
 				continue;
 			}
 
-			$ar_component_tipo =  (array)RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($current_section_tipo, $modelo_name, 'children_recursive', $search_exact=true);
+			#$ar_component_tipo = (array)RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($current_section_tipo, $modelo_name, 'children_recursive', $search_exact=true);
+			$ar_component_tipo = section::get_ar_children_tipo_by_modelo_name_in_section($current_section_tipo, array($modelo_name), $from_cache=true, $resolve_virtual=true, $recursive=true);
+			
 
 			if (!empty($ar_component_tipo)) {
 				$ar_modelo_tipo[$current_section_tipo] = $ar_component_tipo;
@@ -400,7 +435,9 @@ class tool_administration extends tool_common {
 																		$current_section_tipo);
 							$dato_unchanged = $component->get_dato_unchanged();
 
-							$response = $modelo_name::update_dato_version($update_version, $dato_unchanged);
+							$reference_id = $current_section_tipo.'.'.$section_id.'.'.$current_component_tipo;
+
+							$response = $modelo_name::update_dato_version($update_version, $dato_unchanged, $reference_id);
 							#debug_log(__METHOD__." UPDATE_DATO_VERSION COMPONENT RESPONSE [$modelo_name][{$current_section_tipo}-{$section_id}]: result: ".to_string($response->result), logger::DEBUG);
 
 							if($response->result == 1){
@@ -409,6 +446,7 @@ class tool_administration extends tool_common {
 								#debug_log(__METHOD__." UPDATED dato from component [$modelo_name][{$current_section_tipo}-{$section_id}] ".to_string(), logger::DEBUG);
 								$i++;
 								$total_update[$current_section_tipo][$current_component_tipo][$current_lang]['i']=$i;
+								echo $response->msg;
 							}else{
 								echo $response->msg;
 								if($response->result == 0){
@@ -420,7 +458,7 @@ class tool_administration extends tool_common {
 							$ar_time_machine_obj = tool_time_machine::update_records_in_time_machine($current_component_tipo, $section_id, $current_lang, $current_section_tipo);
 							foreach ($ar_time_machine_obj  as $current_time_machine_obj) {
 								$dato_unchanged = $current_time_machine_obj->get_dato();
-								$response = $modelo_name::update_dato_version($update_version, $dato_unchanged);
+								$response = $modelo_name::update_dato_version($update_version, $dato_unchanged, $reference_id);
 								#debug_log(__METHOD__." UPDATE_DATO_VERSION TIME_MACHINE RESPONSE [$modelo_name][{$current_section_tipo}-{$section_id}]: result: ".to_string($response->result), logger::DEBUG);
 								if($response->result == 1){
 									$current_time_machine_obj->set_dato($response->new_dato);
@@ -428,6 +466,7 @@ class tool_administration extends tool_common {
 									#debug_log(__METHOD__." UPDATED TIME MACHINE dato from component [$modelo_name][{$current_section_tipo}-{$current_component_tipo}-{$current_lang}-{$section_id}] ".to_string($tm), logger::DEBUG);
 									$tm++;
 									$total_update[$current_section_tipo][$current_component_tipo][$current_lang]['tm'] = (int)$tm;
+									echo $response->msg;
 								}else{
 									echo $response->msg;
 									if($response->result == 0){
@@ -441,15 +480,15 @@ class tool_administration extends tool_common {
 			}
 		}
 		
-		return $total_update;
-		
-	}#end components_update
+		return $total_update;		
+	}//end components_update
 
 
 
 	/**
 	* SQL_UPDATE
 	* @param string $SQL_update
+	* @return bool
 	*/
 	public static function SQL_update($SQL_update) {
 
@@ -465,15 +504,14 @@ class tool_administration extends tool_common {
 		}
 		debug_log(__METHOD__." Executed database update: ".to_string($SQL_update), logger::DEBUG);
 
-		return true;
-		
-	}#end SQL_update
+		return true;		
+	}//end SQL_update
 
 	
 
 	/**
 	* UPDATE_DEDALO_DATA_VERSION
-	* @return 
+	* @return bool true
 	*/
 	public static function update_dedalo_data_version($version_to_update) {
 
@@ -488,15 +526,14 @@ class tool_administration extends tool_common {
 		self::SQL_update($SQL_update);
 		debug_log(__METHOD__." Updated table 'matrix_updates' with values: ".to_string($str_values), logger::DEBUG);
 
-		return true;
-		
-	}#end update_dedalo_data_version
+		return true;		
+	}//end update_dedalo_data_version
 
 
 
 	/**
 	* TABLE_EXITS
-	* @return bool 
+	* @return bool $table_exits
 	*/
 	public static function table_exits($table_name) {
 
@@ -513,14 +550,13 @@ class tool_administration extends tool_common {
 		}		
 
 		return (bool)$table_exits;
-
-	}#end table_exits
+	}//end table_exits
 
 
 
 	/**
 	* CREATE_TABLE
-	* @return 
+	* @return bool true
 	*/
 	public static function create_table($table_name, $ar_columns) {
 		
@@ -541,30 +577,27 @@ class tool_administration extends tool_common {
 		debug_log(__METHOD__." Created unexisting table $table_name ".to_string(), logger::DEBUG);
 	
 		return true;
-
-	}#end create_table
+	}//end create_table
 
 
 
 	/**
 	* SKIP_PUBLICATION_STATE_CHECK
-	* @return 
+	* Changes session value for 'skip_publication_state_check' until session is expired
 	*/
 	public static function skip_publication_state_check( bool $value) {
-		
 		if ($value) {
 			$_SESSION['dedalo4']['config']['skip_publication_state_check'] = 1;
 		}else{
 			$_SESSION['dedalo4']['config']['skip_publication_state_check'] = 0;
 		}
-
-	}#end skip_publication_state_check
+	}//end skip_publication_state_check
 
 
 
 	/**
 	* REMOVE_AV_TEMPORALS
-	* @return 
+	* @return array $ar_deleted_files
 	*/
 	public static function remove_av_temporals() {
 
@@ -585,13 +618,33 @@ class tool_administration extends tool_common {
 			  		$ar_deleted_files[] = $file_name;
 
 			  		unlink($file); // delete file
-				}		  			  	
-			}		    
+				}
+			}
 		}
 
 		return $ar_deleted_files;
+	}//end remove_av_temporals
 
-	}#end remove_av_temporals
+
+
+	/**
+	* RUN_SCRIPTS
+	* Simply executes static methods based on received $script_obj properties
+	* @param object $script_obj
+	* @return mixed $result
+	*/
+	public static function run_scripts( $script_obj ) {
+		
+		$script_class  = $script_obj->script_class;
+		$script_method = $script_obj->script_method;
+		$script_vars   = isset($script_obj->script_vars) ? $script_obj->script_vars : array();		
+
+		//$result = $script_class::$script_method( $script_obj->script_vars );
+		$result = call_user_func_array($script_class.'::'.$script_method, $script_vars);		
+		
+		return $result;
+	}//end run_scripts
+
 
 
 

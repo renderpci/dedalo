@@ -1,0 +1,40 @@
+<?php
+
+	# VISUALIZADOR HTML	
+	
+	
+	#print "\n<div class=\"\" >";
+	
+		
+		# CONTENIDO (INPUT)
+		$html_contenido  = '';
+
+		switch (true) {
+			case (isset($render_vars->type) && $render_vars->type=='term'):
+				#$valor = $this->get_valor(DEDALO_DATA_LANG);
+				$valor = component_input_text::render_list_value($value=null, $tipo, $parent, $modo, $lang, $section_tipo, $parent);
+					#dump($valor, ' $valor ++ '.to_string());
+				$html_contenido .= "<div class=\"list_thesaurus_icon input_text_list_thesaurus\">";
+				$html_contenido .= $valor;
+				$html_contenido .= "</div>";
+				break;
+			
+			default:
+				$html_contenido .= "<div class=\"list_thesaurus_icon input_text_list_thesaurus\" onclick=\"component_input_text.show_component_in_row_thesaurus(this)\"
+				data-section_tipo=\"$section_tipo\"
+				data-parent=\"$parent\"
+				data-tipo=\"$tipo\"
+				data-lang=\"$lang\"
+				data-modo=\"edit\"
+				>$icon_label</div>";
+				break;
+		}
+	
+		
+		
+		# PRINT HTML
+		print $html_contenido;
+	
+	
+	#print "\n</div>\n\n"; //wrap
+?>

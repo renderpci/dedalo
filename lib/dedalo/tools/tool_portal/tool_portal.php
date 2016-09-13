@@ -55,8 +55,8 @@
 					$section->set_context($context);
 
 					// Remove previous search_options session for refresh link buttons
-					if (isset($_SESSION['dedalo4']['config']['search_options'])) {					
-						foreach((array)$_SESSION['dedalo4']['config']['search_options'] as $key => $value) {							
+					if (isset($_SESSION['dedalo4']['config']['search_options'])) {
+						foreach((array)$_SESSION['dedalo4']['config']['search_options'] as $key => $value) {
 							if ($key==$search_options_session_key) {
 								//dump($_SESSION['dedalo4']['config']['search_options'][$key], '$_SESSION[dedalo4][config][search_options][$key] ++ '.to_string());								
 								if (isset($_SESSION['dedalo4']['config']['search_options'][$key]->context->portal_parent)) {
@@ -68,7 +68,7 @@
 									debug_log(__METHOD__." Removed session key: ".to_string($key), logger::DEBUG);
 								}
 								break;
-							}						
+							}
 						}
 					}
 					$section_html = $section->get_html();

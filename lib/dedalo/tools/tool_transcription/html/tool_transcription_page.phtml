@@ -21,8 +21,10 @@
 			data-type_of_lang=\"dedalo_data_lang\"
 			>";
 			
-			foreach($ar_all_project_langs as $current_lang) {
+			foreach($ar_all_project_langs as $lang_locator) {
 				
+				$current_lang = $lang_locator->section_tipo;
+
 				# Note that component_textarea can change his lang ('force_change_lang') in some contexts
 				$selected = ($current_lang==$textarea_lang) ? 'selected="selected"' : '';			
 

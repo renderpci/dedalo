@@ -23,23 +23,27 @@ if (login::is_logged()) {
 	
 	echo "<div id=\"menu_wrapper\" class=\"$menu_wrapper_css\" >";
 
+		echo "<div id=\"menu_background\" class=\"menu_background\" >";
+			#
+			# Quit button
+			echo "<div id=\"quit\" class=\"glyphicon glyphicon-off link\" title=\"".label::get_label('salir')."\" onclick=\"login.Quit()\"></div>";
 
-		#
-		# Quit button
-		echo "<div id=\"quit\" class=\"glyphicon glyphicon-off link\" title=\"".label::get_label('salir')."\" onclick=\"login.Quit()\"></div>";
+			# Toggle Menu responsive
+			echo "<div id=\"toggle_menu\" class=\"glyphicons glyphicons-show-lines link\" title=\"".label::get_label('menu')."\" onclick=\"menu.toggle_menu(this)\">=</div>";
 
-		#
-		# Icon Dédalo	
-		echo "\n<a href=\"http://www.fmomo.org/\" target=\"_blank\" class=\"dedalo_icon_top\" title=\"Dédalo version ".DEDALO_VERSION." ( build ".DEDALO_BUILD.")\"></a>";
-		
+			#
+			# Icon Dédalo	
+			echo "\n<a href=\"http://www.fmomo.org/\" target=\"_blank\" class=\"dedalo_icon_top\" title=\"Dédalo version ".DEDALO_VERSION." ( build ".DEDALO_BUILD.")\"></a>";
+			
 
-		# INSPECTOR : button open / hide sidebar 
-		$caller_id = navigator::get_selected('caller_id');
-		if( empty($caller_id) && $modo=='edit' ) {
-			echo "<!-- Inspector toggle button -->";
-			#echo "<div id=\"button_toggle_inspector\" class=\"button_in_menu text_unselectable'\" onclick=\"inspector.toggle_sidebar()\">INSPECTOR $caller_id</div>";
-			echo "<div id=\"button_toggle_inspector\" class=\"link'\" title=\"".label::get_label('mostrar_inspector')."\" onclick=\"inspector.toggle_sidebar()\"></div>";
-		}
+			# INSPECTOR : button open / hide sidebar 
+			$caller_id = navigator::get_selected('caller_id');
+			if( empty($caller_id) && $modo=='edit' ) {
+				echo "<!-- Inspector toggle button -->";
+				#echo "<div id=\"button_toggle_inspector\" class=\"button_in_menu text_unselectable'\" onclick=\"inspector.toggle_sidebar()\">INSPECTOR $caller_id</div>";
+				echo "<div id=\"button_toggle_inspector\" class=\"link'\" title=\"".label::get_label('mostrar_inspector')."\" onclick=\"inspector.toggle_sidebar()\"></div>";
+			}
+		echo "</div><!-- /menu_background -->\n";
 
 
 		#
@@ -129,7 +133,11 @@ if (login::is_logged()) {
 			#
 			# HTTP SERVER 
 			if (function_exists('apache_get_version')) {
-				$debug_line_html .= "<span>HTTP "." <b>".apache_get_version()."</b></span>";
+				$apache_version=apache_get_version();
+				if (strlen($apache_version)>86) {
+					$apache_version=substr($apache_version, 0,80).'..';
+				}
+				$debug_line_html .= "<span>HTTP "." <b>". $apache_version ."</b></span>";
 			}
 		
 

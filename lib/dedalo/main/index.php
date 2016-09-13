@@ -39,7 +39,7 @@ if ( strpos($_SERVER["REQUEST_URI"], '.php')!==false ) {
 	#
 	# TIPO : Verify
 	# IS MANDATORY. Verify tipo received is valid. If not, redirect to default fallback section
-	if( !(bool)verify_dedalo_prefix_tipos($tipo) ) {
+	if( empty($tipo) || !(bool)verify_dedalo_prefix_tipos($tipo) ) {
 		$tipo_to_msg 						= 'empty';
 		if (strlen($tipo)>0) $tipo_to_msg 	= 'not valid';		
 		$msg = "Error Processing Request: Main Page tipo:'$tipo' is $tipo_to_msg! Main Page redirected to secure MAIN_FALLBACK_SECTION: ".MAIN_FALLBACK_SECTION." ".RecordObj_dd::get_termino_by_tipo(MAIN_FALLBACK_SECTION);
@@ -228,8 +228,9 @@ if ( strpos($_SERVER["REQUEST_URI"], '.php')!==false ) {
 	# CLOSE DB CONNECTION
 	# dump(DBi::_getConnection());	
 	pg_close(DBi::_getConnection());
-	
-	
+
+	# Write session to unlock session file
+	session_write_close();
 	
 /*
 if(SHOW_DEBUG) {

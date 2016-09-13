@@ -3,10 +3,6 @@
 # MÉTODOS COMPARTIDOS POR TODOS LOS COMPONENTES Y ZONAS
 # DECLARAR LOS MÉTODOS PUBLIC
 include(DEDALO_LIB_BASE_PATH . '/common/class.Accessors.php');
-#require_once(DEDALO_LIB_BASE_PATH . '/component_common/class.locator.php');
-#require_once(DEDALO_LIB_BASE_PATH . '/db/class.RecordObj_matrix.php');
-
-
 
 abstract class common extends Accessors {
 	
@@ -24,15 +20,14 @@ abstract class common extends Accessors {
 	#public $matrix_table ;
 
 	public $context;
-
 	
 	# REQUIRED METHODS
 	#abstract protected function define_id($id);
 	#abstract protected function define_tipo();
 	#abstract protected function define_lang();
-	#abstract public function get_html();
+	#abstract public function get_html();	
 	
-	
+
 
 	/**
 	* GET_PERMISSIONS
@@ -59,9 +54,9 @@ abstract class common extends Accessors {
 			}			
 			die("Error Processing Request. get_permissions: sub_tipo is empty");
 		}
-		$permissions = (int)security::get_security_permissions($tipo, $sub_tipo);		
+		$permissions = security::get_security_permissions($tipo, $sub_tipo);		
 						
-		return $permissions;
+		return (int)$permissions;
 	}
 
 
@@ -82,7 +77,7 @@ abstract class common extends Accessors {
 	protected function load_structure_data() {
 		
 		if( empty($this->tipo) ) {
-			#dump($this,"");
+			dump($this,"");
 			throw new Exception("Error (3): tipo is mandatory!", 1);
 		}
 
@@ -156,8 +151,9 @@ abstract class common extends Accessors {
 			# BL_LOADED_STRUCTURE_DATA
 			$this->bl_loaded_structure_data = true;
 		}
-
 	}//end load_structure_data
+
+
 
 	/**
 	* LOAD MATRIX DATA
@@ -189,8 +185,12 @@ abstract class common extends Accessors {
 	}
 	*/
 
+
+
 	/**
 	* GET MATRIX_TABLE FROM TIPO
+	* @param string $tipo
+	* @return string $matrix_table
 	*/
 	public static function get_matrix_table_from_tipo($tipo) {
 		
@@ -203,13 +203,16 @@ abstract class common extends Accessors {
 			return($matrix_table_from_tipo[$tipo]);
 		}
 		
-		#if(SHOW_DEBUG) $start_time = start_time();
-		
+		#if(SHOW_DEBUG) $start_time = start_time();		
 
 		# Default value:
 		$matrix_table 	= 'matrix';
 
-		$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo( $tipo, true );		
+		$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo( $tipo, true );
+			if (empty($modelo_name)) {
+				debug_log(__METHOD__." Current tipo ($tipo) modelo name is empty. Default table 'matrix' was used.".to_string(), logger::DEBUG);
+			}
+
 		if ($modelo_name=='section') {
 
 			# SECTION CASE
@@ -223,6 +226,9 @@ abstract class common extends Accessors {
 					#error_log("Error. Table for section users tipo is not defined. Unsing default table: '$matrix_table'");
 					break;			
 				default:
+
+					$table_is_resolved = false;
+
 					# SECTION : If section have TR of model name 'matrix_table' takes its matrix_table value
 					$ar_terminos_relacionados = RecordObj_dd::get_ar_terminos_relacionados($tipo, $cache=true, $simple=true);					
 					if ( isset($ar_terminos_relacionados[0]) ) {
@@ -232,11 +238,11 @@ abstract class common extends Accessors {
 							# Set custom matrix table
 							$matrix_table = RecordObj_dd::get_termino_by_tipo($ar_terminos_relacionados[0],null,true);
 								#if (SHOW_DEBUG) dump($matrix_table,"INFO: Switched table to: $matrix_table for tipo:$tipo ");
-							$table_is_resolved = 1;
+							$table_is_resolved = true;
 						} 
 					}
 					// CASE VIRTUAL SECTION
-					if (!isset($table_is_resolved)) {
+					if (!$table_is_resolved) {
 						$tipo = section::get_section_real_tipo_static($tipo);
 						$ar_terminos_relacionados = RecordObj_dd::get_ar_terminos_relacionados($tipo, $cache=true, $simple=true);
 						if ( isset($ar_terminos_relacionados[0]) ) {
@@ -246,12 +252,12 @@ abstract class common extends Accessors {
 								# Set custom matrix table
 								$matrix_table = RecordObj_dd::get_termino_by_tipo($ar_terminos_relacionados[0],null,true);
 									#if (SHOW_DEBUG) dump($matrix_table,"INFO: Switched table to: $matrix_table for tipo:$tipo ");
-								$table_is_resolved = 1;
+								$table_is_resolved = true;
 							} 
 						}
 					}
 					
-			}#end switch
+			}//end switch
 			
 			
 		}else{
@@ -279,8 +285,7 @@ abstract class common extends Accessors {
 
 		#if(SHOW_DEBUG) $GLOBALS['log_messages'][] = exec_time($start_time, __METHOD__, 'logger_backend_activity '.$tipo);
 
-		return $matrix_table;
-
+		return (string)$matrix_table;
 	}//end get_matrix_table_from_tipo
 
 
@@ -354,8 +359,51 @@ abstract class common extends Accessors {
 		unset($this->ar_list_of_values);
 
 		$this->dato = $dato;
+	}//end set_dato
 
-	}//end set_dato	
+
+
+	/**
+	* SET_LANG
+	* When isset lang, valor and dato are cleaned
+	* and $this->bl_loaded_matrix_data is reset to force load from database again
+	*/
+	public function set_lang($lang){
+
+		if($lang!=DEDALO_DATA_LANG) {
+
+			# UNSET previous calculated valor
+			unset($this->valor);
+
+			# FORCE reload dato from database when dato is requested again 
+			$this->bl_loaded_matrix_data = false;
+		}		
+
+		$this->lang = $lang;
+	}//end set_lang
+
+
+
+	/**
+	* GET_MAIN_LANG
+	* @return string $main_lang
+	*/
+	public static function get_main_lang( $section_tipo ) {
+
+		# En pruebas..
+		# Si la sección recibida es hija de tesauro_virtuals_area (dd101)
+		# calculamos el main_lang a partir de su jerarquía		
+		$RecordObj_dd = new RecordObj_dd($section_tipo);
+		$section_parent 	   = $RecordObj_dd->get_parent();
+		$tesauro_virtuals_area = 'dd101';
+		if ($section_parent==$tesauro_virtuals_area) {
+			$main_lang = hierarchy::get_main_lang($section_tipo);
+		}else{
+			$main_lang = DEDALO_DATA_LANG_DEFAULT;
+		}		
+
+		return $main_lang;
+	}//end get_main_lang
 
 
 
@@ -389,8 +437,7 @@ abstract class common extends Accessors {
 			#$identificador_unico = $this->get_tipo() . '_' . $this->get_id() . '_' . $this->get_lang() . '_' . $this->get_modo();	#dump($identificador_unico);		
 			#dump($this->identificador_unico,'$this->identificador_unico');	
 
-		return $this->identificador_unico;
-
+		return (string)$this->identificador_unico;
 	}//end get_identificador_unico
 
 
@@ -405,20 +452,17 @@ abstract class common extends Accessors {
 
 	
 	
-	# LOADED OBJS
-	
 	/**
 	* GET_AR_LOADED_MODELOS
 	*/
 	public static function get_ar_loaded_modelos() {		
-		
 		if(is_array(common::$ar_loaded_modelos)){
 			#dump(common::$ar_loaded_modelos); echo "<hr>";
 			return array_unique(common::$ar_loaded_modelos);			
 		}else{
 			return common::$ar_loaded_modelos;
 		}
-	}
+	}//end get_ar_loaded_modelos
 
 
 	
@@ -447,7 +491,6 @@ abstract class common extends Accessors {
 			}
 			common::$ar_loaded_modelos_name[] 	= $modelo_name;
 		}
-
 	}//end notify_load_lib_element_tipo
 
 
@@ -480,8 +523,7 @@ abstract class common extends Accessors {
 			$_SESSION['debug_content'][__METHOD__] = $debug;
 		}
 		
-		return $debug;	
-
+		return $debug;
 	}//end show_loaded_modelos
 	
 
@@ -572,15 +614,14 @@ abstract class common extends Accessors {
 		# if last char is & delete it
 		if(substr($qs, -1)=='&') $qs = substr($qs, 0, -1);		
 
-		return $qs ;
-
+		return $qs;
 	}//end get_page_query_string
 	
 
 
 	/**
 	* GET HTML CODE . RETURN INCLUDE FILE __CLASS__.PHP
-	* @return $html
+	* @return string $html
 	*	Get standar path file "DEDALO_LIB_BASE_PATH .'/'. $class_name .'/'. $class_name .'.php'" (ob_start)
 	*	and return rendered html code
 	*/
@@ -640,7 +681,6 @@ abstract class common extends Accessors {
 			$context 			= 'default';
 		}
 		return $context;
-
 	}//end get_context
 
 
@@ -652,7 +692,6 @@ abstract class common extends Accessors {
 	*/
 	public static function get_ar_all_langs($resolve_termino=true) {
 		
-		#return unserialize(DEDALO_APPLICATION_LANGS);
 		if(SHOW_DEBUG) $start_time = start_time();
 
 		if($resolve_termino) {
@@ -660,21 +699,31 @@ abstract class common extends Accessors {
 		}else{
 			$idu = 0;
 		}
-
 		if(isset($_SESSION['dedalo4']['config']['ar_all_langs'][$idu])) return $_SESSION['dedalo4']['config']['ar_all_langs'][$idu];
 
 		$ar_all_langs = array();
 
-		# PROJECTS : Get all projects id from matrix
-		# Search username
-		$arguments=array();
-		#$arguments['strPrimaryKeyName']		= "datos->'section_dato'->'components'->'".DEDALO_COMPONENT_PROJECT_LANGS_TIPO."'->'dato'->>'lg-nolan'";
-		#$arguments["datos#>>'{section_tipo}'"]	= DEDALO_SECTION_PROJECTS_TIPO;
-		$arguments["section_tipo"]				= DEDALO_SECTION_PROJECTS_TIPO;
-		$matrix_table 							= common::get_matrix_table_from_tipo(DEDALO_SECTION_PROJECTS_TIPO);
-		$JSON_RecordObj_matrix					= new JSON_RecordObj_matrix($matrix_table,NULL,DEDALO_SECTION_PROJECTS_TIPO);
-		$ar_result								= (array)$JSON_RecordObj_matrix->search($arguments);
-			#dump($arguments, ' ar_result ');
+		$DEDALO_PROJECTS_DEFAULT_LANGS = unserialize(DEDALO_PROJECTS_DEFAULT_LANGS);
+		foreach ($DEDALO_PROJECTS_DEFAULT_LANGS as $current_lang) {
+			
+			if ($resolve_termino===true) {
+				$lang_name = RecordObj_ts::get_termino_by_tipo($current_lang,null,true);
+				$ar_all_langs[$current_lang] = $lang_name;
+			}else{
+				$ar_all_langs[] = $current_lang;
+			}			
+		}
+
+		return (array)$ar_all_langs;
+
+		
+		/*
+		# PROJECTS : Get all projects id from matrix	
+		$arguments=array();		
+		$arguments["section_tipo"]	= DEDALO_SECTION_PROJECTS_TIPO;
+		$matrix_table 				= common::get_matrix_table_from_tipo(DEDALO_SECTION_PROJECTS_TIPO);
+		$JSON_RecordObj_matrix		= new JSON_RecordObj_matrix($matrix_table,NULL,DEDALO_SECTION_PROJECTS_TIPO);
+		$ar_result					= (array)$JSON_RecordObj_matrix->search($arguments);		
 
 		# Case 0 projects (clean intalled version)
 		if (empty($ar_result)) {
@@ -682,24 +731,28 @@ abstract class common extends Accessors {
 		}else{
 			foreach ($ar_result as $current_section_id) {
 				#dump(DEDALO_SECTION_PROJECTS_TIPO," DEDALO_SECTION_PROJECTS_TIPO");dd267
-				#$component_project_langs = new component_project_langs(DEDALO_COMPONENT_PROJECT_LANGS_TIPO,$current_section_id);
 				$component_project_langs   = component_common::get_instance('component_project_langs',
 																			DEDALO_COMPONENT_PROJECT_LANGS_TIPO,
 																			$current_section_id,
 																			'edit',
 																			DEDALO_DATA_NOLAN,
 																			DEDALO_SECTION_PROJECTS_TIPO);
-				$dato 					 = (array)$component_project_langs->get_dato();
-					#dump($dato,"dato - $current_section_id - ".DEDALO_COMPONENT_PROJECT_LANGS_TIPO);
-				foreach ($dato as $current_lang) {
+				$dato = (array)$component_project_langs->get_dato();
+				foreach ($dato as $current_locator_lang) {
+					if (!is_object($current_locator_lang)) {
+						debug_log(__METHOD__." Error on get current_locator_lang. Expected locator object and obtain: ".gettype($current_locator_lang)." - value: ".to_string($current_locator_lang), logger::WARNING);
+						continue;
+					}
+					$current_lang = $current_locator_lang->section_tipo;
 					if(!in_array($current_lang, $ar_all_langs)) $ar_all_langs[] = $current_lang;
 				}
 			}
 		}
-		
+		#dump($ar_all_langs, ' ar_all_langs ++ '.to_string());
 
 		# TERMINO : on true resolve name
 		if ($resolve_termino===true) {
+			$ar_all_langs_final=array();
 			foreach ($ar_all_langs as $current_lang_tipo) {
 				$ar_all_langs_final[$current_lang_tipo] = RecordObj_ts::get_termino_by_tipo($current_lang_tipo,null,true);
 			}
@@ -716,7 +769,7 @@ abstract class common extends Accessors {
 		$_SESSION['dedalo4']['config']['ar_all_langs'][$idu] = $ar_all_langs;
 	
 		return $ar_all_langs;
-
+		*/
 	}//end get_ar_all_langs
 
 
@@ -746,7 +799,7 @@ abstract class common extends Accessors {
 		}else{
 			return json_handler::decode($propiedades);
 		}		
-	}
+	}//end get_propiedades
 
 
 
@@ -770,7 +823,7 @@ abstract class common extends Accessors {
 		}
 		#dump($aditional_css,'aditional_css ');
 		return $aditional_css;
-	}
+	}//end get_element_aditional_css
 
 
 
@@ -785,7 +838,7 @@ abstract class common extends Accessors {
 		}
 		
 		return (array)$relaciones[0];
-	}	
+	}//end get_relaciones
 
 
 
@@ -815,8 +868,7 @@ abstract class common extends Accessors {
 		}
 
 		return $ar_related_by_model;
-
-	}#end get_ar_related_by_model
+	}//end get_ar_related_by_model
 
 
 
@@ -856,7 +908,7 @@ abstract class common extends Accessors {
 		if (!$options->to_find) {
 			trigger_error("Error: get_references property 'to_find' is mandatory");
 			if(SHOW_DEBUG) {
-				#throw new Exception("Error: get_references property 'to_find' is mandatory", 1);				
+				#throw new Exception("Error: get_references property 'to_find' is mandatory", 1);
 			}
 			return $ar_references;
 		}
@@ -865,7 +917,7 @@ abstract class common extends Accessors {
 		if (!$options->tipo) {
 			trigger_error("Error: get_references property 'tipo' is mandatory");
 			if(SHOW_DEBUG) {
-				#throw new Exception("Error: get_references property 'tipo' is mandatory", 1);				
+				#throw new Exception("Error: get_references property 'tipo' is mandatory", 1);
 			}
 			return $ar_references;
 		}
@@ -944,18 +996,42 @@ abstract class common extends Accessors {
 				
 				$ar_references[$id] = $section_tipo;
 
-			}#end while
+			}//end while
 			#dump($ar_references,"ar_references total: ".round(microtime(1)-$star_time,3));
 		
 		if(SHOW_DEBUG) {
 			global$TIMER;$TIMER[__METHOD__.'_OUT_'.microtime(1)]=microtime(1);
 		}
 		
-		return (array)$ar_references;
-		
-	}#end get_references
-		
+		return (array)$ar_references;		
+	}//end get_references
 
 
-}#end class
+
+	/**
+	* GET_ALLOWED_RELATION_TYPES
+	* Search in structure and return an array of tipos
+	* @return array $allowed_relations
+	*/
+	public static function get_allowed_relation_types() {
+		
+		# For speed, we use constants now
+		$ar_allowed = array(DEDALO_RELATION_TYPE_PARENT_TIPO,
+							DEDALO_RELATION_TYPE_CHILDREN_TIPO,
+							DEDALO_RELATION_TYPE_RELATED_TIPO,
+							DEDALO_RELATION_TYPE_INDEX_TIPO,
+							DEDALO_RELATION_TYPE_MODEL_TIPO);
+		/*
+		$tipo 		  = 'dd427';
+		$modelo_name  = 'relation_type';
+		$relation_type= 'children';
+		$ar_allowed   = (array)RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($tipo, $modelo_name, $relation_type, $search_exact=true);
+		*/
+		return (array)$ar_allowed;		
+	}//end get_allowed_relation_types
+	
+
+
+
+}//end class
 ?>

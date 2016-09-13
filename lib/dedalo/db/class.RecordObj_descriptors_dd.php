@@ -33,9 +33,9 @@ class RecordObj_descriptors_dd extends RecordObj_matrix {
 				dump(debug_backtrace(),"Error: Only matrix_descriptors_dd is accepted by now ");							
 				throw new Exception("Error Processing Request. Matrix wrong name ", 1);			
 			}
-			if ( !empty($parent) && !(bool)verify_dedalo_prefix_tipos($parent)) {
-				throw new Exception("Error Processing Request. parent wrong tipo '$parent' ", 1);
-			}
+			#if ( !empty($parent) && !(bool)verify_dedalo_prefix_tipos($parent)) {		
+			#	throw new Exception("Error Processing Request. parent wrong tipo '$parent' ", 1);
+			#}
 			if ($fallback!==false) {
 				#trigger_error("Fallback is true for $parent ");
 			}

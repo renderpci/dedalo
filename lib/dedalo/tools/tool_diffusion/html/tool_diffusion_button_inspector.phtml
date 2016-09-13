@@ -46,7 +46,7 @@
 				onclick=\"tool_diffusion.export_record(this)\">";
 				$html_tool .= "\n <div id=\"button_difussion_export_record\" class=\"icon_bs tool_diffusion tool_diffusion_inspector\"></div>";				
 				$html_tool .= "";
-				$html_tool .= RecordObj_dd::get_termino_by_tipo($element_tipo, DEDALO_DATA_LANG, true, false);
+				$html_tool .= RecordObj_dd::get_termino_by_tipo($element_tipo, DEDALO_DATA_LANG, true, true); //$from_cache=false, $fallback=true
 				if ( SHOW_DEBUG && isset($diffusion_info->$element_tipo)) {
 					$html_tool .= " <i class=\"glyphicon glyphicon-ok\" style=\"color:green\"></i>";
 				}

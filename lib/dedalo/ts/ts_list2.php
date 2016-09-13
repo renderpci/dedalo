@@ -185,6 +185,10 @@ include ( DEDALO_LIB_BASE_PATH . '/ts/html/ts_list2.phtml' );
 $html =  ob_get_contents();
 ob_get_clean();
 echo html_page::get_html($html);
+
+# Write session to unlock session file
+session_write_close();
+
 exit();
 
 ?>

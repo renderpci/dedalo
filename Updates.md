@@ -1,5 +1,43 @@
 **UPDATES AND CHANGES**
 
+*Ver 4.0.14 - 12-09-2016
+
+Today we introduce the update of the V4 to 4.0.14
+
+This update fixed some issues and bugs for the V4.0.12
+
+Changes:
+- component_date : change in the format, now the component have three data types: date, range and period, and now the component will do the calculation of all dates to seconds. The full resolution of the date (with year, month,day,hour, minutes and seconds) now begin at : 01/01/-150000, dates before this date will be only year resolution (month, day , hour, minutes,... are not calculated).
+- component_autocomplete_ts : new tree format to access to the thesaurus. Now the autiocomplete_ts can acces to all thesaurus tree for select the descriptor term.
+- New edit into the portal row : now some components can it change the "modo" into the portal row for edit your dato.
+- New SVG icons : we are change all icons to vectorial format
+- New porta_list views: now is possible change the portal list to diferent edit views: normal, view_single_line, view_mosaic. TO DO: Is necesary the code for change the view for the users. 
+- Tool_difussion : add window scrool top on publish record
+- Tool_image_versions : fixed loosed section_tipo var on trigger when rotate image
+- Tool_export : fixed output inconsistences on export component_filter and component_filter_master
+- Tool_time_machine : changed behaviour when empty data is saved. Now blank data is saved to time machine record too.
+
+Transition to the thesaurus v4: This version have the first steps to the transition from de v3 thesaurus model to v4 matrix model. This is the last change of the old technologies of the v3. The transition will be large, because the thesaurus is a very complex and very large and fundamental Dédalo part. Now we only put the basis of the future functionalities.
+
+- New table Hierarchy : the new table is the first step to transformation the Thesaurus from the v3 model to v4.
+- locator : Add property 'type' to object locator
+- New base_prefix_tipo: hierarchy, this tipo will be used for make the hierarchy section. Please add the 'hierarchy' tipo to the base install of Dédalo at the config file 'define('DEDALO_PREFIX_TIPOS', serialize( array('dd','hierarchy','rsc','oh','ich') ));''
+- New component_relation_parent : the component will be the actual "parent" column in the jer_xx tables and the control of the relationship with the parent descriptor of the thesaurus.
+- New component_relation_children : the actual thesaurus (v3) only have the parent relation between the descriptors terms, in the new version the descriptors terms will be "bi-directional" relation, with childrens. The component will be the control of the relationship with the childrens of the descriptors terms of the thesaurus.
+- New component_relation_index : the component will be the actual "index" row into the descriptors table and the control of the relationship of the descriptors terms with the indexations at the component_text_area index tag.
+- New component_relation_model : the component will be the actual "modelo" column in the jer_xx tables and define the model of the descriptor term.
+- New component_relation_related : the component will be the actual "relaciones" column in the jer_xx tables and define the synonyms of the term or other relations of equity.
+
+
+*Ver 4.0.12 - 20-06-2016
+
+Today we introduce the update of the V4 to 4.0.12
+This update fixed some issues and bugs for the V4.0.11
+
+Changes:
+
+- In Oral History the component: rsc67 change the pointer to the "Entity section" of resources, the list of values "entity" now is deprecated and will be deleted. the TR of rsc67 change from: dd996 to: rsc106 , now, the entity has a structure and connection to the persons. (Entity = group of persons), you need change the data of this field.
+
 *Ver 4.0.11 - 02-06-2016*
 
 Today we introduce the update of the V4 to 4.0.11
@@ -33,8 +71,6 @@ Changes:
 		   added always order by section_id clause to maintain pagination consistence over list and edit modes
 - tool_comom : adecuated to use html_page refresh components
 - config : add constant 'DEDALO_PDF_THUMB_DEFAULT' default value 'thumb' to store rendered pdf preview thumbs 
-
-
 
 
 *Ver 4.0.10 Final - 06-05-2016*

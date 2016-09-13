@@ -73,6 +73,10 @@ if($mode=='loadDescriptorsGrid') {
 			require(DEDALO_LIB_BASE_PATH . '/ts/html/ts_descriptors_grid.phtml');	
 		 }
 	}
+
+	# Write session to unlock session file
+	session_write_close();
+	
 	exit();
 }
 

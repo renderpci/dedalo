@@ -19,7 +19,35 @@ class Jerarquia {
 	/*****************************************************************************
 	* UTILIDADES
 	*****************************************************************************/
+
+
+	/**
+	* GET_TIPO_FROM_prefix
+	* @param string $prefix
+	* @return string | null 
+	*/
+	public static function get_tipo_from_prefix( $prefix ) {
+		
+		$arguments=array();
+		$arguments['alpha2']	= strtoupper(trim($prefix));	
+		$RecordObj_jer			= new RecordObj_jer(null);	
+		$ar_id					= $RecordObj_jer->search($arguments);
+
+		$data = array();
+		foreach ($ar_id as $current_id) {			
+
+			$RecordObj_jer	= new RecordObj_jer($current_id);
+ 			$tipo 			= $RecordObj_jer->get_tipo();
+
+ 			return $tipo;
+		}
+
+		return false;
+
+	}#end get_tipo_from_prefix
 	
+
+
 	/*
 	* DATOSGRUPOJERARQUIA : Devuelve un array con los datos del grupos a partir de id or tld
 	*/

@@ -22,6 +22,18 @@
 
 
 			#
+			# BACKUP FORCE
+			$html   .= "<div class=\"panel_option\">";
+			$html   .= "  <span class=\"glyphicon glyphicon-cog\" aria-hidden=\"true\"></span> ";
+			$html   .= "  <a href=\"javascript:;\" data-mode=\"make_backup\" onclick=\"tool_administration.trigger_call(this,event)\">".label::get_label('hacer_backup')."</a>";
+			$html   .= " <div class=\"panel_option_subcontent\">";
+			$html   .= "  <div id=\"make_backup_response\"></div>";
+			$html   .= " </div>";#end panel_option_subcontent
+			$html   .= "</div>";#end panel_option
+
+
+
+			#
 			# UPDATE STRUCTURE
 			$html   .= "<div class=\"panel_option\">";
 			$html   .= "  <span class=\"glyphicon glyphicon-cog\" aria-hidden=\"true\"></span> ";
@@ -30,6 +42,7 @@
 			$html   .= "  <div id=\"update_structure_response\"></div>";
 			$html   .= " </div>";#end panel_option_subcontent
 			$html   .= "</div>";#end panel_option
+
 
 
 			#
@@ -51,6 +64,14 @@
 				$html   .= " <div class=\"panel_option_subcontent\">";
 				$html 	.= "  <span id=\"update_current_version\">$current_version_in_db</span>";
 				$html 	.= "  <span id=\"update_to_version\"> -----> $update_version</span>";
+				if(SHOW_DEBUG) {
+					// Show updates object (current target correspondence) with all config to apply to current update script
+					include(dirname(dirname(__FILE__)) .'/updates/updates.php');
+					$update_version_plain = str_replace('.', '', $update_version);
+					if (isset($updates->$update_version_plain)) {
+						$html .= '<pre>'. print_r($updates->$update_version_plain,true) .'</pre>';
+					}					
+				}
 				$html   .= "  <div id=\"update_version_response\"></div>";
 				$html   .= "  </div>";#end panel_option_subcontent
 
@@ -65,7 +86,7 @@
 					$html 	.= "  <span class=\"\" style=\"color:#5cbd39\">Data format is updated</span> ";
 				}else{
 					$html 	.= "  <span class=\"glyphicon glyphicon-ban-circle\" aria-hidden=\"true\" style=\"color:#f72f19\"></span> ";
-					$html 	.= "  <span id=\"update_current_version\">User data in PostgreSQL ver: $current_version_in_db</span> </br>";
+					$html 	.= "  <span id=\"update_current_version\">User data in PostgreSQL ver: $current_version_in_db</span> </br>";					
 					$html 	.= "  <span>ALERT: DON'T HAVE UPDATE!!</span> </br>";
 				}
 				$html  		.= "  </div>";#end panel_option_subcontent

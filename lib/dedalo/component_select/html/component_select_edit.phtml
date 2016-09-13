@@ -35,6 +35,11 @@
 		case 2 :
 		case 3 :
 
+				#
+				# CONTEXT
+				# Set as disabled on time machine context 
+				$disabled = (isset($context->context_name) && $context->context_name=='tool_time_machine') ? 'disabled="disabled"' : '';
+
 				$html_contenido .= "\n <select class=\"css_select\"
 				onchange=\"component_select.Save(this)\"
 				onfocus=\"component_common.select_wrap(null,'$id_wrapper');\"
@@ -44,6 +49,7 @@
 				data-section_tipo=\"{$section_tipo}\"
 				data-parent=\"{$parent}\"
 				title=\"$html_title\"
+				$disabled
 				tabindex=\"1\"
 				> ";
 
@@ -52,18 +58,20 @@
 				$html_contenido .= "\n <option value=\"\" {$selected}> </option>";
 
 
-				foreach ($ar_list_of_values->result as $value => $rotulo) {
+				foreach ($ar_list_of_values->result as $value => $label) {
 
 					$value   = (string)$value;
 					$locator = (object)json_handler::decode($value);	# Locator is json encoded object
 					#dump($locator," locator"); dump($dato," dato");
 
-					$selected = in_array($locator, $dato) ? 'selected' : '';					
+					#$selected = in_array($locator, $dato) ? 'selected' : '';
+					$founded  = locator::in_array_locator( $locator, $ar_locator=$dato, $ar_properties=array('section_tipo','section_id') );
+					$selected = $founded ? 'selected' : '';					
 
 					$html_contenido .= "\n<option value='$value' {$selected}>";
-					$html_contenido .= $rotulo;
+					$html_contenido .= $label;
 					if(SHOW_DEBUG) {
-						$html_contenido .= " ". trim($value);
+						$html_contenido .= " - ". trim($value);
 					}
 					$html_contenido .= "</option>";
 				}

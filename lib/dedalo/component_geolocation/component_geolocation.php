@@ -30,8 +30,10 @@
 		case 'edit':
 				$leaflet_dist = 'stable_versions';	// stable_versions | dev_versions
 				# CSS
-					css::$ar_url[] = DEDALO_ROOT_WEB ."/lib/leaflet/$leaflet_dist/leaflet.css";
-					css::$ar_url[] = DEDALO_ROOT_WEB ."/lib/leaflet/$leaflet_dist/leaflet.draw/leaflet.draw.css";
+					#css::$ar_url[] = DEDALO_ROOT_WEB ."/lib/leaflet/$leaflet_dist/leaflet.css";
+					#css::$ar_url[] = DEDALO_ROOT_WEB ."/lib/leaflet/$leaflet_dist/leaflet.draw/leaflet.draw.css";
+					array_unshift(css::$ar_url_basic, DEDALO_ROOT_WEB ."/lib/leaflet/$leaflet_dist/leaflet.css");
+					array_unshift(css::$ar_url_basic, DEDALO_ROOT_WEB ."/lib/leaflet/$leaflet_dist/leaflet.draw/leaflet.draw.css");
 
 				# JS
 					js::$ar_url[] = defined('LEAFLET_JS_URL') ? LEAFLET_JS_URL : DEDALO_ROOT_WEB . "/lib/leaflet/$leaflet_dist/leaflet.js";									

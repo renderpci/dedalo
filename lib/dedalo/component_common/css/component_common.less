@@ -169,14 +169,14 @@ input[type="text"], input[type="password"] {
 	/* LABEL IN WRAP COMPONENT CONTEXT */
 	.wrap_component .label {
 		width: 17%;
-		/*max-width: 90px;*/
+		//max-width: 90px;
 		max-width: 16.66%;
 		text-overflow: ellipsis;
 		overflow: hidden;
 		white-space: nowrap;
 		cursor:default;
-		/*transition: all 0.3s ease;*/
-		/*font-weight: bold;*/
+		//transition: all 0.3s ease;
+		//font-weight: bold;
 		font-family: 'Oxygen-Bold', "Helvetica Neue", Helvetica, Arial, sans-serif;
 		font-weight: 300;
 		@media screen and (max-width: @movil_max_width) {
@@ -219,7 +219,7 @@ input[type="text"], input[type="password"] {
 	line-height: 1.3em;
 	display: inline-block;
 	padding: 2px;
-/*padding-left: 4px;*/
+	//padding-left: 4px;
 	color: #404040;
 	font-size: 96%;	
 }
@@ -240,40 +240,31 @@ DIV.dato_refecence_default_lang {
 	position: relative;
 }
 
-/* SPINNER
-------------------------------------------------------- */
-.css_spinner {
-	background-image: url('../../themes/default/spinner.gif');
-	background-position: center;
-	background-repeat: no-repeat;
-	min-width: 100px;
-	width: 100%;
-	min-height: 16px;
-	display: inline-block;
-}
-
 /* TOOL LABEL
 ------------------------------------------------------- */
 .css_tool_label {
 	display: inline-block;
 	padding-left: 5px;
-	padding-right: 5px;
-	/*margin-left: 23%;*/
+	padding-right: 5px;	
 	text-transform: uppercase;
 	color:#363636;
 	font-size: 130%;
 }
+
+
+
 .tools_container_div {
 	position: relative;
 	z-index: 2000;
 }
+
+
+
 /* SEARCH OPERATORS
 ------------------------------------------------------- */
 .css_operator_select{
 	padding: 2px;
-	cursor: pointer;
-	/*margin-left: 0px;
-	max-width: 99.9%;*/
+	cursor: pointer;	
 }
 
 
@@ -285,4 +276,20 @@ DIV.dato_refecence_default_lang {
 	top: -1px;
 	font-size: 80%;
 }
+
+
+
+/* OVERRIDE JQUERY UI
+------------------------------------------------------- */
+.ui-menu-item {
+	font-weight: normal !important;
+	}
+	.ui-menu-item:hover {
+		
+	}
+
+
+
+
+	
 

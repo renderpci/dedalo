@@ -91,11 +91,18 @@ class security {
 			}
 		}
 
+		# DEBUG
+		if(SHOW_DEBUG) {
+			return 3;
+		}
+
 		# IS_GLOBAL_ADMIN
+		/*
 		$is_global_admin = (bool)component_security_administrator::is_global_admin($_SESSION['dedalo4']['auth']['user_id']);
 		if ( $is_global_admin===true ) {
 			return 3;
 		}
+		*/
 	
 		# PERMISSIONS_TABLE		
 		$permissions_table = self::get_permissions_table();

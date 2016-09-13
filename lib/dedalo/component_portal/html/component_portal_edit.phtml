@@ -4,9 +4,9 @@
 
 	
 	
-	print "\n<!-- PORTAL [tipo:$tipo section_id_matrix:$parent] $label -->";
+	print "\n<!-- PORTAL [tipo:$tipo section_id:$parent] $label -->";
 	
-	print "\n <div class=\"wrap_component css_wrap_portal wrap_component_{$tipo}\" id=\"{$id_wrapper}\"
+	print "\n <div class=\"wrap_component css_wrap_portal wrap_component_{$modo} wrap_component_view_{$edit_view} wrap_component_{$tipo}\" id=\"{$id_wrapper}\"
 	data-tipo=\"{$tipo}\"
 	data-lang=\"{$lang}\"
 	data-section_tipo=\"{$section_tipo}\"
@@ -88,12 +88,28 @@
 										$button_select .= "</div>";
 
 										if (SHOW_DEBUG) {
-											$button_select .= "<span class=\"debug_info\">parent:$parent - tipo:$tipo </span>";
+											#$button_select .= "<span class=\"debug_info\">parent:$parent - tipo:$tipo </span>";
 										}
 										$html_contenido .= $button_select;
 
 									}//end foreach ($ar_target_section_tipo as $current_target_section_tipo) {	
+								}
+
+																#
+								# BUTTON SELECT EXISTING RECORD HTML (BUTTON TOOL_PORTAL)
+								if($modo!='print') {
+
+									$button_toggle_view = "\n<div class=\"btn_view_toogle\" onclick=\"component_portal.toggle_views(this)\"
+									data-view=\"full\" >";
+
+									if(SHOW_DEBUG) {
+										#$button_toggle_view .= ' '.TOP_TIPO.'.'.$current_target_section_tipo.'.'.$this->tipo;
+									}
+									$button_toggle_view .= "</div>";
+
+									$html_contenido .= $button_toggle_view;
 								}								
+						
 
 							}//end buttons if ($show_button_new===true || !is_array($dato))
 							
@@ -512,7 +528,7 @@
 			if ($total_list_time>$limit_time) {
 				$style = "color:red";
 			}			
-			$html_info .= "<div class=\"debug_info99 portal_debug_info\" style=\"{$style}\" onclick=\"$(this).children('pre').toggle()\"> Time: ";
+			$html_info .= "<div class=\"debug_info portal_debug_info\" style=\"{$style}\" onclick=\"$(this).children('pre').toggle()\"> Time: ";
 			$html_info .= $total_list_time;
 			#$html_info .= ", get_rows_data:".$rows_data->generated_time['get_rows_data']." (over {$rows_data->options->full_count} records)";
 			#$html_info .= ", HTML section list: ".round(microtime(1)-$start_time,3);

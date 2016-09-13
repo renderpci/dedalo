@@ -18,9 +18,8 @@ class component_text_area extends component_common {
 
 		# Creamos el componente normalmente
 		parent::__construct($tipo, $parent, $modo, $lang, $section_tipo);
-		
-
 	}//end __construct
+
 
 
 	/**
@@ -52,24 +51,29 @@ class component_text_area extends component_common {
 																	    $modo,
 																	    DEDALO_DATA_NOLAN,
 																	    $section_tipo);
-				$component_select_lang_dato = $component_select_lang->get_dato();
-					#dump($component_select_lang_dato, ' component_select_lang_dato ++ '.to_string());
-				if (!empty($component_select_lang_dato) && strpos($component_select_lang_dato, 'lg-')!==false && $component_select_lang_dato!=$lang) {
-					debug_log(__METHOD__." Changed lang: $lang to $component_select_lang_dato ", logger::DEBUG);
-					$lang = $component_select_lang_dato;
+				$component_select_lang_dato = (array)$component_select_lang->get_dato();
+
+				#
+				# LANG
+				# dato of component_select_lang is an array of locators. 
+				# For this we select only first locator and get his lang data 
+				$lang_locator = reset( $component_select_lang_dato );
+				$current_lang = isset($lang_locator->section_tipo) ? $lang_locator->section_tipo : null;			
+				if (!empty($current_lang) && strpos($current_lang, 'lg-')!==false && $current_lang!=$lang) {
+					debug_log(__METHOD__." Changed lang: $lang to $current_lang ", logger::DEBUG);
+					$lang = $current_lang;
 				}
 			}
 		}
 
 		return $lang;
-
-	}#end force_change_lang
-
+	}//end force_change_lang
 	
 
 
-	
-	# GET DATO : Format "lg-spa"
+	/**
+	* GET DATO : Format "lg-spa"
+	*/
 	public function get_dato() {
 		$dato = parent::get_dato();
 
@@ -84,13 +88,17 @@ class component_text_area extends component_common {
 		}
 
 		return (string)$dato;
-	}
+	}//end get_dato
 
-	# SET_DATO
+
+
+	/**
+	* SET_DATO
+	*/
 	public function set_dato($dato) {
 		if($dato=='""') $dato = ''; // empty dato json encoded
 		parent::set_dato( (string)$dato );
-	}
+	}//end set_dato
 
 
 	/**
@@ -112,8 +120,7 @@ class component_text_area extends component_common {
 		debug_log(__METHOD__." Replaced index_in:$count_index_in and index_out:$count_index_out matches in dato".to_string(), logger::DEBUG);
 
 		return (string)$dato_final;
-
-	}#end convert_tr_v3_v4
+	}//end convert_tr_v3_v4
 
 
 
@@ -131,152 +138,56 @@ class component_text_area extends component_common {
 
 		# Dato current assigned
 		$dato_current 	= $this->dato;
-			#dump($dato_current, ' dato_current');
 			
 		# Clean dato 
 		if ($cleant_text) {
 			$dato_current 	= TR::limpiezaPOSTtr($dato_current);
-		}		
-
+		}
 		#$dato_clean 	= mb_convert_encoding($dato_clean, "UTF-8", "auto");
 
 		# Set dato again (cleaned)
 		$this->dato 	= $dato_current;
 		if(SHOW_DEBUG) {			
 			#dump($this->dato,"salvando desde el componente text area");
-		}		
-
+		}
 
 		# A partir de aquí, salvamos de forma estándar
 		return parent::Save();
-	}
+	}//end Save
 
-	# OVERRIDE COMPONENT_COMMON METHOD
+
+
+	/**
+	* GET_AR_TOOLS_OBJ
+	* Override component_common method
+	*/
 	public function get_ar_tools_obj() {
 		# Add tool_indexation
 		$this->ar_tools_name[] = 'tool_indexation';
 		
 		return parent::get_ar_tools_obj();
-	}	
+	}//end get_ar_tools_obj
 	
 
 	
-
+	/**
+	* GET_HTML
+	*//*
 	public function get_html(){
 
 		switch ($this->modo) {
 			case 'list':
-				$max_char 		 = 256;
-				$obj_fragmentos	 = new stdClass();
-				$valor = (string)$this->get_valor();
 
-				# 
-				# First fragment (key 'full') always is a substring of whole text
-				if (strlen($valor)>$max_char) {
-					#$fragmento_text = mb_substr($valor,0,$max_char). '..';
-					$fragmento_text = tools::truncate_text($valor,$max_char);
-				}else{
-					$fragmento_text = $valor;
-				}
-				
-								
-				#$page_html	= DEDALO_LIB_BASE_PATH .'/'. get_class($this) . '/' . get_class($this) . '.php';
-				#ob_start();
-				#include ( $page_html);
-				#$html =  ob_get_clean();
-				$key=0;
-				$obj_fragmentos->$key = $fragmento_text;
-				
-				#
-				# Next fragments keys(1,2,..) (if tags exists)
-				$tags_en_texto	= (array)$this->get_ar_relation_tags();
-					#dump($tags_en_texto,"tags_en_texto");
-				if (!empty($tags_en_texto[0]) && count($tags_en_texto[0])>0) {
-
-					foreach ($tags_en_texto[0] as $key => $tag) {
-
-						$ar_fragmento = (array)component_text_area::get_fragment_text_from_tag($tag, $this->dato);
-								#dump($ar_fragmento,"ar_fragmento");
-						
-						if(isset($ar_fragmento[0]) && strlen($ar_fragmento[0])>$max_char) {
-							$fragmento_text = mb_substr($ar_fragmento[0],0,$max_char);
-							if (strlen($ar_fragmento[0])>$max_char) {
-								$fragmento_text .= '..';
-							}
-						} else{
-							$fragmento_text = isset($ar_fragmento[0]) ? $ar_fragmento[0] : '';
-						}
-						#dump ($fragmento_text); die();
-						$tag_id = $tags_en_texto[3][$key];
-							#dump ($tag_id); #die();						
-						
-						#$page_html	= DEDALO_LIB_BASE_PATH .'/'. get_class($this) . '/' . get_class($this) . '.php';
-						#ob_start();
-						#include ( $page_html);
-						#$html =  ob_get_clean();
-
-						$obj_fragmentos->$tag_id = $fragmento_text;
-					}
-					#dump ($obj_fragmentos);
-				}
-				#dump(json_handler::encode($obj_fragmentos),"obj_fragmentos");
-				#$html_final = json_handler::encode($obj_fragmentos);
-
-				return $obj_fragmentos;	
-
-				/*
-				$file_name 		= $this->modo;
-				$max_char 		= 256;
-				$tags_en_texto	= array();
-				$obj_fragmentos	 = new stdClass();
-					
-				$tags_en_texto	= $this->get_ar_relation_tags();
-					
-					foreach ($tags_en_texto[0] as $key => $tag) {
-
-						$fragmento = component_text_area::get_fragment_text_from_tag($tag, $this->dato);
-						
-						if(strlen($fragmento[0])>$max_char)
-						{
-							$fragmento_text = substr($fragmento[0],0,$max_char).'..';
-						} else{
-							$fragmento_text = $fragmento[0];
-						}
-						#dump ($fragmento_text); die();
-						$tag_id = $tags_en_texto[3][$key];
-						//dump ($tag_id); die();
-						
-						$page_html	= DEDALO_LIB_BASE_PATH .'/'. get_class($this) . '/' . get_class($this) . '.php';
-						ob_start();
-						include ( $page_html);
-						$html =  ob_get_clean();
-						#$html = htmlentities($html);
-
-						$obj_fragmentos->$tag_id = $html;
-					}
-					#dump ($obj_fragmentos);
-					return $obj_fragmentos;
-					*/
-					/*
-					$page_html	= DEDALO_LIB_BASE_PATH .'/'. get_class($this) . '/' . get_class($this) . '.php';
-					ob_start();
-					include ( $page_html);
-					$str_obj_fragmentos =  ob_get_clean();
-						dump($str_obj_fragmentos,"str_obj_fragmentos");
-
-					return $str_obj_fragmentos;				
-					*/
 				break;
 			
 			default:
 				return parent::get_html();
 				break;
-}
-						
+		}
+	}//end get_html
+	*/
 
 
-
-	}
 
 	/**
 	* GET DATO DEFAULT 
@@ -289,13 +200,15 @@ class component_text_area extends component_common {
 		#$dato = self::decode_dato_html($dato);
 
 		return $dato;
-	}
+	}//end get_dato_default_lang
+
+
 
 	/**
 	* GET VALOR
 	* Overwrite common_function
 	*/
-	public function get_valor() {			
+	public function get_valor() {
 		
 		switch ($this->modo) {
 			case 'dummy':
@@ -319,7 +232,8 @@ class component_text_area extends component_common {
 		}		
 
 		return $dato;
-	}
+	}//end get_valor
+
 
 
 	/**
@@ -327,7 +241,7 @@ class component_text_area extends component_common {
 	* Return component value sended to export data
 	* @return string $valor
 	*/
-	public function get_valor_export( $valor=null, $lang=DEDALO_DATA_LANG ) {
+	public function get_valor_export( $valor=null, $lang=DEDALO_DATA_LANG, $quotes, $add_id ) {
 		
 		if (is_null($valor)) {
 			$dato = $this->get_dato();				// Get dato from DB
@@ -338,21 +252,17 @@ class component_text_area extends component_common {
 		$valor_export = $this->get_valor($lang);
 		#$valor_export = br2nl($valor_export);
 
-
-		if(SHOW_DEBUG) {
-			#return "TEXT_AREA: ".$valor_export;
-		}
 		return $valor_export;
-
-	}#end get_valor_export
+	}//end get_valor_export
 	
+
 
 	/*
 	* DECODE DATO HTML
 	*/
 	protected static function decode_dato_html($dato) {
 		return htmlspecialchars_decode($dato);
-	}
+	}//end decode_dato_html
 
 
 
@@ -364,7 +274,8 @@ class component_text_area extends component_common {
 	* @return $ar_changed_tags (key by lang)
 	*/
 	protected function update_all_langs_tags_state() {
-die(__METHOD__." EN PROCESO");
+		die(__METHOD__." EN PROCESO");
+
 		$ar_changed_tags 	= array();
 		$ar_changed_records = array();
 
@@ -442,7 +353,9 @@ die(__METHOD__." EN PROCESO");
 		#dump($ar_final,'ar_final');
 
 		return $ar_final;
-	}
+	}//end update_all_langs_tags_state
+
+
 
 	/**
 	* CHANGE TAG STATE
@@ -474,7 +387,8 @@ die(__METHOD__." EN PROCESO");
 		}		
 
 		return $text_raw_updated ;
-	}
+	}//end change_tag_state
+
 
 
 	/**
@@ -498,9 +412,9 @@ die(__METHOD__." EN PROCESO");
 			$text_raw_updated 	= preg_replace($pattern, $replacement, $text_raw);
 		}		
 
-		return $text_raw_updated ;
+		return $text_raw_updated;
+	}//end delete_tag_from_text
 
-	}#end delete_tag_from_text
 
 
 	/**
@@ -556,7 +470,9 @@ die(__METHOD__." EN PROCESO");
 			#dump($matches,'$matches',"matches to patern: $pattern");
 
 		return $matches;
-	}
+	}//end get_ar_relation_tags
+
+
 
 	/**
 	* GET LAST TAG REL ID
@@ -565,15 +481,17 @@ die(__METHOD__." EN PROCESO");
 	public function get_last_tag_index_id() {
 
 		$matches = $this->get_ar_relation_tags();
-		$key 	 = 3;		
-			#dump(max($matches[$key]),'max($matches[$key])');
+		$key 	 = 3;
 		
 		if (empty($matches[$key])) {
-			return intval(0);
+			$last_tag_index_id = 0;
 		}else{
-			return intval(max($matches[$key]));	
+			$last_tag_index_id = intval(max($matches[$key]));	
 		}
-	}
+
+		return (int)$last_tag_index_id;
+	}//end get_last_tag_index_id
+
 
 
 	/**
@@ -637,8 +555,9 @@ die(__METHOD__." EN PROCESO");
 			}
 
 		return NULL;
-	}
+	}//end get_fragment_text_from_tag
 	
+
 
 	/**
 	* GET FRAGMENT TEXT FROM REL LOCATOR
@@ -652,9 +571,7 @@ die(__METHOD__." EN PROCESO");
 	*/
 	public static function get_fragment_text_from_rel_locator( $rel_locator ) {
 
-
-		#throw new Exception("SORRY. DEACTIVATED FUNCTION: get_fragment_text_from_rel_locator", 1); // 6-4-2015
-		
+		#throw new Exception("SORRY. DEACTIVATED FUNCTION: get_fragment_text_from_rel_locator", 1); // 6-4-2015		
 				
 		/*
 		# INDEXATION TAG
@@ -706,11 +623,7 @@ die(__METHOD__." EN PROCESO");
 
 		return $fragment_text;
 		*/
-	}
-
-
-	
-
+	}//end get_fragment_text_from_rel_locator
 
 
 
@@ -739,7 +652,8 @@ die(__METHOD__." EN PROCESO");
 		}
 		
 		return (array)$ar_langs_changed;
-	}
+	}//end delete_tag_from_all_langs
+
 
 
 	/**
@@ -881,9 +795,8 @@ die(__METHOD__." EN PROCESO");
 			$response->total = round(microtime(1)-$start_time,4)*1000 ." ms";
 		}	
 			
-		return $response;
-		
-	}#end fix_broken_index_tags
+		return $response;		
+	}//end fix_broken_index_tags
 
 
 
@@ -898,7 +811,7 @@ die(__METHOD__." EN PROCESO");
 		}else{
 			return null;
 		}
-	}#end get_related_component_av_tipo
+	}//end get_related_component_av_tipo
 
 
 	/**
@@ -952,8 +865,7 @@ die(__METHOD__." EN PROCESO");
 		#dump($ar_final, ' $ar_final ++ '.to_string());
 
 		return $ar_final;
-
-	}#end get_component_indexations
+	}//end get_component_indexations
 
 
 	
@@ -1050,7 +962,6 @@ die(__METHOD__." EN PROCESO");
 		}		
 		
 		return $diffusion_obj;
-
 	}//end get_diffusion_obj 
 
 
@@ -1072,6 +983,29 @@ die(__METHOD__." EN PROCESO");
 	*/
 	public static function render_list_value($value, $tipo, $parent, $modo, $lang, $section_tipo, $section_id, $locator=null) {
 		#dump($value, ' value ++ '.$tipo.' - '.to_string($locator)); //get_fragment_text_from_tag( $tag, $raw_text ) {
+
+		#
+		# FALLBACK TO MAIN_LANG
+		$calculated_value=false;
+		if (empty($value)) {
+
+			$main_lang = self::get_main_lang( $section_tipo );	#dump($main_lang, ' main_lang ++ '.to_string(DEDALO_DATA_LANG_DEFAULT));
+			if ($main_lang!=$lang) {
+
+				$component 	= component_common::get_instance(__CLASS__,
+															 $tipo,
+														 	 $parent,
+														 	 $modo,
+															 $main_lang,
+														 	 $section_tipo); 
+				
+				$value = $component->get_valor($main_lang);
+				#$value = component_common::decore_untranslated( $value );
+					#dump($value, ' value ++ '.to_string($main_lang));
+				$calculated_value=true;
+			}			
+		}//end calculated_value
+
 
 		$obj_value = json_decode($value); # Evitamos los errores del handler accediendo directamente al json_decode de php
 
@@ -1099,9 +1033,78 @@ die(__METHOD__." EN PROCESO");
 		# TRUNCATE ALL FRAGMENTS		
 		TR::limpiezaFragmentoEnListados($list_value,160);
 
-		return $list_value;
+		if($calculated_value) $list_value = component_common::decore_untranslated( $list_value );
+
+		return $list_value;		
+	}//end render_list_value
+
+
+
+
+	/**
+	* GET_VALOR_LIST_HTML_TO_SAVE
+	* Usado por section:save_component_dato
+	* Devuelve a section el html a usar para rellenar el 'campo' 'valor_list' al guardar
+	* Por defecto será el html generado por el componente en modo 'list', pero en algunos casos
+	* es necesario sobre-escribirlo, como en component_portal, que ha de resolverse obigatoriamente en cada row de listado
+	*
+	* NOTA : El valor a guardar del text area NO es un string sino un objeto que contine los fragmentos en que se divide
+	* el texto (1 si no hay fragmentos definidos) limitados a un largo apropiado a los listados (ej. 25 chars)
+	*
+	* @see class.section.php
+	* @return string $html
+	*/
+	public function get_valor_list_html_to_save() {
+		# Store current modo
+		$modo_previous = $this->get_modo();
+
+		# Temporal modo
+		$this->set_modo('list');
+
+			#
+			# OBJETO CON LOS FRAGMENTOS DE TEXTO
+			$obj_fragmentos	= new stdClass();
+			$max_char 		= 256;			
+			$valor 			= (string)$this->get_valor(); // Full text source
+
+			# 
+			# FIRST fragment (key 0) always is a substring of whole text
+			if (strlen($valor)>$max_char) {
+				$fragmento_text = tools::truncate_text($valor,$max_char);
+			}else{
+				$fragmento_text = $valor;
+			}			
+			$key=0;
+			$obj_fragmentos->$key = $fragmento_text;
+			
+			#
+			# NEXT fragments keys(1,2,..) (if tags exists)
+			$tags_en_texto	= (array)$this->get_ar_relation_tags();			
+			if (!empty($tags_en_texto[0]) && count($tags_en_texto[0])>0) {
+
+				foreach ($tags_en_texto[0] as $key => $tag) {
+
+					$ar_fragmento = (array)component_text_area::get_fragment_text_from_tag($tag, $this->dato);					
+					if(isset($ar_fragmento[0]) && strlen($ar_fragmento[0])>$max_char) {
+						$fragmento_text = mb_substr($ar_fragmento[0],0,$max_char);
+						if (strlen($ar_fragmento[0])>$max_char) {
+							$fragmento_text .= '..';
+						}
+					}else{
+						$fragmento_text = isset($ar_fragmento[0]) ? $ar_fragmento[0] : '';
+					}
+					
+					$tag_id = $tags_en_texto[3][$key];			
+					$obj_fragmentos->$tag_id = $fragmento_text;
+				}
+			}//end if (!empty($tags_en_texto[0]) && count($tags_en_texto[0])>0)
+
 		
-	}#end render_list_value
+		# Return it to anterior mode after get the html
+		$this->set_modo($modo_previous);	# Important!
+		
+		return (object)$obj_fragmentos;
+	}//end get_valor_list_html_to_save
 
 
 
@@ -1126,9 +1129,8 @@ die(__METHOD__." EN PROCESO");
 				break;
 		}	
 
-		return $tipo;
-		
-	}#end get_related_component_select_lang
+		return $tipo;		
+	}//end get_related_component_select_lang
 
 
 

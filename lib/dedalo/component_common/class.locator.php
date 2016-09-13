@@ -181,6 +181,40 @@ class locator extends stdClass {
 
 
 	/**
+	* LANG_TO_LANG_LOCATOR
+	* Gets a lang like 'lg-spa' and it converts to lang locator like {"section_tipo":"lg-spa","section_id":17344}
+	* @return object $locator
+	*/
+	public static function lang_to_locator( $lang ) {
+		
+		$section_tipo = $lang;
+		
+		switch ($lang) {
+			case 'lg-spa':	$section_id = 17344;	break;
+			case 'lg-eng':	$section_id = 5101;		break;
+			case 'lg-cat':	$section_id = 3032;		break;
+			case 'lg-vlca':	$section_id = 20155;	break;
+			case 'lg-fra':	$section_id = 5450;		break;
+			case 'lg-eus':	$section_id = 5223;		break;
+			default:
+				# Serach in database
+				$RecordObj_ts = new RecordObj_ts($lang);
+				$id = $RecordObj_ts->terminoID2id($lang);
+				$section_id = (int)$id;
+				break;
+		}
+
+		$locator = new locator();
+			$locator->set_section_tipo($section_tipo);
+			$locator->set_section_id($section_id);
+
+		return $locator;
+
+	}#end lang_to_lang_locator
+
+
+
+	/**
 	* GET METHODS
 	* By accessors. When property exits, return property value, else return null
 	*/	

@@ -26,6 +26,10 @@ if($mode=='change_lang') {
 
 	# Return ok . Nothing to do. All logic is in config4. Only load page works..
 	print 'Lang changed to : '. $_SESSION['dedalo4']['config']['dedalo_application_lang'] ."\nReloading page..";
+
+	# Write session to unlock session file
+	session_write_close();
+	
 	exit();
 
 }#end Save

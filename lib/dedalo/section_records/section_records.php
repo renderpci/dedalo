@@ -5,6 +5,7 @@
 	$tipo					= $this->get_tipo();
 	$permissions			= common::get_permissions($tipo,$tipo);
 	$modo					= $this->options->modo;
+	$context 				= $this->options->context;	// ??
 	$file_name				= $modo;
 
 	$cwd = basename(__DIR__);
@@ -16,14 +17,13 @@
 
 		case 'edit':
 
-				include_once(DEDALO_LIB_BASE_PATH . '/section_records/record/class.record.php');
-				
+				include_once(DEDALO_LIB_BASE_PATH . '/section_records/record/class.record.php');				
 
 				#
 				# PAGINATOR HTML					
 					include_once(DEDALO_LIB_BASE_PATH . '/search/records_navigator/class.records_navigator.php');
 					$rows_paginator_html= '';
-					$context_name 		= isset($_GET['context_name']) ? $_GET['context_name'] : false;
+					$context_name 		= isset($_GET['context_name']) ? $_GET['context_name'] : false;						
 					switch (true) {
 						case (isset($this->options->save_handler) && $this->options->save_handler!='database'):
 							# ignore paginator when save_handler is not 'database'
@@ -54,15 +54,16 @@
 
 				include_once(DEDALO_LIB_BASE_PATH . '/section_records/rows_header/class.rows_header.php');
 				include_once(DEDALO_LIB_BASE_PATH . '/section_records/rows/class.rows.php');
-
+			
+				$section_list_tipo = key($this->rows_obj->options->layout_map);	
+				
 				/*
 				$tool_update_cache = new tool_update_cache($tipo);
 				$tool_update_cache->update_cache();
 				if(SHOW_DEBUG) {					
 					#dump(tool_update_cache::$debug_response,'$tool_update_cache->debug_response');					
 				}
-				*/	
-
+				*/
 				
 				# BUTTON DELETE				
 				if (!$this->button_delete_permissions) {
@@ -125,7 +126,7 @@
 					#
 					# JS includes
 						js::$ar_url[] = D3_URL_JS;
-						js::$ar_url[] = NVD3_URL_JS;							
+						js::$ar_url[] = NVD3_URL_JS;
 						js::$ar_url[] = DEDALO_LIB_BASE_URL.'/diffusion/diffusion_section_stats/js/diffusion_section_stats.js';
 						#js::$ar_url[] = DEDALO_ROOT_WEB.'/lib/jquery/jquery.resizableColumns.min.js';
 						#js::$ar_url[] = DEDALO_ROOT_WEB.'/lib/store.js-master/store.min.js';

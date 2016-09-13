@@ -116,8 +116,8 @@ class menu extends common {
 			$logged_user_is_global_admin = (bool)component_security_administrator::is_global_admin($user_id_logged);
 			
 			$security = new security();
-			$tesauro_permissions = security::get_security_permissions(DEDALO_TESAURO_TIPO,DEDALO_TESAURO_TIPO);
-			if ( (array_key_exists(DEDALO_TESAURO_TIPO, $ar_ts_children_areas) && $tesauro_permissions==2) || $logged_user_is_global_admin===true) {			
+			$tesauro_permissions = security::get_security_permissions(DEDALO_TESAURO_TIPO,DEDALO_TESAURO_TIPO);				
+			if ( (array_key_exists(DEDALO_TESAURO_TIPO, $ar_ts_children_areas) && $tesauro_permissions>=2) || $logged_user_is_global_admin===true) {			
 				#dump($ar_ts_children_areas,$ar_ts_children_areas);
 				switch (true) {
 					case ($option=='create_link'):

@@ -20,6 +20,9 @@ class component_date extends component_common {
 
 
 	
+	/**
+	* __CONSTRUCT
+	*/
 	function __construct($tipo=null, $parent=null, $modo='edit', $lang=DEDALO_DATA_NOLAN, $section_tipo=null) {
 		
 		# Force always DEDALO_DATA_NOLAN
@@ -34,8 +37,8 @@ class component_date extends component_common {
 				throw new Exception("Error Processing Request. Wrong component lang definition. This component $tipo (".get_class().") is not 'traducible'. Please fix this ASAP", 1);				
 			}
 		}
-
 	}//end __construct
+
 
 
 	/**
@@ -66,11 +69,16 @@ class component_date extends component_common {
 			$this->Save();
 			$dato = parent::get_dato();
 		}*/
+			#dump( (object)$dato, ' dato get_dato ++ '.to_string());
 
 		return (object)$dato;
-	}
+	}//end get_dato
 
-	# SET_DATO
+
+
+	/**
+	* SET_DATO
+	*/
 	public function set_dato( $dato ) {
 		
 		if (is_string($dato) && strpos($dato, '{')!==false ) {
@@ -86,9 +94,58 @@ class component_date extends component_common {
 			}
 			return false;
 		}
+		#dump( (object)$dato, ' dato set_dato ++ '.to_string());
+		
 		parent::set_dato( (object)$dato );
-	}
+	}//end set_dato
 
+
+
+	/**
+	* GET_DATE_MODE
+	* Calculate date_mode from format of current 'dato'
+	* @return string
+	*/
+	public function get_date_mode() {
+
+		$propiedades = $this->get_propiedades();
+		$dato 		 = $this->get_dato();
+
+		switch (true) {
+			case isset($dato->start):
+				$date_mode = 'range';
+				break;
+			case isset($dato->period):
+				$date_mode = 'period';
+				break;
+			default:
+				if (empty($dato) && isset($propiedades->date_mode)) {
+					$date_mode = $propiedades->date_mode; // Default from structure if is defined
+				}else{
+					$date_mode = 'date'; // Default
+				}				
+				break;
+		}
+		return $date_mode;
+	}//end get_date_mode
+
+
+
+	/**
+	* GET_DATE_MODE_STATIC
+	* @return string
+	*//*
+	public static function get_date_mode_static( $tipo ) {
+		
+		$RecordObj_dd = new RecordObj_dd($tipo);
+		$propiedades  = $RecordObj_dd->get_propiedades();
+		if( $propiedades = json_decode($propiedades) ) {
+
+			dump($propiedades, ' propiedades ++ '.to_string($tipo));
+		}
+
+	}//end get_date_mode_static
+	*/
 
 
 	/**
@@ -109,9 +166,9 @@ class component_date extends component_common {
 			$dato->set_second( 	$date->format('s') );
 
 		return (object)$dato;
-
-	}#end get_date_now
+	}//end get_date_now
 	
+
 
 	/**
 	* SAVE OVERRIDE
@@ -120,7 +177,7 @@ class component_date extends component_common {
 	public function Save() {
 		
 		# Dato
-		$dato = $this->dato;		
+		$dato = $this->dato;
 
 		# DELETING DATE
 		if (empty($dato)) {
@@ -129,7 +186,7 @@ class component_date extends component_common {
 		}
 
 		# DATO FORMAT VERIFY
-		if ( !is_object($dato) ) {			
+		if ( !is_object($dato) ) {
 			if(SHOW_DEBUG) {
 				#dump($dato,'$dato');
 				#throw new Exception("Dato is not string!", 1);
@@ -178,17 +235,13 @@ class component_date extends component_common {
 			# Set dato
 			$this->dato = (string)$dato_formated;
 		*/
+	
+		# add_time to dato always
+		$this->dato = self::add_time( $dato );
 
-		# A partir de aquí, salvamos de forma estándar
+		# From here, save normally
 		return parent::Save();
-	}
-
-
-	
-
-	
-
-
+	}//end Save
 
 
 
@@ -197,34 +250,68 @@ class component_date extends component_common {
 	* Dato formated as timestamp '2012-11-07 17:33:49'
 	*/
 	public function get_valor() {
-		$valor='';
+
+		$previous_modo = $this->get_modo();
+		$this->set_modo('list'); // Force list mode
+		$valor = $this->get_html();
+		# Restore modo after 
+		$this->set_modo($previous_modo);
+		/*
+		$valor 		= '';
+		$separator  = dd_date::$separator; //'/';
 
 		$dato = $this->get_dato();
 			#dump($dato, ' dato ++ '.to_string());
 
 		if (empty($dato)) return $valor;
+		if ($this->get_date_mode()!='date') return $valor;
 
 		$dd_date 		= new dd_date( $dato );
-		$date_format	= "Y-m-d H:i:s"; # Default is used but passed for clarity
+		$date_format	= "Y{$separator}m{$separator}d H:i:s"; # Default is used but passed for clarity
 		$valor 	 		= $dd_date->get_dd_timestamp($date_format);
-		/*
-		$date = new DateTime($dato);
-		$valor = $date->format($format);
-			#dump($valor, 'valor', array());
 		*/
 		return (string)$valor;
 	}//end get_valor
 
+
+
 	/**
-	* GET VALOR LOCAL 
+	* GET VALOR LOCAL
 	* Convert internal dato formated as timestamp '2012-11-07 17:33:49' to current lang data format like '07-11-2012 17:33:49'
 	*/
-	public function get_valor_local( $full=false ) {
+	public static function get_valor_local( $dd_date, $full=false ) {
+		$valor_local= '';
+		$separator  = dd_date::$separator;
+
+		switch (true) {
+			case (empty($dd_date->month) && empty($dd_date->day) ):
+				$date_format	= "Y";
+				break;
+			case ( empty($dd_date->day) && !empty($dd_date->month) ):
+				$date_format	= "m{$separator}Y";
+				break;
+			default:
+				$date_format	= "d{$separator}m{$separator}Y";
+				break;
+		}
+		#$date_format	= "d-m-Y";	# TODO: change order when use english lang ?? ...
+		$valor_local 	= $dd_date->get_dd_timestamp($date_format);
+		if(SHOW_DEBUG) {
+			#dump($valor_local, ' valor_local');
+		}
+
+		return (string)$valor_local;
+	}//end get_valor_local
+
+
+
+	public function get_valor_local_OLD( $full=false ) {
 		$valor_local='';
 
 		$dato = $this->get_dato();
 
-		if (empty($dato)) return $valor_local;
+		if (empty($dato)) return $valor_local;		
+		if ($this->get_date_mode()!='date') return $valor_local;
 
 		$dd_date 		= new dd_date( $dato );
 		switch (true) {
@@ -248,12 +335,13 @@ class component_date extends component_common {
 	}//end get_valor_local
 
 
+
 	/**
 	* GET_VALOR_EXPORT
 	* Return component value sended to export data
 	* @return string $valor
 	*/
-	public function get_valor_export( $valor=null, $lang=DEDALO_DATA_LANG ) {
+	public function get_valor_export( $valor=null, $lang=DEDALO_DATA_LANG, $quotes, $add_id ) {
 		
 		if (is_null($valor)) {
 			$dato = $this->get_dato();				// Get dato from DB
@@ -262,12 +350,21 @@ class component_date extends component_common {
 		}
 
 		$valor = $this->get_valor($lang);
+		$valor = strip_tags($valor); // Removes the span tag used in list mode
+		/*
+		$previous_modo = $this->get_modo();
+		$this->set_modo('list'); // Force list mode
+		$valor = $this->get_html();
+		# Restore modo after 
+		$this->set_modo($previous_modo);
+		*/
 		if(SHOW_DEBUG) {
 			#return "DATE: ".$valor;
 		}
-		return $valor;
+		return (string)$valor;
+	}//end get_valor_export
 
-	}#end get_valor_export
+
 
 	/**
 	* GET TIMESTAMP
@@ -295,8 +392,10 @@ class component_date extends component_common {
 		}
 		#dump($timestamp,'$timestamp ');
 
-		return $timestamp;		
-	}
+		return $timestamp;
+	}//end get_timestamp_now_for_db
+
+
 
 	/**
 	* TIMESTAMP TO EUROPEAN DATE
@@ -332,10 +431,8 @@ class component_date extends component_common {
 		}
 				
 		return $date;
-	}
-
+	}//end timestamp_to_date
 	
-
 
 
 	/**
@@ -351,14 +448,16 @@ class component_date extends component_common {
 			$format = 'DD-MM-YYYY';
 		}
 		*/
-		$format = 'DD-MM-YYYY';
+		$format = 'DD'.dd_date::$separator.'MM'.dd_date::$separator.'YYYY';
 		return $format;
-	}
+	}//end get_ejemplo
 
 
 
-	# GET_STATS_VALUE_RESOLVED
-	public static function get_stats_value_resolved( $tipo, $current_stats_value, $stats_model ,$stats_propiedades=NULL ) {		
+	/**
+	* GET_STATS_VALUE_RESOLVED
+	*/
+	public static function get_stats_value_resolved( $tipo, $current_stats_value, $stats_model ,$stats_propiedades=NULL ) {
 		
 		$caller_component = get_called_class();
 
@@ -392,18 +491,18 @@ class component_date extends component_common {
 					#dump($valor,'valor '.$caller_component. " - current_dato:$current_dato");
 
 				$ar_final[$valor] = $value;
-			}
-			
+			}			
 
-		}#end foreach
-
+		}//end foreach
 		
 		$label 		= RecordObj_dd::get_termino_by_tipo( $tipo ).':'.$stats_model;
 		$ar_final 	= array($label => $ar_final );
 			#dump($ar_final,'$ar_final '.$caller_component . " ".print_r($current_stats_value,true));
 		
 		return $ar_final;
-	}
+	}//end get_stats_value_resolved
+
+
 
 	/*
 	* GET_METHOD
@@ -420,7 +519,7 @@ class component_date extends component_common {
 				return false;
 				break;
 		}
-	}
+	}//end get_method
 
 
 
@@ -444,7 +543,6 @@ class component_date extends component_common {
 		if ( empty($search_value) ) {
 			return false;
 		}
-
 
 
 		$search_query='';
@@ -471,15 +569,36 @@ class component_date extends component_common {
 					if (!empty($ar_filter)) {
 						$search_query = implode(' AND ', $ar_filter);
 					}				
-				}//end if ($comparison_operator=='=') {				
+				}//end if ($comparison_operator=='=') {
 
 				
 				#$search_query = " CAST($json_field#>>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}' AS DATE) $comparison_operator CAST('$search_value' AS DATE)";
 				#$search_query = "CAST(date AS DATE) $comparison_operator '$search_value' ";
-				break;			
+				break;
 
 			default:
-				$search_query = " $json_field#>>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}' $comparison_operator '$search_value' ";
+
+				#$date_mode = component_date::get_date_mode_static($search_tipo);
+					#dump($date_mode, ' date_mode ++ '.to_string());
+
+				// DD_DATE
+				$dd_date = new dd_date();
+				$dd_date->set_date_from_input_field( $search_value );				
+				$time 	 = dd_date::convert_date_to_seconds($dd_date);
+					#dump($time, ' dd_date ++ '.to_string($search_value));
+				$search_value = $time;				
+				
+				// Search in date
+				$aditional_path= ', time';
+				$search_query  = " $json_field#>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang . $aditional_path . "}' $comparison_operator '$search_value' ";
+
+				// Search in ranges
+				$aditional_path= ', start, time';
+				#$search_query .= " \n OR (\n  CAST($json_field#>>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang . $aditional_path . "}' AS integer) <= $search_value";
+				$search_query .= " \n OR (\n  $json_field#>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang . $aditional_path . "}' <= '$search_value'";
+				$aditional_path= ', end, time';
+				#$search_query .= " AND \n  CAST($json_field#>>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang . $aditional_path . "}' AS integer) >= $search_value )";
+				$search_query .= " AND \n  $json_field#>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang . $aditional_path . "}' >= '$search_value' )";
 				break;
 		}
 
@@ -492,7 +611,9 @@ class component_date extends component_common {
 			$search_query = " -- filter_by_search $search_tipo ". get_called_class() ." \n".$search_query;			
 		}
 		return $search_query;
-	}
+	}//end get_search_query
+
+
 
 	/**
 	* BUILD_SEARCH_COMPARISON_OPERATORS 
@@ -518,7 +639,66 @@ class component_date extends component_common {
 		}
 		return (object)$search_comparison_operators;
 
-	}#end build_search_comparison_operators
+	}//end build_search_comparison_operators
+
+
+
+	/**
+	* ADD_TIME
+	* Recoge el dato recibido (de tipo stdClass) y lo usa para creat un objeto dd_date al que inyecta
+	* el time (seconds) calculado.
+	* Retorna el objeto dd_date creado
+	* @return object dd_date $dato
+	*/
+	public static function add_time( $dato ) {
+
+		if(empty($dato)) return $dato;
+		
+		// Period date mode
+		if( isset($dato->period) ) {
+			$dd_date = new dd_date($dato->period);
+			$time 	 = dd_date::convert_date_to_seconds($dd_date);
+			if (isset($dato->period->time) && $dato->period->time!=$time) {
+				debug_log(__METHOD__." Unequal time seconds value: current: $dato->period->time, calculated: $time. Used calculated time.", logger::WARNING);
+			}
+			$dd_date->set_time( $time );
+			$dato->period = $dd_date;
+		}
+
+		// Range date mode
+		if( isset($dato->start) ) {
+			$dd_date = new dd_date($dato->start);
+			$time 	 = dd_date::convert_date_to_seconds($dd_date);
+			if (isset($dato->start->time) && $dato->start->time!=$time) {
+				debug_log(__METHOD__." Unequal time seconds value: current: $dato->start->time, calculated: $time. Used calculated time.", logger::WARNING);
+			}
+			$dd_date->set_time( $time );
+			$dato->start = $dd_date;
+		}
+		if( isset($dato->end) ) {
+			$dd_date = new dd_date($dato->end);
+			$time 	 = dd_date::convert_date_to_seconds($dd_date);
+			if (isset($dato->end->time) && $dato->end->time!=$time) {
+				debug_log(__METHOD__." Unequal time seconds value: current: $dato->end->time, calculated: $time. Used calculated time.", logger::WARNING);
+			}
+			$dd_date->set_time( $time );
+			$dato->end = $dd_date;
+		}
+
+		// Default date mode
+		if( isset($dato->year) ) {
+			$dd_date = new dd_date($dato); 
+			$time 	 = dd_date::convert_date_to_seconds($dd_date);			
+			
+			if (isset($dato->time) && $dato->time!=$time) {
+				debug_log(__METHOD__." Unequal time seconds value: current: $dato->time, calculated: $time. Used calculated time.", logger::WARNING);
+			}
+			$dd_date->set_time( $time );
+			$dato = $dd_date;
+		}
+
+		return $dato;
+	}//end add_time
 
 
 
@@ -526,11 +706,32 @@ class component_date extends component_common {
 	* UPDATE_DATO_VERSION
 	* @return 
 	*/
-	public static function update_dato_version($update_version, $dato_unchanged) {
+	public static function update_dato_version($update_version, $dato_unchanged, $reference_id) {
 
 		$update_version = implode(".", $update_version);
 
 		switch ($update_version) {
+			case '4.0.14':
+				if (!empty($dato_unchanged) && is_object($dato_unchanged) ) {
+					#dump($dato_unchanged, ' dato_unchanged ++ '.to_string($reference_id)); #die();
+
+					$new_dato = component_date::add_time($dato_unchanged);					
+						#dump($new_dato, ' new_dato ++ '. $reference_id.' -> '.to_string($dato_unchanged));						
+
+					$response = new stdClass();
+					$response->result = 1;
+					$response->new_dato = $new_dato;
+					$response->msg = "[$reference_id] Dato is changed from ".to_string($dato_unchanged)." to ".to_string($new_dato).".<br />";
+					return $response;
+
+				}else{
+					$response = new stdClass();
+					$response->result = 2;
+					$response->msg = "[$reference_id] Current dato don't need update.<br />";	// to_string($dato_unchanged)." 
+					return $response;
+				}				
+				break;
+
 			case '4.0.10':
 				#$dato = $this->get_dato_unchanged();
 					
@@ -543,13 +744,14 @@ class component_date extends component_common {
 					$response = new stdClass();
 					$response->result =1;
 					$response->new_dato = $new_dato;
+					$response->msg = "[$reference_id] Dato is changed from ".to_string($dato_unchanged)." to ".to_string($new_dato).".<br />";
 					return $response;
 					
 
 				}else{
 					$response = new stdClass();
 					$response->result = 2;
-					$response->msg = to_string($dato_unchanged)." : The dato don't need update.<br />";
+					$response->msg = "[$reference_id] Current dato don't need update.<br />";	// to_string($dato_unchanged)." 
 					return $response;
 				}
 				break;
@@ -561,10 +763,68 @@ class component_date extends component_common {
 				# code...
 				break;
 		}		
+	}//end update_dato_version
+
+
+
+	/**
+	* RENDER_LIST_VALUE
+	* Overwrite for non default behaviour
+	* Receive value from section list and return proper value to show in list
+	* Sometimes is the same value (eg. component_input_text), sometimes is calculated (e.g component_portal)
+	* @param string $value
+	* @param string $tipo
+	* @param int $parent
+	* @param string $modo
+	* @param string $lang
+	* @param string $section_tipo
+	* @param int $section_id
+	*
+	* @return string $list_value
+	*/
+	public static function render_list_value($value, $tipo, $parent, $modo, $lang, $section_tipo, $section_id) {
+
+		if($section_tipo==DEDALO_ACTIVITY_SECTION_TIPO) {
+			return $value;
+		}else{
+			$component 	= component_common::get_instance(__CLASS__,
+														 $tipo,
+													 	 $parent,
+													 	 $modo,
+														 DEDALO_DATA_NOLAN,
+													 	 $section_tipo);
+			
+			# Use already query calculated values for speed
+			$dato = json_handler::decode($value);
+			$component->set_dato($dato);
+			$component->set_identificador_unico($component->get_identificador_unico().'_'.$section_id); // Set unic id for build search_options_session_key used in sessions
+			
+			return $component->get_html();
+		}
 		
-	}#end update_dato_version
+	}//end render_list_value
 
 
+
+	/**
+	* GET_VALOR_LIST_HTML_TO_SAVE
+	* Usado por section:save_component_dato
+	* Devuelve a section el html a usar para rellenar el 'campo' 'valor_list' al guardar
+	* Por defecto será el html generado por el componente en modo 'list', pero en algunos casos
+	* es necesario sobre-escribirlo, como en component_portal, que ha de resolverse obigatoriamente en cada row de listado
+	*
+	* En este caso, usaremos únicamente el valor en bruto devuelto por el método 'get_dato_unchanged'
+	*
+	* @see class.section.php
+	* @return mixed $result
+	*/
+	public function get_valor_list_html_to_save() {
+		$result = $this->get_dato_unchanged();
+
+		return $result;
+	}//end get_valor_list_html_to_save
+
+	
 
 }
 ?>

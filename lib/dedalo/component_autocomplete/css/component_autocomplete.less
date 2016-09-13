@@ -1,0 +1,214 @@
+/*CSS Document
+WRAP DIV CONTAINER*/
+.css_wrap_autocomplete {
+
+	}
+	.css_wrap_autocomplete > .content_data {
+		display: block;
+		min-height: 21px;
+		width: 100%;
+		/*
+		left: 17%;
+		@media screen and (max-width: 1280px) {
+		left:0;
+		}
+		*/
+	}
+
+/* VALOR TEXT */
+.css_autocomplete_valor {
+	display: inline-block;
+	color: #1a1a1a;
+	padding: 3px;
+	padding-left: 0px;
+	padding-right: 5px;	
+}
+
+
+/* AUTOCOMPLETE SEARCH FIELD */
+input.css_autocomplete_search_field {
+	float: right;
+	width: 90px;
+	right: -30px;
+    position: relative;
+	opacity: 0.5;
+	background: white url('../../themes/default/lupa2.svg') right center no-repeat;
+	background-size: auto 100%;
+	background-position-x: 75%;
+	transition: all 0.25s ease-in-out;
+	}
+	input.css_autocomplete_search_field:hover {
+		opacity: 1;
+	}
+	input.css_autocomplete_search_field:focus {
+		opacity: 1;
+		width: 90px;
+		background-position-x: 95%;
+
+	}
+
+/* DATO HIDDEN INPUT */
+input.css_autocomplete_dato_hidden {
+	float: right;
+	width: 50px;
+	text-align: center;
+	opacity: 0.4;
+	display: none;
+	}
+	input.css_autocomplete_dato_hidden.debug {
+		display: inline-block;
+		width: 290px;
+		margin-top: 2px;
+		clear: both;
+	}
+
+
+.ui-autocomplete-loading {
+	background: white url('../../themes/default/spinner.gif') right center no-repeat;
+}
+
+
+/* BTN DELETE */
+.css_autocomplete_button_delete {
+	position: relative;
+	top: 0px;
+	margin-right: 5px;
+	background-position: -456px 0;
+	opacity: 0.3;
+}
+/* BTN EDIT SECTION */
+.edit_autocomplete {
+	float: right;
+	position: relative;
+	top: -17px;
+	background-position: 0 -72px;
+	opacity: 0.3;
+}
+/* BTN EDIT ROW */
+.edit_autocomplete_row {
+	top: 2px;
+    left: 5px;
+}
+/* BTN NEW */
+.new_autocomplete {
+	float: right;	
+	position: relative;
+	top: -17px;
+	right: 5px;
+	background-position: 0 -96px;
+	opacity: 0.3;
+}
+
+
+
+.component_autocomplete_new_element {
+	
+	width: 100%;
+	display: block;
+	margin-top: 15px;
+	}
+	.component_autocomplete_new_element input[type="text"] {
+		padding: 3px;
+		padding-left: 5px;
+		border: 1px solid #9E9E9E;
+		border-radius: 3px;
+	}
+	.component_autocomplete_new_element input[type="button"] {
+		cursor: pointer;
+	}
+
+
+.autocomplete_semantic_nodes {
+	background-color: rgba(232, 232, 232, 0.81);
+	border-radius: 4px;
+	margin: 3px;
+	margin-left: 15px;
+	padding: 4px;	
+	display: block;
+	white-space: nowrap;
+	width: 100%;
+	min-height: 1.75em;
+}
+
+
+.css_autocomplete_ul_edit_in_portal{
+	display: inline-block;
+	width: 25px;
+	height: 25px;
+	margin-left: -5px;
+	background-size: cover;
+	float: left;
+	background: url('../../themes/default/close.svg') center center no-repeat;
+	-webkit-transform: rotate(45deg);
+    -moz-transform: rotate(45deg);
+    -ms-transform: rotate(45deg);
+    -o-transform: rotate(45deg);
+    transform: rotate(45deg);
+    -webkit-filter: brightness(0%);
+    filter: brightness(0%);
+}.css_autocomplete_ul_edit_in_portal:hover{
+	-webkit-filter: hue-rotate(150deg) brightness(100%) saturate(2);	
+	filter: hue-rotate(150deg) brightness(100%) saturate(2);
+	cursor: pointer;
+
+}
+.css_autocomplete_ul{
+
+}
+
+.css_autocomplete_button_close{
+	display: inline-block;
+	width: 22px;
+	height: 22px;
+	background-size: cover;
+	float: right;
+	background: url('../../themes/default/close.svg') center center no-repeat;
+	//filter: hue-rotate(30deg) saturate(.5) brightness(0%) saturate(4)
+	-webkit-filter: brightness(0%);
+	filter: brightness(0%);
+}.css_autocomplete_button_close:hover{
+	-webkit-filter: brightness(100%);
+	filter:brightness(100%); 
+	cursor: pointer;
+}
+
+.css_wrap_autocomplete.wrap_portal_list >.content_data{
+	width: 100%;
+
+}
+
+.css_wrap_autocomplete.wrap_portal_list >.content_data >.css_autocomplete_valor{
+	width: 80%;
+	min-height: 22px;
+}
+
+
+.css_wrap_autocomplete.wrap_portal_list >.content_data >.css_autocomplete_search_field{
+	width: 75%;
+	background-position-x: 90%;
+	right:0px;
+	display: inline-block;
+}
+
+.css_wrap_autocomplete.wrap_portal_list >.content_data >.edit_autocomplete{
+	top:0px;
+	width: 20px;
+	float: none;
+
+}
+.css_wrap_autocomplete.wrap_portal_list >.content_data >.new_autocomplete{
+	top:0px;
+	width: 20px;
+	right:0px;
+	float: none;
+}
+
+
+
+.css_wrap_autocomplete.wrap_portal_list >.content_data > input.css_autocomplete_search_field:focus {
+
+	background-position-x: 98%;
+}
+
+
+

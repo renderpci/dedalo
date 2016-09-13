@@ -738,7 +738,7 @@ class AVPlayer extends Accessors {
 					
 		$html .= "	<!-- TC Display -->
 					<div id=\"TCdiv\">
-						<span class=\"loading_msg\"> loading </span>
+						<span class=\"loading_msg blink\"> loading </span>
 					</div>";
 					
 		$html .= "	<a class=\"video_btn\" href=\"javascript:;\" id=\"rev10\"	 onClick=\"controlVideo('-10');\"> &lt; 10 seg</a>";

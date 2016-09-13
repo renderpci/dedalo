@@ -1,0 +1,38 @@
+<?php
+
+	# VISUALIZADOR HTML	
+	//if(isset($_REQUEST[$tipo]))					$dato = $_REQUEST[$tipo];		#var_dump($_REQUEST[$tipo]);
+	
+	
+	print "\n<!-- NUMBER -->";
+	print "\n<div class=\"wrap_component css_wrap_number\" id=\"wrap_{$tipo}\">";
+	
+	# ETIQUETA (LABEL)
+	$html_label = component_common_draw::draw_label($this);
+	
+	# CONTENIDO (INPUT)
+	$html_contenido = '';
+	switch($permissions) {
+			
+		case 0	:	$html_contenido .= "";
+					break;
+						
+		case ($permissions>=1):
+		
+					$html_contenido .= "\n <input class=\"css_number\" type=\"text\" 
+					name=\"{$tipo}\" 
+					data-tipo=\"{$tipo}\"
+					value=\"{$dato}\" title=\"$html_title\" />";											
+	}
+
+	# Prepare content to show in page
+	tools::prepare_content($html_contenido);	
+	
+	
+	# PRINT HTML
+	print $html_label;
+	print $html_contenido;
+	
+	
+	print "\n</div>\n\n"; //wrap
+?>

@@ -24,37 +24,37 @@ function dump($val, $var_name=NULL, $arguments=array()){
 	$bt = debug_backtrace(); #print_r($bt);
 
 
-	$html .= " DUMP \n  Caller: ".str_replace(DEDALO_ROOT,'',$bt[0]['file']);
-	$html .= "\n  Line: ".@$bt[0]['line'];
+	$html .= " DUMP ".PHP_EOL."  Caller: ".str_replace(DEDALO_ROOT,'',$bt[0]['file']);
+	$html .= PHP_EOL ." Line: ".@$bt[0]['line'];
 
 	# NIVEL 1
 
 		# FUNCTION
 		if (isset($bt[1]['function']))
-			$html .= "\n  Inside method: ".$bt[1]['function'];
+			$html .= PHP_EOL . " Inside method: ".$bt[1]['function'];
 								
 		# VAR_NAME
 		if(isset($var_name))
-			$html .= "\n  name: <strong>".$var_name."</strong>";	
+			$html .= PHP_EOL . " name: <strong>".$var_name."</strong>";	
 		
 		# EXPECTED
 		if(isset($expected))
-			$html .= "\n  val expected: <em> $expected </em>";
+			$html .= PHP_EOL . " val expected: <em> $expected </em>";
 
 		# EXEC_TIME
 		if(isset($start_time)) {
-			$html .= "\n  exec_time: <em> ".exec_time($start_time)." </em>";
+			$html .= PHP_EOL . " exec_time: <em> ".exec_time($start_time)." </em>";
 		}
 
 		# arguments (optional)
 		if(isset($arguments) && is_array($arguments)) foreach ($arguments as $key => $value) {			
-			$html .= "\n  $key: <em> $value </em>";
+			$html .= PHP_EOL . " $key: <em> $value </em>";
 		}
 			
 
 		# VALUE
 		$value_html='';
-		$html .= "\n  value: " ;
+		$html .= PHP_EOL . " value: " ;
 		switch (true) {
 			case is_array($val):
 				$value_html .= print_r($val, true);
@@ -73,24 +73,26 @@ function dump($val, $var_name=NULL, $arguments=array()){
 		$html .= trim($value_html);
 
 		# TYPE
-		$html .= "\n  type: ".gettype($val)."";
+		$html .= PHP_EOL . " type: ".gettype($val)."";
 
 	
 	# NIVEL 2
 
 		# CALLER FUNCTION
 		if (isset($bt[2])) {
-			$html .= "\n  Caller2: ";
+			$html .= PHP_EOL . " Caller2: ";
 			$html .= " ". print_r($bt[2]['file'],true);
-			$html .= "\n  Function: ". print_r($bt[2]['function'],true);
+			$html .= PHP_EOL . " Function: ". print_r($bt[2]['function'],true);
 			$html .= " [Line: ". print_r($bt[2]['line'],true)."]";
 		}
+	
 	
 
 	# PRINT
 	if(SHOW_DEBUG===true) { //
 		#if ($print!=false)
 		print wrap_pre($html) ;
+		//echo "<script>console.log('PHP: ".$html."');</script>";
 	}
 
 	# LOG MESSAGE
@@ -107,27 +109,33 @@ function wrap_pre($string, $add_header_html=true) {
 	$html='';
 	#$html .= "\n<html xmlns=\"http://www.w3.org/1999/xhtml\" ><body>";
 	if ($add_header_html) {			
-		$html .= "\n<!DOCTYPE html>";
-		$html .= "\n<meta charset=\"utf-8\">";
+		$html .= '<!DOCTYPE html>';
+		$html .= '<html lang="en">';
+		$html .= '<head>';
+		$html .= '<meta charset="utf-8">';
+		$html .= '</head><body>';
 	}
 	$html .= "<pre class=\"dump\" style=\"min-width:500px;font-family:monospace;color:#4B5D5E;font-size:0.8em;background-color:rgba(217, 227, 255, 0.8);border-radius:5px;padding:10px;position:relative;z-index:1\">";
 	$html .= "<div class=\"icon_warning\"></div>";
 	$html .= stripslashes($string);
 	$html .= "</pre>";
-	#$html .= "\n</body></html>";
+	if ($add_header_html) {	
+		$html .= '</body></html>';
+	}
 	return $html;
 }
 
 function wrap_html($string, $htmlspecialchars=true) {
 	$html='';
-	$html .= "\n<!DOCTYPE html>";
-	$html .= "\n<meta http-equiv=\"Content-Type\" content=\"text/html; charset=UTF-8\" />";
-	$html .= "\n<html><body>";
+	$html .= '<!DOCTYPE html>';
+	$html .= '<html lang="en"><head>';
+	$html .= '<meta charset="utf-8">';
+	$html .= '</head><body>';
 	if ($htmlspecialchars) {
 		$string = htmlspecialchars($string);
 	}
 	$html .= nl2br( $string );
-	$html .= "\n</body></html>";
+	$html .= '</body></html>';
 	return $html;
 }
 
@@ -508,10 +516,12 @@ function array_flatten($array) {
 * VERIFY_DEDALO_PREFIX_TIPOS
 * @return bool()
 */
-function verify_dedalo_prefix_tipos($tipo=null) {	
+function verify_dedalo_prefix_tipos($tipo=null) {
 	
+	return true; # Temporal hasta que se valore lo de los prefijos dinámicos de hierarchy
+	
+	/*
 	$DEDALO_PREFIX_TIPOS = unserialize(DEDALO_PREFIX_TIPOS);
-	#var_dump($DEDALO_PREFIX_TIPOS);	var_dump($tipo);
 
 	if (empty($tipo) || strlen($tipo)<2) {
 		return false;
@@ -520,10 +530,10 @@ function verify_dedalo_prefix_tipos($tipo=null) {
 		if ( strpos($tipo, $current_prefix)===0 ) {
 			return true;
 		}
-	}
+	}	
 	
-	#return true; # Temporal hasta que se guarde la structura por partes
 	return false;
+	*/
 }
 
 
@@ -763,6 +773,38 @@ function str_lreplace($search, $replace, $subject) {
     }
 
     return $subject;
+}
+
+
+
+/**
+ * Class casting
+ *
+ * @param string|object $destination
+ * @param object $sourceObject
+ * @return object
+ */
+function cast($destination, $sourceObject) {
+	
+    if (is_string($destination)) {
+        $destination = new $destination();
+    }
+    $sourceReflection = new ReflectionObject($sourceObject);
+    $destinationReflection = new ReflectionObject($destination);
+    $sourceProperties = $sourceReflection->getProperties();
+    foreach ($sourceProperties as $sourceProperty) {
+        $sourceProperty->setAccessible(true);
+        $name = $sourceProperty->getName();
+        $value = $sourceProperty->getValue($sourceObject);
+        if ($destinationReflection->hasProperty($name)) {
+            $propDest = $destinationReflection->getProperty($name);
+            $propDest->setAccessible(true);
+            $propDest->setValue($destination,$value);
+        } else {
+            $destination->$name = $value;
+        }
+    }
+    return $destination;
 }
 
 ?>

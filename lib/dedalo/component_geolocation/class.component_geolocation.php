@@ -32,6 +32,7 @@ class component_geolocation extends component_common {
 				$dato_new->lat		= '39.462571';
 				$dato_new->lon		= '-0.376295';	# Calle Denia
 				$dato_new->zoom		= 17;
+				$dato_new->alt		= 16;
 				#$dato_new->coordinates	= array();
 			# END DEFAULT VALUES
 			######################################################################################################

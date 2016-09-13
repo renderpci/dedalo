@@ -4,7 +4,6 @@
 
 
 	
-	#echo "\n<!-- INPUT_TEXT [tipo:$tipo parent:$parent] -->";	
 		
 	# CONTENIDO (INPUT)
 	$html_contenido = '';
@@ -13,9 +12,9 @@
 		case 0	:	$html_contenido .= "";		
 					break;
 					
-		case ($permissions>=1)	:
-			
-					$html_contenido .= "\n <span class=\"css_span_dato\">$valor</span>";			
+		case ($permissions>=1) :
+					
+					$html_contenido .= "\n <span class=\"css_span_dato\">$valor</span>";											
 					break;
 					
 	}	

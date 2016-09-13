@@ -77,6 +77,7 @@ if($action=='backup') {
 	$res = backup::init_backup_secuence($user_id_matrix='0', $username='system');
 	echo $res;
 	exit();
+	
 }
 
 
@@ -90,6 +91,5 @@ if ($action=='load_str_data') {
 	echo wrap_pre($html);
 	exit();
 
-
-}#nd load_str_data
+}#end if ($action=='load_str_data')
 ?>   

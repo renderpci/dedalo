@@ -4,7 +4,7 @@
 	
 	print "\n\n<!-- SECTION LIST [tipo:$tipo modo:$modo] -->";
 
-	print "\n<div class=\"css_section_wrap css_section_wrap_{$modo} wrap_section wrap_section_{$tipo}\"	id=\"section_wrap_{$tipo}\"
+	print "\n<div class=\"css_section_wrap wrap_section wrap_section_{$modo} wrap_section_{$tipo}\"	id=\"section_wrap_{$tipo}\"
 	data-modo=\"$modo\"
 	data-options=\"\"
 	>";
@@ -69,7 +69,7 @@
 							}
 
 							$html_buttons .= "
-							<div id=\"btn_tool_portal_show_full\" class=\"btn_inside_section_buttons_container $current_btn_class\"
+							<div id=\"btn_tool_portal_show_full\" class=\"css_button_generic btn_inside_section_buttons_container $current_btn_class\"
 							data-search_options_session_key=\"$search_options_session_key\" 
 							data-mode=\"$current_btn_class\" 
 							onclick=\"tool_portal.show_more_toggle(this)\">

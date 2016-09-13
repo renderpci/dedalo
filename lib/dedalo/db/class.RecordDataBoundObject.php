@@ -128,7 +128,7 @@ abstract class RecordDataBoundObject {
 		$dato = json_handler::encode($dato);		# | JSON_NUMERIC_CHECK
 			#dump($dato,'$dato');
 
-		#if(is_numeric($dato)) {
+		#if(is_int($dato)) {
 		#	$this->dato = $dato;
 		#}else{
 			# stripslashes and addslashes text values
@@ -299,26 +299,31 @@ abstract class RecordDataBoundObject {
 						$current_val = json_handler::encode($current_val);
 					}
 
-					if(is_numeric($current_val)) {						
+					if(is_int($current_val)) {		 // changed  from is_numeric to is_int (06-06-2016)
 						$strQuery_set .= "\"$key\" = $current_val, ";
-					}else{
+					}else{						
 						#$strQuery_set .= "\"$key\" = '".pg_escape_string($current_val)."', ";	# Escape the text data
 						$strQuery_set .= "\"$key\" = " . pg_escape_literal($current_val) . ", ";
 						#$strQuery_set .= "\"$key\" = '".$current_val."', ";	# Escape the text data
+							#dump($strQuery_set, ' strQuery_set ++ '.to_string());
 					}
 				}
 			}
+
+			#
+			# EMPTY SET ELEMENTS CASE
 			if(strlen($strQuery_set)==0) {
+				$msg = "Failed Save query (RDBO). Data is not saved because no vars ar set to save. Elements to save: ".count( (array)$this->arRelationMap ) ;
 				if(SHOW_DEBUG===true) {
-					dump($strQuery, ' strQuery');
-					$msg = __METHOD__ ." Failed Save query (Update): strQuery_set = $strQuery_set " .print_r($this->arModifiedRelations,true);
-				}else{
-					$msg = "Failed Save query (RDBO). Data is not saved. Please contact with your admin" ;
+					dump($strQuery, ' strQuery');					
 				}
 				trigger_error($msg);
-				throw new Exception($msg, 1);
-				#die($msg);
+				#throw new Exception($msg, 1); #die($msg);
+
+				// Because is not an error, only a impossible save query, notify and return normally
+				return $this->ID;
 			}
+
 			$strQuery	.= substr($strQuery_set,0,-2);
 			if (is_int($this->ID)) {
 				$strQuery	.= ' WHERE "'. $this->strPrimaryKeyName .'" = ' . $this->ID ;
@@ -336,7 +341,7 @@ abstract class RecordDataBoundObject {
 					throw new Exception("Error Processing Request", 1);;
 				}
 			}
-			return($this->ID);
+			return $this->ID;
 
 		#
 		# SAVE INSERT . RECORD NOT EXISTS AND CREATE ONE
@@ -357,7 +362,7 @@ abstract class RecordDataBoundObject {
 							$actualVal = json_handler::encode($actualVal);
 						}
 
-						if(is_numeric($actualVal) && $this->strTableName!= 'matrix_time_machine') {
+						if(is_int($actualVal) && $this->strTableName!= 'matrix_time_machine') {
 							$strValueList	.= "$actualVal, ";
 						}else{
 							#$actualVal 	     = DBi::_getConnection()->real_escape_string($actualVal);
@@ -607,7 +612,7 @@ abstract class RecordDataBoundObject {
 
 				# DEFAULT . CASO GENERAL: USAREMOS EL KEY COMO CAMPO Y EL VALUE COMO VALOR TIPO 'campo = valor'
 				default :
-									if(is_numeric($value) && strpos($key, 'dato')===false) {
+									if(is_int($value) && strpos($key, 'dato')===false) {
 										$strQuery 	.= "AND \"$key\" = $value ";
 									}else{
 										$strQuery 	.= "AND \"$key\" = '$value' ";
@@ -869,7 +874,7 @@ abstract class RecordDataBoundObject {
 											#}else{
 											
 												# NO JSON FORMAT
-												if(is_numeric($value) && strpos($key, 'dato')===false) {
+												if(is_int($value) && strpos($key, 'dato')===false) {
 													$strQuery 	.= "AND $key = $value ";
 												}else{
 													$strQuery 	.= "AND $key = '$value' ";
@@ -980,7 +985,7 @@ abstract class RecordDataBoundObject {
 			if(is_null($strNewValue)) {
 				$this->$strMember = $strNewValue;
 
-			}elseif(is_numeric($strNewValue)) {
+			}elseif(is_int($strNewValue)) {
 				#eval(' $this->' . $strMember .'=' . $strNewValue . ';');
 				$this->$strMember = $strNewValue;
 

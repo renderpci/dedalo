@@ -23,7 +23,12 @@ if(empty($mode)) exit("<span class='error'> Trigger: Error Need mode..</span>");
 */
 if($mode=='update_cache') { 	
 	
-	if (empty($section_tipo)) throw new Exception("Error Processing Request: Unable load_source_component ! (Few vars1)", 1);
+	if (empty($section_tipo)) {
+		exit("Error Processing Request: Unable load_source_component ! (Few vars1)");
+	}
+
+	# Write session to unlock session file
+	session_write_close();
 
 	$tool_update_cache  = new tool_update_cache($section_tipo);
 	$result 			= $tool_update_cache->update_cache();
@@ -53,6 +58,9 @@ if($mode=='update_cache_by_section_id') {
 	
 	if (empty($section_tipo)) throw new Exception("Error Processing Request: Unable load_source_component ! (Few vars1)", 1);
 	if (empty($section_id))   throw new Exception("Error Processing Request: Unable load_source_component ! (Few vars2)", 1);
+
+	# Write session to unlock session file
+	session_write_close();
 
 
 	$locator = new locator();

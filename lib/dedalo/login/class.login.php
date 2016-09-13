@@ -236,6 +236,7 @@ class login extends common {
 	}#end Login
 
 
+
 	/**
 	* REST_LOGIN
 	* Special login for rest users. $auth_code and source ip are verified for security
@@ -312,6 +313,7 @@ class login extends common {
 
 	}#rest_login
 	
+
 
 	/**
 	* INIT_USER_LOGIN_SECUENCE

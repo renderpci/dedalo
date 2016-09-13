@@ -11,11 +11,30 @@ if(login::is_logged()!==true) die("<span class='error'> Auth error: please login
 
 
 # set vars
-	$vars = array('mode','component_tipo','section_tipo','language','save');
+	$vars = array('mode');
 		foreach($vars as $name) $$name = common::setVar($name);
 
 # mode
 	if(empty($mode)) exit("<span class='error'> Trigger: Error Need mode..</span>");
+
+
+# CALL FUNCTION
+if ( function_exists($mode) ) {
+	call_user_func($mode);
+}
+
+
+
+/**
+* MAKE_BACKUP
+* Force unlock all components
+*/
+function make_backup() {
+
+	$result = tool_administration::make_backup();
+
+	echo (string)json_encode($result);
+}//end make_backup
 
 
 
@@ -23,15 +42,13 @@ if(login::is_logged()!==true) die("<span class='error'> Auth error: please login
 * FORCE_UNLOCK_ALL_COMPONENTS
 * Force unlock all components
 */
-if($mode=='force_unlock_all_components') {
+function force_unlock_all_components() {
 
-	include_once DEDALO_LIB_BASE_PATH . '/lock_components/class.lock_components.php';
+	include DEDALO_LIB_BASE_PATH . '/lock_components/class.lock_components.php';
 
 	$result = lock_components::force_unlock_all_components();
 
-	echo json_encode($result);
-	exit();
-
+	echo (string)json_encode($result);
 }//end force_unlock_all_components
 
 
@@ -40,15 +57,13 @@ if($mode=='force_unlock_all_components') {
 * GET_ACTIVE_USERS
 * Force unlock all components
 */
-if($mode=='get_active_users') {
+function get_active_users() {
 
-	include_once DEDALO_LIB_BASE_PATH . '/lock_components/class.lock_components.php';
+	include DEDALO_LIB_BASE_PATH . '/lock_components/class.lock_components.php';
 
 	$result = lock_components::get_active_users();
 
-	echo json_encode($result);
-	exit();
-
+	echo (string)json_encode($result);
 }//end get_active_users
 
 
@@ -57,13 +72,11 @@ if($mode=='get_active_users') {
 * BUILD_STRUCTURE_CSS
 * Force unlock all components
 */
-if($mode=='build_structure_css') {	
+function build_structure_css() {
 
 	$result = css::build_structure_css();
 
-	echo json_encode($result);
-	exit();
-
+	echo (string)json_encode($result);
 }//end build_structure_css
 
 
@@ -72,7 +85,7 @@ if($mode=='build_structure_css') {
 * UPDATE_STRUCTURE
 * Loads structure databases and overwrite existing data
 */
-if($mode=='update_structure') {
+function update_structure() {
 
 	$response = new stdClass();
 		$response->result 	= false;
@@ -84,7 +97,7 @@ if($mode=='update_structure') {
 	$response->msg .= $exp->msg ;//. '<br>';
 	
 	if ($exp->code!=0) {
-		$response->msg .= "<pre>Sorry. Nex step import_structure stopped ($exp->code)</pre>";	
+		$response->msg .= "<pre>Sorry. A problem occurred. Nex step import_structure is stopped ($exp->code)</pre>";	
 	}else{
 		$res = backup::import_structure();
 		$response->result = true;
@@ -98,11 +111,10 @@ if($mode=='update_structure') {
 
 	# Delete session permissions table (force to recalculate)
 	unset($_SESSION['dedalo4']['auth']['permissions_table']);
-	
-	
-	echo json_encode($response);
-	exit();
 
+	session_write_close();
+	
+	echo (string)json_encode($response);
 }//end update_structure
 
 
@@ -111,17 +123,20 @@ if($mode=='update_structure') {
 * BUILD_STRUCTURE_CSS
 * Force unlock all components
 */
-if($mode=='delete_component_tipo_in_matrix_table') {
+function delete_component_tipo_in_matrix_table() {
 
-	$response = new stdClass();
-		$response->result 	= false;
-		$response->msg 		= '';
+	# set vars
+	$vars = array('component_tipo','section_tipo','language','save');
+		foreach($vars as $name) $$name = common::setVar($name);	
 
 	$component_tipo = json_decode($component_tipo);
 	$section_tipo 	= json_decode($section_tipo);
 	$language 		= json_decode($language);
 	$save 			= json_decode($save);
 
+	$response = new stdClass();
+		$response->result 	= false;
+		$response->msg 		= '';
 
 	if(empty($component_tipo)){
 		$response->msg .= "<span class='error'> Error: '".label::get_label('component_tipo')."' is mandatory</span>";
@@ -137,9 +152,7 @@ if($mode=='delete_component_tipo_in_matrix_table') {
 
 	$result = tool_administration::delete_component_tipo_in_matrix_table($section_tipo,$component_tipo,$language,$save);
 
-	echo json_encode($result);
-	exit();
-
+	echo (string)json_encode($result);
 }//end build_structure_css
 
 
@@ -148,20 +161,20 @@ if($mode=='delete_component_tipo_in_matrix_table') {
 * UPDATE_VERSION
 * Update the version, components, SQL, etc, the script look the updates.php file and apply to the current installation data
 */
-if($mode=='update_version') {
+function update_version() {
 
+	// Set time limit unlimited
 	set_time_limit (0);
 
 	$response = new stdClass();
-		$response->result 	= false;
-		$response->msg 		= '';
+		$response->result = false;
+		$response->msg 	  = '';
 
 	$result = tool_administration::update_version();
 
-	
-	echo json_encode($result);
-	exit();
+	session_write_close();
 
+	echo (string)json_encode($result);
 }//end update_version
 
 
@@ -170,19 +183,16 @@ if($mode=='update_version') {
 * SKIP_PUBLICATION_STATE_CHECK
 * Update the version, components, SQL, etc, the script look the updates.php file and apply to the current installation data
 */
-if($mode=='skip_publication_state_check') {
+function skip_publication_state_check() {
 
 	$vars = array('value');
 		foreach($vars as $name) $$name = common::setVar($name);
 
 		$value = json_decode($value);
-			#dump($value, ' value ++ '.to_string());
 
 	$result = tool_administration::skip_publication_state_check($value);
 	
-	echo json_encode($result);
-	exit();
-
+	echo (string)json_encode($result);
 }//end skip_publication_state_check
 
 
@@ -191,18 +201,17 @@ if($mode=='skip_publication_state_check') {
 * REMOVE_AV_TEMPORALS
 * Remove av ffmpeg sh temprals
 */
-if($mode=='remove_av_temporals') {
+function remove_av_temporals() {
 
 	$result = tool_administration::remove_av_temporals();
 
 	$response = new stdClass();
-		$response->result 	= !empty($result) ? true : false;
-		$response->msg 		= !empty($result) ? "Removed files: <br>".implode('<br>', (array)$result) : "No files found";
+		$response->result = !empty($result) ? true : false;
+		$response->msg 	  = !empty($result) ? "Removed files: <br>".implode('<br>', (array)$result) : "No files found";
 	
-	echo json_encode($response);
-	exit();
-
+	echo (string)json_encode($response);
 }//end remove_av_temporals
+
 
 
 ?>

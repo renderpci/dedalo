@@ -138,6 +138,8 @@ require_once( dirname(dirname(__FILE__)) .'/config/config4.php');
 	*/
 	protected static function set_static_operator_vars( $lang=DEDALO_APPLICATION_LANG ) {
 
+		if(SHOW_DEBUG) $start_time=microtime(1);
+
 		if ($lang=='lg-vlca') {
 			$lang = 'lg-cat';
 		}
@@ -175,7 +177,7 @@ require_once( dirname(dirname(__FILE__)) .'/config/config4.php');
 		if(SHOW_DEBUG) {
 			global$TIMER;$TIMER[__METHOD__.'_OUT_'.microtime(1)]=microtime(1);
 			#error_log("Calculated operators ".count($ar_terminoID_by_modelo_name));
-			debug_log(__METHOD__." for lang: $lang");
+			debug_log(__METHOD__." for lang: $lang ".exec_time_unit($start_time,'ms').' ms');
 		}
 			
 		return (array)$ar_operator;

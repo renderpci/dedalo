@@ -214,7 +214,7 @@
 
 	#
 	# DEDALO_PREFIX_TIPOS
-	define('DEDALO_PREFIX_TIPOS', serialize( array('dd','rsc','oh','ich') ));
+	define('DEDALO_PREFIX_TIPOS', serialize( array('dd','hierarchy','rsc','oh','ich') ));
 
 	# Fallback section
 	define('MAIN_FALLBACK_SECTION'				,'oh1');		# go after login (tipo inventory)

@@ -1,9 +1,6 @@
 <?php
 /*
-* CLASS COMPONENT REF
- La idea es que sea un puntero hacia otros componentes. Que guarde el id_matrix y el tipo y se resuelva al mostrarse.
- Ejemplo: guardamos el id_matrix del usuario actual desde activity y al mostrar el componente en los listado de actividad, mostramos su resolución
- en lugar de su dato (Admin por )... por acabar..
+ class component_autocomplete
 */
 
 
@@ -36,7 +33,8 @@ class component_autocomplete extends component_common {
 				throw new Exception("Error Processing Request. Wrong component lang definition. This component $tipo (".get_class().") is not 'traducible'. Please fix this ASAP", 1);
 			}
 		}
-	}
+	}//end __construct
+
 
 
 	# GET DATO : 
@@ -55,7 +53,9 @@ class component_autocomplete extends component_common {
 		#$dato = json_handler::decode(json_encode($dato));	# Force array of objects instead default array of arrays
 		#dump($dato," dato");
 		return (array)$dato;
-	}
+	}//end get_dato
+
+
 
 	# SET_DATO
 	public function set_dato($dato) {
@@ -79,7 +79,7 @@ class component_autocomplete extends component_common {
 		$dato = $dato_unique;
 
 		parent::set_dato( (array)$dato );		
-	}
+	}//end set_dato
 	
 
 
@@ -91,11 +91,7 @@ class component_autocomplete extends component_common {
 		#dump($this->get_dato()," dato");
 		# Salvamos de forma estándar
 		return parent::Save();
-	}
-
-
-
-	
+	}//end Save
 
 	
 
@@ -112,9 +108,8 @@ class component_autocomplete extends component_common {
 			}
 			return $this->valor;
 		}
-		*/	
+		*/
 
-		
 		$dato = $this->get_dato();
 			#dump($dato,'dato '.gettype($dato) );
 
@@ -159,8 +154,6 @@ class component_autocomplete extends component_common {
 		}
 		#dump($ar_componets_related, ' ar_componets_related ++ '.to_string($this->tipo));
 
-
-
 			
 		$ar_values=array();
 		foreach ($dato as $current_locator) {
@@ -189,7 +182,6 @@ class component_autocomplete extends component_common {
 		}
 		
 		return $valor;
-
 	}//end get valor
 
 
@@ -199,7 +191,7 @@ class component_autocomplete extends component_common {
 	* Return component value sended to export data
 	* @return string $valor
 	*/
-	public function get_valor_export( $valor=null, $lang=DEDALO_DATA_LANG ) {
+	public function get_valor_export( $valor=null, $lang=DEDALO_DATA_LANG, $quotes, $add_id ) {
 		
 		if (is_null($valor)) {
 			$dato = $this->get_dato();				// Get dato from DB
@@ -248,7 +240,7 @@ class component_autocomplete extends component_common {
 																 'list',
 																 $lang,
 																 $section_tipo);
-				$ar_resolved[$section_id][] = $component->get_valor_export(null,$lang);
+				$ar_resolved[$section_id][] = $component->get_valor_export( null, $lang, $quotes, $add_id );
 			}
 		}
 		#dump($ar_resolved, ' $ar_resolved ++ '.to_string());
@@ -263,8 +255,7 @@ class component_autocomplete extends component_common {
 			#return "AUTOCOMPLETE: ".$valor_export;
 		}
 		return $valor_export;
-
-	}#end get_valor_export
+	}//end get_valor_export
 
 
 
@@ -291,8 +282,10 @@ class component_autocomplete extends component_common {
 
 		return $ar_target_section_tipo;
 
-	}#end get_ar_target_section_tipo
+	}//end get_ar_target_section_tipo
 	*/
+
+
 
 	/**
 	* GET_TIPO_TO_SEARCH
@@ -331,13 +324,10 @@ class component_autocomplete extends component_common {
 		$this->tipo_to_search = $tipo_to_search;
 
 		return $tipo_to_search;
-
-	}#end get_tipo_to_search
-
+	}//end get_tipo_to_search
 
 
 
-	
 	/**
 	* AUTOCOMPLETE_SEARCH
 	* Used by trigger on ajax call
@@ -367,9 +357,7 @@ class component_autocomplete extends component_common {
 			#dump($output," ar_result");
 
 		return $output;
-
-	}#end autocomplete_search
-
+	}//end autocomplete_search
 
 
 
@@ -397,8 +385,7 @@ class component_autocomplete extends component_common {
 			$lang = DEDALO_DATA_LANG;
 		}
 		return $lang;
-	}
-
+	}//end get_valor_lang
 
 
 
@@ -410,7 +397,7 @@ class component_autocomplete extends component_common {
 	*/
 	public function build_search_comparison_operators( $comparison_operators=array('=','!=') ) {
 		return (object)parent::build_search_comparison_operators($comparison_operators);
-	}#end build_search_comparison_operators
+	}//end build_search_comparison_operators
 
 
 
@@ -498,9 +485,7 @@ class component_autocomplete extends component_common {
 				$autocomplete_inverse_locator->set_component_tipo($tipo);			
 
 			$section->add_inverse_locator($autocomplete_inverse_locator);
-			$section_id = $section->Save();
-
-			
+			$section_id = $section->Save();			
 			
 		
 		#
@@ -588,7 +573,6 @@ class component_autocomplete extends component_common {
 				#dump($locator,'locator');
 
 		return $locator;
-
 	}//end create_new_autocomplete_record
 
 
@@ -608,11 +592,14 @@ class component_autocomplete extends component_common {
 		$section_to_add->add_inverse_locator($autocomplete_inverse_locator);
 		$section_to_add->Save();
 
-
-
 		return $rel_locator;
-	}
+	}//end add_locator
 
+
+
+	/**
+	* REMOVE_LOCATOR
+	*/
 	public function remove_locator($rel_locator) {
 
 		# Remove inverse locator into the destination section
@@ -627,8 +614,13 @@ class component_autocomplete extends component_common {
 		$section_to_remove->Save();
 
 		return $rel_locator;
-	}
+	}//end remove_locator
 
+
+
+	/**
+	* REMOVE_INVERSE_LOCATOR_REFERENCE
+	*/
 	public function remove_inverse_locator_reference($rel_locator) {
 
 		$dato 			= $this->get_dato();		#dump($dato, ' dato  1 ++ '.to_string());
@@ -646,7 +638,7 @@ class component_autocomplete extends component_common {
 		$this->set_dato($dato);
 
 		return true;
-	}
+	}//end remove_inverse_locator_reference
 
 
 
@@ -670,20 +662,120 @@ class component_autocomplete extends component_common {
 		$component 	= component_common::get_instance(__CLASS__,
 													 $tipo,
 												 	 $parent,
-												 	 'list',
+												 	 $modo,
 													 DEDALO_DATA_NOLAN,
 												 	 $section_tipo);
 
-		
+
 		# Use already query calculated values for speed
 		$ar_records   = (array)json_handler::decode($value);
 		$component->set_dato($ar_records);
 		$component->set_identificador_unico($component->get_identificador_unico().'_'.$section_id); // Set unic id for build search_options_session_key used in sessions
 		
+		if($modo == 'portal_list') {
+			return  $component->get_html();
+		}
+
 		return  $component->get_valor($lang);
 		
-	}#end render_list_value
+	}//end render_list_value
 
+
+
+	/**
+	* IMPORT_plain_VALUE (IN PROGRESS)
+	* @return 
+	*/
+	public function import_plain_value( $value ) {
+	return false;
+		if($this->tipo!='rsc49') return false;
+
+		$target_section_tipo = common::get_ar_related_by_model('section', $this->tipo); 
+
+		# RELACIONES : Search and add relations to current component
+		$relaciones = (array)$this->RecordObj_dd->get_relaciones();
+			#dump($relaciones,'$relaciones');
+
+		$ar_related = array();
+		foreach ($relaciones as $ar_rel_value) foreach ($ar_rel_value as $current_tipo) {
+			$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
+			if ($modelo_name=='section') {
+				$target_section_tipo = $current_tipo;
+			}else{
+				$ar_related[$current_tipo] = $modelo_name;
+			}
+		}
+
+		// Unify value format as array		
+		$ar_value = (strpos($value,',')!==false) ? explode(',', $value) : array($value);
+				dump($ar_value, ' $ar_value ++ '.to_string());
+
+
+		#
+		# SEARCH FOR EXISTING ITEMS
+		/*
+		#
+		# FILTER
+		$filter_by_search = new stdClass();
+			$i=0;foreach ($ar_related as $related_tipo => $related_modelo_name) {
+				$filter_by_search->$related_tipo = trim($ar_value[$i]);
+			$i++;}
+			
+				dump($filter_by_search, ' $filter_by_search ++ '.to_string()); #die();
+		#
+		# OPERATORS
+		$operators = new stdClass();
+			
+			$comparison_operator = new stdClass();
+				$i=0;foreach ($ar_related as $related_tipo => $related_modelo_name) {
+					$comparison_operator->$related_tipo = 'ILIKE';
+				$i++;}
+
+			$operators->comparison_operator = $comparison_operator;
+
+			$logical_operator = new stdClass();
+				$i=0;foreach ($ar_related as $related_tipo => $related_modelo_name) {
+					$logical_operator->$related_tipo = 'AND';
+				$i++;}
+
+			$operators->logical_operator = $logical_operator;
+
+		# OPTIONS
+		$options = new stdClass();
+			$options->section_tipo  			 = $target_section_tipo;
+			$options->filter_by_search 			 = $filter_by_search;
+			$options->operators 			 	 = $operators;
+			$options->layout_map  				 = array();
+			$options->modo  					 = 'edit';
+			$options->limit 					 = false; # IMPORTANT : No limit is applicated to portal list. All records are viewed always
+			$options->search_options_session_key = 'import_plain_value';
+
+		$rows_data = search::get_records_data($options);
+			dump($rows_data, ' rows_data ++ '.to_string());	
+		*/
+		
+	}//end import_plain_value
+
+
+
+	/**
+	* GET_VALOR_LIST_HTML_TO_SAVE
+	* Usado por section:save_component_dato
+	* Devuelve a section el html a usar para rellenar el 'campo' 'valor_list' al guardar
+	* Por defecto será el html generado por el componente en modo 'list', pero en algunos casos
+	* es necesario sobre-escribirlo, como en component_portal, que ha de resolverse obigatoriamente en cada row de listado
+	*
+	* En este caso, usaremos únicamente el valor en bruto devuelto por el método 'get_dato_unchanged'
+	*
+	* @see class.section.php
+	* @return mixed $result
+	*//*
+	public function get_valor_list_html_to_save() {
+		$result = $this->get_dato_unchanged();
+
+		return $result;		
+	}//end get_valor_list_html_to_save
+	*/
 
 }
 ?>

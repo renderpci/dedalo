@@ -209,7 +209,9 @@ class tool_lang extends tool_common {
 		$this->target_component = $target_component;
 
 		return $this->target_component;
-	}
+
+	}//end get_target_component
+
 
 
 	/**
@@ -233,7 +235,10 @@ class tool_lang extends tool_common {
 		}
 
 		return $ar_source_langs;
-	}
+
+	}//end get_source_langs
+
+
 
 	/**
 	* GET TARGET LANGS
@@ -251,12 +256,15 @@ class tool_lang extends tool_common {
 			#dump($ar_all_project_langs,'$ar_all_project_langs');
 
 		$ar_target_langs=array();
-		foreach ($ar_all_project_langs as $current_lang) {
+		foreach ($ar_all_project_langs as $lang_locator) {
+			$current_lang = $lang_locator->section_tipo;
 			$ar_target_langs[$current_lang] = RecordObj_ts::get_termino_by_tipo($current_lang, null, true);
 		}
 
 		return $ar_target_langs;
-	}
+	}//end get_target_langs
+
+
 
 	/**
 	* GET BABEL DIRECTION

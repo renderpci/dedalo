@@ -32,7 +32,10 @@ class RecordObj_dd extends RecordDataBoundObject {
 	#protected $ar_parents_cache 				= array();
 	#protected $ar_reels_of_this 				= array();
 	
-	
+
+	/**
+	* __CONSTRUCT
+	*/
 	function __construct($terminoID=NULL, $prefijo=false) {
 		
 		if( !empty($terminoID) ) {
@@ -53,14 +56,15 @@ class RecordObj_dd extends RecordDataBoundObject {
 		
 		}else{			
 			
-			$msg = "This record ts not exists ! [terminoID:$terminoID, prefijo:$prefijo]"; if(isset($_REQUEST['terminoID'])) $msg .= $_REQUEST['terminoID']; 
+			$msg = "This record dd not exists ! [terminoID:$terminoID, prefijo:$prefijo]"; if(isset($_REQUEST['terminoID'])) $msg .= " - ".$_REQUEST['terminoID']; 
 
 			if(SHOW_DEBUG) {
 				 # LOGGER
         		logger::$obj['error']->log_message("$msg", logger::ERROR, __METHOD__); 
         		throw new Exception("Error Processing Request $msg", 1);
 			} 
-			exit($msg);
+			#exit($msg);
+			trigger_error($msg);
 		}
 		
 		# PREFIX TEST
@@ -77,7 +81,9 @@ class RecordObj_dd extends RecordDataBoundObject {
 		}*/
 		
 		parent::__construct($terminoID);		
-	}	
+	}//end __construct
+
+
 	
 	# DEFINETABLENAME : define current table (tr for this obj)
 	protected function defineTableName() {		
@@ -104,7 +110,8 @@ class RecordObj_dd extends RecordDataBoundObject {
 			"relaciones" 					=> "relaciones",
 			"propiedades" 					=> "propiedades",
 			));
-	}
+	}//end defineRelationMap
+
 
 
 	/**
@@ -123,7 +130,9 @@ class RecordObj_dd extends RecordDataBoundObject {
 			return false;
 		}
 		return (string)$output_array[0];
-	}
+	}//end get_prefix_from_tipo
+
+
 
 	/**
 	* PREFIX_COMPARE
@@ -144,7 +153,8 @@ class RecordObj_dd extends RecordDataBoundObject {
 		}else{
 			return false;
 		}		
-	}
+	}//end prefix_compare
+
 
 
 	/**
@@ -159,7 +169,108 @@ class RecordObj_dd extends RecordDataBoundObject {
 			return json_handler::decode(parent::get_propiedades());
 		}
 		return parent::get_propiedades();
-	}
+	}//end get_propiedades
+
+
+
+	/**
+	* SAVE_TERM_AND_DESCRIPTOR
+	* Used to save elements in class hierarchy
+	* @see class.hierarchy.php
+	*/
+	public function save_term_and_descriptor( $descriptor_dato=null ) {
+
+		if (empty($this->parent)) {
+			if(SHOW_DEBUG) {
+				debug_log(__METHOD__." Error on save 'RecordObj_dd_edit'. Parent is empty. Nothing is saved! ".to_string(), logger::DEBUG);
+			}
+			return false;
+		}
+
+		$terminoID = $this->terminoID;		
+
+		#
+		# INSERT
+		# TERMINO ID NOT CREATED : BUILD NEW AND INSERT	
+		# Creamos el terminoID a partir del prefijo y el contador contador para el prefijo actual
+		$counter_dato   = self::get_counter_value($this->prefijo);
+		#$terminoID		= (string)$this->prefijo . (int)($counter_dato+1);
+			#dump($terminoID," terminoID - prefijo:$this->prefijo");die();		
+		
+		# Set defaults
+		if(empty($this->norden)) $this->set_norden( (int)1 );
+					
+		$result = parent::Save();
+			#dump($result, ' result ++ counter_dato:'.to_string($counter_dato)); #die();
+
+		#
+		# DESCRIPTORS
+		if ($result) {
+			
+			$counter_dato_updated  = self::update_counter($this->prefijo, $counter_dato);		
+
+			#
+			# DESCRIPTORS : finally we create one record in descriptors with this main info	
+			$lang = 'lg-spa';//DEDALO_DATA_LANG;			
+			$RecordObj_descriptors_dd = new RecordObj_descriptors_dd(RecordObj_descriptors_dd::$descriptors_matrix_table, NULL, $terminoID, $lang);
+			$RecordObj_descriptors_dd->set_tipo('termino');
+			$RecordObj_descriptors_dd->set_parent($terminoID);
+			$RecordObj_descriptors_dd->set_lang($lang);
+			$RecordObj_descriptors_dd->set_dato($descriptor_dato);
+			$created_id_descriptors	= $RecordObj_descriptors_dd->Save();
+		}
+		
+
+		return $terminoID;
+	}//end Save
+
+
+
+	/**
+	* UPDATE_COUNTER
+	* @param (string)$tld, (int)$current_value=false
+	* @return int
+	* Actualiza el contador para el tld dado (ej. 'dd').
+	* El 'current_value' es opcional. Si no se recibe se calcula
+	*/
+	protected static function update_counter($tld, $current_value=false) {
+
+		if (!$current_value) {
+			$current_value = self::get_counter_value($tld);
+		}
+		$counter_dato_updated = intval($current_value+1) ;
+
+		$strQuery 	= "UPDATE \"main_dd\" SET counter = $1 WHERE tld = $2";
+		$result 	= pg_query_params(DBi::_getConnection(), $strQuery, array( $counter_dato_updated, $tld));
+		if (!$result) {
+			if(SHOW_DEBUG) {
+				trigger_error("Error on update_counter 'RecordObj_dd_edit'. Nothing is saved! : $strQuery");
+			}
+			return false;
+		}
+
+		return (int)$counter_dato_updated;
+	}//end update_counter
+
+
+
+	/**
+	* GET_COUNTER_VALUE
+	*/
+	protected static function get_counter_value($tld) {
+		$strQuery 		= "SELECT counter FROM main_dd WHERE tld = '$tld' LIMIT 1";
+		$result			= JSON_RecordDataBoundObject::search_free($strQuery);
+		$counter_value 	= pg_fetch_assoc($result)['counter'];
+
+		if (!$counter_value || is_null($counter_value)) {
+			if(SHOW_DEBUG) {				
+				//debug_log(__METHOD__." Error on get_counter_value 'RecordObj_dd_edit'. counter for tld not found. ".to_string(), logger::WARNING);
+			}
+			return (int)0;
+		}
+
+		return (int)$counter_value;
+	}//end get_counter_value
 
 
 	
@@ -681,12 +792,20 @@ class RecordObj_dd extends RecordDataBoundObject {
 
 	
 
-	
-	# SET RELACIONES AS JSON (MODELO: $ar_relaciones[$terminoID_source][] = array($modelo => $terminoID_rel))
-	public function set_relaciones($ar_relaciones) {		
+	/**
+	* SET_RELACIONES
+	* Set relaciones as JSON (MODELO: $ar_relaciones[$terminoID_source][] = array($modelo => $terminoID_rel))
+	*/
+	public function set_relaciones($ar_relaciones) {
 		return parent::set_relaciones(json_encode($ar_relaciones));
 	}
-	# REMOVE_ELEMENT_FROM_AR_TERMINOS_RELACIONADOS
+
+
+
+	/**
+	* REMOVE_ELEMENT_FROM_AR_TERMINOS_RELACIONADOS
+	* @param string $terminoID_to_unlink
+	*/
 	public function remove_element_from_ar_terminos_relacionados($terminoID_to_unlink) {
 		
 		# Recorremos los elementos en terminos relacionados para este objeto
@@ -698,18 +817,27 @@ class RecordObj_dd extends RecordDataBoundObject {
 			
 			foreach($ar_values as $modeloID => $terminoID) {
 				
-				if($terminoID != $terminoID_to_unlink) $ar_final[] =  array($modeloID => $terminoID);	
-			}			
+				if($terminoID != $terminoID_to_unlink) $ar_final[] =  array($modeloID => $terminoID);
+			}
 		}
 		
 		# guardamos el resultado
-		$this->set_relaciones($ar_final);					#dump($ar_relaciones); die();
+		$this->set_relaciones($ar_final);
 		
 		return true;
 	}
-		
-	# AR_TERMINOS_RELACIONADOS JSON_VERSION
-	# En modo 'simple' devuelve sólo un array de 'terminoID'
+
+
+
+	/**
+	* GET_AR_TERMINOS_RELACIONADOS
+	* @param string $terminoID
+	* @param bool $cache
+	* @param bool $simple
+	* @return array $ar_relaciones
+	* JSON_VERSION
+	* En modo 'simple' devuelve sólo un array de 'terminoID'
+	*/
 	public static function get_ar_terminos_relacionados($terminoID, $cache=false, $simple=false) {
 
 		#if(SHOW_DEBUG) $start_time = start_time();
@@ -733,8 +861,10 @@ class RecordObj_dd extends RecordDataBoundObject {
 		}
 		#if(SHOW_DEBUG) $GLOBALS['log_messages'] .= exec_time($start_time, __METHOD__, $ar_relaciones);
 		
-		return $ar_relaciones;	
+		return (array)$ar_relaciones;	
 	}
+
+
 
 	/* DESACTIVA PORQUE NO SE EXPERIMENTA INCREMENTO DE VELOCIDAD... 
 	public static function get_ar_recursive_childrens_of_this_static($terminoID) {

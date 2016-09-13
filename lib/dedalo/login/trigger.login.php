@@ -23,6 +23,9 @@ if($mode=='Quit') {
 	
 	# If all is ok, return string 'ok'
 	$result = login::Quit( $trigger_post_vars );
+
+	session_write_close();
+	
 	# Exit printing result
 	exit($result);
 
@@ -35,6 +38,9 @@ if($mode=='Login') {
 
 	# If all is ok, return string 'ok'
 	$result = login::Login( $trigger_post_vars );
+
+	session_write_close();
+
 	# Exit printing result
 	exit($result);
 	

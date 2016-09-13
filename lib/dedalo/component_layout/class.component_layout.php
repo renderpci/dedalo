@@ -28,7 +28,10 @@ class component_layout extends component_common {
 	}
 
 
-	# GET DATO
+
+	/**
+	* GET_DATO
+	*/
 	public function get_dato() {		
 		$dato = parent::get_dato();
 
@@ -40,9 +43,13 @@ class component_layout extends component_common {
 		}
 
 		return (object)$dato;
-	}
+	}//end get_dato
 
-	# SET_DATO
+
+
+	/**
+	* SET_DATO
+	*/
 	public function set_dato($dato) {
 		if (!is_string($dato)) {
 			trigger_error("Error. Only string format is accepted as dato");
@@ -67,8 +74,7 @@ class component_layout extends component_common {
 		//dump($dato, " dato 2".to_string());
 		
 		parent::set_dato( (object)$dato );
-	}
-
+	}//end set_dato
 
 
 
@@ -101,11 +107,12 @@ class component_layout extends component_common {
 		
 
 		$cache_uid = $section_tipo.'_'.$modo;
+		/*
 		if ($from_cache && isset($_SESSION['dedalo4']['config']['get_layout_map_from_section'][$cache_uid])) {
 			error_log("DEBUG INFO ".__METHOD__." From cache $terminoID.$lang");
-			#return unserialize($_SESSION['dedalo4']['config']['get_layout_map_from_section'][$cache_uid]);
+			#return $_SESSION['dedalo4']['config']['get_layout_map_from_section'][$cache_uid];
 		}
-
+		*/
 
 
 		if(SHOW_DEBUG) {
@@ -120,256 +127,268 @@ class component_layout extends component_common {
 
 			case 'portal_edit':
 			case 'edit':
-				
-					if (!empty($dato)) {
-						# Usamos el guardado en matrix como dato del usuario actual
-						# De momento no existe esta opción..					
-						
-					}else{
-						
-						# LAYOUT MAP EDIT VERSION 2
-						# Concepto: Crear un mapa jerarquizado de todos los section_group y section_tab existentes en la sección (del tipo menu)
-						# Resolverlo a nivel de html respetando el anidamiento
-						# 
-						# 1 Buscamos todos los elementos deseados (section groups y section taps) mas su términos relacionados (componentes u otros section groups/section taps)
-						$ar_layout_hierarchie = component_layout::get_ar_layout_hierarchy($section_tipo);
-							#dump($ar_layout_hierarchie,"AR_LAYOUT_HIERARCHIE");
-						# 2 Recorremos el array llevando el control de los ya resueltos para no volver a incluirlos 						
-						$layout_map = $ar_layout_hierarchie;
-					}				
-					break;
-
-			case 'portal_list':
-			
-					if (!empty($dato)) {
-						# Usamos el guardado en matrix como dato del usuario actual
-						# De momento no existe esta opción..					
+				if (!empty($dato)) {
+					# Usamos el guardado en matrix como dato del usuario actual
+					# De momento no existe esta opción..
 					
-					}else{
+				}else{
+					
+					# LAYOUT MAP EDIT VERSION 2
+					# Concepto: Crear un mapa jerarquizado de todos los section_group y section_tab existentes en la sección (del tipo menu)
+					# Resolverlo a nivel de html respetando el anidamiento
+					# 
+					# 1 Buscamos todos los elementos deseados (section groups y section taps) mas su términos relacionados (componentes u otros section groups/section taps)
+					$ar_layout_hierarchie = component_layout::get_ar_layout_hierarchy($section_tipo);
+						#dump($ar_layout_hierarchie,"AR_LAYOUT_HIERARCHIE");
+					# 2 Recorremos el array llevando el control de los ya resueltos para no volver a incluirlos
+					$layout_map = $ar_layout_hierarchie;
+				}				
+				break;
 
-						# portal_tipo es configurado en el objeto section al hacer la llamada desde el controlador de component_portal
-						$portal_tipo = $section_obj->portal_tipo;
-							#dump($section_obj,"portal_tipo");
+			case 'portal_list':			
+				if (!empty($dato)) {
+					# Usamos el guardado en matrix como dato del usuario actual
+					# De momento no existe esta opción..					
+				
+				}else{
 
-						#$ar_terminos_relacionados = RecordObj_dd::get_ar_terminos_relacionados($portal_tipo, $cache=true, $simple=true);
-						$ar_terminos_relacionados = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($portal_tipo, $modelo_name='component_', $relation_type='termino_relacionado'); 
-							#dump($ar_terminos_relacionados,"ar_terminos_relacionados de portal tipo: $portal_tipo");
-						
-						if(empty($ar_terminos_relacionados)) throw new Exception("Portal structure error. Please define TR components", 1);						
+					# portal_tipo es configurado en el objeto section al hacer la llamada desde el controlador de component_portal
+					$portal_tipo = $section_obj->portal_tipo;
+						#dump($section_obj,"portal_tipo");
 
-						foreach ($ar_terminos_relacionados as $terminoID) {
-							$layout_map[$portal_tipo][] = $terminoID;
-						}
-						#dump($layout_map,'$layout_map');
-						
+					#$ar_terminos_relacionados = RecordObj_dd::get_ar_terminos_relacionados($portal_tipo, $cache=true, $simple=true);
+					$ar_terminos_relacionados = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($portal_tipo, $modelo_name='component_', $relation_type='termino_relacionado'); 
+						#dump($ar_terminos_relacionados,"ar_terminos_relacionados de portal tipo: $portal_tipo");
+					
+					if(empty($ar_terminos_relacionados)) throw new Exception("Portal structure error. Please define TR components", 1);						
+
+					foreach ($ar_terminos_relacionados as $terminoID) {
+						$layout_map[$portal_tipo][] = $terminoID;
 					}
-					# LOG
-					#$log = logger::get_instance();
-					#$log->log_message("Loaded layout_map for section tipo $section_tipo " , logger::DEBUG, __METHOD__);					
-					break;
-			case 'portal_listXX':	
-			case 'list_tm':			
+				}
+				# LOG
+				#$log = logger::get_instance();
+				#$log->log_message("Loaded layout_map for section tipo $section_tipo " , logger::DEBUG, __METHOD__);					
+				break;
+
+			case 'portal_listXX':
+			case 'list_tm':	
 			case 'list':
 					
-					if (!empty($dato)) {
-						# Usamos el guardado en matrix como dato del usuario actual
-						# De momento no existe esta opción..					
-					
-					}else{
+				if (!empty($dato)) {
+					# Usamos el guardado en matrix como dato del usuario actual
+					# De momento no existe esta opción..		
+				
+				}else{
 
-						$current_section_to_list = $section_tipo;
+					$current_section_to_list = $section_tipo;
 
-						#dump($this->section_obj->get_RecordObj_dd()->get_relaciones()[0],'$this->section_obj');
-						#
-						# RELACIONES (SECTION VIRTUAL)
-						$relaciones = $section_obj->get_RecordObj_dd()->get_relaciones()[0];
-							#dump($relaciones,'relaciones '.$this->tipo);
-							if(!empty($relaciones)) {
-								foreach ($relaciones as $key => $value) {
-									$modelo 	= RecordObj_dd::get_termino_by_tipo($key, null, true);
-									#if($modelo=='section') $current_section_to_list = $value;
-								}
+					#dump($this->section_obj->get_RecordObj_dd()->get_relaciones()[0],'$this->section_obj');
+					#
+					# RELACIONES (SECTION VIRTUAL)
+					$relaciones = $section_obj->get_RecordObj_dd()->get_relaciones()[0];
+						#dump($relaciones,'relaciones '.$this->tipo);
+						if(!empty($relaciones)) {
+							foreach ($relaciones as $key => $value) {
+								$modelo 	= RecordObj_dd::get_termino_by_tipo($key, null, true);
+								#if($modelo=='section') $current_section_to_list = $value;
 							}
-
-
-						# Usamos el default definido en estructura
-						# SECTION LIST
-						# Usamos el section list (puede haber varios) para establecer qué componentes se mostrarán y en qué orden se agruparán estos						
-						$ar_section_list = section::get_ar_children_tipo_by_modelo_name_in_section($current_section_to_list, 'section_list');
-							#if(SHOW_DEBUG===true) dump($ar_section_list,"ar_section_list ar section list para $current_section_to_list");
-						
-						if(!empty($ar_section_list)) foreach ($ar_section_list as $section_list_tipo) {
-							# Averiguamos los términos relacionados que tiene (serán los componentes agrupados por el)
-							$ar_terminos_relacionados = RecordObj_dd::get_ar_terminos_relacionados($section_list_tipo, $cache=false, $simple=true);
-								#if(SHOW_DEBUG===true) dump($ar_terminos_relacionados,'ar_terminos_relacionados');
-
-							if(!empty($ar_terminos_relacionados)) foreach ($ar_terminos_relacionados as $terminoID) {
-								$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($terminoID,true);
-								# Exclude 'tools_search'
-								if(strpos($modelo_name, 'component_')!==false) {
-									$layout_map[$section_list_tipo][]	= $terminoID;
-								}								
-							}else{
-								error_log("Current section list don't have any component to show. Please configure properly this section list in structure");
-							}
-						}else{
-							if(SHOW_DEBUG) {
-								dump($ar_section_list,"WARNING section_list for $section_tipo is not defined in structure (empty ar_section_list')");								
-							}
-							throw new Exception("section_list for $section_tipo is not defined in structure (empty ar_section_list)", 1);
 						}
-						#dump($layout_map,'$layout_map');
+
+					# Usamos el default definido en estructura
+					# SECTION LIST
+					# Usamos el section list (puede haber varios) para establecer qué componentes se mostrarán y en qué orden se agruparán estos						
+					$ar_section_list = section::get_ar_children_tipo_by_modelo_name_in_section($current_section_to_list, 'section_list');
+						#if(SHOW_DEBUG===true) dump($ar_section_list,"ar_section_list ar section list para $current_section_to_list");
+					
+					if(!empty($ar_section_list)) foreach ($ar_section_list as $section_list_tipo) {
+						# Averiguamos los términos relacionados que tiene (serán los componentes agrupados por el)
+						$ar_terminos_relacionados = RecordObj_dd::get_ar_terminos_relacionados($section_list_tipo, $cache=false, $simple=true);
+							#if(SHOW_DEBUG===true) dump($ar_terminos_relacionados,'ar_terminos_relacionados');
+
+						if(!empty($ar_terminos_relacionados)) foreach ($ar_terminos_relacionados as $terminoID) {
+							$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($terminoID,true);
+							# Exclude 'tools_search'
+							if(strpos($modelo_name, 'component_')!==false) {
+								$layout_map[$section_list_tipo][]	= $terminoID;
+							}								
+						}else{
+							error_log("Current section list don't have any component to show. Please configure properly this section list in structure");
+						}
+					}else{
+						if(SHOW_DEBUG) {
+							dump($ar_section_list,"WARNING section_list for $section_tipo is not defined in structure (empty ar_section_list')");								
+						}
+						throw new Exception("section_list for $section_tipo is not defined in structure (empty ar_section_list)", 1);
 					}
-					# LOG
-					#$log = logger::get_instance();
-					#$log->log_message("Loaded layout_map for section tipo $section_tipo " , logger::DEBUG, __METHOD__);					
-					break;
+				}
+				# LOG
+				#$log = logger::get_instance();
+				#$log->log_message("Loaded layout_map for section tipo $section_tipo " , logger::DEBUG, __METHOD__);					
+				break;
 
 			case 'relation_reverse':
 			case 'relation_reverse_sections':
 			case 'relation':
 					
-					if (!empty($dato)) {
-						# Usamos el guardado en matrix como dato del usuario actual
-						# De momento no existe esta opción..					
+				if (!empty($dato)) {
+					# Usamos el guardado en matrix como dato del usuario actual
+					# De momento no existe esta opción..					
+				
+				}else{
+					# Usamos el default definido en estructura
+					# RELATION LIST
+					# Usamos el section list (puede haber varios) para establecer qué componentes se mostrarán y en qué orden se agruparán estos						
+					$ar_section_list = section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, 'relation_list');
+						#if(SHOW_DEBUG===true) dump($ar_section_list,'$ar_section_list',"ar section list para $section_tipo");
 					
-					}else{
-						# Usamos el default definido en estructura
-						# RELATION LIST
-						# Usamos el section list (puede haber varios) para establecer qué componentes se mostrarán y en qué orden se agruparán estos						
-						$ar_section_list = section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, 'relation_list');
-							#if(SHOW_DEBUG===true) dump($ar_section_list,'$ar_section_list',"ar section list para $section_tipo");
-						
-						if(!empty($ar_section_list)) foreach ($ar_section_list as $section_list_tipo) {
-							# Averiguamos los términos relacionados que tiene (serán los componentes agrupados por el)
-							$ar_terminos_relacionados = RecordObj_dd::get_ar_terminos_relacionados($section_list_tipo, $cache=false, $simple=true);
-								#if(SHOW_DEBUG===true) dump($ar_terminos_relacionados,'ar_terminos_relacionados');
+					if(!empty($ar_section_list)) foreach ($ar_section_list as $section_list_tipo) {
+						# Averiguamos los términos relacionados que tiene (serán los componentes agrupados por el)
+						$ar_terminos_relacionados = RecordObj_dd::get_ar_terminos_relacionados($section_list_tipo, $cache=false, $simple=true);
+							#if(SHOW_DEBUG===true) dump($ar_terminos_relacionados,'ar_terminos_relacionados');
 
-							if(!empty($ar_terminos_relacionados)) foreach ($ar_terminos_relacionados as $terminoID) {
-								$layout_map[$section_list_tipo][]	= $terminoID;
-							}
-						}else{
-							throw new Exception("relation_list not found in structure. Please define relation_list for ". RecordObj_dd::get_termino_by_tipo($section_tipo). " [$section_tipo]", 1);
+						if(!empty($ar_terminos_relacionados)) foreach ($ar_terminos_relacionados as $terminoID) {
+							$layout_map[$section_list_tipo][]	= $terminoID;
 						}
+					}else{
+						throw new Exception("relation_list not found in structure. Please define relation_list for ". RecordObj_dd::get_termino_by_tipo($section_tipo). " [$section_tipo]", 1);
 					}
-					#if(SHOW_DEBUG===true) dump($layout_map,'layout_map',"layout_map for section tipo $section_tipo");
-					
-					# LOG
-					#$log = logger::get_instance();
-					#$log->log_message("Loaded layout_map for section tipo $section_tipo " , logger::DEBUG, __METHOD__);
-					break;
+				}
+				#if(SHOW_DEBUG===true) dump($layout_map,'layout_map',"layout_map for section tipo $section_tipo");
+				
+				# LOG
+				#$log = logger::get_instance();
+				#$log->log_message("Loaded layout_map for section tipo $section_tipo " , logger::DEBUG, __METHOD__);
+				break;
 
 			case 'portal_editXX':
 					
-					if (!empty($dato)) {
-						# Usamos el guardado en matrix como dato del usuario actual
-						# De momento no existe esta opción..					
+				if (!empty($dato)) {
+					# Usamos el guardado en matrix como dato del usuario actual
+					# De momento no existe esta opción..					
+				
+				}else{
+					# Usamos el default definido en estructura
+					# RELATION LIST
+					# Usamos el section list (puede haber varios) para establecer qué componentes se mostrarán y en qué orden se agruparán estos						
+					$ar_section_list = section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, 'relation_list');
+						#if(SHOW_DEBUG===true) dump($ar_section_list,'$ar_section_list',"ar section list para $section_tipo");
 					
-					}else{
-						# Usamos el default definido en estructura
-						# RELATION LIST
-						# Usamos el section list (puede haber varios) para establecer qué componentes se mostrarán y en qué orden se agruparán estos						
-						$ar_section_list = section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, 'relation_list');
-							#if(SHOW_DEBUG===true) dump($ar_section_list,'$ar_section_list',"ar section list para $section_tipo");
-						
-						if(!empty($ar_section_list)) foreach ($ar_section_list as $section_list_tipo) {
-							# Averiguamos los términos relacionados que tiene (serán los componentes agrupados por el)
-							$ar_terminos_relacionados = RecordObj_dd::get_ar_terminos_relacionados($section_list_tipo, $cache=false, $simple=true);
-								#if(SHOW_DEBUG===true) dump($ar_terminos_relacionados,'ar_terminos_relacionados');
+					if(!empty($ar_section_list)) foreach ($ar_section_list as $section_list_tipo) {
+						# Averiguamos los términos relacionados que tiene (serán los componentes agrupados por el)
+						$ar_terminos_relacionados = RecordObj_dd::get_ar_terminos_relacionados($section_list_tipo, $cache=false, $simple=true);
+							#if(SHOW_DEBUG===true) dump($ar_terminos_relacionados,'ar_terminos_relacionados');
 
-							if(!empty($ar_terminos_relacionados)) foreach ($ar_terminos_relacionados as $terminoID) {
-								$layout_map[$section_list_tipo][]	= $terminoID;
-							}
-						}else{
-							throw new Exception("relation_list not found in structure. Please define relation_list for ". RecordObj_dd::get_termino_by_tipo($section_tipo). " [$section_tipo]", 1);
+						if(!empty($ar_terminos_relacionados)) foreach ($ar_terminos_relacionados as $terminoID) {
+							$layout_map[$section_list_tipo][]	= $terminoID;
 						}
+					}else{
+						throw new Exception("relation_list not found in structure. Please define relation_list for ". RecordObj_dd::get_termino_by_tipo($section_tipo). " [$section_tipo]", 1);
 					}
-					#if(SHOW_DEBUG===true) dump($layout_map,'layout_map',"layout_map for section tipo $section_tipo");
-					
-					# LOG
-					#$log = logger::get_instance();
-					#$log->log_message("Loaded layout_map for section tipo $section_tipo " , logger::DEBUG, __METHOD__);
-					break;
+				}
+				#if(SHOW_DEBUG===true) dump($layout_map,'layout_map',"layout_map for section tipo $section_tipo");
+				
+				# LOG
+				#$log = logger::get_instance();
+				#$log->log_message("Loaded layout_map for section tipo $section_tipo " , logger::DEBUG, __METHOD__);
+				break;
 
 			/*
-			case 'relation_reverse':					
-					if (!empty($dato)) {
-						# Usamos el guardado en matrix como dato del usuario actual
-						# De momento no existe esta opción..					
+			case 'relation_reverse':
+				if (!empty($dato)) {
+					# Usamos el guardado en matrix como dato del usuario actual
+					# De momento no existe esta opción..					
+				
+				}else{
+					# Usamos el default definido en estructura
+					# RELATION REVERSE LIST
+					# Usamos el section list (puede haber varios) para establecer qué componentes se mostrarán y en qué orden se agruparán estos						
+					$ar_section_list = section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, 'relation_reverse_list');
+						#if(SHOW_DEBUG===true) dump($ar_section_list,'$ar_section_list',"ar section list para $section_tipo");
 					
-					}else{
-						# Usamos el default definido en estructura
-						# RELATION REVERSE LIST
-						# Usamos el section list (puede haber varios) para establecer qué componentes se mostrarán y en qué orden se agruparán estos						
-						$ar_section_list = section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, 'relation_reverse_list');
-							#if(SHOW_DEBUG===true) dump($ar_section_list,'$ar_section_list',"ar section list para $section_tipo");
-						
-						if(!empty($ar_section_list)) foreach ($ar_section_list as $section_list_tipo) {
-							# Averiguamos los términos relacionados que tiene (serán los componentes agrupados por el)
-							$ar_terminos_relacionados = RecordObj_dd::get_ar_terminos_relacionados($section_list_tipo, $cache=false, $simple=true);
-								#if(SHOW_DEBUG===true) dump($ar_terminos_relacionados,'ar_terminos_relacionados');
+					if(!empty($ar_section_list)) foreach ($ar_section_list as $section_list_tipo) {
+						# Averiguamos los términos relacionados que tiene (serán los componentes agrupados por el)
+						$ar_terminos_relacionados = RecordObj_dd::get_ar_terminos_relacionados($section_list_tipo, $cache=false, $simple=true);
+							#if(SHOW_DEBUG===true) dump($ar_terminos_relacionados,'ar_terminos_relacionados');
 
-							if(!empty($ar_terminos_relacionados)) foreach ($ar_terminos_relacionados as $terminoID) {
-								$layout_map[$section_list_tipo][] = $terminoID;
-							}
-						}else{
-							throw new Exception("relation_reverse_list not found in structure. Please define relation_reverse_list for ". RecordObj_dd::get_termino_by_tipo($section_tipo). " [$section_tipo]", 1);
+						if(!empty($ar_terminos_relacionados)) foreach ($ar_terminos_relacionados as $terminoID) {
+							$layout_map[$section_list_tipo][] = $terminoID;
 						}
+					}else{
+						throw new Exception("relation_reverse_list not found in structure. Please define relation_reverse_list for ". RecordObj_dd::get_termino_by_tipo($section_tipo). " [$section_tipo]", 1);
 					}
-					#if(SHOW_DEBUG===true) dump($layout_map,'layout_map',"layout_map for section tipo $section_tipo",true);
-					# LOG
-					$log = logger::get_instance();
-					$log->log_message("Loaded layout_map for section tipo $section_tipo " , logger::DEBUG, __METHOD__);
-
+				}
+				#if(SHOW_DEBUG===true) dump($layout_map,'layout_map',"layout_map for section tipo $section_tipo",true);
+				# LOG
+				$log = logger::get_instance();
+				$log->log_message("Loaded layout_map for section tipo $section_tipo " , logger::DEBUG, __METHOD__);
 				break;
 				*/
+			
 			case 'search':
 					
-					if (!empty($dato)) {
-						# Usamos el guardado en matrix como dato del usuario actual
-						# De momento no existe esta opción..					
+				if (!empty($dato)) {
+					# Usamos el guardado en matrix como dato del usuario actual
+					# De momento no existe esta opción..					
+				
+				}else{
+					# Usamos el default definido en estructura
+					# SEARCH LIST
+					# Usamos el section list (puede haber varios) para establecer qué componentes se mostrarán y en qué orden se agruparán estos						
+					$ar_section_list = section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, 'search_list');
+						#if(SHOW_DEBUG===true) dump($ar_section_list,'$ar_section_list',"ar section list para $section_tipo");
 					
-					}else{
-						# Usamos el default definido en estructura
-						# SEARCH LIST
-						# Usamos el section list (puede haber varios) para establecer qué componentes se mostrarán y en qué orden se agruparán estos						
-						$ar_section_list = section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, 'search_list');
-							#if(SHOW_DEBUG===true) dump($ar_section_list,'$ar_section_list',"ar section list para $section_tipo");
-						
-						if(!empty($ar_search_list)) foreach ($ar_search_list as $search_list_tipo) {
-							# Averiguamos los términos relacionados que tiene (serán los componentes agrupados por el)
-							$ar_terminos_relacionados = RecordObj_dd::get_ar_terminos_relacionados($search_list_tipo, $cache=false, $simple=true);
-								#if(SHOW_DEBUG===true) dump($ar_terminos_relacionados,'ar_terminos_relacionados');
+					if(!empty($ar_search_list)) foreach ($ar_search_list as $search_list_tipo) {
+						# Averiguamos los términos relacionados que tiene (serán los componentes agrupados por el)
+						$ar_terminos_relacionados = RecordObj_dd::get_ar_terminos_relacionados($search_list_tipo, $cache=false, $simple=true);
+							#if(SHOW_DEBUG===true) dump($ar_terminos_relacionados,'ar_terminos_relacionados');
 
-							if(!empty($ar_terminos_relacionados)) foreach ($ar_terminos_relacionados as $terminoID) {
-								$layout_map[$search_list_tipo][] = $terminoID;
-							}
-						}else{
-							throw new Exception("search_list not found in structure. Please define search_list for ". RecordObj_dd::get_termino_by_tipo($section_tipo). " [$section_tipo]", 1);
+						if(!empty($ar_terminos_relacionados)) foreach ($ar_terminos_relacionados as $terminoID) {
+							$layout_map[$search_list_tipo][] = $terminoID;
 						}
+					}else{
+						throw new Exception("search_list not found in structure. Please define search_list for ". RecordObj_dd::get_termino_by_tipo($section_tipo). " [$section_tipo]", 1);
 					}
-					#if(SHOW_DEBUG===true) dump($layout_map,'layout_map',"layout_map for section tipo $section_tipo",true);
-					
-					# LOG
-					#$log = logger::get_instance();
-					#$log->log_message("Loaded layout_map for search tipo $section_tipo " , logger::DEBUG, __METHOD__);
-					break;
-
+				}
+				#if(SHOW_DEBUG===true) dump($layout_map,'layout_map',"layout_map for section tipo $section_tipo",true);
+				
+				# LOG
+				#$log = logger::get_instance();
+				#$log->log_message("Loaded layout_map for search tipo $section_tipo " , logger::DEBUG, __METHOD__);
+				break;
 			
 			default:
 				trigger_error("modo: $modo is not valid", E_USER_ERROR);
-				
+				break;				
 		}
 		#if(SHOW_DEBUG===true) dump($layout_map,'layout_map',"layout_map for section tipo $section_tipo");		
-		#dump($layout_map,'$layout_map for $section_tipo: '.$section_tipo);	
 		if(SHOW_DEBUG) {
 			global$TIMER;$TIMER[__METHOD__.'_OUT_'.$section_tipo.'_'.$modo.'_'.microtime(1)]=microtime(1);
 		}
 
-		$_SESSION['dedalo4']['config']['get_layout_map_from_section'][$cache_uid] = serialize($layout_map);
+		#$_SESSION['dedalo4']['config']['get_layout_map_from_section'][$cache_uid] = $layout_map;
+
 		
-		return (array)$layout_map;		
-	}
+		#
+		# REMOVE_EXCLUDE_TERMS : CONFIG EXCLUDES
+		# If instalation config value DEDALO_AR_EXCLUDE_COMPONENTS is defined, remove elements from layout_map
+		if (defined('DEDALO_AR_EXCLUDE_COMPONENTS') && !empty($layout_map)) {
+			$DEDALO_AR_EXCLUDE_COMPONENTS = unserialize(DEDALO_AR_EXCLUDE_COMPONENTS);
+			foreach ($layout_map as $section_tipo => $ar_tipos) foreach ((array)$ar_tipos as $key => $current_tipo) {
+				if (in_array($current_tipo, $DEDALO_AR_EXCLUDE_COMPONENTS)) {
+					unset( $layout_map[$section_tipo][$key] );
+					debug_log(__METHOD__." DEDALO_AR_EXCLUDE_COMPONENTS: Removed layout_map term $current_tipo ".to_string(), logger::DEBUG);
+				}
+			}
+		}
+		#dump($layout_map, ' $layout_map 2 ++ '.to_string());
+		
+
+
+		
+		return (array)$layout_map;
+	}//end get_layout_map_from_section
+
 
 	
 	/**
@@ -430,7 +449,6 @@ class component_layout extends component_common {
 
 						$ar_temp[$element_tipo] = component_layout::get_ar_layout_hierarchy($element_tipo);
 							#dump($ar_temp,"ar_temp - modelo_name:$modelo_name - modeloID:$modeloID");
-
 					}else{
 						#$ar_temp[] = $element_tipo;
 						#$ar_temp[$element_tipo] = array();
@@ -439,15 +457,13 @@ class component_layout extends component_common {
 				######
 
 				#$ar_temp[$element_tipo] = array();
-
 				$ar_current[$children_terminoID]= $ar_temp;			
 
 		}#end foreach ($ar_ts_childrens as $children_terminoID) 			
 		#dump($ar_current,'GET_AR_LAYOUT_HIERARCHy',"array recursive pass section_tipo:$section_tipo ");
 		
-		return $ar_current;	
-	}
-
+		return (array)$ar_current;	
+	}//end get_ar_layout_hierarchy
 
 
 
@@ -471,7 +487,7 @@ class component_layout extends component_common {
 			#dump($ar_exclude_elements," ar_exclude_elements");
 
 		# Recorremos el array de section groups nivel por nivel
-		if(is_array($ar_tipo)) foreach ($ar_tipo as $terminoID => $ar_value) {
+		foreach ($ar_tipo as $terminoID => $ar_value) {
 
 			# Evita re-resolver elementos
 			if ( in_array($terminoID, $ar_resolved_elements) ) {
@@ -769,9 +785,7 @@ class component_layout extends component_common {
 		
 
 		return $html;
-
-	}#end walk_layout_map
-
+	}//end walk_layout_map
 
 
 
@@ -791,9 +805,8 @@ class component_layout extends component_common {
 					return $return;
 				}
 			}
-
 	 	}#end foreach($array as $k=>$each)
-	}
+	}//end get_value_by_key
 	
 
 	

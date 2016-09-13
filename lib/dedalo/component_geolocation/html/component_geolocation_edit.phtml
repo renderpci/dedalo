@@ -52,6 +52,12 @@
 							$html_contenido .= "\n <span>".label::get_label('mapa_zoom')."</span>";
 							$html_contenido .= "\n <input type=\"text\" name=\"zoom\" value=\"{$dato->zoom}\" data-name=\"zoom\"/>";
 
+							if(isset($dato->alt)){
+								$html_contenido .= "\n <span>".label::get_label('altitude')."</span>";
+								$html_contenido .= "\n <span name=\"alt\" data-name=\"alt\"/>".$dato->alt."</span>";
+							}
+							
+
 							$html_contenido .= "\n <span class=\"geolocation_separator\"></span>";
 							$html_contenido .= "\n <span id=\"map_refresh\" class=\"glyphicon glyphicon-refresh geolocation_text link\"></span>";
 							$html_contenido .= "\n <span class=\"geolocation_separator\"></span>";

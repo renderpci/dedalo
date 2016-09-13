@@ -17,7 +17,7 @@ class RecordObj_ts extends RecordDataBoundObject {
 	protected $usableIndex ;
 	protected $traducible ;
 	protected $relaciones ;
-	#protected $propiedades ;
+	protected $propiedades ;
 	
 	protected $prefijo ;
 	
@@ -106,6 +106,7 @@ class RecordObj_ts extends RecordDataBoundObject {
 			"usableIndex" 					=> "usableIndex",
 			"traducible" 					=> "traducible",
 			"relaciones" 					=> "relaciones",
+			"propiedades" 					=> "propiedades",
 			));
 	}
 
@@ -140,7 +141,7 @@ class RecordObj_ts extends RecordDataBoundObject {
 	/**
 	* TERMINOID2ID : resolve id from terminoID, lang
 	*/
-	protected function terminoID2id($terminoID) {
+	public function terminoID2id($terminoID) {
 		
 		# JER_LG : LANGS LIKE 'lg-365'
 		if(strpos($terminoID,'-')!==false) {
@@ -186,9 +187,9 @@ class RecordObj_ts extends RecordDataBoundObject {
 			self::set_norden(1);
 
 			parent::Save();
-
-			error_log("-->".__METHOD__." Warning: second save triggered");
+			//error_log("-->".__METHOD__." Warning: second save triggered");
 		}
+		
 		return $id;
 
 	}//end Save
@@ -279,18 +280,18 @@ class RecordObj_ts extends RecordDataBoundObject {
 		return self::get_descriptor_dato_by_tipo($terminoID, $lang, $tipo);
 	}
 
+	
+
 	/**
 	* GET MODELO NAME (CURRENT OBJ)
 	* Alias of $this->get_termino_by_tipo($modelo_tipo)
 	*/
-	public function get_modelo_name() {
-		if ($this->prefijo=='dd') {
-			$lang='lg-spa';
-		}else{
-			$lang=null;
-		}
+	public function get_modelo_name() {		
+		$lang=null;		
 		return $this->get_termino_by_tipo($this->get_modelo(),$lang,true,false);
 	}
+
+
 
 	/**
 	* GET_TIEMPO
@@ -298,7 +299,8 @@ class RecordObj_ts extends RecordDataBoundObject {
 	*/
 	public function get_tiempo() {
 		$tipo = 'tiempo';
-		return $tiempo = self::get_descriptor_dato_by_tipo($this->terminoID, $this->lang, $tipo);
+		$lang = isset($this->lang) ? $this->lang : false;
+		return $tiempo = self::get_descriptor_dato_by_tipo($this->terminoID, $lang, $tipo);
 	}#end get_tiempo
 
 
@@ -309,8 +311,33 @@ class RecordObj_ts extends RecordDataBoundObject {
 	*/
 	public function get_geolocalizacion() {
 		$tipo = 'geolocalizacion';
-		return $geolocalizacion = self::get_descriptor_dato_by_tipo($this->terminoID, $this->lang, $tipo);
-	}#end get_tiempo
+		$lang = isset($this->lang) ? $this->lang : false;
+		return $geolocalizacion = self::get_descriptor_dato_by_tipo($this->terminoID, $lang, $tipo);
+	}#end get_geolocalizacion
+
+
+
+	/**
+	* GET_nomenclator_code
+	* @return string $nomenclator_code
+	*/
+	public function get_nomenclator_code() {
+		$tipo = 'nomenclator_code';
+		$lang = isset($this->lang) ? $this->lang : false;
+		return $nomenclator_code = self::get_descriptor_dato_by_tipo($this->terminoID, $lang, $tipo);
+	}#end get_nomenclator_code
+
+
+
+	/**
+	* GET_ALTITUDE 
+	* @return string $altitude
+	*/
+	public function get_altitude() {
+		$tipo = 'altitude';
+		$lang = isset($this->lang) ? $this->lang : false;
+		return $altitude = self::get_descriptor_dato_by_tipo($this->terminoID, $lang, $tipo);
+	}#end get_altitude
 
 
 
@@ -1017,7 +1044,131 @@ class RecordObj_ts extends RecordDataBoundObject {
 	
 	
 	
-	
+	/**
+	* UPDATE_TOPONOMY_CENTRAL_SYNC_JER
+	* @return 
+	*/
+	public static function update_toponomy_central_sync_jer( $prefix, $parent, $esmodelo ) {
+
+		$created_terminoID = null;
+
+		$jerarquia_tipo = (int)Jerarquia::get_tipo_from_prefix( $prefix );
+		if ( $jerarquia_tipo==2 ) {
+
+			$options = new stdClass();
+				$options->update_type 	= 'jer';
+				$options->user_id 		= $_SESSION['dedalo4']['auth']['user_id'];
+				$options->user_name 	= $_SESSION['dedalo4']['auth']['username'];
+				$options->entity 		= DEDALO_ENTITY;
+				$options->parent 		= $parent;
+				$options->prefix 		= $prefix;
+				$options->esmodelo  	= $esmodelo;
+
+			$option_json = json_encode($options);
+
+			$url = TOPONOMY_CENTRAL_SYNC .'?options='. rawurlencode($option_json);
+
+			try {
+			
+				# SERVER REQUEST
+				if( !$response = file_get_contents( $url ) ) {
+					#dump($response, ' response ++ '.to_string());
+					echo "<span class=\"error\">Error. Unable connect to server</span>";
+					exit();
+				}
+
+				if ( !$response = json_decode($response) ) {
+					echo "<span class=\"error\">Error. Unable decode server response</span>";
+					exit();
+				}
+
+				if ($response->result==true) {
+
+					# Server has create a new record. We use this created terminoID for local instalation
+					$created_terminoID = $response->terminoID;
+					debug_log(__METHOD__." Created terminoID $created_terminoID successufully ".to_string(), logger::DEBUG);
+
+				}else{
+
+					echo "Error. ".$response->msg;
+					debug_log(__METHOD__." $response->msg ".to_string(), logger::DEBUG);
+					exit();
+				}
+
+			} catch (Exception $e) {
+				
+				exit("<span class=\"error\"> Sorry. a problem was found on create new ts element (TOPONOMY_CENTRAL_SYNC) </span>");
+			}
+
+		}//end 	if (isset($datos_grupo->tipo) && $datos_grupo->tipo==2) {
+
+		return $created_terminoID;
+		
+	}#end update_toponomy_central_sync_jer
+
+
+
+	/**
+	* UPDATE_TOPONOMY_CENTRAL_SYNC_DESCRIPTORS
+	* @return 
+	*/
+	public static function update_toponomy_central_sync_descriptors( $termino, $parent, $lang, $tipo ) {
+
+		$prefix = substr($parent,0,2);		
+		$jerarquia_tipo = (int)Jerarquia::get_tipo_from_prefix( $prefix );
+		if ( $jerarquia_tipo==2 ) {
+
+			$options = new stdClass();
+				$options->update_type 	= 'descriptors';
+				$options->user_id 		= $_SESSION['dedalo4']['auth']['user_id'];
+				$options->user_name 	= $_SESSION['dedalo4']['auth']['username'];
+				$options->entity 		= DEDALO_ENTITY;
+				$options->prefix 		= $prefix;	
+				$options->parent 		= $parent;							
+				$options->termino  		= $termino;
+				$options->lang  		= $lang;
+				$options->tipo  		= $tipo;
+
+			$option_json = json_encode($options);
+
+			$url = TOPONOMY_CENTRAL_SYNC .'?options='. rawurlencode($option_json);
+
+			try {
+			
+				# SERVER REQUEST
+				if( !$response = file_get_contents( $url ) ) {
+					#dump($response, ' response ++ '.to_string());
+					echo "<span class=\"error\">Error. Unable connect to server</span>";
+					exit();
+				}
+
+				if ( !$response = json_decode($response) ) {
+					echo "<span class=\"error\">Error. Unable decode server response</span>";
+					exit();
+				}
+
+				if ($response->result==true) {
+					
+					debug_log(__METHOD__." Update descriptor with parent $parent successufully ".to_string(), logger::DEBUG);
+					return true;
+
+				}else{
+
+					echo "Error. ".$response->msg;
+					debug_log(__METHOD__." $response->msg ".to_string(), logger::DEBUG);
+					exit();
+				}
+
+			} catch (Exception $e) {
+				
+				exit("<span class=\"error\"> Sorry. a problem was found on update ts element (TOPONOMY_CENTRAL_SYNC) </span>");
+			}
+
+		}//end 	if (isset($datos_grupo->tipo) && $datos_grupo->tipo==2) {
+
+		return false;
+
+	}#end update_toponomy_central_sync_descriptors
 	
 	
 	

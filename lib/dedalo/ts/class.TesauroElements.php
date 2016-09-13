@@ -9,7 +9,7 @@ class TesauroElements {
 	/*
 	* CREA LINEA DE TESAURO CON ICONOS Y TÉRMINO
 	*/
-	protected function makeTSline($terminoID,$termino,$parent,$children,$def,$obs,$hijosD,$hijosND,$nIndexaciones,$ncaptaciones,$nordenV,$resalte,$modelo,$usableIndex,$traducible,$visible) {
+	protected function makeTSline($terminoID,$termino,$parent,$children,$def,$obs,$hijosD,$hijosND,$nIndexaciones,$ncaptaciones,$nordenV,$resalte,$modelo,$usableIndex,$traducible,$visible,$ID) {
 
 		# Linea de iconos y término
 		#print("terminoID $terminoID,termino $termino,parent $parent,children $children,def $def,obs $obs,hijosD $hijosD,hijosND $hijosND,ncaptaciones $ncaptaciones,nordenV $nordenV,resalte $resalte,modo $modo ,usableIndex $usableIndex <hr>");
@@ -44,7 +44,7 @@ class TesauroElements {
 
 					if($this->type=='lenguaje') {
 						# new languaje in ts_edit and capt edit and jer edit
-						$html .= $this->renderBtn_newLang($terminoID);
+						$html .= $this->renderBtn_newLang($terminoID, $ID);
 					}else{
 						# terminos relacionados (ts_edit) y indexacion
 						$html .= $this->renderBtnAddIndexacion($terminoID, $termino);
@@ -212,14 +212,14 @@ class TesauroElements {
 	/*
 	crea el botón de añadir lenguaje en ts edit
 	*/
-	protected static function renderBtn_newLang($terminoID)
+	protected static function renderBtn_newLang($terminoID, $ID)
 	{
 		global $anyadir_title, $idioma_title ;
 
 		$button_html = "\n<!-- Btn Añadir lenguaje o idioma para este descriptor -->";
 
 		$button_html .= "\n <div class=\"add_index_btn \" title=\"$anyadir_title $idioma_title [$terminoID]\" ";
-		$button_html .= "onclick=\"window.opener.newLang('$terminoID');\" ";
+		$button_html .= "onclick=\"window.opener.newLang('$terminoID','$ID');\" ";
 		$button_html .= "></div>";
 
 		return $button_html ;

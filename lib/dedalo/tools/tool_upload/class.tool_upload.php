@@ -552,7 +552,7 @@ class tool_upload extends tool_common {
 
 						#
 						# AUDIO FILES
-						# Audio files generate allways a audio file
+						# Audio files generate always a audio file
 						if ($quality==DEDALO_AV_QUALITY_ORIGINAL) {
 							$ar_audio_only_ext = array('mp3','aiff','aif','wave','wav');
 							if (in_array($file_ext, $ar_audio_only_ext)) {

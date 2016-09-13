@@ -8,9 +8,8 @@ if(login::is_logged()!==true) die("<span class='error'> Auth error: please login
 
 # set vars
 	$vars = array('mode','terminoID');
-	if(is_array($vars)) foreach($vars as $name) {
-		$$name = common::setVar($name);
-	}
+		foreach($vars as $name) $$name = common::setVar($name);
+
 
 # mode
 if(empty($mode)) exit("<span class='error'> Trigger: Error Need mode..</span>");
@@ -24,6 +23,9 @@ if($mode=='show_indexations') {
 
 	# DATA VERIFY
 	if(empty($terminoID) || strlen($terminoID)<3) exit("Trigger Error: terminoID is mandatory");
+
+	# Write session to unlock session file
+	session_write_close();
 	
 
 	# DIFFUSION_INDEX_TS

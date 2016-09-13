@@ -60,6 +60,8 @@ class component_filter_master extends component_common {
 		return (array)$dato;
 	}
 
+
+
 	/**
 	* SET_DATO
 	* @see component_filter->set_dato() for maintain unifyed format of projetcs
@@ -72,6 +74,7 @@ class component_filter_master extends component_common {
 	}
 
 
+
 	/**
 	* SAVE OVERRIDE
 	* Overwrite component_common method 
@@ -82,6 +85,7 @@ class component_filter_master extends component_common {
 
 		return parent::Save();
 	}
+
 
 	
 	# Override component_common method
@@ -117,12 +121,16 @@ class component_filter_master extends component_common {
 				#$html .= " [$section_id]";
 				#dump($name, " name ".to_string());
 			}
-			$html .= '<br>';			
+			if(!empty($name)) {
+				$html .= '<br>';
+			}						
 		}
 		$html = substr($html, 0, -4);
 		
 		return $html;		
-	}
+	}//end get_valor
+
+
 
 	/**
 	* GET AR PROYECTOS SECTION ID 
@@ -195,7 +203,9 @@ class component_filter_master extends component_common {
 		}
 		
 		return $ar_projects_final;
-	}
+	}//end get_ar_proyectos_section
+
+
 
 	/*
 	* GET_VALOR_LANG
@@ -256,6 +266,54 @@ class component_filter_master extends component_common {
 		return $valor;
 		
 	}#end render_list_value
+
+
+
+	/**
+	* GET_VALOR_EXPORT
+	* Return component value sended to export data
+	* @return string $valor
+	*/
+	public function get_valor_export( $valor=null, $lang=DEDALO_DATA_LANG, $quotes, $add_id ) {
+			
+		if (is_null($valor)) {
+			$dato = $this->get_dato();				// Get dato from DB
+		}else{
+			$this->set_dato( json_decode($valor) );	// Use parsed json string as dato
+		}
+
+		$valor_export = $this->get_valor('html');
+		if (strlen($valor_export)) {
+			$valor_export = '·'.trim(str_replace('<br>', PHP_EOL.'·',$valor_export));
+			$valor_export = stripslashes($valor_export);
+		}
+		
+		if(SHOW_DEBUG) {
+			#return "FILTER: ".$valor_export;
+		}
+
+		return $valor_export;
+	}#end get_valor_export
+
+
+
+	/**
+	* GET_VALOR_LIST_HTML_TO_SAVE
+	* Usado por section:save_component_dato
+	* Devuelve a section el html a usar para rellenar el 'campo' 'valor_list' al guardar
+	* Por defecto será el html generado por el componente en modo 'list', pero en algunos casos
+	* es necesario sobre-escribirlo, como en component_portal, que ha de resolverse obigatoriamente en cada row de listado
+	*
+	* En este caso, usaremos únicamente el valor en bruto devuelto por el método 'get_dato_unchanged'
+	*
+	* @see class.section.php
+	* @return mixed $result
+	*/
+	public function get_valor_list_html_to_save() {
+		$result = $this->get_dato_unchanged();
+
+		return $result;
+	}//end get_valor_list_html_to_save
 
 
 	

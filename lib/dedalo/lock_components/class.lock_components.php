@@ -185,7 +185,14 @@ class lock_components {
 			$new_dato = array_values($new_dato);	// Recreate array keys to avoid produce json objects instead array
 			$new_dato = json_encode($new_dato);		// Convert again to text before save to database
 			$strQuery = "UPDATE \"".lock_components::LOCK_COMPONENTS_TABLE."\" SET datos = $1 WHERE id = $2";
-			$result   = pg_query_params(DBi::_getConnection(), $strQuery, array( $new_dato, $id ));
+			
+			#$result   = pg_query_params(DBi::_getConnection(), $strQuery, array( $new_dato, $id ));
+
+			# PG_SEND_QUERY is async query
+			if (!pg_connection_busy(DBi::_getConnection())) {
+				pg_send_query(DBi::_getConnection(), $strQuery);
+				$result = pg_get_result(DBi::_getConnection()); # RESULT (pg_get_result for pg_send_query is needed)
+			}
 
 			$response->result = true;
 			$response->msg 	  = "Updated db lock elements";

@@ -46,7 +46,13 @@ class data_check {
 			$increment_by 	= pg_fetch_result($result3, 0, 'increment_by');
 
 
-			$response->msg .= "<hr><b>$table_name</b> - start_value: $start_value - seq last_value: $last_value [ last id: $last_id]";
+			$response->msg .= "<hr><b>$table_name</b> - start_value: $start_value - seq last_value: $last_value ";
+			if ($last_value!=$last_id) {
+				$response->msg .= "<span style=\"color:#b97800\">[last id: $last_id] ALTER SEQUENCE {$table_name}_id_seq RESTART WITH $last_id;</span>";
+			}else{
+				$response->msg .= "[last id: $last_id]";
+			}
+			
 
 			if ($last_id>$last_value) {
 				$response->msg .= "<br><b>   WARNING: seq last_id > last_value [$last_id > $last_value]</b>";

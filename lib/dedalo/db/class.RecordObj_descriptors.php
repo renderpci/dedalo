@@ -129,24 +129,29 @@ class RecordObj_descriptors extends RecordObj_matrix {
 	public function get_mainLang() {
 		return Jerarquia::get_mainLang($this->get_parent());
 	}
+
+
 	
 	/**
 	* GET_MATRIX_TABLE_FROM_TIPO : Static
 	*/
 	public static function get_matrix_table_from_tipo($tipo) {
-		$prefix = substr($tipo, 0,2);		
-		if($prefix=='dd') {
-			return 'matrix_descriptors_dd';
-		}else{
+
+		if(SHOW_DEBUG) {
+			$prefix = substr($tipo, 0,2);		
 			if (!preg_match('/[a-z][a-z]/', $prefix)) {
 				if(SHOW_DEBUG){
 					#dump($tipo,'get_matrix_table_from_tipo tipo '."Prefix $prefix from tipo:$tipo is invalid");
 				}
-				throw new Exception("Error Processing Request. Prefix $prefix from tipo:$tipo is invalid", 1);			
+				#throw new Exception("Error Processing Request. Prefix $prefix from tipo:$tipo is invalid", 1);	
+				error_log("Error Processing Request. Prefix $prefix from tipo:$tipo is invalid");	
 			}
-		}
+		}		
 		return 'matrix_descriptors';
-	}
+		
+	}//end get_matrix_table_from_tipo
+
+	
 	
 	/**
 	* GET DATO OVERWRITE PARENT JSON GET DATO

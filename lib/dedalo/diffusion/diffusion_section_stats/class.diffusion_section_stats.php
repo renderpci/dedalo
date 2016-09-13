@@ -855,6 +855,7 @@ class diffusion_section_stats extends diffusion {
 									# Get value of 'component_input_text' from section project id (tipo is fixed: DEDALO_PROJECTS_NAME_TIPO)
 									
 									$current_key_obj = json_decode($key);
+										dump($current_key_obj, '$current_key_obj ++ '.to_string());
 									
 									$current_section_tipo = (is_array($current_key_obj) && isset(reset($current_key_obj)->section_tipo)) ? reset($current_key_obj)->section_tipo : null;
 									if(SHOW_DEBUG) {

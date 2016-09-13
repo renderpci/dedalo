@@ -699,9 +699,11 @@ class search extends common {
 
 							#
 							# ALWAYS ADD ORDER BY SECTION_ID (DESAMBIGUATE SAME DATA ORDER)
-							$last_order = !empty($order_direction) ? $order_direction : 'ASC'; 						
-							$order .= ', section_id '.$last_order;
-								#dump($order,"order last_order: $last_order  ");
+							$last_order = !empty($order_direction) ? $order_direction : 'ASC'; 
+							if($sql_options->section_tipo!==DEDALO_ACTIVITY_SECTION_TIPO) {
+								$order .= ', section_id '.$last_order;								
+							}				
+							#dump($order,"order last_order: $last_order  ");
 						}						
 						break;
 				}				

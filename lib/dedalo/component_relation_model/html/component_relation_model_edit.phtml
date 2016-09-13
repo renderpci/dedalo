@@ -1,0 +1,102 @@
+<?php
+
+	# VISUALIZADOR HTML
+
+
+	print "\n<!-- relation_MODEL [tipo:$tipo section_id:$parent section_tipo:$section_tipo] $label -->";
+
+	print "\n<div class=\"wrap_component css_wrap_relation_model wrap_component_{$modo} wrap_component_{$tipo}\" id=\"{$id_wrapper}\"
+	data-tipo=\"{$tipo}\"
+	data-lang=\"{$lang}\"
+	data-parent=\"{$parent}\"
+	data-section_tipo=\"{$section_tipo}\"
+	data-modo=\"{$modo}\"
+	data-dato='{$dato_string}'
+	data-component_name=\"{$component_name}\"
+	data-component_info='{$component_info}'
+	>";
+
+	# ETIQUETA (LABEL)
+	$html_label = component_common_draw::draw_label($this);
+
+	# CONTENIDO (INPUT)
+	$html_contenido = '';
+	switch($permissions) {
+
+		case 0 :
+				$html_contenido .= "";
+				break;
+
+		case 1 :
+				$html_contenido .= $this->valor;
+				break;
+
+
+		case 2 :
+		case 3 :
+
+				#
+				# CONTEXT
+				# Set as disabled on time machine context 
+				$disabled = (isset($context->context_name) && $context->context_name=='tool_time_machine') ? 'disabled="disabled"' : '';
+
+				$html_contenido .= "\n <select class=\"css_relation_model\"
+				onchange=\"component_relation_model.Save(this)\"
+				onfocus=\"component_common.select_wrap(null,'$id_wrapper');\"
+				name=\"{$input_name}\"
+				data-tipo=\"{$tipo}\"
+				data-lang=\"{$lang}\"
+				data-section_tipo=\"{$section_tipo}\"
+				data-parent=\"{$parent}\"
+				title=\"$html_title\"
+				$disabled
+				tabindex=\"1\"
+				> ";
+
+				$selected = empty($dato) ? 'selected' : '';
+				
+				$html_contenido .= "\n <option value=\"\" {$selected}> </option>";
+
+				foreach ($ar_list_of_values->result as $value => $label) {
+
+					$value   = (string)$value;
+					$locator = (object)json_handler::decode($value);	# Locator is json encoded object
+
+					$founded  = locator::in_array_locator( $locator, $ar_locator=$dato, $ar_properties=array('section_tipo','section_id') );
+					$selected = $founded ? 'selected' : '';
+
+					$html_contenido .= "\n<option value='$value' {$selected}>";
+					$html_contenido .= $label;
+					if(SHOW_DEBUG) {
+						$html_contenido .= " - ". trim($value);
+					}
+					$html_contenido .= "</option>";
+				}
+				$html_contenido .= "\n </select>";
+
+
+				if(SHOW_DEBUG) {
+					#$html_contenido .= "\n <div class=\"debug_info\"> Current val: <strong>$valor</strong></div>";				
+					#$html_contenido .= "\n <span class=\"css_span_debugger\" id=\"debugger_{$tipo}\">{$debugger}</span>";
+					$html_contenido .= "\n <span class=\"debug_info\">";
+					$html_contenido .= "<br> locators in section relation (model.tipo: ".DEDALO_RELATION_TYPE_MODEL_TIPO."): ";
+					$html_contenido .= wrap_pre( to_string($this->get_my_section_relations(DEDALO_RELATION_TYPE_MODEL_TIPO)), false );
+					$html_contenido .= "</span>";
+				}
+				break;
+	}
+
+	# Prepare content to show in page
+	tools::prepare_content($html_contenido);
+
+
+	# PRINT HTML
+	print $html_label;
+	print $html_contenido;
+
+	if(SHOW_DEBUG) {
+		echo $ar_list_of_values->debug;
+	}
+
+	print "\n</div><!-- /css_wrap_model RELATION_MODEL [tipo:$tipo section_id:$parent] $label -->\n\n"; //wrap
+?>

@@ -16,7 +16,7 @@ function loadImgResize(source,divTarget,w,h)
 	  // wrap our new image in jQuery, then:
 	  $(img)
 		// once the image has loaded, execute this code
-		.load(function () {
+		.on('load', function () {
 		  // set the image hidden by default    
 		  $(this).hide();
 		
@@ -65,7 +65,7 @@ function loadImgCrop(source,divTarget,cw,ch,cp)
 	  // wrap our new image in jQuery, then:
 	  $(img)
 		// once the image has loaded, execute this code
-		.load(function () {
+		.on('load', function () {
 		  // set the image hidden by default    
 		  $(this).hide();
 		

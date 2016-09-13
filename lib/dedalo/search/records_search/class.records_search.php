@@ -80,8 +80,8 @@ class records_search extends common {
 			#global$TIMER;$TIMER[__METHOD__.'_ROW_SEARCH_OUT_'.$this->section_tipo.'_'.microtime(1)]=microtime(1);
 		}
 
-		return $html;
-	}
+		return (string)$html;
+	}//end get_html
 
 
 
@@ -107,10 +107,10 @@ class records_search extends common {
 		}
 
 		# Fix search_list_tipo
-		$this->search_list_tipo = $search_list_tipo;		
+		$this->search_list_tipo = $search_list_tipo;	
 
 		return $search_list_tipo;
-	}
+	}//end get_search_list_tipo
 
 
 
@@ -125,8 +125,7 @@ class records_search extends common {
 		#unset($_SESSION['dedalo4']['config']['records_search'][$this->section_tipo]['ar_search_fields']);
 		#if(isset($_SESSION['dedalo4']['config']['records_search'][$this->section_tipo]['ar_search_fields'])) {
 		#	return unserialize($_SESSION['dedalo4']['config']['records_search'][$this->section_tipo]['ar_search_fields']);
-		#}
-		
+		#}		
 
 		$ar_search_fields 	= array();
 
@@ -135,6 +134,20 @@ class records_search extends common {
 
 		$ar_terminos_relacionados = RecordObj_dd::get_ar_terminos_relacionados($search_list_tipo, true, $simple=true);
 			#dump($ar_terminos_relacionados,'ar_terminos_relacionados');
+
+		#
+		# REMOVE_EXCLUDE_TERMS : CONFIG EXCLUDES
+		# If instalation config value DEDALO_AR_EXCLUDE_COMPONENTS is defined, remove elements from ar_terminos_relacionados
+		if (defined('DEDALO_AR_EXCLUDE_COMPONENTS') && !empty($ar_terminos_relacionados)) {
+			$DEDALO_AR_EXCLUDE_COMPONENTS = unserialize(DEDALO_AR_EXCLUDE_COMPONENTS);
+			foreach ((array)$ar_terminos_relacionados as $key => $current_tipo) {
+				if (in_array($current_tipo, $DEDALO_AR_EXCLUDE_COMPONENTS)) {
+					unset( $ar_terminos_relacionados[$key] );
+					debug_log(__METHOD__." DEDALO_AR_EXCLUDE_COMPONENTS: Removed term $current_tipo from ar_terminos_relacionados ".to_string(), logger::DEBUG);
+				}
+			}
+		}
+
 
 		foreach ($ar_terminos_relacionados as $current_element_tipo) {
 
@@ -161,8 +174,8 @@ class records_search extends common {
 		# CACHE
 		#$_SESSION['dedalo4']['config']['records_search'][$this->section_tipo]['ar_search_fields'] = serialize($ar_search_fields);
 
-		return $ar_search_fields ;
-	}
+		return (array)$ar_search_fields ;
+	}//end get_ar_search_fields
 
 
 

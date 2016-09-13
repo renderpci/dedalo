@@ -47,7 +47,7 @@ var page_globals = new Object();
 	
 	
 	<!-- MSG LOAD control de video -->	
-	<div id="loading_msg" class="select_none"> Loading... </div>
+	<div id="loading_msg" class="select_none blink"> Loading... </div>
 	
 	
 	<!-- Botones control de video -->		
@@ -61,7 +61,7 @@ var page_globals = new Object();
 					echo "<div class=\"css_button_generic css_av_video_controls_rew av_player_btn play_pause\">Play</div>";
 					echo "<!-- TC Display -->
 						  <div id=\"TCdiv\">
-							<span id=\"loading_msg\"> loading </span>
+							<span id=\"loading_msg\" class=\"blink\"> loading </span>
 						  </div>";
 					echo "<div class=\"css_button_generic css_av_video_controls_rew av_player_btn\" onClick=\"controlVideo('-10')\">&lt; 10 seg</div>";
 					echo "<div class=\"css_button_generic css_av_video_controls_rew av_player_btn\" onClick=\"controlVideo('-5')\">&lt; 5 seg</div>";
@@ -87,7 +87,7 @@ var page_globals = new Object();
 					
 					echo "<!-- TC Display -->
 						  <div id=\"TCdiv\">
-							<span id=\"loading_msg\"> loading </span>
+							<span id=\"loading_msg\" class=\"blink\"> loading </span>
 						  </div>";
 					echo "<div class=\"css_button_generic css_av_video_controls_rew av_player_btn\" onClick=\"controlVideo('-10')\">&lt; 10 seg</div>";
 					echo "<div class=\"css_button_generic css_av_video_controls_rew av_player_btn\" onClick=\"controlVideo('-5')\">&lt; 5 seg</div>";

@@ -5,7 +5,6 @@ require_once( dirname(dirname(__FILE__)) .'/config/config4.php');
 * LOGIN
 */
 $is_logged	= login::is_logged();
-	
 if($is_logged!==true) {
 	$url =  DEDALO_ROOT_WEB ."/main/";
 	header("Location: $url");
@@ -156,6 +155,9 @@ require_once($page_html);
 				"terminoID"		=> $terminoID
 				)
 	);
+
+# Write session to unlock session file
+session_write_close();
 
 exit();
 ?>

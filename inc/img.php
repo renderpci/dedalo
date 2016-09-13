@@ -1,4 +1,6 @@
-<?php 
+<?php
+session_write_close();
+
 if(!isset($source)) $source = false;
 if(isset($_REQUEST['source']))	$source = $_REQUEST['source'];
 if(isset($_REQUEST['s']))		$source = $_REQUEST['s'];

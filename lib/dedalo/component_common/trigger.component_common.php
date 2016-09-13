@@ -1,19 +1,14 @@
 <?php
 require_once( dirname(dirname(__FILE__)).'/config/config4.php');
-#require_once(DEDALO_LIB_BASE_PATH . '/db/class.RecordObj_matrix.php');
-#require_once(DEDALO_LIB_BASE_PATH . '/common/class.TR.php');
-
 
 if(login::is_logged()!==true) die("<span class='error'> Auth error: please login </span>");
 
-	#dump($_REQUEST);
-
 # set vars
-	$vars = array('mode','id','id_matrix','parent','dato','tipo','lang','flag','modo','current_tipo_section','caller_tipo','tag','rel_locator','context_name','arguments','propiedades','section_tipo');	
+	$vars = array('mode');	
 		foreach($vars as $name) $$name = common::setVar($name);
 
-# mode
-if(empty($mode)) exit("<span class='error'> Trigger: Error Need mode..</span>");
+	# mode
+	if(empty($mode)) exit("<span class='error'> Trigger: Error Need mode..</span>");
 
 
 
@@ -22,9 +17,15 @@ if(empty($mode)) exit("<span class='error'> Trigger: Error Need mode..</span>");
 */
 if($mode=='Save') {
 
+	$vars = array('parent','tipo','lang','modo','section_tipo','dato');
+		foreach($vars as $name) $$name = common::setVar($name);
+
+
 	# DATA VERIFY
 	if(empty($parent)) exit("Trigger Error: Nothing to save.. (parent:$parent)");
 	if(empty($tipo) || strlen($tipo)<3) exit("Trigger Error: tipo is mandatory (tipo:$tipo)");
+	if(empty($lang)) exit("Trigger Error: Nothing to save.. (lang:$lang)");
+	if(empty($modo)) exit("Trigger Error: Nothing to save.. (modo:$modo)");
 	if(empty($section_tipo) || strlen($section_tipo)<3) exit("Trigger Error: section_tipo is mandatory $tipo");
 	
 	
@@ -33,7 +34,7 @@ if($mode=='Save') {
 	if (!$dato_clean = json_decode($dato)) {
 		$dato_clean = $dato;
 	}
-	#dump($dato_clean, ' dato_clean ++ '.to_string());
+	//dump($dato_clean, ' dato_clean ++ lang: '.to_string($lang)); die();
 	
 	$component_name = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 
@@ -55,19 +56,159 @@ if($mode=='Save') {
 													$section_tipo);
 	
 	# Assign dato
-	$component_obj->set_dato( $dato_clean );
- 
-
+	$component_obj->set_dato( $dato_clean ); 
+	
 	# Call the specific function of the current component that handles the data saving with your specific preprocessing language, etc ..
 	$id = $component_obj->Save();
 		#dump($component_obj, ' component_obj');	
 
 	# Return id
 	echo $id;
+
+	# Write session to unlock session file
+	session_write_close();	
+	
 	exit();
 
 }#end Save
 
+
+
+/**
+* LOAD COMPONENT BY AJAX
+* load ajax html component
+* Cargador genérico de componentes. Devuelve el html costruido del componente resuelto y en el modo recibido
+*/
+if ($mode=='load_component_by_ajax') {			
+	
+	$vars = array('parent','tipo','lang','modo','section_tipo','current_tipo_section','context_name','arguments');
+		foreach($vars as $name) $$name = common::setVar($name);
+	
+	if(empty($parent)) {
+		$msg = "Error Processing Request (load_component_by_ajax). parent is not defined!";
+		error_log($msg);
+		throw new Exception($msg, 1);
+	} 
+
+	if(empty($tipo)) {
+		$msg = "Error Processing Request (load_component_by_ajax). tipo is not defined!";
+		error_log($msg);
+		throw new Exception($msg, 1);	
+	}
+
+	if(empty($lang)) {
+		$msg = "Error Processing Request (load_component_by_ajax). lang is not defined!";
+		error_log($msg);
+		throw new Exception($msg, 1);	
+	}	
+		
+	if(empty($modo)) {
+		$msg = "Error Processing Request (load_component_by_ajax). modo is not defined!";
+		error_log($msg);
+		throw new Exception($msg, 1);
+	}
+	if(empty($section_tipo)) {
+		$msg = "Error Processing Request (load_component_by_ajax). section_tipo is not defined!";
+		error_log($msg);
+		throw new Exception($msg, 1);
+	}
+	#dump($section_tipo,"section_tipo - tipo:$tipo - modo:$modo, lang:$lang");
+
+	
+
+	$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+	$component_obj 	= component_common::get_instance($modelo_name,
+													 $tipo,
+													 $parent,
+													 $modo,
+													 $lang,
+													 $section_tipo);		
+
+	#
+	# CURRENT_TIPO_SECTION
+	# Si se recibe section_tipo, configuramos el objeto para que tenga ese parámetro asignado
+	# Por ejemplo, en relaciones, se requiere para discriminar qué seccion querenmos actualizar
+	if (!empty($current_tipo_section)) {
+		$component_obj->current_tipo_section = $current_tipo_section;
+	}
+
+	#
+	# CONTEXT_NAME : CONTEXT OF COMPONENT
+	if (!empty($context_name)) {
+		$component_obj->set_context($context_name);
+		#dump($context_name,"context_name");
+	}
+
+	#
+	# ARGUMENTS
+	if (!empty($arguments)) {
+		$component_obj->set_arguments($arguments);
+	}
+	
+	# Get component html
+	$html = $component_obj->get_html();
+
+	echo $html;
+
+	# Write session to unlock session file
+	session_write_close();
+
+	exit();
+
+}//load_component_by_ajax
+
+
+
+/**
+* LOAD SECTION BY AJAX
+* load ajax html component
+* Cargador genérico de secciones. Devuelve el html costruido del componente resuelto y en el modo recibido.
+*/
+if ($mode=='load_section_by_ajax') {
+
+	$vars = array('id','tipo','modo','context_name');
+		foreach($vars as $name) $$name = common::setVar($name);
+	
+	if(empty($id)) {
+		$msg = "Error Processing Request. id is not defined!";
+		error_log($msg);
+		throw new Exception($msg, 1);	
+	}		
+	if(empty($tipo)) {
+		$msg = "Error Processing Request. tipo is not defined!";
+		error_log($msg);
+		throw new Exception($msg, 1);
+	}	
+	if(empty($modo)) {
+		$msg = "Error Processing Request. modo is not defined!";
+		error_log($msg);
+		throw new Exception($msg, 1);
+	}	
+	
+	#
+	# SECTION
+	$section_obj = section::get_instance($id, $tipo);
+		#dump($section_obj,'$section_obj');
+
+	#$section_obj->set_caller_id($caller_id);
+	$section_obj->set_show_inspector(false);
+
+	if(empty($context_name)) {
+		$section_obj->set_context($context_name);
+			#dump($section_obj,'$section_obj in trigger');
+			#error_log('context:'.$context);
+	}
+	
+	# Get component html
+	$html = $section_obj->get_html();
+	echo $html;
+
+	# Write session to unlock session file
+	session_write_close();	
+
+	exit();
+
+}//load_section_by_ajax
 
 
 
@@ -164,14 +305,6 @@ if($mode=='Save_related') {
 
 
 
-
-
-
-
-
-
-
-
 /*
 # LOAD RELATIONS LIST
 if($mode=='ajax_load_relations_list') {
@@ -192,10 +325,6 @@ if($mode=='ajax_load_relations_list') {
 
 
 
-
-
-
-
 # INDEX TERMINO
 /*
 	DEFINDA EN TRIGGER.COMPONENT RELATION
@@ -210,6 +339,8 @@ if($mode=='index_termino') {
 	exit();
 }
 */
+
+
 
 # NEW
 /*
@@ -257,128 +388,6 @@ if($mode=='New') {
 	exit($id);
 }
 */
-
-
-
-/**
-* LOAD COMPONENT BY AJAX
-* load ajax html component
-* Cargador genérico de componentes. Devuelve el html costruido del componente resuelto y en el modo recibido
-*/
-if ($mode=='load_component_by_ajax') {			
-	#dump($_REQUEST," ");die();
-	
-	if(empty($tipo)) {
-		$msg = "Error Processing Request (load_component_by_ajax). tipo is not defined!";
-		error_log($msg);
-		throw new Exception($msg, 1);	
-	}
-		
-	if(empty($parent)) {
-		$msg = "Error Processing Request (load_component_by_ajax). parent is not defined!";
-		error_log($msg);
-		throw new Exception($msg, 1);
-	} 
-		
-	if(empty($modo)) {
-		$msg = "Error Processing Request (load_component_by_ajax). modo is not defined!";
-		error_log($msg);
-		throw new Exception($msg, 1);
-	}
-	if(empty($section_tipo)) {
-		$msg = "Error Processing Request (load_component_by_ajax). section_tipo is not defined!";
-		error_log($msg);
-		throw new Exception($msg, 1);
-	}
-	#dump($section_tipo,"section_tipo - tipo:$tipo - modo:$modo, lang:$lang");
-
-
-	$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
-	$component_obj 	= component_common::get_instance($modelo_name,
-													 $tipo,
-													 $parent,
-													 $modo,
-													 $lang,
-													 $section_tipo);
-
-	if(SHOW_DEBUG) {
-		#$dato= $component_obj->get_dato();
-		#dump($dato, ' component_obj - '."$modelo_name - tipo:$tipo - parent:$parent, $modo, $lang, $section_tipo");
-	}
-		
-
-	# CURRENT TIPO SECTION
-	# Si se recibe section_tipo, configuramos el objeto para que tenga ese parámetro asignado
-	# Por ejemplo, en relaciones, se requiere para discriminar qué seccion querenmos actualizar
-	if (!empty($current_tipo_section)) {
-		$component_obj->current_tipo_section = $current_tipo_section;
-	}
-	#dump($current_tipo_section,'$current_tipo_section');
-
-
-	# CONTEXT OF COMPONENT
-	$component_obj->set_context($context_name);
-		#dump($context_name,"context_name");
-
-	if (!empty($arguments)) {
-		$component_obj->set_arguments($arguments);
-	}
-	
-	# Get component html
-	$html = $component_obj->get_html();
-
-	echo $html;
-	exit();
-
-}//load_component_by_ajax
-
-
-/**
-* LOAD SECTION BY AJAX
-* load ajax html component
-* Cargador genérico de secciones. Devuelve el html costruido del componente resuelto y en el modo recibido.
-*/
-if ($mode=='load_section_by_ajax') {
-	
-	if(empty($id)) {
-		$msg = "Error Processing Request. id is not defined!";
-		error_log($msg);
-		throw new Exception($msg, 1);	
-	}		
-	if(empty($tipo)) {
-		$msg = "Error Processing Request. tipo is not defined!";
-		error_log($msg);
-		throw new Exception($msg, 1);
-	}	
-	if(empty($modo)) {
-		$msg = "Error Processing Request. modo is not defined!";
-		error_log($msg);
-		throw new Exception($msg, 1);
-	}
-	if(empty($context_name)) {
-		#$msg = "Error Processing Request. context is not defined!";
-		#error_log($msg);
-		#throw new Exception($msg, 1);
-	}		
-	
-	
-	$section_obj = section::get_instance($id, $tipo);
-		#dump($section_obj,'$section_obj');
-
-	#$section_obj->set_caller_id($caller_id);
-	$section_obj->set_show_inspector(false);
-	$section_obj->set_context($context_name);
-		#dump($section_obj,'$section_obj in trigger');
-		#error_log('context:'.$context);
-	
-	# Get component html
-	$html = $section_obj->get_html();
-	exit($html);
-
-}//load_section_by_ajax
-
-
-
 
 
 

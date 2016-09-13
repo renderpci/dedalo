@@ -122,6 +122,7 @@
 		    }
 		    $html .= "\n </tr>";
 
+
 		    #
 		    # PRINT SIZE ROW
 		    $html .= "\n <tr>";
@@ -361,7 +362,6 @@
 			}
 
 
-
 			#
 		    # ROTATE
 		    if ($permissions>=2 && DEDALO_IMAGE_LIB) {
@@ -380,8 +380,14 @@
 						$degrees 	= 90;
 
 						$html .= "<div class=\"icon_bs link image_rotate_left_icon\"
-						data-image_id=\"$image_id\" data-quality=\"$quality\" data-aditional_path=\"$aditional_path\" data-initial_media_path=\"$initial_media_path\" data-degrees=\"$degrees\"
-						data-tipo=\"$tipo\" data-parent=\"$parent\"					
+						data-image_id=\"$image_id\"
+						data-quality=\"$quality\"
+						data-aditional_path=\"$aditional_path\"
+						data-initial_media_path=\"$initial_media_path\"
+						data-degrees=\"$degrees\"
+						data-tipo=\"$tipo\"
+						data-section_tipo=\"$section_tipo\"
+						data-parent=\"$parent\"					
 						onclick=\"tool_image_versions.rotate_image(this)\"
 						title=\"$title\"
 						></div>";
@@ -390,8 +396,14 @@
 						$degrees 	= -90;
 												
 						$html .= "<div class=\"icon_bs link image_rotate_right_icon\"
-						data-image_id=\"$image_id\" data-quality=\"$quality\" data-aditional_path=\"$aditional_path\" data-initial_media_path=\"$initial_media_path\" data-degrees=\"$degrees\"
-						data-tipo=\"$tipo\" data-parent=\"$parent\"					
+						data-image_id=\"$image_id\"
+						data-quality=\"$quality\"
+						data-aditional_path=\"$aditional_path\"
+						data-initial_media_path=\"$initial_media_path\"
+						data-degrees=\"$degrees\"
+						data-tipo=\"$tipo\"
+						data-section_tipo=\"$section_tipo\"
+						data-parent=\"$parent\"					
 						onclick=\"tool_image_versions.rotate_image(this)\"
 						title=\"$title\"
 						></div>";

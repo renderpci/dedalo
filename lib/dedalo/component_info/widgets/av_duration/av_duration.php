@@ -11,6 +11,8 @@
 		$component_portal_tipo 	= key($data_source);
 		$component_av_tipo 		= reset($data_source);
 		$filename 				= $modo;
+
+
 		switch ($modo) {
 
 			case 'list':

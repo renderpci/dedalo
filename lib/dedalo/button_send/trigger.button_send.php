@@ -128,10 +128,10 @@ throw new Exception("Error Processing Request: EN PROCESO DE CONVERSIÓN A POSTG
 						
 						if( is_array ($ar_ts_relacionados) ) foreach($ar_ts_relacionados as $ar_termino_relacionadoID) {
 													
-							foreach($ar_termino_relacionadoID as $modeloID => $terminoID) {
+							foreach($ar_termino_relacionadoID as $terminoID) {
 								
 								# Para cada hijo, verificamos su modelo
-								$modelo			= RecordObj_dd::get_termino_by_tipo($modeloID);
+								$modelo = RecordObj_dd::get_modelo_name_by_tipo($terminoID); # NO usar el guardado porque puede haberse cambiado en el tiempo (solucionar posibles inconsistencias)
 								
 								if ($modelo =='filter_key'){
 									
@@ -167,9 +167,9 @@ throw new Exception("Error Processing Request: EN PROCESO DE CONVERSIÓN A POSTG
 						}
 						if( is_array ($ar_ts_relacionados) )foreach($ar_ts_relacionados as $ar_termino_relacionadoID) {
 							
-							foreach($ar_termino_relacionadoID as $modeloID => $terminoID) {
+							foreach($ar_termino_relacionadoID as $terminoID) {
 								
-								$modelo			= RecordObj_dd::get_termino_by_tipo($modeloID);
+								$modelo = RecordObj_dd::get_modelo_name_by_tipo($terminoID); # NO usar el guardado porque puede haberse cambiado en el tiempo (solucionar posibles inconsistencias)
 								if (strpos($modelo,'component_') !== false){
 									
 									$matrix_table 		= common::get_matrix_table_from_tipo($terminoID);

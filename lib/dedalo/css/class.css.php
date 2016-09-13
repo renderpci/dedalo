@@ -29,6 +29,9 @@ class css {
 			# JQUERY UI css
 			css::$ar_url_basic[] = JQUERY_UI_URL_CSS ;
 
+			# Test
+			#css::$ar_url_basic[] = DEDALO_ROOT_WEB . '/lib/jquery/acc/test/jquery-ui/jquery-ui.min.css' ;
+
 			# BOOTSTRAP css
 			#css::$ar_url_basic[] = BOOTSTRAP_CSS_URL;
 			#css::$ar_url_basic[] = 'https://cdnjs.cloudflare.com/ajax/libs/normalize/3.0.3/normalize.css';
@@ -134,7 +137,6 @@ class css {
 		#dump( htmlentities($html), '$html');
 		
 		return $html;
-
 	}//end get_css_link_code
 
 
@@ -155,14 +157,14 @@ class css {
 		}
 		$media_attr='';
 		if (!is_null($media)) {
-			$media_attr = "media=\"$media\"";  // Like screen
+			$media_attr = " media=\"$media\"";  // Like screen
 		}
 		
 		#$url = $url.'?v='.DEDALO_VERSION;
 		$url = $url.'?'.DEDALO_VERSION;
 		#return "\n<link rel=\"stylesheet\" href=\"$url\" type=\"text/css\" {$media_attr}/>";
-		return "\n<link href=\"$url\" rel=\"stylesheet\" {$media_attr}>";
-	}
+		return "\n<link href=\"$url\" rel=\"stylesheet\"{$media_attr}>";
+	}//edn build_tag
 	
 	
 
@@ -201,7 +203,7 @@ class css {
 				debug_log(__METHOD__." Failed json decode for $terminoID: ".to_string($propiedades_str), logger::ERROR);
 				continue;
 			}
-			#dump($propiedades, ' propiedades ++ '.to_string());
+				#dump($propiedades, ' propiedades ++ '.to_string());
 			$css_obj = $propiedades->css;
 				#dump($css_obj, ' css_obj ++ '.to_string());
 
@@ -209,6 +211,10 @@ class css {
 			# get_css_prefix
 			$css_prefix = css::get_css_prefix($terminoID);
 				#dump($css_prefix, ' $css_prefix ++ '.to_string());
+
+			# Section
+			//$section_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($terminoID, 'section', 'parent', $search_exact=true);
+			//wrap_section_{$modo}
 
 			#
 			# LESS CODE
@@ -232,14 +238,18 @@ class css {
 		if ($mixins_code = file_get_contents($file_name)) {
 			$less_code = $mixins_code.$less_code;
 		}
-
 		#echo $less_code;		 
 
 		#
 		# Write final file
 		$file_name = DEDALO_LIB_BASE_PATH . self::$structure_file_path;
-		$less->setFormatter("compressed");	// lessjs (default) | compressed | classic
+		
+		# FORMAT : default | compressed | classic
+		#$less->setFormatter("compressed");	// lessjs (default) | compressed | classic
+		
+		# PRESERVE COMMENTS : true | false	
 		$less->setPreserveComments(false);	// true | false	
+
 		try {
 			$compiled_css = $less->compile( $less_code );
 			#echo $compiled_css;
@@ -260,10 +270,7 @@ class css {
 		#$response->code = "<pre>".nl2br($compiled_css) ."</pre>";
 
 		return $response;
-
 	}#end build_structure_css
-
-
 
 
 
@@ -310,8 +317,6 @@ class css {
 
 
 
-
-
 	/**
 	* GET_CSS_PREFIX
 	* @param string $tipo
@@ -335,11 +340,15 @@ class css {
 			case ($modelo_name == 'section_group') :
 				$css_prefix = 'wrap_section_group';
 				break;			
-
+			/*
 			case strpos($modelo_name, 'section')!==false :
-				$css_prefix = 'wrap_section';
+				$css_prefix = 'wrap_section'; // section and section_list
 				break;
-			
+			*/
+			case ($modelo_name == 'section_list') :
+				$css_prefix = 'wrap_section_records';
+				break;
+
 			default:
 				$css_prefix = $tipo;
 				debug_log(__METHOD__." Undefined css_prefix from modelo_name: $modelo_name ($tipo)".to_string(), logger::ERROR);

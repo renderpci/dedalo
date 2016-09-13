@@ -26,17 +26,18 @@
 					$html_contenido .= operator::get_search_comparison_operators_html($tipo,$ar_comparison_operators);
 		
 
-					# INPUT
+					# SELECT
 					$html_contenido .= "\n <select class=\"css_select_lang\" name=\"{$tipo}\" data-tipo=\"{$tipo}\" title=\"$html_title\"> ";		
 
-					$checked = "";	
-					
-					$html_contenido .= "\n <option value=\"\" {$checked}> </option>";
-					
-					if (is_array ($ar_all_project_select_langs)) foreach ($ar_all_project_select_langs as $value => $rotulo) {
+						$checked = "";	
 						
-						$html_contenido .= "\n <option value=\"{$value}\" {$checked}> {$rotulo}</option>";							
-					}					
+						$html_contenido .= "\n <option value=\"\" {$checked}> </option>";
+						
+						foreach((array)$ar_all_project_select_langs as $locator_json => $label) {
+							
+							$html_contenido .= "\n <option value='{$locator_json}' {$checked}> {$label}</option>";							
+						}
+
 					$html_contenido .= "\n </select>";
 
 					# LOGICAL OPERATORS

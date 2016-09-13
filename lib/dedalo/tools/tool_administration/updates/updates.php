@@ -6,6 +6,61 @@ global $updates;
 $updates = new stdClass();	
 
 
+$v=4014; #####################################################################################
+$updates->$v = new stdClass();
+
+	#UPDATE TO
+	$updates->$v->version_major 	 = 4;
+	$updates->$v->version_medium 	 = 0;
+	$updates->$v->version_minor 	 = 14;
+
+
+	#MINIM UPDATE FROM
+	$updates->$v->update_from_major  = 4;
+	$updates->$v->update_from_medium = 0;
+	$updates->$v->update_from_minor  = 12;
+
+	$updates->$v->SQL_update[] = ' CREATE TABLE IF NOT EXISTS "matrix_hierarchy"
+			( LIKE matrix INCLUDING DEFAULTS INCLUDING CONSTRAINTS INCLUDING INDEXES INCLUDING STORAGE INCLUDING COMMENTS ) 
+			WITH (OIDS = FALSE);
+			CREATE SEQUENCE matrix_hierarchy_id_seq;
+			ALTER TABLE matrix_hierarchy ALTER COLUMN id SET DEFAULT nextval(\'matrix_hierarchy_id_seq\'::regclass); ';
+
+	$updates->$v->SQL_update[] 	= '	CREATE TABLE IF NOT EXISTS  "matrix_hierarchy_main"
+			( LIKE matrix INCLUDING DEFAULTS INCLUDING CONSTRAINTS INCLUDING INDEXES INCLUDING STORAGE INCLUDING COMMENTS ) 
+			WITH (OIDS = FALSE);
+			CREATE SEQUENCE matrix_hierarchy_main_id_seq; 
+			ALTER TABLE matrix_hierarchy_main ALTER COLUMN id SET DEFAULT nextval(\'matrix_hierarchy_main_id_seq\'::regclass); ';
+	
+	$updates->$v->SQL_update[] 	= ' INSERT INTO "main_dd" ("tld", "counter", "name") VALUES (\'hierarchy\', 0, \'hierarchy\');';
+	
+	#UPDATE COMPONENTS
+	# Order is important !
+	$updates->$v->components_update = ['component_date'];
+
+
+
+$v=4012; #####################################################################################
+$updates->$v = new stdClass();
+
+	#UPDATE TO
+	$updates->$v->version_major 	 = 4;
+	$updates->$v->version_medium 	 = 0;
+	$updates->$v->version_minor 	 = 12;
+
+
+	#MINIM UPDATE FROM
+	$updates->$v->update_from_major  = 4;
+	$updates->$v->update_from_medium = 0;
+	$updates->$v->update_from_minor  = 11;
+
+
+	#UPDATE COMPONENTS
+	# Order is important !
+	$updates->$v->components_update = ['component_select_lang','component_project_langs'];
+
+
+
 $v=4011; #####################################################################################
 $updates->$v = new stdClass();
 
@@ -26,11 +81,7 @@ $updates->$v = new stdClass();
 	$updates->$v->components_update = ['component_security_access','component_security_areas'];
 
 
-	$updates->$v->SQL_update[] 	= ' CREATE TABLE IF NOT EXISTS "matrix_notifications" (
-										"id" serial NOT NULL,
-										"datos" jsonb NULL,
-										CONSTRAINT matrix_notifications_id PRIMARY KEY(id)
-									) ';
+	
 	$updates->$v->SQL_update[] 	= ' CREATE TABLE IF NOT EXISTS public.jer_ds (
 										LIKE public.jer_ts INCLUDING DEFAULTS INCLUDING CONSTRAINTS INCLUDING INDEXES INCLUDING STORAGE INCLUDING COMMENTS
 								  	) WITH (OIDS = FALSE) ';
@@ -73,7 +124,6 @@ $updates->$v = new stdClass();
 										CONSTRAINT matrix_updates_id PRIMARY KEY(id)
 									) ';
 	
-
 
 
 $v=409; #####################################################################################

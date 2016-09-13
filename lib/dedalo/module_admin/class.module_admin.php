@@ -17,16 +17,16 @@ class module_admin extends zona {
 		
 		$ar_relaciones	= RecordObj_dd::get_ar_terminos_relacionados($this->tipo, $cache=true, $simple=true);
 		
-		if( is_array($ar_relaciones) ) foreach($ar_relaciones as $modelo => $terminoID) {	
+		if( is_array($ar_relaciones) ) foreach($ar_relaciones as $terminoID) {	
 			
 			$RecordObj_dd		= new RecordObj_dd($terminoID);
 			$modeloID			= $RecordObj_dd->get_modelo();
-			$modelo				= RecordObj_dd::get_termino_by_tipo($modeloID,null,true);	
+			$modelo_name		= RecordObj_dd::get_termino_by_tipo($modeloID,null,true);
 			
-			switch($modelo) {
+			switch($modelo_name) {
 				
 				# STORE BUTTONS OF SECTION
-				case (strpos($modelo, 'module') !== false)	: $this->tipo = $terminoID;	$this->load_structure_data();  break;					
+				case (strpos($modelo_name, 'module') !== false)	: $this->tipo = $terminoID;	$this->load_structure_data();  break;					
 			}
 		}
 	

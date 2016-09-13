@@ -5,15 +5,11 @@ if(login::is_logged()!==true) die("<span class='error'> Auth error: please login
 
 
 # set vars
-	$vars = array('mode','id','parent','dato','tipo','lang','source_lang','target_lang', 'section_id', 'section_tipo', 'source_tipo', 'target_tipo');
+	$vars = array('mode');
 		foreach($vars as $name) $$name = common::setVar($name);
 
 # mode
 if(empty($mode)) exit("<span class='error'> Trigger: Error Need mode..</span>");
-
-
-	
-	
 
 
 
@@ -25,6 +21,9 @@ if(empty($mode)) exit("<span class='error'> Trigger: Error Need mode..</span>");
 * @param $section_tipo
 */
 if($mode=='pdf_automatic_transcription') {
+
+	$vars = array('id','parent','dato','tipo','lang','source_lang','target_lang', 'section_id', 'section_tipo', 'source_tipo', 'target_tipo');
+		foreach($vars as $name) $$name = common::setVar($name);
 
 	if (empty($section_id) || empty($section_tipo) || empty($source_tipo) || empty($target_tipo)) {
 		if (SHOW_DEBUG) {
@@ -118,7 +117,12 @@ if($mode=='pdf_automatic_transcription') {
 	}
 
 
-	$component_pdf  = component_common::get_instance("component_pdf", $source_tipo, $section_id, "edit", DEDALO_DATA_LANG, $section_tipo);
+	$component_pdf  = component_common::get_instance("component_pdf",
+													 $source_tipo,
+													 $section_id,
+													 "edit",
+													 DEDALO_DATA_LANG,
+													 $section_tipo);
 	$path_pdf 		= $component_pdf->get_pdf_path();
 
 	#
@@ -172,8 +176,7 @@ if($mode=='pdf_automatic_transcription') {
 	    $pdf_text .= '<br>';
 	    $pdf_text .= nl2br($current_page);
 	    $i++;
-	}
-	
+	}	
 
 
 
@@ -192,9 +195,49 @@ if($mode=='pdf_automatic_transcription') {
 
 	//dump($component_text_area,"component_text_area - target_tipo: $target_tipo - section_id: $section_id");
 	echo "ok";
-
 	exit();
-}
+
+}//end pdf_automatic_transcription
+
+
+
+/**
+* CHANGE_TEXT_EDITOR_LANG
+* @param $tipo
+* @param $lang
+* @param $parent
+*/
+if($mode=='change_text_editor_lang') {
+
+	$vars = array('tipo','parent','section_tipo','lang');
+		foreach($vars as $name) $$name = common::setVar($name);
+	
+	if (empty($tipo)) die("Error Processing Request: Unable load component ! (Few vars1 tipo)");
+	if (empty($parent)) die("Error Processing Request: Unable load component ! (Few vars1 parent)");
+	if (empty($section_tipo)) die("Error Processing Request: Unable load component ! (Few vars1 section_tipo)");
+	if (empty($lang) ) die("Error Processing Request: Unable load component ! (Few vars1 lang)");
+
+	$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);	
+	$modo 		 = 'tool_transcription'; // Fixed always 'tool_transcription'
+	
+	# COMPONENT	
+	$component_obj	= component_common::get_instance($modelo_name,
+													 $tipo,
+													 $parent,
+													 $modo,
+													 $lang,
+													 $section_tipo);
+
+	# Set variant to configure 'identificador_unico' of current component
+	#$component_obj->set_variant( tool_lang::$target_variant );
+
+	# Get component html
+	$html = $component_obj->get_html();
+	
+	echo $html;
+	exit();
+
+}//end change_text_editor_lang
 
 
 

@@ -210,7 +210,7 @@ class component_filter extends component_common {
 	* Return component value sended to export data
 	* @return string $valor
 	*/
-	public function get_valor_export( $valor=null, $lang=DEDALO_DATA_LANG ) {
+	public function get_valor_export( $valor=null, $lang=DEDALO_DATA_LANG, $quotes, $add_id ) {
 			
 		if (is_null($valor)) {
 			$dato = $this->get_dato();				// Get dato from DB
@@ -219,7 +219,10 @@ class component_filter extends component_common {
 		}
 
 		$valor_export = $this->get_valor('html');
-		$valor_export = trim(str_replace('<br>',', ',$valor_export));
+		if (strlen($valor_export)) {
+			$valor_export = '·'.trim(str_replace('<br>', PHP_EOL.'·',$valor_export));
+			$valor_export = stripslashes($valor_export);
+		}
 
 		
 		if(SHOW_DEBUG) {
@@ -539,9 +542,28 @@ class component_filter extends component_common {
 		$component->set_dato($ar_val);
 		$valor = $component->get_valor();
 		
-		return $valor;
-		
+		return $valor;		
 	}#end render_list_value
+
+
+
+	/**
+	* GET_VALOR_LIST_HTML_TO_SAVE
+	* Usado por section:save_component_dato
+	* Devuelve a section el html a usar para rellenar el 'campo' 'valor_list' al guardar
+	* Por defecto será el html generado por el componente en modo 'list', pero en algunos casos
+	* es necesario sobre-escribirlo, como en component_portal, que ha de resolverse obigatoriamente en cada row de listado
+	*
+	* En este caso, usaremos únicamente el valor en bruto devuelto por el método 'get_dato_unchanged'
+	*
+	* @see class.section.php
+	* @return mixed $result
+	*/
+	public function get_valor_list_html_to_save() {
+		$result = $this->get_dato_unchanged();
+
+		return $result;
+	}//end get_valor_list_html_to_save
 
 
 

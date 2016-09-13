@@ -94,8 +94,9 @@
 			
 			#
 			# TD_FRAGMENT (av / image / ..)
-			$html_row .= "<td class=\"td_fragment\">";		
-			switch ($diffusion_obj->columns['related']) {
+			$html_row .= "<td class=\"td_fragment\">";
+			$column_related = isset($diffusion_obj->columns['related']) ? $diffusion_obj->columns['related'] : null;
+			switch ($column_related) {
 				case 'component_av':
 
 					# Indexation link

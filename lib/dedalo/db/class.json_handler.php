@@ -18,13 +18,15 @@ class json_handler {
 
 		$result = json_encode($value, $options);
  
-		if($result) {
+		if($result!==false) {
 			return $result;
 		}
  
 		if(SHOW_DEBUG) {
 			
 			$type = gettype($value);
+			dump($result, ' result ++ '.to_string());
+			dump($value, ' type ++ type: '.to_string($type));
 			trigger_error("json_handler GETTYPE: ".$type);
 
 				#dump($value, 'json_handler JSON encode value');
@@ -36,7 +38,9 @@ class json_handler {
 		}
 		
 		throw new RuntimeException(static::$_messages[json_last_error()]);
-	}
+	}//end encode
+
+
  
 	/**
 	* JSON DECODE
