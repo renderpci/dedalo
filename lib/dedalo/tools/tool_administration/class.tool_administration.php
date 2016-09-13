@@ -402,10 +402,16 @@ class tool_administration extends tool_common {
 				continue;
 			}
 
+<<<<<<< HEAD
 			#$ar_component_tipo = (array)RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($current_section_tipo, $modelo_name, 'children_recursive', $search_exact=true);
 			$ar_component_tipo = section::get_ar_children_tipo_by_modelo_name_in_section($current_section_tipo, array($modelo_name), $from_cache=true, $resolve_virtual=true, $recursive=true);
 			
+=======
+			#$ar_component_tipo =  (array)RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($current_section_tipo, $modelo_name, 'children_recursive', $search_exact=true);
+			$ar_component_tipo = section::get_ar_children_tipo_by_modelo_name_in_section($current_section_tipo, array($modelo_name), $from_cache=true, $resolve_virtual=true, $recursive=true);
+>>>>>>> origin/master
 
+			
 			if (!empty($ar_component_tipo)) {
 				$ar_modelo_tipo[$current_section_tipo] = $ar_component_tipo;
 				
