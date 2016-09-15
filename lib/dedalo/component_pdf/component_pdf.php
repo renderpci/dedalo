@@ -31,7 +31,7 @@
 	$pdf_url				= $this->get_pdf_url().'?t='.time();
 	$aditional_path			= $this->get_aditional_path();		
 	$initial_media_path		= $this->get_initial_media_path();
-	$file_exists 			= $this->get_file_exists();
+	
 
 	#
 	# PDF VIEVER URL
@@ -48,7 +48,7 @@
 		case 'edit' :
 				$id_wrapper 	= 'wrapper_'.$identificador_unico;
 				$component_info	= $this->get_component_info('json');
-				
+				$file_exists	= $this->get_file_exists();
 
 				# THUMB . Change temporally modo to get html
 				$this->modo 	= 'player';
@@ -59,27 +59,40 @@
 				break;		
 
 		case 'player':
+				$file_exists	= $this->get_file_exists();
 				#$iframe_url 	= DEDALO_ROOT_WEB . '/lib/pdfjs/web/dedalo_viewer.html?pdf_url='.$pdf_url;
 				$iframe_url 	= $pdf_viewer_url .'?pdf_url='. $pdf_url;				
 				break;
 
-		case 'thumb':				
+		case 'thumb':
+				$file_exists	= $this->get_file_exists();		
 				# Only show pdf icon						 
 				break;
 		
 		case 'print':
-		case 'portal_list':
+		case 'portal_list':				
 		case 'list_tm':
 				$file_name = 'list';									
 
 		case 'list':
-				$pdf_thumb = $file_exists ? $this->get_pdf_thumb() : null;				
+				#common::notify_load_lib_element_tipo('dd1018', 'component_pdf', $modo);
+
+				# FILE. Test if pdf file exists
+				$file_exists	= $this->get_file_exists();		
+
+				# THUMB. Not used in list	
+				# $pdf_thumb = $file_exists ? $this->get_pdf_thumb() : null;
+				$pdf_thumb 		= false;
+				
 				break;
 
 		case 'search':
-				return NULL;		
+				# Search input name
+				$search_input_name = $section_tipo.'_'.$tipo;
+				return null;		
 				break;											
 	}
+
 	
 	$page_html	= DEDALO_LIB_BASE_PATH .'/'. get_class($this) . '/html/' . get_class($this) . '_' . $file_name . '.phtml';
 	if( !include($page_html) ) {

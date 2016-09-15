@@ -57,6 +57,9 @@
 				$ar_logical_operators 	 = $this->build_search_logical_operators();
 
 				if(isset($_REQUEST[$tipo])) $dato = $_REQUEST[$tipo];
+
+				# Search input name
+				$search_input_name = $section_tipo.'_'.$tipo;
 				break;					
 	}
 	

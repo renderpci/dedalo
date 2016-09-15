@@ -45,6 +45,8 @@
 				break;
 		
 		case 'search':
+				# Search input name
+				$search_input_name = $section_tipo.'_'.$tipo;
 				break;
 						
 		case 'simple':

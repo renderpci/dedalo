@@ -5,13 +5,16 @@
 			
 	# CONTENIDO
 	$html_contenido  = '';
-	$html_contenido .= "<div class=\"list_thesaurus_icon order_list_thesaurus\" onclick=\"component_order.show_component_in_row_thesaurus(this)\"
+	$html_contenido .= "<div class=\"list_thesaurus_element order_list_thesaurus\" onclick=\"component_order.show_component_in_row_thesaurus(this)\"
 	data-section_tipo=\"$section_tipo\"
 	data-parent=\"$parent\"
 	data-tipo=\"$tipo\"
 	data-modo=\"edit\"
-	data-lang=\"$lang\"
-	>$value</div>";
+	data-lang=\"$lang\" ";
+	foreach ($render_vars as $rv_key => $rv_value) {
+		$html_contenido .= "data-{$rv_key}='{$rv_value}' ";
+	}
+	$html_contenido .= ">$value</div>";
 	
 	
 	# PRINT HTML

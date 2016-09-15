@@ -85,8 +85,6 @@ class records_search extends common {
 
 
 
-
-
 	/**
 	* GET_SEARCH_LIST_TIPO
 	*/
@@ -148,25 +146,59 @@ class records_search extends common {
 			}
 		}
 
-
+		
+		# AR_TERMINOS_RELACIONADOS iterate
 		foreach ($ar_terminos_relacionados as $current_element_tipo) {
 
 			$current_modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_element_tipo,true);
-
 			if( strpos($current_modelo_name, 'component_')!==false ) {
 
-				#$section_tipo = component_common::get_section_tipo_from_component_tipo($current_element_tipo);
-					#dump($section_tipo,'section_tipo current_element_tipo:'.$current_element_tipo);
+				# SECTION TIPO 
+				$current_section_tipo = $this->section_tipo;	// Default
 
-				# NOTA: Se pasará SIEMPRE '$this->section_tipo' como sección aunque el componente relacionado pertenezaca a otra sección (nombre del informante por ejemplo)
-				# Esto no es correcto pero no afecta el funcionamiento en este ámbito ya que los componentes no manejan datos en modo search
-				$ar_search_fields[$current_element_tipo] = component_common::get_instance($current_modelo_name,
-																						  $current_element_tipo,
-																						  NULL,
-																						  'search',
-																						  DEDALO_DATA_LANG,
-																						  $this->section_tipo);	#($tipo=NULL, $parent=NULL, $modo='edit', $lang=DEDALO_DATA_LANG)
-					#dump($ar_search_fields[$current_element_tipo],'$ar_search_fields[$current_element_tipo]');
+				if ($current_modelo_name=='component_portal') {
+					
+					$search_list = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($current_element_tipo, 'search_list', 'children'); //common::get_ar_related_by_model('search_list', $current_element_tipo);
+						#dump($search_list, ' search_list ++ '.to_string());
+					$search_list_ar_related = RecordObj_dd::get_ar_terminos_relacionados($search_list[0], true, true);
+						#dump($search_list_ar_related, ' $search_list_ar_related ++ '.to_string());
+
+					$ar_search_components = array();
+					$search_section_tipo  = null;
+					foreach ((array)$search_list_ar_related as $search_related_tipo) {
+						$search_modelo_name = RecordObj_dd::get_modelo_name_by_tipo($search_related_tipo,true);
+						switch (true) {
+							case ($search_modelo_name=='section'):
+								$search_section_tipo = $search_related_tipo;
+								break;
+							case (strpos($search_modelo_name, 'component_')!==false ):
+								$ar_search_components[$search_related_tipo] = $search_modelo_name;
+								break;
+							default:
+								debug_log(__METHOD__." Invalid search model $search_modelo_name . IGNORED ELEMENT".to_string(), logger::WARNING);
+								break;
+						}
+					}//end foreach ((array)$search_list_ar_related as $search_related_tipo) 
+					foreach ($ar_search_components as $search_component_tipo => $search_component_modelo_name) {					
+
+						$ar_search_fields[$search_component_tipo] = component_common::get_instance($search_component_modelo_name,
+																							  $search_component_tipo,
+																							  null,
+																							  'search',
+																							  DEDALO_DATA_LANG,
+																							  $search_section_tipo);
+					}
+					
+				}else{
+
+					$ar_search_fields[$current_element_tipo] = component_common::get_instance($current_modelo_name,
+																							  $current_element_tipo,
+																							  null,
+																							  'search',
+																							  DEDALO_DATA_LANG,
+																							  $current_section_tipo);	#($tipo=NULL, $parent=NULL, $modo='edit', $lang=DEDALO_DATA_LANG)
+				}
+				#dump($ar_search_fields[$current_element_tipo],'$ar_search_fields[$current_element_tipo]');
 			}
 		}
 		#dump($this->get_ar_components_search(),'$this->ar_components_search');

@@ -208,6 +208,8 @@ class component_relation_related extends component_relation_common {
 		if ( empty($search_value) ) {
 			return $search_query;
 		}
+		$json_field = 'a.'.$json_field; // Add 'a.' for mandatory table alias search
+		
 		switch (true) {
 			case $comparison_operator=='=':
 				$search_query = " {$json_field}#>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}' @> '[$search_value]'::jsonb ";
@@ -311,10 +313,10 @@ class component_relation_related extends component_relation_common {
 		# Temporal
 		if($locator->section_tipo == $this->section_tipo) {
 
-			$tipo 		 	= DEDALO_HIERARCHY_TERM_TIPO;; // input text
+			$tipo 		 	= DEDALO_THESAURUS_TERM_TIPO;; // input text
 			$parent 		= $locator->section_id;
 			$section_tipo 	= $locator->section_tipo;
-			$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($tipo);
+			$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 			$component 		= component_common::get_instance( $modelo_name,
 															  $tipo,
 															  $parent,

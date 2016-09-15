@@ -78,10 +78,10 @@ class component_relation_common extends component_common {
 		# Temporal
 		if( RecordObj_dd::get_prefix_from_tipo($locator->section_tipo)==RecordObj_dd::get_prefix_from_tipo($this->section_tipo)) {		
 
-			$tipo 		 	= DEDALO_HIERARCHY_TERM_TIPO; // input_text
+			$tipo 		 	= DEDALO_THESAURUS_TERM_TIPO; // input_text
 			$parent 		= $locator->section_id;
 			$section_tipo 	= $locator->section_tipo;
-			$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($tipo);
+			$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 			$component 		= component_common::get_instance( $modelo_name,
 															  $tipo,
 															  $parent,

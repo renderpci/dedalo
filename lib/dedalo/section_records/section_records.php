@@ -139,6 +139,28 @@
 				
 				break;
 
+		case 'list_thesaurus':
+
+				#include_once(DEDALO_LIB_BASE_PATH . '/section_records/rows_header/class.rows_header.php');
+				include_once(DEDALO_LIB_BASE_PATH . '/section_records/rows/class.rows.php');
+			
+				$section_list_tipo = key($this->rows_obj->options->layout_map);				
+				
+				#
+				# ROWS TABLE HTML
+					
+					# HEADER HTML (TH)
+					#$rows_header 			= new rows_header($this, $modo);
+					#$rows_header_html		= $rows_header->get_html();
+					$rows_header_html 		= $this->options->rows_header_html;
+				
+
+					# ROWS HTML (TD)
+					$rows 					= new rows($this, $modo);
+					$rows_html				= $rows->get_html();
+				
+				break;
+
 	}//end switch($modo)
 
 	

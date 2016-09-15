@@ -58,7 +58,7 @@ class tool_transcription extends tool_common {
 		*/
 		# Verify modelo
 		/*
-		$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($ar_terminos_relacionados[0]);
+		$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($ar_terminos_relacionados[0],true);
 		if ($modelo_name!='component_text_area') {
 			throw new Exception("Component related tipo is invalid (only 'component_text_area' is accepted). Please configure dependencies", 1);			
 		}

@@ -233,7 +233,7 @@ class component_autocomplete extends component_common {
 
 			foreach ($fields as $current_tipo) {				
 			
-				$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($current_tipo);
+				$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
 				$component 		= component_common::get_instance($modelo_name,
 																 $current_tipo,
 																 $section_id,
@@ -421,6 +421,9 @@ class component_autocomplete extends component_common {
 		if ( empty($search_value) ) {
 			return $search_query;
 		}
+
+		$json_field = 'a.'.$json_field; // Add 'a.' for mandatory table alias search
+
 		switch (true) {
 			case $comparison_operator=='=':
 				$search_query = " $json_field#>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}' @> '[$search_value]'::jsonb ";
@@ -776,6 +779,17 @@ class component_autocomplete extends component_common {
 		return $result;		
 	}//end get_valor_list_html_to_save
 	*/
+
+
+
+	/**
+	* GET_ORDER_BY_LOCATOR
+	* OVERWRITE COMPONENT COMMON METHOD
+	* @return bool
+	*/
+	public static function get_order_by_locator() {
+		return true;
+	}//end get_order_by_locator
 
 }
 ?>

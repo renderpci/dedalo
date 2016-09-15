@@ -234,18 +234,25 @@ class component_radio_button extends component_common {
 		if ( empty($search_value) ) {
 			return $search_query;
 		}
+
+		$json_field = 'a.'.$json_field; // Add 'a.' for mandatory table alias search
+		
 		switch (true) {
-			case $comparison_operator=='=':
-				$search_query = " $json_field#>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}' @> '[$search_value]'::jsonb ";
-				break;
 			case $comparison_operator=='!=':
-				$search_query = " ($json_field#>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}' @> '[$search_value]'::jsonb)=FALSE ";
+				$search_query = " ($json_field#>'{components,$search_tipo,$tipo_de_dato_search,". $current_lang ."}' @> '[$search_value]'::jsonb)=FALSE ";
 				break;
+
+			case $comparison_operator=='=':
+			default:
+				$search_query = " $json_field#>'{components,$search_tipo,$tipo_de_dato_search,". $current_lang ."}' @> '[$search_value]'::jsonb ";
+				break;
+			
 		}
 		
 		if(SHOW_DEBUG) {
 			$search_query = " -- filter_by_search $search_tipo ". get_called_class() ." \n".$search_query;
 			#dump($search_query, " search_query for search_value: ".to_string($search_value)); #return '';
+			#dump($comparison_operator, '$comparison_operator ++ '.to_string());
 		}
 		return $search_query;
 	}//end get_search_query
@@ -304,6 +311,17 @@ class component_radio_button extends component_common {
 
 		return $result;		
 	}//end get_valor_list_html_to_save
+
+
+
+	/**
+	* GET_ORDER_BY_LOCATOR
+	* OVERWRITE COMPONENT COMMON METHOD
+	* @return bool
+	*/
+	public static function get_order_by_locator() {
+		return true;
+	}//end get_order_by_locator
 
 
 

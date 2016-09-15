@@ -502,7 +502,7 @@ class tool_import_bibtex extends tool_common {
 					$component_tipo	 		= key($propiedades_current_setion->filtered_by);
 						#dump($propiedades_current_setion," propiedades_current_setion - component_tipo: $component_tipo");					
 					$component_dato 		= $propiedades_current_setion->filtered_by->$component_tipo;
-					$component_modelo_name  = RecordObj_dd::get_modelo_name_by_tipo($component_tipo);
+					$component_modelo_name  = RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
 					$current_component 		= component_common::get_instance($component_modelo_name, $component_tipo, $parent, 'edit', DEDALO_DATA_NOLAN, $section_tipo);
 					$current_component->set_dato($component_dato);
 					#$current_component->Save();

@@ -230,7 +230,7 @@ class component_portal extends component_common {
 			
 			foreach ($fields as $current_tipo) {				
 			
-				$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($current_tipo);
+				$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
 				$component 		= component_common::get_instance($modelo_name,
 																 $current_tipo,
 																 $section_id,
@@ -1311,7 +1311,6 @@ class component_portal extends component_common {
 		$html = $component->get_html();		
 
 		return $component->get_html();
-
 	}#end render_list_value
 
 	
@@ -1370,7 +1369,6 @@ class component_portal extends component_common {
 		$this->ar_columns = $ar_columns;
 		
 		return $this->ar_columns;
-
 	}//end get_ar_columns
 
 
@@ -1391,7 +1389,18 @@ class component_portal extends component_common {
 		$result = $this->get_dato_unchanged();
 
 		return $result;		
-	}//end get_valor_list_html_to_save	
+	}//end get_valor_list_html_to_save
+
+
+
+	/**
+	* GET_ORDER_BY_LOCATOR
+	* OVERWRITE COMPONENT COMMON METHOD
+	* @return bool
+	*/
+	public static function get_order_by_locator() {
+		return true;
+	}//end get_order_by_locator
 
 	
 	

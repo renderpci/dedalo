@@ -108,7 +108,7 @@ class component_pdf extends component_common {
 		if (isset($propiedades->aditional_path)) {
 
 			$component_tipo 	= $propiedades->aditional_path;
-			$component_modelo 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo);
+			$component_modelo 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
 
 			$component 	= component_common::get_instance($component_modelo, $component_tipo, $this->parent, 'edit', DEDALO_DATA_NOLAN, $this->section_tipo);
 			$dato 		= trim($component->get_dato());			
@@ -547,15 +547,16 @@ class component_pdf extends component_common {
 	*/
 	public static function render_list_value($value, $tipo, $parent, $modo, $lang, $section_tipo, $section_id) {
 		
-		$modelo_name = 'component_pdf';
-		$component 	 = component_common::get_instance($modelo_name,
-													  $tipo,
-													  $parent,
-													  $modo,
-													  $lang,
-													  $section_tipo);
-		$value = $component->get_html();
-
+		#if (empty($value)) {	
+			$modelo_name = 'component_pdf';
+			$component 	 = component_common::get_instance($modelo_name,
+														  $tipo,
+														  $parent,
+														  $modo,
+														  $lang,
+														  $section_tipo);
+			$value = $component->get_html();
+		#}
 		return $value;
 
 	}#end render_list_value

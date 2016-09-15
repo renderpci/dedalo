@@ -355,6 +355,9 @@ class component_layout extends component_common {
 				# LOG
 				#$log = logger::get_instance();
 				#$log->log_message("Loaded layout_map for search tipo $section_tipo " , logger::DEBUG, __METHOD__);
+				
+				# Search input name
+				$search_input_name = $section_tipo.'_'.$tipo;
 				break;
 			
 			default:

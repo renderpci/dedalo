@@ -26,7 +26,7 @@ if(login::is_logged()!==true) {
 	$permissions			= common::get_permissions($section_tipo,$tipo);
 	$tool_name 				= get_class($this);
 	$modo 					= $this->get_modo();
-	$modelo_name 			= RecordObj_dd::get_modelo_name_by_tipo($tipo);
+	$modelo_name 			= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 
 	$ar_m 		= explode('_', $modelo_name);
 	$media_type	= $ar_m[1];	# like 'av' from component_av

@@ -149,6 +149,8 @@
 
 		case 'search' :	
 					return print "<br> $component_name. working here..";
+					# Search input name
+					$search_input_name = $section_tipo.'_'.$tipo;
 					break;
 
 		case 'list_tm' :

@@ -2716,6 +2716,8 @@ abstract class component_common extends common {
 		
 		if (empty($search_value)) return false;
 
+		$json_field = 'a.'.$json_field; // Add 'a.' for mandatory table alias search
+
 		$search_query='';
 		switch (true) {
 			case ($comparison_operator=='ILIKE' || $comparison_operator=='LIKE'):
@@ -2725,21 +2727,21 @@ abstract class component_common extends common {
 				if ( $search_value[0] == $separator ) {
 					// Begin with * like
 					$search_value = str_replace($separator, '', $search_value);
-					$search_query = " {$json_field}#>>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}' $comparison_operator '%$search_value' ";
+					$search_query = " unaccent({$json_field}#>>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}') $comparison_operator '%$search_value' ";
 				
 				}else if ( $search_value[strlen($search_value) - 1] == $separator ) {
 					// End with *
 					$search_value = str_replace($separator, '', $search_value);
-					$search_query = " {$json_field}#>>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}' $comparison_operator '$search_value%' ";
+					$search_query = " unaccent({$json_field}#>>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}') $comparison_operator '$search_value%' ";
 					
 				}else{
 					// Contain
 					$search_value = str_replace($separator, '', $search_value);
-					$search_query = " {$json_field}#>>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}' $comparison_operator '%$search_value%' ";
+					$search_query = " unaccent({$json_field}#>>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}') $comparison_operator '%$search_value%' ";
 				}
 				break;
 			case ($comparison_operator=='=' || $comparison_operator=='!='):
-				$search_query = " {$json_field}#>>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}' $comparison_operator '$search_value' ";
+				$search_query = " unaccent({$json_field}#>>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}') $comparison_operator '$search_value' ";
 				break;
 
 			case ($comparison_operator=='IS NULL' || $comparison_operator=='IS NOT NULL'):
@@ -2750,12 +2752,12 @@ abstract class component_common extends common {
 					$comparison_operator2 = '!=';
 					$union_operator = 'AND';
 				}
-				$search_query = " (({$json_field}#>>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}') $comparison_operator $union_operator ";
-				$search_query .= "({$json_field}#>>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}') $comparison_operator2 '' )";
+				$search_query = " ({$json_field}#>>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}') $comparison_operator $union_operator ";
+				$search_query .= " {$json_field}#>>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}') $comparison_operator2 '' )";
 				break;
 
 			default:
-				$search_query = " {$json_field}#>>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}' $comparison_operator '%$search_value%' ";
+				$search_query = " unaccent({$json_field}#>>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}') $comparison_operator '%$search_value%' ";
 				break;
 		}
 		
@@ -3136,6 +3138,16 @@ abstract class component_common extends common {
 		
 		return (string)$html;
 	}//end get_valor_list_html_to_save
+
+
+
+	/**
+	* GET_ORDER_BY_LOCATOR
+	* @return bool
+	*/
+	public static function get_order_by_locator() {
+		return false;
+	}//end get_order_by_locator
 
 
 

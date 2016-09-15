@@ -509,6 +509,15 @@ abstract class RecordDataBoundObject {
 									$strQuery .= 'AND ('. substr($strQuery_temp, 0,-4) .') ';
 									break;
 
+				case (strpos($key,':unaccent_begins_or')!==false):
+									$campo = substr($key, 0, strpos($key,':unaccent_begins_or'));
+									$strQuery_temp ='';
+									if(is_array($value)) foreach ($value as $value_string) {
+										$strQuery_temp .= "unaccent($campo) ILIKE unaccent('{$value_string}%') OR ";
+									}
+									$strQuery .= 'AND ('. substr($strQuery_temp, 0,-4) .') ';
+									break;
+
 				# begins_or (foramto begins_or:or= array('DEDALO_DATA_LANG',DEDALO_DATA_NOLAN))
 				case (strpos($key,':begins_or')!==false):
 									$campo = substr($key, 0, strpos($key,':begins_or'));
@@ -517,7 +526,7 @@ abstract class RecordDataBoundObject {
 										$strQuery_temp .= "$campo ILIKE '{$value_string}%' OR ";
 									}
 									$strQuery .= 'AND ('. substr($strQuery_temp, 0,-4) .') ';
-									break;
+									break;				
 				# LIMIT
 				case ($key=='sql_limit'):
 									$strQuery_limit = "LIMIT $value ";

@@ -58,14 +58,14 @@ class component_section_id extends component_common {
 					$first_val  = !empty($ar_parts[0]) ? intval($ar_parts[0]) : 0;
 					$second_val = !empty($ar_parts[1]) ? intval($ar_parts[1]) : $first_val;
 
-					$search_query = " section_id $comparison_operator $first_val AND $second_val ";
+					$search_query = " a.section_id $comparison_operator $first_val AND $second_val ";
 				}else{
-					$search_query = " section_id = ". intval($search_value);
+					$search_query = " a.section_id = ". intval($search_value);
 				}
 				break;
 			
 			default:
-				$search_query = " section_id $comparison_operator " . intval($search_value).' ';
+				$search_query = " a.section_id $comparison_operator " . intval($search_value).' ';
 				break;
 		}
 		

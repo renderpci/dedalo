@@ -312,7 +312,7 @@ class component_image extends component_common {
 
 				case (is_string($propiedades->aditional_path)):
 					$component_tipo 	= $propiedades->aditional_path;
-					$component_modelo 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo);
+					$component_modelo 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
 
 					$component 	= component_common::get_instance($component_modelo,
 																 $component_tipo,

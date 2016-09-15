@@ -43,6 +43,32 @@
 		echo "<br><div>Total render row_thesaurus: $total ms</div>";
 		*/
 
+		#echo $rows_list_html;
+
+		$html='';
+		$html .= "<ul>";
+		foreach ($ar_hierarchy_typologies->result as $ar_value) foreach($ar_value as $key => $row) {
+			#dump($row, ' row ++ '.to_string());
+
+			$tipology_section_id   	= $row['section_id'];
+			$tipology_section_tipo 	= $row['section_tipo'];
+			$tipology_name 			= $row[area_thesaurus::$typologies_name_tipo];		
+
+			$html .= "<li>";
+			$options = $this->get_options_for_row($tipology_section_tipo, $tipology_section_id);
+
+			# ROWS_HEADER_HTML
+			$options->rows_header_html = "<div> <strong> ".strip_tags($tipology_name)."</strong></div>";
+
+			$section_rows 	= new section_records(DEDALO_HIERARCHY_SECTION_TIPO, $options);
+			$html .= $section_rows->get_html();
+			$html .= "</li>";
+
+		}//end foreach ($ar_hierarchy_typologies->result as $ar_value) foreach($ar_value as $key => $row)
+		$html .= "</ul>";
+
+		echo $html;
+
 	
 	
 	# ETIQUETA (LABEL)

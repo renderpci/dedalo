@@ -120,13 +120,13 @@
 		$ar_ts_childrens_resource 		= $area_resource->get_ar_ts_children_areas($include_main_tipo);
 
 		# AREA_THESAURUS
-		/*
+		/**/
 		$current_tipo 					= RecordObj_dd::get_ar_terminoID_by_modelo_name('area_thesaurus')[0];
 		$area_resource 					= new area_resource($current_tipo);
 		$ar_ts_childrens_thesaurus 		= $area_resource->get_ar_ts_children_areas($include_main_tipo);
 			#dump($ar_ts_childrens_thesaurus," ar_ts_childrens_thesaurus");
-			*/
-		$ar_ts_childrens_thesaurus 		= array();
+			
+		#$ar_ts_childrens_thesaurus 		= array();
 
 		# AREA_TOOLS
 		if (isset(RecordObj_dd::get_ar_terminoID_by_modelo_name('area_tool')[0])) {

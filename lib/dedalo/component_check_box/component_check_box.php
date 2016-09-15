@@ -47,6 +47,9 @@
 					$ar_list_of_values  = $this->get_ar_list_of_values(DEDALO_DATA_LANG, null);
 					$ar_comparison_operators 	= $this->build_search_comparison_operators();
 					$ar_logical_operators 		= $this->build_search_logical_operators();
+
+					# Search input name
+					$search_input_name = $section_tipo.'_'.$tipo;
 					break;
 		
 		case 'portal_list' :

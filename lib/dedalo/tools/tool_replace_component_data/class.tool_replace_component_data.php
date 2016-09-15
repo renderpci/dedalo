@@ -47,7 +47,7 @@ class tool_replace_component_data extends tool_common {
 
 		$tipo 			= $this->component_obj->get_tipo();
 		$section_tipo 	= $this->component_obj->get_section_tipo();
-		$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($tipo);
+		$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 		$lang 			= $this->component_obj->get_traducible()=='no' ? DEDALO_DATA_NOLAN : DEDALO_DATA_LANG ;
 		#dump($this->component_obj, '$this->component_obj'.to_string());	 	
 	

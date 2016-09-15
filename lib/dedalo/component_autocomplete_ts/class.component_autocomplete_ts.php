@@ -473,7 +473,8 @@ class component_autocomplete_ts extends component_common {
 		$arguments['strPrimaryKeyName']	= 'parent';		
 
 		#$arguments['dato:begins']		= $string_to_search;
-		$arguments['dato:begins_or']	= array($string_to_search, ucfirst($string_to_search) );
+		#$arguments['dato:begins_or']	= array($string_to_search, ucfirst($string_to_search) );
+		$arguments['dato:unaccent_begins_or']	= array($string_to_search);
 		# INDEX
 		# CREATE INDEX dato_index ON matrix_descriptors USING gin(to_tsvector('english', dato));
 		# SEARCH EXAMPLE
@@ -492,9 +493,9 @@ class component_autocomplete_ts extends component_common {
 		switch ($source_mode) {
 			case 'jer_tipo':
 				$ar_prefijos = array();
-				foreach ($ar_referenced_tipo as $current_tipo) {					
-					$ar_prefijos[] = $current_tipo
-					;
+				foreach ($ar_referenced_tipo as $current_tipo) {
+					$current_tipo = RecordObj_dd::get_prefix_from_tipo($current_tipo);	// Esto irá más lento pero se deja hasta que el tesauro se porte completamente al nuevo modelo		
+					$ar_prefijos[] = $current_tipo;
 				}
 				$arguments['parent:begins_or']	= $ar_prefijos;
 				$prefix = substr( reset($ar_referenced_tipo), 0, 2 );
@@ -502,10 +503,12 @@ class component_autocomplete_ts extends component_common {
 			case 'childrens_of':
 				$ar_prefijos = array();
 				foreach ($ar_referenced_tipo as $current_tipo) {
+					$current_tipo = RecordObj_dd::get_prefix_from_tipo($current_tipo); // Esto irá más lento pero se deja hasta que el tesauro se porte completamente al nuevo modelo
 					$ar_prefijos[] = $current_tipo;
 				}
 				$arguments['parent:or'] = $ar_prefijos;
-				$prefix = substr( reset($ar_referenced_tipo), 0, 2 );
+				#$prefix = substr( reset($ar_referenced_tipo), 0, 2 );
+				$prefix = RecordObj_dd::get_prefix_from_tipo( reset($ar_referenced_tipo) ); // Esto irá más lento pero se deja hasta que el tesauro se porte completamente al nuevo modelo
 				break;
 			default:
 				debug_log(__METHOD__." Invalid filter mode ".to_string($source_mode), logger::ERROR);
@@ -641,17 +644,12 @@ class component_autocomplete_ts extends component_common {
 				return false;
 			}
 
+		$json_field = 'a.'.$json_field; // Add 'a.' for mandatory table alias search
+
 		$search_query='';
 		# Fixed
 		$tipo_de_dato_search='dato_search';
 		switch (true) {
-			case $comparison_operator=='=':
-				foreach ((array)$search_value as $current_value) {
-					$current_value = json_encode($current_value);
-					$search_query .= " $json_field#>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}' @> '[$current_value]'::jsonb OR \n";
-				}
-				$search_query = substr($search_query, 0,-5);
-				break;
 			case $comparison_operator=='!=':
 				foreach ((array)$search_value as $current_value) {
 					$current_value = json_encode($current_value);
@@ -659,6 +657,15 @@ class component_autocomplete_ts extends component_common {
 				}
 				$search_query = substr($search_query, 0,-5);
 				break;
+
+			case $comparison_operator=='=':
+			default:
+				foreach ((array)$search_value as $current_value) {
+					$current_value = json_encode($current_value);
+					$search_query .= " $json_field#>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}' @> '[$current_value]'::jsonb OR \n";
+				}
+				$search_query = substr($search_query, 0,-5);
+				break;			
 		}
 		
 		if(SHOW_DEBUG) {
@@ -719,6 +726,17 @@ class component_autocomplete_ts extends component_common {
 		return (string)$html;
 	}//end get_valor_list_html_to_save
 	*/
+
+
+
+	/**
+	* GET_ORDER_BY_LOCATOR
+	* OVERWRITE COMPONENT COMMON METHOD
+	* @return bool
+	*/
+	public static function get_order_by_locator() {
+		return true;
+	}//end get_order_by_locator
 
 
 

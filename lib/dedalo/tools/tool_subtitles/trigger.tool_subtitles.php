@@ -35,7 +35,7 @@ if ($mode=='build_subtitles_text') {
 		$line_lenght = 90;
 	}
 
-	$modelo_name   	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo);
+	$modelo_name   	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
 	$component_obj 	= component_common::get_instance($modelo_name, $component_tipo, $section_id, 'edit', DEDALO_DATA_LANG, $section_tipo);
 	$tool_subtitles = new tool_subtitles($component_obj);
 

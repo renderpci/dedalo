@@ -74,7 +74,7 @@ abstract class filter {
 				case ($options->section_tipo===DEDALO_SECTION_PROJECTS_TIPO) :							
 					$sql_filter .= "\n-- filter_user_created -- \n";
 					$sql_filter .= 'AND (';
-					$sql_filter .= "\n $options->json_field @>'{\"created_by_userID\":".navigator::get_user_id()."}'::jsonb \n";
+					$sql_filter .= "\n a.$options->json_field @>'{\"created_by_userID\":".navigator::get_user_id()."}'::jsonb \n";
 
 					# Current user authorized areas
 					$component_filter_master = component_common::get_instance('component_filter_master', DEDALO_FILTER_MASTER_TIPO, navigator::get_user_id(), 'list', DEDALO_DATA_NOLAN, DEDALO_SECTION_USERS_TIPO);
@@ -83,7 +83,7 @@ abstract class filter {
 					if (!empty($filter_master_dato)) {
 						$ar_values 			= array_keys($filter_master_dato);
 						$ar_values_string 	= implode(',', $ar_values);
-						$sql_filter .= " OR section_id IN ($ar_values_string)";
+						$sql_filter .= " OR a.section_id IN ($ar_values_string)";
 					}
 					$sql_filter .= "\n)";			
 					break;
@@ -94,8 +94,8 @@ abstract class filter {
 					# AREAS FILTER
 					$user_id = navigator::get_user_id();
 					$sql_filter .= "\n-- filter_users_by_profile_areas -- \n";
-					$sql_filter .= 'AND section_id>0 AND ';
-					$sql_filter .= "\n $options->json_field @>'{\"created_by_userID\":".$user_id."}'::jsonb OR \n";
+					$sql_filter .= 'AND a.section_id>0 AND ';
+					$sql_filter .= "\n a.$options->json_field @>'{\"created_by_userID\":".$user_id."}'::jsonb OR \n";
 					$sql_filter .= '((';
 					# Editing users. Use user areas as filter
 	
@@ -143,7 +143,7 @@ abstract class filter {
 						#dump($ar_profile_id, ' $ar_profile_id ++ '.to_string($profile_sql)); die();
 
 					foreach ($ar_profile_id as $current_profile_id) {
-						$sql_filter.= "\n $options->json_field#>'{components, ".DEDALO_USER_PROFILE_TIPO.", dato, ". DEDALO_DATA_NOLAN ."}' = '$current_profile_id' ";
+						$sql_filter.= "\n a.$options->json_field#>'{components, ".DEDALO_USER_PROFILE_TIPO.", dato, ". DEDALO_DATA_NOLAN ."}' = '$current_profile_id' ";
 						if ($current_profile_id != end($ar_profile_id)) $sql_filter .= "OR";
 					}					
 					$sql_filter .= "\n)";
@@ -172,7 +172,7 @@ abstract class filter {
 					}
 					$ar_values_string = substr($ar_values_string,0,-1);
 					$sql_filter .= "\n-- filter_by_projects -- \n";
-					$sql_filter .= "AND $options->json_field#>'{components,".DEDALO_FILTER_MASTER_TIPO.",dato,". DEDALO_DATA_NOLAN ."}' ?| array[$ar_values_string] ";
+					$sql_filter .= "AND a.$options->json_field#>'{components,".DEDALO_FILTER_MASTER_TIPO.",dato,". DEDALO_DATA_NOLAN ."}' ?| array[$ar_values_string] ";
 					$sql_filter .= ')';
 						#dump($sql_filter, ' $sql_filter ++ '.to_string());
 					break;
@@ -195,7 +195,7 @@ abstract class filter {
 
 					$ar_id_project = (array)array_keys( (array)$options->projects );
 					if (empty($ar_id_project)) {
-						$sql_filter .= "\n $options->json_field#>'{components, $component_filter_tipo, dato, ". DEDALO_DATA_NOLAN ."}'->>'' = 'VALOR_IMPOSIBLE (User without projects)' ";
+						$sql_filter .= "\n a.$options->json_field#>'{components, $component_filter_tipo, dato, ". DEDALO_DATA_NOLAN ."}'->>'' = 'VALOR_IMPOSIBLE (User without projects)' ";
 					}else{
 						$sql_filter .= '(';						
 						$ar_values_string='';		
@@ -203,8 +203,8 @@ abstract class filter {
 							$ar_values_string .= "'{$id_matrix_project}'";
 							if ($id_matrix_project != end($ar_id_project)) $ar_values_string .= ',';
 						}
-						$sql_filter .= "\n $options->json_field#>'{components,$component_filter_tipo,dato,". DEDALO_DATA_NOLAN ."}' ?| array[$ar_values_string] OR ";
-						$sql_filter .= "\n $options->json_field @>'{\"created_by_userID\":".navigator::get_user_id()."}'::jsonb ";
+						$sql_filter .= "\n a.$options->json_field#>'{components,$component_filter_tipo,dato,". DEDALO_DATA_NOLAN ."}' ?| array[$ar_values_string] OR ";
+						$sql_filter .= "\n a.$options->json_field @>'{\"created_by_userID\":".navigator::get_user_id()."}'::jsonb ";
 						$sql_filter .= "\n)";
 					}
 					break;

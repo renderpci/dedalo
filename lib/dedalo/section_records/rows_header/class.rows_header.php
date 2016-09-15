@@ -77,6 +77,17 @@ class rows_header extends common {
 		#dump($this->section_records_obj->rows_obj->options,"GLOBAL OPTIONS");
 		#dump($options,"CURRENT OPTIONS");
 
+
+		# Add order_by_locator value
+		$options->order_by_locator = false;
+		if($tipo!='section_id') {
+			$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+				#dump($modelo_name, ' $modelo_name ++ '.to_string($tipo));
+			$options->order_by_locator = (bool)$modelo_name::get_order_by_locator();
+		}
+		
+
+
 		if ( strpos($order_by, $tipo)!==false && strpos($order_by, 'DESC')!==false ) {
 			# Flecha UP
 			$options->order_by = "$tipo ASC";

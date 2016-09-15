@@ -53,31 +53,80 @@
 
 
 					# ELEMENTS
-					dump($ar_elements, ' ar_elements ++ '.to_string());
+					# dump($ar_elements, ' ar_elements ++ '.to_string());
 					$html_content .= "<div class=\"elements_container\">";
-					foreach ($ar_elements as $element_tipo => $render_vars) {
-						
-						$modelo_name 	 = RecordObj_dd::get_modelo_name_by_tipo($element_tipo);
-						$component 		 = component_common::get_instance($modelo_name,
+
+						# OPTIONAL ELEMENTS
+						# dump($ar_elements, ' ar_elements ++ '.to_string());
+					 	$start_all_time = microtime(1);
+						foreach ($ar_elements as $k_element_tipo => $current_object) {
+
+							if(SHOW_DEBUG) {
+								$start_time = microtime(1);
+							}
+
+							$element_tipo= key($current_object);
+							$render_vars = $current_object->{$element_tipo};
+							
+							$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($element_tipo,true);
+							$component 	 = component_common::get_instance($modelo_name,
 																		  $element_tipo,
 																		  $section_id,
 																		  $modo='list_thesaurus',
 																		  $lang=DEDALO_DATA_LANG,
-																		  $section_tipo);			
-						$component->set_render_vars( $render_vars );
-						$html = $component->get_html();
-						$html_content .= $html;					
-					}
+																		  $section_tipo);
+							/*
+							# Fix order when we iterate over component_order
+							if ($modelo_name=='component_order') {
+								$dato = $component->get_dato();
+								if (!empty($dato)) {
+									$this->set_order( $component->get_dato() );
+								}								
+							}
+							*/
+
+							$component->set_render_vars( $render_vars );
+							$html = $component->get_html();
+							$html_content .= $html;
+							
+							if(SHOW_DEBUG) {
+								$total=round(microtime(1)-$start_time,6)*1000;
+								$ar_execution[] = " $element_tipo - $modelo_name : $total ms";
+							}
+						}
+
+						if(SHOW_DEBUG) {
+							$total_all_time=round(microtime(1)-$start_all_time,6)*1000;
+							#dump($ar_execution, ' ar_execution ++ '.to_string($total_all_time.' ms'));
+						}
+
+						# FIXED ELEMENTS
+						/*
+							$component 		 = component_common::get_instance('component_relation_children',
+																			  $element_tipo,
+																			  $section_id,
+																			  $modo='list_thesaurus',
+																			  $lang=DEDALO_DATA_LANG,
+																			  $section_tipo);
+
+							$component->set_render_vars( $render_vars );
+							$html = $component->get_html();
+							$html_content .= $html;
+							 */
+
 					$html_content .= "</div>";//end elements_container
 
 				
-					# DATA CONTAINER 
+					# DATA CONTAINER
+					# Common container div where components load the html code
 					$html_content .= '<div class="data_container"></div>';
 
 					# CONTAINER CHILDRENS
-					$html_content .= '<div class="childrens_container">'.$childrens_html.'</div>';
+					# Especific container for childrens html
+					$html_content .= '<div class="childrens_container" data-role="childrens_container">'.$childrens_html.'</div>';
 
 					# CONTAINER INDEXATIONS
+					# Especific container for indexations html
 					$html_content .= '<div class="indexations_container">'.$indexations_html.'</div>';
 
 					break;

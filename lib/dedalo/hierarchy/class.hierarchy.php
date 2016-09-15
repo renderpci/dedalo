@@ -667,7 +667,7 @@ class hierarchy {
 				#{"lat":"39.462571","lon":"-0.376295","zoom":17}
 				if($tipo == 'altitude'){
 
-					$modelo_name = RecordObj_dd::get_modelo_name_by_tipo('hierarchy31');
+					$modelo_name = RecordObj_dd::get_modelo_name_by_tipo('hierarchy31',true);
 					$component = component_common::get_instance($modelo_name,
 																	  'hierarchy31',
 																	  $id,
@@ -692,7 +692,7 @@ class hierarchy {
 
 					$datos = explode(",", $dato); 
 
-					$modelo_name = RecordObj_dd::get_modelo_name_by_tipo('hierarchy31');
+					$modelo_name = RecordObj_dd::get_modelo_name_by_tipo('hierarchy31',true);
 					$component = component_common::get_instance($modelo_name,
 																	  'hierarchy31',
 																	  $id,
@@ -790,7 +790,7 @@ class hierarchy {
 		}
 
 		$modo ='edit';
-		$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($tipo);
+		$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 		$component = component_common::get_instance($modelo_name,
 														  $tipo,
 														  $parent,

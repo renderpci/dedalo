@@ -77,7 +77,12 @@ define('DEDALO_HIERARCHY_ACTIVE_TIPO'					, 'hierarchy4');
 define('DEDALO_HIERARCHY_LANG_TIPO'						, 'hierarchy8');
 define('DEDALO_HIERARCHY_TIPOLOGY_TIPO'					, 'hierarchy9');
 define('DEDALO_HIERARCHY_TLD2_TIPO'						, 'hierarchy6');
-define('DEDALO_HIERARCHY_TERM_TIPO'						, 'hierarchy25');
+define('DEDALO_HIERARCHY_TERM_TIPO'						, 'hierarchy5');
+define('DEDALO_HIERARCHY_CHIDRENS_TIPO'					, 'hierarchy45');
+define('DEDALO_HIERARCHY_ORDER_TIPO'					, 'hierarchy48');
+
+# Thesaurus real section
+define('DEDALO_THESAURUS_TERM_TIPO'						, 'hierarchy25');
 
 # Relation types
 define('DEDALO_RELATION_TYPE_PARENT_TIPO'				, 'dd47');

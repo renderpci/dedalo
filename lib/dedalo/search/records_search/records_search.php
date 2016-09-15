@@ -5,7 +5,6 @@
 	$section_tipo 					= $this->section_tipo;	
 	$permissions					= common::get_permissions($section_tipo, $this->search_list_tipo);	
 	
-	
 
 	#
 	# OPTIONS CUSTOM
@@ -20,7 +19,7 @@
 			$search_options_session_key = 'section_'.$context->tool_section_tipo;
 			break;
 		default:
-			$search_options_session_key	= 'section_'.$section_tipo;			
+			$search_options_session_key	= 'section_'.$section_tipo;		
 			break;
 	}
 
@@ -92,6 +91,7 @@
 		case 'list':
 				# FIELDS
 				$ar_search_fields = $this->get_ar_search_fields();
+					#dump($ar_search_fields, ' $ar_search_fields ++ '.to_string());
 
 				# BUTTONS						
 				$ar_tools_search = $this->get_ar_tools_search();

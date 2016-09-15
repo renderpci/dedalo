@@ -54,6 +54,9 @@
 		case 'search'	:	
 				# Force file_name to 'list'
 				$file_name 	= 'list';
+
+				# Search input name
+				$search_input_name = $section_tipo.'_'.$tipo;
 				break;
 						
 		case 'list_tm' :

@@ -179,7 +179,7 @@ class component_filter_master extends component_common {
 
 
 		// Resolve projects names
-		$modelo_name = RecordObj_dd::get_modelo_name_by_tipo(DEDALO_PROJECTS_NAME_TIPO);		
+		$modelo_name = RecordObj_dd::get_modelo_name_by_tipo(DEDALO_PROJECTS_NAME_TIPO,true);		
 		foreach ($ar_proyectos_section_id as $current_section_id) {
 			
 			$component = component_common::get_instance($modelo_name,

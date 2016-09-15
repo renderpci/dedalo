@@ -248,7 +248,7 @@ class diffusion_section_stats extends diffusion {
 				# DIFFUSION_MAP_OBJECT
 				#
 				$current_obj->title		 	= (string)RecordObj_dd::get_termino_by_tipo($current_component_tipo, DEDALO_DATA_LANG, true);
-				$current_obj->graph_type 	= (string)RecordObj_dd::get_modelo_name_by_tipo($current_component_tipo);
+				$current_obj->graph_type 	= (string)RecordObj_dd::get_modelo_name_by_tipo($current_component_tipo,true);
 				$current_obj->propiedades 	= json_handler::decode($propiedades);
 					#dump($ar_diffusion_map,'$ar_diffusion_map '); die();
 
@@ -1078,7 +1078,7 @@ class diffusion_section_stats extends diffusion {
 					$related_component_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($stats_tipo, $modelo_name='component_', $relation_type='termino_relacionado')[0];
 						#dump($related_component_tipo,'related_component_tipo ' );
 						
-						$related_component_modelo = RecordObj_dd::get_modelo_name_by_tipo($related_component_tipo);
+						$related_component_modelo = RecordObj_dd::get_modelo_name_by_tipo($related_component_tipo,true);
 
 						# PORTAL : CASO PORTALES (El tipo es referido por 'portal_list' y definido en propiedades del puntero)
 						if ($related_component_modelo=='component_portal') {
@@ -1090,7 +1090,7 @@ class diffusion_section_stats extends diffusion {
 								#dump($related_component_tipo,'$related_component_tipo');
 						}
 					
-					$current_modelo = RecordObj_dd::get_modelo_name_by_tipo($stats_tipo);
+					$current_modelo = RecordObj_dd::get_modelo_name_by_tipo($stats_tipo,true);
 						#dump($current_modelo,'current_modelo '." $key - ". print_r($stats_tipo,true ) );
 
 					$RecordObj_dd 	= new RecordObj_dd($stats_tipo);
@@ -1135,7 +1135,7 @@ class diffusion_section_stats extends diffusion {
 							
 							#dump($current_component_tipo,'$current_component_tipo '.$current_component_tipo);
 
-							$component_modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_component_tipo);
+							$component_modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_component_tipo,true);
 								#dump($component_modelo_name,'$component_modelo_name');
 							$results[$current_component_tipo] = $component_modelo_name::get_stats_value($current_component_tipo, $value);
 
@@ -1147,7 +1147,7 @@ class diffusion_section_stats extends diffusion {
 						$ar_resolved=array();
 						foreach ($results as $current_component_tipo => $value) {
 
-							$component_modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($current_component_tipo);
+							$component_modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($current_component_tipo,true);
 
 							# RECUPERA EL MODELO DE GRÁFICO A MOSTRAR (PIE, BAR ...) Y LAS PROPIEDADES
 							if ( array_key_exists($current_component_tipo, $ar_map_related) ) {

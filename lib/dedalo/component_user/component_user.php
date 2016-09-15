@@ -7,7 +7,7 @@
 	$section_tipo			= $this->get_section_tipo();
 	$modo					= $this->get_modo();		
 	$dato 					= $this->get_dato();
-	$dato_reference_lang 	= NULL;
+	$dato_reference_lang 	= null;
 	$traducible 			= $this->get_traducible();
 	$label 					= $this->get_label();				
 	$required				= $this->get_required();
@@ -26,19 +26,23 @@
 	
 
 	# Verify component content record is inside section record filter
-	if ($this->get_filter_authorized_record()===false) return NULL ;
+	if ($this->get_filter_authorized_record()===false) return null ;
 
-	$file_name				= $modo;
+	$file_name = $modo;
 
 	
 	
 	switch($modo) {		
 		
-		case 'search' :	$file_name = 'list';
-						return NULL;
+		case 'search' :
+				$file_name = 'list';
+
+				# Search input name
+				$search_input_name = $section_tipo.'_'.$tipo;
+				return null;
 
 		case 'list'	:
-						break;
+				break;
 						
 						
 	}

@@ -102,7 +102,7 @@ abstract class counter extends Accessors {
 				$RecordObj_matrix_counter->arRelationMap['ref'] 	  = 'ref';
 				$RecordObj_matrix_counter->arModifiedRelations['ref'] = 1;
 				$ref = RecordObj_dd::get_termino_by_tipo($tipo);
-				$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($tipo);
+				$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 				$ref .= " [$modelo_name]";
 				$RecordObj_matrix_counter->set_ref($ref);
 					#dump($RecordObj_matrix_counter,'ref');

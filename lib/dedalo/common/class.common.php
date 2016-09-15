@@ -479,7 +479,8 @@ abstract class common extends Accessors {
 		}
 
 		# Only different modo to 'list' notify. Except buttons
-		if ($modo!='list' || strpos($modelo_name, 'button_')!==false) {
+		#if ($modo!='list' || strpos($modelo_name, 'button_')!==false) {
+		#if (strpos($modelo_name, 'button_')!==false) {
 			if(SHOW_DEBUG) {
 				#dump($tipo, "modelo_name:$modelo_name - modo:$modo");
 			}
@@ -490,7 +491,7 @@ abstract class common extends Accessors {
 				}			
 			}
 			common::$ar_loaded_modelos_name[] 	= $modelo_name;
-		}
+		#}
 	}//end notify_load_lib_element_tipo
 
 

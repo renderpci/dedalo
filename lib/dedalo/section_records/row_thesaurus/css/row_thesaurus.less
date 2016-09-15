@@ -15,6 +15,7 @@
 	width: 100%;
 	position: relative;
 	display: table;
+	margin-left: 52px;
 	//height: 1em;
 	}
 
@@ -44,7 +45,8 @@
 			/* ADD_BUTTON
 			------------------------------------------------------- */
 			.wrap_row_thesaurus .row_thesaurus_add {	
-				width: 25%;	
+				//width: 25%;
+				margin-right: 3px;
 				}
 				.wrap_row_thesaurus .row_thesaurus_add .row_thesaurus_add_icon {
 					height: 100%;
@@ -70,7 +72,8 @@
 			/* DELETE_BUTTON
 			------------------------------------------------------- */
 			.wrap_row_thesaurus .row_thesaurus_delete {
-				width: 25%;
+				//width: 25%;
+				margin-right: 3px;
 				}
 				.wrap_row_thesaurus .row_thesaurus_delete .row_thesaurus_delete_icon {
 					height: 100%;
@@ -96,23 +99,27 @@
 			/* EDIT_BUTTON
 			------------------------------------------------------- */
 			.wrap_row_thesaurus .row_thesaurus_edit {
-				width: 50%;
+				//width: 50%;
 				}
 				.wrap_row_thesaurus .row_thesaurus_edit:hover {
 					background-color: #FF7EF3;
 					filter: invert(100%);
 					border-radius: 3px;	
 				}
+				/* ID NUMBER
+				------------------------------------------------------- */
 				.wrap_row_thesaurus .row_thesaurus_edit .row_thesaurus_section_id_number {
 					height: 24px;
+					min-width: 42px;
 					float: left;
 					padding: 2px;				
-					font-size: 15px;
-					font-weight: bold;		
-					padding-right: 4px;
-					padding-left: 4px;
+					font-size: 14px;	
+					padding-right: 4px;				
 					text-align: right;
+					display: none;
 				}
+				/* EDIT_ICON
+				------------------------------------------------------- */
 				.wrap_row_thesaurus .row_thesaurus_edit .row_thesaurus_edit_icon {
 					float: left;							
 					background-image: url(../../../themes/default/icon_edit.svg);
@@ -136,11 +143,11 @@
 	.wrap_row_thesaurus .elements_container {
 		.inline_common;
 		min-width: 150px;
-		margin-left: 7px;
+		margin-left: 0;
 		}
 		/* LIST_THESAURUS COMMONS
 		------------------------------------------------------- */
-		.wrap_row_thesaurus .elements_container .list_thesaurus_icon {			
+		.wrap_row_thesaurus .elements_container .list_thesaurus_element {
 			display: table-cell;
 			min-width: 24px;	
 			padding: 2px;
@@ -151,13 +158,36 @@
 			vertical-align: middle;
 			cursor: pointer;
 			border-left: 1px solid #c3c3c3;
+
+			// En pruebas
+			width: 29px;
+			vertical-align: top;
+			padding: 0;
+			padding-top: 4px;	
+			//font-family: "Menlo",monospace;
 			}
-			.wrap_row_thesaurus .elements_container .list_thesaurus_icon:hover {
+			.wrap_row_thesaurus .elements_container .list_thesaurus_element:hover {
 				font-weight: bolder;
 				color: #ff8600;
-			}
-			
-	
+			}			
+		/* LIST_THESAURUS SPECIFICS
+		------------------------------------------------------- */
+		/* TERM
+		------------------------------------------------------- */
+		.wrap_row_thesaurus .elements_container .list_thesaurus_element[data-type='term'] {
+			//background-color: #FEFF33;
+			border: none;
+			min-width: 120px;
+			text-align: left;
+
+		}
+		/* ORDER NUMBER
+		------------------------------------------------------- */
+		.wrap_row_thesaurus .elements_container .list_thesaurus_element[data-type='link'] {
+			//background-color: #FEFF33;
+			border: none;
+		}
+
 
 
 	/* DATA_CONTAINER
@@ -187,7 +217,7 @@
 	/* CHILDRENS_CONTAINER
 	------------------------------------------------------- */
 	.wrap_row_thesaurus .childrens_container {
-		background-color: rgba(248, 182, 175, 0.49);
+		//background-color: rgba(248, 182, 175, 0.49);
 		.inline_common ;
 		width: 100%;
 		height: 0;
@@ -218,6 +248,7 @@
 		background-position: 10px;		
 		background-size: 30px;
 		background-repeat: no-repeat;
+		margin-left: 50px;
 	}
 
 

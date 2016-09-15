@@ -216,18 +216,14 @@ class component_relation_children extends component_relation_common {
 				break;
 
 			default:
-				# not default option is set for now
-				debug_log(__METHOD__." WARNING: No target section is founded for get childrens. Please review strucure config to resolve ASAP ".to_string(), logger::DEBUG);
-				if(SHOW_DEBUG) {
-					throw new Exception("Error Processing Request. No target section is founded for get childrens. Please review strucure config to resolve before continue", 1);
-				}
-				$ar_target_section_tipo = array();
+				# Default is self section
+				$ar_target_section_tipo = array($this->section_tipo);
 				break;
 		}
 		
 		# Fix value
 		$this->ar_target_section_tipo = $ar_target_section_tipo;
-		
+
 		return (array)$ar_target_section_tipo;
 	}//end get_ar_target_section_tipo
 
@@ -266,6 +262,9 @@ class component_relation_children extends component_relation_common {
 		if ( empty($search_value) ) {
 			return $search_query;
 		}
+
+		$json_field = 'a.'.$json_field; // Add 'a.' for mandatory table alias search
+		
 		switch (true) {
 			case $comparison_operator=='=':
 				$search_query = " {$json_field}#>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}' @> '[$search_value]'::jsonb ";

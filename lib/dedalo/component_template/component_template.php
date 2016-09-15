@@ -33,27 +33,30 @@
 	switch($modo) {
 		
 		case 'edit'	:
-						break;
+					break;
 		
-		case 'search' :						
-						break;
+		case 'search' :
+					# Search input name
+					$search_input_name = $section_tipo.'_'.$tipo;			
+					break;
 						
 		case 'list'	:
-						$max_char = 256;
-						if(strlen($dato)>$max_char) $dato = substr($dato,0,$max_char).'..';
-						break;
+					$max_char = 256;
+					if(strlen($dato)>$max_char) $dato = substr($dato,0,$max_char).'..';
+					break;
 
-		case 'relation':# Force modo list
-						$file_name 	= 'list';
-						$max_char 	= 256;
-						if(strlen($dato)>$max_char) $dato = substr($dato,0,$max_char).'..';
-						break;
+		case 'relation':
+					# Force modo list
+					$file_name 	= 'list';
+					$max_char 	= 256;
+					if(strlen($dato)>$max_char) $dato = substr($dato,0,$max_char).'..';
+					break;
 						
 		case 'tool_time_machine' :
-						break;
-						
+					break;
+											
 		case 'lang'	:
-						break;	
+					break;	
 	}
 		
 	$page_html	= DEDALO_LIB_BASE_PATH .'/'. get_class($this) . '/html/' . get_class($this) . '_' . $file_name . '.phtml';

@@ -1,0 +1,115 @@
+<?php
+	
+	# VISUALIZADOR HTML	
+
+	print "\n\n<!-- ROWS LIST THESAURUS [$id] $modo + -->";
+
+
+	# CONTENIDO (INPUT)
+	$html_contenido  = "\n<tr class=\"row_tr_{$id}\" data-dato='$rel_locator'>";	
+	
+	switch($permissions) {
+			
+		case 0	:	$html_contenido .= "\n <span class=\"css_span_dato\"> ".label::get_label('sin_acceso')." </span>";
+					break;
+						
+		case ($permissions>=1)	:
+					
+					if( !is_array($ar_valor) || count($ar_valor)==0 ) {
+						
+						$html_contenido .= "\n <td class=\"section_list_td_border\" data-tipo=\"$component_tipo\">"; 
+						$html_contenido .= " No records found.. ";
+						$html_contenido .= "\n </td>";
+						
+					}else{
+					
+						#
+						# TD ID
+						/*						
+						$title = SHOW_DEBUG ? "matrix id: $id" : null;
+						$html_contenido .= "\n <td class=\"section_list_td_border section_list_td_row id_column\" title=\"$title\">";
+							
+							#
+							# BUTTONS
+							
+							#
+							# BUTTON EDIT
+								$url  = htmlspecialchars("?t=$section_tipo&id=$id&m=edit");
+								$url .= "&top_tipo=".TOP_TIPO."&top_id=".TOP_ID."&offset=$offset";
+								$title = label::get_label('editar_registro').' '.$section_id;
+								#if(SHOW_DEBUG) $title .= "\n url:$url \n modo $modo, context_name $context->context_name ";
+								$additional_css_style = $button_delete_permissions <=1 ? 'height: 100%;' : '' ;
+								$html_contenido .= "<a href=\"$url\" class=\"id_column_buttons $id_column_buttons_css button_edit link\" title=\"$title\" style=\"$additional_css_style\">";
+									# SECTION_ID TEXT
+									$html_contenido .= "<span class=\"section_id_number\">";
+									$html_contenido .= " $section_id ";
+									$html_contenido .= "</span>";
+								$html_contenido .= "</a>";
+							
+							#
+							# BUTTON DELETE 
+								if($button_delete_permissions >1){
+									$title = label::get_label('borrar').' '.$section_id;
+									$html_contenido .= "<a href=\"javascript:;\" class=\"id_column_buttons $id_column_buttons_css button_delete link\"
+									data-tipo=\"{$section_tipo}\"
+									data-section_id=\"{$id}\"
+									title=\"$title\">";
+									if(SHOW_DEBUG) {
+										$html_contenido .= "<mark class=\"debug_info row_debug_info\">$section_tipo $section_id</mark>";
+									}
+									$html_contenido .= "</a>";
+								}							
+							
+						$html_contenido .= "\n </td>";
+						*/
+						
+						#
+						# TD DATOS
+						# dump($ar_valor, ' ar_valor ++ '.to_string());						
+						foreach($ar_valor as $component_tipo => $valor_list) {
+							
+							# aditional td css selectors
+							$modelo_name 	 	  = RecordObj_dd::get_modelo_name_by_tipo($component_tipo, true);
+							$td_css_selector 	  = 'td_'.$modelo_name;
+							$td_css_selector_tipo = 'column_'.$component_tipo;
+								
+
+							$html_contenido .= "\n <td class=\"section_list_td_border section_list_td_row $td_css_selector $td_css_selector_tipo\" data-tipo=\"$component_tipo\">";
+							$html_contenido .= $valor_list;
+
+							$html_contenido .= "\n </td>";
+
+						}//end foreach($ar_valor as $component_tipo => $valor_list) {
+
+
+					}//end if( !is_array($ar_valor) || count($ar_valor)==0 ) {
+
+	}//end switch($permissions) {
+	$html_contenido .= "\n</tr>";
+
+	
+	#
+	# CHILDRENS
+	$html_contenido .= "<tr>";
+	$colspan = count($ar_valor)-1;
+	$html_contenido .= "<td colspan=\"$colspan\">";
+
+	# NOTA: Aquí podemos insertar una búsqueda de tipo search::get_rows y traernos TODOS los datos de todos los hijos
+	# en lugar de resolverlos uno a uno. Esto tiene el problema de que pueden haber hijos de distintas tablas, lo cual
+	# complica la búsqueda y habría que implementar eso en la clase 'search'
+	# De momento, dejaremos que cada row resuelva sus propios datos a partir del locator y veremos el rendimiento.
+
+	foreach ((array)$ar_childrens as $current_locator) {
+		$row_thesaurus = new row_thesaurus($current_locator->section_id, $current_locator->section_tipo);
+			#dump($row_thesaurus, ' row_thesaurus ++ '.to_string());		
+		$html_contenido .= $row_thesaurus->get_html();
+	}
+	$html_contenido .= "</tr>";
+
+
+	
+	# PRINT HTML
+	print $html_contenido;
+	
+
+?>

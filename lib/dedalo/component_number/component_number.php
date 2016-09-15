@@ -83,7 +83,10 @@
 				break;
 		
 		case 'search':
-				$dato = empty($dato) ? '' : $dato;		
+				$dato = empty($dato) ? '' : $dato;
+
+				# Search input name
+				$search_input_name = $section_tipo.'_'.$tipo;		
 				break;
 						
 		case 'list_thesaurus':

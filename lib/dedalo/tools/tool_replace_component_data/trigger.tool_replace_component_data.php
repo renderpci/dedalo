@@ -85,7 +85,7 @@ if ($mode=='replace_data') {
 	# Component
 	$tipo 			= (string)$component_tipo;
 	$section_tipo 	= (string)$section_tipo;
-	$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($tipo);
+	$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 	$component_obj  = component_common::get_instance($modelo_name, $tipo, $parent, 'edit', DEDALO_DATA_LANG, $section_tipo);
 
 	

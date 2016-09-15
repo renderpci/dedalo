@@ -11,8 +11,7 @@
 	$traducible 			= $this->get_traducible();
 	$label 					= $this->get_label();
 	$debugger				= $this->get_debugger();
-	$permissions			= common::get_permissions($section_tipo,$tipo);
-
+	$permissions			= common::get_permissions($section_tipo,$tipo); 
 	if ($permissions<1) {
 		return '';
 	}
@@ -45,6 +44,9 @@
 		
 		case 'search': 
 				#return print "<br> $component_name. working here..";
+
+				# Search input name
+				$search_input_name = $section_tipo.'_'.$tipo;
 				return null;
 				break;
 

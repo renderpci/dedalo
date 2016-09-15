@@ -92,7 +92,7 @@ if($mode=='new_element') {
 		}
 		# First array element must be a secion
 		foreach ((array)$ar_terminos_relacionados as $current_tipo) {
-			$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_tipo);
+			$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
 			if ($modelo_name!=='section') {
 				throw new Exception("Error Processing Request [$modelo_name]. Missing required 'ar_terminos_relacionados'->section for current component. First related element must be a section element. Please review elements order", 1);
 			}
@@ -106,7 +106,7 @@ if($mode=='new_element') {
 		#
 		# INPUTS
 		foreach ($ar_terminos_relacionados as $current_tipo) {
-			$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_tipo, true);
+			$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
 			if ($modelo_name=='section') continue;
 			if ($modelo_name!='component_input_text') {
 				if(SHOW_DEBUG) {

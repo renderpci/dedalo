@@ -123,6 +123,7 @@ class css {
 				
 				$added_component_commons = true;
 			}
+			
 
 			# EVITA DUPLICIDADES
 			if(strpos($html,$url)===false) {
@@ -324,7 +325,7 @@ class css {
 	*/
 	public static function get_css_prefix($tipo) {
 		
-		$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($tipo);
+		$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 			#dump($modelo_name, ' modelo_name ++ '.to_string());
 
 		switch (true) {

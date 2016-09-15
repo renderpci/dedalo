@@ -93,7 +93,7 @@ class component_relation extends component_common {
 		$ar_dinamic_relations 	= $this->get_ar_dinamic_relations();	#dump($ar_dinamic_relations,'$ar_dinamic_relations');	#die();
 		
 		foreach ($ar_dinamic_relations as $tipo) {
-			$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($tipo);							
+			$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);							
 				#dump($modelo_name,'$modelo_name');
 			
 			# Sólo incluir secciones (como 1021.0.0.0) como boxes. Descartar los componentes (como 254.dd52.1) que se incluirán dentro del listado como secciones

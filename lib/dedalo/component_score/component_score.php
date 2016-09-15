@@ -68,7 +68,9 @@
 					break;
 
 		case 'search':
-					return NULL;
+					# Search input name
+					$search_input_name = $section_tipo.'_'.$tipo;
+					return null;
 					break;
 
 	}

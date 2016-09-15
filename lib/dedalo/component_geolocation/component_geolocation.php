@@ -52,7 +52,9 @@
 				break;
 
 		case 'search' :	
-				$id_wrapper = 'wrapper_'.$identificador_unico;								
+				$id_wrapper = 'wrapper_'.$identificador_unico;
+				# Search input name
+				$search_input_name = $section_tipo.'_'.$tipo;							
 				break;
 		case 'list' :
 				echo $valor;	

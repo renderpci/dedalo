@@ -620,6 +620,10 @@
 				 							class:component_security_access.php
 		component_autocomplete_ts : added source type 'tree' to add terms directly from thesaurus
 
+	Benimamet 15-09-2016
+		component_autocomplete_ts : fixed bug when search only uses descriptors elements with parent like 'prefix1'. Now prefis is calculated always to avoid this 
+									(desirable value to filter is 'prefix' without number)
+	
 
 
 
@@ -638,8 +642,8 @@
 
 	# Version
 	#define('DEDALO_VERSION'	, '4.1.0.ba');
-	define('DEDALO_VERSION'	, '4.0.14.bc');
-	define('DEDALO_BUILD'	, '11-09-2016');
+	define('DEDALO_VERSION'	, '4.0.14.bf');
+	define('DEDALO_BUILD'	, '15-09-2016');
 
 
 	/*

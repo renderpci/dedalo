@@ -304,7 +304,7 @@ class component_filter extends component_common {
 
 
 		// Resolve projects names
-		$modelo_name = RecordObj_dd::get_modelo_name_by_tipo(DEDALO_PROJECTS_NAME_TIPO);
+		$modelo_name = RecordObj_dd::get_modelo_name_by_tipo(DEDALO_PROJECTS_NAME_TIPO,true);
 		$ar_proyectos_for_current_section=array();
 		foreach ($ar_proyectos_section_id as $current_section_id) {
 			
@@ -486,9 +486,8 @@ class component_filter extends component_common {
 		if ( empty($search_value) ) {
 			return null;
 		}
-		if(SHOW_DEBUG) {
-			#dump($search_value, ' search_value');
-		}
+		
+		$json_field = 'a.'.$json_field; // Add 'a.' for mandatory table alias search
 		
 		if (is_array($search_value)) {
 			$current_search_value = implode("','", $search_value);

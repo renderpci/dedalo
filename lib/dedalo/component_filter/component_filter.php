@@ -29,6 +29,9 @@
 				$ar_comparison_operators 	= $this->build_search_comparison_operators();
 				$ar_logical_operators 		= $this->build_search_logical_operators();
 				$dato 						= isset($_REQUEST[$tipo]) ? json_decode($_REQUEST[$tipo]) : null;
+
+				# Search input name
+				$search_input_name = $section_tipo.'_'.$tipo;
 				#break;
 		case 'ajax' :
 		case 'edit' :	

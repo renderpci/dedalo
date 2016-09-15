@@ -16,9 +16,10 @@
 		case 1	:
 		case 2	:
 		case 3	:
-			if($file_exists) {
 
-				$js_action = "onclick=\"component_pdf.open_pdf(this)\"";	
+			$js_action = "onclick=\"component_pdf.open_pdf(this)\"";
+		
+			if($file_exists) {					
 
 				if($pdf_thumb) {
 					$style = "background-image:url('$pdf_thumb')";								
@@ -32,7 +33,8 @@
 					data-pdf_viewer_url=\"$pdf_viewer_url\"
 					></div>";	
 				}					
-			}							
+			}	
+									
 	}
 
 	

@@ -60,8 +60,8 @@
 				break;
 		
 		case 'search':
-				$ar_comparison_operators 	= $this->build_search_comparison_operators();
-				$ar_logical_operators 		= $this->build_search_logical_operators();	
+				$ar_comparison_operators = $this->build_search_comparison_operators();
+				$ar_logical_operators 	 = $this->build_search_logical_operators();	
 				break;
 						
 		case 'simple':

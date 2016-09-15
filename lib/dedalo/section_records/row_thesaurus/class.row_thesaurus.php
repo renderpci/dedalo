@@ -2,8 +2,8 @@
 /*
 * CLASS row_thesaurus
 * Manage tesaurus hierarchycal elements. Every element is a section used as thesaurus term
+* 
 */
-
 class row_thesaurus extends Accessors {
 	
 
@@ -17,12 +17,19 @@ class row_thesaurus extends Accessors {
 	protected $options;
 	# string (default 'edit')
 	protected $modo;
+	# int 
+	public $order;
 
+	public $ar_elements;
 
 	/**
 	* __CONSTRUCT
 	* @param int $section_id
 	* @param string $section_tipo
+	* @param object $options
+	*	Default null
+	* @param string $modo
+	*	Default 'edit'
 	*/
 	public function __construct( $section_id, $section_tipo, $options=null, $modo='edit' ) {
 		
@@ -38,6 +45,8 @@ class row_thesaurus extends Accessors {
 		# Fix modo
 		$this->modo = $modo;
 
+		# Set default order
+		$this->order = 1000; // Default is 1000. When get_html is called, this var is updated with component value if exits and have data
 	}//end __construct
 
 
@@ -65,41 +74,32 @@ class row_thesaurus extends Accessors {
 
 
 	/**
-	* GET_TERM
-	* Returns thesaurus term in current lang
-	* @return string $term
-	*/
-	public function get_term() {
-		$term='Paquito';
-
-		return (string)$term;
-	}//end get_term
-
-
-
-	/**
-	* GET_MODEL
-	* Returns thesaurus model in current lang
-	* @return 
-	*/
-	public function get_model() {
-		
-	}//end get_model
-
-
-
-	/**
 	* GET_AR_ELEMENTS
 	* @return array ar_elements
 	*/
 	public function get_ar_elements() {
+
+		
+		if(SHOW_DEBUG) {
+			if (isset($this->elements)) {
+				#return $this->elements;
+			}
+		}
 		$ar_elements = array();
 
 		// Elements are stored in current section > section_list_thesaurus
+		// Search element in current section
 		$section_tipo 			 = $this->section_tipo;
 		$ar_modelo_name_required = array('section_list_thesaurus');
-		$ar_children = section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, $ar_modelo_name_required, $from_cache=true, $resolve_virtual=true, $recursive=false, $search_exact=true);
-			#dump($ar_children, ' ar_children ++ '.to_string($section_tipo));
+		$ar_children  = section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo,
+																				$ar_modelo_name_required,
+																				$from_cache=true,
+																				$resolve_virtual=true,
+																				$recursive=false,
+																				$search_exact=true);
+
+		# If element exists (section_list_thesaurus) we get element 'propiedades' json value as array
+		# dump($ar_children, ' ar_children ++ '.to_string($section_tipo));
 		if (isset($ar_children[0])) {
 			
 			$section_list_thesaurus_tipo = $ar_children[0];
@@ -118,8 +118,12 @@ class row_thesaurus extends Accessors {
 			*/
 		}
 
-		return (array)$ar_elements;
+		$this->elements = (array)$ar_elements;
+
+		return $this->elements;
 	}//end get_ar_elements
+
+
 
 
 

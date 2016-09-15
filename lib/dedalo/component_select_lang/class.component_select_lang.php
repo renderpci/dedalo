@@ -289,6 +289,8 @@ class component_select_lang extends component_common {
 		if ( empty($search_value) ) {
 			return $search_query;
 		}
+		$json_field = 'a.'.$json_field; // Add 'a.' for mandatory table alias search
+		
 		switch (true) {
 			case $comparison_operator=='=':
 				$search_query = " $json_field#>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}' @> '[$search_value]'::jsonb ";

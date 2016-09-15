@@ -74,7 +74,7 @@ if($mode=='add_index') {
 			exit();
 		}
 	
-	$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($tipo);
+	$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 	$component 		= component_common::get_instance( $modelo_name,
 													  $tipo,
 													  $parent,
@@ -173,7 +173,7 @@ if($mode=='remove_index') {
 			exit();
 		}
 	
-	$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($tipo);
+	$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 	$component 		= component_common::get_instance( $modelo_name,
 													  $tipo,
 													  $parent,

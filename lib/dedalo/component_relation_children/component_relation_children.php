@@ -46,6 +46,9 @@
 		case 'search':				
 				$ar_comparison_operators = $this->build_search_comparison_operators();
 				$ar_logical_operators 	 = $this->build_search_logical_operators();
+
+				# Search input name
+				$search_input_name = $section_tipo.'_'.$tipo;
 				break;
 					
 		case 'portal_list' :
@@ -67,6 +70,20 @@
 
 		case 'print' :
 				$valor = $this->get_valor();
+				break;
+
+		case 'list_thesaurus' :
+				$render_vars = $this->get_render_vars();
+					#dump($render_vars, ' render_vars ++ '.to_string());
+				$icon_label = isset($render_vars->icon) ? $render_vars->icon : '';
+
+				$ar_childrens 		= $this->get_dato();
+				if (empty($ar_childrens)) {
+					return null;
+				}
+
+				$ar_childrens_json 	= json_encode($ar_childrens);
+					#dump($ar_childrens, ' $ar_childrens ++ '.to_string($parent));
 				break;
 
 	}

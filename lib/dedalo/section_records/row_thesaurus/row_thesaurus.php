@@ -20,12 +20,8 @@
 				$term 			  = $this->get_term();
 				$ar_elements 	  = $this->get_ar_elements();
 
-					#dump($ar_elements, ' ar_elements ++ '.to_string());
-
 				$childrens_html   = '';
 				$indexations_html = '';
-
-
 
 				# Aditional css / js
 				css::$ar_url[] = DEDALO_LIB_BASE_URL.'/section_records/'.$class_name."/css/".$class_name.".css";

@@ -544,6 +544,7 @@ class component_date extends component_common {
 			return false;
 		}
 
+		$json_field = 'a.'.$json_field; // Add 'a.' for mandatory table alias search
 
 		$search_query='';
 		switch (true) {

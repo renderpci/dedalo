@@ -40,7 +40,10 @@
 		
 		case 'search' :
 				$file_name = 'list';
-				return NULL;
+
+				# Search input name
+				$search_input_name = $section_tipo.'_'.$tipo;
+				return null;
 				break;
 
 		case 'list_tm' :

@@ -4,7 +4,8 @@
 	//if(isset($_REQUEST[$tipo]))					$dato = $_REQUEST[$tipo];		#var_dump($_REQUEST[$tipo]);
 	
 	
-	print "\n<!-- NUMBER -->";
+	#print "\n<!-- NUMBER -->";
+
 	print "\n<div class=\"wrap_component css_wrap_number\" id=\"wrap_{$tipo}\">";
 	
 	# ETIQUETA (LABEL)
@@ -19,14 +20,14 @@
 						
 		case ($permissions>=1):
 		
-					$html_contenido .= "\n <input class=\"css_number\" type=\"text\" 
-					name=\"{$tipo}\" 
+					$html_contenido .= "\n <input class=\"css_number\" type=\"text\" name=\"{$search_input_name}\"
 					data-tipo=\"{$tipo}\"
-					value=\"{$dato}\" title=\"$html_title\" />";											
+					value=\"{$dato}\"
+					title=\"$html_title\" />";
 	}
 
 	# Prepare content to show in page
-	tools::prepare_content($html_contenido);	
+	tools::prepare_content($html_contenido);
 	
 	
 	# PRINT HTML

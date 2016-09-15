@@ -41,10 +41,12 @@
 				$component_info = $this->get_component_info('json');
 				
 				# DATO_REFERENCE_LANG
-				$default_component = null;										
+				$default_component = null;
+				/*									
 				if (empty($dato) && $traducible=='si') {					
 					$default_component = $this->get_default_component();		
-				}															
+				}
+				*/													
 				break;
 
 		case 'print' :
@@ -84,6 +86,9 @@
 				$ar_logical_operators 	 = $this->build_search_logical_operators();
 
 				if(isset($_REQUEST[$tipo])) $dato = $_REQUEST[$tipo];
+
+				# Search input name
+				$search_input_name = $section_tipo.'_'.$tipo;
 				break;
 						
 		case 'list_thesaurus':

@@ -23,10 +23,10 @@
 					$html_contenido .= operator::get_search_comparison_operators_html($tipo,$ar_comparison_operators);
 					
 					# INPUT
-					$html_contenido .= "\n <input class=\"input_css_section_id\" type=\"text\" 
-					name=\"{$tipo}\" 
+					$html_contenido .= "\n <input class=\"input_css_section_id\" type=\"text\" name=\"{$search_input_name}\"
 					data-tipo=\"{$tipo}\"
-					value=\"{$dato}\" title=\"$html_title\" />";
+					value=\"{$dato}\"
+					title=\"$html_title\" />";
 
 					# LOGICAL OPERATORS
 					$html_contenido .= operator::get_search_logical_operators_html($tipo,$ar_logical_operators);
