@@ -137,7 +137,7 @@ class dd_date extends stdClass {
 		$this->minute = (int)$value;
 		return true;
 	}#end set_minute
-
+	#public function set_min($value, $constrain=false) {	return $this->set_minute($value, $constrain); }
 
 
 	/**

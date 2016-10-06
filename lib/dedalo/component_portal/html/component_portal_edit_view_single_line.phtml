@@ -46,6 +46,14 @@
 								if( $permissions>=2 && $modo!='print') {
 
 									foreach ($ar_target_section_tipo as $current_target_section_tipo) {
+
+										# Permissions of target section. Apply to current button									
+										$permission_section = common::get_permissions($current_target_section_tipo,$current_target_section_tipo);
+										if ($permission_section<2) {
+											# Skip create new records in target section
+											continue;
+										}
+
 										
 										$button_new = "\n<div class=\"css_button_generic btn_new_ep\" onclick=\"component_portal.new_portal_record(this)\"
 										data-portal_tipo=\"{$this->tipo}\" 
@@ -83,7 +91,7 @@
 										$button_select .= ''. RecordObj_dd::get_termino_by_tipo($current_target_section_tipo);	//.': '.label::get_label('existente');
 
 										if(SHOW_DEBUG) {
-											$button_select .= ' '.TOP_TIPO.'.'.$current_target_section_tipo.'.'.$this->tipo;
+											#$button_select .= ' '.TOP_TIPO.'.'.$current_target_section_tipo.'.'.$this->tipo;
 										}
 										$button_select .= "</div>";
 
@@ -203,6 +211,10 @@
 								$target_section_tipo = $current_section_tipo;
 
 
+							# Permissions of target section. Applied to delete button									
+							$permission_section = common::get_permissions($target_section_tipo,$target_section_tipo);
+							
+
 							#
 							# COLUMNS
 								$sort_id = !empty($rel_locator) ? $rel_locator : 0;
@@ -211,7 +223,7 @@
 	
 									#
 									# EDIT COLUMN
-									if ($column_tipo=='edit') {
+									if ($column_tipo==='edit') {
 										if (!$this->html_options->id_column) continue;
 
 										$table .= "<td class=\"id_column\">";
@@ -249,7 +261,7 @@
 												$table .= "<div class='div_image_link link' title=\"$title\" onclick=\"alert('Deleted record')\"> ! </div>";
 											}else{
 												$additional_css_style = $permissions <2 ? 'style="height: 100%;"' : '' ;
-												$table .= "<a href=\"javascript:component_portal.open_record('$url')\"
+												$table .= "<a href=\"javascript:;\" onclick=\"component_portal.open_record(this,'$url')\"
 												id=\"portal_link_open_{$section_tipo}_{$section_id}\"
 												class=\"id_column_buttons button_edit link\"
 												$additional_css_style
@@ -265,7 +277,7 @@
 
 									#
 									# TAG_ID
-									}else if($column_tipo=='tag_id') {
+									}else if($column_tipo==='tag_id') {
 
 										$table .= "<td class=\"td_tag_id\">";
 
@@ -330,99 +342,6 @@
 																						 $section_id, // Current portal parent
 																						 $current_locator // Used by text_area to select fragment
 																						);
-
-										
-										/*
-										$value = $current_row[$column_tipo];									
-
-										# Row value overwrite on special cases
-										switch ($modelo_name) {
-
-											# COMPONENT_PORTAL
-											case ('component_portal'):
-												# Portal with locators
-												$parent 		 = null; // $section_id / null
-												$component_portal = component_common::get_instance('component_portal',$column_tipo,$parent,'list',DEDALO_DATA_NOLAN,$target_section_tipo);
-												$component_portal->html_options->rows_limit	= 1;
-												if ($parent===null) {
-													# Use already query calculated values for speed
-													$ar_records   = (array)json_handler::decode($value);	#dump($ar_records,"ar_records for portal $current_component_tipo - id:$section_id");#die();
-													$component_portal->set_dato($ar_records);
-													$component_portal->set_identificador_unico($component_portal->get_identificador_unico().'_'.$section_id); // Set unic id for build search_options_session_key used in sessions
-												}
-												$value = $component_portal->get_html();
-													#dump($value, ' value ++ '.to_string());
-												break;
-
-											# COMPONENTS WITH LOCATORS
-											case ('component_autocomplete'):
-											case ('component_radio_button'):
-											case ('component_check_box'):
-											case ('component_select'):
-											case ('component_relation'):
-												#if (empty($value)) break; // Avoid resolve empty vars
-												
-												#$parent 		   = $section_id; // $section_id / null
-												#$current_component = component_common::get_instance($modelo_name,$column_tipo,$parent,'list',DEDALO_DATA_NOLAN,$target_section_tipo);	
-													#dump($target_section_tipo, ' target_section_tipo');
-												#$current_component->html_options->rows_limit	= 1;
-												#if ($parent===null) {
-													# Use already query calculated values for speed
-												#	$ar_records   = (array)json_handler::decode($value);	#dump($ar_records,"ar_records for portal $current_component_tipo - id:$section_id");#die();
-												#	$current_component->set_dato($ar_records); 				#dump($value, 'ar_records');
-												#	$current_component->set_identificador_unico($current_component->get_identificador_unico().'_'.$section_id); // Set unic id for build search_options_session_key used in sessions
-												#}
-												$value = $current_component->get_html();
-												
-												$parent 		   = $section_id;	//null;
-												$current_component = component_common::get_instance($modelo_name, $column_tipo, $parent, 'list', DEDALO_DATA_NOLAN, $target_section_tipo);
-												# Use already query calculated values for speed
-												$ar_records   = (array)json_handler::decode($value);	#dump($ar_records,"ar_records for portal $column_tipo - id:$id");die();
-												$current_component->set_dato($ar_records);
-												$current_component->set_identificador_unico($current_component->get_identificador_unico().'_'.$section_id); // Set unic id for build
-												$value = $current_component->get_html();
-												break;
-
-											# COMPONENT_TEXT_AREA
-											case ('component_text_area'):
-											
-												# TO VERIFY THIS SELECTOR..
-												#$rel_locator = $current_row['lc_object'];	//(object)json_handler::decode($rel_locator);
-
-												#if (!property_exists($rel_locator, 'tag_id')) {										
-												#	$ar_records = (array)json_handler::decode($value);
-												#	$value 		= reset($ar_records);
-												#}
-											
-												$obj_value = json_decode($current_row[$column_tipo]); # Evitamos los errores del handler accediendo directamente al json_decode de php
-												$current_tag = 0;
-												if (is_object($obj_value) && isset($obj_value->$current_tag)) {
-													$value = $obj_value->$current_tag;
-												}else{
-													$value = $current_row[$column_tipo];
-												}
-												break;
-	
-											default:
-												$parent 		   = $section_id; // $section_id / null
-
-												$RecordObjt_dd = new RecordObj_dd($column_tipo);
-												if($RecordObjt_dd->get_traducible() =='no'){
-													$lang = DEDALO_DATA_NOLAN;
-												}else{
-													$lang = DEDALO_DATA_LANG;
-												}
-												$current_component = component_common::get_instance($modelo_name,
-																									$column_tipo,
-																									$parent,
-																									'list',
-																									$lang,
-																									$target_section_tipo);
-												$value = $current_component->get_html();
-
-										}//end switch (true)
-										*/
-
 										
 										#
 										# TD COLUMN
@@ -443,23 +362,20 @@
 
 											$table .= "<td class=\"delete_column\">";
 											if ($permissions>=2) {
-												$title	 = label::get_label('borrar') .' '. label::get_label('recurso');
-												/*
-												$table 		.= " <div class=\"delete_portal_link icon_bs link image_delete_icon\"
-												data-rel_locator='$rel_locator'
-												title=\"$btn_title\"
-												onclick=\"$('#delete_dialog_portal').data('button_obj',this).dialog('open')\"
-												></div>";*/
-												$table .= "<a href=\"javascript:void(0);\" class=\"id_column_buttons button_delete link\" onclick=\"$('#delete_dialog_portal').data('button_obj',this).dialog('open')\"
+												$title	 = label::get_label('borrar') .' '. label::get_label('recurso');												
+												$table .= "<a href=\"javascript:void(0);\" class=\"id_column_buttons button_delete link\" onclick=\"component_portal.open_delete_dialog(this)\"
 												data-rel_locator='{$rel_locator}'
+												data-permission_section=\"{$permission_section}\"
 												title=\"$title\">";
 												if(SHOW_DEBUG) {
-													$table .= "<mark class=\"row_debug_info\">";
+													/*
+													$table .= "<mark class=\"debug_info\">";
 													$table .= $target_section_tipo;
 													$table .= '-'.$current_section_id;
 													$table .= isset($current_component_tipo) ? '-'.$current_component_tipo : '';
 													$table .= isset($current_tag_id) ? '-'.$current_tag_id : '';
 													$table .= "</mark>";
+													*/
 												}
 												$table .= "</a>";
 											}

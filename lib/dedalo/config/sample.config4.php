@@ -61,7 +61,7 @@
 	if(!isset($_SESSION)) {
 		
 		# HANDLER
-		$SESSION_HANDLER = 'memcached';		
+		$SESSION_HANDLER = 'files';		
 		define('DEDALO_SESSION_HANDLER', $SESSION_HANDLER);	// files | memcached | user
 		switch (DEDALO_SESSION_HANDLER) {
 			case 'memcached' :
@@ -70,7 +70,7 @@
 				break;
 			default:
 				ini_set( 'session.save_handler' , 'files');
-				ini_set( 'session.save_path'	, '/tmp/php');
+				ini_set( 'session.save_path'	, '/tmp');
 		}
 
 

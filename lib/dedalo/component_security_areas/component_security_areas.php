@@ -11,8 +11,7 @@
 	$lang					= $this->get_lang();
 	$identificador_unico	= $this->get_identificador_unico();	
 	$component_name			= get_class($this);	
-	$file_name				= $modo;	
-
+	$file_name				= $modo;
 	
 	
 	switch($modo) {		

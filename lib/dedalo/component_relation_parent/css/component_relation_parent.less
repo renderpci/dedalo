@@ -1,3 +1,9 @@
+// Variables
+@common_css: "../../common/css";
+
+// Usage
+@import "@{common_css}/library.less";
+
 
 
 /* WRAP RELATION_PARENT
@@ -14,16 +20,16 @@
 	/* wrap_relation_parent_values
 	---------------------------------------- */
 	.css_wrap_relation_parent .content_data .wrap_relation_parent_values {
-		
+		display: inline-block;
 		}
-		/* inputs line
+		/* INPUTS LINE
 		---------------------------------------- */
 		.css_wrap_relation_parent .content_data .wrap_relation_parent_values .relation_parent_input_line {			
 			margin: 0;
 			margin-bottom: 0px;
 			padding: 3px;
 			}
-			/* input
+			/* INPUT
 			---------------------------------------- */
 			.css_wrap_relation_parent .content_data .wrap_relation_parent_values .relation_parent_input_line input.css_relation_parent {
 				padding: 2px;
@@ -48,25 +54,58 @@
 				.css_wrap_relation_parent .content_data .wrap_relation_parent_values .relation_parent_input_line input.css_relation_parent:active {
 					
 				}
-			/* remove button
+
+			/* REMOVE BUTTON
 			---------------------------------------- */
 			.css_wrap_relation_parent .content_data .wrap_relation_parent_values .relation_parent_input_line .component_relation_parent_button_remove {
-				margin-left: 5px;
-				margin-right: 8px;
+				/*
+				background: url('../../themes/default/close.svg') center center no-repeat;				
+				width: 15px;
+				height: 15px;
+				//background-color: transparent;
+				//outline:none;
+				border: none;
+				margin: 0;				
+				vertical-align: middle;
 				cursor: pointer;
+				*/
+				margin-right: 5px;
 			}
+
 			/* locator_label
 			---------------------------------------- */
 			.css_wrap_relation_parent .content_data .wrap_relation_parent_values .relation_parent_input_line .locator_label {
 				
 			}
-			/* relation_parent_add_button
+
+			/* ADD BUTTON 
 			---------------------------------------- */
 			.css_wrap_relation_parent .content_data .relation_parent_add_button {
-				margin: 3px;
-				cursor: pointer;
+				
+				/*
+				stroke: #a0e570;
+				fill: none;
+				stroke-width:21;
+				stroke-miterlimit:10;
+				background-color: #EEEEEE;
+				*/
+				opacity: 0.5;
+				position: absolute;
+				right: 0;
+				top: 0;
 			}
-		
+			/*
+			.relation_parent_add_button > #document > svg > line.svg_open_line {
+				stroke: #f16767 !important;
+				fill: none;
+				stroke-width: 21;
+				stroke-miterlimit: 10;
+			}
+			*/
+			
+
+
+
 
 
 

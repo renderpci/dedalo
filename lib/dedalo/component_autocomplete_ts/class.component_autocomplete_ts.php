@@ -141,8 +141,10 @@ class component_autocomplete_ts extends component_common {
 				#dump($current_valor, ' current_valor ++ '.to_string($lang));			
 
 
-			#if (!empty($propiedades->jer_tipo) && $propiedades->jer_tipo==2) {
-				# Show with childrens like "Benimamet - Valencia - Spain"
+			if (isset($propiedades->value_with_parents) && $propiedades->value_with_parents===false) {
+				# No childres are calculated and showed
+			}else{
+				# Show with childrens like "Valencia, València, Valencia/València, Comunidad Valenciana, España"
 				$RecordObj_ts = new RecordObj_ts($terminoID);
 				$ar_parents = $RecordObj_ts->get_ar_parents_of_this($terminoID); ksort($ar_parents);
 					#dump($ar_parents,'ar_parents '.$terminoID);
@@ -150,8 +152,8 @@ class component_autocomplete_ts extends component_common {
 						$current_termino = RecordObj_ts::get_termino_by_tipo($current_terminoID, $lang,true);
 						$current_valor .= ", $current_termino";
 					}
-			#}
-			#dump($current_locator, ' current_locator ++ '.to_string());
+			}				
+		
 
 			#
 			# REMOVE TAGS FROM NON TRANSLATED TERMS
@@ -325,19 +327,24 @@ class component_autocomplete_ts extends component_common {
 					foreach ($ar_tesauro_by_jer_tipo as $tld) {
 						$ar_referenced_tipo[] = strtolower($tld)."1";
 					}
+						
 					break;
 				case 'childrens_of':
 					$ar_parents = (array)$propiedades->source->value;
 					foreach ($ar_parents as $current_parent) {						
 						$ar_childrens = RecordObj_ts::get_ar_childrens($current_parent, $order_by='norden');
+							#dump($ar_childrens, ' ar_childrens'.to_string());
 						foreach ((array)$ar_childrens as $current_tipo) {
 							$ar_referenced_tipo[] = $current_tipo;
+
 						}
 					}
+
 					break;
 				case 'tree':
 					# Tipos to hide / exclude
-					$ar_referenced_tipo = json_decode($propiedades->source->value);
+
+					$ar_referenced_tipo = $propiedades->source->value;
 					break;
 				default:
 					debug_log(__METHOD__." Invalid source->mode ".to_string($propiedades->source->mode), logger::ERROR);
@@ -522,7 +529,8 @@ class component_autocomplete_ts extends component_common {
 		$RecordObj_descriptors			= new RecordObj_descriptors($matrix_table, NULL);
 		$ar_records						= $RecordObj_descriptors->search($arguments);
 			#dump($ar_records,'ar_records'." string_to_search:$string_to_search - sql_limit:$max_results - ".print_r($arguments,true) ) ;
-			#dump($arguments, ' arguments ++ '.to_string());	
+			#dump($arguments, ' arguments ++ '.to_string());
+			//error_log( to_string($ar_records) );	
 
 
 		# ESDESCRIPTOR : Removome non descriptors

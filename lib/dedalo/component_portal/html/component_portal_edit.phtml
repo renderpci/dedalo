@@ -47,6 +47,13 @@
 
 									foreach ($ar_target_section_tipo as $current_target_section_tipo) {
 										
+										# Permissions of target section. Apply to current button									
+										$permission_section = common::get_permissions($current_target_section_tipo,$current_target_section_tipo);
+										if ($permission_section<2) {
+											# Skip create new records in target section
+											continue;
+										}
+
 										$button_new = "\n<div class=\"css_button_generic btn_new_ep\" onclick=\"component_portal.new_portal_record(this)\"
 										data-portal_tipo=\"{$this->tipo}\" 
 										data-portal_parent=\"{$this->parent}\"
@@ -70,7 +77,7 @@
 								# BUTTON SELECT EXISTING RECORD HTML (BUTTON TOOL_PORTAL)
 								if($modo!='print') {
 									
-									foreach ($ar_target_section_tipo as $current_target_section_tipo) {	
+									foreach ($ar_target_section_tipo as $current_target_section_tipo) {
 
 										$button_select = "\n<div class=\"css_button_generic btn_new_ep\" onclick=\"tool_common.open_tool_portal(this)\"
 										data-tipo=\"{$tipo}\"
@@ -83,7 +90,7 @@
 										$button_select .= ''. RecordObj_dd::get_termino_by_tipo($current_target_section_tipo);	//.': '.label::get_label('existente');
 
 										if(SHOW_DEBUG) {
-											$button_select .= ' '.TOP_TIPO.'.'.$current_target_section_tipo.'.'.$this->tipo;
+											$button_select .= ' <span class="debug_info">'.TOP_TIPO.'.'.$current_target_section_tipo.'.'.$this->tipo.'</span>';
 										}
 										$button_select .= "</div>";
 
@@ -200,6 +207,10 @@
 								$target_section_tipo = $current_section_tipo;
 
 
+							# Permissions of target section. Applied to delete button									
+							$permission_section = common::get_permissions($target_section_tipo,$target_section_tipo);
+							
+
 							#
 							# COLUMNS
 								$sort_id = !empty($rel_locator) ? $rel_locator : 0;
@@ -217,7 +228,7 @@
 										#$table .= " $section_id ";
 
 										#
-										# EDIT BUTTON
+										# EDIT BUTTON										
 											$context_http_query = http_build_query($context);
 											$url  = htmlspecialchars("?t=$target_section_tipo&id=$section_id&m=edit&portal_section_tipo={$section_tipo}&{$context_http_query}");
 											$url .= "&locator=". urlencode($rel_locator);
@@ -246,7 +257,7 @@
 												$table .= "<div class='div_image_link link' title=\"$title\" onclick=\"alert('Deleted record')\"> ! </div>";
 											}else{
 												$additional_css_style = $permissions <2 ? 'style="height: 100%;"' : '' ;
-												$table .= "<a href=\"javascript:component_portal.open_record('$url')\"
+												$table .= "<a href=\"javascript:;\" onclick=\"component_portal.open_record(this,'$url')\"
 												id=\"portal_link_open_{$section_tipo}_{$section_id}\"
 												class=\"id_column_buttons button_edit link\"
 												$additional_css_style
@@ -257,10 +268,12 @@
 													$table .= "</span>"; 
 												$table .= "</a>";											
 											}
+										
 
 										#
 										# DELETE RECORD BUTTON
 											if ($permissions>=2) {
+												
 												$title	 = label::get_label('borrar') .' '. label::get_label('recurso');
 												/*
 												$table 		.= " <div class=\"delete_portal_link icon_bs link image_delete_icon\"
@@ -268,16 +281,19 @@
 												title=\"$btn_title\"
 												onclick=\"$('#delete_dialog_portal').data('button_obj',this).dialog('open')\"
 												></div>";*/
-												$table .= "<a href=\"javascript:void(0);\" class=\"id_column_buttons button_delete link\" onclick=\"$('#delete_dialog_portal').data('button_obj',this).dialog('open')\"
+												$table .= "<a href=\"javascript:void(0);\" class=\"id_column_buttons button_delete link\" onclick=\"component_portal.open_delete_dialog(this)\"
 												data-rel_locator='{$rel_locator}'
+												data-permission_section=\"{$permission_section}\"
 												title=\"$title\">";
 												if(SHOW_DEBUG) {
-													$table .= "<mark class=\"row_debug_info\">";
+													/*
+													$table .= "<mark class=\"debug_info\">";
 													$table .= $target_section_tipo;
 													$table .= '-'.$current_section_id;
 													$table .= isset($current_component_tipo) ? '-'.$current_component_tipo : '';
 													$table .= isset($current_tag_id) ? '-'.$current_tag_id : '';
 													$table .= "</mark>";
+													*/
 												}
 												$table .= "</a>";
 											}

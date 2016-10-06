@@ -1,0 +1,64 @@
+/*
+
+ Only use to set general thesaurus styles, not dinamic rows
+ Specific CSS for ts_object must be writed in ts_object.less
+
+*/
+@line_height: 34px;
+
+/* WRAPPER : CSS_WRAP_AREA_THESAURUS
+------------------------------------------------ */
+.css_wrap_area_thesaurus {
+
+	}
+	.css_wrap_area_thesaurus > ul {
+		padding: 25px;
+		//background-color: #F4DD79
+		}
+		.css_wrap_area_thesaurus > ul > li {
+		}
+		/* TIPOLOGY_NAME like 'Toponomy'
+		------------------------------------------------ */
+		.css_wrap_area_thesaurus .tipology_name {
+			background-color: #E6E6E6;
+			padding: 7px;text-transform: uppercase;
+		}
+		/* HIERARCHY_NAME like 'España'
+		------------------------------------------------ */
+		.css_wrap_area_thesaurus .hierarchy_name {				
+			padding: 7px;
+			//background-color: #727272;
+			padding-left: 10px;
+			font-size: 1.15em;
+			color: #333333;
+			border-bottom: 1px solid #ebebeb;
+			}
+			.css_wrap_area_thesaurus .hierarchy_name .ts_object_add {
+				display: inline-block;
+				position: relative;
+				top: 5px;
+				left: 4px;
+			}
+
+
+		/* HIERARCHY_ROOT_NODE Container (childrens container)
+		------------------------------------------------ */
+		.css_wrap_area_thesaurus .hierarchy_root_node {
+			//background-color: #EDEDED;
+			padding: 7px;
+			min-height: @line_height;
+			margin-left: 10px;
+			}
+			.hierarchy_root_node > .childrens_container {
+				margin-left: 0 !important;
+			}
+
+
+	/* SEARCH FORM
+	------------------------------------------------ */			
+	.search_form_container {
+		//background-color: #A6E1A2;
+		padding: 10px;
+		padding-top: 5px;
+		width: 100%;
+		}

@@ -8,7 +8,6 @@
 */
 
 
-
 class component_date extends component_common {
 	
 	# Overwrite __construct var lang passed in this component
@@ -117,9 +116,9 @@ class component_date extends component_common {
 				break;
 			case isset($dato->period):
 				$date_mode = 'period';
-				break;
+				break;			
 			default:
-				if (empty($dato) && isset($propiedades->date_mode)) {
+				if (isset($propiedades->date_mode)) {
 					$date_mode = $propiedades->date_mode; // Default from structure if is defined
 				}else{
 					$date_mode = 'date'; // Default
@@ -270,6 +269,8 @@ class component_date extends component_common {
 		$date_format	= "Y{$separator}m{$separator}d H:i:s"; # Default is used but passed for clarity
 		$valor 	 		= $dd_date->get_dd_timestamp($date_format);
 		*/
+		#debug_log(__METHOD__." valor: $valor ".to_string($valor), logger::WARNING);
+
 		return (string)$valor;
 	}//end get_valor
 
@@ -295,10 +296,8 @@ class component_date extends component_common {
 				break;
 		}
 		#$date_format	= "d-m-Y";	# TODO: change order when use english lang ?? ...
-		$valor_local 	= $dd_date->get_dd_timestamp($date_format);
-		if(SHOW_DEBUG) {
-			#dump($valor_local, ' valor_local');
-		}
+		$valor_local 	= $dd_date->get_dd_timestamp($date_format);		
+		#debug_log(__METHOD__." valor_local: $valor_local ".to_string($valor_local), logger::WARNING);
 
 		return (string)$valor_local;
 	}//end get_valor_local
@@ -363,6 +362,22 @@ class component_date extends component_common {
 		}
 		return (string)$valor;
 	}//end get_valor_export
+
+
+
+	/**
+	* GET_DATO_AS_TIMESTAMP
+	* Get current component dato and create a standar timestamp string
+	* using dd_date class call
+	* @return string $timestamp
+	*/
+	public function get_dato_as_timestamp() {
+		$dato 	 	= $this->get_dato();
+		$dd_date 	= new dd_date($dato);
+		$timestamp 	= $dd_date->get_dd_timestamp(); // $date_format="Y-m-d H:i:s"
+
+		return (string)$timestamp;
+	}//end get_dato_as_timestamp
 
 
 
@@ -646,7 +661,7 @@ class component_date extends component_common {
 
 	/**
 	* ADD_TIME
-	* Recoge el dato recibido (de tipo stdClass) y lo usa para creat un objeto dd_date al que inyecta
+	* Recoge el dato recibido (de tipo stdClass) y lo usa para crear un objeto dd_date al que inyecta
 	* el time (seconds) calculado.
 	* Retorna el objeto dd_date creado
 	* @return object dd_date $dato
@@ -684,10 +699,21 @@ class component_date extends component_common {
 			}
 			$dd_date->set_time( $time );
 			$dato->end = $dd_date;
-		}
+		}		
 
 		// Default date mode
 		if( isset($dato->year) ) {
+			$dd_date = new dd_date($dato); 
+			$time 	 = dd_date::convert_date_to_seconds($dd_date);			
+			
+			if (isset($dato->time) && $dato->time!=$time) {
+				debug_log(__METHOD__." Unequal time seconds value: current: $dato->time, calculated: $time. Used calculated time.", logger::WARNING);
+			}
+			$dd_date->set_time( $time );
+			$dato = $dd_date;
+		}
+		// Time date mode
+		else if( isset($dato->hour) ) {
 			$dd_date = new dd_date($dato); 
 			$time 	 = dd_date::convert_date_to_seconds($dd_date);			
 			

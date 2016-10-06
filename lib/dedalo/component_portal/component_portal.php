@@ -137,11 +137,9 @@
 					$file_name 		= $file_view;
 				}
 
-					#dump($exclude_elements, ' exclude_elements');
-					#dump($dato, ' dato');
-				if(SHOW_DEBUG) {
-					#dump($_SESSION['dedalo4']['config']['search_options'][$search_options_session_key],"options for $tipo");				
-				}
+				# dump($edit_view, ' edit_view');
+				# dump($dato, ' dato');
+				
 
 				if (empty($dato)) {
 
@@ -153,8 +151,8 @@
 					$this->html_options->rows 	= false;
 
 				}else{
-										
-					if (isset($_SESSION['dedalo4']['config']['search_options'][$search_options_session_key])) {						
+					# unset($_SESSION['dedalo4']['config']['search_options'][$search_options_session_key]);				
+					if (isset($_SESSION['dedalo4']['config']['search_options'][$search_options_session_key])) {
 						
 						$options = $_SESSION['dedalo4']['config']['search_options'][$search_options_session_key];		
 						$options->full_count = false; # Force update count records on non ajax call						
@@ -167,7 +165,7 @@
 						# All related terms are selected except section that is unset from the array								
 						$layout_map_virtual  	= $this->get_layout_map($edit_view);
 						$ar_target_section_tipo = $this->get_ar_target_section_tipo();
-							#dump( $layout_map_virtual,"layout_map_virtual - $ar_target_section_tipo"); #die();
+							#dump( $layout_map_virtual,"layout_map_virtual ++"); #die();
 
 						# OPTIONS
 						$options = new stdClass();

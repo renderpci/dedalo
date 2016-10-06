@@ -312,7 +312,7 @@ class component_portal extends component_common {
 	/**
 	* Save : Overwrite Save common
 	*/
-	public function Save() {		
+	public function Save() {
 
 		# Salvamos de forma estándar
 		$result = parent::Save();
@@ -342,7 +342,6 @@ class component_portal extends component_common {
 			}		
 
 		return $result;
-
 	}//end Save
 
 
@@ -381,8 +380,7 @@ class component_portal extends component_common {
 			if(SHOW_DEBUG) {
 				debug_log(__METHOD__." Called update_state ($rel_locator->section_id) in section without component_state. ".to_string($rel_locator));
 			}
-		}		
-		
+		}				
 	}//end update_state
 
 
@@ -405,7 +403,6 @@ class component_portal extends component_common {
 				debug_log(__METHOD__." Called remove_state_from_locator in section without component_state. ".to_string($rel_locator));
 			}
 		}
-
 	}//end remove_state_from_locator
 
 
@@ -433,8 +430,7 @@ class component_portal extends component_common {
 		$section = section::get_instance($section_id, $section_tipo);
 		$delete  = $section->Delete($delete_mode='delete_record');
 
-		return 'ok';
-		
+		return 'ok';		
 	}#end remove_resource_from_portal
 	
 
@@ -550,7 +546,6 @@ class component_portal extends component_common {
 		$component_portal->Save();
 
 		return $section_id;
-
 	}//end create_new_portal_record
 
 
@@ -612,7 +607,6 @@ class component_portal extends component_common {
 				return $ar_section_relations;
 				break;
 		}
-
 	}//end get_ar_section_relations_for_current_section_tipo_static
 
 
@@ -642,7 +636,6 @@ class component_portal extends component_common {
 		debug_log(__METHOD__." Added portal locator and section inverse locator from portal. ".to_string($rel_locator), logger::DEBUG);
 
 		return true;
-
 	}//end add_locator
 
 
@@ -672,7 +665,6 @@ class component_portal extends component_common {
 		debug_log(__METHOD__." Remove portal locator and section inverse locator from portal. ".to_string($rel_locator), logger::DEBUG);
 
 		return true;
-
 	}//end remove_locator
 
 
@@ -700,7 +692,6 @@ class component_portal extends component_common {
 		debug_log(__METHOD__." Remove inverse_locator from portal dato (Not saved yet). ".to_string($rel_locator), logger::DEBUG);
 
 		return true;
-
 	}//end remove_inverse_locator_reference
 
 
@@ -731,12 +722,12 @@ class component_portal extends component_common {
 	* GET_LAYOUT_MAP
 	* Calculate current layout map to generate portal html
 	* Cases:
-	* 	1. Modo 'edit' : Uses related terms to build layout map (default)
-	* 	2. Modo 'list' : Uses childrens to build layout map
+	*	1. Modo 'list' : Uses childrens to build layout map
+	* 	2. Modo 'edit' : Uses related terms to build layout map (default)	
 	*/
-	public function get_layout_map($view = 'full') {
+	public function get_layout_map( $view='full' ) {
 		if (isset($this->layout_map) && !empty($this->layout_map)) return $this->layout_map;
-		
+		# dump($view, ' view ++ '.to_string());
 		$ar_related=array();
 		switch ($this->modo) {
 			case 'list':
@@ -761,7 +752,7 @@ class component_portal extends component_common {
 			
 			case 'edit':
 			default:
-				if($view == 'full'){
+				if($view==='full') { // || $view==='view_mosaic'
 					$ar_related = (array)RecordObj_dd::get_ar_terminos_relacionados($this->tipo, $cache=true, $simple=true);
 					break;
 				}else{
@@ -770,12 +761,19 @@ class component_portal extends component_common {
 					foreach ($ar_terms as $current_term) {
 						# Locate 'edit_views' in childrens
 						$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_term,true);
-						if ($modelo_name=='edit_view') {
+						if ($modelo_name==='edit_view') {
 							$view_name = RecordObj_dd::get_termino_by_tipo($current_term);
 
-							if($view ==$view_name){
+							if($view==$view_name){
 								# Use related terms as new list
 								$ar_related = (array)RecordObj_dd::get_ar_terminos_relacionados($current_term, $cache=true, $simple=true);
+								# Fix / set current edit_view propiedades to portal propiedades
+								$RecordObj_dd 			= new RecordObj_dd($current_term);
+								$edit_view_propiedades 	= json_decode($RecordObj_dd->get_propiedades());
+								# dump($edit_view_propiedades->edit_view_options, ' edit_view_propiedades->edit_view_options ++ '.to_string());		
+								if ( isset($edit_view_propiedades->edit_view_options) ) {
+									$this->edit_view_options = $edit_view_propiedades->edit_view_options;									
+								}								
 								break;
 							}
 						}
@@ -822,7 +820,6 @@ class component_portal extends component_common {
 		#dump($layout_map, ' $layout_map 2 ++ '.to_string($layout_map));
 
 		return $this->layout_map = $layout_map;
-
 	}//end get_layout_map
 	
 
@@ -903,7 +900,6 @@ class component_portal extends component_common {
 		#dump($ar_combined_component_filter_dato, 'ar_combined_component_filter_dato dato_filter:'.print_r($dato_filter,true));	#die();
 
 		return true;
-
 	}//end propagate_filter__DEPRECATED
 
 
@@ -979,7 +975,7 @@ class component_portal extends component_common {
 		*/		
 	
 		return $ar_references;
-	}
+	}//end get_all_resource_references__DEPRECATED
 
 
 		
@@ -1050,7 +1046,6 @@ class component_portal extends component_common {
 			#dump($diffusion_obj,"diffusion_obj $this->section_tipo ". print_r($valor));		
 		
 		return $diffusion_obj;
-
 	}#end get_diffusion_obj
 
 
@@ -1185,7 +1180,6 @@ class component_portal extends component_common {
 
 		# Fix value
 		return $this->exclude_elements = $exclude_elements;
-
 	}#end get_exclude_elements
 	
 
@@ -1238,7 +1232,6 @@ class component_portal extends component_common {
 						);
 		return $virtual_row;
 		return false;
-
 	}#end row_in_result
 
 
@@ -1271,7 +1264,6 @@ class component_portal extends component_common {
 			#dump($ar_target_section_tipo, '$ar_target_section_tipo');	
 		
 		return $this->ar_target_section_tipo = (array)$ar_target_section_tipo;
-
 	}//end get_ar_target_section_tipo
 
 
@@ -1291,7 +1283,7 @@ class component_portal extends component_common {
 	*
 	* @return string $list_value
 	*/
-	public static function render_list_value($value, $tipo, $parent, $modo, $lang, $section_tipo, $section_id) {		
+	public static function render_list_value($value, $tipo, $parent, $modo, $lang, $section_tipo, $section_id) {
 		#dump($value, " value ++ parent:$parent - tipo:$tipo - section_id:$section_id ".to_string());
 
 		$parent    = null; // Force null always !important
@@ -1329,6 +1321,7 @@ class component_portal extends component_common {
 
 		$layout_map  = $this->get_layout_map($view);
 		$ar_hcolumns = reset($layout_map);
+			#dump($layout_map, ' layout_map ++ '.to_string());
 			
 
 		$ar_columns = array();

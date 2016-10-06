@@ -22,7 +22,7 @@ if(empty($mode)) exit("<span class='error'> Trigger: Error Need mode..</span>");
 /**
 * EXPORT_LIST
 */
-if($mode=='export_list') { 	
+if($mode=='export_list') {
 	
 	$start_time = start_time();
 
@@ -107,8 +107,7 @@ if($mode=='export_list') {
 	}
 
 	echo json_encode($response);
-	exit();	
-
+	exit();
 }//end export_list
 
 
@@ -118,9 +117,9 @@ if($mode=='export_list') {
 /**
 * EXPORT_RECORD
 */
-if($mode=='export_record') {	
+if($mode=='export_record') {
 	
-	set_time_limit ( 120 ); // Avoid some infinite loop cases when data is bad formed
+	set_time_limit ( $seconds=300 ); // Avoid some infinite loop cases when data is bad formed
 
 	$start_time = start_time();
 
@@ -157,8 +156,7 @@ if($mode=='export_record') {
 	$response->msg 	  = $result->msg;
 
 	echo json_encode($response);
-	exit();		
-
+	exit();
 }//end export_record
 
 
@@ -203,7 +201,6 @@ if($mode=='export_thesaurus') {
 
 	echo json_encode($response);
 	exit();
-
 }//end export_thesaurus
 
 
@@ -263,7 +260,6 @@ if ($mode=='diffusion_complete_dump') {
 	
 	echo $response->msg; // Not use json output here. Only string
 	exit();
-
 }//end diffusion_complete_dump
 
 

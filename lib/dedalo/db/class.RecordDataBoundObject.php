@@ -445,7 +445,7 @@ abstract class RecordDataBoundObject {
 	# Buscador genérico . Necesita array key-value con campo,valor
 	# TIPO $arguments['parent'] = 14 ...
 	public function search($ar_arguments=NULL, $matrix_table=NULL) {
-
+#dump($ar_arguments, ' arguments'.to_string());
 		# DEBUG INFO SHOWED IN FOOTER
 		if(SHOW_DEBUG) $start_time = start_time();
 

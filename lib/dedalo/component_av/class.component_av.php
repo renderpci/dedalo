@@ -79,17 +79,23 @@ class component_av extends component_common {
 		if(SHOW_DEBUG) {
 			global$TIMER;$TIMER[__METHOD__.'_OUT_'.$this->tipo.'_'.$this->modo.'_'.microtime(1)]=microtime(1);
 		}
-
 	}#end __construct
 
 
 
-	# GET DATO : Format {"counter":1}
+	/**
+	* GET DATO
+	*/
 	public function get_dato() {
 		$dato = parent::get_dato();
 		return (object)$dato;
 	}
-	# SET_DATO
+	
+
+
+	/**
+	* SET_DATO
+	*/
 	public function set_dato($dato) {
 		parent::set_dato( (object)$dato );
 	}
@@ -131,7 +137,7 @@ class component_av extends component_common {
 	/**
 	* GET_VALOR_EXPORT
 	* Return component value sended to export data
-	* @return string $valor
+	* @return string $valor_export
 	*/
 	public function get_valor_export( $valor=null, $lang=DEDALO_DATA_LANG, $quotes, $add_id ) {
 			
@@ -154,7 +160,6 @@ class component_av extends component_common {
 			#return "AV: ".$valor_export;
 		}
 		return $valor_export;
-
 	}#end get_valor_export
 	
 
@@ -358,7 +363,6 @@ class component_av extends component_common {
 		$this->quality 	= $initial_quality;
 			
 		return $result;
-
 	}//end get_original_file_path
 
 
@@ -415,7 +419,6 @@ class component_av extends component_common {
 		if($size_kb <= 1024) return $size_kb . ' KB' ;
 				
 		return round($size_kb / 1024) . ' MB' ;
-
 	}//edn get_video_size
 	
 	
@@ -423,7 +426,7 @@ class component_av extends component_common {
 	/**
 	* GET_SUBTITLES_URL
 	*/
-	public function get_subtitles_url() {		
+	public function get_subtitles_url() {
 		return DEDALO_MEDIA_BASE_URL . DEDALO_AV_FOLDER . DEDALO_SUBTITLES_FOLDER. '/'. $this->get_video_id().'_'.DEDALO_DATA_LANG .'.'.DEDALO_AV_SUBTITLES_EXTENSION;		
 	}
 
@@ -461,7 +464,7 @@ class component_av extends component_common {
 		}#end foreach($ar_quality as $quality)
 		
 		return false;
-	}
+	}//end get_source_quality_to_build
 
 
 
@@ -595,8 +598,7 @@ class component_av extends component_common {
 				$msg=__METHOD__." Moved file \n$last_file_path to \n$new_file_path";
 				debug_log($msg);
 				#dump($msg, ' msg');
-			}
-			
+			}			
 		}#end foreach
 		
 
@@ -628,9 +630,42 @@ class component_av extends component_common {
 			}
 		}		
 
-		return true;
-		
+		return true;		
 	}#end restore_component_media_files
+
+
+
+	/**
+	* RENDER_LIST_VALUE
+	* Overwrite for non default behaviour
+	* Receive value from section list and return proper value to show in list
+	* Sometimes is the same value (eg. component_input_text), sometimes is calculated (e.g component_portal)
+	* @param string $value
+	* @param string $tipo
+	* @param int $parent
+	* @param string $modo
+	* @param string $lang
+	* @param string $section_tipo
+	* @param int $section_id
+	*
+	* @return string $value
+	*
+	* In time machine mode (list_tm) image is always calculated
+	*/
+	public static function render_list_value($value, $tipo, $parent, $modo, $lang, $section_tipo, $section_id) {
+		
+		if ($modo==='portal_list_view_mosaic') {
+			$component	= component_common::get_instance(__CLASS__,
+														 $tipo,
+														 $parent,
+														 $modo,
+														 $lang,
+														 $section_tipo);
+			$value 		= $component->get_html();
+		}
+
+		return $value;
+	}#end render_list_value
 
 
 

@@ -56,7 +56,7 @@
 					if ($total_list_time>$limit_time) {
 						$style = "color:red";
 					}			
-					$html_info .= "<div style=\"display:table;margin:15px;margin-bottom:20px;padding:3px;{$style}\" onclick=\"$(this).children('pre').toggle()\"> Time To Generate section list: ";
+					$html_info .= "<div class=\"debug_sql_time\" style=\"{$style}\" onclick=\"$(this).children('pre').toggle()\"> Time To Generate section list: ";
 					$html_info .= $total_list_time;
 					$html_info .= ", get_records_data:".$this->rows_obj->generated_time['get_records_data']." (over {$this->rows_obj->options->full_count} records)";
 					$html_info .= ", HTML section list: ".round(microtime(1)-$start_time,3);

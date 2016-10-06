@@ -3,6 +3,7 @@
 
 /*
 * CLASS COMPONENT SECURITY ACCESS
+* Manages 
 */
 class component_security_access extends component_common {
 
@@ -21,7 +22,7 @@ class component_security_access extends component_common {
 
 		# caller_id from parent var (default)
 		if(!empty($parent)) {
-			$this->caller_id = $parent;			
+			$this->caller_id = $parent;
 		}
 		#dump($id,'id');	#throw new Exception("component_security_access Request", 1);
 		# caller_id is set in main to this obj from request 'caller_id' (is id section parent of current component)
@@ -48,7 +49,7 @@ class component_security_access extends component_common {
 	* SET_DATO
 	* @param object $dato
 	*/
-	public function set_dato($dato) {		
+	public function set_dato($dato) {
 		if (!is_object($dato)) {
 			if(empty($dato)) {
 				$dato = new stdClass();
@@ -67,11 +68,15 @@ class component_security_access extends component_common {
 	*/
 	public function Save() {
 
-
-		$dato = $this->dato;		# Este dato ($this->dato) es inyectado y lo pasa trigger component_common Save (NO es el dato existente en matrix)
+		#
+		# OJO: Este dato ($this->dato) es inyectado y lo pasa trigger component_common Save (NO es el dato existente en matrix)
+		# lo asigna así: $component_obj->set_dato( $dato_clean ); 
+		$dato = $this->dato;		
 			if(SHOW_DEBUG) {
 				#dump($dato, 'dato received to save (stopped script for debug)'); return null;
-			}		
+			}
+
+
 		
 		$this->set_dato( $dato ); // Incluiremos los dato '0' para preservar los cambios al propagar
 
@@ -84,7 +89,7 @@ class component_security_access extends component_common {
 			#dump($this->get_dato_unchanged(), ' this->get_dato_unchanged ++ '.to_string($this->dato));
 
 		return $result;
-	}
+	}//end Save
 
 
 
@@ -187,7 +192,6 @@ class component_security_access extends component_common {
 	    }//end foreach ($ar_authorized_areas_for_user as $tipo => $estado)
 		
 		return $ar_areas;
-
 	}//end get_user_authorized_areas
 	
 
@@ -268,12 +272,11 @@ class component_security_access extends component_common {
 		
 		# STORE CACHE DATA
 		$ar_stat_data[$terminoID_source] = $ar_tesauro[$terminoID];
-			#dump($ar_tesauro[$terminoID], ' $ar_tesauro[$terminoID] ++ '.to_string());
+			#dump($ar_tesauro[$terminoID], ' $ar_tesauro[$terminoID] ++ '.to_string($terminoID));
 
 		if(SHOW_DEBUG) {
 			#$total=round(microtime(1)-$start_time,3); dump($total, 'total');	#dump($ar_authorized_areas_for_user, 'ar_authorized_areas_for_user');				
 		}
-
 	
 		return $ar_tesauro[$terminoID];		
 	}//end get_ar_ts_childrens_recursive	
@@ -347,7 +350,6 @@ class component_security_access extends component_common {
 		}
 
 		return (string)$html_tree;
-
 	}//end walk_ar_elements_recursive	
 
 
@@ -419,7 +421,7 @@ class component_security_access extends component_common {
 	*	Contains mixed area an section tipos without suffix -admin
 	* @return bool
 	*/
-	public static function propagate_areas_to_access($areas_to_save, $parent) {
+	public static function propagate_areas_to_access_DES($areas_to_save, $parent) {
 
 		if (!is_object($areas_to_save)) {
 			trigger_error("Sorry, only objects are accepted as 'areas_to_save' [propagate_areas_to_access]");
@@ -474,9 +476,8 @@ class component_security_access extends component_common {
 		$component_security_access->set_dato($security_access_dato);
 		$component_security_access->Save();
 
-		debug_log(__METHOD__." Propagated areas to access. Added $add elements. Removed sections: $rm".to_string(), logger::DEBUG);
-		
-	}#end propagate_areas_to_access
+		debug_log(__METHOD__." Propagated areas to access. Added $add elements. Removed sections: $rm".to_string(), logger::DEBUG);		
+	}//end propagate_areas_to_access
 	
 
 	
@@ -507,9 +508,8 @@ class component_security_access extends component_common {
 			return $ar_ts_childrens_plain[$parent_tipo];
 		}else{
 			return array();
-		}	
-
-	}#end get_ar_ts_childrens_plain
+		}
+	}//end get_ar_ts_childrens_plain
 
 
 
@@ -537,9 +537,8 @@ class component_security_access extends component_common {
 			$security_areas_sections_obj->$current_section_tipo = component_security_access::get_ar_ts_childrens_recursive($current_section_tipo);
 		}
 
-		return $security_areas_sections_obj;			
-		
-	}#end get_security_areas_sections
+		return $security_areas_sections_obj;		
+	}//end get_security_areas_sections
 
 
 
@@ -574,8 +573,7 @@ class component_security_access extends component_common {
 		}
 
 		return $get_ar_children_elements;
-
-	}#end get_ar_children_elements
+	}//end get_ar_children_elements
 
 
 
@@ -637,8 +635,7 @@ class component_security_access extends component_common {
 				# code...
 				break;
 		}		
-		
-	}#end update_dato_version
+	}//end update_dato_version
 
 
 
@@ -659,6 +656,32 @@ class component_security_access extends component_common {
 		
 		return (string)$html;
 	}//end get_valor_list_html_to_save
+
+
+
+	/**
+	* MERGE_DATO
+	* Merge actual DB dato with received section dato
+	* using array_merge (http://php.net/manual/es/function.array-merge.php)
+	* @return array $ar_result
+	*/
+	public static function merge_dato(array $current_dato, array $new_dato) {
+		/*
+		$new_dato = array();
+		foreach ($current_dato as $section_tipo => $ar_components) {
+			if (isset($new_dato[$section_tipo])) {
+				# code...
+			}
+		}
+		*/
+
+		$ar_result = array_merge($current_dato, $new_dato);
+			#dump($current_dato, ' current_dato ++ '.to_string());
+			#dump($new_dato, ' new_dato ++ '.to_string());
+			#dump($ar_result, ' ar_result ++ '.to_string());
+
+		return (array)$ar_result;
+	}//end merge_dato
 
 
 	

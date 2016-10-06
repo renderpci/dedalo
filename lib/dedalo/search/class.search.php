@@ -205,8 +205,8 @@ class search extends common {
 				}else{
 					$traducible=array();
 					if(SHOW_DEBUG) {
-						if ($sql_options->modo!='edit' && empty(reset($sql_options->layout_map))) {
-							echo "<div class=\"warning\">Warning. Section list of current layout map is misconfigured or your user (".navigator::get_user_id().") don't have privileges to acces: ".to_string($sql_options->layout_map)."</div>";
+						if ($sql_options->modo!=='edit' && empty(reset($sql_options->layout_map))) {
+							echo "<div class=\"warning\">[Search] Warning. Section list of current layout map is misconfigured or your user (".navigator::get_user_id().") don't have privileges to acces: ".to_string($sql_options->layout_map)."</div>";
 							#dump($sql_options->layout_map, 'Sorry. Section list of current layout map is misconfigured: $sql_options->layout_map');
 							#throw new Exception("Error Processing Request. Section list of current layout map is misconfigured. Please review section/portal structure $sql_options->section_tipo", 1);							
 						}
@@ -522,7 +522,7 @@ class search extends common {
 								
 				#
 				# FILTER_BY_SEARCH
-				# dump($sql_options->filter_by_search, '$sql_options->filter_by_search ++ '.to_string());	
+				 #dump($sql_options->filter_by_search, '$sql_options->filter_by_search ++ '.to_string());	
 					if (!empty($sql_options->filter_by_search) && count((array)$sql_options->filter_by_search)>0) {
 						# Clean empty values of array
 						$sql_options->filter_by_search = self::clean_filter_by_search($sql_options->filter_by_search);
@@ -571,10 +571,10 @@ class search extends common {
 							#dump($search_tipo," search_tipo - search_value: $search_value");
 							# Search component section to separate portal components
 							#$component_section_tipo = component_common::get_section_tipo_from_component_tipo($search_tipo);
-							$section_real_tipo 		= $sql_options->section_real_tipo;
+							# $section_real_tipo 		= $sql_options->section_real_tipo;
 								#dump($component_section_tipo," section_real_tipo - sql_options->section_tipo: $sql_options->section_tipo");die();
 							
-							if ($component_section_tipo != $section_real_tipo) {
+							if ($component_section_tipo != $sql_options->section_tipo) {
 
 								#
 								# SUBSEARCH . Subquery when current component is not current section (like informant name in oh1)
@@ -587,8 +587,10 @@ class search extends common {
 								
 								$search_by_value= self::search_by_value($subsearch_query, $table_search);
 								$ar_locator 	= $search_by_value->ar_locator;										
-								$portal_tipo 	= section::get_portal_tipo_from_component($section_real_tipo, $search_tipo);
-										#dump($search_by_value, ' $search_by_value'.to_string());
+								$portal_tipo 	= section::get_portal_tipo_from_component($sql_options->section_tipo, $search_tipo);
+								if (empty($portal_tipo)) {
+									throw new Exception("Error Processing Request. portal_tipo is empty ($sql_options->section_tipo - $search_tipo) Not found in any portal search_list of $sql_options->section_tipo", 1);										
+								}
 
 								if (count($ar_locator)>0) {										
 									
@@ -1119,8 +1121,9 @@ class search extends common {
 		$object = new stdClass();
 			$object->strQuery 	= $strQuery;
 			$object->ar_locator = $ar_locator;
-		return $object;
-	}
+		
+		return (object)$object;
+	}//end search_by_value
 
 
 

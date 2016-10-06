@@ -469,7 +469,7 @@
 		component_html_text : fix bug when spellchecker is called from Chrome. Reenabled browser spellchecker in text_editor
 
 
-	Valencia 21-10-2016 v4.0.9
+	Valencia 21-04-2016 v4.0.9
 		login : added login and logout calls to remove user locked components on both process
 		component_ip : added support to maxmind geoip2 (https://github.com/maxmind/GeoIP2-php/releases)
 		lib : geoip2 added library
@@ -620,10 +620,40 @@
 				 							class:component_security_access.php
 		component_autocomplete_ts : added source type 'tree' to add terms directly from thesaurus
 
-	Benimamet 15-09-2016
+	Benimamet 15-09-2016 v4.0.15.a
 		component_autocomplete_ts : fixed bug when search only uses descriptors elements with parent like 'prefix1'. Now prefis is calculated always to avoid this 
 									(desirable value to filter is 'prefix' without number)
+
+	Ruzafa 20-09-2016 v4.0.15.g
+		lib tinymce : version updated from 4.4.0 to 4.4.3
+		component_security_access : changed to save only one section at once. Control of minimun php config max_input_vars was set (>1000 please)
+		component_security_areas  : changed to save whitout propagation to component_security_access dato (múltiple issues were detected with propagation)
 	
+	Ruzafa 21-09-2016 v4.0.15.h
+		backup : structure import and export methods are review to not use 'id' and avoid conflicts on import
+				 unified db calls as pgsl daemon commands
+	
+	Benimamet 25-09-2016 v4.0.15.hd
+		locator : added property 'from_component_tipo' for set source component tipo
+		component_relation_common : changed to manage section 'relations' container as dato of components that extends this class
+	
+	Benimamet 28-09-2016 v4.0.15.hf
+		area : solved bug on error is triggered on instalations where not defined new 'area_thesaurus' model
+	
+	Benimamet 29-09-2016 v4.0.15.hl
+		component_portal : add target_section permissions control on portal buttons (add element to portal, remove element from portal)
+	
+	Benimamet 30-09-2016 v4.0.15.hq
+		component_date : add mode 'time' to manage times in hours, minutes and seconds like 15:23:12
+	
+	Benimamet 04-09-2016 v4.0.15.ia
+		search : fixed bug when search in virtual sections (erroneus section_real_tipo var is changed to section_tipo)
+	
+	Benimamet 06-09-2016 v4.0.15.id
+		component_portal : added view 'Mosaic'
+		component_autocomplete_ts : added option to hide resolved parents in value (set propiedades->value_with_parents: false)
+	
+
 
 
 
@@ -642,8 +672,8 @@
 
 	# Version
 	#define('DEDALO_VERSION'	, '4.1.0.ba');
-	define('DEDALO_VERSION'	, '4.0.14.bf');
-	define('DEDALO_BUILD'	, '15-09-2016');
+	define('DEDALO_VERSION'	, '4.0.15.id');
+	define('DEDALO_BUILD'	, '05-10-2016');
 
 
 	/*

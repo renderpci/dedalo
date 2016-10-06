@@ -46,6 +46,14 @@ class tool_administration extends tool_common {
 		}
 
 		if ($version[0]==4 && $version[1]==0 && $version[2]<=10) {
+
+			$tables = (array)backup::get_tables();
+				#dump($tables, ' tables ++ '.to_string());
+
+			if (in_array('matrix_notifications', $tables) ) {
+				# Table already exists
+				return false;
+			}
 		
 			$query 	= ' CREATE TABLE IF NOT EXISTS "matrix_notifications" (
 						"id" serial NOT NULL,
@@ -54,9 +62,8 @@ class tool_administration extends tool_common {
 					) ';
 
 			$result = self::SQL_update($query);
-
 			if ($result) {
-				$query_insert 	= ' INSERT INTO "matrix_notifications" ("id","datos") SELECT 1, \'[]\' WHERE NOT EXISTS (SELECT id FROM "matrix_notifications" WHERE id = 1) ';
+				$query_insert = ' INSERT INTO "matrix_notifications" ("id","datos") SELECT 1, \'[]\' WHERE NOT EXISTS (SELECT id FROM "matrix_notifications" WHERE id = 1) ';
 				self::SQL_update($query_insert);
 			}
 
@@ -384,6 +391,7 @@ class tool_administration extends tool_common {
 
 	/**
 	* COMPONENTS_UPDATE
+	* Iterate ALL structure sections and search components to update based on their model
 	* @param string $modelo_name
 	* @param array $current_version
 	* @param array $update_version
@@ -394,28 +402,43 @@ class tool_administration extends tool_common {
 		$total_update = array();
 
 		$ar_section_tipo = array();
-		$ar_section_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name('section');		
+		$ar_section_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name('section');
+
+		# Force custom sections
+		# $ar_section_tipo = array('mupreva22', 'mupreva710', 'mupreva162', 'mupreva163', 'mupreva20');
+
+
+		# Existing db tables
+		# Gets array of all db tables
+		$tables = (array)backup::get_tables();	
 
 		foreach ($ar_section_tipo as $current_section_tipo) {
 
+			# Activity data is not updated
 			if($current_section_tipo == DEDALO_ACTIVITY_SECTION_TIPO){
 				continue;
 			}
 
-<<<<<<< HEAD
+			#
+			# Test if target table exists (avoid errors on update components of "too much updated" structures)
+			$current_table = common::get_matrix_table_from_tipo($current_section_tipo);
+			if (!in_array($current_table, $tables) ) {
+				$msg = "Skipped section ($current_section_tipo) because table ($current_table) not exists";
+				#trigger_error($msg);
+				debug_log(__METHOD__." $msg ".to_string(), logger::WARNING);
+				continue;
+			}
+
+			#
+			# SECTION COMPONENTS
 			#$ar_component_tipo = (array)RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($current_section_tipo, $modelo_name, 'children_recursive', $search_exact=true);
 			$ar_component_tipo = section::get_ar_children_tipo_by_modelo_name_in_section($current_section_tipo, array($modelo_name), $from_cache=true, $resolve_virtual=true, $recursive=true);
 			
-=======
-			#$ar_component_tipo =  (array)RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($current_section_tipo, $modelo_name, 'children_recursive', $search_exact=true);
-			$ar_component_tipo = section::get_ar_children_tipo_by_modelo_name_in_section($current_section_tipo, array($modelo_name), $from_cache=true, $resolve_virtual=true, $recursive=true);
->>>>>>> origin/master
 
-			
 			if (!empty($ar_component_tipo)) {
 				$ar_modelo_tipo[$current_section_tipo] = $ar_component_tipo;
 				
-				$ar_section_id 	= section::get_ar_all_section_records_unfiltered($current_section_tipo);
+				$ar_section_id = section::get_ar_all_section_records_unfiltered($current_section_tipo);
 				
 				$i=0;
 				$tm=0;
@@ -424,15 +447,12 @@ class tool_administration extends tool_common {
 
 						$RecordObj_dd = new RecordObj_dd($current_component_tipo);
 						$translatable = $RecordObj_dd->get_traducible();
-						if($translatable =='no'){
-							$ar_langs = array(DEDALO_DATA_NOLAN);
-						}else{
-							$ar_langs = unserialize(DEDALO_PROJECTS_DEFAULT_LANGS);
-						}
+						$ar_langs 	  = ($translatable=='no') ? array(DEDALO_DATA_NOLAN) : unserialize(DEDALO_PROJECTS_DEFAULT_LANGS);
 						
-						foreach ($ar_langs as $current_lang) {							
+						foreach ($ar_langs as $current_lang) {
 							
-							#Update component dato
+							#
+							# COMPONENT . Update component dato
 							$component = component_common::get_instance($modelo_name,
 																		$current_component_tipo,
 																		$section_id,
@@ -440,8 +460,7 @@ class tool_administration extends tool_common {
 																		$current_lang,
 																		$current_section_tipo);
 							$dato_unchanged = $component->get_dato_unchanged();
-
-							$reference_id = $current_section_tipo.'.'.$section_id.'.'.$current_component_tipo;
+							$reference_id 	= $current_section_tipo.'.'.$section_id.'.'.$current_component_tipo;
 
 							$response = $modelo_name::update_dato_version($update_version, $dato_unchanged, $reference_id);
 							#debug_log(__METHOD__." UPDATE_DATO_VERSION COMPONENT RESPONSE [$modelo_name][{$current_section_tipo}-{$section_id}]: result: ".to_string($response->result), logger::DEBUG);
@@ -459,16 +478,18 @@ class tool_administration extends tool_common {
 									continue 4;
 								}
 							}
-							#Update Time_machine component dato
+							
+							#
+							# TIME MACHINE . Update Time_machine component dato
 							/**/
 							$ar_time_machine_obj = tool_time_machine::update_records_in_time_machine($current_component_tipo, $section_id, $current_lang, $current_section_tipo);
 							foreach ($ar_time_machine_obj  as $current_time_machine_obj) {
 								$dato_unchanged = $current_time_machine_obj->get_dato();
-								$response = $modelo_name::update_dato_version($update_version, $dato_unchanged, $reference_id);
+								$response 		= $modelo_name::update_dato_version($update_version, $dato_unchanged, $reference_id);
 								#debug_log(__METHOD__." UPDATE_DATO_VERSION TIME_MACHINE RESPONSE [$modelo_name][{$current_section_tipo}-{$section_id}]: result: ".to_string($response->result), logger::DEBUG);
 								if($response->result == 1){
 									$current_time_machine_obj->set_dato($response->new_dato);
-									$current_time_machine_obj->Save();										
+									$current_time_machine_obj->Save();
 									#debug_log(__METHOD__." UPDATED TIME MACHINE dato from component [$modelo_name][{$current_section_tipo}-{$current_component_tipo}-{$current_lang}-{$section_id}] ".to_string($tm), logger::DEBUG);
 									$tm++;
 									$total_update[$current_section_tipo][$current_component_tipo][$current_lang]['tm'] = (int)$tm;
@@ -479,12 +500,13 @@ class tool_administration extends tool_common {
 										continue 5;
 									}
 								}
-							}
+							}//end foreach ($ar_time_machine_obj  as $current_time_machine_obj)
+
 						}
-					}
-				}
-			}
-		}
+					}//end foreach ($ar_component_tipo as $current_component_tipo) {
+				}//end foreach ($ar_section_id as $section_id)
+			}//end if (!empty($ar_component_tipo)) 
+		}//end foreach ($ar_section_tipo as $current_section_tipo)
 		
 		return $total_update;		
 	}//end components_update
@@ -650,6 +672,25 @@ class tool_administration extends tool_common {
 		
 		return $result;
 	}//end run_scripts
+
+
+
+	/**
+	* GET_APPROXIMATE_ROW_COUNT
+	* @return int $total_records
+	*/
+	public function get_approximate_row_count( $matrix_table ) {
+		
+		$total_records= 0;		
+
+		$strQuery = "SELECT reltuples AS approximate_row_count FROM pg_class WHERE relname = '$matrix_table';";
+		$result   = pg_query(DBi::_getConnection(), $strQuery);
+		while ($rows = pg_fetch_assoc($result)) {
+			$total_records  = $rows['approximate_row_count'];
+		}		
+		
+		return (int)$total_records;
+	}//end get_approximate_row_count
 
 
 

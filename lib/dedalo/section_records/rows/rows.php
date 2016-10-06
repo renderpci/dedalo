@@ -188,7 +188,7 @@
 						$value = $modelo_name::render_list_value($value, // value string from db
 																 $current_component_tipo, // current component tipo
 																 $section_id, // current row section id
-																 'list', // mode fixed list
+																 'list_tm', // mode fixed list
 																 DEDALO_DATA_LANG, // current data lang
 																 $section_tipo, // current section tipo
 																 $id);
@@ -209,91 +209,7 @@
 				}
 				break;
 
-		#
-		# LIST
-		#
-		case 'list_thesaurus':
-
-				$file_name = $modo;
-				
-				$section_tipo 		= $this->section_records_obj->rows_obj->options->section_tipo;
-				$section_list_tipo 	= key($this->section_records_obj->rows_obj->options->layout_map);					
-				$ar_columns_tipo 	= reset($this->section_records_obj->rows_obj->options->layout_map);
-				
-				$RecordObj_dd = new RecordObj_dd($section_list_tipo);
-				$propiedades  = json_decode($RecordObj_dd->get_propiedades());				
-
-					# Needed for portal_list_in_list . See portal_list_in_list html
-					$n_records = count($result);
-					$i =1;
-
-				# NO RECORDS FOUND CASE. Stop and return null
-				if ($n_records<1) {
-					#echo "<div class=\"no_results_msg\"></div>"; # No results found
-					return;
-				}
-
-				$notify  =false;
-				$ar_valor=array();
-				$offset  = (int)$this->section_records_obj->rows_obj->options->offset;
-
-				foreach ($result as $key => $table_rows) foreach ($table_rows as $current_id => $rows) {
-
-					# REL_LOCATOR : The current_id can be id matrix or locator like object
-					$rel_locator = $current_id;		 # Temporal. Luego se sobreescribe										
-
-					# ROW					
-					$id 		= $rows['section_id'];
-					$section_id = $rows['section_id'];
-
-					#
-					# COLUMNS
-					#
-					#dump($ar_columns_tipo,"ar_columns_tipo");
-					$ar_childrens = array();
-					foreach($ar_columns_tipo as $current_component_tipo) {
-
-						$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_component_tipo,true);
-						
-						# NOTIFY : Notificamos la carga del elemento a common
-						if (!$notify) {
-							common::notify_load_lib_element_tipo($current_component_tipo, $modelo_name, 'edit');
-						}
-						
-						$value = $rows[$current_component_tipo];
-						/*
-						// Override db value with component value interpretation 'render_list_value'
-						$value = $modelo_name::render_list_value($value, // value string from db
-																 $current_component_tipo, // current component tipo
-																 $section_id, // current row section id
-																 'list', // mode fixed list
-																 DEDALO_DATA_LANG, // current data lang
-																 $section_tipo, // current section tipo
-																 $id);
-						*/
-						if ($current_component_tipo==DEDALO_HIERARCHY_CHIDRENS_TIPO) {
-							$ar_childrens = json_decode($value);
-							continue; // Skip show childrens data
-						}
-
-						$ar_valor[$current_component_tipo] = (string)$value;
-
-					}#end foreach($ar_data as $section_dato => $ar_component_obj)
-
-					
-							
-					# LOAD HTML FOR EVERY ROW
-					$row_html_file	= dirname(__FILE__) . '/html/'. basename(dirname(__FILE__)) .'_'. $file_name .'.phtml';
-					include($row_html_file);
-					
-					$notify=true;
-
-					# Offset global of current record inside result. Used for send var to edit page
-					$offset++;
-
-				}#end if(isset($ar_rows) && is_array($ar_rows)) foreach($ar_rows as $id_section => $ar_data)		
-				break;
-
+		
 	}#end switch($modo)
 
 

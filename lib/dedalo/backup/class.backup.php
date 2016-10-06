@@ -5,6 +5,11 @@
 require_once( DEDALO_LIB_BASE_PATH . '/common/class.exec_.php');
 
 abstract class backup {
+
+	# Columns to save (used by copy command, etc.)
+	# Not use id columns NEVER here
+	public static $jer_dd_columns 		  = '"terminoID", parent, modelo, esmodelo, esdescriptor, visible, norden, tld, traducible, relaciones, propiedades';
+	public static $descriptors_dd_columns = 'parent, dato, tipo, lang';
 	
 
 	/**
@@ -170,7 +175,8 @@ abstract class backup {
 
 	/**
 	* GET_TABLES
-	* Dedalo private tables
+	* Get all tables (unfiltered) from current database
+	* @return array $tableList
 	*/
 	public static function get_tables() {
 		
@@ -183,8 +189,7 @@ abstract class backup {
 		";
 		$result		= JSON_RecordDataBoundObject::search_free($strQuery);
 
-		if(!$result) {
-			
+		if(!$result) {			
 			$msg = "Failed Search. Data is not found. Please contact with your admin (1)" ;	
 			if(SHOW_DEBUG) {
 				throw new Exception($msg, 1);			}
@@ -195,8 +200,9 @@ abstract class backup {
 		while($rows = pg_fetch_assoc($result)) {		
 			$tableList[] = $rows['table_name'];
 		}
-		return $tableList;
+		#dump($tableList, ' $tableList ++ '.to_string($strQuery));
 
+		return (array)$tableList;
 	}//end get_tables
 
 
@@ -225,6 +231,9 @@ abstract class backup {
 		while ($rows = pg_fetch_assoc($result)) {
 			
 			$current_tld = $rows['tld'];
+			#if ($current_tld!='dd') continue;
+			$msg='';
+			$msg .= "<b>$current_tld</b>";
 		
 			if ($current_tld=='dd' || $current_tld=='rsc') {
 				# CORE DEDALO STR
@@ -234,53 +243,103 @@ abstract class backup {
 				$path=DEDALO_EXTRAS_PATH.'/'.$current_tld.'/str_data';
 			}
 
+			# Check destination dir for proper permissions
 			if( !is_dir($path) ) {
 				if(!mkdir($path, 0777,true)) {
 					throw new Exception(" Error on read or create directory. Permission denied ($path)");
 				}
 			}
 
+			#
 			# JER_DD
-			$strQuery = "COPY (SELECT * FROM \"jer_dd\" WHERE \"terminoID\" LIKE '{$current_tld}%') TO '{$path}/jer_dd_{$current_tld}.copy';";
-			$result2  = JSON_RecordObj_matrix::search_free($strQuery);
-			if (!$result2) {
-				throw new Exception(" Error on read or create file. Permission denied ({$path}/jer_dd_{$current_tld}.copy)");
-			}
+				$table 		= 'jer_dd';
+				$tld 		= $current_tld;
+				$path_file1 	= "{$path}/{$table}_{$tld}.copy";
+				$res1 = backup::copy_to_file($table, $path_file1, $tld);
 
-			# MATRIX_DESCRIPTORS_DD
-			$strQuery = "COPY (SELECT * FROM \"matrix_descriptors_dd\" WHERE \"parent\" LIKE '{$current_tld}%') TO '{$path}/matrix_descriptors_dd_{$current_tld}.copy';";
-			$result3  = JSON_RecordObj_matrix::search_free($strQuery);
-			if (!$result3) {
-				throw new Exception(" Error on read or create file. Permission denied ({$path}/matrix_descriptors_dd_{$current_tld}.copy)");
-			}
-		
+				if (empty($res1)) {
+					$msg .= "Error on export $table {$tld} . Please try again";
+					print("<div class=\"error\">$msg</div>");
+					$load_with_errors=true;
+					throw new Exception(" Error on read or create file. Permission denied ({$path_file1})");
+				}else{
+					$msg .= "<br>Exported [$tld] $table (<b>".trim($res1)."</b>) - fields: ". str_replace(' ', '', backup::$jer_dd_columns);
+					$msg .= "<br> -> $path_file1 ";
+					#$ar_response[] = $msg;
+				}
+					
+			#
+			# MATRIX_DESCRIPTORS_DD				
+				$table 		= 'matrix_descriptors_dd';
+				$tld 		= $current_tld;
+				$path_file 	= "{$path}/{$table}_{$tld}.copy";
+				$res2 		= backup::copy_to_file($table, $path_file, $tld);
 
-			$msg = " Saved str tables partial data to $current_tld ";
-			if(SHOW_DEBUG) {
-				#debug_log(__METHOD__.$msg);
-			}
+				if (empty($res2)) {
+					$msg .= "Error on export $table {$tld} . Please try again";
+					print("<div class=\"error\">$msg</div>");
+					$load_with_errors=true;
+					throw new Exception(" Error on read or create file. Permission denied ({$path_file})");
+				}else{
+					$msg .= "<br>Exported [$tld] $table (<b>".trim($res2)."</b>) - fields: ". str_replace(' ', '', backup::$descriptors_dd_columns);
+					$msg .= "<br> -> $path_file ";
+					#$ar_response[] = $msg;					
+				}
 
-			$ar_response[]=$msg;
 
+			$ar_response[] = $msg;	
+			#$msg = " -> Saved str tables partial data to $current_tld (jer_dd: <b>".trim($res1)."</b> - matrix_descriptors_dd: <b>".trim($res2)."</b>)";
+			
 		}#end while
 
 		return (array)$ar_response;
-
 	}#end save_dedalo_str_tables_data
 
 
 
 	/**
-	* LOAD_DEDALO_STR_TABLES_DATA
+	* COPY_TO_FILE
+	* Copy rows from DB to file filtered by tld
+	* Copy is made using psql daemon
+	* @return string $res
+	*/
+	public static function copy_to_file($table, $path_file, $tld) {
+		$res='';
+
+		$command_base = DB_BIN_PATH."psql ".DEDALO_DATABASE_CONN." -U ".DEDALO_USERNAME_CONN." -p ".DEDALO_DB_PORT_CONN." -h ".DEDALO_HOSTNAME_CONN;
+		switch ($table) {
+			case 'jer_dd':				
+				$command = $command_base . " -c \"\copy (SELECT ".addslashes(backup::$jer_dd_columns)." FROM jer_dd WHERE ". '\"terminoID\"' ." LIKE '{$tld}%') TO '{$path_file}' \" " ;
+				$res .= shell_exec($command);
+				break;
+			
+			case 'matrix_descriptors_dd':
+				$command = $command_base . " -c \"\copy (SELECT ".addslashes(backup::$descriptors_dd_columns)." FROM \"matrix_descriptors_dd\" WHERE parent LIKE '{$tld}%') TO '{$path_file}' \" ";
+				$res .= shell_exec($command);
+				break;
+		}		
+		#dump($res, ' res ++ '.to_string($path_file));
+
+		if (!file_exists($path_file)) {
+			throw new Exception("Error Processing Request. File $path_file not created!", 1);			
+		}
+
+		return (string)$res;
+	}//end copy_to_file
+
+
+
+	/**
+	* LOAD_DEDALO_STR_TABLES_DATA_FROM_FILES
 	* Load data from every tld element file. Files are saved as postgres 'copy' in various locations.
 	* Core load 'dd','rsc'
 	* Extras load extras folder 'str_data' dir data (filtered by config:DEDALO_PREFIX_TIPOS)
 	* @return array $ar_response with array of generated messages on run method
 	* NOTE: Sequences and list of values are NOT loaded, only str tables without sequences
 	*/
-	public static function load_dedalo_str_tables_data() {
+	public static function load_dedalo_str_tables_data_from_files() {
 		$ar_response=array();
-
+	
 		if (!defined('DEDALO_EXTRAS_PATH')) {
 			define('DEDALO_EXTRAS_PATH'		, DEDALO_LIB_BASE_PATH .'/extras');
 			debug_log(__METHOD__." WARNING: DEDALO_EXTRAS_PATH is not defined. Using default.. ", logger::WARNING);
@@ -292,97 +351,59 @@ abstract class backup {
 
 		#
 		# CORE : Load core dedalo str
+		# Iterate 'dd' and 'rsc' tlds
 		#
 			$path=DEDALO_LIB_BASE_PATH.'/backup/backups_structure/str_data';
 			$ar_core_tlds = array('dd','rsc');
-			foreach ($ar_core_tlds as $current_tld) {				
+			foreach ($ar_core_tlds as $current_tld) {
 
+				$msg='';
+				$msg .= "<b>$current_tld</b>";
+
+				#
 				# JER_DD
-				if (file_exists($path.'/jer_dd_'.$current_tld.'.copy')) {
-					$strQuery = "DELETE FROM \"jer_dd\" WHERE \"terminoID\" LIKE '{$current_tld}%'; ";	// COPY \"jer_dd\" FROM '{$path}/jer_dd_dd.copy';
-					pg_query(DBi::_getConnection(), $strQuery);
-
-					$command = DB_BIN_PATH."psql ".DEDALO_DATABASE_CONN." -U ".DEDALO_USERNAME_CONN." -p ".DEDALO_DB_PORT_CONN." -h ".DEDALO_HOSTNAME_CONN." -c \"\copy jer_dd from {$path}/jer_dd_{$current_tld}.copy\" ";								
-					$res1 = shell_exec($command);
-						#dump($res1, ' res1 ++ '.to_string($current_tld));						
-				}else{
-					throw new Exception("Error Processing Request. File not found: $path/jer_dd_dd.copy", 1);
-				}
-				if (empty($res1)) {
-					$msg = "Error on import jer_dd_{$current_tld} . Please try again";
-					if(SHOW_DEBUG) {
-						dump($command, '$res1 ++ '.to_string($res1));
-						#throw new Exception("Error Processing Request: $msg", 1);
+					$table 		= 'jer_dd';
+					$tld 		= $current_tld;
+					$path_file 	= $path.'/'.$table .'_'.$tld.'.copy';
+					$res1 		= backup::copy_from_file($table, $path_file, $tld);
+					
+					if (empty($res1)) {
+						$msg .= "<br>Error on import $table {$tld} . Please try again";
+						if(SHOW_DEBUG) {
+							dump($command, '$res1 ++ '.to_string($res1));
+							#throw new Exception("Error Processing Request: $msg", 1);
+						}
+						print("<div class=\"error\">$msg</div>");
+						$load_with_errors=true;
 					}
-					print("<div class=\"error\">$msg</div>");
-					$load_with_errors=true;
-				}
 
-				# MATRIX_DESCRIPTORS_DD
-				if (file_exists($path.'/matrix_descriptors_dd_'.$current_tld.'.copy')) {
-					$strQuery = "DELETE FROM \"matrix_descriptors_dd\" WHERE \"parent\" LIKE '{$current_tld}%'; ";	//COPY \"matrix_descriptors_dd\" FROM '{$path}/matrix_descriptors_dd_dd.copy';
-					pg_query(DBi::_getConnection(), $strQuery);
-
-					$command = DB_BIN_PATH."psql ".DEDALO_DATABASE_CONN." -U ".DEDALO_USERNAME_CONN." -p ".DEDALO_DB_PORT_CONN." -h ".DEDALO_HOSTNAME_CONN." -c \"\copy matrix_descriptors_dd from {$path}/matrix_descriptors_dd_{$current_tld}.copy\" ";
-					$res2 = shell_exec($command);
-				}else{
-					throw new Exception("Error Processing Request. File not found: $path/matrix_descriptors_dd_dd.copy", 1);			
-				}
-				if (empty($res2)) {
-					$msg = "Error on import matrix_descriptors_dd_{$current_tld} . Please try again";
-					if(SHOW_DEBUG) {
-						dump($command, '$res2 ++ '.to_string($res2));
-						#throw new Exception("Error Processing Request: $msg", 1);
+				#
+				# MATRIX_DESCRIPTORS_DD	
+					$table 		= 'matrix_descriptors_dd';
+					$tld 		= $current_tld;
+					$path_file 	= $path.'/'.$table .'_'.$tld.'.copy';					
+					$res2 		= backup::copy_from_file($table, $path_file, $tld);
+					
+					if (empty($res2)) {
+						$msg .= "<br>Error on import $table {$tld} . Please try again";
+						if(SHOW_DEBUG) {
+							dump($command, '$res2 ++ '.to_string($res2));
+							#throw new Exception("Error Processing Request: $msg", 1);
+						}
+						print("<div class=\"error\">$msg</div>");
+						$load_with_errors=true;
 					}
-					print("<div class=\"error\">$msg</div>");
-					$load_with_errors=true;
-				}
-				
-				if(SHOW_DEBUG) {
-					$msg = "Importing dedalo core data";
-					$msg .= " (jer_dd_{$current_tld} [".trim($res1)."],matrix_descriptors_dd_{$current_tld} [".trim($res2)."]) ";
-				}				
+					
+					if(SHOW_DEBUG) {
+						$msg .= "<br>Imported dedalo core data";
+						$msg .= " (jer_dd {$tld} [<b>".trim($res1)."</b>], matrix_descriptors_dd {$tld} [<b>".trim($res2)."</b>]) ";
+					}				
 
 				$ar_response[]=$msg;
 
 				// let GC do the memory job
-				time_nanosleep(0, 50000000); // 50 ms
-
-			}#end foreach
-
-			#
-			# SEQUENCES UPDATE
-			# Is necessary for maintain data integrity across exports
-			$msg = "Updated dedalo core data sequences";
-			# SEQUENCE UPDATE (to the last table id)
-				$table 	  ='jer_dd';
-				$strQuery = 'SELECT id FROM "'.$table.'" ORDER BY "id" DESC LIMIT 1';	// get last id
-				$result   = pg_query(DBi::_getConnection(), $strQuery);
-				$row 	  = pg_fetch_row($result);
-				$last_id  = (int)$row[0];
-				#$strQuery = 'ALTER SEQUENCE '.$table.'_id_seq RESTART WITH '.$last_id.';';	// get last id 
-				$sequence_name = $table.'_id_seq';
-				$strQuery = "SELECT setval('$sequence_name', $last_id, true);";
-
-				$result   = pg_query(DBi::_getConnection(), $strQuery);
-				if(SHOW_DEBUG) {
-					$msg .= "<br> {$sequence_name} with value $last_id [$strQuery]";
-				}
-			# SEQUENCE UPDATE (to the last table id)
-				$table 	  ='matrix_descriptors_dd';
-				$strQuery = 'SELECT id FROM "'.$table.'" ORDER BY "id" DESC LIMIT 1';	// get last id
-				$result   = pg_query(DBi::_getConnection(), $strQuery);
-				$row 	  = pg_fetch_row($result);
-				$last_id  = (int)$row[0];
-				#$strQuery = 'ALTER SEQUENCE '.$table.'_id_seq RESTART WITH '.$last_id.';';	// get last id
-				$sequence_name = $table.'_id_seq';
-				$strQuery = "SELECT setval('$sequence_name', $last_id, true);";
-				$result   = pg_query(DBi::_getConnection(), $strQuery);
-				if(SHOW_DEBUG) {
-					$msg .= "<br> {$sequence_name} with value $last_id [$strQuery]";
-				}
-				$ar_response[]=$msg;
-
+				time_nanosleep(0, 10000000); // 50 ms
+			}#end foreach			
 
 		#
 		# LIST OF VALUES PRIVATE
@@ -403,18 +424,21 @@ abstract class backup {
 				}
 				$ar_response[]=$msg;
 			}
-			*/
-						
+			*/						
+
 
 		#
 		# EXTRAS : Load extras str
+		# Iterate tlds from 'extras' folder
 		#
 			$ar_extras_folders = (array)glob(DEDALO_EXTRAS_PATH . '/*', GLOB_ONLYDIR);
-				#dump($ar_extras_folders," ar_extras_folders");return;
 			$DEDALO_PREFIX_TIPOS = (array)unserialize(DEDALO_PREFIX_TIPOS);
 			foreach ($ar_extras_folders as $current_dir) {
 				
 				$current_dir = basename($current_dir);
+				$path 		 = DEDALO_EXTRAS_PATH .'/'.$current_dir.'/str_data';
+				$msg  ='';
+				$msg .= "<b>$current_dir</b>";
 
 				if ($current_dir!='test') {
 					#continue;
@@ -424,41 +448,145 @@ abstract class backup {
 				# DEDALO_PREFIX_TIPOS : config tipos verify. 'tipos' not defined in config, will be ignored
 				if (!in_array($current_dir, $DEDALO_PREFIX_TIPOS)) {
 					continue; # Filter load prefix from config 'DEDALO_PREFIX_TIPOS'
-				}
-
-				$path = DEDALO_EXTRAS_PATH .'/'.$current_dir.'/str_data';
-				# JER_DD
-				if (file_exists($path.'/jer_dd_'.$current_dir.'.copy')) {
-					$strQuery  = "DELETE FROM \"jer_dd\" WHERE \"terminoID\" LIKE '{$current_dir}%'; ";	// COPY \"jer_dd\" FROM '{$path}/jer_dd_{$current_dir}.copy'";
-					pg_query(DBi::_getConnection(), $strQuery);
-
-					$command = DB_BIN_PATH."psql ".DEDALO_DATABASE_CONN." -U ".DEDALO_USERNAME_CONN." -p ".DEDALO_DB_PORT_CONN." -h ".DEDALO_HOSTNAME_CONN." -c \"\copy jer_dd from {$path}/jer_dd_{$current_dir}.copy\" ";
-					$res1 = exec($command);
-				}else{
-					#throw new Exception("Error Processing Request. File not found: ".$path.'/jer_dd_'.$current_dir.'.copy', 1);
-				}
-				# MATRIX_DESCRIPTORS_DD
-				if (file_exists($path.'/matrix_descriptors_dd_'.$current_dir.'.copy')) {
-					$strQuery = "DELETE FROM \"matrix_descriptors_dd\" WHERE \"parent\" LIKE '{$current_dir}%';"; // COPY \"matrix_descriptors_dd\" FROM '{$path}/matrix_descriptors_dd_{$current_dir}.copy';"
-					pg_query(DBi::_getConnection(), $strQuery);
-					
-					$command = DB_BIN_PATH."psql ".DEDALO_DATABASE_CONN." -U ".DEDALO_USERNAME_CONN." -p ".DEDALO_DB_PORT_CONN." -h ".DEDALO_HOSTNAME_CONN." -c \"\copy matrix_descriptors_dd from {$path}/matrix_descriptors_dd_{$current_dir}.copy\" ";
-					$res2 = exec($command);
-				}else{
-					#throw new Exception("Error Processing Request. File not found: ".$path.'/matrix_descriptors_dd_'.$current_dir.'.copy', 1);			
-				}
+				}				
 				
-				$msg = "Imported dedalo extras data";
+				#
+				# JER_DD EXTRAS
+					$table 		= 'jer_dd';
+					$tld 		= $current_dir;
+					$path_file1 	= $path.'/'.$table .'_'.$tld.'.copy';
+					$res1 		= backup::copy_from_file($table, $path_file1, $tld);
+
+					if (empty($res1)) {
+						$msg .= "<br>Error on import $table {$tld} . Please try again";
+						if(SHOW_DEBUG) {
+							dump($command, '$res1 ++ '.to_string($res1));
+							#throw new Exception("Error Processing Request: $msg", 1);
+						}
+						print("<div class=\"error\">$msg</div>");
+						$load_with_errors=true;
+					}
+				
+				#
+				# MATRIX_DESCRIPTORS_DD EXTRAS
+					$table 		= 'matrix_descriptors_dd';
+					$tld 		= $current_dir;
+					$path_file 	= $path.'/'.$table .'_'.$tld.'.copy';
+					$res2 		= backup::copy_from_file($table, $path_file, $tld);
+
+					if (empty($res2)) {
+						$msg .= "<br>Error on import $table {$tld} . Please try again";
+						if(SHOW_DEBUG) {
+							dump($command, '$res2 ++ '.to_string($res2));
+							#throw new Exception("Error Processing Request: $msg", 1);
+						}
+						print("<div class=\"error\">$msg</div>");
+						$load_with_errors=true;
+					}
+				
+				$msg .= "<br>Imported dedalo extras data";
 				if(SHOW_DEBUG) {
-					$msg .= " (jer_dd_{$current_dir} [$res1],matrix_descriptors_dd_{$current_dir} [$res2])";
+					$msg .= " (jer_dd {$tld} [<b>".trim($res1)."</b>], matrix_descriptors_dd {$tld} [<b>".trim($res2)."</b>])";
+					$msg .= "<br> -> $path_file1 ";
+					$msg .= "<br> -> $path_file ";
 				}
 				$ar_response[]=$msg;				
 
+				// let GC do the memory job
+				time_nanosleep(0, 10000000); // 50 ms
 			}#end foreach
 
-		return $ar_response;
+		#
+		# SEQUENCES UPDATE
+		# Is necessary for maintain data integrity across exports
+			$msg = "Updated dedalo core data sequences";
+			# SEQUENCE UPDATE (to the last table id)
+				$table 	 ='jer_dd';
+				$msg 	.= self::consolide_sequence($table);
+				
+			# SEQUENCE UPDATE (to the last table id)
+				$table 	 ='matrix_descriptors_dd';
+				$msg 	.= self::consolide_sequence($table);
+			$ar_response[]=$msg;
 
+
+		return (array)$ar_response;
 	}#end save_dedalo_str_tables_data
+
+
+
+	/**
+	* COPY_FROM_FILE
+	* Copy rows from postgres 'COPY' (like csv) to table
+	* Previously, existing records whit current tld are deleted
+	* Delete is made as regular php query to database
+	* Copy is made using psql daemon
+	* @return string $res
+	*/
+	public static function copy_from_file($table, $path_file, $tld) {
+		$res='';
+
+		if (!file_exists($path_file)) {
+			throw new Exception("Error Processing Request. File $path_file not found", 1);			
+		}
+
+		$command_base = DB_BIN_PATH."psql ".DEDALO_DATABASE_CONN." -U ".DEDALO_USERNAME_CONN." -p ".DEDALO_DB_PORT_CONN." -h ".DEDALO_HOSTNAME_CONN;
+		switch ($table) {
+
+			case 'jer_dd':
+				# DELETE . Remove previous records
+				#$strQuery  = "DELETE FROM \"jer_dd\" WHERE \"terminoID\" LIKE '{$tld}%'; "; #pg_query(DBi::_getConnection(), $strQuery);				
+				$command = $command_base . " -c \"DELETE FROM \"jer_dd\" WHERE ".'\"terminoID\"'." LIKE '{$tld}%'\" "; # -c "DELETE FROM \"jer_dd\" WHERE \"terminoID\" LIKE 'dd%'"
+				$res .= shell_exec($command);
+
+				# COPY . Load data from file
+				$command = $command_base . " -c \"\copy jer_dd(".addslashes(backup::$jer_dd_columns).") from {$path_file}\" ";
+				$res .= shell_exec($command);
+				break;
+
+			case 'matrix_descriptors_dd':
+				# DELETE . Remove previous records
+				#$strQuery = "DELETE FROM \"matrix_descriptors_dd\" WHERE \"parent\" LIKE '{$tld}%';"; #pg_query(DBi::_getConnection(), $strQuery);
+				$command = $command_base . " -c \"DELETE FROM \"matrix_descriptors_dd\" WHERE parent LIKE '{$tld}%'\" "; # -c "DELETE FROM \"jer_dd\" WHERE \"terminoID\" LIKE 'dd%'"
+				$res .= shell_exec($command);
+
+				# COPY . Load data from file
+				$command = $command_base . " -c \"\copy matrix_descriptors_dd(".addslashes(backup::$descriptors_dd_columns).") from {$path_file}\" ";
+				$res .= shell_exec($command);
+				break;			
+		}
+		#dump($res, ' res ++ '.to_string($path_file));
+		$res = str_replace("\n",' ',$res);
+
+		return (string)$res;
+	}//end copy_from_file
+
+
+
+	/**
+	* CONSOLIDE_SEQUENCE
+	* Set sequence value as last table id row
+	* @return array $ar_response
+	*/
+	public static function consolide_sequence($table) {
+		$msg='';
+
+		# SEQUENCE UPDATE (to the last table id)
+		$strQuery = 'SELECT id FROM "'.$table.'" ORDER BY "id" DESC LIMIT 1';	// get last id
+		$result   = pg_query(DBi::_getConnection(), $strQuery);
+		$row 	  = pg_fetch_row($result);
+		$last_id  = (int)$row[0];
+		#$strQuery = 'ALTER SEQUENCE '.$table.'_id_seq RESTART WITH '.$last_id.';';	// get last id 
+		$sequence_name = $table.'_id_seq';
+		$strQuery = "SELECT setval('$sequence_name', $last_id, true);";
+
+		$result   = pg_query(DBi::_getConnection(), $strQuery);
+		if(SHOW_DEBUG) {
+			$msg .= "<br> {$sequence_name} with value $last_id [$strQuery]";
+		}
+		
+		return (string)$msg;
+	}//end consolide_sequence
 
 
 
@@ -568,37 +696,8 @@ abstract class backup {
 		$result->code 	= $worked_result;
 
 		return $result;
-		#return $res_html;
-
 	}#end export_structure
-
-
-
-	/**
-	* DB_SYSTEM_CONFIG_VERIFY
-	*/
-	public static function db_system_config_verify() {
-		
-		#
-		# PGPASS VERIFY
-		$processUser = posix_getpwuid(posix_geteuid());
-		$base_dir 	 = $processUser['dir'];
-		$file 		 = $base_dir.'/.pgpass';		
-
-		# File test
-		if (!file_exists($file)) {
-			die( wrap_pre("Error. Database system configuration not allow import (1). pgpass not found") );
-		}
-
-		# File permissions
-		$perms = decoct(fileperms($file) & 0777);
-			#dump($perms, ' perms ++ '.to_string());
-		if ($perms!='600') {
-			die( wrap_pre("Error. Database system configuration not allow import (2). pgpass invalid permissions") );
-		}
-
-	}#end db_system_config_verify
-
+	
 
 
 	/**
@@ -648,17 +747,18 @@ abstract class backup {
 				$res_html .= '</div>';
 
 				#
-				# LOAD_DEDALO_STR_TABLES_DATA
+				# LOAD_DEDALO_STR_TABLES_DATA_from_files
 				# Load partials srt data based on tld to independent files
 				#if ($db_name=='dedalo4_development_str.custom') {
 					#sleep(2);
-					$ar_response 		= self::load_dedalo_str_tables_data();	
+					$ar_response 		= self::load_dedalo_str_tables_data_from_files();	
 					$ar_response_html 	= implode('<hr>', (array)$ar_response);
 					$res_html .= wrap_pre($ar_response_html, false);
 				#}
 
 				#
 				# DELETE DEVELOPMENT ELEMENTS FROM FINAL STRUCTURE
+				/* DESACTIVADO : YA NO SE NECESITA !
 				if (DEDALO_DATABASE_CONN!='dedalo4_development') {
 					
 					$ar_parents 			= array('dd1111','dd1189');
@@ -688,6 +788,7 @@ abstract class backup {
 					$res_html .= wrap_pre( "Removed development elements: ".count($ar_recursive_childrens)." from parents: ".implode(',', $ar_parents) , false);
 
 				}//end if (DEDALO_DATABASE_CONN!='dedalo4_development')
+				*/
 				break;
 
 			# ERROR (1)
@@ -721,6 +822,35 @@ abstract class backup {
 		return $res_html;
 
 	}#end import_structure
+
+
+
+	/**
+	* DB_SYSTEM_CONFIG_VERIFY
+	* Check current database status to properly configuration 
+	* Test pgpass file existence and permissions
+	* If pgpass if not correctly configurated, die current script showing a error
+	*/
+	public static function db_system_config_verify() {
+		
+		#
+		# PGPASS VERIFY
+		$processUser = posix_getpwuid(posix_geteuid());
+		$base_dir 	 = $processUser['dir'];
+		$file 		 = $base_dir.'/.pgpass';		
+
+		# File test
+		if (!file_exists($file)) {
+			die( wrap_pre("Error. Database system configuration not allow import (1). pgpass not found") );
+		}
+
+		# File permissions
+		$perms = decoct(fileperms($file) & 0777);
+			#dump($perms, ' perms ++ '.to_string());
+		if ($perms!='600') {
+			die( wrap_pre("Error. Database system configuration not allow import (2). pgpass invalid permissions") );
+		}
+	}#end db_system_config_verify
 
 
 

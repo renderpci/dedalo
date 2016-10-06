@@ -26,7 +26,7 @@
 					# COMPARISON OPERATORS
 					$html_contenido .= operator::get_search_comparison_operators_html($tipo,$ar_comparison_operators);
 		
-					$html_contenido .= "\n <input class=\"css_input_text\" type=\"text\" name=\"{$search_input_name}\"
+					$html_contenido .= "\n <input class=\"css_input_text_large_search\" type=\"text\" name=\"{$search_input_name}\"
 					id=\"{$identificador_unico}\"
 					data-tipo=\"{$tipo}\"
 					data-lang=\"{$lang}\"
@@ -37,6 +37,9 @@
 					$html_contenido .= operator::get_search_logical_operators_html($tipo,$ar_logical_operators);
 					break;				
 	}
+
+	# Prepare content to show in page
+	tools::prepare_content($html_contenido);	
 	
 	
 	# PRINT HTML

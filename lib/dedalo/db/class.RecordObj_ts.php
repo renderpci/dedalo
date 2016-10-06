@@ -523,10 +523,10 @@ class RecordObj_ts extends RecordDataBoundObject {
 		$arguments['order_by_asc']		= $order_by;
 		$RecordObj_ts					= new RecordObj_ts($tipo);
 		$ar_childrens					= $RecordObj_ts->search($arguments);
-			
 		# STORE CACHE DATA
 		$get_ar_childrens_data[$key] = $ar_childrens;
-		
+		#$get_ar_childrens_data[$key] = ['ts2885','ts2887'];
+
 		return $ar_childrens;
 
 	}//end get_ar_childrens

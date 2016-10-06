@@ -164,31 +164,35 @@
 					}
 					$html_contenido .= "</div>";
 				}
-				
 
+				# INIT : Init text editor	
+				$html_contenido .= "<script>text_editor.init('$identificador_unico','$modo','$propiedades_json');</script>";
+				/*			
+				$html_contenido .= "<script>
+				//window.addEventListener('load', function(e){
+					text_editor.init('$identificador_unico','$modo','$propiedades_json');
+					if(DEBUG) console.log('init component_text_area: $identificador_unico');
+				//});
+				</script>";
+				*/
 
 				if(SHOW_DEBUG) {
 					#$html_contenido .= "\n <span class=\"css_span_debugger\" id=\"debugger_{$tipo}\" >{$debugger}</span>";
 				}
 				break;
 
-	}//end switch($permissions) {
-
-
-	# INIT : Init text editor
-	if ($permissions>=2) {
-		$html_contenido .= "\n<script>text_editor.init('$identificador_unico','$modo','$propiedades_json');</script>";
-		#$html_contenido .= "\n<script>tinymce.init({ selector:'textarea' });</script>";
-	}
+	}//end switch($permissions) {	
 	
 
 	# Prepare content to show in page
 	tools::prepare_content($html_contenido);
-
+	
 
 	# PRINT HTML
 	print $html_label;
 	print $html_contenido;
+
+
 
 
 	print "\n</div><!-- /css_wrap_text_area  $label -->\n\n"; //wrap

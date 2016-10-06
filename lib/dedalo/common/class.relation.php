@@ -19,13 +19,10 @@ class relation {
 	* __CONSTRUCT
 	* @return 
 	*/
-	public function __construct( $section_id , $section_tipo ) {
+	public function __construct( $section_id, $section_tipo ) {
 		
 		# Create and fix current section
 		$this->section = section::get_instance($section_id, $section_tipo);
-
-
-
 	}//end __construct
 
 
@@ -74,11 +71,11 @@ class relation {
 		
 		$relation = new relation( $locator->section_id , $locator->section_tipo );
 		$parents  = $relation->get_parents();
-		foreach ($parents as $key => $current_locator) {			
+		foreach ($parents as $key => $current_locator) {
 
 			$current_locator->childrens[] = $locator;
 
-			$final[] = $current_locator;		
+			$final[] = $current_locator;
 			
 			if($recursive===true){
 				$final2 = self::get_parents_recursive($current_locator, $final, true);
@@ -95,6 +92,7 @@ class relation {
 
 		return $final2;
 	}//end get_parents_recursive
+
 
 
 	/**

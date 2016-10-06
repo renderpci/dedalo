@@ -235,7 +235,6 @@ class tool_lang extends tool_common {
 		}
 
 		return $ar_source_langs;
-
 	}//end get_source_langs
 
 

@@ -86,6 +86,20 @@
 							$valor_day		= isset($dd_date->day) ? $dd_date->day : '';							
 						}						
 						break;
+					case 'time':
+						$input_name	= "{$tipo}_{$parent}";
+
+						$valor	= '';
+						if(!empty($dato)) {
+							$dd_date 	= new dd_date($dato);
+
+							$hour  	 = isset($dd_date->hour)	? $dd_date->hour : '00';
+							$minute  = isset($dd_date->minute)	? $dd_date->minute : '00';
+							$second  = isset($dd_date->second)	? $dd_date->second : '00';
+							$separator_time = ':';
+							$valor 	 = $hour . $separator_time . $minute . $separator_time . $second;
+						}
+						break;
 					case 'date':
 					default:
 						$input_name	= "{$tipo}_{$parent}";
@@ -99,7 +113,7 @@
 							}else{
 								$valor	= component_date::get_valor_local( $dd_date, false );
 							}
-						}													
+						}
 						break;
 				}
 				#dump($date_mode, ' date_mode ++ '.to_string());

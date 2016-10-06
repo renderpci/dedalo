@@ -47,19 +47,22 @@
 						$current_section_id 	= $current_locator->section_id;
 						$current_section_tipo 	= $current_locator->section_tipo;
 
+						# Permissions of target section. Apply to current buttons
+						$open_section_tipo_permissions = common::get_permissions($current_section_tipo,$current_section_tipo);
+						
 
 						$html_contenido .= "<li>";
 
 
 						#
 						# BTN DELETE
-						if (!$in_time_machine) {
+						if (!$in_time_machine) {							
 						$html_contenido .= "\n <div class=\"icon_bs link css_autocomplete_button_delete\"
 						data-tipo=\"{$tipo}\"
 						data-current_value='$current_value'
 						data-id_wrapper=\"$id_wrapper\"
 						title=\"$label $parent\"
-						onclick=\"component_autocomplete.delete(this)\"></div>";
+						onclick=\"component_autocomplete.delete(this)\"></div>";						
 						}
 
 
@@ -70,13 +73,13 @@
 
 						#
 						# BTN EDIT
-						if (!$in_time_machine) {
+						if (!$in_time_machine && $open_section_tipo_permissions>=2) {
 						$html_contenido .= "<a href=\"javascript:;\" class=\"icon_bs link edit_autocomplete edit_autocomplete_row\" onclick=\"component_autocomplete.open_element(this)\"
 						data-section_tipo=\"$current_section_tipo\"
 						data-section_id=\"$current_section_id\"
 						data-modo=\"edit\"
 						data-menu=\"0\"
-						></a>";
+						></a>";						
 						}
 
 
@@ -114,22 +117,29 @@
 
 					if (!$in_time_machine) {
 
-						#
-						# BTN EDIT WHOLE SECTION
+						
 						#$url_edit = "?t=".reset($ar_target_section_tipo).'&menu=0';	// To first section only  onclick=\"window.open('$url_edit')\"
 						$open_section_tipo = reset($ar_target_section_tipo);
-						$open_section_id   = null;
-						$html_contenido .= "<a href=\"javascript:;\" class=\"icon_bs link edit_autocomplete\" onclick=\"component_autocomplete.open_element(this)\"
-						data-section_tipo=\"$open_section_tipo\"
-						data-section_id=\"$open_section_id\"
-						data-modo=\"list\"
-						data-menu=\"1\"
-						></a>";
 
+						# Permissions of target section. Apply to current buttons
+						$open_section_tipo_permissions = common::get_permissions($open_section_tipo,$open_section_tipo);
+						if ($open_section_tipo_permissions>=2) {
+							
+							#
+							# BTN EDIT WHOLE SECTION
+							$open_section_id   = null;
+							$html_contenido .= "<a href=\"javascript:;\" class=\"icon_bs link edit_autocomplete\" onclick=\"component_autocomplete.open_element(this)\"
+							data-section_tipo=\"$open_section_tipo\"
+							data-section_id=\"$open_section_id\"
+							data-modo=\"list\"
+							data-menu=\"1\"
+							></a>";							
 
-						#
-						# BTN NEW ELEMENT
-						$html_contenido .= "<div class=\"icon_bs link new_autocomplete\" data-target_section_tipo=\"".reset($ar_target_section_tipo)."\" onclick=\"component_autocomplete.new_element(this,'$id_wrapper')\"></div>";
+							#
+							# BTN NEW ELEMENT
+							$html_contenido .= "<div class=\"icon_bs link new_autocomplete\" data-target_section_tipo=\"".reset($ar_target_section_tipo)."\"
+							onclick=\"component_autocomplete.new_element(this,'$id_wrapper')\"></div>";
+						}
 
 
 						#

@@ -264,6 +264,15 @@
 													 $processUser
 													);
 
+			#
+			# MAX_INPUT_VARS
+			$max_input_vars = ini_get("max_input_vars");
+			$html .= tool_administration::show_info( "PHP Max. vars directive",
+													'max_input_vars',
+													 $max_input_vars
+													);
+
+
 			
 			#
 			# ENCODING mb_internal_encoding
@@ -424,7 +433,38 @@
 													 $output_array[1]." - ".$path,
 													 $result
 													);		
-		
+			
+			#
+			# SECTIONS
+			if(SHOW_DEBUG) {
+				$ar_section_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name('section');
+				$ar_sections = array();
+				foreach ($ar_section_tipo as $current_section_tipo) {
+					#$approximate_row_coun = tool_administration::get_approximate_row_count($current_section_tipo);
+					$ar_sections[$current_section_tipo] = RecordObj_dd::get_termino_by_tipo($current_section_tipo)." "; // ($approximate_row_coun)
+				}
+				$html .= tool_administration::show_info( "SECTIONS",
+														 count($ar_section_tipo),
+														 $ar_sections
+														);
+			}
+
+
+			#
+			# DB TABLES
+			if(SHOW_DEBUG) {
+				$tables = (array)backup::get_tables();
+				$ar_tables=array();
+				foreach ($tables as $current_table) {
+					$approximate_row_count = tool_administration::get_approximate_row_count($current_table);
+					$ar_tables[] = "$current_table ($approximate_row_count)";
+				}
+				$html .= tool_administration::show_info( "DB TABLES",
+														 "",
+														 $ar_tables
+														);
+			}
+
 
 
 			#
@@ -444,6 +484,7 @@
 														 $response->msg
 														);
 			}
+
 
 
 		$html   .= "</ul>";//end list-group

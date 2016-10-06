@@ -23,9 +23,6 @@ require(DEDALO_LIB_BASE_PATH . '/common/class.operator.php');
 require(DEDALO_LIB_BASE_PATH . '/common/class.locator.php');
 require(DEDALO_LIB_BASE_PATH . '/common/class.dd_date.php');
 require(DEDALO_LIB_BASE_PATH . '/common/class.relation.php');
-if (SHOW_DEBUG) {
-require(DEDALO_LIB_BASE_PATH . '/common/class.relation_test.php');
-}
 require(DEDALO_LIB_BASE_PATH . '/component_common/class.component_common.php');
 require(DEDALO_LIB_BASE_PATH . '/component_common/class.component_relation_common.php');
 

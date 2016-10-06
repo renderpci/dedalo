@@ -9,18 +9,19 @@ class component_relation_children extends component_relation_common {
 	# Overwrite __construct var lang passed in this component
 	protected $lang = DEDALO_DATA_NOLAN;
 
-
+	public $relation_type = DEDALO_RELATION_TYPE_CHILDREN_TIPO;
+	#public $relation_type_inverse = DEDALO_RELATION_TYPE_PARENT_TIPO; 
 
 	/**
 	* __CONSTRUCT
-	*/
+	*//*
 	function __construct($tipo=null, $parent=null, $modo='edit', $lang=DEDALO_DATA_NOLAN, $section_tipo=null) {
 
 		# Force always DEDALO_DATA_NOLAN
 		$lang = $this->lang;
 
 		# relation_tipo
-		$this->relation_tipo = DEDALO_RELATION_TYPE_PARENT_TIPO;
+		$this->relation_tipo = DEDALO_RELATION_TYPE_CHILDREN_TIPO;
 
 		# Build the componente normally
 		parent::__construct($tipo, $parent, $modo, $lang, $section_tipo);
@@ -32,34 +33,7 @@ class component_relation_children extends component_relation_common {
 			}
 		}
 	}//end __construct
-
-
-
-	/**
-	* SAVE
-	* @return int $result
-	*	section returns section_id on save
-	* When save component, section is saved, not explicit section save is needed here
-	* Note that section relation data of current type is deleted and recreated completely on every save action
 	*/
-	public function Save() {
-
-		# Set section relation locators for fast access later from class relation
-		$my_section = $this->get_my_section();
-
-		# Remove whole actual section parent locators
-		$my_section->remove_relations_of_type($this->relation_tipo);
-
-		# Add whole array of parent locators
-		$dato = $this->get_dato();
-		foreach ((array)$dato as $current_locator) {
-			$current_locator->type = $this->relation_tipo;
-			$my_section->add_relation($current_locator, $remove_previous_of_current_type=false); // Note thats second param force remove old locators of current type
-		}		
-
-		# Save normally
-		return parent::Save();
-	}//end Save
 
 
 
@@ -69,6 +43,7 @@ class component_relation_children extends component_relation_common {
 	*	$dato is always an array of locators
 	*/
 	public function get_dato() {
+		
 		$dato = parent::get_dato();
 
 		if (!empty($dato) && !is_array($dato)) {
@@ -83,6 +58,7 @@ class component_relation_children extends component_relation_common {
 
 		return (array)$dato;
 	}//end get_dato
+
 
 
 
@@ -108,6 +84,7 @@ class component_relation_children extends component_relation_common {
 			parent::set_dato( (array)$dato );
 		}
 		*/
+
 		parent::set_dato( (array)$dato );
 	}//end set_dato
 
@@ -227,7 +204,109 @@ class component_relation_children extends component_relation_common {
 		return (array)$ar_target_section_tipo;
 	}//end get_ar_target_section_tipo
 
-	
+
+
+	/**
+	* MAKE_ME_YOUR_CHILDREN
+	* Add one locator to current 'dato' from parent side
+	* NOTE: This method updates component 'dato' and save
+	* @return bool
+	*/
+	public function make_me_your_children( $section_tipo, $section_id ) {
+
+		$locator = new locator();
+			$locator->set_section_tipo($section_tipo);
+			$locator->set_section_id($section_id);
+			$locator->set_type($this->relation_type);
+			$locator->set_from_component_tipo($this->tipo);
+
+		# Add children locator
+		if (!$add_children = $this->add_children($locator)) {			
+			return false;
+		}
+		
+		return true;
+	}//end make_me_your_children
+
+
+
+	/**
+	* REMOVE_ME_AS_YOUR_CHILDREN
+	* @return bool 
+	*/
+	public function remove_me_as_your_children( $section_tipo, $section_id ) {
+		
+		$locator = new locator();
+			$locator->set_section_tipo($section_tipo);
+			$locator->set_section_id($section_id);
+			$locator->set_type($this->relation_type);
+			$locator->set_from_component_tipo($this->tipo);
+
+		# Remove children locator	
+		if (!$remove_children = $this->remove_children($locator)) {			
+			return false;
+		}
+		
+		return true;
+	}//end remove_me_as_your_children
+
+
+
+	/**
+	* ADD_CHILDREN
+	* Add one locator to current 'dato'. Verify is exists to avoid duplicates
+	* NOTE: This method updates component 'dato' and save
+	* @return bool
+	*/
+	public function add_children( $locator ) {
+
+		# Add current locator to component dato		
+		if (!$add_locator = $this->add_locator_to_dato($locator)) {			
+			return false;
+		}
+		
+		return true;
+	}//end add_children
+
+
+
+	/**
+	* REMOVE_CHILDREN
+	* Iterate current component 'dato' and if math requested locator, removes it the locator from the 'dato' array
+	* NOTE: This method updates component 'dato' and save
+	* @return bool
+	*/
+	public function remove_children( $locator ) {
+
+		# Add current locator to component dato		
+		if (!$remove_locator_locator = $this->remove_locator_from_dato($locator)) {			
+			return false;
+		}
+		
+		return true;
+		/*
+		$ar_locator = $this->get_dato();
+
+		foreach ($ar_locator as $key => $current_locator) {
+			$equal = locator::compare_locators( $current_locator, $locator, $ar_properties=array('section_tipo','section_id','from_component_tipo') );
+			if ( $equal===true ) {
+				unset($ar_locator[$key]);
+				debug_log(__METHOD__." Removed locator ".to_string($current_locator), logger::DEBUG);
+
+				# Recreate indexes (avoid json read this array as object)
+				$ar_locator = array_values($ar_locator);
+
+				# Update component dato
+				$this->set_dato($ar_locator);
+
+				return true;
+			}
+		}		
+
+		return false;
+		*/
+	}//end remove_children
+
 
 
 	/**
@@ -357,6 +436,10 @@ class component_relation_children extends component_relation_common {
 		return $result;
 	}//end get_valor_list_html_to_save
 	*/
+
+
+
+	
 
 
 	

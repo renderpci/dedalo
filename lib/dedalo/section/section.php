@@ -47,36 +47,7 @@
 	
 	switch($modo) {
 
-		case 'edit':
-				
-				/*
-				#
-				# test
-				$locator = new locator();
-					$locator->set_section_tipo($this->tipo);
-					$locator->set_section_id($this->section_id);
-				
-				$start_time = start_time();
-					$ar = relation::get_parents_recursive( $locator );
-				$out = exec_time_unit($start_time,'ms').' ms';	//exec_time($start_time);
-				dump($ar, ' ar relation 1 ++ '.to_string($out));
-				
-
-				#
-				# test
-				$locator = new locator();
-					$locator->set_section_tipo('es1');
-					$locator->set_section_id('18673');
-				
-				$start_time = start_time();
-					$ar = relation_test::get_parents_recursive2( $locator, '' );
-					#$ar = relation_test::get_recursive_branch( $locator );
-					#$ar = array_unique($ar, SORT_REGULAR);
-
-				$out = exec_time_unit($start_time,'ms').' ms';	//exec_time($start_time);
-				dump($ar, ' ar relation_test 2 ++ '.to_string($out));
-				*/
-						
+		case 'edit':						
 				
 				$section_id 			= $this->get_section_id();
 				$section_info 			= $this->get_section_info('json');

@@ -79,7 +79,7 @@ function dump($val, $var_name=NULL, $arguments=array()){
 	# NIVEL 2
 
 		# CALLER FUNCTION
-		if (isset($bt[2])) {
+		if (isset($bt[2]) && isset($bt[2]['file'])) {
 			$html .= PHP_EOL . " Caller2: ";
 			$html .= " ". print_r($bt[2]['file'],true);
 			$html .= PHP_EOL . " Function: ". print_r($bt[2]['function'],true);
@@ -125,6 +125,8 @@ function wrap_pre($string, $add_header_html=true) {
 	return $html;
 }
 
+
+
 function wrap_html($string, $htmlspecialchars=true) {
 	$html='';
 	$html .= '<!DOCTYPE html>';
@@ -140,6 +142,7 @@ function wrap_html($string, $htmlspecialchars=true) {
 }
 
 
+
 function debug_log($info, $level=logger::DEBUG) {
 	if(!SHOW_DEBUG) return false;
 	/* level ref
@@ -150,11 +153,16 @@ function debug_log($info, $level=logger::DEBUG) {
 	const ERROR 	= 10;
 	const CRITICAL 	= 5;
 	*/
+	if( $level > LOGGER_LEVEL ) {
+		return false;
+	}
+
 	$msg = "DEBUG_LOG [".logger::level_to_string($level)."] $info";
 	error_log($msg);
 
 	$GLOBALS['log_messages'][] = $msg;
-}
+}//end debug_log
+
 
 
 # CURL GET URL
@@ -168,6 +176,7 @@ function file_get_contents_curl($url) {
 	curl_close($ch);
 	return $data;
 }
+
 
 
 # START_TIME
@@ -278,13 +287,13 @@ function get_last_modification_date($path, $allowedExtensions=null, $ar_exclude=
 function dedalo_encryptStringArray ($stringArray, $key = DEDALO_INFORMACION) {
 	
 	if (!function_exists('mcrypt_encrypt')) throw new Exception("Error Processing Request: Lib MCRYPT unavailable.", 1);
-	$s = strtr(base64_encode(mcrypt_encrypt(MCRYPT_RIJNDAEL_256, md5($key), serialize($stringArray), MCRYPT_MODE_CBC, md5(md5($key)))), '+/=', '-_,');	
+	$s = strtr(base64_encode(mcrypt_encrypt(MCRYPT_RIJNDAEL_256, md5($key), serialize($stringArray), MCRYPT_MODE_CBC, md5(md5($key)))), '+/=', '-_,');
 	return $s;
 }
 function dedalo_decryptStringArray ($stringArray, $key = DEDALO_INFORMACION) {
 	
 	if (!function_exists('mcrypt_encrypt')) throw new Exception("Error Processing Request: Lib MCRYPT unavailable.", 1);
-	$s = rtrim(mcrypt_decrypt(MCRYPT_RIJNDAEL_256, md5($key), base64_decode(strtr($stringArray, '-_,', '+/=')), MCRYPT_MODE_CBC, md5(md5($key))), "\0");	
+	$s = rtrim(mcrypt_decrypt(MCRYPT_RIJNDAEL_256, md5($key), base64_decode(strtr($stringArray, '-_,', '+/=')), MCRYPT_MODE_CBC, md5(md5($key))), "\0");
 	if ( is_serialized($s) ) {
 		return unserialize($s);
 	}else{
@@ -292,16 +301,16 @@ function dedalo_decryptStringArray ($stringArray, $key = DEDALO_INFORMACION) {
 		return false;
 	}
 	/*
-	try {
-		if ($s == serialize(false)) {
-			$s = unserialize($s);
-		}		
-	} catch (Exception $e) {
-		$s = false;
-	}
-		
-	return $s;
-	*/
+		try {
+			if ($s == serialize(false)) {
+				$s = unserialize($s);
+			}		
+		} catch (Exception $e) {
+			$s = false;
+		}
+			
+		return $s;
+		*/
 }
 
 function is_serialized($str) {
@@ -336,8 +345,10 @@ function array_key_path($needle, $haystack, $forbidden = array(), $path = array(
 	  return array_merge($path, (array)$key);
 	}
   }
-  return FALSE;
+  return false;
 }
+
+
 
 /**
 * Given a path, return a reference to the array entry.
@@ -358,6 +369,8 @@ function &array_path(&$array, $path) {
   return $offset;
 }
 
+
+
 /**
 * ALIST
 * Return array as ul / li html
@@ -370,6 +383,8 @@ function alist ($array) {  //This function prints a text array as an html list.
   $alist .= "</ul>";
   return $alist;
 }
+
+
 
 # ARRAY_KEYS_RECURSIVE : FLAT ARRAY
 function array_keys_recursive(array $array) {

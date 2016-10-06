@@ -26,19 +26,21 @@
 			
 		case 0	:
 
-				$html_contenido .= ""; 
+				$html_contenido .= "No access here"; 
 				break;
 						
-		case 1	:
+		case ($permissions>=1):
 
-				$html_contenido .= "\n <div class=\"security_areas_tree\">";
-				$html_contenido .= $html_tree;
-				$html_contenido .= "\n </div>";
-				break;	
-						
-		case ($permissions>=2)	:
 				
 				$html_contenido .= "\n <div class=\"security_areas_tree\">";
+
+				$max_input_vars = ini_get("max_input_vars");
+				if ($max_input_vars<2000) {
+					$html_contenido .= "<div class=\"error\">PHP directive 'max_input_vars' is too small ($max_input_vars).
+					This can truncate your data when manage big structures with thousands of elements.<br>
+					Please configure your instalation with max_input_vars value with 2000 or higher to use security access safely</div>";
+				}
+				
 				$html_contenido .= $html_tree;
 				$html_contenido .= "\n </div>";	
 	
@@ -60,5 +62,10 @@
 	print "\n</div>\n\n"; //wrap
 
 
-	echo "<script>component_security_areas.update_area_childrens_obj_opened();component_security_areas.update_area_access_obj_opened()</script>"
+	echo "<script>
+			component_security_areas.update_area_childrens_obj_opened();
+			component_security_areas.update_area_access_obj_opened();
+		</script>"
+
+
 ?>

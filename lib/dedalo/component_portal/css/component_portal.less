@@ -7,7 +7,7 @@ WRAP DIV CONTAINER*/
 	/* > select only the first '.content_data' inside css_wrap_portal */
 	.css_wrap_portal > .content_data {
 		width: 100%;		
-		display: table;
+		display: table ;
 		position: relative;
 		top: -25px;
 		margin-bottom: -20px;
@@ -42,7 +42,7 @@ WRAP DIV CONTAINER*/
 	box-shadow: none;
 	/*z-index: 9000 !important;*/
 	position: relative;
-	top:7px;
+	top: 5px;
 }
 .show_more_link {
 	text-transform: capitalize;
@@ -60,23 +60,26 @@ WRAP DIV CONTAINER*/
     width: 20px;
     height: 17px;
     right: 0px;
-    top: 12px;
+    top: 10px;
     display: inline-block;
     position: relative;
     opacity: .3;
     background: url('../../themes/default/view_full.svg') center center no-repeat;
     transition: all .25s ease-in-out;
-}.btn_view_toogle:hover{
-	 opacity: .7;
-}.btn_view_single{
+	}
+	.btn_view_toogle:hover {
+		opacity: .7;
+	}
+.btn_view_single{
 	background: url('../../themes/default/view_single_line.svg') center center no-repeat;
-}.btn_view_mosaic{
+}
+.btn_view_mosaic{
 	background: url('../../themes/default/view_mosaic.svg') center center no-repeat;
 }
 
 
-
-/* TD ID ICONS */
+/* TD ID ICONS 
+---------------------------------------------- */
 .th_large_icon {
 	background-position: -216px 0;
 	top: 0px;
@@ -87,7 +90,8 @@ WRAP DIV CONTAINER*/
 }
 
 
-/* PORTAL INSIDE */
+/* PORTAL INSIDE 
+---------------------------------------------- */
 table.table_portal_inside {
 	margin: 0;
 	/*margin-top: -5px;*/
@@ -105,7 +109,8 @@ table.table_portal_inside {
 		/* background-color: #b8f3f3; */
 	}
 
-/*-- BUTTON MORE IMAGES --*/
+/* BUTTON MORE IMAGES 
+---------------------------------------------- */
 div.portal_toggle_more_elements_more {
 	background-position: 0 -96px;
 	background-position: -313px -119px;
@@ -287,33 +292,90 @@ th.tag_id_column {
 		}.table_rows_list td {
 			padding: 0;
 		}
-
-}
-
+	}
 
 
 
-	/* VIEW_SINGLE_LINE
+	/* VIEW_MOSAIC 
 	------------------------------------------------------- */
 	.wrap_component_view_mosaic {
 
-		.mosaic_li{
-			width: 100px;
-			height: 100px;
-			display: inline-block;
+		/* OVERRIDE COMPONENTS WRAP
+		------------------------------------------------------- */
+		.wrap_component {
+			padding: 0;
+			height: 100%;
+			width: 100%;
 		}
-		.mosaic_ul{
-			-moz-column-count:3;
-			-moz-column-gap: 3%;
-			-moz-column-width: 30%;
-			-webkit-column-count:3;
-			-webkit-column-gap: 3%;
-			-webkit-column-width: 30%;
-			column-count: 3;
-			column-gap: 3%;
-			column-width: 30%;
+		/* OVERRIDE COMPONENT_IMAGE STYLES
+		------------------------------------------------------- */
+		.av_posterframe_in_list {
+			//background-color: #F17AEB;
+			position: absolute;
+			width: 100%;
+			height: 100%;
+			background-size: cover;
 		}
+	
+		.mosaic_ul {
+			//background-color: #A3A3A3;
+			width: 100%;
+			min-height: 50px;
+			//display: table;
+			//padding-top: 5px;
+			}
+			.mosaic_li {
+				//background-color: #C9EDB8;
+				width: 30%;
+				height: 50px;
+				float: left;
+				margin: 0;
+				display: table;
+				position: relative;
+				cursor: pointer;
+				border-left: 1px solid #ffffff;
+				border-bottom: 1px solid #ffffff;
+				transition: all 0.25s ease-in-out;
+				}
+				.mosaic_li:hover .button_edit,
+				.mosaic_li:hover .button_delete {
+					display: block;
+				}
+				/* BUTTONS
+				------------------------------------------------------- */
+				.mosaic_li .button_edit, .mosaic_li .button_delete {
+					position: absolute;
+					z-index: 9;
+					right: 0;
+					width: 30px;
+					height: 30px;
+					color: #fff;
+					padding: 4px;
+					background-repeat: no-repeat;
+					background-color: rgba(255, 255, 255, 0.6);
+					background-position: center;
+					background-size: 19px;
+					border-radius: 3px;
+					display: none;
+				}
+				.mosaic_li .button_edit {
+					top: 0;
+					background-image: url(../../themes/default/icon_edit.svg);
+				}
+				.mosaic_li .button_delete {
+					top: initial;
+					bottom: 0;
+					background-image: url(../../themes/default/icon_delete.svg);
+				}
 
+				.li_component_image {
+					//background-color: #E8C140;
+					display: table;
+					width: 100%;
+					height: 100%;
+					text-align: center;
+					position: relative;
+				}
 	}
 
 

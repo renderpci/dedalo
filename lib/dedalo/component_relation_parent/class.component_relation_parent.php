@@ -1,19 +1,20 @@
 <?php
 /*
-* CLASS COMPONENT_RELATION_PARENT
+* COMPONENT_RELATION_PARENT
+* Class to manage parent relation between section.
+* Not store his own data, only manage component_relation_childrens data in 'reverse' mode
 */
-
-
 class component_relation_parent extends component_relation_common {
 	
 	# Overwrite __construct var lang passed in this component
 	protected $lang = DEDALO_DATA_NOLAN;
+	# Current component relation_type (used to filter locators in 'relations' container data)
+	public $relation_type = DEDALO_RELATION_TYPE_PARENT_TIPO;
 
-
-
+	static $get_parents_query;
 	/**
 	* __CONSTRUCT
-	*/
+	*//*
 	function __construct($tipo=null, $parent=null, $modo='edit', $lang=DEDALO_DATA_NOLAN, $section_tipo=null) {
 
 		# Force always DEDALO_DATA_NOLAN
@@ -32,57 +33,164 @@ class component_relation_parent extends component_relation_common {
 			}
 		}
 	}//end __construct
-
-
-
-	/**
-	* SAVE
-	* @return int $result
-	*	section returns section_id on save
-	* When save component, section is saved, not explicit section save is needed here
-	* Note that section relation data of current type is deleted and recreated completely on every save action
 	*/
-	public function Save() {
-
-		# Set section relation locators for fast access later from class relation
-		$my_section = $this->get_my_section();
-
-		# Remove whole actual section parent locators
-		$my_section->remove_relations_of_type($this->relation_tipo);
-
-		# Add whole array of parent locators
-		$dato = $this->get_dato();
-		foreach ((array)$dato as $current_locator) {
-			$current_locator->type = $this->relation_tipo;
-			$my_section->add_relation($current_locator, $remove_previous_of_current_type=false); // Note thats second param force remove old locators of current type
-		}		
-
-		# Save normally
-		return parent::Save();
-	}//end Save
 
 
 
 	/**
 	* GET DATO
+	* This component don't store data, only manages calculated data from component_relations_children generated data
+	* stored in section 'relations' container
 	* @return array $dato
 	*	$dato is always an array of locators
 	*/
 	public function get_dato() {
-		$dato = parent::get_dato();
 
-		if (!empty($dato) && !is_array($dato)) {
-			#dump($dato,"dato");
-			trigger_error("Error: ".__CLASS__." dato type is wrong. Array expected and ".gettype($dato)." is received for tipo:$this->tipo, parent:$this->parent");
-			$this->set_dato(array());
+		# get_my_parents always
+		$dato = $this->get_my_parents();
+
+		if (!empty($dato) && !is_array($dato)) {	
+			debug_log(__METHOD__." Re-saved invalid dato. Array expected and ".gettype($dato)." is received for tipo:$this->tipo, parent:$this->parent", logger::ERROR);
+			$dato = array();
+			$this->set_dato( $dato );
 			$this->Save();
 		}
-		if ($dato==null) {
-			$dato=array();
-		}
-
+	
 		return (array)$dato;
 	}//end get_dato
+
+
+
+	/**
+	* GET_COMPONENT_RELATION_CHILDREN_TIPO
+	* @return string $component_relation_children_tipo
+	*/
+	public static function get_component_relation_children_tipo($tipo) {
+		
+		$modelo_name 	 = 'component_relation_children';
+		$ar_children 	 = (array)common::get_ar_related_by_model($modelo_name, $tipo);
+		$ar_children_len = count($ar_children);
+		if ($ar_children_len===0) {
+			debug_log(__METHOD__." Sorry, component_relation_children not found in this section ($tipo) ".to_string(), logger::ERROR);
+			return false;
+		}elseif ($ar_children_len>1) {
+			debug_log(__METHOD__." Sorry, more than 1 component_relation_children found in this section ($tipo). First component will be used. ".to_string($ar_children), logger::ERROR);
+		}
+		$component_relation_children_tipo = reset($ar_children);
+
+		return (string)$component_relation_children_tipo;
+	}//end get_component_relation_children_tipo
+
+
+
+	/**
+	* GET_MY_PARENTS
+	* @return array $parents
+	*/
+	protected function get_my_parents() {
+		
+		# Calculate current target component_relation_children_tipo from structure
+		$component_relation_children_tipo = self::get_component_relation_children_tipo($this->tipo);
+
+		$parents = component_relation_parent::get_parents($this->parent, $this->section_tipo, $component_relation_children_tipo);
+
+		return (array)$parents;
+	}//end get_my_parents
+
+
+
+	/**
+	* GET_PARENTS
+	* Get parents of current section
+	* If you call this method from component_relation_parent, always send $from_component_tipo var to avoid recreate the component statically
+	* @param int $section_id
+	* @param string $section_tipo
+	* @param string $from_component_tipo
+	*	Optional. Previously calculated from structure using current section tipo info or calculated inside from section_tipo
+	* @param array $ar_tables
+	*	Optional. If set, union tables search is made over all tables received
+	*
+	* @return array $parents
+	*	Array of stClass objects with properties: section_tipo, section_id, component_tipo
+	*/
+	public static function get_parents($section_id, $section_tipo, $from_component_tipo=null, $ar_tables=null) {
+
+		# FROM_COMPONENT_TIPO FILTER OPTION
+		$filter ='';
+		if (!is_null($from_component_tipo)) {
+			/*
+				# Locate current section component parent tipo
+				$ar_modelo_name_required = array('component_relation_parent');
+				$ar_children_tipo 	 	 = section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, $ar_modelo_name_required, $from_cache=true, $resolve_virtual=true, $recursive=true, $search_exact=true);
+				$component_parent_tipo 	 = reset($ar_children_tipo);
+				# Calculate current target component_relation_children_tipo from structure
+				$from_component_tipo 	 = component_relation_parent::get_component_relation_children_tipo($component_parent_tipo);
+				*/
+			$filter = ",\"from_component_tipo\":\"$from_component_tipo\"";
+		}
+		
+		$type 	  = DEDALO_RELATION_TYPE_CHILDREN_TIPO;		
+		$compare  = "{\"section_tipo\":\"$section_tipo\",\"section_id\":\"$section_id\",\"type\":\"$type\"".$filter."}";
+
+		# TABLES strQuery
+		$strQuery  = '';
+		if (is_null($ar_tables)) {
+			// Calculated from section_tipo (only search in current table)
+			$table 	   = common::get_matrix_table_from_tipo($section_tipo);
+			$strQuery .= "SELECT section_tipo, section_id, datos#>'{relations}' AS relations FROM \"$table\" WHERE datos#>'{relations}' @> '[$compare]'::jsonb ";
+		}else{
+			// Iterate tables and make union search
+			$ar_query=array();
+			foreach ((array)$ar_tables as $table) {
+				$ar_query[] = "SELECT section_tipo, section_id, datos#>'{relations}' AS relations FROM \"$table\" WHERE datos#>'{relations}' @> '[$compare]'::jsonb ";				
+			}
+			$strQuery .= implode(" UNION ALL ", $ar_query);
+		}
+		// Set order to maintain results stable
+		$strQuery .= " ORDER BY section_id ASC";
+		
+		if(SHOW_DEBUG) {	
+			component_relation_parent::$get_parents_query = $strQuery;
+			#error_log($strQuery);
+		}
+		$result	  = JSON_RecordObj_matrix::search_free($strQuery);
+		
+		$parents = array();
+		while ($rows = pg_fetch_assoc($result)) {
+
+			$current_section_id   	= $rows['section_id'];
+			$current_section_tipo 	= $rows['section_tipo'];			
+
+			// Search 'from_tipo' in locators when no is received
+			if (empty($from_component_tipo)) {
+
+				$current_relations = json_decode($rows['relations']);
+
+				$reference_locator = new locator();
+					$reference_locator->set_section_tipo($section_tipo);
+					$reference_locator->set_section_id($section_id);
+					$reference_locator->set_type($type);
+
+				foreach ((array)$current_relations as $current_locator) {
+					# dump( $current_locator, ' $current_locator ++ '.to_string($reference_locator));
+					if( $match = locator::compare_locators( $current_locator, $reference_locator, $ar_properties=array('section_tipo','section_id','type')) ){
+						$calculated_from_component_tipo = $current_locator->from_component_tipo;
+						break;
+					}					
+				}
+			}//end if (empty($from_component_tipo)) {
+
+			$parent = new stdClass();
+				$parent->section_tipo	= $current_section_tipo;
+				$parent->section_id 	= $current_section_id;
+				$parent->component_tipo = empty($from_component_tipo) ? $calculated_from_component_tipo : $from_component_tipo;
+
+			# parents
+			$parents[] = $parent;
+		}//end while
+
+		return (array)$parents;
+	}//end get_parents
 
 
 
@@ -128,8 +236,8 @@ class component_relation_parent extends component_relation_common {
 
 		$ar_valor  	= array();		
 		$dato   	= $this->get_dato();
-		foreach ((array)$dato as $key => $current_locator) {
-			$ar_valor[] = $this->get_locator_value( $current_locator, $lang );			
+		foreach ((array)$dato as $key => $current_parent) {
+			$ar_valor[] = $this->get_parent_value( $current_parent->section_id, $current_parent->section_tipo, $lang );			
 		}//end if (!empty($dato)) 
 
 		# Set component valor
@@ -174,7 +282,7 @@ class component_relation_parent extends component_relation_common {
 
 		return $lang;*/
 	}#end get_valor_lang
-	
+
 
 
 	/**
@@ -203,7 +311,7 @@ class component_relation_parent extends component_relation_common {
 	*
 	* @see class.section_records.php get_rows_data filter_by_search
 	* @return string $search_query . POSTGRE SQL query (like 'datos#>'{components, oh21, dato, lg-nolan}' ILIKE '%paco%' )
-	*/
+	*//*
 	public static function get_search_query( $json_field, $search_tipo, $tipo_de_dato_search, $current_lang, $search_value, $comparison_operator='=') {
 		$search_query='';
 		if ( empty($search_value) ) {
@@ -227,7 +335,7 @@ class component_relation_parent extends component_relation_common {
 
 		return $search_query;
 	}//end get_search_query
-
+	*/
 
 
 	/**
@@ -247,65 +355,115 @@ class component_relation_parent extends component_relation_common {
 		
 		return $valor;
 	}#end get_valor_export
-
-
-
-	/**
-	* RENDER_LIST_VALUE
-	* Overwrite for non default behaviour
-	* Receive value from section list and return proper value to show in list
-	* Sometimes is the same value (eg. component_input_text), sometimes is calculated (e.g component_portal)
-	* @param string $value
-	* @param string $tipo
-	* @param int $parent
-	* @param string $modo
-	* @param string $lang
-	* @param string $section_tipo
-	* @param int $section_id
-	*
-	* @return string $list_value
-	*//*
-	public static function render_list_value($value, $tipo, $parent, $modo, $lang, $section_tipo, $section_id) {
-
-		$component 	= component_common::get_instance(__CLASS__,
-													 $tipo,
-												 	 $parent,
-												 	 'list',
-													 DEDALO_DATA_NOLAN,
-												 	 $section_tipo);
-
-		
-		# Use already query calculated values for speed
-		$ar_records = (array)json_handler::decode($value);
-		$component->set_dato($ar_records);
-		$component->set_identificador_unico($component->get_identificador_unico().'_'.$section_id); // Set unic id for build search_options_session_key used in sessions
-		
-		return  $component->get_valor($lang);		
-	}#end render_list_value
-	*/
-
-
-	/**
-	* GET_VALOR_LIST_HTML_TO_SAVE
-	* Usado por section:save_component_dato
-	* Devuelve a section el html a usar para rellenar el 'campo' 'valor_list' al guardar
-	* Por defecto será el html generado por el componente en modo 'list', pero en algunos casos
-	* es necesario sobre-escribirlo, como en component_portal, que ha de resolverse obigatoriamente en cada row de listado
-	*
-	* En este caso, usaremos únicamente el valor en bruto devuelto por el método 'get_dato_unchanged'
-	*
-	* @see class.section.php
-	* @return mixed $result
-	*//*
-	public function get_valor_list_html_to_save() {
-		$result = $this->get_dato_unchanged();
-
-		return $result;
-	}//end get_valor_list_html_to_save
-	*/
-
-
 	
+
+
+	/**
+	* ADD_PARENT
+	* Add a children to referenced component_relation_children
+	* @return bool $result
+	*/
+	public static function add_parent($tipo, $parent, $section_tipo, $children_section_tipo, $children_section_id, $children_component_tipo) {
+		
+		$result=false;
+	
+		$modelo_name 	= 'component_relation_children';
+		#$component_tipo = self::get_component_relation_children_tipo($tipo);
+		$modo 			= 'edit';
+		$lang 			= DEDALO_DATA_NOLAN;	
+		$component_relation_children   = component_common::get_instance($modelo_name,
+														  				$children_component_tipo,
+														  				$children_section_id,
+														  				$modo,
+														  				$lang,
+														  				$children_section_tipo);
+		
+		$added = (bool)$component_relation_children->make_me_your_children( $section_tipo, $parent );
+		if ($added===true) {
+			$component_relation_children->Save();
+			$result = true;
+		}
+
+		return (bool)$result;
+	}//end add_parent
+
+
+
+	/**
+	* REMOVE_PARENT
+	* @return bool $result
+	*/
+	public static function remove_parent($tipo, $parent, $section_tipo, $children_section_tipo, $children_section_id, $children_component_tipo) {
+
+		$result=false;
+	
+		$modelo_name 	= 'component_relation_children';
+		#$component_tipo = self::get_component_relation_children_tipo($tipo);
+		$modo 			= 'edit';
+		$lang 			= DEDALO_DATA_NOLAN;	
+		$component_relation_children   = component_common::get_instance($modelo_name,
+														  				$children_component_tipo,
+														  				$children_section_id,
+														  				$modo,
+														  				$lang,
+														  				$children_section_tipo);
+
+		$removed = (bool)$component_relation_children->remove_me_as_your_children( $section_tipo, $parent );
+		if ($removed===true) {
+			$component_relation_children->Save();
+			$result = true;
+		}
+
+		return (bool)$result;
+	}//end remove_parent
+
+
+
+	/**
+	* GET_PARENT_VALUE
+	* Resolve value to show in list etc.
+	* @return string $valor
+	*/
+	public function get_parent_value( $section_id, $section_tipo, $lang=DEDALO_DATA_LANG ) {
+	
+		# En proceso..
+		$valor = "$section_id - $section_tipo";
+
+		# Temporal
+		#if( $section_tipo === $this->section_tipo ) {
+		if($this->section_tipo===DEDALO_THESAURUS_SECTION_TIPO) {
+			#dump($section_tipo, ' section_tipo ++ *** '.to_string($this->section_tipo).' - '.DEDALO_THESAURUS_SECTION_TIPO);
+
+			$tipo 		 	= DEDALO_THESAURUS_TERM_TIPO; // input_text			
+			$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+			$component 		= component_common::get_instance( $modelo_name,
+															  $tipo,
+															  $section_id,
+															  $modo='edit',
+															  $lang,
+															  $section_tipo);
+			$valor = $component->get_valor($lang);
+
+			if (empty($valor)) {
+				$main_lang = hierarchy::get_main_lang( $section_tipo );
+				if($lang!=$main_lang) {
+					$component->set_lang($main_lang);
+					$valor = $component->get_valor($main_lang);
+					if (strlen($valor)>0) {
+						$valor = component_common::decore_untranslated( $valor );						
+					}
+					# return component to previous lang
+					$component->set_lang($lang);					
+				}				
+			}		
+		}
+
+		if(SHOW_DEBUG) {
+			$valor .= " <span class=\"note\">[$section_tipo:$section_id]</span>";
+		}	
+		
+		return (string)$valor;
+	}//end get_parent_value
 	
 	
 	

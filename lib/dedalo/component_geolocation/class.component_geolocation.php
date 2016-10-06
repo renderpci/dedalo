@@ -47,13 +47,8 @@ class component_geolocation extends component_common {
 		# Nothing to do here
 
 		if ($need_save===true) {
-
 			$result = $this->Save();
-
-			# DEBUG
-			if(SHOW_DEBUG===true) {
-				debug_log(__METHOD__."  Added default component_geolocation data $parent with: ($tipo, $lang) dato: ".to_string($dato_new), logger::DEBUG);
-			}
+			# debug_log(__METHOD__."  Added default component_geolocation data $parent with: ($tipo, $lang) dato: ".to_string($dato_new), logger::DEBUG);
 		}
 
 		

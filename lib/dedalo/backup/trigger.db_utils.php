@@ -4,7 +4,7 @@
 */
 set_time_limit(300);
 require_once(dirname(dirname(__FILE__)).'/config/config4.php');
-require(DEDALO_LIB_BASE_PATH.'/backup/class.backup.php');
+include(DEDALO_LIB_BASE_PATH.'/backup/class.backup.php');
 
 
 # set vars
@@ -12,15 +12,22 @@ require(DEDALO_LIB_BASE_PATH.'/backup/class.backup.php');
 		foreach($vars as $name) $$name = common::setVar($name);
 
 
+# CALL FUNCTION
+if ( function_exists($action) ) {
+	call_user_func($action);
+}
 
 
-# EXPORT DB (export_structure)
-if($action=='export') {
+/**
+* EXPORT
+* EXPORT DB (export_structure)
+*/
+function export() {
 
 	# LOGIN VERIFICATION
 	if(login::is_logged()!==true) die("<span class='error'> Auth error: please login </span>");
 
-	# Dump historic data first
+	# Dump all historic data first
 	$db_name = 'dedalo4_development_str_'.date("Y-m-d_Hi").'.custom';
 	$exp 	 = backup::export_structure($db_name, $exclude_tables=false);	// Full backup
 	echo $exp->msg;
@@ -32,13 +39,13 @@ if($action=='export') {
 	
 	# Dump official structure version 'dedalo4_development_str.custom' (partial backup)
 	$res = backup::export_structure(null, $exclude_tables=true);	 // Partial backup
-	echo $res->msg;	
-	exit();
-}
+	echo $res->msg;
+}//end export
+
 
 
 # IMPORT DB (import_structure)
-if($action=='import') {
+function import() {
 
 	# LOGIN VERIFICATION
 	if(login::is_logged()!==true) die("<span class='error'> Auth error: please login </span>");
@@ -65,31 +72,28 @@ if($action=='import') {
 
 	$html .= $res;	
 	echo wrap_html($html, false);
-	exit();
-	
-}#if($action=='import') 
+}//end import 
 
 
 
 # BACKUP DB 
-if($action=='backup') {
+function backup() {
 
 	$res = backup::init_backup_secuence($user_id_matrix='0', $username='system');
 	echo $res;
-	exit();
-	
-}
+}//end backup
 
 
 
 # LOAD_STR_DATA
-if ($action=='load_str_data') {	
+function load_str_data() {
 
 	$res = (array)backup::load_dedalo_str_tables_data();
 
 	$html = implode('<hr>', $res);
 	echo wrap_pre($html);
-	exit();
+}//end load_str_data
 
-}#end if ($action=='load_str_data')
-?>   
+
+
+?>

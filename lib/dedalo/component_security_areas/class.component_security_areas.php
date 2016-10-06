@@ -70,7 +70,8 @@ class component_security_areas extends component_common {
 
 
 		# UPDATE ACCESS AND PROYECTS
-		$propagate = true;
+		/*
+		$propagate = false;		
 		if( $propagate===true && !empty($parent) ) {
 
 			##
@@ -87,7 +88,7 @@ class component_security_areas extends component_common {
 			$propagate_areas_to_access = component_security_access::propagate_areas_to_access($dato, $parent);
 				#dump($propagate_areas_to_access,'propagate_areas_to_access',"array completo con hijos");			
 		}		
-
+		*/
 		return $result;
 
 	}//end Save	

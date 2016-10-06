@@ -65,15 +65,12 @@
 				break;
 
 		case 'portal_list':
+		case 'portal_list_view_mosaic':
+			
+				$file_name		= 'portal_list';
 				$id_wrapper 	= 'wrapper_'.$identificador_unico;
 				$component_info = $this->get_component_info('json');
-
-				# ImageObj				
-					$maxWidht 	= DEDALO_IMAGE_THUMB_WIDTH ;
-					$maxHeight 	= DEDALO_IMAGE_THUMB_HEIGHT  ;
-					$image_url	= $this->ImageObj->get_thumb_url($maxWidht, $maxHeight, 'resize', null, 'height');	#$m $maxWidht, $maxHeight, $fx=null, $p=null, $prop=null
-
-
+				
 				#
 				# DEFAULT QUALITY IMAGE URL (onclick go to)
 				$this->ImageObj->set_quality(DEDALO_IMAGE_QUALITY_DEFAULT); // Force default quality always
@@ -126,7 +123,16 @@
 				break;		
 				
 		case 'list_tm':
-				$file_name = 'list';
+				# THUMB PATH . Is calculated reading deleted folder inside thumb quality
+				$image_id   = $this->get_image_id();
+				$thumb_path = component_image::get_deleted_image($quality='thumb', $image_id);							
+				
+				# THUMB URL	
+				$thumb_file_url = str_replace(DEDALO_MEDIA_BASE_PATH, DEDALO_MEDIA_BASE_URL, $thumb_path);
+				# IMAGE_FULL_URL
+				$image_full_url = str_replace('/'.DEDALO_IMAGE_THUMB_DEFAULT.'/', '/'.DEDALO_IMAGE_QUALITY_DEFAULT.'/', $thumb_file_url);
+				break;
+
 		case 'list':
 				#
 				# DEFAULT QUALITY IMAGE URL (onclick go to)

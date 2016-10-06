@@ -107,8 +107,8 @@ class section extends common {
     	# key for cache
     	$key = $section_id .'_'. $tipo;
 
-    	$max_cache_instances = 300;
-    	$cache_slice_on 	 = 100;//$max_cache_instances/2;
+    	$max_cache_instances = 500;
+    	$cache_slice_on 	 = 200;//$max_cache_instances/2;
 
     	# OVERLOAD : If ar_section_instances > 99 , not add current section to cache to avoid overload
     	# array_slice ( array $array , int $offset [, int $length = NULL [, bool $preserve_keys = false ]] )
@@ -802,6 +802,9 @@ class section extends common {
 			# Store section dato as array(key=>value)
 
 				# SECTION_OBJ
+				# When section is created at first time, section_obj is created wit basic data to write a 'empty section'
+				# In some cases, before save at first time, data exits in section object. Take care of this data is added to
+				# current first section data or not 
 				$section_obj = new stdClass();
 
 					# Section id
@@ -829,6 +832,11 @@ class section extends common {
 					if (isset($this->dato->inverse_locators)) {
 					$section_obj->inverse_locators 	= (array)$this->dato->inverse_locators;
 					}
+
+					# Relations container
+					if (isset($this->dato->relations)) {
+					$section_obj->relations 	= (array)$this->dato->relations;
+					}					
 					
 						
 					# ar_section_creator
@@ -1206,7 +1214,7 @@ class section extends common {
 		}
 
 		if (SHOW_DEBUG) {			
-			debug_log(__METHOD__." Deleted section $this->section_id and they childrens. delete_mode $delete_mode");
+			debug_log(__METHOD__." Deleted section $this->section_id and their 'childrens'. delete_mode $delete_mode");
 		}
 		
 
@@ -1233,7 +1241,7 @@ class section extends common {
 					"top_tipo"		=> TOP_TIPO,
 					"table"			=> $matrix_table,
 					"delete_mode"	=> $delete_mode,
-					"section_tipo"	=> $this->section_tipo
+					"section_tipo"	=> $this->tipo
 					)
 		);
 
@@ -1700,7 +1708,7 @@ class section extends common {
 		$ar_recursive_childrens = RecordObj_dd::get_ar_recursive_childrens($tipo, false, $ar_exclude_models);
 
 		return (array)$ar_recursive_childrens;
-	}
+	}//end get_ar_recursive_childrens
 
 
 
@@ -1712,11 +1720,14 @@ class section extends common {
 	* @return string $portal_tipo / bool false
 	*/
 	public static function get_portal_tipo_from_component($section_tipo, $component_tipo_inside_portal) {
-		$ar_portals = (array)section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, 'component_portal');
+		#$ar_portals = (array)section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, 'component_portal');
+		$ar_portals = (array)section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, array('component_portal'), $from_cache=true, $resolve_virtual=true, $recursive=true, $search_exact=true);
+			#dump($ar_portals, ' $ar_portals ++ '.to_string());
 		if (empty($ar_portals)) return false;
 		foreach ($ar_portals as $current_portal_tipo) {
 			# portal related terms
 			$ar_related = RecordObj_dd::get_ar_terminos_relacionados($current_portal_tipo, true, true);
+				#dump($ar_related, ' $ar_related ++ '.to_string());
 			if (in_array($component_tipo_inside_portal, $ar_related)) {
 				return $current_portal_tipo;
 			}
@@ -1797,7 +1808,7 @@ class section extends common {
 		}
 
 		return $this->ar_buttons;
-	}
+	}//end get_ar_buttons
 
 
 
@@ -1810,7 +1821,7 @@ class section extends common {
 		foreach ($ar_buttons as $current_button_object) {
 			return $current_button_object;	# Only first element		
 		}
-	}
+	}//end get_button
 	
 
 
@@ -2061,7 +2072,7 @@ class section extends common {
 		};
 		$valor_local = component_date::timestamp_to_date($dato->created_date, $full=true);
 		return $valor_local;
-	}
+	}//end get_created_date
 
 
 
@@ -2075,7 +2086,7 @@ class section extends common {
 		};
 		$valor_local = component_date::timestamp_to_date($dato->modified_date, $full=true);
 		return $valor_local;
-	}
+	}//end get_modified_date
 
 
 
@@ -2086,7 +2097,7 @@ class section extends common {
 		$dato = $this->get_dato();
 		if( isset($dato->created_by_userID) )  return $dato->created_by_userID;
 		return false;
-	}
+	}//end get_created_by_userID
 
 
 
@@ -2103,8 +2114,9 @@ class section extends common {
 
 		$component_input_text = component_common::get_instance('component_input_text',DEDALO_USER_NAME_TIPO, $user_id, 'edit', DEDALO_DATA_NOLAN, DEDALO_SECTION_USERS_TIPO);
 		$user_name = $component_input_text->get_valor();
+
 		return $user_name;
-	}
+	}//end get_created_by_user_name
 
 
 
@@ -2121,8 +2133,9 @@ class section extends common {
 
 		$component_input_text = component_common::get_instance('component_input_text',DEDALO_USER_NAME_TIPO, $user_id, 'edit', DEDALO_DATA_NOLAN, DEDALO_SECTION_USERS_TIPO);
 		$user_name = $component_input_text->get_valor();
+
 		return $user_name;
-	}
+	}//end get_modified_by_user_name
 	
 
 
@@ -2171,6 +2184,7 @@ class section extends common {
 				FROM \"$matrix_table\"
 				WHERE
 				$filter
+				ORDER BY section_id ASC
 				";
 		if(SHOW_DEBUG) {
 		 	#dump($strQuery," strQuery");
@@ -2389,7 +2403,107 @@ class section extends common {
 			debug_log(__METHOD__." SECTION : Record new created ($this->section_id, $this->tipo)");
 		}
 		return true;
-	}#end forced_create_record
+	}#end forced_create_record	
+
+
+
+	/**
+	* GET_DIFFUSION_INFO
+	* @return 
+	*/
+	public function get_diffusion_info() {
+		$dato = $this->get_dato();
+		if(property_exists($dato, 'diffusion_info')) return $dato->diffusion_info;
+		return null;	
+	}#end get_diffusion_info
+
+
+
+	/**
+	* DIFFUSION_INFO_ADD
+	* @param string $diffusion_element_tipo
+	*/
+	public function diffusion_info_add( $diffusion_element_tipo ) {
+		$dato = $this->get_dato();
+
+		if (!isset($dato->diffusion_info) || !is_object($dato->diffusion_info)) {	// property_exists($dato, 'diffusion_info')
+			$dato->diffusion_info = new stdClass();
+		}
+		if (!isset($dato->diffusion_info->$diffusion_element_tipo)) {
+	
+			$diffusion_element_data = new stdClass();
+				$diffusion_element_data->date 	 = date('Y-m-d H:i:s');;
+				$diffusion_element_data->user_id = $_SESSION['dedalo4']['auth']['user_id'];
+
+			$dato->diffusion_info->$diffusion_element_tipo = $diffusion_element_data;
+			
+			$this->set_dato($dato); // Force update section dato
+		}
+	}#end diffusion_info_add
+
+
+
+	/**
+	* DIFFUSION_INFO_PROPAGATE_CHANGES
+	*/
+	public function diffusion_info_propagate_changes() {
+		
+		$inverse_locators = $this->get_inverse_locators();
+		foreach((array)$inverse_locators as $locator) {
+
+			$section = section::get_instance($locator->section_id, $locator->section_tipo, $modo='list');
+			$dato = $section->get_dato();
+			if (!empty($dato->diffusion_info)) {
+				$dato->diffusion_info = null; // Default value
+				$section->set_dato($dato);
+				$section->Save();
+				debug_log(__METHOD__." Propagated diffusion_info changes to section  $locator->section_tipo, $locator->section_id ".to_string(), logger::DEBUG);						
+			}else{
+				debug_log(__METHOD__." Unnecessary do diffusion_info changes to section  $locator->section_tipo, $locator->section_id ".to_string(), logger::DEBUG);
+			}			
+		}
+	}#end diffusion_info_propagate_changes
+
+
+
+	/**
+	* DIFFUSION_INFO_REMOVE
+	* @param string $diffusion_element_tipo
+	*//*
+	public function diffusion_info_remove__DES( $diffusion_element_tipo ) {
+		$dato = $this->get_dato();
+
+		if (!property_exists($dato, 'diffusion_info')) return false;
+
+		if (isset($dato->diffusion_info->$diffusion_element_tipo)) {
+			
+			# Remove diffusion element info
+			unset($dato->diffusion_info->$current_diffusion_element_tipo);
+			$this->set_dato($dato); // Force update section dato	
+
+			# Propagate changes to parent sections (inverse_locators)
+			#register_shutdown_function($this->diffusion_info_propagate_changes);
+			$this->diffusion_info_propagate_changes();
+		}
+	}#end diffusion_info_remove
+	*/
+
+
+	/**
+	* DIFFUSION_INFO_RESET
+	* @return bool
+	*//*
+	public function diffusion_info_reset__DES() {
+		$dato = $this->get_dato();
+
+		if (!empty($dato->diffusion_info)) {
+			$dato->diffusion_info = null; // Default value
+			$this->set_dato($dato);
+			return true;
+		}
+		return false;
+	}#end diffusion_info_reset
+	*/
 
 
 
@@ -2568,106 +2682,6 @@ class section extends common {
 
 
 	/**
-	* GET_DIFFUSION_INFO
-	* @return 
-	*/
-	public function get_diffusion_info() {
-		$dato = $this->get_dato();
-		if(property_exists($dato, 'diffusion_info')) return $dato->diffusion_info;
-		return null;	
-	}#end get_diffusion_info
-
-
-
-	/**
-	* DIFFUSION_INFO_ADD
-	* @param string $diffusion_element_tipo
-	*/
-	public function diffusion_info_add( $diffusion_element_tipo ) {
-		$dato = $this->get_dato();
-
-		if (!isset($dato->diffusion_info) || !is_object($dato->diffusion_info)) {	// property_exists($dato, 'diffusion_info')
-			$dato->diffusion_info = new stdClass();
-		}
-		if (!isset($dato->diffusion_info->$diffusion_element_tipo)) {
-	
-			$diffusion_element_data = new stdClass();
-				$diffusion_element_data->date 	 = date('Y-m-d H:i:s');;
-				$diffusion_element_data->user_id = $_SESSION['dedalo4']['auth']['user_id'];
-
-			$dato->diffusion_info->$diffusion_element_tipo = $diffusion_element_data;
-			
-			$this->set_dato($dato); // Force update section dato
-		}
-	}#end diffusion_info_add
-
-
-
-	/**
-	* DIFFUSION_INFO_PROPAGATE_CHANGES
-	*/
-	public function diffusion_info_propagate_changes() {
-		
-		$inverse_locators = $this->get_inverse_locators();
-		foreach((array)$inverse_locators as $locator) {
-
-			$section = section::get_instance($locator->section_id, $locator->section_tipo, $modo='list');
-			$dato = $section->get_dato();
-			if (!empty($dato->diffusion_info)) {
-				$dato->diffusion_info = null; // Default value
-				$section->set_dato($dato);
-				$section->Save();
-				debug_log(__METHOD__." Propagated diffusion_info changes to section  $locator->section_tipo, $locator->section_id ".to_string(), logger::DEBUG);						
-			}else{
-				debug_log(__METHOD__." Unnecessary do diffusion_info changes to section  $locator->section_tipo, $locator->section_id ".to_string(), logger::DEBUG);
-			}			
-		}
-	}#end diffusion_info_propagate_changes
-
-
-
-	/**
-	* DIFFUSION_INFO_REMOVE
-	* @param string $diffusion_element_tipo
-	*//*
-	public function diffusion_info_remove__DES( $diffusion_element_tipo ) {
-		$dato = $this->get_dato();
-
-		if (!property_exists($dato, 'diffusion_info')) return false;
-
-		if (isset($dato->diffusion_info->$diffusion_element_tipo)) {
-			
-			# Remove diffusion element info
-			unset($dato->diffusion_info->$current_diffusion_element_tipo);
-			$this->set_dato($dato); // Force update section dato	
-
-			# Propagate changes to parent sections (inverse_locators)
-			#register_shutdown_function($this->diffusion_info_propagate_changes);
-			$this->diffusion_info_propagate_changes();
-		}
-	}#end diffusion_info_remove
-	*/
-
-
-	/**
-	* DIFFUSION_INFO_RESET
-	* @return bool
-	*//*
-	public function diffusion_info_reset__DES() {
-		$dato = $this->get_dato();
-
-		if (!empty($dato->diffusion_info)) {
-			$dato->diffusion_info = null; // Default value
-			$this->set_dato($dato);
-			return true;
-		}
-		return false;
-	}#end diffusion_info_reset
-	*/
-
-
-
-	/**
 	* GET_RELATIONS
 	* @return array $relations
 	*
@@ -2725,8 +2739,7 @@ class section extends common {
 		}
 
 		$current_type = $locator->type;		
-		
-		$relations = $this->get_relations();
+		$relations 	  = $this->get_relations();
 			#dump($relations, ' relations ++ '.to_string());	
 			
 
@@ -2742,25 +2755,11 @@ class section extends common {
 				unset($relations[$key]);
 			}
 		}
-		# maintain array index after unset value. ! Important for encode json as array later (if keys are not correlatives, object is created)
+		# maintain array index after unset value. ! Important for encode json as array later (if keys are not correlatives, undesired object is created)
 		$relations = array_values($relations);
 		
-		# Test if already exists
-		/*
-		$object_exists = false;
-		foreach ((array)$relations as $key => $current_locator_obj) {
-			if ( $current_locator_obj->section_tipo == $locator->section_tipo
-				 && $current_locator_obj->section_id == $locator->section_id
-				 && $current_locator_obj->type == $locator->type
-				) {
-				$object_exists=true;
-				break;
-			}
-		}
-		*/
+		# Test if already exists	
 		$object_exists = locator::in_array_locator( $locator, $ar_locator=$relations, $ar_properties=array('section_tipo','section_id','type') );
-			#dump($relations, ' relations ++ '.to_string($object_exists));
-
 		if ($object_exists===false) {
 
 			array_push($relations, $locator);
@@ -2774,7 +2773,7 @@ class section extends common {
 				$this->dato = new stdClass();
 			}
 
-			$this->dato->relations = $relations;
+			$this->dato->relations = (array)$relations;
 			//$this->set_relations($relations);
 
 			return true;
@@ -2863,6 +2862,8 @@ class section extends common {
 	}//end remove_relations_of_type
 
 
+
+	
 
 	
 

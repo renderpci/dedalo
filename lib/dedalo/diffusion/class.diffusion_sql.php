@@ -78,10 +78,9 @@ class diffusion_sql extends diffusion  {
 				}
 			}
 
-
 		#dump(self::$ar_table, 'self::$ar_table ++ '.to_string()); die();
-
 	}#end get_db_schema	
+
 
 
 	/**
@@ -180,7 +179,6 @@ class diffusion_sql extends diffusion  {
 		#dump($ar_table_data, ' ar_table_data'); die();	
 
 		return self::$ar_table[$database_name][$table_tipo] = $ar_table_data;
-
 	}#end build_table_columns
 
 
@@ -237,8 +235,7 @@ class diffusion_sql extends diffusion  {
 					$thesaurus_columns_data  = self::build_thesaurus_columns_data( $options );
 					self::$ar_table_data[$database_tipo][$current_table_tipo] = $thesaurus_columns_data;
 				}
-			}
-	
+			}	
 	}#end get_db_data
 	*/
 
@@ -250,18 +247,23 @@ class diffusion_sql extends diffusion  {
 	* @param string $table_tipo like 'oh1'
 	* @param array $ar_section_id_portal Optional. Default empty array
 	* @param string $database_name like 'web_xxx'
+	* @param array|bool $ar_result
+	*	Default false
+	* @param string $diffusion_element_tipo
+	*
 	* @see $his->get_db_data
 	*/
 	public static function build_table_columns_data($table_tipo, $ar_section_id_portal=array(), $database_name, $ar_result=false, $diffusion_element_tipo) {
-		#$table_data_recursive=array();		
 
 		if(SHOW_DEBUG) {
 			#dump($ar_section_id_portal,"ar_section_id_portal - table_tipo: $table_tipo (".RecordObj_dd::get_termino_by_tipo($table_tipo).") - database_name: $database_name (".RecordObj_dd::get_termino_by_tipo($database_name).") "); #die();
 			#dump($table_tipo,"table_tipo");#die();
 			#dump($ar_section_id_portal, ' ar_section_id_portal ++ '.to_string());
+			#dump($table_tipo, ' table_tipo ++ '); dump($ar_section_id_portal, ' ar_section_id_portal ++ '); dump($database_name, ' database_name ++ '); dump($ar_result, ' ar_result ++ '); dump($diffusion_element_tipo, ' diffusion_element_tipo ++ ');
+			#exit();
 		}
 
-		# SECTION try . Target section is a related term of current difusion pointer. Normally is section but can be a portal
+		# SECTION try . Target section is a related term of current difusion pointer. Normally is section, but can be a portal
 		$pointer_type='section';
 		$ar_section_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($table_tipo, 'section', 'termino_relacionado');
 		if (empty($ar_section_tipo[0])) {
@@ -269,20 +271,20 @@ class diffusion_sql extends diffusion  {
 			$pointer_type='portal';
 			$ar_section_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($table_tipo, 'component_portal', 'termino_relacionado');
 		}
-		#dump($ar_section_tipo," ar_section_tipo - table_tipo:$table_tipo");#die();
-
 		if(!isset($ar_section_tipo[0])) throw new Exception("Error Processing Request, section_tipo is empty. Please define valid related term (section or portal) for pointer table_tipo:$table_tipo", 1);			
+		# dump($ar_section_tipo," ar_section_tipo - table_tipo:$table_tipo");#die();
+
 		
 		# SECTION_TIPO . Set section tipo
 		$section_tipo = $ar_section_tipo[0];
 			
 			#
 			# AR_RESULT . Get all matrix records in current table / portal. When portal is request, records of portal are in var '$ar_section_id_portal'
-			# NOTE : Because we need section_id and section_tipo of every item (multi-target portals), format $ar_result to contain this data always
+			# NOTE : Because we need section_id and section_tipo of every item (multi-target portals), format $ar_result contains this data always
 			if (!$ar_result) {
 				if(!empty($ar_section_id_portal)) {
-					# Los registros son los que alberga el portal
-					#$ar_result	= $ar_section_id_portal;
+					# Records here are the portal dato locators
+					# $ar_result	= $ar_section_id_portal;
 					foreach ($ar_section_id_portal as $key => $object) {
 						// Override section_tipo for each element
 						$ar_result[] = array($object->section_tipo => $object->section_id);
@@ -342,6 +344,11 @@ class diffusion_sql extends diffusion  {
 
 			# COMPONENT_PUBLICATION_TIPO
 				$component_publication_tipo = false;
+
+				#
+				# RESOLVED RECORDS
+				# Store resolved records to avoid infinite loops
+				static $resolved_records;			
 				
 	
 				#
@@ -356,10 +363,18 @@ class diffusion_sql extends diffusion  {
 					#$current_section_id=1;
 					#$ar_all_project_langs = array('lg-lvca'); //ONLY ONE NOW FOR TEST
 
+					# RESOLVED_RECORDS_KEY
+					$resolved_records_key = $section_tipo.'-'.$current_section_id;
+					if (in_array($resolved_records_key, (array)$resolved_records)) {
+						debug_log(__METHOD__." SKIPPED RECORD [$resolved_records_key]. ALREADY RESOLVED. ".to_string(), logger::WARNING);
+						error_log(" SKIPPED RECORD [$resolved_records_key]. ALREADY RESOLVED. ");
+						continue;
+					}
+					#debug_log(__METHOD__." !!!! resolved_records ".to_string($resolved_records), logger::DEBUG);
 
 					#
 					# SECTION DIFFUSION INFO - CHECK
-					# On finish record update uppdate current section diffusion_info
+					# On finish record update, update current section diffusion_info
 					$section = section::get_instance($current_section_id, $section_tipo, $modo='list');
 					$diffusion_info = $section->get_diffusion_info();
 					if ( isset($diffusion_info->$diffusion_element_tipo) ) {
@@ -367,37 +382,42 @@ class diffusion_sql extends diffusion  {
 						if(isset($_SESSION['dedalo4']['config']['skip_publication_state_check']) && $_SESSION['dedalo4']['config']['skip_publication_state_check']==1) {
 							# Nothing to do. (Configurated from tool_administrator)
 						}else{
+
+							# RESOLVED_RECORDS (set a resoolved)
+							$resolved_records[] = $resolved_records_key;
+
 							debug_log(__METHOD__." Skipped current record [{$section_tipo}-{$current_section_id}]. Already published ($diffusion_element_tipo). ".to_string(), logger::DEBUG);
 							continue;
 						}
 					}
 
-					
+
 					#
 					# COMPONENT PUBLICATION - CHECK
 					if(!$component_publication_tipo) {
 						$component_publication_tipo = self::get_component_publication_tipo($ar_table_children);
 					}
 					#dump($component_publication_tipo, ' component_publication_tipo ++ '.to_string($section_tipo));					
-					if ($component_publication_tipo) {
-						$component_publication_bool_value = self::get_component_publication_bool_value($component_publication_tipo, $current_section_id, $section_tipo);
-							#dump($component_publication_bool_value, ' component_publication_bool_value ++ '.to_string());
-						
-						if (!$component_publication_bool_value) {
-							# Skip this record
-							self::delete_sql_record($current_section_id, $ar_field_data['database_name'], $ar_field_data['table_name']);
-							debug_log(__METHOD__." Skipped record $current_section_id ".to_string($ar_field_data['table_name'])." (publication=no)", logger::DEBUG);
+					
+					$component_publication_bool_value = (bool)self::get_component_publication_bool_value($component_publication_tipo, $current_section_id, $section_tipo);
+						#dump($component_publication_bool_value, ' component_publication_bool_value ++ '.to_string());
+					
+					if (!$component_publication_bool_value) {
+						# Skip this record
+						self::delete_sql_record($current_section_id, $ar_field_data['database_name'], $ar_field_data['table_name']);
+						debug_log(__METHOD__." Skipped record $current_section_id ".to_string($ar_field_data['table_name'])." (publication=no)", logger::DEBUG);
 
-							$section->diffusion_info_add($diffusion_element_tipo);
-							$section->Save();
-							debug_log(__METHOD__." Added current diffusion_element_tipo $diffusion_element_tipo to data. Section diffusion_info updated and saved [{$section_tipo}-{$current_section_id}]. ".to_string(), logger::DEBUG);
-							
-							continue;
-						}
+						$section->diffusion_info_add($diffusion_element_tipo);
+						$section->Save();
+						debug_log(__METHOD__." Added current diffusion_element_tipo $diffusion_element_tipo to data. Section diffusion_info updated and saved [{$section_tipo}-{$current_section_id}]. ".to_string(), logger::DEBUG);
+						
+						# RESOLVED_RECORDS (set a resoolved)
+						$resolved_records[] = $resolved_records_key;
+
+						continue;
 					}
+								
 					
-					
-										
 
 					#
 					# LANGS ITERATION
@@ -563,8 +583,11 @@ class diffusion_sql extends diffusion  {
 					$section->Save();
 					debug_log(__METHOD__." Added current diffusion_element_tipo $diffusion_element_tipo to data. Section diffusion_info updated and saved [{$section_tipo}-{$current_section_id}]. ".to_string(), logger::DEBUG);
 
+					# RESOLVED_RECORDS
+					$resolved_records[] = $resolved_records_key;
+
 					// let GC do the memory job
-					time_nanosleep(0, 50000000); // 50 ms
+					time_nanosleep(0, 10000000); // 50 ms
 
 				}#end foreach ($ar_result as $current_section_id) end itearation of records
 				#self::build_table_columns_data($section_tipo, $ar_portal_section_id_unique, $database_name, false, $diffusion_element_tipo);
@@ -582,19 +605,13 @@ class diffusion_sql extends diffusion  {
 		# PORTAL RECORDS TOTALS
 		# After iterate all records, we have now the portal records totals (organized by portal_tipo )
 		# Iterate all portals and build every table_data of this portals
-		# dump($ar_portal_records, ' $ar_portal_records');
+		# dump($ar_portal_records, ' $ar_portal_records');		
 		foreach ((array)$ar_portal_records as $portal_tipo => $portal_records) {
 			$portal_records = self::clean_duplicates( $portal_records );
 			self::build_table_columns_data($portal_tipo, $portal_records, $database_name, false, $diffusion_element_tipo);
-		}		
+		}
 
 	}#end build_table_columns_data
-
-
-
-	
-
-
 
 
 
@@ -681,7 +698,6 @@ class diffusion_sql extends diffusion  {
 		}
 
 		return $ar_field_data;
-
 	}#end create_field
 
 
@@ -852,7 +868,10 @@ class diffusion_sql extends diffusion  {
 					
 					switch ($diffusion_modelo_name) {
 						case 'field_date':
-							$ar_field_data['field_value'] = $current_component->get_valor();
+							$timestamp = $current_component->get_dato_as_timestamp();
+							$ar_field_data['field_value'] = $timestamp;
+							#$ar_field_data['field_value'] = $current_component->get_valor();
+							debug_log(__METHOD__." $ar_field_data[field_value] ".to_string($ar_field_data['field_value']), logger::WARNING);
 							break;
 						
 						default:
@@ -937,7 +956,6 @@ class diffusion_sql extends diffusion  {
 		}//end switch ($options->typology) {
 
 		return (array)$ar_field_data;
-
 	}//end build_data_field__NO_ACABADA
 	
 	
@@ -994,7 +1012,6 @@ class diffusion_sql extends diffusion  {
 			#dump($this->ar_diffusion_map,"this->ar_diffusion_map ");#die();
 
 		return (array)$this->ar_diffusion_map;
-
 	}#end get_ar_diffusion_map_sql
 
 
@@ -1226,15 +1243,14 @@ class diffusion_sql extends diffusion  {
 				#dump($ar_resolved_static_debug, ' ar_resolved_static_debug ++ '.to_string());;
 			}
 
-			$this->ar_published_records = $ar_resolved_static;
+		$this->ar_published_records = $ar_resolved_static;
 
-			$response->result = true;
-			$response->msg .= "Ok. Record updated $options->section_id";
+		$response->result = true;
+		$response->msg .= "Ok. Record updated $options->section_id";
 
-				#dump($response, ' response ++++++ '.to_string($options->section_id));
+			#dump($response, ' response ++++++ '.to_string($options->section_id));
 			
-			return $response;
-
+		return $response;
 	}//end update_record
 
 
@@ -1271,8 +1287,7 @@ class diffusion_sql extends diffusion  {
 		$thesaurus_columns_data  = self::build_thesaurus_columns_data( $options_cd );
 			#dump($thesaurus_columns_data, ' thesaurus_columns_data ++ '.to_string()); die();
 		
-		return $thesaurus_columns_data;	
-
+		return $thesaurus_columns_data;
 	}#end update_thesaurus
 
 
@@ -1321,7 +1336,6 @@ class diffusion_sql extends diffusion  {
 		}//end foreach ($ts_columns as $field_name => $field_type) {		
 
 		return $ar_table_data;
-
 	}#end build_thesaurus_columns
 
 
@@ -1421,7 +1435,6 @@ class diffusion_sql extends diffusion  {
 		}//switch ($options->field_name) {	
 
 		return (array)$ar_field_data;
-
 	}#end create_ts_field
 
 
@@ -1517,7 +1530,6 @@ class diffusion_sql extends diffusion  {
 		#dump($ar_table_data, ' ar_table_data ++ '.to_string());
 
 		return $ar_table_data;
-
 	}#end build_thesaurus_columns_data
 
 
@@ -1604,15 +1616,11 @@ class diffusion_sql extends diffusion  {
 		}
 
 		return $ar_field_data;
-
 	}#end build_ts_data_field
 
 
 	
 	
-
-	
-
 	/**
 	* GET_DIFFUSION_DATABASE_NAME_FROM_TABLE
 	* @param string $$diffusion_table_tipo
@@ -1642,7 +1650,6 @@ class diffusion_sql extends diffusion  {
 		}
 
 		return $diffusion_database_name;
-
 	}#end get_diffusion_database_name_from_table
 
 
@@ -1659,7 +1666,7 @@ class diffusion_sql extends diffusion  {
 			return false;
 		}
 
-		return $ar_diffusion_map_elements[$diffusion_element_tipo];		
+		return $ar_diffusion_map_elements[$diffusion_element_tipo];	
 
 	}#end get_diffusion_element_from_element_tipo
 
@@ -1760,7 +1767,6 @@ class diffusion_sql extends diffusion  {
 		}//end foreach ($ar_terminoID as $current_table_tipo)
 
 		return (object)$diffusion_element_tables_map;
-
 	}#end get_diffusion_element_tables_map
 
 
@@ -1781,8 +1787,8 @@ class diffusion_sql extends diffusion  {
 				break;
 			}			
 		}
-		return false;		
 
+		return false;
 	}#end get_diffusion_table_by_section
 	
 
@@ -1824,7 +1830,6 @@ class diffusion_sql extends diffusion  {
 		}
 
 		return $thesaurus_data;
-
 	}#end get_thesaurus_data
 
 
@@ -1879,7 +1884,6 @@ class diffusion_sql extends diffusion  {
 		}
 
 		return (object)$response;
-
 	}#end diffusion_complete_dump
 
 
@@ -1906,8 +1910,7 @@ class diffusion_sql extends diffusion  {
 				break;
 		}
 
-		return false;
-		
+		return false;		
 	}#end delete_sql_record
 
 
@@ -1932,7 +1935,6 @@ class diffusion_sql extends diffusion  {
 		}
 
 		return $component_publication_tipo;
-
 	}#end get_component_publication_tipo
 
 
@@ -1957,8 +1959,7 @@ class diffusion_sql extends diffusion  {
 			return true;
 		}		
 
-		return false;
-		
+		return false;		
 	}#end get_component_publication_bool_value
 
 

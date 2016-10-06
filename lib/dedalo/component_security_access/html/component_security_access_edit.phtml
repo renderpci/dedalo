@@ -2,7 +2,7 @@
 
 	# VISUALIZADOR HTML	
 		
-	
+	/*
 	print "\n<!-- SECURITY ACCESS [tipo:$tipo section_id:$parent modo:$modo] -->";
 
 	print "\n<div class=\"wrap_component css_wrap_security_access wrap_component_{$tipo}\" id=\"{$id_wrapper}\"
@@ -31,38 +31,35 @@
 						
 		case ($permissions>=2)	:
 		
-				/* FORMATO:
-				<ul class="menu" id="security_access_ul">  
-				<li class="expanded"><a href="#">Create content</a>
-				  
-					<ul class="menu"> 
-					<li class="leaf"><a href="#">Map</a></li> 
-					<li class="leaf"><a href="#">Page</a></li> 
-					<li class="leaf"><a href="#">Story</a></li> 
-					</ul> 
-					
-				</li>
-				</ul>
-				*/
+				# FORMATO:
+				#<ul class="menu" id="security_access_ul">  
+				#<li class="expanded"><a href="#">Create content</a>
+				#  
+				#	<ul class="menu"> 
+				#	<li class="leaf"><a href="#">Map</a></li> 
+				#	<li class="leaf"><a href="#">Page</a></li> 
+				#	<li class="leaf"><a href="#">Story</a></li> 
+				#	</ul> 
+				#
+				#</li>
+				#</ul>
+			
 
-				$html_contenido .= "\n <input type=\"hidden\" id=\"component_security_access\" 
+				$html_contenido .= "\n <input type=\"hidden\" id=\"component_security_access\"
 				data-tipo=\"{$tipo}\"
 				data-lang=\"{$lang}\"
 				data-section_tipo=\"{$section_tipo}\"
 				data-parent=\"{$parent}\"
 				data-modo=\"{$modo}\"
-				/>";							
-								
+				/>";
+				
 				
 				# TREE HTML ES CALCULADO EN EL CONTROLADOR
-				$html_contenido .= "\n\n <!-- Tree --> " ;	
-				$html_contenido .= $tree_html;		
-	
-			if($permissions==3) {
-				$html_contenido .= "\n <br><span class=\"css_span_debugger\" id=\"debugger_{$tipo}\" >{$debugger}</span>";		
-			}
-			break;										
-							
+				# $html_contenido .= "\n\n <!-- Tree --> " ;	
+				$html_contenido .= $tree_html;	
+			
+				break;
+				
 	}
 
 
@@ -76,4 +73,5 @@
 	
 	
 	print "\n</div><!-- /css_wrap_security_access -->\n\n"; //css_wrap_security_access
+	*/
 ?>

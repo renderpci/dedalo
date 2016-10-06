@@ -1,9 +1,9 @@
 <?php
 
-
-
-
-
+/**
+* COMPONENT_COMMON
+* Common methods of all components
+*/
 abstract class component_common extends common {
 
 	# GENERAL VARS	
@@ -94,7 +94,7 @@ abstract class component_common extends common {
 				dump($parent," parent");
 				throw new Exception("Error Processing Request. trying to use wrong var: '$parent' as parent to load as component", 1);				
 			}			
-			$ar_valid_modo = array("edit","list","search","simple","list_tm","tool_portal","tool_lang","edit_tool","indexation","selected_fragment","tool_indexation",'tool_transcription','print','edit_component','load_tr','update','portal_list','list_thesaurus');
+			$ar_valid_modo = array("edit","list","search","simple","list_tm","tool_portal","tool_lang","edit_tool","indexation","selected_fragment","tool_indexation",'tool_transcription','print','edit_component','load_tr','update','portal_list','list_thesaurus','portal_list_view_mosaic');
 			if ( empty($modo) || !in_array($modo, $ar_valid_modo) ) {
 				#dump($modo," modo");
 				#throw new Exception("Error Processing Request. trying to use wrong var: '$modo' as modo to load as component", 1);			
@@ -215,7 +215,7 @@ abstract class component_common extends common {
     # __CONSTRUCT
 	public function __construct($tipo=NULL, $parent=NULL, $modo='edit', $lang=DEDALO_DATA_LANG, $section_tipo=null) {		
 
-		if ($tipo=='dummy') {
+		if ($tipo==='dummy') {
 			throw new Exception("Error dummy caller!!", 1);			
 		}
 			/*
@@ -273,7 +273,7 @@ abstract class component_common extends common {
 		# LANG : Check lang
 		# Establecemos el lenguaje preliminar (aunque todavía no están cargados lo datos de matrix, ya tenemos la información de si es o no traducible
 		# a partir de la carga de la estructura)
-		if ($this->traducible=='no') {
+		if ($this->traducible==='no') {
 			$lang = DEDALO_DATA_NOLAN;
 		}		
 
@@ -291,7 +291,7 @@ abstract class component_common extends common {
 		# PROPIEDADES:DATO_DEFAULT : Default data try
 		# If 'propiedades:dato_default' exists, use this value as initial value, save component data and reload component data
 		if( ($this->dato===null || $this->dato==='' || $this->dato===false)
-			&& ( $this->modo=='edit' ) // && empty($this->parent) (Now always have parent!)
+			&& ( $this->modo==='edit' ) // && empty($this->parent) (Now always have parent!)
 			) {
 			
 			$propiedades = $this->RecordObj_dd->get_propiedades();
@@ -395,7 +395,7 @@ abstract class component_common extends common {
 	*/
 	protected function load_component_dato() {
 		
-		if( empty($this->parent) || $this->modo=='dummy' || $this->modo=='search') {
+		if( empty($this->parent) || $this->modo==='dummy' || $this->modo==='search') {
 
 			# Experimental (devolvemos como que ya se ha intentado cargar, aunque sin id)
 			#$this->bl_loaded_matrix_data = true;
@@ -420,7 +420,7 @@ abstract class component_common extends common {
 			# Fix dato
 			# El lang_fallback, lo haremos directamente en la extracción del dato del componente en la sección y sólo para el modo list.
 			$lang_fallback=false;
-			if ($this->modo=='list') {
+			if ($this->modo==='list') {
 				$lang_fallback=true;
 			}
 			$this->dato = $section->get_component_dato($this->tipo, $this->lang, $lang_fallback);
@@ -612,7 +612,7 @@ abstract class component_common extends common {
 		
 
 		# SECTION : Preparamos la sección que será la que se encargue de salvar el dato del componente
-		$section 	= section::get_instance($parent, $section_tipo);		
+		$section 	= section::get_instance($parent, $section_tipo);
 		$section_id = $section->save_component_dato($this);
 			#dump($section_id, ' section_id');
 
@@ -624,34 +624,7 @@ abstract class component_common extends common {
 
 
 		# ACTIVITY
-		# Prevent infinite loop saving self
-		if (!in_array($tipo, logger_backend_activity::$ar_elements_activity_tipo)) {
-			try {
-				# LOGGER ACTIVITY : QUE(action normalized like 'LOAD EDIT'), LOG LEVEL(default 'logger::INFO'), TIPO(like 'dd120'), DATOS(array of related info)
-				$matrix_table 	= common::get_matrix_table_from_tipo($this->tipo);
-				logger::$obj['activity']->log_message(
-					'SAVE',
-					logger::INFO,
-					$this->tipo,
-					null,
-					array(	"msg"			=> "Saved component data",							
-							"tipo"			=> $this->tipo,
-							"parent"		=> $this->parent,
-							"lang"			=> $this->lang,
-							"top_id"		=> (TOP_ID ? TOP_ID : $section_id),
-							"top_tipo"		=> (TOP_TIPO ? TOP_TIPO : $section_tipo),
-							"component_name"=> get_called_class(),
-							"table"			=> $matrix_table,
-							"section_tipo"	=> $this->section_tipo
-						 )
-				);
-			} catch (Exception $e) {
-			    if(SHOW_DEBUG) {
-			    	$msg = 'Exception: ' . $e->getMessage();
-			    	trigger_error($msg);
-			    }
-			}#end try catch
-		}#end if (!in_array($tipo, logger_backend_activity::$ar_elements_activity_tipo))
+		$this->save_activity();
 
 
 		# DEDALO_CACHE_MANAGER : Delete cache of current component html	
@@ -667,6 +640,45 @@ abstract class component_common extends common {
 		# RETURN MATRIX ID
 		return (int)$section_id;
 	}#end Save
+
+
+
+	/**
+	* SAVE_ACTIVITY
+	* @return 
+	*/
+	public function save_activity() {
+
+		# ACTIVITY
+		# Prevent infinite loop saving self
+		if (!in_array($this->tipo, logger_backend_activity::$ar_elements_activity_tipo)) {
+			try {
+				# LOGGER ACTIVITY : QUE(action normalized like 'LOAD EDIT'), LOG LEVEL(default 'logger::INFO'), TIPO(like 'dd120'), DATOS(array of related info)
+				$matrix_table 	= common::get_matrix_table_from_tipo($this->tipo);
+				logger::$obj['activity']->log_message(
+					'SAVE',
+					logger::INFO,
+					$this->tipo,
+					null,
+					array(	"msg"			=> "Saved component data",							
+							"tipo"			=> $this->tipo,
+							"parent"		=> $this->parent,
+							"lang"			=> $this->lang,
+							"top_id"		=> (TOP_ID ? TOP_ID : $this->parent),
+							"top_tipo"		=> (TOP_TIPO ? TOP_TIPO : $this->section_tipo),
+							"component_name"=> get_called_class(),
+							"table"			=> $matrix_table,
+							"section_tipo"	=> $this->section_tipo
+						 )
+				);
+			} catch (Exception $e) {
+			    if(SHOW_DEBUG) {
+			    	$msg = 'Exception: ' . $e->getMessage();
+			    	trigger_error($msg);
+			    }
+			}#end try catch
+		}#end if (!in_array($tipo, logger_backend_activity::$ar_elements_activity_tipo))
+	}//end save_activity
 
 
 
@@ -851,7 +863,7 @@ abstract class component_common extends common {
 	# Note: Used in class.inspector to load relation tool
 	public function load_specific_tool($tool_name) {
 
-		if ($tool_name=='tool_relation') {
+		if ($tool_name==='tool_relation') {
 			if(SHOW_DEBUG) {
 				#debug_log(__METHOD__." DESACTIVA LA CARGA DE TOOL RELATION ".__METHOD__);				
 			}
@@ -919,7 +931,7 @@ abstract class component_common extends common {
 		$traducible = $this->RecordObj_dd->get_traducible();
 			#dump($traducible,"traducible");
 		
-		if ($traducible=='no' || $this->lang==DEDALO_DATA_NOLAN) {
+		if ($traducible==='no' || $this->lang===DEDALO_DATA_NOLAN) {
 			$key = array_search('tool_lang',$ar_tools_name);
 			if($key!==false){
 			    unset($ar_tools_name[$key]);			    	
@@ -2028,7 +2040,7 @@ abstract class component_common extends common {
 		if (!is_object($object)) {
 			throw new Exception("Error Processing Request. var 'object' is not of type object ", 1);			
 		}
-		if (get_class($object)=='locator') {
+		if (get_class($object)==='locator') {
 			$std_object = locator::get_std_class( $object );
 		}else{
 			$std_object = $object;
@@ -2068,7 +2080,7 @@ abstract class component_common extends common {
 		if (!is_object($object)) {
 			throw new Exception("Error Processing Request. var 'object' is not of type object ", 1);			
 		}
-		if (get_class($object)=='locator') {			
+		if (get_class($object)==='locator') {			
 			$std_object = locator::get_std_class( $object );
 		}else{
 			$std_object = $object;
@@ -2156,7 +2168,7 @@ abstract class component_common extends common {
 			#}
 
 			$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
-			if($modelo_name=='section') {
+			if($modelo_name==='section') {
 				$section_tipo = $current_tipo;
 				break;
 			}
@@ -2318,7 +2330,7 @@ abstract class component_common extends common {
 
 	/**
 	* GET_COMPONENT_AR_LANGS
-	* Devuelve un arary con todos los idiomas usados por este componente a partir de el dato de la sección que lo aloja
+	* Devuelve un array con todos los idiomas usados por este componente a partir del dato de la sección que lo aloja
 	* @return array $component_ar_langs
 	*/
 	public function get_component_ar_langs() {
@@ -2720,7 +2732,7 @@ abstract class component_common extends common {
 
 		$search_query='';
 		switch (true) {
-			case ($comparison_operator=='ILIKE' || $comparison_operator=='LIKE'):
+			case ($comparison_operator==='ILIKE' || $comparison_operator==='LIKE'):
 				// Allow wildcards like "house*" or "*house"
 				// dump($search_value[strlen($search_value) - 1], "$search_value[0] ".to_string());
 				$separator 	   = '*';				

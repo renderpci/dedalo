@@ -44,6 +44,7 @@ class css {
 
 			# COMMON css			
 			css::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/common/css/common.css';
+			css::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/common/css/buttons.css';
 			css::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/common/css/glyphicons.css';
 
 			# TOOLS COMMON

@@ -124,11 +124,11 @@ if (login::is_logged()) {
 			#
 			# PHP USER
 			$processUser = posix_getpwuid(posix_geteuid());
-			$debug_line_html .= "<span>PHP ".phpversion()." ".ini_get('session.save_handler')." <b>".$processUser['name']."</b></span>";
+			$debug_line_html .= "<span>PHP ".phpversion()." ".ini_get('session.save_handler')." <span>".$processUser['name']."</span></span>";
 
 			#
 			# DATABASE 
-			$debug_line_html .= "<span>DB PGSQL ".pg_version(DBi::_getConnection())['server']." <b>".DEDALO_DATABASE_CONN."</b></span>";
+			$debug_line_html .= "<span>DB PGSQL ".pg_version(DBi::_getConnection())['server']." <span>".DEDALO_DATABASE_CONN."</span></span>";
 
 			#
 			# HTTP SERVER 
@@ -137,7 +137,7 @@ if (login::is_logged()) {
 				if (strlen($apache_version)>86) {
 					$apache_version=substr($apache_version, 0,80).'..';
 				}
-				$debug_line_html .= "<span>HTTP "." <b>". $apache_version ."</b></span>";
+				$debug_line_html .= "<span>HTTP "." <span>". $apache_version ."</span></span>";
 			}
 		
 

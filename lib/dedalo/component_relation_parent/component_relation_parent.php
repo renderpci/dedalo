@@ -5,8 +5,7 @@
 	$tipo 					= $this->get_tipo();
 	$parent 				= $this->get_parent();
 	$section_tipo			= $this->get_section_tipo();
-	$modo					= $this->get_modo();		
-	$dato 					= $this->get_dato();
+	$modo					= $this->get_modo();	
 	$label 					= $this->get_label();
 	$required				= $this->get_required();
 	$debugger				= $this->get_debugger();
@@ -24,15 +23,12 @@
 		case 'edit'	:
 				# Verify component content record is inside section record filter
 				if ($this->get_filter_authorized_record()===false) return null; //($lang=DEDALO_DATA_LANG, $id_path=false, $referenced_section_tipo=false, $filter_custom=false) 
-
-				$id_wrapper 		= 'wrapper_'.$identificador_unico;
-				$input_name 		= "{$tipo}_{$parent}";
-				$component_info 	= $this->get_component_info('json');
-				#$valor				= $this->get_valor();
-				$dato_string		= json_handler::encode($dato);
-
-				#$referenced_tipo 	= $section_tipo;
-					#dump($referenced_tipo, ' referenced_tipo ++ '.to_string());
+				$dato 					 = $this->get_dato();
+				$dato_string 			 = json_encode($dato);
+				$id_wrapper 			 = 'wrapper_'.$identificador_unico;
+				$input_name 			 = "{$tipo}_{$parent}";
+				$component_info 		 = $this->get_component_info('json');
+				$children_component_tipo = component_relation_parent::get_component_relation_children_tipo($tipo);
 				break;
 
 		case 'tool_time_machine' :
@@ -69,7 +65,6 @@
 		case 'print' :
 				$valor = $this->get_valor();
 				break;
-
 	}
 		
 	$page_html	= DEDALO_LIB_BASE_PATH .'/'. get_class($this) . '/html/' . get_class($this) . '_' . $file_name . '.phtml';

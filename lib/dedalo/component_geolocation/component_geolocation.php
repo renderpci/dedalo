@@ -22,7 +22,6 @@
 	$file_name = $modo;
 		#dump($file_name,'$file_name');
 
-	#dump($dato,'$dato');
 	
 	switch($modo) {		
 		

@@ -6,7 +6,7 @@
 	$section_id 	= $this->section_id;
 	$modo 			= $this->modo;
 
-
+	
 	# TOOL CSS / JS MAIN FILES
 	#css::$ar_url[] = DEDALO_LIB_BASE_URL."/tools/".$tool_name."/css/".$tool_name.".css";
 	js::$ar_url[]  = DEDALO_LIB_BASE_URL."/tools/".$tool_name."/js/".$tool_name.".js";

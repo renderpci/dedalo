@@ -105,10 +105,8 @@ class diffusion_mysql extends diffusion_sql  {
 
 			debug_log(__METHOD__." Created new table $database_name.$table_name ".to_string(), logger::DEBUG);
 
-		return true;	// $sql_query;
-
+		return true;
 	}#end create_table
-
 
 
 
@@ -213,8 +211,7 @@ class diffusion_mysql extends diffusion_sql  {
 		#$sql_query = utf8_decode($sql_query);
 		#dump( stripslashes($sql_query), ' sql_query');
 
-		return true;	//$sql_query;
-
+		return true;
 	}#end insert_data	
 
 	
@@ -247,6 +244,7 @@ class diffusion_mysql extends diffusion_sql  {
 
 	}//end multi
 	*/
+
 
 	
 	/**
@@ -304,7 +302,6 @@ class diffusion_mysql extends diffusion_sql  {
 		$sql_query = "PRIMARY KEY (`id`),".$sql_query; // Prepend primary key 
 
 		return $sql_query;
-
 	}#end generate_keys
 
 
@@ -376,7 +373,6 @@ class diffusion_mysql extends diffusion_sql  {
 		#dump($sql_query, ' sql_query');
 
 		return $sql_query;
-
 	}#end generate_fields
 
 
@@ -435,7 +431,6 @@ class diffusion_mysql extends diffusion_sql  {
 			}
 			$ar_verified_tables[] = $table_name; // Store state to avoid verify every time for every record
 		}//end if ( !in_array($table_name, (array)$ar_verified_tables) ) {
-
 		
 
 		foreach ((array)$ar_section_id as $section_id => $ar_fields) {
@@ -512,7 +507,6 @@ class diffusion_mysql extends diffusion_sql  {
 		$response->result = true;
 		$response->msg    = implode(",\n", $response->msg);		#dump($response, ' response');
 		return (object)$response;
-
 	}#end save_record
 
 
@@ -627,7 +621,6 @@ class diffusion_mysql extends diffusion_sql  {
 		#DBi::_getConnection_mysql()->close();
 
 		return $ar_data;
-
 	}//end get_rows_data
 
 
@@ -663,7 +656,6 @@ class diffusion_mysql extends diffusion_sql  {
 		$result->free();
 
 		return (bool)$table_exits;
-
 	}#end table_exits
 
 
@@ -688,7 +680,6 @@ class diffusion_mysql extends diffusion_sql  {
 		}
 
 		return true;
-
 	}#end is_publicable
 
 
@@ -724,8 +715,7 @@ class diffusion_mysql extends diffusion_sql  {
 			$response->msg 	  = "Deleted record section_id:$section_id, table:$table_name, all langs. Affected rows:".DBi::_getConnection_mysql()->affected_rows;
 		}
 
-		return $response;
-
+		return (object)$response;
 	}#end delete_sql_record
 
 

@@ -53,11 +53,22 @@
 						$html_contenido .= "\n <span>".label::get_label('mapa_zoom')."</span>";
 						$html_contenido .= "\n <input type=\"text\" name=\"zoom\" value=\"{$dato->zoom}\" data-name=\"zoom\"/>";
 
+						# ALT
+						$html_contenido .= "\n <span>".label::get_label('altitude')."</span>";
+						#$html_contenido .= "\n <span name=\"alt\" data-name=\"alt\"/>".$dato->alt."</span>";
+						$alt = isset($dato->alt) ? $dato->alt : null;
+						$html_contenido .= "\n <input type=\"text\" name=\"alt\" class=\"input_altitude\" value=\"{$alt}\" data-name=\"alt\" readonly=\"readonly\"/>";
+						
+
 						
 						$html_contenido .= "\n <span class=\"geolocation_separator\"></span>";
 						$html_contenido .= "\n <span id=\"map_refresh\" class=\"glyphicon glyphicon-refresh geolocation_text link\"></span>";
 						$html_contenido .= "\n <span class=\"geolocation_separator\"></span>";
 						$html_contenido .= "\n <span id=\"map_fixed\" class=\"link\"> ".label::get_label('salvar')."</span>";
+
+						# TOGGLE BUTTON
+						$html_contenido .= "\n <span id=\"map_fixed\" class=\"link save_geolocation\" onclick=\"component_geolocation.toggle_full_map(this)\">Toggle</span>";
+
 
 					$html_contenido .= "\n </div>";//end map_inputs
 

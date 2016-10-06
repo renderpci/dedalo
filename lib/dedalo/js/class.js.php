@@ -101,7 +101,7 @@ class js {
 				$html .= self::build_tag( DEDALO_LIB_BASE_URL . '/inspector/js/inspector.js' );						
 
 				# component relation .En algunos contextos es necesario el js de component_relation aunque no tengamos cargado el componente. Por tanto lo cargaremos siempre				
-				$html .= self::build_tag( DEDALO_LIB_BASE_URL . '/component_relation/js/component_relation.js' );
+				#$html .= self::build_tag( DEDALO_LIB_BASE_URL . '/component_relation/js/component_relation.js' );
 
 				# button delete .En algunos contextos es necesario el js de button_delete aunque no tengamos cargado el componente. Por tanto lo cargaremos siempre
 				if(navigator::get_selected('modo')=='list') {

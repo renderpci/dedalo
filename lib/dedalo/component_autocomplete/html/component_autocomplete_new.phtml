@@ -1,0 +1,36 @@
+<?php
+
+	$html='';
+	$html .= "<div class=\"component_autocomplete_new_element\" data-type=\"component_autocomplete_new_element\" >";
+
+		#
+		# INPUTS
+		foreach ($ar_terminos_relacionados as $current_tipo) {
+			$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
+			if ($modelo_name=='section') continue;
+			if ($modelo_name!='component_input_text') {
+				if(SHOW_DEBUG) {
+					trigger_error("Current component is not 'component_input_text'. Ignoring component");
+				}
+				continue;
+			}
+			$title = RecordObj_dd::get_termino_by_tipo($current_tipo,$lang,true);
+			#html .= $title;
+			$html .= " <input type=\"text\" class=\"\" name=\"$current_tipo\" data-tipo=\"{$current_tipo}\" value=\"\" placeholder=\"$title\" /> ";
+		}
+
+		#
+		# BUTTON NEW
+		$html .= "<input type=\"button\"
+		class=\"css_button_generic button_submit_new_element\"
+		data-target_section_tipo=\"$target_section_tipo\"
+		value=\"".label::get_label('nuevo')."\"
+		onclick=\"component_autocomplete.submit_new_element(this)\"
+		/>";
+		if(SHOW_DEBUG) {
+			$html .= " <span class=\"note\">[$target_section_tipo]</span>";
+		}
+		
+
+	$html .= "</div>";
+?>

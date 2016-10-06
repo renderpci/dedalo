@@ -6,6 +6,7 @@
 
 	#
 	# GROUPS
+	# dump($ar_diffusion_map, ' ar_diffusion_map ++ '.to_string());
 	foreach ($ar_diffusion_map as $diffusion_group_tipo => $ar_diffusion_element) {
 		
 		$html_tool .= "<div class=\"diffusion_group\">";
@@ -51,7 +52,6 @@
 					$html_tool .= " <i class=\"glyphicon glyphicon-ok\" style=\"color:green\"></i>";
 				}
 				$html_tool .= "</div>";
-
 
 				/*
 				$checked  = isset($obj_value->checked) && $obj_value->checked===true ? 'checked="checked"' : ''; // Default is not chechecd

@@ -7,6 +7,7 @@
 	$section_tipo			= $this->get_section_tipo();
 	$modo					= $this->get_modo();		
 	$dato 					= $this->get_dato();
+	$valor					= $this->get_valor();
 	$dato_reference_lang 	= NULL;
 	$traducible 			= $this->get_traducible(); 
 	$label 					= $this->get_label();			
@@ -14,8 +15,7 @@
 	$debugger				= $this->get_debugger();	
 	$permissions			= common::get_permissions($section_tipo,$tipo);
 	$ejemplo				= $this->get_ejemplo();
-	$html_title				= "Info about $tipo";		
-	$valor					= $this->get_valor();				
+	$html_title				= "Info about $tipo";					
 	$lang					= $this->get_lang();
 	$lang_name				= $this->get_lang_name();
 	$identificador_unico	= $this->get_identificador_unico();
@@ -25,22 +25,22 @@
 	if ($this->get_filter_authorized_record()===false) return NULL ;
 
 	$file_name				= $modo;
-	$video_id 				= $this->get_video_id();
-	$quality				= $this->get_quality();
-	$video_url				= $this->get_video_url();
-	$aditional_path			= $this->get_aditional_path();
-	$initial_media_path		= $this->get_initial_media_path();
+	
 	
 	#$coef 					= "2.3";
 	#$video_width			= round(720/$coef) ;#.'px';
 	#$video_height			= round(404/$coef) ;#.'px';
-
-		#dump($video_width,$video_height);#round
-
+	
 	switch($modo) {	
 
 		#case 'portal_edit'	:
-		case 'edit'	:					
+		case 'edit'	:
+					$video_id 				= $this->get_video_id();
+					$quality				= $this->get_quality();
+					$video_url				= $this->get_video_url();
+					$aditional_path			= $this->get_aditional_path();
+					$initial_media_path		= $this->get_initial_media_path();
+
 					$id_wrapper 	= 'wrapper_'.$identificador_unico;
 					$input_name 	= "{$tipo}_{$parent}";
 					$component_info = $this->get_component_info('json');
@@ -63,6 +63,11 @@
 					break;
 
 		case 'posterframe':
+					$video_id 				= $this->get_video_id();
+					$quality				= $this->get_quality();
+					$video_url				= $this->get_video_url();
+					$aditional_path			= $this->get_aditional_path();
+					$initial_media_path		= $this->get_initial_media_path();
 
 					# $posterframe_url 	= $this->get_posterframe_url();
 					# PosterFrameObj		
@@ -79,6 +84,11 @@
 					break;
 		
 		case 'player_posterframe':
+					$video_id 				= $this->get_video_id();
+					$quality				= $this->get_quality();
+					$video_url				= $this->get_video_url();
+					$aditional_path			= $this->get_aditional_path();
+					$initial_media_path		= $this->get_initial_media_path();
 
 					# LOAD MEDIA PLAYER ON IFRAME
 					$reelID 	= $video_id;		#dump($reelID);
@@ -87,7 +97,12 @@
 					$file_name = 'player';
 					break;
 
-		case 'player':							
+		case 'player':
+					$video_id 				= $this->get_video_id();
+					$quality				= $this->get_quality();
+					$video_url				= $this->get_video_url();
+					$aditional_path			= $this->get_aditional_path();
+					$initial_media_path		= $this->get_initial_media_path();					
 
 					# LOAD MEDIA PLAYER ON IFRAME
 					$reelID 	= $video_id;		#dump($reelID);
@@ -104,6 +119,11 @@
 					break;
 
 		case 'player_stand_alone':
+					$video_id 				= $this->get_video_id();
+					$quality				= $this->get_quality();
+					$video_url				= $this->get_video_url();
+					$aditional_path			= $this->get_aditional_path();
+					$initial_media_path		= $this->get_initial_media_path();
 
 					$posterframe_url 	= $this->get_posterframe_url().'?&t='.start_time();
 					$posterframe_url 	= str_replace('&', '&amp;', $posterframe_url);
@@ -125,13 +145,33 @@
 						}
 					}
 					$video_url .= '?&t='.start_time();	# Avoid cache file				
-					break;		
-		
+					break;
+
+		case 'portal_list_view_mosaic':
+					$video_id 				= $this->get_video_id();
+
+					# PosterFrameObj		
+					$PosterFrameObj 	= new PosterFrameObj($video_id);
+					#$maxWidht 			= 102 ;
+					#$maxHeight 			= 57  ; # 90
+					#$posterframe_url 	= $PosterFrameObj->get_thumb_url($maxWidht, $maxHeight, $fx='crop').'?&t='.start_time();
+					$posterframe_url 	= $PosterFrameObj->get_url() . '?&t='.start_time();
+					$posterframe_url 	= str_replace('&', '&amp;', $posterframe_url);
+						#dump($posterframe_url,$video_id);
+					$file_name 			= 'list';
+					break;
+
 		case 'portal_list':
 					$file_name 			= 'list';
 		case 'list_tm':
 					$file_name			= 'list';
-		case 'list':	
+		case 'list':
+					$video_id 				= $this->get_video_id();
+					$quality				= $this->get_quality();
+					$video_url				= $this->get_video_url();
+					$aditional_path			= $this->get_aditional_path();
+					$initial_media_path		= $this->get_initial_media_path();
+
 					#$video_width		= intval(720/7) .'px';
 					#$video_height		= intval(404/7) .'px';
 					#$posterframe_url 	= $this->get_posterframe_url();
@@ -146,7 +186,7 @@
 					break;
 
 		case 'search':	
-					return NULL;		
+					return null;		
 					break;
 
 		case 'print':

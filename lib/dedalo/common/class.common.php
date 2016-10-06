@@ -803,31 +803,7 @@ abstract class common extends Accessors {
 	}//end get_propiedades
 
 
-
-	/**
-	* GET_ELEMENT_ADITIONAL_CSS . En pruebas
-	* Obtiene css específico desde el campo 'propiedades' del componente actual
-	* en formato string separado pos espacios, como 'text-area-notacion notacion-libre '
-	* Formato json en estructura:
-	*	{
-	*	"css":["text-area-notacion","notacion-libre"]
-	*	}
-	*/
-	public function get_element_aditional_css() {
-
-		$aditional_css=null;
-
-		$propiedades = $this->get_propiedades();
-			#dump($propiedades->css);
-		if(isset($propiedades->css)) foreach ($propiedades->css as $current_css) {
-			$aditional_css .= ' '.$current_css;
-		}
-		#dump($aditional_css,'aditional_css ');
-		return $aditional_css;
-	}//end get_element_aditional_css
-
-
-
+	
 	/**
 	* GET_RELACIONES : Obtiene las relaciones del tipo del componente actual decodificando el json de '$this->RecordObj_dd->get_relaciones()'
 	*/

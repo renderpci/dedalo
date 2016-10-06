@@ -368,8 +368,8 @@ class login extends common {
 			}
 
 			# GET ENTITY DIFFUSION TABLES / SECTIONS . Store for speed
-			#$entity_diffusion_tables = diffusion::get_entity_diffusion_tables(DEDALO_DIFFUSION_DOMAIN);
-			#$_SESSION['dedalo4']['config']['entity_diffusion_tables'] = $entity_diffusion_tables;
+			# $entity_diffusion_tables = diffusion::get_entity_diffusion_tables(DEDALO_DIFFUSION_DOMAIN);
+			# $_SESSION['dedalo4']['config']['entity_diffusion_tables'] = $entity_diffusion_tables;
 
 		} catch (Exception $e) {
 			debug_log(__METHOD__." $e ", logger::CRITICAL);
@@ -637,7 +637,7 @@ class login extends common {
 		$component  = component_common::get_instance('component_password', DEDALO_USER_PASSWORD_TIPO, -1, 'edit', DEDALO_DATA_NOLAN, DEDALO_SECTION_USERS_TIPO);
 		$dato 		= $component->get_dato();
 		if(SHOW_DEBUG) {
-			#dump(dedalo_decryptStringArray($dato), 'psw : '.$dato);
+			#dump(dedalo_decryptStringArray($dato), 'psw : '.to_string($dato)); //die();
 		}
 		
 		$default = 'Dedalo4debugChangePsW'; // Dedalo4debugChangePsW		

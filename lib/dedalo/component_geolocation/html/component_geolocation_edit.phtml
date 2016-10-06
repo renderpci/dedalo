@@ -36,6 +36,7 @@
 						# INPUTS
 						$html_contenido .= "\n <div class=\"map_inputs\">";
 
+							# LAT
 							$html_contenido .= "\n <span>".label::get_label('latitud')."</span>";
 							$html_contenido .= "\n <input type=\"text\" name=\"lat\" value =\"{$dato->lat}\"
 							data-tipo=\"{$tipo}\"
@@ -46,22 +47,34 @@
 							data-name=\"lat\"
 							/>";
 
+							# LON
 							$html_contenido .= "\n <span>".label::get_label('longitud')."</span>";
 							$html_contenido .= "\n <input type=\"text\" name=\"lon\" value=\"{$dato->lon}\" data-name=\"lon\"/>";
 
+							# ZOOM
 							$html_contenido .= "\n <span>".label::get_label('mapa_zoom')."</span>";
 							$html_contenido .= "\n <input type=\"text\" name=\"zoom\" value=\"{$dato->zoom}\" data-name=\"zoom\"/>";
 
-							if(isset($dato->alt)){
-								$html_contenido .= "\n <span>".label::get_label('altitude')."</span>";
-								$html_contenido .= "\n <span name=\"alt\" data-name=\"alt\"/>".$dato->alt."</span>";
-							}
+							# ALT
+							$html_contenido .= "\n <span>".label::get_label('altitude')."</span>";
+							#$html_contenido .= "\n <span name=\"alt\" data-name=\"alt\"/>".$dato->alt."</span>";
+							$alt = isset($dato->alt) ? $dato->alt : null;
+							$html_contenido .= "\n <input type=\"text\" name=\"alt\" class=\"input_altitude\" value=\"{$alt}\" data-name=\"alt\" readonly=\"readonly\"/>";
 							
+							# SEPARATOR					
+							$html_contenido .= "\n <span class=\"geolocation_separator\"></span>";
 
-							$html_contenido .= "\n <span class=\"geolocation_separator\"></span>";
+							# REFRESH BUTTON
 							$html_contenido .= "\n <span id=\"map_refresh\" class=\"glyphicon glyphicon-refresh geolocation_text link\"></span>";
+
+							# SEPARATOR
 							$html_contenido .= "\n <span class=\"geolocation_separator\"></span>";
-							$html_contenido .= "\n <span id=\"map_fixed\" class=\"link\"> ".label::get_label('salvar')."</span>";
+
+							# SAVE BUTTON
+							$html_contenido .= "\n <span id=\"map_fixed\" class=\"link save_geolocation\"> ".label::get_label('salvar')."</span>";
+
+							# TOGGLE BUTTON
+							$html_contenido .= "\n <span id=\"map_fixed\" class=\"link save_geolocation\" onclick=\"component_geolocation.toggle_full_map(this)\">Toggle</span>";
 
 						$html_contenido .= "\n </div>";//end map_inputs
 
@@ -88,19 +101,11 @@
 
 ?>
 <script type="text/javascript">
-	// Set var geo provider fron config
-	component_geolocation.DEDALO_GEO_PROVIDER = '<?php echo DEDALO_GEO_PROVIDER ?>';
-	// Build map
-	$(function() {
-		component_geolocation.init_map('<?php echo $identificador_unico ?>');
-	});
-	setTimeout(function(){	
-		//L.Util.requestAnimFrame(map.invalidateSize,map,!1,map._container);
-		//L.map.invalidateSize(false);
-		//console.log(L.map)
-		//console.log(component_geolocation)
-		//component_geolocation.maps.invalidateSize(false);
-	}, 1000)
-	
-		
+// Set var geo provider fron config
+component_geolocation.DEDALO_GEO_PROVIDER = '<?php echo DEDALO_GEO_PROVIDER ?>';
+
+// Build map
+window.addEventListener('load', function(e){
+	component_geolocation.init_map('<?php echo $identificador_unico ?>');
+});		
 </script>

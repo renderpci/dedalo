@@ -30,7 +30,6 @@ class records_search extends common {
 		$this->section_obj 	= $section_obj;
 		$this->section_tipo = $section_obj->get_tipo();
 		$this->modo 		= $modo;
-
 	}
 	
 
@@ -63,6 +62,11 @@ class records_search extends common {
 		# if not exists, return empty string
 		$search_list_tipo = $this->get_search_list_tipo();
 		if(!$search_list_tipo)	{
+			$msg = " Search list tipo not found. Please config your structure for section $this->section_tipo";
+			if(SHOW_DEBUG) {
+				#trigger_error($msg);
+			}			
+			debug_log(__METHOD__." $msg  ".to_string(), logger::DEBUG);
 			return '';
 		}
 		
@@ -160,8 +164,12 @@ class records_search extends common {
 					
 					$search_list = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($current_element_tipo, 'search_list', 'children'); //common::get_ar_related_by_model('search_list', $current_element_tipo);
 						#dump($search_list, ' search_list ++ '.to_string());
+					if (empty($search_list)) {
+						debug_log(__METHOD__." Skiped portal search elements. Please define a 'search_list' from current portal ($current_element_tipo) ASAP ".to_string(), logger::WARNING);
+						continue;
+					}
 					$search_list_ar_related = RecordObj_dd::get_ar_terminos_relacionados($search_list[0], true, true);
-						#dump($search_list_ar_related, ' $search_list_ar_related ++ '.to_string());
+						#dump($search_list_ar_related, ' $search_list_ar_related ++ '.to_string($search_list));
 
 					$ar_search_components = array();
 					$search_section_tipo  = null;

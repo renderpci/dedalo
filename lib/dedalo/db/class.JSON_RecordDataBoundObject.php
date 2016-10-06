@@ -341,7 +341,7 @@ abstract class JSON_RecordDataBoundObject {
 		
 		# $result = pg_query(DBi::_getConnection(), $strQuery);	
 		# With prepared statement
-		$result = pg_prepare(DBi::_getConnection(), "", $strQuery);
+		$statement = pg_prepare(DBi::_getConnection(), "", $strQuery);
 		if (!$wait) {
 			$result = pg_send_execute(DBi::_getConnection(), "",array());
 		}else{
@@ -406,7 +406,7 @@ abstract class JSON_RecordDataBoundObject {
 		$strPrimaryKeyName	= $this->strPrimaryKeyName;
 		$strQuery			= '';
 		$strQuery_limit 	= '';	
-
+			
 		if(is_array($ar_arguments)) foreach($ar_arguments as $key => $value) {
 
 			switch(true) {	#"AND dato LIKE  '%\"{$area_tipo}\"%' ";

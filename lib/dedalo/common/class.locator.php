@@ -6,14 +6,15 @@
 /*
 	Format:
 
-	$locator->section_top_tipo	= (string)$section_top_tipo;
-	$locator->section_top_id	= (string)$section_top_id;
-	$locator->section_id		= (string)$section_id;
-	$locator->section_tipo		= (string)$section_tipo; 
-	$locator->component_tipo	= (string)$component_tipo;
-	$locator->tag_id			= (string)$tag_id;
-	$locator->state				= (object)$state;
-	$locator->semantic			= (object)$semantic;
+	$locator->section_top_tipo		= (string)$section_top_tipo;
+	$locator->section_top_id		= (string)$section_top_id;
+	$locator->section_id			= (string)$section_id;
+	$locator->section_tipo			= (string)$section_tipo; 
+	$locator->component_tipo		= (string)$component_tipo;
+	$locator->from_component_tipo	= (string)$component_tipo;
+	$locator->tag_id				= (string)$tag_id;
+	$locator->state					= (object)$state;
+	$locator->semantic				= (object)$semantic;
 
 	Note that properties can exists or not (are created on the fly). Final result object only contain set properties and locator object can be empty or partially set.
 	For example, component portal only use section_tipo an section_id in many cases
@@ -120,6 +121,15 @@ class locator extends stdClass {
 			throw new Exception("Error Processing Request. Invalid component_tipo: $value", 1);
 		}
 		$this->component_tipo = (string)$value;
+	}
+	/**
+	* SET_FROM_COMPONENT_TIPO
+	*/
+	public function set_from_component_tipo($value) {
+		if(!RecordObj_dd::get_prefix_from_tipo($value)) {
+			throw new Exception("Error Processing Request. Invalid from_component_tipo: $value", 1);
+		}
+		$this->from_component_tipo = (string)$value;
 	}
 	/**
 	* SET_TAG_ID
@@ -251,6 +261,27 @@ class locator extends stdClass {
 		$equal = true;
 		
 		foreach ($ar_properties as $current_property) {
+
+			# Test property exists in all locators
+			if (!property_exists($locator1, $current_property) && !property_exists($locator2, $current_property)) {
+				# Skip not existing properties
+				debug_log(__METHOD__." Skipped comparison property $current_property. Property not exits in any locator ", logger::WARNING);
+				continue;
+			}
+
+			# Test property exists only in one locator
+			if (property_exists($locator1, $current_property) && !property_exists($locator2, $current_property)) {
+				debug_log(__METHOD__." Property $current_property exists in locator1 but not exits in locator2 : ".to_string($locator2), logger::WARNING);
+				$equal = false;
+				break; 
+			}
+			if (property_exists($locator2, $current_property) && !property_exists($locator1, $current_property)) {
+				debug_log(__METHOD__." Property $current_property exists in locator2 but not exits in locator1 : ".to_string($locator1), logger::WARNING);
+				$equal = false;
+				break; 
+			}			
+
+			# Compare verified existing properties
 			if($locator1->$current_property !== $locator2->$current_property) {
 				$equal = false;
 				break; 

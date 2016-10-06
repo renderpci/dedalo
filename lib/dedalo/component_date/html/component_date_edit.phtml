@@ -50,7 +50,7 @@
 								data-lang=\"{$lang}\"
 								data-section_tipo=\"{$section_tipo}\"
 								data-parent=\"{$parent}\"
-								data-modo=\"{$modo}\"								
+								data-modo=\"{$modo}\"
 								value=\"{$valor_start}\"
 								title=\"$html_title\"
 								placeholder=\"$ejemplo\"
@@ -61,7 +61,7 @@
 								/>";
 
 								$html_contenido .= " <> ";
-
+								$html_contenido .= " <div class=\"css_date_imput_twice_date\" >";
 								$html_contenido .= "\n <input type=\"text\" class=\"css_date full range_end\" id=\"{$uid_end}\"
 								name=\"{$input_name_end}\"
 								data-role=\"range_end\"
@@ -78,6 +78,7 @@
 								onfocus=\"component_common.select_wrap(null,'$id_wrapper');\"
 								tabindex=\"1\"
 								/>";
+								$html_contenido .= " </div> ";
 								break;
 
 							case 'period':
@@ -146,7 +147,23 @@
 									$html_contenido .= '<span class="css_date label_range">'.label::get_label('dia').'</span>';
 								}
 								break;
-
+							case 'time':
+								# TIME
+								$html_contenido .= "\n <input type=\"text\" class=\"css_date date_time\" id=\"{$identificador_unico}\"
+								name=\"{$input_name}\"
+								data-tipo=\"{$tipo}\"
+								data-lang=\"{$lang}\"
+								data-section_tipo=\"{$section_tipo}\"
+								data-parent=\"{$parent}\"
+								data-modo=\"{$modo}\"
+								value=\"{$valor}\"
+								title=\"$html_title\"
+								placeholder=\"23:40:59\"
+								onchange=\"component_date.Save(this,'$date_mode')\"
+								onfocus=\"component_common.select_wrap(null,'$id_wrapper');\"
+								tabindex=\"1\"
+								/>";
+								break;
 							case 'date':
 							default:
 								// Single date case (end date)

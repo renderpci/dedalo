@@ -56,6 +56,7 @@
 					}
 					*/				
 				# TOOL_DIFFUSION BUTTONS (for export to database, etc.) 
+				# dump( tool_diffusion::have_section_diffusion($section_tipo), ' var ++ '.to_string($section_tipo));
 				if ((bool)component_security_tools::is_authorized_tool_for_logged_user('tool_diffusion') &&
 					(bool)tool_diffusion::have_section_diffusion($section_tipo)) {
 					#$html .= tool_diffusion::get_diffusion_buttons('edit', $section_tipo, $section_id);

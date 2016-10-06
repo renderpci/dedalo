@@ -82,7 +82,10 @@ define('DEDALO_HIERARCHY_CHIDRENS_TIPO'					, 'hierarchy45');
 define('DEDALO_HIERARCHY_ORDER_TIPO'					, 'hierarchy48');
 
 # Thesaurus real section
+define('DEDALO_THESAURUS_SECTION_TIPO'					, 'hierarchy20');
 define('DEDALO_THESAURUS_TERM_TIPO'						, 'hierarchy25');
+define('DEDALO_THESAURUS_CHIDRENS_TIPO'					, 'hierarchy49');
+
 
 # Relation types
 define('DEDALO_RELATION_TYPE_PARENT_TIPO'				, 'dd47');

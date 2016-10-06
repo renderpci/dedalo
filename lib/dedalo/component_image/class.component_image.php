@@ -288,7 +288,6 @@ class component_image extends component_common {
 		$image_id = $this->tipo.'_'.$this->section_tipo.'_'.$this->parent;
 
 		return $this->image_id = $image_id;
-
 	}//end get_image_id
 
 
@@ -369,9 +368,9 @@ class component_image extends component_common {
 		}
 
 
-
 		return $this->aditional_path = $ar_aditional_path[$this->image_id];
-	}
+	}//end get_aditional_path
+
 
 
 	/**
@@ -390,7 +389,9 @@ class component_image extends component_common {
 		$ImageObj->set_quality($quality);
 			
 		return $ImageObj->get_local_full_path();		
-	}
+	}//end get_image_path
+
+
 
 	/**
 	* GET_IMAGE_URL
@@ -433,7 +434,8 @@ class component_image extends component_common {
 		}
 	
 		return $image_url;
-	}
+	}//end get_image_url
+
 
 	
 	# OVERRIDE COMPONENT_COMMON METHOD
@@ -450,12 +452,10 @@ class component_image extends component_common {
 		$this->ar_tools_name[] = 'tool_image_versions';
 		
 		return parent::get_ar_tools_obj();
-	}
-
+	}//end get_ar_tools_obj
 	
 
 	
-
 	/**
 	* GET QUALITY
 	*/
@@ -472,6 +472,8 @@ class component_image extends component_common {
 		$this->quality = $quality;
 		$this->ImageObj->set_quality($quality);
 	}
+
+
 
 	/**
 	* UPLOAD NEEDED
@@ -502,7 +504,8 @@ class component_image extends component_common {
 		$ImageObj->set_quality($quality);
 
 		return $ImageObj->get_size();
-	}
+	}//end get_image_size
+
 
 
 	/**
@@ -559,8 +562,8 @@ class component_image extends component_common {
 			#chmod($target_image, 0777);		
 
 		return true;
+	}//end convert_quality
 
-	}#end convert_quality
 
 
 	/**
@@ -593,6 +596,7 @@ class component_image extends component_common {
 		return true;
 		
 	}#end generate_default
+
 
 
 	/**
@@ -637,8 +641,8 @@ class component_image extends component_common {
 		return array('path'=>$image_thumb_path,
 					 'url' =>$image_thumb_url,
 					);
-
 	}#end generate_thumb
+
 
 
 	/**
@@ -659,6 +663,8 @@ class component_image extends component_common {
 
 	}#end get_thumb_url
 
+
+
 	/**
 	* GET_THUMB_PATH
 	* @return 
@@ -678,6 +684,7 @@ class component_image extends component_common {
 	}#end get_thumb_path
 
 
+
 	/**
 	* GET_IMAGE_PRINT_DIMENSIONS
 	*/
@@ -688,7 +695,7 @@ class component_image extends component_common {
 
 		$ar_info = $ImageObj->pixel_to_centimetres($quality, $dpi=DEDALO_IMAGE_PRINT_DPI);
 		return $ar_info;
-	}
+	}//end get_image_print_dimensions
 	
 	
 
@@ -760,7 +767,7 @@ class component_image extends component_common {
 		$number = floatval($number);
 
 		return $number;
-	}
+	}//end convert_quality_to_megabytes
 
 
 
@@ -829,10 +836,10 @@ class component_image extends component_common {
 		$this->quality 	= $initial_quality;
 			
 		return $result;
-
 	}//end get_original_file_path
 	
 	
+
 	/**
 	* REMOVE_COMPONENT_MEDIA_FILES
 	* "Remove" (rename and move files to deleted folder) all media file vinculated to current component (all quality versions)
@@ -893,7 +900,6 @@ class component_image extends component_common {
 		# WORK IN PROGRESS !!		
 
 		return true;
-
 	}#end remove_component_media_files
 
 	
@@ -969,8 +975,7 @@ class component_image extends component_common {
 		$final_image_value = str_replace($image_url, $final_image_url, $image_value);
 			#dump($final_image_value, ' final_image_value ++ '.to_string());
 		
-		return $final_image_value;
-
+		return (string)$final_image_value;
 	}#end image_value_in_time_machine
 
 
@@ -995,7 +1000,6 @@ class component_image extends component_common {
 		$last_file_path = end($ar_files);		
 
 		return $last_file_path;
-
 	}#end get_deleted_image
 
 
@@ -1013,11 +1017,13 @@ class component_image extends component_common {
 	* @param string $section_tipo
 	* @param int $section_id
 	*
-	* @return string $list_value
+	* @return string $value
+	*
+	* In time machine mode (list_tm) image is always calculated
 	*/
 	public static function render_list_value($value, $tipo, $parent, $modo, $lang, $section_tipo, $section_id) {
 		
-		if (empty($value) && $modo=='portal_list') {
+		if ( (empty($value) && $modo=='portal_list') || $modo=='list_tm' || $modo==='portal_list_view_mosaic') {
 			$component	= component_common::get_instance(__CLASS__,
 														 $tipo,
 														 $parent,
@@ -1025,17 +1031,11 @@ class component_image extends component_common {
 														 $lang,
 														 $section_tipo);
 			$value 		= $component->get_html();
-			if(SHOW_DEBUG) {
-				$value .= "*($modo)";
-			}
-			#debug_log(__METHOD__." Calculated image from empty value ($tipo, $parent, $modo, $lang, $section_tipo, $section_id)".to_string(), logger::DEBUG);
 		}
 
 		return $value;
-
 	}#end render_list_value
 		
-
 
 
 	/**

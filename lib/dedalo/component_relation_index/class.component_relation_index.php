@@ -9,7 +9,7 @@ class component_relation_index extends component_relation_common {
 	# Overwrite __construct var lang passed in this component
 	protected $lang = DEDALO_DATA_NOLAN;
 
-	
+	public $relation_type	= DEDALO_RELATION_TYPE_INDEX_TIPO;
 
 	/**
 	* __CONSTRUCT

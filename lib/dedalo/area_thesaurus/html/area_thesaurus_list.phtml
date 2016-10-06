@@ -2,50 +2,28 @@
 	
 	# VISUALIZADOR HTML	
 	
+
 	
-	print "\n\n<!-- AREA THESAURUS [tipo:$tipo] -->";
 	
-	print "\n<div class=\"css_wrap_area css_wrap_area_resource\" > ";
+	print "\n\n<!-- AREA THESAURUS [tipo:$tipo] -->";	
+	print "\n<div class=\"css_wrap_area css_wrap_area_thesaurus\" > ";
 
-/*
-		#
-		# TEST EXPERIMENTAL #############################################
-		$start_time=microtime(1);
-		$section_id   = '1'; 
-		$section_tipo = 'fr1';
-		$row_thesaurus = new row_thesaurus($section_id, $section_tipo);
-			#dump($row_thesaurus, ' row_thesaurus ++ '.to_string());
-		
-		echo "<hr><br>";
-		echo $row_thesaurus->get_html();
-
-		echo "\n<div id=\"inspector_log\"></div>";	#inspector_log
-
-		$total=round(microtime(1)-$start_time,3);
-	  	//debug_log(__METHOD__." ".exec_time_unit($start_time,'ms').' ms' , logger::DEBUG);
-		echo "<br><blockquote> - Total render row_thesaurus: $total ms</blockquote>";
-
-
-		#
-		# TEST EXPERIMENTAL #############################################
-		
-		$start_time=microtime(1);
-		$section_id   = '2';
-		$section_tipo = 'fr1';
-		$row_thesaurus = new row_thesaurus($section_id, $section_tipo);
-			#dump($row_thesaurus, ' row_thesaurus ++ '.to_string());
-		
-		echo "<hr><br>";
-		echo $row_thesaurus->get_html();
-
-		$total=round(microtime(1)-$start_time,3);
-	  	//debug_log(__METHOD__." ".exec_time_unit($start_time,'ms').' ms' , logger::DEBUG);
-		echo "<br><div>Total render row_thesaurus: $total ms</div>";
-		*/
-
-		#echo $rows_list_html;
 
 		$html='';
+
+		#
+		# SEARCH FORM
+		$html ='';
+		$html .= "<div class=\"search_form_container\">";
+		$html .= $search_form_html;
+		$html .= "</div>";
+
+
+
+
+
+		#
+		# TREE HTML
 		$html .= "<ul>";
 		foreach ($ar_hierarchy_typologies->result as $ar_value) foreach($ar_value as $key => $row) {
 			#dump($row, ' row ++ '.to_string());
@@ -54,14 +32,62 @@
 			$tipology_section_tipo 	= $row['section_tipo'];
 			$tipology_name 			= $row[area_thesaurus::$typologies_name_tipo];		
 
-			$html .= "<li>";
-			$options = $this->get_options_for_row($tipology_section_tipo, $tipology_section_id);
+			$html .= "<li>";			
 
-			# ROWS_HEADER_HTML
-			$options->rows_header_html = "<div> <strong> ".strip_tags($tipology_name)."</strong></div>";
+			#
+			# HIERARCHY TIPOLOGY NAME Like 'Toponimia'
+			$html .= "<div class=\"tipology_name\"> <strong> ".strip_tags($tipology_name)."</strong></div>";
 
-			$section_rows 	= new section_records(DEDALO_HIERARCHY_SECTION_TIPO, $options);
-			$html .= $section_rows->get_html();
+			#
+			# HIERARCHIES OF CURRENT TIPO Like 'España'
+			$search_hierarchies_options = $this->get_options_for_search_hierarchies($tipology_section_tipo, $tipology_section_id);
+			# Calculate rows from database using search class like lists
+			$hierarchies_rows_obj = search::get_records_data($search_hierarchies_options);
+				#dump($hierarchies_rows_obj, ' hierarchies_rows_obj ++ '.to_string());
+
+				$ar_js_call=array();
+				foreach ($hierarchies_rows_obj->result as $hierarchy_ar_value) foreach($hierarchy_ar_value as $hierarchy_key => $hierarchy_row) {
+					
+					$hierarchy_section_id   		= $hierarchy_row['section_id'];
+					$hierarchy_section_tipo 		= $hierarchy_row['section_tipo'];
+					$hierarchy_target_section_tipo 	= strtolower($hierarchy_row[DEDALO_HIERARCHY_TLD2_TIPO]).'1';
+					$hierarchy_name 				= $hierarchy_row[DEDALO_HIERARCHY_TERM_TIPO];
+					$hierarchy_childrens 			= json_decode($hierarchy_row[DEDALO_HIERARCHY_CHIDRENS_TIPO]);
+
+					if ($hierarchy_childrens && count($hierarchy_childrens)==1) {
+						# nothing to show
+					}else{
+						$html .= "<div class=\"hierarchy_name\" data-section_tipo=\"$hierarchy_section_tipo\" data-section_id=\"$hierarchy_section_id\" data-target_section_tipo=\"$hierarchy_target_section_tipo\" >";
+						$html .= $hierarchy_name;
+						$html .= "<span>";
+						$html .= " <a href=\"javascript:;\" class=\"id_column_link ts_object_add\" onclick=\"ts_object.add_children_from_hierarchy(this)\"
+						data-type=\"hierarchy_root\"
+						title=\"add\"
+						>
+						<div class=\"ts_object_add_icon\"></div></a>";
+						$html .= "</span>";
+						$html .= "</div>";//end hierarchy_name
+					}
+					
+
+					$hierarchy_trigger_id = $hierarchy_section_tipo.'_'.$hierarchy_section_id;
+					$html .= "<div class=\"wrap_ts_object hierarchy_root_node\" data-section_tipo=\"{$hierarchy_section_tipo}\" data-section_id=\"{$hierarchy_section_id}\">";
+					$html .= " <div class=\"childrens_container\" data-role=\"childrens_container\">";
+					$html .= "   <div id=\"{$hierarchy_trigger_id}\"></div>";
+					$html .= " </div>";					
+					$html .= "</div>";
+					
+					// JS call to load nodes
+					$ar_js_call[] = "ts_object.parse_ts_object(document.getElementById('{$hierarchy_trigger_id}'))";
+
+				}//end foreach ($hierarchies_rows_obj->result as $hierarchy_ar_value) foreach($hierarchy_ar_value as $hierarchy_key => $hierarchy_row) {
+
+				// JS calls render
+				$html .= "<script>".implode(';', $ar_js_call)."</script>";	
+
+			#$section_rows = new section_records(DEDALO_HIERARCHY_SECTION_TIPO, $options);
+			#$html .= $section_rows->get_html();
+
 			$html .= "</li>";
 
 		}//end foreach ($ar_hierarchy_typologies->result as $ar_value) foreach($ar_value as $key => $row)
@@ -69,8 +95,11 @@
 
 		echo $html;
 
-	
-	
+
+
+
+
+	/*
 	# ETIQUETA (LABEL)
 	$html_label = "\n<div class=\"css_area_titulo\" > ".component_common_draw::draw_label($this)." </div>";	
 		
@@ -109,7 +138,7 @@
 	# PRINT HTML
 	print $html_label;
 	print $html_contenido;
-
+	*/
 
 		
 		

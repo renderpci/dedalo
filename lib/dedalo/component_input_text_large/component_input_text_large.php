@@ -38,7 +38,6 @@
 		case 'edit'	:	
 				$id_wrapper 	= 'wrapper_'.$identificador_unico;
 				$input_name 	= "{$tipo}_{$parent}";
-				$aditional_css  = $this->get_element_aditional_css();
 				$component_info = $this->get_component_info('json');
 									
 				if (empty($dato)) { # && $traducible=='si'

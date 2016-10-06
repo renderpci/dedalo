@@ -42,12 +42,27 @@ $js_url = DEDALO_LIB_BASE_URL.'/component_image/js/component_image_read.js';
 						# CLICK_ACTION
 						$click_action="onclick=\"tool_common.open_player(this,{'type':'component_image','image_full_url':'$image_full_url'});\" ";
 
-						$style = "background-image:url('$thumb_file_url')";
-						$html_contenido .= "<div class=\"thumb_in_list div_image_image_in_list\" style=\"$style\" $click_action
-						data-image_id=\"$image_id\"
-						data-parent_matrix=\"$parent\"
-						alt=\"$image_id\"
-						></div>";
+						switch ($modo) {
+							case 'portal_list_view_mosaic':
+								$thumb_file_url = $image_full_url;
+								$style = "background-image:url('$thumb_file_url')";
+								$html_contenido .= "<div class=\"div_image_portal_list_view_mosaic\" style=\"$style\" $click_action
+								data-image_id=\"$image_id\"
+								data-parent_matrix=\"$parent\"
+								alt=\"$image_id\"
+								></div>";
+								break;
+							
+							default:								
+								$style = "background-image:url('$thumb_file_url')";
+								$html_contenido .= "<div class=\"thumb_in_list div_image_image_in_list\" style=\"$style\" $click_action
+								data-image_id=\"$image_id\"
+								data-parent_matrix=\"$parent\"
+								alt=\"$image_id\"
+								></div>";
+								break;
+						}
+						
 
 					}else{
 
@@ -72,7 +87,12 @@ $js_url = DEDALO_LIB_BASE_URL.'/component_image/js/component_image_read.js';
 							$add_class = 'no_file';
 						}
 
-						# IMAGE		
+						# ImageObj			
+						$maxWidht 	= DEDALO_IMAGE_THUMB_WIDTH;
+						$maxHeight 	= DEDALO_IMAGE_THUMB_HEIGHT;					
+						$image_url	= $this->ImageObj->get_thumb_url($maxWidht, $maxHeight, 'resize', null, 'height');	#$m $maxWidht, $maxHeight, $fx=null, $p=null, $prop=null
+
+						# IMAGE
 						$html_contenido .= "\n <img class=\"css_image $add_class\" $open_tool_default
 						src=\"$image_url\"
 						id=\"img_$identificador_unico\"

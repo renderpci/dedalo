@@ -18,57 +18,66 @@
 	switch($modo) {
 		
 		case 'list':
-				# List
-				include(DEDALO_LIB_BASE_PATH.'/section_records/row_thesaurus/class.row_thesaurus.php');
+				# ts_object class
+				include(DEDALO_LIB_BASE_PATH."/ts_object/class.ts_object.php");
 
+				#
+				# Load necessary js /css elements when we in thesaurus
+				$element_name = 'ts_object';				
+				css::$ar_url[] = DEDALO_LIB_BASE_URL."/$element_name/css/$element_name.css";
+				js::$ar_url[]  = DEDALO_LIB_BASE_URL."/$element_name/js/$element_name.js";
+
+				$element_name = 'component_text_area';
+				css::$ar_url[] = DEDALO_LIB_BASE_URL."/$element_name/css/$element_name.css";
+				js::$ar_url[]  = DEDALO_LIB_BASE_URL."/$element_name/js/$element_name.js";
+
+				$element_name = 'component_order';
+				css::$ar_url[] = DEDALO_LIB_BASE_URL."/$element_name/css/$element_name.css";
+				js::$ar_url[]  = DEDALO_LIB_BASE_URL."/$element_name/js/$element_name.js";
+
+				$element_name = 'component_input_text';
+				css::$ar_url[] = DEDALO_LIB_BASE_URL."/$element_name/css/$element_name.css";
+				js::$ar_url[]  = DEDALO_LIB_BASE_URL."/$element_name/js/$element_name.js";
+
+				$element_name = 'component_relation_children';
+				css::$ar_url[] = DEDALO_LIB_BASE_URL."/$element_name/css/$element_name.css";
+				js::$ar_url[]  = DEDALO_LIB_BASE_URL."/$element_name/js/$element_name.js";
+
+				$element_name = 'component_relation_model';
+				css::$ar_url[] = DEDALO_LIB_BASE_URL."/$element_name/css/$element_name.css";
+				js::$ar_url[]  = DEDALO_LIB_BASE_URL."/$element_name/js/$element_name.js";
+
+				$element_name = 'component_relation_index';
+				css::$ar_url[] = DEDALO_LIB_BASE_URL."/$element_name/css/$element_name.css";
+				js::$ar_url[]  = DEDALO_LIB_BASE_URL."/$element_name/js/$element_name.js";
+
+				$element_name = 'component_number';
+				css::$ar_url[] = DEDALO_LIB_BASE_URL."/$element_name/css/$element_name.css";
+				js::$ar_url[]  = DEDALO_LIB_BASE_URL."/$element_name/js/$element_name.js";
+
+				$element_name = 'component_radio_button';
+				css::$ar_url[] = DEDALO_LIB_BASE_URL."/$element_name/css/$element_name.css";
+				js::$ar_url[]  = DEDALO_LIB_BASE_URL."/$element_name/js/$element_name.js";
+
+				$element_name = 'diffusion_index_ts';
+				css::$ar_url[] = DEDALO_LIB_BASE_URL."/diffusion/$element_name/css/$element_name.css";
+				#js::$ar_url[]  = DEDALO_LIB_BASE_URL."/$element_name/js/$element_name.js";
+
+
+				#
+				# SEARCH FORM . ROWS_SEARCH 
+				# Render search form html
+				$section = section::get_instance(null, DEDALO_THESAURUS_SECTION_TIPO,'list');
+					$search_form_html 	= '';
+					$records_search 	= new records_search($section, 'list');
+					$search_form_html 	= $records_search->get_html();
+						#dump($records_search, ' $records_search ++ '.to_string());
+				
 				#
 				# ACTIVE HIERARCHIES
 				$ar_hierarchy_typologies = $this->get_hierarchy_typologies();
 					#dump($ar_hierarchy_typologies, ' ar_hierarchy_typologies ++ '.to_string());
-
-				/*
-					$section_tipo 	= DEDALO_HIERARCHY_SECTION_TIPO;
-					$matrix_table   = common::get_matrix_table_from_tipo($section_tipo);
-
-					# LAYOUT_MAP
-					# Build a custom layout map with our needs
-					$layout_map=array();
-					$layout_map[DEDALO_HIERARCHY_SECTION_TIPO] = array(
-						DEDALO_HIERARCHY_ACTIVE_TIPO,
-						DEDALO_HIERARCHY_ORDER_TIPO,
-						DEDALO_HIERARCHY_TERM_TIPO,
-						DEDALO_HIERARCHY_LANG_TIPO,
-						DEDALO_HIERARCHY_TIPOLOGY_TIPO,
-						DEDALO_HIERARCHY_TLD2_TIPO,					
-						);
-
-					# Locator 'YES'
-					$locator = new locator();
-						$locator->set_section_tipo(DEDALO_SECTION_SI_NO_TIPO);
-						$locator->set_section_id(NUMERICAL_MATRIX_VALUE_YES);
-					$locator_json = json_encode($locator);
-
-					# FILTER_BY_SEARCH . Uses a search similar as sections do
-					$filter_by_search = new stdClass();
-						$filter_by_search->{DEDALO_HIERARCHY_ACTIVE_TIPO} = (string)$locator_json;
-
-					# OPTIONS SEARCH . Prepares options to get search
-					$options = new stdClass();
-						$options->section_tipo 		= $section_tipo;
-						$options->section_real_tipo = $section_tipo;
-						$options->matrix_table 		= $matrix_table;
-						$options->layout_map 		= $layout_map;
-						$options->layout_map_list 	= $options->layout_map;
-						$options->offset_list 		= 0;
-						$options->limit 			= null; // Not limit amount of results (use null) 
-						$options->filter_by_search	= $filter_by_search;
-						$options->order_by 			= DEDALO_HIERARCHY_ORDER_TIPO.' ASC';
-						$options->modo 				= 'list_thesaurus';
-						$options->context 			= '';
-						$options->search_options_session_key = 'area_thesaurus';
-					$section_rows 	= new section_records($section_tipo, $options);
-					$rows_list_html = $section_rows->get_html();
-					*/
+			
 				break;
 	}
 	

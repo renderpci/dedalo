@@ -22,8 +22,10 @@ class tool_diffusion {
 			throw new Exception("Error Processing Request. Var section_tipo is empty", 1);			
 		}
 		$this->section_tipo = $section_tipo;
-		$this->modo 		= $modo;	
+		$this->modo 		= $modo;
 	}
+
+
 
 	/** 
 	* HTML
@@ -34,6 +36,7 @@ class tool_diffusion {
 		include ( DEDALO_LIB_BASE_PATH .'/tools/'.get_called_class().'/'.get_called_class().'.php' );
 		return  ob_get_clean();
 	}
+
 
 
 	/**
@@ -127,7 +130,6 @@ class tool_diffusion {
 		}				
 
 		return (object)$response;
-
 	}#end export_record
 
 
@@ -207,7 +209,6 @@ class tool_diffusion {
 		}				
 
 		return (object)$response;
-
 	}#end export_thesaurus
 
 
@@ -247,7 +248,6 @@ class tool_diffusion {
 		$response->msg 		= 'Updated '.count($ar_diffusion_map_elements).' diffusion elements';
 
 		return $response;
-
 	}#end diffusion_complete_dump
 
 
@@ -258,14 +258,15 @@ class tool_diffusion {
 	* Note: For better control, sections are TR of diffusion_elements. This correspondence always must exists in diffusion map
 	* @return bool true/false
 	*/
-	public static function have_section_diffusion( $section_tipo ) {		
+	public static function have_section_diffusion( $section_tipo ) {
 		
 		$ar_diffusion_map_elements = diffusion::get_ar_diffusion_map_elements(DEDALO_DIFFUSION_DOMAIN);
-			#dump($ar_diffusion_map_elements, ' $ar_diffusion_map_elements ++ '.to_string());
+			#dump($ar_diffusion_map_elements, ' $ar_diffusion_map_elements ++ '.to_string(DEDALO_DIFFUSION_DOMAIN));
 
 		foreach ($ar_diffusion_map_elements as $diffusion_element_tipo => $obj_value) {
 			
 			$ar_related = common::get_ar_related_by_model('section',$diffusion_element_tipo);
+				#dump($ar_related, ' $ar_related ++ '.to_string( $diffusion_element_tipo ));
 				if(in_array($section_tipo, $ar_related)) {
 					return true;
 				}
@@ -288,10 +289,7 @@ class tool_diffusion {
 		}
 
 		return false;
-
 	}#end have_section_diffusion
-
-
 
 
 
