@@ -1,5 +1,240 @@
 **UPDATES AND CHANGES**
 
+*Ver 4.5.0 - 27-02-2017
+Today we introduce the update of the V4 to 4.5.0
+
+This update fixed some issues and bugs for the V4.0.23
+
+Major update of Dédalo!
+
+This update is the first major revision of Dédalo from v4. This update change the hierarchy and thesaurus format to new matrix format stored in JSON. This version is integrate data format stored in JSON. 
+The next version will remove all "jer" tables into the postgreSQL:
+
+Tables deprecated and will be removed in the next update version:
+
+- jer_ad
+- jer_cu
+- jer_dd
+- jer_ds
+- jer_dz
+- jer_es
+- jer_fr
+- jer_lg
+- jer_ma
+- jer_on
+- jer_pt
+- jer_ts
+- jer_us
+- jerarquia
+- jerarquia_tipos
+- matrix_descriptors
+
+Componets that are afected:
+
+- All "component_autocomplete_ts" are deprecated and removed from the structure. The new component_autocomplete_hi change all formats to the new hierarchy format. The data format is compatible form autocomplet_ts to auocomple_hi and no is necesary change the json.
+
+- All thesaurus need to be convert to the new JSON format of matrix. You can do the tranformation in some ways.
+
+Way 1.- This way is faster but require some manual changes into the Dédalo, if you don't have a lot experience use the way 2 (slow but more easy). If you don't use the toponomy thesaurus (like "España", "Cuba", "France", etc) in the indexation you can inport all toponomy from:
+
+	/dedalo/install/import/hierarchy
+
+All hierarchies can be imported with the postgreSQL copy comand, similar to:
+
+	psql dedalo4_XXX -U YYY -p 5432 -h localhost -c "\copy matrix_hierarchy(section_id, section_tipo, datos) from es1.copy "
+
+XXX: the name of your installation
+YYY: the name of your user
+You can list all exported tables and change the "es1.copy" to the hierarchies that you want
+
+This acction is very fast but you will need change the counters of the tables you can use the:
+- DEDALO COUNTERS STATE
+section in the administration tool, you will see the diference and Dédalo show the SQL command to apply into the postgreSQL, similar to this:
+
+- UPDATE "matrix_counter" SET dato = 75845 WHERE tipo = 'es1'; 
+
+ This command put the conunters to the new imported values.
+
+
+Way 2.- Slow way, but the script do all hard work for transform the hierarchies. (You will need a lot of time and resources for PHP like RAM and SWAP space in HD, we recomended that you up the php memory for scripts to 4GB o more)
+
+If you hierarchy is used in indexation, for example "ts1" (typical thematic hierarchy), you need transform the hierachy from the version V3 to the V4.
+
+In the administration tool you have a script named "update_jer_from_V3_to_4_5" that do all proceses for change the hierarchies.
+
+Put the tld of the original V3 hierarchy like "es" or "ts" and press the "Update" button.
+
+if the hierarchy have a model asociated, check the "modelo" check_box for do this task with the "modelo" data (this porcess is independent of the terms hierarchy).
+
+New button of generate hierarchies:
+
+And finally, if you need open new the hierarchy in the thesaurus section
+
+Thesaurus->Hierarchy
+
+select the hierarchy that you want open in the list, "es1" for example, edit and press the "Generate" button. This action create all new structure for the new hierachy and link the hierachy to new thesaurus terms.
+
+
+
+*Ver 4.0.23 - 28-01-2017
+PREVIOUS TO V4.5
+Today we introduce the update of the V4 to 4.0.23
+
+This update fixed some issues and bugs for the V4.0.22
+
+Changes: this update change the trigram method for acces to terms in matrix_hierarchy. Dédalo use the "ILIKE" operator for search the terms into the hirearchies with the "%term" into json. This update add new trigram method for postgreSQL that do possible index the term of thesaurus. This feature is used in "componet_autocomplete_hi" with auto-search field (toponomy)
+
+*Ver 4.0.22 - 12-01-2017
+PREVIOUS TO V4.5
+Today we introduce the update of the V4 to 4.0.22
+
+This update fixed some issues and bugs for the V4.0.21
+
+ATENTION: This update is a security update, and you can't run it twice!, the update change all passwords on your installation to the OpenSSL format from the original and deprecated mycrpt lib, if you run this update twice you will lose the encription, because the update re-encript the passwords twice and you can't decript it.
+
+Changes:
+- Dédalo change all passwords to new OpenSSL format, the version 4.5 will not use mycript, that will be removed in the final 4.5 version.
+
+
+*Ver 4.0.21 - 28-12-2016
+PREVIOUS TO V4.5
+Today we introduce the update of the V4 to 4.0.21
+
+This update fixed some issues and bugs for the V4.0.20
+
+ATENTION: this update change the user field (component_input_text) to array format, but the root user will be change only in postgreSQL 9.5+, because the PostgreSQL 9.4 can't update one jsonb part, of the specific component. This update is only full compatible with the PostegreSQL 9.5+.
+
+If you see this alert in the login page:
+	Error: User root not exists !
+
+you need change the dato into the user fiel directly in the postgreSQL, the update used to make the change (in the 9.5+) is:			UPDATE "matrix_users" SET
+	"datos" = jsonb_set (datos, '{components,dd132,dato,lg-nolan}', jsonb '["root"]')
+	WHERE "id" = '-1';
+
+for 9.4 installations you need go to the matrix_users->datos_>components->dd132->lg-nolan and you will see the original input_text string format:
+	"root"
+you need change it to array format:
+	["root"]
+
+Changes:
+- component_imput_text: the component dato change to array, this update change all component_input_text in your installation and can be very longer in the large installations. Be patient.
+
+
+*Ver 4.0.20 - 21-12-2016
+PREVIOUS TO V4.5
+Today we introduce the update of the V4 to 4.0.20
+
+This update fixed some issues and bugs for the V4.0.19
+
+Changes:
+- Change into the relation tables in matrix: add index and remove some transition to thesaurusV4 data into the matrix.
+- add the table: matrix_notes, used from the text area tags.
+- add the new "person" tag to component_text_area
+- add the new "notes" tag to component_text_area
+- Change into the "time_code" tag for using miliseconds into the time_code tags. the format will be: [TC_00:00:00.000_TC]
+- Change all tags format to new compatible "retina" displays.
+
+
+*Ver 4.0.19 - 23-11-2016
+PREVIOUS TO V4.5
+Today we introduce the update of the V4 to 4.0.19
+
+This update fixed some issues and bugs for the V4.0.18
+
+Changes:
+- component_relation_parent : New component and model. the parent in the new thesarurus
+- component_relation_children : New component and model. "CH" in the new thesarurus
+- component_relation_related : New component and model. "TR" in the new thesarurus
+- tool_time_machine  : Added lang selector to switch historic lang source in tool window
+
+*Ver 4.0.18 - 23-10-2016
+PREVIOUS TO V4.5
+Today we introduce the update of the V4 to 4.0.18
+
+This update fixed some issues and bugs for the V4.0.17
+
+Update the jerarquiaV3 to hierarchyV4, the jerarquia is deprecated and will be eliminated in the final V4.5 in the database. This update create all virtual sections with all hierarchies that are "active" in the V3.
+
+Changes:
+- hierarchy : add support for resolve langs when import previous version of Dédalo data (<4.5)
+- menu : added thesaurus v4 menu links (reads from structure)
+
+
+*Ver 4.0.17 - 23-10-2016
+PREVIOUS TO V4.5
+Today we introduce the update of the V4 to 4.0.17
+
+This update fixed some issues and bugs for the V4.0.16
+
+ATENTION: the update will need the new default tipos in the config.php of the you installation (the update can't change it because is owner property):
+
+Before run the update you need change the config.php file of your instalation:
+
+add to the "DEDALO_PREFIX_TIPOS" : 	"hierarchy"
+									"lang"
+
+and the define line need to be at least (you can have more tipos in this line, and you need respect it):
+
+	define('DEDALO_PREFIX_TIPOS', serialize( array('dd','rsc','test','hierarchy','lg','ich');
+
+Changes:
+- hierarchy : added matrix table 'matrix_langs' and imported all thesarus v3 langs data.
+- component_select_lang : now resolve with new lang data v4
+- section : created new structure section element named 'section_map' to maping section components to different uses
+				  for example: define what component is used as 'term' by thesaurus and hierarchies
+
+
+*Ver 4.0.16 - 19-10-2016
+PREVIOUS TO V4.5
+Today we introduce the update of the V4 to 4.0.16
+
+This update fixed some issues and bugs for the V4.0.15
+
+The update change the matrix_time_machine table, the update add some index to the table for fast recovery
+
+Changes:
+- component_autocomplete_hi : created new component with our model for use with new dedalo thesaurus v4
+
+
+*Ver 4.0.15 - 30-09-2016
+
+Today we introduce the update of the V4 to 4.0.15
+
+This update fixed some issues and bugs for the V4.0.14
+
+ATENTION: 4.0.15 is the last public version prior the transition to the V4.5, the next updates will be internal updates for needs to change the specific data and imports from thesaurusV3 to the thesaurusV4. the version 4.5 will need all updates befrore it can run,  the transition is hard and need go step by step. Please read the especific update step by step, because the change required some important changes in the config files.
+
+The update change the matrix_time_machine table, the update add some index to the table for fast recovery
+
+Changes:
+- component_portal: new views of the portal
+-locator: add 'from_component_tipo' property, this property say "what component is calling" or "what component make the call to the locator", diferent text_areas can call to same section_tipo, section_id, tag_id, and is necesary "know" what text area do the call. This property is the first change for the new model for "inverse_locators" of the portals, this change will be when the V3 of the theraurus will remove.
+- component_date: add time property, the final formal for the numeric date is:
+	{
+		"year": 0000
+		"month": 00
+		"day": 00
+		"hour": 00
+		"minute":00
+		"second":00
+	}
+	and the dato in the component is : dd-mm-yyyy hh:mm:ss
+	The year is not close to 4 digits, it can be from -15000000000 to 15000000000 and the 0 year is contemplate.
+- component_autocomplete_ts: add property for resolve the parents or not. "value_with_parents": false
+- tool_import_dedalo_csv : the first version of the import the Dédalo format in csv files:
+			- section_tipo is file base name like dd21 on file dd21.csv
+			- first line columns are components_tipo to import
+			- column section_id is optional (if exists, force to use defined values)
+			- portals and other reference type dato components value are always as array of locators like [{"section_tipo":"dd21","section_id":"1",etc..}]
+			- is necesary update the first the portals and autocompletes sections before import the main section:
+				- first import the "list of values"
+				- second import the "resources"
+				- and the last import need to be the main "inventary" section
+-component_common : added method to control order_by param in search orders
+
+Add propoerties to config:
+config : DEDALO_AR_EXCLUDE_COMPONENTS
+
 *Ver 4.0.14 - 12-09-2016
 
 Today we introduce the update of the V4 to 4.0.14

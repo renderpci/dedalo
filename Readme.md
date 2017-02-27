@@ -46,8 +46,8 @@ Some projects using Dédalo to manage their Cultural Heritage or Oral Archive:
 *Required for the OS*
 
 - PHP 5.6+
-- Apache 2.2.3+
-- Postgres 9.4+
+- Apache 2.4.2+
+- Postgres 9.5+
 - MySQL 5.6+ (NOT REQUIRED, only if you want use it for publication)
 
 *libs required for the Dédalo*
@@ -97,7 +97,7 @@ Some projects using Dédalo to manage their Cultural Heritage or Oral Archive:
 6. Change the file /lib/dedalo/config/sample.config4_db.php with your DB configuration.
 7. Rename the /lib/dedalo/config/sample.config4_db.php to /lib/dedalo/config/config4_db.php.
 8. Run Dédalo into the browser. 
-9. Fix your admin password (you can change only once), the default account is: root (this user is only for development or debuger the application).
+9. Fix your admin password (you can change only once), the default account is: admin (this user is a root and only for development or debuger the application).
 10. Create one Administrator user account with all access to the system.(this user will be the administrator of the system)
 11. Logout and login with the Administrator acount.
 12. Create Users and Projects as you need.
@@ -113,7 +113,7 @@ Dédalo have three updates procedures:
 	-  Download the new files and change the files in your server
 	-  You need see the new config files and put the changes into your own config files (/lib/dedalo/config4.php and /lib/dedalo/config4_db.php). If you don't change the config files, Dédalo will require the new "define" variables and will stop the app.
 
-2. Update the structure with the sections, components, list, etc
+2. Update the ontology structure with the sections, components, list, etc
 	-  Do the first update step
 	-  Log-in as "superuser-developer"
 	-  You will see the menu in "orange" or "red" (if you have the debugger active) and a "grey" sub-menu with a "tool administrator" (or in translation version of the app language) button, press it to go to the "admin utils" page.
@@ -134,9 +134,10 @@ Dédalo have three updates procedures:
 **SERVER SYSTEM**
 
 Dédalo in the server part is tested into the next Operating Systems:
-- CentOS 6.5, 6.6, 7.1
-- Red Hat Enterprise Linux 6.5, 6.6, 7.1
-- MacOsX 10.6, 10.7, 10.8, 10.9, 10.10
+- CentOS 6.5 (deprecated update as soon as possible), 6.6, 7.1
+- Red Hat Enterprise Linux 6.5 (deprecated update as soon as possible), 6.6, 7.1
+- Debian 8.7
+- MacOsX 10.6 (deprecated update as soon as possible), 10.7, 10.8, 10.9, 10.10
 
 All other Linux will be compatible but we don't test it.
 
@@ -145,16 +146,18 @@ Windows: is possible that Dédalo can run, but NO TESTED.
 **USE**
 
 Dédalo version 4, is only certificated and proved into the webkit browsers (Chrome, Safari,...). 
-Is possible use Firefox but no is tested and maybe Dédalo can't run fine.
+Firefox situation: Is possible use Firefox but no is tested and maybe Dédalo can't run fine. 
+Full Firefox support is coming into the future 4.6version of Dédalo.
 
 Browser	|	Version |	certificated
 --------- | --------- | ---------
-Chrome	|	40+ | YES - recomended
-Chrome	|	30 to 40 | Deprecated (Please update as soon as posible)	 
-Chrome	|	0 to 30 | NO	 
+Chrome	|	50+ | YES - recomended
+Chrome	|	35 to 50 | Deprecated (Please update as soon as posible)	 
+Chrome	|	0 to 35 | NO	 
 Safari	|	6+ | YES
 Safari	|	3 to 5 | Deprecated (Please update as soon as posible)
-Safari	|	0 to 3 | NO	 
-Firefox	|	40+ | NO, but now we start to test it (29-04-2016), please feedback.
+Safari	|	0 to 3 | NO	
+Firefox	|	49+ | Will be YES very soon, Now Dédalo is compatible at 95% with Firefox but the video player need touches for work ok (27-02-2017), the new version 4.6 we hope that will be full compatible
+Firefox	|	40-49 | NO
 Firefox	|	0-40 | NO
 IExplorer	| All 	| NO
