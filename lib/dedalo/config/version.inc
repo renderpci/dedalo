@@ -3,76 +3,82 @@
 
 	Plataforma Dédalo v4 Valencia 2012
 
+
 	Valencia 08-02-2012 v4.0b1
-	Añadida funcionalidad ( html_page.js -> document.activeElement.blur() ) de salvar el componente activo al abandonar la página (cerrar la ventana o volver atrás)
+		Añadida funcionalidad ( html_page.js -> document.activeElement.blur() ) de salvar el componente activo al abandonar la página (cerrar la ventana o volver atrás)
 
 
 	Valencia 23-11-2012 v4.0b2
-	Rediseñada estructura de acurerdo a la propuesta preliminar de la ficha
+		Rediseñada estructura de acurerdo a la propuesta preliminar de la ficha
 
 
 	Valencia 11-12-2012 v4.0b3
-	Cambiado el sistema de Descriptores para converger con matrix
-	# MYSQL
-	ALTER TABLE  `descriptors` CHANGE  `parent`  `parent` VARCHAR( 8 ) NOT NULL COMMENT  '(0 para término)' ;
-	ALTER TABLE  `descriptors` CHANGE  `tipo`  `tipo` VARCHAR( 8 ) CHARACTER SET utf8 COLLATE utf8_unicode_ci NOT NULL ;
-	# UTILS
-	Usar la 16 para traspasar los datos al nuevo formato
+		Cambiado el sistema de Descriptores para converger con matrix
+		# MYSQL
+		ALTER TABLE  `descriptors` CHANGE  `parent`  `parent` VARCHAR( 8 ) NOT NULL COMMENT  '(0 para término)' ;
+		ALTER TABLE  `descriptors` CHANGE  `tipo`  `tipo` VARCHAR( 8 ) CHARACTER SET utf8 COLLATE utf8_unicode_ci NOT NULL ;
+		# UTILS
+		Usar la 16 para traspasar los datos al nuevo formato
 
 
 	Valencia 20-01-2014 v4.0b41
-	Añadido soporte Imagemagick para component_image
-	Component_image / tool_upload reconfigurados para soportar Imagemagick y aceptar ficheros no jpg (tif,psd,png,etc) como originales. Internamente se mantiene el formato JPG
+		Añadido soporte Imagemagick para component_image
+		Component_image / tool_upload reconfigurados para soportar Imagemagick y aceptar ficheros no jpg (tif,psd,png,etc) como originales. Internamente se mantiene el formato JPG
+
 
 	Valencia 25-01-2014 v4.0b50
-	Limpieza general de ficheros y clases de dedalo3
-	Separación de datos / tablas privadas y públicas
-	Dump de datos privados exclusivamente (estructura, etc.)
+		Limpieza general de ficheros y clases de dedalo3
+		Separación de datos / tablas privadas y públicas
+		Dump de datos privados exclusivamente (estructura, etc.)
 
 
 	Valencia 21-03-2014 v4.0b55
-	Solucionado bug de 'component_security_access' al salvar valores '0' para los permisos (cambiado el cómputo del valor en trigger.comoponent_common)
+		Solucionado bug de 'component_security_access' al salvar valores '0' para los permisos (cambiado el cómputo del valor en trigger.comoponent_common)
+
 
 	Valencia 21-03-2014 v4.0b56
-	Añadidas visualizaciones para modo sólo lectura en varios compoentes (portal, checkbox, radiobutton, area)
+		Añadidas visualizaciones para modo sólo lectura en varios compoentes (portal, checkbox, radiobutton, area)
 
 
 	Valencia 25-03-2014 v4.0b57
-	Añadido instalador
-	Solucionados bugs:
-	OK - Cache : Implementar Redis o Memcache para trabajo
-	OK - Listas de valores: lang fallback no funciona correctamente
-	OK - Lenguajes; al cambiar el idioma no visualiza en azul los campos que no están traducidos. El input text no se puede traducir automáticamente en el tool de traducción
+		Añadido instalador
+		Solucionados bugs:
+		OK - Cache : Implementar Redis o Memcache para trabajo
+		OK - Listas de valores: lang fallback no funciona correctamente
+		OK - Lenguajes; al cambiar el idioma no visualiza en azul los campos que no están traducidos. El input text no se puede traducir automáticamente en el tool de traducción
 
 
 	Valencia 23-04-2014 v4.0b60
-	Varios bugs solucionados y añadidos varios (partituras, import images tool, etc..)
+		Varios bugs solucionados y añadidos varios (partituras, import images tool, etc..)
 
 
 	Valencia 26-04-2014 v4.0b61
-	Varios bugs solucionados y añadidos varios (partituras, import images tool, etc..)
-	Añadido dd_init_test para control de inicio de Dédalo
+		Varios bugs solucionados y añadidos varios (partituras, import images tool, etc..)
+		Añadido dd_init_test para control de inicio de Dédalo
 
 
 	Valencia 29-04-2014 v4.0b62
-	Arreglado bug actualización de miniaturas en portales al cerrar tool images
+		Arreglado bug actualización de miniaturas en portales al cerrar tool images
+
 
 	Valencia 30-04-2014 v4.0b63
-	Añadida funcionalidad de importación de imágenes (sólo probada en script MUPREVA)
-	Ampliado el campo de MySQL 'dato' de text a mediumtext en matrix, matrix_time_machine en la versión de instalación
+		Añadida funcionalidad de importación de imágenes (sólo probada en script MUPREVA)
+		Ampliado el campo de MySQL 'dato' de text a mediumtext en matrix, matrix_time_machine en la versión de instalación
 
 	Valencia 13-05-2014 v4.0b64
-	Añadida opción de diffusion - trigger button - create and save mysql tables
+		Añadida opción de diffusion - trigger button - create and save mysql tables
+
 
 	Valencia 23-05-2014 v4.0b66
-	Corregido un error en la identificación del componente (component_common::get_id_by_tipo_parent) cuando se usa el lenguaje actual
-	de los datos para despejar un componente fijado como no traducible (ej. un component_av no traducible)
+		Corregido un error en la identificación del componente (component_common::get_id_by_tipo_parent) cuando se usa el lenguaje actual
+		de los datos para despejar un componente fijado como no traducible (ej. un component_av no traducible)
 
 	Valencia 10-06-2014 v4.0b67
-	Corregido un error en la selección del componente component_html_text aal pinchar en el editor
+		Corregido un error en la selección del componente component_html_text aal pinchar en el editor
+
 
 	Valencia30-0-2014 v4.0b68
-	Improved image manage and transcription with canvas image in full window size and image button
+		Improved image manage and transcription with canvas image in full window size and image button
 
 	Valencia 08-11-2014 v4.0b2-69
 		POSTGRESQL Add table matrix_profiles
@@ -120,11 +126,12 @@
 
 
 	Valencia 10-11-2014 v4.0b2-70
-	Fix bug in structure dump that don't save postgresql sequences. Now, wildcard flag [-t '*dd_id_seq'] is used to save Dedalo private sequences when structure dump is made.
+		Fix bug in structure dump that don't save postgresql sequences. Now, wildcard flag [-t '*dd_id_seq'] is used to save Dedalo private sequences when structure dump is made.
+
 
 	Valencia 10-11-2014 v4.0b2-71
-	Creado script de importación de datos desde MySQL hacia POSTGRESQL. /dedalo/extras/render/import_b1_to_b2/
-	Reimportado matrix_dd desde MySQL. Reconstruidos los índices de matrix_dd
+		Creado script de importación de datos desde MySQL hacia POSTGRESQL. /dedalo/extras/render/import_b1_to_b2/
+		Reimportado matrix_dd desde MySQL. Reconstruidos los índices de matrix_dd
 		POSTGRESQL INDEX:
 
 		CREATE INDEX matrix_dd_created_by_userid_gin
@@ -161,6 +168,7 @@
 	Valencia 19-11-2014 v4.0b2-72
 		Rebuilded component_autocomplete
 
+
 	Valencia 26-12-2014 v4.0b3.16
 		Fix bug with substring dato in component_text_area with multibyte chars.
 
@@ -184,6 +192,7 @@
 
 	Valencia 13-01-2015 v4.0b3.18
 		Changed path from 'component_tools' to 'tools'
+
 
 	Valencia 20-01-2015 v4.0b3.20
 		Added new table 'matrix_layout' to DDBB
@@ -217,21 +226,26 @@
 		ALTER TABLE matrix_layout_dd ALTER COLUMN id SET DEFAULT nextval('matrix_layout_dd_id_seq'::regclass);
 		ALTER TABLE matrix_layout ALTER COLUMN id SET DEFAULT nextval('matrix_layout_id_seq'::regclass);
 
+
 	Valencia 21-01-2015 v4.0b3.21
 		Added config constant DEDALO_ENTITY for future filters
+
 
 	Valencia 28-01-2015 v4.0b3.22
 		Add ts_map and 'dedalo_country' concept in diffusion for standarize political and geografical divisions
 		Refactorized class.diffusion.php for better manage of records and support for ts_map
 
+
 	Valencia 02-02-2015 v4.0b3.23
 		Fix bug on delete tag option (tool_indexation)
 		Fix bug in inspector mode edit not sow index references (inverse resolution)
+
 
 	Valencia 02-02-2015 v4.0b3.24
 		Changed dedalo session vars name (to avoid versions conflicts) from
 			$_SESSION['config4'] to $_SESSION['dedalo4']['config']
 			$_SESSION['auth4'] 	 to $_SESSION['dedalo4']['auth']
+
 
 	Valencia 23-03-2015 v4.0b3.25
 		Add tool_calendar
@@ -250,8 +264,6 @@
 
 	Valencia 02-03-2015 v4.0b3.27
 		Added session cache for rows_search html (moved form elements css to section list css)
-
-
 
 
 	Valencia 28-07-2015 v4.0 RC 4.2
@@ -281,7 +293,7 @@
 
 
 	Valencia 22-08-2015 v4.0 RC 4.24
-		search: modified section edit behaviour to enable list and search in edit mode
+		search: modified section edit behavior to enable list and search in edit mode
 		lib:geoip:data : updated geoip lib data (GeoLiteCity.dat)
 		lib:tinymce : updated from 4.2.3 to 4.2.4
 		TODO: 	- update inspector section info on navigate in edit mode - OK
@@ -315,9 +327,11 @@
 		tool_replace_component_data : Add new tool
 		interface: changed buttons styles and other cosmetic issues
 
+
 	Valencia 14-10-2015 v4.0 RC 4.30
 		component_common : fixed ar_list_of_values data issue when a component is changed from translatable to non translatable and viceversa
 		minor fixes for stability and view
+
 
 	Valencia 14-10-2015 v4.0 RC 4.31
 		component_common : set_dato now unset var ar_list_of_values to avoid cache when data is injected (ex. statistics)
@@ -326,6 +340,7 @@
 	Valencia 14-10-2015 v4.0 RC 4.32
 		component_autocomplete_ts : now is multivalue and deeep searchable
 		component_autocomplete_ts : now is multivalue
+
 
 	Valencia 26-10-2015 v4.0 RC 4.33
 		backup : added 'DEDALO_BACKUP_TIME_RANGE' to control the building of backup files. Default 4 hours
@@ -338,23 +353,27 @@
 
 
 	Valencia 04-11-2015 v4.0 RC 4.35
-		component_image: changed save way. Now, on save, defult quality and thumb are created always to ensure list view consistency. 'valor_list' now is set to null when file thumb not exists, instead a defaul 0.jpg image
-		search : added ignore project behaviour when section is list of values (tables matrix_list and matrix_dd) to allow all users view all lists
+		component_image: changed save way. Now, on save, default quality and thumb are created always to ensure list view consistency. 'valor_list' now is set to null when file thumb not exists, instead a defaul 0.jpg image
+		search : added ignore project behavior when section is list of values (tables matrix_list and matrix_dd) to allow all users view all lists
 		backup: added control to export sequence for capture errors and stop next execution (avoid do import with bad auth conditions)
 				added db_system_config_verify for test pgpass file
 
+
 	Valencia 05-11-2015 v4.0.000
 		Released current version (4.0 RC 4.35) as version 4.0 official launch
+
 
 	Valencia 09-11-2015 v4.0.008
 		section: added inverse_locators concept. Opened section data property and methods to manage inverse_locators of portals
 		component_portal: add inverse_locators manager
 		component_portal: changed way of iterate records. Now component dato locators are iterated instead database search results. This maintain rows consistency when referenced section are deleted
-		component_state: working here to update behaviour and features
+		component_state: working here to update behavior and features
+
 
 	Valencia 13-11-2015 v4.0.009
 		Add new state_component
 		Fixed images cache issue
+
 
 	Valencia 25-11-2015 v4.0.2
 		component_portal: multiple souces support
@@ -363,27 +382,32 @@
 
 	Valencia 12-12-2015 v4.0.2.6
 		tool_posterframe: added create identifying image support
-		maintanance : added maintance mode (add config var DEDALO_MAINTENANCE_MODE)
+		maintenance : added maintenance mode (add config var DEDALO_MAINTENANCE_MODE)
 
 
 	Valencia 02-01-2016 v4.0.2.8
 		tool_diffusion: added tool_diffusion to control export to mysql flow
 		diffusion : added support to export thesaurus and new tool tool_diffusion. Beter memory control when process large sections / thesaurus
 
+
 	Valencia 02-01-2016 v4.0.2.8c
 		core_functions : added isSerialized function to test valid serialized data (e.g. dedalo_decryptStringArray data)
 		dd_error : removed show errors options to users when not in DEBUG mode
 
+
 	Valencia 13-01-2016 v4.0.2.9
-		component_text_area : enable create tragments anywhere (not only in indexaxtion mode)
+		component_text_area : enable create fragments anywhere (not only in indexaxtion mode)
 		dd : minor changes on related terms selection when edit
+
 
 	Valencia 14-01-2016 v4.0.2.10
 		tool_diffusion : opened to all users with tool auth access (not only admin)
 
+
 	Valencia 18-01-2016 v4.0.2.11
 		tool_portal : solved bug that enable add section locator to portal incorrectly
 		component_portal : fix issue with empty columns in component_portal_list.phtml
+
 
 	Valencia 19-01-2016 v4.0.2.12
 		tinymce : updated to 4.3.3
@@ -397,23 +421,29 @@
 		component_input_text : for compatibility with lastest Chrome versions, changed event onchange to direct input and set readonly default state and onfocus enable write
 		diffusion : minor changes and fix errors in method update_record to enable deep recursion when publish. Now recursion levels don't have limitation
 
+
 	Valencia 19-01-2016 v4.0.2.17
 		component_common : js load_component_by_wrapper_id restored jquery handler (pure javascript generate some problems with tool_lang for example)
 		dd_init_test : add force create folders for all av / image quality (needed for recompressions of ffmpeg)
 
+
 	Valencia 31-01-2016 v4.0.2.18
 		component_state : fixed bug when component is reloaded in 'edit_component' mode (was disappeared from DOM)
+
 
 	Valencia 01-02-2016 v4.0.2.19
 		search : fixed bug in defaults of search operators when not defined operator in component (now uses defult options)
 
+
 	Valencia 04-02-2016 v4.0.2.20
-		component_image : changed thumb behaviour and show mode. No longer is used tag img (current div) Now is defined in config (DEDALO_IMAGE_THUMB_WIDTH x DEDALO_IMAGE_THUMB_WIDTH)
+		component_image : changed thumb behavior and show mode. No longer is used tag img (current div) Now is defined in config (DEDALO_IMAGE_THUMB_WIDTH x DEDALO_IMAGE_THUMB_WIDTH)
 		class Imagemagick uses this config constants to made thumbs
+
 
 	Valencia 04-02-2016 v4.0.2.21
 		component_date : fix issue when negative big years are used
 		dd_date : changed method 'get_dd_timestamp' for support non standar timestamps (negative years, etc..)
+
 
 	Valencia 04-02-2016 v4.0.3
 		component_profile : added support to replace user permissions data. Now users no longer have own permission. Instead, users will have profiles always (mandatory)
@@ -422,7 +452,7 @@
 	Valencia 16-02-2016 v4.0.4
 		component_html_text : Added tinymce button 'upload' to manage locall images via plupload lib
 		av_media_player.js  : Fixed bug with timecode generator when values pases from 01:07:59 to 01:08:00 (for example), calculate wrong value like 01:07:00
-		image_magick : thumb Changed to adjust to gigger side and used as div background instead image in lists
+		image_magick : thumb Changed to adjust to bigger side and used as div background instead image in lists
 
 
 	Valencia 22-02-2016 v4.0.5
@@ -437,7 +467,7 @@
 		tinymce : updated to 4.3.4 and fixed incompatibilities
 		component_common : Save: fix javascript problem on save over Chrome version <=39
 		tool_export : new tool export added to generate csv files from section list results
-		tool_transcription : added aditional command to safe save text_area on before unload window event
+		tool_transcription : added additional command to safe save text_area on before unload window event
 		section_list : solved issue when search. Pagination is set now to offset=0 and offset_list=0 to reset pagination results on every search
 		component_text_area : added support to maintain content and keep changes when broser session is closed
 		tinymce : updated to 4.3.7
@@ -461,7 +491,7 @@
 		lock_components : added lock_components to control already in use components and avoid users overwrite data
 		notifications : added /lib/dd_node server (nodejs instance) for manage notifications
 		ffmpeg : added audio codec fallback. First options now is libfdk-aac and if not enabled ('--enable-libfdk-aac'), libvo_aacenc is used
-		tool_transcription : fixed behaviour when focus editor it was interpreted as 'isDirty' true
+		tool_transcription : fixed behavior when focus editor it was interpreted as 'isDirty' true
 		tool_transcription : fixed bug in reload related component did not work in some cases
 		tool_transcription : added speed slider control to video
 		component_common : js select_wrap now is managed by especific components when component method exists
@@ -496,14 +526,14 @@
 								added option to link to component_text_area and override component_text_area lang
 		component_info : changed propiedades widgets format from array to object with array inside
 		propiedades : add control to set state of the component. E.g. 'deprecated'
-		component_common_draw : add label conditional to manage state of componente warnings. New «update» state for control the update data
+		component_common_draw : add label conditional to manage state of component warnings. New «update» state for control the update data
 		component_portal : Fixed issue where section list don't show images properly
 		component_geolocation : fixed save data when change the map re-position or zoom
 		componet_date : New control for update the data of the component
-		diffusion : added behaviour to skip non publicable records and delete sql records with same section_id. Now all records stored in publication database are difundible = yes
+		diffusion : added behavior to skip non publicable records and delete sql records with same section_id. Now all records stored in publication database are difundible = yes
 		section : added control of publication state. New 'diffusion_info' is a first level section dato variable for store an array of objects (diffusion_element_tipo and his relevant data)
-				  When any componet save, clear this var to indicate tha current section is outdated in diffusion data places. Whe is published, element_diffusiion object is stored in this array var
-		resources schema : added component_publication elements to bibliograpy and informants
+				  When any component save, clear this var to indicate tha current section is outdated in diffusion data places. When is published, element_diffusiion object is stored in this array var
+		resources schema : added component_publication elements to bibliography and informants
 		section_group_div : added new dedalo element 'section_group_div' similar to section_group but without headers and labels, only a wrapper div to free group components
 		tool_administrator: new "update.php" file with control of the updates procedures. New «delete all data of the component» that can delete all data of the component or your language.
 		Schema of the DB : new «matrix_updates» table with «id», «datos», for control the update process.
@@ -513,17 +543,19 @@
 		security_areas : changed format from array to object (see updates) and removed '-admin' elements. Now areas have 3 permissions value: 0,2,3 (no access, access, admin)
 		security_access : changed format from array to object (see updates)
 		security : solved issue when non global admin enter to users section list don't show available user records
-		lock_elements : added icon 'lock' on locked coponents 
+		lock_elements : added icon 'lock' on locked components 
 		tool_administrator : new option 'Remove av temporals' to delete ffmpeg temporal files in av/tmp folder
 		tool_administrator : new option 'Ignore temporarily the publication status when publishing' to passthru component_publication value in some necessary cases
-		tool_administrator : multiple sql querys are supporded now on dedalo data updates
+		tool_administrator : multiple sql querys are supported now on dedalo data updates
+	
+
 	Valencia 23-05-2016
 		component_filter : fixed bug when in global admin, projects are showed by id_matrix instead section_id
 		lock_components : fixed bug when force_unlock_all_components unset all DB locked elements, instead current user only components
 		search : fixed bug in order by json fields when change from list to edit view
 		tool_indexation : fixed bug when not autosave text on change tag tipo
-		install : solved some inconsistences when update from install version db
-		component_portal : fixed undesired behaviour when portal contains component_publications is selected
+		install : solved some inconsistencies when update from install version db
+		component_portal : fixed undesired behavior when portal contains component_publications is selected
 		tool_import_files : fixed issue when components are selected and inspector is not available
 		component_pdf : add thumb for pdf files
 						fixed correct output to tool_export
@@ -532,14 +564,16 @@
 		tool_upload : added postprocessiong create transcription when upload pdf media
 		tool_portal : added edit already existing portal links to enable, for example select a fragment when link is created in one user action (bibliography, etc..)
 		component_portal : fixed various issues related with refresh component in some context. Now centralized html _page page_globals engine is dedicated to manage components refresh
-		html_page : added zentralized control / management of page components to refresh when new windows are open by tools etc 
+		html_page : added centralized control / management of page components to refresh when new windows are open by tools etc 
 		search : optimized 'current_edit' search . Removed count
 				 added always order by section_id clause to maintain pagination consistence over list and edit modes
 		tool_comom : adecuated to use html_page refresh components
 		config : add constant 'DEDALO_PDF_THUMB_DEFAULT' default value 'thumb' to store rendered pdf preview thumbs
+	
+
 	Valencia 03-06-2016
 		component_text_area : fonts used for create labels (indexation, timecode, etc.) are moved from lib/fonts to lib/dedalo/themes/default/fonts for convenience
-		btn labels : changed font fron arial to 'liberation'
+		btn labels : changed font from arial to 'liberation'
 		tool_transcription : fixed issue where lang selector it is out of sync with the language of the text area when component_textarea is forced to change lang
 
 	
@@ -550,41 +584,51 @@
 		config : added contant 'TOPONOMY_CENTRAL_SYNC' for define central toponomy manager url
 		ts : added central toponomy manager to set unic id to toponomy terms
 
+
 	Bengaluru 24-06-2016
-		tool_time_machine : changed behaviour when empty data is saved. Now blank data is saved to time machine record too.
+		tool_time_machine : changed behavior when empty data is saved. Now blank data is saved to time machine record too.
+
 
 	Jodhpur 23-07-2016
-		tool_export : fixed output inconsistences on export component_filter and component_filter_master
+		tool_export : fixed output inconsistencies on export component_filter and component_filter_master
 		lib : tinymce : updated from 4.3.12 to 4.4.0
 		lib : jquery : jquery-ui : updated from 1.11.4 to 1.12
+
 
 	Pushkar 26-07-2016
 		tool_difussion : add window scrool top on publish record
 		tool_image_versions : fixed loosed section_tipo var on trigger when rotate image
 		
+
 	Manali 06-08-2016
 		search : javascript coode conversions from jquey to pure javascript and optimized record navigation 
 	
+
 	Benimamet 17-08-2016
 		lib/json_editor : updated version from 5.1.5 to 5.5.6
 
+
 	Benimamet 22-08-2016
-		component_autocomplete_ts : implemented tesaurus source modes (defined in 'propiedades'). Current defined modes: 'jer_tipo' and 'childrens_of'
+		component_autocomplete_ts : implemented thesaurus source modes (defined in 'propiedades'). Current defined modes: 'jer_tipo' and 'childrens_of'
+
 
 	Benimamet 23-08-2016
 		dd_date : implemented date_modes to save dates, ranges and periods
 		component_date : allow manage ranges, periods and dates
 		component_common:Save : changed main source vars (tipo, parent, section_tipo, etc.) from component dataset to wrapper dataset
 
+
 	Benimamet 28-08-2016
 		locator : Add property 'type' to object locator
 		hierarchy : Added new hierarchy element to control new tesaurus model
 		json_handler : fixed bug when encoded result 0 was generated an error.
 	
+
 	Benimamet 01-09-2016
 		component_relation_common : created new class for manage common logic of relation components
 		component_relation_model : created new component to manage thesaurus model relations (extends component_relation_common)
 		component_relation_parent : created new component to manage thesaurus parent relations (extends component_relation_common)
+
 
 	Benimamet 03-09-2016
 		section : unified valor_list html source in method get_valor_list_html_to_save()
@@ -593,7 +637,7 @@
 		dd_date : moved class file from component_date dir to common (another elements but components are using this class now)
 		activity : changed column id. Now section_id is showed instead matrix id
 				   modified matrix_activity table indexes to optimize ordination (added to updates file 4.0.14 to 4.1.0)
-		search : performance : modified order_by when section activity is used. No longuer adds "order by section_id" at end of query
+		search : performance : modified order_by when section activity is used. No longer adds "order by section_id" at end of query
 		common : added get_main_lang method (gets the info from config)
 		component_input_text : now supports main_lang fallback on list mode
 		component_text_area : now supports main_lang fallback on list mode		
@@ -608,11 +652,13 @@
 		tool_administration : before update section, build thesaurus section to avoid loose secction_tipo resolution when called later
 		component_relation_related : created new component to manage thesaurus terms relations (extends component_relation_common)
 
+
 	Ruzafa 07-09-2016
 		section : added experimental var $_SESSION['dedalo4']['section_config'][$this->tipo]['list_line'] to control list column ID type
 
+
 	Ruzafa 09-09-2016
-		config : DEDALO_AR_EXCLUDE_COMPONENTS . Added constant de set aray of components to hide in sections, etc.
+		config : DEDALO_AR_EXCLUDE_COMPONENTS . Added constant de set array of components to hide in sections, etc.
 				 Removed action occurs in:	class.component_layout.php, 
 				 							record.php, 
 				 							class.records_search.php, 
@@ -620,41 +666,242 @@
 				 							class:component_security_access.php
 		component_autocomplete_ts : added source type 'tree' to add terms directly from thesaurus
 
+
 	Benimamet 15-09-2016 v4.0.15.a
-		component_autocomplete_ts : fixed bug when search only uses descriptors elements with parent like 'prefix1'. Now prefis is calculated always to avoid this 
+		component_autocomplete_ts : fixed bug when search only uses descriptors elements with parent like 'prefix1'. Now prefix is calculated always to avoid this 
 									(desirable value to filter is 'prefix' without number)
+
 
 	Ruzafa 20-09-2016 v4.0.15.g
 		lib tinymce : version updated from 4.4.0 to 4.4.3
-		component_security_access : changed to save only one section at once. Control of minimun php config max_input_vars was set (>1000 please)
-		component_security_areas  : changed to save whitout propagation to component_security_access dato (múltiple issues were detected with propagation)
+		component_security_access : changed to save only one section at once. Control of minimum php config max_input_vars was set (>1000 please)
+		component_security_areas  : changed to save without propagation to component_security_access dato (múltiple issues were detected with propagation)
 	
+
 	Ruzafa 21-09-2016 v4.0.15.h
 		backup : structure import and export methods are review to not use 'id' and avoid conflicts on import
 				 unified db calls as pgsl daemon commands
 	
+
 	Benimamet 25-09-2016 v4.0.15.hd
 		locator : added property 'from_component_tipo' for set source component tipo
 		component_relation_common : changed to manage section 'relations' container as dato of components that extends this class
 	
+
 	Benimamet 28-09-2016 v4.0.15.hf
-		area : solved bug on error is triggered on instalations where not defined new 'area_thesaurus' model
+		area : solved bug on error is triggered on installations where not defined new 'area_thesaurus' model
 	
+
 	Benimamet 29-09-2016 v4.0.15.hl
 		component_portal : add target_section permissions control on portal buttons (add element to portal, remove element from portal)
 	
+
 	Benimamet 30-09-2016 v4.0.15.hq
 		component_date : add mode 'time' to manage times in hours, minutes and seconds like 15:23:12
 	
+
 	Benimamet 04-09-2016 v4.0.15.ia
 		search : fixed bug when search in virtual sections (erroneus section_real_tipo var is changed to section_tipo)
 	
+
 	Benimamet 06-09-2016 v4.0.15.id
 		component_portal : added view 'Mosaic'
 		component_autocomplete_ts : added option to hide resolved parents in value (set propiedades->value_with_parents: false)
 	
 
+	Benimamet 06-09-2016 v4.0.15.id
+		component_portal : added view 'Mosaic'
+		component_autocomplete_ts : added option to hide resolved parents in value (set propiedades->value_with_parents: false)
+	
 
+	Benimamet 11-10-2016 v4.0.15.ja
+		component_security_access : fixed issue when buttons in virtual sections are no showed
+		tool_import_dedalo_csv : added tool to import csv files (with dedalo special format: 
+			- section_tipo is file base name like dd21 on file dd21.csv
+			- first line columns are components_tipo to import
+			- column section_id is optional (if exists, force to use defined values)
+			- portals and other reference type dato components value are always as array of locators like [{"section_tipo":"dd21","section_id":"1",etc..}]
+	
+	Valencia 13-10-2016 v4.0.15.jd
+		tool_upload : fixed issue when browser is locked until ffmpeg ends the media transcode
+		component_date : fixed bug when order not work in search list
+		component_common : added method to control order_by param in search orders
+
+	
+	Valencia 19-10-2016 v4.0.15.k0	
+		component_autocomplete_hi : created new model and component for use with new dedalo thesaurus v4
+		component_publication : fixed issue when in portal, values was overwritten in some cases (two o more portals with same component publication)
+	
+	
+	Valencia 20-10-2016 v4.0.15.kb	
+		section : created new structure section element named 'section_map' to maping section components to different uses
+				  for example: define what component is used as 'term' by thesaurus and hierarchies
+
+
+	Valencia 23-10-2016 v4.5.0.a
+		hierarchy : added matrix table 'matrix_langs' and imported all thesaurus v3 langs data.
+		component_select_lang : now resolve with new lang data v4
+		lang : added class to manage lang needs
+		hierarchy : modified to contemplate import thesaurus v3 exceptions (code and model basically) 
+		tool_portal : fixed bug when a link is replaced. Now, when user select a record to edit in portal edit and selects a different link (another tag for example), old locator is replaced by new locator in portal
+
+
+	Valencia 25-10-2016 v4.5.0.b
+		component_autocomplete : minor js/css fixes when is showed in portal list
+		tool_import_dedalo_csv : added multi language support for 'traducible' components (use JSON format in value like {"lg-eng":"My value","lg-spa":"Mi valor"})
+		section : unified get_ar_all_project_langs with common:get_ar_all_langs
+		component_select_lang : fix some issues using new dedalo thesaurus v4 lang
+
+
+	Valencia 27-10-2016 v4.5.0.bc
+		lang : fixed issue when update Dedalo version < 4.5
+		hierarchy : add support for resolve langs when import previous version of Dédalo data (<4.5)
+		component_children : add support to 'target_section' when in hierarchy section
+		tool-administrator : fixed bug in ajax error response. Now is returned text instead object
+		section : fixed bug on get section real tipo using common::get_relaciones(). Now common::get_ar_related_by_model() is used always
+		common : get_relaciones is deprecated. Use common::get_ar_related_by_model() instead
+
+
+	Valencia 28-10-2016 v4.5.0.bd
+		general performance and optimization tasks
+
+
+	Valencia 31-10-2016 v4.5.0.bd
+		menu : added thesaurus v4 menu links (reads from structure)
+	
+
+	Valencia 02-11-2016 v4.5.0.bj
+		ImageMagick class : added control of preview image layers (tifs) and skip in conversions
+		tool_image_versions : added option to re-convert 'original' quality from original file (tif, psd, etc..)
+
+
+	Valencia 05-11-2016 v4.5.0.bk
+		ImageMagick class : fixed issue when conform headers is done only with fast start. Now copy and later fast start is maked on conform
+		css : no longer browser cache structure.css file when in debug mode
+	
+
+	Valencia 07-11-2016 v4.5.0.bl
+		counter : optimized class
+		diffusion_sql : fixed some minor issues when publish data 
+		diffusion_mysql : removed is publicable verification. No longer necessary because previous verification is made
+	
+
+	Valencia 12-11-2016 v4.5.0.bo
+		component_image : fixed bug when in time machine mode images with custom path (like '/0') are no found 
+		search : load_rows : fixed bug when in time machine list, paginator don't use the correct container for load records
+		widgets : descriptors : Rebuilded to load by ajax on demand instead load always in lists (performance problem) 
+	
+
+	Valencia 15-11-2016 v4.5.0.bp
+		component_state : fixed permissions issue on 'validation' selector when not was shown to admin general and area/section administrators
+		component_text_area : changed data showed in list mode. Now, if exists related component_select_lang, original lang is used always in lists
+							  Now value list is always calculated from original lang
+		component_info : widget tags : now data showed is synchronized with component_text_area lang (original lang when exists)
+		
+
+	Valencia 17-11-2016 v4.5.0.bs
+		tool_transcription : fixed issue when text area forced lang is not updated in video subtitles track lang. Now, on load component_text_area
+							 video subtitles track is forced to sync with component_text_area lang.
+							 Besides, when changes source lang selector, this action force updates subtitles track sync
+		tool_time_machine  : Added lang selector to switch historic lang source in tool window
+
+
+	Valencia 23-11-2016 v4.5.0.bv2
+		component_relation_children : moved some common methods to component_relation_common (__construct,set_dato)
+									  class var 'relation_tipo' changes to 'relation_type'
+		component_relation_related : changed html and class to manage related terms like component_relation_childrens
+
+
+	Valencia 24-11-2016 v4.5.0.bv4
+		component_html_text : fixed bug when reload component don´t init text editor
+		ffmpeg : fixed issue when detect audio codec libvo-aacenc fails
+
+
+	Valencia 24-11-2016 v4.5.0.bx5
+		dd_date : added method convert_seconds_to_period
+
+
+	Valencia 21-12-2016 v4.5.0.cd4
+		tool_import_dedalo_csv : Sorted ar_csv_data by column 0 (section_id) before data is processed
+		button_delete : Added pre and post js actions of delete method configurable in structure
+
+
+	Valencia 07-01-2017 v4.5.1.aa8
+		tinymce : Updated text editor version from 4.4 to 4.5.2
+
+
+	Valencia 14-01-2017 v4.5.1.c6
+		tool_import_marc21 : Added new tool for import bibliography data in marc21 format
+		tool_common : added dedalo_upload js lib (used by tool_import_marc21)
+		component_filter : get_ar_projects_for_current_section : Optimized for large projects table (Now is a only one database call instead one for each project)
+
+
+	Valencia 16-01-2017 v4.5.1.c8
+		component_input_text : fixed issue when search exact (Now 'dato' is array and need jsonb array search operators)
+							   fixed issue with double and single quotes broken input viewed value
+		component_select : fixed issue with select wrap component blur on every select action
+	
+
+	Valencia 17-01-2017 v4.5.1.c10
+		common : notify_load_lib_element_tipo : Changed to manage only model names (and not model tipos)
+		search : fixed issue when portal search is not defined
+				 optimized sub search querys on portals
+
+
+	Valencia 18-01-2017 v4.5.1.c12
+		component_autocomplete_hi : fixed bug on search not send properly component name
+		diffusion_section_stats : fixed bug when component_select_lang values are computed to generate stats (value now is locator instead lang code)
+
+
+	Valencia 25-01-2017 v4.5.1.c16
+		component_inverse : Created new component 'component_inverse' to manage inverse locators view and search
+		tool_export : Removed fixed column 'section_id' in standar export mode
+
+
+	Valencia 26-01-2017 v4.5.1.c17
+		tool_common : added custom_arguments param to url request (from 'propiedades')
+		tool_import_files : changed to use temp section data from main section when in 'section' mode instead from portal target section tipo
+							trigger now works in json mode (Content-Type: application/json')
+		component_portal : changed controller to calculate always the filter_by_locator data from component dato instead from session stored search options (avoid inconsistencies when import images)
+		section : Save : section_temp_data is now managed as pure json object to avoid problemns with session serialize / unserialize objects and classes
+
+
+	Valencia 26-01-2017 v4.5.1.c18
+		tool_import_files : fix issue with components permissions showed in temp section are wrong
+	
+
+	Valencia 02-02-2017 v4.5.1.c23
+		component_portal : get_valor_export Fixed issue when empty values generate double tabs and spaces
+
+
+	Valencia 03-02-2017 v4.5.1.c25
+		tool_portal : fixed bug when link row to portal don't send the correct parent after to do a search in tool_portal window
+
+	
+	Valencia 06-02-2017 v4.5.1.c26
+		diffusion_sql : get_ts_columns : added 'geolocalizacion' column for publication
+
+
+	Valencia 09-02-2017 v4.5.1.c27
+		component_inverse : added link option to jump to referer record
+
+
+	Valencia 11-02-2017 v4.5.1.c27
+		component_geolocation : added default option to render points in edit mode
+		leaflet : Updated from 0.7.7 to 1.0.3
+		leaflet-draw : Updated from 0.2.4 to 0.4.9
+		tinymce : Updated from 4.0.2 to 4.0.3
+		component_common_draw : aded html_delimiter builder
+	
+
+	Valencia 15-02-2017 v4.5.1.df
+		common : get_main_lang : fixed bug when main_lang returned is erroneous when section is not children of thesaurus
+
+
+	Valencia 20-02-2017 v4.5.1.eg9
+		tool_portal : fixed issue when add_relation (fragment) don't work on some context
+		tool_portal : fixed button sho_all / show_filtered issue.
+		rows : fixed issue when on paginated records not work the delete button
 
 
 	/**
@@ -668,12 +915,10 @@
 	*/
 
 
-
-
 	# Version
-	#define('DEDALO_VERSION'	, '4.1.0.ba');
-	define('DEDALO_VERSION'	, '4.0.15.id');
-	define('DEDALO_BUILD'	, '05-10-2016');
+	define('DEDALO_VERSION'	, '4.5.1.ei12');
+	#define('DEDALO_VERSION'	, '4.0.15.kd');
+	define('DEDALO_BUILD'	, '26-02-2017');
 
 
 	/*
@@ -693,6 +938,4 @@
 		$_SESSION['dedalo4']['config']['DEDALO_BUILD'] = DEDALO_BUILD;
 	}
 	*/
-
-
 ?>

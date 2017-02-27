@@ -25,21 +25,15 @@
 	$visible				= $this->get_visible();
 	$propiedades 			= $this->get_propiedades();
 
-
-	//dump($propiedades,'propiedades');
+	if($permissions===0) return null;
 
 	# VISIBLE
 	if ($visible===false) {
 		#return null;
 	}
 
-
-	
-
 	$file_name				= $modo;
 
-
-	
 	
 	switch($modo) {
 		

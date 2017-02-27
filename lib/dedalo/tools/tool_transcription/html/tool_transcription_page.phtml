@@ -21,16 +21,11 @@
 			data-type_of_lang=\"dedalo_data_lang\"
 			>";
 			
-			foreach($ar_all_project_langs as $lang_locator) {
+			foreach($ar_all_project_langs as $lang_code => $lang_name) {
 				
-				$current_lang = $lang_locator->section_tipo;
-
 				# Note that component_textarea can change his lang ('force_change_lang') in some contexts
-				$selected = ($current_lang==$textarea_lang) ? 'selected="selected"' : '';			
-
-				$current_lang_name = RecordObj_ts::get_termino_by_tipo($current_lang,DEDALO_APPLICATION_LANG);
-
-				$html .= "<option value=\"$current_lang\" {$selected}>". $current_lang_name ."</option>";
+				$selected = ($lang_code==$textarea_lang) ? 'selected="selected"' : '';
+				$html 	 .= "<option value=\"$lang_code\" {$selected}>". $lang_name ."</option>";
 			}
 
 			$html .= "</select>";
@@ -60,6 +55,22 @@
 		#
 		# LEFT DIV TEXT AREA
 		$html .= "\n<div class=\"tool_transcription_left\">";
+
+			#
+			# TAGS INSPECTOR
+			/*
+			$html .= "<div id=\"tags_inspector\" class=\"\">";
+			$html .= "";
+
+			foreach ($ar_person_tags as $key => $person_tag) {
+			
+				$image = TR::addTagImgOnTheFly($person_tag);
+				$html .= $image;
+			}
+			#$html .=	"<span class=\"warning\">".$component_warning."</span>";
+			#$html .=	"<div class=\"button_close\" onclick=\"html_page.close_content(this)\"></div>";
+			$html .= "</div>";
+			*/
 
 			#
 			# TEXT EDITOR FROM COMPONENT_TEXT_AREA

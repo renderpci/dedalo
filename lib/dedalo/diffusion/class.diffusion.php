@@ -51,7 +51,7 @@ abstract class diffusion  {
 		}
 		
 		return $html;
-	}
+	}//end get_html
 
 
 
@@ -85,7 +85,6 @@ abstract class diffusion  {
 		}
 
 		return array_values($ar_locators);
-
 	}#end clean_duplicates
 
 
@@ -143,7 +142,8 @@ abstract class diffusion  {
 																		 $options->parent,
 																		 'edit',
 																		 $options->lang,
-																		 $section_tipo );
+																		 $section_tipo,
+																		 false );
 				$dato   				= $target_component->get_dato(); # Dato is a ts term like 'es623'
 				if (is_array($dato)) {
 
@@ -226,7 +226,6 @@ abstract class diffusion  {
 		#dump($ar_dedalo_countries, ' ar_dedalo_countries ++ '.to_string($options));	
 		
 		return (array)$ar_dedalo_countries;
-
 	}#end get_ar_dedalo_countries
 
 
@@ -264,7 +263,7 @@ abstract class diffusion  {
 			
 			$current_name = RecordObj_dd::get_termino_by_tipo($current_tipo,null,true);
 
-			if($current_name==$diffusion_domain_name) {				
+			if($current_name===$diffusion_domain_name) {				
 
 				/**/
 				#
@@ -276,7 +275,7 @@ abstract class diffusion  {
 					$propiedades  = json_decode( $RecordObj_dd->get_propiedades() );
 						#dump($propiedades, ' propiedades '.$current_children);
 
-					if ($propiedades && property_exists($propiedades->diffusion, 'class_name') && $propiedades->diffusion->class_name==$caller_class_name) {
+					if ($propiedades && property_exists($propiedades->diffusion, 'class_name') && $propiedades->diffusion->class_name===$caller_class_name) {
 						return (string)$current_children;
 					}
 				}
@@ -321,7 +320,7 @@ abstract class diffusion  {
 			$ar_current_section_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($diffusion_section_tipo, 'section', 'termino_relacionado');
 			$current_section_tipo 	 = $ar_current_section_tipo[0];
 			
-			if ($current_section_tipo == $section_tipo) {
+			if ($current_section_tipo === $section_tipo) {
 
 				# HEAD 
 				$diffusion_head_tipo 		 = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($diffusion_section_tipo, $modelo_name='diffusion_head', $relation_type='children')[0];
@@ -337,7 +336,6 @@ abstract class diffusion  {
 		}
 
 		return false;
-
 	}#end get_single_diffusion_map
 
 
@@ -366,10 +364,8 @@ abstract class diffusion  {
 		
 
 		return $ar_childrens;
-
 	}#end get_all_ts_records
 	
-
 
 
 	/**
@@ -394,7 +390,7 @@ abstract class diffusion  {
 		$ar_all_diffusion_domains = diffusion::get_diffusion_domains();
 		foreach ($ar_all_diffusion_domains as $current_diffusion_domain_tipo) {
 			$name = RecordObj_dd::get_termino_by_tipo($current_diffusion_domain_tipo, DEDALO_STRUCTURE_LANG, true, false); 
-			if ($name==$diffusion_domain_name) {
+			if ($name===$diffusion_domain_name) {
 				$diffusion_domain_tipo = $current_diffusion_domain_tipo;
 					#dump($diffusion_domain_tipo, ' $diffusion_domain_tipo ++ '.to_string($diffusion_domain_name));
 			}
@@ -439,8 +435,7 @@ abstract class diffusion  {
 
 		}//end foreach ($ar_diffusion_group as $diffusion_group_tipo)		
 
-		return (object)$ar_diffusion_map;
-		
+		return (object)$ar_diffusion_map;		
 	}#end get_ar_diffusion_map
 
 
@@ -460,7 +455,6 @@ abstract class diffusion  {
 		}		
 
 		return $ar_diffusion_map_elements;
-
 	}#end get_ar_diffusion_map_elements
 	
 
@@ -484,10 +478,8 @@ abstract class diffusion  {
 		throw new Exception("Error Processing Request", 1);	
 	}#end diffusion_complete_dump
 
-
-
 	
 
 
-}
+}//end class
 ?>

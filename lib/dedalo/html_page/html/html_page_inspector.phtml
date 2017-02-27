@@ -6,8 +6,7 @@
 
 /*
 
-	# LOADED COMPONENTS 
-	#dump(common::get_ar_loaded_modelos());
+	# LOADED COMPONENTS 	
 	if($modo=='edit')
 	$ar_loaded_modelos = common::get_ar_loaded_modelos_resolved();	#dump($ar_loaded_modelos,'$ar_loaded_modelos');
 
@@ -37,16 +36,7 @@
 		$html_sidebar .= "\n<div id=\"inspector_tools_log\"></div>";
 		$html_sidebar .= "\n</div>";
 
-		# RELATIONS
-		# If any 'component_relation' is loaded, show RELATIONS inspector tap		
-		if (in_array('component_relation', $ar_loaded_modelos)) {
 		
-			$html_sidebar .= "\n<div class=\"css_section_group_titulo tab_title title_down_box text_unselectable border_radius_0\" 
-			data-tab_id=\"Inspector_relations_tap\"><label class=\"css_label\">".label::get_label('relaciones')."</label></div>";
-			$html_sidebar .= "\n<div class=\"css_section_group_content tab_content inspector_div_content \" >";
-			$html_sidebar .= "\n<div id=\"inspector_relations\"></div>";
-			$html_sidebar .= "\n</div>";
-		}
 
 		# DEBUG
 		#if(SHOW_DEBUG===true) {

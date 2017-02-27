@@ -3,10 +3,10 @@
 	# VISUALIZADOR HTML	
 
 	
+	# html_delimiter
+	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'in');
 	
-	print "\n<!-- PORTAL [tipo:$tipo section_id:$parent] $label -->";
-	
-	print "\n <div class=\"wrap_component css_wrap_portal wrap_component_{$modo} wrap_component_{$edit_view} wrap_component_{$tipo}\" id=\"{$id_wrapper}\"
+	print " <div id=\"portal_table_{$tipo}\" class=\"wrap_component css_wrap_portal wrap_component_{$modo} wrap_component_{$edit_view} wrap_component_{$tipo}\" id=\"{$id_wrapper}\"
 	data-tipo=\"{$tipo}\"
 	data-lang=\"{$lang}\"
 	data-section_tipo=\"{$section_tipo}\"
@@ -35,7 +35,7 @@
 
 				#
 				# HEADER ROW HTML
-					#$html_contenido .= "\n<div class=\"portal_header_row \">";
+					#$html_contenido .= "<div class=\"portal_header_row \">";
 				
 					#
 					# BUTTONS
@@ -45,7 +45,7 @@
 						# BUTTON NEW HTML
 						if( $permissions>=2 && $modo!='print') {
 							foreach ($ar_target_section_tipo as $current_target_section_tipo) {										
-								$button_new = "\n<div class=\"css_button_generic btn_new_ep\" onclick=\"component_portal.new_portal_record(this)\"
+								$button_new = "<div class=\"css_button_generic btn_new_ep\" onclick=\"component_portal.new_portal_record(this)\"
 								data-portal_tipo=\"{$this->tipo}\" 
 								data-portal_parent=\"{$this->parent}\"
 								data-portal_section_tipo=\"{$this->section_tipo}\"
@@ -67,7 +67,7 @@
 						if($modo!='print') {
 													
 							foreach ($ar_target_section_tipo as $current_target_section_tipo) {
-								$button_select = "\n<div class=\"css_button_generic btn_new_ep\" onclick=\"tool_common.open_tool_portal(this)\"
+								$button_select = "<div class=\"css_button_generic btn_new_ep\" onclick=\"tool_common.open_tool_portal(this)\"
 								data-tipo=\"{$tipo}\"
 								data-top_tipo=\"".TOP_TIPO."\"
 								data-parent=\"{$parent}\"
@@ -89,7 +89,7 @@
 						#
 						# VIEW MODE ICON BTN_VIEW_TOOGLE
 						if($modo!='print') {
-							$button_toggle_view = "\n<div class=\"btn_view_toogle btn_view_mosaic\" onclick=\"component_portal.toggle_views(this)\"
+							$button_toggle_view = "<div class=\"btn_view_toogle btn_view_mosaic\" onclick=\"component_portal.toggle_views(this)\"
 							data-view=\"mosaic\"></div>";
 							$html_contenido .= $button_toggle_view;
 						}
@@ -119,7 +119,7 @@
 				# MOSAIC ROWS
 				# dump($dato, ' dato ++ '.to_string());	
 				$mosaic_html  = '';
-				$mosaic_html .= "<ul class=\"mosaic_ul\">";						
+				$mosaic_html .= "<ul class=\"tbody mosaic_ul\">";						
 				$row_number=0; foreach((array)$dato as $key => $current_locator) {
 
 					$row_number++;
@@ -155,7 +155,7 @@
 					# LI
 						# dump($ar_columns, ' ar_columns ++ '.to_string());
 						$sort_id  = !empty($rel_locator) ? $rel_locator : 0;
-						$mosaic_html .= "<li class=\"mosaic_li\" data-dato='$sort_id' style=\"$image_styles\">";
+						$mosaic_html .= "<li class=\"portal_element_sortable mosaic_li\" data-dato='$sort_id' style=\"$image_styles\">";
 						foreach ($ar_columns as $column_tipo => $column_label) {
 
 							if ($column_tipo==='edit') {
@@ -194,7 +194,7 @@
 								if (!empty($current_tag_id)) {
 									$title .= ' - '.$current_component_tipo.' - '.$current_tag_id;
 								}
-								if(SHOW_DEBUG) $title .= "\n url:$url \n modo $modo, context $context->context_name";
+								if(SHOW_DEBUG) $title .= " url:$url  modo $modo, context $context->context_name";
 
 								if (empty($current_row['id'])) {
 									$mosaic_html .= "<div class='div_image_link link' title=\"$title\" onclick=\"alert('Deleted record')\"> ! </div>";
@@ -247,7 +247,8 @@
 																				 DEDALO_DATA_LANG, // current data lang
 																				 $target_section_tipo, // current section tipo
 																				 $section_id, // Current portal parent
-																				 $current_locator // Used by text_area to select fragment
+																				 $current_locator, // Used by text_area to select fragment
+																				 $tipo
 																				);										
 
 								
@@ -281,11 +282,9 @@
 				#
 				# DRAG ACTIVATE (for current table)
 				#
-				/* deactivated for the moment
-				if ($this->html_options->sortable) {
+				if ($this->html_options->sortable) {					
 					$html_contenido .= "<script>component_portal.active_portal_table_sortable('portal_table_{$tipo}', '$dragable_connectWith')</script>";
-				}
-				*/
+				}				
 				break;
 		}//end switch($permissions)
 
@@ -338,4 +337,10 @@
 		print $html_contenido;
 	
 	
-	print "\n</div><!-- /css_wrap_portal [tipo:$tipo section_id_matrix:$parent] $label -->\n";
+	print "</div>";
+
+	# html_delimiter
+	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'out');
+
+
+?>

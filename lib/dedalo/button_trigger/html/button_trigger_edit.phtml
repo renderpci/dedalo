@@ -10,20 +10,29 @@
 	# CONTENIDO
 	$html_contenido = '';
 	
-	switch($permissions) {
+	switch(true) {
 						
-		case ($permissions>=2)	:					
+		case ($permissions>=2) :
+
+				$js_action = 'button_trigger.trigger(this)';
+				if ($js_exec_function!==false) {
+					$js_action = $js_exec_function .'(this, event)';
+				}
 
 				# BUTTON
-				$html_contenido .= "\n <div class='css_button_generic css_button_trigger' onclick='button_trigger.trigger(this)' data-parent='$this->parent' data-tipo='$tipo' data-propiedades='$propiedades' >";
+				$html_contenido .= "<div class='css_button_generic css_button_trigger' onclick=\"{$js_action}\"
+				data-parent='$this->parent'
+				data-tipo='$tipo'
+				data-propiedades='$propiedades_json'
+				>";
 				$html_contenido .= $label;
 				$html_contenido .= "</div>";
 
 
 				# RESPONSE
-				$html_contenido .= "\n <div class='button_trigger_response' id=\"button_trigger_$tipo\">";
+				$html_contenido .= "<div class='button_trigger_response' id=\"button_trigger_$tipo\">";
 				$html_contenido .= "";
-				$html_contenido .= "</div>";									
+				$html_contenido .= "</div>";
 	}
 	
 	

@@ -3,7 +3,7 @@
 /* WRAP RELATION_children
 ---------------------------------------- */
 .css_wrap_relation_children {
-	border-bottom: 1px solid #E6E6E6;
+	//border-bottom: 1px solid #E6E6E6;
 	}
 	.css_wrap_relation_children .content_data {
 		
@@ -14,7 +14,7 @@
 	/* wrap_relation_children_values
 	---------------------------------------- */
 	.css_wrap_relation_children .content_data .wrap_relation_children_values {
-		
+		display: inline-block;
 		}
 		/* inputs line
 		---------------------------------------- */
@@ -48,24 +48,39 @@
 				.css_wrap_relation_children .content_data .wrap_relation_children_values .relation_children_input_line input.css_relation_children:active {
 					
 				}
-			/* remove button
+			/* REMOVE BUTTON
 			---------------------------------------- */
 			.css_wrap_relation_children .content_data .wrap_relation_children_values .relation_children_input_line .component_relation_children_button_remove {
-				margin-left: 5px;
-				margin-right: 8px;
-				cursor: pointer;
+				margin-right: 5px;
 			}
 			/* locator_label
 			---------------------------------------- */
 			.css_wrap_relation_children .content_data .wrap_relation_children_values .relation_children_input_line .locator_label {
 				
 			}
-			/* relation_children_add_button
+			/* ADD BUTTON 
 			---------------------------------------- */
 			.css_wrap_relation_children .content_data .relation_children_add_button {
-				margin: 3px;
-				cursor: pointer;
+				
+				/*
+				stroke: #a0e570;
+				fill: none;
+				stroke-width:21;
+				stroke-miterlimit:10;
+				background-color: #EEEEEE;
+				*/
+				opacity: 0.2;
+				position: absolute;
+				right: 0;
+				top: 0;
 			}
+			.css_wrap_relation_children .content_data .relation_children_add_from_tree_button {
+				opacity: 0.5;
+				position: absolute;
+				right: 20px;
+				top: 0;
+			}
+			
 		
 
 	

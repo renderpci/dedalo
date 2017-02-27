@@ -44,13 +44,17 @@ abstract class MediaObj extends Accessors {
 	}
 	
 	
+	
 	# URL
-	public function get_url() {
+	public function get_url() {	
 		
 		$url	 = $this->get_media_path() . $this->get_name() . '.' . $this->get_extension();
 		$url 	.= '?t='.time();
+
 		return $url;
 	}
+
+
 	
 	/**
 	* LOCAL PATH

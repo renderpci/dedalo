@@ -3,10 +3,10 @@
 	# VISUALIZADOR HTML	
 
 	
+	# html_delimiter
+	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'in');
 	
-	print "\n<!-- PROFILE [tipo:$tipo section_id_matrix:$parent] $label -->";
-	
-	print "\n<div class=\"wrap_component css_wrap_profile wrap_component_{$tipo}\" id=\"{$id_wrapper}\" 
+	print "<div class=\"wrap_component css_wrap_profile wrap_component_{$tipo}\" id=\"{$id_wrapper}\" 
 	data-tipo=\"{$tipo}\"
 	data-lang=\"{$lang}\"
 	data-parent=\"{$parent}\"
@@ -33,7 +33,7 @@
 			break;					
 		
 		case ($permissions>1):		
-			$html_contenido .= "\n <select class=\"css_select_profile\" name=\"{$input_name}\" id=\"$identificador_unico\" onchange=\"component_profile.Save(this)\"
+			$html_contenido .= " <select class=\"css_select_profile\" name=\"{$input_name}\" id=\"$identificador_unico\" onchange=\"component_profile.Save(this)\"
 			data-tipo=\"{$tipo}\"
 			data-lang=\"{$lang}\"
 			data-section_tipo=\"{$section_tipo}\"
@@ -47,21 +47,21 @@
 					$checked = "";
 				}
 				# First option (custom)
-				$html_contenido .= "\n <option value=\"0\" {$checked}> Custom </option>";
+				$html_contenido .= " <option value=\"0\" {$checked}> Custom </option>";
 				
 				# DB Options
 				foreach ($ar_select_values as $value => $rotulo) {					
 					
 					$checked = ($value == $dato) ? 'selected' : '';
 
-					$html_contenido .= "\n <option value=\"{$value}\" {$checked}> {$rotulo}</option>";							
+					$html_contenido .= " <option value=\"{$value}\" {$checked}> {$rotulo}</option>";							
 				}
 
-			$html_contenido .= "\n </select>";
+			$html_contenido .= " </select>";
 
 			/*
 			#$html_contenido .= "<div class=\"icon_bs icon_apply\"></div>";
-			$html_contenido .= "\n <input type=\"button\" value=\"".label::get_label('aplicar')."\" class=\"css_button_generic apply_profile_button\" onclick=\"component_profile.apply_profile(this)\">";
+			$html_contenido .= " <input type=\"button\" value=\"".label::get_label('aplicar')."\" class=\"css_button_generic apply_profile_button\" onclick=\"component_profile.apply_profile(this)\">";
 			*/			
 
 
@@ -69,12 +69,12 @@
 			# button_value
 			if ($is_global_admin===true) {
 				$button_value 	 = label::get_label('ir_al_perfil');
-				$html_contenido .= " <input type=\"button\" value=\"$button_value\" class=\"go_to_profile\" onclick=\"component_profile.go_to_profile(this, '$profile_section_tipo', '$identificador_unico')\">";
+				$html_contenido .= " <input type=\"button\" value=\"$button_value\" class=\"btn btn-default btn-xs go_to_profile\" onclick=\"component_profile.go_to_profile(this, '$profile_section_tipo', '$identificador_unico')\">";
 			}
 		
 			
 			if(SHOW_DEBUG) {
-				$html_contenido .= " <span class=\"notas\"> (Current dato: $dato)</span>";	
+				$html_contenido .= " <span class=\"debug_info\"> (Current dato: $dato)</span>";	
 			}
 			
 	}
@@ -88,5 +88,10 @@
 	print $html_contenido;	
 	
 	
-	print "\n</div><!-- /css_wrap_select PROFILE [tipo:$tipo section_id_matrix:$parent] $label -->\n\n"; //wrap
+	print "</div>"; //wrap
+
+
+	# html_delimiter
+	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'out');
+	
 ?>

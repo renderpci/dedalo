@@ -157,7 +157,7 @@ class component_project_langs extends component_common {
 	*	default is DEDALO_APPLICATION_LANG
 	* @return array $ar_langs
 	*	format array( lang_locator => label )
-	*/
+	*//*
 	protected function get_ar_langs( $lang=DEDALO_APPLICATION_LANG ) {
 		
 		$ar_langs	= array();
@@ -175,6 +175,7 @@ class component_project_langs extends component_common {
 		return $ar_langs;	
 
 	}//get_ar_langs
+	*/
 	
 	
 

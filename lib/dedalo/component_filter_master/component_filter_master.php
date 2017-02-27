@@ -22,6 +22,7 @@
 	$caller_id 				= $this->get_caller_id();
 	$file_name				= $modo;
 
+	if($permissions===0) return null;
 
 	switch($modo) {
 		
@@ -51,7 +52,10 @@
 				$ar_proyectos_section = $this->get_ar_proyectos_section(); #die();
 				break;
 						
-		case 'search'	:	
+		case 'search'	:
+				# Showed only when permissions are >1
+				if ($permissions<1) return null;
+				
 				# Force file_name to 'list'
 				$file_name 	= 'list';
 

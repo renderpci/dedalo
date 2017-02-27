@@ -21,6 +21,7 @@
 	$identificador_unico	= $this->get_identificador_unico();
 	$component_name			= get_class($this);
 
+	if($permissions===0) return null;
 	# Verify component content record is inside section record filter
 	if ($this->get_filter_authorized_record()===false) return NULL ;
 
@@ -54,7 +55,7 @@
 					$posterframe_url 	= str_replace('&', '&amp;', $posterframe_url);	
 					*/
 
-					$posterframe_url 	= $this->get_posterframe_url().'?&t='.start_time();
+					$posterframe_url 	= $this->get_posterframe_url().'?&t='.time();
 					$posterframe_url 	= str_replace('&', '&amp;', $posterframe_url);
 					$player_id			= 'player_'.$video_id;
 					
@@ -111,9 +112,11 @@
 
 					#
 					# IFRAME SUBTITLES VARS
-					$av_subtitles_file_exits = file_exists($this->get_subtitles_path());
+					$subtitles_lang = DEDALO_DATA_LANG;
+					$subtitles_path = $this->get_subtitles_path( $subtitles_lang );
+					$av_subtitles_file_exits = file_exists($subtitles_path);
 					if($av_subtitles_file_exits){
-						$subtitles_url = $this->get_subtitles_url();
+						$subtitles_url = $this->get_subtitles_url( $subtitles_lang );
 						$iframe_url .= "&subtitles_url=".$subtitles_url;
 					}
 					break;
@@ -144,7 +147,7 @@
 							$posterframe_url= DEDALO_LIB_BASE_URL.'/themes/default/0_audio.jpg';
 						}
 					}
-					$video_url .= '?&t='.start_time();	# Avoid cache file				
+					#$video_url .= '?&t='.start_time();	# Avoid cache file				
 					break;
 
 		case 'portal_list_view_mosaic':

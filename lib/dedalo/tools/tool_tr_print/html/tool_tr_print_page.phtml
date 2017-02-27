@@ -1,0 +1,254 @@
+<?php
+
+	# VISUALIZADOR HTML		
+
+	$html    = "\n<!-- TOOL_tr_print -->";	
+	$html   .= "\n<div class=\"wrap_tool wrap_tool_tr_print_page\" >";
+
+	#
+	# CONTENT
+	$html   .= "\n<div class=\"content_data block-content-1\" >";
+
+	#
+	# left side
+	$html   .= "<div id=\"content_left\">";
+	$html   .= "<div class=\"label_tc_content\">Options</div>";
+	#
+	# options
+	$html   .= "<div class=\"content options\">";
+		
+		# 
+		# lang selector
+		$html_selector ='';
+		$html_selector .= "<div class=\"option_element\">";
+		$html_selector .= "\n <span class=\"rotulo_tool_lang_selector\">".label::get_label('idioma').":</span> ";
+		$html_selector .= "\n <select class=\"tool_lang_selector_source css_select\"
+		onchange=\"tool_tr_print.change_tool_lang(this)\"
+		> ";
+		$ar_langs = common::get_ar_all_langs_resolved( DEDALO_DATA_LANG );
+		foreach ((array)$ar_langs as $current_lang => $current_lang_name) {
+			
+			$selected 		= ($current_lang === $lang) ? 'selected' : '';
+			$html_selector .= "\n <option value='{$current_lang}' {$selected}>$current_lang_name</option>";
+		}
+		$html_selector .= "\n </select>";
+		$html_selector .= "</div>";//end option_element
+		$html   .= $html_selector;
+
+		#
+		# Checkboxes
+
+		# Checkbox show header
+		if(SHOW_DEBUG===true) {		
+		$checked = 'checked';
+		$html   .= "<div class=\"option_element\">";
+		$html   .= " <input type=\"checkbox\" id=\"show_header\" value=\"1\" class=\"checkbox_element\" $checked onchange=\"tool_tr_print.show_header(this)\">";
+		$html   .= " <label for=\"show_header\" class=\"\">".label::get_label('cabecera')."</label>";
+		$html   .= "</div>";//end option_element
+		}
+
+
+		# Checkbox show tc
+		$checked = 'checked';
+		$html   .= "<div class=\"option_element\">";
+		$html   .= " <input type=\"checkbox\" id=\"show_tc\" value=\"1\" class=\"checkbox_element\" $checked onchange=\"tool_tr_print.show_tc(this)\">";
+		$html   .= " <label for=\"show_tc\" class=\"\">".label::get_label('timecodes')."</label>";
+		$html   .= "</div>";//end option_element
+
+		# Checkbox show persons
+		$checked = 'checked';
+		$html   .= "<div class=\"option_element\">";
+		$html   .= " <input type=\"checkbox\" id=\"show_persons\" value=\"1\" class=\"checkbox_element\" $checked onchange=\"tool_tr_print.show_persons(this)\">";
+		$html   .= " <label for=\"show_persons\" class=\"\">".label::get_label('personas')."</label>";
+		$html   .= "</div>";//end option_element
+
+		# Checkbox show index
+		$checked = 'checked';
+		$html   .= "<div class=\"option_element\">";
+		$html   .= " <input type=\"checkbox\" id=\"show_index\" value=\"1\" class=\"checkbox_element\" $checked onchange=\"tool_tr_print.show_index(this)\">";
+		$html   .= " <label for=\"show_index\" class=\"\">".label::get_label('indexations')."</label>";
+		$html   .= "</div>";//end option_element
+
+		# Checkbox show index_info
+		$checked = 'checked';
+		$html   .= "<div class=\"option_element\">";
+		$html   .= " <input type=\"checkbox\" id=\"show_index_info\" value=\"1\" class=\"checkbox_element\" $checked onchange=\"tool_tr_print.show_index_info(this)\">";
+		$html   .= " <label for=\"show_index_info\" class=\"\">".label::get_label('indexations_info')."</label>";
+		$html   .= "</div>";//end option_element
+
+		# Checkbox show lines
+		$checked = 'checked';
+		$html   .= "<div class=\"option_element\">";
+		$html   .= " <input type=\"checkbox\" id=\"show_lines\" value=\"1\" class=\"checkbox_element\" $checked onchange=\"tool_tr_print.show_lines(this)\">";
+		$html   .= " <label for=\"show_lines\" class=\"\">".label::get_label('lines')."</label>";
+		$html   .= "</div>";//end option_element
+
+		# Checkbox show original
+		$checked = '';
+		$html   .= "<div class=\"option_element\">";
+		$html   .= " <input type=\"checkbox\" id=\"show_original\" value=\"1\" class=\"checkbox_element\" $checked onchange=\"tool_tr_print.show_original(this)\">";
+		$html   .= " <label for=\"show_original\" class=\"\">".label::get_label('original')."</label>";
+		$html   .= "</div>";//end option_element
+		
+		# Checkbox show source
+		$checked = '';
+		$html   .= "<div class=\"option_element\">";
+		$html   .= " <input type=\"checkbox\" id=\"show_source\" value=\"1\" class=\"checkbox_element\" $checked onchange=\"tool_tr_print.show_source(this)\">";
+		$html   .= " <label for=\"show_source\" class=\"\">Source <span class=\"notes\">[debug]</span></label>";
+		$html   .= "</div>";//end option_element
+	
+				
+		#$html   .= " <input type=\"button\" id=\"tc_preview\" class=\"btn btn-default btn-sm button_read\" value=\"".label::get_label('preview')."\" onclick=\"tool_tr_print.change_all_timecodes(this,false)\"/>";
+		$html   .= " <input type=\"button\" id=\"btn_print\" class=\"btn btn-primary btn-sm button_read\" value=\"".label::get_label('imprimir')."\" onclick=\"tool_tr_print.print(this)\"/>";
+		$html   .= " <span id=\"response_div\"></span>";
+		
+	$html   .= "</div>";//end options
+	$html   .= "</div>";
+		
+	
+	#
+	# right side
+	$html   .= "<div id=\"content_right\">";
+	$html   .= "<div class=\"label_tc_content\">Preview</div>";
+	$html   .= "<div id=\"tc_content_right\" class=\"content content_right_text\">";
+	#$html   .= $preview_text; // Ajax loads
+
+	
+	# Header
+	if(SHOW_DEBUG===true) {	
+	$html   .= "<div class=\"tr_header\">";
+	$html   .= "  <ul class=\"tr_info\">";
+	$html   .= "   <li><label>ID</label> <span>".$tr_data->ID."</span></li>";
+	$html   .= "   <li><label>".label::get_label('original').' '.label::get_label('idioma')."</label> <span>".$tr_data->source_lang."</span></li>";
+	$html   .= "   <li><label>".label::get_label('fecha')."</label> <span>".$tr_data->date."</span></li>";
+	$html   .= "   <li><label>".label::get_label('municipio')."</label> <span>".$tr_data->municipality."</span></li>";
+	
+	$html   .= "   <li>";
+				# Interviews
+				foreach ($tr_data->interview as $key => $current_interview) {
+					$html   .= "<label>".label::get_label('entrevista')." ID ".$current_interview->ID."</label>";
+					$html .= "<label class=\"label_informants\">".label::get_label('informantes')."</label>";
+					$last = end($current_interview->informants);
+					foreach ((array)$current_interview->informants as $informant) {
+						$html .= "<span>".$informant."</span>";
+						if($informant!==$last) $html .= ", ";
+					}
+					$html .= "<br>";
+				}
+	$html   .= "   </li>";
+
+	$html   .= "  </ul>";//end tr_info
+	$posterframe_url = $tr_data->posterframe;
+	$html   .= "  <div class=\"posterframe\" style=\"background-image:url('$posterframe_url')\"><img src=\"$posterframe_url\"/></div>";
+	$html   .= "</div>";//end tr_header
+	}
+
+	
+	if ($ar_tc_text===false) {
+
+		$html   .= "<div class=\"empty_text\">Empty text</div>";
+
+	}else{
+		
+		# source
+		$html   .= "<div id=\"source_text\">$source_text</div>";
+		
+		# original
+		$html   .= "<div id=\"original_text\">$original_text</div>";
+
+		# ar_tc_text
+		$html   .= "<table id=\"ar_tc_text\" class=\"ar_tc_text\">";
+		$pattern  = TR::get_mark_pattern($mark='tc',$standalone=false);
+		foreach ((array)$ar_tc_text as $current_tc => $value_obj) {
+
+			# tc
+			$tc = $value_obj->tc;
+
+			# fragment 
+			$fragment = $value_obj->fragment;
+
+			# style tags review
+			# Para asegurarnos de que no haya errores de forma en html revisamos el resultado final de 
+			# la línea para depurar posicionamiento de las etiquetas 
+			$fragment = tool_subtitles::revise_tag_in_line($fragment,'em');
+			$fragment = tool_subtitles::revise_tag_in_line($fragment,'strong');			
+
+			# Remove first and last <br>
+			$fragment = preg_replace( '[^(<br( \/)?>)*|(<br( \/)?>)*$]', '', $fragment);
+			$fragment = TR::addTagImgOnTheFly($fragment);
+
+			# descriptors
+			$descriptors = $value_obj->descriptors;
+
+			$html   .= "<tr class=\"column_group\">";
+
+			$html   .= " <td class=\"column_tc\">";
+			$html   .=   $tc;
+			# descriptors list
+			if (!empty($descriptors)) {
+				#$descriptors = json_decode($value_obj->descriptors);
+				/*
+				$html   .= "<table class=\"descriptors_table\">";
+				foreach ($descriptors as $current_tag => $descriptor_value) {
+					$html   .= "<tr>";
+					$html   .= " <td>";
+					$html   .=   $current_tag;
+					$html   .= " </td>";
+					$html   .= " <td>";
+					foreach ((array)$descriptor_value as $term_tipo => $term_n) {
+						$term_name = RecordObj_ts::get_termino_by_tipo($term_tipo, null, true); //$terminoID, $lang=NULL, $from_cache=false, $fallback=true
+						$html   .= "<div>$term_name <span class=\"notes\">[$term_tipo]</span></div>";
+					}
+					$html   .= " </td>";
+					$html   .= "</tr>";
+				}
+				$html   .= "</table>";//end descriptor_table
+				*/
+				$html   .= "<div class=\"descriptors_container\">";
+				#$pattern_tc = "/(\[TC_[0-9][0-9]:[0-9][0-9]:[0-9][0-9]_TC\])/";
+				$pattern = TR::get_mark_pattern('index', $standalone=true, $id=false, $data=false);
+				foreach ($descriptors as $current_tag => $descriptor_value) {
+
+					preg_match($pattern, $current_tag, $matches);
+
+					$html   .= $matches[3] .": ";
+					$n = count($descriptor_value);
+					$i=1;foreach ((array)$descriptor_value as $term_tipo => $term_n) {
+						$term_name = RecordObj_ts::get_termino_by_tipo($term_tipo, null, true); //$terminoID, $lang=NULL, $from_cache=false, $fallback=true
+						$html   .= "<span>$term_name</span>"; //<span class=\"notes\">[$term_tipo]</span>
+						if($i<$n) $html .= ', ';
+					$i++;}
+				}
+				$html   .= "</div>";//end descriptors_container
+			}
+			$html   .= " </td>";
+
+			$html   .= " <td class=\"column_fragment\">";
+			$html   .= "   <div>$fragment</div>";
+			
+			#$html   .= "   <div>$descriptors_list</div>";
+			$html   .= " </td>";
+			$html   .= "</tr>";
+		}
+		$html   .= "</table>";
+
+		
+
+	}	
+	$html   .= "</div>";
+	$html   .= "</div>";
+
+
+
+
+
+
+	$html   .= "\n</div>";//end content_data block-content-1
+
+
+	$html .= "\n</div><!-- /wrap_tool -->"; //wrap_tool
+
+	
+
+	print $html;		
+?>

@@ -4,7 +4,9 @@
 
 	$tipo 					= $this->get_tipo();
 	$parent 				= $this->get_parent();
+	$section_id 			= $parent;
 	$section_tipo			= $this->get_section_tipo();
+	$propiedades			= $this->get_propiedades();
 	$modo					= $this->get_modo();		
 	$dato 					= $this->get_dato();
 	$label 					= $this->get_label();
@@ -19,6 +21,8 @@
 	$context 				= $this->get_context();	
 	$file_name 				= $modo;
 	
+	if($permissions===0) return null;
+	
 	switch($modo) {
 		
 		case 'edit'	:
@@ -31,8 +35,12 @@
 				$component_info 	= $this->get_component_info('json');				
 				$dato_string		= json_handler::encode($dato);
 
-				#$referenced_tipo 	= $section_tipo;
-					#dump($referenced_tipo, ' referenced_tipo ++ '.to_string());
+				# target_section_tipo
+				$target_section_tipo = $section_tipo;
+
+				# Inverse relations to current term
+				$inverse_related = component_relation_related::get_inverse_related($section_id, $section_tipo);
+					#dump($inverse_related, ' inverse_related ++ '.to_string());
 				break;
 
 		case 'tool_time_machine' :
@@ -41,7 +49,10 @@
 				$file_name 	= 'edit';
 				break;
 						
-		case 'search':				
+		case 'search':
+				# Showed only when permissions are >1
+				if ($permissions<1) return null;
+							
 				$ar_comparison_operators = $this->build_search_comparison_operators();
 				$ar_logical_operators 	 = $this->build_search_logical_operators();
 

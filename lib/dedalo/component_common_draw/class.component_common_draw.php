@@ -7,7 +7,7 @@ abstract class component_common_draw {
 	
 	
 	# DRAW LABEL  
-	public static function draw_label($component_obj) {		
+	public static function draw_label($component_obj) {	
 		global $modo;
 		$html = '';
 
@@ -20,7 +20,7 @@ abstract class component_common_draw {
 		$tipo	= $component_obj->get_tipo();
 
 		
-		if($modo=='edit') {
+		if($modo==='edit') {
 			$def = RecordObj_dd::get_def_by_tipo($tipo, $lang=DEDALO_APPLICATION_LANG);
 			if (!empty($def)) {
 				$def = "\n".$def;
@@ -61,11 +61,20 @@ abstract class component_common_draw {
 		}			
 		
 		return $html;
-
 	}#end draw_label
 	
 	
 	
-	
+	/**
+	* DRAW_HTML_DELIMITER
+	* @return string
+	*/
+	public static function html_delimiter($component_name, $tipo, $section_id=null, $label=null, $type='in') {
+		if(SHOW_DEBUG!==true) {
+			return '';
+		}
+		$begin = $type==='out' ? '//END ' : '';
+		return '<!-- '.$begin.strtoupper($component_name).' [tipo:'.$tipo.' section_id:'.$section_id.'] '.$label.' -->';
+	}//end draw_html_delimiter
 }
 ?>

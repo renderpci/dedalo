@@ -1,0 +1,142 @@
+<?php
+
+	# VISUALIZADOR HTML
+
+	# html_delimiter
+	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'in');
+
+	$wrap_style = isset($wrap_style) ? $wrap_style : '';
+
+	print "<div class=\"css_wrap_iri wrap_component wrap_component_{$modo} wrap_component_{$tipo}\" id=\"{$id_wrapper}\"
+	style=\"$wrap_style\"
+	data-tipo=\"{$tipo}\"
+	data-lang=\"{$lang}\"
+	data-section_tipo=\"{$section_tipo}\"
+	data-parent=\"{$parent}\"
+	data-modo=\"{$modo}\"
+	data-dato='{$dato_json}'
+	data-component_name=\"{$component_name}\"
+	data-component_info='{$component_info}'>";
+	
+
+		# ETIQUETA (LABEL)
+		$html_label = component_common_draw::draw_label($this);
+
+		# CONTENIDO (INPUT)
+		$html_contenido = '';
+		switch(true) {
+
+			case ($permissions===0) :
+					$html_contenido .= "";
+					break;
+
+			case ($permissions===1) :
+					foreach ($dato as $value) {
+						$html_contenido .= " <span class=\"css_span_dato\">$value</span>";
+					}
+					break;
+
+			case ($permissions>=2) :
+
+					# Avoid autocomplete input username in Users section
+					$remove_autocomplete = null;
+					if ($section_tipo==DEDALO_SECTION_USERS_TIPO) {
+						$remove_autocomplete = "readonly onfocus=\"this.removeAttribute('readonly');component_common.select_wrap(null,'$id_wrapper');\"";
+					}else{
+						$remove_autocomplete = '';//"onfocus=\"component_common.select_wrap(null,'$id_wrapper')\";\"";
+						$remove_autocomplete = "onfocus=\"component_common.select_wrap_on_tab_focus(this,'$id_wrapper')\"";
+					}
+
+					# Read only mode (set in propiedades)
+					$read_only = null;
+					if (isset($propiedades->read_only) && $propiedades->read_only==true) {
+						$read_only = 'readonly';
+					}
+					# Button add
+					$html_contenido .= "<div class=\"css_button_generic btn_add_iri\" onclick=\"component_iri.add_iri(this)\">";
+					$html_contenido .= "<div class=\"link css_iri_add\"></div>";
+					$html_contenido .= "</div>";
+					
+					if(empty($dato)){
+						$obj_value = new stdClass();
+						$obj_value->iri = "";
+						$dato_view = array($obj_value);						
+					}else{
+						$dato_view = $dato;
+					}
+
+					$html_contenido .= "<ul>";
+					foreach ($dato_view as $key => $obj_value) {
+
+						# Correct issues with quotes
+						$value = htmlentities($obj_value->iri);
+
+						$html_contenido .= "<li class=\"input-group\">";
+
+						# Input
+						$html_contenido .= "<input type=\"text\" id=\"{$id_wrapper}_input_{$key}\" class=\"form-control99 css_iri\" onchange=\"component_iri.Save(this)\"
+						data-tipo=\"{$tipo}\"
+						data-section_tipo=\"{$section_tipo}\"
+						data-parent=\"{$parent}\"
+						data-lang=\"{$lang}\"
+						data-mandatory='{$mandatory_json}'
+						value=\"{$value}\"
+						title=\"$html_title\"
+						name=\"{$input_name}\"
+						autocomplete=\"off\"
+						$remove_autocomplete
+						$read_only
+						tabindex=\"1\"						
+						/>";
+
+						# Button link
+						$html_contenido .= "<a class=\"input-group-addon css_button_generic btn_go_iri\" onclick=\"component_iri.go_iri_link(this)\">";
+						$html_contenido .= "<div class=\"link css_iri_link\"></div>";
+						$html_contenido .= "</a>";
+
+						$html_contenido .= "</li>";
+
+					}//end foreach
+					$html_contenido .= "</ul>";
+
+					/*
+					<div class="input-group">
+  <input type="text" class="form-control" placeholder="Recipient's username" aria-describedby="basic-addon2">
+  <span class="input-group-addon" id="basic-addon2">@example.com</span>
+</div>*/
+					
+
+					#$html_contenido .= "<script>setAttribute(“autocomplete”,”off”)</script>";
+
+					#readonly onfocus=\"this.removeAttribute('readonly');\"
+
+					#$html_contenido .= " <span  class=\"css_span_log\"></span>";
+					#$html_contenido .= " <span  class=\"css_span_ejemplo\">$ejemplo</span>";
+
+					if(SHOW_DEBUG===true) {
+						$html_contenido .= " <span class=\"debug_info notes\">".$dato_json."</span>";
+					}
+					break;
+		}
+
+		# Prepare content to show in page
+		tools::prepare_content($html_contenido);
+
+
+		# PRINT HTML
+		print $html_label;
+		print $html_contenido;
+
+
+	print "</div><!-- /css_wrap_iri ".__CLASS__." [tipo:$tipo section_id_matrix:$parent] $label -->"; //wrap
+
+
+	// First test on load element
+	if ($mandatory===true) {
+		echo "<script>component_iri.mandatory('{$id_wrapper}')</script>";
+	}
+
+	# html_delimiter
+	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'out');
+
+?>

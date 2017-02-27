@@ -1,52 +1,53 @@
 <?php
 
-	# VISUALIZADOR HTML	
-	#print "\n<!-- INPUT_TEXT [tipo:$tipo id_matrix:$id] -->";
+	# VIEW HTML	
 
-	print "\n<div class=\"wrap_component css_wrap_input_text\" id=\"wrap_{$tipo}\">";
+	print "<div class=\"wrap_component css_wrap_input_text\" id=\"wrap_{$tipo}\">";
 	
-	# ETIQUETA (LABEL)
+	# LABEL
 	$html_label = component_common_draw::draw_label($this);
 	
-	# CONTENIDO (INPUT)
-	$html_contenido = '';
-	switch($permissions) {
-			
-		case 0	:	$html_contenido .= "";
-					break;
-						
+	# CONTENT
+	$html_content = '';
+	switch(true) {
+
 		case ($permissions>=1) :
+				# COMPARISON OPERATORS
+				$html_content .= operator::get_search_comparison_operators_html($tipo,$ar_comparison_operators);
 
-					# COMPARISON OPERATORS
-					$html_contenido .= operator::get_search_comparison_operators_html($tipo,$ar_comparison_operators);
+				# INPUT 
+				#$html_content .= "<span id=\"search_component_$tipo\">";
 
-					# INPUT 
-					#$html_contenido .= "<span id=\"search_component_$tipo\">";
+				$html_content .= " <input class=\"css_input_text_search\" type=\"text\"
+				name=\"{$search_input_name}\"
+				data-tipo=\"{$tipo}\"
+				value=\"\"
+				title=\"$html_title\"
+				/>";
+				
+				#$html_content .= "</span>";
 
-					$html_contenido .= "\n <input class=\"css_input_text_search\" type=\"text\"
-					name=\"{$search_input_name}\"
-					data-tipo=\"{$tipo}\"
-					value=\"{$dato}\"
-					title=\"$html_title\"
-					/>";
+				# LOGICAL OPERATORS
+				$html_content .= operator::get_search_logical_operators_html($tipo,$ar_logical_operators);
+				
+				if(SHOW_DEBUG===true) {
+					$html_content .= "<span class=\"debug_info\">$search_input_name</span>";
+				}
+				break;
+		default:
+			$html_content .= label::get_label("sin_acceso");
+
+	}//end switch($permissions)
 					
-					#$html_contenido .= "</span>";
-
-					# LOGICAL OPERATORS
-					$html_contenido .= operator::get_search_logical_operators_html($tipo,$ar_logical_operators);
-					
-											
-	}//end switch($permissions) 
-
 
 	# Prepare content to show in page
-	tools::prepare_content($html_contenido);	
+	tools::prepare_content($html_content);
 	
 	
 	# PRINT HTML
 	print $html_label;
-	print $html_contenido;
+	print $html_content;
 	
 	
-	print "\n</div>\n\n"; //wrap
+	print "</div>"; //wrap
 ?>

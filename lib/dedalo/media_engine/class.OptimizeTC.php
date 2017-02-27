@@ -24,8 +24,6 @@
 ************************************************************************/
 
 class OptimizeTC {
-
-
 	
 	
 	// ******  AJUSTE TC'S VIRTUALES CALCULADOS HACIENDO LA MEDIA   ******* //
@@ -53,7 +51,7 @@ class OptimizeTC {
 			# Posición del TC anterior		
 			$frAnterior = substr($texto, 0, $indexPos); # fr desde inicio (0) hasta la pos de indexIN
 			$tcLastPos 	= strrpos($frAnterior, "[TC_" ); # pos abs del último tc en el fragmento anterior al indexIn (por tanto es el TC anterior al indexIN) 
-			$prevTC 	= substr($frAnterior, $tcLastPos +4, 8); # valor tc (tipo 00:20:14)
+			$prevTC 	= substr($frAnterior, $tcLastPos +4, 12); # valor tc (tipo 00:20:14.333)
 			$dif 		= $indexPos - $tcLastPos ;
 			
 		if($dif < $margen && $dif > 0) {
@@ -67,7 +65,7 @@ class OptimizeTC {
 			$frPosterior 	= substr($texto, $indexPos ); # fr desde indexIn hasta el final
 			$tcFirstPos 	= strpos($frPosterior, "[TC_" ); # pos del primer tc encontrado
 			$nextTCposAbs	= $indexPos + $tcFirstPos ;
-			$nextTC 		= substr($frPosterior, $tcFirstPos +4, 8); # valor tc (tipo 00:20:14)
+			$nextTC 		= substr($frPosterior, $tcFirstPos +4, 12); # valor tc (tipo 00:20:14.323)
 			$dif 			= $nextTCposAbs - $indexPos ;
 			
 			if( $dif < $margen && $dif > 0) {
@@ -88,7 +86,7 @@ class OptimizeTC {
 				}else{	
 					#$frMedio = substr($texto, $tcPrevPosAbs+16, $difTC); 
 					#$chars = strlen($frMedio);
-					
+				
 					# calculamos el n de segundos entre tc anterior y posterior
 					$prevTCseg 	= self::TC2seg($prevTC);
 					$nextTCseg 	= self::TC2seg($nextTC);
@@ -243,7 +241,7 @@ class OptimizeTC {
 				$dif 		= $indexPos - $tcLastPos ;
 
 			}else{
-				$prevTC 	= '00:00:00';
+				$prevTC 	= '00:00:00.000';
 				$dif=0;
 			}			
 			#dump( substr($frAnterior, $tcLastPos -10, 188) , ' prevTC ++  **'.to_string());
@@ -300,7 +298,8 @@ class OptimizeTC {
 					$difSeg 	= $nextTCseg -$prevTCseg ;
 					
 					# calculamos cuantos segundos ocupa un caracter
-					@ $segChar 	= $difSeg / $difTCchar ;
+					#@ $segChar 	= $difSeg / $difTCchar ;
+					$segChar 	= $difTCchar>0 ? ($difSeg / $difTCchar) : 0 ;
 					
 					# calculamos los caracteres entre en prevTC y el index IN
 					$charPrevTCindexIn =  strlen( substr($texto, $tcPrevPosAbs+16, ($indexPos - $tcPrevPosAbs) ) ); 
@@ -447,7 +446,7 @@ class OptimizeTC {
 		$segundos 	= $tcTrozos[2];
 		$minutos 	= $tcTrozos[1];
 		$horas 		= $tcTrozos[0];
-		if($tipo=='tcin'){
+		if($tipo==='tcin'){
 			if($segundos >= $margen){
 			  $segundos = $segundos  - $margen ;
 			}else{
@@ -455,7 +454,7 @@ class OptimizeTC {
 			  $segundos	= 59 ;
 			}
 		}
-		if($tipo=='tcout'){
+		if($tipo==='tcout'){
 		  if($segundos <= 55){
 			$segundos 	= $segundos + $margen ;
 		  }else{
@@ -501,24 +500,24 @@ class OptimizeTC {
 	public static function TC2seg($tc) {
 
 		$tc = str_replace( array('[TC_','_TC]'), '', $tc);
-		
+
 		$totalSegundos = 0;
-		
+
 		$t = explode(':',$tc);
-		
+		$t_ms = explode('.',$tc);
 		if(is_array($t)) {
 			
-			$horas		= 0;	if(isset($t[0]))	$horas		= $t[0];
-			$minutos	= 0;	if(isset($t[1]))	$minutos	= $t[1];
-			$segundos	= 0;	if(isset($t[2]))	$segundos 	= $t[2];
-			
-			$totalSegundos 	= ($horas * 3600) + ($minutos * 60) + $segundos ;
+			$horas		= 0;	if(isset($t[0]))	$horas		= (int)$t[0];
+			$minutos	= 0;	if(isset($t[1]))	$minutos	= (int)$t[1];
+			$segundos	= 0;	if(isset($t[2]))	$segundos 	= (int)$t[2];
+			$mseconds 	= 0; 	if(isset($t_ms[1]))	$mseconds 	= (int)$t_ms[1];
+	
+			$totalSegundos 	= floatval(($horas * 3600) + ($minutos * 60) + $segundos .'.'. $mseconds ) ;
 		}
-		
 		return $totalSegundos ;
 	}	
 	
-	# convierte el valor en segundos a formato TC. Tipo 322 -> 00:05:22
+	# convierte el valor en segundos a formato TC. Tipo 322.342 -> 00:05:22.342
 	public static function seg2tc($seg)	{	
 		
 		if (strpos($seg, ':')!==false) {
@@ -526,27 +525,28 @@ class OptimizeTC {
 			return false;
 		}
 
-		$horas = $seg / 3600 ;
+		$horas = (int)$seg / 3600 ;
 		if($horas<1){
 			$horas = 0 ;
 		}else{
 			$horas = floor($horas);
-			$seg = $seg - ($horas * 3600);
+			$seg = (int)$seg - ($horas * 3600);
 		}
-		$minutos = ($seg / 60) ;
+		$minutos = ((int)$seg / 60) ;
 		if($minutos<1){
 			$minutos = 0 ;
 		}else{
 			$minutos = floor($minutos);
-			$seg = $seg - ($minutos * 60);
+			$seg = (int)$seg - ($minutos * 60);
 		}
 		$segundos = floor($seg) ;
+		$mseconds = (int)(($seg - $segundos)*1000);
 		# format 00
 		$horas 		= str_pad($horas, 2, '0', STR_PAD_LEFT);
 		$minutos 	= str_pad($minutos, 2, '0', STR_PAD_LEFT);
 		$segundos 	= str_pad($segundos, 2, '0', STR_PAD_LEFT);
-		$tc 		= $horas .':'. $minutos. ':'. $segundos ;
-
+		$mseconds 	= str_pad($mseconds, 3, '0', STR_PAD_LEFT);
+		$tc 		= $horas .':'. $minutos. ':'. $segundos . '.' . $mseconds;
 		return $tc ;
 	}
 
@@ -577,7 +577,7 @@ class OptimizeTC {
 			$tc = self::seg2tc($time);
 		}	
 
-		return $tc . '.000' ;
+		return $tc; //. '.000' ;
 	}
 		
 		

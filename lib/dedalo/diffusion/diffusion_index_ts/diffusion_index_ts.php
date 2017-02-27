@@ -5,11 +5,11 @@
 	# CONTROLLER
 	require_once(DEDALO_LIB_BASE_PATH .'/media_engine/class.OptimizeTC.php');
 
-	$terminoID 				= $this->terminoID;	
+	#$terminoID 				= $this->terminoID;	
 	$ar_section_top_tipo 	= $this->get_ar_section_top_tipo();
+		#dump($ar_section_top_tipo,'$ar_section_top_tipo'); die();
 	$ar_diffusion_map 		= $this->get_ar_diffusion_map_index_ts($ar_section_top_tipo);
-		#dump($ar_section_top_tipo,'$ar_section_top_tipo');
-		#dump($ar_diffusion_map,'$ar_diffusion_map');
+		#dump($ar_diffusion_map,'$ar_diffusion_map'); die();
 
 	#$layout_map = $this->get_layout_map('oh1');
 		#dump($layout_map,'$layout_map 2');
@@ -49,7 +49,7 @@
 					#dump($current_head_elements,'$current_head_elements');
 
 					$RecordObj_dd 	= new RecordObj_dd($head_element_tipo);
-					$current_lang 	= $RecordObj_dd->get_traducible()=='si' ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;					
+					$current_lang 	= $RecordObj_dd->get_traducible()==='si' ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;					
 					$propiedades 	= $RecordObj_dd->get_propiedades();
 					$propiedades 	= json_decode($propiedades);
 						#dump($propiedades, ' propiedades ++ '.to_string());						

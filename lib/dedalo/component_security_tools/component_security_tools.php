@@ -26,7 +26,7 @@
 	
 	$file_name				= $modo;
 	
-	
+	if($permissions===0) return null;
 	
 	switch($modo) {
 

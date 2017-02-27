@@ -268,8 +268,8 @@ class AVPlayer extends Accessors {
 								$('#' + node.id + '-mode').html('mode: ' + player.pluginType);
 								$('#wrap_{$this->playerID}').fadeIn(800);
 							},
-							error: function () { 
-     							alert(error)
+							error: function (evt) {
+     							alert(\"Error on load media\")
     						}
 						});
 					});
@@ -303,7 +303,7 @@ class AVPlayer extends Accessors {
 	
 	# QT PLAYER TYPE
 	protected function get_video_tag_fallback_qt_code() {
-		
+	
 		$html5type  = "type=\"{$this->type}";
 		if($this->codecs) {
 			$html5type .= ";codecs=\'{$this->codecs}\'";
@@ -317,7 +317,7 @@ class AVPlayer extends Accessors {
 
 		if(isset($_GET['subtitles_url'])){
 			$subtitles_url = $_GET['subtitles_url'];
-			$subtitle_track= "<track label=\"English\" kind=\"subtitles\" srclang=\"en\" src=\"$subtitles_url\" default>";
+			$subtitle_track= "<track label=\"Subtitle\" kind=\"subtitles\" srclang=\"en\" src=\"$subtitles_url\" default>";
 		}
 				
 		$html  = "<!-- HTML 5 TAG CODE WITH FALLBACK QUICKTIME PLUG-IN -->\n";

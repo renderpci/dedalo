@@ -91,7 +91,8 @@ function dump($val, $var_name=NULL, $arguments=array()){
 	# PRINT
 	if(SHOW_DEBUG===true) { //
 		#if ($print!=false)
-		print wrap_pre($html) ;
+	print wrap_pre($html);
+		#print trim($html);
 		//echo "<script>console.log('PHP: ".$html."');</script>";
 	}
 
@@ -102,7 +103,8 @@ function dump($val, $var_name=NULL, $arguments=array()){
 	error_log('-->'.$html);
 
 
-	return wrap_pre($html);
+	#return wrap_pre($html);
+	return trim($html);
 }
 
 function wrap_pre($string, $add_header_html=true) {
@@ -115,7 +117,8 @@ function wrap_pre($string, $add_header_html=true) {
 		$html .= '<meta charset="utf-8">';
 		$html .= '</head><body>';
 	}
-	$html .= "<pre class=\"dump\" style=\"min-width:500px;font-family:monospace;color:#4B5D5E;font-size:0.8em;background-color:rgba(217, 227, 255, 0.8);border-radius:5px;padding:10px;position:relative;z-index:1\">";
+	$style = 'tab-size:2;white-space:pre-wrap;overflow:auto;min-width:500px;font-family:monospace;color:#4B5D5E;font-size:0.8em;background-color:rgba(217, 227, 255, 0.8);border-radius:5px;padding:10px;position:relative;z-index:1';
+	$html .= "<pre class=\"dump\" style=\"$style\">";
 	$html .= "<div class=\"icon_warning\"></div>";
 	$html .= stripslashes($string);
 	$html .= "</pre>";
@@ -207,9 +210,9 @@ function exec_time($start, $method=NULL, $result=NULL) {
 function exec_time_unit($start, $unit='ms', $round=3) {
 	$end = start_time();
 	$total = $end - $start;
-	if($unit=='ms') {
+	if($unit==='ms') {
 		$total = $total*1000; 
-	}else if($unit=='sec') {
+	}else if($unit==='sec') {
 		$total = $total; 
 	}  
 	return round($total,3);
@@ -241,8 +244,10 @@ function to_string($var=null) {
 		$var = json_encode($var);
 		$var = json_decode($var);
 		return '<pre>'.print_r($var,true).'</pre>';
+	}else if (is_bool($var)) {
+		$var = (int)$var;
 	}	
-	return $var;
+	return "$var";
 }
 
 
@@ -285,12 +290,18 @@ function get_last_modification_date($path, $allowedExtensions=null, $ar_exclude=
 
 # CRIPTO : if (!function_exists('mcrypt_encrypt'))
 function dedalo_encryptStringArray ($stringArray, $key = DEDALO_INFORMACION) {
+
+	#debug_log(__METHOD__." 1 ".to_string( debug_backtrace() ), logger::ERROR);
+	#dump(debug_backtrace(), ' var ++ '.to_string());
 	
 	if (!function_exists('mcrypt_encrypt')) throw new Exception("Error Processing Request: Lib MCRYPT unavailable.", 1);
 	$s = strtr(base64_encode(mcrypt_encrypt(MCRYPT_RIJNDAEL_256, md5($key), serialize($stringArray), MCRYPT_MODE_CBC, md5(md5($key)))), '+/=', '-_,');
 	return $s;
 }
 function dedalo_decryptStringArray ($stringArray, $key = DEDALO_INFORMACION) {
+
+	#debug_log(__METHOD__." 2 ".to_string( debug_backtrace() ), logger::ERROR);
+	#dump(debug_backtrace(), ' var ++ '.to_string());
 	
 	if (!function_exists('mcrypt_encrypt')) throw new Exception("Error Processing Request: Lib MCRYPT unavailable.", 1);
 	$s = rtrim(mcrypt_decrypt(MCRYPT_RIJNDAEL_256, md5($key), base64_decode(strtr($stringArray, '-_,', '+/=')), MCRYPT_MODE_CBC, md5(md5($key))), "\0");
@@ -312,6 +323,40 @@ function dedalo_decryptStringArray ($stringArray, $key = DEDALO_INFORMACION) {
 		return $s;
 		*/
 }
+
+# CRIPTO : if (!function_exists('mcrypt_encrypt'))
+function dedalo_encrypt_openssl($stringArray, $key = DEDALO_INFORMACION) {
+	
+	if (!function_exists('openssl_encrypt')) throw new Exception("Error Processing Request: Lib OPENSSL unavailable.", 1);
+	$encrypt_method = "AES-256-CBC";
+	// iv - encrypt method AES-256-CBC expects 16 bytes - else you will get a warning
+	$secret_iv = DEDALO_ENTITY;
+    $iv = substr(hash('sha256', $secret_iv), 0, 16);
+
+    $output = base64_encode(openssl_encrypt(serialize($stringArray), $encrypt_method, md5(md5($key)), 0, $iv));
+
+	return $output;
+}
+function dedalo_decrypt_openssl($stringArray, $key = DEDALO_INFORMACION) {
+	
+	if (!function_exists('openssl_decrypt')) throw new Exception("Error Processing Request: Lib OPENSSL unavailable.", 1);
+		$encrypt_method = "AES-256-CBC";
+		// iv - encrypt method AES-256-CBC expects 16 bytes - else you will get a warning
+		$secret_iv = DEDALO_ENTITY;
+	    $iv = substr(hash('sha256', $secret_iv), 0, 16);
+
+		$output = openssl_decrypt(base64_decode($stringArray), $encrypt_method, md5(md5($key)), 0, $iv);
+
+	//$s = rtrim(mcrypt_decrypt(MCRYPT_RIJNDAEL_256, md5($key), base64_decode(strtr($stringArray, '-_,', '+/=')), MCRYPT_MODE_CBC, md5(md5($key))), "\0");
+	if ( is_serialized($output) ) {
+		return unserialize($output);
+	}else{
+		debug_log(__METHOD__." Current string is not correctly serialized ! ".to_string(), logger::DEBUG);
+		return false;
+	}
+}
+
+
 
 function is_serialized($str) {
 	return ($str == serialize(false) || @unserialize($str) !== false);
@@ -483,7 +528,7 @@ function sanitize_output($buffer) {
 }
 
 # SANITIZE_QUERY
-function sanitize_query(&$strQuery) {
+function sanitize_query($strQuery) {
 	return trim(str_replace("\t", "", $strQuery));
 }
 
@@ -567,6 +612,8 @@ function log_messages($vars,$level='error') {
 	$GLOBALS['log_messages'] .= "<div class=\"$level\">$html</div>";
 }
 
+
+
 /**
 * BUILD_SORTER
 * @param string key
@@ -583,15 +630,78 @@ function build_sorter($key) {
 }
 
 
+/**
+* SEARCH_STRING_IN_ARRAY
+* Searchs with preg_match a string match in array of strings
+* @return array $matches
+*	Array of coincidences about search string
+*/
 function search_string_in_array($array, $search_string) {
-		
+	
+	# Coverts string to "all" combinations of accents like gàvia to g[aàáâãäå]v[iìíîï][aàáâãäå]
+	$string = add_accents($search_string);
+	
 	$matches = array();
 	foreach($array as $k=>$v) {
-		if(preg_match("/\b$search_string/i", $v)) {
+		$v = mb_strtolower($v);
+		if(preg_match("/\b".$string."/ui", $v)) {	// u
 			$matches[$k] = $v;
 		}
 	}
 	return $matches;
+}
+
+
+/**
+* ADD_ACCENTS
+* Converts string to lowervase string containing various combinations to simplify preg_match searches
+* like gàvia to g[aàáâãäå]v[iìíîï][aàáâãäå]
+*/
+function add_accents($string) {
+    $array1 = array('a', 'c', 'e', 'i' , 'n', 'o', 'u', 'y');
+    $array2 = array('[aàáâãäå]','[cçćĉċč]','[eèéêë]','[iìíîï]','[nñ]','[oòóôõö]','[uùúûü]','[yýÿ]');
+
+    return str_replace($array1, $array2, mb_strtolower($string));
+}
+
+
+
+/**
+* CONVERT_SPECIAL_CHARS
+
+function convert_special_chars($string) {
+    $array1 = array('ñ');
+    $array2 = array('n');
+
+    $final_string = str_replace($array1, $array2, $string);
+    #debug_log(__METHOD__." final_string: ".to_string($final_string), logger::ERROR);
+
+    return $final_string;
+}
+*/
+
+
+/**
+* ARRAY_GET_BY_KEY
+*/
+function array_get_by_key($array, $key) {
+
+	$results = array();
+	array_get_by_key_r($array, $key, $results);
+	return $results;
+}
+function array_get_by_key_r($array, $key, &$results) {
+    if (!is_array($array)) {
+        return;
+    }
+
+    if (isset($array[$key])) {
+        $results[] = $array[$key];
+    }
+
+    foreach ($array as $subarray) {
+        array_get_by_key_r($subarray, $key, $results);
+    }
 }
 
 

@@ -242,7 +242,7 @@ class ImageObj extends MediaObj {
 		if($source_pixels_width==0 || $source_pixels_height==0) return null;
 
 		# THUMBS. Para generar thumbs, las medidas son fijas
-		if($target_quality==DEDALO_IMAGE_THUMB_DEFAULT) {
+		if($target_quality===DEDALO_IMAGE_THUMB_DEFAULT) {
 			return array($width=102,$height=57);	# Original 102x57
 		}		
 

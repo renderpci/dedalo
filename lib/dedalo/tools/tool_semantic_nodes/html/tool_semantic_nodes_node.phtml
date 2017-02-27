@@ -15,12 +15,22 @@
 	}
 
 	$ds_html .= "<div class=\"icon_bs link new_semantic_node\" onclick=\"tool_semantic_nodes.open_ts_window(this)\"
-	data-locator_section_tipo=\"{$current_locator->section_tipo}\"
-	data-locator_section_id=\"{$current_locator->section_id}\"
+	data-portal_locator_section_tipo=\"{$current_locator->section_tipo}\"
+	data-portal_locator_section_id=\"{$current_locator->section_id}\"
 	data-ds_key=\"{$ds_key}\"
 	data-semantic_wrapper_id=\"{$semantic_wrapper_id}\"
+	data-component_name=\"tool_semantic_nodes\"
+	data-hierarchy_types='[\"4\"]'
+	data-hierarchy_sections=\"\"
 	></div>";
-
+	/*
+		$ds_html .= "<div class=\"button_add relation_related_add_from_tree_button\"
+			data-id_wrapper=\"$semantic_wrapper_id\"
+			data-component_name=\"tool_semantic_nodes\"
+			data-hierarchy_types='[\"4\"]'
+			data-hierarchy_sections=\"\"
+			onclick=\"component_common.open_ts_window(this)\"></div>";
+	*/
 	if (!empty($ds_element)) {
 		#dump($current_locator->ds, '$current_locator->ds ++ '.to_string());		
 			
@@ -28,25 +38,23 @@
 
 		foreach ((array)$ds_element as $locator_ds) {
 
-			$ds_terminoID = component_autocomplete_ts::get_terminoID_by_locator($locator_ds); // nota ahora es un terminoID pero cambiará su formato		
-		
-			$termino = RecordObj_ts::get_termino_by_tipo($ds_terminoID, DEDALO_DATA_LANG, true);
-				#dump($termino, ' termino ++ '.to_string(DEDALO_DATA_LANG));
+			$termino = ts_object::get_term_by_locator( $locator_ds, $lang=DEDALO_DATA_LANG, $from_cache=true );
+			$locator_ds_json = json_encode($locator_ds);
 
 			$ds_html .= "<li>";
 
 			$ds_html .= "<div class=\"icon_bs link delete_semantic_node\" onclick=\"tool_semantic_nodes.remove_index(this,event)\"
-			data-termino_id=\"$ds_terminoID\"
-			data-locator_section_tipo=\"{$current_locator->section_tipo}\"
-			data-locator_section_id=\"{$current_locator->section_id}\"
+			data-portal_locator_section_tipo=\"{$current_locator->section_tipo}\"
+			data-portal_locator_section_id=\"{$current_locator->section_id}\"
 			data-ds_key=\"{$ds_key}\"
+			data-locator_ds='{$locator_ds_json}'
 			data-semantic_wrapper_id=\"{$semantic_wrapper_id}\"
 			></div>";
 
 			$ds_html .= "<span>";
 			$ds_html .= $termino;
 			if(SHOW_DEBUG) {
-				$ds_html .= " [$ds_terminoID]";
+				$ds_html .= ' [' . $locator_ds->section_tipo.'_'.$locator_ds->section_id . ']';
 			}
 			$ds_html .= "</span>";
 
@@ -60,4 +68,5 @@
 
 
 	echo $ds_html;
+
 ?>

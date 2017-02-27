@@ -4,20 +4,18 @@
 	$tool_name 		= get_class($this);
 	$section_tipo 	= $this->section_tipo;
 	$section_id 	= $this->section_id;
-	$modo 			= $this->modo;
-
-	
-	# TOOL CSS / JS MAIN FILES
-	#css::$ar_url[] = DEDALO_LIB_BASE_URL."/tools/".$tool_name."/css/".$tool_name.".css";
-	js::$ar_url[]  = DEDALO_LIB_BASE_URL."/tools/".$tool_name."/js/".$tool_name.".js";
-	
+	$modo 			= $this->modo;	
 
 	# Prevent show button in page tool mode
 	if(isset($_GET['m']) && strpos($_GET['m'],'tool')!==false ) {
 		return null;
 	}
 
-	
+	# TOOL CSS / JS MAIN FILES
+	#css::$ar_url[] = DEDALO_LIB_BASE_URL."/tools/".$tool_name."/css/".$tool_name.".css";
+	js::$ar_url[]  = DEDALO_LIB_BASE_URL."/tools/".$tool_name."/js/".$tool_name.".js";
+
+		
 	switch ($modo) {
 
 		case 'button':			

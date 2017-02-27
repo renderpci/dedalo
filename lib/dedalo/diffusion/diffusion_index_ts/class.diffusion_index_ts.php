@@ -4,26 +4,32 @@
 * Genera la visualización de los fragmentos indexados con el término actual. Se muestra en el Tesauro, al pulsar sobre los botones 'U'
 * Recupera los locators que apuntan al término actual, los agrupa por tipo y los muestra en un listado con diversa información (Código,Proyecto,Título,Municipio,etc)
 */
-
-
 class diffusion_index_ts extends diffusion {
 	
-	public $terminoID;
+	#public $terminoID;
 	public $ar_locators;
 	public $ar_id_section;
+
+	// Term section tipo section id
+	public $section_tipo;
+	public $section_id;
+	public $component_tipo;
 
 	/**
 	* CONSTRUCT
 	* @param string $terminoID Like 'ts53'
 	*/
-	function __construct( $terminoID=null ) {
+	#function __construct( $terminoID=null ) {
+	function __construct( $section_tipo, $section_id, $component_tipo ) {
 
-		if (empty($terminoID)) {
-			debug_log(__METHOD__." Error Processing Request. empty terminoID ".to_string($terminoID), logger::DEBUG);
-			return false;			
-		}
+		#if (empty($terminoID)) {
+		#	debug_log(__METHOD__." Error Processing Request. empty terminoID ".to_string($terminoID), logger::DEBUG);
+		#	return false;			
+		#}
 
-		$this->terminoID = $terminoID;
+		$this->section_tipo 	= $section_tipo;
+		$this->section_id 		= $section_id;
+		$this->component_tipo 	= $component_tipo;
 
 		# Fix ar_locators
 		#$this->ar_locators = $this->get_ar_locators();
@@ -34,7 +40,7 @@ class diffusion_index_ts extends diffusion {
 
 
 	/**
-	* get_ar_diffusion_map_index_ts : Overrides diffusion method
+	* GET_AR_DIFFUSION_MAP_INDEX_TS : Overrides diffusion method
 	* Specific for thesaurus only
 	*/
 	public function get_ar_diffusion_map_index_ts( $ar_section_top_tipo=array() ) {
@@ -43,7 +49,7 @@ class diffusion_index_ts extends diffusion {
 			return $this->ar_diffusion_map;
 		}
 
-		if(SHOW_DEBUG) $start_time = start_time();
+		if(SHOW_DEBUG===true) $start_time = start_time();
 
 		$ar_diffusion_map = array();
 
@@ -66,7 +72,7 @@ class diffusion_index_ts extends diffusion {
 				
 				# ar_current_section_tipo : Verify
 				if ( empty($ar_current_section_tipo[0]) ) {
-					if(SHOW_DEBUG) {
+					if(SHOW_DEBUG===true) {
 						$ar_related = (array)RecordObj_dd::get_ar_terminos_relacionados($diffusion_section_tipo);
 						#dump($ar_related, 'ar_related termns');
 						foreach ($ar_related as $key => $value)
@@ -120,13 +126,12 @@ class diffusion_index_ts extends diffusion {
 				
 			}#end foreach ($ar_diffusion_section as $diffusion_section_tipo
 
-		if(SHOW_DEBUG) {
+		if(SHOW_DEBUG===true) {
 			#dump( $ar_diffusion_map, 'ar_diffusion_map' );
 			#echo "<span style=\"position:absolute;right:30px;margin-top:-25px\">".exec_time($start_time)."</span>";
 		}
 
-		return $this->ar_diffusion_map = $ar_diffusion_map;
-		
+		return $this->ar_diffusion_map = $ar_diffusion_map;		
 	}//end get_ar_diffusion_map_index_ts
 
 
@@ -138,9 +143,9 @@ class diffusion_index_ts extends diffusion {
 	*/
 	public function get_ar_locators() {
 
-		if (isset($this->ar_locators)) {
-			return $this->ar_locators;
-		}
+		#if (isset($this->ar_locators)) {
+		#	return $this->ar_locators;
+		#}
 
 		/* Es un poco más rápido a través de la búsqueda
 			$matrix_table 			= RecordObj_descriptors::get_matrix_table_from_tipo( $this->terminoID );
@@ -149,10 +154,19 @@ class diffusion_index_ts extends diffusion {
 				#dump($ar_indexations, ' ar_indexations ++ '.to_string());
 			*/
 
-		$ar_indexations = Tesauro::get_ar_indexations( $this->terminoID );
+		#$ar_indexations = Tesauro::get_ar_indexations( $this->terminoID );
 			#dump($ar_indexations,'$ar_indexations');
 
-		return $this->ar_locators = $ar_indexations;
+		$component 		= component_common::get_instance('component_relation_index',
+														 $this->component_tipo,
+														 $this->section_id,
+														 'list',
+														 DEDALO_DATA_NOLAN,
+														 $this->section_tipo);
+
+		$ar_locators = $component->get_dato();
+
+		return (array)$ar_locators;
 	}
 
 
@@ -209,7 +223,7 @@ class diffusion_index_ts extends diffusion {
 				$component_filter_tipo  = section::get_ar_children_tipo_by_modelo_name_in_section($section_real_tipo, 'component_filter')[0];
 				
 				if (empty($component_filter_tipo)) {
-					if(SHOW_DEBUG) {
+					if(SHOW_DEBUG===true) {
 						throw new Exception("Error Processing Request. component_filter_tipo not found in section tipo: $section_top_tipo", 1);
 					}
 					continue;	// Skip this				
@@ -245,7 +259,7 @@ class diffusion_index_ts extends diffusion {
 
 		}//end if( ($is_global_admin = component_security_administrator::is_global_admin($user_id))!==true ) {
 		
-		if(SHOW_DEBUG) {
+		if(SHOW_DEBUG===true) {
 			$total=round(microtime(1)-$start_time,3);
 			$slow = 0.125;
 			if ($total>$slow) {
@@ -254,7 +268,6 @@ class diffusion_index_ts extends diffusion {
 		}	
 
 		return $ar_section_top_tipo;
-
 	}//end get_ar_section_top_tipo
 
 
@@ -301,7 +314,6 @@ class diffusion_index_ts extends diffusion {
 		}//end if (!empty($_SESSION['dedalo4']['config']['search_options'][$search_options_session_key]))		
 
 		$rows_data = search::get_records_data($options);
-
 	}#end get_list_data
 
 

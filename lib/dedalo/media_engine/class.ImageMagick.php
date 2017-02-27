@@ -116,7 +116,7 @@ class ImageMagick {
 			if(!mkdir($folder_path, 0777,true)) {
 				throw new Exception(" Error on read or create dd_thumb directory. Permission denied");
 			}
-		}
+		}		
 
 		# Dimensions (original 102x57)
 		#$dimensions = (string)"102x90";
@@ -219,10 +219,20 @@ class ImageMagick {
 		}
 
 
-		# IDENTIFY : Get info aboout source file Colorspace
+		# convert 21900.jpg json: : Get info aboout source file Colorspace
 		#$colorspace_info  = shell_exec( MAGICK_PATH . "identify -verbose " .$source_file." | grep \"Colorspace:\" ");
-		$colorspace_info  = shell_exec( MAGICK_PATH . "identify -format '%[colorspace]' " .$source_file. "[0]" );	//-format "%[EXIF:DateTimeOriginal]"
+		$colorspace_info  = shell_exec( MAGICK_PATH . "identify -format '%[colorspace]' -quiet " .$source_file. "[0]" );	//-format "%[EXIF:DateTimeOriginal]"
 			#dump($colorspace_info,'colorspace_info');
+
+		# Layers info
+		$layers_file_info = (array)self::get_layers_file_info( $source_file );
+		$ar_valid_layers  = array();
+		foreach ($layers_file_info as $layer_key => $layer_type) {
+			if ( strtoupper($layer_type) !== 'REDUCEDIMAGE' ) {
+				$ar_valid_layers[] = (int)$layer_key;
+			}
+		}
+		$source_file_with_layers = '"'. $source_file . '"[' . implode(',', $ar_valid_layers) . ']';
 
 		#
 		# FLAGS : Command flags
@@ -254,11 +264,14 @@ class ImageMagick {
 				$flags 			.= " -flatten";
 				break;
 		}
+
+		$flags .= " -quiet "; // Always add 
 		
 
-		$command = MAGICK_PATH . "convert \"$source_file\" $flags \"$target_file\" ";	# -negate -profile Profiles/sRGB.icc -colorspace sRGB -colorspace sRGB 
+		$command = MAGICK_PATH . "convert $source_file_with_layers $flags \"$target_file\" ";	# -negate -profile Profiles/sRGB.icc -colorspace sRGB -colorspace sRGB 
 		#$command = 'nice -n 19 '.$command;
 			#if(SHOW_DEBUG) dump($command,'ImageMagick command');
+		debug_log(__METHOD__." Command ".to_string($command), logger::DEBUG);
 
 
 		# EXE COMMAND
@@ -275,15 +288,57 @@ class ImageMagick {
 		}
 
 		return $result;
+	}//end convert
 
-	}#end convert
 
 
+	/**
+	* GET_IMAGE_FILE_INFO
+	* @return 
+	*//*
+	public static function get_image_file_info( $source_file ) {
+					# identify -format "{\"%[scene]\":\"%[tiff:subfiletype]\"}\n" -quiet 21900.tif
+		$commnad = MAGICK_PATH . "convert $source_file json: ";
+	    $output  = json_decode( shell_exec($command) );  
+	   		#dump($output, ' output ++ '.to_string( $command ));
+
+	   	return $output;
+	}//end get_image_file_info
+	*/
+
+
+	/**
+	* GET_LAYERS_FILE_INFO
+	* @return array $ar_layers
+	*/
+	public static function get_layers_file_info( $source_file ) {
+		# identify -format "{\"%[scene]\":\"%[tiff:subfiletype]\"}\n" -quiet 21900.tif
+		$command = MAGICK_PATH . 'identify -format "%[scene]:%[tiff:subfiletype]\n" -quiet '. $source_file;
+	    $output  = shell_exec($command); 
+	   		#dump($output, ' output ++ '.to_string( $command ));
+	    	#debug_log(__METHOD__." COMMAND ".to_string($command), logger::DEBUG);
+	
+	   	$output  = trim($output);
+	    $ar_part = explode("\n", $output);
+	    $ar_layers = array();
+	    foreach ($ar_part as $value) {
+
+	    	$ar_part2 = explode(":", $value);
+
+	    	$layer_key 	= $ar_part2[0];
+	    	$layer_type = $ar_part2[1];
+
+	    	$ar_layers[$layer_key] = $layer_type;
+	    }
+		#dump($ar_layers, ' $ar_layers ++ '.to_string());
+
+	   	return (array)$ar_layers;
+	}//end get_layers_file_info
 
 
 	
 	
 
 	
-}	
+}//end ImageMagick
 ?>

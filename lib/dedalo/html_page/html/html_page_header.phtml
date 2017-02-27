@@ -6,7 +6,7 @@
 if (login::is_logged()) {
 	
 	switch (true) {
-		case (SHOW_DEBUG===TRUE && DEDALO_DATABASE_CONN=='dedalo4_development' && DEDALO_ENTITY=='development'):
+		case (SHOW_DEBUG===true && DEDALO_DATABASE_CONN==='dedalo4_development' && DEDALO_ENTITY==='development'):
 			$menu_wrapper_css = 'menu_wrapper_debug_development';
 			break;	
 		case (SHOW_DEBUG ):
@@ -38,7 +38,7 @@ if (login::is_logged()) {
 
 			# INSPECTOR : button open / hide sidebar 
 			$caller_id = navigator::get_selected('caller_id');
-			if( empty($caller_id) && $modo=='edit' ) {
+			if( empty($caller_id) && $modo==='edit' ) {
 				echo "<!-- Inspector toggle button -->";
 				#echo "<div id=\"button_toggle_inspector\" class=\"button_in_menu text_unselectable'\" onclick=\"inspector.toggle_sidebar()\">INSPECTOR $caller_id</div>";
 				echo "<div id=\"button_toggle_inspector\" class=\"link'\" title=\"".label::get_label('mostrar_inspector')."\" onclick=\"inspector.toggle_sidebar()\"></div>";
@@ -87,11 +87,14 @@ if (login::is_logged()) {
 			$section_tipo 	= $current_selected_area;
 			$section_name 	= RecordObj_dd::get_termino_by_tipo($section_tipo,DEDALO_APPLICATION_LANG,true);
 			if($section_name  && ( SHOW_DEBUG===true) ) {
-				$current_table 	= common::get_matrix_table_from_tipo($section_tipo);
-				$section_name .= " [$current_table]";
+				$current_modelo_name = RecordObj_dd::get_modelo_name_by_tipo($section_tipo,true);
+				if ($current_modelo_name==='section') {
+					$current_table 	= common::get_matrix_table_from_tipo($section_tipo);
+					$section_name .= " [$current_table]";
+				}				
 			}		
 			echo "<!-- Section label -->";
-			if( !empty($section_tipo) && $modo=='list' ) {
+			if( !empty($section_tipo) && $modo==='list' ) {
 				echo "<div id=\"current_section_label\" class=\"button_in_menu css_label text_unselectable section_label_list \">$section_name</div>";
 			}else if(!empty($section_tipo)) {
 				echo "<div id=\"current_section_label\" class=\"button_in_menu css_label text_unselectable section_label_edit\" title=\"".label::get_label('ir_a_seccion')."\" onclick=\"goto_url('?m=list&t=$section_tipo')\">";				
@@ -110,7 +113,7 @@ if (login::is_logged()) {
 
 		#
 		# DEBUG SECOND LINE
-		if(SHOW_DEBUG) {
+		if(SHOW_DEBUG===true) {
 			/**/
 			$debug_line_html  ='';
 			$debug_line_html .= "<div class=\"debug_line_wrap\">";
@@ -158,7 +161,7 @@ if (login::is_logged()) {
 					}
 
 					# EXPORT BUTTON (ADMIN)
-					if( DEDALO_DATABASE_CONN=='dedalo4_development' && strpos(DEDALO_HOST,'localhost')!==false ) { 
+					if( DEDALO_DATABASE_CONN==='dedalo4_development' && strpos(DEDALO_HOST,'localhost')!==false ) { 
 						$debug_line_html .= "<a href=\"javascript:void(0)\" class=\"\" onclick=\"menu.export_str(this)\">EXPORT</a>";
 					}
 

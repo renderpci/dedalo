@@ -1,10 +1,11 @@
 <?php
 
-	# VISUALIZADOR HTML	
-	
-	print "\n<!-- SECURITY AREAS (CHECK BOX) [tipo:$tipo section_id_matrix:$parent] -->";
+	# VISUALIZADOR HTML
 
-	print "\n<div class=\"wrap_component css_wrap_component_security_areas wrap_component_{$tipo}\" 
+	# html_delimiter
+	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'in');
+
+	print "<div class=\"wrap_component css_wrap_component_security_areas wrap_component_{$tipo}\" 
 	data-tipo=\"{$tipo}\"
 	data-lang=\"{$lang}\"
 	data-parent=\"{$parent}\"
@@ -32,7 +33,7 @@
 		case ($permissions>=1):
 
 				
-				$html_contenido .= "\n <div class=\"security_areas_tree\">";
+				$html_contenido .= " <div class=\"security_areas_tree\">";
 
 				$max_input_vars = ini_get("max_input_vars");
 				if ($max_input_vars<2000) {
@@ -42,10 +43,10 @@
 				}
 				
 				$html_contenido .= $html_tree;
-				$html_contenido .= "\n </div>";	
+				$html_contenido .= " </div>";	
 	
 				if(SHOW_DEBUG) {
-					#$html_contenido .= "\n <span id=\"debugger_{$tipo}\" class=\"css_span_debugger\">{$debugger}</span>";	
+					#$html_contenido .= " <span id=\"debugger_{$tipo}\" class=\"css_span_debugger\">{$debugger}</span>";	
 				}
 				break;							
 	}
@@ -59,13 +60,16 @@
 	print $html_contenido;
 	
 	
-	print "\n</div>\n\n"; //wrap
+	print "</div>"; //wrap
 
 
 	echo "<script>
 			component_security_areas.update_area_childrens_obj_opened();
 			component_security_areas.update_area_access_obj_opened();
-		</script>"
+		</script>";
+		
 
+	# html_delimiter
+	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'out');
 
 ?>

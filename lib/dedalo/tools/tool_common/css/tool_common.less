@@ -40,20 +40,23 @@
 	user-select: none;
 	-webkit-user-select: none;
 	border-radius: 4px;
-	padding: 6px;
+	padding: 5px;
 	padding-right: 8px;
 	padding-left: 8px;
-	margin-top: 1px;
+	//margin-top: 1px;
 	width: auto;
-	min-width: 100px;
+	//min-width: 100px;
 	background-color: rgba(201, 201, 201, 0.3);
-	float: right;
+	//float: right;
+	float: left;
 	}
 	.btn_inside_section_buttons_container::before {
 		content: '';
-		background-image: url("../../../themes/default/glyphicons-halflings.png");
+		//background-image: url("../../../themes/default/glyphicons-halflings.png");
+		background-image: url("../../../themes/default/svg_icons.svg");
+		background-size: 474px 184px;
 		/*background-position: -240px -24px;*/
-		margin-right: 7px;	
+		//margin-right: 7px;	
 		width: 14px;
 		height: 14px;
 	  	float: left; 
@@ -68,10 +71,10 @@
 ---------------------------------------- */
 .tool_time_machine_icon {
 	background-position: -216px -24px;
-	-moz-transform: scaleX(-1);
-    -o-transform: scaleX(-1);
-    -webkit-transform: scaleX(-1);
-    transform: scaleX(-1);
+	//-moz-transform: scaleX(-1);
+    //-o-transform: scaleX(-1);
+    //-webkit-transform: scaleX(-1);
+    //transform: scaleX(-1);
 }
 .tool_lang_icon {
 	background-position: -336px -144px;
@@ -117,6 +120,18 @@
 .tool_import_bibtex_icon {
 	background-position: -240px -170px;
 }
+.tool_import_marc21_icon {
+	background-position: -240px -170px;
+}
+.tool_import_kml_icon {
+	background-position: -240px -170px;
+}
+.tool_import_dedalo_csv_icon {
+	background-position: -240px -170px;
+}
+.tool_note_icon {
+	background-position: -72px -48px;
+}
 .tool_portal_icon {
 	background-position: -264px 0px;
 }
@@ -159,6 +174,24 @@
 	.tool_export:before {
 		background-position: -264px -24px;
 	}
+.tool_print {
+	min-width: auto !important;
+	}
+	.tool_print:before {
+		background-position: -96px -48px;
+	}
+.tool_stats {
+	min-width: auto !important;
+	}
+	.tool_stats:before {
+		background-position: -408px -1px;
+	}
+.button_add_record {
+	min-width: auto !important;
+	}
+	.button_add_record:before {
+		background-position: 0 -96px;
+	}
 
 .tool_current_indexation_icon {
 	background-position: 0px -48px;
@@ -182,7 +215,9 @@
 .tool_subtitles_icon {
 	background-position: -240px -120px;
 }
-
+.tool_tr_print_icon {
+	background-position: -96px -48px;
+}
 
 
 
@@ -270,8 +305,7 @@
 	
 	}
 	#btn_tool_portal_show_full::before {
-		background-position: -240px -24px;
-		background-position: -360px -48px;
+		background-position: -360px -49px;
 	}
 	#btn_tool_portal_show_full:hover {
 		background-color: rgba(201, 201, 201, 1);
@@ -285,7 +319,7 @@
 #button_update_cache {
 	/*opacity: 0.5;*/
 	margin-left: 6px;
-	margin-right: 6px;
+	//margin-right: 6px;
 	}
 	#button_update_cache::before {
 		background-position: -240px -0px;
@@ -311,3 +345,31 @@
 			/* Position/Spacing */
 		  	float: left;
 		}
+
+
+
+/* DEDALO_UPLOAD
+---------------------------------------------------- */
+.dedalo_upload_form {
+	padding: 15px;
+	//background-color: #C2ECFD
+	}
+	.dedalo_upload_form input[type=file] {
+		padding-top: 10px;
+		padding-bottom: 10px;
+	}
+	.dedalo_upload_form .dedalo_upload_info_div {
+		padding: 5px;
+		color: #7F7F7F;
+	}
+	.dedalo_upload_form .dedalo_upload_msg {
+		padding: 5px;
+		padding-left: 0;
+		font-size: 1.2em;
+		line-height: 2.4em;
+		}
+		.dedalo_upload_form .dedalo_upload_msg span {
+			margin-left: 0;
+		}
+
+

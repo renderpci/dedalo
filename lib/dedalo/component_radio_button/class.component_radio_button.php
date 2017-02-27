@@ -6,6 +6,7 @@
 
 class component_radio_button extends component_common {
 
+
 	# Overwrite __construct var lang passed in this component
 	protected $lang = DEDALO_DATA_NOLAN;
 
@@ -19,7 +20,7 @@ class component_radio_button extends component_common {
 		parent::__construct($tipo, $parent, $modo, $lang, $section_tipo);
 
 		/*
-		if(SHOW_DEBUG) {
+		if(SHOW_DEBUG===true) {
 			$traducible = $this->RecordObj_dd->get_traducible();
 			if ($traducible=='si') {
 				throw new Exception("Error Processing Request. Wrong component lang definition. This component $tipo (".get_class().") is not 'traducible'. Please fix this ASAP", 1);
@@ -27,6 +28,8 @@ class component_radio_button extends component_common {
 		}
 		*/
 	}
+
+
 
 	# GET DATO : 
 	public function get_dato() {
@@ -37,7 +40,7 @@ class component_radio_button extends component_common {
 			$this->set_dato(array());
 			$this->Save();
 		}
-		if ($dato==null) {
+		if ($dato===null) {
 			$dato=array();
 		}
 		#$dato = json_handler::decode(json_encode($dato));	# Force array of objects instead default array of arrays
@@ -45,25 +48,30 @@ class component_radio_button extends component_common {
 		return (array)$dato;
 	}
 
+
+
 	# SET_DATO
 	public function set_dato($dato) {
-		if (is_string($dato) && strpos($dato, '}')!==false ) { # Tool Time machine case, dato is string
+		if (is_string($dato)) { # Tool Time machine case, dato is string
 			$dato = json_handler::decode($dato);
 		}
-		if(SHOW_DEBUG) {
-			#dump($dato," dato original");
-		}
+		
 		if (is_object($dato)) {
 			$dato = array($dato);
+		}else if (is_string($dato)) {
+			$dato = array();
 		}
+		
 		parent::set_dato( (array)$dato );
 	}
+
+
 
 	/* OLD
 	# GET DATO : Format "3"
 	public function get_dato() {
 		$dato = parent::get_dato();		
-		if(SHOW_DEBUG) {
+		if(SHOW_DEBUG===true) {
 			if (is_array($dato) || is_object($dato)) {
 				dump($dato,"dato - parent:".$this->get_parent()." tipo:".$this->get_tipo());	dump($this,"this");
 				throw new Exception("Error Processing Request. Este componente contiuene un tipo de dato no válido (debe ser string)", 1);				
@@ -72,22 +80,25 @@ class component_radio_button extends component_common {
 		return (string)$dato;
 	}
 
+
+
 	# SET_DATO
 	public function set_dato($dato) {
 		parent::set_dato( (string)$dato );
 	}
 	*/
 	
+
+
 	# GET VALUE . DEFAULT IS GET DATO . OVERWRITE IN EVERY DIFFERENT SPECIFIC COMPONENT
 	public function get_valor( $lang=DEDALO_DATA_LANG ) {
 
 		if (isset($this->valor)) {
-			if(SHOW_DEBUG) {
+			if(SHOW_DEBUG===true) {
 				//error_log("Catched valor !!! from ".__METHOD__);
 			}
 			return $this->valor;
 		}
-
 		
 
 		switch ($this->modo) {
@@ -110,13 +121,10 @@ class component_radio_button extends component_common {
 				}
 				break;
 			
-			default:
-				
+			default:				
 				
 				# Always run list of values
 				$ar_list_of_values	= $this->get_ar_list_of_values( $lang, null, false); # Importante: Buscamos el valor en el idioma actual
-				
-			
 				
 				$dato = $this->get_dato();
 				if (empty($dato)) {
@@ -126,14 +134,14 @@ class component_radio_button extends component_common {
 				# Test dato format (b4 changed to object)
 				foreach ($dato as $key => $value) {
 					if (!is_object($value)) {
-						if(SHOW_DEBUG) {
+						if(SHOW_DEBUG===true) {
 							dump($dato," dato");						
 							trigger_error(__METHOD__." Wrong dato format. OLD format dato in $this->label $this->tipo .Expected object locator, but received: ".gettype($value) .' : '. print_r($value,true) );
 						}
 						return $this->valor = null;
 					}
 				}
-				
+					
 
 				foreach ($ar_list_of_values->result as $locator => $rotulo) {
 
@@ -146,8 +154,7 @@ class component_radio_button extends component_common {
 				}
 				break;
 				
-		}#end switch		
-
+		}#end switch
 	}#end get_valor
 
 
@@ -170,14 +177,14 @@ class component_radio_button extends component_common {
 		$termonioID_related = array_values($relacionados[0])[0];
 		$RecordObjt_dd = new RecordObj_dd($termonioID_related);
 
-		if($RecordObjt_dd->get_traducible() =='no'){
+		if($RecordObjt_dd->get_traducible() === 'no'){
 			$lang = DEDALO_DATA_NOLAN;
 		}else{
 			$lang = DEDALO_DATA_LANG;
 		}
 		return $lang;
-
 	}
+
 
 
 	/**
@@ -193,13 +200,9 @@ class component_radio_button extends component_common {
 			$this->set_dato( json_decode($valor) );	// Use parsed json string as dato
 		}
 
-		$valor = $this->get_valor($lang);
+		$valor = $this->get_valor($lang);		
 		
-		if(SHOW_DEBUG) {
-			#return "RADIO_BUTTON: ".$valor;
-		}
 		return $valor;
-
 	}#end get_valor_export
 
 
@@ -213,6 +216,8 @@ class component_radio_button extends component_common {
 	public function build_search_comparison_operators( $comparison_operators=array('=','!=') ) {
 		return (object)parent::build_search_comparison_operators($comparison_operators);
 	}//end build_search_comparison_operators
+
+
 
 	/**
 	* GET_SEARCH_QUERY
@@ -238,18 +243,18 @@ class component_radio_button extends component_common {
 		$json_field = 'a.'.$json_field; // Add 'a.' for mandatory table alias search
 		
 		switch (true) {
-			case $comparison_operator=='!=':
+			case $comparison_operator==='!=':
 				$search_query = " ($json_field#>'{components,$search_tipo,$tipo_de_dato_search,". $current_lang ."}' @> '[$search_value]'::jsonb)=FALSE ";
 				break;
 
-			case $comparison_operator=='=':
+			case $comparison_operator==='=':
 			default:
 				$search_query = " $json_field#>'{components,$search_tipo,$tipo_de_dato_search,". $current_lang ."}' @> '[$search_value]'::jsonb ";
 				break;
 			
 		}
 		
-		if(SHOW_DEBUG) {
+		if(SHOW_DEBUG===true) {
 			$search_query = " -- filter_by_search $search_tipo ". get_called_class() ." \n".$search_query;
 			#dump($search_query, " search_query for search_value: ".to_string($search_value)); #return '';
 			#dump($comparison_operator, '$comparison_operator ++ '.to_string());
@@ -274,7 +279,7 @@ class component_radio_button extends component_common {
 	*
 	* @return string $list_value
 	*/
-	public static function render_list_value($value, $tipo, $parent, $modo, $lang, $section_tipo, $section_id) {
+	public static function render_list_value($value, $tipo, $parent, $modo, $lang, $section_tipo, $section_id, $current_locator=null, $caller_component_tipo=null) {
 
 		$component 	= component_common::get_instance(__CLASS__,
 													 $tipo,
@@ -287,8 +292,8 @@ class component_radio_button extends component_common {
 		# Use already query calculated values for speed
 		$ar_records   = (array)json_handler::decode($value);
 		$component->set_dato($ar_records);
-		$component->set_identificador_unico($component->get_identificador_unico().'_'.$section_id); // Set unic id for build search_options_session_key used in sessions
-		
+		$component->set_identificador_unico($component->get_identificador_unico().'_'.$section_id.'_'.$caller_component_tipo); // Set unic id for build search_options_session_key used in sessions
+
 		return  $component->get_valor($lang);		
 	}#end render_list_value
 

@@ -7,23 +7,35 @@
 class component_input_text_large extends component_common {
 
 
-	# GET DATO
+	/**
+	* GET DATO
+	*/
 	public function get_dato() {
-		$dato = parent::get_dato();
-		#$dato = str_replace("<br />", "\n", $dato);
+
+		$dato = parent::get_dato();		
+
+		if(SHOW_DEBUG) {
+			if ( !is_null($dato) && !is_string($dato)  ) {
+				dump(parent::get_dato(), 'WRONG TYPE dato: '.$this->tipo);
+			}
+		}
+
 		return (string)$dato;
-	}
+	}//end get_dato
 
-	# SET_DATO
+
+
+	/**
+	*  SET_DATO
+	*/
 	public function set_dato($dato) {
-		#$dato = str_replace( array("\n","\r"), "<br />", $dato);
+		if($dato==='""') $dato = ''; // empty dato json encoded
+		
 		parent::set_dato( (string)$dato );
-	}
+	}//end set_dato
 	
 	
-
 	
-
 	/**
 	* GET VALOR
 	* LIST:

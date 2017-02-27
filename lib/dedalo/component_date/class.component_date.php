@@ -30,9 +30,8 @@ class component_date extends component_common {
 		# Creamos el componente normalmente
 		parent::__construct($tipo, $parent, $modo, $lang, $section_tipo);
 
-		if(SHOW_DEBUG) {
-			$traducible = $this->RecordObj_dd->get_traducible();
-			if ($traducible=='si') {
+		if(SHOW_DEBUG===true) {
+			if ($this->RecordObj_dd->get_traducible()==='si') {
 				throw new Exception("Error Processing Request. Wrong component lang definition. This component $tipo (".get_class().") is not 'traducible'. Please fix this ASAP", 1);				
 			}
 		}
@@ -80,21 +79,24 @@ class component_date extends component_common {
 	*/
 	public function set_dato( $dato ) {
 		
-		if (is_string($dato) && strpos($dato, '{')!==false ) {
+		if (is_string($dato)) {
 			$dato = json_decode($dato);
 		}
-		if (is_null($dato)) {
-			$dato = new dd_date();
+		if (is_null($dato) || empty($dato)) {
+			$dato = new stdClass();
+		}
+		if (is_array($dato) && isset($dato[0])) {
+			$dato = $dato[0];
 		}
 		
 		if ( !is_object($dato) ) {
-			if(SHOW_DEBUG) {
-				throw new Exception("Error Processing Request. Only objects are accepted. Type: ".gettype($dato), 1);
+			if(SHOW_DEBUG===true) {
+				//throw new Exception("Error Processing Request: set_dato ($this->tipo). Only objects are accepted. Received Type: ".gettype($dato), 1);
+				debug_log(__METHOD__." Error Processing Request: IGNORED set_dato ($this->tipo). Only objects are accepted. Received Type: ".gettype($dato), logger::ERROR);
 			}
 			return false;
 		}
-		#dump( (object)$dato, ' dato set_dato ++ '.to_string());
-		
+
 		parent::set_dato( (object)$dato );
 	}//end set_dato
 
@@ -111,10 +113,12 @@ class component_date extends component_common {
 		$dato 		 = $this->get_dato();
 
 		switch (true) {
-			case isset($dato->start):
+			#case isset($dato->start):
+			case is_object($dato) && property_exists($dato, 'start'):
 				$date_mode = 'range';
 				break;
-			case isset($dato->period):
+			#case isset($dato->period):
+			case is_object($dato) && property_exists($dato, 'period'):
 				$date_mode = 'period';
 				break;			
 			default:
@@ -122,7 +126,7 @@ class component_date extends component_common {
 					$date_mode = $propiedades->date_mode; // Default from structure if is defined
 				}else{
 					$date_mode = 'date'; // Default
-				}				
+				}
 				break;
 		}
 		return $date_mode;
@@ -186,7 +190,7 @@ class component_date extends component_common {
 
 		# DATO FORMAT VERIFY
 		if ( !is_object($dato) ) {
-			if(SHOW_DEBUG) {
+			if(SHOW_DEBUG===true) {
 				#dump($dato,'$dato');
 				#throw new Exception("Dato is not string!", 1);
 				error_log("Bad date format:".to_string($dato));
@@ -227,7 +231,7 @@ class component_date extends component_common {
 			# Date formated from unix time
 			$dato_formated = date("Y-m-d H:i:s", $unix_time);
 
-			if(SHOW_DEBUG) {
+			if(SHOW_DEBUG===true) {
 				dump($dato_formated,'date - '.$dato);
 			}		
 
@@ -237,6 +241,9 @@ class component_date extends component_common {
 	
 		# add_time to dato always
 		$this->dato = self::add_time( $dato );
+
+		# Force convert dato to stdClass object always
+		#$this->dato = json_decode( json_encode($this->dato) );
 
 		# From here, save normally
 		return parent::Save();
@@ -299,6 +306,10 @@ class component_date extends component_common {
 		$valor_local 	= $dd_date->get_dd_timestamp($date_format);		
 		#debug_log(__METHOD__." valor_local: $valor_local ".to_string($valor_local), logger::WARNING);
 
+		if ($valor_local==='0000') {
+			$valor_local='';
+		}
+
 		return (string)$valor_local;
 	}//end get_valor_local
 
@@ -326,7 +337,7 @@ class component_date extends component_common {
 		}
 		#$date_format	= "d-m-Y";	# TODO: change order when use english lang ?? ...
 		$valor_local 	= $dd_date->get_dd_timestamp($date_format);
-		if(SHOW_DEBUG) {
+		if(SHOW_DEBUG===true) {
 			#dump($valor_local, ' valor_local');
 		}
 
@@ -357,7 +368,7 @@ class component_date extends component_common {
 		# Restore modo after 
 		$this->set_modo($previous_modo);
 		*/
-		if(SHOW_DEBUG) {
+		if(SHOW_DEBUG===true) {
 			#return "DATE: ".$valor;
 		}
 		return (string)$valor;
@@ -484,7 +495,7 @@ class component_date extends component_common {
 		foreach ($current_stats_value as $current_dato => $value) {
 
 			# PROPIEDADES 'year_only' : Return only year as '1997'
-			if($stats_propiedades->context_name=='year_only') {
+			if($stats_propiedades->context_name==='year_only') {
 				$current_dato = date("Y", strtotime($current_dato));
 			}
 			
@@ -493,7 +504,7 @@ class component_date extends component_common {
 				$current_dato = 'nd';
 				$ar_final[$current_dato] = $value;
 
-			}else if($current_dato=='nd') {
+			}else if($current_dato==='nd') {
 
 				$ar_final[$current_dato] = $value;
 
@@ -564,9 +575,9 @@ class component_date extends component_common {
 		$search_query='';
 		switch (true) {
 			
-			case ($search_tipo==DEDALO_ACTIVITY_WHEN):
+			case ($search_tipo===DEDALO_ACTIVITY_WHEN):
 				
-				if ($comparison_operator=='=') {				
+				if ($comparison_operator==='=') {				
 					$search_value = str_replace('/', '-', $search_value);
 					$ar_parts = explode('-', $search_value);
 						#dump($ar_parts, ' ar_parts ++ '.to_string());
@@ -622,12 +633,27 @@ class component_date extends component_common {
 			$search_query='id>0';
 		}
 		
-		if(SHOW_DEBUG) {
+		if(SHOW_DEBUG===true) {
 			#dump($search_query, ' search_query ++ '.to_string());
 			$search_query = " -- filter_by_search $search_tipo ". get_called_class() ." \n".$search_query;			
 		}
 		return $search_query;
 	}//end get_search_query
+
+
+
+	/**
+	* GET_SEARCH_ORDER
+	* Overwrite as needed
+	* @return string $order_direction
+	*/
+	public static function get_search_order($json_field, $search_tipo, $tipo_de_dato_order, $current_lang, $order_direction) {
+
+		$tipo_de_dato_order = 'dato';
+		$order_by_resolved  = "a.$json_field#>'{components, $search_tipo, $tipo_de_dato_order, $current_lang, time}' ".$order_direction;
+		
+		return (string)$order_by_resolved;
+	}//end get_search_order
 
 
 
@@ -640,7 +666,7 @@ class component_date extends component_common {
 
 		#
 		# Overwrite defaults with 'propiedades'->SQL_comparison_operators
-			if(SHOW_DEBUG) {
+			if(SHOW_DEBUG===true) {
 				#dump($this->propiedades, " this->propiedades ".to_string());;
 			}		
 			if(isset($this->propiedades->SQL_comparison_operators)) {
@@ -724,7 +750,8 @@ class component_date extends component_common {
 			$dato = $dd_date;
 		}
 
-		return $dato;
+
+		return (object)$dato;
 	}//end add_time
 
 
@@ -809,10 +836,10 @@ class component_date extends component_common {
 	*
 	* @return string $list_value
 	*/
-	public static function render_list_value($value, $tipo, $parent, $modo, $lang, $section_tipo, $section_id) {
+	public static function render_list_value($value, $tipo, $parent, $modo, $lang, $section_tipo, $section_id, $current_locator=null, $caller_component_tipo=null) {
 
-		if($section_tipo==DEDALO_ACTIVITY_SECTION_TIPO) {
-			return $value;
+		if($section_tipo===DEDALO_ACTIVITY_SECTION_TIPO) {
+			# nothing to do. Value is final value
 		}else{
 			$component 	= component_common::get_instance(__CLASS__,
 														 $tipo,
@@ -824,12 +851,66 @@ class component_date extends component_common {
 			# Use already query calculated values for speed
 			$dato = json_handler::decode($value);
 			$component->set_dato($dato);
-			$component->set_identificador_unico($component->get_identificador_unico().'_'.$section_id); // Set unic id for build search_options_session_key used in sessions
+			$component->set_identificador_unico($component->get_identificador_unico().'_'.$section_id.'_'.$caller_component_tipo); // Set unic id for build search_options_session_key used in sessions
 			
-			return $component->get_html();
+			$value = $component->get_html();
+			#$value = $component->get_valor();
 		}
-		
+
+
+		return $value;		
 	}//end render_list_value
+
+
+
+	/**
+	* GET_DIFFUSION_VALUE
+	* Overwrite component common method
+	* Calculate current component diffusion value for target field (usually a mysql field)
+	* Used for diffusion_mysql to unify components diffusion value call
+	* @return string $diffusion_value
+	*
+	* @see class.diffusion_mysql.php
+	*/
+	public function get_diffusion_value( $lang=null ) {
+
+		$diffusion_value = '';		
+		$dato 			 = $this->get_dato();
+		$date_mode 		 = $this->get_date_mode();
+
+		switch ($date_mode) {
+			case 'range':
+				$ar_date=array();
+				// start
+				if (isset($dato->start) && isset($dato->start->year)) {
+					$dd_date 		= new dd_date($dato->start);
+					$timestamp 		= $dd_date->get_dd_timestamp("Y-m-d H:i:s");
+					$ar_date[] 		= $timestamp;
+				}				
+				// end
+				if (isset($dato->end) && isset($dato->end->year)) {
+					$dd_date 		= new dd_date($dato->end);
+					$timestamp 		= $dd_date->get_dd_timestamp("Y-m-d H:i:s");
+					$ar_date[] 		= $timestamp;
+				}
+				$diffusion_value = implode(',',$ar_date);
+				break;
+
+			case 'period':
+				// Not defined yet
+
+				break;
+
+			case 'date':
+			default:
+				$dd_date 		 = new dd_date($dato);
+				$timestamp 		 = $dd_date->get_dd_timestamp("Y-m-d H:i:s");
+				$diffusion_value = $timestamp;
+				break;
+		}
+
+		return (string)$diffusion_value;
+	}//end get_diffusion_value
 
 
 

@@ -1,10 +1,9 @@
-
 <?php
 /*
 * CLASS COMPONENT_INFO
+*
+*
 */
-
-
 class component_info extends component_common {
 	
 	
@@ -15,7 +14,7 @@ class component_info extends component_common {
 	*/
 	public function get_dato() {
 		return null;
-	}#end get_dato
+	}//end get_dato
 
 	/**
 	* GET_VALOR
@@ -23,7 +22,7 @@ class component_info extends component_common {
 	*/
 	public function get_valor() {
 		return null;
-	}#end get_valor
+	}//end get_valor
 
 
 	/**
@@ -36,7 +35,8 @@ class component_info extends component_common {
 		$this->ar_tools_name = array();
 	
 		return parent::get_ar_tools_obj();
-	}
+	}//end get_ar_tools_obj
+
 
 
 	/**
@@ -54,7 +54,7 @@ class component_info extends component_common {
 	*
 	* @return string $list_value
 	*/
-	public static function render_list_value($value, $tipo, $parent, $modo, $lang, $section_tipo, $section_id) {
+	public static function render_list_value($value, $tipo, $parent, $modo, $lang, $section_tipo, $section_id, $current_locator=null, $caller_component_tipo=null) {
 		
 		$component_info  = component_common::get_instance(__CLASS__,
 														  $tipo,
@@ -72,23 +72,9 @@ class component_info extends component_common {
 				}
 			}
 			*/
+		
 		return $component_info->get_html();
-
-	}#end render_list_value
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+	}//end render_list_value
 
 
 

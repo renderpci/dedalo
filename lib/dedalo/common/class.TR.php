@@ -10,76 +10,104 @@ class TR {
 	# GET UNIFIED PATTERNS FOR MARKS
 	public static function get_mark_pattern($mark, $standalone=true, $id=false, $data=false) {
 		
-		$ar_marks = array('tc','index','indexIn','indexOut','relIn','relOut','br','strong','em','index_and_rel','svg','geo','page'); 
-		if(!in_array($mark,$ar_marks)) {
-			throw new Exception("Error Processing Request. Error: mark: '$mark' is not accepted !", 1);			
-		}
-		
 		switch($mark) {
 
 			# TC
-			case 'tc' : 	if ($id) {
-								$string = '(\[TC_($id)_TC\])';
-							}else{
-								$string = '(\[TC_([0-9]{1,2}:[0-9]{1,2}:[0-9]{1,2})_TC\])';	
-							}
-							break;		
-
-			# SVG
-			case 'svg' : 	if ($id) {
-								$string = "\[svg-[a-z]-{$id}-data:{$data}\]";
-								throw new Exception("Error Processing Request", 1);								
-							}else{
-								$string = "(\[(svg)-([a-z])-([0-9]{1,6})-data:.*?:data\])";
-							}
-							break;
-			# GEO
-			case 'geo' : 	if ($id) {
-								$string = "\[geo-[a-z]-{$id}-data:{$data}\]";
-								throw new Exception("Error Processing Request", 1);								
-							}else{
-								$string = "(\[(geo)-([a-z])-([0-9]{1,6})-data:.*?:data\])";	
-							}
-							break;
-
-			# PAGE (pdf) [page-n-3]
-			case 'page' : 	if ($id) {
-								$string = "\[page-[a-z]-{$id}\]";
-							}else{
-								$string = "(\[(page)-([a-z])-([0-9]{1,6})\])";
-							}
-							break;
+			case 'tc' :					
+					$string = "(\[TC_([0-9]{1,2}:[0-9]{1,2}:[0-9]{1,2}\.[0-9]{1,3})_TC\])";					
+					break;
 
 			# INDEX
-			case 'index' : 	if ($id) {
-								$string = "\[\/{0,1}index-[a-z]-{$id}\]";	
-							}else{
-								$string = "\[\/{0,1}(index)-([a-z])-([0-9]{1,6})\]";
-							}
-							break;	
-			case 'indexIn' :if ($id) {
-								$string = "(\[index-[a-z]-{$id}\])";
-							}else{
-								$string = "(\[index-([a-z])-([0-9]{1,6})\])";				
-							}
-							break;
-			case 'indexOut':if ($id) {
-								$string = "(\[\/index-[a-z]-{$id}\])";
-							}else{
-								$string = "(\[\/index-([a-z])-([0-9]{1,6})\])";
-							}
-							break;			
+			case 'index' :
+					if ($id) {
+						$string = "\[\/{0,1}index-[a-z]-{$id}\]";
+					}else{
+						$string = "\[\/{0,1}(index)-([a-z])-([0-9]{1,6})\]";
+					}
+					break;
+					
+			case 'indexIn' :
+					if ($id) {
+						$string = "(\[index-[a-z]-{$id}\])";
+					}else{
+						$string = "(\[index-([a-z])-([0-9]{1,6})\])";
+					}
+					break;
+
+			case 'indexOut':
+					if ($id) {
+						$string = "(\[\/index-[a-z]-{$id}\])";
+					}else{
+						$string = "(\[\/index-([a-z])-([0-9]{1,6})\])";
+					}
+					break;	
+
+			# SVG
+			case 'svg' :
+					if ($id) {
+						$string = "\[svg-[a-z]-{$id}-data:{$data}\]";
+						throw new Exception("Error Processing Request", 1);
+					}else{
+						$string = "(\[(svg)-([a-z])-([0-9]{1,6})-data:.*?:data\])";
+					}
+					break;
+
+			# GEO
+			case 'geo' :
+					if ($id) {
+						$string = "\[geo-[a-z]-{$id}-data:{$data}\]";
+						throw new Exception("Error Processing Request", 1);
+					}else{
+						$string = "(\[(geo)-([a-z])-([0-9]{1,6})-data:.*?:data\])";	
+					}
+					break;			
+
+			# PAGE (pdf) [page-n-3]
+			case 'page' :
+					if ($id) {
+						$string = "\[page-[a-z]-{$id}\]";
+					}else{
+						$string = "(\[(page)-([a-z])-([0-9]{1,6})\])";
+					}
+					break;
+
+			# PERSON (transcription spoken person) like [person-a-number-data:{"section_tipo":"dd15","section_id":"5"}:data]
+			case 'person' :
+					if ($id) { // id is pseudo locator as dd35_oh1_52 (section_tipo section_id)
+						$string = "\[person-[a-z]-.+-data:{$id}:data\]";
+					}else{
+						$string = "(\[person-([a-z])-(\S{0,10})-data:.*?:data\])";
+					}
+					break;
+
+			# NOTE (transcription annotations) like [note-n-number-data:{"section_tipo":"dd15","section_id":"5"}:data]
+			case 'note' :
+					if ($id) { // id is pseudo locator as dd35_oh1_52 (section_tipo section_id)
+						$string = "\[note-[a-z]-.+-data:{$id}:data\]";
+					}else{
+						$string = "(\[note-([a-z])-(\S{0,10})-data:.*?:data\])";
+					}
+					break;
+
 			# OTHERS
-			case 'br' : 	$string = '\<br \/\>';
-							break;
-			case 'strong' :	$string = '(\<strong\>|\<\/strong\>)';
-							break;
-			case 'em' :		$string = '(\<em\>|\<\/em\>)';
-							break;
+			case 'br' :
+					$string = '\<br \/\>';
+					break;
+
+			case 'strong' :	
+					$string = '(\<strong\>|\<\/strong\>)';
+					break;
+
+			case 'em' :		
+					$string = '(\<em\>|\<\/em\>)';
+					break;
 
 			case 'apertium-notrans' :
-							$string = '(\<apertium-notrans\>|\<\/apertium-notrans\>)';
-							break;
+					$string = '(\<apertium-notrans\>|\<\/apertium-notrans\>)';
+					break;
+
+			default :
+					throw new Exception("Error Processing Request. Error: mark: '$mark' is not valid !", 1);
 		}
 		
 		# default mark have in and out slash (pattern standalone)
@@ -118,7 +146,7 @@ class TR {
 		}
 	}
 	
-	#
+	# TAG2TYPE
 	public static function tag2type($tag) {
 
 		$match_pattern 	= TR::match_pattern_index_from_tag($tag);
@@ -126,7 +154,7 @@ class TR {
 
 		return $type;
 	}
-	#
+	# TAG2STATE
 	public static function tag2state($tag) {
 
 		$match_pattern 	= TR::match_pattern_index_from_tag($tag);
@@ -144,6 +172,7 @@ class TR {
 	}
 
 
+
 	# CONVERT value to tag
 	public static function value2tag($value, $type) {
 		die("Por revisar");
@@ -159,7 +188,7 @@ class TR {
 			case 'indexOut'	:	$value	= sprintf("%03s", $value);	# format like '002'
 								$tag 	= '[out_index_'.$value.']';
 								break;
-			case 'tc'		:	$pattern = '/[0-9][0-9]:[0-9][0-9]:[0-9][0-9]/';# format like '00:02:16'
+			case 'tc'		:	$pattern = '/[0-9][0-9]:[0-9][0-9]:[0-9][0-9].[0-9][0-9][0-9]/';# format like '00:02:16'
 								if(preg_match($pattern,$value)>0) 
 								$tag 	= '[TC_'.$value.'_TC]';
 								break;
@@ -170,6 +199,8 @@ class TR {
 		return $tag;
 	}
 	
+
+
 	# CONVERT DIVS (div) TO <br />
 	private static function convertDiv2br($text) {
 		
@@ -178,51 +209,7 @@ class TR {
 				
 		return $text ;	
 	}
-	
-	
-	# clean text to translate	
-	public static function deleteMarks($string, $deleteTC=true, $deleteIndex=true, $deleteSvg=true, $deleteGeo=true, $delete_page=true) {
-		
-		# TC clear
-		if($deleteTC) {
-			$pattern = TR::get_mark_pattern('tc');
-			$string = preg_replace($pattern, '', $string);	# elliminar los TC
-		}
-		
-		# Index clear
-		if($deleteIndex) {
-			$pattern 	= TR::get_mark_pattern('index');
-			$string 	= preg_replace($pattern, '', $string);
-		}
 
-		# Svg clear
-		if($deleteSvg) {
-			$pattern 	= TR::get_mark_pattern('svg');
-			$string 	= preg_replace($pattern, '', $string);
-		}
-
-		# Geo clear
-		if($deleteGeo) {
-			$pattern 	= TR::get_mark_pattern('geo');
-			$string 	= preg_replace($pattern, '', $string);
-		}
-
-		# Page clear
-		if($delete_page) {
-			$pattern 	= TR::get_mark_pattern('page');
-			$string 	= preg_replace($pattern, '', $string);
-		}
-
-		# last <br /> clear
-		#$lastBR = substr($string, -6); if($lastBR == '<br />') $string = substr($string, 0, -6);	#echo "=== lastBR:$lastBR: === \n";
-		
-		# convert multiples spaces to only one
-		#$string	= TR::multipleSpaces2One($string);
-		
-		#$string = TR::limpiezaPOSTtr($string);		#<---- DESACTIVO TEMPORAL. EVALUAR SI SE DEJA INACTIVO.........................	
-			
-		return $string ;
-	}
 
 
 	/**
@@ -245,64 +232,175 @@ class TR {
 		}
 		
 		return $img;
-
 	}//end create_text_editor_image_from_tag
 
 	
-	# CONVERT TAGS LIKE INDEX,TC TO IMAGES
-	public static function addTagImgOnTheFly($text, $hilite=false, $indexEditable=false, $tcEditable=true, $svgEditable=true, $geoEditable=true, $pageEditable=true) {
+
+	# clean text to translate	
+	public static function deleteMarks($string, $request_options=null) {
+
+		# Temporal (for catch old calls only)
+		if (is_bool($request_options)) {
+			throw new Exception("Error. Only a object is valid for delete marks options. Update your call to new format please", 1);			
+		}
+
+		$options = new stdClass();
+			$options->deleteTC 		= true;
+			$options->deleteIndex 	= true;
+			$options->deleteSvg 	= true;
+			$options->deleteGeo 	= true;
+			$options->delete_page 	= true;
+			$options->delete_person = true;
+			$options->delete_note   = true;
+			if (is_object($request_options)) {
+				foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
+			}
+			
+			
+		# TC clear
+		if($options->deleteTC===true) {
+			$pattern = TR::get_mark_pattern('tc');
+			$string = preg_replace($pattern, '', $string);	# elliminar los TC
+		}
+		
+		# Index clear
+		if($options->deleteIndex===true) {
+			$pattern 	= TR::get_mark_pattern('index');
+			$string 	= preg_replace($pattern, '', $string);
+		}
+
+		# Svg clear
+		if($options->deleteSvg===true) {
+			$pattern 	= TR::get_mark_pattern('svg');
+			$string 	= preg_replace($pattern, '', $string);
+		}
+
+		# Geo clear
+		if($options->deleteGeo===true) {
+			$pattern 	= TR::get_mark_pattern('geo');
+			$string 	= preg_replace($pattern, '', $string);
+		}
+
+		# Page clear
+		if($options->delete_page===true) {
+			$pattern 	= TR::get_mark_pattern('page');
+			$string 	= preg_replace($pattern, '', $string);
+		}
+
+		# Person clear
+		if($options->delete_person===true) {
+			$pattern 	= TR::get_mark_pattern('person');
+			$string 	= preg_replace($pattern, '', $string);
+		}
+
+		# Note clear
+		if($options->delete_note===true) {
+			$pattern 	= TR::get_mark_pattern('note');
+			$string 	= preg_replace($pattern, '', $string);
+		}			
+	
+		return $string ;
+	}//end deleteMarks
+	
+	
+
+	/**
+	* ADDTAGIMGONTHEFLY
+	* Convert tags like index,tc to images
+	*/
+	public static function addTagImgOnTheFly($text, $request_options=null) {
+
+		#$hilite=false, $indexEditable=false, $tcEditable=true, $svgEditable=true, $geoEditable=true, $pageEditable=true,  $personEditable=true
+
+		# Temporal (for catch old calls only)
+		if (is_bool($request_options)) {
+			throw new Exception("Error. Only a object is valid for addTagImgOnTheFly options. Update your call to new format please", 1);			
+		}
+
+		$options = new stdClass();
+			$options->hilite 			= false;
+			$options->indexEditable 	= false;
+			$options->tcEditable 		= true;
+			$options->svgEditable 		= true;
+			$options->geoEditable 		= true;
+			$options->pageEditable 		= true;
+			$options->personEditable 	= true;
+			$options->noteEditable 		= true;
+			if (is_object($request_options)) {
+				foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
+			}
+
 		
 		# Hilite		
-		if($hilite===true) {
-			$codeHiliteIn	= "<span class=\"hilite\">";		#$codeHiliteIn	= "<h7>";
-			$codeHiliteOut	= "</span>";						#$codeHiliteOut	= "</h7>";
+		if($options->hilite===true) {
+			$codeHiliteIn	= "<span class=\"hilite\">";
+			$codeHiliteOut	= "</span>";
 		}else{
 			$codeHiliteIn	= '';
-			$codeHiliteOut	= '';	
+			$codeHiliteOut	= '';
 		}	
 		
-		# Index
-		$mceNonEditable = ' mceNonEditable'; # default (Ojo: conservar el spacio al principio)		
-		if($indexEditable!=false) $mceNonEditable = ''; 
+		# editor mceNonEditable class
+		$mceNonEditable = ' mceNonEditable'; # default (Ojo: conservar el spacio al principio)
+		$mceNonEditable = '';
+				
+		# url path to php script thats render image
+		$btn_url = '../../../inc/btn.php';
 
-		#$mceNonEditable = " "; # OVERRIDE MCE NON EDITABLE VALUE
-		
+
+		# INDEX IN
 		$pattern 	= TR::get_mark_pattern('indexIn');
-		$text		= preg_replace($pattern, "$codeHiliteIn<img id=\"$1\" src=\"../../../inc/btn.php/$1\" class=\"index{$mceNonEditable}\" />" , $text);	# index mceNonEditable
+		$text		= preg_replace($pattern, "$codeHiliteIn<img id=\"$1\" src=\"{$btn_url}/$1\" class=\"index{$mceNonEditable}\" />" , $text);
 		
+		# INDEX OUT
 		$pattern 	= TR::get_mark_pattern('indexOut');		
-		$text		= preg_replace($pattern, "<img id=\"$1\" src=\"../../../inc/btn.php/$1\" class=\"index{$mceNonEditable}\" />$codeHiliteOut", $text);
-		
+		$text		= preg_replace($pattern, "<img id=\"$1\" src=\"{$btn_url}/$1\" class=\"index{$mceNonEditable}\" />$codeHiliteOut", $text);
 
 		# TC
-		$mceNonEditable = ' mceNonEditable'; # default (Ojo: conservar el spacio al principio)		
-		if($tcEditable!=false) $mceNonEditable = '';		
-		$pattern 	= TR::get_mark_pattern('tc'); 
-		$text		= preg_replace($pattern, "<img id=\"$1\" src=\"../../../inc/btn.php/$1\" class=\"tc{$mceNonEditable}\" />", $text);
+		if($options->tcEditable!==false) $mceNonEditable = '';
 
+		$pattern 	= TR::get_mark_pattern('tc');
+		#$pattern 	= '/(\[TC_[0-9]{1,2}:[0-9]{1,2}:[0-9]{1,2}.[0-9]{1,3}_TC\])/';
+		$text		= preg_replace($pattern, "<img id=\"$1\" src=\"{$btn_url}/$1\" class=\"tc{$mceNonEditable}\" />", $text);
+		
+		$old_patter = '/(\[TC_([0-9]{1,2}:[0-9]{1,2}:[0-9]{1,2})_TC\])/';
+		$text = preg_replace($old_patter, "<img id=\"[TC_$2.000_TC]\" src=\"{$btn_url}/[TC_$2.000_TC]\" class=\"tc{$mceNonEditable}\" />", $text);
 
 		# SVG
-		$mceNonEditable = ' mceNonEditable'; # default (Ojo: conservar el spacio al principio)		
-		if($svgEditable!=false) $mceNonEditable = '';
-		$pattern 	= TR::get_mark_pattern('svg');	#dump($text,'$text');
-		#$text		= preg_replace($pattern, "<img id=\"$1\" src=\"../../../inc/btn.php/$1\" class=\"svg{$mceNonEditable}\" />$codeHiliteOut", $text);
-		$text		= preg_replace($pattern, "<img id=\"$1\" src=\"../../../inc/btn.php/[$2-$3-$4-data::data]\" class=\"svg{$mceNonEditable}\" />$codeHiliteOut", $text);
+		if($options->svgEditable!==false) $mceNonEditable = '';
+		$pattern 	= TR::get_mark_pattern('svg');
+		#$text		= preg_replace($pattern, "<img id=\"$1\" src=\"{$btn_url}/$1\" class=\"svg{$mceNonEditable}\" />$codeHiliteOut", $text);
+		$text		= preg_replace($pattern, "<img id=\"$1\" src=\"{$btn_url}/[$2-$3-$4-data::data]\" class=\"svg{$mceNonEditable}\" />$codeHiliteOut", $text);
 
 		# GEO
-		$mceNonEditable = ' mceNonEditable'; # default (Ojo: conservar el spacio al principio)		
-		if($svgEditable!=false) $mceNonEditable = '';
-		$pattern 	= TR::get_mark_pattern('geo');	#dump($text,'$text');
-		#$text		= preg_replace($pattern, "<img id=\"$1\" src=\"../../../inc/btn.php/$1\" class=\"geo{$mceNonEditable}\" />$codeHiliteOut", $text);
-		$text		= preg_replace($pattern, "<img id=\"$1\" src=\"../../../inc/btn.php/[$2-$3-$4-data::data]\" class=\"geo{$mceNonEditable}\" />$codeHiliteOut", $text);
-
+		if($options->geoEditable!==false) $mceNonEditable = '';
+		$pattern 	= TR::get_mark_pattern('geo');
+		#$text		= preg_replace($pattern, "<img id=\"$1\" src=\"{$btn_url}/$1\" class=\"geo{$mceNonEditable}\" />$codeHiliteOut", $text);
+		$text		= preg_replace($pattern, "<img id=\"$1\" src=\"{$btn_url}/[$2-$3-$4-data::data]\" class=\"geo{$mceNonEditable}\" />$codeHiliteOut", $text);
+		
 		# PAGE
-		$mceNonEditable = ' mceNonEditable'; # default (Ojo: conservar el spacio al principio)		
-		if($pageEditable!=false) $mceNonEditable = '';
-		$pattern 	= TR::get_mark_pattern('page');	#dump($text,'$text');
-		$text		= preg_replace($pattern, "<img id=\"$1\" src=\"../../../inc/btn.php/$1\" class=\"page{$mceNonEditable}\" />", $text);
+		if($options->pageEditable!==false) $mceNonEditable = '';
+		$pattern 	= TR::get_mark_pattern('page');
+		$text		= preg_replace($pattern, "<img id=\"$1\" src=\"{$btn_url}/$1\" class=\"page{$mceNonEditable}\" />", $text);
+
+		# PERSON
+		# if($options->personEditable!==false) $mceNonEditable = '';
+		$pattern 	= TR::get_mark_pattern('person'); // $string = "(\[person-([a-z])-(.+)-data:.*?:data\])";
+		$text		= preg_replace($pattern, "<img id=\"$1\" src=\"{$btn_url}/[person-$2-$3-data::data]\" class=\"person{$mceNonEditable}\" />$codeHiliteOut", $text);
+
+		# NOTE
+		# if($options->noteEditable!==false) $mceNonEditable = '';
+		$pattern 	= TR::get_mark_pattern('note'); // $string = "(\[note-([a-z])-(.+)-data:.*?:data\])";
+		$text		= preg_replace($pattern, "<img id=\"$1\" src=\"{$btn_url}/[note-$2-$3-data::data]\" class=\"note{$mceNonEditable}\" />$codeHiliteOut", $text);
 			
 		return (string)$text;
-	}	
+	}//end addTagImgOnTheFly
+
+
+
+	/**
+	* REMOVETAGIMGONTHEFLY
+	*/
 	public static function removeTagImgOnTheFly($text) {		
 
 		# if not found img tag, return the same text
@@ -315,6 +413,10 @@ class TR {
 		$patternSVG		 	= TR::get_mark_pattern('svg',false);
 		$patternGEO		 	= TR::get_mark_pattern('geo',false);
 		$patternPAGE		= TR::get_mark_pattern('page',false);
+		$patternPERSON		= TR::get_mark_pattern('person',false);
+		$patternNOTE		= TR::get_mark_pattern('note',false);
+
+		$file_pattern 		= '.+.php'; # ..\/..\/..\/inc\/btn.php
 		
 		# Convert index images to index text
 		$pattern[] 	= '/\<img id="'.$patternIndexIn.'" src="..\/..\/..\/inc\/btn.php\/'.$patternIndexIn.'" class="(index|index mceNonEditable)" \/\>/';	# (\[index_..._in\])
@@ -335,14 +437,27 @@ class TR {
 		$pattern[] 	= '/\<img id="'.$patternGEO.'" src="..\/..\/..\/inc\/btn.php\/'.$patternGEO.'" class="(geo|geo mceNonEditable)" \/\>/';	# (\[index_..._in\])" />
 
 		# Convert page images to page text
-		$pattern[] 	= '/\<img id="'.$patternPAGE.'" src="..\/..\/..\/inc\/btn.php\/'.$patternPAGE.'" class="(page|page mceNonEditable)" \/\>/';		
+		$pattern[] 	= '/\<img id="'.$patternPAGE.'" src="..\/..\/..\/inc\/btn.php\/'.$patternPAGE.'" class="(page|page mceNonEditable)" \/\>/';
+
+		# Convert person images to page text
+		# $string = "(\[person-([a-z])-(.+)-data:.*?:data\])";
+		$pattern[] 	= '/\<img id="'.$patternPERSON.'" src="..\/..\/..\/inc\/btn.php\/'.$patternPERSON.'" class="(person|person mceNonEditable)" \/\>/';
+
+		# Convert note images to page text
+		# $string = "(\[note-([a-z])-(.+)-data:.*?:data\])";
+		$pattern[] 	= '/\<img id="'.$patternNOTE.'" src="..\/..\/..\/inc\/btn.php\/'.$patternNOTE.'" class="(note|note mceNonEditable)" \/\>/';
 	
 		# replace matches
 		$text		= preg_replace($pattern, "$1", $text);
 		
 		return (string)$text ;
-	}
+	}//end removeTagImgOnTheFly
+
+
 	
+	/**
+	* HIDEAROUNDINDEXID
+	*/
 	public static function hideAroundIndexID($indexID,$texto) {
 		
 		#$brPattern = TR::get_mark_pattern('br');
@@ -760,6 +875,20 @@ class TR {
 		return $result  ;
 	}	
 
+	#Change the format for TC to TC with ms
+	public static function formatTC_to_TCms($string)
+	{
+		# Especific code for old transcriptions TC convert like [TC_01:25:11_TC] to [TC_01:25:11.332_TC]
+		#
+		$pattern 	= '/([0-9][0-9]):([0-9][0-9]):([0-9][0-9])/' ;
+		$string 	= addslashes( preg_replace($pattern, '$1:$2:$3.000', stripslashes($string) ) );
+		$string 	= stripslashes($string) ;
+			
+		$result = $string ;
+		
+		return $result  ;
+	}	
+
 	# multipleSpaces2One
 	public static function multipleSpaces2One($string) {
 			
@@ -879,7 +1008,7 @@ class TR {
 		$string = strip_tags($string);	
 		
 		# eliminamos las marcas de tc e indexación
-		$string	= TR::deleteMarks($string, $deleteTC=true, $deleteIndex=true);
+		$string	= TR::deleteMarks($string);
 		
 		# cortamos elegantemente el fragmento
 		return self::truncate_text($string, $limit, $break=" ", $pad="...");		

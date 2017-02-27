@@ -18,12 +18,15 @@
 	$component_name			= get_class($this);
 	$file_name 				= $modo;
 
-	if($permissions<1) return null;
+	if($permissions===0) return null;
 	
 
 	switch($modo) {
 		
 		case 'search' :
+				# Showed only when permissions are >1
+				if ($permissions<1) return null;
+				
 				# Nothing to do
 				#return print "$component_name. working here..";
 				$ar_comparison_operators 	= $this->build_search_comparison_operators();
@@ -51,16 +54,16 @@
 					}
 				}			
 				
-				$ar_proyectos_section = $this->get_ar_proyectos_for_current_section(); 	#dump($ar_proyectos_section,"ar_proyectos_section");
+				$ar_proyectos_section = $this->get_ar_projects_for_current_section(); 	#dump($ar_proyectos_section,"ar_proyectos_section");
 				$id_wrapper 		  = 'wrapper_'.$identificador_unico; 
 				$input_name 		  = "{$tipo}_{$parent}";
 				$component_info		  = $this->get_component_info('json');				
-				$dato 				  = $this->get_dato();
-				$dato_string		  = $this->get_dato_as_string(); 
+				$dato 				  = $this->get_dato();				
+				$dato_json 			  = json_encode($dato);
 				break;
 
 		case 'tool_time_machine' :				
-				$ar_proyectos_section = $this->get_ar_proyectos_for_current_section();
+				$ar_proyectos_section = $this->get_ar_projects_for_current_section();
 				$id_wrapper = 'wrapper_'.$identificador_unico.'_tm';
 				$input_name = "{$tipo}_{$parent}_tm";
 				# Force file_name
@@ -72,7 +75,7 @@
 
 		case 'list' :				
 				#$valor = $this->get_valor();
-				$ar_proyectos_section = (array)$this->get_ar_proyectos_for_current_section();
+				$ar_proyectos_section = (array)$this->get_ar_projects_for_current_section();
 				if(SHOW_DEBUG) {
 					#dump($ar_proyectos_section, " ar_proyectos_section ".to_string());
 				}

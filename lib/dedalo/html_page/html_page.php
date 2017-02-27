@@ -33,10 +33,14 @@
 	if (!defined('SECTION_TIPO')) {
 		define('SECTION_TIPO', $tipo);
 		
-		if(SHOW_DEBUG) {
+		if(SHOW_DEBUG===true) {
 			$modelo_name = RecordObj_dd::get_modelo_name_by_tipo(SECTION_TIPO, true);
-			if ($modelo_name!='section' && strpos($modelo_name, 'area')===false ) {
-				throw new Exception("DEBUG INFO: Error Processing Request current assigned SECTION_TIPO is not a section ($tipo - $modelo_name)", 1);				
+			if ($modelo_name!=='section' && strpos($modelo_name, 'area')===false ) {
+				#throw new Exception("DEBUG INFO: Error Processing Request current assigned SECTION_TIPO is not a section ($tipo - $modelo_name)", 1);
+				echo "DEBUG INFO: Current requested SECTION_TIPO is not a section.
+				<br> tipo: $tipo <br>
+					 modelo_name: $modelo_name";
+				die();				
 			}
 		}
 	}
@@ -181,12 +185,12 @@
 				include ( DEDALO_LIB_BASE_PATH . '/' . get_class() .'/html/' . get_class() . '_header.phtml' );
 				$html_header = ob_get_clean();
 				break;
-			case ($context_name=='list_in_portal'):
+			case ($context_name==='list_in_portal'):
 
 				$html_header .= "<div class=\"breadcrumb\">";
 				$html_header .=   strip_tags( tools::get_bc_path() ); // Remove possible <mark> tags
 				#dump(tools::get_bc_path(), 'tools::get_bc_path()');
-				$html_header .= " <div class=\"icon_bs close_window\" title=\"".label::get_label('cerrar')."\"></div>";
+				$html_header .= " <div class=\"icon_bs close_window\" title=\"".label::get_label('cerrar')."\" onclick=\"window.close()\"></div>";
 				$html_header .= "</div>";
 				$html_header .= "<div class=\"breadcrumb_spacer\"></div>";
 				break;

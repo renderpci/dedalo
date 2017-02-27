@@ -23,6 +23,8 @@
 	$component_name			= get_class($this);
 	$dato_raw 				= tools::truncate_text(htmlspecialchars($dato),300);	#tools:truncate_text($string, $limit, $break=" ", $pad="...")
 
+	if($permissions===0) return null;
+	
 	# Verify component content record is inside section record filter
 	if ($this->get_filter_authorized_record()===false) return NULL ;
 	

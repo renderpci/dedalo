@@ -5,16 +5,20 @@
 	margin: 40px;
 	font-size: 28px;
 }
-
+#html_page_wrap {
+    background-image: url(../../../themes/default/dedalo_icon_big.png);
+    background-repeat: no-repeat;
+    background-position: 0 0;
+}
 
  /* UPLOAD MODE
 ------------------------------------------------------- */
 #wrap_upload {
-	/**/
+	/*
 	background-image: url('../../../themes/default/dedalo_icon_big.png');
 	background-repeat: no-repeat;
-	background-position: 0px 0px;
-	min-height: 1004px;	
+	background-position: 0px 0px;*/
+	//min-height: 1004px;
 	}
 	.info_line {
 		margin-left: 5px;
@@ -25,7 +29,11 @@
 		}
 		.info_line::before {
 			content: "";
-			background-image: url("../../../themes/default/glyphicons-halflings.png");
+			//background-image: url("../../../themes/default/glyphicons-halflings.png");
+
+			background-image: url("../../../themes/default/svg_icons.svg");
+			background-size: 474px 184px;
+
 			background-position: -72px -96px;
 			background-repeat: no-repeat;
 			display: inline-block;
@@ -163,6 +171,19 @@
 		.form_elements .submit_import {
 
 		}
+	.checkbox_with_out_pdf{
+		background-color: #d50000;
+		border-collapse: collapse;
+		display: inline-block;
+		padding: 6px 12px;
+		border-radius: 3px;
+		font-size: 1.2em;
+		text-align: center;
+		margin-left: 5%;
+		margin-top: 40px;
+		color: #fff;
+
+	}
 
 
  /* PROCESS MODE

@@ -24,17 +24,19 @@
 
 	$userID					= $dato;
 	
+	if($permissions===0) return null;
 
 	# Verify component content record is inside section record filter
 	if ($this->get_filter_authorized_record()===false) return null ;
 
 	$file_name = $modo;
-
-	
 	
 	switch($modo) {		
 		
 		case 'search' :
+				# Showed only when permissions are >1
+				if ($permissions<1) return null;
+				
 				$file_name = 'list';
 
 				# Search input name

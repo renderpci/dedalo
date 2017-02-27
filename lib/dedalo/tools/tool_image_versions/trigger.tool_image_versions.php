@@ -129,7 +129,7 @@ if($mode=='generate_version') {
 		default:
 			# Default normal case. Image is resized to target quelity
 			$Thumb = new Thumb($source_image);
-			$Thumb->resize_basic($target_pixels_width,$target_pixels_height);	
+			$Thumb->resize_basic($target_pixels_width,$target_pixels_height);
 			$response = $Thumb->save($target_image, $quality = 100);
 			break;
 	}	

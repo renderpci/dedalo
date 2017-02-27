@@ -174,7 +174,7 @@ class Process{
     public function stop(){
         $command = 'kill '.$this->pid;
         exec($command);
-        if ($this->status() == false)return true;
+        if ($this->status() === false)return true;
         else return false;
     }
 }

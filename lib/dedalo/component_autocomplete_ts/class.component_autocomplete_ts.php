@@ -75,12 +75,11 @@ class component_autocomplete_ts extends component_common {
 		}
 		
 		return (array)$dato;
-
 	}//end get_dato
 
 
 
-	# SET_DATO . With regex verification
+	# SET_DATO
 	public function set_dato($dato) {
 		
 		if (is_string($dato)) {
@@ -99,6 +98,11 @@ class component_autocomplete_ts extends component_common {
 			}		
 		}
 		$dato = $dato_unique;
+
+		# Avoid bad formed empty values
+		if (isset($dato[0]) && empty($dato[0])) {
+			$dato = array();
+		}
 		
 		parent::set_dato( (array)$dato );
 	}
@@ -700,7 +704,7 @@ class component_autocomplete_ts extends component_common {
 	*
 	* @return string $list_value
 	*/
-	public static function render_list_value($value, $tipo, $parent, $modo, $lang, $section_tipo, $section_id) {
+	public static function render_list_value($value, $tipo, $parent, $modo, $lang, $section_tipo, $section_id, $current_locator=null, $caller_component_tipo=null) {
 		
 		if ($modo=='portal_list') {
 			$component	= component_common::get_instance(__CLASS__,
@@ -745,6 +749,7 @@ class component_autocomplete_ts extends component_common {
 	public static function get_order_by_locator() {
 		return true;
 	}//end get_order_by_locator
+
 
 
 

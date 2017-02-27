@@ -56,7 +56,7 @@ abstract class backup {
 					#dump($difference_in_hours, ' difference_in_hours ++ '.to_string( ($current_time_secs/3600).' - '.($last_modification_time_secs/3600) ));
 				if ( $difference_in_hours < DEDALO_BACKUP_TIME_RANGE ) {
 					$msg = " Skipped backup. A recent backup (about $difference_in_hours hours early) already exists. Is not necessary build another";
-					if(SHOW_DEBUG) {
+					if(SHOW_DEBUG===true) {
 						debug_log(__METHOD__." $msg ".to_string(), logger::DEBUG);
 					}
 					return $msg;
@@ -69,7 +69,7 @@ abstract class backup {
 			$mysqlExportPath = $file_path .'/'. $db_name . '.custom.backup';
 			if (file_exists($mysqlExportPath)) {
 				$msg = " Skipped backup. A recent backup already exists ('$mysqlExportPath'). Is not necessary build another";
-				if(SHOW_DEBUG) {
+				if(SHOW_DEBUG===true) {
 					debug_log(__METHOD__." $msg ".to_string(), logger::DEBUG);
 				}
 				return $msg;
@@ -77,11 +77,12 @@ abstract class backup {
 
 			// Export the database and output the status to the page
 			$command='';	#'sleep 1 ;';	
-			$command = DB_BIN_PATH.'pg_dump -h '.DEDALO_HOSTNAME_CONN.' -p '.DEDALO_DB_PORT_CONN. ' -U "'.DEDALO_USERNAME_CONN.'" -F c -b -v '.DEDALO_DATABASE_CONN.'  > "'.$mysqlExportPath .'"';
+			# $command = DB_BIN_PATH.'pg_dump -h '.DEDALO_HOSTNAME_CONN.' -p '.DEDALO_DB_PORT_CONN. ' -U "'.DEDALO_USERNAME_CONN.'" -F c -b -v '.DEDALO_DATABASE_CONN.'  > "'.$mysqlExportPath .'"';
+			$command = DB_BIN_PATH.'pg_dump -h '.DEDALO_HOSTNAME_CONN.' -p '.DEDALO_DB_PORT_CONN. ' -U "'.DEDALO_USERNAME_CONN.'" -F c -b '.DEDALO_DATABASE_CONN.'  > "'.$mysqlExportPath .'"';
 			
 			if($skip_backup_time_range===true) {
 				
-				$command = 'nice -n 5 '.$command;				
+				$command = 'nice -n 19 '.$command;				
 				debug_log(__METHOD__." Building direct backup file ($mysqlExportPath). Command:\n ".to_string($command), logger::DEBUG);				
 
 				# EXEC DIRECTLY AND WAIT RESULT
@@ -191,7 +192,7 @@ abstract class backup {
 
 		if(!$result) {			
 			$msg = "Failed Search. Data is not found. Please contact with your admin (1)" ;	
-			if(SHOW_DEBUG) {
+			if(SHOW_DEBUG===true) {
 				throw new Exception($msg, 1);			}
 			trigger_error($msg);
 			die($msg);
@@ -235,7 +236,7 @@ abstract class backup {
 			$msg='';
 			$msg .= "<b>$current_tld</b>";
 		
-			if ($current_tld=='dd' || $current_tld=='rsc') {
+			if ($current_tld==='dd' || $current_tld==='rsc') {
 				# CORE DEDALO STR
 				$path=DEDALO_LIB_BASE_PATH.'/backup/backups_structure/str_data';
 			}else{
@@ -254,7 +255,7 @@ abstract class backup {
 			# JER_DD
 				$table 		= 'jer_dd';
 				$tld 		= $current_tld;
-				$path_file1 	= "{$path}/{$table}_{$tld}.copy";
+				$path_file1 = "{$path}/{$table}_{$tld}.copy";
 				$res1 = backup::copy_to_file($table, $path_file1, $tld);
 
 				if (empty($res1)) {
@@ -369,7 +370,7 @@ abstract class backup {
 					
 					if (empty($res1)) {
 						$msg .= "<br>Error on import $table {$tld} . Please try again";
-						if(SHOW_DEBUG) {
+						if(SHOW_DEBUG===true) {
 							dump($command, '$res1 ++ '.to_string($res1));
 							#throw new Exception("Error Processing Request: $msg", 1);
 						}
@@ -386,7 +387,7 @@ abstract class backup {
 					
 					if (empty($res2)) {
 						$msg .= "<br>Error on import $table {$tld} . Please try again";
-						if(SHOW_DEBUG) {
+						if(SHOW_DEBUG===true) {
 							dump($command, '$res2 ++ '.to_string($res2));
 							#throw new Exception("Error Processing Request: $msg", 1);
 						}
@@ -394,7 +395,7 @@ abstract class backup {
 						$load_with_errors=true;
 					}
 					
-					if(SHOW_DEBUG) {
+					if(SHOW_DEBUG===true) {
 						$msg .= "<br>Imported dedalo core data";
 						$msg .= " (jer_dd {$tld} [<b>".trim($res1)."</b>], matrix_descriptors_dd {$tld} [<b>".trim($res2)."</b>]) ";
 					}				
@@ -419,7 +420,7 @@ abstract class backup {
 			
 			}else{
 				$msg = "Error: source str file not found ";
-				if(SHOW_DEBUG) {
+				if(SHOW_DEBUG===true) {
 					 $msg .= $mysqlImportFilename.;
 				}
 				$ar_response[]=$msg;
@@ -459,7 +460,7 @@ abstract class backup {
 
 					if (empty($res1)) {
 						$msg .= "<br>Error on import $table {$tld} . Please try again";
-						if(SHOW_DEBUG) {
+						if(SHOW_DEBUG===true) {
 							dump($command, '$res1 ++ '.to_string($res1));
 							#throw new Exception("Error Processing Request: $msg", 1);
 						}
@@ -476,7 +477,7 @@ abstract class backup {
 
 					if (empty($res2)) {
 						$msg .= "<br>Error on import $table {$tld} . Please try again";
-						if(SHOW_DEBUG) {
+						if(SHOW_DEBUG===true) {
 							dump($command, '$res2 ++ '.to_string($res2));
 							#throw new Exception("Error Processing Request: $msg", 1);
 						}
@@ -485,7 +486,7 @@ abstract class backup {
 					}
 				
 				$msg .= "<br>Imported dedalo extras data";
-				if(SHOW_DEBUG) {
+				if(SHOW_DEBUG===true) {
 					$msg .= " (jer_dd {$tld} [<b>".trim($res1)."</b>], matrix_descriptors_dd {$tld} [<b>".trim($res2)."</b>])";
 					$msg .= "<br> -> $path_file1 ";
 					$msg .= "<br> -> $path_file ";
@@ -581,7 +582,7 @@ abstract class backup {
 		$strQuery = "SELECT setval('$sequence_name', $last_id, true);";
 
 		$result   = pg_query(DBi::_getConnection(), $strQuery);
-		if(SHOW_DEBUG) {
+		if(SHOW_DEBUG===true) {
 			$msg .= "<br> {$sequence_name} with value $last_id [$strQuery]";
 		}
 		
@@ -642,7 +643,7 @@ abstract class backup {
 		#passthru($command,$worked_result);
 		#dump($output, ' worked_result ++ '.to_string($worked_result));
 		$res_html='';
-		if(SHOW_DEBUG) {
+		if(SHOW_DEBUG===true) {
 			#$res_html .= "<div>command otuput: ".var_export($worked_result,true)."</div>";
 			#$res_html .= "<div style=\"font-family:courier;font-size:11px;word-wrap:break-word;padding:3px;\">$command</div>";
 		}
@@ -654,8 +655,8 @@ abstract class backup {
 			case 1:
 				$res_html .= '<div style="color:white;background-color:red;padding:10px;font-family:arial;font-size:13px;word-wrap:break-word;border-radius:5px;margin:5px;width:100%">
 				There was a problem during the export of <b>' .DEDALO_DATABASE_CONN .'</b> to <b>' .$mysqlExportPath .'</b></div>';
-				if(SHOW_DEBUG) {
-					dump($output, 'output - worked_result: '.to_string($worked_result));
+				if(SHOW_DEBUG===true) {
+					#dump($output, 'output - worked_result: '.to_string($worked_result));
 					$res_html .= "<span class=\"warning\">If you are using pgpass, check config, owner an permissions</span>";
 				}
 				break;
@@ -670,7 +671,7 @@ abstract class backup {
 				</tr>
 				</table>
 				</div>';
-				if(SHOW_DEBUG) {
+				if(SHOW_DEBUG===true) {
 					dump($output, ' worked_result: '.to_string($worked_result));
 				}
 				break;
@@ -686,7 +687,7 @@ abstract class backup {
 		#
 		# SAVE_DEDALO_STR_TABLES_DATA
 		# Save partials srt data based on tld to independent files
-		if ($db_name=='dedalo4_development_str.custom') {
+		if ($db_name==='dedalo4_development_str.custom') {
 			$ar_response 		= self::save_dedalo_str_tables_data();	
 			$ar_response_html 	= implode('<hr>', (array)$ar_response);
 			$res_html .= wrap_pre($ar_response_html);
@@ -733,7 +734,7 @@ abstract class backup {
 		#exec($command,$output,$worked);
 		exec($command.' 2>&1', $output, $worked_result);
 		$res_html='';
-		if(SHOW_DEBUG) {
+		if(SHOW_DEBUG===true) {
 			#dump($worked_result," console response code for:\n $command ");
 			#dump($output," console output for:\n $command");
 			#$res_html .= "<div style=\"font-family:courier;font-size:11px;word-wrap:break-word;padding:3px;\">$command</div>";
@@ -804,7 +805,7 @@ abstract class backup {
 				<tr><td>DB Import Filename:</td><td><b>' .$mysqlImportFilename .'</b></td></tr>
 				</table>
 				</div>';
-				if(SHOW_DEBUG) {
+				if(SHOW_DEBUG===true) {
 					$res_html .= "<br>DEBUG INFO:<hr>$command";
 				}
 				break;

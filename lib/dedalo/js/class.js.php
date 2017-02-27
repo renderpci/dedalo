@@ -24,7 +24,9 @@ class js {
 			js::$ar_url_basic[] = JQUERY_UI_URL_JS;
 			#js::$ar_url_basic[] = JQUERY_TABLESORTER_JS;
 			js::$ar_url_basic[] = DEDALO_ROOT_WEB . '/lib/jquery/jquery.cookie.js' ;
-			#js::$ar_url_basic[] = DEDALO_ROOT_WEB . '/lib/head/head.load.min.js' ;			
+			#js::$ar_url_basic[] = DEDALO_ROOT_WEB . '/lib/head/head.load.min.js' ;
+
+			js::$ar_url_basic[] = BOOTSTRAP_JS_URL;		
 			
 			# GRIDSTER
 			#js::$ar_url_basic[] = DEDALO_ROOT_WEB .'/lib/jquery/gridster/jquery.gridster.min.js';
@@ -74,7 +76,7 @@ class js {
 		
 		# Recorremos los elemetos usados, por modeloID es decir: root=dd117, etc..
 		$ar_excepciones  		= array('relation_list');
-		$ar_loaded_modelos_name = array_unique(common::$ar_loaded_modelos_name);	#dump($ar_loaded_modelos_name,"ar_loaded_modelos_name");		
+		$ar_loaded_modelos_name = array_unique(common::$ar_loaded_modelos_name);
 		foreach($ar_loaded_modelos_name as $modelo_name) {
 			
 			#$modelo_name = RecordObj_dd::get_termino_by_tipo($modeloID);
@@ -160,9 +162,9 @@ class js {
 		if (strpos($url, 'section_group_')!==false) return null;
 
 		// LOCAL VERIONS
-		if (!USE_CDN) {
+		if (USE_CDN===false) {
 			/*
-			if(SHOW_DEBUG) {
+			if(SHOW_DEBUG===true) {
 				#$url .= "?".date("ymdhis");
 			}else{
 				if (strpos($url, 'labels')===false) {
@@ -205,7 +207,7 @@ class js {
 					$url = 'http://'.DEDALO_HOST.$url;
 				}
 
-				if(SHOW_DEBUG) {
+				if(SHOW_DEBUG===true) {
 					$url .= "?".date("m.d.y.h");	#DEDALO_VERSION; .i.s
 				}
 				return "\n<script src=\"$url\" type=\"text/javascript\" charset=\"utf-8\"></script>";

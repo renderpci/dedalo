@@ -7,6 +7,9 @@
 
 abstract class DBi {
 
+	/**
+	* _GETCONNECTION
+	*/
 	public static function _getConnection(
 		$host=DEDALO_HOSTNAME_CONN,
 		$user=DEDALO_USERNAME_CONN,
@@ -20,24 +23,32 @@ abstract class DBi {
 		if(isset($pg_conn)) {
 			return($pg_conn);
 		}
+		
+		# basic str_connect with mandatory vars
+		$str_connect = "dbname=$database user=$user password=$password";
 
-		if ($socket) {
-			# Connect by default socket omitting host and port
-			$pg_conn = pg_connect("dbname=$database user=$user password=$password") 
-				or die('Could not connect to database (51): ' .pg_last_error());
-				#error_log("USING SOCKET");
-		}else{
-			// Connecting, selecting database
-			$pg_conn = pg_connect("host=$host port=$port dbname=$database user=$user password=$password") 
-				or die('Could not connect to database (52): ' .pg_last_error());
+		# Port is optional
+		if($port!==false) {
+			$str_connect = "port=$port ".$str_connect;
 		}
-				
+
+		# Host is optional. When false, use default sockect connection
+		if($host!==false) {
+			$str_connect = "host=$host ".$str_connect;
+		}
+		
+		// Connecting, selecting database
+		$pg_conn = pg_connect($str_connect) 
+			or die('Could not connect to database (52): ' .pg_last_error());
+			
 		return $pg_conn;
 	}
 
+
 	
-
-
+	/**
+	* _GETCONNECTION_MYSQL
+	*/
 	public static function _getConnection_mysql(
 		$host=MYSQL_DEDALO_HOSTNAME_CONN,
 		$user=MYSQL_DEDALO_USERNAME_CONN,
@@ -105,6 +116,7 @@ abstract class DBi {
 				
 		return $mysqli;
 	}
+
 
 
 }

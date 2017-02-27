@@ -1,0 +1,112 @@
+<?php
+
+	# VISUALIZADOR HTML	
+	
+	# html_delimiter
+	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'in');
+	
+	print "<div class=\"wrap_component css_wrap_inverse wrap_component_{$tipo}\" id=\"{$id_wrapper}\"
+	data-tipo=\"{$tipo}\"
+	data-lang=\"{$lang}\"
+	data-section_tipo=\"{$section_tipo}\"
+	data-parent=\"{$parent}\"
+	data-modo=\"{$modo}\"
+	data-dato=\"{$dato_json}\"
+	data-component_name=\"{$component_name}\"
+	data-component_info=\"\"
+	>";	
+		
+		# ETIQUETA (LABEL)
+		$html_label = component_common_draw::draw_label($this);
+
+		
+		# CONTENIDO (INPUT)
+		$html_content = '';
+			
+		$html_content .= "<ul class=\"css_inverse\">";
+
+			foreach ($dato as $key => $current_locator) {
+
+				$line = '';
+				foreach ($inverse_show as $ikey => $ivalue) {
+					if ($ivalue===false) continue;
+
+					# link to caller section
+					if ($ikey === 'link') {
+						$url = DEDALO_LIB_BASE_URL . '/main/?t='.$current_locator->section_tipo.'&id='.$current_locator->section_id;
+						$line .= "<a class=\"css_button_generic btn_go_inverse\" href=\"$url\">";
+						$line .= "<div class=\"link css_inverse_link\"></div>";
+						$line .= "</a>";
+					}
+
+					# section_id
+					if ($ikey === 'section_id') {
+						if(strlen($line)>0) $line .= ' ';
+						$line .= '<span class="inverse_show_section_id">'.$current_locator->section_id.'</span>';
+					}
+
+					# section_tipo
+					if ($ikey === 'section_tipo') {
+						if(strlen($line)>0) $line .= ' ';
+						$line .= '<span class="inverse_show_section_tipo">'.$current_locator->section_tipo.'</span>';
+					}
+
+					# section_label
+					if ($ikey === 'section_label') {
+						if(strlen($line)>0) $line .= ' ';
+						$label = RecordObj_dd::get_termino_by_tipo($current_locator->section_tipo);
+						$line .= '<span class="inverse_show_section_label">'.$label.'</span>';
+					}
+
+					# component_tipo
+					if ($ikey === 'component_tipo') {
+						if(strlen($line)>0) $line .= ' ';
+						$line .= '<span class="inverse_show_component_tipo">'.$current_locator->component_tipo.'</span>';
+					}
+
+					# component_label
+					if ($ikey === 'component_label') {
+						if(strlen($line)>0) $line .= ' ';
+						$label = RecordObj_dd::get_termino_by_tipo($current_locator->component_tipo);
+						$line .= '<span class="inverse_show_component_label">'.$label.'</span>';
+					}
+				}			
+				
+				$html_content .= '<li>'. $line . '</li>';
+			}
+
+		$html_content .= "</ul>";
+
+		if(SHOW_DEBUG===true) {
+			$html_content .= " <span class=\"debug_info notes\">".$dato_json."</span>";
+		}
+
+		
+
+		/*
+		$html_content .= " <input class=\"css_section_id\" type=\"text\" 
+		name=\"{$input_name}\" 
+		data-tipo=\"{$tipo}\"
+		data-section_tipo=\"{$section_tipo}\"
+		data-parent=\"{$parent}\"
+		data-lang=\"{$lang}\" 
+		value=\"{$dato}\" 
+		title=\"$html_title\"
+		/>";
+		*/
+		# Prepare content to show in page
+		tools::prepare_content($html_content);		
+
+		# PRINT HTML
+		print $html_label;
+		print $html_content;
+	
+	
+	print "</div>"; //wrap
+
+
+	# html_delimiter
+	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'out');
+
+	
+?>

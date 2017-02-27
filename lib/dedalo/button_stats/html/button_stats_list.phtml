@@ -18,12 +18,14 @@
 					break;
 						
 		case ($permissions>=2)	:
-					
+
 					# BUTTON SHOW STATS
-					$html_contenido .= "\n <div class=\"css_button_generic css_button_stats link\" onclick=\"button_stats.Stats(this)\" 
-					data-tipo=\"{$context_tipo}\"					
-					title=\"$html_title\" >";
+					$html_contenido .= "<div class=\"css_button_generic btn_inside_section_buttons_container css_button_stats tool_stats\" onclick=\"button_stats.Stats(this)\"
+					data-tipo=\"{$context_tipo}\"
+					title=\"$html_title\">";
+					$html_contenido .= "<span>";
 					$html_contenido .= $label;
+					$html_contenido .= "</span>";
 					$html_contenido .= "</div>";
 
 					$date_yesterday		= component_date::get_timestamp_now_for_db( array('sub'=>'P1D') );

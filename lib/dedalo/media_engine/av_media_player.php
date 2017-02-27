@@ -10,8 +10,8 @@ if ($share) {
 	# Decode vars
 	$share_decoded = base64_decode($share);
 
-	if(SHOW_DEBUG) {
-		dump($share_decoded, 'DEBUG INFO: share ++ '.to_string());
+	if(SHOW_DEBUG===true) {
+		#dump($share_decoded, 'DEBUG INFO: share ++ '.to_string());
 	}	
 
 	parse_str($share_decoded);
@@ -89,7 +89,7 @@ $PosterFrameObj = new PosterFrameObj($reelID);
 	#
 	# PLAYER
 	$AVPlayer	= new AVPlayer($AVObj);
-	if(SHOW_DEBUG) {
+	if(SHOW_DEBUG===true) {
 		#dump($AVObj, ' AVPlayer');
 	}
 	#$AVPlayer->set_autoplay('autoplay');

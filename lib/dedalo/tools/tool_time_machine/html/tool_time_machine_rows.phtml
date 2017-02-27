@@ -2,7 +2,28 @@
 <div id="tm_rows">
 
 	<div class="css_time_machine_label css_tool_label history_label text_shadow_inset">
-		<?php echo label::get_label('historico') ?>
+		<?php echo label::get_label('historico') ?> 
+		<?php
+		# Lang selector
+		#echo " $lang_name [$lang] ";
+
+		$html_selector ='';
+		#$html_selector .= "\n <span class=\"rotulo_tool_lang_selector\">".label::get_label('idioma').":</span> ";
+		$html_selector .= "\n <select class=\"tool_lang_selector_source css_select\"
+		onchange=\"tool_time_machine.change_tool_lang_source(this)\"
+		> ";
+					
+			# Empty option
+			#$html_selector .= "\n <option value=\"\"> </option>";
+			foreach ((array)$ar_source_langs as $current_lang => $current_lang_name) {
+				
+				$selected 		= ($current_lang === $lang) ? 'selected' : '';
+				$html_selector .= "\n <option value='{$current_lang}' {$selected}>$current_lang_name</option>";							
+			}
+
+		$html_selector .= "\n </select>";
+		echo $html_selector;
+		?>
 	</div>
 
 

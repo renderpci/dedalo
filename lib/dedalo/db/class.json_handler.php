@@ -31,7 +31,7 @@ class json_handler {
 
 				#dump($value, 'json_handler JSON encode value');
 
-			if ($type=='string') {
+			if ($type==='string') {
 				$encoding = mb_detect_encoding($value);
 				trigger_error("MB_DETECT_ENCODING: ".$encoding);
 			}
@@ -108,7 +108,7 @@ class json_handler {
 	*/
 	public static function test_json( $value ) {
 		
-		if ((substr($value, 0, 1) == '{' || substr($value, 0, 1) == '[') && ($json = json_decode($value, true))) {
+		if ((substr($value, 0, 1) === '{' || substr($value, 0, 1) === '[') && ($json = json_decode($value, true))) {
 			return $json;
 		}
 		return $value;

@@ -13,24 +13,24 @@
 	$html_label = component_common_draw::draw_label($this);
 	
 	# CONTENIDO (INPUT)
-	$html_contenido = '';
+	$html_content = '';
 	switch($permissions) {
 			
-		case 0	:	$html_contenido .= "";
+		case 0	:	$html_content .= "";
 					break;
 						
-		case 1	: 	$html_contenido .= "\n <span class=\"css_span_dato\">$dato</span>";
+		case 1	: 	$html_content .= "\n <span class=\"css_span_dato\">$dato</span>";
 					break;	
 						
 		case ($permissions>=1):
 
 					# COMPARISON OPERATORS
-					$html_contenido .= operator::get_search_comparison_operators_html($tipo,$ar_comparison_operators);
+					$html_content .= operator::get_search_comparison_operators_html($tipo,$ar_comparison_operators);
 					
 					
-					$html_contenido .= "<span id=\"search_component_$tipo\">";
+					$html_content .= "<span id=\"search_component_$tipo\">";
 
-					$html_contenido .= "\n <input class=\"css_date\" type=\"text\"
+					$html_content .= "\n <input class=\"css_date\" type=\"text\"
 						name=\"{$search_input_name}\"
 						data-tipo=\"{$tipo}\"
 						data-parent=\"{$parent}\"
@@ -40,23 +40,27 @@
 						/>";
 					
 
-					$html_contenido .= "</span>";
+					$html_content .= "</span>";
 
-					$html_contenido .= " <span class=\"css_span_ejemplo\">Format $ejemplo </span>";	
+					$html_content .= " <span class=\"css_span_ejemplo\">Format $ejemplo </span>";	
 
 					
 					# LOGICAL OPERATORS
-					$html_contenido .= operator::get_search_logical_operators_html($tipo,$ar_logical_operators);
+					$html_content .= operator::get_search_logical_operators_html($tipo,$ar_logical_operators);
+
+					if(SHOW_DEBUG===true) {
+						$html_content .= "<span class=\"debug_info\">$search_input_name</span>";
+					}
 					
 					break;				
 	}
 	
 	# Prepare content to show in page
-	tools::prepare_content($html_contenido);
+	tools::prepare_content($html_content);
 
 	# PRINT HTML
 	print $html_label;
-	print $html_contenido;
+	print $html_content;
 	
 	
 	print "\n</div>\n\n"; //wrap

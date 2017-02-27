@@ -58,6 +58,12 @@ var page_globals = new Object();
 		switch($modo) {
 			
 			case 'posterframe' :	
+					$standar = $AVObj->get_media_standar();
+					if($standar === 'ntsc'){
+						$rate = '0.033';
+					}else{
+						$rate = '0.040';
+					}
 					echo "<div class=\"css_button_generic css_av_video_controls_rew av_player_btn play_pause\">Play</div>";
 					echo "<!-- TC Display -->
 						  <div id=\"TCdiv\">
@@ -65,8 +71,8 @@ var page_globals = new Object();
 						  </div>";
 					echo "<div class=\"css_button_generic css_av_video_controls_rew av_player_btn\" onClick=\"controlVideo('-10')\">&lt; 10 seg</div>";
 					echo "<div class=\"css_button_generic css_av_video_controls_rew av_player_btn\" onClick=\"controlVideo('-5')\">&lt; 5 seg</div>";
-					echo "<div class=\"css_button_generic css_av_video_controls_rew av_player_btn\" onClick=\"controlVideo('-0.1')\"> - 1 </div>";
-					echo "<div class=\"css_button_generic css_av_video_controls_rew av_player_btn\" onClick=\"controlVideo('0.1')\"> + 1 </div>";
+					echo "<div class=\"css_button_generic css_av_video_controls_rew av_player_btn\" onClick=\"controlVideo('-$rate')\"> - 1 </div>";
+					echo "<div class=\"css_button_generic css_av_video_controls_rew av_player_btn\" onClick=\"controlVideo('$rate')\"> + 1 </div>";
 					echo "<div class=\"css_button_generic css_av_video_controls_rew av_player_btn\" onClick=\"controlVideo('5')\">5 seg &gt;</div>";
 					echo "<div class=\"css_button_generic css_av_video_controls_rew av_player_btn\" onClick=\"controlVideo('10')\">10 seg &gt;</div>";
 					/*
@@ -150,6 +156,11 @@ var page_globals = new Object();
 
 		<?php
 		print "</div><!-- /config_player_content -->";
+
+		if(SHOW_DEBUG===true) {
+			if(isset($share_decoded))
+				echo "<br><div class=\"notes\">DEBUG INFO DECODE share_decoded: $share_decoded</div>";
+		}
 	?> 
 	
 				

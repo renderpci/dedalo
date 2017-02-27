@@ -4,124 +4,126 @@
 
 		
 	# CONTENIDO
-	$html_contenido = '';
-	switch($permissions) {
+	$html_content = '';
+	switch(true) {
 			
-		case 0	:	$html_contenido .= "";
-					break;
+		case $permissions===0 :	
+				$html_content .= "";
+				break;
 						
 		case ($permissions>=1) :
 
-					#
-					# LIST ROWS
-					#
-					#$html_contenido .= "<div id=\"section_list_rows_content_div_{$this->tipo}\" class=\"section_list_rows_content_div\" >";					
-						$table ='';
+				#
+				# LIST ROWS
+				#
+				#$html_content .= "<div id=\"section_list_rows_content_div_{$this->tipo}\" class=\"section_list_rows_content_div\" >";
+					$table ='';
 
-						#$table .= "<div id=\"portal_div_{$tipo}\" class=\"\">";
-						$table .= "<div id=\"portal_div_{$identificador_unico}\" class=\"\">";
-						
-						# ROWS (TD)
-						$row_number=1;
-						foreach ((array)$dato as $key => $current_locator) {
-
-
-							$current_section_id 	= $current_locator->section_id;
-							$current_section_tipo 	= $current_locator->section_tipo;
-							$current_tag_id 		= isset($current_locator->tag_id) ? $current_locator->tag_id : null;
-							$current_component_tipo = isset($current_locator->component_tipo) ? $current_locator->component_tipo : null;
-							
-							$current_row = $this->row_in_result( $current_locator, $rows_data->result );
-
-
-							/**/
-							#dump($this->html_options, '$this->html_options->skip_records ++ '.to_string());
-							if (isset($this->html_options->skip_records) && $row_number <= $this->html_options->skip_records) {
-								$row_number++;
-								continue ;
-							}
-							
-							if ($this->html_options->rows_limit && $row_number > $this->html_options->rows_limit) {
-
-								if (!isset($show_more) && !empty($portal_parent)) {
-									$show_more ='';
-									$show_more .= "<a href=\"javascript:void(0);\" class=\"show_more_link\"
-									data-tipo=\"$tipo\"
-									data-parent=\"$portal_parent\"
-									data-section_tipo=\"$section_tipo\"
-									data-target=\"show_more_{$identificador_unico}\"
-									onclick=\"component_portal.show_more(this)\">";
-									$show_more .= label::get_label('mostrar') .' + ';
-									if(SHOW_DEBUG) {
-										 $show_more .= " $portal_parent";
-									}
-									$show_more .= "</a>";
-									$show_more .= "<div id=\"show_more_{$identificador_unico}\"></div>";
-
-									$table .= $show_more;
-									continue;
-								}
-								
-								break; # Limit number of records to sowh
-							}
-
-							# REL_LOCATOR : The current_id can be id matrix or locator like object								
-								$rel_locator = json_encode($current_locator);
-
-							# SECTION ID
-								$section_id 		= $current_section_id;	//$current_row['section_id'];
-								$target_section_tipo= $current_section_tipo;
-
-							# COLUMNS
-								$table .= "<div class=\"\" data-section_id=\"$section_id\">";
-								foreach ($ar_columns as $column_tipo => $column_label) {
-
-									if($column_tipo=='edit' || $column_tipo=='tag_id' || strpos($column_tipo, 'ds_')===0 ) continue; // Skip edit and semantic columns column
-									
-									#
-									# COMPONENTS COLUMNS
-									$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($column_tipo, true);
-										#dump($modelo_name, ' modelo_name ++ '.to_string($column_tipo));
-									
-
-									/**/
-									$column_value = isset($current_row[$column_tipo]) ? $current_row[$column_tipo] : '';
-										#dump($column_value, ' column_value ++ '.to_string($rows_data->strQuery));
-									#echo $column_value;
-									$value = (string)$modelo_name::render_list_value($column_value, // value string from db
-																					 $column_tipo, // current component tipo
-																					 $section_id, // current row section id
-																					 'list', // mode fixed list
-																					 DEDALO_DATA_LANG, // current data lang
-																					 $target_section_tipo, // current section tipo
-																					 null
-																					);		
-
-									
-									# DIV COLUMN	
-									# aditional td css selectors
-									$td_css_selector = 'column_'.$modelo_name.' column_'.$column_tipo;							
-									$table .= "<div class=\"$td_css_selector\">";
-									if (is_string($value)) {
-										$table .= $value;
-									}else{
-										$table .= to_string($value);
-									}
-									$table .= "</div>";																			
-
-								}//end foreach ($ar_columns as $column_tipo => $column_label) {
-								$table .= "</div>";	
-						
-						$row_number++;						
-						}//end foreach dato
-
-						$table .= '</div>';
-
-						$html_contenido .= $table;
-
+					#$table .= "<div id=\"portal_div_{$tipo}\" class=\"\">";
+					$table .= "<div id=\"portal_div_{$identificador_unico}\" class=\"\">";
 					
-					#$html_contenido .= "</div>";
-					break;
+					# ROWS (TD)
+					$row_number=1;
+					foreach ((array)$dato as $key => $current_locator) {
+
+
+						$current_section_id 	= $current_locator->section_id;
+						$current_section_tipo 	= $current_locator->section_tipo;
+						$current_tag_id 		= isset($current_locator->tag_id) ? $current_locator->tag_id : null;
+						$current_component_tipo = isset($current_locator->component_tipo) ? $current_locator->component_tipo : null;
+						
+						$current_row = $this->row_in_result( $current_locator, $rows_data->result );
+
+
+						/**/
+						#dump($this->html_options, '$this->html_options->skip_records ++ '.to_string());
+						if (isset($this->html_options->skip_records) && $row_number <= $this->html_options->skip_records) {
+							$row_number++;
+							continue ;
+						}
+						
+						if ($this->html_options->rows_limit && $row_number > $this->html_options->rows_limit) {
+
+							if (!isset($show_more) && !empty($portal_parent)) {
+								$show_more ='';
+								$show_more .= "<a href=\"javascript:void(0);\" class=\"show_more_link\"
+								data-tipo=\"$tipo\"
+								data-parent=\"$portal_parent\"
+								data-section_tipo=\"$section_tipo\"
+								data-target=\"show_more_{$identificador_unico}\"
+								onclick=\"component_portal.show_more(this)\">";
+								$show_more .= label::get_label('mostrar') .' + ';
+								if(SHOW_DEBUG) {
+									 $show_more .= " $portal_parent";
+								}
+								$show_more .= "</a>";
+								$show_more .= "<div id=\"show_more_{$identificador_unico}\"></div>";
+
+								$table .= $show_more;
+								continue;
+							}
+							
+							break; # Limit number of records to sowh
+						}
+
+						# REL_LOCATOR : The current_id can be id matrix or locator like object								
+							$rel_locator = json_encode($current_locator);
+
+						# SECTION ID
+							$section_id 		= $current_section_id;	//$current_row['section_id'];
+							$target_section_tipo= $current_section_tipo;
+
+						# COLUMNS
+							$table .= "<div class=\"\" data-section_id=\"$section_id\">";
+							foreach ($ar_columns as $column_tipo => $column_label) {
+
+								if($column_tipo=='edit' || $column_tipo=='tag_id' || strpos($column_tipo, 'ds_')===0 ) continue; // Skip edit and semantic columns column
+								
+								#
+								# COMPONENTS COLUMNS
+								$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($column_tipo, true);
+									#dump($modelo_name, ' modelo_name ++ '.to_string($column_tipo));
+								
+
+								/**/
+								$column_value = isset($current_row[$column_tipo]) ? $current_row[$column_tipo] : '';
+									#dump($column_value, ' column_value ++ '.to_string($rows_data->strQuery));
+								#echo $column_value;
+								$value = (string)$modelo_name::render_list_value($column_value, // value string from db
+																				 $column_tipo, // current component tipo
+																				 $section_id, // current row section id
+																				 'list', // mode fixed list
+																				 DEDALO_DATA_LANG, // current data lang
+																				 $target_section_tipo, // current section tipo
+																				 null,
+																				 $tipo
+																				);		
+
+								
+								# DIV COLUMN	
+								# aditional td css selectors
+								$td_css_selector = 'column_'.$modelo_name.' column_'.$column_tipo;							
+								$table .= "<div class=\"$td_css_selector\">";
+								if (is_string($value)) {
+									$table .= $value;
+								}else{
+									$table .= to_string($value);
+								}
+								$table .= "</div>";																			
+
+							}//end foreach ($ar_columns as $column_tipo => $column_label) {
+							$table .= "</div>";	
+					
+					$row_number++;						
+					}//end foreach dato
+
+					$table .= '</div>';
+
+					$html_content .= $table;
+
+				
+				#$html_content .= "</div>";
+				break;
 
 	}
 
@@ -158,11 +160,10 @@
 		$html_info .= "</div>";
 		#echo "<div> Time To Generate section list: HTML: ".round(microtime(1)-$start_time,3)."</div>";
 			
-		$html_contenido .= $html_info;
+		$html_content .= $html_info;
 	}#end if(SHOW_DEBUG)
 	
 	
-	print $html_contenido;
-
+	print $html_content;
 
 ?>

@@ -15,6 +15,7 @@
 	$component_name			= get_class($this);
 	$file_name 				= $modo;
 		
+	if($permissions===0) return null;
 	
 	switch($modo) {
 		
@@ -40,7 +41,19 @@
 				$file_name	= 'list';
 		case 'list':
 				$valor 		= $this->get_valor();
-				break;		
+				break;
+
+		case 'search':
+				#$referenced_tipo 		 = $this->get_referenced_tipo();
+				#$ar_list_of_values		 = $this->get_ar_list_of_values( DEDALO_DATA_LANG, null );
+				$ar_select_values 		 = (array)$this->get_ar_select_values();
+									
+				$ar_comparison_operators = $this->build_search_comparison_operators();
+				$ar_logical_operators 	 = $this->build_search_logical_operators();
+
+				# Search input name
+				$search_input_name = $section_tipo.'_'.$tipo;
+				break;	
 	}
 		
 	$page_html	= DEDALO_LIB_BASE_PATH .'/'. get_class($this) . '/html/' . get_class($this) . '_' . $file_name . '.phtml';

@@ -2,129 +2,127 @@
 
 	# VISUALIZADOR HTML	
 	
-	print "\n<!-- TEXT AREA [tipo:$tipo section_id:$parent section_tipo:$section_tipo] $label -->";
-	print "\n<div class=\"css_wrap_text_area wrap_component text_area_tool_indexation\" id=\"{$id_wrapper}\"
-	data-tipo=\"{$tipo}\"
-	data-section_tipo=\"{$section_tipo}\"
-	data-parent=\"{$parent}\"
-	data-lang=\"{$lang}\"
-	data-modo=\"{$modo}\"
-	data-dato=\"{$dato_raw}\"
-	data-component_name=\"{$component_name}\"
-	>";
-	
+	# html_delimiter
+	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'in');
+
+	print "<div class=\"css_wrap_text_area wrap_component text_area_tool_indexation\" id=\"{$id_wrapper}\" ";
+	print "data-tipo=\"{$tipo}\" ";
+	print "data-section_tipo=\"{$section_tipo}\" ";
+	print "data-parent=\"{$parent}\" ";
+	print "data-lang=\"{$lang}\" ";
+	print "data-modo=\"{$modo}\" ";
+	print "data-dato=\"{$dato_raw}\" ";
+	print "data-component_name=\"{$component_name}\" ";
+	print ">";	
 	
 	
 	# CONTENIDO (INPUT)
-	$html_contenido = '';
+	$html_content = '';
 	switch($permissions) {
 			
-		case 0	:	$html_contenido .= "";
-					break;
+		case 0	:
+			$html_content .= "";
+			break;
 						
-		case 1	: 	$html_contenido .= "\n<div class=\"text_area_content text_area_content_shadow\" >";
-					$html_contenido .= "\n <span class=\"css_span_dato\">$dato</span>";
-					$html_contenido .= "\n</div>"; #end text_area_content
+		case 1	: 
+			$html_content .= "<div class=\"text_area_content text_area_content_shadow\" >";
+			$html_content .= " <span class=\"css_span_dato\">$dato</span>";
+			$html_content .= "</div>"; #end text_area_content
 
-					/**
-					* WRAP CURRENT SELECTED FRAGMENT (INDEXATION AND RELATIONS LIST TABS) 
-					*/
-					$html_contenido .= "\n <div id=\"relations_ajax_div_{$tipo}\" class=\"wrap_fragment\" 
-					data-tipo=\"{$tipo}\" data-section_tipo=\"{$section_tipo}\" data-parent=\"{$parent}\" data-modo=\"selected_fragment\" data-lang=\"{$lang}\" data-caller_id=\"$caller_id\"
-					> <!-- AJAX CONTENT HERE --> </div>";
-
-						
-					break;	
-						
+			/**
+			* WRAP CURRENT SELECTED FRAGMENT (INDEXATION AND RELATIONS LIST TABS) 
+			*/
+			$html_content .= " <div id=\"relations_ajax_div_{$tipo}\" class=\"wrap_fragment\" 
+			data-tipo=\"{$tipo}\" data-section_tipo=\"{$section_tipo}\" data-parent=\"{$parent}\" data-modo=\"selected_fragment\" data-lang=\"{$lang}\" data-caller_id=\"$caller_id\"
+			> <!-- AJAX CONTENT HERE --> </div>";
+			break;					
 		
 		case 2	:
 		case 3	:
+			# ETIQUETA (LABEL)
+			$html_content = component_common_draw::draw_label($this);
 
-					# ETIQUETA (LABEL)
-					$html_contenido = component_common_draw::draw_label($this);
+			#
+			# BROKEN INDEX TAGS WARNING
+			if (isset($component_warning)) {
+				$html_content .= "<div class=\"text_area_warning\"><span class=\"warning\">".$component_warning."</span></div>";
+			}
 
+			#
+			# TEXT AREA
+			#
+			$html_content .= " <textarea class=\"css_text_area $text_area_tm text_area_tool_indexation\"
+			id=\"{$identificador_unico}\"
+			name=\"{$input_name}\"
+			data-tipo=\"{$tipo}\"
+			data-parent=\"{$parent}\"
+			data-lang=\"{$lang}\"
+			data-modo=\"{$modo}\"
+			data-section_tipo=\"{$section_tipo}\"
+			data-last_tag_index_id=\"{$last_tag_index_id}\"
+			title=\"$html_title\">$dato</textarea>";
 
-					#
-					# BROKEN INDEX TAGS WARNING
-					if (isset($component_warning)) {
-						$html_contenido .= "<div class=\"text_area_warning\"><span class=\"warning\">".$component_warning."</span></div>";
-					}
-					
-
-					#
-					# TEXT AREA
-					#
-					$html_contenido .= "\n <textarea class=\"css_text_area $text_area_tm text_area_tool_indexation\"
-					id=\"{$identificador_unico}\"
-					name=\"{$input_name}\"
-					data-tipo=\"{$tipo}\"
-					data-parent=\"{$parent}\"
-					data-lang=\"{$lang}\"
-					data-modo=\"{$modo}\"
-					data-section_tipo=\"{$section_tipo}\"
-					data-last_tag_index_id=\"{$last_tag_index_id}\"					
-					title=\"$html_title\">$dato</textarea>";
-
-					
-					if (SHOW_DEBUG) {
-					#$html_contenido .= "<span class=\"debug_info\"> $identificador_unico</span>";
-					}
-					
-					
-					#
-					# BTN CREATE FRAGMENT  
-					#
-					#if($caller_id>0)
-					$html_contenido .= "\n <div class=\"css_button_generic btn_create_fragment\" style=\"display:none\"
-					data-identificador_unico=\"$identificador_unico\"
-					data-parent=\"{$parent}\"
-					data-section_tipo=\"{$section_tipo}\"
-					onclick=\"tool_indexation.create_fragment(this);\"
-					>";				
-					$html_contenido .= label::get_label('crear_nuevo_fragmento');
-					if(SHOW_DEBUG) {
-						#$html_contenido .= " <span class=\"debug_info\">[last_tag_index_id:$last_tag_index_id - caller_id:$caller_id]</span>";
-					}
-					$html_contenido .= "</div>";
+			
+			if (SHOW_DEBUG) {
+			#$html_content .= "<span class=\"debug_info\"> $identificador_unico</span>";
+			}				
+			
+			#
+			# BTN CREATE FRAGMENT  
+			#
+			#if($caller_id>0)
+			$html_content .= " <div class=\"css_button_generic btn_create_fragment\" style=\"display:none\"
+			data-identificador_unico=\"$identificador_unico\"
+			data-parent=\"{$parent}\"
+			data-section_tipo=\"{$section_tipo}\"
+			data-lang=\"{$lang}\"
+			onclick=\"tool_indexation.create_fragment(this);\"
+			>";				
+			$html_content .= label::get_label('crear_nuevo_fragmento');
+			if(SHOW_DEBUG) {
+				#$html_content .= " <span class=\"debug_info\">[last_tag_index_id:$last_tag_index_id - caller_id:$caller_id]</span>";
+			}
+			$html_content .= "</div>";
 
 
+			#
+			# SELECT TAG ID
+			# Select current tag when is received by request as 'tag_id' like 'tag_id=1'
+			# tag_id is int value
+			if (!empty($_REQUEST['tag_id'])) {
+				$tagName = '[index-n-'.(int)$_REQUEST['tag_id'].']';	# [index-n-3]
+				$html_content .= "<script>";
+				$html_content .= "$(document).ready(function() {";
+				$html_content .= " setTimeout(function(){";	
+				$html_content .= "   tool_indexation.fragment_info('$tagName','$tipo','$parent','$section_tipo','$lang');";
+				$html_content .= " }, 600);";
+				$html_content .= "});";
+				$html_content .= "</script>";
+			}
+			//fragment_info = function(tagName, tipo, parent)
 
-					#
-					# SELECT TAG ID
-					# Select current tag when is received by request as 'tag_id' like 'tag_id=1'
-					# tag_id is int value
-					if (!empty($_REQUEST['tag_id'])) {
-						$tagName = '[index-n-'.(int)$_REQUEST['tag_id'].']';	# [index-n-3]
-						$html_contenido .= "<script>";
-						$html_contenido .= "$(document).ready(function() {";
-						$html_contenido .= " setTimeout(function(){";	
-						$html_contenido .= "   tool_indexation.fragment_info('$tagName','$tipo','$parent','$section_tipo');";
-						$html_contenido .= " }, 600);";
-						$html_contenido .= "});";
-						$html_contenido .= "</script>";
-					}
-					//fragment_info = function(tagName, tipo, parent)
 
-		
-					if(SHOW_DEBUG) {
-						#$html_contenido .= "\n <span class=\"css_span_debugger\" id=\"debugger_{$tipo}\" >{$debugger}</span>";
-					}
-					break;
-							
+			if(SHOW_DEBUG) {
+				#$html_content .= " <span class=\"css_span_debugger\" id=\"debugger_{$tipo}\" >{$debugger}</span>";
+			}
+			break;				
 	}
 
 	# INIT : Init text editor 
-	$html_contenido .= "\n<script>text_editor.init('$identificador_unico','$modo','$propiedades_json');</script>";
+	$html_content .= "<script>text_editor.init('$identificador_unico','$modo','$propiedades_json');</script>";
 	
 	
 	# Prepare content to show in page
-	tools::prepare_content($html_contenido);
+	tools::prepare_content($html_content);
 
 	
 	# PRINT HTML	
-	print $html_contenido;
+	print $html_content;
 	
 	
-	print "\n</div><!-- /css_wrap_text_area  $label -->\n\n"; //wrap
-?>
+	print "</div>"; //wrap
 
+	# html_delimiter
+	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'out');
+
+?>

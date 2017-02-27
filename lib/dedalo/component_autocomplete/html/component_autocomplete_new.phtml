@@ -27,8 +27,9 @@
 		value=\"".label::get_label('nuevo')."\"
 		onclick=\"component_autocomplete.submit_new_element(this)\"
 		/>";
-		if(SHOW_DEBUG) {
-			$html .= " <span class=\"note\">[$target_section_tipo]</span>";
+		
+		if(SHOW_DEBUG===true) {
+			#$html .= " <span class=\"note\">[$target_section_tipo]</span>";
 		}
 		
 

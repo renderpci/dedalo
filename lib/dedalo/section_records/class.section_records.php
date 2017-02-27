@@ -10,6 +10,7 @@ class section_records extends common {
 
 	public $tipo;
 	public $options;
+	public $button_delete;
 	public $button_delete_permissions = 0;
 
 	public $rows_obj;	
@@ -28,7 +29,7 @@ class section_records extends common {
 
 		#
 		# LIST OPTIONS STORE
-		if ( $options->modo=='list' ) {
+		if ( $options->modo==='list' ) {
 
 			$search_options_session_key = 'section_'.$this->tipo;
 			if (isset($_SESSION['dedalo4']['config']['search_options'][$search_options_session_key])) {				
@@ -39,7 +40,7 @@ class section_records extends common {
 					!empty($session_options) &&
 					!empty($session_options->layout_map_list)) {
 					$options->layout_map = $options->layout_map_list = (array)$session_options->layout_map_list;
-					if(SHOW_DEBUG) {
+					if(SHOW_DEBUG===true) {
 					 	//error_log("ya va desde sesion");
 					}
 				}
@@ -59,7 +60,7 @@ class section_records extends common {
 			}
 			#dump($options, " options ".to_string());
 
-		}//if ( $options->modo=='list' ) {
+		}//if ( $options->modo==='list' ) {
 
 		$this->options  = $options;
 
@@ -78,7 +79,7 @@ class section_records extends common {
 		
 		#
 		# SAVE_HANDLER . Is defined in section and injected in this->options sended to current class
-		if (isset($this->options->save_handler) && $this->options->save_handler=='session') {
+		if (isset($this->options->save_handler) && $this->options->save_handler==='session') {
 			# Mimic database result	with a placebo rows_obj 				
 			$ar_data = array();
 			foreach ($this->options->filter_by_id as $key => $value) {							

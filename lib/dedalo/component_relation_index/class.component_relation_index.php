@@ -1,115 +1,16 @@
 <?php
 /*
 * CLASS COMPONENT_RELATION_INDEX
+*
+*
 */
-
-
 class component_relation_index extends component_relation_common {
 	
-	# Overwrite __construct var lang passed in this component
-	protected $lang = DEDALO_DATA_NOLAN;
 
-	public $relation_type	= DEDALO_RELATION_TYPE_INDEX_TIPO;
+	public $relation_type = DEDALO_RELATION_TYPE_INDEX_TIPO;
 
-	/**
-	* __CONSTRUCT
-	*/
-	function __construct($tipo=null, $parent=null, $modo='edit', $lang=DEDALO_DATA_NOLAN, $section_tipo=null) {
-
-		# Force always DEDALO_DATA_NOLAN
-		$lang = $this->lang;
-
-		# relation_tipo
-		$this->relation_tipo = DEDALO_RELATION_TYPE_INDEX_TIPO;			
-
-		# Build the componente normally
-		parent::__construct($tipo, $parent, $modo, $lang, $section_tipo);
-
-		if(SHOW_DEBUG) {
-			$traducible = $this->RecordObj_dd->get_traducible();
-			if ($traducible=='si') {
-				throw new Exception("Error Processing Request. Wrong component lang definition. This component $tipo (".get_class().") is not 'traducible'. Please fix this ASAP", 1);
-			}
-		}
-	}//end __construct
-
-
-
-	/**
-	* SAVE
-	* @return int $result
-	*	section returns section_id on save
-	* When save component, section is saved, not explicit section save is needed here
-	* Note that section relation data of current type is deleted and recreated completely on every save action
-	*/
-	public function Save() {
-
-		# Set section relation locators for fast access later from class relation
-		$my_section = $this->get_my_section();
-
-		# Remove whole actual section parent locators
-		$my_section->remove_relations_of_type($this->relation_tipo);
-
-		# Add whole array of parent locators
-		$dato = $this->get_dato();
-		foreach ((array)$dato as $current_locator) {
-			$current_locator->type = $this->relation_tipo;
-			$my_section->add_relation($current_locator, $remove_previous_of_current_type=false); // Note thats second param force remove old locators of current type
-		}
-		
-
-		# Save normally
-		return parent::Save();
-	}//end Save
-
-
-
-	/**
-	* GET DATO
-	* @return array $dato
-	*	$dato is always an array of locators
-	*/
-	public function get_dato() {
-		$dato = parent::get_dato();
-
-		if (!empty($dato) && !is_array($dato)) {
-			#dump($dato,"dato");
-			trigger_error("Error: ".__CLASS__." dato type is wrong. Array expected and ".gettype($dato)." is received for tipo:$this->tipo, parent:$this->parent");
-			$this->set_dato(array());
-			$this->Save();
-		}
-		if ($dato==null) {
-			$dato=array();
-		}
-
-		return (array)$dato;
-	}//end get_dato
-
-
-
-	/**
-	* SET_DATO
-	* @param array|string $dato
-	*	When dato is string is because is a json encoded dato
-	*/
-	public function set_dato($dato) {
-		if (is_string($dato)) { # Tool Time machine case, dato is string
-			$dato = json_handler::decode($dato);
-		}
-		if (is_object($dato)) {
-			$dato = array($dato);
-		}
-		# Ensures is a real non-associative array (avoid json encode as object)
-		$dato = is_array($dato) ? array_values($dato) : (array)$dato;		
-		/*
-		if (empty($dato)) {
-			parent::set_dato( null ); // To store null in database instead empty array
-		}else{
-			parent::set_dato( (array)$dato );
-		}
-		*/
-		parent::set_dato( (array)$dato );		
-	}//end set_dato
+	# test_equal_properties is used to verify duplicates when add locators
+	public $test_equal_properties = array('section_tipo','section_id','type','from_component_tipo','component_tipo','tag_id');
 
 
 	
@@ -128,7 +29,7 @@ class component_relation_index extends component_relation_common {
 		$ar_valor  	= array();		
 		$dato   	= $this->get_dato();
 		foreach ((array)$dato as $key => $current_locator) {
-			$ar_valor[] = $this->get_locator_value( $current_locator, $lang );			
+			$ar_valor[] = self::get_locator_value( $current_locator, $lang, $this->section_tipo );			
 		}//end if (!empty($dato)) 
 
 		# Set component valor
@@ -173,8 +74,277 @@ class component_relation_index extends component_relation_common {
 
 		return $lang;*/
 	}#end get_valor_lang
+
+
+
+	/**
+	* ADD_INDEX
+	* Add one locator to current 'dato'. Verify is exists to avoid duplicates
+	* NOTE: This method updates component 'dato' but NOT save
+	* @return bool
+	*/
+	public function add_index( $locator ) {
+
+		# Add current locator to component dato
+		if (!$add_locator = $this->add_locator_to_dato($locator)) {
+			return false;
+		}
+		
+		return true;
+	}//end add_index
+
+
+
+	/**
+	* REMOVE_INDEX
+	* Iterate current component 'dato' and if math requested locator, removes it the locator from the 'dato' array
+	* NOTE: This method updates component 'dato' and save
+	* @return bool
+	*/
+	public function remove_index( $locator ) {
+
+		# Add current locator to component dato		
+		if (!$remove_locator_locator = $this->remove_locator_from_dato($locator)) {
+			return false;
+		}
+		
+		return true;
+	}//end remove_index
+
+
+
+	/**
+	* GET_INDEXATIONS_FROM_TAG
+	* Used by tool_indexation to get list of terms with index realtion to current tag
+	* @return array $ar_indexations
+	*/
+	public static function get_indexations_from_tag($component_tipo, $section_tipo, $section_id, $tag_id, $lang) {
+		
+		# Search relation index in hierarchy tables		
+		$options = new stdClass();
+			$options->fields = new stdClass();
+			$options->fields->section_tipo 	= $section_tipo;
+			$options->fields->section_id 	= $section_id;
+			$options->fields->component_tipo= $component_tipo;
+			$options->fields->type 			= DEDALO_RELATION_TYPE_INDEX_TIPO;
+			$options->fields->tag_id 		= $tag_id;			
+			$options->ar_tables 			= array('matrix_hierarchy');
+
+		$result = component_relation_index::get_indexations_search( $options );
+
+		$ar_indexations = array();
+		while ($rows = pg_fetch_assoc($result)) {
+
+			$current_section_id   	= $rows['section_id'];
+			$current_section_tipo 	= $rows['section_tipo'];
+			$relations 				= json_decode($rows['relations']);
+				#dump($relation, ' relation ++ '.to_string());			
+
+			// Full relation index locator contains from component tipo info
+			$relation_index_locator = component_relation_index::get_locator_from_ar_relations($relations, $section_tipo, $section_id, DEDALO_RELATION_TYPE_INDEX_TIPO, $tag_id);
+				#dump($relation_index_locator, ' relation_index_locator ++ '.to_string());
+
+			$locator = new locator();
+				$locator->set_section_tipo($current_section_tipo);
+				$locator->set_section_id($current_section_id);
+
+			$term_label = ts_object::get_term_by_locator( $locator, DEDALO_DATA_LANG, $from_cache=true );
+
+			$data = new stdClass();		
+				$data->section_tipo = $current_section_tipo;
+				$data->section_id 	= $current_section_id;
+				$data->term 		= strip_tags($term_label);
+				$data->locator 		= $relation_index_locator;
+
+			$ar_indexations[] = $data;
+
+			/*
+			$thesaurus_map 	= section::get_section_map( $current_section_tipo )->thesaurus;
+			if (isset($thesaurus_map->term)) {
+				$term_tipo 		= $thesaurus_map->term;				
+				$term_label 	= component_input_text::render_list_value($value, $term_tipo, $current_section_id, 'list', $lang, $current_section_tipo);
+
+				$data = new stdClass();		
+					$data->section_tipo = $current_section_tipo;
+					$data->section_id 	= $current_section_id;
+					$data->term 		= strip_tags($term_label);
+					$data->locator 		= $relation_index_locator;
+
+				$ar_indexations[] = $data;
+			}
+			*/
+		}//end while
+
+		return (array)$ar_indexations;
+	}//end get_indexations_from_tag	
+
+
+
+	/**
+	* GET_INDEXATIONS_SEARCH
+	* @return resource $result
+	*/
+	public static function get_indexations_search( $request_options ) {
+
+		$options = new stdClass();
+			$options->fields = new stdClass();
+			$options->fields->section_tipo 	= false;
+			$options->fields->section_id 	= false;
+			$options->fields->component_tipo= false;
+			$options->fields->type 			= false;
+			$options->fields->tag_id 		= false;
+			$options->ar_tables 			= array('matrix_hierarchy');
+
+			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 	
 
+		$ar_filter=array();
+		foreach ($options->fields as $key => $value) {
+
+			if ($value!==false) {
+				$ar_filter[] = "\"$key\":\"$value\"";
+			}
+		}
+		$compare = '{'. implode(",", $ar_filter). '}';
+
+		// Iterate tables and make union search		
+		$ar_query=array();
+		foreach ((array)$options->ar_tables as $table) {
+			$query  = " SELECT section_tipo, section_id, datos#>'{relations}' AS relations 
+						FROM \"$table\" 
+						WHERE datos#>'{relations}' @> '[$compare]'::jsonb 
+						";
+			$ar_query[] = $query;
+		}
+
+		$strQuery  = '';
+		$strQuery .= implode(" UNION ALL ", $ar_query);
+		// Set order to maintain results stable
+		$strQuery .= " ORDER BY section_id ASC";
+		#dump($strQuery, ' strQuery ++ '.to_string($strQuery));
+
+		$result = JSON_RecordObj_matrix::search_free($strQuery);
+
+		return $result; // resource
+	}//end get_indexations_search
+
+
+
+	/**
+	* GET_INDEXATIONS_FOR_LOCATOR
+	* @return array $ar_indexations
+	*/
+	public static function get_indexations_for_locator( $locator ) {
+		
+		$ar_indexations = array();
+
+		$options = new stdClass();
+			$options->fields = new stdClass();
+			$options->fields->section_tipo 	= $locator->section_tipo;
+			$options->fields->section_id 	= $locator->section_id;			
+			$options->fields->type 			= DEDALO_RELATION_TYPE_INDEX_TIPO;			
+			$options->ar_tables 			= array('matrix_hierarchy');
+
+		$result = component_relation_index::get_indexations_search( $options );
+		$count = 0;
+		while ($rows = pg_fetch_assoc($result)) {
+
+			$current_section_id   	= $rows['section_id'];
+			$current_section_tipo 	= $rows['section_tipo'];
+			/*
+			$relations 				= json_decode($rows['relations']);
+				#dump($relations, ' $relations **** ++ '.to_string($locator->section_tipo."-".$locator->section_id));
+			$relation_index_locator = component_relation_index::get_locator_from_ar_relations($relations, $locator->section_tipo, $locator->section_id, $options->fields->type, $tag_id=false);
+				#dump($relation_index_locator, ' $relation_index_locator **** ++ '.to_string($locator->section_tipo."-".$locator->section_id." -- $current_section_tipo-$current_section_id"));
+			*/
+			$pseudo_locator = new locator();
+				$pseudo_locator->set_section_tipo($current_section_tipo);
+				$pseudo_locator->set_section_id($current_section_id);
+
+			
+			$locator_json = json_encode($pseudo_locator);
+			$ar_indexations[$locator_json] = 1;
+				#dump($locator_json, ' locator_json ++ '.to_string());
+		}
+		#dump($ar_indexations, ' ar_indexations ++ '.to_string($locator->section_tipo."-".$locator->section_id));
+
+		return (array)$ar_indexations;
+	}//end get_indexations_for_locator
+
+
+
+	/**
+	* GET_LOCATOR_FROM_AR_RELATIONS
+	* Find searched locator in array of locators
+	* Used to locate the correct locator inside relations container returned for SQL search
+	* @return objet $current_locator | null
+	*/
+	private static function get_locator_from_ar_relations($relations, $section_tipo, $section_id, $type, $tag_id=false) {
+
+		// Loactor to find
+		$locator = new locator();
+			$locator->set_section_tipo($section_tipo);
+			$locator->set_section_id($section_id);
+			$locator->set_type($type);
+			
+			if ($tag_id!==false) 
+				$locator->set_tag_id($tag_id);			
+			
+
+		$ar_properties = array_keys((array)$locator);
+			#dump($ar_properties, ' $ar_properties ++ '.to_string());	
+
+		foreach ((array)$relations as $current_locator) {
+			
+			if (true===locator::compare_locators($current_locator, $locator, $ar_properties) ) {
+				// Full locator (with from tipo)
+				return $current_locator;
+			}
+		}
+		debug_log(__METHOD__." Zero locators are located in relations data. This is abnormal situation. Please review this data. ar_relations: ".to_string($relations), logger::ERROR);
+		
+		return null;
+	}//end get_locator_from_ar_relations
+
+
+
+	/**
+	* DELETE_TAG_INDEXATIONS
+	* @return array $ar_deleted
+	*/
+	public static function delete_tag_indexations($component_tipo, $section_tipo, $section_id, $tag_id, $lang) {
+		
+		$ar_indexations = self::get_indexations_from_tag($component_tipo, $section_tipo, $section_id, $tag_id, $lang);
+			#dump($ar_indexations, ' $ar_indexations ++ '.to_string());
+
+		$ar_deleted=array();
+		foreach ((array)$ar_indexations as $key => $index_obj) {
+			
+			$current_section_tipo 	= $index_obj->section_tipo;
+			$current_section_id 	= $index_obj->section_id;
+			$current_component_tipo	= $index_obj->locator->from_component_tipo;
+
+			# Delete locator
+			$component 	   = component_common::get_instance('component_relation_index',
+															 $current_component_tipo,
+															 $current_section_id,
+															 'edit',
+															 DEDALO_DATA_NOLAN,
+															 $current_section_tipo);
+			$component->remove_index( $index_obj->locator );
+			$component->Save();
+			debug_log(__METHOD__." removed locator from component_relation_index ($current_component_tipo, $current_section_tipo, $current_section_id) ".to_string($index_obj->locator), logger::DEBUG);
+		
+			$ar_deleted[] = array('component_tipo'=>$current_component_tipo,
+								  'section_tipo'=>$current_section_tipo,
+								  'section_id'=>$current_section_id,
+								  'removed_locator'=>$index_obj->locator);
+		}
+
+		return (array)$ar_deleted;
+	}//end delete_tag_indexations
+
+	
 
 	/**
 	* BUILD_SEARCH_COMPARISON_OPERATORS 
@@ -211,10 +381,10 @@ class component_relation_index extends component_relation_common {
 		$json_field = 'a.'.$json_field; // Add 'a.' for mandatory table alias search
 		
 		switch (true) {
-			case $comparison_operator=='=':
+			case $comparison_operator==='=':
 				$search_query = " {$json_field}#>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}' @> '[$search_value]'::jsonb ";
 				break;
-			case $comparison_operator=='!=':
+			case $comparison_operator==='!=':
 				$search_query = " ({$json_field}#>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}' @> '[$search_value]'::jsonb)=FALSE ";
 				break;
 		}
@@ -246,6 +416,22 @@ class component_relation_index extends component_relation_common {
 		
 		return $valor;
 	}#end get_valor_export
+
+
+
+
+	/**
+	* GET_COMPONENT_RELATION_INDEX_FROM_SECTION_TIPO
+	* @return 
+	*//*
+	public static function get_component_relation_index_from_section_tipo($section_tipo) {
+		$ar_children = section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, array('component_relation_index'), $from_cache=true, $resolve_virtual=true, $recursive=true, $search_exact=true);
+
+	}//end get_component_relation_index_from_section_tipo
+	*/
+
+
+
 
 	
 	

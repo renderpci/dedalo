@@ -7,6 +7,10 @@
 	$parent 				= $this->source_component->get_parent();
 	$section_tipo			= $this->source_component->get_section_tipo();
 	$lang 					= $this->source_component->get_lang();
+	if (!empty($_REQUEST['lang'])) {
+	$lang 					= $_REQUEST['lang'];
+	}
+	$lang_name 				= lang::get_name_from_code( $lang, 'lg-eng' );
 	$label 					= $this->source_component->get_label();
 	$traducible 			= $this->source_component->get_traducible();
 	$component_name			= get_class($this->component_obj);
@@ -42,7 +46,7 @@
 				# Configure component
 				# In case relation, set current_tipo_section as received value by url GET
 				#$current_tipo_section = common::setVar('current_tipo_section');
-				$current_tipo_section = $this->section_tipo;	// component_common::get_section_tipo_from_component_tipo($tipo);
+				$current_tipo_section = $this->section_tipo;
 					#dump($current_tipo_section,"current_tipo_section");
 
 				if(!empty($current_tipo_section)) {
@@ -50,7 +54,7 @@
 					# Set variant for id
 					$source_component->set_variant( tool_time_machine::$preview_variant );		
 				}
-				#dump($source_component,' $source_component');			
+				#dump($source_component,' $source_component');
 				
 
 				# Build source html
@@ -88,9 +92,12 @@
 						$obj_user_name	= component_common::get_instance('component_input_text', DEDALO_FULL_USER_NAME_TIPO, $userID, 'edit', DEDALO_DATA_NOLAN, DEDALO_SECTION_USERS_TIPO);
 						$user_name = $obj_user_name->get_valor();
 						$tm_obj->user_name =$user_name;
-					};						
-						
+					}						
 				}
+
+				#$ar_source_langs = common::get_ar_all_langs_resolved();
+				$ar_source_langs = $this->get_source_langs();
+					#dump($ar_source_langs, ' $ar_source_langs ++ '.to_string());
 
 				# current_tipo_section is needed for relation tm !
 				$ar_rel_locator_for_current_tipo_section 	= array();
@@ -115,7 +122,11 @@
 		case 'source':
 				# Configure component
 				# In case relation, set current_tipo_section as received value by url GET
-				$current_tipo_section = common::setVar('current_tipo_section');	
+				$current_tipo_section = common::setVar('current_tipo_section');
+	
+				// Force update component lang (can be overwrited with get value) Important !
+				$source_component->set_lang($lang);
+				
 
 				if(!empty($current_tipo_section)) {
 					$source_component->set_current_tipo_section($current_tipo_section);					
@@ -133,6 +144,16 @@
 				$context = new stdClass();
 					$context->context_name = 'tool_time_machine';
 				$source_component->set_context($context);
+
+				# Detect original lang if defined. Else use current lang
+				/*
+				$original_lang 	= component_text_area::force_change_lang($this->source_component->get_tipo(),
+																		 $this->source_component->get_parent(),
+																		 $this->source_component->get_modo(),
+																		 $this->source_component->get_lang(),
+																		 $this->source_component->get_section_tipo());
+				$this->source_component->set_lang($original_lang);
+				*/
 
 				$source_component_html = $source_component->get_html();
 				break;
@@ -194,6 +215,17 @@
 						$context->context_name = 'tool_time_machine';
 					$source_component->set_context($context);
 
+
+					# Detect original lang if defined. Else use current lang
+					/*
+					$original_lang 	= component_text_area::force_change_lang($this->source_component->get_tipo(),
+																			 $this->source_component->get_parent(),
+																			 $this->source_component->get_modo(),
+																			 $this->source_component->get_lang(),
+																			 $this->source_component->get_section_tipo());
+					$this->source_component->set_lang($original_lang);
+					*/
+
 					# Get component html
 					$component_for_time_machine_html = $source_component->get_html();						#dump($source_component->get_dato(),'TM $source_component->get_dato()');
 
@@ -210,14 +242,14 @@
 				$current_tipo_section_name 	= $source_component->get_label();
 
 				# ACTIVITY : Avoid show time machine for activity section
-				if($current_tipo_section==DEDALO_ACTIVITY_SECTION_TIPO) {
+				if($current_tipo_section===DEDALO_ACTIVITY_SECTION_TIPO) {
 					return null;
 				}
 
 				# Restrictions
 				$user_can_recover_sections = tool_time_machine::user_can_recover_sections( $current_tipo_section, navigator::get_user_id() );
 					#dump($user_can_recover_sections, 'user_can_recover_sections', array());
-				if ($user_can_recover_sections==false) {
+				if ($user_can_recover_sections===false) {
 					return null;
 				}
 					

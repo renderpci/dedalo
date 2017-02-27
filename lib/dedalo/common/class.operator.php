@@ -1,5 +1,5 @@
 <?php
-require_once( dirname(dirname(__FILE__)) .'/config/config4.php');
+#require_once( dirname(dirname(__FILE__)) .'/config/config4.php');
 #require_once(DEDALO_LIB_BASE_PATH . '/db/class.RecordObj_dd.php');
 
 /**
@@ -27,7 +27,7 @@ require_once( dirname(dirname(__FILE__)) .'/config/config4.php');
  	*/
  	public static function get_ar_operator( $lang=DEDALO_APPLICATION_LANG ) {
 
- 		if ($lang=='lg-vlca') {
+ 		if ($lang==='lg-vlca') {
 			$lang = 'lg-cat';
 		}
 
@@ -86,7 +86,7 @@ require_once( dirname(dirname(__FILE__)) .'/config/config4.php');
 	*/
 	public static function get_operator($SQL_operator, $lang=DEDALO_APPLICATION_LANG) {
 		
-		if ($lang=='lg-vlca') {
+		if ($lang==='lg-vlca') {
 			$lang = 'lg-cat';
 		}
 
@@ -112,7 +112,7 @@ require_once( dirname(dirname(__FILE__)) .'/config/config4.php');
 	*/
 	public static function get_var_from_operator($operator, $lang=DEDALO_APPLICATION_LANG) {
 
-		if ($lang=='lg-vlca') {
+		if ($lang==='lg-vlca') {
 			$lang = 'lg-cat';
 		}
 
@@ -124,7 +124,7 @@ require_once( dirname(dirname(__FILE__)) .'/config/config4.php');
 		# Search in array to resolve
 		foreach (operator::$ar_operator[$lang] as $key => $value) {
 			#echo $key .'<br>';
-			if ( strtolower($value) == strtolower($operator) ) {
+			if ( strtolower($value) === strtolower($operator) ) {
 				return $key;
 			}
 		}
@@ -140,7 +140,7 @@ require_once( dirname(dirname(__FILE__)) .'/config/config4.php');
 
 		if(SHOW_DEBUG) $start_time=microtime(1);
 
-		if ($lang=='lg-vlca') {
+		if ($lang==='lg-vlca') {
 			$lang = 'lg-cat';
 		}
 		

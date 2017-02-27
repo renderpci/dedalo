@@ -35,6 +35,7 @@ class css {
 			# BOOTSTRAP css
 			#css::$ar_url_basic[] = BOOTSTRAP_CSS_URL;
 			#css::$ar_url_basic[] = 'https://cdnjs.cloudflare.com/ajax/libs/normalize/3.0.3/normalize.css';
+			css::$ar_url_basic[] = BOOTSTRAP_CSS_URL;
 
 			# HTML PAGE css
 			css::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/html_page/css/html_page.css';
@@ -90,7 +91,8 @@ class css {
 		
 		# STRUCTURE CSS
 		if (defined('DEDALO_STRUCTURE_CSS') && DEDALO_STRUCTURE_CSS===true) {
-			css::$ar_url[] = DEDALO_LIB_BASE_URL . css::$structure_file_path;
+			$structure_file_path_url = DEDALO_LIB_BASE_URL . css::$structure_file_path;			
+			css::$ar_url[] 			 = $structure_file_path_url;
 		}
 		
 
@@ -108,11 +110,11 @@ class css {
 				$html .= self::build_tag( DEDALO_LIB_BASE_URL . '/inspector/css/inspector.css' );
 				
 				# TOOLS TOOL_TIME_MACHINE css
-				if(navigator::get_selected('modo')=='tool_time_machine')
+				if(navigator::get_selected('modo')==='tool_time_machine')
 				$html .= self::build_tag( DEDALO_LIB_BASE_URL . '/tools/tool_time_machine/css/tool_time_machine.css' );
 
 				# TOOLS LANG css
-				if(navigator::get_selected('modo')=='tool_lang') {
+				if(navigator::get_selected('modo')==='tool_lang') {
 				$html .= self::build_tag( DEDALO_LIB_BASE_URL . '/tools/tool_lang/css/tool_lang.css' );
 				$html .= self::build_tag( DEDALO_LIB_BASE_URL . '/component_state/css/component_state.css' );
 				}				
@@ -151,7 +153,7 @@ class css {
 		if (strpos($url, 'section_group_')!==false) return null;
 
 		if (!USE_CDN) {
-			if(SHOW_DEBUG) {
+			if(SHOW_DEBUG===true) {
 				#$url .= "?".date("ymdh");
 			}else{
 				#$url .= "?".date("ymd");
@@ -164,6 +166,12 @@ class css {
 		
 		#$url = $url.'?v='.DEDALO_VERSION;
 		$url = $url.'?'.DEDALO_VERSION;
+
+		if(SHOW_DEBUG===true) {
+			if (strpos($url,'structure.css')!==false) {
+				$url .= '&t=' . start_time();
+			}			
+		}
 		#return "\n<link rel=\"stylesheet\" href=\"$url\" type=\"text/css\" {$media_attr}/>";
 		return "\n<link href=\"$url\" rel=\"stylesheet\"{$media_attr}>";
 	}//edn build_tag
@@ -180,7 +188,7 @@ class css {
 			$response->result = false;
 			$response->msg 	  = null;			
 
-		include_once DEDALO_ROOT . '/vendor/leafo/lessphp/lessc.inc.php';
+		include DEDALO_ROOT . '/vendor/leafo/lessphp/lessc.inc.php';
 		$less = new lessc;
 		$less_code = '/* Build: '.date("Y-m-d h:i:s").' */';
 
@@ -195,19 +203,18 @@ class css {
 			}
 		}
 		$strQuery = "SELECT \"terminoID\",\"propiedades\" FROM \"jer_dd\" WHERE \"propiedades\" LIKE '%\"css\"%' AND ($filter) ";
+		# debug_log(__METHOD__." $strQuery ".to_string(), logger::DEBUG);
 		$result   = pg_query(DBi::_getConnection(), $strQuery);
 		while ($rows = pg_fetch_assoc($result)) {
 
 			$terminoID 		 = $rows["terminoID"];
 			$propiedades_str = $rows["propiedades"];
 			$propiedades 	 = json_decode($propiedades_str);
-			if (is_null($propiedades) || !is_object($propiedades) || !isset($propiedades->css)) {
-				debug_log(__METHOD__." Failed json decode for $terminoID: ".to_string($propiedades_str), logger::ERROR);
+			if (!isset($propiedades->css)) {
+				debug_log(__METHOD__." Failed json decode for terminoID: $terminoID. Propiedades: ".to_string($propiedades_str), logger::ERROR);
 				continue;
-			}
-				#dump($propiedades, ' propiedades ++ '.to_string());
+			}			
 			$css_obj = $propiedades->css;
-				#dump($css_obj, ' css_obj ++ '.to_string());
 
 			#
 			# get_css_prefix
@@ -221,12 +228,18 @@ class css {
 			#
 			# LESS CODE
 			$less_line='';
+			$less_line .= ".sgc_edit>";
 			$less_line .= ".".$css_prefix."_".$terminoID."{";
 			foreach ($css_obj as $key => $obj_value) {
 				$less_line .= self::convert_to_less($key, $obj_value, $css_prefix);
 			}
 			$less_line .= "\n}";
-				#dump($less_line, ' $less_line ++ '.to_string());
+
+			if(SHOW_DEBUG===true) {
+				if($terminoID==='hierarchy25') {
+					#dump($less_line, ' $less_line ++ '.to_string());
+				}
+			}			
 
 			$less_code .= $less_line; // Add
 		
@@ -247,44 +260,45 @@ class css {
 		$file_name = DEDALO_LIB_BASE_PATH . self::$structure_file_path;
 		
 		# FORMAT : default | compressed | classic
-		#$less->setFormatter("compressed");	// lessjs (default) | compressed | classic
+		$less->setFormatter("compressed");	// lessjs (default) | compressed | classic
 		
 		# PRESERVE COMMENTS : true | false	
-		$less->setPreserveComments(false);	// true | false	
+		#$less->setPreserveComments(false);	// true | false	
 
-		try {
+		#try {
 			$compiled_css = $less->compile( $less_code );
 			#echo $compiled_css;
 
 			if( !$write = file_put_contents($file_name, $compiled_css) ) {
-				$response->result = false;
-				$response->msg 	  = "Error on write css file ($file_name) ".to_string($write);				
+				$response->result 	= false;
+				$response->msg 	  	= "Error on write css file ($file_name) ".to_string($write);				
 			}else{
 				$response->result 	 = true;
 				$response->msg 	  	 = "File css created successful";
 				$response->file_path = self::$structure_file_path;				
 			}
+			debug_log(__METHOD__." Response: ".to_string($response), logger::DEBUG);
 
-		} catch (exception $e) {
-			debug_log(__METHOD__." Fatal error ".$e->getMessage(), logger::ERROR);
-			//echo "Fatal error: " . $e->getMessage();
-		}
+		#} catch (exception $e) {
+		#	debug_log(__METHOD__." Fatal error ".$e->getMessage(), logger::ERROR);
+		#	//echo "Fatal error: " . $e->getMessage();
+		#}
 		#$response->code = "<pre>".nl2br($compiled_css) ."</pre>";
 
-		return $response;
+		return (object)$response;
 	}#end build_structure_css
 
 
 
 	/**
 	* CONVERT_TO_LESS
-	* @return 
+	* @return string $less_value
 	*/
 	public static function convert_to_less( $key, $obj_value, $css_prefix ) {		
 		
 		$less_value  = '';
 
-		#dump(strpos($key, $css_prefix), " var ++ key: $key - css_prefix: $css_prefix".to_string());
+		# If current key is not defined as css_prefix, add as new style
 		if (strpos($key, $css_prefix)===false ) {
 			$less_value .= "\n$key{";
 		}
@@ -311,45 +325,44 @@ class css {
 		}
 		#if($key!=='.wrap_component') $less_value .= "\n}";
 
-		#dump($obj_value, ' $obj_value ++ '.$key.' - '.to_string($less_value));
-
 		return $less_value;
-
 	}#end convert_to_less
 
 
 
 	/**
 	* GET_CSS_PREFIX
+	* wrap_section_ts1
 	* @param string $tipo
 	* @return string $css_prefix
 	*/
-	public static function get_css_prefix($tipo) {
+	public static function get_css_prefix($tipo) { 
 		
-		$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+		$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($tipo,false);
 			#dump($modelo_name, ' modelo_name ++ '.to_string());
 
-		switch (true) {
-			
-			case strpos($modelo_name, 'component')!==false :
-				$css_prefix = 'wrap_component';
-				break;
+		switch (true) {			
 
-			case ($modelo_name == 'section_group_div'):
+			case ($modelo_name === 'section_group_div'):
 				$css_prefix = 'wrap_section_group_div';
 				break;
 			
-			case ($modelo_name == 'section_group') :
+			case ($modelo_name === 'section_group') :
 				$css_prefix = 'wrap_section_group';
-				break;			
+				break;
+
+			case ($modelo_name === 'section_list') :
+				$css_prefix = 'wrap_section_records';
+				break;
+
+			case strpos($modelo_name, 'component')!==false :
+				$css_prefix = 'wrap_component';
+				break;		
 			/*
 			case strpos($modelo_name, 'section')!==false :
 				$css_prefix = 'wrap_section'; // section and section_list
 				break;
-			*/
-			case ($modelo_name == 'section_list') :
-				$css_prefix = 'wrap_section_records';
-				break;
+			*/			
 
 			default:
 				$css_prefix = $tipo;
@@ -358,7 +371,6 @@ class css {
 		}
 
 		return $css_prefix;
-
 	}#end get_css_prefix
 
 

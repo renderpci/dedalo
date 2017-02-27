@@ -23,11 +23,11 @@ class RecordObj_descriptors_dd extends RecordObj_matrix {
 	# Normalmente llega: id=NULL, $terminoID, $lang
 	function __construct($matrix_table='matrix_descriptors_dd', $id=NULL, $parent=NULL, $lang=NULL, $tipo='termino', $fallback=false) {
 
-		if ($lang=='lg-vlca') {
+		if ($lang==='lg-vlca') {
 			$lang='lg-cat';
 		}
 		
-		if(SHOW_DEBUG) {
+		if(SHOW_DEBUG===true) {
 			if(empty($matrix_table) || $matrix_table!='matrix_descriptors_dd') {				
 				dump($matrix_table,"id:$id - parent:$parent - tipo:$tipo - lang:$lang");
 				dump(debug_backtrace(),"Error: Only matrix_descriptors_dd is accepted by now ");							
@@ -143,7 +143,7 @@ class RecordObj_descriptors_dd extends RecordObj_matrix {
  		
  		if ($raw) {
 			$this->dato = $dato;
-			$this->arModifiedRelations['dato'] = (string)"1";
+			$this->arModifiedRelations['dato'] = 1;
 			return ;
 		}
 
@@ -170,7 +170,7 @@ class RecordObj_descriptors_dd extends RecordObj_matrix {
 		$ar_id					= (array)$this->search($arguments);
 			#dump($parent,'parent ',self::$descriptors_matrix_table);
 		
-		if(count($ar_id)==0) return false;
+		if(count($ar_id)===0) return false;
 		
 		foreach($ar_id as $id) {
 			
@@ -197,7 +197,7 @@ class RecordObj_descriptors_dd extends RecordObj_matrix {
 		$arguments['tipo']	= 'termino';		
 		$ar_id				= $this->search($arguments);
 		
-		if(count($ar_id)==0) return false;
+		if(count($ar_id)===0) return false;
 		
 		return true;	
 	}

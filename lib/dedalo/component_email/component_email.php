@@ -10,7 +10,6 @@
 	$label 					= $this->get_label();				
 	$required				= $this->get_required();
 	$debugger				= $this->get_debugger();
-	if($modo != 'simple')
 	$permissions			= common::get_permissions($section_tipo,$tipo);
 	$ejemplo				= "example: 'user@server.org'";
 	$html_title				= "Info about $tipo";
@@ -21,6 +20,8 @@
 	$component_name			= get_class($this);
 	$valor_string			= $dato;	
 	$file_name				= $modo;	
+	
+	if($permissions===0) return null;
 	
 	switch($modo) {
 		
@@ -55,6 +56,9 @@
 				break;	
 		
 		case 'search':
+				# Showed only when permissions are >1
+				if ($permissions<1) return null;
+				
 				$ar_comparison_operators 	= $this->build_search_comparison_operators();
 				$ar_logical_operators 		= $this->build_search_logical_operators();
 

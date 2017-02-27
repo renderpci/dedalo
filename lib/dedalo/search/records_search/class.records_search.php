@@ -1,5 +1,9 @@
 <?php
-
+/**
+* RECORDS_SEARCH
+*
+*
+*/
 class records_search extends common {
 
 	
@@ -31,9 +35,6 @@ class records_search extends common {
 		$this->section_tipo = $section_obj->get_tipo();
 		$this->modo 		= $modo;
 	}
-	
-
-
 
 
 
@@ -44,17 +45,10 @@ class records_search extends common {
 	* de los css / js necesarios siempre en modo list? ... DECIDIR OPCIÓN
 	*/
 	public function get_html() { // Aprox 100 ms
-
-		if(SHOW_DEBUG) {
-			#$start_time = start_time();
-			#global$TIMER;$TIMER[__METHOD__.'_ROW_SEARCH_IN_'.$this->section_tipo.'_'.microtime(1)]=microtime(1);
-		}
-
-
-
+		
 		# CACHE	
 		#unset($_SESSION['dedalo4']['config']['records_search'][$this->section_tipo]['html']);
-		if(!SHOW_DEBUG && isset($_SESSION['dedalo4']['config']['records_search'][$this->section_tipo]['html'])) {
+		if(SHOW_DEBUG===false && isset($_SESSION['dedalo4']['config']['records_search'][$this->section_tipo]['html'])) {
 			return $_SESSION['dedalo4']['config']['records_search'][$this->section_tipo]['html'];
 		}
 
@@ -62,10 +56,7 @@ class records_search extends common {
 		# if not exists, return empty string
 		$search_list_tipo = $this->get_search_list_tipo();
 		if(!$search_list_tipo)	{
-			$msg = " Search list tipo not found. Please config your structure for section $this->section_tipo";
-			if(SHOW_DEBUG) {
-				#trigger_error($msg);
-			}			
+			$msg = " Search list tipo not found. Please config your structure for section $this->section_tipo";			
 			debug_log(__METHOD__." $msg  ".to_string(), logger::DEBUG);
 			return '';
 		}
@@ -74,16 +65,9 @@ class records_search extends common {
 		include ( __CLASS__ .'.php' );
 		$html =  ob_get_clean();
 
-		#dump($html,'html');
-
 		# CACHE
-		$_SESSION['dedalo4']['config']['records_search'][$this->section_tipo]['html'] = $html;
+		$_SESSION['dedalo4']['config']['records_search'][$this->section_tipo]['html'] = $html;		
 		
-		if(SHOW_DEBUG) {
-			#$GLOBALS['log_messages'] .= exec_time($start_time, __METHOD__. ' [records_search]', "html");
-			#global$TIMER;$TIMER[__METHOD__.'_ROW_SEARCH_OUT_'.$this->section_tipo.'_'.microtime(1)]=microtime(1);
-		}
-
 		return (string)$html;
 	}//end get_html
 
@@ -113,7 +97,6 @@ class records_search extends common {
 
 		return $search_list_tipo;
 	}//end get_search_list_tipo
-
 
 
 
@@ -165,6 +148,9 @@ class records_search extends common {
 					$search_list = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($current_element_tipo, 'search_list', 'children'); //common::get_ar_related_by_model('search_list', $current_element_tipo);
 						#dump($search_list, ' search_list ++ '.to_string());
 					if (empty($search_list)) {
+						if(SHOW_DEBUG===true) {
+							throw new Exception("Error Processing Request. Please define a 'search_list' from current portal ($current_element_tipo) ASAP", 1);							
+						}
 						debug_log(__METHOD__." Skiped portal search elements. Please define a 'search_list' from current portal ($current_element_tipo) ASAP ".to_string(), logger::WARNING);
 						continue;
 					}
@@ -214,6 +200,13 @@ class records_search extends common {
 		# CACHE
 		#$_SESSION['dedalo4']['config']['records_search'][$this->section_tipo]['ar_search_fields'] = serialize($ar_search_fields);
 
+		# Notify to css / js component is loaded
+		foreach ($ar_search_fields as $component_tipo => $value) {
+			$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+			# Notify element load to common
+			common::notify_load_lib_element_tipo($modelo_name, $this->modo);
+		}
+
 		return (array)$ar_search_fields ;
 	}//end get_ar_search_fields
 
@@ -239,7 +232,7 @@ class records_search extends common {
 
 		$tools_search_tipo 	= RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($search_list_tipo, 'tools_search', 'termino_relacionado', $search_exact=true);
 		if(empty($tools_search_tipo[0])) {			
-			if(SHOW_DEBUG) {
+			if(SHOW_DEBUG===true) {
 				#throw new Exception("Error Processing Request: tools_search:tools_search_tipo not found in structure ($search_list_tipo)", 1);
 				error_log("tools_search:tools_search_tipo not found in structure ($search_list_tipo)");
 			}
@@ -283,14 +276,9 @@ class records_search extends common {
 
 
 
-
-
-
-
-
-
-
-	# SET AR COMPONENTS
+	/**
+	* SET_AR_COMPONENT_SEARCH_OBJ
+	*/
 	public function set_ar_component_search_obj() {
 
 		$ar_component_search			= array();
@@ -323,6 +311,7 @@ class records_search extends common {
 	}
 
 
+
 	# RECORRE Y CARGA TODOS LOS COMPONENTES DE ESTE ROW EN UN ARRAY COMO OBJETOS
 	public function set_ar_component_obj() {
 
@@ -340,9 +329,5 @@ class records_search extends common {
 
 
 
-
-
-
-
-}
+}//end records_search
 ?>

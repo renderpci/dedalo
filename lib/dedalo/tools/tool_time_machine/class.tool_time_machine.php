@@ -98,7 +98,7 @@ class tool_time_machine extends tool_common {
 	*/
 	public static function get_ar_sections_time_machine($section_tipo) {
 
-		if($section_tipo == DEDALO_ACTIVITY_SECTION_TIPO) return NULL;
+		if($section_tipo === DEDALO_ACTIVITY_SECTION_TIPO) return NULL;
 
 		if(SHOW_DEBUG) $start_time = start_time();
 
@@ -108,7 +108,7 @@ class tool_time_machine extends tool_common {
 		$RecordObj_dd = new RecordObj_dd($section_tipo);
 		$propiedades  = $RecordObj_dd->get_propiedades();
 		$propiedades  = json_decode($propiedades);
-		if(isset($propiedades->section_tipo) && $propiedades->section_tipo == "real"){
+		if(isset($propiedades->section_tipo) && $propiedades->section_tipo === "real"){
 			$section_tipo = section::get_section_real_tipo_static($section_tipo);
 		}
 
@@ -255,30 +255,29 @@ class tool_time_machine extends tool_common {
 		# Admin of current area
 		$is_admin_of_current_area		= (bool)false;
 		$ar_authorized_areas_for_user 	= component_security_areas::get_ar_authorized_areas_for_user($userID, $mode_result='full');
-			#dump($ar_authorized_areas_for_user, 'ar_authorized_areas_for_user', array());
-		if(is_array($ar_authorized_areas_for_user)) foreach ($ar_authorized_areas_for_user as $key => $value) {
+			#dump($ar_authorized_areas_for_user, 'ar_authorized_areas_for_user - tipo: '. $tipo);
+		foreach ((array)$ar_authorized_areas_for_user as $key => $value) {
 			#if ($key == $tipo.'-admin' && $value == 2) {
-			if ($key == $tipo && $value == 3) {
-				return (bool)true;				
+			if ($key === $tipo && (int)$value === 3) {
+				return true;				
 			}
 			#
 			# USERS / GROUPS / PROJECTS CASE 
 			# This areas don't have '-admin' parameter, so we accept only type as administrable (with state '2')
 			switch (true) {
-				case ($key==$tipo && $tipo==DEDALO_SECTION_USERS_TIPO && $value >= 2):
+				case ($key===$tipo && $tipo===DEDALO_SECTION_USERS_TIPO && $value >= 2):
 					return (bool)true;
 					break;
-				case ($key==$tipo && $tipo==DEDALO_SECTION_PROFILES_TIPO && $value >= 2):
+				case ($key===$tipo && $tipo===DEDALO_SECTION_PROFILES_TIPO && $value >= 2):
 					return (bool)true;
 					break;	
-				case ($key==$tipo && $tipo==DEDALO_SECTION_PROJECTS_TIPO && $value >= 2):
+				case ($key===$tipo && $tipo===DEDALO_SECTION_PROJECTS_TIPO && $value >= 2):
 					return (bool)true;
 					break;
 			}
 		}
 
 		return false;
-
 	}//end user_can_recover_sections
 
 
@@ -312,6 +311,25 @@ class tool_time_machine extends tool_common {
 		return $ar_time_machine_obj;
 		
 	}#end update_records_in_time_machine
+
+
+
+	/**
+	* GET SOURCE LANGS
+	*/
+	public function get_source_langs() {
+		
+		$component_ar_langs = (array)$this->source_component->get_component_ar_langs();
+	
+		$ar_source_langs=array();
+		foreach ($component_ar_langs as $current_lang) {
+
+			$name = lang::get_name_from_code($current_lang);
+			$ar_source_langs[$current_lang] = $name;
+		}
+	
+		return $ar_source_langs;
+	}//end get_source_langs
 
 
 

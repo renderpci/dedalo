@@ -35,7 +35,7 @@ class component_number extends component_common {
 
 		switch (true) {
 
-			case ($this->section_tipo==DEDALO_SECTION_USERS_TIPO) :
+			case ($this->section_tipo===DEDALO_SECTION_USERS_TIPO) :
 				
 					# Test is dato already exists
 			 		$dato_already_exists = component_common::dato_already_exists($dato, $this->tipo, DEDALO_DATA_NOLAN, $this->section_tipo);
@@ -54,15 +54,16 @@ class component_number extends component_common {
 		}
 
 		# A partir de aquí, salvamos de forma estándar
-		return parent::Save();
-		
+		return parent::Save();		
 	}#end Save
+
+
 
 	/*
 	* SET_FORMAT_FORM_TYPE
 	* Format the dato into the standar format or the propiedades format of the current intance of the component
 	*/
-	public function set_format_form_type ($dato){
+	public function set_format_form_type( $dato ) {
 
 		$propiedades = $this->get_propiedades();
 	
@@ -82,26 +83,21 @@ class component_number extends component_common {
 
 						}else{
 							$dato = (int)substr($dato,0,$value);
-						}
-						
+						}						
 						break;
 					
 					default:
 						$dato = (float)number_format($dato,$value);
 						break;
-				};
+				}
 
-			};
-
-		}
+			}//end foreach ($propiedades->type as $key => $value)
+		}//end if(empty($propiedades->type))
 
 		return $dato;
-
-
-	}
+	}//end set_format_form_type
 
 
 
-	
 }
 ?>

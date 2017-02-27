@@ -45,7 +45,7 @@ class component_user extends component_common {
 		$arguments['parent']			= $userID;
 		$arguments['tipo']				= DEDALO_USERNAME_TIPO;
 		$arguments['lang']				= DEDALO_DATA_NOLAN;
-		$matrix_table 					= common::get_matrix_table_from_tipo(DEDALO_USERNAME_TIPO);
+		$matrix_table 					= common::get_matrix_table_from_tipo($section_tipo);
 		$RecordObj_matrix				= new RecordObj_matrix($matrix_table,NULL);
 		$ar_records						= $RecordObj_matrix->search($arguments);
 

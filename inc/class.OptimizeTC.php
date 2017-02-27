@@ -1,6 +1,6 @@
 <?php
 
-class OptimizeTC {	
+class OptimizeTC__DESACTIVA {	
 	
 	
 	// ******  AJUSTE TC'S VIRTUALES CALCULADOS HACIENDO LA MEDIA   ******* //
@@ -294,11 +294,5 @@ class OptimizeTC {
 	}
 
 
-
-
 }
-
-
-
-
 ?>

@@ -1,272 +1,240 @@
 <?php
-require_once( dirname(dirname(dirname(__FILE__))) .'/config/config4.php');
-require_once( DEDALO_LIB_BASE_PATH . '/media_engine/class.ImageObj.php');
 
+// JSON DOCUMENT
+header('Content-Type: application/json');
+
+require_once( dirname(dirname(dirname(__FILE__))) .'/config/config4.php');
+
+# Write session to unlock session file
+# session_write_close();
 
 if(login::is_logged()!==true) die("<span class='error'> Auth error: please login </span>");
 
 
 # set vars
-	$vars = array('mode','tipo','parent','tagName','terminoID','rel_locator','tag','section_tipo');
+	$vars = array('mode');
 		foreach($vars as $name) $$name = common::setVar($name);
-	
 
 # mode
 	if(empty($mode)) exit("<span class='error'> Trigger: Error Need mode..</span>");
 
 
+# CALL FUNCTION
+if ( function_exists($mode) ) {
+	$result = call_user_func($mode);
+	echo json_encode($result);
+}
+
+
+
 /**
-* ADD INDEX
-* Save on MATRIX DESCRIPORS current index
-* @param $teminoID (teminoID from tesauro)
-* @param $rel_locator String like '1235.dd12.3'
+* ADD_INDEX
+* Add the received locator in a component relation index dato
+* Triggered by js tool_indexation.add_index, called by component_text_area (link_term), called by ts_object (link_term)
+* @return object $response
 */
-if($mode=='add_index') {
+function add_index() {
 
-	# TERMINO ID 			
-		if(empty($terminoID)) 	exit(" Error: terminoID is empty ! ");	
+	$response = new stdClass();
+		$response->result 	= false;
+		$response->msg 		= 'Error. Request failed add_index';
 
-	# REL LOCATOR . Verify isset rel_locator
-		if(empty($rel_locator)) exit(" Error: rel_locator is empty ! ");
-		$rel_locator = json_handler::decode($rel_locator);
-		if (!is_object($rel_locator)) exit(" Error: rel_locator no is object ! ");
-			#dump($rel_locator,"rel_locator");die();
-
-		$rel_locator_formatted=new stdClass();
-		foreach ($rel_locator as $key => $value) {
-			$rel_locator_formatted->$key = (string)$value;
+	$vars = array('section_tipo', 'section_id', 'label', 'locator');
+		foreach($vars as $name) {
+			$$name = common::setVar($name);
+			if (empty($$name)) {
+				$response->msg = 'Error. Empty mandatory var '.$name;
+				return $response;
+			}
 		}
 
-	# SAVE rel_locator DATA TO tesauro index (in table matrix descriptors)
-		$matrix_table			= 'matrix_descriptors';
-		$RecordObj_descriptors	= new RecordObj_descriptors($matrix_table, NULL, $terminoID, DEDALO_DATA_NOLAN, 'index');		#dump($RecordObj_descriptors->get_dato(),'before'); __construct($id=NULL, $parent=NULL, $lang=NULL, $tipo='termino', $fallback=false)
+		$locator = json_decode($locator);
+		if (!is_object($locator)) {
+			$response->msg = 'Error. Bad locator: '. to_string($locator)." - type: ".gettype($locator);
+			return $response;
+		}
 
-		
-		# get current dato in db
-		$dato	= $RecordObj_descriptors->get_dato();
-
-		# Decode matrix_descriptors json string dato to array
-		$dato	= json_handler::decode($dato);
-			#dump($dato,"dato en db matrix_descriptors 2");#die();
-
-		# mix array current dato + rel_locator relation string like (1253.0.0)
-		#$new_ar_dato 			= component_common::add_locator_to_dato($rel_locator, $dato);
-		$new_ar_dato 			= component_common::add_object_to_dato((object)$rel_locator_formatted, (array)$dato);
-			#dump($new_ar_dato,"new_ar_dato 3");die();
-
-		#$new_ar_dato = json_handler::encode($new_ar_dato);
-			#dump($new_ar_dato,"new_ar_dato 4");die();
-
-		# set new array dato and save record in matrix
-		$RecordObj_descriptors->set_dato($new_ar_dato);
-			#dump($RecordObj_descriptors->get_dato(),'after');
-
-		$RecordObj_descriptors->Save();
-
-		
-		if(SHOW_DEBUG) {
-			#error_log("Added rel_locator ". json_encode($rel_locator_formatted) ." from matrix_descriptors parent $terminoID");
-		}		
-
-	print 'ok';
-	exit();
-}
-
-/**
-* REMOVE INDEX
-*/
-if($mode=='remove_index') {
-		
-	# REL LOCATOR . Verify isset rel_locator
-		if(empty($rel_locator) || !isset($rel_locator['section_top_tipo'])) exit(" Error: rel_locator is empty ! ");
-			#dump($rel_locator,"rel_locator");die();
-
-	# TERMINO ID : Necesario para despejar la tabla			
-		if(empty($terminoID)) 	exit(" Error: terminoID is empty ! ");
-
-	# SAVE rel_locator DATA TO tesauro index
-		$matrix_table			= 'matrix_descriptors';
-		$RecordObj_descriptors	= new RecordObj_descriptors($matrix_table, null, $parent=$terminoID, $lang=DEDALO_DATA_NOLAN, 'index');
-
-		#$id = $RecordObj_descriptors->get_id();
-			#dump($RecordObj_descriptors,"RecordObj_descriptors");
-		#$RecordObj_descriptors->remove_index($rel_locator);
-
-		$dato			= $RecordObj_descriptors->get_dato();
-		# Dato is string in matrix descriptors. Convert to object from something like [{"section_top_tipo":"dd12","section_top_id":"474116","section_id_matrix":"474116","component_tipo":"dd22","tag_id":"1"},{"section_top_tipo":"dd12","section_top_id_matrix":"474116","section_id_matrix":"474116","component_tipo":"dd22","tag_id":"2"}]
-		$dato			= json_handler::decode($dato);
-		$new_ar_dato	= component_common::remove_object_in_dato((object)$rel_locator, (array)$dato);
-		$RecordObj_descriptors->set_dato($new_ar_dato);
-
-		$RecordObj_descriptors->Save();
-
-		debug_log(" Removed rel_locator ". json_encode($rel_locator) ." from matrix_descriptors parent $terminoID");
-
-	print 'ok';
-	exit();
-}
-
-
-
-/**
-* load_inspector_indexation_list
-* @param $tipo (text area tipo)
-* @param $parent (section id matrix)
-* @param $tagName (like '[/index-n-1]')
-*/
-if ($mode=='load_inspector_indexation_list') {
-	#die("load_inspector_indexation_list des");
-	if (empty($tagName)) {
-		throw new Exception("load_inspector_indexation_list->tagName is empty", 1);		
+	# COMPONENT_RELATION_INDEX
+	$ar_children = section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, array('component_relation_index'), $from_cache=true, $resolve_virtual=true, $recursive=true, $search_exact=true);
+	if(empty($ar_children)) {
+		$response->msg = 'Error. Component component_relation_index not found in section '.$section_tipo;
+		return $response;
 	}
 
-	# Create new component_text_area obj
-	#$component_text_area = new component_text_area($tipo, $parent, 'edit', DEDALO_DATA_LANG);	#($id=NULL, $tipo=NULL, $modo='edit', $parent=NULL, $lang=DEDALO_DATA_LANG)
-	$component_text_area = component_common::get_instance('component_text_area', $tipo, $parent, 'edit', DEDALO_DATA_LANG, $section_tipo);
-		#dump($component_text_area,'$component_text_area');
-
-	# add some vars to component
-	#$component_text_area->caller_id = '';
-
-	# Create new tool_indexation
-	$tool_indexation = new tool_indexation($component_text_area,'terminos_list');
-		#dump($tool_indexation,'$tool_indexation');die();
-
-	# Add som vars to tool object
-	$tool_indexation->selected_tagName = $tagName;
-		#dump($tool_indexation,'$tool_indexation en load_inspector_indexation_list');	
-
-	$html = $tool_indexation->get_html();
-		#dump($html,"html");
+	$tipo 			= reset($ar_children);
+	$component 		= component_common::get_instance('component_relation_index',
+													 $tipo,
+													 $section_id,
+													 'edit',
+													 DEDALO_DATA_NOLAN,
+													 $section_tipo);
 	
-	print $html;
-	exit();
+
+	# Add fix custom data to locator
+	$locator->type 				  = DEDALO_RELATION_TYPE_INDEX_TIPO;
+	$locator->from_component_tipo = $tipo;
+		#dump($locator, ' locator ++ '.to_string());
+	$response->result = $component->add_index($locator);
+	if($response->result===true) {
+		$component->Save();
+		$response->msg = "Added term $label, locator ".json_encode($locator)." to component_relation_index $tipo [$section_tipo - $section_id]";
+	}
 	
-}#end load_inspector_indexation_list
+
+	return (object)$response;
+}//end add_index
+
+
+
+/**
+* REMOVE_INDEX
+* @return object $response
+*/
+function remove_index() {
+	
+	$response = new stdClass();
+		$response->result 	= false;
+		$response->msg 		= 'Error. Request failed remove_index';
+
+	$vars = array('section_tipo', 'section_id', 'component_tipo', 'term', 'locator');
+		foreach($vars as $name) {
+			$$name = common::setVar($name);
+			if (empty($$name)) {
+				$response->msg = 'Error. Empty mandatory var '.$name;
+				return $response;
+			}
+		}
+		$locator = json_decode($locator);
+		if (!is_object($locator)) {
+			$response->msg = 'Error. Bad locator: '. to_string($locator)." - type: ".gettype($locator);
+			return $response;
+		}
+
+	# COMPONENT_RELATION_INDEX
+	$component 		= component_common::get_instance('component_relation_index',
+													 $component_tipo,
+													 $section_id,
+													 'edit',
+													 DEDALO_DATA_NOLAN,
+													 $section_tipo);	
+
+
+	$response->result = $component->remove_index($locator);
+	if($response->result===true) {
+		$component->Save();
+		$response->msg = "Removed term \"$term\", locator ".json_encode($locator)." on component_relation_index $component_tipo [$section_tipo - $section_id]";
+	}
+
+	return (object)$response;
+}//end remove_index
 
 
 
 /**
 * FRAGMENT_INFO
-* @param string $tipo (text area tipo)
-* @param string $parent (section id matrix)
-* @param string $tagName (like '[/index-n-1]')
+* @return object $response
 */
-if ($mode=='fragment_info') {
-	#die("fragment_info des");
-	if (empty($tagName)) {
-		throw new Exception("fragment_info->tagName is empty", 1);		
-	}
-	if (empty($tipo)) {
-		throw new Exception("fragment_info->tipo is empty", 1);		
-	}
-	if (empty($parent)) {		
-		throw new Exception("fragment_info->parent is empty", 1);		
-	}
-	if (empty($section_tipo)) {		
-		throw new Exception("fragment_info->section_tipo is empty", 1);		
-	}
-
-	# Create new component_text_area obj
-	#$component_text_area = new component_text_area($tipo, $parent, 'edit', DEDALO_DATA_LANG);	#($id=NULL, $tipo=NULL, $modo='edit', $parent=NULL, $lang=DEDALO_DATA_LANG)
-	$component_text_area = component_common::get_instance('component_text_area', $tipo, $parent, 'edit', DEDALO_DATA_LANG, $section_tipo);
-		#dump($component_text_area,'$component_text_area');
-
-	# add some vars to component
-	#$component_text_area->caller_id = '';
-
-	# TOOL_INDEXATION : Create new tool_indexation
-	$tool_indexation = new tool_indexation($component_text_area,'fragment_info');		
-
-	# Add som vars to tool object
-	$tool_indexation->selected_tagName = $tagName;		
-		#dump($tool_indexation,'$tool_indexation en fragment_info');
-
-	$html = $tool_indexation->get_html();
+function fragment_info() {
 	
-	print $html;
-	exit();
-	
-}#end fragment_info
+	$response = new stdClass();
+		$response->result 	= false;
+		$response->msg 		= 'Error. Request failed fragment_info';
 
+	$vars = array('section_tipo', 'section_id', 'component_tipo', 'tag_id', 'lang','tagName');
+		foreach($vars as $name) {
+			$$name = common::setVar($name);
+			if (empty($$name)) {
+				$response->msg = 'Error. Empty mandatory var '.$name;
+				return $response;
+			}
+		}
+
+	$component_obj  = component_common::get_instance('component_text_area',
+													 $component_tipo,
+													 $section_id,
+													 'list',
+													 $lang,
+													 $section_tipo); 	
+	$raw_text		= $component_obj->get_dato();
+	$fragment_text	= component_text_area::get_fragment_text_from_tag($tagName, $raw_text)[0];
+	#$fragment_text	= strip_tags($fragment_text);
+
+	$response->result 			= true;
+	$response->msg 	  			= 'Request done successfully';
+	$response->fragment_text 	= $fragment_text;
+	$response->indexations_list = component_relation_index::get_indexations_from_tag($component_tipo, $section_tipo, $section_id, $tag_id, $lang);
+	
+
+	return (object)$response;
+}//end fragment_info
+
+
+
+/**
+* INDEXATIONS_LIST
+* @return object $response
+*/
+function indexations_list() {
+	
+	$response = new stdClass();
+		$response->result 	= false;
+		$response->msg 		= 'Error. Request failed indexations_list';
+
+	$vars = array('section_tipo', 'section_id', 'component_tipo', 'tag_id', 'lang');
+		foreach($vars as $name) {
+			$$name = common::setVar($name);
+			if (empty($$name)) {
+				$response->msg = 'Error. Empty mandatory var '.$name;
+				return $response;
+			}
+		}
+
+	$ar_indexations = component_relation_index::get_indexations_from_tag($component_tipo, $section_tipo, $section_id, $tag_id, $lang);
+	if (!empty($ar_indexations)) {
+		$response->msg = 'Request done successfully. '. count($ar_indexations)." indexations";
+	}else{
+		$response->msg = 'Request done successfully. No current indexes have been created';
+	}	
+	$response->result 			= true;
+	$response->indexations_list = $ar_indexations;
+	
+	
+	return (object)$response;
+}//end indexations_list
 
 
 
 /**
 * DELETE_TAG
-* Delete / remove current tag in all compoenent langs, all references in portals / relations and index term row locator
-* @param string $tag like '[index-n-2]'
-* @param string $rel_locator (locator object encoded in json)
-* @param int parent like '63' (id matrix)
-* @param string $tipo like 'rsc36'
+* Deletes all tag relations (index and portal) and finally removes the tag in all langs
+* @return object $response
 */
-if($mode=='delete_tag') {
-	
-	# Verify
-	if(empty($tag)) { // like '[index-n-1]'
-		trigger_error("Empty tag");
-		exit();
-	}	
-	if(empty($section_tipo)) {
-		trigger_error("Empty section_tipo");
-		exit();
-	}
-	if(empty($parent)) {
-		trigger_error("Empty parent");
-		exit();
-	}
-	if(empty($tipo)) {
-		trigger_error("Empty tipo");
-		exit();
-	}
-	if(empty($rel_locator)) {
-		trigger_error("Empty rel_locator");
-		exit();
-	}
-	$rel_locator = json_handler::decode($rel_locator); // Convert string to object
-	if (!is_object($rel_locator)) {
-		trigger_error("Empty rel_locator");
-		exit();
-	}
-	#dump($tag, ' tag');die();
+function delete_tag() {	
 
-	#
-	# 1 INDEX . Remove all references in descriptors->index 
-	# Remove current locator from array data of all rows in matrix_descriptors
-	$ar_deleted = RecordObj_descriptors::delete_rel_locator_from_all_indexes($rel_locator);
-	if(SHOW_DEBUG) {
-		debug_log(" INFO: Deleted rel_locator_from_all_indexes (RecordObj_descriptors): ".to_string($ar_deleted));
-	}
-		#dump($ar_deleted, ' ar_deleted');die();
+	$vars = array('section_tipo', 'section_id', 'component_tipo', 'tag', 'tag_id', 'lang');
+		foreach($vars as $name) {
+			$$name = common::setVar($name);
+			if (empty($$name)) {
+				$response->msg = 'Error. Empty mandatory var '.$name;
+				return $response;
+			}
+		}
 
-	#
-	# 2 PORTALS . Remove all references in all portals
-	/*
-		WORK IN PROGRESS..
-		Por acabar.. (de momento no se usa en los sistemas instalados, por lo que se obvia hasta otra fase)
-		$tag_id 	= TR::tag2value($tag);
-		$ar_deleted = component_portal::remove_references_to_tag( $tag_id, $section_tipo );	
-	*/
+	$options = new stdClass();
+		$options->section_tipo 	= $section_tipo;
+		$options->section_id 	= $section_id;
+		$options->component_tipo= $component_tipo;
+		$options->tag 			= $tag;
+		$options->tag_id 		= $tag_id;
+		$options->lang 			= $lang;
+
+	$response = tool_indexation::delete_tag($options);	
+
+	return (object)$response;
+}//end delete_tag
 
 
-	# 
-	# 3 RELATIONS . Remove all references in all relations
-	# UNDER CONSTRUCTION..
 
-
-	#
-	# 4 COMPONENT_TEXT_AREA (ALL LANGS)
-	# Remove current tag in current component all langs
-	$component_text_area = component_common::get_instance('component_text_area',$tipo,$parent,'edit',DEDALO_DATA_LANG,$section_tipo);		
-	$ar_deleted 		 = $component_text_area->delete_tag_from_all_langs($tag);
-	if(SHOW_DEBUG) {
-		debug_log(" INFO: Deleted tag $tag from component text area langs: ".to_string($ar_deleted));
-	}
-
-
-	print 'ok';	// Expected response is string 'ok'
-	exit();
-}
 
 
 

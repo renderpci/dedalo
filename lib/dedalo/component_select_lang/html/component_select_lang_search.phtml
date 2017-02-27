@@ -32,11 +32,29 @@
 						$checked = "";	
 						
 						$html_contenido .= "\n <option value=\"\" {$checked}> </option>";
-						
-						foreach((array)$ar_all_project_select_langs as $locator_json => $label) {
+						/*
+						foreach((array)$ar_all_project_select_langs as $current_lang_code => $current_locator) {
+
+							$current_label 			= lang::get_name_from_code($current_lang_code);
+							$current_locator_json 	= json_encode($current_locator);
 							
-							$html_contenido .= "\n <option value='{$locator_json}' {$checked}> {$label}</option>";							
+							$html_contenido .= "\n <option value='{$current_locator_json}' {$checked}> {$current_label}</option>";							
 						}
+						*/						
+						foreach ((array)$ar_all_project_select_langs as $current_lang_code => $current_label) {
+			
+							$current_locator 		= lang::get_lang_locator_from_code($current_lang_code);
+							$current_locator_json 	= json_encode($current_locator);
+
+							$html_contenido .= "\n <option value='{$current_locator_json}' data-lang='{$current_lang_code}'>";
+							$html_contenido .= $current_label;
+							if(SHOW_DEBUG===true) {
+								#$html_contenido .= " - ". trim($current_locator_json);
+							}
+							$html_contenido .="</option>";
+						}
+
+
 
 					$html_contenido .= "\n </select>";
 

@@ -23,7 +23,8 @@
 	$ip						= $dato;
 	$geoiptoolURL 			= 'http://whatismyipaddress.com/ip/'.$ip; #'http://geotool.flagfox.net/?lang=es-ES&ip=',"http://www.geoiptool.com/es/?IP="
 
-
+	if($permissions===0) return null;
+	
 	# Verify component content record is inside section record filter
 	if ($this->get_filter_authorized_record()===false) return NULL ;
 
@@ -39,6 +40,9 @@
 				break;
 		
 		case 'search' :
+				# Showed only when permissions are >1
+				if ($permissions<1) return null;
+				
 				$file_name = 'list';
 
 				# Search input name

@@ -4,7 +4,7 @@
 	$html_tool  ='';
 
 	#
-	# GROUPS
+	# GROUPS	
 	foreach ($ar_diffusion_map as $diffusion_group_tipo => $ar_diffusion_element) {
 	
 		#$html_tool .= "<div class=\"diffusion_group\">";
@@ -34,7 +34,12 @@
 				data-options='$options_json'
 				onclick=\"tool_diffusion.export_list(this)\"
 				>";
+				$html_tool .= "<span>";
 				$html_tool .= RecordObj_dd::get_termino_by_tipo($obj_value->element_tipo, DEDALO_DATA_LANG, true, false);
+				if(SHOW_DEBUG===true) {
+					$html_tool .= ' <span class="notes">['.DEDALO_DIFFUSION_DOMAIN.']</span>';
+				}
+				$html_tool .= "</span>";
 				$html_tool .= "</div>";
 
 				/*

@@ -1,1 +1,1 @@
-<?php  header("Location: jer_list.php"); exit;?>
+<?php header("Location: jer_list.php"); exit;?>

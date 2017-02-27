@@ -10,6 +10,15 @@
 		display: inline-block;		
 	}
 
+	.lang_info_debug {
+		position: absolute;
+		right: 5px;
+		z-index: 1;
+		padding: 8px;
+		/* font-weight: bold; */
+		color: #b76021;
+	}
+
 
 /* TOOL TIME MACHINE CONTEXT
 ----------------------------------------------- */
@@ -17,11 +26,11 @@
 	width: 100%;
 }
 
-/* PORTAL LIST MODE */
+/* Portal list mode */
 .section_edit_in_portal_td_row .content_data {
 	width: 100%;
 }
-/* SPAN DATO MOSTRADO EN LOS LISTADOS DE PORTAL */
+/* SPAN DATO Mostrado en los listados de portal */
 .section_list_td_row .css_text_area_wrap span {
 	display: inline-block;
 	width: auto;
@@ -45,11 +54,14 @@
 	.text_area_tool_transcription .css_label {
 		display: none !important;
 	}
+	.text_area_transcription {
+		visibility: hidden;
+	}
 
 
 /* INDEXATION MODE */
 .text_area_tool_indexation .content_data {
-	width: 98.9%;	
+	width: 100%;	
 	padding: 0;
 	padding-left: 4px;
 }
@@ -57,7 +69,8 @@
    box-shadow: 0 0 5px #CCC;
 }
 
-/*TEXT AREA*/
+/* Text area Input element
+------------------------------------------- */
 .css_text_area {
 	padding: 3px;
 	border: 1px solid #9E9E9E;
@@ -99,7 +112,8 @@
 	display: inline-table;
 	clear: both;
 }
-/*CONTAINER RELATIONS LIST*/
+/* Container relations list
+------------------------------------------- */
 .btn_create_fragment {
 	/*
 	float: left;
@@ -282,15 +296,21 @@ div.selected_fragment {
 }
 
 
-.text_area_warning {
-	width: 100%;
-	}
-	.text_area_warning span {
-		margin: 0;
-		padding: 10px;
-		width: 100.25%;
-		border-radius: 0;
-	}
+/* text_area_warning (show broken tags, invalig time code tags etc..)
+----------------------------------------------- */
+	.text_area_warning {
+		width: 100%;
+		position: relative;
+		}
+		.text_area_warning span {
+			margin: 0;
+			padding: 10px;
+			padding-right: 22px;
+			width: 100%;
+			border-radius: 0;
+		}
+
+
 
 .text_area_read_only {
 	max-height: 450px;
@@ -301,7 +321,7 @@ div.selected_fragment {
 /* FIX TEXT AREA FULLSCREEN WIDTH PROBLEM
 ----------------------------------------------- */
 .mce-fullscreen, .mce-container-body {
-    /*width: 100% !important;*/
+	/*width: 100% !important;*/
 }
 .mce-panel {
 	/*width: initial !important;*/
@@ -320,7 +340,179 @@ div.selected_fragment {
 }
 
 
+/* Overwrite tinymce css 
+-------------------------------------------------- 
+.mce-panel {
+	width: 100% !important;
+	-moz-box-sizing: content-box !important;
+	-webkit-box-sizing: border-box !important;
+			box-sizing: border-box !important;	
+}
+*/
 
+/* Custom images for text editor
+-------------------------------------------------- */
+#tags_inspector {
+
+	}
+	#tags_inspector .button_persons {
+		float: left;
+		background-color: #C3E474;
+	}
+
+
+/* persons_overlay
+-------------------------------------------------- */
+#persons_overlay {
+	background-color: rgba(241, 241, 241, 0.97);;
+	position: absolute;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+
+	top: 62px;
+	left: 5%;
+	width: 89%;
+	height: auto;
+	border: 1px solid #dedede;
+	box-shadow: 3px 3px 10px #c3c3c3;
+	border-radius: 4px;
+	}
+	#persons_overlay h1 {
+		padding: 0;
+		padding-left: 20px;
+		padding-top: 20px;
+	}
+	#persons_overlay ul {
+		padding: 15px;
+		}
+		#persons_overlay ul li {
+			line-height: 24px;
+			}
+			#persons_overlay ul li span {
+				padding-left: 7px;
+			}
+			#persons_overlay ul li label {
+				padding-left: 7px;
+				color: #717171;
+			}
+			#persons_overlay ul li strong {
+				padding-left: 7px;				
+			}
+			#persons_overlay ul li img {
+				vertical-align: text-bottom;
+				cursor: pointer;			
+				}
+				#persons_overlay ul li img:active {
+					opacity: 0.5;
+				}
+
+	.person {
+		height: 16px;
+		}
+		.person:active{
+			opacity: 0.5;
+		}
+
+	.person_info_float {
+		position: absolute;
+		padding: 10px;
+		padding-top: 5px;
+		padding-bottom: 5px;
+		background-color: #ffbb33;
+		box-shadow: 4px 5px 8px #929292;
+		border-radius: 7px;
+		color: #292929;
+		line-height: 1.2em;
+		font-weight: 300;
+		font-size: 1.1em;
+		}
+		.person_info_float a {
+			float: right;
+			position: relative;
+			cursor: pointer;
+			top: -3px;
+			right: -5px;
+			font-size: 1.2em;
+			font-weight: bold;
+			color: #ffffff;
+			}
+			.person_info_float a:hover{
+				text-decoration: none;
+				color: #000000;
+			}
+
+
+/* NOTE 
+-------------------------------------------------- */
+#div_note_wrapper {
+	
+	//background-color: #F3EE1C;
+	//width: 700px;
+	//min-height: 209px;
+	/*
+	position: fixed;
+	box-shadow: 10px 10px 26px -8px rgba(0,0,0,0.75);
+	z-index: 9;
+	*/
+	}
+	#div_note_wrapper .label {
+		display: none;
+	}
+	#div_note_wrapper .content_data {
+		width: 100%;
+	}
+	#div_note_wrapper .note_close {
+		float: right;
+		width: 16px;
+		height: 16px;
+		position: relative;
+		margin-left: 10px;
+	}
+	#div_note_wrapper .created_by_user_name {
+		float: left;
+		padding: 5px;
+		padding-top: 7px;
+	}
+	#div_note_wrapper .created_date {
+		float: left;
+		padding: 6px;
+		padding-left: 15px;
+	}
+	#div_note_wrapper .modal-body {
+		/**/
+		display: table;
+		width: 100%;		
+	}
+	#div_note_wrapper .text_area_inline {
+		display: block;
+		min-height: 100px;
+		background-color: #C9EDB8;
+		width: 100%;
+	}
+	#div_note_wrapper .css_wrap_text_area {
+		//min-height: 450px;
+	}
+	#div_note_wrapper .button_delete_note {
+		float: left;
+	}
+
+
+	// hack to maintain tinyMCE menu position
+	.mce-floatpanel.mce-fixed{
+		//top:75px !important
+	}
+
+	
+
+.text_area_div_editable {
+	height: 300px;
+	width: 100%;
+	display: block;
+	position: relative;
+	//background-color: #C2ECFD;
+}
 
 
 /* PRINT 

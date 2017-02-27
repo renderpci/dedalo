@@ -21,7 +21,7 @@
 		case 0	:	$html_contenido .= "\n <span class=\"css_span_dato\"> ".label::get_label('sin_acceso')." </span>";
 					break;
 						
-		case ($permissions>=1)	:
+		case ($permissions>=1):
 		
 					$html_contenido .= "\n <blockquote> ";
 					foreach ($ar_children_areas as $tipo => $value) {

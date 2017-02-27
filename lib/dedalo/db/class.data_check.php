@@ -1,11 +1,10 @@
 <?php
-
-
-
-
-
+/**
+* DATA_CHECK
+*
+*
+*/
 class data_check {
-	
 
 
 
@@ -13,7 +12,7 @@ class data_check {
 	* CHECK_SEQUENCES
 	* @return stdClass object $response
 	*/
-	public function check_sequences() {		
+	public function check_sequences() {	
 		
 		$response = new stdClass();
 			$response->result 	= true;
@@ -32,7 +31,7 @@ class data_check {
 			# Find last id in table
 			$sql 	 = " SELECT id FROM $table_name ORDER BY id DESC LIMIT 1 ";
 			$result2 = JSON_RecordObj_matrix::search_free($sql);
-			if (pg_num_rows($result2) == 0) {
+			if (pg_num_rows($result2) === 0) {
 				continue;	// Skip empty tables
 			}
 			$last_id = pg_fetch_result($result2, 0, 'id');
@@ -48,7 +47,8 @@ class data_check {
 
 			$response->msg .= "<hr><b>$table_name</b> - start_value: $start_value - seq last_value: $last_value ";
 			if ($last_value!=$last_id) {
-				$response->msg .= "<span style=\"color:#b97800\">[last id: $last_id] ALTER SEQUENCE {$table_name}_id_seq RESTART WITH $last_id;</span>";
+				#$response->msg .= "<span style=\"color:#b97800\">[last id: $last_id] ALTER SEQUENCE {$table_name}_id_seq RESTART WITH $last_id;</span>";
+				$response->msg .= "<span style=\"color:#b97800\">[last id: $last_id] SELECT setval('public.{$table_name}_id_seq', $last_id, true);</span>";
 			}else{
 				$response->msg .= "[last id: $last_id]";
 			}
@@ -79,11 +79,7 @@ class data_check {
 
 
 		return (object)$response;
-
 	}#end check_sequences
-
-
-
 
 
 

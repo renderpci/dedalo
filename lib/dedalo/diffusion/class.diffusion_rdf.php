@@ -115,8 +115,8 @@ class diffusion_rdf extends diffusion {
 				$i=1;foreach ($data as $data_obj) {
 					
 					
-					if ( $rdf_object->modelo_name=='rdf:subject' &&
-						 $data_obj->modelo_name=='rdf:subject' &&
+					if ( $rdf_object->modelo_name==='rdf:subject' &&
+						 $data_obj->modelo_name==='rdf:subject' &&
 						 !isset($added_close) )
 					{ //!empty($data_obj->data)
 
@@ -129,7 +129,7 @@ class diffusion_rdf extends diffusion {
 					$this->parse_rdf_object( $data_obj, $section_tipo, $section_id, false );
 
 
-					if ($i==$n_childrens && !isset($added_close) && !empty($rdf_object->ar_related)) {	//rdf:predicate
+					if ($i===$n_childrens && !isset($added_close) && !empty($rdf_object->ar_related)) {	//rdf:predicate
 						$parse .= ">"; //$parse .="YYY[$data_obj->tipo]YYY";
 						$added_close=true;
 					}					
@@ -143,7 +143,7 @@ class diffusion_rdf extends diffusion {
 
 				#
 				# OUT TAG
-				if ($n_childrens==1 && $data_obj->modelo_name=='rdf:predicate' && empty($rdf_object->ar_related)) {	//&& $rdf_object->modelo_name=='rdf:predicate'	&& empty($rdf_object->ar_related)		
+				if ($n_childrens===1 && $data_obj->modelo_name==='rdf:predicate' && empty($rdf_object->ar_related)) {	//&& $rdf_object->modelo_name=='rdf:predicate'	&& empty($rdf_object->ar_related)		
 					$parse .= '/>';
 				}else{
 					$parse .= isset($resolved->out_tag) ? $resolved->out_tag : '';
@@ -217,7 +217,8 @@ class diffusion_rdf extends diffusion {
 																			$section_id,
 																			'list',
 																			DEDALO_DATA_NOLAN,
-																			$section_tipo);
+																			$section_tipo,
+																			false);
 					$portal_dato = (array)$component_portal->get_dato();
 					# Component image
 					if (reset($portal_dato)) {
@@ -229,7 +230,8 @@ class diffusion_rdf extends diffusion {
 																			$locator->section_id,
 																			'list',
 																			DEDALO_DATA_NOLAN,
-																			$locator->section_tipo);
+																			$locator->section_tipo,
+																			false);
 						$aditional_path = $component_obj->get_aditional_path();
 						$image_id = $component_obj->get_target_filename();							
 					
@@ -272,7 +274,8 @@ class diffusion_rdf extends diffusion {
 																				$section_id,
 																				'list',
 																				DEDALO_DATA_LANG,
-																				$section_tipo);
+																				$section_tipo,
+																				false);
 							$dato = $component_obj->get_valor(DEDALO_DATA_LANG, 'string', (array)$object_uri->value);	//  Ref. $lang=DEDALO_DATA_LANG, $format='string', $ar_related_terms=false
 								#dump($dato, ' dato ++ '.to_string( $object_uri->value ));
 							$value = $dato;
@@ -284,7 +287,8 @@ class diffusion_rdf extends diffusion {
 																				$section_id,
 																				'list',
 																				DEDALO_DATA_LANG,
-																				$section_tipo);
+																				$section_tipo,
+																				false);
 							$dato = $component_obj->get_valor();
 								#dump($dato, ' dato ++ '.to_string( $related_tipo ));
 							$value = $dato;
@@ -294,11 +298,11 @@ class diffusion_rdf extends diffusion {
 					$add_uri_string .= $object_uri!=end($add_uri) ? $separator : '';										
 					
 				}
-				if ($modelo_name=='rdf:predicate') {
+				if ($modelo_name==='rdf:predicate') {
 					$value = " $name=\"{$base_uri}{$add_uri_string}\"";
 
 					if(SHOW_DEBUG) {
-						if ($base_uri=='http://numismatics.org/ocre/id/ric.') {
+						if ($base_uri==='http://numismatics.org/ocre/id/ric.') {
 
 							self::test_method($base_uri, $add_uri_string, $section_id);
 							/* PASADO AL MÉTODO 'test_method' 
@@ -366,10 +370,10 @@ class diffusion_rdf extends diffusion {
 				
 				$var_uri_string=''; foreach((array)$var_uri as $key => $component_tipo) {
 					
-					if ($key=='#') {
+					if ($key==='#') {
 
 						$value = $component_tipo;
-						if (substr($var_uri_string, -1)=='&' ) {
+						if (substr($var_uri_string, -1)==='&' ) {
 							$var_uri_string = substr($var_uri_string, 0, -1);
 						}
 						$var_uri_string .= $value;
@@ -378,7 +382,7 @@ class diffusion_rdf extends diffusion {
 
 						# Resolve value
 						$ct_modelo_name = RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
-						if ($ct_modelo_name=='component_section_id') {
+						if ($ct_modelo_name==='component_section_id') {
 							$value = $section_id;
 						}else{						
 							$ct_modelo_name = RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
@@ -387,7 +391,8 @@ class diffusion_rdf extends diffusion {
 																				$section_id,
 																				'list',
 																				DEDALO_DATA_LANG,
-																				$section_tipo);
+																				$section_tipo,
+																				false);
 							$dato = $component_obj->get_valor();
 								#dump($dato, ' dato ++ '.to_string( $ct_modelo_name ));
 							$value = $dato;
@@ -417,7 +422,8 @@ class diffusion_rdf extends diffusion {
 																		$section_id,
 																		'list',
 																		DEDALO_DATA_LANG,
-																		$section_tipo);
+																		$section_tipo,
+																		false);
 					$dato = $component_obj->get_valor();
 						#dump($dato, ' dato ++ '.to_string( $related_tipo ));
 					$value = $dato;	
@@ -522,7 +528,7 @@ class diffusion_rdf extends diffusion {
 			$rdf_predicates = '';
 			foreach ($ar_elements as $children_tipo) {
 				$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($children_tipo,true);
-				if ($modelo_name=='head') {
+				if ($modelo_name==='head') {
 					
 					$rdf_head 	 	  = new RecordObj_dd($children_tipo);				
 					$ar_head_elements = $rdf_head->get_ar_childrens_of_this();
@@ -725,7 +731,8 @@ class diffusion_rdf extends diffusion {
 															$section_id,
 															'edit',
 															DEDALO_DATA_NOLAN,								
-															'mupreva1');
+															'mupreva1',
+															false);
 			$locator = new locator();
 				$locator->set_section_tipo('dd64');
 				$locator->set_section_id(2);

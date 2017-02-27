@@ -65,16 +65,52 @@ $html='';
 		$html .= "<div id=\"col4\" class=\"col\">";
 
 			#
-			# BUTTON EXPORT
-			$html .= "<a id=\"button_export\" class=\"btn btn-success fileinput-button\" onclick=\"tool_export.export_data(this);\">
-						<strong>".label::get_label('tool_export')."</strong>
-			  		 </a>";
-
-		 	#
 			# INFO
 			$html .= "<div id=\"records_info\">";
-			$html .= " <h1>$section_label</h1><span> ".label::get_label('total_records')." $total_records </span>"; 
+			$html .= " <h1>Section: <strong>$section_label</strong></h1><span> ".label::get_label('total_records').": <strong>$total_records</strong> </span>"; 
 			$html .= "</div>";
+
+
+			$html .= "<div id=\"buttons_div\">";
+				
+				/*
+				#
+				# SELECT ENCODING
+				$html .= '<div class="input-group">';
+				$html .= '<span class="input-group-addon" id="basic-addon1">Encoding</span>';
+				
+				$html .= '</div>';
+
+				#
+				# SELECT FORMAT
+				$html .= '<div class="input-group">';
+				$html .= '<span class="input-group-addon" id="basic-addon1">Format</span>';
+				
+				$html .= '</div>';
+				*/
+
+				#
+				# BUTTON EXPORT
+				$html .= '<div class="input-group">';
+				$html .= "<a id=\"button_export\" class=\"btn btn-success fileinput-button\" onclick=\"tool_export.export_data(this);\">
+							<strong>".label::get_label('tool_export')."</strong>
+						 </a>";
+				/*
+				$html .= '<span class="input-label">Encoding</span>';	 
+				$html .= "<select id=\"select_encoding_export\" class=\"form-control\">
+							<option value=\"UTF8\">UTF8</option>
+							<option value=\"ISO-8859-1\">ISO-8859-1 (Excel)</option>
+						 </select>";
+				*/
+				$html .= '<span class="input-label">Format</span>';
+				$html .= "<select id=\"select_data_format_export\" class=\"form-control\">
+							<option value=\"standar\">Standar (Resolved)</option>
+							<option value=\"dedalo\">Dédalo (Raw)</option>
+						 </select>";				
+				$html .= '</div>';		 
+
+			$html .= "</div>";//end buttons_div
+			
 
 		$html .= "</div>";//end col4
 
@@ -86,8 +122,12 @@ $html='';
 	#
 	# DOWNLOAD_FILE
 	$html .= "<div id=\"download_file\">";
+	# DOWNLOAD_FILE CSV UTF-8
 	$html .= "	<h2><a href=\"\" target=\"_blank\" id=\"download_file_link\">".label::get_label("descargar")."</a></h2>";
+	# DOWNLOAD_FILE_EXCEL
+	$html .= "	<h2><a href=\"\" target=\"_blank\" id=\"download_file_link_excel\">".label::get_label("descargar")." Excel</a></h2>";
 	$html .= "</div>";
+
 
 
 	#

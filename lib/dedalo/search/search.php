@@ -1,5 +1,6 @@
 <?php
-	
+
+		
 	switch($modo) {
 		
 		case 'tool_lang':

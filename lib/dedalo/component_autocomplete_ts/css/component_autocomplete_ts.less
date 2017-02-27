@@ -19,17 +19,11 @@ WRAP DIV CONTAINER*/
 
 
 
-/* AUTOCOMPLETE SEARCH FIELD */
+/* AUTOCOMPLETE SEARCH FIELD 
+----------------------------------------- */
 input.css_autocomplete_ts_search_field {
 	float: right;
 	width: 90px;
-	/*
-	padding: 2px;
-	padding-left: 5px;	
-	border: 1px solid #9E9E9E;
-	border-radius: 3px;
-	box-shadow: inset 0 0 6px #999999;
-	*/
 	opacity: 0.5;
 	background: white url('../../themes/default/lupa2.svg') right center no-repeat;
 	background-size: auto 100%;
@@ -44,6 +38,17 @@ input.css_autocomplete_ts_search_field {
 		width: 90px;
 		background-position-x: 95%;
 	}
+
+	/* Search variant
+	----------------------------------------- */
+	input.css_autocomplete_ts_search_field.in_search_mode,
+	.new_autocomplete_ts.in_search_mode {
+		float: left;
+		margin-right: 10px;
+	}
+
+
+
 
 /* DATO HIDDEN INPUT */
 input.css_autocomplete_ts_dato_hidden {
@@ -89,9 +94,7 @@ input.css_autocomplete_ts_dato_hidden {
 }
 
 
-.wrap_portal_list{
-	padding: 1px;
-}
+
 
 .css_autocomplete_ts_ul_edit_in_portal{
 	display: inline-block;
@@ -140,22 +143,29 @@ input.css_autocomplete_ts_dato_hidden {
 
 .css_wrap_autocomplete_ts.wrap_portal_list > .content_data {
 	width: 100%;
-
 }
 
-.css_wrap_autocomplete_ts.wrap_portal_list >.content_data >.css_autocomplete_ts_valor{
+.css_wrap_autocomplete_ts.wrap_portal_list >.content_data >.css_autocomplete_ts_valor {
 	width: 80%;
 	min-height: 22px;
 }
+/* Search mode variant
+-------------------------------------------*/
+.css_autocomplete_ts_valor.in_search_mode {
+	width: auto;
+}
 
 
-.css_wrap_autocomplete_ts.wrap_portal_list >.content_data >.css_autocomplete_ts_search_field{
+.css_wrap_autocomplete_ts.wrap_portal_list >.content_data >.css_autocomplete_ts_search_field {
 	width: 100%;
 	background-position-x: 90%;
-}
-.css_wrap_autocomplete_ts.wrap_portal_list >.content_data > input.css_autocomplete_ts_search_field:focus {
+	}
+	.css_wrap_autocomplete_ts.wrap_portal_list >.content_data > input.css_autocomplete_ts_search_field:focus {
+		background-position-x: 98%;
+	}
 
-	background-position-x: 98%;
+.css_wrap_autocomplete_ts .comparison_operator {
+	float: left;
 }
 
 
@@ -167,6 +177,7 @@ input.css_autocomplete_ts_dato_hidden {
 	background-position: 0 -96px;
 	opacity: 0.4;
 	width: 14px;
+	zoom: 1.25;
 }
 
 

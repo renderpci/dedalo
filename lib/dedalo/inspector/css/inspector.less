@@ -1,3 +1,8 @@
+// Variables
+@common_css: "../../common/css";
+
+// Usage
+@import "@{common_css}/library.less"; 
 
 /* INSPECTOR
 ---------------------------------------- */
@@ -217,10 +222,42 @@ div.tool_inspector_div {
 	}
 
 /* Elimina la última línea separadora del bottom */
-DIV#inspector_tools .tool_inspector_div:last-of-type {
+div#inspector_tools .tool_inspector_div:last-of-type {
     border-bottom:none;
 }
 div.tool_inspector_div .icon_bs {
 	margin-right: 3px;
 }
+
+
+
+@media screen and (max-width: @movil_max_width) { // 768px
+
+	// Title of info group
+	#inspector_div > .css_section_group_titulo {
+		display: none;
+	}
+	// info group content info
+	#inspector_div #inspector_info {
+		display: none;
+		}
+
+	// Other inspector elements
+	#tools_info_wrapper, #indexations_info_wrapper, #others_info_wrapper, #debug_info_wrapper {
+		display: none;
+	}
+
+	/*
+	#sidebar .css_wrap_rows_paginator {
+		height: 28px;
+		top: 0;
+		position: relative;
+		text-align: center;
+		zoom: 1.7;
+	}
+	*/
+	
+	
+
+}//end @media screen and (max-width: @movil_max_width)
 

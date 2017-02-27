@@ -6,6 +6,8 @@
 
 
 
+/* DESACTIVO PARA VER SI PITA !!
+
 require_once( dirname(dirname(__FILE__)) .'/config/config4.php');
 
 
@@ -88,7 +90,7 @@ throw new Exception("Error Processing Request: EN PROCESO DE CONVERSIÓN A POSTG
 							$tipo_security_areas 	= $terminoID;			
 							$area[] 				= $area_actual;
 							
-							$matrix_table 			= common::get_matrix_table_from_tipo($tipo_security_areas);
+							$matrix_table 			= common::get_matrix_table_from_tipo($section_tipo_security_areas);
 							$RecordObj_matrix2		= new RecordObj_matrix($matrix_table,NULL);
 							
 							# If dato is array, convert to json
@@ -107,7 +109,7 @@ throw new Exception("Error Processing Request: EN PROCESO DE CONVERSIÓN A POSTG
 							$tipo_security_access 				= $terminoID;			
 							$area_security_access[$area_actual]	= 2;
 							
-							$matrix_table 		= common::get_matrix_table_from_tipo($tipo_security_access);
+							$matrix_table 		= common::get_matrix_table_from_tipo($section_tipo_security_access);
 							$RecordObj_matrix3	= new RecordObj_matrix($matrix_table,NULL);
 							
 							# If dato is array, convert to json
@@ -203,5 +205,5 @@ throw new Exception("Error Processing Request: EN PROCESO DE CONVERSIÓN A POSTG
 	
 	# RETURN CREATED RECORD IN MATRIX
 	print $id;
-		
+*/		
 ?>

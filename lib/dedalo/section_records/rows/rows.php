@@ -8,8 +8,24 @@
 	$tipo			= $this->section_records_obj->get_tipo();
 	$permissions 	= common::get_permissions($tipo,$tipo);
 	
-	$ar_component_resolved = array();
-	$button_delete_permissions = (int)$this->section_records_obj->button_delete_permissions;
+	$ar_component_resolved 		= array();
+
+	#
+	# Button delete	
+	$button_delete_permissions 	= (int)$this->section_records_obj->button_delete_permissions;
+	if (isset($this->section_records_obj->button_delete)) {
+		$button_delete 				= $this->section_records_obj->button_delete;
+		$button_delete_propiedades  = $button_delete->get_propiedades();
+	}	
+	$button_delete_actions 		= new stdClass();
+	if (isset($button_delete_propiedades->delete_action_pre)) {
+		$button_delete_actions->delete_action_pre = $button_delete_propiedades->delete_action_pre->method;
+	}
+	if (isset($button_delete_propiedades->delete_action_post)) {
+		$button_delete_actions->delete_action_post = $button_delete_propiedades->delete_action_post->method;
+	}
+	$button_delete_actions_json = json_encode($button_delete_actions);
+	
 		#dump($button_delete_permissions, ' button_delete_permissions ++ '.to_string());
 		#dump($this->section_records_obj, ' result ++ '.to_string());
 
@@ -19,9 +35,7 @@
 	$context = (object)$this->section_records_obj->rows_obj->options->context;					
 	if (!isset($context->context_name)) {
 		$context->context_name = false;
-	}
-
-	
+	}	
 	#dump($context,"context");
 	#dump($this, '$this->section_records_ob ++ '.to_string());	
 
@@ -35,7 +49,7 @@
 		case 'list':
 				
 				$section_tipo 		= $this->section_records_obj->rows_obj->options->section_tipo;
-				$section_list_tipo 	= key($this->section_records_obj->rows_obj->options->layout_map);					
+				$section_list_tipo 	= key($this->section_records_obj->rows_obj->options->layout_map);
 				$ar_columns_tipo 	= reset($this->section_records_obj->rows_obj->options->layout_map);
 				
 				$RecordObj_dd = new RecordObj_dd($section_list_tipo);
@@ -71,7 +85,7 @@
 
 					# ROW		
 					#$id = $rows['section_id'];	#dump($id,"id - $current_id");
-					if($section_tipo == DEDALO_ACTIVITY_SECTION_TIPO){
+					if($section_tipo === DEDALO_ACTIVITY_SECTION_TIPO){
 						$id = $rows['id'];
 						#$section_id = $id;
 						$section_id = $rows['section_id'];
@@ -97,22 +111,54 @@
 						$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_component_tipo,true);
 						
 						# NOTIFY : Notificamos la carga del elemento a common
-						if (!$notify) {
-							common::notify_load_lib_element_tipo($current_component_tipo, $modelo_name, 'edit');
+						if ($notify===false) {
+							common::notify_load_lib_element_tipo($modelo_name, 'edit');
 						}
 						
-						$value = $rows[$current_component_tipo];
+						$db_value = $rows[$current_component_tipo];
+
+						$render_list_mode = 'list';
+						# Overwrite defailt list mode when need. Set component propiedades 'elements_list_mode' as you want, like edit..							
+						if (isset($propiedades->elements_list_mode->$current_component_tipo->mode)) {
+							$render_list_mode = $propiedades->elements_list_mode->$current_component_tipo->mode;
+						}
 											
 						// Override db value with component value interpretation 'render_list_value'
-						$value = $modelo_name::render_list_value($value, // value string from db
+						$value = $modelo_name::render_list_value($db_value, // value string from db
 																 $current_component_tipo, // current component tipo
 																 $section_id, // current row section id
-																 'list', // mode fixed list
+																 $render_list_mode, // mode fixed list : default 'list'
 																 DEDALO_DATA_LANG, // current data lang
 																 $section_tipo, // current section tipo
 																 $id);
 						
 						$ar_valor[$current_component_tipo] = (string)$value;
+
+
+						#
+						# PORTALS. Portal with multiple list cases
+						if ($modelo_name==='component_portal') {							
+							$ar_section_list = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($current_component_tipo, 'section_list', 'children', true);
+							#dump($ar_section_list, ' $ar_section_list ++ '.to_string($current_component_tipo));
+							if (count($ar_section_list)>1) foreach ($ar_section_list as $slkey => $current_section_list_tipo) {
+								if ($slkey===0) continue; # Skip first default list already calculated
+
+								// Override db value with component value interpretation 'render_list_value'
+								$value2 = $modelo_name::render_list_value($db_value, // value string from db
+																		 $current_component_tipo, // current component tipo
+																		 $section_id, // current row section id
+																		 $render_list_mode, // mode fixed list
+																		 DEDALO_DATA_LANG, // current data lang
+																		 $section_tipo, // current section tipo
+																		 $id,
+																		 null,
+																		 null,
+																		 $slkey);
+								
+								$ar_valor[$current_component_tipo.'_'.$slkey] = (string)$value2;								
+							}
+						}//end if ($modelo_name==='portal')
+
 
 					}#end foreach($ar_data as $section_dato => $ar_component_obj)
 
@@ -131,7 +177,7 @@
 					}
 
 					# ACTIVITY DEDALO_ACTIVITY_SECTION_TIPO
-					if ($section_tipo==DEDALO_ACTIVITY_SECTION_TIPO) {
+					if ($section_tipo===DEDALO_ACTIVITY_SECTION_TIPO) {
 						$file_name = 'activity';
 					}
 

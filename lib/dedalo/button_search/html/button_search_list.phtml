@@ -21,10 +21,10 @@
 						
 		case ($permissions>=1)	:
 		
-					$html_contenido .= "\n <input class=\"css_button_search\" type=\"button\" onclick=\"search.Search(this.form)\" 
+					$html_contenido .= "\n <input class=\"css_button_search\" type=\"button\" data-role=\"button_search\" onclick=\"search.Search(this.form)\" 
 					data-tipo=\"{$target_tipo}\" value=\"$label\" title=\"$html_title\" />";
 
-
+					$html_contenido .= "<span id=\"search_response\"></span>";
 					#$html_contenido .= "\n <input class=\"css_max_rows\" type=\"text\" name=\"max_rows\" value=\"{$valor_max_rows}\" title=\"$html_title\" />";
 											
 	}

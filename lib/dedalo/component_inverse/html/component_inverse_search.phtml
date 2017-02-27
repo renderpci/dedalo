@@ -1,0 +1,42 @@
+<?php
+
+	# VISUALIZADOR HTML	
+	print "<div class=\"wrap_component css_wrap_section_id\">";	
+	
+	
+	# ETIQUETA (LABEL)
+	$html_label = component_common_draw::draw_label($this);
+	
+	# CONTENIDO (INPUT)
+	$html_content = '';
+	#switch($permissions) {
+						
+		#case ($permissions>=1) :					
+
+				# COMPARISON OPERATORS
+				$html_content .= operator::get_search_comparison_operators_html($tipo,$ar_comparison_operators);
+				
+				# INPUT
+				$html_content .= " <input class=\"input_css_inverse\" type=\"text\" name=\"{$search_input_name}\"
+				data-tipo=\"{$tipo}\"
+				title=\"$html_title\" />";
+
+				# LOGICAL OPERATORS
+				$html_content .= operator::get_search_logical_operators_html($tipo,$ar_logical_operators);
+
+				if(SHOW_DEBUG===true) {
+					$html_content .= "<span class=\"debug_info\">$search_input_name</span>";
+				}										
+	#}
+
+	# Prepare content to show in page
+	tools::prepare_content($html_content);	
+	
+	
+	# PRINT HTML
+	print $html_label;
+	print $html_content;
+
+	print "</div><!-- /css_wrap_section_id -->"; //wrap
+	
+?>

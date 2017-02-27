@@ -2,9 +2,10 @@
 
 	# VISUALIZADOR HTML		
 	
-	print "\n<!-- COMPONENT_HTML_TEXT [tipo:$tipo section_id_matrix:$parent] $label -->";
+	# html_delimiter
+	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'in');
 
-	print "\n<div class=\"wrap_component css_wrap_html_text wrap_component_{$tipo}\" id=\"{$id_wrapper}\"
+	print "<div class=\"wrap_component css_wrap_html_text wrap_component_{$tipo}\" id=\"{$id_wrapper}\"
 	data-tipo=\"{$tipo}\"
 	data-section_tipo=\"{$section_tipo}\"
 	data-parent=\"{$parent}\"
@@ -25,14 +26,14 @@
 		case 0	:	$html_contenido .= "";	
 					break;
 						
-		case 1	: 	#$html_contenido .= "\n<div class=\"html_text_content html_text_content_shadow\" >";
-					$html_contenido .= "\n <span class=\"css_span_dato\">$dato</span>";
-					#$html_contenido .= "\n</div>"; #end html_text_content
+		case 1	: 	#$html_contenido .= "<div class=\"html_text_content html_text_content_shadow\" >";
+					$html_contenido .= " <span class=\"css_span_dato\">$dato</span>";
+					#$html_contenido .= "</div>"; #end html_text_content
 
 					##
 					# WRAP CURRENT SELECTED FRAGMENT (RELATION / ADD PORTAL BUTTON) 
 					#
-					$html_contenido .= "\n <div id=\"relations_ajax_div_{$tipo}\" class=\"wrap_fragment\" 
+					$html_contenido .= " <div id=\"relations_ajax_div_{$tipo}\" class=\"wrap_fragment\" 
 					data-tipo=\"{$tipo}\"
 					data-section_tipo=\"{$section_tipo}\"
 					data-parent=\"{$parent}\"
@@ -54,7 +55,7 @@
 					/*
 					# Dato reference default lang
 					if ($modo!='tool_lang' && !empty($default_component)) {
-						#$html_contenido .= "\n <div class=\"dato_refecence_default_lang\">$dato_reference_lang</div>";
+						#$html_contenido .= " <div class=\"dato_refecence_default_lang\">$dato_reference_lang</div>";
 						# Fijamos el lenguaje actual como el de destino para el tool_lang
 						$html_contenido .= "<script>set_localStorage('last_target_lang','$lang')</script>";
 						$tool_lang = new tool_lang($default_component,'button');
@@ -74,7 +75,7 @@
 					##
 					# Text area  contenteditable=\"true\"
 					#					
-					$html_contenido .= "\n <textarea class=\"css_html_text\" 
+					$html_contenido .= " <textarea class=\"css_html_text\" 
 					id=\"{$identificador_unico}\" 
 					name=\"{$input_name}\" 
 					data-tipo=\"{$tipo}\"
@@ -82,12 +83,17 @@
 					data-section_tipo=\"{$section_tipo}\"
 					data-parent=\"{$parent}\"
 					data-context_name=\"$context_name_text\"
-					title=\"$html_title\">$dato</textarea>";					
+					title=\"$html_title\">$dato</textarea>";
+
+
+					# INIT : Init text editor	
+					$html_contenido .= "<script>component_html_text_editor.init('$identificador_unico','$modo','$propiedades_json');	console.log(\"Inied $identificador_unico\");</script>";
+				
 					
 					
 					if (SHOW_DEBUG) {
 						#$html_contenido .= "<span class=\"debug_info\"> $identificador_unico</span>";					
-						#$html_contenido .= "\n <span class=\"css_span_debugger\" id=\"debugger_{$tipo}\" >{$debugger}</span>";
+						#$html_contenido .= " <span class=\"css_span_debugger\" id=\"debugger_{$tipo}\" >{$debugger}</span>";
 					}					
 					break;							
 	}
@@ -98,15 +104,17 @@
 	tools::prepare_content($html_contenido);
 
 
-	# INIT : Init text editor	
-	$html_contenido .= "\n<script>$(function(){component_html_text_editor.init('$identificador_unico','$modo','$propiedades_json');});</script>";
-
+	
 	
 	# PRINT HTML
 	print $html_label;
 	print $html_contenido;
 	
 	
-	print "\n</div><!-- /css_wrap_html_text  $label -->\n\n"; //wrap	
-?>
+	print "</div>"; //wrap
 
+	# html_delimiter
+	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'out');
+
+
+?>

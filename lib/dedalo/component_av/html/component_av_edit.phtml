@@ -5,9 +5,10 @@
 
 	# ELEMENTOS
 	
-	
-	print "\n<!-- AV [tipo:$tipo section_id_matrix:$parent] $label -->";
-	print "\n<div class=\"wrap_component css_wrap_av wrap_component_{$tipo}\"
+	# html_delimiter
+	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'in');
+
+	print "<div class=\"wrap_component css_wrap_av wrap_component_{$tipo}\"
 	id=\"{$id_wrapper}\"
 	data-tipo=\"{$tipo}\"
 	data-lang=\"{$lang}\"
@@ -63,7 +64,7 @@
 						# PLAYER
 						#$html_contenido .= $player_html	; # Rendered in player mode
 						# PLAYER
-						$html_contenido .= "\n<div class=\"css_posterframe_wrap $add_class\" $open_tool_default >";
+						$html_contenido .= "<div class=\"css_posterframe_wrap $add_class\" $open_tool_default >";
 
 
 						if ($av_file_exits) {
@@ -78,21 +79,22 @@
 							data-video_id=\"{$video_id}\"							
 							>";
 
-								$html_contenido .= "\n <source id=\"video_mp4_{$tipo}\" src=\"$video_url\" type=\"video/mp4\" onerror=\"alert('Sorry. Unplayable media')\" >";	//onerror=\"alert('Sorry. Unplayable media')\" 
+								$html_contenido .= " <source id=\"video_mp4_{$tipo}\" src=\"$video_url\" type=\"video/mp4\" onerror=\"alert('Sorry. Unplayable media')\" >";	//onerror=\"alert('Sorry. Unplayable media')\" 
 								
 								# FALLBACK IMG (no html5 codec video support)
-								$html_contenido .= "\n <img src=\"$posterframe_url\" class=\"av_posterframe\" alt=\"Posterframe\" title=\"No video playback capabilities\" />";
+								$html_contenido .= " <img src=\"$posterframe_url\" class=\"av_posterframe\" alt=\"Posterframe\" title=\"No video playback capabilities\" />";
 							
 								#
 								# VTT SUBTITLES TRACK
 								if($av_subtitles_file_exits){
-									$html_contenido .= "\n<track label=\"English\" kind=\"subtitles\" srclang=\"en\" src=\"$subtitles_url\" default>";
+
+									$html_contenido .= "<track label=\"Subtitles\" kind=\"subtitles\" srclang=\"en\" src=\"$subtitles_url\" default>";
 								}
 
-							$html_contenido .= "\n</video>";
+							$html_contenido .= "</video>";
 
 
-							if(SHOW_DEBUG) {
+							if(SHOW_DEBUG===true) {
 								require_once(DEDALO_LIB_BASE_PATH.'/media_engine/class.Ffmpeg.php');
 								$media_streams = Ffmpeg::get_media_streams($video_path);
 
@@ -103,7 +105,7 @@
 						}else{
 							
 							# POSTERFRAME (When video file not exists)							
-							$html_contenido .= "\n <img class=\"av_posterframe\" src=\"$posterframe_url\"
+							$html_contenido .= " <img class=\"av_posterframe\" src=\"$posterframe_url\"
 							data-video_id=\"$video_id\"
 							/>";							
 						}						
@@ -111,7 +113,7 @@
 
 
 							
-						$html_contenido .= "\n</div><!-- /css_posterframe_wrap -->";
+						$html_contenido .= "</div><!-- /css_posterframe_wrap -->";
 
 						# VERSIONS
 						#$html_contenido .= $versions_html ;												
@@ -126,7 +128,11 @@
 		print $html_contenido;
 	
 	
-	print "\n</div><!-- /css_wrap_av AV [tipo:$tipo section_id_matrix:$parent] $label -->\n"; //wrap
+	print "</div>"; //wrap
+
+
+	# html_delimiter
+	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'out');
 
 
 ?>

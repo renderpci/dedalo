@@ -2,9 +2,10 @@
 
 	# VISUALIZADOR HTML	
 	
-	print "\n<!-- COMPONENT_SECTION_ID [tipo:$tipo section_id:$parent] $label -->";
+	# html_delimiter
+	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'in');
 	
-	print "\n<div class=\"wrap_component css_wrap_section_id wrap_component_{$tipo}\" id=\"{$id_wrapper}\"
+	print "<div class=\"wrap_component css_wrap_section_id wrap_component_{$tipo}\" id=\"{$id_wrapper}\"
 	data-tipo=\"{$tipo}\"
 	data-lang=\"{$lang}\"
 	data-section_tipo=\"{$section_tipo}\"
@@ -23,7 +24,7 @@
 			
 		$html_contenido .= "<div class=\"css_section_id\">$dato</div>";
 		/*
-		$html_contenido .= "\n <input class=\"css_section_id\" type=\"text\" 
+		$html_contenido .= " <input class=\"css_section_id\" type=\"text\" 
 		name=\"{$input_name}\" 
 		data-tipo=\"{$tipo}\"
 		data-section_tipo=\"{$section_tipo}\"
@@ -41,5 +42,10 @@
 		print $html_contenido;
 	
 	
-	print "\n</div><!-- /css_wrap_section_id COMPONENT_SECTION_ID [tipo:$tipo section_id:$parent] $label -->\n"; //wrap
+	print "</div>"; //wrap
+
+	# html_delimiter
+	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'out');
+
+
 ?>

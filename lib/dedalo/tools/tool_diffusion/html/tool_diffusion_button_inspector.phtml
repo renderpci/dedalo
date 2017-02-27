@@ -49,7 +49,10 @@
 				$html_tool .= "";
 				$html_tool .= RecordObj_dd::get_termino_by_tipo($element_tipo, DEDALO_DATA_LANG, true, true); //$from_cache=false, $fallback=true
 				if ( SHOW_DEBUG && isset($diffusion_info->$element_tipo)) {
-					$html_tool .= " <i class=\"glyphicon glyphicon-ok\" style=\"color:green\"></i>";
+					$html_tool .= " <i class=\"glyphicon glyphicon-ok\" style=\"color:green\"></i>";					
+				}
+				if(SHOW_DEBUG===true) {
+					$html_tool .= ' ['.DEDALO_DIFFUSION_DOMAIN.']';
 				}
 				$html_tool .= "</div>";
 

@@ -76,6 +76,8 @@ if($mode=='propagate_marks') {
 	exit(msgJS($html));
 }
 
+
+
 /**
 * LOAD SOURCE COMPONENT (RIGHT SIDE)
 * @param $tipo
@@ -91,6 +93,7 @@ if($mode=='load_source_component') {
 
 	$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);	
 	$modo 			= 'tool_lang';
+
 
 	# COMPONENT	
 	$component_obj	= component_common::get_instance($modelo_name, $tipo, $parent, $modo, $lang, $section_tipo);	
@@ -189,22 +192,26 @@ if($mode=='automatic_translation') {
 
 	# mandatory vars
 	$mandatoy_vars = array('source_lang','target_lang','tipo','parent');
-	foreach ($mandatoy_vars as $var_name) {		
+	foreach ($mandatoy_vars as $var_name) {
 		if (empty($$var_name)) throw new Exception("Error Processing Request: $var_name is mandatory!", 1);
 	}	
 
 	# SOURCE TEXT . get source text
-	$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);	# 'component_text_area';	#
-	$component_obj	= component_common::get_instance($modelo_name, $tipo, $parent, 'edit', $source_lang, $section_tipo);
-	#$dato 			= $component_obj->get_dato();
-	$dato 			= $component_obj->get_dato_real();	#dump($dato,"dato fron source component");
+	# IMPORTANT : use 'list' as 'modo' because 'edit' can change the component lang on the fly when a reference component_select_lang is defined
+	$modo = 'list';
+	$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+	$component_obj	= component_common::get_instance($modelo_name, $tipo, $parent, $modo, $source_lang, $section_tipo);
+	$dato 			= $component_obj->get_dato();
+	if ($modelo_name==='component_input_text') {
+		$dato = $component_obj->get_valor(0);
+	}
 	$dato			= strip_tags($dato, '<br><strong><em><apertium-notrans>');	# allow only some thtml tags	
 	$source_text	= $dato;
 
 	# ADDTAGIMGONTHEFLY : Añadimos las etiquetas de imagen para que Apertium no toque las etiqueta originales de la base de datos
 	# Poner Apertium en modo 'html' para ello
 	$source_text	= TR::addTagImgOnTheFly($source_text);
-		#dump($source_text,'$source_text'); die();
+		#dump($source_text, "$modelo_name, $tipo, $parent, 'edit', $source_lang, $section_tipo"); die();
 	
 	
 	# DIRECTION
@@ -224,9 +231,11 @@ if($mode=='automatic_translation') {
 		$fields_string = '';
 		
 		# url-ify the data for the POST
-		foreach($fields as $key=>$value) { $fields_string .= $key.'='.$value.'&'; }
+		foreach($fields as $key=>$value) {
+			$fields_string .= $key.'='.$value.'&';
+		}
 		rtrim($fields_string,'&');
-		#dump($fields_string,'$fields_string');
+		#dump($fields, '$fields - ' .$url.'?'.$fields_string);
 		
 		# open connection
 		$ch = curl_init();
@@ -243,7 +252,6 @@ if($mode=='automatic_translation') {
 		# close connection
 		curl_close($ch);
 		#dump($result,'$result',"");
-
 			
 	# Set and save (save result text)
 	$ar_invalid_respone = array('Error: Mode','Error. You need authorization');
@@ -263,7 +271,9 @@ if($mode=='automatic_translation') {
 	
 	
 	# TARGET TEXT 
-	$component_obj	= component_common::get_instance($modelo_name, $tipo, $parent, 'edit', $target_lang, $section_tipo);
+	# IMPORTANT : use 'list' as 'modo' because 'edit' can change the component lang on the fly when a reference component_select_lang is defined
+	$modo = 'list';
+	$component_obj	= component_common::get_instance($modelo_name, $tipo, $parent, $modo, $target_lang, $section_tipo);
 		#dump($component_obj,'$component_obj PRE');
 	$component_obj->set_dato($result);
 	$component_obj->Save(false);	# Important: send arg 'false' to save for avoid alter other langs tags (propagate)

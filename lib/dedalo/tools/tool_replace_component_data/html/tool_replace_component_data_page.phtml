@@ -23,9 +23,9 @@
 		
 		$total_records 	= "<label>$total_records</label>";
 		if ($lang==DEDALO_DATA_NOLAN) {
-			$lang_text		= "<label>". label::get_label('todos'). "</label>";
+			$lang_text		= "<label>". label::get_label('todos') ."</label>";
 		}else{
-			$lang_text		= "<label>". RecordObj_ts::get_termino_by_tipo($lang,DEDALO_DATA_LANG). "</label>";
+			$lang_text		= "<label>". lang::get_name_from_code( $lang, DEDALO_DATA_LANG ) ."</label>";
 		}
 		
 			#dump($lang, " lang ".to_string());

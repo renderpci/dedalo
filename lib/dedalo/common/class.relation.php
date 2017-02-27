@@ -49,6 +49,8 @@ class relation {
 	* @return array $parents
 	*/
 	public function get_parents() {
+		trigger_error(__METHOD__." DEPRECATED METHOD! Use component_relation_parent instead");
+		
 		$parents = array();
 
 		$relations_locators = $this->get_relation_locators();		#dump($relations_locators, ' relations_locators ++ '.to_string());
@@ -67,8 +69,9 @@ class relation {
 	* GET_PARENTS_RECURSIVE
 	* @return array $parents_recursive
 	*/
-	public static function get_parents_recursive( $locator, $final2=array(), $recursive=false, $final=array() ){
-		
+	public static function get_parents_recursive( $locator, $final2=array(), $recursive=false, $final=array() ) {
+		trigger_error(__METHOD__." DEPRECATED METHOD! Use component_relation_parent instead");
+
 		$relation = new relation( $locator->section_id , $locator->section_tipo );
 		$parents  = $relation->get_parents();
 		foreach ($parents as $key => $current_locator) {

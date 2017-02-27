@@ -17,7 +17,7 @@ abstract class html_page {
 	*/
 	public static function get_html( $content, $html_raw=false ) {
 
-		if(SHOW_DEBUG) $start_time = start_time();
+		if(SHOW_DEBUG===true) $start_time = start_time();
 		
 		ob_start();
 		include ( DEDALO_LIB_BASE_PATH .'/'. get_class() . '/' . get_class() . '.php' );
@@ -26,7 +26,7 @@ abstract class html_page {
 		# sanitize_output html
 		#ob_start("sanitize_output");
 		
-		if(SHOW_DEBUG) {
+		if(SHOW_DEBUG===true) {
 			#$GLOBALS['log_messages'] .= exec_time($start_time, __METHOD__. ' ' );
 			global$TIMER;$TIMER[__METHOD__.'_'.get_called_class().'_'.microtime(1)]=microtime(1);
 		}
@@ -78,7 +78,7 @@ abstract class html_page {
 				
 				switch (true) {
 
-					case ($modo=='edit'):
+					case ($modo==='edit'):
 						
 						$dato_activity['id']		= $id;
 						$dato_activity['tipo']		= $tipo;
@@ -86,7 +86,7 @@ abstract class html_page {
 						$dato_activity['top_tipo'] 	= TOP_TIPO;	#$_SESSION['dedalo4']['config']['top_tipo'];
 						break;
 
-					case ($modo=='list') :
+					case ($modo==='list') :
 						#$dato_activity['id']		= null;
 						$dato_activity['tipo']		= $tipo;
 						#$dato_activity['top_id'] 	= null;

@@ -188,7 +188,7 @@ class component_filter_master extends component_common {
 														'list',
 														DEDALO_DATA_LANG,
 														DEDALO_SECTION_PROJECTS_TIPO);
-			$current_dato = $component->get_dato();
+			$current_dato = $component->get_valor(0);
 			// Fallback to application default lang
 			if ( empty($current_dato) ) {
 				$component = component_common::get_instance($modelo_name,
@@ -197,7 +197,7 @@ class component_filter_master extends component_common {
 														'list',
 														DEDALO_APPLICATION_LANGS_DEFAULT,
 														DEDALO_SECTION_PROJECTS_TIPO);
-				$current_dato = "<mark>".$component->get_dato()."</mark>";
+				$current_dato = "<mark>".$component->get_valor(0)."</mark>";
 			}
 			$ar_projects_final[$current_section_id] = (string)$current_dato;
 		}
@@ -224,7 +224,7 @@ class component_filter_master extends component_common {
 		$termonioID_related = array_values($relacionados[0])[0];
 		$RecordObjt_dd = new RecordObj_dd($termonioID_related);
 
-		if($RecordObjt_dd->get_traducible() =='no'){
+		if($RecordObjt_dd->get_traducible() === 'no'){
 			$lang = DEDALO_DATA_NOLAN;
 		}else{
 			$lang = DEDALO_DATA_LANG;
@@ -250,7 +250,7 @@ class component_filter_master extends component_common {
 	*
 	* @return string $list_value
 	*/
-	public static function render_list_value($value, $tipo, $parent, $modo, $lang, $section_tipo, $section_id) {
+	public static function render_list_value($value, $tipo, $parent, $modo, $lang, $section_tipo, $section_id, $current_locator=null, $caller_component_tipo=null) {
 
 		$current_valor  = $value;
 		$ar_val 		= json_decode($current_valor);

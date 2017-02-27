@@ -64,6 +64,15 @@
 					
 					# COMPONENT SOURCE
 					$component_obj_source_html = $this->source_component->get_html();
+
+					$original_lang 	= component_text_area::force_change_lang($this->source_component->get_tipo(),
+																		 $this->source_component->get_parent(),
+																		 $this->source_component->get_modo(),
+																		 $this->source_component->get_lang(),
+																		 $this->source_component->get_section_tipo());
+					$this->source_component->set_lang($original_lang);
+
+
 					
 					# COMPONENT TARGET					
 					$target_component 			= $this->get_target_component();

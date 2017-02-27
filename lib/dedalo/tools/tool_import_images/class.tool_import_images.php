@@ -59,7 +59,7 @@ class tool_import_images extends tool_common {
 	*/
 	function get_button_import_obj( $button_tipo=null ) {
 
-		if ($button_tipo==null) { // From REQUEST
+		if ($button_tipo===null) { // From REQUEST
 			$vars = array('button_tipo');
 				foreach($vars as $name) $$name = common::setVar($name);
 		}		
@@ -287,7 +287,7 @@ class tool_import_images extends tool_common {
 			return $ar_inventory_section_id[$numero_inventario];
 		}
 
-		$matrix_table		= common::get_matrix_table_from_tipo($component_tipo);
+		$matrix_table		= common::get_matrix_table_from_tipo($section_tipo);
 		#$strQuery='
 		#SELECT id FROM "'.$matrix_table.'"
 		#WHERE

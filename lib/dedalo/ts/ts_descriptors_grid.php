@@ -41,21 +41,17 @@ if($mode=='loadDescriptorsGrid') {
 
 	}else{
 
-		#$ar_all_langs 	= common::get_ar_all_langs(false);
-			#dump($ar_all_langs,'ar_all_langs');
-
 		# Iterate all traductions
 		foreach($ar_transtations_of_current as $id => $current_lang) {
-
-				#dump($id,'id terminoID:'.$terminoID);					
+			
 
 			# TERMINO : Data from current descriptor
 			$matrix_table			= RecordObj_descriptors::get_matrix_table_from_tipo($terminoID);
 			$RecordObj_descriptors	= new RecordObj_descriptors($matrix_table, $id);
-			$termino 				= $RecordObj_descriptors->get_dato();		#dump($termino,'termino');
+			$termino 				= $RecordObj_descriptors->get_dato();
 			$parent_desc			= $RecordObj_descriptors->get_parent();		
 			$lang 					= $RecordObj_descriptors->get_lang();
-			$mainLang 				= $RecordObj_descriptors->get_mainLang();	#dump($id,"mainLang");		
+			$mainLang 				= $RecordObj_descriptors->get_mainLang();		
 			$langFull 				= RecordObj_ts::get_termino_by_tipo($lang);
 
 

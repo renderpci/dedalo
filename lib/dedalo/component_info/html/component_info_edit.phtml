@@ -3,8 +3,10 @@
 	# VISUALIZADOR HTML	
 	
 	
-	print "\n<!-- COMPONENT_INFO [tipo:$tipo section_id:$parent] $label -->";
-	print "\n<div class=\"wrap_component css_wrap_component_info wrap_component_{$tipo}\" id=\"{$id_wrapper}\"
+	# html_delimiter
+	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'in');
+
+	print "<div class=\"wrap_component css_wrap_component_info wrap_component_{$tipo}\" id=\"{$id_wrapper}\"
 	data-tipo=\"{$tipo}\"
 	data-lang=\"{$lang}\"
 	data-section_tipo=\"{$section_tipo}\"
@@ -36,14 +38,11 @@
 							#$html_contenido .= "<hr>";
 						}
 
-						$html_contenido .= "<a href=\"javascript:;\" class=\"update_info\" onclick=\"component_info.update_info(this);\"
+						$html_contenido .= "<a href=\"javascript:;\" class=\"update_info edit_hidden\" onclick=\"component_info.update_info(this);\"
 						data-wrapper_id=\"$id_wrapper\"
 						>".label::get_label('actualizar')."</a>";
 		}
 
-		if(SHOW_DEBUG) {
-			$html_contenido .= "<span class=\"component_info_debug\">".exec_time($start_time)."</span>";
-		}
 	
 		# Prepare content to show in page
 		tools::prepare_content($html_contenido);	
@@ -51,12 +50,14 @@
 
 		# PRINT HTML
 		print $html_label;
-		print $html_contenido;
-	
-	
+		print $html_contenido;	
 	
 
-	print "\n</div><!-- /css_wrap_COMPONENT_INFO COMPONENT_INFO [tipo:$tipo section_id:$parent] $label -->\n"; //wrap
+	print "</div>"; //wrap
+
+
+	# html_delimiter
+	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'in');
 
 
 ?>

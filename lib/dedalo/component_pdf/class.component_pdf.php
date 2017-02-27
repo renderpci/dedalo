@@ -24,7 +24,7 @@ class component_pdf extends component_common {
 	# COMPONENT_PDF COSNTRUCT
 	function __construct($tipo=null, $parent=null, $modo='edit', $lang=DEDALO_DATA_LANG, $section_tipo=null) {
 		
-		if(SHOW_DEBUG) {
+		if(SHOW_DEBUG===true) {
 			$start_time = microtime(1);
 			global$TIMER;$TIMER[__METHOD__.'_IN_'.$tipo.'_'.$modo.'_'.microtime(1)]=microtime(1);
 		}
@@ -77,14 +77,14 @@ class component_pdf extends component_common {
 			# result devuelve el id de la sección parent creada o editada
 			$result = $this->Save();
 			# DEBUG
-			if(SHOW_DEBUG) {
+			if(SHOW_DEBUG===true) {
 				$total=round(microtime(true)-$start_time,3);
 				$name = RecordObj_dd::get_termino_by_tipo($this->tipo,true);
 				error_log("DEBUG INFO ".__METHOD__." Saved $name with dato ".$locator->get_flat()." of current ".get_called_class()." (tipo:$this->tipo - section_tipo:$this->section_tipo - parent:$this->parent - lang:$this->lang)");
 			}		
 		}#end if ($need_save)
 		
-		if(SHOW_DEBUG) {
+		if(SHOW_DEBUG===true) {
 			global$TIMER;$TIMER[__METHOD__.'_OUT_'.$this->tipo.'_'.$this->modo.'_'.microtime(1)]=microtime(1);
 		}
 
@@ -111,7 +111,7 @@ class component_pdf extends component_common {
 			$component_modelo 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
 
 			$component 	= component_common::get_instance($component_modelo, $component_tipo, $this->parent, 'edit', DEDALO_DATA_NOLAN, $this->section_tipo);
-			$dato 		= trim($component->get_dato());			
+			$dato 		= trim($component->get_valor(0));			
 
 			# Add / at begin if not exits
 			if ( substr($dato, 0, 1) != '/' ) {
@@ -208,7 +208,7 @@ class component_pdf extends component_common {
 		
 		$dato = $this->get_dato();
 		if (!isset($dato->section_id)) {
-			if(SHOW_DEBUG) {
+			if(SHOW_DEBUG===true) {
 				#dump($dato, ' dato ++ '.to_string());
 				trigger_error(__METHOD__." Component dato (parent:$this->parent,section_tipo:$this->section_tipo) is empty for: ".to_string($dato));
 			}
@@ -218,7 +218,7 @@ class component_pdf extends component_common {
 		$pdf_id	  = $locator->get_flat($dato);
 
 		# Add lang
-		if ($this->traducible=='si') {
+		if ($this->traducible==='si') {
 		$pdf_id .= '_'.DEDALO_DATA_LANG;
 		}
 		
@@ -378,7 +378,7 @@ class component_pdf extends component_common {
 		foreach ($ar_quality as $current_quality) {
 			# media_path
 			$media_path = $this->get_pdf_path($current_quality);
-			if(SHOW_DEBUG) {
+			if(SHOW_DEBUG===true) {
 				#dump($media_path, ' media_path $current_quality:'.$current_quality);
 			}
 			if (!file_exists($media_path)) continue; # Skip
@@ -397,7 +397,7 @@ class component_pdf extends component_common {
 			$media_path_moved 	= $folder_path_del . "/$pdf_id" . '_deleted_' . $date . '.' . DEDALO_PDF_EXTENSION;			
 			if( !rename($media_path, $media_path_moved) ) throw new Exception(" Error on move files to folder \"deleted\" . Permission denied . The files are not deleted");
 
-			if(SHOW_DEBUG) {
+			if(SHOW_DEBUG===true) {
 				$msg=__METHOD__." \nMoved file \n$media_path to \n$media_path_moved";
 				error_log($msg);
 				dump($msg, ' msg');
@@ -426,12 +426,12 @@ class component_pdf extends component_common {
 			# media_path
 			$media_path = $this->get_target_dir().'/deleted';
 			$pdf_id 	= $this->get_pdf_id();
-			if(SHOW_DEBUG) {
+			if(SHOW_DEBUG===true) {
 				#dump($media_path, "media_path $current_quality:$current_quality - get_pdf_id:$pdf_id");
 			}
 			$file_pattern 	= $media_path.'/'.$pdf_id.'_*.'.DEDALO_PDF_EXTENSION;
 			$ar_files 		= glob($file_pattern);
-			if(SHOW_DEBUG) {
+			if(SHOW_DEBUG===true) {
 				#dump($ar_files, ' ar_files');
 			}
 			if (empty($ar_files)) {
@@ -443,7 +443,7 @@ class component_pdf extends component_common {
 			$new_file_path 	= $this->get_pdf_path($current_quality);		
 			if( !rename($last_file_path, $new_file_path) ) throw new Exception(" Error on move files to restore folder. Permission denied . Nothing was restored (2)");
 
-			if(SHOW_DEBUG) {
+			if(SHOW_DEBUG===true) {
 				$msg=__METHOD__." \nMoved file \n$last_file_path to \n$new_file_path";
 				error_log($msg);
 				#dump($msg, ' msg');
@@ -509,7 +509,7 @@ class component_pdf extends component_common {
 			exec($command.' 2>&1', $output, $result);
 				#dump($command, ' $command ++ '.to_string()); dump($output, ' result ++ '.to_string($result));
 
-			if ($result==0) {
+			if ($result===0) {
 				# All is ok
 				$url = DEDALO_MEDIA_BASE_URL . DEDALO_PDF_FOLDER . '/' . DEDALO_PDF_THUMB_DEFAULT . '/' . $file_name . '.jpg';
 
@@ -545,7 +545,7 @@ class component_pdf extends component_common {
 	*
 	* @return string $list_value
 	*/
-	public static function render_list_value($value, $tipo, $parent, $modo, $lang, $section_tipo, $section_id) {
+	public static function render_list_value($value, $tipo, $parent, $modo, $lang, $section_tipo, $section_id, $current_locator=null, $caller_component_tipo=null) {
 		
 		#if (empty($value)) {	
 			$modelo_name = 'component_pdf';
@@ -560,6 +560,25 @@ class component_pdf extends component_common {
 		return $value;
 
 	}#end render_list_value
+
+
+
+	/**
+	* GET_DIFFUSION_VALUE
+	* Overwrite component common method
+	* Calculate current component diffusion value for target field (usually a mysql field)
+	* Used for diffusion_mysql to unify components diffusion value call
+	* @return string $diffusion_value
+	*
+	* @see class.diffusion_mysql.php
+	*/
+	public function get_diffusion_value( $lang=null ) {
+		
+		$diffusion_value = $this->get_pdf_url(DEDALO_PDF_QUALITY_DEFAULT);
+
+
+		return (string)$diffusion_value;
+	}//end get_diffusion_value
 
 
 

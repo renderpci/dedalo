@@ -4,7 +4,8 @@
 	
 	$id						= $this->get_id();
 	$tipo					= $this->get_tipo();
-	$permissions			= common::get_permissions($tipo,$tipo);		
+	$section_tipo			= $this->get_section_tipo();
+	$permissions			= common::get_permissions($section_tipo,$tipo);
 	$label					= $this->get_label();
 	$modo					= $this->get_modo();
 	$label_name				= $this->get_label();
@@ -19,19 +20,20 @@
 	
 	switch($modo) {
 		
-		case 'edit' :		# Nothing to do
+		case 'edit' :
+			# Nothing to do
+			break;
 
-							break;
+		case 'search' :
+			# Nothing to do
+			break;
 
-		case 'search' :		# Nothing to do
-							break;
+		case 'list' :
+			# Nothing to do
+				break;
 
-		case 'list' :		# Nothing to do
-							break;
-
-		case 'relation' :	
-							break;
-
+		case 'relation' :
+				break;
 	}
 	
 	

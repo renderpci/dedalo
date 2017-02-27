@@ -2,9 +2,10 @@
 
 	# VISUALIZADOR HTML	
 	
-	#print "\n<!-- PORTAL [tipo:$tipo section_id_matrix:$parent] $label -->";
+	# html_delimiter
+	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'in');
 
-	print "\n <div class=\"css_wrap_portal wrap_component\" id=\"{$id_wrapper}\"
+	print " <div class=\"css_wrap_portal wrap_component\" id=\"{$id_wrapper}\"
 	data-tipo=\"{$tipo}\"
 	data-lang=\"{$lang}\"
 	data-section_tipo=\"{$section_tipo}\"
@@ -22,25 +23,23 @@
 		$html_contenido = '';
 		switch($permissions) {
 				
-			case 0	:	$html_contenido .= "\n <span class=\"css_span_dato\"> ".label::get_label('sin_acceso')." (portal)</span>";
+			case 0	:	$html_contenido .= " <span class=\"css_span_dato\"> ".label::get_label('sin_acceso')." (portal)</span>";
 						break;
 							
-			case 1	: 	$html_contenido .= "\n <span class=\"css_span_dato\">$valor</span>";
+			case 1	: 	$html_contenido .= " <span class=\"css_span_dato\">$valor</span>";
 						break;	
 							
-			case ($permissions>=2)	:
-
-						$html_contenido .= "\n <span class=\"css_span_dato\"> portal </span>";
-						
-
+			case 2	:
+			case 3	:
+						$html_contenido .= " <span class=\"css_span_dato\"> portal </span>";
 						break;	
-												
 		}		
 		
 		print $html_contenido;
 	
 	
-	print "\n</div><!-- /css_wrap_portal [tipo:$tipo section_id_matrix:$parent] $label -->\n"; //wrap
+	print "</div>"; //wrap
 
-
+	# html_delimiter
+	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'out');
 ?>

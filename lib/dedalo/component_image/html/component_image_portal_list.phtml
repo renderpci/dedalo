@@ -7,11 +7,11 @@ $js_url = DEDALO_LIB_BASE_URL.'/component_image/js/component_image_read.js';
 */
 
 	# VISUALIZADOR HTML	
-
 		
-	#print "\n<!-- IMAGE [tipo:$tipo section_id_matrix:$parent] $label -->";
+	# html_delimiter
+	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'in');
 	
-	print "\n<div class=\"wrap_component css_wrap_image css_wrap_image_{$modo} wrap_component_{$tipo}\"
+	print "<div class=\"wrap_component css_wrap_image css_wrap_image_{$modo} wrap_component_{$tipo}\"
 	id=\"{$id_wrapper}\"
 	data-tipo=\"{$tipo}\"
 	data-lang=\"{$lang}\"
@@ -37,8 +37,7 @@ $js_url = DEDALO_LIB_BASE_URL.'/component_image/js/component_image_read.js';
 					
 
 					if (file_exists($thumb_path)) {
-
-						/**/
+						
 						# CLICK_ACTION
 						$click_action="onclick=\"tool_common.open_player(this,{'type':'component_image','image_full_url':'$image_full_url'});\" ";
 
@@ -61,8 +60,7 @@ $js_url = DEDALO_LIB_BASE_URL.'/component_image/js/component_image_read.js';
 								alt=\"$image_id\"
 								></div>";
 								break;
-						}
-						
+						}						
 
 					}else{
 
@@ -93,7 +91,7 @@ $js_url = DEDALO_LIB_BASE_URL.'/component_image/js/component_image_read.js';
 						$image_url	= $this->ImageObj->get_thumb_url($maxWidht, $maxHeight, 'resize', null, 'height');	#$m $maxWidht, $maxHeight, $fx=null, $p=null, $prop=null
 
 						# IMAGE
-						$html_contenido .= "\n <img class=\"css_image $add_class\" $open_tool_default
+						$html_contenido .= " <img class=\"css_image $add_class\" $open_tool_default
 						src=\"$image_url\"
 						id=\"img_$identificador_unico\"
 						data-image_id=\"$image_id\"
@@ -103,12 +101,10 @@ $js_url = DEDALO_LIB_BASE_URL.'/component_image/js/component_image_read.js';
 						data-lang=\"$lang\"
 						alt=\"$image_url\"
 						/>";
-					}
-					
+					}					
 
 					#$html_contenido .= "<a href=\"$image_url\" target=\"_blank\" > + ";
-					#$html_contenido .= "</a>";
-											
+					#$html_contenido .= "</a>";											
 		}
 
 		#$html_contenido =  "<div>88888 88888 8888 888</div>";
@@ -123,15 +119,7 @@ $js_url = DEDALO_LIB_BASE_URL.'/component_image/js/component_image_read.js';
 	
 	print "</div>"; //wrap
 
-
+	# html_delimiter
+	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'out');
 	
 ?>
-
-
-
-
-
-
-
-
-

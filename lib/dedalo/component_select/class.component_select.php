@@ -23,7 +23,7 @@ class component_select extends component_common {
 
 		if(SHOW_DEBUG) {
 			$traducible = $this->RecordObj_dd->get_traducible();
-			if ($traducible=='si') {
+			if ($traducible==='si') {
 				throw new Exception("Error Processing Request. Wrong component lang definition. This component $tipo (".get_class().") is not 'traducible'. Please fix this ASAP", 1);
 			}
 		}
@@ -45,7 +45,7 @@ class component_select extends component_common {
 			$this->set_dato(array());
 			$this->Save();
 		}
-		if ($dato==null) {
+		if ($dato===null) {
 			$dato=array();
 		}
 
@@ -99,7 +99,7 @@ class component_select extends component_common {
 						if(SHOW_DEBUG) {
 							dump($dato," dato");
 						}
-						trigger_error(__METHOD__." Wrong dato format. OLD format dato in $this->label $this->tipo .Expected object locator, but received: ".gettype($current_value) .' : '. print_r($current_value,true) );
+						trigger_error(__METHOD__." Wrong dato format. OLD format dato in $this->label $this->section_tipo - $this->tipo - $this->parent .Expected object locator, but received: ".gettype($current_value) .' : '. print_r($current_value,true) );
 						return $valor;
 					}
 				}
@@ -147,7 +147,7 @@ class component_select extends component_common {
 		$termonioID_related = array_values($relacionados[0])[0];
 		$RecordObjt_dd = new RecordObj_dd($termonioID_related);
 
-		if($RecordObjt_dd->get_traducible() =='no'){
+		if($RecordObjt_dd->get_traducible() === 'no'){
 			$lang = DEDALO_DATA_NOLAN;
 		}else{
 			$lang = DEDALO_DATA_LANG;
@@ -194,11 +194,11 @@ class component_select extends component_common {
 		$json_field = 'a.'.$json_field; // Add 'a.' for mandatory table alias search
 
 		switch (true) {
-			case $comparison_operator=='!=':
+			case $comparison_operator==='!=':
 				$search_query = " ($json_field#>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}' @> '[$search_value]'::jsonb)=FALSE ";
 				break;
 
-			case $comparison_operator=='=':
+			case $comparison_operator==='=':
 			default:
 				$search_query = " $json_field#>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}' @> '[$search_value]'::jsonb ";
 				break;			
@@ -249,7 +249,7 @@ class component_select extends component_common {
 	*
 	* @return string $list_value
 	*/
-	public static function render_list_value($value, $tipo, $parent, $modo, $lang, $section_tipo, $section_id) {
+	public static function render_list_value($value, $tipo, $parent, $modo, $lang, $section_tipo, $section_id, $current_locator=null, $caller_component_tipo=null) {
 
 		$component 	= component_common::get_instance(__CLASS__,
 													 $tipo,
@@ -262,7 +262,7 @@ class component_select extends component_common {
 		# Use already query calculated values for speed
 		$ar_records   = (array)json_handler::decode($value);
 		$component->set_dato($ar_records);
-		$component->set_identificador_unico($component->get_identificador_unico().'_'.$section_id); // Set unic id for build search_options_session_key used in sessions
+		$component->set_identificador_unico($component->get_identificador_unico().'_'.$section_id.'_'.$caller_component_tipo); // Set unic id for build search_options_session_key used in sessions
 		
 		return  $component->get_valor($lang);		
 	}#end render_list_value

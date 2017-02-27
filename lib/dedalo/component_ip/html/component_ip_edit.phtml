@@ -3,8 +3,10 @@
 	# VISUALIZADOR HTML		
 
 	
-	print "\n<!-- COMPONENT_IP [tipo:$tipo section_id_matrix:$parent] -->";		
-	print "\n<div class=\"wrap_component css_wrap_ip wrap_component_{$tipo}\" id=\"{$id_wrapper}\"
+	# html_delimiter
+	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'in');
+
+	print "<div class=\"wrap_component css_wrap_ip wrap_component_{$tipo}\" id=\"{$id_wrapper}\"
 	data-tipo=\"{$tipo}\"
 	data-lang=\"{$lang}\"
 	data-section_tipo=\"{$section_tipo}\"
@@ -30,7 +32,7 @@
 					
 		case ($permissions>=1)	:
 			
-				$html_contenido .= "\n <span class=\"css_span_dato list_ip_dato\"
+				$html_contenido .= " <span class=\"css_span_dato list_ip_dato\"
 				data-tipo=\"{$tipo}\"
 				data-section_tipo=\"{$section_tipo}\"
 				data-parent=\"{$parent}\"
@@ -41,17 +43,17 @@
 				# GEOIP FLAGS : geoip_info
 				if (isset($geoip_info) && is_object($geoip_info)) {
 					
-					#$html_contenido .= "\n<span class=\"city_span\">$geoip_info->city</span>" ;
-					$html_contenido .= "\n<a href=\"$geoip_info->geo_tool_link\" target=\"_blank\" title=\"Info\">";
+					#$html_contenido .= "<span class=\"city_span\">$geoip_info->city</span>" ;
+					$html_contenido .= "<a href=\"$geoip_info->geo_tool_link\" target=\"_blank\" title=\"Info\">";
 					# Flag (http://cdn.whatismyipaddress.com/images/flags/mx.png)							
-					$html_contenido .= "\n<img src=\"".DEDALO_LIB_BASE_URL."/themes/default/flags/{$geoip_info->code}.gif\" class=\"flag_img\" title=\"$geoip_info->continent $geoip_info->country $geoip_info->region_name\" />" ; 
-					#$html_contenido .= "\n<img src=\"http://cdn.mmcreation.com/icon/flags-iso/flat/16/".strtolower($code).".png\" class=\"flag_img\" title=\"$continent_code $country $region_name\" />" ;			
-					$html_contenido .= "\n</a>";
+					$html_contenido .= "<img src=\"".DEDALO_LIB_BASE_URL."/themes/default/flags/{$geoip_info->code}.gif\" class=\"flag_img\" title=\"$geoip_info->continent $geoip_info->country $geoip_info->region_name\" />" ; 
+					#$html_contenido .= "<img src=\"http://cdn.mmcreation.com/icon/flags-iso/flat/16/".strtolower($code).".png\" class=\"flag_img\" title=\"$continent_code $country $region_name\" />" ;			
+					$html_contenido .= "</a>";
 				}
 		
 				
 				if(SHOW_DEBUG) {
-					#$html_contenido .= "\n <span class=\"css_span_debugger\" id=\"debugger_{$tipo}\" >{$debugger}</span>";
+					#$html_contenido .= " <span class=\"css_span_debugger\" id=\"debugger_{$tipo}\" >{$debugger}</span>";
 				}
 				break;
 				
@@ -70,8 +72,11 @@
 	
 
 
-	print "\n </div><!-- /wrap_ip -->";
+	print "</div>";
 
 
-	
+	# html_delimiter
+	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'out');
+
+
 ?>

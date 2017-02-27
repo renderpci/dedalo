@@ -20,7 +20,7 @@ header('Content-Type: text/html');
 <?php echo trim($css_link_code); ?>
 
 <script>
-var DEDALO_LIB_BASE_URL='<?php echo DEDALO_LIB_BASE_URL ?>',DEDALO_ROOT_WEB='<?php echo DEDALO_ROOT_WEB ?>',DEBUG=<?php var_export(SHOW_DEBUG); ?>;
+var DEDALO_LIB_BASE_URL='<?php echo DEDALO_LIB_BASE_URL ?>',DEDALO_ROOT_WEB='<?php echo DEDALO_ROOT_WEB ?>',DEBUG=SHOW_DEBUG=<?php var_export(SHOW_DEBUG); ?>;
 var page_globals = {
 	dedalo_version:'<?php echo DEDALO_VERSION ?>',
 	dedalo_application_lang:'<?php echo DEDALO_APPLICATION_LANG ?>',
@@ -52,21 +52,26 @@ var page_globals = {
 <?php #if (isset($_REQUEST["id_path"])) {   ?>
 	id_path:'<?php echo isset($_REQUEST["id_path"]) ? $_REQUEST["id_path"]:'' ?>',
 <?php #} ?>
+<?php if (defined('DEDALO_PROTECT_MEDIA_FILES') && DEDALO_PROTECT_MEDIA_FILES===true) {   ?>
+	dedalo_protect_media_files:1,
+<?php } ?>
 	DEDALO_NOTIFICATIONS:<?php echo defined("DEDALO_NOTIFICATIONS") ? (int)DEDALO_NOTIFICATIONS : 0 ?>,
-}
-<?php if(SHOW_DEBUG) {?>
-
-	//console.log("section_tipo: "+page_globals.section_tipo)
-	if(page_globals.section_tipo.length<3) {
-		alert("page_globals.section_tipo not defined: "+page_globals.section_tipo)
+	DEDALO_PUBLICATION_ALERT:<?php echo defined("DEDALO_PUBLICATION_ALERT") ? (int)DEDALO_PUBLICATION_ALERT : 0 ?>,
+	float_window_features : {
+		small:"menubar=no,location=no,resizable=yes,scrollbars=yes,status=no,width=470,height=415"
 	}
-	//console.log("id_path:"+page_globals.id_path)
-	
-<?php } //if(SHOW_DEBUG) {?>
+}
+<?php if(SHOW_DEBUG===true) {?>
+//console.log("section_tipo: "+page_globals.section_tipo)
+if(page_globals.section_tipo.length<3) {
+	alert("page_globals.section_tipo not defined: "+page_globals.section_tipo)
+}
+//console.log("id_path:"+page_globals.id_path)
+<?php } //if(SHOW_DEBUG===true) {?>
 </script>
 <?php echo trim($js_link_code) ?>
-</head>
 
+</head>
 <body>
 <div id="html_page_wrap" class="<?php echo "html_page_wrap_{$modo} html_page_wrap_{$tipo}"; ?>">
 
@@ -82,7 +87,7 @@ var page_globals = {
 	# LOG MESSAGES		
 		print '<!-- LOG MESSAGES HTML -->';
 		print '<div id="log_messages" ondblclick="this.innerHTML=\'\';">';
-		if(SHOW_DEBUG) {
+		if(SHOW_DEBUG===true) {
 			if (!TOP_TIPO) {
 				print "<div class=\"warning\">Error: TOP_TIPO is empty</div>";
 			}		
@@ -106,9 +111,9 @@ var page_globals = {
 	#
 	# CONTENT HTML
 		print '<!-- CONTENT HTML -->';
-		print "\n<div class=\"content_html\">";
+		print "<div class=\"content_html\">";
 		print $html;
-		print "\n</div><!-- /content_html -->\n\n";
+		print "</div><!-- /content_html -->";
 
 
 	#
@@ -124,7 +129,7 @@ var page_globals = {
 			&& login::is_logged()
 			)
 		{
-			print "\n <div class=\"css_button_generic button_back link\" onclick=\"goto_url(document.referrer);\">";
+			print "<div class=\"css_button_generic button_back link\" onclick=\"goto_url(document.referrer);\">";
 			print label::get_label('volver') ;
 			print "</div>";
 		}
@@ -132,8 +137,8 @@ var page_globals = {
 
 		#
 		# DIALOG FRAME
-		#if(empty($caller_id))
-		print "\n <iframe id=\"dialog_page_iframe\" class=\"dialog_page_iframe\" src=\"about:blank\"></iframe><!-- /dialog_page_iframe -->\n\n";
+		# Used by tool_av_versions, etc.. to create a modal dialog window
+		print "<iframe id=\"dialog_page_iframe\" class=\"dialog_page_iframe\" src=\"about:blank\"></iframe>";
 		
 
 

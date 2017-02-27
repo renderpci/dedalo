@@ -6,8 +6,10 @@
 
 class component_select_lang extends component_common {
 	
+
 	# Overwrite __construct var lang passed in this component
 	protected $lang = DEDALO_DATA_NOLAN;
+
 
 
 	function __construct($tipo=null, $parent=null, $modo='edit', $lang=DEDALO_DATA_NOLAN, $section_tipo=null) {
@@ -20,7 +22,7 @@ class component_select_lang extends component_common {
 
 		if(SHOW_DEBUG) {
 			$traducible = $this->RecordObj_dd->get_traducible();
-			if ($traducible=='si') {
+			if ($traducible==='si') {
 				throw new Exception("Error Processing Request. Wrong component lang definition. This component $tipo (".get_class().") is not 'traducible'. Please fix this ASAP", 1);
 			}
 		}
@@ -54,8 +56,7 @@ class component_select_lang extends component_common {
 		$dato = parent::get_dato();
 
 		if (!empty($dato) && !is_array($dato)) {
-		
-			trigger_error("Error: ".__CLASS__." dato type is wrong. Array expected and ".gettype($dato)." is received for tipo:$this->tipo, parent:$this->parent");			
+			debug_log(__METHOD__." Dato type is wrong. Array expected. ".gettype($dato)." is received for tipo:$this->tipo, parent:$this->parent, section_tipo:$this->section_tipo. dato will be converted to array of locator. Dato received: ".to_string($dato), logger::ERROR);
 			$dato = array( locator::lang_to_locator($dato) );
 		}
 		if ($dato==null) {
@@ -63,7 +64,6 @@ class component_select_lang extends component_common {
 		}
 
 		return (array)$dato;
-
 	}//end get_dato
 
 
@@ -83,8 +83,7 @@ class component_select_lang extends component_common {
 		# Ensures is a real non-associative array (avoid json encode as object)
 		$dato = is_array($dato) ? array_values($dato) : (array)$dato;
 
-		parent::set_dato( (array)$dato );
-		
+		parent::set_dato( (array)$dato );		
 	}//end set_dato
 
 
@@ -138,26 +137,44 @@ class component_select_lang extends component_common {
 			}		
 
 			# Always run ar_all_project_select_langs
-			$ar_all_project_select_langs = $this->get_ar_all_project_select_langs( $lang, null );
-
-			foreach ((array)$ar_all_project_select_langs as $locator_json => $label) {
-				$locator = json_handler::decode($locator_json);	# Locator is json encoded object
-					#dump($locator, ' label ++ '.to_string($label));
-				if (in_array($locator, $dato)) {
-					$valor = $label;
+			# $ar_all_project_select_langs = $this->get_ar_all_project_select_langs( $lang );
+			$ar_all_project_select_langs = common::get_ar_all_langs_resolved(DEDALO_DATA_LANG);
+			foreach ((array)$ar_all_project_select_langs as $lang_code => $lang_name ) {
+				
+				$locator = lang::get_lang_locator_from_code( $lang_code );
+				if (locator::in_array_locator( $locator, (array)$dato, $ar_properties=array('section_tipo','section_id') )) {
+					$valor = $lang_name;
 					break;
 				}
 			}
-
 		}//end if (!empty($dato))
 
 		# Set component valor
 		$this->valor = $valor;
 
 		return $valor;
-
 	}//end get_valor
 
+
+
+	/**
+	* GET_AR_ALL_PROJECT_SELECT_LANGS
+	* @param string $lang
+	*	default is DEDALO_APPLICATION_LANG
+	* @return array $ar_projects
+	*	format array( lang_locator => label )
+	*//*
+	public function get_ar_all_project_select_langs( $lang=DEDALO_APPLICATION_LANG ) {
+		
+		$section_id  			= $this->get_parent();
+		$section_tipo		 	= $this->get_section_tipo();
+		$section 				= section::get_instance($section_id, $section_tipo);
+		$ar_all_project_langs 	= $section->get_ar_all_project_langs();
+			#dump($ar_all_project_langs," ar_all_project_langs ".DEDALO_APPLICATION_LANG);
+
+		return (array)$ar_all_project_langs;
+	}//end get_ar_all_project_select_langs
+	*/
 
 
 	/**
@@ -201,59 +218,8 @@ class component_select_lang extends component_common {
 		$valor = $this->get_valor($lang);
 		
 		return $valor;
-
 	}#end get_valor_export
-
-
-
-	/**
-	* GET_AR_ALL_PROJECT_SELECT_LANGS
-	* @param string $lang
-	*	default is DEDALO_APPLICATION_LANG
-	* @return array $ar_projects
-	*	format array( lang_locator => label )
-	*/
-	public function get_ar_all_project_select_langs( $lang=DEDALO_APPLICATION_LANG ) {
-		
-		$ar_projects = array();
-		$section_id  = $this->get_parent();
-
-		if($section_id > 1 ) {	 // Warning: Unactive for now 		
-			
-			$section_tipo		 	= $this->get_section_tipo();
-			$section 				= section::get_instance($section_id,$section_tipo);
-			$ar_all_project_langs 	= $section->get_ar_all_project_langs();
-				#dump($ar_all_project_langs," ar_all_project_langs ".DEDALO_APPLICATION_LANG);	
-
-			#dump($ar_all_project_langs,'$ar_all_project_langs from get_ar_all_project_langs'); #die();	
-
-		}else{
-
-			# UNDER CONSTRUCTION
-			# To do: calculate all projects langs of all records ??
-			$ar_projects_default_langs 	= unserialize(DEDALO_PROJECTS_DEFAULT_LANGS);
-			foreach ($ar_projects_default_langs as $current_lang) {
-				$ar_all_project_langs[] = locator::lang_to_locator($current_lang);
-			}
-			#dump($ar_all_project_langs,'$ar_all_project_langs from DEDALO_PROJECTS_DEFAULT_LANGS'); #die();
-		}		
-
-
-		# FINAL FORMATED ARRAY
-		foreach ($ar_all_project_langs as $current_lang_locator) {
-			if(isset($current_lang_locator->section_tipo)) {
-				$key 		  = json_encode($current_lang_locator);
-				$current_tipo = $current_lang_locator->section_tipo;
-				$ar_projects[$key] = RecordObj_ts::get_termino_by_tipo($current_tipo, $lang, true);
-			}			
-		}
-		if(SHOW_DEBUG) {
-			#dump($ar_projects," ar_projects ".DEDALO_APPLICATION_LANG);		
-		}
-
-		return $ar_projects;
-
-	}//end get_ar_all_project_select_langs
+	
 
 	
 
@@ -330,8 +296,7 @@ class component_select_lang extends component_common {
 				break;
 		}
 
-		return $tipo;
-		
+		return $tipo;		
 	}#end get_related_component_text_area
 
 
@@ -395,7 +360,6 @@ class component_select_lang extends component_common {
 				# code...
 				break;
 		}		
-		
 	}#end update_dato_version
 
 
@@ -415,7 +379,7 @@ class component_select_lang extends component_common {
 	*
 	* @return string $list_value
 	*/
-	public static function render_list_value($value, $tipo, $parent, $modo, $lang, $section_tipo, $section_id) {
+	public static function render_list_value($value, $tipo, $parent, $modo, $lang, $section_tipo, $section_id, $current_locator=null, $caller_component_tipo=null) {
 		
 		return $value;
 		/*
@@ -434,7 +398,28 @@ class component_select_lang extends component_common {
 		
 		return  $component->get_valor($lang);
 		*/
-	}#end render_list_value	
+	}#end render_list_value
+
+
+
+	/**
+	* GET_DIFFUSION_VALUE
+	* Overwrite component common method
+	* Calculate current component diffsuion value for target field (usually a mysql field)
+	* Used for diffusion_mysql to unify components diffusion value call
+	* @return string $diffusion_value
+	*
+	* @see class.diffusion_mysql.php
+	*/
+	public function get_diffusion_value( $lang=null ) {
+		
+		$valor = $this->get_valor( $lang ); # Importante!: Pasar lang como parámetro para indicar en la resolución del get_ar_list_of_values el lenguaje deseado
+		$valor = preg_replace("/<\/?mark>/", "", $valor); # Remove untranslated string tags
+		$diffusion_value = $valor;
+
+
+		return (string)$diffusion_value;
+	}//end get_diffusion_value
 	
 
 }

@@ -236,7 +236,7 @@ abstract class tools extends common {
 	*/
 	public static function get_memory_usage($mode='pid') {
 
-		if($mode=='pid') {
+		if($mode==='pid') {
 			$pid = getmypid();
      		exec("ps -o rss -p $pid", $output);
      		$mem_usage = $output[1] *1024;
@@ -303,19 +303,19 @@ abstract class tools extends common {
 
 		# TDL3 COMPATIBILITY
 		switch (true) {
-			case ($lang=='lg-cat'):
-			case ($lang=='lg-vlca'):
-			case ($lang=='lg-vlnc'):
+			case ($lang==='lg-cat'):
+			case ($lang==='lg-vlca'):
+			case ($lang==='lg-vlnc'):
 				$lang_d3= 'ca';
 				break;
-			case ($lang=='lg-espn'):
-			case ($lang=='lg-spa'):
+			case ($lang==='lg-espn'):
+			case ($lang==='lg-spa'):
 				$lang_d3= 'es';
 				break;
-			case ($lang=='lg-fra'):
+			case ($lang==='lg-fra'):
 				$lang_d3= 'fr';
 				break;
-			case ($lang=='lg-eng'):
+			case ($lang==='lg-eng'):
 				$lang_d3= 'en';
 				break;
 			default:
@@ -363,11 +363,11 @@ abstract class tools extends common {
 
 		return $bc_path;
 	}
+	
 
 
 	static function get_id_path($id) {
-
-		#
+		
 		# PATH
 		$id_path='';
 		if (isset($_GET['id_path'])) {

@@ -1,9 +1,9 @@
 <?php
 /*
 * CLASS COMPONENT_STATE
+*
+*
 */
-
-
 class component_state extends component_common {
 	
 	
@@ -38,7 +38,8 @@ class component_state extends component_common {
 			$this->options->section_id		= $this->parent;
 			$this->options->component_tipo 	= $this->tipo;
 				#dump($this->options, ' options ++ '.to_string($modo));			
-	}
+	}//end __construct
+
 
 	
 	/**
@@ -51,7 +52,7 @@ class component_state extends component_common {
 		$this->dato = array_unique((array)$this->dato,SORT_REGULAR);
 		$result = parent::Save();
 
-		debug_log(__METHOD__." Saved $this->section_tipo - $this->parent", logger::DEBUG);
+		debug_log(__METHOD__." Saved $this->section_tipo - $this->parent". to_string($this->dato), logger::WARNING);
 
 		if ($result) {
 			# Update caller sections (from inverse locators)
@@ -59,9 +60,7 @@ class component_state extends component_common {
 		}
 
 		return $result;
-
 	}#end Save
-
 
 
 
@@ -184,7 +183,7 @@ class component_state extends component_common {
 				foreach ($ar_locator_obj as $key => $locator_obj) {					
 					
 					if (empty($locator_obj->section_tipo)) {
-						if(SHOW_DEBUG) {
+						if(SHOW_DEBUG===true) {
 							dump($locator_obj, ' $propiedades->state ++ '.to_string($modelo_name)." - current_tipo:$current_tipo");;
 						}
 						continue;
@@ -249,7 +248,7 @@ class component_state extends component_common {
 			
 		foreach ($dato as $key => $state_locator) {
 
-			if($state_locator->section_tipo == $section_tipo && $state_locator->section_id == $section_id){
+			if($state_locator->section_tipo === $section_tipo && $state_locator->section_id == $section_id){
 				unset($dato[$key]);
 			}
 		}
@@ -308,9 +307,9 @@ class component_state extends component_common {
 		
 		foreach ($dato as $key => $current_locator) {
 			
-			if( $current_locator->section_tipo 	 == $locator_state->section_tipo &&
+			if( $current_locator->section_tipo 	 === $locator_state->section_tipo &&
 				$current_locator->section_id 	 == $locator_state->section_id &&
-				$current_locator->component_tipo == $locator_state->component_tipo ) {
+				$current_locator->component_tipo === $locator_state->component_tipo ) {
 
 				$locator_exists=true;
 
@@ -473,7 +472,7 @@ class component_state extends component_common {
 	*/
 	public function get_valor_export( $valor=null, $lang=DEDALO_DATA_LANG, $quotes, $add_id ) {
 		
-		if(SHOW_DEBUG) {
+		if(SHOW_DEBUG===true) {
 			#return "STATE: n/a";
 		}
 		return "n/a";
@@ -496,15 +495,15 @@ class component_state extends component_common {
 			return false;
 		}	
 
-		if(	$locator->section_tipo 	== $options->section_tipo &&
+		if(	$locator->section_tipo 	=== $options->section_tipo &&
 			$locator->section_id 	== $options->section_id &&
-			$locator->component_tipo== $options->component_tipo)
+			$locator->component_tipo=== $options->component_tipo)
 			{
 			return true;
 		}
 		return false;
-
 	}#end compare
+
 
 
 	/**
@@ -521,14 +520,13 @@ class component_state extends component_common {
 
 			foreach($related_terms as $ar_value) foreach($ar_value as $odelo => $terminoID) {
 			//foreach ( (array)array_flatten($related_terms) as $odelo => $terminoID) {				
-				if ($this->options->component_tipo==$terminoID) {
+				if ($this->options->component_tipo===$terminoID) {
 					return true;
 				}
 			}
 		}
 
 		return false;
-
 	}#end bool_traceable
 
 
@@ -563,8 +561,9 @@ class component_state extends component_common {
 		}
 		
 		return $ar_dato_state;
-
 	}//end get_valor
+
+
 
 	/**
 	* SET_VALOR
@@ -574,6 +573,8 @@ class component_state extends component_common {
 		#unset($this->valor);
 		$this->valor = (array)$valor;
 	}#end set_valor
+
+
 
 	/**
 	* GET_VALOR
@@ -586,7 +587,7 @@ class component_state extends component_common {
 			return $this->valor;
 		}
 
-		if(SHOW_DEBUG) {
+		if(SHOW_DEBUG===true) {
 			$start_time = start_time();
 			global$TIMER;$TIMER[__METHOD__.'_IN_'.'_'.$this->tipo.'_'.$this->modo.'_'.microtime(1)]=microtime(1);
 		}
@@ -598,17 +599,20 @@ class component_state extends component_common {
 		$this->valor = $this->resolve_valor($final_dato);
 			#dump($valor, ' valor');
 
-		if(SHOW_DEBUG) {
+		if(SHOW_DEBUG===true) {
 			global$TIMER;$TIMER[__METHOD__.'_OUT_'.'_'.$this->tipo.'_'.$this->modo.'_'.microtime(1)]=microtime(1);
 		}
 
 		return $this->valor;
 	}
 
+
+
 	/**
 	* RESOLVE_VALOR
 	* Convert current section value to 'comprensible' lang independent grouped by process type, resolved adn sorted value
 	* @param array $dato, array of objects state_locator
+	* @return array $group
 	*/
 	public function resolve_valor($dato) {
 
@@ -649,9 +653,9 @@ class component_state extends component_common {
 		ksort($group);
 		#dump($group, ' group ++ '.to_string());				
 
-		return $group;		
-
+		return $group;
 	}//end get_valor
+
 
 
 	/**
@@ -685,10 +689,10 @@ class component_state extends component_common {
 					$obj_values->x 		= $process_value_name;	// Label
 					$obj_values->y 		= $value;				// Value
 					switch (true) {
-						case ($process_value_name=='no'):
+						case ($process_value_name==='no'):
 							$obj_values->color 	= 'red'; 		// Color red
 							break;
-						case ($process_value_name=='si' || $process_value_name=='yes'):
+						case ($process_value_name==='si' || $process_value_name==='yes'):
 							$obj_values->color 	= 'rgb(104, 195, 54)'; // Color green
 							break;
 						default:
@@ -734,15 +738,13 @@ class component_state extends component_common {
 	}#end get_ar_graph
 
 
+
 	/**
 	* GET_VALOR_PLAIN
 	* @return 
 	*/
 	public function get_valor_plain( $valor ) {		
 		
-		#$valor = $this->get_valor();		
-			#dump($valor, ' valor ++ '.to_string());		
-
 		#
 		# BUILD ELEMENTS
 		$ar_resolved=array();
@@ -785,43 +787,10 @@ class component_state extends component_common {
 				$ar_resolved[$process_name][$process_type] = $object;
 			}
 		}
-		#dump($ar_resolved, '$ar_resolved ++ '.to_string($this->parent));
 
 		return (array)$ar_resolved;
-
-		/* OLD WORLD 
-			$ar_plain=array();
-			foreach ((array)$ar_resolved as $element_obj) {
-
-				# FINISHED_VALUE : When label of current element is 100, current value is interpreted as 'yes' finish elements of total
-				$finished_value = 0;
-				foreach ((array)$element_obj->values as $current_obj_value) {
-					#dump($current_obj_value, ' current_obj_value ++ '.to_string());
-					if ( isset($current_obj_value->label) && (int)$current_obj_value->label==100 ) {					
-						$finished_value = isset($current_obj_value->value) ? $current_obj_value->value : 0;
-					}
-				}
-
-				$total_value 	= isset($element_obj->total) ? $element_obj->total : 0;
-
-				$plain_value = $finished_value .'/'. $total_value;
-				$ar_plain[$element_obj->key] = $plain_value;
-
-			}//end foreach ($ar_resolved as $key => $element_obj) {
-			dump($ar_plain, ' ar_plain ++ '.to_string());
-
-			if ($format=='text') {	// Default
-				$valor_plain_text='';
-				foreach ($ar_plain as $key => $value) {
-					$valor_plain_text .= "$key: $value<br>";
-				}
-				return (string)$valor_plain_text;
-			}else{
-				return (array)$ar_plain;
-			}
-			*/
-
 	}#end get_valor_plain
+
 
 
 	/**
@@ -843,11 +812,10 @@ class component_state extends component_common {
 		$total_value 	= isset($element_object->total) ? $element_object->total : 0;
 		$plain_value 	= $finished_value .'/'. $total_value;
 		$text 			= "$element_object->key: $plain_value";
-			#dump($text, ' text ++ '.to_string());
 
-		return $text;		
-
+		return $text;
 	}#end element_object_to_text
+
 
 
 	/**
@@ -879,8 +847,9 @@ class component_state extends component_common {
 		}
 
 		return $value;
-
 	}#end get_process_value_name
+
+
 
 	/**
 	* GET_PROCESS_NAME
@@ -906,11 +875,11 @@ class component_state extends component_common {
 														'edit',
 														DEDALO_DATA_LANG,
 														$process_section_tipo);
-		$process_name = $component->get_dato();
+		$process_name = $component->get_valor(0);
 
 		return (string)$process_name;
-
 	}#end get_process_name
+
 
 
 	/**
@@ -940,7 +909,6 @@ class component_state extends component_common {
 
 
 
-
 	/**
 	* MAP_DATO_TO_CURRENT_ELEMENT
 	* Convert current value to boolean value
@@ -949,7 +917,7 @@ class component_state extends component_common {
 	public function map_dato_to_current_element_DEPRECATED() {
 
 		if(empty($this->caller_element)) {
-			if(SHOW_DEBUG) {
+			if(SHOW_DEBUG===true) {
 				throw new Exception("Error Processing Request: caller_element is not defined", 1);
 			}
 			return false;					
@@ -966,21 +934,16 @@ class component_state extends component_common {
 		if(is_array($ar_value)) foreach ($ar_value as $value) {
 			if($value==$this->caller_element) return true;
 		}
-	}
-
-
-
+	}//end map_dato_to_current_element_DEPRECATED
 	
-	
-
 
 
 	/**
 	* GET_AR_DATA_BY_TOOL
-	*/
+	*//*
 	protected function get_ar_data_by_tool_DEPRECATED() {
 
-		if(SHOW_DEBUG) $start_time = start_time();
+		if(SHOW_DEBUG===true) $start_time = start_time();
 
 		$ar_data_by_tool = array();
 
@@ -1035,31 +998,28 @@ class component_state extends component_common {
 		#dump($ar_data_by_tool," ar_data_by_tool");
 
 		# AR LANGS ALL
-		$ar_tool_lang_all = $section->get_ar_all_project_langs();		
-
-		$ar_data_by_tool_final = array($ar_data_by_tool,$ar_tool_lang_all);
+		$ar_tool_lang_all 		= $section->get_ar_all_project_langs($resolve_termino=true);
+		$ar_data_by_tool_final  = array($ar_data_by_tool,$ar_tool_lang_all);
 			#dump($ar_data_by_tool_final,'ar_data_by_tool');
 
 		# CACHE : Static cache
-		#$ar_data_by_tool[$section_tipo] = $ar_data_by_tool_final;
-		
+		#$ar_data_by_tool[$section_tipo] = $ar_data_by_tool_final;		
 
 		return $ar_data_by_tool_final;
-	}
-
+	}//end get_ar_data_by_tool_DEPRECATED
+	*/
 	
-
 
 	/**
 	* GET_ESTADO
-	*/
+	*//*
 	protected function get_estado_DEPRECATED() {
 
 		#dump($this->get_modo(),'get_estado this->modo'); return null;
 
 		static $ar_estado;
 		if(isset($ar_estado[$this->parent])) {
-			if(SHOW_DEBUG) {
+			if(SHOW_DEBUG===true) {
 				#dump($ar_estado[$this->parent],'$ar_estado');
 			}			
 			return $ar_estado[$this->parent];
@@ -1090,12 +1050,12 @@ class component_state extends component_common {
 		foreach ($ar_data_by_tool as $key => $ar_component_tipo) {
 			
 			# TRANSCRIBIBLES			
-			if ($key=='tool_transcription') {
+			if ($key==='tool_transcription') {
 				foreach ($ar_component_tipo as $component_tipo) {
 					$exists = array_key_exists($component_tipo, $dato);
 					if($exists){
 						foreach ($dato[$component_tipo] as $ar_tools) {
-							if($ar_tools=='tool_transcription') $n_current_tool_transcription++;
+							if($ar_tools==='tool_transcription') $n_current_tool_transcription++;
 						}
 					}
 				}
@@ -1103,12 +1063,12 @@ class component_state extends component_common {
 			}
 
 			# INDEXABLES			
-			if ($key=='tool_indexation') {
+			else if ($key==='tool_indexation') {
 				foreach ($ar_component_tipo as $component_tipo) {
 					$exists = array_key_exists($component_tipo, $dato);
 					if($exists){
 						foreach ($dato[$component_tipo] as $ar_tools) {
-							if($ar_tools=='tool_indexation') $n_current_tool_indexation++;
+							if($ar_tools==='tool_indexation') $n_current_tool_indexation++;
 						}
 					}
 				}
@@ -1116,7 +1076,7 @@ class component_state extends component_common {
 			}
 
 			# TRADUCIBLES			
-			if ($key=='tool_lang') {
+			else if ($key==='tool_lang') {
 				foreach ($ar_component_tipo as $component_tipo) {
 
 					$exists = array_key_exists($component_tipo, $dato);
@@ -1180,7 +1140,7 @@ class component_state extends component_common {
 		foreach ($ar_porcentaje_lang as $key => $value) {
 			$total += $value;
 		}
-		if ($n_keys==0) {
+		if ($n_keys===0) {
 			$porcentaje_lang_global = 0;
 		}else{
 			$porcentaje_lang_global = round($total / $n_keys,2);
@@ -1200,7 +1160,8 @@ class component_state extends component_common {
 			#dump($ar_estado,'$ar_estado');
 
 		return $estado;
-	}
+	}//end get_estado_DEPRECATED
+	*/
 
 
 
@@ -1219,7 +1180,7 @@ class component_state extends component_common {
 	*
 	* @return string $list_value
 	*/
-	public static function render_list_value($value, $tipo, $parent, $modo, $lang, $section_tipo, $section_id) {
+	public static function render_list_value($value, $tipo, $parent, $modo, $lang, $section_tipo, $section_id, $current_locator=null, $caller_component_tipo=null) {
 
 		$current_valor  = $value;
 		$valor 			= '';
@@ -1230,8 +1191,8 @@ class component_state extends component_common {
 													 	 'list',
 														 DEDALO_DATA_NOLAN,
 													 	 $section_tipo);
-			$ar_val 	= json_decode($current_valor);
-			$component->set_valor($ar_val);
+			#$ar_val 	= json_decode($current_valor);
+			#$component->set_valor($ar_val);
 			$valor 		= $component->get_html();
 		}
 
@@ -1252,15 +1213,15 @@ class component_state extends component_common {
 	* @see class.section.php
 	* @return string $html
 	*/
-	public function get_valor_list_html_to_save() {
-		$html = $this->get_valor();
+	public function get_valor_list_html_to_save() {		
+		$group = $this->get_valor();	
 		
-		return (string)$html;
+		return (string)to_string($group)."+++";
 	}//end get_valor_list_html_to_save
 
 
 
 
 
-}
+}//end class component_state
 ?>

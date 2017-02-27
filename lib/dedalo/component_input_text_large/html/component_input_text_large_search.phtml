@@ -2,31 +2,31 @@
 
 	# VISUALIZADOR HTML		
 	
-	if(isset($_REQUEST[$tipo])) $dato = $_REQUEST[$tipo];		#var_dump($_REQUEST[$tipo]);
+	if(isset($_REQUEST[$tipo])) $dato = $_REQUEST[$tipo];
 	
-	
-	print "\n<!-- INPUT_TEXT LARGE -->";
+	#print "<!-- ". __CLASS__ ." -->";
 
-	print "\n<div class=\"wrap_component css_wrap_input_text\" id=\"wrap_{$tipo}\">";
+	print "<div class=\"wrap_component css_wrap_input_text\" id=\"wrap_{$tipo}\">";
 	
 	# ETIQUETA (LABEL)
 	$html_label = component_common_draw::draw_label($this);
 	
 	# CONTENIDO (INPUT)
-	$html_contenido = '';
-	switch($permissions) {
-			
-		case 0	:	$html_contenido .= "";
+	$html_content = '';
+	switch(true) {			
+		case ($permissions===0)	:
+					$html_content .= "";
 					break;
 						
-		case 1	: 	$html_contenido .= "\n <span class=\"css_span_dato\">$dato</span>";
+		case ($permissions===1):
+					$html_content .= "<span class=\"css_span_dato\">$dato</span>";
 					break;	
 						
 		case ($permissions>=2)	:
 					# COMPARISON OPERATORS
-					$html_contenido .= operator::get_search_comparison_operators_html($tipo,$ar_comparison_operators);
+					$html_content .= operator::get_search_comparison_operators_html($tipo,$ar_comparison_operators);
 		
-					$html_contenido .= "\n <input class=\"css_input_text_large_search\" type=\"text\" name=\"{$search_input_name}\"
+					$html_content .= "<input class=\"css_input_text_large_search\" type=\"text\" name=\"{$search_input_name}\"
 					id=\"{$identificador_unico}\"
 					data-tipo=\"{$tipo}\"
 					data-lang=\"{$lang}\"
@@ -34,18 +34,18 @@
 					title=\"$html_title\" />";
 
 					# LOGICAL OPERATORS
-					$html_contenido .= operator::get_search_logical_operators_html($tipo,$ar_logical_operators);
-					break;				
+					$html_content .= operator::get_search_logical_operators_html($tipo,$ar_logical_operators);
+					break;
 	}
 
 	# Prepare content to show in page
-	tools::prepare_content($html_contenido);	
+	tools::prepare_content($html_content);	
 	
 	
 	# PRINT HTML
 	print $html_label;
-	print $html_contenido;
+	print $html_content;
 	
 	
-	print "\n</div>\n\n"; //wrap
+	print "</div>"; //wrap
 ?>

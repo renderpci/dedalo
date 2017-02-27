@@ -39,6 +39,7 @@ class locator extends stdClass {
 	#protected $section_id;
 	#protected $section_tipo;
 
+	const DELIMITER = '_';
 
 
 	/**
@@ -176,8 +177,8 @@ class locator extends stdClass {
 
 
 	/**
-	* GET_FLA
-	* Compound a chained flat locator string for use as media componet name, etc..	
+	* GET_FLAT
+	* Compound a chained plain flat locator string for use as media componet name, etc..	
 	* @return string $name Like 'dd42_dd207_1'
 	*/
 	public function get_flat( ) {
@@ -191,8 +192,22 @@ class locator extends stdClass {
 		if ( empty($this->get_section_id() ) ) {
 			throw new Exception("Error Processing Request. empty section_id", 1);
 		}
-		$delimiter = '_';
-		$name = $this->component_tipo . $delimiter . $this->section_tipo . $delimiter . $this->section_id;
+		
+		$name = $this->component_tipo . locator::DELIMITER . $this->section_tipo . locator::DELIMITER . $this->section_id;
+
+		/*
+		if ( !empty($this->component_tipo) {
+			$name .= locator::DELIMITER . $this->component_tipo;
+		}
+
+		if ( !empty($this->from_component_tipo) {
+			$name .= locator::DELIMITER . $this->from_component_tipo;
+		}
+
+		if ( !empty($this->tag_id) {
+			$name .= locator::DELIMITER . $this->tag_id;
+		}
+		*/
 
 		return $name;
 	}//end get_flat
@@ -225,7 +240,7 @@ class locator extends stdClass {
 	*/
 	public static function lang_to_locator( $lang ) {
 		
-		$section_tipo = $lang;
+		$section_tipo = DEDALO_LANGS_SECTION_TIPO;	//$lang;
 		
 		switch ($lang) {
 			case 'lg-spa':	$section_id = 17344;	break;
@@ -235,11 +250,10 @@ class locator extends stdClass {
 			case 'lg-fra':	$section_id = 5450;		break;
 			case 'lg-eus':	$section_id = 5223;		break;
 			case 'lg-por':	$section_id = 14895;	break;
+			case 'lg-ara':	$section_id = 841;		break;
 			default:
 				# Serach in database
-				$RecordObj_ts = new RecordObj_ts($lang);
-				$id = $RecordObj_ts->terminoID2id($lang);
-				$section_id = (int)$id;
+				$section_id = (int)lang::get_section_id_from_code($lang);
 				break;
 		}
 
@@ -260,33 +274,34 @@ class locator extends stdClass {
 
 		$equal = true;
 		
-		foreach ($ar_properties as $current_property) {
+		foreach ($ar_properties as $current_property) { // 'section_tipo','section_id','type','from_component_tipo','component_tipo','tag_id'
 
 			# Test property exists in all locators
 			if (!property_exists($locator1, $current_property) && !property_exists($locator2, $current_property)) {
 				# Skip not existing properties
-				debug_log(__METHOD__." Skipped comparison property $current_property. Property not exits in any locator ", logger::WARNING);
+				#debug_log(__METHOD__." Skipped comparison property $current_property. Property not exits in any locator ", logger::DEBUG);
 				continue;
 			}
 
 			# Test property exists only in one locator
 			if (property_exists($locator1, $current_property) && !property_exists($locator2, $current_property)) {
-				debug_log(__METHOD__." Property $current_property exists in locator1 but not exits in locator2 : ".to_string($locator2), logger::WARNING);
+				#debug_log(__METHOD__." Property $current_property exists in locator1 but not exits in locator2 (false is returned): ".to_string($locator1).to_string($locator2), logger::DEBUG);
 				$equal = false;
 				break; 
 			}
 			if (property_exists($locator2, $current_property) && !property_exists($locator1, $current_property)) {
-				debug_log(__METHOD__." Property $current_property exists in locator2 but not exits in locator1 : ".to_string($locator1), logger::WARNING);
+				#debug_log(__METHOD__." Property $current_property exists in locator2 but not exits in locator1 (false is returned): ".to_string($locator1).to_string($locator2), logger::DEBUG);
 				$equal = false;
 				break; 
 			}			
 
 			# Compare verified existing properties
-			if($locator1->$current_property !== $locator2->$current_property) {
+			if( $locator1->$current_property != $locator2->$current_property ) {				
 				$equal = false;
 				break; 
 			}
 		}
+
 		return (bool)$equal;
 	}//end compare_locators
 
@@ -345,7 +360,7 @@ class locator extends stdClass {
 
 		#
 		# ONLY FOR DEBUG !!
-		if(SHOW_DEBUG) {		
+		if(SHOW_DEBUG===true) {		
 			if (!isset($this->section_tipo)) {
 				dump($this, ' this');
 				#dump(debug_backtrace(), 'debug_backtrace()');

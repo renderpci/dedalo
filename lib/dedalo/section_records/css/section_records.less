@@ -15,6 +15,10 @@
 	font-weight: normal;
 	min-height: 60px;
 }
+
+
+/* CSS_SECTION_LIST_WRAP
+------------------------------------------------------- */
 .css_section_list_wrap {
 
 	}
@@ -27,7 +31,6 @@
 /* SECTION_LIST_ROWS_CONTENT_DIV . Table wrapper
 ------------------------------------------------------- */
 .section_list_rows_content_div {
-	/*top: 15px;*/
 	position: relative;
 }
 
@@ -45,8 +48,9 @@ table.css_section_list_table {
 	max-width: 98.7%;
 	}
 
-	/*- Rows -*/
-	table.css_section_list_table TH {		
+	/* Rows 
+	------------------------------------------------------- */
+	table.css_section_list_table th {		
 		padding: 5px;
 		padding-top: 3px;
 		padding-bottom: 0px;
@@ -67,14 +71,14 @@ table.css_section_list_table {
 		line-height: 15px;
 	}
 
-	table.css_section_list_table TH:first-child {
+	table.css_section_list_table th:first-child {
 		border-top-left-radius: 5px;
 		border: none !important;
 	}
-	table.css_section_list_table TH:last-child {
+	table.css_section_list_table th:last-child {
 		border-top-right-radius: 4px;
 	}
-	.css_section_list_table TH DIV.th_title {
+	.css_section_list_table th div.th_title {
 		width: auto;
 		max-width: 90px;
 		text-overflow: ellipsis;
@@ -84,7 +88,7 @@ table.css_section_list_table {
 		cursor: default;
 
 	}	
-	table.css_section_list_table TH DIV.flechas {
+	table.css_section_list_table th div.flechas {
 		display: inline-block;
 		margin: 0;
 		margin-right: -3px;
@@ -92,8 +96,9 @@ table.css_section_list_table {
 		position: relative;
 
 	}
-	/* -- ROWS DATOS [TD] -- */
-	table.css_section_list_table TD {
+	/* ROWS DATOS [TD] 
+	------------------------------------------------------- */
+	table.css_section_list_table td {
 		color: #333;
 		/* padding: 5px; */
 		text-align: left;
@@ -115,7 +120,7 @@ table.css_section_list_table {
     	color: #505050;
 		font-size: 11.6px;
 	}
-	table.css_section_list_table .section_list_td_row {
+	table.css_section_list_table td.section_list_td_row {
 		padding: 5px;
 		vertical-align: top;
 		/*
@@ -125,8 +130,24 @@ table.css_section_list_table {
 		overflow: hidden !important;
 		white-space: nowrap;
 		*/
-	}
-	table.css_section_list_table TD SPAN {
+		}
+
+
+		/* TABLE TD CONTENTS DIV
+		------------------------------------------- */
+		td.section_list_td_row > div {
+			font-size: 11px;
+			//max-height: 58px;
+			//overflow: hidden;
+			//background-color: #EFFE2B;			
+		}
+		td.section_list_td_row.td_component_info > div {
+			overflow: auto;
+		}
+
+
+
+	table.css_section_list_table td span {
 		width: auto;
 		white-space: pre-wrap;
 		/* max-width: 200px;
@@ -135,25 +156,30 @@ table.css_section_list_table {
 		*/
 	}
 	
-	table.css_section_list_table TH.id_column,
-	table.css_section_list_table TD.id_column {
+	table.css_section_list_table th.id_column,
+	table.css_section_list_table td.id_column {
 		text-align: right;
 		white-space: nowrap;
 		width: 34px !important;
 		/* width: auto !important; */
 	}
 
-		td.td_component_text_area {
-			display: block;
-		    max-height: 68px;
-		    overflow: hidden;		   
+		td.td_component_text_area > div,
+		td.td_component_autocomplete_ts > div,
+		td.td_component_input_text > div,
+		td.td_component_autocomplete_ts > div
+		 {
+			//display: block; NOT DISPLAY AS BLOCK !!!
+		    max-height: 58px;
+		    overflow: visible; // Changed from hidden 22-02-2017 [P] because portal edit need more space !
+		    //font-size: 96%;	 // CHANGED IN LIST ONLY  
 		    /*display: table-cell;*/   
 		}
 
 		/*-- td_css_selector --*/
 		td.td_component_av ,
 		td.td_component_image,
-		td.td_component_portal,
+		//td.td_component_portal,
 		td.td_component_pdf
 		{
 			width: 102px ;
@@ -206,95 +232,92 @@ table.css_section_list_table {
 }
 
 
-/* Table relation 
-------------------------------------------------------- */
-.css_section_list_table_relation {
-	margin: 0;
-	padding: 0;
-	width: 100.01%;
-	border-collapse: collapse;
-	/*margin: 100px !important;*/
-}
-.css_section_list_table_relation th {
-	color: #CCCCCC;
-	padding: 5px;
-	padding-top: 1px;
-	padding-bottom: 1px;
-	text-transform: capitalize;
-	font-weight: normal;
-	font-size: 92%;
-	word-wrap: break-word;
-	border-left-width: 1px;
-	border-left-style: solid;
-	border-left-color: #CCC;
-	background: rgb(178, 178, 178);
-	background: -moz-linear-gradient(top, rgba(178,178,178,1) 0%, rgba(96,96,96,1) 100%);
-	background: -webkit-gradient(linear, left top, left bottom, color-stop(0%,rgba(178,178,178,1)), color-stop(100%,rgba(96,96,96,1)));
-	background: -webkit-linear-gradient(top, rgba(178,178,178,1) 0%,rgba(96,96,96,1) 100%);
-	background: -o-linear-gradient(top, rgba(178,178,178,1) 0%,rgba(96,96,96,1) 100%);
-	background: -ms-linear-gradient(top, rgba(178,178,178,1) 0%,rgba(96,96,96,1) 100%);
-	background: linear-gradient(to bottom, rgba(178,178,178,1) 0%,rgba(96,96,96,1) 100%);
-	/*filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#b2b2b2', endColorstr='#606060',GradientType=0 );*/
-}
-.css_section_list_table_relation td {
-	color: #333;
-	padding: 4px;
-	word-wrap: break-word;
-	border-bottom-width: 1px;
-	border-bottom-style: solid;
-	border-bottom-color: #E8E8E8;
-	border-left: none;
-	background-color: #F9F9F9;
-}
-td.td_relation_info, td.td_relation_fragment {
-	width: 45%;
-}
-td.td_relation_reverse_info {
-	width: 95%;
-	margin: 0;
-}
-td.td_relation_reverse_info SPAN {
-	/*width: 95%;*/
-	line-height: 1em !important;
-}
-td.td_relation_reverse_info HR {
-	margin: 0;
-	padding: 0;
-}
-
-/*- Flechas -*/
-.flechas {
-	left: 2px;
-	min-width: 8px;
-	}
-	.flecha_orden_ascendent,
-	.flecha_orden_descendent {
-		background-position: center 2px;
-		vertical-align:baseline;
-	}
-	.flecha_orden_ascendent {
-		background-image: url('../../themes/default/flecha_up.png');	
-		top: 2px;
-	}
-	.flecha_orden_descendent {
-		background-image: url('../../themes/default/flecha_down.png');
-		top: 0px;
-	}
-
-
-div.link_relation {
-	cursor: pointer;
-	display: inline-block;
-	margin-left: 4px;
-	color: #AAABA4;
-}
-div.link_relation:hover {
-	color: #5D5E5A;
-}
+	/* Table relation 
+	------------------------------------------------------- */
+	.css_section_list_table_relation {
+		margin: 0;
+		padding: 0;
+		width: 100.01%;
+		border-collapse: collapse;
+		/*margin: 100px !important;*/
+		}
+		.css_section_list_table_relation th {
+			color: #CCCCCC;
+			padding: 5px;
+			padding-top: 1px;
+			padding-bottom: 1px;
+			text-transform: capitalize;
+			font-weight: normal;
+			font-size: 92%;
+			word-wrap: break-word;
+			border-left-width: 1px;
+			border-left-style: solid;
+			border-left-color: #CCC;
+			background: rgb(178, 178, 178);
+			background: -moz-linear-gradient(top, rgba(178,178,178,1) 0%, rgba(96,96,96,1) 100%);
+			background: -webkit-gradient(linear, left top, left bottom, color-stop(0%,rgba(178,178,178,1)), color-stop(100%,rgba(96,96,96,1)));
+			background: -webkit-linear-gradient(top, rgba(178,178,178,1) 0%,rgba(96,96,96,1) 100%);
+			background: -o-linear-gradient(top, rgba(178,178,178,1) 0%,rgba(96,96,96,1) 100%);
+			background: -ms-linear-gradient(top, rgba(178,178,178,1) 0%,rgba(96,96,96,1) 100%);
+			background: linear-gradient(to bottom, rgba(178,178,178,1) 0%,rgba(96,96,96,1) 100%);
+			/*filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#b2b2b2', endColorstr='#606060',GradientType=0 );*/
+		}
+		.css_section_list_table_relation td {
+			color: #333;
+			padding: 4px;
+			word-wrap: break-word;
+			border-bottom-width: 1px;
+			border-bottom-style: solid;
+			border-bottom-color: #E8E8E8;
+			border-left: none;
+			background-color: #F9F9F9;
+		}
+		td.td_relation_info, td.td_relation_fragment {
+			width: 45%;
+		}
+		td.td_relation_reverse_info {
+			width: 95%;
+			margin: 0;
+		}
+		td.td_relation_reverse_info SPAN {
+			/*width: 95%;*/
+			line-height: 1em !important;
+		}
+		td.td_relation_reverse_info HR {
+			margin: 0;
+			padding: 0;
+		}
+		div.link_relation {
+			cursor: pointer;
+			display: inline-block;
+			margin-left: 4px;
+			color: #AAABA4;
+		}
+		div.link_relation:hover {
+			color: #5D5E5A;
+		}
 
 
 
-
+	/* Flechas 
+	------------------------------------------------------- */
+	.flechas {
+		left: 2px;
+		min-width: 8px;
+		}
+		.flecha_orden_ascendent,
+		.flecha_orden_descendent {
+			background-position: center 2px;
+			vertical-align:baseline;
+		}
+		.flecha_orden_ascendent {
+			background-image: url('../../themes/default/flecha_up.png');	
+			top: 2px;
+		}
+		.flecha_orden_descendent {
+			background-image: url('../../themes/default/flecha_down.png');
+			top: 0px;
+		}
 
 
 
@@ -342,11 +365,11 @@ div.link_relation:hover {
 
 
 
-/*DELETE DIALOG*/
+/* DELETE DIALOG 
 #delete_dialog {
 	display: none;
 }
-
+*/
 
 /* component_av icon
 ------------------------------------------------------- */
@@ -382,7 +405,7 @@ td.td_dd551 div {
 
 
 
-/*VARIANTES EXCLUSIVAS DE ESTE COMPONENTE
+/* VARIANTES EXCLUSIVAS DE ESTE COMPONENTE
 ------------------------------------------------------- */
 table.css_section_list_table .column_test {
 	background-color:#d5e9e9;
@@ -409,11 +432,9 @@ table.css_section_list_table .column_test {
 }
 
 @media screen and (max-width: @movil_max_width) {
-
 	.wrap_table_rows_list {
-		width: 100%;
-		overflow-x: auto;
+		width: 99%;
+		//overflow-x: auto;
 		//width: 365px;
 	}
-
 }

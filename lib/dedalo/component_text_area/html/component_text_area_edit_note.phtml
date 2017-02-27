@@ -1,0 +1,73 @@
+<?php
+
+	# VISUALIZADOR HTML	
+
+	# html_delimiter
+	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'in');
+	
+	print "<div class=\"wrap_component css_wrap_text_area wrap_component_{$tipo}\" id=\"{$id_wrapper}\"
+	data-tipo=\"{$tipo}\"
+	data-section_tipo=\"{$section_tipo}\"
+	data-parent=\"{$parent}\"
+	data-lang=\"{$lang}\"
+	data-modo=\"{$modo}\"
+	data-dato=\"{$dato_raw}\"
+	data-context_name=\"{$context_name}\"
+	data-component_name=\"{$component_name}\"
+	data-component_info='{$component_info}'
+	role=\"wrap_component_text_area\"
+	>";
+
+	# ETIQUETA (LABEL)
+	#$html_label = component_common_draw::draw_label($this);
+	
+	# CONTENIDO (INPUT)
+	$html_content = '';
+	switch($permissions) {
+
+		case 0 :
+				$html_content .= "";
+				break;
+
+		case 1 :
+				$html_content .= "<span class=\"css_span_dato text_area_read_only\">$dato</span>";
+				break;
+
+		case 2 :
+		case 3 :
+				#
+				# TEXTAREA					
+				$html_content .= "\n <div class=\"text_area_div_editable\" id=\"{$identificador_unico}\"
+				name=\"{$input_name}\"
+				data-parent=\"{$parent}\"
+				data-tipo=\"{$tipo}\"
+				data-lang=\"{$lang}\"
+				data-modo=\"{$modo}\"
+				data-section_tipo=\"{$section_tipo}\"
+				title=\"$html_title\"
+				tabindex=\"1\">$dato</div>";
+				
+
+				# INIT : Init text editor	
+				$html_content .= "<script>text_editor.init('$identificador_unico','$modo','$propiedades_json')</script>";
+				break;
+
+	}//end switch($permissions) {	
+	
+
+	# Prepare content to show in page
+	tools::prepare_content($html_content);
+	
+
+	# PRINT HTML
+	#print $html_label;
+	print $html_content;
+
+
+
+	print "</div>"; //wrap
+
+	# html_delimiter
+	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'out');
+
+?>

@@ -39,11 +39,19 @@
 				css::$ar_url[] = DEDALO_LIB_BASE_URL."/$element_name/css/$element_name.css";
 				js::$ar_url[]  = DEDALO_LIB_BASE_URL."/$element_name/js/$element_name.js";
 
+				$element_name = 'component_input_text_large';
+				css::$ar_url[] = DEDALO_LIB_BASE_URL."/$element_name/css/$element_name.css";
+				js::$ar_url[]  = DEDALO_LIB_BASE_URL."/$element_name/js/$element_name.js";
+
 				$element_name = 'component_relation_children';
 				css::$ar_url[] = DEDALO_LIB_BASE_URL."/$element_name/css/$element_name.css";
 				js::$ar_url[]  = DEDALO_LIB_BASE_URL."/$element_name/js/$element_name.js";
 
 				$element_name = 'component_relation_model';
+				css::$ar_url[] = DEDALO_LIB_BASE_URL."/$element_name/css/$element_name.css";
+				js::$ar_url[]  = DEDALO_LIB_BASE_URL."/$element_name/js/$element_name.js";
+
+				$element_name = 'component_relation_related';
 				css::$ar_url[] = DEDALO_LIB_BASE_URL."/$element_name/css/$element_name.css";
 				js::$ar_url[]  = DEDALO_LIB_BASE_URL."/$element_name/js/$element_name.js";
 
@@ -65,8 +73,22 @@
 
 
 				#
+				# HIERARCHY_TYPES
+				$hierarchy_types 	= null;
+				if (isset($_GET['hierarchy_types'])) {
+					$hierarchy_types 	= json_decode($_GET['hierarchy_types']);
+				}
+
+				#
+				# HIERARCHY_SECTIONS
+				$hierarchy_sections = null;
+				if (isset($_GET['hierarchy_sections'])) {
+					$hierarchy_sections = json_decode($_GET['hierarchy_sections']);
+				}
+
+				#
 				# SEARCH FORM . ROWS_SEARCH 
-				# Render search form html
+				# Render search form html DEDALO_LANGS_SECTION_TIPO
 				$section = section::get_instance(null, DEDALO_THESAURUS_SECTION_TIPO,'list');
 					$search_form_html 	= '';
 					$records_search 	= new records_search($section, 'list');
@@ -77,6 +99,31 @@
 				# ACTIVE HIERARCHIES
 				$ar_hierarchy_typologies = $this->get_hierarchy_typologies();
 					#dump($ar_hierarchy_typologies, ' ar_hierarchy_typologies ++ '.to_string());
+
+
+				# When request var 'model' is set, use models target section, else use regular target section
+				if (isset($_GET['model'])) {
+
+					$model_view 				= true;
+					$target_section_tipo 		= DEDALO_HIERARCHY_TARGET_SECTION_MODEL_TIPO;
+					$hierarchy_childrens_tipo	= DEDALO_HIERARCHY_CHIDRENS_MODEL_TIPO;
+					$_SESSION['dedalo4']['config']['thesaurus_view_mode'] = 'model';
+
+					#dump($hierarchy_childrens_tipo, '$hierarchy_childrens_tipo ++ '.to_string($target_section_tipo));
+				}else{
+
+					$model_view 				= false;
+					$target_section_tipo 		= DEDALO_HIERARCHY_TARGET_SECTION_TIPO;
+					$hierarchy_childrens_tipo	= DEDALO_HIERARCHY_CHIDRENS_TIPO;
+					$_SESSION['dedalo4']['config']['thesaurus_view_mode'] = 'thesaurus';
+				}
+
+				#
+				# List mode
+				$thesaurus_list_mode = 'list'; // Default
+				if(!empty($_GET['term'])) {
+					$thesaurus_list_mode = 'search';
+				}
 			
 				break;
 	}

@@ -25,28 +25,28 @@ if ($mode=='save_order') {
 	# Verify vars
 	if( empty($portal_tipo) ) {
 		trigger_error("Error portal_tipo is mandatory");
-		if(SHOW_DEBUG) {
+		if(SHOW_DEBUG===true) {
 			throw new Exception("Trigger Error: portal_tipo is empty ! ", 1); 
 		}		
 		exit();
 	}
 	if( empty($portal_parent) ) {
 		trigger_error("Error portal_parent is mandatory");
-		if(SHOW_DEBUG) {
+		if(SHOW_DEBUG===true) {
 			throw new Exception("Trigger Error: portal_parent is empty ! ", 1); 
 		}		
 		exit();
 	}
 	if( empty($section_tipo) ) {
 		trigger_error("Error section_tipo is mandatory");
-		if(SHOW_DEBUG) {
+		if(SHOW_DEBUG===true) {
 			throw new Exception("Trigger Error: section_tipo is empty ! ", 1); 
 		}		
 		exit();
 	}
 	if( empty($dato) ) {
 		trigger_error("Error dato is mandatory");
-		if(SHOW_DEBUG) {
+		if(SHOW_DEBUG===true) {
 			throw new Exception("Trigger Error: dato is empty ! ", 1); 
 		}		
 		exit();
@@ -84,7 +84,7 @@ if ($mode=='save_order') {
 
 	# Verify first element
 	if (isset($dato[0]) && !is_object($dato[0])) {
-		if(SHOW_DEBUG) {
+		if(SHOW_DEBUG===true) {
 			dump($dato,"debug dato");
 		}
 		die("Error: dato format is wrong");
@@ -108,7 +108,6 @@ if ($mode=='save_order') {
 	 
 	echo 'ok';
 	exit();
-
 }#end save_order
 
 
@@ -128,42 +127,42 @@ if($mode=='new_portal_record') {
 	# Verify vars	
 	if( empty($portal_tipo) ) {
 		trigger_error("Error portal_tipo is mandatory");
-		if(SHOW_DEBUG) {
+		if(SHOW_DEBUG===true) {
 			throw new Exception("Trigger Error: portal_tipo is empty ! ", 1); 
 		}		
 		exit();
 	}
 	if( empty($portal_parent) ) {
 		trigger_error("Error portal_parent is mandatory");
-		if(SHOW_DEBUG) {
+		if(SHOW_DEBUG===true) {
 			throw new Exception("Trigger Error: portal_parent is empty ! ", 1); 
 		}		
 		exit();
 	}
 	if( empty($portal_section_tipo) ) {
 		trigger_error("Error portal_section_tipo is mandatory");
-		if(SHOW_DEBUG) {
+		if(SHOW_DEBUG===true) {
 			throw new Exception("Trigger Error: portal_section_tipo is empty ! ", 1); 
 		}		
 		exit();
 	}
 	if( empty($target_section_tipo) ) {
 		trigger_error("Error target_section_tipo is mandatory");
-		if(SHOW_DEBUG) {
+		if(SHOW_DEBUG===true) {
 			throw new Exception("Trigger Error: target_section_tipo is empty ! ", 1); 
 		}
 		exit();
 	}
 	if( empty($top_tipo) ) {
 		trigger_error("Error top_tipo is mandatory");
-		if(SHOW_DEBUG) {
+		if(SHOW_DEBUG===true) {
 			throw new Exception("Trigger Error: top_tipo is empty ! ", 1); 
 		}
 		exit();
 	}
 	if( empty($top_id) ) {
 		trigger_error("Error top_id is mandatory");
-		if(SHOW_DEBUG) {
+		if(SHOW_DEBUG===true) {
 			throw new Exception("Trigger Error: top_id is empty ! ", 1); 
 		}
 		exit();
@@ -172,8 +171,7 @@ if($mode=='new_portal_record') {
 	$new_portal_record = component_portal::create_new_portal_record( $portal_parent, $portal_tipo, $target_section_tipo, $top_tipo, $top_id, $portal_section_tipo );
 
 	echo $new_portal_record;
-	exit();
-	
+	exit();	
 }#end new_portal_record
 
 
@@ -223,8 +221,7 @@ if($mode=='remove_locator_from_portal') {
 		print 'error: '.$result;
 	}	
 	exit();
-
-}#end delete_portal_record
+}#end remove_locator_from_portal
 
 
 
@@ -245,7 +242,7 @@ if($mode=='remove_resource_from_portal') {
 	}
 	if( empty($section_tipo) ) {
 		trigger_error("Error section_tipo is mandatory");
-		if(SHOW_DEBUG) {
+		if(SHOW_DEBUG===true) {
 			throw new Exception("Trigger Error: section_tipo is empty ! ", 1); 
 		}		
 		exit();
@@ -268,9 +265,8 @@ if($mode=='remove_resource_from_portal') {
 	$state = $component_portal->remove_state_from_locator($rel_locator);
 	
 	echo $msg;
-	exit();	
-
-}#end delete_portal_record
+	exit();
+}#end remove_resource_from_portal
 
 
 
@@ -282,21 +278,21 @@ if($mode=='show_more') {
 
 	if( empty($portal_tipo) ) {
 		trigger_error("Error portal_tipo is mandatory");
-		if(SHOW_DEBUG) {
+		if(SHOW_DEBUG===true) {
 			throw new Exception("Trigger Error: portal_tipo is empty ! ", 1); 
 		}		
 		exit();
 	}
 	if( empty($section_tipo) ) {
 		trigger_error("Error section_tipo is mandatory");
-		if(SHOW_DEBUG) {
+		if(SHOW_DEBUG===true) {
 			throw new Exception("Trigger Error: section_tipo is empty ! ", 1); 
 		}
 		exit();
 	}
 	if( empty($portal_parent) ) {
 		trigger_error("Error portal_parent is mandatory");
-		if(SHOW_DEBUG) {
+		if(SHOW_DEBUG===true) {
 			#throw new Exception("Trigger Error: portal_parent is empty ! ", 1); 
 		}
 		exit();

@@ -20,6 +20,7 @@
 
 	$file_name = $modo;
 	
+	if($permissions===0) return null;
 	
 	switch($modo) {
 		
@@ -31,7 +32,8 @@
 				$dato_json 	= json_encode($dato);
 
 				$valor							= $this->get_valor();
-				$ar_all_project_select_langs	= $this->get_ar_all_project_select_langs();
+				#$ar_all_project_select_langs	= $this->get_ar_all_project_select_langs();
+				$ar_all_project_select_langs	= common::get_ar_all_langs_resolved(DEDALO_DATA_LANG);
 					#dump($ar_all_project_select_langs," ar_all_project_select_langs");
 
 				$id_wrapper 	= 'wrapper_'.$identificador_unico;
@@ -51,8 +53,11 @@
 				return null;
 				break;
 
-		case 'search':	
-				$ar_all_project_select_langs 	= $this->get_ar_all_project_select_langs();
+		case 'search':
+				# Showed only when permissions are >1
+				if ($permissions<1) return null;
+				
+				$ar_all_project_select_langs	= common::get_ar_all_langs_resolved(DEDALO_DATA_LANG);				
 				$ar_comparison_operators 		= $this->build_search_comparison_operators();
 				$ar_logical_operators 	 		= $this->build_search_logical_operators();
 

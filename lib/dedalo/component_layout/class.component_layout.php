@@ -36,7 +36,7 @@ class component_layout extends component_common {
 		$dato = parent::get_dato();
 
 		if(!empty($dato) && !is_object($dato)) {
-			if(SHOW_DEBUG) {
+			if(SHOW_DEBUG===true) {
 				trigger_error("Error. dato converted to layout_print because is not as expected object. ". gettype($dato));
 			}
 			$dato = new layout_print();
@@ -79,6 +79,19 @@ class component_layout extends component_common {
 
 
 	/**
+	* GET_VALOR
+	* @return 
+	*/
+	public function get_valor() {
+		$dato  = $this->get_dato();
+		$valor = json_encode($dato);
+
+		return $valor;
+	}//end get_valor
+
+
+
+	/**
 	* GET_LAYOUT_MAP_FROM_SECTION
 	* 
 	* @param obj $section_obj
@@ -115,7 +128,7 @@ class component_layout extends component_common {
 		*/
 
 
-		if(SHOW_DEBUG) {
+		if(SHOW_DEBUG===true) {
 			global$TIMER;$TIMER[__METHOD__.'_IN_'.$section_tipo.'_'.$modo.'_'.microtime(1)]=microtime(1);
 		}
 
@@ -216,7 +229,7 @@ class component_layout extends component_common {
 							error_log("Current section list don't have any component to show. Please configure properly this section list in structure");
 						}
 					}else{
-						if(SHOW_DEBUG) {
+						if(SHOW_DEBUG===true) {
 							dump($ar_section_list,"WARNING section_list for $section_tipo is not defined in structure (empty ar_section_list')");								
 						}
 						throw new Exception("section_list for $section_tipo is not defined in structure (empty ar_section_list)", 1);
@@ -365,7 +378,7 @@ class component_layout extends component_common {
 				break;				
 		}
 		#if(SHOW_DEBUG===true) dump($layout_map,'layout_map',"layout_map for section tipo $section_tipo");		
-		if(SHOW_DEBUG) {
+		if(SHOW_DEBUG===true) {
 			global$TIMER;$TIMER[__METHOD__.'_OUT_'.$section_tipo.'_'.$modo.'_'.microtime(1)]=microtime(1);
 		}
 
@@ -501,7 +514,7 @@ class component_layout extends component_common {
 			# Skip to remove elements
 			# dump($ar_exclude_elements,'ar_exclude_elements');
 			if( is_array($ar_exclude_elements) && in_array($terminoID, $ar_exclude_elements) ) {
-				#if(SHOW_DEBUG) dump($terminoID,"removed 4 $terminoID");
+				#if(SHOW_DEBUG===true) dump($terminoID,"removed 4 $terminoID");
 				continue; # skip
 			}			
 
@@ -509,7 +522,7 @@ class component_layout extends component_common {
 			$RecordObj_dd 			= new RecordObj_dd($terminoID);
 			$element_modelo_name	= $RecordObj_dd->get_modelo_name();		#dump($element_modelo_name,'switch element_modelo_name '.$terminoID);
 			$element_tipo 			= $terminoID;
-			$element_lang 			= ($RecordObj_dd->get_traducible()=='no') ? DEDALO_DATA_NOLAN : DEDALO_DATA_LANG;
+			$element_lang 			= ($RecordObj_dd->get_traducible()==='no') ? DEDALO_DATA_NOLAN : DEDALO_DATA_LANG;
 			$html_elements			= '';	# Important: reset html_elements every iteration
 			
 			$ar_tipo_next_level 	= $ar_tipo[$terminoID];
@@ -517,7 +530,7 @@ class component_layout extends component_common {
 
 			switch (true) {
 
-				case ($element_modelo_name=='section_group_div'):
+				case ($element_modelo_name==='section_group_div'):
 
 						# El html a incluir será el resultado de la recursión de sus hijos
 						$ar_children_elements = $RecordObj_dd->get_ar_childrens_of_this();
@@ -529,25 +542,25 @@ class component_layout extends component_common {
 							$children_modelo_name = RecordObj_dd::get_modelo_name_by_tipo($children_tipo,true);
 								#dump($children_modelo_name,'children_modelo_name');
 
-							if ($children_modelo_name=='section_group_div' || $children_modelo_name=='section_group') {
+							if ($children_modelo_name==='section_group_div' || $children_modelo_name==='section_group') {
 								#dump($children_modelo_name,'$children_modelo_name');
 
 								# Extraemos el html del conjunto recursivamente
 								$html_elements .= component_layout::walk_layout_map($section_obj, $ar_tipo_next_level, $ar_resolved_elements, $ar_exclude_elements);
 
-							}# if ($children_modelo_name=='section_group')
+							}# if ($children_modelo_name==='section_group')
 							else if ( strpos($children_modelo_name, 'component_')!==false ) { 
 								#dump($children_modelo_name,'children_modelo_name');
 
 								# Skip to remove elements
 								# dump($ar_exclude_elements,'ar_exclude_elements');
 								if( is_array($ar_exclude_elements) && in_array($children_tipo, $ar_exclude_elements) ) {
-									#if(SHOW_DEBUG) dump($children_tipo,"removed 3 $children_tipo");
+									#if(SHOW_DEBUG===true) dump($children_tipo,"removed 3 $children_tipo");
 									continue; # skip
 								}
 								
 								$RecordObj_dd2	= new RecordObj_dd($children_tipo);			
-								$children_lang 	= ($RecordObj_dd2->get_traducible()=='no') ? DEDALO_DATA_NOLAN : DEDALO_DATA_LANG;
+								$children_lang 	= ($RecordObj_dd2->get_traducible()==='no') ? DEDALO_DATA_NOLAN : DEDALO_DATA_LANG;
 								$component_obj	= component_common::get_instance($children_modelo_name,
 																				 $children_tipo,
 																				 $section_id,
@@ -575,7 +588,7 @@ class component_layout extends component_common {
 						break;
 
 				# SECTION GROUP
-				case ($element_modelo_name=='section_group' || $element_modelo_name=='section_group_portal') :
+				case ($element_modelo_name==='section_group' || $element_modelo_name==='section_group_portal') :
 						
 						# El html a incluir será el resultado de la recursión de sus hijos
 						$ar_children_elements = $RecordObj_dd->get_ar_childrens_of_this();
@@ -587,7 +600,7 @@ class component_layout extends component_common {
 							$children_modelo_name = RecordObj_dd::get_modelo_name_by_tipo($children_tipo,true);
 								#dump($children_modelo_name,'children_modelo_name');
 
-							if ($children_modelo_name=='section_group' || $children_modelo_name=='section_portal' || $children_modelo_name=='section_tab' || $children_modelo_name=='section_group_div') {
+							if ($children_modelo_name==='section_group' || $children_modelo_name==='section_portal' || $children_modelo_name==='section_tab' || $children_modelo_name==='section_group_div') {
 								#dump($children_modelo_name,'$children_modelo_name');
 
 								# Extraemos el html del conjunto recursivamente
@@ -600,12 +613,12 @@ class component_layout extends component_common {
 								# Skip to remove elements
 								# dump($ar_exclude_elements,'ar_exclude_elements');
 								if( is_array($ar_exclude_elements) && in_array($children_tipo, $ar_exclude_elements) ) {
-									#if(SHOW_DEBUG) dump($children_tipo,"removed 3 $children_tipo");
+									#if(SHOW_DEBUG===true) dump($children_tipo,"removed 3 $children_tipo");
 									continue; # skip
 								}
 								
 								$RecordObj_dd2 = new RecordObj_dd($children_tipo);
-								$children_lang = ($RecordObj_dd2->get_traducible()=='no') ? DEDALO_DATA_NOLAN : DEDALO_DATA_LANG;
+								$children_lang = ($RecordObj_dd2->get_traducible()==='no') ? DEDALO_DATA_NOLAN : DEDALO_DATA_LANG;
 								
 								$component_obj = component_common::get_instance($children_modelo_name,
 																				$children_tipo,
@@ -613,7 +626,7 @@ class component_layout extends component_common {
 																				'edit',
 																				$children_lang,
 																				$section_obj->get_tipo() );
-								if(SHOW_DEBUG) {
+								if(SHOW_DEBUG===true) {
 									#dump($component_obj," component_obj");
 									#dump($section_obj->get_tipo()," section tipo  component $children_tipo ($children_modelo_name)");
 								}									
@@ -629,7 +642,7 @@ class component_layout extends component_common {
 								# Skip to remove elements
 								# dump($ar_exclude_elements,'ar_exclude_elements');
 								if( is_array($ar_exclude_elements) && in_array($children_tipo, $ar_exclude_elements) ) {
-									#if(SHOW_DEBUG) dump($children_tipo,"removed 3 $children_tipo");
+									#if(SHOW_DEBUG===true) dump($children_tipo,"removed 3 $children_tipo");
 									continue; # skip
 								}
 								$button_obj	= new $children_modelo_name($children_tipo, ''); #$tipo, $target
@@ -640,7 +653,7 @@ class component_layout extends component_common {
 								$html_elements	.= $current_element_html ;
 							}
 							array_push($ar_resolved_elements, $children_tipo);
-							if(SHOW_DEBUG) {
+							if(SHOW_DEBUG===true) {
 								#error_log("WALK LAYOUT ADDED Element $children_tipo");
 							}
 							
@@ -657,7 +670,7 @@ class component_layout extends component_common {
 						break;
 
 				# SECTION TAB					
-				case ($element_modelo_name=='section_tab') :
+				case ($element_modelo_name==='section_tab') :
 						
 						#$ar_tab_html = array();
 						# Buscamos sus tabs (son hijos)
@@ -683,7 +696,7 @@ class component_layout extends component_common {
 						}
 
 						# Compound section tap
-						$section_tab = new section_tab($terminoID, 'edit', $ar_tab_html, $section_id);
+						$section_tab = new section_tab($terminoID, $section_obj->get_tipo(), 'edit', $ar_tab_html, $section_id);
 							#dump($section_tab,'section_tab',"section tab tipo $terminoID ");
 						$html .= $section_tab->get_html();
 
@@ -691,7 +704,7 @@ class component_layout extends component_common {
 
 
 				# SECTION GROUP RELATION
-				case ($element_modelo_name=='section_group_relation') :
+				case ($element_modelo_name==='section_group_relation') :
 						continue; // DEACTIVATED FOR NOW
 
 						# Calcular html de cada seccion									
@@ -856,7 +869,7 @@ class component_layout extends component_common {
 			# include dom parser
 			include DEDALO_ROOT . '/lib/dom/simple_html_dom.php';
 
-			if(SHOW_DEBUG) {
+			if(SHOW_DEBUG===true) {
 			 	#dump( htmlspecialchars($html_string)," html_string ");
 			} 
 			
@@ -909,7 +922,7 @@ class component_layout extends component_common {
 				#dump($output_array, ' output_array');#die();
 
 			if (empty($output_array[1])) {
-				if(SHOW_DEBUG) {
+				if(SHOW_DEBUG===true) {
 					#error_log("This template don't have components!");
 				}
 				return $html_template; # Return untouched html
@@ -996,7 +1009,7 @@ class component_layout extends component_common {
 				dump($output_array, ' output_array');die();
 
 				if (empty($output_array[1])) {
-					if(SHOW_DEBUG) {
+					if(SHOW_DEBUG===true) {
 						error_log(__METHOD__." Warning: This template don't have components!");
 					}
 					return $html_template; # Return untouched html

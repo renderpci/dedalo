@@ -18,20 +18,16 @@
 	$component_info 		= $this->get_component_info('json');
 	$file_name				= $modo;
 
-	if ($permissions<1) {
+	if($permissions===0) return null;
+
+
+	# SHOW IN MODES
+	$show_in_modes = isset($propiedades->show_in_modes) ? (array)$propiedades->show_in_modes : array();	
+	if (!in_array($modo, $show_in_modes)) {	
 		return null;
-	}
+	}	
 
-
-	#if(!SHOW_DEBUG) {
-		$show_in_modes = isset($propiedades->show_in_modes) ? (array)$propiedades->show_in_modes : array();
-			#dump($show_in_modes, ' show_in_modes ++ '.to_string());
-		if (!in_array($modo, $show_in_modes)) {		
-			return null;	
-		}
-	#}
-
-
+	# CLASS WIDGETS
 	include_once( dirname(__FILE__) . '/widgets/class.widget.php' );
 
 	$widgets = isset($propiedades->widgets) ? $propiedades->widgets : null;
@@ -43,6 +39,7 @@
 
 	$ar_widget_html=array();
 	foreach ($widgets as $widget_obj) {
+		#$start_time=microtime(1);
 		
 		$widget_obj->component_info = $this;
 
@@ -52,6 +49,8 @@
 		# Widget html
 		$ar_widget_html[] = $widget->get_html();
 
+		#$total = exec_time_unit($start_time);
+		#debug_log(__METHOD__." total: $total - widget_name: ".to_string($widget_obj->widget_name), logger::WARNING);
 	}//end foreach ($widgets as $widget)
 	
 	
@@ -59,7 +58,5 @@
 	if( !include($page_html) ) {
 		echo "<div class=\"error\">Invalid mode $this->modo</div>";
 	}
-
-	
 	
 ?>

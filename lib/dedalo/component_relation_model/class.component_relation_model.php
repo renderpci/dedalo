@@ -8,7 +8,9 @@ class component_relation_model extends component_relation_common {
 	
 	# Overwrite __construct var lang passed in this component
 	protected $lang = DEDALO_DATA_NOLAN;
-	
+
+	# test_equal_properties is used to verify duplicates when add locators
+	public $test_equal_properties = array('section_tipo','section_id','type','from_component_tipo');	
 
 
 	/**
@@ -27,79 +29,14 @@ class component_relation_model extends component_relation_common {
 
 		if(SHOW_DEBUG) {
 			$traducible = $this->RecordObj_dd->get_traducible();
-			if ($traducible=='si') {
+			if ($traducible==='si') {
 				throw new Exception("Error Processing Request. Wrong component lang definition. This component $tipo (".get_class().") is not 'traducible'. Please fix this ASAP", 1);
 			}
 		}
 	}//end __construct
 
-
-
-	/**
-	* SAVE
-	* @return int $result
-	*	section returns section_id on save
-	* When save component, section is saved, not explicit section save is needed here
-	*/
-	public function Save() {
-
-		# Set section relation locators for fast access later from class relation
-		$my_section = $this->get_my_section();
-		$dato 		= $this->get_dato();	
-		foreach ((array)$dato as $current_locator) {
-			$current_locator->type = $this->relation_type;
-			$my_section->add_relation($current_locator, $remove_previous_of_current_type=true); // Note thats second param force remove old locators of current type
-		}
-
-		# Save normally
-		return parent::Save();
-	}//end Save
-
-
-
-	/**
-	* GET DATO
-	* @return array $dato
-	*	$dato is always an array of locators
-	*/
-	public function get_dato() {
-		$dato = parent::get_dato();
-
-		if (!empty($dato) && !is_array($dato)) {
-			#dump($dato,"dato");
-			trigger_error("Error: ".__CLASS__." dato type is wrong. Array expected and ".gettype($dato)." is received for tipo:$this->tipo, parent:$this->parent");
-			$this->set_dato(array());
-			$this->Save();
-		}
-		if ($dato==null) {
-			$dato=array();
-		}
-
-		return (array)$dato;
-	}//end get_dato
-
-
-
-	/**
-	* SET_DATO
-	* @param array|string $dato
-	*	When dato is string is because is a json encoded dato
-	*/
-	public function set_dato($dato) {
-		if (is_string($dato)) { # Tool Time machine case, dato is string
-			$dato = json_handler::decode($dato);
-		}
-		if (is_object($dato)) {
-			$dato = array($dato);
-		}
-		# Ensures is a real non-associative array (avoid json encode as object)
-		$dato = is_array($dato) ? array_values($dato) : (array)$dato;
-
-		parent::set_dato( (array)$dato );
-	}//end set_dato
-
-
 	
+
 	/**
 	* GET_VALOR
 	* Get value . default is get dato . overwrite in every different specific component
@@ -173,7 +110,7 @@ class component_relation_model extends component_relation_common {
 		$termonioID_related = array_values($relacionados[0])[0];
 		$RecordObjt_dd = new RecordObj_dd($termonioID_related);
 
-		if($RecordObjt_dd->get_traducible() =='no'){
+		if($RecordObjt_dd->get_traducible() === 'no'){
 			$lang = DEDALO_DATA_NOLAN;
 		}else{
 			$lang = DEDALO_DATA_LANG;
@@ -278,10 +215,10 @@ class component_relation_model extends component_relation_common {
 		$json_field = 'a.'.$json_field; // Add 'a.' for mandatory table alias search
 		
 		switch (true) {
-			case $comparison_operator=='=':
+			case $comparison_operator==='=':
 				$search_query = " {$json_field}#>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}' @> '[$search_value]'::jsonb ";
 				break;
-			case $comparison_operator=='!=':
+			case $comparison_operator==='!=':
 				$search_query = " ({$json_field}#>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}' @> '[$search_value]'::jsonb)=FALSE ";
 				break;
 		}
@@ -314,42 +251,7 @@ class component_relation_model extends component_relation_common {
 		return $valor;
 	}#end get_valor_export
 
-
-
-	/**
-	* RENDER_LIST_VALUE
-	* Overwrite for non default behaviour
-	* Receive value from section list and return proper value to show in list
-	* Sometimes is the same value (eg. component_input_text), sometimes is calculated (e.g component_portal)
-	* @param string $value
-	* @param string $tipo
-	* @param int $parent
-	* @param string $modo
-	* @param string $lang
-	* @param string $section_tipo
-	* @param int $section_id
-	*
-	* @return string $list_value
-	*//*
-	public static function render_list_value($value, $tipo, $parent, $modo, $lang, $section_tipo, $section_id) {
-
-		$component 	= component_common::get_instance(__CLASS__,
-													 $tipo,
-												 	 $parent,
-												 	 'list',
-													 DEDALO_DATA_NOLAN,
-												 	 $section_tipo);
-
-		
-		# Use already query calculated values for speed
-		$ar_records = (array)json_handler::decode($value);
-		$component->set_dato($ar_records);
-		$component->set_identificador_unico($component->get_identificador_unico().'_'.$section_id); // Set unic id for build search_options_session_key used in sessions
-		
-		return  $component->get_valor($lang);
-	}#end render_list_value
-	*/
-
+	
 
 	/**
 	* GET_VALOR_LIST_HTML_TO_SAVE

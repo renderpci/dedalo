@@ -2,10 +2,10 @@
 
 	# VISUALIZADOR HTML
 
+	# html_delimiter
+	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'in');
 
-	print "\n<!-- COMPONENT_PUBLICATION [tipo:$tipo parent:$parent] $label -->";
-
-	print "\n<div class=\"wrap_component css_wrap_component_publication wrap_component_{$modo} wrap_component_{$tipo}\" id=\"{$id_wrapper}\"
+	print "<div class=\"wrap_component css_wrap_component_publication wrap_component_{$modo} wrap_component_{$tipo}\" id=\"{$id_wrapper}\"
 	data-tipo=\"{$tipo}\"
 	data-section_tipo=\"{$section_tipo}\"
 	data-parent=\"{$parent}\"
@@ -17,88 +17,80 @@
 	>";
 
 
-
-	# ETIQUETA (LABEL)
+	# LABEL
 	$html_label = component_common_draw::draw_label($this);
 
-	$required_code 	= null;
-	#if($required)
-	#	$required_code = 'style="font-weight:bold"';
 
-	# CONTENIDO (INPUT)
-	$html_contenido = '';
+	# CONTENT 
+	$html_content = '';
 	switch($permissions) {
 
 		case 0	:
-				$html_contenido .= "";
+				$html_content .= "";
 				break;
 
 		case 1	: 	
-				$html_contenido .= "$valor";
+				$html_content .= "$valor";
 				break;
 
 		case 2 :
 		case 3 :
-				$html_contenido .= "<ul>";
-				$i=1; foreach((array)$ar_list_of_values->result as $value => $rotulo) {
+				# Value yes
+				$value_yes = '[{"section_id":"1","section_tipo":"dd64"}]';
+				# Value no
+				$value_no  = '[{"section_id":"2","section_tipo":"dd64"}]';
+				# Checked add
+				$checked   = $dato_json===$value_yes ? 'checked="checked"' : '';
 
-					$value   = (string)$value;
-					$locator = (object)json_handler::decode($value);	# Locator is json encoded object						
-					
+				# Switcher				
+				$html_content .= "<div class=\"switcher_publication text_unselectable\">";
 
-					$checked  = is_array($dato) && in_array($locator, $dato) ? 'checked="checked"' : '';
-					$tabindex = $i==1 ? 'tabindex="1"' : '';
+				$html_content .= "<input type=\"checkbox\" class=\"ios-toggle\" $checked onchange=\"component_publication.Save(this)\"
+				name=\"$input_name\"
+				id=\"{$input_name}\"
+				data-tipo=\"{$tipo}\"
+				data-lang=\"{$lang}\"
+				data-section_tipo=\"{$section_tipo}\"
+				data-parent=\"{$parent}\"
+				/>";
+  				$html_content .= "<label for=\"$input_name\" class=\"checkbox-label\" data-off=\"off\" data-on=\"on\"></label>";
 
-					$html_contenido .= "<li>";
+  				$html_content .= "</div>";//end switcher_publication
 
-						#
-						# INPUT
-						$html_contenido .= "\n <input class=\"css_component_publication\" type=\"radio\"
-						onfocus=\"component_common.select_wrap(null,'$id_wrapper');\"
-						onchange=\"component_publication.Save(this)\"
-						name=\"{$input_name}\"
-						data-tipo=\"{$tipo}\"
-						data-lang=\"{$lang}\"
-						data-section_tipo=\"{$section_tipo}\"
-						data-parent=\"{$parent}\"
-						value='$value'
-						title=\"$html_title\"
-						$checked
-						$tabindex
-						/>";
+				# JS
+				$html_content .= "<script>";
+				$html_content .= "component_publication.value_yes = '$value_yes';";
+				$html_content .= "component_publication.value_no  = '$value_no';";
+				$html_content .= "</script>";
 
-						#
-						# LABEL
-						$html_contenido .= "\n <label class=\"css_component_publication_rotulo\" $required_code >$rotulo</label>";
-
-					$html_contenido .= "</li>";
-					
-				$i++;}
-				$html_contenido .= "</ul>";
+				//$html_content .= "<script>component_publication.check_publication('{$id_wrapper}')</script>";
 
 				if(SHOW_DEBUG) {
-					#$html_contenido .= "\n <span class=\"notas\">dato: $dato_json</span>";				
-					#$html_contenido .= "\n <span class=\"css_span_debugger\" id=\"debugger_{$tipo}\" >{$debugger}</span>";
+					$html_content .= " <span class=\"debug_info notas\">$dato_json</span>";				
+					#$html_content .= " <span class=\"css_span_debugger\" id=\"debugger_{$tipo}\" >{$debugger}</span>";
 				}
 				break;
-
 	}
 
-	if(isset($js_code)) $html_contenido .= $js_code;
+	#if(isset($js_code)) $html_content .= $js_code;
 
 	# Prepare content to show in page
-	tools::prepare_content($html_contenido);
+	tools::prepare_content($html_content);
 
 
 	# PRINT HTML
 	print $html_label;
-	print $html_contenido;
+	print $html_content;
 
 
 
 	if(SHOW_DEBUG) {
-		echo $ar_list_of_values->debug;
+		#echo $ar_list_of_values->debug;
 	}
 
-	print "\n</div>\n\n"; //wrap
+	print "</div>"; //wrap
+
+	# html_delimiter
+	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'out');
+
 ?>

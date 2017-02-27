@@ -16,17 +16,17 @@
 	$identificador_unico	= $this->get_identificador_unico();
 	$component_name			= get_class($this);
 	
+	if($permissions===0) return null;
+	
 	# Verify component content record is inside section record filter
 	if ($this->get_filter_authorized_record()===false) return NULL ;
 
-	$file_name = $modo;
-		#dump($file_name,'$file_name');
-
-	
+	$file_name = $modo;	
 	switch($modo) {		
 		
 		case 'player':
 		case 'edit':
+				$file_name = 'edit';
 				$leaflet_dist = 'stable_versions';	// stable_versions | dev_versions
 				# CSS
 					#css::$ar_url[] = DEDALO_ROOT_WEB ."/lib/leaflet/$leaflet_dist/leaflet.css";
@@ -47,14 +47,22 @@
 
 				$id_wrapper 	= 'wrapper_'.$identificador_unico;
 				$component_info = $this->get_component_info('json');
-				$dato_json		= json_encode($dato);		
+				$dato_json		= json_encode($dato);
+
+				# Related components
+				$ar_related_component_tipo 		= $this->get_ar_related_component_tipo();
+				$ar_related_component_tipo_json = json_encode($ar_related_component_tipo);	
 				break;
 
-		case 'search' :	
+		case 'search' :
+				# Showed only when permissions are >1
+				if ($permissions<1) return null;
+				
 				$id_wrapper = 'wrapper_'.$identificador_unico;
 				# Search input name
 				$search_input_name = $section_tipo.'_'.$tipo;							
 				break;
+
 		case 'list' :
 				echo $valor;	
 				return;							
@@ -67,5 +75,4 @@
 	if( !include($page_html) ) {
 		echo "<div class=\"error\">Invalid mode $this->modo</div>";
 	}
-
 ?>

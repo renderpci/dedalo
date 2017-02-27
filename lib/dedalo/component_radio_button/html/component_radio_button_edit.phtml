@@ -2,10 +2,10 @@
 
 	# VISUALIZADOR HTML
 
+	# html_delimiter
+	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'in');
 
-	print "\n<!-- RADIO BUTTON [tipo:$tipo parent:$parent] $label -->";
-
-	print "\n<div class=\"wrap_component css_wrap_radio_button wrap_component_{$tipo}\" id=\"{$id_wrapper}\"
+	print "<div class=\"wrap_component css_wrap_radio_button wrap_component_{$tipo}\" id=\"{$id_wrapper}\"
 	data-tipo=\"{$tipo}\"
 	data-section_tipo=\"{$section_tipo}\"
 	data-parent=\"{$parent}\"
@@ -33,8 +33,7 @@
 				$html_contenido .= "";
 				break;
 
-		case 1	: 	
-
+		case 1	:
 				foreach ($ar_list_of_values->result as $value => $rotulo) {
 					/*
 					if( $value == $dato ) {
@@ -42,44 +41,45 @@
 					}else {
 						$checked = "";
 					}
-					$html_contenido .= "\n <input class=\"css_radio_button\" type=\"radio\"
+					$html_contenido .= "<input class=\"css_radio_button\" type=\"radio\"
 					name=\"{$input_name}\"
 					data-tipo=\"{$tipo}\" data-id_matrix=\"{$id}\" data-lang=\"{$lang}\" data-parent=\"{$parent}\"
 					value=\"{$value}\" title=\"$html_title\" $checked disabled />";
-					$html_contenido .= "\n <label class=\"css_radio_button_rotulo\" $required_code >$rotulo</label>";
+					$html_contenido .= "<label class=\"css_radio_button_rotulo\" $required_code >$rotulo</label>";
 					*/
 					if( $value == $dato ) {
-						$html_contenido .= "\n <label class=\"css_radio_button_rotulo\" $required_code >$rotulo</label>";
+						$html_contenido .= "<label class=\"css_radio_button_rotulo\" $required_code >$rotulo</label>";
 					}
 				}
 				break;
 
-
 		case 2 :
 		case 3 :
-
-				$html_contenido .= "<ul>";
+				$html_contenido .= "<ul class=\"radio_button_ul_list\">";				
 				$i=1; foreach((array)$ar_list_of_values->result as $value => $rotulo) {
 
 					$value   = (string)$value;
-					$locator = (object)json_handler::decode($value);	# Locator is json encoded object						
-					
+					$locator = (object)json_handler::decode($value);	# Locator is json encoded object
 
 					$checked  = is_array($dato) && in_array($locator, $dato) ? 'checked="checked"' : '';
 					$tabindex = $i==1 ? 'tabindex="1"' : '';
+
+					$input_id = $input_name.'_'.$i;
 
 					$html_contenido .= "<li>";
 
 						#
 						# INPUT
-						$html_contenido .= "\n <input class=\"css_radio_button\" type=\"radio\"
+						$html_contenido .= "<input class=\"css_radio_button\" type=\"radio\"
 						onfocus=\"component_common.select_wrap(null,'$id_wrapper');\"
 						onchange=\"component_radio_button.Save(this)\"
 						name=\"{$input_name}\"
+						id=\"{$input_id}\"
 						data-tipo=\"{$tipo}\"
 						data-lang=\"{$lang}\"
 						data-section_tipo=\"{$section_tipo}\"
 						data-parent=\"{$parent}\"
+						data-mandatory='{$mandatory_json}'
 						value='$value'
 						title=\"$html_title\"
 						$checked
@@ -88,23 +88,17 @@
 
 						#
 						# LABEL
-						$html_contenido .= "\n <label class=\"css_radio_button_rotulo\" $required_code >$rotulo</label>";
+						$html_contenido .= " <label for=\"$input_id\" class=\"css_radio_button_rotulo\" $required_code >$rotulo</label> ";
 
 					$html_contenido .= "</li>";
 					$i++;
 				}
 				$html_contenido .= "</ul>";
-
-				if(SHOW_DEBUG) {
-					#$html_contenido .= "\n <span class=\"notas\">dato: $dato_json</span>";
-					#$html_contenido .= "\n <span class=\"css_span_debugger\" id=\"debugger_{$tipo}\" >{$debugger}</span>";
-				}
 				break;
-
-
-	}
+	}//end switch($permissions)
 
 	$html_contenido .= $js_code;
+
 
 	# Prepare content to show in page
 	tools::prepare_content($html_contenido);
@@ -114,11 +108,17 @@
 	print $html_label;
 	print $html_contenido;
 
-	#print $js_code;
+	
 
-	if(SHOW_DEBUG) {
-		echo $ar_list_of_values->debug;
+	print "</div>"; //wrap
+
+
+	// First test on load element
+	if ($mandatory===true) {
+		echo "<script>component_radio_button.mandatory('{$id_wrapper}')</script>";
 	}
 
-	print "\n</div>\n\n"; //wrap
+	# html_delimiter
+	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'out');
+
 ?>

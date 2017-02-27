@@ -3,8 +3,10 @@
 	# VISUALIZADOR HTML	
 	
 	
-	print "\n<!-- EMAIL [tipo:$tipo section_id_matrix:$parent] -->";
-	print "\n<div class=\"wrap_component css_wrap_email wrap_component_{$tipo}\" id=\"{$id_wrapper}\"
+	# html_delimiter
+	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'in');
+
+	print "<div class=\"wrap_component css_wrap_email wrap_component_{$tipo}\" id=\"{$id_wrapper}\"
 	data-tipo=\"{$tipo}\"
 	data-lang=\"{$lang}\"
 	data-section_tipo=\"{$section_tipo}\"
@@ -19,20 +21,20 @@
 	$html_label = component_common_draw::draw_label($this);
 	
 	# CONTENIDO (INPUT)
-	$html_contenido = '';
+	$html_content = '';
 	switch($permissions) {
 			
 		case 0	:
-				$html_contenido .= "";
+				$html_content .= "";
 				break;
 						
 		case 1	: 	
-				$html_contenido .= "\n <span class=\"css_span_dato\">$dato</span>";
+				$html_content .= " <span class=\"css_span_dato\">$dato</span>";
 				break;	
-						
-		case ($permissions>=2)	:
 		
-				$html_contenido .= "\n <input class=\"css_email bg_email\" type=\"text\"
+		case 2	:
+		case 3	:		
+				$html_content .= " <input class=\"css_email bg_email\" type=\"text\"
 				onfocus=\"component_common.select_wrap(null,'$id_wrapper');\"
 				onchange=\"component_email.Save(this)\"
 				name=\"{$input_name}\"
@@ -43,21 +45,23 @@
 				value=\"{$dato}\"
 				title=\"$html_title\"
 				tabindex=\"1\"
-				/>";					
-				
-				if(SHOW_DEBUG) {
-					#$html_contenido .= "\n <span class=\"css_span_debugger\" id=\"debugger_{$tipo}\">{$debugger}</span>";
-				}
-				break;								
+				/>";				
+				break;
 	}
 
 	# Prepare content to show in page
-	tools::prepare_content($html_contenido);
+	tools::prepare_content($html_content);
 	
 	
 	# PRINT HTML
 	print $html_label;
-	print $html_contenido;
+	print $html_content;
 	
-	print "\n</div>\n\n"; //wrap
+	print "</div>"; //wrap
+
+
+	# html_delimiter
+	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'out');
+
+
 ?>

@@ -4,8 +4,10 @@
 
 	# ELEMENTOS
 
-	print "\n<!-- COMPONENT_AUTOCOMPLETE [tipo:$tipo section_id:$parent] $label -->";
-	print "\n<div class=\"wrap_component css_wrap_autocomplete wrap_component_{$tipo}\" id=\"{$id_wrapper}\"
+	# html_delimiter
+	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'in');
+
+	print "<div class=\"wrap_component css_wrap_autocomplete wrap_component_{$tipo}\" id=\"{$id_wrapper}\"
 	data-tipo=\"{$tipo}\"
 	data-lang=\"{$lang}\"
 	data-parent=\"{$parent}\"
@@ -34,13 +36,75 @@
 
 		case ($permissions>=2)	:
 
-					if($from_modo != 'edit'){
+					if($from_modo !== 'edit'){
 						$html_contenido .= "<div class=\"css_autocomplete_button_close\" onclick=\"component_common.change_mode_component(this, 'edit', '$from_modo')\"></div>";
 					}
-					
+
+
+					if ($in_time_machine!==true) {
+
+						#
+						# NEW_ELEMENT_CONTAINER ajax loads here
+						$html_contenido .= "<div class=\"new_element_container\" data-type=\"new_element_container\"></div>";
+							if(SHOW_DEBUG===true) {
+								/*
+								$html_contenido .= "<div class=\"debug_info notes\">target_section_tipo: ".implode(', ', $ar_target_section_tipo)."</div>";
+								if (isset($propiedades->filtered_by)) {
+									$html_contenido .= "<div class=\"debug_info notes\">filtered_by: ".json_encode($propiedades->filtered_by)."</div>";	// filtered_by
+								}
+								$html_contenido .= "<div class=\"debug_info notes\">".str_replace('},', '},<br>', $dato_json) ."</div>";
+								*/
+							}
+
+						
+						# BUTTONS_AND_FIELDS
+						$html_contenido .= "<div class=\"buttons_and_fields\">";
+
+							#$url_edit = "?t=".reset($ar_target_section_tipo).'&menu=0';	// To first section only  onclick=\"window.open('$url_edit')\"
+							$open_section_tipo = reset($ar_target_section_tipo);
+
+							# Permissions of target section. Apply to current buttons
+							$open_section_tipo_permissions = common::get_permissions($open_section_tipo,$open_section_tipo);
+							if ($open_section_tipo_permissions>=2) {
+								
+								#
+								# BTN EDIT WHOLE SECTION
+								$open_section_id   = null;
+								$html_contenido .= "<a href=\"javascript:;\" class=\"icon_bs link edit_autocomplete edit_hidden\" onclick=\"component_autocomplete.open_element(this)\"
+								data-section_tipo=\"$open_section_tipo\"
+								data-section_id=\"$open_section_id\"
+								data-modo=\"list\"
+								data-menu=\"1\"
+								></a>";							
+
+								#
+								# BTN NEW ELEMENT
+								$html_contenido .= "<div class=\"icon_bs link new_autocomplete edit_hidden\" data-target_section_tipo=\"".reset($ar_target_section_tipo)."\"
+								onclick=\"component_autocomplete.new_element(this,'$id_wrapper')\"></div>";
+							}
+
+							#
+							# INPUT SEARCH FIELD
+							$html_contenido .= " <input type=\"text\" class=\"css_autocomplete_search_field edit_hidden\" placeholder=\"".label::get_label('buscar')."...\"
+								data-id_wrapper=\"$id_wrapper\"
+								data-tipo='{$tipo}'
+								data-section_tipo=\"{$section_tipo}\"
+								data-parent='{$parent}'
+								data-ar_target_section_tipo='{$ar_target_section_tipo_json}'
+								data-tipo_to_search='{$tipo_to_search}'
+								onfocus=\"component_autocomplete.activate(this)\"
+								tabindex=\"1\"
+								/>";
+
+						$html_contenido .= "</div>";//end div buttons_and_fields
+
+
+
+					}//end if (!$in_time_machine) {
+
 
 					# VALOR . STRING RESOLVED TO SHOW
-					$html_contenido .= "\n <ul class=\"css_autocomplete_valor\">";
+					$html_contenido .= " <ul class=\"css_autocomplete_valor\" data-role=\"autocomplete_valor\">";
 					foreach ($ar_valor as $current_value => $value) {
 
 						$current_locator  		= json_decode($current_value);
@@ -48,33 +112,30 @@
 						$current_section_tipo 	= $current_locator->section_tipo;
 
 						# Permissions of target section. Apply to current buttons
-						$open_section_tipo_permissions = common::get_permissions($current_section_tipo,$current_section_tipo);
-						
+						$open_section_tipo_permissions = common::get_permissions($current_section_tipo,$current_section_tipo);						
 
 						$html_contenido .= "<li>";
-
 
 						#
 						# BTN DELETE
 						if (!$in_time_machine) {							
-						$html_contenido .= "\n <div class=\"icon_bs link css_autocomplete_button_delete\"
+						$html_contenido .= " <div class=\"icon_bs link css_autocomplete_button_delete edit_hidden\"
 						data-tipo=\"{$tipo}\"
 						data-current_value='$current_value'
 						data-id_wrapper=\"$id_wrapper\"
+						data-role=\"autocomplete_button_delete\"
 						title=\"$label $parent\"
 						onclick=\"component_autocomplete.delete(this)\"></div>";						
 						}
-
 
 						#
 						# LABEL
 						$html_contenido .= "<span>$value</span>";
 
-
 						#
 						# BTN EDIT
 						if (!$in_time_machine && $open_section_tipo_permissions>=2) {
-						$html_contenido .= "<a href=\"javascript:;\" class=\"icon_bs link edit_autocomplete edit_autocomplete_row\" onclick=\"component_autocomplete.open_element(this)\"
+						$html_contenido .= "<a href=\"javascript:;\" class=\"icon_bs link edit_autocomplete edit_autocomplete_row edit_hidden\" onclick=\"component_autocomplete.open_element(this)\"
 						data-section_tipo=\"$current_section_tipo\"
 						data-section_id=\"$current_section_id\"
 						data-modo=\"edit\"
@@ -110,69 +171,13 @@
 						}
 
 						$html_contenido .= "</li>";
-
 					}
 					$html_contenido .= "</ul>";
 
 
-					if (!$in_time_machine) {
-
-						
-						#$url_edit = "?t=".reset($ar_target_section_tipo).'&menu=0';	// To first section only  onclick=\"window.open('$url_edit')\"
-						$open_section_tipo = reset($ar_target_section_tipo);
-
-						# Permissions of target section. Apply to current buttons
-						$open_section_tipo_permissions = common::get_permissions($open_section_tipo,$open_section_tipo);
-						if ($open_section_tipo_permissions>=2) {
-							
-							#
-							# BTN EDIT WHOLE SECTION
-							$open_section_id   = null;
-							$html_contenido .= "<a href=\"javascript:;\" class=\"icon_bs link edit_autocomplete\" onclick=\"component_autocomplete.open_element(this)\"
-							data-section_tipo=\"$open_section_tipo\"
-							data-section_id=\"$open_section_id\"
-							data-modo=\"list\"
-							data-menu=\"1\"
-							></a>";							
-
-							#
-							# BTN NEW ELEMENT
-							$html_contenido .= "<div class=\"icon_bs link new_autocomplete\" data-target_section_tipo=\"".reset($ar_target_section_tipo)."\"
-							onclick=\"component_autocomplete.new_element(this,'$id_wrapper')\"></div>";
-						}
-
-
-						#
-						# INPUT SEARCH FIELD
-						$html_contenido .= "\n <input type=\"text\" class=\"css_autocomplete_search_field\" placeholder=\"".label::get_label('buscar')."...\"
-							data-id_wrapper=\"$id_wrapper\"
-							data-tipo='{$tipo}'
-							data-section_tipo=\"{$section_tipo}\"
-							data-parent='{$parent}'
-							data-ar_target_section_tipo='{$ar_target_section_tipo_json}'
-							data-tipo_to_search='{$tipo_to_search}'
-							onfocus=\"component_autocomplete.activate(this)\"
-							tabindex=\"1\"
-							/>";
-
-
-						#
-						# NEW_ELEMENT_CONTAINER ajax loads here
-						$html_contenido .= "<div class=\"new_element_container\" data-type=\"new_element_container\"></div>";
-
-						if(SHOW_DEBUG) {
-							$html_contenido .= "<div class=\"debug_info notes\">target_section_tipo: ".implode(', ', $ar_target_section_tipo)."</div>";
-							if (isset($propiedades->filtered_by)) {
-								$html_contenido .= "<div class=\"debug_info notes\">filtered_by: ".json_encode($propiedades->filtered_by)."</div>";	// filtered_by
-							}
-							$html_contenido .= "<div class=\"debug_info notes\">".str_replace('},', '},<br>', $dato_json) ."</div>";
-						}
-					}
-
-
 					#
 					# INPUT DATA HIDDEN
-					$html_contenido .= "\n <input type=\"text\" class=\"css_autocomplete_dato_hidden\"
+					$html_contenido .= " <input type=\"text\" class=\"css_autocomplete_dato_hidden\"
 						name=\"{$input_name}\"
 						data-type=\"autocomplete_dato_hidden\"
 						data-tipo=\"{$tipo}\"
@@ -182,6 +187,7 @@
 						data-ar_target_section_tipo='{$ar_target_section_tipo_json}'
 						data-dato_in_db='{$dato_json}'
 						data-id_wrapper=\"$id_wrapper\"
+						data-role=\"autocomplete_dato_hidden\"
 						value='{$dato_json}'
 						title=''
 						disabled=\"disabled\"
@@ -189,7 +195,7 @@
 
 
 					if(SHOW_DEBUG) {
-						#$html_contenido .= "\n <span class=\"css_span_debugger\" id=\"debugger_{$tipo}\" >{$debugger}</span>";
+						#$html_contenido .= " <span class=\"css_span_debugger\" id=\"debugger_{$tipo}\" >{$debugger}</span>";
 					}
 					break;
 
@@ -209,5 +215,10 @@
 		}
 	}
 
-	print "\n</div><!-- /css_wrap_component_autocomplete COMPONENT_AUTOCOMPLETE [tipo:$tipo section_id:$parent] $label -->\n\n"; //wrap
+	print "</div>"; //wrap
+
+	# html_delimiter
+	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'out');
+
+
 ?>

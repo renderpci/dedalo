@@ -1,0 +1,53 @@
+<?php
+/**
+* VIEW HTML
+* 
+*/
+$html='';
+
+	$html   .= "<!-- ".__CLASS__." [section_tipo:$section_tipo] -->";
+	$html 	.= "<div class=\"import_kml_wrap\">";
+	
+		# Title
+		$html   .= "<h2 class=\"text_shadow_inset\" > TOOL IMPORT KML </h2>";
+
+		#
+		# SECTION_TEMP_WRAP
+		$html .= "<div id=\"section_temp_wrap\">";
+		$html .= $section_temp->get_html();
+		$html .= "</div>";
+
+
+		#
+		# UPLOAD FORM
+		$html .= "<div id=\"wrap_upload\">";
+		$html .= "";
+		$html .= "</div>";		
+		# JS
+		$js  = "";
+		$js .= "<script>";
+		// Set dedalo_upload config vars
+		$js .= "dedalo_upload.build_upload_form({
+					container_id 		: 'wrap_upload',
+					target_file_path 	: '$target_file_path',
+					target_file_name 	: '$target_file_name',
+					allowed_extensions 	: ['kml'],
+					on_complete 		: 'tool_import_kml.upload_complete',
+				});";
+		// Fix util vars on tool_import_kml js
+		$js .= "tool_import_kml.section_tipo='$section_tipo';";
+		$js .= "tool_import_kml.button_import_tipo='$button_import_tipo';";	
+		$js .= "</script>";
+
+			
+		#
+		# SECTION_TEMP_WRAP
+		$html .= "<button type=\"button\" class=\"btn btn-primary\" id=\"button_import\"> ".label::get_label('importar')." </button>";
+		$html .= "<div id=\"response_div\"></div>";
+
+
+	$html .= "</div>";//end import_kml_wrap
+
+echo $html;
+echo $js;
+?>

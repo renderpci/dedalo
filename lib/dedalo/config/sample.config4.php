@@ -193,7 +193,7 @@
 	define('DEDALO_APPLICATION_LANG'			, fix_cascade_config4_var('dedalo_application_lang',DEDALO_APPLICATION_LANGS_DEFAULT));
 	
 	# DATA LANG : Dedalo data lang
-	define('DEDALO_DATA_LANG_DEFAULT'			, DEDALO_APPLICATION_LANG);
+	define('DEDALO_DATA_LANG_DEFAULT'			, 'lg-spa');
 	define('DEDALO_DATA_LANG'					, fix_cascade_config4_var('dedalo_data_lang',DEDALO_DATA_LANG_DEFAULT));
 	define('DEDALO_DATA_NOLAN'					, 'lg-nolan');
 
@@ -344,6 +344,9 @@
 		define('MAGICK_PATH'						, '/usr/bin/'); 	# Like '/usr/bin/';
 		define('COLOR_PROFILES_PATH'				, DEDALO_LIB_BASE_PATH . '/media_engine/lib/color_profiles_icc/');
 
+		define('DEDALO_IMAGE_THUMB_WIDTH'			, 102);	// Default 102
+		define('DEDALO_IMAGE_THUMB_HEIGHT'			, 57);	// Default 57
+		
 		# DEDALO_IMAGE_WEB_FOLDER normally '/web' Used to save uploaded files from component_html_text
 		define('DEDALO_IMAGE_WEB_FOLDER'			, '/web');
 
@@ -425,6 +428,8 @@
 	# TOOL EXPORT
 	define('DEDALO_TOOL_EXPORT_FOLDER_PATH',	DEDALO_MEDIA_BASE_PATH . '/export/files');
 	define('DEDALO_TOOL_EXPORT_FOLDER_URL' ,	DEDALO_MEDIA_BASE_URL  . '/export/files');
+	# TOOL IMPORT
+	define('DEDALO_TOOL_IMPORT_DEDALO_CSV_FOLDER_PATH',	DEDALO_MEDIA_BASE_PATH . '/import/files');
 
 
 

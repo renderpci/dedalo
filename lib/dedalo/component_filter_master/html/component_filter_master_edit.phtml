@@ -24,12 +24,12 @@
 	$html_contenido = '';
 	switch(true) {
 			
-		case ($permissions==0) :
+		case ($permissions===0) :
 
 				$html_contenido .= ""; 
 				break;
 						
-		case ($permissions==1)	:
+		case ($permissions===1)	:
 
 				$html_contenido .= "<ul class=\"filter_master_list\">";
 
@@ -46,7 +46,7 @@
 						
 		case ($permissions>=2)	:					
 
-				$disabled = ($user_id_logged==$user_id_viewed) ? 'disabled' : '';	
+				$disabled = ((int)$user_id_logged===(int)$user_id_viewed) ? 'disabled' : '';
 
 				$html_contenido .= "<ul class=\"filter_master_list\">";
 
@@ -57,9 +57,12 @@
 						$checked  = is_array($dato) && in_array($current_section_id, array_keys($dato)) ? 'checked="checked"' : '';
 						$tabindex = ($i==1) ? 'tabindex="1"' : '';
 
+						$input_id = $input_name.'_'.$i;
+
 						$html_contenido .= "\n <input class=\"css_check_box_filter_master\" type=\"checkbox\"
 						onchange=\"component_filter_master.Save(this)\"
 						name=\"{$input_name}\"
+						id=\"{$input_id}\"
 						value=\"{$current_section_id}\"
 						title=\"$html_title\"
 						data-tipo=\"{$tipo}\"
@@ -71,8 +74,8 @@
 						$tabindex
 						/>";
 						
-						$html_contenido .= "<label class=\"css_check_box_filter_master_rotulo\" $required >";
-						if(SHOW_DEBUG) {
+						$html_contenido .= "<label for=\"$input_id\" class=\"css_check_box_filter_master_rotulo\" $required >";
+						if(SHOW_DEBUG===true) {
 							$html_contenido .= "[$current_section_id] ";
 						}
 						$html_contenido .= $rotulo;

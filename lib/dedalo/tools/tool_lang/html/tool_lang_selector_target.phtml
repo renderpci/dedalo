@@ -18,24 +18,16 @@
 		onchange=\"tool_lang.load_target_component(this)\"
 		> ";
 				
-				# Empty option	
-				if(empty($lang)) {
-					$checked = 'selected';
-				}else{
-					$checked = "";
-				}				
-				$html_selector .= "\n <option value=\"\" {$checked}> </option>";
-				
-				# Value option
-				if (is_array ($ar_target_langs)) foreach ($ar_target_langs as $current_target_lang => $current_target_lang_name) {
-					#echo" $target_lang - $current_target_lang <br>";
-					if( $target_lang === $current_target_lang) {
-						$selected = 'selected';
-					}else {
-						$selected = "";
-					}
-					$html_selector .= "\n <option value=\"{$current_target_lang}\" {$selected}>$current_target_lang_name</option>";							
-				}
+			# Empty option					
+			$html_selector .= "\n <option value=\"\"> </option>";
+			
+			# Value option
+			# dump($ar_target_langs, ' ar_target_langs ++ '.to_string());
+			foreach ((array)$ar_target_langs as $current_target_lang => $current_target_lang_name) {
+									
+				$selected 		= ($target_lang === $current_target_lang) ? 'selected' : '';
+				$html_selector .= "\n <option value='{$current_target_lang}' {$selected}>$current_target_lang_name</option>";
+			}
 
 		$html_selector .= "\n </select>";	
 

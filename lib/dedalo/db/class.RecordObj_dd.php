@@ -1,12 +1,9 @@
 <?php
-#require_once(DEDALO_LIB_BASE_PATH . '/db/class.RecordDataBoundObject.php');
-#require_once(DEDALO_LIB_BASE_PATH . '/db/class.RecordObj_descriptors_dd.php');
-
-if (!defined('DEDALO_STRUCTURE_LANG')) {
-	define('DEDALO_STRUCTURE_LANG',   'lg-spa');
-}
-
-
+/**
+* RecordObj_dd
+*
+*
+*/
 class RecordObj_dd extends RecordDataBoundObject {
 	
 	# FIELDS
@@ -36,7 +33,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 	/**
 	* __CONSTRUCT
 	*/
-	function __construct($terminoID=NULL, $prefijo=false) {
+	function __construct($terminoID=null, $prefijo=false) {
 		
 		if( !empty($terminoID) ) {
 			# CASO GENERAL
@@ -51,14 +48,14 @@ class RecordObj_dd extends RecordDataBoundObject {
 		
 		}else if(strlen($prefijo)>=2) {
 			
-			$terminoID = NULL;
+			$terminoID = null;
 			$this->set_prefijo($prefijo);	
 		
 		}else{			
 			
 			$msg = "This record dd not exists ! [terminoID:$terminoID, prefijo:$prefijo]"; if(isset($_REQUEST['terminoID'])) $msg .= " - ".$_REQUEST['terminoID']; 
 
-			if(SHOW_DEBUG) {
+			if(SHOW_DEBUG===true) {
 				 # LOGGER
         		logger::$obj['error']->log_message("$msg", logger::ERROR, __METHOD__); 
         		throw new Exception("Error Processing Request $msg", 1);
@@ -72,7 +69,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 		if(!$this->prefijo) {
 
 			$msg = " Element not defined with prefijo: $prefijo ";
-			if(SHOW_DEBUG) {
+			if(SHOW_DEBUG===true) {
 				 # LOGGER
         		logger::$obj['error']->log_message("$msg", logger::ERROR, __METHOD__); 
         		throw new Exception("Error Processing Request $msg", 1); 
@@ -121,7 +118,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 	public static function get_prefix_from_tipo($tipo) {
 		preg_match("/\D+/", $tipo, $output_array);
 		if (empty($output_array[0])) {
-			if(SHOW_DEBUG) {
+			if(SHOW_DEBUG===true) {
 				#throw new Exception("Error Processing Request from tipo:'$tipo' ", 1);	
 				#dump($tipo,"tipo received ");	
 				dump(debug_backtrace()[0]," debug_backtrace Invalid tipo received ". json_encode($tipo));	
@@ -143,12 +140,12 @@ class RecordObj_dd extends RecordDataBoundObject {
 		$prefijo2	= RecordObj_dd::get_prefix_from_tipo($terminoID2);
 		if (empty($prefijo) || empty($prefijo2)) {
 			trigger_error("Error: prefix_compare received empty term! I can't compare this case");
-			if(SHOW_DEBUG) {
+			if(SHOW_DEBUG===true) {
 				throw new Exception("Error Processing Request", 1);				
 			}
 			return false;
 		}	
-		if ($prefijo==$prefijo2) {
+		if ($prefijo===$prefijo2) {
 			return true;
 		}else{
 			return false;
@@ -165,8 +162,8 @@ class RecordObj_dd extends RecordDataBoundObject {
 	* @return object / string parent::$propiedades
 	*/
 	public function get_propiedades($json_decode=false) {
-		if ($json_decode) {
-			return json_handler::decode(parent::get_propiedades());
+		if ($json_decode===true) {
+			return json_decode(parent::get_propiedades());
 		}
 		return parent::get_propiedades();
 	}//end get_propiedades
@@ -181,7 +178,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 	public function save_term_and_descriptor( $descriptor_dato=null ) {
 
 		if (empty($this->parent)) {
-			if(SHOW_DEBUG) {
+			if(SHOW_DEBUG===true) {
 				debug_log(__METHOD__." Error on save 'RecordObj_dd_edit'. Parent is empty. Nothing is saved! ".to_string(), logger::DEBUG);
 			}
 			return false;
@@ -205,7 +202,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 
 		#
 		# DESCRIPTORS
-		if ($result) {
+		if ($result!==false) {
 			
 			$counter_dato_updated  = self::update_counter($this->prefijo, $counter_dato);		
 
@@ -218,8 +215,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 			$RecordObj_descriptors_dd->set_lang($lang);
 			$RecordObj_descriptors_dd->set_dato($descriptor_dato);
 			$created_id_descriptors	= $RecordObj_descriptors_dd->Save();
-		}
-		
+		}		
 
 		return $terminoID;
 	}//end Save
@@ -235,15 +231,15 @@ class RecordObj_dd extends RecordDataBoundObject {
 	*/
 	protected static function update_counter($tld, $current_value=false) {
 
-		if (!$current_value) {
+		if ($current_value===false) {
 			$current_value = self::get_counter_value($tld);
 		}
 		$counter_dato_updated = intval($current_value+1) ;
 
 		$strQuery 	= "UPDATE \"main_dd\" SET counter = $1 WHERE tld = $2";
 		$result 	= pg_query_params(DBi::_getConnection(), $strQuery, array( $counter_dato_updated, $tld));
-		if (!$result) {
-			if(SHOW_DEBUG) {
+		if ($result===false) {
+			if(SHOW_DEBUG===true) {
 				trigger_error("Error on update_counter 'RecordObj_dd_edit'. Nothing is saved! : $strQuery");
 			}
 			return false;
@@ -262,8 +258,8 @@ class RecordObj_dd extends RecordDataBoundObject {
 		$result			= JSON_RecordDataBoundObject::search_free($strQuery);
 		$counter_value 	= pg_fetch_assoc($result)['counter'];
 
-		if (!$counter_value || is_null($counter_value)) {
-			if(SHOW_DEBUG) {				
+		if ($counter_value===false || is_null($counter_value)) {
+			if(SHOW_DEBUG===true) {				
 				//debug_log(__METHOD__." Error on get_counter_value 'RecordObj_dd_edit'. counter for tld not found. ".to_string(), logger::WARNING);
 			}
 			return (int)0;
@@ -310,15 +306,15 @@ class RecordObj_dd extends RecordDataBoundObject {
 		#$from_cache=false;
 		
 		$cache_uid = $terminoID.'_'.$lang;
-		if ($from_cache && isset($_SESSION['dedalo4']['config']['termino_by_tipo'][$cache_uid])) {
+		if ($from_cache===true && isset($_SESSION['dedalo4']['config']['termino_by_tipo'][$cache_uid])) {
 			#error_log("From cache $cache_uid");
 			return $_SESSION['dedalo4']['config']['termino_by_tipo'][$cache_uid];
 		}
 		$tipo 	= 'termino';
 		$result = self::get_descriptor_dato_by_tipo($terminoID, $lang, $tipo, $fallback);
 
-		if($from_cache)
-		$_SESSION['dedalo4']['config']['termino_by_tipo'][$cache_uid] = $result;
+		if($from_cache===true)
+			$_SESSION['dedalo4']['config']['termino_by_tipo'][$cache_uid] = $result;
 
 		return $result;
 	}	
@@ -342,15 +338,15 @@ class RecordObj_dd extends RecordDataBoundObject {
 	# GET MODELO NAME BY TIPO (STATIC)
 	public static function get_modelo_name_by_tipo($tipo, $from_cache=false) {
 		#$from_cache=false;
-		if ($from_cache && isset($_SESSION['dedalo4']['config']['modelo_name_by_tipo'][$tipo])) {
+		if ($from_cache===true && isset($_SESSION['dedalo4']['config']['modelo_name_by_tipo'][$tipo])) {
 			#error_log("From cache $tipo");
 			return $_SESSION['dedalo4']['config']['modelo_name_by_tipo'][$tipo];
 		}
 		$RecordObj_dd	= new RecordObj_dd($tipo);
 		$modelo_name 	= (string)$RecordObj_dd->get_modelo_name();
 
-		if($from_cache)
-		$_SESSION['dedalo4']['config']['modelo_name_by_tipo'][$tipo] = $modelo_name;
+		if($from_cache===true)
+			$_SESSION['dedalo4']['config']['modelo_name_by_tipo'][$tipo] = $modelo_name;
 
 		return $modelo_name;
 	}
@@ -358,15 +354,14 @@ class RecordObj_dd extends RecordDataBoundObject {
 	# GET LANG BY TIPO (STATIC)
 	public static function get_lang_by_tipo($tipo, $from_cache=false) {
 		$RecordObj_dd = new RecordObj_dd($tipo);
-		$traducible   = $RecordObj_dd->get_traducible();
-		$lang = ($traducible=='si') ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
+		$lang 		  = $RecordObj_dd->get_traducible()==='si' ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
 		return $lang;
 	}
 
 	# GET AR TERMINO ID BY MODELO NAME (STATIC)
 	public static function get_ar_terminoID_by_modelo_name($modelo_name, $prefijo='dd') {
 	
-		if(SHOW_DEBUG) {
+		if(SHOW_DEBUG===true) {
 			$start_time = start_time();
 		}
 
@@ -386,7 +381,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 		}			
 		*/
 
-		#if(SHOW_DEBUG) $start_time = start_time();
+		#if(SHOW_DEBUG===true) $start_time = start_time();
 
 		# 1 Despejamos el terminoID del modelo (ejemplo : 'area_root') que es el parent en matrix_descriptors
 		$arguments=array();
@@ -410,7 +405,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 				$RecordObj_dd	= new RecordObj_dd($terminoID);
 				$esmodelo		= $RecordObj_dd->get_esmodelo($arguments);
 				# Excluimos a los propios modelos del array
-				if ($esmodelo=='si') {
+				if ($esmodelo==='si') {
 					# Verfificado
 					$ar_modelo_terminoID[] = $terminoID;
 				}
@@ -429,12 +424,13 @@ class RecordObj_dd extends RecordDataBoundObject {
 		$ar_terminoID_by_modelo_name[$unic_string] = $ar_result;
 			#dump($ar_result,'$ar_result');
 		
-		if(SHOW_DEBUG) {
+		if(SHOW_DEBUG===true) {
 			#$GLOBALS['log_messages'] .= exec_time($start_time, __METHOD__, $ar_result );
 		}
 
 		return $ar_result;
-	}
+	}//end get_ar_terminoID_by_modelo_name
+
 
 	
 	# MODELOS ARRAY
@@ -462,7 +458,9 @@ class RecordObj_dd extends RecordDataBoundObject {
 		$ar_all_modelos_data[$this->terminoID]	= $ar_all_modelos;
 		
 		return $ar_all_modelos ;
-	}
+	}//end get_ar_all_modelos
+
+
 
 	public static function get_ar_all_terminoID_of_modelo_tipo($modelo_tipo) {
 		# SEARCH		
@@ -485,11 +483,11 @@ class RecordObj_dd extends RecordDataBoundObject {
 	* Get array of terms (terminoID) with parent = $this->terminoID
 	* @return array 
 	*/
-	public function get_ar_childrens_of_this($esdescriptor='si', $esmodelo=NULL, $order_by='norden') {
+	public function get_ar_childrens_of_this($esdescriptor='si', $esmodelo=null, $order_by='norden') {
 			
 		# COMPROBACIÓN
-		if(!$this->terminoID) 	return false;
-		if(!$this->prefijo) 	return false;
+		if(empty($this->terminoID))	return false;
+		#if(empty($this->prefijo)) 	return false;
 
 		# STATIC CACHE
 		static $ar_childrens_of_this_stat_data;
@@ -504,10 +502,10 @@ class RecordObj_dd extends RecordDataBoundObject {
 		$arguments['strPrimaryKeyName']	= 'terminoID';
 		$arguments['parent']			= $this->terminoID;
 		
-		if( !empty($esdescriptor) && ($esdescriptor=='si' || $esdescriptor=='no') )
+		if( !empty($esdescriptor) && ($esdescriptor==='si' || $esdescriptor==='no') )
 			$arguments['esdescriptor']	= $esdescriptor;
 		
-		if( !empty($esmodelo) && ($esmodelo=='si' || $esmodelo=='no') )
+		if( !empty($esmodelo) && ($esmodelo==='si' || $esmodelo==='no') )
 			$arguments['esmodelo']		= $esmodelo;
 		
 		if (!empty($order_by)) {
@@ -515,7 +513,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 		}		
 				
 		$ar_childrens_of_this = (array)$this->search($arguments);
-		if(SHOW_DEBUG) {
+		if(SHOW_DEBUG===true) {
 			#dump($ar_childrens_of_this," arguments:".print_r($arguments,true));
 		}			
 				
@@ -523,7 +521,9 @@ class RecordObj_dd extends RecordDataBoundObject {
 		$ar_childrens_of_this_stat_data[$key] = $ar_childrens_of_this;
 		
 		return $ar_childrens_of_this ;
-	}
+	}//end get_ar_childrens_of_this
+
+
 
 	/**
 	* GET_AR_CHILDRENS
@@ -534,7 +534,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 		static $get_ar_childrens_data;	
 		$key = $tipo.'_'.$order_by;
 		if(isset($get_ar_childrens_data[$key])) {
-			if(SHOW_DEBUG) {
+			if(SHOW_DEBUG===true) {
 				#error_log("Returned cache value for get_ar_childrens $key");
 			}			
 			return $get_ar_childrens_data[$key];
@@ -556,7 +556,9 @@ class RecordObj_dd extends RecordDataBoundObject {
 		$get_ar_childrens_data[$key] = $ar_childrens;
 		
 		return $ar_childrens ;
-	}
+	}//end get_ar_childrens
+
+
 
 	# CHILDRENS RECURSIVE ARRAY
 	# SACA TODOS LOS HIJOS DEL TERMINO ACTUAL RECURSIVAMENTE
@@ -588,22 +590,22 @@ class RecordObj_dd extends RecordDataBoundObject {
 
 		$ar_resolved=array();
 		
-		if($is_recursion) {
+		if($is_recursion===true) {
 			#array_push($ar_resolved, $terminoID);
 			$ar_resolved[] = $terminoID;
 		}
 
-		$RecordObj_dd 	= new RecordObj_dd($terminoID);
-		$ar_childrens 	= (array)$RecordObj_dd->get_ar_childrens_of_this('si',null,null);
+		$RecordObj_dd = new RecordObj_dd($terminoID);
+		$ar_childrens = (array)$RecordObj_dd->get_ar_childrens_of_this('si',null,null);
 
 		foreach($ar_childrens as $current_terminoID) {
 
 			# Exclude models optional
-			if ($ar_exclude_models) {
+			if ($ar_exclude_models!==false) {
 				$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_terminoID,true);
 				if (in_array($modelo_name, $ar_exclude_models)) {
 					debug_log(__METHOD__." Skiped model '$modelo_name' ".to_string($current_terminoID), logger::DEBUG);
-					continue ;	// Skip current modelo and childrens 
+					continue;	// Skip current modelo and childrens 
 				}				
 			}
 
@@ -627,7 +629,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 		}
 		*/
 		
-		if($is_recursion) {
+		if($is_recursion===true) {
 			#array_push($ar_resolved, $terminoID);
 			$ar_resolved[] = $terminoID;
 		}
@@ -635,7 +637,6 @@ class RecordObj_dd extends RecordDataBoundObject {
 		#$ar_childrens  = (array)RecordObj_dd::get_ar_childrens($terminoID);
 		$RecordObj_dd 	= new RecordObj_dd($terminoID);
 		$ar_childrens 	= (array)$RecordObj_dd->get_ar_childrens_of_this('si',null,null);
-
 
 		foreach($ar_childrens as $current_terminoID) {
 
@@ -648,7 +649,8 @@ class RecordObj_dd extends RecordDataBoundObject {
 		}
 		
 		return $ar_resolved;
-	}
+	}//end get_ar_recursive_childrens_with_exclude
+
 	
 	
 	# GET PARENTS ARRAY
@@ -662,34 +664,35 @@ class RecordObj_dd extends RecordDataBoundObject {
 		
 		$ar_parents_of_this = array();	
 		$parent				= $this->get_parent();
-		if(!$parent) {
+		if(empty($parent)) {
 			return $ar_parents_of_this;
 		}
-		$parent_inicial		= $parent;	
+		$parent_inicial		= $parent;
 		$parent_zero		= 'dd0';
 
 		do {			
 			if( strpos($parent, $parent_zero)===false  ) { // $parent != $parent_zero
-				$ar_parents_of_this[]	= $parent;				
+				$ar_parents_of_this[] = $parent;				
 			}			
 			
-			$RecordObj_dd			= new RecordObj_dd($parent);	
-			$parent 				= $RecordObj_dd->get_parent();		#dump($parent); #die();	
+			$RecordObj_dd = new RecordObj_dd($parent);
+			$parent 	  = $RecordObj_dd->get_parent();
 
-			#$esdescriptor			= $RecordObj_dd->get_esdescriptor(); #if($esdescriptor!='si' && $parent!=$parent_zero) die( __METHOD__ ."<span class='error'> Error. this parent is not descriptor ! (parent:$parent, esdescriptor:$esdescriptor) </span>");				
+			#$esdescriptor = $RecordObj_dd->get_esdescriptor(); #if($esdescriptor!='si' && $parent!=$parent_zero) die( __METHOD__ ."<span class='error'> Error. this parent is not descriptor ! (parent:$parent, esdescriptor:$esdescriptor) </span>");				
 		
-		} while ( !empty($parent) && ($parent != $parent_zero) && $parent != $parent_inicial );
+		} while ( !empty($parent) && ($parent !== $parent_zero) && $parent !== $parent_inicial );
 		
 		
 		# ordenamos a la inversa los padres
 		#echo " ksort:";dump($ksort);
-		if($ksort==true) krsort($ar_parents_of_this);
+		if($ksort===true) krsort($ar_parents_of_this);
 		
 		# STORE CACHE DATA
 		$ar_parents_of_this_data[$this->terminoID] = $ar_parents_of_this;
 		
 		return $ar_parents_of_this ;
-	}	
+	}//end get_ar_parents_of_this
+
 	
 	
 	# GET SIBLINGS ARRAY [HERMANOS]
@@ -755,11 +758,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 		$get_n_hijos_data[$this->terminoID] = $n_hijos;	
 		
 		return $n_hijos;
-	}
-	
-	
-	
-	
+	}//end get_n_hijos	
 	
 
 	
@@ -779,16 +778,16 @@ class RecordObj_dd extends RecordDataBoundObject {
 		}
 	
 		$relaciones = json_decode($dato, true);		
-		#dump($dato,'dato en get_relaciones');
-
-		if ($modo=='simple') {
+	
+		/*
+		if ($modo==='simple') {
 			#$termonioID_related = array_values($relacionados[0]);
 			#$RecordObjt_dd 		= new RecordObj_dd($termonioID_related);
 		}
-		#dump($relaciones, ' relaciones');
+		*/
 
 		return $relaciones;	
-	}
+	}//end get_relaciones
 
 	
 
@@ -812,7 +811,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 		$ar_relaciones = $this->get_relaciones();
 		
 		# eliminamos del array el valor recibido
-		$ar_final = NULL;
+		$ar_final = null;
 		if(is_array($ar_relaciones)) foreach($ar_relaciones as $key => $ar_values) {
 			
 			foreach($ar_values as $modeloID => $terminoID) {
@@ -825,7 +824,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 		$this->set_relaciones($ar_final);
 		
 		return true;
-	}
+	}//end remove_element_from_ar_terminos_relacionados
 
 
 
@@ -840,13 +839,13 @@ class RecordObj_dd extends RecordDataBoundObject {
 	*/
 	public static function get_ar_terminos_relacionados($terminoID, $cache=false, $simple=false) {
 
-		#if(SHOW_DEBUG) $start_time = start_time();
-		# NO HACER CACHE EN ESTE MÉTODO		
+		#if(SHOW_DEBUG===true) $start_time = start_time();
+		# NO HACER CACHE EN ESTE MÉTODO	
 				
 		$ar_terminos_relacionados 	= array();
 		
 		$RecordObj_dd				= new RecordObj_dd($terminoID);
-		$ar_relaciones				= $RecordObj_dd->get_relaciones();	#echo " - get_ar_terminos_relacionados($terminoID): "; dump($ar_relaciones); echo "<hr>";	
+		$ar_relaciones				= $RecordObj_dd->get_relaciones();
 		
 		# SIMPLE . SOLO DEVUELVE EL ARRAY LIMPIO CON EL LISTADO DE terminoID
 		if($simple===true) {
@@ -857,12 +856,12 @@ class RecordObj_dd extends RecordDataBoundObject {
 					$ar_terminos_relacionados[]	= $terminoID;	
 				}					
 			}
-			$ar_relaciones	= $ar_terminos_relacionados;
+			$ar_relaciones = $ar_terminos_relacionados;
 		}
-		#if(SHOW_DEBUG) $GLOBALS['log_messages'] .= exec_time($start_time, __METHOD__, $ar_relaciones);
+		#if(SHOW_DEBUG===true) $GLOBALS['log_messages'] .= exec_time($start_time, __METHOD__, $ar_relaciones);
 		
-		return (array)$ar_relaciones;	
-	}
+		return (array)$ar_relaciones;
+	}//end get_ar_terminos_relacionados
 
 
 
@@ -881,8 +880,6 @@ class RecordObj_dd extends RecordDataBoundObject {
 		return $ar_recursive_childrens_of_this;
 	}
 	*/	
-	
-	
 
 
 
@@ -904,7 +901,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 		# TIPO : Acepta también arrays como entrada de tipo aunque sólo usa el primero. Evitar esto..
 		if(is_array($tipo) && isset($tipo[0])) {
 			$tipo = $tipo[0];
-			if(SHOW_DEBUG) {
+			if(SHOW_DEBUG===true) {
 				debug_log(__METHOD__." Used function 'get_ar_terminoID_by_modelo_name_and_relation' received one array instead a espected string. Used first value as tipo: ".to_string($tipo), logger::DEBUG);
 				throw new Exception("Error Processing Request", 1);				
 			}
@@ -917,7 +914,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 			return $get_ar_terminoID_by_modelo_name_and_relation_data[$name];
 		}
 
-		#if(SHOW_DEBUG) $start_time = start_time();		
+		#if(SHOW_DEBUG===true) $start_time = start_time();		
 		#dump($tipo);	#dump(debug_backtrace());
 		
 		switch($relation_type) {
@@ -926,7 +923,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 				
 					# Obtenemos los hijos
 					$RecordObj_dd	= new RecordObj_dd($tipo);
-					$ar_childrens	= $RecordObj_dd->get_ar_childrens_of_this();		#dump($ar_childrens,$section);
+					$ar_childrens	= $RecordObj_dd->get_ar_childrens_of_this();
 					
 					# los recorremos para filtrar por modelo
 					if(is_array($ar_childrens)) foreach($ar_childrens as $terminoID) {
@@ -936,21 +933,21 @@ class RecordObj_dd extends RecordDataBoundObject {
 
 						if(empty($modelo)) {
 							$name = RecordObj_dd::get_termino_by_tipo($terminoID);
-							throw new Exception("Error Processing Request. Modelo is empty. Please define modelo for this component $terminoID ($name)", 1);							
+							trigger_error("Error Processing Request. Modelo is empty. Please define modelo for this component $terminoID ($name)");
+							return array();
+							#throw new Exception("Error Processing Request. Modelo is empty. Please define modelo for this component $terminoID ($name)", 1);							
 						}
 						$current_modelo_name	= $RecordObj_dd->get_termino_by_tipo($modelo);	#dump($modelo_name);
 						
-						if($search_exact) {
-							if ($current_modelo_name==$modelo_name) {
+						if($search_exact===true) {
+							if ($current_modelo_name===$modelo_name) {
 								$result[] = $terminoID;
 							}
 						}else{
 							if(strpos($current_modelo_name, $modelo_name) !== false) {
-								$result[] = $terminoID;
-								#break;
+								$result[] = $terminoID;							
 							}
-						}
-						
+						}						
 					}
 					break;
 
@@ -968,18 +965,19 @@ class RecordObj_dd extends RecordDataBoundObject {
 
 						if(empty($modelo)) {
 							$name = RecordObj_dd::get_termino_by_tipo($terminoID);
-							throw new Exception("Error Processing Request. Modelo is empty. Please define modelo for this component $terminoID ($name)", 1);							
+							trigger_error("Error Processing Request. Modelo is empty. Please define modelo for this component $terminoID ($name)");
+							return array();
+							#throw new Exception("Error Processing Request. Modelo is empty. Please define modelo for this component $terminoID ($name)", 1);							
 						}
 						$current_modelo_name	= $RecordObj_dd->get_termino_by_tipo($modelo);	#dump($modelo_name);
 						
-						if($search_exact) {
-							if ($current_modelo_name==$modelo_name) {
+						if($search_exact===true) {
+							if ($current_modelo_name===$modelo_name) {
 								$result[] = $terminoID;
 							}
 						}else{
 							if(strpos($current_modelo_name, $modelo_name) !== false) {
 								 $result[] = $terminoID;
-								 #break;
 							}
 						}
 					}
@@ -999,18 +997,19 @@ class RecordObj_dd extends RecordDataBoundObject {
 
 						if(empty($modelo)) {
 							$name = RecordObj_dd::get_termino_by_tipo($terminoID);
-							throw new Exception("Error Processing Request. Modelo is empty. Please define modelo for this terminoID: $terminoID (name: $name)", 1);							
+							trigger_error("Error Processing Request. Modelo is empty. Please define modelo for this component $terminoID ($name)");
+							return array();
+							#throw new Exception("Error Processing Request. Modelo is empty. Please define modelo for this terminoID: $terminoID (name: $name)", 1);							
 						}
-						$current_modelo_name	= $RecordObj_dd->get_termino_by_tipo($modelo);		#dump($modelo_name);
+						$current_modelo_name	= $RecordObj_dd->get_termino_by_tipo($modelo);
 						
-						if($search_exact) {
-							if ($current_modelo_name==$modelo_name) {
+						if($search_exact===true) {
+							if ($current_modelo_name===$modelo_name) {
 								$result[] = $terminoID;
 							}
 						}else{
 							if(strpos($current_modelo_name, $modelo_name) !== false) {
 								 $result[] = $terminoID;
-								 #break;
 							}
 						}
 					}
@@ -1030,18 +1029,19 @@ class RecordObj_dd extends RecordDataBoundObject {
 
 						if(empty($modelo)) {
 							$name = RecordObj_dd::get_termino_by_tipo($terminoID);
-							throw new Exception("Error Processing Request. Modelo is empty. Please define modelo for this component $terminoID ($name)", 1);							
+							trigger_error("Error Processing Request. Modelo is empty. Please define modelo for this component $terminoID ($name)");
+							return array();
+							#throw new Exception("Error Processing Request. Modelo is empty. Please define modelo for this component $terminoID ($name)", 1);							
 						}
 						$current_modelo_name	= $RecordObj_dd->get_termino_by_tipo($modelo);		#dump($modelo_name);
 						
-						if($search_exact) {
-							if ($current_modelo_name==$modelo_name) {
+						if($search_exact===true) {
+							if ($current_modelo_name===$modelo_name) {
 								$result[] = $terminoID;
 							}
 						}else{							
-							if($current_modelo_name == $modelo_name) {
+							if($current_modelo_name===$modelo_name) {
 								 $result[] = $terminoID;
-								 #break;
 							}
 						}
 					}
@@ -1055,138 +1055,12 @@ class RecordObj_dd extends RecordDataBoundObject {
 		# STORE CACHE DATA
 		$get_ar_terminoID_by_modelo_name_and_relation_data[$name] = $result ;
 
-		#if(SHOW_DEBUG) $GLOBALS['log_messages'] .= exec_time($start_time, __METHOD__, $result );
+		#if(SHOW_DEBUG===true) $GLOBALS['log_messages'] .= exec_time($start_time, __METHOD__, $result );
 		
 		return (array)$result;
-	}
-	
-	
+	}//end get_ar_terminoID_by_modelo_name_and_relation
 
 	
 	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-
-
-
-	/**
-	* GET PROPIEDADES (JSON)
-	*//*
-	function get_propiedades($raw=false) {
-
-		if ($raw) {
-			return $this->propiedades;
-		}
-		
-		if($this->blIsLoaded != true) $this->Load();
-
-		if(!isset($this->propiedades)) return NULL;
-				
-		$propiedades = $this->propiedades;								#dump($propiedades,'propiedades pre json decode');
-
-		# FORMATOS RECIBIDOS:
-			# String:				María
-			# String JSON:			"María"
-			# Array secuencial:		["María","Begoña"] (Cualquier array cuyo key sea consecutivo y que comience en 0)
-			# Array no secuencial	{"nombre":"María","apellidos":"Pérez"} (Arrays asociativos o cualquier array cuyo key sea no consecutivo o que no comience en 0)
-		#
-		# Test dato . Decode and convert in array if have various values ( format json_decode($dato,true) )		
-		$propiedades_decoded = json_handler::decode($propiedades,true);
-			#dump($propiedades_decoded,'propiedades post json decode');
-		
-		# Case IS JSON encoded
-		if($propiedades_decoded != NULL) $propiedades = $propiedades_decoded;
-			#dump($propiedades,'$propiedades');
-
-		# "" is replaced by NULL . ("" es la representación json de null en DDBB)
-		if($propiedades=='""') return NULL;
-		
-		# Case IS String apply htmlspecialchars formater
-		#if(is_string($propiedades)) $propiedades = htmlspecialchars($propiedades);	DESHABILITADO (ALTERA EL DUPLICADO EN MATRIX TIME MACHINE)
-
-		return $propiedades;	
-	}
-	*/
-
-	/**
-	* SET PROPIEDADES (JSON)
-	*//*
-	function set_propiedades($propiedades, $raw=false) {
-
-		# Always set dato as modified
-		$this->arModifiedRelations['propiedades'] = "1";
-
-		if ($raw) {
-			$this->propiedades = $propiedades;			
-			return ;
-		}
- 
-		# JSON ENCODING
-		# FORZAMOS SIEMPRE CODIFICAR EN JSON (IMPORTANTE : JSON_UNESCAPED_UNICODE !!)
-		# FORMATOS:
-			# String:				María
-			# String JSON:			"María"
-			# Array secuencial:		["María","Begoña"] (Cualquier array cuyo key sea consecutivo y que comience en 0)
-			# Array no secuencial	{"nombre":"María","apellidos":"Pérez"} (Arrays asociativos o cualquier array cuyo key sea no consecutivo o que no comience en 0)
-
-		# En php <5.4 no existe JSON_UNESCAPED_SLASHES (su valor es int 256)
-		if(!defined('JSON_UNESCAPED_UNICODE')) define('JSON_UNESCAPED_UNICODE', 256);
-
-			#dump($propiedades,"set_propiedades pre json decode $propiedades",$raw);
-
-		# Reemplazamos las comillas dobles por sencillas antes de pasar el propiedades a JSON
-		if(is_string($propiedades)) {
-			#$propiedades = stripslashes($propiedades);				
-			$propiedades = str_replace('"', '\'',	$propiedades);
-		}
-		#$propiedades = json_encode($propiedades, JSON_UNESCAPED_UNICODE);			#dump(JSON_UNESCAPED_UNICODE);
-		$propiedades = json_handler::encode($propiedades,JSON_UNESCAPED_UNICODE);	# | JSON_NUMERIC_CHECK
-
-		if(is_numeric($propiedades)) {
-			$this->propiedades = $propiedades;
-		}else{
-			# stripslashes and addslashes text values
-			# is important and manpropiedadesry for avoid duplicate slashes			
-			if(is_string($propiedades)) {
-				$propiedades = stripslashes($propiedades);
-				$propiedades = stripslashes($propiedades);			
-				$propiedades = addslashes($propiedades);
-			}else if (is_null($propiedades)) {
-				$propiedades = '';
-			}
-			$this->propiedades = $propiedades;
-		}	
-	}
-	*/
-
-	/**
-	* GET_AR_TERMINOS_RELACIONADOS_REVERSE : Devuelve el array de términos (terminoID) que están relacionados con el pasado
-	*//*
-	public static function get_ar_terminos_relacionados_reverse___DEPRECATED($tipo, $esmodelo='no') {
-		
-		$arguments["strPrimaryKeyName"]	= 'terminoID';
-		$arguments["relaciones:json"]	= $tipo;
-		$arguments["esmodelo"]			= $esmodelo;
-		$RecordObj_dd					= new RecordObj_dd(NULL,substr($tipo, 0,2));
-		$ar_result						= $RecordObj_dd->search($arguments);
-			#dump($ar_result,'$ar_result');
-
-		return $ar_result;
-	}
-	*/
-
-
-	
-	
-	
-	
-}
+}//end RecordObj_dd
 ?>

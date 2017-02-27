@@ -11,7 +11,7 @@ class tool_transcription extends tool_common {
 	protected $component_obj ;
 
 	# text component
-	protected $component_related_obj ;
+	protected $component_related_obj;
 
 
 	public function __construct($component_obj, $modo='button') {
@@ -64,7 +64,7 @@ class tool_transcription extends tool_common {
 		}
 		*/
 		# método acceso directo al componente. buscamos probablemente el componente text_area para transcripbir (pude no haber)
-		$ar_terminos_relacionados = $this->component_obj->get_relaciones();
+		$ar_terminos_relacionados = $this->component_obj->RecordObj_dd->get_relaciones();
 			#dump($ar_terminos_relacionados,'$ar_terminos_relacionados');
 		
 		if(empty($ar_terminos_relacionados)) {
@@ -73,6 +73,7 @@ class tool_transcription extends tool_common {
 		}
 			
 		foreach ($ar_terminos_relacionados as $modelo => $termino_relacionado_tipo) {
+			$termino_relacionado_tipo = reset($termino_relacionado_tipo);
 			break;
 		}
 
@@ -90,7 +91,6 @@ class tool_transcription extends tool_common {
 		$this->component_related_obj = $component_text_area;
 
 		return $this->component_related_obj;
-
 	}//end get_component_related_obj
 
 
@@ -213,8 +213,11 @@ class tool_transcription extends tool_common {
 		$response->msg 	   = "Ok Processing Request pdf_automatic_transcription: text processed";
 		$response->original = trim($original_text);
 		return $response;
-
 	}#end build_pdf_transcription
+
+
+
+	
 
 
 

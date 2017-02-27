@@ -11,7 +11,6 @@
 	$label 					= $this->get_label();
 	$required				= $this->get_required();
 	$debugger				= $this->get_debugger();
-	if($modo != 'simple')
 	$permissions			= common::get_permissions($section_tipo,$tipo);
 	$ejemplo				= $this->get_ejemplo();
 	$html_title				= "Info about $tipo";
@@ -21,6 +20,8 @@
 	$identificador_unico	= $this->get_identificador_unico();
 	$component_name			= get_class($this);
 
+	if($permissions===0) return null;
+	
 	# Verify component content record is inside section record filter
 	if ($this->get_filter_authorized_record()===false) return NULL ;
 		

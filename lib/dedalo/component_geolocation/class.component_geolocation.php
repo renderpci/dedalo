@@ -1,9 +1,9 @@
 <?php
 /*
 * CLASS COMPONENT_GEOLOCATION
+*
+*
 */
-
-
 class component_geolocation extends component_common {
 	
 	# Overwrite __construct var lang passed in this component
@@ -31,7 +31,7 @@ class component_geolocation extends component_common {
 			$dato_new = new stdClass();	
 				$dato_new->lat		= '39.462571';
 				$dato_new->lon		= '-0.376295';	# Calle Denia
-				$dato_new->zoom		= 17;
+				$dato_new->zoom		= 15;
 				$dato_new->alt		= 16;
 				#$dato_new->coordinates	= array();
 			# END DEFAULT VALUES
@@ -54,7 +54,7 @@ class component_geolocation extends component_common {
 		
 		if(SHOW_DEBUG) {
 			$traducible = $this->RecordObj_dd->get_traducible();
-			if ($traducible=='si') {
+			if ($traducible==='si') {
 				throw new Exception("Error Processing Request. Wrong component lang definition. This component $tipo (".get_class().") is not 'traducible'. Please fix this ASAP", 1);
 			}
 		}
@@ -70,8 +70,19 @@ class component_geolocation extends component_common {
 
 	# SET_DATO
 	public function set_dato($dato) {
+
+		# json encoded dato
+		if (is_string($dato)) {
+			$dato = json_decode($dato);
+		}
+
+		if (!isset($dato->zoom)) {
+			$dato->zoom = "16";
+		}
+
 		parent::set_dato( (object)$dato );
 	}
+
 
 
 	# OVERRIDE COMPONENT_COMMON METHOD
@@ -100,8 +111,8 @@ class component_geolocation extends component_common {
 		$valor = (array)self::get_dato();
 
 		$separator = ' ,  ';
-		if($this->modo=='list') $separator = '<br>';
-	#dump($valor,"valor");
+		if($this->modo==='list') $separator = '<br>';
+	
 		if (is_object($valor)) {
 			$valor = array($valor); # Convert json obj to array			
 		}
@@ -121,13 +132,74 @@ class component_geolocation extends component_common {
 		}else{
 			
 			return $valor;
-		}			
-		
+		}		
 	}//end get_valor
 
 
 
+	/**
+	* GET_DIFFUSION_VALUE
+	* Overwrite component common method
+	* Calculate current component diffusion value for target field (usually a mysql field)
+	* Used for diffusion_mysql to unify components diffusion value call
+	* @return string $diffusion_value
+	*
+	* @see class.diffusion_mysql.php
+	*/
+	public function get_diffusion_value( $lang=null ) {
+	
+		$dato 			 = $this->get_dato();
+		$diffusion_value = json_encode($dato);
+
+		return (string)$diffusion_value;
+	}//end get_diffusion_value
 
 
-};
+
+	/**
+	* BUILD_GEOLOCATION_TAG_STRING
+	* Example
+	* [geo-n-1-data:{'type':'FeatureCollection','features':[{'type':'Feature','properties':{},'geometry':{'type':'Point','coordinates':[2.304362542927265,41.82053505145308]}}]}:data]
+	* {
+		"type": "FeatureCollection",
+		"features": [
+		    {
+		      "type": "Feature",
+		      "properties": {},
+		      "geometry": {
+		        "type": "Point",
+		        "coordinates": [
+		          2.304362542927265,
+		          41.82053505145308
+		        ]
+		      }
+		    }
+		]
+	* }
+	*
+	* @return 
+	*/
+	public static function build_geolocation_tag_string($tag_id, $lon, $lat) {
+		/*
+		$geometry = new stdClass();
+			$geometry->type 		= "Point";
+			$geometry->coordinates 	= array($lon, $lat)
+
+		$feature = new stdClass();
+			$feature->type 		 = "Feature";
+			$feature->properties = new stdClass();
+			$feature->geometry 	 = $geometry
+		
+		$data = new stdClass();
+			$data->type 	= 'FeatureCollection';
+			$data->features = array( $feature );
+		*/
+		$result = "[geo-n-".$tag_id."-data:{'type':'FeatureCollection','features':[{'type':'Feature','properties':{},'geometry':{'type':'Point','coordinates':[".$lon.",".$lat."]}}]}:data]";
+
+		return (string)$result;
+	}//end build_geolocation_tag_string
+
+
+
+}
 ?>

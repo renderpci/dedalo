@@ -152,7 +152,7 @@ class logger_backend_activity extends logger_backend {
 
 
 		# DEBUG : Time
-		if(SHOW_DEBUG) {
+		if(SHOW_DEBUG===true) {
 			$start_time = start_time();
 			global$TIMER;$TIMER[get_called_class().'_IN_'.$tipo_donde.'_'.microtime(1)]=microtime(1);
 		}
@@ -168,7 +168,7 @@ class logger_backend_activity extends logger_backend {
 					$ip_address	= 'unknow';
 					if (isset($_SERVER['REMOTE_ADDR']))
 					$ip_address	= $_SERVER["REMOTE_ADDR"];
-					if($ip_address=='::1') $ip_address = 'localhost';
+					if($ip_address==='::1') $ip_address = 'localhost';
 
 					$component_tipo = self::$_COMPONENT_IP['tipo'];
 					$component_obj  = self::build_component_activity_object($ip_address);
@@ -341,7 +341,7 @@ class logger_backend_activity extends logger_backend {
 							#dump($save_options,"save_options");die();
 					$id_section = $section->Save( $save_options );
 
-					if(SHOW_DEBUG) {
+					if(SHOW_DEBUG===true) {
 						#$GLOBALS['log_messages'] .= exec_time($start_time, __METHOD__, 'logger_backend_activity '.$id_section);
 						$TIMER[get_called_class().'_OUT_'.$tipo_donde.'_'.microtime(1)]=microtime(1);
 					}

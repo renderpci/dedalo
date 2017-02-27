@@ -137,9 +137,9 @@ class tool_layout_print extends tool_common {
 
 				# Define if header and footer will be rendered.
 				# In preview mode, we only need render first page
-				if ($options->render_type=='preview' && $p<=1) {
+				if ($options->render_type==='preview' && $p<=1) {
 					$header_footer = true;
-				}else if ($options->render_type=='preview' && $p>1) {
+				}else if ($options->render_type==='preview' && $p>1) {
 					$header_footer = false;
 				}else{
 					$header_footer = true;
@@ -158,7 +158,7 @@ class tool_layout_print extends tool_common {
 					preg_match("/[0-9]+_((.{3,})_[0-9]+)/", $page_key, $output_array);
 					# If current pkey is like main section, is assigned. If not main_section_key is maintained
 					$current_section 	= $output_array[2];	// Like oh1 from 2_oh1_1
-					if ($current_section==$main_section_tipo) {
+					if ($current_section===$main_section_tipo) {
 						$main_section_key = $output_array[1];  // Like oh1_1 from 2_oh1_1
 							#dump($main_section_key, " main_section_key ++ main_section_tipo: $main_section_tipo ++ current_section: ".to_string($current_section));
 					}
@@ -232,7 +232,7 @@ class tool_layout_print extends tool_common {
 									$result->ar_pages[$page_key.$p] = (string)$current_page_html->html;
 
 									$p++;
-									if($options->render_type=='preview') break; // Only one record is needed
+									if($options->render_type==='preview') break; // Only one record is needed
 								}
 
 							}//end foreach ($portal_data as $current_locator) {
@@ -264,7 +264,7 @@ class tool_layout_print extends tool_common {
 								$result->ar_pages[$page_key.$p] = (string)$current_page_html->html;
 
 								$p++;
-								if($options->render_type=='preview') break; // Only one record is needed
+								if($options->render_type==='preview') break; // Only one record is needed
 							}//end foreach ($portal_data as $current_locator) {
 
 						}//end if ($portal_section != $section_tipo_general) {
@@ -315,7 +315,7 @@ class tool_layout_print extends tool_common {
 			}//end foreach ((array)$options->pages as $pkey => $current_page) {
 
 
-			if($options->render_type=='preview') break;	// Force break in preview mode
+			if($options->render_type==='preview') break;	// Force break in preview mode
 		}//end foreach ($options->records as $key => $current_record) {
 		
 		
@@ -405,7 +405,7 @@ class tool_layout_print extends tool_common {
 			#dump($options->header_footer, " options->header_footer ".to_string());
 
 		# PAGE ATTR		
-		if ($render_type=='preview') {
+		if ($render_type==='preview') {
 			$page_id = $page->html_id;
 		}else{
 			$page_id = $page->html_id.'_'.	microtime(true);
@@ -414,7 +414,7 @@ class tool_layout_print extends tool_common {
 		$dataset 	= isset($page->data) ? self::build_attr('dataset', $page->data) : '';
 		$css_class 	= isset($page->css->class) ? self::build_attr('css_class', $page->css->class) : '';
 		$css_style  = isset($page->css->style) ? self::build_attr('css_style', $page->css->style) : '';
-		$edit_events= $render_type=='preview' ? self::build_attr('edit_events', null) : '';
+		$edit_events= $render_type==='preview' ? self::build_attr('edit_events', null) : '';
 
 
 		#
@@ -456,7 +456,7 @@ class tool_layout_print extends tool_common {
 					$header_html = self::build_header_footer_html($element_options);
 				}
 				# Only add to page html when is set to true
-				if ($options->header_footer==true) {
+				if ($options->header_footer===true) {
 				 	$html .= $header_html;
 				}				
 
@@ -507,7 +507,7 @@ class tool_layout_print extends tool_common {
 					$footer_html = self::build_header_footer_html($element_options);					
 				}
 				# Only add to page html when is set to true
-				if ($options->header_footer==true) {
+				if ($options->header_footer===true) {
 				 	$html .= $footer_html;
 				}
 
@@ -623,7 +623,7 @@ class tool_layout_print extends tool_common {
 		$dataset 	= isset($element->data) ? self::build_attr('dataset', $element->data) : '';
 		$css_class 	= isset($element->css->class) ? self::build_attr('css_class', $element->css->class) : '';
 		$css_style  = isset($element->css->style) ? self::build_attr('css_style', $element->css->style) : '';
-		$edit_events= $options->render_type=='preview' ? self::build_attr('edit_events', null) : '';
+		$edit_events= $options->render_type==='preview' ? self::build_attr('edit_events', null) : '';
 
 		if ($options->record) {	
 
@@ -646,7 +646,7 @@ class tool_layout_print extends tool_common {
 																$section_tipo
 																);
 			*/
-			if( $modelo_name ==  'section_group'){
+			if( $modelo_name === 'section_group'){
 				$component_obj 	= new $modelo_name( $component_tipo,
 													$section_tipo,
 													'print'
@@ -775,7 +775,7 @@ class tool_layout_print extends tool_common {
 		$dataset 	= isset($element->data) ? self::build_attr('dataset', $element->data) : '';
 		$css_class 	= isset($element->css->class) ? self::build_attr('css_class', $element->css->class) : '';
 		$css_style  = isset($element->css->style) ? self::build_attr('css_style', $element->css->style) : '';
-		$edit_events= $options->render_type=='preview' ? self::build_attr('edit_events', null) : '';
+		$edit_events= $options->render_type==='preview' ? self::build_attr('edit_events', null) : '';
 		$content 	= isset($element->content) ? $element->content : '';
 		$title 		= "title=\"Drag free text box to page\"";
 
@@ -809,14 +809,14 @@ class tool_layout_print extends tool_common {
 		$hf_element = $options->hf_element;		#dump($hf_element, '$hf_element');
 		if (!$hf_element) return null;
 
-		if ($options->name=='footer') return '';
+		if ($options->name==='footer') return '';
 
 		# HF ATTR
 		$id 		= isset($hf_element->html_id) ? self::build_attr('id', $hf_element->html_id) : '';
 		$dataset 	= isset($hf_element->data) ? self::build_attr('dataset', $hf_element->data) : '';
 		$css_class 	= isset($hf_element->css->class) ? self::build_attr('css_class', $hf_element->css->class) : '';
 		$css_style  = isset($hf_element->css->style) ? self::build_attr('css_style', $hf_element->css->style) : '';
-		$edit_events= $options->render_type=='preview' ? self::build_attr('edit_events', null) : '';
+		$edit_events= $options->render_type==='preview' ? self::build_attr('edit_events', null) : '';
 		
 		$header_footer_html .= "\n <div $id $css_class $css_style $dataset $edit_events >";
 
@@ -842,14 +842,14 @@ class tool_layout_print extends tool_common {
 				$header_footer_html .= self::build_free_text_html($element_options);
 			}//en if(isset($hf_element->free_text)) foreach ((array)$hf_element->free_text as $key => $element) {
 
-			if ($options->name=='footer') {
+			if ($options->name==='footer') {
 				#$header_footer_html .= "<div class=\"pagination_info\">Page <span class=\"var_pdf_page\">X</span> of <span class=\"var_pdf_topage\">X</span></div>";
 			}
 			
 
 		$header_footer_html .= "</div><!-- /$options->name -->";
 
-		if ($options->name=='footer') {
+		if ($options->name==='footer') {
 			/*
 			$header_footer_html .="
 			<script>
@@ -968,7 +968,7 @@ class tool_layout_print extends tool_common {
 				$layout_obj->section_id				= $section_id;
 				$layout_obj->type 					= $type;
 				$layout_obj->section_layout_tipo 	= $section_layout_tipo;		
-				$layout_obj->label 					= $component_label->get_dato();				
+				$layout_obj->label 					= $component_label->get_valor(0);				
 				$layout_obj->section_layout_dato 	= $component_layout->get_dato();
 				$layout_obj->component_layout_tipo  = $component_layout_tipo;				
 
@@ -1063,7 +1063,7 @@ class tool_layout_print extends tool_common {
 				continue;
 			}
 			/**/
-			if($modelo_name =='section_group'){
+			if($modelo_name === 'section_group'){
 
 				$component = new $modelo_name($component_tipo, $section_tipo, 'print');
 
@@ -1074,7 +1074,7 @@ class tool_layout_print extends tool_common {
 				$ar_section_resolved[$section_tipo][$component_tipo] = $component;
 				#$ar_components[$value] = RecordObj_dd::get_termino_by_tipo($value);
 
-			}else if($modelo_name =='component_portal'){
+			}else if($modelo_name === 'component_portal'){
 			
 				$RecordObj_dd = new RecordObj_dd($component_tipo);
 				$ar_relaciones = $RecordObj_dd->get_relaciones();
@@ -1100,7 +1100,7 @@ class tool_layout_print extends tool_common {
 				foreach ($ar_relaciones as $key => $relaciones) {
 					foreach ($relaciones as $modelo => $componente_tipo_relationed) {
 						$modelo_name = RecordObj_dd::get_termino_by_tipo($modelo, null, true);
-						if($modelo_name =='section'){
+						if($modelo_name === 'section'){
 							//$section_real_tipo = section::get_section_real_tipo_static($componente_tipo);
 							$ar_section_resolved[$section_tipo][$component_tipo]['section'] = $this->get_ar_components($componente_tipo_relationed, $component_dato, $resolve_virtual=true);
 							#$ar_section_resolved['all_sections'][]=$componente_tipo_relationed; 
@@ -1260,7 +1260,7 @@ class tool_layout_print extends tool_common {
 			preg_match("/[0-9]+_((.{3,})_[0-9]+)/", $pkey, $output_array);
 			# If current pkey is like main section, is assigned. If not main_section_key is maintained
 			$current_section 	= $output_array[2];	// Like oh1 from 2_oh1_1
-			if ($current_section==$main_section_tipo) {
+			if ($current_section===$main_section_tipo) {
 				$main_section_key = $output_array[1];  // Like oh1_1 from 2_oh1_1
 					#dump($main_section_key, ' main_section_key ++ '.to_string());
 			}

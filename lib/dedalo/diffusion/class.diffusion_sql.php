@@ -26,22 +26,21 @@ class diffusion_sql extends diffusion  {
 	* GET_DB_SCHEMA
 	* Simply Exec self::build_table_columns for every table in structure
 	* @param string $database_tipo like 'dd521'
-	*/
-	public function get_db_schema($database_tipo) {
+	*//*
+	public function get_db_schema($database_tipo) {	
 		
-		#
 		# DEFAULT CASE
 		# table in first level
-		$ar_diffusion_table = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($database_tipo, $modelo_name='table', $relation_type='children', $search_exact=true);		
+		$ar_diffusion_table = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($database_tipo, $modelo_name=array('table'), $relation_type='children', $search_exact=true);		
 
 			# Recorremos hijos de la primera/as tabla/s
 			foreach ($ar_diffusion_table as $key => $current_table_tipo) {
 				
-				if(SHOW_DEBUG) {
+				if(SHOW_DEBUG===true) {
 
 					# Table verify
 					$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_table_tipo,true);
-					if ($modelo_name=='section') {				
+					if ($modelo_name==='section') {				
 					
 						$ar_section = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($current_table_tipo, 'section', 'termino_relacionado', true);
 						#dump($ar_section,'ar_section : '.$database_tipo);
@@ -53,10 +52,10 @@ class diffusion_sql extends diffusion  {
 					}
 				}			
 				# Exec build_table_columns for each table
-				self::build_table_columns($current_table_tipo, $database_tipo);		
-			}
-			
-		#
+				$result = self::build_table_columns($current_table_tipo, $database_tipo);
+				#dump($result, ' result ++ '.to_string());	
+			}			
+		
 		# THESAURUS CASE
 		# table_thesaurus in first level
 		$ar_diffusion_table_thesaurus = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($database_tipo, $modelo_name='table_thesaurus', $relation_type='children', true);
@@ -77,10 +76,9 @@ class diffusion_sql extends diffusion  {
 					self::$ar_table[$options->database_name][$current_table_tipo] = $thesaurus_columns;
 				}
 			}
-
 		#dump(self::$ar_table, 'self::$ar_table ++ '.to_string()); die();
-	}#end get_db_schema	
-
+	}#end get_db_schema*/
+	
 
 
 	/**
@@ -94,10 +92,20 @@ class diffusion_sql extends diffusion  {
 		
 		$ar_table_data=array();
 
+
 		$ar_table_data['database_name']	= $database_name;	//self::$database_name;
 		$ar_table_data['table_name']	= RecordObj_dd::get_termino_by_tipo($table_tipo, DEDALO_STRUCTURE_LANG, true, false);
 		$ar_table_data['ar_fields'] 	= array();
 
+
+		# Table propiedades SCHEMA optional
+		$RecordObj_dd 	  = new RecordObj_dd($table_tipo);
+		$str_propiedades  = $RecordObj_dd->get_propiedades();
+		if($propiedades = json_decode($str_propiedades)) {
+			if (isset($propiedades->schema)) {
+				self::save_table_schema(  $database_name, $ar_table_data['table_name'], $propiedades->schema );
+			}
+		}
 
 		#
 		# ID FIELD	. Mandatory column
@@ -124,8 +132,13 @@ class diffusion_sql extends diffusion  {
 
 			$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($curent_children_tipo,true);
 
+			if ($modelo_name==='box elements') {
+				continue;
+			}
+
 			switch ($modelo_name) {
-				case 'table':
+
+				case 'table': // ESTO SE USA ????????
 					#
 					# TABLE
 					$options = new stdClass();
@@ -163,8 +176,7 @@ class diffusion_sql extends diffusion  {
 								$ar_column_data['field_options'] 	= (string)' ';
 								$ar_table_data['ar_fields'][] 		= $ar_column_data;	# Add column
 								#error_log("Add column field_name:$current_dedalo_country - field_type:field_text, - field_coment:Autocreated column for country compatibility - field_options:'' ");
-							}
-							
+							}							
 					}else{
 					# DEFAULT CASE
 						$options = new stdClass();
@@ -180,438 +192,6 @@ class diffusion_sql extends diffusion  {
 
 		return self::$ar_table[$database_name][$table_tipo] = $ar_table_data;
 	}#end build_table_columns
-
-
-
-	/**
-	* GET_DB_DATA
-	* Simply Exec self::build_table_columns_data for every table in structure
-	* @param string $database_tipo Like 'dd1260'
-	*//*
-	public function get_db_data__DEPRECATED($database_tipo) {
-		
-		#
-		# DEFAULT CASE
-		# Tablas en el primer nivel
-		$ar_diffusion_table = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($database_tipo, $modelo_name='table', $relation_type='children', $search_exact=true);	
-
-			# Recorremos hijos de la primera/as tabla/s
-			foreach ($ar_diffusion_table as $current_table_tipo) {
-
-				if(SHOW_DEBUG) {
-					$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_table_tipo,true);
-					if ($modelo_name=='section') {	
-						# Table verify				
-						$ar_section = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($current_table_tipo, 'section', 'termino_relacionado', true);				
-
-						if(empty($ar_section)) {
-							debug_log(__METHOD__." Current diffusion table ($current_table_tipo) is excluded from diffusion data because don't have related 'section'. Please fix this ASAP ".to_string(), logger::WARNING);
-							continue;
-						}
-					}
-				}			
-				# Exec build_table_columns_data for each table
-				self::build_table_columns_data($current_table_tipo, null, $database_tipo);
-				
-			}#end foreach
-	
-
-		#
-		# THESAURUS CASE
-		# table_thesaurus in first level
-		$ar_diffusion_table_thesaurus = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($database_tipo, $modelo_name='table_thesaurus', $relation_type='children', true);
-
-			# Recorremos hijos de la primera/as tabla/s
-			foreach ($ar_diffusion_table_thesaurus as $current_table_tipo) {
-
-				$RecordObj_dd = new RecordObj_dd($current_table_tipo);
-				$propiedades  = json_decode( $RecordObj_dd->get_propiedades() );
-					#dump($propiedades, ' propiedades ++ '.to_string());
-				if (isset($propiedades->ar_tables)) {
-					$options = new stdClass();
-						$options->ar_tables  		= $propiedades->ar_tables;
-						$options->table_name 		= RecordObj_dd::get_termino_by_tipo($current_table_tipo, DEDALO_STRUCTURE_LANG, true, false);
-						$options->diffusion_section = $current_table_tipo;
-					$thesaurus_columns_data  = self::build_thesaurus_columns_data( $options );
-					self::$ar_table_data[$database_tipo][$current_table_tipo] = $thesaurus_columns_data;
-				}
-			}	
-	}#end get_db_data
-	*/
-
-
-
-	/** 
-	* BUILD_TABLE_COLUMNS_DATA (RECURSIVE)
-	* Construye los datos para introducir en los campos de la tabla generada y los fija en la variable estática self::$ar_table_data
-	* @param string $table_tipo like 'oh1'
-	* @param array $ar_section_id_portal Optional. Default empty array
-	* @param string $database_name like 'web_xxx'
-	* @param array|bool $ar_result
-	*	Default false
-	* @param string $diffusion_element_tipo
-	*
-	* @see $his->get_db_data
-	*/
-	public static function build_table_columns_data($table_tipo, $ar_section_id_portal=array(), $database_name, $ar_result=false, $diffusion_element_tipo) {
-
-		if(SHOW_DEBUG) {
-			#dump($ar_section_id_portal,"ar_section_id_portal - table_tipo: $table_tipo (".RecordObj_dd::get_termino_by_tipo($table_tipo).") - database_name: $database_name (".RecordObj_dd::get_termino_by_tipo($database_name).") "); #die();
-			#dump($table_tipo,"table_tipo");#die();
-			#dump($ar_section_id_portal, ' ar_section_id_portal ++ '.to_string());
-			#dump($table_tipo, ' table_tipo ++ '); dump($ar_section_id_portal, ' ar_section_id_portal ++ '); dump($database_name, ' database_name ++ '); dump($ar_result, ' ar_result ++ '); dump($diffusion_element_tipo, ' diffusion_element_tipo ++ ');
-			#exit();
-		}
-
-		# SECTION try . Target section is a related term of current difusion pointer. Normally is section, but can be a portal
-		$pointer_type='section';
-		$ar_section_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($table_tipo, 'section', 'termino_relacionado');
-		if (empty($ar_section_tipo[0])) {
-			# PORTAL try
-			$pointer_type='portal';
-			$ar_section_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($table_tipo, 'component_portal', 'termino_relacionado');
-		}
-		if(!isset($ar_section_tipo[0])) throw new Exception("Error Processing Request, section_tipo is empty. Please define valid related term (section or portal) for pointer table_tipo:$table_tipo", 1);			
-		# dump($ar_section_tipo," ar_section_tipo - table_tipo:$table_tipo");#die();
-
-		
-		# SECTION_TIPO . Set section tipo
-		$section_tipo = $ar_section_tipo[0];
-			
-			#
-			# AR_RESULT . Get all matrix records in current table / portal. When portal is request, records of portal are in var '$ar_section_id_portal'
-			# NOTE : Because we need section_id and section_tipo of every item (multi-target portals), format $ar_result contains this data always
-			if (!$ar_result) {
-				if(!empty($ar_section_id_portal)) {
-					# Records here are the portal dato locators
-					# $ar_result	= $ar_section_id_portal;
-					foreach ($ar_section_id_portal as $key => $object) {
-						// Override section_tipo for each element
-						$ar_result[] = array($object->section_tipo => $object->section_id);
-					}
-				}else{
-					# Buscamos TODOS los registros de esta sección
-					$ar_result_id  = section::get_ar_all_section_records_unfiltered($section_tipo);
-					foreach($ar_result_id as $current_id) {
-						// Use general section_tipo for each element
-						$ar_result[] = array($section_tipo => $current_id);
-					}		
-				}
-			}
-			#dump($ar_section_id_portal, ' ar_section_id_portal ++ '.to_string());			
-			#dump($ar_result," ar_result section_tipo:$section_tipo - table_tipo:$table_tipo - ar_section_id_portal:".to_string($ar_section_id_portal)); #die();			
-			
-			#
-			# LANGS
-			/*
-				switch ($pointer_type) {
-
-					case 'portal':
-						$portal_tipo 		 = $section_tipo;
-						$portal_section_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($section_tipo, 'section', 'parent')[0];
-						$component_portal	 = component_common::get_instance('component_portal',
-																			  $portal_tipo,
-																			  null,
-																			  'list',
-																			  DEDALO_DATA_NOLAN,
-																			  $portal_section_tipo);
-						$lang_target_section_tipo = $component_portal->get_ar_target_section_tipo()[0];	 // First of array of target secitions (multy target portal arrived)
-							dump($lang_target_section_tipo, ' lang_target_section_tipo ++ '.to_string($portal_tipo));												
-						break;
-
-					default:					
-						$lang_target_section_tipo = $section_tipo;				
-						break;
-				}
-				# Verify lang_target_section_tipo
-				if(empty($lang_target_section_tipo)) throw new Exception("Error Processing Request. lang_target_section_tipo is empty", 1);		
-				*/
-
-			
-			# From config :
-			$ar_all_project_langs 	= unserialize(DEDALO_PROJECTS_DEFAULT_LANGS);			
-			if(SHOW_DEBUG) {
-				#dump($ar_all_project_langs," ar_all_project_langs");die();	
-				#$ar_all_project_langs = array('lg-spa'); # Test only
-			}
-
-			$ar_field_data['database_name']	= (string)$database_name;
-			$ar_field_data['table_name'] 	= (string)RecordObj_dd::get_termino_by_tipo($table_tipo, DEDALO_STRUCTURE_LANG, true, false);
-
-			# TABLE CHILDREN (FIELDS)
-				$RecordObj_dd 	   = new RecordObj_dd($table_tipo);
-				$ar_table_children = $RecordObj_dd->get_ar_childrens_of_this();
-
-			# COMPONENT_PUBLICATION_TIPO
-				$component_publication_tipo = false;
-
-				#
-				# RESOLVED RECORDS
-				# Store resolved records to avoid infinite loops
-				static $resolved_records;			
-				
-	
-				#
-				# RECORDS
-				$ar_data=array();
-				$i=0;
-				$ar_portal_records=array();
-				if($ar_result) foreach ((array)$ar_result as $records) foreach ($records as $section_tipo => $current_section_id) {	# iteramos por registros
-					#dump($current_section_id, ' current_section_id ++ '.to_string());
-
-					# test
-					#$current_section_id=1;
-					#$ar_all_project_langs = array('lg-lvca'); //ONLY ONE NOW FOR TEST
-
-					# RESOLVED_RECORDS_KEY
-					$resolved_records_key = $section_tipo.'-'.$current_section_id;
-					if (in_array($resolved_records_key, (array)$resolved_records)) {
-						debug_log(__METHOD__." SKIPPED RECORD [$resolved_records_key]. ALREADY RESOLVED. ".to_string(), logger::WARNING);
-						error_log(" SKIPPED RECORD [$resolved_records_key]. ALREADY RESOLVED. ");
-						continue;
-					}
-					#debug_log(__METHOD__." !!!! resolved_records ".to_string($resolved_records), logger::DEBUG);
-
-					#
-					# SECTION DIFFUSION INFO - CHECK
-					# On finish record update, update current section diffusion_info
-					$section = section::get_instance($current_section_id, $section_tipo, $modo='list');
-					$diffusion_info = $section->get_diffusion_info();
-					if ( isset($diffusion_info->$diffusion_element_tipo) ) {
-
-						if(isset($_SESSION['dedalo4']['config']['skip_publication_state_check']) && $_SESSION['dedalo4']['config']['skip_publication_state_check']==1) {
-							# Nothing to do. (Configurated from tool_administrator)
-						}else{
-
-							# RESOLVED_RECORDS (set a resoolved)
-							$resolved_records[] = $resolved_records_key;
-
-							debug_log(__METHOD__." Skipped current record [{$section_tipo}-{$current_section_id}]. Already published ($diffusion_element_tipo). ".to_string(), logger::DEBUG);
-							continue;
-						}
-					}
-
-
-					#
-					# COMPONENT PUBLICATION - CHECK
-					if(!$component_publication_tipo) {
-						$component_publication_tipo = self::get_component_publication_tipo($ar_table_children);
-					}
-					#dump($component_publication_tipo, ' component_publication_tipo ++ '.to_string($section_tipo));					
-					
-					$component_publication_bool_value = (bool)self::get_component_publication_bool_value($component_publication_tipo, $current_section_id, $section_tipo);
-						#dump($component_publication_bool_value, ' component_publication_bool_value ++ '.to_string());
-					
-					if (!$component_publication_bool_value) {
-						# Skip this record
-						self::delete_sql_record($current_section_id, $ar_field_data['database_name'], $ar_field_data['table_name']);
-						debug_log(__METHOD__." Skipped record $current_section_id ".to_string($ar_field_data['table_name'])." (publication=no)", logger::DEBUG);
-
-						$section->diffusion_info_add($diffusion_element_tipo);
-						$section->Save();
-						debug_log(__METHOD__." Added current diffusion_element_tipo $diffusion_element_tipo to data. Section diffusion_info updated and saved [{$section_tipo}-{$current_section_id}]. ".to_string(), logger::DEBUG);
-						
-						# RESOLVED_RECORDS (set a resoolved)
-						$resolved_records[] = $resolved_records_key;
-
-						continue;
-					}
-								
-					
-
-					#
-					# LANGS ITERATION
-					foreach ($ar_all_project_langs as $current_lang) {	# iteramos por idioma						
-
-							#
-							# SECTION_ID . Mandatory column . Add field section_id to table data
-							# COLUMN ADD ###################################################
-							$options = new stdClass();
-								$options->typology 	= 'section';
-								$options->value 	= $current_section_id;
-							$ar_field_data['ar_fields'][$current_section_id][$current_lang][] = self::build_data_field( $options );
-							#$ar_field_data['ar_fields'][$current_section_id][$current_lang][] = self::create_data_field($pointer_section_tipo, $current_section_id, true);											
-
-							#
-							# LANG . Mandatory column. Add field lang to table data
-							# COLUMN ADD ###################################################
-							$options = new stdClass();
-								$options->typology 	= 'lang';
-								$options->value 	= $current_lang;
-							$ar_field_data['ar_fields'][$current_section_id][$current_lang][] = self::build_data_field( $options );
-							#$ar_field_data['ar_fields'][$current_section_id][$current_lang][] = self::create_data_field('lang',$current_lang);						
-
-							#
-							# COLUMNS . Normal table columns / fields	
-							# NORMAL COLUMNS ITERATE ###################################################							
-							foreach ((array)$ar_table_children as $curent_children_tipo) {								
-								
-								# Obtenemos el modelo de los hijos de la tabla para identificar los campos y las tablas relacionadas
-								$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($curent_children_tipo,true);
-									#dump($modelo_name, ' modelo_name');
-
-								# Si el modelo es "field" es un campo directo
-								# Si el modelo es "tabla" es un puntero a un portal, se convertirá este hijo en un campo que relacionará las dos tablas
-								switch (true) {
-
-									case ($modelo_name=='table') : # Pointer to portal case
-										
-										# PORTAL
-										# Tabla = portal, obtenemos del elemento 'tabla', su portal (es el término relacionado)
-										# El término 'tabla' se convierte en un campo que apunta a la tabla relacionada que se creará
-										$portal_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($curent_children_tipo, 'component_portal', 'termino_relacionado')[0];
-										if (SHOW_DEBUG) {
-											if (empty($portal_tipo)) {
-												throw new Exception("Error Processing Request. 
-													component_portal not found as 'termino_relacionado' by get_ar_terminoID_by_modelo_name_and_relation children_tipo:$curent_children_tipo ,component_portal, termino_relacionado
-													Please verify structure for this element, is possible that related term is not portal (maybe section?)", 1);										
-											}
-										}
-										
-										# AR_PORTAL_DATA . CAMPO TABLA : Generamos el campo con los datos (registros) del portal que vienen de Matrix
-										$options = new stdClass();
-											$options->typology 		= 'portal';
-											$options->tipo 			= $curent_children_tipo;
-											$options->parent 		= $current_section_id;
-											#$options->section_tipo 	= ($pointer_type=='portal') ? $portal_section_tipo : $section_tipo; 
-											$options->section_tipo 	= $section_tipo; // Verificar esto !!
-											$options->caler_id 		= "2 - ".$section_tipo;	//$lang_target_section_tipo;									
-										$ar_portal_data = self::build_data_field( $options );																
-											#dump($ar_portal_data,"build_data_field: ar_portal_data - portal_tipo: $portal_tipo - section_tipo: $section_tipo - curent_children_tipo: ".$curent_children_tipo); //die();
-
-										# Añade el resultado de la generación del campo al array de campos generados (Vínculo con el portal)
-										# COLUMN ADD ###################################################
-										$ar_field_data['ar_fields'][$current_section_id][$current_lang][] = $ar_portal_data;
-											#dump($ar_portal_data,'$ar_portal_data');
-										
-										# Obetenos el "locator" del portal para identificar los enlaces directos en la posición del "tipo ("0") y los enlaces a etiquetas ("dd341")
-										$current_ar_portal_section_id=array();
-										#foreach ($ar_portal_data['field_value'] as $section_id) {
-										#	$current_ar_portal_section_id[] = $section_id; # Nota: 'current_locator' es section_id
-										#}
-										foreach ($ar_portal_data['dato'] as $key => $current_locator) {
-											$current_ar_portal_section_id[] = $current_locator;
-										}
-
-										# Create ar_portal_records if not exits. curent_children_tipo es el tipo de la tabla de difusión, como oh94 para informant
-										if (!isset($ar_portal_records[$curent_children_tipo])) {
-											$ar_portal_records[$curent_children_tipo]=array();
-										}										
-										#dump($current_ar_portal_section_id, ' curent_children_tipo: '.$curent_children_tipo.' ++ '.to_string($section_tipo));
-
-										$ar_portal_records[$curent_children_tipo] = array_merge($ar_portal_records[$curent_children_tipo], (array)$current_ar_portal_section_id);	# Mix with general portal array	for this tipo
-										$ar_portal_records[$curent_children_tipo] = self::clean_duplicates( $ar_portal_records[$curent_children_tipo] );	# Clean array removing duplicates
-											#dump($ar_portal_records[$curent_children_tipo], '$ar_portal_records[$curent_children_tipo] ++ '.to_string());														
-										break;
-									
-									default: # Normal field case
-										
-										$RecordObj_dd 	= new RecordObj_dd($curent_children_tipo);
-										$propiedades 	= json_decode($RecordObj_dd->get_propiedades());
-											#dump($propiedades, ' propiedades '.$modelo_name );
-										
-										switch (true) { # DISCRIMINE BY PROPIEDADES
-											case ( $propiedades && property_exists($propiedades, 'ts_map') ):	
-												#
-												# TS MAP
-												$options = new stdClass();
-													$options->ts_map 				= $propiedades->ts_map;
-													$options->curent_children_tipo  = $curent_children_tipo;
-													$options->request  				= 'fields';
-													$options->parent  				= $current_section_id;
-													$options->lang  				= $current_lang;
-
-												$ar_dedalo_countries = (array)self::get_ar_dedalo_countries($options);
-													#dump($ar_dedalo_countries, ' ar_dedalo_countries');
-												
-												foreach ($ar_dedalo_countries as $current_dedalo_country => $current_value) {
-													$current_ts_map_ar_field_data=array();
-													$current_ts_map_ar_field_data['field_name']  = (string)$current_dedalo_country;
-													$current_ts_map_ar_field_data['field_value'] = (string)$current_value;
-
-													# COLUMN ADD ###################################################
-													$ar_field_data['ar_fields'][$current_section_id][$current_lang][] = $current_ts_map_ar_field_data;	# Add field
-													#error_log("Added field field_name:$current_dedalo_country - field_value:$current_value");
-												}
-												break;
-											
-											case ( $propiedades && property_exists($propiedades, 'table') ): # AUTOCOMPLETE COLUMN TABLE
-												# TABLE NAME COLUMN
-												# Usada para alojar el nombre de la tabla a que apunta el id del del dato del autocomplete actual (se guardan 3 columnas: name_id,name_table,name_label)
-												$current_ar_field_data=array();
-												$current_ar_field_data['field_name']  = RecordObj_dd::get_termino_by_tipo($curent_children_tipo, DEDALO_STRUCTURE_LANG, true, false);
-												$current_ar_field_data['field_value'] = $propiedades->table;		#dump($current_ar_field_data, ' current_ar_field_data '.$curent_children_tipo);
-												# COLUMN ADD ###################################################											
-												$ar_field_data['ar_fields'][$current_section_id][$current_lang][] = $current_ar_field_data;
-
-											case ( $propiedades && property_exists($propiedades, 'data_to_be_used 999') ): # AUTOCOMPLETE COLUMN id
-
-												break;
-											default:
-												# DEFAULT CASE . DIRECT FIELD
-												# COLUMN ADD ###################################################
-												$options = new stdClass();
-													$options->tipo 			= $curent_children_tipo;
-													$options->parent 		= $current_section_id;
-													$options->lang 			= $current_lang;
-													$options->section_tipo 	= $section_tipo;	//$lang_target_section_tipo;
-													$options->caler_id 		= 3;
-													$options->propiedades 	= $propiedades;
-												$column = self::build_data_field( $options );
-												#$column = self::create_data_field($curent_children_tipo, false, false, $current_section_id, $current_lang, false, $pointer_section_tipo); //$tipo, $value, $is_section_id=false, $parent=null, $lang=null, $is_portal=false, $section_tipo=null
-													#dump($column, ' column '.$curent_children_tipo);
-												$ar_field_data['ar_fields'][$current_section_id][$current_lang][] = $column;
-												break;
-										}//end switch (true) { # DISCRIMINE BY PROPIEDADES							
-											
-								}#end modelo_name switch							
-								
-							}#end foreach ($ar_table_children as $curent_children_tipo)
-					#break; //ONLY ONE NOW FOR TEST
-
-					$i++; # fin primera iteración registro/idioma					
-					}#end foreach ($ar_all_project_langs as $current_lang)
-					#dump($ar_data, ' ar_data '.$table_tipo);
-					
-					
-					#
-					# SECTION DIFFUSION INFO - ADD
-					# On finish record update uppdate current section diffusion_info
-					#$section = section::get_instance($current_section_id, $section_tipo, $modo='list');
-					#$diffusion_info = $section->get_diffusion_info(); dump($diffusion_info, ' diffusion_info ++ '.to_string());
-					$section->diffusion_info_add($diffusion_element_tipo);
-					$section->Save();
-					debug_log(__METHOD__." Added current diffusion_element_tipo $diffusion_element_tipo to data. Section diffusion_info updated and saved [{$section_tipo}-{$current_section_id}]. ".to_string(), logger::DEBUG);
-
-					# RESOLVED_RECORDS
-					$resolved_records[] = $resolved_records_key;
-
-					// let GC do the memory job
-					time_nanosleep(0, 10000000); // 50 ms
-
-				}#end foreach ($ar_result as $current_section_id) end itearation of records
-				#self::build_table_columns_data($section_tipo, $ar_portal_section_id_unique, $database_name, false, $diffusion_element_tipo);
-				#$ar_field_data['ar_fields'][] = self::create_data_field($ar_section[0], $matrix_id_section, 'true');
-
-			
-
-		# ASIGN VAR (If not empty ar_fields)
-		# After iterate all records and create the current section array fields, set to static class var (self::$ar_table_data)
-		if (!empty($ar_field_data['ar_fields'])) {
-			self::$ar_table_data[$database_name][$table_tipo] = $ar_field_data;
-		}		
-
-		
-		# PORTAL RECORDS TOTALS
-		# After iterate all records, we have now the portal records totals (organized by portal_tipo )
-		# Iterate all portals and build every table_data of this portals
-		# dump($ar_portal_records, ' $ar_portal_records');		
-		foreach ((array)$ar_portal_records as $portal_tipo => $portal_records) {
-			$portal_records = self::clean_duplicates( $portal_records );
-			self::build_table_columns_data($portal_tipo, $portal_records, $database_name, false, $diffusion_element_tipo);
-		}
-
-	}#end build_table_columns_data
 
 
 
@@ -672,9 +252,9 @@ class diffusion_sql extends diffusion  {
 				$diffusion_modelo_name 			= RecordObj_dd::get_modelo_name_by_tipo($options->tipo,true);
 				switch ($diffusion_modelo_name) {
 					case 'field_enum':
-						if(SHOW_DEBUG) {
+						if(SHOW_DEBUG===true) {
 							if (!isset($propiedades->enum)) {
-								throw new Exception("Error Processing Request. Field enum $options->tipo is misconfigurated. Please, set property 'enum' to current field", 1);									
+								throw new Exception("Error Processing Request. Field enum $options->tipo is misconfigurated. Please, set property 'enum' to current field", 1);
 							}
 						}
 						$ar_enum_options=array();
@@ -682,6 +262,14 @@ class diffusion_sql extends diffusion  {
 							$ar_enum_options[] = (string)'"'.$current_enum_value.'"';
 						}
 						$ar_field_data['field_options'] = (string)implode(',', $ar_enum_options);		# Format: "enum":{"1":"si", "2":"no"}							
+						break;
+					case 'field_varchar':
+						if(SHOW_DEBUG===true) {
+							if (!isset($propiedades->varchar)) {
+								throw new Exception("Error Processing Request. Field varchar $options->tipo is misconfigurated. Please, set property 'varchar' to current field", 1);
+							}
+						}
+						$ar_field_data['field_options'] = (string)$propiedades->varchar;		# Format: "varchar":8							
 						break;
 					case 'field_int':
 						$ar_field_data['field_options']	= 8;
@@ -700,6 +288,358 @@ class diffusion_sql extends diffusion  {
 		return $ar_field_data;
 	}#end create_field
 
+
+
+	/** 
+	* BUILD_TABLE_COLUMNS_DATA (RECURSIVE)
+	* Construye los datos para introducir en los campos de la tabla generada y los fija en la variable estática self::$ar_table_data
+	* @param string $table_tipo like 'oh1'
+	* @param array $ar_section_id_portal Optional. Default empty array
+	* @param string $database_name like 'web_xxx'
+	* @param array|bool $ar_result
+	*	Default false
+	* @param string $diffusion_element_tipo
+	*
+	* @see $his->get_db_data
+	*/
+	public static function build_table_columns_data($table_tipo, $ar_section_id_portal=array(), $database_name, $ar_result=false, $diffusion_element_tipo) {
+
+		if(SHOW_DEBUG===true) {
+			#dump($table_tipo, ' table_tipo ++ ');
+			#dump($ar_section_id_portal, ' ar_section_id_portal ++ ');
+			#dump($database_name, ' database_name ++ ');
+			#dump($ar_result, ' ar_result ++ ');
+			#dump($diffusion_element_tipo, " diffusion_element_tipo ++ (".RecordObj_dd::get_termino_by_tipo($table_tipo).")");
+			  #dump($ar_section_id_portal,"ar_section_id_portal - table_tipo: $table_tipo (".RecordObj_dd::get_termino_by_tipo($table_tipo).") - database_name: $database_name (".RecordObj_dd::get_termino_by_tipo($database_name).") "); #die();
+			#exit();
+		}
+
+		# SECTION try . Target section is a related term of current difusion pointer. Normally is section, but can be a portal
+		$pointer_type='section';
+		$ar_section_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($table_tipo, 'section', 'termino_relacionado');
+		if (!isset($ar_section_tipo[0])) {
+			# PORTAL try
+			$pointer_type='portal';
+			$ar_section_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($table_tipo, 'component_portal', 'termino_relacionado');
+		}
+		if(!isset($ar_section_tipo[0])) {
+			debug_log(__METHOD__." Error Processing Request, related section_tipo not found for $table_tipo. Please define valid related term (section or portal) for pointer table_tipo:$table_tipo (Ignored element $table_tipo!)", logger::ERROR);	
+			return false;
+		}
+		
+		# SECTION_TIPO . Set section tipo
+		$section_tipo = $ar_section_tipo[0];
+			
+		#
+		# AR_RESULT . Get all matrix records in current table / portal. When portal is request, records of portal are in var '$ar_section_id_portal'
+		# NOTE : Because we need section_id and section_tipo of every item (multi-target portals), format $ar_result contains this data always
+		if ($ar_result===false) {
+			$ar_result = array();
+			if(!empty($ar_section_id_portal)) {
+				# Records here are the portal dato locators
+				# $ar_result	= $ar_section_id_portal;
+				foreach ($ar_section_id_portal as $key => $object) {
+					// Override section_tipo for each element
+					$ar_result[] = array($object->section_tipo => $object->section_id);
+				}
+			}else{
+				# Buscamos TODOS los registros de esta sección
+				$result = section::get_resource_all_section_records_unfiltered($section_tipo);
+				while ($rows = pg_fetch_assoc($result)) {
+					$current_id = $rows['section_id'];				
+					// Use general section_tipo for each element
+					$ar_result[] = array($section_tipo => $current_id);
+				}
+			}
+		}
+		#dump($ar_section_id_portal, ' ar_section_id_portal ++ '.to_string());			
+		#dump($ar_result," ar_result section_tipo:$section_tipo - table_tipo:$table_tipo - ar_section_id_portal:".to_string($ar_section_id_portal)); die();
+					
+		# LANGS . From config :
+		$ar_all_project_langs = unserialize(DEDALO_PROJECTS_DEFAULT_LANGS);
+		
+
+		# AR_FIELD_DATA
+		$ar_field_data = array();
+		$ar_field_data['database_name']	= (string)$database_name;
+		$ar_field_data['table_name'] 	= (string)RecordObj_dd::get_termino_by_tipo($table_tipo, DEDALO_STRUCTURE_LANG, true, false);
+		#$ar_field_data['ar_fields'] 	= array();
+			#dump($ar_field_data['table_name'], ' table_name ++ '.to_string());
+			#dump(debug_backtrace() , 'debug_backtrace()  ++ '.to_string());
+		
+		#
+		# TABLE CHILDREN (FIELDS)
+			$RecordObj_dd 	   = new RecordObj_dd($table_tipo);
+			$ar_table_children = $RecordObj_dd->get_ar_childrens_of_this();
+				#dump($ar_table_children, ' ar_table_children ++ '.to_string($table_tipo));
+		
+		#
+		# COMPONENT PUBLICATION - CHECK (once)
+		$component_publication_tipo = self::get_component_publication_tipo($ar_table_children);
+		if (empty($component_publication_tipo)) {
+			#dump($component_publication_tipo, ' component_publication_tipo ++ '.to_string($section_tipo));	
+			#trigger_error("Error on find component_publication_tipo. Not found component_publication for section_tipo: $section_tipo. Ignored");
+			debug_log(__METHOD__." Error on find component_publication_tipo. Not found component_publication for section_tipo: $section_tipo. Ignored!", logger::ERROR);			
+			return false;
+		}
+	
+		#
+		# RESOLVED RECORDS
+		# Store resolved records to avoid infinite loops
+		static $resolved_records;
+
+		#
+		# RECORDS
+		$ar_data=array();
+		$i=0;
+		$ar_portal_records=array();
+		# Records iteration
+		if(!empty($ar_result)) foreach ((array)$ar_result as $records) foreach ($records as $section_tipo => $current_section_id) {	# iteramos por registros
+			#dump($current_section_id, ' current_section_id ++ '.to_string());
+
+			# test
+			#$current_section_id=1;
+			#$ar_all_project_langs = array('lg-lvca'); //ONLY ONE NOW FOR TEST
+
+			# RESOLVED_RECORDS_KEY
+			$resolved_records_key = $section_tipo.'-'.$current_section_id;
+			if (in_array($resolved_records_key, (array)$resolved_records)) {
+				debug_log(__METHOD__." SKIPPED RECORD [$resolved_records_key]. ALREADY RESOLVED. ".to_string(), logger::WARNING);
+				continue;
+			}
+
+			#
+			# SECTION DIFFUSION INFO - CHECK
+			# On finish record update, update current section diffusion_info
+			$section 		= section::get_instance($current_section_id, $section_tipo, $modo='list', false);
+			$diffusion_info = $section->get_diffusion_info();
+			if ( isset($diffusion_info->$diffusion_element_tipo) ) {
+
+				if(isset($_SESSION['dedalo4']['config']['skip_publication_state_check']) && $_SESSION['dedalo4']['config']['skip_publication_state_check']==1) {
+					# Nothing to do. (Configurated from tool_administrator)
+				}else{
+					# RESOLVED_RECORDS (set a resoolved)
+					$resolved_records[] = $resolved_records_key;
+
+					debug_log(__METHOD__." Skipped current record [{$section_tipo}-{$current_section_id}]. Already published ($diffusion_element_tipo). ".to_string(), logger::DEBUG);
+					continue;
+				}
+			}			
+
+
+			#
+			# COMPONENT PUBLICATION - CHECK (once)				
+			$component_publication_bool_value = (bool)self::get_component_publication_bool_value($component_publication_tipo, $current_section_id, $section_tipo);
+				#dump($component_publication_bool_value, ' component_publication_bool_value ++ '.to_string());					
+				if ($component_publication_bool_value===false) {
+					# Skip this record
+					self::delete_sql_record($current_section_id, $ar_field_data['database_name'], $ar_field_data['table_name']);
+					debug_log(__METHOD__." Skipped (and mysql deleted) record $current_section_id ".$ar_field_data['table_name']." (publication=no)", logger::DEBUG);
+
+					$section->diffusion_info_add($diffusion_element_tipo);
+					$section->Save();
+					debug_log(__METHOD__." Added current diffusion_element_tipo $diffusion_element_tipo to data. Section diffusion_info updated and saved [{$section_tipo}-{$current_section_id}]. ".to_string(), logger::DEBUG);
+					
+					# RESOLVED_RECORDS (set a resoolved)
+					$resolved_records[] = $resolved_records_key;
+
+					continue;
+				}				
+
+			#
+			# LANGS ITERATION
+			foreach ($ar_all_project_langs as $current_lang) {	# iteramos por idioma
+
+				#
+				# SECTION_ID . Mandatory column . Add field section_id to table data
+				# COLUMN ADD ###################################################
+				$options = new stdClass();
+					$options->typology 	= 'section';
+					$options->value 	= $current_section_id;
+				$ar_field_data['ar_fields'][$current_section_id][$current_lang][] = self::build_data_field( $options );
+				#$ar_field_data['ar_fields'][$current_section_id][$current_lang][] = self::create_data_field($pointer_section_tipo, $current_section_id, true);											
+
+				#
+				# LANG . Mandatory column. Add field lang to table data
+				# COLUMN ADD ###################################################
+				$options = new stdClass();
+					$options->typology 	= 'lang';
+					$options->value 	= $current_lang;
+				$ar_field_data['ar_fields'][$current_section_id][$current_lang][] = self::build_data_field( $options );
+				#$ar_field_data['ar_fields'][$current_section_id][$current_lang][] = self::create_data_field('lang',$current_lang);						
+
+				#
+				# COLUMNS . Normal table columns / fields	
+				# NORMAL COLUMNS ITERATE ###################################################							
+				foreach ((array)$ar_table_children as $curent_children_tipo) {								
+					
+					# Obtenemos el modelo de los hijos de la tabla para identificar los campos y las tablas relacionadas
+					$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($curent_children_tipo,true);
+						#dump($modelo_name, ' modelo_name');
+					if ($modelo_name==='box elements') {
+						continue;
+					}
+
+					# Si el modelo es "field" es un campo directo
+					# Si el modelo es "tabla" es un puntero a un portal, se convertirá este hijo en un campo que relacionará las dos tablas
+					#switch (true) {
+						/*
+						case ($modelo_name==='table9999') : # Pointer to portal case
+							
+							# PORTAL
+							# Tabla = portal, obtenemos del elemento 'tabla', su portal (es el término relacionado)
+							# El término 'tabla' se convierte en un campo que apunta a la tabla relacionada que se creará
+							$portal_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($curent_children_tipo, 'component_portal', 'termino_relacionado')[0];
+							if (SHOW_DEBUG) {
+								if (empty($portal_tipo)) {
+									throw new Exception("Error Processing Request. 
+										component_portal not found as 'termino_relacionado' by get_ar_terminoID_by_modelo_name_and_relation children_tipo:$curent_children_tipo ,component_portal, termino_relacionado
+										Please verify structure for this element, is possible that related term is not portal (maybe section?)", 1);										
+								}
+							}
+							
+							# AR_PORTAL_DATA . CAMPO TABLA : Generamos el campo con los datos (registros) del portal que vienen de Matrix
+							$options = new stdClass();
+								$options->typology 		= 'portal';
+								$options->tipo 			= $curent_children_tipo;
+								$options->parent 		= $current_section_id;
+								#$options->section_tipo 	= ($pointer_type=='portal') ? $portal_section_tipo : $section_tipo; 
+								$options->section_tipo 	= $section_tipo; // Verificar esto !!
+								$options->caler_id 		= "2 - ".$section_tipo;	//$lang_target_section_tipo;									
+							$ar_portal_data = self::build_data_field( $options );																
+								#dump($ar_portal_data,"build_data_field: ar_portal_data - portal_tipo: $portal_tipo - section_tipo: $section_tipo - curent_children_tipo: ".$curent_children_tipo); //die();
+
+							# Añade el resultado de la generación del campo al array de campos generados (Vínculo con el portal)
+							# COLUMN ADD ###################################################
+							$ar_field_data['ar_fields'][$current_section_id][$current_lang][] = $ar_portal_data;
+								#dump($ar_portal_data,'$ar_portal_data');
+							
+							# Obetenos el "locator" del portal para identificar los enlaces directos en la posición del "tipo ("0") y los enlaces a etiquetas ("dd341")
+							$current_ar_portal_section_id=array();
+							#foreach ($ar_portal_data['field_value'] as $section_id) {
+							#	$current_ar_portal_section_id[] = $section_id; # Nota: 'current_locator' es section_id
+							#}
+							foreach ($ar_portal_data['dato'] as $key => $current_locator) {
+								$current_ar_portal_section_id[] = $current_locator;
+							}
+
+							# Create ar_portal_records if not exits. curent_children_tipo es el tipo de la tabla de difusión, como oh94 para informant
+							if (!isset($ar_portal_records[$curent_children_tipo])) {
+								$ar_portal_records[$curent_children_tipo]=array();
+							}										
+							#dump($current_ar_portal_section_id, ' curent_children_tipo: '.$curent_children_tipo.' ++ '.to_string($section_tipo));
+
+							$ar_portal_records[$curent_children_tipo] = array_merge($ar_portal_records[$curent_children_tipo], (array)$current_ar_portal_section_id);	# Mix with general portal array	for this tipo
+							$ar_portal_records[$curent_children_tipo] = self::clean_duplicates( $ar_portal_records[$curent_children_tipo] );	# Clean array removing duplicates
+								#dump($ar_portal_records[$curent_children_tipo], '$ar_portal_records[$curent_children_tipo] ++ '.to_string());														
+							break;
+						*/
+						#default: # Normal field case
+							
+							$RecordObj_dd 	= new RecordObj_dd($curent_children_tipo);
+							$propiedades 	= json_decode($RecordObj_dd->get_propiedades());
+								#dump($propiedades, ' propiedades '.$modelo_name );
+
+							
+							switch (true) { # DISCRIMINE BY PROPIEDADES
+								case ( is_object($propiedades) && property_exists($propiedades, 'ts_map') ):
+									#
+									# TS MAP
+									$options = new stdClass();
+										$options->ts_map 				= $propiedades->ts_map;
+										$options->curent_children_tipo  = $curent_children_tipo;
+										$options->request  				= 'fields';
+										$options->parent  				= $current_section_id;
+										$options->lang  				= $current_lang;
+
+									$ar_dedalo_countries = (array)self::get_ar_dedalo_countries($options);
+										#dump($ar_dedalo_countries, ' ar_dedalo_countries');
+									
+									foreach ($ar_dedalo_countries as $current_dedalo_country => $current_value) {
+										$current_ts_map_ar_field_data=array();
+										$current_ts_map_ar_field_data['field_name']  = (string)$current_dedalo_country;
+										$current_ts_map_ar_field_data['field_value'] = (string)$current_value;
+
+										# COLUMN ADD ###################################################
+										$ar_field_data['ar_fields'][$current_section_id][$current_lang][] = $current_ts_map_ar_field_data;	# Add field
+										#error_log("Added field field_name:$current_dedalo_country - field_value:$current_value");
+									}
+									break;
+								
+								case ( is_object($propiedades) && property_exists($propiedades, 'table') ): # AUTOCOMPLETE COLUMN TABLE
+									# TABLE NAME COLUMN
+									# Usada para alojar el nombre de la tabla a que apunta el id del del dato del autocomplete actual (se guardan 3 columnas: name_id,name_table,name_label)
+									$current_ar_field_data=array();
+									$current_ar_field_data['field_name']  = RecordObj_dd::get_termino_by_tipo($curent_children_tipo, DEDALO_STRUCTURE_LANG, true, false);									
+									$current_ar_field_data['field_value'] = $propiedades->table;
+
+									# COLUMN ADD ###################################################											
+									$ar_field_data['ar_fields'][$current_section_id][$current_lang][] = $current_ar_field_data;
+									break;
+
+								default:
+									# DEFAULT CASE . DIRECT FIELD
+									# COLUMN ADD ###################################################
+									$options = new stdClass();
+										$options->tipo 			= $curent_children_tipo;
+										$options->parent 		= $current_section_id;
+										$options->lang 			= $current_lang;
+										$options->section_tipo 	= $section_tipo;	//$lang_target_section_tipo;
+										$options->caler_id 		= 3;
+										$options->propiedades 	= $propiedades;
+									$column = self::build_data_field( $options );
+									#$column = self::create_data_field($curent_children_tipo, false, false, $current_section_id, $current_lang, false, $pointer_section_tipo); //$tipo, $value, $is_section_id=false, $parent=null, $lang=null, $is_portal=false, $section_tipo=null
+										#dump($column, ' column '.$curent_children_tipo);
+									$ar_field_data['ar_fields'][$current_section_id][$current_lang][] = $column;
+									break;
+							}//end switch (true) { # DISCRIMINE BY PROPIEDADES					
+		
+					#}#end modelo_name switch							
+					
+				}#end foreach ($ar_table_children as $curent_children_tipo)
+			#break; //ONLY ONE NOW FOR TEST
+
+			$i++; # fin primera iteración registro/idioma					
+			}#end foreach ($ar_all_project_langs as $current_lang)
+			#dump($ar_data, ' ar_data '.$table_tipo);
+			
+			
+			#
+			# SECTION DIFFUSION INFO - ADD
+			# On finish record update uppdate current section diffusion_info
+			#$section = section::get_instance($current_section_id, $section_tipo, $modo='list');
+			#$diffusion_info = $section->get_diffusion_info(); dump($diffusion_info, ' diffusion_info ++ '.to_string());
+			$section->diffusion_info_add($diffusion_element_tipo);
+			$section->Save();
+			debug_log(__METHOD__." Added current diffusion_element_tipo $diffusion_element_tipo to data. Section diffusion_info updated and saved [{$section_tipo}-{$current_section_id}]. ".to_string(), logger::DEBUG);
+
+			# RESOLVED_RECORDS
+			$resolved_records[] = $resolved_records_key;
+
+			// let GC do the memory job
+			time_nanosleep(0, 10000000); // 50 ms
+		}#end foreach ($ar_result as $current_section_id) end itearation of records
+		#self::build_table_columns_data($section_tipo, $ar_portal_section_id_unique, $database_name, false, $diffusion_element_tipo);
+		
+
+		# ASIGN VAR (If not empty ar_fields)
+		# After iterate all records and create the current section array fields, set to static class var (self::$ar_table_data)
+		if (!empty($ar_field_data['ar_fields'])) {
+			self::$ar_table_data[$database_name][$table_tipo] = $ar_field_data; // Fix in class static var if not empty
+			return $ar_field_data;		
+		}else{
+			return null;
+		}
+		# PORTAL RECORDS TOTALS
+		# After iterate all records, we have now the portal records totals (organized by portal_tipo )
+		# Iterate all portals and build every table_data of this portals
+		# dump($ar_portal_records, ' $ar_portal_records');
+		#foreach ((array)$ar_portal_records as $portal_tipo => $portal_records) {
+		#	$portal_records = self::clean_duplicates( $portal_records );
+		#	self::build_table_columns_data($portal_tipo, $portal_records, $database_name, false, $diffusion_element_tipo);
+		#}		
+	}#end build_table_columns_data
+	
 
 
 	/**
@@ -724,7 +664,7 @@ class diffusion_sql extends diffusion  {
 			$options->section_tipo 	= null;
 			$options->caler_id 		= null;
 			$options->propiedades 	= null;
-
+	
 			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
 
@@ -733,7 +673,7 @@ class diffusion_sql extends diffusion  {
 			
 			case 'section': # Fix column section_id
 				$ar_field_data['field_name'] 	= 'section_id';
-				$ar_field_data['field_value'] 	= $options->value;	
+				$ar_field_data['field_value'] 	= $options->value;
 				break;
 
 			case 'lang': # Especial case, constructs a column with current lang value
@@ -750,14 +690,14 @@ class diffusion_sql extends diffusion  {
 				$termino_relacionado 			= RecordObj_dd::get_ar_terminos_relacionados($options->tipo, true, true)[0];
 					#dump($termino_relacionado, ' termino_relacionado tipo:'.$tipo);
 				$modelo_name 					= RecordObj_dd::get_modelo_name_by_tipo($termino_relacionado,true);				
-				if(SHOW_DEBUG) {
+				if(SHOW_DEBUG===true) {
 					if ($modelo_name!='component_portal') throw new Exception("Error Processing Request. Wrong modelo name. Expected portal ($modelo_name)", 1);
 				}
 				/*  PRE 12-01-2016			
 				#$portal_section_tipo = $options->section_tipo;	//RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($termino_relacionado, 'section', 'parent')[0];
 				$portal_section_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($termino_relacionado, 'section', 'parent')[0];
 					dump($portal_section_tipo, ' portal_section_tipo ++ '.to_string());
-				if(SHOW_DEBUG) {
+				if(SHOW_DEBUG===true) {
 					$real_section = section::get_section_real_tipo_static($options->section_tipo);
 					if ($real_section!=$options->section_tipo) {
 						# estamos en una virtual. el cálculo anterior de $portal_section_tipo puede ser erróneo !
@@ -770,7 +710,7 @@ class diffusion_sql extends diffusion  {
 					$portal_section_tipo = $options->section_tipo;
 				}else{
 					$portal_section_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($termino_relacionado, 'section', 'parent')[0];					
-					if(SHOW_DEBUG) {
+					if(SHOW_DEBUG===true) {
 						$real_section = section::get_section_real_tipo_static($options->section_tipo);
 						if ($real_section!=$options->section_tipo) {
 							# estamos en una virtual. el cálculo anterior de $portal_section_tipo puede ser erróneo !
@@ -784,7 +724,8 @@ class diffusion_sql extends diffusion  {
 																	  $options->parent,
 																	  'edit',
 																	  DEDALO_DATA_NOLAN,
-																	  $portal_section_tipo);
+																	  $portal_section_tipo,
+																	  false);
 
 				$dato = $component_portal->get_dato();
 					#dump($dato,'portal dato PARA '.$termino_relacionado. " - parent:$parent - lang:$lang - termino:$termino");
@@ -815,142 +756,72 @@ class diffusion_sql extends diffusion  {
 																				 $options->parent,
 																				 'edit',
 																				 $options->lang,
-																				 $options->section_tipo);
+																				 $options->section_tipo,
+																				 false);
 																				 #dump($modelo_name, ' termino_relacionado:'.$termino_relacionado.' - section_tipo:'.to_string($options->section_tipo));			
-
+				
 				$dato 					= $current_component->get_dato();
 				$diffusion_modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($options->tipo,true);
 
 				#
 				# Diffusion element
 				$diffusion_element 		= new RecordObj_dd($options->tipo);				
-				$propiedades 			= $diffusion_element->get_propiedades(true);	# Format: {"data_to_be_used": "dato"}				
-				if (is_object($propiedades) && property_exists($propiedades, 'data_to_be_used') && $propiedades->data_to_be_used=='dato') {
+				$propiedades 			= $diffusion_element->get_propiedades(true);	# Format: {"data_to_be_used": "dato"}
+				# Fix diffusion element propiedades on target component to enable configure response value
+				$current_component->set_diffusion_properties($propiedades);
+
+				# switch cases
+				switch (true) {
+					case (is_object($propiedades) && property_exists($propiedades, 'data_to_be_used') && $propiedades->data_to_be_used==='dato'):						
 					
-					# VALOR (Unresolved data)					
-					switch ($diffusion_modelo_name) {
+						# VALOR (Unresolved data)
+						switch ($diffusion_modelo_name) {
 
-						case 'field_enum':								
-							foreach ((array)$dato as $current_locator) {
-								$dato = $current_locator->section_id;
-							}								
-							if (empty($dato) || ($dato!=='1' && $dato!=='2') ) {
-								if(!empty($dato)) {
-									#dump($dato, ' dato ++ '.to_string());
-									trigger_error("WARNING: Set enum dato to default 'No' [2] for $modelo_name : $options->tipo !. <br>Received dato:".to_string($dato) );
-									debug_log(__METHOD__." WARNING: Set enum dato to default 'No' [2] for $modelo_name : $options->tipo !. <br>Received dato:".to_string($dato), logger::WARNING);
-								} 
-								$dato = 2;	# Value 'No' default
-							}
-							if(SHOW_DEBUG) {
-								#dump($dato," dato"); #dump($propiedades->enum," dato");
-								if (!property_exists($propiedades, 'enum')) {
-									throw new Exception("Error Processing Request. Field enum $tipo is misconfigurated. Please, set property 'enum' to current field", 1);									
+							case 'field_enum':
+								foreach ((array)$dato as $current_locator) {
+									$dato = $current_locator->section_id;
+								}								
+								if (empty($dato) || ($dato!=='1' && $dato!=='2') ) {
+									if(!empty($dato)) {
+										#dump($dato, ' dato ++ '.to_string());
+										trigger_error("WARNING: Set enum dato to default 'No' [2] for $modelo_name : $options->tipo !. <br>Received dato:".to_string($dato) );
+										debug_log(__METHOD__." WARNING: Set enum dato to default 'No' [2] for $modelo_name : $options->tipo !. <br>Received dato:".to_string($dato), logger::WARNING);
+									} 
+									$dato = 2;	# Value 'No' default
 								}
-							}
-							$ar_field_data['field_value'] = (string)$propiedades->enum->$dato;		# Format: "enum":{"1":"si", "2":"no"}							
-							break;						
-
-						default:
-							if (is_array($dato)) {
-								$ar_id =array();
-								foreach ($dato as $current_locator) {
-									$ar_id[] = $current_locator->section_id;
+								if(SHOW_DEBUG===true) {
+									#dump($dato," dato"); #dump($propiedades->enum," dato");
+									if (!property_exists($propiedades, 'enum')) {
+										throw new Exception("Error Processing Request. Field enum $tipo is misconfigurated. Please, set property 'enum' to current field", 1);									
+									}
 								}
-								$dato = $ar_id;
-							}
-							$ar_field_data['field_value'] = $dato; 	#dump($dato, " dato: $termino_relacionado - $modelo_name");
-							break;
+								$ar_field_data['field_value'] = (string)$propiedades->enum->$dato;		# Format: "enum":{"1":"si", "2":"no"}							
+								break;						
 
-					}//end switch ($diffusion_modelo_name) {
+							default:
+								if (is_array($dato)) {
+									$ar_id =array();
+									foreach ($dato as $current_locator) {
+										$ar_id[] = $current_locator->section_id;
+									}
+									$dato = $ar_id;
+								}
+								$ar_field_data['field_value'] = $dato; 	#dump($dato, " dato: $termino_relacionado - $modelo_name");
+								break;
+						}//end switch ($diffusion_modelo_name) {
+						break;
 
-				}else{ //if (is_object($propiedades) && property_exists($propiedades, 'data_to_be_used') && $propiedades->data_to_be_used=='dato') {
-					
-					switch ($diffusion_modelo_name) {
-						case 'field_date':
-							$timestamp = $current_component->get_dato_as_timestamp();
-							$ar_field_data['field_value'] = $timestamp;
-							#$ar_field_data['field_value'] = $current_component->get_valor();
-							debug_log(__METHOD__." $ar_field_data[field_value] ".to_string($ar_field_data['field_value']), logger::WARNING);
-							break;
-						
-						default:
-							switch ($modelo_name) {
-								case 'component_text_area':
-									# DATO
-									$ar_field_data['field_value'] = $current_component->get_dato(); # Important: use raw text
-									break;								
-								case 'component_image':
-									# DATO
-									$ar_field_data['field_value'] = $current_component->get_image_url(DEDALO_IMAGE_QUALITY_DEFAULT); # Important: use raw text
-									break;
-								case 'component_av':
-									# DATO
-									$ar_field_data['field_value'] = $current_component->get_video_url(DEDALO_AV_QUALITY_DEFAULT); # Important: use raw text
-									break;
-								case 'component_pdf':
-									# DATO
-									$ar_field_data['field_value'] = $current_component->get_pdf_url(DEDALO_PDF_QUALITY_DEFAULT); # Important: use raw text
-									break;
-								case 'component_array':
-									$ar_field_data['field_value'] = implode(',', $current_component->get_dato() );
-									break;
-								case 'component_select_lang':
-									$valor = $current_component->get_valor( $options->lang ); # Importante!: Pasar lang como parámetro para indicar en la resolución del get_ar_list_of_values el lenguaje deseado
-									$valor = preg_replace("/<\/?mark>/", "", $valor); # Remove untranslated string tags
-									$ar_field_data['field_value'] = $valor; 
-									break;
-								case 'component_portal':
-									# If not isset propiedades->data_to_be_used, we understand that is 'dato' for speed
-									if (!isset($propiedades->data_to_be_used)) {
-										$data_to_be_used = 'dato';
-										$dato = $current_component->get_dato();
-										if (is_array($dato)) {
-											$ar_id =array();
-											foreach ($dato as $current_locator) {
-												$ar_id[] = $current_locator->section_id;
-											}
-											$dato = $ar_id;
-										}
-										$ar_field_data['field_value'] = $dato;
-									}else{
-										# 'Default' behaviour is now get_valor (...)
-										$data_to_be_used = $propiedades->data_to_be_used;
-										$ar_field_data['field_value'] = $current_component->get_valor( $options->lang );
-									}									
-									break;								
-								case 'component_autocomplete':
-									
-									$component_autocomplete_dato = $current_component->get_dato();		
-									$valor 						 = $current_component->get_valor( $options->lang );
-										if(SHOW_DEBUG) {
-											#dump($component_autocomplete_dato, ' component_autocomplete_dato ++ '.to_string($valor));
-											#dump($options->tipo, ' options->tipo ++ '.to_string());
-											#if ($options->tipo=='mupreva1998') {
-											#	dump($component_autocomplete_dato, ' component_autocomplete_dato ++ '.to_string());
-											#	dump($valor, ' component_autocomplete_dato mupreva1532 valor ++ '.to_string($options->lang));
-											#}
-										}																				
+					case (is_object($propiedades) && property_exists($propiedades, 'process_dato')):
+						# Process dato with function
+						$function_name = $propiedades->process_dato;
+						$ar_field_data['field_value'] = call_user_func($function_name, $options, $dato);
+						break;
 
-									if (empty($valor) && !empty($component_autocomplete_dato) ) {
-
-										#debug_log(__METHOD__.' sorry resolve value diffusion component_autocomplete in progress.. ('.$current_component->get_tipo().', '.$current_component->get_parent().', '.$current_component->get_section_tipo().') '.to_string(), logger::WARNING);
-										$valor = ""; // 'sorry resolve value in progress..';
-									}				
-									$ar_field_data['field_value'] = $valor;
-										#$current_component->set_modo('edit');
-										#dump($ar_field_data['field_value'], ' var autocomplete - lang:'.$options->lang);
-										#dump($current_component, ' current_component - '.$options->lang);										
-									break;
-								default:
-									# VALOR (Remember: Send lang a parameter)									
-									$ar_field_data['field_value'] = $current_component->get_valor( $options->lang ); # Importante!: Pasar lang como parámetro para indicar en la resolución del get_ar_list_of_values el lenguaje deseado		
-									#dump($options->lang," lang for $modelo_name, $termino_relacionado - ".$current_component->get_dato() );									
-									break;
-							}
-							break;
-					}//end switch ($diffusion_modelo_name) {
-				}//end if (is_object($propiedades) && property_exists($propiedades, 'data_to_be_used') && $propiedades->data_to_be_used=='dato') {
+					default:
+						# Set unified diffusion value
+						$ar_field_data['field_value'] =	$current_component->get_diffusion_value( $options->lang );
+						break;
+				}//switch (true) {				
 				break;
 
 		}//end switch ($options->typology) {
@@ -959,7 +830,6 @@ class diffusion_sql extends diffusion  {
 	}//end build_data_field__NO_ACABADA
 	
 	
-
 
 	/**
 	* GET_AR_DIFFUSION_MAP
@@ -974,7 +844,7 @@ class diffusion_sql extends diffusion  {
 		if (isset($this->ar_diffusion_map)) {
 			return $this->ar_diffusion_map;
 		}
-		#if(SHOW_DEBUG) $start_time = start_time();
+		#if(SHOW_DEBUG===true) $start_time = start_time();
 
 
 		$ar_diffusion_map = array();
@@ -1005,7 +875,7 @@ class diffusion_sql extends diffusion  {
 				
 			}#end foreach ($ar_diffusion_database as $diffusion_section_tipo
 
-		#if(SHOW_DEBUG) dump( exec_time($start_time, __METHOD__) );
+		#if(SHOW_DEBUG===true) dump( exec_time($start_time, __METHOD__) );
 
 		# Fix
 		$this->ar_diffusion_map = $ar_diffusion_map;
@@ -1032,8 +902,8 @@ class diffusion_sql extends diffusion  {
 			$options->section_id   			= null;
 			$options->diffusion_element_tipo= null;
 			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
-				
-
+				#dump($options, ' options ++ '.to_string()); die();
+		
 		# Mandatory vars
 		if(empty($options->section_tipo) || empty($options->section_id) || empty($options->diffusion_element_tipo)) {
 			debug_log(__METHOD__." ERROR ON UPDATE RECORD $options->section_id - $options->section_tipo - $options->diffusion_element_tipo. Undefined mandatory options var".to_string(), logger::ERROR);
@@ -1041,14 +911,23 @@ class diffusion_sql extends diffusion  {
 		}
 			# Old code heritage control
 			if (is_array($options->section_id)) {
-				if(SHOW_DEBUG) {
+				if(SHOW_DEBUG===true) {
 					dump($options->section_id, ' $options->section_id ++ '.to_string());
 				}			
 				throw new Exception("Error Processing Request. Sorry, array is not accepted to update_record anymore. Please use int as options->section_id ", 1);			
 			}
 
 		#
-		# DIFFUSION_ELEMENT_TIPO
+		# TABLE NAME
+			$diffusion_element_tables_map = self::get_diffusion_element_tables_map( $options->diffusion_element_tipo );
+				#dump($diffusion_element_tables_map, ' diffusion_element_tables_map ++ '.to_string($options));
+			$section_tipo = $options->section_tipo;
+			$table_name   = $diffusion_element_tables_map->$section_tipo->name;
+				#dump($table_name, ' table_name ++ '.to_string());
+		
+
+		#
+		# DIFFUSION_ELEMENT_TIPO (structre diffusion_element like oh63 for 'Historia oral web')
 		$diffusion_element_tipo = $options->diffusion_element_tipo;
 
 		#
@@ -1073,10 +952,8 @@ class diffusion_sql extends diffusion  {
 		static $ar_resolved_static;
 		static $ar_record_updated;
 		static $ar_unconfigured_diffusion_section;
-			#dump($ar_resolved_static, ' ar_resolved_static ++ '.to_string());
-
-		if(SHOW_DEBUG) {
-			static $ar_resolved_static_debug;
+		if(SHOW_DEBUG===true) {
+		static $ar_resolved_static_debug;
 		}
 
 		if ( isset($ar_resolved_static[$options->section_tipo]) &&  
@@ -1097,10 +974,10 @@ class diffusion_sql extends diffusion  {
 				$response->msg .= 'unconfigured_diffusion_section';	
 				return $response;
 			}
-			$diffusion_section = $this->get_diffusion_table_by_section( $options->section_tipo );
-				#dump($diffusion_section, " diffusion_section $options->section_tipo".to_string()); #die();
+			$diffusion_section = self::get_diffusion_table_by_section( $options->section_tipo );
+				#dump($diffusion_section, " diffusion_section $options->section_tipo ".to_string()); die();
 				if(!$diffusion_section) {
-					if(SHOW_DEBUG) {
+					if(SHOW_DEBUG===true) {
 						$section_name = RecordObj_dd::get_termino_by_tipo($options->section_tipo, DEDALO_STRUCTURE_LANG, true, false);
 						#throw new Exception("Error Processing Request. diffusion_section not found in correspondece with section_tipo: $options->section_tipo . Nothing is updated", 1);
 						#echo "<hr> DEBUG update_record: Omitted update section <b>'$section_name'</b>. Optional diffusion_section not found in correspondece with section_tipo: $options->section_tipo [$options->section_id]<br>";
@@ -1113,8 +990,7 @@ class diffusion_sql extends diffusion  {
 
 					$response->msg .= " unconfigured_diffusion_section: $options->section_tipo";
 					return $response;
-				}			
-				
+				}					
 
 				#
 				# TABLE FIELDS reference only	(not needed because tables are already created)
@@ -1124,13 +1000,13 @@ class diffusion_sql extends diffusion  {
 				#
 				# TABLE_DATA . Calculate table_data for current array of section_id (all langs)
 				$ar_result=array();
-				foreach ((array)$options->section_id as $section_id) {
-					$ar_result[] = array($options->section_tipo => $section_id);
+				foreach ((array)$options->section_id as $current_section_id) {
+					$ar_result[] = array($options->section_tipo => $current_section_id);
 				}
-				self::build_table_columns_data($diffusion_section, $ar_section_id_portal=array(), $database_name, $ar_result, $diffusion_element_tipo); // Trigger resolve		
+				# Calculate, process and store in a class var all columns data for current diffusion_section
+				$ar_field_data = self::build_table_columns_data($diffusion_section, $ar_section_id_portal=array(), $database_name, $ar_result, $diffusion_element_tipo); // Trigger resolve		
 				#$table_data = self::$ar_table_data[$database_name][$diffusion_section]; // Result is set and usable
-					#dump($table_data, ' table_data ++ '.to_string($diffusion_section)); die();
-
+					#dump($ar_field_data, ' ar_field_data ++ '.to_string($diffusion_section)); die();
 				
 				#
 				# SAVE RECORD . Insert MYSQL record (array) deleting before old data
@@ -1139,8 +1015,9 @@ class diffusion_sql extends diffusion  {
 					$save_options = new stdClass();
 						$save_options->record_data 					    = self::$ar_table_data[$database_name][$diffusion_section];		#dump($save_options, ' save_options ++ '.to_string());die();
 						$save_options->record_data['diffusion_section'] = $diffusion_section;
-						$save_options->record_data['database_name'] 	= self::$database_name;
-							#dump($save_options, ' save_options ++ '.to_string()); die();
+						$save_options->record_data['database_name'] 	= self::$database_name;						
+						$save_options->record_data['table_name'] 		= $table_name; // overwrite default table name
+							#dump($save_options, ' save_options ++ '.to_string($diffusion_section)); die();
 
 					$save = diffusion_mysql::save_record($save_options);
 						$ar_record_updated[] = $options;
@@ -1149,7 +1026,7 @@ class diffusion_sql extends diffusion  {
 			
 				# AR_RESOLVED . update				
 				$ar_resolved_static[$options->section_tipo][] = $options->section_id;
-				if(SHOW_DEBUG) {
+				if(SHOW_DEBUG===true) {
 					$time_complete = round(microtime(1)-$start_time,3);
 					$ar_resolved_static_debug[] = array($options->section_tipo, $options->section_id, $time_complete);
 				}			
@@ -1187,7 +1064,8 @@ class diffusion_sql extends diffusion  {
 																			 $section_id,
 																			 'edit',
 																			 $lang,
-																			 $options->section_tipo);
+																			 $options->section_tipo,
+																			 false);
 						$dato = $current_component->get_dato();
 							#dump($dato, " dato $current_component_tipo - $modelo_name".to_string(''));
 						foreach ((array)$dato as $current_locator) {
@@ -1232,14 +1110,13 @@ class diffusion_sql extends diffusion  {
 							$this->update_record( $new_options, true );
 						}
 						
-					}//end foreach ($group_by_section_tipo as $current_section_tipo => $ar_section_id) {
-									
+					}//end foreach ($group_by_section_tipo as $current_section_tipo => $ar_section_id) {									
 
 			}//end if ($resolve_references===true) {
 
 			#dump($ar_record_updated, ' ar_record_updated ++ '.to_string());
 			#dump($ar_resolved_static, ' ar_resolved_static ++ '.to_string());
-			if(SHOW_DEBUG) {
+			if(SHOW_DEBUG===true) {
 				#dump($ar_resolved_static_debug, ' ar_resolved_static_debug ++ '.to_string());;
 			}
 
@@ -1259,7 +1136,7 @@ class diffusion_sql extends diffusion  {
 	* UPDATE_THESAURUS
 	* Update one thesaurus like 'ts'
 	* @param array|string $table e.g. 'ts'
-	* @return 
+	* @return array rows data
 	*/
 	public function update_thesaurus( $request_options ) {
 
@@ -1274,7 +1151,7 @@ class diffusion_sql extends diffusion  {
 		$diffusion_section = $options->section_tipo;				
 			
 		#
-		# database_name . Resolve database_name in current diffusion map e.g. 'web_DEDALO_DIFFUSION_DOMAIN'		
+		# database_name . Resolve diffusion database_name in current diffusion map e.g. 'web_DEDALO_DIFFUSION_DOMAIN'
 		$thesaurus_data 	= self::get_thesaurus_data();
 		$current_table_tipo	= $thesaurus_data->table;
 		$database_name 		= $thesaurus_data->database_name;
@@ -1287,7 +1164,7 @@ class diffusion_sql extends diffusion  {
 		$thesaurus_columns_data  = self::build_thesaurus_columns_data( $options_cd );
 			#dump($thesaurus_columns_data, ' thesaurus_columns_data ++ '.to_string()); die();
 		
-		return $thesaurus_columns_data;
+		return (array)$thesaurus_columns_data;
 	}#end update_thesaurus
 
 
@@ -1358,6 +1235,7 @@ class diffusion_sql extends diffusion  {
 					'index' 		=> "text",
 					'termino'		=> "text", // translatable (from Descriptors)
 					'obs'			=> "text", // translatable (from Descriptors)
+					'geolocalizacion'=>"text",
 					);
 	}#end get_ts_columns
 
@@ -1593,7 +1471,7 @@ class diffusion_sql extends diffusion  {
 				$ar_field_data['field_name']  = 'publication';
 				$RecordObj_ts = new RecordObj_ts($options->terminoID);				
 				$visible 	  = $RecordObj_ts->get_visible();
-				if ($visible=='si') {
+				if ($visible==='si') {
 					$visible = 'yes';
 				}				
 				$ar_field_data['field_value'] = empty($visible) ? 'yes' : $visible;  // Default is 'yes'
@@ -1638,7 +1516,7 @@ class diffusion_sql extends diffusion  {
 		$count = count($ar_terminoID);
 
 		switch (true) {
-			case $count==1:
+			case $count===1:
 				$diffusion_database_tipo = reset($ar_terminoID);				
 				$diffusion_database_name = RecordObj_dd::get_termino_by_tipo($diffusion_database_tipo, DEDALO_STRUCTURE_LANG, true, false); // $terminoID, $lang=NULL, $from_cache=false, $fallback=true
 				break;
@@ -1673,7 +1551,7 @@ class diffusion_sql extends diffusion  {
 
 
 	/**
-	* get_diffusion_element_tables_map
+	* GET_DIFFUSION_ELEMENT_TABLES_MAP
 	* Build map of section->table of all tables of current diffusion domain
 	* @param string $diffusion_domain_name . Like 'aup'
 	* @return object $diffusion_element_tables
@@ -1724,18 +1602,32 @@ class diffusion_sql extends diffusion  {
 					# Indirect relation
 					$ar_related_tables   = common::get_ar_related_by_model('table', $current_table_tipo);	
 					$real_table 		 = reset($ar_related_tables);
-					$ar_related_sections = common::get_ar_related_by_model('section', $real_table);
+
+					# RELATED_SECTION . Direct related section case
+					$ar_direct_related_sections = common::get_ar_related_by_model('section', $current_table_tipo);
+					if (!empty($ar_direct_related_sections)) {
+						# Overwrite mode. Section is located in alias table diffusion element
+						$ar_related_sections = $ar_direct_related_sections;
+						# Overwrite default real_table calculation
+						#
+					}else{
+						# Default mode. Section is located in real table diffusion element
+						$ar_related_sections = common::get_ar_related_by_model('section', $real_table);
+					}
+					
 					if (!empty($ar_related_sections)) {
 						$section_tipo 		 = reset($ar_related_sections);
-						$name 				 = RecordObj_dd::get_termino_by_tipo($real_table, DEDALO_STRUCTURE_LANG, true, false);
-
+						# Table name is taked from real_table tipo (only one mysql table for all table alias)
+						#$name 				 = RecordObj_dd::get_termino_by_tipo($real_table, DEDALO_STRUCTURE_LANG, true, false);
+						# Table name is taked from current_table_tipo tipo (one mysql table for each table alias)
+						$name 				 = RecordObj_dd::get_termino_by_tipo($current_table_tipo, DEDALO_STRUCTURE_LANG, true, false);
 						$data = new stdClass();
 							$data->table 		= $real_table;
 							$data->name  		= $name;
 							$data->database  	= $database;
 							$data->from_alias 	= $current_table_tipo;
-
-						$diffusion_element_tables_map->$section_tipo = $data;
+								#dump($data, ' data ++ '.to_string($section_tipo));
+						$diffusion_element_tables_map->$section_tipo = $data;						
 					}					
 					break;
 				
@@ -1765,6 +1657,7 @@ class diffusion_sql extends diffusion  {
 					break;
 			}			
 		}//end foreach ($ar_terminoID as $current_table_tipo)
+		#dump($diffusion_element_tables_map, ' diffusion_element_tables_map ++ '.to_string());
 
 		return (object)$diffusion_element_tables_map;
 	}#end get_diffusion_element_tables_map
@@ -1779,9 +1672,12 @@ class diffusion_sql extends diffusion  {
 	public static function get_diffusion_table_by_section( $section_tipo ) {
 		
 		$ar_diffusion_map_elements = self::get_ar_diffusion_map_elements();		
+			#dump($ar_diffusion_map_elements, ' ar_diffusion_map_elements ++ '.to_string($section_tipo));
 
 		foreach ($ar_diffusion_map_elements as $diffusion_element_tipo => $obj_value) {
 			$diffusion_element_tables_map = (object)self::get_diffusion_element_tables_map($diffusion_element_tipo);
+				#dump($diffusion_element_tables_map, ' diffusion_element_tables_map ++ '.to_string($diffusion_element_tipo));
+
 			if ( isset($diffusion_element_tables_map->$section_tipo) && isset($diffusion_element_tables_map->$section_tipo->table)) {
 				return $diffusion_element_tables_map->$section_tipo->table;
 				break;
@@ -1848,7 +1744,7 @@ class diffusion_sql extends diffusion  {
 			#dump($ar_tables, ' ar_tables ++ '.to_string($diffusion_element_tipo)); die();
 		foreach ((array)$ar_tables as $section_tipo => $value_obj) {			
 
-			if ($section_tipo=='thesaurus') {
+			if ($section_tipo==='thesaurus') {
 				
 				# Thesaurus tables
 				$ar_prefix = (array)$value_obj->thesaurus_ar_prefix;				
@@ -1864,10 +1760,11 @@ class diffusion_sql extends diffusion  {
 			}else{				
 				
 				# All section records
-				$ar_all_records = section::get_ar_all_section_records_unfiltered($section_tipo);
-					#dump($ar_all_records, ' $ar_all_records ++ '.to_string($section_tipo)); #die();
+				$result_resource = section::get_resource_all_section_records_unfiltered($section_tipo);				
+				while ($rows = pg_fetch_assoc($result_resource)) {
 
-				foreach ((array)$ar_all_records as $current_record_section_id) {
+					$current_record_section_id = $rows['section_id'];
+				
 					$options = new stdClass();
 						$options->section_tipo 			 = $section_tipo;
 						$options->section_id    		 = $current_record_section_id;
@@ -1923,6 +1820,8 @@ class diffusion_sql extends diffusion  {
 		
 		$component_publication_tipo = false;
 
+		// section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, $ar_modelo_name_required, $from_cache=true, $resolve_virtual=false, $recursive=true, $search_exact=false) 
+
 		foreach ($ar_fields_tipo as $curent_children_tipo) {
 
 			$ar_related = common::get_ar_related_by_model('component_publication', $curent_children_tipo);
@@ -1941,21 +1840,22 @@ class diffusion_sql extends diffusion  {
 
 	/**
 	* GET_COMPONENT_PUBLICATION_bool_VALUE
-	* @return 
+	* @return bool
 	*/
-	public static function get_component_publication_bool_value( $component_publication_tipo, $section_id, $section_tipo ) {													
+	public static function get_component_publication_bool_value( $component_publication_tipo, $section_id, $section_tipo ) {
 			
 		$component_publication = component_common::get_instance( 'component_publication',
 																  $component_publication_tipo,
 																  $section_id,
 																  'list',
 																  DEDALO_DATA_NOLAN,
-																  $section_tipo);
+																  $section_tipo,
+																  false);
 		$dato = $component_publication->get_dato();
 			#dump($dato, ' dato ++ '.to_string());
 
-		if (isset($dato[0]->section_tipo) && $dato[0]->section_tipo == DEDALO_SECTION_SI_NO_TIPO && 
-			isset($dato[0]->section_id) && $dato[0]->section_id == NUMERICAL_MATRIX_VALUE_YES) {
+		if (isset($dato[0]->section_tipo) && $dato[0]->section_tipo === DEDALO_SECTION_SI_NO_TIPO && 
+			isset($dato[0]->section_id)   && (int)$dato[0]->section_id === NUMERICAL_MATRIX_VALUE_YES) {
 			return true;
 		}		
 
@@ -1964,7 +1864,261 @@ class diffusion_sql extends diffusion  {
 
 
 
+	/**
+	* SAVE_TABLE_SCHEMA
+	* schema_obj is table propiedades json data
+	* @param string $database_name
+	* @param string $name
+	* @param object $schema_obj
+	* @return object $response
+	*/
+	public static function save_table_schema( $database_name, $name, $schema_obj ) {
+		
+		$map = json_encode($schema_obj);
+
+		$response = diffusion_mysql::add_publication_schema( $database_name, $name, $map );
+
+		return $response;		
+	}//end save_table_schema
+
+
+
+	/**
+	* GET_ELEMENTS_OF_TYPE
+	* @return array
+	*/
+	public function get_elements_of_type() {
+		
+	}//end get_elements_of_type
+
+
+
+	/**
+	* MAP_TARGET_SECTION_TIPO
+	* Searchs in diffusion structure the table that point to the same section of current dato
+	* @param string $element_tipo
+	* @param array $dato;
+	* 	Contains one value like 'ts1' (is target section tipo data from component in hierarchy record)
+	* @return string $table_name
+	*	Return table name usable for mysql like 'themes' 
+	*/
+	public static function map_target_section_tipo($options, $dato) {
+		$table_name = null;
+
+		$element_tipo = $options->tipo;
+
+		$target_section_tipo = reset($dato);
+		if (!empty($target_section_tipo)) {
+			
+			$database_element_tipo  = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($element_tipo, $modelo_name='database', $relation_type='parent', $search_exact=true);
+				#dump($database_element_tipo, ' database_element_tipo ++ '.to_string());
+			$database_element_tables = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($database_element_tipo[0], $modelo_name='table', $relation_type='children', $search_exact=true);
+				#dump($database_element_tables, ' database_element_tables ++ '.to_string());
+			foreach ($database_element_tables as $table_tipo) {
+				$ar_section_tipo = common::get_ar_related_by_model('section', $table_tipo);	
+
+				if (isset($ar_section_tipo[0]) && $ar_section_tipo[0]===$target_section_tipo ) {
+
+					$table_name = RecordObj_dd::get_termino_by_tipo($table_tipo, DEDALO_STRUCTURE_LANG, true, false);
+					break;
+				}
+			}
+		}
+
+		return $table_name;
+	}//end map_target_section_tipo
+
+
+
+	/**
+	* MAP_LOCATOR_SECTION_TIPO
+	* @return 
+	*/
+	public static function map_locator_section_tipo($options, $dato) {
+		$table_name = '';
+
+		$element_tipo = $options->tipo;
+		$locator 	  = reset($dato);
+		if (isset($locator->section_tipo)) {
+			$database_element_tipo  = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($element_tipo, $modelo_name='database', $relation_type='parent', $search_exact=true);
+				#dump($database_element_tipo, ' database_element_tipo ++ '.to_string());
+			$database_element_tables = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($database_element_tipo[0], $modelo_name='table', $relation_type='children', $search_exact=true);
+
+			foreach ($database_element_tables as $table_tipo) {
+				$ar_section_tipo = common::get_ar_related_by_model('section', $table_tipo);	
+
+				if (isset($ar_section_tipo[0]) && $ar_section_tipo[0]===$locator->section_tipo ) {
+
+					$table_name = RecordObj_dd::get_termino_by_tipo($table_tipo, DEDALO_STRUCTURE_LANG, true, false);
+					break;
+				}
+			}
+		}
+
+		return $table_name;
+	}//end map_locator_section_tipo
+
+
+
+	/**
+	* MAP_TO_SECTION_TIPO
+	* Returns current section tipo like 'es1'
+	* @return string $section_tipo
+	*/
+	public static function map_to_section_tipo($options, $dato) {
+		$section_tipo = null;
+		/*
+		$element_tipo 		= $options->tipo;
+		$table_element_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($element_tipo, $modelo_name='table', $relation_type='parent', $search_exact=true);
+		$ar_section_tipo 	= common::get_ar_related_by_model('section', reset($table_element_tipo));
+		$section_tipo 	 	= reset($ar_section_tipo);
+		*/
+		$section_tipo 	 	= $options->section_tipo;
+
+		return $section_tipo;
+	}//end map_to_section_tipo
+
+
+
+	/**
+	* MAP_TO_TERMINOID
+	* Returns current section tipo like 'es1'
+	* @return string $section_tipo
+	*/
+	public static function map_to_terminoID($options, $dato) {
+		$terminoID = null;
+		/*
+		$element_tipo 		= $options->tipo;
+		$table_element_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($element_tipo, $modelo_name='table', $relation_type='parent', $search_exact=true);
+		$ar_section_tipo 	= common::get_ar_related_by_model('section', reset($table_element_tipo));
+		$section_tipo 	 	= reset($ar_section_tipo);
+		*/
+		$section_tipo 	 	= $options->section_tipo;
+		$section_id 		= $dato;
+
+		$terminoID = $section_tipo .'_'. $section_id;
+
+		return $terminoID;
+	}//end map_to_terminoID
+
+
+
+	/**
+	* MAP_LOCATOR_TO_TERMINOID
+	* Returns map first locator to plain "terminoID" like "es_2"
+	* @return string $section_tipo
+	*/
+	public static function map_locator_to_terminoID($options, $dato) {
+		$terminoID = null;
+
+		if (!empty($dato)) {
+			
+			$first_locator 	= reset($dato);
+			$section_tipo 	= $first_locator->section_tipo;
+			$section_id 	= $first_locator->section_id;
+
+			$terminoID = $section_tipo .'_'. $section_id;
+		}
+
+		return $terminoID;
+	}//end map_locator_to_terminoID
+
+
+
+	/**
+	* MAP_PARENT_TO_NORDER
+	* Returns number of order of current element based on parent array position of this element
+	* @param array $dato
+	*	Is array of parent locators 
+	* @return int $norder
+	*/
+	public static function map_parent_to_norder($options, $dato) {
+		$norder = 0;
+
+		if (!empty($dato)) {
+
+			$current_locator = new locator();
+				$current_locator->set_section_tipo($options->section_tipo);
+				$current_locator->set_section_id($options->parent);			
+
+			$parent_locator = reset($dato);
+			$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($parent_locator->component_tipo, true);
+
+			$component 		= component_common::get_instance($modelo_name,
+															 $parent_locator->component_tipo,
+															 $parent_locator->section_id,
+															 'list',
+															 DEDALO_DATA_NOLAN,
+															 $parent_locator->section_tipo);
+			$parent_dato = $component->get_dato();
+			foreach ((array)$parent_dato as $key => $children_locator) {
+				if( true===locator::compare_locators( $current_locator, $children_locator, $ar_properties=array('section_tipo','section_id') ) ) {
+					$norder = $key;
+					break;
+				}
+			}
+		}
+
+		return (int)$norder;
+	}//end map_parent_to_norder
+
+
+
+	/**
+	* GET_DB_DATA
+	* Simply Exec self::build_table_columns_data for every table in structure
+	* @param string $database_tipo Like 'dd1260'
+	*//*
+	public function get_db_data__DEPRECATED($database_tipo) {
+		
+		#
+		# DEFAULT CASE
+		# Tablas en el primer nivel
+		$ar_diffusion_table = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($database_tipo, $modelo_name='table', $relation_type='children', $search_exact=true);	
+
+			# Recorremos hijos de la primera/as tabla/s
+			foreach ($ar_diffusion_table as $current_table_tipo) {
+
+				if(SHOW_DEBUG===true) {
+					$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_table_tipo,true);
+					if ($modelo_name=='section') {	
+						# Table verify				
+						$ar_section = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($current_table_tipo, 'section', 'termino_relacionado', true);				
+
+						if(empty($ar_section)) {
+							debug_log(__METHOD__." Current diffusion table ($current_table_tipo) is excluded from diffusion data because don't have related 'section'. Please fix this ASAP ".to_string(), logger::WARNING);
+							continue;
+						}
+					}
+				}			
+				# Exec build_table_columns_data for each table
+				self::build_table_columns_data($current_table_tipo, null, $database_tipo);
+				
+			}#end foreach
 	
+
+		#
+		# THESAURUS CASE
+		# table_thesaurus in first level
+		$ar_diffusion_table_thesaurus = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($database_tipo, $modelo_name='table_thesaurus', $relation_type='children', true);
+
+			# Recorremos hijos de la primera/as tabla/s
+			foreach ($ar_diffusion_table_thesaurus as $current_table_tipo) {
+
+				$RecordObj_dd = new RecordObj_dd($current_table_tipo);
+				$propiedades  = json_decode( $RecordObj_dd->get_propiedades() );
+					#dump($propiedades, ' propiedades ++ '.to_string());
+				if (isset($propiedades->ar_tables)) {
+					$options = new stdClass();
+						$options->ar_tables  		= $propiedades->ar_tables;
+						$options->table_name 		= RecordObj_dd::get_termino_by_tipo($current_table_tipo, DEDALO_STRUCTURE_LANG, true, false);
+						$options->diffusion_section = $current_table_tipo;
+					$thesaurus_columns_data  = self::build_thesaurus_columns_data( $options );
+					self::$ar_table_data[$database_tipo][$current_table_tipo] = $thesaurus_columns_data;
+				}
+			}	
+	}#end get_db_data
+	*/
 
 
 	

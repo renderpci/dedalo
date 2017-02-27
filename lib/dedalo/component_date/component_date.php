@@ -24,6 +24,8 @@
 
 	$file_name 				= $modo;
 	$from_modo				= $modo;
+
+	if($permissions===0) return null;
 	
 	switch($modo) {
 		
@@ -117,15 +119,10 @@
 						break;
 				}
 				#dump($date_mode, ' date_mode ++ '.to_string());
+				$mandatory 		= (isset($propiedades->mandatory) && $propiedades->mandatory===true) ? true : false;
+				$mandatory_json = json_encode($mandatory);	
 				break;
-
-		case 'tool_time_machine' :
-				$id_wrapper = 'wrapper_'.$identificador_unico.'_tm';
-				$input_name = "{$tipo}_{$parent}_tm";	
-				# Force file_name
-				$file_name  = 'edit';
-				break;
-				
+		
 		case 'portal_list'	:
 				$file_name = 'list';
 
@@ -190,6 +187,14 @@
 						break;
 				}
 				break;
+
+		case 'tool_time_machine' :
+				$id_wrapper = 'wrapper_'.$identificador_unico.'_tm';
+				$input_name = "{$tipo}_{$parent}_tm";	
+				# Force file_name
+				$file_name  = 'edit';
+				break;
+				
 		case 'print':
 				$date_mode = $this->get_date_mode();
 				switch ($date_mode) {
@@ -244,6 +249,9 @@
 				break;
 
 		case 'search':
+				# Showed only when permissions are >1
+				if ($permissions<1) return null;
+				
 				$valor = '';
 				$ar_comparison_operators 	= $this->build_search_comparison_operators();
 				$ar_logical_operators 		= $this->build_search_logical_operators();

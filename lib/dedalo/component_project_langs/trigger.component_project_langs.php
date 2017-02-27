@@ -20,7 +20,7 @@ if($mode=='get_termino_by_tipo') {
 	if(empty($terminoID)) exit(" Error: terminoID is empty ! ");	
 	
 	#$termino = RecordObj_dd::get_termino_by_tipo($terminoID);
-	$termino = RecordObj_ts::get_termino_by_tipo($terminoID);
+	$termino = lang::get_name_from_code( $terminoID, DEDALO_DATA_LANG );
 	
 	echo $termino;
 	exit();

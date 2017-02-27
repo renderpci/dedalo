@@ -2,303 +2,312 @@
 	
 	# VISUALIZADOR HTML	
 
-	print "\n\n<!-- ROWS [$id] $modo + -->";
+	print "<!-- ROWS [$id] $modo + -->";
 
 
 	# CONTENIDO (INPUT)
-	$html_contenido  = "\n<tr class=\"row_tr_{$id}\" data-dato='$rel_locator'>";	
+	$html_content  = "<tr class=\"row_tr_{$id}\" data-dato='$rel_locator'>";	
 	
-	switch($permissions) {
+	switch(true) {
 			
-		case 0	:	$html_contenido .= "\n <span class=\"css_span_dato\"> ".label::get_label('sin_acceso')." </span>";
-					break;
+		case ($permissions===0):	
+			$html_content .= " <span class=\"css_span_dato\"> ".label::get_label('sin_acceso')." </span>";
+			break;
 						
-		case ($permissions>=1)	:
+		case ($permissions>=1):
 					
-					if( !is_array($ar_valor) || count($ar_valor)==0 ) {
-						
-						$html_contenido .= "\n <td class=\"section_list_td_border\" data-tipo=\"$component_tipo\">"; 
-						$html_contenido .= " No records found.. ";
-						$html_contenido .= "\n </td>";
-						
-					}else{
+			if( !is_array($ar_valor) || count($ar_valor)==0 ) {
+				
+				$html_content .= " <td class=\"section_list_td_border\" data-tipo=\"$component_tipo\">"; 
+				$html_content .= " No records found.. ";
+				$html_content .= " </td>";
+				
+			}else{
+			
+				# TD ID
+				# List line custom config
+				# dump($this->section_records_obj->options->list_line, ' this ++ '.to_string());
+				# dump($this, ' this ++ '.to_string());						
+				$section_config = isset($_SESSION['dedalo4']['section_config'][$section_tipo]) ? $_SESSION['dedalo4']['section_config'][$section_tipo] : null;
+				$id_column_buttons_css='';				
+				if(isset($section_config['list_line']) && $section_config['list_line']=='single') {
+					$id_column_buttons_css = 'id_column_buttons_single_line';
+				}
+										
+				$title = (SHOW_DEBUG===true) ? "matrix id: $id" : null;
+				$html_content .= " <td class=\"section_list_td_border section_list_td_row id_column\" title=\"$title\">";
 					
-						# TD ID
+					#
+					# BUTTONS
+					# 
+					# dump($context, ' context ++ '.to_string());
+					switch ($context->context_name) {
+						
+						# LIST_INTO_TOOL_PORTAL : 
+						# Listado de un sección mostrado en la ventana flotante de tool_portal para seleccionar un registro desde el portal
+						case 'list_into_tool_portal':
+							#
+							# BUTTON EDIT
+								$context_http_query = http_build_query($context); 	#dump($context_http_query," context_http_query");
+								$url  = htmlspecialchars("?t=$section_tipo&id=$id&m=edit&{$context_http_query}");
+								$url .= "&top_tipo=".TOP_TIPO."&top_id=".TOP_ID;
+								$url .= "&menu=0";
+								$url .= "&exclude_elements=".$context->exclude_elements;
+								#echo $url." <br>";
+								$title 	= "Goto resource $section_id [$id]";
+								if(SHOW_DEBUG===true) $title .= " url:$url  modo $modo, context $context->context_name";										
+								
+								$html_content .= "<a href=\"$url\" class=\"id_column_buttons button_edit link\" title=\"$title\">";
+									# SECTION_ID TEXT
+									$html_content .= "<span class='section_id_number'>";
+									$html_content .= " $section_id ";
+									$html_content .= "</span>"; 
+								$html_content .= "</a>"; 								
+							#
+							# ADD RESOURCE BUTTON
+								# LOCATOR
+								$locator = new locator();
+									$locator->set_section_id($id);
+									$locator->set_section_tipo($section_tipo);
+								
+								$rel_locator = json_encode($locator);									
 
-						# List line custom config
-						# dump($this->section_records_obj->options->list_line, ' this ++ '.to_string());
-						# dump($this, ' this ++ '.to_string());						
-						$section_config = isset($_SESSION['dedalo4']['section_config'][$section_tipo]) ? $_SESSION['dedalo4']['section_config'][$section_tipo] : null;
-						$id_column_buttons_css='';				
-						if(isset($section_config['list_line']) && $section_config['list_line']=='single') {
-							$id_column_buttons_css = 'id_column_buttons_single_line';
-						}
-												
-						$title = SHOW_DEBUG ? "matrix id: $id" : null;
-						$html_contenido .= "\n <td class=\"section_list_td_border section_list_td_row id_column\" title=\"$title\">";
+								$title = "Add resource to portal ";
+								$html_content .= "<a href=\"javascript:void(0);\" class=\"id_column_buttons button_add_resource link\" onclick=\"tool_portal.add_resource(this)\"
+								data-rel_locator='{$rel_locator}'										
+								title=\"$title\">";								
+								$html_content .= "</a>";
+							break;
+						
+						case 'section_tool':
+							#
+							# SECTION TOOL: 
+							# Buttons calculated for section tool
+								$tool_name  = $context->target_tool;										
+								$modelo_name= RecordObj_dd::get_modelo_name_by_tipo( $context->target_component_tipo, true ); 
+								$component 	= component_common::get_instance( $modelo_name,
+																			  $context->target_component_tipo,
+																			  $section_id,
+																			  $modo,
+																			  DEDALO_DATA_LANG,
+																			  $section_tipo);
+								$tool = new $tool_name($component,'button');
+									#dump($tool, ' tool ++ '.to_string());
+								$html_content .= $tool->get_html();
+							break;
+
+						case 'list_into_tool_relation':
+							#
+							# BUTTON EDIT
+								/*
+								$url 	= htmlspecialchars("?t=$section_tipo&id=$id&m=edit&context_name=$context->context_name");
+								$title 	= "Goto record $section_id [$id]";
+								if(SHOW_DEBUG===true) $title .= " url:$url  modo $modo, context_name $context->context_name";
+								$html_content .= "<div class='button_edit div_image_link link' title=\"$title\" onclick=\"goto_url('$url')\"></div>";
+								*/
+								$html_content .= "Por revisar";
+							#
+							# BUTTON ADD RELATION 
+								$title = "Add relation [$rel_locator]";
+								$html_content .= " <div class=\"icon_bs tool_relation_icon link\"
+								data-id_matrix=\"{$id}\"
+								data-caller_tipo=\"{$section_tipo}\"
+								data-rel_locator='$rel_locator'
+								data-tipo=\"$tipo\"
+								onclick=\"parent.tool_relation.add_relation(this)\"
+								title=\"$title\"></div>";
+							break;
+				
+						# SELECT_PARENT : Listado de un sección mostrado en una ventana flotante para seleccionar un registro 
+						case 'select_parent':
+							# SECTION_ID TEXT
+								$html_content .= "<span class='section_id_number'>";
+								$html_content .= " $section_id ";
+								$html_content .= "</span>"; 
+							#
+							# ADD PARENT BUTTON
+								$locator = new locator();
+									$locator->set_type(DEDALO_RELATION_TYPE_PARENT_TIPO);
+									$locator->set_section_id($id);
+									$locator->set_section_tipo($section_tipo);
+								
+								$locator = json_handler::encode($locator);
+
+								$title = "Add parent ";
+								$html_content .= "<a href=\"javascript:void(0);\" class=\"id_column_buttons button_add_resource link\"
+								onclick=\"window.opener.component_relation_parent.add_relation_from_opened_window(this)\"
+								data-locator='{$locator}'
+								title=\"$title\">";
+								$html_content .= "</a>";
+							break;
+
+						# SELECT_CHILDREN : Listado de un sección mostrado en una ventana flotante para seleccionar un registro 
+						case 'select_children':
+							# SECTION_ID TEXT
+								$html_content .= "<span class='section_id_number'>";
+								$html_content .= " $section_id ";
+								$html_content .= "</span>"; 
+							#
+							# ADD PARENT BUTTON
+								$locator = new locator();
+									$locator->set_type(DEDALO_RELATION_TYPE_CHILDREN_TIPO);
+									$locator->set_section_id($id);
+									$locator->set_section_tipo($section_tipo);
+								
+								$locator = json_handler::encode($locator);
+
+								$title = "Add children ";
+								$html_content .= "<a href=\"javascript:void(0);\" class=\"id_column_buttons button_add_resource link\"
+								onclick=\"window.opener.component_relation_children.add_relation_from_opened_window(this)\"
+								data-locator='{$locator}'
+								title=\"$title\">";
+								$html_content .= "</a>";
+							break;
+
+						# SELECT_RELATED : Listado de un sección mostrado en una ventana flotante para seleccionar un registro 
+						case 'select_related':
+							# SECTION_ID TEXT
+								$html_content .= "<span class='section_id_number'>";
+								$html_content .= " $section_id ";
+								$html_content .= "</span>"; 
+							#
+							# ADD PARENT BUTTON
+								$locator = new locator();
+									$locator->set_type(DEDALO_RELATION_TYPE_RELATED_TIPO);
+									$locator->set_section_id($id);
+									$locator->set_section_tipo($section_tipo);
+								
+								$locator = json_handler::encode($locator);
+
+								$title = "Add related term";
+								$html_content .= "<a href=\"javascript:void(0);\" class=\"id_column_buttons button_add_resource link\"
+								onclick=\"window.opener.component_relation_related.add_relation_from_opened_window(this)\"
+								data-locator='{$locator}'
+								title=\"$title\">";
+								$html_content .= "</a>";
+							break;
+
+						# SELECT_RECORD: Listado de un sección mostrado en una ventana flotante para seleccionar un registro 
+						/* UNACTIVE
+						case 'select_record':
+							# SECTION_ID TEXT
+								$html_content .= "<span class='section_id_number'>";
+								$html_content .= " $section_id ";
+								$html_content .= "</span>"; 
+							#
+							# ADD PARENT BUTTON 
+								$locator = new locator();
+									$locator->set_type(DEDALO_RELATION_TYPE_RECORD_TIPO);
+									$locator->set_section_id($id);
+									$locator->set_section_tipo($section_tipo);
+								
+								$locator = json_handler::encode($locator);
+
+								$title = "Add record";
+								$html_content .= "<a href=\"javascript:void(0);\" class=\"id_column_buttons button_add_resource link\"
+								onclick=\"window.opener.component_relation_record.add_relation_from_opened_window(this)\"
+								data-locator='{$locator}'
+								title=\"$title\">";
+								$html_content .= "</a>";
+							break;
+						*/
+						# SELECT_INDEX : Listado de un sección mostrado en una ventana flotante para seleccionar un registro 
+						case 'select_index':
+							# SECTION_ID TEXT
+								$html_content .= "<span class='section_id_number'>";
+								$html_content .= " $section_id ";
+								$html_content .= "</span>";
+							#
+							# ADD ELEMENT BUTTON
+								$locator = new locator();
+									$locator->set_type(DEDALO_RELATION_TYPE_INDEX_TIPO);
+									$locator->set_section_id($id);
+									$locator->set_section_tipo($section_tipo);											
+								
+								$locator = json_handler::encode($locator);
+
+								$title = "Add index";
+								$html_content .= "<a href=\"javascript:void(0);\" class=\"id_column_buttons button_add_resource link\"
+								onclick=\"window.opener.component_relation_index.add_relation_from_opened_window(this)\"
+								data-locator='{$locator}'
+								title=\"$title\">";										
+								$html_content .= "</a>";
+							break;
+						
+						default:
+
+							#
+							# BUTTON EDIT										
+								$url  = htmlspecialchars("?t=$section_tipo&id=$id&m=edit");
+								$url .= "&top_tipo=".TOP_TIPO."&top_id=".TOP_ID."&offset=$offset";
+								$title = label::get_label('editar_registro').' '.$section_id;
+								#if(SHOW_DEBUG===true) $title .= " url:$url  modo $modo, context_name $context->context_name ";
+								$additional_css_style = $button_delete_permissions <=1 ? 'height: 100%;' : '' ;
+								$html_content .= "<a href=\"$url\" class=\"id_column_buttons $id_column_buttons_css button_edit link\" title=\"$title\" style=\"$additional_css_style\">";
+									# SECTION_ID TEXT
+									$html_content .= "<span class=\"section_id_number\">";
+									$html_content .= " $section_id ";
+									$html_content .= "</span>";
+								$html_content .= "</a>";
 							
 							#
-							# BUTTONS
-							# 
-							# dump($context, ' context ++ '.to_string());
-							switch ($context->context_name) {
-								
-								# LIST_INTO_TOOL_PORTAL : 
-								# Listado de un sección mostrado en la ventana flotante de tool_portal para seleccionar un registro desde el portal
-								case 'list_into_tool_portal':
-									#
-									# BUTTON EDIT
-										$context_http_query = http_build_query($context); 	#dump($context_http_query," context_http_query");
-										$url  = htmlspecialchars("?t=$section_tipo&id=$id&m=edit&{$context_http_query}");
-										$url .= "&top_tipo=".TOP_TIPO."&top_id=".TOP_ID;
-										$url .= "&exclude_elements=".$context->exclude_elements;
-										#echo $url." <br>";
-										$title 	= "Goto resource $section_id [$id]";
-										if(SHOW_DEBUG) $title .= "\n url:$url \n modo $modo, context $context->context_name";										
-										
-										$html_contenido .= "<a href=\"$url\" class=\"id_column_buttons button_edit link\" title=\"$title\">";
-											# SECTION_ID TEXT
-											$html_contenido .= "<span class='section_id_number'>";
-											$html_contenido .= " $section_id ";
-											$html_contenido .= "</span>"; 
-										$html_contenido .= "</a>"; 								
-									#
-									# ADD RESOURCE BUTTON
-										# Get vars from context obj									
-										$portal_parent 		 = $context->portal_parent;		
-										$portal_tipo 		 = $context->portal_tipo;
-										$portal_section_tipo = $context->portal_section_tipo;
-										/*
-										$portal_parent 		= isset($_GET['parent']) ? $_GET['parent'] : '';
-										$portal_tipo  		= isset($_GET['t']) ? $_GET['t'] : '';
-										$portal_section_tipo= isset($_GET['section_tipo']) ? $_GET['section_tipo'] : '';										
-										*/
-
-										# LOCATOR
-										$locator = new locator();
-											$locator->set_section_id($id);
-											$locator->set_section_tipo($section_tipo);
-										
-										$rel_locator = json_handler::encode($locator);
-											
-
-										$title = "Add resource to $portal_parent ";
-										$html_contenido .= "<a href=\"javascript:void(0);\" class=\"id_column_buttons button_add_resource link\" onclick=\"tool_portal.add_resource(this)\"
-										data-portal_parent=\"{$portal_parent}\"
-										data-section_tipo=\"{$portal_section_tipo}\"
-										data-portal_tipo=\"{$portal_tipo}\"
-										data-portal_section_tipo=\"{$portal_section_tipo}\"
-										data-rel_locator='{$rel_locator}'										
-										title=\"$title\">";
-										if(SHOW_DEBUG) {
-											#$html_contenido .= $portal_parent;
-										}
-										$html_contenido .= "</a>";
-									break;
-								
-								case 'section_tool':
-									#
-									# SECTION TOOL: 
-									# Buttons calculated for section tool
-										$tool_name  = $context->target_tool;										
-										$modelo_name= RecordObj_dd::get_modelo_name_by_tipo( $context->target_component_tipo, true ); 
-										$component 	= component_common::get_instance( $modelo_name,
-																					  $context->target_component_tipo,
-																					  $section_id,
-																					  $modo,
-																					  DEDALO_DATA_LANG,
-																					  $section_tipo);
-										$tool = new $tool_name($component,'button');
-											#dump($tool, ' tool ++ '.to_string());
-										$html_contenido .= $tool->get_html();
-									break;
-
-								case 'list_into_tool_relation':
-									#
-									# BUTTON EDIT
-										/*
-										$url 	= htmlspecialchars("?t=$section_tipo&id=$id&m=edit&context_name=$context->context_name");
-										$title 	= "Goto record $section_id [$id]";
-										if(SHOW_DEBUG) $title .= "\n url:$url \n modo $modo, context_name $context->context_name";
-										$html_contenido .= "<div class='button_edit div_image_link link' title=\"$title\" onclick=\"goto_url('$url')\"></div>";
-										*/
-										$html_contenido .= "Por revisar";
-									#
-									# BUTTON ADD RELATION 
-										$title = "Add relation [$rel_locator]";
-										$html_contenido .= " <div class=\"icon_bs tool_relation_icon link\"
-										data-id_matrix=\"{$id}\"
-										data-caller_tipo=\"{$section_tipo}\"
-										data-rel_locator='$rel_locator'
-										data-tipo=\"$tipo\"
-										onclick=\"parent.tool_relation.add_relation(this)\"
-										title=\"$title\"></div>";
-									break;
-						
-								# SELECT_PARENT : Listado de un sección mostrado en una ventana flotante para seleccionar un registro 
-								case 'select_parent':
-									# SECTION_ID TEXT
-										$html_contenido .= "<span class='section_id_number'>";
-										$html_contenido .= " $section_id ";
-										$html_contenido .= "</span>"; 
-									#
-									# ADD PARENT BUTTON
-										$locator = new locator();
-											$locator->set_type(DEDALO_RELATION_TYPE_PARENT_TIPO);
-											$locator->set_section_id($id);
-											$locator->set_section_tipo($section_tipo);
-										
-										$locator = json_handler::encode($locator);
-
-										$title = "Add parent ";
-										$html_contenido .= "<a href=\"javascript:void(0);\" class=\"id_column_buttons button_add_resource link\"
-										onclick=\"window.opener.component_relation_parent.add_relation_from_opened_window(this)\"
-										data-locator='{$locator}'
-										title=\"$title\">";
-										$html_contenido .= "</a>";
-									break;
-
-								# SELECT_CHILDREN : Listado de un sección mostrado en una ventana flotante para seleccionar un registro 
-								case 'select_children':
-									# SECTION_ID TEXT
-										$html_contenido .= "<span class='section_id_number'>";
-										$html_contenido .= " $section_id ";
-										$html_contenido .= "</span>"; 
-									#
-									# ADD PARENT BUTTON
-										$locator = new locator();
-											$locator->set_type(DEDALO_RELATION_TYPE_CHILDREN_TIPO);
-											$locator->set_section_id($id);
-											$locator->set_section_tipo($section_tipo);
-										
-										$locator = json_handler::encode($locator);
-
-										$title = "Add children ";
-										$html_contenido .= "<a href=\"javascript:void(0);\" class=\"id_column_buttons button_add_resource link\"
-										onclick=\"window.opener.component_relation_children.add_relation_from_opened_window(this)\"
-										data-locator='{$locator}'
-										title=\"$title\">";
-										$html_contenido .= "</a>";
-									break;
-
-								# SELECT_RELATED : Listado de un sección mostrado en una ventana flotante para seleccionar un registro 
-								case 'select_related':
-									# SECTION_ID TEXT
-										$html_contenido .= "<span class='section_id_number'>";
-										$html_contenido .= " $section_id ";
-										$html_contenido .= "</span>"; 
-									#
-									# ADD PARENT BUTTON
-										$locator = new locator();
-											$locator->set_type(DEDALO_RELATION_TYPE_RELATED_TIPO);
-											$locator->set_section_id($id);
-											$locator->set_section_tipo($section_tipo);											
-										
-										$locator = json_handler::encode($locator);
-
-										$title = "Add related term";
-										$html_contenido .= "<a href=\"javascript:void(0);\" class=\"id_column_buttons button_add_resource link\"
-										onclick=\"window.opener.component_relation_related.add_relation_from_opened_window(this)\"
-										data-locator='{$locator}'
-										title=\"$title\">";										
-										$html_contenido .= "</a>";
-									break;
-
-								# SELECT_INDEX : Listado de un sección mostrado en una ventana flotante para seleccionar un registro 
-								case 'select_index':
-									# SECTION_ID TEXT
-										$html_contenido .= "<span class='section_id_number'>";
-										$html_contenido .= " $section_id ";
-										$html_contenido .= "</span>";
-									#
-									# ADD ELEMENT BUTTON
-										$locator = new locator();
-											$locator->set_type(DEDALO_RELATION_TYPE_INDEX_TIPO);
-											$locator->set_section_id($id);
-											$locator->set_section_tipo($section_tipo);											
-										
-										$locator = json_handler::encode($locator);
-
-										$title = "Add index";
-										$html_contenido .= "<a href=\"javascript:void(0);\" class=\"id_column_buttons button_add_resource link\"
-										onclick=\"window.opener.component_relation_index.add_relation_from_opened_window(this)\"
-										data-locator='{$locator}'
-										title=\"$title\">";										
-										$html_contenido .= "</a>";
-									break;
-								
-								default:
-
-									#
-									# BUTTON EDIT										
-										$url  = htmlspecialchars("?t=$section_tipo&id=$id&m=edit");
-										$url .= "&top_tipo=".TOP_TIPO."&top_id=".TOP_ID."&offset=$offset";
-										$title = label::get_label('editar_registro').' '.$section_id;
-										#if(SHOW_DEBUG) $title .= "\n url:$url \n modo $modo, context_name $context->context_name ";
-										$additional_css_style = $button_delete_permissions <=1 ? 'height: 100%;' : '' ;
-										$html_contenido .= "<a href=\"$url\" class=\"id_column_buttons $id_column_buttons_css button_edit link\" title=\"$title\" style=\"$additional_css_style\">";
-											# SECTION_ID TEXT
-											$html_contenido .= "<span class=\"section_id_number\">";
-											$html_contenido .= " $section_id ";
-											$html_contenido .= "</span>";
-										$html_contenido .= "</a>";
-									
-									#
-									# BUTTON DELETE 
-										if($button_delete_permissions >1){
-											$title = label::get_label('borrar').' '.$section_id;
-											$html_contenido .= "<a href=\"javascript:;\" class=\"id_column_buttons $id_column_buttons_css button_delete link\"
-											data-tipo=\"{$section_tipo}\"
-											data-section_id=\"{$id}\"
-											title=\"$title\">";
-											if(SHOW_DEBUG) {
-												$html_contenido .= "<mark class=\"debug_info row_debug_info\">$section_tipo $section_id</mark>";
-											}
-											$html_contenido .= "</a>";
-										}
-									break;
-							}//end switch ($context->context_name) {
-							
-
-							# DEBUG INFO
-							if(SHOW_DEBUG) {
-								#$html_contenido .= "\n <span class=\"css_span_debugger\" id=\"debugger_{$id}\" >{$id}</span>";
-							}		
-								
-							
-
-						$html_contenido .= "\n </td>";
-
-						
-
-						# TD DATOS
-						foreach($ar_valor as $component_tipo => $valor_list) {
-
-							# aditional td css selectors
-							$modelo_name 	 	  = RecordObj_dd::get_modelo_name_by_tipo($component_tipo, true);
-							$td_css_selector 	  = 'td_'.$modelo_name;
-							$td_css_selector_tipo = 'column_'.$component_tipo;
-
-							$html_contenido .= "\n <td class=\"section_list_td_border section_list_td_row $td_css_selector $td_css_selector_tipo\" data-tipo=\"$component_tipo\">";
-								$html_contenido .= $valor_list ;
-								if(SHOW_DEBUG) {
-									if (strpos($valor_list, 'thumb_in_list')!==false) {
-										$url = DEDALO_LIB_BASE_URL."/tools/tool_update_cache/trigger.tool_update_cache.php?section_tipo=$section_tipo&mode=update_cache_by_section_id&section_id=$section_id";
-										$html_contenido .= "<a class=\"debug_info\" href=\"$url\" target=\"_blank\">Update</a>";
+							# BUTTON DELETE 
+								if($button_delete_permissions >1){
+									$title = label::get_label('borrar').' '.$section_id;
+									$html_content .= "<a href=\"javascript:;\" class=\"id_column_buttons $id_column_buttons_css button_delete link\" ";
+									$html_content .= "onclick=\"button_delete.open_delete_dialog(this)\" ";
+									$html_content .= "data-tipo=\"{$section_tipo}\" ";
+									$html_content .= "data-section_id=\"{$id}\" ";
+									$html_content .= "data-button_delete_actions='{$button_delete_actions_json}' ";
+									$html_content .= "title=\"$title\">";
+									if(SHOW_DEBUG===true) {
+										$html_content .= "<mark class=\"debug_info row_debug_info\">$section_tipo $section_id</mark>";
 									}
+									$html_content .= "</a>";
 								}
-							$html_contenido .= "\n </td>";
+							break;
+					}//end switch ($context->context_name) {
+					
 
-						}//end foreach($ar_valor as $component_tipo => $valor_list) {
+					# DEBUG INFO
+					if(SHOW_DEBUG===true) {
+						#$html_content .= " <span class=\"css_span_debugger\" id=\"debugger_{$id}\" >{$id}</span>";
+					}					
+
+				$html_content .= " </td>"; //end id_column
+
+				
+
+				# TD DATOS
+				foreach($ar_valor as $component_tipo => $valor_list) {
+
+					# aditional td css selectors
+					$modelo_name 	 	  = RecordObj_dd::get_modelo_name_by_tipo($component_tipo, true);
+					$td_css_selector 	  = 'td_'.$modelo_name;
+					$td_css_selector_tipo = 'column_'.$component_tipo;
+
+					$html_content .= " <td class=\"section_list_td_border section_list_td_row $td_css_selector $td_css_selector_tipo\" data-tipo=\"$component_tipo\">";
+						$html_content .= "<div>";
+						$html_content .= $valor_list;
+						$html_content .= "</div>";
+						if(SHOW_DEBUG===true) {
+							if (strpos($valor_list, 'thumb_in_list')!==false) {
+								$url = DEDALO_LIB_BASE_URL."/tools/tool_update_cache/trigger.tool_update_cache.php?section_tipo=$section_tipo&mode=update_cache_by_section_id&section_id=$section_id";
+								$html_content .= "<a class=\"debug_info\" href=\"$url\" target=\"_blank\">Update</a>";
+							}
+						}						
+					$html_content .= " </td>";
+
+				}//end foreach($ar_valor as $component_tipo => $valor_list) {
 
 
-					}//end if( !is_array($ar_valor) || count($ar_valor)==0 ) {
+			}//end if( !is_array($ar_valor) || count($ar_valor)==0 ) 
 
 	}//end switch($permissions) {
-	$html_contenido .= "\n</tr>";
+	$html_content .= "</tr>";
 	
 	# PRINT HTML
-	print $html_contenido;
+	print $html_content;
 	
 
 ?>

@@ -24,6 +24,7 @@
 	$propiedades 			= $this->get_propiedades();
 	$file_name				= $modo;
 	
+	if($permissions===0) return null;
 	
 	switch($modo) {
 		
@@ -83,6 +84,9 @@
 				break;
 		
 		case 'search':
+				# Showed only when permissions are >1
+				if ($permissions<1) return null;
+				
 				$dato = empty($dato) ? '' : $dato;
 
 				# Search input name

@@ -24,10 +24,10 @@
 					
 						# TD ID
 						$title=null;
-						if(SHOW_DEBUG) $title .= "matrix id: $id";
+						if(SHOW_DEBUG===true) $title .= "matrix id: $id";
 						$html_contenido .= "\n <td class=\"section_list_td_border section_list_td_row id_column\" title=\"$title\">";		
 						
-							if(SHOW_DEBUG) {
+							if(SHOW_DEBUG===true) {
 								$html_contenido .= "<mark style=\"color:#a3a3a3;padding-right:5px\">$current_id</mark>";
 							}
 
@@ -38,7 +38,7 @@
 							#
 							# BUTTON RESTORE
 							$title = label::get_label('recuperar') .' '.label::get_label('registro');
-							if(SHOW_DEBUG) $title .= "\n id time machine: $id_time_machine";
+							if(SHOW_DEBUG===true) $title .= "\n id time machine: $id_time_machine";
 					        $html_contenido .= "
 					        <!-- BUTTON RECOVER -->
 					        <div class=\"icon_bs tool_time_machine_goback_icon link\" title=\"$title\"
@@ -52,7 +52,7 @@
 
 
 							# DEBUG INFO
-							if(SHOW_DEBUG) {
+							if(SHOW_DEBUG===true) {
 								#$html_contenido .= "\n <span class=\"css_span_debugger\" id=\"debugger_{$id}\" >{$id}</span>";	
 							}
 							
@@ -65,10 +65,11 @@
 							$modelo_name 	 = RecordObj_dd::get_modelo_name_by_tipo($component_tipo, true);
 							$td_css_selector = 'td_'.$modelo_name;
 
-							$html_contenido .= "\n <td class=\"section_list_td_border section_list_td_row $td_css_selector\" data-tipo=\"$component_tipo\">";
-
-							$html_contenido .= $valor_list ; 
-							$html_contenido .= "\n </td>";
+							$html_contenido .= "<td class=\"section_list_td_border section_list_td_row $td_css_selector\" data-tipo=\"$component_tipo\">";
+							$html_contenido .= " <div>";
+							$html_contenido .=   $valor_list;
+							$html_contenido .= " </div>";
+							$html_contenido .= "</td>";
 						}
 					}
 	}

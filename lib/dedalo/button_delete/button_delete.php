@@ -8,6 +8,7 @@
 	$id 					= $this->get_target();
 	$modo					= $this->get_modo();		
 	$label 					= $this->get_label();
+	$propiedades 			= $this->get_propiedades();
 	$debugger				= $this->get_debugger();
 	$permissions			= common::get_permissions($section_tipo, $tipo);
 	$html_title				= "Info about $tipo";
@@ -17,30 +18,29 @@
 	
 	switch($modo) {
 		
-		case 'edit'	:	
-						break;
+		case 'edit':
+					break;
 						
 		case 'tool_portal':
-						$file_name  = 'edit';
-						break;
+					$file_name  = 'edit';
+					break;
 						
 		case 'relation':$file_name  = 'edit';
-						break;
+					break;
 
-		case 'tool_time_machine' :
-						$file_name  = 'edit';
-						break;
+		case 'tool_time_machine':
+					$file_name  = 'edit';
+					break;
 
 		case 'selected_fragment':
-						$file_name  = 'edit';
-						break;
+					$file_name  = 'edit';
+					break;
 
-		case 'list'	:	
-						break;
+		case 'list':
+					break;
 						
-		case 'list_of_values'	:
-						break;							
-						
+		case 'list_of_values':
+					break;						
 	}
 	
 		

@@ -22,7 +22,6 @@
 			#
 			# LOADED COMPONENTS	
 			$ar_loaded_modelos_name = array_unique(common::$ar_loaded_modelos_name);
-			#$ar_loaded_modelos = common::get_ar_loaded_modelos_resolved();	#dump($ar_loaded_modelos,'$ar_loaded_modelos');#dump(common::get_ar_loaded_modelos());
 
 			if(SHOW_DEBUG) {
 				$section = section::get_instance($section_id, $section_tipo);
@@ -42,26 +41,6 @@
 				$fixed_tools = true;
 			}
 
-			# DATA LANGS OF CURRENT SECTION
-			/*
-			if(empty($section_tipo)) {
-				if(SHOW_DEBUG) {
-					throw new Exception("Error Processing Request. Error. section_tipo undefined ! ", 1);
-				}
-				die("Error. section_tipo undefined !");					
-			}else
-			if (empty($section_id) || $section_id=='scalar') {
-				if(SHOW_DEBUG) {
-					throw new Exception("Error Processing Request. Error. section_id is wrog ! section_id:'$section_id' ", 1);
-				}
-				die("Error. section_id is wrog !");		
-			}else{
-					#dump($section_tipo, ' section_id '.$section_id);
-				$section 				= section::get_instance($section_id,$section_tipo);
-				$ar_all_project_langs 	= $section->get_ar_all_project_langs();
-			}
-			*/	
-			
 
 			#
 			# PHP : Info version

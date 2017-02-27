@@ -89,7 +89,7 @@ foreach($vars as $name)	$$name = setVar($name);
 
 
 	# LANGS SELECTOR
-	$ar_all_langs 	= common::get_ar_all_langs();	
+	$ar_all_langs 	= common::get_ar_all_langs_resolved(DEDALO_DATA_LANG);	
 	$selectedItem 	= $ts_lang;
 
 	$select_html='';

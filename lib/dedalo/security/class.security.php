@@ -34,7 +34,7 @@ class security {
 		# USER ID
 		if(empty($_SESSION['dedalo4']['auth']['user_id'])) {
 			$msg=" <span class='error'> Error: Session user_id is not defined! </span>";
-			if(SHOW_DEBUG) {
+			if(SHOW_DEBUG===true) {
 				throw new Exception( __METHOD__ . $msg);
 			}
 			die($msg);
@@ -52,7 +52,7 @@ class security {
 		# PERMISSIONS ROOT
 		if( !defined('DEDALO_PERMISSIONS_ROOT') ) {
 			$msg=" <span class='error'> Error: permissions_root is not defined! </span>";
-			if(SHOW_DEBUG) {
+			if(SHOW_DEBUG===true) {
 				throw new Exception( __METHOD__ . $msg);
 			}
 			die($msg);
@@ -77,13 +77,13 @@ class security {
 	*/
 	public static function get_security_permissions( $tipo, $sub_tipo ) {
 		
-		if(SHOW_DEBUG) {
+		if(SHOW_DEBUG===true) {
 			#unset($_SESSION['dedalo4']['auth']['permissions_table']);					
 		
 			# Tipo verification
 			if(!(bool)verify_dedalo_prefix_tipos($tipo)){
 				$msg = "Error Processing Request. Invalid tipo: $tipo ".gettype($tipo);
-				if(SHOW_DEBUG) {
+				if(SHOW_DEBUG===true) {
 					dump($tipo,"GET_SECURITY_PERMISSIONS RECEIVED TIPO with invalid tipo ($tipo)");
 					throw new Exception($msg, 1);	
 				}
@@ -92,10 +92,9 @@ class security {
 		}
 
 		# DEBUG
-		if(SHOW_DEBUG) {
-			return 3;
-		}
-
+		#if(SHOW_DEBUG===true) {
+			#return 3;
+		#}
 		# IS_GLOBAL_ADMIN
 		/*
 		$is_global_admin = (bool)component_security_administrator::is_global_admin($_SESSION['dedalo4']['auth']['user_id']);
@@ -103,6 +102,10 @@ class security {
 			return 3;
 		}
 		*/
+		if (isset($_SESSION['dedalo4']['auth']['is_global_admin']) && $_SESSION['dedalo4']['auth']['is_global_admin']===true && (int)$_SESSION['dedalo4']['auth']['user_id']===-1) {
+			return 3;
+		}
+
 	
 		# PERMISSIONS_TABLE		
 		$permissions_table = self::get_permissions_table();
@@ -123,7 +126,7 @@ class security {
 			unset($_SESSION['dedalo4']['auth']['permissions_table']);
 
 			$msg = "Permissions not defined for this tipo: $tipo<br> Try reloading this page again to reset your permissions cache";
-			if(SHOW_DEBUG) {
+			if(SHOW_DEBUG===true) {
 				trigger_error($msg);
 			}
 			die("Error: Sorry, you don't have permissions to enter here [$tipo]");
@@ -177,7 +180,7 @@ class security {
 			# STATIC CACHE (RAM)
 			case (isset($ar_permissions_table)):
 				#debug_log(__METHOD__." Loaded ar_permissions_table static");
-				if(SHOW_DEBUG) {
+				if(SHOW_DEBUG===true) {
 					#dump($ar_permissions_table , '$ar_permissions_table  ++ '.to_string( count($ar_permissions_table) ));	die();
 				}
 				return $ar_permissions_table ;
@@ -201,7 +204,7 @@ class security {
 		
 
 		# DEBUG
-		if(SHOW_DEBUG) $start_time = start_time();
+		if(SHOW_DEBUG===true) $start_time = start_time();
 
 		$root					= DEDALO_ROOT_TIPO ;
 		$ar_excluded			= array(
@@ -213,7 +216,7 @@ class security {
 		# AR_TESAURO 
 		# Get plain array list (recursive) of all dedalo terms (from root usually 'dd1')		
 		$ar_tesauro				= (array)RecordObj_dd::get_ar_recursive_childrens_with_exclude($root, false, $ar_excluded);
-			if(SHOW_DEBUG) {
+			if(SHOW_DEBUG===true) {
 				$n_elements = count($ar_tesauro);
 				$time_ms 	= exec_time_unit($start_time);
 				debug_log(__METHOD__." Calculated recursive_childrens: $n_elements elements in $time_ms ms. Ratio: " .$n_elements/$time_ms );
@@ -282,7 +285,7 @@ class security {
 		foreach($ar_tesauro as $current_terminoID) {		
 			if( !array_key_exists($current_terminoID, $ar_permissions_table) ) {
 				$ar_permissions_table[$current_terminoID] = 0;
-				if(SHOW_DEBUG) {
+				if(SHOW_DEBUG===true) {
 					#debug_log(__METHOD__." Assigned permissions 0 to $current_terminoID");
 				}
 			}
@@ -301,7 +304,7 @@ class security {
 		
 
 		# DEBUG
-		if(SHOW_DEBUG) {			
+		if(SHOW_DEBUG===true) {			
 			#if(is_array($ar_permissions_table)) foreach($ar_permissions_table as $terminoID => $permissions) {				
 			#	$termino = RecordObj_dd::get_termino_by_tipo($terminoID,null,true);
 			#	$ar_permissions_table_debug[$terminoID] = "$permissions ($termino)";
@@ -317,7 +320,6 @@ class security {
 		# file_put_contents($this->filename_user_ar_permissions_table, serialize($ar_permissions_table) );
 
 		return (array)$ar_permissions_table;
-
 	}#end get_permissions_table
 	*/
 	
@@ -334,7 +336,7 @@ class security {
 	private static function get_permissions_table() {
 
 		# DEBUG
-		if(SHOW_DEBUG) $start_time = start_time();
+		if(SHOW_DEBUG===true) $start_time = start_time();
 
 		static $permissions_table;
 		
@@ -342,7 +344,7 @@ class security {
 			# STATIC CACHE (RAM)
 			case (isset($permissions_table)):
 				#debug_log(__METHOD__." Loaded permissions_table static");
-				if(SHOW_DEBUG) {
+				if(SHOW_DEBUG===true) {
 					#dump($permissions_table , '$permissions_table  ++ '.to_string( count($permissions_table) ));	die();
 				}
 				return $permissions_table ;
@@ -370,7 +372,6 @@ class security {
 		$_SESSION['dedalo4']['auth']['permissions_table'] = $permissions_table;		
 
 		return (object)$permissions_table;
-
 	}#end get_permissions_table
 
 	
@@ -383,11 +384,15 @@ class security {
 	*	Array of all element=>level like array([dd12] => 2,[dd93] => 2,..)
 	*	Include areas and components permissions
 	*/ 
-	private static function get_ar_permissions_in_matrix_for_current_user() {
+	private static function get_ar_permissions_in_matrix_for_current_user($user_id=false) {
 
 		$dato=array();
 
-		$user_id = $_SESSION['dedalo4']['auth']['user_id'];
+		if ($user_id===false) {
+			# Default behaviour is false (use logged user to calculate permissions)
+			$user_id = $_SESSION['dedalo4']['auth']['user_id'];
+		}
+		
 
 		#
 		# USER PROFILE
@@ -441,8 +446,39 @@ class security {
 		#dump($obj_mix, ' obj_mix ++ '.to_string());
 		
 		return (object)$obj_mix;
-
 	}//end get_ar_permissions_in_matrix_for_current_user
+
+
+
+	/**
+	* GET_PERMISSIONS_TABLE_OF_SPECIFIC_USER
+	* Custom user calcul
+	*
+	* @return array $permissions_table
+	*	Array of permissions of ALL structure table elements from root 'dd1'
+	*/
+	public static function get_permissions_table_of_specific_user( $user_id ) {
+					
+		$permissions_table = self::get_ar_permissions_in_matrix_for_current_user( $user_id );
+			#dump($permissions_table, ' permissions_table ++ '.to_string($user_id));
+	
+		return (object)$permissions_table;
+	}#end get_permissions_table_of_specific_user
+
+
+
+	/**
+	* RESET_PERMISSIONS_TABLE
+	* Force to recalculate global permissions
+	* @return bool
+	*/
+	public static function reset_permissions_table() {
+		unset($permissions_table);
+		unset($_SESSION['dedalo4']['auth']['permissions_table']);
+		security::get_permissions_table();
+
+		return true;
+	}//end reset_permissions_table
 
 
 	

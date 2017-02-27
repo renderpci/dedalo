@@ -8,11 +8,12 @@ $js_url = DEDALO_LIB_BASE_URL.'/component_image/js/component_image_read.js';
 
 	# VISUALIZADOR HTML	
 
-		
-	print "\n<!-- IMAGE [tipo:$tipo section_id_matrix:$parent] $label -->";
+	# html_delimiter
+	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'in');
 
-	print "\n<div class=\"wrap_component css_wrap_image wrap_component_{$tipo}\"
-	id=\"{$id_wrapper}\"
+	$wrap_style = isset($wrap_style) ? $wrap_style : '';
+	print "<div id=\"{$id_wrapper}\" class=\"wrap_component css_wrap_image wrap_component_{$tipo}\"
+	style=\"$wrap_style\"
 	data-tipo=\"{$tipo}\"
 	data-lang=\"{$lang}\"
 	data-parent=\"{$parent}\"
@@ -69,7 +70,7 @@ $js_url = DEDALO_LIB_BASE_URL.'/component_image/js/component_image_read.js';
 					# CANVAS : IMAGE					
 					$html_contenido .= "<canvas id=\"$identificador_unico\" class=\"canvas_edit $add_class\" $open_tool_default resize hidpi=\"on\">";
 					#$html_contenido .= $image_thumb_html ; # Rendered in thumb mode
-					$html_contenido .= "\n <img class=\"css_image\"
+					$html_contenido .= " <img class=\"css_image\"
 					src=\"$image_url\"
 					id=\"img_$identificador_unico\"
 					data-image_id=\"$image_id\"
@@ -89,7 +90,7 @@ $js_url = DEDALO_LIB_BASE_URL.'/component_image/js/component_image_read.js';
 		}
 
 		# INIT : Init canvas in read only mode 
-		$html_contenido .= "\n<script>component_image_read.init_canvas('$identificador_unico');</script>";
+		$html_contenido .= "<script>component_image_read.init_canvas('$identificador_unico');</script>";
 
 		# Prepare content to show in page
 		tools::prepare_content($html_contenido);	
@@ -100,17 +101,10 @@ $js_url = DEDALO_LIB_BASE_URL.'/component_image/js/component_image_read.js';
 		print $html_contenido;
 	
 	
-	print "\n</div><!-- /css_wrap_image IMAGE [tipo:$tipo section_id_matrix:$parent] $label -->\n"; //wrap
+	print "</div>"; //wrap
 
 
+	# html_delimiter
+	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'out');
 	
 ?>
-
-
-
-
-
-
-
-
-

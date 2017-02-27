@@ -90,8 +90,8 @@ class Thumb {
    function resize($value, $prop) {
         
       //---Determinar la propiedad a redimensionar y la propiedad opuesta  
-      $prop_value	   = ($prop == 'width') ? $this->width : $this->height;  
-      $prop_versus	= ($prop == 'width') ? $this->height : $this->width;
+      $prop_value	   = ($prop === 'width') ? $this->width : $this->height;  
+      $prop_versus	= ($prop === 'width') ? $this->height : $this->width;
 	  
       if(!$prop_value) return false;
 	  
@@ -100,7 +100,7 @@ class Thumb {
       $value_versus = $prop_versus * $pcent;  
         
       //---Crear la imagen dependiendo de la propiedad a variar  
-      $image = ($prop == 'width') ? imagecreatetruecolor($value, $value_versus) : imagecreatetruecolor($value_versus, $value);  
+      $image = ($prop === 'width') ? imagecreatetruecolor($value, $value_versus) : imagecreatetruecolor($value_versus, $value);  
         
       //---Hacer una copia de la imagen dependiendo de la propiedad a variar  
       switch($prop){  
@@ -117,7 +117,7 @@ class Thumb {
         
       //---Actualizar la imagen y sus dimensiones  
       #$info = getimagesize($name);  
-	  #$info = getimagesize($this->image); 
+	   #$info = getimagesize($this->image); 
         
       $this->width	= imagesx($image);  
       $this->height  = imagesy($image);  
@@ -162,7 +162,7 @@ class Thumb {
    //---Método de extraer una sección de la imagen sin deformarla  
    function crop($cwidth, $cheight, $pos = 'center') {  
       
-      if(intval($cwidth)==0 || intval($cheight)==0 || !$this->width ) return false;
+      if(intval($cwidth)===0 || intval($cheight)===0 || !$this->width ) return false;
 	  
 	  //---Hallar los valores a redimensionar 
       $new_w = $cwidth; 

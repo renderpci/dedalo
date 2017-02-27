@@ -2,217 +2,214 @@
 
 	# VISUALIZADOR HTML	
 		
-		# CONTENIDO (INPUT)
-		$html_contenido = '';
+	# CONTENIDO (INPUT)
+	$html_contenido = '';
 
 
 
-		# ROWS (TD)
-		$row_number=1;
-		if ($this->html_options->rows && !empty($rows_data->result)) {
-		foreach ($rows_data->result as $key => $table_rows) {
-		foreach ($table_rows as $current_id => $rows) {			
+	# ROWS (TD)
+	$row_number=1;
+	if ($this->html_options->rows && !empty($rows_data->result)) {
+	foreach ($rows_data->result as $key => $table_rows) {
+	foreach ($table_rows as $current_id => $rows) {			
 
-			# REL_LOCATOR : The current_id can be id matrix or locator like object
-				$rel_locator = $current_id;	// Default							
-				if (isset($rows['lc_object'])) { // Locator object
-					$rel_locator = $rows['lc_object'];
-					$rel_locator = json_handler::encode($rel_locator);
-					if(SHOW_DEBUG) {
-						#dump($rel_locator," rel_locator from lc_object "); 
-					}
+		# REL_LOCATOR : The current_id can be id matrix or locator like object
+			$rel_locator = $current_id;	// Default							
+			if (isset($rows['lc_object'])) { // Locator object
+				$rel_locator = $rows['lc_object'];
+				$rel_locator = json_handler::encode($rel_locator);
+				if(SHOW_DEBUG) {
+					#dump($rel_locator," rel_locator from lc_object "); 
 				}
+			}
 
-			# ROW
-				$section_id = $rows['id']; 	#dump($section_id," id");
-				
-				
-			# SECTION ID
-				$section_id = $rows['section_id'];
+		# ROW
+			$section_id = $rows['id']; 	#dump($section_id," id");
+			
+			
+		# SECTION ID
+			$section_id = $rows['section_id'];
 
 
-			# COLUMNS
-				#dump($rows['rsc29']," rows");
-				$table .= "<tr class=\"tr_sortable\" data-dato='$rel_locator'>";
-				#foreach ((array)$rows as $key => $current_value) {
+		# COLUMNS
+			#dump($rows['rsc29']," rows");
+			$table .= "<tr class=\"tr_sortable\" data-dato='$rel_locator'>";
+			#foreach ((array)$rows as $key => $current_value) {
 
-				foreach ($ar_columns as $column_tipo => $column_label) {										
+			foreach ($ar_columns as $column_tipo => $column_label) {										
+
+				#
+				# EDIT COLUMN
+				if ($column_tipo=='edit') {
+					if (!$this->html_options->id_column) continue;
+
+					$table .= "<td class=\"id_column\">";
 
 					#
-					# EDIT COLUMN
-					if ($column_tipo=='edit') {
-						if (!$this->html_options->id_column) continue;
+					# EDIT BUTTON
+						$context_http_query = http_build_query($context);
+						$url  = htmlspecialchars("?t=$target_section_tipo&id=$section_id&m=edit&{$context_http_query}");
+						$url .= "&top_tipo=".TOP_TIPO."&top_id=".TOP_ID;
+						$url .= "&exclude_elements=".$exclude_elements;
 
-						$table .= "<td class=\"id_column\">";
+						# Breadcrumb : add bc_path = url vars
+						$bc_path = tools::get_bc_path();
+							#dump($bc_path, ' bc_path');
+						$url 	.= "&bc_path=". base64_encode($bc_path);
 
-						#
-						# EDIT BUTTON
-							$context_http_query = http_build_query($context);
-							$url  = htmlspecialchars("?t=$target_section_tipo&id=$section_id&m=edit&{$context_http_query}");
-							$url .= "&top_tipo=".TOP_TIPO."&top_id=".TOP_ID;
-							$url .= "&exclude_elements=".$exclude_elements;
+						# id_path
+						$id_path = tools::get_id_path($section_tipo.'.'.$section_id);
+							#dump($section_id_path,"id_path - $section_id");
+						$url 	.= "&id_path=". $id_path;
 
-							# Breadcrumb : add bc_path = url vars
-							$bc_path = tools::get_bc_path();
-								#dump($bc_path, ' bc_path');
-							$url 	.= "&bc_path=". base64_encode($bc_path);
-
-							# id_path
-							$id_path = tools::get_id_path($section_tipo.'.'.$section_id);
-								#dump($section_id_path,"id_path - $section_id");
-							$url 	.= "&id_path=". $id_path;
-
-							$title 	= "Goto resource section_id $section_id [$target_section_tipo]";
-							if(SHOW_DEBUG) $title .= "\n url:$url \n modo $modo, context $context->context_name";
-							$table .= "<div class='button_edit div_image_link link' title=\"$title\" onclick=\"window.open('$url', '_blank', 'toolbar=0,location=0,menubar=0')\"></div>";
-							
-						#
-						# DELETE RECORD BUTTON
-							if ($permissions>=2) {
-								$btn_title	 = label::get_label('borrar') .' '. label::get_label('recurso');
-								$table 		.= " <div class=\"delete_portal_link icon_bs link image_delete_icon\"
-						    	data-rel_locator='$rel_locator'
-						    	title=\"$btn_title\"
-						    	onclick=\"$('#delete_dialog_portal').data('button_obj',this).dialog('open')\"
-						    	></div>";
-							}
-
-						if(SHOW_DEBUG) {
-							# ID MATRIX
-							$table .= "<br><mark class=\"row_debug_info\">$current_id</mark>";
+						$title 	= "Goto resource section_id $section_id [$target_section_tipo]";
+						if(SHOW_DEBUG) $title .= "\n url:$url \n modo $modo, context $context->context_name";
+						$table .= "<div class='button_edit div_image_link link' title=\"$title\" onclick=\"window.open('$url', '_blank', 'toolbar=0,location=0,menubar=0')\"></div>";
+						
+					#
+					# DELETE RECORD BUTTON
+						if ($permissions>=2) {
+							$btn_title	 = label::get_label('borrar') .' '. label::get_label('recurso');
+							$table 		.= " <div class=\"delete_portal_link icon_bs link image_delete_icon\"
+					    	data-rel_locator='$rel_locator'
+					    	title=\"$btn_title\"
+					    	onclick=\"$('#delete_dialog_portal').data('button_obj',this).dialog('open')\"
+					    	></div>";
 						}
 
+					if(SHOW_DEBUG) {
+						# ID MATRIX
+						$table .= "<br><mark class=\"row_debug_info\">$current_id</mark>";
+					}
+
+					$table .= "</td>";
+
+
+				# COMPONENTS COLUMNS
+				}else{
+
+					$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($column_tipo, true);
+
+					# Row value default
+					/*if (!isset($rows[$column_tipo])) {
+						$table .= "<td class=\"\">";
+						$table .= ''; // User with NO access to this column
 						$table .= "</td>";
+						continue;
+					}	*/									
+					$value = $rows[$column_tipo];
+					#dump($rows,"rows $this->tipo");
 
+					# Row value overwrite on special cases
+					switch ($modelo_name) {
 
-					# COMPONENTS COLUMNS
-					}else{
-
-						$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($column_tipo, true);
-
-						# Row value default
-						/*if (!isset($rows[$column_tipo])) {
-							$table .= "<td class=\"\">";
-							$table .= ''; // User with NO access to this column
-							$table .= "</td>";
-							continue;
-						}	*/									
-						$value = $rows[$column_tipo];
-						#dump($rows,"rows $this->tipo");
-
-						# Row value overwrite on special cases
-						switch ($modelo_name) {
-
-							# COMPONENT_PORTAL
-							case ('component_portal'):
-								#if (empty($value)) break; // Avoid resolve empty portals
-								# Portal with locators
-								$parent 		 = null; // $section_id / null
-								$component_portal = component_common::get_instance('component_portal',$column_tipo,$parent,'list',DEDALO_DATA_NOLAN,$target_section_tipo);
-								$component_portal->html_options->rows_limit	= 1;
-								if ($parent===null) {
-									# Use already query calculated values for speed
-									$ar_records   = (array)json_handler::decode($value);	#dump($ar_records,"ar_records for portal $current_component_tipo - id:$section_id");#die();
-									$component_portal->set_dato($ar_records);
-									$component_portal->set_identificador_unico($component_portal->get_identificador_unico().'_'.$section_id); // Set unic id for build search_options_session_key used in sessions
-								}
-								$value = $component_portal->get_html();
-								break;
-
-							# COMPONENTS WITH LOCATORS
-							case ('component_autocomplete'):
-							case ('component_radio_button'):
-							case ('component_check_box'):
-							case ('component_select'):
-							case ('component_relation'):
-								#if (empty($value)) break; // Avoid resolve empty vars
-								/*
-								$parent 		   = $section_id; // $section_id / null
-								$current_component = component_common::get_instance($modelo_name,$column_tipo,$parent,'list',DEDALO_DATA_NOLAN,$target_section_tipo);	
-									#dump($target_section_tipo, ' target_section_tipo');
-								#$current_component->html_options->rows_limit	= 1;
-								#if ($parent===null) {
-									# Use already query calculated values for speed
-									$ar_records   = (array)json_handler::decode($value);	#dump($ar_records,"ar_records for portal $current_component_tipo - id:$section_id");#die();
-									$current_component->set_dato($ar_records); 				#dump($value, 'ar_records');
-									$current_component->set_identificador_unico($current_component->get_identificador_unico().'_'.$section_id); // Set unic id for build search_options_session_key used in sessions
-								#}
-								$value = $current_component->get_html();
-								*/
-								$parent 		   = $section_id;	//null;
-								$current_component = component_common::get_instance($modelo_name, $column_tipo, $parent, 'list', DEDALO_DATA_NOLAN, $target_section_tipo);
+						# COMPONENT_PORTAL
+						case ('component_portal'):
+							#if (empty($value)) break; // Avoid resolve empty portals
+							# Portal with locators
+							$parent 		 = null; // $section_id / null
+							$component_portal = component_common::get_instance('component_portal',$column_tipo,$parent,'list',DEDALO_DATA_NOLAN,$target_section_tipo);
+							$component_portal->html_options->rows_limit	= 1;
+							if ($parent===null) {
 								# Use already query calculated values for speed
-								$ar_records   = (array)json_handler::decode($value);	#dump($ar_records,"ar_records for portal $column_tipo - id:$id");#die();
-								$current_component->set_dato($ar_records);
-								$current_component->set_identificador_unico($current_component->get_identificador_unico().'_'.$section_id); // Set unic id for build
-								$value = $current_component->get_html();
-								break;
+								$ar_records   = (array)json_handler::decode($value);	#dump($ar_records,"ar_records for portal $current_component_tipo - id:$section_id");#die();
+								$component_portal->set_dato($ar_records);
+								$component_portal->set_identificador_unico($component_portal->get_identificador_unico().'_'.$section_id); // Set unic id for build search_options_session_key used in sessions
+							}
+							$value = $component_portal->get_html();
+							break;
 
-							# COMPONENT_TEXT_AREA
-							case ('component_text_area'):
-								/*
-								# TO VERIFY THIS SELECTOR..
-								$rel_locator = $rows['lc_object'];	//(object)json_handler::decode($rel_locator);
+						# COMPONENTS WITH LOCATORS
+						case ('component_autocomplete'):
+						case ('component_radio_button'):
+						case ('component_check_box'):
+						case ('component_select'):
+						case ('component_relation'):
+							#if (empty($value)) break; // Avoid resolve empty vars
+							/*
+							$parent 		   = $section_id; // $section_id / null
+							$current_component = component_common::get_instance($modelo_name,$column_tipo,$parent,'list',DEDALO_DATA_NOLAN,$target_section_tipo);	
+								#dump($target_section_tipo, ' target_section_tipo');
+							#$current_component->html_options->rows_limit	= 1;
+							#if ($parent===null) {
+								# Use already query calculated values for speed
+								$ar_records   = (array)json_handler::decode($value);	#dump($ar_records,"ar_records for portal $current_component_tipo - id:$section_id");#die();
+								$current_component->set_dato($ar_records); 				#dump($value, 'ar_records');
+								$current_component->set_identificador_unico($current_component->get_identificador_unico().'_'.$section_id); // Set unic id for build search_options_session_key used in sessions
+							#}
+							$value = $current_component->get_html();
+							*/
+							$parent 		   = $section_id;	//null;
+							$current_component = component_common::get_instance($modelo_name, $column_tipo, $parent, 'list', DEDALO_DATA_NOLAN, $target_section_tipo);
+							# Use already query calculated values for speed
+							$ar_records   = (array)json_handler::decode($value);	#dump($ar_records,"ar_records for portal $column_tipo - id:$id");#die();
+							$current_component->set_dato($ar_records);
+							$current_component->set_identificador_unico($current_component->get_identificador_unico().'_'.$section_id); // Set unic id for build
+							$value = $current_component->get_html();
+							break;
 
-								if (!property_exists($rel_locator, 'tag_id')) {										
-									$ar_records = (array)json_handler::decode($value);
-									$value 		= reset($ar_records);
-								}
-								*/
-								$obj_value = json_decode($rows[$column_tipo]); # Evitamos los errores del handler accediendo directamente al json_decode de php
-								$current_tag = 0;
-								if (is_object($obj_value) && isset($obj_value->$current_tag)) {
-									$value = $obj_value->$current_tag;
-								}else{
-									$value = $rows[$column_tipo];
-								}
-								break;
+						# COMPONENT_TEXT_AREA
+						case ('component_text_area'):
+							/*
+							# TO VERIFY THIS SELECTOR..
+							$rel_locator = $rows['lc_object'];	//(object)json_handler::decode($rel_locator);
 
-
-								
-							default:
-								$parent 		   = $section_id; // $section_id / null
-
-								$RecordObjt_dd = new RecordObj_dd($column_tipo);
-								if($RecordObjt_dd->get_traducible() =='no'){
-									$lang = DEDALO_DATA_NOLAN;
-								}else{
-									$lang = DEDALO_DATA_LANG;
-								}
-								$current_component = component_common::get_instance($modelo_name,$column_tipo,$parent,'list',$lang,$target_section_tipo);
-								$value = $current_component->get_html();
-
-						}//end switch (true)
-
-						# aditional td css selectors										
-						$td_css_selector = 'td_'.$modelo_name;
-
-						# TD COLUMN
-						$table .= "<td class=\"$td_css_selector\">";
-						if (is_string($value)) {
-							$table .= $value;
-						}else{
-							$table .= to_string($value);
-						}
-															
-						$table .= "</td>";
-
-					}//end if ($modelo_name=='component_portal')
-
-				}//end foreach ($ar_columns as $column_tipo => $column_label)
-				$table .= "</tr>";	
-
-		
-		$row_number++;
+							if (!property_exists($rel_locator, 'tag_id')) {										
+								$ar_records = (array)json_handler::decode($value);
+								$value 		= reset($ar_records);
+							}
+							*/
+							$obj_value = json_decode($rows[$column_tipo]); # Evitamos los errores del handler accediendo directamente al json_decode de php
+							$current_tag = 0;
+							if (is_object($obj_value) && isset($obj_value->$current_tag)) {
+								$value = $obj_value->$current_tag;
+							}else{
+								$value = $rows[$column_tipo];
+							}
+							break;
 
 
-		}//END foreach ($table_rows as $current_id => $rows)
-		}//END foreach ($rows_data->result as $key => $table_rows)
-		}//end if ($this->html_options->header)
+							
+						default:
+							$parent 		   = $section_id; // $section_id / null
+
+							$RecordObjt_dd = new RecordObj_dd($column_tipo);
+							if($RecordObjt_dd->get_traducible() =='no'){
+								$lang = DEDALO_DATA_NOLAN;
+							}else{
+								$lang = DEDALO_DATA_LANG;
+							}
+							$current_component = component_common::get_instance($modelo_name,$column_tipo,$parent,'list',$lang,$target_section_tipo);
+							$value = $current_component->get_html();
+
+					}//end switch (true)
+
+					# aditional td css selectors
+					$td_css_selector = 'td_'.$modelo_name;
+
+					# TD COLUMN
+					$table .= "<td class=\"$td_css_selector\">";
+					$table .= "<div>";
+					if (is_string($value)) {
+						$table .= $value;
+					}else{
+						$table .= to_string($value);
+					}
+					$table .= "</div>";
+					$table .= "</td>";
+
+				}//end if ($modelo_name=='component_portal')
+
+			}//end foreach ($ar_columns as $column_tipo => $column_label)
+			$table .= "</tr>";	
+
+	
+	$row_number++;
 
 
-		
-
+	}//END foreach ($table_rows as $current_id => $rows)
+	}//END foreach ($rows_data->result as $key => $table_rows)
+	}//end if ($this->html_options->header)
 		
 
 

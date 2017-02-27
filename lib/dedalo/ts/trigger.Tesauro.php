@@ -44,6 +44,9 @@ if($accion=='show_indexations') {
 	# Write session to unlock session file
 	session_write_close();
 
+	# IMPORTANT: NOTE THAT WE USE OLD CLASS V 4.0 diffusion_index_ts, NOT DEFAULT CLASS V 4.5
+	require_once(DEDALO_LIB_BASE_PATH .'/diffusion/diffusion_index_ts_V40/class.diffusion_index_ts.php');
+
 	# DIFFUSION_INDEX_TS
 	$diffusion_index_ts = new diffusion_index_ts($terminoID);
 	$html 				= $diffusion_index_ts->get_html();

@@ -18,6 +18,7 @@
 	$visible				= $this->get_visible();
 	$file_name				= $modo;
 	
+	if($permissions===0) return null;
 	
 	switch($modo) {		
 	
@@ -49,6 +50,9 @@
 				break;	
 		
 		case 'search':
+				# Showed only when permissions are >1
+				if ($permissions<1) return null;
+				
 				if ($dato<1) {
 					$dato = null;
 				}

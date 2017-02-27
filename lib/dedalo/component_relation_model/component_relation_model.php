@@ -21,6 +21,8 @@
 
 	$file_name = $modo;
 	
+	if($permissions===0) return null;
+
 	switch($modo) {
 		
 		case 'edit'	:
@@ -43,6 +45,9 @@
 				break;
 						
 		case 'search':
+				# Showed only when permissions are >1
+				if ($permissions<1) return null;
+				
 				$referenced_tipo 		 = $this->get_referenced_tipo();
 				$ar_list_of_values		 = $this->get_ar_list_of_values( DEDALO_DATA_LANG, null );
 				

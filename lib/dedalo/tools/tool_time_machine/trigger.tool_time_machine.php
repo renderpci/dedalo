@@ -66,10 +66,12 @@ if($mode=='assign_time_machine_value') {
 	if (empty($tipo))	throw new Exception("Error Processing Request: Unable assign_time_machine_value ! (tipo is mandatory)", 1);
 	if (empty($id_time_machine))	throw new Exception("Error Processing Request: Unable assign_time_machine_value ! (id_time_machine is mandatory)", 1);
 	if (empty($current_tipo_section))	throw new Exception("Error Processing Request: Unable assign_time_machine_value ! (current_tipo_section is mandatory)", 1);
-	
+	if (empty($lang))	throw new Exception("Error Processing Request: Unable assign_time_machine_value ! (id_time_machine is mandatory)", 1);
+
 	# Extraemos el dato de matrix_time_machine
 	$RecordObj_time_machine = new RecordObj_time_machine($id_time_machine);
-	$dato_time_machine 		= $RecordObj_time_machine->get_dato();	
+	$dato_time_machine 		= $RecordObj_time_machine->get_dato();
+		#dump($dato_time_machine, ' dato_time_machine ++ '.to_string());
 
 	/* OLD
 	# CURRENT TIPO SECTION (RELATION)
@@ -116,7 +118,13 @@ if($mode=='assign_time_machine_value') {
 		
 
 	#$component_obj_to_save	= component_common::load_component($id, $tipo);
-	$component_obj_to_save	= component_common::get_instance(null, $tipo, $parent, 'edit', DEDALO_DATA_LANG, $current_tipo_section);
+	$modelo_name 			= RecordObj_dd::get_modelo_name_by_tipo($tipo,true); 
+	$component_obj_to_save	= component_common::get_instance($modelo_name,
+															 $tipo,
+															 $parent,
+															 'edit',
+															 $lang,
+															 $current_tipo_section);
 		#dump($component_obj_to_save,"component_obj_to_save");die();
 
 	
@@ -127,7 +135,7 @@ if($mode=='assign_time_machine_value') {
 	#
 	# COMPONENT PORTAL SEARCH_OPTIONS : Clear old data and force recreate
 	#dump($_SESSION['dedalo4']['config']['search_options'],"search_options");
-	if (get_class($component_obj_to_save)=='component_portal' && isset($_SESSION['dedalo4']['config']['search_options']) ) {		
+	if (get_class($component_obj_to_save)==='component_portal' && isset($_SESSION['dedalo4']['config']['search_options']) ) {		
 		$target_section_tipo = $component_obj_to_save->get_ar_target_section_tipo()[0];		
 		foreach ($_SESSION['dedalo4']['config']['search_options'] as $key => $value) {
 			if ( strpos($key, $target_section_tipo)!==false ) {

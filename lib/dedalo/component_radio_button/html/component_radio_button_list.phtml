@@ -3,9 +3,10 @@
 	# VISUALIZADOR HTML	
 	
 
-	print "\n<!-- RADIO BUTTON [tipo:$tipo parent:$parent] $label -->";
+	# html_delimiter
+	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'in');
 
-	print "\n<div class=\"css_wrap_radio_button wrap_component\" id=\"{$id_wrapper}\"
+	print "<div class=\"css_wrap_radio_button wrap_component\" id=\"{$id_wrapper}\"
 	data-tipo=\"{$tipo}\"
 	data-section_tipo=\"{$section_tipo}\"
 	data-parent=\"{$parent}\"
@@ -33,7 +34,7 @@
 		case 1	: 
 				foreach ($ar_list_of_values->result as $value => $rotulo) {						
 					if( $value == $dato ) {
-						$html_contenido .= "\n <label class=\"css_radio_button_rotulo\" $required_code >$rotulo</label>";
+						$html_contenido .= " <label class=\"css_radio_button_rotulo\" $required_code >$rotulo</label>";
 					}
 				}
 				break;	
@@ -56,7 +57,7 @@
 
 					$html_contenido .= "<li>";
 					
-						$html_contenido .= "\n <input class=\"css_radio_button\" type=\"radio\"
+						$html_contenido .= " <input class=\"css_radio_button\" type=\"radio\"
 						onchange=\"component_radio_button.Save(this)\"
 						name=\"{$input_name}\" 
 						data-tipo=\"{$tipo}\"
@@ -65,7 +66,7 @@
 						data-parent=\"{$parent}\"
 						value='$value'
 						title=\"$html_title\" $checked />";
-						$html_contenido .= "\n <label class=\"css_radio_button_rotulo\" $required_code >$rotulo</label>";
+						$html_contenido .= " <label class=\"css_radio_button_rotulo\" $required_code >$rotulo</label>";
 
 						if ($rotulo!=end($ar_list_of_values->result)) {
 							#$html_contenido .= "<br>";
@@ -85,11 +86,16 @@
 	# PRINT HTML
 	print $html_contenido;
 
-	#print $js_code;
 
 	if(SHOW_DEBUG) {
 		echo "<hr>".$ar_list_of_values->debug;
 	}
 	
-	print "\n</div>\n\n"; //wrap
+	print "</div>"; //wrap
+
+
+	# html_delimiter
+	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'out');
+
+
 ?>

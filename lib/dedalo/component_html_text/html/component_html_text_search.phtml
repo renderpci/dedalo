@@ -11,35 +11,38 @@
 	$html_label = component_common_draw::draw_label($this);
 	
 	# CONTENIDO (INPUT)
-	$html_contenido = '';
+	$html_content = '';
 	switch($permissions) {
 			
-		case 0	:	$html_contenido .= "\n <span class=\"css_span_dato\"> No access here (html_text)! </span>";	
+		case 0	:	$html_content .= "\n <span class=\"css_span_dato\"> No access here (html_text)! </span>";	
 					break;						
 		
 		case ($permissions>=1)	:
 					/*
-					$html_contenido .= "\n <textarea class=\"css_html_text\" 
+					$html_content .= "\n <textarea class=\"css_html_text\" 
 					id=\"{$identificador_unico}\" name=\"{$tipo}\" 
 					data-tipo=\"{$tipo}\" 
 					title=\"$html_title\">$dato</textarea>";
 					*/
-					$html_contenido .= "\n <input class=\"css_input_text\" type=\"text\"
+					$html_content .= "\n <input class=\"css_input_text\" type=\"text\"
 					name=\"{$tipo}\"
 					data-tipo=\"{$tipo}\"
 					value=\"{$dato}\"
 					title=\"$html_title\"
 					/>";
 				
+				if(SHOW_DEBUG===true) {
+					$html_content .= "<span class=\"debug_info\">$search_input_name</span>";
+				}
 	}
 
 	# Prepare content to show in page
-	tools::prepare_content($html_contenido);
+	tools::prepare_content($html_content);
 	
 	
 	# PRINT HTML
 	print $html_label;
-	print $html_contenido;
+	print $html_content;
 	
 	
 	print "\n</div>\n\n"; //wrap

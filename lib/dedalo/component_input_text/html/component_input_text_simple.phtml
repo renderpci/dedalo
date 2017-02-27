@@ -1,19 +1,16 @@
 <?php
 
-	# VISUALIZADOR HTML	
-	
-	
-	print "\n<!-- INPUT_TEXT [$tipo][$parent] -->";
+	# VISUALIZADOR HTML		
 
-	print "\n<div class=\"css_wrap_input_text\" >";
+	print "<div class=\"css_wrap_input_text\">";
 	
-		# ETIQUETA (LABEL)
+		# LABEL
 		$html_label = component_common_draw::draw_label($this);
 		
-		# CONTENIDO (INPUT)
-		$html_contenido = '';
+		# CONTENT
+		$html_content = '';
 
-		$html_contenido .= "\n <input class=\"css_input_text\" type=\"text\"
+		$html_content .= " <input class=\"css_input_text\" type=\"text\"
 		onchange=\"component_input_text.Save(this)\"
 		id=\"{$identificador_unico}\"
 		name=\"{$tipo}_{$parent}\"
@@ -21,14 +18,12 @@
 		data-modo=\"login\"
 		value=\"\"
 		title=\"$html_title\"
-		placeholder=\"$label\"	
-		/>";
-		
+		placeholder=\"$label\"
+		/>";		
 		
 		# PRINT HTML
 		print $html_label;
-		print $html_contenido;
+		print $html_content;	
 	
-	
-	print "\n</div>\n\n"; //wrap
+	print "</div>"; //wrap
 ?>

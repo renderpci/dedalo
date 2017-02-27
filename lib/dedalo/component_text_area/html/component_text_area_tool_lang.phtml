@@ -3,7 +3,9 @@
 	# VISUALIZADOR HTML
 	
 	
-	print "\n<!-- TEXT AREA [tipo:$tipo parent:$parent] $label -->";
+	# html_delimiter
+	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'in');
+
 	print "\n<div class=\"css_wrap_text_area wrap_component text_area_tool_lang\" id=\"{$id_wrapper}\"
 	data-tipo=\"{$tipo}\"
 	data-section_tipo=\"{$section_tipo}\"
@@ -73,7 +75,7 @@
 
 	# INIT : Init text editor 
 	#$html_contenido .= "\n<script>$(function(){text_editor.init('$identificador_unico','$modo','$propiedades_json');})</script>";
-	$html_contenido .= "\n<script>text_editor.init('$identificador_unico','$modo','$propiedades_json');</script>";
+	$html_contenido .= "<script>text_editor.init('$identificador_unico','$modo','$propiedades_json');</script>";
 	
 	
 	# Prepare content to show in page
@@ -86,5 +88,8 @@
 
 	
 	
-	print "\n</div><!-- /css_wrap_text_area  $label -->\n\n"; //wrap
+	print "</div>"; //wrap
+
+	# html_delimiter
+	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'out');
 ?>

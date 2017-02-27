@@ -31,20 +31,20 @@ class JSON_RecordObj_matrix extends JSON_RecordDataBoundObject {
 		#dump($section_id,"__construct JSON_RecordObj_matrix , matrix_table: $matrix_table");
 
 		if(empty($matrix_table)) {
-			if(SHOW_DEBUG)
+			if(SHOW_DEBUG===true)
 				dump($matrix_table,"section_id:$section_id - tipo:$section_tipo");
 			throw new Exception("Error Processing Request. Matrix wrong name ", 1);			
 		}
 
 		if(empty($section_id)) {
-			if(SHOW_DEBUG) {
+			if(SHOW_DEBUG===true) {
 				#dump($section_id,"section_id:$section_id is null for: matrix_table:$matrix_table, section_tipo:$section_tipo, caller:".debug_backtrace()[1]['function']);
 				#dump( debug_backtrace(), 'debug_backtrace');
 			}					
 		}
 
 		if(empty($section_tipo)) {
-			if(SHOW_DEBUG)
+			if(SHOW_DEBUG===true)
 				dump($section_tipo,"section_id:$section_id - matrix_table:$matrix_table");
 			throw new Exception("Error Processing Request. section_tipo is empty ", 1);			
 		}
@@ -132,17 +132,7 @@ class JSON_RecordObj_matrix extends JSON_RecordDataBoundObject {
 		
 		# MATRIX SAVE (with parent RecordDataBoundObject)
 		$id = parent::Save($save_options);
-<<<<<<< HEAD
 		
-=======
-
-
-		# AUTOLOG STOP TIME MACHINE COPY SAVE
-		# Prevent time machine saving activity (if current tipo is a component logger, stop save)
-		#if ($this->matrix_table=='matrix_activity') {
-		#	RecordObj_time_machine::$save_time_machine_version = false;			
-		#}
->>>>>>> origin/master
 
 		# TIME MACHINE COPY SAVE (Return assigned id on save)
 		# Every record saved in matrix is saved as copy in 'matrix_time_machine' except logger and TM recover section
@@ -166,7 +156,7 @@ class JSON_RecordObj_matrix extends JSON_RecordDataBoundObject {
 		if (empty($save_options->time_machine_data)) {
 			#dump($save_options,"save_time_machine save_options");
 			#trigger_error("Warning: Nothing to save in  time machine: time_machine_data is empty");
-			if(SHOW_DEBUG) {
+			if(SHOW_DEBUG===true) {
 				#error_log("DEBUG INFO: ".__METHOD__ . " Empty save_options->time_machine_data. No time machine saved data. section_tipo:$this->section_tipo, section_id:$this->section_id");
 				#dump($save_options->time_machine_data, ' save_options->time_machine_data ++ '.to_string());
 				debug_log(__METHOD__." Empty save_options->time_machine_data. nothing is saved in TM  ".to_string(), logger::DEBUG);
@@ -188,7 +178,8 @@ class JSON_RecordObj_matrix extends JSON_RecordDataBoundObject {
 		"userID" 				=> "userID", 	# integer
 		"state" 				=> "state",		# string char 32
 		"dato" 					=> "dato",		# jsonb format	
-		*/		
+		*/
+	
 		
 		# id_matrix
 		#$RecordObj_time_machine->set_id_matrix( $this->get_ID() );
@@ -197,14 +188,17 @@ class JSON_RecordObj_matrix extends JSON_RecordDataBoundObject {
 		# section_tipo
 		$RecordObj_time_machine->set_section_tipo( $this->get_section_tipo() );
 		# tipo
+		if(isset($save_options->time_machine_tipo))
 		$RecordObj_time_machine->set_tipo( $save_options->time_machine_tipo );
 		# lang
+		if(isset($save_options->time_machine_lang))
 		$RecordObj_time_machine->set_lang( $save_options->time_machine_lang );
 		# timestamp
 		$RecordObj_time_machine->set_timestamp( component_date::get_timestamp_now_for_db() );
 		# userID
 		$RecordObj_time_machine->set_userID( navigator::get_user_id() );
 		# dato
+		if(isset($save_options->time_machine_data))
 		$RecordObj_time_machine->set_dato( $save_options->time_machine_data );			
 		
 		

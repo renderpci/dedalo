@@ -17,6 +17,8 @@ class login extends common {
 
 	protected static $login_matrix_table = 'matrix';
 
+	const SU_DEFAULT_PASSWORD = 'Dedalo4debugChangePsW';
+
 
 	public function __construct($modo='edit') {
 
@@ -78,11 +80,17 @@ class login extends common {
 		$arguments=array();
 		$arguments["strPrimaryKeyName"] = 'section_id';
 		$arguments["section_tipo"]  	= DEDALO_SECTION_USERS_TIPO;
-		$arguments["datos#>>'{components,".DEDALO_USER_NAME_TIPO.",dato,lg-nolan}'"] = $username;
+		$current_version = tool_administration::get_current_version_in_db();
+		# Username query
+		if($current_version[0]>=4 && $current_version[1]>=0 && $current_version[2]>=22) {
+			$arguments["datos#>>'{components,".DEDALO_USER_NAME_TIPO.",dato,lg-nolan}'"] = json_encode((array)$username,JSON_UNESCAPED_UNICODE);
+		}else{
+			$arguments["datos#>>'{components,".DEDALO_USER_NAME_TIPO.",dato,lg-nolan}'"] = $username;
+		}
 		$matrix_table 					= common::get_matrix_table_from_tipo(DEDALO_SECTION_USERS_TIPO);
 		$JSON_RecordObj_matrix			= new JSON_RecordObj_matrix($matrix_table,NULL,DEDALO_SECTION_USERS_TIPO);
 		$ar_result						= (array)$JSON_RecordObj_matrix->search($arguments);
-			#dump($ar_result,"ar_result ",$arguments);#die();
+			#dump($username, ' username ++ '.to_string($arguments));
 
 		if( !is_array($ar_result) || empty($ar_result[0])  ) {
 
@@ -284,7 +292,7 @@ class login extends common {
 		$_SESSION['dedalo4']['auth']['is_logged']	= 1;
 
 		# CONFIG KEY
-		$_SESSION['dedalo4']['auth']['salt_secure']	= dedalo_encryptStringArray(DEDALO_SALT_STRING);
+		$_SESSION['dedalo4']['auth']['salt_secure']	= dedalo_encrypt_openssl(DEDALO_SALT_STRING);
 
 
 		#
@@ -347,9 +355,13 @@ class login extends common {
 		$_SESSION['dedalo4']['auth']['is_logged']		= 1;
 
 		# CONFIG KEY
-		$_SESSION['dedalo4']['auth']['salt_secure']	= dedalo_encryptStringArray(DEDALO_SALT_STRING);
+		$_SESSION['dedalo4']['auth']['salt_secure']	= dedalo_encrypt_openssl(DEDALO_SALT_STRING);
 		
-		
+
+		# Auth cookie
+		if (defined('DEDALO_PROTECT_MEDIA_FILES') && DEDALO_PROTECT_MEDIA_FILES===true) {
+			self::init_cookie_auth();
+		}
 
 		# BACKUP ALL
 		if( DEDALO_BACKUP_ON_LOGIN ) {
@@ -396,8 +408,130 @@ class login extends common {
 			);
 		
 		return true;
-
 	}#end init_user_login_secuence
+
+
+
+	/**
+	* INIT_COOKIE_AUTH
+	* @return bool true
+	*/
+	private static function init_cookie_auth() {
+
+		$cookie_name  = self::get_auth_cookie_name();
+		$cookie_value = self::get_auth_cookie_value();
+
+		$current = '';
+		$previous= '';
+	
+		$ktoday 	= date("Y_m_d");
+		$kyesterday = date("Y_m_d",strtotime("-1 day"));
+
+		$file = DEDALO_EXTRAS_PATH.'/media_protection/cookie/cookie_auth.php';
+		if ($file_exists  = file_exists($file)) {
+			$current_file = file_get_contents($file);
+			$ar_data 	  = json_decode($current_file);
+		}
+
+		if ( $file_exists===true && isset($ar_data->$ktoday) && isset($ar_data->$kyesterday) ) {
+			
+			$data = $ar_data;
+			debug_log(__METHOD__." data 1 Recycle ".to_string($data), logger::DEBUG);
+		
+		}else{
+
+			$data = new stdClass();
+
+			$ktoday_data = new stdClass();
+				$ktoday_data->cookie_name  = $cookie_name;
+				$ktoday_data->cookie_value = $cookie_value;
+
+			$data->$ktoday = $ktoday_data;
+
+			if (isset($ar_data->$kyesterday)) {
+				$data->$kyesterday = $ar_data->$kyesterday;
+			}else{
+
+				$kyesterday_data = new stdClass();
+					$kyesterday_data->cookie_name  = self::get_auth_cookie_name();
+					$kyesterday_data->cookie_value = self::get_auth_cookie_value();
+
+				$data->$kyesterday = $kyesterday_data; 
+			}					
+			# File cookie data
+			if( !file_put_contents($file, json_encode($data)) ){
+				throw new Exception("Error Processing Request. Media protecction error on create cookie file", 1);
+			}
+
+			debug_log(__METHOD__." data 2 New data ".to_string($data), logger::DEBUG);
+
+			$htaccess_text  = '';
+
+			$htaccess_text .= '# Protect files and directories from prying eyes.'.PHP_EOL;
+			$htaccess_text .= '<FilesMatch "\.(deleted|sh|temp|tmp|import)$">'.PHP_EOL;
+  			$htaccess_text .= 'Order allow,deny'.PHP_EOL;
+			$htaccess_text .= '</FilesMatch>'.PHP_EOL;
+
+			$htaccess_text .= '# Protect media files with realm'.PHP_EOL;
+			$htaccess_text .= 'AuthType Basic'.PHP_EOL;
+			$htaccess_text .= 'AuthName "Protected Login"'.PHP_EOL;
+			$htaccess_text .= 'AuthUserFile ".htpasswd"'.PHP_EOL;
+			$htaccess_text .= 'AuthGroupFile "/dev/null"'.PHP_EOL;
+			$htaccess_text .= 'SetEnvIf Cookie '.$data->$ktoday->cookie_name.'='.$data->$ktoday->cookie_value.' PASS=1'.PHP_EOL;
+			$htaccess_text .= 'SetEnvIf Cookie '.$data->$kyesterday->cookie_name.'='.$data->$kyesterday->cookie_value.' PASS=1'.PHP_EOL;
+			$htaccess_text .= 'Order deny,allow'.PHP_EOL;
+			$htaccess_text .= 'Deny from all'.PHP_EOL;
+			$htaccess_text .= 'Allow from env=PASS'.PHP_EOL;
+			$htaccess_text .= 'Require valid-user'.PHP_EOL;
+			$htaccess_text .= 'Satisfy any'.PHP_EOL;
+
+			debug_log(__METHOD__." htaccess_text ".to_string($htaccess_text), logger::DEBUG);
+
+			# File .htaccess
+			$htaccess_file = DEDALO_MEDIA_BASE_PATH.'/.htaccess';
+			if( !file_put_contents($htaccess_file, $htaccess_text) ){
+				throw new Exception("Error Processing Request. Media protecction error on create access file", 1);
+			}	
+		}			
+
+		$_SESSION['dedalo4']['auth']['cookie_auth'] = $data;
+
+		setcookie($data->$ktoday->cookie_name, $data->$ktoday->cookie_value, time() + (86400 * 1), '/'); // 86400 = 1 day
+
+		return true;
+	}//end init_cookie_auth
+
+
+
+	/**
+	* GET_AUTH_COOKIE_NAME
+	* @return 
+	*/
+	private static function get_auth_cookie_name() {
+		$date = getdate();
+	    $cookie_name = md5( 'dedalo_c_name_'.$date['year'].$date['mon'].$date['mday'].$date['weekday']. mt_rand() );
+	    return $cookie_name;
+	}//end get_auth_cookie_name
+
+
+
+	/**
+	* GET_AUTH_COOKIE_value	
+	    [mday]    => 17
+	    [wday]    => 2
+	    [mon]     => 6
+	    [year]    => 2003
+	    [yday]    => 167
+	    [weekday] => Tuesday
+	    [month]   => June
+	* @return 
+	*/
+	private static function get_auth_cookie_value() {
+		$date = getdate();
+	    $cookie_value = md5( 'dedalo_c_value_'.$date['wday'].$date['yday'].$date['mday'].$date['month']. mt_rand() );
+	    return $cookie_value;
+	}//end get_auth_cookie_value
+
 
 
 	/**
@@ -446,6 +580,7 @@ class login extends common {
 	}#end verify_login
 
 
+
 	/**
 	* GET_LOGIN_TIPO
 	*/
@@ -458,6 +593,7 @@ class login extends common {
 
 		return NULL;
 	}
+
 
 
 	/**
@@ -543,6 +679,7 @@ class login extends common {
 	}
 
 
+
 	/**
 	* GET HTML CODE .
 	* Return include file __class__.php
@@ -561,17 +698,17 @@ class login extends common {
 
 
 
-
-
 	/**
 	* QUIT
+	* Made logout
 	*/
 	public static function Quit( $trigger_post_vars ) {
 
 		if (self::is_logged()) {
 
-			$user_id 	= $_SESSION['dedalo4']['auth']['user_id'];
-			$username	= $_SESSION['dedalo4']['auth']['username'];
+			$user_id 	 = $_SESSION['dedalo4']['auth']['user_id'];
+			$username	 = $_SESSION['dedalo4']['auth']['username'];
+			
 
 			$activity_datos['result'] 	= "quit";
 			$activity_datos['cause'] 	= "called quit method";
@@ -590,9 +727,21 @@ class login extends common {
 				$activity_datos
 				);
 
+			# Delete auth cookie
+			if (defined('DEDALO_PROTECT_MEDIA_FILES') && DEDALO_PROTECT_MEDIA_FILES===true) {
+				$cookie_auth = (object)$_SESSION['dedalo4']['auth']['cookie_auth'];
+				$ktoday 	 = date("Y_m_d");
+				$kyesterday  = date("Y_m_d",strtotime("-1 day"));
+
+				setcookie($cookie_auth->$ktoday->cookie_name, null, -1, '/');
+				setcookie($cookie_auth->$kyesterday->cookie_name, null, -1, '/');
+			}
+			
+
 			#unset($_SESSION['dedalo4']['auth']);
 			#unset($_SESSION['dedalo4']['config']);
 			unset($_SESSION['dedalo4']);
+			setcookie('PHPSESSID', null, -1, '/');
 			#unset($_SESSION);
 		}
 		# Return OK
@@ -635,17 +784,21 @@ class login extends common {
 	public function test_su_default_password() {
 	
 		$component  = component_common::get_instance('component_password', DEDALO_USER_PASSWORD_TIPO, -1, 'edit', DEDALO_DATA_NOLAN, DEDALO_SECTION_USERS_TIPO);
-		$dato 		= $component->get_dato();
-		if(SHOW_DEBUG) {
-			#dump(dedalo_decryptStringArray($dato), 'psw : '.to_string($dato)); //die();
-		}
+		$dato 		= $component->get_dato();		
+		$default 	= login::SU_DEFAULT_PASSWORD; // Dedalo4debugChangePsW	
 		
-		$default = 'Dedalo4debugChangePsW'; // Dedalo4debugChangePsW		
-		if (dedalo_decryptStringArray($dato)==$default) {
-			return true;
+		$current_version = tool_administration::get_current_version_in_db();
+		if($current_version[0] >= 4 && $current_version[1] >= 0 && $current_version[2] >= 22){
+			if (dedalo_decrypt_openssl($dato)==$default) {
+				return true;
+			}
+		}else {
+			if (dedalo_decryptStringArray($dato)==$default) {
+				return true;
+			}
 		}
-		return false;
 
+		return false;
 	}#end test_su_default_password
 
 

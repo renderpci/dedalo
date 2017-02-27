@@ -52,29 +52,13 @@
 						value=\"".$valor_for_checkbox[0]."\"				
 						title=\"$html_title\" $checked
 						/>";
-
 						
-						if(SHOW_DEBUG) {
+						if(SHOW_DEBUG===true) {
 							$html_contenido .= "<span class=\"notas\"> [".$current_options->tool_locator."]</span>";							
-						}					
-
-						
-						if ($permissions<3) {
-
-							# USER: Label to info user about current admin options values (read only)
-							switch (true) {
-								case $valor_for_checkbox[1]==50:
-									$html_contenido .= " <strong>".label::get_label('para_revisar')."</strong>";
-									break;
-								case $valor_for_checkbox[1]==100:
-									$html_contenido .= " <strong>".label::get_label('validado')."</strong>";
-									break;
-								default:
-									$html_contenido .= " <strong>".''."</strong>";
-									break;
-							}
+						}
 							
-						}else if ($permissions>=3) {
+							
+						if($permission_section>=3 || (bool)$is_global_admin===true) {
 
 							# Admin options
 							$html_contenido .= "\n<select onchange=\"component_state.update_state_locator(this)\"
@@ -93,14 +77,29 @@
 							$html_contenido .= "<option value=\"100\" $selected >".label::get_label('validado')."</option>";
 							$html_contenido .= "</select>";
 													
-							if(SHOW_DEBUG) {
+							if(SHOW_DEBUG===true) {
 								#$html_contenido .= " [".$options->lang."]";
 							}
 							#$html_contenido .= "</label> valor: $valor - valor_for_checkbox: $valor_for_checkbox ";
+
+						}else{
+
+							# USER: Label to info user about current admin options values (read only)
+							switch (true) {
+								case $valor_for_checkbox[1]==50:
+									$html_contenido .= " <strong>".label::get_label('para_revisar')."</strong>";
+									break;
+								case $valor_for_checkbox[1]==100:
+									$html_contenido .= " <strong>".label::get_label('validado')."</strong>";
+									break;
+								default:
+									$html_contenido .= " <strong>".''."</strong>";
+									break;
+							}
 						}
 
-						$html_contenido .= "</div>";//end state_group div
 
+						$html_contenido .= "</div>";//end state_group div
 					}//end foreach ($ar_state_id as $key => $value) {
 					break;						
 	}

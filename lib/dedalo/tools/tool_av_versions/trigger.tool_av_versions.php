@@ -44,15 +44,17 @@ if($mode=='generate_version') {
 		throw new Exception("Error Processing Request. Few vars! (tipo)", 1);
 	}
 
+
 	$reelID		= $video_id ;
 	$quality 	= $target_quality ;
 			
 	# AVObj
-	$AVObj		= new AVObj($reelID, $quality);
+	$AVObj		= new AVObj($reelID, $source_quality); 
+	#dump($AVObj, ' $AVObj ++ '.to_string());die();
 	
 	# Ffmpeg
 	$Ffmpeg			= new Ffmpeg();
-	$setting_name	= $Ffmpeg->get_setting_name_from_quality($AVObj, $quality);
+	$setting_name	= $Ffmpeg->get_setting_name_from_quality($AVObj, $target_quality);
 
 	if(SHOW_DEBUG) {
 		#die("N3 STOP setting_name:$setting_name - reelID:$reelID, quality:$quality");	#dump($setting_name,'setting_name'); die($setting_name);

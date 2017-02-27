@@ -11,6 +11,7 @@
 	$required				= $this->get_required();
 	$debugger				= $this->get_debugger();
 	$permissions			= common::get_permissions($section_tipo,$tipo);
+	$permission_section 	= common::get_permissions($section_tipo,$section_tipo);
 	$ejemplo				= NULL;
 	$html_title				= "Info about $tipo";
 	
@@ -18,10 +19,13 @@
 	$component_name			= get_class($this);
 	$dato_string			= json_encode($dato);
 
-		
+	if($permissions===0) return null;
+	
 	# Verify component content record is inside section record filter
 	if ($this->get_filter_authorized_record()===false) return NULL ;
 
+	$user_id_logged  = navigator::get_user_id();
+	$is_global_admin = (bool)component_security_administrator::is_global_admin($user_id_logged);
 	
 	$file_name = $modo;
 	
@@ -88,10 +92,14 @@
 				# Format 'valor' as simple array lang resolved to store in 'valor_list'
 				$valor 	  = $this->get_valor(); 
 				$ar_valor = $this->get_valor_plain( $valor );
+					#dump($this->get_dato(), ' get_dato ++ '.to_string());
 					#dump($ar_valor, ' ar_valor ++ '.to_string());
 				break;
 
 		case 'search' :
+				# Showed only when permissions are >1
+				if ($permissions<1) return null;
+				
 				# Search input name
 				$search_input_name = $section_tipo.'_'.$tipo;
 				return null;

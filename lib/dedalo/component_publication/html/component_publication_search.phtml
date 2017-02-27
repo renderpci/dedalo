@@ -13,43 +13,48 @@
 
 	
 	# CONTENIDO (INPUT)
-	$html_contenido = '';
+	$html_content = '';
 	switch($permissions) {
 			
-		case 0	:	$html_contenido .= "";
+		case 0	:	$html_content .= "";
 					break;						
 		
 		case ($permissions>=1)	:
 					
 					# COMPARISON OPERATORS
-					$html_contenido .= operator::get_search_comparison_operators_html($tipo,$ar_comparison_operators);
+					$html_content .= operator::get_search_comparison_operators_html($tipo,$ar_comparison_operators);
 					
 					# INPUT
-					$html_contenido .= "<span id=\"search_component_$tipo\">";
-					foreach ($ar_list_of_values->result as $value => $rotulo) {
-						if( $value == $dato ) {
-							$checked = 'checked="checked"';
-						}else {
-							$checked = "";
-						}
-						$html_contenido .= "\n <input class=\"css_component_publication\" type=\"radio\" name=\"{$search_input_name}\"
-						data-tipo=\"{$tipo}\" 
-						value='$value' 
-						title=\"$html_title\" $checked
+					$html_content .= " <span id=\"search_component_$tipo\">";
+					$i=1;foreach ($ar_list_of_values->result as $value => $rotulo) {
+						
+						$id = "search_component_input_".$i;
+
+						$search_input_id = $search_input_name .'_'.$i;
+
+						$html_content .= " <input class=\"css_component_publication\" type=\"radio\" name=\"{$search_input_name}\" id=\"$search_input_id\"
+						data-tipo=\"{$tipo}\"
+						value='$value'
+						title=\"$html_title\"						
 						/>";
-						$html_contenido .= "\n <label class=\"css_component_publication_rotulo\">$rotulo</label>";						
-					}
-					$html_contenido .= "</span>";
+						$html_content .= "\n&nbsp;<label for=\"$search_input_id\" class=\"css_component_publication_rotulo\">$rotulo</label> &nbsp;";
+
+					$i++;}
+					$html_content .= "</span>";
 
 					# LOGICAL OPERATORS
-					$html_contenido .= operator::get_search_logical_operators_html($tipo,$ar_logical_operators);
+					$html_content .= operator::get_search_logical_operators_html($tipo,$ar_logical_operators);
+
+					if(SHOW_DEBUG===true) {
+						$html_content .= " <span class=\"debug_info\">$search_input_name</span>";
+					}
 							
 	}	
 	
 	
 	# PRINT HTML
 	print $html_label;
-	print $html_contenido;
+	print $html_content;
 	
 	
 	print "\n</div>\n\n"; //wrap

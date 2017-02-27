@@ -9,9 +9,19 @@
 		$header_html = '';
 		$header_html  .= "\n<!-- TOOL IMPORT FILES [tipo:$tipo] -->";
 		$header_html  .= "<div class=\"tool_header\">";
-		$header_html  .= " <div class=\"h2_title\"> TOOL IMPORT FILES $custom_tool_label </div>";
+		$header_html  .= " <div class=\"h2_title\"> TOOL IMPORT FILES $custom_tool_label ";
+		if(SHOW_DEBUG===true) {
+		$header_html  .= " <span class=\"notes\">[$import_mode] ";
+			if ($import_mode==='section') {
+				$header_html  .= " Creates one section $section_tipo and one portal record $target_section_tipo for each file ";
+			}else{
+				$header_html  .= " Creates one portal record $target_section_tipo for each file ";
+			}
+		$header_html  .= "</span>";
+		}		
+		$header_html  .= " </div>";
 		$header_html  .= " <div class=\"import_context_label\">";
-		if(SHOW_DEBUG && $context!='form') {
+		if(SHOW_DEBUG && $context!=='form') {
 		$header_html .= "  <span class=\"debug_info\">".TOOL_IMPORT_FILES_UPLOAD_DIR."</span>";
 		}
 		$header_html  .= " </div>";//import_context_label
@@ -35,40 +45,35 @@
 	#
 	# FORM (Temporal section)
 		# Note that current section_id received in get url is like 'tmp1'. Section change automatically save_handler (to 'session') for manage this cases as temporal section		
-		$temp_id 			 = DEDALO_SECTION_ID_TEMP.'_'.$parent.'_'.$user_id;
-		$section 			 = section::get_instance($temp_id,$target_section_tipo,'edit');
-		
+		$temp_id 			= DEDALO_SECTION_ID_TEMP.'_'.$parent.'_'.$user_id;
+		$temp_section_tipo  = $target_section_tipo; // Default
+		if ($import_mode==='section') {
+			$temp_section_tipo = $section_tipo;
+			#dump($section_tipo, ' section_tipo ++ '.to_string());
+		}
+		$section = section::get_instance($temp_id, $temp_section_tipo, 'edit');
+
 		# Add custom layout map defined in propiedades of current component portal
 		if (!empty($custom_layout_map)) {
 			$section->layout_map = $custom_layout_map;	// Inject custom layout map fron propiedades
 		}		
 		$section->show_inspector = (bool)false;
-			#dump($section->get_dato(), ' section ++ '.to_string());
+			#dump($section->layout_map, ' section ++ '.to_string( $section->get_tipo() ));
 		
-			
-
-		if(SHOW_DEBUG) {
-			$temp_data_uid = $target_section_tipo.'_'.$temp_id;
-			if (isset($_SESSION['dedalo4']['section_temp_data'][$temp_id])) {
-				#dump($_SESSION['dedalo4']['section_temp_data'][$temp_data_uid], '$_SESSION[dedalo4][section_temp_data][$temp_data_uid] ++ '.to_string($temp_data_uid));
-			}
-		}
+		
 		$section_temp_html  = '';
 		$section_temp_html .= "<div class=\"wrap_section_temp\">";
-		$section_temp_html .= $section->get_html();	
+		$section_temp_html .= $section->get_html();
 		$section_temp_html .= "</div>";
 		
 		#
 		# PAGE_GLOBALS : Set vars to enable components save data in session
-		$section_temp_html .= "<script>
-		page_globals.modo='edit';
-			//console.log(page_globals);
-		</script>";
+		#$section_temp_html .= "<script>
+		#page_globals.modo='edit';
+		#	//console.log(page_globals);		
+		#</script>";
 
 		echo $section_temp_html;
-
-
-
 
 
 
@@ -83,12 +88,22 @@
 		data-tipo=\"$tipo\"
 		data-section_tipo=\"$section_tipo\"
 		data-parent=\"$parent\"
+		data-import_mode=\"$import_mode\"
 		onclick=\"tool_import_files.import_files(this)\">
 							<strong>OK</strong> <span>".label::get_label('tool_import_images'). ' ' .strip_tags($custom_tool_label). " </span>
 						  </a>";
 		$footer_html .= "</div>";
 		echo $footer_html;
 ?>
-
+<script>
+	// PAGE_GLOBALS : Set vars to enable components save data in session
+	page_globals.modo='edit';
+	// SGC_EDIT
+	var current_record_wrap = document.getElementById('current_record_wrap')
+	if (current_record_wrap) {		
+		// sgc_edit . To enable structure css affect to components, add 'sgc_edit' class to component wrapper simulating a section group
+		current_record_wrap.classList.add('sgc_edit')
+	}
+</script>
 
 

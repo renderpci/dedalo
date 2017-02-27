@@ -3,9 +3,10 @@
 	# VISUALIZADOR HTML
 
 
-	print "\n<!-- SELECT [tipo:$tipo section_id_matrix:$parent] $label -->";
+	# html_delimiter
+	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'in');
 
-	print "\n<div class=\"wrap_component css_wrap_select_lang wrap_component_{$tipo}\" id=\"{$id_wrapper}\"
+	print "<div class=\"wrap_component css_wrap_select_lang wrap_component_{$tipo}\" id=\"{$id_wrapper}\"
 	data-tipo=\"{$tipo}\"
 	data-lang=\"{$lang}\"
 	data-parent=\"{$parent}\"
@@ -39,7 +40,7 @@
 				# Set as disabled on time machine context 
 				$disabled = (isset($context->context_name) && $context->context_name=='tool_time_machine') ? 'disabled="disabled"' : '';
 		
-				$html_contenido .= "\n <select class=\"css_select_lang\"
+				$html_contenido .= " <select class=\"css_select_lang\"
 				onchange=\"component_select_lang.Save(this)\"
 				onfocus=\"component_common.select_wrap(null,'$id_wrapper');\"
 				name=\"{$input_name}\"
@@ -56,28 +57,34 @@
 					#
 					# OPTIONS
 
-					# OPTIONS EMPTY
+					# OPTION EMPTY
 					$selected = empty($dato) ? 'selected' : '';
-					$html_contenido .= "\n <option value=\"\" {$selected}> </option>";
+					$html_contenido .= " <option value=\"\" {$selected}> </option>";
+				
 
 					# OPTIONS VALUES
-					foreach ((array)$ar_all_project_select_langs as $current_locator_json => $current_label) {				
-						$locator = json_decode($current_locator_json);
-						#$current_locator_json = urlencode($current_locator_json);
-						$selected = in_array($locator, (array)$dato) ? 'selected' : '';						
-						$html_contenido .= "\n <option value='{$current_locator_json}' {$selected}>";
+					# dump($ar_all_project_select_langs, ' ar_all_project_select_langs ++ '.to_string());
+					foreach ((array)$ar_all_project_select_langs as $current_lang_code => $current_label) {
+			
+						$current_locator 		= lang::get_lang_locator_from_code($current_lang_code);
+						$current_locator_json 	= json_encode($current_locator);
+
+						# Selected
+						$selected 				= locator::in_array_locator( $current_locator, (array)$dato, $ar_properties=array('section_tipo','section_id') ) ? 'selected' : ''; 
+
+						$html_contenido .= " <option value='{$current_locator_json}' data-lang='{$current_lang_code}' {$selected}>";
 						$html_contenido .= $current_label;
-						if(SHOW_DEBUG) {
-							$html_contenido .= " - ". trim($current_locator_json);
+						if(SHOW_DEBUG===true) {
+							#$html_contenido .= " - ". trim($current_locator_json);
 						}
 						$html_contenido .="</option>";
 					}
 
-				$html_contenido .= "\n </select>";
+				$html_contenido .= " </select>";
 
 
-				if(SHOW_DEBUG) {
-					#$html_contenido .= "\n <span class=\"css_span_debugger\" id=\"debugger_{$tipo}\" >{$debugger}</span>";
+				if(SHOW_DEBUG===true) {
+					$html_contenido .= " <span class=\"debug_info notes\">".json_encode($dato)."</span>";
 				}				
 				break;
 	}
@@ -91,6 +98,10 @@
 	print $html_contenido;
 
 
+	print "</div>"; //wrap
 
-	print "\n</div><!-- /css_wrap_select_lang SELECT [tipo:$tipo section_id_matrix:$parent] $label -->\n\n"; //wrap
+	# html_delimiter
+	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'out');
+
+
 ?>

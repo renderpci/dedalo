@@ -5,26 +5,26 @@
 	
 
 
-	$html    = "\n<!-- TOOL PAGE [tipo:$tipo] -->";	
-	$html   .= "\n<div class=\"wrap_tool wrap_tool_portal_page\" >";
-	$html   .= "\n<div class=\"content_data\" >";
+	$html    = "<!-- TOOL PAGE [tipo:$tipo] -->";	
+	$html   .= "<div class=\"wrap_tool wrap_tool_portal_page\" >";
+	$html   .= "<div class=\"content_data\" >";
 			
 
 		#
 		# RECORDS LIST
-		$html   .= "\n<div class=\"records_relation\">";
-		#$html 	.= "\n <iframe id=\"iframe_records_relation\" name=\"iframe_records_relation\" class=\"iframe_records_relation\" src=\"{$iframe_records_relation_url}\" ></iframe>";
+		$html   .= "<div class=\"records_relation\">";
+		#$html 	.= " <iframe id=\"iframe_records_relation\" name=\"iframe_records_relation\" class=\"iframe_records_relation\" src=\"{$iframe_records_relation_url}\" ></iframe>";
 		$html   .= $section_html;
-		$html   .= "\n</div>";
+		$html   .= "</div>";
 		
 		
 	
-	$html .= "\n</div><!-- /content_data -->";
-	$html .= "\n</div><!-- /wrap_tool -->"; //wrap_tool
+	$html .= "</div><!-- /content_data -->";
+	$html .= "</div><!-- /wrap_tool -->"; //wrap_tool
 
 	
 	# INSPECTOR LOG TOOL
-	$html .= "\n<div id=\"inspector_log\" class=\"tool_transcription_inspector_log\"> </div>";
+	$html .= "<div id=\"inspector_log\" class=\"tool_transcription_inspector_log\"> </div>";
 
 	print $html;
 		

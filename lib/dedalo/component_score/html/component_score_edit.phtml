@@ -3,9 +3,10 @@
 	# VISUALIZADOR HTML	
 	
 	
-	print "\n<!-- SCORE [tipo:$tipo section_id_matrix:$parent] $label -->";
+	# html_delimiter
+	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'in');
 
-	print "\n<div class=\"wrap_component css_wrap_score wrap_component_{$tipo}\" id=\"{$id_wrapper}\"
+	print "<div class=\"wrap_component css_wrap_score wrap_component_{$tipo}\" id=\"{$id_wrapper}\"
 	data-tipo=\"{$tipo}\"
 	data-lang=\"{$lang}\"
 	data-section_tipo=\"{$section_tipo}\"
@@ -44,7 +45,7 @@
 							
 						
 					if(SHOW_DEBUG) {
-						#$html_contenido .= "\n <span class=\"css_span_debugger\" id=\"debugger_{$tipo}\" >{$debugger}</span>";	
+						#$html_contenido .= " <span class=\"css_span_debugger\" id=\"debugger_{$tipo}\" >{$debugger}</span>";	
 					}	
 					break;
 									
@@ -52,7 +53,7 @@
 
 
 		# INIT : Init text editor 
-		$html_contenido .= "\n<script>component_score.init('$id_wrapper')</script>";
+		$html_contenido .= "<script>component_score.init('$id_wrapper')</script>";
 
 
 		# Prepare content to show in page
@@ -64,6 +65,9 @@
 		print $html_contenido;
 	
 	
-	print "\n</div><!-- /css_wrap_image SCORE [tipo:$tipo section_id_matrix:$parent] $label -->\n"; //wrap
+	print "</div>"; //wrap
+
+	# html_delimiter
+	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'out');
 	
 ?>

@@ -1,11 +1,18 @@
 <?php
 	
 	# CONTROLLER
-	
+
 	$tipo				= $this->section_records_obj->get_tipo();
 	$permissions		= common::get_permissions($tipo,$tipo);
 	$modo				= $this->get_modo();
 	$layout_map 		= $this->section_records_obj->rows_obj->options->layout_map;
+
+	$section_tipo 		= $this->section_records_obj->rows_obj->options->section_tipo;
+	$section_list_tipo 	= key($this->section_records_obj->rows_obj->options->layout_map);
+	$ar_columns_tipo 	= reset($this->section_records_obj->rows_obj->options->layout_map);
+	
+	$RecordObj_dd = new RecordObj_dd($section_list_tipo);
+	$propiedades  = json_decode($RecordObj_dd->get_propiedades());	
 
 	$ar_label_html		= array();
 	$file_name 			= $modo;
@@ -17,12 +24,48 @@
 	#	$ar_label_html[$tipo] = $component_obj->get_label();
 	#}
 
-	$ar_components_tipo = reset($layout_map);
 	
+	foreach($ar_columns_tipo as $current_tipo) {
 
-	foreach($ar_components_tipo as $current_tipo) {
-		$ar_label_html[$current_tipo] = RecordObj_dd::get_termino_by_tipo($current_tipo, DEDALO_DATA_LANG, true);
+		$label = RecordObj_dd::get_termino_by_tipo($current_tipo, DEDALO_DATA_LANG, true);
+
+		#
+		# PORTALS. Portal with multiple list cases
+		$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
+		if ($modelo_name==='component_portal') {			
+			
+			$ar_section_list = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($current_tipo, 'section_list', 'children', true);
+				#dump($ar_section_list, ' $ar_section_list ++ '.to_string($current_tipo));
+			
+			if (empty($ar_section_list)) {
+				if(SHOW_DEBUG===true) {
+					debug_log(__METHOD__." Empty portal section_list. Please define at least one section_list for portal [portal tipo:$current_tipo - $label]".to_string(), logger::WARNING);
+				}
+				$ar_section_list = array($current_tipo);
+			}
+
+			$sl_count 		 = count($ar_section_list);				
+			foreach ($ar_section_list as $slkey => $current_section_list_tipo) {
+
+				if ($sl_count>1) {					
+					$label = RecordObj_dd::get_termino_by_tipo($current_section_list_tipo, DEDALO_DATA_LANG, true);
+				}
+				
+				$ar_label_html[] = array('tipo'  => $current_tipo,
+									   	 'label' => $label
+									   	 );
+			}
+
+		# DEFAULT 
+		}else{
+
+			$ar_label_html[] = array('tipo'  => $current_tipo,
+								   	 'label' => RecordObj_dd::get_termino_by_tipo($current_tipo, DEDALO_DATA_LANG, true)
+								   	);
+
+		}//end if ($modelo_name==='component_portal')
 	}
+	#dump($ar_label_html, ' ar_label_html ++ '.to_string());
 	
 	
 

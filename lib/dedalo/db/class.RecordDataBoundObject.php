@@ -1,9 +1,9 @@
 <?php
-#require_once(DEDALO_LIB_BASE_PATH . '/db/class.DBi.php');
-#require_once(DEDALO_LIB_BASE_PATH . '/db/class.json_handler.php');
-
-
-
+/**
+* RecordDataBoundObject
+*
+*
+*/
 abstract class RecordDataBoundObject {
 
 	protected $ID;
@@ -28,7 +28,6 @@ abstract class RecordDataBoundObject {
 	abstract protected function definePrimaryKeyName();
 
 
-	#static $ar_RecordDataObject_query_search_cache;
 
 	# __CONSTRUCT
 	public function __construct($id=NULL) {
@@ -47,51 +46,21 @@ abstract class RecordDataBoundObject {
 	}
 
 
+
 	# GET_DATO : GET DATO UNIFICADO (JSON)
 	public function get_dato() {
 
-		if($this->blIsLoaded != true) $this->Load();
+		if($this->blIsLoaded!==true) $this->Load();
 
 		if (!isset($this->dato)) {
 			#error_log("Callin get dato from ".get_called_class().''.print_r(debug_backtrace(),true) );
-			return NULL;		
+			return null;
 		}
 
 		return $this->dato;
-		/*
-		if(!isset($this->dato)) return NULL;
-
-		if ($raw) {
-			return $this->dato;
-		}
-
-		$dato = $this->dato;
-			#dump($dato,'dato pre json decode');
-
-		# FORMATOS RECIBIDOS:
-			# String:				María
-			# String JSON:			"María"
-			# Array secuencial:		["María","Begoña"] (Cualquier array cuyo key sea consecutivo y que comience en 0)
-			# Array no secuencial	{"nombre":"María","apellidos":"Pérez"} (Arrays asociativos o cualquier array cuyo key sea no consecutivo o que no comience en 0)
-		#
-		# Test dato . Decode and convert in array if have various values ( format json_decode($dato,true) )
-		# $dato_decoded = json_decode($dato,true);
-		$dato_decoded = json_handler::decode($dato,true);
-			#dump($dato,'dato post json decode');
-
-		# Case IS JSON encoded
-		if($dato_decoded != NULL) $dato = $dato_decoded;
-			#dump($dato,'$dato');
-
-		# "" is replaced by NULL . ("" es la representación json de null en DDBB)
-		if($dato=='""') return NULL;
-
-		# Case IS String apply htmlspecialchars formater
-		#if(is_string($dato)) $dato = htmlspecialchars($dato);	DESHABILITADO (ALTERA EL DUPLICADO EN MATRIX TIME MACHINE)
-
-		return $dato;	
-		*/	
 	}
+
+
 
 	# SET_DATO : SET DATO UNIFICADO (JSON)
 	public function set_dato($dato, $raw=false) {
@@ -100,63 +69,19 @@ abstract class RecordDataBoundObject {
 		$this->arModifiedRelations['dato'] = 1;
 		
 		$this->dato = $dato;
-		/*
-		if ($raw) {
-			$this->dato = $dato;
-			return ;
-		}
-
-		# JSON ENCODING
-		# FORZAMOS SIEMPRE CODIFICAR EN JSON (IMPORTANTE : JSON_UNESCAPED_UNICODE !!)
-		# FORMATOS:
-			# String:				María
-			# String JSON:			"María"
-			# Array secuencial:		["María","Begoña"] (Cualquier array cuyo key sea consecutivo y que comience en 0)
-			# Array no secuencial	{"nombre":"María","apellidos":"Pérez"} (Arrays asociativos o cualquier array cuyo key sea no consecutivo o que no comience en 0)
-
-		# En php <5.4 no existe JSON_UNESCAPED_SLASHES (su valor es int 256)
-		#if(!defined('JSON_UNESCAPED_UNICODE')) define('JSON_UNESCAPED_UNICODE', 256);
-			#dump($dato,"set_dato pre json decode $dato",$raw);
-
-		# Reemplazamos las comillas dobles por sencillas antes de pasar el dato a JSON
-		if(is_string($dato)) {
-			#$dato = stripslashes($dato);
-			$dato = str_replace('"', "'", $dato);
-		}
-
-		#$dato = json_encode($dato, JSON_UNESCAPED_UNICODE);			#dump(JSON_UNESCAPED_UNICODE);
-		$dato = json_handler::encode($dato);		# | JSON_NUMERIC_CHECK
-			#dump($dato,'$dato');
-
-		#if(is_int($dato)) {
-		#	$this->dato = $dato;
-		#}else{
-			# stripslashes and addslashes text values
-			# is important and mandatory for avoid duplicate slashes
-			if(is_string($dato)) {
-				$dato = stripslashes($dato);
-				$dato = stripslashes($dato);
-				//$dato = addslashes($dato);
-			#}else if ($dato==NULL) {
-			}else if (is_null($dato)) {
-				#$dato = json_handler::encode(NULL);
-				$dato = '';
-			}
-			$this->dato = $dato;
-		#}
-		#dump($dato,"set_dato post json decode $dato",$raw);
-		*/
 	}
+
 
 
 	# LOAD
 	public function Load() {
 
-		# No do load if $this->ID is not set
-		if(!isset($this->ID) || !$this->ID) return;
-
 		# DEBUG INFO SHOWED IN FOOTER
-		if(SHOW_DEBUG) $start_time = start_time();
+		if(SHOW_DEBUG===true) $start_time = start_time();
+
+
+		# No do load if $this->ID is not set
+		if(!isset($this->ID) || $this->ID===false) return;		
 
 		# SQL QUERY
 		$strQuery = 'SELECT ';
@@ -178,7 +103,7 @@ abstract class RecordDataBoundObject {
 		#dump($this->use_cache,'$this->use_cache ID:'.$this->ID." - tipo:$this->tipo");
 
 		# CACHE_MANAGER
-		if( $this->use_cache_manager && $this->use_cache===true && DEDALO_CACHE_MANAGER && cache::exists($strQuery) ) {
+		if( $this->use_cache_manager===true && $this->use_cache===true && DEDALO_CACHE_MANAGER===true) { //  && cache::exists($strQuery) 
 
 			#$arRow	= json_handler::decode(cache::get($strQuery));
 			$arRow	= unserialize(cache::get($strQuery));
@@ -201,19 +126,18 @@ abstract class RecordDataBoundObject {
 
 			$result = pg_query(DBi::_getConnection(), $strQuery) ;//or die("Cannot (2) execute query: $strQuery <br>\n". pg_last_error());
 			
-			if (!$result) {
+			if ($result===false) {
 				trigger_error("Error Processing Request Load");
-				if(SHOW_DEBUG) {
+				if(SHOW_DEBUG===true) {
 					throw new Exception("Error Processing Request Load: (".DEDALO_DATABASE_CONN.") ".pg_last_error()." <hr>$strQuery", 1);
 				}
 			}
 
 			$arRow = pg_fetch_assoc($result);
-				#dump($arRow,"arRow");
-			
+				#dump($arRow,"arRow");			
 
-			if(!$arRow)	{
-				if(SHOW_DEBUG) {
+			if($arRow===false)	{
+				if(SHOW_DEBUG===true) {
 					#dump($this,"WARNING: No result on Load arRow : strQuery:".$strQuery);
 					#throw new Exception("Error Processing Request (".DEDALO_DATABASE_CONN.") strQuery:$strQuery", 1);					
 				}
@@ -225,7 +149,7 @@ abstract class RecordDataBoundObject {
 			#if($this->use_cache===true)
 			$ar_RecordDataObject_load_query_cache[$strQuery] = $arRow;
 			# CACHE_MANAGER
-			if( $this->use_cache_manager && $this->use_cache===true && DEDALO_CACHE_MANAGER && strpos($strQuery, '_dd')!==false ) {
+			if( $this->use_cache_manager===true && $this->use_cache===true && DEDALO_CACHE_MANAGER===true && strpos($strQuery, '_dd')!==false ) {
 				#cache::set($strQuery, json_handler::encode($arRow));
 				cache::set($strQuery, serialize($arRow));
 			}
@@ -246,14 +170,14 @@ abstract class RecordDataBoundObject {
 
 		if(is_array($arRow)) foreach($arRow as $key => $value) {
 
-			try {
+			#try {
 				$strMember = $this->arRelationMap[$key];
-			}catch(Exception $e){ echo $e->getMessage(); }
+			#}catch(Exception $e){ echo $e->getMessage(); }
 
-			if(property_exists($this, $strMember) || $key=='texto' ) {
+			if(property_exists($this, $strMember) || $key==='texto' ) {
 
 				# special case texto substring
-				if(!$strMember && $key=='texto') $strMember = 'texto';
+				if($key==='texto' && !$strMember) $strMember = 'texto';
 					#echo " +property_exists: $strMember - $value <br>";
 				
 				$this->$strMember = $value ;			
@@ -264,16 +188,19 @@ abstract class RecordDataBoundObject {
 		$this->blIsLoaded = true;
 		
 		/*
-		if(SHOW_DEBUG) {
+		if(SHOW_DEBUG===true) {
 			global $contador_destruct;
 			if(!isset($contador_destruct)) $contador_destruct=0;		
 			$contador_destruct++;
 			error_log("Loaded: id:".$this->ID ." - contador:".$contador_destruct ." - $strQuery - ".exec_time_unit($start_time,'ms'));
 		}
 		*/
-		
-	}#end load
-
+		# DEBUG
+		if(SHOW_DEBUG===true) {
+			#$totaltime = exec_time_unit($start_time,'ms');
+			#debug_log(__METHOD__." Total: $totaltime - $strQuery ".to_string(), logger::DEBUG);
+		}		
+	}//end load
 
 
 
@@ -282,7 +209,7 @@ abstract class RecordDataBoundObject {
 		
 		# SAVE UPDATE
 		#if(isset($this->ID) && $this->ID>0 && $this->force_insert_on_save!=true) {
-		if(isset($this->ID) && strlen($this->ID)>0 && $this->force_insert_on_save!=true) {
+		if(isset($this->ID) && strlen($this->ID)>0 && $this->force_insert_on_save!==true) {
 
 			$strQuery		= ' UPDATE "'.$this->strTableName.'" SET ' ;
 			$strQuery_set	= '';
@@ -312,7 +239,7 @@ abstract class RecordDataBoundObject {
 
 			#
 			# EMPTY SET ELEMENTS CASE
-			if(strlen($strQuery_set)==0) {
+			if(strlen($strQuery_set)===0) {
 				$msg = "Failed Save query (RDBO). Data is not saved because no vars ar set to save. Elements to save: ".count( (array)$this->arRelationMap ) ;
 				if(SHOW_DEBUG===true) {
 					dump($strQuery, ' strQuery');					
@@ -333,9 +260,9 @@ abstract class RecordDataBoundObject {
 			#dump($strQuery,"strQuery");
 
 			$result = pg_query(DBi::_getConnection(), $strQuery);
-			if(!$result) {
+			if($result===false) {
 				echo "Error: sorry an error ocurred on UPDATE record '$this->ID'. Data is not saved";
-				if(SHOW_DEBUG) {
+				if(SHOW_DEBUG===true) {
 					dump($strQuery,"strQuery");
 					dump(pg_last_error(),"pg_last_error()");
 					throw new Exception("Error Processing Request", 1);;
@@ -362,7 +289,7 @@ abstract class RecordDataBoundObject {
 							$actualVal = json_handler::encode($actualVal);
 						}
 
-						if(is_int($actualVal) && $this->strTableName!= 'matrix_time_machine') {
+						if(is_int($actualVal) && $this->strTableName !== 'matrix_time_machine') {
 							$strValueList	.= "$actualVal, ";
 						}else{
 							#$actualVal 	     = DBi::_getConnection()->real_escape_string($actualVal);
@@ -380,10 +307,8 @@ abstract class RecordDataBoundObject {
 			#dump($strQuery,"strQuery");#die();
 			$result 	= pg_query(DBi::_getConnection(), $strQuery);
 
-
-
-			if(!$result) {
-				if(SHOW_DEBUG) {
+			if($result===false) {
+				if(SHOW_DEBUG===true) {
 					dump($strQuery,"strQuery");
 					throw new Exception("Error Processing Save Insert Request ". pg_last_error(), 1);
 				}
@@ -391,8 +316,8 @@ abstract class RecordDataBoundObject {
 			}
 
 			$id = pg_fetch_result($result,0,'"'.$this->strPrimaryKeyName.'"');
-			if (!$id) {
-				if(SHOW_DEBUG) {
+			if ($id===false) {
+				if(SHOW_DEBUG===true) {
 					dump($strQuery,"strQuery");
 					throw new Exception("Error Processing Request: ".pg_last_error(), 1);
 				}
@@ -402,7 +327,8 @@ abstract class RecordDataBoundObject {
 
 			return $this->ID;
 		}
-	}
+	}//end Save
+
 
 
 	# DELETE
@@ -428,16 +354,12 @@ abstract class RecordDataBoundObject {
 
 			foreach($this->arRelationMap as $field_name => $property_name) {
 
-				if($property_name != 'ID') $ar_editable_fields[] = $field_name ;
+				if($property_name !== 'ID') $ar_editable_fields[] = $field_name ;
 			}
 			return $ar_editable_fields ;
 		}
 		return false;
-	}
-
-
-
-
+	}//end get_ar_editable_fields
 
 
 
@@ -445,11 +367,11 @@ abstract class RecordDataBoundObject {
 	# Buscador genérico . Necesita array key-value con campo,valor
 	# TIPO $arguments['parent'] = 14 ...
 	public function search($ar_arguments=NULL, $matrix_table=NULL) {
-#dump($ar_arguments, ' arguments'.to_string());
-		# DEBUG INFO SHOWED IN FOOTER
-		if(SHOW_DEBUG) $start_time = start_time();
 
-		$ar_records 		= array();
+		# DEBUG INFO SHOWED IN FOOTER
+		if(SHOW_DEBUG===true) $start_time = start_time();
+
+		$ar_records = array();
 		# TABLE . Optionally change table temporally for search
 		if (!empty($matrix_table)) {
 			$this->strTableName = $matrix_table;
@@ -467,12 +389,12 @@ abstract class RecordDataBoundObject {
 			switch(true) {	#"AND dato LIKE  '%\"{$area_tipo}\"%' ";
 
 				# SI $key ES 'strPrimaryKeyName', LO USAREMOS COMO strPrimaryKeyName A BUSCAR
-				case ($key=='strPrimaryKeyName'):
+				case ($key==='strPrimaryKeyName'):
 									$strPrimaryKeyName = $value;
 									break;
 
 				# SI $key ES 'sql_code', INTERPRETAMOS $value LITERALMENTE, COMO SQL
-				case ($key=='sql_code'):
+				case ($key==='sql_code'):
 									$strQuery .= $value.' ';
 									break;
 
@@ -528,22 +450,22 @@ abstract class RecordDataBoundObject {
 									$strQuery .= 'AND ('. substr($strQuery_temp, 0,-4) .') ';
 									break;				
 				# LIMIT
-				case ($key=='sql_limit'):
+				case ($key==='sql_limit'):
 									$strQuery_limit = "LIMIT $value ";
 									break;
 
 				# SI $key ES 'group_by', INTERPRETAMOS $value COMO SQL en formato "GROUP BY $value"
-				case ($key=='group_by'):
+				case ($key==='group_by'):
 									$strQuery .= "GROUP BY $value ";
 									break;
 
 				# SI $key ES 'group_by', INTERPRETAMOS $value COMO SQL en formato "ORDER BY $value ASC"
-				case ($key=='order_by_asc'):
+				case ($key==='order_by_asc'):
 									$strQuery .= "ORDER BY $value ASC ";
 									break;
 
 				# SI $key ES 'group_by', INTERPRETAMOS $value COMO SQL en formato "ORDER BY $value DESC"
-				case ($key=='order_by_desc'):
+				case ($key==='order_by_desc'):
 									$strQuery .= "ORDER BY $value DESC ";
 									break;
 
@@ -590,9 +512,7 @@ abstract class RecordDataBoundObject {
 									$strQuery .= "AND $campo ILIKE '%\"{$value}\"%' ";
 									#$strQuery .= "AND match($campo) against('%\"{$value}\"%' IN BOOLEAN MODE) ";
 									#dump($strQuery,'$strQuery');
-									break;
-
-				
+									break;				
 
 
 				# SQL_CACHE
@@ -654,7 +574,7 @@ abstract class RecordDataBoundObject {
 
 		# CACHE_MANAGER
 		# USING EXTERNAL CACHE MANAGER (LIKE REDIS)
-		if( $this->use_cache===true && $this->use_cache_manager && DEDALO_CACHE_MANAGER && cache::exists($strQuery) ) {
+		if( $this->use_cache===true && $this->use_cache_manager===true && DEDALO_CACHE_MANAGER===true) { // && cache::exists($strQuery) 
 			
 			$ar_records	= unserialize(cache::get($strQuery));
 			#$ar_records	= json_handler::decode(cache::get($strQuery));
@@ -666,7 +586,7 @@ abstract class RecordDataBoundObject {
 				#dump($ar_records, ' ar_records');
 
 			# DEBUG
-			if(SHOW_DEBUG) {
+			if(SHOW_DEBUG===true) {
 				$total_time_ms = exec_time($start_time,'ms');
 				#$_SESSION['debug_content'][__METHOD__.' cache'][] = "<em> --". str_replace("\n",'',$strQuery) ."</em> [$totaltime ms]";
 				#error_log("Search RDBO - Loaded: $total_time_ms ms  - $strQuery");
@@ -679,7 +599,7 @@ abstract class RecordDataBoundObject {
 			/*
 			$result = DBi::_getConnection()->query($strQuery);
 			if(!$result) {
-				if(SHOW_DEBUG) {
+				if(SHOW_DEBUG===true) {
 					$msg = __METHOD__ . " Failed Search: $strQuery,'strQuery' Error (table '$this->strTableName' exists?) " . DBi::_getConnection()->error ;
 				}else{
 					$msg = "Failed Search (RDBO). Data is not found. Please contact with your admin (2) " ;
@@ -704,23 +624,21 @@ abstract class RecordDataBoundObject {
 			#dump($strQuery);
 		
 			$result = pg_query(DBi::_getConnection(), $strQuery);	# or die("Cannot (1) execute query: $strQuery <br>\n". pg_last_error());
+			
 			#$result = pg_prepare(DBi::_getConnection(), "", $strQuery);		
 			#$result = pg_execute(DBi::_getConnection(), "",array());
 				#dump($result, " result ".to_string($strQuery));	
-				if (!$result) {					
-					if(SHOW_DEBUG) {
-						throw new Exception("Error Processing Request . ".pg_last_error(), 1);
-					}else{
-						trigger_error("Error on DB query");
-					}							
-				}
-			if (is_resource($result)) {			
-				while ($rows = pg_fetch_assoc($result)) {
-					$ar_records[] = $rows[$strPrimaryKeyName];
-				}
+			if ($result===false) {
+				if(SHOW_DEBUG===true) {
+					throw new Exception("Error Processing Request . ".pg_last_error(), 1);
+				}else{
+					trigger_error("Error on DB query");
+				}							
 			}
-			#dump($ar_records, 'ar_records', array());	
-		
+
+			while ($rows = pg_fetch_assoc($result)) {
+				$ar_records[] = $rows[$strPrimaryKeyName];
+			}		
 
 			# CACHE
 			# SI SE LE PASA UN QUERY QUE YA HA SIDO RECIBIDO, NO SE CONECTA CON LA DB Y SE LE DEVUELVE EL RESULTADO DEL QUERY IDÉNTICO YA CALCULADO
@@ -734,204 +652,24 @@ abstract class RecordDataBoundObject {
 				$ar_RecordDataObject_query_search_cache[$strQuery] = $ar_records;
 
 				# CACHE_MANAGER
-				if( $this->use_cache_manager && $this->use_cache===true && DEDALO_CACHE_MANAGER && strpos($strQuery, '_dd')!==false ) {
+				if( $this->use_cache_manager===true && $this->use_cache===true && DEDALO_CACHE_MANAGER===true && strpos($strQuery, '_dd')!==false ) {
 					#cache::set($strQuery, json_handler::encode($ar_records));
 					cache::set($strQuery, serialize($ar_records));
 				}
 			}
 
 			# DEBUG
-			if(SHOW_DEBUG) {
+			if(SHOW_DEBUG===true) {
 				$total_time_ms = exec_time_unit($start_time,'ms');
 				#$_SESSION['debug_content'][__METHOD__][] = " ". str_replace("\n",'',$strQuery) ." count:".count($ar_records)." [$total_time_ms ms]";				
-				if($total_time_ms>SLOW_QUERY_MS) error_log($total_time_ms."ms. SEARCH_SLOW_QUERY: $strQuery - records:".count($ar_records));
-				#if(strpos($strQuery, 'dd294')) {
-				#	trigger_error($strQuery. '$strQuery '.$total_time_ms);
-				#}
-				#global$TIMER;$TIMER[__METHOD__.'_'.$strQuery.'_TOTAL:'.count($ar_records).'_'.microtime(1)]=microtime(1);
-				#error_log("Load RDBO - Search: $total_time_ms ms  - $strQuery");
+				if($total_time_ms>SLOW_QUERY_MS) error_log($total_time_ms."ms. SEARCH_SLOW_QUERY: $strQuery - records:".count($ar_records));				
 			}
 
 		}
 		#pg_close(DBi::_getConnection());
 
 		return $ar_records;
-
 	}#end search
-
-
-
-
-
-
-
-
-	/*
-	# SEARCH2
-	public function search2($ar_arguments=NULL, $matrix_table=NULL) {
-	
-		# DEBUG INFO SHOWED IN FOOTER
-		if(SHOW_DEBUG) $start_time = start_time();
-
-
-		$ar_records 		= array();
-		$strPrimaryKeyName	= $this->strPrimaryKeyName;
-		$strQuery			= '';
-		$strQuery_limit 	= '';
-
-		if(is_array($ar_arguments)) foreach($ar_arguments as $key => $value) {
-
-
-			switch(true) {	#"AND dato LIKE  '%\"{$area_tipo}\"%' ";
-
-				# SI $key ES 'strPrimaryKeyName', LO USAREMOS COMO strPrimaryKeyName A BUSCAR
-				case ($key=='strPrimaryKeyName') :
-											$strPrimaryKeyName = $value;
-											break;
-
-				# SI $key ES 'sql_code', INTERPRETAMOS $value LITERALMENTE, COMO SQL
-				case ($key=='sql_code') : 	$strQuery .= $value.' ';
-											break;
-
-				# LIKE_%
-				case (strpos($key,':%like%')!==false):
-											$campo = substr($key, 0, strpos($key,':%like%'));
-											$strQuery .= "AND $campo LIKE '%{$value}%' ";
-											break;
-				# NOT_LIKE
-				case (strpos($key,':not_like')!==false):
-											$campo = substr($key, 0, strpos($key,':not_like'));
-											$strQuery .= "AND $campo NOT LIKE '{$value}' ";
-											break;
-
-				# OR (foramto lan:or= array('DEDALO_DATA_LANG',DEDALO_DATA_NOLAN))
-				case (strpos($key,':or')!==false) :
-											$campo = substr($key, 0, strpos($key,':or'));
-											$strQuery_temp ='';
-											foreach ($value as $value_string) {
-												$strQuery_temp .= "$campo = '$value_string' OR ";
-											}
-											$strQuery .= 'AND ('. substr($strQuery_temp, 0,-4) .') ';
-											break;
-
-				# begins_or (foramto lan:begins_or= array('DEDALO_DATA_LANG',DEDALO_DATA_NOLAN))
-				case (strpos($key,':begins_or')!==false) :
-											$campo = substr($key, 0, strpos($key,':begins_or'));
-											$strQuery_temp ='';
-											foreach ($value as $value_string) {
-												$strQuery_temp .= "$campo LIKE '{$value_string}%' OR ";
-											}
-											$strQuery .= 'AND ('. substr($strQuery_temp, 0,-4) .') ';
-											break;
-				# LIMIT
-				case ($key=='sql_limit') : 	$strQuery_limit = "LIMIT $value ";
-											break;
-
-				# SI $key ES 'group_by', INTERPRETAMOS $value COMO SQL en formato "GROUP BY $value"
-				case ($key=='group_by') : 	$strQuery .= "GROUP BY $value ";
-											break;
-
-				# SI $key ES 'group_by', INTERPRETAMOS $value COMO SQL en formato "ORDER BY $value ASC"
-				case ($key=='order_by_asc'):$strQuery .= "ORDER BY $value ASC ";
-											break;
-
-				# SI $key ES 'group_by', INTERPRETAMOS $value COMO SQL en formato "ORDER BY $value DESC"
-				case ($key=='order_by_desc'):
-											$strQuery .= "ORDER BY $value DESC ";
-											break;
-				# BEGINS
-				case (strpos($key,':begins')!==false):
-											$campo = substr($key, 0, strpos($key,':begins'));
-											$strQuery .= "AND $campo LIKE '{$value}%' ";
-											break;
-				# JSON BEGINS
-				case (strpos($key,':json_begins')!==false):
-											$campo = substr($key, 0, strpos($key,':json_begins'));
-											$strQuery .= "AND $campo LIKE '\"{$value}%' ";
-											break;
-				# JSON
-				case (strpos($key,':json')!==false):
-											$campo = substr($key, 0, strpos($key,':json'));
-											$strQuery .= "AND $campo LIKE '%\"{$value}\"%' ";
-											#$strQuery .= "AND match($campo) against('%\"{$value}\"%' IN BOOLEAN MODE) ";	#dump($strQuery,'$strQuery');
-											break;
-
-				# KEY-JSON ( format like "created_by_userID":"114" )
-				case (strpos($key,':key-json')!==false):
-											$campo = substr($key, 0, strpos($key,':key-json'));
-
-											if (strpos($value, ':')!==false) {
-												$ar = explode(':', $value);
-												if(isset($ar[0]) && isset($ar[1])) {
-													$ar_key 	= $ar[0];
-													$ar_value 	= $ar[1];
-													#if (is_int($ar_value)) {
-													#	$strQuery  .= "AND $campo LIKE '%\"{$ar_key}\":{$ar_value}%' ";
-													#}else{
-														$strQuery  .= "AND $campo LIKE '%\"{$ar_key}\":\"{$ar_value}\"%' ";
-													#}
-												}
-											}
-											break;
-
-				# CASO GENERAL: USAREMOS EL KEY COMO CAMPO Y EL VALUE COMO VALOR TIPO 'campo = valor'
-				default : 					
-											#if($key=='dato' ) {
-											#	# JSON FORMAT
-											#	$strQuery 	.= "AND $key LIKE '%\"{$value}\"%' ";
-											#
-											#}else{
-											
-												# NO JSON FORMAT
-												if(is_int($value) && strpos($key, 'dato')===false) {
-													$strQuery 	.= "AND $key = $value ";
-												}else{
-													$strQuery 	.= "AND $key = '$value' ";
-												}
-											#}
-
-			}
-		}
-
-		# TABLE . Optionally change table for search
-		if (!empty($matrix_table)) {
-			$this->strTableName = $matrix_table;
-		}
-		if(strpos($strQuery, 'AND')===0) {
-			$strQuery = substr($strQuery, 4);
-		}else  if( strpos($strQuery, ' AND')===0 ) {
-			$strQuery = substr($strQuery, 5);
-		}
-		$strQuery = trim('SELECT '.$strPrimaryKeyName. ' FROM '.$this->strTableName.' WHERE '. $strQuery .' '. $strQuery_limit) ;	#$strQuery .= 'SQL_CACHE ';
-			dump($strQuery,'strQuery');	# SQL_CACHE
-		
-		$db_connection = DB::_getConnection();
-		$res 		 = mysql_query($strQuery, $db_connection);
-		if(!$res) 	 die(__METHOD__ ." <br>\nFailed Load (RDBO) : <pre>$strQuery</pre>  <br>\n".mysql_error() );
-			
-		$ar_records=array();
-		
-		while ($row = mysql_fetch_assoc($res)) {		   
-			 $ar_records[]=$row[$strPrimaryKeyName];
-		}
-		
-		
-		#while ($row = mysql_fetch_array($res, MYSQL_ASSOC)) {
-		#    $ar_records[]=$row[$strPrimaryKeyName]; 
-		#}
-		
-		return $ar_records;
-	}#end search2
-	*/
-
-
-
-
-
-
-
-
-
 
 
 
@@ -940,7 +678,7 @@ abstract class RecordDataBoundObject {
 
 		if( isset($this->ID) ) {
 
-			if($this->blForDeletion == true) {				
+			if($this->blForDeletion === true) {				
 
 				if (is_int($this->ID)) {
 					$strQuery 	= "DELETE FROM \"$this->strTableName\" WHERE \"$this->strPrimaryKeyName\" = $this->ID";
@@ -952,7 +690,7 @@ abstract class RecordDataBoundObject {
 				#$result 		= DBi::_getConnection()->query($strQuery);
 				$result		= JSON_RecordObj_matrix::search_free($strQuery);
 
-				if(!$result) {
+				if($result===false) {
 					if(SHOW_DEBUG===true) {
 						$msg = __METHOD__." Failed Delete record (RDBO) from {$this->strPrimaryKeyName}: $this->ID \n" . DBi::_getConnection()->error ;
 					}else{
@@ -965,13 +703,8 @@ abstract class RecordDataBoundObject {
 		}
 		# close connection
 		#DBi::_getConnection()->close();
-		#DBi::_getConnection()->commit();
-		
-	}
-
-
-
-
+		#DBi::_getConnection()->commit();		
+	}//end __destruct
 
 
 
@@ -1014,7 +747,7 @@ abstract class RecordDataBoundObject {
 				$this->$strMember = $strNewValue;
 			}
 
-			$this->arModifiedRelations[$strMember] = "1";
+			$this->arModifiedRelations[$strMember] = 1;
 
 		}else{
 			return(false);
@@ -1039,7 +772,5 @@ abstract class RecordDataBoundObject {
 
 
 
-
-
-};
+}//end class
 ?>

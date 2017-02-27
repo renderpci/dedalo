@@ -7,7 +7,6 @@
 	$section_tipo 			= $this->get_section_tipo();
 	$modo					= $this->get_modo();
 	$dato 					= $this->get_dato();
-	$dato_reference_lang 	= NULL;
 	$traducible 			= $this->get_traducible();
 	$label 					= $this->get_label();
 	$required				= $this->get_required();
@@ -22,7 +21,8 @@
 	$widht 					= $this->get_widht();
 	$height 				= $this->get_height();
 
-
+	if($permissions===0) return null;
+	
 	# Verify component content record is inside section record filter
 	if ($this->get_filter_authorized_record()===false) return NULL ;
 
@@ -30,11 +30,17 @@
 	$image_id 				= $this->get_image_id();
 	$quality				= $this->get_quality();
 	$aditional_path			= $this->get_aditional_path();
-	$initial_media_path		= $this->get_initial_media_path();	
-
-	#dump("$id,$tipo,$parent");
-
+	$initial_media_path		= $this->get_initial_media_path();
+	
 	switch($modo) {
+
+		case 'edit_in_list':
+				// Fix always edit as modo / filename
+				$modo 			= 'edit';
+				$file_name		= 'edit';
+
+				$wrap_style 	= '';	// 'width:100%'; // Overwrite possible custon component structure css
+				// Dont break here. Continue as modo edit
 
 		case 'edit'	:	
 				#
@@ -125,7 +131,8 @@
 		case 'list_tm':
 				# THUMB PATH . Is calculated reading deleted folder inside thumb quality
 				$image_id   = $this->get_image_id();
-				$thumb_path = component_image::get_deleted_image($quality='thumb', $image_id);							
+				$thumb_path = $this->get_deleted_image($quality='thumb');
+					#dump($thumb_path, ' thumb_path ++ '.to_string($image_id));
 				
 				# THUMB URL	
 				$thumb_file_url = str_replace(DEDALO_MEDIA_BASE_PATH, DEDALO_MEDIA_BASE_URL, $thumb_path);
@@ -161,7 +168,7 @@
 				break;
 
 		case 'print': 
-				$image_url				= $this->get_image_url();	// With '0.jpg' fallback
+				$image_url = $this->get_image_url();	// With '0.jpg' fallback
 				break;
 	}
 

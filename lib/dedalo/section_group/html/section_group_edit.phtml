@@ -2,7 +2,8 @@
 	
 	# VISUALIZADOR HTML	
 	
-	print "\n<!-- SECTION GROUP [tipo:$tipo] $label -->";
+	# html_delimiter
+	print component_common_draw::html_delimiter($component_name, $tipo, null, $label, 'in');
 
 	print "<div id=\"$section_group_id\" class=\"css_section_group_wrap wrap_section_group wrap_section_group_{$tipo} box_shadow_1 box_border_radius_1\" >";
 	
@@ -16,26 +17,26 @@
 
 		#
 		# CONTENIDO (INPUT)
-		$html_contenido = "\n<div class=\"css_section_group_content tab_content section_group_content_{$modo}\" >";
+		$html_contenido = "<div class=\"css_section_group_content tab_content section_group_content_{$modo} sgc_{$modo}\" >";
 
 		
 			switch($permissions) {
 					
 				case 0	:
-					$html_contenido .= "\n <span class=\"css_span_dato\"> ".label::get_label('sin_acceso')." (group)</span>"; 		
+					$html_contenido .= " <span class=\"css_span_dato\"> ".label::get_label('sin_acceso')." (group)</span>"; 		
 					break;
 								
 				case 1	:
 				case 2	: 
 				case 3	:
 					#$html_contenido .= '<div class="gridster"><ul>';
-					$html_contenido .= "\n $components_html ";	
+					$html_contenido .= " $components_html ";	
 					#$html_contenido .= '</ul></div>';		
 					break;			
 			}
 
 		
-		$html_contenido .= "\n</div><!-- /css_section_group_content -->";
+		$html_contenido .= "</div><!-- /css_section_group_content -->";
 
 
 		# Prepare content to show in page
@@ -47,5 +48,10 @@
 		print $html_contenido;
 
 	
-	print "\n</div><!-- /css_section_group_wrap SECTION GROUP [tipo:$tipo] $label  -->\n\n"; //wrap
+	print "</div>"; //wrap
+
+	# html_delimiter
+	print component_common_draw::html_delimiter($component_name, $tipo, null, $label, 'out');
+
+
 ?>

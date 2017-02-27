@@ -1,0 +1,74 @@
+<?php
+
+	# VISUALIZADOR HTML		
+
+	$html    = "\n<!-- TOOL_TC -->";	
+	$html   .= "\n<div class=\"wrap_tool wrap_tool_tc_page\" >";
+
+	#
+	# CONTENT
+	$html   .= "\n<div class=\"content_data block-content-1\" >";
+
+	#
+	# left side
+
+	$html   .= "<div id=\"tc_left\" class=\"tc_left\">";
+	$html   .= "<div class=\"label_tc_content\">Current content</div>";
+	$html   .= "<div class=\"tc_content\">";
+	$html   .= $original_text;
+	$html   .= "</div>";
+	$html   .= "</div>";
+		
+	
+	#
+	# right side
+	$html   .= "<div id=\"tc_right\" class=\"tc_right\">";
+	$html   .= "<div class=\"label_tc_content\">Preview target content</div>";
+	$html   .= "<div id=\"tc_content_right\" class=\"tc_content\">";
+	$html   .= $preview_text; // Ajax loads
+	$html   .= "</div>";
+	$html   .= "</div>";
+
+
+	#
+	# tc options
+	$html   .= "<div class=\"tc_options\">";
+
+	$html_selector ='';
+	#$html_selector .= "\n <span class=\"rotulo_tool_lang_selector\">".label::get_label('idioma').":</span> ";
+	$html_selector .= "\n <select class=\"tool_lang_selector_source css_select\"
+	onchange=\"tool_tc.change_tool_lang(this)\"
+	> ";
+	$ar_langs = common::get_ar_all_langs_resolved( DEDALO_DATA_LANG );
+	foreach ((array)$ar_langs as $current_lang => $current_lang_name) {
+		
+		$selected 		= ($current_lang === $lang) ? 'selected' : '';
+		$html_selector .= "\n <option value='{$current_lang}' {$selected}>$current_lang_name</option>";
+	}
+	$html_selector .= "\n </select> ";
+	$html   .= $html_selector;
+
+
+	$html   .= " <span class=\"offset_label\"> Offset in seconds </span>";
+	$html   .= " <input type=\"text\" id=\"tc_offset\" class=\"form-control input-sm files_path\" autocomplete=\"off\"  value=\"\"
+	data-tipo=\"$tipo\"
+	data-section_tipo=\"$section_tipo\"
+	data-parent=\"$parent\"
+	data-lang=\"$lang\"
+	/>";
+	$html   .= " <input type=\"button\" id=\"tc_preview\" class=\"btn btn-default btn-sm button_read\" value=\"".label::get_label('preview')."\" onclick=\"tool_tc.change_all_timecodes(this,false)\"/>";
+	$html   .= " <input type=\"button\" id=\"tc_apply\" class=\"btn btn-primary btn-sm button_read\" value=\"".label::get_label('aplicar')."\" onclick=\"tool_tc.change_all_timecodes(this,true)\"/>";
+	$html   .= " <span id=\"response_div\"></span>";
+	$html   .= "</div>";
+
+
+
+	$html   .= "\n</div>";//end content_data block-content-1
+
+
+	$html .= "\n</div><!-- /wrap_tool -->"; //wrap_tool
+
+	
+
+	print $html;		
+?>

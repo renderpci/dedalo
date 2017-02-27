@@ -188,7 +188,7 @@ if($mode=='add_relation') {
 		*/
 
 				/* OLD WORLD*/
-				$matrix_table 		= common::get_matrix_table_from_tipo($tipo);		
+				$matrix_table 		= common::get_matrix_table_from_tipo($section_tipo);		
 
 				dump($matrix_table,"matrix_table");die();
 				/*
@@ -237,7 +237,7 @@ if($mode=='remove_relation_from_tag') {
 	}
 
 	# Find matrix record where is relation data
-		#$matrix_table 			= common::get_matrix_table_from_tipo($tipo);
+		#$matrix_table 			= common::get_matrix_table_from_tipo($section_tipo);
 		#$current_tipo 			= common::get_tipo_by_id($parent, $matrix_table);
 		$section_tipo			= component_common::get_section_tipo_from_component_tipo($tipo);
 		$section 				= section::get_instance($parent, $section_tipo);

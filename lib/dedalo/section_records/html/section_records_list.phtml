@@ -2,66 +2,65 @@
 
 	# VISUALIZADOR HTML	
 	
-	print "\n <!-- SECTION RECORDS LIST [tipo:$tipo modo:$modo] -->";
+	print " <!-- SECTION RECORDS LIST [tipo:$tipo modo:$modo] -->";
 	
-	print "\n<div class=\"div_main_list\"></div>";
+	print "<div class=\"div_main_list\"></div>";
 	
-	print "\n <div class=\"css_section_list_wrap wrap_section_{$tipo}\" id=\"wrap_{$tipo}_{$modo}\" data-options='".json_handler::encode($this->options)."' >";
+	print " <div class=\"css_section_list_wrap wrap_section_{$tipo}\" id=\"wrap_{$tipo}_{$modo}\" data-options='".json_handler::encode($this->options)."' >";
 	
 	
 	# CONTENIDO
-	$html_contenido='';	
-	$html_contenido  .= "\n<div class=\"css_section_group_content tab_content wrap_table_rows_list section_records_{$modo} wrap_section_records_{$section_list_tipo}\"
+	$html_content='';	
+	$html_content  .= "<div class=\"css_section_group_content tab_content wrap_table_rows_list section_records_{$modo} wrap_section_records_{$section_list_tipo}\"
 	data-rol=\"section_records\"
 	>";	
-	#$html_contenido  = "\n<div class=\"content_ajax\">";
+	#$html_content  = "<div class=\"content_ajax\">";
 	
-	switch($permissions) {
+	switch(true) {
 			
-		case 0	:	$html_contenido .= "\n <span class=\"css_span_dato\"> ".label::get_label('sin_acceso')." </span>";
-					break;
+		case ($permissions===0)	:
+				$html_content .= " <span class=\"css_span_dato\"> ".label::get_label('sin_acceso')." </span>";
+				break;
 						
 		case ($permissions>=1)	:
 
-				#$html_contenido .= "\n<div id=\"stats_info\"><!-- Stats content here --></div>";
+				#$html_content .= "<div id=\"stats_info\"><!-- Stats content here --></div>";
 				
 				# SEARCH FILTER
-					#$html_contenido .= $rows_search_html;					
+					#$html_content .= $rows_search_html;
 				
 				# PAGINATOR
-				$html_contenido .= $rows_paginator_html;
+				$html_content .= $rows_paginator_html;
 
 				# LIST (Search,paginator,rows)
-				##$html_contenido .= "\n<div class=\"main_list main_list_{$modo}\">";
-				#$html_contenido .= "\n<div class=\"records main_section_{$modo}\">";
+				##$html_content .= "<div class=\"main_list main_list_{$modo}\">";
+				#$html_content .= "<div class=\"records main_section_{$modo}\">";
 
 
 					# TABLE
-					$html_contenido .= "\n<table class=\"table_rows_list\">"; // css_section_list_table box_shadow_1 box_border_radius_1
-					#$html_contenido .= "\n <caption style=\"text-align:left;\"> $tipo </caption>";
+					$html_content .= "<table class=\"table_rows_list\">"; // css_section_list_table box_shadow_1 box_border_radius_1
+					#$html_content .= " <caption style=\"text-align:left;\"> $tipo </caption>";
 					
 						# TH TITULOS
-						$html_contenido .= '<thead>';
-						$html_contenido .= $rows_header_html;
-						$html_contenido .= '</thead>';
+						$html_content .= '<thead>';
+						$html_content .= $rows_header_html;
+						$html_content .= '</thead>';
 						
 						# TD DATOS
-						$html_contenido .= '<tbody>';
-						$html_contenido .= $rows_html;
-						$html_contenido .= '</tbody>';				
+						$html_content .= '<tbody>';
+						$html_content .= $rows_html;
+						$html_content .= '</tbody>';
 						
-					$html_contenido .= "\n</table>";
+					$html_content .= "</table>";
 
 
 					# PAGINATOR
-					#$html_contenido .= $rows_paginator_html;				
-					
+					#$html_content .= $rows_paginator_html;					
 
-				#$html_contenido .= "\n</div><!-- /records -->";#end main_list
-
+				#$html_content .= "</div><!-- /records -->";#end main_list
 
 
-				if(SHOW_DEBUG) {
+				if(SHOW_DEBUG===true) {
 					#dump($this, ' this 1 ');
 					$limit_time=SLOW_QUERY_MS;
 					$html_info='';
@@ -86,25 +85,25 @@
 					}
 					#dump($this->rows_obj->options->search_options_session_key," ");
 					if (isset($this->rows_obj->options->search_options_session_key)) {		
-						$html_info .= ", search_options_key: ".$this->rows_obj->options->search_options_session_key;
+						$html_info .= ", search_options_session_key: ".$this->rows_obj->options->search_options_session_key;
 					}
 					$html_info .= ", strQuery:";
 					$html_info .= "<pre style=\"display:none\"> ".$this->rows_obj->strQuery ."</pre>";
 					$html_info .= "</div>";
 					#echo "<div> Time To Generate section list: HTML: ".round(microtime(1)-$start_time,3)."</div>";
 						
-					$html_contenido .= $html_info;
+					$html_content .= $html_info;
 				}#end if(SHOW_DEBUG)
-								
+	
 	}
-	#$html_contenido  = "\n</div>"; // class=\"content\"
-	$html_contenido .= "\n</div><!-- /css_section_group_content -->";
+	#$html_content  = "</div>"; // class=\"content\"
+	$html_content .= "</div><!-- /css_section_group_content -->";
 	
 
 	
 	# PRINT HTML
-	print $html_contenido;	
+	print $html_content;	
 	
 	
-	print "\n</div><!-- /css_section_list_wrap -->\n\n"; //wrap
+	print "</div><!-- /css_section_list_wrap -->"; //wrap
 ?>

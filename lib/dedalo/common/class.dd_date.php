@@ -6,9 +6,13 @@
 */
 class dd_date extends stdClass {
 
- 	# public $errors; // Optional
+	// Errors Optional
+ 	#public $errors;
+ 	// Separator when format output
 	static $separator = '-';
+	// Virtual year days
 	static $virtual_year_days  = 372;
+	// Virtual month days
 	static $virtual_month_days = 31;
 
 
@@ -20,12 +24,13 @@ class dd_date extends stdClass {
 	public function __construct( $data=null, $constrain=false ) {
 
 		#$this->constrain = $constrain; // Fix constrain mode
-
 		if (is_null($data)) return;
 
 		# Nothing to do on construct (for now)
 		if (!is_object($data)) {
-			trigger_error("wrong data format. Object expected. Given: ".gettype($data));
+			#dump($data, ' data ++ '.to_string());
+			#trigger_error("wrong data format. object expected. Given type: ".gettype($data));
+			debug_log(__METHOD__." wrong data format. object expected. Given type: ".gettype($data).' - '.to_string($data), logger::ERROR);
 			return false;
 		}
 
@@ -35,7 +40,6 @@ class dd_date extends stdClass {
 			$method = 'set_'.$key;
 			$this->$method($value, $constrain);		
 		}
-
 	}//end __construct
 
 
@@ -450,7 +454,61 @@ class dd_date extends stdClass {
 			$time += $second;
 		
 		return (int)$time;
-	}#end convert_date_to_seconds	
+	}#end convert_date_to_seconds
+
+
+
+	/**
+	* CONVERT_SECONDS_TO_PERIOD
+	* Calculate current seconds in minutes, hours, days, totals and aproximative prtials.
+	* Note that non total values are aproximations because we need use 
+	* a reference year of 365 days and a reference month of 30 days
+	* @param int $seconds
+	* @return object $response
+	*/
+	public static function convert_seconds_to_period( $seconds ) {
+		
+		$response = new stdClass();
+			$response->result 	= new stdClass();
+			$response->msg 		= '';
+
+		# minutes (reliable measurement)
+		$minutes_total = ceil( (int)$seconds / 60 ); // Round to up	
+
+		# hours_total (reliable measurement)
+		$hours_total = ceil( (int)$seconds / 60 / 60 ); // Round to up
+
+		# days_total (reliable measurement)
+		$days_total = ceil( (int)$seconds / 60 / 60 / 24 ); // Round to up
+		
+		# years (aproximate measurement)
+		$years  	= $days_total/365;
+		$years_int  = floor($years); // Round to bottom
+		$rest_days 	= ceil( ($years - $years_int) *365);
+
+		# months (aproximate measurement)
+		$months 	= $rest_days/30;
+		$months_int = floor($months); // Round to bottom
+		$rest_days 	= ceil( ($months - $months_int)*30 );
+
+		# days (aproximate measurement)
+		$days_int 	= $rest_days;
+
+
+		#dump($days_total, ' days_total ++ '." years:$years_int, months:$months_int, days:$rest_days ".to_string());
+
+		# Absolute values
+		$response->result->seconds_total = (int)$seconds;
+		$response->result->minutes_total = (int)$minutes_total;
+		$response->result->days_total 	 = (int)$days_total;
+
+		# Aproximations
+		$response->result->years 		 = (int)$years_int;
+		$response->result->months 		 = (int)$months_int;
+		$response->result->days 		 = (int)$days_int;
+
+		return (object)$response;
+	}//end convert_seconds_to_period
 	
 
 
@@ -463,10 +521,11 @@ class dd_date extends stdClass {
 
 		if (!empty($this->errors)) {
 			//trigger_error( to_string($this->errors) );
+			debug_log(__METHOD__." Errors foud in dd_date ".to_string($this->errors), logger::WARNING);
 		}
 	}#end __destruct
 
 
-}//end class dd_date 
 
+}//end class dd_date
 ?>

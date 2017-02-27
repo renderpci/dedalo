@@ -20,7 +20,7 @@
 	$component_name			= get_class($this);	
 
 	
-
+	if($permissions===0) return null;
 	# Verify component content record is inside section record filter
 	if ($this->get_filter_authorized_record()===false) return NULL ;
 
@@ -50,22 +50,19 @@
 				$source_mode = $this->get_source_mode();
 					#dump($source_mode, ' source_mode ++ '.to_string());
 				break;
-
-		case 'tool_time_machine'	:	
-				return NULL;				
-				$id_wrapper = 'wrapper_'.$identificador_unico.'_tm';
-				$input_name = "{$tipo}_{$id}_tm";
-				$file_name 	= 'edit';
-				break;
-						
-		case 'search' :	
+		
+		case 'search' :
+				# Showed only when permissions are >1
+				if ($permissions<1) return null;
+				
 				$id_wrapper = 'wrapper_'.$identificador_unico;
-				$input_name = $tipo;
+				$input_name = $section_tipo.'_'.$tipo;
 				$valor 		= $this->get_valor($lang);
 				# Valor searched
 				$valor_searched 		= NULL;
 				$valor_searched_string 	= NULL;
-				$ar_valor 				= $this->get_valor($lang,'array');				
+				$ar_valor 				= $this->get_valor($lang,'array');
+				$ar_link_fields			= json_handler::encode($this->ger_ar_link_fields());			
 				$dato_json 				= json_encode($dato);
 
 				$ar_referenced_tipo 	= $this->get_ar_referenced_tipo();
@@ -77,6 +74,9 @@
 				}
 				$ar_comparison_operators = $this->build_search_comparison_operators();
 				$ar_logical_operators 	 = $this->build_search_logical_operators();
+
+				# SOURCE_MODE
+				$source_mode = $this->get_source_mode();
 
 				# Search input name
 				$search_input_name = $section_tipo.'_'.$tipo;
@@ -110,8 +110,13 @@
 		case 'print' :
 				$valor = $this->get_valor($lang,'string');
 				break;			
-							
 		
+		case 'tool_time_machine'	:	
+				return NULL;				
+				$id_wrapper = 'wrapper_'.$identificador_unico.'_tm';
+				$input_name = "{$tipo}_{$id}_tm";
+				$file_name 	= 'edit';
+				break;		
 	}
 		
 	$page_html	= DEDALO_LIB_BASE_PATH .'/'. get_class($this) . '/html/' . get_class($this) . '_' . $file_name . '.phtml';

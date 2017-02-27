@@ -157,7 +157,7 @@ class tool_upload extends tool_common {
 			$fileUploadOK =0;
 
 			#If the file is a .zip (DVD) create the folder and copy the VIDEO_TS and AUDIO_TS to the destination folder.
-			if($f_extension == 'zip'){
+			if($f_extension === 'zip'){
 
 				$zip = new ZipArchive;
 				$res = $zip->open($f_temp_name);
@@ -181,7 +181,7 @@ class tool_upload extends tool_common {
 
 						  	$fileinfo = pathinfo($filename);
 						  	# Don't copy the original VIDEO_TS in the zip file
-							if ($fileinfo['basename'] == 'VIDEO_TS') {
+							if ($fileinfo['basename'] === 'VIDEO_TS') {
 								continue;
 							}
 							#Copy al files of the VIDEO_TS zip file into the VIDEO_TS destination file
@@ -193,7 +193,7 @@ class tool_upload extends tool_common {
 						}else if(strpos($filename,'AUDIO_TS')!== false){
 							$fileinfo = pathinfo($filename);
 							# Don't copy the original AUDIO_TS in the zip file
-							if ($fileinfo['basename'] == 'AUDIO_TS') {
+							if ($fileinfo['basename'] === 'AUDIO_TS') {
 								continue;
 							}
 							#Copy al files of the VIDEO_TS zip file into the AUDIO_TS destination file					        
@@ -356,13 +356,7 @@ class tool_upload extends tool_common {
 		$response->html = $html;
 
 		return $response;
-
 	}#end upload_file
-
-
-	
-
-
 
 
 
@@ -437,7 +431,7 @@ class tool_upload extends tool_common {
 	public function validate_extension( $f_extension, $ar_allowed_extensions ) {
 
 		foreach ($ar_allowed_extensions as $current_allowed_extension) {
-			if (strtolower($current_allowed_extension) == strtolower($f_extension)) {
+			if (strtolower($current_allowed_extension) === strtolower($f_extension)) {
 				return true;
 			}
 		}
@@ -486,7 +480,7 @@ class tool_upload extends tool_common {
 	
 						#
 						# AUDIO CASE
-						if ($quality=='audio') {
+						if ($quality==='audio') {
 							# AUDIO Extensions supported
 							$ar_audio_only_ext = array('mp3','aiff','aif','wave','wav');
 							if (in_array($file_ext, $ar_audio_only_ext)) {
@@ -553,7 +547,7 @@ class tool_upload extends tool_common {
 						#
 						# AUDIO FILES
 						# Audio files generate always a audio file
-						if ($quality==DEDALO_AV_QUALITY_ORIGINAL) {
+						if ($quality===DEDALO_AV_QUALITY_ORIGINAL) {
 							$ar_audio_only_ext = array('mp3','aiff','aif','wave','wav');
 							if (in_array($file_ext, $ar_audio_only_ext)) {
 								
@@ -572,40 +566,7 @@ class tool_upload extends tool_common {
 							}else{
 								#throw new Exception("Error Processing Request. Current audio extension [$file_ext] is not supported (q:$quality) (2)", 1);
 							}
-						}//end if ($quality==DEDALO_AV_QUALITY_ORIGINAL) {	
-
-
-
-						#
-						# SET DURATION (RESOURCES AV)
-						if( $this->component_obj->get_tipo()==DEDALO_COMPONENT_RESOURCES_AV_TIPO 
-						 && $this->component_obj->get_section_tipo()==DEDALO_SECTION_RESOURCES_AV_TIPO ) {
-
-							$source_file = $this->file_obj->uploaded_file_path;
-							$media_attributes = Ffmpeg::get_media_attributes( $source_file );
-								#dump($media_attributes, ' $media_attributes ++ '.to_string());
-
-							if (isset($media_attributes->format) && isset($media_attributes->format->duration)) {
-								$duration_secs = (float)$media_attributes->format->duration;
-									#dump($duration_secs, ' duration_secs ++ '.to_string());
-								if ($duration_secs && $duration_secs>0) {
-									$modelo_name = RecordObj_dd::get_modelo_name_by_tipo(DEDALO_COMPONENT_RESOURCES_MINUTES_TIPO,true);
-									$component 	 = component_common::get_instance($modelo_name,
-																				  DEDALO_COMPONENT_RESOURCES_MINUTES_TIPO,
-																				  $this->component_obj->get_parent(),
-																				  'edit',
-																				  DEDALO_DATA_NOLAN,
-																				  DEDALO_SECTION_RESOURCES_AV_TIPO);									
-									$component->set_dato($duration_secs);
-									$component->Save();
-									debug_log(__METHOD__." Saved duration (secs) info from media streams to component: $duration_secs ".to_string(), logger::DEBUG);
-
-									$response->update_components[] = DEDALO_COMPONENT_RESOURCES_MINUTES_TIPO;
-								}
-							}
-						}
-				
-												
+						}//end if ($quality==DEDALO_AV_QUALITY_ORIGINAL) {												
 
 					} catch (Exception $e) {
 						$msg = 'Exception[upload_trigger][FFMPEG]: ' .  $e->getMessage() . "\n";

@@ -2,26 +2,21 @@
 
 	# VISUALIZADOR HTML	
 
-	
-	echo "\n<!-- INPUT_TEXT [tipo:$tipo section_id_matrix:$parent] -->";	
-		
+			
 	# CONTENIDO (INPUT)
-	$html_contenido = '';
-	switch($permissions) {
-			
-		case 0	:	$html_contenido .= ''; 		
-					break;
+	$html_content = '';
+	switch(true) {
+		
+		case ($permissions==0):
+			$html_content .= '';
+			break;
 					
-		case ($permissions>=1)	:
-			
-					$html_contenido .= "\n <span class=\"css_span_dato\" data-tipo=\"{$tipo}\" data-section_tipo=\"{$section_tipo}\" data-parent=\"{$parent}\" data-lang=\"{$lang}\" >$valor</span>";
-					
-					
-					break;							
+		case ($permissions>=1):			
+			$html_content .= $valor;
+			break;
 	}	
 
 	
 	# PRINT HTML	
-	print $html_contenido;	
-	
+	print $html_content;	
 ?>

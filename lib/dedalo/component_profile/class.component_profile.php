@@ -34,9 +34,9 @@ class component_profile extends component_common {
 		# Creamos el componente normalmente
 		parent::__construct($tipo, $parent, $modo, $lang, $section_tipo);
 
-		if(SHOW_DEBUG) {
+		if(SHOW_DEBUG===true) {
 			$traducible = $this->RecordObj_dd->get_traducible();
-			if ($traducible=='si') {
+			if ($traducible==='si') {
 				throw new Exception("Error Processing Request. Wrong component lang definition. This component $tipo (".get_class().") is not 'traducible'. Please fix this ASAP", 1);
 			}
 		}
@@ -107,7 +107,7 @@ class component_profile extends component_common {
 															  DEDALO_DATA_LANG,
 															  $section_tipo);
 				#dump($component,"component ".DEDALO_APPLICATION_LANG);
-			$name = $component->get_dato();
+			$name = $component->get_valor(0);
 				#dump($name, ' name '.$strQuery);
 			
 			# Falta de fallback del idioma. Hacer más adelante			
@@ -139,11 +139,32 @@ class component_profile extends component_common {
 													  DEDALO_DATA_LANG,
 													  DEDALO_SECTION_PROFILES_TIPO);
 			#dump($component,"component ".DEDALO_APPLICATION_LANG);
-		$name = $component->get_dato();
+		$name = $component->get_valor(0);
 			
 		return $name;
-
 	}#end get_valor
+
+
+
+	/**
+	* GET_PROFILE_FROM_USER_ID
+	* @param int $user_id
+	* @return int $profile_id
+	*/
+	public static function get_profile_from_user_id( $user_id ) {
+		
+		# Calculate current user profile id
+		$component_profile = component_common::get_instance('component_profile',
+														  	DEDALO_USER_PROFILE_TIPO,
+														  	$user_id,
+														  	'edit',
+														  	DEDALO_DATA_NOLAN,
+														  	DEDALO_SECTION_USERS_TIPO);
+		$profile_id = $component_profile->get_dato();
+
+		return (int)$profile_id;
+	}//end get_profile_from_user_id
+
 
 
 	/**
@@ -177,7 +198,7 @@ class component_profile extends component_common {
 
 			if (!$result) {
 				$msg.= "Error on save component_security_areas_users<br>";
-				if(SHOW_DEBUG) {
+				if(SHOW_DEBUG===true) {
 					dump($security_areas_profiles_dato," security_areas_profiles_dato");
 					throw new Exception("Error Processing Request", 1);
 				}
@@ -194,7 +215,7 @@ class component_profile extends component_common {
 
 			if (!$result) {
 				$msg.= "Error on save component_security_access_users<br>";
-				if(SHOW_DEBUG) {
+				if(SHOW_DEBUG===true) {
 					dump($security_access_profiles_dato," security_access_profiles_dato");
 					throw new Exception("Error Processing Request", 1);
 				}
@@ -211,7 +232,7 @@ class component_profile extends component_common {
 
 			if (!$result) {
 				$msg.= "Error on save component_security_tools_users<br>";
-				if(SHOW_DEBUG) {
+				if(SHOW_DEBUG===true) {
 					dump($security_tools_profiles_dato," security_tools_profiles_dato");
 					throw new Exception("Error Processing Request", 1);
 				}

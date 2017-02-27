@@ -995,7 +995,7 @@ class tool_import_bibtex extends tool_common {
 		$section_tipo   = BIBLIO_SECTION_TIPO_VIRTUAL_BIBLIOGRAFIA;		# 'rsc212'; 	# Lista de valores Colecciones / Series 
 		$lang 			= DEDALO_DATA_NOLAN;
 		$value 			= $reference;
-		$table 			= common::get_matrix_table_from_tipo($tipo); 
+		$table 			= common::get_matrix_table_from_tipo($section_tipo); 
 		
 		$sql_filter  = JSON_RecordObj_matrix::build_pg_filter('gin','datos',$tipo,$lang,$value);
 		$strQuery   = "-- ".__METHOD__."

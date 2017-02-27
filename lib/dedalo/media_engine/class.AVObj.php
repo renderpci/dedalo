@@ -36,9 +36,24 @@ class AVObj extends MediaObj {
 		
 		$this->streamer			= $this->define_streamer();
 		
-		parent::__construct($reelID);
-		
+		parent::__construct($reelID);		
 	}
+
+
+
+	/**
+	* GET_URL
+	* Custom get url in av case
+	*/
+	public function get_url() {
+		
+		$name = $this->get_name() . '.' . $this->get_extension() . '?t='.time();		
+		$url  = $this->get_media_path() . $name;
+		#$url 	.= '?t='.time();
+
+		return $url;
+	}
+	
 	
 	
 	# MANDATORY DEFINITIONS
@@ -204,6 +219,7 @@ class AVObj extends MediaObj {
 		# RECUPERA INFO A PARTIR DE LA LECTURA DE LA CABECERA
 		$quality		= $this->get_quality();
 		$ar_data 		= $this->get_ar_movie_header_info();
+		# dump($ar_data, ' ar_data ++ '.to_string($quality));
 		
 		$width			= 720;
 		$height			= 404;

@@ -13,6 +13,7 @@
 	switch($modo) {
 
 		case 'button':
+			$button_title = label::get_label('tool_export');
 			# Show tool button
 			/*
 			$options = new stdClass();

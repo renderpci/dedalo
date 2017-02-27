@@ -1,26 +1,21 @@
 <?php
 
-	# VISUALIZADOR HTML	
-
-
-	
+	# VIEW HTML
 		
-	# CONTENIDO (INPUT)
-	$html_contenido = '';
-	switch($permissions) {
-			
-		case 0	:	$html_contenido .= "";		
-					break;
-					
-		case ($permissions>=1) :
-					
-					$html_contenido .= "\n <span class=\"css_span_dato\">$valor</span>";											
-					break;
-					
-	}	
+	# CONTENT
+	$html_content = '';
+	switch(true) {
+		
+		case ($permissions===0):
+				$html_content .= "";
+				break;
+		
+		case ($permissions>=1):
+				$html_content .= "<span class=\"css_span_dato\">$valor</span>";
+				break;
+	}
 
 	
 	# PRINT HTML	
-	print $html_contenido;	
-	
+	print $html_content;
 ?>

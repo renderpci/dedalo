@@ -23,11 +23,11 @@ class RecordObj_descriptors extends RecordObj_matrix {
 	function __construct($matrix_table=null, $id=NULL, $parent=NULL, $lang=NULL, $tipo='termino', $fallback=false) { 
 		
 		if(empty($matrix_table)) {
-			if(SHOW_DEBUG) dump($matrix_table,"id:$id - parent:$parent - tipo:$tipo - lang:$lang");
+			if(SHOW_DEBUG===true) dump($matrix_table,"id:$id - parent:$parent - tipo:$tipo - lang:$lang");
 			throw new Exception("Error Processing Request. Matrix wrong name ", 1);
 		}
 
-		if(SHOW_DEBUG) {
+		if(SHOW_DEBUG===true) {
 			if (!empty($parent) && strpos($parent, 'dd')===0) {
 				throw new Exception("Error Processing Request. parent wrong tipo '$parent' use 'RecordObj_descriptors_dd' to manage this term", 1);
 			}
@@ -116,7 +116,7 @@ class RecordObj_descriptors extends RecordObj_matrix {
 			# Forzamos el calculo del ID si es viable
 			if( $id<1 && (!empty($parent) && !empty($lang)) ) {					
 				$result = parent::calculate_ID();
-				if(SHOW_DEBUG) {					
+				if(SHOW_DEBUG===true) {					
 					#dump($result," result from calculate id");
 				}					
 			}
@@ -137,10 +137,10 @@ class RecordObj_descriptors extends RecordObj_matrix {
 	*/
 	public static function get_matrix_table_from_tipo($tipo) {
 
-		if(SHOW_DEBUG) {
+		if(SHOW_DEBUG===true) {
 			$prefix = substr($tipo, 0,2);		
 			if (!preg_match('/[a-z][a-z]/', $prefix)) {
-				if(SHOW_DEBUG){
+				if(SHOW_DEBUG===true){
 					#dump($tipo,'get_matrix_table_from_tipo tipo '."Prefix $prefix from tipo:$tipo is invalid");
 				}
 				#throw new Exception("Error Processing Request. Prefix $prefix from tipo:$tipo is invalid", 1);	
@@ -170,10 +170,13 @@ class RecordObj_descriptors extends RecordObj_matrix {
 		$dato = $this->dato;		#dump($dato);
 
 		# Untranslated case
-		if($this->unTranslated	=== true) $dato = component_common::decore_untranslated($dato);
+		if($this->unTranslated===true) $dato = component_common::decore_untranslated($dato);
 
 		return $dato;		
 	}
+
+
+
 	/**
 	* SET DATO OVERWRITE PARENT JSON SET DATO
 	* @param $dato String
@@ -182,7 +185,7 @@ class RecordObj_descriptors extends RecordObj_matrix {
  		
  		if ($raw) {
 			$this->dato = $dato;
-			$this->arModifiedRelations['dato'] = "1";
+			$this->arModifiedRelations['dato'] = 1;
 			return ;
 		}
 
@@ -193,6 +196,7 @@ class RecordObj_descriptors extends RecordObj_matrix {
  		}				
 		$this->arModifiedRelations['dato'] = 1;
 	}
+	
 	
 	
 	# TRANSLATIONS OF CURRENT
@@ -210,7 +214,7 @@ class RecordObj_descriptors extends RecordObj_matrix {
 		$ar_id				= $this->search($arguments);
 			#dump($parent,'parent ',$this->matrix_table);
 		
-		if(count($ar_id)==0) return false;
+		if(count($ar_id)===0) return false;
 		
 		foreach($ar_id as $id) {
 			
@@ -238,7 +242,7 @@ class RecordObj_descriptors extends RecordObj_matrix {
 		$arguments['tipo']	= 'termino';		
 		$ar_id				= $this->search($arguments);
 		
-		if(count($ar_id)==0) return false;
+		if(count($ar_id)===0) return false;
 		
 		return true;	
 	}
@@ -336,7 +340,7 @@ class RecordObj_descriptors extends RecordObj_matrix {
 	public static function delete_rel_locator_from_all_indexes($rel_locator) {
 
 		if (!is_object($rel_locator) || empty($rel_locator->component_tipo)) {
-			if(SHOW_DEBUG) {
+			if(SHOW_DEBUG===true) {
 				dump($rel_locator, 'REL_LOCATOR');;
 			}
 			throw new Exception("Error Processing Request. Wrong rel_locator", 1);			
@@ -412,7 +416,7 @@ class RecordObj_descriptors extends RecordObj_matrix {
 	public static function get_indexations_for_locator( $locator ) {
 		
 		if (!is_object($locator) || !isset($locator->section_tipo) || !isset($locator->section_id)) {
-			if(SHOW_DEBUG) {
+			if(SHOW_DEBUG===true) {
 				dump($locator, 'locator');
 			}
 			throw new Exception("Error Processing Request. Wrong locator", 1);			
@@ -435,8 +439,8 @@ class RecordObj_descriptors extends RecordObj_matrix {
 				#dump($dato, ' RecordObj_descriptors ++ '.to_string($terminoID));
 			$count = 0;
 			foreach ((array)$dato as $key => $current_locator) {
-				if( $current_locator->section_tipo == $locator->section_tipo &&
-					$current_locator->section_id == $locator->section_id
+				if( $current_locator->section_tipo === $locator->section_tipo &&
+					$current_locator->section_id === $locator->section_id
 					)
 					$count++;
 			}

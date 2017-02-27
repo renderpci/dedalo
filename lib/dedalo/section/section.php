@@ -1,4 +1,40 @@
 <?php
+
+
+	if(SHOW_DEBUG===true) {
+		/*
+		$options = new stdClass();
+			$options->section_tipo 	 = 'oh1';	
+			$options->json_field	 = (string)'datos';
+			$options->data_type	 	 = (string)'valor';  # Can be dato, valor, valor_list, etc...
+			$options->select_format	 = (string)'>>'; // JSON selector type: >> (text) or > (object)
+
+			$component1 = (object)array("section_tipo"=>"oh1","component_tipo"=>"oh14");
+			$component2 = (object)array("section_tipo"=>"rsc197","component_tipo"=>"rsc85");
+			$component3 = (object)array("section_tipo"=>"rsc212","component_tipo"=>"rsc214"); 
+			$component4 = (object)array("section_tipo"=>"rsc197","component_tipo"=>"rsc86");
+
+			$options->components 	 = array($component1,$component2,$component3,$component4);	// [oh1_oh14]
+			$options->matrix_tables  = array(); // [oh1 => matrix] Optional
+			$options->operators	 	 = (bool)false;	# SQL operators used by search from
+
+			$filter_by_search = new stdClass();
+				$filter_by_search->oh1_oh14 = "cod";
+
+			$options->filter_by_search = $filter_by_search;
+
+
+		$search = new search();
+		$records_2 = $search->get_records_2($options);
+		#dump($modo, ' modo ++ '.to_string());
+		*/
+	}
+
+
+
+
+
+
 	
 	# CONTROLLER
 		
@@ -47,7 +83,7 @@
 	
 	switch($modo) {
 
-		case 'edit':						
+		case 'edit':
 				
 				$section_id 			= $this->get_section_id();
 				$section_info 			= $this->get_section_info('json');
@@ -55,9 +91,8 @@
 				$ar_exclude_elements  	= array(); #array('dd1106');
 				$section_real_tipo  	= $this->get_section_real_tipo();	# Important: Fija $this->section_real_tipo que es necesario luego
 					#dump($section_real_tipo,"section_real_tipo ");
-				$id_wrapper 			= 'wrap_section_'.$identificador_unico;
+				$id_wrapper 			= 'wrap_section_'.$identificador_unico;				
 				
-					
 				#
 				# SEARCH FORM . ROWS_SEARCH 
 				# Render search form html
@@ -202,9 +237,11 @@
 					if (defined('DEDALO_LOCK_COMPONENTS') && DEDALO_LOCK_COMPONENTS===true) {
 						js::$ar_url[]  = DEDALO_LIB_BASE_URL."/lock_components/js/lock_components.js";
 					}
+					if ($tipo===DEDALO_HIERARCHY_SECTION_TIPO) {
+						js::$ar_url[]  = DEDALO_LIB_BASE_URL."/hierarchy/js/hierarchy.js";
+					}
 
-					#js::$ar_url[]  = DEDALO_ROOT_WEB . "/lib/jquery/jquery.matchHeight-min.js";
-					
+					#js::$ar_url[]  = DEDALO_ROOT_WEB . "/lib/jquery/jquery.matchHeight-min.js";					
 
 				break;
 
@@ -241,7 +278,7 @@
 					}
 
 
-					if ( !empty($_SESSION['dedalo4']['config']['search_options'][$search_options_session_key]) ) {						
+					if ( !empty($_SESSION['dedalo4']['config']['search_options'][$search_options_session_key]) ) {					
 						
 						$options = (object)$_SESSION['dedalo4']['config']['search_options'][$search_options_session_key];
 							$options->full_count = false; # Force update count records on non ajax call
@@ -262,7 +299,6 @@
 						if (!empty($options->limit_list)) {
 							$options->limit = $options->limit_list;
 						}
-
 	
 					}else{
 							
@@ -296,8 +332,7 @@
 								default:
 									# code...
 									break;
-							}
-							
+							}							
 
 							#
 							# ACTIVITY CASE
@@ -307,9 +342,8 @@
 								$options->order_by				= 'id DESC';	#section_id ASC
 								$options->limit					= DEDALO_MAX_ROWS_PER_PAGE*3;
 							}
-
 							#dump($options->layout_map_list, '$options->layout_map_list ++ '.to_string());
-					}
+					}//end else
 
 
 					# Override some specific options
@@ -335,7 +369,7 @@
 					$search_form_html 	= $records_search->get_html();	
 
 				#
-				# TIME_MACHINE_HTML
+				# TOOL TIME MACHINE HTML
 				# Render tool time machine content
 					$time_machine_html='';
 					if(isset($context->context_name)) {
@@ -354,10 +388,7 @@
 				# BUTTONS
 				# Calculate and prepare current section buttons to use as : $this->section_obj->ar_buttons
 					$ar_buttons = (array)$this->get_ar_buttons();
-					if(SHOW_DEBUG) {
-						#dump($ar_buttons,"ar_buttons");
-					}
-
+				
 				#
 				# ADITIONAL_CSS
 					if (defined('DEDALO_ADITIONAL_CSS') && DEDALO_ADITIONAL_CSS===true && isset($propiedades->aditional_css)) {

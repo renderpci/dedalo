@@ -40,6 +40,7 @@ class component_security_access extends component_common {
 		if (!is_object($dato) && empty($dato)) {
 			$dato = new stdClass();
 		}
+
 		return (object)$dato;
 	}
 
@@ -183,10 +184,10 @@ class component_security_access extends component_common {
 	    $ar_areas = array();
 	    foreach ($ar_authorized_areas_for_user as $tipo => $estado) {
 
-	    	if ($tipo==DEDALO_SECTION_PROFILES_TIPO) continue; # Skip section profiles
+	    	if ($tipo===DEDALO_SECTION_PROFILES_TIPO) continue; # Skip section profiles
 	    
 	    	$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
-	    	if($estado>=2 && $modelo_name=='section'){			
+	    	if($estado>=2 && $modelo_name==='section'){			
 	    		$ar_areas[] = $tipo ;
 	    	}	    		
 	    }//end foreach ($ar_authorized_areas_for_user as $tipo => $estado)
@@ -225,7 +226,14 @@ class component_security_access extends component_common {
 
 				$section_tipo 			 = $terminoID;
 				$ar_modelo_name_required = array('section_group','button_');
-				$ar_ts_childrens 		 = section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, $ar_modelo_name_required, $from_cache=true, $resolve_virtual=true, $recursive=false);	
+
+				# Real section
+				//($section_tipo, $ar_modelo_name_required, $from_cache=true, $resolve_virtual=false, $recursive=true, $search_exact=false)
+				$ar_ts_childrens   = section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, $ar_modelo_name_required, $from_cache=true, $resolve_virtual=true, $recursive=false, $search_exact=false);	
+				
+				# Virtual section too is neccesary (buttons specifics)
+				$ar_ts_childrens_v = section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, $ar_modelo_name_required, $from_cache=true, $resolve_virtual=false, $recursive=false, $search_exact=false);
+				$ar_ts_childrens = array_merge($ar_ts_childrens, $ar_ts_childrens_v);				
 				break;
 			
 			default:
@@ -237,7 +245,7 @@ class component_security_access extends component_common {
 		}
 		
 
-		$ar_exclude_modelo = array('component_security_administrator','relation_list','section_list','box_elements','exclude_elements');		# ,'filter'	,'tools','search_list'
+		$ar_exclude_modelo = array('component_security_administrator','relation_list','section_list','search_list','semantic_node','box_elements','exclude_elements');		# ,'filter'	,'tools','search_list'
 		foreach((array)$ar_ts_childrens as $children_terminoID) {			
 			$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($children_terminoID,true);			
 			foreach($ar_exclude_modelo as $exclude_modelo) {					
@@ -314,7 +322,7 @@ class component_security_access extends component_common {
 		$html_tree='';
 		foreach((array)$ar_elements as $tipo => $value) {
 
-			#if ($tipo=='mupreva502') {
+			#if ($tipo=='mupreva21') {
 			#	dump($dato->$dato_section_tipo->$tipo, ' $dato->$tipo ++ '.to_string());
 			#}		
 			

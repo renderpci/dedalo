@@ -2,20 +2,20 @@
 	
 	# VISUALIZADOR HTML	
 	
-	print "\n\n<!-- SECTION GROUP DIV [tipo:$tipo] $label -->";
+	print "<!-- SECTION GROUP DIV [tipo:$tipo] $label -->";
 
-	print "\n<div id=\"$identificador_unico\" class=\"wrap_section_group_div wrap_section_group_div_{$tipo}\" >";	
+	print "<div id=\"$identificador_unico\" class=\"wrap_section_group_div wrap_section_group_div_{$tipo} sgc_{$modo}\" >";	
 	
 
 	# CONTENIDO (INPUT)
 	$html_contenido='';
-	$html_contenido .= "\n $components_html ";
+	$html_contenido .= " $components_html ";
 	
 	
 	# PRINT HTML	
 	print $html_contenido;
 
 	
-	print "\n</div><!-- /wrap_section_group_div SECTION GROUP DIV [tipo:$tipo]  -->\n\n"; //wrap
+	print "</div><!-- /wrap_section_group_div SECTION GROUP DIV [tipo:$tipo]  -->"; //wrap
 	
 ?>

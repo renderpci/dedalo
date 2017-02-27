@@ -2,13 +2,66 @@
 
 	# VISUALIZADOR HTML	
 
+
+
+
+
+	/*
+
+		Moved to javascript builder
+
+	*/
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 	
 	# CONTENIDO (INPUT)
 	$html_contenido = '';
-	switch($permissions) {
+	switch(true) {
 			
-		case 0	:	
-			$html_contenido .= "\n <span class=\"css_span_dato\"> No access here (text_area)! </span>";	
+		case ($permissions===0)	:	
+			$html_contenido .= "<span class=\"css_span_dato\"> No access here (text_area)! </span>";	
 			break;
 						
 		
@@ -26,7 +79,7 @@
 
 
 			# TAG STATE SELECTOR
-			$html_contenido .= "\n <div class=\"wrap_tag_state_selector\">";
+			$html_contenido .= "<div class=\"wrap_tag_state_selector\">";
 
 				#
 				# CURRENT TAG STATE SELECTOR
@@ -40,12 +93,12 @@
 				$html_contenido .= "<select class=\"tag_state_selector\" name=\"$name\"
 				data-tag=\"$tag\"
 				onchange=\"component_text_area.change_tag_state(this)\">";			
-				#$html_contenido .= "\n <option value=\"\"></option>";
+				#$html_contenido .= "<option value=\"\"></option>";
 				foreach ($ar_states as $key => $value) {
 
 					$selected = ($tag_state==$key) ? " selected=\"selected\" " : '';
 
-					$html_contenido .= "\n <option value=\"$key\" $selected >";					
+					$html_contenido .= "<option value=\"$key\" $selected >";					
 					$html_contenido .= $value;
 					$html_contenido .= "</option>";
 
@@ -56,7 +109,7 @@
 			
 
 			# BUTTON DELETE TAG
-			$html_contenido .= "\n <div class=\"div_delete_tag\">";
+			$html_contenido .= "<div class=\"div_delete_tag\">";
 
 				$html_contenido .= " <div class=\"icon_bs tool_indexation_delete_icon link\"
 				data-tipo=\"{$tipo}\"
@@ -70,17 +123,17 @@
 
 				$html_contenido .= " Delete tag";
 
-			$html_contenido .= "</div>";//end div_delete_tag	
+			$html_contenido .= "</div>";//end div_delete_tag
 
 
 			# BUTTON CLOSE
-			$html_contenido .= "\n <div class=\"icon_bs tool_indexation_show_fragment link\"
+			$html_contenido .= "<div class=\"icon_bs tool_indexation_show_fragment link\"
 			data-tab_id=\"indexation_fragment\"
 			onclick=\"tool_indexation.toggle_selected_fragment(this);\"></div>";
 			
 
 			# TEXT SELECTED FRAGMENT
-			$html_contenido .= "\n <div class=\"selected_fragment\">{$fragment_text}</div>";			
+			$html_contenido .= "<div class=\"selected_fragment\">{$fragment_text}</div>";
 	}	
 
 
@@ -89,10 +142,12 @@
 
 
 	# TEXT SELECTED FRAGMENT
-	$html_contenido .= "\n <div class=\"terminos_list\">";
-	$html_contenido .= "\n   <div class=\"terminos_list_title\">".label::get_label('descriptores')."</div>";
-	$html_contenido .= 		 $component_text_area_terminos_list_html;
-	$html_contenido .= "\n </div>";
+	$html_contenido .= "<div id=\"terminos_list\" class=\"terminos_list\">";
+	$html_contenido .= "  <div class=\"terminos_list_title\">".label::get_label('descriptores')."</div>";
+	$html_contenido .= "  <div id=\"terminos_list_container\">";
+	$html_contenido .=    	$component_text_area_terminos_list_html;
+	$html_contenido .= "  </div>";
+	$html_contenido .= "</div>";
 
 
 

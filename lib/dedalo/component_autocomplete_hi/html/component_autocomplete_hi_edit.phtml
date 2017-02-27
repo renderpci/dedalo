@@ -1,0 +1,158 @@
+<?php
+
+	# VISUALIZADOR HTML
+
+	# html_delimiter
+	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'in');
+	
+	print "<div class=\"wrap_component css_wrap_autocomplete_hi wrap_component_{$tipo}\" id=\"{$id_wrapper}\"
+	data-tipo=\"{$tipo}\"
+	data-lang=\"{$lang}\"
+	data-section_tipo=\"{$section_tipo}\"
+	data-parent=\"{$parent}\"
+	data-modo=\"{$modo}\"
+	data-from_modo=\"{$from_modo}\"
+	data-dato='{$dato_json}'
+	data-component_name=\"{$component_name}\"
+	data-component_info='{$component_info}'
+	>";
+
+	# ETIQUETA (LABEL)
+	$html_label = component_common_draw::draw_label($this);
+
+	# CONTENIDO (INPUT)
+	$html_contenido = '';
+	switch($permissions) {
+
+		case 0	:	$html_contenido .= "";
+					break;
+
+		case 1	: 	$html_contenido .= $valor;
+					break;
+
+		case 2	:
+		case 3	:
+				if($from_modo !== 'edit'){
+					$html_contenido .= "<div class=\"css_autocomplete_hi_button_close\" onclick=\"component_common.change_mode_component(this, 'edit', '$from_modo')\"></div>";
+				}
+				
+
+				#
+				# ROW
+				$html_contenido .= " <ul class=\"css_autocomplete_hi_valor\">";
+				foreach ($ar_valor as $current_value => $value) {
+
+					$html_contenido .= "<li>";
+
+					# BTN DELETE
+					$html_contenido .= " <div class=\"icon_bs link css_autocomplete_hi_button_delete edit_hidden\"
+					data-tipo=\"{$tipo}\"
+					data-current_value='$current_value'
+					data-role=\"autocomplete_hi_button_delete\"
+					title=\"$label $parent\"
+					onclick=\"component_autocomplete_hi.delete(this)\"></div>";
+
+					# VALUE . STRING RESOLVED TO SHOW
+					$value = strip_tags($value);
+					$html_contenido .= $value;
+					if(SHOW_DEBUG===true) {
+						#$html_contenido .= " <span class=\"notes\">$current_value</span>";
+					}
+
+					$html_contenido .= "</li>";
+				}
+				$html_contenido .= "</ul>";
+
+				$hierarchy_types_json 	 = json_encode($hierarchy_types);
+				$hierarchy_sections_json = json_encode($hierarchy_sections);
+
+				# SOURCE_MODE SWITCH
+				switch ($source_mode) {
+					case 'tree':
+
+						# BTN NEW ELEMENT
+						$html_contenido .= "<div class=\"icon_bs link new_autocomplete_hi edit_hidden\"
+						data-id_wrapper=\"$id_wrapper\"
+						data-component_name=\"$component_name\"
+						data-hierarchy_types='{$hierarchy_types_json}'
+						data-hierarchy_sections='{$hierarchy_sections_json}'
+						onclick=\"component_common.open_ts_window(this)\"></div>";
+
+						/*
+						data-termino_id=\"$ds_terminoID\"
+						data-locator_section_tipo=\"{$current_locator->section_tipo}\"
+						data-locator_section_id=\"{$current_locator->section_id}\"
+						data-ds_key=\"{$ds_key}\"
+						data-semantic_wrapper_id=\"{$semantic_wrapper_id}\"
+						*/
+						break;
+					
+					case 'autocomplete':
+					default:
+				
+						#
+						# INPUT SEARCH FIELD
+						$html_contenido .= " <input class=\"css_autocomplete_hi_search_field\" type=\"text\" placeholder=\"".label::get_label('buscar')."...\"
+						data-id_wrapper=\"$id_wrapper\"
+						data-tipo=\"$tipo\"
+						data-hierarchy_types='{$hierarchy_types_json}'
+						data-hierarchy_sections='{$hierarchy_sections_json}'
+						onfocus=\"component_autocomplete_hi.activate(this)\"
+						tabindex=\"1\"
+						autocomplete=\"off\"
+						autocorrect=\"off\"
+						/>";
+
+						if(SHOW_DEBUG===true) {
+							#$html_contenido .= "<div class=\"debug_info notes\">ar_referenced_tipo: ".implode(', ', $ar_referenced_tipo)."</div>";
+							$html_contenido .= "<div class=\"debug_info notes\">".str_replace('},', '},<br>', $dato_json) ."</div>";
+						}
+
+
+						# Reset var 'activated' on load
+						$html_contenido .= "<script>component_autocomplete_hi.activated={}</script>";
+						break;
+				}//end switch ($source_mode)
+
+
+				#
+				# TREE RESOLUTION STATS
+				#$html_contenido .= " <div id=\"autocomplete_hi_tree_stats_{$tipo}\" class=\"css_autocomplete_hi_tree_stats\"> Calculating.. </div>";
+
+				# INPUT DATA HIDDEN
+				$html_contenido .= "<input type=\"text\" name=\"{$input_name}\" class=\"css_autocomplete_hi_dato_hidden\" style=\"width:300px;\"
+				data-tipo=\"{$tipo}\"
+				data-section_tipo=\"{$section_tipo}\"
+				data-parent=\"{$parent}\"
+				data-lang=\"{$lang}\"
+				data-link_fields='{$ar_link_fields}'
+				data-role=\"autocomplete_hi_dato_hidden\"
+				value='{$dato_json}'
+				/>";
+
+				if(SHOW_DEBUG===true) {
+					#$html_contenido .= " <span class=\"css_span_debugger\" id=\"debugger_{$parent}\" >{$debugger}</span>";
+					$html_contenido .= "<div class=\"debug_info notes\">". json_encode($propiedades) ."</div>";
+				}
+				break;
+
+	}
+
+	# Prepare content to show in page
+	tools::prepare_content($html_contenido);
+
+
+	# PRINT HTML
+	print $html_label;
+	print $html_contenido;
+
+
+
+	print "</div>"; //wrap
+
+	# html_delimiter
+	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'in');
+
+
+
+?>

@@ -124,7 +124,7 @@ class navigator extends Accessors {
 		if(isset(self::$$var_name))	return self::$$var_name;
 		
 		# default for modo
-		if($name=='modo') return 'list';
+		if($name==='modo') return 'list';
 		
 		return NULL;
 	}

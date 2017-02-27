@@ -3,9 +3,10 @@
 	# VISUALIZADOR HTML
 	
 
-	print "\n<!-- TEXT AREA [tipo:$tipo section_id:$parent modo:$modo] $label $identificador_unico -->";
+	# html_delimiter
+	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'in');
 	
-	print "\n<div class=\"wrap_component css_wrap_text_area wrap_component_{$tipo}\" id=\"{$id_wrapper}\"
+	print "\n <div class=\"wrap_component css_wrap_text_area wrap_component_{$tipo}\" id=\"{$id_wrapper}\"
 	data-tipo=\"{$tipo}\"
 	data-section_tipo=\"{$section_tipo}\"
 	data-parent=\"{$parent}\"
@@ -15,12 +16,14 @@
 	data-context_name=\"{$context_name}\"
 	data-component_name=\"{$component_name}\"
 	data-component_info='{$component_info}'
+	data-related_tipo='{$ar_related_component_tipo_json}'
 	role=\"wrap_component_text_area\"
 	>";
 
 	# ETIQUETA (LABEL)
 	$html_label = component_common_draw::draw_label($this);
 
+	
 	# CONTENIDO (INPUT)
 	$html_contenido = '';
 	switch($permissions) {
@@ -84,9 +87,14 @@
 					$html_contenido .= "<div class=\"text_area_warning\"><span class=\"warning\">".$component_warning."</span></div>";
 				}
 
+				if(SHOW_DEBUG===true) {
+					$html_contenido .= "<span class=\"lang_info_debug\">$lang</span>" ;
+				}
+
+
 
 				#
-				# TEXTAREA			
+				# TEXTAREA						
 				$html_contenido .= "\n <textarea class=\"css_text_area $text_area_tm\" id=\"{$identificador_unico}\" style=\"visibility:hidden\"
 				name=\"{$input_name}\"
 				data-parent=\"{$parent}\"
@@ -98,9 +106,22 @@
 				data-canvas_id=\"$canvas_id\"
 				data-context_name=\"$context_name\"
 				title=\"$html_title\"
-				tabindex=\"1\"
-				>$dato</textarea>";
-
+				tabindex=\"1\">$dato</textarea>";
+				
+				/*
+				$html_contenido .= "\n <div class=\"css_text_area $text_area_tm\" id=\"{$identificador_unico}\" style=\"visibility:hidden\"
+				name=\"{$input_name}\"
+				data-parent=\"{$parent}\"
+				data-tipo=\"{$tipo}\"
+				data-lang=\"{$lang}\"
+				data-modo=\"{$modo}\"
+				data-section_tipo=\"{$section_tipo}\"
+				data-last_tag_index_id=\"{$last_tag_index_id}\"
+				data-canvas_id=\"$canvas_id\"
+				data-context_name=\"$context_name\"
+				title=\"$html_title\"
+				tabindex=\"1\">$dato</div>";
+				*/
 
 				#
 				# RELATE BUTTON . Relate current selected text with caller_id section
@@ -129,6 +150,7 @@
 				data-identificador_unico=\"$identificador_unico\"
 				data-parent=\"{$parent}\"
 				data-section_tipo=\"{$section_tipo}\"
+				data-lang=\"{$lang}\"
 				onclick=\"tool_indexation.create_fragment(this);\"
 				>";
 				$html_contenido .= label::get_label('crear_nuevo_fragmento');
@@ -149,13 +171,12 @@
 
 					$button_action 	= 'tool_portal.add_resource(this)';#"tool_portal.add_fragment_resource(this)";
 					
-					$html_contenido .= "<div class=\"css_button_generic btn_relate_fragment\" id=\"btn_relate_fragment_{$tipo}\" style=\"display:none\"
+					$html_contenido .= "<div class=\"css_button_generic btn_relate_fragment\" id=\"btn_relate_fragment_{$tipo}\" style=\"display:none\" onclick=\"{$button_action}\"
 					data-tipo=\"$tipo\"
 					data-portal_tipo=\"$portal_tipo\"
 					data-portal_parent=\"$portal_parent\"
 					data-portal_section_tipo=\"$portal_section_tipo\"
-					data-rel_locator=\"\"
-					onclick=\"{$button_action}\"
+					data-rel_locator=\"\"					
 					>";
 					$html_contenido .= label::get_label('relacionar_fragmento_seleccionado') . " (".label::get_label('etiqueta')." <span></span>)";
 					if(SHOW_DEBUG) {
@@ -193,9 +214,10 @@
 	print $html_contenido;
 
 
+	print "</div>"; //wrap
 
-
-	print "\n</div><!-- /css_wrap_text_area  $label -->\n\n"; //wrap
+	# html_delimiter
+	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'out');
 
 
 ?>

@@ -25,7 +25,7 @@
 					
 				# TD ID
 				$title=null;
-				if(SHOW_DEBUG) $title .= "matrix id: $id ";
+				if(SHOW_DEBUG===true) $title .= "matrix id: $id ";
 				$html_contenido .= "\n <td class=\"section_list_td_border section_list_td_row\">";					
 											
 					# ID TEXT
@@ -33,7 +33,7 @@
 					#$html_contenido .= $current_id.' ';
 					
 
-					if(SHOW_DEBUG) {
+					if(SHOW_DEBUG===true) {
 						#$html_contenido .= '<br>'.$section_id.' ';
 						#$html_contenido .= "<br><mark style=\"color:#a3a3a3;padding-right:5px\">$current_id</mark>";
 					}

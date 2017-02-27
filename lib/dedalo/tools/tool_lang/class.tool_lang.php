@@ -46,7 +46,7 @@ class tool_lang extends tool_common {
 	* SOURCE COMPONENTS
 	* Grouped by lang like Array([lg-esp]=>component obj)
 	*/
-	public function get_ar_source_components() {
+	public function get_ar_source_components__DEPRECATED() {
 		throw new Exception("Error Processing Request", 1);
 		
 		if (isset($this->ar_source_components)) return $this->ar_source_components;
@@ -56,14 +56,14 @@ class tool_lang extends tool_common {
 		$lang 			= $this->source_component->get_lang();
 		#$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 
-		if ($lang==DEDALO_DATA_NOLAN) {
+		if ($lang===DEDALO_DATA_NOLAN) {
 			$msg = "Current component is not translatable!";
 			throw new Exception($msg, 1);
 		}
-/*
+		/*
 		# Filtro de registros (sólo para registros de tabla 'matrix')
 		# A partir del tipo del parent del componente (la sección a que pertenece) generamos el filtro y verificamos que estamos autorizados a ver este registro
-		$matrix_table 		= common::get_matrix_table_from_tipo($tipo);
+		$matrix_table 		= common::get_matrix_table_from_tipo($section_tipo);
 		if ($matrix_table=='matrix') {
 			$RecordObj_matrix 	= new RecordObj_matrix($matrix_table,$parent);
 			$section_tipo 		= $RecordObj_matrix->get_tipo();
@@ -74,10 +74,10 @@ class tool_lang extends tool_common {
 				throw new Exception("Warning tool_lang: You are not authorized to see this record ", 1);
 			}
 		}
-*/
+		*/
 		$component_ar_langs = (array)$this->source_component->get_component_ar_langs();
 			#dump($component_ar_langs,"component_ar_langs $lang");
-/*
+		/*
 		#
 		# OTHER LANGS
 		#
@@ -85,7 +85,7 @@ class tool_lang extends tool_common {
 		$arguments=array();
 		$arguments['parent']	= $parent;
 		$arguments['tipo']		= $tipo;
-		$matrix_table 			= common::get_matrix_table_from_tipo($tipo);
+		$matrix_table 			= common::get_matrix_table_from_tipo($section_tipo);
 		$RecordObj_matrix		= new RecordObj_matrix($matrix_table,NULL);
 		$ar_result				= $RecordObj_matrix->search($arguments);
 
@@ -101,10 +101,12 @@ class tool_lang extends tool_common {
 			$ar_components_by_lang[$current_lang]	= $component_obj;
 		}
 		#dump($ar_components_by_lang,'$ar_components_by_lang');
-*/
+		*/
+
 		$ar_components_by_lang=array();
 		foreach ($component_ar_langs as $current_component_lang) {
-			if($current_component_lang==$lang) continue; #Skip
+
+			if($current_component_lang===$lang) continue; #Skip
 			$ar_components_by_lang[$current_component_lang] = component_common::get_instance(get_class($this->source_component), $tipo, $parent, 'edit', $current_component_lang, $this->section_tipo);
 		}
 		#dump($ar_components_by_lang,"ar_components_by_lang");die();
@@ -112,16 +114,17 @@ class tool_lang extends tool_common {
 		$this->ar_source_components = $ar_components_by_lang;
 
 		return $this->ar_source_components;
-	}
+	}//end get_ar_source_components__DEPRECATED
 
 
 
 	/**
 	* TARGET COMPONENTS
 	* Grouped by lang like Array([lg-esp]=>component obj)
-	*/
-	public function get_ar_target_components() {
-		throw new Exception("Error Processing Request", 1);
+	*//*
+	public function get_ar_target_components__DEPRECATED() {
+		
+		throw new Exception("Error Processing Request get_ar_target_components", 1);
 		if (isset($this->ar_target_components)) return $this->ar_target_components;
 
 		$ar_components_by_lang = array();
@@ -132,14 +135,14 @@ class tool_lang extends tool_common {
 
 		# Selector target
 		#
-		#$matrix_table 		= common::get_matrix_table_from_tipo($tipo);
+		#$matrix_table 		= common::get_matrix_table_from_tipo($section_tipo);
 			#dump($matrix_table,'$matrix_table');
 
 		# Section
 		$current_tipo 		= $this->source_component->get_section_tipo();
 		$section 			= section::get_instance($parent,$current_tipo);
 			#dump($section,'section');
-		$ar_all_project_langs = $section->get_ar_all_project_langs();
+		$ar_all_project_langs = $section->get_ar_all_project_langs($resolve_termino=true);
 			dump($ar_all_project_langs,'$ar_all_project_langs');
 
 		# Construimos el array final de lenguajes disponibles con la suma de los que tienen todos los proyectos asociados a esta sección
@@ -168,7 +171,9 @@ class tool_lang extends tool_common {
 		$this->ar_target_components = $ar_components_by_lang;
 
 		return $this->ar_target_components;
-	}
+	}//END get_ar_target_components__DEPRECATED
+	*/
+
 
 
 	/**
@@ -193,7 +198,6 @@ class tool_lang extends tool_common {
 		*/
 
 		$ar_target_langs = $this->get_target_langs();
-
 		if ( isset($this->last_target_lang) && isset($ar_target_langs[$this->last_target_lang]) ) {
 			$target_component = component_common::get_instance(get_class($this->source_component),
 															$this->source_component->get_tipo(),
@@ -209,7 +213,6 @@ class tool_lang extends tool_common {
 		$this->target_component = $target_component;
 
 		return $this->target_component;
-
 	}//end get_target_component
 
 
@@ -218,22 +221,16 @@ class tool_lang extends tool_common {
 	* GET SOURCE LANGS
 	*/
 	public function get_source_langs() {
-		/*
-		$ar_source_components = $this->get_ar_source_components();
-
-		$ar_source_langs = array();
-		foreach ($ar_source_components as $lang => $component) {
-			$ar_source_langs[$lang] = RecordObj_ts::get_termino_by_tipo($lang);
-		}
-		return $ar_source_langs;
-		*/
+		
 		$component_ar_langs = (array)$this->source_component->get_component_ar_langs();
-
+	
 		$ar_source_langs=array();
 		foreach ($component_ar_langs as $current_lang) {
-			$ar_source_langs[$current_lang] = RecordObj_ts::get_termino_by_tipo($current_lang, null, true);
-		}
 
+			$name = lang::get_name_from_code($current_lang);
+			$ar_source_langs[$current_lang] = $name;
+		}
+	
 		return $ar_source_langs;
 	}//end get_source_langs
 
@@ -241,28 +238,22 @@ class tool_lang extends tool_common {
 
 	/**
 	* GET TARGET LANGS
+	* Returns a resolved array like lg-spa => Español, lg-eng => English
+	* @return array $ar_target_langs
 	*/
 	public function get_target_langs() {
-		
-		$parent 		= $this->source_component->get_parent(); 	
-		$tipo 			= $this->source_component->get_tipo();		
-		$section_tipo	= $this->source_component->get_section_tipo();	//component_common::get_section_tipo_from_component_tipo($tipo); 
-		#$section_tipo	= section::get_section_real_tipo_static($section_tipo);
-		
-		$section		= section::get_instance($parent, $section_tipo);
-			#dump($section,'section');
-		$ar_all_project_langs = $section->get_ar_all_project_langs();
-			#dump($ar_all_project_langs,'$ar_all_project_langs');
+		/*
+		$parent 		 = $this->source_component->get_parent(); 	
+		$tipo 			 = $this->source_component->get_tipo();		
+		$section_tipo	 = $this->source_component->get_section_tipo();		
+		$section	     = section::get_instance($parent, $section_tipo);
+		$ar_target_langs = $section->get_ar_all_project_langs($resolve_termino=true);
+		*/
+		$ar_target_langs = common::get_ar_all_langs_resolved(DEDALO_DATA_LANG);
 
-		$ar_target_langs=array();
-		foreach ($ar_all_project_langs as $lang_locator) {
-			$current_lang = $lang_locator->section_tipo;
-			$ar_target_langs[$current_lang] = RecordObj_ts::get_termino_by_tipo($current_lang, null, true);
-		}
-
-		return $ar_target_langs;
+		return (array)$ar_target_langs;
 	}//end get_target_langs
-
+	
 
 
 	/**
@@ -279,7 +270,9 @@ class tool_lang extends tool_common {
 		$target_babel	= substr($target_lang,3,2);
 
 		return $source_babel . '-' . $target_babel ;
-	}
+	}//end get_babel_direction
+
+
 
 	/**
 	* SANITIZE RESULT
@@ -300,13 +293,9 @@ class tool_lang extends tool_common {
 		# PATTERN IN TR CLASS: "\[\/{0,1}(index)-([a-z])-([0-9]{1,6})\]";
 
 		return $result;
-	}
+	}//end sanitize_result
 
 
 
-
-
-
-
-}
+}//end class
 ?>

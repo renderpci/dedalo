@@ -82,7 +82,7 @@
 					#
 					# SECTION VIRTUAL CASE
 					# Special vars config when current is a virtual section
-						if ($section->section_virtual==true ) {
+						if ($section->section_virtual===true ) {
 							# Clone current  section obj
 							$current_section_obj  = clone $section;
 							# Inject real tipo to section object clone sended to layout when mode is edit

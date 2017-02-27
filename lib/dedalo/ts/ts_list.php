@@ -11,13 +11,8 @@ if($is_logged!==true) {
 	header("Location: $url");
 	exit();
 }
-$security 	 = new security();
-$permissions = (int)security::get_security_permissions(DEDALO_TESAURO_TIPO,DEDALO_TESAURO_TIPO);
-if ($permissions<1) {
-	$url =  DEDALO_ROOT_WEB ."/main/";
-	header("Location: $url");
-	exit();
-}
+
+
 
 require_once(DEDALO_LIB_BASE_PATH . '/common/class.navigator.php');
 require_once(DEDALO_LIB_BASE_PATH . '/ts/class.Tesauro.php');
@@ -37,6 +32,23 @@ foreach($vars as $name)	$$name = setVar($name);
 # fix area
 if($modo=='tesauro_edit') 	$_SESSION['area_ts'] = 'ts';
 if($modo=='modelo_edit') 	$_SESSION['area_ts'] = 'model';
+
+if ($modo==='tesauro_rel') {
+	# Skip permissions
+	$permissions = 3;
+}else{
+	$security 	 = new security();
+	$permissions = (int)security::get_security_permissions(DEDALO_TESAURO_TIPO,DEDALO_TESAURO_TIPO);
+}
+
+#$permissions = (int)security::get_security_permissions(DEDALO_TESAURO_TIPO,DEDALO_TESAURO_TIPO);
+if ($permissions<1) {
+	$url =  DEDALO_ROOT_WEB ."/main/";
+	header("Location: $url");
+	exit();
+}
+
+
 
 
 #print_r($_SESSION);
@@ -89,7 +101,7 @@ foreach($vars as $name)	$$name = setVar($name);
 
 
 	# LANGS SELECTOR
-	$ar_all_langs 	= common::get_ar_all_langs();	
+	$ar_all_langs 	= common::get_ar_all_langs_resolved();	
 	$selectedItem 	= $ts_lang;
 
 	$select_html='';

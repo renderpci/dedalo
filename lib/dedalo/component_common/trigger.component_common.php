@@ -35,7 +35,7 @@ if($mode=='Save') {
 	if (!$dato_clean = json_decode($dato)) {
 		$dato_clean = $dato;
 	}
-	//dump($dato_clean, ' dato_clean ++ lang: '.to_string($lang)); die();
+	#dump($dato_clean, ' dato_clean ++ lang: '.to_string($lang)); #die();
 	
 	$component_name = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 
@@ -57,7 +57,8 @@ if($mode=='Save') {
 													$section_tipo);
 	
 	# Assign dato
-	$component_obj->set_dato( $dato_clean ); 
+	$component_obj->set_dato( $dato_clean );
+		#dump($component_obj->get_dato(), ' component_obj->get_dato() ++ '.to_string());
 	
 	# Call the specific function of the current component that handles the data saving with your specific preprocessing language, etc ..
 	$id = $component_obj->Save();
@@ -67,10 +68,9 @@ if($mode=='Save') {
 	echo $id;
 
 	# Write session to unlock session file
-	session_write_close();	
+	session_write_close();
 	
 	exit();
-
 }#end Save
 
 
@@ -355,7 +355,7 @@ if($mode=='New') {
 	$parent	= "0";
 	
 	# buscamos el último registro de esta sección y sacamos su dato, que será el último 'seccion_id'
-	$matrix_table 			= common::get_matrix_table_from_tipo($tipo);
+	$matrix_table 			= common::get_matrix_table_from_tipo($section_tipo);
 	$RecordObj_matrix		= new RecordObj_matrix($matrix_table,NULL);
 	$arguments=array();		
 	$arguments['tipo']		= $tipo;
@@ -364,14 +364,14 @@ if($mode=='New') {
 	if(is_array($ar_result) && count($ar_result)>0) {
 		
 		$id_matrix			= max($ar_result);	# selecciona el valor mayor en el array 
-		$matrix_table 		= common::get_matrix_table_from_tipo($tipo);
+		$matrix_table 		= common::get_matrix_table_from_tipo($section_tipo);
 		$RecordObj_matrix	= new RecordObj_matrix($matrix_table,$id_matrix);
 		$dato				= $RecordObj_matrix->get_dato();
 	}	
 	
 	//print_r( $dato );		//die();
 	
-	$matrix_table 		= common::get_matrix_table_from_tipo($tipo);
+	$matrix_table 		= common::get_matrix_table_from_tipo($section_tipo);
 	$RecordObj_matrix	= new RecordObj_matrix($matrix_table,NULL);
 	
 	$RecordObj_matrix->set_dato(intval($dato+1));	

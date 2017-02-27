@@ -3,10 +3,58 @@
 	throw new Exception("Error Processing Request: Unused mode", 1);
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 	# VISUALIZADOR HTML	
 	
-	
-	print "\n<!-- TEXT AREA [tipo:$tipo section_id_matrix:$parent] $label -->";
+	# html_delimiter
+	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'in');
+
 	print "\n<div class=\"css_wrap_text_area wrap_component\" id=\"{$id_wrapper}\"
 	data-tipo=\"{$tipo}\" data-section_tipo=\"{$section_tipo}\" data-parent=\"{$parent}\" data-lang=\"{$lang}\" data-modo=\"{$modo}\" data-dato=\"{$dato_raw}\" data-component_name=\"{$component_name}\" >";
 	
@@ -71,7 +119,7 @@
 
 	
 	
-	print "\n</div><!-- /css_wrap_text_area  $label -->\n\n"; //wrap	
+	print "\n</div>"; //wrap	
 
 ?>
 <script type="text/javascript">

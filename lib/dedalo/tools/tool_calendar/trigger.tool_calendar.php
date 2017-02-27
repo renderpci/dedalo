@@ -92,8 +92,12 @@ if ($mode=='get_events') {
 	# DATA BACKGROUND
 		if (!empty($tool_vars->backgound_events_tipo)) {
 
-			$ar_all_section_records = (array)section::get_ar_all_section_records_unfiltered($tool_vars->backgound_events_tipo);			
-			foreach ($ar_all_section_records as $current_section_id) {
+			#$ar_all_section_records = (array)section::get_ar_all_section_records_unfiltered($tool_vars->backgound_events_tipo);
+			#foreach ($ar_all_section_records as $current_section_id) {
+			$result = section::get_resource_all_section_records_unfiltered($tool_vars->backgound_events_tipo);
+			while ($rows = pg_fetch_assoc($result)) {			
+
+				$current_section_id = $rows['section_id'];
 
 				# title
 				$component_tipo = $tool_vars->backgound_event_title;
@@ -129,10 +133,13 @@ if ($mode=='get_events') {
 
 	#
 	# DATA
-		$ar_all_section_records = (array)section::get_ar_all_section_records_unfiltered($tool_vars->tipo);
-			#dump($ar_all_section_records," ar_all_section_records");
-		
-		foreach ($ar_all_section_records as $current_section_id) {
+		#$ar_all_section_records = (array)section::get_ar_all_section_records_unfiltered($tool_vars->tipo);
+		#dump($ar_all_section_records," ar_all_section_records");
+		#foreach ($ar_all_section_records as $current_section_id) {
+		$result = section::get_resource_all_section_records_unfiltered($tool_vars->tipo);
+		while ($rows = pg_fetch_assoc($result)) {		
+
+			$current_section_id = $rows['section_id'];
 
 			# title
 			$component_tipo = $tool_vars->event->title;

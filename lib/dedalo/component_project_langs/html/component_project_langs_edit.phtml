@@ -2,8 +2,8 @@
 
 	# VISUALIZADOR HTML	
 	
-	
-	print "\n<!-- COMPONENT_PROJECT_LANGS [tipo:$tipo section_id_matrix:$parent] -->";
+	# html_delimiter
+	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'in');
 
 	print "\n<div class=\"wrap_component css_wrap_component_project_langs wrap_component_project_langs_{$this->modo} wrap_component_{$tipo}\" 
 	data-tipo=\"{$tipo}\"
@@ -95,5 +95,8 @@
 	print "<script>var dedalo_projects_default_langs=". json_encode($dedalo_projects_default_langs)."</script>";
 	
 	
-	print "</div><!-- /css_wrap_component_project_langs -->"; //wrap
+	print "</div>"; //wrap
+
+	# html_delimiter
+	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'out');
 ?>

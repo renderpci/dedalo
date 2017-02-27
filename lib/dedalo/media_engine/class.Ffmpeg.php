@@ -49,34 +49,35 @@ class Ffmpeg {
 	* Setting name from quality
 	*/
 	public function get_setting_name_from_quality(AVObj $AVObj, $quality) {
-		
+
 		# CREATE A NEW AVOBJ AS MASTER MEDIA 
-		$master_media_file_obj = $this->get_master_media_file_obj($AVObj); 	#dump($master_media_file_obj, ' master_media_file_obj'); 
+		$master_media_file_obj = $this->get_master_media_file_obj($AVObj); 
+		# dump($master_media_file_obj, ' master_media_file_obj');  die();
 		
 		# MEDIA STANDAR (PAL/NTSC)
 		$media_standar	= strtolower($master_media_file_obj->get_media_standar());
+			#dump($media_standar, ' media_standar ++ '.to_string());
 		
 		if($media_standar) {
 			$media_standar = '_' . $media_standar ;
 		}else{
 			$media_standar = '';	
 		}
-		if($quality=='audio') $media_standar = '';
+		if($quality==='audio') $media_standar = '';
 		
 		# ASPECT RATIO (16X9/4X3)
-		$aspect_ratio	= strtolower($master_media_file_obj->get_aspect_ratio());		
-		if($aspect_ratio =='4x3' || $aspect_ratio =='16x9') {			
+		$aspect_ratio = strtolower($master_media_file_obj->get_aspect_ratio());
+		if($aspect_ratio == '4x3' || $aspect_ratio == '16x9') {			
 			$aspect_ratio = '_' . $aspect_ratio ;
 		}else{
 			$aspect_ratio = '';	
 		}
 		
-		if($quality=='audio') $aspect_ratio = '';
+		if($quality==='audio') $aspect_ratio = '';
 		
 		$setting = $quality . $media_standar . $aspect_ratio ;
 		
 		return $setting;
-
 	}//end get_setting_name_from_quality
 	
 	
@@ -84,7 +85,7 @@ class Ffmpeg {
 	# QUALITY FROM SETTING
 	public function get_quality_from_setting($setting) {
 		
-		if($setting=='audio') return $setting;
+		if($setting==='audio') return $setting;
 		
 		$ar_quality 	= self::$ar_supported_qualitys;
 		
@@ -163,7 +164,6 @@ class Ffmpeg {
 		$quality 	= $ar[$key];
 				
 		return $quality;
-
 	}//end get_master_media_file_quality
 
 	
@@ -180,7 +180,6 @@ class Ffmpeg {
 		$obj = new AVObj($reelID, $master_media_file_quality);
 				
 		return $obj;
-
 	}//end get_master_media_file_obj
 	
 	
@@ -196,13 +195,13 @@ class Ffmpeg {
 	*	Terminal commnad response
 	*/
 	public function create_av_alternate(AVObj $AVObj, $setting) {
-				
+	
 		# load ar_settings
 		$this->ar_settings = $this->get_ar_settings();		
 		
 		# verify setting exists
 		if( !in_array($setting, $this->ar_settings) ) die("Error: setting: '$setting' not exits! (create_av_alternate). Please contact with your admin to create");		
-		
+		# dump($setting, ' setting ++ '.to_string()); die();
 		# import vars from settings file		
 		require_once(DEDALO_AV_FFMPEG_SETTINGS .'/'. $setting .'.php');
 
@@ -247,7 +246,7 @@ class Ffmpeg {
 				}
 				if(!$create_dir) {
 					$msg = "Error on read or create directory for \"$setting\". Permission denied !";
-					if(SHOW_DEBUG) $msg .= " final_target_path: $final_target_path";
+					if(SHOW_DEBUG===true) $msg .= " final_target_path: $final_target_path";
 					throw new Exception($msg, 1);
 				}
 			}
@@ -262,8 +261,11 @@ class Ffmpeg {
 				}
 			}
 		
+		#
 		# SOURCE FILE		
-		$src_file			= $this->get_master_media_file($AVObj);
+		$src_file = $this->get_master_media_file($AVObj);
+
+		# 
 
 		#IF the source file is a directory (DVD folder), change the source file to the .VOB into the DVD folder and set the concat of the .vobs
 		if(is_dir($src_file)){
@@ -277,7 +279,7 @@ class Ffmpeg {
 			if ($handle = opendir($src_file.'/VIDEO_TS')) {
 		  		 while (false !== ($file = readdir($handle))) {
 		  		 	$extension = pathinfo($file,PATHINFO_EXTENSION);
-		  		 	if($extension == 'VOB' && filesize($src_file.'/VIDEO_TS/'.$file) > $vob_filesize){
+		  		 	if($extension === 'VOB' && filesize($src_file.'/VIDEO_TS/'.$file) > $vob_filesize){
 		  		 		#dump($file,'$file: '.filesize($src_file.'/VIDEO_TS/'.$file));
 		  		 		$is_all_ok 	= true;
 		  		 		//reset the size of the vob (for the end files of the video)
@@ -296,8 +298,7 @@ class Ffmpeg {
 		  		
 		  	}else{
 		  		throw new Exception("Error: is necessary the DVD structure (.VOB files)", 1);
-		  	}
-		  				  		 		
+		  	}		  				  		 		
 		}# End if source file is directory
 
 		
@@ -339,9 +340,9 @@ class Ffmpeg {
 
 		foreach ( reset($media_streams) as $stream_obj) {
 			$codec_type = $stream_obj->codec_type;
-			if ($codec_type=='audio') {
+			if ($codec_type==='audio') {
 				$source_with_audio = true;
-			}else if ($codec_type=='video') {
+			}else if ($codec_type==='video') {
 				$source_with_video = true;
 			}
 		}
@@ -354,10 +355,10 @@ class Ffmpeg {
 		# COMMANDS SHELL
 		$command	 = '';			
 		
-		if($setting=='audio') {
+		if($setting==='audio') {
 			
 			switch (true) {
-				case ($source_with_audio==false):
+				case ($source_with_audio===false):
 					#
 					# SOURCE NOT CONTAINS ANY AUDIO TRACK
 					return false;
@@ -379,14 +380,11 @@ class Ffmpeg {
 					$command	.= "&& rm -f " . $prgfile;
 					break;
 			}
-			
-		
-		}else{
-			
+		}else{			
 			
 			switch (true) {
 
-				case ($source_with_video==false):
+				case ($source_with_video===false):
 					#
 					# CASE ORIGINAL HAVE ONLY AUDIO
 					$command	.= "nice -n 19 ".DEDALO_AV_FFMPEG_PATH." -i $src_file -vn -acodec $acodec -ar 44100 -ab 128k -ac 2 $target_file ";
@@ -395,6 +393,27 @@ class Ffmpeg {
 				default:
 					#
 					# CASE ORIGINAL HAVE AUDIO AND VIDEO OR ONLY VIDEO
+
+					/* EXAMPLE VARS
+					$vb				= '960k';			# video rate kbs
+					$s				= '720x404';		# scale
+					$g				= 75;				# keyframes interval (gob)	
+					$vcodec			= 'libx264';		# default libx264
+
+					$progresivo		= "-vf yadif";		# desentrelazar
+					$gamma_y		= "0.97";			# correccion de luminancia
+					$gamma_u		= "1.01";			# correccion de B-y
+					$gamma_v		= "0.98";			# correccion de R-y
+					$gammma			= "-vf lutyuv=\"u=gammaval($gamma_u):v=gammaval($gamma_v):y=gammaval($gamma_y)\""; # corrección de gamma
+					$force			= 'mp4';			# default mp4
+
+					$ar				= 44100;			# audio sample rate (22050)
+					$ab				= '64k';			# adio rate kbs
+					$ac				= "1";				# numero de canales de audio 2 = stereo, 1 = nomo
+					$acodec			= 'libvo_aacenc';	# default libvo_aacenc
+
+					$target_path 	= "404";			# like '404'
+					*/
 					# paso 1 sólo video			
 					$command	.= "nice -n 19 ".DEDALO_AV_FFMPEG_PATH." -i $src_file -an -pass 1 -vcodec $vcodec -vb $vb -s $s -g $g $progresivo $gammma -f $force -passlogfile $log_file -y /dev/null ";
 					
@@ -416,13 +435,11 @@ class Ffmpeg {
 					# delete self sh file
 					$command	.= "&& rm -f " . $prgfile;
 					break;
-			}		
-			
-			
+			}			
 		}//end if($setting=='audio') {
 		
 		
-		if(SHOW_DEBUG) {
+		if(SHOW_DEBUG===true) {
 			#dump($command, "sudo -u _www $command");			
 			debug_log(__METHOD__." Creating AV version:\n ".to_string($command), logger::DEBUG);
 		}
@@ -445,7 +462,6 @@ class Ffmpeg {
 		$av_alternate_command_exc = exec_::exec_sh_file($prgfile);		
 
 		return $av_alternate_command_exc;
-
 	}//end create_av_alternate
 
 	
@@ -467,7 +483,7 @@ class Ffmpeg {
 		
 		# SRC VIDEO FILE
 		$src_file			= $AVObj->get_media_path_abs()	. $AVObj->get_name() . '.' . $AVObj->get_extension();
-		if(SHOW_DEBUG) {
+		if(SHOW_DEBUG===true) {
 			#dump($src_file,'$src_file 1');
 			#dump($AVObj, " AVObj ".to_string());	
 			#dump(file_exists($src_file), "file_exists($src_file) ".to_string());
@@ -479,7 +495,7 @@ class Ffmpeg {
 			$src_file		= $this->get_master_media_file($AVObj);		
 		}
 		if (!$src_file) {
-			if(SHOW_DEBUG) {
+			if(SHOW_DEBUG===true) {
 				dump($src_file, "NOT FOUND src_file 2".to_string());;
 			}
 			return false;
@@ -537,13 +553,12 @@ class Ffmpeg {
 		$command	.= DEDALO_AV_FFMPEG_PATH . " -ss $timecode -i $src_file -y -vframes 1 -f rawvideo -an -vcodec mjpeg $target_file ";
 			#dump( $command );
 
-		#if(SHOW_DEBUG) dump($command, "Admin Debug command for ".__METHOD__."<div class=\"notas\">sudo -u _www $command </div><hr>");		
+		#if(SHOW_DEBUG===true) dump($command, "Admin Debug command for ".__METHOD__."<div class=\"notas\">sudo -u _www $command </div><hr>");		
 
 		# EXEC COMMAND									
 		$posterFrame_command_exc = exec_::exec_command($command);		
 		
 		return $posterFrame_command_exc;
-
 	}//end create_posterframe	
 	
 	
@@ -570,7 +585,7 @@ class Ffmpeg {
 			if( !is_dir($fragments_folder) ) {
 				$create_dir = mkdir($fragments_folder, 0777);
 				if(!$create_dir) {
-					if(SHOW_DEBUG) {
+					if(SHOW_DEBUG===true) {
 						dump($fragments_folder, 'trying to create: $fragments_folder');
 					}
 					throw new Exception("Error on read or create directory for \"fragments\" folder. Permission denied ! ", 1);
@@ -611,7 +626,6 @@ class Ffmpeg {
 		$file_url = 'http://' . $_SERVER['HTTP_HOST'] . $AVObj->get_media_path() .'fragments/'. $target_filename;
 
 		return $file_url;
-
 	}//end build_fragment
 	
 	
@@ -635,26 +649,26 @@ class Ffmpeg {
 		$source_file_path = $AVObj->get_local_full_path();
 
 		$path_parts 	  = pathinfo($source_file_path);
-		$target_file_path = $path_parts['dirname'].'/'.$path_parts['filename'].'-b.'.$path_parts['extension'];
+		$target_file_path = $path_parts['dirname'].'/'.$path_parts['filename'].'.'.$path_parts['extension'];
 	
 		$command  = '';
-		/*
+		
 		$command .= "cd ".$AVObj->get_media_path_abs()." ";
 		
 		# Copy file
-		$command .= "&& $ffmpeg_installed_path -i $file_path -c:v copy -c:a copy -movflags +faststart $file_path_temp ";	# && rm -f $file_path && mv $file_path_temp $file_path # -y
+		$command .= "&& $ffmpeg_installed_path -i $file_path -c:v copy -c:a copy $file_path_temp ";	# && rm -f $file_path && mv $file_path_temp $file_path # -y
 		
-		# Rename original
+		# Rename original to conservate original file untouched
 		$command .= "&& mv $file_path $file_path_original ";
 		
 		# Rename new file as source
-		$command .= "&& mv $file_path_temp $file_path ";
-		*/
-		# Faststart
-		$command .= "$qt_faststart_installed_path $source_file_path $target_file_path ";
+		#$command .= "&& mv $file_path_temp $file_path ";
+
+		# Faststart (build final file)
+		$command .= "&& $qt_faststart_installed_path $file_path_temp $target_file_path ";
 
 		# Remove temp file
-		#$command .= "&& rm -f $file_path_temp ";
+		$command .= "&& rm -f $file_path_temp ";
 
 		#dump($command, ' command'.to_string()); die();
 		
@@ -664,21 +678,20 @@ class Ffmpeg {
 
 		} catch (Exception $e) {
 		    echo 'Caught exception: ',  $e->getMessage(), "\n";
-		    if(SHOW_DEBUG) {
+		    if(SHOW_DEBUG===true) {
 		    	dump($e->getMessage(), " EXCEPTION ".to_string());
 		    }		    	
 		}
 		
 		#$conform_header_command_exc = Exec::exec_command($command);
 
-		if(SHOW_DEBUG) {
+		if(SHOW_DEBUG===true) {
 			debug_log(__METHOD__." Exec command conform headers: sudo -u _www $command .".to_string($result), logger::DEBUG);
 			#error_log("Admin Debug command for ".__METHOD__."<div class=\"notas\">sudo -u _www $command </div><hr>");
 			#dump($result, " result ".to_string($command));
 		}
 
 		return $result;
-
 	}//end conform_header
 
 
@@ -711,14 +724,14 @@ class Ffmpeg {
 		# Faststart
 		$command .= "&& $qt_faststart_installed_path $output_file_path $output_file_path ";
 
-		if(SHOW_DEBUG) {
+		if(SHOW_DEBUG===true) {
 			#error_log($command);
 		}
 
 		$result = shell_exec( $command );
 		#$conform_header_command_exc = Exec::exec_command($command);
 
-		if(SHOW_DEBUG) error_log("Admin Debug command for ".__METHOD__."<div class=\"notas\">sudo -u _www $command </div><hr>") ;
+		if(SHOW_DEBUG===true) error_log("Admin Debug command for ".__METHOD__."<div class=\"notas\">sudo -u _www $command </div><hr>") ;
 
 		return $result;
 
@@ -742,13 +755,18 @@ class Ffmpeg {
 
 		$path_parts 	  = pathinfo($target_file);
 		$temp_target_file = $path_parts['dirname'] .'/'. $path_parts['filename'] .'_temp.' . $path_parts['extension'];
+
+		$heigth = DEDALO_AV_QUALITY_DEFAULT; // 404, 240 ..
 		
 		# COMMAND: Full process
 		#$command  = "nice $ffmpeg_path -y -i $source_file -vf \"yadif=0:-1:0, scale=720:404:-1\" -vb 960k -g 75 -f mp4 -vcodec libx264 -acodec $acodec -ar 44100 -ab 128k -ac 2 -movflags faststart $target_file ";
-		$command  = "nice $ffmpeg_path -y -i $source_file -vf \"yadif=0:-1:0, scale=720:404:-1\" -vb 960k -g 75 -f mp4 -vcodec libx264 -acodec $acodec -ar 44100 -ab 128k -ac 2 -movflags faststart $temp_target_file ";
+		#$command  = "nice $ffmpeg_path -y -i $source_file -vf \"yadif=0:-1:0, scale=720:404:-1\" -vb 960k -g 75 -f mp4 -vcodec libx264 -acodec $acodec -ar 44100 -ab 128k -ac 2 -movflags faststart $temp_target_file ";
+		$command  = "nice $ffmpeg_path -y -i $source_file -vf \"yadif=0:-1:0, scale=-1:{$heigth}\" -vb 960k -g 75 -f mp4 -vcodec libx264 -acodec $acodec -ar 44100 -ab 128k -ac 2 -movflags faststart $temp_target_file ";
 		$command .= "&& mv $temp_target_file $target_file ";
 		# Comando procesado sólo fast start
 		#$command = "nice $qt_faststart_path $source_file $target_file";
+
+		debug_log(__METHOD__." command: $command ", logger::DEBUG);
 		
 		if ($async) {
 			# Exec without wait finish
@@ -756,11 +774,7 @@ class Ffmpeg {
 		}else{
 			# Exec wait finish
 			exec("$command");
-		}	
-
-		
-		debug_log(__METHOD__." command: $command ", logger::DEBUG);			
-
+		}		
 	}//end convert_to_dedalo_av
 
 
@@ -807,7 +821,7 @@ class Ffmpeg {
 	/**
 	* GET_MEDIA_STREAMS
 	*/
-	public static function get_media_streams( $source_file ) {		
+	public static function get_media_streams( $source_file ) {
 		
 	    $command = DEDALO_AV_FFPROBE_PATH . ' -v quiet -show_streams -print_format json ' . $source_file . ' 2>&1';  
 	    $output  = json_decode( shell_exec($command) );  
@@ -828,12 +842,12 @@ class Ffmpeg {
 		#
 		# FFMPEG AUDIO CODEC TEST
 		$ffmpeg_info = shell_exec(DEDALO_AV_FFMPEG_PATH .' -buildconf');
-		if (strpos($ffmpeg_info, '--enable-libfdk-aac')!==false) {		
+		if (strpos($ffmpeg_info, '--enable-libfdk-aac')!==false) {
 			// Version >=3 with libfdk-aac installed
-			$acodec = 'libfdk_aac';
-		}else if (strpos($ffmpeg_info, 'libvo_aacenc')!==false) {
+			$acodec = 'libfdk_aac'; // Note uderscore '_'			
+		}else if (strpos($ffmpeg_info, 'libvo-aacenc')!==false) {
 			// Default only with version <3
-			$acodec = 'libvo_aacenc'; 
+			$acodec = 'libvo_aacenc';  // Note uderscore '_'
 		}else{
 			// Default native ffmpeg >= 3
 			$acodec = 'aac';
@@ -841,7 +855,6 @@ class Ffmpeg {
 		debug_log(__METHOD__." Using audio codec $acodec from ffmpeginfo : ".to_string($ffmpeg_info), logger::DEBUG);
 
 		return $acodec;
-		
 	}//end get_audio_codec
 
 

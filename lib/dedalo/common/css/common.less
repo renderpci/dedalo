@@ -220,9 +220,9 @@ hr {
 	display: inline-block;
 	float:none; 
 	color: #FFFFFF;
-	padding: 4px;
-	padding-left: 6px;
-	padding-right: 6px;
+	padding: 3px;
+	padding-left: 12px;
+	padding-right: 12px;
 	margin: 5px;
 	margin-left: 5px;
 	margin-right: 5px;
@@ -237,7 +237,7 @@ hr {
 	*/
 	text-shadow: 0 -1px 1px #a5a5a5;
 	position: relative;
- 	z-index: 1;
+	z-index: 1;
 }
 .ok {
 	background-color: #0C0;
@@ -274,7 +274,11 @@ hr {
 	text-shadow:none;
 }
 .icon_warning {
-	background-image: url("../../themes/default/glyphicons-halflings.png");
+	//background-image: url("../../themes/default/glyphicons-halflings.png");
+
+	background-image: url("../../themes/default/svg_icons.svg");
+	background-position: -360px -144px;
+
 	background-repeat: no-repeat;
 	background-position: -144px -120px;
 	display: inline-block;
@@ -318,16 +322,19 @@ hr {
 	color: #a6a6a6;
 	font-size: 80%;
 	font-family: 'Menlo',monospace;
+	word-wrap: break-word;
 }
 
-/* UNTRANSLATED */
+/* UNTRANSLATED 
+----------------------------------------- */
 mark {
-	/*font-style: italic;
-	opacity: 0.6;
-	*/
-	color: #7B99C1 !important;	
+	//font-style: italic;
+	//opacity: 0.6;	
+	//color: #7B99C1 !important;
+	color: #c4753c !important;
 	background-color: transparent;
 }
+
 .sample_data {
 	font-family: Arial, sans;
 	font-size: 10px;
@@ -492,7 +499,7 @@ mark {
 		--------------------------------------------------------------------- */
 		.table_rows_list .th_component_av ,
 		.table_rows_list .th_component_image,
-		.table_rows_list .th_component_portal,
+		//.table_rows_list .th_component_portal,
 		.table_rows_list .th_component_pdf
 		{
 			width: 106px;
@@ -519,6 +526,7 @@ mark {
 		.table_rows_list td.id_column {
 			padding: 0px;
 			//height: 64px;
+			background-color: #eeeeee;
 		}
 
 
@@ -555,7 +563,8 @@ mark {
 				//display: block;
 				vertical-align: middle;
 				padding-right: 30px;
-				padding-left: 4px;	
+				padding-left: 4px;
+				padding-top: 6px;
 			}
 
 		/* EDIT
@@ -802,5 +811,12 @@ label.css_label.tooltips {
 }
 
 
-
+/* EDIT HIDE - REMOVE VISIBILITY OF PARTS OF COMPONETS
+------------------------------------------------------- */
+.edit_hidden{
+	visibility: hidden;
+}
+.edit_show{
+	visibility: visible;
+}
 

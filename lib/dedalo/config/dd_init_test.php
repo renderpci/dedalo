@@ -4,7 +4,6 @@
 # Comprueba la existencia de elementos / directorios / permisos necesarios para ejecutar Dédalo
 
 
-
 # PHP VERSION
 if (version_compare(PHP_VERSION, '5.4.15', '<'))
 	die(" Error. This php version ".PHP_VERSION." is not supported by Dédalo");
@@ -93,7 +92,6 @@ foreach ($ar_quality as $quality) {
 	}
 }
 
-
 # MEDIA PDF folder
 # Target folder exists test
 if(defined('DEDALO_PDF_FOLDER')) {
@@ -104,7 +102,6 @@ if( !is_dir($folder_path) ) {
 	}
 	debug_log(__METHOD__." CREATED DIR: $folder_path  ".to_string(), logger::DEBUG);
 }}
-
 
 # MEDIA PDF THUMBS folder
 # Target folder exists test
@@ -118,7 +115,6 @@ if( !is_dir($folder_path) ) {
 }}
 
 
-
 # MEDIA HTML FILES folder
 # Target folder exists test	
 if(defined('DEDALO_HTML_FILES_FOLDER')) {
@@ -129,7 +125,6 @@ if( !is_dir($folder_path) ) {
 	}
 	debug_log(__METHOD__." CREATED DIR: $folder_path  ".to_string(), logger::DEBUG);
 }}
-
 
 # MEDIA WEB IMAGES folder
 # Target folder exists test	
@@ -152,6 +147,31 @@ if( !is_dir($folder_path) ) {
 	}
 	debug_log(__METHOD__." CREATED DIR: $folder_path  ".to_string(), logger::DEBUG);
 }}
+
+# MEDIA AV
+# Target folder exists test
+$ar_quality = (array)unserialize(DEDALO_AV_AR_QUALITY);
+foreach ($ar_quality as $quality) {
+	$folder_path = DEDALO_MEDIA_BASE_PATH . DEDALO_AV_FOLDER . '/'.$quality;
+	if( !is_dir($folder_path) ) {
+		if(!mkdir($folder_path, 0777,true)) {
+			die(" Error on read or create image $quality directory. Permission denied ");
+		}
+		debug_log(__METHOD__." CREATED DIR: $folder_path  ".to_string(), logger::DEBUG);
+	}
+}
+
+# MEDIA PROTECTION
+# Target folder exists test	
+if(defined('DEDALO_PROTECT_MEDIA_FILES') && DEDALO_PROTECT_MEDIA_FILES===true) {
+	/*	
+	# Test .htaccess file
+	$htaccess_file = DEDALO_MEDIA_BASE_PATH . '/.htaccess';
+	if (!file_exists($htaccess_file)) {
+		die(" Error on read protect file for av directory. File '.htaccess' not found");
+	}
+	*/
+}
 
 
 # LOGS folder
@@ -222,10 +242,21 @@ if(!function_exists('curl_init') || !function_exists('curl_version')) {
 	die("Error Processing Request. Curl: function 'curl_init' not found. Please review your PHP cofiguration");
 }
 
+# LOCK COMPONENTS
+if (defined('DEDALO_LOCK_COMPONENTS') && DEDALO_LOCK_COMPONENTS===true) {
+	lock_components::clean_locks_garbage();
+}
+
 
 # Test mcrypt lib
+# Change it to Open SSL in 4.0.22
 if (!function_exists('mcrypt_encrypt')) {
 	die("Error Processing Request: MCRYPT lib is not available");
+}
+
+# Test openSSL lib
+if (!function_exists('openssl_encrypt')) {
+	die("Error Processing Request: OPEN_SSL lib is not available");
 }
 
 # LANGS JS
@@ -255,7 +286,7 @@ if (!function_exists('mcrypt_encrypt')) {
 	$response 	= $data_check->check_sequences();
 	if ($response->result!=true) {
 		debug_log(__METHOD__." $response->msg ".to_string(), logger::WARNING);
-		if(SHOW_DEBUG) {
+		if(SHOW_DEBUG===true) {
 			die("Error on ".$response->msg);
 		}
 	}

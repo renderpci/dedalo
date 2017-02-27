@@ -25,11 +25,11 @@ class tool_replace_component_data extends tool_common {
 		$this->component_obj = $component_obj;
 
 
-		$search_options_key = 'section_'.$this->component_obj->get_section_tipo();
-		if (!isset($_SESSION['dedalo4']['config']['search_options'][$search_options_key])) {
-		 	throw new Exception("Error Processing Request. Sorry, search options are not fixed in session ($search_options_key)", 1);
+		$search_options_session_key = 'section_'.$this->component_obj->get_section_tipo();
+		if (!isset($_SESSION['dedalo4']['config']['search_options'][$search_options_session_key])) {
+		 	throw new Exception("Error Processing Request. Sorry, search options are not fixed in session ($search_options_session_key)", 1);
 		}
-		$this->search_options = clone($_SESSION['dedalo4']['config']['search_options'][$search_options_key]);
+		$this->search_options = clone($_SESSION['dedalo4']['config']['search_options'][$search_options_session_key]);
 	}
 
 
@@ -48,7 +48,7 @@ class tool_replace_component_data extends tool_common {
 		$tipo 			= $this->component_obj->get_tipo();
 		$section_tipo 	= $this->component_obj->get_section_tipo();
 		$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
-		$lang 			= $this->component_obj->get_traducible()=='no' ? DEDALO_DATA_NOLAN : DEDALO_DATA_LANG ;
+		$lang 			= $this->component_obj->get_traducible()==='no' ? DEDALO_DATA_NOLAN : DEDALO_DATA_LANG ;
 		#dump($this->component_obj, '$this->component_obj'.to_string());	 	
 	
 
@@ -90,11 +90,11 @@ class tool_replace_component_data extends tool_common {
 		}
 
 		# Update search_options cleaning current 'filter_by_search'
-		$search_options_key = 'section_'.$section_tipo;
-		$search_options 	= $_SESSION['dedalo4']['config']['search_options'][$search_options_key];		
+		$search_options_session_key = 'section_'.$section_tipo;
+		$search_options 	= $_SESSION['dedalo4']['config']['search_options'][$search_options_session_key];		
 		$search_options->filter_by_search = false; // Affect session object directly (not save is necessary)
-		#$_SESSION['dedalo4']['config']['search_options'][$search_options_key] = $search_options;
-			#dump($search_options, ' var '.to_string($search_options_key));
+		#$_SESSION['dedalo4']['config']['search_options'][$search_options_session_key] = $search_options;
+			#dump($search_options, ' var '.to_string($search_options_session_key));
 
 		return (array)$ar_records;
 

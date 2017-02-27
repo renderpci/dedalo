@@ -1,15 +1,17 @@
 <?php
 /*
 * CLASS COMPONENT_PUBLICATION
+*
+*
 */
-
-
 class component_publication extends component_common {
 
 	# Overwrite __construct var lang passed in this component
 	protected $lang = DEDALO_DATA_NOLAN;
 
-
+	/**
+	* __CONSTRUCT
+	*/
 	function __construct($tipo=null, $parent=null, $modo='edit', $lang=DEDALO_DATA_NOLAN, $section_tipo=null) {
 
 		# Force always DEDALO_DATA_NOLAN
@@ -19,14 +21,16 @@ class component_publication extends component_common {
 		parent::__construct($tipo, $parent, $modo, $lang, $section_tipo);
 
 		/*
-		if(SHOW_DEBUG) {
+		if(SHOW_DEBUG===true) {
 			$traducible = $this->RecordObj_dd->get_traducible();
 			if ($traducible=='si') {
 				throw new Exception("Error Processing Request. Wrong component lang definition. This component $tipo (".get_class().") is not 'traducible'. Please fix this ASAP", 1);
 			}
 		}
 		*/
-	}
+	}//end __construct
+
+
 
 	# GET DATO : 
 	public function get_dato() {
@@ -36,7 +40,7 @@ class component_publication extends component_common {
 			$this->set_dato(array());
 			$this->Save();
 		}
-		if ($dato==null) {
+		if ($dato===null) {
 			$dato=array();
 		}		
 		return (array)$dato;
@@ -98,9 +102,9 @@ class component_publication extends component_common {
 				
 				# Test dato format (b4 changed to object)
 				foreach ($dato as $key => $value) {
-					if (!is_object($value)) {
-						if(SHOW_DEBUG) {
-							dump($dato," +++ dato");							
+					if (!empty($value) && !is_object($value)) {
+						if(SHOW_DEBUG===true) {
+							dump($dato," +++ dato Wrong dato format. OLD format dato in $this->label $this->tipo .Expected object locator, but received: ".gettype($value));							
 						}
 						debug_log(__METHOD__." Wrong dato format. OLD format dato in $this->label $this->tipo .Expected object locator, but received: ".gettype($value) .' : '. print_r($value,true), logger::ERROR);
 						return $this->valor = null;
@@ -119,7 +123,6 @@ class component_publication extends component_common {
 		}#end switch
 
 		return null;
-
 	}#end get_valor
 
 
@@ -142,13 +145,12 @@ class component_publication extends component_common {
 		$termonioID_related = array_values($relacionados[0])[0];
 		$RecordObjt_dd = new RecordObj_dd($termonioID_related);
 
-		if($RecordObjt_dd->get_traducible()=='no'){
+		if($RecordObjt_dd->get_traducible()==='no'){
 			$lang = DEDALO_DATA_NOLAN;
 		}else{
 			$lang = DEDALO_DATA_LANG;
 		}
 		return $lang;
-
 	}
 
 
@@ -167,7 +169,7 @@ class component_publication extends component_common {
 
 		$valor = $this->get_valor($lang);
 		
-		if(SHOW_DEBUG) {
+		if(SHOW_DEBUG===true) {
 			#return "RADIO_BUTTON: ".$valor;
 		}
 		return $valor;
@@ -206,19 +208,19 @@ class component_publication extends component_common {
 		if ( empty($search_value) ) {
 			return $search_query;
 		}
-		
+
 		$json_field = 'a.'.$json_field; // Add 'a.' for mandatory table alias search
 
 		switch (true) {
-			case $comparison_operator=='=':
+			case $comparison_operator==='=':
 				$search_query = " $json_field#>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}' @> '[$search_value]'::jsonb ";
 				break;
-			case $comparison_operator=='!=':
+			case $comparison_operator==='!=':
 				$search_query = " ($json_field#>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}' @> '[$search_value]'::jsonb)=FALSE ";
 				break;
 		}
 		
-		if(SHOW_DEBUG) {
+		if(SHOW_DEBUG===true) {
 			$search_query = " -- filter_by_search $search_tipo ". get_called_class() ." \n".$search_query;
 			#dump($search_query, " search_query for search_value: ".to_string($search_value)); #return '';
 		}
@@ -242,8 +244,8 @@ class component_publication extends component_common {
 	*
 	* @return string $list_value
 	*/
-	public static function render_list_value($value, $tipo, $parent, $modo, $lang, $section_tipo, $section_id) {
-		
+	public static function render_list_value($value, $tipo, $parent, $modo, $lang, $section_tipo, $section_id, $current_locator=null, $caller_component_tipo=null) {
+	
 		$component 	= component_common::get_instance(__CLASS__,
 													 $tipo,
 												 	 $parent,
@@ -254,10 +256,12 @@ class component_publication extends component_common {
 		
 		# Use already query calculated values for speed
 		$ar_records   = (array)json_handler::decode($value);
-		$component->set_dato($ar_records);
-		$component->set_identificador_unico($component->get_identificador_unico().'_'.$section_id); // Set unic id for build search_options_session_key used in sessions
-		
-		if ($modo=='list') {
+		if (!empty($ar_records)) {
+			$component->set_dato($ar_records);
+		}		
+		$component->set_identificador_unico('2'.$component->get_identificador_unico().'_'.$section_id.'_'.$caller_component_tipo); // Set unic id for build search_options_session_key used in sessions
+	
+		if ($modo==='list') {
 			$result = $component->get_valor($lang);
 		}else{
 			$result = $component->get_html();

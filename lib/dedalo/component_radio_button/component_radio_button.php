@@ -5,6 +5,7 @@
 	$tipo 					= $this->get_tipo();
 	$parent 				= $this->get_parent();
 	$section_tipo			= $this->get_section_tipo();
+	$propiedades			= $this->get_propiedades();
 	$modo					= $this->get_modo();		
 	$dato 					= $this->get_dato();
 	$label 					= $this->get_label();
@@ -19,12 +20,12 @@
 	$dato_string			= $this->get_dato_as_string();
 	$dato_json 				= json_encode($dato);
 
+	if($permissions===0) return null;
 
 	# Verify component content record is inside section record filter
 	if ($this->get_filter_authorized_record()===false) return NULL ;
 	
-	$file_name				= $modo;	
-
+	$file_name				= $modo;
 	
 	switch($modo) {
 
@@ -37,7 +38,10 @@
 				$input_name 		= 'radio_button_'.$identificador_unico;
 				$js_code			= $this->generate_js();
 				$component_info 	= $this->get_component_info('json');
-				$component_info  	= rawurlencode($component_info);
+				#$component_info  	= rawurlencode($component_info);
+
+				$mandatory 		= (isset($propiedades->mandatory) && $propiedades->mandatory===true) ? true : false;
+				$mandatory_json = json_encode($mandatory);
 				break;
 
 		case 'tool_time_machine' :	
@@ -47,6 +51,9 @@
 				break;						
 						
 		case 'search' :
+				# Showed only when permissions are >1
+				if ($permissions<1) return null;
+				
 				$referenced_tipo 	= $this->get_referenced_tipo();
 				$ar_list_of_values	= $this->get_ar_list_of_values( DEDALO_DATA_LANG, null);
 				

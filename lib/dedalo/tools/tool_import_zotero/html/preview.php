@@ -62,6 +62,10 @@ if (empty($ar_files[0])) {
 
 
 	$html  = '';
+	$html .= "<div class=\"checkbox_with_out_pdf\">";
+	$html .= "<input type=\"checkbox\" class=\"\" name=\"with_out_pdf\" value=\"yes\" onclick=\"tool_import_zotero.change_checkbox_state(this)\"/> ".label::get_label('sin_fichero');
+	$html .= "</div>";
+
 	$html .= "<form class=\"form_preview\">";
 
 	#

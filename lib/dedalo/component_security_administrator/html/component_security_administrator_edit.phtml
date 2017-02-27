@@ -3,10 +3,10 @@
 	# VISUALIZADOR HTML	
 
 	
-	
-	print "\n<!-- COMPONENT_SECURITY_ADMINISTRATOR [$tipo $parent] -->";
+	# html_delimiter
+	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'in');
 
-	print "\n<div class=\"wrap_component css_wrap_security_administrator wrap_component_{$tipo}\" id=\"{$id_wrapper}\"
+	print "<div class=\"wrap_component css_wrap_security_administrator wrap_component_{$tipo}\" id=\"{$id_wrapper}\"
 	data-tipo=\"{$tipo}\"
 	data-lang=\"{$lang}\"
 	data-parent=\"{$parent}\"
@@ -35,7 +35,7 @@
 				# CASE CHECKED				
 				$checked = (int)$dato===1 ? 'checked="checked"' : '';
 
-				$html_contenido .= "\n <input type=\"checkbox\" class=\"css_security_administrator\"
+				$html_contenido .= " <input type=\"checkbox\" class=\"css_security_administrator\"
 				id=\"{$identificador_unico}\"
 				name=\"{$tipo}_{$parent}\"
 				value=\"{$tipo}\"
@@ -61,7 +61,7 @@
 				$checked = (int)$dato===1 ? 'checked="checked"' : '';
 
 
-				$html_contenido .= "\n <input type=\"checkbox\" class=\"css_security_administrator\"
+				$html_contenido .= " <input type=\"checkbox\" class=\"css_security_administrator\"
 				onchange=\"component_security_administrator.Save(this)\"				
 				id=\"{$identificador_unico}\"
 				name=\"{$tipo}_{$parent}\"
@@ -76,7 +76,7 @@
 				/>";
 		
 				if(SHOW_DEBUG) {
-					#$html_contenido .= "\n <span class=\"css_span_debugger\" id=\"debugger_{$tipo}\" >{$debugger}</span>";	
+					#$html_contenido .= " <span class=\"css_span_debugger\" id=\"debugger_{$tipo}\" >{$debugger}</span>";	
 				}
 				
 				break;							
@@ -93,9 +93,12 @@
 
 	if ($permissions>=2) {
 		print "<script>$(function() { component_security_administrator.update_filter_master_view( + document.getElementById('$identificador_unico').checked ); })</script>";
-	}
+	}	
 	
-	
-	print "\n</div><!-- /css_wrap_security_administrator -->\n\n"; //wrap
+	print "</div>"; //wrap
+
+	# html_delimiter
+	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'out');
+
 
 ?>

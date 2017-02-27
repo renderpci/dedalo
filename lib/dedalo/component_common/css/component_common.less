@@ -1,6 +1,5 @@
-/*CSS Document*/
 
-// Variables
+// Vars
 @common_css: "../../common/css";
 
 // Usage
@@ -12,13 +11,16 @@
 .wrap_component {
 	position: relative;
 	float: left;
-	overflow: hidden;
+	//overflow: hidden;
 	padding: 5px;	
 	border:none;
 	margin: 0;	
 	min-height: 2.333em;
 	width: 100%;
-	transition: all .180s ease-in-out;
+	//transition: all .180s ease-in-out;
+	//display: flex;
+	// flex-wrap: wrap;
+
 	//pointer-events: initial;
 	//background-color: rgba(175, 204, 246, 0.16);
 	//border-top: 1px solid #EBEBEB;
@@ -35,6 +37,9 @@
 	background: rgb(230, 230, 230) !important;
 }
 
+
+/* LOCKED_WRAP . Apperance when component is locked
+------------------------------------------------------- */
 .locked_wrap {
 	/*background-color: #ED2112;*/	
 	user-select: none;
@@ -97,6 +102,8 @@
 }
 
 
+
+
 /* CONTENT DATA
 ------------------------------------------------------- */
 .content_data {
@@ -108,7 +115,7 @@
 	height: 100%;
 	/*background-color:#fff7e0;*/
 	}	
-	@media screen and (max-width: 1280px) { /* 736 */
+	@media screen and (max-width: @content_data_max_width) {
 		.content_data {
 			display: block !important;
 			width: 100% !important;
@@ -119,20 +126,26 @@
 	}
 
 
+
+/* INPUTS
+------------------------------------------------------- */
 input[type="text"], input[type="password"] {
 	padding: 3px;
 	padding-left: 6px;
 	padding-right: 6px;
 	margin-top: 0;
-	border: 1px solid #C7C5C5;
+	//border: 1px solid #C7C5C5;
+	border: 1px solid;
+	border-color: #e1e0e0;
 	color: #3F3F3F;
 	border-radius: 3px;
-	box-shadow: inset 0 0 5px #D2D2D2;
-	/*transition: all 0.09s ease-in-out;*/
+	//box-shadow: inset 0 0 5px #D2D2D2;
+	//transition: all 0.09s ease-in-out;
 	background-color: #FFFFFF;
+	font-size: 12px;
 	}
 	input[type=text]:hover, input[type="password"]:hover {
-		background-color: #F1F1F1;
+		background-color: #F8F8F8;
 	}
 	input[type="text"]:focus, input[type="password"]:focus {		
 		box-shadow: 0 0 10px #BEBEBE;
@@ -140,8 +153,15 @@ input[type="text"], input[type="password"] {
 		z-index: 2001 !important;
 	}
 	input[type="text"]:active {
+		background-color: #FFFFFF;
 	}
 	
+	/* OVERWRITE TINYMCE TEXT AREA
+	------------------------------------------------------- */
+	.mce-panel {
+		border-color: #e1e0e0 !important;
+	}
+
 
 
 /* LABEL
@@ -189,6 +209,7 @@ input[type="text"], input[type="password"] {
 		}
 
 
+
 .css_label_naranja {
 	color: #F60;
 }
@@ -205,6 +226,8 @@ input[type="text"], input[type="password"] {
 	color: #EEE;
 	width: auto;
 }
+
+
 
 /* TEXT DATO STRING
 ------------------------------------------------------- */
@@ -223,11 +246,13 @@ input[type="text"], input[type="password"] {
 	color: #404040;
 	font-size: 96%;	
 }
-DIV.dato_refecence_default_lang {
+div.dato_refecence_default_lang {
 	font-style: italic;
 	color: #3A5880 !important;
 	opacity: 0.6;
 }
+
+
 
 /* EJEMPLO TEXT
 ------------------------------------------------------- */
@@ -239,6 +264,8 @@ DIV.dato_refecence_default_lang {
 	margin-right: 5px;
 	position: relative;
 }
+
+
 
 /* TOOL LABEL
 ------------------------------------------------------- */
@@ -269,6 +296,8 @@ DIV.dato_refecence_default_lang {
 
 
 
+/* DEBUG
+------------------------------------------------------- */
 .debug_component_total_time {
 	position: absolute;
 	padding: 0;
@@ -289,5 +318,10 @@ DIV.dato_refecence_default_lang {
 	}
 
 
-
+/* mandatory common
+------------------------------------------------------- */
+.wrap_component .mandatory {
+	border-color: red;
+	background-color: rgba(255, 0, 0, 0.11);
+}
 

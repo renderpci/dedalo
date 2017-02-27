@@ -1,8 +1,8 @@
 /*CSS Document
 WRAP DIV CONTAINER*/
 
-@elements_over_z_index : 1;
-
+//@elements_over_z_index : 1000;
+@elements_over_z_index : 1000;
 .css_wrap_geolocation, .css_wrap_geolocation_tm {
 	
 }
@@ -26,7 +26,7 @@ WRAP DIV CONTAINER*/
 	/* altitude 
 	-------------------------------------------------- */
 	.map_inputs	.input_altitude {
-		width: 24px;
+		width: 28px;
 	    text-align: center;
 	}
 
@@ -75,12 +75,18 @@ WRAP DIV CONTAINER*/
 	    user-select: none;
 		position: absolute;
 		top: 10px;
-		left: 50px;		
+		left: 50px;
+		//right: 50px;
 		background-color: rgb(255, 255, 255);
 		padding: 5px;
 		border-radius: 4px;
-		box-shadow: 0 1px 5px rgba(0,0,0,0.65);
+		//max-width: 660px;
+		//box-shadow: 0 1px 5px rgba(0,0,0,0.65);
 		z-index: @elements_over_z_index;
+		// From new leaflet 1.0 (removed shadow and add solid line around)
+		  border: 2px solid rgba(0,0,0,0.2);
+  		  background-clip: padding-box;	
+		
 		}
 		.map_inputs span:not(:nth-of-type(1)) {
 			padding-left: 5px;
@@ -116,7 +122,7 @@ WRAP DIV CONTAINER*/
 	left: 0;
 	width: 100%;
 	height: 100%;
-	z-index: 999;
+	z-index: 10002;
 }
 
 

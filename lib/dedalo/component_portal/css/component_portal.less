@@ -1,5 +1,11 @@
-/*CSS Document
-WRAP DIV CONTAINER*/
+// Vars
+@common_css: "../../common/css";
+
+// Usage
+@import "@{common_css}/library.less";
+
+/* WRAP DIV CONTAINER
+------------------------------------------------------- */
 .css_wrap_portal {
 	padding-top: 5px;
 	padding-bottom: 7px;
@@ -8,15 +14,17 @@ WRAP DIV CONTAINER*/
 	.css_wrap_portal > .content_data {
 		width: 100%;		
 		display: table ;
-		position: relative;
-		top: -25px;
-		margin-bottom: -20px;
 		text-align: right;
-		/*background-color: #edbff5;  */
+		position: relative;
+		//top: -25px;
+		//margin-bottom: -20px;
+		
+		//background-color: #edbff5;  
 	}
 	/* hide main label (> first label only) */
 	.css_wrap_portal > .css_label {
 		/* display: none; */
+		position: absolute;
 	}
 
 
@@ -49,23 +57,23 @@ WRAP DIV CONTAINER*/
 	position: relative;
 	top: -2px;
 	/*background-color: rgba(204, 204, 204, 0.22);*/
-    width: 100%;
-    display: inline-block;
+	width: 100%;
+	display: inline-block;
 	}
 	.show_more_link:hover {
 		color: #ff9439;
 	}
 .btn_view_toogle{
 	float: none;
-    width: 20px;
-    height: 17px;
-    right: 0px;
-    top: 10px;
-    display: inline-block;
-    position: relative;
-    opacity: .3;
-    background: url('../../themes/default/view_full.svg') center center no-repeat;
-    transition: all .25s ease-in-out;
+	width: 20px;
+	height: 17px;
+	right: 0px;
+	top: 10px;
+	display: inline-block;
+	position: relative;
+	opacity: .3;
+	background: url('../../themes/default/view_full.svg') center center no-repeat;
+	transition: all .25s ease-in-out;
 	}
 	.btn_view_toogle:hover {
 		opacity: .7;
@@ -138,7 +146,7 @@ div.portal_more_elements_content {
 
 .new_portal_record {
 	background-position: 0 -96px;
-    opacity: 0.3;
+	opacity: 0.3;
 }
 .find_portal_record {
 	background-position: -48px 0;
@@ -197,7 +205,12 @@ div.portal_more_elements_content {
 
 
 .table_rows_list tr {
-	/*cursor: move;*/	
+	/*cursor: move;*/
+}
+.table_rows_list td > div {
+	//max-height: 58px;
+	//overflow: hidden;
+	font-size: 11px;
 }
 .tr_sortable{
 	cursor: move;
@@ -243,8 +256,7 @@ th.tag_id_column {
 		border-bottom: 1px solid #eeeeee;
 		border-left:none;
 		font-weight: light;
-		padding-bottom: 5px;
-	
+		padding-bottom: 5px;	
 	}
 	.print_table_rows_list td {
 		border: none;
@@ -335,7 +347,7 @@ th.tag_id_column {
 				cursor: pointer;
 				border-left: 1px solid #ffffff;
 				border-bottom: 1px solid #ffffff;
-				transition: all 0.25s ease-in-out;
+				//transition: all 0.25s ease-in-out;
 				}
 				.mosaic_li:hover .button_edit,
 				.mosaic_li:hover .button_delete {
@@ -380,7 +392,95 @@ th.tag_id_column {
 
 
 
+#delete_dialog_portal .modal-body {
+	font-size: 1.3em;
+	text-transform: capitalize;
+	font-weight: 100;
+	color: #5a5a5a;
+}
 
+
+/* COMPONENTS IN EDIT MODE INSIDE PORTAL LIST
+-------------------------------------------------------------- */
+.portal_table_wraper .css_label {
+	display: none;
+}
+.portal_table_wraper .content_data {
+	width: 100%;
+}
+.portal_table_wraper .css_wrap_portal>.content_data {
+	top: -7px;
+	margin-bottom: -7px;
+}
+
+
+
+
+
+
+
+
+/* MODE HEADER FIXED POSITION . TESTING..
+-------------------------------------------------------------- 
+.css_wrap_portal {
+	
+	}	
+	// section
+	.css_wrap_portal > .content_data > section.portal_section {
+		position: relative;
+		border: 1px solid #C4C4C4;
+		padding-top: 25px;
+		//background: #500;
+		background-color: #C0C0C0;
+	}
+	// container
+	.css_wrap_portal > .content_data > section.portal_section .section_list_rows_content_div {
+		overflow-y: auto;
+		//height: 120px;
+		position: initial;
+	}
+	// table
+	.css_wrap_portal > .content_data > section.portal_section table {
+		border-spacing: 0;
+		width: 100%;
+		margin: 0;
+	}	
+	// th
+	.css_wrap_portal > .content_data > section.portal_section th {
+		height: 0;
+		line-height: 0;
+		padding-top: 0;
+		padding-bottom: 0;
+		color: transparent;
+		border: none;
+		white-space: nowrap;
+	}
+	// th title (used to create widht placeholder)
+	.css_wrap_portal > .content_data > section.portal_section th div.th_title {
+		display: none;
+	}
+	// th title absolute (visible absolute position th)
+	.css_wrap_portal > .content_data > section.portal_section th div.th_title_abs {
+		margin: 0;
+		position: absolute;
+		background: transparent;
+		color: #fff;
+		top: 0;
+		padding-top: 5px;
+		padding-right: 10px;
+		padding-bottom: 5px;
+		padding-left: 10px;
+		margin-left: -10px;
+		line-height: normal;
+		//border-left: 1px solid #800;
+		z-index: 9;
+		display: block;
+		text-shadow: none;
+		//width: 100%;
+		//min-width: initial;
+		//background-color: #7fffd4;
+	}
+*/
 
 
 

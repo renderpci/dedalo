@@ -126,7 +126,7 @@ class tool_subtitles extends tool_common {
 
 			$type='srt';
 			
-			if( DEDALO_ENTITY=='development' ) {
+			if( DEDALO_ENTITY==='development' ) {
 				$added_advice = false;
 			}else{
 				$added_advice = false;	# TEMPORAL !!!!!!! SET TO FALSE WHEN WORK IN PRODUCTION
@@ -162,14 +162,13 @@ class tool_subtitles extends tool_common {
 				if (empty($this->ar_lines[$key+1]['tcin'])) {
 
 					$tcin_value = OptimizeTC::TC2seg($this->ar_lines[$key]['tcin']);
-						#dump($tcin_value, 'tcin_value', array());
 
 					# Seconds +3
 					$tcout_final_secs 		= $tcin_value + 5;
 						#dump($tcout_final_secs, 'tcout_final_secs', array());
 
-					# Format as tc like '00:01:03'			
-					$tcout_final_formated 	= OptimizeTC::seg2tc($tcout_final_secs).'.000';	
+					# Format as tc like '00:01:03.765'			
+					$tcout_final_formated 	= OptimizeTC::seg2tc($tcout_final_secs);	
 
 					$tcout = $tcout_final_formated;
 						#dump($tcout, 'tcout '.$this->ar_lines[$key]['tcin'], array());	
@@ -195,7 +194,7 @@ class tool_subtitles extends tool_common {
 					# SRT (HTML5 PLAYER)			
 					case 'srt'	: 	# format 1\n00:00:00,000 --> 00:00:08,000\nHola Anna. Gràcies\n\n															
 									$i++;
-									if($this->show_debug == true) {
+									if($this->show_debug === true) {
 										$srt .= "$i\n{$tcin} --> {$tcout}\n {$tcin} - {$tcout}\n DEBUG:{$text_final}\n\n";
 									}else{
 										# ADVICE_TEXT_SUBTITLES_TITLE
@@ -245,25 +244,28 @@ class tool_subtitles extends tool_common {
 									break;
 			}
 
+			return false;		
+	}//end build_subtitles_text
 
-			return false;
-		
-	}#end build_subtitles_text
 
 
 	# TRUNCATE
 	function truncate_text($string, $limit, $break=" ", $pad="...") {
 
-	  # return with no change if string is shorter than $limit
-	  if(strlen($string) <= $limit) return $string;
+	  	# return with no change if string is shorter than $limit
+		$str_len = self::my_strlen($string);  // strlen($string)
+		if($str_len <= $limit) return $string;
+		
+		$string = mb_substr($string, 0, $limit);
 
-	  $string = substr($string, 0, $limit);
-	  if(false !== ($breakpoint = strrpos($string, $break))) {
-		$string = substr($string, 0, $breakpoint);
-	  }
+		if(false !== ($breakpoint = mb_strrpos($string, $break))) {
+			$string = mb_substr($string, 0, $breakpoint);
+		}
 
-	  return $string . $pad;
-	}
+		return $string . $pad;
+	}//end truncate_text
+
+
 
 	/**
 	* GET_AR_LINES_NEW
@@ -294,15 +296,15 @@ class tool_subtitles extends tool_common {
 			#dump($text,'$text '."$this->tcin -> $this->tcout"); die();
 		*/
 		# explode by tc pattern
-		$tcPattern 			= "/(\[TC_[0-9][0-9]:[0-9][0-9]:[0-9][0-9]_TC\])/";	#TR::get_mark_pattern('tc',$standalone=true);
+		$tcPattern 			= "/(\[TC_[0-9][0-9]:[0-9][0-9]:[0-9][0-9].[0-9][0-9][0-9]_TC\])/";	#TR::get_mark_pattern('tc',$standalone=true);
 		$ar_fragments		= preg_split($tcPattern, $text, -1, PREG_SPLIT_NO_EMPTY | PREG_SPLIT_DELIM_CAPTURE);
 		#preg_match_all("/(\[TC_[0-9][0-9]:[0-9][0-9]:[0-9][0-9]_TC\])/", $text, $ar_fragments, PREG_SET_ORDER);
 			#dump($ar_fragments,'$ar_fragments'); die();
 
 		$ar_fragments_formated = array();
 		if (is_array($ar_fragments)) foreach ($ar_fragments as $key => $value) {
-			# code...
-			#echo "<br>$key - $value";
+			
+			# echo "<br>$key - $value";
 			if(!preg_match($tcPattern, $value)) {
 				# Es un texto
 
@@ -343,13 +345,12 @@ class tool_subtitles extends tool_common {
 							#echo " Changed tcout: $tcout from tcin $tcin <br>";
 					}
 					*/
-
 				
 				$ar_fragments_formated[] = array(	'tcin' 	=> $tcin,
 													'tcout' => $tcout,
 													'text' 	=> $text,													
 													);
-			}
+			}//end if(!preg_match($tcPattern, $value))
 		}
 		#dump($ar_fragments_formated,'$ar_fragments_formated'); #die();
 
@@ -373,25 +374,25 @@ class tool_subtitles extends tool_common {
 				$ar_final_formated[] = $value;
 			}						
 		}
-		#dump($ar_final_formated,'$ar_final_formated');		
+		#dump($ar_final_formated,'$ar_final_formated');
 
 		return (array)$ar_final_formated;
+	}//end get_ar_lines_new
 
-	}#end get_ar_lines_new
 
 
 	/**
 	* FRAGMENT_SPLIT
 	* LINES . Return lines of fragment
 	*/
-	function fragment_split($text ,$tcin, $tcout) {
+	function fragment_split($text, $tcin, $tcout) {
 
 		$siguiente_linea_add_b = '';
 		$siguiente_linea_add_i = '';
 		$lastLine	= false;
 		$ar_lines 	= array();
 		$refPos		= 0;
-		$offsetSecs = intval(OptimizeTC::TC2seg($tcin)); 	#dump($offsetSecs, ' offsetSecs');
+		$offsetSecs = OptimizeTC::TC2seg($tcin); 	#dump($offsetSecs, ' offsetSecs');
 		$i=0;
 
 		# calculate duration of char (secs)
@@ -400,7 +401,8 @@ class tool_subtitles extends tool_common {
 			#dump($current_charTime, 'current_charTime GLOBAL', array());
 		if(!empty($tcin) && !empty($tcout)) {
 
-			$current_durationSecs	= OptimizeTC::TC2seg($tcout) - OptimizeTC::TC2seg($tcin);
+			$current_durationSecs = OptimizeTC::TC2seg($tcout) - OptimizeTC::TC2seg($tcin);
+
 
 			if ($current_durationSecs<0) {
 				trigger_error("ERROR: fragment_split : el tcout ($tcout) es menor que el tcin ($tcin)");
@@ -415,22 +417,24 @@ class tool_subtitles extends tool_common {
 		$reference_text = $text;
 		#$reference_text = strip_tags($reference_text);
 		#$reference_text = utf8_decode($text);
-				
-		do{
-			# Primera linea
 			
 
-			$current_line = mb_substr( $text, $refPos, $this->maxCharLine);
+		do{
+			# Primera linea			
+
+			$current_line = mb_substr( $text, $refPos, $this->maxCharLine );
+			
 				#dump($reference_text, ' reference_text ');
 				#dump($current_line, ' current_line $refPos: '.$refPos);
 				#dump(self::my_strlen($current_line), ' my_strlen($current_line)');
 				#dump($this->maxCharLine, ' this->maxCharLine');
 
-			# search a blank space from end to begin . If n char of line < maxCharLine, this is the last line.			
-			if(self::my_strlen($current_line) < $this->maxCharLine)
-			{
-				$lastLine 	= true;
-				$spacePos 	= self::my_strlen($current_line);
+			# search a blank space from end to begin . If n char of line < maxCharLine, this is the last line.
+			$line_length = self::my_strlen($current_line); 	#dump($line_length, ' $line_length ++ '.to_string());
+			if($line_length < $this->maxCharLine) {
+
+				$lastLine = true;
+				$spacePos = $line_length;
 					#dump($lastLine, ' LASTLINE .........................................................');		
 			}else{
 				#dump(strrpos($current_line, '. '), 'strrpos($current_line, '. ')');
@@ -444,13 +448,23 @@ class tool_subtitles extends tool_common {
 				}
 				*/
 				$spacePos = mb_strrpos($current_line, ' '); # Localiza el último espacio
-					#$spacePos 	 = self::my_strlen($current_line) - $last_appear;			
+					#$spacePos 	 = self::my_strlen($current_line) - $last_appear;
 			}
 
+
 			# save fragment text line
-			$current_line_cut		= ''.trim( mb_substr($text, $refPos,  $spacePos) );
-				#dump($current_line_cut, "current_line_cut $refPos, $spacePos");
+			$current_line_cut = ''.trim( mb_substr($text, $refPos,  $spacePos) );
+			if(SHOW_DEBUG===true) {
+				#$current_line_cut .= " [$line_length]";
+				#$utf8 = $current_line_cut; // file must be UTF-8 encoded
+				#$iso88591_1 = utf8_decode($utf8);
+				#$iso88591_2 = iconv('UTF-8', 'ISO-8859-1', $utf8);
+				#$iso88591_2 = mb_convert_encoding($utf8, 'ISO-8859-1', 'UTF-8');
+					#dump($utf8, ' current_line_cut ++ '.to_string());
+			}
+			#dump($current_line_cut, "current_line_cut $refPos, $spacePos");
 	
+
 			#
 			# NEGRITAS E ITALICAS
 				#dump($current_line_cut, '$siguiente_linea_add_b', array());
@@ -482,19 +496,19 @@ class tool_subtitles extends tool_common {
 					$siguiente_linea_add_i = '<i>';
 				}else{
 					$siguiente_linea_add_i = '';
-				}
-			
+				}			
 			
 			# PROVISIONAL : El formateo de negritas y itálicas falla en ocasiones. Para asegurarnos de que no haya errores de forma en html revisamos 
 			# el resultado final de la línea para depurar el número y posicionamiento de las etiquetas
 			#if(SHOW_DEBUG) {
-				$current_line_cut = self::revise_tag_in_line($current_line_cut,'b');
-				$current_line_cut = self::revise_tag_in_line($current_line_cut,'i');
+				$current_line_cut = tool_subtitles::revise_tag_in_line($current_line_cut,'b');
+				$current_line_cut = tool_subtitles::revise_tag_in_line($current_line_cut,'i');
 			#}
 			
 
-			$ar_lines[$i]['text']	= trim($current_line_cut);
-			$current_tcin_secs		= (int)$offsetSecs - ($this->tcin);	// Eliminada esta parte (verificar su influencia): + ($this->dif_ms_in/1000);
+			$ar_lines[$i]['text'] = trim($current_line_cut);
+			$current_tcin_secs	  = $offsetSecs - ($this->tcin);	// Eliminada esta parte (verificar su influencia): + ($this->dif_ms_in/1000);
+
 			#$current_tcin_secs	= floatval(number_format($current_tcin_secs, 3));
 				#dump($current_tcin_secs, ' current_tcin_secs');	
 
@@ -511,6 +525,7 @@ class tool_subtitles extends tool_common {
 					));
 				*/
 			$ar_lines[$i]['tcin']	= OptimizeTC::ms_format($current_tcin_secs);
+
 				#dump($this->dif_ms_in, " $offsetSecs - this->tcin: ".$this->tcin/1000 ." +++");
 				#$tc_ms = OptimizeTC::ms2tc($ar_lines[$i]['tcin']);
 					#dump($tc_ms,'$tc_ms '.$ar_lines[$i]['tcin']);
@@ -524,30 +539,34 @@ class tool_subtitles extends tool_common {
 			# add refPos for next iteration
 			$refPos += $spacePos;
 			
-			$i++;				
-			
+			$i++;
 		}while ($lastLine === false);
+
+		#dump($ar_lines, ' ar_lines ++ '.to_string());
 		
 		#die();
 		#dump($ar_lines, 'ar_lines', array());	
 		return $ar_lines ;
-	}
+	}//end fragment_split
 
 
-	# calculate_total_ms
+
+	# CALCULATE_TOTAL_MS
 	private function calculate_total_ms($tcin, $tcout) {
+
 		return intval( $tcout - $tcin );
 	}
 
+
+
 	/**
-	* calculate_global_charTime
+	* CALCULATE_GLOBAL_CHARTIME
 	* @param string $sourceText (removed non TC tags)
 	* @param int $total_ms
 	* @return float $global_charTime (in seconds)
 	*/
 	private function calculate_global_charTime( $sourceText, $total_ms ) {
 		$global_charTime=0;
-
 		# count number of char
 		$n_char 	= self::my_strlen( $sourceText );
 		
@@ -567,7 +586,7 @@ class tool_subtitles extends tool_common {
 			));
 		*/
 		return $global_charTime;
-	}
+	}//end calculate_global_charTime
 
 
 
@@ -578,7 +597,7 @@ class tool_subtitles extends tool_common {
 	* @return string $string (removed marks and extras)
 	* @see class.TR.php deleteMarks
 	*/
-	function cleanTextForSubtitles($string) {		
+	function cleanTextForSubtitles($string) {
 
 		# CONVERT ENCODING (Traducciones mal formadas provinientes de Babel)
 		html_entity_decode($string);
@@ -591,10 +610,14 @@ class tool_subtitles extends tool_common {
 		$string = str_replace('</strong>', '</b>', $string);
 		$string = str_replace('<em>', '<i>', $string);	
 		$string = str_replace('</em>', '</i>', $string);							
-		$string = TR::deleteMarks($string, $deleteTC=false, $deleteIndex=true, $deleteSvg=true, $deleteGeo=true);	# delete some marks
+		
+		$options = new stdClass();
+			$options->deleteTC = false;
+		$string = TR::deleteMarks($string, $options);	# delete some marks
 		
 		return $string;
-	}
+	}//end cleanTextForSubtitles
+
 
 
 	# str leng in chars (multibyte if support)
@@ -605,8 +628,10 @@ class tool_subtitles extends tool_common {
 			die("No multibyte support found !!!");
 			return strlen($string);
 		}			
-	}
+	}//end my_strlen
 	
+
+
 	# trim firs and last return \n 
 	static function my_trim($string) { 
 		$firstChar = substr($string,0,1);
@@ -616,7 +641,9 @@ class tool_subtitles extends tool_common {
 		if($lastChar=="\r" || $lastChar=="\n")	$string = substr($string,0,-1);
 		
 		return trim($string) ;
-	}
+	}//end my_trim
+
+
 
 	/**
 	* REVISE_TAG_IN_LINE
@@ -657,10 +684,7 @@ class tool_subtitles extends tool_common {
 		}
 
 		return (string)$line_string;
-
 	}#end revise_tag_in_line
-
-
 
 
 

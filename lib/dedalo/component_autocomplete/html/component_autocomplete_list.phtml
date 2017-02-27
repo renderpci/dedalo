@@ -5,8 +5,8 @@
 	# ELEMENTOS	
 	
 	
-	print "\n<!-- COMPONENT_AUTOCOMPLETE [tipo:$tipo section_id:$parent] $label -->";
-	print "\n<div class=\"wrap_component css_wrap_autocomplete wrap_portal_list\" id=\"{$id_wrapper}\"
+	print "<!-- COMPONENT_AUTOCOMPLETE [tipo:$tipo section_id:$parent] $label -->";
+	print "<div class=\"wrap_component css_wrap_autocomplete wrap_portal_list\" id=\"{$id_wrapper}\"
 	data-tipo=\"{$tipo}\"
 	data-lang=\"{$lang}\"
 	data-parent=\"{$parent}\"
@@ -47,9 +47,9 @@
 						}else{
 							$edit_class = 'css_autocomplete_ts_ul';
 						}
-						$html_contenido .= "\n <ul class=$edit_class onclick=\"component_common.change_mode_component(this, '$modo','edit')\">";
+						$html_contenido .= " <ul class=$edit_class onclick=\"component_common.change_mode_component(this, '$modo','edit')\">";
 					}else{
-						$html_contenido .= "\n <ul>";
+						$html_contenido .= " <ul>";
 					}
 					
 					foreach ($ar_valor as $current_value => $value) {
@@ -70,5 +70,5 @@
 	print $html_contenido;
 	
 	
-	#echo "\n</div>\n\n"; //css_wrap_autocomplete
+	echo "</div>"; //css_wrap_autocomplete
 ?>

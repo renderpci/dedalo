@@ -1,17 +1,15 @@
 <?php
 /*
 * CLASS TOOL_IMPORT_FILES
+*
+*
 */
-require_once( dirname(dirname(dirname(__FILE__))) .'/config/config4.php');
-
-
-
 class tool_import_files extends tool_common {
 	
 	
 	protected $component_obj;	# received section	
 	protected $valid_extensions;
-	
+
 
 
 	public function __construct($component_obj, $modo='button') {
@@ -27,6 +25,7 @@ class tool_import_files extends tool_common {
 	}
 
 
+
 	/**
 	* SET_UP
 	*/
@@ -34,16 +33,15 @@ class tool_import_files extends tool_common {
 
 		# VERIFY USER IS LOGGED
 		if(login::is_logged()!==true) die("<span class='error'> Auth error: please login </span>");
-
 		
-
-		$user_id 		= $_SESSION['dedalo4']['auth']['user_id'];
+		# Usuario logeado actualmente
+   		$user_id		= navigator::get_user_id();	
 		$media_folder 	= DEDALO_IMAGE_FOLDER;
 		$tipo 			= isset($_GET['t']) ? $_GET['t'] : '';	// When varname is t (default page call)
 		$tipo 			= isset($_REQUEST['tipo']) ? $_REQUEST['tipo'] : $tipo;	// When varname is tipo fallback
 
 		# UPLOAD_DIR_CUSTOM is section_tipo
-		$upload_dir_custom = isset($tipo) ? '/'.$tipo : '';
+		$upload_dir_custom = isset($tipo) ? '/'.$tipo : null;
 		if (empty($upload_dir_custom)) {
 			trigger_error(__METHOD__." WARNING TOOL_IMPORT_FILES: EMPTY upload_dir_custom: $upload_dir_custom");
 		}
@@ -75,7 +73,6 @@ class tool_import_files extends tool_common {
 				throw new Exception(" Error on read or create TOOL_IMPORT_IMAGES_UPLOAD_DIR directory. Permission denied ");
 			}
 		}
-
 	}//end set_up
 
 
@@ -85,7 +82,7 @@ class tool_import_files extends tool_common {
 	* FIND_ALL_FILES
 	* Read dir (can be accessible)
 	*/
-	public function find_all_files($dir, $recursive=false) {		
+	public function find_all_files($dir, $recursive=false) {
 
 		$ar_data = array();
 		try {
@@ -140,7 +137,7 @@ class tool_import_files extends tool_common {
 	* Extrae información de la imágen recibida usando una expresión regular para interpretar un patrón dado
 	* Devuelve un array con los datos extraidos
 	*/
-	function get_file_data( $dir, $file ) {	// , $regex="/(\d*)[-|_]?(\d*)_?(\w{0,}\b.*)\.([a-zA-Z]{3,4})\z/" 	
+	function get_file_data( $dir, $file ) {	// , $regex="/(\d*)[-|_]?(\d*)_?(\w{0,}\b.*)\.([a-zA-Z]{3,4})\z/" 
 
 		$ar_data = array();
 	
@@ -168,19 +165,15 @@ class tool_import_files extends tool_common {
 	* PROPAGATE_TEMP_SECTION_DATA
 	* @param object $temp_section_data
 	* @param object $current_section
-	*/
-	public function propagate_temp_section_data($temp_section_data, $section_tipo, $section_id) {		
+	*//* MOVED TO TOOL COMMON
+	public function propagate_temp_section_data($temp_section_data, $section_tipo, $section_id) {
 
 		$ar_current_component = reset($temp_section_data);
 		foreach ($ar_current_component as $current_tipo => $current_component) {
 
 			$RecordObj_dd 	= new RecordObj_dd($current_tipo);
 			$traducible  	= $RecordObj_dd->get_traducible();
-			if ($traducible!='si') {
-				$current_lang = DEDALO_DATA_NOLAN;
-			}else{
-				$current_lang = DEDALO_DATA_LANG;
-			}
+			$current_lang   = $RecordObj_dd->get_traducible()!=='si' ? DEDALO_DATA_NOLAN : DEDALO_DATA_LANG;
 			
 			$component_dato_current_lang = $current_component->dato->$current_lang;
 
@@ -200,8 +193,7 @@ class tool_import_files extends tool_common {
 		}//end foreach ($temp_section_data as $key => $value) {
 
 		return true;
-
-	}#end propagate_temp_section_data
+	}#end propagate_temp_section_data*/
 
 
 
@@ -338,8 +330,7 @@ class tool_import_files extends tool_common {
 			default:
 				trigger_error("Error. Media type not allowed");
 				break;
-		}
-		
+		}		
 	}#end set_media_file
 
 

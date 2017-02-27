@@ -50,7 +50,7 @@ class component_section_id extends component_common {
 			return $search_query;
 		}
 		switch (true) {
-			case ($comparison_operator=='BETWEEN'):
+			case ($comparison_operator==='BETWEEN'):
 				$separator='...';
 				if (strpos($search_value, $separator)!==false) {
 					// Transform "12...25" to "12 AND 25"
@@ -77,7 +77,6 @@ class component_section_id extends component_common {
 		return $search_query;
 	}//end get_search_query
 
-	
 	
 	
 }

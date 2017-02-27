@@ -211,13 +211,14 @@
 		    		$html .= "\n <td class=\"$td_style\">";
 			    	$tmp_file		 		= DEDALO_MEDIA_BASE_PATH . DEDALO_AV_FOLDER . '/tmp/'.$quality.'_'.$video_id.'.sh';
 			    	$source_quality_file 	= $file_path;	//$this->component_obj->get_video_path($quality);
+
 			    	if( file_exists($tmp_file) ) {	//&& !file_exists($source_quality_file)
 			    		$html .= "<small class=\"blink\">Processing..</small>";
 			    	//}else if ( !file_exists($source_quality_file) ) {
 			    	}else {
 			    		   		
 						$source_quality = $this->component_obj->get_source_quality_to_build($quality);
-							#dump($source_quality,'$source_quality for '.$quality);
+							#dump($source_quality,'$source_quality for quality '.$quality);
 						$style = '';
 						if( empty($source_quality) ) {
 							$style = "display:none";

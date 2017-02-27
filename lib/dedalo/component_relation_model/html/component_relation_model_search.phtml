@@ -12,21 +12,21 @@
 	$html_label = component_common_draw::draw_label($this);
 	
 	# CONTENIDO (INPUT)
-	$html_contenido = '';
+	$html_content = '';
 	switch($permissions) {
 			
-		case 0	:	$html_contenido .= "";
+		case 0	:	$html_content .= "";
 					break;
 						
 		
 		case ($permissions>=1)	:
 
 					# COMPARISON OPERATORS
-					$html_contenido .= operator::get_search_comparison_operators_html($tipo,$ar_comparison_operators);
+					$html_content .= operator::get_search_comparison_operators_html($tipo,$ar_comparison_operators);
 
 					
 					# SELECT
-					$html_contenido .= "\n <select class=\"css_relation_model\" name=\"{$search_input_name}\"
+					$html_content .= "\n <select class=\"css_relation_model\" name=\"{$search_input_name}\"
 					data-tipo=\"{$tipo}\" 
 					title=\"$html_title\">";
 
@@ -35,7 +35,7 @@
 						}else{
 							$checked = "";
 						}
-						$html_contenido .= "\n <option value=\"\" {$checked}> </option>";
+						$html_content .= "\n <option value=\"\" {$checked}> </option>";
 						
 						foreach ($ar_list_of_values->result as $value => $rotulo) {
 							
@@ -44,23 +44,27 @@
 							}else {
 								$checked = "";
 							}
-							$html_contenido .= "\n <option value='$value' {$checked}> {$rotulo}</option>";
+							$html_content .= "\n <option value='$value' {$checked}> {$rotulo}</option>";
 						}					
-					$html_contenido .= "\n </select>";	
+					$html_content .= "\n </select>";	
 					
 
 					# LOGICAL OPERATORS
-					$html_contenido .= operator::get_search_logical_operators_html($tipo,$ar_logical_operators);
+					$html_content .= operator::get_search_logical_operators_html($tipo,$ar_logical_operators);
+
+					if(SHOW_DEBUG===true) {
+						$html_content .= "<span class=\"debug_info\">$search_input_name</span>";
+					}
 											
 	}
 	
 	# Prepare content to show in page
-	tools::prepare_content($html_contenido);
+	tools::prepare_content($html_content);
 	
 
 	# PRINT HTML
 	print $html_label;
-	print $html_contenido;	
+	print $html_content;	
 
 	
 	print "\n</div><!-- /css_wrap_relation_model -->\n\n"; //wrap

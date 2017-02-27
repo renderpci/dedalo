@@ -6,9 +6,9 @@
 	if(isset($_REQUEST[$tipo])) $dato = $_REQUEST[$tipo];		#var_dump($_REQUEST[$tipo]);
 	
 	
-	print "\n<!-- SELECT [tipo:$tipo section_id:$parent] $label -->";
+	print "<!-- SELECT [tipo:$tipo section_id:$parent] $label -->";
 
-	print "\n<div class=\"wrap_component css_wrap_select\" >";
+	print "<div class=\"wrap_component css_wrap_select\" >";
 
 	
 	# ETIQUETA (LABEL)
@@ -16,28 +16,28 @@
 
 	
 	# CONTENIDO (INPUT)
-	$html_contenido = '';
+	$html_content = '';
 	switch($permissions) {
 			
-		case 0	:	$html_contenido .= "";
+		case 0	:	$html_content .= "";
 					break;						
 		
 		case ($permissions>=1) :
 
 					# COMPARISON OPERATORS
 					if (isset($ar_comparison_operators)) {
-					$html_contenido .= operator::get_search_comparison_operators_html($tipo,$ar_comparison_operators);
+					$html_content .= operator::get_search_comparison_operators_html($tipo,$ar_comparison_operators);
 					}					
 
 					
 					# SELECT
-					$html_contenido .= "\n <select class=\"css_select\" name=\"{$search_input_name}\" data-tipo=\"{$tipo}\" title=\"$html_title\"> ";					
+					$html_content .= " <select class=\"css_select\" name=\"{$search_input_name}\" data-tipo=\"{$tipo}\" title=\"$html_title\"> ";					
 						if(empty($dato)) {
 							$checked = 'selected';
 						}else{
 							$checked = "";
 						}
-						$html_contenido .= "\n <option value=\"\" {$checked}> </option>";
+						$html_content .= " <option value=\"\" {$checked}> </option>";
 						foreach ($ar_list_of_values->result as $value => $rotulo) {
 							
 							if( $dato == $value) {
@@ -45,24 +45,28 @@
 							}else {
 								$checked = "";
 							}
-							$html_contenido .= "\n <option value='$value' {$checked}> {$rotulo}</option>";							
+							$html_content .= " <option value='$value' {$checked}> {$rotulo}</option>";							
 						}
-					$html_contenido .= "\n </select>";
+					$html_content .= " </select>";
 					
 
 					# LOGICAL OPERATORS
 					if (isset($ar_logical_operators)) {
-					$html_contenido .= operator::get_search_logical_operators_html($tipo,$ar_logical_operators);
-					}								
+					$html_content .= operator::get_search_logical_operators_html($tipo,$ar_logical_operators);
+					}
+
+					if(SHOW_DEBUG===true) {
+						$html_content .= "<span class=\"debug_info\">$search_input_name</span>";
+					}							
 					break;										
 	}
 	
 	
 	# PRINT HTML
 	print $html_label;
-	print $html_contenido;	
+	print $html_content;	
 	
 	
-	print "\n</div><!-- /css_wrap_select -->\n\n"; //wrap
+	print "</div><!-- /css_wrap_select -->"; //wrap
 	
 ?>

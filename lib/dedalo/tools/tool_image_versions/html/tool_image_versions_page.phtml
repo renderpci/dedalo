@@ -281,22 +281,14 @@
 			    	$td_style = null; if($quality==DEDALO_IMAGE_QUALITY_DEFAULT) $td_style = 'td_default_quality';
 		    		$html .= "\n <td class=\"$td_style\">";
 
-			    	$source_quality_file 	= $this->component_obj->get_image_path($quality);
+		    		# File in jpg format in current quality
+			    	$source_quality_file = $this->component_obj->get_image_path($quality);
+			    		#dump($source_quality_file, ' $source_quality_file ++ '.to_string($quality));
 			    	
-			    	if( file_exists($source_quality_file) ) {
+			    	if( $this->component_obj->get_original($quality,true) ) {
 
-			    		$previous_quality 	= $quality;
-						$ImageObj 			= new ImageObj($image_id, $quality, $this->component_obj->aditional_path, $this->component_obj->initial_media_path);
-						$previous_width 	= $ImageObj->get_image_width();
-						$previous_height 	= $ImageObj->get_image_height();			
-						if(SHOW_DEBUG) {
-						 	#dump($previous_quality, "previous_quality - current:$quality  - $previous_width - $previous_height");	
-						 }				
-					
-					}else if ( $this->component_obj->get_original() ) {
-
-						$source_file = DEDALO_MEDIA_BASE_PATH.DEDALO_IMAGE_FOLDER.'/'.$quality . $aditional_path .'/'. $image_id.'.'.$this->component_obj->get_original();
-						$target_file = DEDALO_MEDIA_BASE_PATH.DEDALO_IMAGE_FOLDER.'/'.$quality . $aditional_path .'/'. $image_id.'.'.DEDALO_IMAGE_EXTENSION;
+						$source_file = DEDALO_MEDIA_BASE_PATH.DEDALO_IMAGE_FOLDER.$initial_media_path.'/'.$quality . $aditional_path .'/'. $image_id.'.'.$this->component_obj->get_original($quality);
+						$target_file = DEDALO_MEDIA_BASE_PATH.DEDALO_IMAGE_FOLDER.$initial_media_path.'/'.$quality . $aditional_path .'/'. $image_id.'.'.DEDALO_IMAGE_EXTENSION;
 
 						#dump($source_file,'$source_file '.$target_file);
 						$title = "Convert ".$this->component_obj->get_original()." to ".DEDALO_IMAGE_EXTENSION. " (width same quality)";
@@ -320,9 +312,17 @@
 							$title 			= "Convert from \nQ:$source_quality ($previous_width x $previous_height)\nto \nQ:$quality ($widht_target x $height_target)";
 						}						
 						*/
-									
-					}else if(isset($previous_quality )) {
 
+						$previous_quality 	= $quality;
+									
+					}else if( file_exists($source_quality_file) ) {
+
+			    		$previous_quality 	= $quality;
+						$ImageObj 			= new ImageObj($image_id, $quality, $this->component_obj->aditional_path, $this->component_obj->initial_media_path);
+						$previous_width 	= $ImageObj->get_image_width();
+						$previous_height 	= $ImageObj->get_image_height();
+					
+					}else if(isset($previous_quality )) {
 						
 						$source_quality = $previous_quality;											
 						$title = null;
@@ -352,7 +352,6 @@
 							onclick=\"tool_image_versions.generate_version(this)\"
 							title=\"Convert from $previous_quality\"
 							></div>";
-
 
 					}#end else
 

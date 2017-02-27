@@ -22,7 +22,8 @@
 	$component_name			= get_class($this);
 	$visible				= $this->get_visible();
 
-
+	if($permissions===0) return null;
+	
 	# Verify component content record is inside section record filter
 	if ($this->get_filter_authorized_record()===false) return NULL ;
 
@@ -39,10 +40,11 @@
 				$id_wrapper 	= 'wrapper_'.$identificador_unico;
 				$input_name 	= "{$tipo}_{$parent}";
 				$component_info = $this->get_component_info('json');
-									
+				/*			
 				if (empty($dato)) { # && $traducible=='si'
 					$dato_reference_lang = $this->get_dato_default_lang();#$this->get_ejemplo();	#RecordObj_dd::get_termino_by_tipo($tipo,DEDALO_DATA_LANG_DEFAULT);						
-				}												
+				}
+				*/												
 				break;
 
 		case 'tool_time_machine' :						
@@ -68,7 +70,10 @@
 		case 'lang'	:	
 				break;
 		
-		case 'search':	
+		case 'search':
+				# Showed only when permissions are >1
+				if ($permissions<1) return null;
+				
 				$ar_comparison_operators 	= $this->build_search_comparison_operators();
 				$ar_logical_operators 		= $this->build_search_logical_operators();
 

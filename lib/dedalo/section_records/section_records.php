@@ -28,7 +28,7 @@
 						case (isset($this->options->save_handler) && $this->options->save_handler!='database'):
 							# ignore paginator when save_handler is not 'database'
 							break;
-						case $context_name=='list_in_portal':
+						case $context_name==='list_in_portal':
 							# nothing to do (avoid show paginator when portal tool is opened)
 							break;						
 						default:
@@ -70,9 +70,10 @@
 					$ar_children_tipo_by_modelo_name_in_section = section::get_ar_children_tipo_by_modelo_name_in_section($this->tipo, 'button_delete', $from_cache=true, $resolve_virtual=true); //$section_tipo, $ar_modelo_name_required, $from_cache=true, $resolve_virtual=false
 					# dump($ar_children_tipo_by_modelo_name_in_section, ' ar_children_tipo_by_modelo_name_in_section ++ '.to_string($this->tipo));
 					if (!empty($ar_children_tipo_by_modelo_name_in_section[0])) {
-
-						$current_button_tipo = $ar_children_tipo_by_modelo_name_in_section[0];					
-						#dump($ar_children_tipo_by_modelo_name_in_section[0], ',$ar_children_tipo_by_modelo_name_in_section[0] ++ '.to_string());						
+						// Set current button_delete
+						$current_button_tipo = $ar_children_tipo_by_modelo_name_in_section[0];
+						$this->button_delete = new button_delete($current_button_tipo,null,$tipo);
+						#dump($ar_children_tipo_by_modelo_name_in_section[0], ',$ar_children_tipo_by_modelo_name_in_section[0] ++ '.to_string());
 						$this->button_delete_permissions = security::get_security_permissions( $tipo, $current_button_tipo);
 					}
 				}
@@ -133,7 +134,7 @@
 				}
 
 				# ACTIVITY DEDALO_ACTIVITY_SECTION_TIPO
-					if ($tipo==DEDALO_ACTIVITY_SECTION_TIPO) {
+					if ($tipo===DEDALO_ACTIVITY_SECTION_TIPO) {
 						$file_name = 'list_activity';
 					}
 				

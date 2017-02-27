@@ -38,6 +38,11 @@ if( $mode=='upload_file' ) {
 	if(!$parent) 		exit('Error: parent not defined');
 	if(!$section_tipo) 	exit('Error: section_tipo not defined');
 
+	# Write session to unlock session file
+	session_write_close();
+
+	debug_log(__METHOD__." Uploading file ($SID). Session is writeed and closed ".to_string(), logger::DEBUG);
+
 	$component_name = RecordObj_dd::get_modelo_name_by_tipo($tipo, true);
 	$component_obj 	= component_common::get_instance($component_name, $tipo, $parent, 'edit', DEDALO_DATA_LANG, $section_tipo);
 	$tool_upload 	= new tool_upload($component_obj);
@@ -52,7 +57,7 @@ if( $mode=='upload_file' ) {
 
 	echo json_encode($response);
 	exit();
-}
+}//end upload_file
 
 
 

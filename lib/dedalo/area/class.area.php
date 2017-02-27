@@ -80,10 +80,10 @@
 	*/
 	public static function get_ar_ts_children_all_areas_hierarchized($include_main_tipo=true) {
 
-		if(SHOW_DEBUG) $start_time=microtime(1);
+		if(SHOW_DEBUG===true) $start_time=microtime(1);
 
 		if (isset($_SESSION['dedalo4']['config']['ar_ts_children_all_areas_hierarchized']) ) {
-			if(SHOW_DEBUG) {
+			if(SHOW_DEBUG===true) {
 				#return $_SESSION['dedalo4']['config']['ar_ts_children_all_areas_hierarchized'];
 			}else{
 				return $_SESSION['dedalo4']['config']['ar_ts_children_all_areas_hierarchized'];
@@ -119,24 +119,24 @@
 		$area_resource 					= new area_resource($current_tipo);
 		$ar_ts_childrens_resource 		= $area_resource->get_ar_ts_children_areas($include_main_tipo);
 
-		# AREA_THESAURUS
-		if (isset(RecordObj_dd::get_ar_terminoID_by_modelo_name('area_thesaurus')[0])) {			
-			$current_tipo 				= RecordObj_dd::get_ar_terminoID_by_modelo_name('area_thesaurus')[0];
-			$area_resource 				= new area_resource($current_tipo);
-			$ar_ts_childrens_thesaurus 	= $area_resource->get_ar_ts_children_areas($include_main_tipo);	
-		}else{
-			$ar_ts_childrens_thesaurus 	= array();
-		}
-
 		# AREA_TOOLS
 		if (isset(RecordObj_dd::get_ar_terminoID_by_modelo_name('area_tool')[0])) {
 			$current_tipo 					= RecordObj_dd::get_ar_terminoID_by_modelo_name('area_tool')[0];
-			$area_resource 					= new area_resource($current_tipo);
-			$ar_ts_childrens_tools 			= $area_resource->get_ar_ts_children_areas($include_main_tipo);
+			$area_tool 						= new area_tool($current_tipo);
+			$ar_ts_childrens_tools 			= $area_tool->get_ar_ts_children_areas($include_main_tipo);
 				#dump($ar_ts_childrens_tools," ar_ts_childrens_tools $current_tipo - $include_main_tipo");
 		}else{
 			$ar_ts_childrens_tools = array();
-		}		
+		}
+
+		# AREA_THESAURUS
+		if (isset(RecordObj_dd::get_ar_terminoID_by_modelo_name('area_thesaurus')[0])) {
+			$current_tipo 				= RecordObj_dd::get_ar_terminoID_by_modelo_name('area_thesaurus')[0];
+			$area_thesaurus 			= new area_thesaurus($current_tipo);
+			$ar_ts_childrens_thesaurus 	= $area_thesaurus->get_ar_ts_children_areas($include_main_tipo);
+		}else{
+			$ar_ts_childrens_thesaurus 	= array();
+		}	
 
 		# AREA_ADMIN
 		$current_tipo 					= RecordObj_dd::get_ar_terminoID_by_modelo_name('area_admin')[0];
@@ -144,12 +144,12 @@
 		$ar_ts_childrens_admin 			= $area_admin->get_ar_ts_children_areas($include_main_tipo);
 
 		
-		$ar_all = array_merge($ar_ts_childrens_root, $ar_ts_childrens_activity, $ar_ts_childrens_publication, $ar_ts_childrens_resource, $ar_ts_childrens_thesaurus, $ar_ts_childrens_tools, $ar_ts_childrens_admin);
+		$ar_all = array_merge($ar_ts_childrens_root, $ar_ts_childrens_activity, $ar_ts_childrens_publication, $ar_ts_childrens_resource, $ar_ts_childrens_tools, $ar_ts_childrens_thesaurus, $ar_ts_childrens_admin);
 			
 
 		#
 		# ALLOW DENY AREAS
-		if (!SHOW_DEBUG) {
+		if (SHOW_DEBUG!==true) {
 			$ar_all = self::walk_recursive_remove($ar_all, 'area::area_to_remove');			
 				#dump($ar_all,'ar_all AFTER ');
 		}		
@@ -158,13 +158,13 @@
 		# Store for speed
 		$_SESSION['dedalo4']['config']['ar_ts_children_all_areas_hierarchized'] = $ar_all;
 
-		if(SHOW_DEBUG) {
-			$total=round(microtime(1)-$start_time,3); #dump($total, 'total');	#dump($ar_all, 'ar_all');
-			debug_log(__METHOD__." ".exec_time_unit($start_time,'ms').' ms' , logger::DEBUG);			
+		if(SHOW_DEBUG===true) {
+			$total=round(microtime(1)-$start_time,3);
+			$n = count($ar_all);
+			debug_log(__METHOD__." Total ($n): ".exec_time_unit($start_time,'ms')." ms - ratio(total/n): " . ($total/$n), logger::DEBUG);			
 		}
 
 		return $ar_all;
-
 	}//end get_ar_ts_children_all_areas_hierarchized
 
 
@@ -243,12 +243,12 @@
 		$id_unic = $terminoID . '-'. intval($include_main_tipo) . '-' . DEDALO_DATA_LANG; #dump($id_unic);
 		if(isset($ar_ts_children_areas_cache[$id_unic])) return $ar_ts_children_areas_cache[$id_unic];
 
-		#if(SHOW_DEBUG) $start_time = start_time();
+		#if(SHOW_DEBUG===true) $start_time = start_time();
 
 		$ar_ts_children_areas = self::get_ar_ts_children_areas_recursive($terminoID, $include_main_tipo);
 
 		# Añadimos el propio termino como padre del arbol
-		if($include_main_tipo==true)
+		if($include_main_tipo===true)
 		$ar_ts_children_areas = array($terminoID => $ar_ts_children_areas);
 
 		# STORE CACHE DATA
@@ -283,15 +283,15 @@
 			foreach ($ar_ts_childrens as $children_terminoID) {
 				
 				$RecordObj_dd	= new RecordObj_dd($children_terminoID);
-				$modeloID		= $RecordObj_dd->get_modelo($children_terminoID);
-				$modelo			= RecordObj_dd::get_termino_by_tipo($modeloID,null,true);
-				#$modelo = RecordObj_dd::get_modelo_name_by_tipo($children_terminoID,true);
+				#$modeloID		= $RecordObj_dd->get_modelo($children_terminoID);
+				#$modelo		= RecordObj_dd::get_termino_by_tipo($modeloID,null,true);
+				$modelo 		= RecordObj_dd::get_modelo_name_by_tipo($children_terminoID,true);
 
 				$visible	= $RecordObj_dd->get_visible();
 					#dump($usableIndex,'$usableIndex',"children_terminoID: $children_terminoID");
 
 				# Test if modelo name is acepted or not (more restrictive)
-				if( $visible != 'no' && in_array($modelo, $this->ar_children_include_modelo_name) && !in_array($modelo, $this->ar_children_exclude_modelo_name) ) {
+				if( $visible!=='no' && in_array($modelo, $this->ar_children_include_modelo_name) && !in_array($modelo, $this->ar_children_exclude_modelo_name) ) {
 								
 					$ar_temp = $this->get_ar_ts_children_areas_recursive($children_terminoID);
 			
@@ -300,7 +300,7 @@
 				}
 
 			}#end foreach
-			if(SHOW_DEBUG) {
+			if(SHOW_DEBUG===true) {
 				#dump($ar_ts_children_areas_recursive,'ar_ts_children_areas',"array recursive pass:$terminoID ");
 			}			
 			
@@ -308,7 +308,7 @@
 		}
 		
 		return $ar_ts_children_areas_recursive;
-	}
+	}//end get_ar_ts_children_areas_recursive
 
 
 
@@ -333,7 +333,7 @@
 				$visible	= $RecordObj_dd->get_visible();
 					#dump($usableIndex,'$usableIndex',"children_terminoID: $children_terminoID");
 
-				if($visible=='no') continue; # Skip
+				if($visible==='no') continue; # Skip
 
 				# Test if modelo name is acepted or not (more restrictive)
 				switch (true) {

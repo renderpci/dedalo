@@ -19,8 +19,9 @@
 	$lang					= $this->get_lang();
 	$identificador_unico	= $this->get_identificador_unico();
 	$component_name			= get_class($this);
-	
 
+	if($permissions===0) return null;
+	
 	# Verify component content record is inside section record filter
 	if ($this->get_filter_authorized_record()===false) return NULL ;
 
@@ -29,16 +30,16 @@
 	
 	switch($modo) {
 	
-		case 'edit'	:					
+		case 'edit'	:			
 				$ar_target_section_tipo 	 = $this->get_ar_target_section_tipo();		
-				$ar_target_section_tipo_json = json_encode($ar_target_section_tipo);	#dump($ar_target_section_tipo, ' ar_target_section_tipo ++ '.to_string());
+				$ar_target_section_tipo_json = json_encode($ar_target_section_tipo);
 				
-				$tipo_to_search			= $this->get_tipo_to_search();				
-				$valor 					= $this->get_valor();		#dump($valor,"$label valor");
-				$ar_valor 				= $this->get_valor($lang,'array');		#dump($ar_valor, ' ar_valor ++ '.to_string());
+				$tipo_to_search			= $this->get_tipo_to_search();
+				$valor 					= $this->get_valor();
+				$ar_valor 				= $this->get_valor($lang,'array');
 				$id_wrapper 			= 'wrapper_'.$identificador_unico;
 				$input_name 			= "{$tipo}_{$parent}";
-				$component_info 		= $this->get_component_info('json');				
+				$component_info 		= $this->get_component_info('json');
 				$dato_json 				= json_handler::encode($dato);
 
 				if (isset($_REQUEST['from_modo'])) {
@@ -68,6 +69,9 @@
 				break;	
 						
 		case 'search':
+				# Showed only when permissions are >1
+				if ($permissions<1) return null;
+				
 				$referenced_tipo		= $this->get_referenced_tipo();
 				$ar_list_of_values		= $this->get_ar_list_of_values(DEDALO_DATA_LANG, null); // $this->get_ar_list_of_values( $lang, null, $this->ar_referenced_section_tipo, $filter_custom );
 
@@ -99,7 +103,7 @@
 				break;
 				
 		case 'list'	:
-				# Return direct value for store in 'valor_list'
+				# Return direct value for store in 'valor_list'				
 				$valor = $this->get_valor($lang,'string');
 				echo (string)$valor; 	# Like "Catarroja, L'Horta Sud, Valencia/València, Comunidad Valenciana, España"
 				return; // NOT load html file

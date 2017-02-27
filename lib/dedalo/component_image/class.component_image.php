@@ -33,7 +33,7 @@ class component_image extends component_common {
 	# COMPONENT_IMAGE CONSTRUCT
 	function __construct($tipo, $parent, $modo='edit', $lang=null, $section_tipo=null) {
 
-		if(SHOW_DEBUG) {
+		if(SHOW_DEBUG===true) {
 			$start_time = microtime(1);
 			global$TIMER;$TIMER[__METHOD__.'_IN_'.$tipo.'_'.$modo.'_'.microtime(1)]=microtime(1);
 		}
@@ -93,7 +93,7 @@ class component_image extends component_common {
 			
 			# result devuelve el id de la sección parent creada o editada
 			$result = $this->Save();
-			if(SHOW_DEBUG) {
+			if(SHOW_DEBUG===true) {
 				$total=round(microtime(true)-$start_time,3);
 				error_log("Updated ".RecordObj_dd::get_termino_by_tipo($this->tipo)." locator (to ".$locator->get_flat().") of current ".get_called_class()." (tipo:$this->tipo - section_tipo:$this->section_tipo - parent:$this->parent - lang:$this->lang) $total ms");
 			}
@@ -101,7 +101,7 @@ class component_image extends component_common {
 		}#end if ($this->need_save)
 		*/
 
-		if(SHOW_DEBUG) {
+		if(SHOW_DEBUG===true) {
 			global$TIMER;$TIMER[__METHOD__.'_OUT_'.$this->tipo.'_'.$this->modo.'_'.microtime(1)]=microtime(1);
 		}	
 
@@ -133,7 +133,7 @@ class component_image extends component_common {
 		# Generate thumb image quality from default always (if default exits)
 		$thumb 	 = $this->generate_thumb();
 
-		if(SHOW_DEBUG) {
+		if(SHOW_DEBUG===true) {
 			debug_log(__METHOD__." SAVING COMPONENT IMAGE: generate_thumb response: ".to_string($thumb), logger::DEBUG);
 		}
 
@@ -173,7 +173,7 @@ class component_image extends component_common {
 	public function get_dato() {
 		$dato = parent::get_dato();		
 
-		if(SHOW_DEBUG) {			
+		if(SHOW_DEBUG===true) {			
 			#dump($dato,"dato  (tipo:$this->tipo - section_tipo:$this->section_tipo - parent:$this->parent - lang:$this->lang)");
 			/*
 			if (!isset($dato->component_tipo)) {
@@ -230,7 +230,7 @@ class component_image extends component_common {
 		
 		$valor 			= $this->get_image_url($image_quality, $test_file, $absolute);
 		
-		if(SHOW_DEBUG) {
+		if(SHOW_DEBUG===true) {
 			#return "IMAGE: ".$valor;
 		}
 		return $valor;
@@ -262,7 +262,7 @@ class component_image extends component_common {
 														 'edit',
 														 DEDALO_DATA_NOLAN,
 														 $this->section_tipo);
-			$dato 		= trim($component->get_dato());
+			$dato 		= trim($component->get_valor(0));
 				#dump($dato,"dato - compoent tipo $this->tipo - section_tipo: ".$this->section_tipo);
 
 			if(!empty($dato) && strlen($dato)>0) {
@@ -275,7 +275,7 @@ class component_image extends component_common {
 		/*
 		$dato = $this->get_dato();
 		if (!isset($dato->section_id)) {			
-			if(SHOW_DEBUG) {
+			if(SHOW_DEBUG===true) {
 				if($this->parent>0)			
 				trigger_error(__METHOD__." Warning: Component image dato is empty. component_tipo:$component_tipo, parent:$this->parent, section_tipo:$this->section_tipo");
 			}
@@ -305,7 +305,7 @@ class component_image extends component_common {
 
 		$propiedades = $this->get_propiedades();
 		
-		if (isset($propiedades->aditional_path)) {
+		if (isset($propiedades->aditional_path) && !empty($this->get_parent()) ) {
 			
 			switch (true) {
 
@@ -315,11 +315,11 @@ class component_image extends component_common {
 
 					$component 	= component_common::get_instance($component_modelo,
 																 $component_tipo,
-																 $this->parent,
+																 $this->get_parent(),
 																 'edit',
 																 DEDALO_DATA_NOLAN,
-																 $this->section_tipo);
-					$dato 		= trim($component->get_dato());			
+																 $this->get_section_tipo());
+					$dato 		= trim($component->get_valor(0));			
 
 					# Add / at begin if not exits
 					if ( substr($dato, 0, 1) != '/' ) {
@@ -514,8 +514,8 @@ class component_image extends component_common {
 	*/
 	public function convert_quality( $source_quality, $target_quality ) {
 
-		if ($target_quality==DEDALO_IMAGE_QUALITY_ORIGINAL || $target_quality==DEDALO_IMAGE_THUMB_DEFAULT) {
-			if(SHOW_DEBUG) {
+		if ($target_quality===DEDALO_IMAGE_QUALITY_ORIGINAL || $target_quality===DEDALO_IMAGE_THUMB_DEFAULT) {
+			if(SHOW_DEBUG===true) {
 				throw new Exception("Error Processing Request. Wrong target quality: $target_quality", 1);				;
 			}
 			return false;
@@ -589,13 +589,52 @@ class component_image extends component_common {
 		$ImageObj			 = new ImageObj($image_id, DEDALO_IMAGE_QUALITY_DEFAULT, $aditional_path, $initial_media_path);
 		$image_default_path  = $ImageObj->get_local_full_path();
 
-		if ($overwrite || !file_exists($image_default_path)) {
+		if ($overwrite===true || !file_exists($image_default_path)) {
 			$this->convert_quality( DEDALO_IMAGE_QUALITY_ORIGINAL, DEDALO_IMAGE_QUALITY_DEFAULT );		
 		}
 
-		return true;
-		
+		return true;		
 	}#end generate_default
+
+
+
+	/**
+	* GENERATE_DEFAULT_FROM_ORIGINAL_REAL
+	* @return 
+	*/
+	public function generate_default_from_original_real($overwrite=true) {
+		
+		# common data
+		$image_id 			 = $this->get_image_id();
+		$aditional_path 	 = $this->get_aditional_path();
+		$initial_media_path  = $this->get_initial_media_path();
+
+		# source data (default quality is source)
+		$source_ImageObj	 = new ImageObj($image_id, DEDALO_IMAGE_QUALITY_ORIGINAL, $aditional_path, $initial_media_path);
+		$original_image_path = $source_ImageObj->get_local_full_path();
+
+		$path = pathinfo($original_image_path);
+
+		$original_image_extension = $this->get_original( DEDALO_IMAGE_QUALITY_ORIGINAL, $exclude_converted=true );
+		$original_image_path_real = $path['dirname'] . '/' .  $path['filename'] . '.' . $original_image_extension;
+			#dump($original_image_path, ' $original_image_path ++ '.to_string(DEDALO_IMAGE_QUALITY_ORIGINAL));
+
+		if (!file_exists($original_image_path_real)) {			
+			return false;
+		}
+
+		# target data (target quality is thumb)
+		$ImageObj			 = new ImageObj($image_id, DEDALO_IMAGE_QUALITY_DEFAULT, $aditional_path, $initial_media_path);
+		$image_default_path  = $ImageObj->get_local_full_path();
+
+		if ($overwrite===true ) { //|| !file_exists($image_default_path)
+			#$this->convert_quality( DEDALO_IMAGE_QUALITY_ORIGINAL, DEDALO_IMAGE_QUALITY_DEFAULT );	
+			Imagemagick::convert($original_image_path_real, $original_image_path);
+			Imagemagick::convert($original_image_path, $image_default_path);
+		}
+
+		return true;
+	}//end generate_default_from_original_real
 
 
 
@@ -615,7 +654,7 @@ class component_image extends component_common {
 		$default_image_path  = $source_ImageObj->get_local_full_path();
 
 		if (!file_exists($default_image_path)) {
-			if(SHOW_DEBUG) {				
+			if(SHOW_DEBUG===true) {				
 				debug_log(__METHOD__." Default image quality don't exists. Skip create thumb. ".to_string(), logger::DEBUG);
 			}
 			return false;
@@ -813,9 +852,9 @@ class component_image extends component_common {
 		#dump($ar_originals, ' target_dir ++ '.to_string($target_dir));
 		
 		$n = count($ar_originals);
-		if ($n==0) {
+		if ($n===0) {
 			$result = false;
-		}elseif($n==1) {
+		}elseif($n===1) {
 			#$path = $_FILES['image']['name'];
 			$ext = pathinfo($ar_originals[0], PATHINFO_EXTENSION);
 			$result = $ext;
@@ -858,7 +897,7 @@ class component_image extends component_common {
 		foreach ($ar_quality as $current_quality) {
 			# media_path is full path of file like '/www/dedalo/media_test/media_development/image/thumb/rsc29_rsc170_77.jpg'
 			$media_path = $this->get_image_path($current_quality);
-			if(SHOW_DEBUG) {
+			if(SHOW_DEBUG===true) {
 				#dump($media_path, "DEBUG INFO ".__METHOD__.' media_path $current_quality:'.$current_quality." - ".$this->get_target_dir() );
 			}
 			if (!file_exists($media_path)) continue; # Skip 
@@ -884,7 +923,8 @@ class component_image extends component_common {
 			$original_extension = $this->get_original( $current_quality );
 			$path_parts 		= pathinfo($media_path);
 			$original_file  	= $path_parts['dirname'].'/'.$path_parts['filename'].'.'.$original_extension;
-			$original_file_moved= $path_parts['dirname'].'/'.$path_parts['filename'].'_deleted_'.$date.'.'.$original_extension;
+			#$original_file_moved= $path_parts['dirname'].'/'.$path_parts['filename'].'_deleted_'.$date.'.'.$original_extension;
+			$original_file_moved= $folder_path_del.'/'.$path_parts['filename'].'_deleted_'.$date.'.'.$original_extension;
 			if (file_exists($original_file)) {				
 				if( !rename($original_file, $original_file_moved) ) {
 					#throw new Exception(" Error on move files to folder \"deleted\" . Permission denied . The files are not deleted");
@@ -918,15 +958,15 @@ class component_image extends component_common {
 		foreach ($ar_quality as $current_quality) {
 
 			# media_path
-			$media_path = $this->get_image_path($current_quality);
-			$media_path = pathinfo($media_path,PATHINFO_DIRNAME).'/deleted';
-			$image_id 	= $this->get_image_id();
-			if(SHOW_DEBUG) {
-				#dump($media_path, "media_path current_quality:$current_quality - get_image_id:$image_id");
+			$media_path 	 = $this->get_image_path($current_quality);
+			$folder_path_del = pathinfo($media_path,PATHINFO_DIRNAME).'/deleted';
+			$image_id 		 = $this->get_image_id();
+			if(SHOW_DEBUG===true) {
+				#dump($folder_path_del, "folder_path_del current_quality:$current_quality - get_image_id:$image_id");
 			}
-			$file_pattern 	= $media_path.'/'.$image_id.'_*.'.DEDALO_IMAGE_EXTENSION;
+			$file_pattern 	= $folder_path_del .'/'.$image_id.'_*.'.DEDALO_IMAGE_EXTENSION;
 			$ar_files 		= glob($file_pattern);
-			if(SHOW_DEBUG) {
+			if(SHOW_DEBUG===true) {
 				#dump($ar_files, ' ar_files');#continue;
 			}
 			if (empty($ar_files)) {
@@ -937,6 +977,23 @@ class component_image extends component_common {
 			$last_file_path = end($ar_files);
 			$new_file_path 	= $this->get_image_path($current_quality);		
 			if( !rename($last_file_path, $new_file_path) ) throw new Exception(" Error on move files to restore folder. Permission denied . Nothing was restored (2)");
+
+
+			/* POR ACABAR
+			// Move original files too (PNG,TIF,Etc.)
+			// NOTE : 'original files' are NOT 'original quality'. Are uploaded files with extension different to DEDALO_IMAGE_EXTENSION 
+			$original_extension = $this->get_original( $current_quality );
+			$path_parts 		= pathinfo($media_path);
+			$original_file  	= $path_parts['dirname'].'/'.$path_parts['filename'].'.'.$original_extension;
+			#$original_file_moved= $path_parts['dirname'].'/'.$path_parts['filename'].'_deleted_'.$date.'.'.$original_extension;
+			$original_file_moved= $folder_path_del.'/'.$path_parts['filename'].'_deleted_'.$date.'.'.$original_extension;
+			if (file_exists($original_file)) {				
+				if( !rename($original_file, $original_file_moved) ) {
+					#throw new Exception(" Error on move files to folder \"deleted\" . Permission denied . The files are not deleted");
+					trigger_error(" Error on move files to folder \"deleted\" [2]. Permission denied . The files are not deleted");
+				}
+			}
+			*/
 							
 			debug_log(__METHOD__." Successful Moved file \n$last_file_path to \n$new_file_path ".to_string(), logger::DEBUG);			
 			
@@ -952,7 +1009,7 @@ class component_image extends component_common {
 	* IMAGE_VALUE_IN_TIME_MACHINE
 	* @param string $image_value . Is valor_list of current image. We need replace path to enable view deleted image
 	* @return 
-	*/
+	*//*
 	public static function image_value_in_time_machine( $image_value ) {
 		
 		# Example of url: /dedalo4/media_test/media_development/image/thumb/rsc29_rsc170_33.jpg
@@ -977,6 +1034,7 @@ class component_image extends component_common {
 		
 		return (string)$final_image_value;
 	}#end image_value_in_time_machine
+	*/
 
 
 
@@ -984,12 +1042,17 @@ class component_image extends component_common {
 	* GET_DELETED_IMAGE
 	* @return string $last_file_path
 	*/
-	public static function get_deleted_image( $quality, $image_id ) {
+	public function get_deleted_image( $quality ) {
 
-		$media_path 	= DEDALO_MEDIA_BASE_PATH . DEDALO_IMAGE_FOLDER .'/'.$quality.'/deleted';
-		$file_pattern 	= $media_path.'/'.$image_id.'_*.'.DEDALO_IMAGE_EXTENSION;
+		# media_path
+		$media_path 	 = $this->get_image_path($quality);
+		$folder_path_del = pathinfo($media_path,PATHINFO_DIRNAME).'/deleted'; 
+		$image_id 		 = $this->get_image_id();
+
+		#$media_path 	= DEDALO_MEDIA_BASE_PATH . DEDALO_IMAGE_FOLDER .'/'.$quality.'/deleted';
+		$file_pattern 	= $folder_path_del.'/'.$image_id.'_*.'.DEDALO_IMAGE_EXTENSION;
 		$ar_files 		= glob($file_pattern);
-		if(SHOW_DEBUG) {
+		if(SHOW_DEBUG===true) {
 			#dump($ar_files, ' ar_files');#continue;
 		}
 		if (empty($ar_files)) {			
@@ -1021,9 +1084,10 @@ class component_image extends component_common {
 	*
 	* In time machine mode (list_tm) image is always calculated
 	*/
-	public static function render_list_value($value, $tipo, $parent, $modo, $lang, $section_tipo, $section_id) {
-		
-		if ( (empty($value) && $modo=='portal_list') || $modo=='list_tm' || $modo==='portal_list_view_mosaic') {
+	public static function render_list_value($value, $tipo, $parent, $modo, $lang, $section_tipo, $section_id, $current_locator=null, $caller_component_tipo=null) {
+	
+		if ( (empty($value) && $modo==='portal_list') || $modo==='list_tm' || $modo==='portal_list_view_mosaic' || $modo==='edit' || $modo==='edit_in_list') {
+			
 			$component	= component_common::get_instance(__CLASS__,
 														 $tipo,
 														 $parent,
@@ -1035,6 +1099,25 @@ class component_image extends component_common {
 
 		return $value;
 	}#end render_list_value
+
+
+
+	/**
+	* GET_DIFFUSION_VALUE
+	* Overwrite component common method
+	* Calculate current component diffusion value for target field (usually a mysql field)
+	* Used for diffusion_mysql to unify components diffusion value call
+	* @return string $diffusion_value
+	*
+	* @see class.diffusion_mysql.php
+	*/
+	public function get_diffusion_value( $lang=null ) {
+		
+		$diffusion_value = $this->get_image_url(DEDALO_IMAGE_QUALITY_DEFAULT);
+
+
+		return (string)$diffusion_value;
+	}//end get_diffusion_value
 		
 
 
@@ -1050,7 +1133,7 @@ class component_image extends component_common {
 			
 			# result devuelve el id de la sección parent creada o editada
 			$result = $this->Save();
-			if(SHOW_DEBUG) {
+			if(SHOW_DEBUG===true) {
 				#$total=round(microtime(true)-$start_time,3);
 				#error_log("Updated ".RecordObj_dd::get_termino_by_tipo($this->tipo)." locator (to ".$locator->get_flat().") of current ".get_called_class()." (tipo:$this->tipo - section_tipo:$this->section_tipo - parent:$this->parent - lang:$this->lang) $total ms");
 			}					

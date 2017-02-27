@@ -31,7 +31,7 @@ abstract class filter {
 		# Verify minimun valid options acepted
 		if(!is_object($filter_options)) {
 			trigger_error("ilegal filter_options type");
-			if(SHOW_DEBUG) {
+			if(SHOW_DEBUG===true) {
 				dump($filter_options,"filter_options");			
 			}			
 			return null;
@@ -58,7 +58,7 @@ abstract class filter {
 		
 		$is_global_admin = (bool)component_security_administrator::is_global_admin(navigator::get_user_id());
 		if ($is_global_admin===true) {
-			$sql_filter .= '';
+			$sql_filter .= '';		
 		}else{
 			if (empty($options->projects)) {				
 				debug_log(__METHOD__. "<div class=\"warning\">Warning: User without projects!!</div>", logger::WARNING);
@@ -66,12 +66,12 @@ abstract class filter {
 
 			switch (true) {
 				##### PROFILES ########################################################
-				case ($options->section_tipo===DEDALO_SECTION_PROFILES_TIPO) :	
+				case ($options->section_tipo===DEDALO_SECTION_PROFILES_TIPO) :
 					$sql_filter .= "\n-- filter_profiles (no filter is used) -- \n";
 					break;
 
 				##### PROJECTS ########################################################
-				case ($options->section_tipo===DEDALO_SECTION_PROJECTS_TIPO) :							
+				case ($options->section_tipo===DEDALO_SECTION_PROJECTS_TIPO) :
 					$sql_filter .= "\n-- filter_user_created -- \n";
 					$sql_filter .= 'AND (';
 					$sql_filter .= "\n a.$options->json_field @>'{\"created_by_userID\":".navigator::get_user_id()."}'::jsonb \n";
@@ -89,7 +89,7 @@ abstract class filter {
 					break;
 				
 				##### USERS ########################################################
-				case ($options->section_tipo===DEDALO_SECTION_USERS_TIPO) :					
+				case ($options->section_tipo===DEDALO_SECTION_USERS_TIPO) :
 
 					# AREAS FILTER
 					$user_id = navigator::get_user_id();
@@ -102,6 +102,7 @@ abstract class filter {
 					#
 					# USER PROFILE
 					# Calculate current user profile id
+					/*
 					$component_profile = component_common::get_instance('component_profile',
 																	  	DEDALO_USER_PROFILE_TIPO,
 																	  	$user_id,
@@ -109,6 +110,8 @@ abstract class filter {
 																	  	DEDALO_DATA_NOLAN,
 																	  	DEDALO_SECTION_USERS_TIPO);
 					$profile_id = (int)$component_profile->get_dato();
+					*/
+					$profile_id = component_profile::get_profile_from_user_id( $user_id );
 
 
 					# Current user profile authorized areas
@@ -125,7 +128,7 @@ abstract class filter {
 					$ar_area_tipo = array();
 					foreach ($security_areas_dato as $area_tipo => $value) {
 						#if( strpos($area_tipo,'-admin') !== false && $value==2)  $ar_area_tipo[] = substr($area_tipo, 0,strpos($area_tipo,'-admin'));
-						if ($value==3) {
+						if ( (int)$value===3 ) {
 							$ar_area_tipo[] = $area_tipo;
 						}
 					}
@@ -178,17 +181,18 @@ abstract class filter {
 					break;
 				
 				##### DEFAULT ########################################################
-				default:					
-					$sql_filter .= "\n-- filter_by_projects -- \n";
+				default:
+					$sql_filter .= "\n-- filter_by_projects --\n";
 					$sql_filter .= 'AND ';
 					# SECTION FILTER TIPO : Actual component_filter de esta sección
-					$ar_component_filter 	= section::get_ar_children_tipo_by_modelo_name_in_section($options->section_tipo, 'component_filter', true, false);	//$section_tipo, $ar_modelo_name_required, $from_cache=true, $resolve_virtual=false
+					// params: $section_tipo, $ar_modelo_name_required, $from_cache=true, $resolve_virtual=false, $recursive=true, $search_exact=false
+					$ar_component_filter 	= section::get_ar_children_tipo_by_modelo_name_in_section($options->section_tipo, array('component_filter'), true, false, true, false);
 					if (empty($ar_component_filter[0])) {
-						if(SHOW_DEBUG) {
+						if(SHOW_DEBUG===true) {
 							$section_name = RecordObj_dd::get_termino_by_tipo($options->section_tipo);
-							throw new Exception("Error Processing Request. Filter not found is this section ($options->section_tipo) $section_name", 1);	;
+							throw new Exception("Error Processing Request. Filter not found is this section ($options->section_tipo) $section_name", 1);
 						}
-						throw new Exception("Error Processing Request. Dédalo is not properly configured [$options->section_tipo]. Please contact with your admin ASAP", 1);																										
+						throw new Exception("Error Processing Request. Dédalo is not properly configured [$options->section_tipo]. Please contact with your admin ASAP", 1);
 					}else{
 						$component_filter_tipo = $ar_component_filter[0];
 					}
@@ -197,8 +201,8 @@ abstract class filter {
 					if (empty($ar_id_project)) {
 						$sql_filter .= "\n a.$options->json_field#>'{components, $component_filter_tipo, dato, ". DEDALO_DATA_NOLAN ."}'->>'' = 'VALOR_IMPOSIBLE (User without projects)' ";
 					}else{
-						$sql_filter .= '(';						
-						$ar_values_string='';		
+						$sql_filter .= '(';
+						$ar_values_string='';
 						foreach ($ar_id_project as $id_matrix_project){
 							$ar_values_string .= "'{$id_matrix_project}'";
 							if ($id_matrix_project != end($ar_id_project)) $ar_values_string .= ',';
@@ -212,7 +216,6 @@ abstract class filter {
 		}
 
 		return $sql_filter;
-
 	}#end get_sql_filter
 
 
@@ -264,9 +267,9 @@ abstract class filter {
 		#
 		# DEDALO SUPERUSER EDIT CASE
 		# Avoid show DEDALO_SUPERUSER to edit
-			if($section_id==DEDALO_SUPERUSER && $matrix_table=='matrix_users') {		
+			if($section_id==DEDALO_SUPERUSER && $matrix_table==='matrix_users') {		
 				$msg="Error Processing Request.";
-				if(SHOW_DEBUG) $msg .= "<hr>Current user is not editable : $matrix_table";
+				if(SHOW_DEBUG===true) $msg .= "<hr>Current user is not editable : $matrix_table";
 				throw new Exception($msg, 1);
 			}
 		
@@ -289,7 +292,7 @@ abstract class filter {
 			$options->search_options_session_key = 'filter_is_authorized_record_'.$section_tipo.'_'.$section_id;
 
 		$rows_data = search::get_records_data($options);
-		if (count($rows_data->result)==1) {
+		if (count($rows_data->result)===1) {
 			return true;
 		}
 
@@ -321,6 +324,32 @@ abstract class filter {
 	}
 
 
+
+	/**
+	* GET_FILTER_USER_RECORDS_BY_ID
+	* Filter user access to section records by section_id 
+	* In process.... (need specific component for manage)
+	* @return string $sql_filtro
+	*/
+	public static function get_filter_user_records_by_id( $user_id ) {
+		
+		$filter_user_records_by_id = array();
+
+		if (defined('DEDALO_FILTER_USER_RECORDS_BY_ID') && DEDALO_FILTER_USER_RECORDS_BY_ID===true) {
+			
+			$modelo_name 	= 'component_filter_records';
+			$tipo 			= DEDALO_USER_COMPONENT_FILTER_RECORDS_TIPO;
+			$component 		= component_common::get_instance($modelo_name,
+															 $tipo,
+															 $user_id,
+															 'list',
+															 DEDALO_DATA_NOLAN,
+															 DEDALO_SECTION_USERS_TIPO);
+			$filter_user_records_by_id = $component->get_dato();
+		}
+
+		return (array)$filter_user_records_by_id;
+	}//end get_filter_user_records_by_id
 
 
 

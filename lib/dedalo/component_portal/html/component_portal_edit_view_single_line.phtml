@@ -1,12 +1,12 @@
 <?php
 
-	# VISUALIZADOR HTML	
-
+	# VISUALIZADOR HTML
 	
 	
-	print "\n<!-- PORTAL [tipo:$tipo section_id:$parent] $label -->";
+	# html_delimiter
+	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'in');
 	
-	print "\n <div class=\"wrap_component css_wrap_portal wrap_component_{$modo} wrap_component_{$edit_view} wrap_component_{$tipo}\" id=\"{$id_wrapper}\"
+	print " <div class=\"wrap_component css_wrap_portal wrap_component_{$modo} wrap_component_{$edit_view} wrap_component_{$tipo}\" id=\"{$id_wrapper}\"
 	data-tipo=\"{$tipo}\"
 	data-lang=\"{$lang}\"
 	data-section_tipo=\"{$section_tipo}\"
@@ -35,7 +35,7 @@
 
 						#
 						# HEADER ROW HTML
-							#$html_contenido .= "\n<div class=\"portal_header_row \">";
+							#$html_contenido .= "<div class=\"portal_header_row \">";
 						
 							#
 							# BUTTONS
@@ -55,14 +55,16 @@
 										}
 
 										
-										$button_new = "\n<div class=\"css_button_generic btn_new_ep\" onclick=\"component_portal.new_portal_record(this)\"
+										$button_new = "<div class=\"css_button_generic btn_new_ep\" onclick=\"component_portal.new_portal_record(this)\"
 										data-portal_tipo=\"{$this->tipo}\" 
 										data-portal_parent=\"{$this->parent}\"
 										data-portal_section_tipo=\"{$this->section_tipo}\"
 										data-target_section_tipo=\"{$current_target_section_tipo}\"
 										title=\"parent:$parent - tipo:$tipo\" >";
 										$button_new .= "<div class=\"icon_bs link new_portal_record\"></div> ";
+										$button_new .= "<span>";
 										$button_new .= ''. RecordObj_dd::get_termino_by_tipo($current_target_section_tipo);	//.': '.label::get_label('nuevo');#. " $label" ;
+										$button_new .= "</span>";
 										$button_new .= "</div>";
 										
 										if (SHOW_DEBUG) {
@@ -80,7 +82,7 @@
 									
 									foreach ($ar_target_section_tipo as $current_target_section_tipo) {	
 
-										$button_select = "\n<div class=\"css_button_generic btn_new_ep\" onclick=\"tool_common.open_tool_portal(this)\"
+										$button_select = "<div class=\"css_button_generic btn_new_ep\" onclick=\"tool_common.open_tool_portal(this)\"
 										data-tipo=\"{$tipo}\"
 										data-top_tipo=\"".TOP_TIPO."\"
 										data-parent=\"{$parent}\"
@@ -88,11 +90,13 @@
 										data-target_section_tipo=\"{$current_target_section_tipo}\"
 										title=\"parent:$parent - tipo:$tipo\" >";
 										$button_select .= "<div class=\"icon_bs link find_portal_record\"></div> ";
+										$button_select .= "<span>";
 										$button_select .= ''. RecordObj_dd::get_termino_by_tipo($current_target_section_tipo);	//.': '.label::get_label('existente');
 
-										if(SHOW_DEBUG) {
+										if(SHOW_DEBUG===true) {
 											#$button_select .= ' '.TOP_TIPO.'.'.$current_target_section_tipo.'.'.$this->tipo;
 										}
+										$button_select .= "</span>";
 										$button_select .= "</div>";
 
 										if (SHOW_DEBUG) {
@@ -107,10 +111,10 @@
 								# BUTTON SELECT EXISTING RECORD HTML (BUTTON TOOL_PORTAL)
 								if($modo!='print') {
 
-									$button_toggle_view = "\n<div class=\"btn_view_toogle btn_view_single\" onclick=\"component_portal.toggle_views(this)\"
+									$button_toggle_view = "<div class=\"btn_view_toogle btn_view_single\" onclick=\"component_portal.toggle_views(this)\"
 									data-view=\"single_line\" >";
 
-									if(SHOW_DEBUG) {
+									if(SHOW_DEBUG===true) {
 										#$button_toggle_view .= ' '.TOP_TIPO.'.'.$current_target_section_tipo.'.'.$this->tipo;
 									}
 									$button_toggle_view .= "</div>";
@@ -170,7 +174,7 @@
 						
 						#
 						# ROWS (TD)
-						$table .= "<tbody>";						
+						$table .= "<tbody class=\"tbody\">";						
 						
 						$row_number=0; foreach((array)$dato as $key => $current_locator) {
 
@@ -198,7 +202,7 @@
 							# ROW
 								/*						
 								if (empty($current_row['id'])) {
-									if(SHOW_DEBUG) {
+									if(SHOW_DEBUG===true) {
 										#dump("Se ha recibido un row de id null en component portal edit. Se ha omitido pero algo va mal, probablemente haya un proyecto de parent 0 creado por error o se ha borrado un registro al cual el portal hace referencia","DEBUG INFO");										
 									}									
 									#continue;
@@ -218,7 +222,7 @@
 							#
 							# COLUMNS
 								$sort_id = !empty($rel_locator) ? $rel_locator : 0;
-								$table .= "<tr class=\"tr_sortable\" data-dato='$sort_id'>";															
+								$table .= "<tr class=\"portal_element_sortable\" data-dato='$sort_id'>";															
 								foreach ($ar_columns as $column_tipo => $column_label) {									
 	
 									#
@@ -256,7 +260,7 @@
 												$title .= ' - '.$current_component_tipo.' - '.$current_tag_id;
 											}
 
-											if(SHOW_DEBUG) $title .= "\n url:$url \n modo $modo, context $context->context_name";
+											if(SHOW_DEBUG===true) $title .= " url:$url  modo $modo, context $context->context_name";
 											if (empty($current_row['id'])) {
 												$table .= "<div class='div_image_link link' title=\"$title\" onclick=\"alert('Deleted record')\"> ! </div>";
 											}else{
@@ -340,17 +344,20 @@
 																						 DEDALO_DATA_LANG, // current data lang
 																						 $target_section_tipo, // current section tipo
 																						 $section_id, // Current portal parent
-																						 $current_locator // Used by text_area to select fragment
+																						 $current_locator, // Used by text_area to select fragment
+																						 $tipo
 																						);
 										
 										#
 										# TD COLUMN
 										$table .= "<td class=\"$td_css_selector\">";
+										$table .= "<div>";
 										if (is_string($value)) {
 											$table .= $value;
 										}else{
 											$table .= to_string($value);
-										}										
+										}
+										$table .= "</div>";									
 										$table .= "</td>";
 
 									}//end if ($modelo_name=='component_portal')
@@ -367,7 +374,7 @@
 												data-rel_locator='{$rel_locator}'
 												data-permission_section=\"{$permission_section}\"
 												title=\"$title\">";
-												if(SHOW_DEBUG) {
+												if(SHOW_DEBUG===true) {
 													/*
 													$table .= "<mark class=\"debug_info\">";
 													$table .= $target_section_tipo;
@@ -382,7 +389,7 @@
 											$table .= "</td>";
 										}
 									/*
-									if(SHOW_DEBUG) {
+									if(SHOW_DEBUG===true) {
 										$table .= " <br><mark class=\"row_debug_info\">";
 										$table .= "$target_section_tipo $current_section_id";
 										if ($current_tag_id) {
@@ -402,7 +409,7 @@
 						/*
 						if (empty($rows_data->result) && !empty($dato)) {
 							$table .= "<tr><td colspan=\"".count($ar_columns)."\">";
-							if(SHOW_DEBUG) {
+							if(SHOW_DEBUG===true) {
 								$table .= "<div class=\"warning\">DEBUG INFO: I can't resolve this locator: <blockquote> ".to_string($dato,true)."</blockquote></div>";
 							}else{
 								$table .= " ";
@@ -475,12 +482,13 @@
 			#echo "<div> Time To Generate section list: HTML: ".round(microtime(1)-$start_time,3)."</div>";
 				
 			$html_contenido .= $html_info;
-		}#end if(SHOW_DEBUG)
+		}#end if(SHOW_DEBUG===true)
 		
 		print $html_contenido;
 	
 	
-	print "\n</div><!-- /css_wrap_portal [tipo:$tipo section_id_matrix:$parent] $label -->\n"; //wrap
+	print "</div>"; //wrap
 
-
+	# html_delimiter
+	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'out');
 ?>

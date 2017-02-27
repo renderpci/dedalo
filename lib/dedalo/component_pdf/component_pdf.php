@@ -21,7 +21,8 @@
 	$identificador_unico	= $this->get_identificador_unico();
 	$component_name			= get_class($this);
 
-
+	if($permissions===0) return null;
+	
 	# Verify component content record is inside section record filter
 	if ($this->get_filter_authorized_record()===false) return NULL ;
 
@@ -75,7 +76,6 @@
 				$file_name = 'list';									
 
 		case 'list':
-				#common::notify_load_lib_element_tipo('dd1018', 'component_pdf', $modo);
 
 				# FILE. Test if pdf file exists
 				$file_exists	= $this->get_file_exists();		

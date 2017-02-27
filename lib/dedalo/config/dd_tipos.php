@@ -24,6 +24,7 @@ define('DEDALO_COMPONENT_SECURITY_AREAS_USER_TIPO'		, 'dd240'); # AREAS USUARIO
 define('DEDALO_COMPONENT_SECURITY_ACCESS_USER_TIPO'		, 'dd148'); # ACCES USUARIO
 define('DEDALO_COMPONENT_SECURITY_TOOLS_USER_TIPO'		, 'dd784'); # TOOLS USUARIO model component_security_tools
 define('DEDALO_FILTER_MASTER_TIPO'						, 'dd170'); # USER COMPONENT_FILTER_MASTER
+define('DEDALO_USER_COMPONENT_FILTER_RECORDS_TIPO'		, 'dd478');
 
 # Profiles
 define('DEDALO_SECTION_PROFILES_TIPO'					, 'dd234');
@@ -69,7 +70,11 @@ define('DEDALO_TOOL_INVESTIGATION_COMPONENT_TIPO'		, 'dd127');
 # Video components resources
 define('DEDALO_SECTION_RESOURCES_AV_TIPO'				, 'rsc167');
 define('DEDALO_COMPONENT_RESOURCES_AV_TIPO'				, 'rsc35');
-define('DEDALO_COMPONENT_RESOURCES_MINUTES_TIPO'		, 'rsc54');
+define('DEDALO_COMPONENT_RESOURCES_AV_DURATION_TIPO'	, 'rsc54');
+
+# Hierarchy types
+define('DEDALO_HIERARCHY_TYPES_SECTION_TIPO'			, 'hierarchy13');
+define('DEDALO_HIERARCHY_TYPES_NAME_TIPO'				, 'hierarchy16');
 
 # Hierarchy
 define('DEDALO_HIERARCHY_SECTION_TIPO'					, 'hierarchy1');
@@ -78,29 +83,54 @@ define('DEDALO_HIERARCHY_LANG_TIPO'						, 'hierarchy8');
 define('DEDALO_HIERARCHY_TIPOLOGY_TIPO'					, 'hierarchy9');
 define('DEDALO_HIERARCHY_TLD2_TIPO'						, 'hierarchy6');
 define('DEDALO_HIERARCHY_TERM_TIPO'						, 'hierarchy5');
+define('DEDALO_HIERARCHY_TARGET_SECTION_TIPO'			, 'hierarchy53');
+define('DEDALO_HIERARCHY_TARGET_SECTION_MODEL_TIPO'		, 'hierarchy58');
 define('DEDALO_HIERARCHY_CHIDRENS_TIPO'					, 'hierarchy45');
+define('DEDALO_HIERARCHY_CHIDRENS_MODEL_TIPO'			, 'hierarchy59');
 define('DEDALO_HIERARCHY_ORDER_TIPO'					, 'hierarchy48');
+define('DEDALO_HIERARCHY_FILTER_TIPO'					, 'hierarchy54');
 
 # Thesaurus real section
 define('DEDALO_THESAURUS_SECTION_TIPO'					, 'hierarchy20');
 define('DEDALO_THESAURUS_TERM_TIPO'						, 'hierarchy25');
-define('DEDALO_THESAURUS_CHIDRENS_TIPO'					, 'hierarchy49');
+define('DEDALO_THESAURUS_CODE_TIPO'						, 'hierarchy41');
+define('DEDALO_THESAURUS_GEOLOCATION_TIPO'				, 'hierarchy31');
+define('DEDALO_THESAURUS_RELATION_PARENT_TIPO'			, 'hierarchy36');
+define('DEDALO_THESAURUS_RELATION_MODEL_TIPO'			, 'hierarchy27');
+define('DEDALO_THESAURUS_RELATION_CHIDRENS_TIPO'		, 'hierarchy49');
+define('DEDALO_THESAURUS_VIRTUALS_AREA_TIPO'			, 'hierarchy56');
+define('DEDALO_THESAURUS_VIRTUALS_MODELS_AREA_TIPO'		, 'hierarchy57');
+define('DEDALO_THESAURUS_GEONAMES_ID_TIPO'				, 'hierarchy63');
+define('DEDALO_THESAURUS_ORDER_TIPO'					, 'hierarchy42');
+define('DEDALO_THESAURUS_FILTER_TIPO'					, 'hierarchy55');
 
 
 # Relation types
 define('DEDALO_RELATION_TYPE_PARENT_TIPO'				, 'dd47');
 define('DEDALO_RELATION_TYPE_CHILDREN_TIPO'				, 'dd48');
-define('DEDALO_RELATION_TYPE_RELATED_TIPO'				, 'dd89');
 define('DEDALO_RELATION_TYPE_INDEX_TIPO'				, 'dd96');
 define('DEDALO_RELATION_TYPE_MODEL_TIPO'				, 'dd98');
+define('DEDALO_RELATION_TYPE_RELATED_TIPO'				, 'dd89');
+	# Relation related types
+	define('DEDALO_RELATION_TYPE_RELATED_BIDIRECTIONAL_TIPO', 'dd467');
+#define('DEDALO_RELATION_TYPE_RECORD_TIPO'				, 'ddXXX'); // working here
+
+# Notes
+define('DEDALO_NOTES_SECTION_TIPO'						, 'rsc326');
+define('DEDALO_NOTES_TEXT_TIPO'							, 'rsc329');
+
 
 define('DEDALO_TEXTAREA_FIX_BROQUEN_TAGS_TIPOS'			, serialize( array('rsc36')) );
+
+# LANGS
+define('DEDALO_LANGS_SECTION_TIPO'						, 'lg1');
 
 
 
 if (!defined('DEDALO_PROTOCOL')) {
 	define('DEDALO_PROTOCOL', 'http://');
 }
+
 
 
 # TOP_TIPO

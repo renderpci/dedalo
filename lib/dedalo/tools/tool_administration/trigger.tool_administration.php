@@ -1,10 +1,14 @@
 <?php
+// JSON DOCUMENT
+header('Content-Type: application/json');
+
+$session_duration_hours = 72;
 require_once( dirname(dirname(dirname(__FILE__))) .'/config/config4.php');
+
 
 # lessc load by composer
 #require_once DEDALO_ROOT . '/autoload.php';
 #use \leafo\lessc;
-
 
 
 if(login::is_logged()!==true) die("<span class='error'> Auth error: please login </span>");
@@ -20,7 +24,8 @@ if(login::is_logged()!==true) die("<span class='error'> Auth error: please login
 
 # CALL FUNCTION
 if ( function_exists($mode) ) {
-	call_user_func($mode);
+	$result = call_user_func($mode);
+	echo (string)json_encode($result);
 }
 
 
@@ -33,7 +38,7 @@ function make_backup() {
 
 	$result = tool_administration::make_backup();
 
-	echo (string)json_encode($result);
+	return $result;
 }//end make_backup
 
 
@@ -48,7 +53,7 @@ function force_unlock_all_components() {
 
 	$result = lock_components::force_unlock_all_components();
 
-	echo (string)json_encode($result);
+	return $result;
 }//end force_unlock_all_components
 
 
@@ -63,7 +68,7 @@ function get_active_users() {
 
 	$result = lock_components::get_active_users();
 
-	echo (string)json_encode($result);
+	return  $result;
 }//end get_active_users
 
 
@@ -76,7 +81,7 @@ function build_structure_css() {
 
 	$result = css::build_structure_css();
 
-	echo (string)json_encode($result);
+	return $result;
 }//end build_structure_css
 
 
@@ -114,7 +119,7 @@ function update_structure() {
 
 	session_write_close();
 	
-	echo (string)json_encode($response);
+	return $response;
 }//end update_structure
 
 
@@ -140,19 +145,19 @@ function delete_component_tipo_in_matrix_table() {
 
 	if(empty($component_tipo)){
 		$response->msg .= "<span class='error'> Error: '".label::get_label('component_tipo')."' is mandatory</span>";
-		exit(json_encode($response));
+		return $response;
 	}else if(empty($section_tipo)){
 		$response->msg .= "<span class='error'> Error: '".label::get_label('section_tipo')."' is mandatory</span>";
-		exit(json_encode($response));
+		return $response;
 	}
 	if(!empty($language) && (empty($component_tipo) || empty($section_tipo)) ){
 		$response->msg .= "<span class='error'> Error: Need component_tipo and section_tipo for delete Language</span>";
-		exit(json_encode($response));
+		return $response;
 	}
 
-	$result = tool_administration::delete_component_tipo_in_matrix_table($section_tipo,$component_tipo,$language,$save);
+	$response = (object)tool_administration::delete_component_tipo_in_matrix_table($section_tipo,$component_tipo,$language,$save);
 
-	echo (string)json_encode($result);
+	return $response;
 }//end build_structure_css
 
 
@@ -162,19 +167,17 @@ function delete_component_tipo_in_matrix_table() {
 * Update the version, components, SQL, etc, the script look the updates.php file and apply to the current installation data
 */
 function update_version() {
+	
+	set_time_limit (0); // Set time limit unlimited
 
-	// Set time limit unlimited
-	set_time_limit (0);
+	ini_set('memory_limit', -1); // unlimited memory
 
-	$response = new stdClass();
-		$response->result = false;
-		$response->msg 	  = '';
+	// Free browser session
+	// session_write_close();
 
-	$result = tool_administration::update_version();
+	$response = (object)tool_administration::update_version();	
 
-	session_write_close();
-
-	echo (string)json_encode($result);
+	return $response;
 }//end update_version
 
 
@@ -188,11 +191,15 @@ function skip_publication_state_check() {
 	$vars = array('value');
 		foreach($vars as $name) $$name = common::setVar($name);
 
-		$value = json_decode($value);
+	$value = json_decode($value);
 
-	$result = tool_administration::skip_publication_state_check($value);
+	tool_administration::skip_publication_state_check($value);
+
+	$response = new stdClass();
+		$response->result 	= true;
+		$response->msg 		= 'Set skip_publication_state_check successfully: '.to_string($value);
 	
-	echo (string)json_encode($result);
+	return $response;
 }//end skip_publication_state_check
 
 
@@ -209,8 +216,106 @@ function remove_av_temporals() {
 		$response->result = !empty($result) ? true : false;
 		$response->msg 	  = !empty($result) ? "Removed files: <br>".implode('<br>', (array)$result) : "No files found";
 	
-	echo (string)json_encode($response);
+	return $response;
 }//end remove_av_temporals
+
+
+
+/**
+* MOVE_COMPONENT_DATA
+*/
+function move_component_data() {
+
+	# set vars
+	$vars = array('source_section_tipo','source_section_id','source_delete','source_portal_tipo','target_section_tipo','target_section_id','map_components');
+		foreach($vars as $name) $$name = common::setVar($name);
+
+	if (!empty($source_section_id)) {
+		if ($ar_source = json_decode($source_section_id)) {
+			$source_section_id = (array)$ar_source;
+		}else{
+			$source_section_id = (array)$source_section_id;
+		}
+	}	
+
+	$options = new stdClass();
+		# Source options
+		$options->source_section_tipo 	= $source_section_tipo;
+		$options->source_section_id 	= $source_section_id; // array or null for all records
+		$options->source_delete 		= json_decode($source_delete); // bool
+		$options->source_portal_tipo 	= $source_portal_tipo;	// portal tipo where hook the target section
+		# Target options
+		$options->target_section_tipo 	= $target_section_tipo;
+		$options->target_section_id 	= $target_section_id; // array or null for all records			
+		# Others
+		$options->map_components 		= json_decode($map_components); // key is source component tipo. value is target component tipo
+
+		#debug_log(__METHOD__." [trigger_tool_administration] Options ".to_string($options), logger::DEBUG);
+
+	$response = (object)tool_administration::move_component_data($options);	
+	
+	return $response;
+}//end move_component_data
+
+
+
+/**
+* REMOVE_INVERSE_LOCATORS_IN_SECTION
+* @return json string
+*/
+function remove_inverse_locators_in_section() {
+
+	session_write_close();
+
+	$response = new stdClass();
+		$response->result 	= false;
+		$response->msg 		= '';
+	
+	# set vars
+	$vars = array('section_tipo');
+		foreach($vars as $name) $$name = common::setVar($name);
+
+	if (empty($section_tipo)) {
+		return null;
+	}
+
+	$result = (bool)tool_update_cache::remove_inverse_locators_in_section($section_tipo);
+	$response->result = $result;
+
+	if ($result===true) {
+		$response->msg = "Removed all inverse locators in section '$section_tipo' successfully";
+	}else{
+		$response->msg = "Error on remove inverse locators: ".to_string($result);
+	}
+
+	return (object)$response;
+}//end remove_inverse_locators_in_section
+
+
+
+/**
+* UPDATE_JER_FROM_4_0_TO_4_1
+* @return 
+*/
+function update_jer_from_4_0_to_4_1() {
+
+	set_time_limit ( 259200 );  // 3 dias
+
+	# set vars
+	$vars = array('tld','modelo');
+		foreach($vars as $name) $$name = common::setVar($name);
+
+	$tld 	= (string)strtolower($tld);
+	$modelo = (string)$modelo;
+	if ($modelo!=='si') {
+		$modelo = 'no';
+	}
+	
+	$response =	hierarchy::update_jer_from_4_0_to_4_1($tld, $modelo);
+
+
+	return (object)$response;	
+}//end update_jer_from_4_0_to_4_1
 
 
 

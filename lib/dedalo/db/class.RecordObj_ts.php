@@ -51,7 +51,7 @@ class RecordObj_ts extends RecordDataBoundObject {
 			
 			$this->set_terminoID($terminoID);
 		
-		}else if(strlen($prefijo)==2) {
+		}else if(strlen($prefijo)===2) {
 			
 			$id = NULL;
 			$this->set_prefijo($prefijo);				
@@ -60,7 +60,7 @@ class RecordObj_ts extends RecordDataBoundObject {
 			
 			$msg = "This record ts not exists ! [terminoID:$terminoID, prefijo:$prefijo] id:"; if(isset($_REQUEST['id'])) $msg .= $_REQUEST['id']; 
 
-			if(SHOW_DEBUG) {
+			if(SHOW_DEBUG===true) {
 				 # LOGGER
         		logger::$obj['error']->log_message("$msg", logger::ERROR, __METHOD__); 
         		throw new Exception("Error Processing Request $msg", 1);
@@ -72,7 +72,7 @@ class RecordObj_ts extends RecordDataBoundObject {
 		if(!$this->prefijo) {
 
 			$msg = " Table not defined with prefijo:$prefijo ";
-			if(SHOW_DEBUG) {
+			if(SHOW_DEBUG===true) {
 				 # LOGGER
         		logger::$obj['error']->log_message("$msg", logger::ERROR, __METHOD__); 
         		throw new Exception("Error Processing Request $msg", 1); 
@@ -250,13 +250,23 @@ class RecordObj_ts extends RecordDataBoundObject {
 	public static function get_termino_by_tipo($terminoID, $lang=NULL, $from_cache=false, $fallback=true) {
 		#$from_cache=false;
 		$cache_uid = $terminoID.'_'.$lang;
-		if ($from_cache && isset($_SESSION['dedalo4']['config']['termino_by_tipo'][$cache_uid])) {
+		if ($from_cache===true && isset($_SESSION['dedalo4']['config']['termino_by_tipo'][$cache_uid])) {
 			#error_log("From cache $terminoID.$lang");
 			return $_SESSION['dedalo4']['config']['termino_by_tipo'][$cache_uid];
 		}
+
+		// CATCH CALL
+		if(SHOW_DEBUG===true) {
+			if (strpos($terminoID, 'lg-')===0) {
+				#dump(debug_backtrace(), 'debug_backtrace() ++ '.to_string());
+				debug_log(__METHOD__." CATCH CALL TO get_termino_by_tipo FOR LANG: ".to_string($terminoID), logger::ERROR);
+			}
+		}
+		
+
 		$tipo = 'termino';
 		$result = self::get_descriptor_dato_by_tipo($terminoID, $lang, $tipo, $fallback);
-		if (substr($terminoID, 0,2)=='dd') {
+		if (substr($terminoID, 0,2)==='dd') {
 			$_SESSION['dedalo4']['config']['termino_by_tipo'][$cache_uid] = $result;
 		}		
 		return $result;
@@ -365,7 +375,7 @@ class RecordObj_ts extends RecordDataBoundObject {
 	*/
 	public static function get_ar_terminoID_by_modelo_name($modelo_name, $prefijo='dd') {
 	
-		if(SHOW_DEBUG) {
+		if(SHOW_DEBUG===true) {
 			$start_time = start_time();
 		}
 
@@ -416,7 +426,7 @@ class RecordObj_ts extends RecordDataBoundObject {
 		$ar_terminoID_by_modelo_name[$unic_string] = $ar_result;
 			#dump($ar_result,'$ar_result');
 		
-		if(SHOW_DEBUG) {
+		if(SHOW_DEBUG===true) {
 			#$GLOBALS['log_messages'] .= exec_time($start_time, __METHOD__, $ar_result );
 		}
 
@@ -507,7 +517,7 @@ class RecordObj_ts extends RecordDataBoundObject {
 		static $get_ar_childrens_data;
 		$key = $tipo.'_'.$order_by;
 		if(isset($get_ar_childrens_data[$key])) {
-			if(SHOW_DEBUG) {
+			if(SHOW_DEBUG===true) {
 				#error_log("Returned cache value for get_ar_childrens $key");
 			}			
 			return $get_ar_childrens_data[$key];
@@ -806,7 +816,7 @@ class RecordObj_ts extends RecordDataBoundObject {
 	*/
 	public static function get_ar_terminos_relacionados($terminoID, $cache=false) {
 
-		#if(SHOW_DEBUG) $start_time = start_time();
+		#if(SHOW_DEBUG===true) $start_time = start_time();
 		# NO HACER CACHE EN ESTE MÉTODO	
 		$RecordObj_ts				= new RecordObj_ts($terminoID);
 		$ar_terminos_relacionados	= (array)$RecordObj_ts->get_relaciones();		
@@ -849,7 +859,7 @@ class RecordObj_ts extends RecordDataBoundObject {
 		$name	= $tipo.'_'.$modelo_name.'_'.$relation_type; 			#dump($name,"CACHE KEY $name");
 		if(isset($get_ar_terminoID_by_modelo_name_and_relation_data[$name])) return $get_ar_terminoID_by_modelo_name_and_relation_data[$name];
 
-		#if(SHOW_DEBUG) $start_time = start_time();
+		#if(SHOW_DEBUG===true) $start_time = start_time();
 		
 		#dump($tipo);	#dump(debug_backtrace());
 		
@@ -962,7 +972,7 @@ class RecordObj_ts extends RecordDataBoundObject {
 		# STORE CACHE DATA
 		$get_ar_terminoID_by_modelo_name_and_relation_data[$name] = $result ;
 
-		#if(SHOW_DEBUG) $GLOBALS['log_messages'] .= exec_time($start_time, __METHOD__, $result );
+		#if(SHOW_DEBUG===true) $GLOBALS['log_messages'] .= exec_time($start_time, __METHOD__, $result );
 		
 		return $result;
 	}

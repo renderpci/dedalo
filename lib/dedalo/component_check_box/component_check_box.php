@@ -18,6 +18,8 @@
 	$identificador_unico	= $this->get_identificador_unico();
 	$component_name			= get_class($this);
 	
+	if($permissions===0) return null;
+	
 	# Verify component content record is inside section record filter
 	if ($this->get_filter_authorized_record()===false) return NULL ;
 	
@@ -42,7 +44,10 @@
 					$file_name 	= 'edit';
 					break;
 						
-		case 'search' :						
+		case 'search' :
+					# Showed only when permissions are >1
+					if ($permissions<1) return null;
+
 					$referenced_tipo	= $this->get_referenced_tipo();
 					$ar_list_of_values  = $this->get_ar_list_of_values(DEDALO_DATA_LANG, null);
 					$ar_comparison_operators 	= $this->build_search_comparison_operators();

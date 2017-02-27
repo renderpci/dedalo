@@ -53,10 +53,11 @@ html,body {
 	width: 100%; 
 	position: absolute;
 }
-
+/*
 h1, h2, h3, h4, h5, h6, pre, code, address, caption, cite, code, em, strong, th, figcaption {
 	font-size: 1em;
 }
+*/
 fieldset, iframe {
 	border: none;
 }
@@ -68,7 +69,13 @@ table {
 	border-spacing: 0 !important;
 }
 input, select {
-	margin-top: 3px;
+	//margin-top: 3px;
+	font-size: 100%;
+	color: initial;
+	border-color: #e1e0e0;
+}
+select {	
+    height: 25px;
 }
 html {
 	margin: 0;
@@ -93,6 +100,9 @@ pre {
 	padding: 5px;
 	word-wrap: break-word;	
 	line-height: 1.2em;
+}
+label {
+	font-weight: 100;
 }
 .main_font_light {
 	font-family: 'Oxygen-light', "Helvetica Neue", Helvetica, Arial, sans-serif;
@@ -408,6 +418,7 @@ span.ajax_loading_msg {
 	}
 	.ui-dialog {
 		width: 96% !important;
+		z-index: 1001;
 	}
 
 
@@ -534,7 +545,7 @@ span.ajax_loading_msg {
 		top: 8px;
 		background-position: -168px -96px;
 		background-position: -48px -96px;
-		opacity: 0.8;
+		//opacity: 0.8;
 	}
 	.breadcrumb_spacer {
 		position: relative;
@@ -543,6 +554,17 @@ span.ajax_loading_msg {
 		display: block;
 		clear: both;
 	}
+
+
+
+/* TEXT AREA TAGS
+ tags showed outside text editor
+----------------------------------------- */
+img.person, img.note, img.index, img.tc, img.svg, img.geo  {
+	opacity: 1;
+	vertical-align: sub;
+	height: 15px;
+}
 
 
 

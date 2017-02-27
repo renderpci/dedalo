@@ -10,6 +10,7 @@
 	$label 					= $this->get_label();
 	$required				= $this->get_required();
 	$debugger				= $this->get_debugger();
+	$propiedades 			= $this->get_propiedades();
 	$permissions			= common::get_permissions($section_tipo,$tipo);
 	$ejemplo				= NULL;
 	$html_title				= "Info about $tipo";
@@ -20,14 +21,17 @@
 	
 
 	$file_name = $modo;
-	
+
+	if($permissions===0) return null;
+
 	switch($modo) {
 		
 		case 'edit'	:
 				# Verify component content record is inside section record filter
 				if ($this->get_filter_authorized_record()===false) return NULL ;
 
-				$referenced_tipo 	= $this->get_referenced_tipo();
+				# referenced section tipo
+				$referenced_tipo 	= $this->get_referenced_tipo();				
 				$ar_list_of_values  = $this->get_ar_list_of_values( DEDALO_DATA_LANG, null, $referenced_tipo );
 				$id_wrapper 		= 'wrapper_'.$identificador_unico;
 				$input_name 		= "{$tipo}_{$parent}";	
@@ -35,6 +39,8 @@
 				$valor				= $this->get_valor();
 				$dato_string		= json_handler::encode($dato);
 				
+				$mandatory 			= (isset($propiedades->mandatory) && $propiedades->mandatory===true) ? true : false;
+				$mandatory_json 	= json_encode($mandatory);
 				break;
 
 		case 'tool_time_machine' :
@@ -44,6 +50,9 @@
 				break;
 						
 		case 'search':
+				# Showed only when permissions are >1
+				if ($permissions<1) return null;
+				
 				$referenced_tipo 		 = $this->get_referenced_tipo();
 				$ar_list_of_values		 = $this->get_ar_list_of_values( DEDALO_DATA_LANG, null );
 				

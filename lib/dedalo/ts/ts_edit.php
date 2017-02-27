@@ -122,7 +122,7 @@ $ar_parents_of_this	= $RecordObj_ts->get_ar_parents_of_this();			#dump($ar_paren
 	$notes 			= $RecordObj->get_dato();
 	$notes_id 		= $RecordObj->get_ID();
 
-	$ar_all_langs 	= common::get_ar_all_langs(true);
+	$ar_all_langs 	= common::get_ar_all_langs_resolved(DEDALO_DATA_LANG);
 
 	$file_include		= DEDALO_LIB_BASE_PATH . '/ts/html/ts_descriptors_grid.phtml';
 	ob_start();			include ( $file_include );

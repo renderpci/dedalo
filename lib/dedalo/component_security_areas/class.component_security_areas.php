@@ -1,14 +1,24 @@
 <?php
-
-
 /*
 * CLASS COMPONENT SECURITY AREAS
+*
+*
 */
 class component_security_areas extends component_common {
 
 
 	# Overwrite __construct var lang passed in this component
 	protected $lang = DEDALO_DATA_NOLAN;
+
+
+	/**
+	* CONSTRUCT
+	*//*
+	function __construct($tipo=false, $parent=null, $modo='edit',  $lang=null, $section_tipo=null) {	#__construct($id=NULL, $tipo=false, $modo='edit', $parent=NULL, $lang=NULL)
+
+		parent::__construct($tipo, $parent, $modo, $lang=$this->lang, $section_tipo);
+	}
+	*/
 
 
 	/**
@@ -31,14 +41,16 @@ class component_security_areas extends component_common {
 	* @param object $dato
 	*/
 	public function set_dato($dato) {
+		
 		if (!is_object($dato)) {
 			if(empty($dato)) {
 				$dato = new stdClass();
 			}else{
-				$dato = (object)$dato;
+				#$dato = (object)$dato;
 			}
 		}
-		parent::set_dato((object)$dato);
+			
+		parent::set_dato( (object)$dato );
 	}
 
 
@@ -55,11 +67,11 @@ class component_security_areas extends component_common {
 	* Overwrite component_common method to set always lang to config:DEDALO_DATA_NOLAN before save
 	*/
 	public function Save() {
-
-		$dato 			= (object)$this->get_dato();
-		$parent 		= $this->get_parent();
-		$tipo 			= $this->get_tipo();
-		$section_tipo 	= $this->get_section_tipo();
+		
+		$parent 		= $this->parent;
+		$tipo 			= $this->tipo;
+		$section_tipo 	= $this->section_tipo;
+		$dato 			= $this->dato;
 
 		##
 		# SAVE DATO
@@ -89,8 +101,8 @@ class component_security_areas extends component_common {
 				#dump($propagate_areas_to_access,'propagate_areas_to_access',"array completo con hijos");			
 		}		
 		*/
-		return $result;
 
+		return $result;
 	}//end Save	
 	
 
@@ -108,6 +120,7 @@ class component_security_areas extends component_common {
 
 		#
 		# USER PROFILE
+		/*
 		$component_profile = component_common::get_instance('component_profile',
 														  	DEDALO_USER_PROFILE_TIPO,
 														  	$user_id,
@@ -115,6 +128,8 @@ class component_security_areas extends component_common {
 														  	DEDALO_DATA_NOLAN,
 														  	DEDALO_SECTION_USERS_TIPO);
 		$profile_id = (int)$component_profile->get_dato();
+		*/
+		$profile_id = component_profile::get_profile_from_user_id( $user_id );
 		if (empty($profile_id)) {
 			return $ar_authorized_areas;
 		}
@@ -166,7 +181,6 @@ class component_security_areas extends component_common {
 		}
 
 		return $ar_authorized_areas;
-
 	}#end get_ar_authorized_areas_for_user
 
 
@@ -196,7 +210,6 @@ class component_security_areas extends component_common {
 		}
 				
 		return $ar_area_name;
-
 	}//end get_ar_authorized_areas_for_user_as_list
 
 
@@ -288,7 +301,6 @@ class component_security_areas extends component_common {
 		}
 
 		return (int)$permissions;
-
 	}//end get_permisions_of_this_area
 
 
@@ -336,7 +348,7 @@ class component_security_areas extends component_common {
 		$current_security_areas_tipo = $this->get_tipo();		
 		# Context : calculate current context (editing users, profiles, etc.)
 		switch (true) {					
-			case ($current_security_areas_tipo==DEDALO_COMPONENT_SECURITY_AREAS_PROFILES_TIPO):
+			case ($current_security_areas_tipo===DEDALO_COMPONENT_SECURITY_AREAS_PROFILES_TIPO):
 				# We are in Profiles
 				$arguments_tree['context']	= 'profiles';
 				break;			
@@ -397,7 +409,6 @@ class component_security_areas extends component_common {
 		}		
 		
 		return $tree_html;
-
 	}//end get_tree
 
 
@@ -409,7 +420,7 @@ class component_security_areas extends component_common {
 	*/
 	public static function get_areas_tree_html($arguments_tree) {
 
-		$tree_html = "\n<!-- SECURITY AREAS TREE --> \n<ul id=\"security_areas_tree\" class=\"\">";		
+		$tree_html = "<!-- SECURITY AREAS TREE --> <ul id=\"security_areas_tree\" class=\"\">";		
 			
 			$ar_ts_children_areas = area::get_ar_ts_children_all_areas_hierarchized();
 				#dump($ar_ts_children_areas,"ar_ts_children_areas");
@@ -417,10 +428,9 @@ class component_security_areas extends component_common {
 			# BUILD LIST RECURSIVELY
 			$tree_html .= self::walk_ar_areas($ar_ts_children_areas, $arguments_tree);
 		
-		$tree_html .= "\n</ul><!-- /SECURITY AREAS TREE --> \n";
+		$tree_html .= "</ul><!-- /SECURITY AREAS TREE -->";
 		
 		return (string)$tree_html ;
-
 	}//end public static function get_areas_tree_html($option, $arguments_tree) {
 
 
@@ -476,7 +486,7 @@ class component_security_areas extends component_common {
 			# no deben ser mostradas (tesauro selector, media area, etc.)
 			$RecordObj_dd	= new RecordObj_dd($tipo);
 			$visible 		= $RecordObj_dd->get_visible();
-			$show 			= ($visible == 'no') ? false : true;			
+			$show 			= ($visible === 'no') ? false : true;			
 			
 			# TERMINO (In current data lang with fallback)
 			$termino	 	= RecordObj_dd::get_termino_by_tipo($tipo, DEDALO_APPLICATION_LANG, true);
@@ -485,7 +495,7 @@ class component_security_areas extends component_common {
 			$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);			
 			
 			$has_sub=false;
-			if (!empty($value) && $modelo_name!='section') {
+			if (!empty($value) && $modelo_name!=='section') {
 				$open_term = "<li class=\"has-sub\">";
 				$has_sub=true;
 			}
@@ -521,7 +531,7 @@ class component_security_areas extends component_common {
 					#dump($html,'$html');
 				}
 
-			}else if($show===true) {				
+			}else if($show===true) {
 
 				# FIRST OPEN
 				$html	.= $open_term;
@@ -532,7 +542,7 @@ class component_security_areas extends component_common {
 					#
 					# ACCESS ELEMENTS
 					$add_elements=true;
-					if ($add_elements && $modelo_name=='section') {
+					if ($add_elements && $modelo_name==='section') {
 						
 						$wrap_div_id = 'access_elements_'.$tipo;	//chevron-down
 						
@@ -730,7 +740,6 @@ class component_security_areas extends component_common {
 		$html .= $js;
 
 		return $html;
-
 	}//end create_checkbox
 
 
@@ -787,8 +796,7 @@ class component_security_areas extends component_common {
 			default:
 				# code...
 				break;
-		}		
-		
+		}
 	}#end update_dato_version
 
 
@@ -814,5 +822,5 @@ class component_security_areas extends component_common {
 	
 	
 	
-}
+}//end component_security_areas
 ?>

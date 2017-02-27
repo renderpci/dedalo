@@ -38,9 +38,10 @@ class rows_header extends common {
 			#dump($order_by,"order_by");
 		
 		# OPTIONS : Pasaremos sólo algunas opciones necesarias para la búsqueda con portales (layout_map, filter_by_id)
-		$options = new stdClass();
+		/*
+			$options = new stdClass();
 			
-			/*
+			
 			$options->section_tipo 			= $this->section_records_obj->rows_obj->options->section_tipo;
 			$options->section_real_tipo 	= $this->section_records_obj->rows_obj->options->section_real_tipo;		
 			$options->layout_map 			= $this->section_records_obj->rows_obj->options->layout_map;
@@ -80,7 +81,7 @@ class rows_header extends common {
 
 		# Add order_by_locator value
 		$options->order_by_locator = false;
-		if($tipo!='section_id') {
+		if($tipo!=='section_id') {
 			$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 				#dump($modelo_name, ' $modelo_name ++ '.to_string($tipo));
 			$options->order_by_locator = (bool)$modelo_name::get_order_by_locator();
@@ -100,10 +101,9 @@ class rows_header extends common {
 		}
 
 		return $flecha;		
-	}
+	}//end flechas_orden
 
 
 
 }#end class
-
 ?>

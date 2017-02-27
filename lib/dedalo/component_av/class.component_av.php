@@ -4,6 +4,8 @@
 */
 include_once( DEDALO_LIB_BASE_PATH . '/media_engine/class.AVObj.php');
 include_once( DEDALO_LIB_BASE_PATH . '/media_engine/class.PosterFrameObj.php');
+include_once( DEDALO_LIB_BASE_PATH . '/media_engine/class.Ffmpeg.php');
+include_once( DEDALO_LIB_BASE_PATH . '/media_engine/class.OptimizeTC.php');
 
 
 class component_av extends component_common {
@@ -29,7 +31,7 @@ class component_av extends component_common {
 	*/
 	function __construct($tipo, $parent=null, $modo='edit', $lang=DEDALO_DATA_LANG, $section_tipo=null) {
 		
-		if(SHOW_DEBUG) {
+		if(SHOW_DEBUG===true) {
 			global$TIMER;$TIMER[__METHOD__.'_IN_'.$tipo.'_'.$modo.'_'.microtime(1)]=microtime(1);
 		}
 
@@ -76,7 +78,7 @@ class component_av extends component_common {
 		}#end if ($need_save)
 		
 
-		if(SHOW_DEBUG) {
+		if(SHOW_DEBUG===true) {
 			global$TIMER;$TIMER[__METHOD__.'_OUT_'.$this->tipo.'_'.$this->modo.'_'.microtime(1)]=microtime(1);
 		}
 	}#end __construct
@@ -156,7 +158,7 @@ class component_av extends component_common {
 
 		$valor_export = $av_file_path .",".$posterframe_file_path;		
 		
-		if(SHOW_DEBUG) {
+		if(SHOW_DEBUG===true) {
 			#return "AV: ".$valor_export;
 		}
 		return $valor_export;
@@ -174,7 +176,7 @@ class component_av extends component_common {
 		
 		$dato = $this->get_dato();
 		if (!isset($dato->section_id)) {
-			if(SHOW_DEBUG) {
+			if(SHOW_DEBUG===true) {
 				debug_log(__METHOD__." Component dato is empty from tipo:$this->tipo, parent:$this->parent, section_tipo:$this->section_tipo", logger::WARNING);
 			}
 			return 0;	
@@ -193,7 +195,7 @@ class component_av extends component_common {
 	* GET QUALITY
 	*/
 	public function get_quality() {
-		if(!isset($this->quality))	return DEDALO_AV_QUALITY_DEFAULT;
+		if(!isset($this->quality)) return DEDALO_AV_QUALITY_DEFAULT;
 		return $this->quality;
 	}
 
@@ -215,15 +217,20 @@ class component_av extends component_common {
 	/**
 	* GET_VIDEO_URL
 	*/
-	public function get_video_url($quality=false) {		
-		#return $this->AVObj->get_media_path();
+	public function get_video_url($quality=false) {
 
-		if(!$quality)
-		$quality 	= $this->get_quality();
-		$video_id 	= $this->get_video_id();
+		if($quality===false) {
+		$quality  = $this->get_quality();
+		}
+		$video_id = $this->get_video_id();
 
-		return DEDALO_MEDIA_BASE_URL . DEDALO_AV_FOLDER .'/'. $quality . '/'. $video_id .'.'. DEDALO_AV_EXTENSION ;
-	}
+		$path = DEDALO_MEDIA_BASE_URL . DEDALO_AV_FOLDER .'/'. $quality . '/';
+		$name = $video_id .'.'. DEDALO_AV_EXTENSION;
+		
+		$video_url = $path . $name;
+
+		return $video_url;
+	}//end get_video_url
 
 
 	
@@ -232,11 +239,9 @@ class component_av extends component_common {
 	*/
 	public function get_video_path($quality=false) {
 
-		#return $this->AVObj->get_media_path_abs();
-		if(!$quality){
-		$quality 	= $this->get_quality();	
-		}
-		
+		if($quality===false) {	
+		$quality 	= $this->get_quality();
+		}		
 		$video_id 	= $this->get_video_id();
 
 		return DEDALO_MEDIA_BASE_PATH . DEDALO_AV_FOLDER .'/'. $quality . '/'. $video_id .'.'. DEDALO_AV_EXTENSION ;
@@ -263,7 +268,7 @@ class component_av extends component_common {
 		$posterframe_url = DEDALO_MEDIA_BASE_URL . DEDALO_AV_FOLDER .'/posterframe/'. $video_id .'.'. DEDALO_AV_POSTERFRAME_EXTENSION;
 
 		# FILE EXISTS TEST : If not, show '0' dedalo image logo
-		if ($test_file) {
+		if ($test_file===true) {
 			$file = DEDALO_MEDIA_BASE_PATH .DEDALO_AV_FOLDER.'/posterframe/'. $video_id .'.'. DEDALO_AV_POSTERFRAME_EXTENSION ;
 			if(!file_exists($file)) {
 				$posterframe_url = DEDALO_LIB_BASE_URL . '/themes/default/0.jpg';
@@ -283,10 +288,19 @@ class component_av extends component_common {
 	/**
 	* GET_SUBTITLES_PATH
 	*/
-	public function get_subtitles_path() {
-		return DEDALO_MEDIA_BASE_PATH . DEDALO_AV_FOLDER . DEDALO_SUBTITLES_FOLDER.'/'. $this->get_video_id().'_'.DEDALO_DATA_LANG.'.'.DEDALO_AV_SUBTITLES_EXTENSION;
+	public function get_subtitles_path( $lang=DEDALO_DATA_LANG ) {
+		return DEDALO_MEDIA_BASE_PATH . DEDALO_AV_FOLDER . DEDALO_SUBTITLES_FOLDER.'/'. $this->get_video_id().'_'.$lang.'.'.DEDALO_AV_SUBTITLES_EXTENSION;
 	}
 	
+
+
+	/**
+	* GET_SUBTITLES_URL
+	*/
+	public function get_subtitles_url( $lang=DEDALO_DATA_LANG ) {
+		return DEDALO_MEDIA_BASE_URL . DEDALO_AV_FOLDER . DEDALO_SUBTITLES_FOLDER. '/'. $this->get_video_id().'_'.$lang .'.'.DEDALO_AV_SUBTITLES_EXTENSION;		
+	}
+
 
 
 	/**
@@ -345,15 +359,15 @@ class component_av extends component_common {
 		    closedir($handle);
 		}
 		$n = count($ar_originals);
-		if ($n==0) {
+		if ($n===0) {
 			$result = false;
-		}elseif($n==1) {
+		}elseif($n===1) {
 			#$path = $_FILES['image']['name'];
 			#$ext = pathinfo($ar_originals[0], PATHINFO_EXTENSION);
 			$result = $target_dir.'/'.$ar_originals[0];
 				#dump($result, ' result');
 		}else{
-			if(SHOW_DEBUG) {
+			if(SHOW_DEBUG===true) {
 				dump($ar_originals, "ar_originals ".to_string($ar_originals));
 				trigger_error("ERROR (DEBUG ONLY): Current quality have more than one file. ".to_string($ar_originals));
 			}						
@@ -370,7 +384,7 @@ class component_av extends component_common {
 	/**
 	* GET_VIDEO SIZE
 	*/
-	public function get_video_size($quality=false, $filename=false) {		
+	public function get_video_size($quality=false, $filename=false) {
 
 		if (!$filename) {
 			if(!$quality)
@@ -393,7 +407,7 @@ class component_av extends component_common {
 				$handle = opendir($filename.'/VIDEO_TS'); 
 			  		 while (false !== ($file = readdir($handle))) {
 			  		 	$extension = pathinfo($file,PATHINFO_EXTENSION);
-			  		 	if($extension == 'VOB' && filesize($filename.'/VIDEO_TS/'.$file) > $vob_filesize){
+			  		 	if($extension === 'VOB' && filesize($filename.'/VIDEO_TS/'.$file) > $vob_filesize){
 			  		 		#dump($file,'$file: '.filesize($filename.'/VIDEO_TS/'.$file));
 
 			  		 		//reset the size of the vob (for the end files of the video)
@@ -419,17 +433,58 @@ class component_av extends component_common {
 		if($size_kb <= 1024) return $size_kb . ' KB' ;
 				
 		return round($size_kb / 1024) . ' MB' ;
-	}//edn get_video_size
-	
-	
-	
-	/**
-	* GET_SUBTITLES_URL
-	*/
-	public function get_subtitles_url() {
-		return DEDALO_MEDIA_BASE_URL . DEDALO_AV_FOLDER . DEDALO_SUBTITLES_FOLDER. '/'. $this->get_video_id().'_'.DEDALO_DATA_LANG .'.'.DEDALO_AV_SUBTITLES_EXTENSION;		
-	}
+	}//end get_video_size
 
+
+
+	/**
+	* GET_DURATION_SECONDS
+	* @return int $duration_seconds OR string $timecode
+	*/
+	public function get_duration_seconds($format=null) {
+
+		$duration_seconds = 0;
+
+		# Input text av_duration
+		# NOTE : This component store seconds as timecode like 00:09:52 . When you call to obtain stored duration
+		# 		 you need convert stored data to seconds (and viceversa for save)
+		$component 	= component_common::get_instance('component_input_text',
+													DEDALO_COMPONENT_RESOURCES_AV_DURATION_TIPO,
+													$this->get_parent(),
+													'list',
+													DEDALO_DATA_NOLAN,
+													$this->get_section_tipo());
+		$tc = $component->get_dato();
+
+		if (empty($tc[0])) {
+			# Read file once
+			$duration_seconds = 0;
+
+			$video_path 	  = $this->get_video_path(DEDALO_AV_QUALITY_DEFAULT);
+			$media_attributes = ffmpeg::get_media_attributes($video_path);
+				#dump($media_attributes, ' media_attributes ++ '.to_string());
+			if (isset($media_attributes->format->duration) && !empty($media_attributes->format->duration)) {
+				$duration_seconds = $media_attributes->format->duration;				
+
+				# Save data to component as time code
+				$tc[0] = OptimizeTC::seg2tc($duration_seconds);
+				$component->set_dato($tc);
+				$component->Save();
+			}			
+		}else{
+
+			# Calculate seconds from tc
+			$duration_seconds = OptimizeTC::TC2seg($tc[0]);
+		}
+
+		# For fast access from oh list only
+		if ($format==='timecode') {
+			return (string)$tc[0];
+		}		
+
+		return (int)$duration_seconds;
+	}//end get_duration_seconds
+	
 
 
 	/**
@@ -440,28 +495,21 @@ class component_av extends component_common {
 		
 		$ar_quality_source_valid = array();
 		$ar_quality 			 = unserialize(DEDALO_AV_AR_QUALITY);
-			#dump($ar_quality,'$ar_quality');		
+			#dump($ar_quality,'$ar_quality');	
 
 		foreach($ar_quality as $current_quality) {
 
+			if($target_quality===DEDALO_AV_QUALITY_ORIGINAL) continue;
+
 			# Current file
-			$filename = $this->get_original_file_path($current_quality);			
-			
-			if (file_exists($filename)) {
-
-				# Add current quality as source valid 
-				$ar_quality_source_valid[] = $current_quality;
-					#dump($filename,'$file_exists');
-			}else{
-
-				# Return first value found inside array of quality
-				if(!empty($ar_quality_source_valid)) foreach ($ar_quality_source_valid as $quality_source) {
-
-					if ($current_quality == $target_quality) return $quality_source;						
-				}
-			}
+			$filename = $this->get_original_file_path($current_quality);
+				
+			if ($current_quality!==$target_quality && file_exists($filename)) {
+				return $current_quality;
+			}		
 			
 		}#end foreach($ar_quality as $quality)
+		
 		
 		return false;
 	}//end get_source_quality_to_build
@@ -484,8 +532,7 @@ class component_av extends component_common {
 			$ar_all_files_by_quality[$current_quality] = $this->get_original_file_path($current_quality);
 		}
 
-		return (array)$ar_all_files_by_quality;
-		
+		return (array)$ar_all_files_by_quality;		
 	}#end get_ar_all_files_by_quality
 		
 
@@ -506,7 +553,7 @@ class component_av extends component_common {
 		foreach ($ar_quality as $current_quality) {
 			# media_path
 			$media_path = $this->get_video_path($current_quality);
-			if(SHOW_DEBUG) {
+			if(SHOW_DEBUG===true) {
 				#dump($media_path, ' media_path $current_quality:'.$current_quality);
 			}
 			if (!file_exists($media_path)) continue; # Skip
@@ -524,7 +571,7 @@ class component_av extends component_common {
 			$media_path_moved 	= $folder_path_del . "/$reelID" . '_deleted_' . $date . '.' . DEDALO_AV_EXTENSION;			
 			if( !rename($media_path, $media_path_moved) ) throw new Exception(" Error on move files to folder \"deleted\" . Permission denied . The files are not deleted");
 
-			if(SHOW_DEBUG) {
+			if(SHOW_DEBUG===true) {
 				$msg=__METHOD__." Moved file \n$media_path to \n$media_path_moved";
 				debug_log($msg);
 				#dump($msg, ' msg');
@@ -548,7 +595,7 @@ class component_av extends component_common {
 			$media_path_moved 	= $folder_path_del . "/$reelID" . '_deleted_' . $date . '.' . DEDALO_AV_POSTERFRAME_EXTENSION;
 			if( !rename($media_path, $media_path_moved) ) throw new Exception(" Error on move files to folder \"deleted\" . Permission denied . The files are not deleted");
 
-			if(SHOW_DEBUG) {
+			if(SHOW_DEBUG===true) {
 				$msg=__METHOD__." \nMoved file \n$media_path to \n$media_path_moved";
 				debug_log($msg);
 				#dump($msg, ' msg');
@@ -577,12 +624,12 @@ class component_av extends component_common {
 			$media_path = $this->get_video_path($current_quality);
 			$media_path = pathinfo($media_path,PATHINFO_DIRNAME).'/deleted';			
 			$video_id 	= $this->get_video_id();
-			if(SHOW_DEBUG) {
+			if(SHOW_DEBUG===true) {
 				#dump($media_path, "media_path current_quality:$current_quality - get_video_id:$video_id");	#continue;
 			}
 			$file_pattern 	= $media_path.'/'.$video_id.'_*.'.DEDALO_AV_EXTENSION;
 			$ar_files 		= glob($file_pattern);
-			if(SHOW_DEBUG) {
+			if(SHOW_DEBUG===true) {
 				#dump($ar_files, ' ar_files');#continue;
 			}
 			if (empty($ar_files)) {
@@ -594,7 +641,7 @@ class component_av extends component_common {
 			$new_file_path 	= $this->get_video_path($current_quality);		
 			if( !rename($last_file_path, $new_file_path) ) throw new Exception(" Error on move files to restore folder. Permission denied . Nothing was restored (2)");
 
-			if(SHOW_DEBUG) {
+			if(SHOW_DEBUG===true) {
 				$msg=__METHOD__." Moved file \n$last_file_path to \n$new_file_path";
 				debug_log($msg);
 				#dump($msg, ' msg');
@@ -607,12 +654,12 @@ class component_av extends component_common {
 		$media_path = $this->get_posterframe_path();
 		$media_path = pathinfo($media_path,PATHINFO_DIRNAME).'/deleted';
 		$video_id 	= $this->get_video_id();
-		if(SHOW_DEBUG) {
+		if(SHOW_DEBUG===true) {
 			#dump($media_path, "media_path posterframe - get_video_id:$video_id");	#continue;
 		}
 		$file_pattern 	= $media_path.'/'.$video_id.'_*.'.DEDALO_AV_POSTERFRAME_EXTENSION;
 		$ar_files 		= glob($file_pattern);
-		if(SHOW_DEBUG) {
+		if(SHOW_DEBUG===true) {
 			#dump($ar_files, ' ar_files');#continue;
 		}
 		if (empty($ar_files)) {
@@ -623,7 +670,7 @@ class component_av extends component_common {
 			$new_file_path 	= $this->get_posterframe_path();
 			if( !rename($last_file_path, $new_file_path) ) throw new Exception(" Error on move files to restore folder. Permission denied to restore posterframe. Nothing was restored (4)");
 
-			if(SHOW_DEBUG) {
+			if(SHOW_DEBUG===true) {
 				$msg=__METHOD__." \nMoved file \n$last_file_path to \n$new_file_path";
 				debug_log($msg);
 				#dump($msg, ' msg');
@@ -652,7 +699,7 @@ class component_av extends component_common {
 	*
 	* In time machine mode (list_tm) image is always calculated
 	*/
-	public static function render_list_value($value, $tipo, $parent, $modo, $lang, $section_tipo, $section_id) {
+	public static function render_list_value($value, $tipo, $parent, $modo, $lang, $section_tipo, $section_id, $current_locator=null, $caller_component_tipo=null) {
 		
 		if ($modo==='portal_list_view_mosaic') {
 			$component	= component_common::get_instance(__CLASS__,
@@ -664,9 +711,33 @@ class component_av extends component_common {
 			$value 		= $component->get_html();
 		}
 
+		# Reset posterframe t var to force regenerate
+		preg_match("/t=(.{1,20})'\)/", $value, $output_array);
+		if (isset($output_array[1])) {
+			$value = str_replace($output_array[1], start_time(), $value);
+		}
+
 		return $value;
 	}#end render_list_value
 
+
+
+	/**
+	* GET_DIFFUSION_VALUE
+	* Overwrite component common method
+	* Calculate current component diffusion value for target field (usually a mysql field)
+	* Used for diffusion_mysql to unify components diffusion value call
+	* @return string $diffusion_value
+	*
+	* @see class.diffusion_mysql.php
+	*/
+	public function get_diffusion_value( $lang=null ) {
+		
+		$diffusion_value = $this->get_video_url(DEDALO_AV_QUALITY_DEFAULT);
+
+
+		return (string)$diffusion_value;
+	}//end get_diffusion_value
 
 
 	

@@ -34,7 +34,7 @@
 				
 				$contain_references = false;
 				foreach ((array)$inverse_locators as $key => $current_locator) {
-					if ($current_locator->section_tipo==TOP_TIPO) {
+					if ($current_locator->section_tipo===TOP_TIPO) {
 						$contain_references = true;
 						break;
 					}
@@ -74,7 +74,6 @@
 						return ;
 					}
 				}//end if (!TOP_ID) {
-
 				
 
 
@@ -87,8 +86,21 @@
 					js::$ar_url[] = DEDALO_LIB_BASE_URL."/$component_name/js/$component_name.js";
 
 				$tesauro_url = DEDALO_LIB_BASE_URL . "/ts/ts_list.php?modo=tesauro_rel&type=all&current_tipo=".$tipo."&caller_id=".$parent."&caller_tipo=".$tipo."";
+				if (defined('DEDALO_THESAURUS_VERSION') && DEDALO_THESAURUS_VERSION===4) {
+					$tesauro_url = DEDALO_LIB_BASE_URL . "/main/?menu=no&thesaurus_mode=relation&component_name=component_text_area&t=".DEDALO_TESAURO_TIPO;
+				}
+
 
 				$this->component_obj->set_modo('indexation');
+				# Force change lang  (component is inited in edit mode without $_GET['m'] var set. Because this we need trigger manually force_change_lang)		
+				$original_lang 	= component_text_area::force_change_lang($this->component_obj->get_tipo(),
+																		 $this->component_obj->get_parent(),
+																		 $this->component_obj->get_modo(),
+																		 $this->component_obj->get_lang(),
+																		 $this->component_obj->get_section_tipo());
+				$this->component_obj->set_lang($original_lang);
+				
+				// text area html
 				$component_text_area_html = $this->component_obj->get_html();
 				
 
@@ -100,13 +112,11 @@
 				if ( !empty($component_state) && is_object($component_state) ) {
 					$component_state_html = $component_state->get_html();
 				}
-				
-				break;		
-
+				break;
 
 		case 'fragment_info':
+					/* MOVED TO JAVASCRIPT BUILD
 					#$file_name = 'inspector_list';
-
 
 					$tag 					= $this->selected_tagName;	
 					$tag_value 				= TR::tag2value($tag);
@@ -132,19 +142,17 @@
 						#dump($rel_locator ,'$rel_locator ');
 
 
-					$raw_text 				= $this->component_obj->get_dato_real();
+					$raw_text 				= $this->component_obj->get_dato();
 					$fragment_text 			= component_text_area::get_fragment_text_from_tag($tag, $raw_text)[0];
 
 					$this->set_modo('terminos_list');
 					$this->context = 'tool_window';
 					$component_text_area_terminos_list_html = $this->get_html();
-
+					*/
 					break;
-					
-
 
 		case 'terminos_list':					
-		
+					/* MOVED TO JAVASCRIPT BUILD
 					$index_list_html = null;
 
 					$tag 					= $this->selected_tagName;	
@@ -182,12 +190,9 @@
 					$ar_records						= $RecordObj_descriptors->search($arguments);
 						#dump($ar_records,"ar_recordsfor matrix_descriptors ".print_r($arguments,true));
 
-					/*
 
-						PASAR A JSON CUANDO SEA POSIBLOE
-
-					*/
-
+					//	PASAR A JSON CUANDO SEA POSIBLE
+					
 
 					$n_index 			= count($ar_records);
 					$ar_row_index_html 	= array();
@@ -209,9 +214,8 @@
 					foreach ($ar_row_index_html as $row_index_html) {
 						$index_list_html .= $row_index_html;
 					}
-					/**/
-					break;				
-		
+					*/
+					break;		
 	}#end switch
 		
 

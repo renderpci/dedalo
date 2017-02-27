@@ -31,6 +31,7 @@
 		.header_tool .lang_selector_in_header select {
 			margin-left: 5px;
 			margin-right: 10px;
+			color: #000000;
 		}
 		.header_tool #header_info {
 			display:block;
@@ -111,18 +112,31 @@
 	}
 
 
+
+/* TAGS INSPECTOR
+------------------------------------------------------ */
+	#tags_inspector {
+		background-color: #99C9F5;
+		height: 24px;
+		width: 100%;
+	}
+
+
+
 /* AV ADD-ON 
 ------------------------------------------------------ */
 	.video_options {
 		
 		}
 		.video_options h1 {
-			font-size: 24px;
+			font-size: 20px;
 			padding: 0;
 			padding-left: 15px;
 			font-weight: 300;
 			text-transform: uppercase;
 			color: #ABABAB;
+			float: left;
+			margin-right: 10px;
 		}
 		ul.tool_transcription_keys {
 			/*background-color: #DEBCA1;*/
@@ -134,9 +148,10 @@
 			.tool_transcription_keys li {
 				/*background-color: #B9DECA;*/
 				display: inline-block;
-				margin: 0;
-				width: 150px;
+				margin: 0;				
 				text-align: left;
+				//width: 150px;
+				min-width: 135px;
 				}
 				.tool_transcription_keys li label {
 					display: block;
@@ -155,7 +170,7 @@
 				}
 		
 		.tool_subtitles_wrap {
-			position: relative;
+			
 			}
 			.tool_subtitles_wrap .css_button_generic {
 				margin-top: 0
@@ -172,7 +187,8 @@
 			}
 			.slider {
 			  width: 100%;
-			  /*margin: 50% auto;*/
+			  //margin: 50% auto;
+			  position: relative;
 			}
 			.slider_label{
 				font-size: 14px;
@@ -210,14 +226,38 @@
 				box-shadow: 0px 0px 1px #ffb505;
 			}
 			#speed_range_value {
-			  text-align: center;
-			  font-size: 18px;
-			  display: block;
-			  margin: auto;
-			  padding: 0px 10px;
-			  width: 100%;
-			  color: #555555;
+				text-align: center;
+				font-size: 18px;
+				display: block;
+				margin: auto;
+				padding: 0px 10px;
+				width: 100%;
+				color: #555555;
+				position: absolute;
+				top: -30px;
 			}
+	/* tools_container
+	---------------------------------------- */
+	.tools_container {
+		//background-color: #B0F5C3;
+		width: 100%;
+		line-height: 1em;
+		}
+		.tools_container .link {
+			float: left;
+			padding-left: 5px;
+			padding-right: 5px;
+		}
+		.tools_container .icon_bs {
+			zoom: 1.3;
+			vertical-align: text-bottom;
+			margin-right: 2px;
+		}
 
-
-
+		/* text_area_tool_transcription wrap
+		---------------------------------------- */
+		.wrap_component.text_area_tool_transcription {
+			position: absolute;
+			height: calc(100% + 4px); //width: calc(100.5% + 4px); // Adjust as needed 
+			//background-color: #40F588
+		}

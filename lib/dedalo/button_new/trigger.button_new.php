@@ -70,13 +70,13 @@ if ($mode=='New') {
 	$arguments=array();
 	$arguments['parent']			= $user_id;
 	$arguments['tipo']				= $tipo_component_security_areas[0];
-	$matrix_table 					= common::get_matrix_table_from_tipo($tipo_component_security_areas[0]);
+	$matrix_table 					= common::get_matrix_table_from_tipo(DEDALO_SECTION_PROFILES_TIPO);
 	$RecordObj_matrix				= new RecordObj_matrix($matrix_table,NULL);
 	$ar_records						= $RecordObj_matrix->search($arguments);
 
 	if(!empty($ar_records[0])) {
 		
-		$matrix_table 		= common::get_matrix_table_from_tipo($tipo_component_security_areas[0]);
+		$matrix_table 		= common::get_matrix_table_from_tipo(DEDALO_SECTION_PROFILES_TIPO);
 		$RecordObj_matrix	= new RecordObj_matrix($matrix_table,$ar_records[0]);
 		$dato_areas 		= $RecordObj_matrix->get_dato();
 
@@ -85,7 +85,7 @@ if ($mode=='New') {
 			# Seleccionamos la primera area de este usuario y la asignamos al nuevo usuario por defecto
 			#$first_area = array_slice($dato_areas, 0, 1);
 
-			$matrix_table 		= common::get_matrix_table_from_tipo($tipo_component_security_areas[0]);
+			$matrix_table 		= common::get_matrix_table_from_tipo(DEDALO_SECTION_PROFILES_TIPO);
 			$RecordObj_matrix	= new RecordObj_matrix($matrix_table,NULL);
 			$RecordObj_matrix->set_parent($id);
 			$RecordObj_matrix->set_tipo($tipo_component_security_areas[0]);	

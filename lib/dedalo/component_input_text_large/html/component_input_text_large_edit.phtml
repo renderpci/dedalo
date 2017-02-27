@@ -3,9 +3,10 @@
 	# VISUALIZADOR HTML
 	
 	
-	print "\n<!-- INPUT_TEXT_LARGE [tipo:$tipo section_id_matrix:$parent] $label -->";
+	# html_delimiter
+	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'in');
 
-	print "\n<div class=\"wrap_component css_wrap_input_text_large wrap_component_{$tipo}\" id=\"{$id_wrapper}\"
+	print "<div class=\"wrap_component css_wrap_input_text_large wrap_component_{$tipo}\" id=\"{$id_wrapper}\"
 	data-tipo=\"{$tipo}\"
 	data-lang=\"{$lang}\"
 	data-section_tipo=\"{$section_tipo}\"
@@ -21,55 +22,58 @@
 		$html_label = component_common_draw::draw_label($this);
 		
 		# CONTENIDO (INPUT)
-		$html_contenido = '';
+		$html_content = '';
 		switch($permissions) {
 				
 			case 0	:	
-				$html_contenido .= "";
+				$html_content .= "";
 				break;
 							
 			case 1	: 	
-				$html_contenido .= "\n <span class=\"css_span_dato\">$dato</span>";
+				$html_content .= " <span class=\"css_span_dato\">$dato</span>";
 				break;	
 							
 			case ($permissions>=2)	:
 			
 				# Dato reference default lang
+				/*
 				if ($modo!='tool_lang') {
-				$html_contenido .= "\n <div class=\"dato_refecence_default_lang\">$dato_reference_lang</div>";
+				$html_content .= " <div class=\"dato_refecence_default_lang\">$dato_reference_lang</div>";
 				}
-				
+				*/	
 
-				$html_contenido .= "\n <textarea class=\"css_input_text_large\" name=\"{$input_name}\"
+				$html_content .= "<textarea class=\"css_input_text_large\" name=\"{$input_name}\"
 				onchange=\"component_input_text_large.Save(this)\"
 				id=\"$identificador_unico\"
 				data-tipo=\"{$tipo}\"
 				data-parent=\"{$parent}\"
 				data-section_tipo=\"{$section_tipo}\"
 				data-lang=\"{$lang}\"
-				title=\"$html_title\" style=\"overflow: visible\">$dato</textarea>";				
+				title=\"$html_title\">$dato</textarea>";
 				
-				#$html_contenido .= "\n <span  class=\"css_span_log\"></span>";
-				#$html_contenido .= "\n <span  class=\"css_span_ejemplo \">$ejemplo</span>";
+				#$html_content .= " <span  class=\"css_span_log\"></span>";
+				#$html_content .= " <span  class=\"css_span_ejemplo \">$ejemplo</span>";
 						
 				if(SHOW_DEBUG) {
-					#$html_contenido .= "\n <span class=\"css_span_debugger\" id=\"debugger_{$tipo}\" >{$debugger}</span>";
+					#$html_content .= " <span class=\"css_span_debugger\" id=\"debugger_{$tipo}\" >{$debugger}</span>";
 				}
 				break;
-							
-												
 		}
 
 		# Prepare content to show in page
-		tools::prepare_content($html_contenido);
+		tools::prepare_content($html_content);
 		
 
 		# PRINT HTML
 		print $html_label;
-		print $html_contenido;
+		print $html_content;
 	
 	
-	print "\n</div><!-- /css_wrap_input_text_large INPUT_TEXT_large [tipo:$tipo section_id_matrix:$parent] $label -->\n"; //wrap
+	print "</div>"; //wrap
+
+
+	# html_delimiter
+	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'out');
 
 
 ?>

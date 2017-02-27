@@ -3,14 +3,15 @@
 	# VISUALIZADOR HTML
 
 
-	print "\n<!-- RELATION_PARENT [tipo:$tipo section_id:$parent section_tipo:$section_tipo] $label -->";
+	# html_delimiter
+	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'in');
 
-	print "\n<div class=\"wrap_component css_wrap_relation_parent wrap_component_{$modo} wrap_component_{$tipo}\" id=\"{$id_wrapper}\"
+	print "<div class=\"wrap_component css_wrap_relation_parent wrap_component_{$modo} wrap_component_{$tipo}\" id=\"{$id_wrapper}\"
 	data-tipo=\"{$tipo}\"
 	data-lang=\"{$lang}\"
 	data-parent=\"{$parent}\"
 	data-section_tipo=\"{$section_tipo}\"
-	data-modo=\"{$modo}\"	
+	data-modo=\"{$modo}\"
 	data-component_name=\"{$component_name}\"
 	data-component_info='{$component_info}'
 	data-children_component_tipo=\"{$children_component_tipo}\"
@@ -24,70 +25,104 @@
 	switch($permissions) {
 
 		case 0 :
-				$html_content .= "";
-				break;
+			$html_content .= "";
+			break;
 
 		case 1 :
-				$html_content .= $this->valor;
-				break;
+			$html_content .= $this->valor;
+			break;
 
 		case 2 :
 		case 3 :
 
-				$html_content .= "<div class=\"wrap_relation_parent_values\">";
+			$html_content .= "<div class=\"wrap_relation_parent_values\">";
 
-					# ADD BUTTON
-					$html_content .= "<div class=\"button_add relation_parent_add_button\"
-					data-target_tipo=\"$section_tipo\"
-					onclick=\"component_relation_parent.open_parent_selector_window(this,event)\">					
-					</div>";
-
-				
-					foreach ((array)$dato as $key => $current_parent) {
-
-						$html_content .= "<div class=\"relation_parent_input_line\">";
-
-						# REMOVE BUTTON
-						$html_content .= "<input type=\"button\" class=\"button_remove component_relation_parent_button_remove\" value=\"\"
-											data-role=\"component_relation_parent_button_remove\"
-											data-children_section_tipo=\"$current_parent->section_tipo\"
-											data-children_section_id=\"$current_parent->section_id\"
-											data-children_component_tipo=\"$current_parent->component_tipo\"
-											onclick=\"component_relation_parent.remove_parent(this)\" />";
-
-						# TERM STRING
-						$value = $this->get_parent_value( $current_parent->section_id, $current_parent->section_tipo); // Provissional !!
-						$html_content .= '<span class="locator_label">'.$value.'</span>';
-
-						$html_content .= "</div>";//relation_parent_input_line
-					}					
-
-				$html_content .= "</div>";//end wrap_parent_values
-
-				
-
+				# ADD BUTTON
 				/*
-				$html_content .= "<object type=\"image/svg+xml\" data=\"../themes/default/open.svg\" class=\"relation_parent_add_button\"
+				$html_content .= "<div class=\"button_add relation_parent_add_button\"
 				data-target_tipo=\"$section_tipo\"
-				onclick=\"component_relation_parent.open_parent_selector_window(this,event)\">					
-				</object>";
+				onclick=\"component_relation_parent.open_parent_selector_window(this,event)\">
+				</div>";
 				*/
-				#$html_content .= "<div class=\"\" style=\"content:ur('../themes/default/open.svg')\"> 123 </div>";
+
+					# SOURCE_MODE SWITCH
+					$source_mode = 'tree';
+					switch ($source_mode) {
+						
+						case 'tree':
+						case 'autocomplete':
+						default:
+
+							$hierarchy_types_json 	 = '';
+							$hierarchy_sections_json = json_encode(array($section_tipo));
+
+							# BTN LINK ELEMENT
+							$html_content .= "<div class=\"button_add relation_parent_add_button\"
+							data-id_wrapper=\"$id_wrapper\"
+							data-component_name=\"$component_name\"
+							data-hierarchy_types='{$hierarchy_types_json}'
+							data-hierarchy_sections='{$hierarchy_sections_json}'
+							onclick=\"component_common.open_ts_window(this)\"></div>";
+
+							/*
+							#
+							# INPUT SEARCH FIELD
+							$html_content .= "\n <input class=\"css_autocomplete_hi_search_field\" type=\"text\" placeholder=\"".label::get_label('buscar')."...\"
+							data-id_wrapper=\"$id_wrapper\"
+							data-tipo=\"$tipo\"
+							data-hierarchy_types='{$hierarchy_types_json}'
+							data-hierarchy_sections='{$hierarchy_sections_json}'
+							onfocus=\"component_autocomplete_hi.activate(this)\"
+							tabindex=\"1\"
+							autocomplete=\"off\"
+							autocorrect=\"off\"
+							/>";
+							*/
+							if(SHOW_DEBUG===true) {
+								#$html_content .= "<div class=\"debug_info notes\">ar_referenced_tipo: ".implode(', ', $ar_referenced_tipo)."</div>";
+								#$html_content .= "<div class=\"debug_info notes\">".str_replace('},', '},<br>', $dato_json) ."</div>";
+							}	
+
+							# Reset var 'activated' on load
+							#$html_content .= "<script>component_autocomplete_hi.activated={}</script>";
+							break;
+					}//end switch ($source_mode)
 
 
 
-				if(SHOW_DEBUG) {
-					#$html_content .= "\n <div class=\"debug_info\"> Current val: <strong>$valor</strong></div>";				
-					#$html_content .= "\n <span class=\"css_span_debugger\" id=\"debugger_{$tipo}\">{$debugger}</span>";
-					$html_content .= "\n <span class=\"debug_info\">";
-					$html_content .= "<br> locators in section relation (parent.tipo: ".$this->relation_type.") : ";
-					#$html_content .= wrap_pre( to_string($this->get_my_section_relations($this->relation_type)), false );
-					$html_content .= "<br><span>".component_relation_parent::$get_parents_query."</span>";
-					$html_content .= "</span>";
+				# TERMS
+				foreach ((array)$dato as $key => $current_locator) {
+
+					$html_content .= "<div class=\"relation_parent_input_line\">";
+
+					# REMOVE BUTTON
+					$html_content .= "<input type=\"button\" class=\"button_remove component_relation_parent_button_remove\" value=\"\"
+										data-role=\"component_relation_parent_button_remove\"
+										data-children_section_tipo=\"$current_locator->section_tipo\"
+										data-children_section_id=\"$current_locator->section_id\"
+										data-children_component_tipo=\"$current_locator->component_tipo\"
+										onclick=\"component_relation_parent.remove_parent(this)\" />";
+
+					# TERM STRING
+					$value = ts_object::get_term_by_locator( $current_locator, DEDALO_DATA_LANG, $from_cache=true );
+					$html_content .= '<span class="locator_label">'.$value.'</span>';
+
+					$html_content .= "</div>";//relation_parent_input_line
 				}
 
+			$html_content .= "</div>";//end wrap_parent_values
 
-				break;
+
+			if(SHOW_DEBUG===true) {
+				#$html_content .= "\n <div class=\"debug_info\"> Current val: <strong>$valor</strong></div>";
+				#$html_content .= "\n <span class=\"css_span_debugger\" id=\"debugger_{$tipo}\">{$debugger}</span>";
+				$html_content .= "\n <span class=\"debug_info\">";
+				$html_content .= "<br> locators in section relation (parent.tipo: ".$this->relation_type.") : ";
+				$html_content .= wrap_pre( to_string($dato), false );
+				$html_content .= "<br><span>".component_relation_parent::$get_parents_query."</span>";
+				$html_content .= "</span>";
+			}
+			break;
 	}
 
 	# Prepare content to show in page
@@ -99,5 +134,10 @@
 	print $html_content;
 
 
-	print "\n</div><!-- /css_wrap_relation_parent RELATION_PARENT [tipo:$tipo section_id:$parent] $label -->\n\n"; //wrap
+	print "</div>"; //wrap
+
+	# html_delimiter
+	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'out');
+
+	
 ?>

@@ -32,6 +32,8 @@
 	$propiedades 	  = $this->get_propiedades();
 	$propiedades_json = json_handler::encode($propiedades);
 
+	if($permissions===0) return null;
+	
 	$file_name = $modo;
 
 	
@@ -48,7 +50,7 @@
 		case 'indexation':
 		case 'edit'	:	
 				# Verify component content record is inside section record filter
-				if ($this->get_filter_authorized_record()===false) return NULL;				
+				if ($this->get_filter_authorized_record()===false) return NULL;
 
 
 				$component_info = $this->get_component_info('json');
@@ -58,15 +60,15 @@
 				# FIX BROKEN TAGS
 				$ar_tipos = unserialize(DEDALO_TEXTAREA_FIX_BROQUEN_TAGS_TIPOS);
 				if (  in_array($this->tipo, $ar_tipos) ) {
-					if (isset($context) && $context=='default') {							
+					if (isset($context) && $context==='default') {							
 						$save=true;
-						if(SHOW_DEBUG) {
+						if(SHOW_DEBUG===true) {
 							$save=false;
 						}
 						$broken_index_tags = $this->fix_broken_index_tags($save);
 						if ($broken_index_tags->result) {
 							$component_warning = $broken_index_tags->msg;
-							if(SHOW_DEBUG) {
+							if(SHOW_DEBUG===true) {
 								$component_warning .= " (Fixed in ".$broken_index_tags->total.")";
 							}
 						}
@@ -99,7 +101,7 @@
 				
 					foreach ($ar_values as $relaciones_modelo => $relaciones_tipo) {
 						$modelo_name = RecordObj_dd::get_termino_by_tipo($relaciones_modelo,null,true);
-						if($modelo_name=='component_image') {
+						if($modelo_name==='component_image') {
 							#$component_image 	= new component_image($relaciones_tipo, $parent, $modo);
 							$component_image 	= component_common::get_instance('component_image', $relaciones_tipo, $parent, $modo, DEDALO_DATA_NOLAN, $this->section_tipo);
 							$canvas_id 			= $component_image->get_identificador_unico();
@@ -116,7 +118,21 @@
 						break;						
 					default:
 						$component_state_html = $this->get_state_process_html();	
-				}					
+				}
+
+				# Related components
+				$ar_related_component_tipo 		= $this->get_ar_related_component_tipo();
+				$ar_related_component_tipo_json = json_encode($ar_related_component_tipo);	
+				break;
+
+		case 'edit_note':
+				# Verify component content record is inside section record filter
+				if ($this->get_filter_authorized_record()===false) return NULL;
+
+				$component_info 	= $this->get_component_info('json');
+				$dato 				= $this->get_dato();
+				$id_wrapper 		= 'wrapper_'.$identificador_unico;
+				$input_name 		= "{$tipo}_{$parent}";							
 				break;
 		
 		case 'tool_lang' :
@@ -183,7 +199,7 @@
 				#$rel_locator 			= json_handler::encode($rel_locator);
 				#$rel_locator 			= component_common::build_locator_relation($parent, $tipo, $tag_value);
 
-				$raw_text 				= $this->get_dato_real();
+				$raw_text 				= $this->get_dato();
 				$fragment_text 			= component_text_area::get_fragment_text_from_tag($tag, $raw_text)[0];
 				break;
 
@@ -202,8 +218,8 @@
 				$tag_state_selector_html= $this->get_tag_state_selector_html($tag); 
 					#dump($tag_state_selector_html,'$tag_state_selector_html');
 				#$rel_locator 			= component_common::build_locator($parent, $tipo, $tag_value);
-				#$raw_text 				= $this->get_dato_real();
-				#$fragment_text 			= component_text_area::get_fragment_text_from_tag($tag, $raw_text)[0];	
+				#$raw_text 				= $this->get_dato();
+				#$fragment_text 		= component_text_area::get_fragment_text_from_tag($tag, $raw_text)[0];	
 				
 				/**
 				* FRAGMENT INFO HTML
@@ -239,6 +255,9 @@
 				break;
 		
 		case 'search' :
+				# Showed only when permissions are >1
+				if ($permissions<1) return null;
+				
 				$ar_comparison_operators 	= $this->build_search_comparison_operators();
 				$ar_logical_operators 		= $this->build_search_logical_operators();
 				$valor 						= isset($_GET['tipo']) ? $_GET['tipo'] : null;

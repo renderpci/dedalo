@@ -30,6 +30,25 @@ class component_array extends component_common {
 	}
 
 
+
+	/**
+	* GET_DIFFUSION_VALUE
+	* Overwrite component common method
+	* Calculate current component diffsuion value for target field (usually a mysql field)
+	* Used for diffusion_mysql to unify components diffusion value call
+	* @return string $diffusion_value
+	*
+	* @see class.diffusion_mysql.php
+	*/
+	public function get_diffusion_value( $lang=null ) {
+		
+		$diffusion_value = implode(',', $this->get_dato());
+
+
+		return (string)$diffusion_value;
+	}//end get_diffusion_value
+
+
 	
 
 

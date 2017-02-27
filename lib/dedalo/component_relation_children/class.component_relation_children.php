@@ -5,12 +5,13 @@
 
 
 class component_relation_children extends component_relation_common {
-	
-	# Overwrite __construct var lang passed in this component
-	protected $lang = DEDALO_DATA_NOLAN;
+		
 
-	public $relation_type = DEDALO_RELATION_TYPE_CHILDREN_TIPO;
-	#public $relation_type_inverse = DEDALO_RELATION_TYPE_PARENT_TIPO; 
+	protected $relation_type = DEDALO_RELATION_TYPE_CHILDREN_TIPO;
+
+	# test_equal_properties is used to verify duplicates when add locators
+	public $test_equal_properties = array('section_tipo','section_id','type','from_component_tipo');
+	
 
 	/**
 	* __CONSTRUCT
@@ -20,8 +21,8 @@ class component_relation_children extends component_relation_common {
 		# Force always DEDALO_DATA_NOLAN
 		$lang = $this->lang;
 
-		# relation_tipo
-		$this->relation_tipo = DEDALO_RELATION_TYPE_CHILDREN_TIPO;
+		# relation_type
+		$this->relation_type = DEDALO_RELATION_TYPE_CHILDREN_TIPO;
 
 		# Build the componente normally
 		parent::__construct($tipo, $parent, $modo, $lang, $section_tipo);
@@ -41,7 +42,7 @@ class component_relation_children extends component_relation_common {
 	* GET DATO
 	* @return array $dato
 	*	$dato is always an array of locators
-	*/
+	*//*
 	public function get_dato() {
 		
 		$dato = parent::get_dato();
@@ -52,21 +53,20 @@ class component_relation_children extends component_relation_common {
 			$this->set_dato(array());
 			$this->Save();
 		}
-		if ($dato==null) {
+		if ($dato===null) {
 			$dato=array();
 		}
 
 		return (array)$dato;
 	}//end get_dato
-
-
+	*/
 
 
 	/**
 	* SET_DATO
 	* @param array|string $dato
 	*	When dato is string is because is a json encoded dato
-	*/
+	*//*
 	public function set_dato($dato) {
 		if (is_string($dato)) { # Tool Time machine case, dato is string
 			$dato = json_handler::decode($dato);
@@ -75,19 +75,32 @@ class component_relation_children extends component_relation_common {
 			$dato = array($dato);
 		}
 		# Ensures is a real non-associative array (avoid json encode as object)
-		$dato = is_array($dato) ? array_values($dato) : (array)$dato;	
-		
-		/*
-		if (empty($dato)) {
-			parent::set_dato( null ); // To store null in database instead empty array
-		}else{
-			parent::set_dato( (array)$dato );
+		$dato = is_array($dato) ? array_values($dato) : (array)$dato;
+
+		# Verify all locators are well formed 
+		foreach ((array)$dato as $key => $current_locator) {
+			// Type
+			if (!isset($current_locator->type)) {
+				$current_locator->type = DEDALO_RELATION_TYPE_CHILDREN_TIPO;
+				debug_log(__METHOD__." Fixed bad formed locator (empty type) [$this->section_tipo, $this->parent, $this->tipo] ".to_string(), logger::WARNING);
+			}else if ($current_locator->type!==DEDALO_RELATION_TYPE_CHILDREN_TIPO) {
+				$current_locator->type = DEDALO_RELATION_TYPE_CHILDREN_TIPO;
+				debug_log(__METHOD__." Fixed bad formed locator (bad type $current_locator->type) [$this->section_tipo, $this->parent, $this->tipo] ".to_string(), logger::WARNING);
+			}
+			// from_component_tipo
+			if (!isset($current_locator->from_component_tipo)) {
+				$current_locator->from_component_tipo = $this->tipo;
+				debug_log(__METHOD__." Fixed bad formed locator (empty from_component_tipo) [$this->section_tipo, $this->parent, $this->tipo] ".to_string(), logger::WARNING);
+			}else if ($current_locator->from_component_tipo!==$this->tipo) {
+				$current_locator->type = $this->tipo;
+				debug_log(__METHOD__." Fixed bad formed locator (bad from_component_tipo $current_locator->from_component_tipo) [$this->section_tipo, $this->parent, $this->tipo] ".to_string(), logger::WARNING);
+			}
 		}
-		*/
+		
 
 		parent::set_dato( (array)$dato );
 	}//end set_dato
-
+	*/
 
 	
 	/**
@@ -106,8 +119,10 @@ class component_relation_children extends component_relation_common {
 		$ar_valor  	= array();		
 		$dato   	= $this->get_dato();
 		foreach ((array)$dato as $key => $current_locator) {
-			$ar_valor[] = $this->get_locator_value( $current_locator, $lang );			
-		}//end if (!empty($dato)) 
+			#$ar_valor[] = self::get_locator_value( $current_locator, $lang, $this->section_tipo );
+			$ar_valor[] = ts_object::get_term_by_locator( $current_locator, $lang, $from_cache=true );		
+		}//end if (!empty($dato))
+
 
 		# Set component valor
 		#$this->valor = implode(', ', $ar_valor);
@@ -260,8 +275,17 @@ class component_relation_children extends component_relation_common {
 	*/
 	public function add_children( $locator ) {
 
+		if ($locator->section_tipo===$this->section_tipo && $locator->section_id==$this->parent) {
+			return false; // Avoid autoreferences
+		}
+
+		if (!isset($locator->from_component_tipo)) {
+			debug_log(__METHOD__." ERROR. ignored action. Property \"from_component_tipo\" is mandatory ".to_string(), logger::ERROR);
+			return false;
+		}
+
 		# Add current locator to component dato		
-		if (!$add_locator = $this->add_locator_to_dato($locator)) {			
+		if (!$add_locator = $this->add_locator_to_dato($locator)) {
 			return false;
 		}
 		
@@ -273,13 +297,13 @@ class component_relation_children extends component_relation_common {
 	/**
 	* REMOVE_CHILDREN
 	* Iterate current component 'dato' and if math requested locator, removes it the locator from the 'dato' array
-	* NOTE: This method updates component 'dato' and save
+	* NOTE: This method updates component 'dato' 
 	* @return bool
 	*/
 	public function remove_children( $locator ) {
 
 		# Add current locator to component dato		
-		if (!$remove_locator_locator = $this->remove_locator_from_dato($locator)) {			
+		if (!$remove_locator_locator = $this->remove_locator_from_dato($locator)) {
 			return false;
 		}
 		
@@ -345,10 +369,10 @@ class component_relation_children extends component_relation_common {
 		$json_field = 'a.'.$json_field; // Add 'a.' for mandatory table alias search
 		
 		switch (true) {
-			case $comparison_operator=='=':
+			case $comparison_operator==='=':
 				$search_query = " {$json_field}#>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}' @> '[$search_value]'::jsonb ";
 				break;
-			case $comparison_operator=='!=':
+			case $comparison_operator==='!=':
 				$search_query = " ({$json_field}#>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}' @> '[$search_value]'::jsonb)=FALSE ";
 				break;
 		}
@@ -382,65 +406,7 @@ class component_relation_children extends component_relation_common {
 	}#end get_valor_export
 
 
-
-	/**
-	* RENDER_LIST_VALUE
-	* Overwrite for non default behaviour
-	* Receive value from section list and return proper value to show in list
-	* Sometimes is the same value (eg. component_input_text), sometimes is calculated (e.g component_portal)
-	* @param string $value
-	* @param string $tipo
-	* @param int $parent
-	* @param string $modo
-	* @param string $lang
-	* @param string $section_tipo
-	* @param int $section_id
-	*
-	* @return string $list_value
-	*//*
-	public static function render_list_value($value, $tipo, $parent, $modo, $lang, $section_tipo, $section_id) {
-
-		$component 	= component_common::get_instance(__CLASS__,
-													 $tipo,
-												 	 $parent,
-												 	 'list',
-													 DEDALO_DATA_NOLAN,
-												 	 $section_tipo);
-
-		
-		# Use already query calculated values for speed
-		$ar_records = (array)json_handler::decode($value);
-		$component->set_dato($ar_records);
-		$component->set_identificador_unico($component->get_identificador_unico().'_'.$section_id); // Set unic id for build search_options_session_key used in sessions
-		
-		return  $component->get_valor($lang);		
-	}#end render_list_value
-	*/
-
-
-	/**
-	* GET_VALOR_LIST_HTML_TO_SAVE
-	* Usado por section:save_component_dato
-	* Devuelve a section el html a usar para rellenar el 'campo' 'valor_list' al guardar
-	* Por defecto será el html generado por el componente en modo 'list', pero en algunos casos
-	* es necesario sobre-escribirlo, como en component_portal, que ha de resolverse obigatoriamente en cada row de listado
-	*
-	* En este caso, usaremos únicamente el valor en bruto devuelto por el método 'get_dato_unchanged'
-	*
-	* @see class.section.php
-	* @return mixed $result
-	*//*
-	public function get_valor_list_html_to_save() {
-		$result = $this->get_dato_unchanged();
-
-		return $result;
-	}//end get_valor_list_html_to_save
-	*/
-
-
-
 	
-
 
 	
 	

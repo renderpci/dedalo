@@ -28,17 +28,20 @@
 	text-align: center;
 	display: block;
 	/*width: 720px;*/
-	/*height:607px;*/
+	height:460px;
 	}
 	.css_player_wrap iframe.videoFrame {
 		width: 732px;
-		height: 540px;
+		height: 465px !important;
+		//background-color: #8efff3;
+		z-index: 0;
+		overflow: hidden;
 		}
 		
 
 
 /*-- AVPLAYER STAND ALONE --*/
-VIDEO.css_av_video {
+video.css_av_video {
 	box-shadow: 0 2px 8px #999999;
 	/*width: 720px;
 	height: 404px;*/
@@ -68,12 +71,14 @@ VIDEO.css_av_video {
 	text-align: center;	
 	display: inline-block;	/*background-color: #b1fdda;*/
 }
-IMG.av_posterframe {	
+img.av_posterframe {	
 	/*
 	width: 313px;
 	height: 176px;
 	*/
-	max-height: 404px;
+	//max-height: 404px;
+	height: 404px;
+	width: auto;
 	max-width: 100%;	
 	box-shadow: 0 2px 8px #999999;
 }

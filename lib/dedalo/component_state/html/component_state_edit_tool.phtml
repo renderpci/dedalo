@@ -18,15 +18,16 @@
 	
 	# CONTENIDO (INPUT)
 	$html_contenido = '';
-	//	dump($_SESSION['dedalo4']['auth']['permissions_table'], '$_SESSION'.to_string());
-			#dump($permissions, ' permissions'.to_string());
+	
+	
 	switch($permissions) {
 			
 		case 0	:	$html_contenido .= "\n <span class=\"css_span_dato\"> ".label::get_label('sin_acceso')." ".get_class()."</span>"; 
 					break;
 						
 		case 1	: 	$html_contenido .= $valor;
-					$html_contenido .= "\n <label class=\"css_state_rotulo\">". label::get_label($this->caller_element) ."</label>";
+					$caller_element  = isset($this->caller_element) ? $this->caller_element : null;
+					$html_contenido .= "\n <label class=\"css_state_rotulo\">". label::get_label($caller_element) ."</label>";
 					break;
 						
 		case ($permissions>=2)	:
@@ -34,6 +35,7 @@
 					# User options
 					$checked = $valor_for_checkbox[0]>=1 ? 'checked="checked"' : '';					
 					$html_contenido .= "\n <input type=\"checkbox\" class=\"css_state\"
+					id=\"{$id_wrapper}_checkbox\"
 					data-tipo=\"{$tipo}\"
 					data-section_tipo=\"{$section_tipo}\"
 					data-parent=\"{$parent}\"
@@ -45,28 +47,11 @@
 					title=\"$html_title\" $checked
 					onchange=\"component_state.update_state_locator(this)\" />";
 											
-					$html_contenido .= "<span> ".label::get_label('acabado')." </span>";
-					if(SHOW_DEBUG) {
-					//	$html_contenido .= " [".$this->options->lang."] ";
-					}
-					#$html_contenido .= "</label> valor: $valor - valor_for_checkbox: $valor_for_checkbox ";
+					$html_contenido .= "<label for=\"{$id_wrapper}_checkbox\"> ".label::get_label('acabado')." </label>";
+					
+					
 
-					if ($permissions<3) {
-
-						# USER: Label to info user about current admin options values (read only)
-						switch (true) {
-							case $valor_for_checkbox[1]==50:
-								$html_contenido .= " <strong>".label::get_label('para_revisar')."</strong>";
-								break;
-							case $valor_for_checkbox[1]==100:
-								$html_contenido .= " <strong>".label::get_label('validado')."</strong>";
-								break;
-							default:
-								$html_contenido .= " <strong>".''."</strong>";
-								break;
-						}
-						
-					}else if ($permissions>=3) {
+					if($permission_section>=3 || (bool)$is_global_admin===true) {
 
 						# Admin options
 						$html_contenido .= "\n <select onchange=\"component_state.update_state_locator(this)\"
@@ -84,18 +69,24 @@
 						$selected = ($valor_for_checkbox[1]==100) ? 'selected="selected"' : '';
 						$html_contenido .= "<option value=\"100\" $selected >".label::get_label('validado')."</option>";
 						$html_contenido .= "</select> ";
-												
-						if(SHOW_DEBUG) {
-							#$html_contenido .= " [".$this->options->lang."]";
-						}
-						#$html_contenido .= "</label> valor: $valor - valor_for_checkbox: $valor_for_checkbox ";
-					}
 
-					if(SHOW_DEBUG) {
-						#$html_contenido .= "\n <span class=\"css_span_debugger\" id=\"debugger_{$tipo}\" >{$debugger}</span>";	
-					}
+					}else{
+
+						# USER: Label to info user about current admin options values (read only)
+						switch (true) {
+							case $valor_for_checkbox[1]==50:
+								$html_contenido .= " <strong>".label::get_label('para_revisar')."</strong>";
+								break;
+							case $valor_for_checkbox[1]==100:
+								$html_contenido .= " <strong>".label::get_label('validado')."</strong>";
+								break;
+							default:
+								$html_contenido .= " <strong>".''."</strong>";
+								break;
+						}
+												
+					}//end if($permissions>=3 || (bool)$is_global_admin===true)					
 					break;
-			
 	}
 
 	# Prepare content to show in page

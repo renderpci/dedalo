@@ -36,7 +36,17 @@
 		opacity: 0.8;
 		color:#000000
 	}
+	.css_button_generic > span {
+		padding-left: 4px;
+	}
 
+/* HIDE BUTTONS TEXT ON SMALL SCREEN
+-------------------------------------------------------------- */
+.css_button_generic > span {
+	@media screen and (max-width: @movil_max_width) {
+		display: none;
+    	}
+}
 
 
 /* BUTTON WITH ICON LEFT
@@ -62,7 +72,8 @@
 		}
 		.button_with_icon_left::before {
 			content: '';
-			background-image: url("../../themes/default/glyphicons-halflings.png");
+			//background-image: url("../../themes/default/glyphicons-halflings.png");
+			background-image: url("../../themes/default/svg_icons.svg");
 			background-position: -360px -144px;
 			margin-right: 7px;	
 			width: 14px;
@@ -89,23 +100,25 @@
 		height: 14px;
 		line-height: 14px;
 		vertical-align: text-top;
-		background-image: url("../../themes/default/glyphicons-halflings.png");
+		//background-image: url("../../themes/default/glyphicons-halflings.png");
 		background-image: url("../../themes/default/svg_icons.svg");
 		background-position: -48px -24px;
-		background-size: 474px 184px ;
+		background-size: 474px 184px;
 		background-repeat: no-repeat;
 		list-style: none;	
 		position: relative;
 		/*top: -1px;*/
 		cursor: pointer;
-		opacity: 0.4
-	}
-	.icon_bs:hover {
-		opacity: 1
-	}
-	.icon_bs:active {
-		opacity: 0.4
-	}
+		opacity: 1;
+		//zoom: 1.25;
+		}
+		.icon_bs:hover {
+			opacity: 1
+		}
+		.icon_bs:active {
+			opacity: 0.4
+		}
+
 	.image_delete_icon {
 		/* background-image: url('../../../themes/default/delete.png'); 
 		width: 11px;
@@ -143,15 +156,12 @@
 		background-position: -432px 0px;	
 	}
 	.icon_video {
-		background-image: url("../../themes/default/video.png");
-		background-position: initial;
-		background-size: initial;
-		width: 14px;
-		height: 14px;
-		display: inline-block;
-		vertical-align: sub;
+		//background-position: initial;
+		//background-size: initial;
+		background-position: -192px 0;
 		margin-left: 2px;
-		opacity: 0.8;
+		opacity: 0.65;
+		zoom: initial;
 	}
 	.icon_transcription {
 		background-image: url("../../themes/default/tr-icon.gif");
@@ -249,5 +259,20 @@
 	}
 
 
+/* BUTTON Close
+ * X icon
+----------------------------------------------------- */
+.button_close {	
+	position: absolute;
+	right: 5px;
+	top: 5px;
+	z-index: 2;
+	//background-position: -168px -96px;
+	//background-position: -48px -96px;
+	//opacity: 0.8;
+	
+	.buttons_common;
+	background-image: url('../../themes/default/close.svg');	
+}
 
 

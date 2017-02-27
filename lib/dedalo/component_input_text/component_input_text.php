@@ -10,34 +10,42 @@
 	$propiedades			= $this->get_propiedades();	
 	$dato 					= $this->get_dato();
 	$valor					= $this->get_valor();
-	$dato_reference_lang 	= NULL;
+	$dato_reference_lang 	= null;
 	$traducible 			= $this->get_traducible();
 	$label 					= $this->get_label();
 	$required				= $this->get_required();
 	$debugger				= $this->get_debugger();
-	if($modo != 'simple')
 	$permissions			= common::get_permissions($section_tipo,$tipo);
 	$ejemplo				= $this->get_ejemplo();
-	$html_title				= "Info about $tipo";		
-	$lang_name				= $this->get_lang_name();
+	$html_title				= "Info about $tipo";
 	$identificador_unico	= $this->get_identificador_unico();
 	$component_name			= get_class($this);
 	$visible				= $this->get_visible();
 	$file_name				= $modo;
 	
-
+	if($permissions===0) return null;
+	
 	# Verify component content record is inside section record filter
-	if ($this->get_filter_authorized_record()===false) return null ;	
+	if ($this->get_filter_authorized_record()===false) return null ;
 	
 	
-	switch($modo) {
+	switch($modo) {		
+		
+		case 'edit_in_list':
+				// Fix always edit as modo / filename
+				$modo 			= 'edit';
+				$file_name		= 'edit';
+
+				$wrap_style 	= '';	// 'width:100%'; // Overwrite possible custon component structure css
+				// Dont break here. Continue as modo edit
 		
 		case 'tool_lang':
-				$file_name 		= 'edit';
-		case 'edit'	:				
+				$file_name = 'edit';
+		case 'edit'	:
 				$id_wrapper 	= 'wrapper_'.$identificador_unico;
 				$input_name 	= "{$tipo}_{$parent}";
-				$dato 			= htmlentities($dato);
+				$dato_json 		= json_handler::encode($dato);
+				#$dato 			= htmlentities($dato);
 				$component_info = $this->get_component_info('json');
 				
 				# DATO_REFERENCE_LANG
@@ -46,11 +54,13 @@
 				if (empty($dato) && $traducible=='si') {					
 					$default_component = $this->get_default_component();		
 				}
-				*/													
+				*/		
+				$mandatory 		= (isset($propiedades->mandatory) && $propiedades->mandatory===true) ? true : false;
+				$mandatory_json = json_encode($mandatory);									
 				break;
 
 		case 'print' :
-				$dato = htmlentities($dato);
+				#$dato = htmlentities($dato);
 				break;
 
 		case 'tool_time_machine'	:	
@@ -78,14 +88,16 @@
 				$file_name  = 'list';
 				break;
 						
-		case 'lang'	:									
+		case 'lang'	:
 				break;
 		
 		case 'search':
+				# Operators
 				$ar_comparison_operators = $this->build_search_comparison_operators();
 				$ar_logical_operators 	 = $this->build_search_logical_operators();
 
-				if(isset($_REQUEST[$tipo])) $dato = $_REQUEST[$tipo];
+				#if(isset($_REQUEST[$tipo])) $dato = $_REQUEST[$tipo];
+				#$dato 			= json_encode($dato);
 
 				# Search input name
 				$search_input_name = $section_tipo.'_'.$tipo;

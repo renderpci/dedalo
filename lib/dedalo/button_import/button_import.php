@@ -15,17 +15,27 @@
 	$propiedades 			= $this->get_propiedades();
 	if(SHOW_DEBUG) {
 		if (!isset($propiedades->section_tipo)) {
-			dump($propiedades , ' propiedades - button_tipo: '.$tipo );
+			dump($propiedades , ' DEBUG ALERT (mandatory section_tipo is not defined in \'propiedades\') propiedades - button_tipo: '.$tipo );
 		}
 	}
 	$tool_name 	  			= $propiedades->tool_name;
-	$context_name 			= $propiedades->context_name;
-	$target_section_tipo	= $propiedades->section_tipo;
+	$context_name 			= $propiedades->context_name;	
+	$target_section_tipo	= isset($propiedades->target_section_tipo) ? $propiedades->target_section_tipo : $propiedades->section_tipo;
+
+
+	# T
+	# Configure 'tipo' send ed in url as ?t=XXX
+	# Default is section tipo, but you can use a component tipo if you need specifyc value (import files from section list case, for example)
+	$t = isset($propiedades->component_tipo) ? $propiedades->component_tipo : $propiedades->section_tipo;
+
+	# CUSTOM_PARAMS
+	# Optional propiedades params (used from import files from section list)
+	$custom_params = isset($propiedades->custom_params) ? json_encode($propiedades->custom_params) : null;
 	
 	
 	if(SHOW_DEBUG) {
 		if (!property_exists($propiedades, 'tool_name')) {
-			dump($propiedades, ' propiedades');
+			dump($propiedades, ' DEBUG ALERT (mandatory tool_name is not defined in \'propiedades\') - propiedades');
 			throw new Exception("Error Processing Request. Properties 'tool_name' is mandatory ", 1);			
 		}
 	}		

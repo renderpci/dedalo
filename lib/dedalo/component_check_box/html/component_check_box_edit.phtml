@@ -2,9 +2,10 @@
 
 	# VISUALIZADOR HTML	
 	
-	print "\n<!-- CHECK BOX [tipo:$tipo section_id_matrix:$parent] $label -->";
+	# html_delimiter
+	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'in');
 
-	print "\n<div class=\"wrap_component css_wrap_check_box wrap_component_{$tipo}\"
+	print "<div class=\"wrap_component css_wrap_check_box wrap_component_{$tipo}\"
 	id=\"{$id_wrapper}\"
 	data-tipo=\"{$tipo}\"
 	data-section_tipo=\"{$section_tipo}\"
@@ -45,15 +46,18 @@
 						
 						$checked  = in_array($locator, $dato) ? 'checked="checked"' : '';
 						$tabindex = $i==1 ? 'tabindex="1"' : '';
+
+						$input_id = $input_name.'_'.$i;
 						
 						$html_contenido .= "<li>";
 
 						# 
 						# INPUT
-						$html_contenido .= "\n <input type=\"checkbox\" class=\"css_check_box\"
+						$html_contenido .= " <input type=\"checkbox\" class=\"css_check_box\"
 						onfocus=\"component_common.select_wrap(null,'$id_wrapper');\"
 						onchange=\"component_check_box.Save(this)\"
 						name=\"{$input_name}\"
+						id=\"{$input_id}\"
 						data-tipo=\"{$tipo}\"
 						data-lang=\"{$lang}\"
 						data-section_tipo=\"{$section_tipo}\"
@@ -66,7 +70,7 @@
 						
 						#
 						# LABEL				
-						$html_contenido .= " <label class=\"css_check_box_rotulo\" $required_code >$rotulo</label>";
+						$html_contenido .= " <label for=\"$input_id\" class=\"css_check_box_rotulo\" $required_code >$rotulo</label>";
 
 						$html_contenido .= "</li>";
 						$i++;
@@ -92,7 +96,11 @@
 	}
 	
 	
-	print "\n</div><!-- /css_wrap_check_box CHECK BOX [tipo:$tipo section_id_matrix:$tipo] $label -->\n\n"; //wrap
+	print "</div>"; //wrap
+
+
+	# html_delimiter
+	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'in');
 
 
 ?>

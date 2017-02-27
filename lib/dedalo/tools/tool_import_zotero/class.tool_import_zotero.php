@@ -80,7 +80,7 @@ class tool_import_zotero extends tool_common {
 			define('ZOTERO_COMPONENT_TIPO_TIPOLOGIA_DE_BIBLIORAFIA' 	, 'rsc138'); # Tipología bibliográfica select (Nota: Establecer correspondencias tipo 'entry-encyclopedia' => 'Libro electrónico')
 			define('ZOTERO_COMPONENT_TIPO_TITULO' 						, 'rsc140'); # Título
 			define('ZOTERO_COMPONENT_TIPO_SERIE_COLECCION' 				, 'rsc211'); # Series / colecciones (component_autocomplete)
-			define('ZOTERO_COMPONENT_TIPO_AUTORIA_RESPONSABILIDAD' 		, 'rsc139'); # Autoría y responsabilidad
+			define('ZOTERO_COMPONENT_TIPO_AUTORIA_RESPONSABILIDAD' 		, 'rsc349'); # Autoría y responsabilidad
 			define('ZOTERO_COMPONENT_TIPO_RESUMEN' 						, 'rsc221'); # Resumen
 			define('ZOTERO_COMPONENT_TIPO_FECHA_ACTUALIZACION'			, 'rsc143'); # Fecha de actualización o revisión //accessed
 			define('ZOTERO_COMPONENT_TIPO_FECHA'						, 'rsc224'); # Fecha 
@@ -279,7 +279,7 @@ class tool_import_zotero extends tool_common {
 		#$section_tipo  	= 'rsc3'; 	# Virtual is rsc205
 		$lang 				= DEDALO_DATA_NOLAN;
 		$value 				= (int)$zotero_id;
-		$table 				= 'matrix';#(string)common::get_matrix_table_from_tipo($tipo); 
+		$table 				= 'matrix';#(string)common::get_matrix_table_from_tipo($section_tipo); 
 		
 		$sql_filter  = JSON_RecordObj_matrix::build_pg_filter('gin','datos',$tipo,$lang,$value);
 		$strQuery   = "
@@ -400,7 +400,12 @@ class tool_import_zotero extends tool_common {
 			if (isset($zotero_obj->$optional_id)) {
 				$section_id = (int)$zotero_obj->$optional_id;	// Optionally, if is defined zotero->call-number, use this as section id
 			}else{
-				$section_id = (int)$zotero_obj->id;	// Default, get from zotero id
+				if(is_string($zotero_obj->id)){
+
+				}else{
+					$section_id = (int)$zotero_obj->id;	// Default, get from zotero id
+				}
+				
 			}
 			#dump($section_id, ' section_id - '.$zotero_obj->id);die();
 			if ($section_id<1) throw new Exception("Error Processing Request. section_id is empty", 1);
@@ -534,7 +539,7 @@ class tool_import_zotero extends tool_common {
 					
 					case 'author':
 						$ar_name   = (array)self::zotero_name_to_name( $zotero_obj->$name, 'array' );
-						$component = component_common::get_instance('component_array', $component_tipo, $parent, 'edit', DEDALO_DATA_NOLAN, $section_tipo);
+						$component = component_common::get_instance('component_input_text', $component_tipo, $parent, 'edit', DEDALO_DATA_NOLAN, $section_tipo);
 						$component->set_dato( $ar_name );
 						$component->Save();						
 						$ar_response[$parent]->$name ="+ Saved $name value ".to_string($ar_name)." (".to_string($value).") from zotero import process";
@@ -665,7 +670,7 @@ class tool_import_zotero extends tool_common {
 		$section_tipo   = ZOTERO_SECTION_TIPO_SERIES_COLECCIONES;		# 'rsc212'; 	# Lista de valores Colecciones / Series 
 		$lang 			= DEDALO_DATA_LANG;
 		$value 			= $zotero_container_title;
-		$table 			= (string)common::get_matrix_table_from_tipo($tipo); 
+		$table 			= (string)common::get_matrix_table_from_tipo($section_tipo); 
 		
 		$sql_filter  = JSON_RecordObj_matrix::build_pg_filter('gin','datos',$tipo,$lang,$value);
 		$strQuery   = "-- ".__METHOD__."

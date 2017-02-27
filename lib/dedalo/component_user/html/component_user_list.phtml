@@ -2,7 +2,8 @@
 
 	# VISUALIZADOR HTML	
 	
-	echo "\n<!-- COMPONENT_USER [tipo:$tipo section_id_matrix:$parent] -->";	
+	# html_delimiter
+	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'in');	
 		
 	# CONTENIDO (INPUT)
 	$html_contenido = '';
@@ -25,6 +26,9 @@
 
 	
 	# PRINT HTML	
-	print $html_contenido;	
+	print $html_contenido;
 	
+
+	# html_delimiter
+	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'out');
 ?>

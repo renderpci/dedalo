@@ -37,8 +37,8 @@
 
 
 	if ($permissions<1) {
-		echo "\n <span class=\"css_span_dato\"></span>";
-		return false;
+		echo "<span class=\"css_span_dato\"></span>";
+		#return false;
 	}
 	
 #return $ar_search_fields;

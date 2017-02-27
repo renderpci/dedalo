@@ -5,12 +5,13 @@
 	# CONTENIDO (INPUT)
 	$html_contenido  = "\n<tr>";	
 	
-	switch($permissions) {
+	switch(true) {
 			
-		case 0	:	$html_contenido .= "\n <span class=\"css_span_dato\"> ".label::get_label('sin_acceso')." </span>";
+		case $permissions===0	:	$html_contenido .= "\n <span class=\"css_span_dato\"> ".label::get_label('sin_acceso')." </span>";
 					break;
 						
-		case ($permissions>=1)	:
+		case ($permissions>=1):
+
 					
 					# TD ID
 					$html_contenido .= "\n <th data-resizable-column-id=\"ID\" class=\"id_column\" >";
@@ -22,17 +23,27 @@
 
 					$html_contenido .= "\n </th>";
 					
-					# TD DATOS	
-					foreach($ar_label_html as $tipo => $label_html) {
+					# TD DATOS
+					foreach($ar_label_html as $key => $ar_data) {
+
+						$tipo  = $ar_data['tipo'];
+						$label = $ar_data['label'];
 
 						$td_css_selector_tipo = 'th_column_'.$tipo;
+
+						$th_style = '';
+						# Overwrite default column width when need. Set component propiedades 'elements_list_mode' as you want, like edit..
+						if (isset($propiedades->elements_list_mode->$tipo->column_width)) {
+							$column_width = $propiedades->elements_list_mode->$tipo->column_width;
+							$th_style = "width:$column_width";
+						}	
 						
-						$html_contenido .= "\n <th class=\"$td_css_selector_tipo\" data-resizable-column-id=\"$tipo\">";
+						$html_contenido .= "\n <th class=\"$td_css_selector_tipo\" style=\"$th_style\" data-resizable-column-id=\"$tipo\">";
 						
-							$html_contenido .= "<div class=\"th_title\" title=\"$label_html\">";
-							$html_contenido .= $label_html;
+							$html_contenido .= "<div class=\"th_title\" title=\"$label\">";
+							$html_contenido .= $label;
 							$html_contenido .= '</div>';
-							$html_contenido .= $this->flechas_orden($tipo, $label_html);
+							$html_contenido .= $this->flechas_orden($tipo, $label);
 
 						$html_contenido .= "\n </th>";
 					}

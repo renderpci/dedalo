@@ -2,92 +2,115 @@
 
 	# VISUALIZADOR HTML	
 	
-		
-	
-	print "\n<!-- COMPONENT_AUTOCOMPLETE_TS $label -->";
+	print "<!-- ".__CLASS__." [tipo:$tipo] $label -->";
 
-	print "\n<div class=\"wrap_component css_wrap_autocomplete_ts\" id=\"{$id_wrapper}\" >";
+	print "<div class=\"wrap_component css_wrap_autocomplete_ts\" id=\"{$id_wrapper}\">";
 	
 	# ETIQUETA (LABEL)
 	$html_label = component_common_draw::draw_label($this);
 	
 	# CONTENIDO (INPUT)
-	$html_contenido = '';
+	$html_content = '';
 	switch($permissions) {
 			
-		case 0	:	$html_contenido .= "";
+		case 0	:	$html_content .= "";
 					break;
-						
-		case 1	: 	$html_contenido .= $valor;
-					break;	
-						
-		
-		case ($permissions>=2)	:
+		case 1	:
+		case 2	:
+		case 3	:
+			#
+			# COMPARISON OPERATORS
+			$html_content .= operator::get_search_comparison_operators_html($tipo,$ar_comparison_operators);
 
-					# COMPARISON OPERATORS
-					$html_contenido .= operator::get_search_comparison_operators_html($tipo,$ar_comparison_operators);
+			
+			#
+			# VALOR . STRING RESOLVED TO SHOW
+			$html_content .= "\n <ul class=\"css_autocomplete_ts_valor in_search_mode\">";
+			foreach ($ar_valor as $current_value => $value) {
 
-					
-		
-					# VALOR . STRING RESOLVED TO SHOW
-					#$html_contenido .= "\n <div class=\"css_autocomplete_ts_valor\">".$valor_searched_string."</div>";
-					# VALOR . STRING RESOLVED TO SHOW
-					$html_contenido .= "\n <ul class=\"css_autocomplete_ts_valor\">";					
-					$html_contenido .= "</ul>";
+				$html_content .= "<li>";
 
-					
-					#
+				# BTN DELETE
+				$html_content .= "\n <div class=\"icon_bs link css_autocomplete_ts_button_delete\"
+				data-tipo=\"{$tipo}\"
+				data-current_value='$current_value'
+				data-role=\"autocomplete_ts_button_delete\"
+				title=\"$label $parent\"
+				onclick=\"component_autocomplete_ts.delete(this)\"></div>";
+
+				$html_content .= $value;
+				if(SHOW_DEBUG) {
+					#$html_content .= " <span class=\"notes\">$current_value</span>";
+				}
+
+				$html_content .= "</li>";
+			}
+			$html_content .= "</ul>";
+
+
+			# SOURCE_MODE SWITCH
+			switch ($source_mode) {
+				case 'tree':
+					# BTN NEW ELEMENT
+					$html_content .= "<div class=\"icon_bs link new_autocomplete_ts in_search_mode\"
+					data-id_wrapper=\"$id_wrapper\"
+					data-hide_types='{$ar_referenced_tipo_json}'
+					data-source_mode=\"$source_mode\"
+					onclick=\"component_autocomplete_ts.open_ts_window(this)\"></div>";
+					break;
+				
+				default:				
 					# INPUT SEARCH FIELD
-					$html_contenido .= "\n <input type=\"text\" class=\"css_autocomplete_ts_search_field\"
-					placeholder=\"".label::get_label('buscar')."...\"
+					$html_content .= "\n <input class=\"css_autocomplete_ts_search_field in_search_mode\" type=\"text\" placeholder=\"".label::get_label('buscar')."...\"
+					data-id_wrapper=\"$id_wrapper\"
 					data-ar_tipo_to_search='{$ar_referenced_tipo_json}'
-					onclick=\"component_autocomplete_ts.activate(this)\"
+					data-source_mode=\"$source_mode\"
+					onfocus=\"component_autocomplete_ts.activate(this)\"
+					tabindex=\"1\"
+					autocomplete=\"off\"
+					autocorrect=\"off\"
 					/>";
+					if(SHOW_DEBUG) {
+						$html_content .= "<div class=\"debug_info notes\">ar_referenced_tipo: ".implode(', ', $ar_referenced_tipo)."</div>";
+						$html_content .= "<div class=\"debug_info notes\">".str_replace('},', '},<br>', $dato_json) ."</div>";
+					}
+					break;
+			}//end switch ($source_mode)
+			
 
+			# INPUT DATA HIDDEN
+			$html_content .= "\n<input type=\"text\" name=\"{$input_name}\" class=\"css_autocomplete_ts_dato_hidden\" style=\"width:300px;\"
+			data-tipo=\"{$tipo}\"
+			data-section_tipo=\"{$section_tipo}\"
+			data-parent=\"{$parent}\"
+			data-lang=\"{$lang}\"
+			data-ar_tipo_to_search='{$ar_referenced_tipo_json}'
+			data-link_fields='{$ar_link_fields}'
+			data-role=\"autocomplete_ts_dato_hidden\"
+			value='{$dato_json}'
+			title='$ar_referenced_tipo_json'
+			/>";		
 
+			#
+			# LOGICAL OPERATORS
+			$html_content .= operator::get_search_logical_operators_html($tipo,$ar_logical_operators);
 
-					# INPUT DATA HIDDEN
-					$html_contenido .= "\n <input type=\"text\" name=\"{$search_input_name}\" class=\"css_autocomplete_ts_dato_hidden temmporal\"
-					id=\"{$identificador_unico}\"						 
-					data-tipo=\"{$tipo}\"
-					data-section_tipo=\"{$section_tipo}\"
-					data-parent=\"{$parent}\"
-					data-lang=\"{$lang}\"
-					value='{$dato_json}'
-					/>";
-					
+			if(SHOW_DEBUG===true) {
+				$html_content .= "<span class=\"debug_info\">$search_input_name</span>";
+			}
 
-
-					# BTN DELETE
-					/*
-					$html_contenido .= "\n <div class=\"div_image_link link css_autocomplete_ts_button_delete\" 
-					data-tipo=\"{$tipo}\"
-					title=\"$label $id\"
-					onclick=\"component_autocomplete_ts.delete_searched_value(this)\"></div>";
-					*/	
-
-
-					# TREE RESOLUTION STATS
-					#$html_contenido .= "\n <div id=\"autocomplete_ts_tree_stats_{$tipo}\" class=\"css_autocomplete_ts_tree_stats\">231</div>";					
-
-								
-
-					# LOGICAL OPERATORS
-					$html_contenido .= operator::get_search_logical_operators_html($tipo,$ar_logical_operators);
-
-					break;				
-											
+			break;
 	}
 
 	# Prepare content to show in page
-	tools::prepare_content($html_contenido);
+	tools::prepare_content($html_content);
 	
 	
 	# PRINT HTML
 	print $html_label;
-	print $html_contenido;
+	print $html_content;
 	
 	
 	
-	print "\n</div><!-- /css_wrap_autocomplete_ts COMPONENT_AUTOCOMPLETE_TS [tipo:$tipo id_matrix:$parent] $label -->\n\n"; //wrap
+	print "\n</div><!-- /css_wrap_autocomplete_ts ".__CLASS__." [tipo:$tipo id_matrix:$parent] $label -->\n\n"; //wrap
 ?>

@@ -1,7 +1,8 @@
 <?php
 
 	# CONTROLLER
-	$tool_name = get_class($this);
+	$tool_name 	  = get_class($this);
+	$button_title = label::get_label('tool_update_cache');
 
 	# TOOL CSS / JS MAIN FILES
 	css::$ar_url[] = DEDALO_LIB_BASE_URL."/tools/".$tool_name."/css/".$tool_name.".css";

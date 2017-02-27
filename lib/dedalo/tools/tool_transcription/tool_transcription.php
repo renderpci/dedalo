@@ -52,6 +52,12 @@
 
 				# TEXT (EDITOR) LEFT SIDE
 				$this->component_related_obj->set_modo('tool_transcription');
+				$original_lang 	= component_text_area::force_change_lang($this->component_related_obj->get_tipo(),
+																		 $this->component_related_obj->get_parent(),
+																		 $this->component_related_obj->get_modo(),
+																		 $this->component_related_obj->get_lang(),
+																		 $this->component_related_obj->get_section_tipo());
+				$this->component_related_obj->set_lang($original_lang);
 				$component_related_obj_tipo = $this->component_related_obj->get_tipo();
 				$html_text 					= $this->component_related_obj->get_html();
 
@@ -75,12 +81,13 @@
 				# HEADER
 				$component_related_tipo = $this->component_related_obj->get_tipo();	# Tipo del text_area
 				# DATA LANGS OF CURRENT SECTION
+				/*
 				$section_id 			= $parent;
 				$section_tipo 			= $this->component_obj->get_section_tipo();
 				$section 				= section::get_instance($section_id ,$section_tipo);
-				$ar_all_project_langs 	= $section->get_ar_all_project_langs();
-					#dump($ar_all_project_langs,'$ar_all_project_langs');
-						
+				$ar_all_project_langs 	= $section->get_ar_all_project_langs($resolve_termino=true);
+				*/
+				$ar_all_project_langs 	= common::get_ar_all_langs_resolved(DEDALO_DATA_LANG);					
 				
 				#
 				# STATE
@@ -99,6 +106,22 @@
 					$button_subtitles_html 	= $tool_subtitles->get_html();
 				}
 
+				# BUTTON TOOL TR_PRINT
+					$tool_tr_print 				= new tool_tr_print($this->component_related_obj,'button');
+					$button_tool_tr_print_html 	= $tool_tr_print->get_html();
+				
+				# BUTTON TOOL TIME_MACHINE
+					$tool_time_machine 				= new tool_time_machine($this->component_related_obj,'button');
+					$button_tool_time_machine_html 	= $tool_time_machine->get_html();
+				
+
+
+				# TAGS_INSPECTOR
+				# ar_person_tags
+				# $ar_person_tags = $this->get_ar_person_tags();
+					#dump($ar_person_tags, ' ar_person_tags ++ '.to_string());
+
+
 				# TOOL CSS / JS MAIN FILES
 				# CSS
 				css::$ar_url[] = DEDALO_LIB_BASE_URL."/tools/".$tool_name."/css/".$tool_name.".css";
@@ -106,8 +129,7 @@
 				js::$ar_url[]  = DEDALO_LIB_BASE_URL."/tools/tool_lang/js/tool_lang.js";
 				js::$ar_url[]  = DEDALO_LIB_BASE_URL."/tools/".$tool_name."/js/".$tool_name.".js";
 				
-				break;				
-		
+				break;		
 	}#end switch		
 
 

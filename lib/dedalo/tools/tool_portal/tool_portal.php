@@ -75,7 +75,6 @@
 
 				#DEDALO_LIB_BASE_URL + "/main/?m=list&tipo="+current_tipo+"&caller_id="+caller_id+"&caller_tipo="+caller_tipo;
 				break;
-
 		
 	}#end switch
 		

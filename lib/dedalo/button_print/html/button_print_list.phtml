@@ -12,28 +12,30 @@
 	//$html_label = component_common_draw::draw_label($this);
 	
 	# CONTENIDO (INPUT)
-	$html_contenido = '';
+	$html_content = '';
 	
-	switch($permissions) {
+	switch(true) {
 			
-		case 0	:	$html_contenido .= "";					
-					break;
+		case $permissions===0 :
+				$html_content .= "";
+				break;
 						
 		case ($permissions>=2)	:
 
-					$html_contenido .= "\n <div class=\"css_button_generic css_button_print link\"
-					onclick=\"tool_common.open_tool_layout_print(this)\"
-					data-tipo=\"{$tipo}\"
-					data-target_section_tipo=\"{$target_section_tipo}\"
-					title=\"$html_title\" >";
-					$html_contenido .= $label;
-					$html_contenido .= "</div>";
-	
+				$html_content .= "<div class=\"css_button_generic btn_inside_section_buttons_container css_button_print tool_print\"
+				onclick=\"tool_common.open_tool_layout_print(this)\"
+				data-tipo=\"{$tipo}\"
+				data-target_section_tipo=\"{$target_section_tipo}\"
+				title=\"$html_title\" >";
+				$html_content .= "<span>";
+				$html_content .= $label;
+				$html_content .= "</span>";
+				$html_content .= "</div>";
 	}
 	
 	
 	# PRINT HTML
-	print $html_contenido;
+	print $html_content;
 	
 	
 	#print "\n</div><!-- /css_wrap_button_import -->\n\n"; //wrap

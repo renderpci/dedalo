@@ -27,60 +27,60 @@ class component_filter extends component_common {
 	protected static $filter_matrix_table = 'matrix';
 	
 	
-	# Constructor
+	/**
+	* __CONSTRUCT
+	* Component constructor
+	*/
 	function __construct( $tipo=false, $parent=null, $modo='list', $lang=DEDALO_DATA_NOLAN, $section_tipo=null) {	#__construct($id=NULL, $tipo=false, $modo='edit', $parent=NULL, $lang=NULL)
 				
-		# Creamos el componente normalmente
+		# Build component normally
 		parent::__construct($tipo, $parent, $modo, DEDALO_DATA_NOLAN, $section_tipo);
 
 		$this->parent = $this->get_parent();	
 
-		if(SHOW_DEBUG) {
-			$traducible = $this->RecordObj_dd->get_traducible();
-			if ($traducible=='si') {
+		if(SHOW_DEBUG===true) {
+			if ($this->RecordObj_dd->get_traducible()==='si') {
 				throw new Exception("Error Processing Request. Wrong component lang definition. This component $tipo (".get_class().") is not 'traducible'. Please fix this ASAP", 1);				
 			}
 		}
 
-
 		# DEDALO_DEFAULT_PROJECT
 		# Dato : Verificamos que hay un dato. Si no, asignamos el dato por defecto definido en config 
-		if ($modo=='edit' && defined('DEDALO_DEFAULT_PROJECT')) {
-			$dato = $this->get_dato();
-				
+		if ($modo==='edit' && defined('DEDALO_DEFAULT_PROJECT')) {
+			$dato = $this->get_dato();				
 			if(empty($dato)) {
 				#dump($dato," EMPTY DATO:  $this->parent - $this->tipo - $this->section_tipo");
 				$this->set_dato(array(DEDALO_DEFAULT_PROJECT => 2));
 				$this->Save();
-				if(SHOW_DEBUG) {					
+				if(SHOW_DEBUG===true) {					
 					debug_log(__METHOD__." Saved component filter (tipo:$tipo, parent:$parent, section_tipo:$section_tipo) DEDALO_DEFAULT_PROJECT as ".DEDALO_DEFAULT_PROJECT);
 				}
 			}
-		}#end if ($modo=='edit' && defined('DEDALO_DEFAULT_PROJECT'))
-
-	}#end __construct
+		}
+	}//end __construct
 
 
 
 	/**
 	* GET_HTML
-	* @return 
+	* @return string $html
 	*/
 	public function get_html() {
-		$this->start_time = microtime(1);	
+		$this->start_time = microtime(1);
 		return parent::get_html();
-	}#end get_html
+	}//end get_html
 
 
 
 	/**
 	* GET DATO : Format {"7":2,"269":2,"298":2}
+	* @return array $dato
 	* @see component_filter_master->get_dato() for maintain unyfied format of projetcs
 	*/
 	public function get_dato() {
 		$dato = parent::get_dato();
 		return (array)$dato;
-	}
+	}//end get_dato
 
 
 
@@ -93,8 +93,9 @@ class component_filter extends component_common {
 			$dato=array();
 		}
 		parent::set_dato( (object)$dato );
-	}
+	}//end set_dato
 	
+
 
 	/**
 	* SAVE OVERRIDE
@@ -107,22 +108,17 @@ class component_filter extends component_common {
 
 		# 
 		# ACTIVITY CASE Logger only
-		if( $this->tipo == logger_backend_activity::$_COMPONENT_PROYECTOS['tipo'] ) return $parent_save_result; 
+		if( $this->tipo === logger_backend_activity::$_COMPONENT_PROYECTOS['tipo'] ) return $parent_save_result; 
 		
 		#
 		# PORTAL CASE
 		# Si la sección a que pertenece este componente tiene portal, propagaremos los cambios a todos los recursos existentes en el portal de esta sección (si los hay)
-		if ($this->propagate_filter) {
-			
-			$this->propagate_filter();				
-			
-		}# /if ($propagate_filter) {
+		if ($this->propagate_filter) {			
+			$this->propagate_filter();			
+		}//if ($propagate_filter) {
 
-		#dump($parent_save_result,'$parent_save_result for component_filter Save tipo:'.$this->tipo." parent: ".$this->parent);
-
-		# Devolvemos el resultado del save
+		# Returns parent Save result at end
 		return $parent_save_result;
-
 	}//end Save
 
 
@@ -146,8 +142,6 @@ class component_filter extends component_common {
 					#dump($component_portal,'$component_portal propagando filtro....');
 			}			
 		}
-		#component_portal::propagate_filter_static($section_tipo, $dato_filter);
-
 	}//end propagate_filter
 
 
@@ -155,10 +149,11 @@ class component_filter extends component_common {
 	/**
 	* GET VALOR
 	* Devuelve los valores del array 'dato' separados por '<br>'
+	* @return string $html | array $ar_final
 	*/
 	public function get_valor( $format='html' ) {
 		
-		$ar_proyectos_for_current_section = self::get_ar_proyectos_for_current_section();
+		$ar_proyectos_for_current_section = self::get_ar_projects_for_current_section();
 			#dump($ar_proyectos_for_current_section,'ar_proyectos_for_current_section');
 		
 		$dato 		= $this->get_dato();
@@ -176,11 +171,11 @@ class component_filter extends component_common {
 			}
 		}//end foreach ($ar_proyectos_for_current_section as $section_id => $name) {
 
-		if ($format=='array') {
+		if ($format==='array') {
 			
 			return $ar_final;
 
-		}else if($format=='html'){
+		}else if($format==='html'){
 
 			$html = '';
 			foreach ($ar_final as $name) {
@@ -190,7 +185,8 @@ class component_filter extends component_common {
 			$html = substr($html, 0,-4);			
 			
 			return $html;
-		}else if($format=='html_concat'){
+
+		}else if($format==='html_concat'){
 			$html = '';
 			foreach ($ar_final as $name) {
 				$html .= $name;
@@ -200,7 +196,6 @@ class component_filter extends component_common {
 			
 			return $html;
 		}
-
 	}//end get_valor
 
 
@@ -224,13 +219,9 @@ class component_filter extends component_common {
 			$valor_export = stripslashes($valor_export);
 		}
 
-		
-		if(SHOW_DEBUG) {
-			#return "FILTER: ".$valor_export;
-		}
-		return $valor_export;
 
-	}#end get_valor_export
+		return $valor_export;
+	}//end get_valor_export
 	
 
 
@@ -243,12 +234,12 @@ class component_filter extends component_common {
 	* @return $ar_proyectos_for_current_section
 	*	Array proyectos id matrix
 	*/
-	public function get_ar_proyectos_for_current_section() {
-
+	public function get_ar_projects_for_current_section() {
+		/*
 		# STATIC CACHE
 		static $cache_ar_proyectos_for_current_section;
 		if( isset($cache_ar_proyectos_for_current_section[$this->tipo]) ) {
-			#trigger_error("Returned data from static cache get_ar_proyectos_for_current_section ");
+			#trigger_error("Returned data from static cache get_ar_projects_for_current_section ");
 			return $cache_ar_proyectos_for_current_section[$this->tipo];
 		}
 
@@ -257,11 +248,11 @@ class component_filter extends component_common {
 		#	return $_SESSION['dedalo4']['config']['ar_proyectos_for_current_section'][DEDALO_DATA_LANG];
 		#}
 
-		if(SHOW_DEBUG) {
+		if(SHOW_DEBUG===true) {
 			$start_time = start_time();
 			global$TIMER;$TIMER[__METHOD__.'_'.get_called_class().'_IN_'.$this->tipo.'_'.microtime(1)]=microtime(1);
 		}
-		
+		*/
 		$ar_proyectos_for_current_section = array();
 
 		# Usuario logeado actualmente
@@ -275,6 +266,7 @@ class component_filter extends component_common {
 			# SÓLO PARA ADMINISTRADORES. 
 			# BYPASS EL FILTRO Y ACCEDE A TODOS LOS PROYECTOS
 			# Buscamos TODOS los registros de section tipo DEDALO_SECTION_PROJECTS_TIPO
+			/*
 				$strQuery   = "-- ".__METHOD__."\n SELECT section_id \n FROM \"matrix_projects\" ORDER BY section_id ASC";	//WHERE $sql_filtro
 				$result		= JSON_RecordObj_matrix::search_free($strQuery);
 
@@ -283,6 +275,7 @@ class component_filter extends component_common {
 					$ar_proyectos_section_id[] = $rows['section_id'];
 				}
 				#dump($ar_proyectos_section_id	, ' ar_proyectos_section_id');
+				*/
 			
 		}else{
 
@@ -302,7 +295,62 @@ class component_filter extends component_common {
 					#dump($ar_proyectos_section_id,'ar_proyectos_section_id',"resultado de component_check_box::get_array_dato_from_js_dato(dato)");					
 		}
 
+		$strQuery  = '';
+		# SELECCIÓN CON TODOS LOS LENGUAJES
+		$strQuery .= "SELECT section_id, ";
+		$strQuery .= "datos #>>'{components,".DEDALO_PROJECTS_NAME_TIPO.",dato}' AS project_name " ;
+		$strQuery .= "\n FROM \"matrix_projects\" ";
+		$strQuery .= "\n WHERE ";
+		$strQuery .= "\n section_tipo = '".DEDALO_SECTION_PROJECTS_TIPO."' ";
+		if ($is_global_admin!==true) {
+			$strQuery .= "\n AND (";
+			$last = end($ar_proyectos_section_id);
+			foreach ($ar_proyectos_section_id as $current_section_id) {
+				$strQuery .= "section_id = $current_section_id ";
+				if($current_section_id!==$last) $strQuery .= " OR ";
+			}
+			$strQuery .= ") ";
+		}		
+		$strQuery .= "\n ORDER BY section_id ASC; ";
+		#debug_log(__METHOD__." strQuery ".to_string($strQuery), logger::ERROR);
+		$result = JSON_RecordObj_matrix::search_free($strQuery);		
+		while ($rows = pg_fetch_assoc($result)) {
+			$current_section_id = $rows['section_id'];
+			$project_names		= json_decode($rows['project_name']);
+				#dump($project_names, ' $project_names ++ '.to_string($current_section_id));
+			$project_name = '';
+			if (!is_null($project_names)) {
 
+				if (property_exists($project_names, DEDALO_DATA_LANG)) {
+					# REMOVE STRING TEST ON V4.5 CONSOLIDATED
+					if (is_string($project_names->{DEDALO_DATA_LANG})) {
+						$project_name = $project_names->{DEDALO_DATA_LANG};
+						debug_log(__METHOD__." Project name is string. Update projects dato ASAP ".to_string(), logger::WARNING);
+					}else{
+						$project_name = reset($project_names->{DEDALO_DATA_LANG}); 	#dump($project_name, ' project_name 1 ++ '.to_string(DEDALO_DATA_LANG)); die();
+					}					
+				}elseif (property_exists($project_names, DEDALO_APPLICATION_LANGS_DEFAULT)) {
+					# REMOVE STRING TEST ON V4.5 CONSOLIDATED
+					if (is_string($project_names->{DEDALO_APPLICATION_LANGS_DEFAULT})) {
+						$project_name = $project_names->{DEDALO_APPLICATION_LANGS_DEFAULT};
+						debug_log(__METHOD__." Project name is string. Update projects dato ASAP ".to_string(), logger::WARNING);
+					}else{
+						$project_name = reset($project_names->{DEDALO_APPLICATION_LANGS_DEFAULT}); #dump($project_name, ' project_name 2 ++ '.to_string(DEDALO_APPLICATION_LANGS_DEFAULT)); die();
+					}					
+				}else{
+					# REMOVE STRING TEST ON V4.5 CONSOLIDATED
+					if (is_string($project_names)) {
+						$project_name = $project_names;
+						debug_log(__METHOD__." Project name is string. Update projects dato ASAP ".to_string(), logger::WARNING);
+					}else{
+						$project_name = reset($project_names);
+						$project_name = to_string($project_name);  #dump($project_name, ' project_name 3 ++ '.to_string($project_names)); die();
+					}					
+				}
+			}			
+			$ar_proyectos_for_current_section[$current_section_id] = (string)$project_name;
+		}
+		/*
 		// Resolve projects names
 		$modelo_name = RecordObj_dd::get_modelo_name_by_tipo(DEDALO_PROJECTS_NAME_TIPO,true);
 		$ar_proyectos_for_current_section=array();
@@ -314,7 +362,7 @@ class component_filter extends component_common {
 														'list',
 														DEDALO_DATA_LANG,
 														DEDALO_SECTION_PROJECTS_TIPO);
-			$current_dato = $component->get_dato();
+			$current_dato = $component->get_valor();
 			
 			// Fallback to application default lang
 			if ( empty($current_dato) ) {
@@ -324,23 +372,24 @@ class component_filter extends component_common {
 														'list',
 														DEDALO_APPLICATION_LANGS_DEFAULT,
 														DEDALO_SECTION_PROJECTS_TIPO);
-				$current_dato = "<mark>".$component->get_dato()."</mark>";
+				$current_dato = "<mark>".$component->get_valor()."</mark>";
 			}
+			
 			$ar_proyectos_for_current_section[$current_section_id] = (string)$current_dato;
 		}
-
+		
 		# STATIC CACHE
 		$cache_ar_proyectos_for_current_section[$this->tipo] = $ar_proyectos_for_current_section;
 		#$_SESSION['dedalo4']['config']['ar_proyectos_for_current_section'][DEDALO_DATA_LANG] = $ar_proyectos_for_current_section;
 
-		if(SHOW_DEBUG) {			
+		if(SHOW_DEBUG===true) {			
 			global$TIMER;$TIMER[__METHOD__.'_'.get_called_class().'_OUT_'.$this->tipo.'_'.microtime(1)]=microtime(1);
 			#dump($ar_proyectos_for_current_section,'$ar_proyectos_for_current_section');
+			#debug_log(__METHOD__." exec_time ".exec_time($start_time). to_string(), logger::WARNING);
 		}		
-
+*/
 		return (array)$ar_proyectos_for_current_section;
-
-	}//end get_ar_proyectos_for_current_section
+	}//end get_ar_projects_for_current_section
 
 
 
@@ -445,7 +494,7 @@ class component_filter extends component_common {
 		$termonioID_related = array_values($relacionados[0])[0];
 		$RecordObjt_dd = new RecordObj_dd($termonioID_related);
 
-		if($RecordObjt_dd->get_traducible() =='no'){
+		if($RecordObjt_dd->get_traducible() === 'no'){
 			$lang = DEDALO_DATA_NOLAN;
 		}else{
 			$lang = DEDALO_DATA_LANG;
@@ -497,15 +546,15 @@ class component_filter extends component_common {
 		
 		#$search_query = " $json_field#>'{components,$search_tipo,$tipo_de_dato_search,$current_lang}' ?| array['$current_search_value'] ";
 		switch (true) {
-			case $comparison_operator=='=':
+			case $comparison_operator==='=':
 				$search_query = " $json_field#>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}' ?| array['$current_search_value'] ";
 				break;
-			case $comparison_operator=='!=':
+			case $comparison_operator==='!=':
 				$search_query = " ($json_field#>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}' @> '[$current_search_value]'::jsonb)=FALSE ";
 				break;
 		}		
 
-		if(SHOW_DEBUG) {
+		if(SHOW_DEBUG===true) {
 			$search_query = " -- filter_by_search $search_tipo ". get_called_class() ." \n".$search_query;
 		}
 		return $search_query;
@@ -528,7 +577,7 @@ class component_filter extends component_common {
 	*
 	* @return string $list_value
 	*/
-	public static function render_list_value($value, $tipo, $parent, $modo, $lang, $section_tipo, $section_id) {
+	public static function render_list_value($value, $tipo, $parent, $modo, $lang, $section_tipo, $section_id, $current_locator=null, $caller_component_tipo=null) {
 
 		$current_valor  = $value;
 		$ar_val 		= json_decode($current_valor);
@@ -563,6 +612,29 @@ class component_filter extends component_common {
 
 		return $result;
 	}//end get_valor_list_html_to_save
+
+
+
+	/**
+	* REGENERATE_COMPONENT
+	* Force the current component to re-save its data
+	* Note that the first action is always load dato to avoid save empty content
+	* @see class.tool_update_cache.php
+	* @return bool
+	*/
+	public function regenerate_component() {
+
+		# Force loads dato always !IMPORTANT
+		$this->get_dato();
+
+		$this->set_propagate_filter(false); # !IMPORTANT (to avoid calculate inverse search of portals, very long process)
+
+		# Save component data
+		$this->Save();
+			
+		
+		return true;
+	}//end regenerate_component
 
 
 

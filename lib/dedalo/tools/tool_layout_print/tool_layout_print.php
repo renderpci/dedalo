@@ -54,12 +54,12 @@
 						#
 						#
 						# PRINT_SEARCH_OPTIONS fix
-							$search_options_key = 'section_'.$tipo;
-							if (!isset($_SESSION['dedalo4']['config']['search_options'][$search_options_key])) {
+							$search_options_session_key = 'section_'.$tipo;
+							if (!isset($_SESSION['dedalo4']['config']['search_options'][$search_options_session_key])) {
 								throw new Exception("Error Processing Request. current_section_search_options not found", 1);
 							}
 							# Change some specific print options
-							$print_search_options = clone($_SESSION['dedalo4']['config']['search_options'][$search_options_key]);
+							$print_search_options = clone($_SESSION['dedalo4']['config']['search_options'][$search_options_session_key]);
 								$print_search_options->limit = 1;
 								$print_search_options->modo  = 'list';
 								# layout map full with all section components
@@ -188,11 +188,11 @@
 						
 						#
 						# INFO STATS
-						$search_options_key = 'section_'.$tipo;
-						if (isset($_SESSION['dedalo4']['config']['search_options'][$search_options_key]) 
-							&& isset($_SESSION['dedalo4']['config']['search_options'][$search_options_key]->full_count)) {
-							#dump($_SESSION['dedalo4']['config']['search_options'][$search_options_key], '$_SESSION ++ '.to_string());
-							$n_records = $_SESSION['dedalo4']['config']['search_options'][$search_options_key]->full_count;
+						$search_options_session_key = 'section_'.$tipo;
+						if (isset($_SESSION['dedalo4']['config']['search_options'][$search_options_session_key]) 
+							&& isset($_SESSION['dedalo4']['config']['search_options'][$search_options_session_key]->full_count)) {
+							#dump($_SESSION['dedalo4']['config']['search_options'][$search_options_session_key], '$_SESSION ++ '.to_string());
+							$n_records = $_SESSION['dedalo4']['config']['search_options'][$search_options_session_key]->full_count;
 						}
 						$n_records 	= isset($n_records) ? $n_records : count($ar_records->result);					
 						$n_pages 	= isset($result->ar_pages) ? count($result->ar_pages)*$n_records : '';
@@ -225,12 +225,12 @@
 						
 						#
 						# AR_RECORDS
-							$search_options_key = 'section_'.$tipo;
-							if (!isset($_SESSION['dedalo4']['config']['search_options'][$search_options_key])) {
+							$search_options_session_key = 'section_'.$tipo;
+							if (!isset($_SESSION['dedalo4']['config']['search_options'][$search_options_session_key])) {
 								echo "Please select template"; return ;
 							}
 							# Change some specific print options
-							$print_search_options = clone($_SESSION['dedalo4']['config']['search_options'][$search_options_key]);							
+							$print_search_options = clone($_SESSION['dedalo4']['config']['search_options'][$search_options_session_key]);							
 								$print_search_options->modo = 'list';
 								$print_search_options->limit = false;
 								# layout map full with all section components

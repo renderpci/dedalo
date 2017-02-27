@@ -27,12 +27,12 @@
  	*/
  	public static function get_ar_label( $lang=DEDALO_APPLICATION_LANG ) {
 
- 		if ($lang=='lg-vlca') {
+ 		if ($lang==='lg-vlca') {
 			$lang = 'lg-cat';
 		}
 
  		# DEBUG NOT STORE SESSION LABELS
- 		#if(SHOW_DEBUG) unset($ar_label);
+ 		#if(SHOW_DEBUG===true) unset($ar_label);
 
  		if(isset(label::$ar_label[$lang])) return label::$ar_label[$lang];		
 
@@ -86,7 +86,7 @@
 	*/
 	public static function get_label($name, $lang=DEDALO_APPLICATION_LANG) {
 		
-		if ($lang=='lg-vlca') {
+		if ($lang==='lg-vlca') {
 			$lang = 'lg-cat';
 		}
 
@@ -112,7 +112,7 @@
 	*/
 	public static function get_var_from_label($label, $lang=DEDALO_APPLICATION_LANG) {
 
-		if ($lang=='lg-vlca') {
+		if ($lang==='lg-vlca') {
 			$lang = 'lg-cat';
 		}
 
@@ -124,7 +124,7 @@
 		# Search in array to resolve
 		foreach (label::$ar_label[$lang] as $key => $value) {
 			#echo $key .'<br>';
-			if ( strtolower($value) == strtolower($label) ) {
+			if ( strtolower($value) === strtolower($label) ) {
 				return $key;
 			}
 		}
@@ -138,13 +138,13 @@
 	*/
 	protected static function set_static_label_vars( $lang=DEDALO_APPLICATION_LANG ) {
 
-		if(SHOW_DEBUG) $start_time=microtime(1);
+		if(SHOW_DEBUG===true) $start_time=microtime(1);
 
-		if ($lang=='lg-vlca') {
+		if ($lang==='lg-vlca') {
 			$lang = 'lg-cat';
 		}
 		
-		if(SHOW_DEBUG) {
+		if(SHOW_DEBUG===true) {
 			global$TIMER;$TIMER[__METHOD__.'_IN_'.microtime(1)]=microtime(1);			
 		}		
 		
@@ -154,7 +154,7 @@
 		$ar_label = array();
 		$cached   = true;
 		$fallback = true;
-		if(SHOW_DEBUG) {
+		if(SHOW_DEBUG===true) {
 			$cached=false;
 		}
 		foreach ($ar_terminoID_by_modelo_name as $current_terminoID) {
@@ -175,7 +175,7 @@
 		}		
 		
 
-		if(SHOW_DEBUG) {
+		if(SHOW_DEBUG===true) {
 			global$TIMER;$TIMER[__METHOD__.'_OUT_'.microtime(1)]=microtime(1);
 			#error_log("Calculated labels ".count($ar_terminoID_by_modelo_name));
 			debug_log(__METHOD__." for lang: $lang ".exec_time_unit($start_time,'ms').' ms');

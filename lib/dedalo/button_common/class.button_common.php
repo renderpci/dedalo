@@ -53,7 +53,7 @@ class button_common extends common {
 	# GET HTML CODE . RETURN INCLUDE FILE __CLASS__.PHP
 	public function get_html() {
 
-		if(SHOW_DEBUG) {
+		if(SHOW_DEBUG===true) {
 			global$TIMER;$TIMER[__METHOD__.'_'.get_called_class().'_IN_'.$this->tipo.'_'.microtime(1)]=microtime(1);
 		}
 /*
@@ -82,7 +82,7 @@ class button_common extends common {
 			cache::set($cache_key_name, $html);
 		}
 
-		if(SHOW_DEBUG) {
+		if(SHOW_DEBUG===true) {
 			global$TIMER;$TIMER[__METHOD__.'_'.get_called_class().'_OUT_'.$this->tipo.'_'.microtime(1)]=microtime(1);
 		}
 		

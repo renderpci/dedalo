@@ -5,6 +5,7 @@
 	$tipo 					= $this->get_tipo();
 	$parent 				= $this->get_parent();
 	$section_tipo			= $this->get_section_tipo();
+	$propiedades			= $this->get_propiedades();
 	$modo					= $this->get_modo();		
 	$dato 					= $this->get_dato();
 	$label 					= $this->get_label();
@@ -19,6 +20,8 @@
 	$context 				= $this->get_context();	
 	$file_name 				= $modo;
 	
+	if($permissions===0) return null;
+	
 	switch($modo) {
 		
 		case 'edit'	:
@@ -27,14 +30,36 @@
 
 				$id_wrapper 			= 'wrapper_'.$identificador_unico;
 				$input_name 			= "{$tipo}_{$parent}";
-				$component_info 		= $this->get_component_info('json');
-				$ar_target_section_tipo = $this->get_ar_target_section_tipo();
-				$target_tipo 			= reset($ar_target_section_tipo); // Only one (the first) is accepted for now
-				#$valor					= $this->get_valor();
+				$component_info 		= $this->get_component_info('json');			
 				$dato_string			= json_handler::encode($dato);
 
-				#$referenced_tipo 	= $section_tipo;
-					#dump($referenced_tipo, ' referenced_tipo ++ '.to_string());
+				# target_section_tipo
+				$target_section_tipo = $section_tipo;				
+				if (isset($propiedades->target_values)) {
+					# target_section_tipo is the value of component defined in propiedades->target_values 
+					$source_component_tipo = reset($propiedades->target_values);
+						#dump($source_component_tipo, ' $source_component_tipo ++ '.to_string($tipo));
+					$modelo_name 	 = RecordObj_dd::get_modelo_name_by_tipo($source_component_tipo, true);
+					$componnent 	 = component_common::get_instance($modelo_name,
+																	  $source_component_tipo,
+																	  $parent,
+																	  $modo,
+																	  DEDALO_DATA_NOLAN,
+																	  $section_tipo);
+					$target_section_tipo = $componnent->get_valor(0);
+				}
+
+				# Parent area is model (default is false)
+				$parent_area_is_model = false;
+				if (!empty($target_section_tipo)) {
+					$RecordObj_dd = new RecordObj_dd($target_section_tipo);
+					$parent_area  = $RecordObj_dd->get_parent();
+					if ($parent_area===DEDALO_THESAURUS_VIRTUALS_MODELS_AREA_TIPO) {
+						$parent_area_is_model = true;
+					}
+				}
+				
+				#dump($parent_area_is_model, ' parent_area_is_model ++ '.to_string($parent_area));
 				break;
 
 		case 'tool_time_machine' :
@@ -43,7 +68,10 @@
 				$file_name 	= 'edit';
 				break;
 						
-		case 'search':				
+		case 'search':
+				# Showed only when permissions are >1
+				if ($permissions<1) return null;
+							
 				$ar_comparison_operators = $this->build_search_comparison_operators();
 				$ar_logical_operators 	 = $this->build_search_logical_operators();
 

@@ -6,7 +6,7 @@ if(login::is_logged()!==true) die("<span class='error'> Auth error: please login
 
 
 # set vars
-	$vars = array('mode','id','tipo');
+	$vars = array('mode','section_id','section_tipo');
 		foreach($vars as $name) $$name = common::setVar($name);
 	
 	
@@ -15,22 +15,20 @@ if(empty($mode)) exit("<span class='error'>Error Trigger: Need mode..</span>");
 
 
 # FIX SECTION TIPO
-	define('SECTION_TIPO', $tipo);
+	define('SECTION_TIPO', $section_tipo);
 
 
 # DELETE
-	if(!$id) 	exit("<span class='error'>Error Delete Trigger: Need section id..</span>");
-	if(!$tipo) 	exit("<span class='error'>Error Delete Trigger: Need section tipo..</span>");
+	if(!$section_id) 	exit("<span class='error'>Error Delete Trigger: Need section section_id..</span>");
+	if(!$section_tipo) 	exit("<span class='error'>Error Delete Trigger: Need section section_tipo..</span>");
 
 	$delete_mode = $mode;
 
 	# Delete method
 	#$delete = button_delete::Delete($id, $delete_mode=$mode);
-	$section 	= section::get_instance($id, $tipo);
+	$section 	= section::get_instance($section_id, $section_tipo);
 	$delete 	= $section->Delete($delete_mode);
 
 	print $delete;
 	die();
-
-	
-	
+?>

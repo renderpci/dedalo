@@ -32,7 +32,7 @@ class RecordObj_matrix extends RecordDataBoundObject {
 	public function __construct($matrix_table=null, $id=NULL, $parent=NULL, $tipo=NULL, $lang=NULL) {
 
 		if(empty($matrix_table)) {
-			if(SHOW_DEBUG)
+			if(SHOW_DEBUG===true)
 				dump($matrix_table,"id:$id - parent:$parent - tipo:$tipo - lang:$lang");
 			throw new Exception("Error Processing Request. Matrix wrong name ", 1);			
 		}
@@ -121,20 +121,18 @@ class RecordObj_matrix extends RecordDataBoundObject {
 
 		# RECORDOBJ_MATRIX : IMPORTANT ! Set use cache to false
 		#$this->use_cache = false;
-
 		
-		if($this->ID !== NULL) return $this->ID;
+		if($this->ID !== null) return $this->ID;
 
-		$id = NULL;
+		$id = null;
 		
 		$parent = $this->get_parent();
-		if (strlen($parent)==0) 
+		if (strlen($parent)===0) 
 			$parent = intval(0);
 		$tipo 	= $this->get_tipo();
 		$lang 	= $this->get_lang();
 
-		$matrix_table = $this->matrix_table;		
-	
+		$matrix_table = $this->matrix_table;	
 		
 		#unset($_SESSION['dedalo4']['config']['calculate_ID']);
 		#$idu = $parent.'-'.$tipo.'-'.$lang.'-'.$this->matrix_table;
@@ -166,7 +164,7 @@ class RecordObj_matrix extends RecordDataBoundObject {
 			#if($tipo!=DEDALO_ACTIVITY_SECTION_TIPO) $_SESSION['dedalo4']['config']['calculate_ID'][$idu] = $id;
 		}		
 
-		#if(SHOW_DEBUG) error_log("calculado id:$id from parent:$parent, tipo:$tipo, lang:$lang, table:$this->matrix_table");
+		#if(SHOW_DEBUG===true) error_log("calculado id:$id from parent:$parent, tipo:$tipo, lang:$lang, table:$this->matrix_table");
 
 		return $id ;
 	}
@@ -235,7 +233,7 @@ class RecordObj_matrix extends RecordDataBoundObject {
 			&& $this->matrix_table != 'matrix_activity' && $this->matrix_table != 'matrix_counter' && $this->matrix_table != 'matrix_stats'
 			) {
 			$msg = "Save matrix: valid 'userID' value is mandatory. No data is saved! ";
-			#if(SHOW_DEBUG) {
+			#if(SHOW_DEBUG===true) {
 				#dump($this," matrix_table: $this->matrix_table ");
 			#}
 			#error_log($msg);
@@ -301,7 +299,7 @@ class RecordObj_matrix extends RecordDataBoundObject {
 		if($this->save_time_machine_version===true)	{
 
 			$this->time_machine_last_id = $this->save_time_machine();	// Está desactiva de momento
-			if(SHOW_DEBUG) {
+			if(SHOW_DEBUG===true) {
 				#error_log("time_machine_last_id: ".$this->time_machine_last_id);
 				#$total_time   = round(microtime(1)-$start_time,4);
 				#error_log("Save $this->tipo : $total_time sec");
@@ -318,7 +316,7 @@ class RecordObj_matrix extends RecordDataBoundObject {
 	*/
 	protected function save_time_machine() {
 
-		#if(SHOW_DEBUG) {
+		#if(SHOW_DEBUG===true) {
 		#	trigger_error("save_time_machine en ".__METHOD__ ." triggered");
 		#}
 
@@ -460,6 +458,7 @@ class RecordObj_matrix extends RecordDataBoundObject {
 	
 	
 	# BUSQUEDA ESPECÍFICA.. VER DE HACER GENÉRICA EN ORIGEN..
+	/*
 	public static function get_records_by_search($id=false, $parent=false, $dato=false,  $tipo=false, $lang=false) {
 		
 		$ar_arguments = array();
@@ -494,14 +493,14 @@ class RecordObj_matrix extends RecordDataBoundObject {
 			$ar_arguments['sql_code']	= " AND (".  substr($str_dato,0,-4) . ")";
 		}
 		
-		$matrix_table 			= common::get_matrix_table_from_tipo($tipo);
+		$matrix_table 			= common::get_matrix_table_from_tipo($section_tipo);
 		$RecordObj_matrix		= new RecordObj_matrix($matrix_table,NULL);
 		$ar_records_by_search	= $RecordObj_matrix->search($ar_arguments);		
 			#dump($ar_arguments,'ar_arguments');
 		
 		return $ar_records_by_search;
 	}
-
+	*/
 
 	
 }

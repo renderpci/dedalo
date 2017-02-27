@@ -7,10 +7,37 @@
 
 class component_relation_common extends component_common {
 
-	# relation_tipo (set in constructor). 
+	# relation_type (set in constructor). 
 	# Defines type used in section relation locators to set own locator type
-	protected $relation_tipo;
+	# protected $relation_type;
+
+	# Overwrite __construct var lang passed in this component
+	protected $lang = DEDALO_DATA_NOLAN;
+
+
+	/**
+	* __CONSTRUCT
+	*/
+	function __construct($tipo=null, $parent=null, $modo='edit', $lang=DEDALO_DATA_NOLAN, $section_tipo=null) {
+
+		# Force always DEDALO_DATA_NOLAN
+		$lang = $this->lang;
+
+		# relation_type
+		# $this->relation_type = DEDALO_RELATION_TYPE_CHILDREN_TIPO;
+
+		# Build the componente normally
+		parent::__construct($tipo, $parent, $modo, $lang, $section_tipo);
+
+		if(SHOW_DEBUG) {
+			$traducible = $this->RecordObj_dd->get_traducible();
+			if ($traducible=='si') {
+				throw new Exception("Error Processing Request. Wrong component lang definition. This component $tipo (".get_class().") is not 'traducible'. Please fix this ASAP", 1);
+			}
+		}
+	}//end __construct
 	
+
 
 	/**
 	* GET_MY_SECTION
@@ -34,7 +61,9 @@ class component_relation_common extends component_common {
 		if ($filtered_by) {
 			$filtered_relations = array();
 			foreach ($relations as $current_locator) {
-				if(isset($current_locator->type) && $current_locator->type==$filtered_by) {
+				if( isset($current_locator->type) && $current_locator->type===$filtered_by 
+				 && isset($current_locator->from_component_tipo) && $current_locator->from_component_tipo===$this->tipo
+				 ) {
 					$filtered_relations[] = $current_locator;
 				}
 			}
@@ -53,28 +82,118 @@ class component_relation_common extends component_common {
 	*/
 	public function add_locator_to_dato( $locator ) {
 
-		$relation_type = $this->relation_type;
+		if (!is_object($locator)) {
+			return false;
+		}
+		$locator = new locator($locator);
+
+		if ($locator->section_tipo==="undefined" || $locator->section_id==="undefined") {
+			return false;
+		}
+
+		$section = $this->get_my_section();
+		$added 	 = (bool)$section->add_relation($locator);
+
+		# Save
+		if ($added===true) {
+			// Unset component dato to force reload from section
+			unset($this->dato);
+			$this->get_dato();
+
+			//$this->Save();
+		}
+		return (bool)$added;
+
+		/*
+		$relation_type 		   = $this->relation_type;
+		$test_equal_properties = $this->test_equal_properties;
 
 		# Verify locator type
-		if (!isset($locator->type) || $locator->type!=$relation_type) {
-			throw new Exception("Error Processing Request. Current locator type is incorrect ($locator->type). Expected is ".$relation_type, 1);			
+		if (!isset($locator->type)) {
+			# Added manually
+			$locator->type = $relation_type;
+			debug_log(__METHOD__." Forced add mandatory locator type $relation_type not present in received locator ".to_string(), logger::WARNING);
+		}else if ($locator->type!==$relation_type) {
+			# Bad type
+			throw new Exception("Bad locator type. Received type is incorrect ($locator->type). Expected is ".$relation_type, 1);
 		}
 		
 		$ar_locator = $this->get_dato();
 
 		# Dato exits test
-		$exists = (bool)locator::in_array_locator( $locator, $ar_locator, $ar_properties=array('section_tipo','section_id','type','from_component_tipo') );
+		$exists = (bool)locator::in_array_locator( $locator, $ar_locator, $test_equal_properties );
 		if($exists===false) {
 			$ar_locator[] = $locator;
 
 			# Update component dato
-			$this->set_dato($ar_locator);		
+			$this->set_dato($ar_locator);
 		
 			return true;
-		}		
+		}else{
+			debug_log(__METHOD__." Ignored add locator action: locator already exists. Tested properties: ".to_string($test_equal_properties), logger::DEBUG);
+		}	
 
 		return false;
+		*/
 	}//end add_locator_to_dato
+
+
+
+	/**
+	* REMOVE_LOCATOR_FROM_DATO
+	* @return bool
+	*/
+	public function remove_locator_from_dato( $locator ) {
+
+		if (!is_object($locator)) {
+			return false;
+		}
+		$locator = new locator($locator);
+
+		# Remove locator relations from current section before save (for fast access later only)
+		$section = $this->get_my_section();
+		$removed = (bool)$section->remove_relation($locator);
+
+		# Save
+		if ($removed===true) {
+
+			// Unset component dato to force reload from section
+			unset($this->dato);
+			$this->get_dato();
+
+			//$this->Save();
+		}
+		return (bool)$removed;
+
+		/*
+			$ar_locator 			= $this->get_dato();
+			$relation_type 		    = $this->relation_type;		
+
+			# Iterate and search current locator in component dato
+			foreach ($ar_locator as $key => $current_locator) {
+				$equal = locator::compare_locators( $current_locator, $locator, $test_equal_properties );
+				if ( $equal===true ) {
+					unset($ar_locator[$key]);
+
+					# Recreate indexes (avoid json read this array as object)
+					$ar_locator = array_values($ar_locator);
+
+					# Update component dato
+					$this->set_dato($ar_locator);
+
+					# Remove locator relations from current section before save (for fast access later only)
+					$section = $this->get_my_section();
+					$section->remove_relation($locator, $test_equal_properties);
+
+					# Save
+					$this->Save();
+					
+					return true;
+				}
+			}
+			return false;	
+			*/	
+	}//end remove_locator_from_dato
 
 
 
@@ -91,7 +210,8 @@ class component_relation_common extends component_common {
 	/**
 	* GET_DATO
 	* Returns dato from container 'relations', not for component dato container
-	* @return 
+	* @return array $dato
+	*	$dato is always an array of locators
 	*/
 	public function get_dato() {
 
@@ -99,7 +219,17 @@ class component_relation_common extends component_common {
 			$dato = $this->dato;
 		}else{
 			$dato = $this->get_my_section_relations( $this->relation_type );
-		}		
+		}
+
+		if (!empty($dato) && !is_array($dato)) {
+			#dump($dato,"dato");
+			trigger_error("Error: ".__CLASS__." dato type is wrong. Array expected and ".gettype($dato)." is received for tipo:$this->tipo, parent:$this->parent");
+			$this->set_dato(array());
+			$this->Save();
+		}
+		if ($dato===null) {
+			$dato=array();
+		}	
 
 		return (array)$dato;
 	}//end get_dato
@@ -108,8 +238,42 @@ class component_relation_common extends component_common {
 
 	/**
 	* SET_DATO
+	* Set raw dato overwrite existing dato.
+	* Usually, dato is builded element by element, adding one locator to existing dato, but some times we need 
+	* insert complete array of locators at once. Use this method in this cases
 	*/
 	public function set_dato( $dato ) {
+
+		if (is_string($dato)) { # Tool Time machine case, dato is string
+			$dato = json_handler::decode($dato);
+		}
+		if (is_object($dato)) {
+			$dato = array($dato);
+		}
+		# Ensures is a real non-associative array (avoid json encode as object)
+		$dato = is_array($dato) ? array_values($dato) : (array)$dato;
+		
+		# Verify all locators are well formed
+		$relation_type = $this->relation_type;
+		foreach ((array)$dato as $key => $current_locator) {
+			// Type
+			if (!isset($current_locator->type)) {
+				$current_locator->type = $relation_type;
+				debug_log(__METHOD__." Fixed bad formed locator (empty type) [$this->section_tipo, $this->parent, $this->tipo] ".to_string(), logger::WARNING);
+			}else if ($current_locator->type!==$relation_type) {
+				$current_locator->type = $relation_type;
+				debug_log(__METHOD__." Fixed bad formed locator (bad type $current_locator->type) [$this->section_tipo, $this->parent, $this->tipo] ".to_string(), logger::WARNING);
+			}
+			// from_component_tipo
+			if (!isset($current_locator->from_component_tipo)) {
+				$current_locator->from_component_tipo = $this->tipo;
+				debug_log(__METHOD__." Fixed bad formed locator (empty from_component_tipo) [$this->section_tipo, $this->parent, $this->tipo] ".to_string(), logger::WARNING);
+			}else if ($current_locator->from_component_tipo!==$this->tipo) {
+				$current_locator->from_component_tipo = $this->tipo;
+				debug_log(__METHOD__." Fixed bad formed locator (bad from_component_tipo $current_locator->from_component_tipo) [$this->section_tipo, $this->parent, $this->tipo] ".to_string(), logger::WARNING);
+			}
+		}
+
 
 		$my_section = $this->get_my_section();
 		$my_section->add_relations( (array)$dato, $remove_previous_of_current_type=true );
@@ -118,6 +282,8 @@ class component_relation_common extends component_common {
 		unset($this->valor);
 
 		$this->dato = (array)$dato;
+
+		return $this->dato;
 	}//end set_dato
 
 
@@ -139,7 +305,7 @@ class component_relation_common extends component_common {
 
 		# PARENT : Verify parent
 		if(abs($parent)<1 && strpos($parent, DEDALO_SECTION_ID_TEMP)===false) {
-			if(SHOW_DEBUG) {
+			if(SHOW_DEBUG===true) {
 				dump($this, "this section_tipo:$section_tipo - parent:$parent - tipo:$tipo - lang:$lang");
 				throw new Exception("Error Processing Request. Inconsistency detected: component trying to save without parent ($parent) ", 1);;
 			}			
@@ -169,7 +335,7 @@ class component_relation_common extends component_common {
 		$this->save_activity();
 
 
-		# RETURN MATRIX ID
+		# RETURN SECTION ID
 		return (int)$parent;
 	}#end Save
 
@@ -182,6 +348,11 @@ class component_relation_common extends component_common {
 	*/
 	private function save_inverse_locator_from_locator( $locator ) {
 
+		if (!is_object($locator)) {
+			return false;
+		}
+		$locator = new locator($locator);
+
 		$relation_type_inverse = $this->relation_type_inverse;
 		
 		# Add locator relations to target section (for fast access later only)
@@ -191,55 +362,10 @@ class component_relation_common extends component_common {
 			$reverse_locator->set_type($relation_type_inverse);
 
 		$children_section = section::get_instance($locator->section_id, $locator->section_tipo);
-		$children_section->add_relation($reverse_locator,false);
+		$children_section->add_relation($reverse_locator);
 
 		return $children_section->Save();
 	}//end save_inverse_locator_from_locator
-
-
-
-	/**
-	* REMOVE_LOCATOR_FROM_DATO
-	* @return 
-	*/
-	public function remove_locator_from_dato( $locator ) {
-
-		$ar_locator = $this->get_dato();
-		# Iterate and search current locator in component dato
-		foreach ($ar_locator as $key => $current_locator) {
-			$equal = locator::compare_locators( $current_locator, $locator, $ar_properties=array('section_tipo','section_id','type','from_component_tipo') );
-			if ( $equal===true ) {
-				unset($ar_locator[$key]);
-
-				# Recreate indexes (avoid json read this array as object)
-				$ar_locator = array_values($ar_locator);
-
-				# Update component dato
-				$this->set_dato($ar_locator);
-
-				# Remove locator relations from current section before save (for fast access later only)
-				$section = $this->get_my_section();
-				$section->remove_relation($locator);
-
-				# Save
-				$this->Save();
-
-				# Remove locator relations from target section (for fast access later only)
-				$reverse_locator  = new locator();
-					$reverse_locator->set_section_tipo($locator->section_tipo);
-					$reverse_locator->set_section_id($this->parent);
-					$reverse_locator->set_type(DEDALO_RELATION_TYPE_PARENT_TIPO);
-
-				$children_section = section::get_instance($locator->section_id, $locator->section_tipo);
-				$children_section->remove_relation($reverse_locator);
-				$children_section->Save();
-
-				return true;
-			}
-		}		
-
-		return false;		
-	}//end remove_locator_from_dato
 
 
 
@@ -268,47 +394,45 @@ class component_relation_common extends component_common {
 	* Resolve locator to string value to show in list etc.
 	* @return string $valor
 	*/
-	public function get_locator_value( $locator, $lang=DEDALO_DATA_LANG ) {
+	public static function get_locator_value( $locator, $lang=DEDALO_DATA_LANG, $section_tipo, $show_parents=false ) {
 
+		if (!is_object($locator)) {
+			return false;
+		}
+		$locator = new locator($locator);
+
+		$valor = ts_object::get_term_by_locator( $locator, $lang );
+
+		if ($show_parents===true) {
+			#$ar_parents = relation::get_parents_recursive( $locator );
+			#$ar_parents = component_relation_parent::get_parents($locator->section_id, $locator->section_tipo, $from_component_tipo=null, $ar_tables=null);
+			$ar_parents = component_relation_parent::get_parents_recursive($locator->section_id, $locator->section_tipo);
+				#dump($ar_parents, ' $ar_parents ++ '.to_string($locator));
+
+			$ar_parents_resolved = array();
+			foreach ($ar_parents as $current_locator) {
+				$current_value 			= ts_object::get_term_by_locator( $current_locator, $lang );
+				$ar_parents_resolved[]  = $current_value;
+			}
+			if (!empty($ar_parents_resolved)) {
+				$valor .= ', '.implode(', ', $ar_parents_resolved);
+			}				
+		}	
+
+		/*
 		# En proceso. De momento devuelve el locator en formato json, sin resolver..
-		# $valor = json_encode($locator);
-
-		# Temporal
-		if( RecordObj_dd::get_prefix_from_tipo($locator->section_tipo)===RecordObj_dd::get_prefix_from_tipo($this->section_tipo)) {		
-
-			$tipo 		 	= DEDALO_THESAURUS_TERM_TIPO; // input_text
-			$parent 		= $locator->section_id;
-			$section_tipo 	= $locator->section_tipo;
-			$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
-			$component 		= component_common::get_instance( $modelo_name,
-															  $tipo,
-															  $parent,
-															  $modo='edit',
-															  $lang,
-															  $section_tipo);
-			$valor = $component->get_valor($lang);
-			
-			if (empty($valor)) {
-				$main_lang = hierarchy::get_main_lang( $locator->section_tipo );
-				if($lang!=$main_lang) {
-					$component->set_lang($main_lang);
-					$valor = $component->get_valor($main_lang);
-					if (strlen($valor)>0) {
-						$valor = component_common::decore_untranslated( $valor );
-					}		
-
-					# return component to previous lang
-					$component->set_lang($lang);
-				}				
-			}		
+		if (!isset($valor)) {
+			$valor = json_encode($locator);
 		}
 
-
-		# En proceso. De momento devuelve el locator en formato json, sin resolver..
-		$valor = isset($valor) ? json_encode($locator).' '.$valor : json_encode($locator);
+		if(SHOW_DEBUG===true) {
+			$valor .= " <span class=\"debug_info notes\">".json_encode($locator)."</span>";
+		}
+		*/
 		
 		return (string)$valor;
 	}//end get_locator_value
+
 
 
 
@@ -327,7 +451,7 @@ class component_relation_common extends component_common {
 	*
 	* @return string $list_value
 	*/
-	public static function render_list_value($value, $tipo, $parent, $modo, $lang, $section_tipo, $section_id) {
+	public static function render_list_value($value, $tipo, $parent, $modo, $lang, $section_tipo, $section_id, $current_locator=null, $caller_component_tipo=null) {
 
 		$component 	= component_common::get_instance(get_called_class(),
 													 $tipo,
@@ -338,238 +462,112 @@ class component_relation_common extends component_common {
 
 		
 		# Use already query calculated values for speed
-		$ar_records = (array)json_handler::decode($value);
-		$component->set_dato($ar_records);
-		$component->set_identificador_unico($component->get_identificador_unico().'_'.$section_id); // Set unic id for build search_options_session_key used in sessions
+		#$ar_records = (array)json_handler::decode($value);
+		#$component->set_dato($ar_records);
+		$component->set_identificador_unico($component->get_identificador_unico().'_'.$section_id.'_'.$caller_component_tipo); // Set unic id for build search_options_session_key used in sessions
 		
 		return  $component->get_valor($lang);
 	}#end render_list_value
 
+
+
+	/**
+	* REMOVE_PARENT_REFERENCES
+	* Calculate parents and removes references to current section
+	* @param string $section_tipo
+	* @param int $section_id
+	* @param array $filter
+	* 	Is array of locators. Default is bool false
+	*
+	* @return object $response
+	*/
+	public static function remove_parent_references($section_tipo, $section_id, $filter=false) {
+
+		$response = new stdClass();
+			$response->result 	= false;
+			$response->msg 		= '';
+		
+		$section_table 	= common::get_matrix_table_from_tipo($section_tipo); // Normally 'matrix_hierarchy'
+		$hierarchy_table= hierarchy::$table;	// Normally 'hierarchy'. Look too in 'matrix_hierarchy_main' table for references
+		$ar_tables 		= array( $section_table, $hierarchy_table);
+		$parents 		= component_relation_parent::get_parents($section_id, $section_tipo, $from_component_tipo=null, $ar_tables);
+		# dump($parents, ' $parents ++ '.to_string("$section_id, $section_tipo")); die();
+
+		$ar_removed=array();
+		foreach ((array)$parents as $current_parent) {
+
+			if ($filter!==false) {				
+				# compare current with filter
+				$process=false;
+				foreach ($filter as $current_locator) {
+					if ($current_locator->section_id==$current_parent->section_id && $current_locator->section_tipo===$current_parent->section_tipo) {
+						$process = true; break;
+					}
+				}
+				if(!$process) continue; // Skip current section
+			}
+		
+			# Target section data
+			$modelo_name 	= 'component_relation_children';
+			$modo 			= 'edit';
+			$lang			= DEDALO_DATA_NOLAN;
+			$component_relation_children = component_common::get_instance($modelo_name,
+																		  $current_parent->component_tipo,
+																		  $current_parent->section_id,
+																		  $modo,
+																		  $lang,
+																		  $current_parent->section_tipo);
+			
+			# NOTE: remove_me_as_your_children deletes current section references from component_relation_children and section->relations container
+			# $removed = (bool)$component_relation_children->remove_children_and_save($children_locator);
+			$removed = (bool)$component_relation_children->remove_me_as_your_children( $section_tipo, $section_id );
+			if ($removed) {
+				$component_relation_children->Save();
+				debug_log(__METHOD__." Removed references in component_relation_children ($current_parent->section_id, $current_parent->section_tipo) to $section_id, $section_tipo ".to_string(), logger::DEBUG);
+				$ar_removed[] = array('section_tipo' 	=> $current_parent->section_tipo,
+									  'section_id' 	 	=> $current_parent->section_id,
+									  'component_tipo' 	=> $current_parent->component_tipo
+									 );
+			}
+		}//end foreach ((array)$parents as $current_parent)
+
+		if (!empty($ar_removed)) {
+			$response->result 		= true;
+			$response->msg 			= 'Removed references: '.count($ar_removed);
+			$response->ar_removed 	= $ar_removed;
+		}
+
+		return (object)$response;
+	}//end remove_parent_references
+
+
+
+	/**
+	* GET_DIFFUSION_VALUE
+	* Overwrite component common method
+	* Calculate current component diffusion value for target field (usually a mysql field)
+	* Used for diffusion_mysql to unify components diffusion value call
+	* @return string $diffusion_value
+	*
+	* @see class.diffusion_mysql.php
+	*/
+	public function get_diffusion_value( $lang=null ) {
+	
+		$dato = $this->get_dato();		
+		/*
+		$ar_data = array();
+		foreach ((array)$dato as $current_locator) {
+			$ar_data[] = $current_locator->section_id;
+		}
+		$diffusion_value = json_encode($ar_data);
+		*/
+		$diffusion_value = json_encode($dato);
+
+		return (string)$diffusion_value;
+	}//end get_diffusion_value
+
+
 	
 
 }//end component_relation_common
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-class desactiva{
-
-	/**
-	* SAVE_RELATIONS
-	* @return int $result
-	*	section returns section_id on save
-	* When save component, section is saved, not explicit section save is needed here
-	*/
-	public function save_relations() {
-
-		# Set section relation locators for fast access
-		$my_section = $this->get_my_section();
-
-		$dato = $this->get_dato();		
-		foreach ((array)$dato as $current_locator) {
-			$my_section->add_relation($current_locator, false);
-		}
-	}//end save_relations
-
-	
-	
-
-
-	/**
-	* GET DATO
-	* @return array $dato
-	*	$dato is always an array of locators from first level of section (not from component)
-	*/
-	public function get_dato() {
-
-		$section_relations = $this->get_my_section_relations();
-
-		$dato = array();
-		foreach ((array)$section_relations as $current_locator) {
-			if($current_locator->type===DEDALO_RELATION_TYPE_MODEL_TIPO) {
-				$dato[] = $current_locator;
-			}
-		}
-		$this->dato = $dato;
-
-		return (array)$dato;
-	}//end get_dato
-
-
-
-	/**
-	* SET_DATO
-	* @param array|string $dato
-	*	When dato is string is because is a json encoded dato
-	*/
-	public function set_dato($dato) {
-		if (is_string($dato)) { # Tool Time machine case, dato is string
-			$dato = json_handler::decode($dato);
-		}
-		if (is_object($dato)) {
-			$dato = array($dato);			
-		}
-		# Ensures is a real non-associative array (avoid json encode as object)
-		$dato = is_array($dato) ? array_values($dato) : (array)$dato;
-
-		if (empty($dato)) {
-			$res = parent::set_dato( null );
-		}else{
-			$my_section = $this->get_my_section();
-			$my_section->add_relations($dato);
-
-			$res = parent::set_dato( (array)$dato );
-		}
-		
-		return $res;		
-	}//end set_dato
-
-
-	
-	/**
-	* GET_VALOR
-	* Get value . default is get dato . overwrite in every different specific component
-	* @return string | null $valor
-	*/
-	public function get_valor($lang=DEDALO_DATA_LANG) {
-
-		if (isset($this->valor)) {
-			if(SHOW_DEBUG) {
-				//error_log("Catched valor !!! from ".__METHOD__);
-			}
-			return $this->valor;
-		}
-
-		$valor  = null;		
-		$dato   = $this->get_dato();
-		if (!empty($dato)) {
-			
-			# Test dato format (b4 changed to object)
-			if(SHOW_DEBUG) {
-				foreach ($dato as $key => $current_value) {
-					if (!is_object($current_value)) {
-						if(SHOW_DEBUG) {
-							dump($dato," dato");
-						}
-						trigger_error(__METHOD__." Wrong dato format. OLD format dato in $this->label $this->tipo .Expected object locator, but received: ".gettype($current_value) .' : '. print_r($current_value,true) );
-						return $valor;
-					}
-				}
-			}		
-
-			# Always run list of values
-			$ar_list_of_values	= $this->get_ar_list_of_values( $lang, null ); # Importante: Buscamos el valor en el idioma actual
-
-			foreach ($ar_list_of_values->result as $locator => $label) {
-				$locator = json_handler::decode($locator);	# Locator is json encoded object
-					#dump($label, ' label ++ '.to_string($locator));
-				if (in_array($locator, $dato)) {
-					$valor = $label;
-					break;
-				}
-			}
-
-		}//end if (!empty($dato)) 
-
-		# Set component valor
-		$this->valor = $valor;
-
-		return $valor;
-	}//end get_valor
-
-
-
-	/*
-	* GET_VALOR_LANG
-	* Return the main component lang
-	* If the component need change this langs (selects, radiobuttons...) overwritte this function
-	*/
-	public function get_valor_lang(){
-
-		$relacionados = (array)$this->RecordObj_dd->get_relaciones();
-		
-		#dump($relacionados,'$relacionados');
-		if(empty($relacionados)){
-			return $this->lang;
-		}
-
-		$termonioID_related = array_values($relacionados[0])[0];
-		$RecordObjt_dd = new RecordObj_dd($termonioID_related);
-
-		if($RecordObjt_dd->get_traducible() =='no'){
-			$lang = DEDALO_DATA_NOLAN;
-		}else{
-			$lang = DEDALO_DATA_LANG;
-		}
-		return $lang;
-	}//end get_valor_lang
-
-
-
-	/**
-	* GET_AR_TARGET_SECTION_TIPO
-	* Select source section/s
-	* Overrides component common method
-	*/
-	public function get_ar_target_section_tipo() {
-		
-		if (!$this->tipo) return null;
-
-		if(isset($this->ar_target_section_tipo)) {
-			return $this->ar_target_section_tipo;
-		}
-
-		$prefix = RecordObj_dd::get_prefix_from_tipo($this->section_tipo);
-			#dump($prefix, ' prefix ++ '.to_string());
-
-		$ar_target_section_tipo = array($prefix.'2');
-		
-		# Fix value
-		$this->ar_target_section_tipo = $ar_target_section_tipo;
-		
-		return (array)$ar_target_section_tipo;
-	}//end get_ar_target_section_tipo
-
-
-
-	/**
-	* GET_REFERENCED_TIPO
-	* Alias of get_ar_target_section_tipo
-	* Select source section/s
-	* Overrides component common method
-	* @return string $this->referenced_tipo
-	*/
-	public function get_referenced_tipo() {
-
-		if (!$this->tipo) return null;
-		if (isset($this->referenced_tipo)) return $this->referenced_tipo;
-
-		# For future compatibility, we use get_ar_target_section_tipo to obtain section target tipo
-		$ar_target_section_tipo = $this->get_ar_target_section_tipo();
-		
-		$this->referenced_tipo = reset($ar_target_section_tipo);
-		
-		return (string)$this->referenced_tipo;
-	}//end get_referenced_tipo
-
-}
 ?>

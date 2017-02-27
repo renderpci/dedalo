@@ -2,7 +2,7 @@
 /*
 * CLASS LOGGER
 */
-require_once( dirname(dirname(__FILE__)) . '/config/config4.php');
+#require_once( dirname(dirname(__FILE__)) . '/config/config4.php');
 
 class logger {
 
@@ -24,6 +24,8 @@ class logger {
 	# PRIVATE CONSTRUCT . Constructor privado (Patrón único)
 	private function __construct() {
 	}
+
+
 
 	/**
 	* LEVEL TO STRING CONVERSION
@@ -53,6 +55,8 @@ class logger {
 		}
 	}
 
+
+
 	/**
 	* REGISTER
 	*/
@@ -81,6 +85,8 @@ class logger {
 		logger::manage_backends($log_name, $obj_back);
 	}
 
+
+
 	/**
 	* GET INSTANCE
 	*/
@@ -99,7 +105,7 @@ class logger {
 			$backends = array();
 		}
 
-		if ($obj_back == NULL) {
+		if ($obj_back === null) {
 			# We are recovering
 			if (isset($backends[$name])) {
 				return $backends[$name];
@@ -110,15 +116,9 @@ class logger {
 			# We are adding
 			$backends[$name] = $obj_back;
 		}
-	}
-
+	}//end manage_backends
 	
 	
-
 
 }#end class logger
-
-
-
-
 ?>

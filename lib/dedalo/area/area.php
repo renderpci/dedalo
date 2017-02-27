@@ -14,7 +14,15 @@
 	$ar_ts_children 		= (array)$this->get_ar_ts_children();
 		#dump($ar_children_areas ,'$ar_children_areas ');
 
-	
+	/*
+	# Redirections when area is a special thesaurus class
+	if ($tipo===DEDALO_THESAURUS_VIRTUALS_AREA_TIPO) { // hierarchy56
+		header("Location: ".DEDALO_LIB_BASE_URL."/main/?t=".DEDALO_TESAURO_TIPO); exit();
+	}elseif ($tipo===DEDALO_THESAURUS_VIRTUALS_MODELS_AREA_TIPO) {
+		header("Location: ".DEDALO_LIB_BASE_URL."/main/?t=".DEDALO_TESAURO_TIPO.'&model'); exit();
+	}
+	*/
+
 	
 	$file_name 				= $modo;
 

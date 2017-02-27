@@ -5,96 +5,194 @@
 
 	
 	
-	print "\n\n<!-- AREA THESAURUS [tipo:$tipo] -->";	
-	print "\n<div class=\"css_wrap_area css_wrap_area_thesaurus\" > ";
+	print "<!-- ".__CLASS__." [tipo:$tipo] -->";	
+	print "<div class=\"css_wrap_area css_wrap_area_thesaurus\">";
 
 
-		$html='';
+	$html='';
+
+	#
+	# SEARCH FORM
+	$html ='';
+	$html .= "<div class=\"search_form_container\">";
+	#$html .= "<div class=\"beta\">Beta</div>";
+	$html .= $search_form_html;
+	$html .= "</div>";
+	
+	
+	$tipology_name_model_css = ($model_view===true) ? 'tipology_name_model' : null;
+
+
+	#
+	# TREE HTML
+	$html .= "<ul id=\"thesaurus_list_wrapper\">";
+	#foreach ($ar_hierarchy_typologies->result as $ar_value) foreach($ar_value as $key => $row) {
+	$root_nodes=array();
+	foreach ($ar_hierarchy_typologies as $key => $tipology_section_id) {
+		#dump($row, ' row ++ '.to_string());
+
+		#$tipology_section_id   	= $row['section_id'];
+		#$tipology_section_tipo 	= $row['section_tipo'];
+		#$tipology_name 			= $row[area_thesaurus::$typologies_name_tipo];
+	
+		$tipology_section_tipo 	= area_thesaurus::$typologies_section_tipo;
+		$tipology_name 			= $this->get_tipology_name($tipology_section_id);
+
+
+		// Filter by GET var hierarchy_types if is present
+		if(is_array($hierarchy_types)) {
+			if (!in_array($tipology_section_id, $hierarchy_types)) {
+				continue;
+			}
+		}	
+
+		$html .= "<li>";			
 
 		#
-		# SEARCH FORM
-		$html ='';
-		$html .= "<div class=\"search_form_container\">";
-		$html .= $search_form_html;
-		$html .= "</div>";
-
-
-
-
+		# HIERARCHY TIPOLOGY NAME Like 'Toponimia'
+		$html .= "<div class=\"tipology_name $tipology_name_model_css\"> <strong> ".trim($tipology_name)."</strong></div>";
 
 		#
-		# TREE HTML
-		$html .= "<ul>";
-		foreach ($ar_hierarchy_typologies->result as $ar_value) foreach($ar_value as $key => $row) {
-			#dump($row, ' row ++ '.to_string());
+		# HIERARCHIES OF CURRENT TIPO Like 'España' for tipology_section_id 2
+		$search_hierarchies_options = area_thesaurus::get_options_for_search_hierarchies($tipology_section_tipo, $tipology_section_id);
+		# Calculate rows from database using search class like lists
+		$hierarchies_rows_obj = search::get_records_data($search_hierarchies_options);
+			#dump($hierarchies_rows_obj, ' hierarchies_rows_obj ++ '.to_string());
+			
+			foreach ($hierarchies_rows_obj->result as $hierarchy_ar_value) foreach($hierarchy_ar_value as $hierarchy_key => $hierarchy_row) {
+							
+				$hierarchy_section_id   		= $hierarchy_row['section_id'];
+				$hierarchy_section_tipo 		= $hierarchy_row['section_tipo'];				
+				$hierarchy_term_tipo 			= DEDALO_HIERARCHY_TERM_TIPO;
+				$hierarchy_name 				= json_decode($hierarchy_row[$hierarchy_term_tipo])[0];
+				# hierarchy_target_section_tipo is a json encoded array
+				$hierarchy_target_section_tipo 	= $hierarchy_row[$target_section_tipo];
+				$hierarchy_target_section_tipo  = json_decode($hierarchy_target_section_tipo)[0];
 
-			$tipology_section_id   	= $row['section_id'];
-			$tipology_section_tipo 	= $row['section_tipo'];
-			$tipology_name 			= $row[area_thesaurus::$typologies_name_tipo];		
+				if (empty($hierarchy_target_section_tipo)) {
+					debug_log(__METHOD__." Ignored hierarchy ID: $hierarchy_section_id ($hierarchy_name) with empty childrens target section tipo ".to_string(), logger::WARNING);
+					continue;
+				}
 
-			$html .= "<li>";			
+				#$hierarchy_childrens 			= json_decode($hierarchy_row[$hierarchy_childrens_tipo]);				
+					#dump($hierarchy_row, '$hierarchy_target_section_tipo ++ '.to_string($hierarchy_childrens_tipo));
+					#dump($hierarchy_row, ' hierarchy_target_section_tipo ++ '.to_string($hierarchy_target_section_tipo));
 
-			#
-			# HIERARCHY TIPOLOGY NAME Like 'Toponimia'
-			$html .= "<div class=\"tipology_name\"> <strong> ".strip_tags($tipology_name)."</strong></div>";
-
-			#
-			# HIERARCHIES OF CURRENT TIPO Like 'España'
-			$search_hierarchies_options = $this->get_options_for_search_hierarchies($tipology_section_tipo, $tipology_section_id);
-			# Calculate rows from database using search class like lists
-			$hierarchies_rows_obj = search::get_records_data($search_hierarchies_options);
-				#dump($hierarchies_rows_obj, ' hierarchies_rows_obj ++ '.to_string());
-
-				$ar_js_call=array();
-				foreach ($hierarchies_rows_obj->result as $hierarchy_ar_value) foreach($hierarchy_ar_value as $hierarchy_key => $hierarchy_row) {
+				# Permissions
+				$current_permissions = common::get_permissions( $hierarchy_target_section_tipo, $hierarchy_target_section_tipo);
+				# dump($current_permissions, ' $current_permissions ++ '.to_string($hierarchy_target_section_tipo));
+				if ($current_permissions<2) {
+					continue;
+				}
 					
-					$hierarchy_section_id   		= $hierarchy_row['section_id'];
-					$hierarchy_section_tipo 		= $hierarchy_row['section_tipo'];
-					$hierarchy_target_section_tipo 	= strtolower($hierarchy_row[DEDALO_HIERARCHY_TLD2_TIPO]).'1';
-					$hierarchy_name 				= $hierarchy_row[DEDALO_HIERARCHY_TERM_TIPO];
-					$hierarchy_childrens 			= json_decode($hierarchy_row[DEDALO_HIERARCHY_CHIDRENS_TIPO]);
-
-					if ($hierarchy_childrens && count($hierarchy_childrens)==1) {
-						# nothing to show
-					}else{
-						$html .= "<div class=\"hierarchy_name\" data-section_tipo=\"$hierarchy_section_tipo\" data-section_id=\"$hierarchy_section_id\" data-target_section_tipo=\"$hierarchy_target_section_tipo\" >";
-						$html .= $hierarchy_name;
-						$html .= "<span>";
-						$html .= " <a href=\"javascript:;\" class=\"id_column_link ts_object_add\" onclick=\"ts_object.add_children_from_hierarchy(this)\"
-						data-type=\"hierarchy_root\"
-						title=\"add\"
-						>
-						<div class=\"ts_object_add_icon\"></div></a>";
-						$html .= "</span>";
-						$html .= "</div>";//end hierarchy_name
+				// Filter by GET var hierarchy_sections if is present				 
+				if(is_array($hierarchy_sections)) {					
+					if (!in_array($hierarchy_target_section_tipo, $hierarchy_sections)) {
+						continue;
 					}
+				}
+				
+				
+				// WRAP_TS_OBJECT
+				$hierarchy_trigger_id = $hierarchy_section_tipo.'_'.$hierarchy_section_id;
+				$html .= "<div class=\"wrap_ts_object hierarchy_root_node\" data-node_type=\"hierarchy_node\" data-section_tipo=\"{$hierarchy_section_tipo}\" data-section_id=\"{$hierarchy_section_id}\" data-target_section_tipo=\"$hierarchy_target_section_tipo\">";
+				
+				
+					$root_node_id = $hierarchy_trigger_id.'_root';
+					$root_nodes[] = $root_node_id;
+
+					/*
+					# column id
+					$html .= "<div class=\"id_column_content\">";
+					$html .= " <a href=\"javascript:;\" class=\"id_column_link ts_object_add\" title=\"add\" onclick=\"ts_object.add_children_from_hierarchy(this)\"><div class=\"ts_object_add_icon\"></div></a>";
+					#$html .= " <a href=\"javascript:;\" class=\"id_column_link ts_object_delete\" title=\"delete\"><div class=\"ts_object_delete_icon\"></div></a>";
+					$html .= " <a href=\"javascript:;\" class=\"id_column_link ts_object_edit\" title=\"edit\" onclick=\"ts_object.edit(this)\"><div class=\"ts_object_section_id_number\"><span>1</span></div><div class=\"ts_object_edit_icon\"></div></a>";
+					$html .= "</div>";//end id_column_content
+					*/
+					# elements container
+					$html .= " <div class=\"elements_container\">";
+					#$html .= "  <div class=\"list_thesaurus_element hierarchy_name\" data-tipo=\"$hierarchy_term_tipo\" data-type=\"root\" data-section_tipo=\"$hierarchy_section_tipo\" data-section_id=\"$hierarchy_section_id\">";
+					#$html .= $hierarchy_name;
+					#$html .= "<span>";
+					#$html .= " <a href=\"javascript:;\" class=\"id_column_link ts_object_add\" onclick=\"ts_object.add_children_from_hierarchy(this)\" data-type=\"hierarchy_root\" title=\"add\">";
+					#$html .= " <div class=\"ts_object_add_icon\"></div>";
+					#$html .= " </a>";
+					#$html .= "</span>";
+					#$html .= "  </div>";//end hierarchy_name
+					$html .= "  <div id=\"{$root_node_id}\" class=\"list_thesaurus_element\" data-tipo=\"$hierarchy_childrens_tipo\" data-type=\"link_childrens\"></div>";
+					$html .= " </div>";//end elements_container
 					
-
-					$hierarchy_trigger_id = $hierarchy_section_tipo.'_'.$hierarchy_section_id;
-					$html .= "<div class=\"wrap_ts_object hierarchy_root_node\" data-section_tipo=\"{$hierarchy_section_tipo}\" data-section_id=\"{$hierarchy_section_id}\">";
-					$html .= " <div class=\"childrens_container\" data-role=\"childrens_container\">";
-					$html .= "   <div id=\"{$hierarchy_trigger_id}\"></div>";
-					$html .= " </div>";					
-					$html .= "</div>";
 					
-					// JS call to load nodes
-					$ar_js_call[] = "ts_object.parse_ts_object(document.getElementById('{$hierarchy_trigger_id}'))";
+					$html .= " <div class=\"childrens_container\" data-role=\"childrens_container\" data-section_id=\"$hierarchy_section_id\">";
+					#$html .= "   <div id=\"{$root_node_id}\" data-tipo=\"".$hierarchy_childrens_tipo."\">";
+					#
+					# LIST ROOT BUILDER
+					#if ($thesaurus_list_mode==='list') {
+					/*
+					$html .= "<script>
+					ts_object.get_childrens(document.getElementById('{$hierarchy_trigger_id}_root')); 
+					console.log(document.getElementById('{$hierarchy_trigger_id}_root'));
+					</script>";
+					*/
+					#}					
+					#$html .= "   </div>"; // This div is replaced for ajax result
+					$html .= " </div>";			
+					
+				
+				/*
+				$html .= "<div class=\"wrap_ts_object\" data-section_tipo=\"{$hierarchy_section_tipo}\" data-section_id=\"{$hierarchy_section_id}\" data-target_section_tipo=\"$hierarchy_target_section_tipo\">";
+				$html .= " <div class=\"childrens_container\" data-role=\"childrens_container\">";
+				$html .= "   <div id=\"{$hierarchy_trigger_id}\"></div>"; // This div is replaced for ajax result
+				$html .= " </div>";
+				$html .= "</div>";
+				*/
+				$html .= "</div>";//end wrap_ts_object
 
-				}//end foreach ($hierarchies_rows_obj->result as $hierarchy_ar_value) foreach($hierarchy_ar_value as $hierarchy_key => $hierarchy_row) {
+				
+				// JS call to load nodes
+				#$ar_js_call[] = "ts_object.parse_ts_object(document.getElementById('{$hierarchy_trigger_id}'))";
 
-				// JS calls render
-				$html .= "<script>".implode(';', $ar_js_call)."</script>";	
+			}//end foreach ($hierarchies_rows_obj->result as $hierarchy_ar_value) foreach($hierarchy_ar_value as $hierarchy_key => $hierarchy_row) {
 
-			#$section_rows = new section_records(DEDALO_HIERARCHY_SECTION_TIPO, $options);
-			#$html .= $section_rows->get_html();
+			// JS calls render
+			#$html .= "<script>".implode(';', $ar_js_call)."</script>";	
 
-			$html .= "</li>";
+		#$section_rows = new section_records(DEDALO_HIERARCHY_SECTION_TIPO, $options);
+		#$html .= $section_rows->get_html();
 
-		}//end foreach ($ar_hierarchy_typologies->result as $ar_value) foreach($ar_value as $key => $row)
-		$html .= "</ul>";
+		$html .= "</li>";
 
-		echo $html;
+	}//end foreach ($ar_hierarchy_typologies->result as $ar_value) foreach($ar_value as $key => $row)
 
+
+	#
+	# SEARCH ROOT BUILDER
+	if ($thesaurus_list_mode==='search') {
+
+		$options = new stdClass();
+			$options->term = isset($_GET['term']) ? $_GET['term'] : false;	
+		$search_data = $this->search_thesaurus( $options );
+		$search_data = json_encode($search_data);
+		/*
+		$html .= " <div class=\"childrens_container search_test\" data-role=\"childrens_container\" id=\"search_test\"> search_test </div>";
+		#$search_data = '{"ts1_65":{"section_tipo":"ts1","section_id":"65","modo":"edit","lang":"lg-spa","ar_elements":[{"type":"link","tipo":"hierarchy42","value":0},{"type":"term","tipo":"hierarchy25","value":"65"},{"type":"link_childrens","tipo":"hierarchy49","value":"button show childrens"}],"heritage":{"ts1_73":{"section_tipo":"ts1","section_id":"73","modo":"edit","lang":"lg-spa","ar_elements":[{"type":"link","tipo":"hierarchy42","value":0},{"type":"term","tipo":"hierarchy25","value":"73"},{"type":"link_childrens","tipo":"hierarchy49","value":"button show childrens"}],"heritage":{"ts1_74":{"section_tipo":"ts1","section_id":"74","modo":"edit","lang":"lg-spa","ar_elements":[{"type":"link","tipo":"hierarchy42","value":0},{"type":"term","tipo":"hierarchy25","value":"74 pepito"},{"type":"link_childrens","tipo":"hierarchy49","value":"button show childrens unactive"}]}}},"ts1_66":{"section_tipo":"ts1","section_id":"66","modo":"edit","lang":"lg-spa","ar_elements":[{"type":"link","tipo":"hierarchy42","value":0},{"type":"term","tipo":"hierarchy25","value":"66"},{"type":"link_childrens","tipo":"hierarchy49","value":"button show childrens"}],"heritage":{"ts1_67":{"section_tipo":"ts1","section_id":"67","modo":"edit","lang":"lg-spa","ar_elements":[{"type":"link","tipo":"hierarchy42","value":0},{"type":"term","tipo":"hierarchy25","value":"67  pepito pepet"},{"type":"link_childrens","tipo":"hierarchy49","value":"button show childrens unactive"}]}}}}}}';
+		$html .= " <script>ts_object.parse_search_result($search_data, document.querySelector('.search_test'))</script>";
+		*/
+		$html .= " <script>ts_object.parse_search_result($search_data, null, false)</script>";
+	
+	}else{
+	
+		// List mode
+		$html .= " <script>area_thesaurus.root_nodes=".json_encode($root_nodes)."</script>";
+
+	}//end if ($thesaurus_list_mode==='search') 
+	
+	#$_SERVER['PHP_AUTH_USER'] = 'pepe';
+	#dump($_SERVER['PHP_AUTH_USER'], '$_SERVER[PHP_AUTH_USER] ++ '.to_string());
+	
+	
+	$html .= "</ul>";
+	echo $html;
 
 
 
@@ -139,9 +237,6 @@
 	print $html_label;
 	print $html_contenido;
 	*/
-
-		
-		
 	
 	
 	print "\n</div><!-- /AREA [$tipo] -->\n\n"; //wrap

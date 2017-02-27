@@ -3,9 +3,10 @@
 	# VISUALIZADOR HTML	
 	
 	
-	print "\n<!-- STATE [tipo:$tipo section_id:$parent $modo] -->";
+	# html_delimiter
+	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'in');
 
-	print "\n<div class=\"wrap_component css_wrap_state css_wrap_state_edit wrap_component_{$tipo}\" id=\"{$id_wrapper}\" 
+	print "<div class=\"wrap_component css_wrap_state css_wrap_state_edit wrap_component_{$tipo}\" id=\"{$id_wrapper}\" 
 	data-tipo=\"{$tipo}\"
 	data-section_tipo=\"{$section_tipo}\"
 	data-parent=\"{$parent}\"
@@ -30,7 +31,8 @@
 					
 				$checked = $valor_for_checkbox[0]>=1 ? 'checked="checked"' : '';
 
-				$html_contenido .= "\n<input type=\"checkbox\" class=\"css_state\"
+				$html_contenido .= "<input type=\"checkbox\" class=\"css_state\"
+				id=\"{$id_wrapper}_checkbox\"
 				onchange=\"component_state.update_state_locator(this)\"
 				onfocus=\"component_common.select_wrap(null,'$id_wrapper');\"
 				data-tipo=\"{$tipo}\"
@@ -47,31 +49,16 @@
 				tabindex=\"1\"
 				/>";
 
-				$html_contenido .= "<span> ".label::get_label('acabado')." </span>";
-				if(SHOW_DEBUG) {
+				$html_contenido .= " <label for=\"{$id_wrapper}_checkbox\"> ".label::get_label('acabado')." </label>";
+				if(SHOW_DEBUG===true) {
 					$html_contenido .= "<span class=\"notas\"> [".$this->options->lang."] </span>";
-				}					
+				}			
 
-				
-				if ($permissions<3) {
 
-					# USER: Label to info user about current admin options values (read only)
-					switch (true) {
-						case $valor_for_checkbox[1]==50:
-							$html_contenido .= " <strong>".label::get_label('para_revisar')."</strong>";
-							break;
-						case $valor_for_checkbox[1]==100:
-							$html_contenido .= " <strong>".label::get_label('validado')."</strong>";
-							break;
-						default:
-							$html_contenido .= " <strong>".''."</strong>";
-							break;
-					}
-					
-				}else if ($permissions>=3) {
+				if($permission_section>=3 || (bool)$is_global_admin===true) {
 
 					# Admin options
-					$html_contenido .= "\n <select onchange=\"component_state.update_state_locator(this)\"
+					$html_contenido .= " <select onchange=\"component_state.update_state_locator(this)\"
 					data-tipo=\"{$tipo}\"
 					data-section_tipo=\"{$section_tipo}\"
 					data-parent=\"{$parent}\"
@@ -88,21 +75,36 @@
 					$html_contenido .= "<option value=\"100\" $selected >".label::get_label('validado')."</option>";
 					$html_contenido .= "</select> ";
 											
-					#$html_contenido .= "\n <label class=\"css_state_rotulo\" $required_code >";
+					#$html_contenido .= " <label class=\"css_state_rotulo\" $required_code >";
 					#$html_contenido .= label::get_label('validado') ;
-					if(SHOW_DEBUG) {
+					if(SHOW_DEBUG===true) {
 						#$html_contenido .= " [".$this->options->lang."]";
 					}
 					#$html_contenido .= "</label> valor: $valor - valor_for_checkbox: $valor_for_checkbox ";
+
+				}else{
+
+					# USER: Label to info user about current admin options values (read only)
+					switch (true) {
+						case $valor_for_checkbox[1]==50:
+							$html_contenido .= " <strong>".label::get_label('para_revisar')."</strong>";
+							break;
+						case $valor_for_checkbox[1]==100:
+							$html_contenido .= " <strong>".label::get_label('validado')."</strong>";
+							break;
+						default:
+							$html_contenido .= " <strong>".''."</strong>";
+							break;
+					}		
 				}
 
 				
-				if(SHOW_DEBUG) {					
+				if(SHOW_DEBUG===true) {					
 					$html_contenido .= " <div class=\"state_debug_info\" onclick=\"$(this).children('pre').toggle()\"> State data: ";
 					$html_contenido .= "<pre style=\"display:none\">";
 					foreach ($this->get_dato() as $current_state_locator) {
-						#$html_contenido .= json_encode($current_state_locator)."\n";
-						$html_contenido .= print_r($current_state_locator,true)."\n";
+						#$html_contenido .= json_encode($current_state_locator)."";
+						$html_contenido .= print_r($current_state_locator,true)."";
 					}						
 					$html_contenido .= "</pre>";
 					$html_contenido .= "</div>";					
@@ -111,11 +113,11 @@
 
 				# 
 				# GRAPH
-				$html_contenido .= "\n <div class=\"togge_state_graphs\" onclick=\"component_state.toggle_graphs(this);\" data-state_graphs_button=\"1\"></div>";
-				$html_contenido .= "\n <div class=\"state_graphs_content\" style=\"display:none\">";
+				$html_contenido .= " <div class=\"togge_state_graphs\" onclick=\"component_state.toggle_graphs(this);\" data-state_graphs_button=\"1\"></div>";
+				$html_contenido .= " <div class=\"state_graphs_content\" style=\"display:none\">";
 				foreach ($ar_graph as $key => $ar_value) {						
 					# Current_stats_item div
-					$html_contenido .= "\n <div class=\"current_stats_item\" id=\"current_stats_item_$key\">";
+					$html_contenido .= " <div class=\"current_stats_item\" id=\"current_stats_item_$key\">";
 					#
 					# SVG GRAPHIC BUILDED BY JS
 					$html_contenido .= "<script>";
@@ -129,7 +131,7 @@
 					$html_contenido .= "</div>";
 				}
 				/*
-				$html_contenido .= "\n<script>";
+				$html_contenido .= "<script>";
 				//$html_contenido .= "window.onload = function(){";
 				#$html_contenido .= "$(function(){";
 				foreach ($ar_graph as $key => $ar_value) {
@@ -138,13 +140,13 @@
 				}
 				//$html_contenido .= "}";
 				#$html_contenido .= "})";
-				$html_contenido .= "\n</script>";
+				$html_contenido .= "</script>";
 				*/
 				$html_contenido .= "</div>";
 					
 		
-				if(SHOW_DEBUG) {
-					#$html_contenido .= "\n <span class=\"css_span_debugger\" id=\"debugger_{$tipo}\" >{$debugger}</span>";	
+				if(SHOW_DEBUG===true) {
+					#$html_contenido .= " <span class=\"css_span_debugger\" id=\"debugger_{$tipo}\" >{$debugger}</span>";	
 				}
 				break;							
 	}
@@ -159,14 +161,17 @@
 	print $html_contenido;
 
 
-	#if(SHOW_DEBUG) {
+	#if(SHOW_DEBUG===true) {
 	#	$total=round(microtime(1)-$this->start_time,3);
 	#	echo "<span class=\"debug_info ar_list_of_values_debug_info\">Time: $total</span>";
 	#}
-
 	
 	
 	print "</div>"; //wrap
+
+
+	# html_delimiter
+	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'out');
 
 	/*
 	$html_contenido='';

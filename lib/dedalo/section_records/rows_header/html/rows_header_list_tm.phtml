@@ -3,39 +3,41 @@
 	# VISUALIZADOR HTML	
 		
 	# CONTENIDO (INPUT)
-	$html_contenido  = "\n<tr>";	
+	$html_contenido  = "<tr>";	
 	
-	switch($permissions) {
+	switch(true) {
 			
-		case 0	:	$html_contenido .= "\n <span class=\"css_span_dato\"> ".label::get_label('sin_acceso')." </span>";
+		case $permissions===0	:	$html_contenido .= " <span class=\"css_span_dato\"> ".label::get_label('sin_acceso')." </span>";
 					break;
 						
 		case ($permissions>=1)	:
 					
 					# TD ID
-					$html_contenido .= "\n <th class=\"id_column\">";
+					$html_contenido .= " <th class=\"id_column\">";
 						$html_contenido .= "<div class=\"th_title\">";
-						$html_contenido .= "\n ID ";
+						$html_contenido .= " ID ";
 						$html_contenido .= '</div>';
-					$html_contenido .= "\n </th>";
+					$html_contenido .= " </th>";
 					
 					# TD DATOS					
-					foreach($ar_label_html as $tipo => $label_html) {
+					foreach($ar_label_html as $key => $data_obj) {
 						
-						$html_contenido .= "\n <th>";
+						$current_tipo 		= $data_obj['tipo'];
+						$current_label_html = $data_obj['label'];
+
+						$html_contenido .= " <th>";
 						
-							$html_contenido .= "<div class=\"th_title\" title=\"$label_html\">";
-							$html_contenido .= $label_html;
+							$html_contenido .= "<div class=\"th_title\" title=\"$current_label_html\">";
+							$html_contenido .= $current_label_html;
 							$html_contenido .= '</div>';
 
-						$html_contenido .= "\n </th>";						
+						$html_contenido .= " </th>";						
 					}
 
 	}
-	$html_contenido .= "\n</tr>";
+	$html_contenido .= "</tr>";
 	
 	# PRINT HTML
 	print $html_contenido;
-	
 
 ?>

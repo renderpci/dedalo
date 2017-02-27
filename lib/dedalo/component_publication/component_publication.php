@@ -12,35 +12,34 @@
 	$ejemplo				= NULL;
 	$html_title				= "Info about $tipo";
 	$lang					= $this->get_lang();
-	$identificador_unico	= $this->get_identificador_unico();
+	$identificador_unico	= isset($this->identificador_unico) ? $this->identificador_unico : $this->get_identificador_unico();		
 	$component_name			= get_class($this);
 	$dato_string			= $this->get_dato_as_string();	
 	$file_name				= $modo;	
 
-
+	if($permissions===0) return null;
+	
 	switch($modo) {
 
 		case 'portal_list' :
 				$file_name = 'edit';
-
 		case 'edit' :
 				# Verify component content record is inside section record filter
 				if ($this->get_filter_authorized_record()===false) return NULL ;
 
 				$dato 				= $this->get_dato();
-				$dato_json 			= json_encode($dato);
+				$dato_json 			= json_encode($dato);		
 				$valor				= $this->get_valor();
 				$referenced_tipo 	= $this->get_referenced_tipo();
-				$ar_list_of_values	= $this->get_ar_list_of_values( DEDALO_DATA_LANG, null );				
+				#$ar_list_of_values	= $this->get_ar_list_of_values( DEDALO_DATA_LANG, null );				
 				$id_wrapper 		= 'wrapper_'.$identificador_unico;			
-				$input_name 		= 'radio_button_'.$identificador_unico;
+				$input_name 		= 'publication_'.$identificador_unico; 
 				#$js_code			= $this->generate_js();
 				$component_info 	= $this->get_component_info('json');
 				break;
 
 		case 'list_tm' :
-				$file_name = 'list';
-							
+				$file_name = 'list';							
 		case 'list' :
 
 				$valor  			= $this->get_valor();
@@ -50,7 +49,7 @@
 				$referenced_tipo 	= $this->get_referenced_tipo();
 				$ar_list_of_values	= $this->get_ar_list_of_values( DEDALO_DATA_LANG, null );				
 				$id_wrapper 		= 'wrapper_'.$identificador_unico;				
-				$input_name 		= 'radio_button_'.$identificador_unico;
+				$input_name 		= 'publication_'.$identificador_unico;
 				#$js_code			= $this->generate_js();
 				$component_info 	= $this->get_component_info('json');			
 				break;
@@ -62,6 +61,9 @@
 				break;						
 						
 		case 'search' :
+				# Showed only when permissions are >1
+				if ($permissions<1) return null;
+				
 				$referenced_tipo 	= $this->get_referenced_tipo();
 				$ar_list_of_values	= $this->get_ar_list_of_values( DEDALO_DATA_LANG, null);			
 				

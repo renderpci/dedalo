@@ -1,4 +1,53 @@
 <?php
+/*
+
+
+
+
+
+	USE UNIFIED EDIT HTML
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 	# VISUALIZADOR HTML	- PLAYER (TRANSCRIPTION)
 
@@ -7,8 +56,8 @@
 	$html_contenido = '';
 
 	#$html_contenido .= "<div class=\"leaflet_map_player\">";
-	echo "\n<!-- GEOLOCATION [tipo:$tipo] -->";
-	echo "\n<div class=\"css_wrap_geolocation wrap_component leaflet_map_player\" id=\"{$id_wrapper}\"
+	echo "<!-- ".__CLASS__." [tipo:$tipo] -->";
+	echo "<div class=\"css_wrap_geolocation wrap_component leaflet_map_player\" id=\"{$id_wrapper}\"
 	data-tipo=\"{$tipo}\"
 	data-lang=\"{$lang}\"
 	data-section_tipo=\"{$section_tipo}\"
@@ -18,67 +67,68 @@
 	data-dato='{$dato_json}'
 	data-component_name=\"{$component_name}\"
 	data-component_info='{$component_info}'
+	data-related_tipo='{$ar_related_component_tipo_json}'
 	>";
 	
 
 	# CONTENIDO (INPUT)
 	$html_contenido = '';
-	switch($permissions) {
+	switch(true) {
 			
-		case 0	:	$html_contenido .= "";
-					break;
+		case ($permissions===0):
+				$html_contenido .= "";
+				break;
 						
-		case 1	: 	$html_contenido .= "\n <span class=\"css_span_dato\"> Under construction </span>";
-					break;	
+		case ($permissions===1): 
+				$html_contenido .= " <span class=\"css_span_dato\"> Under construction </span>";
+				break;	
 						
-		case ($permissions>=2) :
+		case ($permissions>=2):
+				#
+				# INPUTS
+				$html_contenido .= " <div class=\"map_inputs\">";
 
-					#
-					# INPUTS
-					$html_contenido .= "\n <div class=\"map_inputs\">";
+					$html_contenido .= " <span>".label::get_label('latitud')."</span>";
+					$html_contenido .= " <input type=\"text\" name=\"lat\" value =\"{$dato->lat}\"
+					data-tipo=\"{$tipo}\"
+					data-lang=\"{$lang}\"
+					data-section_tipo=\"{$section_tipo}\"
+					data-parent=\"{$parent}\"
+					data-modo=\"{$modo}\"
+					data-name=\"lat\"
+					/>";
 
-						$html_contenido .= "\n <span>".label::get_label('latitud')."</span>";
-						$html_contenido .= "\n <input type=\"text\" name=\"lat\" value =\"{$dato->lat}\"
-						data-tipo=\"{$tipo}\"
-						data-lang=\"{$lang}\"
-						data-section_tipo=\"{$section_tipo}\"
-						data-parent=\"{$parent}\"
-						data-modo=\"{$modo}\"
-						data-name=\"lat\"
-						/>";
+					$html_contenido .= " <span>".label::get_label('longitud')."</span>";
+					$html_contenido .= " <input type=\"text\" name=\"lon\" value=\"{$dato->lon}\" data-name=\"lon\"/>";
 
-						$html_contenido .= "\n <span>".label::get_label('longitud')."</span>";
-						$html_contenido .= "\n <input type=\"text\" name=\"lon\" value=\"{$dato->lon}\" data-name=\"lon\"/>";
+					$html_contenido .= " <span>".label::get_label('mapa_zoom')."</span>";
+					$html_contenido .= " <input type=\"text\" name=\"zoom\" value=\"{$dato->zoom}\" data-name=\"zoom\"/>";
 
-						$html_contenido .= "\n <span>".label::get_label('mapa_zoom')."</span>";
-						$html_contenido .= "\n <input type=\"text\" name=\"zoom\" value=\"{$dato->zoom}\" data-name=\"zoom\"/>";
-
-						# ALT
-						$html_contenido .= "\n <span>".label::get_label('altitude')."</span>";
-						#$html_contenido .= "\n <span name=\"alt\" data-name=\"alt\"/>".$dato->alt."</span>";
-						$alt = isset($dato->alt) ? $dato->alt : null;
-						$html_contenido .= "\n <input type=\"text\" name=\"alt\" class=\"input_altitude\" value=\"{$alt}\" data-name=\"alt\" readonly=\"readonly\"/>";
-						
-
-						
-						$html_contenido .= "\n <span class=\"geolocation_separator\"></span>";
-						$html_contenido .= "\n <span id=\"map_refresh\" class=\"glyphicon glyphicon-refresh geolocation_text link\"></span>";
-						$html_contenido .= "\n <span class=\"geolocation_separator\"></span>";
-						$html_contenido .= "\n <span id=\"map_fixed\" class=\"link\"> ".label::get_label('salvar')."</span>";
-
-						# TOGGLE BUTTON
-						$html_contenido .= "\n <span id=\"map_fixed\" class=\"link save_geolocation\" onclick=\"component_geolocation.toggle_full_map(this)\">Toggle</span>";
-
-
-					$html_contenido .= "\n </div>";//end map_inputs
-
-
-					#
-					# MAP
-						$html_contenido .= "\n <div class=\"leaflet_map\" id=\"$identificador_unico\"><!-- Map content here --></div>";	
+					# ALT
+					$html_contenido .= " <span>".label::get_label('altitude')."</span>";
+					#$html_contenido .= " <span name=\"alt\" data-name=\"alt\"/>".$dato->alt."</span>";
+					$alt = isset($dato->alt) ? $dato->alt : null;
+					$html_contenido .= " <input type=\"text\" name=\"alt\" class=\"input_altitude\" value=\"{$alt}\" data-name=\"alt\" readonly=\"readonly\"/>";
 					
-					break;										
-														
+
+					
+					$html_contenido .= " <span class=\"geolocation_separator\"></span>";
+					$html_contenido .= " <span id=\"map_refresh\" class=\"glyphicon glyphicon-refresh geolocation_text link\"></span>";
+					$html_contenido .= " <span class=\"geolocation_separator\"></span>";
+					$html_contenido .= " <span id=\"map_fixed\" class=\"link\"> ".label::get_label('salvar')."</span>";
+
+					# TOGGLE BUTTON
+					$html_contenido .= " <span id=\"map_fixed\" class=\"link save_geolocation\" onclick=\"component_geolocation.toggle_full_map(this)\">Toggle</span>";
+
+
+				$html_contenido .= " </div>";//end map_inputs
+
+
+				#
+				# MAP
+					$html_contenido .= " <div class=\"leaflet_map\" id=\"$identificador_unico\"><!-- Map content here --></div>";	
+				
+				break;														
 	}
 
 
@@ -102,3 +152,6 @@
 	// Build map
 	component_geolocation.init_map('<?php echo $identificador_unico ?>');
 </script>
+<?php
+*/
+?>

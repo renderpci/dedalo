@@ -1,8 +1,13 @@
 <?php
+// JSON DOCUMENT
+header('Content-Type: application/json');
+
 require_once( dirname(dirname(dirname(__FILE__))) .'/config/config4.php');
 
 if(login::is_logged()!==true) die("<span class='error'> Auth error: please login </span>");
 
+# Write session to unlock session file
+session_write_close();
 
 # set vars
 	$vars = array('mode');
@@ -13,84 +18,80 @@ if(login::is_logged()!==true) die("<span class='error'> Auth error: please login
 
 
 
+# CALL FUNCTION
+if ( function_exists($mode) ) {
+	$result = call_user_func($mode);
+	$json_params = null;
+	if(SHOW_DEBUG===true) {
+		$json_params = JSON_PRETTY_PRINT;
+	}
+	echo json_encode($result, $json_params);
+}
+
+
 
 /**
 * ADD_INDEX
 * Add semantic term to column
 */
-if($mode=='add_index') {
+function add_index() {
+
+	$response = new stdClass();
+		$response->result 	= false;
+		$response->msg 		= 'Error. Request failed on node add_index. ';
 
 	# set vars
-	$vars = array('tipo', 'section_tipo', 'parent', 'termino_id', 'locator_section_tipo', 'locator_section_id','ds_key');
+	$vars = array('component_tipo', 'section_tipo', 'parent','portal_locator_section_tipo','portal_locator_section_id','new_ds_locator','ds_key');
 		foreach($vars as $name) $$name = common::setVar($name);
 
-		if( empty($tipo) ) {
-			trigger_error("Error tipo is mandatory");
-			if(SHOW_DEBUG) {
-				throw new Exception("Trigger Error: tipo is empty ! ", 1); 
-			}		
-			exit();
+		if( empty($component_tipo) ) {
+			$response->msg .= 'Error component_tipo is mandatory';
+			return $response;
 		}
 		if( empty($section_tipo) ) {
-			trigger_error("Error section_tipo is mandatory");
-			if(SHOW_DEBUG) {
-				throw new Exception("Trigger Error: section_tipo is empty ! ", 1); 
-			}
-			exit();
+			$response->msg .= 'Error section_tipo is mandatory';
+			return $response;
 		}
 		if( empty($parent) ) {
-			trigger_error("Error parent is mandatory");
-			if(SHOW_DEBUG) {
-				#throw new Exception("Trigger Error: parent is empty ! ", 1); 
-			}
-			exit();
+			$response->msg .= 'Error parent is mandatory';
+			return $response;
 		}
-		if( empty($termino_id) ) {
-			trigger_error("Error termino_id is mandatory");
-			if(SHOW_DEBUG) {
-				throw new Exception("Trigger Error: termino_id is empty ! ", 1); 
-			}
-			exit();
+		if( empty($portal_locator_section_tipo) ) {
+			$response->msg .= 'Error portal_locator_section_tipo is mandatory';
+			return $response;
 		}
-		if( empty($locator_section_tipo) ) {
-			trigger_error("Error locator_section_tipo is mandatory");
-			if(SHOW_DEBUG) {
-				throw new Exception("Trigger Error: locator_section_tipo is empty ! ", 1); 
-			}
-			exit();
+		if( empty($portal_locator_section_id) ) {
+			$response->msg .= 'Error portal_locator_section_id is mandatory';
+			return $response;
 		}
-		if( empty($locator_section_id) ) {
-			trigger_error("Error locator_section_id is mandatory");
-			if(SHOW_DEBUG) {
-				throw new Exception("Trigger Error: locator_section_id is empty ! ", 1); 
-			}
-			exit();
+		if( empty($new_ds_locator) || !$new_ds_locator = json_decode($new_ds_locator) ) {
+			$response->msg .= 'Error locator is mandatory';
+			return $response;
 		}
 		if( empty($ds_key) ) {
-			trigger_error("Error ds_key is mandatory");
-			if(SHOW_DEBUG) {
-				throw new Exception("Trigger Error: ds_key is empty ! ", 1); 
-			}
-			exit();
+			$response->msg .= 'Error ds_key is mandatory';
+			return $response;
 		}
 	
-	$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+
+	$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
 	$component 		= component_common::get_instance( $modelo_name,
-													  $tipo,
+													  $component_tipo,
 													  $parent,
 													  'list',
 													  DEDALO_DATA_NOLAN,
 													  $section_tipo);
-	$result = $component->add_index( $termino_id, $locator_section_tipo, $locator_section_id, $ds_key );
+
+	$result = $component->add_index_semantic( $new_ds_locator, $portal_locator_section_tipo, $portal_locator_section_id, $ds_key );
 	$dato   = $component->get_dato();
 	
 	foreach ($dato as $dato_locator) {
-		if ($dato_locator->section_tipo==$locator_section_tipo && $dato_locator->section_id==$locator_section_id) {
+		if ($dato_locator->section_tipo==$portal_locator_section_tipo && $dato_locator->section_id==$portal_locator_section_id) {
 			$current_locator = $dato_locator;
 			break;
 		}
 	}
-
+	
 	$html='';
 	if (isset($current_locator)) {		
 
@@ -102,13 +103,11 @@ if($mode=='add_index') {
 		$html .= ob_get_clean();
 	}
 
-	if(SHOW_DEBUG) {
-		#$html .= to_string($result);
-	}
 
-	echo $html;
-	exit();
+	$response->result 	= $html;
+	$response->msg 		= "add_index done successfully";
 
+	return $response;
 }//end add_index
 
 
@@ -117,74 +116,58 @@ if($mode=='add_index') {
 * REMOVE_INDEX
 * Remove semantic term from column
 */
-if($mode=='remove_index') {
+function remove_index() {
+
+	$response = new stdClass();
+		$response->result 	= false;
+		$response->msg 		= 'Error. Request failed on node remove_index. ';
 
 	# set vars
-	$vars = array('tipo', 'section_tipo', 'parent', 'termino_id', 'locator_section_tipo', 'locator_section_id','ds_key');
+	$vars = array('component_tipo', 'section_tipo', 'parent','portal_locator_section_tipo','portal_locator_section_id','new_ds_locator','ds_key');
 		foreach($vars as $name) $$name = common::setVar($name);
 
-		if( empty($tipo) ) {
-			trigger_error("Error tipo is mandatory");
-			if(SHOW_DEBUG) {
-				throw new Exception("Trigger Error: tipo is empty ! ", 1); 
-			}		
-			exit();
+		if( empty($component_tipo) ) {
+			$response->msg .= 'Error component_tipo is mandatory';
+			return $response;
 		}
 		if( empty($section_tipo) ) {
-			trigger_error("Error section_tipo is mandatory");
-			if(SHOW_DEBUG) {
-				throw new Exception("Trigger Error: section_tipo is empty ! ", 1); 
-			}
-			exit();
+			$response->msg .= 'Error section_tipo is mandatory';
+			return $response;
 		}
 		if( empty($parent) ) {
-			trigger_error("Error parent is mandatory");
-			if(SHOW_DEBUG) {
-				#throw new Exception("Trigger Error: parent is empty ! ", 1); 
-			}
-			exit();
+			$response->msg .= 'Error parent is mandatory';
+			return $response;
 		}
-		if( empty($termino_id) ) {
-			trigger_error("Error termino_id is mandatory");
-			if(SHOW_DEBUG) {
-				throw new Exception("Trigger Error: termino_id is empty ! ", 1); 
-			}
-			exit();
+		if( empty($portal_locator_section_tipo) ) {
+			$response->msg .= 'Error portal_locator_section_tipo is mandatory';
+			return $response;
 		}
-		if( empty($locator_section_tipo) ) {
-			trigger_error("Error locator_section_tipo is mandatory");
-			if(SHOW_DEBUG) {
-				throw new Exception("Trigger Error: locator_section_tipo is empty ! ", 1); 
-			}
-			exit();
+		if( empty($portal_locator_section_id) ) {
+			$response->msg .= 'Error portal_locator_section_id is mandatory';
+			return $response;
 		}
-		if( empty($locator_section_id) ) {
-			trigger_error("Error locator_section_id is mandatory");
-			if(SHOW_DEBUG) {
-				throw new Exception("Trigger Error: locator_section_id is empty ! ", 1); 
-			}
-			exit();
+		if( empty($new_ds_locator) || !$new_ds_locator = json_decode($new_ds_locator) ) {
+			$response->msg .= 'Error locator is mandatory';
+			return $response;
 		}
 		if( empty($ds_key) ) {
-			trigger_error("Error ds_key is mandatory");
-			if(SHOW_DEBUG) {
-				throw new Exception("Trigger Error: ds_key is empty ! ", 1); 
-			}
-			exit();
+			$response->msg .= 'Error ds_key is mandatory';
+			return $response;
 		}
 	
-	$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+	$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
 	$component 		= component_common::get_instance( $modelo_name,
-													  $tipo,
+													  $component_tipo,
 													  $parent,
 													  'list',
 													  DEDALO_DATA_NOLAN,
 													  $section_tipo);
-	$result = $component->remove_index( $termino_id, $locator_section_tipo, $locator_section_id, $ds_key );
+
+	$result = $component->remove_index_semantic( $new_ds_locator, $portal_locator_section_tipo, $portal_locator_section_id, $ds_key );
 	$dato   = $component->get_dato();
 	
 	foreach ($dato as $dato_locator) {
-		if ($dato_locator->section_tipo==$locator_section_tipo && $dato_locator->section_id==$locator_section_id) {
+		if ($dato_locator->section_tipo==$portal_locator_section_tipo && $dato_locator->section_id==$portal_locator_section_id) {
 			$current_locator = $dato_locator;
 			break;
 		}
@@ -201,13 +184,11 @@ if($mode=='remove_index') {
 		$html .= ob_get_clean();
 	}
 
-	if(SHOW_DEBUG) {
-		#$html .= to_string($result);
-	}
 
-	echo $html;
-	exit();
+	$response->result 	= $html;
+	$response->msg 		= "remove_index done successfully";
 
+	return $response;
 }//end remove_index
 
 

@@ -1,0 +1,167 @@
+<?php
+
+	$html_head = '';
+
+	$html_head .= "<tr class=\"tr_head\">";
+
+
+	# INFO	
+	for ($i=0; $i < count($ar_diffusion_obj_head) ; $i++) {
+
+		$current_diffusion_obj = $ar_diffusion_obj_head[$i];
+			#dump($current_diffusion_obj,'current_diffusion_obj');
+
+		# VARS
+		$label 	= $current_diffusion_obj->label;
+		$valor 	= $current_diffusion_obj->columns['valor'];
+			#dump($valor, ' valor ++ '.to_string());
+		
+
+		$current_css_class = '';
+		#if($i==0)
+		#$current_css_class = "class='head_first_column'";
+
+		if ($i==0) {
+			#$current_css_class = 'rowspan="2"';
+		}
+
+		$html_head .= "<td $current_css_class >";
+		
+		$html_head .= "<div class=\"head_row_wrap\">";
+		
+			# LABEL : Excluimos el label del primer elemento, generalmente la foto identificativa (sólo nos interesa el contenido, no el label de la misma)
+			if($i>0) {
+				#$html_head .= "<div class=\"head_row_label\">";
+				#$html_head .= "<h5>$label</h5>";
+				#$html_head .= "</div>";
+			}
+			
+
+			# CONTENT
+			$html_head .= "<div class=\"head_row_content\">";
+
+				#dump($current_diffusion_obj, "current_diffusion_obj ".to_string());
+				#dump($valor, ' valor ++ '.to_string());
+
+				# VALOR : Si el valor recibido es único (no es un compuesto de varios registros) se formatea para unificar la lectura
+				if(!is_array($valor)) {
+					$valor = array( $current_diffusion_obj->id = array($current_diffusion_obj->tipo => $valor ) );
+						#dump($valor, ' valor ++ '.to_string());
+				}
+				#dump($valor);
+
+				# VALOR IS ARRAY
+				if (is_array($valor)) {
+	
+					# FORMATO DEL ARRAY RECIBIDO
+					# [valor] => Array
+		            #    (
+		            #        [58] => Array
+		            #            (
+		            #                [dd72] => Javier
+		            #                [dd77] => Gómez López
+		            #            )
+		            #        [61] => Array
+		            #            (
+		            #                [dd72] => José
+		            #                [dd77] => Perez Ramírez
+		            #            )
+		            #    )
+					foreach ($valor as $id => $ar_section_id) {
+						#dump($section_id, ' section_id ++ '.to_string());
+						foreach ($ar_section_id as $component_tipo => $current_valor) {
+
+							# SWITCH component_modelo_name
+							$component_modelo_name = RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+								#dump($component_modelo_name,'$component_modelo_name '.$current_valor);
+							switch( $component_modelo_name ) {
+
+								# IMG
+								case 'component_image':
+									/* CALCULATED MODE DES FOR SPEED 
+										$component_image = component_common::get_instance($component_modelo_name,
+																						  $component_tipo,
+																						  $section_id,
+																						  'list',
+																						  DEDALO_DATA_NOLAN,
+																						  $section_tipo);
+										$html_head .= $component_image->get_html();
+										*/
+									#$img_url 	= DEDALO_IMAGE_FILE_URL . "?m=image&SID=$current_valor&w=102&h=57&fx=crop";
+									$img_url 	= DEDALO_MEDIA_BASE_URL .'/'. DEDALO_IMAGE_FOLDER .'/'. DEDALO_IMAGE_THUMB_DEFAULT . "/{$current_valor}.jpg";
+									$html_head .= "<img src=\"$img_url\" class=\"index_ts_thumb\" />$current_valor";
+									#$html_head .= "WORKING HERE [component_image]";
+									break;
+
+								# AV
+								case 'component_av':
+									#dump($current_valor, ' current_valor ++ '.to_string());
+									$img_url 	= DEDALO_IMAGE_FILE_URL . "?m=posterframe&SID=$current_valor&w=102&h=57&fx=crop";
+									$html_head .= "<img src=\"$img_url\" class=\"index_ts_thumb\" />";
+									#$html_head .= "WORKING HERE [component_av]"; 
+									break;
+
+								default:									
+									if ($i==1) {
+										$html_head .= "<h5>$current_section_id</h5>";
+										if (!empty($current_valor)) {											
+											$html_head .= " [$current_valor]";
+										}										
+										#dump($var, ' var ++ '.to_string());
+									}else{
+										$html_head .= $current_valor;
+									}
+									# Separador
+									if (count($ar_section_id)>1 && $current_valor!=end($ar_section_id)) {
+										$html_head .= ' ';
+									}
+									break;
+							}
+
+						}#end foreach ($ar_section_id as $component_tipo => $current_valor)
+
+						# Foto Identificativa : sólo nos interesa el primer registro
+						if($i==0) break;
+
+						# Separador
+						if (count($valor)>1 && $ar_section_id!=end($valor)) {
+							$html_head .= ', ';
+						}						
+
+					}#end foreach ($valor as $section_id => $ar_section_id)
+
+				# VALOR IS STRING
+				}else{
+					
+					$html_head .= $valor;
+				}
+
+			$html_head .= "</div>"; #end head_row_content
+
+
+		$html_head .= "</div>";#end head_row_wrap
+		
+
+		$html_head .= "</td>";
+		
+	}
+	
+
+	$html_head .= "</tr>";
+
+
+	# ROW TR HEAD ------------------------------------------------
+		
+	/*
+	$html_head .= "<tr>";
+	$html_head .= "<td>ID</td>";
+	$html_head .= "<td>Tag</td>";
+	$html_head .= "<td clas=\"td_fragment\">Fragment</td>";
+	$html_head .= "<td>".label::get_label('informacion')."</td>";
+	$html_head .= "</tr>";
+
+	$included_tr_head = true;
+	*/
+
+	#echo $html_head ;
+?>

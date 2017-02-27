@@ -33,7 +33,7 @@ class logger_backend_file extends logger_backend  {
 		$this->h_log_file = @fopen($log_file_path, 'a+');
 
 		if ( !is_resource($this->h_log_file) ) {
-			if(SHOW_DEBUG)
+			if(SHOW_DEBUG===true)
 			trigger_error("The especified log file $log_file_path could not be opened or created for writing. Check file permissions.");
 		}
 		
@@ -110,7 +110,7 @@ class logger_backend_file extends logger_backend  {
 		#} catch (Exception $e) {
 		#	throw new Exception("Error Processing Request $e", 1);
 		#}
-		#if(SHOW_DEBUG) {
+		#if(SHOW_DEBUG===true) {
 			#$GLOBALS['log_messages'] .= exec_time($start_time, __METHOD__, $log_line);
 		#}
 	}
