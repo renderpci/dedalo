@@ -85,6 +85,11 @@ class component_relation_index extends component_relation_common {
 	*/
 	public function add_index( $locator ) {
 
+		if ($locator->type!=$this->relation_type) {
+			debug_log(__METHOD__." Stopped add index (struct) of invalid type (valid type is $this->relation_type). Received type: ".to_string($locator->type), logger::ERROR);
+			return false;
+		}
+
 		# Add current locator to component dato
 		if (!$add_locator = $this->add_locator_to_dato($locator)) {
 			return false;
@@ -191,12 +196,12 @@ class component_relation_index extends component_relation_common {
 			$options->fields->section_tipo 	= false;
 			$options->fields->section_id 	= false;
 			$options->fields->component_tipo= false;
-			$options->fields->type 			= false;
+			$options->fields->type 			= DEDALO_RELATION_TYPE_INDEX_TIPO;
 			$options->fields->tag_id 		= false;
 			$options->ar_tables 			= array('matrix_hierarchy');
 
 			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
-	
+		
 
 		$ar_filter=array();
 		foreach ($options->fields as $key => $value) {
@@ -206,7 +211,7 @@ class component_relation_index extends component_relation_common {
 			}
 		}
 		$compare = '{'. implode(",", $ar_filter). '}';
-
+			#dump($compare, ' compare ++ '.to_string($options));
 		// Iterate tables and make union search		
 		$ar_query=array();
 		foreach ((array)$options->ar_tables as $table) {
@@ -244,6 +249,7 @@ class component_relation_index extends component_relation_common {
 			$options->fields->section_id 	= $locator->section_id;			
 			$options->fields->type 			= DEDALO_RELATION_TYPE_INDEX_TIPO;			
 			$options->ar_tables 			= array('matrix_hierarchy');
+				#dump($options, ' options ++ '.to_string()); die();
 
 		$result = component_relation_index::get_indexations_search( $options );
 		$count = 0;

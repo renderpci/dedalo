@@ -1,210 +1,29 @@
 <?php
-/************************************************************************
-	
-    Dédalo : Intangible Cultural Heritage Management Platform
-	
-	Copyright (C) 2011  Authors: Juan Francisco Onielfa, Alejandro Peña
-
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU Affero General Public License as
-    published by the Free Software Foundation, either version 3 of the
-    License, or (at your option) any later version.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU Affero General Public License for more details.
-
-    You should have received a copy of the GNU Affero General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
-	
-	http://www.fmomo.org
-	dedalo@fmomo.org
-	
-************************************************************************/
-
-class OptimizeTC {
-	
-	
-	// ******  AJUSTE TC'S VIRTUALES CALCULADOS HACIENDO LA MEDIA   ******* //
-	// Localizado el index IN, si el TC anterior y posterior están a mas de X caracteres, hacemos una 
-	// aproximaximación y creamos un TC virtual con la media de las duraciones de los caracteres entre 
-	// los TC anterior y posterior
-	public static function optimize_tcIN__DES($texto, $indexIN, $inicioPos='', $in_margin=100) {	
-		
-		$debug = false;
-		
-		// Si inicioPos > 0 estaremos buscando de forma libre, sin index o ya sabemos la posición
-		if( $inicioPos!='' ) {
-			#$in_margin 	= 100 ;	
-			$indexPos 	= $inicioPos - $in_margin ;
-			if($indexPos<0) $indexPos = 0;
-		}else{
-			# pos absoluta de index IN
-			$indexPos = strpos($texto, $indexIN); 
-		}
-		#dump($indexPos, ' indexPos ++ indexIN'.to_string($indexIN));
-		
-		# margen de validación
-		$margen = 55 ;
-		
-			# Posición del TC anterior		
-			$frAnterior = substr($texto, 0, $indexPos); # fr desde inicio (0) hasta la pos de indexIN
-			$tcLastPos 	= strrpos($frAnterior, "[TC_" ); # pos abs del último tc en el fragmento anterior al indexIn (por tanto es el TC anterior al indexIN) 
-			$prevTC 	= substr($frAnterior, $tcLastPos +4, 12); # valor tc (tipo 00:20:14.333)
-			$dif 		= $indexPos - $tcLastPos ;
-			
-		if($dif < $margen && $dif > 0) {
-			
-			$tcin = $prevTC ;
-			$debug .= "tcin anterior ($prevTC) a $dif ch. ";
-			
-		} else {
-					
-			# Posición del TC posterior
-			$frPosterior 	= substr($texto, $indexPos ); # fr desde indexIn hasta el final
-			$tcFirstPos 	= strpos($frPosterior, "[TC_" ); # pos del primer tc encontrado
-			$nextTCposAbs	= $indexPos + $tcFirstPos ;
-			$nextTC 		= substr($frPosterior, $tcFirstPos +4, 12); # valor tc (tipo 00:20:14.323)
-			$dif 			= $nextTCposAbs - $indexPos ;
-			
-			if( $dif < $margen && $dif > 0) {
-				
-				$tcin = $nextTC ;
-				$debug .= "tcin posterior ($nextTC) a $dif ch. ";
-				
-			} else {
-									
-				# cálculo tc virtual
-				# calculamos cuantos caracteres hay entre prevTC y nexTC
-				$tcPrevPosAbs 	= strpos($texto, "[TC_".$prevTC ); # pos absoluta del tc anterior
-				$tcNextPosAbs 	= strpos($texto, "[TC_".$nextTC ); # pos absoluta del tc siguiente
-				$difTCchar 		= $tcNextPosAbs - $tcPrevPosAbs ; # caracteres entre el tc anterior y el posterior 
-				
-				if( (!$tcPrevPosAbs && !$tcNextPosAbs) ){
-					$tcin = '' ;
-				}else{	
-					#$frMedio = substr($texto, $tcPrevPosAbs+16, $difTC); 
-					#$chars = strlen($frMedio);
-				
-					# calculamos el n de segundos entre tc anterior y posterior
-					$prevTCseg 	= self::TC2seg($prevTC);
-					$nextTCseg 	= self::TC2seg($nextTC);
-					$difSeg 	= $nextTCseg -$prevTCseg ;
-					
-					# calculamos cuantos segundos ocupa un caracter
-					@ $segChar 	= $difSeg / $difTCchar ;
-					
-					# calculamos los caracteres entre en prevTC y el index IN
-					$charPrevTCindexIn =  strlen( substr($texto, $tcPrevPosAbs+16, ($indexPos - $tcPrevPosAbs) ) ); 
-					
-					# hacemos la hipótesis del TC que tocaría en indexIN
-					$tcInVirtualseg = ($charPrevTCindexIn * $segChar) +  $prevTCseg ; # en segundos
-					$tcInVirtual 	= self::seg2tc($tcInVirtualseg);
-					
-					$tcin = $tcInVirtual ;
-					$debug .= "tcin virtual ($prevTC => $tcInVirtual) segChar: $segChar  a $difTCchar ch. ";
-				}
-			}#if( $dif < $margen && $dif > 0)
-			
-		}#/if($dif < $margen && $dif > 0)
-		
-		#echo $debug ;
-		return $tcin ;
-	}
-	
-	
-	public static function optimize_tcOUT__DES($texto, $indexOUT, $finalPos='', $in_margin=100) {	
-		
-		$debug = false;
-		
-		/* Si finalPos > 0 estaremos buscando de forma libre, sin index */
-		if( $finalPos!='' )
-		{
-			$indexPos 	= strpos($texto, $finalPos);
-			#$in_margin 	= 100 ;
-			$indexPos 	= $finalPos + $in_margin ;
-		}
-		else
-		{
-			# pos absoluta de index OUT
-			$indexPos 	= strpos($texto, $indexOUT); 
-		}
-		
-		# margen de validación
-		$margen = 55 ;
-		
-			# Posición del TC posterior
-			$frPosterior 	= substr($texto, $indexPos ); # fr desde indexIn hasta el final
-			$tcFirstPos 	= strpos($frPosterior, "[TC_" ); # pos del primer tc encontrado
-			$nextTCposAbs 	= $indexPos + $tcFirstPos ;
-			$nextTC 		= substr($frPosterior, $tcFirstPos +4, 8); # valor tc (tipo 00:20:14)
-			$dif 			= $nextTCposAbs - $indexPos ;			
-			
-		if( $dif < $margen && $dif > 0)
-		{			
-			$tcout = $nextTC ;
-			$debug .= "tcout posterior ($nextTC) a $dif ch. ";
-		}
-		else
-		{		
-			# Posición del TC anterior		
-			$frAnterior = substr($texto, 0, $indexPos); # fr desde inicio (0) hasta la pos de indexIN
-			$tcLastPos 	= strrpos($frAnterior, "[TC_" ); # pos abs del último tc en el fragmento anterior al indexIn (por tanto es el TC anterior al indexIN) 
-			$prevTC 	= substr($frAnterior, $tcLastPos +4, 8); # valor tc (tipo 00:20:14)
-			$dif 		= $indexPos - $tcLastPos ;
-			if( $dif  < $margen && $dif > 0)
-			{
-				$tcout = $prevTC ;
-				$debug .= "tcout anterior ($nextTC) a $dif ch. ";
-			}
-			else
-			{			
-				# cálculo tc virtual
-				# calculamos cuantos caracteres hay entre prevTC y nexTC
-				$tcPrevPosAbs 	= strpos($texto, "[TC_".$prevTC ); # pos absoluta del tc anterior
-				$tcNextPosAbs 	= strpos($texto, "[TC_".$nextTC ); # pos absoluta del tc siguiente
-				$difTCchar 		= $tcNextPosAbs - $tcPrevPosAbs ; # caracteres entre el tc anterior y el posterior 
-				
-				if(!$tcPrevPosAbs && !$tcNextPosAbs){
-					$tcout = '' ;
-				}else{				
-					#$frMedio = substr($texto, $tcPrevPosAbs+16, $difTC); 
-					#$chars = strlen($frMedio);
-					
-					# calculamos el n de segundos entre tc anterior y posterior
-					$prevTCseg 	= self::TC2seg($prevTC);
-					$nextTCseg 	= self::TC2seg($nextTC);
-					$difSeg 	= $nextTCseg -$prevTCseg ;
-					
-					# calculamos cuantos segundos ocupa un caracter
-					$segChar = 0;
-					if ($difTCchar>0) {
-						$segChar = $difSeg / $difTCchar;
-					}					
-					
-					# calculamos los caracteres entre en prevTC y el index IN
-					$charPrevTCindexIn =  strlen( substr($texto, $tcPrevPosAbs+16, ($indexPos - $tcPrevPosAbs) ) ); 
-					
-					# hacemos la hipótesis del TC que tocaría en indexIN
-					$tcInVirtualseg	 = ($charPrevTCindexIn * $segChar) +  $prevTCseg ; # en segundos
-					$tcInVirtual	 = self::seg2tc($tcInVirtualseg);
-					
-					$tcout = $tcInVirtual ;
-					$debug .= "tcout virtual ($prevTC => $tcInVirtual) segChar: $segChar  a $difTCchar ch. ";
-				}
-			}
-		}
-		#echo "<hr>$debug" ;
-		return $tcout ;
-	}
-	// ****** FIN AJUSTE TC'S VIRTUALES CALCULADOS HACIENDO LA MEDIA   ******* //
+/**
+* OPTIMIZETC
+* Da servicio a las transcripciones (component_text_area) pero también a las partes públicas.
+* Esta clase es genérica y debe servir también para las partes públicas.
+* Cuando se use fuera de Dédalo, copiar este fichero.
+* Para poder aprovechar las mejoras y corrección de errores del desarrollo de Dédalo, llevar control de versión de esta clase.
+*
+* Esta clase contiene funciones que NO se usan en Dédalo pero si en algunas partes públicas. Ir revisando en las partes públicas 
+* que funcionan correctamente.
+*/
+abstract class OptimizeTC {
 
 
-	// ******  AJUSTE TC'S VIRTUALES CALCULADOS HACIENDO LA MEDIA   ******* //
-	// Localizado el index IN, si el TC anterior y posterior están a mas de X caracteres, hacemos una 
-	// aproximaximación y creamos un TC virtual con la media de las duraciones de los caracteres entre 
-	// los TC anterior y posterior
+	# Version. Important!
+	static $version = "1.0.1"; // 07-03-2017
+		
+	
+
+	/**
+	* OPTIMIZE_TCIN
+	* ******  AJUSTE TC'S VIRTUALES CALCULADOS HACIENDO LA MEDIA   ******* //
+	* Localizado el index IN, si el TC anterior y posterior están a mas de X caracteres, hacemos una 
+	* aproximaximación y creamos un TC virtual con la media de las duraciones de los caracteres entre 
+	* los TC anterior y posterior
+	*/
 	public static function optimize_tcIN($texto, $indexIN, $inicioPos='', $in_margin=100) {	
 		
 		$debug = false;
@@ -314,13 +133,18 @@ class OptimizeTC {
 			}#if( $dif < $margen && $dif > 0)
 			
 		}#/if($dif < $margen && $dif > 0)
-			#dump($tcin, ' tcin ++ '.to_string());
+		#dump($tcin, ' tcin ++ '.to_string());
 		#echo $debug ;
-		return $tcin ;
+
+		return $tcin;
 	}//end optimize_tcIN
-	
-	
-	public static function optimize_tcOUT($texto, $indexOUT, $finalPos='', $in_margin=100) {	
+
+
+
+	/**
+	* OPTIMIZE_TCOUT
+	*/
+	public static function optimize_tcOUT($texto, $indexOUT, $finalPos='', $in_margin=100) {
 		
 		$debug = false;
 
@@ -432,14 +256,15 @@ class OptimizeTC {
 		return $tcout ;
 	}//end optimize_tcOUT
 	// ****** FIN AJUSTE TC'S VIRTUALES CALCULADOS HACIENDO LA MEDIA   ******* //
-	
+
+
 	
 	/*
 	* TC Margen
-	* agrega un margen al tc recibido
+	* Agrega un margen al tc recibido
 	* (hacia atrás si es tcin, hacia delante si es tcout)
 	*/
-	public static function tcMargen($tc,$tipo,$margen=2) {
+	public static function tcMargen($tc, $tipo, $margen=2) {
 		
 		$tcTrozos 	= array();
 		$tcTrozos 	= explode(':', $tc);
@@ -473,8 +298,13 @@ class OptimizeTC {
 
 		return $tc = "$horas:$minutos:$segundos";
 	}
-	
-	# calcula el valor absoluto (entero) del tc. Si es 0 es porque NO existe TC
+
+
+
+	/**
+	* VALORTC
+	* Calcula el valor absoluto (entero) del tc. Si es 0 es porque NO existe TC
+	*/
 	public static function valorTC($tc)	{
 
 		$tc = str_replace( array('[TC_','_TC]'), '', $tc);
@@ -493,32 +323,42 @@ class OptimizeTC {
 		}
 		
 		return intval($valor) ;
-	}
+	}//end valorTC
+
+
 	
-	# convierte el valor de TC a segundos. Tipo 00:05:22 -> 322
-	# acepta formato 00:01:20 y [TC_00:01:20_TC]
+	/**
+	* TC2SEG
+	* Converts TC value to seconds like: 00:05:22.363 -> 322
+	* Accepts format 00:01:20.022 and [TC_00:01:20.320_TC]
+	*/
 	public static function TC2seg($tc) {
 
 		$tc = str_replace( array('[TC_','_TC]'), '', $tc);
 
-		$totalSegundos = 0;
+		$total_secs = 0;
 
-		$t = explode(':',$tc);
-		$t_ms = explode('.',$tc);
-		if(is_array($t)) {
-			
-			$horas		= 0;	if(isset($t[0]))	$horas		= (int)$t[0];
-			$minutos	= 0;	if(isset($t[1]))	$minutos	= (int)$t[1];
-			$segundos	= 0;	if(isset($t[2]))	$segundos 	= (int)$t[2];
-			$mseconds 	= 0; 	if(isset($t_ms[1]))	$mseconds 	= (int)$t_ms[1];
-	
-			$totalSegundos 	= floatval(($horas * 3600) + ($minutos * 60) + $segundos .'.'. $mseconds ) ;
-		}
-		return $totalSegundos ;
-	}	
-	
-	# convierte el valor en segundos a formato TC. Tipo 322.342 -> 00:05:22.342
-	public static function seg2tc($seg)	{	
+		preg_match("/([0-9]{1,2}):([0-9]{1,2}):([0-9]{1,2}).?([0-9]{1,3})?/", $tc, $matches);
+
+		$matches;
+
+		$hours 	 	= isset($matches[1]) ? $matches[1] : 0;
+		$minutes 	= isset($matches[2]) ? $matches[2] : 0;
+		$seconds 	= isset($matches[3]) ? $matches[3] : 0;
+		$mseconds 	= isset($matches[4]) ? $matches[4] : 0;
+
+		$total_secs = floatval(($hours * 3600) + ($minutes * 60) + $seconds .'.'. $mseconds);
+		
+		return (int)$total_secs;
+	}//end TC2seg
+
+
+
+	/**
+	* SEG2TC
+	* Convierte el valor en segundos a formato TC. Tipo 322.342 -> 00:05:22.342
+	*/
+	public static function seg2tc($seg)	{
 		
 		if (strpos($seg, ':')!==false) {
 			trigger_error("Bad format '$seg' . Expected seconds");
@@ -546,10 +386,17 @@ class OptimizeTC {
 		$minutos 	= str_pad($minutos, 2, '0', STR_PAD_LEFT);
 		$segundos 	= str_pad($segundos, 2, '0', STR_PAD_LEFT);
 		$mseconds 	= str_pad($mseconds, 3, '0', STR_PAD_LEFT);
-		$tc 		= $horas .':'. $minutos. ':'. $segundos . '.' . $mseconds;
-		return $tc ;
-	}
 
+		$tc 		= $horas .':'. $minutos. ':'. $segundos . '.' . $mseconds;
+
+		return $tc ;
+	}//end seg2tc
+
+
+
+	/**
+	* SEG2TC_MS
+	*/
 	public static function seg2tc_ms($seg_float) {
 
 		$ar = explode('.', $seg_float);
@@ -568,9 +415,13 @@ class OptimizeTC {
 		}		
 
 		return $tc . '.' . $tc2 ;
-	}
+	}//end seg2tc_ms
 
 
+
+	/**
+	* MS_FORMAT
+	*/
 	public static function ms_format($time) {
 
 		if(isset($time)) {
@@ -578,14 +429,15 @@ class OptimizeTC {
 		}	
 
 		return $tc; //. '.000' ;
-	}
-		
-		
+	}//end ms_format	
+
 
 	
-	
-	# retorna un tc con el tc_offset (segundos) aplicado (sumado o restado, si es negativo
-	public static function apli_tc_offset($tc, $tc_offset=false) {	
+	/**
+	* APLI_TC_OFFSET
+	* retorna un tc con el tc_offset (segundos) aplicado (sumado o restado, si es negativo
+	*/
+	public static function apli_tc_offset($tc, $tc_offset=false) {
 		
 		if($tc_offset===false) return $tc;
 		
@@ -597,11 +449,12 @@ class OptimizeTC {
 		$tc_time_code	= self::seg2tc($tc_sec);
 		
 		return 	$tc_time_code;
-	}
+	}//end apli_tc_offset
+
 
 
 	/**
-	* 
+	* MINUTOS_TO_HORAS
 	*/
 	public static function minutos_to_horas($minutos, $formated=true) {
 
@@ -626,8 +479,184 @@ class OptimizeTC {
 		}
 			
 		return $total_hotas;
+	}//end minutos_to_horas
+
+
+
+	// ******  AJUSTE TC'S VIRTUALES CALCULADOS HACIENDO LA MEDIA   ******* //
+	// Localizado el index IN, si el TC anterior y posterior están a mas de X caracteres, hacemos una 
+	// aproximaximación y creamos un TC virtual con la media de las duraciones de los caracteres entre 
+	// los TC anterior y posterior
+	public static function optimize_tcIN__DES($texto, $indexIN, $inicioPos='', $in_margin=100) {
+		
+		$debug = false;
+		
+		// Si inicioPos > 0 estaremos buscando de forma libre, sin index o ya sabemos la posición
+		if( $inicioPos!='' ) {
+			#$in_margin 	= 100 ;	
+			$indexPos 	= $inicioPos - $in_margin ;
+			if($indexPos<0) $indexPos = 0;
+		}else{
+			# pos absoluta de index IN
+			$indexPos = strpos($texto, $indexIN); 
+		}
+		#dump($indexPos, ' indexPos ++ indexIN'.to_string($indexIN));
+		
+		# margen de validación
+		$margen = 55 ;
+		
+			# Posición del TC anterior		
+			$frAnterior = substr($texto, 0, $indexPos); # fr desde inicio (0) hasta la pos de indexIN
+			$tcLastPos 	= strrpos($frAnterior, "[TC_" ); # pos abs del último tc en el fragmento anterior al indexIn (por tanto es el TC anterior al indexIN) 
+			$prevTC 	= substr($frAnterior, $tcLastPos +4, 12); # valor tc (tipo 00:20:14.333)
+			$dif 		= $indexPos - $tcLastPos ;
+			
+		if($dif < $margen && $dif > 0) {
+			
+			$tcin = $prevTC ;
+			$debug .= "tcin anterior ($prevTC) a $dif ch. ";
+			
+		} else {
+					
+			# Posición del TC posterior
+			$frPosterior 	= substr($texto, $indexPos ); # fr desde indexIn hasta el final
+			$tcFirstPos 	= strpos($frPosterior, "[TC_" ); # pos del primer tc encontrado
+			$nextTCposAbs	= $indexPos + $tcFirstPos ;
+			$nextTC 		= substr($frPosterior, $tcFirstPos +4, 12); # valor tc (tipo 00:20:14.323)
+			$dif 			= $nextTCposAbs - $indexPos ;
+			
+			if( $dif < $margen && $dif > 0) {
+				
+				$tcin = $nextTC ;
+				$debug .= "tcin posterior ($nextTC) a $dif ch. ";
+				
+			} else {
+									
+				# cálculo tc virtual
+				# calculamos cuantos caracteres hay entre prevTC y nexTC
+				$tcPrevPosAbs 	= strpos($texto, "[TC_".$prevTC ); # pos absoluta del tc anterior
+				$tcNextPosAbs 	= strpos($texto, "[TC_".$nextTC ); # pos absoluta del tc siguiente
+				$difTCchar 		= $tcNextPosAbs - $tcPrevPosAbs ; # caracteres entre el tc anterior y el posterior 
+				
+				if( (!$tcPrevPosAbs && !$tcNextPosAbs) ){
+					$tcin = '' ;
+				}else{	
+					#$frMedio = substr($texto, $tcPrevPosAbs+16, $difTC); 
+					#$chars = strlen($frMedio);
+				
+					# calculamos el n de segundos entre tc anterior y posterior
+					$prevTCseg 	= self::TC2seg($prevTC);
+					$nextTCseg 	= self::TC2seg($nextTC);
+					$difSeg 	= $nextTCseg -$prevTCseg ;
+					
+					# calculamos cuantos segundos ocupa un caracter
+					@ $segChar 	= $difSeg / $difTCchar ;
+					
+					# calculamos los caracteres entre en prevTC y el index IN
+					$charPrevTCindexIn =  strlen( substr($texto, $tcPrevPosAbs+16, ($indexPos - $tcPrevPosAbs) ) ); 
+					
+					# hacemos la hipótesis del TC que tocaría en indexIN
+					$tcInVirtualseg = ($charPrevTCindexIn * $segChar) +  $prevTCseg ; # en segundos
+					$tcInVirtual 	= self::seg2tc($tcInVirtualseg);
+					
+					$tcin = $tcInVirtual ;
+					$debug .= "tcin virtual ($prevTC => $tcInVirtual) segChar: $segChar  a $difTCchar ch. ";
+				}
+			}#if( $dif < $margen && $dif > 0)
+			
+		}#/if($dif < $margen && $dif > 0)
+		
+		#echo $debug ;
+		return $tcin ;
 	}
+	
+	public static function optimize_tcOUT__DES($texto, $indexOUT, $finalPos='', $in_margin=100) {
+		
+		$debug = false;
+		
+		/* Si finalPos > 0 estaremos buscando de forma libre, sin index */
+		if( $finalPos!='' )
+		{
+			$indexPos 	= strpos($texto, $finalPos);
+			#$in_margin 	= 100 ;
+			$indexPos 	= $finalPos + $in_margin ;
+		}
+		else
+		{
+			# pos absoluta de index OUT
+			$indexPos 	= strpos($texto, $indexOUT); 
+		}
+		
+		# margen de validación
+		$margen = 55 ;
+		
+			# Posición del TC posterior
+			$frPosterior 	= substr($texto, $indexPos ); # fr desde indexIn hasta el final
+			$tcFirstPos 	= strpos($frPosterior, "[TC_" ); # pos del primer tc encontrado
+			$nextTCposAbs 	= $indexPos + $tcFirstPos ;
+			$nextTC 		= substr($frPosterior, $tcFirstPos +4, 8); # valor tc (tipo 00:20:14)
+			$dif 			= $nextTCposAbs - $indexPos ;			
+			
+		if( $dif < $margen && $dif > 0)
+		{			
+			$tcout = $nextTC ;
+			$debug .= "tcout posterior ($nextTC) a $dif ch. ";
+		}
+		else
+		{		
+			# Posición del TC anterior		
+			$frAnterior = substr($texto, 0, $indexPos); # fr desde inicio (0) hasta la pos de indexIN
+			$tcLastPos 	= strrpos($frAnterior, "[TC_" ); # pos abs del último tc en el fragmento anterior al indexIn (por tanto es el TC anterior al indexIN) 
+			$prevTC 	= substr($frAnterior, $tcLastPos +4, 8); # valor tc (tipo 00:20:14)
+			$dif 		= $indexPos - $tcLastPos ;
+			if( $dif  < $margen && $dif > 0)
+			{
+				$tcout = $prevTC ;
+				$debug .= "tcout anterior ($nextTC) a $dif ch. ";
+			}
+			else
+			{			
+				# cálculo tc virtual
+				# calculamos cuantos caracteres hay entre prevTC y nexTC
+				$tcPrevPosAbs 	= strpos($texto, "[TC_".$prevTC ); # pos absoluta del tc anterior
+				$tcNextPosAbs 	= strpos($texto, "[TC_".$nextTC ); # pos absoluta del tc siguiente
+				$difTCchar 		= $tcNextPosAbs - $tcPrevPosAbs ; # caracteres entre el tc anterior y el posterior 
+				
+				if(!$tcPrevPosAbs && !$tcNextPosAbs){
+					$tcout = '' ;
+				}else{				
+					#$frMedio = substr($texto, $tcPrevPosAbs+16, $difTC); 
+					#$chars = strlen($frMedio);
+					
+					# calculamos el n de segundos entre tc anterior y posterior
+					$prevTCseg 	= self::TC2seg($prevTC);
+					$nextTCseg 	= self::TC2seg($nextTC);
+					$difSeg 	= $nextTCseg -$prevTCseg ;
+					
+					# calculamos cuantos segundos ocupa un caracter
+					$segChar = 0;
+					if ($difTCchar>0) {
+						$segChar = $difSeg / $difTCchar;
+					}					
+					
+					# calculamos los caracteres entre en prevTC y el index IN
+					$charPrevTCindexIn =  strlen( substr($texto, $tcPrevPosAbs+16, ($indexPos - $tcPrevPosAbs) ) ); 
+					
+					# hacemos la hipótesis del TC que tocaría en indexIN
+					$tcInVirtualseg	 = ($charPrevTCindexIn * $segChar) +  $prevTCseg ; # en segundos
+					$tcInVirtual	 = self::seg2tc($tcInVirtualseg);
+					
+					$tcout = $tcInVirtual ;
+					$debug .= "tcout virtual ($prevTC => $tcInVirtual) segChar: $segChar  a $difTCchar ch. ";
+				}
+			}
+		}
+		#echo "<hr>$debug" ;
+		return $tcout ;
+	}
+	// ****** FIN AJUSTE TC'S VIRTUALES CALCULADOS HACIENDO LA MEDIA   ******* //
+
+
 
 };
-
 ?>

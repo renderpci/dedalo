@@ -22,6 +22,7 @@ $js_url = DEDALO_LIB_BASE_URL.'/component_image/js/component_image_read.js';
 	data-dato=\"{$valor}\"
 	data-component_name=\"{$component_name}\"
 	data-component_info='{$component_info}'
+	data-related_tipo='{$ar_related_component_tipo_json}'
 	>";
 	
 		
@@ -90,7 +91,7 @@ $js_url = DEDALO_LIB_BASE_URL.'/component_image/js/component_image_read.js';
 		}
 
 		# INIT : Init canvas in read only mode 
-		$html_contenido .= "<script>component_image_read.init_canvas('$identificador_unico');</script>";
+		$html_contenido .= "<script>component_image_read.init_canvas('$identificador_unico','$id_wrapper');</script>";
 
 		# Prepare content to show in page
 		tools::prepare_content($html_contenido);	

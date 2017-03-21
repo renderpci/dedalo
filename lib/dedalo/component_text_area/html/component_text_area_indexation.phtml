@@ -59,7 +59,6 @@
 			data-lang=\"{$lang}\"
 			data-modo=\"{$modo}\"
 			data-section_tipo=\"{$section_tipo}\"
-			data-last_tag_index_id=\"{$last_tag_index_id}\"
 			title=\"$html_title\">$dato</textarea>";
 
 			
@@ -75,12 +74,13 @@
 			data-identificador_unico=\"$identificador_unico\"
 			data-parent=\"{$parent}\"
 			data-section_tipo=\"{$section_tipo}\"
+			data-tipo=\"{$tipo}\"
 			data-lang=\"{$lang}\"
-			onclick=\"tool_indexation.create_fragment(this);\"
+			onmousedown=\"tool_indexation.create_fragment(this,event);\"
 			>";				
 			$html_content .= label::get_label('crear_nuevo_fragmento');
 			if(SHOW_DEBUG) {
-				#$html_content .= " <span class=\"debug_info\">[last_tag_index_id:$last_tag_index_id - caller_id:$caller_id]</span>";
+				#$html_content .= " <span class=\"debug_info\">[caller_id:$caller_id]</span>";
 			}
 			$html_content .= "</div>";
 

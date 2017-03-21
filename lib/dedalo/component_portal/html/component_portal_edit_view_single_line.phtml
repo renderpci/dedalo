@@ -158,9 +158,16 @@
 									}else{
 										$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($column_tipo, true);
 										$td_css_selector = 'th_'.$modelo_name.' th_'.$column_tipo;
-									}									
-									
-								$table .= "<th class=\"$td_css_selector\">";
+									}
+
+								$th_style = '';
+								# Overwrite default column width when need. Set component propiedades 'elements_list_mode' as you want, like edit..
+								if (isset($propiedades->elements_list_mode->$column_tipo->column_width)) {
+									$column_width = $propiedades->elements_list_mode->$column_tipo->column_width;
+									$th_style = "width:$column_width";
+								}										
+											
+								$table .= "<th class=\"$td_css_selector\" style=\"$th_style\">";
 								$table .= " <div class=\"th_title\" title=\"$column_label\">$column_label</div>";
 								$table .= "</th>";
 							}
@@ -336,11 +343,17 @@
 
 										
 										/**/
+
+										$render_list_mode = 'portal_list';
+										# Overwrite default list mode when need. Set component propiedades 'elements_list_mode' as you want, like edit..
+										if (isset($propiedades->elements_list_mode->$column_tipo->mode)) {
+											$render_list_mode = $propiedades->elements_list_mode->$column_tipo->mode;
+										}
 										$column_value = isset($current_row[$column_tipo]) ? $current_row[$column_tipo] : null;
 										$value = (string)$modelo_name::render_list_value($column_value, // value string from db
 																						 $column_tipo, // current component tipo
 																						 $section_id, // current portal row section id
-																						 'portal_list', // mode fixed list
+																						 $render_list_mode, // mode get form properties or default
 																						 DEDALO_DATA_LANG, // current data lang
 																						 $target_section_tipo, // current section tipo
 																						 $section_id, // Current portal parent

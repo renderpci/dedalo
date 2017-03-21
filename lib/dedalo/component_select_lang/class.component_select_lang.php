@@ -176,31 +176,7 @@ class component_select_lang extends component_common {
 	}//end get_ar_all_project_select_langs
 	*/
 
-
-	/**
-	* GET_VALOR_EXPORT
-	* Return component value sended to export data
-	* @return string $valor
-	*//*
-	public function get_valor_export( $valor=null, $lang=DEDALO_DATA_LANG, $quotes, $add_id ) {
-			
-		if (is_null($valor)) {
-			$dato = $this->get_dato();	// Get dato from DB
-		}else{
-			$this->set_dato( $valor );	// Use received string as dato
-		}
-
-		$valor_export = $this->get_valor();		
-		
-		if(SHOW_DEBUG) {
-			#return "SELECT LANG: ".$valor_export;
-		}
-		return $valor_export;
-
-	}//end get_valor_export
-	*/
-
-
+	
 
 	/**
 	* GET_VALOR_EXPORT

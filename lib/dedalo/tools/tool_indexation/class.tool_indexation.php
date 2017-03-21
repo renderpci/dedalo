@@ -33,7 +33,7 @@ class tool_indexation extends tool_common {
 	* GET_AR_INVERSE
 	* Format, filter and sort inverse_locators values for use in selector
 	* @return array $ar_inverse
-	*/
+	*//* MOVED TO TOOL_COMMON
 	public function get_ar_inverse( $inverse_locators ) {
 		$ar_inverse=array();
 
@@ -48,7 +48,7 @@ class tool_indexation extends tool_common {
 		
 		return $ar_inverse;
 	}#end get_ar_inverse
-
+	*/
 
 
 
@@ -69,7 +69,6 @@ class tool_indexation extends tool_common {
 			$options->section_tipo 	= null;
 			$options->section_id 	= null;
 			$options->component_tipo= null;
-			$options->tag 			= null;
 			$options->tag_id 		= null;
 			$options->lang 			= null;
 			foreach ($request_options as $key => $value) {
@@ -105,7 +104,7 @@ class tool_indexation extends tool_common {
 															  'edit',
 															  $lang,
 															  $section_tipo);		
-		$ar_tag_deleted = (array)$component_text_area->delete_tag_from_all_langs($tag); // note that "tag" is complete in or out tag like [index-n-8]
+		$ar_tag_deleted = (array)$component_text_area->delete_tag_from_all_langs($tag_id, $tag_type='index'); // note that "tag" is complete in or out tag like [index-n-8]
 			$response->msg[] = "Deleted in langs ".count($ar_tag_deleted)." the tag \"$tag\" from component_text_area $component_tipo [$section_tipo - $section_id]";
 			$response->debug['ar_tag_deleted'] = $ar_tag_deleted;	
 				
@@ -116,6 +115,34 @@ class tool_indexation extends tool_common {
 
 		return (object)$response;
 	}//end delete_tag
+
+
+
+	/**
+	* NEW_INDEX_DATA_RECORD
+	* @return object $response
+	*/
+	public static function new_index_data_record() {
+
+		$response = new stdClass();
+			$response->result 	= false;
+			$response->msg 		= 'Error. Request failed';
+
+		#$user_id = navigator::get_user_id();
+		$section_tipo = DEDALO_INDEXATION_SECTION_TIPO;
+
+		$section 	= section::get_instance(null, $section_tipo);
+		$section_id = $section->Save();
+
+		$locator = new locator();
+			$locator->set_section_tipo($section_tipo);
+			$locator->set_section_id($section_id);
+		
+		$response->result = $locator;
+		$response->msg 	  = 'Created new_index_data_record successfully with locator: '.json_encode($locator);
+
+		return (object)$response;
+	}//end new_index_data_record
 	
 
 	

@@ -1,5 +1,13 @@
 **UPDATES AND CHANGES**
 
+*Ver 4.5.1 - 05-03-2017
+Today we introduce the update of the V4 to 4.5.1
+
+This update fixed some issues and bugs for the V4.5.0
+
+New matrix_indexation, for implement labels, comments and anotations to the indexations.
+
+
 *Ver 4.5.0 - 27-02-2017
 Today we introduce the update of the V4 to 4.5.0
 

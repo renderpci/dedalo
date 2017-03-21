@@ -523,6 +523,7 @@ class component_autocomplete_hi extends component_common {
 		 WHERE
 		 $filter_sections
 		 AND f_unaccent(a.datos#>>'{components, $term_tipo, dato}') ILIKE f_unaccent('%[\"{$string_to_search}%')
+		 ORDER BY term ASC
 		 LIMIT $max_results
 		 ;");	
 		
@@ -544,7 +545,8 @@ class component_autocomplete_hi extends component_common {
 				$current_term = $current_term_obj->{$term_lang};
 			}else{
 				$current_term = reset($current_term_obj);
-			}			
+			}
+			
 
 			$locator = new locator();
 				$locator->set_section_tipo($current_section_tipo);
@@ -584,6 +586,10 @@ class component_autocomplete_hi extends component_common {
 					}
 				}
 			}
+
+			if(SHOW_DEBUG===true) {
+				$current_term .= ' ['.$current_section_tipo.'_'.$current_section_id.']';
+			}	
 
 			# Store key - value
 			$current_term = strip_tags($current_term);
@@ -685,7 +691,7 @@ class component_autocomplete_hi extends component_common {
 	* @return string $list_value
 	*/
 	public static function render_list_value($value, $tipo, $parent, $modo, $lang, $section_tipo, $section_id, $current_locator=null, $caller_component_tipo=null) {
-				
+		
 		$component	= component_common::get_instance(__CLASS__,
 													 $tipo,
 													 $parent,

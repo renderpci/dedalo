@@ -496,7 +496,7 @@ class section extends common {
 					break;
 				
 				default:
-					if($component_lang === $component_valor_lang && $component_traducible==='si'){
+					if($component_lang===$component_valor_lang && $component_traducible==='si') {
 						$component_global_dato->valor->$component_lang = $component_obj->get_valor();
 					}else{
 						$component_global_dato->valor->$component_lang = $component_obj->get_dato_unchanged();
@@ -508,44 +508,11 @@ class section extends common {
 		# VALOR LIST : Actualizamos el Html del componente en modo list		
 			if(SHOW_DEBUG===true) $start_time = microtime(true);
 			
-			# valor_list is dato for some components
-			/* OLD WAY
-				switch ($component_modelo_name) {
-					case 'component_portal':
-					case 'component_autocomplete':
-					case 'component_radio_button':
-					case 'component_publication':
-					case 'component_check_box':
-					case 'component_select':
-					case 'component_model':
-					case 'component_relation':
-					case 'component_filter':
-					case 'component_filter_master':
-					case 'component_date':	
-						$html = $component_obj->get_dato_unchanged();
-						break;
-					case 'component_state':
-						$html = $component_obj->get_valor();					
-						break;
-					case 'component_security_areas':
-					case 'component_security_access':
-						$html = '';					
-						break;
-					default:					
-						$modo_previous = $component_obj->get_modo();
-						# Temporal mode
-						$component_obj->set_modo('list');					
-						$html = $component_obj->get_html();
-						
-						# Return anterior mode after is saved
-						$component_obj->set_modo($modo_previous);	# Important!					
-						break;
-				}
-				*/
+			# valor_list is dato for some components			
 			
 			# Every component have a method to return value to save in json container 'valor_list' 
 			# (if not, they use component common defined method)
-			$html = $component_obj->get_valor_list_html_to_save();	
+			$html = $component_obj->get_valor_list_html_to_save();
 			
 			if(SHOW_DEBUG===true) {
 				$total=round(microtime(true)-$start_time,3);

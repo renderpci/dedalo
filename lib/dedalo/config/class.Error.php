@@ -154,7 +154,7 @@ class dd_error {
 
 		if($show_option) {
 			$html .= '
-					<div class="text_shadow_inset" style="padding:0px">
+					<div class="" style="padding:0px">
 					<a href="'.DEDALO_LIB_BASE_URL.'/main/?home" style="padding:5px">Home</a>
 					<a href="javascript:history.go(-1)" style="padding:5px">Back</a> Sorry, an error was found
 					<img src="'.DEDALO_LIB_BASE_URL.'/themes/default/favicon.ico" style="position:relative;top:1px" />

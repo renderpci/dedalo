@@ -170,8 +170,8 @@
 			# style tags review
 			# Para asegurarnos de que no haya errores de forma en html revisamos el resultado final de 
 			# la línea para depurar posicionamiento de las etiquetas 
-			$fragment = tool_subtitles::revise_tag_in_line($fragment,'em');
-			$fragment = tool_subtitles::revise_tag_in_line($fragment,'strong');			
+			$fragment = subtitles::revise_tag_in_line($fragment,'em');
+			$fragment = subtitles::revise_tag_in_line($fragment,'strong');			
 
 			# Remove first and last <br>
 			$fragment = preg_replace( '[^(<br( \/)?>)*|(<br( \/)?>)*$]', '', $fragment);

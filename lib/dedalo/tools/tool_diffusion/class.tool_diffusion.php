@@ -238,7 +238,7 @@ class tool_diffusion {
 		$ar_de_result=array();
 		foreach ($ar_diffusion_map_elements as $diffusion_element_tipo => $value_obj) {
 
-			# Diffusiion classname (diffusion_mysq, diffusion_rdf, etc..)
+			# Diffusiion classname (diffusion_mysql, diffusion_rdf, etc..)
 			$class_name = $value_obj->class_name;
 
 			include_once(DEDALO_LIB_BASE_PATH .'/diffusion/class.'.$class_name.'.php' );
@@ -302,10 +302,31 @@ class tool_diffusion {
 
 		$tables = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($diffusion_element_tipo, $modelo_name='table', $relation_type='children_recursive', $search_exact=false);
 		foreach ($tables as $current_table_tipo) {
-			$ar_related = common::get_ar_related_by_model('section', $current_table_tipo);
+
+			$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_table_tipo,true);
+			switch ($modelo_name) {
+				case 'table_alias':
+					# First try section (thesaurus needed)
+					$ar_related = common::get_ar_related_by_model('section', $current_table_tipo);
+					if (!isset($ar_related[0])) {
+						# If not, We search 'table' now
+						$ar_table = common::get_ar_related_by_model('table', $current_table_tipo);
+						if (isset($ar_table[0])) {
+							$ar_related = common::get_ar_related_by_model('section', $ar_table[0]);
+						}
+					}					
+					break;
+				
+				case 'table':
+				default:
+					# Pointer to section
+					$ar_related = common::get_ar_related_by_model('section', $current_table_tipo);
+					break;
+			}
+		
 			if (isset($ar_related[0])) {
 				$ar_diffusion_sections[] = $ar_related[0];
-			}
+			}						
 		}
 
 		if(SHOW_DEBUG===true) {

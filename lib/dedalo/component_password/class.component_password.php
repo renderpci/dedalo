@@ -54,7 +54,7 @@ class component_password extends component_common {
 
 		$current_version = tool_administration::get_current_version_in_db();
 		
-		if($current_version[0] >= 4 && $current_version[1] >= 0 && $current_version[2] >= 22){
+		if( ($current_version[0] >= 4 && $current_version[1] >= 0 && $current_version[2] >= 22) || ($current_version[0] >= 4 && $current_version[1] >= 5) ) {
 			return dedalo_encrypt_openssl($stringArray, DEDALO_INFORMACION);
 		}else{
 			return dedalo_encryptStringArray($stringArray, DEDALO_INFORMACION);

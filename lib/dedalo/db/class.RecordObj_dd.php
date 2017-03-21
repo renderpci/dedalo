@@ -997,7 +997,10 @@ class RecordObj_dd extends RecordDataBoundObject {
 
 						if(empty($modelo)) {
 							$name = RecordObj_dd::get_termino_by_tipo($terminoID);
-							trigger_error("Error Processing Request. Modelo is empty. Please define modelo for this component $terminoID ($name)");
+
+							#throw new Exception("Error Processing Request", 1);
+							
+							trigger_error("Error Processing Request. Modelo is empty. Please define modelo for this component terminoID:$terminoID, name:$name ");
 							return array();
 							#throw new Exception("Error Processing Request. Modelo is empty. Please define modelo for this terminoID: $terminoID (name: $name)", 1);							
 						}

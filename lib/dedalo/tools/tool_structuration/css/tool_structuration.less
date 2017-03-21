@@ -1,0 +1,381 @@
+// Vars
+@common_css: "../../../common/css";
+
+// Usage
+@import "@{common_css}/library.less";
+
+
+
+/* PAGE 
+-------------------------------------- */
+.wrap_tool_indexation_page {
+	display: block;
+	width: 99.9%;
+	text-align: left;
+
+	}
+	.wrap_tool_indexation_page .content_data {
+		width: 100%;
+	}
+
+	.content_html {
+		//background-color: #cfd8d8;
+	}
+
+.tool_structuration_delete_icon {
+	background-position: -456px 0px;
+	margin-right: 4px;
+}
+
+
+.left_side, .right_side {
+	width: 100%;
+	height: 100%;
+}
+
+.left_side {
+	/*
+	clear: left;
+	float: left;
+	width: 53%;
+	padding: 0;
+	margin: 0;	
+	background-color: #CAE42C;
+	*/
+	}
+
+.right_side {
+	/*
+	float: right;
+	width: 47%;
+	padding:0;
+	margin: 0;
+	
+	background-color: #8DE2E4;
+	*/
+	}
+
+
+	/* THESAURUS
+	------------------------------------------- */
+	.left_side .indexation_page_tesauro {
+		//background-color: aqua;
+		height: 100%;
+		display: table;
+		width: 100%;
+		overflow: hidden;
+		position: relative;
+		}
+		.left_side .tesauro_frame {
+			width: 100%;
+			height:99.40%;
+			padding: 0;
+			margin: 0;
+			overflow: hidden;
+			border: none;
+		}
+
+
+/* TEXT (COMPONENT TEXT AREA) 
+------------------------------------------- 
+.right_side .indexation_page_text {
+	display: table;
+	width: 100%;
+	height: 350px;
+}*/
+/* INDEX LIST 
+------------------------------------------- */
+.right_side .indexation_page_list {
+	padding: 10px;
+	//height: 230px;
+	//background-color: #81D980
+	}
+	.right_side .indexation_page_list .content_data {
+		display: block;
+		width: 100%;
+	}
+
+.terminos_list {
+	margin-top: 10px;
+	padding: 5px;
+}
+.terminos_list_title {
+	margin-bottom: 8px;
+	position: relative;
+	left: -3px;	
+	text-transform:capitalize;
+	font-weight: bold;
+}
+li.tool_indexation_index_list_termino {
+	width: auto;
+	max-width: 580px;
+	text-overflow: ellipsis;
+	overflow: hidden;
+	white-space: nowrap;
+	line-height: 1.6em;
+	clear: both;
+}
+.tool_structuration_show_fragment {
+	background-position: -216px -48px;
+	float: right;
+    top: 16px;
+    right: 15px;
+}
+.tool_structuration_delete_fragment {
+
+}
+/* fragment_id_info label
+------------------------------------- */
+.fragment_id_info {
+	text-transform: uppercase;
+    font-weight: bold;
+    font-size: 12px;
+    color: #ffffff;
+    //background-color: #ffab01; // orange
+    background-color: #b9b9b9; // grey
+    text-shadow: none;
+    padding: 5px;
+    padding-left: 8px;
+    padding-right: 8px;
+    padding-bottom: 4px;
+    border-radius: 4px;
+}
+
+.wrap_tag_state_selector {
+	text-transform: capitalize;
+	}
+	.wrap_tag_state_selector select {
+		margin-left: 5px;
+		margin-right: 10px;
+	}
+
+.top_id_selector {
+	padding: 2px;
+	display: inline-block;
+	}
+	.top_id_selector label {
+		padding-left: 10px;
+		padding-right: 5px;
+		text-transform: capitalize;
+	}
+
+
+.header_info {
+	padding: 6px;
+	float: left;
+}
+
+.wrap_tool_indexation_page label.css_label.tooltips {
+	max-width: 250px;
+} 
+
+
+
+/* TABS
+--------------------------------------------------------- */
+	#section_tab_1:checked ~ #section_tab_1_content,
+	#section_tab_2:checked ~ #section_tab_2_content
+	{ 
+		display: block; 
+	}
+	.common_line {
+		float: left;
+	}
+	.css_section_tab_content > label {
+		float: right;
+		text-transform: capitalize;
+	}
+	.css_section_tab_content > section {
+		clear: both;
+	}
+	div.selected_fragment {
+		margin: 0;
+	}
+	.css_section_tab_content>section {
+		padding-top: 0;
+	}
+	.section_tab .btn {
+		margin: 15px;
+		margin-left: 1px;
+	}
+
+
+
+
+
+/* SPLIT PANES
+--------------------------------------------------------- */
+	#indexation_container {		
+		height: 100%;
+		width: 100%;
+		position: absolute;
+	}
+	.split {
+	-webkit-box-sizing: border-box;
+	   -moz-box-sizing: border-box;
+			box-sizing: border-box;
+
+	overflow-y: auto;
+	overflow-x: hidden;
+	width: 100%;
+	//display: block;
+	display: table;
+	}
+
+	.gutter {
+		background-color: #eee;
+		background-repeat: no-repeat;
+		background-position: 50%;
+		cursor: move;
+		cursor: grab;
+		cursor: -moz-grab;
+		cursor: -webkit-grab;
+		}
+		.gutter:active { 
+			cursor: grabbing;
+			cursor: -moz-grabbing;
+			cursor: -webkit-grabbing;
+		}
+
+	@tool_common_path: '../../../tools/tool_common';
+	.gutter.gutter-horizontal {
+		background-image: url('@{tool_common_path}/images/grips/vertical.png');
+	}
+	.gutter.gutter-vertical {
+		background-image: url('@{tool_common_path}/images/grips/horizontal.png');
+	}
+
+	.split.split-horizontal, .gutter.gutter-horizontal {
+		height: 100%;
+		float: left;
+	}
+
+
+
+
+#text_preview_wrapper {
+	//max-height: calc(100% - 230px);
+	overflow: auto;
+	max-height: 60%;	// fallback for browsers without support for calc() 
+	max-height: ~"calc(100% - 290px)";
+}
+
+#text_preview {
+	padding: 10px;
+    max-height: 83%;
+    overflow-y: auto;
+    background-color: #F5F5F5;
+    width: 100%;
+    //margin-left: 10px;
+    //line-height: 1.5em;
+}
+#text_buttons {
+	padding: 10px;
+	padding-bottom: 0;
+}
+
+.css_wrap_text_area .content_data > .css_label {
+	width: 100%;
+	display: block;
+	max-width: initial;
+}
+
+.button_save_text {
+	float: right;
+}
+
+#tool_info_log {
+	//background-color: #94EDE0;
+	display: inline;
+	padding: 6px;
+	color: #6b6b6b
+}
+
+#current_lang {
+    right: 40px;
+    position: absolute;
+    top: 4px;
+    color: #cecece;
+}
+/*
+.icon_bs {
+	vertical-align: top;
+}*/
+
+
+
+/* CHAPTER HEADERS
+--------------------------------------------------------- */
+	.text_area_tool_structuration h2 {
+		-webkit-user-select: none !important;
+		-khtml-user-select: none !important;
+		-moz-user-select: none !important;
+		-o-user-select: none !important;
+		user-select: none !important;
+
+		padding-bottom: 5px;
+	    line-height: 1em;
+
+	    font-family: 'Oxygen-light', sans-serif;
+		}
+		.text_area_tool_structuration h2 .order,
+		.text_area_tool_structuration h2 .title {
+			padding-right: 5px;
+			font-size: 18px;
+			//color: #A8A8A8
+		}
+		.text_area_tool_structuration h2 .order {
+			
+		} 
+		.text_area_tool_structuration h2 .title {
+			
+		} 
+
+
+
+/* COMPONENTS
+--------------------------------------------------------- */
+	// Order
+	.wrap_component_rsc383 {
+		width: 8%;
+		}
+		.wrap_component_rsc383 .css_label {
+			overflow: initial;
+		}
+	// Title
+	.wrap_component_rsc372 {
+		width: 92%;
+	}
+
+
+/* SECTIONS
+--------------------------------------------------------- */
+	section.deleted {
+		background-color: #4ea0ff !important;
+		//border-color: #4ea0ff;
+    	//border-width: 1px;
+	}
+	section.to_review {
+		background-color: #fc623d !important;
+		//border-color: #fc623d;
+    	//border-width: 1px;
+	}
+
+
+/* TOC
+--------------------------------------------------------- */
+	.toc {
+		padding: 15px;
+		padding-top: 10px;
+		/* background-color: #e6e6e6; */
+		/* margin: 10px; */
+		margin-bottom: 15px;
+		border: solid 1px #a7a7a7;
+		border-radius: 3px;
+		}
+		.toc h2 {
+			padding-bottom: 0;
+		}
+
+
+

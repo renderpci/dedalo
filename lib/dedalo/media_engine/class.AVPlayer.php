@@ -139,7 +139,7 @@ class AVPlayer extends Accessors {
 			}
 			return "<div style=\"margin:0px;padding-top:200px;font-size:14px; color:#999999\"> Media not available <br> $info_path </div>"; #{$this->AVObj->get_media_path()}
 		}
-		if(!$this->PosterFrameObj->get_file_exists())	
+		if(!$this->PosterFrameObj->get_file_exists())
 		$this->poster = $this->PosterFrameObj->get_media_path() ."0.jpg";
 
 
@@ -168,7 +168,7 @@ class AVPlayer extends Accessors {
 		
 		$nivel = 0;
 		
-		$html  = "\n<!-- \"Video Player -->\n";		
+		$html  = "<!-- \"Video Player -->";		
 		$html .= "<script type=\"text/javascript\">
 		
 					// General media vars
@@ -183,12 +183,11 @@ class AVPlayer extends Accessors {
 					var video_controls_loaded	= false;
 					var isInitmovie				= 0;
 					var modo 					= '$modo';
-					var player_option 			= '$option';	
-																		
+					var player_option 			= '$option';															
 				  </script>";
 				  
 		# DIV WRAP PLAYER
-		$html .= "\n<div id=\"wrap_{$this->playerID}\">";
+		$html .= "<div id=\"wrap_{$this->playerID}\">";
 		if($this->quality=='audio') {
 			
 			#$html .= "<img src=\"{$this->poster}\" height=\"{$this->height}\" alt=\"Posterframe {$this->poster}\" />";
@@ -222,15 +221,10 @@ class AVPlayer extends Accessors {
 			
 		}
 		
-		$html2 = "\n</div><!-- /wrap_{$this->playerID} -->\n";
+		$html2 = "</div><!-- /wrap_{$this->playerID} -->";
 
     	return $html . $player_code . $html2 ;	
 	}
-	
-	
-	
-	
-	
 	
 	
 	
@@ -239,16 +233,15 @@ class AVPlayer extends Accessors {
 	protected function get_video_tag_code() {		
 		
 		$html  ='';
-		$html .= "\n<!-- HTML 5 TAG CODE -->";
-		$html .= "\n<video id=\"wrap_{$this->playerID}\" width=\"{$this->width}\" height=\"{$this->height}\" preload=\"{$this->preload}\" {$this->get_html5_controls_code()} poster=\"{$this->poster}\" {$this->autoplay} >";
-		$html .= "\n <source src=\"{$this->src}\" {$this->get_html5_source_type_code()} >";		
-		$html .= "\n <div class=\"message\">Sorry, you\'ll need an HTML5 Video capable browser to view this media.</div>";
-		$html .= "\n</video>";
+		$html .= "<!-- HTML 5 TAG CODE -->";
+		$html .= "<video id=\"wrap_{$this->playerID}\" width=\"{$this->width}\" height=\"{$this->height}\" preload=\"{$this->preload}\" {$this->get_html5_controls_code()} poster=\"{$this->poster}\" {$this->autoplay} >";
+		$html .= " <source src=\"{$this->src}\" {$this->get_html5_source_type_code()} >";		
+		$html .= " <div class=\"message\">Sorry, you\'ll need an HTML5 Video capable browser to view this media.</div>";
+		$html .= "</video>";
 		
 		return $html;	
 	}	
-    
-    
+       
 
 	
 	# MEDIAELEMENT PLAYER TYPE
@@ -319,8 +312,14 @@ class AVPlayer extends Accessors {
 			$subtitles_url = $_GET['subtitles_url'];
 			$subtitle_track= "<track label=\"Subtitle\" kind=\"subtitles\" srclang=\"en\" src=\"$subtitles_url\" default>";
 		}
+
+		$width  = $this->width;
+		$height = $this->height;
+
+		$width  = '';
+		$height = '';
 				
-		$html  = "<!-- HTML 5 TAG CODE WITH FALLBACK QUICKTIME PLUG-IN -->\n";
+		$html  = "<!-- HTML 5 TAG CODE WITH FALLBACK QUICKTIME PLUG-IN -->"; // width=\"{$this->width}\" height=\"{$this->height}\" width=\"{$this->width}\" height=\"{$this->height}\"
 		$html .= "<script type=\"text/javascript\">
 		
 					var videoCode = new String('');
@@ -329,9 +328,9 @@ class AVPlayer extends Accessors {
 			
 						modo = 'html5' ;	//alert('{$src}')
 						
-						videoCode += '<video id=\"{$this->playerID}\" width=\"{$this->width}\" height=\"{$this->height}\" preload=\"{$this->preload}\" {$this->get_html5_controls_code()} poster=\"{$this->poster}\" {$this->autoplay} onerror=\"failed(event)\" >';	      					
+						videoCode += '<video id=\"{$this->playerID}\" preload=\"{$this->preload}\" {$this->get_html5_controls_code()} poster=\"{$this->poster}\" {$this->autoplay} onerror=\"failed(event)\" >';	      					
 						videoCode += ' <source id=\"video_mp4\" src=\"\" {$html5_source_type_code} >';
-						videoCode += ' <img src=\"{$this->poster}\" width=\"{$this->width}\" height=\"{$this->height}\" alt=\"Posterframe\" title=\"No video playback capabilities\" />';
+						videoCode += ' <img src=\"{$this->poster}\" alt=\"Posterframe\" title=\"No video playback capabilities\" />';
 						videoCode += '$subtitle_track';
 						videoCode += '</video>';			
 						
@@ -344,7 +343,7 @@ class AVPlayer extends Accessors {
 						var controlbar_height = 16;
 						if(quality=='audio') var controlbar_height = -8;					
 						
-						var videoCode =  QT_GenerateOBJECTText_XHTML('/dedalo/images/init.mov' , {$this->width}, {$this->height}+controlbar_height, '', 
+						var videoCode =  QT_GenerateOBJECTText_XHTML('/dedalo/images/init.mov', '{$width}', '{$height}'+controlbar_height, '', 
 						'EnableJavaScript'	, 'true',
 						'postdomevents'		, 'true', 
 						'emb#NAME' 			, '{$this->playerID}', 

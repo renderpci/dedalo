@@ -30,7 +30,7 @@ if($mode=='set_psw') {
 	$tipo = DEDALO_USER_PASSWORD_TIPO;
 	$lang = DEDALO_DATA_NOLAN;
 	#dump($dato->components->$tipo->dato->$lang, ' dato');
-	$dato->components->$tipo->dato->$lang = $dato->components->$tipo->valor->$lang = dedalo_encryptStringArray($password);
+	$dato->components->$tipo->dato->$lang = $dato->components->$tipo->valor->$lang = dedalo_encrypt_openssl($password);
 	
 	$strQuery 	= "UPDATE matrix_users SET datos = $1 WHERE section_id = $2 AND section_tipo = $3";
 	$result 	= pg_query_params(DBi::_getConnection(), $strQuery, array( json_handler::encode($dato), -1, DEDALO_SECTION_USERS_TIPO ));

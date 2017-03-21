@@ -2,15 +2,15 @@
 	
 
 	# VISUALIZADOR HTML	
-	print "\n\n<!-- SECTION TAB [tipo:$tipo] $label -->";
+	print "<!-- SECTION TAB [tipo:$tipo] $label -->";
 
 	# CONTENT
-	$html_content = "\n<div class=\"css_section_tab_content \" >";
+	$html_content = "<div class=\"css_section_tab_content \" >";
 	
-	switch($permissions) {
+	switch(true) {
 			
-		case 0 :
-				$html_content .= "\n <span class=\"css_span_dato\"> ".label::get_label('sin_acceso')." (tab)</span>"; 
+		case $permissions===0 :
+				$html_content .= " <span class=\"css_span_dato\"> ".label::get_label('sin_acceso')." (tab)</span>"; 
 				break;
 		
 		case ($permissions>=1) :
@@ -46,13 +46,10 @@
 				# TABS JS
 				# Select last active tab on every navigation
 				$html_content .= "<script>section_tabs.select_tab_active()</script>";
-				
-		case 2	: 
-		case 3	:	
 				break;
 	}
 	
-	$html_content .= "\n</div><!-- /css_section_tab_content -->";
+	$html_content .= "</div><!-- /css_section_tab_content -->";
 
 	
 	

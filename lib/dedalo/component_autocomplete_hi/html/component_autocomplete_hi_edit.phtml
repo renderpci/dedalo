@@ -21,31 +21,31 @@
 	$html_label = component_common_draw::draw_label($this);
 
 	# CONTENIDO (INPUT)
-	$html_contenido = '';
+	$html_content = '';
 	switch($permissions) {
 
-		case 0	:	$html_contenido .= "";
+		case 0	:	$html_content .= "";
 					break;
 
-		case 1	: 	$html_contenido .= $valor;
+		case 1	: 	$html_content .= $valor;
 					break;
 
 		case 2	:
 		case 3	:
 				if($from_modo !== 'edit'){
-					$html_contenido .= "<div class=\"css_autocomplete_hi_button_close\" onclick=\"component_common.change_mode_component(this, 'edit', '$from_modo')\"></div>";
+					$html_content .= "<div class=\"css_autocomplete_hi_button_close\" onclick=\"component_common.change_mode_component(this, 'edit', '$from_modo')\"></div>";
 				}
 				
 
 				#
 				# ROW
-				$html_contenido .= " <ul class=\"css_autocomplete_hi_valor\">";
+				$html_content .= " <ul class=\"css_autocomplete_hi_valor\">";
 				foreach ($ar_valor as $current_value => $value) {
 
-					$html_contenido .= "<li>";
+					$html_content .= "<li>";
 
 					# BTN DELETE
-					$html_contenido .= " <div class=\"icon_bs link css_autocomplete_hi_button_delete edit_hidden\"
+					$html_content .= " <div class=\"icon_bs link css_autocomplete_hi_button_delete edit_hidden\"
 					data-tipo=\"{$tipo}\"
 					data-current_value='$current_value'
 					data-role=\"autocomplete_hi_button_delete\"
@@ -54,14 +54,14 @@
 
 					# VALUE . STRING RESOLVED TO SHOW
 					$value = strip_tags($value);
-					$html_contenido .= $value;
+					$html_content .= $value;
 					if(SHOW_DEBUG===true) {
-						#$html_contenido .= " <span class=\"notes\">$current_value</span>";
+						#$html_content .= " <span class=\"notes\">$current_value</span>";
 					}
 
-					$html_contenido .= "</li>";
+					$html_content .= "</li>";
 				}
-				$html_contenido .= "</ul>";
+				$html_content .= "</ul>";
 
 				$hierarchy_types_json 	 = json_encode($hierarchy_types);
 				$hierarchy_sections_json = json_encode($hierarchy_sections);
@@ -71,7 +71,7 @@
 					case 'tree':
 
 						# BTN NEW ELEMENT
-						$html_contenido .= "<div class=\"icon_bs link new_autocomplete_hi edit_hidden\"
+						$html_content .= "<div class=\"icon_bs link new_autocomplete_hi edit_hidden\"
 						data-id_wrapper=\"$id_wrapper\"
 						data-component_name=\"$component_name\"
 						data-hierarchy_types='{$hierarchy_types_json}'
@@ -92,7 +92,7 @@
 				
 						#
 						# INPUT SEARCH FIELD
-						$html_contenido .= " <input class=\"css_autocomplete_hi_search_field\" type=\"text\" placeholder=\"".label::get_label('buscar')."...\"
+						$html_content .= " <input class=\"css_autocomplete_hi_search_field\" type=\"text\" placeholder=\"".label::get_label('buscar')."...\"
 						data-id_wrapper=\"$id_wrapper\"
 						data-tipo=\"$tipo\"
 						data-hierarchy_types='{$hierarchy_types_json}'
@@ -104,23 +104,45 @@
 						/>";
 
 						if(SHOW_DEBUG===true) {
-							#$html_contenido .= "<div class=\"debug_info notes\">ar_referenced_tipo: ".implode(', ', $ar_referenced_tipo)."</div>";
-							$html_contenido .= "<div class=\"debug_info notes\">".str_replace('},', '},<br>', $dato_json) ."</div>";
+							#$html_content .= "<div class=\"debug_info notes\">ar_referenced_tipo: ".implode(', ', $ar_referenced_tipo)."</div>";
+							$html_content .= "<div class=\"debug_info notes\">".str_replace('},', '},<br>', $dato_json) ."</div>";
 						}
 
+						#
+						# OPTIONS
+						$html_content .= "<div class=\"icon_bs toponymy_list_button_options edit_hidden\"></div>";
 
+						$cookie_name = 'toponymy_list_'.$section_tipo .'_'. $tipo;
+						$html_content .= "<ul class=\"toponymy_list text_unselectable\">";
+						#$html_content .= "<div class=\"toponymy_list_close\">X</div>";
+						$html_content .= "<input type=\"checkbox\" onchange=\"component_autocomplete_hi.select_all_hierarchy_sections(this,'$cookie_name')\"> <label>All</label>";
+						foreach ((array)$hierarchy_sections as $hs_key => $hs_section_tipo) {
+
+							$hs_name = RecordObj_dd::get_termino_by_tipo($hs_section_tipo);
+							$html_content .= "<li>";
+							$html_content .= "<input type=\"checkbox\" value=\"$hs_section_tipo\" id=\"$tipo.$hs_key.$hs_section_tipo\" checked onchange=\"component_autocomplete_hi.save_hierarchy_sections(this,'$cookie_name')\"> <label for=\"$tipo.$hs_key.$hs_section_tipo\">$hs_name</label>";
+							$html_content .= "</li>";
+						}
+						$html_content .= "</ul>";
+
+						
+						$html_content .= "<script>";
 						# Reset var 'activated' on load
-						$html_contenido .= "<script>component_autocomplete_hi.activated={}</script>";
+						$html_content .= "component_autocomplete_hi.activated={};";
+						# Init component
+						$html_content .= "component_autocomplete_hi.init('".$id_wrapper."','".$cookie_name."');";
+						$html_content .= "</script>";
+						
 						break;
 				}//end switch ($source_mode)
 
 
 				#
 				# TREE RESOLUTION STATS
-				#$html_contenido .= " <div id=\"autocomplete_hi_tree_stats_{$tipo}\" class=\"css_autocomplete_hi_tree_stats\"> Calculating.. </div>";
+				#$html_content .= " <div id=\"autocomplete_hi_tree_stats_{$tipo}\" class=\"css_autocomplete_hi_tree_stats\"> Calculating.. </div>";
 
 				# INPUT DATA HIDDEN
-				$html_contenido .= "<input type=\"text\" name=\"{$input_name}\" class=\"css_autocomplete_hi_dato_hidden\" style=\"width:300px;\"
+				$html_content .= "<input type=\"text\" name=\"{$input_name}\" class=\"css_autocomplete_hi_dato_hidden\" style=\"width:300px;\"
 				data-tipo=\"{$tipo}\"
 				data-section_tipo=\"{$section_tipo}\"
 				data-parent=\"{$parent}\"
@@ -131,20 +153,19 @@
 				/>";
 
 				if(SHOW_DEBUG===true) {
-					#$html_contenido .= " <span class=\"css_span_debugger\" id=\"debugger_{$parent}\" >{$debugger}</span>";
-					$html_contenido .= "<div class=\"debug_info notes\">". json_encode($propiedades) ."</div>";
+					#$html_content .= " <span class=\"css_span_debugger\" id=\"debugger_{$parent}\" >{$debugger}</span>";
+					$html_content .= "<div class=\"debug_info notes\">". json_encode($propiedades) ."</div>";
 				}
 				break;
-
 	}
 
 	# Prepare content to show in page
-	tools::prepare_content($html_contenido);
+	tools::prepare_content($html_content);
 
 
 	# PRINT HTML
 	print $html_label;
-	print $html_contenido;
+	print $html_content;
 
 
 

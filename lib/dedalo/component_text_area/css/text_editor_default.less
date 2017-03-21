@@ -71,6 +71,8 @@ img {
 }
 .note {
 	height: 15px;
+	margin-left: 2px;
+	margin-right: 2px;
 }
 .index {
 	height: 15px;
@@ -78,6 +80,11 @@ img {
 .tc {
 	height: 15px;
 	margin-right: 3px;
+}
+.tc2 {
+	height: 15px;
+	margin-right: 3px;
+	filter: invert(80%);
 }
 .svg {
 	height: 15px;
@@ -96,4 +103,51 @@ img {
     border-left: none;
     margin: 60px;
 }
+
+
+/**/
+section {
+
+}
+.section_struct {  
+    padding: 3px;
+    padding-left: 15px;
+    border: #909090;
+    border-style: dashed;
+    border-width: thin;
+    border-radius: 3px;
+    line-height: 1em;
+    min-height: 1em;
+    background-color: #FFFFFF;
+    padding-bottom: 8px
+	}
+	.section_struct > .section_struct {
+		margin-top: 8px;
+	}
+	/*
+	.section_struct::before {
+		content: "";
+	}*/
+	.section_struct:hover {
+		//background-color: #FBF6EA;
+	}
+	.section_struct:active {
+		//background-color: #FBEBD4;
+	}
+	.text_active {
+		background-color: #FBF6EA !important;
+	}
+
+	.text_unselectable {
+		cursor: default !important;
+	}
+	.text_selectable {
+		cursor: text !important;
+	}
+
+img.struct {
+	//display: none;
+}
+
+
 

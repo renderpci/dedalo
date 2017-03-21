@@ -15,14 +15,10 @@
 	$tool_name 				= get_class($this);
 	$tool_locator			= DEDALO_TOOL_INVESTIGATION_SECTION_TIPO.'_'.DEDALO_TOOL_INDEXATION_ID;//
 
-
 	$selected_tagName 		= $this->selected_tagName;
 	$selected_tag_id		= TR::tag2value($this->selected_tagName);
 	$modo 					= $this->get_modo();
 	$file_name 				= $modo;	
-
-		#dump( $this->component_obj );
-	
 
 	
 	switch($modo) {	
@@ -38,17 +34,20 @@
 						$contain_references = true;
 						break;
 					}
-				}
-				
+				}				
 				break;
 
 		
 		case 'page':
 
 				# TOOL CSS / JS MAIN FILES
+				css::$ar_url[] = DEDALO_LIB_BASE_URL."/section_tab/css/section_tab.css";
+				css::$ar_url[] = DEDALO_LIB_BASE_URL."/component_input_text_large/css/component_input_text_large.css";
 				css::$ar_url[] = DEDALO_LIB_BASE_URL."/tools/".$tool_name."/css/".$tool_name.".css";				
 
-				js::$ar_url[]  = DEDALO_LIB_BASE_URL."/tools/".$tool_name."/js/split.min.js";
+				js::$ar_url[] = DEDALO_LIB_BASE_URL."/component_input_text_large/js/component_input_text_large.js";
+				js::$ar_url[]  = DEDALO_LIB_BASE_URL."/tools/tool_common/js/split.min.js";
+				js::$ar_url[]  = DEDALO_LIB_BASE_URL."/section_tab/js/section_tab.js";
 				js::$ar_url[]  = DEDALO_LIB_BASE_URL."/tools/".$tool_name."/js/".$tool_name.".js";
 
 				if (strpos(TOP_TIPO, 'rsc')===0) {
@@ -85,10 +84,8 @@
 				# JS includes
 					js::$ar_url[] = DEDALO_LIB_BASE_URL."/$component_name/js/$component_name.js";
 
-				$tesauro_url = DEDALO_LIB_BASE_URL . "/ts/ts_list.php?modo=tesauro_rel&type=all&current_tipo=".$tipo."&caller_id=".$parent."&caller_tipo=".$tipo."";
-				if (defined('DEDALO_THESAURUS_VERSION') && DEDALO_THESAURUS_VERSION===4) {
-					$tesauro_url = DEDALO_LIB_BASE_URL . "/main/?menu=no&thesaurus_mode=relation&component_name=component_text_area&t=".DEDALO_TESAURO_TIPO;
-				}
+				#$tesauro_url = DEDALO_LIB_BASE_URL . "/ts/ts_list.php?modo=tesauro_rel&type=all&current_tipo=".$tipo."&caller_id=".$parent."&caller_tipo=".$tipo."";
+				$tesauro_url = DEDALO_LIB_BASE_URL . "/main/?menu=no&thesaurus_mode=relation&component_name=component_text_area&t=".DEDALO_TESAURO_TIPO;				
 
 
 				$this->component_obj->set_modo('indexation');
@@ -143,7 +140,7 @@
 
 
 					$raw_text 				= $this->component_obj->get_dato();
-					$fragment_text 			= component_text_area::get_fragment_text_from_tag($tag, $raw_text)[0];
+					$fragment_text 			= component_text_area::get_fragment_text_from_tag($tag_id, $tag_type, $raw_text)[0];
 
 					$this->set_modo('terminos_list');
 					$this->context = 'tool_window';

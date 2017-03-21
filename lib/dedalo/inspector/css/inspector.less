@@ -164,9 +164,26 @@
 }
 #inspector_log .ok, #inspector_log .error {
 	margin: 0px;
-	width: 99.9%;
-	/*display: block;*/
-}
+	max-width: 99.9%;
+	opacity: 0.7;
+	float: right;
+	clear: both;
+	margin-bottom: 1px;
+	}
+	#inspector_log .ok::after {
+		content: "x";
+		position: relative;
+		float: right;
+		padding-left: 10px;
+		cursor: pointer;
+		font-weight: bold;
+	}
+
+	#tools_info_wrapper #inspector_log .ok,
+	#tools_info_wrapper #inspector_log .error {
+		width: 99.9%;
+	}
+
 #inspector_log .span_save {
 	margin-top: 2px;
 	width: 100%;

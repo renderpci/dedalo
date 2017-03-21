@@ -355,17 +355,17 @@ class component_input_text extends component_common {
 				if ( $search_value[0] === $separator ) {
 					// Begin with * like
 					$search_value = str_replace($separator, '', $search_value);
-					$search_query = " unaccent({$json_field}#>>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}') $comparison_operator '%$search_value' ";
+					$search_query = " unaccent({$json_field}#>>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}') $comparison_operator unaccent('%$search_value') ";
 				
 				}else if ( $search_value[strlen($search_value) - 1] === $separator ) {
 					// End with *
 					$search_value = str_replace($separator, '', $search_value);
-					$search_query = " unaccent({$json_field}#>>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}') $comparison_operator '$search_value%' ";
+					$search_query = " unaccent({$json_field}#>>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}') $comparison_operator unaccent('$search_value%') ";
 					
 				}else{
 					// Contain
 					$search_value = str_replace($separator, '', $search_value);
-					$search_query = " unaccent({$json_field}#>>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}') $comparison_operator '%$search_value%' ";
+					$search_query = " unaccent({$json_field}#>>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}') $comparison_operator unaccent('%$search_value%') ";
 				}
 				break;
 

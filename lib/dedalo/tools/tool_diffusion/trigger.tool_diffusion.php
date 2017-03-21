@@ -161,10 +161,72 @@ function export_record() {
 
 
 
+/**
+* DIFFUSION_COMPLETE_DUMP
+* Hace un exportado general de datos a la web, de la misma forma que lo harías sección por sección, 
+* pero en una sola orden (por comodidad)
+*/
+function diffusion_complete_dump() {
+
+	$start_time = start_time();
+
+	# Write session to unlock session file
+	session_write_close();
+
+	#$response = new stdClass();
+	#	$response->result 	= false;
+	#	$response->msg 		= 'Error on diffusion_complete_dump';
+
+	$response = tool_diffusion::diffusion_complete_dump();
+
+	#$response->msg .= $result->msg;
+
+	/*
+		$ar_diffusion_map_elements = diffusion::get_ar_diffusion_map_elements();
+			#dump($ar_diffusion_map_elements, ' ar_diffusion_map_elements ++ '.to_string()); 
+			#die();	
+
+		
+		$ar_de_result=array();
+		foreach ($ar_diffusion_map_elements as $diffusion_element_tipo => $value_obj) {
+
+			# Diffusiion classname (diffusion_mysq, diffusion_rdf, etc..)
+			$class_name = $value_obj->class_name;
+
+			include_once(DEDALO_LIB_BASE_PATH .'/diffusion/class.'.$class_name.'.php' );
+
+			$diffusion 	= new $class_name;
+			$de_result 	= $diffusion->diffusion_complete_dump( $diffusion_element_tipo, $resolve_references=true );
+			
+			#$response->msg .= isset($de_result->msg) ? "<br>".$de_result->msg : '';
+
+			
+
+			// let GC do the memory job
+			time_nanosleep(0, 10000000); // 10 ms
+
+		}//end foreach ($ar_diffusion_map_elements as $diffusion_element => $value_obj) {
+		*/
+		
+	$response->msg .= sprintf ("<br>Export diffusion elements completed in %s seconds ", exec_time_unit($start_time,'secs') );
+
+	if(SHOW_DEBUG) {
+		if (function_exists('bcdiv')) {
+			$memory_usage = bcdiv(memory_get_usage(), 1048576, 3);
+		}else{
+			$memory_usage = memory_get_usage();
+		}
+		$response->msg .= " <span>MB: ". $memory_usage ."</span>";
+	}
+	
+	return $response;
+}//end diffusion_complete_dump
+
+
 
 /**
 * EXPORT_THESAURUS
-*/
+*//*
 function export_thesaurus() {
 
 	$seconds = 60 * 10; set_time_limit($seconds); 
@@ -207,73 +269,7 @@ function export_thesaurus() {
 
 	return $response;
 }//end export_thesaurus
-
-
-
-
-/**
-* DIFFUSION_COMPLETE_DUMP
-* Hace un exportado general de datos a la web, de la misma forma que lo harías sección por sección, 
-* pero en una sola orden (por comodidad)
 */
-function diffusion_complete_dump() {
-
-	$start_time = start_time();
-
-	# Write session to unlock session file
-	session_write_close();
-
-	$response = new stdClass();
-		$response->result 	= false;
-		$response->msg 		= 'Error on diffusion_complete_dump';
-
-	$result = tool_diffusion::diffusion_complete_dump();
-
-	$response->msg .= $result->msg;
-
-	/*
-		$ar_diffusion_map_elements = diffusion::get_ar_diffusion_map_elements();
-			#dump($ar_diffusion_map_elements, ' ar_diffusion_map_elements ++ '.to_string()); 
-			#die();	
-
-		
-		$ar_de_result=array();
-		foreach ($ar_diffusion_map_elements as $diffusion_element_tipo => $value_obj) {
-
-			# Diffusiion classname (diffusion_mysq, diffusion_rdf, etc..)
-			$class_name = $value_obj->class_name;
-
-			include_once(DEDALO_LIB_BASE_PATH .'/diffusion/class.'.$class_name.'.php' );
-
-			$diffusion 	= new $class_name;
-			$de_result 	= $diffusion->diffusion_complete_dump( $diffusion_element_tipo, $resolve_references=true );
-			
-			#$response->msg .= isset($de_result->msg) ? "<br>".$de_result->msg : '';
-
-			
-
-			// let GC do the memory job
-			time_nanosleep(0, 10000000); // 10 ms
-
-		}//end foreach ($ar_diffusion_map_elements as $diffusion_element => $value_obj) {
-		*/
-		
-	$response->msg .= sprintf ("<br>Export diffusion elements completed in %s seconds ", exec_time_unit($start_time,'secs') );
-
-	if(SHOW_DEBUG) {
-		if (function_exists('bcdiv')) {
-			$memory_usage = bcdiv(memory_get_usage(), 1048576, 3);
-		}else{
-			$memory_usage = memory_get_usage();
-		}
-		$response->msg .= " <span>MB: ". $memory_usage ."</span>";
-	}
-	
-	return $response->msg; // Not use json output here. Only string
-}//end diffusion_complete_dump
-
-
-
 
 
 

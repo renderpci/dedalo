@@ -21,12 +21,12 @@
 	
 	# CONTENIDO (INPUT)
 	$html_contenido = '';
-	switch($permissions) {	
+	switch(true) {	
 			
-		case 0	:	$html_contenido .= "";	
+		case $permissions===0	:	$html_contenido .= "";	
 					break;
 						
-		case 1	: 	#$html_contenido .= "<div class=\"html_text_content html_text_content_shadow\" >";
+		case $permissions===1	: 	#$html_contenido .= "<div class=\"html_text_content html_text_content_shadow\" >";
 					$html_contenido .= " <span class=\"css_span_dato\">$dato</span>";
 					#$html_contenido .= "</div>"; #end html_text_content
 
@@ -45,8 +45,6 @@
 					>
 					<div class=\"content_data\"><!-- AJAX CONTENT HERE --></div>
 					</div>";
-
-						
 					break;	
 						
 		
@@ -87,15 +85,14 @@
 
 
 					# INIT : Init text editor	
-					$html_contenido .= "<script>component_html_text_editor.init('$identificador_unico','$modo','$propiedades_json');	console.log(\"Inied $identificador_unico\");</script>";
-				
-					
+					$html_contenido .= "<script>component_html_text_editor.init('$identificador_unico','$modo','$propiedades_json');</script>";
+									
 					
 					if (SHOW_DEBUG) {
 						#$html_contenido .= "<span class=\"debug_info\"> $identificador_unico</span>";					
 						#$html_contenido .= " <span class=\"css_span_debugger\" id=\"debugger_{$tipo}\" >{$debugger}</span>";
-					}					
-					break;							
+					}
+					break;
 	}
 	
 	

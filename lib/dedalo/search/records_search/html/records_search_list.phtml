@@ -31,7 +31,28 @@
 
 						# COMPONENTS ( CAMPOS DE BÚSQUEDA )
 						# dump($ar_search_fields, ' ar_search_fields ++ '.to_string());
-						foreach($ar_search_fields as $component_tipo => $component_obj) {
+						foreach($ar_search_fields as $key_search_component => $component_obj) {
+
+							if(strpos($key_search_component, ':') !== false){
+								$case_portal = explode(':', $key_search_component);
+								$search_name = $case_portal[0].'_'.$component_obj->get_section_tipo() .'_' .$case_portal[1];
+
+								$html_content  .="<div class=\"css_portal_title\">";
+								
+								$component_portal =component_common::get_instance('component_portal',
+																							  $case_portal[0],
+																							  null,
+																							  'edit',
+																							  DEDALO_DATA_NOLAN,
+																							  $section_tipo);
+								$portal_name = $component_portal->get_label();
+								$html_content  .=$portal_name;
+								$html_content  .="</div>";
+
+							}else{
+								$search_name = $component_obj->get_section_tipo() .'_'. $component_obj->get_tipo();								
+							}
+							$component_obj->set_search_input_name($search_name);
 							$html_content .= $component_obj->get_html();
 						}
 						$html_content  .= " <hr>";

@@ -921,8 +921,13 @@ class diffusion_sql extends diffusion  {
 		# TABLE NAME
 			$diffusion_element_tables_map = self::get_diffusion_element_tables_map( $options->diffusion_element_tipo );
 				#dump($diffusion_element_tables_map, ' diffusion_element_tables_map ++ '.to_string($options));
-			$section_tipo = $options->section_tipo;
-			$table_name   = $diffusion_element_tables_map->$section_tipo->name;
+			$section_tipo = $options->section_tipo;	
+			if (!property_exists($diffusion_element_tables_map, $section_tipo)) {
+				# code...
+				debug_log(__METHOD__." ERROR ON UPDATE RECORD [2] $options->section_id - $options->section_tipo - $options->diffusion_element_tipo. Undefined section_tipo $section_tipo var in diffusion_element_tables_map".to_string(), logger::ERROR);
+				return false;
+			}		
+			$table_name   = $diffusion_element_tables_map->{$section_tipo}->name;
 				#dump($table_name, ' table_name ++ '.to_string());
 		
 
@@ -1743,39 +1748,24 @@ class diffusion_sql extends diffusion  {
 		$ar_tables = self::get_diffusion_element_tables_map( $diffusion_element_tipo );
 			#dump($ar_tables, ' ar_tables ++ '.to_string($diffusion_element_tipo)); die();
 		foreach ((array)$ar_tables as $section_tipo => $value_obj) {			
+			
+			# All section records
+			$result_resource = section::get_resource_all_section_records_unfiltered($section_tipo);
+			while ($rows = pg_fetch_assoc($result_resource)) {
 
-			if ($section_tipo==='thesaurus') {
-				
-				# Thesaurus tables
-				$ar_prefix = (array)$value_obj->thesaurus_ar_prefix;				
-				foreach ((array)$ar_prefix as $prefix) {							
-					$options 	= new stdClass();
-						$options->section_tipo  		 = $prefix;
-						$options->diffusion_element_tipo = $diffusion_element_tipo;
-							#dump($options, ' options ++ '.to_string()); die();
-	
-					$result = $this->update_thesaurus( $options );
-				}//end foreach ($ar_prefix as $prefix) {
-				
-			}else{				
-				
-				# All section records
-				$result_resource = section::get_resource_all_section_records_unfiltered($section_tipo);				
-				while ($rows = pg_fetch_assoc($result_resource)) {
+				$current_record_section_id = $rows['section_id'];
+				debug_log(__METHOD__." Difussion record: - $section_tipo - $current_record_section_id ".to_string(), logger::DEBUG);
 
-					$current_record_section_id = $rows['section_id'];
+				$options = new stdClass();
+					$options->section_tipo 			 = $section_tipo;
+					$options->section_id    		 = $current_record_section_id;
+					$options->diffusion_element_tipo = $diffusion_element_tipo;
 				
-					$options = new stdClass();
-						$options->section_tipo 			 = $section_tipo;
-						$options->section_id    		 = $current_record_section_id;
-						$options->diffusion_element_tipo = $diffusion_element_tipo;							
-					
-					$result = $this->update_record( $options, $resolve_references=true );
+				$result = $this->update_record( $options, $resolve_references=false );
 
-					$response->msg .= isset($result->msg) ? "<br>".$result->msg : '';
-				}//end foreach ((array)$ar_all_records as $current_record_section_id) {							
-			}
-
+				$response->msg .= isset($result->msg) ? "<br>".$result->msg : '';
+			}//end foreach ((array)$ar_all_records as $current_record_section_id) {
+		
 			// let GC do the memory job
 			time_nanosleep(0, 10000000); // 10 ms
 		}

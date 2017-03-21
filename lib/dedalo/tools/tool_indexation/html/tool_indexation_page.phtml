@@ -3,7 +3,7 @@
 
 	# VISUALIZADOR HTML
 
-	$html    = "<!-- TOOL PAGE [tipo:$tipo] -->";	
+	$html    = "<!-- $tool_name PAGE [tipo:$tipo] -->";	
 	#$html   .= "<div class=\"wrap_tool wrap_tool_indexation_page\" >";	
 	
 	#
@@ -45,7 +45,7 @@
 
 	#
 	# CONTENT 
-	$html .= "<div id=\"indexation_container\" class=\"container text_shadow_inset\" >";		
+	$html .= "<div id=\"indexation_container\" class=\"container\" >";		
 
 		#
 		# LEFT SIDE
@@ -70,17 +70,22 @@
 			$html 	.= $component_text_area_html;
 			$html   .= "</div>";			
 			
-			#
-			# TERM LIST
-			$html   .= "<div id=\"indexation_page_list\" class=\"indexation_page_list\">";
-			$html 	.= label::get_label('seleccione_una_etiqueta_para_indexar') . ' <br>';
-			$html 	.= label::get_label('para_crear_un_fragmento');
-			$html   .= "</div>";
+
+			#$html   .= "<div id=\"indexation_page_list\" class=\"css_section_tab_content\">";
+			
+				#
+				# TERM LIST
+				$html   .= "<div id=\"indexation_page_list\" class=\"css_section_tab_content indexation_page_list\">";
+				$html 	.= label::get_label('seleccione_una_etiqueta_para_indexar') . ' <br>';
+				$html 	.= label::get_label('para_crear_un_fragmento');
+				$html   .= "</div>";
+
+			#$html   .= "</div>";
+
 			
 			$html .= "<div id=\"inspector_log\" class=\"tool_transcription_inspector_log\"> </div>";
 			
 		$html   .= "</div>";#end right_side
-
 
 
 	
@@ -88,16 +93,16 @@
 	#$html .= "</div><!-- /wrap_tool -->"; //wrap_tool
 
 	
-	# INSPECTOR LOG TOOL
+	# Inspector log tool
 	$html .= "<div id=\"inspector_log\" class=\"tool_transcription_inspector_log\"> </div>";
-	/**/
-	$html .= "<script>
-	 Split(['#left_side', '#right_side'], {
-		minSize: '40%'
-    });
-	</script>";
+
+
+	# Init tool
+	$html .= "<script>$tool_name.init()</script>";
 	
 
 	echo $html;
-		
+
+
+
 ?>

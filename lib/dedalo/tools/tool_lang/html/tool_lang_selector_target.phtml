@@ -7,9 +7,9 @@
 
 	
 		
-		$html_selector .= "\n<!-- TOOL LANG SELECTOR TARGET LANG -->";
-		$html_selector .= "\n <span class=\"rotulo_tool_lang_selector\">".label::get_label('idioma_de_destino').":</span> ";
-		$html_selector .= "\n <select class=\"tool_lang_selector_target css_select\"
+		$html_selector .= "<!-- TOOL LANG SELECTOR TARGET LANG -->";
+		$html_selector .= " <span class=\"rotulo_tool_lang_selector\">".label::get_label('idioma_de_destino').":</span> ";
+		$html_selector .= " <select class=\"tool_lang_selector_target css_select\"
 		data-tipo=\"{$tipo}\"
 		data-parent=\"{$parent}\"
 		data-section_tipo=\"{$section_tipo}\"
@@ -19,17 +19,17 @@
 		> ";
 				
 			# Empty option					
-			$html_selector .= "\n <option value=\"\"> </option>";
+			$html_selector .= " <option value=\"\"> </option>";
 			
 			# Value option
 			# dump($ar_target_langs, ' ar_target_langs ++ '.to_string());
 			foreach ((array)$ar_target_langs as $current_target_lang => $current_target_lang_name) {
 									
 				$selected 		= ($target_lang === $current_target_lang) ? 'selected' : '';
-				$html_selector .= "\n <option value='{$current_target_lang}' {$selected}>$current_target_lang_name</option>";
+				$html_selector .= " <option value='{$current_target_lang}' {$selected}>$current_target_lang_name</option>";
 			}
 
-		$html_selector .= "\n </select>";	
+		$html_selector .= " </select>";	
 
 
 	

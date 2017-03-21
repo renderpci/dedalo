@@ -52,7 +52,7 @@ class component_state extends component_common {
 		$this->dato = array_unique((array)$this->dato,SORT_REGULAR);
 		$result = parent::Save();
 
-		debug_log(__METHOD__." Saved $this->section_tipo - $this->parent". to_string($this->dato), logger::WARNING);
+		debug_log(__METHOD__." Saved $this->section_tipo - $this->parent - dato: ". to_string($this->dato), logger::DEBUG);
 
 		if ($result) {
 			# Update caller sections (from inverse locators)

@@ -140,15 +140,17 @@ function fragment_info() {
 		$response->result 	= false;
 		$response->msg 		= 'Error. Request failed fragment_info';
 
-	$vars = array('section_tipo', 'section_id', 'component_tipo', 'tag_id', 'lang','tagName');
+	$vars = array('section_tipo', 'section_id', 'component_tipo', 'tag_id', 'lang', 'data');
 		foreach($vars as $name) {
 			$$name = common::setVar($name);
-			if (empty($$name)) {
+			if ($$name===false) {
 				$response->msg = 'Error. Empty mandatory var '.$name;
 				return $response;
 			}
 		}
-
+	
+	#
+	# Fragment text
 	$component_obj  = component_common::get_instance('component_text_area',
 													 $component_tipo,
 													 $section_id,
@@ -156,14 +158,58 @@ function fragment_info() {
 													 $lang,
 													 $section_tipo); 	
 	$raw_text		= $component_obj->get_dato();
-	$fragment_text	= component_text_area::get_fragment_text_from_tag($tagName, $raw_text)[0];
+	$fragment_text	= component_text_area::get_fragment_text_from_tag($tag_id, 'index', $raw_text)[0];
 	#$fragment_text	= strip_tags($fragment_text);
 
+	#
+	# Indexations list
+	$indexations_list = component_relation_index::get_indexations_from_tag($component_tipo, $section_tipo, $section_id, $tag_id, $lang);
+
+	#
+	# Indexation notes
+	$data = str_replace("'", '"', $data);
+	if ($locator = json_decode($data)) {
+
+		$section = section::get_instance($locator->section_id, $locator->section_tipo);		
+		
+		// Section info
+		$section_info = new stdClass();
+			$section_info->modified_by_userID 	= $section->get_modified_by_userID();
+			$section_info->modified_date 		= $section->get_modified_date();
+			$section_info->created_by_userID 	= $section->get_created_by_userID();
+			$section_info->created_by_user_name = $section->get_created_by_user_name();
+			$section_info->created_date 		= $section->get_created_date();		
+
+		// HTML
+		#$ar_children_objects = $section->get_ar_children_objects_by_modelo_name_in_section($modelo_name_required='component_', $resolve_virtual=false);
+		$ar_component_tipo = array(DEDALO_INDEXATION_TITLE_TIPO, DEDALO_INDEXATION_DESCRIPTION_TIPO);
+		$html = '';
+		foreach ($ar_component_tipo as $component_tipo) {
+
+			$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo, true);
+			$component 	 	= component_common::get_instance($modelo_name,
+															 $component_tipo,
+															 $locator->section_id,
+															 'edit',
+															 $lang,
+															 $locator->section_tipo);
+			$html .= $component->get_html();
+		}
+
+
+
+
+		$indexation_notes = new stdClass();
+			$indexation_notes->section_info = $section_info;
+			$indexation_notes->html 	    = $html;
+	}
+	
+	
 	$response->result 			= true;
 	$response->msg 	  			= 'Request done successfully';
 	$response->fragment_text 	= $fragment_text;
-	$response->indexations_list = component_relation_index::get_indexations_from_tag($component_tipo, $section_tipo, $section_id, $tag_id, $lang);
-	
+	$response->indexations_list = $indexations_list;
+	$response->indexation_notes = isset($indexation_notes) ? $indexation_notes : null;	
 
 	return (object)$response;
 }//end fragment_info
@@ -211,7 +257,7 @@ function indexations_list() {
 */
 function delete_tag() {	
 
-	$vars = array('section_tipo', 'section_id', 'component_tipo', 'tag', 'tag_id', 'lang');
+	$vars = array('section_tipo', 'section_id', 'component_tipo', 'tag_id', 'lang');
 		foreach($vars as $name) {
 			$$name = common::setVar($name);
 			if (empty($$name)) {
@@ -223,8 +269,7 @@ function delete_tag() {
 	$options = new stdClass();
 		$options->section_tipo 	= $section_tipo;
 		$options->section_id 	= $section_id;
-		$options->component_tipo= $component_tipo;
-		$options->tag 			= $tag;
+		$options->component_tipo= $component_tipo;		
 		$options->tag_id 		= $tag_id;
 		$options->lang 			= $lang;
 
@@ -232,6 +277,21 @@ function delete_tag() {
 
 	return (object)$response;
 }//end delete_tag
+
+
+
+/**
+* NEW_INDEX_DATA_RECORD
+* @return object $response
+*/
+function new_index_data_record() {
+	
+	$vars = array('tag_id');
+
+	$response = tool_indexation::new_index_data_record();
+
+	return $response;
+}//end new_index_data_record
 
 
 

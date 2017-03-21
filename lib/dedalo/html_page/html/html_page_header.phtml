@@ -6,6 +6,9 @@
 if (login::is_logged()) {
 	
 	switch (true) {
+		case (DEDALO_DATABASE_CONN==='dedalo4_master'):
+			$menu_wrapper_css = 'menu_wrapper_debug_master';
+			break;
 		case (SHOW_DEBUG===true && DEDALO_DATABASE_CONN==='dedalo4_development' && DEDALO_ENTITY==='development'):
 			$menu_wrapper_css = 'menu_wrapper_debug_development';
 			break;	
@@ -156,12 +159,12 @@ if (login::is_logged()) {
 				) {
 
 					# IMPORT BUTTON (ADMIN)
-					if( strpos(DEDALO_HOST, 'localhost')===false ) {	
+					if( DEDALO_DATABASE_CONN!=='dedalo4_master' && strpos(DEDALO_HOST, 'localhost')===false ) {	
 						$debug_line_html .= "<a href=\"javascript:void(0)\" class=\"\" onclick=\"menu.import_str(this)\">IMPORT</a>";
 					}
 
 					# EXPORT BUTTON (ADMIN)
-					if( DEDALO_DATABASE_CONN==='dedalo4_development' && strpos(DEDALO_HOST,'localhost')!==false ) { 
+					if( DEDALO_DATABASE_CONN==='dedalo4_master' && strpos(DEDALO_HOST,'master')!==false ) { 
 						$debug_line_html .= "<a href=\"javascript:void(0)\" class=\"\" onclick=\"menu.export_str(this)\">EXPORT</a>";
 					}
 

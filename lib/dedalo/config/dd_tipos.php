@@ -103,21 +103,35 @@ define('DEDALO_THESAURUS_VIRTUALS_MODELS_AREA_TIPO'		, 'hierarchy57');
 define('DEDALO_THESAURUS_GEONAMES_ID_TIPO'				, 'hierarchy63');
 define('DEDALO_THESAURUS_ORDER_TIPO'					, 'hierarchy42');
 define('DEDALO_THESAURUS_FILTER_TIPO'					, 'hierarchy55');
-
+define('DEDALO_THESAURUS_DESCRIPTOR_TIPO'				, 'hierarchy23');
+define('DEDALO_THESAURUS_USABLE_INDEX_TIPO'				, 'hierarchy24');
 
 # Relation types
 define('DEDALO_RELATION_TYPE_PARENT_TIPO'				, 'dd47');
 define('DEDALO_RELATION_TYPE_CHILDREN_TIPO'				, 'dd48');
 define('DEDALO_RELATION_TYPE_INDEX_TIPO'				, 'dd96');
+define('DEDALO_RELATION_TYPE_STRUCT_TIPO'				, 'dd490');
 define('DEDALO_RELATION_TYPE_MODEL_TIPO'				, 'dd98');
 define('DEDALO_RELATION_TYPE_RELATED_TIPO'				, 'dd89');
 	# Relation related types
 	define('DEDALO_RELATION_TYPE_RELATED_BIDIRECTIONAL_TIPO', 'dd467');
 #define('DEDALO_RELATION_TYPE_RECORD_TIPO'				, 'ddXXX'); // working here
 
+
 # Notes
 define('DEDALO_NOTES_SECTION_TIPO'						, 'rsc326');
 define('DEDALO_NOTES_TEXT_TIPO'							, 'rsc329');
+
+# Structuration notes
+define('DEDALO_STRUCTURATION_SECTION_TIPO'				, 'rsc370');
+define('DEDALO_STRUCTURATION_TITLE_TIPO'				, 'rsc372');
+define('DEDALO_STRUCTURATION_DESCRIPTION_TIPO'			, 'rsc373');
+define('DEDALO_STRUCTURATION_ORDER_TIPO'				, 'rsc383');
+
+# Indexation notes
+define('DEDALO_INDEXATION_SECTION_TIPO'					, 'rsc377');
+define('DEDALO_INDEXATION_TITLE_TIPO'					, 'rsc379');
+define('DEDALO_INDEXATION_DESCRIPTION_TIPO'				, 'rsc380');
 
 
 define('DEDALO_TEXTAREA_FIX_BROQUEN_TAGS_TIPOS'			, serialize( array('rsc36')) );

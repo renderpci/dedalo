@@ -152,6 +152,20 @@ class tool_import_zotero extends tool_common {
 		#
 		# Date 
 		$branch_name = 'date-parts';
+
+		if (!is_object($zotero_date)) {
+			#debug_log(__METHOD__." String received ".to_string($zotero_date), logger::ERROR);
+			if ((int)$zotero_date>0) {
+				$dd_date->set_year((int)$zotero_date);
+				return (object)$dd_date;
+			}
+		}
+
+		if (!isset($zotero_date->$branch_name)) {
+			debug_log(__METHOD__." Error on get date from zotero ".to_string($zotero_date), logger::ERROR);
+			return null;
+		}
+
 		$branch		 = $zotero_date->$branch_name;
 		if ( !isset($branch[0][0]) ) {
 			error_log("Wrong data from ".print_r($zotero_date,true));
@@ -175,14 +189,10 @@ class tool_import_zotero extends tool_common {
 				if(isset($matches[2])) $dd_date->set_minute((int)$matches[2]);
 				if(isset($matches[3])) $dd_date->set_second((int)$matches[3]);
 			}
-		}
-
-		if(SHOW_DEBUG) {
-			
 		}		
 
 		return (object)$dd_date;
-	}
+	}//end zotero_date_to_dd_date
 
 
 
@@ -361,6 +371,11 @@ class tool_import_zotero extends tool_common {
 				'techreport'		=> 13, # Informe técnico
 				'incollection' 		=> 17, # Colección (def: A part of a book having its own title)
 				'unpublished'		=> 18, # Sin publicar
+				'blogPost'			=> 25,
+				'bookSection'		=> 26,
+				'document'			=> 27,
+				'webpage'			=> 28,
+				'newspaperArticle'	=> 29,
 				);			
 		}
 		
@@ -404,17 +419,32 @@ class tool_import_zotero extends tool_common {
 
 				}else{
 					$section_id = (int)$zotero_obj->id;	// Default, get from zotero id
-				}
-				
+				}				
 			}
+			$forced_create_record = false;
+
+			# Test if section_id is a text (Manolo's cases like 'http://...')
+			$is_text = false;
+			# Search \D	Any non-digit
+			preg_match("/\D/", $section_id, $output_array);
+			if (!empty($output_array)) {
+				$is_text = true;
+			}
+			
 			#dump($section_id, ' section_id - '.$zotero_obj->id);die();
-			if ($section_id<1) throw new Exception("Error Processing Request. section_id is empty", 1);
-
-			#
-			# SECTION : Force create secti0on record if not exits
-			$section = section::get_instance($section_id, $section_tipo);
-			$forced_create_record = $section->forced_create_record();
-
+			if ( empty($section_id) || $is_text===true || (int)$section_id<1) {
+				#
+				# SECTION : Create new section when call-number is empty
+				$section = section::get_instance(null, $section_tipo);
+				$section_id = $section->Save();
+			}else{
+				#
+				# SECTION : Force create secti0on record if not exits
+				$section = section::get_instance($section_id, $section_tipo);
+				$forced_create_record = $section->forced_create_record();
+			}
+			$parent = $section_id;
+			/*
 			if ($forced_create_record===true) {
 				# Created new record
 				$parent  = $section_id;
@@ -438,43 +468,8 @@ class tool_import_zotero extends tool_common {
 					#$current_component->Save();
 						#dump($current_component,"current_component section_tipo:$section_tipo");
 				}
-			}
-
-			/* OLD WORLD
-			# PARENT (section id matrix)
-			# Each zotero obj is stored as Dédalo row
-			if ($section_id>0) {
-				#$section = section::get_instance($section_id, $section_tipo);
-				$parent  = $section_id;
-			}else{
-				$section = section::get_instance(null, $section_tipo);
-				$parent  = $section->Save();
-
-				# COMPONENT : Filtro 
-				$component_tipo 		= ZOTERO_COMPONENT_TIPO_BIBLIOGRAFIA_FILTER;
-				$component_dato 		= array(DEDALO_DEFAULT_PROJECT=>"2");	# Id matrix del proyecto 'Catalogación' component_filter	
-				$current_component 		= component_common::get_instance('component_filter', $component_tipo, $parent, 'edit', DEDALO_DATA_NOLAN, $section_tipo);
-				$current_component->set_dato($component_dato);
-				$current_component->Save();
-
-				# DEFAULT
-				# Propiedades : if default dato is set in 'propiedades', save component here
-				# Example: {"filtered_by":{"rsc235":[{"section_tipo":"rsc229","section_id":"2"}]}}
-				$RecordObj_dd = new RecordObj_dd($section_tipo);
-				$propiedades_current_setion = json_decode($RecordObj_dd->get_propiedades());
-				if (isset($propiedades_current_setion->filtered_by)) {
-					
-					$component_tipo	 		= key($propiedades_current_setion->filtered_by);
-						#dump($propiedades_current_setion," propiedades_current_setion - component_tipo: $component_tipo");					
-					$component_dato 		= $propiedades_current_setion->filtered_by->$component_tipo;
-					$component_modelo_name  = RecordObj_dd::get_modelo_name_by_tipo($component_tipo);	
-					$current_component 		= component_common::get_instance($component_modelo_name, $component_tipo, $parent, 'edit', DEDALO_DATA_NOLAN, $section_tipo);
-					$current_component->set_dato($component_dato);
-					#$current_component->Save();
-						#dump($current_component,"current_component section_tipo:$section_tipo");
-				}
-			}
-			*/
+			}*/
+			
 			if ($parent<1) throw new Exception("Error Processing Request. Section parent is empty", 1);
 
 			# Response track
@@ -511,6 +506,7 @@ class tool_import_zotero extends tool_common {
 						break;
 
 					case 'container-title':
+						
 						$section_id_list = self::get_section_id_from_zotero_container_title( $zotero_obj->$name );
 						if ($section_id_list>0) {
 							# Use existing record
@@ -520,7 +516,11 @@ class tool_import_zotero extends tool_common {
 							$section_container_list = section::get_instance(null,$section_tipo_colecciones_series); 
 							$section_id_list 		= (int)$section_container_list->Save();
 							$component_container_list = component_common::get_instance('component_input_text',ZOTERO_COMPONENT_TIPO_SERIES_COLECCIONES, $section_id_list, 'edit', DEDALO_DATA_LANG, $section_tipo_colecciones_series); # Colección / Serie (component_input_text)
-							$component_container_list->set_dato($zotero_obj->$name);
+							
+							# Eliminamos comillas que no paran de dar problemas
+							$serie_name = str_replace(array("'",'"'), '', $zotero_obj->$name);
+							
+							$component_container_list->set_dato($serie_name);
 							$component_container_list->Save();
 						}
 						if(SHOW_DEBUG) {
@@ -535,6 +535,7 @@ class tool_import_zotero extends tool_common {
 						$component->set_dato( $locator );
 						$component->Save();					
 						$ar_response[$parent]->$name ="+ Saved $name value ". json_encode($locator)." from zotero import process";
+						
 						break;
 					
 					case 'author':
@@ -664,15 +665,20 @@ class tool_import_zotero extends tool_common {
 	* @return int $section_id
 	*/
 	public static function get_section_id_from_zotero_container_title( $zotero_container_title ) {
-		$section_id=0;
+		$section_id=0;		
 
 		$tipo 			= ZOTERO_COMPONENT_TIPO_SERIES_COLECCIONES;		# Colección / Serie (component_input_text)
 		$section_tipo   = ZOTERO_SECTION_TIPO_SERIES_COLECCIONES;		# 'rsc212'; 	# Lista de valores Colecciones / Series 
 		$lang 			= DEDALO_DATA_LANG;
 		$value 			= $zotero_container_title;
-		$table 			= (string)common::get_matrix_table_from_tipo($section_tipo); 
+		$table 			= (string)common::get_matrix_table_from_tipo($section_tipo);
+
+		# Eliminamos comillas que no paran de dar problemas
+		$serie_name = str_replace(array("'",'"'), '', $value);		
 		
-		$sql_filter  = JSON_RecordObj_matrix::build_pg_filter('gin','datos',$tipo,$lang,$value);
+		$sql_filter  = JSON_RecordObj_matrix::build_pg_filter('gin','datos',$tipo,$lang,$serie_name);
+		#$sql_filter  = pg_escape_string($sql_filter);
+		#$sql_filter  = "datos @>'{\"components\":{\"$tipo\":{\"dato\":{\"$lang\":\"$value\"}}}}'::jsonb "
 		$strQuery   = "-- ".__METHOD__."
 		SELECT section_id
 		FROM \"$table\"
@@ -681,7 +687,7 @@ class tool_import_zotero extends tool_common {
 		AND \n $sql_filter
 		LIMIT 1
 		";
-		$strQuery=sanitize_query($strQuery);
+		#$strQuery=sanitize_query($strQuery);
 		if(SHOW_DEBUG) {
 			#dump($strQuery, ' strQuery');
 		}
@@ -698,7 +704,6 @@ class tool_import_zotero extends tool_common {
 
 	
 }#end class
-
 
 
 # SET TOOL CONTANTS

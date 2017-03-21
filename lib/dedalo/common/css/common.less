@@ -64,11 +64,14 @@ hr {
 /* TEXT
 ----------------------------------------- */
 .text_unselectable {
-	-webkit-user-select: none;
-	-khtml-user-select: none;
-	-moz-user-select: none;
-	-o-user-select: none;
-	user-select: none;
+	-webkit-user-select: none !important;
+	-khtml-user-select: none !important;
+	-moz-user-select: none !important;
+	-o-user-select: none !important;
+	user-select: none !important;
+}
+.text_selectable {
+	user-select: initial;
 }
 .text_shadow_inset {
 	text-shadow: 0 0 0 transparent, 0 1px 0 #FFF;
@@ -217,25 +220,26 @@ hr {
 /* MSG ERROR / OK / WARNING
 ----------------------------------------- */
 .ok, .error, .warning, .dump {
-	display: inline-block;
-	float:none; 
+	font-family: "Oxygen-light", sanserif;
+	//font-family: Arial, sanserif;
+	font-size: 1.1em !important;
+	font-weight: 100;
 	color: #FFFFFF;
+	display: inline-block;
+	float:none;
 	padding: 3px;
 	padding-left: 12px;
 	padding-right: 12px;
 	margin: 5px;
 	margin-left: 5px;
 	margin-right: 5px;
-	border-radius: 3px;
-	font-size: 1.1em !important;
-	font-family: arial, sanserif;
-	font-weight: 300;
+	border-radius: 3px;	
 	word-wrap: break-word;
 	/*-webkit-font-smoothing:none;*/
 	/*	
 	box-shadow: inset 0 1px 10px #bfbfbf;
 	*/
-	text-shadow: 0 -1px 1px #a5a5a5;
+	//text-shadow: 0 -1px 1px #a5a5a5;
 	position: relative;
 	z-index: 1;
 }
@@ -660,11 +664,21 @@ mark {
 			height: 100%;
 			}
 			.table_rows_list a.button_indexation:hover {
-				background-image: url('../../themes/default/icon_indexation_hover.svg');				
+				background-image: url('../../themes/default/icon_indexation_hover.svg');
 				background-color: #7ED8DF;
 			}
 
-
+		/* BUTTON_STRUCTURATION (PROCESSES)
+		--------------------------------------------------------------------- */
+		.table_rows_list a.button_structuration {
+			background-image: url('../../themes/default/icon_structuration.svg');
+			background-position:right 8px top 50%;
+			height: 100%;
+			}
+			.table_rows_list a.button_structuration:hover {
+				background-image: url('../../themes/default/icon_structuration_hover.svg');
+				background-color: #7ED8DF;
+			}
 
 
 
@@ -813,10 +827,11 @@ label.css_label.tooltips {
 
 /* EDIT HIDE - REMOVE VISIBILITY OF PARTS OF COMPONETS
 ------------------------------------------------------- */
-.edit_hidden{
-	visibility: hidden;
+.edit_hidden {
+	//visibility: hidden;
+	visibility: visible;
 }
-.edit_show{
+.edit_show {
 	visibility: visible;
 }
 

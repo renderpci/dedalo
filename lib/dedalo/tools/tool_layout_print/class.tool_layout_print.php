@@ -988,11 +988,13 @@ class tool_layout_print extends tool_common {
 	*/
 	protected static function search_layout_records($component_section_tipo, $section_tipo, $matrix_table) {
 
-		$filter = JSON_RecordObj_matrix::build_pg_filter('gin','datos',$component_section_tipo,DEDALO_DATA_NOLAN,$section_tipo);
+		$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($component_section_tipo,true);
+		$filter = $modelo_name::get_search_query( $json_field='datos', $component_section_tipo, $tipo_de_dato_search='dato', DEDALO_DATA_NOLAN, $section_tipo, $comparison_operator='=');
+			#dump($filter2, ' filter2 ++ '.to_string());
 		
 		$strQuery  = '';
 		$strQuery .= ' SELECT section_id ';
-		$strQuery .= ' FROM ' . $matrix_table;
+		$strQuery .= ' FROM ' . $matrix_table .' a';
 		$strQuery .= ' WHERE ' . $filter;
 			#dump($strQuery," ");die();
 		$result	= JSON_RecordObj_matrix::search_free($strQuery);

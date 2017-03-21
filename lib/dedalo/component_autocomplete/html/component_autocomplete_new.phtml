@@ -7,16 +7,27 @@
 		# INPUTS
 		foreach ($ar_terminos_relacionados as $current_tipo) {
 			$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
-			if ($modelo_name=='section') continue;
+			if ($modelo_name=='section') 
+				continue;
 			if ($modelo_name!='component_input_text') {
 				if(SHOW_DEBUG) {
 					trigger_error("Current component is not 'component_input_text'. Ignoring component");
 				}
-				continue;
+				//continue;
 			}
 			$title = RecordObj_dd::get_termino_by_tipo($current_tipo,$lang,true);
 			#html .= $title;
-			$html .= " <input type=\"text\" class=\"\" name=\"$current_tipo\" data-tipo=\"{$current_tipo}\" value=\"\" placeholder=\"$title\" /> ";
+			$component =  component_common::get_instance($modelo_name,
+														 $current_tipo,
+														 $parent= DEDALO_SECTION_ID_TEMP,
+														 'edit',
+														 $lang,
+														 $target_section_tipo);
+			$html .= $component->get_html();
+				
+			
+			
+			//$html .= " <input type=\"text\" class=\"\" name=\"$current_tipo\" data-tipo=\"{$current_tipo}\" value=\"\" placeholder=\"$title\" /> ";
 		}
 
 		#

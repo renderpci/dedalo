@@ -197,7 +197,7 @@
 					$current_tag_id 		= isset($current_locator->tag_id) ? $current_locator->tag_id : null;
 
 					$current_row = $this->row_in_result( $current_locator, $rows_data->result );						
-					
+						#dump($current_row, ' current_row ++ '.to_string());
 
 					#
 					# Limit showed rows
@@ -247,7 +247,7 @@
 								#$table .= " $section_id ";
 
 								#
-								# EDIT BUTTON										
+								# EDIT BUTTON
 									$context_http_query = http_build_query($context);
 									$url  = htmlspecialchars("?t=$target_section_tipo&id=$section_id&m=edit&portal_section_tipo={$section_tipo}&{$context_http_query}");
 									$url .= "&locator=". urlencode($rel_locator);
@@ -381,6 +381,7 @@
 
 								
 								$column_value = isset($current_row[$column_tipo]) ? $current_row[$column_tipo] : null;
+									#dump($column_value, ' column_value ++ '.to_string());
 
 								# Detect and avoid structure errors (portal list with deprecated elements for example)
 								if (strpos($modelo_name, 'component_')===false) {
@@ -396,7 +397,7 @@
 								$value = (string)$modelo_name::render_list_value($column_value, // value string from db
 																				 $column_tipo, // current component tipo
 																				 $section_id, // current portal row section id
-																				 $render_list_mode, // mode fixed list
+																				 $render_list_mode, // mode get form properties or default
 																				 DEDALO_DATA_LANG, // current data lang
 																				 $target_section_tipo, // current section tipo
 																				 $section_id, // Current portal parent

@@ -5,6 +5,35 @@
 global $updates;
 $updates = new stdClass();
 
+$v=451; #####################################################################################
+$updates->$v = new stdClass();
+
+	# UPDATE TO
+	$updates->$v->version_major 	 = 4;
+	$updates->$v->version_medium 	 = 5;
+	$updates->$v->version_minor 	 = 1;
+
+	# MINIM UPDATE FROM
+	$updates->$v->update_from_major  = 4;
+	$updates->$v->update_from_medium = 5;
+	$updates->$v->update_from_minor  = 0;
+
+
+	$updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query("
+									CREATE TABLE IF NOT EXISTS public.matrix_indexations
+									(LIKE public.matrix INCLUDING DEFAULTS INCLUDING CONSTRAINTS INCLUDING INDEXES INCLUDING STORAGE INCLUDING COMMENTS) 
+									WITH (OIDS = FALSE);
+									CREATE SEQUENCE matrix_indexations_id_seq; 
+									ALTER TABLE public.matrix_indexations ALTER COLUMN id SET DEFAULT nextval('matrix_indexations_id_seq'::regclass);
+									");
+
+	$updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query("
+									CREATE TABLE IF NOT EXISTS public.matrix_structurations
+									(LIKE public.matrix INCLUDING DEFAULTS INCLUDING CONSTRAINTS INCLUDING INDEXES INCLUDING STORAGE INCLUDING COMMENTS) 
+									WITH (OIDS = FALSE);
+									CREATE SEQUENCE matrix_structurations_id_seq; 
+									ALTER TABLE public.matrix_structurations ALTER COLUMN id SET DEFAULT nextval('matrix_structurations_id_seq'::regclass);
+									");
 
 
 $v=450; #####################################################################################
@@ -168,7 +197,7 @@ $updates->$v = new stdClass();
 		$script_obj->script_vars    = array('ma','si');
 	$scripts[] = $script_obj;
 	*/
-	$updates->$v->run_scripts = $scripts;
+	#$updates->$v->run_scripts = $scripts;
 
 
 $v=4023; #####################################################################################

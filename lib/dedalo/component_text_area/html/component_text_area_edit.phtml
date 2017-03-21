@@ -101,8 +101,7 @@
 				data-tipo=\"{$tipo}\"
 				data-lang=\"{$lang}\"
 				data-modo=\"{$modo}\"
-				data-section_tipo=\"{$section_tipo}\"
-				data-last_tag_index_id=\"{$last_tag_index_id}\"
+				data-section_tipo=\"{$section_tipo}\"				
 				data-canvas_id=\"$canvas_id\"
 				data-context_name=\"$context_name\"
 				title=\"$html_title\"
@@ -115,8 +114,7 @@
 				data-tipo=\"{$tipo}\"
 				data-lang=\"{$lang}\"
 				data-modo=\"{$modo}\"
-				data-section_tipo=\"{$section_tipo}\"
-				data-last_tag_index_id=\"{$last_tag_index_id}\"
+				data-section_tipo=\"{$section_tipo}\"				
 				data-canvas_id=\"$canvas_id\"
 				data-context_name=\"$context_name\"
 				title=\"$html_title\"
@@ -145,13 +143,14 @@
 
 
 				#
-				# BTN CREATE FRAGMENT				
+				# BTN CREATE FRAGMENT
 				$html_contenido .= "<div class=\"css_button_generic btn_create_fragment\" style=\"display:none\"
 				data-identificador_unico=\"$identificador_unico\"
 				data-parent=\"{$parent}\"
 				data-section_tipo=\"{$section_tipo}\"
+				data-tipo=\"{$tipo}\"
 				data-lang=\"{$lang}\"
-				onclick=\"tool_indexation.create_fragment(this);\"
+				onmousedown=\"tool_indexation.create_fragment(this,event);\"
 				>";
 				$html_contenido .= label::get_label('crear_nuevo_fragmento');
 				if(SHOW_DEBUG) {

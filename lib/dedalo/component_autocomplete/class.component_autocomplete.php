@@ -1,9 +1,9 @@
 <?php
 /*
- CLASS COMPONENT_AUTOCOMPLETE
+* CLASS COMPONENT_AUTOCOMPLETE
+*
+*
 */
-
-
 class component_autocomplete extends component_common {
 	
 	# Overwrite __construct var lang passed in this component
@@ -348,7 +348,8 @@ class component_autocomplete extends component_common {
 		foreach((array)$ar_target_section_tipo as $target_section_tipo) {	
 
 			$component = component_common::get_instance(null, $tipo, null, 'edit', DEDALO_DATA_LANG, $target_section_tipo);
-			$ar_list_of_values  = $component->get_ar_list_of_values(DEDALO_DATA_LANG, $id_path, $target_section_tipo);
+			# ar list of values ($lang=DEDALO_DATA_LANG, $id_path=false, $referenced_section_tipo=false, $filter_custom=false, $value_container='valor')
+			$ar_list_of_values  = $component->get_ar_list_of_values(DEDALO_DATA_LANG, $id_path, $target_section_tipo, false, 'valor_list');
 				#dump($ar_list_of_values, ' ar_list_of_values ++ '.to_string($target_section_tipo));
 			$result 			= search_string_in_array($ar_list_of_values->result,(string)$string_to_search);
 				#dump($ar_result," ar_result");
@@ -669,7 +670,7 @@ class component_autocomplete extends component_common {
 	* @return string $list_value
 	*/
 	public static function render_list_value($value, $tipo, $parent, $modo, $lang, $section_tipo, $section_id, $current_locator=null, $caller_component_tipo=null) {
-
+	
 		$component 	= component_common::get_instance(__CLASS__,
 													 $tipo,
 												 	 $parent,
@@ -684,7 +685,7 @@ class component_autocomplete extends component_common {
 		$dato = $component->get_dato();
 		$component->set_identificador_unico($component->get_identificador_unico().'_'.$section_id.'_'.$caller_component_tipo); // Set unic id for build search_options_session_key used in sessions
 		
-		if($modo === 'portal_list') {
+		if($modo === 'portal_list' || $modo === 'edit_in_list') {
 			$valor = $component->get_html();
 		}else{
 			$valor = $component->get_valor($lang);

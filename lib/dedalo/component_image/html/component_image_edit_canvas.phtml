@@ -3,9 +3,9 @@
 	# VISUALIZADOR HTML	
 	
 	
-	print "\n<!-- IMAGE [tipo:$tipo section_id_matrix:$parent] $label -->";
+	print "<!-- IMAGE [tipo:$tipo section_id_matrix:$parent] $label -->";
 
-	print "\n<div class=\"css_wrap_image wrap_component\" id=\"{$id_wrapper}\"
+	print "<div class=\"css_wrap_image wrap_component\" id=\"{$id_wrapper}\"
 	data-tipo=\"{$tipo}\"
 	data-lang=\"{$lang}\"
 	data-section_tipo=\"{$section_tipo}\"
@@ -13,6 +13,7 @@
 	data-modo=\"{$modo}\"
 	data-dato=\"{$valor}\"
 	data-component_name=\"{$component_name}\"
+	data-related_tipo='{$ar_related_component_tipo_json}'
 	>";
 	
 		
@@ -74,7 +75,7 @@
 		}
 
 		# INIT : Init text editor 
-		$html_contenido .= "\n<script>component_image.init_canvas('$identificador_unico');</script>";
+		$html_contenido .= "\n<script>component_image.init_canvas('$identificador_unico','$id_wrapper');</script>";
 
 		# Prepare content to show in page
 		tools::prepare_content($html_contenido);	

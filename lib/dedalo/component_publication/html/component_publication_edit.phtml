@@ -45,7 +45,7 @@
 				# Switcher				
 				$html_content .= "<div class=\"switcher_publication text_unselectable\">";
 
-				$html_content .= "<input type=\"checkbox\" class=\"ios-toggle\" $checked onchange=\"component_publication.Save(this)\"
+				$html_content .= "<input type=\"checkbox\" class=\"ios-toggle\" $checked onchange=\"component_publication.Save(this);\"
 				name=\"$input_name\"
 				id=\"{$input_name}\"
 				data-tipo=\"{$tipo}\"
@@ -82,11 +82,6 @@
 	print $html_label;
 	print $html_content;
 
-
-
-	if(SHOW_DEBUG) {
-		#echo $ar_list_of_values->debug;
-	}
 
 	print "</div>"; //wrap
 

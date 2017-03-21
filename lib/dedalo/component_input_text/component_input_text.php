@@ -95,12 +95,11 @@
 				# Operators
 				$ar_comparison_operators = $this->build_search_comparison_operators();
 				$ar_logical_operators 	 = $this->build_search_logical_operators();
-
-				#if(isset($_REQUEST[$tipo])) $dato = $_REQUEST[$tipo];
-				#$dato 			= json_encode($dato);
-
-				# Search input name
-				$search_input_name = $section_tipo.'_'.$tipo;
+				
+				# Search input name (var search_input_name is injected in search -> records_search_list.phtml)
+				# and recovered in component_common->get_search_input_name()
+				# Normally is section_tipo + component_tipo, but when in portal can be portal_tipo + section_tipo + component_tipo
+				$search_input_name = $this->get_search_input_name();
 				break;
 						
 		case 'list_thesaurus':

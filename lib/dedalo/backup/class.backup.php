@@ -287,11 +287,31 @@ abstract class backup {
 					#$ar_response[] = $msg;					
 				}
 
-
 			$ar_response[] = $msg;	
-			#$msg = " -> Saved str tables partial data to $current_tld (jer_dd: <b>".trim($res1)."</b> - matrix_descriptors_dd: <b>".trim($res2)."</b>)";
-			
+			#$msg = " -> Saved str tables partial data to $current_tld (jer_dd: <b>".trim($res1)."</b> - matrix_descriptors_dd: <b>".trim($res2)."</b>)";			
 		}#end while
+
+
+		#
+		# MATRIX_DD (Private list of values)
+		$table 		= 'matrix_dd';
+		$path 		= DEDALO_LIB_BASE_PATH.'/backup/backups_structure/str_data';
+		$path_file 	= "{$path}/{$table}.copy";
+		$res3 		= backup::copy_to_file($table, $path_file, null);
+
+		$msg='';
+		$msg .= "<b>$table</b>";
+		if (empty($res3)) {
+			$msg .= "Error on export $table. Please try again";
+			print("<div class=\"error\">$msg</div>");
+			$load_with_errors=true;
+			throw new Exception(" Error on read or create file. Permission denied ({$path_file})");
+		}else{
+			$msg .= "<br>Exported $table (<b>".trim($res3)."</b>) - fields: * ";
+			$msg .= "<br> -> $path_file ";
+			$ar_response[] = $msg;
+		}
+
 
 		return (array)$ar_response;
 	}#end save_dedalo_str_tables_data
@@ -317,6 +337,12 @@ abstract class backup {
 			case 'matrix_descriptors_dd':
 				$command = $command_base . " -c \"\copy (SELECT ".addslashes(backup::$descriptors_dd_columns)." FROM \"matrix_descriptors_dd\" WHERE parent LIKE '{$tld}%') TO '{$path_file}' \" ";
 				$res .= shell_exec($command);
+				break;
+
+			case 'matrix_dd':
+				$command = $command_base . " -c \"\copy (SELECT * FROM \"$table\") TO '{$path_file}' \" ";				
+				$res .= shell_exec($command);
+				#debug_log(__METHOD__." matrix_dd copy command ".to_string($command), logger::ERROR);
 				break;
 		}		
 		#dump($res, ' res ++ '.to_string($path_file));
@@ -371,7 +397,7 @@ abstract class backup {
 					if (empty($res1)) {
 						$msg .= "<br>Error on import $table {$tld} . Please try again";
 						if(SHOW_DEBUG===true) {
-							dump($command, '$res1 ++ '.to_string($res1));
+							dump($res1, '$res1 ++ '.to_string($table));
 							#throw new Exception("Error Processing Request: $msg", 1);
 						}
 						print("<div class=\"error\">$msg</div>");
@@ -388,7 +414,7 @@ abstract class backup {
 					if (empty($res2)) {
 						$msg .= "<br>Error on import $table {$tld} . Please try again";
 						if(SHOW_DEBUG===true) {
-							dump($command, '$res2 ++ '.to_string($res2));
+							dump($res2, '$res2 ++ '.to_string($table));
 							#throw new Exception("Error Processing Request: $msg", 1);
 						}
 						print("<div class=\"error\">$msg</div>");
@@ -409,23 +435,27 @@ abstract class backup {
 		#
 		# LIST OF VALUES PRIVATE
 		#
-			/* WORKING HERE..
-			$db_name 			 ='dedalo4_development_str.custom';
-			$file_path		 	 = DEDALO_LIB_BASE_PATH .'/backup/backups_structure/';
-			$mysqlImportFilename = $file_path . $db_name . ".backup";	
-			if (file_exists($mysqlImportFilename)) {
-
-				$command  = DB_BIN_PATH.'pg_restore -h '.DEDALO_HOSTNAME_CONN.' -p '.DEDALO_DB_PORT_CONN. ' -U "'.DEDALO_USERNAME_CONN.'" --dbname '.DEDALO_DATABASE_CONN;
-				$command .=' -t "matrix_dd" -t "matrix_layout_dd" -t "matrix_counter_dd" -t "*dd_id_seq" --no-password --clean --no-owner "'.$mysqlImportFilename.'"' ;	
-			
-			}else{
-				$msg = "Error: source str file not found ";
+			$table 		= 'matrix_dd';
+			$path 		= DEDALO_LIB_BASE_PATH.'/backup/backups_structure/str_data';
+			$path_file 	= $path.'/'.$table .'.copy';
+			$res3 		= backup::copy_from_file($table, $path_file, null);
+			$msg='';
+			$msg .= "<b>$table</b>";					
+			if (empty($res3)) {
+				$msg .= "<br>Error on import $table. Please try again";
 				if(SHOW_DEBUG===true) {
-					 $msg .= $mysqlImportFilename.;
+					#dump($res3, '$res3 ++ '.to_string($table));
+					#throw new Exception("Error Processing Request: $msg", 1);
 				}
-				$ar_response[]=$msg;
-			}
-			*/						
+				print("<div class=\"error\">$msg</div>");
+				$load_with_errors=true;
+			}			
+			if(SHOW_DEBUG===true) {
+				$msg .= "<br>Imported dedalo core data";
+				$msg .= ' ('.$table.' [<b>'.trim( to_string($res3) ).'</b>] '.$path_file.') ';
+			}				
+			
+			$ar_response[]=$msg;					
 
 
 		#
@@ -528,7 +558,7 @@ abstract class backup {
 		$res='';
 
 		if (!file_exists($path_file)) {
-			throw new Exception("Error Processing Request. File $path_file not found", 1);			
+			throw new Exception("Error Processing Request. File $path_file not found", 1);
 		}
 
 		$command_base = DB_BIN_PATH."psql ".DEDALO_DATABASE_CONN." -U ".DEDALO_USERNAME_CONN." -p ".DEDALO_DB_PORT_CONN." -h ".DEDALO_HOSTNAME_CONN;
@@ -554,7 +584,20 @@ abstract class backup {
 				# COPY . Load data from file
 				$command = $command_base . " -c \"\copy matrix_descriptors_dd(".addslashes(backup::$descriptors_dd_columns).") from {$path_file}\" ";
 				$res .= shell_exec($command);
-				break;			
+				break;
+
+			case 'matrix_dd':
+				# DELETE . Remove previous records
+				#$strQuery = "DELETE FROM \"matrix_descriptors_dd\" WHERE \"parent\" LIKE '{$tld}%';"; #pg_query(DBi::_getConnection(), $strQuery);
+				$command = $command_base . " -c \"DELETE FROM \"$table\" \" "; # -c "DELETE FROM \"jer_dd\" WHERE \"terminoID\" LIKE 'dd%'"				
+				#dump($command, ' command ++ '.to_string());
+				$res .= shell_exec($command);
+
+				# COPY . Load data from file
+				$command = $command_base . " -c \"\copy matrix_dd from {$path_file}\" ";
+				#dump($command, ' command ++ '.to_string());
+				$res .= shell_exec($command);
+				break;		
 		}
 		#dump($res, ' res ++ '.to_string($path_file));
 		$res = str_replace("\n",' ',$res);
@@ -637,7 +680,7 @@ abstract class backup {
 		
 		# LOW PRIORITY ( nice , at 22:56 , etc)
 		#$command = "nice ".$command ;
-			#dump($command, 'command', array());#die();
+			#dump($command, 'command', array()); die();
 
 		exec($command.' 2>&1', $output, $worked_result);	
 		#passthru($command,$worked_result);

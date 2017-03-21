@@ -1185,38 +1185,6 @@ function getVersionGD()
 }
 
 
-#
-# Fija los márgenes del video. Streaming
-#
-function tcMargen($tc,$tipo,$margen=2) {
-	die("tcMargen Deprecated. Use class Optimize instead!");
-	$tcTrozos	= explode(':', $tc);
-	$segundos	= $tcTrozos[2];
-	$minutos 	= $tcTrozos[1];
-	$horas		= $tcTrozos[0];
-	if($tipo=='tcin'){
-		if($segundos >= $margen){
-		  $segundos = $segundos  - $margen ;
-		}else{
-		  $minutos	= $minutos -1 ;
-		  $segundos = 59 ;
-		}
-	}
-	if($tipo=='tcout'){
-	  if($segundos <= 55){
-		$segundos = $segundos  + $margen ;
-	  }else{
-		$minutos ++ ;
-		$segundos = '00' ;
-	  }
-	}
-	
-	$tc	= "$horas:$minutos:$segundos";
-	
-	return  $tc	;
-}
-
-
 
 // ------- remove array item by value with fast for loop
 function removeElementFromArrayByValue($ar,$item2removeValue) {	

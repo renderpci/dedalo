@@ -1,5 +1,6 @@
 <?php
-
+require_once( dirname(dirname(dirname(__FILE__))) .'/media_engine/class.OptimizeTC.php');
+require_once( dirname(dirname(dirname(__FILE__))) .'/tools/tool_subtitles/class.subtitles.php');
 
 /*
 * CLASS tool_tr_print

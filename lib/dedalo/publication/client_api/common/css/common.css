@@ -1,0 +1,9 @@
+body {
+	font-family: "Helvetica","Oxygen","helvetica neue",helvetica,arial,sans-serif;
+    font-size: 13px;
+}
+.media {
+	clear: both;
+	display: table;
+	padding: 10px;
+	}

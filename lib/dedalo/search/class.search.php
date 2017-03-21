@@ -74,7 +74,7 @@ class search extends common {
 			
 			$sql_options->operators				= (bool)false;	# SQL operators used by search from
 			$sql_options->full_count			= (bool)false;
-			$sql_options->tipo_de_dato 			= (string)'valor_list'; # Can be dato, valor, valor_list, etc...
+			$sql_options->tipo_de_dato 			= (string)'valor_list'; # Columns container type. Can be dato, valor, valor_list, etc...
 			$sql_options->tipo_de_dato_search 	= (string)'dato';
 			$sql_options->tipo_de_dato_order  	= (string)'valor';
 			$sql_options->limit				  	= (int)DEDALO_MAX_ROWS_PER_PAGE;
@@ -218,7 +218,7 @@ class search extends common {
 
 						$RecordObj_dd = new RecordObj_dd($current_column_tipo);
 						$traducible[$current_column_tipo] = $RecordObj_dd->get_traducible();
-						if ($traducible[$current_column_tipo]!='si') {
+						if ($traducible[$current_column_tipo]!=='si') {
 							$current_lang 	= DEDALO_DATA_NOLAN;
 							
 							#
@@ -383,12 +383,8 @@ class search extends common {
 					}
 
 
-				
-
-
-
 				#
-				# PROPIEDADES : Section filter_by_id
+				# FILTER PROPIEDADES : Section filter_by_id
 				# Returned format is like '[rsc24] => 114'. component tipo => value
 				# NOTA: Opcionalmente, se podría prescindir de este filtro ya que 'filter_by_section_creator_portal_tipo' en más restrictivo. ¿Esto es así???
 					if( !empty($sql_options->filter_by_id) || !empty($sql_options->filter_by_locator) ) {
@@ -501,7 +497,6 @@ class search extends common {
 							}
 						}#end if (!is_null($propiedades) && isset($propiedades->filtered_by) && !empty($propiedades->filtered_by) )
 					}#end else
-
 				
 
 				
@@ -511,7 +506,7 @@ class search extends common {
 					$filter_options = new stdClass();
 						$filter_options->section_tipo 	= $sql_options->section_real_tipo; // ! Important real tipo
 						$filter_options->json_field 	= $sql_options->json_field;
-					if ($sql_options->matrix_table==='matrix_list' || $sql_options->matrix_table==='matrix_dd' || $sql_options->matrix_table==='matrix_hierarchy' || $sql_options->matrix_table==='matrix_hierarchy_main') {
+					if ($sql_options->matrix_table==='matrix_list' || $sql_options->matrix_table==='matrix_dd' || $sql_options->matrix_table==='matrix_hierarchy' || $sql_options->matrix_table==='matrix_hierarchy_main' || $sql_options->matrix_table==='matrix_langs') {
 						# No filter is applicable when current section is a list of values (public or private)
 					}else{
 						$sql_filtro .= filter::get_sql_filter( (object)$filter_options );
@@ -538,8 +533,16 @@ class search extends common {
 							if (empty($search_value)) continue;
 
 							$search_parts = explode('_', $search_combi);
-							$component_section_tipo = $search_parts[0];
-							$search_tipo = $search_parts[1];
+							if (isset($search_parts[2])) {
+								# case components inside portals have 3 parts: portal_tipo, section_tipo and component_tipo
+								$portal_tipo 			= $search_parts[0];
+								$component_section_tipo = $search_parts[1];
+								$search_tipo 			= $search_parts[2];
+							}else{
+								# only 2 parts: section_tipo and component_tipo
+								$component_section_tipo = $search_parts[0];
+								$search_tipo 			= $search_parts[1];
+							}							
 
 							$RecordObj_dd = new RecordObj_dd($search_tipo);
 							$traducible[$search_tipo] = $RecordObj_dd->get_traducible();
@@ -566,7 +569,6 @@ class search extends common {
 							}
 
 							$search_tipo_modelo_name = RecordObj_dd::get_modelo_name_by_tipo($search_tipo, true);
-
 							
 							
 							#dump($search_tipo," search_tipo - search_value: $search_value");
@@ -588,8 +590,9 @@ class search extends common {
 									#dump($subsearch_query, " subsearch_query ".to_string());
 								
 								$search_by_value = self::search_by_value($subsearch_query, $table_search);
-								$ar_locator 	 = $search_by_value->ar_locator;										
-								$portal_tipo 	 = section::get_portal_tipo_from_component_in_search_list($sql_options->section_tipo, $search_tipo);
+								$ar_locator 	 = $search_by_value->ar_locator;
+								# Notar que portal_tipo ahora se recibe a través del nombre del input (search_input_name) recibido por el formulario de búsqueda (like oh20_oh1_rsc152)						
+								#$portal_tipo 	 = section::get_portal_tipo_from_component_in_search_list($sql_options->section_tipo, $search_tipo);
 								if (empty($portal_tipo)) {
 									throw new Exception("Error Processing Request. portal_tipo is empty ($sql_options->section_tipo - $search_tipo) Not found in any portal search_list of $sql_options->section_tipo", 1);										
 								}

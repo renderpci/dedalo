@@ -99,6 +99,15 @@ input.css_autocomplete_hi_dato_hidden {
 }
 
 
+
+/* Overwrite jquery ui defaults
+----------------------------------------- */
+.ui-autocomplete {
+	z-index: 1001;
+}
+
+
+
 .ui-autocomplete-loading {
 	//background: white url('../../themes/default/spinner.gif') right center no-repeat !important;
 	background: white url('../../themes/default/spinner.svg') right center no-repeat !important;
@@ -192,4 +201,55 @@ input.css_autocomplete_hi_dato_hidden {
 }
 
 
+
+.toponymy_list {
+	background-color: #8E8E8E;
+	padding: 10px;	
+	display: none;
+	z-index: 1001;
+	/*
+	position: absolute;
+	left: 0;
+	top: 0;*/
+	margin-top:10px;
+	border-radius: 4px;
+	white-space: nowrap;
+	color: #ffffff !important;
+	}
+	.toponymy_list li {
+		//display: table;
+		float: left;
+		width: 33%;
+	}
+	.toponymy_list input {
+		margin-right: 4px;
+	}
+	/*
+	.toponymy_list .toponymy_list_close {
+		float: right;
+		background-color: #a0a0a0;
+		padding: 3px;
+		width: 24px;
+		text-align: center;
+		border-radius: 4px;
+		position: relative;
+		right: 0px;
+		cursor: pointer;
+		font-weight: bold;
+		}
+		.toponymy_list .toponymy_list_close:active {
+			color: black;
+		}*/
+
+	.toponymy_list_button_options {
+		float: right;
+		position: relative;
+		top: -17px;
+		right: 5px;
+		opacity: .3;
+		background-position: -432px 0;
+		right: 0;
+		position: absolute;	
+		zoom: 1.15;
+	}
 

@@ -1,24 +1,22 @@
 <?php
 
 	# VISUALIZADOR HTML	
-
-	# ELEMENTOS	
 	
-	
-	print "<!-- COMPONENT_AUTOCOMPLETE [tipo:$tipo section_id:$parent] $label -->";
+	print "<!-- ".__CLASS__." [tipo:$tipo section_id:$parent] $label -->";
+	#print "<!-- COMPONENT_AUTOCOMPLETE [tipo:$tipo section_id:$parent] $label -->";
 	print "<div class=\"wrap_component css_wrap_autocomplete wrap_portal_list\" id=\"{$id_wrapper}\"
-	data-tipo=\"{$tipo}\"
-	data-lang=\"{$lang}\"
-	data-parent=\"{$parent}\"
-	data-section_tipo=\"{$section_tipo}\"
-	data-ar_target_section_tipo='{$ar_target_section_tipo_json}'
-	data-tipo_to_search='{$tipo_to_search}'
-	data-modo=\"{$modo}\"
-	data-from_modo=\"{$from_modo}\"
-	data-dato='{$dato_json}'
-	data-component_name=\"{$component_name}\"
-	data-component_info='{$component_info}'
-	>";
+				data-tipo=\"{$tipo}\"
+				data-lang=\"{$lang}\"
+				data-parent=\"{$parent}\"
+				data-section_tipo=\"{$section_tipo}\"
+				data-ar_target_section_tipo='{$ar_target_section_tipo_json}'
+				data-tipo_to_search='{$tipo_to_search}'
+				data-modo=\"{$modo}\"
+				data-from_modo=\"{$from_modo}\"
+				data-dato='{$dato_json}'
+				data-component_name=\"{$component_name}\"
+				data-component_info='{$component_info}'
+				>";
 	
 	# ETIQUETA (LABEL)
 	#$html_label = component_common_draw::draw_label($this);
@@ -27,8 +25,9 @@
 	$html_contenido = '';
 	switch($permissions) {
 			
-		case 0	:	$html_contenido .= "";		
-					break;
+		case 0:	
+				$html_contenido .= "";		
+				break;
 		
 		case 1:
 										
@@ -43,11 +42,11 @@
 
 					if($modo =='portal_list'){
 						if(empty($ar_valor)){
-							$edit_class = 'css_autocomplete_ts_ul_edit_in_portal';
+							$edit_class = 'css_autocomplete_ul_edit_in_portal';
 						}else{
-							$edit_class = 'css_autocomplete_ts_ul';
+							$edit_class = 'css_autocomplete_ul';
 						}
-						$html_contenido .= " <ul class=$edit_class onclick=\"component_common.change_mode_component(this, '$modo','edit')\">";
+						$html_contenido .= " <ul class=\"$edit_class\" onclick=\"component_common.change_mode_component(this, '$modo','edit')\">";
 					}else{
 						$html_contenido .= " <ul>";
 					}

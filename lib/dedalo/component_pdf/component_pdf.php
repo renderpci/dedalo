@@ -57,7 +57,12 @@
 				
 				# restore modo
 				$this->modo 	= 'edit';
-				break;		
+
+				# Related components
+				$ar_related_component_tipo 		= $this->get_ar_related_component_tipo();
+				$ar_related_component_tipo_json = json_encode($ar_related_component_tipo);			
+
+				break;
 
 		case 'player':
 				$file_exists	= $this->get_file_exists();
@@ -87,8 +92,10 @@
 				break;
 
 		case 'search':
-				# Search input name
-				$search_input_name = $section_tipo.'_'.$tipo;
+				# Search input name (var search_input_name is injected in search -> records_search_list.phtml)
+				# and recovered in component_common->get_search_input_name()
+				# Normally is section_tipo + component_tipo, but when in portal can be portal_tipo + section_tipo + component_tipo
+				$search_input_name = $this->get_search_input_name();
 				return null;		
 				break;											
 	}

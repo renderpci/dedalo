@@ -26,23 +26,30 @@ $text = strip_tags($text, '');
 $type = false;
 switch (true) {
 	case (strpos($text,'[TC_')!==false):
-		$type = 'tc';
-		$text 		= substr($text,4,12);
-		$imgBase 	= "../images/btn_base/tc_ms-x2.png";
+		$type 			= 'tc';
+		$pattern 		= "/\[TC_([0-9]{1,2}:[0-9]{1,2}:[0-9]{1,2}(\.[0-9]{1,3})?)_TC\]/";
+		$text_original 	= $text;
+		preg_match_all($pattern, $text, $matches);
+		#print_r($text.'<hr>'); print_r($pattern.'<hr>'); print_r($matches); die();
+		$text			= $matches[1][0];	
+		$imgBase 		= "../images/btn_base/tc_ms-x2.png";
 		break;
 	case (strpos($text,'[index-')!==false || strpos($text,'[/index-')!==false):
-		$type = 'index';
-		if(strpos($text,'/')) {
-			# mode [/index-u-6]
-			$n 			= substr($text,10,-1);
-			$state 		= substr($text,8,1);
-			$text 		= " $n";
+		$type 			= 'index';
+		$pattern 		= "/\[\/{0,1}(index)-([a-z])-([0-9]{1,6})(-(.{0,22}))?(-data:(.*?):data)?\]/";
+		$text_original 	= $text;
+		preg_match_all($pattern, $text, $matches);
+		#print_r($text.'<hr>'); print_r($pattern.'<hr>'); print_r($matches); die();
+		$n 		= $matches[3][0];
+		$state 	= $matches[2][0];		
+
+		if(strpos($text_original,'/')!==false) {
+			# mode [/index-u-6]	
+			$text 		= " $n";		
 			$imgBase 	= "../images/btn_base/indexOut-{$state}-x2.png";
 		}else{
 			# mode [index-u-1]
-			$n 			= substr($text,9,-1);
-			$state 		= substr($text,7,1);	
-			$text 		= "$n";
+			$text 		= $n;
 			$imgBase 	= "../images/btn_base/indexIn-{$state}-x2.png";
 		}
 		break;	
@@ -67,18 +74,24 @@ switch (true) {
 	case (strpos($text,'[page-')!==false):
 		$type = 'page';
 		# mode [page-n-1]
-		$state 		= substr($text,6,1);
-		$ar_parts 	= explode('-', $text);
-		$text 		= substr($ar_parts[2],0,-1);
-		$imgBase 	= "../images/btn_base/page-{$state}-x2.png";
+		$pattern 		= "/\[(page)-([a-z])-([0-9]{1,6})(-.{0,22})?\]/";
+		$text_original 	= $text;
+		preg_match_all($pattern, $text, $matches);
+		#print_r($text.'<hr>'); print_r($pattern.'<hr>'); print_r($matches); die();
+		$text			= $matches[3][0];	
+		$state 			= $matches[2][0];		
+		$imgBase 		= "../images/btn_base/page-{$state}-x2.png";
 		break;
 	case (strpos($text,'[person-')!==false):
 		$type = 'person';
 		# mode [person-0-name-data:locator_flat:data]
-		$ar_parts 	= explode('-', $text);
-		$state 		= $ar_parts[1];
-		$text 		= urldecode($ar_parts[2]);
-		$imgBase 	= "../images/btn_base/person-{$state}-x2.png";
+		$pattern 	= "/\[(person)-([a-z])-([0-9]{1,6})-(\S{0,22})\]/";
+		$text_original 	= $text;
+		preg_match_all($pattern, $text, $matches);
+		#print_r($text.'<hr>'); print_r($pattern.'<hr>'); print_r($matches); die();
+		$text			= urldecode($matches[4][0]);
+		$state 			= $matches[2][0];		
+		$imgBase 		= "../images/btn_base/person-{$state}-x2.png";
 		break;
 	case (strpos($text,'[note-')!==false):
 		$type = 'note';
@@ -304,18 +317,21 @@ if($text!==false) {
 				if ($imgText===false) {
 					imagestring($im, 1, 5, 5, "Error $text1", 0);
 				}	
-}
+}//end if($text!==false) {
+
 
 # Enable interlancing
 imageinterlace($im, true);
 
+
 # HEADERS
-/*
+/**/
 header("Cache-Control: private, max-age=10800, pre-check=10800");
 header("Pragma: private");
 header("Expires: " . date(DATE_RFC822,strtotime(" 200 day")));
-*/
-header("Cache-Control: no-cache, must-revalidate");
+
+# No cache header
+#header("Cache-Control: no-cache, must-revalidate");
 
 # Output to browser
 header('Content-Type: image/png;');

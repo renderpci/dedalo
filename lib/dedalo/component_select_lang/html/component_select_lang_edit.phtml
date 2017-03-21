@@ -21,15 +21,15 @@
 	$html_label = component_common_draw::draw_label($this);
 
 	# CONTENIDO (INPUT)
-	$html_contenido = '';
+	$html_content = '';
 	switch($permissions) {
 
 		case 0 :	
-				$html_contenido .= "";
+				$html_content .= "";
 				break;
 
 		case 1 : 
-				$html_contenido .= $this->valor;
+				$html_content .= $valor;
 				break;
 
 		case 2 :
@@ -40,7 +40,7 @@
 				# Set as disabled on time machine context 
 				$disabled = (isset($context->context_name) && $context->context_name=='tool_time_machine') ? 'disabled="disabled"' : '';
 		
-				$html_contenido .= " <select class=\"css_select_lang\"
+				$html_content .= " <select class=\"css_select_lang\"
 				onchange=\"component_select_lang.Save(this)\"
 				onfocus=\"component_common.select_wrap(null,'$id_wrapper');\"
 				name=\"{$input_name}\"
@@ -58,44 +58,59 @@
 					# OPTIONS
 
 					# OPTION EMPTY
-					$selected = empty($dato) ? 'selected' : '';
-					$html_contenido .= " <option value=\"\" {$selected}> </option>";
+					#$selected = empty($dato) ? 'selected' : ''; // {$selected}
+					$html_content .= " <option value=\"\" > </option>";
 				
 
 					# OPTIONS VALUES
 					# dump($ar_all_project_select_langs, ' ar_all_project_select_langs ++ '.to_string());
+					$option_selected = false;
 					foreach ((array)$ar_all_project_select_langs as $current_lang_code => $current_label) {
 			
 						$current_locator 		= lang::get_lang_locator_from_code($current_lang_code);
 						$current_locator_json 	= json_encode($current_locator);
 
 						# Selected
-						$selected 				= locator::in_array_locator( $current_locator, (array)$dato, $ar_properties=array('section_tipo','section_id') ) ? 'selected' : ''; 
-
-						$html_contenido .= " <option value='{$current_locator_json}' data-lang='{$current_lang_code}' {$selected}>";
-						$html_contenido .= $current_label;
-						if(SHOW_DEBUG===true) {
-							#$html_contenido .= " - ". trim($current_locator_json);
+						$selected 				= locator::in_array_locator( $current_locator, (array)$dato, $ar_properties=array('section_tipo','section_id') ) ? 'selected' : false;
+						if ($selected!==false) {
+							$option_selected = true;
 						}
-						$html_contenido .="</option>";
+
+						$html_content .= " <option value='{$current_locator_json}' data-lang='{$current_lang_code}' {$selected}>";
+						$html_content .= $current_label;
+						if(SHOW_DEBUG===true) {
+							#$html_content .= " - ". trim($current_locator_json);
+						}
+						$html_content .="</option>";
 					}
 
-				$html_contenido .= " </select>";
+					# dump($dato, ' dato ++ '.to_string());
+					if ($option_selected===false && !empty($dato)) {
+						#dump($dato, ' dato ++ '.to_string());
+						$locator = reset($dato);
+						$current_lang_name = lang::get_lang_name_by_locator($locator);
+						$current_lang_code = lang::get_code_from_locator($locator);
+						
+						$value = json_encode( $locator );
+						$html_content .= " <option value='".$value."' data-lang='{$current_lang_code}' selected>".$current_lang_name." *</option>";						
+					}
+					
+				$html_content .= " </select>";
 
 
 				if(SHOW_DEBUG===true) {
-					$html_contenido .= " <span class=\"debug_info notes\">".json_encode($dato)."</span>";
+					$html_content .= " <span class=\"debug_info notes\">".json_encode($dato)."</span>";
 				}				
 				break;
 	}
 
 	# Prepare content to show in page
-	tools::prepare_content($html_contenido);
+	tools::prepare_content($html_content);
 
 
 	# PRINT HTML
 	print $html_label;
-	print $html_contenido;
+	print $html_content;
 
 
 	print "</div>"; //wrap

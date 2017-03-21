@@ -175,7 +175,7 @@ class records_search extends common {
 					}//end foreach ((array)$search_list_ar_related as $search_related_tipo) 
 					foreach ($ar_search_components as $search_component_tipo => $search_component_modelo_name) {					
 
-						$ar_search_fields[$search_component_tipo] = component_common::get_instance($search_component_modelo_name,
+						$ar_search_fields[$current_element_tipo.':'.$search_component_tipo] = component_common::get_instance($search_component_modelo_name,
 																							  $search_component_tipo,
 																							  null,
 																							  'search',

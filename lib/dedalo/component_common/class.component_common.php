@@ -1,8 +1,8 @@
 <?php
-
 /**
 * COMPONENT_COMMON
 * Common methods of all components
+*
 */
 abstract class component_common extends common {
 
@@ -47,6 +47,9 @@ abstract class component_common extends common {
 	#public static $ar_component_instances = array();	# array chache of called instances of components
 
 	public $render_vars;
+
+	# search_input_name. injected for records search
+	public $search_input_name;
 
 
 	/**
@@ -1477,7 +1480,7 @@ abstract class component_common extends common {
 	*		"others":"..."
 	* 	} parent
 	*/
-	public function get_ar_list_of_values($lang=DEDALO_DATA_LANG, $id_path=false, $referenced_section_tipo=false, $filter_custom=false) {
+	public function get_ar_list_of_values($lang=DEDALO_DATA_LANG, $id_path=false, $referenced_section_tipo=false, $filter_custom=false, $value_container='valor') {
 	
 		if(SHOW_DEBUG===true) {
 			global$TIMER;$TIMER[__METHOD__.'_IN_'.$this->tipo.'_'.$this->modo.'_'.$this->parent.'_'.microtime(1)]=microtime(1);;
@@ -1574,11 +1577,11 @@ abstract class component_common extends common {
 				$strQuery_select .= JSON_RecordObj_matrix::build_pg_select('btree','datos',$current_tipo,'dato',$current_lang);
 				*/
 				# SELECCIÓN CON TODOS LOS LENGUAJES
-				$strQuery_select .= "datos #>>'{components,$current_tipo,dato}' AS $current_tipo " ;
+				$strQuery_select .= "datos #>>'{components,$current_tipo,$value_container}' AS $current_tipo " ;
 				# SELECCIÓN EN EL LENGUAJE ACTUAL (SÓLO PARA ORDENAR)			
 				$RecordObj_dd 	= new RecordObj_dd($current_tipo);
 				$current_lang 	= $RecordObj_dd->get_traducible()==='no' ? DEDALO_DATA_NOLAN : $lang;
-				$strQuery_select .= ", datos #>>'{components,$current_tipo,dato,$current_lang}' AS {$current_tipo}_lang " ;
+				$strQuery_select .= ", datos #>>'{components,$current_tipo,$value_container,$current_lang}' AS {$current_tipo}_lang " ;
 
 				# WHERE CLAUSE
 				#$strQuery_where = "datos #>'{components}' ? '$current_tipo'";
@@ -3328,6 +3331,19 @@ abstract class component_common extends common {
 		
 		return true;
 	}//end regenerate_component
+
+
+
+	/**
+	* GET_SEARCH_INPUT_NAME
+	* Search input name (var search_input_name is injected in search -> records_search_list.phtml)
+	* and recovered in component_common->get_search_input_name()
+	* Normally is section_tipo + component_tipo, but when in portal can be portal_tipo + section_tipo + component_tipo
+	* @return string $search_input_name
+	*/
+	public function get_search_input_name() {
+		return $this->search_input_name;
+	}//end get_search_input_name
 
 
 

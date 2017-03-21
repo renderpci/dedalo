@@ -7,28 +7,30 @@
 
 	
 		
-		$html_selector .= "\n<!-- TOOL LANG SELECTOR SOURCE LANG -->";
-		$html_selector .= "\n <span class=\"rotulo_tool_lang_selector\">".label::get_label('idioma_de_origen').":</span> ";
-		$html_selector .= "\n <select class=\"tool_lang_selector_source css_select\"
+		$html_selector .= "<!-- TOOL LANG SELECTOR SOURCE LANG -->";
+		$html_selector .= " <span class=\"rotulo_tool_lang_selector\">".label::get_label('idioma_de_origen').":</span> ";
+		$html_selector .= " <select class=\"tool_lang_selector_source css_select\"
 		data-tipo=\"{$tipo}\"
 		data-parent=\"{$parent}\"
 		data-section_tipo=\"{$section_tipo}\"
 		data-tool_name=\"{$tool_name}\"
 		data-tool_locator=\"{$tool_locator}\"
 		onchange=\"tool_lang.load_source_component(this)\"
-		> ";
+		>";
 					
 				# Empty option
-				$html_selector .= "\n <option value=\"\"> </option>";
+				$html_selector .= "<option value=\"\"> </option>";
+
 
 				# dump($ar_source_langs, ' ar_source_langs ++ '.to_string());
 				foreach ((array)$ar_source_langs as $current_source_lang => $current_source_lang_name) {
+				
+					$selected = ($lang === $current_source_lang) ? 'selected="selected"' : '';					
 					
-					$selected 		= ($lang === $current_source_lang) ? 'selected' : '';
-					$html_selector .= "\n <option value='{$current_source_lang}' {$selected}>$current_source_lang_name</option>";							
+					$html_selector .= "<option value='{$current_source_lang}' {$selected}>$current_source_lang_name</option>";
 				}
 
-		$html_selector .= "\n </select>";	
+		$html_selector .= " </select>";	
 
 
 	

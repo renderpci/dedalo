@@ -17,7 +17,7 @@ class login extends common {
 
 	protected static $login_matrix_table = 'matrix';
 
-	const SU_DEFAULT_PASSWORD = 'Dedalo4debugChangePsW';
+	const SU_DEFAULT_PASSWORD = ''; //Dedalo4debugChangePsW
 
 
 	public function __construct($modo='edit') {
@@ -82,7 +82,7 @@ class login extends common {
 		$arguments["section_tipo"]  	= DEDALO_SECTION_USERS_TIPO;
 		$current_version = tool_administration::get_current_version_in_db();
 		# Username query
-		if($current_version[0]>=4 && $current_version[1]>=0 && $current_version[2]>=22) {
+		if( ($current_version[0] >= 4 && $current_version[1] >= 0 && $current_version[2] >= 22) || ($current_version[0] >= 4 && $current_version[1] >= 5) ) { 
 			$arguments["datos#>>'{components,".DEDALO_USER_NAME_TIPO.",dato,lg-nolan}'"] = json_encode((array)$username,JSON_UNESCAPED_UNICODE);
 		}else{
 			$arguments["datos#>>'{components,".DEDALO_USER_NAME_TIPO.",dato,lg-nolan}'"] = $username;
@@ -788,7 +788,7 @@ class login extends common {
 		$default 	= login::SU_DEFAULT_PASSWORD; // Dedalo4debugChangePsW	
 		
 		$current_version = tool_administration::get_current_version_in_db();
-		if($current_version[0] >= 4 && $current_version[1] >= 0 && $current_version[2] >= 22){
+		if( ($current_version[0] >= 4 && $current_version[1] >= 0 && $current_version[2] >= 22) || ($current_version[0] >= 4 && $current_version[1] >= 5) ){
 			if (dedalo_decrypt_openssl($dato)==$default) {
 				return true;
 			}

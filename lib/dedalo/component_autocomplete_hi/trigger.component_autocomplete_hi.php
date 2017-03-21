@@ -46,7 +46,7 @@ function autocomplete() {
 	$result = component_autocomplete_hi::autocomplete_hi_search($hierarchy_types,
 																$hierarchy_sections,
 																$string_to_search,
-																30,
+																50,
 																true,
 																true); //$ar_referenced_tipo, $string_to_search, $max_results=30, $show_modelo_name=true, $source_mode
 

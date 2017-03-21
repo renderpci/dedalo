@@ -36,7 +36,6 @@
 	
 	$file_name = $modo;
 
-	
 	switch($modo) {
 
 		case 'load_tr':
@@ -47,37 +46,48 @@
 		#case 'portal_list'	:
 				#$file_name = 'edit';
 		case 'tool_transcription':
+		case 'tool_structuration':
 		case 'indexation':
 		case 'edit'	:	
 				# Verify component content record is inside section record filter
 				if ($this->get_filter_authorized_record()===false) return NULL;
-
 
 				$component_info = $this->get_component_info('json');
 				$context 		= $this->get_context();
 					
 				#
 				# FIX BROKEN TAGS
+				$component_warning = '';							
 				$ar_tipos = unserialize(DEDALO_TEXTAREA_FIX_BROQUEN_TAGS_TIPOS);
 				if (  in_array($this->tipo, $ar_tipos) ) {
-					if (isset($context) && $context==='default') {							
+					if (isset($context) && $context==='default') {
 						$save=true;
 						if(SHOW_DEBUG===true) {
 							$save=false;
 						}
+						# FIX_BROKEN_INDEX_TAGS
 						$broken_index_tags = $this->fix_broken_index_tags($save);
 						if ($broken_index_tags->result) {
-							$component_warning = $broken_index_tags->msg;
+							$component_warning .= $broken_index_tags->msg;
 							if(SHOW_DEBUG===true) {
 								$component_warning .= " (Fixed in ".$broken_index_tags->total.")";
 							}
 						}
-					}									
-				}//end if ($modo=='edit' && in_array($this->tipo, $ar_tipos) ) {
+						# FIX_BROKEN_STRUCT_TAGS
+						$broken_index_tags = $this->fix_broken_struct_tags($save);
+						if ($broken_index_tags->result) {
+							$component_warning .= " ".$broken_index_tags->msg;
+							if(SHOW_DEBUG===true) {
+								$component_warning .= " (Fixed in ".$broken_index_tags->total.")";
+							}
+						}
+					}
+				}//end if ($modo=='edit' && in_array($this->tipo, $ar_tipos) )				
+				
 
 				$dato 				= $this->get_dato();
 				$dato 				= TR::addTagImgOnTheFly($dato);
-				$last_tag_index_id	= $this->get_last_tag_index_id();
+				#$last_tag_index_id	= $this->get_last_tag_index_id();
 				$id_wrapper 		= 'wrapper_'.$identificador_unico;
 				$input_name 		= "{$tipo}_{$parent}";
 				$text_area_tm 		= NULL;
@@ -97,8 +107,7 @@
 				# CANVAS ID : Resolve canvas_id for paper get tags
 				$canvas_id = null;
 				$ar_relaciones = $this->RecordObj_dd->get_relaciones();
-				if(!empty($ar_relaciones)) foreach ($ar_relaciones as $key => $ar_values) {
-				
+				if(!empty($ar_relaciones)) foreach ($ar_relaciones as $key => $ar_values) {				
 					foreach ($ar_values as $relaciones_modelo => $relaciones_tipo) {
 						$modelo_name = RecordObj_dd::get_termino_by_tipo($relaciones_modelo,null,true);
 						if($modelo_name==='component_image') {
@@ -135,10 +144,10 @@
 				$input_name 		= "{$tipo}_{$parent}";							
 				break;
 		
-		case 'tool_lang' :
+		case 'tool_lang':
 				$dato 				= $this->get_dato();
 				$dato 				= TR::addTagImgOnTheFly($dato);
-				$last_tag_index_id	= $this->get_last_tag_index_id();
+				#$last_tag_index_id	= $this->get_last_tag_index_id();
 
 				$id_wrapper 		= 'wrapper_'.$identificador_unico.'_tool_lang';
 				$input_name 		= "{$tipo}_{$parent}";
@@ -148,8 +157,8 @@
 				#$file_name  = 'edit';
 				break;
 	
-		case 'tool_time_machine' :
-				$last_tag_index_id	= $this->get_last_tag_index_id();
+		case 'tool_time_machine':
+				#$last_tag_index_id	= $this->get_last_tag_index_id();
 				$component_info 	= $this->get_component_info('json');
 
 				$canvas_id = null;
@@ -169,15 +178,16 @@
 
 				break;
 						
-		case 'fragment_info' :
+		case 'fragment_info':
 				$arguments = (object)$this->arguments;
 				if (!isset($arguments->tagName)) {
 					trigger_error("Error: tagName not defined in arguments (fragment_info)");
 					return;
 				}
+					dump($arguments->tagName, ' arguments->tagName ++ '.to_string()); die("Stoped!");
 
 				$tag 					= $arguments->tagName;
-				$tag_value 				= TR::tag2value($tag);
+				$tag_id 				= TR::tag2value($tag);
 				$tag_type 				= TR::tag2type($tag);
 				$tag_state 				= TR::tag2state($tag);
 
@@ -191,19 +201,19 @@
 					$locator->set_section_tipo( $section_tipo );
 					$locator->set_section_id( $parent );
 					$locator->set_component_tipo( $tipo );
-					$locator->set_tag_id( $tag_value );
+					$locator->set_tag_id( $tag_id );
 
 				$rel_locator = json_handler::encode($locator);
 					#dump($rel_locator,"rel_locator");
 				#$rel_locator_js_pretty	= json_encode($rel_locator); 	dump($rel_locator_js_pretty,"rel_locator_js_pretty");
 				#$rel_locator 			= json_handler::encode($rel_locator);
-				#$rel_locator 			= component_common::build_locator_relation($parent, $tipo, $tag_value);
+				#$rel_locator 			= component_common::build_locator_relation($parent, $tipo, $tag_id);
 
 				$raw_text 				= $this->get_dato();
-				$fragment_text 			= component_text_area::get_fragment_text_from_tag($tag, $raw_text)[0];
+				$fragment_text 			= component_text_area::get_fragment_text_from_tag($tag_id, $tag_type, $raw_text)[0];
 				break;
 
-		case 'selected_fragment__DES' :
+		case 'selected_fragment__DES':
 
 				$arguments = (object)$this->arguments;
 					#dump($arguments,"selected_fragment arguments");
@@ -219,7 +229,7 @@
 					#dump($tag_state_selector_html,'$tag_state_selector_html');
 				#$rel_locator 			= component_common::build_locator($parent, $tipo, $tag_value);
 				#$raw_text 				= $this->get_dato();
-				#$fragment_text 		= component_text_area::get_fragment_text_from_tag($tag, $raw_text)[0];	
+				#$fragment_text 		= component_text_area::get_fragment_text_from_tag($tag_id, $tag_type, $raw_text)[0];	
 				
 				/**
 				* FRAGMENT INFO HTML
@@ -254,7 +264,7 @@
 				$rel_locator = json_handler::encode($locator);
 				break;
 		
-		case 'search' :
+		case 'search':
 				# Showed only when permissions are >1
 				if ($permissions<1) return null;
 				
@@ -262,17 +272,19 @@
 				$ar_logical_operators 		= $this->build_search_logical_operators();
 				$valor 						= isset($_GET['tipo']) ? $_GET['tipo'] : null;
 
-				# Search input name
-				$search_input_name = $section_tipo.'_'.$tipo;
+				# Search input name (var search_input_name is injected in search -> records_search_list.phtml)
+				# and recovered in component_common->get_search_input_name()
+				# Normally is section_tipo + component_tipo, but when in portal can be portal_tipo + section_tipo + component_tipo
+				$search_input_name = $this->get_search_input_name();
 				break;
 		
-		case 'portal_list'	:
+		case 'portal_list':
 				if(empty($dato)) return null;
 				$file_name = 'list';
-		case 'list_tm' :
+		case 'list_tm':
 				$file_name = 'list';
 						
-		case 'list'	:	
+		case 'list':
 				/*
 					//if(strlen($valor)>$max_char) $valor = substr($valor,0,$max_char).'..';
 					$max_char 		 = 256;
@@ -299,7 +311,7 @@
 
 						foreach ($tags_en_texto[0] as $key => $tag) {
 
-							$ar_fragmento = (array)$this->get_fragment_text_from_tag($tag, $this->dato);
+							$ar_fragmento = (array)$this->get_fragment_text_from_tag($tag_id, $tag_type, $this->dato);
 									#dump($ar_fragmento,"ar_fragmento");
 							
 							if(strlen($ar_fragmento[0])>$max_char) {
@@ -337,8 +349,9 @@
 				if(strlen($valor)>$max_char) $valor = mb_substr($valor,0,$max_char).'..';
 				break;						
 		
-		case 'lang'	:
-					break;
+		case 'lang':
+				break;
+
 		case 'diffusion':
 				$diffusion_obj = new diffusion_component_obj();
 

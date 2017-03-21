@@ -257,11 +257,79 @@ class component_date extends component_common {
 	*/
 	public function get_valor() {
 
-		$previous_modo = $this->get_modo();
-		$this->set_modo('list'); // Force list mode
-		$valor = $this->get_html();
+		#$previous_modo = $this->get_modo();
+		#$this->set_modo('list'); // Force list mode
+		#$valor = $this->get_html();
 		# Restore modo after 
-		$this->set_modo($previous_modo);
+		#$this->set_modo($previous_modo);
+
+		$dato 		= $this->get_dato();
+		$propiedades= $this->get_propiedades();
+		$valor		= '';		
+		$date_mode 	= $this->get_date_mode();
+		switch ($date_mode) {
+
+			case 'range':
+				# Start
+				$valor_start = '';
+				if(isset($dato->start)) {
+					$dd_date	= new dd_date($dato->start);
+					/*
+					$valor_start= isset($propiedades->method->get_valor_local) 
+								? component_date::get_valor_local( $dd_date, reset($propiedades->method->get_valor_local) ) 
+								: component_date::get_valor_local( $dd_date, false );
+								*/
+					$valor_start = $dd_date->get_dd_timestamp("Y-m-d");
+					$valor .= $valor_start;
+				}
+
+				# End
+				$valor_end = '';
+				if(isset($dato->end->time) && (int)$dato->end->time > 0) {
+					$dd_date	= new dd_date($dato->end);
+					/*
+					$valor_end 	= isset($propiedades->method->get_valor_local) 
+								? component_date::get_valor_local( $dd_date, reset($propiedades->method->get_valor_local) ) 
+								: component_date::get_valor_local( $dd_date, false );
+					*/
+					$valor_end = $dd_date->get_dd_timestamp("Y-m-d");
+					$valor .= ' <> '. $valor_end;
+				}
+				#$valor .= $valor_start .' <> '. $valor_end;
+				break;
+
+			case 'period':
+				$valor_year	= $valor_month = $valor_day = '';
+				if(!empty($dato->period)) {
+					$dd_date = new dd_date($dato->period);
+					# Year
+					$valor_year	= isset($dd_date->year) ? $dd_date->year : '';
+					# Month
+					$valor_month= isset($dd_date->month) ? $dd_date->month : '';
+					# Day
+					$valor_day	= isset($dd_date->day) ? $dd_date->day : '';
+				}
+				if(!empty($valor_year)) {
+					$valor .= $valor_year;
+				}
+				if(!empty($valor_month)) {
+					$valor .= '-'.$valor_month;
+				}
+				if(!empty($valor_day)) {
+					$valor .= '-'.$valor_day;
+				}
+				break;
+
+			case 'date':
+			default:
+				if(!empty($dato)) {
+					$dd_date = new dd_date($dato);
+					$valor	  = $dd_date->get_dd_timestamp();
+				}
+				break;
+		}
+
+
 		/*
 		$valor 		= '';
 		$separator  = dd_date::$separator; //'/';
@@ -837,7 +905,7 @@ class component_date extends component_common {
 	* @return string $list_value
 	*/
 	public static function render_list_value($value, $tipo, $parent, $modo, $lang, $section_tipo, $section_id, $current_locator=null, $caller_component_tipo=null) {
-
+	
 		if($section_tipo===DEDALO_ACTIVITY_SECTION_TIPO) {
 			# nothing to do. Value is final value
 		}else{
@@ -849,14 +917,14 @@ class component_date extends component_common {
 													 	 $section_tipo);
 			
 			# Use already query calculated values for speed
-			$dato = json_handler::decode($value);
-			$component->set_dato($dato);
+			#$dato = json_handler::decode($value);
+			#$component->set_dato($dato);
+
 			$component->set_identificador_unico($component->get_identificador_unico().'_'.$section_id.'_'.$caller_component_tipo); // Set unic id for build search_options_session_key used in sessions
 			
 			$value = $component->get_html();
 			#$value = $component->get_valor();
 		}
-
 
 		return $value;		
 	}//end render_list_value
@@ -898,7 +966,6 @@ class component_date extends component_common {
 
 			case 'period':
 				// Not defined yet
-
 				break;
 
 			case 'date':
@@ -927,12 +994,13 @@ class component_date extends component_common {
 	* @return mixed $result
 	*/
 	public function get_valor_list_html_to_save() {
-		$result = $this->get_dato_unchanged();
-
+		#$result = $this->get_dato_unchanged();
+		$result = $this->get_valor();
+		
 		return $result;
 	}//end get_valor_list_html_to_save
 
-	
+
 
 }
 ?>

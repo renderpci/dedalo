@@ -131,7 +131,7 @@
 						# TOOL_DIFFUSION button for export to mysql
 						if ((bool)component_security_tools::is_authorized_tool_for_logged_user('tool_diffusion') &&
 							(bool)tool_diffusion::have_section_diffusion($tipo)) {
-							$tool_diffusion = new tool_diffusion($tipo,'button');							
+							$tool_diffusion = new tool_diffusion($tipo,'button');
 							$html_buttons  .= $tool_diffusion->get_html();
 						}
 						
@@ -140,7 +140,7 @@
 						#
 						# DEBUG BUTTONS
 						# Special debug only buttons
-						$is_global_admin = component_security_administrator::is_global_admin( navigator::get_user_id() );						
+						$is_global_admin = component_security_administrator::is_global_admin( navigator::get_user_id() );
 						if( (SHOW_DEBUG || $is_global_admin) && !isset($_REQUEST['cache_updated'])	) {
 							if(isset($_GET['m']) && strpos($_GET['m'], 'tool')!==false) {
 								# Nothing to show
