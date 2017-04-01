@@ -50,7 +50,6 @@ class login extends common {
 
 
 
-
 	/**
 	* LOGIN
 	* @see Mandatory vars: 'username','password','tipo_login','tipo_username','tipo_password','tipo_active_account'
@@ -517,14 +516,14 @@ class login extends common {
 
 	/**
 	* GET_AUTH_COOKIE_value	
-	    [mday]    => 17
-	    [wday]    => 2
-	    [mon]     => 6
-	    [year]    => 2003
-	    [yday]    => 167
-	    [weekday] => Tuesday
-	    [month]   => June
-	* @return 
+	*    [mday]    => 17
+	*    [wday]    => 2
+	*    [mon]     => 6
+	*    [year]    => 2003
+	*    [yday]    => 167
+	*    [weekday] => Tuesday
+	*    [month]   => June
+	* @return string $cookie_value
 	*/
 	private static function get_auth_cookie_value() {
 		$date = getdate();
@@ -769,10 +768,7 @@ class login extends common {
 			null,
 			$datos
 		);
-	}
-
-
-
+	}//end login_activity_report
 
 
 
@@ -785,7 +781,7 @@ class login extends common {
 	
 		$component  = component_common::get_instance('component_password', DEDALO_USER_PASSWORD_TIPO, -1, 'edit', DEDALO_DATA_NOLAN, DEDALO_SECTION_USERS_TIPO);
 		$dato 		= $component->get_dato();		
-		$default 	= login::SU_DEFAULT_PASSWORD; // Dedalo4debugChangePsW	
+		$default 	= login::SU_DEFAULT_PASSWORD; // Dedalo4debugChangePsW
 		
 		$current_version = tool_administration::get_current_version_in_db();
 		if( ($current_version[0] >= 4 && $current_version[1] >= 0 && $current_version[2] >= 22) || ($current_version[0] >= 4 && $current_version[1] >= 5) ){
