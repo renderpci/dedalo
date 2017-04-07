@@ -1,0 +1,119 @@
+<?php
+
+	# VISUALIZADOR HTML	
+	$html ='';	
+
+	$html .= "<ul class=\"widget_descriptors\">";
+
+	#
+	# HEADER
+	#$html .= "<li class=\"tab_title\">";	
+	#$html .= "  <div class=\"label_second header\">".label::get_label('terminos')." : $total_terms / $total_index</div>";
+	#$html .= "</li>";
+
+
+	#
+	# ROWS	
+
+	#
+	# TC
+	$html .= "<li class=\"\">";		
+	$html .= " <div class=\"label_first\">TC :</div>";
+	$html .= " <div class=\"label_second\">".$total_tc."</div>";			
+	$html .= "</li>";
+
+
+	#if(SHOW_DEBUG) {
+	if (!empty($ar_tc_wrong)) {
+		$html .= "<li class=\"\">";
+		$html .= " <div class=\"label_second\">";
+		foreach ($ar_tc_wrong as $current_tc) {
+			$html .= "	<span class=\"warning\">".label::get_label('etiqueta_revisar').": $current_tc</span><br>";
+		}
+		$html .= " </div>";
+		$html .= "</li>";
+	}
+	#}
+
+
+	#
+	# INDEX
+	$html .= "<li class=\"\">";
+	$html .= " <div class=\"label_first\">INDEX :</div>";
+	$html .= " <div class=\"label_second\">".$total_index."</div>";
+	$html .= "</li>";
+
+	#
+	# INDEX IN MISSING
+	/*
+	if (!empty($ar_missing_indexIn) || !empty($ar_missing_indexOut)) {	
+		$html .= "<li class=\"\">";
+		#$html .= " <div class=\"label_first\">".label::get_label('index_errors')."</div>";
+		
+
+		$html .= " <div class=\"label_second\">";
+
+		// MODO DESGLOSADO
+			$missing_indexIn_html='';
+			if (!empty($ar_missing_indexIn)) {
+			foreach ($ar_missing_indexIn as $ctag) {
+				#dump($ctag, ' ctag ++ '.to_string());
+
+				#$tag_id = TR::tag2value($ctag);
+					#dump($tag_id, ' $tag_id ++ '.to_string());
+				// ?m=tool_indexation&t=rsc36&section_tipo=rsc167&parent=2&top_tipo=oh1&top_id=1&tag_id=1
+				#$url = "?m=tool_indexation&t={$tipo}&section_tipo={$section_tipo}&parent={$parent}&top_tipo={$top_tipo}&top_id={$top_id}&tag_id={$tag_id}";
+				
+				$img = TR::create_text_editor_image_from_tag( $ctag, 'index' );
+				$missing_indexIn_html .= "<span class=\"error\">".label::get_label('etiqueta_perdida').":</span><a>$img</a><br>";
+			}
+			}
+			$html .= $missing_indexIn_html;
+
+			$missing_indexOut_html='';
+			if (!empty($ar_missing_indexOut)) {
+			foreach ($ar_missing_indexOut as $ctag) {
+
+				$img = TR::create_text_editor_image_from_tag( $ctag, 'index' );
+				$missing_indexOut_html .= "<span class=\"error\">".label::get_label('etiqueta_perdida').":</span>$img<br>";
+			}
+			}
+			$html .= $missing_indexOut_html;
+					
+
+		#$html .= "<span class=\"warning\">".label::get_label('etiquetas_borradas').": $total_deleted_tags</span><br>";
+
+		$html .= "</div>";
+
+		$html .= "</li>";
+	}
+	*/
+
+	if ($total_missing_tags>0 || $total_to_review_tags>0) {		
+	
+		$html .= "<li class=\"\">";
+		$html .= " <div class=\"label_second\">";
+		if ($total_missing_tags>0) {
+			$html .= "	<span class=\"error\">".label::get_label('etiquetas_perdidas').": $total_missing_tags</span><br>";
+		}
+		if ($total_to_review_tags>0) {
+			$html .= "	<span class=\"warning\">".label::get_label('etiqueta_revisar').": $total_to_review_tags</span><br>";
+		}	
+		$html .= " </div>";
+		$html .= "</li>";
+	}
+
+	#
+	# TOTALS CHARS
+	$html .= "<li class=\"\">";
+	$html .= " <div class=\"label_first\">CHARS :</div>";
+	$html .= " <div class=\"label_second\">".$total_chars."</div>";		
+	$html .= "</li>";
+	
+
+	$html .= "</ul>";
+
+
+	print $html;
+
+?>
