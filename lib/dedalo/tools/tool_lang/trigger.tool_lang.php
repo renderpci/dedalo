@@ -1,26 +1,197 @@
 <?php
-require_once( dirname(dirname(dirname(__FILE__))) .'/config/config4.php');
-
-if(login::is_logged()!==true) die("<span class='error'> Auth error: please login </span>");
-
-# set vars
-	$vars = array('mode','id','parent','section_tipo','dato','tipo','lang','source_lang','target_lang','caller_component_tipo','caller_element','tool_name','tool_locator');
-		foreach($vars as $name) $$name = common::setVar($name);
-
-# mode
-if(empty($mode)) exit("<span class='error'> Trigger: Error Need mode..</span>");
+$start_time=microtime(1);
+include( dirname(dirname(dirname(__FILE__))) .'/config/config4.php');
+# TRIGGER_MANAGER. Add trigger_manager to receive and parse requested data
+common::trigger_manager();
 
 
-if (empty($section_tipo)) {
-	exit("<span class='error'> Trigger: Error Need section_tipo..</span>");
-}
+
+/**
+* render_component
+* @param object $json_data
+*/
+function render_component($json_data) {
+	global $start_time;
+
+	# Write session to unlock session file
+	session_write_close();
+
+	$response = new stdClass();
+		$response->result 	= false;
+		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
+
+	$vars = array('tipo','parent','modo','lang','section_tipo','role');
+		foreach($vars as $name) {
+			$$name = common::setVarData($name, $json_data);
+			# DATA VERIFY
+			#if ($name==='dato') continue; # Skip non mandatory
+			if (empty($$name)) {
+				$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty '.$name.' (is mandatory)';
+				return $response;
+			}
+		}
+
+
+	$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);	
+	$modo 			= 'tool_lang';
+	#$modo 			= 'tool_structuration';
+
+	# COMPONENT	
+	$component_obj	= component_common::get_instance($modelo_name,
+													 $tipo,
+													 $parent,
+													 $modo,
+													 $lang,
+													 $section_tipo);	
+	#dump($component_obj,"component_obj tipo:$tipo, parent:$parent, modo:$modo, lang: $lang");
+	#$component_obj->set_variant( tool_lang::$source_variant );
+
+
+	if ($role==="selector_source") {
+		$component_obj->role = "source_lang";
+	}
+	
+
+	# Get component html
+	$html = $component_obj->get_html();
+	
+	$response->result 	= $html;
+	$response->msg 		= 'Ok. Request done ['.__FUNCTION__.']';
+
+	# Debug
+	if(SHOW_DEBUG===true) {
+		$debug = new stdClass();
+			$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
+			foreach($vars as $name) {
+				$debug->{$name} = $$name;
+			}
+
+		$response->debug = $debug;
+	}
+	
+	return (object)$response;
+}//end render_component
+
+
+/**
+* update_tool_header 
+* @param $caller_component_tipo
+* @param $caller_element
+* @param $parent
+*/
+function update_tool_header($json_data) {
+	global $start_time;
+
+	# Write session to unlock session file
+	session_write_close();
+
+	$response = new stdClass();
+		$response->result 	= false;
+		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
+
+	$vars = array('tipo','parent','section_tipo','lang','tool_locator','top_tipo');
+		foreach($vars as $name) {
+			$$name = common::setVarData($name, $json_data);
+			# DATA VERIFY
+			#if ($name==='dato') continue; # Skip non mandatory
+			if (empty($$name)) {
+				$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty '.$name.' (is mandatory)';
+				return $response;
+			}
+		}	
+	
+
+	$modelo_name    = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+	$component_obj  = component_common::get_instance($modelo_name,
+													$tipo,
+													$parent,
+													'edit_tool',
+													$lang,
+													$section_tipo);
+	#
+	# STATE
+	# Create component_state configurated
+	$component_state 		= $component_obj->get_component_state( $tool_locator, $component_obj->get_lang() );
+	$component_state_html 	= '';
+	if ( !empty($component_state) && is_object($component_state) ) {
+		$component_state_html = $component_state->get_html();
+	}	
+	debug_log(__METHOD__." Updated tool header ".to_string(), logger::DEBUG);
+	
+	$response->result 	= $component_state_html;
+	$response->msg 		= 'Ok. Request done ['.__FUNCTION__.']';
+
+	# Debug
+	if(SHOW_DEBUG===true) {
+		$debug = new stdClass();
+			$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
+			foreach($vars as $name) {
+				$debug->{$name} = $$name;
+			}
+
+		$response->debug = $debug;
+	}
+	
+	return (object)$response;
+}//end update_tool_header
+
+
+
+/**
+* AUTOMATIC TRANSLATION
+* @param $source_lang
+* @param $target_lang
+* @param $source_id
+* @param $tipo
+* @param $parent
+*/
+function automatic_translation($json_data) {
+	global $start_time;
+	
+	# Write session to unlock session file
+	#session_write_close();
+
+	$response = new stdClass();
+		$response->result 	= false;
+		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
+
+	# mandatory vars
+	$vars = array('source_lang','target_lang','tipo','parent','section_tipo','top_tipo');
+			foreach($vars as $name) {
+				$$name = common::setVarData($name, $json_data);
+				# DATA VERIFY
+				#if ($name==='dato') continue; # Skip non mandatory
+				if (empty($$name)) {
+					$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty '.$name.' (is mandatory)';
+					return $response;
+				}
+			}	
+
+	// Options are the same as reveived json_data object
+	$options  = $json_data;
+	$response = tool_lang::automatic_translation($options);
+
+	# Debug
+	if(SHOW_DEBUG===true) {
+		$debug = new stdClass();
+			$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
+			foreach($vars as $name) {
+				$debug->{$name} = $$name;
+			}
+
+		$response->debug = $debug;
+	}
+	
+	return (object)$response;
+}//end automatic_translation
+
 
 
 /**
 * PROPAGATE MARKS
 *
 */
-if($mode=='propagate_marks') {
+function propagate_marks() {
 	die(" NO ACABADA !!");
 	if(!$sourceID || !$targetID) die("propagateMarks: Need more vars ! (sourceID:$sourceID , targetID:$targetID, $texto:$texto");
 	if(!isset($texto)) exit();
@@ -74,216 +245,68 @@ if($mode=='propagate_marks') {
 	$html 				.= " \n PROPAGATOR LOG: \n".$TransPropagatorObj->get_html_log();
 	
 	exit(msgJS($html));
-}
+}//end propagate_marks
 
 
 
 /**
-* LOAD SOURCE COMPONENT (RIGHT SIDE)
-* @param $tipo
-* @param $lang
-* @param $parent
+* OPEN_STRUCTURATION_SELECTOR
+* @return object $response
 */
-if($mode=='load_source_component') { 	
-	
-	if (empty($tipo)) throw new Exception("Error Processing Request: Unable load component ! (Few vars1 tipo)", 1);
-	if (empty($parent)) throw new Exception("Error Processing Request: Unable load component ! (Few vars1 parent)", 1);
-	if (empty($section_tipo)) throw new Exception("Error Processing Request: Unable load component ! (Few vars1 section_tipo)", 1);
-	if (empty($lang) ) throw new Exception("Error Processing Request: Unable load component ! (Few vars1 lang)", 1);
+function open_structuration_selector($json_data) {
+	global $start_time;
 
-	$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);	
-	$modo 			= 'tool_lang';
+	$response = new stdClass();
+		$response->result 	= false;
+		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
 
-
-	# COMPONENT	
-	$component_obj	= component_common::get_instance($modelo_name, $tipo, $parent, $modo, $lang, $section_tipo);	
-		#dump($component_obj,"component_obj tipo:$tipo, parent:$parent, modo:$modo, lang: $lang");
-
-	# Get component html
-	$html = $component_obj->get_html();
-	
-	print $html;
-	exit();
-}
-
-/**
-* LOAD TARGET COMPONENT (RIGHT SIDE)
-* @param $tipo
-* @param $lang
-* @param $parent
-*/
-if($mode=='load_target_component') {
-	
-	if (empty($tipo)) throw new Exception("Error Processing Request: Unable load component ! (Few vars1 tipo)", 1);
-	if (empty($parent)) throw new Exception("Error Processing Request: Unable load component ! (Few vars1 parent)", 1);
-	if (empty($section_tipo)) throw new Exception("Error Processing Request: Unable load component ! (Few vars1 section_tipo)", 1);
-	if (empty($lang) ) throw new Exception("Error Processing Request: Unable load component ! (Few vars1 lang)", 1);
-
-	$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);	
-	$modo 			= 'tool_lang';
-	
-	# COMPONENT	
-	$component_obj	= component_common::get_instance($modelo_name, $tipo, $parent, $modo, $lang, $section_tipo);
-		#dump($component_obj,'component_obj');
-
-	# Set variant to configure 'identificador_unico' of current component
-	$component_obj->set_variant( tool_lang::$target_variant );
-
-	# Get component html
-	$html = $component_obj->get_html();
-
-	# Store last target component
-	#$_SESSION['tool_lang']['last_target_lang'] = $lang;
-	
-	print $html;
-	exit();
-}
-
-/**
-* update_tool_header 
-* @param $caller_component_tipo
-* @param $caller_element
-* @param $parent
-*/
-if($mode=='update_tool_header') { 	
-	
-	if (empty($tipo)||
-		empty($parent) ||
-		empty($section_tipo) ||
-		empty($lang) ||
-		empty($tool_name) || 
-		empty($tool_locator)
-		) exit("Error Processing Request: Unable update_tool_header ! (Few vars1)");
-
-	$modelo_name    = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
-	$component_obj  = component_common::get_instance($modelo_name,
-													$tipo,
-													$parent,
-													'edit_tool',
-													$lang,
-													$section_tipo);
-
-	#
-	# STATE
-	# Create component_state configurated
-	$component_state 		= $component_obj->get_component_state( $tool_locator, $component_obj->get_lang() );
-	$component_state_html 	= '';
-	if ( !empty($component_state) && is_object($component_state) ) {
-		$component_state_html = $component_state->get_html();
-	}
-	
-	debug_log(__METHOD__." Updated tool header ".to_string(), logger::DEBUG);
-	
-	print $component_state_html;
-	exit();
-	
-}
-
-
-/**
-* AUTOMATIC TRANSLATION
-* @param $source_lang
-* @param $target_lang
-* @param $source_id
-* @param $tipo
-* @param $parent
-*/
-if($mode=='automatic_translation') {
-
-	# mandatory vars
-	$mandatoy_vars = array('source_lang','target_lang','tipo','parent');
-	foreach ($mandatoy_vars as $var_name) {
-		if (empty($$var_name)) throw new Exception("Error Processing Request: $var_name is mandatory!", 1);
-	}	
-
-	# SOURCE TEXT . get source text
-	# IMPORTANT : use 'list' as 'modo' because 'edit' can change the component lang on the fly when a reference component_select_lang is defined
-	$modo = 'list';
-	$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
-	$component_obj	= component_common::get_instance($modelo_name, $tipo, $parent, $modo, $source_lang, $section_tipo);
-	$dato 			= $component_obj->get_dato();
-	if ($modelo_name==='component_input_text') {
-		$dato = $component_obj->get_valor(0);
-	}
-	$dato			= strip_tags($dato, '<br><strong><em><apertium-notrans>');	# allow only some thtml tags	
-	$source_text	= $dato;
-
-	# ADDTAGIMGONTHEFLY : Añadimos las etiquetas de imagen para que Apertium no toque las etiqueta originales de la base de datos
-	# Poner Apertium en modo 'html' para ello
-	$source_text	= TR::addTagImgOnTheFly($source_text);
-		#dump($source_text, "$modelo_name, $tipo, $parent, 'edit', $source_lang, $section_tipo"); die();
-	
-	
-	# DIRECTION
-	$direction 		= tool_lang::get_babel_direction($source_lang, $target_lang);
-		#dump($direction,'direction',"",true);
-
-	# 
-	# CURL_EXEC
-	
-		# set curl variables
-		$url 			= DEDALO_TRANSLATOR_URL;
-		$source_text	= trim($source_text);
-		$fields = array(
-					'text'=>urlencode($source_text),
-					'direction'=>urlencode($direction)
-				);
-		$fields_string = '';
-		
-		# url-ify the data for the POST
-		foreach($fields as $key=>$value) {
-			$fields_string .= $key.'='.$value.'&';
+	# set vars
+	$vars = array('section_tipo','section_id','component_tipo','lang');
+		foreach($vars as $name) {
+			$$name = common::setVarData($name, $json_data);
+			# DATA VERIFY
+			# if ($name==='max_records' || $name==='offset') continue; # Skip non mandatory
+			if (empty($$name)) {
+				$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty '.$name.' (is mandatory)';
+				return $response;
+			}
 		}
-		rtrim($fields_string,'&');
-		#dump($fields, '$fields - ' .$url.'?'.$fields_string);
-		
-		# open connection
-		$ch = curl_init();
-		
-		# set the url, number of POST vars, POST data
-		curl_setopt($ch,CURLOPT_URL,$url);
-		curl_setopt($ch,CURLOPT_POST,count($fields));
-		curl_setopt($ch,CURLOPT_POSTFIELDS,$fields_string);
-		curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-		
-		# execute post
-		$result = curl_exec($ch);
-		
-		# close connection
-		curl_close($ch);
-		#dump($result,'$result',"");
-			
-	# Set and save (save result text)
-	$ar_invalid_respone = array('Error: Mode','Error. You need authorization');
-	foreach ($ar_invalid_respone as $invalid_respone) {
-		if( strpos($result,$invalid_respone)!==false ) exit($result);
+
+	$source_lang 	= component_text_area::force_change_lang($component_tipo, $section_id, 'lang', $lang, $section_tipo);
+	if ($source_lang===$lang) {
+		$response->msg 		= "Warning. Lang ($lang) and source lang ($source_lang) are the same..";
+		return $response;
 	}
 
-	# DECODE HTML ENTITIES . Babel devuelve los caracteres especiales codificados como entidades html. Para revertir el formato usamos html_entity_decode
-	# convirtiendo las comillas dobles en sencillas (flag ENT_COMPAT) y forzando el formato final a UTF-8
-	# error_log( "encoding: ".mb_detect_encoding($result) ." - ".$result );
-	$result = html_entity_decode($result,ENT_COMPAT,'UTF-8');
+	$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+	$component 		= component_common::get_instance($modelo_name,
+													 $component_tipo,
+													 $section_id,
+													 'list',
+													 $source_lang,
+													 $section_tipo);
 
-	# SANITIZE BABEL RESULT
-	# Apertium cambia el formato de las etiquetas al devolverlas. Se restitituyen aquí
-	tool_lang::sanitize_result($result);	
-		#dump($result,'$result'); die();
-	
-	
-	# TARGET TEXT 
-	# IMPORTANT : use 'list' as 'modo' because 'edit' can change the component lang on the fly when a reference component_select_lang is defined
-	$modo = 'list';
-	$component_obj	= component_common::get_instance($modelo_name, $tipo, $parent, $modo, $target_lang, $section_tipo);
-		#dump($component_obj,'$component_obj PRE');
-	$component_obj->set_dato($result);
-	$component_obj->Save(false);	# Important: send arg 'false' to save for avoid alter other langs tags (propagate)
-		#dump($component_obj,'$component_obj POST SAVE');
+	$dato = $component->get_dato();
+	$dato = component_text_area::resolve_titles($dato, $component_tipo, $section_tipo, $section_id, null, $source_lang, true);
+	$dato = TR::addTagImgOnTheFly($dato);
+	$response->result 	= $dato;
+	$response->msg = 'OK. Loaded component source lang ($source_lang)';
 
-	$id = $component_obj->get_parent();
+	# Debug
+	if(SHOW_DEBUG===true) {
+		$debug = new stdClass();
+			$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
+			foreach($vars as $name) {
+				$debug->{$name} = $$name;
+			}
+
+		$response->debug = $debug;
+	}
 	
-	#print $result;
-	print $id;
-	exit();
-}
+
+	return (object)$response;
+}//end open_structuration_selector
+
+
 
 ?>

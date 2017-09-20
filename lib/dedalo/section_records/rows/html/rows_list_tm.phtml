@@ -2,43 +2,43 @@
 	
 	# VISUALIZADOR HTML	
 
-	print "\n\n<!-- ROWS [$id] -->";	
+	print "<!-- ROWS [$id] -->";	
 
 	# CONTENIDO (INPUT)
-	$html_contenido  = "\n<tr class=\"\" data-dato='$rel_locator'>";		
+	$html_contenido  = "<tr class=\"\" data-dato='$rel_locator'>";		
 	
-	switch($permissions) {
+	switch(true) {
 			
-		case 0	:	$html_contenido .= "\n <span class=\"css_span_dato\"> ".label::get_label('sin_acceso')." </span>";
+		case $permissions==0	:	$html_contenido .= "<span class=\"css_span_dato\">".label::get_label('sin_acceso')."</span>";
 					break;
 						
 		case ($permissions>=1)	:
 					
 					if( !is_array($ar_valor) || count($ar_valor)==0 ) {
 						
-						$html_contenido .= "\n <td class=\"section_list_td_border\">";
+						$html_contenido .= "<td class=\"section_list_td_border\">";
 						#$html_contenido .= "No records found.. ";
-						$html_contenido .= "\n </td>";
+						$html_contenido .= "</td>";
 						
 					}else{
 					
 						# TD ID
 						$title=null;
 						if(SHOW_DEBUG===true) $title .= "matrix id: $id";
-						$html_contenido .= "\n <td class=\"section_list_td_border section_list_td_row id_column\" title=\"$title\">";		
+						$html_contenido .= "<td class=\"section_list_td_border section_list_td_row id_column\" title=\"$title\">";		
 						
 							if(SHOW_DEBUG===true) {
 								$html_contenido .= "<mark style=\"color:#a3a3a3;padding-right:5px\">$current_id</mark>";
 							}
 
 							# SECTION_ID TEXT
-							$html_contenido .= "\n  $section_id ";
+							$html_contenido .= "  $section_id ";
 							$id_time_machine = $current_id;
 							
 							#
 							# BUTTON RESTORE
 							$title = label::get_label('recuperar') .' '.label::get_label('registro');
-							if(SHOW_DEBUG===true) $title .= "\n id time machine: $id_time_machine";
+							if(SHOW_DEBUG===true) $title .= " id time machine: $id_time_machine";
 					        $html_contenido .= "
 					        <!-- BUTTON RECOVER -->
 					        <div class=\"icon_bs tool_time_machine_goback_icon link\" title=\"$title\"
@@ -53,10 +53,10 @@
 
 							# DEBUG INFO
 							if(SHOW_DEBUG===true) {
-								#$html_contenido .= "\n <span class=\"css_span_debugger\" id=\"debugger_{$id}\" >{$id}</span>";	
+								#$html_contenido .= " <span class=\"css_span_debugger\" id=\"debugger_{$id}\" >{$id}</span>";	
 							}
 							
-						$html_contenido .= "\n </td>";		
+						$html_contenido .= "</td>";		
 						
 						# TD DATOS
 						foreach($ar_valor as $component_tipo => $valor_list) {
@@ -66,14 +66,14 @@
 							$td_css_selector = 'td_'.$modelo_name;
 
 							$html_contenido .= "<td class=\"section_list_td_border section_list_td_row $td_css_selector\" data-tipo=\"$component_tipo\">";
-							$html_contenido .= " <div>";
-							$html_contenido .=   $valor_list;
-							$html_contenido .= " </div>";
+							$html_contenido .= "<div>";
+							$html_contenido .= $valor_list;
+							$html_contenido .= "</div>";
 							$html_contenido .= "</td>";
 						}
 					}
 	}
-	$html_contenido .= "\n</tr>";
+	$html_contenido .= "</tr>";
 	
 	# PRINT HTML
 	print $html_contenido;

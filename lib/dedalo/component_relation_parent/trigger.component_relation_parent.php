@@ -1,24 +1,11 @@
 <?php
-require_once( dirname(dirname(__FILE__)).'/config/config4.php');
+$start_time=microtime(1);
+include( dirname(dirname(__FILE__)).'/config/config4.php');
+# TRIGGER_MANAGER. Add trigger_manager to receive and parse requested data
+common::trigger_manager();
 
-if(login::is_logged()!==true) die("<span class='error'> Auth error: please login </span>");
-
-# set vars
-	$vars = array('mode');
-		foreach($vars as $name) $$name = common::setVar($name);
-
-# Set JSON headers for all responses
-header('Content-Type: application/json');
-
-# mode
-if(empty($mode)) exit("<span class='error'> Trigger: Error Need mode..</span>");
-
-
-# CALL FUNCTION
-if ( function_exists($mode) ) {
-	$res = call_user_func($mode);
-	echo json_encode($res);
-}
+# IGNORE_USER_ABORT
+ignore_user_abort(true);
 
 
 
@@ -26,23 +13,43 @@ if ( function_exists($mode) ) {
 * ADD_PARENT
 * @return bool
 */
-function add_parent() {
+function add_parent($json_data) {
+	global $start_time;
 
-	$result = false;
+	$response = new stdClass();
+		$response->result 	= false;
+		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';	
 	
 	$vars = array('tipo','parent','section_tipo','children_section_tipo','children_section_id','children_component_tipo');
 		foreach($vars as $name) {
-			$$name = common::setVar($name);
+			$$name = common::setVarData($name, $json_data);
+			# DATA VERIFY
+			#if ($name==='top_tipo' || $name==='top_id') continue; # Skip non mandatory
 			if (empty($$name)) {
-				exit("Error. ".$$name." is mandatory");
+				$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty '.$name.' (is mandatory)';
+				return $response;
 			}
 		}
+
+	$add_parent = component_relation_parent::add_parent($tipo, $parent, $section_tipo, $children_section_tipo, $children_section_id, $children_component_tipo); 
 		
-	$result = component_relation_parent::add_parent($tipo, $parent, $section_tipo, $children_section_tipo, $children_section_id, $children_component_tipo);
+	$response->result 	= $add_parent;
+	$response->msg 		= 'Ok. Request done ['.__FUNCTION__.']';
 
-	return (bool)$result;
+	# Debug
+	if(SHOW_DEBUG===true) {
+		$debug = new stdClass();
+			$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
+			foreach($vars as $name) {
+				$debug->{$name} = $$name;
+			}
+
+		$response->debug = $debug;
+	}
+	
+
+	return (object)$response;
 }//end add_parent
-
 
 
 
@@ -50,30 +57,41 @@ function add_parent() {
 * REMOVE_PARENT
 * @return bool
 */
-function remove_parent() {
+function remove_parent($json_data) {
+	global $start_time;
 
-	$result = false;
+	$response = new stdClass();
+		$response->result 	= false;
+		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
+	
 	
 	$vars = array('tipo','parent','section_tipo','children_section_tipo','children_section_id','children_component_tipo');
 		foreach($vars as $name) {
-			$$name = common::setVar($name);
+			$$name = common::setVarData($name, $json_data);
 			if (empty($$name)) {
 				exit("Error. ".$$name." is mandatory");
 			}
 		}
 	
-	$result = component_relation_parent::remove_parent($tipo, $parent, $section_tipo, $children_section_tipo, $children_section_id, $children_component_tipo);
+	$remove_parent 		= component_relation_parent::remove_parent($tipo, $parent, $section_tipo, $children_section_tipo, $children_section_id, $children_component_tipo);
+
+	$response->result 	= $remove_parent;
+	$response->msg 		= 'Ok. Request done [remove_parent]';
+
+	# Debug
+	if(SHOW_DEBUG===true) {
+		$debug = new stdClass();
+			$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
+			foreach($vars as $name) {
+				$debug->{$name} = $$name;
+			}
+
+		$response->debug = $debug;
+	}
+
 	
-	return (bool)$result;
+	return (object)$response;
 }//end remove_parent
-
-
-
-
-
-
-
-
 
 
 

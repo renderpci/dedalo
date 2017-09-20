@@ -157,7 +157,10 @@ class diffusion_index_ts extends diffusion {
 		#$ar_indexations = Tesauro::get_ar_indexations( $this->terminoID );
 			#dump($ar_indexations,'$ar_indexations');
 
-		$component 		= component_common::get_instance('component_relation_index',
+		$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($this->component_tipo, true);
+
+		# INDEXATIONS
+		$component 		= component_common::get_instance($modelo_name, //'component_relation_index',
 														 $this->component_tipo,
 														 $this->section_id,
 														 'list',
@@ -165,6 +168,17 @@ class diffusion_index_ts extends diffusion {
 														 $this->section_tipo);
 
 		$ar_locators = $component->get_dato();
+
+		/*
+		$component 		= component_common::get_instance('component_relation_struct',
+														 $relation_struct_component_tipo,
+														 $this->section_id,
+														 'list',
+														 DEDALO_DATA_NOLAN,
+														 $this->section_tipo); 
+
+		$ar_locators = $component->get_dato(); */
+			#dump($ar_locators, ' ar_locators ++ '.to_string());
 
 		return (array)$ar_locators;
 	}

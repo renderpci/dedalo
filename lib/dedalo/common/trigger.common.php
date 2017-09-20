@@ -12,8 +12,8 @@ if(empty($mode)) exit("<span class='error'> Trigger: Error Need mode..</span>");
 
 /**
 * CHANGE_LANG 
-*/
-if($mode=='change_lang') {
+*//* UNUSED ??
+if($mode=='change_lang') {	
 
 	# DATA VERIFY
 	if(empty($dedalo_application_lang) || strlen($dedalo_application_lang)<3) exit("Trigger Error: dedalo_application_lang is mandatory");
@@ -38,6 +38,6 @@ if($mode=='change_lang') {
 
 # Login verify os disabled 
 #if(login::is_logged()!==true) die("<span class='error'> Auth error: please login </span>");
-
+*/
 
 ?>

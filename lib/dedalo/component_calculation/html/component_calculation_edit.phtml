@@ -1,71 +1,75 @@
 <?php
 
-	# VISUALIZADOR HTML	
+	# HTML VIEW
+	
+	
+	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'in', $modo, $lang);
 
-	
-	
-	
-	print "\n<!-- NUMBER [tipo:$tipo section_id_matrix:$parent] $label -->";
-	print "\n<div class=\"wrap_component css_wrap_calculation wrap_component_{$tipo}\" id=\"{$id_wrapper}\"
-	data-tipo=\"{$tipo}\"
-	data-lang=\"{$lang}\"
-	data-section_tipo=\"{$section_tipo}\"
-	data-parent=\"{$parent}\"
-	data-modo=\"{$modo}\"
-	data-dato=\"{$dato}\"
-	data-component_name=\"{$component_name}\"
-	data-component_info='{$component_info}'
-	>";
+
+	print "\n<div class=\"wrap_component css_wrap_calculation wrap_component_{$tipo}\" id=\"{$id_wrapper}\" ";
+	print "data-tipo=\"{$tipo}\" ";
+	print "data-lang=\"{$lang}\" ";
+	print "data-section_tipo=\"{$section_tipo}\" ";
+	print "data-parent=\"{$parent}\" ";
+	print "data-modo=\"{$modo}\" ";
+	print "data-dato=\"{$dato}\"  ";
+	print "data-formula ='{$preprocess_formula}' ";
+	print "data-component_name=\"{$component_name}\" ";
+	print "data-component_info='{$component_info}' ";
+	print ">";
 	
 		
 		# ETIQUETA (LABEL)
 		$html_label = component_common_draw::draw_label($this);
 		
 		# CONTENIDO (INPUT)
-		$html_contenido = '';
+		$html_content = '';
 		switch($permissions) {
 				
-			case 0	:	$html_contenido .= "";
+			case 0	:	$html_content .= "";
 						break;
 							
-			case 1	: 	$html_contenido .= "\n <span class=\"css_span_dato\">$dato</span>";
+			case 1	: 	$html_content .= "<span class=\"css_span_dato\">$dato</span>";
 						break;	
 							
-			case ($permissions>=2)	:
-		
-					
-						$html_contenido .= "\n <input class=\"css_calculation\" type=\"text\"
-						onchange=\"component_number.Save(this)\" 
-						name=\"{$input_name}\" 
-						data-tipo=\"{$tipo}\"
-						data-section_tipo=\"{$section_tipo}\"
-						data-parent=\"{$parent}\"
-						data-lang=\"{$lang}\" 
-						value=\"{$dato}\" 
-						title=\"$html_title\"
-						/>";			
-						
-						#$html_contenido .= "\n <span  class=\"css_span_log\"></span>";					
-						#$html_contenido .= "\n <span  class=\"css_span_ejemplo\">$ejemplo</span>";						
+			case ($permissions>=2) :
+
+						$html_content .= "<div class=\"css_calculation\" type=\"text\" ";
+						$html_content .= "id=\"{$identificador_unico}\" ";
+						$html_content .= "name=\"{$input_name}\" ";
+						$html_content .= "data-tipo=\"{$tipo}\" ";
+						$html_content .= "data-section_tipo=\"{$section_tipo}\" ";
+						$html_content .= "data-parent=\"{$parent}\" ";
+						$html_content .= "data-lang=\"{$lang}\" ";
+						$html_content .= "data-formula ='{$preprocess_formula}' ";
+						$html_content .= "title=\"$html_title\" ";
+						$html_content .= ">";
+						$html_content .= $dato;
+						$html_content .= "</div>";
+
+						#$html_content .= "\n <span  class=\"css_span_log\"></span>";					
+						#$html_content .= "\n <span  class=\"css_span_ejemplo\">$ejemplo</span>";						
 						
 						if(SHOW_DEBUG) {
-							#$html_contenido .= "\n <span class=\"css_span_debugger\" id=\"debugger_{$tipo}\" >{$debugger}</span>";	
-						}
-						break;
-						
-												
+							#$html_content .= "\n <span class=\"css_span_debugger\" id=\"debugger_{$tipo}\" >{$debugger}</span>";	
+						}						
+						break;												
 		}
 
 		# Prepare content to show in page
-		tools::prepare_content($html_contenido);	
+		tools::prepare_content($html_content);	
 		
+		# Init tool
+		$html_content .= "<script>$component_name.init({uid:'$identificador_unico'})</script>";
 
 		# PRINT HTML
 		print $html_label;
-		print $html_contenido;
+		print $html_content;
 	
 	
-	print "\n</div><!-- /css_wrap_calculation NUMBER [tipo:$tipo section_id_matrix:$parent] $label -->\n"; //wrap
+	print "</div>";//wrap
+
+	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'out', $modo, $lang);
 
 
 ?>

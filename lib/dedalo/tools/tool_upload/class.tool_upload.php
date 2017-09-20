@@ -566,7 +566,31 @@ class tool_upload extends tool_common {
 							}else{
 								#throw new Exception("Error Processing Request. Current audio extension [$file_ext] is not supported (q:$quality) (2)", 1);
 							}
-						}//end if ($quality==DEDALO_AV_QUALITY_ORIGINAL) {												
+						}//end if ($quality==DEDALO_AV_QUALITY_ORIGINAL) {	
+
+
+						#
+						# TARGET_FILENAME 
+						# Save original file name in a component_input_text
+						$propiedades 		 = $this->component_obj->get_propiedades();
+						$current_section_id  = $this->component_obj->get_parent();
+						$target_section_tipo = $this->component_obj->get_section_tipo();
+						$file_name 			 = $this->file_obj->f_name;	//pathinfo($this->file_obj->f_name, PATHINFO_BASENAME);
+
+						if (isset($propiedades->target_filename)) {
+							$modelo_name_target_filename= RecordObj_dd::get_modelo_name_by_tipo($propiedades->target_filename,true);
+							$component_target_filename 	= component_common::get_instance(
+																				$modelo_name_target_filename, 
+																				$propiedades->target_filename, 
+																				$current_section_id,
+																				'edit',
+																				DEDALO_DATA_NOLAN, 
+																				$target_section_tipo
+																				);
+							$component_target_filename->set_dato( $file_name );
+							$component_target_filename->Save();
+							debug_log(__METHOD__." Saved original filename: ".to_string($file_name), logger::DEBUG);
+						}											
 
 					} catch (Exception $e) {
 						$msg = 'Exception[upload_trigger][FFMPEG]: ' .  $e->getMessage() . "\n";
@@ -588,6 +612,27 @@ class tool_upload extends tool_common {
 						# THUMB . Eliminamos el thumb anterior si existiese. Los thumbs se crean automáticamente al solicitarlos (list)
 						#$this->file_obj->thumb_file = $this->build_thumb_file($SID);
 
+						#
+						# TARGET_FILENAME 
+						# Save original file name in a component_input_text
+						$propiedades 		 = $this->component_obj->get_propiedades();
+						$current_section_id  = $this->component_obj->get_parent();
+						$target_section_tipo = $this->component_obj->get_section_tipo();
+						$file_name 			 = $this->file_obj->f_name;	//pathinfo($this->file_obj->f_name, PATHINFO_BASENAME);
+
+						if (isset($propiedades->target_filename)) {
+							$modelo_name_target_filename= RecordObj_dd::get_modelo_name_by_tipo($propiedades->target_filename,true);
+							$component_target_filename 	= component_common::get_instance(
+																				$modelo_name_target_filename, 
+																				$propiedades->target_filename, 
+																				$current_section_id,
+																				'edit',
+																				DEDALO_DATA_NOLAN, 
+																				$target_section_tipo
+																				);
+							$component_target_filename->set_dato( $file_name );
+							$component_target_filename->Save();
+						}
 
 						# POSTPROCESSING_IMAGE_SCRIPT
 						if (defined('POSTPROCESSING_IMAGE_SCRIPT')) {
@@ -662,7 +707,6 @@ class tool_upload extends tool_common {
 		}
 
 		return $result;
-
 	}#end postprocessing_file
 
 
@@ -685,7 +729,7 @@ class tool_upload extends tool_common {
 		}else{
 			return $this->file_obj->uploaded_file_path;
 		}		
-	}
+	}//end build_standar_image_format
 
 
 	

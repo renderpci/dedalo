@@ -10,6 +10,8 @@ require_once(DEDALO_LIB_BASE_PATH . '/diffusion/class.diffusion_sql.php');
 class diffusion_mysql extends diffusion_sql  {	
 
 
+	static $insert_id;
+
 
 	/**
 	* CONSTRUCT
@@ -34,6 +36,8 @@ class diffusion_mysql extends diffusion_sql  {
 										 		$database_name,
 										 		MYSQL_DEDALO_DB_PORT_CONN,
 										 		MYSQL_DEDALO_SOCKET_CONN);
+		# Set as class static var
+		#self::$mysql_conn;
 
 		if ($multi_query===true) {
 			$result = $mysql_conn->multi_query( $sql );
@@ -45,7 +49,8 @@ class diffusion_mysql extends diffusion_sql  {
 			#debug_log(__METHOD__." Skipped (key:$key) db_data value for database: $database_name : ".to_string($mysql_conn->error), logger::WARNING);
 			if(SHOW_DEBUG===true) {
 				#dump( $mysql_conn->error, "error".to_string() );
-				dump( str_replace('\\', '', $sql) , '$sql ERROR: '.to_string($mysql_conn->error) );
+				$query_clean = trim($sql);
+				dump($mysql_conn->error, ' sql ERROR: query ++ '.PHP_EOL.to_string($sql).PHP_EOL);
 				#throw new Exception("Error Processing Request. MySQL query_insert_data error ".to_string($mysql_conn->error), 1);
 			}
 			$msg = "INFO: Data skipped in SQL table : ". $table_name .' : '. to_string($mysql_conn->error);
@@ -53,6 +58,11 @@ class diffusion_mysql extends diffusion_sql  {
 			#die();							
 		}
 		#$mysql_conn->close();
+
+		if( strpos($sql, 'INSERT')!==false ) {
+			self::$insert_id = $mysql_conn->insert_id;		
+			#dump(self::$insert_id, ' insert_id ++ '.to_string($sql));
+		}
 
 		return $result;
 	}#end exec_mysql_query	
@@ -84,7 +94,8 @@ class diffusion_mysql extends diffusion_sql  {
 		
 		$database_name 	= $table_data['database_name'];	# nombre base de datos	
 		$table_name 	= $table_data['table_name'];	# nombre tabla
-		$ar_fields 		= $table_data['ar_fields'];		# campos de la tabla			
+		$ar_fields 		= $table_data['ar_fields'];		# campos de la tabla
+		$engine 		= isset($table_data['engine']) ? $table_data['engine'] : 'MyISAM';
 
 		#
 		# DROP (default is true)
@@ -103,7 +114,16 @@ class diffusion_mysql extends diffusion_sql  {
 			$sql_query .= "\nCREATE TABLE `$database_name`.`$table_name` (";
 			$sql_query .= self::generate_fields($ar_fields);
 			$sql_query .= self::generate_keys($ar_fields);
-			$sql_query .= "\n) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci PACK_KEYS=0 COMMENT='Tabla autogenerada en Dédalo4 para difusión' AUTO_INCREMENT=1;\n";	
+			switch ($engine) {
+				case 'InnoDB':
+					$sql_query .= "\n) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci COMMENT='Self-generated table in Dédalo4 for diffusion' AUTO_INCREMENT=1 ;\n";
+					break;
+				case 'MyISAM':			
+				default:
+					$sql_query .= "\n) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci PACK_KEYS=0 COMMENT='Self-generated table in Dédalo4 for diffusion' AUTO_INCREMENT=1 ;\n";
+					break;
+			}
+			
 		
 			#
 			# EXEC SINGLE QUERY TO DATABASE
@@ -179,15 +199,9 @@ class diffusion_mysql extends diffusion_sql  {
 							$field_name 	= $field['field_name'];
 							$field_value 	= $field['field_value'];
 
-							if(is_array($field_value)) {
-								# TYPE ARRAY : Convert to json
-								$field_value = json_encode($field_value);	
-							}else{
-								# TYPE OTHERS : addslashes
-								$field_value = addslashes($field_value);
-							}	
+							$field_value 	= diffusion_mysql::conform_field_value($field_value);
 
-							$sql_query_line .= "'$field_value',";
+							$sql_query_line .= $field_value.',';											
 
 						}#end foreach ($ar_row as $field)
 						
@@ -363,6 +377,19 @@ class diffusion_mysql extends diffusion_sql  {
 					$sql_query .= " `$field_name` date DEFAULT NULL COMMENT '$field_coment',\n";
 					break;
 
+				case ($field_type===$pref.'datetime'):
+					$sql_query .= " `$field_name` datetime DEFAULT NULL COMMENT '$field_coment',\n";
+					break;
+
+				case ($field_type===$pref.'decimal'):										
+					$sql_query .= " `$field_name` decimal(10,0) DEFAULT NULL COMMENT '$field_coment',\n";
+					break;
+
+				case ($field_type===$pref.'boolean'):
+					# bool and boolean are alias of tinyint. 0 value is false and 1 is true
+					$sql_query .= " `$field_name` tinyint(4) DEFAULT NULL COMMENT '$field_coment',\n";
+					break;	
+
 				case ($field_type===$pref.'year'):
 					$sql_query .= " `$field_name` year(4) DEFAULT NULL COMMENT '$field_coment',\n";
 					break;
@@ -395,7 +422,9 @@ class diffusion_mysql extends diffusion_sql  {
 
 		$options = new stdClass();
 			$options->record_data 		= null;
-			$options->typology 	  		= null;			
+			$options->typology 	  		= null;
+			$options->delete_previous 	= true;
+			$options->section_tipo 		= null;
 			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}				
 
 	
@@ -405,6 +434,7 @@ class diffusion_mysql extends diffusion_sql  {
 		$table_name 		= $options->record_data['table_name'];
 		$ar_section_id 		= $options->record_data['ar_fields'];
 		$diffusion_section 	= $options->record_data['diffusion_section'];
+		$engine 			= isset($options->record_data['engine']) ? $options->record_data['engine'] : null;
 		$typology 			= $options->typology;
 			#dump( array_keys($ar_section_id), " section_id ".to_string($table_name )); #die();
 			#dump($options->record_data, ' record_data ++ '.to_string($database_name)); die();
@@ -417,7 +447,7 @@ class diffusion_mysql extends diffusion_sql  {
 		#
 		# CREATE TABLE IF NOT EXITS
 		static $ar_verified_tables;
-		if ( !in_array($table_name, (array)$ar_verified_tables) ) {		
+		if ( !in_array($table_name, (array)$ar_verified_tables) ) {
 			if(!self::table_exits($database_name, $table_name)) {
 
 				# Call to diffusion to optain fields for generate the table
@@ -432,6 +462,7 @@ class diffusion_mysql extends diffusion_sql  {
 					#dump($create_table_ar_fields['ar_fields'], ' create_table_ar_fields ++ '.to_string());die();			
 				self::create_table( array('database_name' 	=> $database_name,
 										  'table_name' 		=> $table_name,
+										  'engine' 			=> $engine,
 										  'ar_fields' 		=> $create_table_ar_fields['ar_fields'],
 										  ));	
 			}
@@ -446,23 +477,11 @@ class diffusion_mysql extends diffusion_sql  {
 			
 
 			# First, delete current record in all langs if exists
-				$delete_result = self::delete_sql_record($section_id, $database_name, $table_name, $typology);
-				$response->msg[] = $delete_result->msg;
-				/*
-					if ($typology==='thesaurus') {
-						$strQuery="DELETE FROM `$database_name`.`$table_name` WHERE `terminoID` = '$section_id' ";
-					}else{
-						$strQuery="DELETE FROM `$database_name`.`$table_name` WHERE `section_id` = '$section_id' ";
-					}			
-					$result  = DBi::_getConnection_mysql()->query( $strQuery );					
-						if (!$result) {
-							if(SHOW_DEBUG===true) { dump($strQuery, 'ERROR ON $strQuery '.to_string(DBi::_getConnection_mysql()->error)); }
-							$response->result = false;
-							$response->msg    = "Error Processing Request. Nothing is deleted. MySQL error".DBi::_getConnection_mysql()->error;
-							return (object)$response;						
-						}
-						$response->msg[] = "Deleted record section_id:$section_id, table:$table_name, all langs. Affected rows:".DBi::_getConnection_mysql()->affected_rows;
-					*/
+				if ($options->delete_previous===true) {
+					$delete_result = self::delete_sql_record($section_id, $database_name, $table_name, $typology, $options->section_tipo);
+					$response->msg[] = $delete_result->msg;
+				}				
+				
 			
 			#
 			# IS_PUBLICABLE : Skip non publicable records
@@ -481,19 +500,14 @@ class diffusion_mysql extends diffusion_sql  {
 					$field_name  = $field['field_name'];
 					$field_value = $field['field_value'];
 
-					if(is_array($field_value) || is_object($field_value)) {
-						# TYPE ARRAY : Convert to json
-						$field_value = json_encode($field_value);	
-					}else{
-						# TYPE OTHERS : addslashes
-						$field_value = addslashes($field_value);
-					}
+					$field_value = diffusion_mysql::conform_field_value($field_value);
+					
 					$ar_field_name[]  = $field_name;
 					$ar_field_value[] = $field_value;
 				}
 			
 				# Insert mysql record
-				$strQuery = "INSERT INTO `$database_name`.`$table_name` VALUES (NUll,'".implode("','", $ar_field_value)."');";
+				$strQuery = "INSERT INTO `$database_name`.`$table_name` VALUES (NUll,".implode(',', $ar_field_value).");";
 				#$result   = DBi::_getConnection_mysql()->query( $strQuery );
 				$result = self::exec_mysql_query( $strQuery, $table_name, $database_name );
 					if (!$result) {						
@@ -507,15 +521,59 @@ class diffusion_mysql extends diffusion_sql  {
 			}//end foreach ($ar_fields as $lang => $fields) iterate langs
 
 		}//end foreach ($ar_section_id as $section_id) 
+		#dump($result, ' result ++ '.to_string());
+
 
 		if(SHOW_DEBUG===true) {
 			$response->debug = exec_time($start_time);
 		}
 
 		$response->result = true;
+		$response->new_id = self::$insert_id;
 		$response->msg    = implode(",\n", $response->msg);		#dump($response, ' response');
 		return (object)$response;
 	}#end save_record
+
+
+
+
+	/**
+	* CONFORM_field_VALUE
+	* @return 
+	*/
+	public static function conform_field_value($field_value) {
+
+		switch (true) {
+			case (is_array($field_value) || is_object($field_value)):
+				# TYPE ARRAY/OBJECT : Convert to json
+				$field_value = "'".json_encode($field_value)."'";
+				#$sql_query_line .= "'$field_value',";
+				break;
+			case is_null($field_value):
+				# TYPE NULL
+				$field_value = "NULL";
+			case is_bool($field_value):
+				# TYPE BOOL
+				$field_value = (int)$field_value;
+				break;
+			case is_int($field_value):
+				# TYPE FLOAT
+				$field_value = (int)$field_value;
+				break;
+			case is_float($field_value):
+				# TYPE FLOAT
+				$field_value = str_replace(",", ".", $field_value);
+				break;			
+			default:
+				# TYPE OTHERS : addslashes
+				$field_value = "'".addslashes($field_value)."'";
+				#$sql_query_line .= "'$field_value',";
+				break;
+		}
+
+
+		return $field_value;
+	}//end conform_field_value
 
 
 
@@ -697,7 +755,7 @@ class diffusion_mysql extends diffusion_sql  {
 	* DELETE_SQL_RECORD
 	* @return 
 	*/
-	public static function delete_sql_record($section_id, $database_name, $table_name, $typology=null) {
+	public static function delete_sql_record($section_id, $database_name, $table_name, $typology=null, $section_tipo=null) {
 
 		$response = new stdClass();
 			$response->result 	= false;
@@ -706,8 +764,8 @@ class diffusion_mysql extends diffusion_sql  {
 		if ($typology==='thesaurus' || $table_name==='thesaurus') {
 			$strQuery="DELETE FROM `$database_name`.`$table_name` WHERE `terminoID` = '$section_id' ";
 		}else{
-			$strQuery="DELETE FROM `$database_name`.`$table_name` WHERE `section_id` = '$section_id' ";
-		}			
+			$strQuery="DELETE FROM `$database_name`.`$table_name` WHERE `section_id` = '$section_id' OR `section_id` = '{$section_tipo}_{$section_id}' ";
+		}
 		#$result  = DBi::_getConnection_mysql()->query( $strQuery );
 		$result  = self::exec_mysql_query( $strQuery, $table_name, $database_name );
 			if (!$result) {

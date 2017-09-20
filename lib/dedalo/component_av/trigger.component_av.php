@@ -1,26 +1,58 @@
 <?php
-require_once( dirname(dirname(__FILE__)) .'/config/config4.php');
-require_once( DEDALO_LIB_BASE_PATH . '/media_engine/class.AVObj.php');
-require_once( DEDALO_LIB_BASE_PATH . '/media_engine/class.PosterFrameObj.php');
-require_once( DEDALO_LIB_BASE_PATH . '/media_engine/class.Ffmpeg.php');
-
-
-if(login::is_logged()!==true) die("<span class='error'> Auth error: please login </span>");
-
-
-# set vars
-	$vars = array('mode','video_id','quality','source_quality','target_quality','timecode');
-	foreach($vars as $name) $$name = common::setVar($name);
-
-# mode
-	if(empty($mode)) exit("<span class='error'> Trigger: Error Need mode..</span>");
+$start_time=microtime(1);
+include( dirname(dirname(__FILE__)).'/config/config4.php');
+# TRIGGER_MANAGER. Add trigger_manager to receive and parse requested data
+common::trigger_manager();
 
 
 
+/**
+* GET_VIDEO_STREAMS_INFO
+* @return object $response
+*/
+function get_video_streams_info($json_data) {
+	global $start_time;
 
+	session_write_close();
 
+	$response = new stdClass();
+		$response->result 	= false;
+		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
 
+	# set vars
+	$vars = array('video_path');
+		foreach($vars as $name) {
+			$$name = common::setVarData($name, $json_data);
+			# DATA VERIFY
+			# if ($name==='max_records' || $name==='offset') continue; # Skip non mandatory
+			if (empty($$name)) {
+				$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty '.$name.' (is mandatory)';
+				return $response;
+			}
+		}
 
+	# Ffmpeg functions
+	require_once(DEDALO_LIB_BASE_PATH.'/media_engine/class.Ffmpeg.php');
+
+	# get_media_streams from av file
+	$media_streams = Ffmpeg::get_media_streams($video_path);
+
+	$response->result 	= $media_streams;
+	$response->msg 		= 'Ok. Request done ['.__FUNCTION__.']';
+
+	# Debug
+	if(SHOW_DEBUG===true) {
+		$debug = new stdClass();
+			$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
+			foreach($vars as $name) {
+				$debug->{$name} = $$name;
+			}
+
+		$response->debug = $debug;
+	}
+
+	return (object)$response;
+}//end get_video_streams_info
 
 
 ?>

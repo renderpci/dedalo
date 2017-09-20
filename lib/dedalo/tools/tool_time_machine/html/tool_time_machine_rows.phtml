@@ -1,4 +1,3 @@
-
 <div id="tm_rows">
 
 	<div class="css_time_machine_label css_tool_label history_label text_shadow_inset">
@@ -9,23 +8,20 @@
 
 		$html_selector ='';
 		#$html_selector .= "\n <span class=\"rotulo_tool_lang_selector\">".label::get_label('idioma').":</span> ";
-		$html_selector .= "\n <select class=\"tool_lang_selector_source css_select\"
-		onchange=\"tool_time_machine.change_tool_lang_source(this)\"
-		> ";
+		$html_selector .= "<select class=\"tool_lang_selector_source css_select\" onchange=\"tool_time_machine.change_tool_lang_source(this)\">";
 					
 			# Empty option
 			#$html_selector .= "\n <option value=\"\"> </option>";
 			foreach ((array)$ar_source_langs as $current_lang => $current_lang_name) {
 				
 				$selected 		= ($current_lang === $lang) ? 'selected' : '';
-				$html_selector .= "\n <option value='{$current_lang}' {$selected}>$current_lang_name</option>";							
+				$html_selector .= "<option value='{$current_lang}' {$selected}>$current_lang_name</option>";
 			}
 
-		$html_selector .= "\n </select>";
+		$html_selector .= "</select>";
 		echo $html_selector;
 		?>
 	</div>
-
 
 	<!-- BUTTONS APPLY / CLOSE -->
 	<?php if ($permissions>=2) { ?>
@@ -41,7 +37,6 @@
 
 	</div>
 	<?php } ?>
-
 		
 	<div class="time_machine_record_rows shadow_inset">    
 		 <!-- TM ROWS -->
@@ -104,9 +99,6 @@
 		#dump($ar_dato_printed,'$ar_dato_printed');
 		?>
 
-
 	</div><!-- css_time_machine_record_rows -->
 
-
 </div><!-- tm_rows -->
-

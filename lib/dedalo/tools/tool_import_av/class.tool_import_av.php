@@ -7,7 +7,9 @@ require_once( dirname(dirname(dirname(__FILE__))) .'/config/config4.php');
 if(login::is_logged()!==true) die("<span class='error'> Auth error: please login </span>");
 
 # UPLOAD_DIR_CUSTOM is button_tipo
-$upload_dir_custom = isset($_REQUEST['button_tipo']) ? '/'.$_REQUEST['button_tipo'] : '';
+$var_requested 		= common::get_request_var('button_tipo');
+//$upload_dir_custom = isset($_REQUEST['button_tipo']) ? '/'.$_REQUEST['button_tipo'] : '';
+$upload_dir_custom = !empty($var_requested) ? '/'.$var_requested : '';
 if (empty($upload_dir_custom)) {
 	error_log("WARNING TOOL_IMPORT_AV: EMPTY upload_dir_custom: $upload_dir_custom");
 }

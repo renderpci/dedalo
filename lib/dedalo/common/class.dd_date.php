@@ -30,12 +30,18 @@ class dd_date extends stdClass {
 		if (!is_object($data)) {
 			#dump($data, ' data ++ '.to_string());
 			#trigger_error("wrong data format. object expected. Given type: ".gettype($data));
+		#	throw new Exception("Error Processing Request", 1);
+			
 			debug_log(__METHOD__." wrong data format. object expected. Given type: ".gettype($data).' - '.to_string($data), logger::ERROR);
+			if(SHOW_DEBUG===true) {
+				dump(debug_backtrace()[0], " wrong data format. object expected. Given type:".gettype($data).' - data:'.to_string($data)." from:");
+			}
 			return false;
 		}
 
 		foreach ($data as $key => $value) {
-			if (empty($value)) continue; // Skip empty values			
+			//if ($key!=="year" && empty($value)) continue; // Skip empty values
+			if (!isset($value) || is_null($value)) continue; // Skip empty values	
 
 			$method = 'set_'.$key;
 			$this->$method($value, $constrain);		
@@ -182,7 +188,7 @@ class dd_date extends stdClass {
 	* When any value if empty, default values are used, like 01 for month
 	* @return string $dd_timestamp
 	*/
-	public function get_dd_timestamp($date_format="Y-m-d H:i:s") {
+	public function get_dd_timestamp($date_format="Y-m-d H:i:s", $padding=true) {
 
 		if (isset($this->year)) {
 		$year   = $this->year;
@@ -214,43 +220,50 @@ class dd_date extends stdClass {
 
 
 		# year
-		if (!isset($year) || empty($year)) {
-		  $year = 0;
+		if (!isset($year)) {
+		  $year = '';
 		}
+		if($padding===true)
 		$year = sprintf("%04d", $year);
 
 		# month
 		if (!isset($month) || $month<1) {
 		  $month = 1;
 		}
+		if($padding===true)
 		$month = sprintf("%02d", $month);
 
 		# day
 		if (!isset($day) || $day<1) {
 		  $day = 1;
 		}
+		if($padding===true)
 		$day = sprintf("%02d", $day);
 
 		# hour
 		if (!isset($hour)) {
 			$hour = 0;
 		}
+		if($padding===true)
 		$hour = sprintf("%02d", $hour);	
 
 		# minute
 		if (!isset($minute)) {
 			$minute = 0;
 		}
+		if($padding===true)
 		$minute = sprintf("%02d", $minute);
 
 		# second
 		if (!isset($second)) {
 			$second = 0;
 		}
+		if($padding===true)
 		$second = sprintf("%02d", $second);
 
 		# ms	
 		if (isset($ms)) {
+			if($padding===true)
 			$ms = sprintf("%03d", $ms);
 		}else{
 			$ms=null;	
@@ -303,50 +316,41 @@ class dd_date extends stdClass {
 	*/
 	public function set_date_from_input_field( $search_field_value ) {
 
-		$regex   = "/^(-?[0-9]+)-?([0-9]+)?-?([0-9]+)? ?([0-9]+)?:?([0-9]+)?:?([0-9]+)?/";
+		#$regex   = "/^(-?[0-9]+)-?([0-9]+)?-?([0-9]+)? ?([0-9]+)?:?([0-9]+)?:?([0-9]+)?/";
+		$regex   = "/^(([0-9]{1,2})-)?(([0-9]{1,2})-)?(-?[0-9]{1,12}) ?([0-9]+)?:?([0-9]+)?:?([0-9]+)?$/";
 		preg_match($regex, $search_field_value, $matches);    
 			#dump($matches, ' matches - ' .count($matches));
+			#$elements = count($matches)-1;
 
-			$elements = count($matches)-1;
-		
-
-			if($elements>=1) {
-				$this->set_year((int)$matches[1]); 
-			} 
-		
-			if($elements>=2) {
+			# Year is mandatory
+			$this->set_year((int)$matches[5]); 
+			
+			# Month
+			if (!empty($matches[4])) {
+				$this->set_month((int)$matches[4]);
+				# Day (only when month exists)
+				if (!empty($matches[2])) {
+					$this->set_day((int)$matches[2]);
+				}
+			}else if(!empty($matches[2])) {
 				$this->set_month((int)$matches[2]);
 			}
-			
-			if($elements>=3) {
-				$this->set_day((int)$matches[3]);
-			}
-
-			if($elements>=4) {
-				$this->set_hour((int)$matches[4]);
-			}
-
-			if($elements>=5) {
-				$this->set_minute((int)$matches[5]);
-			}
-
-			if($elements>=6) {
-				$this->set_second((int)$matches[6]);	
-			}			
 		
-		/*
-		if(isset($matches[1])) $this->set_day((int)$matches[1]);
-		if(isset($matches[2])) $this->set_month((int)$matches[2]);
-		if(isset($matches[3])) $this->set_year((int)$matches[3]);		
-		
-		if(isset($matches[4])) $this->set_hour((int)$matches[4]);
-		if(isset($matches[5])) $this->set_minute((int)$matches[5]);
-		if(isset($matches[6])) $this->set_second((int)$matches[6]);	
-		*/
-		#if (!empty($this->year)) {
-			//$this->correct_date();
-		#}
-		#dump($this, ' this ++ '.to_string());
+			# Hours
+			if (!empty($matches[6])) {
+				$this->set_hour((int)$matches[6]);
+			}
+
+			# Minutes
+			if (!empty($matches[7])) {
+				$this->set_minute((int)$matches[7]);
+			}
+
+			# Seconds
+			if (!empty($matches[8])) {
+				$this->set_second((int)$matches[8]);
+			}
+
 
 		return $this;
 	}#end set_date_from_input_field
@@ -521,7 +525,7 @@ class dd_date extends stdClass {
 
 		if (!empty($this->errors)) {
 			//trigger_error( to_string($this->errors) );
-			debug_log(__METHOD__." Errors foud in dd_date ".to_string($this->errors), logger::WARNING);
+			debug_log(__METHOD__." Errors foud in dd_date ".to_string($this), logger::WARNING);
 		}
 	}#end __destruct
 

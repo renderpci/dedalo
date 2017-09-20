@@ -89,11 +89,12 @@ class tool_replace_component_data extends tool_common {
 
 		}
 
-		# Update search_options cleaning current 'filter_by_search'
-		$search_options_session_key = 'section_'.$section_tipo;
-		$search_options 	= $_SESSION['dedalo4']['config']['search_options'][$search_options_session_key];		
-		$search_options->filter_by_search = false; // Affect session object directly (not save is necessary)
-		#$_SESSION['dedalo4']['config']['search_options'][$search_options_session_key] = $search_options;
+		# Update search_options cleaning current 'filter_by_search' (DELETE, now the selection is sustained)
+
+		#$search_options_session_key = 'section_'.$section_tipo;
+		#$search_options 	= $_SESSION['dedalo4']['config']['search_options'][$search_options_session_key];		
+		#$search_options->filter_by_search = false; // Affect session object directly (not save is necessary)
+		
 			#dump($search_options, ' var '.to_string($search_options_session_key));
 
 		return (array)$ar_records;

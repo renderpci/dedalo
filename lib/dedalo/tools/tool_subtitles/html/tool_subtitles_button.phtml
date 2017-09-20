@@ -27,15 +27,15 @@
 	$html .= "<div class=\"tool_subtitles_wrap\">";		
 		
 		
-		$html .= "<div id=\"button_build_subtitles\" class=\"css_button_generic\" onclick=\"tool_subtitles.build_subtitles_text(this)\"
-		data-component_tipo=\"$component_tipo\"
-		data-section_tipo=\"$section_tipo\"
-		data-section_id=\"$section_id\"
-		>";
+		$html .= "<div id=\"button_build_subtitles\" class=\"css_button_generic\" onclick=\"tool_subtitles.build_subtitles_text(this)\" ";
+		$html .= "data-component_tipo=\"$component_tipo\" ";
+		$html .= "data-section_tipo=\"$section_tipo\" ";
+		$html .= "data-section_id=\"$section_id\" ";
+		$html .= ">";
 		$html .= label::get_label('crear_subtitulos');
 		$html .= "</div>";
 
-		$html .= " <input type=\"text\" id=\"tool_subtitles_line_lenght\" value=\"$line_lenght\" /> " . label::get_label('caracteres_por_linea') ;
+		$html .= "<input type=\"text\" id=\"tool_subtitles_line_lenght\" value=\"$line_lenght\"/> " . label::get_label('caracteres_por_linea');
 
 		$html .= "<div id=\"subtitles_response\"> </div>";
 

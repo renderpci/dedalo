@@ -2,10 +2,8 @@
 /*
 * CLASS TOOL TIME MACHINE
 */
-require_once( dirname(dirname(dirname(__FILE__))) .'/config/config4.php');
-require_once(DEDALO_LIB_BASE_PATH .'/db/class.RecordObj_time_machine.php');
-
-
+#require_once( dirname(dirname(dirname(__FILE__))) .'/config/config4.php');
+#require_once(DEDALO_LIB_BASE_PATH .'/db/class.RecordObj_time_machine.php');
 class tool_time_machine extends tool_common {
 
 
@@ -87,7 +85,6 @@ class tool_time_machine extends tool_common {
 		#dump($ar_time_machine_obj,"ar_time_machine_obj");
 
 		return $ar_time_machine_obj;
-
 	}//end get_ar_component_time_machine
 
 
@@ -156,7 +153,7 @@ class tool_time_machine extends tool_common {
 	* GET AR SECTIONS TIME MACHINE
 	* Get time machine id array of sections that no exists in matrix now (deleted sections)
 	* @param $id_time_machine int
-	* @return $ar_sections_time_machine (array of time machine id's of deleted sections)
+	* @return bool true
 	*/
 	public static function recover_section_from_time_machine($id_time_machine) {
 

@@ -4,7 +4,7 @@
 *
 *
 */
-class component_portal extends component_common {
+class component_portal extends component_reference_common {
 
 	# Overwrite __construct var lang passed in this component
 	protected $lang = DEDALO_DATA_NOLAN;
@@ -22,6 +22,13 @@ class component_portal extends component_common {
 
 	# section_list_key. Default is first (0) of various
 	public $section_list_key = 0;
+
+	# generate_json component
+	public $generate_json_element = true;
+
+
+	public $max_records = null;
+	public $offset = null;
 
 	
 	function __construct($tipo=null, $parent=null, $modo='edit', $lang=DEDALO_DATA_NOLAN, $section_tipo=null) {
@@ -111,13 +118,14 @@ class component_portal extends component_common {
 	# GET DATO : 
 	public function get_dato() {
 		$dato = parent::get_dato();
-		if (!empty($dato) && !is_array($dato)) {
+
+		if ($dato==='' || (!empty($dato) && !is_array($dato)) ) {
 			#dump($dato,"dato");
-			trigger_error("Error: Portal dato type is wrong. Array expected and ".gettype($dato)." is received for tipo:$this->tipo, parent:$this->parent");
+			trigger_error("Error: Portal dato type is wrong. Array expected and ".gettype($dato)." is received for tipo:$this->tipo, parent:$this->parent. Empty dato is saved to avoid this warning");
 			$this->set_dato(array());
 			$this->Save();
 		}
-		if ($dato===null) {
+		if ($dato===null || !is_array($dato)) {
 			$dato=array();
 		}
 		#$dato = json_handler::decode(json_encode($dato));	# Force array of objects instead default array of arrays
@@ -133,7 +141,7 @@ class component_portal extends component_common {
 			$dato = json_handler::decode($dato);
 		}
 		if(SHOW_DEBUG===true) {
-			
+			#debug_log(__METHOD__." Dato seted to portal: ".to_string($dato), logger::DEBUG);
 		}
 		parent::set_dato( (array)$dato );
 	}
@@ -898,7 +906,7 @@ class component_portal extends component_common {
 
 		# Regular columns
 		foreach ((array)$ar_hcolumns as $value) {			
-			$ar_columns[$value] = RecordObj_dd::get_termino_by_tipo($value,DEDALO_DATA_LANG,true);			
+			$ar_columns[$value] = RecordObj_dd::get_termino_by_tipo($value,DEDALO_APPLICATION_LANG,true);			
 		}
 		#dump($ar_columns,"ar_columns ");
 
@@ -1461,7 +1469,8 @@ class component_portal extends component_common {
 		
 		$diffusion_value = $this->get_image_url(DEDALO_IMAGE_QUALITY_DEFAULT);
 
-		$diffusion_properties = $this->get_diffusion_properties();
+		# Propiedades of diffusion element that references this component
+		$diffusion_properties = $this->get_diffusion_properties();				
 
 		# If not isset propiedades->data_to_be_used, we understand that is 'dato' for speed
 		if (!isset($diffusion_properties->data_to_be_used)) {
@@ -1477,8 +1486,9 @@ class component_portal extends component_common {
 			$diffusion_value = $dato;
 		}else{
 			# 'Default' behaviour is now get_valor (...)
-			$data_to_be_used = $diffusion_properties->data_to_be_used;
-			$diffusion_value = $this->get_valor( $lang );
+			$data_to_be_used = 'valor_list';// Changed from valor to valor_list because input_text valor is an json array. $diffusion_properties->data_to_be_used;			
+			$diffusion_value = $this->get_valor( $lang, $data_to_be_used, $separator_rows='<br>', $separator_fields=', ' );
+			#dump($diffusion_value, '$diffusion_value ++ '.to_string($this->tipo));
 		}
 
 
@@ -1656,6 +1666,162 @@ class component_portal extends component_common {
 		return true;
 	}//end regenerate_component
 	
+
+
+	/**
+	* sET_DATO_EXTERNAL
+	* get the dato from other component that reference at the current section of the portal
+	* the result will be the result of the search to the external section and component 
+	* and the combiantion with the dato of the portal (that save the result for user manipulation, order, etc)
+	* @return dato
+	*/
+	public function set_dato_external() {
+		$dato 					= $this->get_dato();
+		# get the properties for get search section and component
+		$propiedades 				= $this->get_propiedades();
+		$ar_section_to_search 		= $propiedades->source->section_to_search;
+		$ar_component_to_search 	= $propiedades->source->component_to_search;
+		
+
+		//get the locator of the current section for search in the component that call this section
+		$section_id 	= $this->get_parent();
+		$section_tipo 	= $this->get_section_tipo();
+
+		$locator 		= new locator();
+			$locator->set_section_id($section_id);
+			$locator->set_section_tipo($section_tipo);
+			
+		$value_to_search = array($locator);
+		$value_to_search = json_encode($value_to_search);
+
+		foreach ($ar_component_to_search as $component_to_search) {
+		
+			# get the modelo_name of the componet to search
+			$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($component_to_search,true);
+
+			//get the query model of the component to secarch
+			$filter_fields 	= $modelo_name::get_search_query( $json_field='datos', $component_to_search, $tipo_de_dato_search='dato', DEDALO_DATA_NOLAN, $value_to_search, $comparison_operator='=');
+			
+			break; // Only one exists
+		}
+		# MATRIX TABLE : Only from first term for now
+			$matrix_table = common::get_matrix_table_from_tipo( $ar_section_to_search[0] );	
+
+		# TARGET SECTIONS : Filter search by target sections (hierarchy_sections)
+			$filter_target_section = '';
+			$ar_filter=array();
+			foreach ($ar_section_to_search as $current_section_tipo) {
+				$ar_filter[] = "a.section_tipo='$current_section_tipo'";
+			}
+			$filter_target_section = '(' . implode(' OR ', $ar_filter) . ')';
+
+		# ORDER
+			$order 	= "a.section_id ASC";
+				
+
+		# Build the search query
+		$strQuery = PHP_EOL.sanitize_query("
+		 -- ".__METHOD__."
+			SELECT a.section_id, a.section_tipo
+			FROM \"$matrix_table\" a
+			WHERE
+			$filter_target_section
+			AND $filter_fields 
+			ORDER BY $order
+			"
+			);
+
+		$result	= JSON_RecordObj_matrix::search_free($strQuery, false);
+
+		#build the locators with the result
+		$ar_result = array();
+		while ($rows = pg_fetch_assoc($result)) {
+			$locator 		= new locator();
+				$locator->set_section_id($rows['section_id']);
+				$locator->set_section_tipo($rows['section_tipo']);
+			$ar_result[] = $locator;
+		}
+
+		foreach ($dato as $key => $current_locator) {
+			if(	locator::in_array_locator( $current_locator, $ar_result, $ar_properties=array('section_tipo','section_id') ) === false){
+				unset($dato[$key]);
+			}			
+		}
+
+		foreach ($ar_result as $key => $current_locator) {
+			if(	locator::in_array_locator( $current_locator, $dato, $ar_properties=array('section_tipo','section_id') ) === false){
+				array_push($dato, $current_locator);
+			}
+		}
+
+		$dato = array_values($dato);
+		$this->set_dato($dato);
+		$this->Save();		
+	}//end set_dato_external
+
+
+
+	/**
+	* GET_JSON_build_options
+	* Collect vars to js call to component for build html
+	* @return object $options
+	*//*
+	public function get_json_build_options() {
+		
+		$options = parent::get_json_build_options();
+			#dump($options, ' options ++ '.to_string());
+		
+		# add dato
+		$options->dato = $this->get_dato();
+
+
+		return $options;
+	}//end get_json_build_options
+	*/
+
+
+	/**
+	* GET_FROM_JSON
+	* @return object $json_d
+	*/
+	public function get_from_json() {
+		# Set to false
+		$this->generate_json_element = false;
+
+		# Include controler
+		include ( DEDALO_LIB_BASE_PATH .'/'. get_called_class() .'/'. get_called_class() .'.php' );
+		#dump($json_d, ' json_d ++ '.to_string());
+
+		return (object)$json_d;
+	}//end get_from_json
+
+
+
+	/**
+	* GET_JSON_build_options
+	* Collect vars to js call to component for build html
+	* @return object $options
+	*/
+	public function get_json_build_options() {
+
+		/* common options reference:
+		$options->section_tipo 	 = $this->get_section_tipo();
+		$options->section_id   	 = $this->get_parent();
+		$options->component_tipo = $this->get_tipo();
+		$options->model_name 	 = get_class($this);
+		$options->lang 	 		 = $this->get_lang();
+		$options->modo 	 		 = $this->get_modo();
+		$options->unic_id 		 = 'wrapper_'.$this->get_identificador_unico();*/
+		
+		// Component common options
+		$options = parent::get_json_build_options();
+
+		
+		// Specific component options
+		$options->dato = $this->get_dato();
+
+		return (object)$options;
+	}//end get_json_build_options
 
 
 }

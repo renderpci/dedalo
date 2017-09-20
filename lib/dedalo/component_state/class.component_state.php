@@ -132,7 +132,7 @@ class component_state extends component_common {
 																		$locator_obj->component_tipo,
 																		$current_section_id,
 																		'edit',
-																		DEDALO_DATA_LANG,
+																		DEDALO_APPLICATION_LANG,
 																		$locator_obj->section_tipo);
 				$options->label = $component_input_text->get_valor();				
 
@@ -141,8 +141,7 @@ class component_state extends component_common {
 		}
 		#dump($ar_state, ' ar_state ++ '.to_string());
 		
-		return $this->ar_state = $ar_state;
-		
+		return $this->ar_state = $ar_state;		
 	}#end configure_for_component
 
 
@@ -288,8 +287,8 @@ class component_state extends component_common {
 		$this->update_state($locator);
 		$this->Save();
 		
+		
 		return true;
-
 	}#end update_state_locator
 	
 	
@@ -1216,7 +1215,7 @@ class component_state extends component_common {
 	public function get_valor_list_html_to_save() {		
 		$group = $this->get_valor();	
 		
-		return (string)to_string($group)."+++";
+		return (string)to_string($group);
 	}//end get_valor_list_html_to_save
 
 

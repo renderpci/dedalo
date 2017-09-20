@@ -1,32 +1,8 @@
 <?php
+$start_time=microtime(1);
 include( dirname(dirname(__FILE__)).'/config/config4.php');
-#include(DEDALO_LIB_BASE_PATH.'/ts_object/class.ts_object.php');
-
-#ignore_user_abort(true);
-
-# unlock session allows continue brosing
-#session_write_close();
-
-
-if(login::is_logged()!==true) die("<span class='error'> Auth error: please login </span>");
-
-# Set JSON headers for all responses
-header('Content-Type: application/json');
-
-
-
-# set vars
-$vars = array('mode');
-	foreach($vars as $name) $$name = common::setVar($name);
-
-# mode
-if(empty($mode)) exit("<span class='error'> Trigger: Error Need mode..</span>");
-
-# CALL FUNCTION
-if ( function_exists($mode) ) {
-	$result = call_user_func($mode);
-	echo json_encode($result);
-}
+# TRIGGER_MANAGER. Add trigger_manager to receive and parse requested data
+common::trigger_manager();
 
 
 
@@ -34,10 +10,24 @@ if ( function_exists($mode) ) {
 * SEARCH_THESAURUS
 * @return array $result
 */
-function search_thesaurus() {
+function search_thesaurus($json_data) {
+	global $start_time;
+
+	$response = new stdClass();
+		$response->result 	= false;
+		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
+
 	# set vars
 	$vars = array('options');
-		foreach($vars as $name) $$name = common::setVar($name);
+		foreach($vars as $name) {
+			$$name = common::setVarData($name, $json_data);
+			# DATA VERIFY
+			# if ($name==='max_records' || $name==='offset') continue; # Skip non mandatory
+			if (empty($$name)) {
+				$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty '.$name.' (is mandatory)';
+				return $response;
+			}
+		}
 
 	$options = json_decode($options);
 	#dump( count($options->filter_by_search), ' $options->filter_by_search ++ '.to_string()); die();
@@ -57,6 +47,9 @@ function search_thesaurus() {
 			case 'hierarchy20_hierarchy33': // observations
 				$search_options->observations = $value;
 				break;
+			case 'hierarchy_id': // observations
+				$search_options->hierarchy_id = $value;
+				break;
 			default:
 				# code...
 				break;
@@ -65,6 +58,8 @@ function search_thesaurus() {
 
 	# model
 	$search_options->model = (bool)$options->model;
+
+	$search_options->limit = isset($options->limit) ? (int)$options->limit : 100;
 
 
 	$n_vars = count(get_object_vars($search_options));	
@@ -75,6 +70,17 @@ function search_thesaurus() {
 	$area_thesaurus = new area_thesaurus(DEDALO_TESAURO_TIPO);
 	$response 		= $area_thesaurus->search_thesaurus( $search_options );
 		#dump( json_encode((array)$response), ' $response ++ '.to_string());
+
+	# Debug
+	if(SHOW_DEBUG===true) {
+		$debug = new stdClass();
+			$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
+			foreach($vars as $name) {
+				$debug->{$name} = $$name;
+			}
+
+		$response->debug = $debug;
+	}
 
 	return (object)$response;
 }//end search_thesaurus

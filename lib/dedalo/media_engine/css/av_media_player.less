@@ -96,6 +96,11 @@ a:active {
 	height:28px;
 	width:@video_width;
 	display:none;
+	padding-left: 15px;
+	@media screen and (max-width: 575px) { // @movil_max_width
+		zoom:0.6;
+	}
+	
 }
 .video_btn {
 	font-size:10px;
@@ -146,8 +151,8 @@ a:active {
 	text-shadow: 1px 2px 2px #b9b9b9;
 	position: relative;
 	top: 3px;
-	padding-right: 8px;
-	padding-left: 5px;
+	padding-right: 5px;
+	padding-left: 3px;
 }
 #TCdiv .loading_msg {
 	display:inline-block;

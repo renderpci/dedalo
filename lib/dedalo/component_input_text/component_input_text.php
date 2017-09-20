@@ -15,7 +15,7 @@
 	$label 					= $this->get_label();
 	$required				= $this->get_required();
 	$debugger				= $this->get_debugger();
-	$permissions			= common::get_permissions($section_tipo,$tipo);
+	$permissions			= $this->get_component_permissions();
 	$ejemplo				= $this->get_ejemplo();
 	$html_title				= "Info about $tipo";
 	$identificador_unico	= $this->get_identificador_unico();
@@ -29,18 +29,27 @@
 	if ($this->get_filter_authorized_record()===false) return null ;
 	
 	
+
 	switch($modo) {		
 		
 		case 'edit_in_list':
 				// Fix always edit as modo / filename
-				$modo 			= 'edit';
+				//$modo 			= 'edit';
 				$file_name		= 'edit';
 
 				$wrap_style 	= '';	// 'width:100%'; // Overwrite possible custon component structure css
-				// Dont break here. Continue as modo edit
-		
+				// Dont break here. Continue as modo edit		
 		case 'tool_lang':
 				$file_name = 'edit';
+
+				// Role .
+				$source_lang = DEDALO_DATA_LANG;
+				if ($lang===$source_lang) {
+					$role = "source_lang";
+				}else{
+					$role = "tranlation_lang";
+				}			
+				
 		case 'edit'	:
 				$id_wrapper 	= 'wrapper_'.$identificador_unico;
 				$input_name 	= "{$tipo}_{$parent}";
@@ -56,7 +65,10 @@
 				}
 				*/		
 				$mandatory 		= (isset($propiedades->mandatory) && $propiedades->mandatory===true) ? true : false;
-				$mandatory_json = json_encode($mandatory);									
+				$mandatory_json = json_encode($mandatory);
+
+				$propiedades_json 	= json_encode($propiedades);
+				$context 			= $this->get_context();						
 				break;
 
 		case 'print' :

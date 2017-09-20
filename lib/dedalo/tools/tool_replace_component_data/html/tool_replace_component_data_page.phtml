@@ -7,7 +7,7 @@
 
 	$html    = "\n<!-- TOOL PAGE [tipo:$component_tipo] -->";
 	$html   .= "\n<div class=\"wrap_tool wrap_tool_replace_component_data_page\" >";
-	$html   .= "\n<div class=\"content_data text_shadow_inset\" >";
+	$html   .= "\n<div class=\"content_data tool_replace_component_data_text\" >";
 
 	
 		// 'Se reemplazara el contenido del campo: %s en los %s registros actuales con el valor %s'
@@ -33,7 +33,7 @@
 		$html   .= sprintf($dialog, $label, $total_records, $valor, $lang_text );
 
 		# Cancel button
-		$html .= "<div class=\"css_button_generic button_cancel\" onclick=\"top.$('#dialog_page_iframe').dialog('close');\">".label::get_label('cancelar')."</div>";
+		//$html .= "<div class=\"css_button_generic button_cancel\" onclick=\"top.$('#dialog_page_iframe').dialog('close');\">".label::get_label('cancelar')."</div>";
 
 		# Ok button
 		$html .= "<div class=\"css_button_generic button_replace\" onclick=\"tool_replace_component_data.replace_data(this)\"

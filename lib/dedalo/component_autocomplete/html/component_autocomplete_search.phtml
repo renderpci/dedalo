@@ -2,13 +2,20 @@
 
 	# VISUALIZADOR HTML
 	
-	
-	if(isset($_REQUEST[$tipo])) $dato = $_REQUEST[$tipo];		#var_dump($_REQUEST[$tipo]);
-	
-	
-	print "<!-- SELECT [tipo:$tipo section_id:$parent] $label -->";
 
-	print "<div class=\"wrap_component css_wrap_select\" >";
+	#print "<!-- ".__CLASS__." $label -->";
+	
+	print "<div class=\"wrap_component css_wrap_autocomplete wrap_component_{$modo} wrap_component_{$tipo}\" id=\"{$id_wrapper}\" ";
+	print "data-tipo=\"{$tipo}\" ";
+	print "data-lang=\"{$lang}\" ";
+	print "data-parent=\"{$parent}\" ";
+	print "data-section_tipo=\"{$section_tipo}\" ";
+	print "data-ar_target_section_tipo='{$ar_target_section_tipo_json}' ";
+	print "data-tipo_to_search='{$tipo_to_search}' ";
+	print "data-modo=\"{$modo}\" ";
+	print "data-dato='{$dato_json}' ";
+	print "data-component_name=\"{$component_name}\" ";
+	print ">";
 
 	
 	# ETIQUETA (LABEL)
@@ -17,9 +24,10 @@
 	
 	# CONTENIDO (INPUT)
 	$html_content = '';
-	switch($permissions) {
+	switch(true) {
 			
-		case 0	:	$html_content .= "";
+		case $permissions===0 :	
+					$html_content .= "";
 					break;						
 		
 		case ($permissions>=1) :
@@ -27,9 +35,139 @@
 					# COMPARISON OPERATORS
 					if (isset($ar_comparison_operators)) {
 					$html_content .= operator::get_search_comparison_operators_html($tipo,$ar_comparison_operators);
-					}					
+					}
 
-					
+					#
+					# ROW
+					$html_content .= "<ul class=\"css_autocomplete_valor in_search_mode\" data-role=\"autocomplete_valor\">";
+					foreach ($ar_valor as $current_value => $value) {
+
+						$html_content .= "<li>";
+
+						# BTN DELETE
+						$html_content .= "<div class=\"icon_bs link css_autocomplete_button_delete\" ";
+						$html_content .= "data-tipo=\"{$tipo}\" ";
+						$html_content .= "data-current_value='$current_value' ";
+						$html_content .= "data-role=\"autocomplete_button_delete\" ";
+						$html_content .= "title=\"$label $parent\" ";
+						$html_content .= "onclick=\"component_autocomplete.delete(this)\"></div>";
+
+						# VALUE . STRING RESOLVED TO SHOW
+						$html_content .= $value;
+						if(SHOW_DEBUG===true) {
+							#$html_content .= " <span class=\"notes\">$current_value</span>";
+						}
+
+						$html_content .= "</li>";
+					}
+					$html_content .= "</ul>";
+
+
+					#
+					# INPUT SEARCH FIELD
+					$html_content .= "<input class=\"css_autocomplete_search_field in_search_mode\" type=\"text\" placeholder=\"".label::get_label('buscar')."...\" ";
+					$html_content .= "data-id_wrapper=\"$id_wrapper\" ";
+					$html_content .= "data-tipo=\"$tipo\" ";
+					$html_content .= "data-section_tipo=\"{$section_tipo}\" ";
+					$html_content .= "data-parent='{$parent}' ";
+					$html_content .= "data-ar_target_section_tipo='{$ar_target_section_tipo_json}' ";
+					$html_content .= "data-tipo_to_search='{$tipo_to_search}' ";
+					$html_content .= "onfocus=\"component_autocomplete.activate(this)\" ";
+					$html_content .= "tabindex=\"1\" ";
+					$html_content .= "autocomplete=\"off\" ";
+					$html_content .= "autocorrect=\"off\" ";
+					$html_content .= "/>";
+
+					# Reset var 'activated' on load
+					$html_content .= "<script>";
+					$html_content .= "component_autocomplete.activated={};";
+					$html_content .= "</script>";
+
+					#
+					# OPTIONS (filter_by_list)
+					#$filter_by_list= false;
+					if ($filter_by_list!==false) {
+						$html_content .= "<div class=\"icon_bs autocomplete_list_button_options in_search_mode edit_hidden\"></div>";
+
+						$cookie_name = 'filter_by_list_'. $section_tipo .'_'. $tipo;
+						$html_content .= "<ul class=\"filter_by_list text_unselectable\">";
+						#$html_content .= "<div class=\"toponymy_list_close\">X</div>";
+						$html_content .= "<li>";
+						$html_content .= "<input type=\"checkbox\" id=\"select_all_{$tipo}\" onchange=\"component_autocomplete.select_all_filter_sections(this,'$cookie_name')\"/>";
+						$html_content .= "<label for=\"select_all_{$tipo}\">".label::get_label('todos')."</label>";
+						$html_content .= "</li>";
+						$html_content .= "<hr>";
+						$total = count($filter_by_list); $n=0;
+						foreach ($filter_by_list as $current_obj_value) {
+
+							$f_section_tipo   	= $current_obj_value->section_tipo;
+							$f_component_tipo 	= $current_obj_value->component_tipo;
+
+							# Calculate list values of each element
+							$c_modelo_name 		= RecordObj_dd::get_modelo_name_by_tipo($f_component_tipo,true);
+							$current_component  = component_common::get_instance($c_modelo_name,
+																				 $f_component_tipo,
+																				 null,
+																				 'list',
+																				 DEDALO_DATA_LANG,
+																				 $f_section_tipo);
+							$ar_list_of_values = $current_component->get_ar_list_of_values(DEDALO_DATA_LANG, false, false, false, $value_container='valor');
+								#dump($ar_list_of_values, ' ar_list_of_values ++ '.to_string());
+							foreach ((array)$ar_list_of_values->result as $hs_value => $hs_name) {
+								
+								$current_value = json_decode($hs_value);
+								# Add component tipo to locator
+								$current_value->component_tipo = $f_component_tipo;							
+
+								$input_id = md5($hs_value);
+								$html_content .= "<li>";
+								$html_content .= "<input type=\"checkbox\" value='".json_encode($current_value)."' id=\"$input_id\" checked onchange=\"component_autocomplete.save_filter_sections(this,'$cookie_name')\"/>";
+								$html_content .= "<label for=\"$input_id\">";
+								$html_content .= $hs_name;
+								if(SHOW_DEBUG===true) {
+									#$html_content .= " <span class=\"notes\">[$hs_value]<span>";
+								}
+								$html_content .= "</label>";
+								$html_content .= "</li>";
+							}
+							$n++;
+							if ($total>1 && $n<$total) {
+								$html_content .= "<hr>";
+							}							
+						}
+						$html_content .= "</ul>";
+
+						$html_content .= "<script>";
+						# Reset var 'activated' on load
+						#$html_content .= "component_autocomplete.activated={};";
+						# Init component
+						$html_content .= "component_autocomplete.init({\"wrapper_id\":\"$id_wrapper\",\"cookie_name\":\"$cookie_name\",\"limit\":\"$limit\"});";
+						$html_content .= "</script>";
+					}//end if ($filter_by_list!==false)
+
+
+					#
+					# INPUT DATA HIDDEN
+					$html_content .= "<input type=\"text\" class=\"css_autocomplete_dato_hidden style=\"width:300px;\" ";
+					$html_content .= "name=\"{$search_input_name}\" ";
+					$html_content .= "data-type=\"autocomplete_dato_hidden\" ";
+					$html_content .= "data-role=\"autocomplete_dato_hidden\" ";
+					$html_content .= "data-tipo=\"{$tipo}\" ";
+					$html_content .= "data-section_tipo=\"{$section_tipo}\" ";
+					$html_content .= "data-parent=\"{$parent}\" ";
+					$html_content .= "data-lang=\"{$lang}\" ";
+					$html_content .= "data-ar_target_section_tipo='{$ar_target_section_tipo_json}' ";
+					$html_content .= "data-search_fields='{$search_fields_json}' ";
+					$html_content .= "data-dato_in_db='{$dato_json}' ";
+					$html_content .= "data-id_wrapper=\"$id_wrapper\" ";
+					$html_content .= "data-limit=\"$limit\" ";
+					$html_content .= "data-divisor=\"$divisor\" ";
+					$html_content .= "value='{$dato_json}' ";
+					$html_content .= "title='' ";
+					$html_content .= "/>";
+
+
+					/*
 					# SELECT
 					$html_content .= " <select class=\"css_select\" name=\"{$search_input_name}\" data-tipo=\"{$tipo}\" title=\"$html_title\"> ";					
 						if(empty($dato)) {
@@ -48,7 +186,7 @@
 							$html_content .= " <option value='$value' {$checked}> {$rotulo}</option>";							
 						}
 					$html_content .= " </select>";
-					
+					*/
 
 					# LOGICAL OPERATORS
 					if (isset($ar_logical_operators)) {
@@ -60,6 +198,9 @@
 					}							
 					break;										
 	}
+
+	# Prepare content to show in page
+	tools::prepare_content($html_content);
 	
 	
 	# PRINT HTML
@@ -67,6 +208,6 @@
 	print $html_content;	
 	
 	
-	print "</div><!-- /css_wrap_select -->"; //wrap
+	print "</div>"; //wrap
 	
 ?>

@@ -5,17 +5,17 @@
 	# ELEMENTOS
 	
 	
-	print "\n<!-- INPUT_TEXT_LARGE [tipo:$tipo section_id_matrix:$parent] $label -->";
-	print "\n<div class=\"css_wrap_input_text_large css_wrap_input_text_large_transcription wrap_component\" id=\"{$id_wrapper}\"
-	data-tipo=\"{$tipo}\"
-	data-lang=\"{$lang}\"
-	data-section_tipo=\"{$section_tipo}\"
-	data-parent=\"{$parent}\"
-	data-modo=\"{$modo}\"
-	data-dato=\"\"
-	data-component_name=\"{$component_name}\"
-	data-component_info='{$component_info}'
-	>";
+
+	print "<div class=\"css_wrap_input_text_large css_wrap_input_text_large_transcription wrap_component\" id=\"{$id_wrapper}\" ";
+	print "data-tipo=\"{$tipo}\" ";
+	print "data-lang=\"{$lang}\" ";
+	print "data-section_tipo=\"{$section_tipo}\" ";
+	print "data-parent=\"{$parent}\" ";
+	print "data-modo=\"{$modo}\" ";
+	print "data-dato=\"\" ";
+	print "data-component_name=\"{$component_name}\" ";
+	print "data-component_info='{$component_info}' ";
+	print ">";
 	
 		
 		# ETIQUETA (LABEL)
@@ -26,23 +26,26 @@
 		switch($permissions) {
 				
 			case 0	:	
-				$html_contenido .= "\n <span class=\"css_span_dato\"> ".label::get_label('sin_acceso')." (input_text_large)</span>";
+				$html_contenido .= "<span class=\"css_span_dato\"> ".label::get_label('sin_acceso')." (input_text_large)</span>";
 				break;
 							
 			case 1	: 	
-				$html_contenido .= "\n <span class=\"css_span_dato\">$dato</span>";
+				$html_contenido .= "<span class=\"css_span_dato\">$dato</span>";
 				break;	
 							
-			case ($permissions>=2)	:			
+			case 2	:
+			case 3	:		
 
-				$html_contenido .= "\n <textarea class=\"css_input_text_large css_input_text_large_transcription\" name=\"{$input_name}\"
-				id=\"$identificador_unico\"
-				data-tipo=\"{$tipo}\"
-				data-parent=\"{$parent}\"
-				data-section_tipo=\"{$section_tipo}\"
-				data-lang=\"{$lang}\"
-				title=\"$html_title\"				
-				>$dato</textarea>";												
+				$html_contenido .= "<textarea class=\"css_input_text_large css_input_text_large_transcription\" name=\"{$input_name}\" ";
+				$html_contenido .= "id=\"$identificador_unico\" ";
+				$html_contenido .= "data-tipo=\"{$tipo}\" ";
+				$html_contenido .= "data-parent=\"{$parent}\" ";
+				$html_contenido .= "data-section_tipo=\"{$section_tipo}\" ";
+				$html_contenido .= "data-lang=\"{$lang}\" ";
+				$html_contenido .= "title=\"$html_title\" ";			
+				$html_contenido .= ">";
+				$html_contenido .= $dato;
+				$html_contenido .= "</textarea>";												
 		}
 
 		# Prepare content to show in page
@@ -54,7 +57,7 @@
 		print $html_contenido;
 	
 	
-	print "\n</div><!-- /css_wrap_input_text_large INPUT_TEXT_large [tipo:$tipo section_id_matrix:$parent] $label -->\n"; //wrap
+	print "</div>"; //wrap
 
 
 ?>

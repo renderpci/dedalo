@@ -143,7 +143,8 @@ class search extends common {
 			if(SHOW_DEBUG===true) {
 				dump($sql_options, 'sql_options', array());
 			}
-			throw new Exception("Error: layout_map is not defined! [$section_tipo] ", 1);	
+			#throw new Exception("Error: layout_map is not defined! [$section_tipo] ", 1);
+			trigger_error("Error: layout_map is not defined! [$section_tipo] ");
 		}
 		# Verify permissions of every field and remove not authorized element
 		foreach ((array)$sql_options->layout_map as $current_section_list_tipo => $map_values)
@@ -152,8 +153,8 @@ class search extends common {
 				if(SHOW_DEBUG===true) {
 					dump($sql_options->layout_map, " sql_options->layout_map ".to_string());
 					dump($map_values, " map_values ".to_string());;
-				}				
-				throw new Exception("Error Processing Request: current_component_tipo is empty in latout map_values:".print_r($map_values,true), 1);						
+				}
+				debug_log(__METHOD__." Error Processing Request: current_component_tipo is empty in latout map_values: ".to_string($map_values), logger::ERROR);			
 			}
 			$current_permissions = common::get_permissions($section_tipo, $current_component_tipo); #dump($current_permissions, 'permissions for $current_component_tipo:'.$current_component_tipo, array());
 			if ($current_permissions<1) {
@@ -208,7 +209,8 @@ class search extends common {
 					$traducible=array();
 					if(SHOW_DEBUG===true) {
 						if ($sql_options->modo!=='edit' && empty(reset($sql_options->layout_map))) {
-							echo "<div class=\"warning\">[Search] Warning. Section list of current layout map is misconfigured or your user (".navigator::get_user_id().") don't have privileges to acces: ".to_string($sql_options->layout_map)."</div>";
+							debug_log(__METHOD__." Warning. Section list of current layout map is empty or invalid. ".to_string($sql_options->layout_map), logger::DEBUG);
+							#echo "<div class=\"warning\">[Search] Warning. Section list of current layout map is misconfigured or your user (".navigator::get_user_id().") modo:".$sql_options->modo." don't have privileges to acces: ".to_string($sql_options->layout_map)."</div>";
 							#dump($sql_options->layout_map, 'Sorry. Section list of current layout map is misconfigured: $sql_options->layout_map');
 							#throw new Exception("Error Processing Request. Section list of current layout map is misconfigured. Please review section/portal structure $sql_options->section_tipo", 1);							
 						}
@@ -529,9 +531,10 @@ class search extends common {
 						$sql_filter_by_search = "\n-- filter_by_search --";
 						$last_key = key( array_slice( (array)$sql_options->filter_by_search, -1, 1, TRUE ) );
 							#dump($sql_options->filter_by_search, ' sql_options->filter_by_search'.to_string());
+
 						foreach ($sql_options->filter_by_search as $search_combi => $search_value) {
 							if (empty($search_value)) continue;
-
+	
 							$search_parts = explode('_', $search_combi);
 							if (isset($search_parts[2])) {
 								# case components inside portals have 3 parts: portal_tipo, section_tipo and component_tipo
@@ -578,7 +581,7 @@ class search extends common {
 								#dump($component_section_tipo," section_real_tipo - sql_options->section_tipo: $sql_options->section_tipo");die();
 							
 							if ($component_section_tipo !== $sql_options->section_tipo) {
-
+	
 								#
 								# SUBSEARCH . Subquery when current component is not current section (like informant name in oh1)
 								#$subsearch_query = "a.{$sql_options->json_field}#>>'{section_tipo}' = '$component_section_tipo' ";
@@ -590,11 +593,12 @@ class search extends common {
 									#dump($subsearch_query, " subsearch_query ".to_string());
 								
 								$search_by_value = self::search_by_value($subsearch_query, $table_search);
-								$ar_locator 	 = $search_by_value->ar_locator;
+								$ar_locator 	 = $search_by_value->ar_locator;								
 								# Notar que portal_tipo ahora se recibe a través del nombre del input (search_input_name) recibido por el formulario de búsqueda (like oh20_oh1_rsc152)						
-								#$portal_tipo 	 = section::get_portal_tipo_from_component_in_search_list($sql_options->section_tipo, $search_tipo);
+								# $portal_tipo 	 = section::get_portal_tipo_from_component_in_search_list($sql_options->section_tipo, $search_tipo);
 								if (empty($portal_tipo)) {
-									throw new Exception("Error Processing Request. portal_tipo is empty ($sql_options->section_tipo - $search_tipo) Not found in any portal search_list of $sql_options->section_tipo", 1);										
+									#throw new Exception("Error Processing Request. portal_tipo is empty ($sql_options->section_tipo - $search_tipo) Not found in any portal search_list of $sql_options->section_tipo", 1);	
+									trigger_error("Error Processing Request. portal_tipo is empty ($sql_options->section_tipo - $search_tipo) Not found in any portal search_list of $sql_options->section_tipo");							
 								}
 
 								if (count($ar_locator)>0) {										
@@ -633,6 +637,7 @@ class search extends common {
 								dump($search_value, ' search_value ++ '.to_string());
 								dump($comparison_operator, ' comparison_operator ++ '.to_string());
 								*/
+								#dump($sql_filter_by_search, ' sql_filter_by_search ++ '.to_string($search_value));
 							}//end if ($component_section_tipo != $section_real_tipo)							
 
 							
@@ -645,6 +650,7 @@ class search extends common {
 						}//end foreach ($sql_options->filter_by_search as $search_tipo => $search_value) {
 						
 						# dump(strlen($sql_filter_by_search), 'strlen($sql_filter_by_search) ++ '.to_string());
+						#dump($sql_filter_by_search, ' sql_filter_by_search ++ '.to_string());
 						if ( strlen($sql_filter_by_search)>30 ) {
 							$sql_filtro .= ' AND ('.$sql_filter_by_search."\n)";							
 						}
@@ -842,7 +848,7 @@ class search extends common {
 					#dump($sql_filtro, ' sql_filtro');
 					#dump($order, ' order');
 				}
-				#dump($strQuery, ' strQuery ++ '.to_string());
+				#dump($strQuery, ' strQuery ++ '.to_string()); die();
 				#error_log($strQuery);
 				
 	
@@ -865,10 +871,17 @@ class search extends common {
 			# FULL COUNT IS A INDEPENDENT SEARCH FOR SPEED
 			#
 				if (!$sql_options->full_count && $sql_options->limit>0 && $sql_options->search_options_session_key!='current_edit') {
-					
+						
+					$sql_filtro = trim($sql_filtro);
+					if ($sql_filtro==='a.id IS NOT NULL' || $sql_filtro==="a.section_id IS NOT NULL \n-- filter_by_section_tipo -- \n AND") {
+						$where_filter = '';
+					}else{
+						$sql_filtro = str_replace("a.section_id IS NOT NULL \n-- filter_by_section_tipo -- \n AND ", '', $sql_filtro);
+						$where_filter = ' a WHERE '.$sql_filtro;
+					}
 					$start_time_full_count = microtime(1);
 					$sql_columns 	= "count(*) AS full_count"; // count(*) OVER() AS full_count
-					$strQuery_count	= "SELECT $sql_columns FROM \"$sql_options->matrix_table\" a WHERE ".trim($sql_filtro)." \n;";	// LIMIT 1
+					$strQuery_count	= "SELECT $sql_columns FROM \"$sql_options->matrix_table\"".$where_filter.";";
 					if(SHOW_DEBUG===true) {
 						$strQuery_count = '-- '.__METHOD__.' : '.debug_backtrace()[1]['function']."\n".$strQuery_count;
 					}
@@ -878,7 +891,7 @@ class search extends common {
 					if(SHOW_DEBUG===true) {
 						$total=round(microtime(1)-$start_time_full_count,3);
 						if ($total > SLOW_QUERY_MS) {
-							dump($row_count['full_count'],"full_count ".$total."secs for \n".print_r($strQuery_count,true));
+							debug_log(__METHOD__." SLOW_QUERY_MS full_count:".$row_count['full_count']." $total secs for \n".to_string($strQuery_count), logger::DEBUG);
 						}
 					}
 				}
@@ -1110,11 +1123,11 @@ class search extends common {
 	protected static function search_by_value($subsearch_query, $table) {
 		$ar_locator=array();
 
-		$strQuery = "
-		-- ".__METHOD__."
-		SELECT a.section_id, a.section_tipo FROM \"$table\" a WHERE 
-		$subsearch_query
-		";
+		$strQuery  = "";
+		$strQuery .= "-- ".__METHOD__;
+		$strQuery .= "\nSELECT a.section_id, a.section_tipo FROM \"$table\" a WHERE ";
+		$strQuery .= $subsearch_query;
+	
 		$result = JSON_RecordObj_matrix::search_free($strQuery);
 		while ($rows = pg_fetch_assoc($result)) {
 			
@@ -1140,10 +1153,9 @@ class search extends common {
 
 
 
-
 	# ORDER_PORTAL_LIST
 	# Re-order db result table by filter options (by reference)
-	public static function order_portal_list_DES(&$table_final, $options) {
+	/*public static function order_portal_list_DES(&$table_final, $options) {
 		
 		#
 		# MATRIX TIME MACHINE NOT SORT FOR NOW
@@ -1197,11 +1209,11 @@ class search extends common {
 			if (empty($table_final) && !empty($table_final_pre_sort)) {
 				dump($table_final_pre_sort,"PRE table_final_pre_sort");
 				dump($table_final,"POST table_final");
-				throw new Exception("Error Processing Request. Sort table result is wrong. Please, review 'order_portal_list' ", 1);							
+				#throw new Exception("Error Processing Request. Sort table result is wrong. Please, review 'order_portal_list' ", 1);
+				trigger_error("Error Processing Request. Sort table result is wrong. Please, review 'order_portal_list' ");							
 			}
 		}
-	}//end order_portal_list
-
+	}//end order_portal_list */
 	
 
 
@@ -1275,7 +1287,7 @@ FROM(
 			-- if is array do a jsonb_array_elements
 			-- else don't split in diferent rows (keep the format of hte data)
 
-			case when jsonb_typeof(matrix.datos#>'{components, oh24, dato, lg-nolan}') = 'array' 
+			case when (jsonb_typeof(matrix.datos#>'{components, oh24, dato, lg-nolan}') = 'array' AND {$json_field}#>'{components, $options->search_tipo, dato, $lg_nolang}' != '[]') 
 				then jsonb_array_elements(matrix.datos#>'{components, oh24, dato, lg-nolan}')
 				else matrix.datos#>'{components, oh24, dato, lg-nolan}'
 				end as locator_b
@@ -1351,6 +1363,78 @@ LIMIT 50
 
 */
 
+	/**
+	* GET_SUBQUERY
+	* Build component specific sql portion query to inject in a global query
+	* Default subquery. Overwrite when use components with references like component_autocomplete, etc.
+	* @param object $options
+	*
+	* @return string $subquery
+	*/
+	public static function get_subquery($request_options) {
+
+		$options = new stdClass();
+			$options->search_in 	 		= null; # Where compare section_id. Like "section_id::text" for direct compare or "oh30->>'section_id'" for referenced fields
+			$options->search_tipo 	 		= null; # component tipo where to search
+			$options->search_section_tipo 	= null; # section tipo where to search
+			$options->matrix_table 	 		= null; # table where to search
+			$options->search_query 	 		= null; # composed search query
+			$options->subquery_type 		= null;
+			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
+		
+		$subquery  = '';
+		if(SHOW_DEBUG===true) {
+			$subquery .= "\n -- ".get_called_class().' > '.__METHOD__." $options->search_tipo in section $options->search_section_tipo . Subquery $options->subquery_type ";
+		}			
+		
+		#$subquery .= "\nsection_id::text IN( \n";
+		$subquery .= "\n {$options->search_in} IN( \n";
+		
+		switch ($options->subquery_type) {
+			case 'with_references':
+				$modelo_name  = RecordObj_dd::get_modelo_name_by_tipo($options->search_tipo,true);
+
+				$select_options = new stdClass();
+					$select_options->json_field  = 'datos';
+					$select_options->search_tipo = $options->search_tipo;
+					$select_options->lang 		  = 'all';	//$RecordObj_dd->get_traducible()!=='si' ? DEDALO_DATA_NOLAN : DEDALO_DATA_LANG;
+					$select_options->modelo_name = $modelo_name;
+					#$select_options->all_langs   = true;	// Important true								
+				$select 	  = $modelo_name::get_select_query($select_options);
+
+				$subquery .= " SELECT section_id::text \n";
+				$subquery .= " FROM (SELECT section_id::text, ";
+				$subquery .= $select;
+				$subquery .= "\n FROM \n $options->matrix_table a";
+				$subquery .= "\n WHERE (a.section_tipo='$options->search_section_tipo') \n";
+				$subquery .= ") as base_". $options->search_tipo;
+				$subquery .= "\n WHERE \n";
+				break;
+			
+			default:
+				$subquery .= " SELECT section_id::text FROM ";
+				$subquery .=  "\"$options->matrix_table\" a WHERE \n";
+				$subquery .= " (a.section_tipo='$options->search_section_tipo') AND \n";
+				break;
+		}
+		
+		#$subquery .= " (f_unaccent(a.datos#>>'{components, $search_tipo, dato}') ILIKE f_unaccent('%[\"{$search_value}%')) \n";
+		$subquery .= " ($options->search_query) \n)";
+
+
+		return $subquery;
+	}//end get_subquery
+
+
+
+
+
+
+
+	/*
+		EN PRUEBAS 
+	---------------------------------------------------------------------------------------------------------------------------------- */
+
 
 
 	/**
@@ -1404,10 +1488,103 @@ LIMIT 50
 
 		$query = $sql_select .' '. $sql_from .' '. $sql_left_join .' '. $sql_where;
 			dump($query, ' query ++ '.to_string());
-			return ;	
-		
-
+			return ;			
 	}//end get_records_2
+
+
+
+	/**
+	* GET_RECORDS_3
+	* @return 
+	*/
+	public function get_records_3($request_options) {
+		
+		$options = new stdClass();
+			$options->section_tipo 	 	 = null;
+			$options->search_submit_data = null;
+			$options->columns 		 	 = null;
+			$options->main_matrix_table  = null;
+			$options->lang 		 		 = 'all'; # Can be all for all langs
+			$options->limit 			 = 10;
+
+			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
+
+		// Fix as global
+		$this->options = $options;
+
+		// MAIN_MATRIX_TABLE
+			if ($options->main_matrix_table===null) {
+				$this->options->main_matrix_table = $this->get_matrix_table_from_section_tipo($options->section_tipo);
+			}
+
+		// LIMIT
+			$sql_limit = $this->build_sql_limit();
+
+		// ORDER
+			$sql_order = $this->build_sql_order();
+
+		// GROUP
+			$sql_group = $this->build_sql_group();
+
+		// WHERE (subquery)
+			$sql_where_subquery = $this->build_sql_where();
+				dump($sql_where_subquery, ' sql_where_subquery ++ '.to_string());
+
+		// SELECT
+			$sql_select_second = $this->build_sql_select();
+				dump($sql_select_second, ' sql_select_second ++ '.to_string());
+/*
+		// WHERE (default)
+			$sql_where_default = $this->build_sql_where('default');
+				dump($sql_where, ' sql_where ++ '.to_string());
+*/
+		
+		$query  = "\nSELECT id, section_id, section_tipo, ".implode(', ',$options->columns);
+		$query .= "\n FROM ( $sql_select_second ) AS base ";
+		$query .= " $sql_where_subquery ";
+		$query .= " $sql_group $sql_order $sql_limit \n";
+			dump($query, ' query ++ '.to_string());
+	}//end get_records_3
+
+
+
+	/**
+	* BUILD_SQL_SELECT
+	* @return 
+	*/
+	public function build_sql_select() {
+
+		$options = $this->options;
+		
+		$ar_select = [];
+
+		// Fixed columns
+		$ar_select[] = ' '. 'a.id';
+		$ar_select[] = ' '. 'a.section_id';	//$options->main_matrix_table 
+		$ar_select[] = ' '. 'a.section_tipo';
+		
+		foreach ($options->columns as $key => $component_tipo) {
+			
+			$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+
+			$select_options = new stdClass();
+				$select_options->json_field  = 'datos';
+				$select_options->search_tipo = $component_tipo;
+				$select_options->lang 		 = $options->lang;
+				#$select_options->subquery 	 = $options->subquery;
+
+			foreach ($options->search_submit_data as $ckey => $value) {
+				# code...
+			}
+
+			$ar_select[] = $modelo_name::get_select_query($select_options);
+		}
+
+		$sql_select  = "SELECT \n" . implode(", ",$ar_select);
+		$sql_select .= "\n FROM \"".$this->options->main_matrix_table."\" a WHERE (a.section_tipo='".$this->options->section_tipo."') ";
+		
+		return $sql_select;
+	}//end build_sql_select
 
 
 
@@ -1415,7 +1592,7 @@ LIMIT 50
 	* BUILD_SQL_SELECT
 	* @return string $sql_select
 	*/
-	public function build_sql_select() {
+	public function build_sql_select_OLD() {
 
 		$options = $this->options;
 		
@@ -1484,19 +1661,24 @@ LIMIT 50
 	*/
 	public function build_sql_where() {
 
-		$ar_sql = array();		
+		$options = $this->options;
 
-		// FILTER_BY_SECTION_TIPO. Fixed filter
-			$section_tipo = $this->options->section_tipo;
-			$matrix_table = $this->options->matrix_tables[$section_tipo];
-			$ar_sql[] = "($matrix_table.section_tipo = '$section_tipo')";
-
-		// FILTER BY SEARCH
-			$ar_sql[] = $this->filter_by_search();
-
-
+		$ar_sql = array();
+		/*
+		if ($mode==='subquery') {
+			// FILTER BY SEARCH
+				$ar_sql[] = $this->filter_by_search();
+		}else{
+			// FILTER_BY_SECTION_TIPO. Fixed filter
+				$section_tipo = $this->options->section_tipo;
+				$matrix_table = 'a';	//$this->options->matrix_tables[$section_tipo];
+				$ar_sql[] = "($matrix_table.section_tipo = '$section_tipo')";
+		}
+		*/
+		$ar_sql[] = $this->filter_by_search();
 
 		$sql_where = "\nWHERE \n". implode(" AND \n",$ar_sql);
+			#dump($sql_where, ' sql_where ++ '.to_string($mode));
 
 		return $sql_where;
 	}//end build_sql_where
@@ -1508,6 +1690,79 @@ LIMIT 50
 	* @return 
 	*/
 	public function filter_by_search() {
+		$options = $this->options;
+
+		$ar_subquery = array();
+		foreach ($options->search_submit_data as $keyd => $dimension) {			
+			foreach ($dimension as $ar_blocks) {
+				if (!is_array($ar_blocks)) continue; # case last link_logical_operator is nor an array. Is object
+					#dump($ar_blocks, ' ar_blocks ++ '.to_string()); continue;
+				foreach ($ar_blocks as $search_element) {
+					#dump($search_element, ' search_element ++ '.to_string());
+					
+					if ($search_element->type==='component_search') {
+
+						if (isset($search_element->search)) {
+							# subquery_type = 'with_reference';
+							#$search_element->search->dato = $search_element->dato;
+							$ar_search 		= (array)$search_element->search;
+							foreach ($ar_search as $c_search) $c_search->dato = $search_element->dato;							
+							$search_in 		= "{$search_element->component_tipo}_array_elements->>'section_id'";
+						}else{
+							# subquery_type = 'default';
+							$ar_search 		= array($search_element);
+							$search_in 		= 'section_id::text';
+						}
+						
+						foreach ($ar_search as $search_field) {
+						
+							# Select elements
+							$current_section_tipo   = $search_field->section_tipo;
+							$current_component_tipo = $search_field->component_tipo;
+							$string_to_search 		= $search_field->dato;
+
+							#$RecordObj_dd = new RecordObj_dd($current_component_tipo);
+							#$current_lang = $RecordObj_dd->get_traducible()!=='si' ? DEDALO_DATA_NOLAN : DEDALO_DATA_LANG;
+							$search_modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_component_tipo,true);		
+							$search_query 		= $search_modelo_name::get_search_query('datos', $current_component_tipo, 'dato', 'all', $string_to_search.'*', 'ILIKE');
+							
+							#$bracket 	  = ($search_modelo_name==='component_input_text') ? '[' : '';
+							#$search_query = "f_unaccent(a.datos#>>'{components, $current_component_tipo, dato}') ILIKE f_unaccent('%{$bracket}\"{$string_to_search}%')"; # Force custom search instead standar ?
+							#error_log($search_query); continue;
+
+							$options = new stdClass();
+								$options->search_in 	 		= $search_in;
+								$options->search_tipo 	 		= $current_component_tipo;
+								$options->search_section_tipo 	= $current_section_tipo;
+								$options->matrix_table 	 		= common::get_matrix_table_from_tipo( $current_section_tipo );
+								$options->search_query 	 		= $search_query;
+								$options->subquery_type 		= '';
+							$subquery = search::get_subquery($options);
+							$ar_subquery[] = $subquery;
+						}
+
+					}else if ($search_element->type==='link_logical_operator'){
+						# link_logical_operator
+
+					}
+
+				}#end foreach ($ar_blocks as $search_element)
+			}#end foreach ($dimension as $ar_blocks)
+		}#end foreach ($options->search_submit_data as $keyd => $dimension)
+
+		$filter_by_search = "-- filter_by_search --\n(".implode(" OR ", $ar_subquery)." )";
+			dump($filter_by_search, ' filter_by_search ++ '.to_string());
+
+		return $filter_by_search;
+	}//end filter_by_search
+
+
+
+	/**
+	* FILTER_BY_SEARCH
+	* @return 
+	*/
+	public function filter_by_search__OLD() {
 
 		if (empty($this->options->filter_by_search)) return null;
 
@@ -1620,23 +1875,62 @@ LIMIT 50
 	}//end build_sql_left_join
 
 
+	/**
+	* BUILD_SQL_GROUP
+	* @return string $sql_group
+	*/
+	public function build_sql_group() {
+		
+		$sql_group = '';
+
+		$ar_group=array();		
+		foreach ($this->options->columns as $component_key) {
+			$ar_group[] = $component_key;
+		}		
+		
+		# Fixed elements at end 
+		$ar_group[] = 'id';
+		$ar_group[] = 'section_tipo';
+		$ar_group[] = 'section_id';
+
+		$sql_group = "\n GROUP BY ". implode(', ', $ar_group);
+
+		
+		return $sql_group;
+	}//end build_sql_order
+
+
 
 	/**
 	* BUILD_SQL_ORDER
-	* @return 
+	* @return string $sql_order
 	*/
 	public function build_sql_order() {
 		
+		$sql_order = '';
+		
+		if (isset($this->options->order)) {
+			$sql_order = "\n ORDER BY $this->options->order";
+		}
+		
+		return $sql_order;
 	}//end build_sql_order
 
 
 
 	/**
 	* BUILD_SQL_LIMIT
-	* @return 
+	* @return string $sql_limit
 	*/
 	public function build_sql_limit() {
+
+		$sql_limit = '';
+	
+		if (isset($this->options->limit)) {
+			$sql_limit = "\n LIMIT ".$this->options->limit;
+		}
 		
+		return $sql_limit;
 	}//end build_sql_limit
 
 

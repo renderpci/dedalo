@@ -9,14 +9,15 @@
 	$dato 					= $this->get_dato();	
 	$label 					= $this->get_label();
 	$required				= $this->get_required();
-	$debugger				= $this->get_debugger();
-	$permissions			= common::get_permissions($section_tipo,$tipo);
+	$debugger				= $this->get_debugger();	
+	$permissions			= $this->get_component_permissions();
 	$ejemplo				= NULL;
-	$html_title				= "Info about $tipo";
+	$html_title				= $label;
 	$ar_tools_obj			= $this->get_ar_tools_obj();
 	$lang					= $this->get_lang();
 	$identificador_unico	= $this->get_identificador_unico();
 	$component_name			= get_class($this);
+
 	
 	if($permissions===0) return null;
 	
@@ -28,6 +29,9 @@
 	
 	switch($modo) {
 		
+		case 'dataframe_edit' :
+					$caller_dataset_json = json_encode($this->caller_dataset);
+						#dump($dato, ' dato ++ '.to_string());
 		case 'edit' :					
 					$id_wrapper = 'wrapper_'.$identificador_unico;
 					$input_name = "{$tipo}_{$parent}";	

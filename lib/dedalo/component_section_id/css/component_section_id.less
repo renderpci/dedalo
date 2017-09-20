@@ -1,13 +1,39 @@
+// Vars
+@common_css: "../../common/css";
+
+// Usage
+@import "@{common_css}/library.less";
 
 
-
+/* WRAPPER
+------------------------------------------------------- */
 .css_wrap_section_id, .css_wrap_section_id_tm {
+	//width: 8%;
+	/*
 	min-width: 62px;
+	min-height: 4.667em;    
+    padding-left: 10px;
+    padding-right: 10px;
+    background-color: rgba(129,129,129,0.8);
+    color: #fff !important;
+    border-right: 1px solid #ebebeb;
+    border-bottom-right-radius: 8px;*/
+
+    background-color: rgba(129,129,129,0.8);
+    color: #FFFFFF !important;
 	}
+
+
+
+	/* CONTENT_DATA
+	------------------------------------------------------- */
 	.css_wrap_section_id .content_data {
-		display: inline;
-		
+		display: inline-block;		
 		}
+
+
+		/* SECTION_ID
+		------------------------------------------------------- */
 		.css_wrap_section_id .content_data .css_section_id {
 			padding: 0;
 			display: inline-block;
@@ -17,4 +43,18 @@
 			text-align: center;
 			width: 100%;
 		}
+
+
+
+		/* LABEL
+		------------------------------------------------------- */
+		.css_wrap_section_id > .css_label {
+			/*
+			width: 100%;
+			max-width: 100%;
+			min-height: initial;
+			padding-left: 0;*/
+		}
 		
+
+    

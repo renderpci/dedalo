@@ -31,7 +31,8 @@
 				#return print "$component_name. working here..";
 				$ar_comparison_operators 	= $this->build_search_comparison_operators();
 				$ar_logical_operators 		= $this->build_search_logical_operators();
-				$dato 						= isset($_REQUEST[$tipo]) ? json_decode($_REQUEST[$tipo]) : null;
+				#$dato 						= isset($_REQUEST[$tipo]) ? json_decode($_REQUEST[$tipo]) : null;
+
 
 				# Search input name (var search_input_name is injected in search -> records_search_list.phtml)
 				# and recovered in component_common->get_search_input_name()

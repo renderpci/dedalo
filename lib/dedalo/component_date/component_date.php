@@ -12,7 +12,7 @@
 	$label 					= $this->get_label();	
 	$required				= $this->get_required();
 	$debugger				= $this->get_debugger();
-	$permissions			= common::get_permissions($section_tipo,$tipo);	
+	$permissions			= $this->get_component_permissions();
 	$html_title				= "Info about $tipo";
 	$lang					= $this->get_lang();
 	$lang_name				= $this->get_lang_name();
@@ -20,6 +20,8 @@
 	$component_name			= get_class($this);
 	$ejemplo 				= $this->get_ejemplo();
 	$propiedades 			= $this->get_propiedades();
+	$status 				= $this->get_status();
+	
 		
 
 	$file_name 				= $modo;
@@ -39,87 +41,135 @@
 				$dato_json 		= json_encode($this->dato);
 				$component_info = $this->get_component_info('json');
 
-				if (isset($_REQUEST['from_modo'])) {
-					$from_modo = $_REQUEST['from_modo'];
+				#get the change modo from portal list to edit
+				$var_requested = common::get_request_var('from_modo');
+				if (!empty($var_requested)) {
+					$from_modo = $var_requested;
 				}
 
+				$ar_dato = $dato;
 				$date_mode = $this->get_date_mode();
+				
+				$ar_dataframe_obj = array();
+				$ar_dataframe = isset($propiedades->dataframe) ? $propiedades->dataframe : false;
+
+				//create the array varibles for the modo
 				switch ($date_mode) {
 					case 'range':
-						$uid_start		  	= 'start_'.$identificador_unico;
-						$uid_end 		  	= 'end_'.$identificador_unico;
-						$input_name_start	= 'start_'."{$tipo}_{$parent}";
-						$input_name_end		= 'end_'."{$tipo}_{$parent}";
-
-						# Start
-						$valor_start = '';
-						if(isset($dato->start)) {
-							$dd_date	= new dd_date($dato->start);
-							$valor_start= isset($propiedades->method->get_valor_local) 
-										? component_date::get_valor_local( $dd_date, reset($propiedades->method->get_valor_local) ) 
-										: component_date::get_valor_local( $dd_date, false );
-						}
-											
-
-						# End
-						$valor_end = '';
-						if(isset($dato->end)) {
-							$dd_date	= new dd_date($dato->end);
-							$valor_end 	= isset($propiedades->method->get_valor_local) 
-										? component_date::get_valor_local( $dd_date, reset($propiedades->method->get_valor_local) ) 
-										: component_date::get_valor_local( $dd_date, false );
-						}
+						$uid_start	= $uid_end	=	$input_name_start	=	$input_name_end	= array();
+						$valor_start = array();
+						$valor_end = array();
 						break;
-					case 'period':						
-						$placeholder_year 	= 'Y';//labeL::get_label('anyos');
-						$placeholder_month 	= 'M';//labeL::get_label('meses');
-						$placeholder_day 	= 'D';//labeL::get_label('dias');
-
-						$input_name_year	= "year_{$tipo}_{$parent}";
-						$input_name_month	= "month_{$tipo}_{$parent}";
-						$input_name_day		= "day_{$tipo}_{$parent}";
-
-						$valor_year	= $valor_month = $valor_day = '';
-						if(!empty($dato->period)) {
-							$dd_date = new dd_date($dato->period);
-							# Year							
-							$valor_year		= isset($dd_date->year) ? $dd_date->year : '';							
-							# Month							
-							$valor_month	= isset($dd_date->month) ? $dd_date->month : '';							
-							# Day							
-							$valor_day		= isset($dd_date->day) ? $dd_date->day : '';							
-						}						
-						break;
-					case 'time':
-						$input_name	= "{$tipo}_{$parent}";
-
-						$valor	= '';
-						if(!empty($dato)) {
-							$dd_date 	= new dd_date($dato);
-
-							$hour  	 = isset($dd_date->hour)	? $dd_date->hour : '00';
-							$minute  = isset($dd_date->minute)	? $dd_date->minute : '00';
-							$second  = isset($dd_date->second)	? $dd_date->second : '00';
-							$separator_time = ':';
-							$valor 	 = $hour . $separator_time . $minute . $separator_time . $second;
-						}
-						break;
-					case 'date':
+					case 'period':	
+						$uid_year	= $uid_month	=	$uid_day	= array();
+						$input_name_year	=	$input_name_month	=	$input_name_day	= array();
+						$valor_year	= $valor_month = $valor_day = array();
 					default:
-						$input_name	= "{$tipo}_{$parent}";
-
-						$valor	= '';
-						if(!empty($dato)) {
-							$dd_date 	= new dd_date($dato);
-
-							if (isset($propiedades->method->get_valor_local)) {
-								$valor	= component_date::get_valor_local( $dd_date, reset($propiedades->method->get_valor_local) );
-							}else{
-								$valor	= component_date::get_valor_local( $dd_date, false );
-							}
-						}
+						$input_name = array();
+						$valor	= array();
 						break;
 				}
+				$ar_dato = empty($dato) ? array("") : $dato;
+				
+				foreach ($ar_dato as $key => $current_dato) {
+					switch ($date_mode) {
+						case 'range':
+
+							$uid_start[$key] 		  	= 'start_'.$key.'_'.$identificador_unico;
+							$uid_end[$key]  		  	= 'end_'.$key.'_'.$identificador_unico;
+							$input_name_start[$key] 	= 'start_'.$key.'_'."{$tipo}_{$parent}";
+							$input_name_end[$key] 		= 'end_'.$key.'_'."{$tipo}_{$parent}";
+
+							# Start
+							if(isset($current_dato->start)) {
+								$dd_date	= new dd_date($current_dato->start);
+								$valor_start[$key]= isset($propiedades->method->get_valor_local) 
+											? component_date::get_valor_local( $dd_date, reset($propiedades->method->get_valor_local) ) 
+											: component_date::get_valor_local( $dd_date, false );
+							}
+												
+
+							# End
+							if(isset($current_dato->end)) {
+								$dd_date	= new dd_date($current_dato->end);
+								$valor_end[$key] 	= isset($propiedades->method->get_valor_local) 
+											? component_date::get_valor_local( $dd_date, reset($propiedades->method->get_valor_local) ) 
+											: component_date::get_valor_local( $dd_date, false );
+							}
+							break;
+						case 'period':			
+							
+							$placeholder_year 	= 'Y';//labeL::get_label('anyos');
+							$placeholder_month 	= 'M';//labeL::get_label('meses');
+							$placeholder_day 	= 'D';//labeL::get_label('dias');
+
+							$uid_year[$key] 		  	= 'year_'.$key.'_'.$identificador_unico;
+							$uid_month[$key]  		  	= 'month_'.$key.'_'.$identificador_unico;
+							$uid_day[$key]  		  	= 'day_'.$key.'_'.$identificador_unico;
+
+							$input_name_year[$key] 	= "year_".$key."_{$tipo}_{$parent}";
+							$input_name_month[$key]	= "month_".$key."_{$tipo}_{$parent}";
+							$input_name_day[$key]	= "day_".$key."_{$tipo}_{$parent}";
+
+							
+							if(!empty($current_dato->period)) {
+								$dd_date = new dd_date($current_dato->period);
+								# Year							
+								$valor_year[$key] 	= isset($dd_date->year) ? $dd_date->year : '';
+
+								# Month							
+								$valor_month[$key] 	= isset($dd_date->month) ? $dd_date->month : '';							
+								# Day							
+								$valor_day[$key] 	= isset($dd_date->day) ? $dd_date->day : '';							
+							}						
+							break;
+						case 'time':
+							$input_name[$key] 	= $key."_{$tipo}_{$parent}";
+
+							if(!empty($current_dato)) {
+								$dd_date 	= new dd_date($current_dato);
+
+								$hour  	 = isset($dd_date->hour)	? $dd_date->hour : '00';
+								$minute  = isset($dd_date->minute)	? $dd_date->minute : '00';
+								$second  = isset($dd_date->second)	? $dd_date->second : '00';
+								$separator_time = ':';
+								$valor[$key] 	 = $hour . $separator_time . $minute . $separator_time . $second;
+							}
+							break;
+						case 'date':
+						default:
+							$input_name[$key]	= $key."_{$tipo}_{$parent}";
+							if(!empty($current_dato)) {								
+								$dd_date 	= new dd_date($current_dato);
+
+								if (isset($propiedades->method->get_valor_local)) {
+									$valor[$key]	= component_date::get_valor_local( $dd_date, reset($propiedades->method->get_valor_local) );
+								}else{
+									$valor[$key]	= component_date::get_valor_local( $dd_date, false );
+										#dump($valor[$key], '$valor[$key] ++ '.to_string());
+								}
+							}
+							break;
+					}
+
+					#
+					# DATAFRAME MANAGER	
+					if($ar_dataframe !==false){
+						foreach ($ar_dataframe as $current_dataframe) {
+							if ($current_dataframe->tipo!==false) {
+								$dataframe_obj = new dataframe($current_dataframe->tipo, $current_dataframe->type, $this, 'dataframe_edit', $key);
+								$ar_dataframe_obj[] = $dataframe_obj;
+							}	
+						}
+					}
+				
+					
+
+				}//end foreach ($ar_dato as $key => $current_dato)
+
+				
+
+
 				#dump($date_mode, ' date_mode ++ '.to_string());
 				$mandatory 		= (isset($propiedades->mandatory) && $propiedades->mandatory===true) ? true : false;
 				$mandatory_json = json_encode($mandatory);	
@@ -131,61 +181,85 @@
 		case 'list_tm' :
 				$file_name = 'list';
 
+		case 'print':
 		case 'list'	:
 
 				$id_wrapper 	= 'wrapper_'.$identificador_unico;
 				$dato_json 		= json_encode($this->dato);
 				$component_info = $this->get_component_info('json');
-
-
-				$date_mode = $this->get_date_mode();
+				$ar_dato 		= $dato;
+				$date_mode 		= $this->get_date_mode();
+				
 				switch ($date_mode) {
 					case 'range':
-						
-						# Start
-						$valor_start = '';
-						if(isset($dato->start)) {
-							$dd_date	= new dd_date($dato->start);
-							$valor_start= isset($propiedades->method->get_valor_local) 
-										? component_date::get_valor_local( $dd_date, reset($propiedades->method->get_valor_local) ) 
-										: component_date::get_valor_local( $dd_date, false );
-						}
-											
-
-						# End
-						$valor_end = '';
-						if(isset($dato->end)) {
-							$dd_date	= new dd_date($dato->end);
-							$valor_end 	= isset($propiedades->method->get_valor_local) 
-										? component_date::get_valor_local( $dd_date, reset($propiedades->method->get_valor_local) ) 
-										: component_date::get_valor_local( $dd_date, false );
-						}
+						$valor_start = array();
+						$valor_end = array();
 						break;
-					case 'period':
-						$valor_year	= $valor_month = $valor_day = '';
-						if(!empty($dato->period)) {
-							$dd_date = new dd_date($dato->period);
-							# Year
-							$valor_year	= isset($dd_date->year) ? $dd_date->year : '';
-							# Month
-							$valor_month= isset($dd_date->month) ? $dd_date->month : '';
-							# Day
-							$valor_day	= isset($dd_date->day) ? $dd_date->day : '';
-						}
-						break;
-					case 'date':
+					case 'period':	
+						$valor_year	= $valor_month = $valor_day = array();
 					default:
+						$valor	= array();
+						break;
+				}
 
-						$valor	= '';
-						if(!empty($dato)) {
-							$dd_date 	= new dd_date($dato);
+				foreach ($ar_dato as $key => $current_dato) {
+					switch ($date_mode) {
+						case 'range':
+							
+							# Start
+							if(isset($current_dato->start)) {
+								$dd_date	= new dd_date($current_dato->start);
+								$valor_start[]= isset($propiedades->method->get_valor_local) 
+											? component_date::get_valor_local( $dd_date, reset($propiedades->method->get_valor_local) ) 
+											: component_date::get_valor_local( $dd_date, false );
+							}				
 
-							if (isset($propiedades->method->get_valor_local)) {
-								$valor	= component_date::get_valor_local( $dd_date, reset($propiedades->method->get_valor_local) );
-							}else{
-								$valor	= component_date::get_valor_local( $dd_date, false );
+							# End
+							if(isset($current_dato->end)) {
+								$dd_date	= new dd_date($current_dato->end);
+								$valor_end[] 	= isset($propiedades->method->get_valor_local) 
+											? component_date::get_valor_local( $dd_date, reset($propiedades->method->get_valor_local) ) 
+											: component_date::get_valor_local( $dd_date, false );
 							}
-						}
+							break;
+						case 'period':
+							if(!empty($current_dato->period)) {
+								$dd_date = new dd_date($current_dato->period);
+								# Year
+								$valor_year[]	= isset($dd_date->year) ? $dd_date->year : '';
+								# Month
+								$valor_month[]	= isset($dd_date->month) ? $dd_date->month : '';
+								# Day
+								$valor_day[]	= isset($dd_date->day) ? $dd_date->day : '';
+							}
+							break;
+						case 'date':
+						default:
+
+							if(!empty($current_dato)) {
+								$dd_date 	= new dd_date($current_dato);
+
+								if (isset($propiedades->method->get_valor_local)) {
+									$valor[]	= component_date::get_valor_local( $dd_date, reset($propiedades->method->get_valor_local) );
+								}else{
+									$valor[]	= component_date::get_valor_local( $dd_date, false );
+								}
+							}
+							break;
+					}
+				}
+
+				switch ($date_mode) {
+					case 'range':
+						$valor_start	= implode(' | ', $valor_start);
+						$valor_end		= implode(' | ', $valor_end);
+						break;
+					case 'period':	
+						$valor_year		= implode(' | ', $valor_year);
+						$valor_month	= implode(' | ', $valor_month);
+						$valor_day		= implode(' | ', $valor_day);
+					default:
+						$valor			= implode(' | ', $valor);
 						break;
 				}
 				break;
@@ -197,58 +271,6 @@
 				$file_name  = 'edit';
 				break;
 				
-		case 'print':
-				$date_mode = $this->get_date_mode();
-				switch ($date_mode) {
-					case 'range':
-						
-						# Start
-						$valor_start = '';
-						if(isset($dato->start)) {
-							$dd_date	= new dd_date($dato->start);
-							$valor_start= isset($propiedades->method->get_valor_local) 
-										? component_date::get_valor_local( $dd_date, reset($propiedades->method->get_valor_local) ) 
-										: component_date::get_valor_local( $dd_date, false );
-						}
-											
-
-						# End
-						$valor_end = '';
-						if(isset($dato->end)) {
-							$dd_date	= new dd_date($dato->end);
-							$valor_end 	= isset($propiedades->method->get_valor_local) 
-										? component_date::get_valor_local( $dd_date, reset($propiedades->method->get_valor_local) ) 
-										: component_date::get_valor_local( $dd_date, false );
-						}
-						break;
-					case 'period':
-						$valor_year	= $valor_month = $valor_day = '';
-						if(!empty($dato->period)) {
-							$dd_date = new dd_date($dato->period);
-							# Year
-							$valor_year	= isset($dd_date->year) ? $dd_date->year : '';
-							# Month
-							$valor_month= isset($dd_date->month) ? $dd_date->month : '';
-							# Day
-							$valor_day	= isset($dd_date->day) ? $dd_date->day : '';
-						}
-						break;
-					case 'date':
-					default:
-
-						$valor	= '';
-						if(!empty($dato)) {
-							$dd_date 	= new dd_date($dato);
-
-							if (isset($propiedades->method->get_valor_local)) {
-								$valor	= component_date::get_valor_local( $dd_date, reset($propiedades->method->get_valor_local) );
-							}else{
-								$valor	= component_date::get_valor_local( $dd_date, false );
-							}
-						}
-						break;
-				}
-				break;
 
 		case 'search':
 				# Showed only when permissions are >1

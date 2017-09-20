@@ -1,23 +1,32 @@
 <?php
-# COMMON (ABSTRACT CLASS)
-# MÉTODOS COMPARTIDOS POR TODOS LOS COMPONENTES Y ZONAS
-# DECLARAR LOS MÉTODOS PUBLIC
-# include(DEDALO_LIB_BASE_PATH . '/common/class.Accessors.php');
-
+/**
+* COMMON (ABSTRACT CLASS)
+* Métodos compartidos por todos los componentes y secciones
+* declarar los métodos public
+*/
 abstract class common {
 	
-	public $permissions;	
+	# permissions. int value from 0 to 3
+	public $permissions;
+
+	# ar_loaded_modelos_name. List of all components/sections modelo name used in current page (without duplicates). Used to determine
+	# the css and css files to load
 	static $ar_loaded_modelos_name = array();
 	
+	# identificador_unico. UID used to set dom elements id unic bsen on section_tipo, section_id, lang, modo, etc.
 	public $identificador_unico;
+	# variant. Modifier of identificador_unico
 	public $variant;
 
+	# bl_loaded_structure_data. Set to true when element structure data is loaded. Avoid reload structure data again
 	protected $bl_loaded_structure_data;
+	#bl_loaded_matrix_data. Set to true when element matrix data is loaded. Avoid reconnect to db data again
 	protected $bl_loaded_matrix_data;
 
 	# TABLE  matrix_table
 	#public $matrix_table ;
 
+	# context. Object with information about context of current element 
 	public $context;
 	
 	# REQUIRED METHODS
@@ -27,7 +36,7 @@ abstract class common {
 	#abstract public function get_html();
 
 	# ACCESSORS
-	public function __call($strFunction, $arArguments) {
+	final public function __call($strFunction, $arArguments) {
 		
 		$strMethodType 		= substr($strFunction, 0, 4); # like set or get_
 		$strMethodMember 	= substr($strFunction, 4);
@@ -43,7 +52,7 @@ abstract class common {
 		return(false);
 	}
 	# SET
-	private function SetAccessor($strMember, $strNewValue) {
+	final private function SetAccessor($strMember, $strNewValue) {
 		
 		if(property_exists($this, $strMember)) {
 			$this->$strMember = $strNewValue;			
@@ -52,7 +61,7 @@ abstract class common {
 		}
 	}
 	# GET
-	private function GetAccessor($strMember) {
+	final private function GetAccessor($strMember) {
 		
 		if(property_exists($this, $strMember)) {
 			$strRetVal = $this->$strMember;
@@ -75,7 +84,6 @@ abstract class common {
 		
 		if(login::is_logged()!==true)
 			return 0;
-		
 
 		if( empty($tipo) ) {
 			if(SHOW_DEBUG===true) {
@@ -572,10 +580,30 @@ abstract class common {
 	*/
 	public static function setVar($name, $default=false) {
 
-		if($name==='name') throw new Exception("Error Processing Request: Name 'name' is invalid", 1);
+		if($name==='name') throw new Exception("Error Processing Request [setVar]: Name 'name' is invalid", 1);
 		
 		$$name = $default; 
 		if(isset($_REQUEST[$name])) $$name = $_REQUEST[$name];
+		
+		if(isset($$name))
+			return $$name;
+
+		return false;
+	}//end setVar
+
+
+
+	/**
+	* SETVARDATA
+	* @param string $name
+	* @param onject $data_obj
+	*/
+	public static function setVarData($name, $data_obj, $default=false) {
+
+		if($name==='name') throw new Exception("Error Processing Request [setVarData]: Name 'name' is invalid", 1);
+		
+		$$name = $default; 
+		if(isset($data_obj->{$name})) $$name = $data_obj->{$name};
 		
 		if(isset($$name))
 			return $$name;
@@ -689,17 +717,80 @@ abstract class common {
 
 	/**
 	* GET_CONTEXT
+	* @return object $context
 	*/
 	public function get_context() {
-		$context 				= $this->context;
+
+		// Get from self object (fixed before)
+		$context = $this->context;
+
+		if (is_string($context) && empty($context)) {
+			$context = $this->context = null;
+		}
+
+		// Check if is a invalid string (only objects are accepted)
+		if (is_string($context)) {
+			dump($context, ' context ++ '.to_string($context));
+			throw new Exception("Error Processing Request. context must be an object or null (current is string)", 1);			
+		}
+		
+		// When no is fixed in current object, search in request vars for one
+		if (empty($context)) {
+			
+			if ($context_req = common::get_request_var('context')) {
+				// Get context object from url get or input vars
+				if (is_string($context_req)) {
+					if(!$context = json_decode()){
+						throw new Exception("Error Processing Request, Invalid context request", 1);						
+					}
+				}			
+			}else{
+				// Default context object
+				$context = new stdClass();
+					$context->context_name = 'default';
+			}
+
+		}//end if (empty($context))
+
+		
+		/*
 		if (!empty($_REQUEST['context']) && empty($context)) {
 			$context 			= $_REQUEST['context'];
 		}
 		if (empty($context)) {
 			$context 			= 'default';
 		}
-		return $context;
+		*/
+		#dump($context, ' context 2 ++ '. gettype($context). to_string());
+
+
+		return (object)$context;
 	}//end get_context
+
+
+
+	/**
+	* SET_CONTEXT
+	* @param mixed object | string $context
+	* @return bool
+	*/
+	public function set_context($context) {
+		if (is_string($context)) {
+			$context = json_decode($context);
+		}
+
+		if (!is_object($context)) {
+			$context = new stdClass();
+		}
+
+		if (!property_exists($context, 'context_name')) {
+			$context->context_name = 'default';
+		}
+
+		$this->context = (object)$context;
+	
+		return true;
+	}//end set_context
 
 
 
@@ -743,6 +834,10 @@ abstract class common {
 	* GET_PROPIEDADES : Alias of $this->RecordObj_dd->get_propiedades() but json decoded
 	*/
 	public function get_propiedades() {
+
+		if(isset($this->propiedades)) return $this->propiedades;
+
+		# Read string from database str
 		$propiedades = $this->RecordObj_dd->get_propiedades();
 		if (!is_string($propiedades)) {
 			#dump($this," ");
@@ -750,6 +845,24 @@ abstract class common {
 			return json_handler::decode($propiedades);
 		}		
 	}//end get_propiedades
+
+
+
+	/**
+	* SET_PROPIEDADES
+	* @return bool
+	*/
+	public function set_propiedades($value) {
+		if (is_string($value)) {
+			$propiedades = json_decode($value);
+		}else{
+			$propiedades = $value;
+		}
+
+		$this->propiedades = (object)$propiedades;
+
+		return true;
+	}//end set_propiedades
 
 
 	
@@ -969,6 +1082,9 @@ abstract class common {
 							DEDALO_RELATION_TYPE_INDEX_TIPO,
 							DEDALO_RELATION_TYPE_STRUCT_TIPO,
 							DEDALO_RELATION_TYPE_MODEL_TIPO,
+							DEDALO_DATAFRAME_TYPE_UNCERTAINTY,
+							DEDALO_DATAFRAME_TYPE_TIME,
+							DEDALO_DATAFRAME_TYPE_SPACE
 							); // DEDALO_RELATION_TYPE_RECORD_TIPO
 		/*
 		$tipo 		  = 'dd427';
@@ -976,9 +1092,102 @@ abstract class common {
 		$relation_type= 'children';
 		$ar_allowed   = (array)RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($tipo, $modelo_name, $relation_type, $search_exact=true);
 		*/
+
 		return (array)$ar_allowed;		
 	}//end get_allowed_relation_types
 	
+	
+
+	/**
+	* TRIGGER_MANAGER
+	* @param php://input
+	* @return object $response
+	*/
+	public static function trigger_manager($request_options=false) {		
+
+		$options = new stdClass();
+			$options->test_login = true;
+			if($request_options!==false) {
+				foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
+			}
+			
+
+		# Set JSON headers for all responses
+		header('Content-Type: application/json');
+
+		# JSON_DATA
+		# javascript common.get_json_data sends a stringify json object
+		# this object is getted here and decoded with all ajax request vars
+		$str_json = file_get_contents('php://input');
+		if (!$json_data = json_decode($str_json)) {
+			$response = new stdClass();
+				$response->result 	= false;
+				$response->msg 		= "Error on read php://input data";
+			echo json_encode($response);
+			exit();
+		}
+
+		# DEDALO_MAINTENANCE_MODE
+		$mode = $json_data->mode;
+		if ($mode!=="Save" && $mode!=="Login") {
+			if (DEDALO_MAINTENANCE_MODE===true && (isset($_SESSION['dedalo4']['auth']['user_id']) && $_SESSION['dedalo4']['auth']['user_id']!=DEDALO_SUPERUSER)) {
+				debug_log(__METHOD__." Kick user ".to_string(), logger::DEBUG);
+	
+				# Unset user session login
+				# Delete current Dédalo session
+				unset($_SESSION['dedalo4']['auth']);
+
+				# maintenance check		
+				$response = new stdClass();
+					$response->result 	= true;
+					$response->msg 		= "Sorry, this site is under maintenace now";
+				echo json_encode($response);
+				exit();
+			}
+		}			
+		
+
+		# LOGGED USER CHECK. Can be disabled in options (login case)
+		if($options->test_login===true && login::is_logged()!==true) {
+			$response = new stdClass();
+				$response->result 	= false;
+				$response->msg 		= "Error. Auth error: please login";
+			echo json_encode($response);
+			exit();
+		}
+		
+		#dump($json_data, ' json_data ++ '.to_string());
+
+		# MODE Verify
+		if(empty($json_data->mode)) exit( json_encode("<span class='error'> Trigger: Error Need mode..</span>") );
+		
+		# CALL FUNCTION
+		if ( function_exists($json_data->mode) ) {
+			$response = (object)call_user_func($json_data->mode, $json_data);
+			$json_params = null;
+			if(SHOW_DEBUG===true) {
+				$json_params = JSON_PRETTY_PRINT;
+			}
+			echo json_encode($response, $json_params);
+		}else{
+			$response = new stdClass();
+				$response->result 	= false;
+				$response->msg 		= 'Error. Request failed.'.$json_data->mode.' not exists';
+			echo json_encode($response);
+		}
+	}//end trigger_manager
+
+
+
+	/**
+	* GET_REQUEST_VAR
+	* Alias of core function get_request_var
+	* @return mixed string | bool $var_value
+	*/
+	public static function get_request_var($var_name) {	
+
+		return get_request_var($var_name);
+	}//end get_request_var
 
 
 

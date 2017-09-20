@@ -3,18 +3,18 @@
 	# VISUALIZADOR HTML
 
 	# html_delimiter
-	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'in');
+	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'in', $modo, $lang);
 
-	print "<div class=\"wrap_component css_wrap_component_security_areas wrap_component_{$tipo}\" 
-	data-tipo=\"{$tipo}\"
-	data-lang=\"{$lang}\"
-	data-parent=\"{$parent}\"
-	data-section_tipo=\"{$section_tipo}\"
-	data-modo=\"{$modo}\"
-	data-dato=\"\"
-	data-component_name=\"{$component_name}\"
-	data-component_info='{$component_info}'
-	>";
+	print "<div class=\"wrap_component css_wrap_component_security_areas wrap_component_{$tipo}\" ";
+	print "data-tipo=\"{$tipo}\" ";
+	print "data-lang=\"{$lang}\" ";
+	print "data-parent=\"{$parent}\" ";
+	print "data-section_tipo=\"{$section_tipo}\" ";
+	print "data-modo=\"{$modo}\" ";
+	print "data-dato=\"\" ";
+	print "data-component_name=\"{$component_name}\" ";
+	print "data-component_info='{$component_info}' ";
+	print ">";
 
 	
 	# ETIQUETA (LABEL)
@@ -23,17 +23,15 @@
 	
 	# CONTENIDO (INPUT)
 	$html_contenido = '';
-	switch($permissions) {
+	switch(true) {
 			
-		case 0	:
-
+		case ($permissions==0)	:
 				$html_contenido .= "No access here"; 
 				break;
 						
 		case ($permissions>=1):
-
 				
-				$html_contenido .= " <div class=\"security_areas_tree\">";
+				$html_contenido .= "<div class=\"security_areas_tree\">";
 
 				$max_input_vars = ini_get("max_input_vars");
 				if ($max_input_vars<2000) {
@@ -43,7 +41,7 @@
 				}
 				
 				$html_contenido .= $html_tree;
-				$html_contenido .= " </div>";	
+				$html_contenido .= "</div>";	
 	
 				if(SHOW_DEBUG) {
 					#$html_contenido .= " <span id=\"debugger_{$tipo}\" class=\"css_span_debugger\">{$debugger}</span>";	
@@ -63,13 +61,14 @@
 	print "</div>"; //wrap
 
 
-	echo "<script>
-			component_security_areas.update_area_childrens_obj_opened();
-			component_security_areas.update_area_access_obj_opened();
-		</script>";
+	# script
+	print "<script>";
+	print "component_security_areas.update_area_childrens_obj_opened();";
+	print "component_security_areas.update_area_access_obj_opened();";
+	print "</script>";
 		
 
 	# html_delimiter
-	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'out');
+	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'out', $modo, $lang);
 
 ?>

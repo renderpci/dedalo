@@ -14,7 +14,8 @@ require_once( dirname(dirname(dirname(__FILE__))) .'/config/config4.php');
 	$tipo 				= $section_obj->get_tipo();
 	$section_tipo 		= $tipo;
 	$modo 				= $this->get_modo();
-	$context_name		= $_REQUEST['context_name'];
+	$context_name 		= common::get_request_var('context_name');
+	#$context_name		= $_REQUEST['context_name'];
 	#$modelo_name 		= RecordObj_dd::get_modelo_name_by_tipo($tipo);
 	$tool_name 			= get_class($this);
 
@@ -108,7 +109,9 @@ require_once( dirname(dirname(dirname(__FILE__))) .'/config/config4.php');
 							}							
 							
 							# IMAGES UPLOAD MANAGER
-							$button_tipo = isset($_REQUEST['button_tipo']) ? $_REQUEST['button_tipo'] : '';	# Needed for build var 'upload_dir_custom'
+							$var_requested 		= common::get_request_var('button_tipo');
+							#$button_tipo = isset($_REQUEST['button_tipo']) ? $_REQUEST['button_tipo'] : '';
+							$button_tipo = !empty($var_requested) ? $var_requested : '';	# Needed for build var 'upload_dir_custom'
 							$upload_handler_url = DEDALO_LIB_BASE_URL . '/tools/tool_import_av/trigger.tool_import_av.php?button_tipo='.$button_tipo.'&top_tipo='.TOP_TIPO;
 							ob_start();
 							include('html/jquery_upload.phtml');

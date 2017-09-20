@@ -1,14 +1,9 @@
 <?php
-#require_once( dirname(dirname(__FILE__)) .'/config/config4.php');
-#require_once(DEDALO_LIB_BASE_PATH . '/db/class.RecordObj_dd.php');
-
 /**
 * OPERATOR
 * Manage all operators of Dedalo for compose searchs
 * Get all operators from file or data base and convert all variables to static vars
 */
-
-# OPERATOR  
  abstract class operator {
 
 
@@ -32,7 +27,7 @@
 		}
 
  		# DEBUG NOT STORE SESSION OPERATORS
- 		#if(SHOW_DEBUG) unset($ar_operator);
+ 		#if(SHOW_DEBUG===true) unset($ar_operator);
 
  		if(isset(operator::$ar_operator[$lang])) return operator::$ar_operator[$lang];		
 
@@ -54,7 +49,8 @@
 				break;
 
 			# Using php session as cache
-			default:				
+			default:
+
 				if( isset($_SESSION['dedalo4']['config']['ar_operator'][$lang]) ) {
 					# Get from session	
 					operator::$ar_operator[$lang] = $_SESSION['dedalo4']['config']['ar_operator'][$lang];		
@@ -62,11 +58,13 @@
 					# Calculate operator for current lang and store
 					operator::$ar_operator[$lang] = self::set_static_operator_vars( $lang );	
 					$_SESSION['dedalo4']['config']['ar_operator'][$lang] = operator::$ar_operator[$lang];				
-				}								
+				}
+				break;							
 		}
 
 		return operator::$ar_operator[$lang];
- 	}
+ 	}//end get_ar_operator
+
  	
 
  	/**
@@ -76,6 +74,7 @@
 		return DEDALO_DATABASE_CONN.'_operator_'.DEDALO_APPLICATION_LANG;
 	}
 	*/
+
 
 
 	/**
@@ -101,7 +100,8 @@
 		#dump(operator::$ar_operator,'operator::$ar_operator');
 
 		return operator::$ar_operator[$lang][$SQL_operator];
-	}
+	}//end get_operator
+
 
 
 	/**
@@ -128,7 +128,7 @@
 				return $key;
 			}
 		}
-	}
+	}//end get_var_from_operator
 
 
 
@@ -138,13 +138,13 @@
 	*/
 	protected static function set_static_operator_vars( $lang=DEDALO_APPLICATION_LANG ) {
 
-		if(SHOW_DEBUG) $start_time=microtime(1);
+		if(SHOW_DEBUG===true) $start_time=microtime(1);
 
 		if ($lang==='lg-vlca') {
 			$lang = 'lg-cat';
 		}
 		
-		if(SHOW_DEBUG) {
+		if(SHOW_DEBUG===true) {
 			global$TIMER;$TIMER[__METHOD__.'_IN_'.microtime(1)]=microtime(1);
 		}		
 		
@@ -154,7 +154,7 @@
 		$ar_operator = array();
 		$cached   = true;
 		$fallback = true;
-		if(SHOW_DEBUG) {
+		if(SHOW_DEBUG===true) {
 			$cached=false;
 		}
 		foreach ($ar_terminoID_by_modelo_name as $current_terminoID) {
@@ -174,14 +174,13 @@
 			$ar_operator[$vars_obj->SQL_operator] = RecordObj_dd::get_termino_by_tipo($current_terminoID, $lang, $cached, $fallback);
 		}	
 
-		if(SHOW_DEBUG) {
+		if(SHOW_DEBUG===true) {
 			global$TIMER;$TIMER[__METHOD__.'_OUT_'.microtime(1)]=microtime(1);
 			#error_log("Calculated operators ".count($ar_terminoID_by_modelo_name));
 			debug_log(__METHOD__." for lang: $lang ".exec_time_unit($start_time,'ms').' ms');
 		}
 			
 		return (array)$ar_operator;
-
 	}//end set_static_operator_vars
 
 
@@ -193,7 +192,7 @@
 	public static function get_search_comparison_operators_html($tipo, $ar_comparison_operator) {
 		$selector_html='';
 		
-		$selector_html .= "\n <select class=\"css_operator_select comparison_operator\" name=\"{$tipo}_comparison_operator\" data-tipo=\"$tipo\" onchange=\"search.comparation_operator_options(this)\">";
+		$selector_html .= "<select class=\"css_operator_select comparison_operator\" name=\"{$tipo}_comparison_operator\" data-tipo=\"$tipo\" onchange=\"search.comparation_operator_options(this)\">";
 
 
 			$checked = "";
@@ -202,15 +201,14 @@
 				
 			foreach ($ar_comparison_operator as $value => $rotulo) {
 				#$value = urlencode($value);
-				$selector_html .= "\n<option value='$value' {$checked}>";
+				$selector_html .= "<option value='$value' {$checked}>";
 				$selector_html .= trim($rotulo);
 				$selector_html .= "</option>";
 			}
 		
-		$selector_html .= "\n </select> ";
+		$selector_html .= "</select> ";
 
 		return (string)$selector_html;
-
 	}#end get_search_comparison_operators_html
 
 
@@ -222,21 +220,20 @@
 	public static function get_search_logical_operators_html($tipo, $ar_logical_operator) {
 		$selector_html='';
 
-		$selector_html .= "\n <select class=\"css_operator_select logical_operator\" name=\"{$tipo}_logical_operator\">";
+		$selector_html .= "<select class=\"css_operator_select logical_operator\" name=\"{$tipo}_logical_operator\">";
 
 			$checked = "";
 			#$selector_html .= "\n <option value=\"\" {$checked}> </option>";
 				
 			foreach ($ar_logical_operator as $value => $rotulo) {				
-				$selector_html .= "\n<option value='$value' {$checked}>";
+				$selector_html .= "<option value='$value' {$checked}>";
 				$selector_html .= trim($rotulo);
 				$selector_html .= "</option>";
 			}
 		
-		$selector_html .= "\n </select>";
+		$selector_html .= "</select>";
 
 		return (string)$selector_html;
-
 	}#end get_search_logical_operators_html
 
 

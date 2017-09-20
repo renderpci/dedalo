@@ -1,8 +1,8 @@
 <?php
-#include_once( dirname(dirname(dirname(__FILE__))) .'/config/config4.php');
-
 /*
 * CLASS TOOL_IMPORT_DEDALO_CSV
+*
+*
 */
 class tool_import_dedalo_csv extends tool_common {
 	
@@ -30,6 +30,10 @@ class tool_import_dedalo_csv extends tool_common {
 	public static function import_dedalo_csv_file($section_tipo, $ar_csv_data) {
 
 		$start_time = start_time();
+
+		# Disable logging activity and time machine # !IMPORTANT
+		logger_backend_activity::$enable_log = false;
+		RecordObj_time_machine::$save_time_machine_version = false;
 
 		$result = new stdClass();
 			$result->result = false;
@@ -59,7 +63,9 @@ class tool_import_dedalo_csv extends tool_common {
 		#    return $a[0] > $b[0];
 		#});
 		# dump($ar_csv_data, ' ar_csv_data ++ '.to_string()); die();
+		$counter = 0;
 		foreach ((array)$ar_csv_data as $rkey => $row) {
+			$row_start_time = start_time();
 
 			if($rkey===0) continue; // Skip first row (used for csv_map)
 
@@ -76,7 +82,7 @@ class tool_import_dedalo_csv extends tool_common {
 			$section_id 	= $section->get_section_id();
 			# dump($section_id, ' section_id ++ '.to_string());
 
-			# Iterate fields
+			# Iterate fields/columns
 			foreach ($row as $key => $value) {
 
 				if ($csv_map[$key]==='section_id') continue; # Skip section_id value column
@@ -104,7 +110,7 @@ class tool_import_dedalo_csv extends tool_common {
 				# Target component is always the csv map element with current key
 				$component_tipo	= $csv_map[$key];
 				$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo, true);
-				$modo 			= 'edit';
+				$modo 			= 'list';
 				$RecordObj_dd 	= new RecordObj_dd($component_tipo);
 				$traducible   	= $RecordObj_dd->get_traducible()==='si' ? true : false;
 				$lang 			= $traducible===false ? DEDALO_DATA_NOLAN : DEDALO_DATA_LANG;			
@@ -115,17 +121,49 @@ class tool_import_dedalo_csv extends tool_common {
 																  $lang,
 																  $section_tipo,
 																  false);
+				# Configure component
+					# DIFFUSION_INFO
+					# Note that this process can be very long if there are many inverse locators in this section
+					# To optimize save process in scripts of importation, you can dissable this option if is not really necessary
+					$component->update_diffusion_info_propagate_changes = false;
+					# SAVE_TO_DATABASE
+					# Set component to save data but tells section that don save updated section to DDBB for now
+					# No component time machine data will be saved when section saves later
+					$component->save_to_database = false;
+
+
 				# If value is json encoded, decode and set
 				# Note: json_decode returns null when no is possible decode the value
 				#if(strpos($value, '{"lg-')!==false) {
 				#	$value = str_replace(EOL, "\n", $value);
 				#}
 				$value = trim($value); // Avoid wrong final return problems
+				# Remove delimiter escape (U+003B for ;)
+				$value = str_replace('U+003B', ';', $value);
 				$dato_from_json = json_decode($value);
 				# debug_log(__METHOD__." Result decode json: type:".gettype($dato_from_json).' -> value: '.$value.' => decoded: '.to_string($dato_from_json), logger::DEBUG);
 				if($dato_from_json!==null) {
 					$value = $dato_from_json;	
 				}
+
+
+				# Checks value contains dataframe or dato keys
+				if (is_object($value)) {
+					# Dataframe
+					if (property_exists($value, 'dataframe')) {
+						foreach ((array)$value->dataframe as $dtkey => $current_dt_locator) {
+							$current_from_key 	= $current_dt_locator->from_key;
+							$current_type 		= $current_dt_locator->type;
+							$component->update_dataframe_element($current_dt_locator, $current_from_key, $current_type); //$ar_locator, $from_key, $type
+							debug_log(__METHOD__." Added dataframe locator [$current_from_key,$current_type] ".to_string($current_dt_locator), logger::DEBUG);
+						}						
+					}					
+					# Dato
+					if (property_exists($value, 'dato')) {						
+						$value = $value->dato;
+					}					
+				}
+
 
 				# Elements 'translatables' can be formated as json values like {"lg-eng":"My value","lg-spa":"Mi valor"}				
 				if ($traducible===true && is_object($value)) {
@@ -144,28 +182,54 @@ class tool_import_dedalo_csv extends tool_common {
 					// Inverse locators
 					if ($modelo_name==='component_portal' || $modelo_name==='component_autocomplete') {
 						// This is ONLY for add INVERSE LOCATORS. NOT for save dato !!
-						if(!empty($value)) foreach ((array)$value as $pkey => $current_locator) {
-							if (!empty($current_locator->section_tipo) && !empty($current_locator->section_id))	{
-								$component->add_locator($current_locator);
-							}else{
-								debug_log(__METHOD__." ERROR ON CREATE LOCATOR TO ADD TO PORTAL / AUTOCOMPLETE. SKIPPED EMPTY OR BAD LOCATOR: ".to_string($current_locator), logger::ERROR);
-							}										
-						}
+						if(!empty($value)) {
+							foreach ((array)$value as $pkey => $current_locator) {
+								if (!empty($current_locator->section_tipo) && !empty($current_locator->section_id))	{
+									$component->add_locator($current_locator);
+								}else{
+									debug_log(__METHOD__." ERROR ON ADD_LOCATOR TO $modelo_name tipo:$component_tipo, $section_tipo:$section_tipo. locator type:".gettype($current_locator).", SKIPPED EMPTY OR BAD LOCATOR: ".to_string($current_locator), logger::ERROR);
+								}
+							}
+						}//end if(!empty($value))
 					}
-					// Always set dato
-					$component->set_dato( $value );								
+					// Nolan optional key check
+					if (is_object($value) && property_exists($value, 'lg-nolan')) {
+						$nolan = 'lg-nolan';
+						$value = $value->{$nolan};
+					}
+
+					if (is_object($value) && property_exists($value, 'dataframe') && !property_exists($value, 'dato')) {
+						// Element without dato. Only the dataframe is saved					
+					}else{
+						// Always set dato
+						$component->set_dato( $value );
+					}
+												
 					// Save of course
+					// Note that $component->save_to_database = false, avoid real save.
 					$component->Save();
-				}
+				}				
 			}//end foreach ($row as $key => $value)
 			
 			if($create_record) {
 				$created_rows[] = $section_id;
+				$action = "created"; 
 			}else{
 				$updated_rows[] = $section_id;
+				$action = "updated";
 			}
 
-			debug_log(__METHOD__." +++ Added / updated section $section_tipo - $section_id ".to_string(), logger::WARNING);		
+			# ROW SAVE . Save edited by components section once per row
+			$section->Save();
+
+			# Forces collection of any existing garbage cycles
+			$counter++;
+			if ($counter===100) {
+				$counter = 0;
+				gc_collect_cycles();
+			}			
+
+			#debug_log(__METHOD__." +++ $action section $section_tipo - $section_id - in ".exec_time_unit($row_start_time,'ms').' ms', logger::ERROR);		
 		}//end foreach ($ar_csv_data as $key => $value) 
 
 		if (!empty($updated_rows)) {
@@ -228,6 +292,17 @@ class tool_import_dedalo_csv extends tool_common {
 			# Reference first row		
 			$ar_reference = array(); foreach ($ar_data[1] as $key => $value) {
 				$current_key = $key.']['.$ar_data[0][$key];
+
+				$value = str_replace('U+003B', ';', $value);
+
+				# Test valid json
+				if (strpos($value,'[')===0 || strpos($value,'{')===0) {
+					$test = json_decode($value);
+					if ($test===null) {
+						$value = "<span class=\"error\">ERROR!! BAD JSON FORMAT</span>: ".$value;
+					}
+				}
+				
 				$ar_reference[$current_key] = $value;
 			}
 			$files_info[$current_file_name] .= "<pre style=\"white-space:pre;display:none\">Reference row 1: ".print_r($ar_reference,true)."</pre>";

@@ -1,31 +1,33 @@
 <?php
-require_once( dirname(dirname(__FILE__)).'/config/config4.php');
+$start_time=microtime(1);
+include( dirname(dirname(__FILE__)).'/config/config4.php');
+# TRIGGER_MANAGER. Add trigger_manager to receive and parse requested data
+common::trigger_manager();
 
-if(login::is_logged()!==true) die("<span class='error'> Auth error: please login </span>");
-
-# set vars
-	$vars = array('mode',);	
-		foreach($vars as $name) $$name = common::setVar($name);
-
-# mode
-if(empty($mode)) exit("<span class='error'> Trigger: Error Need mode..</span>");
+# IGNORE_USER_ABORT
+ignore_user_abort(true);
 
 
 
 /**
 * LOAD_ACCESS_ELEMENTS
 */
-if($mode=='load_access_elements') {
+function load_access_elements($json_data) {
+	global $start_time;
+
+	$response = new stdClass();
+		$response->result 	= false;
+		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
 
 	$vars = array('tipo','parent');	
-		foreach($vars as $name) $$name = common::setVar($name);
-
-	if (!$tipo) {
-		echo "Opss. Error tipo is mandatory"; exit();
-	}
-	if (!$parent) {
-		echo "Opss. Error parent is mandatory"; exit();
-	}	
+		foreach($vars as $name) {
+			$$name = common::setVarData($name, $json_data);
+			# DATA VERIFY
+			if ($name==='dato') continue; # Skip non mandatory filled
+			if (empty($$name)) {
+				exit("Error. ".$$name." is mandatory");
+			}
+		}
 	
 	#
 	# SECTION ELEMENTS CHILDREN
@@ -51,13 +53,24 @@ if($mode=='load_access_elements') {
 	
 	$li_elements_html = component_security_access::walk_ar_elements_recursive($ar_ts_childrens, $access_arguments);
 	
-	$html  ='';
-	$html .= "<ul>";
-	$html .= $li_elements_html;
-	$html .= "</ul>";
+	# Write session to unlock session file
+	session_write_close();
 
-	echo $html;
-	exit();
+	$response->result 	= $li_elements_html;
+	$response->msg 		= 'Ok. Request done ['.__FUNCTION__.']';
 
+	# Debug
+	if(SHOW_DEBUG===true) {
+		$debug = new stdClass();
+			$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
+			foreach($vars as $name) {
+				$debug->{$name} = $$name;
+			}
+
+		$response->debug = $debug;
+	}
+
+	return (object)$response;
 }//end load_access_elements
+
 

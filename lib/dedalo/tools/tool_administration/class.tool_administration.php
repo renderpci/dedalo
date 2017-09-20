@@ -563,11 +563,14 @@ class tool_administration extends tool_common {
 			}//end while ($rows = pg_fetch_assoc($result)) {
 
 			// let GC do the memory job
-			time_nanosleep(0, 50000000); // 10 ms
+			#time_nanosleep(0, 50000000); // 10 ms
+
+			# Forces collection of any existing garbage cycles			
+			gc_collect_cycles();			
 			
 		}//end foreach ($ar_section_tipo as $current_section_tipo)
 		
-		#return $total_update;
+		
 		return true;
 	}//end components_update
 

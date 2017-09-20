@@ -3,36 +3,34 @@ abstract class tools extends common {
 
 	public static $globals;
 
-	# SET REQUEST VAR
-	public static function setVar($name,$default=false) {
 
-		$$name = $default;
-		if(isset($_REQUEST["$name"])) $$name = $_REQUEST["$name"];
+	/**
+	* HTML CONTENT
+	* Modifica el contenido '$html' empaquetándolo en un div '.content' necesario para delimitar las actualizaciones mediante ajax
+	*/
+	public static function prepare_content(&$html) {
 
-		if($$name)
-		return $$name ;
-	}
+		#$string = "/\t{1,15}/";
+		#$html 	= preg_replace($string,'',$html);
 
-	# SET POST VAR
-	public static function setVarPost($name,$default=false) {
+		#$html 	= str_replace(array("\t\t"), "\t", $html);
+		#$html 	= str_replace(array("\n","\r","  "),' ',$html);
+		#$html 	= preg_replace("/\t{2,}/",' ',$html);
+		#$html 	= preg_replace("/\n/",' ',$html);
+		#$html 	= preg_replace("/ {2,}/",' ',$html);
+		/*
+		$html = preg_replace("/\t{1,}/", " ", $html);
+		$html = preg_replace("/\n{1,}/", " ", $html);
+		$html = preg_replace("/ {2,}/", " ", $html);
+		*/
+		$html = '<div class="content_data">'.trim($html).'</div>';
+		if(SHOW_DEBUG===true) {
+			$html .= '<!-- /content_data -->';
+		}
 
-		$$name = $default;
-		if(isset($_POST["$name"])) $$name = $_REQUEST["$name"];
-
-		if($$name)
-		return $$name ;
-	}
-
-	# SET SESSION VAR
-	public static function setVarSession($name,$default=false) {
-
-		$$name = $default;
-		if(isset($_SESSION["$name"])) $$name = $_SESSION["$name"];
-
-		if($$name)
-		return $$name ;
-	}
-
+		return $html;
+	}//end prepare_content
+	
 
 
 	# STRIP TAGS FOR TEMPLATES
@@ -51,10 +49,10 @@ abstract class tools extends common {
 		$tpl_file		= dirname($caller_file) . '/tpl/'. LANG_FILE . '.html';
 
 		if(file_exists($tpl_file)) {
-			$tpl_file_html	= Tools::template_strip_tags(file_get_contents($tpl_file));
+			$tpl_file_html	= tools::template_strip_tags(file_get_contents($tpl_file));
 		}else{
 			$tpl_file		= dirname($caller_file) . '/tpl/'. LANG_DEFAULT . '.html';
-			$tpl_file_html	= Tools::template_strip_tags(file_get_contents($tpl_file));
+			$tpl_file_html	= tools::template_strip_tags(file_get_contents($tpl_file));
 		}
 
 		return $tpl_file_html;
@@ -205,29 +203,7 @@ abstract class tools extends common {
 	}
 
 
-	/**
-	* HTML CONTENT
-	* Modifica el contenido '$html' empaquetándolo en un div '.content' necesario para delimitar las actualizaciones mediante ajax
-	*/
-	public static function prepare_content(&$html) {
-
-		#$string = "/\t{1,15}/";
-		#$html 	= preg_replace($string,'',$html);
-
-		#$html 	= str_replace(array("\t\t"), "\t", $html);
-		#$html 	= str_replace(array("\n","\r","  "),' ',$html);
-		#$html 	= preg_replace("/\t{2,}/",' ',$html);
-		#$html 	= preg_replace("/\n/",' ',$html);
-		#$html 	= preg_replace("/ {2,}/",' ',$html);
-		/*
-		$html = preg_replace("/\t{1,}/", " ", $html);
-		$html = preg_replace("/\n{1,}/", " ", $html);
-		$html = preg_replace("/ {2,}/", " ", $html);
-		*/
-		$html = "\n <div class=\"content_data\">".trim($html)." \n</div><!-- /content_data -->";
-
-		return $html;
-	}
+	
 
 
 

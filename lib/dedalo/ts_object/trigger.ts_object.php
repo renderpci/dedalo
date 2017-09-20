@@ -1,51 +1,40 @@
 <?php
+$start_time=microtime(1);
 include( dirname(dirname(__FILE__)).'/config/config4.php');
 include(DEDALO_LIB_BASE_PATH.'/ts_object/class.ts_object.php');
+# TRIGGER_MANAGER. Add trigger_manager to receive and parse requested data
+common::trigger_manager();
 
+# IGNORE_USER_ABORT
 ignore_user_abort(true);
-
-if(login::is_logged()!==true) die("<span class='error'> Auth error: please login </span>");
-
-# Set JSON headers for all responses
-header('Content-Type: application/json');
-
-# set vars
-$vars = array('mode');
-	foreach($vars as $name) $$name = common::setVar($name);
-
-# mode
-if(empty($mode)) exit("<span class='error'> Trigger: Error Need mode..</span>");
-
-# CALL FUNCTION
-if ( function_exists($mode) ) {
-	$result = call_user_func($mode);
-	$json_params = null;
-	if(SHOW_DEBUG===true) {
-		$json_params = JSON_PRETTY_PRINT;
-	}
-	echo json_encode($result, $json_params);
-}
 
 
 
 /**
 * GET_CHILDRENS_DATA
 * Get json data of all childrens of current element
+* @return object $response
 */
-function get_childrens_data() {
-	
+function get_childrens_data($json_data) {
+	global $start_time;
+
+	$response = new stdClass();
+		$response->result 	= false;
+		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
+
 	# set vars
 	$vars = array('section_tipo','section_id','node_type','tipo');
-		foreach($vars as $name) $$name = common::setVar($name);
-		if(!$section_tipo) return("Error. section_tipo not found");
-		if(!$section_id) return("Error. section_id not found");
-		if(!$tipo) return("Error. tipo not found");
+		foreach($vars as $name) {
+			$$name = common::setVarData($name, $json_data);
+			# DATA VERIFY
+			#if ($name==='dato') continue; # Skip non mandatory
+			if (empty($$name)) {
+				$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty '.$name.' (is mandatory)';
+				return $response;
+			}
+		}
 
-	#$ar='[{"type":"dd47","section_id":"47","section_tipo":"cu1"},{"type":"dd47","section_id":"50","section_tipo":"cu1"},{"type":"dd47","section_id":"42","section_tipo":"cu1"},{"type":"dd47","section_id":"43","section_tipo":"cu1"},{"type":"dd47","section_id":"44","section_tipo":"cu1"},{"type":"dd47","section_id":"45","section_tipo":"cu1"},{"type":"dd47","section_id":"46","section_tipo":"cu1"},{"type":"dd47","section_id":"48","section_tipo":"cu1"},{"type":"dd47","section_id":"49","section_tipo":"cu1"},{"type":"dd47","section_id":"51","section_tipo":"cu1"},{"type":"dd47","section_id":"52","section_tipo":"cu1"},{"type":"dd47","section_id":"53","section_tipo":"cu1"},{"type":"dd47","section_id":"54","section_tipo":"cu1"},{"type":"dd47","section_id":"55","section_tipo":"cu1"},{"type":"dd47","section_id":"56","section_tipo":"cu1"},{"type":"dd47","section_id":"57","section_tipo":"cu1"},{"type":"dd47","section_id":"58","section_tipo":"cu1"},{"type":"dd47","section_id":"59","section_tipo":"cu1"},{"type":"dd47","section_id":"60","section_tipo":"cu1"},{"type":"dd47","section_id":"61","section_tipo":"cu1"},{"type":"dd47","section_id":"62","section_tipo":"cu1"},{"type":"dd47","section_id":"63","section_tipo":"cu1"},{"type":"dd47","section_id":"64","section_tipo":"cu1"},{"type":"dd47","section_id":"65","section_tipo":"cu1"},{"type":"dd47","section_id":"66","section_tipo":"cu1"},{"type":"dd47","section_id":"67","section_tipo":"cu1"},{"type":"dd47","section_id":"68","section_tipo":"cu1"},{"type":"dd47","section_id":"69","section_tipo":"cu1"},{"type":"dd47","section_id":"70","section_tipo":"cu1"},{"type":"dd47","section_id":"71","section_tipo":"cu1"},{"type":"dd47","section_id":"72","section_tipo":"cu1"},{"type":"dd47","section_id":"73","section_tipo":"cu1"},{"type":"dd47","section_id":"74","section_tipo":"cu1"},{"type":"dd47","section_id":"75","section_tipo":"cu1"},{"type":"dd47","section_id":"76","section_tipo":"cu1"},{"type":"dd47","section_id":"77","section_tipo":"cu1"},{"type":"dd47","section_id":"78","section_tipo":"cu1"},{"type":"dd47","section_id":"79","section_tipo":"cu1"},{"type":"dd47","section_id":"80","section_tipo":"cu1"},{"type":"dd47","section_id":"81","section_tipo":"cu1"},{"type":"dd47","section_id":"82","section_tipo":"cu1"},{"type":"dd47","section_id":"83","section_tipo":"cu1"},{"type":"dd47","section_id":"84","section_tipo":"cu1"},{"type":"dd47","section_id":"85","section_tipo":"cu1"},{"type":"dd47","section_id":"86","section_tipo":"cu1"},{"type":"dd47","section_id":"87","section_tipo":"cu1"},{"type":"dd47","section_id":"88","section_tipo":"cu1"},{"type":"dd47","section_id":"89","section_tipo":"cu1"},{"type":"dd47","section_id":"90","section_tipo":"cu1"},{"type":"dd47","section_id":"91","section_tipo":"cu1"},{"type":"dd47","section_id":"92","section_tipo":"cu1"},{"type":"dd47","section_id":"93","section_tipo":"cu1"},{"type":"dd47","section_id":"94","section_tipo":"cu1"},{"type":"dd47","section_id":"95","section_tipo":"cu1"},{"type":"dd47","section_id":"96","section_tipo":"cu1"},{"type":"dd47","section_id":"97","section_tipo":"cu1"},{"type":"dd47","section_id":"98","section_tipo":"cu1"},{"type":"dd47","section_id":"99","section_tipo":"cu1"},{"type":"dd47","section_id":"100","section_tipo":"cu1"},{"type":"dd47","section_id":"101","section_tipo":"cu1"},{"type":"dd47","section_id":"102","section_tipo":"cu1"},{"type":"dd47","section_id":"103","section_tipo":"cu1"},{"type":"dd47","section_id":"104","section_tipo":"cu1"},{"type":"dd47","section_id":"105","section_tipo":"cu1"},{"type":"dd47","section_id":"106","section_tipo":"cu1"},{"type":"dd47","section_id":"107","section_tipo":"cu1"},{"type":"dd47","section_id":"108","section_tipo":"cu1"},{"type":"dd47","section_id":"109","section_tipo":"cu1"},{"type":"dd47","section_id":"110","section_tipo":"cu1"},{"type":"dd47","section_id":"111","section_tipo":"cu1"},{"type":"dd47","section_id":"112","section_tipo":"cu1"},{"type":"dd47","section_id":"113","section_tipo":"cu1"},{"type":"dd47","section_id":"114","section_tipo":"cu1"},{"type":"dd47","section_id":"115","section_tipo":"cu1"},{"type":"dd47","section_id":"116","section_tipo":"cu1"},{"type":"dd47","section_id":"117","section_tipo":"cu1"},{"type":"dd47","section_id":"118","section_tipo":"cu1"},{"type":"dd47","section_id":"119","section_tipo":"cu1"},{"type":"dd47","section_id":"120","section_tipo":"cu1"},{"type":"dd47","section_id":"121","section_tipo":"cu1"},{"type":"dd47","section_id":"122","section_tipo":"cu1"},{"type":"dd47","section_id":"123","section_tipo":"cu1"},{"type":"dd47","section_id":"124","section_tipo":"cu1"},{"type":"dd47","section_id":"125","section_tipo":"cu1"},{"type":"dd47","section_id":"126","section_tipo":"cu1"},{"type":"dd47","section_id":"127","section_tipo":"cu1"},{"type":"dd47","section_id":"128","section_tipo":"cu1"},{"type":"dd47","section_id":"129","section_tipo":"cu1"},{"type":"dd47","section_id":"130","section_tipo":"cu1"},{"type":"dd47","section_id":"131","section_tipo":"cu1"},{"type":"dd47","section_id":"132","section_tipo":"cu1"},{"type":"dd47","section_id":"133","section_tipo":"cu1"},{"type":"dd47","section_id":"134","section_tipo":"cu1"},{"type":"dd47","section_id":"135","section_tipo":"cu1"},{"type":"dd47","section_id":"136","section_tipo":"cu1"},{"type":"dd47","section_id":"137","section_tipo":"cu1"},{"type":"dd47","section_id":"138","section_tipo":"cu1"},{"type":"dd47","section_id":"139","section_tipo":"cu1"},{"type":"dd47","section_id":"140","section_tipo":"cu1"},{"type":"dd47","section_id":"141","section_tipo":"cu1"}]';
-	#$ar=json_decode($ar);
-	#debug_log(__METHOD__." section_tipo: $section_tipo - section_id: $section_id - tipo: $tipo - node_type: $node_type".to_string(), logger::DEBUG);
 	
-
 	if($node_type==='hierarchy_node') {
 
 		// Childrens are the same current data
@@ -98,29 +87,42 @@ function get_childrens_data() {
 			$childrens_data[] 	= $childrens_object;
 		#}		
 	}
+	
 
-	
-	if (isset($_GET['debug'])) {
-		#dump($childrens_data); #return;
+	$response->result 	= (array)$childrens_data;
+	$response->msg 		= 'Ok. Request done [get_childrens_data]';
+
+	# Debug
+	if(SHOW_DEBUG===true) {
+		$debug = new stdClass();
+			$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
+			foreach($vars as $name) {
+				$debug->{$name} = $$name;
+			}
+
+		$response->debug = $debug;
 	}
-	
-	return (array)$childrens_data;
+
+	return (object)$response;
 }//end get_ar_childrens_data_real
 
 
 
 /**
 * ADD_CHILDREN
-* @return json encoded bool
+* @return object $response
 */
-function add_children() {
+function add_children($json_data) {
+	global $start_time;
 
-	$result = 0;
+	$response = new stdClass();
+	$response->result 	= 0;
+	$response->msg 		= 'Error. Request failed [add_children]';
 
 	# set vars
 	$vars = array('section_tipo','section_id','node_type');
 		foreach($vars as $name) {
-			$$name = common::setVar($name);
+			$$name = common::setVarData($name, $json_data);
 			if (empty($$name)) {
 				return("Error. ".$$name." is mandatory");
 			}
@@ -152,29 +154,47 @@ function add_children() {
 		$component_relation_children->Save();
 
 		# All is ok. Result is new created section section_id
-		$result = $new_section_id;	
+		$response->result  	= (int)$new_section_id;
+		$response->msg 		= 'Error. Request failed [add_children]';
+
+		# Debug
+		if(SHOW_DEBUG===true) {
+			$debug = new stdClass();
+				$debug->exec_time 	= exec_time_unit($start_time,'ms')." ms";			
+				$debug->tipo 		= $tipo;
+				$debug->section_tipo= $section_tipo;
+				$debug->section_id 	= $section_id;
+				$debug->node_type 	= $node_type;
+
+			$response->debug = $debug;
+		}
 	}
-			
 	
-	return (int)$result;
+
+	return (object)$response;
 }//end add_children
 
 
 
 /**
 * ADD_CHILDREN_FROM_HIERARCHY
-* @return 
+* @return object $response
 */
-function add_children_from_hierarchy() {
-	
-	$result = 0;
+function add_children_from_hierarchy($json_data) {
+	global $start_time;
 
-	# set vars
+	$response = new stdClass();
+		$response->result 	= false;
+		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
+
 	$vars = array('section_tipo','section_id','target_section_tipo','tipo');
 		foreach($vars as $name) {
-			$$name = common::setVar($name);
-			if (empty($$name) || $$name==='undefined') {
-				return "Error. ".$$name." is mandatory";
+			$$name = common::setVarData($name, $json_data);
+			# DATA VERIFY
+			#if ($name==='dato') continue; # Skip non mandatory
+			if (empty($$name)) {
+				$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty '.$name.' (is mandatory)';
+				return $response;
 			}
 		}
 
@@ -183,7 +203,8 @@ function add_children_from_hierarchy() {
 	$new_section_id	= $new_section->Save();
 					if (empty($new_section_id)) {
 						debug_log(__METHOD__." Error on create new section from parent. Stoped add_children process !".to_string(), logger::ERROR);
-						return 0;
+						$response->msg = 'Trigger Error: ('.__FUNCTION__.') Error on create new section from parent. Stoped add_children process !';
+						return $response;
 					}
 
 	# COMPONENT_RELATION_CHILDREN
@@ -202,10 +223,22 @@ function add_children_from_hierarchy() {
 		$component_relation_children->Save();
 
 		# All is ok. Result is new created section section_id
-		$result = $new_section_id;	
-	}			
-	
-	return (int)$result;
+		$response->result  	= (int)$new_section_id;
+		$response->msg 		= 'Ok. Request done ['.__FUNCTION__.']';		
+	}
+
+	# Debug
+	if(SHOW_DEBUG===true) {
+		$debug = new stdClass();
+			$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
+			foreach($vars as $name) {
+				$debug->{$name} = $$name;
+			}
+
+		$response->debug = $debug;
+	}
+
+	return (object)$response;
 }//end add_children_from_hierarchy
 
 
@@ -213,21 +246,26 @@ function add_children_from_hierarchy() {
 /**
 * DELETE
 * Removes current thesaurus element an all references in parents
-* @return bool
+* @return object $response
 */
-function delete() {
-	
-	$result = false;
+function delete($json_data) {
+	global $start_time;
 
-	# set vars
+	$response = new stdClass();
+		$response->result 	= false;
+		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
+
 	$vars = array('section_tipo','section_id','node_type');
 		foreach($vars as $name) {
-			$$name = common::setVar($name);
+			$$name = common::setVarData($name, $json_data);
+			# DATA VERIFY
+			#if ($name==='dato') continue; # Skip non mandatory
 			if (empty($$name)) {
-				#echo "Error. ".$$name." is mandatory";
-				return false;
+				$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty '.$name.' (is mandatory)';
+				return $response;
 			}
 		}
+	
 
 	# CHILDRENS . Verify that current term don't have childrens. If yes, stop process.
 	$modelo_name 		= 'component_relation_children';
@@ -246,7 +284,8 @@ function delete() {
 
 	 	if (!empty($dato)) {
 	 		debug_log(__METHOD__." Stopped delete term from thesaurus. Current term have childrens".to_string($dato), logger::DEBUG);
-	 		return $result = false;
+	 		$response->msg = 'Trigger Error: ('.__FUNCTION__.') ' . "Stopped delete term from thesaurus. Current term have childrens ".to_string($dato);
+	 		return (object)$response;
 	 	}
 	}
 	
@@ -279,15 +318,32 @@ function delete() {
 			}
 		}
 		*/
-	$response = component_relation_common::remove_parent_references($section_tipo, $section_id, false);
+	$relation_response = component_relation_common::remove_parent_references($section_tipo, $section_id, false);
 
 
 	# RECORD . Finally, delete target section
-	$section_to_remove = section::get_instance($section_id, $section_tipo);
-	$result  		   = (bool)$section_to_remove->Delete('delete_record');
+	$section_to_remove	= section::get_instance($section_id, $section_tipo);
+	$result 			= (bool)$section_to_remove->Delete('delete_record');
+
 	debug_log(__METHOD__." Removed section $section_id, $section_tipo ".to_string(), logger::DEBUG);
 
-	return (bool)$result;
+	$response->result	= $result;
+	$response->msg 		= 'Ok. Request done ['.__FUNCTION__.']';	
+	
+	# Debug
+	if(SHOW_DEBUG===true) {
+		$debug = new stdClass();
+			$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
+			foreach($vars as $name) {
+				$debug->{$name} = $$name;
+			}
+		$debug->relation_response = $relation_response;
+
+		$response->debug = $debug;
+
+	}
+
+	return (object)$response;
 }//end delete
 
 
@@ -295,28 +351,32 @@ function delete() {
 /**
 * UPDATE_PARENT_DATA
 * Updates element 
+* @return object $response
 */
-function update_parent_data() {
+function update_parent_data($json_data) {
+	global $start_time;
+
+	$response = new stdClass();
+		$response->result 	= false;
+		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
 
 	# set vars
 	$vars = array('section_tipo','section_id','old_parent_section_id','old_parent_section_tipo','parent_section_id','parent_section_tipo','parent_node_type','tipo');
 		foreach($vars as $name) {
-			$$name = common::setVar($name);
+			$$name = common::setVarData($name, $json_data);
 			if (empty($$name)) {
 				echo "Error. ".$$name." is mandatory";
 				return false;
 			}
 		}
-
-	$result = false;
 	
 	# Remove current element as children from previous parent (old parentt)
 		$locator = new locator();
 			$locator->set_section_tipo($old_parent_section_tipo);
 			$locator->set_section_id($old_parent_section_id);
 		$filter   = array($locator);		
-		$response = component_relation_common::remove_parent_references($section_tipo, $section_id, $filter);
-		if ($response->result===true) {
+		$relation_response = component_relation_common::remove_parent_references($section_tipo, $section_id, $filter);
+		if ($relation_response->result===true) {
 			debug_log(__METHOD__." Removed me as children from old parent  ".to_string(), logger::DEBUG);
 		}
 
@@ -334,34 +394,53 @@ function update_parent_data() {
 
 		$added = (bool)$component_relation_children->make_me_your_children( $section_tipo, $section_id );
 		if ($added===true) {
+
 			$component_relation_children->Save();
 
-			# All is ok. Result is new created section section_id
-			$result = true;
 			debug_log(__METHOD__." Added dropped element as children of target wrap ".to_string(), logger::DEBUG);
+
+			# All is ok. Result is new created section section_id
+			$response->result 	= true;
+			$response->msg 		= 'Ok. Request done ['.__FUNCTION__.']';
+			
+			# Debug
+			if(SHOW_DEBUG===true) {
+				$debug = new stdClass();
+					$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
+					foreach($vars as $name) {
+						$debug->{$name} = $$name;
+					}
+					$debug->remove_parent_references= $relation_response;
+					$debug->added					= $added;
+
+				$response->debug = $debug;
+			}
 		}
 
-	return (bool)$result;
+	return (object)$response;
 }//end update_parent_data
 
 
 
 /**
 * SHOW_INDEXATIONS
-* @return 
+* @return object $response
 */
-function show_indexations() {
+function show_indexations($json_data) {
+	global $start_time;
 
 	$response = new stdClass();
 		$response->result 	= false;
-		$response->msg 		= 'Error. Request failed on show_indexations';
+		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
 	
 	# set vars
 	$vars = array('section_tipo','section_id','component_tipo');
 		foreach($vars as $name) {
-			$$name = common::setVar($name);
+			$$name = common::setVarData($name, $json_data);
+			# DATA VERIFY
+			#if ($name==='dato') continue; # Skip non mandatory
 			if (empty($$name)) {
-				$response->msg = $name." is mandatory";
+				$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty '.$name.' (is mandatory)';
 				return $response;
 			}
 		}
@@ -374,6 +453,18 @@ function show_indexations() {
 	$response->result 	= $html;
 	$response->msg 		= "Request done successufully";
 
+	# Debug
+	if(SHOW_DEBUG===true) {
+		$debug = new stdClass();
+			$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
+			foreach($vars as $name) {
+				$debug->{$name} = $$name;
+			}
+
+		$response->debug = $debug;
+	}
+	
+
 	return (object)$response;
 }//end show_indexations
 
@@ -383,16 +474,17 @@ function show_indexations() {
 * SAVE_ORDER
 * @return object $response
 */
-function save_order() {
-	
+function save_order($json_data) {
+	global $start_time;
+
 	$response = new stdClass();
 		$response->result 	= false;
-		$response->msg 		= 'Error. Request failed on save_order';
+		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
 	
 	# set vars
 	$vars = array('section_tipo','section_id','component_tipo','ar_locators');
 		foreach($vars as $name) {
-			$$name = common::setVar($name);
+			$$name = common::setVarData($name, $json_data);
 			if (empty($$name)) {
 				$response->msg = $name." is mandatory";
 				return $response;
@@ -422,8 +514,20 @@ function save_order() {
 	$result = $component_relation_children->set_dato($dato);
 	$component_relation_children->Save();
 
+
 	$response->result 	= $result;
-	$response->msg 		= 'Request done successfully';
+	$response->msg 		= 'Ok. Request done ['.__FUNCTION__.']';
+
+	# Debug
+	if(SHOW_DEBUG===true) {
+		$debug = new stdClass();
+			$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
+			foreach($vars as $name) {
+				$debug->{$name} = $$name;
+			}
+
+		$response->debug = $debug;
+	}
 
 	return (object)$response;
 }//end save_order
@@ -432,9 +536,9 @@ function save_order() {
 
 /**
 * LINK_TERM
-* @return 
+* @return object $response
 *//*
-public function link_term() {
+public function link_term($json_data) {
 	
 	# set vars
 	$vars = array('section_tipo','section_id');

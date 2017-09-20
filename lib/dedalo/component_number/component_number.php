@@ -12,7 +12,7 @@
 	$label 					= $this->get_label();				
 	$required				= $this->get_required();
 	$debugger				= $this->get_debugger();
-	$permissions			= common::get_permissions($section_tipo,$tipo);
+	$permissions			= $this->get_component_permissions();
 	$ejemplo				= $this->get_ejemplo();
 	$html_title				= "Info about $tipo";		
 	$valor					= $this->get_valor();				
@@ -22,13 +22,18 @@
 	$component_name			= get_class($this);
 	$visible				= $this->get_visible();
 	$propiedades 			= $this->get_propiedades();
+	
 	$file_name				= $modo;
+	$from_modo				= $modo;
 	
 	if($permissions===0) return null;
 	
 	switch($modo) {
-		
-		case 'tool_lang':
+		case 'edit_in_list':
+						$file_name = 'edit';
+						$wrap_style 	= '';	// 'width:100%'; // Overwrite possible custon component structure css
+				// Dont break here. Continue as modo edit
+						case 'tool_lang':
 						$file_name = 'edit';
 
 		#case 'portal_edit'	:
@@ -37,19 +42,18 @@
 		case 'edit'	:	
 				# Verify component content record is inside section record filter
 				if ($this->get_filter_authorized_record()===false) return NULL ;
-				
+
+				#get the change modo from portal list to edit
+				$var_requested = common::get_request_var('from_modo');
+				if (!empty($var_requested)) {
+					$from_modo = $var_requested;
+				}
+
 				$id_wrapper = 'wrapper_'.$identificador_unico;
 				$input_name = "{$tipo}_{$parent}";
 
 				$dato = htmlentities($dato);
-				
-				# DATO_REFERENCE_LANG
-				$dato_reference_lang= NULL;												
-				if (empty($dato) && $this->get_traducible()=='si') { # && $traducible=='si'
-					#$dato_reference_lang = $this->get_dato_default_lang();
-					$default_component = $this->get_default_component();
-						#dump($default_component,'$default_component');			
-				}
+										
 				$component_info 	= $this->get_component_info('json');
 												
 				break;
@@ -65,11 +69,15 @@
 				break;
 				
 		case 'portal_list':
-				if(empty($valor)) return null;					
 		case 'list_tm' :
+		case 'list'	:
+				$id_wrapper = 'wrapper_'.$identificador_unico;
+				$input_name = "{$tipo}_{$parent}";
+
+				$component_info 	= $this->get_component_info('json');
+
+				$dato = htmlentities($dato);
 				$file_name = 'list';
-						
-		case 'list'	:	
 				break;
 						
 		case 'list_of_values'	:

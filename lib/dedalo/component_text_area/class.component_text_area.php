@@ -9,12 +9,16 @@ class component_text_area extends component_common {
 	public $arguments;
 
 
+
 	function __construct($tipo=null, $parent=null, $modo='edit', $lang=DEDALO_DATA_LANG, $section_tipo=null) {
 		
 		// Overwrite lang when component_select_lang is present
 		if ( ($modo==='edit') && (!empty($parent) && !empty($section_tipo)) ) {
 			# dump($_REQUEST, ' _REQUEST ++ '.to_string());
-			if ( (isset($_GET['m']) && $_GET['m']==='edit') || (isset($_REQUEST['mode']) && $_REQUEST['mode']==='load_rows') ) {
+			$var_requested 		= common::get_request_var('m');
+			$var_requested_mode = common::get_request_var('mode');
+			#if ( (isset($_GET['m']) && $_GET['m']==='edit') || (isset($_REQUEST['mode']) && $_REQUEST['mode']==='load_rows') ) {
+			if ( (!empty($var_requested) && $var_requested==='edit') || (!empty($var_requested_mode) && $var_requested_mode==='load_rows') ) {
 				# Only when component is loaded on page edit mode (avoid tool_lang changes of lang)
 				$lang = self::force_change_lang($tipo, $parent, $modo, $lang, $section_tipo);
 			}					
@@ -57,7 +61,7 @@ class component_text_area extends component_common {
 				$component_select_lang = component_common::get_instance('component_select_lang',
 																	    $related_component_select_lang,
 																	    $parent,
-																	    $modo,
+																	    'list',
 																	    DEDALO_DATA_NOLAN,
 																	    $section_tipo);
 				$component_select_lang_dato = (array)$component_select_lang->get_dato();
@@ -80,11 +84,10 @@ class component_text_area extends component_common {
 		}
 
 		if(SHOW_DEBUG===true) {
-			if (isset($target_lang)) {
-				$total=round(microtime(1)-$start_time,3);
+			if (isset($target_lang)) {				
 				if ($changed_lang === true) {
 					$msg = "Changed lang: $first_lang to $target_lang ($first_lang-$lang)";
-					debug_log(__METHOD__." $msg ".exec_time_unit($start_time,'ms').' ms' , logger::DEBUG);
+					#debug_log(__METHOD__." $msg ".exec_time_unit($start_time,'ms').' ms' , logger::DEBUG);
 				}else{
 					$msg = "No change lang is necessary ($first_lang-$lang)";
 				}				
@@ -120,6 +123,13 @@ class component_text_area extends component_common {
 	*/
 	public function set_dato($dato) {
 		if($dato==='""') $dato = ''; // empty dato json encoded
+
+		# Change &nbsp; for space . Optimizes chars time calculations
+		#$dato = str_replace('&nbsp;', " ", $dato);
+
+		# Change < / > for safe [ / ]
+		#$dato = str_replace(array('<','>'),array('[',']'),$dato);
+
 		parent::set_dato( (string)$dato );
 	}//end set_dato
 
@@ -162,6 +172,7 @@ class component_text_area extends component_common {
 
 		# Dato current assigned
 		$dato_current 	= $this->dato;
+
 			
 		# Clean dato 
 		if ($cleant_text) {
@@ -188,8 +199,10 @@ class component_text_area extends component_common {
 	public function get_ar_tools_obj() {
 		# Add tool_indexation
 		$this->ar_tools_name[] = 'tool_indexation';
+		$this->ar_tools_name[] = 'tool_structuration';
 		$this->ar_tools_name[] = 'tool_tc';
 		$this->ar_tools_name[] = 'tool_tr_print';
+		#$this->ar_tools_name[] = 'tool_lang_multi';	
 		
 		return parent::get_ar_tools_obj();
 	}//end get_ar_tools_obj
@@ -528,7 +541,7 @@ class component_text_area extends component_common {
 	* @return $fragment_text (String like 'texto englobado por las etiquetas xxx a /xxx')
 	*/
 	public static function get_fragment_text_from_tag( $tag_id, $tag_type, $raw_text ) {
-
+	
 		# Test if la etiqueta no está bien formada
 		if(empty($tag_id) || empty($tag_type)) {
 			$msg = "Warning: tag '$tag_id' is not valid! (get_fragment_text_from_tag tag_id:$tag_id - tag_type:$tag_type - raw_text:$raw_text)";
@@ -555,7 +568,7 @@ class component_text_area extends component_common {
 		
 		# Build in/out regex pattern to search
 		$regexp = $tag_in ."(.*)". $tag_out;
-			#dump($regexp,'regexp',"regexp for $tag_id : $regexp - ".to_string($tag_type)); die();		
+			#dump($tag_type,'regexp',"regexp for $tag_id : $regexp - ".to_string($tag_type)); #die();		
 
 		# Search fragment_text
 			# Dato raw from matrix db				
@@ -575,7 +588,6 @@ class component_text_area extends component_common {
 			        	$fragment_text = TR::deleteMarks($fragment_text);
 			        	$fragment_text = self::decode_dato_html($fragment_text);
 
-
 			        	# tag in position
 			        	$tag_in_pos = $match[0][1];
 
@@ -589,6 +601,24 @@ class component_text_area extends component_common {
 
 		return NULL;
 	}//end get_fragment_text_from_tag
+
+
+
+	/**
+	* GET_FRAGMENTS_TEXT_BY_TC
+	* @param string $raw_text (String transcription complete as raw text with all tags)
+	* @return array $ar_fragments
+	*/
+	public static function get_fragments_text_by_tc( $raw_text ) {
+		
+		# explode by tc pattern
+		$pattern_tc  = TR::get_mark_pattern('tc_full',$standalone=true);
+		#$pattern_tc  = "/(\[TC_[0-9][0-9]:[0-9][0-9]:[0-9][0-9]\.[0-9]{1,3}_TC\])/";
+		$ar_fragments = preg_split($pattern_tc, $raw_text, -1, PREG_SPLIT_NO_EMPTY | PREG_SPLIT_DELIM_CAPTURE);	
+			#dump($ar_fragments, ' ar_fragments ++ '.to_string());
+		
+		return $ar_fragments;
+	}//end get_fragments_text_by_tc
 	
 
 
@@ -634,10 +664,10 @@ class component_text_area extends component_common {
 		$tag_id					= $rel_locator->tag_id;
 
 		switch ($rel_locator->type) {
-			case DEDALO_RELATION_TYPE_STRUCT_TIPO:
+			case DEDALO_RELATION_TYPE_INDEX_TIPO:
 				$tag_type = 'index';
 				break;
-			case DEDALO_RELATION_TYPE_INDEX_TIPO:
+			case DEDALO_RELATION_TYPE_STRUCT_TIPO:
 				$tag_type = 'struct';
 				break;
 			default:
@@ -645,7 +675,7 @@ class component_text_area extends component_common {
 				$tag_type = 'index';
 				break;
 		}
-	
+		#dump($tag_type, ' tag_type ++ '.to_string($rel_locator->type));
 
 		$component_text_area = component_common::get_instance('component_text_area',
 															  $component_tipo,
@@ -668,9 +698,19 @@ class component_text_area extends component_common {
 	* @see trigger.tool_indexation mode 'delete_tag'
 	*/
 	public function delete_tag_from_all_langs($tag_id, $tag_type) {
+		/*
+		$src_lang = self::force_change_lang($this->tipo, $this->parent, $this->modo, $this->lang, $this->section_tipo);
+		if ($this->lang!==$src_lang) {
+			# Problem. Not delete tags "of all langs" from non source lang
+			debug_log(__METHOD__." Trying to delete tag_from_all_langs when non in source lang. src_lang:$src_lang , lang:$this->lang  ".to_string(), logger::ERROR);
+		
+			$component_ar_langs = array($this->lang); // Only current lang tag will be removed
+		}else{
+			$component_ar_langs = (array)$this->get_component_ar_langs();
+		}
+		#dump($component_ar_langs, ' component_ar_langs');*/
 
 		$component_ar_langs = (array)$this->get_component_ar_langs();
-			#dump($component_ar_langs, ' component_ar_langs');		
 
 		$ar_langs_changed=array();
 		foreach ($component_ar_langs as $current_lang) {
@@ -682,6 +722,7 @@ class component_text_area extends component_common {
 			 	throw new Exception("Error Processing Request. Error saving component_text_area lang ($current_lang)", 1);			 	
 			}
 			$ar_langs_changed[] = $current_lang;
+			debug_log(__METHOD__." Delted tag in lang ".to_string($current_lang), logger::WARNING);
 		}
 		
 		return (array)$ar_langs_changed;
@@ -751,7 +792,7 @@ class component_text_area extends component_common {
 				$pair 	  = $tag_in.''.$tag_out;	// concatenate in-out
 				$raw_text = str_replace($tag_out, $pair, $raw_text);
 					#dump($raw_text, ' raw_text ++** '.$pair .to_string($tag_in));	
-				$changed_tags++;				
+				$changed_tags++;
 			}
 		}
 		#dump($ar_missing_indexIn, ' ar_missing_indexIn ++ '.to_string());
@@ -787,12 +828,14 @@ class component_text_area extends component_common {
 				#dump($locator, ' locator ++ '.to_string());
 				if(!property_exists($locator,'tag_id')) continue;
 				
-				$l_section_tipo 	= $locator->section_tipo;
-				$l_section_id 		= $locator->section_id;
-				$l_component_tipo 	= $locator->component_tipo;
-				if ($l_section_tipo  === $this->section_tipo && 
-					$l_section_id    == $this->parent &&
-					$l_component_tipo=== $this->tipo
+				$l_section_tipo 		= $locator->section_tipo;
+				$l_section_id 			= $locator->section_id;
+				$l_component_tipo 		= $locator->component_tipo;
+				$l_from_component_tipo 	= $locator->from_component_tipo;
+				if ($l_section_tipo  	  === $this->section_tipo && 
+					$l_section_id          == $this->parent &&
+					$l_component_tipo     === $this->tipo &&
+					$l_from_component_tipo=== DEDALO_THESAURUS_INDEXATIONS_TIPO
 					) {
 					$tag_id = $locator->tag_id;
 						#dump($tag_id, ' $tag_id ++ '.to_string());
@@ -879,7 +922,7 @@ class component_text_area extends component_common {
 	* @return 
 	*/
 	public function fix_broken_struct_tags( $save=false ) {
-
+	
 		$start_time = start_time();
 
 		$response = new stdClass();
@@ -989,6 +1032,9 @@ class component_text_area extends component_common {
 
 			$all_text_tags = array_unique(array_merge($matches_indexIn[$index_tag_id], $matches_indexOut[$index_tag_id]));
 				#dump($all_text_tags, ' $all_text_tags ++ '.to_string());
+	
+			// Forced lang when is available is de source lang
+			$source_lang = self::force_change_lang($this->tipo, $this->parent, $this->modo, $this->lang, $this->section_tipo);
 
 			foreach ($ar_indexations_tag_id as $current_tag_id) {
 				if (!in_array($current_tag_id, $all_text_tags)) {
@@ -996,13 +1042,18 @@ class component_text_area extends component_common {
 					#$new_pair = "[index-d-{$current_tag_id}][/index-d-{$current_tag_id}] ";
 
 					$state = 'd';
-					$label = $current_tag_id;
+					$label = 'struct '.$current_tag_id;
 
 					$tag_in   = TR::build_tag('structIn',  $state, $current_tag_id, $label, '');
 					$tag_out  = TR::build_tag('structOut', $state, $current_tag_id, $label, '');
-					$new_pair = $tag_in . $tag_out;
+					
+					#$new_pair = $tag_in . $tag_out;
+					#$raw_text = $new_pair . $raw_text;
 
-					$raw_text = $new_pair . $raw_text;
+					#
+					# Search and place in aproximate position (12-09-2017)
+					$raw_text = $this->place_broken_tag_in_aproximate_position($raw_text, $tag_in, $tag_out, $current_tag_id, $source_lang);					
+
 					$added_tags++;
 				}
 			}
@@ -1038,6 +1089,156 @@ class component_text_area extends component_common {
 			
 		return $response;		
 	}//end fix_broken_struct_tags
+
+
+
+	/**
+	* PLACE_BROKEN_TAG_IN_APROXIMATE_POSITION
+	* @return string $raw_text
+	*/
+	public function place_broken_tag_in_aproximate_position($raw_text, $tag_in, $tag_out, $tag_id, $source_lang) {
+
+		$blank_space = " ";
+	
+		# Search existing tag in original lang
+		# source_lang is user selected as source lang of current text in edit mode
+		if ($this->lang===$source_lang) {
+			// Lang is the original. No references exists..
+			$raw_text = $tag_in ." Deleted tag $tag_id ". $tag_out . $blank_space . $raw_text;
+		
+		}else{
+			// Lang is different. Check the source lang for additional data 
+			$component 		= component_common::get_instance(get_class($this),
+															 $this->tipo,
+															 $this->parent,
+															 $this->modo,
+															 $source_lang,
+															 $this->section_tipo);
+			$source_raw_text = $component->get_dato();
+	
+			# INDEX IN
+			$pattern = TR::get_mark_pattern('structIn',$standalone=false, $tag_id); //$mark, $standalone=true, $id=false, $data=false, $state=false		
+			preg_match($pattern,  $source_raw_text,  $matches_indexIn, PREG_OFFSET_CAPTURE);			
+				#dump($tag_real_position, ' tag_real_position ++ '.to_string($matches_indexIn[0][1]));
+				#dump($matches_indexIn,"matches_indexIn $source_lang - ".to_string($pattern));
+			if (empty($matches_indexIn[0][0])) {
+				// No. tag not found in original lan. Not exists the same tag in the original lang ...				
+				$raw_text = $tag_in . " Deleted tag $tag_id (tag not exists in original lang $source_lang) " . $tag_out . $blank_space . $raw_text;
+
+			}else{
+				// Yes. Founded current broken tag in the orininal lang. Lets go..
+
+				# GET KNOWED FULL STRUCT TAG DATA FROM SOURCE ;-)
+				# Override tag_in and out calculated with real full data locator
+				$tag_in_full = $matches_indexIn[0][0];
+					#dump($tag_in_full, ' tag_in_full ++ '.to_string());
+				preg_match("/data:(.*):data/", $tag_in_full, $output_array);
+					#dump($output_array, ' current_data ++ '.to_string());
+				$data_locator = $output_array[1];
+				if (!empty($output_array[1])) {
+					#dump($tag_in, ' tag_in ++ 1'.to_string());
+					$tag_in  = preg_replace("/(data:.*:data)/", 'data:'.$data_locator.':data', $tag_in);
+					$tag_out = preg_replace("/(data:.*:data)/", 'data:'.$data_locator.':data', $tag_out);
+				}
+				#dump($tag_in, ' tag_in ++ 2'.to_string());
+
+				$raw_text = $tag_in ." Deleted tag " . $tag_id . " (tag found in original lang $source_lang) ". $tag_out . $blank_space . $raw_text;
+
+				/* PASAMOS ESTA LÓGICA A JAVASCRIPT
+					#
+					# SOURCE LANG	
+					# Real position in chars
+					$tag_real_position = mb_strlen(substr($source_raw_text, 0, $matches_indexIn[0][1]));	
+					#$tag_position 	= $matches_indexIn[0][1]; 	dump($tag_position, ' tag_position ++ '.to_string());
+					$pre_fragment 	= mb_substr($source_raw_text, 0, $tag_real_position); 
+						#dump($pre_fragment, ' pre_fragment ++ '.to_string($tag_real_position));
+					$tc_pattern 	= TR::get_mark_pattern($mark='tc',$standalone=false);
+					preg_match_all($tc_pattern,  $pre_fragment,  $matches_tc, PREG_PATTERN_ORDER);
+						#dump($matches_tc, ' matches_tc ++ '.to_string());
+						#debug_log(__METHOD__." matches_tc $tc_pattern - ".to_string($matches_tc), logger::ERROR);				
+					
+					#
+					# TARGET LANG
+					# Search the same tc tag in target				
+					$ar_reverse = array_reverse($matches_tc[0]);
+					foreach ($ar_reverse as $key => $current_tc) {
+						$tc_target_position = mb_strpos($raw_text, $current_tc);
+						if($tc_target_position!==false) {
+							$last_tc = $current_tc;
+							break;
+						}
+					}			
+
+					#dump($tc_target_position, ' tc_target_position ++ '.to_string());
+					if ($tc_target_position!==false) {
+
+						# REFERENCE_FRAGMENT
+						$last_tc_position   = mb_strpos($pre_fragment, $last_tc) + mb_strlen($last_tc);				
+						$reference_fragment = mb_substr($pre_fragment, $last_tc_position);					
+
+						$src_ar_tags_of_type = TR::get_tags_of_type_in_text($reference_fragment, array("index","person","reference","note"));
+							#dump($src_ar_tags_of_type, ' $src_ar_tags_of_type ++ '.to_string());
+						
+						#$post_fragment = mb_substr($raw_text, $tc_target_position);
+						$post_fragment = mb_substr($raw_text, $tc_target_position, (strlen($reference_fragment)*2) );			
+							#dump($post_fragment, ' $post_fragment ++ '.to_string());
+
+						$target_ar_tags_of_type = TR::get_tags_of_type_in_text($post_fragment, array("index","person","reference","note"));
+							#dump($target_ar_tags_of_type, ' $target_ar_tags_of_type ++ '.to_string());
+
+						# Tags existing in target text that exists in source
+						$ar_different_tags = array();
+						foreach ($src_ar_tags_of_type as $tag_obj) {
+							$ar_found = array_filter(
+							    $target_ar_tags_of_type,
+							    function ($obj) use($tag_obj) {				    	
+							        return $obj->tag == $tag_obj->tag;
+							    }
+							);
+							#dump($ar_found, ' ar_found ++ '.to_string($tag_obj->tag));
+							if (empty($ar_found)) {
+								$ar_different_tags[] = $tag_obj->tag;
+							}
+						}
+						#dump($ar_different_tags, ' ar_different_tags ++ '.to_string());
+
+						# Remove diffrent tags from source text only to compute
+						#dump($reference_fragment, ' reference_fragment 1 ++ '.to_string());
+						$reference_fragment = str_replace($ar_different_tags, '', $reference_fragment);
+						#dump($reference_fragment, ' reference_fragment 2 ++ '.to_string());
+						
+						# Count spaces into source reference_fragment
+						preg_match_all("/ |&nbsp;/",  $reference_fragment,  $matches_spaces_reference);
+						$n_blank_spaces = count($matches_spaces_reference[0]);
+							#dump($n_blank_spaces, ' $n_blank_spaces ++ '.to_string());
+						# Count spaces into target post_fragment
+						preg_match_all("/ |&nbsp;/",  $post_fragment,  $matches_spaces, PREG_OFFSET_CAPTURE); //PREG_PATTERN_ORDER
+							#dump($matches_spaces, ' matches_spaces ++ '.count($matches_spaces[0]));
+						# If we found the equivalent space key in target that in source, set in this point the rebuilded tag
+						$key = $n_blank_spaces -1;
+						if (isset($matches_spaces[0][$key])) {
+							#dump($matches_spaces[0][$key], '$matches_spaces[0][$key] ++ '.to_string());
+							#$space_position = $matches_spaces[0][$key][1];
+							# Real position in chars
+							$space_position = mb_strlen(substr($post_fragment, 0, $matches_spaces[0][$key][1]));
+								#dump($space_position, ' space_position ++ '.to_string($matches_spaces[0][$key][1]));
+							$cut_position = $tc_target_position + $space_position;
+							$raw_text = mb_substr($raw_text,0, $cut_position) . $tag_in ." DELETED TAG $tag_id AT NEAR LAST TC ". $tag_out . mb_substr($raw_text, $cut_position);
+						}else{
+							$raw_text = $tag_in ." Deleted tag $tag_id (match space key not found) ". $tag_out. $raw_text;
+						}
+
+					}else{
+						$raw_text = $tag_in ." Deleted tag $tag_id (match tc not found) ". $tag_out. $raw_text;
+					}							
+					*/
+			}//end if (empty($matches_indexIn[0][0]))
+
+		}//end if ($this->lang===$source_lang)	
+
+
+		return $raw_text;
+	}//end place_broken_tag_in_aproximate_position
 
 
 
@@ -1115,6 +1316,7 @@ class component_text_area extends component_common {
 			#$rel_locator 	= component_common::build_locator_from_obj( $rel_locator_obj );
 			$fragment_info	= component_text_area::get_fragment_text_from_rel_locator( $rel_locator_obj );
 			$texto 			= $this->get_dato();
+				#dump($fragment_info, ' fragment_info ++ '.to_string($rel_locator_obj));
 
 			# FRAGMENT
 			$diffusion_obj->columns['fragment']	= $fragment_info[0];
@@ -1208,7 +1410,6 @@ class component_text_area extends component_common {
 		# Ignore DB data
 		$value = null;
 
-
 		$lang_received = $lang;
 
 		# Always use original lang (defined by optional component_select_lang asociated)
@@ -1218,7 +1419,13 @@ class component_text_area extends component_common {
 													 	 $parent,
 													 	 $modo,
 														 $original_lang,
-													 	 $section_tipo); 
+													 	 $section_tipo);
+
+		if($modo === 'portal_list'){
+			$list_value = $component->get_html();
+			return $list_value;
+		}
+
 		$value 			= $component->get_valor_list_html_to_save();
 			#dump($value, ' value ++ '.to_string());
 		#$value = $component->get_valor($original_lang);		
@@ -1284,7 +1491,7 @@ class component_text_area extends component_common {
 		if($lang_received!==$original_lang) $list_value = component_common::decore_untranslated( $list_value );
 
 
-		return $list_value;		
+		return $list_value;
 	}//end render_list_value
 
 
@@ -1439,36 +1646,48 @@ class component_text_area extends component_common {
 	* looking for index in tags inside
 	* @return array $ar_descriptors
 	*/
-	public static function get_descriptors( $raw_text, $section_tipo, $section_id, $component_tipo ) {
+	public static function get_descriptors( $raw_text, $section_tipo, $section_id, $component_tipo, $type='indexIn' ) {
 		
-		$ar_descriptors = array();
+		$ar_descriptors = array();	
+		
 
 		# Search index in locators
 		# INDEX IN
 		#$pattern = TR::get_mark_pattern($mark='indexIn',$standalone=false);
-		$pattern = TR::get_mark_pattern($mark='index',$standalone=true);
+		$pattern = TR::get_mark_pattern($type.'In', $standalone=true);
+			#dump($pattern, ' pattern ++ '.to_string($type));
 		preg_match_all($pattern,  $raw_text,  $matches_indexIn, PREG_PATTERN_ORDER);
 			#dump($matches_indexIn,"matches_indexIn ".to_string($pattern));
 		$total_indexIn = 0;
-		if (isset($matches_indexIn[0])) {
+		if (!empty($matches_indexIn[0])) {
 			$total_indexIn = count($matches_indexIn[0]);
+			#dump($matches_indexIn, ' matches_indexIn[0] ++ '.$type." - ".to_string($total_indexIn)); #die(); return array();
 		}
-		#dump($matches_indexIn[0], ' matches_indexIn[0] ++ '.to_string($raw_text)); die(); return array();
+		
 
 		if ($total_indexIn===0) {
 			return $ar_descriptors;
 		}
 
-		foreach ($matches_indexIn[0] as $key => $tag) {
-			
+		$full_tag = $matches_indexIn[0][0];
+		$tag_id_key = 4;
+		foreach ($matches_indexIn[$tag_id_key] as $key => $tag_id) {
+			/*
 			$locator = new locator();
 				$locator->set_section_tipo($section_tipo);
 				$locator->set_section_id($section_id);
 				$locator->set_component_tipo($component_tipo);
-
+			
 			$ar_index = RecordObj_descriptors::get_indexations_for_locator( $locator );
+			$ar_descriptors[$tag] = $ar_index;*/
+			if ($type==="struct") {
+				$ar_index = component_relation_struct::get_indexations_from_tag($component_tipo, $section_tipo, $section_id, $tag_id, DEDALO_DATA_LANG);
+			}else{
+				$ar_index = component_relation_index::get_indexations_from_tag($component_tipo, $section_tipo, $section_id, $tag_id, DEDALO_DATA_LANG);
+			}			
+			#dump($ar_descriptors, ' ar_descriptors ++ '.to_string());
 
-			$ar_descriptors[$tag] = $ar_index;
+			$ar_descriptors[$full_tag] = $ar_index;
 		}
 		#dump($ar_descriptors, ' $ar_descriptors ++ '.to_string()); die();
 		
@@ -1482,23 +1701,23 @@ class component_text_area extends component_common {
 	* Get available tags for insert in text area. Intervieved, informants, etc..
 	* @return array $ar_tags_inspector
 	*/
-	public function get_tags_person() {
+	public function get_tags_person($top_tipo=TOP_TIPO) {
 		
 		$tags_person = array();
 
 		$section_id 		= $this->get_parent();
 		$section_tipo		= $this->get_section_tipo();
-		$section_top_tipo 	= TOP_TIPO;	
+		$section_top_tipo 	= $top_tipo;	
 
 		$propiedades = $this->get_propiedades();
 		if (!isset($propiedades->tags_person)) {
-			debug_log(__METHOD__." Warning: misconfigured properties for tags_persons (section_top_tipo: $section_top_tipo) ".to_string($propiedades), logger::WARNING);
+			debug_log(__METHOD__." Warning: empty properties for tags_persons [propiedades->tags_person] (section_top_tipo: $section_top_tipo) ".to_string($propiedades), logger::WARNING);
 			return $tags_person;
 		}
 		elseif (!isset($propiedades->tags_person->$section_top_tipo)) {
 			debug_log(__METHOD__." Warning: bad top_tipo for tags_persons (section_top_tipo: $section_top_tipo) ".to_string($propiedades), logger::WARNING);
 			return $tags_person;
-		}
+		}		
 
 		# Resolve obj value
 		$ar_objects = array();
@@ -1527,7 +1746,8 @@ class component_text_area extends component_common {
 				}			
 			}
 		}
-		#dump($ar_objects, ' ar_objects ++ '.to_string()); exit();
+		#dump($ar_objects, ' ar_objects ++ '.to_string()); #exit();
+		
 		$resolved=array();
 		foreach ((array)$ar_objects as $key => $obj_value) {
 			
@@ -1548,7 +1768,8 @@ class component_text_area extends component_common {
 			$dato = $component->get_dato();
 			foreach ($dato as $key => $current_locator) {
 
-				if (in_array($current_locator->section_id,$resolved)) {
+				$lkey = $current_locator->section_tipo .'_' .$current_locator->section_id;
+				if (in_array($lkey, $resolved)) {
 					continue;
 				}
 			
@@ -1574,11 +1795,11 @@ class component_text_area extends component_common {
 					$element->state 	= $current_state;
 					$element->tag_id 	= $current_tag_id;
 					$element->label 	= $label->initials;
-					$element->data 	= $current_locator;			
+					$element->data 		= $current_locator;			
 
 				$tags_person[] = $element;
 
-				$resolved[] = $current_locator->section_id;
+				$resolved[] = $lkey;
 			}
 		}
 		#dump($tags_person, ' tags_person ++ '.to_string());
@@ -1629,7 +1850,7 @@ class component_text_area extends component_common {
 		$label 	 	  = trim($ar_data['label']);
 		$locator 	  = $ar_data['data'];
 		$locator_json = json_encode($locator);	
-		$data 		  = $locator_json;	
+		$data 		  = $locator_json;		
 
 		$person_tag   = TR::build_tag($type, $state, $tag_id, $label, $data); 	// '[person-'.$state.'-'.$label.'-data:'.$locator_json.':data]';
 		#$person_tag = '[person-data:'.$section_tipo.'_'.$section_id.':data]';
@@ -1743,7 +1964,7 @@ class component_text_area extends component_common {
 
 	/**
 	* CREATE_NEW_NOTE
-	* @return 
+	* @return object $response
 	*/
 	public static function create_new_note() {
 		
@@ -1754,7 +1975,7 @@ class component_text_area extends component_common {
 		#$user_id = navigator::get_user_id();
 		$section_tipo = DEDALO_NOTES_SECTION_TIPO;
 
-		$section 	= section::get_instance(null, $section_tipo);
+		$section 	= section::get_instance(null, $section_tipo, 'edit', false);
 		$section_id = $section->Save();
 
 		$locator = new locator();
@@ -1823,7 +2044,100 @@ class component_text_area extends component_common {
 	}//end regenerate_component
 
 
+
+	/**
+	* RESOLVE_TITLES
+	* @return string $text
+	* @see tr_tool_print
+	*/
+	public static function resolve_titles($raw_text, $component_tipo_tipo, $section_tipo, $section_id, $decore=null, $lang=DEDALO_DATA_LANG, $lang_fallback=true) {
+
+		if (empty($decore)) {
+			$decore = 'h2';
+		}
+		
+		$pattern 			= TR::get_mark_pattern($mark='structIn', $standalone=true, false, $data=false);
+			#dump($pattern, ' $pattern ++ '.to_string());
+
+		$matches = array();
+		preg_match_all($pattern, $raw_text, $matches);
+			#dump($matches, ' matches ++ '.to_string($raw_text));
+			#dump($raw_text, ' raw_text ++ '.to_string());
+
+		$data_key 	 = 7;
+		$modelo_name = RecordObj_dd::get_modelo_name_by_tipo(DEDALO_STRUCTURATION_TITLE_TIPO,true);		
+		$ar_resolved = array();
+		foreach ((array)$matches[$data_key] as $key => $current_locator) {
+			#dump($current_locator, ' current_locator ++ '.to_string());			
+			
+			#$source_current_locator = md5($current_locator);
+			#if (in_array($source_current_locator, $ar_resolved)) {
+			#	continue;
+			#}
+
+			if (empty($current_locator)) continue;
+
+			$current_locator = str_replace("'",'"',$current_locator);
+			if (!$current_locator = json_decode($current_locator)) {
+				continue;
+			}
+
+			# Resolve locator to value			
+			$component 		= component_common::get_instance($modelo_name,
+															 DEDALO_STRUCTURATION_TITLE_TIPO,
+															 $current_locator->section_id,
+															 'list',
+															 $lang,
+															 $current_locator->section_tipo);
+			$value = $component->get_valor();
+				#dump($value, ' value ++ '.to_string(DEDALO_DATA_LANG.' - '. $current_locator->section_id.' - '.DEDALO_STRUCTURATION_SECTION_TIPO.' - '.$current_locator->section_tipo));
+
+			if ($lang_fallback===true && empty($value)) {
+				# Fallback				
+				$main_lang = component_text_area::force_change_lang($component_tipo_tipo, $section_id, 'edit', DEDALO_DATA_LANG, $section_tipo);
+				if ($main_lang!=DEDALO_DATA_LANG) {
+					$old_lang = $component->get_lang();
+					$component->set_lang($main_lang);
+					$value = $component->get_valor();
+					#$value = '<em>'.$value.'</em>';
+						#dump($value, ' value ++ '.to_string($main_lang));
+
+					# Restore old lang to component
+					$component->set_lang($old_lang);
+				}
+			}
+
+			switch ($decore) {
+				case 'h2':
+					$value = "<h2 class=\"mceNonEditable\"><label class=\"title\">".$value."</label></h2>";
+					break;
+				
+				default:
+					# code...
+					break;
+			}			
+			#dump(null, ' value ++ '.to_string($value));
+
+			$full_tag = $matches[0][$key];
+			$raw_text = str_replace($full_tag, $full_tag . $value, $raw_text);
+			/*
+			$pos = strpos($raw_text, $full_tag);
+			if ($pos !== false) {
+			    $raw_text = substr_replace($raw_text, $full_tag.$value, $pos, strlen($full_tag));
+			}
+			*/
+			#$ar_resolved[] = $source_current_locator;
+				#dump($ar_resolved, ' $ar_resolved ++ '.to_string($source_current_locator));		
+		}		
 	
+
+		return $raw_text;
+	}//end resolve_titles
+
+
+
+
+
 	
-}
+}//end component_text_area
 ?>

@@ -1,9 +1,6 @@
 <?php
 
-	# VISUALIZADOR HTML	
-		
-	if(isset($_REQUEST[$tipo])) $dato = $_REQUEST[$tipo];
-
+	# VISUALIZADOR HTML
 	print "<div class=\"wrap_component css_wrap_section_id\">";	
 	
 	
@@ -20,10 +17,11 @@
 					$html_content .= operator::get_search_comparison_operators_html($tipo,$ar_comparison_operators);
 					
 					# INPUT
-					$html_content .= " <input class=\"input_css_section_id\" type=\"text\" name=\"{$search_input_name}\"
-					data-tipo=\"{$tipo}\"
-					value=\"{$dato}\"
-					title=\"$html_title\" />";
+					$html_content .= "<input class=\"input_css_section_id\" type=\"text\" name=\"{$search_input_name}\" ";
+					$html_content .= "data-tipo=\"{$tipo}\" ";
+					$html_content .= "value=\"{$dato}\" ";
+					$html_content .= "title=\"$html_title\" ";
+					$html_content .= "/>";
 
 					# LOGICAL OPERATORS
 					$html_content .= operator::get_search_logical_operators_html($tipo,$ar_logical_operators);

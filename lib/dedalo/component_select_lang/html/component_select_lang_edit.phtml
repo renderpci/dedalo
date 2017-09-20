@@ -4,18 +4,18 @@
 
 
 	# html_delimiter
-	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'in');
+	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'in', $modo, $lang);
 
-	print "<div class=\"wrap_component css_wrap_select_lang wrap_component_{$tipo}\" id=\"{$id_wrapper}\"
-	data-tipo=\"{$tipo}\"
-	data-lang=\"{$lang}\"
-	data-parent=\"{$parent}\"
-	data-section_tipo=\"{$section_tipo}\"
-	data-modo=\"{$modo}\"
-	data-dato='{$dato_json}'
-	data-component_name=\"{$component_name}\"
-	data-component_info='{$component_info}'
-	>";
+	print "<div class=\"wrap_component css_wrap_select_lang wrap_component_{$tipo}\" id=\"{$id_wrapper}\" ";
+	print "data-tipo=\"{$tipo}\" ";
+	print "data-lang=\"{$lang}\" ";
+	print "data-parent=\"{$parent}\" ";
+	print "data-section_tipo=\"{$section_tipo}\" ";
+	print "data-modo=\"{$modo}\" ";
+	print "data-dato='{$dato_json}' ";
+	print "data-component_name=\"{$component_name}\" ";
+	print "data-component_info='{$component_info}' ";
+	print ">";
 
 	# ETIQUETA (LABEL)
 	$html_label = component_common_draw::draw_label($this);
@@ -40,26 +40,26 @@
 				# Set as disabled on time machine context 
 				$disabled = (isset($context->context_name) && $context->context_name=='tool_time_machine') ? 'disabled="disabled"' : '';
 		
-				$html_content .= " <select class=\"css_select_lang\"
-				onchange=\"component_select_lang.Save(this)\"
-				onfocus=\"component_common.select_wrap(null,'$id_wrapper');\"
-				name=\"{$input_name}\"
-				data-tipo=\"{$tipo}\"
-				data-lang=\"{$lang}\"
-				data-section_tipo=\"{$section_tipo}\"
-				data-parent=\"{$parent}\"
-				data-related_component_text_area=\"{$related_component_text_area}\"
-				title=\"$html_title\"
-				$disabled
-				tabindex=\"1\"
-				>";
+				$html_content .= "<select class=\"css_select_lang\" ";
+				$html_content .= "onchange=\"component_select_lang.Save(this)\" ";
+				$html_content .= "onfocus=\"component_common.select_wrap(null,'$id_wrapper')\" ";
+				$html_content .= "name=\"{$input_name}\" ";
+				$html_content .= "data-tipo=\"{$tipo}\" ";
+				$html_content .= "data-lang=\"{$lang}\" ";
+				$html_content .= "data-section_tipo=\"{$section_tipo}\" ";
+				$html_content .= "data-parent=\"{$parent}\" ";
+				$html_content .= "data-related_component_text_area=\"{$related_component_text_area}\" ";
+				$html_content .= "title=\"$html_title\" ";
+				$html_content .= $disabled;
+				$html_content .= "tabindex=\"1\" ";
+				$html_content .= ">";
 
 					#
 					# OPTIONS
 
 					# OPTION EMPTY
 					#$selected = empty($dato) ? 'selected' : ''; // {$selected}
-					$html_content .= " <option value=\"\" > </option>";
+					$html_content .= "<option value=\"\"></option>";
 				
 
 					# OPTIONS VALUES
@@ -76,7 +76,7 @@
 							$option_selected = true;
 						}
 
-						$html_content .= " <option value='{$current_locator_json}' data-lang='{$current_lang_code}' {$selected}>";
+						$html_content .= "<option value='{$current_locator_json}' data-lang='{$current_lang_code}' {$selected}>";
 						$html_content .= $current_label;
 						if(SHOW_DEBUG===true) {
 							#$html_content .= " - ". trim($current_locator_json);
@@ -88,18 +88,20 @@
 					if ($option_selected===false && !empty($dato)) {
 						#dump($dato, ' dato ++ '.to_string());
 						$locator = reset($dato);
-						$current_lang_name = lang::get_lang_name_by_locator($locator);
+						$current_lang_name = lang::get_lang_name_by_locator($locator, DEDALO_APPLICATION_LANG);
 						$current_lang_code = lang::get_code_from_locator($locator);
 						
 						$value = json_encode( $locator );
 						$html_content .= " <option value='".$value."' data-lang='{$current_lang_code}' selected>".$current_lang_name." *</option>";						
 					}
 					
-				$html_content .= " </select>";
+				$html_content .= "</select>";
+
 
 
 				if(SHOW_DEBUG===true) {
 					$html_content .= " <span class=\"debug_info notes\">".json_encode($dato)."</span>";
+					#$html_content .= "<span class=\"component_select_lang_debug debug_info\">".exec_time($start_time)."</span>";					
 				}				
 				break;
 	}
@@ -116,7 +118,6 @@
 	print "</div>"; //wrap
 
 	# html_delimiter
-	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'out');
-
+	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'out', $modo, $lang);
 
 ?>

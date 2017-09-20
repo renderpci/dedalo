@@ -2,32 +2,34 @@
 
 	# VISUALIZADOR HTML	
 
-	print "\n\n<!-- SECTION EDIT [section_id:$section_id tipo:$tipo] -->";
+	if(SHOW_DEBUG===true) {
+		print "<!-- SECTION EDIT [section_id:$section_id tipo:$tipo] -->";
+	}	
 
-	print "\n<div class=\"css_section_wrap wrap_section wrap_section_{$modo} wrap_section_{$tipo}\" id=\"{$id_wrapper}\"
-	data-section_id=\"{$section_id}\"
-	data-tipo=\"{$tipo}\"
-	data-lang=\"{$lang}\"
-	data-parent=\"{$parent}\"
-	data-modo=\"{$modo}\"
-	data-dato=\"array\"
-	data-component_name=\"{$component_name}\"
-	data-section_id=\"{$section_id}\"
-	data-label=\"{$label}\"
-	data-section_info='{$section_info}'
-	>";
+	print "<div class=\"css_section_wrap wrap_section wrap_section_{$modo} wrap_section_{$tipo}\" id=\"{$id_wrapper}\" ";
+	print "data-section_id=\"{$section_id}\" ";
+	print "data-tipo=\"{$tipo}\" ";
+	print "data-lang=\"{$lang}\" ";
+	print "data-parent=\"{$parent}\" ";
+	print "data-modo=\"{$modo}\" ";
+	print "data-dato=\"array\" ";
+	print "data-component_name=\"{$component_name}\" ";
+	print "data-section_id=\"{$section_id}\" ";
+	print "data-label=\"{$label}\" ";
+	print "data-section_info='{$section_info}' ";
+	print ">";
 
 
 	# CONTENT
 	$html_content  = '';
-	$html_content = "\n<div class=\"css_section_content section_content_list section_list_rows_content_div\" data-role=\"section_list_rows_content\" >";
+	$html_content = "<div class=\"css_section_content section_content_list section_list_rows_content_div\" data-role=\"section_list_rows_content\" >";
 
-		#$html_content .= "\n<div class=\"css_section_content\" id=\"section_{$identificador_unico}\" >";			
+		#$html_content .= "<div class=\"css_section_content\" id=\"section_{$identificador_unico}\" >";			
 		
 			# Fields
 			switch($permissions) {
 					
-				case 0	:	$html_content .= "\n <span class=\"css_span_dato\">";
+				case 0	:	$html_content .= "<span class=\"css_span_dato\">";
 							$html_content .= label::get_label('contenido_no_autorizado');
 								#dump(security::$ar_permissions_table," security::ar_permissions_table");
 							$html_content .= " (Section $tipo - $modo)</span>";
@@ -50,32 +52,41 @@
 							break;
 			}
 
-		$html_content .= "\n</div><!-- /css_section_content -->";
+		$html_content .= "</div>";//end css_section_content
+
+		if(SHOW_DEBUG===true) {
+			$html_content .= "\n<!-- /css_section_content -->";
+		}
 		
 
 		#######################
 		# SIDEBAR (INSPECTOR)
 		$show_inspector=true;	// <---- / temporal : borrar tras acabar el apartado
 		if ($show_inspector) {
-			print "\n<div id=\"sidebar\">";
+			print "<div id=\"sidebar\">";
 			print isset($inspector_html) ? $inspector_html : '';
-			print "\n</div><!-- /sidebar -->";
+			print "</div><!-- /sidebar -->";
 		}
 		#######################
 
 		
 		#######################
 		# CONTENT PRINT HTML
-		print "\n<div class=\"records main_section_{$modo}\">";
-			print "\n<div class=\"css_section_content\" id=\"section_{$identificador_unico}\" >";
+		print "<div class=\"records main_section_{$modo}\">";
+			print "<div class=\"css_section_content\" id=\"section_{$identificador_unico}\">";
 			print $html_content;
-			print "\n</div><!-- /css_section_content -->";
-		print "\n</div><!-- /records -->";#end records;
+			print "</div><!-- /css_section_content -->";
+		print "</div><!-- /records -->";#end records;
 		#######################
 
 
-	print "\n</div><!-- /SECTION WRAP [section_id:$section_id tipo:$tipo] -->\n\n"; //wrap
+	print "</div>"; //wrap
 
 
+	if(SHOW_DEBUG===true) {
+		print "\n<!-- /wrap_section [section_id:$section_id tipo:$tipo] -->"; //wrap
+		print "\n<!-- / SECTION EDIT [section_id:$section_id tipo:$tipo] -->\n";
+	}
+	
 
 ?>

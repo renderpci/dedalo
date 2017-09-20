@@ -31,7 +31,7 @@ switch (true) {
 		$text_original 	= $text;
 		preg_match_all($pattern, $text, $matches);
 		#print_r($text.'<hr>'); print_r($pattern.'<hr>'); print_r($matches); die();
-		$text			= $matches[1][0];	
+		$text			= $matches[1][0];
 		$imgBase 		= "../images/btn_base/tc_ms-x2.png";
 		break;
 	case (strpos($text,'[index-')!==false || strpos($text,'[/index-')!==false):
@@ -41,18 +41,18 @@ switch (true) {
 		preg_match_all($pattern, $text, $matches);
 		#print_r($text.'<hr>'); print_r($pattern.'<hr>'); print_r($matches); die();
 		$n 		= $matches[3][0];
-		$state 	= $matches[2][0];		
+		$state 	= $matches[2][0];
 
 		if(strpos($text_original,'/')!==false) {
 			# mode [/index-u-6]	
-			$text 		= " $n";		
+			$text 		= " $n";
 			$imgBase 	= "../images/btn_base/indexOut-{$state}-x2.png";
 		}else{
 			# mode [index-u-1]
 			$text 		= $n;
 			$imgBase 	= "../images/btn_base/indexIn-{$state}-x2.png";
 		}
-		break;	
+		break;
 	case (strpos($text,'[svg-')!==false):
 		$type = 'svg' ;
 		# mode [svg-n-1-data:***]
@@ -90,7 +90,7 @@ switch (true) {
 		preg_match_all($pattern, $text, $matches);
 		#print_r($text.'<hr>'); print_r($pattern.'<hr>'); print_r($matches); die();
 		$text			= urldecode($matches[4][0]);
-		$state 			= $matches[2][0];		
+		$state 			= $matches[2][0];
 		$imgBase 		= "../images/btn_base/person-{$state}-x2.png";
 		break;
 	case (strpos($text,'[note-')!==false):
@@ -101,8 +101,28 @@ switch (true) {
 		$text 		= urldecode($ar_parts[2]);
 		$imgBase 	= "../images/btn_base/note-{$state}-x2.png";
 		break;
+	/*
+	case (strpos($text,'[reference-')!==false || strpos($text,'[/reference-')!==false):
+		$type 			= 'reference';
+		$pattern 		= "/\[\/{0,1}(reference)-([a-z])-([0-9]{1,6})(-(.{0,22}))?(-data:(.*?):data)?\]/";
+		$text_original 	= $text;
+		preg_match_all($pattern, $text, $matches);
+		#print_r($text.'<hr>'); print_r($pattern.'<hr>'); print_r($matches); die();
+		$n 		= $matches[3][0];
+		$state 	= $matches[2][0];
+
+		if(strpos($text_original,'/')!==false) {
+			# mode [/reference-u-6]	
+			$text 		= " $n";
+			$imgBase 	= "../images/btn_base/referenceOut-{$state}-x2.png";
+		}else{
+			# mode [reference-u-1]
+			$text 		= $n;
+			$imgBase 	= "../images/btn_base/referenceIn-{$state}-x2.png";
+		}
+		break;*/
 	default:
-		die("Need type ..!");
+		die("Need type ..! <br>$text");
 		break;
 }
 

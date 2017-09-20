@@ -40,6 +40,13 @@ class component_relation_parent extends component_relation_common {
 	*/
 
 
+	# Override component_common method
+	# This component don't save dato. Is only a computed value in current moment
+	public function get_ar_tools_obj() {
+		return NULL;
+	}
+
+
 
 	/**
 	* GET DATO
@@ -103,16 +110,16 @@ class component_relation_parent extends component_relation_common {
 	* GET_COMPONENT_RELATION_CHILDREN_TIPO
 	* @return string $component_relation_children_tipo
 	*/
-	public static function get_component_relation_children_tipo($tipo) {
+	public static function get_component_relation_children_tipo( $component_tipo ) {
 		
 		$modelo_name 	 = 'component_relation_children';
-		$ar_children 	 = (array)common::get_ar_related_by_model($modelo_name, $tipo);
+		$ar_children 	 = (array)common::get_ar_related_by_model($modelo_name, $component_tipo);
 		$ar_children_len = count($ar_children);
 		if ($ar_children_len===0) {
-			debug_log(__METHOD__." Sorry, component_relation_children not found in this section ($tipo) ".to_string(), logger::ERROR);
+			debug_log(__METHOD__." Sorry, component_relation_children not found in this section ($component_tipo) ".to_string(), logger::ERROR);
 			return false;
 		}elseif ($ar_children_len>1) {
-			debug_log(__METHOD__." Sorry, more than 1 component_relation_children found in this section ($tipo). First component will be used. ".to_string($ar_children), logger::ERROR);
+			debug_log(__METHOD__." Sorry, more than 1 component_relation_children found in this section ($component_tipo). First component will be used. ".to_string($ar_children), logger::ERROR);
 		}
 		$component_relation_children_tipo = reset($ar_children);
 
@@ -128,7 +135,7 @@ class component_relation_parent extends component_relation_common {
 	protected function get_my_parents() {
 		
 		# Calculate current target component_relation_children_tipo from structure
-		$from_component_tipo = self::get_component_relation_children_tipo($this->tipo);
+		$from_component_tipo = component_relation_parent::get_component_relation_children_tipo($this->tipo);
 
 		$parents = component_relation_parent::get_parents($this->parent, $this->section_tipo, $from_component_tipo);
 
@@ -153,6 +160,10 @@ class component_relation_parent extends component_relation_common {
 	*/
 	public static function get_parents($section_id, $section_tipo, $from_component_tipo=null, $ar_tables=null) {
 		#dump($ar_tables, ' $ar_tables ++ '.to_string());
+
+		if ($section_tipo===DEDALO_HIERARCHY_SECTION_TIPO) {
+			return array(); // We are in last level of parent
+		}
 
 		if(SHOW_DEBUG===true) {
 			$start_time=microtime(1);
@@ -221,16 +232,20 @@ class component_relation_parent extends component_relation_common {
 
 			$current_section_id   	= $rows['section_id'];
 			$current_section_tipo 	= $rows['section_tipo'];
+			$current_relations 		= json_decode($rows['relations']);			
 
 			if ($current_section_id==$section_id && $current_section_tipo===$section_tipo) {
 				debug_log(__METHOD__." Error on get parent. Parent is set at itself as loop. Ignored locator. ($section_id - $section_tipo) ".to_string(), logger::ERROR);
 				continue;
-			}		
+			}
+
+			# Hierarchy parent case locator, force from_component_tipo
+			if ($current_section_tipo==='hierarchy1') {
+				$from_component_tipo = DEDALO_HIERARCHY_CHIDRENS_TIPO;
+			}	
 
 			// Search 'from_component_tipo' in locators when no is received
-			if (empty($from_component_tipo)) {
-
-				$current_relations = json_decode($rows['relations']);
+			if (empty($from_component_tipo)) {				
 
 				$reference_locator = new locator();
 					$reference_locator->set_section_tipo($section_tipo);
@@ -278,19 +293,59 @@ class component_relation_parent extends component_relation_common {
 	* @return array $parents_recursive
 	*/
 	public static function get_parents_recursive($section_id, $section_tipo) {
+
+		static $ar_resolved_parents_recursive = array();
+
+		$key_resolve = $section_tipo.'_'.$section_id;
+
+		$parents_recursive = array();
 		
 		// Add first level
 		$ar_parents 	   = component_relation_parent::get_parents($section_id, $section_tipo);
 		$parents_recursive = $ar_parents;
+			#dump($parents_recursive, ' parents_recursive ++ '.to_string());
 
+		# Avoid infinite loop on bad configurated thesaurus
+		if (in_array($key_resolve, $ar_resolved_parents_recursive)) {
+			/*
+			$key = array_search($key_resolve, $ar_resolved_parents_recursive);
+			$resolved = $ar_resolved_parents_recursive[$key];
+			$ar_resolved_parents_recursive = array(); // reset
+			return array();*/
+			
+			if(SHOW_DEBUG===true) {
+				#trigger_error("Error on ".__METHOD__.". Infinite loop is stopped for: <br> $key_resolve <h5> Please, review your config about parent of $key_resolve</h5>");
+				#dump($ar_resolved_parents_recursive, ' ar_resolved_parents_recursive ++ '.to_string());
+				#throw new Exception("Error Processing Request", 1);				
+			}
+			$ar_resolved_parents_recursive = array(); // reset
+			return $parents_recursive;
+		}
+		
+		# Set as resolved
+		$ar_resolved_parents_recursive[] = $key_resolve;
+	
 		foreach ($ar_parents as $current_locator) {
+
+			if ($current_locator->section_id==$section_id && $current_locator->section_tipo===$section_tipo) {
+				# Wrong recursion prevention
+				debug_log(__METHOD__." Wrong recursion detected for $section_id, $section_tipo . Skipped resolution ".to_string(), logger::ERROR);
+				continue;
+			}
 			// Add every parent level
 			$current_ar_parents	= component_relation_parent::get_parents_recursive($current_locator->section_id, $current_locator->section_tipo);
-			$parents_recursive  = array_merge($parents_recursive, $current_ar_parents);
+			foreach ($current_ar_parents as $c_parent) {
+				#debug_log(__METHOD__." c_parent ".to_string($c_parent), logger::DEBUG);
+				if ($c_parent->section_tipo===DEDALO_HIERARCHY_SECTION_TIPO) continue; // Skip root hierarchy term 
+				# Add to array
+				$parents_recursive[] = $c_parent;
+			}
+			#$parents_recursive  = array_merge($parents_recursive, $current_ar_parents);
 		}
-
+		
+		
 		return (array)$parents_recursive;
-	}//end get_parents_recursive	
+	}//end get_parents_recursive
 
 
 	

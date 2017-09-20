@@ -1,5 +1,99 @@
 **UPDATES AND CHANGES**
 
+*Ver 4.7.0 - 18-09-2017
+Today we introduce the update of the V4 to 4.7.0
+
+This update fixed some issues and bugs for the V4.5.1
+
+IMPORTANT:
+
+The next version will be removed old jer_xx tables in SQL, the suppor for the thesaurus v3 will be completed removed and all data into the SQL will be removed. Please change the data into the new JSON format. This is the last call for do it.
+
+Tables the will be removed:
+jer_xx (every public table that beging with jer_ except the internal table "jer_dd" - stucture -that will not removed)
+jerarquia
+jerarquia_tipos
+matrix_descriptors (the internal matrix_descriptors_dd - structure - will not removed)
+
+In this version the install database don't have the toponymy data, you need import the data of the country that you will need.
+
+- IMPORT TOPONYMY
+
+1 first create the toponymy into the Hierarchy menu into THesaurus:
+	login in Dédalo
+	go to Thesaurus -> Hierarchy
+	find the country that you want import
+	edit the country
+	change the "active" field to "Yes"
+	press the "Generate" button
+
+2 Now the toponymy is ready for import the data in SQL.
+
+ 	logout Dédalo
+ 	go to: /dedalo/install/import/hierarchy
+ 	select the hierarchies to be imported with the postgreSQL copy comand, similar to:
+		psql dedalo4_XXX -U YYY -p 5432 -h localhost -c "\copy matrix_hierarchy(section_id, section_tipo, datos) from es1.copy "
+
+		XXX: the name of your installation
+		YYY: the name of your user
+	You can list all exported tables and change the "es1.copy" to the hierarchies that you want import
+	When you are import the toponymy data, you will need change the counters of the tables that you were imported.
+	login to Dédalo with developer user
+	go to the administation tool and see the:
+		DEDALO COUNTERS STATE
+	you will see the diferences and Dédalo show the SQL command to apply into the postgreSQL, similar to this:
+		UPDATE "matrix_counter" SET dato = 75845 WHERE tipo = 'es1'; 
+	This command will change the conunters to the new imported values in SQL
+	Change the profiles to acces users to the new hierarchy.
+
+	Done! you new hierarchy was imported and ready to use.
+
+NEWS AND CHNAGES:
+This version change the comunicacion form javascript to php of all triggers, now the comunication is make in JSON native format in both directions. All information storre and change in the components is transfered in JSON. All  JQuery versions of the AJAX are remove and the calls now are made with the native XMLHttpRequest. In the PHP side the POST variables are removed.
+
+New lang tools for the components, and new langs options for the transciptions, indexations, chapters, etc. 
+
+New tool_lang_multiple used in the multiple modes, that access the langs versions of the component. Now is possible work with all langs versions of the information at same time.
+
+New tools in the struct, this version add the options for sustain the correlation between translations of the "structurations", now is posible re-asig the original structurations from the original lang to the target lang.
+
+New encriptation of the 256bits for the passwords based in OpenSSL implemantation.
+
+Update the component_autocomplete for support the deep search in multiples sections. Now is possible search inside the 2, 3, 4, etc levels of the deep informations in sections linked by locators. 
+Object -> portal -> mint -> group
+PCI -> Interview -> Informant -> Profesion -> Place -> actual situation
+this searches are created with subquery in the JSON information. (important: for now the subquery is not possible index it)
+
+Updated the component_text_area for support the geolocation marks directly in edit mode. The component now has two editors for support the structuration tools, this situation is temporal, in near future the component will has only one editor for all, indexation, structuration.
+
+Updated the search and replace tool for do multiples changes without reset the agrupation search in every change.
+
+Update for all tools of OH, now the tools shown the same information in the header, now is possible change the lang in all tools.
+
+New sync between tools in the client side. Now if one tool change the information all open windows with other tools are updated and sync with the change made.
+
+New render engine for the image tags in the client side. Now the TC marks are rendered with javascript. In this first version only work with the TC marks but in the near future all marks will be rendered by the new engine.
+
+Updated the new structuration tool with possibility to add and remove annotations and links to thesaurus.
+
+New developer user that have access to the dev tools, now the root user is not necessary for do administration tasks. Please use the new dev user to access to the tools and debugger.
+
+New concept "dataframe"
+This newer version has a new dataframe into the JSON matrix, dataframe is a data companion of the dato. Dataframe in this first version store the uncertainity of the dato, if the dato is not certain, it will be store and procesed by dataframe. In the near future will be incorporate the time and space information of the dato. Ex: one mint can change own name (dato) in the time (dataframe) and space (dataframe) and we can't be sure that the name in one time can be certain (dataframe)
+
+Componets that are afected:
+- component_date is update to suport multiple values of the dato. Now is a raid. Is necessary update the dato in the matrix tablet. Date is the first component that suppor "dataframe" and can manage it.
+
+
+New components
+- component_calculation, this new component can do calculations with formulas that can be configurables inside properties of the structure. The values for do calculations are get from other components, the get_dato is procesed in php and the formula is calculted in javascript.
+
+- New SQL matrix 
+- matrix_dataframe: will store the dataframe information that will be referenced by locators inside the components.
+
+
+
+
 *Ver 4.5.1 - 05-03-2017
 Today we introduce the update of the V4 to 4.5.1
 
@@ -43,7 +137,7 @@ Componets that are afected:
 
 - All thesaurus need to be convert to the new JSON format of matrix. You can do the tranformation in some ways.
 
-Way 1.- This way is faster but require some manual changes into the Dédalo, if you don't have a lot experience use the way 2 (slow but more easy). If you don't use the toponomy thesaurus (like "España", "Cuba", "France", etc) in the indexation you can inport all toponomy from:
+Way 1.- This way is faster but require some manual changes into the Dédalo, if you don't have a lot experience use the way 2 (slow but more easy). If you don't use the toponomy thesaurus (like "España", "Cuba", "France", etc) in the indexation you can import all toponomy from:
 
 	/dedalo/install/import/hierarchy
 

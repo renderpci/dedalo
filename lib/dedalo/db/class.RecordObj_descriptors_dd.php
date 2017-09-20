@@ -81,7 +81,7 @@ class RecordObj_descriptors_dd extends RecordObj_matrix {
 
 			# LANG . SI NO TENEMOS LANG, USAMOS EL LANG PRINCIPAL DE SU JERARQUIA
 			if(empty($lang)) {
-				$lang	= self::$descriptors_mainLang;		
+				$lang	= self::$descriptors_mainLang;
 				#dump($lang, ' lang from empty '.$parent);		
 			}			
 			

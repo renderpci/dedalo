@@ -37,8 +37,19 @@ class tool_import_files extends tool_common {
 		# Usuario logeado actualmente
    		$user_id		= navigator::get_user_id();	
 		$media_folder 	= DEDALO_IMAGE_FOLDER;
-		$tipo 			= isset($_GET['t']) ? $_GET['t'] : '';	// When varname is t (default page call)
-		$tipo 			= isset($_REQUEST['tipo']) ? $_REQUEST['tipo'] : $tipo;	// When varname is tipo fallback
+		// tipo
+		$tipo = null;
+		if (isset($this->component_obj)) {
+			$tipo = $this->component_obj->get_tipo();
+		}else{
+			$var_requested_t 	= common::get_request_var('t');
+			#$tipo	= isset($_GET['t']) ? $_GET['t'] : '';
+			$tipo	= !empty($var_requested_t) ? $var_requested_t : '';	// When varname is t (default page call)
+			#$tipo	= isset($_REQUEST['tipo']) ? $_REQUEST['tipo'] : $tipo;
+			$var_requested 		= common::get_request_var('tipo');
+			$tipo	= !empty($var_requested) ? $var_requested : $tipo;	// When varname is tipo fallback	
+		}
+		
 
 		# UPLOAD_DIR_CUSTOM is section_tipo
 		$upload_dir_custom = isset($tipo) ? '/'.$tipo : null;
@@ -84,6 +95,8 @@ class tool_import_files extends tool_common {
 	*/
 	public function find_all_files($dir, $recursive=false) {
 
+		#$dir = str_replace('//', '/', $dir);
+		
 		$ar_data = array();
 		try {
 			if (!file_exists($dir)) {
@@ -97,6 +110,7 @@ class tool_import_files extends tool_common {
 		if (!$root) {
 			return array();
 		}
+		#dump($root, ' root ++ '.to_string());
 		
 		natsort($root);
 		foreach($root as $value) {
@@ -122,7 +136,7 @@ class tool_import_files extends tool_common {
 
 		# SORT ARRAY (By custom core function build_sorter)
 		#usort($ar_data, build_sorter('numero_recurso'));
-		#dump($ar_data,'$ar_data');
+		#dump($ar_data,'$ar_data',to_string($dir));
 		
 		return $ar_data;
 	}
@@ -217,7 +231,7 @@ class tool_import_files extends tool_common {
 				#
 				# COMPONENT IMAGE 
 				# (Is autosaved with defaults on create)
-				$component 	 = component_common::get_instance($modelo_name, $target_component, $current_section_id, 'edit', DEDALO_DATA_LANG, $target_section_tipo);				
+				$component 	 = component_common::get_instance($modelo_name, $target_component, $current_section_id, 'list', DEDALO_DATA_LANG, $target_section_tipo);				
 
 				#
 				# get_image_id
@@ -244,7 +258,7 @@ class tool_import_files extends tool_common {
 				# Save original file name in a component_input_text
 				if (isset($tool_propiedades->target_filename)) {
 					$modelo_name_target_filename= RecordObj_dd::get_modelo_name_by_tipo($tool_propiedades->target_filename,true);
-					$component_target_filename 	= component_common::get_instance($modelo_name_target_filename, $tool_propiedades->target_filename, $current_section_id, 'edit', DEDALO_DATA_LANG, $target_section_tipo);
+					$component_target_filename 	= component_common::get_instance($modelo_name_target_filename, $tool_propiedades->target_filename, $current_section_id, 'list', DEDALO_DATA_LANG, $target_section_tipo);
 					$component_target_filename->set_dato( $file_name_full );
 					$component_target_filename->Save();
 				}
@@ -254,7 +268,7 @@ class tool_import_files extends tool_common {
 				# Save original file date in a component_date if actual component date is empty
 				if (isset($tool_propiedades->target_date)) {
 					$modelo_name_target_date= RecordObj_dd::get_modelo_name_by_tipo($tool_propiedades->target_date,true);
-					$component_target_date 	= component_common::get_instance($modelo_name_target_date, $tool_propiedades->target_date, $current_section_id, 'edit', DEDALO_DATA_LANG, $target_section_tipo);
+					$component_target_date 	= component_common::get_instance($modelo_name_target_date, $tool_propiedades->target_date, $current_section_id, 'list', DEDALO_DATA_LANG, $target_section_tipo);
 					$dato = $component_target_date->get_dato();
 					if (empty($dato)) {
 						# exif try to get date from file

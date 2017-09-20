@@ -4,22 +4,23 @@
 
 		
 	
-	print "\n\n<!-- AREA [tipo:$tipo] -->";
+	print "<!-- AREA [tipo:$tipo] -->";
 
-	print "\n<div class=\"css_wrap_area\" > ";
+	print "<div class=\"css_wrap_area\" > ";
 	
 	
 	# ETIQUETA (LABEL)
-	$html_label = "\n<div class=\"css_area_titulo\" > ".component_common_draw::draw_label($this)." </div>";
+	$html_label = "<div class=\"css_area_titulo\" > ".component_common_draw::draw_label($this)." </div>";
 		
 	
 	# CONTENIDO (INPUT)
 	$html_contenido  ='';
-	$html_contenido .= "\n<div class=\"css_area_content area_content_list\" >";
+	$html_contenido .= "<div class=\"css_area_content area_content_list\" >";
 	
-	switch($permissions) {
+	switch(true) {
 			
-		case 0	:	$html_contenido .= "\n <span class=\"css_span_dato\"> ".label::get_label('sin_acceso')." </span>";
+		case $permissions===0	:
+					$html_contenido .= " <span class=\"css_span_dato\"> ".label::get_label('sin_acceso')." </span>";
 					break;
 						
 		case ($permissions>=1) :
@@ -37,7 +38,7 @@
 
 					#dump($ar_children_areas ,'$ar_children_areas ');
 					$path = DEDALO_LIB_BASE_URL .'/main/';
-					$html_contenido .= "\n <blockquote> ";
+					$html_contenido .= " <blockquote> ";
 					foreach ($ar_children_areas as $tipo => $value) {
 
 						$section_name = RecordObj_dd::get_termino_by_tipo($tipo,DEDALO_APPLICATION_LANG,true);
@@ -54,13 +55,13 @@
 						#$html_contenido .= "<a href=\"$url\">$section_name</a><br>";
 						*/
 					}
-					$html_contenido .= "\n </blockquote> ";
+					$html_contenido .= " </blockquote> ";
 					
 					
 					break;			
 	}
 	
-	$html_contenido .= "\n</div>";
+	$html_contenido .= "</div>";
 	
 	
 	# Prepare content to show in page
@@ -72,5 +73,5 @@
 	print $html_contenido;
 	
 	
-	print "\n</div><!-- /AREA [$tipo] -->\n\n"; //wrap
+	print "</div><!-- /AREA [$tipo] -->"; //wrap
 ?>

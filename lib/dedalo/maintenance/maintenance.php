@@ -1,15 +1,22 @@
 <?php
 	
 	# CONTROLLER
+	/*
+	if (SHOW_DEBUG!==true) {
+		# Delete current Dédalo session
+		unset($_SESSION['dedalo4']['auth']);
+
+		#exit();
+	}*/
+	
 
 	#
 	# ONLY SHOW WHEN USER IS NOT ADMIN DEDALO_SUPERUSER
-	if (isset($_SESSION['dedalo4']['auth']['user_id'])
-		&& 	 ($_SESSION['dedalo4']['auth']['user_id']!=DEDALO_SUPERUSER)) {
+	if (DEDALO_MAINTENANCE_MODE===true && (isset($_SESSION['dedalo4']['auth']['user_id']) && $_SESSION['dedalo4']['auth']['user_id']!=DEDALO_SUPERUSER)) {
 		
+		# Delete current Dédalo session
 		unset($_SESSION['dedalo4']['auth']);
 	
-		#die("Sitio en mantenimiento. Disculpe las molestias");	
 
 		$cwd = basename(__DIR__);
 		$page_title = label::get_label('sitio_en_mantenimiento');

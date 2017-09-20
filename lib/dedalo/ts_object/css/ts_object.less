@@ -158,9 +158,12 @@
 				margin-right: 5px;
 				margin-left: 3px;
 				//background-color: black;
-				//border: none;
-				//border-radius: 2px;
+				border: 1px solid #FD7F26;
+				border-radius: 2px;
 				//color: #ffffff;
+				opacity: 1 !important;
+				position: relative;
+				top: 1px;
 			}
 
 
@@ -229,6 +232,7 @@
 		.inline_common;
 		min-width: 150px;
 		margin-left: 0;
+		min-height: 22px;
 		}
 		/* LIST_THESAURUS COMMONS
 		------------------------------------------------------- */
@@ -290,6 +294,7 @@
 			top: -1px;
 			padding-left: 5px;
 			padding-right: 10px;
+			user-select: auto; 
 		}
 
 		/* ORDER NUMBER
@@ -304,7 +309,8 @@
 			opacity: 1;
 		}*/
 
-		.wrap_ts_object .elements_container .list_thesaurus_element[data-tipo="hierarchy40"] {
+		.wrap_ts_object .elements_container .list_thesaurus_element[data-tipo="hierarchy40"],
+		.wrap_ts_object .elements_container .list_thesaurus_element[data-tipo="hierarchy91"] {
 			background-color: #e6e6e6;
 			opacity: 0.8;
 			padding-left: 4px;
@@ -319,7 +325,8 @@
 			width: initial;
 			font-size: 12px;
 			}
-			.wrap_ts_object .elements_container .list_thesaurus_element[data-tipo="hierarchy40"]:hover {
+			.wrap_ts_object .elements_container .list_thesaurus_element[data-tipo="hierarchy40"]:hover,
+			.wrap_ts_object .elements_container .list_thesaurus_element[data-tipo="hierarchy91"]:hover {
 				background-color: #ffb666;
 				color: #fff !important;
 			}
@@ -551,6 +558,7 @@
 
 	.list_thesaurus_element mark {
 		color: #333 !important;
+		font-style: italic;
 	}
 
 

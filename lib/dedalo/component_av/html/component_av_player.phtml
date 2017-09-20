@@ -6,17 +6,17 @@
 	# PLAYER
 	$html_contenido = '';
 
-	$html_contenido .= "\n<div class=\"css_player_wrap\"							
-							data-tipo=\"{$tipo}\"
-							data-section_tipo=\"{$section_tipo}\"
-							data-parent=\"{$parent}\"
-							data-video_id=\"{$video_id}\"
-							>";
+	$html_contenido .= "<div class=\"css_player_wrap\" ";					
+	$html_contenido .= "data-tipo=\"{$tipo}\" ";
+	$html_contenido .= "data-section_tipo=\"{$section_tipo}\" ";
+	$html_contenido .= "data-parent=\"{$parent}\" ";
+	$html_contenido .= "data-video_id=\"{$video_id}\" ";
+	$html_contenido .= ">";
 
-		$html_contenido .= "\n <iframe id=\"videoFrame\" name=\"videoFrame\" class=\"videoFrame\" src=\"{$iframe_url}\" onload=\"resizeIframe(this)\"></iframe>";
+		$html_contenido .= "<iframe id=\"videoFrame\" name=\"videoFrame\" class=\"videoFrame\" src=\"{$iframe_url}\" onload=\"resizeIframe(this)\"></iframe>";
 
 
-	$html_contenido .= "\n</div><!-- /css_player_wrap -->";
+	$html_contenido .= "</div><!-- /css_player_wrap -->";
 
 	# PRINT HTML
 	print $html_contenido;

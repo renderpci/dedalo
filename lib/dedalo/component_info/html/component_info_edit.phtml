@@ -4,17 +4,18 @@
 	
 	
 	# html_delimiter
-	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'in');
+	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'in', $modo, $lang);
+	
 
-	print "<div class=\"wrap_component css_wrap_component_info wrap_component_{$tipo}\" id=\"{$id_wrapper}\"
-	data-tipo=\"{$tipo}\"
-	data-lang=\"{$lang}\"
-	data-section_tipo=\"{$section_tipo}\"
-	data-parent=\"{$parent}\"
-	data-modo=\"{$modo}\"
-	data-component_name=\"{$component_name}\"
-	data-component_info='{$component_info}'
-	>";
+	print "<div class=\"wrap_component css_wrap_component_info wrap_component_{$tipo}\" id=\"{$id_wrapper}\" ";
+	print "data-tipo=\"{$tipo}\" ";
+	print "data-lang=\"{$lang}\" ";
+	print "data-section_tipo=\"{$section_tipo}\" ";
+	print "data-parent=\"{$parent}\" ";
+	print "data-modo=\"{$modo}\" ";
+	print "data-component_name=\"{$component_name}\" ";
+	print "data-component_info='{$component_info}' ";
+	print ">";
 	
 		
 		# ETIQUETA (LABEL)
@@ -30,7 +31,8 @@
 			case 1	: 	$html_contenido .= "";
 						break;	
 							
-			case ($permissions>=2)	:			
+			case 2	:
+			case 3	:		
 						
 						#$html_contenido .= "Info: <br>";
 						foreach ((array)$ar_widget_html as $key => $widget_html) {
@@ -38,9 +40,9 @@
 							#$html_contenido .= "<hr>";
 						}
 
-						$html_contenido .= "<a href=\"javascript:;\" class=\"update_info edit_hidden\" onclick=\"component_info.update_info(this);\"
-						data-wrapper_id=\"$id_wrapper\"
-						>".label::get_label('actualizar')."</a>";
+						$html_contenido .= "<a href=\"javascript:;\" class=\"update_info edit_hidden\" onclick=\"component_info.update_info(this);\" data-wrapper_id=\"$id_wrapper\">";
+						$html_contenido .= label::get_label('actualizar');
+						$html_contenido .= "</a>";
 		}
 
 	
@@ -57,7 +59,7 @@
 
 
 	# html_delimiter
-	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'in');
+	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'in', $modo, $lang);
 
 
 ?>

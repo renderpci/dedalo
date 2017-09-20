@@ -4,9 +4,9 @@
 		
 	# CONTENIDO (INPUT)
 	$html_contenido = '';
-	switch($permissions) {
+	switch(true) {
 			
-		case 0	:	$html_contenido .= "";		
+		case $permissions===0	:	$html_contenido .= "";		
 					break;
 					
 		case ($permissions>=1)	:

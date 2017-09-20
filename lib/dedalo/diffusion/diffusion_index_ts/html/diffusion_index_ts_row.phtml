@@ -26,6 +26,8 @@
 		$section_top_tipo 	= $rel_locator_obj->section_top_tipo;
 		$section_top_id 	= $rel_locator_obj->section_top_id;
 		$tag_id 			= $rel_locator_obj->tag_id;
+		$type 				= $rel_locator_obj->type;
+			#dump($type, ' type ++ '.to_string());
 
 			#dump($rel_locator_obj, ' section_tipo ++ '.to_string());
 		
@@ -33,14 +35,29 @@
 		$component_text_area 	= component_common::get_instance('component_text_area',
 																 $component_tipo,
 																 $section_id,
-																 'list',
+																 'edit',
 																 DEDALO_DATA_LANG,
 																 $section_tipo);
+		if ($type===DEDALO_RELATION_TYPE_STRUCT_TIPO) {
+			$raw_text = $component_text_area->get_dato();
+			# Returns original lang transcription
+			$main_lang = component_text_area::force_change_lang($component_tipo, $section_id, 'edit', DEDALO_DATA_LANG, $section_tipo);
+			$pattern = TR::get_mark_pattern('struct', $standalone=true, $tag_id, false, false);
+			preg_match($pattern, $raw_text, $matches);
+			#dump($matches, ' matches ++ '.to_string($raw_text));
+			if (empty($matches[0]) && $main_lang!=DEDALO_DATA_LANG) {
+				$component_text_area->set_lang($main_lang);
+				$raw_text = $component_text_area->get_dato();
+			}
+		}
+
 		#dump($component_text_area,'component_text_area');
 		$propiedades 	= array('rel_locator'=>$rel_locator_obj);
 		$diffusion_obj 	= $component_text_area->get_diffusion_obj( $propiedades );			
 			#dump($diffusion_obj, ' diffusion_obj ++ '.to_string());
+			#dump($component_text_area->get_dato(), '$component_text_area->get_dato() ++ '.to_string());
 
+		#$component_text_area->set_lang(DEDALO_DATA_LANG);
 
 		# ROW TR HEAD ------------------------------------------------
 		if(!$included_tr_head) {
@@ -75,6 +92,45 @@
 			#
 			# TD_TAG_ID
 			$html_row .= "<td class=\"td_tag_id\">";
+
+			if ($type===DEDALO_RELATION_TYPE_STRUCT_TIPO) {
+				# DEDALO_RELATION_TYPE_STRUCT_TIPO (dd490)
+				$html_row .= "<div class=\"tag_title\">";
+		
+				$pattern = TR::get_mark_pattern('struct', $standalone=true, $tag_id, false, false);
+				preg_match($pattern, $raw_text, $matches);
+				#dump($matches, ' matches ++ '.to_string($raw_text));
+				if (isset($matches[0])) {	
+					// tag data is the locator inside tag struct	
+					$tag_data  = TR::tag2data($matches[0], 'struct');
+						#dump($tag_data, ' tag_data ++ '.to_string());
+					if ($tag_data!==null) {					
+						$title_modelo_name = RecordObj_dd::get_modelo_name_by_tipo(DEDALO_STRUCTURATION_TITLE_TIPO,true);
+						$title_component= component_common::get_instance($title_modelo_name,
+																		 DEDALO_STRUCTURATION_TITLE_TIPO,
+																		 $tag_data->section_id,
+																		 'list',
+																		 DEDALO_DATA_LANG,
+																		 $tag_data->section_tipo);
+						$title = $title_component->get_valor(DEDALO_DATA_LANG);
+							#dump($title, ' title ++ '.to_string(DEDALO_STRUCTURATION_TITLE_TIPO));
+						if ($main_lang!=DEDALO_DATA_LANG) {
+							$title_component->set_lang($main_lang);
+							$title = $title_component->get_valor($main_lang);
+							$title = "<mark>".$title ."</mark>";
+						}
+						$html_row .= "<span class=\"struct_title\">$title</span>";
+					}else{
+						debug_log(__METHOD__." Empty matches tag_data in text for tag_id:".to_string($tag_id), logger::ERROR);
+					}
+				}
+				$html_row .= "</div>";
+			}else{
+				# DEDALO_RELATION_TYPE_INDEX_TIPO (dd96)
+				$html_row .= "<div class=\"tag_id\">";
+				$html_row .= $tag_id;
+				$html_row .= "</div>";
+			}
 				/*		
 				$url = DEDALO_LIB_BASE_URL . "/main/?m=tool_indexation&t={$diffusion_obj->tipo}&section_tipo={$section_tipo}&parent={$parent}&top_tipo={$section_top_tipo}&top_id={$section_top_id}&tag_id={$tag_id}";
 				$html_row .= "<a href=\"$url\" target=\"_blank\" class=\"tag_id\"
@@ -85,9 +141,7 @@
 				$html_row .= $tag_id;
 				$html_row .= "</a>";
 				*/
-			$html_row .= "	<div class=\"tag_id\">";
-			$html_row .= 	$tag_id;
-			$html_row .= "	</div>";
+			
 			$html_row .= "</td>";
 
 
@@ -100,13 +154,18 @@
 				case 'component_av':
 
 					# Indexation link
-					$url = DEDALO_LIB_BASE_URL."/main/?m=tool_indexation&t=$diffusion_obj->tipo&section_tipo=$section_tipo&parent=$parent&top_tipo=$section_top_tipo&top_id=$section_top_id&tag_id=$tag_id";
-					$html_row .= "<a href=\"$url\" class=\"icon_bs tool_indexation_icon link button_indexation\" target=\"_blank\" title=\"".label::get_label('tool_indexation')."\"></a>";				
+					if ($type===DEDALO_RELATION_TYPE_STRUCT_TIPO) {
+						$url = DEDALO_LIB_BASE_URL."/main/?m=tool_structuration&t=$diffusion_obj->tipo&section_tipo=$section_tipo&parent=$parent&top_tipo=$section_top_tipo&top_id=$section_top_id&tag_id=$tag_id";
+						$html_row .= "<a href=\"$url\" class=\"icon_bs tool_structuration_icon link button_structuration\" target=\"_blank\" title=\"".label::get_label('tool_structuration')."\"></a>";				
+					}else{
+						$url = DEDALO_LIB_BASE_URL."/main/?m=tool_indexation&t=$diffusion_obj->tipo&section_tipo=$section_tipo&parent=$parent&top_tipo=$section_top_tipo&top_id=$section_top_id&tag_id=$tag_id";
+						$html_row .= "<a href=\"$url\" class=\"icon_bs tool_indexation_icon link button_indexation\" target=\"_blank\" title=\"".label::get_label('tool_indexation')."\"></a>";				
+					}
 					
 					# Transcription link
 					$related_tipo 	= $diffusion_obj->columns['related_tipo'];
 					$url = DEDALO_LIB_BASE_URL."/main/?m=tool_transcription&t=$related_tipo&section_tipo=$section_tipo&parent=$parent&context_name=component_av&tag_id=$tag_id&top_tipo=$section_top_tipo&top_id=$section_top_id"; 
-					$html_row .= "	<a href=\"$url\" class=\"icon_bs tool_transcription_icon link button_indexation_av\" target=\"_blank\" title=\"".label::get_label('tool_transcription')."\"></a>";
+					$html_row .= "<a href=\"$url\" class=\"icon_bs tool_transcription_icon link button_indexation_av\" target=\"_blank\" title=\"".label::get_label('tool_transcription')."\"></a>";
 
 					# Video player link
 					$reelID  		= isset($diffusion_obj->columns['video_id'])  ? $diffusion_obj->columns['video_id'] : null;
@@ -114,7 +173,7 @@
 					$tcin_secs 		= isset($diffusion_obj->columns['tcin_secs'])  ? $diffusion_obj->columns['tcin_secs']  : null;
 					$tcout_secs 	= isset($diffusion_obj->columns['tcout_secs']) ? $diffusion_obj->columns['tcout_secs'] : null;	// Like vbegin=287&vend=318 tcout_secs
 					$url = DEDALO_LIB_BASE_URL."/media_engine/av_media_player.php?reelID=$reelID&quality=$quality&top_tipo=$section_top_tipo&top_id=$section_top_id&section_tipo=$section_tipo&vbegin=$tcin_secs&vend=$tcout_secs"; 
-					$html_row .= "	<a href=\"$url\" class=\"icon_bs av_video_icon link\" target=\"_blank\" title=\"".label::get_label('fragmento')."\"></a>";
+					$html_row .= "<a href=\"$url\" class=\"icon_bs av_video_icon link\" target=\"_blank\" title=\"".label::get_label('fragmento')."\"></a>";
 
 					# Share custom link					
 					# icon_share					
@@ -145,7 +204,11 @@
 			# TEXT (Transcription fragment)
 			# dump($diffusion_obj->columns['fragment'], '$diffusion_obj->columns ++ '.to_string());
 			$html_row .= "<div class=\"fragment_text\">";
-			$html_row .= TR::limpiezaFragmentoEnListados($diffusion_obj->columns['fragment'],122);
+			$current_fragment = TR::limpiezaFragmentoEnListados($diffusion_obj->columns['fragment'],122);
+			if ($type===DEDALO_RELATION_TYPE_STRUCT_TIPO && DEDALO_DATA_LANG!=$main_lang) {
+				$current_fragment = "<mark>".$current_fragment."</mark>";
+			}
+			$html_row .= $current_fragment;
 			$html_row .= "</div>";
 
 			$html_row .= "</td>";
@@ -165,6 +228,7 @@
 						$tc_in 		 = $diffusion_obj->columns['tc_in'];
 						$tc_out 	 = $diffusion_obj->columns['tc_out'];
 						$duracion_tc = $diffusion_obj->columns['duracion_tc'];
+							#dump($duracion_tc, ' duracion_tc ++ '.to_string());
 
 						if (!empty($tc_in)) {
 							$html_row .= $tc_in;
@@ -172,8 +236,11 @@
 						}												
 
 						# Download fragment
-		                if( !empty($duracion_tc) && $duracion_tc!='00:00:00' && !empty($tc_in) && !empty($tc_out)) {
+		                if( !empty($duracion_tc) && $duracion_tc!=='00:00:00.000' && !empty($tc_in) && !empty($tc_out)) {
 
+		                	if (OptimizeTC::TC2seg($duracion_tc)<=0) {
+		                		$duracion_tc = '<span class="error">'.$duracion_tc.'</span>';
+		                	}
 		                	$html_row .= ' '.label::get_label('total').': '. $duracion_tc;
 		                   
 							$quality 	= DEDALO_AV_QUALITY_DEFAULT;
@@ -184,19 +251,19 @@
 							}							
 
 							# DOWNLOAD BUTTON NORMAL
-		                    $html_row .= " <div class=\"icon_bs link av_download_icon\"
-					    	data-video_id=\"$video_id\" data-quality=\"$quality\" data-tc_in=\"$tc_in\" data-tc_out=\"$tc_out\" data-watermark=\"0\" data-tag_id=\"$tag_id\"
-					    	data-parent=\"$parent\" data-tipo=\"$diffusion_obj->tipo\" data-top_id=\"$section_top_id\" data-top_tipo=\"$section_top_tipo\"
-					    	onclick=\"tool_av_versions.donwload_fragment(this)\"
-					    	></div>";
+		                    $html_row .= "<div class=\"icon_bs link av_download_icon\" ";
+					    	$html_row .= "data-video_id=\"$video_id\" data-quality=\"$quality\" data-tc_in=\"$tc_in\" data-tc_out=\"$tc_out\" data-watermark=\"0\" data-tag_id=\"$tag_id\" ";
+					    	$html_row .= "data-parent=\"$parent\" data-tipo=\"$diffusion_obj->tipo\" data-top_id=\"$section_top_id\" data-top_tipo=\"$section_top_tipo\" ";
+					    	$html_row .= "onclick=\"tool_av_versions.donwload_fragment(this)\" ";
+					    	$html_row .= "></div>";
 
 					    	# DOWNLOAD BUTTON WATERMARK
 					    	if(file_exists(DEDALO_AV_WATERMARK_FILE)) {
-					    	$html_row .= " <div class=\"icon_bs link av_download_icon_watermark\"
-					    	data-video_id=\"$video_id\" data-quality=\"$quality\" data-tc_in=\"$tc_in\" data-tc_out=\"$tc_out\" data-watermark=\"1\" data-tag_id=\"$tag_id\"
-					    	data-parent=\"$parent\" data-section_tipo =\"$section_tipo\" data-tipo=\"$diffusion_obj->tipo\" data-top_id=\"$section_top_id\" data-top_tipo=\"$section_top_tipo\"
-					    	onclick=\"tool_av_versions.donwload_fragment(this)\"
-					    	></div>";
+					    	$html_row .= "<div class=\"icon_bs link av_download_icon_watermark\" ";
+					    	$html_row .= "data-video_id=\"$video_id\" data-quality=\"$quality\" data-tc_in=\"$tc_in\" data-tc_out=\"$tc_out\" data-watermark=\"1\" data-tag_id=\"$tag_id\" ";
+					    	$html_row .= "data-parent=\"$parent\" data-section_tipo =\"$section_tipo\" data-tipo=\"$diffusion_obj->tipo\" data-top_id=\"$section_top_id\" data-top_tipo=\"$section_top_tipo\" ";
+					    	$html_row .= "onclick=\"tool_av_versions.donwload_fragment(this)\" ";
+					    	$html_row .= "></div>";
 					    	}
 		                }
 						break;

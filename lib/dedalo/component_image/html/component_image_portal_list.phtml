@@ -11,17 +11,17 @@ $js_url = DEDALO_LIB_BASE_URL.'/component_image/js/component_image_read.js';
 	# html_delimiter
 	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'in');
 	
-	print "<div class=\"wrap_component css_wrap_image css_wrap_image_{$modo} wrap_component_{$tipo}\"
-	id=\"{$id_wrapper}\"
-	data-tipo=\"{$tipo}\"
-	data-lang=\"{$lang}\"
-	data-parent=\"{$parent}\"
-	data-section_tipo=\"{$section_tipo}\"
-	data-modo=\"{$modo}\"
-	data-dato=\"{$valor}\"
-	data-component_name=\"{$component_name}\"
-	data-component_info='{$component_info}'
-	>";
+	print "<div class=\"wrap_component css_wrap_image css_wrap_image_{$modo} wrap_component_{$tipo}\" ";
+	print "id=\"{$id_wrapper}\" ";
+	print "data-tipo=\"{$tipo}\" ";
+	print "data-lang=\"{$lang}\" ";
+	print "data-parent=\"{$parent}\" ";
+	print "data-section_tipo=\"{$section_tipo}\" ";
+	print "data-modo=\"{$modo}\" ";
+	print "data-dato=\"{$valor}\" ";
+	print "data-component_name=\"{$component_name}\" ";
+	print "data-component_info='{$component_info}' ";
+	print ">";
 	
 		
 		
@@ -45,20 +45,20 @@ $js_url = DEDALO_LIB_BASE_URL.'/component_image/js/component_image_read.js';
 							case 'portal_list_view_mosaic':
 								$thumb_file_url = $image_full_url;
 								$style = "background-image:url('$thumb_file_url')";
-								$html_contenido .= "<div class=\"div_image_portal_list_view_mosaic\" style=\"$style\" $click_action
-								data-image_id=\"$image_id\"
-								data-parent_matrix=\"$parent\"
-								alt=\"$image_id\"
-								></div>";
+								$html_contenido .= "<div class=\"div_image_portal_list_view_mosaic\" style=\"$style\" $click_action ";
+								$html_contenido .= "data-image_id=\"$image_id\" ";
+								$html_contenido .= "data-parent_matrix=\"$parent\" ";
+								$html_contenido .= "alt=\"$image_id\" ";
+								$html_contenido .= "></div>";
 								break;
 							
 							default:								
 								$style = "background-image:url('$thumb_file_url')";
-								$html_contenido .= "<div class=\"thumb_in_list div_image_image_in_list\" style=\"$style\" $click_action
-								data-image_id=\"$image_id\"
-								data-parent_matrix=\"$parent\"
-								alt=\"$image_id\"
-								></div>";
+								$html_contenido .= "<div class=\"thumb_in_list div_image_image_in_list\" style=\"$style\" $click_action ";
+								$html_contenido .= "data-image_id=\"$image_id\" ";
+								$html_contenido .= "data-parent_matrix=\"$parent\" ";
+								$html_contenido .= "alt=\"$image_id\" ";
+								$html_contenido .= "></div>";
 								break;
 						}						
 
@@ -71,16 +71,16 @@ $js_url = DEDALO_LIB_BASE_URL.'/component_image/js/component_image_read.js';
 							!file_exists($this->get_image_path()) &&
 							!$this->get_original(DEDALO_IMAGE_QUALITY_ORIGINAL,false)
 							) {
-							$open_tool_default ="
-							data-image_id=\"$image_id\"
-							data-quality=\"".DEDALO_IMAGE_QUALITY_ORIGINAL."\"
-							data-aditional_path=\"$aditional_path\"
-							data-initial_media_path=\"$initial_media_path\"
-							data-tipo=\"$tipo\"
-							data-parent=\"$parent\"
-							data-section_tipo=\"$section_tipo\"
-							onclick=\"tool_common.open_tool_upload(this)\"
-							title=\"Upload file in original quality\" ";
+							$open_tool_default  = "";
+							$open_tool_default .= "data-image_id=\"$image_id\" ";
+							$open_tool_default .= "data-quality=\"".DEDALO_IMAGE_QUALITY_ORIGINAL."\" ";
+							$open_tool_default .= "data-aditional_path=\"$aditional_path\" ";
+							$open_tool_default .= "data-initial_media_path=\"$initial_media_path\" ";
+							$open_tool_default .= "data-tipo=\"$tipo\" ";
+							$open_tool_default .= "data-parent=\"$parent\" ";
+							$open_tool_default .= "data-section_tipo=\"$section_tipo\" ";
+							$open_tool_default .= "onclick=\"tool_common.open_tool_upload(this)\" ";
+							$open_tool_default .= "title=\"Upload file in original quality\" ";
 
 							$add_class = 'no_file';
 						}
@@ -91,16 +91,16 @@ $js_url = DEDALO_LIB_BASE_URL.'/component_image/js/component_image_read.js';
 						$image_url	= $this->ImageObj->get_thumb_url($maxWidht, $maxHeight, 'resize', null, 'height');	#$m $maxWidht, $maxHeight, $fx=null, $p=null, $prop=null
 
 						# IMAGE
-						$html_contenido .= " <img class=\"css_image $add_class\" $open_tool_default
-						src=\"$image_url\"
-						id=\"img_$identificador_unico\"
-						data-image_id=\"$image_id\"
-						data-tipo=\"$tipo\"
-						data-section_tipo=\"{$section_tipo}\"
-						data-parent=\"$parent\"
-						data-lang=\"$lang\"
-						alt=\"$image_url\"
-						/>";
+						$html_contenido .= "<img class=\"css_image $add_class\" $open_tool_default ";
+						$html_contenido .= "src=\"$image_url\" ";
+						$html_contenido .= "id=\"img_$identificador_unico\" ";
+						$html_contenido .= "data-image_id=\"$image_id\" ";
+						$html_contenido .= "data-tipo=\"$tipo\" ";
+						$html_contenido .= "data-section_tipo=\"{$section_tipo}\" ";
+						$html_contenido .= "data-parent=\"$parent\" ";
+						$html_contenido .= "data-lang=\"$lang\" ";
+						$html_contenido .= "alt=\"$image_url\" ";
+						$html_contenido .= "/>";
 					}					
 
 					#$html_contenido .= "<a href=\"$image_url\" target=\"_blank\" > + ";

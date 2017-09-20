@@ -5,17 +5,15 @@
 	$tipo 					= $this->get_tipo();
 	$parent 				= $this->get_parent();
 	$section_tipo 			= $this->get_section_tipo();
-	$modo					= $this->get_modo();		
-	$dato 					= $this->get_dato();
+	$modo					= $this->get_modo();
 	$dato_reference_lang 	= NULL;
 	$traducible 			= $this->get_traducible();
 	$label 					= $this->get_label();				
 	$required				= $this->get_required();
 	$debugger				= $this->get_debugger();
-	$permissions			= common::get_permissions($section_tipo,$tipo);
+	$permissions			= $this->get_component_permissions();
 	$ejemplo				= $this->get_ejemplo();
-	$html_title				= "Info about $tipo";		
-	$valor					= $this->get_valor();				
+	$html_title				= "Info about $tipo";					
 	$lang					= $this->get_lang();
 	$lang_name				= $this->get_lang_name();
 	$identificador_unico	= $this->get_identificador_unico();
@@ -25,6 +23,7 @@
 	$file_name				= $modo;
 	
 	if($permissions===0) return null;
+
 	
 	switch($modo) {
 		
@@ -41,21 +40,12 @@
 				$id_wrapper = 'wrapper_'.$identificador_unico;
 				$input_name = "{$tipo}_{$parent}";
 
-				$dato = htmlentities($dato);
-				
-				# DATO_REFERENCE_LANG
-				$dato_reference_lang= NULL;												
-				if (empty($dato) && $this->get_traducible()=='si') { # && $traducible=='si'
-					#$dato_reference_lang = $this->get_dato_default_lang();
-					$default_component = $this->get_default_component();
-						#dump($default_component,'$default_component');			
-				}
-				$component_info 	= $this->get_component_info('json');
-												
+				$dato  = $this->get_dato();
+				#$valor = $this->get_valor();
+
+				$component_info = $this->get_component_info();
 				break;
 		case 'print' :
-				$dato = htmlentities($dato);
-
 				break;
 		case 'tool_time_machine'	:	
 				$id_wrapper = 'wrapper_'.$identificador_unico.'_tm';
@@ -65,11 +55,13 @@
 				break;
 				
 		case 'portal_list':
+				$valor = $this->get_valor();
 				if(empty($valor)) return null;					
 		case 'list_tm' :
 				$file_name = 'list';
 						
-		case 'list'	:	
+		case 'list'	:
+				$dato  = $this->get_dato();
 				break;
 						
 		case 'list_of_values'	:
@@ -84,11 +76,6 @@
 				break;
 		
 		case 'search':
-				# Showed only when permissions are >1
-				if ($permissions<1) return null;
-				
-				$dato = empty($dato) ? '' : $dato;
-
 				# Search input name (var search_input_name is injected in search -> records_search_list.phtml)
 				# and recovered in component_common->get_search_input_name()
 				# Normally is section_tipo + component_tipo, but when in portal can be portal_tipo + section_tipo + component_tipo

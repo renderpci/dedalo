@@ -11,7 +11,7 @@
 	$label 					= $this->get_label();				
 	$required				= $this->get_required();
 	$debugger				= $this->get_debugger();
-	$permissions			= common::get_permissions($section_tipo,$tipo);
+	$permissions			= $this->get_component_permissions();
 	$ejemplo				= $this->get_ejemplo();
 	$html_title				= "Info about $tipo";
 	
@@ -22,17 +22,43 @@
 	$valor					= $this->get_valor();
 	$dato_raw 				= tools::truncate_text(htmlspecialchars($valor),300);
 
-	$context_name 			= null;
+	if($permissions===0) return null;
+
+	# Context
+	$context = $this->get_context();
+		#dump($context, ' context ++ '.to_string());
+	$req_context_name = common::get_request_var('context_name');
+	if (false!==$req_context_name) {
+		$context->context_name = $req_context_name;
+		$this->set_context($context);
+	}
+	
+
+	/*
 	if (isset($_REQUEST['context_name'])) {
 		$context_name = $_REQUEST['context_name'];
 	}
-	
+	*/
+	#get the change modo from portal list to edit
+	/*
+	$var_requested = common::get_request_var('context_name');
+	if (!empty($var_requested)) {
+		$from_modo = $var_requested;
+	}*/
 
 	# Propiedades puede asignar valores de configuración del editor de texto (tinyMCE)
 	$propiedades 	  = $this->get_propiedades();
 	$propiedades_json = json_handler::encode($propiedades);
+	
 
-	if($permissions===0) return null;
+	# CSS / JS MAIN FILES
+	css::$ar_url[] = DEDALO_LIB_BASE_URL."/component_autocomplete_hi/css/component_autocomplete_hi.css";
+	js::$ar_url[]  = DEDALO_LIB_BASE_URL."/component_autocomplete_hi/js/component_autocomplete_hi.js";
+
+	js::$ar_url[]  = DEDALO_LIB_BASE_URL."/component_text_area/js/mce_editor.js";
+	js::$ar_url[]  = DEDALO_LIB_BASE_URL."/component_text_area/js/text_editor.js";
+
+
 	
 	$file_name = $modo;
 
@@ -40,58 +66,85 @@
 
 		case 'load_tr':
 				$dato	= $this->get_dato();
+				if ($tipo===DEDALO_COMPONENT_RESOURCES_TR_TIPO) {
+					# Resolve chapters for current text
+					$dato = component_text_area::resolve_titles($dato, $tipo, $section_tipo, $parent, null, $lang, true); // $raw_text, $component_tipo_tipo, $section_tipo, $section_id, $decore='h2', $lang=DEDALO_DATA_LANG
+				}
 				$text	= TR::addTagImgOnTheFly($dato);
 				break;
-		
-		#case 'portal_list'	:
-				#$file_name = 'edit';
-		case 'tool_transcription':
+
 		case 'tool_structuration':
-		case 'indexation':
-		case 'edit'	:	
+				css::$ar_url[] = DEDALO_LIB_BASE_URL."/component_text_area/css/text_editor_default.css";				
+		
+		case 'tool_indexation':
+		case 'edit_in_list':
+		case 'tool_transcription':
+		case 'edit'	:
 				# Verify component content record is inside section record filter
 				if ($this->get_filter_authorized_record()===false) return NULL;
 
+				// Role .
+				$source_lang = component_text_area::force_change_lang($tipo, $parent, 'edit', $lang, $section_tipo);
+				if ($lang===$source_lang) {
+					$role = "source_lang";
+				}else{
+					$role = "tranlation_lang";
+				}
+
 				$component_info = $this->get_component_info('json');
-				$context 		= $this->get_context();
-					
+				
 				#
-				# FIX BROKEN TAGS
-				$component_warning = '';							
-				$ar_tipos = unserialize(DEDALO_TEXTAREA_FIX_BROQUEN_TAGS_TIPOS);
-				if (  in_array($this->tipo, $ar_tipos) ) {
-					if (isset($context) && $context==='default') {
+				# FIX BROKEN TAGS										
+				$ar_fix_broquen_tags_tipos = unserialize(DEDALO_TEXTAREA_FIX_BROQUEN_TAGS_TIPOS);
+				if (  in_array($this->tipo, $ar_fix_broquen_tags_tipos) ) {	
+					if (isset($context) && $context->context_name==='default') {
 						$save=true;
 						if(SHOW_DEBUG===true) {
 							$save=false;
+							debug_log(__METHOD__." Stopped save broken tags for debugger only ".to_string(), logger::DEBUG);
 						}
-						# FIX_BROKEN_INDEX_TAGS
-						$broken_index_tags = $this->fix_broken_index_tags($save);
-						if ($broken_index_tags->result) {
-							$component_warning .= $broken_index_tags->msg;
-							if(SHOW_DEBUG===true) {
-								$component_warning .= " (Fixed in ".$broken_index_tags->total.")";
+						$component_warning = '';
+						# FIX_BROKEN_INDEX_TAGS						
+						if ($modo==='indexation' || $modo==='tool_indexation') {
+							$broken_index_tags = $this->fix_broken_index_tags($save);
+							if ($broken_index_tags->result) {
+								$component_warning .= $broken_index_tags->msg;
+								if(SHOW_DEBUG===true) {
+									$component_warning .= " (Fixed in ".$broken_index_tags->total.")";
+								}
 							}
 						}
 						# FIX_BROKEN_STRUCT_TAGS
-						$broken_index_tags = $this->fix_broken_struct_tags($save);
-						if ($broken_index_tags->result) {
-							$component_warning .= " ".$broken_index_tags->msg;
-							if(SHOW_DEBUG===true) {
-								$component_warning .= " (Fixed in ".$broken_index_tags->total.")";
+						if ($modo==='tool_structuration') {
+							$broken_index_tags = $this->fix_broken_struct_tags($save);
+							if ($broken_index_tags->result) {
+								$component_warning .= " ".$broken_index_tags->msg;
+								if(SHOW_DEBUG===true) {
+									$component_warning .= " (Fixed in ".$broken_index_tags->total.")";
+								}
 							}
 						}
 					}
-				}//end if ($modo=='edit' && in_array($this->tipo, $ar_tipos) )				
+				}//end if ($modo=='edit' && in_array($this->tipo, $ar_fix_broquen_tags_tipos) )				
 				
 
-				$dato 				= $this->get_dato();
+				$dato = $this->get_dato();
+	
+				# Tool time machine context. Add chapters headers
+				#if (isset($context->context_name) && $context->context_name==='tool_time_machine') {					
+				if ($tipo===DEDALO_COMPONENT_RESOURCES_TR_TIPO && $modo!=='tool_structuration') {
+					# Resolve chapters for current text
+					$dato = component_text_area::resolve_titles($dato, $tipo, $section_tipo, $parent, null, $lang, true);
+				}					
+				#}
+				#dump($context, ' context ++ '.to_string());
+
 				$dato 				= TR::addTagImgOnTheFly($dato);
 				#$last_tag_index_id	= $this->get_last_tag_index_id();
 				$id_wrapper 		= 'wrapper_'.$identificador_unico;
 				$input_name 		= "{$tipo}_{$parent}";
 				$text_area_tm 		= NULL;
-									
+							
 				
 				# DATO_REFERENCE_LANG
 				$dato_reference_lang= NULL;
@@ -106,10 +159,13 @@
 				
 				# CANVAS ID : Resolve canvas_id for paper get tags
 				$canvas_id = null;
+				$ar_related_component_name = array();
 				$ar_relaciones = $this->RecordObj_dd->get_relaciones();
-				if(!empty($ar_relaciones)) foreach ($ar_relaciones as $key => $ar_values) {				
+				if(!empty($ar_relaciones)) foreach ($ar_relaciones as $key => $ar_values) {		
 					foreach ($ar_values as $relaciones_modelo => $relaciones_tipo) {
 						$modelo_name = RecordObj_dd::get_termino_by_tipo($relaciones_modelo,null,true);
+						$ar_related_component_name[] = $modelo_name;
+						#$ar_related_component_name_json	= json_encode($ar_related_component_name);
 						if($modelo_name==='component_image') {
 							#$component_image 	= new component_image($relaciones_tipo, $parent, $modo);
 							$component_image 	= component_common::get_instance('component_image', $relaciones_tipo, $parent, $modo, DEDALO_DATA_NOLAN, $this->section_tipo);
@@ -117,12 +173,13 @@
 						}
 					}	
 				}
+				$ar_related_component_name_json = json_encode($ar_related_component_name);
 
 				#
 				# STATE PROCESS
 				# When propiedades->state is set, call to component_status for render status process options
 				switch (true) {
-					case (isset($context->context_name) && $context->context_name=='tool_time_machine'):
+					case (isset($context->context_name) && $context->context_name==='tool_time_machine'):
 						$component_state_html = '';
 						break;						
 					default:
@@ -131,7 +188,10 @@
 
 				# Related components
 				$ar_related_component_tipo 		= $this->get_ar_related_component_tipo();
-				$ar_related_component_tipo_json = json_encode($ar_related_component_tipo);	
+				$ar_related_component_tipo_json = json_encode($ar_related_component_tipo);
+
+				css::$ar_url[] = DEDALO_LIB_BASE_URL."/component_publication/css/component_publication.css";
+				js::$ar_url[]  = DEDALO_LIB_BASE_URL."/component_publication/js/component_publication.js";	
 				break;
 
 		case 'edit_note':
@@ -141,15 +201,41 @@
 				$component_info 	= $this->get_component_info('json');
 				$dato 				= $this->get_dato();
 				$id_wrapper 		= 'wrapper_'.$identificador_unico;
-				$input_name 		= "{$tipo}_{$parent}";							
+				$input_name 		= "{$tipo}_{$parent}";
+
+				# Related components
+				$ar_related_component_tipo 		= $this->get_ar_related_component_tipo();
+				$ar_related_component_tipo_json = json_encode($ar_related_component_tipo);												
 				break;
 		
 		case 'tool_lang':
 				$dato 				= $this->get_dato();
-				$dato 				= TR::addTagImgOnTheFly($dato);
-				#$last_tag_index_id	= $this->get_last_tag_index_id();
 
-				$id_wrapper 		= 'wrapper_'.$identificador_unico.'_tool_lang';
+				if ($tipo===DEDALO_COMPONENT_RESOURCES_TR_TIPO) {
+					# Resolve chapters for current text
+					$dato = component_text_area::resolve_titles($dato, $tipo, $section_tipo, $parent, null, $lang, true);
+				}
+
+				// addTagImgOnTheFly
+				$dato 				= TR::addTagImgOnTheFly($dato);
+
+
+				// Role .
+				if (isset($this->role)) {
+					$role = $this->role;
+				}else{
+					$role = "tranlation_lang";
+					/*
+					$source_lang 	= component_text_area::force_change_lang($tipo, $parent, 'edit', $lang, $section_tipo);				
+					if ($lang===$source_lang) {
+						$role = "source_lang";
+					}else{
+						$role = "tranlation_lang";
+					}*/
+				}
+				#dump($role, ' role ++ '.to_string());
+
+				$id_wrapper 		= 'wrapper_'.$identificador_unico;//.'_tool_lang';
 				$input_name 		= "{$tipo}_{$parent}";
 				$text_area_tm 		= NULL;
 				$dato_reference_lang= NULL;
@@ -175,7 +261,6 @@
 				}
 				# Force file_name
 				$file_name  = 'edit';
-
 				break;
 						
 		case 'fragment_info':
@@ -184,7 +269,7 @@
 					trigger_error("Error: tagName not defined in arguments (fragment_info)");
 					return;
 				}
-					dump($arguments->tagName, ' arguments->tagName ++ '.to_string()); die("Stoped!");
+				#dump($arguments->tagName, ' arguments->tagName ++ '.to_string()); die("Stoped!");
 
 				$tag 					= $arguments->tagName;
 				$tag_id 				= TR::tag2value($tag);
@@ -279,8 +364,51 @@
 				break;
 		
 		case 'portal_list':
-				if(empty($dato)) return null;
-				$file_name = 'list';
+
+				#if(empty($dato)) return null;
+				$file_name 	= 'list';
+				$value 		= $this->get_valor_list_html_to_save();
+					#dump($value, ' value ++ '.to_string());
+
+				#$obj_value = json_decode($value); # Evitamos los errores del handler accediendo directamente al json_decode de php
+				$obj_value = $value;
+
+				# value from database is always an array of strings. default we select first element (complete text)
+				# other array index are fragments of complete text
+				$current_tag = 0;
+
+				#
+				# Portal tables can reference fragments of text inside components (tags). In this cases
+				# we verify current required text is from correct component and tag		
+				if ( isset($locator->component_tipo) && isset($locator->tag_id) ) {
+					$locator_component_tipo = $locator->component_tipo;
+					$locator_tag_id 		= $locator->tag_id;
+					if ($locator_component_tipo===$tipo) {
+						$current_tag = (int)$locator_tag_id;
+					}
+				}
+
+				if (is_object($obj_value) && isset($obj_value->$current_tag)) {
+					$list_value = $obj_value->$current_tag;
+				}else{
+					$list_value = $value;
+				}
+
+				if (!is_string($list_value)) {
+					dump( debug_backtrace() );
+					dump($list_value, ' list_value ++ '.to_string()); die();
+				}		
+
+				# TRUNCATE ALL FRAGMENTS		
+				TR::limpiezaFragmentoEnListados($list_value,160);
+
+				#if($calculated_value===true) $list_value = component_common::decore_untranslated( $list_value );
+				#if($lang_received!==$original_lang) $list_value = component_common::decore_untranslated( $list_value );
+				$fragment_text = $list_value;
+
+				$id_wrapper = 'wrapper_'.$identificador_unico;
+				break;
+				
 		case 'list_tm':
 				$file_name = 'list';
 						
@@ -367,9 +495,9 @@
 					#dump($render_vars, ' render_vars ++ '.to_string());
 				$icon_label = isset($render_vars->icon) ? $render_vars->icon : '';
 				break;
+		
 
 		default:
-
 	}
 		
 	#$page_html	= DEDALO_LIB_BASE_PATH .'/'. get_class($this) . '/html/' . get_class($this) . '_' . $file_name . '.phtml';

@@ -36,7 +36,7 @@ if (login::is_logged()) {
 
 			#
 			# Icon Dédalo	
-			echo "\n<a href=\"http://www.fmomo.org/\" target=\"_blank\" class=\"dedalo_icon_top\" title=\"Dédalo version ".DEDALO_VERSION." ( build ".DEDALO_BUILD.")\"></a>";
+			echo "<a href=\"http://www.fmomo.org/\" target=\"_blank\" class=\"dedalo_icon_top\" title=\"Dédalo version ".DEDALO_VERSION." ( build ".DEDALO_BUILD.")\"></a>";
 			
 
 			# INSPECTOR : button open / hide sidebar 
@@ -46,7 +46,7 @@ if (login::is_logged()) {
 				#echo "<div id=\"button_toggle_inspector\" class=\"button_in_menu text_unselectable'\" onclick=\"inspector.toggle_sidebar()\">INSPECTOR $caller_id</div>";
 				echo "<div id=\"button_toggle_inspector\" class=\"link'\" title=\"".label::get_label('mostrar_inspector')."\" onclick=\"inspector.toggle_sidebar()\"></div>";
 			}
-		echo "</div><!-- /menu_background -->\n";
+		echo "</div><!-- /menu_background -->";
 
 
 		#
@@ -56,24 +56,29 @@ if (login::is_logged()) {
 		#echo "</div>";
 		
 		# Logged user
-		echo "\n<div class=\"button_in_menu logged_user_name\">".navigator::get_username()."</div>";	
+		echo "<div class=\"button_in_menu logged_user_name\">".navigator::get_username()."</div>";	
 		
 		
 		#
-		# LANG JUMP
+		# APPLICATION LANG JUMP
 		$dedalo_aplication_langs_selector_html = html_page::get_dedalo_aplication_langs_selector_html();
 		echo $dedalo_aplication_langs_selector_html;
 
 		
+		#
+		# DATA LANG JUMP
+		if(component_security_administrator::is_global_admin( navigator::get_user_id() )===true || (defined('DEDALO_DATA_LANG_SELECTOR') && DEDALO_DATA_LANG_SELECTOR===true)) {
 
-		
+			$dedalo_data_langs_selector_html = html_page::get_dedalo_data_langs_selector_html();
+			echo $dedalo_data_langs_selector_html;
+		}
 	
 
 		
 		# log messages in debug mode
 		/*
 			if(SHOW_DEBUG===TRUE) {
-				echo "\n<div class=\"button_in_menu div_log_messages_checkbox\">
+				echo "<div class=\"button_in_menu div_log_messages_checkbox\">
 						<input type=\"checkbox\" id=\"log_messages_checkbox\" class=\"button_in_menu\" value=\"1\" > 
 						Messages
 					</div>";
@@ -109,14 +114,14 @@ if (login::is_logged()) {
 		}#end if(!empty($current_selected_area))
 		
 	
-	echo "</div><!-- /menu_wrapper -->\n";
+	echo "</div><!-- /menu_wrapper -->";
 
 
 
 
 		#
 		# DEBUG SECOND LINE
-		if(SHOW_DEBUG===true) {
+		if(SHOW_DEVELOPER===true) {
 			/**/
 			$debug_line_html  ='';
 			$debug_line_html .= "<div class=\"debug_line_wrap\">";
@@ -153,22 +158,22 @@ if (login::is_logged()) {
 
 			#
 			# STRUCTURE LINKS
-			if ( SHOW_DEBUG===true && 
-				component_security_administrator::is_global_admin(navigator::get_user_id())===true && 
-				strpos($_SERVER['REQUEST_URI'], 'dd_list.php')!==false
-				) {
+			if ( SHOW_DEBUG===true && strpos($_SERVER['REQUEST_URI'], 'dd_list.php')!==false ) {
 
 					# IMPORT BUTTON (ADMIN)
+					/*
 					if( DEDALO_DATABASE_CONN!=='dedalo4_master' && strpos(DEDALO_HOST, 'localhost')===false ) {	
-						$debug_line_html .= "<a href=\"javascript:void(0)\" class=\"\" onclick=\"menu.import_str(this)\">IMPORT</a>";
-					}
+						$debug_line_html .= "<a href=\"javascript:void(0)\" class=\"\" onclick=\"common.import_str(this)\">IMPORT</a>";
+					}*/
 
 					# EXPORT BUTTON (ADMIN)
-					if( DEDALO_DATABASE_CONN==='dedalo4_master' && strpos(DEDALO_HOST,'master')!==false ) { 
-						$debug_line_html .= "<a href=\"javascript:void(0)\" class=\"\" onclick=\"menu.export_str(this)\">EXPORT</a>";
+					if( DEDALO_DATABASE_CONN==='dedalo4_master' && strpos(DEDALO_HOST,'master')!==false 
+						|| (DEDALO_DATABASE_CONN==='dedalo4_development')
+						) { 
+						$debug_line_html .= "<a href=\"javascript:void(0)\" class=\"\" onclick=\"common.export_str(this)\">EXPORT</a>";
 					}
-
 			}//END STRUCTURE LINKS
+
 
 			#
 			# VERSION
@@ -180,7 +185,7 @@ if (login::is_logged()) {
 
 			#$menu_wrapper_space_style = 'height:53px';
 			#echo "<div class=\"menu_wrapper_space\" style=\"height:253px\"></div>";
-		}
+		}//end if(SHOW_DEVELOPER===true) 
 
 	
 	# Sólo se usa para ocupar el espacio del mewnu_wrapper ya que este es de posición fija y no ocupa espacio en la página

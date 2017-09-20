@@ -4,35 +4,35 @@
 */
 
 	# VISUALIZADOR HTML	
-
-	$html    = "\n<!-- TOOL TIME MACHINE PAGE [tipo:$tipo section_id:$parent] -->";	
-	$html   .= "\n<div class=\"wrap_time_machine_page\" >";
+	$html = '';
+	#$html    = "<!-- TOOL TIME MACHINE PAGE [tipo:$tipo section_id:$parent] -->";	
+	$html   .= "<div class=\"wrap_time_machine_page\" >";
 
 		# CONTENT TITLE
-		#$html 	.= "\n<div class=\"css_time_machine_label css_tool_label text_shadow_inset\">Time Machine page</div>";
+		#$html 	.= "<div class=\"css_time_machine_label css_tool_label text_shadow_inset\">Time Machine page</div>";
 				
 		#
 		# ORIGINAL COMPONENT
 		# Current active matrix version of current component
-		$html 	.= "\n<div id=\"tm_component_actual\">";		
+		$html 	.= "<div id=\"tm_component_actual\">";		
 		$html 	.= 	 $source_html;
-		$html 	.= "\n</div>";
+		$html 	.= "</div>";
 		
 
 		#
 		# PREVIEW COMPONENT
 		# Historic TM component. Default is last save (previous of actual) of source component
-		$html 	.= "\n<div id=\"tm_component_time_machine\">";
+		$html 	.= "<div id=\"tm_component_time_machine\">";
 		$html 	.= 	 $preview_html;
-		$html 	.= "\n</div>";
+		$html 	.= "</div>";
 
 
 		#
 		# ROWS  
 		# Versions selector
-		$html 	.= "\n<div id=\"tm_selector_time_machine\">";
+		$html 	.= "<div id=\"tm_selector_time_machine\">";
 		$html 	.= 	 $rows_html;
-		$html 	.= "\n</div>";
+		$html 	.= "</div>";
 
 
 		#
@@ -42,14 +42,13 @@
 		
 		#
 		# LOAD PREVIEW AND ROWS BY AJAX /**/		
-		$html   .= "<script>
-						tool_time_machine.load_preview_component('$tipo','$parent','$lang',null,'$this->section_tipo'); //(id,tipo,lang,id_time_machine,current_tipo_section)	
-						//tool_time_machine.load_rows_history($id,'$tipo','$lang','$current_tipo_section');											
-					</script>";
+		$html   .= "<script>";
+		$html   .= "tool_time_machine.load_preview_component('$tipo','$parent','$lang',null,'$this->section_tipo');";	
+		#$html   .= "//tool_time_machine.load_rows_history($id,'$tipo','$lang','$current_tipo_section');											
+		$html   .= "</script>";
 		
 		
-	$html   .= "\n</div><!-- /wrap_time_machine_page -->";
-
+	$html   .= "</div><!-- /wrap_time_machine_page -->";
 	
 
 

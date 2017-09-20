@@ -265,10 +265,10 @@ class menu extends common {
 			$skip = false;
 
 			// OPEN/CLOSE GROUP RESET
-			$open_group 	= " <ul>";
-			$close_group 	= " </ul>";
+			$open_group 	= "<ul>";
+			$close_group 	= "</ul>";
 			// OPEN/CLOSE TERM RESET
-			$open_term		= " <li>";
+			$open_term		= "<li>";
 			$close_term		= "</li>";
 
 			/*
@@ -332,12 +332,12 @@ class menu extends common {
 
 			
 			if (!empty($value) && $modelo_name!='section') {
-				$open_term = " <li class=\"has-sub\">";
+				$open_term = "<li class=\"has-sub\">";
 			}
 
 			# AREA ADMIN ELEMENTS diferenciate with class 'global_admin_element'
 			if(isset($arguments_tree['context']) && $arguments_tree['context']==='users' && in_array($tipo, component_security_areas::get_ar_tipo_admin()) )	{
-				$open_term	= " <li class=\"global_admin_element\" >";
+				$open_term	= "<li class=\"global_admin_element\">";
 			}
 
 			$dato_current	= isset($dato->$tipo) ? intval($dato->$tipo) : null;
@@ -375,14 +375,6 @@ class menu extends common {
 		
 		return $html;
 	}//end walk_ar_structure
-
-
-
-
-
-
-
-
 
 
 

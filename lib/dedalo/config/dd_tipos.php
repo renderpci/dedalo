@@ -25,6 +25,7 @@ define('DEDALO_COMPONENT_SECURITY_ACCESS_USER_TIPO'		, 'dd148'); # ACCES USUARIO
 define('DEDALO_COMPONENT_SECURITY_TOOLS_USER_TIPO'		, 'dd784'); # TOOLS USUARIO model component_security_tools
 define('DEDALO_FILTER_MASTER_TIPO'						, 'dd170'); # USER COMPONENT_FILTER_MASTER
 define('DEDALO_USER_COMPONENT_FILTER_RECORDS_TIPO'		, 'dd478');
+define('DEDALO_USER_DEVELOPER_TIPO'						, 'dd515');
 
 # Profiles
 define('DEDALO_SECTION_PROFILES_TIPO'					, 'dd234');
@@ -71,6 +72,7 @@ define('DEDALO_TOOL_INVESTIGATION_COMPONENT_TIPO'		, 'dd127');
 define('DEDALO_SECTION_RESOURCES_AV_TIPO'				, 'rsc167');
 define('DEDALO_COMPONENT_RESOURCES_AV_TIPO'				, 'rsc35');
 define('DEDALO_COMPONENT_RESOURCES_AV_DURATION_TIPO'	, 'rsc54');
+define('DEDALO_COMPONENT_RESOURCES_TR_TIPO'				, 'rsc36');
 
 # Hierarchy types
 define('DEDALO_HIERARCHY_TYPES_SECTION_TIPO'			, 'hierarchy13');
@@ -89,6 +91,8 @@ define('DEDALO_HIERARCHY_CHIDRENS_TIPO'					, 'hierarchy45');
 define('DEDALO_HIERARCHY_CHIDRENS_MODEL_TIPO'			, 'hierarchy59');
 define('DEDALO_HIERARCHY_ORDER_TIPO'					, 'hierarchy48');
 define('DEDALO_HIERARCHY_FILTER_TIPO'					, 'hierarchy54');
+define('DEDALO_HIERARCHY_BUTTON_NEW_TIPO'				, 'hierarchy11');
+define('DEDALO_HIERARCHY_BUTTON_DELETE_TIPO'			, 'hierarchy12');
 
 # Thesaurus real section
 define('DEDALO_THESAURUS_SECTION_TIPO'					, 'hierarchy20');
@@ -105,6 +109,10 @@ define('DEDALO_THESAURUS_ORDER_TIPO'					, 'hierarchy42');
 define('DEDALO_THESAURUS_FILTER_TIPO'					, 'hierarchy55');
 define('DEDALO_THESAURUS_DESCRIPTOR_TIPO'				, 'hierarchy23');
 define('DEDALO_THESAURUS_USABLE_INDEX_TIPO'				, 'hierarchy24');
+define('DEDALO_THESAURUS_INDEXATIONS_TIPO'				, 'hierarchy40');
+define('DEDALO_THESAURUS_STRUCTURATIONS_TIPO'			, 'hierarchy91');
+define('DEDALO_THESAURUS_BUTTON_NEW_TIPO'				, 'hierarchy38');
+define('DEDALO_THESAURUS_BUTTON_DELETE_TIPO'			, 'hierarchy39');
 
 # Relation types
 define('DEDALO_RELATION_TYPE_PARENT_TIPO'				, 'dd47');
@@ -117,24 +125,32 @@ define('DEDALO_RELATION_TYPE_RELATED_TIPO'				, 'dd89');
 	define('DEDALO_RELATION_TYPE_RELATED_BIDIRECTIONAL_TIPO', 'dd467');
 #define('DEDALO_RELATION_TYPE_RECORD_TIPO'				, 'ddXXX'); // working here
 
+# Data frames types
+define('DEDALO_DATAFRAME_TYPE_UNCERTAINTY'				, 'dd558');
+define('DEDALO_DATAFRAME_TYPE_TIME'						, 'dd559');
+define('DEDALO_DATAFRAME_TYPE_SPACE'					, 'dd560');
 
 # Notes
 define('DEDALO_NOTES_SECTION_TIPO'						, 'rsc326');
 define('DEDALO_NOTES_TEXT_TIPO'							, 'rsc329');
+define('DEDALO_NOTES_PUBLICATION_TIPO'					, 'rsc399');
 
 # Structuration notes
 define('DEDALO_STRUCTURATION_SECTION_TIPO'				, 'rsc370');
 define('DEDALO_STRUCTURATION_TITLE_TIPO'				, 'rsc372');
 define('DEDALO_STRUCTURATION_DESCRIPTION_TIPO'			, 'rsc373');
-define('DEDALO_STRUCTURATION_ORDER_TIPO'				, 'rsc383');
 
 # Indexation notes
 define('DEDALO_INDEXATION_SECTION_TIPO'					, 'rsc377');
 define('DEDALO_INDEXATION_TITLE_TIPO'					, 'rsc379');
 define('DEDALO_INDEXATION_DESCRIPTION_TIPO'				, 'rsc380');
 
+# References (to thesaurus)
+define('DEDALO_TS_REFERENCES_SECTION_TIPO'				, 'rsc425');
+define('DEDALO_TS_REFERENCES_COMPONENT_TIPO'			, 'rsc426');
 
-define('DEDALO_TEXTAREA_FIX_BROQUEN_TAGS_TIPOS'			, serialize( array('rsc36')) );
+
+define('DEDALO_TEXTAREA_FIX_BROQUEN_TAGS_TIPOS'			, serialize( array(DEDALO_COMPONENT_RESOURCES_TR_TIPO)) );
 
 # LANGS
 define('DEDALO_LANGS_SECTION_TIPO'						, 'lg1');
@@ -148,10 +164,12 @@ if (!defined('DEDALO_PROTOCOL')) {
 
 
 # TOP_TIPO
-if (!empty($_REQUEST['top_tipo'])) {
-	define('TOP_TIPO', trim($_REQUEST['top_tipo']));
-}else if (!empty($_REQUEST['t'])) {
-	define('TOP_TIPO', trim($_REQUEST['t']));
+# if (!empty($_REQUEST['top_tipo'])) {
+if ( false !== ($request_var_top_tipo = get_request_var('top_tipo')) ) {	
+	define('TOP_TIPO', $request_var_top_tipo);
+#}else if (!empty($_REQUEST['t'])) {
+}else if ( false !== ($request_var_t = get_request_var('t')) ) {
+	define('TOP_TIPO', $request_var_t);
 }else if (isset($TOP_TIPO)) {
 	define('TOP_TIPO', $TOP_TIPO);	
 }else{
@@ -161,10 +179,12 @@ if (!empty($_REQUEST['top_tipo'])) {
 	#}
 }
 # TOP_ID
-if (!empty($_REQUEST['top_id'])) {
-	define('TOP_ID', trim($_REQUEST['top_id']));
-}else if (!empty($_REQUEST['id'])) {
-	define('TOP_ID', trim($_REQUEST['id']));
+#if (!empty($_REQUEST['top_id'])) {
+if ( false !== ($request_var_top_id = get_request_var('top_id')) ) {
+	define('TOP_ID', $request_var_top_id);
+#}else if (!empty($_REQUEST['id'])) {
+}else if ( false !== ($request_var_id = get_request_var('id')) ) {
+	define('TOP_ID', $request_var_id);
 }else{
 	define('TOP_ID', false);
 }

@@ -14,7 +14,7 @@ class tool_indexation extends tool_common {
 	# Tag label selected in component_text_area .Received when load inspector info trigger is called like [/index-n-1]
 	public $selected_tagName ;
 
-	public $context = 'inspector'; # inspector | tool_window
+	public $context ;	//= 'inspector'; # inspector | tool_window
 
 	
 	public function __construct($component_obj, $modo='button') {
@@ -25,6 +25,9 @@ class tool_indexation extends tool_common {
 		# Fix current media component
 		$this->component_obj = $component_obj;
 			#dump($component_obj,"component_obj");
+
+		$this->context = new stdClass();
+			$this->context->context_name = 'inspector';
 	}
 
 
@@ -105,7 +108,7 @@ class tool_indexation extends tool_common {
 															  $lang,
 															  $section_tipo);		
 		$ar_tag_deleted = (array)$component_text_area->delete_tag_from_all_langs($tag_id, $tag_type='index'); // note that "tag" is complete in or out tag like [index-n-8]
-			$response->msg[] = "Deleted in langs ".count($ar_tag_deleted)." the tag \"$tag\" from component_text_area $component_tipo [$section_tipo - $section_id]";
+			$response->msg[] = "Deleted in langs ".count($ar_tag_deleted)." the tag \"$tag_id\" from component_text_area $component_tipo [$section_tipo - $section_id]";
 			$response->debug['ar_tag_deleted'] = $ar_tag_deleted;	
 				
 		

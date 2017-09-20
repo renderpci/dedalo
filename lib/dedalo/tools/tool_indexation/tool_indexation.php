@@ -1,14 +1,14 @@
 <?php
 
 	# CONTROLLER TOOL LANG
-
-	#dump($this, ' this ++ '.to_string());
+	
 	$tipo 					= $this->component_obj->get_tipo();
 	$parent 				= $this->component_obj->get_parent();	#dump($tipo,$parent);
 	$section_id				= $parent;
 	$section_tipo			= $this->component_obj->get_section_tipo();
 	$lang 					= $this->component_obj->get_lang();
 	$label 					= $this->component_obj->get_label();
+	$section_label 			= RecordObj_dd::get_termino_by_tipo($section_tipo);
 	$permissions			= common::get_permissions($section_tipo,$tipo);
 	$component_name			= get_class($this->component_obj);
 	$context_name			= $this->get_context();
@@ -35,20 +35,27 @@
 						break;
 					}
 				}				
-				break;
-
+				break;				
 		
 		case 'page':
 
 				# TOOL CSS / JS MAIN FILES
 				css::$ar_url[] = DEDALO_LIB_BASE_URL."/section_tab/css/section_tab.css";
 				css::$ar_url[] = DEDALO_LIB_BASE_URL."/component_input_text_large/css/component_input_text_large.css";
+				css::$ar_url[] = DEDALO_LIB_BASE_URL."/component_publication/css/component_publication.css";
 				css::$ar_url[] = DEDALO_LIB_BASE_URL."/tools/".$tool_name."/css/".$tool_name.".css";				
 
 				js::$ar_url[] = DEDALO_LIB_BASE_URL."/component_input_text_large/js/component_input_text_large.js";
+				js::$ar_url[]  = DEDALO_LIB_BASE_URL."/component_publication/js/component_publication.js";
 				js::$ar_url[]  = DEDALO_LIB_BASE_URL."/tools/tool_common/js/split.min.js";
 				js::$ar_url[]  = DEDALO_LIB_BASE_URL."/section_tab/js/section_tab.js";
 				js::$ar_url[]  = DEDALO_LIB_BASE_URL."/tools/".$tool_name."/js/".$tool_name.".js";
+
+				#
+				# JS aditional
+				if (defined('DEDALO_LOCK_COMPONENTS') && DEDALO_LOCK_COMPONENTS===true) {
+					js::$ar_url[]  = DEDALO_LIB_BASE_URL."/lock_components/js/lock_components.js";
+				}
 
 				if (strpos(TOP_TIPO, 'rsc')===0) {
 					//trigger_error("Warning: Indexing resource");
@@ -61,7 +68,7 @@
 				# TOP_ID
 				# Calculate TOP_ID from inverse data
 				# dump(TOP_ID, 'TOP_ID ++ '.to_string());
-				if (!TOP_ID) {
+				#if (!TOP_ID) {
 					#dump($this, ' this ++ '.to_string());
 					$section = section::get_instance( $parent, $section_tipo );
 					$inverse_locators = $section->get_inverse_locators();
@@ -72,8 +79,12 @@
 						echo "<div class=\"warning\">".label::get_label('por_favor_indexe_desde_una_seccion_de_inventario')." [2]</div>";
 						return ;
 					}
-				}//end if (!TOP_ID) {
-				
+				#}//end if (!TOP_ID) {
+
+
+				# INVERSE_CODE
+				$inverse_code = tool_common::get_inverse_element('code', $parent, $section_tipo);
+				#dump($inverse_code, ' $inverse_code ++ '.to_string());
 
 
 				# Because components are loaded by ajax, we need prepare js/css elements from tool
@@ -84,11 +95,15 @@
 				# JS includes
 					js::$ar_url[] = DEDALO_LIB_BASE_URL."/$component_name/js/$component_name.js";
 
+				# AV_PLAYER_URL
+				$reelID = DEDALO_COMPONENT_RESOURCES_AV_TIPO .'_'. $section_tipo.'_'.$parent;
+				$av_player_url = DEDALO_LIB_BASE_URL . '/media_engine/av_media_player.php?reelID='.$reelID.'&quality=' . DEDALO_AV_QUALITY_DEFAULT; // rsc35_rsc167_1
+
 				#$tesauro_url = DEDALO_LIB_BASE_URL . "/ts/ts_list.php?modo=tesauro_rel&type=all&current_tipo=".$tipo."&caller_id=".$parent."&caller_tipo=".$tipo."";
-				$tesauro_url = DEDALO_LIB_BASE_URL . "/main/?menu=no&thesaurus_mode=relation&component_name=component_text_area&t=".DEDALO_TESAURO_TIPO;				
+				$thesaurus_url = DEDALO_LIB_BASE_URL . "/main/?menu=no&thesaurus_mode=relation&component_name=component_text_area&t=".DEDALO_TESAURO_TIPO;				
 
 
-				$this->component_obj->set_modo('indexation');
+				$this->component_obj->set_modo('tool_indexation');
 				# Force change lang  (component is inited in edit mode without $_GET['m'] var set. Because this we need trigger manually force_change_lang)		
 				$original_lang 	= component_text_area::force_change_lang($this->component_obj->get_tipo(),
 																		 $this->component_obj->get_parent(),
@@ -99,6 +114,15 @@
 				
 				// text area html
 				$component_text_area_html = $this->component_obj->get_html();
+
+
+				# BUTTON TOOL TR_PRINT
+					$tool_tr_print 				= new tool_tr_print($this->component_obj,'button');
+					$button_tool_tr_print_html 	= $tool_tr_print->get_html();
+				
+				# BUTTON TOOL TIME_MACHINE
+					$tool_time_machine 			= new tool_time_machine($this->component_obj,'button');
+					$button_tool_time_machine_html = $tool_time_machine->get_html();
 				
 
 				#

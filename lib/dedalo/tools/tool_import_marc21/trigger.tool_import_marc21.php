@@ -1,35 +1,13 @@
 <?php
+$start_time=microtime(1);
 set_time_limit ( 3600 * 2 );  // 2 horas (1h = 3600 sec)
-
-// JSON DOCUMENT
-header('Content-Type: application/json');
-
-require_once( dirname(dirname(dirname(__FILE__))) .'/config/config4.php');
-require_once( dirname(__FILE__) .'/class.tool_import_marc21.php');  # Read constants from here (pass url 'button_tipo' if needed)
+include( dirname(dirname(dirname(__FILE__))) .'/config/config4.php');
+include( dirname(__FILE__) .'/class.tool_import_marc21.php');  # Read constants from here (pass url 'button_tipo' if needed)
+# TRIGGER_MANAGER. Add trigger_manager to receive and parse requested data
+common::trigger_manager();
 
 # Write session to unlock session file
 session_write_close();
-
-
-if(login::is_logged()!==true) die("<span class='error'> Auth error: please login </span>");
-
-# set vars
-$vars = array('mode');
-	foreach($vars as $name) $$name = common::setVar($name);
-
-# mode
-	if(empty($mode)) exit("<span class='error'> Trigger: Error Need mode.. </span>");
-
-
-# CALL FUNCTION
-if ( function_exists($mode) ) {
-	$result = call_user_func($mode);
-	$json_params = null;
-	if(SHOW_DEBUG===true) {
-		$json_params = JSON_PRETTY_PRINT;
-	}
-	echo json_encode($result, $json_params);
-}
 
 
 
@@ -37,15 +15,24 @@ if ( function_exists($mode) ) {
 * PROCESS_FILE
 * 
 */
-function process_file() {
+function process_file($json_data) {
+	global $start_time;
 
 	$response = new stdClass();
 		$response->result 	= false;
-		$response->msg 		= 'Error. Request failed process_file';
+		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
 
 	# set vars
 	$vars = array('target_file_path','target_file_name','projects_value');
-		foreach($vars as $name) $$name = common::setVar($name);
+		foreach($vars as $name) {
+			$$name = common::setVarData($name, $json_data);
+			# DATA VERIFY
+			#if ($name==='dato') continue; # Skip non mandatory
+			if (empty($$name)) {
+				$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty '.$name.' (is mandatory)';
+				return $response;
+			}
+		}
 
 	$projects_value = json_decode($projects_value);
 	$projects_dato  = array();
@@ -71,6 +58,17 @@ function process_file() {
 	$response = (object)$tool_import_marc21->process_file($file, $projects_dato);
 
 		
+	# Debug
+	if(SHOW_DEBUG===true) {
+		$debug = new stdClass();
+			$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
+			foreach($vars as $name) {
+				$debug->{$name} = $$name;
+			}
+
+		$response->debug = $debug;
+	}
+
 	return (object)$response;
 }//end process_file
 

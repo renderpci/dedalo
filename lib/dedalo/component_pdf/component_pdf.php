@@ -12,7 +12,7 @@
 	$label 					= $this->get_label();			
 	$required				= $this->get_required();
 	$debugger				= $this->get_debugger();	
-	$permissions			= common::get_permissions($section_tipo,$tipo);
+	$permissions			= $this->get_component_permissions();
 	$ejemplo				= $this->get_ejemplo();
 	$html_title				= "Info about $tipo";		
 	$valor					= $this->get_valor();				

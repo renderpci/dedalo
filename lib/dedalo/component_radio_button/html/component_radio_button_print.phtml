@@ -9,10 +9,10 @@
 				
 				# ETIQUETA (LABEL)
 				if (!isset($this->print_options->show_label) || $this->print_options->show_label==true) {
-				$html_contenido .= "\n <div class=\"print_label {$component_name}_print_label\">$label</div>";
+				$html_contenido .= "<div class=\"print_label {$component_name}_print_label\">$label</div>";
 				}
 				# CONTENT (DATO)
-				$html_contenido .= "\n <div class=\"print_content {$component_name}_print_content\">$valor</div>";
+				$html_contenido .= "<div class=\"print_content {$component_name}_print_content\">$valor</div>";
 				break;
 	}
 

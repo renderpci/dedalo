@@ -2,6 +2,8 @@
 	
 	# CONTROLLER
 
+	if(SHOW_DEBUG===true) $start_time=microtime(1);
+
 	$tipo 					= $this->get_tipo();	
 	$parent 				= $this->get_parent();
 	$section_tipo			= $this->get_section_tipo();
@@ -10,7 +12,7 @@
 	$label 					= $this->get_label();
 	$required				= $this->get_required();
 	$debugger				= $this->get_debugger();
-	$permissions			= common::get_permissions($section_tipo,$tipo);
+	$permissions			= $this->get_component_permissions();
 	$permission_section 	= common::get_permissions($section_tipo,$section_tipo);
 	$ejemplo				= NULL;
 	$html_title				= "Info about $tipo";

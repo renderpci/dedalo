@@ -4,7 +4,6 @@
 * Used as common base from all components tha works from section relations data, instead standar component dato
 * like component_model, component_parent, etc..
 */
-
 class component_relation_common extends component_common {
 
 	# relation_type (set in constructor). 
@@ -276,12 +275,14 @@ class component_relation_common extends component_common {
 
 
 		$my_section = $this->get_my_section();
-		$my_section->add_relations( (array)$dato, $remove_previous_of_current_type=true );
+		$my_section->add_relations( (array)$dato, $remove_previous_of_current_type=true, $this->relation_type );
 
 		# UNSET previous calculated valor
 		unset($this->valor);
 
 		$this->dato = (array)$dato;
+
+			#dump($this->dato, ' this->dato ++ '.to_string());
 
 		return $this->dato;
 	}//end set_dato
@@ -401,7 +402,7 @@ class component_relation_common extends component_common {
 		}
 		$locator = new locator($locator);
 
-		$valor = ts_object::get_term_by_locator( $locator, $lang );
+		$valor = ts_object::get_term_by_locator( $locator, $lang, true );
 
 		if ($show_parents===true) {
 			#$ar_parents = relation::get_parents_recursive( $locator );
@@ -411,8 +412,10 @@ class component_relation_common extends component_common {
 
 			$ar_parents_resolved = array();
 			foreach ($ar_parents as $current_locator) {
-				$current_value 			= ts_object::get_term_by_locator( $current_locator, $lang );
+				$current_value 			= ts_object::get_term_by_locator( $current_locator, $lang, true );
+					#dump($current_parent, ' current_parent ++ '.to_string());
 				$ar_parents_resolved[]  = $current_value;
+				break;
 			}
 			if (!empty($ar_parents_resolved)) {
 				$valor .= ', '.implode(', ', $ar_parents_resolved);

@@ -1,6 +1,12 @@
+// Vars
+@common_css: "../../common/css";
+
+// Usage
+@import "@{common_css}/library.less";
 
 
-
+@color_switcher_active : rgba(19,191,17,1);
+@green2 : #13bf11;
 
 
 
@@ -26,40 +32,46 @@
 
 	/* INPUT 
 	---------------------------------------------------- */
-	.css_wrap_component_publication > .content_data input.css_component_publication {
+	input.css_component_publication {
 		padding: 2px;
-		border: 1px solid #9E9E9E;
+		border: 1px solid @color_input_border;
 		border-radius: 6px;
-		box-shadow: inset 0 0 6px #999999;
+		//box-shadow: inset 0 0 6px #999999;
+		margin-right: 2px;
 		}
-		.css_wrap_component_publication > .content_data input.css_component_publication:hover {
+		input.css_component_publication:hover {
 			background-color: #F1F1F1;
 			cursor: pointer;
 		}
-		.css_wrap_component_publication > .content_data input.css_component_publication:focus {
+		input.css_component_publication:focus {
 			box-shadow: 0 0 5px #CCC;
 		}
+		input.css_component_publication:checked+label {
+			//box-shadow: 0 0 5px #CCC;
+			text-decoration: underline;
+		}
 		
-		.css_wrap_component_publication > .content_data .css_component_publication_rotulo {
+		label.css_component_publication_rotulo {
 			margin-left: 2px;
+			margin-right: 6px;
 		}
 
 
 
 /* SHOWED IN PORTAL EDIT MODE 
 ---------------------------------------------------- */
-.td_component_publication > .css_wrap_component_publication {
+.portal_section .css_wrap_component_publication {
 	//background-color: #71EDE1
 	}
-	.td_component_publication > .css_wrap_component_publication > .content_data {
+	.portal_section .css_wrap_component_publication > .content_data {
 		width: 100%;
 	}
-	.td_component_publication > .css_wrap_component_publication .css_label {
+	.portal_section .css_wrap_component_publication .css_label {
 		width: 100%;
 		max-width: 100%;
 		display: none;
 	}
-	.td_component_publication .css_wrap_component_publication {
+	.portal_section .css_wrap_component_publication {
 		border: none;
 		width: 100%;
 		min-height: 2.3em;
@@ -242,9 +254,9 @@
 		}
 		.switcher_publication .ios-toggle:checked + .checkbox-label{
 			/*box-shadow*/
-			-webkit-box-shadow:inset 0 0 0 20px rgba(19,191,17,1),0 0 0 2px rgba(19,191,17,1);
-			   -moz-box-shadow:inset 0 0 0 20px rgba(19,191,17,1),0 0 0 2px rgba(19,191,17,1);
-			        box-shadow:inset 0 0 0 20px rgba(19,191,17,1),0 0 0 2px rgba(19,191,17,1);
+			-webkit-box-shadow:inset 0 0 0 20px @color_switcher_active,0 0 0 2px @color_switcher_active;
+			   -moz-box-shadow:inset 0 0 0 20px @color_switcher_active,0 0 0 2px @color_switcher_active;
+			        box-shadow:inset 0 0 0 20px @color_switcher_active,0 0 0 2px @color_switcher_active;
 		}
 		.switcher_publication .ios-toggle:checked + .checkbox-label:before{
 			//left:calc(100% - 25px);
@@ -263,17 +275,42 @@
 		/* GREEN CHECKBOX */
 		.switcher_publication input + .checkbox-label{
 			//box-shadow
-			-webkit-box-shadow:inset 0 0 0 0px #13bf11,0 0 0 1px #dddddd;
-			   -moz-box-shadow:inset 0 0 0 0px #13bf11,0 0 0 1px #dddddd;
-			        box-shadow:inset 0 0 0 0px #13bf11,0 0 0 1px #dddddd;
+			-webkit-box-shadow:inset 0 0 0 0px @green2,0 0 0 1px #dddddd;
+			   -moz-box-shadow:inset 0 0 0 0px @green2,0 0 0 1px #dddddd;
+			        box-shadow:inset 0 0 0 0px @green2,0 0 0 1px #dddddd;
 		}
 		.switcher_publication input:checked + .checkbox-label{
 			//box-shadow
-			-webkit-box-shadow:inset 0 0 0 18px #13bf11,0 0 0 2px #13bf11;
-			   -moz-box-shadow:inset 0 0 0 18px #13bf11,0 0 0 2px #13bf11;
-			        box-shadow:inset 0 0 0 18px #13bf11,0 0 0 2px #13bf11;
+			-webkit-box-shadow:inset 0 0 0 18px @green2,0 0 0 2px @green2;
+			   -moz-box-shadow:inset 0 0 0 18px @green2,0 0 0 2px @green2;
+			        box-shadow:inset 0 0 0 18px @green2,0 0 0 2px @green2;
 		}
 		.switcher_publication input:checked + .checkbox-label:after{
-			color:rgba(19,191,17,1);
+			color:@color_switcher_active;
 		}
+
+
+
+	/* div_note_wrapper
+	--------------------------------------- */
+	#div_note_wrapper {
+		//background-color: #8BECF5;
+
+		}
+		#div_note_wrapper .css_wrap_component_publication {
+			padding: 0;
+			padding-top: 5px;
+		}
+		#div_note_wrapper .css_wrap_component_publication .css_label {
+			display: inline-block;
+			vertical-align: baseline;
+		}
+		#div_note_wrapper .css_wrap_component_publication .content_data {
+			display: inline-block;
+			width: 100px;
+			vertical-align: baseline;
+		}
+
+
+
 

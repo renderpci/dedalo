@@ -1,8 +1,9 @@
 <?php
-require_once( dirname(dirname(dirname(__FILE__))) .'/config/config4.php');
-
-
-
+/**
+* TOOL_UPDATE_CACHE
+*
+*
+*/
 class tool_update_cache {
 
 
@@ -11,6 +12,7 @@ class tool_update_cache {
 	protected $section_list_tipo;
 	protected $matrix_table;
 	public static $debug_response; 
+
 
 	
 	function __construct( $section_tipo=null, $modo='button' ) {
@@ -21,6 +23,8 @@ class tool_update_cache {
 		$this->section_tipo = $section_tipo;
 		$this->modo 		= $modo;	
 	}
+
+
 
 	/** 
 	* HTML
@@ -35,6 +39,7 @@ class tool_update_cache {
 
 	/**
 	* UPDATE_CACHE
+	* @param object $options
 	* @return bool
 	*/
 	public function update_cache( $options=null ) {
@@ -55,7 +60,7 @@ class tool_update_cache {
 
 		#static $ar_regenerated_sections;
 
-		if(SHOW_DEBUG && DEDALO_ENTITY==='development') {
+		if(SHOW_DEBUG===true && DEDALO_ENTITY==='development') {
 			$start_time = start_time();
 		}
 		
@@ -118,7 +123,7 @@ class tool_update_cache {
 				#debug_log(__METHOD__." records_data ".to_string($records_data), logger::DEBUG);		
 
 
-		if(SHOW_DEBUG && DEDALO_ENTITY==='development') {
+		if(SHOW_DEBUG===true && DEDALO_ENTITY==='development') {
 			#$time = round( microtime(TRUE) - $partial_time ,4);
 			#debug_log(__METHOD__." - Time ".round( microtime(TRUE) - $start_time ,4)." secs to query - Memory: ".tools::get_memory_usage('pid'));				
 		}
@@ -129,7 +134,7 @@ class tool_update_cache {
 			$section_id = $row['section_id'];
 			#$datos = $rows['datos'];
 
-			if(SHOW_DEBUG && DEDALO_ENTITY==='development') {
+			if(SHOW_DEBUG===true && DEDALO_ENTITY==='development') {
 				$partial_time = start_time();
 			}
 
@@ -188,18 +193,18 @@ class tool_update_cache {
 				*/				
 			}#end foreach ($related_terms as $current_component_tipo)
 
-			if(SHOW_DEBUG && DEDALO_ENTITY==='development') {
+			if(SHOW_DEBUG===true && DEDALO_ENTITY==='development') {
 				$time    = round( microtime(TRUE) - $partial_time ,4);
 				$n_items = count($related_terms);				
-				debug_log(__METHOD__." - Time $time secs to update section_id:$section_id ($n_items components) ".to_string(), logger::DEBUG);			
+				debug_log(__METHOD__." - Time $time secs to update section_tipo:$this->section_tipo, section_id:$section_id ($n_items components) ".to_string(), logger::DEBUG);			
 			}
 			
-			debug_log(__METHOD__." Updated cached of section $this->section_tipo - $section_id ".to_string(), logger::DEBUG);
+			#debug_log(__METHOD__." Updated cached of section $this->section_tipo - $section_id ".to_string(), logger::DEBUG);
 		}#end foreach ($records_data->result as $key => $ar_value)
 		
 		#sleep(1);
 		
-		if(SHOW_DEBUG && DEDALO_ENTITY==='development') {			
+		if(SHOW_DEBUG===true && DEDALO_ENTITY==='development') {			
 			#$time = round( microtime(TRUE) - $start_time ,4);
 			debug_log(__METHOD__." -- Finish Time ".round( microtime(TRUE) - $start_time ,4)." ms for section_tipo: $this->section_tipo - related_terms:".count($related_terms)." - Memory: ".tools::get_memory_usage('pid'));				
 		}

@@ -1,5 +1,8 @@
 <?php
 #require_once(DEDALO_LIB_BASE_PATH . '/diffusion/class.diffusion_mysql.php');
+if (defined('DIFFUSION_CUSTOM')) {
+	include(DIFFUSION_CUSTOM);
+}
 
 /*
 * CLASS DIFUSSION
@@ -140,7 +143,7 @@ abstract class diffusion  {
 				$target_component 	 	= component_common::get_instance($modelo_name,	// component_autocomplete_ts
 																		 $target_component_tipo,
 																		 $options->parent,
-																		 'edit',
+																		 'list',
 																		 $options->lang,
 																		 $section_tipo,
 																		 false );
@@ -420,13 +423,15 @@ abstract class diffusion  {
 
 					# Database of current diffusion element
 					$ar_children 			 = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($element_tipo, $modelo_name='database', $relation_type='children', $search_exact=true);
-					$diffusion_database_name = RecordObj_dd::get_termino_by_tipo(reset($ar_children), DEDALO_STRUCTURE_LANG, true, false);
+					$diffusion_database_tipo = reset($ar_children);
+					$diffusion_database_name = RecordObj_dd::get_termino_by_tipo($diffusion_database_tipo, DEDALO_STRUCTURE_LANG, true, false);
 
 					$data = new stdClass();
 						$data->element_tipo = $element_tipo;
 						$data->name 		= $name;
 						$data->class_name 	= $diffusion_class_name;
 						$data->database_name= $diffusion_database_name;
+						$data->database_tipo= $diffusion_database_tipo;
 							#dump($ar_diffusion_map->$diffusion_group_tipo[]=4, ' ar_diffusion_map_elements ++ '.to_string());				
 				
 					$ar_diffusion_map->{$diffusion_group_tipo}[] = $data;

@@ -2,6 +2,112 @@
 
 
 	if(SHOW_DEBUG===true) {
+		
+		/*
+		$search_submit_data = '[
+		  [
+		    [
+		      {
+		        "type": "component_search",
+		        "section_tipo": "oh1",
+		        "component_tipo": "oh24",
+		        "search": [
+		          {
+		            "section_tipo": "rsc197",
+		            "component_tipo": "rsc86"
+		          }
+		        ],
+		        "comparison_operator": "ILIKE",
+		        "logical_operator": "OR",
+		        "dato": "augustus"
+		      },
+		      {
+		        "type": "component_search",
+		        "section_tipo": "oh24",
+		        "component_tipo": "oh24",
+		        "search": [
+		          {
+		            "section_tipo": "rsc197",
+		            "component_tipo": "rsc86"
+		          }
+		        ],
+		        "comparison_operator": "ILIKE",
+		        "logical_operator": "AND",
+		        "dato": "manolus"
+		      },
+		      {
+		        "type": "link_logical_operator",
+		        "link_logical_operator": "AND"
+		      }
+		    ],
+		    [
+		      {
+		        "type": "component_search",
+		        "section_tipo": "oh1",
+		        "component_tipo": "oh16",
+		        "comparison_operator": "ILIKE",
+		        "logical_operator": "AND",
+		        "dato": "history"
+		      },
+		      {
+		        "type": "link_logical_operator",
+		        "link_logical_operator": "AND"
+		      }
+		    ],
+		    {
+		      "type": "link_logical_operator",
+		      "link_logical_operator": "AND"
+		    }
+		  ]
+		]';
+		$search_submit_data = '[
+		  [
+		    [
+		      {
+		        "type": "component_search",
+		        "section_tipo": "rsc205",
+		        "component_tipo": "rsc139",
+		        "search": [
+		          {
+		            "section_tipo": "rsc194",
+		            "component_tipo": "rsc86"
+		          }
+		        ],
+		        "comparison_operator": "ILIKE",
+		        "logical_operator": "OR",
+		        "dato": "abe"
+		      },
+		      {
+		        "type": "link_logical_operator",
+		        "link_logical_operator": "AND"
+		      }
+		    ],
+		    {
+		      "type": "link_logical_operator",
+		      "link_logical_operator": "AND"
+		    }
+		  ]
+		]';
+		$search_submit_data = json_decode($search_submit_data);
+			#dump($search_submit_data, ' $search_submit_data ++ '.to_string());
+
+		$section	= section::get_instance(null,'oh1','list');
+		$layout_map = (array)component_layout::get_layout_map_from_section( $section );
+			#dump($layout_map, ' layout_map ++ '.to_string());
+
+		$layout_map = array(array("rsc139"));
+
+		$options = new stdClass();
+			$options->section_tipo 	 	 = 'rsc205';
+			$options->search_submit_data = $search_submit_data;
+			$options->columns 		 	 = reset($layout_map);
+
+		
+		require_once(DEDALO_LIB_BASE_PATH . '/search/class.search_development.php');
+		$search = new search_development();
+		$records_3 = $search->get_records_3($options);
+		*/
+
 		/*
 		$options = new stdClass();
 			$options->section_tipo 	 = 'oh1';	
@@ -31,10 +137,6 @@
 	}
 
 
-
-
-
-
 	
 	# CONTROLLER
 		
@@ -56,16 +158,28 @@
 
 	#
 	# CONTEXT . Override context object when is requested
+	$context_name = common::get_request_var('context_name');
+	if(!empty($context_name)){
+		$context_obj = new stdClass();
+			$context_obj->context_name = $context_name;
+		$this->set_context($context_obj);
+	}
+	/*
 	if(isset($_REQUEST['context_name']))  {
 		
 		$context_obj = new stdClass();
 			$context_obj->context_name = $_REQUEST['context_name'];
 		$this->set_context($context_obj);
 	}
+	*/
 	$context = $this->get_context();
 
+
+
 	# Test is a complete section or process
-	$is_process_section = (isset($_REQUEST['t']) && $_REQUEST['t']!= $tipo) ? true : false;
+	$var_requested = common::get_request_var('t');
+	//$is_process_section = (isset($_REQUEST['t']) && $_REQUEST['t']!= $tipo) ? true : false;
+	$is_process_section = (!empty($var_requested) && $var_requested!=$tipo) ? true : false;
 
 	#
 	# GLOBAL ADMIN
@@ -108,7 +222,9 @@
 				# RECORDS_HTML
 				# Render search form html using search.
 				# We know the current record id but we search like a list filtered by id for maintain always the same criterion
-					if (!isset($_REQUEST['offset'])) {
+					//if (!isset($_REQUEST['offset'])) {
+					$offset = common::get_request_var('offset');
+					if ($offset===false) {
 						
 						$search_options_session_key = 'current_edit';
 						$locator = new locator();
@@ -132,7 +248,8 @@
 						$search_options_session_key = 'section_'.$this->tipo;
 							#dump($search_options_session_key, " search_options_session_key ".to_string($context));
 						
-							$offset = isset($_REQUEST['offset']) ? (int)$_REQUEST['offset'] : 0;						
+							//$offset = isset($_REQUEST['offset']) ? (int)$_REQUEST['offset'] : 0;
+							#$offset = !empty($var_requested) ? (int)$var_requested : 0;		
 							
 							if (isset($_SESSION['dedalo4']['config']['search_options'][$search_options_session_key])) {
 								
@@ -155,11 +272,6 @@
 							$options->offset 					 = $offset;					
 							$options->layout_map 				 = array();							
 							$options->search_options_session_key = $search_options_session_key;
-
-
-							if(SHOW_DEBUG) {
-								#dump($options, ' options');
-							}
 
 					}//end if (empty($_REQUEST['offset'])) {
 			
@@ -214,7 +326,7 @@
 						$inspector_html = $inspector->get_html();
 					}
 
-				if ( isset($_GET['context_name']) && strpos($_GET['context_name'], 'portal')!==false ) {
+				if ( strpos($context_name, 'portal')!==false ) {
 					js::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/tools/tool_portal/js/tool_portal.js'; // Cuando añadimos un fragmento, no está disponible..	
 				}
 
@@ -260,8 +372,8 @@
 					$search_options_session_key = 'section_'.$this->tipo;
 	
 					# SESSION_KEY OVERRIDES DEFAULT IN SOME CONTEXTS
-					switch (true) {
-						case ( isset($_GET['m']) && $_GET['m']=='tool_portal' ):
+					switch (true) {						
+						case ( common::get_request_var('m')=='tool_portal' ):
 							#
 							# TOOL PORTAL CASE
 							# Override on tool_portal context 
@@ -312,14 +424,18 @@
 							$options->context 			= $this->context;	# inyectado a la sección y usado para generar pequeñas modificaciones en la visualización del section list como por ejemplo el link de enlazar un registro con un portal
 							$options->search_options_session_key = $search_options_session_key;
 								#dump($options, ' options ++ '.to_string());
-
+							
+							
 							# OPTIONS CUSTOM
 							switch (true) {
-								case (isset($_REQUEST['m']) && $_REQUEST['m']=='tool_portal'):
+								//case (isset($_REQUEST['m']) && $_REQUEST['m']=='tool_portal'):
+								case ( common::get_request_var('m')=='tool_portal' ):
 									#
 									# FILTER_BY_SECTION_CREATOR_PORTAL_TIPO
 									# When received request 'm=tool_portal', options is set with param filter_by_section_creator_portal_tipo=$portal_tipo
-									$portal_tipo = $_REQUEST['t'];
+									
+									//$portal_tipo = $_REQUEST['t'];
+									$portal_tipo = common::get_request_var('t');
 									$options->filter_by_section_creator_portal_tipo = $portal_tipo;
 									break;
 								case ( isset($this->context->context_name) && $this->context->context_name=='section_tool' && isset($this->context->top_tipo) ):
@@ -339,7 +455,7 @@
 							if ($this->tipo==DEDALO_ACTIVITY_SECTION_TIPO) {
 								$options->tipo_de_dato 			= 'dato';
 								$options->tipo_de_dato_order	= 'dato';
-								$options->order_by				= 'id DESC';	#section_id ASC
+								$options->order_by				= 'section_id DESC';	#section_id ASC
 								$options->limit					= DEDALO_MAX_ROWS_PER_PAGE*3;
 							}
 							#dump($options->layout_map_list, '$options->layout_map_list ++ '.to_string());
@@ -352,7 +468,6 @@
 
 						$options->context = $context;
 							#dump($options, ' options ++ '.to_string());
-
 
 
 					$section_rows 	= new section_records($this->tipo, $options);
@@ -462,7 +577,6 @@
 
 		default:  echo "<blockquote> Error: modo '$modo' is not valid! </blockquote>"; return;
 	}
-		
 
 		
 	 

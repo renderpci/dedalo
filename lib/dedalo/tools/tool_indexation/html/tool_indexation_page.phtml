@@ -12,32 +12,95 @@
 	$header_html .= "<div class=\"header_tool\">";
 
 		#
-		# INFO
-		$header_html .= "<div class=\"header_info\">";
-		$header_html .= "ID $section_id";
-		$header_html .= "</div>";
+		# TOOL NAME
+		$header_html .= "<div class=\"header_info header_tool_name tool_indexation_icon\">";
+		$header_html .= label::get_label($tool_name) ;
+		$header_html .= "</div>";//end header_tool_name
 
 		#
-		# TOP_ID SELECTOR		
+		# HEADER_TOOL_TABS
+		$header_html .= "<ul class=\"header_tool_tabs\">";
+		$header_html .= "<li class=\"tab_active\" onclick=\"tool_common.change_view_selector(this,'thesaurus','tesaurus_frame')\">Thesaurus</li>";
+		$header_html .= "<li class=\"\" onclick=\"tool_common.change_view_selector(this,'media','tesaurus_frame')\">Video</li>";
+		$header_html .= "</ul>";
+		$header_html .= "<script>";
+		$header_html .= "tool_common.media_frame_url='$av_player_url';";
+		$header_html .= "</script>";
+
+
+		#
+		# INFO
+		$header_html .= "<div class=\"header_info\">";
+		$header_html .= $section_label;
+		$header_html .= ' | ' . $section_id . ' | ';
+		if (is_object($inverse_code)) {
+			$header_html .= $inverse_code->value;
+		}
+		$header_html .= "</div>";//end header_info
+
+		#
+		# TOP_ID SELECTOR
+		/*	
 		if (isset($inverse_locators) && is_array($inverse_locators)) {
 			$top_id_selector  = '';
 			$top_id_selector .= "<div class=\"top_id_selector\">";
 			$top_id_selector .= "<label>".label::get_label('enfoque')."</label>";
-			$top_id_selector .= "<select id=\"top_id_selector\" onchange=\"tool_indexation.update_top_id(this)\" >";
+			$top_id_selector .= "<select id=\"top_id_selector\" onchange=\"tool_indexation.update_top_id(this)\">";
 			#$top_id_selector .= " <option></option>";
 			$ar_inverse = $this->get_ar_inverse($inverse_locators);
+				#dump($ar_inverse, ' ar_inverse ++ '.to_string());
 			foreach ($ar_inverse as $current_id => $current_name) {
 				$top_id_selector .= " <option value=\"$current_id\">$current_name</option>";
 			}
 			$top_id_selector .= "</select>";
 			$top_id_selector .= "</div>";
+			// Trigger js update_top_id
 			$top_id_selector .= "<script>tool_indexation.update_top_id(document.getElementById('top_id_selector'));</script>";
 			$header_html .= $top_id_selector;
-		}		
+		}
+		*/
+		#
+		# TOP_ID SELECTOR
+		if (isset($inverse_locators) && is_array($inverse_locators)) {
+			
+			$header_html .= "<div class=\"top_id_selector\">";
+
+			$header_html .= "<label>".label::get_label('enfoque')."</label> : ";
+			$header_html .= "<select id=\"top_id_selector\" class=\"custom_dropdown\" onchange=\"$tool_name.update_top_id(this)\">";
+			#$header_html .= " <option></option>";
+			$ar_inverse = $this->get_ar_inverse($inverse_locators);
+			foreach ($ar_inverse as $current_id => $current_name) {
+				$selected = $current_id==TOP_ID ? ' selected' : '';
+				$header_html .= "<option value=\"$current_id\"{$selected}>$current_name</option>";
+			}
+			$header_html .= "</select>";
+
+			$header_html .= "<script>";
+			$header_html .= "{$tool_name}.update_top_id(document.getElementById('top_id_selector'));";			
+			$header_html .= "</script>";
+
+			$header_html .= "</div>";//end top_id_selector	
+		}
+
+
+		$header_html .= "<div class=\"header_buttons\">";	
+			#
+			# BUTTON_TOOL_TR_PRINT_HTML
+			if (isset($button_tool_tr_print_html)) {
+				$header_html .= $button_tool_tr_print_html;
+			}
+			#
+			# BUTTON_TOOL_TIME_MACHINE_HTML
+			if (isset($button_tool_time_machine_html)) {
+				$header_html .= $button_tool_time_machine_html;
+			}
+		$header_html .= "</div>";//end header_buttons
+
 
 		#
 		# COMPONENT STATE
 		$header_html .= $component_state_html;
+
 
 	$header_html .= "</div>";//end header_tool
 	$html .= $header_html;
@@ -45,19 +108,27 @@
 
 	#
 	# CONTENT 
-	$html .= "<div id=\"indexation_container\" class=\"container\" >";		
+	$html .= "<div id=\"indexation_container\" class=\"container\">";		
 
 		#
 		# LEFT SIDE
 		$html   .= "<div id=\"left_side\" class=\"split split-horizontal left_side\">";	
 	
 			#
-			# TESAURO (IFRAME)
-			#$html   .= "<div class=\"indexation_page_tesauro\">";
-			$html 	.= " <iframe id=\"tesauro_frame\" name=\"tesauro_frame\" class=\"tesauro_frame\" src=\"{$tesauro_url}\" ></iframe>";
-			#$html   .= "</div>";
-		
+			# THESAURUS (IFRAME)
+			$html .= "<div class=\"indexation_page_tesauro\">";
+
+				#$html   .= "<div class=\"indexation_page_tesauro\">";
+				#$html 	.= " <iframe id=\"tesauro_frame\" name=\"tesauro_frame\" class=\"tesauro_frame\" src=\"{$tesauro_url}\" ></iframe>";
+				$html .= "<iframe id=\"videoFrame\" name=\"videoFrame\" class=\"media_frame\" src=\"\"></iframe>"; // {$av_player_url}
+				$html .= "<iframe id=\"tesaurus_frame\" name=\"tesaurus_frame\" class=\"tesaurus_frame\" src=\"{$thesaurus_url}\"></iframe>";
+				#$html   .= "</div>";
+
+			$html .= "</div>";
+
+			
 		$html   .= "</div>";#end left_side
+
 
 
 		#
@@ -66,7 +137,7 @@
 		
 			#
 			# TEXT (TEXT AREA)
-			$html   .= "<div class=\"indexation_page_text\">";
+			$html   .= "<div id=\"indexation_page_text\" class=\"indexation_page_text\">";
 			$html 	.= $component_text_area_html;
 			$html   .= "</div>";			
 			
@@ -76,14 +147,12 @@
 				#
 				# TERM LIST
 				$html   .= "<div id=\"indexation_page_list\" class=\"css_section_tab_content indexation_page_list\">";
-				$html 	.= label::get_label('seleccione_una_etiqueta_para_indexar') . ' <br>';
+				$html 	.= label::get_label('seleccione_una_etiqueta_para_indexar') . '<br>';
 				$html 	.= label::get_label('para_crear_un_fragmento');
 				$html   .= "</div>";
 
-			#$html   .= "</div>";
-
+			#$html   .= "</div>";			
 			
-			$html .= "<div id=\"inspector_log\" class=\"tool_transcription_inspector_log\"> </div>";
 			
 		$html   .= "</div>";#end right_side
 
@@ -94,12 +163,16 @@
 
 	
 	# Inspector log tool
-	$html .= "<div id=\"inspector_log\" class=\"tool_transcription_inspector_log\"> </div>";
+	#$html .= "<div id=\"inspector_log\" class=\"tool_transcription_inspector_log\"> </div>";
+	# INSPECTOR LOG TOOL_LANG ()
+	$html 	.= "<div id=\"inspector_log\" class=\"tool_inspector_log\"></div>";
 
 
 	# Init tool
-	$html .= "<script>$tool_name.init()</script>";
-	
+	$html .= "<script>";
+	$html .= "$tool_name.init({textarea_lang:'$original_lang'});";
+	$html .= "</script>";
+
 
 	echo $html;
 

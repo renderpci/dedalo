@@ -34,7 +34,7 @@
 	}
 
 .selected_wrap {
-	background: rgb(230, 230, 230) !important;
+	background: @color_selected_wrap !important;
 }
 
 
@@ -66,7 +66,7 @@
 			height: 100%;
 			top: 0;
 			left: 0;
-			background-color: #ED5221;
+			background-color: @color_locked_wrap;
 			z-index: 999;
 			opacity: 0.16;
 			//pointer-events:none; 
@@ -89,7 +89,7 @@
 	}
 	
 .locked_wrap_overlay {
-	background-color: #ED0019;
+	background-color: @color_label_error; //#ED0019;
 	z-index: 2;
 	position: absolute;
 	width: 100%;
@@ -134,9 +134,8 @@ input[type="text"], input[type="password"], textarea {
 	padding-left: 6px;
 	padding-right: 6px;
 	margin-top: 0;
-	//border: 1px solid #C7C5C5;
 	border: 1px solid;
-	border-color: #e1e0e0;
+	border-color: @color_input_border;
 	color: #3F3F3F;
 	border-radius: 3px;
 	//box-shadow: inset 0 0 5px #D2D2D2;
@@ -155,11 +154,15 @@ input[type="text"], input[type="password"], textarea {
 	input[type="text"]:active {
 		background-color: #FFFFFF;
 	}
+
+	input::-webkit-input-placeholder {
+		color: #D2D2D2
+	}
 	
 	/* OVERWRITE TINYMCE TEXT AREA
 	------------------------------------------------------- */
 	.mce-panel {
-		border-color: #e1e0e0 !important;
+		border-color: @color_input_border !important;
 	}
 
 
@@ -177,7 +180,7 @@ input[type="text"], input[type="password"], textarea {
 		word-wrap: break-word;
 		vertical-align: top;
 		font-size: 100%;
-		color: #3F3F3F;
+		color: @color_component_label;
 		border:none;
 		cursor: pointer;
 		-webkit-user-select: none;
@@ -197,7 +200,7 @@ input[type="text"], input[type="password"], textarea {
 		cursor:default;
 		//transition: all 0.3s ease;
 		//font-weight: bold;
-		font-family: 'Oxygen-Bold', "Helvetica Neue", Helvetica, Arial, sans-serif;
+		font-family: "Oxygen-Bold", "Helvetica Neue", Helvetica, Arial, sans-serif;
 		font-weight: 300;
 		@media screen and (max-width: @movil_max_width) {
 			width: 100% !important;
@@ -274,7 +277,7 @@ div.dato_refecence_default_lang {
 	padding-left: 5px;
 	padding-right: 5px;	
 	text-transform: uppercase;
-	color:#363636;
+	color: @color_component_label;
 	font-size: 130%;
 }
 
@@ -324,4 +327,40 @@ div.dato_refecence_default_lang {
 	border-color: red;
 	background-color: rgba(255, 0, 0, 0.11);
 }
+
+
+.select_fast_lang_switch {
+	position: absolute;
+    //right: 57px;
+   // top: 3px;
+    z-index: 9;
+    //height: 26px;
+
+    right: 2px;
+    top: 2px;
+    height: 20px;
+
+    top: 0;
+    right: 0;
+    margin: 2px;
+
+    //display: none;
+    opacity: 0;
+}
+
+.selected_wrap > .select_fast_lang_switch {
+	//display: block;
+	opacity: 1;
+}
+
+
+/* component_tools_container
+------------------------------------------------------- */
+	.component_tools_container {
+		//position: absolute;
+		float: right;
+		right: 0;
+		top: 0;
+		margin: 5px;
+	}
 

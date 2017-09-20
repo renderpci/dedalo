@@ -1,42 +1,36 @@
 <?php
-require_once( dirname(dirname(dirname(__FILE__))) .'/config/config4.php');
+$start_time=microtime(1);
+include( dirname(dirname(dirname(__FILE__))) .'/config/config4.php');
+# TRIGGER_MANAGER. Add trigger_manager to receive and parse requested data
+common::trigger_manager();
 
-if(login::is_logged()!==true) die("<span class='error'> Auth error: please login </span>");
-
-# set vars
-	$vars = array('mode');
-		foreach($vars as $name) $$name = common::setVar($name);
-
-# mode
-if(empty($mode)) exit("<span class='error'> Trigger: Error Need mode..</span>");
+# Write session to unlock session file
+session_write_close();
 
 
 
 /**
 * BUILD_SUBTITLES_TEXT
 */
-if ($mode=='build_subtitles_text') {
+function build_subtitles_text($json_data) {
+	global $start_time;
 
-	# set vars
-	$vars = array('section_tipo','section_id','component_tipo','line_lenght','video_duration_secs','lang');
-		foreach($vars as $name) $$name = common::setVar($name);
+	$response = new stdClass();
+		$response->result 	= false;
+		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
 
-		if (empty($section_tipo)) {
-			return "Error: section_tipo is not defined!";
-		}
-		if (empty($section_id)) {
-			return "Error: section_id is not defined!";
-		}
-		if (empty($component_tipo)) {
-			return "Error: component_tipo is not defined!";
-		}
-		if (empty($lang)) {
-			return "Error: lang is not defined!";
-		}
-		if (empty($line_lenght)) {
-			$line_lenght = 90;
-		}
+	$vars = array('section_tipo','section_id','component_tipo','line_lenght','lang');
+		foreach($vars as $name) {
+			$$name = common::setVarData($name, $json_data);
+			# DATA VERIFY
+			#if ($name==='video_duration_secs') continue; # Skip non mandatory
+			if (empty($$name)) {
+				$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty '.$name.' (is mandatory)';
+				return $response;
+			}
+		}	
 
+	// rsc36 text area
 	$modelo_name   	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
 	$component_obj 	= component_common::get_instance($modelo_name,
 													 $component_tipo,
@@ -44,6 +38,24 @@ if ($mode=='build_subtitles_text') {
 													 'edit',
 													 $lang,
 													 $section_tipo);
+	// rsc 35 component_av
+	$av_modelo_name = 'component_av';
+	$ar_related_av_tipo = common::get_ar_related_by_model($av_modelo_name, $component_tipo);
+	if (!isset($ar_related_av_tipo[0])) {
+		$response->msg = 'Trigger Error: ('.__FUNCTION__.') Not founded related av component';
+		return $response;
+	}
+	$related_av_tipo	= $ar_related_av_tipo[0];
+	$av_component_obj 	= component_common::get_instance($av_modelo_name,
+														 $related_av_tipo,
+														 $section_id,
+														 'list',
+														 DEDALO_DATA_NOLAN,
+														 $section_tipo);
+	$video_duration_secs = $av_component_obj->get_duration_seconds();
+	debug_log(__METHOD__." video_duration_secs ".to_string($video_duration_secs), logger::DEBUG);
+
+
 	$tool_subtitles = new tool_subtitles($component_obj);
 
 	$options = new stdClass();
@@ -53,18 +65,13 @@ if ($mode=='build_subtitles_text') {
 		#dump($options, ' options'); die();
 
 	preg_match("/\[TC_[0-9][0-9]:[0-9][0-9]:[0-9][0-9].[0-9][0-9][0-9]_TC\]/", $options->sourceText, $output_array);
-	if ( empty($output_array[0]) ) {
-		$response = new stdClass();
-			$response->result 	= 'error';
-			$response->msg 		= 'Please, save initial and final timecodes at least and try again';
-
-		echo json_encode( $response );
-		return;
+	if ( empty($output_array[0]) ) {		
+		$response->msg 		= 'Please, save initial and final timecodes at least and try again';	
+		return (object)$response;
 	}
 
 	$result   = $tool_subtitles->build_subtitles_text( $options );
 	$component_av_related_tipo = $component_obj->get_related_component_av_tipo();
-
 
 	$filename = $component_av_related_tipo.'_'.$section_tipo.'_'.$section_id.'_'.$lang.'.vtt';
 	/* WITHOUT FILE OPTION
@@ -81,23 +88,25 @@ if ($mode=='build_subtitles_text') {
 	}
 	file_put_contents( $target_dir.'/'.$filename, $result );
 
-	$response = new stdClass();
-		$response->result 	= 'ok';
-		$response->msg 		= 'Subtitles generated successfully';
-		$response->url 		= DEDALO_MEDIA_BASE_URL .DEDALO_AV_FOLDER. $base_dir .'/'. $filename;
 	
-	echo json_encode($response);
+	$response->result 	= true;
+	$response->msg 		= 'Ok. Subtitles generated successfully';
+	$response->url 		= DEDALO_MEDIA_BASE_URL .DEDALO_AV_FOLDER. $base_dir .'/'. $filename;
+	
+	# Debug
+	if(SHOW_DEBUG===true) {
+		$debug = new stdClass();
+			$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
+			foreach($vars as $name) {
+				$debug->{$name} = $$name;
+			}
+			$debug->video_duration_secs = $video_duration_secs;
+		$response->debug = $debug;
+	}
 
-	#dump($result, ' result');
-}//end if ($mode=='build_subtitles_text')
+	return (object)$response;
+}//end build_subtitles_text
 
-
-/**/
-# CALL FUNCTION
-if ( function_exists($mode) ) {
-	$result = call_user_func($mode);
-	echo json_encode($result);
-}
 
 
 
@@ -105,18 +114,25 @@ if ( function_exists($mode) ) {
 * ADD_SUBTITLE_TRACK_TO_VIDEO
 * @return 
 */
-function add_subtitle_track_to_video() {
-
-	// JSON DOCUMENT
-	header('Content-Type: application/json');
-
-	# set vars
-	$vars = array('section_tipo','section_id','component_tipo','lang');
-		foreach($vars as $name) $$name = common::setVar($name);
+function add_subtitle_track_to_video($json_data) {
+	global $start_time;
 
 	$response = new stdClass();
 		$response->result 	= false;
-		$response->msg 		= '';
+		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
+
+	# set vars
+	$vars = array('section_tipo','section_id','component_tipo','lang');
+		foreach($vars as $name) {
+			$$name = common::setVarData($name, $json_data);
+			# DATA VERIFY
+			#if ($name==='top_tipo' || $name==='top_id') continue; # Skip non mandatory
+			if (empty($$name)) {
+				$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty '.$name.' (is mandatory)';
+				return $response;
+			}
+		}
+
 
 	$modelo_name   	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
 	$component_obj 	= component_common::get_instance($modelo_name,
@@ -134,17 +150,32 @@ function add_subtitle_track_to_video() {
 	$base_dir   = DEDALO_MEDIA_BASE_PATH;
 	$target_dir = $base_dir . DEDALO_AV_FOLDER . DEDALO_SUBTITLES_FOLDER;
 	$filename 	= $component_av_related_tipo.'_'.$section_tipo.'_'.$section_id.'_'.$lang.'.vtt';
+	$url = DEDALO_MEDIA_BASE_URL . DEDALO_AV_FOLDER . DEDALO_SUBTITLES_FOLDER .'/'.$filename;
 	if(file_exists( $target_dir.'/'.$filename )) {
-		$url = DEDALO_MEDIA_BASE_URL . DEDALO_AV_FOLDER . DEDALO_SUBTITLES_FOLDER .'/'.$filename;
-
 		$response->result 	 = true;
 		$response->msg 		 = "Ok. Subtitles files found";
 		$response->url 		 = $url;
 		$response->lang 	 = $lang;
 		$response->lang_name = lang::get_name_from_code( $lang, DEDALO_APPLICATION_LANG ) ;
+	}else{
+		$response->result 	 = false;
+		$response->msg 		 = "Opss. No subtitles file exists actually as ".$filename;
+		$response->url 		 = $url;
+		$response->lang 	 = $lang;
+		$response->lang_name = lang::get_name_from_code( $lang, DEDALO_APPLICATION_LANG ) ;
+	}
+	
+	# Debug
+	if(SHOW_DEBUG===true) {
+		$debug = new stdClass();
+			$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
+			foreach($vars as $name) {
+				$debug->{$name} = $$name;
+			}
+
+		$response->debug = $debug;
 	}
 
-	
 	return (object)$response;
 }//end add_subtitle_track_to_video
 

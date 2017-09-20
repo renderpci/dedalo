@@ -1,3 +1,10 @@
+// Vars
+@common_css: "../../common/css";
+
+// Usage
+@import "@{common_css}/library.less";
+
+
 
 
 .css_wrap_text_area, .css_wrap_text_area_tm {
@@ -18,6 +25,29 @@
 		/* font-weight: bold; */
 		color: #b76021;
 	}
+
+
+/* TEXT_AREA_CONTENT . Case component in read only div (permissions 1) (like tool_lang)
+----------------------------------------------- */
+	div.text_area_content {
+		color: #000000;
+    	font-family: Verdana,Arial,Helvetica,sans-serif;
+    	background-color: #FFFFFF;
+    	color: #000000;
+		font-size: 13px;
+		line-height: 16px;
+
+		h2 .title {
+		    padding-right: 5px;
+		    font-size: 18px;
+		    font-weight: initial;
+		    font-style: initial;
+		    display: inline;
+		    cursor: pointer;
+		}
+	}
+
+
 
 
 /* TOOL TIME MACHINE CONTEXT
@@ -309,6 +339,7 @@ div.selected_fragment {
 			padding-right: 22px;
 			width: 100%;
 			border-radius: 0;
+			z-index: 1;
 		}
 
 
@@ -323,6 +354,9 @@ div.selected_fragment {
 ----------------------------------------------- */
 .mce-fullscreen, .mce-container-body {
 	/*width: 100% !important;*/
+}
+div.mce-tinymce.mce-fullscreen {
+	 z-index: 1003;
 }
 .mce-panel {
 	/*width: initial !important;*/
@@ -524,4 +558,102 @@ div.selected_fragment {
 
 
 
+/* REFERENCE_DIALOG
+-------------------------------------------------- */
+	.reference_container {
+		display: table;
+		width: 100%;
+		}
+		.reference_container .label {
+			max-width: 100%;
+			width: 100%;
+		}
+		.reference_container .content_data {
+			width: 100%;
+		}
 
+	.button_delete_reference {
+		float: left;
+	}
+	.button_apply_reference {
+
+	}
+
+
+.indexation_buttons_container {
+	border: 0 solid rgba(0,0,0,0.2);
+    background-color: #f0f0f0;
+	height: 26px;
+	width: 100%;
+	border: 1px solid #e1e0e0;
+	}
+	.indexation_buttons_container > button {
+		//background-image: url(../themes/default/buttons/reference.svg);
+		height: 22px;
+		width: 28px;
+		background-size: 64%;
+		background-position: center;
+		background-repeat: no-repeat;
+		display: block;
+		cursor: pointer;
+		float: left;
+		margin: 1px;
+		background-color: transparent;
+    	border: none;
+		}
+		.indexation_buttons_container > button:hover {
+			background-color: #d4d4d4;
+		}
+		.indexation_buttons_container > button.button_toc {
+			padding: 4px;
+		    width: 33px;		
+		}
+		.indexation_buttons_container > button.button_save {
+			padding: 4px;
+			width: 43px;
+			border-left: solid 1px #cccccc;
+			padding-left: 8px;
+			margin-left: 4px;
+			//background-color: aqua;
+			text-align: left;
+		}
+
+.mce-branding-powered-by {
+	display: none;
+}
+
+
+
+/* FAST_SWITCH_LANG SELECTOR
+-------------------------------------------------- */
+	.fast_switch_lang_note {
+		opacity: 1;
+		top: 8px;
+		right: 6px;
+	}
+
+/* STRUCTURATION_INFO 
+-------------------------------------------------- */
+#div_structuration_wrapper {
+	}
+	#div_structuration_wrapper .modal-body {
+		/**/
+		display: table;
+		width: 100%;		
+	}
+	#div_structuration_wrapper .structuration_container {
+		display: block;
+		min-height: 100px;
+		//background-color: #C9EDB8;
+		width: 100%;
+	}
+
+
+/* component_tools_container in portal_list mode
+-------------------------------------------------- */
+.css_wrap_text_area_portal_list > .component_tools_container {
+		position: absolute;
+	}
+	.css_wrap_text_area_portal_list > .component_tools_container span {
+		display: none
+	}

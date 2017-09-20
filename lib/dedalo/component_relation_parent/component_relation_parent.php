@@ -9,13 +9,13 @@
 	$label 					= $this->get_label();
 	$required				= $this->get_required();
 	$debugger				= $this->get_debugger();
-	$permissions			= common::get_permissions($section_tipo,$tipo);
+	$permissions			= $this->get_component_permissions();
 	$ejemplo				= null;
 	$html_title				= "Info about $tipo";
 	$lang					= $this->get_lang();
 	$identificador_unico	= $this->get_identificador_unico();
 	$component_name			= get_class($this);
-	$context 				= $this->get_context();	
+	$context 				= $this->get_context();
 	$file_name 				= $modo;
 	
 	if($permissions===0) return null;
@@ -34,9 +34,9 @@
 				break;
 
 		case 'tool_time_machine' :
-				$id_wrapper = 'wrapper_'.$identificador_unico.'_tm';
-				$input_name = "{$tipo}_{$parent}_tm";
-				$file_name 	= 'edit';
+				$id_wrapper 	= 'wrapper_'.$identificador_unico.'_tm';
+				$input_name 	= "{$tipo}_{$parent}_tm";
+				$file_name 		= 'edit'; 	dump($id_wrapper, ' $id_wrapper ++ '.to_string());
 				break;
 						
 		case 'search':

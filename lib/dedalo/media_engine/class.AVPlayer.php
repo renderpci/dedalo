@@ -70,7 +70,7 @@ class AVPlayer extends Accessors {
 			$this->src .= "&vbegin=".$_GET['vbegin'].'&vend='.$_GET['vend'];
 		}
 
-		$this->preload				= 'metadata'; # auto|metadata|none	
+		$this->preload				= 'none'; # auto|metadata|none	
 		$this->type					= $this->AVObj->get_mime_type();	#if($this->codecs) $this->type = $this->type .';'. $this->codecs;	
 		$this->codecs				= $this->AVObj->get_codecs();	
 		$this->provider				= 'http';

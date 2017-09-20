@@ -3,18 +3,24 @@
 	# VISUALIZADOR HTML	
 	
 	# html_delimiter
-	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'in');
+	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'in', $modo);
 
-	print "<div class=\"css_wrap_text_area wrap_component text_area_tool_indexation\" id=\"{$id_wrapper}\" ";
-	print "data-tipo=\"{$tipo}\" ";
-	print "data-section_tipo=\"{$section_tipo}\" ";
-	print "data-parent=\"{$parent}\" ";
-	print "data-lang=\"{$lang}\" ";
-	print "data-modo=\"{$modo}\" ";
-	print "data-dato=\"{$dato_raw}\" ";
-	print "data-component_name=\"{$component_name}\" ";
-	print ">";	
-	
+	# Wrapper
+		print "<div class=\"css_wrap_text_area wrap_component text_area_tool_indexation\" id=\"{$id_wrapper}\" ";
+		print "data-tipo=\"{$tipo}\" ";
+		print "data-section_tipo=\"{$section_tipo}\" ";
+		print "data-parent=\"{$parent}\" ";
+		print "data-lang=\"{$lang}\" ";
+		print "data-original_lang=\"{$source_lang}\" ";
+		print "data-modo=\"{$modo}\" ";
+		print "data-role=\"{$role}\" ";
+		#print "data-dato=\"{$dato_raw}\" ";
+		print "data-component_name=\"{$component_name}\" ";
+		print ">";
+
+	# LANG FAST SWITCHER
+	#print component_common_draw::draw_select_fast_lang_switch($id_wrapper, $lang, 'select_fast_lang_switch tool_structuration_fast_lang_switch', 'tool_structuration.fast_switch_lang');
+	print component_common_draw::draw_select_fast_lang_switch($id_wrapper, $lang, 'select_fast_lang_switch tool_structuration_fast_lang_switch', 'component_common.fast_switch_lang');
 	
 	# CONTENIDO (INPUT)
 	$html_content = '';
@@ -26,21 +32,43 @@
 						
 		case 1	: 
 			$html_content .= "<div class=\"text_area_content text_area_content_shadow\" >";
-			$html_content .= " <span class=\"css_span_dato\">$dato</span>";
+			$html_content .= "<span class=\"css_span_dato\">$dato</span>";
 			$html_content .= "</div>"; #end text_area_content
 
 			/**
 			* WRAP CURRENT SELECTED FRAGMENT (INDEXATION AND RELATIONS LIST TABS) 
 			*/
-			$html_content .= " <div id=\"relations_ajax_div_{$tipo}\" class=\"wrap_fragment\" 
-			data-tipo=\"{$tipo}\" data-section_tipo=\"{$section_tipo}\" data-parent=\"{$parent}\" data-modo=\"selected_fragment\" data-lang=\"{$lang}\" data-caller_id=\"$caller_id\"
-			> <!-- AJAX CONTENT HERE --> </div>";
+			$html_content .= "<div id=\"relations_ajax_div_{$tipo}\" class=\"wrap_fragment\" ";
+			$html_content .= "data-tipo=\"{$tipo}\" data-section_tipo=\"{$section_tipo}\" data-parent=\"{$parent}\" data-modo=\"selected_fragment\" data-lang=\"{$lang}\" data-caller_id=\"$caller_id\" ";
+			$html_content .= "> <!-- AJAX CONTENT HERE --> </div>";
 			break;					
 		
 		case 2	:
-		case 3	:
+		case 3	:			
+
 			# ETIQUETA (LABEL)
 			$html_content = component_common_draw::draw_label($this);
+
+			//document.getElementById('$identificador_unico').querySelector('#text_preview')
+			
+			#
+			# BUTTONS TOP CONTAINER
+			$html_content .= "<div class=\"indexation_buttons_container text_unselectable\">";
+					
+			# TOC button
+			$html_content .= "<button class=\"button_toc\" title=\"Toggle TOC\" onclick=\"text_editor.toggle_toc(document.getElementById('".$id_wrapper."').querySelector('#text_preview'))\">TOC</button>";			
+			
+			if ($role==="source_lang") {
+			# Link notes
+			$html_content .= "<button class=\"\" style=\"background-image: url('../themes/default/buttons/note.svg')\" onclick=\"component_text_area.create_new_note(document.getElementById('".$id_wrapper."').querySelector('#text_preview'))\"/>";
+			# Link button reference
+			$html_content .= "<button class=\"\" style=\"background-image: url('../themes/default/buttons/reference.svg')\" onclick=\"component_text_area.create_new_reference(document.getElementById('".$id_wrapper."').querySelector('#text_preview'))\"/>";	
+			# SAVE button	
+			$html_content .= "<button class=\"button_save\" title=\"Save\" onclick=\"tool_structuration.save_structuration_text(null, true);\">Save</button>";
+			}
+			
+			$html_content .= "</div>";	
+
 
 			#
 			# BROKEN INDEX TAGS WARNING
@@ -49,22 +77,59 @@
 			}
 
 			#
-			# TEXT AREA
+			# LANG FAST SWITCHER
+			/*
+			$html_content .= "<select class=\"select_fast_lang_switch tool_structuration_fast_lang_switch\" onchange=\"tool_structuration.fast_switch_lang(this)\">";
+				# Aplication langs
+				$dedalo_application_langs = unserialize(DEDALO_APPLICATION_LANGS);
+				foreach($dedalo_application_langs as $current_lang => $lang_name) {
+					# Selected
+					$selected = ($current_lang === $lang) ? ' selected="selected"' : '';
+					$html_content .= '<option value="'.$current_lang.'" '.$selected.'>'.$lang_name.'</option>';
+				}
+			$html_content .= "</select>";
+			*/
+
+			# dato_work 
+			# Always add a blank space at end to allow user set the cursor at end of text
+			$dato_work = trim($dato)."<br> ";
+
+
 			#
-			$html_content .= " <div class=\"text_area_tool_structuration\" contenteditable=\"false\" onclick=\"tool_structuration.select_area(this, event)\"
-			id=\"text_preview\"
-			name=\"{$input_name}\"
-			data-tipo=\"{$tipo}\"
-			data-parent=\"{$parent}\"
-			data-lang=\"{$lang}\"
-			data-modo=\"{$modo}\"
-			data-section_tipo=\"{$section_tipo}\"
-			>$dato</div>";
+			# TEXT AREA DIV	(contenteditable)		
+			$html_content .= "<div id=\"text_preview\" class=\"text_area_tool_structuration\" contenteditable=\"false\" ";
+			$html_content .= "onblur=\"component_text_area.save_text_preview(this)\" ";
+			$html_content .= "onkeyup=\"component_text_area.set_content_is_changed(true)\" ";
+			$html_content .= "name=\"{$input_name}\" ";
+			$html_content .= "data-tipo=\"{$tipo}\" ";
+			$html_content .= "data-parent=\"{$parent}\" ";
+			$html_content .= "data-lang=\"{$lang}\" ";
+			$html_content .= "data-modo=\"{$modo}\" ";
+			$html_content .= "data-section_tipo=\"{$section_tipo}\" ";
+			$html_content .= ">";
+			$html_content .= $dato_work;
+			$html_content .= "</div>";
 
 			
-			if (SHOW_DEBUG) {
-			#$html_content .= "<span class=\"debug_info\"> $identificador_unico</span>";
-			}				
+			// Fix text area current values
+			$html_content .= "<script>";
+			#$html_content .= "component_text_area.section_tipo = '$section_tipo';";
+			#$html_content .= "component_text_area.section_id = '$parent';";
+			#$html_content .= "component_text_area.component_tipo = '$tipo';";
+			#$html_content .= "component_text_area.lang = '$lang';";
+			#$html_content .= "component_text_area.wrapper_id = '$id_wrapper';";
+			#$html_content .= "component_text_area.set_content_editable(true);";
+
+			$init_options = array(
+				"uid"  			=> $identificador_unico,
+				"modo" 			=> $modo,
+				"propiedades" 	=> $propiedades,
+				"role" 			=> $role
+			);
+			$html_content .= "component_text_area.init(".json_encode($init_options).");";
+			$html_content .= "tool_structuration.fix_height('$id_wrapper');";			
+			$html_content .= "</script>";
+					
 			
 			/*
 			#
@@ -109,7 +174,7 @@
 	}
 
 	# INIT : Init text editor 
-	#$html_content .= "<script>text_editor.init('$identificador_unico','$modo','$propiedades_json');</script>";
+	#$html_content .= "<script>component_text_area.init('$identificador_unico','$modo','$propiedades_json');</script>";
 	
 	
 	# Prepare content to show in page
@@ -123,6 +188,6 @@
 	print "</div>"; //wrap
 
 	# html_delimiter
-	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'out');
+	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'out', $modo);
 
 ?>

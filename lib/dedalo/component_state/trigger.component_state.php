@@ -1,54 +1,40 @@
 <?php
-require_once( dirname(dirname(__FILE__)) .'/config/config4.php');
+$start_time=microtime(1);
+include( dirname(dirname(__FILE__)).'/config/config4.php');
+# TRIGGER_MANAGER. Add trigger_manager to receive and parse requested data
+common::trigger_manager();
 
-
-if(login::is_logged()!==true) die("<span class='error'> Auth error: please login </span>");
-
-
-# set vars
-	$vars = array('mode','tipo','parent','lang','section_tipo','top_tipo','options','type','dato');
-		foreach($vars as $name)	$$name = common::setVar($name);
-
-# mode
-	if(empty($mode)) exit("<span class='error'> Trigger: Error Need mode..</span>");
+# IGNORE_USER_ABORT
+#ignore_user_abort(true);
 
 
 
 /**
 * UPDATE_STATE_LOCATOR
 */
+function update_state_locator($json_data) {
+	global $start_time;
 
-if($mode=='update_state_locator') {
+	$response = new stdClass();
+		$response->result 	= false;
+		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
 
-
-	# Verify vars
-	if( empty($options) ) {
-		trigger_error("Error options is mandatory");
-		if(SHOW_DEBUG) {
-			throw new Exception("Trigger Error: options is empty ! ", 1); 
-		}		
-		exit();
-	}
-	if( $dato === false ) {
-		trigger_error("Error dato is mandatory");
-		if(SHOW_DEBUG) {
-			throw new Exception("Trigger Error: dato is empty ! ", 1); 
-		}		
-		exit();
-	}
-	if( empty($section_tipo) ) {
-		trigger_error("Error section_tipo is manadatory");
-		if(SHOW_DEBUG) {
-			throw new Exception("Trigger Error: section_tipo is empty ! ", 1); 
-		}		
-		exit();
-	}
+	# set vars
+	$vars = array('tipo','parent','modo','lang','section_tipo','top_tipo','options','type','dato');
+		foreach($vars as $name) {
+			$$name = common::setVarData($name, $json_data);
+			# DATA VERIFY
+			if ($name==='dato') continue; # Skip non mandatory
+			if (empty($$name)) {
+				$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty '.$name.' (is mandatory)';
+				return $response;
+			}
+		}
 
 	$options = json_decode($options);
 	$dato 	 = (int)$dato;
 
-
-	$component_state = component_common::get_instance(	'component_state',
+	$component_state = component_common::get_instance( 'component_state',
 														$tipo,
 														$parent,
 														'edit',
@@ -66,17 +52,28 @@ if($mode=='update_state_locator') {
 		exit('Error: Invalid type');
 	}
 
-	$result = $component_state->update_state_locator( $options, $ar_dato);
+	$result = (bool)$component_state->update_state_locator( $options, $ar_dato);
 
-	if($result===true){
-		echo 'ok';
-	}else{
-		echo 'error';
+	if($result!==true){
 		debug_log(__METHOD__." Error on update_state_locator. result: ".to_string($result), logger::WARNING);
 	}
-	exit();
 
-}#END update_state_locator
+	$response->result 	= $result;
+	$response->msg 		= 'Ok. Request done ['.__FUNCTION__.']';
+
+	# Debug
+	if(SHOW_DEBUG===true) {
+		$debug = new stdClass();
+			$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
+			foreach($vars as $name) {
+				$debug->{$name} = $$name;
+			}
+
+		$response->debug = $debug;
+	}
+	
+	return (object)$response;
+}//end update_state_locator
 
 
 

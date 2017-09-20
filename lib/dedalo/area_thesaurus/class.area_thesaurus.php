@@ -36,7 +36,7 @@ class area_thesaurus extends area {
 			$options->limit 			= null; // Not limit amount of results (use null) 
 			#$options->filter_custom 	= $filter_custom;			
 			$options->modo 				= 'edit'; // edit dont need define layout map
-			$options->context 			= '';
+			$options->context 			= null;
 			$options->search_options_session_key = 'area_thesaurus';
 				#dump($options, ' options ++ '.to_string());
 
@@ -72,7 +72,7 @@ class area_thesaurus extends area {
 		$modelo_name 	 = 'component_input_text';
 		$tipo 			 = area_thesaurus::$typologies_name_tipo;
 		$parent 		 = $tipology_section_tipo;
-		$modo 			 = 'edit';
+		$modo 			 = 'list';
 		$lang 			 = DEDALO_DATA_LANG;
 		$section_tipo 	 = area_thesaurus::$typologies_section_tipo;
 		
@@ -154,7 +154,7 @@ class area_thesaurus extends area {
 			$options->filter_by_search	= $filter_by_search;
 			#$options->filter_custom 	= $filter_custom;
 			$options->modo 				= 'list_thesaurus';
-			$options->context 			= '';
+			$options->context 			= null;
 			$options->tipo_de_dato 		= 'dato';
 			#$options->order_by	 		= "a.datos#>'{components, ".DEDALO_HIERARCHY_ORDER_TIPO.", dato, lg-nolan}' ASC";
 			$options->order_by	 		= DEDALO_HIERARCHY_ORDER_TIPO." ASC";
@@ -171,10 +171,8 @@ class area_thesaurus extends area {
 	* @return object $result
 	*/
 	public function search_thesaurus( $request_options ) {
-
-		if(SHOW_DEBUG===true) {
-			$start_time=microtime(1);
-		}
+		
+		$start_time=microtime(1);		
 
 		$response = new stdClass();
 			$response->result 	= false;
@@ -183,6 +181,7 @@ class area_thesaurus extends area {
 		$options = new stdClass();
 			$options->term  		= false;
 			$options->section_id  	= false;
+			$options->hierarchy_id 	= false;
 			$options->model  		= false;
 			$options->limit 		= 1000;
 			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
@@ -241,7 +240,7 @@ class area_thesaurus extends area {
 				#$last_term_tipo = end($ar_terms);
 				$ar_lines = array();
 				foreach ((array)$ar_terms as $term_tipo) {
-					$line = "\n unaccent(datos#>>'{components, $term_tipo, dato}') ILIKE unaccent('%".$term."%') ";
+					$line = "\n f_unaccent(datos#>>'{components, $term_tipo, dato}') ILIKE f_unaccent('%".$term."%') ";
 					if (!in_array($line, $ar_lines)) {
 						$ar_lines[] = $line;
 					}		
@@ -257,18 +256,37 @@ class area_thesaurus extends area {
 				$strQuery .= "\n section_id = ".(int)$options->section_id." ";
 			}
 
+			# Filter hierarchy_id
+			if ($options->hierarchy_id!==false && ($options->section_id!==false || $options->term!==false)) {
+
+				// Calculate target thesaurus
+				$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo(DEDALO_HIERARCHY_TARGET_SECTION_TIPO,true);
+				$component 		= component_common::get_instance($modelo_name,
+																 DEDALO_HIERARCHY_TARGET_SECTION_TIPO,
+																 (int)$options->hierarchy_id,
+																 'list',
+																 DEDALO_DATA_NOLAN,
+																 DEDALO_HIERARCHY_SECTION_TIPO);
+				$valor = trim($component->get_valor());
+				#if ($options->term!==false) 
+				$strQuery .= " AND ";
+				$strQuery .= "\n (section_tipo = '{$valor}') ";
+					#dump($options->hierarchy_id, '$options->hierarchy_id ++ '.to_string($valor));
+			}
+
 			# Section tipo filter
 			$strQuery .= $filter_section;
-
 
 			if($table!==$last_key) $strQuery .= "\n UNION ALL ";
 		}
 		$strQuery .= "\n LIMIT $options->limit ";
-		#dump($strQuery, ' $strQuery ++ '.to_string());	
+		#dump($strQuery, ' $strQuery ++ '.to_string());		 
 
 		$result = JSON_RecordObj_matrix::search_free($strQuery);
 		$n_rows = pg_num_rows($result);
-
+		
+		debug_log(__METHOD__." strQuery: $strQuery ".exec_time($start_time," ").to_string(), logger::ERROR);
+		
 		if(SHOW_DEBUG===true) {
 			$response->debug[] = exec_time($start_time,"$strQuery [rows:$n_rows]");
 		}
@@ -284,7 +302,7 @@ class area_thesaurus extends area {
 
 			$locator = new locator();
 				$locator->set_section_tipo($section_tipo);
-				$locator->set_section_id($section_id);			
+				$locator->set_section_id($section_id);
 
 			$ar_path   = array_reverse($ar_parents);
 			$ar_path[] = $locator; // add self at end

@@ -5,218 +5,260 @@
 	# ELEMENTS
 
 	# html_delimiter
-	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'in');
+	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'in', $modo, $lang);
 
-	print "<div class=\"wrap_component css_wrap_date wrap_component_{$tipo}\" id=\"{$id_wrapper}\"
-	data-tipo=\"{$tipo}\"
-	data-lang=\"{$lang}\"
-	data-section_tipo=\"{$section_tipo}\"
-	data-parent=\"{$parent}\"
-	data-modo=\"{$modo}\"
-	data-mode=\"$date_mode\"
-	data-from_modo=\"{$from_modo}\"
-	data-dato='{$dato_json}'
-	data-component_name=\"{$component_name}\"
-	data-component_info='{$component_info}'
-	>";
+	print "<div class=\"wrap_component css_wrap_date wrap_component_{$tipo}\" id=\"{$id_wrapper}\" ";
+	print "data-tipo=\"{$tipo}\" ";
+	print "data-lang=\"{$lang}\" ";
+	print "data-section_tipo=\"{$section_tipo}\" ";
+	print "data-parent=\"{$parent}\" ";
+	print "data-modo=\"{$modo}\" ";
+	print "data-mode=\"$date_mode\" ";
+	print "data-from_modo=\"{$from_modo}\" ";
+	print "data-dato='{$dato_json}' ";
+	print "data-component_name=\"{$component_name}\" ";
+	print "data-component_info='{$component_info}' ";
+	if (isset($this->caller_dataset)) {
+		$caller_dataset_json = json_encode($this->caller_dataset_json);
+		print "data-caller_dataset='{$caller_dataset_json}' ";
+	}
+	print ">";
 
 
 		# ETIQUETA (LABEL)
 		$html_label = component_common_draw::draw_label($this);
 
 		# CONTENIDO (INPUT)
-		$html_contenido = '';
+		$html_content = '';
 		switch($permissions) {
 
 			case 0	:
-					$html_contenido .= "";
+					$html_content .= "";
 					break;
 
 			case 1	: 	
-					$html_contenido .= "\n <span class=\"css_span_dato\">$valor</span>";
+					$html_content .= "<span class=\"css_span_dato\">$valor</span>";
 					break;
 
 			case ($permissions>=2) :
+					#change the edit mode of the componet
 
 					if($from_modo !== 'edit'){
-						$html_contenido .= "<div class=\"css_date_button_close\" onclick=\"component_common.change_mode_component(this, 'edit', '$from_modo')\"></div>";
-					}						
-
-					switch ($date_mode) {
-						case 'range':
-							$html_contenido .= "\n <input type=\"text\" class=\"css_date full range_start\" id=\"{$uid_start}\"
-							name=\"{$input_name_start}\"
-							data-role=\"range_start\"
-							data-tipo=\"{$tipo}\"
-							data-lang=\"{$lang}\"
-							data-section_tipo=\"{$section_tipo}\"
-							data-parent=\"{$parent}\"
-							data-modo=\"{$modo}\"
-							value=\"{$valor_start}\"
-							title=\"$html_title\"
-							placeholder=\"$ejemplo\"
-							onclick=\"component_date.activate_datepicker(this)\"
-							onchange=\"component_date.Save(this,'$date_mode')\"
-							onfocus=\"component_common.select_wrap(null,'$id_wrapper');\"
-							tabindex=\"1\"
-							/>";
-
-							$html_contenido .= " <> ";
-							$html_contenido .= " <div class=\"css_date_imput_twice_date\" >";
-							$html_contenido .= "\n <input type=\"text\" class=\"css_date full range_end\" id=\"{$uid_end}\"
-							name=\"{$input_name_end}\"
-							data-role=\"range_end\"
-							data-tipo=\"{$tipo}\"
-							data-lang=\"{$lang}\"
-							data-section_tipo=\"{$section_tipo}\"
-							data-parent=\"{$parent}\"
-							data-modo=\"{$modo}\"
-							value=\"{$valor_end}\"
-							title=\"$html_title\"
-							placeholder=\"$ejemplo\"
-							onclick=\"component_date.activate_datepicker(this)\"
-							onchange=\"component_date.Save(this,'$date_mode')\"
-							onfocus=\"component_common.select_wrap(null,'$id_wrapper');\"
-							tabindex=\"1\"
-							/>";
-							$html_contenido .= " </div> ";
-							break;
-						case 'period':
-							# YEAR
-							$html_contenido .= "\n <input type=\"text\" class=\"css_date period_year\"
-							name=\"{$input_name_year}\"
-							data-role=\"period_year\"
-							data-tipo=\"{$tipo}\"
-							data-lang=\"{$lang}\"
-							data-section_tipo=\"{$section_tipo}\"
-							data-parent=\"{$parent}\"
-							data-modo=\"{$modo}\"
-							value=\"{$valor_year}\"
-							title=\"$html_title\"
-							placeholder=\"$placeholder_year\"
-							onchange=\"component_date.Save(this,'$date_mode')\"
-							onfocus=\"component_common.select_wrap(null,'$id_wrapper');\"
-							tabindex=\"1\"
-							/> ";
-							if($valor_year>1){
-								$html_contenido .= '<span class="css_date label_range">'.label::get_label('anyos').'</span>';
-							}else{
-								$html_contenido .= '<span class="css_date label_range">'.label::get_label('anyo').'</span>';
-							}
-							# MONTH
-							$html_contenido .= "\n <input type=\"text\" class=\"css_date period_month\"
-							name=\"{$input_name_month}\"
-							data-role=\"period_month\"
-							data-tipo=\"{$tipo}\"
-							data-lang=\"{$lang}\"
-							data-section_tipo=\"{$section_tipo}\"
-							data-parent=\"{$parent}\"
-							data-modo=\"{$modo}\"
-							value=\"{$valor_month}\"
-							title=\"$html_title\"
-							placeholder=\"$placeholder_month\"
-							onchange=\"component_date.Save(this,'$date_mode')\"
-							onfocus=\"component_common.select_wrap(null,'$id_wrapper');\"
-							tabindex=\"1\"
-							/> ";
-							if($valor_month>1){
-								$html_contenido .= '<span class="css_date label_range label_range_34">'.label::get_label('meses').'</span>';
-							}else{
-								$html_contenido .= '<span class="css_date label_range label_range_34">'.label::get_label('mes').'</span>';
-							}
-							
-							# DAY
-							$html_contenido .= "\n <input type=\"text\" class=\"css_date period_day\"
-							name=\"{$input_name_day}\"
-							data-role=\"period_day\"
-							data-tipo=\"{$tipo}\"
-							data-lang=\"{$lang}\"
-							data-section_tipo=\"{$section_tipo}\"
-							data-parent=\"{$parent}\"
-							data-modo=\"{$modo}\"
-							value=\"{$valor_day}\"
-							title=\"$html_title\"
-							placeholder=\"$placeholder_day\"
-							onchange=\"component_date.Save(this,'$date_mode')\"
-							onfocus=\"component_common.select_wrap(null,'$id_wrapper');\"
-							tabindex=\"1\"
-							/> ";
-							if($valor_day>1){
-								$html_contenido .= '<span class="css_date label_range">'.label::get_label('dias').'</span>';
-							}else{
-								$html_contenido .= '<span class="css_date label_range">'.label::get_label('dia').'</span>';
-							}
-							break;
-						case 'time':
-							# TIME
-							$html_contenido .= "\n <input type=\"text\" class=\"css_date date_time\" id=\"{$identificador_unico}\"
-							name=\"{$input_name}\"
-							data-tipo=\"{$tipo}\"
-							data-lang=\"{$lang}\"
-							data-section_tipo=\"{$section_tipo}\"
-							data-parent=\"{$parent}\"
-							data-modo=\"{$modo}\"
-							value=\"{$valor}\"
-							title=\"$html_title\"
-							placeholder=\"23:40:59\"
-							onchange=\"component_date.Save(this,'$date_mode')\"
-							onfocus=\"component_common.select_wrap(null,'$id_wrapper');\"
-							tabindex=\"1\"
-							/>";
-							break;
-						case 'date':
-						default:
-							// Single date case (end date)
-							$add_class='';
-							if ( !empty($propiedades) &&
-								 isset($propiedades->method->get_valor_local) &&
-								 reset($propiedades->method->get_valor_local)==true
-								) $add_class = 'full';
-
-
-							$html_contenido .= "\n <input type=\"text\" class=\"css_date full $add_class\" id=\"{$identificador_unico}\"
-							name=\"{$input_name}\"
-							data-tipo=\"{$tipo}\"
-							data-lang=\"{$lang}\"
-							data-section_tipo=\"{$section_tipo}\"
-							data-parent=\"{$parent}\"
-							data-modo=\"{$modo}\"
-							value=\"{$valor}\"
-							title=\"$html_title\"
-							placeholder=\"$ejemplo\"
-							onclick=\"component_date.activate_datepicker(this)\"
-							onchange=\"component_date.Save(this,'$date_mode')\"
-							onfocus=\"component_common.select_wrap(null,'$id_wrapper');\"
-							tabindex=\"1\"
-							/>";
-							break;
+						$html_content .= "<div class=\"css_date_button_close\" onclick=\"component_common.change_mode_component(this, 'edit', '$from_modo')\"></div>";
 					}
-					#$html_contenido .= "<div>$date_mode</div>";
+
+					# Button add
+					if (isset($propiedades->multi_value) && $propiedades->multi_value==true) {
+						$html_content .= "<div class=\"css_button_generic btn_add_date\" onclick=\"component_date.add_date(this)\">";
+						$html_content .= "<div class=\"link css_date_add\"></div>";
+						$html_content .= "</div>";
+					}
+					$html_content .= "<ul>";
+					foreach ($ar_dato as $key => $dato) {
+						
+						$html_content .= "<li>";
+
+						switch ($date_mode) {
+							case 'range':
+								$value_start = isset($valor_start[$key]) ? $valor_start[$key] : '';
+								$html_content .= "<div class=\"css_date_imput_twice_date\">";
+								$html_content .= "<input type=\"text\" class=\"css_date full range_start\" id=\"".$uid_start[$key]."\" ";
+								$html_content .= "onclick=\"component_date.activate_datepicker(this)\" ";
+								$html_content .= "onchange=\"component_date.Save(this,'$date_mode')\" ";
+								$html_content .= "onfocus=\"component_common.select_wrap(null,'$id_wrapper');\" ";
+								$html_content .= "name=\"".$input_name_start[$key]."\" ";
+								$html_content .= "data-role=\"range_start\" ";
+								$html_content .= "data-tipo=\"{$tipo}\" ";
+								$html_content .= "data-lang=\"{$lang}\" ";
+								$html_content .= "data-section_tipo=\"{$section_tipo}\" ";
+								$html_content .= "data-parent=\"{$parent}\" ";
+								$html_content .= "data-modo=\"{$modo}\" ";
+								$html_content .= "value=\"".$value_start."\" ";
+								$html_content .= "title=\"$html_title\" ";
+								$html_content .= "placeholder=\"$ejemplo\" ";
+								$html_content .= "tabindex=\"1\" ";
+								$html_content .= "/>";
+								$html_content .= " </div> ";
+
+								$value_end = isset($valor_end[$key]) ? $valor_end[$key] : '';
+								$html_content .= " <> ";
+								$html_content .= "<div class=\"css_date_imput_twice_date\">";
+								$html_content .= "<input type=\"text\" class=\"css_date full range_end\" id=\"{$uid_end[$key]}\" ";
+								$html_content .= "name=\"{$input_name_end[$key]}\" ";
+								$html_content .= "data-role=\"range_end\" ";
+								$html_content .= "data-tipo=\"{$tipo}\" ";
+								$html_content .= "data-lang=\"{$lang}\" ";
+								$html_content .= "data-section_tipo=\"{$section_tipo}\" ";
+								$html_content .= "data-parent=\"{$parent}\" ";
+								$html_content .= "data-modo=\"{$modo}\" ";
+								$html_content .= "value=\"".$value_end."\" ";
+								$html_content .= "title=\"$html_title\" ";
+								$html_content .= "placeholder=\"$ejemplo\" ";
+								$html_content .= "onclick=\"component_date.activate_datepicker(this)\" ";
+								$html_content .= "onchange=\"component_date.Save(this,'$date_mode')\" ";
+								$html_content .= "onfocus=\"component_common.select_wrap(null,'$id_wrapper');\" ";
+								$html_content .= "tabindex=\"1\" ";
+								$html_content .= "/>";
+								$html_content .= " </div> ";
+
+								# DATAFRAME MANAGER
+								if (isset($ar_dataframe_obj[$key])) {
+									$html_content .= $ar_dataframe_obj[$key]->get_html();
+								}
+								break;
+							case 'period':
+								# YEAR
+								$value_year = isset($valor_year[$key]) ? $valor_year[$key] : '';
+								$html_content .= "<input type=\"text\" class=\"css_date period_year\" id=\"".$uid_year[$key]."\" ";
+								$html_content .= "name=\"{$input_name_year[$key]}\" ";
+								$html_content .= "data-role=\"period_year\" ";
+								$html_content .= "data-tipo=\"{$tipo}\" ";
+								$html_content .= "data-lang=\"{$lang}\" ";
+								$html_content .= "data-section_tipo=\"{$section_tipo}\" ";
+								$html_content .= "data-parent=\"{$parent}\" ";
+								$html_content .= "data-modo=\"{$modo}\" ";
+								$html_content .= "value=\"{$value_year}\" ";
+								$html_content .= "title=\"$html_title\" ";
+								$html_content .= "placeholder=\"$placeholder_year\" ";
+								$html_content .= "onchange=\"component_date.Save(this,'$date_mode')\" ";
+								$html_content .= "onfocus=\"component_common.select_wrap(null,'$id_wrapper');\" ";
+								$html_content .= "tabindex=\"1\" ";
+								$html_content .= "/> ";
+								if($value_year>1){
+									$html_content .= '<span class="css_date label_range">'.label::get_label('anyos').'</span>';
+								}else{
+									$html_content .= '<span class="css_date label_range">'.label::get_label('anyo').'</span>';
+								}
+								# MONTH
+								$value_month = isset($valor_month[$key]) ? $valor_month[$key] : '';
+								$html_content .= "<input type=\"text\" class=\"css_date period_month\" id=\"".$uid_month[$key]."\" ";
+								$html_content .= "name=\"{$input_name_month[$key]}\" ";
+								$html_content .= "data-role=\"period_month\" ";
+								$html_content .= "data-tipo=\"{$tipo}\" ";
+								$html_content .= "data-lang=\"{$lang}\" ";
+								$html_content .= "data-section_tipo=\"{$section_tipo}\" ";
+								$html_content .= "data-parent=\"{$parent}\" ";
+								$html_content .= "data-modo=\"{$modo}\" ";
+								$html_content .= "value=\"{$value_month}\" ";
+								$html_content .= "title=\"$html_title\" ";
+								$html_content .= "placeholder=\"$placeholder_month\" ";
+								$html_content .= "onchange=\"component_date.Save(this,'$date_mode')\" ";
+								$html_content .= "onfocus=\"component_common.select_wrap(null,'$id_wrapper');\" ";
+								$html_content .= "tabindex=\"1\" ";
+								$html_content .= "/> ";
+								if($value_month>1){
+									$html_content .= '<span class="css_date label_range label_range_34">'.label::get_label('meses').'</span>';
+								}else{
+									$html_content .= '<span class="css_date label_range label_range_34">'.label::get_label('mes').'</span>';
+								}
+								
+								# DAY
+								$value_day = isset($valor_day[$key]) ? $valor_day[$key] : '';
+								$html_content .= "<input type=\"text\" class=\"css_date period_day\" id=\"".$uid_day[$key]."\" ";
+								$html_content .= "name=\"{$input_name_day[$key]}\" ";
+								$html_content .= "data-role=\"period_day\" ";
+								$html_content .= "data-tipo=\"{$tipo}\" ";
+								$html_content .= "data-lang=\"{$lang}\" ";
+								$html_content .= "data-section_tipo=\"{$section_tipo}\" ";
+								$html_content .= "data-parent=\"{$parent}\" ";
+								$html_content .= "data-modo=\"{$modo}\" ";
+								$html_content .= "value=\"{$value_day}\" ";
+								$html_content .= "title=\"$html_title\" ";
+								$html_content .= "placeholder=\"$placeholder_day\" ";
+								$html_content .= "onchange=\"component_date.Save(this,'$date_mode')\" ";
+								$html_content .= "onfocus=\"component_common.select_wrap(null,'$id_wrapper');\" ";
+								$html_content .= "tabindex=\"1\" ";
+								$html_content .= "/> ";
+								if($value_day>1){
+									$html_content .= '<span class="css_date label_range">'.label::get_label('dias').'</span>';
+								}else{
+									$html_content .= '<span class="css_date label_range">'.label::get_label('dia').'</span>';
+								}
+								break;
+							case 'time':
+								# TIME
+								$value = isset($valor[$key]) ? $valor[$key] : '';
+								$html_content .= "<input type=\"text\" class=\"css_date date_time\" id=\"date_{$key}_{$identificador_unico}\" ";
+								$html_content .= "name=\"{$input_name[$key]}\" ";
+								$html_content .= "data-tipo=\"{$tipo}\" ";
+								$html_content .= "data-lang=\"{$lang}\" ";
+								$html_content .= "data-section_tipo=\"{$section_tipo}\" ";
+								$html_content .= "data-parent=\"{$parent}\" ";
+								$html_content .= "data-modo=\"{$modo}\" ";
+								$html_content .= "value=\"{$value}\" ";
+								$html_content .= "title=\"$html_title\" ";
+								$html_content .= "placeholder=\"23:40:59\" ";
+								$html_content .= "onchange=\"component_date.Save(this,'$date_mode')\" ";
+								$html_content .= "onfocus=\"component_common.select_wrap(null,'$id_wrapper');\" ";
+								$html_content .= "tabindex=\"1\" ";
+								$html_content .= "/>";
+								break;
+							case 'date':
+							default:
+								// Single date case (end date)
+								$add_class='';
+								if ( !empty($propiedades) &&
+									 isset($propiedades->method->get_valor_local) &&
+									 reset($propiedades->method->get_valor_local)==true
+									) $add_class = 'full';
+
+								$value = isset($valor[$key]) ? $valor[$key] : '';
+								$html_content .= "<div class=\"css_date_imput_twice_date\">";
+								$html_content .= "<input type=\"text\" class=\"css_date full $add_class\" id=\"date_{$key}_{$identificador_unico}\" ";
+								$html_content .= "name=\"{$input_name[$key]}\" ";
+								$html_content .= "data-role=\"date_time\" ";
+								$html_content .= "data-tipo=\"{$tipo}\" ";
+								$html_content .= "data-lang=\"{$lang}\" ";
+								$html_content .= "data-section_tipo=\"{$section_tipo}\" ";
+								$html_content .= "data-parent=\"{$parent}\" ";
+								$html_content .= "data-modo=\"{$modo}\" ";
+								$html_content .= "value=\"{$value}\" ";
+								$html_content .= "title=\"$html_title\" ";
+								$html_content .= "placeholder=\"$ejemplo\" ";
+								$html_content .= "onclick=\"component_date.activate_datepicker(this)\" ";
+								$html_content .= "onchange=\"component_date.Save(this,'$date_mode')\" ";
+								$html_content .= "onfocus=\"component_common.select_wrap(null,'$id_wrapper');\" ";
+								$html_content .= "tabindex=\"1\" ";
+								$html_content .= "/>";
+								$html_content .= "</div> ";
+
+								# DATAFRAME MANAGER
+								if (isset($ar_dataframe_obj[$key])) {
+									$html_content .= $ar_dataframe_obj[$key]->get_html();
+								}
+
+								break;
+						}
+						$html_content .= "</li>";
+					}
+					$html_content .= "</ul>";
+
+					#$html_content .= "<div>$date_mode</div>";
 					
 
-					#$html_contenido .= " <span class=\"css_span_ejemplo\">Format $ejemplo </span>";
+					#$html_content .= " <span class=\"css_span_ejemplo\">Format $ejemplo </span>";
 
 
-					#$html_contenido .= "\n <span  class=\"css_span_ejemplo\">$ejemplo</span>";
+					#$html_content .= "\n <span  class=\"css_span_ejemplo\">$ejemplo</span>";
 
 					# Save handler js
-					#$html_contenido .= "<script>$('#$identificador_unico').on(\"change\",function(){component_date.Save(this);})</script>";
+					#$html_content .= "<script>$('#$identificador_unico').on(\"change\",function(){component_date.Save(this);})</script>";
 
 					if(SHOW_DEBUG) {
-						$html_contenido .= "\n <span class=\"debug_info current_date_info\">date_mode: $date_mode  - current date: <span>$dato_json</span></span>";
-						#$html_contenido .= "\n <span class=\"css_span_debugger\" id=\"debugger_{$tipo}\" >{$debugger}</span>";
+						$html_content .= "<span class=\"debug_info current_date_info\">date_mode: $date_mode  - current date: <span>$dato_json</span></span>";
+						#$html_content .= "\n <span class=\"css_span_debugger\" id=\"debugger_{$tipo}\" >{$debugger}</span>";
 					}
 					break;
 		}
 
 
 		# Prepare content to show in page
-		tools::prepare_content($html_contenido);
+		tools::prepare_content($html_content);
 
 
 		# PRINT HTML
 		print $html_label;
-		print $html_contenido;
+		print $html_content;
 
 
 	print "</div>"; //wrap
@@ -228,6 +270,6 @@
 	}
 
 	# html_delimiter
-	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'out');
+	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'out', $modo, $lang);
 
 ?>

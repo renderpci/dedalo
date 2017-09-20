@@ -1,13 +1,18 @@
 <?php
 /*
 * CLASS COMPONENT DATE
- Encargado de guardar y gestionar las fechas de tipo absoluto, como por ejemplo '2012-11-07 17:33:49'
- Basado en un component_input_text, se irá sofisticando.
+ Encargado de guardar y gestionar las fechas de tipo absoluto, como por ejemplo '2012-11-07 17:33:49' that have a json format:
+ {
+	*    "year": 2012,
+	*    "month": 11,
+	*    "day": 07,
+	*    "hour": 17,
+	*    "minute": 33,
+	*    "second": 49
+	 }
  Debe verificar el formato antes de guardar y a la hora de mostrarse, además de proporcionar la lógica de las búsquedas para localizar años, rangos, etc..
  Podría incorporar un calendario desplegable para seleccionar la fecha de forma normalizada..
 */
-
-
 class component_date extends component_common {
 	
 	# Overwrite __construct var lang passed in this component
@@ -15,7 +20,7 @@ class component_date extends component_common {
 
 
 	# American data format
-	public static $ar_american	= array('lg-eng','lg-angl','lg-ango','lg-meng');
+	public static $ar_american = array('lg-eng','lg-angl','lg-ango','lg-meng');
 
 
 	
@@ -40,6 +45,44 @@ class component_date extends component_common {
 
 
 	/**
+	* SAVE OVERRIDE
+	* Overwrite component_common method 
+	*/
+	public function Save() {
+			
+		# Dato
+		$dato = $this->dato;
+
+		//dump(!is_array($dato), ' is array ++ '.to_string());
+		# DELETING DATE
+		if (empty($dato)) {
+			# Salvamos de forma estándar un valor vacío
+			return parent::Save();
+		}
+
+		# DATO FORMAT VERIFY
+		if ( !is_array($dato) ) {
+			if(SHOW_DEBUG===true) {
+				#dump($dato,'$dato');
+				#throw new Exception("Dato is not string!", 1);
+				error_log("Bad date format:".to_string($dato));
+			}
+			return false;
+		}
+
+		# add_time to dato always
+		foreach ($dato as $key => $current_dato) {
+			$this->dato[$key] = self::add_time( $current_dato );
+		}
+
+			
+		# From here, save normally
+		return parent::Save();
+	}//end Save
+
+
+
+	/**
 	* GET_DATO
 	* Dato change to object with year, month, day, hour, minute, second separated in key->value like
 	* {
@@ -52,24 +95,36 @@ class component_date extends component_common {
 	* }
 	*/
 	public function get_dato() {
+		
 		$dato = parent::get_dato();
 		
-		if (empty($dato) || (is_object($dato) && empty(get_object_vars($dato))) ) {
-			#$dd_date = new dd_date();
-				#dump($dd_date, ' dd_date');
-			return null;
+		# Compatibility with version 4.0.14 to 4.6 dedalo instalations
+		if (is_object($dato) && !empty(get_object_vars($dato)) ) {
+			$safe_dato=array();
+			
+			$safe_dato[] = $dato;
+			
+			$dato = $safe_dato;
+			$this->set_dato($dato);
+			$this->Save();
 		}
 
-		# Compatibility old dedalo instalations
+		if(SHOW_DEBUG===true) {
+			if ( !is_null($dato) && !is_array($dato)  ) {
+				#dump( $dato, "WRONG TYPE of dato. tipo: $this->tipo - section_tipo: $this->section_tipo - section_id: $this->parent");
+			}
+		}
+		return (array)$dato;
+
+		# Compatibility old dedalo instalations before 4.014
 		/*if (is_string($dato)) {
 			$dd_date    = new dd_date();
 			$this->dato = (object)$dd_date->get_date_from_timestamp( $dato );
 			$this->Save();
 			$dato = parent::get_dato();
 		}*/
-			#dump( (object)$dato, ' dato get_dato ++ '.to_string());
+		#dump( $dato, ' dato get_dato ++ '.to_string());
 
-		return (object)$dato;
 	}//end get_dato
 
 
@@ -78,26 +133,34 @@ class component_date extends component_common {
 	* SET_DATO
 	*/
 	public function set_dato( $dato ) {
-		
+
 		if (is_string($dato)) {
 			$dato = json_decode($dato);
 		}
 		if (is_null($dato) || empty($dato)) {
-			$dato = new stdClass();
-		}
-		if (is_array($dato) && isset($dato[0])) {
-			$dato = $dato[0];
-		}
-		
-		if ( !is_object($dato) ) {
-			if(SHOW_DEBUG===true) {
-				//throw new Exception("Error Processing Request: set_dato ($this->tipo). Only objects are accepted. Received Type: ".gettype($dato), 1);
-				debug_log(__METHOD__." Error Processing Request: IGNORED set_dato ($this->tipo). Only objects are accepted. Received Type: ".gettype($dato), logger::ERROR);
-			}
-			return false;
+			$dato = array();
 		}
 
-		parent::set_dato( (object)$dato );
+		# Compatibility with version 4.0.14 to 4.7 dedalo instalations
+		if (is_object($dato) && !empty(get_object_vars($dato)) ) {
+			$safe_dato		= array();
+			$safe_dato[] 	= $dato;
+			$dato 			= $safe_dato;
+		}
+		
+
+		# Remove empy objects
+		$clean_dato = array(); 
+		foreach ((array)$dato as $key => $value_obj) {
+			$ar_vars = get_object_vars($value_obj);
+				//dump($ar_vars, ' ar_vars ++ '.to_string());
+			if(!empty($ar_vars)) {
+				$clean_dato[] = $value_obj;
+			}
+		}
+
+		#debug_log(__METHOD__." dato ".to_string($dato), logger::DEBUG);
+		parent::set_dato( (array)$clean_dato );
 	}//end set_dato
 
 
@@ -110,8 +173,15 @@ class component_date extends component_common {
 	public function get_date_mode() {
 
 		$propiedades = $this->get_propiedades();
-		$dato 		 = $this->get_dato();
 
+		if (isset($propiedades->date_mode)) {
+					$date_mode = $propiedades->date_mode; // Default from structure if is defined
+				}else{
+					$date_mode = 'date'; // Default
+		}
+
+		/*
+		$dato 		 = $this->get_dato();
 		switch (true) {
 			#case isset($dato->start):
 			case is_object($dato) && property_exists($dato, 'start'):
@@ -128,27 +198,10 @@ class component_date extends component_common {
 					$date_mode = 'date'; // Default
 				}
 				break;
-		}
+		}*/
 		return $date_mode;
 	}//end get_date_mode
 
-
-
-	/**
-	* GET_DATE_MODE_STATIC
-	* @return string
-	*//*
-	public static function get_date_mode_static( $tipo ) {
-		
-		$RecordObj_dd = new RecordObj_dd($tipo);
-		$propiedades  = $RecordObj_dd->get_propiedades();
-		if( $propiedades = json_decode($propiedades) ) {
-
-			dump($propiedades, ' propiedades ++ '.to_string($tipo));
-		}
-
-	}//end get_date_mode_static
-	*/
 
 
 	/**
@@ -169,85 +222,7 @@ class component_date extends component_common {
 			$dato->set_second( 	$date->format('s') );
 
 		return (object)$dato;
-	}//end get_date_now
-	
-
-
-	/**
-	* SAVE OVERRIDE
-	* Overwrite component_common method 
-	*/
-	public function Save() {
-		
-		# Dato
-		$dato = $this->dato;
-
-		# DELETING DATE
-		if (empty($dato)) {
-			# Salvamos de forma estándar un valor vacío
-			return parent::Save();
-		}
-
-		# DATO FORMAT VERIFY
-		if ( !is_object($dato) ) {
-			if(SHOW_DEBUG===true) {
-				#dump($dato,'$dato');
-				#throw new Exception("Dato is not string!", 1);
-				error_log("Bad date format:".to_string($dato));
-			}
-			return false;
-		}
-		/*
-			$regex1 = "/^(0[0-9]|[12][0-9]|3[01])[-\/.](0[0-9]|1[012])[-\/.](-?[0-9]+)$/";
-			$regex2 = "/^(0[0-9]|1[012])[-\/.](-?[0-9]+)$/";
-			$regex3 = "/^(-?[0-9]+)$/";
-
-			if( preg_match($regex1, $dato, $matches)>0 ){			
-				$day 	= $matches[1];
-				$month	= $matches[2];
-				$year 	= $matches[3];				
-			}else if( preg_match($regex2, $dato, $matches)>0 ){
-				$day 	= "00";
-				$month	= $matches[1];
-				$year 	= $matches[2];
-			}else if( preg_match($regex2, $dato, $matches)>0 ){
-				$day 	= "00";
-				$month	= "00";
-				$year 	= $matches[1];
-			}else{
-				trigger_error("Error on format date. Date '$dato' is not valid!");
-				return false;
-			}
-
-			# Time defaults
-			$hour 	="00";
-			$minute ="00";
-			$second ="00";
-			
-			# Unix time convert
-			$unix_time = mktime($hour,$minute,$second,$month,$day,$year);
-	  			#dump($mktime, ' time - from '.$dato);
-
-			# Date formated from unix time
-			$dato_formated = date("Y-m-d H:i:s", $unix_time);
-
-			if(SHOW_DEBUG===true) {
-				dump($dato_formated,'date - '.$dato);
-			}		
-
-			# Set dato
-			$this->dato = (string)$dato_formated;
-		*/
-	
-		# add_time to dato always
-		$this->dato = self::add_time( $dato );
-
-		# Force convert dato to stdClass object always
-		#$this->dato = json_decode( json_encode($this->dato) );
-
-		# From here, save normally
-		return parent::Save();
-	}//end Save
+	}//end get_date_now	
 
 
 
@@ -263,89 +238,94 @@ class component_date extends component_common {
 		# Restore modo after 
 		#$this->set_modo($previous_modo);
 
-		$dato 		= $this->get_dato();
-		$propiedades= $this->get_propiedades();
-		$valor		= '';		
-		$date_mode 	= $this->get_date_mode();
-		switch ($date_mode) {
+		$ar_dato 		= $this->get_dato();
+		$propiedades	= $this->get_propiedades();
+		$ar_valor		= array();	
+		$valor			= '';	
+		$date_mode 		= $this->get_date_mode();
+		foreach ($ar_dato as $key => $current_dato) {
+			$ar_valor[$key] ='';
+			switch ($date_mode) {
 
-			case 'range':
-				# Start
-				$valor_start = '';
-				if(isset($dato->start)) {
-					$dd_date	= new dd_date($dato->start);
-					/*
-					$valor_start= isset($propiedades->method->get_valor_local) 
-								? component_date::get_valor_local( $dd_date, reset($propiedades->method->get_valor_local) ) 
-								: component_date::get_valor_local( $dd_date, false );
-								*/
-					$valor_start = $dd_date->get_dd_timestamp("Y-m-d");
-					$valor .= $valor_start;
-				}
+				case 'range':
+					# Start
+					$valor_start = '';
+					if(isset($current_dato->start)) {
+						$dd_date	= new dd_date($current_dato->start);
+						/*
+						$valor_start= isset($propiedades->method->get_valor_local) 
+									? component_date::get_valor_local( $dd_date, reset($propiedades->method->get_valor_local) ) 
+									: component_date::get_valor_local( $dd_date, false );
+									*/
+						if(isset($current_dato->start->day)) {
+							$valor_start = $dd_date->get_dd_timestamp("Y-m-d");
+						}else{
+							$valor_start = $dd_date->get_dd_timestamp("Y-m");
+							if(isset($current_dato->start->month)) {
+							}else{
+								$valor_start = $dd_date->get_dd_timestamp("Y");
+							}
+						}
+						
+						$ar_valor[$key] .= $valor_start;
+					}
 
-				# End
-				$valor_end = '';
-				if(isset($dato->end->time) && (int)$dato->end->time > 0) {
-					$dd_date	= new dd_date($dato->end);
-					/*
-					$valor_end 	= isset($propiedades->method->get_valor_local) 
-								? component_date::get_valor_local( $dd_date, reset($propiedades->method->get_valor_local) ) 
-								: component_date::get_valor_local( $dd_date, false );
-					*/
-					$valor_end = $dd_date->get_dd_timestamp("Y-m-d");
-					$valor .= ' <> '. $valor_end;
-				}
-				#$valor .= $valor_start .' <> '. $valor_end;
-				break;
+					# End
+					$valor_end = '';
+					if(isset($current_dato->end)) {
+						$dd_date	= new dd_date($current_dato->end);
+						/*
+						$valor_end 	= isset($propiedades->method->get_valor_local) 
+									? component_date::get_valor_local( $dd_date, reset($propiedades->method->get_valor_local) ) 
+									: component_date::get_valor_local( $dd_date, false );
+						*/
 
-			case 'period':
-				$valor_year	= $valor_month = $valor_day = '';
-				if(!empty($dato->period)) {
-					$dd_date = new dd_date($dato->period);
-					# Year
-					$valor_year	= isset($dd_date->year) ? $dd_date->year : '';
-					# Month
-					$valor_month= isset($dd_date->month) ? $dd_date->month : '';
-					# Day
-					$valor_day	= isset($dd_date->day) ? $dd_date->day : '';
-				}
-				if(!empty($valor_year)) {
-					$valor .= $valor_year;
-				}
-				if(!empty($valor_month)) {
-					$valor .= '-'.$valor_month;
-				}
-				if(!empty($valor_day)) {
-					$valor .= '-'.$valor_day;
-				}
-				break;
+						if(isset($current_dato->end->day)) {
+								$valor_end = $dd_date->get_dd_timestamp("Y-m-d");
+							}else{
+								if(isset($current_dato->end->month)) {
+									$valor_end = $dd_date->get_dd_timestamp("Y-m");
+								}else{
+									$valor_end = $dd_date->get_dd_timestamp("Y");
+								}
+							}
+						$ar_valor[$key] .= ' <> '. $valor_end;
+					}
+					#$valor .= $valor_start .' <> '. $valor_end;
+					break;
 
-			case 'date':
-			default:
-				if(!empty($dato)) {
-					$dd_date = new dd_date($dato);
-					$valor	  = $dd_date->get_dd_timestamp();
-				}
-				break;
+				case 'period':
+					$valor_year	= $valor_month = $valor_day = '';
+					if(!empty($current_dato->period)) {
+						$dd_date = new dd_date($current_dato->period);
+						# Year
+						$valor_year	= isset($dd_date->year) ? $dd_date->year : '';
+						# Month
+						$valor_month= isset($dd_date->month) ? $dd_date->month : '';
+						# Day
+						$valor_day	= isset($dd_date->day) ? $dd_date->day : '';
+					}
+					if(!empty($valor_year)) {
+						$ar_valor[$key] .= $valor_year;
+					}
+					if(!empty($valor_month)) {
+						$ar_valor[$key] .= '-'.$valor_month;
+					}
+					if(!empty($valor_day)) {
+						$ar_valor[$key] .= '-'.$valor_day;
+					}
+					break;
+
+				case 'date':
+				default:
+					if(!empty($current_dato)) {
+						$dd_date		= new dd_date($current_dato);
+						$ar_valor[$key] = $dd_date->get_dd_timestamp("Y-m-d");
+					}
+					break;
+			}
 		}
-
-
-		/*
-		$valor 		= '';
-		$separator  = dd_date::$separator; //'/';
-
-		$dato = $this->get_dato();
-			#dump($dato, ' dato ++ '.to_string());
-
-		if (empty($dato)) return $valor;
-		if ($this->get_date_mode()!='date') return $valor;
-
-		$dd_date 		= new dd_date( $dato );
-		$date_format	= "Y{$separator}m{$separator}d H:i:s"; # Default is used but passed for clarity
-		$valor 	 		= $dd_date->get_dd_timestamp($date_format);
-		*/
-		#debug_log(__METHOD__." valor: $valor ".to_string($valor), logger::WARNING);
-
+		$valor = implode('|',$ar_valor);
 		return (string)$valor;
 	}//end get_valor
 
@@ -371,47 +351,13 @@ class component_date extends component_common {
 				break;
 		}
 		#$date_format	= "d-m-Y";	# TODO: change order when use english lang ?? ...
-		$valor_local 	= $dd_date->get_dd_timestamp($date_format);		
+		$valor_local 	= $dd_date->get_dd_timestamp($date_format, $padding=false);
+			#dump($valor_local, ' valor_local ++ '.to_string());		
 		#debug_log(__METHOD__." valor_local: $valor_local ".to_string($valor_local), logger::WARNING);
 
-		if ($valor_local==='0000') {
-			$valor_local='';
-		}
 
 		return (string)$valor_local;
 	}//end get_valor_local
-
-
-
-	public function get_valor_local_OLD( $full=false ) {
-		$valor_local='';
-
-		$dato = $this->get_dato();
-
-		if (empty($dato)) return $valor_local;		
-		if ($this->get_date_mode()!='date') return $valor_local;
-
-		$dd_date 		= new dd_date( $dato );
-		switch (true) {
-			case (empty($dato->month) && empty($dato->day) ):
-				$date_format	= "Y";
-				break;
-			case ( empty($dato->day) && !empty($dato->month) ):
-				$date_format	= "m-Y";
-				break;
-			default:
-				$date_format	= "d-m-Y";
-				break;
-		}
-		#$date_format	= "d-m-Y";	# TODO: change order when use english lang ?? ...
-		$valor_local 	= $dd_date->get_dd_timestamp($date_format);
-		if(SHOW_DEBUG===true) {
-			#dump($valor_local, ' valor_local');
-		}
-
-		return (string)$valor_local;
-	}//end get_valor_local
-
 
 
 	/**
@@ -428,7 +374,7 @@ class component_date extends component_common {
 		}
 
 		$valor = $this->get_valor($lang);
-		$valor = strip_tags($valor); // Removes the span tag used in list mode
+		#$valor = strip_tags($valor); // Removes the span tag used in list mode
 		/*
 		$previous_modo = $this->get_modo();
 		$this->set_modo('list'); // Force list mode
@@ -448,9 +394,10 @@ class component_date extends component_common {
 	* GET_DATO_AS_TIMESTAMP
 	* Get current component dato and create a standar timestamp string
 	* using dd_date class call
+	* DEPRECATED 22-08-2017
 	* @return string $timestamp
 	*/
-	public function get_dato_as_timestamp() {
+	public function get_dato_as_timestamp_DEPRECATED() {
 		$dato 	 	= $this->get_dato();
 		$dd_date 	= new dd_date($dato);
 		$timestamp 	= $dd_date->get_dd_timestamp(); // $date_format="Y-m-d H:i:s"
@@ -675,25 +622,91 @@ class component_date extends component_common {
 
 				#$date_mode = component_date::get_date_mode_static($search_tipo);
 					#dump($date_mode, ' date_mode ++ '.to_string());
+				#dump($search_value, ' search_value ++ '.to_string());
+
+				/*
+
+			
+					 SELECT a.id, a.section_id, a.section_tipo,
+					 a.datos#>>'{components, rsc224, dato, lg-nolan}' AS rsc224 
+					 FROM "matrix" a 
+					  WHERE a.id IN (SELECT a.id FROM "matrix" a WHERE  a.section_id IS NOT NULL 
+					-- filter_by_section_tipo -- 
+					 AND (a.section_tipo = 'rsc205')  AND (
+					-- filter_by_search --
+
+					 -- filter_by_search rsc224 component_date 
+					a.id IN (SELECT a.id 
+					  FROM "matrix" a, jsonb_array_elements(a.datos#>'{components, rsc224, dato, lg-nolan}') as rsc224
+					  WHERE rsc224#>>'{period,time}' = '64281600'
+					OR
+					(
+					rsc224#>>'{start,time}' <= '64281600' AND 
+					rsc224#>>'{end,time}' >= '64281600'
+					)
+					OR
+					rsc224#>>'{start,time}' = '64281600' AND
+					rsc224#>>'{end,time}' IS NULL
+					)
+					) 
+					 ORDER BY a.section_id ASC  
+					 LIMIT 10)  
+					 ORDER BY a.section_id ASC ;
+				*/
+
+
 
 				// DD_DATE
 				$dd_date = new dd_date();
-				$dd_date->set_date_from_input_field( $search_value );				
+				$dd_date->set_date_from_input_field( $search_value );	
 				$time 	 = dd_date::convert_date_to_seconds($dd_date);
-					#dump($time, ' dd_date ++ '.to_string($search_value));
-				$search_value = $time;				
+					#dump($dd_date, ' dd_date ++ time: '.$time." - search_value: ".to_string($search_value));
+				$search_value = $time;
 				
 				// Search in date
-				$aditional_path= ', time';
-				$search_query  = " $json_field#>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang . $aditional_path . "}' $comparison_operator '$search_value' ";
+				$aditional_path 	 = 'time';
+				#$comparison_operator = '='; // Force always 
+				
+				$search_query  .= " a.id IN (SELECT a.id FROM";				
+
+				$search_query  .= "\n  jsonb_array_elements($json_field#>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}') as $search_tipo";
+
+				/*
+				$search_query .= "\n  case when (jsonb_typeof({$json_field}#>'{components, $search_tipo, dato, $current_lang}') = 'array' AND {$json_field}#>'{components, $search_tipo, dato, $current_lang}' != '[]')";
+				$search_query .= "\n  then jsonb_array_elements({$json_field}#>'{components, $search_tipo, dato, $current_lang}')";
+				$search_query .= "\n  else {$json_field}#>'{components, $search_tipo, dato, $current_lang}'";
+				$search_query .= "\n  end as {$search_tipo}";	 // _array_elements		
+				#$search_query .= "\n  ,{$json_field}#>'{components, $search_tipo, $tipo_de_dato_search, $current_lang}' as $search_tipo";
+				*/
+
+				$search_query .= "\n  WHERE\n  $search_tipo#>'{".$aditional_path."}' $comparison_operator '$search_value'";
+
+				#$search_query  = " $json_field#>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang . $aditional_path . "}' $comparison_operator '$search_value' ";
 
 				// Search in ranges
-				$aditional_path= ', start, time';
+				$aditional_path= 'start, time';
 				#$search_query .= " \n OR (\n  CAST($json_field#>>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang . $aditional_path . "}' AS integer) <= $search_value";
-				$search_query .= " \n OR (\n  $json_field#>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang . $aditional_path . "}' <= '$search_value'";
-				$aditional_path= ', end, time';
+
+				$search_query .= " \n  OR (\n  $search_tipo#>'{".$aditional_path."}' <= '$search_value'";
+				#$search_query .= " \n OR (\n  $json_field#>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang . $aditional_path . "}' <= '$search_value'";
+				
+				$aditional_path= 'end, time';
 				#$search_query .= " AND \n  CAST($json_field#>>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang . $aditional_path . "}' AS integer) >= $search_value )";
-				$search_query .= " AND \n  $json_field#>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang . $aditional_path . "}' >= '$search_value' )";
+				$search_query .= " AND \n  $search_tipo#>'{".$aditional_path."}' >= '$search_value')";
+				#$search_query .= " AND \n  $json_field#>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang . $aditional_path . "}' >= '$search_value' )";
+				
+				$aditional_path= 'start, time';
+				$search_query .= " \n  OR (\n  $search_tipo#>'{".$aditional_path."}' = '$search_value'";
+				#$search_query .= " \n OR (\n  $json_field#>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang . $aditional_path . "}' = '$search_value' ";
+				$aditional_path= 'end, time';
+				$search_query .= " AND \n  $search_tipo#>'{".$aditional_path."}' IS NULL)";
+				#$search_query .= " AND \n $json_field#>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang . $aditional_path . "}' IS NULL )";
+				
+				$aditional_path= 'period, time';
+				$search_query .= " \n  OR (\n  $search_tipo#>'{".$aditional_path."}' = '$search_value')";
+				#$search_query .= " \n OR (\n  $json_field#>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang . $aditional_path . "}' = '$search_value' ";
+
+				$search_query .= "\n )";
 				break;
 		}
 
@@ -703,7 +716,7 @@ class component_date extends component_common {
 		
 		if(SHOW_DEBUG===true) {
 			#dump($search_query, ' search_query ++ '.to_string());
-			$search_query = " -- filter_by_search $search_tipo ". get_called_class() ." \n".$search_query;			
+			$search_query = "\n -- filter_by_search [".__METHOD__."] $search_tipo ". get_called_class() ." \n".$search_query;			
 		}
 		return $search_query;
 	}//end get_search_query
@@ -718,7 +731,35 @@ class component_date extends component_common {
 	public static function get_search_order($json_field, $search_tipo, $tipo_de_dato_order, $current_lang, $order_direction) {
 
 		$tipo_de_dato_order = 'dato';
-		$order_by_resolved  = "a.$json_field#>'{components, $search_tipo, $tipo_de_dato_order, $current_lang, time}' ".$order_direction;
+
+		$RecordObj_dd 	= new RecordObj_dd($search_tipo);
+		$propiedades 	= $RecordObj_dd->get_propiedades();
+
+		$propiedades = json_decode($propiedades);
+
+		//dump($propiedades	, ' propiedades ++ '.to_string());
+
+		if (isset($propiedades->date_mode)) {
+					$date_mode = $propiedades->date_mode; // Default from structure if is defined
+				}else{
+					$date_mode = 'date'; // Default
+		}
+
+		switch ($date_mode) {
+				case 'range':
+					$order_by_resolved  = "a.$json_field#>'{components, $search_tipo, $tipo_de_dato_order, $current_lang}'->0->'start'->'time' ".$order_direction;
+				break;
+
+				case 'period':
+					$order_by_resolved  = "a.$json_field#>'{components, $search_tipo, $tipo_de_dato_order, $current_lang}'->0->'period'->'time' ".$order_direction;
+				break;
+
+				case 'date':
+					$order_by_resolved  = "a.$json_field#>'{components, $search_tipo, $tipo_de_dato_order, $current_lang}'->0->'time' ".$order_direction;
+				default:
+			}
+
+
 		
 		return (string)$order_by_resolved;
 	}//end get_search_order
@@ -755,71 +796,71 @@ class component_date extends component_common {
 
 	/**
 	* ADD_TIME
-	* Recoge el dato recibido (de tipo stdClass) y lo usa para crear un objeto dd_date al que inyecta
+	* Recoge el current dato recibido (de tipo stdClass) y lo usa para crear un objeto dd_date al que inyecta
 	* el time (seconds) calculado.
 	* Retorna el objeto dd_date creado
 	* @return object dd_date $dato
 	*/
-	public static function add_time( $dato ) {
+	public static function add_time( $current_dato ) {
 
-		if(empty($dato)) return $dato;
+		if(empty($current_dato)) return $current_dato;
 		
 		// Period date mode
-		if( isset($dato->period) ) {
-			$dd_date = new dd_date($dato->period);
+		if( isset($current_dato->period) ) {
+			$dd_date = new dd_date($current_dato->period);
 			$time 	 = dd_date::convert_date_to_seconds($dd_date);
-			if (isset($dato->period->time) && $dato->period->time!=$time) {
-				debug_log(__METHOD__." Unequal time seconds value: current: $dato->period->time, calculated: $time. Used calculated time.", logger::WARNING);
+			if (isset($current_dato->period->time) && $current_dato->period->time!=$time) {
+				debug_log(__METHOD__." Unequal time seconds value: current: $current_dato->period->time, calculated: $time. Used calculated time.", logger::WARNING);
 			}
 			$dd_date->set_time( $time );
-			$dato->period = $dd_date;
+			$current_dato->period = $dd_date;
 		}
 
 		// Range date mode
-		if( isset($dato->start) ) {
-			$dd_date = new dd_date($dato->start);
+		if( isset($current_dato->start) ) {
+			$dd_date = new dd_date($current_dato->start);
 			$time 	 = dd_date::convert_date_to_seconds($dd_date);
-			if (isset($dato->start->time) && $dato->start->time!=$time) {
-				debug_log(__METHOD__." Unequal time seconds value: current: $dato->start->time, calculated: $time. Used calculated time.", logger::WARNING);
+			if (isset($current_dato->start->time) && $current_dato->start->time!=$time) {
+				debug_log(__METHOD__." Unequal time seconds value: current: $current_dato->start->time, calculated: $time. Used calculated time.", logger::WARNING);
 			}
 			$dd_date->set_time( $time );
-			$dato->start = $dd_date;
+			$current_dato->start = $dd_date;
 		}
-		if( isset($dato->end) ) {
-			$dd_date = new dd_date($dato->end);
+		if( isset($current_dato->end) ) {
+			$dd_date = new dd_date($current_dato->end);
 			$time 	 = dd_date::convert_date_to_seconds($dd_date);
-			if (isset($dato->end->time) && $dato->end->time!=$time) {
-				debug_log(__METHOD__." Unequal time seconds value: current: $dato->end->time, calculated: $time. Used calculated time.", logger::WARNING);
+			if (isset($current_dato->end->time) && $current_dato->end->time!=$time) {
+				debug_log(__METHOD__." Unequal time seconds value: current: $current_dato->end->time, calculated: $time. Used calculated time.", logger::WARNING);
 			}
 			$dd_date->set_time( $time );
-			$dato->end = $dd_date;
+			$current_dato->end = $dd_date;
 		}		
 
 		// Default date mode
-		if( isset($dato->year) ) {
-			$dd_date = new dd_date($dato); 
+		if( isset($current_dato->year) ) {
+
+			$dd_date = new dd_date($current_dato); 
 			$time 	 = dd_date::convert_date_to_seconds($dd_date);			
-			
-			if (isset($dato->time) && $dato->time!=$time) {
-				debug_log(__METHOD__." Unequal time seconds value: current: $dato->time, calculated: $time. Used calculated time.", logger::WARNING);
+			if (isset($current_dato->time) && $current_dato->time!=$time) {
+				debug_log(__METHOD__." Unequal time seconds value: current: $current_dato->time, calculated: $time. Used calculated time.", logger::WARNING);
 			}
 			$dd_date->set_time( $time );
-			$dato = $dd_date;
+			$current_dato = $dd_date;
 		}
 		// Time date mode
-		else if( isset($dato->hour) ) {
-			$dd_date = new dd_date($dato); 
+		else if( isset($current_dato->hour) ) {
+			$dd_date = new dd_date($current_dato); 
 			$time 	 = dd_date::convert_date_to_seconds($dd_date);			
 			
-			if (isset($dato->time) && $dato->time!=$time) {
-				debug_log(__METHOD__." Unequal time seconds value: current: $dato->time, calculated: $time. Used calculated time.", logger::WARNING);
+			if (isset($current_dato->time) && $current_dato->time!=$time) {
+				debug_log(__METHOD__." Unequal time seconds value: current: $current_dato->time, calculated: $time. Used calculated time.", logger::WARNING);
 			}
 			$dd_date->set_time( $time );
-			$dato = $dd_date;
+			$current_dato = $dd_date;
 		}
 
 
-		return (object)$dato;
+		return (object)$current_dato;
 	}//end add_time
 
 
@@ -833,6 +874,29 @@ class component_date extends component_common {
 		$update_version = implode(".", $update_version);
 
 		switch ($update_version) {
+
+			case '4.7.0':
+				if (!empty($dato_unchanged) && is_object($dato_unchanged) ) {
+					#dump($dato_unchanged, ' dato_unchanged ++ '.to_string($reference_id)); #die();
+
+					$new_dato = [];
+					$new_dato = $dato_unchanged;					
+						#dump($new_dato, ' new_dato ++ '. $reference_id.' -> '.to_string($dato_unchanged));						
+
+					$response = new stdClass();
+					$response->result = 1;
+					$response->new_dato = $new_dato;
+					$response->msg = "[$reference_id] Dato is changed from ".to_string($dato_unchanged)." to ".to_string($new_dato).".<br />";
+					return $response;
+
+				}else{
+					$response = new stdClass();
+					$response->result = 2;
+					$response->msg = "[$reference_id] Current dato don't need update.<br />";	// to_string($dato_unchanged)." 
+					return $response;
+				}	
+
+			break;
 			case '4.0.14':
 				if (!empty($dato_unchanged) && is_object($dato_unchanged) ) {
 					#dump($dato_unchanged, ' dato_unchanged ++ '.to_string($reference_id)); #die();
@@ -943,40 +1007,54 @@ class component_date extends component_common {
 	public function get_diffusion_value( $lang=null ) {
 
 		$diffusion_value = '';		
-		$dato 			 = $this->get_dato();
+		$ar_dato 			 = $this->get_dato();
 		$date_mode 		 = $this->get_date_mode();
+		$ar_diffusion_values = array();
+		foreach ($ar_dato as $dato) {
+			switch ($date_mode) {
+				case 'range':
+					$ar_date=array();
+					// start
+					if (isset($dato->start) && isset($dato->start->year)) {
+						$dd_date 		= new dd_date($dato->start);
+						$timestamp 		= $dd_date->get_dd_timestamp("Y-m-d H:i:s");
+						$ar_date[] 		= $timestamp;
+					}				
+					// end
+					if (isset($dato->end) && isset($dato->end->year)) {
+						$dd_date 		= new dd_date($dato->end);
+						$timestamp 		= $dd_date->get_dd_timestamp("Y-m-d H:i:s");
+						$ar_date[] 		= $timestamp;
+					}
+					$ar_diffusion_values[] = implode(',',$ar_date);
+					break;
 
-		switch ($date_mode) {
-			case 'range':
-				$ar_date=array();
-				// start
-				if (isset($dato->start) && isset($dato->start->year)) {
-					$dd_date 		= new dd_date($dato->start);
-					$timestamp 		= $dd_date->get_dd_timestamp("Y-m-d H:i:s");
-					$ar_date[] 		= $timestamp;
-				}				
-				// end
-				if (isset($dato->end) && isset($dato->end->year)) {
-					$dd_date 		= new dd_date($dato->end);
-					$timestamp 		= $dd_date->get_dd_timestamp("Y-m-d H:i:s");
-					$ar_date[] 		= $timestamp;
-				}
-				$diffusion_value = implode(',',$ar_date);
-				break;
+				case 'period':
+					// Not defined yet
+					break;
 
-			case 'period':
-				// Not defined yet
-				break;
-
-			case 'date':
-			default:
-				$dd_date 		 = new dd_date($dato);
-				$timestamp 		 = $dd_date->get_dd_timestamp("Y-m-d H:i:s");
-				$diffusion_value = $timestamp;
-				break;
+				case 'date':
+				default:
+					$dd_date 		 = new dd_date($dato);
+					$timestamp 		 = $dd_date->get_dd_timestamp("Y-m-d H:i:s");
+					$ar_diffusion_values[] = $timestamp;
+					break;
+			}
 		}
 
-		return (string)$diffusion_value;
+		#$diffusion_value = implode('|',$ar_diffusion_values);
+
+		# NOTA
+		# Para publicación, NO está solucionado el acso en que hay más de ina fecha... ejem.. VALORAR ;-)
+		$diffusion_value = reset($ar_diffusion_values); // Temporal !!
+	
+		# Force null on empty to avoid errors on mysql save value invalid format
+		# Only valid dates or null area accepted
+		if (empty($diffusion_value)) {
+			$diffusion_value = null;
+		}
+
+		return $diffusion_value;
 	}//end get_diffusion_value
 
 

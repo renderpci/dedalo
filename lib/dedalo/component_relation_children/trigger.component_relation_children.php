@@ -1,38 +1,27 @@
 <?php
+$start_time=microtime(1);
 require_once( dirname(dirname(__FILE__)).'/config/config4.php');
+common::trigger_manager();
 
-if(login::is_logged()!==true) die("<span class='error'> Auth error: please login </span>");
-
-# set vars
-	$vars = array('mode');
-		foreach($vars as $name) $$name = common::setVar($name);
-
-# Set JSON headers for all responses
-header('Content-Type: application/json');
-
-# mode
-if(empty($mode)) exit("<span class='error'> Trigger: Error Need mode..</span>");
-
-
-# CALL FUNCTION
-if ( function_exists($mode) ) {
-	$res = call_user_func($mode);
-	echo json_encode($res);
-}
+# IGNORE_USER_ABORT
+ignore_user_abort(true);
 
 
 
 /**
 * ADD_CHILDREN
-* @return bool
+* @return object $response
 */
-function add_children() {
+function add_children($json_data) {
+	global $start_time;
 
-	$result = false;
+	$response = new stdClass();
+		$response->result 	= false;
+		$response->msg 		= 'Error. Request failed [add_children]';
 	
 	$vars = array('tipo','parent','section_tipo','target_section_tipo','target_section_id');
 		foreach($vars as $name) {
-			$$name = common::setVar($name);
+			$$name = common::setVarData($name, $json_data);
 			if (empty($$name)) {
 				exit("Error. ".$$name." is mandatory");
 			}
@@ -52,25 +41,40 @@ function add_children() {
 	$added = (bool)$component_relation_children->make_me_your_children( $target_section_tipo, $target_section_id );
 	if ($added===true) {
 		$component_relation_children->Save();
-		$result = true;
+		$response->result 	= true;
+		$response->msg 		= 'Ok. Request done ['.__FUNCTION__.']';
 	}
 
-	return (bool)$result;
+	# Debug
+	if(SHOW_DEBUG===true) {
+		$debug = new stdClass();
+			$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
+			foreach($vars as $name) {
+				$debug->{$name} = $$name;
+			}
+
+		$response->debug = $debug;
+	}
+
+	return (object)$response;
 }//end add_children
 
 
 
 /**
 * REMOVE_CHILDREN
-* @return bool
+* @return object $response
 */
-function remove_children() {
+function remove_children($json_data) {
+	global $start_time;
 
-	$result = false;
+	$response = new stdClass();
+		$response->result 	= false;
+		$response->msg 		= 'Error. Request failed [remove_children]';
 	
 	$vars = array('tipo','parent','section_tipo','target_section_tipo','target_section_id');
 		foreach($vars as $name) {
-			$$name = common::setVar($name);
+			$$name = common::setVarData($name, $json_data);
 			if (empty($$name)) {
 				exit("Error. ".$$name." is mandatory");
 			}
@@ -93,7 +97,8 @@ function remove_children() {
 	$removed = (bool)$component_relation_children->remove_me_as_your_children( $target_section_tipo, $target_section_id );
 	if ($removed===true) {
 		$component_relation_children->Save();
-		$result = true;
+		$response->result 	= true;
+		$response->msg 		= 'Ok. Request done ['.__FUNCTION__.']';
 	}
 
 	/* Método eliminando por locator:		
@@ -105,16 +110,19 @@ function remove_children() {
 		}
 		*/
 
-	return (bool)$result;
+	# Debug
+	if(SHOW_DEBUG===true) {
+		$debug = new stdClass();
+			$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
+			foreach($vars as $name) {
+				$debug->{$name} = $$name;
+			}
+
+		$response->debug = $debug;
+	}
+
+	return (object)$response;
 }//end remove_children
-
-
-
-
-
-
-
-
 
 
 

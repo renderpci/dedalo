@@ -1,6 +1,10 @@
 <?php
-
- class area extends common  {	
+/**
+* AREA
+*
+*
+*/
+class area extends common  {	
 
 	# VARS
 	protected $tipo;
@@ -79,15 +83,19 @@
 	* @see menu
 	*/
 	public static function get_ar_ts_children_all_areas_hierarchized($include_main_tipo=true) {
-
+		gc_disable();
+		
 		if(SHOW_DEBUG===true) $start_time=microtime(1);
+
+		
 
 		if (isset($_SESSION['dedalo4']['config']['ar_ts_children_all_areas_hierarchized']) ) {
 			if(SHOW_DEBUG===true) {
 				#return $_SESSION['dedalo4']['config']['ar_ts_children_all_areas_hierarchized'];
 			}else{
-				return $_SESSION['dedalo4']['config']['ar_ts_children_all_areas_hierarchized'];
-			}			
+				
+			}
+			return $_SESSION['dedalo4']['config']['ar_ts_children_all_areas_hierarchized'];			
 		}
 
 		# AREA_ROOT
@@ -155,14 +163,17 @@
 		}		
 
 
-		# Store for speed
+		# Store in session for speed
 		$_SESSION['dedalo4']['config']['ar_ts_children_all_areas_hierarchized'] = $ar_all;
+
 
 		if(SHOW_DEBUG===true) {
 			$total=round(microtime(1)-$start_time,3);
-			$n = count($ar_all);
+			$n = count($ar_all);			
 			debug_log(__METHOD__." Total ($n): ".exec_time_unit($start_time,'ms')." ms - ratio(total/n): " . ($total/$n), logger::DEBUG);			
 		}
+
+		 gc_enable();
 
 		return $ar_all;
 	}//end get_ar_ts_children_all_areas_hierarchized
@@ -183,13 +194,17 @@
 		}
 		#dump($areas_deny, ' areas_deny ++ '.to_string($areas_allow));
 
+		# This check is made befor login in init_test. For this check session user_id too here
+		if(SHOW_DEBUG===true || (isset($_SESSION['dedalo4']['auth']['user_id']) && $_SESSION['dedalo4']['auth']['user_id']=="-1") ) {
+			return false;
+		}
 
-		if ( in_array($tipo, $areas_deny) && !in_array($tipo, $areas_allow) ) {
+
+		if ( in_array($tipo, $areas_deny) && !in_array($tipo, $areas_allow) ) {			
 			return true;
 		}
 
 		return false;
-
 	}#end area_to_remove
 
 
@@ -309,57 +324,6 @@
 		
 		return $ar_ts_children_areas_recursive;
 	}//end get_ar_ts_children_areas_recursive
-
-
-
-
-
-
-	protected function get_ar_ts_children_DEPRECATED() {	
-		
-		$ar_current 		= array();
-		$RecordObj_dd		= new RecordObj_dd($this->tipo);				
-		$ar_ts_childrens	= $RecordObj_dd->get_ar_childrens_of_this(); 
-		
-		if (count($ar_ts_childrens)>0) {
-			
-			foreach ($ar_ts_childrens as $children_terminoID) {
-				
-				$RecordObj_dd	= new RecordObj_dd($children_terminoID);
-				$modeloID		= $RecordObj_dd->get_modelo($children_terminoID);
-				$modelo_name	= RecordObj_dd::get_termino_by_tipo($modeloID,null,true);
-					#dump($modelo_name, ' modelo_name');
-
-				$visible	= $RecordObj_dd->get_visible();
-					#dump($usableIndex,'$usableIndex',"children_terminoID: $children_terminoID");
-
-				if($visible==='no') continue; # Skip
-
-				# Test if modelo name is acepted or not (more restrictive)
-				switch (true) {
-					case (strpos($modelo_name, 'button_')!==false) :
-
-							$current_obj = new $modelo_name($children_terminoID, $target=NULL);
-							$current_obj->set_context_tipo($this->tipo);
-							$ar_current[$children_terminoID] = $current_obj;
-							break;
-				}											
-				#if(count($ar_ts_childrens)>0)
-					
-				
-
-			}#end foreach
-			
-			//dump($ar_current,'ar_ts_children_areas',"array recursive pass:$terminoID ");
-			
-			return $ar_current;
-		}
-		
-		return NULL;
-	}
-	
-
-
 
 
 	

@@ -11,8 +11,8 @@
 	$required				= $this->get_required();
 	$debugger				= $this->get_debugger();
 	$propiedades 			= $this->get_propiedades();
-	$permissions			= common::get_permissions($section_tipo,$tipo);
-	$ejemplo				= NULL;
+	$permissions			= $this->get_component_permissions();
+	$ejemplo				= null;
 	$html_title				= "Info about $tipo";
 	$lang					= $this->get_lang();
 	$identificador_unico	= $this->get_identificador_unico();
@@ -20,15 +20,17 @@
 	$context 				= $this->get_context();
 	
 
-	$file_name = $modo;
+	$file_name	= $modo;
+	$from_modo	= $modo;
 
 	if($permissions===0) return null;
 
 	switch($modo) {
 		
-		case 'edit'	:
+		
+		case 'edit'	:		
 				# Verify component content record is inside section record filter
-				if ($this->get_filter_authorized_record()===false) return NULL ;
+				if ($this->get_filter_authorized_record()===false) return null ;
 
 				# referenced section tipo
 				$referenced_tipo 	= $this->get_referenced_tipo();				
@@ -37,8 +39,7 @@
 				$input_name 		= "{$tipo}_{$parent}";	
 				$component_info 	= $this->get_component_info('json');	
 				$valor				= $this->get_valor();
-				$dato_string		= json_handler::encode($dato);
-				
+				$dato_string		= json_handler::encode($dato);				
 				$mandatory 			= (isset($propiedades->mandatory) && $propiedades->mandatory===true) ? true : false;
 				$mandatory_json 	= json_encode($mandatory);
 				break;
@@ -63,14 +64,21 @@
 				# and recovered in component_common->get_search_input_name()
 				# Normally is section_tipo + component_tipo, but when in portal can be portal_tipo + section_tipo + component_tipo
 				$search_input_name = $this->get_search_input_name();
-				break;
-					
+				break;					
+		
 		case 'portal_list' :
+				$file_name = 'list';
+				
 		case 'list_tm' :
 				$file_name = 'list';
 						
 		case 'list'	:
-				$valor	= $this->get_valor();				
+				$valor	= $this->get_valor();
+
+				$referenced_tipo 	= $this->get_referenced_tipo();
+				$dato_string		= json_handler::encode($dato);
+				$component_info 	= $this->get_component_info('json');
+				$id_wrapper 		= 'wrapper_'.$identificador_unico;
 				break;
 
 		case 'relation':
@@ -85,8 +93,8 @@
 		case 'print' :
 				$valor = $this->get_valor();
 				break;
-
 	}
+
 		
 	$page_html	= DEDALO_LIB_BASE_PATH .'/'. get_class($this) . '/html/' . get_class($this) . '_' . $file_name . '.phtml';
 	if( !include($page_html) ) {

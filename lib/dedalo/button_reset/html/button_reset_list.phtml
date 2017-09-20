@@ -11,22 +11,26 @@
 	//$html_label = component_common_draw::draw_label($this);
 	
 	# CONTENIDO (INPUT)
-	$html_contenido = '';
+	$html_content = '';
 	
-	switch($permissions) {
+	switch(true) {
 			
-		case 0	:	$html_contenido .= " <span class=\"css_span_dato\"> ".label::get_label('sin_acceso')." (button_reset)</span>";
+		case $permissions===0	:	$html_content .= "<span class=\"css_span_dato\"> ".label::get_label('sin_acceso')." (button_reset)</span>";
 					break;					
 						
 		case ($permissions>=1)	:
 		
-					$html_contenido .= " <input class=\"css_button_reset\" type=\"button\" data-role=\"button_reset\" onclick=\"search.reset_form(this.form)\" 
-					data-tipo=\"{$target_tipo}\" value=\"$label\" title=\"$html_title\" />";					
+					$html_content .= "<input class=\"css_button_reset\" type=\"button\" ";
+					$html_content .= "onclick=\"search.reset_form(this.form)\" ";
+					$html_content .= "data-role=\"button_reset\" ";
+					$html_content .= "data-tipo=\"{$target_tipo}\" ";
+					$html_content .= "value=\"$label\" title=\"$html_title\" ";
+					$html_content .= "/>";					
 											
 	}	
 	
 	# PRINT HTML
-	print $html_contenido;
+	print $html_content;
 	
 	# INIT COMPONENT
 	#require(DEDALO_LIB_BASE_PATH . "/component_common/trigger.component_init.php");

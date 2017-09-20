@@ -12,10 +12,23 @@
 abstract class OptimizeTC {
 
 
+
 	# Version. Important!
-	static $version = "1.0.1"; // 07-03-2017
-		
+	#static $version = "1.0.2"; // 28-03-2017
+	static $version = "1.0.3"; // 05-06-2017
+
 	
+
+	/**
+	* GET_TC_VALUE_PATTERN
+	* Not use complete tag like '[TC_00:00:00.000_TC]'. Only tc value like '00:00:00.000'
+	* @return regex
+	*/
+	public static function get_tc_value_pattern() {
+		return TR::get_mark_pattern('tc_value', true, false, false, false);
+	}//end get_tc_value_pattern
+	
+
 
 	/**
 	* OPTIMIZE_TCIN
@@ -29,13 +42,16 @@ abstract class OptimizeTC {
 		$debug = false;
 
 		$tc_pattern = TR::get_mark_pattern('tc',false);
-
 		
 		// Si inicioPos > 0 estaremos buscando de forma libre, sin index o ya sabemos la posición
-		if( !empty($inicioPos) && $inicioPos!='' ) {
+		if($inicioPos===0) {
+			$indexPos = 0;
+			return '00:00:00.000';
+		}else if( !empty($inicioPos) && $inicioPos!='' ) {
 			#$in_margin 	= 100 ;
 			$indexPos 	= $inicioPos - $in_margin;
 			if($indexPos<0) $indexPos = 0;
+				#dump($indexPos, ' indexPos ++ '.to_string());
 		}else{
 			# pos absoluta de index IN
 			$indexPos = strpos($texto, $indexIN); 			
@@ -302,12 +318,33 @@ abstract class OptimizeTC {
 
 
 	/**
+	* TC_MARGIN_SECONDS
+	* Add or substract seconds from time in seconds
+	* @return int seconds
+	*/
+	public static function tc_margin_seconds($type, $seconds, $margin) {
+		
+		if ($type==='in') {			
+			$seconds = (int)$seconds - (int)$margin;
+			if ($seconds<0) {
+				$seconds = 0;
+			}
+		}elseif($type==='out') {
+			$seconds = (int)$seconds + (int)$margin;
+		}
+
+		return (int)$seconds;
+	}//end tc_margin_seconds
+
+
+
+	/**
 	* VALORTC
 	* Calcula el valor absoluto (entero) del tc. Si es 0 es porque NO existe TC
 	*/
-	public static function valorTC($tc)	{
-
-		$tc = str_replace( array('[TC_','_TC]'), '', $tc);
+	public static function valorTC__DEPRECATED($tc)	{
+		/*
+		$tc = str_replace( array('[TC_','_TC]'), '', $tc);		
 		
 		$valor = 0;
 			
@@ -323,33 +360,52 @@ abstract class OptimizeTC {
 		}
 		
 		return intval($valor) ;
+		*/
 	}//end valorTC
 
 
 	
 	/**
 	* TC2SEG
-	* Converts TC value to seconds like: 00:05:22.363 -> 322
+	* Converts TC value to seconds like: 00:05:22.363 -> 322.363
 	* Accepts format 00:01:20.022 and [TC_00:01:20.320_TC]
+	* @param string $tc
+	* @return float $total_secs
+	*	Like '0.1'
 	*/
 	public static function TC2seg($tc) {
 
-		$tc = str_replace( array('[TC_','_TC]'), '', $tc);
-
 		$total_secs = 0;
 
-		preg_match("/([0-9]{1,2}):([0-9]{1,2}):([0-9]{1,2}).?([0-9]{1,3})?/", $tc, $matches);
+		if (empty($tc)) {
+			return $total_secs;
+		}
+		
+		# Remove possible full tags unnecessary chars received
+		if (strpos('TC',$tc)!==false) {
+			if(SHOW_DEBUG===true) {
+				debug_log(__METHOD__." Please, use only tc values, NOT tags like ".to_string($tc), logger::ERROR);
+			}			
+			$tc = str_replace( array('[TC_','_TC]'), '', $tc);
+		}			
 
-		$matches;
+		$tc_value_pattern = OptimizeTC::get_tc_value_pattern();
+		preg_match($tc_value_pattern, $tc, $matches);
+			#dump($matches, ' matches ++ '.to_string());
 
-		$hours 	 	= isset($matches[1]) ? $matches[1] : 0;
-		$minutes 	= isset($matches[2]) ? $matches[2] : 0;
-		$seconds 	= isset($matches[3]) ? $matches[3] : 0;
-		$mseconds 	= isset($matches[4]) ? $matches[4] : 0;
+		$key_hours 	 = 1;
+		$key_minutes = 2;
+		$key_seconds = 3;
+		$key_ms 	 = 5;
+
+		$hours 	 	= isset($matches[$key_hours]) ? $matches[$key_hours] : 0;
+		$minutes 	= isset($matches[$key_minutes]) ? $matches[$key_minutes] : 0;
+		$seconds 	= isset($matches[$key_seconds]) ? $matches[$key_seconds] : 0;
+		$mseconds 	= isset($matches[$key_ms]) ? $matches[$key_ms] : 0;
 
 		$total_secs = floatval(($hours * 3600) + ($minutes * 60) + $seconds .'.'. $mseconds);
 		
-		return (int)$total_secs;
+		return (float)$total_secs;
 	}//end TC2seg
 
 
@@ -369,15 +425,15 @@ abstract class OptimizeTC {
 		if($horas<1){
 			$horas = 0 ;
 		}else{
-			$horas = floor($horas);
-			$seg = (int)$seg - ($horas * 3600);
+			$horas 	= floor($horas);
+			$seg   	= (int)$seg - ($horas * 3600);
 		}
 		$minutos = ((int)$seg / 60) ;
 		if($minutos<1){
 			$minutos = 0 ;
 		}else{
 			$minutos = floor($minutos);
-			$seg = (int)$seg - ($minutos * 60);
+			$seg 	 = (int)$seg - ($minutos * 60);
 		}
 		$segundos = floor($seg) ;
 		$mseconds = (int)(($seg - $segundos)*1000);
@@ -387,16 +443,16 @@ abstract class OptimizeTC {
 		$segundos 	= str_pad($segundos, 2, '0', STR_PAD_LEFT);
 		$mseconds 	= str_pad($mseconds, 3, '0', STR_PAD_LEFT);
 
-		$tc 		= $horas .':'. $minutos. ':'. $segundos . '.' . $mseconds;
+		$tc = $horas .':'. $minutos. ':'. $segundos . '.' . $mseconds;
 
-		return $tc ;
+		return (string)$tc ;
 	}//end seg2tc
 
 
 
 	/**
 	* SEG2TC_MS
-	*/
+	*//*
 	public static function seg2tc_ms($seg_float) {
 
 		$ar = explode('.', $seg_float);
@@ -416,6 +472,7 @@ abstract class OptimizeTC {
 
 		return $tc . '.' . $tc2 ;
 	}//end seg2tc_ms
+	*/
 
 
 
@@ -446,9 +503,9 @@ abstract class OptimizeTC {
 		
 		if($tc_sec<0) $tc_sec = 0;
 		
-		$tc_time_code	= self::seg2tc($tc_sec);
+		$tc_time_code = self::seg2tc($tc_sec);
 		
-		return 	$tc_time_code;
+		return (string)$tc_time_code;
 	}//end apli_tc_offset
 
 
@@ -570,6 +627,8 @@ abstract class OptimizeTC {
 		return $tcin ;
 	}
 	
+
+
 	public static function optimize_tcOUT__DES($texto, $indexOUT, $finalPos='', $in_margin=100) {
 		
 		$debug = false;
@@ -658,5 +717,5 @@ abstract class OptimizeTC {
 
 
 
-};
+}//end OptimizeTC
 ?>

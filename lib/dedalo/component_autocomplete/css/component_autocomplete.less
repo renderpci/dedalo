@@ -1,3 +1,10 @@
+// Vars
+@common_css: "../../common/css";
+
+// Usage
+@import "@{common_css}/library.less";
+
+
 
 /* WRAP DIV CONTAINER
 --------------------------------------------- */
@@ -26,8 +33,8 @@
 		height: 30px;
 
 		float: right;
-		top: 17px;
-		margin-bottom: 12px;
+		//top: 17px;
+		//margin-bottom: 12px;
 		}
 
 
@@ -55,16 +62,35 @@
 			opacity: 1;
 			width: 90px;
 			background-position-x: 95%;
-
 		}
 
-	/* DATO HIDDEN INPUT */
+		/* Search variant
+		----------------------------------------- */
+		input.css_autocomplete_search_field.in_search_mode,
+		.new_autocomplete.in_search_mode {
+			position: relative;
+			float: left;
+			margin-right: 10px;
+			opacity: 1
+		}
+		div.autocomplete_list_button_options.in_search_mode {
+			position: relative;
+			float: left;
+			top: 1px;
+			zoom: 1.45;
+			margin-right: 5px;
+			margin-left: 5px;
+		}
+
+
+
+	/* DATO HIDDEN INPUT
+	----------------------------------------- */
 	input.css_autocomplete_dato_hidden {
-		float: right;
-		width: 50px;
-		text-align: center;
-		opacity: 0.4;
+		opacity: 0.8;
 		display: none;
+		width:100%;
+		background-color: #c3e6f7;
 		}
 		input.css_autocomplete_dato_hidden.debug {
 			display: inline-block;
@@ -208,6 +234,7 @@
 		//right:0px;
 		//display: inline-block;
 		max-width: 82px;
+		z-index: 9;
 	}
 	/*
 	.css_wrap_autocomplete.wrap_portal_list > .content_data .css_autocomplete_valor {
@@ -235,5 +262,98 @@
 	background-position-x: 98%;
 }
 
+
+
+/* filter_by_list
+----------------------------------------*/
+@column_width : 25%;
+	/* button options to show/hide the options
+	----------------------------------------*/
+	.autocomplete_list_button_options {
+		background-position: -432px 0;
+		position: absolute;
+		top: -2px;
+		right: 30px;
+		opacity: .3;
+		zoom: 1.20;
+	}
+	.filter_by_list {
+		display: none;
+		//display: table;
+		background-color: #8E8E8E;
+		padding: 10px;	
+		z-index: 1001;
+		/*
+		position: absolute;
+		left: 0;
+		top: 0;*/
+		margin-top:10px;
+		border-radius: 4px;
+		white-space: nowrap;
+		color: #ffffff !important;
+		width: 100%;
+		}
+		.filter_by_list li {
+			//display: table;
+			float: left;
+			//width: 33%;
+			width: @column_width;
+			display: flex; // Important for text-overflow ellipsis
+		}
+		.filter_by_list input {
+			margin: 2px;
+			margin-right: 4px;
+		}
+		.filter_by_list label {
+			white-space: nowrap;
+			overflow: hidden;
+			text-overflow: ellipsis;
+			max-width: 90%;
+		}
+		.filter_by_list  hr {
+			width: 100%;
+			display: -webkit-inline-box;
+			margin: 3px;
+			padding: 0;
+			float: left;
+		}
+		/*
+		.filter_by_list .filter_by_list_close {
+			float: right;
+			background-color: #a0a0a0;
+			padding: 3px;
+			width: 24px;
+			text-align: center;
+			border-radius: 4px;
+			position: relative;
+			right: 0px;
+			cursor: pointer;
+			font-weight: bold;
+			}
+			.filter_by_list .filter_by_list_close:active {
+				color: black;
+			}*/
+
+		.autocomplete_list_button_options {
+			float: right;
+			position: relative;
+			top: -16px;
+			opacity: .3;
+			background-position: -432px 0;
+			right: 8px;
+			zoom: 121%;
+		}
+		.filter_by_list mark {
+			color: #f5c39f !important;
+		}
+
+
+
+/* SEARCH MODE OVERWRITE OPERATORS CSS
+---------------------------------------- */
+	.wrap_component_search .comparison_operator {
+		float: left;
+		margin-right: 8px;
+	}
 
 

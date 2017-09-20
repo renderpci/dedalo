@@ -10,8 +10,7 @@
 	$label 					= $this->get_label();				
 	$required				= $this->get_required();
 	$debugger				= $this->get_debugger();
-	if($modo != 'simple')
-	$permissions			= common::get_permissions($section_tipo,$tipo);	
+	$permissions			= $this->get_component_permissions();
 	$ejemplo				= NULL;
 	$html_title				= "Info about $tipo";
 	$ar_tools_obj			= NULL;	

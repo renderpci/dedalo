@@ -4,7 +4,7 @@
 */
 
 
-class component_select_lang extends component_common {
+class component_select_lang extends component_reference_common {
 	
 
 	# Overwrite __construct var lang passed in this component

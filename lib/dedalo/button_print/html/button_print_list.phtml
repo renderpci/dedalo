@@ -22,11 +22,11 @@
 						
 		case ($permissions>=2)	:
 
-				$html_content .= "<div class=\"css_button_generic btn_inside_section_buttons_container css_button_print tool_print\"
-				onclick=\"tool_common.open_tool_layout_print(this)\"
-				data-tipo=\"{$tipo}\"
-				data-target_section_tipo=\"{$target_section_tipo}\"
-				title=\"$html_title\" >";
+				$html_content .= "<div class=\"css_button_generic btn_inside_section_buttons_container css_button_print tool_print\" ";
+				$html_content .= "onclick=\"tool_common.open_tool_layout_print(this)\" ";
+				$html_content .= "data-tipo=\"{$tipo}\" ";
+				$html_content .= "data-target_section_tipo=\"{$target_section_tipo}\" ";
+				$html_content .= "title=\"$html_title\" >";
 				$html_content .= "<span>";
 				$html_content .= $label;
 				$html_content .= "</span>";

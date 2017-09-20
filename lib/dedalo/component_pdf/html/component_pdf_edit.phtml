@@ -3,22 +3,23 @@
 	# VISUALIZADOR HTML
 
 	# html_delimiter
-	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'in');
+	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'in', $modo, $lang);
 	
-	print "<div class=\"wrap_component css_wrap_pdf wrap_component_{$tipo}\"
-	id=\"{$id_wrapper}\"
-	data-tipo=\"{$tipo}\"
-	data-lang=\"{$lang}\"
-	data-section_tipo=\"{$section_tipo}\"
-	data-parent=\"{$parent}\"
-	data-modo=\"{$modo}\"
-	data-dato=\"{$valor}\"
-	data-component_name=\"{$component_name}\"
-	data-aditional_path=\"$aditional_path\"
-	data-initial_media_path=\"$initial_media_path\"
-	data-component_info='{$component_info}'
-	data-related_tipo='{$ar_related_component_tipo_json}'
-	>";
+	
+	print "<div class=\"wrap_component css_wrap_pdf wrap_component_{$tipo}\" ";
+	print "id=\"{$id_wrapper}\" ";
+	print "data-tipo=\"{$tipo}\" ";
+	print "data-lang=\"{$lang}\" ";
+	print "data-section_tipo=\"{$section_tipo}\" ";
+	print "data-parent=\"{$parent}\" ";
+	print "data-modo=\"{$modo}\" ";
+	print "data-dato=\"{$valor}\" ";
+	print "data-component_name=\"{$component_name}\" ";
+	print "data-aditional_path=\"$aditional_path\" ";
+	print "data-initial_media_path=\"$initial_media_path\" ";
+	print "data-component_info='{$component_info}' ";
+	print "data-related_tipo='{$ar_related_component_tipo_json}' ";
+	print ">";
 
 
 		# ETIQUETA (LABEL)
@@ -48,7 +49,7 @@
 					# pdf THUMB
 					if($file_exists) {
 
-						$html_contenido .= " <div class=\"css_wrap_pdf_thumb\" onclick=\"\" >";
+						$html_contenido .= "<div class=\"css_wrap_pdf_thumb\" onclick=\"\">";
 						/*
 						#Embed PDF File
 						$html_contenido .= "<object class=\"pdf_object_thumb\" type=\"application/pdf\"
@@ -59,26 +60,26 @@
 						*/
 
 						$html_contenido .= $pdf_thumb_html ; # Rendered in thumb mode
-						$html_contenido .= " </div>";
+						$html_contenido .= "</div>";
 
 					}else{
 
 						$open_tool_default='';
 						$add_class='';
 						# FILE NOT EXISTS. PLACE DEDALO PDF WITH LINK TO DEFAULT TOOL
-						$open_tool_default ="data-pdf_id=\"$pdf_id\"
-						data-quality=\"".DEDALO_PDF_QUALITY_DEFAULT."\"
-						data-aditional_path=\"$aditional_path\"
-						data-initial_media_path=\"$initial_media_path\"
-						data-tipo=\"$tipo\"
-						data-parent=\"$parent\"
-						data-section_tipo=\"$section_tipo\"
-						onclick=\"tool_common.open_tool_upload(this)\"
-						title=\"Upload file in original quality\" ";
+						$open_tool_default ="data-pdf_id=\"$pdf_id\" ";
+						$open_tool_default ="data-quality=\"".DEDALO_PDF_QUALITY_DEFAULT."\" ";
+						$open_tool_default ="data-aditional_path=\"$aditional_path\" ";
+						$open_tool_default ="data-initial_media_path=\"$initial_media_path\" ";
+						$open_tool_default ="data-tipo=\"$tipo\" ";
+						$open_tool_default ="data-parent=\"$parent\" ";
+						$open_tool_default ="data-section_tipo=\"$section_tipo\" ";
+						$open_tool_default ="onclick=\"tool_common.open_tool_upload(this)\" ";
+						$open_tool_default ="title=\"Upload file in original quality\" ";
 
-						$html_contenido .= " <a class=\"css_wrap_pdf_thumb no_pdf_file\" $open_tool_default tabindex=\"1\">";
-						$html_contenido .= "  <span class=\"\" >No file is loaded. Click to upload PDF</span>" ;
-						$html_contenido .= " </a>";
+						$html_contenido .= "<a class=\"css_wrap_pdf_thumb no_pdf_file\" $open_tool_default tabindex=\"1\">";
+						$html_contenido .= "<span class=\"\" >No file is loaded. Click to upload PDF</span>";
+						$html_contenido .= "</a>";
 					}
 					break;
 
@@ -97,7 +98,7 @@
 
 
 	# html_delimiter
-	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'out');
+	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'out', $modo, $lang);
 
 
 ?>

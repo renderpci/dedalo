@@ -131,7 +131,8 @@
 			--------------------------------------------- */
 			#original_text {
 				display: none;
-			}
+				font-family: sans-serif;
+				}				
 
 			/* source text
 			--------------------------------------------- */
@@ -142,7 +143,32 @@
 				font-family: initial;
 				text-align: initial;
 				font-size: initial;
-			}	
+			}
+
+			/* text_clean
+			--------------------------------------------- */
+			#text_clean {
+				display: none;
+
+				// Reset text params
+				font-family: initial;
+				text-align: initial;
+				font-size: initial;
+				}
+				#text_clean .info_text {
+					padding: 10px;
+					background-color: #337ab7;
+					line-height: 1em;
+					display: table;
+					margin-bottom: 10px;
+					width: 100%;
+					color: aliceblue;
+					font-size: 14px;
+				}
+				#text_clean #btn_select_all {
+					width: auto;
+					float: right;
+				}
 
 		/* top label of content (static obn scroll)
 		--------------------------------------------- */
@@ -197,6 +223,21 @@
 				border: none !important;
 			}
 			*/
+
+		/* DESCRIPTORS_CONTAINER_STRUCT
+		--------------------------------------------- */
+		.descriptors_struct_container {			
+			margin-top: 5px;			
+			text-align: left;
+			font-family: Arial;
+			color: #291d11;
+			width: 192px;
+
+			border: #909090;
+			border-style: dashed;
+			border-width: thin;
+			border-radius: 3px;
+			}
 
 
 		
@@ -276,6 +317,20 @@
 	--------------------------------------------- */
 	img.note {
 		display: none; // For now is hidden
+	}
+
+
+
+	/* STRUCTURATION TITLES	
+	--------------------------------------------- */
+	label.title {
+		padding-right: 5px;
+		font-size: 18px;
+		font-weight: initial;
+		font-style: initial;
+	}
+	.section_struct_none label.title {
+		display: none;
 	}
 
 

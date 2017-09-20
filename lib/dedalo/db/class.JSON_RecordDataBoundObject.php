@@ -329,7 +329,7 @@ abstract class JSON_RecordDataBoundObject {
 		
 		# $result = pg_query(DBi::_getConnection(), $strQuery);	
 		# With prepared statement
-		$statement = pg_prepare(DBi::_getConnection(), "", $strQuery);		
+		$statement = pg_prepare(DBi::_getConnection(), "", $strQuery);
 		if ($statement===false) {
 			if(SHOW_DEBUG===true) {
 				debug_log(__METHOD__." Error when pg_prepare statemnt for strQuery: ".to_string($strQuery), logger::ERROR);
@@ -345,7 +345,7 @@ abstract class JSON_RecordDataBoundObject {
 		if($result===false) {
 			echo "<span class=\"error\">Error: sorry an error ocurred on search record.</span>";
 			if(SHOW_DEBUG===true) {
-				dump($strQuery,"strQuery");
+				dump(pg_last_error()," error on strQuery: ".to_string( PHP_EOL.$strQuery.PHP_EOL ));
 				throw new Exception("Error Processing SEARCH_FREE Request ". pg_last_error(), 1);;
 			}
 		}
@@ -414,7 +414,7 @@ abstract class JSON_RecordDataBoundObject {
 									# Else (dedault) is a column key and we use '"column_name"'
 									else{
 										$strPrimaryKeyName = '"'.$value.'"';
-									}									
+									}
 									break;
 				# LIMIT
 				case ($key==='sql_limit'):

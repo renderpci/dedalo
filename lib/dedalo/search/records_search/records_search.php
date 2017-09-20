@@ -9,7 +9,8 @@
 	#
 	# OPTIONS CUSTOM
 	# inyectado a la sección y usado para generar pequeñas modificaciones en la visualización del section list como por ejemplo el link de enlazar un registro con un portal
-	$context = (object)$this->section_obj->context; 
+	$context = (object)$this->section_obj->context;
+		#dump($context, ' context ++ '.to_string()); 
 	switch (true) {		
 		case ( isset($context->context_name) && $context->context_name=='section_tool' && isset($context->tool_section_tipo) ):
 			#
@@ -35,9 +36,8 @@
 
 		
 
-
 	if ($permissions<1) {
-		echo "<span class=\"css_span_dato\"></span>";
+		echo "<span class=\"css_span_dato\">Access denied</span>";
 		#return false;
 	}
 	

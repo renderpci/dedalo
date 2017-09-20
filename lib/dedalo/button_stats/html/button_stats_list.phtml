@@ -12,17 +12,19 @@
 	# CONTENIDO (INPUT)
 	$html_contenido = '';
 		
-	switch($permissions) {
+	switch(true) {
 			
-		case 0	:	$html_contenido .= "";	//\n <span class=\"css_span_dato\"> ".label::get_label('sin_acceso')." (button_stats)</span>";
+		case ($permissions===0) :	
+					$html_contenido .= "";	//\n <span class=\"css_span_dato\"> ".label::get_label('sin_acceso')." (button_stats)</span>";
 					break;
 						
 		case ($permissions>=2)	:
 
 					# BUTTON SHOW STATS
-					$html_contenido .= "<div class=\"css_button_generic btn_inside_section_buttons_container css_button_stats tool_stats\" onclick=\"button_stats.Stats(this)\"
-					data-tipo=\"{$context_tipo}\"
-					title=\"$html_title\">";
+					$html_contenido .= "<div class=\"css_button_generic btn_inside_section_buttons_container css_button_stats tool_stats\" ";
+					$html_contenido .= "onclick=\"button_stats.Stats(this)\" ";
+					$html_contenido .= "data-tipo=\"{$context_tipo}\" ";
+					$html_contenido .= "title=\"$html_title\">";
 					$html_contenido .= "<span>";
 					$html_contenido .= $label;
 					$html_contenido .= "</span>";

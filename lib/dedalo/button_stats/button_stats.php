@@ -14,6 +14,14 @@
 	$html_title				= "Info about $tipo";	
 	$file_name 				= $modo;
 
+	# CSS / JS MAIN FILES
+	css::$ar_url[] = NVD3_URL_CSS;
+	css::$ar_url[] = DEDALO_LIB_BASE_URL."/diffusion/diffusion_section_stats/css/diffusion_section_stats.css";	
+	
+	js::$ar_url[]  = D3_URL_JS;
+	js::$ar_url[]  = NVD3_URL_JS;
+	js::$ar_url[]  = DEDALO_LIB_BASE_URL."/diffusion/diffusion_section_stats/js/diffusion_section_stats.js";
+
 	switch($modo) {		
 						
 		case 'list'	:	

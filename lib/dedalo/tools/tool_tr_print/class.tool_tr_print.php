@@ -41,6 +41,7 @@ class tool_tr_print extends tool_common {
 
 		# Source text
 		$raw_text = $this->component_obj->get_dato();
+			#dump($raw_text, ' raw_text ++ '.to_string());
 		
 		# Get all timecodes
 		#$pattern = TR::get_mark_pattern($mark='tc',$standalone=false);
@@ -50,11 +51,11 @@ class tool_tr_print extends tool_common {
 
 
 		# explode by tc pattern
-		$pattern_tc 		= "/(\[TC_[0-9][0-9]:[0-9][0-9]:[0-9][0-9]_TC\])/";	#TR::get_mark_pattern('tc',$standalone=true);
-		$ar_fragments		= preg_split($pattern_tc, $raw_text, -1, PREG_SPLIT_NO_EMPTY | PREG_SPLIT_DELIM_CAPTURE);
-			#dump($ar_fragments, ' ar_fragments ++ '.to_string());
+		$pattern_tc   = TR::get_mark_pattern('tc_full',$standalone=true);
+		#$pattern_tc  = "/(\[TC_[0-9][0-9]:[0-9][0-9]:[0-9][0-9]\.[0-9]{1,3}_TC\])/";
+		$ar_fragments = preg_split($pattern_tc, $raw_text, -1, PREG_SPLIT_NO_EMPTY | PREG_SPLIT_DELIM_CAPTURE);			
 
-			if (!isset($ar_fragments[0])) {				
+			if (!isset($ar_fragments[0])) {
 				$response->msg = 'No fragements are found';
 				return $response;
 			}
@@ -64,10 +65,20 @@ class tool_tr_print extends tool_common {
 			preg_match($pattern_tc, $ar_fragments[0], $matches);
 				#dump($matches, ' matches ++ '.to_string());
 			if (empty($matches)) {
-				$tc_init = '[TC_00:00:00_TC]';
+				$tc_init = '[TC_00:00:00.000_TC]';
 				array_unshift($ar_fragments, $tc_init);
 			}
 			#dump($ar_fragments, ' ar_fragments 2 ++ '.to_string());
+
+			# Fix consecutive tc case
+			foreach ($ar_fragments as $key => $value) {			
+				if ( $key>0 && strpos($value, '[TC_')!==false && isset($ar_fragments[$key-1]) && strpos($ar_fragments[$key-1], '[TC_')!==false ) {
+					// Remove second tc apperance
+					unset($ar_fragments[$key]);
+				}
+			}
+			$ar_fragments = array_values($ar_fragments);
+			
 
 		$ar_final = array();
 		$pattern  = TR::get_mark_pattern($mark='tc',$standalone=false);
@@ -83,12 +94,16 @@ class tool_tr_print extends tool_common {
 					$tc = isset($matches[1]) ? $matches[1] : null;
 
 					# Descriptors
-					$descriptors = $this->get_descriptors($fragment);
+					$descriptors = $this->get_descriptors($fragment, 'index');
+
+					# Descriptors structure
+					$descriptors_struct = $this->get_descriptors($fragment, 'struct');
 
 					$value_obj = new stdClass();
-						$value_obj->tc 		 	= $tc;
-						$value_obj->fragment 	= $fragment;
-						$value_obj->descriptors = $descriptors;
+						$value_obj->tc 		 			= $tc;
+						$value_obj->fragment 			= $fragment;
+						$value_obj->descriptors 		= $descriptors;
+						$value_obj->descriptors_struct 	= $descriptors_struct;
 
 					$ar_final[$tc_tag] = $value_obj;
 				}
@@ -109,16 +124,29 @@ class tool_tr_print extends tool_common {
 	* GET_DESCRIPTORS
 	* @return 
 	*/
-	public function get_descriptors( $fragment ) {
+	public function get_descriptors( $fragment, $type ) {
 		
 		$section_tipo 	= $this->component_obj->get_section_tipo();
 		$section_id 	= $this->component_obj->get_parent();
 		$component_tipo = $this->component_obj->get_tipo();
 
-		$descriptors 	= component_text_area::get_descriptors( $fragment, $section_tipo, $section_id, $component_tipo );
+		$descriptors 	= component_text_area::get_descriptors( $fragment, $section_tipo, $section_id, $component_tipo, $type );
+			#dump($descriptors, ' $descriptors ++ '.to_string());
 
 		return (array)$descriptors;
 	}//end get_descriptors
+
+
+
+	/**
+	* GET_RAW_TEXT
+	* @return string $raw_text
+	*/
+	public function get_raw_text() {
+		$raw_text = $this->component_obj->get_dato();
+
+		return $raw_text;
+	}//end get_raw_text
 
 
 
@@ -157,7 +185,7 @@ class tool_tr_print extends tool_common {
 	*/
 	public static function format_text_for_tool( $raw_text ) {
 		$raw_text = TR::addTagImgOnTheFly($raw_text);
-
+	
 		return $raw_text;
 	}//end format_text_for_tool
 

@@ -1,61 +1,46 @@
 <?php
-/**
-* TRIGGER TOOL_DIFFUSION
-*/
+$start_time=microtime(1);
 set_time_limit ( 259200 );  // 3 dias
-
 include( dirname(dirname(dirname(__FILE__))) .'/config/config4.php');
 include( DEDALO_LIB_BASE_PATH .'/diffusion/class.diffusion.php');
+# TRIGGER_MANAGER. Add trigger_manager to receive and parse requested data
+common::trigger_manager();
+
+# IGNORE_USER_ABORT
+#ignore_user_abort(true);
 
 # Disable logging activity and time machine # !IMPORTANT
 logger_backend_activity::$enable_log = false;
-
-if(login::is_logged()!==true) die("<span class='error'> Auth error: please login </span>");
-
-
-# set vars
-$vars = array('mode');
-	foreach($vars as $name) $$name = common::setVar($name);
-
-# mode
-if(empty($mode)) exit("<span class='error'> Trigger: Error Need mode..</span>");
-
-
-# CALL FUNCTION
-if ( function_exists($mode) ) {
-	$result = call_user_func($mode);
-	echo json_encode($result);
-}
 
 
 
 /**
 * EXPORT_LIST
 */
-function export_list() {
-	
-	$start_time = start_time();
+function export_list($json_data) {
+	global $start_time;
+
+	$response = new stdClass();
+		$response->result 	= false;
+		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
+
+	# set vars
+	$vars = array('section_tipo','diffusion_element_tipo');
+		foreach($vars as $name) {
+			$$name = common::setVarData($name, $json_data);
+			# DATA VERIFY
+			#if ($name==='top_tipo' || $name==='top_id') continue; # Skip non mandatory
+			if (empty($$name)) {
+				$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty '.$name.' (is mandatory)';
+				return $response;
+			}
+		}
 
 	# Write session to unlock session file
 	session_write_close();
 
 	$seconds = 60 * 10; set_time_limit($seconds); 
 
-	$response = new stdClass();
-		$response->result 	= false;
-		$response->msg 		= 'Error on export_list';
-
-	$vars = array('section_tipo','diffusion_element_tipo');
-		foreach($vars as $name) $$name = common::setVar($name);
-
-		if (!$section_tipo) {
-			$response->msg = "Sorry. section_tipo is mandatory";
-			return $response;
-		}
-		if (!$diffusion_element_tipo) {
-			$response->msg = "Sorry. diffusion_element_tipo is mandatory";
-			return $response;
-		}
 
 	# Reset msg
 	$response->msg = '';
@@ -114,7 +99,19 @@ function export_list() {
 		$response->msg .= "<span>Exec in ".exec_time_unit($start_time,'secs')." secs </span>";  //style=\"position:absolute;right:12px;top:8px\"
 	}
 
-	return $response;
+	# Debug
+	if(SHOW_DEBUG===true) {
+		$debug = new stdClass();
+			$debug->exec_time	= exec_time_unit($start_time,'secs')." secs";
+			foreach($vars as $name) {
+				$debug->{$name} = $$name;
+			}
+
+		$response->debug = $debug;
+	}
+
+
+	return (object)$response;
 }//end export_list
 
 
@@ -122,41 +119,47 @@ function export_list() {
 /**
 * EXPORT_RECORD
 */
-function export_record() {
-	
+function export_record($json_data) {
+	global $start_time;
+
 	set_time_limit ( $seconds=300 ); // Avoid some infinite loop cases when data is bad formed
 
-	$start_time = start_time();
-
 	# Write session to unlock session file
-	session_write_close();
+	session_write_close();	
 
 	$response = new stdClass();
 		$response->result 	= false;
-		$response->msg 		= 'Error on export_record. ';
+		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
 
+	# set vars
 	$vars = array('section_tipo','section_id','diffusion_element_tipo');
-		foreach($vars as $name) $$name = common::setVar($name);
-	
-		if (!$section_tipo) {
-			$response->msg .= "Sorry. section_tipo is mandatory";
-			return $response;
-		}
-		if (!$section_id) {
-			$response->msg .= "Sorry. section_id is mandatory";
-			return $response;
+		foreach($vars as $name) {
+			$$name = common::setVarData($name, $json_data);
+			# DATA VERIFY
+			#if ($name==='top_tipo' || $name==='top_id') continue; # Skip non mandatory
+			if (empty($$name)) {
+				$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty '.$name.' (is mandatory)';
+				return $response;
+			}
 		}	
-		if (empty($diffusion_element_tipo)) {
-			$response->msg .= "Sorry. diffusion_element_tipo is mandatory";
-			return $response;
-		}
 
 	$result = tool_diffusion::export_record($section_tipo, $section_id, $diffusion_element_tipo);
 
 	$response->result = $result->result;
 	$response->msg 	  = $result->msg;
 
-	return $response;
+	# Debug
+	if(SHOW_DEBUG===true) {
+		$debug = new stdClass();
+			$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
+			foreach($vars as $name) {
+				$debug->{$name} = $$name;
+			}
+
+		$response->debug = $debug;
+	}
+
+	return (object)$response;
 }//end export_record
 
 
@@ -166,18 +169,13 @@ function export_record() {
 * Hace un exportado general de datos a la web, de la misma forma que lo harías sección por sección, 
 * pero en una sola orden (por comodidad)
 */
-function diffusion_complete_dump() {
-
-	$start_time = start_time();
+function diffusion_complete_dump($json_data) {
+	global $start_time;
 
 	# Write session to unlock session file
 	session_write_close();
 
-	#$response = new stdClass();
-	#	$response->result 	= false;
-	#	$response->msg 		= 'Error on diffusion_complete_dump';
-
-	$response = tool_diffusion::diffusion_complete_dump();
+	$response = (object)tool_diffusion::diffusion_complete_dump();
 
 	#$response->msg .= $result->msg;
 
@@ -219,7 +217,18 @@ function diffusion_complete_dump() {
 		$response->msg .= " <span>MB: ". $memory_usage ."</span>";
 	}
 	
-	return $response;
+	# Debug
+	if(SHOW_DEBUG===true) {
+		$debug = new stdClass();
+			$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
+			foreach($vars as $name) {
+				$debug->{$name} = $$name;
+			}
+
+		$response->debug = $debug;
+	}
+
+	return (object)$response;
 }//end diffusion_complete_dump
 
 
@@ -227,7 +236,7 @@ function diffusion_complete_dump() {
 /**
 * EXPORT_THESAURUS
 *//*
-function export_thesaurus() {
+function export_thesaurus($json_data) {
 
 	$seconds = 60 * 10; set_time_limit($seconds); 
 	

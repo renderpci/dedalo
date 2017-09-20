@@ -1,28 +1,16 @@
 <?php
 
 	# VISUALIZADOR HTML	
-
-	#echo "\n<!-- INPUT_TEXT [tipo:$tipo parent:$parent] -->";	
 		
 	# CONTENIDO (INPUT)
 	$html_contenido = '';
-	switch($permissions) {
-			
-		case 0	:	$html_contenido .= "\n <span class=\"css_span_sin_acceso\">".label::get_label('sin_acceso')."</span>";		
-					break;
-					
-		case ($permissions>=1)	:
-			
-					$html_contenido .= "\n <span class=\"css_span_dato\">$valor</span>";
-					
-					
-					break;
-					
-							
+	switch($permissions) {					
+		case ($permissions>=1) :			
+					$html_contenido .= "<span class=\"css_span_dato\">$dato</span>";					
+					break;			
 	}	
 
 	
 	# PRINT HTML	
 	print $html_contenido;	
-	
 ?>

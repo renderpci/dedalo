@@ -11,7 +11,7 @@
 	$label 					= $this->get_label();
 	$required				= $this->get_required();
 	$debugger				= $this->get_debugger();
-	$permissions			= common::get_permissions($section_tipo,$tipo);
+	$permissions			= $this->get_component_permissions();
 	$ejemplo				= NULL;
 	$html_title				= "Info about $parent";
 	$ar_tools_obj			= $this->get_ar_tools_obj();	
@@ -43,9 +43,12 @@
 
 				$hide_types = isset($propiedades->source->value) ? $propiedades->source->value : null;
 
-				if (isset($_REQUEST['from_modo'])) {
-					$from_modo = $_REQUEST['from_modo'];
+				#get the change modo from portal list to edit
+				$var_requested = common::get_request_var('from_modo');
+				if (!empty($var_requested)) {
+					$from_modo = $var_requested;
 				}
+
 				# SOURCE_MODE
 				$source_mode = $this->get_source_mode();
 					#dump($source_mode, ' source_mode ++ '.to_string());
@@ -67,11 +70,7 @@
 
 				$ar_referenced_tipo 	= $this->get_ar_referenced_tipo();
 				$ar_referenced_tipo_json= json_handler::encode($this->get_ar_referenced_tipo());
-							
-				if (!empty($_REQUEST[$tipo])) {
-					$valor_searched 		= $_REQUEST[$tipo];
-					$valor_searched_string 	= RecordObj_dd::get_termino_by_tipo($_REQUEST[$tipo]);
-				}
+				
 				$ar_comparison_operators = $this->build_search_comparison_operators();
 				$ar_logical_operators 	 = $this->build_search_logical_operators();
 

@@ -1,4 +1,9 @@
-/*@import url('component_image_canvas.css');*/
+// Variables
+@common_css: "../../common/css";
+
+// Usage
+@import "@{common_css}/library.less"; 
+
 
 
 /* WRAP DIV CONTAINER
@@ -69,7 +74,19 @@
 		}
 		.main_buttons {
 			display: none;
-		}
+			z-index: 99;			
+			}
+			.main_buttons input[type="button"] {
+				border: 1px solid #DADADA;
+				}
+				.main_buttons input[type="button"]:hover {
+					opacity: 0.8;
+					border: 1px solid #eeeeee;
+					color: #000000;
+				}
+				.main_buttons input[type="button"]:active {
+					background-color: #F3FBFF;
+				}
 		.image_buttons input {
 			font-family: Arial, sans-serif;
 			margin-left: 5px;
@@ -194,7 +211,8 @@
 	background-repeat: no-repeat;
 	background-position: center;
 	position: absolute;
-	background-color: #f2f2f2;
+	//background-color: #f2f2f2;
+	background-color: #ffffff;
 }
 
 

@@ -72,27 +72,52 @@
 				
 						#
 						# INPUT SEARCH FIELD
-						$html_content .= "\n <input class=\"css_autocomplete_hi_search_field in_search_mode\" type=\"text\" placeholder=\"".label::get_label('buscar')."...\"
-						data-id_wrapper=\"$id_wrapper\"
-						data-tipo=\"$tipo\"
-						data-hierarchy_types='{$hierarchy_types_json}'
-						data-hierarchy_sections='{$hierarchy_sections_json}'
-						onfocus=\"component_autocomplete_hi.activate(this)\"
-						tabindex=\"1\"
-						autocomplete=\"off\"
-						autocorrect=\"off\"
-						/>";
-
-						if(SHOW_DEBUG===true) {
-							#$html_content .= "<div class=\"debug_info notes\">ar_referenced_tipo: ".implode(', ', $ar_referenced_tipo)."</div>";
-							$html_content .= "<div class=\"debug_info notes\">".str_replace('},', '},<br>', $dato_json) ."</div>";
-						}
-
+						$html_content .= "<input class=\"css_autocomplete_hi_search_field in_search_mode\" type=\"text\" placeholder=\"".label::get_label('buscar')."...\" ";
+						$html_content .= "data-id_wrapper=\"$id_wrapper\" ";
+						$html_content .= "data-tipo=\"$tipo\" ";
+						$html_content .= "data-hierarchy_types='{$hierarchy_types_json}' ";
+						$html_content .= "data-hierarchy_sections='{$hierarchy_sections_json}' ";
+						$html_content .= "onfocus=\"component_autocomplete_hi.activate(this)\" ";
+						$html_content .= "tabindex=\"1\" ";
+						$html_content .= "autocomplete=\"off\" ";
+						$html_content .= "autocorrect=\"off\" ";
+						$html_content .= "/>";
 
 						# Reset var 'activated' on load
-						$html_content .= "<script>component_autocomplete_hi.activated={}</script>";
+						#$html_content .= "<script>component_autocomplete_hi.activated={}</script>";
+
+						#
+						# OPTIONS
+						if ($ar_filter_options!==false) {
+						
+							$html_content .= "<div class=\"icon_bs toponymy_list_button_options in_search_mode edit_hidden\"></div>";
+
+							$cookie_name = 'toponymy_list_'.$section_tipo .'_'. $tipo;
+							$html_content .= "<ul class=\"toponymy_list text_unselectable\">";
+							#$html_content .= "<div class=\"toponymy_list_close\">X</div>";
+							$html_content .= "<li><input type=\"checkbox\" id=\"select_all_{$tipo}\" onchange=\"component_autocomplete_hi.select_all_hierarchy_sections(this,'$cookie_name')\"> <label for=\"select_all_{$tipo}\">".label::get_label('todos')."</label></li><hr>";
+							foreach ((array)$ar_filter_options as $fo_key => $fo_label) {
+								$current_id = md5($fo_key);
+								$html_content .= "<li>";
+								$html_content .= "<input type=\"checkbox\" value='".$fo_key."' id=\"$current_id\" checked onchange=\"component_autocomplete_hi.save_hierarchy_sections(this,'$cookie_name')\">";
+								$html_content .= "<label for=\"$current_id\">$fo_label</label>";
+								$html_content .= "</li>";
+							}
+							$html_content .= "</ul>";
+
+						}//end if ($ar_filter_options!==false)
+						
+						# JAVASCRIPT
+						$html_content .= "<script>";
+						# Reset var 'activated' on load
+						$html_content .= "component_autocomplete_hi.activated={};";
+						# Init component
+						$html_content .= "component_autocomplete_hi.init({\"wrapper_id\":\"$id_wrapper\",\"cookie_name\":\"$cookie_name\",\"limit\":\"$limit\"});";
+						$html_content .= "</script>";
 						break;
 				}//end switch ($source_mode)
+
+
 
 
 				#
@@ -100,15 +125,17 @@
 				#$html_content .= "\n <div id=\"autocomplete_hi_tree_stats_{$tipo}\" class=\"css_autocomplete_hi_tree_stats\"> Calculating.. </div>";
 
 				# INPUT DATA HIDDEN
-				$html_content .= "\n<input type=\"text\" name=\"{$input_name}\" class=\"css_autocomplete_hi_dato_hidden\" style=\"width:300px\"
-				data-tipo=\"{$tipo}\"
-				data-section_tipo=\"{$section_tipo}\"
-				data-parent=\"{$parent}\"
-				data-lang=\"{$lang}\"
-				data-link_fields='{$ar_link_fields}'
-				data-role=\"autocomplete_hi_dato_hidden\"
-				value='{$dato_json}'
-				/>";
+				$html_content .= "<input type=\"text\" name=\"{$search_input_name}\" class=\"css_autocomplete_hi_dato_hidden\" style=\"width:300px;\" ";
+				$html_content .= "data-tipo=\"{$tipo}\" ";
+				$html_content .= "data-section_tipo=\"{$section_tipo}\" ";
+				$html_content .= "data-parent=\"{$parent}\" ";
+				$html_content .= "data-lang=\"{$lang}\" ";
+				$html_content .= "data-link_fields='{$ar_link_fields}' ";
+				$html_content .= "data-role=\"autocomplete_hi_dato_hidden\" ";
+				$html_content .= "data-role=\"autocomplete_hi_dato_hidden\" ";
+				$html_content .= "data-limit=\"$limit\" ";
+				$html_content .= "data-options_type=\"$options_type\" ";
+				$html_content .= "/>";
 
 				if(SHOW_DEBUG===true) {
 					#$html_content .= "\n <span class=\"css_span_debugger\" id=\"debugger_{$parent}\" >{$debugger}</span>";
@@ -136,5 +163,6 @@
 	print $html_content;	
 	
 	
-	print "</div><!-- /css_wrap_autocomplete_hi COMPONENT_AUTOCOMPLETE_hi [tipo:$tipo id_matrix:$parent] $label -->"; //wrap
+	print "</div>";
+	#<!-- /css_wrap_autocomplete_hi COMPONENT_AUTOCOMPLETE_hi [tipo:$tipo id_matrix:$parent] $label -->"; //wrap
 ?>

@@ -24,30 +24,9 @@ class tool_portal extends tool_common {
 
 		# Fix current media component
 		$this->component_obj = $component_obj;
-	}
-
-
-	
-	
-	
+	}//end __construct
 
 	
 	
-
-
-
-
-
-
-
-
-
-
-
-
-
-	
-	
-}
-
+}//end tool_portal
 ?>

@@ -1,9 +1,8 @@
 <?php
-
-
 /*
 * CLASS COMPONENT SECURITY ACCESS
-* Manages 
+* Manages
+*
 */
 class component_security_access extends component_common {
 
@@ -73,7 +72,7 @@ class component_security_access extends component_common {
 		# OJO: Este dato ($this->dato) es inyectado y lo pasa trigger component_common Save (NO es el dato existente en matrix)
 		# lo asigna así: $component_obj->set_dato( $dato_clean ); 
 		$dato = $this->dato;		
-			if(SHOW_DEBUG) {
+			if(SHOW_DEBUG===true) {
 				#dump($dato, 'dato received to save (stopped script for debug)'); return null;
 			}
 
@@ -134,7 +133,7 @@ class component_security_access extends component_common {
 	*/
 	protected function get_user_authorized_areas() {
 
-		if(SHOW_DEBUG) {
+		if(SHOW_DEBUG===true) {
 			#$start_time=microtime(1);
 		}
 
@@ -207,7 +206,7 @@ class component_security_access extends component_common {
 	*/
 	public static function get_ar_ts_childrens_recursive($terminoID) {
 
-		if(SHOW_DEBUG) {
+		if(SHOW_DEBUG===true) {
 			#$start_time=microtime(1);
 			#dump($terminoID, ' terminoID ++ '.to_string());
 		}
@@ -282,7 +281,7 @@ class component_security_access extends component_common {
 		$ar_stat_data[$terminoID_source] = $ar_tesauro[$terminoID];
 			#dump($ar_tesauro[$terminoID], ' $ar_tesauro[$terminoID] ++ '.to_string($terminoID));
 
-		if(SHOW_DEBUG) {
+		if(SHOW_DEBUG===true) {
 			#$total=round(microtime(1)-$start_time,3); dump($total, 'total');	#dump($ar_authorized_areas_for_user, 'ar_authorized_areas_for_user');				
 		}
 	
@@ -304,7 +303,7 @@ class component_security_access extends component_common {
 	*/
 	public static function walk_ar_elements_recursive($ar_elements, $arguments=array()) {
 
-		if(SHOW_DEBUG) {
+		if(SHOW_DEBUG===true) {
 			#$start_time=microtime(1);
 		}	
 		
@@ -338,7 +337,7 @@ class component_security_access extends component_common {
 					$html_tree	.= "<a> ";
 					$html_tree	.= component_security_access::create_radio($dato_current, $parent, $tipo, $dato_section_tipo);
 					$html_tree	.= "<label>$termino</label>";
-					if(SHOW_DEBUG) {
+					if(SHOW_DEVELOPER===true) {
 						$html_tree	.=" <span>[$tipo:<b>$dato_current</b> $modelo_name]</span>";
 					}					
 					$html_tree	.= "</a>";
@@ -353,7 +352,7 @@ class component_security_access extends component_common {
 
 		}//end foreach((array)$ar_elements as $tipo => $value) {
 
-		if(SHOW_DEBUG) {
+		if(SHOW_DEBUG===true) {
 			#$total=round(microtime(1)-$start_time,3); dump($total, 'total');	#dump($ar_authorized_areas_for_user, 'ar_authorized_areas_for_user');				
 		}
 
@@ -378,45 +377,48 @@ class component_security_access extends component_common {
 
 		# OPTION 0  . NO ACCESS
 		$checked = ($dato_current==0) ? 'checked="checked"' : '';
-		$html .= "<input type=\"radio\" class=\"css_security_radio_button\" onchange=\"component_security_access.Save(this,event)\"
-		name=\"{$name}\"
-		data-tipo=\"{$tipo}\"
-		data-parent=\"{$parent}\"
-		data-lang=\"$lang\"
-		data-section_tipo=\"$section_tipo\"
-		data-dato_section_tipo=\"{$dato_section_tipo}\"
-		data-dato_tipo=\"{$dato_tipo}\"
-		value=\"0\"
-		title=\"No access\"
-		{$checked} {$disabled}/> <span class=\"span_property\">X</span> ";
+		$html .= "<input type=\"radio\" class=\"css_security_radio_button\" onchange=\"component_security_access.Save(this,event)\" ";
+		$html .= "name=\"{$name}\" ";
+		$html .= "data-tipo=\"{$tipo}\" ";
+		$html .= "data-parent=\"{$parent}\" ";
+		$html .= "data-lang=\"$lang\" ";
+		$html .= "data-section_tipo=\"$section_tipo\" ";
+		$html .= "data-dato_section_tipo=\"{$dato_section_tipo}\" ";
+		$html .= "data-dato_tipo=\"{$dato_tipo}\" ";
+		$html .= "value=\"0\" ";
+		$html .= "title=\"No access\" ";
+		$html .= "{$checked} {$disabled}/>";
+		$html .= "<span class=\"span_property\">X</span>";
 		
 		# OPTION 1 . READ ONLY
 		$checked = ($dato_current==1) ? 'checked="checked"' : '';
-		$html .= "<input type=\"radio\" class=\"css_security_radio_button\" onchange=\"component_security_access.Save(this,event)\"
-		name=\"{$name}\"
-		data-tipo=\"{$tipo}\"
-		data-parent=\"{$parent}\"
-		data-lang=\"$lang\"
-		data-section_tipo=\"$section_tipo\"
-		data-dato_section_tipo=\"{$dato_section_tipo}\"
-		data-dato_tipo=\"{$dato_tipo}\"
-		value=\"1\"
-		title=\"Read only\"
-		{$checked} {$disabled}/> <span class=\"span_property\">R</span> ";
+		$html .= "<input type=\"radio\" class=\"css_security_radio_button\" onchange=\"component_security_access.Save(this,event)\" ";
+		$html .= "name=\"{$name}\" ";
+		$html .= "data-tipo=\"{$tipo}\" ";
+		$html .= "data-parent=\"{$parent}\" ";
+		$html .= "data-lang=\"$lang\" ";
+		$html .= "data-section_tipo=\"$section_tipo\" ";
+		$html .= "data-dato_section_tipo=\"{$dato_section_tipo}\" ";
+		$html .= "data-dato_tipo=\"{$dato_tipo}\" ";
+		$html .= "value=\"1\" ";
+		$html .= "title=\"Read only\" ";
+		$html .= "{$checked} {$disabled}/>";
+		$html .= "<span class=\"span_property\">R</span>";
 		
 		# OPTION 2 . READ AND WRITE
 		$checked = ($dato_current==2) ? 'checked="checked"' : '';
-		$html .= "<input type=\"radio\" class=\"css_security_radio_button\" onchange=\"component_security_access.Save(this,event)\"
-		name=\"{$name}\"
-		data-tipo=\"{$tipo}\"
-		data-parent=\"{$parent}\"
-		data-lang=\"$lang\"
-		data-section_tipo=\"$section_tipo\"
-		data-dato_section_tipo=\"{$dato_section_tipo}\"
-		data-dato_tipo=\"{$dato_tipo}\"
-		value=\"2\"
-		title=\"Read and write\"
-		{$checked} {$disabled}/> <span class=\"span_property\">RW</span> ";
+		$html .= "<input type=\"radio\" class=\"css_security_radio_button\" onchange=\"component_security_access.Save(this,event)\" ";
+		$html .= "name=\"{$name}\" ";
+		$html .= "data-tipo=\"{$tipo}\" ";
+		$html .= "data-parent=\"{$parent}\" ";
+		$html .= "data-lang=\"$lang\" ";
+		$html .= "data-section_tipo=\"$section_tipo\" ";
+		$html .= "data-dato_section_tipo=\"{$dato_section_tipo}\" ";
+		$html .= "data-dato_tipo=\"{$dato_tipo}\" ";
+		$html .= "value=\"2\" ";
+		$html .= "title=\"Read and write\" ";
+		$html .= "{$checked} {$disabled}/>";
+		$html .= "<span class=\"span_property\">RW</span>";
 		
 		return $html;
 	}//end create_radio
@@ -633,8 +635,7 @@ class component_security_access extends component_common {
 				}else{
 					$response = new stdClass();
 						$response->result = 2;
-						$response->msg = "[$reference_id] Current dato don't need update.<br />";	// to_string($dato_unchanged)." 
-
+						$response->msg = "[$reference_id] Current dato don't need update.<br />";	// to_string($dato_unchanged)."
 					return $response;
 				}
 				break;

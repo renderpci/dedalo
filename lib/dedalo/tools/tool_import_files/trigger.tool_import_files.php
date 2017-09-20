@@ -1,63 +1,44 @@
 <?php
-/**
-* TRIGGER_TOOL_IMPORT_FILES
-*
-*
-*/
+$start_time=microtime(1);
 set_time_limit ( 259200 );  // 3 dias
-
-// JSON DOCUMENT
-header('Content-Type: application/json');
-
 $session_duration_hours = 72;
-require_once( dirname(dirname(dirname(__FILE__))) .'/config/config4.php');
-
-
-if(login::is_logged()!==true) die("<span class='error'> Auth error: please login </span>");
-
+include( dirname(dirname(dirname(__FILE__))) .'/config/config4.php');
+# TRIGGER_MANAGER. Add trigger_manager to receive and parse requested data
+common::trigger_manager();
 
 # Disable logging activity and time machine # !IMPORTANT
 logger_backend_activity::$enable_log = false;
 #RecordObj_time_machine::$save_time_machine_version = false;
 
-
 # Write session to unlock session file
 session_write_close();
 
-
-# set vars
-	$vars = array('mode');
-		foreach($vars as $name) $$name = common::setVar($name);
-
-# mode
-	if(empty($mode)) exit("<span class='error'> Trigger: Error Need mode..</span>");
-
-
-
-# CALL FUNCTION
-if ( function_exists($mode) ) {
-	$result = call_user_func($mode);
-	echo json_encode($result);
-}
 
 
 /**
 * IMPORT_FILES
 * Process previously uploaded images 
 */
-function import_files() {
+function import_files($json_data) {
+	global $start_time;
 
 	$response = new stdClass();
 		$response->result 	= false;
-		$response->msg 		= 'Error. Request failed import_files';
+		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
 	
 	$vars = array('tipo','section_tipo','parent','top_tipo','top_id','import_mode');
-		foreach($vars as $name) $$name = common::setVar($name);
-	
-		if ( empty($tipo) || empty($section_tipo) || empty($parent) ) {
-			$response->msg = "Sorry few fars received";
-			return $response;
+		foreach($vars as $name) {
+			$$name = common::setVarData($name, $json_data);
+			# DATA VERIFY
+			if ($name==='import_mode' || $name==='top_id' ) continue; # Skip non mandatory
+			if (empty($$name)) {
+				$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty '.$name.' (is mandatory)';
+				return $response;
+			}
 		}
+
+	// Set get var to allow class recover the tipo
+	#$_GET['tipo'] = $tipo;
 	
 	# Component (expected portal)
 	$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($tipo, true);
@@ -167,11 +148,22 @@ function import_files() {
 		}
 
 		debug_log(__METHOD__." Imported files and data from $section_tipo - $portal_parent".to_string(), logger::WARNING);
-
 	}//end foreach ($ar_all_files as $key => $current_file) {
 
 	$response->result 	= true;
 	$response->msg 		= 'Import files done successfully. Total: '.count($ar_all_files);
+
+
+	# Debug
+	if(SHOW_DEBUG===true) {
+		$debug = new stdClass();
+			$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
+			foreach($vars as $name) {
+				$debug->{$name} = $$name;
+			}
+
+		$response->debug = $debug;
+	}
 
 	return (object)$response;
 }//end if ($mode=='import_files')

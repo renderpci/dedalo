@@ -5,50 +5,50 @@
 	
 
 
-	$html    = "\n<!-- TOOL PAGE [tipo:$tipo] -->";	
-	$html   .= "\n<div class=\"wrap_tool wrap_tool_image_versions_page\" >";
-	$html   .= "\n<div class=\"content_data text_shadow_inset\" >";
+	$html    = "<!-- TOOL PAGE [tipo:$tipo] -->";	
+	$html   .= "<div class=\"wrap_tool wrap_tool_image_versions_page\" >";
+	$html   .= "<div class=\"content_data text_shadow_inset\" >";
 
 
-		$html   .= "\n<script>
+		$html   .= "<script>
 					page_globals.media_base_path = '$media_base_path',
 					page_globals.media_extension = '$media_extension'									
 					</script>";
 
 
 		# THUMB
-		$html .= "\n<div class=\"thumb_container\">";
+		$html .= "<div class=\"thumb_container\">";
 		#$html .= "<span class=\"helper\"></span>";
 		$html .= $thumb_html;
-		$html .= "\n</div>";
+		$html .= "</div>";
 
 		# VERSIONS
-		$html .= "\n<table class=\"table_versions\">";
+		$html .= "<table class=\"table_versions\">";
     
     	
 	    	#
 			# QUALITY ROW
-		    $html .= "\n <tr>";
-		    $html .= "\n <th>". label::get_label('calidad'). "</th>" ;
+		    $html .= " <tr>";
+		    $html .= " <th>". label::get_label('calidad'). "</th>" ;
 		    foreach ($ar_quality as $quality) {
 		    	$td_style = null; if($quality==DEDALO_IMAGE_QUALITY_DEFAULT) $td_style = 'td_default_quality';
-		    	$html .= "\n <th class=\"$td_style\">";
+		    	$html .= " <th class=\"$td_style\">";
 		    	$html .= $quality;
 		    	if ($quality==DEDALO_IMAGE_QUALITY_DEFAULT) {
 		    		$html .= " <span class=\"image_info\">[Default]</span>";
 		    	}
-		    	$html .= "\n </th>";
+		    	$html .= " </th>";
 		    }
-		    $html .= "\n </tr>";
+		    $html .= " </tr>";
 			
 		    
 			#
 			# FILE ROW
-			$html .= "\n <tr>";
-			$html .= "\n <td>". label::get_label('fichero')."</td>" ;
+			$html .= " <tr>";
+			$html .= " <td>". label::get_label('fichero')."</td>" ;
 			foreach ($ar_quality as $quality) {
 				$td_style = null; if($quality==DEDALO_IMAGE_QUALITY_DEFAULT) $td_style = 'td_default_quality';
-				$html .= "\n <td class=\"$td_style\">";
+				$html .= " <td class=\"$td_style\">";
 			
 				if( file_exists($this->component_obj->get_image_path($quality)) ) {	    			
 	    		
@@ -64,18 +64,18 @@
 			    	></div>";
 				}
 
-		    	$html .= "\n </td>";
+		    	$html .= " </td>";
 		    }
-		    $html .= "\n </tr>";
+		    $html .= " </tr>";
 			
 		    
 		    #
 		    # SIZE ROW
-		    $html .= "\n <tr>";
-		    $html .= "\n <td>". label::get_label('tamano')."</td>" ;
+		    $html .= " <tr>";
+		    $html .= " <td>". label::get_label('tamano')."</td>" ;
 		    foreach ($ar_quality as $quality) {
 		    	$td_style = null; if($quality==DEDALO_IMAGE_QUALITY_DEFAULT) $td_style = 'td_default_quality';
-		    	$html .= "\n <td class=\"$td_style\">";
+		    	$html .= " <td class=\"$td_style\">";
 		    	
 	    		if( file_exists($this->component_obj->get_image_path($quality)) ) {	    			
 	    			    	
@@ -94,18 +94,18 @@
 			    	"</div>";	#dump($this->component_obj->get_image_size($quality), $this->component_obj->get_image_path($quality));
 		    	}
 
-		    	$html .= "\n </td>";
+		    	$html .= " </td>";
 		    }
-		    $html .= "\n </tr>";
+		    $html .= " </tr>";
 
 
 		    #
 		    # PIXEL DIMENSIONS ROW
-		    $html .= "\n <tr>";
-		    $html .= "\n <td>Pixels <span class=\"image_info\">[WxH]</span></td>" ;	#label::get_label('dimensiones').
+		    $html .= " <tr>";
+		    $html .= " <td>Pixels <span class=\"image_info\">[WxH]</span></td>" ;	#label::get_label('dimensiones').
 		    foreach ($ar_quality as $quality) {
 		    	$td_style = null; if($quality==DEDALO_IMAGE_QUALITY_DEFAULT) $td_style = 'td_default_quality';
-		    	$html .= "\n <td class=\"$td_style\">";
+		    	$html .= " <td class=\"$td_style\">";
 		    	
 	    		if( file_exists($this->component_obj->get_image_path($quality)) ) {
 	    		
@@ -113,38 +113,38 @@
 					$current_width 	= $ImageObj->get_image_width();
 					$current_height = $ImageObj->get_image_height();
 
-					$html .= "\n <div class=\"image_size_info\" data-quality=\"$quality\" data-aditional_path=\"$aditional_path\"  data-initial_media_path=\"$initial_media_path\" >";					
+					$html .= " <div class=\"image_size_info\" data-quality=\"$quality\" data-aditional_path=\"$aditional_path\"  data-initial_media_path=\"$initial_media_path\" >";					
 					$html .= "$current_width x $current_height";
-					$html .= "\n </div>";
+					$html .= " </div>";
 				}
 		    		    	
-		    	$html .= "\n </td>";
+		    	$html .= " </td>";
 		    }
-		    $html .= "\n </tr>";
+		    $html .= " </tr>";
 
 
 		    #
 		    # PRINT SIZE ROW
-		    $html .= "\n <tr>";
-		    $html .= "\n <td>Print size <span class=\"image_info\">[".DEDALO_IMAGE_PRINT_DPI."dpi]</span></td>" ;	#label::get_label('dimensiones').
+		    $html .= " <tr>";
+		    $html .= " <td>Print size <span class=\"image_info\">[".DEDALO_IMAGE_PRINT_DPI."dpi]</span></td>" ;	#label::get_label('dimensiones').
 		    foreach ($ar_quality as $quality) {		    	
 		    	$td_style = null; if($quality==DEDALO_IMAGE_QUALITY_DEFAULT) $td_style = 'td_default_quality';
-		    	$html .= "\n <td class=\"$td_style\">";
+		    	$html .= " <td class=\"$td_style\">";
 
 	    		if( file_exists($this->component_obj->get_image_path($quality)) ) {
 	    			 	
-					$html .= "\n <div class=\"image_size_info\" data-quality=\"$quality\" data-aditional_path=\"$aditional_path\" data-initial_media_path=\"$initial_media_path\" >";
+					$html .= " <div class=\"image_size_info\" data-quality=\"$quality\" data-aditional_path=\"$aditional_path\" data-initial_media_path=\"$initial_media_path\" >";
 						$image_print_dimensions = $this->component_obj->get_image_print_dimensions($quality);
 						# Widht
 						$html .= $image_print_dimensions[0] .' x ';		#dump( $image_print_dimensions[0] . $image_print_dimensions[1] );
 						# Height
 						$html .= $image_print_dimensions[1] .'';
-					$html .= "\n </div>";
+					$html .= " </div>";
 				}
 		    		    	
-		    	$html .= "\n </td>";
+		    	$html .= " </td>";
 		    }
-		    $html .= "\n </tr>";
+		    $html .= " </tr>";
 			
 		    
 			#
@@ -153,11 +153,11 @@
 
 				$current_section_tipo = isset($_GET['section_tipo']) ?  $_GET['section_tipo'] : ''; 	
 
-				$html .= "\n <tr>";
-				$html .= "\n <td>". label::get_label('subir')."</td>" ;
+				$html .= " <tr>";
+				$html .= " <td>". label::get_label('subir')."</td>" ;
 				foreach ($ar_quality as $quality) {
 					$td_style = null; if($quality==DEDALO_IMAGE_QUALITY_DEFAULT) $td_style = 'td_default_quality';
-		    		$html .= "\n <td class=\"$td_style\">";
+		    		$html .= " <td class=\"$td_style\">";
 
 					$html .= "<div class=\"icon_bs link tool_upload_icon\"
 					data-image_id=\"$image_id\"
@@ -169,9 +169,9 @@
 					data-section_tipo=\"$current_section_tipo\"
 					onclick=\"tool_common.open_tool_upload(this)\"
 					></div>";	    		    	
-					$html .= "\n </td>";
+					$html .= " </td>";
 				}
-				$html .= "\n </tr>";
+				$html .= " </tr>";
 		    }
 			
 		    
@@ -179,11 +179,11 @@
 		    # DOWNLOAD ROW
 		    if ($permissions>=2) {
 
-			    $html .= "\n <tr>";
-			    $html .= "\n <td>". label::get_label('descargar')."</td>" ;
+			    $html .= " <tr>";
+			    $html .= " <td>". label::get_label('descargar')."</td>" ;
 			    foreach ($ar_quality as $quality) {
 			    	$td_style = null; if($quality==DEDALO_IMAGE_QUALITY_DEFAULT) $td_style = 'td_default_quality';
-		    		$html .= "\n <td class=\"$td_style\">";
+		    		$html .= " <td class=\"$td_style\">";
 
 		    		if( file_exists($this->component_obj->get_image_path($quality)) ) {		    			
 		    		
@@ -208,23 +208,22 @@
 				    	data-parent=\"$parent\"
 				    	onclick=\"tool_image_versions.download_file(this)\"
 				    	>$original</div>";
-			    	}
-			    	
-			    	    	
-			    	$html .= "\n </td>";
+			    	}			    	
+			    
+			    	$html .= " </td>";
 			    }
-			    $html .= "\n </tr>";
+			    $html .= " </tr>";
 			}
 
 
 		    # VIEW ROW
 		    if ($permissions>=1) {
 
-			    $html .= "\n <tr>";
-			    $html .= "\n <td>". label::get_label('visualizar')."</td>" ;
+			    $html .= " <tr>";
+			    $html .= " <td>". label::get_label('visualizar')."</td>" ;
 			    foreach ($ar_quality as $quality) {
 			    	$td_style = null; if($quality==DEDALO_IMAGE_QUALITY_DEFAULT) $td_style = 'td_default_quality';
-		    		$html .= "\n <td class=\"$td_style\">";
+		    		$html .= " <td class=\"$td_style\">";
 
 		    		if( file_exists($this->component_obj->get_image_path($quality)) ) {
 
@@ -235,9 +234,9 @@
 				    	></div>";
 					}
 
-			    	$html .= "\n </td>";
+			    	$html .= " </td>";
 			    }
-			    $html .= "\n </tr>";
+			    $html .= " </tr>";
 			}
 			
 			
@@ -245,11 +244,11 @@
 		    # DELETE ROW
 		    if ($permissions>=2) {
 
-			    $html .= "\n <tr>";
-			    $html .= "\n <td>". label::get_label('borrar')."</td>" ;
+			    $html .= " <tr>";
+			    $html .= " <td>". label::get_label('borrar')."</td>" ;
 			    foreach ($ar_quality as $quality) {
 			    	$td_style = null; if($quality==DEDALO_IMAGE_QUALITY_DEFAULT) $td_style = 'td_default_quality';
-		    		$html .= "\n <td class=\"$td_style\">";
+		    		$html .= " <td class=\"$td_style\">";
 			    	
 		    		if( file_exists($this->component_obj->get_image_path($quality)) ) {
 		    			
@@ -265,9 +264,9 @@
 				    	></div>";
 			    	  }
 
-			    	$html .= "\n </td>";
+			    	$html .= " </td>";
 			    }
-			    $html .= "\n </tr>";
+			    $html .= " </tr>";
 			}
 			
 			
@@ -275,11 +274,11 @@
 		    # GENERATE ROW
 		    if ($permissions>=2 && DEDALO_IMAGE_LIB) {
 
-			    $html .= "\n <tr>";
-			    $html .= "\n <td>". label::get_label('generar') .' '.label::get_label('version'). "</td>" ;
+			    $html .= " <tr>";
+			    $html .= " <td>". label::get_label('generar') .' '.label::get_label('version'). "</td>" ;
 			    foreach ($ar_quality as $quality) {
 			    	$td_style = null; if($quality==DEDALO_IMAGE_QUALITY_DEFAULT) $td_style = 'td_default_quality';
-		    		$html .= "\n <td class=\"$td_style\">";
+		    		$html .= " <td class=\"$td_style\">";
 
 		    		# File in jpg format in current quality
 			    	$source_quality_file = $this->component_obj->get_image_path($quality);
@@ -309,7 +308,7 @@
 							$height_target 	= $ar_target[1];
 								#dump($ar_target,"$widht_target x $height_target - source_quality:$source_quality - target_quality:$quality ($previous_width x $previous_height)");
 							
-							$title 			= "Convert from \nQ:$source_quality ($previous_width x $previous_height)\nto \nQ:$quality ($widht_target x $height_target)";
+							$title 			= "Convert from Q:$source_quality ($previous_width x $previous_height)to Q:$quality ($widht_target x $height_target)";
 						}						
 						*/
 
@@ -334,7 +333,7 @@
 							$height_target 	= $ar_target[1];
 								#dump($ar_target,"$widht_target x $height_target - source_quality:$source_quality - target_quality:$quality ($previous_width x $previous_height)");
 							
-							$title 			= "Convert from \nQ:$source_quality ($previous_width x $previous_height)\nto \nQ:$quality ($widht_target x $height_target)";
+							$title 			= "Convert from Q:$source_quality ($previous_width x $previous_height)to Q:$quality ($widht_target x $height_target)";
 						}
 						# Si la calidad target es válida para calcular el tamaño 
 						if($widht_target>0 && $height_target>0) {
@@ -355,9 +354,9 @@
 
 					}#end else
 
-					$html .= "\n </td>";
+					$html .= " </td>";
 				}#end foreach
-			    $html .= "\n </tr>";
+			    $html .= " </tr>";
 			}
 
 
@@ -365,11 +364,11 @@
 		    # ROTATE
 		    if ($permissions>=2 && DEDALO_IMAGE_LIB) {
 
-			    $html .= "\n <tr>";
-			    $html .= "\n <td>". label::get_label('rotar') .' '.label::get_label('imagen'). "</td>" ;
+			    $html .= " <tr>";
+			    $html .= " <td>". label::get_label('rotar') .' '.label::get_label('imagen'). "</td>" ;
 			    foreach ($ar_quality as $quality) {
 			    	$td_style = null; if($quality==DEDALO_IMAGE_QUALITY_DEFAULT) $td_style = 'td_default_quality';
-		    		$html .= "\n <td class=\"$td_style\">";
+		    		$html .= " <td class=\"$td_style\">";
 			    	
 			    	$source_quality_file 	= $this->component_obj->get_image_path($quality);
 
@@ -386,7 +385,7 @@
 						data-degrees=\"$degrees\"
 						data-tipo=\"$tipo\"
 						data-section_tipo=\"$section_tipo\"
-						data-parent=\"$parent\"					
+						data-parent=\"$parent\"
 						onclick=\"tool_image_versions.rotate_image(this)\"
 						title=\"$title\"
 						></div>";
@@ -402,28 +401,28 @@
 						data-degrees=\"$degrees\"
 						data-tipo=\"$tipo\"
 						data-section_tipo=\"$section_tipo\"
-						data-parent=\"$parent\"					
+						data-parent=\"$parent\"
 						onclick=\"tool_image_versions.rotate_image(this)\"
 						title=\"$title\"
 						></div>";
 					}
 
-					$html .= "\n </td>";
+					$html .= " </td>";
 				}#end foreach
-			    $html .= "\n </tr>";
+			    $html .= " </tr>";
 			}#END ROTATE
 		
 
-		$html .= "\n</table><!-- /table_versions -->";
+		$html .= "</table><!-- /table_versions -->";
 
 
 	
-	$html .= "\n</div><!-- /content_data -->";
-	$html .= "\n</div><!-- /wrap_tool -->"; //wrap_tool
+	$html .= "</div><!-- /content_data -->";
+	$html .= "</div><!-- /wrap_tool -->"; //wrap_tool
 
 	
 	# INSPECTOR LOG TOOL
-	$html .= "\n<div id=\"inspector_log\" class=\"tool_image_versions_inspector_log\"> </div>";
+	$html .= "<div id=\"inspector_log\" class=\"tool_image_versions_inspector_log\"> </div>";
 
 	print $html;
 		

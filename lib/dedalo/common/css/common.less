@@ -22,6 +22,8 @@ hr {
 	cursor: pointer; 
 }
 
+
+
 /* BOX SHADOW
 ----------------------------------------- */
 .shadow_inset {
@@ -71,7 +73,12 @@ hr {
 	user-select: none !important;
 }
 .text_selectable {
-	user-select: initial;
+	//user-select: initial;
+	-webkit-user-select: text !important;
+	-khtml-user-select: text !important;
+	-moz-user-select: text !important;
+	-o-user-select: text !important;
+	user-select: text !important;
 }
 .text_shadow_inset {
 	text-shadow: 0 0 0 transparent, 0 1px 0 #FFF;
@@ -207,13 +214,18 @@ hr {
 .hide_area_element {
 	display: none !important;
 }
-/**/
+/*
 .data_content {
 	background-color: #F5F181;
+}*/
+
+
+
+/* LOG_MESSAGES
+----------------------------------------- */
+.log_messages div {
+	width: 100%;
 }
-
-
-
 
 
 
@@ -241,14 +253,17 @@ hr {
 	*/
 	//text-shadow: 0 -1px 1px #a5a5a5;
 	position: relative;
-	z-index: 1;
+	z-index: 1000;
 }
 .ok {
-	background-color: #0C0;
+	background-color: @color_label_ok;
 	text-align: center;
 }
+.ok.text-left {
+	text-align: left;
+}
 .error {
-	background-color: #D50000;
+	background-color: @color_label_error;
 	/*
 	padding: 8px;
 	padding-left: 12px;
@@ -256,7 +271,7 @@ hr {
 	*/
 }
 .warning {
-	background-color: #fdcf39;
+	background-color: @color_label_warning;
 	color: #6F6D69;
 	text-shadow: none;
 	font-weight: normal;
@@ -293,6 +308,11 @@ hr {
 	opacity: 0.7;
 	position: relative;
 	right: 1px;
+}
+.notice_to_active_users {
+	position: absolute;
+    top: 27px;
+    z-index: 10;
 }
 
 /* DEBUG
@@ -332,11 +352,14 @@ hr {
 /* UNTRANSLATED 
 ----------------------------------------- */
 mark {
+	background-color: transparent;
 	//font-style: italic;
 	//opacity: 0.6;	
 	//color: #7B99C1 !important;
-	color: #c4753c !important;
-	background-color: transparent;
+	//color: #c4753c !important;
+	
+	font-style: italic;
+	opacity: 0.8;
 }
 
 .sample_data {
@@ -636,11 +659,13 @@ mark {
 		.table_rows_list a.button_transcription {
 			background-image: url('../../themes/default/icon_transcription.svg');
 			background-position:right 8px top 50%;
-			height: 100%;			
+			height: 100%;
+			min-height: 65px;
+			position: absolute;		
 			}
 			.table_rows_list a.button_transcription:hover {
 				background-image: url('../../themes/default/icon_transcription_hover.svg');				
-				background-color: #FD7F26;
+				background-color: @color_trascription;
 			}
 
 		/* BUTTON_TRANSLATION (PROCESSES)
@@ -648,11 +673,13 @@ mark {
 		.table_rows_list a.button_translation {
 			background-image: url('../../themes/default/icon_translation.svg');
 			background-position:right 6px top 50%;
-			height: 100%;			
+			height: 100%;
+			min-height: 65px;
+			position: absolute;		
 			}
 			.table_rows_list a.button_translation:hover {
 				background-image: url('../../themes/default/icon_translation_hover.svg');				
-				background-color: #9A90FD;
+				background-color: @color_lang;
 			}
 
 
@@ -662,10 +689,12 @@ mark {
 			background-image: url('../../themes/default/icon_indexation.svg');
 			background-position:right 8px top 50%;
 			height: 100%;
+			min-height: 65px;
+			position: absolute;
 			}
 			.table_rows_list a.button_indexation:hover {
 				background-image: url('../../themes/default/icon_indexation_hover.svg');
-				background-color: #7ED8DF;
+				background-color: @color_indexation;
 			}
 
 		/* BUTTON_STRUCTURATION (PROCESSES)
@@ -674,10 +703,12 @@ mark {
 			background-image: url('../../themes/default/icon_structuration.svg');
 			background-position:right 8px top 50%;
 			height: 100%;
+			min-height: 65px;
+			position: absolute;
 			}
 			.table_rows_list a.button_structuration:hover {
-				background-image: url('../../themes/default/icon_structuration_hover.svg');
-				background-color: #7ED8DF;
+				background-image: url('../../themes/default/icon_structuration_hover.svg');				
+				background-color: @color_structuration;
 			}
 
 
@@ -798,40 +829,108 @@ label.css_label.tooltips {
 		//content: " ";
 		//clear: left;
 	}
-	
+
+
+
 /* SPINNER
 ------------------------------------------------------- */
-.css_spinner {
-	//.progress;
+	.css_spinner {
+		//.progress;
 
-	//background: url('../../themes/default/spinner.gif') center no-repeat;
-	background: url('../../themes/default/spinner.svg');
+		//background: url('../../themes/default/spinner.gif') center no-repeat;
+		background: url('../../themes/default/spinner.svg');
+		
+		/*
+		font-size: 7px;
+		margin-top: 64px;
+		margin-right: auto;
+	    margin-bottom: auto;
+	    margin-left: auto;
+		*/
 
-	
-	/*
-	font-size: 7px;
-	margin-top: 64px;
-	margin-right: auto;
-    margin-bottom: auto;
-    margin-left: auto;
-	*/
-
-	background-position: center;
-	background-repeat: no-repeat;
-	min-width: 100px;
-	width: 100%;
-	min-height: 32px;
-	display: inline-block;
-}
+		background-position: center;
+		background-repeat: no-repeat;
+		min-width: 100px;
+		width: 100%;
+		min-height: 32px;
+		display: inline-block;
+	}
 
 
-/* EDIT HIDE - REMOVE VISIBILITY OF PARTS OF COMPONETS
+
+/* EDIT HIDE - REMOVE VISIBILITY OF PARTS OF COMPONENTS
 ------------------------------------------------------- */
-.edit_hidden {
-	//visibility: hidden;
-	visibility: visible;
-}
-.edit_show {
-	visibility: visible;
+	.edit_hidden {
+		//visibility: hidden;
+		visibility: visible;
+	}
+	.edit_show {
+		visibility: visible;
+	}
+
+
+
+/* BOOTSTRAP modal-dialog
+------------------------------------------------------- */
+	.modal .modal-dialog-big {
+		width: 90%;
+	}
+	.modal .modal-dialog-big2 {
+		width: 96%;
+	}
+
+
+
+/* SELECT - CUSTOM_DROPDOWN
+   Custom select apperance 
+------------------------------------------------------- */
+select.custom_dropdown {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    border: 0 !important;
+    -webkit-border-radius: 5px;
+    cursor: pointer;
+    /* background-color: transparent; */
+    background: transparent url(../../themes/default/drop-down-arrow.png) no-repeat right center;
+    background-size: 12px;
+    padding-left: 5px;
+    padding-right: 18px;
+    line-height: 1em;
 }
 
+
+
+/* STRUCTURATION_LABEL
+------------------------------------------------------- */
+.structuration_label {
+	background-color: #7eb5ef;
+	background-color: rgba(126, 181, 239, 0.47);
+	//display: inline-block;
+	//border-radius: 3px;
+	padding-left: 5px;
+	padding-right: 5px;
+	border: #909090;
+    border-style: dashed;
+    border-width: thin;
+}
+.structuration_label.stl_in {
+	border-radius: 4px 0 0 4px;
+	border-right: none;
+}
+.structuration_label.stl_out {
+	border-radius: 0 3px 3px 0;
+	text-align: right;
+	border-left: none;
+}
+
+
+
+/* show_str_data (log info str import / expor data)
+------------------------------------------------------- */
+.show_str_data {
+	position: relative !important;
+	margin-top: 63px !important;
+	max-height: initial !important;
+	overflow: visible !important;
+	z-index: 1 !important;
+}

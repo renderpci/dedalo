@@ -32,13 +32,15 @@
 			onclick=\"component_common.open_ts_window(this)\"></div>";
 	*/
 	if (!empty($ds_element)) {
-		#dump($current_locator->ds, '$current_locator->ds ++ '.to_string());		
+		#dump($current_locator->ds, '$current_locator->ds ++ '.to_string());
+		#dump($ds_element, ' ds_element ++ '.to_string());		
 			
 		$ds_html .= "<ul class=\"ul_semantic_node\">";
 
 		foreach ((array)$ds_element as $locator_ds) {
+			#dump($locator_ds, ' locator_ds ++ '.to_string());
 
-			$termino = ts_object::get_term_by_locator( $locator_ds, $lang=DEDALO_DATA_LANG, $from_cache=true );
+			$term = ts_object::get_term_by_locator( $locator_ds, $lang=DEDALO_DATA_LANG, $from_cache=true );
 			$locator_ds_json = json_encode($locator_ds);
 
 			$ds_html .= "<li>";
@@ -52,7 +54,7 @@
 			></div>";
 
 			$ds_html .= "<span>";
-			$ds_html .= $termino;
+			$ds_html .= $term;
 			if(SHOW_DEBUG) {
 				$ds_html .= ' [' . $locator_ds->section_tipo.'_'.$locator_ds->section_id . ']';
 			}

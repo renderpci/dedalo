@@ -53,7 +53,7 @@
 .key {
 	display: inline-block;
 	min-width: 50px;
-	background-color: rgb(230, 230, 230);
+	background-color: #eeeeee;
 	margin-right: 0px;
 	padding-left: 2px;
 	padding-right: 2px;
@@ -72,6 +72,10 @@
 	display: inline-block;*/
 	word-break: break-all;
 }
+.value_bold {
+	color: #333333;
+	font-weight: bold;
+}
 .capitalize {
 	text-transform: capitalize;
 }
@@ -88,7 +92,7 @@
 }
 
 #inspector_info {
-	min-height: 48px;
+	min-height: 22px;
 	padding-left: 5px;
 }
 /* INSPECTOR TOOLS
@@ -134,7 +138,7 @@
 	
 }
 #inspector_debug .key {
-	margin-left: 4px;
+	//margin-left: 4px;
 }
 .css_span_debugger {
 	font-style: italic;
@@ -161,6 +165,7 @@
 	margin-bottom: 2px;
 	padding-left: 4px;
 	padding-right: 4px;
+	z-index: 10;
 }
 #inspector_log .ok, #inspector_log .error {
 	margin: 0px;
@@ -218,6 +223,11 @@
 	#wrap_inspector_paginator .css_rows_paginator_content {
 		padding: 5px;
 	}
+	#wrap_inspector_paginator .css_rows_paginator_div_links {
+		zoom: 1.4;
+		vertical-align: middle;
+	}
+
 
 
 /* TOOLS COMMON
@@ -272,9 +282,29 @@ div.tool_inspector_div .icon_bs {
 		text-align: center;
 		zoom: 1.7;
 	}
-	*/
-	
-	
+	*/	
 
 }//end @media screen and (max-width: @movil_max_width)
+
+
+/* INSPECTOR LOG SHOWED IN TOOLS
+---------------------------------------- */
+	.tool_inspector_log {
+		text-align: right;
+		position: fixed;
+	    right: 0;
+	    margin-right: 0;
+	    top: 29px;
+	    opacity: 0.9;
+	    width: 37%;
+		min-height: 1.3em;
+		//background-color: #AFEBFF
+
+		.span_save {
+			white-space: nowrap;
+		}
+	}
+
+
+
 

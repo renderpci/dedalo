@@ -1,3 +1,10 @@
+// Vars
+@common_css: "../../common/css";
+
+// Usage
+@import "@{common_css}/library.less";
+
+
 
 
 /* WRAP DIV CONTAINER
@@ -26,6 +33,7 @@
 		border: 1px solid #9E9E9E;
 		border-radius: 3px;
 		box-shadow: inset 0 0 6px #999999;
+		margin-right: 3px;
 		}
 		input.css_component_security_areas:hover {
 		}
@@ -89,6 +97,9 @@ span.security_areas_admin_checkbox {
 }
 .component_security_areas_admin + label {
 	color: #999999;	
+}
+.security_areas_admin_checkbox.visible {
+	display: block;
 }
 
 

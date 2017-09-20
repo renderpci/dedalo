@@ -3,27 +3,27 @@
 	# VISUALIZADOR HTML	
 	
 	
-	print "\n\n<!-- AREA [tipo:$tipo] -->";
+	print "<!-- AREA [tipo:$tipo] -->";
 	
-	print "\n<div class=\"css_wrap_area css_wrap_area_resource\" > ";
+	print "<div class=\"css_wrap_area css_wrap_area_resource\" > ";
 	
 	
 	# ETIQUETA (LABEL)
-	$html_label = "\n<div class=\"css_area_titulo\" > ".component_common_draw::draw_label($this)." </div>";	
+	$html_label = "<div class=\"css_area_titulo\" > ".component_common_draw::draw_label($this)." </div>";	
 		
 	
 	# CONTENIDO (INPUT)
 	$html_contenido  ='';
-	$html_contenido .= "\n<div class=\"css_area_content\" >";
+	$html_contenido .= "<div class=\"css_area_content\" >";
 	
 	switch($permissions) {
 			
-		case 0	:	$html_contenido .= "\n <span class=\"css_span_dato\"> ".label::get_label('sin_acceso')." </span>";
+		case 0	:	$html_contenido .= " <span class=\"css_span_dato\"> ".label::get_label('sin_acceso')." </span>";
 					break;
 						
 		case ($permissions>=1):
 		
-					$html_contenido .= "\n <blockquote> ";
+					$html_contenido .= " <blockquote> ";
 					foreach ($ar_children_areas as $tipo => $value) {
 						
 						$section_name = RecordObj_dd::get_termino_by_tipo($tipo,DEDALO_APPLICATION_LANG,true);
@@ -31,12 +31,12 @@
 						
 						$html_contenido .= menu::create_link($tipo, $section_name, $modelo_name, null).'<br>';
 					}
-					$html_contenido .= "\n </blockquote> ";
+					$html_contenido .= " </blockquote> ";
 					
 					break;			
 	}
 	
-	$html_contenido .= "\n</div>";
+	$html_contenido .= "</div>";
 	
 	
 	# Prepare content to show in page
@@ -48,5 +48,5 @@
 	print $html_contenido;
 	
 	
-	print "\n</div><!-- /AREA [$tipo] -->\n\n"; //wrap
+	print "</div><!-- /AREA [$tipo] -->"; //wrap
 ?>

@@ -202,7 +202,7 @@ class ts_object extends Accessors {
 		
 			#debug_log(__METHOD__." ar_propiedades ".to_string($ar_propiedades), logger::DEBUG);
 		}
-
+	
 		return (array)$ar_elements;
 	}//end get_ar_elements
 
@@ -223,11 +223,13 @@ class ts_object extends Accessors {
 			$childrens_data->modo 			= 'edit';	//'list_thesaurus';
 			$childrens_data->lang 			= DEDALO_DATA_LANG;
 			$childrens_data->is_descriptor	= true;
-			$childrens_data->is_indexable	= (bool)self::is_indexable($this->section_tipo, $this->section_id);
+			$childrens_data->is_indexable	= (bool)self::is_indexable($this->section_tipo, $this->section_id);			
+			$childrens_data->permissions_button_new		= $this->get_permissions_element('button_new');
+			$childrens_data->permissions_button_delete 	= $this->get_permissions_element('button_delete');
 			$childrens_data->ar_elements 	= array();
 
 		$model = isset($this->options->model) ? $this->options->model : null;
-
+		
 		# ELEMENTS
 		$ar_elements = ts_object::get_ar_elements($this->section_tipo, $model);
 			#dump($ar_elements, ' $ar_elements ++ '.to_string($childrens_data));
@@ -236,6 +238,7 @@ class ts_object extends Accessors {
 
 			$element_tipo= $current_object->tipo;
 			$render_vars = $current_object;
+			#debug_log(__METHOD__."  ".to_string($render_vars), logger::DEBUG);
 
 			# No descriptors do not have children. Avoid calculate childrens
 			if ($childrens_data->is_descriptor===false && $render_vars->type==='link_childrens') {
@@ -256,8 +259,7 @@ class ts_object extends Accessors {
 															  $this->section_tipo);
 				$dato = $component->get_dato();
 				if ($modelo_name==='component_input_text') {
-					$dato = $component->get_valor(0);
-					
+					$dato = $component->get_valor(0);					
 				}else if ($modelo_name==='component_relation_related') {
 					# Add inverse related (bidirectional only)
 					# dump($dato, ' dato ++ '.to_string($element_tipo));
@@ -313,7 +315,8 @@ class ts_object extends Accessors {
 						$element_obj->value = $render_vars->icon;
 						if(empty($dato)) continue 2; // Skip empty icon value links
 
-						if ($modelo_name==='component_relation_index') {
+						if ($modelo_name==='component_relation_index' || $modelo_name==='component_relation_struct') {
+							#dump($dato, ' dato ++ '.to_string($element_tipo));
 							$total = count($dato);
 							$element_obj->value .= ":$total";
 						}
@@ -355,7 +358,7 @@ class ts_object extends Accessors {
 			#debug_log(__METHOD__." Total ($n): ".exec_time_unit($start_time,'ms')." ms - ratio(total/n): " . ($total/$n), logger::DEBUG);
 			$childrens_data->total_time = $total;	
 		}
-
+		#dump($childrens_data, ' $childrens_data ++ '.to_string());
 	
 		return (object)$childrens_data;
 	}//end get_childrens_data
@@ -446,7 +449,7 @@ class ts_object extends Accessors {
 	/**
 	* GET_DESCRIPTORS_FROM_CHILDRENS
 	* @return 
-	*/
+	*//*
 	public static function get_descriptors_from_childrens__DES( $ar_childrens ) {
 
 		$ar_descriptors = array();
@@ -479,7 +482,7 @@ class ts_object extends Accessors {
 
 
 		return $ar_descriptors;
-	}//end get_descriptors_from_childrens
+	}//end get_descriptors_from_childrens*/
 
 
 
@@ -516,7 +519,7 @@ class ts_object extends Accessors {
 	*/
 	public static function get_term_by_locator( $locator, $lang=DEDALO_DATA_LANG, $from_cache=false ) {
 	
-		if (!is_object($locator)) {
+		if (!is_object($locator) || !property_exists($locator, 'section_tipo')) {
 			if(SHOW_DEBUG===true) {
 				#throw new Exception("Error Processing Request. locator is not object: ".to_string($locator), 1);
 				debug_log(__METHOD__." ERROR on get term. locator is not of type object: ".gettype($locator)." FALSE VALUE IS RETURNED !", logger::ERROR);
@@ -524,8 +527,8 @@ class ts_object extends Accessors {
 			return false;			
 		}
 
+		# Cache control (session)
 		$cache_uid = $locator->section_tipo.'_'.$locator->section_id.'_'.$lang;
-
 		if ($from_cache===true && isset($_SESSION['dedalo4']['config']['term_by_locator'][$cache_uid])) {
 			return $_SESSION['dedalo4']['config']['term_by_locator'][$cache_uid];
 		}
@@ -591,8 +594,11 @@ class ts_object extends Accessors {
 			$valor .= " <span class=\"debug_info notes\">".json_encode($locator)."</span>";
 		}
 		*/
+		#debug_log(__METHOD__." valor $cache_uid ".htmlentities($valor), logger::DEBUG); 
 
+		# Cache control (session)
 		$_SESSION['dedalo4']['config']['term_by_locator'][$cache_uid] = $valor;
+		
 		
 		return $valor;
 	}//end get_term_by_locator
@@ -611,6 +617,43 @@ class ts_object extends Accessors {
 
 		return $element_tipo;
 	}//end get_component_order_tipo
+
+
+
+	/**
+	* GET_PERMISSIONS_ELEMENT
+	* @return int $permissions
+	*/
+	public function get_permissions_element( $element_name ) {
+
+		switch ($element_name) {
+			case 'button_new':
+				if ($this->section_tipo===DEDALO_HIERARCHY_SECTION_TIPO) {
+					$tipo = DEDALO_HIERARCHY_BUTTON_NEW_TIPO;
+					$permissions = common::get_permissions($this->section_tipo,$tipo);
+				}else{
+					$tipo = DEDALO_THESAURUS_BUTTON_NEW_TIPO;
+					$permissions = common::get_permissions($this->section_tipo,$tipo);
+				}
+				break;
+			case 'button_delete':
+				# hierarchy1 case
+				if ($this->section_tipo===DEDALO_HIERARCHY_SECTION_TIPO) {
+					$permissions = 0; // Always is 0
+				}else{
+					$tipo = DEDALO_THESAURUS_BUTTON_DELETE_TIPO;
+					$permissions = common::get_permissions($this->section_tipo,$tipo);
+				}
+				break;
+			default:
+				debug_log(__METHOD__." ERROR. Element not defined: $element_name . Zero value is returned ".to_string(), logger::ERROR);
+				$permissions = 0;
+				break;
+		}
+		#dump($permissions, ' permissions ++ '.to_string($element_name.' - '.$this->section_tipo));
+
+		return (int)$permissions;
+	}//end get_permissions_element
 
 
 

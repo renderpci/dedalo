@@ -83,6 +83,16 @@
 			#$html   .= " <span>".label::get_label('ruta_carpeta_ficheros')."</span>";
 
 			$html   .= " <div class=\"panel_option_subcontent\">";
+
+
+			# Info
+			$html   .= " <h5 style=\"color:#337ab7;line-height:1.25em;\">
+			To rename images, create and upload a csv file with <strong>2 columns</strong>: section_id and component_tipo. <br>
+			Insert current existing files name in the second column (component_tipo column). <br>
+			Files will be renamed as standard Dédalo format like rsc170_rs90_1.jpg (component_tipo + section_tipo + section_id + image extension) <br>
+			Section tipo is resolved from csv file name, component tipo from second column first row, and section id from every row of first column
+			</h5><br>";	
+
 			
 			# CSV File
 			$html   .= " <span>".label::get_label('ruta_carpeta_ficheros_renombrar')."</span>";			

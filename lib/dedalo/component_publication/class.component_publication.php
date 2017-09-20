@@ -4,7 +4,7 @@
 *
 *
 */
-class component_publication extends component_common {
+class component_publication extends component_reference_common {
 
 	# Overwrite __construct var lang passed in this component
 	protected $lang = DEDALO_DATA_NOLAN;

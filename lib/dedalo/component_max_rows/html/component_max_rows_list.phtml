@@ -4,32 +4,32 @@
 	
 	
 	
-	#print "\n<!-- MAX ROWS [tipo:$tipo] -->";
-	print "\n<div class=\"css_wrap_max_rows\" id=\"wrap_{$tipo}\">";
+	#print "<!-- MAX ROWS [tipo:$tipo] -->";
+	print "<div class=\"css_wrap_max_rows\" id=\"wrap_{$tipo}\">";
 	
 	# ETIQUETA (LABEL)
 	$html_label = component_common_draw::draw_label($this);
 	
 	# CONTENIDO (INPUT)
-	$html_contenido = '';
-	switch($permissions) {
+	$html_content = '';
+	switch(true) {
 			
-		case 0	:	$html_contenido .= "";
+		case $permissions===0	:	$html_content .= "";
 					break;		
 						
 		case ($permissions>=1)	:
 		
-				$html_contenido .= "\n <input class=\"css_max_rows\" type=\"text\" name=\"max_rows\" value=\"{$valor}\" title=\"$html_title\" />";
+				$html_content .= "<input class=\"css_max_rows\" type=\"text\" name=\"max_rows\" value=\"{$valor}\" title=\"$html_title\" />";
 											
 	}
 	
 	
 	# PRINT HTML
 	print $html_label;
-	print $html_contenido;
+	print $html_content;
 
 	# INIT COMPONENT
 	#require(DEDALO_LIB_BASE_PATH . "/component_common/trigger.component_init.php");	
 	
-	print "\n</div>\n\n"; //wrap
+	print "</div>"; //wrap
 ?>

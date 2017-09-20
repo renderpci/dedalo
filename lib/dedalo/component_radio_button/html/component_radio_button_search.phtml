@@ -3,7 +3,7 @@
 	# VISUALIZADOR HTML	
 	
 	
-	#print "\n<!-- RADIO BUTTON [tipo:$tipo section_id_matrix:$parent] $label -->";
+	#print "<!-- RADIO BUTTON [tipo:$tipo section_id_matrix:$parent] $label -->";
 	print "<div class=\"wrap_component css_wrap_radio_button\">";
 	
 	# ETIQUETA (LABEL)
@@ -23,28 +23,23 @@
 					$html_content .= operator::get_search_comparison_operators_html($tipo,$ar_comparison_operators);
 					
 					# INPUT
-					$html_content .= " <span id=\"search_component_$tipo\">";
+					$html_content .= "<span id=\"search_component_$tipo\">";
 					$i=0; foreach ($ar_list_of_values->result as $value => $rotulo) {
 
 						$search_input_id = $search_input_name .'_'.$i;						
 						
-						$html_content .= " <input class=\"css_radio_button\" type=\"radio\" name=\"{$search_input_name}\" id=\"$search_input_id\"
-						data-tipo=\"{$tipo}\"
-						value='$value'
-						title=\"$html_title\"
-						/>";
+						$html_content .= "<input class=\"css_radio_button\" type=\"radio\" name=\"{$search_input_name}\" id=\"$search_input_id\" ";
+						$html_content .= "data-tipo=\"{$tipo}\" ";
+						$html_content .= "value='$value' ";
+						$html_content .= "title=\"$html_title\" ";
+						$html_content .= "/>";
 
-						$html_content .= "\n&nbsp;<label for=\"{$search_input_id}\" class=\"css_radio_button_rotulo\">$rotulo</label> &nbsp;";						
+						$html_content .= "<label for=\"{$search_input_id}\" class=\"css_radio_button_rotulo\">$rotulo</label>";						
 					$i++;}
 					$html_content .= "</span>";
 
 					# LOGICAL OPERATORS
-					$html_content .= operator::get_search_logical_operators_html($tipo,$ar_logical_operators);
-
-					if(SHOW_DEBUG===true) {
-						$html_content .= "<span class=\"debug_info\">$search_input_name</span>";
-					}
-							
+					$html_content .= operator::get_search_logical_operators_html($tipo,$ar_logical_operators);							
 	}	
 	
 	
@@ -53,5 +48,5 @@
 	print $html_content;
 	
 	
-	print "\n</div>\n\n"; //wrap
+	print "</div>"; //wrap
 ?>

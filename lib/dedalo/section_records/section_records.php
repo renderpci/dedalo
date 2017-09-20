@@ -23,7 +23,12 @@
 				# PAGINATOR HTML					
 					include_once(DEDALO_LIB_BASE_PATH . '/search/records_navigator/class.records_navigator.php');
 					$rows_paginator_html= '';
-					$context_name 		= isset($_GET['context_name']) ? $_GET['context_name'] : false;						
+
+					// CONTEXT
+					//$context_name 		= isset($_GET['context_name']) ? $_GET['context_name'] : false;
+					$context_name 			= common::get_request_var('context_name');
+						#dump($context_name, ' context_name edit ++ '.to_string(common::get_request_var('context')));
+
 					switch (true) {
 						case (isset($this->options->save_handler) && $this->options->save_handler!='database'):
 							# ignore paginator when save_handler is not 'database'
@@ -114,9 +119,10 @@
 					# ROWS HTML (TD)
 					$rows 					= new rows($this, $modo);
 					$rows_html				= $rows->get_html();
-			
 				
-				if (isset($_REQUEST['m']) && $_REQUEST['m']!='list') {
+				
+				//if (isset($_REQUEST['m']) && $_REQUEST['m']!='list') {
+				if (common::get_request_var('m')!=='list') {
 					# Nothing to load
 				}else{
 					#

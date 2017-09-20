@@ -1,9 +1,9 @@
 <?php
 /*
 * CLASS COMPONENT_HTML_TEXT
+*
+*
 */
-
-
 class component_html_text extends component_common {
 
 
@@ -14,7 +14,11 @@ class component_html_text extends component_common {
 	}
 
 	# SET_DATO
-	public function set_dato($dato) {
+	public function set_dato($dato) {			
+		if ($dato==='""') {
+			$dato = "";
+		}
+
 		parent::set_dato( (string)$dato );
 	}
 
@@ -43,9 +47,8 @@ class component_html_text extends component_common {
 	public function get_ar_tools_obj() {		
 		return parent::get_ar_tools_obj();
 	}	
-	
 
-	
+
 
 	/**
 	* GET DATO DEFAULT 
@@ -56,6 +59,8 @@ class component_html_text extends component_common {
 		$dato = parent::get_dato_default_lang();
 		return $dato;
 	}
+
+
 
 	/**
 	* GET VALOR
@@ -80,7 +85,7 @@ class component_html_text extends component_common {
 		}		
 
 		return $dato;
-	}
+	}//end get_valor
 
 
 	/**
@@ -94,13 +99,9 @@ class component_html_text extends component_common {
 		#$string = stripslashes($string);
 
 		return trim($string);
-	}
-	
-
+	}//end clean_text
 
 
 	
-
-	
-};
+}//end component_html_text
 ?>

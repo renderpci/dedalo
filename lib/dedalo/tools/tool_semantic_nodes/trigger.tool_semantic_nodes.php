@@ -1,32 +1,11 @@
 <?php
-// JSON DOCUMENT
-header('Content-Type: application/json');
-
-require_once( dirname(dirname(dirname(__FILE__))) .'/config/config4.php');
-
-if(login::is_logged()!==true) die("<span class='error'> Auth error: please login </span>");
+$start_time=microtime(1);
+include( dirname(dirname(dirname(__FILE__))) .'/config/config4.php');
+# TRIGGER_MANAGER. Add trigger_manager to receive and parse requested data
+common::trigger_manager();
 
 # Write session to unlock session file
 session_write_close();
-
-# set vars
-	$vars = array('mode');
-		foreach($vars as $name) $$name = common::setVar($name);
-
-# mode
-	if(empty($mode)) exit("<span class='error'> Trigger: Error Need mode..</span>");
-
-
-
-# CALL FUNCTION
-if ( function_exists($mode) ) {
-	$result = call_user_func($mode);
-	$json_params = null;
-	if(SHOW_DEBUG===true) {
-		$json_params = JSON_PRETTY_PRINT;
-	}
-	echo json_encode($result, $json_params);
-}
 
 
 
@@ -34,45 +13,26 @@ if ( function_exists($mode) ) {
 * ADD_INDEX
 * Add semantic term to column
 */
-function add_index() {
+function add_index($json_data) {
+	global $start_time;
 
 	$response = new stdClass();
 		$response->result 	= false;
-		$response->msg 		= 'Error. Request failed on node add_index. ';
+		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
 
 	# set vars
 	$vars = array('component_tipo', 'section_tipo', 'parent','portal_locator_section_tipo','portal_locator_section_id','new_ds_locator','ds_key');
-		foreach($vars as $name) $$name = common::setVar($name);
+		foreach($vars as $name) {
+			$$name = common::setVarData($name, $json_data);
+			# DATA VERIFY
+			#if ($name==='top_tipo' || $name==='top_id') continue; # Skip non mandatory
+			if (empty($$name)) {
+				$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty '.$name.' (is mandatory)';
+				return $response;
+			}
+		}
 
-		if( empty($component_tipo) ) {
-			$response->msg .= 'Error component_tipo is mandatory';
-			return $response;
-		}
-		if( empty($section_tipo) ) {
-			$response->msg .= 'Error section_tipo is mandatory';
-			return $response;
-		}
-		if( empty($parent) ) {
-			$response->msg .= 'Error parent is mandatory';
-			return $response;
-		}
-		if( empty($portal_locator_section_tipo) ) {
-			$response->msg .= 'Error portal_locator_section_tipo is mandatory';
-			return $response;
-		}
-		if( empty($portal_locator_section_id) ) {
-			$response->msg .= 'Error portal_locator_section_id is mandatory';
-			return $response;
-		}
-		if( empty($new_ds_locator) || !$new_ds_locator = json_decode($new_ds_locator) ) {
-			$response->msg .= 'Error locator is mandatory';
-			return $response;
-		}
-		if( empty($ds_key) ) {
-			$response->msg .= 'Error ds_key is mandatory';
-			return $response;
-		}
-	
+	$new_ds_locator = json_decode($new_ds_locator);
 
 	$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
 	$component 		= component_common::get_instance( $modelo_name,
@@ -84,7 +44,7 @@ function add_index() {
 
 	$result = $component->add_index_semantic( $new_ds_locator, $portal_locator_section_tipo, $portal_locator_section_id, $ds_key );
 	$dato   = $component->get_dato();
-	
+		#dump($dato, ' dato ++ '.to_string());
 	foreach ($dato as $dato_locator) {
 		if ($dato_locator->section_tipo==$portal_locator_section_tipo && $dato_locator->section_id==$portal_locator_section_id) {
 			$current_locator = $dato_locator;
@@ -107,7 +67,18 @@ function add_index() {
 	$response->result 	= $html;
 	$response->msg 		= "add_index done successfully";
 
-	return $response;
+	# Debug
+	if(SHOW_DEBUG===true) {
+		$debug = new stdClass();
+			$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
+			foreach($vars as $name) {
+				$debug->{$name} = $$name;
+			}
+
+		$response->debug = $debug;
+	}
+
+	return (object)$response;
 }//end add_index
 
 
@@ -116,44 +87,26 @@ function add_index() {
 * REMOVE_INDEX
 * Remove semantic term from column
 */
-function remove_index() {
+function remove_index($json_data) {
+	global $start_time;
 
 	$response = new stdClass();
 		$response->result 	= false;
-		$response->msg 		= 'Error. Request failed on node remove_index. ';
+		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
 
 	# set vars
 	$vars = array('component_tipo', 'section_tipo', 'parent','portal_locator_section_tipo','portal_locator_section_id','new_ds_locator','ds_key');
-		foreach($vars as $name) $$name = common::setVar($name);
+		foreach($vars as $name) {
+			$$name = common::setVarData($name, $json_data);
+			# DATA VERIFY
+			#if ($name==='top_tipo' || $name==='top_id') continue; # Skip non mandatory
+			if (empty($$name)) {
+				$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty '.$name.' (is mandatory)';
+				return $response;
+			}
+		}
 
-		if( empty($component_tipo) ) {
-			$response->msg .= 'Error component_tipo is mandatory';
-			return $response;
-		}
-		if( empty($section_tipo) ) {
-			$response->msg .= 'Error section_tipo is mandatory';
-			return $response;
-		}
-		if( empty($parent) ) {
-			$response->msg .= 'Error parent is mandatory';
-			return $response;
-		}
-		if( empty($portal_locator_section_tipo) ) {
-			$response->msg .= 'Error portal_locator_section_tipo is mandatory';
-			return $response;
-		}
-		if( empty($portal_locator_section_id) ) {
-			$response->msg .= 'Error portal_locator_section_id is mandatory';
-			return $response;
-		}
-		if( empty($new_ds_locator) || !$new_ds_locator = json_decode($new_ds_locator) ) {
-			$response->msg .= 'Error locator is mandatory';
-			return $response;
-		}
-		if( empty($ds_key) ) {
-			$response->msg .= 'Error ds_key is mandatory';
-			return $response;
-		}
+	$new_ds_locator = json_decode($new_ds_locator);
 	
 	$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
 	$component 		= component_common::get_instance( $modelo_name,
@@ -188,7 +141,18 @@ function remove_index() {
 	$response->result 	= $html;
 	$response->msg 		= "remove_index done successfully";
 
-	return $response;
+	# Debug
+	if(SHOW_DEBUG===true) {
+		$debug = new stdClass();
+			$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
+			foreach($vars as $name) {
+				$debug->{$name} = $$name;
+			}
+
+		$response->debug = $debug;
+	}
+
+	return (object)$response;
 }//end remove_index
 
 

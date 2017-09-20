@@ -2,11 +2,9 @@
 
 	# VISUALIZADOR HTML
 	
-	if(isset($_REQUEST[$tipo])) $dato = $_REQUEST[$tipo];		#var_dump($_REQUEST[$tipo]);
 	
-	
-	#print "\n<!-- INPUT_TEXT [tipo:$tipo id_matrix:$id] -->";
-	#print "\n<div class=\"css_wrap_calculation\" id=\"wrap_{$tipo}\">";
+	#print "<!-- INPUT_TEXT [tipo:$tipo id_matrix:$id] -->";
+	#print "<div class=\"css_wrap_calculation\" id=\"wrap_{$tipo}\">";
 	
 	# ETIQUETA (LABEL)
 	$html_label = component_common_draw::draw_label($this);
@@ -20,10 +18,10 @@
 						
 		case ($permissions>=1) :
 		
-					$html_contenido .= "\n <input class=\"css_calculation\" type=\"text\" 
-					name=\"{$tipo}\" 
-					data-tipo=\"{$tipo}\"
-					value=\"{$dato}\" title=\"$html_title\" />";
+					$html_contenido .= "<input class=\"css_calculation\" type=\"text\" ";
+					$html_contenido .= "name=\"{$tipo}\" ";
+					$html_contenido .= "data-tipo=\"{$tipo}\" ";
+					$html_contenido .= "value=\"{$dato}\" title=\"$html_title\" />";
 											
 	}
 
@@ -36,5 +34,5 @@
 	print $html_contenido;
 	
 	
-	#print "\n</div>\n\n"; //wrap
+	#print "</div>"; //wrap
 ?>

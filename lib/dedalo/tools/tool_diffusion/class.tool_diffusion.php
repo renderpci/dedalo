@@ -296,8 +296,8 @@ class tool_diffusion {
 		$ar_diffusion_sections = array();
 		#if(SHOW_DEBUG===true) $start_time=microtime(1);
 
-		if( isset($_SESSION['dedalo4']['config']['ar_diffusion_sections']) ) {
-			return $_SESSION['dedalo4']['config']['ar_diffusion_sections'];
+		if( isset($_SESSION['dedalo4']['config']['ar_diffusion_sections'][$diffusion_element_tipo]) ) {
+			return $_SESSION['dedalo4']['config']['ar_diffusion_sections'][$diffusion_element_tipo];
 		}
 
 		$tables = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($diffusion_element_tipo, $modelo_name='table', $relation_type='children_recursive', $search_exact=false);
@@ -334,7 +334,7 @@ class tool_diffusion {
 		}
 
 		# Store in session
-		$_SESSION['dedalo4']['config']['ar_diffusion_sections'] = $ar_diffusion_sections;
+		$_SESSION['dedalo4']['config']['ar_diffusion_sections'][$diffusion_element_tipo] = $ar_diffusion_sections;
 
 		return $ar_diffusion_sections;
 	}//end get_diffusion_sections_from_diffusion_element

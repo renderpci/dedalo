@@ -19,6 +19,9 @@ var page_globals = {
 	user_id:'<?php if(isset($user_id)) echo $user_id ?>'
 }
 DEBUG = <?php var_export(SHOW_DEBUG); ?>;
+setTimeout(function(){
+	window.location.reload(true);
+},2000)
 </script><?php echo $js_link_code ?>
 </head>
 

@@ -1,14 +1,33 @@
 <?php
 $jump_lang ='';
-$jump_lang .= "<!-- JUMP LANG -->";	
-$jump_lang .= "<select class=\"dedalo_aplication_langs_selector\" data-type_of_lang=\"dedalo_application_lang\" onchange=\"common.jump_select_lang(this)\">";
+$jump_lang .= "<!-- JUMP LANG $type_of_lang -->";
+if ($type_of_lang==='dedalo_data_lang' && DEDALO_DATA_LANG!==DEDALO_APPLICATION_LANG) {
+	$sync_style = ' unsync';
+}else{
+	$sync_style = '';
+}
+$jump_lang .= "<select class=\"dedalo_aplication_langs_selector".$sync_style."\" data-type_of_lang=\"$type_of_lang\" onchange=\"common.jump_select_lang(this)\">";
+
+	$current_set_lang = ($type_of_lang==='dedalo_data_lang') ? DEDALO_DATA_LANG : DEDALO_APPLICATION_LANG;
+	$prefix_label 	  = ($type_of_lang==='dedalo_data_lang') ? 'Data: ' : '';
 
 	foreach($dedalo_application_langs as $lang => $lang_name) {
+
+		if(SHOW_DEBUG===true) {
+			if($type_of_lang==='dedalo_data_lang') $lang_name='';
+		}
+
+		# Name 
+		$name = ($type_of_lang==='dedalo_data_lang') ? 'Data: '.$lang_name : $lang_name;
+
+		if(SHOW_DEBUG===true) {
+			if($type_of_lang==='dedalo_data_lang') $name .= " [$lang]";
+		}
 		
-		$selected = '';
-		if(DEDALO_APPLICATION_LANG == $lang) $selected = 'selected="selected"';
+		# Selected
+		$selected = ($lang === $current_set_lang) ? ' selected="selected"' : '';
 		
-		$jump_lang .= "<option value=\"{$lang}\" {$selected}>$lang_name</option>";
+		$jump_lang .= '<option value="'.$lang.'"'.$selected.'>'.$name.'</option>';
 	}
 
 $jump_lang .= "</select>";

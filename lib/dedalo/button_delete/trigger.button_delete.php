@@ -1,34 +1,61 @@
 <?php
-require_once( dirname(dirname(__FILE__)) .'/config/config4.php');
+$start_time=microtime(1);
+include( dirname(dirname(__FILE__)).'/config/config4.php');
+# TRIGGER_MANAGER. Add trigger_manager to receive and parse requested data
+common::trigger_manager();
 
 
-if(login::is_logged()!==true) die("<span class='error'> Auth error: please login </span>");
 
+/**
+* DEL
+* @return 
+*/
+function Del($json_data) {
+	global $start_time;
 
-# set vars
-	$vars = array('mode','section_id','section_tipo');
-		foreach($vars as $name) $$name = common::setVar($name);
-	
-	
-# mode
-if(empty($mode)) exit("<span class='error'>Error Trigger: Need mode..</span>");
+	$response = new stdClass();
+		$response->result 	= false;
+		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
 
+	# set vars
+	$vars = array('modo','section_tipo','section_id','top_tipo');
+		foreach($vars as $name) {
+			$$name = common::setVarData($name, $json_data);
+			# DATA VERIFY
+			# if ($name==='top_tipo' || $name==='top_id') continue; # Skip non mandatory
+			if (empty($$name)) {
+				$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty '.$name.' (is mandatory)';
+				return $response;
+			}
+		}
 
-# FIX SECTION TIPO
+	# FIX SECTION TIPO
 	define('SECTION_TIPO', $section_tipo);
 
-
-# DELETE
-	if(!$section_id) 	exit("<span class='error'>Error Delete Trigger: Need section section_id..</span>");
-	if(!$section_tipo) 	exit("<span class='error'>Error Delete Trigger: Need section section_tipo..</span>");
-
-	$delete_mode = $mode;
+	$delete_mode = $modo;
 
 	# Delete method
-	#$delete = button_delete::Delete($id, $delete_mode=$mode);
 	$section 	= section::get_instance($section_id, $section_tipo);
 	$delete 	= $section->Delete($delete_mode);
 
-	print $delete;
-	die();
+
+	$response->result 	= $delete;
+	$response->msg 		= 'Ok. Request done ['.__FUNCTION__.']';
+
+	# Debug
+	if(SHOW_DEBUG===true) {
+		$debug = new stdClass();
+			$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
+			foreach($vars as $name) {
+				$debug->{$name} = $$name;
+			}
+
+		$response->debug = $debug;
+	}
+	
+	return (object)$response;
+}//end Del
+
+
+
 ?>

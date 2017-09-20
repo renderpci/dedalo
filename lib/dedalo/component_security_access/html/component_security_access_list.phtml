@@ -3,8 +3,8 @@
 	# VISUALIZADOR HTML	
 	
 	
-	print "\n<!-- SECURITY ACCESS [tipo:$tipo section_id_matrix:$parent] -->";
-	print "\n<div class=\"css_wrap_radio_button\" >";
+	print "<!-- SECURITY ACCESS [tipo:$tipo section_id_matrix:$parent] -->";
+	print "<div class=\"css_wrap_radio_button\" >";
 	
 	# ETIQUETA (LABEL)
 	$html_label = component_common_draw::draw_label($this);
@@ -13,16 +13,16 @@
 	$html_contenido = '';
 	switch($permissions) {
 			
-		case 0	:	$html_contenido .= "\n <span class=\"css_span_dato\"> No access here (security_access)! </span>";
+		case 0	:	$html_contenido .= "<span class=\"css_span_dato\"> No access here (security_access)! </span>";
 					break;
 						
-		case 1	: 	$html_contenido .= "\n <span class=\"css_span_dato\">$dato</span>";
+		case 1	: 	$html_contenido .= "<span class=\"css_span_dato\">$dato</span>";
 					break;	
 						
 		case ($permissions>=2)	:
 					
 					if(!isset($valor)) $valor = 'En construccion';
-					$html_contenido .= "\n <span class=\"css_span_dato\">$valor</span>";	
+					$html_contenido .= "<span class=\"css_span_dato\">$valor</span>";	
 					/*
 					foreach ($ar_list_of_values->result as $value => $rotulo) {
 						
@@ -42,5 +42,5 @@
 	#print $html_label;
 	print $html_contenido;
 	
-	echo "\n</div>\n\n"; //wrap
+	echo "</div>"; //wrap
 ?>

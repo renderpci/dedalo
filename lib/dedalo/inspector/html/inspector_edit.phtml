@@ -4,7 +4,7 @@
 
 		
 	# INSPECTOR DIV
-	$html .= " <div id=\"inspector_div\" class=\"inspector_div box_shadow_1 box_border_radius_1 \">";
+	$html .= " <div id=\"inspector_div\" class=\"inspector_div box_shadow_1 box_border_radius_1\">";
 
 	
 		
@@ -72,8 +72,8 @@
 
 			#		
 			# SPECIFIC COMPONENT TOOLS
-				$html .= " <div id=\"inspector_tools\" class=\"inspector_info_body\">";
-				$html .= " <!-- Ajax load --> ";
+				$html .= "<div id=\"inspector_tools\" class=\"inspector_info_body\">";
+				$html .= "<!-- Ajax load --> ";
 				$html .= "</div>";
 
 
@@ -83,7 +83,7 @@
 					ob_start();
 					include(DEDALO_INSPECTOR_EXTRAS);
 					$html .= ob_get_clean();
-				}		
+				}	
 		$html .= "</div>";//end body tools
 		$html .= "</div>";//end tools_info_wrapper
 
@@ -135,7 +135,7 @@
 		$html .= " <label class=\"css_label\">ACTIVITY LOG</label>";
 		$html .= "</div>";
 		# Body				
-		$html .= "<div class=\"css_section_group_content tab_content inspector_div_content \" >";
+		$html .= "<div class=\"css_section_group_content tab_content inspector_div_content\">";
 		$html .= " <div id=\"inspector_log\" class=\"inspector_info_body\"></div>";			
 		$html .= "</div>";
 		$html .= "</div>";//end tools_info_wrapper
@@ -154,11 +154,11 @@
 			$html .= " <label class=\"css_label\">OTHERS</label>";
 			$html .= "</div>";
 			# Body
-			$html .= "<div class=\"css_section_group_content tab_content inspector_div_content\" >";
+			$html .= "<div class=\"css_section_group_content tab_content inspector_div_content\">";
 			$html .= " <div id=\"inspector_others\" class=\"inspector_info_body\">";
 
 				# Dédalo version
-				$html .= " Dédalo version ".DEDALO_VERSION. " - Build " .DEDALO_BUILD. "<br>";
+				#$html .= " Dédalo version ".DEDALO_VERSION. " - Build " .DEDALO_BUILD. "<br>";
 			
 				/*
 					$html .= " <span class=\"key\">TOP_TIPO:</span> <span class=\"value\"><b>". TOP_TIPO . "</b></span> ";
@@ -222,30 +222,27 @@
 			
 				$html .= "	<div id=\"load_time_inspector\"></div>";
 
-			$html .= " </div><!-- /inspector_others -->";						
-			$html .= "</div><!-- /css_section_group_content -->";
+			$html .= " </div>"; # <!-- /inspector_others -->
+			$html .= "</div>"; # <!-- /css_section_group_content -->
 			$html .= "</div>";//end tools_info_wrapper
 
 		}#if(SHOW_DEBUG===true)
 
+	
 
-		
-		
-		if(SHOW_DEBUG===true) {
-
-			#
-			# DEBUG
-			#
+		#
+		# DEBUG INFO
+		#
+		if(SHOW_DEVELOPER===true) {
 			$html .= "<div id=\"debug_info_wrapper\">";
 			# Header
 			$html .= "<div class=\"css_section_group_titulo tab_title title_down_box text_unselectable border_radius_0\" data-tab_id=\"Inspector_debug_tap\">";
-			$html .= " <label class=\"css_label\">Debug</label>";
+			$html .= " <label class=\"css_label\">Info</label>";
 			$html .= "</div>";
 			# Body
-			$html .= "<div id=\"inspector_debug\" class=\"inspector_info_body css_section_group_content tab_content inspector_div_content \" ></div>";
-			$html .= "</div>";//end debug_info_wrapper			
-
-		}#end iif(SHOW_DEBUG===true || DEDALO_ENTITY=='development') 
+			$html .= "<div id=\"inspector_debug\" class=\"inspector_info_body css_section_group_content tab_content inspector_div_content\"></div>";
+			$html .= "</div>";//end debug_info_wrapper
+		}#end iif(SHOW_DEBUG===true || DEDALO_ENTITY=='development')
 		
 		
 	$html .= " </div>";#/inspector_div

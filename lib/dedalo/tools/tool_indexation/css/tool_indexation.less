@@ -5,6 +5,12 @@
 @import "@{common_css}/library.less";
 
 
+.tool_indexation_icon {
+	background-color: @color_indexation;
+	background-image: url(../../../themes/default/icon_structuration_hover.svg);
+} 
+
+
 
 /* PAGE 
 -------------------------------------- */
@@ -52,6 +58,35 @@
 	}
 
 
+	/* LEFT SIDE
+	------------------------------------------- */
+	.left_side .indexation_page_tesauro {
+		//background-color: aqua;
+		height: 100%;
+		display: table;
+		width: 100%;
+		overflow: hidden;
+		position: relative;
+		}
+
+
+
+	/* AV IFRAME
+	------------------------------------------- */	
+	.left_side .media_frame {
+		width: 100%;
+		height:99.40%;
+		//height: 70%;
+		//max-height: 460px;
+		padding: 0;
+		margin: 0;
+		overflow: hidden;
+		border: none;
+		//background-color: #6ED03E
+		display: none;
+		}
+
+
 
 	.left_side .indexation_page_tesauro {
 		/*
@@ -59,7 +94,9 @@
 		height:100%;
 		width: 100%;*/
 	}
-	.left_side .tesauro_frame {
+	/* THESAURUS IFRAME
+	------------------------------------------- */	
+	.left_side .tesaurus_frame {
 		width: 100%;
 		height:99.40%;
 		padding: 0;
@@ -77,7 +114,7 @@
 	height: 100%;
 	overflow: auto;
 	max-height: 60%;	// fallback for browsers without support for calc() 
-	max-height: ~"calc(100% - 290px)";
+	max-height: ~"calc(100% - 320px)";
 
 	//background-color: #81D980
 }
@@ -154,10 +191,6 @@ li.tool_indexation_index_list_termino {
 	}
 
 
-.header_info {
-	padding: 6px;
-	float: left;
-}
 
 .wrap_tool_indexation_page label.css_label.tooltips {
 	max-width: 250px;
@@ -201,9 +234,9 @@ li.tool_indexation_index_list_termino {
 --------------------------------------------------------- */
 	#indexation_container {
 		width: 100%;
-		//height: 600px;		
+		height: 96.8%; // fallback
+		height: ~"calc(100% - 30px)"; // Note the strange format ~"value" is necessary for less
 
-		height: ~"calc(100% - 32px)";
 		position: absolute;
 	}
 	.split {
@@ -247,6 +280,14 @@ li.tool_indexation_index_list_termino {
 	}
 
 
+.tool_indexation_fast_lang_switch {
+	top: 27px;
+	right: 5px;
+	opacity: 1;
+	height: 22px;
+}
 
 
-
+.lang_info_debug {
+	top: -8px;
+}

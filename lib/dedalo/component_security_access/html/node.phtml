@@ -2,37 +2,34 @@
 
 #
 # NODE
-
-
 $html = '';
-
 $html .= "<li class=\"ts_term_li clearfix\">";
 
 	#
 	# CHECKBOX
 	$checked = '';
 
-	$html .= "\n <input type=\"checkbox\" class=\"css_component_security_areas\" onclick=\"component_security_aaccess.save_area(this,event)\"
-	data-tipo=\"{$current_tipo}\"
-	value=\"{$current_tipo}\"
-	$checked />";
-
+	$html .= "<input type=\"checkbox\" class=\"css_component_security_areas\" onclick=\"component_security_aaccess.save_area(this,event)\" ";
+	$html .= "data-tipo=\"{$current_tipo}\" ";
+	$html .= "value=\"{$current_tipo}\" ";
+	$html .= $checked;
+	$html .= "/>";
 
 
 	#
 	# TERM NAME	
-	$add_class = isset($highlight) ? 'highlight_term' : '';
+	$add_class = isset($highlight) ? ' highlight_term' : '';
 	$highlight = '';
 	
-	$html .= "<label id=\"ts_term_{$current_tipo}\" class=\"ts_term_name $add_class\">";
+	$html .= "<label id=\"ts_term_{$current_tipo}\" class=\"ts_term_name{$add_class}\">";
 	$html .= $termino;
-	if(SHOW_DEBUG) {
-		$html .= " <small>[".$current_tipo."]</small>";
+	if(SHOW_DEVELOPER===true) {
+		$html .= "<small>[".$current_tipo."]</small>";
 	}
 	$html .= "</label>";
 
 			/*
-				$html_contenido .= "\n <label for=\"{$identificador_unico}_{$tipo}\" class=\"css_component_security_areas_rotulo\">";
+				$html_contenido .= "<label for=\"{$identificador_unico}_{$tipo}\" class=\"css_component_security_areas_rotulo\">";
 				$html_contenido .= "$termino";
 				if(SHOW_DEBUG) {
 					$html_contenido .= " - [$tipo: ";
@@ -42,19 +39,18 @@ $html .= "<li class=\"ts_term_li clearfix\">";
 				}
 				$html_contenido .= "</label>";
 				*/
-
 	#
 	# CHILDRENS TOGGLE BUTTON	
 	if (!empty($ar_childrens)) {
 		$ar_childrens_json = json_encode($ar_childrens);
 		$title = 'mostrar_ocultar';
-		$html .= "<div class=\"ts_term_icon icon_show_childrens arrow_right unselectable\" rel=\"tooltip\" title=\"$title\"
-		data-termino_id=\"$current_tipo\"
-		data-ar_childrens='$ar_childrens_json'
-		onclick=\"ts_term.toggle_childrens(this)\"
-		></div>";
+		
+		$html .= "<div class=\"ts_term_icon icon_show_childrens arrow_right unselectable\" rel=\"tooltip\" title=\"$title\" ";
+		$html .= "data-termino_id=\"$current_tipo\" ";
+		$html .= "data-ar_childrens='$ar_childrens_json' ";
+		$html .= "onclick=\"ts_term.toggle_childrens(this)\" ";
+		$html .= "></div>";
 	}
-
 
 $html .= "</li>";
 

@@ -45,6 +45,18 @@ if( !is_dir($folder_path) ) {
 	debug_log(__METHOD__." CREATED DIR: $folder_path  ".to_string(), logger::DEBUG);
 }
 
+# BACKUP_TEMP
+# Target folder exists test	
+if (defined('STRUCTURE_DOWNLOAD_DIR')) {
+$folder_path = STRUCTURE_DOWNLOAD_DIR;
+if( !is_dir($folder_path) ) {
+	if(!mkdir($folder_path, 0777,true)) {
+		die(" Error on read or create backup STRUCTURE_DOWNLOAD_DIR directory. Permission denied");
+	}
+	debug_log(__METHOD__." CREATED DIR: $folder_path  ".to_string(), logger::DEBUG);
+}
+}
+
 # MEDIA folder
 # Target folder exists test	
 $folder_path = DEDALO_MEDIA_BASE_PATH;
@@ -189,37 +201,37 @@ if( !is_dir($folder_path) ) {
 # IMAGE MAGICK
 #exec(MAGICK_PATH. "convert -version", $out, $rcode); // Try to get ImageMagick "convert" program version number.
 #if ($rcode!==0) die("Error on system test. ImageMagick lib not found");
-$image_magick = trim(shell_exec('type -P '.MAGICK_PATH.'/convert'));
+$image_magick = trim(shell_exec('command -v '.MAGICK_PATH.'/convert'));
 if (empty($image_magick)) {
 	die("Error on system test. ImageMagick lib not found");
 }
 
 # FFMPEG
-$ffmpeg = trim(shell_exec('type -P '.DEDALO_AV_FFMPEG_PATH));
+$ffmpeg = trim(shell_exec('command -v '.DEDALO_AV_FFMPEG_PATH));
 if (empty($ffmpeg)) {
 	die("Error on system test. ffmpeg lib not found");
 }
 
 # QT-FASTSTART
-$qt_faststart = trim(shell_exec('type -P '.DEDALO_AV_FASTSTART_PATH));
+$qt_faststart = trim(shell_exec('command -v '.DEDALO_AV_FASTSTART_PATH));
 if (empty($qt_faststart)) {
 	die("Error on system test. qt-faststart lib not found");
 }
 
 # FFPROBE
-$ffprobe = trim(shell_exec('type -P '.DEDALO_AV_FFPROBE_PATH));
+$ffprobe = trim(shell_exec('command -v '.DEDALO_AV_FFPROBE_PATH));
 if (empty($ffprobe)) {
 	die("Error on system test. ffprobe lib not found");
 }
 
 # NODE
 if (defined('DEDALO_NOTIFICATIONS') && DEDALO_NOTIFICATIONS===true) {
-	$node = trim(shell_exec('type -P '.DEDALO_NODEJS));
+	$node = trim(shell_exec('command -v '.DEDALO_NODEJS));
 	if (empty($node)) {
 		die("Error on system test. node lib not found");
 	}
 	/*
-	$pm2 = trim(shell_exec('type -P '.DEDALO_NODEJS_PM2));
+	$pm2 = trim(shell_exec('command -v '.DEDALO_NODEJS_PM2));
 	if (empty($pm2)) {
 		die("Error on system test. npm pm2 lib not found");
 	}
@@ -271,7 +283,7 @@ if (!function_exists('openssl_encrypt')) {
 	$ar_langs 	 = (array)unserialize(DEDALO_APPLICATION_LANGS);
 	foreach ($ar_langs as $lang => $label) {
 		$label_path  = '/common/js/lang/' . $lang . '.js';	
-		if (!file_exists(DEDALO_LIB_BASE_PATH.$label_path) || (SHOW_DEBUG && strpos(DEDALO_HOST, 'localhost')!==false) ) {		 	
+		if (!file_exists(DEDALO_LIB_BASE_PATH.$label_path)) {		 	
 			$ar_label = label::get_ar_label($lang); // Get all properties
 				#dump($ar_label, ' ar_label');
 			
@@ -286,14 +298,13 @@ if (!function_exists('openssl_encrypt')) {
 	$response 	= $data_check->check_sequences();
 	if ($response->result!=true) {
 		debug_log(__METHOD__." $response->msg ".to_string(), logger::WARNING);
-		if(SHOW_DEBUG===true) {
+		if($_SESSION['dedalo4']['auth']['user_id']=="-1") { 
 			die("Error on ".$response->msg);
 		}
 	}
 
 # AREA TREE 
 area::get_ar_ts_children_all_areas_hierarchized(true);
-
 
 
 

@@ -29,7 +29,7 @@
 				#$html_content .= "</div><!-- /records -->";#end main_list
 
 
-				if(SHOW_DEBUG===true) {
+				if(SHOW_DEVELOPER===true) {
 					#dump($this, ' this 1 ');
 					$limit_time=SLOW_QUERY_MS;
 					$html_info='';
@@ -62,7 +62,7 @@
 							
 						$html_content .= $html_info;
 					}
-				}#end if(SHOW_DEBUG===true)
+				}#end if(SHOW_DEVELOPER===true)
 								
 	}
 	

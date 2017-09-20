@@ -148,7 +148,7 @@ abstract class tool_common extends common {
 
 			$RecordObj_dd 	= new RecordObj_dd($current_tipo);
 			$traducible  	= $RecordObj_dd->get_traducible();
-			$current_lang   = $RecordObj_dd->get_traducible()!=='si' ? DEDALO_DATA_NOLAN : DEDALO_DATA_LANG;
+			$current_lang   = $traducible!=='si' ? DEDALO_DATA_NOLAN : DEDALO_DATA_LANG;
 			
 			$component_dato_current_lang = $current_component->dato->$current_lang;
 
@@ -185,12 +185,51 @@ abstract class tool_common extends common {
 			if ($current_locator->section_tipo!=TOP_TIPO) {
 				continue;
 			}			
-			$ar_inverse[$current_locator->section_id] = "$section_name - $current_locator->section_id";				
+			$ar_inverse[$current_locator->section_id] = $section_name ." | ". $current_locator->section_id ;
+
+			# inverse_code
+			$inverse_code = tool_common::get_inverse_element('code', $current_locator->section_id, TOP_TIPO);
+			if (is_object($inverse_code)) {
+				$ar_inverse[$current_locator->section_id] .= " | ". $inverse_code->value;
+			}
 		}
 		natsort($ar_inverse);
 		
 		return $ar_inverse;
 	}#end get_ar_inverse
+
+
+
+	/**
+	* GET_INVERSE_ELEMENT
+	* Get section_map from section class and calculate value of desired component type like 'code'
+	* @return mixed object|null
+	*/
+	public static function get_inverse_element($type, $section_id, $section_tipo) {			
+
+		# section_map is in properties of structure element 'section_map', inside current section structure
+		$section_map = section::get_section_map( $section_tipo );
+			#dump($section_map, ' section_map ++ '.to_string());
+		
+		if (is_object($section_map) && property_exists($section_map, "default") && property_exists($section_map->default, $type)) {
+			$element_tipo 	= $section_map->default->$type;
+			$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($element_tipo,true);
+			$component 		= component_common::get_instance($modelo_name,
+															 $element_tipo,
+															 $section_id,
+															 'list',
+															 DEDALO_DATA_LANG,
+															 $section_tipo);			
+			$response = new stdClass();
+				$response->label = $component->get_label();
+				$response->value = $component->get_valor();			
+		}else{
+			$response = null;
+		}
+		#dump($response, ' response ++ '.to_string());
+
+		return $response;
+	}//end get_inverse_element
 
 
 

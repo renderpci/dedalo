@@ -1,4 +1,8 @@
+// Vars
+@common_css: "../../common/css";
 
+// Usage
+@import "@{common_css}/library.less";
 
 
 
@@ -54,17 +58,26 @@ input.css_autocomplete_hi_search_field {
 		float: left;
 		margin-right: 10px;
 	}
+	div.toponymy_list_button_options.in_search_mode {
+		position: relative;
+		float: left;
+		top: 1px;
+		zoom: 145%;
+		margin-right: 5px;
+	}
+	ul.css_autocomplete_hi_valor.in_search_mode {
+		padding-top: 5px;
+	}
 
 
 
 /* DATO HIDDEN INPUT 
 ----------------------------------------- */
 input.css_autocomplete_hi_dato_hidden {
-	float: right;
-	width: 50px;
-	text-align: center;
-	opacity: 0.4;
 	display: none;
+	width: 100%;
+	margin-top: 10px;
+	background-color: #ccf0fb;
 	}
 	input.css_autocomplete_hi_dato_hidden.debug {
 		display: inline-block;
@@ -103,7 +116,7 @@ input.css_autocomplete_hi_dato_hidden {
 /* Overwrite jquery ui defaults
 ----------------------------------------- */
 .ui-autocomplete {
-	z-index: 1001;
+	z-index: 10019;
 }
 
 
@@ -202,10 +215,13 @@ input.css_autocomplete_hi_dato_hidden {
 
 
 
+/* TOPONYMY_LIST
+----------------------------------------*/
+@column_width : 33%;
 .toponymy_list {
+	display: none;
 	background-color: #8E8E8E;
 	padding: 10px;	
-	display: none;
 	z-index: 1001;
 	/*
 	position: absolute;
@@ -215,15 +231,33 @@ input.css_autocomplete_hi_dato_hidden {
 	border-radius: 4px;
 	white-space: nowrap;
 	color: #ffffff !important;
+	width: 100%;
 	}
 	.toponymy_list li {
 		//display: table;
 		float: left;
-		width: 33%;
-	}
+		width: @column_width;
+		white-space: nowrap;
+		overflow: hidden;
+		display: flex; // Important for text-overflow ellipsis
+	}	
 	.toponymy_list input {
+		margin: 2px;
 		margin-right: 4px;
 	}
+	.toponymy_list label {
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		max-width: 90%;
+	}
+	.toponymy_list  hr {
+		width: 100%;
+		display: -webkit-inline-box;
+		margin: 3px;
+		padding: 0;
+		float: left;
+		}
 	/*
 	.toponymy_list .toponymy_list_close {
 		float: right;
@@ -251,5 +285,9 @@ input.css_autocomplete_hi_dato_hidden {
 		right: 0;
 		position: absolute;	
 		zoom: 1.15;
+	}
+
+	.toponymy_list mark {
+		color: #f5c39f !important;
 	}
 

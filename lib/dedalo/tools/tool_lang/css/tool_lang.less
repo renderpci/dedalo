@@ -1,4 +1,55 @@
-/* INSPECTOR */
+// Vars
+@common_css: "../../../common/css";
+
+// Usage
+@import "@{common_css}/library.less";
+
+
+.tool_lang_icon {
+	background-image: url(../../../themes/default/icon_translation_hover.svg);
+	background-color: @color_lang;
+}
+
+
+#wrap_tool_lang_component_source {
+
+	// For text editor as read only
+	/*
+	max-height: 450px;
+    overflow: scroll;*/
+}
+
+
+
+/* TABS
+--------------------------------------------------------- */
+	#section_tab_1:checked ~ #section_tab_1_content,
+	#section_tab_2:checked ~ #section_tab_2_content
+	{ 
+		display: block; 
+	}
+	.common_line {
+		float: left;
+	}
+	.css_section_tab_content > label {
+		float: right;
+		text-transform: capitalize;
+	}
+	.css_section_tab_content > section {
+		clear: both;
+	}
+	div.selected_fragment {
+		margin: 0;
+	}
+	.css_section_tab_content>section {
+		padding-top: 0;
+	}
+	.section_tab .btn {
+		margin: 15px;
+		margin-left: 1px;
+	}
+
+
 
 
 
@@ -21,6 +72,23 @@
 #tool_lang_component_target {
 	/*background-color:#fdd25e;*/
 }
+
+/* AV IFRAME
+------------------------------------------- */	
+.media_frame {
+	width: 49%;
+	height: 500px;
+	float: left;
+	//height: 70%;
+	//max-height: 460px;
+	padding: 0;
+	margin: 0;
+	overflow: hidden;
+	border: none;
+	//background-color: #6ED03E
+	display: none;
+	}
+
 
 
 /* SELECTORS */
@@ -65,7 +133,11 @@
 	display: inline-block;
 	margin: 0px;
 	margin-right: 5px;
-}
+	}
+	.propagate_optionsDIV label {
+		padding-left: 4px;
+		padding-right: 8px;
+	}
 
 /* - N PARAGRAPHS -*/
 DIV.nParagrapsLeft_div {
@@ -74,8 +146,11 @@ DIV.nParagrapsLeft_div {
 	padding-left: 6px;	
 }
 #nParagrapsLeft, #nParagrapsRight {
-	padding: 3px;
+	padding: 2px;
 	font-weight: bold;
+	padding-top: 2px;
+	padding-bottom: 2px;
+	margin-left: 4px;
 }
 #nParagrapsRight {
 	color: #2f7f24;
@@ -85,7 +160,7 @@ DIV.nParagrapsRight_div {
 	padding: 4px;	
 }
 .nParagrapsRight_red {
-	background-color: #fa1614;
+	background-color: @color_label_error;
 	color: #ffffff !important;
 	border-radius: 3px;
 	padding-left: 8px !important;
@@ -93,11 +168,23 @@ DIV.nParagrapsRight_div {
 }
 
 
-.tool_lang_inspector_log { 
+.tool_lang_inspector_log {
+	/*
 	float: right;
 	width: 180px;
 	margin-right: 10px;
-	text-align: center;
+	*/
+	/*
+	text-align: right;
+
+	position: fixed;
+    right: 0;
+    margin-right: 0;
+    top: 29px;
+    opacity: 0.9;
+    width: 37%;
+	min-height: 1.3em;
+	//background-color: #AFEBFF */
 }
 
 .wrap_tool_lang_page label.css_label.tooltips{
@@ -216,3 +303,43 @@ DIV.nParagrapsRight_div {
 }
 /*LANG AJAX RESPONSE
 ********************************************************************************/
+
+
+
+#open_structuration_selector {
+
+
+	}
+	#open_structuration_selector li {
+		cursor: pointer;
+		font-size: 14px;
+		list-style: inside;
+		border-bottom: solid 1px #f3f2f2;
+		padding: 1px;
+		}
+		#open_structuration_selector li.unactivated {
+			opacity: 0.5;
+			cursor: default;
+		}
+		#open_structuration_selector li.activated:hover {
+			background-color: @color_lang;
+			color: #ffffff;
+		}
+		#open_structuration_selector li.activated:active {
+			//background-color: #BFEFFA;
+			color: #000000;
+		}
+
+.body_dialog_structuration_selector {
+	overflow: auto;
+	max-height: 500px;
+}
+
+
+
+
+.lang_info_debug {
+	top: -30px; 
+}
+
+

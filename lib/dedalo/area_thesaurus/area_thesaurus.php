@@ -71,6 +71,9 @@
 				css::$ar_url[] = DEDALO_LIB_BASE_URL."/diffusion/$element_name/css/$element_name.css";
 				#js::$ar_url[]  = DEDALO_LIB_BASE_URL."/$element_name/js/$element_name.js";
 
+				$element_name = 'tool_av_versions';
+				#css::$ar_url[] = DEDALO_LIB_BASE_URL."/tools/$element_name/css/$element_name.css";
+				js::$ar_url[]  = DEDALO_LIB_BASE_URL."/tools/$element_name/js/$element_name.js"; 
 
 				#
 				# HIERARCHY_TYPES

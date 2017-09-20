@@ -1,54 +1,73 @@
 <?php
-/*
-	TRIGGER DB UTILS
-*/
+$start_time=microtime(1);
 set_time_limit(300);
-require_once(dirname(dirname(__FILE__)).'/config/config4.php');
+include( dirname(dirname(__FILE__)).'/config/config4.php');
 include(DEDALO_LIB_BASE_PATH.'/backup/class.backup.php');
+# TRIGGER_MANAGER. Add trigger_manager to receive and parse requested data
+common::trigger_manager();
 
-
-# set vars
-	$vars = array('action');
-		foreach($vars as $name) $$name = common::setVar($name);
-
-
-# CALL FUNCTION
-if ( function_exists($action) ) {
-	call_user_func($action);
-}
 
 
 /**
-* EXPORT
-* EXPORT DB (export_structure)
+* EXPORT_STR
+* Export db (export_structure)
 */
-function export() {
+function export_str($json_data) {
+	global $start_time;
 
-	# LOGIN VERIFICATION
-	if(login::is_logged()!==true) die("<span class='error'> Auth error: please login </span>");
+	$response = new stdClass();
+		$response->result 	= false;
+		$response->msg 		= "";//'Error. Request failed ['.__FUNCTION__.']';
 
 	# Dump all historic data first
-	$db_name = 'dedalo4_development_str_'.date("Y-m-d_Hi").'.custom';
-	$exp 	 = backup::export_structure($db_name, $exclude_tables=false);	// Full backup
-	echo $exp->msg;
-	echo '<br>';
-	if ($exp->code!=0) {
-		echo "<pre>Sorry. Nex step export_structure stopped ($exp->code)</pre>";
-		exit();
+	$db_name 				= 'dedalo4_development_str_'.date("Y-m-d_Hi").'.custom';
+	$res_export_structure 	= backup::export_structure($db_name, $exclude_tables=false);	// Full backup
+	if ($res_export_structure->result===false) {
+		$response->result 	= false;
+		$response->msg 		= $res_export_structure->msg;
+		return $response;
+	}else{
+		# Append msg
+		$response->msg .= $res_export_structure->msg;
 	}
+
+
 	
 	# Dump official structure version 'dedalo4_development_str.custom' (partial backup)
-	$res = backup::export_structure(null, $exclude_tables=true);	 // Partial backup
-	echo $res->msg;
-}//end export
+	$res_export_structure2 = (object)backup::export_structure(null, $exclude_tables=true);	 // Partial backup
+	if ($res_export_structure2->result===false) {
+		$response->result 	= false;
+		$response->msg 		= $res_export_structure2->msg;
+		return $response;
+	}else{
+		# Append msg
+		$response->msg .= $res_export_structure2->msg;
+	}
+
+
+	# Debug
+	if(SHOW_DEBUG===true) {
+		$debug = new stdClass();
+			$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";			
+
+		$response->debug = $debug;
+	}
+	
+	return (object)$response;
+}//end export_str
 
 
 
-# IMPORT DB (import_structure)
-function import() {
+/**
+* IMPORT_STR
+* Import db (import_structure)
+*//* NO USAR . USAR LA DE TOOL ADMINISTRATION 
+function import_str($json_data) {
+	global $start_time;
 
-	# LOGIN VERIFICATION
-	if(login::is_logged()!==true) die("<span class='error'> Auth error: please login </span>");
+	$response = new stdClass();
+		$response->result 	= false;
+		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
 
 	$html ='';
 
@@ -58,8 +77,8 @@ function import() {
 	$html .= $exp->msg;
 	$html .= '<br>';
 	if ($exp->code!=0) {
-		echo "<pre>Sorry. Nex step import_structure stopped ($exp->code)</pre>";
-		exit();
+		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.'] Sorry. Next step import_structure stopped ('.$exp->code.')';
+		return $response;		
 	}
 
 	$res = backup::import_structure();
@@ -71,28 +90,44 @@ function import() {
 	unset($_SESSION['dedalo4']['auth']['permissions_table']);
 
 	$html .= $res;	
-	echo wrap_html($html, false);
-}//end import 
+	#echo wrap_html($html, false);
+
+	$response->result 	= $html;
+	$response->msg 		= 'Ok. Request done ['.__FUNCTION__.']';
+
+	# Debug
+	if(SHOW_DEBUG===true) {
+		$debug = new stdClass();
+			$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
+			$debug->exp 		= $exp;
+
+		$response->debug = $debug;
+	}
+	
+	return (object)$response;
+}//end import_str */
 
 
 
 # BACKUP DB 
+/* REMOVED
 function backup() {
 
 	$res = backup::init_backup_secuence($user_id_matrix='0', $username='system');
 	echo $res;
-}//end backup
+}//end backup */
 
 
 
 # LOAD_STR_DATA
+/* REMOVED !
 function load_str_data() {
 
 	$res = (array)backup::load_dedalo_str_tables_data();
 
 	$html = implode('<hr>', $res);
 	echo wrap_pre($html);
-}//end load_str_data
+}//end load_str_data */
 
 
 

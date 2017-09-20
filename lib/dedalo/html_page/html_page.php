@@ -44,7 +44,7 @@
 			}
 		}
 	}
-
+	
 
 	# DEBUG	
 	if(SHOW_DEBUG===true) {
@@ -115,7 +115,7 @@
 
 				$username		= $_SESSION['dedalo4']['auth']['username'];
 				$user_id		= $_SESSION['dedalo4']['auth']['user_id'];
-				$full_username 	= $_SESSION['dedalo4']['auth']['full_username'];
+				$full_username 	= isset($_SESSION['dedalo4']['auth']['full_username']) ? $_SESSION['dedalo4']['auth']['full_username'] : null;
 			
 				##############################################################################
 				# ACTIVITY : LOG VISIT TO CURRENT PAGE
@@ -142,6 +142,7 @@
 	#
 	# JAVASCRIPT
 		# PARENT (JAVASCRIPT VAR) NEEDED FOR TIME MACHINE
+
 		if(isset($_REQUEST['parent'])) {
 			$parent = $_REQUEST['parent'];
 		}elseif(isset($_REQUEST['id'])) {
@@ -177,6 +178,7 @@
 			case (isset($_REQUEST['menu']) && $_REQUEST['menu']==0):
 				$menu_html = null;
 				break;
+
 			case (isset($_REQUEST['menu']) && $_REQUEST['menu']==1):
 				# MENU
 				$menu 		= new menu($modo);
@@ -185,8 +187,8 @@
 				include ( DEDALO_LIB_BASE_PATH . '/' . get_class() .'/html/' . get_class() . '_header.phtml' );
 				$html_header = ob_get_clean();
 				break;
-			case ($context_name==='list_in_portal'):
 
+			case ($context_name==='list_in_portal'):
 				$html_header .= "<div class=\"breadcrumb\">";
 				$html_header .=   strip_tags( tools::get_bc_path() ); // Remove possible <mark> tags
 				#dump(tools::get_bc_path(), 'tools::get_bc_path()');
@@ -194,8 +196,8 @@
 				$html_header .= "</div>";
 				$html_header .= "<div class=\"breadcrumb_spacer\"></div>";
 				break;
-			case (strpos($m, 'tool_')===false): //empty($context_name) && 
 
+			case (strpos($m, 'tool_')===false): //empty($context_name) && 
 				# MENU
 				$menu_html = null;
 				if(empty($caller_id)) {
@@ -215,13 +217,24 @@
 
 	#
 	# PAGE TITLE
-		$page_title = RecordObj_dd::get_termino_by_tipo($tipo,DEDALO_APPLICATION_LANG,true);
-		$page_title = strip_tags($page_title);
-		$page_title .= ' '.$tipo;
-		if (isset($id)) {
-			$page_title .= " $id";
+		if (strpos($modo, 'tool_')===0){
+			$page_title = label::get_label($modo);
+		}else{
+			$page_title = RecordObj_dd::get_termino_by_tipo($tipo,DEDALO_APPLICATION_LANG,true);
 		}
-		$page_title = DEDALO_ENTITY .' '.$page_title;
+		
+		$page_title = strip_tags($page_title);
+		
+		if (!empty($id)) {
+			$page_title .= " $id";
+		}else{
+			$page_title .= " $parent";
+		}
+
+		if(SHOW_DEBUG===true) {
+			$page_title .= ' '.$tipo;
+			$page_title = defined('DEDALO_ENTITY_LABEL') ? DEDALO_ENTITY_LABEL.' '.$page_title : DEDALO_ENTITY.' '.$page_title;
+		}
 
 
 	$is_global_admin = (bool)component_security_administrator::is_global_admin(navigator::get_user_id());
@@ -230,6 +243,6 @@
 	#
 	# HTML PAGE
 		include(DEDALO_LIB_BASE_PATH . '/' . get_class() .'/html/' . get_class() . '.phtml');
-	
+
 
 ?>

@@ -382,11 +382,41 @@ if($mode=='download_file') {
 	# VARS FOR LIB 'donwload.php'
 	$base_dir			= $AVObj->get_media_path_abs();	 #$AVObj->get_media_path(); 	
 	$allowed_referrer	= DEDALO_HOST;
+	# Local real file name
 	$file_name			= $AVObj->get_name() . '.' . $extension;
+	# Name of file that user downloads
+	$file_name_showed	= 'media_downloaded_' . $file_name;
 
 
-	
-	$file_name_showed	= 'media_downloaded_' . $file_name ;
+	#
+	# ORIGINAL NAME CASE
+	# Change Dédalo internal name like  "rsc29_rsc170_5837.jpg" to original file name like "falla de lhorta capçèlera.JPG"
+	$ar = explode('_', $AVObj->get_name());
+	$tipo 				= $ar[0];
+	$section_tipo 		= $ar[1];
+	$parent 	 		= $ar[2];
+	$modelo_name 		= RecordObj_dd::get_modelo_name_by_tipo($tipo, true);
+	$component_image 	= component_common::get_instance($modelo_name,
+														 $tipo,
+														 $parent,
+														 'list',
+														 DEDALO_DATA_NOLAN,
+														 $section_tipo);
+	$propiedades = $component_image->get_propiedades();
+	if (isset($propiedades->target_filename)) {
+		
+		$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($propiedades->target_filename, true);
+		$component 		= component_common::get_instance($modelo_name,
+														 $propiedades->target_filename,
+														 $parent,
+														 'list',
+														 DEDALO_DATA_LANG,
+														 $section_tipo);
+		$original_file_name = $component->get_valor();
+		if (!empty($original_file_name)) {
+			$file_name_showed = $original_file_name; // Overwrite Dédalo media name with stored original file name
+		}
+	}
 
 	# Extract tipo from video_id like dd732-1.mp4 => dd732
 	$ar 	= explode('-', $video_id);

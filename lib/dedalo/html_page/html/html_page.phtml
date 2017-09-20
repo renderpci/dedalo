@@ -6,6 +6,7 @@ header("Pragma: private");
 header("Expires: " . date(DATE_RFC822,strtotime(" 120 day")));
 header('Content-Type: text/html');
 */
+#header("Access-Control-Allow-Origin: *");
 ?>
 <!DOCTYPE html>
 <?php /*<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en-US" lang="en-US">*/ ?>
@@ -18,9 +19,8 @@ header('Content-Type: text/html');
 <title><?php echo $page_title ?></title>
 <link rel="shortcut icon" href="<?php echo DEDALO_ROOT_WEB ?>/favicon.ico" />
 <?php echo trim($css_link_code); ?>
-
 <script>
-var DEDALO_LIB_BASE_URL='<?php echo DEDALO_LIB_BASE_URL ?>',DEDALO_ROOT_WEB='<?php echo DEDALO_ROOT_WEB ?>',DEBUG=SHOW_DEBUG=<?php var_export(SHOW_DEBUG); ?>;
+var DEDALO_LIB_BASE_URL='<?php echo DEDALO_LIB_BASE_URL ?>',DEDALO_ROOT_WEB='<?php echo DEDALO_ROOT_WEB ?>',DEBUG=SHOW_DEBUG=<?php var_export(SHOW_DEBUG); ?>,SHOW_DEVELOPER=<?php var_export(SHOW_DEVELOPER);?>;
 var page_globals = {
 	dedalo_version:'<?php echo DEDALO_VERSION ?>',
 	dedalo_application_lang:'<?php echo DEDALO_APPLICATION_LANG ?>',
@@ -68,13 +68,12 @@ if(page_globals.section_tipo.length<3) {
 }
 //console.log("id_path:"+page_globals.id_path)
 <?php } //if(SHOW_DEBUG===true) {?>
+<?php echo js::get_json_elements_data(); ?>
 </script>
 <?php echo trim($js_link_code) ?>
-
 </head>
 <body>
 <div id="html_page_wrap" class="<?php echo "html_page_wrap_{$modo} html_page_wrap_{$tipo}"; ?>">
-
 	<?php
 
 
@@ -98,7 +97,7 @@ if(page_globals.section_tipo.length<3) {
 			print_r(error_get_last());
 			print "</pre>";
 		}
-		print "</div><!-- /log_messages -->\n\n";
+		print "</div><!-- /log_messages -->";
 		
 	
 	#
@@ -110,10 +109,10 @@ if(page_globals.section_tipo.length<3) {
 
 	#
 	# CONTENT HTML
-		print '<!-- CONTENT HTML -->';
-		print "<div class=\"content_html\">";
+		print '<!-- CONTENT_HTML -->';
+		print '<div class="content_html">';
 		print $html;
-		print "</div><!-- /content_html -->";
+		print '</div><!-- /content_html -->';
 
 
 	#
@@ -150,13 +149,12 @@ if(page_globals.section_tipo.length<3) {
 	?>
 
 </div><!-- /html_page_wrap -->
-
 <?php
 	# DEBUG
 	if(SHOW_DEBUG===true) {
 
 		# DEBUGGER INFO
-		if($modo!='relation') include(DEDALO_LIB_BASE_PATH.'/html_page/html/html_page_debug.phtml');
+		# if($modo!='relation') include(DEDALO_LIB_BASE_PATH.'/html_page/html/html_page_debug.phtml');
 		
 		
 	}#if(SHOW_DEBUG===true)

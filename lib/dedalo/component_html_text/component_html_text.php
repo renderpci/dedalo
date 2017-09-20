@@ -8,30 +8,30 @@
 	$modo					= $this->get_modo();		
 	$dato 					= $this->get_dato();
 	$caller_id 				= navigator::get_selected('caller_id');		
-	$caller_tipo 			= navigator::get_selected('caller_tipo');	
-
+	$caller_tipo 			= navigator::get_selected('caller_tipo');
 	$label 					= $this->get_label();				
 	$required				= $this->get_required();
 	$debugger				= $this->get_debugger();
-	$permissions			= common::get_permissions($section_tipo,$tipo);
+	$permissions			= $this->get_component_permissions();
 	$ejemplo				= $this->get_ejemplo();
-	$html_title				= "Info about $tipo";
-	
+	$html_title				= "Info about $tipo";	
 	$valor					= $this->get_valor();				
 	$lang					= $this->get_lang();
 	$lang_name				= $this->get_lang_name();
+	$traducible 			= $this->get_traducible();
 	$identificador_unico	= $this->get_identificador_unico();
 	$component_name			= get_class($this);
-	$dato_raw 				= tools::truncate_text(htmlspecialchars($valor),300);	#tools::truncate_text($string, $limit, $break=" ", $pad="...")
-	
-	$context_name 			= $this->get_context();
-		#dump($context,'context');
-		#echo "context:$context - $modo";
+	$dato_raw 				= '';//tools::truncate_text(htmlspecialchars($valor),300);	#tools::truncate_text($string, $limit, $break=" ", $pad="...")	
+	$context 				= $this->get_context();
+	$context_name 			= isset($context->context_name) ? $context->context_name : null;
 
 	# Propiedades puede asignar valores de configuración del editor de texto (tinyMCE)
-	$propiedades = $this->get_propiedades();
-	$propiedades_json = json_handler::encode($propiedades);
-		#dump($propiedades,'propiedades');
+	$propiedades 		= $this->get_propiedades();
+	$propiedades_json 	= json_encode($propiedades);
+	if ($propiedades_json==null) {
+		$clean_obj = new stdClass();
+		$propiedades_json = json_encode($clean_obj);
+	}
 
 	if($permissions===0) return null;
 
@@ -39,9 +39,13 @@
 	if ($this->get_filter_authorized_record()===false) return NULL ;
 	
 
-	$file_name				= $modo;
+	$file_name = $modo;
 
-	js::$ar_url[]  = DEDALO_ROOT_WEB."/lib/tinymce/plupload/js/plupload.full.min.js";	
+
+	js::$ar_url[]  = TEXT_EDITOR_URL_JS; # tinyMCE
+	js::$ar_url[]  = DEDALO_LIB_BASE_URL . '/component_html_text/js/component_html_text_editor.js';
+	js::$ar_url[]  = DEDALO_ROOT_WEB."/lib/tinymce/plupload/js/plupload.full.min.js";
+		
 	
 	switch($modo) {
 		
@@ -59,7 +63,7 @@
 						#$dato_reference_lang = $this->get_dato_default_lang();
 						$default_component = $this->get_default_component();
 							#dump($default_component,'$default_component');
-					}			
+					}					
 					break;
 		
 		case 'tool_lang' :
@@ -93,7 +97,7 @@
 					# Search input name (var search_input_name is injected in search -> records_search_list.phtml)
 					# and recovered in component_common->get_search_input_name()
 					# Normally is section_tipo + component_tipo, but when in portal can be portal_tipo + section_tipo + component_tipo
-					$search_input_name = $this->get_search_input_name();				
+					$search_input_name = $this->get_search_input_name();		
 					break;					
 		
 		case 'portal_list'	:

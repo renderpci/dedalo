@@ -43,15 +43,39 @@ abstract class html_page {
 
 		# Aplication langs
 		$dedalo_application_langs = unserialize(DEDALO_APPLICATION_LANGS);
+
+		$type_of_lang = 'dedalo_application_lang';
 		
 		# Include controller
 		ob_start();
 		include ( DEDALO_LIB_BASE_PATH .'/'. get_class() . '/html/' . get_class() . '_aplication_lang_selector.phtml' );
 		$html = ob_get_contents();
-		ob_get_clean();		
+		ob_get_clean();
 		
 		return $html;
-	}
+	}//end get_dedalo_aplication_langs_selector_html
+
+
+
+	/**
+	* GET_DEDALO_DATA_LANGS_SELECTOR_HTML
+	*/
+	public static function get_dedalo_data_langs_selector_html() {
+
+		# Aplication langs
+		$dedalo_application_langs = unserialize(DEDALO_APPLICATION_LANGS);
+
+		$type_of_lang = 'dedalo_data_lang';
+		
+		# Include controller
+		ob_start();
+		include ( DEDALO_LIB_BASE_PATH .'/'. get_class() . '/html/' . get_class() . '_aplication_lang_selector.phtml' );
+		$html = ob_get_contents();
+		ob_get_clean();
+		
+		return $html;
+	}//end get_dedalo_data_langs_selector_html
+
 
 
 

@@ -132,6 +132,16 @@
 
 
 
+################################################################
+# IS_DEVELOPER : Logged user is developer value
+	$show_developer = false;
+	if (isset($_SESSION['dedalo4']['auth']['is_developer']) && $_SESSION['dedalo4']['auth']['is_developer']===true) {
+		$show_developer = true;
+	}
+	define('SHOW_DEVELOPER'			, $show_developer);
+
+
+
 
 ################################################################
 # LOG AND ERRORS : STORE APPLICATION DATA INFO AND ERRORS
@@ -195,13 +205,16 @@
 	# DATA LANG : Dedalo data lang
 	define('DEDALO_DATA_LANG_DEFAULT'			, 'lg-spa');
 	define('DEDALO_DATA_LANG'					, fix_cascade_config4_var('dedalo_data_lang',DEDALO_DATA_LANG_DEFAULT));
+	define('DEDALO_DATA_LANG_SELECTOR' 			, false);
+	
+	# DEDALO_DATA_NOLAN
 	define('DEDALO_DATA_NOLAN'					, 'lg-nolan');
 
 	# Projects langs
 	define('DEDALO_PROJECTS_DEFAULT_LANGS'		, serialize(array(
 													'lg-spa',
-													'lg-cat',													
-													'lg-eng',													
+													'lg-cat',
+													'lg-eng',
 													)));
 
 	# TRANSLATOR
@@ -460,7 +473,20 @@
 ################################################################
 # DIFFUSION DOMAIN
 	define('DEDALO_DIFFUSION_DOMAIN'	, 'default');
-	
+
+
+
+################################################################
+# ENCRYPTION_MODE. If not is defined, will be calculated from current Dédalo data version
+	define('ENCRYPTION_MODE'	, 'openssl');
+
+
+
+################################################################
+# DEDALO_FILTER_USER_RECORDS_BY_ID
+# Activate user records filter restriction
+	define('DEDALO_FILTER_USER_RECORDS_BY_ID'	, false);
+
 
 
 ################################################################

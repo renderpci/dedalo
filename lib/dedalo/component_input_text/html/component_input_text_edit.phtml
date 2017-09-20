@@ -4,138 +4,171 @@
 	
 
 	# html_delimiter
-	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'in');
+	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'in', $modo, $lang);
 
 
 	$wrap_style = isset($wrap_style) ? $wrap_style : '';
-	print "<div class=\"css_wrap_input_text wrap_component wrap_component_{$modo} wrap_component_{$tipo}\" id=\"{$id_wrapper}\"
-	style=\"$wrap_style\"
-	data-tipo=\"{$tipo}\"
-	data-lang=\"{$lang}\"
-	data-section_tipo=\"{$section_tipo}\"
-	data-parent=\"{$parent}\"
-	data-modo=\"{$modo}\"
-	data-dato='{$dato_json}'
-	data-component_name=\"{$component_name}\"
-	data-component_info='{$component_info}'>";
+	print "<div class=\"wrap_component css_wrap_input_text wrap_component_{$modo} wrap_component_{$tipo}\" id=\"{$id_wrapper}\" ";
+	print "style=\"$wrap_style\" ";
+	print "data-tipo=\"{$tipo}\" ";
+	print "data-lang=\"{$lang}\" ";
+	print "data-section_tipo=\"{$section_tipo}\" ";
+	print "data-parent=\"{$parent}\" ";
+	print "data-modo=\"{$modo}\" ";
+	print "data-dato='{$dato_json}' ";
+	print "data-component_name=\"{$component_name}\" ";
+	print "data-component_info='{$component_info}' ";
+	print ">";
 	
 
-		# LABEL
-		$html_label = component_common_draw::draw_label($this);
+	# LABEL
+	$html_label = component_common_draw::draw_label($this);
 
-		# CONTENIT
-		$html_content = '';
-		switch($permissions) {
 
-			case 0 :
-					$html_content .= "";
-					break;
+	# LANG FAST SWITCHER
+	/*
+	if ($this->traducible==='si') {
+		$html_label .= component_common_draw::draw_select_fast_lang_switch($id_wrapper, $lang, 'select_fast_lang_switch');
+	}*/
+	
 
-			case 1 :
-					foreach ($dato as $value) {
-						$html_content .= " <span class=\"css_span_dato\">$value</span>";
-					}
-					break;
+	# CONTENIT
+	$html_content = '';
+	switch($permissions) {
 
-			case 2 :
-			case 3 :
-					# Dato reference default lang
-					if ($modo!='tool_lang' && !empty($default_component)) {
-						#$html_content .= " <div class=\"dato_refecence_default_lang\">$dato_reference_lang</div>";
-						# Fijamos el lenguaje actual como el de destino para el tool_lang
-						$html_content .= "<script>set_localStorage('last_target_lang','$lang')</script>";
-						$tool_lang = new tool_lang($default_component,'button');
-							#dump($tool_lang,'$tool_lang');
-						$html_content .= $tool_lang->get_html();
-					}
+		case 0 :
+				$html_content .= "";
+				break;
 
-					# Avoid autocomplete input username in Users section
-					$remove_autocomplete = null;
-					if ($section_tipo==DEDALO_SECTION_USERS_TIPO) {
-						$remove_autocomplete = "readonly onfocus=\"this.removeAttribute('readonly');component_common.select_wrap(null,'$id_wrapper');\"";
-					}else{
-						$remove_autocomplete = '';//"onfocus=\"component_common.select_wrap(null,'$id_wrapper')\";\"";
-						$remove_autocomplete = "onfocus=\"component_common.select_wrap_on_tab_focus(this,'$id_wrapper')\"";
-					}
+		case 1 :
+				foreach ($dato as $value) {
+					$html_content .= "<span class=\"css_span_dato\">$value</span>";
+				}
+				break;
 
-					# Read only mode (set in propiedades)
-					$read_only = null;
-					if (isset($propiedades->read_only) && $propiedades->read_only==true) {
-						$read_only = 'readonly';
-					}
-					# Button add
-					if (isset($propiedades->multi_value) && $propiedades->multi_value==true) {
-						$html_content .= "<div class=\"css_button_generic btn_add_input_text\"
-							onclick=\"component_input_text.add_input_text(this)\">
-							<div class=\" link css_input_text_add\"></div></div>";
-					}
+		case 2 :
+		case 3 :
+				# Dato reference default lang
+				$fix_tool_lang = false;
+				if ($modo!=='tool_lang' && !empty($default_component)) {
+					#$html_content .= " <div class=\"dato_refecence_default_lang\">$dato_reference_lang</div>";
+					# Fijamos el lenguaje actual como el de destino para el tool_lang
+					# $html_content .= "<script>set_localStorage('last_target_lang','$lang');</script>";
+					$fix_tool_lang = true;
+					$tool_lang = new tool_lang($default_component,'button');
+						#dump($tool_lang,'$tool_lang');
+					$html_content .= $tool_lang->get_html();
+				}
 
-					if(empty($dato)){
-						
-						$dato_view = array("");
-						
-					}else{
-						$dato_view = $dato;
-					}
+				# Avoid autocomplete input username in Users section
+				$remove_autocomplete = null;
+				if ($section_tipo==DEDALO_SECTION_USERS_TIPO) {
+					$remove_autocomplete = "readonly onfocus=\"this.removeAttribute('readonly');component_common.select_wrap(null,'$id_wrapper');\"";
+				}else{
+					$remove_autocomplete = '';//"onfocus=\"component_common.select_wrap(null,'$id_wrapper')\";\"";
+					$remove_autocomplete = "onfocus=\"component_common.select_wrap_on_tab_focus(this,'$id_wrapper')\"";
+				}
 
-					$html_content .= "<ul>";
-					foreach ($dato_view as $key => $value) {
-						# Correct issues with quotes
-						$value = htmlentities($value);
+				# Read only mode (set in propiedades)
+				$read_only = null;
+				if (isset($propiedades->read_only) && $propiedades->read_only==true) {
+					$read_only = 'readonly';
+				}
+				if (isset($role) && $role=="source_lang") {
+					$read_only = 'readonly';
+				}
 
-						$html_content .= "<li>";
+				# Button add
+				if (isset($propiedades->multi_value) && $propiedades->multi_value==true) {
+					$html_content .= "<div class=\"css_button_generic btn_add_input_text\" onclick=\"component_input_text.add_input_text(this)\">";
+					$html_content .= "<div class=\"link css_input_text_add\"></div>";
+					$html_content .= "</div>";
+				}
 
-						$html_content .= "<input class=\"css_input_text\" type=\"text\" onchange=\"component_input_text.Save(this)\"
-						data-tipo=\"{$tipo}\"
-						data-section_tipo=\"{$section_tipo}\"
-						data-parent=\"{$parent}\"
-						data-lang=\"{$lang}\"
-						data-mandatory='{$mandatory_json}'
-						value=\"{$value}\"
-						title=\"$html_title\"
-						name=\"{$input_name}\"
-						autocomplete=\"off\"
-						$remove_autocomplete
-						$read_only
-						id=\"{$id_wrapper}_input_{$key}\"
-						/>";
-						$html_content .= "</li>"; // tabindex=\"1\"
+				# dato_view
+				$dato_view = empty($dato) ? array("") : $dato;
+				$html_content .= "<ul>";
+				foreach ($dato_view as $key => $value) {
+					# Fix issues with quotes
+					$value = htmlentities($value);
 
-					}//end foreach
-					$html_content .= "</ul>";
+					$html_content .= "<li>";
+
+					$html_content .= "<input class=\"css_input_text\" type=\"text\" ";
+					if($context->context_name==='default') {
+						$html_content .= "onchange=\"component_input_text.Save(this)\" ";
+					}					
+					$html_content .= "data-tipo=\"{$tipo}\" ";
+					$html_content .= "data-section_tipo=\"{$section_tipo}\" ";
+					$html_content .= "data-parent=\"{$parent}\" ";
+					$html_content .= "data-lang=\"{$lang}\" ";
+					$html_content .= "data-mandatory='{$mandatory_json}' ";
+					$html_content .= "value=\"{$value}\" ";
+					$html_content .= "title=\"$html_title\" ";
+					$html_content .= "name=\"{$input_name}\" ";
+					$html_content .= "autocomplete=\"off\" ";
+					$html_content .= "$remove_autocomplete ";
+					$html_content .= "$read_only ";
+					$html_content .= "id=\"{$id_wrapper}_input_{$key}\" ";
+					$html_content .= "/>";
 					
-					
+					$html_content .= "</li>"; // tabindex=\"1\"
 
-					#$html_content .= "<script>setAttribute(“autocomplete”,”off”)</script>";
+				}//end foreach
+				$html_content .= "</ul>";			
+				
 
-					#readonly onfocus=\"this.removeAttribute('readonly');\"
+				#$html_content .= "<script>setAttribute(“autocomplete”,”off”)</script>";
 
-					#$html_content .= " <span  class=\"css_span_log\"></span>";
-					#$html_content .= " <span  class=\"css_span_ejemplo\">$ejemplo</span>";
+				#readonly onfocus=\"this.removeAttribute('readonly');\"
 
-					if(SHOW_DEBUG===true) {
-						$html_content .= " <span class=\"debug_info notes\">".$dato_json."</span>";
-					}
-					break;
-		}
+				#$html_content .= " <span  class=\"css_span_log\"></span>";
+				#$html_content .= " <span  class=\"css_span_ejemplo\">$ejemplo</span>";
 
-		# Prepare content to show in page
-		tools::prepare_content($html_content);
+				if(SHOW_DEBUG===true) {
+					$html_content .= "<span class=\"debug_info notes\">".$dato_json."</span>";
+				}
+
+				# JS
+				if($context->context_name==='default') {
+				$html_content .= "<script>";				
+				// Init
+				$init_options = array(
+					"uid" 			=> $identificador_unico,
+					"modo" 			=> $modo,
+					"propiedades" 	=> $propiedades,
+					"traducible" 	=> $traducible
+				);
+				$html_content .= "component_input_text.init(".json_encode($init_options).");";
+				// First test on load element
+				if ($mandatory===true) {
+					$html_content .= "component_input_text.mandatory('{$id_wrapper}');";
+				}
+				if ($fix_tool_lang===true) {
+					$html_content .= "set_localStorage('last_target_lang','$lang');";
+				}
+				$html_content .= "</script>";
+				}
+				
+				break;
+	}
+
+	# Prepare content to show in page
+	tools::prepare_content($html_content);
 
 
-		# PRINT HTML
+	# PRINT HTML
+	if($modo!=='edit_in_list'){
 		print $html_label;
-		print $html_content;
+	}		
+	print $html_content;
 
 
 	print "</div>"; //wrap
 
-	// First test on load element
-	if ($mandatory===true) {
-		echo "<script>component_input_text.mandatory('{$id_wrapper}')</script>";
-	}
+	
 
-	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'out');
+	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'out', $modo, $lang);
 
 	
 ?>

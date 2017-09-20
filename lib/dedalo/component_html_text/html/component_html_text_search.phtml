@@ -1,11 +1,10 @@
 <?php
 
-	# VISUALIZADOR HTML	
-
-	if(isset($_REQUEST[$tipo])) $dato = $_REQUEST[$tipo];		#var_dump($_REQUEST[$tipo]);
+	# HTML VIEW
 	
+
 	#print "\n<!-- TEXT AREA [tipo:$tipo id_matrix:$id] -->";
-	print "\n<div class=\"wrap_component css_wrap_html_text css_wrap_html_text_{$modo}\" >";
+	print "<div class=\"wrap_component css_wrap_html_text css_wrap_html_text_{$modo}\" >";
 	
 	# ETIQUETA (LABEL)
 	$html_label = component_common_draw::draw_label($this);
@@ -14,7 +13,7 @@
 	$html_content = '';
 	switch($permissions) {
 			
-		case 0	:	$html_content .= "\n <span class=\"css_span_dato\"> No access here (html_text)! </span>";	
+		case 0	:	$html_content .= "<span class=\"css_span_dato\"> No access here (html_text)! </span>";	
 					break;						
 		
 		case ($permissions>=1)	:
@@ -24,12 +23,12 @@
 					data-tipo=\"{$tipo}\" 
 					title=\"$html_title\">$dato</textarea>";
 					*/
-					$html_content .= "\n <input class=\"css_input_text\" type=\"text\"
-					name=\"{$tipo}\"
-					data-tipo=\"{$tipo}\"
-					value=\"{$dato}\"
-					title=\"$html_title\"
-					/>";
+					$html_content .= "<input class=\"css_input_text\" type=\"text\" ";
+					$html_content .= "name=\"{$search_input_name}\" ";
+					$html_content .= "data-tipo=\"{$tipo}\" ";
+					$html_content .= "value=\"{$dato}\" ";
+					$html_content .= "title=\"$html_title\" ";
+					$html_content .= "/>";
 				
 				if(SHOW_DEBUG===true) {
 					$html_content .= "<span class=\"debug_info\">$search_input_name</span>";
@@ -45,5 +44,5 @@
 	print $html_content;
 	
 	
-	print "\n</div>\n\n"; //wrap
+	print "</div>"; //wrap
 ?>

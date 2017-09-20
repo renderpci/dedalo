@@ -60,7 +60,7 @@
 		}else{
 
 			$ar_label_html[] = array('tipo'  => $current_tipo,
-								   	 'label' => RecordObj_dd::get_termino_by_tipo($current_tipo, DEDALO_DATA_LANG, true)
+								   	 'label' => RecordObj_dd::get_termino_by_tipo($current_tipo, DEDALO_APPLICATION_LANG, true)
 								   	);
 
 		}//end if ($modelo_name==='component_portal')

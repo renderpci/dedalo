@@ -70,7 +70,7 @@
 					$ar_diffusion_obj_head[] = $current_component->get_diffusion_obj( $propiedades );
 				}
 				#dump($ar_diffusion_obj_head,'ar_diffusion_obj_head '.to_string($current_section_id));
-				require DEDALO_LIB_BASE_PATH .'/diffusion/'. get_class($this) . '/html/' . get_class($this) . '_head.phtml';
+				include DEDALO_LIB_BASE_PATH .'/diffusion/'. get_class($this) . '/html/' . get_class($this) . '_head.phtml';
 				$html_group .= $html_head;
 			
 			#
@@ -88,13 +88,13 @@
 
 				}
 				*/
-				require DEDALO_LIB_BASE_PATH .'/diffusion/'. get_class($this) . '/html/' . get_class($this) . '_row.phtml';
+				include DEDALO_LIB_BASE_PATH .'/diffusion/'. get_class($this) . '/html/' . get_class($this) . '_row.phtml';
 				$html_group .= $html_row;
 
 		}//end foreach ($ar_values as $current_section_id => $ar_head) {		
 		
 
-		require DEDALO_LIB_BASE_PATH .'/diffusion/'. get_class($this) . '/html/' . get_class($this) . '_table.phtml';
+		include DEDALO_LIB_BASE_PATH .'/diffusion/'. get_class($this) . '/html/' . get_class($this) . '_table.phtml';
 	}
 
 	if(SHOW_DEBUG) {

@@ -11,7 +11,7 @@
 	$label 					= $this->get_label();
 	$required				= $this->get_required();
 	$debugger				= $this->get_debugger();
-	$permissions			= common::get_permissions($section_tipo,$tipo);
+	$permissions			= $this->get_component_permissions();
 	$ejemplo				= NULL;
 	$html_title				= "Info about $tipo";
 	$lang					= $this->get_lang();
@@ -24,6 +24,14 @@
 
 	# Verify component content record is inside section record filter
 	if ($this->get_filter_authorized_record()===false) return NULL ;
+
+	# case is_developer control
+	if ($tipo===DEDALO_USER_DEVELOPER_TIPO) {
+		if($_SESSION['dedalo4']['auth']['user_id']!=DEDALO_SUPERUSER) {
+			$permissions = 1; # Force permissions to read only except for dedalo superuser
+		}
+	}
+
 	
 	$file_name				= $modo;
 	

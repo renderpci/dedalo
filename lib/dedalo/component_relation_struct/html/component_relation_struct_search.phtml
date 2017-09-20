@@ -2,8 +2,9 @@
 
 	# VISUALIZADOR HTML	
 
-	
-	if(isset($_REQUEST[$tipo])) $dato = $_REQUEST[$tipo];
+	$var_requested = common::get_request_var($tipo);
+	#if(isset($_REQUEST[$tipo])) $dato = $_REQUEST[$tipo];	#var_dump($_REQUEST[$tipo]);
+	if(!empty($var_requested)) $dato = $var_requested;
 	
 	print "\n<div class=\"wrap_component css_wrap_relation_index\" >";
 	

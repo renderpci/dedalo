@@ -1,5 +1,58 @@
 <?php
 
+
+
+	exit("UNUSED !!");
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 	# VISUALIZADOR HTML
 	
 	
@@ -63,7 +116,7 @@
 										title=\"parent:$parent - tipo:$tipo\" >";
 										$button_new .= "<div class=\"icon_bs link new_portal_record\"></div> ";
 										$button_new .= "<span>";
-										$button_new .= ''. RecordObj_dd::get_termino_by_tipo($current_target_section_tipo);	//.': '.label::get_label('nuevo');#. " $label" ;
+										$button_new .= ''. RecordObj_dd::get_termino_by_tipo($current_target_section_tipo, DEDALO_DATA_LANG);	//.': '.label::get_label('nuevo');#. " $label" ;
 										$button_new .= "</span>";
 										$button_new .= "</div>";
 										
@@ -91,7 +144,7 @@
 										title=\"parent:$parent - tipo:$tipo\" >";
 										$button_select .= "<div class=\"icon_bs link find_portal_record\"></div> ";
 										$button_select .= "<span>";
-										$button_select .= ''. RecordObj_dd::get_termino_by_tipo($current_target_section_tipo);	//.': '.label::get_label('existente');
+										$button_select .= ''. RecordObj_dd::get_termino_by_tipo($current_target_section_tipo, DEDALO_DATA_LANG);	//.': '.label::get_label('existente');
 
 										if(SHOW_DEBUG===true) {
 											#$button_select .= ' '.TOP_TIPO.'.'.$current_target_section_tipo.'.'.$this->tipo;

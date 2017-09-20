@@ -8,7 +8,7 @@
 	$label 					= $this->get_label();
 	$required				= $this->get_required();
 	$debugger				= $this->get_debugger();
-	$permissions			= common::get_permissions($section_tipo,$tipo);
+	$permissions			= $this->get_component_permissions();
 	$ejemplo				= NULL;
 	$html_title				= "Info about $tipo";
 	$lang					= $this->get_lang();
@@ -18,11 +18,12 @@
 	$file_name				= $modo;	
 
 	if($permissions===0) return null;
-	
+
 	switch($modo) {
 
 		case 'portal_list' :
 				$file_name = 'edit';
+		case 'edit_note' :		
 		case 'edit' :
 				# Verify component content record is inside section record filter
 				if ($this->get_filter_authorized_record()===false) return NULL ;
@@ -70,8 +71,9 @@
 				$ar_comparison_operators 	= $this->build_search_comparison_operators();
 				$ar_logical_operators 		= $this->build_search_logical_operators();
 
-				$dato = isset($_REQUEST[$tipo]) ? $_REQUEST[$tipo] : null;
-
+				#$dato = isset($_REQUEST[$tipo]) ? $_REQUEST[$tipo] : null;
+				#get the change dato
+				
 				# Search input name (var search_input_name is injected in search -> records_search_list.phtml)
 				# and recovered in component_common->get_search_input_name()
 				# Normally is section_tipo + component_tipo, but when in portal can be portal_tipo + section_tipo + component_tipo

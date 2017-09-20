@@ -459,13 +459,48 @@ if($mode=='download_file') {
 	$allowed_referrer	= DEDALO_HOST;
 	
 	# If var 'extension' is received, overwrite default
-	if(!$extension)
-	$extension 			= $ImageObj->get_extension();
-	
+	if(!$extension)	$extension = $ImageObj->get_extension();	
 	$file_name			= $ImageObj->get_name() . '.' . $extension;
 	$file_name_showed	= 'media_downloaded_' . $file_name ;
 
-		#dump($file_name, ' file_name');
+
+	#
+	# ORIGINAL NAME CASE
+	# Change Dédalo internal name like  "rsc29_rsc170_5837.jpg" to original file name like "falla de lhorta capçèlera.JPG"
+	$ar = explode('_', $ImageObj->get_name());
+	if (isset($ar[1]) &&  isset($ar[2])) {		
+		
+		$tipo 				= $ar[0];
+		$section_tipo 		= $ar[1];
+		$parent 	 		= $ar[2];
+		$modelo_name 		= RecordObj_dd::get_modelo_name_by_tipo($tipo, true);
+		$component_image 	= component_common::get_instance($modelo_name,
+															 $tipo,
+															 $parent,
+															 'list',
+															 DEDALO_DATA_NOLAN,
+															 $section_tipo);
+		$propiedades = $component_image->get_propiedades();
+		if (isset($propiedades->target_filename)) {
+			
+			$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($propiedades->target_filename, true);
+			$component 		= component_common::get_instance($modelo_name,
+															 $propiedades->target_filename,
+															 $parent,
+															 'list',
+															 DEDALO_DATA_LANG,
+															 $section_tipo);
+			$original_file_name = $component->get_valor();
+			if (!empty($original_file_name)) {
+				$file_name_showed = $original_file_name; // Overwrite Dédalo media name with stored original file name
+			}
+		}
+	}else{
+		$original_file_name = $file_name;
+		$file_name_showed 	= $original_file_name;
+	}//end if (isset($ar[1]) &&  isset($ar[2])) {
+
+		#dump($file_name, ' file_name'); exit();
 		#dump($initial_media_path, ' initial_media_path');
 		#dump($base_dir, ' base_dir');
 
@@ -520,8 +555,7 @@ if($mode=='download_file') {
 	session_write_close();
 
 	# LOAD LIB 
-	$page = DEDALO_LIB_BASE_PATH . '/media_engine/lib/download.php';
-	require_once($page);
+	require( DEDALO_LIB_BASE_PATH . '/media_engine/lib/download.php' );
 
 	exit();
 }#end download

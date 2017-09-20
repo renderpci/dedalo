@@ -2,7 +2,7 @@
 /*
 * CLASS TOOL_EXPORT
 	
-	Export selected records in differents formats using section_list as base fields reference
+	Export selected records in differents formats using section_list as base fields reference 
 	
 */
 require_once( dirname(dirname(dirname(__FILE__))) .'/config/config4.php');
@@ -51,9 +51,10 @@ class tool_export extends tool_common {
 	* SET_UP
 	*/
 	static function set_up() {
-
-		if (isset($_REQUEST['button_tipo'])) {
-			$button_obj  = new button_import($_REQUEST['button_tipo'], null, $this->section_tipo);
+		$var_requested 		= common::get_request_var('button_tipo');
+		//if (isset($_REQUEST['button_tipo'])) {
+		if (!empty($var_requested)) {
+			$button_obj  = new button_import($var_requested, null, $this->section_tipo);
 			$propiedades = json_handler::decode($button_obj->RecordObj_dd->get_propiedades());
 
 			// in process..		
@@ -148,29 +149,30 @@ class tool_export extends tool_common {
 				$delimiter  = tool_export::$delimiter;	// ";";
 				$delimiter_length = strlen($delimiter);
 				$header_added = false;
-				$i=0;foreach ($ar_records_deep_resolved as $key => $ar_alue) {
+				$i=0;foreach ($ar_records_deep_resolved as $key => $ar_value) {
 					
 					# Header
 					if ($header_added===false) {						
-						foreach ($ar_alue as $current_tipo => $cvalue) {
+						foreach ($ar_value as $current_tipo => $cvalue) {
 
 							if ($current_tipo!=='id' && $current_tipo!=='section_id' && $current_tipo!=='section_tipo') {
 								# Resolve name
 								if($this->data_format==='dedalo') {
 									$current_tipo = trim($current_tipo);
 								}else{
-									$current_tipo = RecordObj_dd::get_termino_by_tipo($current_tipo);
+									$current_tipo = RecordObj_dd::get_termino_by_tipo($current_tipo, DEDALO_DATA_LANG, true, true);
 								}								
 							}
 							$export_str_data .= $com.$current_tipo.$com;							
 							$export_str_data .= $delimiter;
 						}
 						$export_str_data = substr($export_str_data, 0,-$delimiter_length);
+						#$export_str_data = str_replace('U+003B', ';', $export_str_data);
 						$export_str_data .= PHP_EOL;
 						$header_added = true;
 					}
 					# Rows
-					$export_str_data .= implode($delimiter, $ar_alue) .PHP_EOL;
+					$export_str_data .= implode($delimiter, $ar_value) .PHP_EOL;
 				$i++;}
 				break;
 			
@@ -244,13 +246,16 @@ class tool_export extends tool_common {
 			if($this->data_format==='dedalo') {
 				# Full source untouched dato				
 				$valor_export 	 = $this->get_valor_dedalo($component);
+
+				# escape delimiter for avoid breaks
+				$valor_export 	 = str_replace(';','U+003B',$valor_export);	
 				
 			}else{
 				$valor_export 	 = $component->get_valor_export( $value, $lang, $quotes, $add_id=false );
 				#$valor_export 	 = str_replace(PHP_EOL, '; ', $valor_export);
 				$valor_export 	 = addslashes($valor_export);
-				$valor_export 	 = $quotes.trim($valor_export).$quotes;				
-			}			
+				$valor_export 	 = $quotes.trim($valor_export).$quotes;
+			}	
 			
 			$row_deep_resolved[$key] = $valor_export;
 
@@ -327,13 +332,13 @@ class tool_export extends tool_common {
 			#dump($ar_elements, ' $ar_elements ++ '.to_string($section_tipo));
 
 		$ar_columns=array();
-		foreach ($ar_elements as $key => $tipo) {			
+		foreach ($ar_elements as $key => $tipo) {
 
 			#$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 			#if($modelo_name=='component_section_id') continue; # Skip component_section_id (is fixed data in export)
 			
 			$name = RecordObj_dd::get_termino_by_tipo($tipo, DEDALO_DATA_LANG, true, true); // $terminoID, $lang=NULL, $from_cache=false, $fallback=true
-			$ar_columns[$tipo] = $name;						
+			$ar_columns[$tipo] = $name;
 		}
 
 		return $ar_columns;
@@ -374,9 +379,11 @@ class tool_export extends tool_common {
 			$response->msg 		= '';
 		
 		$section_tipo	= $this->section_tipo;
-		$label 			= RecordObj_dd::get_termino_by_tipo($section_tipo);
+		$label 			= RecordObj_dd::get_termino_by_tipo($section_tipo, DEDALO_DATA_LANG, true, true);
 		$label 			= self::normalize_name($label);
-		$filename 		= 'exported_'.$variant.''.$label.'_'.navigator::get_user_id().'-'.$section_tipo.'.csv';		
+		$filename 		= 'exported_'.$variant.''.$label.'_'.navigator::get_user_id().'-'.$section_tipo.'.csv';
+
+		#$result_string  = str_replace('U+003B', ';', $result_string);	
 		
 		$target_dir 	= DEDALO_TOOL_EXPORT_FOLDER_PATH;
 		if( !is_dir($target_dir) ) {
@@ -448,6 +455,9 @@ class tool_export extends tool_common {
 					# IMAGES . Replace images url to html img tags
 					$regex = '/https?\:\/\/[^\\" ]+.jpg/i';
 					$cell  = preg_replace($regex, "<img src=\"$0\" style=\"width:auto;height:57px\"/>", $cell);
+
+					# unescape separator ;
+					$cell  = str_replace('U+003B', ';', $cell);
 					
 					$table_html .= $cell;
 					$table_html .= ($header && $i==0) ? "</th>" : "</td>";

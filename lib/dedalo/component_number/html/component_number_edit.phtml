@@ -4,18 +4,18 @@
 	
 	
 	# html_delimiter
-	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'in');
+	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'in', $modo, $lang);
 
-	print "<div class=\"wrap_component css_wrap_number wrap_component_{$tipo}\" id=\"{$id_wrapper}\"
-	data-tipo=\"{$tipo}\"
-	data-lang=\"{$lang}\"
-	data-section_tipo=\"{$section_tipo}\"
-	data-parent=\"{$parent}\"
-	data-modo=\"{$modo}\"
-	data-dato=\"{$dato}\"
-	data-component_name=\"{$component_name}\"
-	data-component_info='{$component_info}'
-	>";
+	print "<div class=\"wrap_component css_wrap_number wrap_component_{$tipo}\" id=\"{$id_wrapper}\" ";
+	print "data-tipo=\"{$tipo}\" ";
+	print "data-lang=\"{$lang}\" ";
+	print "data-section_tipo=\"{$section_tipo}\" ";
+	print "data-parent=\"{$parent}\" ";
+	print "data-modo=\"{$modo}\" ";
+	print "data-dato=\"{$dato}\" ";
+	print "data-component_name=\"{$component_name}\" ";
+	print "data-component_info='{$component_info}' ";
+	print ">";
 	
 		
 		# ETIQUETA (LABEL)
@@ -28,20 +28,26 @@
 			case 0	:	$html_contenido .= "";
 						break;
 							
-			case 1	: 	$html_contenido .= " <span class=\"css_span_dato\">$dato</span>";
+			case 1	: 	$html_contenido .= "<span class=\"css_span_dato\">$dato</span>";
 						break;	
 							
-			case ($permissions>=2) :
+			case ($permissions>=2) :	//dump($from_modo, ' from_modo ++ '.to_string());
+						if($from_modo !== 'edit'){
 
-						$html_contenido .= " <input class=\"css_number\" type=\"text\" onchange=\"component_number.Save(this)\"
-						name=\"{$input_name}\" 
-						data-tipo=\"{$tipo}\"
-						data-section_tipo=\"{$section_tipo}\"
-						data-parent=\"{$parent}\"
-						data-lang=\"{$lang}\"
-						value=\"{$dato}\" 
-						title=\"$html_title\"
-						/>";
+
+							$html_contenido .= "<div class=\"css_number_button_close\" onclick=\"component_common.change_mode_component(this, 'edit', '$from_modo')\"></div>";
+						}						
+
+
+						$html_contenido .= "<input class=\"css_number\" type=\"text\" onchange=\"component_number.Save(this)\" ";
+						$html_contenido .= "name=\"{$input_name}\" ";
+						$html_contenido .= "data-tipo=\"{$tipo}\" ";
+						$html_contenido .= "data-section_tipo=\"{$section_tipo}\" ";
+						$html_contenido .= "data-parent=\"{$parent}\" ";
+						$html_contenido .= "data-lang=\"{$lang}\" ";
+						$html_contenido .= "value=\"{$dato}\"  ";
+						$html_contenido .= "title=\"$html_title\" ";
+						$html_contenido .= "/>";
 						
 						#$html_contenido .= " <span  class=\"css_span_log\"></span>";					
 						#$html_contenido .= " <span  class=\"css_span_ejemplo\">$ejemplo</span>";						
@@ -64,7 +70,7 @@
 	print "</div>"; //wrap
 
 	# html_delimiter
-	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'out');
+	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'out', $modo, $lang);
 
 
 ?>

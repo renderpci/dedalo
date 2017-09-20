@@ -35,12 +35,12 @@
 												
 							$input_id = $input_name.'_'.$i;
 
-							$html_content .= "<input type=\"checkbox\" class=\"filter_checkbox\" id=\"{$input_id}\"
-							name=\"{$search_input_name}_array\"
-							data-tipo=\"{$tipo}\"
-							value=\"{$value}\"
-							title=\"$html_title $value\"
-							/> ";
+							$html_content .= "<input type=\"checkbox\" class=\"filter_checkbox\" id=\"{$input_id}\" ";
+							$html_content .= "name=\"{$search_input_name}_array\" ";
+							$html_content .= "data-tipo=\"{$tipo}\" ";
+							$html_content .= "value=\"{$value}\" ";
+							$html_content .= "title=\"$html_title $value\" ";
+							$html_content .= "/> ";
 							
 							$html_content .= "<label for=\"$input_id\" class=\"filter_checkbox_rotulo\">$rotulo</label> ";
 						

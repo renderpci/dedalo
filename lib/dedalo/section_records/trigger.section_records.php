@@ -1,75 +1,58 @@
 <?php
-require_once( dirname(dirname(__FILE__)).'/config/config4.php');
-
-
-if(login::is_logged()!==true) die("<span class='error'> Auth error: please login </span>");
-
-#dump($_REQUEST);
-//session_write_close();
-
-
-# set vars
-	$vars = array('mode');
-		foreach($vars as $name) $$name = common::setVar($name);		
-	
-
-# mode
-if(empty($mode)) exit("<span class='error'> Trigger: Error Need mode..</span>");
-
-
-
-# CALL FUNCTION
-if ( function_exists($mode) ) {
-	call_user_func($mode);
-}
+$start_time=microtime(1);
+include( dirname(dirname(__FILE__)).'/config/config4.php');
+# TRIGGER_MANAGER. Add trigger_manager to receive and parse requested data
+common::trigger_manager();
 
 
 
 /**
 * LOAD_ROWS
 */
-function load_rows() {
+function load_rows($json_data) {
+	global $start_time;
 
-	if(SHOW_DEBUG) {
-		#dump($_REQUEST,"_REQUEST");
-		$start_time=microtime(1);
-	}
+	$response = new stdClass();
+		$response->result 	= false;
+		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
 	
-	#$options = $_REQUEST['options'];
-
 	# set vars
 	$vars = array('options');
-		foreach($vars as $name) $$name = common::setVar($name);	
+		foreach($vars as $name) {
+			$$name = common::setVarData($name, $json_data);
+			# DATA VERIFY
+			# if ($name==='dato') continue; # Skip non mandatory
+			if (empty($$name)) {
+				$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty '.$name.' (is mandatory)';
+				return $response;
+			}
+		}
 
 
 	# Received post var 'options' is a json object stringnified. Decode to regenrate original object
-	$options = json_handler::decode($options);
-		#dump($options,"options to object");die();
+	$options = json_decode($options);
+	if (!is_object($options)) {
+		$response->msg = 'Trigger Error: ('.__FUNCTION__.') Received data must be a object (options)';
+		return $response;
+	}
 
+	/*
 	if (isset($options->context) && is_string($options->context) ) {
 		$options->context = json_decode($options->context);
-	}
-	#dump($options,"options to object");
-
-	if (!is_object($options)) {
-		die("Error. Received data must be a object (options)");
-	}
+	}*/
+	#dump($options->context,"options to object");	
 
 	if (isset($options->limit)) {
 		#$_SESSION['dedalo4']['config']['max_rows'] = $options->limit;
 	}
 
 	if (empty($options->section_tipo)) {
-		if(SHOW_DEBUG) {
-			throw new Exception("Error Processing Request. Ilegal section tipo", 1);
-		}			
-		die("Error on load rows. Ilegal section tipo");
+		$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty options->section_tipo (is mandatory)';
+		return $response;
 	}
 	if (empty($options->modo)) {
-		if(SHOW_DEBUG) {
-			throw new Exception("Error Processing Request. Empty modo", 1);
-		}
-		die("Error on load rows. Empty modo");
+		$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty options->modo (is mandatory)';
+		return $response;
 	}
 
 	# Activity case : Only use
@@ -78,6 +61,7 @@ function load_rows() {
 		$options->tipo_de_dato_order	= 'dato';
 	}
 
+	# error_log( to_string($options) );
 	# Reset offset
 	#$options->offset = 0;
 	#$options->offset_list = 0;
@@ -96,16 +80,27 @@ function load_rows() {
 
 	#$html 			= str_replace(':', '_', $html);
 	#$html = filter_var($html, FILTER_SANITIZE_STRING);
-
-	if(SHOW_DEBUG) {
-		$total=round(microtime(1)-$start_time,3);
-		debug_log(__METHOD__." Total: (load_rows) ".exec_time($start_time), logger::DEBUG);	;
-	}
 	
 	session_write_close();
-	echo $html;
-}//end load_rows
 
+
+	$response->result 	= $html;
+	$response->msg 		= 'Ok. Request done ['.__FUNCTION__.']';
+
+	# Debug
+	if(SHOW_DEBUG===true) {
+		$debug = new stdClass();
+			$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
+			foreach($vars as $name) {
+				$debug->{$name} = $$name;
+			}
+
+		$response->debug = $debug;
+	}
+
+
+	return (object)$response;
+}//end load_rows
 
 
 

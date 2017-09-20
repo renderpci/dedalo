@@ -3,27 +3,27 @@
 	# VISUALIZADOR HTML	
 	
 	
-	print "\n\n<!-- SECTION GROUP [tipo:$tipo] -->";
-	#print "\n<div class=\"css_section_group_wrap\" >";
+	print "<!-- SECTION GROUP [tipo:$tipo] -->";
+	#print "<div class=\"css_section_group_wrap\" >";
 	
 	
 	# ETIQUETA (LABEL)
 	#$html_label = component_common_draw::draw_label($this);	
-	#print "\n<div class=\"css_section_group_titulo tab_title\" > $html_label </div>";
+	#print "<div class=\"css_section_group_titulo tab_title\" > $html_label </div>";
 	
 		
 	
 	# CONTENIDO (INPUT)
 	$html_contenido = "";
 	
-	switch($permissions) {
+	switch(true) {
 			
-		case 0	:	$html_contenido .= "\n <span class=\"css_span_dato\"> ".label::get_label('sin_acceso')." (group) </span>";		
+		case $permissions===0	:	$html_contenido .= " <span class=\"css_span_dato\"> ".label::get_label('sin_acceso')." (group) </span>";		
 					break;
 						
 		case ($permissions>=1)	:
 		
-					$html_contenido .= "\n<td>";					
+					$html_contenido .= "<td>";					
 					$html_contenido .= "$section_dato ";
 					$html_contenido .= "<div class=\"button_edit div_image_link\" onclick=\"goto_url('?modo=edit&id=$id')\"></div>";
 										
@@ -36,7 +36,7 @@
 					
 					if(is_array($ar_components_html)) foreach($ar_components_html as $component_html) {
 			
-						$html_contenido .= "\n<td> $component_html </td>";
+						$html_contenido .= "<td>".$component_html."</td>";
 					}					
 		case 2	: 
 		case 3	:									
@@ -50,5 +50,5 @@
 	print $html_contenido;
 	
 	
-	#print "\n</div>\n\n"; //wrap
+	#print "</div>"; //wrap
 ?>

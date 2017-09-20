@@ -2,18 +2,22 @@
 
 	# VISUALIZADOR HTML	
 
-	$html_contenido = '';
+	$html_content = '';
 	switch(true) {
 		
 		case ($permissions<1) :
-					$html_contenido .= "";
+					$html_content .= "";
 					break;
 			
 		case ($permissions>=1) :
-					$html_contenido .= $valor;
+					$html_content .= $valor;
+
+					if(SHOW_DEBUG===true) {
+						$html_content .= "<span class=\"component_select_lang_debug debug_info\">".exec_time($start_time)."</span>";
+					}
 					break;
-	}	
+	}
 	
 	# PRINT HTML
-	print $html_contenido;
+	print $html_content;
 ?>

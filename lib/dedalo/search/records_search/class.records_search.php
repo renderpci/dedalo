@@ -46,17 +46,29 @@ class records_search extends common {
 	*/
 	public function get_html() { // Aprox 100 ms
 		
+		/* REMOVED (We need load all js / css files always...)
+		$section_to_cache = $this->section_tipo;
+		
+		$context = (object)$this->section_obj->context;
+		if (isset($context->tool_section_tipo)) {
+			$section_to_cache = $context->tool_section_tipo;
+		}
+		#dump($section_to_cache, ' section_to_cache ++ '.to_string());
+
 		# CACHE	
 		#unset($_SESSION['dedalo4']['config']['records_search'][$this->section_tipo]['html']);
-		if(SHOW_DEBUG===false && isset($_SESSION['dedalo4']['config']['records_search'][$this->section_tipo]['html'])) {
-			return $_SESSION['dedalo4']['config']['records_search'][$this->section_tipo]['html'];
-		}
+		if(SHOW_DEBUG===false && isset($_SESSION['dedalo4']['config']['records_search'][$section_to_cache]['html'])) {
+			#return $_SESSION['dedalo4']['config']['records_search'][$section_to_cache]['html'];
+		}*/
 
 		# Structure defined search element tipo
 		# if not exists, return empty string
 		$search_list_tipo = $this->get_search_list_tipo();
 		if(!$search_list_tipo)	{
-			$msg = " Search list tipo not found. Please config your structure for section $this->section_tipo";			
+			$msg = " Search list tipo not found. Please config your structure for section $this->section_tipo ";
+			if (isset($section_to_cache)) {
+				$msg = " (section_to_cache: $section_to_cache)";
+			}		
 			debug_log(__METHOD__." $msg  ".to_string(), logger::DEBUG);
 			return '';
 		}
@@ -66,7 +78,7 @@ class records_search extends common {
 		$html =  ob_get_clean();
 
 		# CACHE
-		$_SESSION['dedalo4']['config']['records_search'][$this->section_tipo]['html'] = $html;		
+		#$_SESSION['dedalo4']['config']['records_search'][$section_to_cache]['html'] = $html;		
 		
 		return (string)$html;
 	}//end get_html
@@ -149,7 +161,8 @@ class records_search extends common {
 						#dump($search_list, ' search_list ++ '.to_string());
 					if (empty($search_list)) {
 						if(SHOW_DEBUG===true) {
-							throw new Exception("Error Processing Request. Please define a 'search_list' from current portal ($current_element_tipo) ASAP", 1);							
+							#throw new Exception("Error Processing Request. Please define a 'search_list' from current portal ($current_element_tipo) ASAP", 1);
+							trigger_error("Error Processing Request. Please define a 'search_list' from current portal ($current_element_tipo) ASAP");						
 						}
 						debug_log(__METHOD__." Skiped portal search elements. Please define a 'search_list' from current portal ($current_element_tipo) ASAP ".to_string(), logger::WARNING);
 						continue;
@@ -234,7 +247,7 @@ class records_search extends common {
 		if(empty($tools_search_tipo[0])) {			
 			if(SHOW_DEBUG===true) {
 				#throw new Exception("Error Processing Request: tools_search:tools_search_tipo not found in structure ($search_list_tipo)", 1);
-				error_log("tools_search:tools_search_tipo not found in structure ($search_list_tipo)");
+				trigger_error("tools_search:tools_search_tipo not found in structure ($search_list_tipo)");
 			}
 			#trigger_error("Warning: tools_search_tipo not found in structure");
 			#return false;

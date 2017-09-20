@@ -4,35 +4,39 @@
 	
 	
 	
-	print "\n<!-- BUTTON SEARCH [tipo:$tipo id_matrix:$id] -->";
+	#print "<!-- BUTTON SEARCH [tipo:$tipo id_matrix:$id] -->";
 
-	print "\n<div class=\"css_wrap_button_search\">";
+	print "<div class=\"css_wrap_button_search\">";
 	
 	# ETIQUETA (LABEL)
 	//$html_label = component_common_draw::draw_label($this);
 	
 	# CONTENIDO (INPUT)
-	$html_contenido = '';
+	$html_content = '';
 	
-	switch($permissions) {
+	switch(true) {
 			
-		case 0	:	$html_contenido .= "";
-					break;
+		case $permissions===0	:	
+				$html_content .= "";
+				break;
 						
 		case ($permissions>=1)	:
 		
-					$html_contenido .= "\n <input class=\"css_button_search\" type=\"button\" data-role=\"button_search\" onclick=\"search.Search(this.form)\" 
-					data-tipo=\"{$target_tipo}\" value=\"$label\" title=\"$html_title\" />";
+				$html_content .= "<input class=\"css_button_search\" type=\"button\" data-role=\"button_search\" ";
+				$html_content .= "onclick=\"search.Search(this.form)\" ";
+				$html_content .= "data-tipo=\"{$target_tipo}\" ";
+				$html_content .= "value=\"$label\" ";
+				$html_content .= "title=\"$html_title\"/>";
 
-					$html_contenido .= "<span id=\"search_response\"></span>";
-					#$html_contenido .= "\n <input class=\"css_max_rows\" type=\"text\" name=\"max_rows\" value=\"{$valor_max_rows}\" title=\"$html_title\" />";
-											
+				$html_content .= "<span id=\"search_response\"></span>";
+				#$html_content .= " <input class=\"css_max_rows\" type=\"text\" name=\"max_rows\" value=\"{$valor_max_rows}\" title=\"$html_title\" />";
+				break;						
 	}
 	
 	
 	# PRINT HTML
-	print $html_contenido;
+	print $html_content;
 	
 	
-	print "\n</div><!-- /css_wrap_button_search -->\n\n"; //wrap
+	print "</div>"; //wrap <!-- /css_wrap_button_search -->
 ?>

@@ -1,10 +1,6 @@
 <?php
 
-	# VISUALIZADOR HTML		
-	
-	if(isset($_REQUEST[$tipo])) $dato = $_REQUEST[$tipo];
-	
-	#print "<!-- ". __CLASS__ ." -->";
+	# VISUALIZADOR HTML	
 
 	print "<div class=\"wrap_component css_wrap_input_text\" id=\"wrap_{$tipo}\">";
 	
@@ -26,12 +22,12 @@
 					# COMPARISON OPERATORS
 					$html_content .= operator::get_search_comparison_operators_html($tipo,$ar_comparison_operators);
 		
-					$html_content .= "<input class=\"css_input_text_large_search\" type=\"text\" name=\"{$search_input_name}\"
-					id=\"{$identificador_unico}\"
-					data-tipo=\"{$tipo}\"
-					data-lang=\"{$lang}\"
-					value=\"{$dato}\"
-					title=\"$html_title\" />";
+					$html_content .= "<input class=\"css_input_text_large_search\" type=\"text\" name=\"{$search_input_name}\" ";
+					$html_content .= "id=\"{$identificador_unico}\" ";
+					$html_content .= "data-tipo=\"{$tipo}\" ";
+					$html_content .= "data-lang=\"{$lang}\" ";
+					$html_content .= "value=\"\" ";
+					$html_content .= "title=\"$html_title\" />";
 
 					# LOGICAL OPERATORS
 					$html_content .= operator::get_search_logical_operators_html($tipo,$ar_logical_operators);

@@ -157,7 +157,8 @@
 							#$record_layout_html .= $records_search->get_html();
 							#dump($section->get_tipo(),"section_list"); #die();						
 
-							$record_layout_html .= component_layout::walk_layout_map($current_section_obj, $layout_map, $ar, $ar_exclude_elements); 
+							$record_layout_html .= component_layout::walk_layout_map($current_section_obj, $layout_map, $ar, $ar_exclude_elements);
+								#dump($record_layout_html, ' record_layout_html ++ '.to_string());
 								#dump($ar_exclude_elements,"layout ".$current_section_obj->get_tipo());							
 
 							if(SHOW_DEBUG) {

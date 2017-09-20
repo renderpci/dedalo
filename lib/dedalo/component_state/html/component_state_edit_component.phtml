@@ -3,16 +3,18 @@
 	# VISUALIZADOR HTML	
 	
 	
-	print "\n<!-- COMPONENT STATE [tipo:$tipo section_id:$parent $modo] $label -->";
-	print "\n<div id=\"{$id_wrapper}\" class=\"css_wrap_state css_wrap_state_edit_component\"
-	data-tipo=\"{$tipo}\"
-	data-section_tipo=\"{$section_tipo}\"
-	data-parent=\"{$parent}\"
-	data-lang=\"{$lang}\"
-	data-label=\"{$label}\"
-	data-modo=\"{$modo}\"
-	data-component_name=\"{$component_name}\"
-	data-component_info='{$component_info}'>\n";
+	# html_delimiter
+	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'in', $modo, $lang);
+
+	print "<div id=\"{$id_wrapper}\" class=\"css_wrap_state css_wrap_state_edit_component\" ";
+	print "data-tipo=\"{$tipo}\" ";
+	print "data-section_tipo=\"{$section_tipo}\" ";
+	print "data-parent=\"{$parent}\" ";
+	print "data-lang=\"{$lang}\" ";
+	print "data-label=\"{$label}\" ";
+	print "data-modo=\"{$modo}\" ";
+	print "data-component_name=\"{$component_name}\" ";
+	print "data-component_info='{$component_info}'>";
 	
 	# ETIQUETA (LABEL)
 	$html_label = '';	//component_common_draw::draw_label($this);
@@ -23,10 +25,10 @@
 	switch($permissions) {
 			
 		case 0	:	$html_contenido .= "";
-					break;						
-		
-		case ($permissions>=2) :
-
+					break;					
+		case 1 :
+		case 2 :
+		case 3 :
 					#
 					# AR_STATE iterate
 					foreach ($this->ar_state as $current_key => $current_options) {						
@@ -36,22 +38,22 @@
 							#dump($valor_for_checkbox, ' valor_for_checkbox ++ '.to_string());
 
 						$html_contenido .= "<div class=\"state_group\">";
-						$html_contenido .= " <span class=\"state_process_label\">".$current_options->label."</span>";
+						$html_contenido .= "<span class=\"state_process_label\">".$current_options->label."</span>";
 					
-						$html_contenido .= " <span class=\"\"> ".label::get_label('acabado')."</span>";
+						$html_contenido .= "<span class=\"state_process_label2\"> ".label::get_label('acabado')."</span>";
 
 						$checked = $valor_for_checkbox[0]>=1 ? 'checked="checked"' : '';
-						$html_contenido .= "\n <input type=\"checkbox\" class=\"css_state\" onchange=\"component_state.update_state_locator(this)\"
-						data-tipo=\"{$tipo}\"
-						data-section_tipo=\"{$section_tipo}\"
-						data-parent=\"{$parent}\"
-						data-lang=\"{$lang}\"
-						data-id_wrapper=\"{$id_wrapper}\"
-						data-options='".$options_json."'
-						data-type='user'
-						value=\"".$valor_for_checkbox[0]."\"				
-						title=\"$html_title\" $checked
-						/>";
+						$html_contenido .= "<input type=\"checkbox\" class=\"css_state\" onchange=\"component_state.update_state_locator(this)\" ";
+						$html_contenido .= "data-tipo=\"{$tipo}\" ";
+						$html_contenido .= "data-section_tipo=\"{$section_tipo}\" ";
+						$html_contenido .= "data-parent=\"{$parent}\" ";
+						$html_contenido .= "data-lang=\"{$lang}\" ";
+						$html_contenido .= "data-id_wrapper=\"{$id_wrapper}\" ";
+						$html_contenido .= "data-options='".$options_json."' ";
+						$html_contenido .= "data-type='user' ";
+						$html_contenido .= "value=\"".$valor_for_checkbox[0]."\" ";			
+						$html_contenido .= "title=\"$html_title\" $checked ";
+						$html_contenido .= "/>";
 						
 						if(SHOW_DEBUG===true) {
 							$html_contenido .= "<span class=\"notas\"> [".$current_options->tool_locator."]</span>";							
@@ -61,20 +63,20 @@
 						if($permission_section>=3 || (bool)$is_global_admin===true) {
 
 							# Admin options
-							$html_contenido .= "\n<select onchange=\"component_state.update_state_locator(this)\"
-							data-tipo=\"{$tipo}\"
-							data-section_tipo=\"{$section_tipo}\"
-							data-parent=\"{$parent}\"
-							data-lang=\"{$lang}\"
-							data-id_wrapper=\"{$id_wrapper}\"
-							data-options='".$options_json."'
-							data-type='admin'													
-							>";
+							$html_contenido .= "<select onchange=\"component_state.update_state_locator(this)\" ";
+							$html_contenido .= "data-tipo=\"{$tipo}\" ";
+							$html_contenido .= "data-section_tipo=\"{$section_tipo}\" ";
+							$html_contenido .= "data-parent=\"{$parent}\" ";
+							$html_contenido .= "data-lang=\"{$lang}\" ";
+							$html_contenido .= "data-id_wrapper=\"{$id_wrapper}\" ";
+							$html_contenido .= "data-options='".$options_json."' ";
+							$html_contenido .= "data-type='admin' ";												
+							$html_contenido .= ">";
 							$html_contenido .= "<option value=\"0\"> </option>";
 							$selected = ($valor_for_checkbox[1]==50) ? 'selected="selected"' : '';
-							$html_contenido .= "<option value=\"50\" $selected >".label::get_label('para_revisar')."</option>";
+							$html_contenido .= "<option value=\"50\" {$selected}>".label::get_label('para_revisar')."</option>";
 							$selected = ($valor_for_checkbox[1]==100) ? 'selected="selected"' : '';
-							$html_contenido .= "<option value=\"100\" $selected >".label::get_label('validado')."</option>";
+							$html_contenido .= "<option value=\"100\" {$selected}>".label::get_label('validado')."</option>";
 							$html_contenido .= "</select>";
 													
 							if(SHOW_DEBUG===true) {
@@ -87,13 +89,13 @@
 							# USER: Label to info user about current admin options values (read only)
 							switch (true) {
 								case $valor_for_checkbox[1]==50:
-									$html_contenido .= " <strong>".label::get_label('para_revisar')."</strong>";
+									$html_contenido .= "<strong>".label::get_label('para_revisar')."</strong>";
 									break;
 								case $valor_for_checkbox[1]==100:
-									$html_contenido .= " <strong>".label::get_label('validado')."</strong>";
+									$html_contenido .= "<strong>".label::get_label('validado')."</strong>";
 									break;
 								default:
-									$html_contenido .= " <strong>".''."</strong>";
+									$html_contenido .= "<strong>".''."</strong>";
 									break;
 							}
 						}
@@ -116,7 +118,9 @@
 
 	
 	
-	print "\n</div>\n\n"; //wrap
+	print "</div>"; //wrap
 
+	# html_delimiter
+	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'out', $modo, $lang);
 	
 ?>

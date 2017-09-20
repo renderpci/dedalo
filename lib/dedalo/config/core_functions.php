@@ -50,14 +50,13 @@ function dump($val, $var_name=NULL, $arguments=array()){
 		if(isset($arguments) && is_array($arguments)) foreach ($arguments as $key => $value) {			
 			$html .= PHP_EOL . " $key: <em> $value </em>";
 		}
-			
-
+		
 		# VALUE
 		$value_html='';
 		$html .= PHP_EOL . " value: " ;
 		switch (true) {
 			case is_array($val):
-				$value_html .= print_r($val, true);
+				$value_html .= print_r($val, true);								
 				break;
 			case is_object($val):
 				$value_html .= print_r($val,true);
@@ -325,33 +324,35 @@ function dedalo_decryptStringArray ($stringArray, $key = DEDALO_INFORMACION) {
 }
 
 # CRIPTO : if (!function_exists('mcrypt_encrypt'))
-function dedalo_encrypt_openssl($stringArray, $key = DEDALO_INFORMACION) {
+function dedalo_encrypt_openssl($stringArray, $key=DEDALO_INFORMACION) {
 	
 	if (!function_exists('openssl_encrypt')) throw new Exception("Error Processing Request: Lib OPENSSL unavailable.", 1);
+
 	$encrypt_method = "AES-256-CBC";
 	// iv - encrypt method AES-256-CBC expects 16 bytes - else you will get a warning
 	$secret_iv = DEDALO_ENTITY;
-    $iv = substr(hash('sha256', $secret_iv), 0, 16);
+	$iv = substr(hash('sha256', $secret_iv), 0, 16);
 
-    $output = base64_encode(openssl_encrypt(serialize($stringArray), $encrypt_method, md5(md5($key)), 0, $iv));
+	$output = base64_encode(openssl_encrypt(serialize($stringArray), $encrypt_method, md5(md5($key)), 0, $iv));
 
 	return $output;
 }
-function dedalo_decrypt_openssl($stringArray, $key = DEDALO_INFORMACION) {
+function dedalo_decrypt_openssl($stringArray, $key=DEDALO_INFORMACION) {
 	
 	if (!function_exists('openssl_decrypt')) throw new Exception("Error Processing Request: Lib OPENSSL unavailable.", 1);
-		$encrypt_method = "AES-256-CBC";
-		// iv - encrypt method AES-256-CBC expects 16 bytes - else you will get a warning
-		$secret_iv = DEDALO_ENTITY;
-	    $iv = substr(hash('sha256', $secret_iv), 0, 16);
+		
+	$encrypt_method = "AES-256-CBC";
+	// iv - encrypt method AES-256-CBC expects 16 bytes - else you will get a warning
+	$secret_iv = DEDALO_ENTITY;
+	$iv = substr(hash('sha256', $secret_iv), 0, 16);
 
-		$output = openssl_decrypt(base64_decode($stringArray), $encrypt_method, md5(md5($key)), 0, $iv);
-
+	$output = openssl_decrypt(base64_decode($stringArray), $encrypt_method, md5(md5($key)), 0, $iv);
+	
 	//$s = rtrim(mcrypt_decrypt(MCRYPT_RIJNDAEL_256, md5($key), base64_decode(strtr($stringArray, '-_,', '+/=')), MCRYPT_MODE_CBC, md5(md5($key))), "\0");
 	if ( is_serialized($output) ) {
 		return unserialize($output);
 	}else{
-		debug_log(__METHOD__." Current string is not correctly serialized ! ".to_string(), logger::DEBUG);
+		debug_log(__METHOD__." Current string is not correctly serialized ! ".to_string(), logger::ERROR);
 		return false;
 	}
 }
@@ -360,6 +361,33 @@ function dedalo_decrypt_openssl($stringArray, $key = DEDALO_INFORMACION) {
 
 function is_serialized($str) {
 	return ($str == serialize(false) || @unserialize($str) !== false);
+}
+
+
+/**
+* ENCRYPTION_MODE
+* @return string
+*	Return current crypt mode to use looking current Dédalo version
+*/
+function encryption_mode() {
+
+	# Overwrites calculated mode. Usefull for clean install
+	if (defined('ENCRYPTION_MODE')) {
+		return ENCRYPTION_MODE;
+	}
+
+	$current_version = tool_administration::get_current_version_in_db();
+	
+	$min_subversion = 22; # real: 22 (see updates.php)
+	if( ($current_version[0] >= 4 && $current_version[1] >= 0 && $current_version[2] >= $min_subversion) || 
+		($current_version[0] >= 4 && $current_version[1] >= 5) ||
+		 $current_version[0] > 4
+	  ) { 
+	  	return 'openssl';
+	}else{
+		debug_log(__METHOD__." !! USING OLD CRYPT METHOD (mcrypt). Please use openssl ".to_string(), logger::WARNING);
+		return 'mcrypt';
+	}
 }
 
 
@@ -597,22 +625,6 @@ function verify_dedalo_prefix_tipos($tipo=null) {
 }
 
 
-function log_messages($vars,$level='error') {
-	$html ='';
-
-	if (is_array($vars)) {
-		foreach ($vars as $key => $value) {
-			$html .= "$key => $value";
-		}
-	}elseif (is_object($vars)) {
-		$html .= print_r($vars,true);	
-	}else{
-		$html .= $vars;
-	}
-	$GLOBALS['log_messages'] .= "<div class=\"$level\">$html</div>";
-}
-
-
 
 /**
 * BUILD_SORTER
@@ -648,8 +660,9 @@ function search_string_in_array($array, $search_string) {
 			$matches[$k] = $v;
 		}
 	}
+
 	return $matches;
-}
+}//end search_string_in_array
 
 
 /**
@@ -658,10 +671,10 @@ function search_string_in_array($array, $search_string) {
 * like gàvia to g[aàáâãäå]v[iìíîï][aàáâãäå]
 */
 function add_accents($string) {
-    $array1 = array('a', 'c', 'e', 'i' , 'n', 'o', 'u', 'y');
-    $array2 = array('[aàáâãäå]','[cçćĉċč]','[eèéêë]','[iìíîï]','[nñ]','[oòóôõö]','[uùúûü]','[yýÿ]');
+	$array1 = array('a', 'c', 'e', 'i' , 'n', 'o', 'u', 'y');
+	$array2 = array('[aàáâãäå]','[cçćĉċč]','[eèéêë]','[iìíîï]','[nñ]','[oòóôõö]','[uùúûü]','[yýÿ]');
 
-    return str_replace($array1, $array2, mb_strtolower($string));
+	return str_replace($array1, $array2, mb_strtolower($string));
 }
 
 
@@ -670,13 +683,13 @@ function add_accents($string) {
 * CONVERT_SPECIAL_CHARS
 
 function convert_special_chars($string) {
-    $array1 = array('ñ');
-    $array2 = array('n');
+	$array1 = array('ñ');
+	$array2 = array('n');
 
-    $final_string = str_replace($array1, $array2, $string);
-    #debug_log(__METHOD__." final_string: ".to_string($final_string), logger::ERROR);
+	$final_string = str_replace($array1, $array2, $string);
+	#debug_log(__METHOD__." final_string: ".to_string($final_string), logger::ERROR);
 
-    return $final_string;
+	return $final_string;
 }
 */
 
@@ -691,18 +704,18 @@ function array_get_by_key($array, $key) {
 	return $results;
 }
 function array_get_by_key_r($array, $key, &$results) {
-    if (!is_array($array)) {
-        return;
-    }
+	if (!is_array($array)) {
+		return;
+	}
 
-    if (isset($array[$key])) {
-        $results[] = $array[$key];
-    }
+	if (isset($array[$key])) {
+		$results[] = $array[$key];
+	}
 
-    foreach ($array as $subarray) {
-        array_get_by_key_r($subarray, $key, $results);
-    }
-}
+	foreach ($array as $subarray) {
+		array_get_by_key_r($subarray, $key, $results);
+	}
+}//end array_get_by_key_r
 
 
 
@@ -798,10 +811,10 @@ function ip_in_range($ip, $range) {
 	}
 
 	echo 'Range argument is not in 1.2.3.4/24 or 1.2.3.4/255.255.255.0 format';
+
 	return false;
   }
-
-}
+}//end ip_in_range
 
 
 function br2nl($string) {
@@ -833,19 +846,22 @@ function get_top_tipo() {
 */
 function get_http_response_code($theURL) {
 	stream_context_set_default(
-    	array(
-	        'http' => array(
-	            'method' => 'HEAD'
-	        )
-	    )
+		array(
+			'http' => array(
+				'method' => 'HEAD'
+			)
+		)
 	);
-    $headers = get_headers($theURL);
-    	#dump($headers, ' headers ++ '.to_string());
-    return (int)substr($headers[0], 9, 3);
-}
+	$headers = get_headers($theURL);
+		#dump($headers, ' headers ++ '.to_string());
+	return (int)substr($headers[0], 9, 3);
+}//end get_http_response_code
 
 
 
+/**
+* DD_MEMORY_USAGE
+*/
 function dd_memory_usage() { 
 	$mem_usage = memory_get_usage(true); 
 	$total='';
@@ -857,7 +873,8 @@ function dd_memory_usage() {
 		$total .= round($mem_usage/1048576,2)." MB";
 		
 	return $total; 
-}
+}//end dd_memory_usage
+
 
 
 /**
@@ -885,20 +902,20 @@ function app_lang_to_tld2($lang) {
 			break;
 	}
 	return $tld2;
-}
+}//end app_lang_to_tld2
 
 
 
 function str_lreplace($search, $replace, $subject) {
 
-    $pos = strrpos($subject, $search);
+	$pos = strrpos($subject, $search);
 
-    if($pos !== false) {
-        $subject = substr_replace($subject, $replace, $pos, strlen($search));
-    }
+	if($pos !== false) {
+		$subject = substr_replace($subject, $replace, $pos, strlen($search));
+	}
 
-    return $subject;
-}
+	return $subject;
+}//end str_lreplace
 
 
 
@@ -911,25 +928,101 @@ function str_lreplace($search, $replace, $subject) {
  */
 function cast($destination, $sourceObject) {
 	
-    if (is_string($destination)) {
-        $destination = new $destination();
-    }
-    $sourceReflection = new ReflectionObject($sourceObject);
-    $destinationReflection = new ReflectionObject($destination);
-    $sourceProperties = $sourceReflection->getProperties();
-    foreach ($sourceProperties as $sourceProperty) {
-        $sourceProperty->setAccessible(true);
-        $name = $sourceProperty->getName();
-        $value = $sourceProperty->getValue($sourceObject);
-        if ($destinationReflection->hasProperty($name)) {
-            $propDest = $destinationReflection->getProperty($name);
-            $propDest->setAccessible(true);
-            $propDest->setValue($destination,$value);
-        } else {
-            $destination->$name = $value;
-        }
-    }
-    return $destination;
-}
+	if (is_string($destination)) {
+		$destination = new $destination();
+	}
+	$sourceReflection = new ReflectionObject($sourceObject);
+	$destinationReflection = new ReflectionObject($destination);
+	$sourceProperties = $sourceReflection->getProperties();
+	foreach ($sourceProperties as $sourceProperty) {
+		$sourceProperty->setAccessible(true);
+		$name = $sourceProperty->getName();
+		$value = $sourceProperty->getValue($sourceObject);
+		if ($destinationReflection->hasProperty($name)) {
+			$propDest = $destinationReflection->getProperty($name);
+			$propDest->setAccessible(true);
+			$propDest->setValue($destination,$value);
+		} else {
+			$destination->$name = $value;
+		}
+	}
+	return $destination;
+}//end cast
+
+
+/**
+* LOG_MESSAGES
+* Print a message in all pages to active users
+*/
+function log_messages($vars,$level='error') {
+	$html ='';
+
+	if (is_array($vars)) {
+		foreach ($vars as $key => $value) {
+			$html .= "$key => $value";
+		}
+	}elseif (is_object($vars)) {
+		$html .= print_r($vars,true);	
+	}else{
+		$html .= $vars;
+	}
+	#$GLOBALS['log_messages'] .= "<div class=\"$level\">$html</div>";
+	$GLOBALS['log_messages'][] = "<div class=\"$level\">$html</div>";
+}//end log_messages
+
+
+
+/**
+* NOTICE_TO_ACTIVE_USERS
+* Print a message in all pages to active users
+*/
+function notice_to_active_users( $ar_options ) {
+
+	$msg  = $ar_options['msg'];
+	$mode = $ar_options['mode'];
+
+	log_messages($msg, $mode);
+	/*
+	switch ($mode) {
+		case 'warning':
+			$msg = "<span class=\"warning notice_to_active_users\">$msg</span>";
+			break;
+		
+		default:
+			# code...
+			break;
+	}
+	// Write msg in globas var array
+	$GLOBALS['log_messages'][] = $msg;
+	*/
+}//end notice_to_active_users
+
+
+
+/**
+* GET_REQUEST_VAR
+* Check if var exists in $_REQUEST enviroment. If not do a fallback to search var in php://input (for
+* example in trigger json requests)
+* @return mixed string | bool $var_value
+*/
+function get_request_var($var_name) {
+
+	$var_value = false;
+
+	if(isset($_REQUEST[$var_name]))  {
+		$var_value = $_REQUEST[$var_name];
+	}else{
+		#get the change modo from portal list to edit
+		$str_json = file_get_contents('php://input');
+		$get_submit_vars = json_decode($str_json);
+		if (isset($get_submit_vars->{$var_name})) {
+			$var_value = $get_submit_vars->{$var_name};
+		}
+	}
+
+	return $var_value;
+}//end get_request_var
+
+
 
 ?>

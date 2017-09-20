@@ -90,10 +90,14 @@ var page_globals = new Object();
 					echo "<div class=\"css_button_generic css_av_video_controls_rew av_player_btn\" onClick=\"controlVideo('-5')\">&lt; 5 seg</div>";
 					echo "<div class=\"css_button_generic css_av_video_controls_rew av_player_btn\" onClick=\"controlVideo('5')\">5 seg &gt;</div>";
 					echo "<div class=\"css_button_generic css_av_video_controls_rew av_player_btn\" onClick=\"controlVideo('10')\">10 seg &gt;</div>";
+					# Reload button
+					echo "<div class=\"css_button_generic css_av_video_controls_rew av_player_btn\" onClick=\"set_and_load_media(src,1)\">".label::get_label('recargar')."</div>";
+					/*
 					$recargar_title = label::get_label('recargar');
 					echo "<script type=\"text/javascript\">							
 							document.write('<div class=\"css_button_generic css_av_video_controls_rew av_player_btn\" onClick=\"set_and_load_media(src,1);\">$recargar_title</div>');
 						  </script>";
+					*/
 					echo $quality_selector_html;					
 					break;			
 		}		

@@ -1,6 +1,6 @@
 <?php
 /*
-	LOADER DEDALO COMPONENTS
+	LOADER DEDALO COMPONENTS 
 */
 include(DEDALO_LIB_BASE_PATH . '/db/class.DBi.php');
 include(DEDALO_LIB_BASE_PATH . '/db/class.RecordObj_matrix.php');
@@ -26,6 +26,7 @@ include(DEDALO_LIB_BASE_PATH . '/common/class.dd_date.php');
 include(DEDALO_LIB_BASE_PATH . '/common/class.relation.php');
 include(DEDALO_LIB_BASE_PATH . '/component_common/class.component_common.php');
 include(DEDALO_LIB_BASE_PATH . '/component_common/class.component_relation_common.php');
+include(DEDALO_LIB_BASE_PATH . '/component_common/class.component_reference_common.php');
 
 	
 class class_loader {

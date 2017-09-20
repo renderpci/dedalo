@@ -572,14 +572,25 @@ class component_image extends component_common {
 	*/
 	public function generate_default($overwrite=false) {
 
+
+
 		# common data
 		$image_id 			 = $this->get_image_id();
 		$aditional_path 	 = $this->get_aditional_path();
 		$initial_media_path  = $this->get_initial_media_path();
 
-		# source data (default quality is source)
-		$source_ImageObj	 = new ImageObj($image_id, DEDALO_IMAGE_QUALITY_ORIGINAL, $aditional_path, $initial_media_path);
+
+		# source data (default modify is source)
+		$source_ImageObj	 = new ImageObj($image_id, DEDALO_IMAGE_QUALITY_RETOUCHED, $aditional_path, $initial_media_path);
 		$original_image_path = $source_ImageObj->get_local_full_path();
+		$real_orig_quality	 = DEDALO_IMAGE_QUALITY_RETOUCHED;
+
+		if (!file_exists($original_image_path)) {
+			# source data (default quality is source)
+			$source_ImageObj	 = new ImageObj($image_id, DEDALO_IMAGE_QUALITY_ORIGINAL, $aditional_path, $initial_media_path);
+			$original_image_path = $source_ImageObj->get_local_full_path();
+			$real_orig_quality	 = DEDALO_IMAGE_QUALITY_ORIGINAL;
+		}
 
 		if (!file_exists($original_image_path)) {
 			return false;
@@ -590,7 +601,7 @@ class component_image extends component_common {
 		$image_default_path  = $ImageObj->get_local_full_path();
 
 		if ($overwrite===true || !file_exists($image_default_path)) {
-			$this->convert_quality( DEDALO_IMAGE_QUALITY_ORIGINAL, DEDALO_IMAGE_QUALITY_DEFAULT );		
+			$this->convert_quality( $real_orig_quality, DEDALO_IMAGE_QUALITY_DEFAULT );		
 		}
 
 		return true;		

@@ -16,13 +16,13 @@
 	
 	switch($permissions) {
 			
-		case 0	:	$html_contenido .= " <span class=\"css_span_dato\"> ".label::get_label('sin_acceso')." (button_search)</span>";
+		case 0	:	$html_contenido .= "<span class=\"css_span_dato\"> ".label::get_label('sin_acceso')." (button_search)</span>";
 					break;
 						
 		case ($permissions>=1)	:
 		
-					$html_contenido .= " <input class=\"css_button_search\" type=\"button\" onclick=\"search.Search(this.form)\" 
-					data-tipo=\"{$target_tipo}\" value=\"$label\" title=\"$html_title\" />";
+					$html_contenido .= "<input class=\"css_button_search\" type=\"button\" onclick=\"search.Search(this.form)\" ";
+					$html_contenido .= "data-tipo=\"{$target_tipo}\" value=\"$label\" title=\"$html_title\"/>";
 											
 	}	
 	

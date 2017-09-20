@@ -3,11 +3,11 @@
 	# VISUALIZADOR HTML	
 		
 	# CONTENIDO 
-	$html_contenido = '';
+	$html_content = '';
 	switch($permissions) {
 			
 		case 0	:	
-				$html_contenido .= ''; 		
+				$html_content .= ''; 		
 				break;
 					
 		case ($permissions>=1) :
@@ -28,14 +28,18 @@
 					$title = trim($title);
 					
 					$current_class 	= $ar_values['show_icon'];	// state name locator like dd174_1
-					$html_contenido .= "<div class=\"icon_state_list $current_class\" title=\"$title\"></div>";						
+					$html_content .= "<div class=\"icon_state_list $current_class\" title=\"$title\"></div>";						
 
 				}//end foreach ($ar_valor as $key => $ar_values) {
+
+				if(SHOW_DEBUG===true) {
+					$html_content .= "<span class=\"component_state_debug debug_info\">".exec_time($start_time)."</span>";
+				}
 				break;							
 	}	
 
-	$html_contenido = '<div>'.$html_contenido.'</div>';
+	$html_content = '<div>'.$html_content.'</div>';
 	
 	# PRINT HTML	
-	print $html_contenido;
+	print $html_content;
 ?>

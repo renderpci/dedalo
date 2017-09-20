@@ -637,8 +637,7 @@ class component_layout extends component_common {
 
 								$current_element_html = $component_obj->get_html();
 									#dump($current_element_html, ' $current_element_html ++ '.to_string($children_modelo_name));
-								$html_elements	.= $current_element_html ;							
-								
+								$html_elements	.= $current_element_html;								
 							}
 							else if ( strpos($children_modelo_name, 'button_')!==false ) {
 								# Skip to remove elements
@@ -777,6 +776,7 @@ class component_layout extends component_common {
 							#dump($section_obj->get_tipo()," section tipo  component $terminoID ($element_modelo_name)"); #die();
 						$html	.= $component_obj->get_html();
 							#dump($element_modelo_name,"component_obj");
+							#dump($component_obj->generate_json_element, '$component_obj->generate_json_element ++ '.to_string());					
 						break;
 
 				# BUTTONS
@@ -793,6 +793,12 @@ class component_layout extends component_common {
 				case (strpos($element_modelo_name, 'relation_list')!==false):
 						# Nothing to do
 						break;
+
+				# COMPONENTS
+				case ($element_modelo_name==='box elements') :
+						# Nothing to do
+						debug_log(__METHOD__." Skipped box element ".to_string($terminoID), logger::DEBUG);
+						break;		
 				default:
 						throw new Exception("Error Processing Request. Tipo $terminoID ($element_modelo_name) not valid", 1);													
 						break;

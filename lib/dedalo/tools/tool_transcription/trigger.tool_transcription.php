@@ -1,15 +1,8 @@
 <?php
-require_once( dirname(dirname(dirname(__FILE__))) .'/config/config4.php');
-
-if(login::is_logged()!==true) die("<span class='error'> Auth error: please login </span>");
-
-
-# set vars
-	$vars = array('mode');
-		foreach($vars as $name) $$name = common::setVar($name);
-
-# mode
-if(empty($mode)) exit("<span class='error'> Trigger: Error Need mode..</span>");
+$start_time=microtime(1);
+include( dirname(dirname(dirname(__FILE__))) .'/config/config4.php');
+# TRIGGER_MANAGER. Add trigger_manager to receive and parse requested data
+common::trigger_manager();
 
 
 
@@ -20,17 +13,26 @@ if(empty($mode)) exit("<span class='error'> Trigger: Error Need mode..</span>");
 * @param $section_id
 * @param $section_tipo
 */
-if($mode=='pdf_automatic_transcription') {
+function pdf_automatic_transcription($json_data) {
+	global $start_time;
+
+	# Write session to unlock session file
+	session_write_close();
+
+	$response = new stdClass();
+		$response->result 	= false;
+		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
 
 	$vars = array('id','parent','dato','tipo','lang','source_lang','target_lang', 'section_id', 'section_tipo', 'source_tipo', 'target_tipo');
-		foreach($vars as $name) $$name = common::setVar($name);
-
-	if (empty($section_id) || empty($section_tipo) || empty($source_tipo) || empty($target_tipo)) {
-		if (SHOW_DEBUG) {
-			dump($_REQUEST);
+		foreach($vars as $name) {
+			$$name = common::setVarData($name, $json_data);
+			# DATA VERIFY
+			# if ($name==='dato') continue; # Skip non mandatory
+			if (empty($$name)) {
+				$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty '.$name.' (is mandatory)';
+				return $response;
+			}
 		}
-		throw new Exception("Error Processing Request: Unable load_source_component ! (Few vars1)", 1);
-	}
 		
 
 		#
@@ -101,21 +103,19 @@ if($mode=='pdf_automatic_transcription') {
 		    return preg_replace(array('~\r\n?~', '~[^\P{C}\t\n]+~u'), array("\n", ''), $string);
 		}
 
-	if(SHOW_DEBUG) {
-		$start_time = microtime(true);
-	}
 
 	#
 	# TEST ENGINE PDF TO TEXT
-	if (defined('PDF_AUTOMATIC_TRANSCRIPTION_ENGINE')===false) {
-		exit("Error on pdf_automatic_transcription: config PDF_AUTOMATIC_TRANSCRIPTION_ENGINE is not defined");
+	if (defined('PDF_AUTOMATIC_TRANSCRIPTION_ENGINE')===false) {		
+		$response->msg = 'Error. Request failed ['.__FUNCTION__.'] config PDF_AUTOMATIC_TRANSCRIPTION_ENGINE is not defined';
+		return $response;
 	}else{
 		$transcription_engine = trim(shell_exec('type -P '.PDF_AUTOMATIC_TRANSCRIPTION_ENGINE));
 		if (empty($transcription_engine)) {
-			exit("Error on pdf_automatic_transcription: daemon engine not found");
+			$response->msg = 'Error. Request failed ['.__FUNCTION__.'] daemon engine not found';
+			return $response;
 		}
 	}
-
 
 	$component_pdf  = component_common::get_instance("component_pdf",
 													 $source_tipo,
@@ -134,11 +134,11 @@ if($mode=='pdf_automatic_transcription') {
 	$command  = PDF_AUTOMATIC_TRANSCRIPTION_ENGINE . " -enc UTF-8 $path_pdf";
 	$output   = shell_exec( $command );			# Generate text version file in same dir as pdf
 
-	if (!file_exists($filename)) {
-		exit("Error on pdf_automatic_transcription: Text file not found");
+	if (!file_exists($filename)) {		
+		$response->msg = 'Error. Request failed ['.__FUNCTION__.'] Text file not found';
+		return $response;
 	}
 	$pdf_text = file_get_contents($filename);	# Read current text file
-
 		
 		#
 		# TEST STRING VALUE IS VALID
@@ -153,17 +153,18 @@ if($mode=='pdf_automatic_transcription') {
 
 		# Test JSON conversion before save
 		$pdf_text 	= json_handler::encode($pdf_text);		
-		if (!$pdf_text) {
-			die("Error: String is not saved because format encoding is wrong");
+		if (!$pdf_text) {			
+			$response->msg = 'Error. Request failed ['.__FUNCTION__.'] String is not saved because format encoding is wrong';
+			return $response;
 		}		
 		$pdf_text 	= json_handler::decode($pdf_text);	# JSON is valid. We turn object to string
 		#echo "\n pdf_text: ".$pdf_text;
 	
-
+	# Check empty text
 	if (empty($pdf_text)) {
-		exit("Error on pdf_automatic_transcription: Empty text");
+		$response->msg = 'Error. Request failed ['.__FUNCTION__.'] Empty text';
+		return $response;
 	}
-
 
 	#
 	# PAGES TAGS	
@@ -179,24 +180,40 @@ if($mode=='pdf_automatic_transcription') {
 	}	
 
 
-
 	#
 	# TARGET TEXT AREA
-	$component_text_area = component_common::get_instance('component_text_area', $target_tipo, $section_id, 'edit', DEDALO_DATA_LANG, $section_tipo);
+	$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($target_tipo,true);
+	$component_text_area = component_common::get_instance(	$modelo_name, //'component_text_area',
+															$target_tipo,
+															$section_id,
+															'edit',
+															DEDALO_DATA_LANG,
+															$section_tipo);
 	$component_text_area->set_dato($pdf_text);
 	$component_text_area->Save(false, false);
 
 
-	if(SHOW_DEBUG) {
-		$total=round(microtime(1)-$start_time,3);
-		$n_chars = strlen($pdf_text);
-		error_log(__METHOD__." total time: $total - n_chars:$n_chars");
-	}
-
 	//dump($component_text_area,"component_text_area - target_tipo: $target_tipo - section_id: $section_id");
-	echo "ok";
-	exit();
+	$response->result 	= true;
+	$response->msg 		= 'Ok. Request done ['.__FUNCTION__.']';
 
+	# Debug
+	if(SHOW_DEBUG===true) {
+
+		$debug = new stdClass();
+			$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
+			foreach($vars as $name) {
+				$debug->{$name} = $$name;
+			}
+			$degbug->n_chars 	= strlen($pdf_text);
+			$debug->path_pdf 	= $path_pdf;
+			$debug->command 	= $command;
+			$degbug->output 	= $output;
+
+		$response->debug = $debug;
+	}
+	
+	return (object)$response;
 }//end pdf_automatic_transcription
 
 
@@ -206,7 +223,7 @@ if($mode=='pdf_automatic_transcription') {
 * @param $tipo
 * @param $lang
 * @param $parent
-*/
+*//*
 if($mode=='change_text_editor_lang') {
 
 	$vars = array('tipo','parent','section_tipo','lang');
@@ -236,13 +253,7 @@ if($mode=='change_text_editor_lang') {
 	
 	echo $html;
 	exit();
-
-}//end change_text_editor_lang
-
-
-
-
-
+}//end change_text_editor_lang */
 
 
 

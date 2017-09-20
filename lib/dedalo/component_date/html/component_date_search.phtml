@@ -1,26 +1,21 @@
 <?php
 
 	# VISUALIZADOR HTML	
+
 	
-	
-	if(isset($_REQUEST[$tipo])) $dato = $_REQUEST[$tipo];		#var_dump($_REQUEST[$tipo]);
-	
-	
-	print "\n<!-- DATE -->";
-	print "\n<div class=\"wrap_component css_wrap_date\" id=\"wrap_{$tipo}\">";
-	
+	#print "<!-- DATE -->";
+	print "<div class=\"wrap_component css_wrap_date\" id=\"wrap_{$tipo}\">";
+
 	# ETIQUETA (LABEL)
 	$html_label = component_common_draw::draw_label($this);
 	
 	# CONTENIDO (INPUT)
 	$html_content = '';
-	switch($permissions) {
+	switch(true) {
 			
-		case 0	:	$html_content .= "";
+		case $permissions===0:
+					$html_content .= "";
 					break;
-						
-		case 1	: 	$html_content .= "\n <span class=\"css_span_dato\">$dato</span>";
-					break;	
 						
 		case ($permissions>=1):
 
@@ -30,27 +25,22 @@
 					
 					$html_content .= "<span id=\"search_component_$tipo\">";
 
-					$html_content .= "\n <input class=\"css_date\" type=\"text\"
-						name=\"{$search_input_name}\"
-						data-tipo=\"{$tipo}\"
-						data-parent=\"{$parent}\"
-						data-lang=\"{$lang}\"
-						value=\"{$valor}\"
-						title=\"$html_title\"
-						/>";
-					
+					$html_content .= "<input class=\"css_date\" type=\"text\" ";
+					$html_content .= "name=\"{$search_input_name}\" ";
+					$html_content .= "data-tipo=\"{$tipo}\" ";
+					$html_content .= "data-parent=\"{$parent}\" ";
+					$html_content .= "data-lang=\"{$lang}\"	";				
+					$html_content .= "title=\"$html_title\" ";
+					$html_content .= "/>";					
 
 					$html_content .= "</span>";
 
-					$html_content .= " <span class=\"css_span_ejemplo\">Format $ejemplo </span>";	
+					$html_content .= "<span class=\"css_span_ejemplo\">Format $ejemplo</span>";	
 
 					
 					# LOGICAL OPERATORS
 					$html_content .= operator::get_search_logical_operators_html($tipo,$ar_logical_operators);
-
-					if(SHOW_DEBUG===true) {
-						$html_content .= "<span class=\"debug_info\">$search_input_name</span>";
-					}
+				
 					
 					break;				
 	}
@@ -63,5 +53,5 @@
 	print $html_content;
 	
 	
-	print "\n</div>\n\n"; //wrap
+	print "</div>"; //wrap
 ?>

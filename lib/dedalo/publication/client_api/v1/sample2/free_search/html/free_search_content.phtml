@@ -1,0 +1,40 @@
+<div id="free_search_content">
+<form>
+	<h2>Free</h2> <input type="text" name="q" value="<?php echo htmlspecialchars($options->q) ?>"><input type="submit" value="Search">
+</form>
+
+<?php if (empty($data->result) && !empty($_REQUEST["q"])) { ?>
+	<h3>Sorry. Nothing found for: <?php echo $options->q ?></h3>
+<?php } ?>	
+
+<?php foreach ($data->result as $key => $row) { ?>
+	
+	<div><hr>Interview</div>
+	<div><strong>Code:</strong> <?php echo $row->code ?></div>
+
+	<div><hr>Image</div>
+	<?php foreach ($row->image as $av_key => $image_obj) { ?>
+		<img src="<?php echo __WEB_BASE_URL__ . $image_obj->image ?>" height="120" />
+	<?php } ?>
+
+	<div><hr>Informant</div>
+	<?php foreach ($row->informant as $av_key => $inf_column) { ?>
+		<div><strong>Name:</strong> <?php echo $inf_column->name ?></div>
+		<div><strong>Surname:</strong> <?php echo $inf_column->surname ?></div>
+		<div><strong>Birthdate:</strong> <?php echo $inf_column->birthdate ?></div>
+	<?php } ?>
+
+	<div><hr>Transcription fragment</div>
+	<?php foreach ($row->fragments as $match => $fragment_obj) { ?>
+		<div><strong>Text:</strong> <br><?php echo substr($fragment_obj->list_fragment, 0, 856) . '..' ?></div>
+		<input type="button" value="load video" onclick="free_search.load_video(this, '<?php echo "av_container_".$key ?>', '<?php echo $row->av_section_id ?>', '<?php echo $match ?>')">
+	<?php } ?>		
+
+	<hr>
+	<div id="<?php echo "av_container_".$key ?>">
+		<!-- ajax load video html here -->
+	</div>
+
+	<br>
+<?php } ?>
+</div>

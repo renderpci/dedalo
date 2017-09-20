@@ -3,19 +3,19 @@
 	# VISUALIZADOR HTML	
 	
 	# html_delimiter
-	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'in');
+	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'in', $modo, $lang);
 
-	print "<div class=\"wrap_component css_wrap_check_box wrap_component_{$tipo}\"
-	id=\"{$id_wrapper}\"
-	data-tipo=\"{$tipo}\"
-	data-section_tipo=\"{$section_tipo}\"
-	data-parent=\"{$parent}\"
-	data-lang=\"{$lang}\"
-	data-modo=\"{$modo}\"
-	data-dato='$dato_string'
-	data-component_name=\"{$component_name}\"
-	data-component_info='{$component_info}'
-	>";
+	print "<div class=\"wrap_component css_wrap_check_box wrap_component_{$tipo}\" ";
+	print "id=\"{$id_wrapper}\" ";
+	print "data-tipo=\"{$tipo}\" ";
+	print "data-section_tipo=\"{$section_tipo}\" ";
+	print "data-parent=\"{$parent}\" ";
+	print "data-lang=\"{$lang}\" ";
+	print "data-modo=\"{$modo}\" ";
+	print "data-dato='$dato_string' ";
+	print "data-component_name=\"{$component_name}\" ";
+	print "data-component_info='{$component_info}' ";
+	print ">";
 	
 	# ETIQUETA (LABEL)
 	$html_label = component_common_draw::draw_label($this);
@@ -35,13 +35,22 @@
 					break;	
 
 						
-		case ($permissions>=2) :					
+		case 2 :
+		case 3 :					
 		
 					$html_contenido .= "<ul class=\"group\">";
 					$i=1; foreach ($ar_list_of_values->result as $value => $rotulo) {
 
 						$value   = (string)$value; 
 						$locator = (object)json_handler::decode($value);	# Locator is json encoded object
+
+						/*
+						if (isset($this->caller_dataset)) {
+							$locator->type 		 = $this->caller_dataset->type;
+							$locator->caller_key = $this->caller_dataset->caller_key;
+
+							$value = (string)json_encode($locator);
+						}*/
 						#dump($locator," locator"); #dump($dato," dato");
 						
 						$checked  = in_array($locator, $dato) ? 'checked="checked"' : '';
@@ -53,24 +62,24 @@
 
 						# 
 						# INPUT
-						$html_contenido .= " <input type=\"checkbox\" class=\"css_check_box\"
-						onfocus=\"component_common.select_wrap(null,'$id_wrapper');\"
-						onchange=\"component_check_box.Save(this)\"
-						name=\"{$input_name}\"
-						id=\"{$input_id}\"
-						data-tipo=\"{$tipo}\"
-						data-lang=\"{$lang}\"
-						data-section_tipo=\"{$section_tipo}\"
-						data-parent=\"{$parent}\"
-						value='$value'
-						title=\"$html_title\"
-						$checked
-						$tabindex
-						/>";
+						$html_contenido .= "<input type=\"checkbox\" class=\"css_check_box\" ";
+						$html_contenido .= "onfocus=\"component_common.select_wrap(null,'$id_wrapper');\" ";
+						$html_contenido .= "onchange=\"component_check_box.Save(this)\" ";
+						$html_contenido .= "name=\"{$input_name}\" ";
+						$html_contenido .= "id=\"{$input_id}\" ";
+						$html_contenido .= "data-tipo=\"{$tipo}\" ";
+						$html_contenido .= "data-lang=\"{$lang}\" ";
+						$html_contenido .= "data-section_tipo=\"{$section_tipo}\" ";
+						$html_contenido .= "data-parent=\"{$parent}\" ";
+						$html_contenido .= "value='$value' ";
+						$html_contenido .= "title=\"$html_title\" ";
+						$html_contenido .= "$checked ";
+						$html_contenido .= "$tabindex ";
+						$html_contenido .= "/>";
 						
 						#
 						# LABEL				
-						$html_contenido .= " <label for=\"$input_id\" class=\"css_check_box_rotulo\" $required_code >$rotulo</label>";
+						$html_contenido .= "<label for=\"$input_id\" class=\"css_check_box_rotulo\" {$required_code}>$rotulo</label>";
 
 						$html_contenido .= "</li>";
 						$i++;
@@ -100,7 +109,7 @@
 
 
 	# html_delimiter
-	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'in');
+	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'in', $modo, $lang);
 
 
 ?>

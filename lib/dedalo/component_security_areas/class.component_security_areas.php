@@ -420,7 +420,7 @@ class component_security_areas extends component_common {
 	*/
 	public static function get_areas_tree_html($arguments_tree) {
 
-		$tree_html = "<!-- SECURITY AREAS TREE --> <ul id=\"security_areas_tree\" class=\"\">";		
+		$tree_html = "<!-- SECURITY AREAS TREE --> <ul id=\"security_areas_tree\">";		
 			
 			$ar_ts_children_areas = area::get_ar_ts_children_all_areas_hierarchized();
 				#dump($ar_ts_children_areas,"ar_ts_children_areas");
@@ -546,12 +546,12 @@ class component_security_areas extends component_common {
 						
 						$wrap_div_id = 'access_elements_'.$tipo;	//chevron-down
 						
-						$html .= " <span class=\"glyphicon glyphicon-th toggle_access_elements\" onclick=\"component_security_areas.load_access_elements(this,event);\"
-						data-tipo=\"$tipo\"
-						data-parent=\"$parent\"
-						data-wrap_div_id=\"$wrap_div_id\"
-						data-button_tipo=\"$tipo\"
-						></span>";
+						$html .= "<span class=\"glyphicon glyphicon-th toggle_access_elements\" onclick=\"component_security_areas.load_access_elements(this,event)\" ";
+						$html .= "data-tipo=\"$tipo\" ";
+						$html .= "data-parent=\"$parent\" ";
+						$html .= "data-wrap_div_id=\"$wrap_div_id\" ";
+						$html .= "data-button_tipo=\"$tipo\" ";
+						$html .= "></span>";
 						$html .= "<div id=\"{$wrap_div_id}\" class=\"access_elements\"></div>"; # Ajax container to load elements
 					}
 					
@@ -600,7 +600,7 @@ class component_security_areas extends component_common {
 		$js 		= '';
 		
 		# CHECKED . Default NULL
-		$checked 	= '';
+		$checked 	= false;//'';
 		
 		$context 			 = isset($arguments_tree['context']) ? $arguments_tree['context'] : null;
 		$dato 	 			 = isset($arguments_tree['dato']) ? $arguments_tree['dato'] : null;
@@ -615,12 +615,13 @@ class component_security_areas extends component_common {
 		if( isset($dato->$tipo) ) {
 			
 			# CASE CHECKED
-			if($dato->$tipo==3) {
-				$checked = 'checked="checked"';
+			if($dato->$tipo===3) {
+				$checked = ' checked="checked"';
 			}
 			# CASE INDETERMINATE
-			else if($dato->$tipo==2){
-				$js = "<script>var checkbox=document.getElementById(\"{$identificador_unico}_{$tipo}\");checkbox.indeterminate=true</script>"; #dump($tipo);
+			else if($dato->$tipo===2){
+				#$js = "<script>var checkbox=document.getElementById(\"{$identificador_unico}_{$tipo}\");checkbox.indeterminate=true</script>"; #dump($tipo);
+				$js = "<script>document.getElementById(\"{$identificador_unico}_{$tipo}\").indeterminate=true</script>";
 			}			
 		}
 
@@ -663,30 +664,34 @@ class component_security_areas extends component_common {
 			#if(is_array($dato) && array_key_exists($tipo.'-admin', $dato) && $dato[$tipo.'-admin']==2) {
 			#	$admin_checked = 'checked="checked"';
 			#}
-			$admin_checked = (property_exists($dato, $tipo) && $dato->$tipo==3) ? 'checked="checked"' : '';
+			$admin_checked = (property_exists($dato, $tipo) && $dato->$tipo==3) ? ' checked="checked" ' : '';
 
 			/**
 			* USERS . REMOVE MAIN UNAUTHORIZED ADMIN CHECKBOX ELEMENTS
 			* En el contexto de edición de 'users' eliminamos las areas de tipo admin que nosotros mismos no podamos administrar
 			*/			
-			#if( $logged_user_is_global_admin===true || array_key_exists($tipo.'-admin', $dato) ) {						
+			#if( $logged_user_is_global_admin===true || array_key_exists($tipo.'-admin', $dato) ) {
 
-				$html .= "<span class=\"security_areas_admin_checkbox\" id=\"{$identificador_unico}_{$tipo}-admin-span\">";
+				# Si area checkbox esta checked, mostramos su admin checkbox				
+				$span_block = ($checked!==false) ? ' visible' : '';
+				$html .= "<span class=\"security_areas_admin_checkbox{$span_block}\" id=\"{$identificador_unico}_{$tipo}-admin-span\">";
 
-				$html .= "<input type=\"checkbox\" class=\"css_component_security_areas component_security_areas_admin\" onclick=\"component_security_areas.Save(this,event)\"
-				name=\"{$identificador_unico}\"
-				id=\"{$identificador_unico}_{$tipo}-admin\"
-				data-tipo=\"{$parent_tipo}\"
-				data-lang=\"{$lang}\"
-				data-section_tipo=\"{$section_tipo}\"
-				data-parent=\"{$parent}\"
-				data-flag=\"component_security_areas\"
-				value=\"{$tipo}-admin\"
-				$admin_checked $disabled />";
+				$html .= "<input type=\"checkbox\" class=\"css_component_security_areas component_security_areas_admin\" onclick=\"component_security_areas.Save(this,event)\" ";
+				$html .= "name=\"{$identificador_unico}\" ";
+				$html .= "id=\"{$identificador_unico}_{$tipo}-admin\" ";
+				$html .= "data-tipo=\"{$parent_tipo}\" ";
+				$html .= "data-lang=\"{$lang}\" ";
+				$html .= "data-section_tipo=\"{$section_tipo}\" ";
+				$html .= "data-parent=\"{$parent}\" ";
+				$html .= "data-flag=\"component_security_areas\" ";
+				$html .= "value=\"{$tipo}-admin\" ";
+				$html .= $admin_checked;
+				$html .= $disabled;
+				$html .= "/>";
 
-				$html .= " <label for=\"{$identificador_unico}_{$tipo}-admin\" class=\"css_component_security_areas_rotulo\">";
+				$html .= "<label for=\"{$identificador_unico}_{$tipo}-admin\" class=\"css_component_security_areas_rotulo\">";
 				$html .= "Admin $termino";
-				if(SHOW_DEBUG) {
+				if(SHOW_DEVELOPER===true) {
 					$html .= " - [$tipo:";
 					$permissions = isset($dato->$tipo) ? $dato->{$tipo} : 0;
 					$html .= "<b>$permissions</b>";
@@ -698,29 +703,31 @@ class component_security_areas extends component_common {
 				$html .= "</span>";
 
 				# Si area checkbox esta checked, mostramos su admin checkbox
-				if($checked)
-				$js .= "<script>document.getElementById(\"{$identificador_unico}_{$tipo}-admin-span\").style.display=\"block\";</script>";
+				#if($checked)
+				#$js .= "<script>document.getElementById(\"{$identificador_unico}_{$tipo}-admin-span\").style.display=\"block\";</script>";
 			#}
 		}
 
 		# AREA CHECKBOX
 			#if( $logged_user_is_global_admin===true || array_key_exists($tipo.'-admin', $dato) ) {
-				$html .= "<input type=\"checkbox\" class=\"css_component_security_areas\" onclick=\"component_security_areas.Save(this,event)\"
-				name=\"{$identificador_unico}\"
-				id=\"{$identificador_unico}_{$tipo}\"
-				data-tipo=\"{$parent_tipo}\"
-				data-lang=\"{$lang}\"
-				data-section_tipo=\"{$section_tipo}\"
-				data-parent=\"{$parent}\"
-				data-flag=\"component_security_areas\" 
-				value=\"{$tipo}\"
-				title=\"$html_title\"
-				$checked $disabled />";
+				$html .= "<input type=\"checkbox\" class=\"css_component_security_areas\" onclick=\"component_security_areas.Save(this,event)\" ";
+				$html .= "name=\"{$identificador_unico}\" ";
+				$html .= "id=\"{$identificador_unico}_{$tipo}\" ";
+				$html .= "data-tipo=\"{$parent_tipo}\" ";
+				$html .= "data-lang=\"{$lang}\" ";
+				$html .= "data-section_tipo=\"{$section_tipo}\" ";
+				$html .= "data-parent=\"{$parent}\" ";
+				$html .= "data-flag=\"component_security_areas\" "; 
+				$html .= "value=\"{$tipo}\" ";
+				$html .= "title=\"$html_title\" ";
+				$html .= $checked;
+				$html .= $disabled;
+				$html .= "/>";
 
-				$html .= " <label class=\"css_component_security_areas_rotulo\">";	// for=\"{$identificador_unico}_{$tipo}\" 
+				$html .= "<label class=\"css_component_security_areas_rotulo\">";	// for=\"{$identificador_unico}_{$tipo}\" 
 				$html .= "$termino";
 				$html .= "</label>";
-				if(SHOW_DEBUG) {
+				if(SHOW_DEVELOPER===true) {
 					$html .= " [$tipo:";
 					$permissions = isset($dato->$tipo) ? $dato->{$tipo} : 0;
 					$html .= "<b>$permissions</b>";
@@ -731,10 +738,8 @@ class component_security_areas extends component_common {
 				#
 				# ICON TOGGLE_AREA_CHILDRENS
 				if ($have_childrens) {
-					$html .= " <span class=\"glyphicon glyphicon-chevron-down toggle_area_childrens\" onclick=\"component_security_areas.toggle_area_childrens(this,event);\" data-button_tipo=\"$tipo\"></span>";
+					$html .= "<span class=\"glyphicon glyphicon-chevron-down toggle_area_childrens\" onclick=\"component_security_areas.toggle_area_childrens(this,event);\" data-button_tipo=\"$tipo\"></span>";
 				}
-				
-				
 			#}
 		
 		$html .= $js;

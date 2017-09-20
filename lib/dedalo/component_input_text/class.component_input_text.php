@@ -1,9 +1,9 @@
 <?php
 /*
 * CLASS COMPONENT_INPUT_TEXT
+* Manage specific component input text logic
+* Common components properties and method are inherited of component_common class that are inherited from common class
 */
-
-
 class component_input_text extends component_common {
 	
 
@@ -41,13 +41,13 @@ class component_input_text extends component_common {
 			}else{
 				# dato is string plain value
 				$dato = array($dato);
-				debug_log(__METHOD__." Dato received is a plain string. Support for this type is deprecated. Use always an array to set dato. ".to_string(), logger::DEBUG);
-			}			
+				debug_log(__METHOD__." Warning. [$this->tipo,$this->parent] Dato received is a plain string. Support for this type is deprecated. Use always an array to set dato. ".to_string($dato), logger::DEBUG);
+			}
 		}
 
 		if(SHOW_DEBUG===true) {
 			if (!is_array($dato)) {
-				debug_log(__METHOD__." Warning in set dato [$this->tipo,$this->parent]. Received dato is NOT array. Type is '".gettype($dato)."' and dato: '".to_string($dato)."' will be converted to array", logger::DEBUG);
+				debug_log(__METHOD__." Warning. [$this->tipo,$this->parent]. Received dato is NOT array. Type is '".gettype($dato)."' and dato: '".to_string($dato)."' will be converted to array", logger::DEBUG);
 			}
 			#debug_log(__METHOD__." dato [$this->tipo,$this->parent] Type is ".gettype($dato)." -> ".to_string($dato), logger::ERROR);
 		}
@@ -60,7 +60,7 @@ class component_input_text extends component_common {
 				$safe_dato[] = $value;
 			}
 		}
-		$dato = array_values($safe_dato);
+		$dato = $safe_dato;
 		
 		parent::set_dato( (array)$dato );
 	}//end set_dato
@@ -74,21 +74,20 @@ class component_input_text extends component_common {
 	* @return string $valor
 	*/
 	public function get_valor( $lang=DEDALO_DATA_LANG, $index='all' ) {
+		
 		$dato = $this->get_dato();
 				
-		if ($index==='all') {
-			$valor='';
-			$last_value = end($dato);
-			foreach ($dato as $key => $value) {
-				$valor .= $value;
-				if ($value !== $last_value) {
-					$valor .= ', ';
-				}
+		if ($index==='all') {			
+			$ar = array();
+			foreach ($dato as $key => $value) {				
+				$ar[] = $value;				
 			}
+			$valor = implode(',',$ar);
 		}else{
 			$index = (int)$index;
 			$valor = isset($dato[$index]) ? $dato[$index] : null;
 		}
+
 
 		return (string)$valor;
 	}//end get_valor
@@ -130,46 +129,6 @@ class component_input_text extends component_common {
 	}//end Save
 
 
-	
-	/**
-	* GET_SEARCH_QUERY
-	* Build search query for current component . Overwrite for different needs in other components 
-	* (is static to enable direct call from section_records without construct component)
-	* Params
-	* @param string $json_field . JSON container column Like 'dato'
-	* @param string $search_tipo . Component tipo Like 'dd421'
-	* @param string $tipo_de_dato_search . Component dato container Like 'dato' or 'valor'
-	* @param string $current_lang . Component dato lang container Like 'lg-spa' or 'lg-nolan'
-	* @param string $search_value . Value received from search form request Like 'paco'
-	* @param string $comparison_operator . SQL comparison operator Like 'ILIKE'
-	*
-	* @see class.section_records.php get_rows_data filter_by_search
-	* @return string $search_query . POSTGRE SQL query (like 'datos#>'{components, oh21, dato, lg-nolan}' ILIKE '%paco%' )
-	*/
-	/*
-	public static function get_search_query( $json_field, $search_tipo, $tipo_de_dato_search, $current_lang, $search_value, $comparison_operator='ILIKE') {//, $logical_operator = 'AND' 
-		if ( empty($search_value) ) {
-			return null;
-		}
-		if(SHOW_DEBUG===true) {
-			#dump($search_value, ' search_value');
-		}
-		
-		switch (true) {
-			case ($comparison_operator=='=' || $comparison_operator=='!='):
-				$search_query = " $json_field#>>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}' $comparison_operator '$search_value' ";
-				break;
-			default:
-				$search_query = " $json_field#>>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}' $comparison_operator '%$search_value%' ";
-				break;
-		}
-		
-		if(SHOW_DEBUG===true) {
-			$search_query = " -- filter_by_search $search_tipo ". get_called_class() ." \n".$search_query;
-		}
-		return $search_query;
-	}
-	*/
 
 
 
@@ -351,21 +310,33 @@ class component_input_text extends component_common {
 			case ($comparison_operator==='ILIKE' || $comparison_operator==='LIKE'):
 				// Allow wildcards like "house*" or "*house"
 				// dump($search_value[strlen($search_value) - 1], "$search_value[0] ".to_string());
-				$separator 	   = '*';				
+				$separator 	   = '*';			
 				if ( $search_value[0] === $separator ) {
 					// Begin with * like
 					$search_value = str_replace($separator, '', $search_value);
-					$search_query = " unaccent({$json_field}#>>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}') $comparison_operator unaccent('%$search_value') ";
+					if ($current_lang=='all') {
+						$search_query = " unaccent({$json_field}#>>'{components, $search_tipo, $tipo_de_dato_search}') $comparison_operator unaccent('%[\"%{$search_value}') ";
+					}else{
+						$search_query = " unaccent({$json_field}#>>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}') $comparison_operator unaccent('%$search_value') ";
+					}					
 				
 				}else if ( $search_value[strlen($search_value) - 1] === $separator ) {
 					// End with *
 					$search_value = str_replace($separator, '', $search_value);
-					$search_query = " unaccent({$json_field}#>>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}') $comparison_operator unaccent('$search_value%') ";
-					
+					if ($current_lang=='all') {
+						$search_query = " unaccent({$json_field}#>>'{components, $search_tipo, $tipo_de_dato_search}') $comparison_operator unaccent('%[\"{$search_value}%') ";
+					}else{
+						$search_query = " unaccent({$json_field}#>>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}') $comparison_operator unaccent('$search_value%') ";
+					}
 				}else{
 					// Contain
 					$search_value = str_replace($separator, '', $search_value);
-					$search_query = " unaccent({$json_field}#>>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}') $comparison_operator unaccent('%$search_value%') ";
+					if ($current_lang=='all') {
+						$search_query = " unaccent({$json_field}#>>'{components, $search_tipo, $tipo_de_dato_search}') ~* unaccent('.*\[\".*$search_value.*') ";
+					}else{
+						$search_query = " unaccent({$json_field}#>>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}') $comparison_operator unaccent('%$search_value%') ";
+					}
+
 				}
 				break;
 
@@ -396,6 +367,7 @@ class component_input_text extends component_common {
 		}
 		return (string)$search_query;
 	}//end get_search_query
+
 
 
 

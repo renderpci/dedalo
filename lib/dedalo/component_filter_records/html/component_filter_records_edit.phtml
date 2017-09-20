@@ -3,9 +3,9 @@
 	# VISUALIZADOR HTML
 
 
-	print "\n<!-- ".__CLASS__." [tipo:$tipo section_id:$parent section_tipo:$section_tipo] $label -->";
+	print "<!-- ".__CLASS__." [tipo:$tipo section_id:$parent section_tipo:$section_tipo] $label -->";
 
-	print "\n<div class=\"wrap_component css_wrap_filter_records wrap_component_{$modo} wrap_component_{$tipo}\" id=\"{$id_wrapper}\"
+	print "<div class=\"wrap_component css_wrap_filter_records wrap_component_{$modo} wrap_component_{$tipo}\" id=\"{$id_wrapper}\"
 	data-tipo=\"{$tipo}\"
 	data-lang=\"{$lang}\"
 	data-parent=\"{$parent}\"
@@ -81,5 +81,5 @@
 	print $html_content;
 
 
-	print "\n</div><!-- /css_wrap_filter_records [tipo:$tipo section_id:$parent] $label -->\n\n"; //wrap
+	print "</div><!-- /css_wrap_filter_records [tipo:$tipo section_id:$parent] $label -->"; //wrap
 ?>

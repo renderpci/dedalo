@@ -68,19 +68,6 @@ class tool_structuration extends tool_common {
 		$ar_data = array();
 
 		#
-		# ORDER
-		$tipo 			= DEDALO_STRUCTURATION_ORDER_TIPO;
-		$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
-		$component 		= component_common::get_instance($modelo_name,
-														 $tipo,
-														 $locator->section_id,
-														 'list',
-														 $lang,
-														 $locator->section_tipo);
-
-		$ar_data['order'] = $component->get_valor();
-
-		#
 		# TITLE
 		$tipo 			= DEDALO_STRUCTURATION_TITLE_TIPO;
 		$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
@@ -127,6 +114,7 @@ class tool_structuration extends tool_common {
 				}
 			}
 
+
 		#
 		# INDEX
 		# Delete all references to current tag in component_relation_struct
@@ -143,7 +131,7 @@ class tool_structuration extends tool_common {
 															  $section_id,
 															  'edit',
 															  $lang,
-															  $section_tipo);		
+															  $section_tipo);
 		$ar_tag_deleted = (array)$component_text_area->delete_tag_from_all_langs($tag_id, $tag_type='struct'); // note that "tag" is complete in or out tag like [index-n-8]
 			$response->msg[] = "Deleted in langs ".count($ar_tag_deleted)." the tag \"$options->tag_id\" from component_text_area $component_tipo [$section_tipo - $section_id]";
 			$response->debug['ar_tag_deleted'] = $ar_tag_deleted;	

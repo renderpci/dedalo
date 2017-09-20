@@ -6,9 +6,10 @@
 	$modo	 		= $this->section_records_obj->options->modo;
 	$result	 		= $this->section_records_obj->rows_obj->result;
 	$tipo			= $this->section_records_obj->get_tipo();
+	$lang			= DEDALO_DATA_LANG;
 	$permissions 	= common::get_permissions($tipo,$tipo);
 	
-	$ar_component_resolved 		= array();
+	$ar_component_resolved = array();
 
 	#
 	# Button delete	
@@ -32,11 +33,13 @@
 	#
 	# CONTEXT
 	# inyectado a la sección y usado para generar pequeñas modificaciones en la visualización del section list como por ejemplo el link de enlazar un registro con un portal
-	$context = (object)$this->section_records_obj->rows_obj->options->context;					
+	$context = (object)$this->section_records_obj->rows_obj->options->context;				
 	if (!isset($context->context_name)) {
+		throw new Exception("Error Processing Request. Invalid context", 1);		
 		$context->context_name = false;
-	}	
-	#dump($context,"context");
+	}
+	$context_name = $context->context_name;
+	#dump($context,"context A");
 	#dump($this, '$this->section_records_ob ++ '.to_string());	
 
 

@@ -26,7 +26,7 @@
 		$html_content .= "<ul class=\"css_inverse\">";
 
 			foreach ($dato as $key => $current_locator) {
-
+	
 				$line = '';
 				foreach ($inverse_show as $ikey => $ivalue) {
 					if ($ivalue===false) continue;
@@ -72,6 +72,10 @@
 					}
 				}			
 				
+				# Inverse values (defined in structure as related terms)
+				$current_value = $this->get_inverse_value($current_locator);				
+				$line .= '<span>'.$current_value .'</span>';
+
 				$html_content .= '<li>'. $line . '</li>';
 			}
 

@@ -1,8 +1,26 @@
 <?php
 
 	# VISUALIZADOR HTML	
-
+/*
+if($this->generate_json_element===true) {
 	
+	$html_content = '';
+	$html_content .= '<div id="'.$id_wrapper.'">';
+
+	$json_build_options = json_encode($this->get_json_build_options());
+	#dump($json_build_options, ' $json_build_options ++ '.to_string());
+	$html_content .= "<script>component_portal.init();section.render_component_html( ".$json_build_options." );</script>";
+	#$html_content .= "<script>console.log('$json_build_options')</script>";
+
+	$html_content .= '</div>';
+
+	# Prepare content to show in page
+	//tools::prepare_content($html_content);
+
+	echo $html_content;
+
+}else{
+*/
 	# html_delimiter
 	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'in');
 	
@@ -53,7 +71,7 @@
 								title=\"parent:$parent - tipo:$tipo\" >";
 								$button_new .= "<div class=\"icon_bs link new_portal_record\"></div> ";
 								$button_new .= "<span>";
-								$button_new .= ''. RecordObj_dd::get_termino_by_tipo($current_target_section_tipo);	//.': '.label::get_label('nuevo');#. " $label" ;
+								$button_new .= ''. RecordObj_dd::get_termino_by_tipo($current_target_section_tipo, DEDALO_DATA_LANG);	//.': '.label::get_label('nuevo');#. " $label" ;
 								$button_new .= "</span>";
 								$button_new .= "</div>";
 
@@ -76,7 +94,7 @@
 								title=\"parent:$parent - tipo:$tipo\" >";
 								$button_select .= "<div class=\"icon_bs link find_portal_record\"></div> ";
 								$button_select .= "<span>";
-								$button_select .= ''. RecordObj_dd::get_termino_by_tipo($current_target_section_tipo);	//.': '.label::get_label('existente');
+								$button_select .= ''. RecordObj_dd::get_termino_by_tipo($current_target_section_tipo, DEDALO_DATA_LANG);	//.': '.label::get_label('existente');
 								$button_select .= "</span>";
 								$button_select .= "</div>";
 								$html_contenido .= $button_select;
@@ -164,7 +182,7 @@
 							}
 
 							$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($column_tipo, true);
-							if ($modelo_name!=='component_image' && $modelo_name!=='component_av') {
+							if ($modelo_name!=='component_image' && $modelo_name!=='component_av'&& $modelo_name!=='component_portal') {
 								# Only accept component_image as column
 								debug_log(__METHOD__." Skipped component $column_label ($column_tipo) modelo_name: $modelo_name. Only component_image are valid in mosaic mode ", logger::DEBUG);
 								continue;
@@ -342,5 +360,5 @@
 	# html_delimiter
 	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'out');
 
-
+//}
 ?>

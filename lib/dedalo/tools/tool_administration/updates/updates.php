@@ -5,6 +5,33 @@
 global $updates;
 $updates = new stdClass();
 
+
+$v=470; #####################################################################################
+$updates->$v = new stdClass();
+
+	# UPDATE TO
+	$updates->$v->version_major 	 = 4;
+	$updates->$v->version_medium 	 = 7;
+	$updates->$v->version_minor 	 = 0;
+
+	# MINIM UPDATE FROM
+	$updates->$v->update_from_major  = 4;
+	$updates->$v->update_from_medium = 5;
+	$updates->$v->update_from_minor  = 1;
+
+	# DATABASE UPDATES
+	$updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query("
+									CREATE TABLE IF NOT EXISTS public.matrix_dataframe
+									(LIKE public.matrix INCLUDING DEFAULTS INCLUDING CONSTRAINTS INCLUDING INDEXES INCLUDING STORAGE INCLUDING COMMENTS) 
+									WITH (OIDS = FALSE);
+									CREATE SEQUENCE matrix_dataframe_id_seq; 
+									ALTER TABLE public.matrix_dataframe ALTER COLUMN id SET DEFAULT nextval('matrix_dataframe_id_seq'::regclass);
+									");
+	
+	#UPDATE COMPONENTS
+	$updates->$v->components_update = ['component_date'];
+
+
 $v=451; #####################################################################################
 $updates->$v = new stdClass();
 
@@ -19,6 +46,7 @@ $updates->$v = new stdClass();
 	$updates->$v->update_from_minor  = 0;
 
 
+	# DATABASE UPDATES
 	$updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query("
 									CREATE TABLE IF NOT EXISTS public.matrix_indexations
 									(LIKE public.matrix INCLUDING DEFAULTS INCLUDING CONSTRAINTS INCLUDING INDEXES INCLUDING STORAGE INCLUDING COMMENTS) 
@@ -303,7 +331,7 @@ $updates->$v = new stdClass();
 
 	# DATABASE UPDATES
 	$updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query("
-									CREATE INDEX matrix_relations_idx ON matrix USING gin ((datos #> '{relations}'));
+									CREATE INDEX matrix_relations_idx ON matrix USING gin ((datos#>'{relations}'));
 									CREATE INDEX matrix_langs_relations_idx ON matrix_langs USING gin ((datos#>'{relations}'));
 									CREATE INDEX matrix_langs_hierarchy41_gin  ON matrix_langs USING GIN ((datos#>'{components, hierarchy41, dato, lg-nolan}'));
 									CREATE INDEX matrix_hierarchy_relations_idx ON matrix_hierarchy USING gin ((datos#>'{relations}'));

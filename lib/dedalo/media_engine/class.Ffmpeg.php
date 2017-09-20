@@ -602,9 +602,10 @@ class Ffmpeg {
 
 		if ($watermark==1) {
 
-			$target_filename_path_temp 		= $AVObj->get_media_path_abs() .'fragments/temp_'. $target_filename ;
+			$target_filename_path_temp 		= $AVObj->get_media_path_abs() .'fragments/temp_'. $target_filename;
 
-			$command = "nice -n 19 $ffmpeg_installed_path -i $source_file -ss $tcin -t $duracion -vcodec copy -acodec copy -y $target_filename_path_temp" ;
+			#$command = "nice -n 19 $ffmpeg_installed_path -i $source_file -ss $tcin -t $duracion -vcodec copy -acodec copy -y $target_filename_path_temp";
+			$command = "nice -n 19 $ffmpeg_installed_path -ss $tcin  -i $source_file -t $duracion -vcodec copy -acodec copy -y $target_filename_path_temp";
 
 			$command .= " && nice -n 19 $ffmpeg_installed_path -i $target_filename_path_temp -vf 'movie=$watermark_file [watermark]; [in][watermark] overlay=main_w-overlay_w-10:10 [out]' -y $target_filename_path";
 			
@@ -615,7 +616,8 @@ class Ffmpeg {
 		}else{
 
 			# nice -n 19 
-			$command = "$ffmpeg_installed_path -i $source_file -ss $tcin -t $duracion -vcodec copy -acodec copy -y $target_filename_path";
+			#$command = "$ffmpeg_installed_path -i $source_file -ss $tcin -t $duracion -vcodec copy -acodec copy -y $target_filename_path";
+			$command = "$ffmpeg_installed_path -ss $tcin -i $source_file -t $duracion -vcodec copy -acodec copy -y $target_filename_path";
 
 			# EXEC COMMAND
 			$command_exc = exec_::exec_command($command);

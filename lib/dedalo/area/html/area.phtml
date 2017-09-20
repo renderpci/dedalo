@@ -4,21 +4,21 @@
 	
 	
 	
-	print "\n\n<!-- AREA [tipo:$tipo id_matrix:$id] -->";
+	print "<!-- AREA [tipo:$tipo id_matrix:$id] -->";
 
-	print "\n<div class=\"css_wrap_area\" > ";
+	print "<div class=\"css_wrap_area\" > ";
 	
 	
 	# ETIQUETA (LABEL)
-	$html_label = "\n<div class=\"css_area_titulo\" > <hr> AREA: ".component_common_draw::draw_label($this)." </div>";	
+	$html_label = "<div class=\"css_area_titulo\" > <hr> AREA: ".component_common_draw::draw_label($this)." </div>";	
 		
 	
 	# CONTENIDO (INPUT)
-	$html_contenido = "\n<div class=\"css_area_content\" > areas 2: ";
+	$html_contenido = "<div class=\"css_area_content\" > areas 2: ";
 	
 	switch($permissions) {
 			
-		case 0	:	$html_contenido .= "\n <span class=\"css_span_dato\"> No access here ! </span>";
+		case 0	:	$html_contenido .= " <span class=\"css_span_dato\"> No access here ! </span>";
 					break;
 						
 		case ($permissions>=1)	:
@@ -39,17 +39,17 @@
 							$link_style = '';
 						}
 						
-						$html_contenido .= "\n <a href=\"?modo=list&area=$tipo\" class=\"link_navigation link {$link_style}\" >$label +</a> ";					
+						$html_contenido .= " <a href=\"?modo=list&area=$tipo\" class=\"link_navigation link {$link_style}\" >$label +</a> ";					
 						
 						if($key != $end_array) $html_contenido .= ' | ';	
 					} 
 			
-					$html_contenido .= "\n $html_area ";					
+					$html_contenido .= " $html_area ";					
 					*/
 					break;			
 	}
 	
-	$html_contenido .= "\n</div>";
+	$html_contenido .= "</div>";
 	
 	
 	# Prepare content to show in page
@@ -61,5 +61,5 @@
 	print $html_contenido;
 	
 	
-	print "\n</div><!-- /AREA [$tipo] -->\n\n"; //wrap
+	print "</div><!-- /AREA [$tipo] -->"; //wrap
 ?>

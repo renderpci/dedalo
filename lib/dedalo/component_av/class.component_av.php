@@ -7,7 +7,6 @@ include_once( DEDALO_LIB_BASE_PATH . '/media_engine/class.PosterFrameObj.php');
 include_once( DEDALO_LIB_BASE_PATH . '/media_engine/class.Ffmpeg.php');
 include_once( DEDALO_LIB_BASE_PATH . '/media_engine/class.OptimizeTC.php');
 
-
 class component_av extends component_common {
 	
 	# Overwrite __construct var lang passed in this component
@@ -24,6 +23,8 @@ class component_av extends component_common {
 	public $aditional_path;
 
 	#public $AVObj;
+
+
 
 	/**
 	* __CONSTRUCT
@@ -70,7 +71,7 @@ class component_av extends component_common {
 				$this->video_id = $this->get_video_id();
 				
 			
-		if ($need_save) {
+		if ($need_save===true) {
 			# result devuelve el id de la sección parent creada o editada
 			$result = $this->Save();			
 			debug_log(__METHOD__." CREATED/UPDATED ".RecordObj_dd::get_termino_by_tipo($this->tipo)." locator (to ".$locator->get_flat().") of current ".get_called_class()." (tipo:$this->tipo - section_tipo:$this->section_tipo - parent:$this->parent - lang:$this->lang)");
@@ -81,7 +82,7 @@ class component_av extends component_common {
 		if(SHOW_DEBUG===true) {
 			global$TIMER;$TIMER[__METHOD__.'_OUT_'.$this->tipo.'_'.$this->modo.'_'.microtime(1)]=microtime(1);
 		}
-	}#end __construct
+	}//end __construct
 
 
 
@@ -91,8 +92,8 @@ class component_av extends component_common {
 	public function get_dato() {
 		$dato = parent::get_dato();
 		return (object)$dato;
-	}
-	
+	}//end get_dato
+
 
 
 	/**
@@ -100,7 +101,7 @@ class component_av extends component_common {
 	*/
 	public function set_dato($dato) {
 		parent::set_dato( (object)$dato );
-	}
+	}//end set_dato
 	
 
 	
@@ -121,7 +122,7 @@ class component_av extends component_common {
 		$this->ar_tools_name[] = 'tool_posterframe';
 		
 		return parent::get_ar_tools_obj();
-	}
+	}//end get_ar_tools_obj
 
 
 
@@ -132,7 +133,7 @@ class component_av extends component_common {
 	*/
 	public function get_valor() {
 		return $this->valor = $this->get_video_id();
-	}
+	}//end get_valor
 
 
 
@@ -161,14 +162,14 @@ class component_av extends component_common {
 		if(SHOW_DEBUG===true) {
 			#return "AV: ".$valor_export;
 		}
+
 		return $valor_export;
-	}#end get_valor_export
+	}//end get_valor_export
 	
 
 
 	/**
 	* GET VIDEO ID
-	* 
 	*/
 	public function get_video_id() {
 
@@ -197,7 +198,7 @@ class component_av extends component_common {
 	public function get_quality() {
 		if(!isset($this->quality)) return DEDALO_AV_QUALITY_DEFAULT;
 		return $this->quality;
-	}
+	}//end get_quality
 
 
 
@@ -210,7 +211,7 @@ class component_av extends component_common {
 	public function get_target_dir() {
 		return DEDALO_MEDIA_BASE_PATH . DEDALO_AV_FOLDER .'/'. $this->get_quality() ;
 		#return $this->AVObj->get_media_path_abs();
-	}
+	}//end get_target_dir
 	
 
 
@@ -245,7 +246,7 @@ class component_av extends component_common {
 		$video_id 	= $this->get_video_id();
 
 		return DEDALO_MEDIA_BASE_PATH . DEDALO_AV_FOLDER .'/'. $quality . '/'. $video_id .'.'. DEDALO_AV_EXTENSION ;
-	}
+	}//end get_video_path
 
 
 
@@ -281,7 +282,7 @@ class component_av extends component_common {
 		}		
 
 		return $posterframe_url;
-	}
+	}//end get_posterframe_url
 
 
 
@@ -456,6 +457,7 @@ class component_av extends component_common {
 													$this->get_section_tipo());
 		$tc = $component->get_dato();
 
+		#if(SHOW_DEBUG===true) {		
 		if (empty($tc[0])) {
 			# Read file once
 			$duration_seconds = 0;
@@ -506,8 +508,7 @@ class component_av extends component_common {
 				
 			if ($current_quality!==$target_quality && file_exists($filename)) {
 				return $current_quality;
-			}		
-			
+			}			
 		}#end foreach($ar_quality as $quality)
 		
 		
@@ -576,7 +577,7 @@ class component_av extends component_common {
 				debug_log($msg);
 				#dump($msg, ' msg');
 			}
-		}#end foreach
+		}#end foreach ($ar_quality as $current_quality) 
 
 		#
 		# Posterframe remove
@@ -603,7 +604,7 @@ class component_av extends component_common {
 		}
 
 		return true;
-	}#end remove_component_media_files
+	}//end remove_component_media_files
 
 
 
@@ -646,7 +647,7 @@ class component_av extends component_common {
 				debug_log($msg);
 				#dump($msg, ' msg');
 			}			
-		}#end foreach
+		}#end foreach ($ar_quality as $current_quality)
 		
 
 		#
@@ -678,7 +679,7 @@ class component_av extends component_common {
 		}		
 
 		return true;		
-	}#end restore_component_media_files
+	}//end restore_component_media_files
 
 
 
@@ -718,7 +719,7 @@ class component_av extends component_common {
 		}
 
 		return $value;
-	}#end render_list_value
+	}//end render_list_value
 
 
 
@@ -741,5 +742,5 @@ class component_av extends component_common {
 
 
 	
-}
+}//end component_av
 ?>

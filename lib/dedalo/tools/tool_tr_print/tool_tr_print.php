@@ -18,22 +18,21 @@
 		}
 	
 	
-	# TOOL CSS / JS MAIN FILES
-	css::$ar_url[] = DEDALO_LIB_BASE_URL."/tools/".$tool_name."/css/".$tool_name.".css";
-	js::$ar_url[]  = DEDALO_LIB_BASE_URL."/tools/".$tool_name."/js/".$tool_name.".js";
-	
 	switch($modo) {	
 		
 		case 'button':
-					
 				break;
 
 		case 'page':
+
+				# TOOL CSS / JS MAIN FILES
+				css::$ar_url[] = DEDALO_LIB_BASE_URL."/tools/".$tool_name."/css/".$tool_name.".css";
+				js::$ar_url[]  = DEDALO_LIB_BASE_URL."/tools/".$tool_name."/js/".$tool_name.".js";
 					
 				#
 				# CSS includes
 					#css::$ar_url[] = BOOTSTRAP_CSS_URL;
-					array_unshift(css::$ar_url_basic, BOOTSTRAP_CSS_URL);
+					#array_unshift(css::$ar_url_basic, BOOTSTRAP_CSS_URL);
 
 				#
 				# JS includes
@@ -42,22 +41,36 @@
 				if(SHOW_DEBUG===true) {
 					# tr data (header)
 					$tr_data = $this->get_tr_data();
-				}
-				
+				}				
 				
 				# source_text				
-				$source_text = $this->get_source_text();
-				
-
-				# original_text
-				$original_text = $this->get_original_text();
+				$source_text = $this->get_source_text();				
 
 				# ar_tc_text
 				$options 	= new stdClass();
 				$response 	= $this->get_ar_tc_text( $options );
 				$ar_tc_text = $response->result;
-				#$preview_text = $response->result;
+				#$preview_text = $response->result;	
+
+				# ORIGINAL_TEXT
+				$original_text = $this->get_original_text();
+
+				#
+				# TEXT_CLEAN
+				$raw_text 		= $this->get_raw_text();
+				$text_clean 	= $raw_text;
+				# clean text
+				$text_clean 	= trim($text_clean); #$text_clean = htmlspecialchars_decode($text_clean);
+				# Remove Dédalo marks
+				$text_clean 	= TR::deleteMarks($text_clean);		
 				
+				#
+				# COUNT
+				$chars_info = TR::get_chars_info($raw_text);
+					#dump($chars_info, ' $chars_info ++ '.to_string()); #die();
+
+				$total_chars  			= $chars_info->total_chars;
+				$total_chars_no_spaces 	= $chars_info->total_chars_no_spaces;				
 				break;		
 	}#end switch
 		

@@ -4,7 +4,7 @@
 */
 
 
-class component_radio_button extends component_common {
+class component_radio_button extends component_reference_common {
 
 
 	# Overwrite __construct var lang passed in this component
@@ -233,35 +233,53 @@ class component_radio_button extends component_common {
 	*
 	* @see class.section_records.php get_rows_data filter_by_search
 	* @return string $search_query . POSTGRE SQL query (like 'datos#>'{components, oh21, dato, lg-nolan}' ILIKE '%paco%' )
-	*/
+	*//*
 	public static function get_search_query( $json_field, $search_tipo, $tipo_de_dato_search, $current_lang, $search_value, $comparison_operator='=') {
-		$search_query='';
-		if ( empty($search_value) ) {
-			return $search_query;
+			
+		$search_value = json_decode($search_value);
+			if ( !$search_value || empty($search_value) ) {
+				return false;
+			}		
+
+		if (is_object($search_value)) {
+			$search_value = array($search_value);
 		}
 
 		$json_field = 'a.'.$json_field; // Add 'a.' for mandatory table alias search
-		
+
+		$search_query='';
+		$ar_data = array();
+		# Fixed
+		$tipo_de_dato_search='dato';
 		switch (true) {
 			case $comparison_operator==='!=':
-				$search_query = " ($json_field#>'{components,$search_tipo,$tipo_de_dato_search,". $current_lang ."}' @> '[$search_value]'::jsonb)=FALSE ";
+				$ar_data = array();
+				foreach ((array)$search_value as $current_value) {
+					$current_value = json_encode($current_value);
+					$ar_data[] = " ($json_field#>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}' @> '[$current_value]'::jsonb)=FALSE ";
+				}
 				break;
 
 			case $comparison_operator==='=':
 			default:
-				$search_query = " $json_field#>'{components,$search_tipo,$tipo_de_dato_search,". $current_lang ."}' @> '[$search_value]'::jsonb ";
-				break;
-			
+				foreach ((array)$search_value as $current_value) {
+					$current_value = json_encode($current_value);
+					$ar_data[] = " $json_field#>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}' @> '[$current_value]'::jsonb ";
+				}
+				break;			
 		}
+		$search_query = implode(" OR ",$ar_data);
 		
 		if(SHOW_DEBUG===true) {
-			$search_query = " -- filter_by_search $search_tipo ". get_called_class() ." \n".$search_query;
+			$search_query = " -- filter_by_search $search_tipo ". get_called_class() ." \n".$search_query ;
 			#dump($search_query, " search_query for search_value: ".to_string($search_value)); #return '';
-			#dump($comparison_operator, '$comparison_operator ++ '.to_string());
 		}
+		
+
 		return $search_query;
 	}//end get_search_query
-
+	*/
+	
 
 
 	/**

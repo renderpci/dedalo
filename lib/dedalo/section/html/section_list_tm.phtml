@@ -3,46 +3,47 @@
 	# VISUALIZADOR HTML	
 
 	
-	print "\n\n<!-- SECTION LIST_TM [tipo:$tipo modo:$modo] -->";
-	print "\n<div class=\"css_section_wrap\" id=\"section_wrap_{$tipo}_{$modo}\" data-modo=\"$modo\" data-options=\"\" >";
+	#print "<!-- SECTION LIST_TM [tipo:$tipo modo:$modo] -->";
+	print "<div class=\"css_section_wrap\" id=\"section_wrap_{$tipo}_{$modo}\" data-modo=\"$modo\" data-options=\"\">";
 	
 	
 	# ETIQUETA (LABEL)
-	#$html_label 	= "\n<div class=\"css_section_titulo\" > SECTION: ".component_common_draw::draw_label($this)." </div>";
-	#$html_label  	.= "\n<div class=\"css_section_titulo\" > Número: ".$dato." </div>";
+	#$html_label 	= "<div class=\"css_section_titulo\" > SECTION: ".component_common_draw::draw_label($this)." </div>";
+	#$html_label  	.= "<div class=\"css_section_titulo\" > Número: ".$dato." </div>";
 		
 	
 	# CONTENIDO (INPUT)
-	$html_contenido = "\n<div class=\"css_section_content section_content_list section_list_rows_content_div\" style=\"margin:0\" >";
-	switch($permissions) {
+	$html_content = "<div class=\"css_section_content section_content_list section_list_rows_content_div\" style=\"margin:0\">";
+	
+	switch(true) {
 			
-		case 0	:	$html_contenido .= "\n <span class=\"css_span_dato\"> ".label::get_label('contenido_no_autorizado')." </span>";
+		case ($permissions==0)	:
+					$html_content .= "<span class=\"css_span_dato\"> ".label::get_label('contenido_no_autorizado')."</span>";
 					break;
 						
-		case ($permissions>=1)	:
-		
-					#$html_contenido .= "\n".$ar_components_html;
-					#$html_contenido .= "\n <a href=\"javascript:;\" onclick=\"New(this)\" data-tipo=\"{$tipo}\"> New ($tipo)</a> <div class=\"new_ajax_response\"></div> ";	
+		case ($permissions>=1)	:		
+					#$html_content .= "".$ar_components_html;
+					#$html_content .= " <a href=\"javascript:;\" onclick=\"New(this)\" data-tipo=\"{$tipo}\"> New ($tipo)</a> <div class=\"new_ajax_response\"></div> ";	
 					
-
 					# Content html
-					$html_contenido .= $rows_list_html;
+					$html_content .= $rows_list_html;
 						
 		case 2	: 
 		case 3	:	
 					break;			
 	}
-	$html_contenido .= "\n</div><!-- /css_section_content -->";
+
+	$html_content .= "</div><!-- /css_section_content -->";
 
 	
 	
 	
 	# PRINT HTML
 	#print $html_label;
-	print $html_contenido;
+	print $html_content;
 	
 	
-	print "\n</div><!-- /css_section_wrap SECTION LIST_TM [tipo:$tipo modo:$modo] -->\n\n"; //wrap
+	print "</div><!-- /css_section_wrap SECTION LIST_TM [tipo:$tipo modo:$modo] -->"; //wrap
 	
 	
 ?>

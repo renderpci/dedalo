@@ -385,7 +385,7 @@ class hierarchy {
 			
 		hierarchy::set_hierarchy_permissions( $permissions_options );
 		
-		return $response;
+		return (object)$response;
 	}//end generate_virtual_section
 
 

@@ -51,7 +51,7 @@ class component_relation_index extends component_relation_common {
 	/*
 	* GET_VALOR_LANG
 	* Return the main component lang
-	* If the component need change this langs (selects, radiobuttons...) overwritte this function
+	* If the component need change this langs (selects, radiobuttons...) overwrite this function
 	*/
 	public function get_valor_lang(){
 		return "working here! ".__METHOD__;
@@ -120,7 +120,7 @@ class component_relation_index extends component_relation_common {
 
 	/**
 	* GET_INDEXATIONS_FROM_TAG
-	* Used by tool_indexation to get list of terms with index realtion to current tag
+	* Used by tool_indexation to get list of terms with index relation to current tag
 	* @return array $ar_indexations
 	*/
 	public static function get_indexations_from_tag($component_tipo, $section_tipo, $section_id, $tag_id, $lang) {
@@ -287,7 +287,7 @@ class component_relation_index extends component_relation_common {
 	*/
 	private static function get_locator_from_ar_relations($relations, $section_tipo, $section_id, $type, $tag_id=false) {
 
-		// Loactor to find
+		// Locator to find
 		$locator = new locator();
 			$locator->set_section_tipo($section_tipo);
 			$locator->set_section_id($section_id);

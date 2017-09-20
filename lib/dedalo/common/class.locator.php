@@ -15,6 +15,7 @@
 	$locator->tag_id				= (string)$tag_id;
 	$locator->state					= (object)$state;
 	$locator->semantic				= (object)$semantic;
+	$locator->from_key				= (int)$from_key;
 
 	Note that properties can exists or not (are created on the fly). Final result object only contain set properties and locator object can be empty or partially set.
 	For example, component portal only use section_tipo an section_id in many cases
@@ -33,6 +34,7 @@ class locator extends stdClass {
 		private $tag_id;
 		private $state;
 		private $semantic;
+		private $from_key;
 	*/
 
 	# Mandatory and protected (use set/get to access)
@@ -172,7 +174,19 @@ class locator extends stdClass {
 		}
 		$this->semantic = (array)$value;
 	}
+	*//**
+	* SET_FROM_KEY
+	* @return 
 	*/
+	public function set_from_key($value) {
+		if(int($value)<0) {
+			throw new Exception("Error Processing Request. Invalid from_key: $value", 1);
+		}
+		$this->type = (int)$value;
+		
+	}//end set_from_key
+
+
 
 
 
@@ -321,6 +335,26 @@ class locator extends stdClass {
 
 		return $founded;
 	}//end in_array_locator
+
+
+
+	/**
+	* GET_KEY_IN_ARRAY_LOCATOR
+	* @return mixed bool | int $key_founded
+	*/
+	public static function get_key_in_array_locator( $locator, $ar_locator, $ar_properties=array('section_tipo','section_id') ) {
+		$key_founded = false;
+
+		foreach ((array)$ar_locator as $key => $current_locator) {
+			$result = self::compare_locators( $locator, $current_locator, $ar_properties );
+			if($result===true) {
+				$key_founded = $key;
+				break;
+			}
+		}
+
+		return $key_founded;
+	}//end get_key_in_array_locator
 
 
 

@@ -7,7 +7,7 @@
 	
 		# CONTENIDO (INPUT)
 		$html_content   = '';
-		$html_content  .= " <div class=\"tab_title css_rows_search_tap\" data-tab_id=\"filter_tap\"> ".label::get_label('filtro')." </div>";
+		$html_content  .= " <div class=\"tab_title css_rows_search_tap\" data-tab_id=\"filter_tap\"> ".label::get_label('filtro')."</div>";
 
 
 		switch(true) {
@@ -40,17 +40,17 @@
 								$html_content  .="<div class=\"css_portal_title\">";
 								
 								$component_portal =component_common::get_instance('component_portal',
-																							  $case_portal[0],
-																							  null,
-																							  'edit',
-																							  DEDALO_DATA_NOLAN,
-																							  $section_tipo);
+																				   $case_portal[0],
+																				   null,
+																				   'edit',
+																				   DEDALO_DATA_NOLAN,
+																				   $section_tipo);
 								$portal_name = $component_portal->get_label();
 								$html_content  .=$portal_name;
 								$html_content  .="</div>";
 
 							}else{
-								$search_name = $component_obj->get_section_tipo() .'_'. $component_obj->get_tipo();								
+								$search_name = $component_obj->get_section_tipo() .'_'. $component_obj->get_tipo();
 							}
 							$component_obj->set_search_input_name($search_name);
 							$html_content .= $component_obj->get_html();
@@ -62,10 +62,17 @@
 							$html_content .= $current_tool_search->get_html();
 						}
 						
-						$html_content  .= " <input type=\"hidden\" name=\"section_tipo\" value=\"$section_tipo\">";
-						$html_content  .= " <input type=\"hidden\" name=\"modo\" value=\"$modo\">";
-						$html_content  .= " <input type=\"hidden\" name=\"search_options_session_key\" value=\"$search_options_session_key\">";
-						$html_content  .= " <input type=\"hidden\" name=\"context\" value='".json_encode($context)."'>";
+						$html_content  .= "<input type=\"hidden\" name=\"section_tipo\" value=\"$section_tipo\">";
+						$html_content  .= "<input type=\"hidden\" name=\"modo\" value=\"$modo\">";
+						$html_content  .= "<input type=\"hidden\" name=\"search_options_session_key\" value=\"$search_options_session_key\">";
+						$html_content  .= "<input type=\"hidden\" name=\"context\" value='".json_encode($context)."'>";
+
+						if(SHOW_DEBUG===true) {
+							$html_content  .= "<div class=\"debug_info\">";
+							$html_content  .= "<div>search_options_session_key: $search_options_session_key</div> ";
+							$html_content  .= "<div>context: ".json_encode($context)."</div>";
+							$html_content  .= "</div>";
+						}
 						
 					$html_content  .= "</form>";
 

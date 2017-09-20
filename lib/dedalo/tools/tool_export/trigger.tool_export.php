@@ -1,34 +1,10 @@
 <?php
+$start_time=microtime(1);
 set_time_limit ( 259200 );  // 3 dias
-
-// JSON DOCUMENT
-header('Content-Type: application/json');
-
 $session_duration_hours = 72;
-require_once( dirname(dirname(dirname(__FILE__))) .'/config/config4.php');
-
-
-if(login::is_logged()!==true) die("<span class='error'> Auth error: please login </span>");
-
-
-# Write session to unlock session file
-session_write_close();
-
-
-# set vars
-$vars = array('mode');
-	foreach($vars as $name) $$name = common::setVar($name);
-
-# mode
-	if(empty($mode)) exit("<span class='error'> Trigger: Error Need mode.. </span>");
-
-
-
-# CALL FUNCTION
-if ( function_exists($mode) ) {
-	$result = call_user_func($mode);
-	echo (string)json_encode($result);
-}
+include( dirname(dirname(dirname(__FILE__))) .'/config/config4.php');
+# TRIGGER_MANAGER. Add trigger_manager to receive and parse requested data
+common::trigger_manager();
 
 
 
@@ -36,25 +12,26 @@ if ( function_exists($mode) ) {
 * EXPORT_DATA
 *
 */
-function export_data() {
+function export_data($json_data) {
+	global $start_time;
 
-	$start_time = start_time();
+	# Write session to unlock session file
+	session_write_close();
 
 	$response = new stdClass();
 		$response->result 	= false;
-		$response->msg 		= '';
+		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
 
 	$vars = array('section_tipo','columns','encoding','data_format');
-		foreach($vars as $name) $$name = common::setVar($name);
-	
-	# Verify mandatory vars
-	if (empty($section_tipo) || empty($columns) || empty($encoding) || empty($data_format)) {
-		$response->msg = "Error: few vars";
-		return $response;
-	}
-
-	# Write session to unlock session file
-	session_write_close();	
+		foreach($vars as $name) {
+			$$name = common::setVarData($name, $json_data);
+			# DATA VERIFY
+			#if ($name==='top_tipo' || $name==='top_id') continue; # Skip non mandatory
+			if (empty($$name)) {
+				$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty '.$name.' (is mandatory)';
+				return $response;
+			}
+		}		
 
 	$tool_export  = new tool_export($section_tipo,'edit',$data_format);
 
@@ -99,7 +76,19 @@ function export_data() {
 
 		$response->msg 		= 'Error on write file: '.$write_result->msg;		
 	}
-	
+
+	# Debug
+	if(SHOW_DEBUG===true) {
+		$debug = new stdClass();
+			$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
+			foreach($vars as $name) {
+				$debug->{$name} = $$name;
+			}
+
+		$response->debug = $debug;
+	}
+
+
 	return (object)$response;
 }//end export_data
 

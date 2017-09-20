@@ -3,7 +3,11 @@
 	# VISUALIZADOR HTML		
 
 	$html    = "\n<!-- TOOL ADMINISTRATION -->";	
-	$html   .= "\n<div class=\"wrap_tool wrap_tool_administration_page\" >";	
+	$html   .= "\n<div class=\"wrap_tool wrap_tool_administration_page\" >";
+
+
+	
+	
 
 
 	#$html   .= $header_html;
@@ -26,6 +30,18 @@
 	#
 	# ADMIN UTILS
 	$html   .= "\n<div class=\"content_data block-content-1\" >";
+
+		# Check PHP shell_exec permissions
+		$a = shell_exec("ls -l");
+		if (empty($a)) {
+			$html   .= "<div class=\"error\">WARNING. Your PHP shell_exec seems not work. Please review your server php config</div>";
+			dump($a, ' shell_exec command ls -l ++ '.to_string($a));
+		}			
+
+		# Check DB config
+		if (empty(DB_BIN_PATH)) {
+			$html   .= "<div class=\"warning\">WARNING. Your DB config DB_BIN_PATH is empty. This can create problems in some servers</div>";
+		}
 
 		# PANELS
 		$html   .= "<div class=\"panel panel-primary\">";
@@ -50,10 +66,21 @@
 			#
 			# UPDATE STRUCTURE
 			$html   .= "<div class=\"panel_option\">";
-			$html   .= "  <span class=\"glyphicon glyphicon-cog\" aria-hidden=\"true\"></span> ";
-			$html   .= "  <a href=\"javascript:;\" data-mode=\"update_structure\" onclick=\"tool_administration.update_structure(this,event)\">".label::get_label('actualizar_estructura')."</a>";
-			$html   .= " <div class=\"panel_option_subcontent\">";			
-			$html   .= "  <div id=\"update_structure_response\"></div>";
+			$html   .= "  <span class=\"glyphicon glyphicon-cog\" aria-hidden=\"true\"></span> ";			
+			if (DEDALO_ENTITY=="master") {
+			$html   .= " <a> ".label::get_label('actualizar_estructura')." is a disabled for ".DEDALO_ENTITY." </a>";
+			}else{
+			if (defined('STRUCTURE_FROM_SERVER') && STRUCTURE_FROM_SERVER===true && !empty(STRUCTURE_SERVER_URL)) {
+				$url = STRUCTURE_SERVER_URL;
+				$parse = parse_url($url);
+				$from_remote = " from remote: <strong>".$parse['host']."</strong>";
+			}
+			$html   .= "  <a href=\"javascript:;\" data-mode=\"update_structure\" onclick=\"tool_administration.update_structure(this,event)\">".label::get_label('actualizar_estructura')."</a>".$from_remote;	
+			}
+			$html   .= " <div class=\"panel_option_subcontent\">";
+			$dedalo_structure_info = RecordObj_dd::get_termino_by_tipo(DEDALO_ROOT_TIPO,'lg-spa');
+			#$html   .= "<div>$dedalo_structure_info</div>";			
+			$html   .= "  <div id=\"update_structure_response\">Current: $dedalo_structure_info</div>";
 			$html   .= " </div>";#end panel_option_subcontent
 			$html   .= "</div>";#end panel_option
 
@@ -139,7 +166,7 @@
 			$html   .= "</div>";#end panel_option
 
 
-
+			/*
 			#
 			# FORCE_UNLOCK_ALL_COMPONENTS
 			$html   .= "<div class=\"panel_option\">";
@@ -149,6 +176,7 @@
 			$html   .= "  <div id=\"force_unlock_all_components_response\"></div>";
 			$html   .= " </div>";#end panel_option_subcontent
 			$html   .= "</div>";#end panel_option
+			*/
 
 
 			#
@@ -305,6 +333,17 @@
 		$html   .= "    <h3 class=\"panel-title\"> USERS INFO </h3>";
 		$html   .= "  </div>";
 		$html   .= "  <div class=\"panel-body\">";
+
+			#
+			# FORCE_UNLOCK_ALL_COMPONENTS
+			$html   .= "<div class=\"panel_option\">";
+			$html   .= "  <span class=\"glyphicon glyphicon-cog\" aria-hidden=\"true\"></span>";
+			$html   .= "  <a href=\"javascript:;\" data-mode=\"force_unlock_all_components\" onclick=\"tool_administration.force_unlock_all_components(this, event)\">".label::get_label('desbloquear_todos_los_componentes')."</a>";
+			$html   .= " <div class=\"panel_option_subcontent\">";	
+			$html   .= "  <div id=\"force_unlock_all_components_response\"></div>";
+			$html   .= " </div>";#end panel_option_subcontent
+			$html   .= "</div>";#end panel_option
+
 		
 			#
 			# ACTIVE_USERS
@@ -337,7 +376,7 @@
 
 			#
 			# DEDALO VERSION
-			$dedalo_structure_info = RecordObj_dd::get_termino_by_tipo(DEDALO_ROOT_TIPO);
+			$dedalo_structure_info = RecordObj_dd::get_termino_by_tipo(DEDALO_ROOT_TIPO,'lg-spa');
 			$prefix_tipos  = unserialize(DEDALO_PREFIX_TIPOS);
 			$dedalo_structure_info .= "\n".'Prefix: '. implode(",",$prefix_tipos);
 			$info_database = pg_version(DBi::_getConnection());	
@@ -378,11 +417,35 @@
 
 			#
 			# PHP USER
+			if(SHOW_DEBUG===true) {
 			$processUser = posix_getpwuid(posix_geteuid());
 			$html .= tool_administration::show_info( "PHP user",
 													 $processUser['name'],
 													 $processUser
 													);
+			}
+
+
+			#
+			# USER_LIMITS
+			if(SHOW_DEBUG===true) {			
+			$user_limits = shell_exec("ulimit -a");
+			$user_limits .= "-Hn\t\t\t\t     ".shell_exec("ulimit -Hn");
+			$user_limits .= "-Sn\t\t\t\t     ".shell_exec("ulimit -Sn");
+			$html .= tool_administration::show_info( "USER_LIMITS",
+													 "".$processUser['name'],
+													 $user_limits
+													);
+			}
+
+			#
+			# DISK SPACE
+			if(SHOW_DEBUG===true) {			
+			$html .= tool_administration::show_info( "DISK SPACE",
+													 "DF COMMAND",
+													 shell_exec("df -h")
+													);
+			}
 
 			#
 			# MAX_INPUT_VARS
@@ -392,7 +455,37 @@
 													 $max_input_vars
 													);
 
+			#
+			# SESSION_CACHE_LIMITER
+			$cache_limiter = session_cache_limiter();
+			$html .= tool_administration::show_info( "PHP session_cache_limiter",
+													'cache_limiter',
+													 $cache_limiter
+													);
 
+			#
+			# SESSION_CACHE_EXPIRE
+			$cache_expire = session_cache_expire();
+			$html .= tool_administration::show_info( "PHP session_cache_expire",
+													'cache_expire in minutes',
+													 $cache_expire ." (".((int)$cache_expire/60)." hours)"
+													);
+
+			#
+			# SESSION.GC_MAXLIFETIME
+			$gc_maxlifetime = ini_get("session.gc_maxlifetime");
+			$html .= tool_administration::show_info( "PHP gc_maxlifetime",
+													'gc_maxlifetime in secs',
+													 $gc_maxlifetime ." (".($gc_maxlifetime/3600)." hours)"
+													);
+
+			#
+			# SESSION_SAVE_PATH
+			$session_save_path = session_save_path();
+			$html .= tool_administration::show_info( "PHP session_save_path()",
+													'session_save_path',
+													 $session_save_path
+													);
 			
 			#
 			# ENCODING mb_internal_encoding
@@ -409,46 +502,58 @@
 			$html .= tool_administration::show_info( "PHP ENCODING",
 													 "mb_regex_encoding",
 													 $result
-													);
-			
+													);		
 
-			#
-			# SESSION MAX LIFE TIME
-			$maxlifetime = ini_get("session.gc_maxlifetime");
-			$html .= tool_administration::show_info( "PHP SESSION MAX LIFE TIME",
-													 "session.gc_maxlifetime",
-													 $maxlifetime/60 ." min (".$maxlifetime/3600 ." hours)"
-													);
+			
 
 			#
 			# HTTP HEADERS
 			# it could be useful if you using nginx instead of apache
-			/*
-			if (function_exists('get_headers')) {		
-			
-				if (!function_exists('getallheaders')) { 
-					function getallheaders() { 
-						   $headers = ''; 
-						foreach ($_SERVER as $name => $value) { 
-							if (substr($name, 0, 5) == 'HTTP_') { 
-								$headers[str_replace(' ', '-', ucwords(strtolower(str_replace('_', ' ', substr($name, 5)))))] = $value; 
-						   }
-						} 
-					   return $headers; 
-					} 
-				} 
-				$url 	 = DEDALO_PROTOCOL . $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI'];
-				$headers = array();
-				#$headers += headers_list();
-				$headers += get_headers($url, 1);
-				$headers += getallheaders();
-				$html .= tool_administration::show_info( "HTTP HEADER",
-														 " $url",
-														 $headers
-														);
-			}//end if (function_exists('get_headers')) 
-			*/
+			try {
 
+				# APACHE_VERSION
+				if (function_exists('apache_get_version')) {
+					$apache_version = apache_get_version();
+				}else{					
+					$apache_version = shell_exec("httpd -v");
+				}
+				$apache_version = !empty($apache_version) ? $apache_version : "Unavailable (function 'apache_get_version' not exists)";
+				$html .= tool_administration::show_info( "APACHE VERSION",
+														 "Apache version",
+														 $apache_version
+														);				
+
+				# APACHE HEADERS
+				/*
+				if (function_exists('get_headers')) {
+					if (!function_exists('getallheaders')) { 
+						function getallheaders() { 
+							   $headers = ''; 
+							foreach ($_SERVER as $name => $value) { 
+								if (substr($name, 0, 5) == 'HTTP_') { 
+									$headers[str_replace(' ', '-', ucwords(strtolower(str_replace('_', ' ', substr($name, 5)))))] = $value; 
+							   }
+							} 
+						   return $headers; 
+						} 
+					}
+					$url 	 = DEDALO_PROTOCOL . $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI'];
+					$headers = array();
+					#$headers += headers_list();
+					$headers[] = get_headers($url, 1);
+					$headers[] = getallheaders();
+					$html .= tool_administration::show_info( "HTTP HEADER",
+															 " $url",
+															 $headers
+															);
+				}//end if (function_exists('get_headers'))
+			*/
+			} catch (Exception $e) {			    
+			    $html .= tool_administration::show_info( "APACHE INFO ERROR",
+													 "Apache info exception",
+													 "<span class=\"warning\">Exception on get apache info: " . $e->getMessage() . "</span>"
+													);
+			}
 
 			#
 			# FFMPEG
@@ -483,8 +588,8 @@
 			#
 			# IMAGE MAGICK
 			$result = shell_exec(MAGICK_PATH."convert -version ");
-			preg_match("/Version: ImageMagick (\S*)\s/", $result, $output_array);			
-			$image_magick_version = isset($output_array[1]) ? $output_array[1] : "Unavailable";			
+			preg_match("/Version: ImageMagick (\S*)\s/", $result, $output_array);	
+			$image_magick_version = isset($output_array[1]) ? $output_array[1] : "Unavailable";
 			$html .= tool_administration::show_info( "IMAGE MAGICK",
 													 $image_magick_version ." - ". MAGICK_PATH,
 													 $result

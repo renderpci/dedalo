@@ -14,9 +14,11 @@ Dédalo use the structure Ontology for three things:
 	2. Do the programing objects in the execution time (in real time).
 	3. Interpret the code and the data and translate to multiple formats (RDF, JSON-LD, SQL, CSV, XML, Dublin Core, HTML, PDF, etc)
 
-The ontology can be change in the time and this will change the data and the programing code; you can develop new functionalities without change the data, and you can change the metadata without change the code or the data.
+The ontology can be changed in the time and this will change the data and the programing code; you can develop new functionalities without change the data, and you can change the metadata without change the code or the data.
 
-Dédalo is a real multilingual app (Dédalo can use any language) in the interface and the managed data, with a multi-thesaurus and manage multiple resources and resolutions for video, image, pdf, notation scores, etc. 
+Dédalo is based in linked data model, and use a relative, multireference and universal locator. THe locator can find a entity, section, component, and tag. In other words, the locator can find, archives (in others entities), records, fields, and part of the fields (sub-field data).
+
+Dédalo is a real multilingual app (Dédalo can use any language) in the interface and the managed data, has a multi-thesaurus engine and manage multiple resources and resolutions for video, image, pdf, notation scores, etc. 
 
 Dédalo has a geo-reference for the cultural goods, interviews, etc. with points, areas, paths, etc and have a indexation and related model of multiple data sources with the thesaurus.
 
@@ -45,7 +47,7 @@ Some projects using Dédalo to manage their Cultural Heritage or Oral Archive:
 
 *Required for the OS*
 
-- PHP 5.6+
+- PHP 7.0+
 - Apache 2.4.2+
 - Postgres 9.5+
 - MySQL 5.6+ (NOT REQUIRED, only if you want use it for publication)
@@ -62,6 +64,7 @@ Some projects using Dédalo to manage their Cultural Heritage or Oral Archive:
 - FullCalendar v2.3.1
 - geoip2
 - jshash md5 v2.2
+- json-logic
 - SWFObject v1.5
 - jwplayer 5.9.2118
 - leaflet 0.8
@@ -78,11 +81,7 @@ Some projects using Dédalo to manage their Cultural Heritage or Oral Archive:
 - wexflow 1.2
 - videojs 3.0r2
 - wkhtmltopdf 0.12.1-08b0817
-- Zend: Bit
--       Exception
--       Io
--       Media
--       Mime
+
 
 **INSTALLATION**
 
@@ -97,10 +96,11 @@ Some projects using Dédalo to manage their Cultural Heritage or Oral Archive:
 6. Change the file /lib/dedalo/config/sample.config4_db.php with your DB configuration.
 7. Rename the /lib/dedalo/config/sample.config4_db.php to /lib/dedalo/config/config4_db.php.
 8. Run Dédalo into the browser. 
-9. Fix your admin password (you can change only once), the default account is: admin (this user is a root and only for development or debuger the application).
+9. Fix your root password (you can change only once), the default account is: root (this user is a superuser and only for development or debuger the application).
 10. Create one Administrator user account with all access to the system.(this user will be the administrator of the system)
 11. Logout and login with the Administrator acount.
 12. Create Users and Projects as you need.
+Optional: Import the toponymy that you will need (Dédalo install DB will not provide specific toponymy by default anymore).
 
 **UPDATE**
 
@@ -111,24 +111,55 @@ Dédalo have three updates procedures:
 1. Update the code files (php, js, css, html, etc)
 	-  Make backup of all files.
 	-  Download the new files and change the files in your server
-	-  You need see the new config files and put the changes into your own config files (/lib/dedalo/config4.php and /lib/dedalo/config4_db.php). If you don't change the config files, Dédalo will require the new "define" variables and will stop the app.
+	-  You will need see the new config files and put the changes into your own config files (/lib/dedalo/config4.php and /lib/dedalo/config4_db.php) is not possible change it automatically because are the configuration specific of the users. If you don't change the config files, Dédalo will require the new "define" variables and will stop the app.
 
 2. Update the ontology structure with the sections, components, list, etc
 	-  Do the first update step
-	-  Log-in as "superuser-developer"
-	-  You will see the menu in "orange" or "red" (if you have the debugger active) and a "grey" sub-menu with a "tool administrator" (or in translation version of the app language) button, press it to go to the "admin utils" page.
+	-  Log-in with any "developer" user.
+	-  You will see the menu in "orange" or "red" (in red, if you have the debugger active) and a "grey" sub-menu with a "tool administrator" (or in translation version of the app language) button, press it to go to the "admin utils" page.
 	-  Press the "import structure" button, if all go well you will see a "green" alert.
-	-  Log-out and log-in with normal admin user.
-	-  Optional: in the inventory pages (OH, PCI, etc) press the "Update Cache" for update some changes into the components (this task force to update all components with the new model no 1 to 1), and will apply the changes to the data into the databases.
+	-  Log-out and log-in with a normal admin user.
 
 3. Update the data in your instalation
-	- Do the first and second update steps
-	-  Log-in as "superuser-developer"
-	-  You will see the menu in "orange" or "red" (if you have the debugger active) and a "grey" sub-menu with a "tool administrator" (or in translation version of the app language) button, press it to go to the "admin utils" page.
-	- If your data version is different that the "code files" version, Dédalo will show that you need update, press the «update» link and wait for notifications.
-	- If all go well you will see a repport with the changes.
-	- Reload the page 'Administration Tools'. Sometimes, if the update differs in several versions, you will need to update the data to each of the intermediate versions (v4.0.9 pass from v4.0.9 to -> v4.0.10, v4.0.10 to -> v4.0.11, etc) when the data and "code files" are in the same version, Dédalo will show that is consistent and stop the upgrade process.
-	- Log-out and log-in with normal admin user.
+	-  Do the first and second update steps
+	-  Log-in with any "developer" user.
+	-  You will see the menu in "orange" or "red" (in red, if you have the debugger active) and a "grey" sub-menu with a "tool administrator" (or in translation version of the app language) button, press it to go to the "admin utils" page.
+	-  If your data version is different that the "code files" version, Dédalo will show that you need update, press the «update» link and wait for notifications.
+	-  If all go well you will see a repport with the changes.
+	-  Reload the page 'Administration Tools'. Sometimes, if the update differs in several versions, you will need to update the data to each of the intermediate versions (v4.0.9 pass from v4.0.9 to -> v4.0.10, v4.0.10 to -> v4.0.11, etc) when the data and "code files" are in the same version, Dédalo will show that is consistent and stop the upgrade process.
+	-  Log-out and log-in with normal admin user.
+	-  Optional: in the inventory pages (OH, PCI, etc) press the "Update Cache" into the list of the sections for update some changes into the components (this task force to update all components with the new model no 1 to 1), and will apply the changes to the data into the databases.
+
+**IMPORT TOPONYMY**
+
+1. first create the toponymy into the Hierarchy menu into THesaurus:
+	-  Login in Dédalo
+	-  Go to "Thesaurus -> Hierarchy" section
+	-  Find the country that you want import
+	-  Edit the country
+	-  Change the "active" field to "Yes"
+	-  Press the "Generate" button
+
+2. Now the toponymy is ready for import the data in SQL.
+
+ 	-  Logout Dédalo
+ 	-  Go to: /dedalo/install/import/hierarchy
+ 	-  Select the hierarchies to be imported with the postgreSQL copy comand, similar to:
+		-  psql dedalo4_XXX -U YYY -p 5432 -h localhost -c "\copy matrix_hierarchy(section_id, section_tipo, datos) from es1.copy "
+
+		-  XXX: the name of your installation
+		-  YYY: the name of your user
+	-  You can list all exported tables and change the "es1.copy" to the hierarchies that you want import
+	-  When you are import the toponymy data, you will need change the counters of the tables that you were imported.
+	-  Login to Dédalo with developer user
+	-  Go to the "administation tool" and see the:
+		-  DEDALO COUNTERS STATE
+	-  You will see the diferences and Dédalo show the SQL command to apply into the postgreSQL, similar to this:
+		-  UPDATE "matrix_counter" SET dato = 75845 WHERE tipo = 'es1'; 
+	-  This command will change the counters to the new imported values in SQL
+	-  Change the profiles to acces users to the new hierarchy.
+
+	Done! you new hierarchy was imported and ready to use.
 
 
 **SERVER SYSTEM**
@@ -137,7 +168,7 @@ Dédalo in the server part is tested into the next Operating Systems:
 - CentOS 6.5 (deprecated update as soon as possible), 6.6, 7.1
 - Red Hat Enterprise Linux 6.5 (deprecated update as soon as possible), 6.6, 7.1
 - Debian 8.7
-- MacOsX 10.6 (deprecated update as soon as possible), 10.7, 10.8, 10.9, 10.10
+- MacOsX 10.8 (deprecated update as soon as possible), 10.9, 10.10+
 
 All other Linux will be compatible but we don't test it.
 
@@ -146,18 +177,18 @@ Windows: is possible that Dédalo can run, but NO TESTED.
 **USE**
 
 Dédalo version 4, is only certificated and proved into the webkit browsers (Chrome, Safari,...). 
-Firefox situation: Is possible use Firefox but no is tested and maybe Dédalo can't run fine. 
-Full Firefox support is coming into the future 4.6version of Dédalo.
+Firefox situation: Is possible use Firefox, but not in production, this version of Dédalo(V4.7+) is compatible, but we need feedback from the users, please comment your experience. 
 
 Browser	|	Version |	certificated
 --------- | --------- | ---------
-Chrome	|	50+ | YES - recomended
-Chrome	|	35 to 50 | Deprecated (Please update as soon as posible)	 
-Chrome	|	0 to 35 | NO	 
-Safari	|	6+ | YES
-Safari	|	3 to 5 | Deprecated (Please update as soon as posible)
-Safari	|	0 to 3 | NO	
-Firefox	|	49+ | Will be YES very soon, Now Dédalo is compatible at 95% with Firefox but the video player need touches for work ok (27-02-2017), the new version 4.6 we hope that will be full compatible
+Chrome	|	60+ | YES - recomended
+Chrome	|	50+ | Deprecated (Please update as soon as posible)	 
+Chrome	|	0 to 50 | NO	 
+Safari	|	9+ | YES
+Safari	|	6 to 8 | Deprecated (Please update as soon as posible)
+Safari	|	0 to 5 | NO	
+Firefox	|	49+ | The compatibility now is complete, but we need feedback to resolve issues in the diary work with Firefox (15-09-2017), please test it and comment it.
 Firefox	|	40-49 | NO
 Firefox	|	0-40 | NO
+EDGE	| All 	| For us NO, we don't test it. But, is possible that Dédalo run fine in the last versions, because Microsoft say that EDGE is ECMA and HTML5 standards compatible. But we insist that we don't test it.
 IExplorer	| All 	| NO

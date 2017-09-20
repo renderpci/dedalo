@@ -3,25 +3,25 @@
 	# VISUALIZADOR HTML	
 		
 	# CONTENIDO (INPUT)
-	$html_contenido  = "\n<tr>";	
+	$html_contenido  = "<tr>";	
 	
 	switch(true) {
 			
-		case $permissions===0	:	$html_contenido .= "\n <span class=\"css_span_dato\"> ".label::get_label('sin_acceso')." </span>";
+		case $permissions===0	:	$html_contenido .= " <span class=\"css_span_dato\"> ".label::get_label('sin_acceso')." </span>";
 					break;
 						
 		case ($permissions>=1):
 
 					
 					# TD ID
-					$html_contenido .= "\n <th data-resizable-column-id=\"ID\" class=\"id_column\" >";
+					$html_contenido .= " <th data-resizable-column-id=\"ID\" class=\"id_column\" >";
 						
 						$html_contenido .= "<div class=\"th_title\">";
-						$html_contenido .= "\n ID ";
+						$html_contenido .= " ID ";
 						$html_contenido .= '</div>';
 						$html_contenido .= $this->flechas_orden('section_id','section_id');
 
-					$html_contenido .= "\n </th>";
+					$html_contenido .= " </th>";
 					
 					# TD DATOS
 					foreach($ar_label_html as $key => $ar_data) {
@@ -38,18 +38,18 @@
 							$th_style = "width:$column_width";
 						}	
 						
-						$html_contenido .= "\n <th class=\"$td_css_selector_tipo\" style=\"$th_style\" data-resizable-column-id=\"$tipo\">";
+						$html_contenido .= " <th class=\"$td_css_selector_tipo\" style=\"$th_style\" data-resizable-column-id=\"$tipo\">";
 						
 							$html_contenido .= "<div class=\"th_title\" title=\"$label\">";
 							$html_contenido .= $label;
 							$html_contenido .= '</div>';
 							$html_contenido .= $this->flechas_orden($tipo, $label);
 
-						$html_contenido .= "\n </th>";
+						$html_contenido .= " </th>";
 					}
 
 	}
-	$html_contenido .= "\n</tr>";
+	$html_contenido .= "</tr>";
 	
 	# PRINT HTML
 	print $html_contenido;

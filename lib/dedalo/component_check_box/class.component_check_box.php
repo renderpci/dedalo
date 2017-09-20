@@ -1,10 +1,10 @@
 <?php
 /*
 * CLASS COMPONENT CHECK BOX
+*
+*
 */
-
-
-class component_check_box extends component_common {
+class component_check_box extends component_reference_common {
 
 	# Overwrite __construct var lang passed in this component
 	protected $lang = DEDALO_DATA_NOLAN;

@@ -7,30 +7,123 @@
 
 
 /* HEADER_TOOL
----------------------------------------- */
-.header_tool {
-	background-color: rgba(103, 103, 103, 0.8);
-	color: #f5f5f5;
-	height: 30px;
+---------------------------------------------------- */
+	.header_tool {
+		background-color: rgb(193, 193, 193);
+		//color: #f5f5f5;
+		height: 30px;
+		width: 100%;
+
+		display: flex;
+		-webkit-flex-flow: row wrap;
+		//justify-content: flex-end;
+		-webkit-user-select: none;
+		-khtml-user-select: none;
+		-moz-user-select: none;
+		-o-user-select: none;
+		user-select: none;
+		}
+		.header_tool > div.header_tool_name {
+			font-family: "Oxygen-Light";
+			//background-color: #48bac3;
+			//background-image: url(../../../themes/default/icon_structuration_hover.svg);
+			background-position: left 5px top 15%;
+			background-repeat: no-repeat;
+			background-size: 20px;			
+			color: #fff;
+			font-size: 16px;
+			padding-left: 32px;
+			line-height: 1em;
+			letter-spacing: 2px;
+			height: 30px;
+		}
+		
+		.header_tool label {
+			min-width: 1px;
+			vertical-align: middle;
+			text-transform: capitalize;
+			line-height: 1em;
+		}
+		
+		// header_info . Curent audiovisual id and code
+		.header_tool .header_info {
+			padding: 7px;
+			padding-left: 8px;
+			padding-right: 10px;
+			//float: left;
+			//background-color: #636363
+		}
+		// top_id_selector . Selector of current interview approach
+		.top_id_selector {
+			padding: 2px;
+			padding-left: 10px;
+			padding-right: 10px;
+			//background-color: #CCFA90
+			}			
+			.top_id_selector select {				
+				//margin-left: 5px;
+				margin-right: 10px;				
+			}
+		// header_tool_tabs
+		ul.header_tool_tabs {
+			//background-color: #EDCB95;
+			display: flex;
+            -webkit-flex-flow: row wrap;
+
+			}
+			.header_tool_tabs > li {
+				background-color: #706d6e;
+				color: #f5f5f5;
+				padding: 7px;
+				padding-left: 15px;
+				padding-right: 15px;
+				cursor: pointer;height: 30px;
+				}
+				.header_tool_tabs > li:hover {
+					background-color: #FFFFFF;
+					color: #555
+				}
+				.header_tool_tabs > li:active {
+					background-color: transparent;
+				}
+				.header_tool_tabs > li.tab_active {
+					background-color: #FFFFFF;
+					color: #555;
+					border: 1px solid #ddd;
+					border-top: 2px solid #ffa500;
+					border-bottom: 1px solid #fff;
+					cursor: initial;
+				}
+
+		// css_wrap_state 
+		.header_tool .css_wrap_state {
+			position: absolute;
+			right: 0;
+			//background-color: #83DCEB
+		}
+/**/
+		
+		
+	
+		/*
+		.header_tool .content_data, 
+		.header_tool .css_wrap_state .content_data {
+			width: auto;
+		}
+		
+		*/
+	.tool_title {
+		margin: 40px;
+		font-size: 28px;
 	}
-	.header_tool LABEL.css_label {
-		min-width: 1px;
-	}
-	.header_tool .content_data, 
-	.header_tool .css_wrap_state  .content_data {
-		width: auto;
+	.wrap_tool {
+		background-image: url('../../../themes/default/dedalo_icon_big.png');
+		background-repeat: no-repeat;
+		background-position: 0px 0px;
+		//min-height: 1004px;
+		min-height: 98%;
 	}
 
-.tool_title {
-    margin: 40px;
-    font-size: 28px;
-}
-.wrap_tool {
-	background-image: url('../../../themes/default/dedalo_icon_big.png');
-	background-repeat: no-repeat;
-	background-position: 0px 0px;
-	min-height: 1004px;
-}
 
 
 /* BTN_INSIDE_SECTION_BUTTONS_CONTAINER
@@ -65,8 +158,8 @@
 		//margin-right: 7px;	
 		width: 14px;
 		height: 14px;
-	  	float: left; 
-	  	opacity: 0.5;	
+		float: left; 
+		opacity: 0.5;	
 	}
 	.btn_inside_section_buttons_container:hover {
 		background-color: rgba(201, 201, 201, 1);
@@ -78,9 +171,9 @@
 .tool_time_machine_icon {
 	background-position: -216px -24px;
 	//-moz-transform: scaleX(-1);
-    //-o-transform: scaleX(-1);
-    //-webkit-transform: scaleX(-1);
-    //transform: scaleX(-1);
+	//-o-transform: scaleX(-1);
+	//-webkit-transform: scaleX(-1);
+	//transform: scaleX(-1);
 }
 .tool_lang_icon {
 	background-position: -336px -144px;
@@ -91,6 +184,9 @@
 	top: -2px;
 	left: -18px;
 	float: left;
+}
+.tool_lang_multi_icon {
+	background-position: -336px -144px;
 }
 .tool_posterframe_icon{
 	background-position: -456px -48px;
@@ -112,7 +208,7 @@
 	background-position: -25px -47px;
 }
 .tool_structuration_icon {
-	background-position: -25px -47px;
+	background-position: -48px -47px;
 }
 .tool_calendar_icon {
 	background-position: -192px -121px;
@@ -160,7 +256,7 @@
 	min-width: auto !important;
 	}
 	.tool_diffusion:before {
-	    background-position: -24px -144px;
+		background-position: -24px -144px;
 	}
 	.tool_diffusion_inspector {
 		margin-left: 5px;
@@ -352,7 +448,7 @@
 			width: 14px;
 			height: 14px;
 			/* Position/Spacing */
-		  	float: left;
+			float: left;
 		}
 
 
@@ -380,5 +476,27 @@
 		.dedalo_upload_form .dedalo_upload_msg span {
 			margin-left: 0;
 		}
+
+
+
+/* HEADER_BUTTONS
+--------------------------------------------------------- */
+.header_buttons {
+	width: auto;
+	display: flex;
+	flex-wrap: nowrap;
+	padding: 7px;
+	@media screen and (max-width: 1200px) {
+			display: none !important;
+		}
+	}
+	.header_buttons .link {
+		margin-right: 8px;
+	}
+
+
+
+
+
 
 

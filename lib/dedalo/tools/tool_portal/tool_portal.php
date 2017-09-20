@@ -13,8 +13,8 @@
 	$button_row				= $this->button_row;
 	$target_section_tipo 	= $this->component_obj->target_section_tipo;	
 	$modo 					= $this->get_modo();
-	$file_name 				= $modo;	
-
+	$file_name 				= $modo;
+	
 
 	# TOOL CSS / JS MAIN FILES
 	css::$ar_url[] = DEDALO_LIB_BASE_URL."/tools/".$tool_name."/css/".$tool_name.".css";

@@ -41,24 +41,32 @@ class component_password extends component_common {
 	# GET EJEMPLO
 	protected function get_ejemplo() {
 		
-		if($this->ejemplo===false) return "example: 'Kp3Myuser9Jt1'";		
+		if($this->ejemplo===false) return "example: 'Kp3Myuser9Jt1'";
 		return parent::get_ejemplo();
 	}
 
 
-	# CRIPTO PASSWORD
+	/**
+	* ENCRYPT_PASSWORD
+	*
+	* Crypto password
 	# Change the mycript lib to OpenSSL in the 4.0.22 update
 	# we need the to encriptors for sustain the login of the user before the update to 4.0.22
 	# this function will be change to only Open SSl in the 4.5.
+	*/
 	public static function encrypt_password($stringArray) {
 
-		$current_version = tool_administration::get_current_version_in_db();
+		$encryption_mode = encryption_mode();
 		
-		if( ($current_version[0] >= 4 && $current_version[1] >= 0 && $current_version[2] >= 22) || ($current_version[0] >= 4 && $current_version[1] >= 5) ) {
+		if( $encryption_mode==='openssl' ) {
 			return dedalo_encrypt_openssl($stringArray, DEDALO_INFORMACION);
-		}else{
+		}else if($encryption_mode==='mcrypt') {
 			return dedalo_encryptStringArray($stringArray, DEDALO_INFORMACION);
-		}		
+		}else{
+			debug_log(__METHOD__." UNKNOW ENCRYPT MODE !! ".to_string(), logger::ERROR);
+		}
+
+		return false;	
 	}
 
 

@@ -9,7 +9,7 @@
 	$lang					= DEDALO_APPLICATION_LANG;
 	$label 					= $this->get_label();	
 	$debugger				= $this->get_debugger();
-	$permissions			= common::get_permissions($section_tipo,$tipo);
+	$permissions			= $this->get_component_permissions();
 	$html_title				= "Info about $tipo";
 	$identificador_unico	= $this->get_identificador_unico();
 	$component_name			= get_class($this);

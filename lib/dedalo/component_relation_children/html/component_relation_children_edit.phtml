@@ -105,8 +105,13 @@
 										onclick=\"component_relation_children.remove_children(this)\" />";
 
 					# TERM STRING
-					$value = ts_object::get_term_by_locator( $current_locator, DEDALO_DATA_LANG, $from_cache=true );
-					$html_content .= '<span class="locator_label">'.$value.'</span>';
+					$value = ts_object::get_term_by_locator( $current_locator, DEDALO_DATA_LANG, $from_cache=true );					
+					$html_content .= '<span class="locator_label">';
+					$html_content .= $value;
+					if(SHOW_DEBUG===true) {
+						$html_content .= ' <span class="notes">['.$current_locator->section_tipo.'_'.$current_locator->section_id.']</span>';
+					}
+					$html_content .= '</span>';
 
 					$html_content .= "</div>";//relation_children_input_line
 				}//end foreach ((array)$dato as $key => $current_locator)

@@ -18,16 +18,18 @@
 						onclick=\"tool_common.open_tool_lang(this)\"
 						></div>";
 	*/
-	$html_tool .= "<a href=\"javascript:void(0);\" class=\"id_column_buttons button_translation link\" title=\"$title\" onclick=\"tool_common.open_tool_lang(this)\"
-	data-tipo=\"{$tipo}\"
-	data-section_tipo=\"{$section_tipo}\"
-	data-parent=\"{$parent}\"
-	data-lang=\"{$lang}\"
-	data-tab_id=\"img_lang_{$tipo}_{$parent}\"
-	>";
-		$html_tool .= "<span class='section_id_number'>";
-		$html_tool .= " $section_id ";
-		$html_tool .= "</span>";
+	$html_tool .= "<a href=\"javascript:void(0);\" class=\"id_column_buttons button_translation link\" title=\"$title\" onclick=\"tool_common.open_tool_lang(this)\" ";
+	$html_tool .= "data-tipo=\"{$tipo}\" ";
+	$html_tool .= "data-section_tipo=\"{$section_tipo}\" ";
+	$html_tool .= "data-parent=\"{$parent}\" ";
+	$html_tool .= "data-lang=\"{$lang}\" ";
+	$html_tool .= "data-tab_id=\"img_lang_{$tipo}_{$parent}\" ";
+	$html_tool .= ">";
+
+	$html_tool .= "<span class='section_id_number'>";
+	$html_tool .= $section_id;
+	$html_tool .= "</span>";
+
 	$html_tool .= "</a>";
 
 

@@ -1,50 +1,42 @@
 <?php
-require_once( dirname(dirname(__FILE__)).'/config/config4.php');
+$start_time=microtime(1);
+include( dirname(dirname(__FILE__)).'/config/config4.php');
+# TRIGGER_MANAGER. Add trigger_manager to receive and parse requested data
+common::trigger_manager();
 
 ignore_user_abort(true);
-
-# Set JSON headers for all responses
-header('Content-Type: application/json');
-
-if(login::is_logged()!==true) die("<span class='error'> Auth error: please login </span>");
-
-# set vars
-$vars = array('mode');
-	foreach($vars as $name) $$name = common::setVar($name);
-
-# mode
-if(empty($mode)) exit("<span class='error'> Trigger: Error Need mode..</span>");
-
-# CALL FUNCTION
-if ( function_exists($mode) ) {
-	$result = call_user_func($mode);
-	echo json_encode($result);
-}
 
 
 
 /**
 * GENERATE_VIRTUAL_SECTION
+* @return object $response
 */
-function generate_virtual_section() {
+function generate_virtual_section($json_data) {
+	global $start_time;
 
 	$response = new stdClass();
 		$response->result 	= false;
-		$response->msg 		= 'Error. Request failed on generate_virtual_section';
-	
-	$section_id 	= $_REQUEST['component_parent'];
-		if (empty($section_id))
-			return '<div class="error">Error: Empty section_id</div>';
+		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
 
-	$section_tipo 	= $_REQUEST['section_tipo'];	
-		if (empty($section_tipo))
-			return '<div class="error">Error: Empty section_tipo</div>';
+	# set vars
+	$vars = array('component_parent','section_tipo');
+		foreach($vars as $name) {
+			$$name = common::setVarData($name, $json_data);
+			# DATA VERIFY
+			#if ($name==='top_tipo' || $name==='top_id') continue; # Skip non mandatory
+			if (empty($$name)) {
+				$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty '.$name.' (is mandatory)';
+				return $response;
+			}
+		}
 
 	$options = new stdClass();
-		$options->section_id   = $section_id;
+		$options->section_id   = $component_parent;
 		$options->section_tipo = $section_tipo;
 		
 	$result = (object)hierarchy::generate_virtual_section( $options );
+		#dump($result, ' $result ++ '.to_string());
 
 	switch (true) {
 		case isset($result->result) && $result->result===true:
@@ -58,38 +50,73 @@ function generate_virtual_section() {
 			break;
 	}
 	if (isset($result->msg)) {
-		return '<div class="'.$class.'">'. nl2br($result->msg) .'</div>';
+
+		$msg = '<div class="'.$class.'">'. nl2br($result->msg) .'</div>';
+
+		$response->result 	= true;
+		$response->msg 		= $msg;	//'Ok. Request done ['.__FUNCTION__.']';
 	}
 
-	return null;
+	# Debug
+	if(SHOW_DEBUG===true) {
+		$debug = new stdClass();
+			$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
+			foreach($vars as $name) {
+				$debug->{$name} = $$name;
+			}
+
+		$response->debug = $debug;
+	}
+
+	
+	return (object)$response;
 }//end generate_virtual_section
 
 
 
 /**
 * UPDATE_TARGET_SECTION
-* @return 
+* @return object $response
 */
-function update_target_section() {
+function update_target_section($json_data) {
+	global $start_time;
+
+	$response = new stdClass();
+		$response->result 	= false;
+		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
 
 	# set vars
 	$vars = array('parent');
-		foreach($vars as $name) $$name = common::setVar($name);
-
-	if (empty($parent)) {
-		$response = new stdClass();
-			$response->result 	= false;
-			$response->msg 		= 'Error. Request failed (parent:$parent)';
-		return $response;
-	}	
+		foreach($vars as $name) {
+			$$name = common::setVarData($name, $json_data);
+			# DATA VERIFY
+			#if ($name==='top_tipo' || $name==='top_id') continue; # Skip non mandatory
+			if (empty($$name)) {
+				$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty '.$name.' (is mandatory)';
+				return $response;
+			}
+		}
+	
 
 	$options = new stdClass();
 		$options->section_tipo = DEDALO_HIERARCHY_SECTION_TIPO;
 		$options->section_id   = (int)$parent;
 
 	$response = hierarchy::update_target_section($options);
+
+	# Debug
+	if(SHOW_DEBUG===true) {
+		$debug = new stdClass();
+			$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
+			foreach($vars as $name) {
+				$debug->{$name} = $$name;
+			}
+
+		$response->debug = $debug;
+	}
+
 	
-	return $response;
+	return (object)$response;
 }//end update_target_section
 
 

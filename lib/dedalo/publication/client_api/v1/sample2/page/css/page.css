@@ -1,0 +1,46 @@
+/**
+* PAGE CSS
+*/
+@font-face {
+    font-family: 'san_francisco_displayregular';
+    src: url('../css/fonts/san_francisco/web/sanfranciscodisplay-regular-webfont.eot');
+    src: url('../css/fonts/san_francisco/web/sanfranciscodisplay-regular-webfont.eot?#iefix') format('embedded-opentype'),
+         url('../css/fonts/san_francisco/web/sanfranciscodisplay-regular-webfont.woff2') format('woff2'),
+         url('../css/fonts/san_francisco/web/sanfranciscodisplay-regular-webfont.woff') format('woff'),
+         url('../css/fonts/san_francisco/web/sanfranciscodisplay-regular-webfont.ttf') format('truetype'),
+         url('../css/fonts/san_francisco/web/sanfranciscodisplay-regular-webfont.svg#san_francisco_displayregular') format('svg');
+    font-weight: normal;
+    font-style: normal;
+}
+body {	
+	margin: 0;
+	padding: 0;
+}
+input[type="button"] {
+	background-color: #fb8218;
+    color: #ffffff;
+    border: none;
+    border-radius: 4px;
+    padding: 5px;
+    margin: 4px;
+    margin-left: 0;
+    text-transform: uppercase;
+    padding-left: 7px;
+    padding-right: 7px;
+    cursor: pointer;
+}
+
+#header {
+	font-family: "san_francisco_displayregular", sans;
+	background-color: #FA8218;
+	color: #ffffff;
+	padding: 20px;
+}
+#content {
+	padding: 20px;
+}
+#footer {
+	background-color: #797979;
+	color: #ffffff;
+	padding: 20px;
+}

@@ -1,73 +1,39 @@
 <?php
-// JSON DOCUMENT
-header('Content-Type: application/json');
-
-require_once( dirname(dirname(dirname(__FILE__))) .'/config/config4.php');
-require_once(DEDALO_LIB_BASE_PATH . '/common/class.TR.php');
-
-# Write session to unlock session file
-session_write_close();
-
-
-if(login::is_logged()!==true) die("<span class='error'> Auth error: please login </span>");
-
-
-# set vars
-	$vars = array('mode','portal_tipo','portal_parent','rel_locator','search_options_session_key','portal_section_tipo');
-		foreach($vars as $name) $$name = common::setVar($name);
-
-# mode
-	if(empty($mode)) exit("<span class='error'> Trigger: Error Need mode..</span>");
-
-
-
-# CALL FUNCTION
-if ( function_exists($mode) ) {
-	$result = call_user_func($mode);
-	$json_params = null;
-	if(SHOW_DEBUG===true) {
-		$json_params = JSON_PRETTY_PRINT;
-	}
-	echo json_encode($result, $json_params);
-}
+$start_time=microtime(1);
+include( dirname(dirname(dirname(__FILE__))) .'/config/config4.php');
+# TRIGGER_MANAGER. Add trigger_manager to receive and parse requested data
+common::trigger_manager();
 
 
 
 /**
 * ADD RESOURCE
-* Save on matrix current resource
-* @param $caller_id (id matrix from source component_resource)
-* @param $rel_locator String like '1235.0.0'
+* Add new locator to portal dato
+* @return object $response
 */
-function add_resource() {
+function add_resource($json_data) {
+	global $start_time;
 
 	$response = new stdClass();
 		$response->result 	= false;
-		$response->msg 		= 'Error. Request failed on add_resource';
+		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
 
-	$vars = array('portal_tipo','portal_parent','portal_section_tipo','rel_locator','prev_locator');
-		foreach($vars as $name) $$name = common::setVar($name);
-
-	if(empty($portal_tipo)) {
-		$response->msg = "Error : few vars. portal_tipo is mandatory";
-		return $response;
-	}
-	if(empty($portal_parent)) {		
-		$response->msg = "Error : few vars. portal_parent is mandatory";
-		return $response;
-	}
-	if(empty($portal_section_tipo)) {
-		$response->msg = "Error : few vars. portal_section_tipo is mandatory";
-		return $response;
-	}
-	if(empty($rel_locator)) {
-		$response->msg = "Error : few vars. rel_locator is mandatory";
-		return $response;
-	}
-	if ($prev_locator==='"null"') {
-		$prev_locator = null;
-	}
 	
+	$vars = array('portal_tipo','portal_parent','portal_section_tipo','rel_locator','prev_locator');
+		foreach($vars as $name) {
+			$$name = common::setVarData($name, $json_data);
+			# DATA VERIFY
+			if ($name==='prev_locator') continue; # Skip non mandatory
+			if (empty($$name)) {
+				$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty '.$name.' (is mandatory)';
+				return $response;
+			}
+		}
+
+		if ($prev_locator==='"null"') {
+			$prev_locator = null;
+		}
+		
 	
 	$component_portal 	= component_common::get_instance('component_portal',
 														 $portal_tipo,
@@ -90,7 +56,7 @@ function add_resource() {
 		}		
 		#debug_log(__METHOD__." Removed prev locator ".to_string($prev_locator), logger::DEBUG);
 
-	}//end if (!empty($prev_locator)) 
+	}//end if (!empty($prev_locator))
 
 
 	#
@@ -104,7 +70,7 @@ function add_resource() {
 		debug_log(__METHOD__." Error on json_decode 2 var rel_locator: ".to_string($rel_locator), logger::ERROR);
 	}
 	
-	if ($locator_added!==true) {		
+	if ($locator_added!==true) {
 		$response->msg = "Error : on add locator. Expected response 'true'. Received response: ".to_string($locator_added);
 		return $response;
 	}
@@ -119,8 +85,10 @@ function add_resource() {
 	$response->result = true;
 	$response->msg 	  = "Added resource successfully";
 
+	
 	if(SHOW_DEBUG===true) {
 		$debug = new stdClass();
+			$debug->exec_time			= exec_time_unit($start_time,'ms')." ms";
 			$debug->locator_added 		= $locator_added;
 			$debug->state 		  		= $state;
 			$debug->portal_tipo 		= $portal_tipo;
@@ -131,37 +99,35 @@ function add_resource() {
 			$debug->request 			= $_REQUEST;
 	
 		$response->debug = $debug;
-	}	
-	
+	}
 
-	return $response;
+
+	return (object)$response;
 }//end add_resource
 
 
 
 /**
 * SHOW_MORE_TOGGLE
-* @return 
+* @return object $response
 */
-function show_more_toggle() {
-	
+function show_more_toggle($json_data) {
+	global $start_time;
+
 	$response = new stdClass();
 		$response->result 	= false;
-		$response->msg 		= 'Error. Request failed on show_more_toggle';
+		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
 
 	$vars = array('action', 'search_options_session_key');
-		foreach($vars as $name) $$name = common::setVar($name);
-
-		# Verify vars
-		if (empty($action)) {
-			$response->msg = "Trigger Error: action is empty !";
-			return response;
+		foreach($vars as $name) {
+			$$name = common::setVarData($name, $json_data);
+			# DATA VERIFY
+			# if ($name==='max_records' || $name==='offset') continue; # Skip non mandatory
+			if (empty($$name)) {
+				$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty '.$name.' (is mandatory)';
+				return $response;
+			}
 		}
-		if (empty($search_options_session_key)) {
-			$response->msg = "Trigger Error: search_options_session_key is empty !";
-			return response;
-		}
-
 
 
 	# Action
@@ -199,7 +165,18 @@ function show_more_toggle() {
 			$response->msg 	  = 'Error. Invalid action: '.to_string($action);
 	}
 
-	return $response;
+	# Debug
+	if(SHOW_DEBUG===true) {
+		$debug = new stdClass();
+			$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
+			foreach($vars as $name) {
+				$debug->{$name} = $$name;
+			}
+
+		$response->debug = $debug;
+	}
+
+	return (object)$response;
 }//end show_more_toggle
 
 

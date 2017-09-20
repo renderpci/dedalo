@@ -19,7 +19,7 @@
 		}
 	}
 	$tool_name 	  			= $propiedades->tool_name;
-	$context_name 			= $propiedades->context_name;	
+	$context_name 			= isset($propiedades->context_name) ? $propiedades->context_name : null;	
 	$target_section_tipo	= isset($propiedades->target_section_tipo) ? $propiedades->target_section_tipo : $propiedades->section_tipo;
 
 

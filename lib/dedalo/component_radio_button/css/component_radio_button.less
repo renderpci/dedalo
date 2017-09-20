@@ -1,5 +1,8 @@
+// Vars
+@common_css: "../../common/css";
 
-
+// Usage
+@import "@{common_css}/library.less";
 
 
 
@@ -24,22 +27,28 @@
 
 	/* INPUT 
 	---------------------------------------------------- */
-	.css_wrap_radio_button .content_data input.css_radio_button {
+	input.css_radio_button {
 		padding: 2px;
-		border: 1px solid #9E9E9E;
+		border: 1px solid @color_input_border;
 		border-radius: 6px;
-		box-shadow: inset 0 0 6px #999999;
+		//box-shadow: inset 0 0 6px #999999;
+		margin-right: 2px;
 		}
-		.css_wrap_radio_button .content_data input.css_radio_button:hover {
+		input.css_radio_button:hover {
 			background-color: #F1F1F1;
 			cursor: pointer;
 		}
-		.css_wrap_radio_button .content_data input.css_radio_button:focus {
-			box-shadow: 0 0 5px #CCC;
+		input.css_radio_button:focus {
+			//box-shadow: 0 0 5px #CCC;
+		}
+		input.css_radio_button:checked+label {
+			//box-shadow: 0 0 5px #CCC;
+			text-decoration: underline;
 		}
 		
-		.css_wrap_radio_button .content_data .css_radio_button_rotulo {
+		label.css_radio_button_rotulo {
 			margin-left: 2px;
+			margin-right: 6px;
 		}
 
 
@@ -52,3 +61,18 @@
 	padding-bottom: 2px;
 	padding-left: 5px;
 }
+
+
+
+.checked_style_false {
+	/*
+	background-color: #999999;
+    padding: 3px;
+    border-radius: 3px;
+    color: white;
+    padding-bottom: 2px;
+    */
+    opacity: 0.3;
+}
+
+

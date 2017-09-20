@@ -6,14 +6,12 @@
 	
 	print "<div class=\"div_main_list\"></div>";
 	
-	print " <div class=\"css_section_list_wrap wrap_section_{$tipo}\" id=\"wrap_{$tipo}_{$modo}\" data-options='".json_handler::encode($this->options)."' >";
+	print " <div class=\"sgc_edit css_section_list_wrap wrap_section_{$tipo}\" id=\"wrap_{$tipo}_{$modo}\" data-options='".json_handler::encode($this->options)."' >";
 	
 	
 	# CONTENIDO
 	$html_content='';	
-	$html_content  .= "<div class=\"css_section_group_content tab_content wrap_table_rows_list section_records_{$modo} wrap_section_records_{$section_list_tipo}\"
-	data-rol=\"section_records\"
-	>";	
+	$html_content  .= "<div class=\"css_section_group_content tab_content wrap_table_rows_list section_records_{$modo} wrap_section_records_{$section_list_tipo}\" data-rol=\"section_records\">";	
 	#$html_content  = "<div class=\"content_ajax\">";
 	
 	switch(true) {
@@ -60,7 +58,7 @@
 				#$html_content .= "</div><!-- /records -->";#end main_list
 
 
-				if(SHOW_DEBUG===true) {
+				if(SHOW_DEVELOPER===true) {
 					#dump($this, ' this 1 ');
 					$limit_time=SLOW_QUERY_MS;
 					$html_info='';
@@ -93,7 +91,7 @@
 					#echo "<div> Time To Generate section list: HTML: ".round(microtime(1)-$start_time,3)."</div>";
 						
 					$html_content .= $html_info;
-				}#end if(SHOW_DEBUG)
+				}#end if(SHOW_DEVELOPER)
 	
 	}
 	#$html_content  = "</div>"; // class=\"content\"

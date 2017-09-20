@@ -3,9 +3,9 @@
 	# VISUALIZADOR HTML
 	
 	
-	print "\n<!-- area_activity [tipo:$tipo modo:$modo] -->";
+	print "<!-- area_activity [tipo:$tipo modo:$modo] -->";
 
-	print "\n<div class=\"css_wrap_area css_wrap_area_activity\" 
+	print "<div class=\"css_wrap_area css_wrap_area_activity\" 
 	data-tipo=\"{$tipo}\" data-lang=\"{$lang}\" data-component_name=\"{$component_name}\" >";
 	
 	# ETIQUETA (LABEL)
@@ -15,19 +15,19 @@
 	$html_contenido = '';
 	switch($permissions) {
 			
-		case 0	:	$html_contenido .= "\n <span class=\"css_span_dato\"> ".label::get_label('sin_acceso')." (input_text)</span>";
+		case 0	:	$html_contenido .= " <span class=\"css_span_dato\"> ".label::get_label('sin_acceso')." (input_text)</span>";
 					break;
 						
-		#case 1	: 	$html_contenido .= "\n <span class=\"css_span_dato\">Read only access</span>";
+		#case 1	: 	$html_contenido .= " <span class=\"css_span_dato\">Read only access</span>";
 		#			break;	
 						
 		case ($permissions>=1)	:
 		
-					$html_contenido .= "\n You are in $component_name page of $label ";	
+					$html_contenido .= " You are in $component_name page of $label ";	
 
 
-					$html_contenido .= "\n <br>Please select a section: ";
-					$html_contenido .= "\n <blockquote>";
+					$html_contenido .= " <br>Please select a section: ";
+					$html_contenido .= " <blockquote>";
 					
 					#$menu = new menu('list');
 					#$html_contenido .= 	"<hr>".$menu->get_html();	
@@ -35,11 +35,11 @@
 					foreach ($ar_sections as $tipo => $name) {
 						$html_contenido .= "<br> <a href=\"?t=$tipo\" class=\"link\">$name</a> ";
 					}
-					$html_contenido .= "\n </blockquote>";					
+					$html_contenido .= " </blockquote>";					
 										
 					
 					if(SHOW_DEBUG) {
-						#$html_contenido .= "\n <span class=\"css_span_debugger\" id=\"debugger_{$id}\" >{$debugger}</span>";	
+						#$html_contenido .= " <span class=\"css_span_debugger\" id=\"debugger_{$id}\" >{$debugger}</span>";	
 					}		
 					
 					
@@ -56,7 +56,7 @@
 	print $html_contenido;
 	
 	
-	print "\n</div><!-- /area_activity [tipo:$tipo modo:$modo] -->"; //wrap
+	print "</div><!-- /area_activity [tipo:$tipo modo:$modo] -->"; //wrap
 
 
 

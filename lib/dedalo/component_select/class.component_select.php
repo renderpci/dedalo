@@ -1,10 +1,10 @@
 <?php
 /*
 * CLASS COMPONENT SELECT
+*
+*
 */
-
-
-class component_select extends component_common {
+class component_select extends component_reference_common {
 	
 	# Overwrite __construct var lang passed in this component
 	protected $lang = DEDALO_DATA_NOLAN;
@@ -124,6 +124,7 @@ class component_select extends component_common {
 
 		# Set component valor
 		$this->valor = $valor;
+		
 
 		return $valor;
 	}//end get_valor
@@ -184,34 +185,53 @@ class component_select extends component_common {
 	*
 	* @see class.section_records.php get_rows_data filter_by_search
 	* @return string $search_query . POSTGRE SQL query (like 'datos#>'{components, oh21, dato, lg-nolan}' ILIKE '%paco%' )
-	*/
+	*//*
 	public static function get_search_query( $json_field, $search_tipo, $tipo_de_dato_search, $current_lang, $search_value, $comparison_operator='=') {
 		$search_query='';
-		if ( empty($search_value) ) {
-			return $search_query;
-		}
+	
+		$search_value = json_decode($search_value);
+			if ( !$search_value || empty($search_value) ) {
+				return false;
+			}
+			if (is_object($search_value)) {
+				$search_value = array($search_value);
+			}
+			#dump($search_value, ' search_value ++ '.to_string());
+			if (!is_array($search_value)) {
+				debug_log(__METHOD__." Error invalid search_value. Only json encoded array of locators are accepted ".to_string($search_value), logger::ERROR);
+				#return false;
+			}
+
 
 		$json_field = 'a.'.$json_field; // Add 'a.' for mandatory table alias search
 
 		switch (true) {
-			case $comparison_operator==='!=':
-				$search_query = " ($json_field#>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}' @> '[$search_value]'::jsonb)=FALSE ";
-				break;
-
 			case $comparison_operator==='=':
+				foreach ((array)$search_value as $current_value) {
+					$current_value = json_encode($current_value);
+					$search_query .= " $json_field#>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}' @> '[$current_value]'::jsonb OR \n";
+				}
+				$search_query = substr($search_query, 0,-5);
+
+				#$search_query = " $json_field#>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}' @> '[$search_value]'::jsonb ";
+				break;
+			case $comparison_operator==='!=':
 			default:
-				$search_query = " $json_field#>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}' @> '[$search_value]'::jsonb ";
-				break;			
+				foreach ((array)$search_value as $current_value) {
+					$current_value = json_encode($current_value);
+					$search_query = " ($json_field#>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}' @> '[$current_value]'::jsonb)=FALSE OR \n";
+				}
+				$search_query = substr($search_query, 0,-5);
+				break;
 		}
 		
-		if(SHOW_DEBUG) {
+		if(SHOW_DEBUG===true) {
 			$search_query = " -- filter_by_search $search_tipo ". get_called_class() ." \n".$search_query;
 			#dump($search_query, " search_query for search_value: ".to_string($search_value)); #return '';
 		}
-
 		return $search_query;
 	}//end get_search_query
-
+	*/
 
 
 	/**
@@ -250,21 +270,21 @@ class component_select extends component_common {
 	* @return string $list_value
 	*/
 	public static function render_list_value($value, $tipo, $parent, $modo, $lang, $section_tipo, $section_id, $current_locator=null, $caller_component_tipo=null) {
-
+	
 		$component 	= component_common::get_instance(__CLASS__,
 													 $tipo,
 												 	 $parent,
-												 	 'list',
+												 	 $modo,
 													 DEDALO_DATA_NOLAN,
 												 	 $section_tipo);
 
 		
 		# Use already query calculated values for speed
-		$ar_records   = (array)json_handler::decode($value);
+		$ar_records = is_string($value) ? (array)json_handler::decode($value) : (array)$value;
 		$component->set_dato($ar_records);
 		$component->set_identificador_unico($component->get_identificador_unico().'_'.$section_id.'_'.$caller_component_tipo); // Set unic id for build search_options_session_key used in sessions
 		
-		return  $component->get_valor($lang);		
+		return  $component->get_html();		
 	}#end render_list_value
 
 
@@ -298,6 +318,36 @@ class component_select extends component_common {
 		return true;
 	}//end get_order_by_locator
 
+
+
+	/**
+	* GET_SUBQUERY
+	* @return string $select_query
+	*//*
+	public static function get_subquery($request_options) {
+
+		$options = new stdClass();
+			$options->search_in 	 		= null;
+			$options->search_tipo 	 		= null;
+			$options->search_section_tipo 	= null;
+			$options->matrix_table 	 		= null;
+			$options->search_query 	 		= null;	
+			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
+
+		$subquery  = '';
+		if(SHOW_DEBUG===true) {
+			$subquery .= "\n-- ".__CLASS__." $options->search_tipo in $options->search_section_tipo subquery ";
+		}
+		#$subquery .= "\n{$options->search_tipo}->>'section_id' IN ( \n";
+		$subquery .= "\n{$options->search_in} IN ( \n";
+		$subquery .= " SELECT section_id::text FROM $options->matrix_table a WHERE \n";
+		#$subquery.= " f_unaccent(datos#>>'{components, $search_tipo, dato}') ILIKE f_unaccent('%[\"c%') AND \n";
+		$subquery .= " (a.section_tipo='$options->search_section_tipo') AND \n";
+		$subquery .= " ($options->search_query) \n) ";
+
+		return $subquery;
+	}//end get_subquery
+	*/
 	
 	
 

@@ -9,7 +9,7 @@
 	$dato 					= $this->get_dato();
 	$label 					= $this->get_label();
 	$debugger				= $this->get_debugger();	
-	$permissions			= common::get_permissions($section_tipo,$tipo);
+	$permissions			= $this->get_component_permissions();
 	$html_title				= "Info about $tipo";
 	$valor					= $this->get_valor();
 	$lang					= $this->get_lang();

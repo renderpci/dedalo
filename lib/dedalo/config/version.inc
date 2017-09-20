@@ -919,10 +919,10 @@
 
 
 	Valencia 07-03-2017 v4.5.2a4
-		subtitles : standarized as share static library usable by public websites 
-		TR : standarized as share static library usable by public websites 
-		OptimizeTC : standarized as share static library usable by public websites 
-		web_data : (api_dedalo_web) standarized as share static library usable by public websites
+		subtitles : standardize as share static library usable by public websites 
+		TR : standardize as share static library usable by public websites 
+		OptimizeTC : standardize as share static library usable by public websites 
+		web_data : (api_dedalo_web) standardize as share static library usable by public websites
 
 
 	Valencia 09-03-2017 v4.5.2a5
@@ -931,6 +931,200 @@
 
 	Valencia 11-03-2017 v4.5.2a9
 		hierarchy : rows_jer_to_matrix_json : fixed erroneous call to removed component 'order' (hierarchy42) in import thesaurus
+
+
+	Valencia 22-03-2017 v4.6.0j
+		component_text_area : build_tag_person fix bug that send unsafe data to tag
+
+
+	Valencia 23-03-2017 v4.6.0k
+		tool_lang : fixed bug when new tags are not preserved on appertium translation process
+
+
+	Valencia 24-03-2017 v4.6.0m
+		dd_date : fixed issue where search value is not properly calculated 
+		component_relation_parent : removed default tools for component because this component is always a computed value
+									fixed bug when infinite recursion occurs. To prevent infinite loop, a new control is added
+
+
+	Valencia 27-03-2017 v4.6.0n
+		area_thesaurus : fixed issue when tool_av_versons js is not included when controller builds his html
+		tool_upload : Added option to store original file name in a component of current section
+
+
+	Valencia 28-03-2017 v4.6.0p
+		component_text_area : added notes state a/b : 'private/public' -orange/green-
+		component_publication : adapted to support notes (+ mode 'edit_note') and auto sync current note tag state on change (js component_publication.change_tag_state)
+	
+
+	Valencia 28-03-2017 v4.6.0u
+		component_autocomplete : changed way of work
+
+
+	Valencia 26-04-2017 v4.6.1
+		component_text_area : updated text editor tinyMCE from 453 to 457
+
+
+	Valencia 28-04-2017 v4.6.1hc
+		tool_transcription : fixed bug on unload page when no refresh opener window properly
+		tool_indexation : fixed bug on unload page when no refresh opener window properly
+		search.js : reload_rows_list : Fixed bug on jquery selection
+
+
+	Valencia 28-04-2017 v4.6.1hc
+		component_autocomplete : fixed bug when multiple input text elements save the same value on create new record
+
+	
+	Valencia 08-05-2017 v4.6.1hi7
+		login : fixed bug on clean install when database data version is < 4.0.22
+		config4 : added constant ENCRYPTION_MODE to define current encryption mode
+
+
+	Berlin 10-05-2017 v4.6.1hi8
+		component_text_area : get_fragment_text_from_rel_locator : fixed bug on switch tag type is erroneous and time codes are not calculated properly
+
+	
+	Valencia 16-05-2017 4.6.1hj12
+		config : added new constant SHOW_DEVELOPER to control especial debug info showed to developers
+		login : added new method to control when user is developer
+		component_radiobutton : add forced read only mode when user is not dedalo superuser (root)
+
+
+	Valencia 31-05-2017 4.6.2a9
+		component_text_area : create_new_note : Fixed issue where selected text is replaced with new note. Now, selection is collapsed and note is placed at end of selection
+		component_portal : Changed to enable limit viewed records and use "Show more items" link action
+		tool_lang : Fixed issue where copy to target lang not set editor as "Dirty" and then don't save. Now component save on copy content from source
+		are_thesaurus : search : fixed wrong filter sql code. Now correct f_unaccent is used instead unaccent to obtain gain of index
+		tool_av_versions : Added new behavior: on download, use original filename if exists 
+
+
+	Valencia 31-05-2017 4.6.2b1
+		component_portal : Fixed issues on drag between portals (jquery reverse order event remove / )
+
+
+	Valencia 15-06-2017 4.6.2c2
+		tool_export : Fixed issue with csv separator ";" . Now is converted to unicode value: U+003B when in raw mode
+		tool_import : Now decode unicode U+003B to ; to rebuild correctly the values after export
+
+
+	Valencia 21-06-2017 4.6.2c4
+		fixed issues with js 'let' in non strict mode libs
+
+	
+	Valencia 22-06-2017 4.6.2c5
+		filter : fixed issue where user can view records of projects that this user don't have actually. Now only in case that record don't have project, user that was created can view it
+
+
+	Valencia 22-06-2017 4.6.2c5
+		filter : fixed issue where new filter (projects) fails in postgresql <= 9.4 on detect null value in jsonb
+		tool_export : fixed issue that shows column titles always in spanish. Now uses DEDALO_DATA_LANG to render column titles
+
+	
+	Valencia 29-06-2017 4.6.2c7
+		tool_didffusion : fixed bug that return wrong value when multiple publication elements are defined
+		component_portal::get_diffusion_value : fixed bug that not return the correct value when diffusion field propiedades->data_to_be_used = "valor" is requested
+												Now, portal calculate by default the 'valor_list' instead 'valor' for work with input_text array data
+
+
+	Valencia 30-06-2017 4.6.2c7cd
+		component_text_area : added tiny editor control to avoid users can insert reserved chars: <> mapped to [] 
+
+	
+	Valencia 30-06-2017 4.6.2c8
+		component_portal : fixed issue when read very old data as string. Now, wen portal detect string dato, emit a warning and saves empty array value instead
+
+	
+	Valencia 10-07-2017 4.6.2d1
+		component_relation_related : configurated to allow relations with all thesaurus terms instead only same section
+		component_text_area : updated tinyMCE editor version from 4.5.7 to 4.6.4 . This version allow replace "reference" tags content without delete the reference tags (use Alt click to select reference content text)
+
+	
+	Valencia 11-07-2017 4.6.2d3
+		component_common : Added var $update_diffusion_info_propagate_changes to define when the save process of a component set callers (inverse locators) as publication outdated
+						   When in edit mode is true, else is false
+
+
+	Valencia 12-07-2017 4.6.2d4
+		component_reference_common : Fixed bug when empty arrays are not included in subquery results.
+		tool_import_dedalo_csv : Added Delete file option in each file row
+		component_relation_parent : get_parents : Fixed bug when parents are from hierarchy (hierarchy1) instead self thesaurus section (ex. ts1)
+	
+
+	Valencia 13-07-2017 4.6.2d5
+		tool_replace_component_data : Changed dialog from jquery ui to bootstrap dialog
+									  Fixed issue when on replace data, search params session are loosed
+
+
+	Valencia 20-07-2017 4.6.2d8
+		records_search : fixed bug in processes tool sections that incrrectly mix processes in list results
+		area_thesaurus : search_thesaurus : Added selector to filter search by hierarchy
+		component_av : add info video for all users (not only debug mode)
+
+
+	Valencia 20-07-2017 4.6.2d9
+		ts_object : added permissions control to hide "New" and "Delete" buttons in the tree view
+
+
+	Valencia 24-07-2017 4.6.2d10
+		tool_structuration : trigger.tool_structuration : remove_index : Removed mandatory check to field "name" (translations issue)
+
+
+	Valencia 25-07-2017 4.6.2d11
+		component_relation_parent : get_parents_recursive : Fixed bug when a term parent is bad configured provokes infinite loop
+
+	
+	Valencia 27-07-2017 4.6.2d12
+		diffusion_sql : fix bug when tables alias records are not deleted on unpublish
+
+
+	Valencia 13-08-2017 4.6.3a1
+		TR : fix bug when various tag are placed continuous. On save, this contiguous tags was mixed in only one (geo tag for example)
+
+
+	Valencia 31-08-2017 4.7.0a8
+		component_text_area : updated tinyMCE editor version from 4.6.4 to 4.6.5
+		component_text_area : created a second editor (switable) "text_preview"			
+		tool_lang : Added option to edit and translate the chapter headings
+		component_common : refactorized all to manage all request as json request 
+		triggers : refactorized all to use json request 
+		tool_structuration : refactorized all		
+		components DDBB dato container: added "dataframe" to allocate metadata of component value like centainty, time, space, etc.
+		dataframe : created dataframe tool to manage the dataframe info inside each component
+		tool_transcription, tool_structuration, tool_indexation, tool_lang : refactorized to send and receive notifications of value change and update self data
+		tool_lang_multi : added net tool to fast and easy translate content of components
+		various : refactorized many js and php files to use json request instead get / post request
+		many, many details and fixes are made
+		
+
+	Valencia 05-08-2017 44.7.0b17
+		section : fixed bug when component_relation_common set a empty value (from time machine->assign_vale or ts_object->order, for example) now all locators of type requested are removed correctly
+		ts_object : save_order : fixed js function error that selects all deep wrap_ts_object bellow before sort. Now only first level childrens are selected to sort
+
+
+	Valencia 09-08-2017 44.7.0b36
+		tool_import_dedalo_csv : fixed issue with upload js library that stops on 
+		backup : import_structure : Added optional download and update from a remote server (master)
+		Config : added constants:
+		# REMOTE_STRUCTURE_SERVER_CODE
+			define('STRUCTURE_FROM_SERVER'		, true);
+			define('STRUCTURE_SERVER_CODE'		, 'XXXXXXX');
+			define('STRUCTURE_SERVER_URL'		, 'http://myserver.com/my_path_to_manager/');
+			define('STRUCTURE_DOWNLOAD_DIR'		, DEDALO_LIB_BASE_PATH . '/backup/backups_structure/srt_download');
+
+
+	Valencia 11-08-2017 44.7.0b40
+		component_html_text : fixed bug on search . Input name now is normative and search is enable again
+		
+
+
+	Valencia WORK IN PROGRESS
+		thesaurus : mark as "red or similar" restricted an other terms based in x param..
+					on search fix appearance issue with results css 		
+		structure config search for all resources (notes, chapter titles, etc.)
+		tool_structuration : solve error in structure tag inside text (is showed outside)
+
+
+
 
 
 
@@ -946,9 +1140,12 @@
 
 
 	# Version
-	define('DEDALO_VERSION'	, '4.6.0i');
-	#define('DEDALO_VERSION'	, '4.0.15.kd');
-	define('DEDALO_BUILD'	, '21-03-2017');
+	$DEDALO_VERSION = '4.7.0b49';
+	if(DEDALO_ENTITY==='development') {
+		$DEDALO_VERSION .= '.'.time();
+	}
+	define('DEDALO_VERSION'	, $DEDALO_VERSION);
+	define('DEDALO_BUILD'	, '20-09-2017');
 
 
 	/*

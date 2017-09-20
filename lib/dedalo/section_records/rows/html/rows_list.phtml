@@ -1,8 +1,9 @@
 <?php
 	
 	# VISUALIZADOR HTML	
-
-	print "<!-- ROWS [$id] $modo + -->";
+	if(SHOW_DEBUG===true) {
+		print "<!-- ROWS ROW [section_id.$section_id section_tipo.$section_tipo modo:$modo lang:$lang] -->";
+	}	
 
 
 	# CONTENIDO (INPUT)
@@ -11,16 +12,16 @@
 	switch(true) {
 			
 		case ($permissions===0):	
-			$html_content .= " <span class=\"css_span_dato\"> ".label::get_label('sin_acceso')." </span>";
+			$html_content .= "<span class=\"css_span_dato\"> ".label::get_label('sin_acceso')." </span>";
 			break;
 						
 		case ($permissions>=1):
 					
 			if( !is_array($ar_valor) || count($ar_valor)==0 ) {
 				
-				$html_content .= " <td class=\"section_list_td_border\" data-tipo=\"$component_tipo\">"; 
-				$html_content .= " No records found.. ";
-				$html_content .= " </td>";
+				$html_content .= "<td class=\"section_list_td_border\" data-tipo=\"$component_tipo\">"; 
+				$html_content .= "No records found..";
+				$html_content .= "</td>";
 				
 			}else{
 			
@@ -35,13 +36,13 @@
 				}
 										
 				$title = (SHOW_DEBUG===true) ? "matrix id: $id" : null;
-				$html_content .= " <td class=\"section_list_td_border section_list_td_row id_column\" title=\"$title\">";
+				$html_content .= "<td class=\"section_list_td_border section_list_td_row id_column\" title=\"$title\">";
 					
 					#
 					# BUTTONS
 					# 
 					# dump($context, ' context ++ '.to_string());
-					switch ($context->context_name) {
+					switch ($context_name) {
 						
 						# LIST_INTO_TOOL_PORTAL : 
 						# Listado de un sección mostrado en la ventana flotante de tool_portal para seleccionar un registro desde el portal
@@ -55,14 +56,17 @@
 								$url .= "&exclude_elements=".$context->exclude_elements;
 								#echo $url." <br>";
 								$title 	= "Goto resource $section_id [$id]";
-								if(SHOW_DEBUG===true) $title .= " url:$url  modo $modo, context $context->context_name";										
+								if(SHOW_DEBUG===true) $title .= " url:$url  modo $modo, context_name $context->context_name";										
 								
 								$html_content .= "<a href=\"$url\" class=\"id_column_buttons button_edit link\" title=\"$title\">";
 									# SECTION_ID TEXT
 									$html_content .= "<span class='section_id_number'>";
-									$html_content .= " $section_id ";
-									$html_content .= "</span>"; 
-								$html_content .= "</a>"; 								
+									$html_content .= $section_id;
+									if(SHOW_DEBUG===true) {
+										#$html_content .= $context_name;
+									}
+									$html_content .= "</span>";
+								$html_content .= "</a>";
 							#
 							# ADD RESOURCE BUTTON
 								# LOCATOR
@@ -73,9 +77,13 @@
 								$rel_locator = json_encode($locator);									
 
 								$title = "Add resource to portal ";
-								$html_content .= "<a href=\"javascript:void(0);\" class=\"id_column_buttons button_add_resource link\" onclick=\"tool_portal.add_resource(this)\"
-								data-rel_locator='{$rel_locator}'										
-								title=\"$title\">";								
+								$html_content .= "<a href=\"javascript:void(0);\" class=\"id_column_buttons button_add_resource link\" ";
+								$html_content .= "onclick=\"tool_portal.add_resource(this)\" ";
+								$html_content .= "data-rel_locator='{$rel_locator}'	";									
+								$html_content .= "title=\"$title\">";
+								if(SHOW_DEBUG===true) {
+									#$html_content .= $context_name;
+								}								
 								$html_content .= "</a>";
 							break;
 						
@@ -100,22 +108,26 @@
 							#
 							# BUTTON EDIT
 								/*
-								$url 	= htmlspecialchars("?t=$section_tipo&id=$id&m=edit&context_name=$context->context_name");
+								$url 	= htmlspecialchars("?t=$section_tipo&id=$id&m=edit&context_name=$context->name");
 								$title 	= "Goto record $section_id [$id]";
-								if(SHOW_DEBUG===true) $title .= " url:$url  modo $modo, context_name $context->context_name";
+								if(SHOW_DEBUG===true) $title .= " url:$url  modo $modo, context_name $context->name";
 								$html_content .= "<div class='button_edit div_image_link link' title=\"$title\" onclick=\"goto_url('$url')\"></div>";
 								*/
 								$html_content .= "Por revisar";
 							#
 							# BUTTON ADD RELATION 
 								$title = "Add relation [$rel_locator]";
-								$html_content .= " <div class=\"icon_bs tool_relation_icon link\"
-								data-id_matrix=\"{$id}\"
-								data-caller_tipo=\"{$section_tipo}\"
-								data-rel_locator='$rel_locator'
-								data-tipo=\"$tipo\"
-								onclick=\"parent.tool_relation.add_relation(this)\"
-								title=\"$title\"></div>";
+								$html_content .= "<div class=\"icon_bs tool_relation_icon link\" ";
+								$html_content .= "data-id_matrix=\"{$id}\" ";
+								$html_content .= "data-caller_tipo=\"{$section_tipo}\" ";
+								$html_content .= "data-rel_locator='$rel_locator' ";
+								$html_content .= "data-tipo=\"$tipo\" ";
+								$html_content .= "onclick=\"parent.tool_relation.add_relation(this)\" ";
+								$html_content .= "title=\"$title\">";
+								if(SHOW_DEBUG===true) {
+									#$html_content .= $context_name;
+								}
+								$html_content .= "</div>";
 							break;
 				
 						# SELECT_PARENT : Listado de un sección mostrado en una ventana flotante para seleccionar un registro 
@@ -133,11 +145,14 @@
 								
 								$locator = json_handler::encode($locator);
 
-								$title = "Add parent ";
-								$html_content .= "<a href=\"javascript:void(0);\" class=\"id_column_buttons button_add_resource link\"
-								onclick=\"window.opener.component_relation_parent.add_relation_from_opened_window(this)\"
-								data-locator='{$locator}'
-								title=\"$title\">";
+								$title = "Add parent";
+								$html_content .= "<a href=\"javascript:void(0);\" class=\"id_column_buttons button_add_resource link\" ";
+								$html_content .= "onclick=\"window.opener.component_relation_parent.add_relation_from_opened_window(this)\" ";
+								$html_content .= "data-locator='{$locator}' ";
+								$html_content .= "title=\"$title\">";
+								if(SHOW_DEBUG===true) {
+									#$html_content .= $context_name;
+								}
 								$html_content .= "</a>";
 							break;
 
@@ -156,11 +171,14 @@
 								
 								$locator = json_handler::encode($locator);
 
-								$title = "Add children ";
-								$html_content .= "<a href=\"javascript:void(0);\" class=\"id_column_buttons button_add_resource link\"
-								onclick=\"window.opener.component_relation_children.add_relation_from_opened_window(this)\"
-								data-locator='{$locator}'
-								title=\"$title\">";
+								$title = "Add children";
+								$html_content .= "<a href=\"javascript:void(0);\" class=\"id_column_buttons button_add_resource link\" ";
+								$html_content .= "onclick=\"window.opener.component_relation_children.add_relation_from_opened_window(this)\" ";
+								$html_content .= "data-locator='{$locator}' ";
+								$html_content .= "title=\"$title\">";
+								if(SHOW_DEBUG===true) {
+									#$html_content .= $context_name;
+								}
 								$html_content .= "</a>";
 							break;
 
@@ -168,7 +186,7 @@
 						case 'select_related':
 							# SECTION_ID TEXT
 								$html_content .= "<span class='section_id_number'>";
-								$html_content .= " $section_id ";
+								$html_content .= $section_id;
 								$html_content .= "</span>"; 
 							#
 							# ADD PARENT BUTTON
@@ -180,10 +198,13 @@
 								$locator = json_handler::encode($locator);
 
 								$title = "Add related term";
-								$html_content .= "<a href=\"javascript:void(0);\" class=\"id_column_buttons button_add_resource link\"
-								onclick=\"window.opener.component_relation_related.add_relation_from_opened_window(this)\"
-								data-locator='{$locator}'
-								title=\"$title\">";
+								$html_content .= "<a href=\"javascript:void(0);\" class=\"id_column_buttons button_add_resource link\" ";
+								$html_content .= "onclick=\"window.opener.component_relation_related.add_relation_from_opened_window(this)\" ";
+								$html_content .= "data-locator='{$locator}' ";
+								$html_content .= "title=\"$title\">";
+								if(SHOW_DEBUG===true) {
+									#$html_content .= $context_name;
+								}
 								$html_content .= "</a>";
 							break;
 
@@ -214,9 +235,9 @@
 						# SELECT_INDEX : Listado de un sección mostrado en una ventana flotante para seleccionar un registro 
 						case 'select_index':
 							# SECTION_ID TEXT
-								$html_content .= "<span class='section_id_number'>";
-								$html_content .= " $section_id ";
-								$html_content .= "</span>";
+								$html_content .= '<span class="section_id_number">';
+								$html_content .= $section_id;
+								$html_content .= '</span>';
 							#
 							# ADD ELEMENT BUTTON
 								$locator = new locator();
@@ -227,10 +248,13 @@
 								$locator = json_handler::encode($locator);
 
 								$title = "Add index";
-								$html_content .= "<a href=\"javascript:void(0);\" class=\"id_column_buttons button_add_resource link\"
-								onclick=\"window.opener.component_relation_index.add_relation_from_opened_window(this)\"
-								data-locator='{$locator}'
-								title=\"$title\">";										
+								$html_content .= "<a href=\"javascript:void(0);\" class=\"id_column_buttons button_add_resource link\" ";
+								$html_content .= "onclick=\"window.opener.component_relation_index.add_relation_from_opened_window(this)\" ";
+								$html_content .= "data-locator='{$locator}' ";
+								$html_content .= "title=\"$title\">";
+								if(SHOW_DEBUG===true) {
+									#$html_content .= $context_name;
+								}
 								$html_content .= "</a>";
 							break;
 						
@@ -241,12 +265,15 @@
 								$url  = htmlspecialchars("?t=$section_tipo&id=$id&m=edit");
 								$url .= "&top_tipo=".TOP_TIPO."&top_id=".TOP_ID."&offset=$offset";
 								$title = label::get_label('editar_registro').' '.$section_id;
-								#if(SHOW_DEBUG===true) $title .= " url:$url  modo $modo, context_name $context->context_name ";
+								#if(SHOW_DEBUG===true) $title .= " url:$url  modo $modo, context_name $context->name ";
 								$additional_css_style = $button_delete_permissions <=1 ? 'height: 100%;' : '' ;
 								$html_content .= "<a href=\"$url\" class=\"id_column_buttons $id_column_buttons_css button_edit link\" title=\"$title\" style=\"$additional_css_style\">";
 									# SECTION_ID TEXT
 									$html_content .= "<span class=\"section_id_number\">";
-									$html_content .= " $section_id ";
+									$html_content .= $section_id;
+									if(SHOW_DEBUG===true) {
+										#$html_content .= $context_name;
+									}
 									$html_content .= "</span>";
 								$html_content .= "</a>";
 							
@@ -266,7 +293,7 @@
 									$html_content .= "</a>";
 								}
 							break;
-					}//end switch ($context->context_name) {
+					}//end switch ($context->name) {
 					
 
 					# DEBUG INFO
@@ -274,7 +301,7 @@
 						#$html_content .= " <span class=\"css_span_debugger\" id=\"debugger_{$id}\" >{$id}</span>";
 					}					
 
-				$html_content .= " </td>"; //end id_column
+				$html_content .= "</td>"; //end id_column
 
 				
 
@@ -286,7 +313,7 @@
 					$td_css_selector 	  = 'td_'.$modelo_name;
 					$td_css_selector_tipo = 'column_'.$component_tipo;
 
-					$html_content .= " <td class=\"section_list_td_border section_list_td_row $td_css_selector $td_css_selector_tipo\" data-tipo=\"$component_tipo\">";
+					$html_content .= "<td class=\"section_list_td_border section_list_td_row $td_css_selector $td_css_selector_tipo\" data-tipo=\"$component_tipo\">";
 						$html_content .= "<div>";
 						$html_content .= $valor_list;
 						$html_content .= "</div>";
@@ -296,7 +323,7 @@
 								$html_content .= "<a class=\"debug_info\" href=\"$url\" target=\"_blank\">Update</a>";
 							}
 						}						
-					$html_content .= " </td>";
+					$html_content .= "</td>";
 
 				}//end foreach($ar_valor as $component_tipo => $valor_list) {
 
@@ -308,6 +335,11 @@
 	
 	# PRINT HTML
 	print $html_content;
+
+
+	if(SHOW_DEBUG===true) {
+		print "<!-- /ROWS ROW [section_id.$section_id section_tipo.$section_tipo modo:$modo lang:$lang] -->";
+	}
 	
 
 ?>

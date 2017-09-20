@@ -8,6 +8,7 @@
 	$section_tipo 			= $this->component_obj->get_section_tipo();
 	$lang 					= $this->component_obj->get_lang();
 	$label 					= $this->component_obj->get_label();
+	$section_label 			= RecordObj_dd::get_termino_by_tipo($section_tipo);
 	$component_name			= get_class($this->component_obj);
 	$tool_locator			= DEDALO_TOOL_INVESTIGATION_SECTION_TIPO.'_'.DEDALO_TOOL_TRANSCRIPTION_ID;//
 	$tool_name 				= get_class($this);
@@ -32,15 +33,18 @@
 					return null; 	# media sin transcripción asociada
 				}
 
+	
 				# Because components are loaded by ajax, we need prepare js/css elements from tool
 				#					
 				# CSS
 					css::$ar_url[] = DEDALO_LIB_BASE_URL.'/component_text_area/css/component_text_area.css';
+					css::$ar_url[] = DEDALO_LIB_BASE_URL."/component_publication/css/component_publication.css";
 					css::$ar_url[] = DEDALO_LIB_BASE_URL."/$component_name/css/$component_name.css";
 					
 				#
 				# JS includes
 					js::$ar_url[] = DEDALO_LIB_BASE_URL.'/component_text_area/js/component_text_area.js';
+					js::$ar_url[] = DEDALO_LIB_BASE_URL."/component_publication/js/component_publication.js";	
 					js::$ar_url[] = DEDALO_LIB_BASE_URL."/$component_name/js/$component_name.js";
 
 				#
@@ -60,6 +64,7 @@
 				$this->component_related_obj->set_lang($original_lang);
 				$component_related_obj_tipo = $this->component_related_obj->get_tipo();
 				$html_text 					= $this->component_related_obj->get_html();
+				$id_wrapper 				= 'wrapper_'.$this->component_related_obj->get_identificador_unico();
 
 				# TEXTAREA_LANG
 				# Note that component_textarea can change his lang ('force_change_lang') in some contexts
@@ -87,8 +92,31 @@
 				$section 				= section::get_instance($section_id ,$section_tipo);
 				$ar_all_project_langs 	= $section->get_ar_all_project_langs($resolve_termino=true);
 				*/
-				$ar_all_project_langs 	= common::get_ar_all_langs_resolved(DEDALO_DATA_LANG);					
+				$ar_all_project_langs 	= common::get_ar_all_langs_resolved(DEDALO_DATA_LANG);
+
+
+				# INVERSE_CODE
+				$inverse_code = tool_common::get_inverse_element('code', $parent, $section_tipo);
+					#dump($inverse_code, ' $inverse_code ++ '.to_string());
+
+				#
+				# TOP_ID
+				# Calculate TOP_ID from inverse data
+				# dump(TOP_ID, 'TOP_ID ++ '.to_string());
+				#if (!TOP_ID) {
+					#dump($this, ' this ++ '.to_string());
+					$section = section::get_instance( $parent, $section_tipo );
+					$inverse_locators = $section->get_inverse_locators();
+						#dump($inverse_locators, ' inverse_locators ++ '."$parent, $section_tipo ".to_string());
+					/*
+					if (empty($inverse_locators)) {
+						//trigger_error("Warning: Indexing resource");
+						echo "<div class=\"warning\">".label::get_label('por_favor_indexe_desde_una_seccion_de_inventario')." [2]</div>";
+						return ;
+					}*/
+				#}//end if (!TOP_ID) {
 				
+
 				#
 				# STATE
 				# Create component_state configurated
@@ -133,8 +161,7 @@
 	}#end switch		
 
 
-		
-
+	
 
 
 	# INCLUDE FILE HTML

@@ -5,28 +5,33 @@
 	# ELEMENTOS	
 	
 	# html_delimiter
-	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'in');
+	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'in', $modo);
 
-	print "<div class=\"css_wrap_text_area wrap_component text_area_tool_transcription\" id=\"{$id_wrapper}\"
-	data-tipo=\"{$tipo}\"
-	data-section_tipo=\"{$section_tipo}\"
-	data-parent=\"{$parent}\"
-	data-lang=\"{$lang}\"
-	data-modo=\"{$modo}\"
-	data-dato=\"{$dato_raw}\"
-	data-component_name=\"{$component_name}\"
-	data-related_tipo='{$ar_related_component_tipo_json}'
-	>";
+	# wrapper
+	print "<div class=\"css_wrap_text_area wrap_component text_area_tool_transcription\" id=\"{$id_wrapper}\" ";
+	print "data-tipo=\"{$tipo}\" ";
+	print "data-section_tipo=\"{$section_tipo}\" ";
+	print "data-parent=\"{$parent}\" ";
+	print "data-lang=\"{$lang}\" ";
+	print "data-modo=\"{$modo}\" ";
+	#print "data-dato=\"{$dato_raw}\" ";
+	print "data-component_name=\"{$component_name}\" ";
+	print "data-related_tipo='{$ar_related_component_tipo_json}' ";
+	print ">";
 	
 	# ETIQUETA (LABEL)
 	$html_label = component_common_draw::draw_label($this);
+
+	# LANG FAST SWITCHER
+	#$html_label .= component_common_draw::draw_select_fast_lang_switch($id_wrapper, $lang, 'tool_transcription_fast_lang_switch', 'tool_transcription.fast_switch_lang');
+	
 	
 	# CONTENIDO (INPUT)
 	$html_content = '';
 	switch($permissions) {
 			
 		case 0	:	
-				$html_content .= "";	
+				$html_content .= "";
 				break;
 						
 		case 1	: 	
@@ -39,11 +44,11 @@
 		case 3	:
 				#
 				# BROKEN INDEX TAGS WARNING
-				if (isset($component_warning)) {
-					$html_content .= "<div id=\"text_area_warning\" class=\"text_area_warning\">
-					<span class=\"warning\">".$component_warning."</span>
-					<div class=\"button_close\" onclick=\"html_page.close_content(this)\"></div>
-					</div>";
+				if (!empty($component_warning)) {
+					$html_content .= "<div id=\"text_area_warning\" class=\"text_area_warning\">";
+					$html_content .= "<span class=\"warning\">".$component_warning."</span>";
+					$html_content .= "<div class=\"button_close\" onclick=\"html_page.close_content(this)\"></div>";
+					$html_content .= "</div>";
 				}
 
 				#
@@ -56,19 +61,25 @@
 				$html_content .= "</div>";
 				*/
 
+				if(SHOW_DEBUG===true) {
+					$html_content .= "<span class=\"lang_info_debug\">$lang</span>" ;
+				}
+
 				#
 				# TEXT AREA
 				#
-				$html_content .= "<textarea class=\"css_text_area text_area_transcription\"
-				id=\"{$identificador_unico}\"
-				name=\"{$input_name}\"
-				data-parent=\"{$parent}\"
-				data-tipo=\"{$tipo}\"
-				data-lang=\"{$lang}\"
-				data-modo=\"{$modo}\"
-				data-section_tipo=\"{$section_tipo}\"
-				data-role=\"text_area_transcription\"
-				title=\"$html_title\">$dato</textarea>";
+				$html_content .= "<textarea class=\"css_text_area text_area_transcription\" ";
+				$html_content .= "id=\"{$identificador_unico}\" ";
+				$html_content .= "name=\"{$input_name}\" ";
+				$html_content .= "data-parent=\"{$parent}\" ";
+				$html_content .= "data-tipo=\"{$tipo}\" ";
+				$html_content .= "data-lang=\"{$lang}\" ";
+				$html_content .= "data-modo=\"{$modo}\" ";
+				$html_content .= "data-section_tipo=\"{$section_tipo}\" ";
+				$html_content .= "data-role=\"text_area_transcription\" ";
+				$html_content .= "title=\"$html_title\">";
+				$html_content .= $dato;
+				$html_content .= "</textarea>";
 				
 				if (SHOW_DEBUG===true) {
 					#$html_content .= "<span class=\"debug_info\"> $identificador_unico</span>";					
@@ -76,7 +87,9 @@
 				}
 				
 				# INIT : Init text editor 
-				$html_content .= "<script>text_editor.init('$identificador_unico','$modo');component_text_area.load_tags_person(null, true)</script>";
+				$html_content .= "<script>";
+				$html_content .= "component_text_area.init({uid:'$identificador_unico',modo:'$modo',propiedades:'$propiedades_json',load_tags_person:true});";				
+				$html_content .= "</script>";
 				break;
 
 	}//end switch($permissions)	
@@ -94,6 +107,6 @@
 	print "</div>"; //wrap
 
 	# html_delimiter
-	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'out');
+	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'out', $modo);
 
 ?>

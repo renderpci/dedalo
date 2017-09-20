@@ -3,85 +3,89 @@
 	# VISUALIZADOR HTML	
 
 	
-	print "\n<!-- STATE [tipo:$tipo section_id_matrix:$parent] $label -->";
-	print "\n<div id=\"{$id_wrapper}\" class=\"css_wrap_state css_wrap_state_edit_tool wrap_component\"
-	data-tipo=\"{$tipo}\"
-	data-lang=\"{$lang}\"
-	data-label=\"{$label}\"
-	data-section_tipo=\"{$section_tipo}\"
-	data-parent=\"{$parent}\"
-	data-modo=\"{$modo}\"
-	data-component_name=\"{$component_name}\">";
+	print "<!-- STATE [tipo:$tipo section_id_matrix:$parent] $label -->";
+	print "<div id=\"{$id_wrapper}\" class=\"css_wrap_state css_wrap_state_edit_tool wrap_component\" ";
+	print "data-tipo=\"{$tipo}\" ";
+	print "data-lang=\"{$lang}\" ";
+	print "data-label=\"{$label}\" ";
+	print "data-section_tipo=\"{$section_tipo}\" ";
+	print "data-parent=\"{$parent}\" ";
+	print "data-modo=\"{$modo}\" ";
+	print "data-component_name=\"{$component_name}\">";
 	
 	# ETIQUETA (LABEL)
 	$html_label = component_common_draw::draw_label($this);
 	
 	# CONTENIDO (INPUT)
-	$html_contenido = '';
+	$html_content = '';
 	
 	
 	switch($permissions) {
 			
-		case 0	:	$html_contenido .= "\n <span class=\"css_span_dato\"> ".label::get_label('sin_acceso')." ".get_class()."</span>"; 
+		case 0	:	$html_content .= " <span class=\"css_span_dato\"> ".label::get_label('sin_acceso')." ".get_class()."</span>"; 
 					break;
 						
-		case 1	: 	$html_contenido .= $valor;
+		case 1	: 	$html_content .= $valor;
 					$caller_element  = isset($this->caller_element) ? $this->caller_element : null;
-					$html_contenido .= "\n <label class=\"css_state_rotulo\">". label::get_label($caller_element) ."</label>";
+					$html_content .= " <label class=\"css_state_rotulo\">". label::get_label($caller_element) ."</label>";
 					break;
 						
-		case ($permissions>=2)	:
-					
+		case 2	:
+		case 3	:					
 					# User options
-					$checked = $valor_for_checkbox[0]>=1 ? 'checked="checked"' : '';					
-					$html_contenido .= "\n <input type=\"checkbox\" class=\"css_state\"
-					id=\"{$id_wrapper}_checkbox\"
-					data-tipo=\"{$tipo}\"
-					data-section_tipo=\"{$section_tipo}\"
-					data-parent=\"{$parent}\"
-					data-lang=\"{$lang}\"
-					data-id_wrapper=\"{$id_wrapper}\"
-					data-options='".$options_json."'
-					data-type='user'					
-					value=\"".$valor_for_checkbox[0]."\"
-					title=\"$html_title\" $checked
-					onchange=\"component_state.update_state_locator(this)\" />";
+					$checked = $valor_for_checkbox[0]>=1 ? 'checked="checked"' : '';
+
+					$html_content .= "<input type=\"checkbox\" class=\"css_state\" onchange=\"component_state.update_state_locator(this)\" ";
+					$html_content .= "id=\"{$id_wrapper}_checkbox\" ";
+					$html_content .= "title=\"$html_title\" $checked ";
+					$html_content .= "data-tipo=\"{$tipo}\" ";
+					$html_content .= "data-section_tipo=\"{$section_tipo}\" ";
+					$html_content .= "data-parent=\"{$parent}\" ";
+					$html_content .= "data-lang=\"{$lang}\" ";
+					$html_content .= "data-id_wrapper=\"{$id_wrapper}\" ";
+					$html_content .= "data-options='".$options_json."' ";
+					$html_content .= "data-type='user' ";
+					$html_content .= "value=\"".$valor_for_checkbox[0]."\" ";					
+					$html_content .= "/>";
 											
-					$html_contenido .= "<label for=\"{$id_wrapper}_checkbox\"> ".label::get_label('acabado')." </label>";
+					$html_content .= "<label for=\"{$id_wrapper}_checkbox\">".label::get_label('acabado')."</label>";
 					
 					
 
 					if($permission_section>=3 || (bool)$is_global_admin===true) {
 
 						# Admin options
-						$html_contenido .= "\n <select onchange=\"component_state.update_state_locator(this)\"
-						data-tipo=\"{$tipo}\"
-						data-section_tipo=\"{$section_tipo}\"
-						data-parent=\"{$parent}\"
-						data-lang=\"{$lang}\"
-						data-id_wrapper=\"{$id_wrapper}\"
-						data-options='".$options_json."'
-						data-type='admin'												
-						>";
-						$html_contenido .= "<option value=\"0\"> </option>";
+						$html_content .= "<select class=\"custom_dropdown\" onchange=\"component_state.update_state_locator(this)\" ";
+						$html_content .= "data-tipo=\"{$tipo}\" ";
+						$html_content .= "data-section_tipo=\"{$section_tipo}\" ";
+						$html_content .= "data-parent=\"{$parent}\" ";
+						$html_content .= "data-lang=\"{$lang}\" ";
+						$html_content .= "data-id_wrapper=\"{$id_wrapper}\" ";
+						$html_content .= "data-options='".$options_json."' ";
+						$html_content .= "data-type='admin'";											
+						$html_content .= ">";
+
+						$html_content .= "<option value=\"0\"> </option>";
+
 						$selected = ($valor_for_checkbox[1]==50) ? 'selected="selected"' : '';
-						$html_contenido .= "<option value=\"50\" $selected >".label::get_label('para_revisar')."</option>";
+
+						$html_content .= "<option value=\"50\" {$selected}>".label::get_label('para_revisar')."</option>";
 						$selected = ($valor_for_checkbox[1]==100) ? 'selected="selected"' : '';
-						$html_contenido .= "<option value=\"100\" $selected >".label::get_label('validado')."</option>";
-						$html_contenido .= "</select> ";
+						$html_content .= "<option value=\"100\" {$selected}>".label::get_label('validado')."</option>";
+						$html_content .= "</select> ";
 
 					}else{
 
 						# USER: Label to info user about current admin options values (read only)
 						switch (true) {
 							case $valor_for_checkbox[1]==50:
-								$html_contenido .= " <strong>".label::get_label('para_revisar')."</strong>";
+								$html_content .= "<strong>".label::get_label('para_revisar')."</strong>";
 								break;
 							case $valor_for_checkbox[1]==100:
-								$html_contenido .= " <strong>".label::get_label('validado')."</strong>";
+								$html_content .= "<strong>".label::get_label('validado')."</strong>";
 								break;
 							default:
-								$html_contenido .= " <strong>".''."</strong>";
+								$html_content .= "<strong>".''."</strong>";
 								break;
 						}
 												
@@ -90,14 +94,14 @@
 	}
 
 	# Prepare content to show in page
-	tools::prepare_content($html_contenido);	
+	tools::prepare_content($html_content);	
 	
 	
 	# PRINT HTML
 	print $html_label;
-	print $html_contenido;
+	print $html_content;
 
 	
 	
-	print "\n</div>\n\n"; //wrap
+	print "</div>"; //wrap
 ?>

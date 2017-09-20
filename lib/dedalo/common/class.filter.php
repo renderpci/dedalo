@@ -1,10 +1,8 @@
 <?php
-
-
-
-
 /**
 * FILTER CLASS
+*
+*
 */
 abstract class filter {
 	
@@ -145,9 +143,10 @@ abstract class filter {
 					$ar_profile_id = self::get_profiles_for_areas( $ar_area_tipo );						
 						#dump($ar_profile_id, ' $ar_profile_id ++ '.to_string($profile_sql)); die();
 
+					$last_item = end($ar_profile_id);
 					foreach ($ar_profile_id as $current_profile_id) {
 						$sql_filter.= "\n a.$options->json_field#>'{components, ".DEDALO_USER_PROFILE_TIPO.", dato, ". DEDALO_DATA_NOLAN ."}' = '$current_profile_id' ";
-						if ($current_profile_id != end($ar_profile_id)) $sql_filter .= "OR";
+						if ($current_profile_id != $last_item) $sql_filter .= "OR";
 					}					
 					$sql_filter .= "\n)";
 						#dump($sql_filter, ' $sql_filter ++ '.to_string($ar_profile_id)); die();
@@ -203,20 +202,24 @@ abstract class filter {
 					}else{
 						$sql_filter .= '(';
 						$ar_values_string='';
+						$last_item = end($ar_id_project);
 						foreach ($ar_id_project as $id_matrix_project){
 							$ar_values_string .= "'{$id_matrix_project}'";
-							if ($id_matrix_project != end($ar_id_project)) $ar_values_string .= ',';
+							if ($id_matrix_project != $last_item) $ar_values_string .= ',';
 						}
 						$sql_filter .= "\n a.$options->json_field#>'{components,$component_filter_tipo,dato,". DEDALO_DATA_NOLAN ."}' ?| array[$ar_values_string] OR ";
-						$sql_filter .= "\n a.$options->json_field @>'{\"created_by_userID\":".navigator::get_user_id()."}'::jsonb ";
-						$sql_filter .= "\n)";
+						$sql_filter .= "\n(a.$options->json_field @>'{\"created_by_userID\":".navigator::get_user_id()."}'::jsonb AND (";
+						#$sql_filter .=   "a.$options->json_field#>'{components,$component_filter_tipo,dato,". DEDALO_DATA_NOLAN ."}' IS NULL OR ";
+						$sql_filter .=    "a.datos#>'{components,$component_filter_tipo,dato,". DEDALO_DATA_NOLAN ."}' IS NULL OR ";
+						$sql_filter .=    "a.$options->json_field#>>'{components,$component_filter_tipo,dato,". DEDALO_DATA_NOLAN ."}'='{}'))";
+						$sql_filter .= "\n )";
 					}
 					break;
-			}#end switch
+			}//end switch
 		}
 
 		return $sql_filter;
-	}#end get_sql_filter
+	}//end get_sql_filter
 
 
 
@@ -244,8 +247,7 @@ abstract class filter {
 		}
 
 		return (array)$ar_profile_id;
-
-	}#end get_profiles_for_areas
+	}//end get_profiles_for_areas
 
 
 
@@ -298,7 +300,7 @@ abstract class filter {
 
 		return false;
 
-	}#end is_authorized_record	
+	}//end is_authorized_record	
 	
 
 
@@ -320,6 +322,7 @@ abstract class filter {
 
 			return $dato;
 		}
+
 		return null;		
 	}
 

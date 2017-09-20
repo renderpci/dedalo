@@ -2,8 +2,8 @@
 
 	# VISUALIZADOR HTML	
 	
-	print "\n<!-- SECURITY ACCESS [tipo:$tipo id_matrix:$id] -->";
-	print "\n<div class=\"css_wrap_security_access\" id=\"wrap_{$tipo}\">";
+	print "<!-- SECURITY ACCESS [tipo:$tipo id_matrix:$id] -->";
+	print "<div class=\"css_wrap_security_access\" id=\"wrap_{$tipo}\">";
 	
 	# ETIQUETA (LABEL)
 	$html_label = component_common_draw::draw_label($this);
@@ -12,10 +12,10 @@
 	$html_contenido = '';
 	switch($permissions) {
 			
-		case 0	:	$html_contenido .= "\n <span class=\"css_span_dato\"> No access here (security_access)! </span>";	
+		case 0	:	$html_contenido .= "<span class=\"css_span_dato\"> No access here (security_access)! </span>";	
 					break;
 						
-		case 1	: 	$html_contenido .= "\n <span class=\"css_span_dato\"> No read access here (security_access)!</span>";
+		case 1	: 	$html_contenido .= "<span class=\"css_span_dato\"> No read access here (security_access)!</span>";
 					break;	
 						
 		case ($permissions>=2)	:
@@ -34,14 +34,14 @@
 					</ul>
 					*/
 					
-					$html_contenido .= " <span class='error'> ESTE TIME MACHINE ESTÁ POR ACABAR ... </span>";
+					$html_contenido .= "<span class='error'> ESTE TIME MACHINE ESTÁ POR ACABAR ... </span>";
 						
-					$html_contenido .= "\n\n <!-- Tree --> " ;					
+					$html_contenido .= " <!-- Tree --> " ;					
 					
 					$html_contenido .= $tree_html;
 													
 					if($permissions==3){
-						$html_contenido .= "\n <br><span class=\"css_span_debugger\" id=\"debugger_{$id}\" >{$debugger}</span>";		
+						$html_contenido .= "<br><span class=\"css_span_debugger\" id=\"debugger_{$id}\" >{$debugger}</span>";		
 					}
 					break;							
 							
@@ -53,5 +53,5 @@
 	print $html_contenido;
 	
 	
-	print "\n</div>\n\n"; //wrap
+	print "</div>"; //wrap
 ?>

@@ -1,4 +1,19 @@
-/* INSPECTOR */
+// Vars
+@common_css: "../../../common/css";
+
+// Usage
+@import "@{common_css}/library.less";
+
+
+.tool_transcription_icon {
+	background-color: @color_trascription;
+	background-image: url(../../../themes/default/icon_transcription_hover.svg);
+	// Adjust icon size
+	background-size: 18px !important;
+    background-position-y: 3px !important;
+    background-position-x: 6px !important;
+} 
+
 
 
 /* PAGE
@@ -21,17 +36,26 @@
 	.header_tool {
 
 		}
-		.header_tool .lang_selector_in_header {
+		.header_tool .select_fast_lang_switch {
 			float: left;
 			position: relative;	
 			top: 3px;
 			left: 10px;
 			text-transform: capitalize;
+			padding-right: 20px;
 		}
-		.header_tool .lang_selector_in_header select {
+		//.header_tool .lang_selector_in_header .select_fast_lang_switch select {
+		.header_tool .lang_selector_in_header .select_fast_lang_switch{
+			opacity: 1;
 			margin-left: 5px;
 			margin-right: 10px;
 			color: #000000;
+			max-width: 84px;
+		}
+		.header_tool .lang_selector_in_header{
+			padding: 2px;
+			padding-right: 10px;
+			padding-left: 10px;
 		}
 		.header_tool #header_info {
 			display:block;
@@ -260,4 +284,6 @@
 			position: absolute;
 			height: calc(100% + 4px); //width: calc(100.5% + 4px); // Adjust as needed 
 			//background-color: #40F588
+			//padding: 0;
 		}
+

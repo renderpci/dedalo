@@ -1,13 +1,14 @@
 <?php
 
 	# VISUALIZADOR HTML
-	$html    = "\n<!-- TOOL TIME MACHINE PREVIEW COMPONENT [tipo:$tipo section_id:$id] -->";
+	$html = '';
+	#$html    = "<!-- TOOL TIME MACHINE PREVIEW COMPONENT [tipo:$tipo section_id:$id] -->";
 	
 	# Wrap
-	$html   .= "\n<div class=\"css_wrap_time_machine\" >";
+	$html   .= "<div class=\"css_wrap_time_machine\">";
 		
 		# Header
-		$html 	.= "\n<div class=\"css_time_machine_label css_tool_label text_shadow_inset\">";
+		$html 	.= "<div class=\"css_time_machine_label css_tool_label text_shadow_inset\">";
 		$html 	.= label::get_label('tool_time_machine')." ".label::get_label('preview');
 		$html 	.= " [$lang]";
 		if(SHOW_DEBUG===true) {
@@ -19,16 +20,16 @@
 		$html   .= $component_for_time_machine_html;
 
 		# Footer info					
-		$html .= "\n <div class=\"tm_component_footer_info\"> $version_date </div>";
+		$html .= "<div class=\"tm_component_footer_info\"> $version_date </div>";
 	
-	$html   .= "\n</div>"; //wrap
+	$html   .= "</div>"; //wrap
 
 
 	# Script
-	$html   .= "<script>
-					// Fix current id_time_machine value					 	
-					tool_time_machine.current_id_time_machine = '$id_time_machine';								
-				</script>";
+	$html   .= "<script>";
+	#$html   .= "// Fix current id_time_machine value					 	
+	$html   .= "tool_time_machine.current_id_time_machine = ".(int)$id_time_machine.";";								
+	$html   .= "</script>";
 
 
 	print $html;

@@ -196,6 +196,53 @@ class component_inverse extends component_common {
 		return $search_query;
 	}//end get_search_query
 
+
+
+	/**
+	* GET_INVERSE_VALUE
+	* @return string $inverse_value
+	*/
+	public function get_inverse_value($locator) {
+
+		$tipo = $this->get_tipo();			
+		
+		$ar_look_section_tipo = common::get_ar_related_by_model('section', $tipo);
+		if (!isset($ar_look_section_tipo[0])) {
+			return null;
+		}
+		$look_section_tipo = $ar_look_section_tipo[0];		
+		if ($locator->section_tipo!==$look_section_tipo) {
+			//debug_log(__METHOD__." Ignored section tipo ".to_string(), logger::DEBUG);
+			return null;
+		}
+
+		$ar_value=array();
+		$ar_related = $this->RecordObj_dd->get_relaciones();
+		foreach ($ar_related as $key => $value) {
+			#dump($value, ' value ++ '.to_string()); 
+			$current_tipo = reset($value);
+			$modelo_name  = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
+			if ($modelo_name!=='section') {			
+				# Components
+				$component = component_common::get_instance( $modelo_name,
+															 $current_tipo,
+															 $locator->section_id,
+															 'list',
+															 DEDALO_DATA_LANG,
+															 $locator->section_tipo);
+				$value = $component->get_valor();
+					#dump($value, ' value ++ '.to_string());
+				#$ar_value[] = $modelo_name::render_list_value($locator, $current_tipo, $locator->section_id, 'list', DEDALO_DATA_LANG, $locator->section_tipo, $locator->section_id);
+				$ar_value[] = $value;
+			}
+		}
+		#dump($ar_value, ' $ar_value ++ '.$look_section_tipo.' -- '.to_string($locator));
+		$inverse_value = implode('/ ',$ar_value);
+
+		
+		return (string)$inverse_value;	
+	}//end get_inverse_value
+
 	
 	
 	

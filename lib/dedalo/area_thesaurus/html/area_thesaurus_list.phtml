@@ -28,6 +28,7 @@
 	$html .= "<ul id=\"thesaurus_list_wrapper\">";
 	#foreach ($ar_hierarchy_typologies->result as $ar_value) foreach($ar_value as $key => $row) {
 	$root_nodes=array();
+	$ar_hierarchy_selector = array();
 	foreach ($ar_hierarchy_typologies as $key => $tipology_section_id) {
 		#dump($row, ' row ++ '.to_string());
 
@@ -44,13 +45,13 @@
 			if (!in_array($tipology_section_id, $hierarchy_types)) {
 				continue;
 			}
-		}	
+		}
 
-		$html .= "<li>";			
+		$html .= "<li>";
 
 		#
 		# HIERARCHY TIPOLOGY NAME Like 'Toponimia'
-		$html .= "<div class=\"tipology_name $tipology_name_model_css\"> <strong> ".trim($tipology_name)."</strong></div>";
+		$html .= "<div class=\"tipology_name $tipology_name_model_css\"> <strong>".trim($tipology_name)."</strong></div>";
 
 		#
 		# HIERARCHIES OF CURRENT TIPO Like 'España' for tipology_section_id 2
@@ -62,7 +63,7 @@
 			foreach ($hierarchies_rows_obj->result as $hierarchy_ar_value) foreach($hierarchy_ar_value as $hierarchy_key => $hierarchy_row) {
 							
 				$hierarchy_section_id   		= $hierarchy_row['section_id'];
-				$hierarchy_section_tipo 		= $hierarchy_row['section_tipo'];				
+				$hierarchy_section_tipo 		= $hierarchy_row['section_tipo'];
 				$hierarchy_term_tipo 			= DEDALO_HIERARCHY_TERM_TIPO;
 				$hierarchy_name 				= json_decode($hierarchy_row[$hierarchy_term_tipo])[0];
 				# hierarchy_target_section_tipo is a json encoded array
@@ -95,11 +96,15 @@
 				
 				// WRAP_TS_OBJECT
 				$hierarchy_trigger_id = $hierarchy_section_tipo.'_'.$hierarchy_section_id;
+				
 				$html .= "<div class=\"wrap_ts_object hierarchy_root_node\" data-node_type=\"hierarchy_node\" data-section_tipo=\"{$hierarchy_section_tipo}\" data-section_id=\"{$hierarchy_section_id}\" data-target_section_tipo=\"$hierarchy_target_section_tipo\">";
 				
 				
 					$root_node_id = $hierarchy_trigger_id.'_root';
 					$root_nodes[] = $root_node_id;
+
+
+					$ar_hierarchy_selector[$hierarchy_section_id] = $hierarchy_name;
 
 					/*
 					# column id
@@ -183,7 +188,17 @@
 	}else{
 	
 		// List mode
-		$html .= " <script>area_thesaurus.root_nodes=".json_encode($root_nodes)."</script>";
+		function cmp($a, $b) {if ($a == $b) {return 0;}return ($a < $b) ? -1 : 1;}
+		uasort($ar_hierarchy_selector, 'cmp');
+		$ar_hierarchy_obj = array();
+		foreach ($ar_hierarchy_selector as $key => $value) {
+			$ar_hierarchy_obj[] = array('id' => $key, 'label' => $value);
+		}
+			#dump($ar_hierarchy_obj, ' ar_hierarchy_obj ++ '.to_string());
+		$html .= "<script>";
+		$html .= "area_thesaurus.root_nodes=".json_encode($root_nodes).";\n";
+		$html .= "area_thesaurus.ar_hierarchy=".json_encode($ar_hierarchy_obj).";";
+		$html .= "</script>";
 
 	}//end if ($thesaurus_list_mode==='search') 
 	
@@ -193,7 +208,6 @@
 	
 	$html .= "</ul>";
 	echo $html;
-
 
 
 

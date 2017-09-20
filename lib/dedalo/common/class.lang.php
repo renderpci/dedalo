@@ -108,6 +108,7 @@ class lang {
 				case 'lg-rus':	$section_id = 15862;	break;
 				case 'lg-ell':	$section_id = 5037;		break;
 				case 'lg-deu':	$section_id = 4253;		break;
+				case 'lg-ita':	$section_id = 7466;		break;
 				default:
 					break;
 			}
@@ -179,7 +180,7 @@ class lang {
 	* GET_LANG_NAME_BY_LOCATOR
 	* @return string $lang_name
 	*/
-	public static function get_lang_name_by_locator($locator, $lang=DEDALO_DATA_LANG, $from_cache=false) {
+	public static function get_lang_name_by_locator($locator, $lang=DEDALO_APPLICATION_LANG, $from_cache=false) {
 		$lang_name = ts_object::get_term_by_locator( $locator, $lang, $from_cache );
 
 		return $lang_name;
@@ -244,6 +245,7 @@ class lang {
 		if ($add_prefix===true) {
 			$code = 'lg-'.$code;
 		}
+		
 
 		return (string)$code;
 	}//end get_code_from_locator

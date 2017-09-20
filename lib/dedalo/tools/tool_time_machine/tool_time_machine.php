@@ -24,12 +24,14 @@
 
 
 	# TOOL CSS / JS MAIN FILES
-	css::$ar_url[] = DEDALO_LIB_BASE_URL."/tools/".$tool_name."/css/".$tool_name.".css";
-	js::$ar_url[]  = DEDALO_LIB_BASE_URL."/tools/".$tool_name."/js/".$tool_name.".js";
+	if (strpos($modo,'button')===false) {
+		css::$ar_url[] = DEDALO_LIB_BASE_URL."/tools/".$tool_name."/css/".$tool_name.".css";
+		js::$ar_url[]  = DEDALO_LIB_BASE_URL."/tools/".$tool_name."/js/".$tool_name.".js";
+	}
 
 
 	#dump($modo,"modo");
-	switch($modo) {		
+	switch($modo) {
 
 		#
 		# PAGE . Estructural TM page
@@ -56,7 +58,6 @@
 				}
 				#dump($source_component,' $source_component');
 				
-
 				# Build source html
 				$this->set_modo('source');	# change temp
 				$source_html = $this->get_html();
@@ -183,10 +184,10 @@
 					$id_time_machine 			= current($ar_time_machine_of_this);
 				}
 
-				if (empty($id_time_machine)) {
-
-					return NULL;
+				if (empty($id_time_machine)) {					
 					$component_for_time_machine_html = "<br><div class=\"warning\">No history exists for this component</div>";
+					echo $component_for_time_machine_html;
+					return NULL;
 					#exit("No history exists for this component"); #throw new Exception("Error Processing Request: Unable load_preview_component ! (Few vars2)", 1);
 
 				}else{
@@ -231,7 +232,6 @@
 
 				}				
 				break;
-
 		
 		# BUTTON FOR SECTION ROWS LIST . TM FOR LIST
 		case 'button_section_list':

@@ -1,24 +1,11 @@
 <?php
-require_once( dirname(dirname(__FILE__)).'/config/config4.php');
+$start_time=microtime(1);
+include( dirname(dirname(__FILE__)).'/config/config4.php');
+# TRIGGER_MANAGER. Add trigger_manager to receive and parse requested data
+common::trigger_manager();
 
-if(login::is_logged()!==true) die("<span class='error'> Auth error: please login </span>");
-
-# set vars
-	$vars = array('mode');
-		foreach($vars as $name) $$name = common::setVar($name);
-
-# Set JSON headers for all responses
-header('Content-Type: application/json');
-
-# mode
-if(empty($mode)) exit("<span class='error'> Trigger: Error Need mode..</span>");
-
-
-# CALL FUNCTION
-if ( function_exists($mode) ) {
-	$res = call_user_func($mode);
-	echo json_encode($res);
-}
+# IGNORE_USER_ABORT
+ignore_user_abort(true);
 
 
 
@@ -26,13 +13,16 @@ if ( function_exists($mode) ) {
 * ADD_RELATED
 * @return bool
 */
-function add_related() {
+function add_related($json_data) {
+	global $start_time;
 
-	$result = false;
+	$response = new stdClass();
+		$response->result 	= false;
+		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
 	
 	$vars = array('tipo','parent','section_tipo','target_section_tipo','target_section_id');
 		foreach($vars as $name) {
-			$$name = common::setVar($name);
+			$$name = common::setVarData($name, $json_data);
 			if (empty($$name)) {
 				exit("Error. ".$$name." is mandatory");
 			}
@@ -59,10 +49,23 @@ function add_related() {
 	$added = (bool)$component_relation_related->add_related( $locator );
 	if ($added===true) {
 		$component_relation_related->Save();
-		$result = true;
+
+		$response->result 	= true;
+		$response->msg 		= 'Ok. Request done ['.__FUNCTION__.']';
 	}
 
-	return (bool)$result;
+	# Debug
+	if(SHOW_DEBUG===true) {
+		$debug = new stdClass();
+			$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
+			foreach($vars as $name) {
+				$debug->{$name} = $$name;
+			}
+
+		$response->debug = $debug;
+	}
+
+	return (object)$response;
 }//end add_related
 
 
@@ -71,13 +74,16 @@ function add_related() {
 * REMOVE_related
 * @return bool
 */
-function remove_related() {
+function remove_related($json_data) {
+	global $start_time;
 
-	$result = false;
+	$response = new stdClass();
+		$response->result 	= false;
+		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
 	
 	$vars = array('tipo','parent','section_tipo','target_section_tipo','target_section_id');
 		foreach($vars as $name) {
-			$$name = common::setVar($name);
+			$$name = common::setVarData($name, $json_data);
 			if (empty($$name)) {
 				exit("Error. ".$$name." is mandatory");
 			}
@@ -103,20 +109,25 @@ function remove_related() {
 	$removed = (bool)$component_relation_related->remove_related( $locator );
 	if ($removed===true) {
 		$component_relation_related->Save();
-		$result = true;
+
+		$response->result 	= true;
+		$response->msg 		= 'Ok. Request done ['.__FUNCTION__.']';
 	}
 
-	return (bool)$result;
+	# Debug
+	if(SHOW_DEBUG===true) {
+		$debug = new stdClass();
+			$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
+			foreach($vars as $name) {
+				$debug->{$name} = $$name;
+			}
+
+		$response->debug = $debug;
+	}
+
+
+	return (object)$response;
 }//end remove_related
-
-
-
-
-
-
-
-
-
 
 
 

@@ -25,13 +25,13 @@ class navigator extends Accessors {
 	
 	public function __construct() {
 		
-		self::$ar_vars = array('root','area','module','section','modo','id','caller_id','caller_tipo','context');
+		self::$ar_vars = array('root','area','module','section','modo','id','caller_id','caller_tipo'); // ,'context'
 		
 		# LOAD AND SET SESSION VARS
 		self::get_session_vars();
 		
 		# LOAD AND SET HTTP VARS
-		self::get_http_vars();
+		//self::get_http_vars();
 		
 		# STORE SESSION VARS
 		self::set_session_vars();
@@ -76,13 +76,13 @@ class navigator extends Accessors {
 			}
 		}
 	}
-	
+	/*
 	private function get_http_vars() {
 		
 		foreach(self::$ar_vars as $name) {
 			eval( "if( !empty(\$_REQUEST[\$name]) ) self::\$selected_$name = \$_REQUEST[\$name];" );
 		}
-	}	
+	}*/	
 		
 	private function set_session_vars() {
 		/*

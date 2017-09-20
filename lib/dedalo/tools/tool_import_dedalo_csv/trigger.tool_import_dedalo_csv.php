@@ -1,81 +1,141 @@
 <?php
-set_time_limit ( 259200 );  // 3 dias
-
-// JSON DOCUMENT
-header('Content-Type: application/json');
-
-$session_duration_hours = 72;
-require_once( dirname(dirname(dirname(__FILE__))) .'/config/config4.php');
-
-
-if(login::is_logged()!==true) die("<span class='error'> Auth error: please login </span>");
+$start_time=microtime(1);
+set_time_limit ( 345600 );  // 4 dias: 4 * 24 * 3600
+$session_duration_hours = 96;
+include( dirname(dirname(dirname(__FILE__))) .'/config/config4.php');
+# TRIGGER_MANAGER. Add trigger_manager to receive and parse requested data
+common::trigger_manager();
 
 
 # Disable logging activity and time machine # !IMPORTANT
 logger_backend_activity::$enable_log = false;
-#RecordObj_time_machine::$save_time_machine_version = false;
-
+RecordObj_time_machine::$save_time_machine_version = false;
 
 # Write session to unlock session file
 session_write_close();
 
-
-# set vars
-	$vars = array('mode');
-		foreach($vars as $name) $$name = common::setVar($name);
-
-# mode
-	if(empty($mode)) exit("<span class='error'> Trigger: Error Need mode..</span>");
-
-
-
-# CALL FUNCTION
-if ( function_exists($mode) ) {
-	$result = call_user_func($mode);
-	$json_params = null;
-	if(SHOW_DEBUG===true) {
-		$json_params = JSON_PRETTY_PRINT;
-	}
-	echo json_encode($result, $json_params);
-}
+# Ignore user close browser
+ignore_user_abort(true);
 
 
 
 /**
 * GET_DIR_FILES
-* 
 */
-function get_dir_files() {
+function get_dir_files($json_data) {
+	global $start_time;
+
+	$response = new stdClass();
+		$response->result 	= false;
+		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
 
 	$vars = array('dir');
-		foreach($vars as $name) $$name = common::setVar($name);
+		foreach($vars as $name) {
+			$$name = common::setVarData($name, $json_data);
+			# DATA VERIFY
+			#if ($name==='top_tipo' || $name==='top_id') continue; # Skip non mandatory
+			if (empty($$name)) {
+				$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty '.$name.' (is mandatory)';
+				return $response;
+			}
+		}
 
-	$response  = tool_import_dedalo_csv::get_csv_files( $dir );
+	$response = (object)tool_import_dedalo_csv::get_csv_files( $dir );
 	
+	# Debug
+	if(SHOW_DEBUG===true) {
+		$debug = new stdClass();
+			$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
+			foreach($vars as $name) {
+				$debug->{$name} = $$name;
+			}
+
+		$response->debug = $debug;
+	}
+
 	return (object)$response;
 }//end get_dir_files
 
 
 
 /**
-* IMPORT_SELETED_FILES
+* DELETE_CSV_FILE
 */
-function import_seleted_files() {
-
-	$start_time = start_time();
+function delete_csv_file($json_data) {
+	global $start_time;
 
 	$response = new stdClass();
 		$response->result 	= false;
-		$response->msg 		= 'Error on import_seleted_files';
+		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
+	
+	$vars = array('dir','file_name');
+		foreach($vars as $name) {
+			$$name = common::setVarData($name, $json_data);
+			# DATA VERIFY
+			#if ($name==='top_tipo' || $name==='top_id') continue; # Skip non mandatory
+			if (empty($$name)) {
+				$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty '.$name.' (is mandatory)';
+				return $response;
+			}
+		}
+
+	$file_full_path = $dir .'/'. $file_name;
+
+	if (file_exists($file_full_path)) {
+		if( unlink($file_full_path) ) {
+			$response->result 	= true;
+			$response->msg 		= 'Ok. Request file '.$file_name.' is deleted';
+		}else{
+			$response->msg 		= 'Error. File exists but you don\'t have permissions to delete this file';
+		}
+	}
+
+	# Debug
+	if(SHOW_DEBUG===true) {
+		$debug = new stdClass();
+			$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
+			foreach($vars as $name) {
+				$debug->{$name} = $$name;
+			}
+
+		$response->debug = $debug;
+	}
+
+	return (object)$response;
+}//end delete_csv_file
+
+
+
+/**
+* IMPORT_SELETED_FILES
+*/
+function import_seleted_files($json_data) {
+	global $start_time;
+
+	# Write session to unlock session file
+	session_write_close();
+
+	# Ignore user close browser
+	ignore_user_abort(true);
+
+	# Disable logging activity and time machine # !IMPORTANT
+	logger_backend_activity::$enable_log = false;
+	RecordObj_time_machine::$save_time_machine_version = false;
+
+	$response = new stdClass();
+		$response->result 	= false;
+		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
 	
 	$vars = array('files','dir');
-		foreach($vars as $name) $$name = common::setVar($name);
-
-	# Verify mandatory vars
-	if (empty($files) || empty($dir)) {
-		$response->msg = "Error: few vars";
-		return $response;
-	}
+		foreach($vars as $name) {
+			$$name = common::setVarData($name, $json_data);
+			# DATA VERIFY
+			#if ($name==='top_tipo' || $name==='top_id') continue; # Skip non mandatory
+			if (empty($$name)) {
+				$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty '.$name.' (is mandatory)';
+				return $response;
+			}
+		}
 
 	# Files is a json encoded array
 	$files = json_decode($files);
@@ -118,8 +178,17 @@ function import_seleted_files() {
 		$response->import_response  = $import_response;
 	}
 
-	$response->total_time = exec_time_unit($start_time,'ms');
-	
+	# Debug
+	if(SHOW_DEBUG===true) {
+		$debug = new stdClass();
+			$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
+			foreach($vars as $name) {
+				$debug->{$name} = $$name;
+			}
+
+		$response->debug = $debug;
+	}
+
 	return (object)$response;
 }//end import_seleted_files
 
@@ -128,37 +197,22 @@ function import_seleted_files() {
 /**
 * RENAME_FILES
 */
-function rename_files() {
-	
-	#die("STOP");
-
-	$vars = array('csv_file_path','images_dir','section_tipo','old_name_column','action'); // component_tipo
-		foreach($vars as $name) $$name = common::setVar($name);
+function rename_files($json_data) {
+	global $start_time;
 
 	$response = new stdClass();
 		$response->result 	= false;
-		$response->msg 		= array();
+		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
 
-		if (!$csv_file_path) {
-			$response->msg = 'Empty csv_file_path';
-			return $response;
-		}		
-		if (!$images_dir) {
-			$response->msg[] = 'Empty images_dir';
-			return $response;
-		}		
-		if (!$section_tipo) {
-			$response->msg[] = 'Empty section_tipo';
-			return $response;
-		}
-		# Columna donde está el nombre del fichero
-		if (!$old_name_column) {
-			$response->msg[] = 'Empty old_name_column';
-			return $response;
-		}
-		if (!$action) {
-			$response->msg[] = 'Empty action';
-			return $response;
+	$vars = array('csv_file_path','images_dir','section_tipo','old_name_column','action'); // component_tipo
+		foreach($vars as $name) {
+			$$name = common::setVarData($name, $json_data);
+			# DATA VERIFY
+			#if ($name==='top_tipo' || $name==='top_id') continue; # Skip non mandatory
+			if (empty($$name)) {
+				$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty '.$name.' (is mandatory)';
+				return $response;
+			}
 		}
 
 	/*
@@ -258,6 +312,16 @@ function rename_files() {
 
 	$response = (object)tool_import_dedalo_csv::rename_files($options);
 
+	# Debug
+	if(SHOW_DEBUG===true) {
+		$debug = new stdClass();
+			$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
+			foreach($vars as $name) {
+				$debug->{$name} = $$name;
+			}
+
+		$response->debug = $debug;
+	}
 
 	return (object)$response;
 }//end rename_files
@@ -268,14 +332,24 @@ function rename_files() {
 * IMPORT_IMAGES_CUSTOM
 * @return object $response
 */
-function import_images_custom() {
+function import_images_custom($json_data) {
+	global $start_time;
 
 	$response = new stdClass();
 		$response->result 	= false;
-		$response->msg 		= 'Error on import_images_custom';
+		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
 
 	$vars = array('csv_file_path','images_dir','section_tipo','component_tipo','images_inside_column','portal_tipo','portal_section_tipo');
-		foreach($vars as $name) $$name = common::setVar($name);
+		/*
+		foreach($vars as $name) {
+			$$name = common::setVarData($name, $json_data);
+			# DATA VERIFY
+			#if ($name==='top_tipo' || $name==='top_id') continue; # Skip non mandatory
+			if (empty($$name)) {
+				$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty '.$name.' (is mandatory)';
+				return $response;
+			}
+		}*/
 
 		# Defaults
 		if (!$csv_file_path)
@@ -407,6 +481,18 @@ function import_images_custom() {
 
 	if (!empty($response->result)) {
 		$response->msg = "Total files afected : ".count($response->result);
+	}
+
+
+	# Debug
+	if(SHOW_DEBUG===true) {
+		$debug = new stdClass();
+			$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
+			foreach($vars as $name) {
+				$debug->{$name} = $$name;
+			}
+
+		$response->debug = $debug;
 	}
 
 	return (object)$response;	

@@ -47,7 +47,7 @@ background-color: #FFFF00;
 /* MENU WRAPPER
 ------------------------------------------------------- */
 #menu_wrapper {
-	z-index: 1001;
+	z-index: 1002;
 	position: fixed;
 	top: 0px;
 	left:0px;
@@ -138,18 +138,18 @@ background-color: #FFFF00;
 @menu_box_shadow : 5px 5px 15px rgba(0, 0, 0, 0.1);
 
 #menu {
-	font-family: 'Oxygen-light';
+	font-family: "Oxygen-light";
 	//-webkit-font-smoothing: subpixel-antialiased;
 	z-index: 100;
 	float: left;
 	display: inline-block;
 	margin: 0;
-	margin-left: 66px;
+	margin-left: 64px;
 	padding: 0;
 	text-align: left;
 	}
 	#menu li {
-		margin: 0 3px;
+		margin: 0 2px;
 		padding: 0 0 0px;
 		float: left;
 		position: relative;
@@ -318,7 +318,8 @@ background-color: #FFFF00;
 	#menu_wrapper .logged_user_name {
 		color:#c9c9c9;
 		float: left;
-		margin-left: 15px;
+		margin-left: 10px;
+		margin-right: 10px;
 		top: 6px;
 		cursor: default;
 	}
@@ -340,16 +341,20 @@ background-color: #FFFF00;
 	------------------------------------------------------- */
 	#menu_wrapper .dedalo_aplication_langs_selector {
 		float: left;
-		margin-left: 20px;
+		margin-left: 5px;
 		top: 2px;
 		position: relative;
 		background-color: #373737;
-		box-shadow: inset 2px 2px 4px #3f3f3f;
+		//box-shadow: inset 2px 2px 4px #3f3f3f;
 		color: #cccccc;
 		border-radius: 6px;
 		border-color: transparent;
 		line-height: 1em;
 		opacity: 0.8;
+	}
+	#menu_wrapper .dedalo_aplication_langs_selector.unsync {
+		color: #fdcf39;
+    	opacity: 0.9;
 	}
 
 
@@ -453,7 +458,7 @@ background-color: #FFFF00;
 	position: fixed;
     left: 0;
     top: 0;
-    z-index: 2;
+    z-index: 1001;
     opacity: 0.95;
     overflow: hidden;
     line-height: 24px;

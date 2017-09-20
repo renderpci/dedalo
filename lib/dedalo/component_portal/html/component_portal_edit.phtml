@@ -1,7 +1,343 @@
 <?php
 
-	# VISUALIZADOR HTML	
+# VIEW HTML
+
+
+if($this->generate_json_element===true) {
+
+	// INFO
+	// This "code" only builds var json_build_options and call javascript render_component_html
 	
+	$html_content = '';
+	$html_content .= '<div id="'.$id_wrapper.'">';
+
+	$json_build_options = json_encode($this->get_json_build_options());
+		#dump($json_build_options, ' $json_build_options ++ '.to_string());
+
+	# JAVASCRIPT
+	$html_content .= '<script>';
+	$html_content .= 'component_portal.init();';
+	$html_content .= 'section.render_component_html('.$json_build_options.');';
+	#$html_content .= 'console.log("'.$json_build_options.'");';
+	$html_content .= '</script>';
+	
+
+	$html_content .= '</div>';
+
+	# Prepare content to show in page
+	//tools::prepare_content($html_content);
+
+	echo $html_content;
+
+}else{
+
+	// INFO
+	// This "code" generates the resolved portal elements and create a html/vars resolved json object to later build DOM in javascript (rows, header, etc.) 
+
+
+	# html_delimiter
+	#print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'in', $modo, $lang);
+
+	$ar_columns_plus = array();
+	foreach ($ar_columns as $c_tipo => $c_label) {
+		$label_lower = strtolower($c_label);
+		if ($label_lower==='edit' || $label_lower==='rol' || $label_lower==='tag_id') {
+			$name = $label_lower;
+		}else{
+			$name = RecordObj_dd::get_modelo_name_by_tipo($c_tipo,true);
+		}
+		$ar_columns_plus[$c_tipo] = array('label'=>$c_label,'name'=>$name);
+	}
+
+	$json_d = new stdClass();
+		$json_d->dato 					= $dato;
+		$json_d->propiedades 			= $propiedades;
+		$json_d->label 					= $label;
+		$json_d->permissions 			= $permissions;
+		$json_d->component_info 		= $component_info;
+		$json_d->exclude_elements 		= $exclude_elements;
+		$json_d->html_options 			= $this->html_options;
+		$json_d->n_rows 				= $n_rows;
+		$json_d->context 				= $context;
+		$json_d->rows_data 				= $rows_data;
+		$json_d->ar_columns 			= $ar_columns_plus;
+		$json_d->ar_target_section_tipo = $ar_target_section_tipo;
+		$json_d->show_button_new 		= $show_button_new;
+		$json_d->dragable_connectWith 	= $dragable_connectWith;
+		$json_d->max_records 			= $max_records;
+		$json_d->offset 				= $offset;
+
+
+		/*
+		$json_data->edit_view 			= $edit_view;
+		$json_data->file_view 			= $file_view;
+		$json_data->file_name 			= $file_name;
+		*/
+		$json_d->rows_data_values 		= array();
+
+
+		$row_number=0; foreach((array)$dato as $key => $current_locator) {
+
+			# MAX_RECORDS Limit
+			if( $row_number >= $max_records+$offset ){
+				break;
+			}
+			
+			$row_number++;
+
+			# Offset
+			if ($row_number <= $offset) {
+				continue; # Skip print offset records
+			}
+			
+			$current_section_id 	= $current_locator->section_id;
+			$current_section_tipo 	= $current_locator->section_tipo;
+			$current_component_tipo = isset($current_locator->component_tipo) ? $current_locator->component_tipo : null;
+			$current_tag_id 		= isset($current_locator->tag_id) ? $current_locator->tag_id : null;
+
+			$current_row = $this->row_in_result( $current_locator, $rows_data->result );						
+				#dump($current_row, ' current_row ++ '.to_string());
+
+			#
+			# Limit showed rows
+			/*
+			if ($this->html_options->rows_limit && $key > $this->html_options->rows_limit) {
+				debug_log(__METHOD__." Limit number of records to sowh ".to_string($this->html_options->rows_limit), logger::DEBUG);
+				break; # Limit number of records to sowh
+			}
+			*/
+
+			#
+			# REL_LOCATOR : locator like object
+				$rel_locator = json_encode($current_locator);
+
+				$json_d->rows_data_values[$key]['locator'] = $rel_locator;
+
+			#
+			# SECTION ID
+				$section_id 		 = $current_section_id;
+				$target_section_tipo = $current_section_tipo;
+
+
+			# Permissions of target section. Applied to delete button									
+			$permission_section = common::get_permissions($target_section_tipo,$target_section_tipo);
+	
+			#
+			# COLUMNS
+				$sort_id = !empty($rel_locator) ? $rel_locator : 0;
+				$table='';															
+				foreach ($ar_columns as $column_tipo => $column_label) {
+
+					#
+					# EDIT COLUMN
+					if ($column_tipo==='edit') {
+						if (!$this->html_options->id_column) continue;
+
+						# SECTION_ID TEXT
+						$column_edit_value = '';
+
+						#
+						# EDIT BUTTON
+							$context_http_query = http_build_query($context);
+							$url  = htmlspecialchars("?t=$target_section_tipo&id=$section_id&m=edit&portal_section_tipo={$section_tipo}&{$context_http_query}");
+							$url .= "&locator=". urlencode($rel_locator);
+							$url .= "&top_tipo=".TOP_TIPO."&top_id=".TOP_ID;
+							$url .= "&exclude_elements=".$exclude_elements;
+
+							# Breadcrumb : add bc_path = url vars
+							$bc_path = tools::get_bc_path();
+								#dump($bc_path, ' bc_path');
+							$url 	.= "&bc_path=". base64_encode($bc_path);
+
+							# id_path
+							$id_path = tools::get_id_path($section_tipo.'.'.$section_id);
+								#dump($section_id_path,"id_path - $section_id");
+							$url 	.= "&id_path=". $id_path;								
+
+							# Title
+							$title = label::get_label('editar_registro').' '.$section_id;
+							if (!empty($current_tag_id)) {
+								$title .= ' - '.$current_component_tipo.' - '.$current_tag_id;
+							}
+
+							if(SHOW_DEBUG===true) {
+								$title .= "\n url:$url \n modo $modo, context $context->context_name";
+							}
+							$edit_button = '';
+							if (empty($current_row['id'])) {
+								$edit_button .= "<div class='div_image_link link' title=\"$title\" onclick=\"alert('Deleted record')\"> ! </div>";
+							}else{
+								$additional_css_style = $permissions <2 ? 'style="height: 100%;"' : '' ;
+								$edit_button .= "<a href=\"javascript:void(0);\" onclick=\"component_portal.open_record(this,'$url')\" ";
+								$edit_button .= "id=\"portal_link_open_{$section_tipo}_{$section_id}\" ";
+								$edit_button .= "class=\"id_column_buttons button_edit link\" ";
+								$edit_button .= $additional_css_style;
+								$edit_button .= "title=\"$title\">";
+									# SECTION_ID TEXT
+									$edit_button .= "<span class=\"section_id_number\">";
+									$edit_button .= $section_id;
+									$edit_button .= "</span>"; 
+								$edit_button .= "</a>";											
+							}
+							$column_edit_value .= $edit_button;
+						
+
+						#
+						# DELETE RECORD BUTTON
+							$delete_button = '';
+							if ($permissions>=2) {								
+								$title	= label::get_label('borrar') .' '. label::get_label('recurso');													
+								$delete_button .= "<a href=\"javascript:void(0);\" class=\"id_column_buttons button_delete link\" ";
+								$delete_button .= "onclick=\"component_portal.open_delete_dialog(this)\" ";
+								$delete_button .= "data-rel_locator='{$rel_locator}' ";
+								$delete_button .= "data-permission_section=\"{$permission_section}\" ";
+								$delete_button .= "title=\"$title\">";							
+								$delete_button .= "</a>";
+							}
+
+						$json_d->rows_data_values[$key][$column_tipo] = array('edit'=>$column_edit_value, 'delete'=>$delete_button);
+
+					#
+					# TAG_ID
+					}else if($column_tipo=='tag_id') {						
+
+						if( isset($current_locator->component_tipo) && isset($current_locator->tag_id) ) {
+
+							$component_name = RecordObj_dd::get_termino_by_tipo($current_locator->component_tipo);
+							$tag_id_column_value = '';
+							$tag_id_column_value .= "<div class=\"tag_id tooltip_active\" title=\"$component_name\">";											
+							$tag_id_column_value .= $current_locator->tag_id;
+							$tag_id_column_value .= "</div>";
+
+							$json_d->rows_data_values[$key][$column_tipo] = $tag_id_column_value;
+						}
+
+					#
+					# DEDALO SEMANTICS COLUMNS
+					}else if ( strpos($column_tipo, 'ds_')===0 ) {
+
+						# Convert column name from 'ds_myname' to 'myname'
+						$ds_key = substr($column_tipo, 3);
+
+						# Mandatory vars to create semantic_node column
+						$semantic_wrapper_id = $ds_key.'_'.$current_locator->section_tipo.'_'.$current_locator->section_id;
+						$ds_element 		 = isset($current_locator->ds->$ds_key) ? $current_locator->ds->$ds_key : null;
+							#dump($current_locator, ' current_locator ++ '.to_string());
+							#dump($ds_element, ' ds_element ++ '.to_string());
+						
+						$ds_value = '';
+						$ds_value .= "<div class=\"td_ds\">";
+						ob_start();
+						include(DEDALO_LIB_BASE_PATH . '/tools/tool_semantic_nodes/html/tool_semantic_nodes_node.phtml');
+						$ds_value .= ob_get_clean();
+						$ds_value .= "</div>";
+
+						$json_d->rows_data_values[$key][$column_tipo] = $ds_value;				
+
+					#
+					# COMPONENTS COLUMNS
+					}else{
+
+						$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($column_tipo, true);
+
+						# aditional td css selectors
+						$td_css_selector = 'td_'.$modelo_name.' td_'.$column_tipo. ' column_'.$column_tipo;
+
+						# Row value default
+						/*
+						if (!isset($current_row[$column_tipo])) {
+							$table .= "<td class=\"$td_css_selector\">"; 	dump($current_row[$column_tipo], ' excluded column_tipo ++ '.to_string($column_tipo));
+							$table .= ' '; // User with NO access to this column
+							$table .= "</td>";
+							continue;
+						}
+						*/
+						#dump($modelo_name, ' PORTAL EDIT modelo_name ++ '.to_string($column_tipo));
+
+						
+						$column_value = isset($current_row[$column_tipo]) ? $current_row[$column_tipo] : null;
+							#dump($column_value, ' column_value ++ '.to_string());
+
+						# Detect and avoid structure errors (portal list with deprecated elements for example)
+						if (strpos($modelo_name, 'component_')===false) {
+							dump($modelo_name, ' wrong modelo_name ++ column_tipo: '.to_string($column_tipo));
+							continue;
+						}
+
+						$render_list_mode = 'portal_list';
+						// Verificar este supuesto !!!
+						
+						if ($edit_view==='view_mosaic') {
+							$render_list_mode = 'portal_list_view_mosaic';
+
+							if ($modelo_name!=='component_image' && $modelo_name!=='component_av' && $modelo_name!=='component_portal') {
+								# Only accept component_image as column
+								debug_log(__METHOD__." Skipped component $column_label ($column_tipo) modelo_name: $modelo_name. Only component_image are valid in mosaic mode ", logger::DEBUG);
+								continue;
+							}
+						}
+
+						# Overwrite default list mode when need. Set component propiedades 'elements_list_mode' as you want, like edit..
+						if (isset($propiedades->elements_list_mode->$column_tipo->mode)) {
+							$render_list_mode = $propiedades->elements_list_mode->$column_tipo->mode;
+						}
+						$value = (string)$modelo_name::render_list_value($column_value, // value string from db
+																		 $column_tipo, // current component tipo
+																		 $section_id, // current portal row section id
+																		 $render_list_mode, // mode get form properties or default
+																		 DEDALO_DATA_LANG, // current data lang
+																		 $target_section_tipo, // current section tipo
+																		 $section_id, // Current portal parent
+																		 $current_locator, // Used by text_area to select fragment
+																		 $tipo // Current component_portal tipo
+																		);
+
+						#
+						# TD COLUMN					
+						if (is_string($value)) {						
+							$json_d->rows_data_values[$key][$column_tipo] = $value;
+						}else{						
+							$json_d->rows_data_values[$key][$column_tipo] = to_string($value);
+						}
+					}//end if ($modelo_name=='component_portal')
+				}//end foreach ($ar_columns as $column_tipo => $column_label)
+
+
+			
+		
+		#$row_number++;
+		}//end foreach((array)$dato as $key => $current_locator)
+		#dump($dato, ' dato ++ '.to_string());
+		#dump($json_d->rows_data_values, '$json_d->rows_data_values ++ '.to_string());
+		#dump($json_d, ' json_d ++ '.to_string());
+
+		# Important : Rebuild array indexes to avoid objects when use offset
+		$json_d->rows_data_values = array_values($json_d->rows_data_values);
+
+	# html_delimiter
+	#print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'out', $modo, $lang);
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+if (isset($pisuerga) && $pisuerga==='valladolid') {
 	
 	# html_delimiter
 	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'in');
@@ -16,10 +352,10 @@
 	data-parent=\"{$parent}\"
 	data-modo=\"{$modo}\"
 	data-component_name=\"{$component_name}\"
-	data-component_info='{$component_info}'
-	data-dato='{$dato_json}'
+	data-component_info='{$component_info}'	
 	data-target_section_tipo='{$ar_target_section_tipo_json}'
 	>";
+	// data-dato='{$dato_json}'
 	
 		
 		# ETIQUETA (LABEL)
@@ -47,7 +383,7 @@
 						
 						#
 						# BUTTON NEW HTML
-						if( $permissions>=2 && $modo!='print') {
+						if( $permissions>=2 && $modo!=='print') {
 
 							foreach ($ar_target_section_tipo as $current_target_section_tipo) {
 								
@@ -66,7 +402,8 @@
 								title=\"parent:$parent - tipo:$tipo\" >";
 								$button_new .= "<div class=\"icon_bs link new_portal_record\"></div> ";
 								$button_new .= "<span>";
-								$button_new .= ''. RecordObj_dd::get_termino_by_tipo($current_target_section_tipo, DEDALO_DATA_LANG);	//.': '.label::get_label('nuevo');#. " $label" ;
+								#$button_new .= ''. RecordObj_dd::get_termino_by_tipo($current_target_section_tipo, DEDALO_DATA_LANG);	//.': '.label::get_label('nuevo');#. " $label" ;
+								$button_new .= ''. $label;
 								$button_new .= "</span>";
 								$button_new .= "</div>";
 								
@@ -81,7 +418,7 @@
 
 						#
 						# BUTTON SELECT EXISTING RECORD HTML (BUTTON TOOL_PORTAL)
-						if($modo!='print') {
+						if($modo!=='print') {
 							
 							foreach ($ar_target_section_tipo as $current_target_section_tipo) {
 
@@ -94,7 +431,8 @@
 								title=\"parent:$parent - tipo:$tipo\" >";
 								$button_select .= "<div class=\"icon_bs link find_portal_record\"></div> ";
 								$button_select .= "<span>";
-								$button_select .= ''. RecordObj_dd::get_termino_by_tipo($current_target_section_tipo, DEDALO_DATA_LANG);	//.': '.label::get_label('existente');
+								#$button_select .= ''. RecordObj_dd::get_termino_by_tipo($current_target_section_tipo, DEDALO_DATA_LANG);	//.': '.label::get_label('existente');
+								$button_select .= ''. $label;
 
 								if(SHOW_DEBUG===true) {
 									$button_select .= ' <span class="debug_info">'.TOP_TIPO.'.'.$current_target_section_tipo.'.'.$this->tipo.'</span>';
@@ -112,7 +450,7 @@
 
 														#
 						# BUTTON SELECT EXISTING RECORD HTML (BUTTON TOOL_PORTAL)
-						if($modo!='print') {
+						if($modo!=='print') {
 
 							$button_toggle_view = "<div class=\"btn_view_toogle\" onclick=\"component_portal.toggle_views(this)\"
 							data-view=\"full\" >";
@@ -158,8 +496,6 @@
 							}else{
 								$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($column_tipo, true);
 								$td_css_selector = 'th_'.$modelo_name.' th_'.$column_tipo;
-
-
 							}
 
 						$th_style = '';
@@ -366,7 +702,7 @@
 								$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($column_tipo, true);
 
 								# aditional td css selectors
-								$td_css_selector = 'td_'.$modelo_name.' td_'.$column_tipo;
+								$td_css_selector = 'td_'.$modelo_name.' td_'.$column_tipo. ' column_'.$column_tipo;
 
 								# Row value default
 								/*
@@ -516,5 +852,5 @@
 	# html_delimiter
 	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'out');
 
-
+}
 ?>

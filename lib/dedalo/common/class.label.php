@@ -40,7 +40,7 @@
 		switch (true) {
 
 			# using DEDALO_CACHE_MANAGER as cache
-			case (DEDALO_CACHE_MANAGER && CACHE_LABELS) :
+			case (DEDALO_CACHE_MANAGER===true && CACHE_LABELS===true) :
 
 				$cache_key_name = DEDALO_DATABASE_CONN.'_label_'.$lang;;
 				if (cache::exists($cache_key_name)) {
@@ -155,13 +155,12 @@
 		$cached   = true;
 		$fallback = true;
 		if(SHOW_DEBUG===true) {
-			$cached=false;
+			#$cached=false;
 		}
 		foreach ($ar_terminoID_by_modelo_name as $current_terminoID) {
 			
 			$RecordObj_dd 	= new RecordObj_dd($current_terminoID);			
 			$propiedades 	= $RecordObj_dd->get_propiedades();
-
 			$vars_obj 		= json_decode($propiedades);
 
 			# No data in field 'propiedades'
@@ -173,17 +172,16 @@
 			# Set value			
 			$ar_label[$vars_obj->name] 	= RecordObj_dd::get_termino_by_tipo($current_terminoID, $lang, $cached, $fallback);
 		}		
-		
 
 		if(SHOW_DEBUG===true) {
 			global$TIMER;$TIMER[__METHOD__.'_OUT_'.microtime(1)]=microtime(1);
 			#error_log("Calculated labels ".count($ar_terminoID_by_modelo_name));
 			debug_log(__METHOD__." for lang: $lang ".exec_time_unit($start_time,'ms').' ms');
 		}
+
 			
 		return $ar_label;
-
-	}
+	}//end set_static_label_vars
 
 
 

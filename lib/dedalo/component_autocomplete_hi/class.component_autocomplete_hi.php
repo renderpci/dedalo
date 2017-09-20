@@ -4,7 +4,7 @@
 * Replaces component_autocomplete_ts
 *
 */
-class component_autocomplete_hi extends component_common {
+class component_autocomplete_hi extends component_reference_common {
 	
 	# Overwrite __construct var lang passed in this component
 	protected $lang = DEDALO_DATA_NOLAN;
@@ -76,6 +76,7 @@ class component_autocomplete_hi extends component_common {
 			}
 		}
 		$dato = $dato_unique;
+
 		
 		return parent::set_dato( (array)$dato );
 	}//end set_dato
@@ -114,11 +115,14 @@ class component_autocomplete_hi extends component_common {
 			# Propiedades
 			$propiedades = $this->get_propiedades();
 			$recursive 	 = (isset($propiedades->value_with_parents) && $propiedades->value_with_parents===true) ? true : false;
-
+			#dump($propiedades, ' propiedades ++ '.to_string());
+	#$recursive = false; 
+	
 			$ar_valor = array();
-			foreach ($dato as $key => $current_locator) {				
+			foreach ($dato as $key => $current_locator) {
 			
 				$current_valor = component_relation_common::get_locator_value( $current_locator, $lang, $this->section_tipo, $recursive );
+				#dump($current_valor, ' current_valor ++ '.to_string()); break;
 
 				#
 				# REMOVE TAGS FROM NON TRANSLATED TERMS
@@ -442,8 +446,9 @@ class component_autocomplete_hi extends component_common {
 				$target_section_tipo = json_decode($ar_value[DEDALO_HIERARCHY_TARGET_SECTION_TIPO]);
 					#dump($ar_value, ' ar_value ++ current_section_id '.to_string($target_section_tipo));
 					#dump($target_section_tipo, ' target_section_tipo ++ '.to_string());
-
-				$hierarchy_sections_from_types[] = reset($target_section_tipo);
+				if (is_array($target_section_tipo)) {
+					$hierarchy_sections_from_types[] = reset($target_section_tipo);
+				}				
 			}
 		}
 
@@ -474,7 +479,7 @@ class component_autocomplete_hi extends component_common {
 
 	
 	/**
-	* AUTOCOMPLETE_hi_SEARCH
+	* AUTOCOMPLETE_HI_SEARCH
 	* Used by trigger on ajax call
 	* @param array ar_referenced_tipo like ['es1','fr1'] (parent where start to search)
 	* @param string_to_search
@@ -529,6 +534,7 @@ class component_autocomplete_hi extends component_common {
 		
 		$result	= JSON_RecordObj_matrix::search_free($strQuery, false);
 			#dump(null, ' strQuery ++ '.to_string($strQuery)); die(); // --ORDER BY term ASC
+		#error_log($strQuery);
 
 		$ar_term = array();
 		while ($rows = pg_fetch_assoc($result)) {			
@@ -634,7 +640,7 @@ class component_autocomplete_hi extends component_common {
 	*
 	* @see class.section_records.php get_rows_data filter_by_search
 	* @return string $search_query . POSTGRE SQL query (like 'datos#>'{components, oh21, dato, lg-nolan}' ILIKE '%paco%' )
-	*/
+	*//*
 	public static function get_search_query( $json_field, $search_tipo, $tipo_de_dato_search, $current_lang, $search_value, $comparison_operator='=') {		
 		
 		$search_value = json_decode($search_value);
@@ -672,7 +678,7 @@ class component_autocomplete_hi extends component_common {
 		}
 		return $search_query;
 	}//end get_search_query
-
+	*/
 
 
 	/**
@@ -758,6 +764,69 @@ class component_autocomplete_hi extends component_common {
 		
 		return $dato;
 	}//end get_valor_list_html_to_save
+
+
+
+	/**
+	* GET_AR_FILTER_OPTIONS
+	* Build an array of elements to show in options filter
+	* Can be a list of sections form hierarchy, or a list of value=>label for general use
+	* @return array $ar_filter_options
+	*/
+	public function get_ar_filter_options($type, $ar_value) {
+
+		$ar_filter_options = array();
+
+		switch ($type) {
+			// Default is hierarchy use
+			case 'hierarchy':
+				foreach ((array)$ar_value as $hs_section_tipo) {
+					$ar_filter_options[$hs_section_tipo] = RecordObj_dd::get_termino_by_tipo($hs_section_tipo, DEDALO_DATA_LANG, true, true);
+				}
+				break;
+			// Generic use compatible with old component_autocomplete
+			case 'generic':
+				foreach ($ar_value as $current_obj_value) {
+
+					$f_section_tipo   	= $current_obj_value->section_tipo;
+					$f_component_tipo 	= $current_obj_value->component_tipo;
+
+					# Calculate list values of each element
+					$c_modelo_name 		= RecordObj_dd::get_modelo_name_by_tipo($f_component_tipo,true);
+					$current_component  = component_common::get_instance($c_modelo_name,
+																		 $f_component_tipo,
+																		 null,
+																		 'list',
+																		 DEDALO_DATA_LANG,
+																		 $f_section_tipo);
+					$ar_list_of_values = $current_component->get_ar_list_of_values(DEDALO_DATA_LANG, false, false, false, $value_container='valor');
+						#dump($ar_list_of_values, ' ar_list_of_values ++ '.to_string());
+					foreach ((array)$ar_list_of_values->result as $hs_value => $hs_name) {
+						$ar_filter_options[$hs_value] = $hs_name;
+					}
+				}
+				break;
+		}
+		
+		return $ar_filter_options;
+	}//end get_ar_filter_options
+
+
+
+	/**
+	* GET_OPTIONS_TYPE
+	* @return string $options_type
+	*/
+	public function get_options_type() {
+		$propiedades = $this->get_propiedades();
+		if(isset($propiedades->source->filter_by_list)) {
+			$options_type = 'generic'; // Used with generic sections
+		}else{
+			$options_type = 'hierarchy'; // Used with hierarchical sections
+		}
+
+		return $options_type;
+	}//end get_options_type
 
 
 

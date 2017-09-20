@@ -5,17 +5,18 @@
 	# html_delimiter
 	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'in');
 
-	print "<div class=\"wrap_component css_wrap_select wrap_component_{$tipo}\" id=\"{$id_wrapper}\"
-	data-tipo=\"{$tipo}\"
-	data-lang=\"{$lang}\"
-	data-parent=\"{$parent}\"
-	data-section_tipo=\"{$section_tipo}\"
-	data-referenced_section_tipo=\"{$referenced_tipo}\"
-	data-modo=\"{$modo}\"
-	data-dato='{$dato_string}'
-	data-component_name=\"{$component_name}\"
-	data-component_info='{$component_info}'
-	>";
+	print "<div class=\"wrap_component css_wrap_select wrap_component_{$tipo}\" id=\"{$id_wrapper}\" ";
+	print "data-tipo=\"{$tipo}\" ";
+	print "data-lang=\"{$lang}\" ";
+	print "data-parent=\"{$parent}\" ";
+	print "data-section_tipo=\"{$section_tipo}\" ";
+	print "data-referenced_section_tipo=\"{$referenced_tipo}\" ";
+	print "data-modo=\"{$modo}\" ";
+	print "data-from_modo=\"{$from_modo}\" ";
+	print "data-dato='{$dato_string}' ";
+	print "data-component_name=\"{$component_name}\" ";
+	print "data-component_info='{$component_info}' ";
+	print ">";
 
 	# ETIQUETA (LABEL)
 	$html_label = component_common_draw::draw_label($this);
@@ -34,23 +35,27 @@
 
 		case 2 :
 		case 3 :
+
+				if($from_modo !== 'edit'){
+						$html_contenido .= "<div class=\"css_select_button_close\" onclick=\"component_common.change_mode_component(this, 'edit', '$from_modo')\"></div>";
+				}	
 				#
 				# CONTEXT
 				# Set as disabled on time machine context 
 				$disabled = (isset($context->context_name) && $context->context_name=='tool_time_machine') ? 'disabled="disabled"' : '';
 
-				$html_contenido .= " <select class=\"css_select\"
-				onchange=\"component_select.Save(this)\"
-				onfocus=\"component_common.select_wrap(document.getElementById('$id_wrapper'));\"
-				name=\"{$input_name}\"
-				data-tipo=\"{$tipo}\"
-				data-lang=\"{$lang}\"
-				data-section_tipo=\"{$section_tipo}\"
-				data-parent=\"{$parent}\"
-				title=\"$html_title\"
-				$disabled
-				tabindex=\"1\"
-				>";
+				$html_contenido .= "<select class=\"css_select\" ";
+				$html_contenido .= "onchange=\"component_select.Save(this)\" ";
+				$html_contenido .= "onfocus=\"component_common.select_wrap(document.getElementById('$id_wrapper'));\" ";
+				$html_contenido .= "name=\"{$input_name}\" ";
+				$html_contenido .= "data-tipo=\"{$tipo}\" ";
+				$html_contenido .= "data-lang=\"{$lang}\" ";
+				$html_contenido .= "data-section_tipo=\"{$section_tipo}\" ";
+				$html_contenido .= "data-parent=\"{$parent}\" ";
+				$html_contenido .= "title=\"$html_title\" ";
+				$html_contenido .= "$disabled ";
+				$html_contenido .= "tabindex=\"1\" ";
+				$html_contenido .= ">";
 
 				$selected = empty($dato) ? 'selected' : '';
 					
@@ -58,7 +63,7 @@
 					$html_contenido .= "<option value=\"\" {$selected}> </option>";
 
 					# Available options
-					foreach ($ar_list_of_values->result as $value => $label) {						
+					foreach ($ar_list_of_values->result as $value => $label) {
 
 						$value   = (string)$value;
 						$locator = (object)json_handler::decode($value);	# Locator is json encoded object
@@ -73,7 +78,7 @@
 						$html_contenido .= "</option>";
 					}
 
-				$html_contenido .= " </select>";
+				$html_contenido .= "</select>";
 
 				# Button open section referenced
 				#$html_contenido .= "<input type=\"button\" value=\"Source\" class=\"css_button_generic\" onclick=\"component_select.open_section(this)\" />";

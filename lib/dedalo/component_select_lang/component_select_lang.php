@@ -2,6 +2,8 @@
 	
 	# CONTROLLER
 
+	if(SHOW_DEBUG===true) $start_time=microtime(1);
+
 	$tipo 					= $this->get_tipo();
 	$parent 				= $this->get_parent();
 	$section_tipo			= $this->get_section_tipo();
@@ -9,7 +11,7 @@
 	$label 					= $this->get_label();
 	$required				= $this->get_required();
 	$debugger				= $this->get_debugger();
-	$permissions			= common::get_permissions($section_tipo, $tipo);
+	$permissions			= $this->get_component_permissions();
 	$ejemplo				= null;
 	$html_title				= "Info about $tipo";
 	$ar_tools_obj			= $this->get_ar_tools_obj();

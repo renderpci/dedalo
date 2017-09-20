@@ -5,7 +5,9 @@
 	# CONTROLLER TOOL
 	$section_tipo		= $this->section_tipo;	
 	$modo 				= $this->get_modo();
-	$context_name		= isset($_REQUEST['context_name']) ? $_REQUEST['context_name'] : null;;	
+	$var_requested 		= common::get_request_var('context_name');
+	$context_name		= !empty($var_requested) ? $var_requested : null;;	
+	//$context_name		= isset($_REQUEST['context_name']) ? $_REQUEST['context_name'] : null;;	
 	$tool_name 			= get_class($this);
 	$file_name			= $modo;	
 	
@@ -30,7 +32,10 @@
 			css::$ar_url[] = DEDALO_LIB_BASE_URL."/tools/".$tool_name."/css/".$tool_name.".css";
 			js::$ar_url[]  = DEDALO_LIB_BASE_URL."/tools/".$tool_name."/js/".$tool_name.".js";
 
-			$button_tipo = isset($_GET['button_tipo']) ? $_REQUEST['button_tipo'] : null;
+			$var_requested 		= common::get_request_var('button_tipo');
+
+			//$button_tipo = isset($_GET['button_tipo']) ? $_REQUEST['button_tipo'] : null;
+			$button_tipo = !empty($var_requested) ? $var_requested : null;
 
 			# Context
 			switch ($context_name) {
@@ -43,7 +48,7 @@
 					array_unshift(css::$ar_url_basic, BOOTSTRAP_CSS_URL);
 					js::$ar_url[]  = DEDALO_ROOT_WEB.'/lib/jquery/grids/grids.min.js';
 
-					$section_label = RecordObj_dd::get_termino_by_tipo($section_tipo);
+					$section_label = RecordObj_dd::get_termino_by_tipo($section_tipo, DEDALO_APPLICATION_LANG, true, true);
 
 					#
 					# Current searched records stats info
