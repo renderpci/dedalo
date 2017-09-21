@@ -847,8 +847,11 @@ class login extends common {
 													 DEDALO_SECTION_USERS_TIPO);
 		$dato 		= $component->get_dato();		
 		$default 	= login::SU_DEFAULT_PASSWORD; // Dedalo4debugChangePsW
+<<<<<<< HEAD
 
 		$encryption_mode = encryption_mode();
+=======
+>>>>>>> origin/master
 		
 		if( $encryption_mode==='openssl' ) {
 			if (dedalo_decrypt_openssl($dato)==$default) {

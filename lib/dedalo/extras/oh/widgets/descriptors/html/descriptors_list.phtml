@@ -1,0 +1,23 @@
+<?php
+
+	# VISUALIZADOR HTML	
+	$html ='';
+	
+	$html .= "<div class=\"descriptors_list\">";
+
+	# Button
+	$html .= " <div class=\"descriptors_button\" onclick=\"descriptors.load_terms(this)\"
+	data-component_tipo=\"$component_tipo\"
+	data-section_tipo=\"$section_tipo\"
+	data-section_id=\"$parent\"
+	data-component_portal_tipo=\"$component_portal_tipo\"
+	data-component_text_area_tipo=\"$component_text_area_tipo\"
+	>".label::get_label('terminos')."</div>";
+
+	# Ajax container
+	$html .= " <div class=\"descriptors_container\"></div>";
+
+	$html .= "</div>";
+
+	print $html;
+?>
