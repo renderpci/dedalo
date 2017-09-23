@@ -2,11 +2,6 @@
 
 	# VISUALIZADOR HTML	
 
-	# ELEMENTOS
-	
-	
-	#echo "\n<!-- TEXT AREA [tipo:$tipo id_matrix:$id] -->";
-	#echo "<div class=\"css_text_area_wrap\" >";
 	# html_delimiter
 	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'in', $modo, $lang);
 	
@@ -34,18 +29,18 @@
 				
 			case $permissions===0:
 			
-						$html_content .= '';	
-						break;
+					$html_content .= '';
+					break;
 							
 			case ($permissions>=1):
 
-						$html_content .= "<span class=\"css_span_dato\">$fragment_text</span>";				
-				
-						#if(SHOW_DEBUG) {
-						#	$html_content .= "<span class=\"css_span_debugger\" id=\"debugger_{$tipo}\" >{$debugger}</span>";	
-						#}
+					$html_content .= "<span class=\"css_span_dato\">$fragment_text</span>";				
+			
+					#if(SHOW_DEBUG) {
+					#	$html_content .= "<span class=\"css_span_debugger\" id=\"debugger_{$tipo}\" >{$debugger}</span>";	
+					#}
 
-
+					
 					# INIT : Init text editor	
 					$html_content .= "<script>";
 					#$html_content .= "var init=new component_text_area.init({uid:'$identificador_unico',modo:'$modo',propiedades:'$propiedades_json'});";
@@ -55,9 +50,12 @@
 					$html_content .= "component_text_area.init({uid:'$identificador_unico',modo:'$modo',propiedades:'$propiedades_json'});";
 					#$html_content .= "alert('aaaaa');";
 					$html_content .= "</script>";
+					
+					
 		}
 		
-			tools::prepare_content($html_content);
+		tools::prepare_content($html_content);
+
 		# PRINT HTML
 		print $html_content;
 	
