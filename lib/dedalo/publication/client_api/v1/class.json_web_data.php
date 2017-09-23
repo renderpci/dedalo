@@ -87,7 +87,7 @@ class json_web_data {
 				$dedalo_data->result = array();
 				if(SHOW_DEBUG===true) {
 					$dedalo_data->debug = new stdClass();
-					$dedalo_data->debug->info = "Error in response results (verify your server json .htaccess file): ".print_r($dedalo_data_file, true);
+					$dedalo_data->debug->info = "Error in response results. dedalo_data is not and object (verify your server json .htaccess file): ".print_r($dedalo_data_file, true);
 				}				
 		}
 		#error_log( to_string($dedalo_data->debug) );
