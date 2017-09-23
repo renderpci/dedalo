@@ -741,6 +741,21 @@ class component_av extends component_common {
 	}//end get_diffusion_value
 
 
+
+	/**
+	* AV_FILE_EXIST
+	* @return BOOL
+	*/
+	public function av_file_exist($quality=false) {
+
+	$video_path = $this->get_video_path($quality);
+	$file_exists = file_exists($video_path);
+
+	return $file_exists;
+		
+	}#end av_file_exist
+
+
 	
 }//end component_av
 ?>

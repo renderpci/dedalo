@@ -68,6 +68,17 @@ $PosterFrameObj = new PosterFrameObj($reelID);
 		if (!empty($ar_valid[0])) {
 			$quality = $ar_valid[0];
 			$AVObj->set_quality($quality);			
+		}else{
+			//http://master.render.es/dedalo/lib/dedalo/main/?m=tool_upload&t=rsc35&parent=1&section_tipo=muvaet203&quality=original&top_tipo=muvaet78&top_id=
+			//reelID rsc35_muvaet203_1
+
+			$locator = explode("_", $reelID);
+			$component_tipo = $locator[0];
+			$section_tipo = $locator[1];
+			$section_id = $locator[2];
+
+			header("Location: ".DEDALO_LIB_BASE_URL."/main/?m=tool_upload&t=".$component_tipo."&parent=".$section_id."&section_tipo=".$section_tipo."&quality=original");
+
 		}		
 	}
 
