@@ -1112,9 +1112,14 @@
 			define('STRUCTURE_DOWNLOAD_DIR'		, DEDALO_LIB_BASE_PATH . '/backup/backups_structure/srt_download');
 
 
-	Valencia 11-08-2017 44.7.0b40
+	Valencia 11-09-2017 44.7.0b40
 		component_html_text : fixed bug on search . Input name now is normative and search is enable again
 		
+	
+	Valencia 11-08-2017 44.7.0bc1
+		component_portal : fixed bug on load more items don't activate component sacripts
+		
+
 
 
 	Valencia WORK IN PROGRESS
@@ -1140,12 +1145,12 @@
 
 
 	# Version
-	$DEDALO_VERSION = '4.7.0b49';
+	$DEDALO_VERSION = '4.7.0c1';
 	if(DEDALO_ENTITY==='development') {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '20-09-2017');
+	define('DEDALO_BUILD'	, '21-09-2017');
 
 
 	/*
