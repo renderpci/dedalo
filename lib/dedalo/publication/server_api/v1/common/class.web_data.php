@@ -231,7 +231,7 @@ class web_data {
 						$ar_data[$i][$current_field] = self::portal_resolve($rows, $current_field, $request_options, $sql_options->resolve_portals_custom);
 					}
 				}
-							
+			
 			$i++;}; 
 			
 			$result->free();
@@ -251,12 +251,13 @@ class web_data {
 			}
 
 			# Debug properties
-			if(SHOW_DEBUG) {		
+			if(SHOW_DEBUG===true) {		
 				if (isset($count_query)) {
 				$response->debug['count_query']= $count_query;
 				}
 				$response->debug['strQuery']= $strQuery;
 				$response->debug['time'] 	= round(microtime(1)-$start_time,3);
+				#error_log("strQuery: ".$strQuery);
 			}
 			# Fixed properties
 			$response->result 			= $ar_data;
@@ -319,7 +320,7 @@ class web_data {
 			$sql .= "\nWHERE section_id IS NOT NULL";
 								
 			# SQL_FILTER
-			if(!empty($sql_filter) AND strlen($sql_filter)>3 ) {
+			if(!empty($sql_filter) AND strlen($sql_filter)>2 ) {
 				if($sql_filter===PUBLICACION_FILTER_SQL) {
 					$sql .= "\n$sql_filter";
 				}else{
@@ -334,6 +335,7 @@ class web_data {
 				}
 				$sql .= "\nAND lang = '$lang'";
 			}
+
 
 			return $sql;
 		}//end build_sql_where
@@ -1707,25 +1709,33 @@ class web_data {
 				foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
 			$field_term = FIELD_TERM;
+
+			if ($options->q!==false) {		
 			
-			$sd_options = new stdClass();
-				$sd_options->table 	 	= $options->table;
-				$sd_options->ar_fields  = array($field_term );
-				$sd_options->sql_filter = $field_term ." LIKE '%".$options->q."%'";
-				$sd_options->order 	 	= $field_term ." ASC";
-				$sd_options->lang 	 	= $options->lang ;
-				$sd_options->limit 	 	= $options->limit;
+				$sd_options = new stdClass();
+					$sd_options->table 	 	= $options->table;
+					$sd_options->ar_fields  = array($field_term );
+					$sd_options->sql_filter = $field_term ." LIKE '%".$options->q."%'";
+					$sd_options->order 	 	= $field_term ." ASC";
+					$sd_options->lang 	 	= $options->lang ;
+					$sd_options->limit 	 	= $options->limit;
 
-			$search_data	= (object)web_data::get_rows_data( $sd_options );
+				$search_data	= (object)web_data::get_rows_data( $sd_options );
 
-			$result = array();
-			foreach ((array)$search_data->result as $ar_value) foreach ($ar_value as $key => $value) {
-				$result[] = $value;
+				$result = array();
+				foreach ((array)$search_data->result as $ar_value) foreach ($ar_value as $key => $value) {
+					$result[] = $value;
+				}
+
+				$response = new stdClass();
+					$response->result 	= $result;
+					$response->msg 		= 'Ok. Request done';
+			}else{
+
+				$response = new stdClass();
+					$response->result 	= false;
+					$response->msg 		= 'Error. Empty search value (q)';
 			}
-
-			$response = new stdClass();
-				$response->result 	= $result;
-				$response->msg 		= 'Ok. Request done';
 
 			return (object)$response;
 		}//end get_thesaurus_autocomplete
