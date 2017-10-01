@@ -2,8 +2,6 @@
 	
 	# VISUALIZADOR HTML	
 	
-
-	
 	
 	print "<!-- ".__CLASS__." [tipo:$tipo] -->";	
 	print "<div class=\"css_wrap_area css_wrap_area_thesaurus\">";
@@ -51,7 +49,7 @@
 
 		#
 		# HIERARCHY TIPOLOGY NAME Like 'Toponimia'
-		$html .= "<div class=\"tipology_name $tipology_name_model_css\"> <strong>".trim($tipology_name)."</strong></div>";
+		$html .= "<div class=\"tipology_name $tipology_name_model_css\" onclick=\"area_thesaurus.toggle_tipology(this)\" data-state=\"show\"><strong>".trim($tipology_name)."</strong></div>";
 
 		#
 		# HIERARCHIES OF CURRENT TIPO Like 'España' for tipology_section_id 2
@@ -183,7 +181,7 @@
 		#$search_data = '{"ts1_65":{"section_tipo":"ts1","section_id":"65","modo":"edit","lang":"lg-spa","ar_elements":[{"type":"link","tipo":"hierarchy42","value":0},{"type":"term","tipo":"hierarchy25","value":"65"},{"type":"link_childrens","tipo":"hierarchy49","value":"button show childrens"}],"heritage":{"ts1_73":{"section_tipo":"ts1","section_id":"73","modo":"edit","lang":"lg-spa","ar_elements":[{"type":"link","tipo":"hierarchy42","value":0},{"type":"term","tipo":"hierarchy25","value":"73"},{"type":"link_childrens","tipo":"hierarchy49","value":"button show childrens"}],"heritage":{"ts1_74":{"section_tipo":"ts1","section_id":"74","modo":"edit","lang":"lg-spa","ar_elements":[{"type":"link","tipo":"hierarchy42","value":0},{"type":"term","tipo":"hierarchy25","value":"74 pepito"},{"type":"link_childrens","tipo":"hierarchy49","value":"button show childrens unactive"}]}}},"ts1_66":{"section_tipo":"ts1","section_id":"66","modo":"edit","lang":"lg-spa","ar_elements":[{"type":"link","tipo":"hierarchy42","value":0},{"type":"term","tipo":"hierarchy25","value":"66"},{"type":"link_childrens","tipo":"hierarchy49","value":"button show childrens"}],"heritage":{"ts1_67":{"section_tipo":"ts1","section_id":"67","modo":"edit","lang":"lg-spa","ar_elements":[{"type":"link","tipo":"hierarchy42","value":0},{"type":"term","tipo":"hierarchy25","value":"67  pepito pepet"},{"type":"link_childrens","tipo":"hierarchy49","value":"button show childrens unactive"}]}}}}}}';
 		$html .= " <script>ts_object.parse_search_result($search_data, document.querySelector('.search_test'))</script>";
 		*/
-		$html .= " <script>ts_object.parse_search_result($search_data, null, false)</script>";
+		$html .= "<script>ts_object.parse_search_result($search_data, null, false)</script>";
 	
 	}else{
 	
@@ -196,7 +194,7 @@
 		}
 			#dump($ar_hierarchy_obj, ' ar_hierarchy_obj ++ '.to_string());
 		$html .= "<script>";
-		$html .= "area_thesaurus.root_nodes=".json_encode($root_nodes).";\n";
+		$html .= "area_thesaurus.root_nodes=".json_encode($root_nodes).";";
 		$html .= "area_thesaurus.ar_hierarchy=".json_encode($ar_hierarchy_obj).";";
 		$html .= "</script>";
 
@@ -210,10 +208,9 @@
 	echo $html;
 
 
-
 	/*
 	# ETIQUETA (LABEL)
-	$html_label = "\n<div class=\"css_area_titulo\" > ".component_common_draw::draw_label($this)." </div>";	
+	$html_label = "<div class=\"css_area_titulo\" > ".component_common_draw::draw_label($this)." </div>";	
 		
 	
 	# CONTENIDO (INPUT)
@@ -253,5 +250,5 @@
 	*/
 	
 	
-	print "\n</div><!-- /AREA [$tipo] -->\n\n"; //wrap
+	print "</div><!-- /AREA [$tipo] -->"; //wrap
 ?>
