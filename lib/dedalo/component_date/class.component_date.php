@@ -810,7 +810,7 @@ class component_date extends component_common {
 			$dd_date = new dd_date($current_dato->period);
 			$time 	 = dd_date::convert_date_to_seconds($dd_date);
 			if (isset($current_dato->period->time) && $current_dato->period->time!=$time) {
-				debug_log(__METHOD__." Unequal time seconds value: current: $current_dato->period->time, calculated: $time. Used calculated time.", logger::WARNING);
+				debug_log(__METHOD__." Unequal time seconds value: current: ".to_string($current_dato->period->time).", calculated: $time. Used calculated time.", logger::WARNING);
 			}
 			$dd_date->set_time( $time );
 			$current_dato->period = $dd_date;
@@ -821,7 +821,7 @@ class component_date extends component_common {
 			$dd_date = new dd_date($current_dato->start);
 			$time 	 = dd_date::convert_date_to_seconds($dd_date);
 			if (isset($current_dato->start->time) && $current_dato->start->time!=$time) {
-				debug_log(__METHOD__." Unequal time seconds value: current: $current_dato->start->time, calculated: $time. Used calculated time.", logger::WARNING);
+				debug_log(__METHOD__." Unequal time seconds value: current: ".to_string($current_dato->start->time).", calculated: $time. Used calculated time.", logger::WARNING);
 			}
 			$dd_date->set_time( $time );
 			$current_dato->start = $dd_date;
@@ -830,7 +830,7 @@ class component_date extends component_common {
 			$dd_date = new dd_date($current_dato->end);
 			$time 	 = dd_date::convert_date_to_seconds($dd_date);
 			if (isset($current_dato->end->time) && $current_dato->end->time!=$time) {
-				debug_log(__METHOD__." Unequal time seconds value: current: $current_dato->end->time, calculated: $time. Used calculated time.", logger::WARNING);
+				debug_log(__METHOD__." Unequal time seconds value: current: ".to_string($current_dato->end->time).", calculated: $time. Used calculated time.", logger::WARNING);
 			}
 			$dd_date->set_time( $time );
 			$current_dato->end = $dd_date;
@@ -842,7 +842,7 @@ class component_date extends component_common {
 			$dd_date = new dd_date($current_dato); 
 			$time 	 = dd_date::convert_date_to_seconds($dd_date);			
 			if (isset($current_dato->time) && $current_dato->time!=$time) {
-				debug_log(__METHOD__." Unequal time seconds value: current: $current_dato->time, calculated: $time. Used calculated time.", logger::WARNING);
+				debug_log(__METHOD__." Unequal time seconds value: current: ".to_string($current_dato->time).", calculated: $time. Used calculated time.", logger::WARNING);
 			}
 			$dd_date->set_time( $time );
 			$current_dato = $dd_date;
@@ -853,7 +853,7 @@ class component_date extends component_common {
 			$time 	 = dd_date::convert_date_to_seconds($dd_date);			
 			
 			if (isset($current_dato->time) && $current_dato->time!=$time) {
-				debug_log(__METHOD__." Unequal time seconds value: current: $current_dato->time, calculated: $time. Used calculated time.", logger::WARNING);
+				debug_log(__METHOD__." Unequal time seconds value: current: ".to_string($current_dato->time).", calculated: $time. Used calculated time.", logger::WARNING);
 			}
 			$dd_date->set_time( $time );
 			$current_dato = $dd_date;
