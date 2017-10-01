@@ -116,30 +116,34 @@ function add_children($json_data) {
 	global $start_time;
 
 	$response = new stdClass();
-	$response->result 	= 0;
-	$response->msg 		= 'Error. Request failed [add_children]';
+	$response->result 	= false;
+	$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
 
 	# set vars
-	$vars = array('section_tipo','section_id','node_type');
+	$vars = array('section_tipo','section_id','node_type','tipo');
 		foreach($vars as $name) {
 			$$name = common::setVarData($name, $json_data);
+			# DATA VERIFY
+			#if ($name==='dato') continue; # Skip non mandatory
 			if (empty($$name)) {
-				return("Error. ".$$name." is mandatory");
+				$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty '.$name.' (is mandatory)';
+				return $response;
 			}
 		}
 
 	# NEW SECTION
+	# Create a new empty section
 	$new_section 	= section::get_instance(null,$section_tipo);
 	$new_section_id	= $new_section->Save();
 					if (empty($new_section_id)) {
-						debug_log(__METHOD__." Error on create new section from parent. Stoped add_children process !".to_string(), logger::ERROR);
-						return 0;
+						#debug_log(__METHOD__." Error on create new section from parent. Stoped add_children process !".to_string(), logger::ERROR);
+						$response->msg 		= 'Error on create new section from parent. Stoped add_children process !';
+						return $response;
 					}
 
 
 	# COMPONENT_RELATION_CHILDREN
 	$modelo_name 	= 'component_relation_children';
-	$tipo 			= ($node_type=='root') ? DEDALO_HIERARCHY_CHIDRENS_TIPO : DEDALO_THESAURUS_RELATION_CHIDRENS_TIPO;
 	$modo 			= 'edit';
 	$lang			= DEDALO_DATA_NOLAN;
 	$component_relation_children = component_common::get_instance($modelo_name,
@@ -151,21 +155,21 @@ function add_children($json_data) {
 
 	$added = (bool)$component_relation_children->make_me_your_children( $section_tipo, $new_section_id );
 	if ($added===true) {
+
+		# Save relation children data
 		$component_relation_children->Save();
 
 		# All is ok. Result is new created section section_id
 		$response->result  	= (int)$new_section_id;
-		$response->msg 		= 'Error. Request failed [add_children]';
+		$response->msg 		= 'Ok. Request done ['.__FUNCTION__.']';
 
 		# Debug
 		if(SHOW_DEBUG===true) {
 			$debug = new stdClass();
 				$debug->exec_time 	= exec_time_unit($start_time,'ms')." ms";			
-				$debug->tipo 		= $tipo;
-				$debug->section_tipo= $section_tipo;
-				$debug->section_id 	= $section_id;
-				$debug->node_type 	= $node_type;
-
+				foreach($vars as $name) {
+					$debug->{$name} = $$name;
+				}
 			$response->debug = $debug;
 		}
 	}
@@ -224,7 +228,7 @@ function add_children_from_hierarchy($json_data) {
 
 		# All is ok. Result is new created section section_id
 		$response->result  	= (int)$new_section_id;
-		$response->msg 		= 'Ok. Request done ['.__FUNCTION__.']';		
+		$response->msg 		= 'Ok. Request done ['.__FUNCTION__.']';
 	}
 
 	# Debug
