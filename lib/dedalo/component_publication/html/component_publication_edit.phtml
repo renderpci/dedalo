@@ -5,7 +5,7 @@
 	# html_delimiter
 	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'in', $modo, $lang);
 
-	print "<div class=\"wrap_component css_wrap_component_publication wrap_component_{$modo} wrap_component_{$tipo}\" id=\"{$id_wrapper}\" ";
+	print "<div class=\"wrap_component css_wrap_component_publication css_wrap_component_publication_{$modo} wrap_component_{$modo} wrap_component_{$tipo}\" id=\"{$id_wrapper}\" ";
 	print "data-tipo=\"{$tipo}\" ";
 	print "data-section_tipo=\"{$section_tipo}\" ";
 	print "data-parent=\"{$parent}\" ";
@@ -67,7 +67,7 @@
 				//$html_content .= "<script>component_publication.check_publication('{$id_wrapper}')</script>";
 
 				if(SHOW_DEBUG) {
-					$html_content .= "<span class=\"debug_info notas\">$dato_json</span>";				
+					$html_content .= "<span class=\"debug_info notas\">$dato_json</span>";
 					#$html_content .= " <span class=\"css_span_debugger\" id=\"debugger_{$tipo}\" >{$debugger}</span>";
 				}
 				break;
