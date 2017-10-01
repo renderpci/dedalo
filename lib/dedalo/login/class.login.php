@@ -64,7 +64,10 @@ class login extends common {
 			$response->msg 		= 'Error. Request failed [Login]';
 	
 		# Test mcrypt lib
-		if (!function_exists('mcrypt_encrypt')) die("Error Processing Request: MCRYPT lib is not available");
+		if (!function_exists('mcrypt_encrypt')) {
+			$response->msg = "Error Processing Request: MCRYPT lib is not available";
+			return $response;
+		}
 
 		# Mandatory vars
 		$mandatoy_vars = array('username','password','tipo_login','tipo_password','tipo_active_account');
@@ -391,7 +394,8 @@ class login extends common {
 		# BACKUP ALL
 		if( DEDALO_BACKUP_ON_LOGIN ) {
 			require(DEDALO_LIB_BASE_PATH.'/backup/class.backup.php');
-			$backup_info = backup::init_backup_secuence($user_id, $username);
+			$backup_secuence_response = backup::init_backup_secuence($user_id, $username);
+			$backup_info = $backup_secuence_response->msg;
 		}else{
 			$backup_info = 'Deactivated "on login backup" for this domain';
 		}
@@ -835,7 +839,7 @@ class login extends common {
 	/**
 	* TEST_SU_DEFAULT_PASSWORD
 	* Check if admin user password default has ben changed or not
-	* @return bool true/false
+	* @return bool true/false 
 	*/
 	public function test_su_default_password() {
 	
@@ -847,11 +851,8 @@ class login extends common {
 													 DEDALO_SECTION_USERS_TIPO);
 		$dato 		= $component->get_dato();		
 		$default 	= login::SU_DEFAULT_PASSWORD; // Dedalo4debugChangePsW
-<<<<<<< HEAD
 
 		$encryption_mode = encryption_mode();
-=======
->>>>>>> origin/master
 		
 		if( $encryption_mode==='openssl' ) {
 			if (dedalo_decrypt_openssl($dato)==$default) {
