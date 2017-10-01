@@ -2,8 +2,8 @@
 /*
 * CLASS SECTION
 */
-require_once(DEDALO_LIB_BASE_PATH . '/search/records_search/class.records_search.php');
-require_once(DEDALO_LIB_BASE_PATH . '/search/records_navigator/class.records_navigator.php');
+include_once(DEDALO_LIB_BASE_PATH . '/search/records_search/class.records_search.php');
+include_once(DEDALO_LIB_BASE_PATH . '/search/records_navigator/class.records_navigator.php');
 
 
 
@@ -263,7 +263,7 @@ class section extends common {
 
 			# Experimental (devolvemos como que ya se ha intentado cargar, aunque sin section_id)
 			#$this->bl_loaded_matrix_data = true;
-			debug_log(__METHOD__." error on get dato . Trying get dato from section section_id = 0 ($this->section_id) ", logger::DEBUG);
+			debug_log(__METHOD__." error on get dato . Trying get dato from section $this->tipo, section_id = ".to_string($this->section_id), logger::DEBUG);
 			if(SHOW_DEBUG===true) {
 				#dump($this,"this section");
 				#throw new Exception("Error on get dato:  Trying get dato in modo edit without section_id section. Section section_id = ($this->section_id) in modo $this->modo", 1);
@@ -2082,7 +2082,7 @@ class section extends common {
 	/**
 	* GET_CREATED_BY_USER_NAME
 	*/
-	public function get_created_by_user_name() {
+	public function get_created_by_user_name($full_name=false) {
 		$dato = $this->get_dato();
 		if( !isset($dato->created_by_userID) ){
 			return false;
@@ -2090,7 +2090,12 @@ class section extends common {
 		$user_id = $dato->created_by_userID;
 		if( !$user_id ) return false;
 
-		$component_input_text = component_common::get_instance('component_input_text',DEDALO_USER_NAME_TIPO, $user_id, 'edit', DEDALO_DATA_NOLAN, DEDALO_SECTION_USERS_TIPO);
+		if ($full_name===true) {
+			$username_tipo = DEDALO_FULL_USER_NAME_TIPO;
+		}else{
+			$username_tipo = DEDALO_USER_NAME_TIPO;
+		}
+		$component_input_text = component_common::get_instance('component_input_text', $username_tipo, $user_id, 'edit', DEDALO_DATA_NOLAN, DEDALO_SECTION_USERS_TIPO);
 		$user_name = $component_input_text->get_valor();
 
 		return $user_name;
@@ -2183,8 +2188,8 @@ class section extends common {
 		$matrix_table 	= common::get_matrix_table_from_tipo($section_tipo);
 		$filter 		= "section_tipo = '$section_tipo'";
 		$strQuery 		= "-- ".__METHOD__." \nSELECT section_id FROM \"$matrix_table\" WHERE section_tipo = '$section_tipo' ORDER BY section_id ASC ";
-		$result			= JSON_RecordObj_matrix::search_free($strQuery);	
-				
+		$result			= JSON_RecordObj_matrix::search_free($strQuery);
+		
 		return $result;
 	}//end get_resource_all_section_records_unfiltered
 
@@ -2559,6 +2564,13 @@ class section extends common {
 	* @param object locator $locator
 	*/
 	public function add_inverse_locator( $locator ) {
+
+		# matrix_list records don't store inverse locators (for speed)
+		# 29-09-2017 Paco
+		$matrix_table = common::get_matrix_table_from_tipo($this->tipo);
+		if ($matrix_table==="matrix_list") {
+			return false;
+		}
 
 		if (!is_object($locator)) {
 			if(SHOW_DEBUG===true) {

@@ -292,7 +292,12 @@ class search extends common {
 					if ($sql_options->filter_by_locator) {
 						$filter_by_locator  = '';
 						foreach ((array)$sql_options->filter_by_locator as $current_locator) {
-							$filter_by_locator .= "(a.section_tipo='$current_locator->section_tipo' AND a.section_id=$current_locator->section_id) OR\n";
+							if (isset($current_locator->section_tipo) && isset($current_locator->section_id)) {
+								$filter_by_locator .= "(a.section_tipo='".$current_locator->section_tipo."' AND a.section_id=".$current_locator->section_id.") OR\n";
+							}else{
+								$filter_by_locator .= "(a.section_tipo='IMPOSSIBLE_VALUE') OR\n";
+								debug_log(__METHOD__." Ignored invalid locator as filter ".to_string($current_locator), logger::ERROR);
+							}							
 						}
 						if (!empty($filter_by_locator)) {
 							$sql_filtro .= "\n-- filter_by_locator -- \n AND (\n" . substr($filter_by_locator, 0,-3)."\n)";
@@ -861,8 +866,9 @@ class search extends common {
 			#
 			#
 				$result	= JSON_RecordObj_matrix::search_free($strQuery);									
-				if (!$result) {					
-					trigger_error("Error Processing Request : Sorry cannot execute list query: $strQuery");
+				if (!is_resource($result)) {					
+					trigger_error("Error Processing Request : Sorry cannot execute non resource query: ".PHP_EOL."<hr> $strQuery");
+					return null;
 				}
 				#echo "<hr> Time To Generate list html from section_list: section_tipo:$section_tipo): ".round(microtime(1)-$start_time,3);
 	
