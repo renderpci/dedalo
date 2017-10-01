@@ -185,8 +185,8 @@ Chrome	|	60+ | YES - recomended
 Chrome	|	50+ | Deprecated (Please update as soon as posible)	 
 Chrome	|	0 to 50 | NO	 
 Safari	|	9+ | YES
-Safari	|	6 to 8 | Deprecated (Please update as soon as posible)
-Safari	|	0 to 5 | NO	
+Safari	|	7 to 8 | Deprecated (Please update as soon as posible)
+Safari	|	0 to 6 | NO	
 Firefox	|	49+ | The compatibility now is complete, but we need feedback to resolve issues in the diary work with Firefox (15-09-2017), please test it and comment it.
 Firefox	|	40-49 | NO
 Firefox	|	0-40 | NO
