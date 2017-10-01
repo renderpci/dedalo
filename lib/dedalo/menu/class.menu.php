@@ -126,7 +126,7 @@ class menu extends common {
 						if(SHOW_DEBUG===true) {						
 						$tesauro_html = '';
 						$tesauro_html .= "<li class=\"has-sub menu_li_inactive\">";
-						$tesauro_html .= "<a href=\"".DEDALO_LIB_BASE_URL."/ts/ts_list.php?t=".DEDALO_TESAURO_TIPO."&modo=tesauro_edit&type=all\">". ucfirst(label::get_label('tesauro'))." V3</a>";
+						$tesauro_html .= "<a href=\"".DEDALO_LIB_BASE_URL."/ts/ts_list.php?t=".DEDALO_TESAURO_TIPO."&modo=tesauro_edit&type=all\">TS V3</a>"; // ucfirst(label::get_label('tesauro'))
 							$tesauro_html .= "<ul>";
 							$tesauro_html .= "<li><a href=\"".DEDALO_LIB_BASE_URL."/ts/ts_list.php?t=".DEDALO_TESAURO_TIPO."&modo=tesauro_edit&type=all\">". ucfirst(label::get_label('terminos'))."</a></li>";
 							$tesauro_html .= "<li><a href=\"".DEDALO_LIB_BASE_URL."/ts/ts_list.php?t=".DEDALO_TESAURO_TIPO."&modo=modelo_edit&type=all\">". ucfirst(label::get_label('modelos'))." </a></li>";
