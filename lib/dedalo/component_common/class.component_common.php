@@ -560,7 +560,7 @@ abstract class component_common extends common {
 			}
 			# /DEDALO_CACHE_MANAGER #################################
 		
-
+	
 		#
 		# HTML BUFFER
 		ob_start();
@@ -3361,7 +3361,7 @@ abstract class component_common extends common {
 	* @return string $current_value
 	*/
 	public static function extract_component_value_fallback($component, $lang=DEDALO_DATA_LANG, $mark=true) {
-
+	
 		$current_value = $component->get_valor($lang);
 
 		if (empty($current_value)) {
@@ -3369,7 +3369,7 @@ abstract class component_common extends common {
 			# Try main lang	
 			if ($lang !== $main_lang) {
 				$component->set_lang($main_lang);
-				$current_value = $component->get_valor($main_lang);
+				$current_value = $component->get_valor($main_lang);					
 			}
 			# Try nolan
 			if (empty($current_value)) {
@@ -3380,6 +3380,9 @@ abstract class component_common extends common {
 			if (empty($current_value)) {
 				$data_langs = common::get_ar_all_langs();
 				foreach ($data_langs as $current_lang) {
+					if ($current_lang===$lang || $current_lang===$main_lang) {
+						continue; // Already checked
+					}
 					$component->set_lang($current_lang);
 					$current_value = $component->get_valor($current_lang);
 					if (!empty($current_value)) break; # Stops when first data is found
