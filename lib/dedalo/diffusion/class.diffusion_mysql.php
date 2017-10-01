@@ -418,7 +418,8 @@ class diffusion_mysql extends diffusion_sql  {
 	public static function save_record( $request_options ) {
 		
 		$response = new stdClass();
-			$response->result = false;	
+			$response->result = false;
+			$response->msg 	  = array();
 
 		$options = new stdClass();
 			$options->record_data 		= null;
@@ -451,13 +452,13 @@ class diffusion_mysql extends diffusion_sql  {
 			if(!self::table_exits($database_name, $table_name)) {
 
 				# Call to diffusion to optain fields for generate the table
-				if ($typology==='thesaurus') {
-					$ts_options = new stdClass();
-						$ts_options->table_name = $table_name;
-					$create_table_ar_fields = self::build_thesaurus_columns( $ts_options );
-				}else{
+				#if ($typology==='thesaurus') {
+				#	$ts_options = new stdClass();
+				#		$ts_options->table_name = $table_name;
+				#	$create_table_ar_fields = self::build_thesaurus_columns( $ts_options );
+				#}else{
 					$create_table_ar_fields = self::build_table_columns( $diffusion_section, $database_name);
-				}
+				#}
 				
 					#dump($create_table_ar_fields['ar_fields'], ' create_table_ar_fields ++ '.to_string());die();			
 				self::create_table( array('database_name' 	=> $database_name,
@@ -478,10 +479,9 @@ class diffusion_mysql extends diffusion_sql  {
 
 			# First, delete current record in all langs if exists
 				if ($options->delete_previous===true) {
-					$delete_result = self::delete_sql_record($section_id, $database_name, $table_name, $typology, $options->section_tipo);
+					$delete_result = self::delete_sql_record($section_id, $database_name, $table_name, $options->section_tipo, false);
 					$response->msg[] = $delete_result->msg;
 				}				
-				
 			
 			#
 			# IS_PUBLICABLE : Skip non publicable records
@@ -755,24 +755,31 @@ class diffusion_mysql extends diffusion_sql  {
 	* DELETE_SQL_RECORD
 	* @return 
 	*/
-	public static function delete_sql_record($section_id, $database_name, $table_name, $typology=null, $section_tipo=null) {
+	public static function delete_sql_record($section_id, $database_name, $table_name, $section_tipo=null, $custom=false) {
 
 		$response = new stdClass();
 			$response->result 	= false;
 			$response->msg 		= '';
-		
-		if ($typology==='thesaurus' || $table_name==='thesaurus') {
-			$strQuery="DELETE FROM `$database_name`.`$table_name` WHERE `terminoID` = '$section_id' ";
+
+		if ($custom!==false) {
+			// Custom is a object
+			$field_name  = $custom->field_name;
+			$field_value = $custom->field_value;
+			$strQuery="DELETE FROM `$database_name`.`$table_name` WHERE `{$field_name}` = '{$field_value}' ";
 		}else{
+			// Generic delete way
 			$strQuery="DELETE FROM `$database_name`.`$table_name` WHERE `section_id` = '$section_id' OR `section_id` = '{$section_tipo}_{$section_id}' ";
 		}
+	
 		#$result  = DBi::_getConnection_mysql()->query( $strQuery );
 		$result  = self::exec_mysql_query( $strQuery, $table_name, $database_name );
 			if (!$result) {
-				if(SHOW_DEBUG===true) { dump($strQuery, 'ERROR ON $strQuery '.to_string(DBi::_getConnection_mysql()->error)); }
+				if(SHOW_DEBUG===true) {
+					dump($strQuery, 'ERROR ON $strQuery '.to_string(DBi::_getConnection_mysql()->error));
+				}
 				$response->result = false;
 				$response->msg    = "Error Processing Request. Nothing is deleted. MySQL error".DBi::_getConnection_mysql()->error;
-				return (object)$response;						
+				return (object)$response;
 			}
 
 		$affected_rows = isset(DBi::_getConnection_mysql()->affected_rows) ? DBi::_getConnection_mysql()->affected_rows : 0;
@@ -788,7 +795,7 @@ class diffusion_mysql extends diffusion_sql  {
 
 
 	/**
-	* add_publication_schema
+	* ADD_PUBLICATION_SCHEMA
 	* Add record to table publication_schema
 	* @return 
 	*/

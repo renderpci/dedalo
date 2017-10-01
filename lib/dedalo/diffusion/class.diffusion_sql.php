@@ -402,10 +402,10 @@ class diffusion_sql extends diffusion  {
 			#dump($component_publication_tipo, ' component_publication_tipo ++ ar_table_children: '.to_string($ar_table_children));
 		if (empty($component_publication_tipo)) {
 			if(SHOW_DEBUG===true) {
-				dump($component_publication_tipo, ' component_publication_tipo ++ '.to_string($ar_table_children));
+				#dump($component_publication_tipo, ' component_publication_tipo ++ '.to_string($ar_table_children));
 			}			
 			#trigger_error("Error on find component_publication_tipo. Not found component_publication for section_tipo: $section_tipo. Ignored");
-			debug_log(__METHOD__." Error on find component_publication_tipo. Not found component_publication for section_tipo: $section_tipo. Ignored! ", logger::ERROR);			
+			debug_log(__METHOD__." Error on find component_publication_tipo. Not found component_publication for section_tipo: $section_tipo. Ignored! table_name:".$ar_field_data['table_name'], logger::ERROR);			
 			return false;
 		}
 
@@ -461,7 +461,7 @@ class diffusion_sql extends diffusion  {
 				#dump($component_publication_bool_value, ' component_publication_bool_value ++ '.to_string());					
 				if ($component_publication_bool_value===false) {
 					# Skip this record
-					self::delete_sql_record($current_section_id, $ar_field_data['database_name'], $ar_field_data['table_name']);
+					diffusion_sql::delete_sql_record($current_section_id, $ar_field_data['database_name'], $ar_field_data['table_name']);
 					debug_log(__METHOD__." Skipped (and mysql deleted) record $current_section_id ".$ar_field_data['table_name']." (publication=no)", logger::DEBUG);					
 
 					$section->diffusion_info_add($diffusion_element_tipo);
@@ -473,7 +473,7 @@ class diffusion_sql extends diffusion  {
 					if (isset($table_propiedades->cascade_delete)) {
 						foreach ((array)$table_propiedades->cascade_delete as $tkey => $tvalue) {
 							$cd_table_name = $tvalue->table;
-							self::delete_sql_record($current_section_id, $ar_field_data['database_name'], $cd_table_name);
+							diffusion_sql::delete_sql_record($current_section_id, $ar_field_data['database_name'], $cd_table_name);
 							debug_log(__METHOD__." Deleted (cascade_delete) record $current_section_id ".$cd_table_name." ", logger::DEBUG);
 						}
 					}
@@ -738,7 +738,7 @@ class diffusion_sql extends diffusion  {
 			
 		if ($component_publication_bool_value===false) {
 			# Delete this record
-			self::delete_sql_record($options->section_id, $options->database_name, $options->table_name, $options->section_tipo);
+			diffusion_sql::delete_sql_record($options->section_id, $options->database_name, $options->table_name, $options->section_tipo);
 			debug_log(__METHOD__." Skipped (and mysql deleted) record $options->section_id ".$options->table_name." (publication=no)", logger::DEBUG);
 
 			$section = section::get_instance($options->section_id, $options->section_tipo, $modo='list', false);
@@ -751,7 +751,7 @@ class diffusion_sql extends diffusion  {
 			if (isset($options->table_propiedades->cascade_delete)) {
 				foreach ((array)$options->table_propiedades->cascade_delete as $tkey => $tvalue) {
 					$cd_table_name = $tvalue->table;
-					self::delete_sql_record($options->section_id, $options->database_name, $cd_table_name, $options->section_tipo);
+					diffusion_sql::delete_sql_record($options->section_id, $options->database_name, $cd_table_name, $options->section_tipo);
 					debug_log(__METHOD__." Deleted (cascade_delete) record $options->section_id ".$cd_table_name." ", logger::DEBUG);
 				}
 			}
@@ -1101,7 +1101,7 @@ class diffusion_sql extends diffusion  {
 		$table_tipo = $diffusion_element_tables_map->{$section_tipo}->table;
 		$table_obj 	= new RecordObj_dd($table_tipo);
 		$table_obj_propiedades = json_decode($table_obj->get_propiedades());
-			#dump($table_obj_propiedades, ' table_obj_propiedades ++ '.to_string());
+			#dump($table_obj_propiedades, ' table_obj_propiedades ++ '.to_string($table_tipo));
 		if (isset($table_obj_propiedades->custom_diffusion)) {
 			#dump(get_defined_vars(), 'get_defined_vars() ++ '.to_string());
 			$function_name = $table_obj_propiedades->custom_diffusion;
@@ -1959,16 +1959,16 @@ class diffusion_sql extends diffusion  {
 	* @return bool
 	*/ 
 	public static function delete_sql_record($section_id, $database_name, $table_name, $section_tipo) {
-
-			error_log("delete_sql_record: $section_id, $database_name, $table_name, $section_tipo, ".get_called_class());
-
-		#$diffusion_element_tables_map = diffusion_sql::get_diffusion_element_tables_map( $options->diffusion_element_tipo );
+		if(SHOW_DEBUG===true) {
+			debug_log(__METHOD__." Called with: section_id:$section_id, database_name:$database_name, table_name:$table_name, section_tipo:$section_tipo, called_class:".get_called_class(), logger::DEBUG);
+			#$diffusion_element_tables_map = diffusion_sql::get_diffusion_element_tables_map( $options->diffusion_element_tipo );
+		}		
 		
 		switch ( get_called_class() ) {
 			case 'diffusion_mysql':
 			case 'diffusion_sql': // ??			
 				if( diffusion_mysql::table_exits($database_name, $table_name) ) { 
-					$response = diffusion_mysql::delete_sql_record($section_id, $database_name, $table_name, $typology=null, $section_tipo); // $section_id, $database_name, $table_name, $typology=null, $section_tipo=null
+					$response = diffusion_mysql::delete_sql_record($section_id, $database_name, $table_name, $section_tipo); // $section_id, $database_name, $table_name, $section_tipo=null, $custom=false
 					if ($response->result===true) {
 						debug_log(__METHOD__." MySQL record is deleted (publication=no) $response->msg ", logger::DEBUG);
 					}					
