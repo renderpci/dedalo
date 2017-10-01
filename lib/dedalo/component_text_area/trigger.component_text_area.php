@@ -585,14 +585,14 @@ function show_structuration_info($json_data) {
 		}//foreach
 
 	$structuration_info = new stdClass();
-		$structuration_info->section_info = $section_info;
-		$structuration_info->html 	    = $html;
+		$structuration_info->section_info 	= $section_info;
+		$structuration_info->html 	    	= $html;
 
 
-	$response->result 			= true;
-	$response->msg 				= 'Request done successfully [show_structuration_info]';
-	$response->fragment_text 	= $fragment_text;
-	$response->indexations_list = $indexations_list;
+	$response->result 				= true;
+	$response->msg 					= 'Request done successfully [show_structuration_info]';
+	#$response->fragment_text 		= $fragment_text;
+	#$response->indexations_list 	= $indexations_list;
 	$response->structuration_info 	= isset($structuration_info) ? $structuration_info : null;
 
 	# Debug
