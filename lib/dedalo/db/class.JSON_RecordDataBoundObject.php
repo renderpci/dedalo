@@ -25,7 +25,7 @@ abstract class JSON_RecordDataBoundObject {
 	abstract protected function defineTableName();
 	abstract protected function defineRelationMap();
 	abstract protected function definePrimaryKeyName();
-	
+
 
 
 	# __CONSTRUCT
@@ -42,7 +42,7 @@ abstract class JSON_RecordDataBoundObject {
 		$this->arModifiedRelations	= array();
 
 		$this->use_cache = false;
-	}
+	}//end __construct
 
 
 
@@ -53,7 +53,7 @@ abstract class JSON_RecordDataBoundObject {
 		}
 		#if(!isset($this->dato)) return NULL;
 		return $this->dato;		
-	}
+	}//end get_dato
 
 
 
@@ -64,7 +64,7 @@ abstract class JSON_RecordDataBoundObject {
 		$this->arModifiedRelations['dato'] = 1;
 
 		$this->dato = $dato;	
-	}
+	}//end set_dato
 
 
 
@@ -168,12 +168,14 @@ abstract class JSON_RecordDataBoundObject {
 			#$totaltime = exec_time_unit($start_time,'ms');
 			#debug_log(__METHOD__." Total: $totaltime - $strQuery ".to_string(), logger::DEBUG);
 		}
-	}#end load
+	}//end load
 
 
 
-	#
-	# SAVE . UPDATE CURRENT RECORD
+	/**
+	* SAVE
+	* Updates current record
+	*/
 	public function Save( $save_options=null ) {
 
 		#dump($this->ID,"this->ID");dump($this->datos,"this->datos");die();
@@ -273,18 +275,23 @@ abstract class JSON_RecordDataBoundObject {
 
 
 
-	# DELETE
+	/**
+	* MARKFORDELETION
+	* Delete record on destruct
+	*/
 	public function MarkForDeletion() {
 		$this->blForDeletion = true;
 	}
-	# ALIAS OF MarkForDeletion
+	# DELETE. ALIAS OF MarkForDeletion
 	public function Delete() {
 		$this->MarkForDeletion();
 	}
 
 
 
-	# ARRAY EDITABLE FIELDS
+	/**
+	* GET_AR_EDITABLE_FIELDS
+	*/
 	public function get_ar_editable_fields() {
 
 		static $ar_editable_fields;
@@ -301,8 +308,9 @@ abstract class JSON_RecordDataBoundObject {
 			}
 			return $ar_editable_fields ;
 		}
+
 		return false;
-	}
+	}//end get_ar_editable_fields
 
 
 
@@ -315,38 +323,39 @@ abstract class JSON_RecordDataBoundObject {
 	*/
 	public static function search_free($strQuery, $wait=true) {
 
-		#static $search_free_cache;
-		#if (isset($search_free_cache) && in_array($strQuery, $search_free_cache)) {
-			#return $search_free_cache[$strQuery];
-		#}
-
 		if(SHOW_DEBUG===true) {
 			$start_time = start_time();
 			if (isset(debug_backtrace()[1]['function'])) {
 				$strQuery = '-- search_free : '.debug_backtrace()[1]['function']."\n".$strQuery;
 			}
-		}
+		}		
 		
 		# $result = pg_query(DBi::_getConnection(), $strQuery);	
-		# With prepared statement
-		$statement = pg_prepare(DBi::_getConnection(), "", $strQuery);
+
+
+		# With prepared statement	
+		$stmtname  = ""; //md5($strQuery); //'search_free_stmt';		
+		$statement = pg_prepare(DBi::_getConnection(), $stmtname, $strQuery);			
 		if ($statement===false) {
 			if(SHOW_DEBUG===true) {
 				debug_log(__METHOD__." Error when pg_prepare statemnt for strQuery: ".to_string($strQuery), logger::ERROR);
+				return false;
 			}
-		}
+		}	
+
+		
 		if ($wait===false) {
-			pg_send_execute(DBi::_getConnection(), "", array());
+			pg_send_execute(DBi::_getConnection(), $stmtname, array());
 			$result = pg_get_result(DBi::_getConnection());
 		}else{
-			$result = pg_execute(DBi::_getConnection(), "", array());
+			$result = pg_execute(DBi::_getConnection(), $stmtname, array());
 		}
 		#dump($result, " result ".to_string());
 		if($result===false) {
 			echo "<span class=\"error\">Error: sorry an error ocurred on search record.</span>";
 			if(SHOW_DEBUG===true) {
 				dump(pg_last_error()," error on strQuery: ".to_string( PHP_EOL.$strQuery.PHP_EOL ));
-				throw new Exception("Error Processing SEARCH_FREE Request ". pg_last_error(), 1);;
+				throw new Exception("Error Processing SEARCH_FREE Request. pg_last_error: ". pg_last_error(), 1);;
 			}
 		}
 		#dump($result, 'result', array());
@@ -370,18 +379,17 @@ abstract class JSON_RecordDataBoundObject {
 			#error_log("search_free - Loaded: $total_time_ms ms ");
 		}
 
-		#$search_free_cache[$strQuery] = $result;
-			#dump( array_keys($search_free_cache), ' search_free_cache');
 
 		return $result; # resource
 	}//end search_free
 
 
 
-	#
-	# SEARCH
-	# Buscador genérico . Necesita array key-value con campo,valor
-	# TIPO $arguments['parent'] = 14 ...
+	/**
+	* SEARCH
+	* Buscador genérico . Necesita array key-value con campo,valor
+	* TIPO $arguments['parent'] = 14 ...
+	*/
 	public function search($ar_arguments=NULL, $matrix_table=NULL) {
 
 		#$use_cache = $this->use_cache; # Default use class value
@@ -544,14 +552,14 @@ abstract class JSON_RecordDataBoundObject {
 		#pg_close(DBi::_getConnection());
 
 		return $ar_records;
-	}#end search
+	}//end search
 
 
 
 	/**
 	* BUILD_PG_FILTER 
 	*/
-	static function build_pg_filter($modo,$datos='datos',$tipo,$lang,$value) {
+	public static function build_pg_filter($modo,$datos='datos',$tipo,$lang,$value) {
 		switch ($modo) {
 			case 'gin':
 				# ref: datos @>'{"components":{"rsc24":{"dato":{"lg-nolan":"114"}}}}'
@@ -607,12 +615,14 @@ abstract class JSON_RecordDataBoundObject {
 				}				
 				break;
 		}		
-	}
+	}//end build_pg_filter
+
+
 
 	/**
 	* BUILD_PG_SELECT
 	*/
-	static function build_pg_select($modo,$datos='datos',$tipo,$key='dato',$lang) {
+	public static function build_pg_select($modo,$datos='datos',$tipo,$key='dato',$lang) {
 		switch ($modo) {
 			case 'gin':
 				throw new Exception("Error Processing Request. Sorry not implemented...", 1);				
@@ -622,11 +632,13 @@ abstract class JSON_RecordDataBoundObject {
 				return "$datos #>>'{components,$tipo,$key,$lang}' AS $tipo";
 				break;
 		}		
-	}
+	}//end build_pg_select
 
 
 
-	# DESTRUCT
+	/**
+	* __DESTRUCT
+	*/
 	public function __destruct() {
 
 		#if( isset($this->ID) ) {
@@ -649,7 +661,7 @@ abstract class JSON_RecordDataBoundObject {
 		#pg_get_result(DBi::_getConnection()) ;
 		# close connection
 		#DBi::_getConnection()->close();		
-	}
+	}//end __destruct
 
 
 
