@@ -82,6 +82,17 @@ class common {
 
 
 
+	/**
+	* GENERATE_URL
+	* @return 
+	*/
+	public static function generate_url($string) {
+		return urlencode($string);
+	}//end generate_url
+
+
+	
+
 }//end common
 
 
