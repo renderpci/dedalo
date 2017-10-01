@@ -187,10 +187,7 @@ class tool_administration extends tool_common {
 				// Save section dato			
 				$strQuery = "UPDATE \"$matrix_table\" SET datos = '$datos' WHERE id = $id";
 					#dump($strQuery, ' strQuery');
-
-				if(SHOW_DEBUG===true) {
-					#$msg[] = "$strQuery";
-				}
+					#debug_log(__METHOD__." strQuery ".to_string($strQuery), logger::DEBUG);
 					
 				#if check "save" proced to save the new dato into the DB row (update the row)
 				if ($save===true) {
@@ -341,13 +338,9 @@ class tool_administration extends tool_common {
 		require(DEDALO_LIB_BASE_PATH.'/backup/class.backup.php');
 		$user_id  = $_SESSION['dedalo4']['auth']['user_id'];
 		$username = $_SESSION['dedalo4']['auth']['username'];
-		$backup_info = backup::init_backup_secuence($user_id, $username, $skip_backup_time_range=true);
-		debug_log(__METHOD__."  backup_info: $backup_info ".to_string(), logger::DEBUG);
-
-		if ($backup_info ) {
-			$response->result 	= true;
-			$response->msg 		= 'Backup is done: '.$backup_info;
-		}
+		
+		$response = (object)backup::init_backup_secuence($user_id, $username, $skip_backup_time_range=true);
+		#debug_log(__METHOD__."  backup_info: $response->msg ".to_string(), logger::DEBUG);		
 
 		return (object)$response;
 	}//end make_backup

@@ -4,6 +4,7 @@ $session_duration_hours = 72;
 include( dirname(dirname(dirname(__FILE__))) .'/config/config4.php');
 # TRIGGER_MANAGER. Add trigger_manager to receive and parse requested data
 common::trigger_manager();
+set_time_limit(0);
 
 # IGNORE_USER_ABORT
 #ignore_user_abort(true);
