@@ -75,20 +75,7 @@
 			if (!empty($component_warning)) {
 				$html_content .= "<div class=\"text_area_warning\"><span class=\"warning\">".$component_warning."</span></div>";
 			}
-
-			#
-			# LANG FAST SWITCHER
-			/*
-			$html_content .= "<select class=\"select_fast_lang_switch tool_structuration_fast_lang_switch\" onchange=\"tool_structuration.fast_switch_lang(this)\">";
-				# Aplication langs
-				$dedalo_application_langs = unserialize(DEDALO_APPLICATION_LANGS);
-				foreach($dedalo_application_langs as $current_lang => $lang_name) {
-					# Selected
-					$selected = ($current_lang === $lang) ? ' selected="selected"' : '';
-					$html_content .= '<option value="'.$current_lang.'" '.$selected.'>'.$lang_name.'</option>';
-				}
-			$html_content .= "</select>";
-			*/
+			
 
 			# dato_work 
 			# Always add a blank space at end to allow user set the cursor at end of text
