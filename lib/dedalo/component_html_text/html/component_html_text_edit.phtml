@@ -15,13 +15,13 @@
 	data-component_name=\"{$component_name}\"
 	data-component_info='{$component_info}'
 	>";
-	
+	//return null;
 	# ETIQUETA (LABEL)
 	$html_label = component_common_draw::draw_label($this);
 	
 	# CONTENIDO (INPUT)
 	$html_contenido = '';
-	switch(true) {	
+	switch(true) {
 			
 		case $permissions===0	:
 					$html_contenido .= "";	

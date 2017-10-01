@@ -16,9 +16,9 @@ class component_input_text extends component_common {
 		$dato = parent::get_dato();
 		
 		if(SHOW_DEBUG===true) {
-			if ( !is_null($dato) && !is_array($dato)  ) {
+			#if ( !is_null($dato) && !is_array($dato)  ) {
 				#dump( $dato, "WRONG TYPE of dato. tipo: $this->tipo - section_tipo: $this->section_tipo - section_id: $this->parent");
-			}
+			#}
 		}
 
 		return (array)$dato;
@@ -79,7 +79,7 @@ class component_input_text extends component_common {
 				
 		if ($index==='all') {			
 			$ar = array();
-			foreach ($dato as $key => $value) {				
+			foreach ($dato as $key => $value) {
 				$ar[] = $value;				
 			}
 			$valor = implode(',',$ar);

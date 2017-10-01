@@ -6,7 +6,7 @@
 	$parent 				= $this->get_parent();
 	$section_tipo			= $this->get_section_tipo();
 	$modo					= $this->get_modo();		
-	$dato 					= $this->get_dato();
+	$dato 					= $this->get_dato(); 
 	$caller_id 				= navigator::get_selected('caller_id');		
 	$caller_tipo 			= navigator::get_selected('caller_tipo');
 	$label 					= $this->get_label();				
@@ -16,8 +16,8 @@
 	$ejemplo				= $this->get_ejemplo();
 	$html_title				= "Info about $tipo";	
 	$valor					= $this->get_valor();				
-	$lang					= $this->get_lang();
-	$lang_name				= $this->get_lang_name();
+	$lang					= $this->get_lang(); 
+	#$lang_name				= $this->get_lang_name();
 	$traducible 			= $this->get_traducible();
 	$identificador_unico	= $this->get_identificador_unico();
 	$component_name			= get_class($this);
@@ -58,12 +58,13 @@
 					$component_info 	= $this->get_component_info('json');
 					
 					# DATO_REFERENCE_LANG
+					/*
 					$dato_reference_lang= NULL;
-					if (empty($dato) && $this->get_traducible()=='si') { # && $traducible=='si'
+					if (empty($dato) && $traducible==='si') { # && $traducible=='si'
 						#$dato_reference_lang = $this->get_dato_default_lang();
 						$default_component = $this->get_default_component();
 							#dump($default_component,'$default_component');
-					}					
+					}*/									
 					break;
 		
 		case 'tool_lang' :
@@ -119,7 +120,8 @@
 					break;	
 	}
 
-		
+
+
 	$page_html	= DEDALO_LIB_BASE_PATH .'/'. get_class($this) . '/html/' . get_class($this) . '_' . $file_name . '.phtml';
 	if( !include($page_html) ) {
 		echo "<div class=\"error\">Invalid mode $this->modo</div>";
