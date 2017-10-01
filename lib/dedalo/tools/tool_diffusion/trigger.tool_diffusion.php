@@ -79,25 +79,24 @@ function export_list($json_data) {
 			$n_records_published++;
 		}else{
 			$response->msg .= $export_result->msg;
-			debug_log(__METHOD__." export_result ".to_string(), logger::DEBUG);
+			debug_log(__METHOD__." export_result ".to_string($export_result), logger::DEBUG);
 		}
 	}
 	$response->n_records_published = $n_records_published;	
 
 	if ($n_records_published>0) {
 		#echo "Published record: $section_id ";
+		$response->result = true;
 		$response->msg .= sprintf("<span class=\"ok\">Ok. Published %s records successfully</span>",$n_records_published);
 		
 	}else{
+		$response->result = false;
 		$response->msg .= "<span class=\"warning\">Warning. Error on publish records. $n_records_published records area publish</span>";
 		if(SHOW_DEBUG) {
 			#dump($response, ' response ++ '.to_string());;
 		}
 	}
-
-	if(SHOW_DEBUG) {
-		$response->msg .= "<span>Exec in ".exec_time_unit($start_time,'secs')." secs </span>";  //style=\"position:absolute;right:12px;top:8px\"
-	}
+	
 
 	# Debug
 	if(SHOW_DEBUG===true) {
