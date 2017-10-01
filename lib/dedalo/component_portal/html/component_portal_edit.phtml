@@ -89,6 +89,12 @@ if($this->generate_json_element===true) {
 			if ($row_number <= $offset) {
 				continue; # Skip print offset records
 			}
+
+			if (!isset($current_locator->section_tipo) || !isset($current_locator->section_id)) {
+				debug_log(__METHOD__."ERROR. Skipped invalid locator ".to_string($current_locator), logger::ERROR);
+				trigger_error("ERROR. Skipped invalid locator ");
+				continue; # Skip invalid locator
+			}
 			
 			$current_section_id 	= $current_locator->section_id;
 			$current_section_tipo 	= $current_locator->section_tipo;

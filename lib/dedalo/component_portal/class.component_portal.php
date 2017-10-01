@@ -294,7 +294,7 @@ class component_portal extends component_reference_common {
 		$dato = (array)$this->get_dato();
 		$string='';
 		foreach ($dato as $key => $value) {
-			foreach ($value as $current_key => $current_value) {
+			foreach ((array)$value as $current_key => $current_value) {
 				$string .= "[$key] $current_key -> ".to_string($current_value)." \n";
 			}
 		}
