@@ -20,11 +20,15 @@ abstract class backup {
 	* Make backup (compresed mysql dump) of current dedalo DB before login
 	* @return $db_name." ($file_bk_size)";
 	*/
-	public static function init_backup_secuence($user_id_matrix, $username, $skip_backup_time_range=false) {
+	public static function init_backup_secuence($user_id, $username, $skip_backup_time_range=false) {
+
+		$response = new stdClass();
+			$response->result 	= false;
+			$response->msg 		= 'Error. Request failed '.__METHOD__;
 		
 		try {
 			# NAME : File name formated as date . (One hour resolution)
-			$user_id 		= isset($_SESSION['dedalo4']['auth']['user_id']) ? $_SESSION['dedalo4']['auth']['user_id'] : '';			
+			# $user_id 		= isset($_SESSION['dedalo4']['auth']['user_id']) ? $_SESSION['dedalo4']['auth']['user_id'] : '';			
 			if($skip_backup_time_range===true) {
 				$db_name 		= date("Y-m-d_His") .'.'. DEDALO_DATABASE_CONN .'.'. DEDALO_DB_TYPE .'_'. $user_id .'_forced';
 			}else{
@@ -36,7 +40,10 @@ abstract class backup {
 			# Backups folder exists verify
 			if( !is_dir($file_path) ) {		
 				if(!mkdir($file_path, 0700, true)) {
-					throw new Exception(" Error on read or create backup directory. Permission denied");
+					#throw new Exception(" Error on read or create backup directory. Permission denied");
+					$response->result 	= false;
+					$response->msg 		= "Error on read or create backup directory. Permission denied ".__METHOD__;
+					return $response;
 				}
 				debug_log(__METHOD__." CREATED DIR: $folder_path  ".to_string(), logger::DEBUG);
 			}
@@ -51,7 +58,7 @@ abstract class backup {
 				#
 				# Time range for backups in hours
 				if (!defined('DEDALO_BACKUP_TIME_RANGE')) {
-					define('DEDALO_BACKUP_TIME_RANGE', 4); // Minimun lapse of time (in hours) for run backup script again. Default: (int) 4
+					define('DEDALO_BACKUP_TIME_RANGE', 8); // Minimun lapse of time (in hours) for run backup script again. Default: (int) 4
 				}			
 				$last_modification_time_secs = get_last_modification_date( $file_path, $allowedExtensions=array('backup'), $ar_exclude=array('/acc/'));
 				$current_time_secs 			 = time();
@@ -60,7 +67,9 @@ abstract class backup {
 				if ( $difference_in_hours < DEDALO_BACKUP_TIME_RANGE ) {
 					$msg = " Skipped backup. A recent backup (about $difference_in_hours hours early) already exists. Is not necessary build another";					
 					debug_log(__METHOD__." $msg ".to_string(), logger::DEBUG);					
-					return $msg;
+					$response->result 	= true;
+					$response->msg 		= $msg . " ".__METHOD__;
+					return $response;
 				}
 			}
 			
@@ -71,7 +80,9 @@ abstract class backup {
 			if (file_exists($mysqlExportPath)) {
 				$msg = " Skipped backup. A recent backup already exists ('$mysqlExportPath'). Is not necessary build another";				
 				debug_log(__METHOD__." $msg ".to_string(), logger::DEBUG);				
-				return $msg;
+				$response->result 	= true;
+				$response->msg 		= $msg . " ".__METHOD__;
+				return $response;
 			}
 
 			// Export the database and output the status to the page
@@ -161,8 +172,10 @@ abstract class backup {
 		} catch (Exception $e) {
 			$msg = "Sorry $username. ".  $e->getMessage(). "\n";
 			#trigger_error($msg);
-			debug_log(__METHOD__." Exception: $msg ".to_string(), logger::ERROR);
-			die($msg);
+			debug_log(__METHOD__." Exception: $msg ".to_string(), logger::ERROR);			
+			$response->result 	= false;
+			$response->msg 		= "Exception: $msg ";
+			return $response;
 		}
 
 		# BK Filesize
@@ -172,7 +185,11 @@ abstract class backup {
 			$file_bk_size = number_format((float)$file_bk_size, 3, '.', '').' MB';
 		}
 
-		return $db_name." ($file_bk_size)";
+		$response->result 	= true;
+		$response->msg 		= "Ok. backup done. ".$db_name." ($file_bk_size)";
+
+
+		return (object)$response;
 	}#end init_backup_secuence
 
 
