@@ -1,8 +1,8 @@
 <?php
 
 # CONFIG
-	#include(dirname(dirname(__FILE__)) . '/config/config.php');
-
+	include_once(dirname(dirname(__FILE__)) . '/config/config.php');
+	#dump(WEB_AREA_NAME, 'WEB_AREA_NAME ++ '.to_string());
 
 
 # PAGE
@@ -12,7 +12,21 @@
 	$css_links 		= $this->get_header_links('css'); 
 	$js_links 		= $this->get_header_links('js');
 
-	# header_html	
+	# menu_html
+	$menu_html = '';
+	if ($this->row!==false) {
+
+		$this->main_menu_data = $this->get_menu_terms();
+		#dump($main_menu_data, ' $main_menu_data ++ '.to_string($this->term_id)); //die();
+
+		ob_start();
+		include ( dirname(__FILE__) .'/html/menu.phtml' );
+		$menu_html = ob_get_clean();
+	}
+
+
+	# header_html
+	$this->breadcrumb = $this->get_breadcrumb();	
 	ob_start();
 	include ( dirname(__FILE__) .'/html/header.phtml' );
 	$header_html = ob_get_clean();

@@ -1,0 +1,23 @@
+<div id="generic_list_content">
+<h2><?php echo WEB_AREA_NAME ?></h2>	
+<h3><?php echo $template_name ?></h3>
+<h2></h2>
+<ul>
+<?php 
+for ($i=0; $i < 45; $i++) { 
+?>
+<li>
+<?php 
+#echo $i; 
+$id = $i + 1480;
+$url = "http://www.museodeprehistoria.es/dedalo/media/image/digital/thumb/".$id."/".$id."-1.jpg"
+?>
+	<img src="<?php echo $url ?>" width="120px" height="80px">
+
+</li>
+
+<?php
+}
+?>
+</ul>
+</div>

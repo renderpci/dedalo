@@ -69,7 +69,6 @@ class video_view_data {
 			$summary 	  		= $interview_result[FIELD_SUMMARY];
 			$interview_date 	= $interview_result[FIELD_INTERVIEW_DATE];
 			$interview_code 	= $interview_result[FIELD_CODE];
-		
 
 		#
 		# AUDIOVISUAL DATA
@@ -93,7 +92,6 @@ class video_view_data {
 			# Remove restricted fragments
 			$raw_text = web_data::remove_restricted_text( $raw_text, $av_section_id );
 				#dump($raw_text, ' $raw_text ++ '.to_string()); die();
-		
 
 		#
 		# INFORMANT DATA
@@ -116,7 +114,6 @@ class video_view_data {
 			#$informant = isset($row_informant->result) ? $row_informant->result : null;
 			$informant = reset($row_interview->result)[FIELD_INFORMANT];
 
-
 		#
 		# IMAGE DATA
 			#$ar_image  = (array)json_decode( reset($row_interview->result)[FIELD_IMAGE] );
@@ -127,7 +124,6 @@ class video_view_data {
 			# vars
 			$image_data = reset($row_interview->result)[FIELD_IMAGE];
 			$image_url  = $this->get_image_url($image_data, $av_section_id);
-
 
 		#
 		# FRAGMENT DATA 
@@ -144,8 +140,7 @@ class video_view_data {
 				$options->fragment_terms_inside = false; # If true, calculate terms indexed inide this fragment 
 				$options->indexation_terms 		= true; # If true, calculate all terms used in this indexation
 			$fragments_obj = web_data::build_fragment( $options );				
-				#dump($fragments_obj, ' fragments_obj ++ '.to_string( )); #die();
-		
+				#dump($fragments_obj, ' fragments_obj ++ '.to_string( )); #die();		
 
 		#
 		# TS_TERM DATA
@@ -153,7 +148,13 @@ class video_view_data {
 			$ts_term->load_data(); // Force load db data
 				#dump($ts_term, ' ts_term ++ '.to_string());
 			$term = $ts_term->term;
-				#dump($term, ' term ++ '.to_string()); die();		
+				#dump($term, ' term ++ '.to_string()); die();
+
+		#
+		# SUBTITLES
+			if ($this->add_subtitles===true) {
+				$this->subtitles = $this->get_subtitles();				
+			}
 
 
 		#
@@ -162,15 +163,14 @@ class video_view_data {
 			if (defined('TERM_ID_RESTRICTED') && !empty(TERM_ID_RESTRICTED)) {
 				$ar_restricted_fragments = web_data::get_ar_restricted_fragments($av_section_id);
 			}
-			
 
 		#
 		# AR_KEY . For create nav elements
 			$total 	= count($ar_locator);
 			$key 	= (int)$locator_key;
 			$ar_key = range(0, $total-1);
-		
-		
+
+
 		# Add to object	self
 			$this->result 			= true;
 			$this->interview_id 	= $interview_id;	
@@ -199,10 +199,47 @@ class video_view_data {
 			$this->ar_restricted_fragments 	= $ar_restricted_fragments;
 			$this->raw_text 				= $raw_text;	
 			$this->raw_text_unrestricted   	= $raw_text_unrestricted;
-			
+
 
 		return true;		
 	}//end load_thesaurus_video_view_data
+
+
+
+	/**
+	* GET_SUBTITLES
+	* @return array $ar_subtitles
+	*/
+	public function get_subtitles($av_section_id) {
+
+		$ar_subtitles = array();
+		
+		// Get all diffusion langs
+		$ar_langs = unserialize(DEDALO_DIFFUSION_LANGS);
+		foreach ($ar_langs as $current_lang) {
+
+			$name = DEDALO_COMPONENT_RESOURCES_AV_TIPO .'_'. AUDIOVISUAL_SECTION_TIPO .'_'. $av_section_id .'_'. $current_lang .'.'.DEDALO_AV_SUBTITLES_EXTENSION;
+			
+			$file_full_path = DEDALO_MEDIA_BASE_PATH . DEDALO_AV_FOLDER . DEDALO_SUBTITLES_FOLDER . '/' . $name;
+			if (!file_exists($file_full_path)) {
+				# Force create file ??
+			}else{
+				$file_url 	= DEDALO_MEDIA_BASE_URL  . DEDALO_AV_FOLDER . DEDALO_SUBTITLES_FOLDER . '/' . $name;
+
+				$lang_name = lang::get_name_from_code($current_lang, 'lg-eng');
+
+				// Add to array
+				$ar_subtitles[] = array(
+					"url"  		=> $file_url,
+					"lang" 		=> $current_lang,
+					"lang_name" => $lang_name,
+				);
+			}
+		}//end foreach ($ar_langs as $current_lang)
+
+
+		return $ar_subtitles;
+	}//end get_subtitles
 
 
 

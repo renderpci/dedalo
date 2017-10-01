@@ -1364,19 +1364,33 @@ class web_data {
 					$tld = $ar[0];
 					if ($tld==='hierarchy1') {
 						$tld = $parent; // Full like hierarchy1_246
-					}
-					
-					# Resolve parent term name
-					$options_hierarchy = new stdClass();
-						$options_hierarchy->table 		= TABLE_HIERARCHY;
-						$options_hierarchy->ar_fields 	= array('name');
-						$options_hierarchy->lang 	 	= WEB_CURRENT_LANG_CODE;
-						$options_hierarchy->sql_filter  = "`section_id` = ".(int)$ar[1];
-						$options_hierarchy->limit 		= 1;
-						$options_hierarchy->order 		= '';
-					$rows_data	= (object)web_data::get_rows_data( $options_hierarchy );
-						#dump($rows_data, ' rows_data ++ '.to_string($options_hierarchy));
-					$parent_term = reset($rows_data->result)['name'];
+											
+						# Resolve parent term name
+						$options_hierarchy = new stdClass();
+							$options_hierarchy->table 		= TABLE_HIERARCHY;
+							$options_hierarchy->ar_fields 	= array('name');
+							$options_hierarchy->lang 	 	= WEB_CURRENT_LANG_CODE;
+							$options_hierarchy->sql_filter  = "`section_id` = ".(int)$ar[1];
+							$options_hierarchy->limit 		= 1;
+							$options_hierarchy->order 		= '';
+						$rows_data	= (object)web_data::get_rows_data( $options_hierarchy );
+							#dump($rows_data, ' rows_data ++ '.to_string($options_hierarchy));
+						$parent_term = reset($rows_data->result)['name'];
+
+					}else{
+						
+						# Resolve parent term name
+						$options_hierarchy = new stdClass();
+							$options_hierarchy->table 		= $options->table;
+							$options_hierarchy->ar_fields 	= array('term');
+							$options_hierarchy->lang 	 	= WEB_CURRENT_LANG_CODE;
+							$options_hierarchy->sql_filter  = "`section_id` = ".(int)$ar[1];
+							$options_hierarchy->limit 		= 1;
+							$options_hierarchy->order 		= '';
+						$rows_data	= (object)web_data::get_rows_data( $options_hierarchy );
+							#dump($rows_data, ' rows_data ++ '.to_string($options_hierarchy));
+						$parent_term = reset($rows_data->result)['term'];
+					}					
 
 					$ar_value[] = array('tld'=>$tld, 'term_id'=>$parent, 'term'=>$parent_term );
 				}
@@ -1394,6 +1408,7 @@ class web_data {
 						#dump($rows_data, ' rows_data ++ '.to_string($rd_options)); die();
 			}
 			#dump($rows_data, ' rows_data ++ '.to_string());
+			
 			
 			# THESAURUS ROOT LEVEL TERMS
 				# Get data from each term
@@ -1452,7 +1467,7 @@ class web_data {
 					}		
 
 				}//end foreach ((array)$rows_data->result) as $current_tld) {
-				#dump($ar_ts_terms, ' $ar_ts_terms ++ '.to_string()); die();
+				#dump($ar_ts_terms, ' $ar_ts_terms ++ '.to_string()); #die();
 
 			$response = new stdClass();
 				$response->result 	= (array)$ar_ts_terms;
@@ -2017,14 +2032,17 @@ class web_data {
 				$options->lang 					= WEB_CURRENT_LANG_CODE;
 				$options->raw_text 				= false;
 				$options->raw_text_unrestricted	= false;
+				$options->add_subtitles			= false;
 				$options->image_type 	 		= 'posterframe';
 				foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 		
 			$video_view_options = new stdClass();
-				$video_view_options->lang = $options->lang;
+				$video_view_options->lang 			= $options->lang;
+				$video_view_options->add_subtitles 	= $options->add_subtitles;
 			$video_view_data = new video_view_data( $video_view_options );
 			$video_view_data->load_thesaurus_video_view_data( $options->term_id, $options->ar_locators, $options->ar_locators_key );
-
+	dump($video_view_data, ' video_view_data ++ '.to_string());
+	
 			if ($options->raw_text===false) {
 				unset($video_view_data->raw_text);
 			}
@@ -2048,19 +2066,21 @@ class web_data {
 				$options->term_id  		= null;				
 				$options->recursive 	= false;
 				$options->lang 		   	= WEB_CURRENT_LANG_CODE;
+				$options->ar_fields 	= array('*');
 				foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
 			$section_tipo 	= explode('_', $options->term_id)[0]; 	
 			$table 			= $table_thesaurus_map[$section_tipo];
 			$lang 			= $options->lang;
-			$recursive 		= $options->recursive;			
+			$recursive 		= $options->recursive;
+			$ar_fields 		= $options->ar_fields;
 
 			// get_items. Recursion is optional
-			function get_items($current_term_id, $table, $lang, $recursive) {						
+			function get_items($current_term_id, $table, $lang, $ar_fields, $recursive) {						
 
 				$sd_options = new stdClass();
 					$sd_options->table 	 	= $table;
-					$sd_options->ar_fields  = array("*");
+					$sd_options->ar_fields  = $ar_fields;
 					#$sd_options->sql_filter = "childrens LIKE '%\"type\":\"".DEDALO_RELATION_TYPE_CHILDREN_TIPO."\",\"section_id\":\"".$section_id ."\",\"section_tipo\":\"".$section_tipo."\"%' ";
 					$sd_options->sql_filter = "parent = '".$current_term_id."' ";
 					#$sd_options->order 	 = "section_id ASC";
@@ -2073,13 +2093,13 @@ class web_data {
 								
 				if ($recursive===true && !empty($search_data->result)) {						
 					foreach ($search_data->result as $current_row) {
-						$ar_data = array_merge($ar_data, get_items($current_row["term_id"], $table, $lang, $recursive));
+						$ar_data = array_merge($ar_data, get_items($current_row["term_id"], $table, $lang, $ar_fields, $recursive));
 					}
 				}
 
 				return (array)$ar_data;
 			}//end get_items
-			$ar_children = get_items($options->term_id, $table, $lang, $recursive);
+			$ar_children = get_items($options->term_id, $table, $lang, $ar_fields, $recursive);
 				#dump($ar_children, ' ar_children ++ '.to_string());
 
 			
@@ -2090,6 +2110,70 @@ class web_data {
 
 			return $response;
 		}//end get_thesaurus_childrens
+
+
+
+		/**
+		* GET_THESAURUS_parents
+		* @return 
+		*/
+		public static function get_thesaurus_parents( $request_options ) {
+			global $table_thesaurus_map; // From server api config
+
+			$options = new stdClass();
+				$options->term_id  		= null;				
+				$options->recursive 	= true;
+				$options->lang 		   	= WEB_CURRENT_LANG_CODE;
+				$options->ar_fields 	= array('*');
+				foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
+
+			$ar_parts 		= explode('_', $options->term_id);
+			$section_tipo 	= $ar_parts [0];
+			#$section_id 	= $ar_parts [1];
+			$table 			= $table_thesaurus_map[$section_tipo];
+			$lang 			= $options->lang;
+			$recursive 		= $options->recursive;	
+			$ar_fields 		= $options->ar_fields;		
+
+			// get_items. Recursion is optional
+			function get_items($current_term_id, $table, $lang, $ar_fields, $recursive) {
+								
+				$ar_parts 		= explode('_', $current_term_id);
+				$section_tipo 	= $ar_parts [0];
+				$section_id 	= $ar_parts [1];
+
+				$sd_options = new stdClass();
+					$sd_options->table 	 	= $table;
+					$sd_options->ar_fields  = $ar_fields;
+					$sd_options->sql_filter = "childrens LIKE '%\"type\":\"".DEDALO_RELATION_TYPE_CHILDREN_TIPO."\",\"section_id\":\"".$section_id ."\",\"section_tipo\":\"".$section_tipo."\"%' ";
+					#$sd_options->sql_filter = "parent = '".$current_term_id."' ";
+					#$sd_options->order 	 = "section_id ASC";
+					$sd_options->lang 	 	= $lang;
+
+				$search_data	= (object)web_data::get_rows_data( $sd_options );
+					#dump($search_data, ' search_data ++ '.to_string($sd_options));	
+
+				$ar_data = (array)$search_data->result;		
+								
+				if ($recursive===true && !empty($search_data->result)) {						
+					foreach ($search_data->result as $current_row) {
+						$ar_data = array_merge($ar_data, get_items($current_row["term_id"], $table, $lang, $ar_fields, $recursive));
+					}
+				}
+
+				return (array)$ar_data;
+			}//end get_items
+			$ar_parent = get_items($options->term_id, $table, $lang, $ar_fields, $recursive);
+				#dump($ar_parent, ' ar_parent ++ '.to_string());
+
+			
+			$response = new stdClass();
+				$response->result 	= $ar_parent;
+				$response->msg 		= 'Ok. Request done ['.__METHOD__.']';
+
+
+			return $response;
+		}//end get_thesaurus_parents
 
 
 
@@ -2160,9 +2244,15 @@ class web_data {
 						$search_options->count 		= $options->count;
 
 					$rows_data	= (object)web_data::get_rows_data( $search_options );
-						#dump($rows_data, ' $rows_data ++ '.to_string());
+						#dump($rows_data->result, ' $rows_data ++ '.to_string());
 						#dump($search_options, ' $search_options ++ '.to_string()); die();
 					break;
+			}
+
+			if($rows_data->result===false) {
+				$response->result = false;
+				$response->msg 	  = 'Error. Request free_search failed. '.$rows_data->msg;
+				return $response;
 			}
 
 			$ar_free_nodes = array();

@@ -1,0 +1,32 @@
+<div id="<?php echo $template_name ?>_content">
+<?php 
+if(SHOW_DEBUG===true) {
+	echo "<pre>$template_name</pre>";
+}
+$html='';
+foreach ($template_map->{$mode} as $key => $column_obj) {
+
+	$value = $page->get_column_value( $column_obj );
+	switch ($column_obj->type) {
+		case 'title':
+			$html .= '<h1>'.$value.'</h1>';
+			break;
+		case 'abstract':
+			$html .= '<h3>'.$value.'</h3>';
+			break;
+		case 'body':
+			$html .= '<div class="text_body">'.$value.'</div>';
+			break;
+		case 'image':
+			#$html .= '<img class="'.$column_obj->colname.'" src="'.$value.'"/>';
+			$html .= '<script>document.getElementById("'.$template_name.'_content").style.backgroundImage="url('.$value.')"</script>';
+			break;
+		default:
+			# code...
+			break;
+	}
+
+}//end foreach ($template_map->{$mode} as $key => $column_obj)
+echo $html;
+?>
+</div>

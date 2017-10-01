@@ -16,27 +16,29 @@
 	# Number of records per page (for paginate)
 	$nregpp = isset($_REQUEST['nregpp']) ? $_REQUEST['nregpp'] : 10;
 
-	# Search	
-	$options = new stdClass();
-		$options->dedalo_get 		= 'free_search';
-		$options->q 				= (string)($q_raw);
-		$options->search_mode 		= 'full_text_search';
-		$options->lang 				= WEB_CURRENT_LANG_CODE;
-		$options->rows_per_page 	= (int)$nregpp;
-		$options->page_number 		= isset($_GET['page']) ? (int)$_GET['page'] : 1;
-		$options->offset 			= isset($_GET['offset']) ? (int)$_GET['offset'] : 0;
-		$options->count 			= true;
-		$options->image_type 		= 'posterframe';
-		$options->apperances_limit 	= 1;
-		$options->video_fragment 	= false;
-		$options->list_fragment 	= true;
-		$options->fragment_terms 	= false;
+	if (!empty($q_raw)) {
 
-	# Http request in php to the API
-	$data = json_web_data::get_data($options);
-	# Data info dev
-	#print "<pre>";print_r($data);print "</pre>"; die();
+		# Search	
+		$options = new stdClass();
+			$options->dedalo_get 		= 'free_search';
+			$options->q 				= (string)($q_raw);
+			$options->search_mode 		= 'full_text_search';
+			$options->lang 				= WEB_CURRENT_LANG_CODE;
+			$options->rows_per_page 	= (int)$nregpp;
+			$options->page_number 		= isset($_GET['page']) ? (int)$_GET['page'] : 1;
+			$options->offset 			= isset($_GET['offset']) ? (int)$_GET['offset'] : 0;
+			$options->count 			= true;
+			$options->image_type 		= 'posterframe';
+			$options->apperances_limit 	= 1;
+			$options->video_fragment 	= false;
+			$options->list_fragment 	= true;
+			$options->fragment_terms 	= false;
 
+		# Http request in php to the API
+		$data = json_web_data::get_data($options);
+		# Data info dev
+		#print "<pre>";print_r($data);print "</pre>"; die();
+	}
 
 	#
 	# CONTENT HTML

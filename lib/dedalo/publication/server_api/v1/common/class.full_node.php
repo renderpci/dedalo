@@ -96,7 +96,7 @@ class full_node {
 
 		# Result for compatibility
 		$this->result = true;
-			dump($this, ' this ++ '.to_string());
+			#dump($this, ' this ++ '.to_string());
 
 		# ar key for compatibility
 		$this->ar_key 	= json_decode($this->audiovisual);

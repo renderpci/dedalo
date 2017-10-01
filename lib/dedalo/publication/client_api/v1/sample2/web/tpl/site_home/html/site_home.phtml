@@ -1,0 +1,72 @@
+<div id="<?php echo $template_name ?>_content">
+<?php 
+if(SHOW_DEBUG===true) {
+	echo "<pre>$template_name</pre>";
+}
+
+function render_html($template_map, $page) {
+	#dump($template_map, ' template_map ++ '.to_string());
+	$html='';
+	foreach ($template_map as $key => $column_obj) {
+
+		$value = $page->get_column_value( $column_obj );
+		switch ($column_obj->type) {
+			case 'title':
+				$html .= '<h1>'.$value.'</h1>';
+				break;
+			case 'abstract':
+				$html .= '<h3>'.$value.'</h3>';
+				break;
+			case 'body':
+				$html .= '<div class="text_body">'.$value.'</div>';
+				break;
+			case 'image':
+				$html .= '<img class="'.$column_obj->colname.'" src="'.$value.'"/>';
+				break;
+			case 'portal':
+				if ($ar_value = json_decode($value)) {
+					foreach ($ar_value as $key => $value) {
+
+						#$html .= '<div class="">Portal '.$value.'</div>';
+						
+						$portal_template_map = $column_obj->columns;
+							#dump($portal_template_map, ' portal_template_map ++ '.to_string());
+
+						$ar_fields = array();
+						foreach ($portal_template_map as $key => $portal_template_map_value) {
+							$ar_fields[] = $portal_template_map_value->colname;
+						}
+						
+						$options = new stdClass();
+							$options->dedalo_get 		= 'records';
+							$options->lang 				= WEB_CURRENT_LANG_CODE;
+							$options->table 			= $column_obj->colname;
+							$options->ar_fields 		= $ar_fields;
+							$options->sql_filter 		= "section_id = '".$value."'";
+							#$options->limit 			= 1;
+
+						# Http request in php to API
+						$data = json_web_data::get_data($options);
+							#dump($data, ' data ++ '.to_string($options));
+
+						foreach ((array)$data->result as $key => $portal_row) {
+							#dump($portal_row, ' portal_row ++ '.to_string());
+							$temp_page = new page();
+							$temp_page->row = $portal_row;
+							$html .= render_html($portal_template_map, $temp_page);
+						}					
+					}				
+				}			
+				break;
+			default:
+				$html .= '<div class="">'.$value.'</div>';
+				break;
+		}
+
+	}//end foreach ($template_map->{$mode} as $key => $column_obj)
+
+	return $html;
+}
+echo render_html( $template_map->{$mode} , $page);
+?>
+</div>

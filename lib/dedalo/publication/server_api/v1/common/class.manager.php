@@ -123,6 +123,11 @@ class manager {
 				$dedalo_data = (object)web_data::get_thesaurus_childrens( $options );
 				break;	
 
+			case 'thesaurus_parents':
+				#
+				# Execute data retrieving
+				$dedalo_data = (object)web_data::get_thesaurus_parents( $options );
+				break;	
 
 			## FREE ##
 			case 'free_search':
