@@ -56,6 +56,7 @@ if($mode=='generate_posterframe') {
 
 	
 	# LOGGER ACTIVITY : QUE(action normalized like 'LOAD EDIT'), LOG LEVEL(default 'logger::INFO'), TIPO(like 'dd120'), DATOS(array of related info)
+	/*
 	logger::$obj['activity']->log_message(
 		'NEW VERSION',
 		logger::INFO,
@@ -70,7 +71,7 @@ if($mode=='generate_posterframe') {
 				"quality" 			=> $quality,
 				"timecode" 			=> $timecode
 			)
-	);
+	);*/
 	
 	
 	#$html = "Processing media in background (target quality: $quality - setting: $setting_name). You can continue working" ;
@@ -116,6 +117,7 @@ if($mode=='delete_posterframe') {
 
 	
 	# LOGGER ACTIVITY : QUE(action normalized like 'LOAD EDIT'), LOG LEVEL(default 'logger::INFO'), TIPO(like 'dd120'), DATOS(array of related info)
+	/*
 	logger::$obj['activity']->log_message(
 		'DELETE',
 		logger::INFO,
@@ -129,7 +131,7 @@ if($mode=='delete_posterframe') {
 				"video_id" 			=> $video_id,
 				"quality" 			=> $quality
 			)
-	);
+	);*/
 	
 	print "Posterframe deleted" ;
 	exit();
