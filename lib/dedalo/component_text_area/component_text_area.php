@@ -16,7 +16,7 @@
 	$html_title				= "Info about $tipo";
 	
 	$lang					= $this->get_lang();
-	$lang_name				= $this->get_lang_name();
+	#$lang_name				= $this->get_lang_name();
 	$identificador_unico	= $this->get_identificador_unico();
 	$component_name			= get_class($this);
 	$valor					= $this->get_valor();
