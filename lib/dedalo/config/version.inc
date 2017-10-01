@@ -1117,7 +1117,11 @@
 		
 	
 	Valencia 11-08-2017 44.7.0bc1
-		component_portal : fixed bug on load more items don't activate component sacripts
+		component_portal : fixed bug on load more items don't activate component scripts
+		
+
+	Valencia 29-08-2017 44.7.0bc3
+		component_text_area : fixed bug on load structuration info from tool lang. Undefined trigger vars are fixed
 		
 
 
@@ -1145,12 +1149,12 @@
 
 
 	# Version
-	$DEDALO_VERSION = '4.7.0c1';
+	$DEDALO_VERSION = '4.7.0c4';
 	if(DEDALO_ENTITY==='development') {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '21-09-2017');
+	define('DEDALO_BUILD'	, '29-09-2017');
 
 
 	/*
