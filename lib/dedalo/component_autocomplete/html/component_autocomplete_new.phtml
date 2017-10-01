@@ -1,7 +1,7 @@
 <?php
 
 	$html='';
-	$html .= "<div class=\"component_autocomplete_new_element\" data-type=\"component_autocomplete_new_element\" >";
+	$html .= "<div class=\"component_autocomplete_new_element\" data-type=\"component_autocomplete_new_element\">";
 
 		$component_context = new stdClass();
 			$component_context->context_name = 'component_autocomplete';
@@ -12,14 +12,15 @@
 
 			$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
 			
-			if ($modelo_name=='section') continue;
+			if ($modelo_name==='section') continue;
 
+			/*
 			if ($modelo_name!='component_input_text') {
 				if(SHOW_DEBUG) {
-					trigger_error("Current component is not 'component_input_text'. Ignoring component");
+					#trigger_error("Current component is not 'component_input_text'. Ignoring component");
 				}
 				//continue;
-			}
+			}*/
 			$title = RecordObj_dd::get_termino_by_tipo($current_tipo,$lang,true);
 			#html .= $title;
 			$component =  component_common::get_instance($modelo_name,

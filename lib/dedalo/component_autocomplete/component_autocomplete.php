@@ -23,7 +23,7 @@
 	if($permissions===0) return null;
 	
 	# Verify component content record is inside section record filter
-	if ($this->get_filter_authorized_record()===false) return NULL ;
+	if ($this->get_filter_authorized_record()===false) return NULL;
 
 	$file_name				= $modo;
 	$from_modo				= $modo;
@@ -41,13 +41,16 @@
 				$ar_target_section_tipo 	 = $this->get_ar_target_section_tipo();
 				$ar_target_section_tipo_json = json_encode($ar_target_section_tipo);
 				
-				$tipo_to_search			= $this->get_tipo_to_search();				
-				$ar_valor 				= $this->get_valor($lang,'array');
+				$tipo_to_search			= $this->get_tipo_to_search();		
+				$ar_valor 				= $this->get_valor($lang,'array'); 
+			#echo "<div style=\"width: 100%; position: relative;\">$label ..... </div>".to_string($ar_valor)."<hr>"; return null;
 				$valor  				= implode('<br>',$ar_valor);
 				$id_wrapper 			= 'wrapper_'.$identificador_unico;
 				$input_name 			= "{$tipo}_{$parent}";
 				$component_info 		= $this->get_component_info('json');
 				$dato_json 				= json_handler::encode($dato);
+
+
 
 				#get the change modo from portal list to edit
 				$from_modo_requested = common::get_request_var('from_modo');

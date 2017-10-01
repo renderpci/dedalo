@@ -101,7 +101,7 @@ class component_autocomplete extends component_reference_common {
 	* @return array $this->valor
 	*/
 	public function get_valor( $lang=DEDALO_DATA_LANG, $format='string', $ar_related_terms=false, $divisor="<br> " ) {
-		/**/
+		
 		if (isset($this->valor)) {
 			if(SHOW_DEBUG===true) {
 				#error_log("Catched valor !!! from ".__METHOD__);
@@ -163,6 +163,7 @@ class component_autocomplete extends component_reference_common {
 																	$current_locator->section_tipo);
 
 				$current_value = component_common::extract_component_value_fallback($current_component,$lang,true);
+					#dump($modelo_name , ' $modelo_name  ++ '.to_string());
 				/*
 				$current_value = $current_component->get_valor($lang);
 
