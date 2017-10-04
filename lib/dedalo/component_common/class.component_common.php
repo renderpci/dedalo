@@ -2723,6 +2723,8 @@ abstract class component_common extends common {
 
 		$json_field = 'a.'.$json_field; // Add 'a.' for mandatory table alias search
 
+		$current_lang='all'; // Forced to search in all langs always	
+
 		$search_query='';
 		switch (true) {
 			case ($comparison_operator==='ILIKE' || $comparison_operator==='LIKE'):
@@ -2735,23 +2737,39 @@ abstract class component_common extends common {
 						$search_query = " unaccent({$json_field}#>>'{components, $search_tipo, $tipo_de_dato_search}') $comparison_operator unaccent('%[\"%{$search_value}') ";
 					}else{
 						$search_value = str_replace($separator, '', $search_value);
-						$search_query = " unaccent({$json_field}#>>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}') $comparison_operator '%$search_value' ";
+						$search_query = " unaccent({$json_field}#>>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}') $comparison_operator unaccent('%$search_value') ";
 					}
 				
 				}else if ( $search_value[strlen($search_value) - 1] === $separator ) {
 					// End with *
-					$search_value = str_replace($separator, '', $search_value);
-					$search_query = " unaccent({$json_field}#>>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}') $comparison_operator '$search_value%' ";
-					
+					$search_value = str_replace($separator, '', $search_value);					
+					if ($current_lang=='all') {
+						$search_query = " unaccent({$json_field}#>>'{components, $search_tipo, $tipo_de_dato_search}') $comparison_operator unaccent('%[\"{$search_value}%') ";
+					}else{
+						$search_query = " unaccent({$json_field}#>>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}') $comparison_operator unaccent('$search_value%') ";
+					}					
 				}else{
 					// Contain
-					$search_value = str_replace($separator, '', $search_value);
-					$search_query = " unaccent({$json_field}#>>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}') $comparison_operator '%$search_value%' ";
+					$search_value = str_replace($separator, '', $search_value);					
+					if ($current_lang=='all') {
+						#$search_query = " unaccent({$json_field}#>>'{components, $search_tipo, $tipo_de_dato_search}') ~* unaccent('.*\[\".*$search_value.*') ";
+						$search_query = " unaccent({$json_field}#>>'{components, $search_tipo, $tipo_de_dato_search}') $comparison_operator unaccent('%$search_value%') ";
+					}else{
+						$search_query = " unaccent({$json_field}#>>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}') $comparison_operator unaccent('%$search_value%') ";
+					}
 				}
 				break;
 
-			case ($comparison_operator==='=' || $comparison_operator==='!='):
-				$search_query = " unaccent({$json_field}#>>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}') $comparison_operator '$search_value' ";
+			case ($comparison_operator==='=' || $comparison_operator==='!='):				
+				if ($current_lang=='all') {
+					$ar_lang_search_query = array();
+					foreach (common::get_ar_all_langs() as $iter_lang) {
+						$ar_lang_search_query[] = "{$json_field}#>'{components, $search_tipo, $tipo_de_dato_search, ". $iter_lang ."}' $comparison_operator '\"$search_value\"'";
+					}
+					$search_query = " (".implode(" OR ", $ar_lang_search_query).") ";
+				}else{
+					$search_query = " unaccent({$json_field}#>>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}') $comparison_operator '$search_value' ";
+				}
 				break;
 
 			case ($comparison_operator==='IS NULL' || $comparison_operator==='IS NOT NULL'):
@@ -2769,14 +2787,14 @@ abstract class component_common extends common {
 			default:
 				if ($current_lang=='all') {
 						$search_query = " unaccent({$json_field}#>>'{components, $search_tipo, $tipo_de_dato_search}') $comparison_operator unaccent('%[\"%{$search_value}') ";
-						}else{
+				}else{
 						$search_query = " unaccent({$json_field}#>>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}') $comparison_operator '%$search_value%' ";
 				}
 				break;
 		}
 		
 		if(SHOW_DEBUG===true) {
-			$search_query = " -- filter_by_search $search_tipo ". get_called_class() ." \n".$search_query;
+			$search_query = " -- filter_by_search $search_tipo ". get_called_class() ." $comparison_operator \n".$search_query;
 		}
 		return (string)$search_query;
 	}//end get_search_query
