@@ -1124,7 +1124,8 @@ abstract class common {
 				$response->result 	= false;
 				$response->msg 		= "Error on read php://input data";
 			echo json_encode($response);
-			exit();
+			#exit();
+			return false;
 		}
 
 		# DEDALO_MAINTENANCE_MODE
@@ -1142,7 +1143,8 @@ abstract class common {
 					$response->result 	= true;
 					$response->msg 		= "Sorry, this site is under maintenace now";
 				echo json_encode($response);
-				exit();
+				#exit();
+				return false;
 			}
 		}			
 		
@@ -1151,15 +1153,23 @@ abstract class common {
 		if($options->test_login===true && login::is_logged()!==true) {
 			$response = new stdClass();
 				$response->result 	= false;
-				$response->msg 		= "Error. Auth error: please login";
+				$response->msg 		= "Error. Auth error: please login [1]";
 			echo json_encode($response);
-			exit();
+			#exit();
+			return false;
 		}
 		
-		#dump($json_data, ' json_data ++ '.to_string());
 
 		# MODE Verify
-		if(empty($json_data->mode)) exit( json_encode("<span class='error'> Trigger: Error Need mode..</span>") );
+		if(empty($json_data->mode)) {
+			$response = new stdClass();
+				$response->result 	= false;
+				$response->msg 		= "Error. mode is mandatory";
+			echo json_encode($response);
+			#exit();
+			return false;
+		}
+
 		
 		# CALL FUNCTION
 		if ( function_exists($json_data->mode) ) {
@@ -1175,6 +1185,8 @@ abstract class common {
 				$response->msg 		= 'Error. Request failed.'.$json_data->mode.' not exists';
 			echo json_encode($response);
 		}
+
+		return true;
 	}//end trigger_manager
 
 

@@ -90,8 +90,18 @@ abstract class JSON_RecordDataBoundObject {
 			#return false;
 		}
 
+		# Section_id is always int
+		$section_id = intval($this->section_id);
+
+		# Check valid section_tipo for safety
+		# Safe tipo test
+		if (!$section_tipo = safe_tipo($this->section_tipo)) {
+			die("Bad tipo ".htmlentities($this->section_tipo));
+		}
+	
 		# SQL QUERY
-		$strQuery = 'SELECT "datos" FROM "'. $this->strTableName .'" WHERE "section_id" = '. $this->section_id .' AND "section_tipo" = \''. $this->section_tipo .'\'';
+		#$strQuery = 'SELECT "datos" FROM "'. $this->strTableName .'" WHERE "section_id" = '. $this->section_id .' AND "section_tipo" = \''. $this->section_tipo .'\'';
+		$strQuery = 'SELECT "datos" FROM "'. $this->strTableName .'" WHERE "section_id" = '. $section_id .' AND "section_tipo" = \''. $section_tipo .'\'';
 		#$strQuery = "SELECT \"datos\" FROM \"$this->strTableName\" WHERE \"section_id\" = $1 AND \"section_tipo\" = $2";
 			#dump($strQuery,'$strQuery');
 
@@ -122,9 +132,22 @@ abstract class JSON_RecordDataBoundObject {
 		# WITHOUT QUERY CACHE
 		}else{
 			
+			/*
 			# Synchronous query 
 			$result = pg_query(DBi::_getConnection(), $strQuery);	#or die("Cannot execute query: $strQuery\n". pg_last_error());
 			#$result  = pg_query_params(DBi::_getConnection(), $strQuery, array( $this->section_id, $this->section_tipo ));
+			*/
+			# With prepared statement	
+			$stmtname  = ""; //md5($strQuery); //'search_free_stmt';		
+			$statement = pg_prepare(DBi::_getConnection(), $stmtname, $strQuery);				
+			if ($statement===false) {
+				if(SHOW_DEBUG===true) {
+					debug_log(__METHOD__." Error when pg_prepare statemnt for strQuery: ".to_string($strQuery), logger::ERROR);
+					return false;
+				}
+			}
+			$result = pg_execute(DBi::_getConnection(), $stmtname, array());
+
 				if ($result===false) {
 					trigger_error("Error Processing Request Load");
 					if(SHOW_DEBUG===true) {
@@ -193,20 +216,30 @@ abstract class JSON_RecordDataBoundObject {
 		# DATOS : JSON ENCODE ALWAYS !!!
 		$datos = json_handler::encode($this->datos);
 			#dump($datos, ' save datos ++ '.to_string());
+
+		# Section_id is always int
+		$section_id = intval($this->section_id);
+
+		# Check valid section_tipo for safety
+		# Safe tipo test
+		if (!$section_tipo = safe_tipo($this->section_tipo)) {
+			die("Bad tipo ".htmlentities($this->section_tipo));
+		}
+
 		
 		#
 		# SAVE UPDATE : Record already exists
-		if( $save_options->new_record!==true && isset($this->section_id) && $this->section_id>0 && $this->force_insert_on_save!==true ) {
+		if( $save_options->new_record!==true && $section_id>0 && $this->force_insert_on_save!==true ) {
 
 			# Si no se ha modificado nada, ignoramos la orden de salvar
-			if(!isset($this->arRelationMap['datos'])) return false;
+			if(!isset($this->arRelationMap['datos'])) return false;			
 			
 			$strQuery 	= "UPDATE $this->strTableName SET datos = $1 WHERE section_id = $2 AND section_tipo = $3";
-			$result 	= pg_query_params(DBi::_getConnection(), $strQuery, array( $datos, $this->section_id, $this->section_tipo ));
+			$result 	= pg_query_params(DBi::_getConnection(), $strQuery, array( $datos, $section_id, $section_tipo ));
 			#dump($strQuery,"strQuery");
 			if($result===false) {
 				if(SHOW_DEBUG===true) {
-					dump($datos,"strQuery $strQuery , section_id:$this->section_id, section_tipo:$this->section_tipo");
+					dump($datos,"strQuery $strQuery , section_id:$section_id, section_tipo:$section_tipo");
 					throw new Exception("Error Processing Save Update Request ". pg_last_error(), 1);;
 				}
 				return "Error: sorry an error ocurred on UPDATE record '$this->ID'. Data is not saved";
@@ -229,8 +262,6 @@ abstract class JSON_RecordDataBoundObject {
 				# DEFAULT INSERT (sync pg_query_params)
 				default:
 
-					$section_id   = $this->section_id;
-					$section_tipo = $this->section_tipo;
 					if(empty($section_id) || empty($section_tipo)) {
 						#throw new Exception("Error Processing Request. section_id and section_tipo", 1);	
 						error_log("Error Processing Request. section_id:$section_id and section_tipo:$section_tipo,  table:$this->strTableName - $this->ID");
@@ -329,20 +360,18 @@ abstract class JSON_RecordDataBoundObject {
 				$strQuery = '-- search_free : '.debug_backtrace()[1]['function']."\n".$strQuery;
 			}
 		}		
-		
 		# $result = pg_query(DBi::_getConnection(), $strQuery);	
 
 
 		# With prepared statement	
 		$stmtname  = ""; //md5($strQuery); //'search_free_stmt';		
-		$statement = pg_prepare(DBi::_getConnection(), $stmtname, $strQuery);			
+		$statement = pg_prepare(DBi::_getConnection(), $stmtname, $strQuery);
 		if ($statement===false) {
 			if(SHOW_DEBUG===true) {
 				debug_log(__METHOD__." Error when pg_prepare statemnt for strQuery: ".to_string($strQuery), logger::ERROR);
 				return false;
 			}
-		}	
-
+		}
 		
 		if ($wait===false) {
 			pg_send_execute(DBi::_getConnection(), $stmtname, array());
@@ -646,14 +675,23 @@ abstract class JSON_RecordDataBoundObject {
 
 			if($this->blForDeletion === true) {
 
+				# Section_id is always int
+				$section_id = intval($this->section_id);
+
+				# Check valid section_tipo for safety
+				# Safe tipo test
+				if (!$section_tipo = safe_tipo($this->section_tipo)) {
+					die("Bad tipo ".htmlentities($this->section_tipo));
+				}
+
 				$strQuery 	= 'DELETE FROM "'. $this->strTableName .'" WHERE "section_id" = $1 AND "section_tipo" = $2';
-				$result 	= pg_query_params( DBi::_getConnection(), $strQuery, array($this->section_id, $this->section_tipo) );
+				$result 	= pg_query_params( DBi::_getConnection(), $strQuery, array($section_id, $section_tipo) );
 
 				if($result===false) {
-					echo "Error: sorry an error ocurred on DELETE record (section_id:$this->section_id, section_tipo:$this->section_tipo). Data is not deleted";
+					echo "Error: sorry an error ocurred on DELETE record (section_id:$section_id, section_tipo:$section_tipo). Data is not deleted";
 					if(SHOW_DEBUG===true) {
 						dump($strQuery,"Delete strQuery");
-						throw new Exception("Error Processing Request (result==false): an error ocurred on DELETE record (section_id:$this->section_id, section_tipo:$this->section_tipo). Data is not deleted", 1);
+						throw new Exception("Error Processing Request (result==false): an error ocurred on DELETE record (section_id:$section_id, section_tipo:$section_tipo). Data is not deleted", 1);
 					}
 				}				
 			}

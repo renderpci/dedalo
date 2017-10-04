@@ -64,10 +64,10 @@ class login extends common {
 			$response->msg 		= 'Error. Request failed [Login]';
 	
 		# Test mcrypt lib
-		if (!function_exists('mcrypt_encrypt')) {
-			$response->msg = "Error Processing Request: MCRYPT lib is not available";
-			return $response;
-		}
+		#if (!function_exists('mcrypt_encrypt')) {
+		#	$response->msg = "Error Processing Request: MCRYPT lib is not available";
+		#	return $response;
+		#}
 
 		# Mandatory vars
 		$mandatoy_vars = array('username','password','tipo_login','tipo_password','tipo_active_account');
@@ -611,11 +611,12 @@ class login extends common {
 	private static function verify_login() {
 		#global $maintenance_mode;
 		#debug_log(__METHOD__." maintenance_mode ".to_string($maintenance_mode), logger::DEBUG);
+		#dump($_SESSION['dedalo4']['auth']['user_id'], '$_SESSION[dedalo4][auth][user_id] ++ '.to_string());
 
 		# NO ESTÁ AUTENTIFICADO
 		if( empty($_SESSION['dedalo4']['auth']['user_id']) || 
 			empty($_SESSION['dedalo4']['auth']['is_logged']) || 
-			$_SESSION['dedalo4']['auth']['is_logged'] != 1 || 
+			$_SESSION['dedalo4']['auth']['is_logged'] !== 1 || 
 			empty($_SESSION['dedalo4']['auth']['salt_secure']) 
 			) {
 			

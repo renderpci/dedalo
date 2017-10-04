@@ -34,6 +34,12 @@ if ( strpos($_SERVER["REQUEST_URI"], '.php')!==false ) {
 	if($m!==false) $modo = $m;
 
 
+	# Safe tipo test
+	# When tipo is defined, check if is valid (avoid sql injection)
+	if ($tipo!==false) {
+		if (safe_tipo($tipo)===false) die("Bad tipo ".htmlentities($tipo));
+	}
+
 	#
 	# TIPO : Verify
 	# IS MANDATORY. Verify tipo received is valid. If not, redirect to default fallback section
@@ -72,7 +78,7 @@ if ( strpos($_SERVER["REQUEST_URI"], '.php')!==false ) {
 	# If id==0, redirect to current section in list mode
 	if ($modo==='edit' && $id<1) {		
 		$msg = "Error Processing Request: Main Page id:'$id' is not valid! Main Page redirected to modo 'list' and requested tipo: ".$tipo. " ". RecordObj_dd::get_termino_by_tipo($tipo);
-		debug_log(__METHOD__." $msg ".to_string(), logger::DEBUG);
+		debug_log(__METHOD__." $msg ".to_string(), logger::ERROR);
 		header("Location: ".DEDALO_LIB_BASE_URL."/main/?t=".$tipo."&m=list");
 		exit();		
 	}
