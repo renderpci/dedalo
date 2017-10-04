@@ -9,10 +9,12 @@
 @elements_over_z_index : 1000;
 .css_wrap_geolocation, .css_wrap_geolocation_tm {
 	z-index: 1;
-}
-.css_wrap_geolocation_tm .content_data {
-
-}
+	//min-height: 400px;
+	}
+	.css_wrap_geolocation .content_data {
+		height: 96%;
+		padding-bottom: 10px;
+	}
 
 /* FIELDS 
 -------------------------------------------------- */
@@ -59,12 +61,13 @@
 /* MAP 
 -------------------------------------------------- */
 .leaflet_map {
+	position: relative;
 	width: 100%;
 	height: 100%;
-	min-height: 500px;
-	position: relative;	
-	padding: 0;
+	min-height: 300px;	
 	margin: 0;
+	padding: 0;
+	padding-bottom: 5px;
 	}
 	.leaflet-control-zoom a {
 		font-size: initial !important;
