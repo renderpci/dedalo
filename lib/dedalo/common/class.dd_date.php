@@ -93,7 +93,7 @@ class dd_date extends stdClass {
 	public function set_month($value, $constrain=false) {
 		if( (int)$value<1 || (int)$value>12 ) {
 		  #throw new Exception("Error Processing Request. Invalid month: $value", 1);
-		  $this->errors[] = "Error on set month. Value is not standar: ".to_string($value);
+		  $this->errors[] = "Error on set month. Value is not standard: ".to_string($value);
 		  if ($constrain===true) return false;
 		}
 		$this->month = (int)$value;
@@ -109,7 +109,7 @@ class dd_date extends stdClass {
 	public function set_day($value, $constrain=false) {
 		if( (int)$value<1 || (int)$value>31 ) {
 		 # throw new Exception("Error Processing Request. Invalid day: $value", 1);
-		  $this->errors[] = "Error on set day. Value is not standar: ".to_string($value);
+		  $this->errors[] = "Error on set day. Value is not standard: ".to_string($value);
 		  if ($constrain===true) return false;
 		}
 		$this->day = (int)$value;
