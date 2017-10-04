@@ -1,1 +1,0 @@
-/Users/paco/Trabajos/Dedalo/site_dedalo_plataforma_40/lib/dedalo/publication/client_api/v1/class.json_web_data.php
