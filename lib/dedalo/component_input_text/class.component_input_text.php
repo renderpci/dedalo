@@ -41,7 +41,7 @@ class component_input_text extends component_common {
 			}else{
 				# dato is string plain value
 				$dato = array($dato);
-				debug_log(__METHOD__." Warning. [$this->tipo,$this->parent] Dato received is a plain string. Support for this type is deprecated. Use always an array to set dato. ".to_string($dato), logger::DEBUG);
+				#debug_log(__METHOD__." Warning. [$this->tipo,$this->parent] Dato received is a plain string. Support for this type is deprecated. Use always an array to set dato. ".to_string($dato), logger::DEBUG);
 			}
 		}
 
@@ -303,7 +303,10 @@ class component_input_text extends component_common {
 
 		#$tipo_de_dato_search = 'valor';
 
-		$json_field = 'a.'.$json_field; // Add 'a.' for mandatory table alias search		
+		$json_field = 'a.'.$json_field; // Add 'a.' for mandatory table alias search	
+
+
+		$current_lang='all'; // Forced to search in all langs always	
 
 		$search_query='';
 		switch (true) {
@@ -318,7 +321,7 @@ class component_input_text extends component_common {
 						$search_query = " unaccent({$json_field}#>>'{components, $search_tipo, $tipo_de_dato_search}') $comparison_operator unaccent('%[\"%{$search_value}') ";
 					}else{
 						$search_query = " unaccent({$json_field}#>>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}') $comparison_operator unaccent('%$search_value') ";
-					}					
+					}
 				
 				}else if ( $search_value[strlen($search_value) - 1] === $separator ) {
 					// End with *
@@ -342,7 +345,15 @@ class component_input_text extends component_common {
 
 			case ($comparison_operator==='=' || $comparison_operator==='!='):
 				$comparison_operator = '@>';
-				$search_query = " {$json_field}#>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}' $comparison_operator '\"$search_value\"' ";
+				if ($current_lang=='all') {
+					$ar_lang_search_query = array();
+					foreach (common::get_ar_all_langs() as $iter_lang) {
+						$ar_lang_search_query[] = "{$json_field}#>'{components, $search_tipo, $tipo_de_dato_search, ". $iter_lang ."}' $comparison_operator '\"$search_value\"'";
+					}
+					$search_query = " (".implode(" OR ", $ar_lang_search_query).") ";
+				}else{
+					$search_query = " {$json_field}#>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}' $comparison_operator '\"$search_value\"' ";
+				}				
 				break;
 
 			case ($comparison_operator==='IS NULL' || $comparison_operator==='IS NOT NULL'):
@@ -354,11 +365,15 @@ class component_input_text extends component_common {
 					$union_operator = 'AND';
 				}
 				$search_query  = " ({$json_field}#>>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}') $comparison_operator $union_operator ";
-				$search_query .= " {$json_field}#>>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}') $comparison_operator2 '' )";
+				$search_query .= " {$json_field}#>>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}') $comparison_operator2 '' )";								
 				break;
 
 			default:
-				$search_query = " unaccent({$json_field}#>>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}') $comparison_operator '%$search_value%' ";
+				if ($current_lang=='all') {
+					$search_query = " unaccent({$json_field}#>>'{components, $search_tipo, $tipo_de_dato_search}') $comparison_operator '%$search_value%' ";
+				}else{
+					$search_query = " unaccent({$json_field}#>>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}') $comparison_operator '%$search_value%' ";
+				}
 				break;
 		}
 		
