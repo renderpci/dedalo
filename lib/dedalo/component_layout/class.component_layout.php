@@ -230,9 +230,10 @@ class component_layout extends component_common {
 						}
 					}else{
 						if(SHOW_DEBUG===true) {
-							dump($ar_section_list,"WARNING section_list for $section_tipo is not defined in structure (empty ar_section_list')");								
+							#dump($ar_section_list,"WARNING section_list for $section_tipo is not defined in structure (empty ar_section_list')");								
 						}
-						throw new Exception("section_list for $section_tipo is not defined in structure (empty ar_section_list)", 1);
+						#throw new Exception("section_list for $section_tipo is not defined in structure (empty ar_section_list)", 1);
+						trigger_error("section_list for $section_tipo is not defined in structure (empty ar_section_list)");
 					}
 				}
 				# LOG
