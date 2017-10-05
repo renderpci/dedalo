@@ -8,9 +8,6 @@
 	$lang					= $this->get_lang();
 	$section_tipo 			= $this->get_section_tipo();
 	$propiedades			= $this->get_propiedades();	
-	$dato 					= $this->get_dato();
-	$valor					= $this->get_valor();
-	$dato_reference_lang 	= NULL;
 	$traducible 			= $this->get_traducible();
 	$label 					= $this->get_label();
 	$required				= $this->get_required();
@@ -28,7 +25,7 @@
 	# Verify component content record is inside section record filter
 	if ($this->get_filter_authorized_record()===false) return null ;
 	
-	
+
 	switch($modo) {		
 		
 		case 'edit_in_list':
@@ -44,9 +41,9 @@
 		case 'edit'	:
 
 				$id_wrapper 	= 'wrapper_'.$identificador_unico;
-				$dato_json 		= json_encode($this->dato);
+				$dato 			= $this->get_dato();
+				$dato_json 		= json_encode($dato);
 				$component_info = $this->get_component_info('json');
-
 
 				$input_name 	= "{$tipo}_{$parent}";
 				#$dato_json 		= json_handler::encode($dato);

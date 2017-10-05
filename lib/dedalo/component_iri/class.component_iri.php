@@ -4,11 +4,12 @@
 *
 *
 */
-
 include dirname(__FILE__) . "/class.dd_iri.php";
 
 class component_iri extends component_common {
-	
+
+
+
 	/**
 	* GET DATO
 	* Array with objects, every object have two properties: "iri" mandatory with string value and "display" optional with string value
