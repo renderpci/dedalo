@@ -5,9 +5,18 @@
 	$tipo				= $this->section_records_obj->get_tipo();
 	$permissions		= common::get_permissions($tipo,$tipo);
 	$modo				= $this->get_modo();
-	$layout_map 		= $this->section_records_obj->rows_obj->options->layout_map;
-
 	$section_tipo 		= $this->section_records_obj->rows_obj->options->section_tipo;
+	$layout_map 		= $this->section_records_obj->rows_obj->options->layout_map;
+	
+
+	
+	if (empty($layout_map)) {
+		$layout_map = $this->section_records_obj->rows_obj->options->layout_map = array($section_tipo=>array());
+		debug_log(__METHOD__." Error. layout_map is empty. Using a temporal layout_map to avoid break the section ".to_string(), logger::ERROR);
+	}
+	#dump($layout_map, ' layout_map ++ '.to_string());
+
+
 	$section_list_tipo 	= key($this->section_records_obj->rows_obj->options->layout_map);
 	$ar_columns_tipo 	= reset($this->section_records_obj->rows_obj->options->layout_map);
 	
