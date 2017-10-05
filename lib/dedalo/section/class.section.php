@@ -1883,7 +1883,7 @@ class section extends common {
 		}#end if ($this->section_virtual==true )
 
 		# Group result by modelo name
-		foreach ($ar_buttons as $current_obj_button) {
+		if($ar_buttons) foreach ($ar_buttons as $current_obj_button) {
 			$current_modelo_name = get_class($current_obj_button);		#dump($current_modelo_name,'$current_modelo_name');
 			$this->ar_buttons[$current_modelo_name][] = $current_obj_button;
 		}
