@@ -390,6 +390,21 @@
 
 
 
+			#
+			# API DOC
+				$html   .= "<div class=\"panel_option form-inline\"> ";			
+				$html   .= " <span class=\"glyphicon glyphicon-cog\" aria-hidden=\"true\"></span>";
+				$find_api_code = function() {
+					#require_once(DEDALO_LIB_BASE_PATH.'/publication/server_api/v1/config_api/server_config_api.php');
+					#return API_WEB_USER_CODE;
+					return '';
+				};
+				$url 	 = DEDALO_LIB_BASE_URL."/publication/client_api/v1/docu/ui?m=code=" . $find_api_code();
+				$html   .= " <a href=\"$url\" target=\"_blank\" data-mode=\"remove_av_temporals\">API DOC</a>";
+				$html   .= "</div>";#end panel_option
+
+
+
 		$html   .= "  </div>";//end panel-body
 		$html   .= "</div>";//end panel-primary
 		

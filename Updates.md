@@ -1,5 +1,160 @@
 **UPDATES AND CHANGES**
 
+*Ver 4.8.3 - 03-03-2018
+Today we introduce the update of the V4 to 4.8.3
+
+This update fixed some issues and bugs for the V4.8.2
+
+The full implementation of the new search model. The test of the 4.8.2 was great!, the new model work perfectly and now is implemented for all sections and components. New filter diseny, and new features are added.
+
+Components:
+	add the new search to all components. Now the operators are calculated inside the components.
+	section_records : added init with css / js files to load options
+	component_relation_related : Fix autosearch feature. (Set search_query_object as allow_sub_select_by_id=false to avoid use id's window query)
+
+*Ver 4.8.2 - 14-02-2018
+Today we introduce the update of the V4 to 4.8.2
+
+This update fixed some issues and bugs for the V4.8.1
+
+The first version of the new search, was changed only the component_autocompolete for test the new search model before implemented it.
+This version implement the new model for the search but sustain the old serch, the new model is implemented in the component_autocomplete and is tested only in the monedaiberica instalation, this version is ONLY A TEST version. 
+
+*Ver 4.8.1 - 07-02-2018
+Today we introduce the update of the V4 to 4.8.1
+
+This update fixed some issues and bugs for the V4.8.0
+
+This version remove the inverse locators of the sections, now, the section can calculate the inverse locator in real time when is demanded.
+All components that has use the inverse locators are changed to calculate it if is necessary.
+
+	inverse_locators : 	review all classes to unify new inverse locator format (using from_component_tipo, from_section_tipo, from_section_id)
+
+Components:
+	component_image : fixed issues with canvas resize and view
+	component_number : 	set js validator/formater to force always . instaed , php controller to format float numbers with "." instead "," when show, print, etc
+	component_text_area : added method fix_broken_peson_tags to fix untranslated person info
+
+Tools:
+	refactoring of the tool_import_files, now the tool can be configated for upload files, and control the destination of the uploads, now the tool has three new concepts; 
+			1 - the name of the files can indicate the field (component) that will be store it
+					mi foto bonita-a.jpeg
+						the image will be store inside the field a (configuration is in the structure)
+					mi otra foto-b.jpeg
+						the image will be store inside the field b (configuration is in the structure)
+			2 - the name of the files can indicate the record (section_id) that will be store it
+					1-mifoto.jpeg
+						the image will be store in the section_id: 1 (configuration field is the default portal field for image in the structure)
+					2-mi otra foto.jpg
+						the image will be store in the section_id: 2 (configuration field is the default portal field for image in the structure)
+					alternative:
+						the name can indicate the row of the portal in second step:
+						1-1.jpg
+							the image will be store in the section_id: 1 and the first row of the portal image(configuration field is the default portal field for image in the structure)
+						1-2.jpeg
+							the image will be store in the section_id: 2 and the first row of the portal image(configuration field is the default portal field for image in the structure)
+			3 - the name of the files can indicate same record when the names are the same:
+						mi foto-a.jpg
+						mi foto-b.jpg
+							the same name of the images "mi foto" indicate that the images are of the same "section_id" the -a or -b indicate the field. If the field are not indicated the imagesm, the images will be stored in the same section_id inside the default portal of the image in the same row, (the second image replace the first). If the field is indicated the photo "-a" will go to the field "a" indicated in the structure, the image "-b" will be stored in the same "section_id" but in the field "b".
+
+			This 3 configurations can be combinated for control the destinations.
+
+				1-1-a.jpg
+				1-2-a.jpg
+				1-1-b.jpg
+				1-2-b.jpg
+
+	tool_import_files : Added new options: 
+						Import file name mode (to process smart numered images)
+						Image processor selector (to trigger predefined in 'propiedades' scripts and commands)
+						Target component (to select different target components from importer)
+
+Diffusion:
+		diffusion_sql : split_date_range . added function to select/split date ranges to sql columns
+
+
+*Ver 4.8.0 - 26-11-2017
+Today we introduce the update of the V4 to 4.8.0
+
+This update fixed some issues and bugs for the V4.7.1
+
+Major update of Dédalo!
+
+IMPORTANT:
+
+This version change all realtion components to new format, now the locator(dato) is stored in a unique container in matrix, this container named "relations" is inside to the section and is outside of the clasical "components" container.
+
+The new locator introduce the concept of "from_", the classical format of the locator point to the destination of the information:
+
+	{
+		"section_tipo":"oh1",
+		"section_id":1,
+		"component_tipo":"oh24",
+		"tag_id":4
+	}
+
+locate the destination information, "chilren inforamtion" of the component.
+Now the locator introduce the orgien concept:
+	{
+		"section_tipo":"oh1",
+		"section_id":1,
+		"component_tipo":"oh24",
+		"tag_id":4,
+		"from_component_tipo":"oh12"
+	}
+
+from_component_tipo, say the origen of the locator, and it open the possiblity that eliminate the "tipo" inside the section JSON in matrix.
+
+Now the section has two dato containers:
+	"relations"
+	"components"
+
+	- relations: will store only the information of the all components_relations, like component_portal, component_autocomplete, component_select, component_radio_button, etc, this information always will be locators.
+
+	-"components": will store the dato information of the components that has alfanumeric, date, ... information, this container is not changed in this version, the structurarion of this container is the same that in previuos version.
+
+MATRIX:
+
+	This version create the new "relations" table, this change store the connections between information store inside the locators. This table split the locator in classical columns for index it and speed the search inside.
+	This table is only a cache of the relations, this information can be recreated if the information store inside was de-syncronized with the real information.
+	The components_relations will store your own data in locator format in the matix sections and in the new relations table.
+
+
+SEARCH:
+		The 4.8 versions will replace the old search and filter, the new search concept is based in the relations of the documents that Dédalo manage. The target of the new search archiquecture is make possible the find in the deeper data, folowing the locator indications to the documents that has links with the origin section. The new search will can locate any related information, independent of the steps or relations that it has with the origin document.
+
+		New "search_object" based in JSON. Every component can defined your path and the operators that will be parse to SQL. the search_object unify the model and options of search. This has a client part in js that tranform the DOM to the object that will send to PHP to be parsed for the components for analize the operators and options and finaly will be parse to SQL.
+
+		The new search will be stored in a section_list inside Postgres, leave the SESION model of the old search, the new filter can be reused for users, because the "search_object" can be saved like a presets. The presets can save the components and the data of the searches.
+
+section : unified save_component_dato. Now all (direct and relation) components save using this method 
+		component_relation_common : changed the component data manager to converge with standard components 
+		tool_portal : js : fixed bug when section_id is parsed as int (incompatible with temp section_id)
+		tool_common : propagate_temp_section_data : added relation components propagate dato loosed feature
+		trigger.import_files : updated component_portal add new element method for compatibility with version >=4.8
+
+
+
+
+*Ver 4.7.1 - 12-11-2017
+Today we introduce the update of the V4 to 4.7.1
+
+This update fixed some issues and bugs for the V4.7.0
+
+component_reference_common: Update the db connection of component_reference_common for compatibility with postgreSQL 10
+
+diffusion_sql : added map_locator_to_terminoID_parent method to update parent on publish term (useful in web thesaurus applications)
+
+section_records : added debug info. JSON visualization of actual search options
+
+section : removed method add_relations. Now, relations are added individually
+
+component_relation_common : set_dato now is compatible with new relation type 'link' for future portals and autocompletes 
+
+component_relation_autocomplete : added transition component for replacement of actual component_autocomplete
+
+
 *Ver 4.7.0 - 18-09-2017
 Today we introduce the update of the V4 to 4.7.0
 
