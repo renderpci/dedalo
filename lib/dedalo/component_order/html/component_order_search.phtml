@@ -1,11 +1,13 @@
 <?php
 
-	# VISUALIZADOR HTML	
-	//if(isset($_REQUEST[$tipo]))					$dato = $_REQUEST[$tipo];		#var_dump($_REQUEST[$tipo]);
+	# VISUALIZADOR HTML
 	
-	
-	print "\n<!-- NUMBER -->";
-	print "\n<div class=\"wrap_component css_wrap_number\" id=\"wrap_{$tipo}\">";
+	print "<div class=\"wrap_component css_wrap_number tooltip_active\" id=\"wrap_{$tipo}\" ";
+	print "data-component_name=\"{$component_name}\" ";
+	print "data-modo=\"{$modo}\" ";
+	print "data-dato='".json_encode($dato)."' ";
+	print 'title="'.search_development2::search_options_title( $this->search_operators_info() ).'" ';
+	print ">";
 	
 	# ETIQUETA (LABEL)
 	$html_label = component_common_draw::draw_label($this);
@@ -19,10 +21,11 @@
 						
 		case ($permissions>=1):
 		
-					$html_contenido .= "\n <input class=\"css_number\" type=\"text\" 
-					name=\"{$tipo}\" 
-					data-tipo=\"{$tipo}\"
-					value=\"{$dato}\" title=\"$html_title\" />";											
+					$html_contenido .= "<input class=\"css_number\" type=\"text\" ";
+					$html_contenido .= "name=\"{$tipo}\" ";
+					$html_contenido .= "data-tipo=\"{$tipo}\" ";
+					$html_contenido .= "value=\"{$dato}\" title=\"$html_title\" ";
+					$html_contenido .= "/>";											
 	}
 
 	# Prepare content to show in page
@@ -34,5 +37,5 @@
 	print $html_contenido;
 	
 	
-	print "\n</div>\n\n"; //wrap
+	print "</div>"; //wrap
 ?>

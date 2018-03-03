@@ -75,14 +75,25 @@ class component_input_text extends component_common {
 	*/
 	public function get_valor( $lang=DEDALO_DATA_LANG, $index='all' ) {
 		
+		$valor ='';
+
 		$dato = $this->get_dato();
+
+		if(empty($dato)) {			
+			return (string)$valor;
+		}
 				
 		if ($index==='all') {			
 			$ar = array();
 			foreach ($dato as $key => $value) {
-				$ar[] = $value;				
+				$value = trim($value);
+				if (!empty($value)) {
+					$ar[] = $value;	
+				}							
 			}
-			$valor = implode(',',$ar);
+			if (count($ar)>0) {
+				$valor = implode(',',$ar);
+			}			
 		}else{
 			$index = (int)$index;
 			$valor = isset($dato[$index]) ? $dato[$index] : null;
@@ -130,8 +141,6 @@ class component_input_text extends component_common {
 
 
 
-
-
 	/**
 	* RENDER_LIST_VALUE
 	* Overwrite for non default behaviour
@@ -172,7 +181,7 @@ class component_input_text extends component_common {
 			$empty_list_value = "\n".' <span class="css_span_dato"></span>';
 			if (empty($value) || $value===$empty_list_value) {
 
-				$main_lang = common::get_main_lang( $section_tipo, $parent );
+				$main_lang = common::get_main_lang( $section_tipo, $parent );			
 				# main lang
 				if ($main_lang!=$lang) {
 
@@ -242,24 +251,39 @@ class component_input_text extends component_common {
 	* UPDATE_DATO_VERSION
 	* @return object $response
 	*/
-	public static function update_dato_version($update_version, $dato_unchanged, $reference_id) {
+	public static function update_dato_version($request_options) {
+
+		$options = new stdClass();
+			$options->update_version 	= null;
+			$options->dato_unchanged 	= null;
+			$options->reference_id 		= null;
+			$options->tipo 				= null;
+			$options->section_id 		= null;
+			$options->section_tipo 		= null;
+			$options->context 			= 'update_component_dato';
+			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
+
+			$update_version = $options->update_version;
+			$dato_unchanged = $options->dato_unchanged;
+			$reference_id 	= $options->reference_id;
+		
 
 		$update_version = implode(".", $update_version);
 
 		switch ($update_version) {
 			case '4.0.21':
 				#$dato = $this->get_dato_unchanged();
-					
+				
 				# Compatibility old dedalo instalations
 				if (!empty($dato_unchanged) && is_string($dato_unchanged)) {
 
 					$new_dato = (array)$dato_unchanged;
-											
+
 					$response = new stdClass();
 						$response->result   = 1;
 						$response->new_dato = $new_dato;
 						$response->msg = "[$reference_id] Dato is changed from ".to_string($dato_unchanged)." to ".to_string($new_dato).".<br />";
-					return $response;					
+					return $response;
 
 				}else if(is_array($dato_unchanged)){
 
@@ -335,20 +359,27 @@ class component_input_text extends component_common {
 					// Contain
 					$search_value = str_replace($separator, '', $search_value);
 					if ($current_lang=='all') {
-						$search_query = " unaccent({$json_field}#>>'{components, $search_tipo, $tipo_de_dato_search}') ~* unaccent('.*\[\".*$search_value.*') ";
+						if ($comparison_operator==="LIKE") {
+							$search_query = " {$json_field}#>>'{components, $search_tipo, $tipo_de_dato_search}' ~ '.*\[\".*$search_value.*' ";
+						}else{
+							$search_query = " unaccent({$json_field}#>>'{components, $search_tipo, $tipo_de_dato_search}') ~* unaccent('.*\[\".*$search_value.*') ";
+						}						
 					}else{
 						$search_query = " unaccent({$json_field}#>>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}') $comparison_operator unaccent('%$search_value%') ";
 					}
-
 				}
 				break;
 
 			case ($comparison_operator==='=' || $comparison_operator==='!='):
-				$comparison_operator = '@>';
+				$json_operator = '@>';
 				if ($current_lang=='all') {
 					$ar_lang_search_query = array();
 					foreach (common::get_ar_all_langs() as $iter_lang) {
-						$ar_lang_search_query[] = "{$json_field}#>'{components, $search_tipo, $tipo_de_dato_search, ". $iter_lang ."}' $comparison_operator '\"$search_value\"'";
+						if ($comparison_operator==="!=") {							
+							$ar_lang_search_query[] = "({$json_field}#>'{components, $search_tipo, $tipo_de_dato_search, ". $iter_lang ."}' $json_operator '\"$search_value\"') = false";
+						}else{
+							$ar_lang_search_query[] = "{$json_field}#>'{components, $search_tipo, $tipo_de_dato_search, ". $iter_lang ."}' $json_operator '\"$search_value\"'";
+						}						
 					}
 					$search_query = " (".implode(" OR ", $ar_lang_search_query).") ";
 				}else{
@@ -382,6 +413,145 @@ class component_input_text extends component_common {
 		}
 		return (string)$search_query;
 	}//end get_search_query
+
+
+
+	/**
+	* RESOLVE_QUERY_OBJECT_SQL
+	* @return object $query_object
+	*/
+	public static function resolve_query_object_sql($query_object) {
+		#debug_log(__METHOD__." query_object ".to_string($query_object), logger::DEBUG);
+		
+		$q = $query_object->q;
+		if (isset($query_object->type) && $query_object->type==='jsonb') {
+			$q = json_decode($q);
+		}	
+
+    	# Always set fixed values
+		$query_object->type = 'string';
+		
+		$q = pg_escape_string(stripslashes($q));
+		
+        switch (true) {
+			case ($q==='!*'):
+				$operator = 'IS NULL';
+				$q_clean  = '';
+				$query_object->operator = $operator;
+    			$query_object->q_parsed	= $q_clean;
+    			$query_object->unaccent = false;
+
+    			$clone = clone($query_object);
+	    			$clone->operator = '=';
+	    			$clone->q_parsed = "'[]'";
+
+				$logical_operator = '$or';
+    			$new_query_json = new stdClass;    			
+	    			$new_query_json->$logical_operator = [$query_object, $clone];
+    			# override
+    			$query_object = $new_query_json ;
+				break;
+			case ($q==='*'):
+				$operator = 'IS NOT NULL';
+				$q_clean  = '';
+				$query_object->operator = $operator;
+    			$query_object->q_parsed	= $q_clean;
+    			$query_object->unaccent = false;
+
+    			$clone = clone($query_object);
+	    			$clone->operator = '!=';
+	    			$clone->q_parsed = "'[]'";
+
+				$logical_operator ='$or';
+    			$new_query_json = new stdClass;    			
+    				$new_query_json->$logical_operator = [$query_object, $clone];    			
+    			# override
+    			$query_object = $new_query_json ;
+				break;
+			# IS DIFFERENT			
+			case (strpos($q, '!=')===0):
+				$operator = '!=';
+				$q_clean  = str_replace($operator, '', $q);
+				$query_object->operator = '!~';
+    			$query_object->q_parsed = '\'.*"'.$q_clean.'".*\'';
+    			$query_object->unaccent = false;
+				break;
+			# IS EQUAL
+			case (strpos($q, '=')===0):
+				$operator = '=';
+				$q_clean  = str_replace($operator, '', $q);
+				$query_object->operator = '~';
+    			$query_object->q_parsed	= '\'.*"'.$q_clean.'".*\'';
+    			$query_object->unaccent = false;
+				break;
+			# NOT CONTAIN
+			case (strpos($q, '-')===0):
+				$operator = '!~*';
+				$q_clean  = str_replace('-', '', $q);
+				$query_object->operator = $operator;
+    			$query_object->q_parsed	= '\'.*\[".*'.$q_clean.'.*\'';
+    			$query_object->unaccent = true;
+				break;
+			# CONTAIN				
+			case (substr($q, 0, 1)==='*' && substr($q, -1)==='*'):
+				$operator = '~*';
+				$q_clean  = str_replace('*', '', $q);
+				$query_object->operator = $operator;
+    			$query_object->q_parsed	= '\'.*\[".*'.$q_clean.'.*\'';
+    			$query_object->unaccent = true;
+				break;
+			# ENDS WITH
+			case (substr($q, 0, 1)==='*'):
+				$operator = '~*';
+				$q_clean  = str_replace('*', '', $q);
+				$query_object->operator = $operator;
+    			$query_object->q_parsed	= '\'.*\[".*'.$q_clean.'".*\'';
+    			$query_object->unaccent = true;
+				break;
+			# BEGINS WITH
+			case (substr($q, -1)==='*'):
+				$operator = '~*';
+				$q_clean  = str_replace('*', '', $q);
+				$query_object->operator = $operator;
+    			$query_object->q_parsed	= '\'.*\["'.$q_clean.'.*\'';
+    			$query_object->unaccent = true;
+				break;
+			# CONTAIN
+			default:
+				$operator = '~*';
+				$q_clean  = str_replace('+', '', $q);				
+				$query_object->operator = $operator;
+    			$query_object->q_parsed	= '\'.*\[".*'.$q_clean.'.*\'';
+    			$query_object->unaccent = true;
+				break;
+		}//end switch (true) {		
+       
+
+        return $query_object;
+	}//end resolve_query_object_sql
+
+
+
+	/**
+	* SEARCH_OPERATORS_INFO
+	* Return valid operators for search in current component
+	* @return array $ar_operators
+	*/
+	public function search_operators_info() {
+		
+		$ar_operators = [
+			'*' 	 => 'no_vacio', // not null
+			'!*' 	 => 'vacio', // null	
+			'=' 	 => 'igual_que',
+			'!=' 	 => 'distinto_de',
+			'-' 	 => 'no_contiene',
+			'*text*' => 'contiene',
+			'text*'  => 'empieza_con',
+			'*text'  => 'acaba_con',
+		];
+
+		return $ar_operators;
+	}//end search_operators_info
 
 
 

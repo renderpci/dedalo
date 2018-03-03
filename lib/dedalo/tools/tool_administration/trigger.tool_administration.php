@@ -167,12 +167,40 @@ function update_structure($json_data) {
 	
 
 	# Delete session config (force to recalculate)
-	unset($_SESSION['dedalo4']['config']);
+	#unset($_SESSION['dedalo4']['config']);
 
 	# Delete session permissions table (force to recalculate)
-	unset($_SESSION['dedalo4']['auth']['permissions_table']);
+	#unset($_SESSION['dedalo4']['auth']['permissions_table']);
+
+	# Delete all session data except auth
+	foreach ($_SESSION['dedalo4'] as $key => $value) {
+		if ($key==='auth') continue;
+		unset($_SESSION['dedalo4'][$key]);
+	}
 
 	session_write_close();
+
+
+	#
+	# UPDATE JAVASCRIPT LABELS
+		$ar_langs 	 = (array)unserialize(DEDALO_APPLICATION_LANGS);
+		foreach ($ar_langs as $lang => $label) {
+			$label_path  = '/common/js/lang/' . $lang . '.js';			
+			$ar_label 	 = label::get_ar_label($lang); // Get all properties
+				#dump($ar_label, ' ar_label');
+			
+			file_put_contents( DEDALO_LIB_BASE_PATH.$label_path, 'get_label='.json_encode($ar_label,JSON_UNESCAPED_UNICODE).'');			
+			debug_log(__METHOD__." Generated js labels file for lang: $lang - $label_path ".to_string(), logger::DEBUG);
+		}
+
+
+	#
+	# UPDATE STRUCTURE CSS
+		$build_structure_css_response = (object)css::build_structure_css();
+		if ($build_structure_css_response->result===false) {
+			debug_log(__METHOD__." Error on build_structure_css: ".to_string($build_structure_css_response), logger::ERROR);
+		}
+
 
 
 	$response->result 	= true;
@@ -193,8 +221,7 @@ function update_structure($json_data) {
 
 
 /**
-* BUILD_STRUCTURE_CSS
-* Force unlock all components
+* DELETE_COMPONENT_TIPO_IN_MATRIX_TABLE
 */
 function delete_component_tipo_in_matrix_table($json_data) {
 	global $start_time;
@@ -208,7 +235,7 @@ function delete_component_tipo_in_matrix_table($json_data) {
 		foreach($vars as $name) {
 			$$name = common::setVarData($name, $json_data);
 			# DATA VERIFY
-			#if ($name==='top_tipo' || $name==='top_id') continue; # Skip non mandatory
+			if ($name==='save') continue; # Skip non mandatory
 			if (empty($$name)) {
 				$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty '.$name.' (is mandatory)';
 				return $response;
@@ -246,7 +273,55 @@ function delete_component_tipo_in_matrix_table($json_data) {
 	}
 
 	return (object)$response;
-}//end build_structure_css
+}//end delete_component_tipo_in_matrix_table
+
+
+
+/**
+* RENUMERATE_SECTIONS
+*/
+function renumerate_sections($json_data) {
+	global $start_time;
+
+	$response = new stdClass();
+		$response->result 	= false;
+		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
+
+	# set vars
+	$vars = array('section_tipo','section_id_start','section_id_end','counter_start','save');
+		foreach($vars as $name) {
+			$$name = common::setVarData($name, $json_data);
+			# DATA VERIFY
+			if ($name==='save') continue; # Skip non mandatory
+			if (empty($$name)) {
+				$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty '.$name.' (is mandatory)';
+				return $response;
+			}
+		}
+
+	$save = json_decode($save);
+
+	$options = new stdClass();
+		$options->section_tipo 		= $section_tipo;
+		$options->section_id_start 	= $section_id_start;
+		$options->section_id_end	= $section_id_end;
+		$options->counter_start 	= $counter_start;
+		$options->save 				= $save;
+	$response = (object)tool_administration::renumerate_sections( $options );
+
+	# Debug
+	if(SHOW_DEBUG===true) {
+		$debug = new stdClass();
+			$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
+			foreach($vars as $name) {
+				$debug->{$name} = $$name;
+			}
+
+		$response->debug = $debug;
+	}
+
+	return (object)$response;
+}//end renumerate_sections
 
 
 
@@ -268,10 +343,10 @@ function update_version($json_data) {
 	// Free browser session
 	// session_write_close();
 
-	$result = tool_administration::update_version();
+	$response = tool_administration::update_version();
 
-	$response->result 	= $result;
-	$response->msg 		= 'Ok. Request done ['.__FUNCTION__.']';	
+	#$response->result 	= $result;
+	#$response->msg 		= 'Ok. Request done ['.__FUNCTION__.']';
 
 	# Debug
 	if(SHOW_DEBUG===true) {
@@ -426,7 +501,7 @@ function move_component_data($json_data) {
 /**
 * REMOVE_INVERSE_LOCATORS_IN_SECTION
 * @return json string
-*/
+*//*
 function remove_inverse_locators_in_section($json_data) {
 	global $start_time;
 
@@ -467,7 +542,56 @@ function remove_inverse_locators_in_section($json_data) {
 	}
 
 	return (object)$response;
-}//end remove_inverse_locators_in_section
+}//end remove_inverse_locators_in_section */
+
+
+
+/**
+* propagate_relations
+* @return json string
+*/
+function propagate_relations($json_data) {
+	global $start_time;
+
+	$response = new stdClass();
+		$response->result 	= false;
+		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
+
+	session_write_close();	
+	
+	# set vars
+	$vars = array('tables');
+		foreach($vars as $name) {
+			$$name = common::setVarData($name, $json_data);			
+			if (empty($$name)) {
+				$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty '.$name.' (is mandatory)';
+				return $response;
+			}
+		}
+
+
+	$result = (bool)tool_administration::generate_relations_table_data( $tables );
+	$response->result = $result;
+
+	if ($result===true) {
+		$response->msg = "Propagated relations in tables '$tables' successfully";
+	}else{
+		$response->msg = "Error on propagate tables: ".to_string($result);
+	}
+
+	# Debug
+	if(SHOW_DEBUG===true) {
+		$debug = new stdClass();
+			$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
+			foreach($vars as $name) {
+				$debug->{$name} = $$name;
+			}
+
+		$response->debug = $debug;
+	}
+
+	return (object)$response;
+}//end propagate_relations
 
 
 
@@ -518,4 +642,103 @@ function update_jer_from_4_0_to_4_1($json_data) {
 
 
 
+/**
+* CONVERT_SEARCH_OBJECT_TO_SQL_QUERY
+* @return 
+*/
+function convert_search_object_to_sql_query($json_data) {
+	global $start_time;
+
+	$response = new stdClass();
+		$response->result 	= false;
+		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
+
+	set_time_limit ( 259200 );  // 3 dias
+
+	# set vars
+	$vars = array('json_string');
+		foreach($vars as $name) {
+			$$name = common::setVarData($name, $json_data);			
+			if (empty($$name)) {
+				$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty '.$name.' (is mandatory)';
+				return $response;
+			}
+		}
+
+	#if (!$json_string_decoded = json_decode($json_string)) {
+	#	$response->msg .= " Invalid JSON data. Ignored!"
+	#	return $response;
+	#}
+
+	if($search_query_object = json_decode($json_string)) {
+		
+		$search_development2 = new search_development2($search_query_object);
+		$sql_query = $search_development2->parse_search_query_object();
+
+		#$sql_query = addslashes($sql_query);
+		$sql_query = "<pre style=\"font-size:12px\">".$sql_query."</pre>";
+
+		$response->result 	= true;
+		$response->msg 		= $sql_query;
+	}		
+
+	
+
+	# Debug
+	if(SHOW_DEBUG===true) {
+		$debug = new stdClass();
+			$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
+			#foreach($vars as $name) {
+			#	$debug->{$name} = $$name;
+			#}
+
+		$response->debug = $debug;
+	}
+
+	return (object)$response;
+}//end convert_search_object_to_sql_query
+
+
+
+/**
+* export_hierarchy
+* @return 
+*/
+function export_hierarchy($json_data) {
+	global $start_time;
+
+	$response = new stdClass();
+		$response->result 	= false;
+		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
+
+	set_time_limit ( 259200 );  // 3 dias
+
+	# set vars
+	$vars = array('section_tipo');
+		foreach($vars as $name) {
+			$$name = common::setVarData($name, $json_data);			
+			if (empty($$name)) {
+				$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty '.$name.' (is mandatory)';
+				return $response;
+			}
+		}
+
+	
+	$response = (object)tool_administration::export_hierarchy($section_tipo);
+
+	
+
+	# Debug
+	if(SHOW_DEBUG===true) {
+		$debug = new stdClass();
+			$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
+			#foreach($vars as $name) {
+			#	$debug->{$name} = $$name;
+			#}
+
+		$response->debug = $debug;
+	}
+
+	return (object)$response;
+}//end export_hierarchy
 ?>

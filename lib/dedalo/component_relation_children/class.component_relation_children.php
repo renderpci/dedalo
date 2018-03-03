@@ -1,9 +1,9 @@
 <?php
 /*
 * CLASS component_relation_children
+*
+*
 */
-
-
 class component_relation_children extends component_relation_common {
 		
 
@@ -11,96 +11,7 @@ class component_relation_children extends component_relation_common {
 
 	# test_equal_properties is used to verify duplicates when add locators
 	public $test_equal_properties = array('section_tipo','section_id','type','from_component_tipo');
-	
 
-	/**
-	* __CONSTRUCT
-	*//*
-	function __construct($tipo=null, $parent=null, $modo='edit', $lang=DEDALO_DATA_NOLAN, $section_tipo=null) {
-
-		# Force always DEDALO_DATA_NOLAN
-		$lang = $this->lang;
-
-		# relation_type
-		$this->relation_type = DEDALO_RELATION_TYPE_CHILDREN_TIPO;
-
-		# Build the componente normally
-		parent::__construct($tipo, $parent, $modo, $lang, $section_tipo);
-
-		if(SHOW_DEBUG) {
-			$traducible = $this->RecordObj_dd->get_traducible();
-			if ($traducible=='si') {
-				throw new Exception("Error Processing Request. Wrong component lang definition. This component $tipo (".get_class().") is not 'traducible'. Please fix this ASAP", 1);
-			}
-		}
-	}//end __construct
-	*/
-
-
-
-	/**
-	* GET DATO
-	* @return array $dato
-	*	$dato is always an array of locators
-	*//*
-	public function get_dato() {
-		
-		$dato = parent::get_dato();
-
-		if (!empty($dato) && !is_array($dato)) {
-			#dump($dato,"dato");
-			trigger_error("Error: ".__CLASS__." dato type is wrong. Array expected and ".gettype($dato)." is received for tipo:$this->tipo, parent:$this->parent");
-			$this->set_dato(array());
-			$this->Save();
-		}
-		if ($dato===null) {
-			$dato=array();
-		}
-
-		return (array)$dato;
-	}//end get_dato
-	*/
-
-
-	/**
-	* SET_DATO
-	* @param array|string $dato
-	*	When dato is string is because is a json encoded dato
-	*//*
-	public function set_dato($dato) {
-		if (is_string($dato)) { # Tool Time machine case, dato is string
-			$dato = json_handler::decode($dato);
-		}
-		if (is_object($dato)) {
-			$dato = array($dato);
-		}
-		# Ensures is a real non-associative array (avoid json encode as object)
-		$dato = is_array($dato) ? array_values($dato) : (array)$dato;
-
-		# Verify all locators are well formed 
-		foreach ((array)$dato as $key => $current_locator) {
-			// Type
-			if (!isset($current_locator->type)) {
-				$current_locator->type = DEDALO_RELATION_TYPE_CHILDREN_TIPO;
-				debug_log(__METHOD__." Fixed bad formed locator (empty type) [$this->section_tipo, $this->parent, $this->tipo] ".to_string(), logger::WARNING);
-			}else if ($current_locator->type!==DEDALO_RELATION_TYPE_CHILDREN_TIPO) {
-				$current_locator->type = DEDALO_RELATION_TYPE_CHILDREN_TIPO;
-				debug_log(__METHOD__." Fixed bad formed locator (bad type $current_locator->type) [$this->section_tipo, $this->parent, $this->tipo] ".to_string(), logger::WARNING);
-			}
-			// from_component_tipo
-			if (!isset($current_locator->from_component_tipo)) {
-				$current_locator->from_component_tipo = $this->tipo;
-				debug_log(__METHOD__." Fixed bad formed locator (empty from_component_tipo) [$this->section_tipo, $this->parent, $this->tipo] ".to_string(), logger::WARNING);
-			}else if ($current_locator->from_component_tipo!==$this->tipo) {
-				$current_locator->type = $this->tipo;
-				debug_log(__METHOD__." Fixed bad formed locator (bad from_component_tipo $current_locator->from_component_tipo) [$this->section_tipo, $this->parent, $this->tipo] ".to_string(), logger::WARNING);
-			}
-		}
-		
-
-		parent::set_dato( (array)$dato );
-	}//end set_dato
-	*/
 
 	
 	/**
@@ -112,11 +23,11 @@ class component_relation_children extends component_relation_common {
 		#return "working here! ".__METHOD__;
 	
 		if (isset($this->valor)) {
-			dump($this->valor, ' RETURNED VALOR FROM CACHE this->valor ++ '.to_string());		
+			#dump($this->valor, ' RETURNED VALOR FROM CACHE this->valor ++ '.to_string());		
 			return $this->valor;
 		}
 
-		$ar_valor  	= array();		
+		$ar_valor  	= array();
 		$dato   	= $this->get_dato();
 		foreach ((array)$dato as $key => $current_locator) {
 			#$ar_valor[] = self::get_locator_value( $current_locator, $lang, $this->section_tipo );
@@ -165,7 +76,7 @@ class component_relation_children extends component_relation_common {
 		}
 
 		return $lang;*/
-	}#end get_valor_lang
+	}//end get_valor_lang
 
 
 
@@ -307,28 +218,7 @@ class component_relation_children extends component_relation_common {
 			return false;
 		}
 		
-		return true;
-		/*
-		$ar_locator = $this->get_dato();
-
-		foreach ($ar_locator as $key => $current_locator) {
-			$equal = locator::compare_locators( $current_locator, $locator, $ar_properties=array('section_tipo','section_id','from_component_tipo') );
-			if ( $equal===true ) {
-				unset($ar_locator[$key]);
-				debug_log(__METHOD__." Removed locator ".to_string($current_locator), logger::DEBUG);
-
-				# Recreate indexes (avoid json read this array as object)
-				$ar_locator = array_values($ar_locator);
-
-				# Update component dato
-				$this->set_dato($ar_locator);
-
-				return true;
-			}
-		}		
-
-		return false;
-		*/
+		return true;		
 	}//end remove_children
 
 
@@ -338,10 +228,10 @@ class component_relation_children extends component_relation_common {
 	* Note: Override in every specific component
 	* @param array $comparison_operators . Like array('=','!=')
 	* @return object stdClass $search_comparison_operators
-	*/
+	*//*
 	public function build_search_comparison_operators( $comparison_operators=array('=','!=') ) {
 		return (object)parent::build_search_comparison_operators($comparison_operators);
-	}#end build_search_comparison_operators
+	}//end build_search_comparison_operators */
 
 
 
@@ -359,7 +249,7 @@ class component_relation_children extends component_relation_common {
 	*
 	* @see class.section_records.php get_rows_data filter_by_search
 	* @return string $search_query . POSTGRE SQL query (like 'datos#>'{components, oh21, dato, lg-nolan}' ILIKE '%paco%' )
-	*/
+	*//*
 	public static function get_search_query( $json_field, $search_tipo, $tipo_de_dato_search, $current_lang, $search_value, $comparison_operator='=') {
 		$search_query='';
 		if ( empty($search_value) ) {
@@ -383,7 +273,7 @@ class component_relation_children extends component_relation_common {
 		}
 
 		return $search_query;
-	}//end get_search_query
+	}//end get_search_query */
 
 
 
@@ -403,14 +293,8 @@ class component_relation_children extends component_relation_common {
 		$valor = $this->get_valor($lang);
 		
 		return $valor;
-	}#end get_valor_export
+	}//end get_valor_export
 
-
-	
-
-	
-	
-	
 	
 
 }//end component_relation_children

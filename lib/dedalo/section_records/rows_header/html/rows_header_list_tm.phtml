@@ -3,41 +3,42 @@
 	# VISUALIZADOR HTML	
 		
 	# CONTENIDO (INPUT)
-	$html_contenido  = "<tr>";	
-	
-	switch(true) {
+	$html_content  = '<tr>';	
+
+					
+		# TD ID
+		$html_content .= '<th class="id_column"';
+		#$html_content .= 'data-resizable-column-id="ID" ';
+		$html_content .= '>';
 			
-		case $permissions===0	:	$html_contenido .= " <span class=\"css_span_dato\"> ".label::get_label('sin_acceso')." </span>";
-					break;
-						
-		case ($permissions>=1)	:
-					
-					# TD ID
-					$html_contenido .= " <th class=\"id_column\">";
-						$html_contenido .= "<div class=\"th_title\">";
-						$html_contenido .= " ID ";
-						$html_contenido .= '</div>';
-					$html_contenido .= " </th>";
-					
-					# TD DATOS					
-					foreach($ar_label_html as $key => $data_obj) {
-						
-						$current_tipo 		= $data_obj['tipo'];
-						$current_label_html = $data_obj['label'];
+			$html_content .= '<div class="th_title">';
+			$html_content .= 'ID';
+			$html_content .= '</div>';
 
-						$html_contenido .= " <th>";
-						
-							$html_contenido .= "<div class=\"th_title\" title=\"$current_label_html\">";
-							$html_contenido .= $current_label_html;
-							$html_contenido .= '</div>';
+		$html_content .= '</th>';
 
-						$html_contenido .= " </th>";						
-					}
 
-	}
-	$html_contenido .= "</tr>";
+		
+		# TD DATOS					
+		foreach($ar_label_data as $value) {
+
+			$tipo  = $value['tipo'];
+			$label = $value['label'];
+			
+			$html_content .= " <th>";
+			
+				$html_content .= '<div class="th_title">';
+				$html_content .= $label;
+				$html_content .= '</div>';
+
+			$html_content .= '</th>';						
+		}
+
+	
+	$html_content .= '</tr>';
+
 	
 	# PRINT HTML
-	print $html_contenido;
+	print $html_content;
 
 ?>

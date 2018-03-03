@@ -1,10 +1,16 @@
 <?php
 
-	# VISUALIZADOR HTML	
+	# VISUALIZADOR HTML		
 	
-	print "\n<!-- GEOLOCATION [tipo:$tipo section_id_matrix:$parent] $label -->";
-	print "\n<div class=\"css_wrap_geolocation wrap_component\" id=\"{$id_wrapper}\"
-	data-tipo=\"{$tipo}\" data-lang=\"{$lang}\" data-section_tipo=\"{$section_tipo}\" data-parent=\"{$parent}\" data-modo=\"{$modo}\" data-dato=\"{$valor}\" data-component_name=\"{$component_name}\" >";
+	print "<div class=\"css_wrap_geolocation wrap_component\" id=\"{$id_wrapper}\" ";
+	print "data-tipo=\"{$tipo}\" ";
+	print "data-lang=\"{$lang}\" ";
+	print "data-section_tipo=\"{$section_tipo}\" ";
+	print "data-parent=\"{$parent}\" ";
+	print "data-component_name=\"{$component_name}\" ";
+	print "data-modo=\"{$modo}\" ";
+	print "data-dato='".json_encode($dato)."' ";
+	print ">";
 	
 		
 		# ETIQUETA (LABEL)
@@ -14,12 +20,12 @@
 		$html_contenido = '';
 		switch($permissions) {
 				
-			case 0	:	$html_contenido .= "\n <span class=\"css_span_sin_acceso\">".label::get_label('sin_acceso')."</span>";
+			case 0	:	$html_contenido .= " <span class=\"css_span_sin_acceso\">".label::get_label('sin_acceso')."</span>";
 						break;
 							
 			case ($permissions>=1)	:						
 
-						$html_contenido .= "\n <div id=\"$identificador_unico\">$component_name. working here..</div>";						
+						$html_contenido .= " <div id=\"$identificador_unico\">$component_name. working here..</div>";						
 												
 		}
 
@@ -28,6 +34,6 @@
 		print $html_contenido;
 	
 	
-	print "\n</div><!-- /css_wrap_geolocation GEOLOCATION [tipo:$tipo section_id_matrix:$parent] $label -->\n"; //wrap
+	print "</div>"; //wrap
 
 ?>

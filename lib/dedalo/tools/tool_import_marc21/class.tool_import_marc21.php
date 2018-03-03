@@ -96,7 +96,7 @@ class tool_import_marc21 extends tool_common {
 
 		# Parse file
 		# MARC PEAR Lib
-		$pear_lib_path = DEDALO_LIB_EX_BASE_PATH."/pear/";
+		$pear_lib_path = DEDALO_LIB_BASE_PATH."/pear/";
 		require($pear_lib_path . "File/MARC.php");
 
 		$ar_records = new File_MARC($file);

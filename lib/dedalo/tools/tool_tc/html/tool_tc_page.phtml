@@ -2,16 +2,15 @@
 
 	# VISUALIZADOR HTML		
 
-	$html    = "\n<!-- TOOL_TC -->";	
-	$html   .= "\n<div class=\"wrap_tool wrap_tool_tc_page\" >";
+	$html    = "<!-- TOOL_TC -->";	
+	$html   .= "<div class=\"wrap_tool wrap_tool_tc_page\" >";
 
 	#
 	# CONTENT
-	$html   .= "\n<div class=\"content_data block-content-1\" >";
+	$html   .= "<div class=\"content_data block-content-1\" >";
 
 	#
 	# left side
-
 	$html   .= "<div id=\"tc_left\" class=\"tc_left\">";
 	$html   .= "<div class=\"label_tc_content\">Current content</div>";
 	$html   .= "<div class=\"tc_content\">";
@@ -35,7 +34,7 @@
 	$html   .= "<div class=\"tc_options\">";
 
 	$html_selector ='';
-	#$html_selector .= "\n <span class=\"rotulo_tool_lang_selector\">".label::get_label('idioma').":</span> ";
+	#$html_selector .= "<span class=\"rotulo_tool_lang_selector\">".label::get_label('idioma').":</span> ";
 	$html_selector .= "<select class=\"tool_lang_selector_source css_select\" onchange=\"tool_tc.change_tool_lang(this)\"> ";
 	$ar_langs = common::get_ar_all_langs_resolved( DEDALO_DATA_LANG );
 	foreach ((array)$ar_langs as $current_lang => $current_lang_name) {
@@ -47,24 +46,24 @@
 	$html   .= $html_selector;
 
 
-	$html   .= " <span class=\"offset_label\"> Offset in seconds </span>";
-	$html   .= " <input type=\"text\" id=\"tc_offset\" class=\"form-control input-sm files_path\" autocomplete=\"off\"  value=\"\"
-	data-tipo=\"$tipo\"
-	data-section_tipo=\"$section_tipo\"
-	data-parent=\"$parent\"
-	data-lang=\"$lang\"
-	/>";
-	$html   .= " <input type=\"button\" id=\"tc_preview\" class=\"btn btn-default btn-sm button_read\" value=\"".label::get_label('preview')."\" onclick=\"tool_tc.change_all_timecodes(this,false)\"/>";
-	$html   .= " <input type=\"button\" id=\"tc_apply\" class=\"btn btn-primary btn-sm button_read\" value=\"".label::get_label('aplicar')."\" onclick=\"tool_tc.change_all_timecodes(this,true)\"/>";
-	$html   .= " <span id=\"response_div\"></span>";
+	$html   .= "<span class=\"offset_label\"> Offset in seconds </span>";
+	$html   .= "<input type=\"text\" id=\"tc_offset\" class=\"form-control input-sm files_path\" autocomplete=\"off\" value=\"\" ";
+	$html   .= "data-tipo=\"$tipo\" ";
+	$html   .= "data-section_tipo=\"$section_tipo\" ";
+	$html   .= "data-parent=\"$parent\" ";
+	$html   .= "data-lang=\"$lang\" ";
+	$html   .= "/>";
+	$html   .= "<input type=\"button\" id=\"tc_preview\" class=\"btn btn-default btn-sm button_read\" value=\"".label::get_label('preview')."\" onclick=\"tool_tc.change_all_timecodes(this,false)\"/>";
+	$html   .= "<input type=\"button\" id=\"tc_apply\" class=\"btn btn-primary btn-sm button_read\" value=\"".label::get_label('aplicar')."\" onclick=\"tool_tc.change_all_timecodes(this,true)\"/>";
+	$html   .= "<span id=\"response_div\"></span>";
 	$html   .= "</div>";
 
 
 
-	$html   .= "\n</div>";//end content_data block-content-1
+	$html   .= "</div>";//end content_data block-content-1
 
 
-	$html .= "\n</div><!-- /wrap_tool -->"; //wrap_tool
+	$html .= "</div><!-- /wrap_tool -->"; //wrap_tool
 
 	
 

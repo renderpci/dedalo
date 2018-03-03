@@ -138,6 +138,8 @@ class dataframe extends common {
 	public function get_dataframe_data_of_type($type) {
 		
 		$dataframe 		= (array)$this->component_obj->get_dataframe();
+			#dump($dataframe, ' dataframe ++ '.to_string());
+			#	dump($type, ' type ++ '.to_string());
 		$ar_locators 	= array();
 		foreach ($dataframe as $frame_obj) {
 			
@@ -150,7 +152,7 @@ class dataframe extends common {
 				$ar_locators[$frame_obj->from_key] = $frame_obj;
 			}
 		}
-
+	#dump($ar_locators, ' ar_locators ++ '.to_string());
 		return $ar_locators;
 	}//end get_dataframe_data_of_type
 

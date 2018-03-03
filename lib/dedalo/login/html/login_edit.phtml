@@ -73,11 +73,7 @@
 				if(DEDALO_ENTITY=='development') {
 					$html_contenido .= "<br> ".DEDALO_USERNAME_CONN." -> ".DEDALO_DATABASE_CONN ;
 				}
-				if(SHOW_DEBUG) {			
-					#$html_contenido .= " ".DEDALO_DATABASE_CONN." ";
-					#$html_contenido .= " : ".DEDALO_DB_PORT_CONN." ";			
-				}
-
+				
 
 				try {
 				    $str_version 	 = RecordObj_dd::get_termino_by_tipo(DEDALO_ROOT_TIPO);
@@ -85,6 +81,17 @@
 				} catch (Exception $e) {
 				    echo 'Excepction: ',  $e->getMessage(), "\n";
 				}
+
+
+				if(DEVELOPMENT_SERVER===true) {
+					$html_contenido .= "<span class=\"note\">";
+					$html_contenido .= " ".DEDALO_DATABASE_CONN." ";
+					$html_contenido .= "  - ".DEDALO_HOSTNAME_CONN." ";
+					$html_contenido .= "  - ".DEDALO_USERNAME_CONN." ";
+					#$html_contenido .= " : ".DEDALO_DB_PORT_CONN." ";
+					$html_contenido .= "</span>";
+				}
+
 			
 		
 			$html_contenido .= "</div>";
@@ -96,7 +103,7 @@
 		if (DEDALO_MAINTENANCE_MODE===true) {
 		$html_contenido .= "setTimeout(function(){window.location.reload(true);},30000);";
 		}
-		$html_contenido .= "console.log('browser_info:',login.get_browser_info());";
+		#$html_contenido .= "console.log('browser_info:',login.get_browser_info());";
 		$html_contenido .= "</script>";
 
 		

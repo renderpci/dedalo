@@ -5,7 +5,7 @@
 	$section_tipo 					= $this->section_tipo;	
 	$permissions					= common::get_permissions($section_tipo, $this->search_list_tipo);	
 	
-
+	
 	#
 	# OPTIONS CUSTOM
 	# inyectado a la sección y usado para generar pequeñas modificaciones en la visualización del section list como por ejemplo el link de enlazar un registro con un portal
@@ -32,14 +32,19 @@
 	* TEMPORAL !!
 	* Para posibilitar el acceso del filtro a las secciones virtuales, fijamos los permisos temporalmente a 1
 	*/
-	$permissions=1;
-
-		
+	$permissions=2;		
 
 	if ($permissions<1) {
 		echo "<span class=\"css_span_dato\">Access denied</span>";
 		#return false;
 	}
+
+	# Notify element load to common
+	# Force load some css / js used later
+	foreach (['component_input_text','component_radio_button'] as $key => $value) {
+		common::notify_load_lib_element_tipo($value, 'edit');
+	}
+	
 	
 #return $ar_search_fields;
 

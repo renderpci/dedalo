@@ -23,65 +23,36 @@ function load_rows($json_data) {
 			# DATA VERIFY
 			# if ($name==='dato') continue; # Skip non mandatory
 			if (empty($$name)) {
-				$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty '.$name.' (is mandatory)';
+				$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty '.safe_xss($name).' (is mandatory)';
 				return $response;
 			}
-		}
-
-
+		}	
+	
 	# Received post var 'options' is a json object stringnified. Decode to regenrate original object
-	$options = json_decode($options);
+	# $options = json_decode($options);
 	if (!is_object($options)) {
 		$response->msg = 'Trigger Error: ('.__FUNCTION__.') Received data must be a object (options)';
 		return $response;
-	}
+	}	
 
-	/*
-	if (isset($options->context) && is_string($options->context) ) {
-		$options->context = json_decode($options->context);
-	}*/
-	#dump($options->context,"options to object");	
-
-	if (isset($options->limit)) {
-		#$_SESSION['dedalo4']['config']['max_rows'] = $options->limit;
-	}
-
-	if (empty($options->section_tipo)) {
-		$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty options->section_tipo (is mandatory)';
-		return $response;
-	}
 	if (empty($options->modo)) {
 		$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty options->modo (is mandatory)';
 		return $response;
 	}
 
-	# Activity case : Only use
-	if ($options->section_tipo==DEDALO_ACTIVITY_SECTION_TIPO) {
-		$options->tipo_de_dato 			= 'dato';
-		$options->tipo_de_dato_order	= 'dato';
-	}
+	$section_tipo = $options->search_query_object->section_tipo;
 
-	# error_log( to_string($options) );
-	# Reset offset
-	#$options->offset = 0;
-	#$options->offset_list = 0;
-
-	#$options = json_handler::decode(json_encode($options));	# Force array of objects instead default array of arrays format
-		#dump($options, 'options', array()); #die();
 
 	if (!defined('SECTION_TIPO')) {
-		define('SECTION_TIPO', $options->section_tipo);
+		define('SECTION_TIPO', $section_tipo);
 	}	
-	#dump($options, ' options'); die();
 
-	$section_records 	= new section_records($options->section_tipo, $options);
+
+	$section_records 	= new section_records($section_tipo, $options);
 	$html 				= $section_records->get_html();
-	#$html 			=(string)"<br>12345</br>";
-
-	#$html 			= str_replace(':', '_', $html);
-	#$html = filter_var($html, FILTER_SANITIZE_STRING);
 	
-	session_write_close();
+	
+	#session_write_close();
 
 
 	$response->result 	= $html;

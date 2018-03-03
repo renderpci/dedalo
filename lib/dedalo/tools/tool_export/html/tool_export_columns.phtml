@@ -24,7 +24,7 @@ $html='';
 			foreach ($source_list as $tipo => $name) {
 				$html .= "<li data-tipo=\"$tipo\">";
 				$html .= $name;
-				if(SHOW_DEBUG) {
+				if(SHOW_DEVELOPER===true) {
 					$html .= " [$tipo]";
 				}
 				$html .= "</li>";
@@ -50,7 +50,7 @@ $html='';
 			foreach ($target_list as $tipo => $name) {
 				$html .= "<li data-tipo=\"$tipo\" class=\"ui-icon ui-icon-arrow-4\" >";
 				$html .= $name;
-				if(SHOW_DEBUG) {
+				if(SHOW_DEVELOPER===true) {
 					$html .= " [$tipo]";
 				}
 				$html .= "</li>";

@@ -39,28 +39,7 @@
 		$header_html .= "</div>";//end header_info
 
 		#
-		# TOP_ID SELECTOR
-		/*	
-		if (isset($inverse_locators) && is_array($inverse_locators)) {
-			$top_id_selector  = '';
-			$top_id_selector .= "<div class=\"top_id_selector\">";
-			$top_id_selector .= "<label>".label::get_label('enfoque')."</label>";
-			$top_id_selector .= "<select id=\"top_id_selector\" onchange=\"tool_indexation.update_top_id(this)\">";
-			#$top_id_selector .= " <option></option>";
-			$ar_inverse = $this->get_ar_inverse($inverse_locators);
-				#dump($ar_inverse, ' ar_inverse ++ '.to_string());
-			foreach ($ar_inverse as $current_id => $current_name) {
-				$top_id_selector .= " <option value=\"$current_id\">$current_name</option>";
-			}
-			$top_id_selector .= "</select>";
-			$top_id_selector .= "</div>";
-			// Trigger js update_top_id
-			$top_id_selector .= "<script>tool_indexation.update_top_id(document.getElementById('top_id_selector'));</script>";
-			$header_html .= $top_id_selector;
-		}
-		*/
-		#
-		# TOP_ID SELECTOR
+		# TOP_ID SELECTOR	
 		if (isset($inverse_locators) && is_array($inverse_locators)) {
 			
 			$header_html .= "<div class=\"top_id_selector\">";

@@ -24,17 +24,19 @@ if($this->generate_json_element===true) {
 	# html_delimiter
 	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'in');
 	
-	print " <div id=\"portal_table_{$tipo}\" class=\"wrap_component css_wrap_portal wrap_component_{$modo} wrap_component_{$edit_view} wrap_component_{$tipo}\" id=\"{$id_wrapper}\"
-	data-tipo=\"{$tipo}\"
-	data-lang=\"{$lang}\"
-	data-section_tipo=\"{$section_tipo}\"
-	data-parent=\"{$parent}\"
-	data-modo=\"{$modo}\"
-	data-component_name=\"{$component_name}\"
-	data-component_info='{$component_info}'
-	data-dato='{$valor}'
-	data-target_section_tipo='{$ar_target_section_tipo_json}'
-	>";
+
+	print "<div id=\"portal_table_{$tipo}\" class=\"wrap_component css_wrap_portal wrap_component_{$modo} wrap_component_{$edit_view} wrap_component_{$tipo}\" ";
+	print "id=\"{$id_wrapper}\" ";
+	print "data-tipo=\"{$tipo}\" ";
+	print "data-lang=\"{$lang}\" ";
+	print "data-section_tipo=\"{$section_tipo}\" ";
+	print "data-parent=\"{$parent}\" ";
+	print "data-modo=\"{$modo}\" ";
+	print "data-component_name=\"{$component_name}\" ";
+	print "data-component_info='{$component_info}' ";
+	print "data-dato='{$valor}' ";
+	print "data-target_section_tipo='{$ar_target_section_tipo_json}' ";
+	print ">";
 	
 		
 		# ETIQUETA (LABEL)
@@ -85,13 +87,15 @@ if($this->generate_json_element===true) {
 						if($modo!='print') {
 													
 							foreach ($ar_target_section_tipo as $current_target_section_tipo) {
-								$button_select = "<div class=\"css_button_generic btn_new_ep\" onclick=\"tool_common.open_tool_portal(this)\"
-								data-tipo=\"{$tipo}\"
-								data-top_tipo=\"".TOP_TIPO."\"
-								data-parent=\"{$parent}\"
-								data-section_tipo=\"{$section_tipo}\"
-								data-target_section_tipo=\"{$current_target_section_tipo}\"
-								title=\"parent:$parent - tipo:$tipo\" >";
+								$button_select  = '';
+								$button_select .= "<div class=\"css_button_generic btn_new_ep\" onclick=\"tool_common.open_tool_portal(this)\" ";
+								$button_select .= "data-tipo=\"{$tipo}\" ";
+								$button_select .= "data-top_tipo=\"".TOP_TIPO."\" ";
+								$button_select .= "data-parent=\"{$parent}\" ";
+								$button_select .= "data-section_tipo=\"{$section_tipo}\" ";
+								$button_select .= "data-target_section_tipo=\"{$current_target_section_tipo}\" ";
+								$button_select .= "title=\"parent:$parent - tipo:$tipo\" ";
+								$button_select .= ">";
 								$button_select .= "<div class=\"icon_bs link find_portal_record\"></div> ";
 								$button_select .= "<span>";
 								$button_select .= ''. RecordObj_dd::get_termino_by_tipo($current_target_section_tipo, DEDALO_DATA_LANG);	//.': '.label::get_label('existente');
@@ -99,8 +103,6 @@ if($this->generate_json_element===true) {
 								$button_select .= "</div>";
 								$html_contenido .= $button_select;
 							}//end foreach ($ar_target_section_tipo as $current_target_section_tipo) {
-
-						
 							
 						}//end if($modo!='print')
 
@@ -119,7 +121,7 @@ if($this->generate_json_element===true) {
 				# SECTION HTML (LIST ROWS)
 				#
 				# $html_contenido .= "<div id=\"section_list_rows_content_div_{$this->tipo}\" class=\"section_list_rows_content_div portal_table_wraper\" >";
-
+	
 				if (isset($this->edit_view_options)) {
 					# Config from propiedades
 					$element_width 	= $this->edit_view_options->element_width;
@@ -147,7 +149,7 @@ if($this->generate_json_element===true) {
 					$current_component_tipo = isset($current_locator->component_tipo) ? $current_locator->component_tipo : null;
 					$current_tag_id 		= isset($current_locator->tag_id) ? $current_locator->tag_id : null;
 
-					$current_row = $this->row_in_result( $current_locator, $rows_data->result );
+					$current_row = $this->row_in_result( $current_locator, $rows_data->ar_records );
 						#dump($current_row, ' $current_row ++ '.to_string($current_locator));				
 
 					#
@@ -253,11 +255,10 @@ if($this->generate_json_element===true) {
 
 							#
 							# COMPONENTS COLUMNS
-
 								# aditional td css selectors
 								$td_css_selector = 'li_'.$modelo_name.' li_'.$column_tipo;
 								
-								$column_value = isset($current_row[$column_tipo]) ? $current_row[$column_tipo] : null;
+								$column_value = isset($current_row->$column_tipo) ? $current_row->$column_tipo : null;
 								$value = (string)$modelo_name::render_list_value($column_value, // value string from db
 																				 $column_tipo, // current component tipo
 																				 $section_id, // current portal row section id
@@ -267,7 +268,7 @@ if($this->generate_json_element===true) {
 																				 $section_id, // Current portal parent
 																				 $current_locator, // Used by text_area to select fragment
 																				 $tipo
-																				);										
+																				);
 
 								
 								#
@@ -277,12 +278,12 @@ if($this->generate_json_element===true) {
 									$mosaic_html .= $value;
 								}else{
 									$mosaic_html .= to_string($value);
-								}										
+								}
 								$mosaic_html .= "</div>";
 							
 
 						}//end foreach ($ar_columns as $column_tipo => $column_label)
-						$mosaic_html .= "</li>";	
+						$mosaic_html .= "</li>";
 
 				}//end foreach((array)$dato as $key => $current_locator)
 
@@ -300,9 +301,9 @@ if($this->generate_json_element===true) {
 				#
 				# DRAG ACTIVATE (for current table)
 				#
-				if ($this->html_options->sortable) {					
+				if ($this->html_options->sortable) {
 					$html_contenido .= "<script>component_portal.active_portal_table_sortable('portal_table_{$tipo}', '$dragable_connectWith')</script>";
-				}				
+				}
 				break;
 		}//end switch($permissions)
 

@@ -55,37 +55,26 @@
 				# BUTTONS
 				#
 					$html_buttons  = '';
-					$html_buttons .= "<div class=\"section_buttons_container\">";						
+					$html_buttons .= "<div class=\"section_buttons_container\">";
 					
 						#
 						# PORTAL BUTTONS: SHOW ALL / SHOW FILTERED 
 						# Add buttons for tool_portal mode (modo is 'list' but url request contain var m=tool_portal)
 						if ( common::get_request_var('m')=='tool_portal' ) {
 
-							#dump($_SESSION['dedalo4']['config']['search_options'][$search_options_session_key]->filter_by_section_creator_portal_tipo, " search_options_session_key ".to_string($search_options_session_key));				
-							#dump($search_options_session_key, " search_options_session_key ".to_string());
-							#dump($_SESSION['dedalo4']['config']['search_options'][$search_options_session_key]->filter_by_section_creator_portal_tipo, " search_options_session_key ".to_string());
-							#$search_options_session_key = ''.$tipo.'_'.$modo.'_'.TOP_TIPO;	// section_ .'_'.$_REQUEST['t']
-							if( isset($_SESSION['dedalo4']['config']['search_options'][$search_options_session_key]) &&
-								property_exists($_SESSION['dedalo4']['config']['search_options'][$search_options_session_key], 'filter_by_section_creator_portal_tipo') &&
-								!empty($_SESSION['dedalo4']['config']['search_options'][$search_options_session_key]->filter_by_section_creator_portal_tipo)) {
-								$current_btn_label = label::get_label('mostrar_todos');
-								$current_btn_class = 'show_full';
-							}else{
-								/* REMOVED. Now 'show_full' trigger form reset button and removes this button from DOM (tool_portal::show_more_toggle)
-								$current_btn_label = label::get_label('mostrar_filtrados');
-								$current_btn_class = 'show_filtered';*/
-							}
+							$current_btn_label = label::get_label('mostrar_todos');
+							$current_btn_class = 'show_full';
 
 							$html_buttons .= "<div id=\"btn_tool_portal_show_full\" class=\"css_button_generic btn_inside_section_buttons_container $current_btn_class\" ";
-							$html_buttons .= "onclick=\"tool_portal.show_more_toggle(this)\" ";
-							$html_buttons .= "data-search_options_session_key=\"$search_options_session_key\" ";
+							#$html_buttons .= "onclick=\"tool_portal.show_more_toggle(this)\" ";
+							$html_buttons .= "onclick=\"search.show_all(this)\" ";
+							#$html_buttons .= "data-search_options_session_key=\"$search_options_session_key\" ";
 							$html_buttons .= "data-mode=\"$current_btn_class\" ";							
 							$html_buttons .= ">";
 							$html_buttons .= "<span>";
 							$html_buttons .= $current_btn_label;
 							if(SHOW_DEBUG) {
-								$html_buttons .= " [$search_options_session_key]";
+								#$html_buttons .= " [$search_options_session_key]";
 							}
 							$html_buttons .= "</span>";
 							$html_buttons .= "</div>";
@@ -132,8 +121,9 @@
 
 						#
 						# TOOL_DIFFUSION button for export to mysql
-						if ((bool)component_security_tools::is_authorized_tool_for_logged_user('tool_diffusion') &&
-							(bool)tool_diffusion::have_section_diffusion($tipo)) {
+						# dump(tool_diffusion::have_section_diffusion($tipo), 'component_security_tools:: ++ '.to_string($tipo));
+						if (true===component_security_tools::is_authorized_tool_for_logged_user('tool_diffusion') &&
+							true===tool_diffusion::have_section_diffusion($tipo)) {
 							$tool_diffusion = new tool_diffusion($tipo,'button');
 							$html_buttons  .= $tool_diffusion->get_html();
 						}
@@ -175,12 +165,33 @@
 				#
 				# CONTENT HTML
 				#
+					#
 					# SEARCH_FORM_HTML
 					$html_content .= $search_form_html;
 
+					
+					#
 					# ROWS_LIST_HTML
+					$rows_list_html  = '';
+					if(SHOW_DEBUG===true) 
+					$rows_list_html .= '<!-- SECTION RECORDS LIST [tipo:$tipo modo:$modo] -->';
+					# Stats loads here
+					$rows_list_html .= '<div class="div_main_list"></div>';					
+					$rows_list_html .= '<div class="css_section_list_wrap wrap_section_'.$tipo.' sgc_edit" id="wrap_'.$tipo.'_'.$modo.'">';
+					# Rows loads here
+					#$rows_list_html .= '<div class="css_section_group_content tab_content wrap_table_rows_list section_records_'.$modo.' wrap_section_records_'.$section_list_tipo.'" data-rol="section_records">';
+					$rows_list_html .= '<div class="css_section_group_content tab_content wrap_table_rows_list section_records_'.$modo.' wrap_section_records_'.$section_list_tipo.'" data-rol="section_records">';
+					$rows_list_html .= '<div id="load_rows_button"><span>Loading..</span></div>';
+					$rows_list_html .= '<table class="table_rows_list" data-search_options="'.encodeURIComponent($search_options_json).'"></table>';
+					# JS Load first rows
+					$rows_list_html .= '<script>';
+					$rows_list_html .= 'search.first_load_rows(document.getElementById("load_rows_button"));';					
+					$rows_list_html .= '</script>';
+
+					$rows_list_html .= '</div><!-- /css_section_group_content -->';
+					$rows_list_html .= '</div><!-- /css_section_list_wrap -->';					
+
 					$html_content .= $rows_list_html;
-				
 
 				# Time machine section button
 				#$html_content .= " $html_section_tm ";

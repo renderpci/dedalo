@@ -1,24 +1,31 @@
 <?php
 /*
 * CLASS INSPECTOR
+*
+*
 */
-
-
 class inspector {
+
+
 
 	protected $modo;
 	protected $tipo;
+	protected $section;
 
 
-	public function __construct($modo, $tipo) {
 
-		$this->modo	= $modo;
-		$this->tipo	= $tipo;	
-	}
+	public function __construct($modo, $tipo, $section) {
+
+		$this->modo		= $modo;
+		$this->tipo		= $tipo;
+		$this->section	= $section;
+	}//end __construct
+
 
 
 	/**
-	* HTML
+	* GET_HTML
+	* @return string $html
 	*/
 	public function get_html() {
 
@@ -56,7 +63,7 @@ class inspector {
 		}
 
 		return $html;
-	}
+	}//end get_html
 
 
 	/**
@@ -105,14 +112,10 @@ class inspector {
 			$html 		= $tool_relation_obj[0]->get_html();
 			return $html;
 		}
-		*/
-			
-	}#end get_tool_relation_button_html
+		*/			
+	}//end get_tool_relation_button_html
 
 
 
-
-
-
-};
+}//end inspector
 ?>

@@ -232,7 +232,7 @@ class tool_import_dedalo_csv extends tool_common {
 			#debug_log(__METHOD__." +++ $action section $section_tipo - $section_id - in ".exec_time_unit($row_start_time,'ms').' ms', logger::ERROR);		
 		}//end foreach ($ar_csv_data as $key => $value) 
 
-		if (!empty($updated_rows)) {
+		if (!empty($updated_rows) || !empty($created_rows)) {
 			$result->result 	  = true;
 			$result->msg 		  = 'Section: '.$section_tipo.'. Total records created:'.count($created_rows).' - updated:'.count($updated_rows);
 			$result->created_rows = $created_rows;
@@ -252,10 +252,12 @@ class tool_import_dedalo_csv extends tool_common {
 	public static function verify_csv_map($csv_map, $section_tipo) {
 		
 		$ar_component_tipo = section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, array('component_'), $from_cache=true, $resolve_virtual=true, $recursive=true, $search_exact=false);
-			#dump($ar_component_tipo, ' $ar_component_tipo ++ '.to_string());
 		foreach ($csv_map as $key => $component_tipo) {
 				
-			if($component_tipo==='section_id' || $component_tipo==='created_by_userID' || $component_tipo==='created_date' || $component_tipo==='modified_date') continue;
+			if($component_tipo==='section_id' || 
+				$component_tipo==='created_by_userID' || 
+				$component_tipo==='created_date' || 
+				$component_tipo==='modified_date') continue;
 
 			if (!in_array($component_tipo, $ar_component_tipo)) {
 				$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($component_tipo, true);

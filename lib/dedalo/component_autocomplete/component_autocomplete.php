@@ -5,8 +5,7 @@
 	$tipo 					= $this->get_tipo();
 	$parent 				= $this->get_parent();
 	$section_tipo			= $this->get_section_tipo();
-	$modo					= $this->get_modo();		
-	$dato 					= $this->get_dato();
+	$modo					= $this->get_modo();	
 	$label 					= $this->get_label();
 	$required				= $this->get_required();
 	$propiedades			= $this->get_propiedades();
@@ -14,7 +13,8 @@
 	$permissions			= $this->get_component_permissions();
 	$ejemplo				= NULL;
 	$html_title				= "Info about $tipo";
-	$ar_tools_obj			= $this->get_ar_tools_obj();	
+	$ar_tools_obj			= $this->get_ar_tools_obj();
+	$dato 					= $this->get_dato(); // !!
 	$valor_string			= $dato;
 	$lang					= $this->get_lang();
 	$identificador_unico	= $this->get_identificador_unico();
@@ -31,26 +31,37 @@
 	switch($modo) {
 	
 		case 'edit_in_list':
+
 				// Fix always edit as modo / filename
 				$modo 			= 'portal_list';
-				$file_name		= 'list';
+				#$file_name		= 'edit';
+				if (empty($dato)) {
+					$file_name		= 'edit';
+				}else{
+					$file_name		= 'list';
+				}
 
 				$wrap_style 	= '';
 				// Dont break here. Continue as modo edit
-		case 'edit'	:			
+		case 'edit'	:
+			
+				# Custom propiedades external dato 
+				if(isset($propiedades->source->mode) && $propiedades->source->mode==='external'){
+					$this->set_dato_external(false);	// Forces update dato with calculated external dato						
+				}	
+
 				$ar_target_section_tipo 	 = $this->get_ar_target_section_tipo();
 				$ar_target_section_tipo_json = json_encode($ar_target_section_tipo);
 				
 				$tipo_to_search			= $this->get_tipo_to_search();		
-				$ar_valor 				= $this->get_valor($lang,'array'); 
-			#echo "<div style=\"width: 100%; position: relative;\">$label ..... </div>".to_string($ar_valor)."<hr>"; return null;
+				$ar_valor 				= $this->get_valor($lang,'array');	
 				$valor  				= implode('<br>',$ar_valor);
+			
 				$id_wrapper 			= 'wrapper_'.$identificador_unico;
 				$input_name 			= "{$tipo}_{$parent}";
 				$component_info 		= $this->get_component_info('json');
 				$dato_json 				= json_handler::encode($dato);
-
-
+					#dump($dato_json, ' dato_json ++ '.to_string());
 
 				#get the change modo from portal list to edit
 				$from_modo_requested = common::get_request_var('from_modo');
@@ -82,9 +93,10 @@
 				$filter_by_list = false; // Default
 				if (isset($propiedades->source->filter_by_list)) {
 					$filter_by_list = $propiedades->source->filter_by_list;
-				}				
+				}
+				$json_filter_by_list = json_encode($filter_by_list);
 
-				#$referenced_tipo = $this->get_referenced_tipo();		
+				#$referenced_tipo = $this->get_referenced_tipo();
 				
 				# SEARCH_FIELDS
 				$search_fields 		= $this->get_search_fields($tipo);
@@ -99,8 +111,40 @@
 				# Divisor
 				$divisor = $this->get_divisor();
 
+				# SEARCH_QUERY_OBJECT
+				$query_object_options = new stdClass();
+					$query_object_options->q 	 			= null;
+					$query_object_options->limit  			= 40;
+					$query_object_options->offset 			= 0;
+					$query_object_options->section_tipo 	= $section_tipo;
+				$search_query_object 		= $this->build_search_query_object($query_object_options);
+				$json_search_query_object 	= json_encode( $search_query_object, JSON_UNESCAPED_UNICODE );
+					#dump($search_query_object, ' search_query_object ++ '.to_string());
+					#dump(json_encode( $search_query_object, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE), '$search_query_object ++ '.to_string());
+
 				#$filter_by_list_component_tipo = isset($propiedades->source->filter_by_list->component_tipo) ? $propiedades->source->filter_by_list->component_tipo : null;
 					#dump($filter_by_list_component_tipo, ' filter_by_list_component_tipo ++ '.to_string($propiedades));
+				
+				#
+				# DATAFRAME MANAGER	
+				$ar_dataframe_obj = array();
+				
+				foreach ($dato as $key => $value) {
+						
+					$ar_dataframe = isset($propiedades->dataframe) ? $propiedades->dataframe : false;
+					if($ar_dataframe !==false){
+						foreach ($ar_dataframe as $current_dataframe) {
+							if ($current_dataframe->tipo!==false) {
+								$dataframe_obj = new dataframe($current_dataframe->tipo, $current_dataframe->type, $this, 'dataframe_edit', $key);
+								$ar_dataframe_obj[] = $dataframe_obj;
+
+								#dump($ar_dataframe_obj[0]->get_html(), ' $ar_dataframe_obj[$i]->get_html(); ++ '.to_string());
+							}	
+						}
+					}
+				}
+
+
 				break;
 
 		case 'tool_time_machine' :	
@@ -111,20 +155,42 @@
 				break;	
 						
 		case 'search':
-				# Showed only when permissions are >1
-				if ($permissions<1) return null;
-				
-				$referenced_tipo			 = $this->get_referenced_tipo();
-				#$ar_list_of_values			 = $this->get_ar_list_of_values(DEDALO_DATA_LANG, null); // $this->get_ar_list_of_values( $lang, null, $this->ar_referenced_section_tipo, $filter_custom );
-				$ar_valor 					 = array(); //$this->get_valor($lang,'array');
-				$id_wrapper 				 = 'wrapper_'.$identificador_unico;
-				$ar_target_section_tipo 	 = $this->get_ar_target_section_tipo();		
-				$ar_target_section_tipo_json = json_encode($ar_target_section_tipo);
-				$tipo_to_search				 = $this->get_tipo_to_search();				
-				$dato_json 					 = json_handler::encode($dato);
+				# dato is injected by trigger search wen is needed
+				$dato = isset($this->dato) ? $this->dato : [];
 
-				$ar_comparison_operators 	 = $this->build_search_comparison_operators();
-				$ar_logical_operators 	 	 = $this->build_search_logical_operators();	
+				$component_info 	= $this->get_component_info('json');
+				$in_time_machine 	= false;
+
+				# search_query_object
+				$query_object_options = new stdClass();
+					$query_object_options->q 	  = null;
+					$query_object_options->limit  = 40;
+					$query_object_options->offset = 0;
+				$search_query_object 		= $this->build_search_query_object($query_object_options);
+				$json_search_query_object 	= json_encode( $search_query_object, JSON_UNESCAPED_UNICODE);
+
+				# FIlTER_BY_LIST (Propiedades option)
+				$filter_by_list = false; // Default
+				if (isset($propiedades->source->filter_by_list)) {
+					$filter_by_list = $propiedades->source->filter_by_list;
+				}
+				$json_filter_by_list = json_encode($filter_by_list);
+
+				# Limit
+				#$limit = 100;
+				
+				$referenced_tipo			 	= $this->get_referenced_tipo();
+				#$ar_list_of_values			 = $this->get_ar_list_of_values(DEDALO_DATA_LANG, null); // $this->get_ar_list_of_values( $lang, null, $this->ar_referenced_section_tipo, $filter_custom );
+				$ar_valor 						= $this->get_valor($lang,'array');	
+				$valor  						= implode('<br>',$ar_valor);
+				$id_wrapper 				 	= 'wrapper_'.$identificador_unico;
+				$ar_target_section_tipo 	 	= $this->get_ar_target_section_tipo();		
+				$ar_target_section_tipo_json 	= json_encode($ar_target_section_tipo);
+				$tipo_to_search					= $this->get_tipo_to_search();				
+				$dato_json 						= json_handler::encode($dato);
+
+				//$ar_comparison_operators 	 	= $this->build_search_comparison_operators();
+				//$ar_logical_operators 	 	 	= $this->build_search_logical_operators();	
 
 				# Search input name (var search_input_name is injected in search -> records_search_list.phtml)
 				# and recovered in component_common->get_search_input_name()

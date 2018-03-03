@@ -4,7 +4,7 @@
  Specific CSS for ts_object must be writed in ts_object.less
 
 */
-@line_height: 34px;
+@ts_line_height: 34px;
 
 /* WRAPPER : CSS_WRAP_AREA_THESAURUS
 ------------------------------------------------ */
@@ -13,21 +13,33 @@
 	}
 	.css_wrap_area_thesaurus > ul {
 		padding: 25px;
-		//background-color: #F4DD79
+		background-color: rgba(255, 255, 255, 0.84);
+		margin: 20px;
+		margin-top: 0;
+		border-radius: 5px;
 		}
 		.css_wrap_area_thesaurus > ul > li {
 		}
 		/* TIPOLOGY_NAME like 'Toponomy'
 		------------------------------------------------ */
 		.css_wrap_area_thesaurus .tipology_name {
-			background-color: #E6E6E6;
+			background-color: rgba(230, 230, 230, 0.88);
 			padding: 7px;
 			padding-bottom: 5px;
 			text-transform: uppercase;
 			border-bottom: 1px solid white;
 			font-size: 1.1em;
 			color: #636363;
-		}
+			min-height: 31px;
+			cursor: pointer;
+			}
+			.css_wrap_area_thesaurus .tipology_name:hover {
+				background-color: #E0E0E0;
+			}
+			.css_wrap_area_thesaurus .tipology_name:active {
+				background-color: #BBBBBB;
+				color: #ffffff;
+			}
 		.css_wrap_area_thesaurus .tipology_name_model {
 			background-color: rgb(245, 158, 61);			
 			color: white;
@@ -68,7 +80,7 @@
 		------------------------------------------------ */
 		.css_wrap_area_thesaurus .hierarchy_root_node > .childrens_container {
 			//background-color: #EDEDED;
-			//min-height: @line_height;
+			//min-height: @ts_line_height;
 			//padding: 7px;			
 			margin: 0;				
 			}
@@ -159,6 +171,7 @@
 
 	/* COMPONENT OVERWRITE CSS
 	------------------------------------------------ */
+
 		.reset_wrap {
 			//background-color: #41E8F5;
 			width: inherit;
@@ -194,7 +207,6 @@
 			.wrap_component .content_data .css_input_text {
 				min-width: 260px;
 			}
-
 			/*
 			// Related terms standar
 			.wrap_component_hierarchy35 {
@@ -214,5 +226,29 @@
 		}//end wrap_ts_object
 
 
+	#submit_group {
+		clear: both;
+		padding-top: 10px;
+	}
 
+	#hierarchy_selector {
+		margin-top: 5px;
+	}
+	span.label_hierarchy_selector {
+		min-width: initial;
+		padding: 7px;
+		padding-right: 30px;
+		padding-top: 10px;
+	}
 
+	.css_operator_select {
+	    padding: 2px;
+	    cursor: pointer;
+	    clear: both;
+	    width: 100%;
+	    margin: 0;
+	}
+
+	.css_wrap_max_rows {
+		width: 12%;		
+	}

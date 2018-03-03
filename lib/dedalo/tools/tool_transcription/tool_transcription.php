@@ -61,7 +61,7 @@
 																		 $this->component_related_obj->get_modo(),
 																		 $this->component_related_obj->get_lang(),
 																		 $this->component_related_obj->get_section_tipo());
-				$this->component_related_obj->set_lang($original_lang);
+				$this->component_related_obj->set_lang($original_lang);				
 				$component_related_obj_tipo = $this->component_related_obj->get_tipo();
 				$html_text 					= $this->component_related_obj->get_html();
 				$id_wrapper 				= 'wrapper_'.$this->component_related_obj->get_identificador_unico();

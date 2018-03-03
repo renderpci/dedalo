@@ -44,6 +44,7 @@
 				$html_content .= "onchange=\"component_select_lang.Save(this)\" ";
 				$html_content .= "onfocus=\"component_common.select_wrap(null,'$id_wrapper')\" ";
 				$html_content .= "name=\"{$input_name}\" ";
+				$html_content .= "data-role=\"component_select_lang_selector\" ";
 				$html_content .= "data-tipo=\"{$tipo}\" ";
 				$html_content .= "data-lang=\"{$lang}\" ";
 				$html_content .= "data-section_tipo=\"{$section_tipo}\" ";
@@ -71,7 +72,7 @@
 						$current_locator_json 	= json_encode($current_locator);
 
 						# Selected
-						$selected 				= locator::in_array_locator( $current_locator, (array)$dato, $ar_properties=array('section_tipo','section_id') ) ? 'selected' : false;
+						$selected 				= locator::in_array_locator( $current_locator, (array)$dato, $ar_properties=array('section_id','section_tipo') ) ? 'selected' : false;
 						if ($selected!==false) {
 							$option_selected = true;
 						}
@@ -99,9 +100,9 @@
 
 
 
-				if(SHOW_DEBUG===true) {
+				if(SHOW_DEVELOPER===true) {
 					$html_content .= " <span class=\"debug_info notes\">".json_encode($dato)."</span>";
-					#$html_content .= "<span class=\"component_select_lang_debug debug_info\">".exec_time($start_time)."</span>";					
+					$html_content .= "<span class=\"component_select_lang_debug debug_info\">".exec_time($start_time)."</span>";					
 				}				
 				break;
 	}

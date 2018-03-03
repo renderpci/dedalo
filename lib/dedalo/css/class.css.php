@@ -151,7 +151,7 @@ class css {
 	/**
 	* BUILD_TAG
 	*/
-	static function build_tag($url, $media=null) {
+	static function build_tag($url, $media=null, $uncacheable=false) {
 
 		if (strpos($url, 'section_group_')!==false) return null;
 
@@ -169,7 +169,7 @@ class css {
 		}		
 
 		if(SHOW_DEBUG===true) {
-			if (strpos($url,'structure.css')!==false) {
+			if (strpos($url,'structure.css')!==false || $uncacheable===true) {
 				$url .= '&t=' . start_time();
 			}			
 		}		
@@ -234,7 +234,7 @@ class css {
 			$less_line .= ".sgc_edit>";
 			$less_line .= ".".$css_prefix."_".$terminoID."{";
 			foreach ($css_obj as $key => $obj_value) {
-				$less_line .= self::convert_to_less($key, $obj_value, $css_prefix);
+				$less_line .= self::convert_to_less($key, $obj_value, $css_prefix, $terminoID);
 			}
 			$less_line .= "\n}";
 
@@ -272,12 +272,18 @@ class css {
 			$compiled_css = $less->compile( $less_code );
 			#echo $compiled_css;
 
+			if (!unlink($file_name)) {
+				$response->result 	= false;
+				$response->msg 	  	= "Error on remove old css file ($file_name) ";	
+			}
+
 			if( !$write = file_put_contents($file_name, $compiled_css) ) {
 				$response->result 	= false;
 				$response->msg 	  	= "Error on write css file ($file_name) ".to_string($write);				
 			}else{
+				$file_size = format_size_units( filesize($file_name) );
 				$response->result 	 = true;
-				$response->msg 	  	 = "File css created successful";
+				$response->msg 	  	 = "File css created successful. Size: $file_size";
 				$response->file_path = self::$structure_file_path;				
 			}
 			debug_log(__METHOD__." Response: ".to_string($response), logger::DEBUG);
@@ -297,36 +303,42 @@ class css {
 	* CONVERT_TO_LESS
 	* @return string $less_value
 	*/
-	public static function convert_to_less( $key, $obj_value, $css_prefix ) {		
+	public static function convert_to_less( $key, $obj_value, $css_prefix, $terminoID ) {		
 		
 		$less_value  = '';
 
-		# If current key is not defined as css_prefix, add as new style
-		if (strpos($key, $css_prefix)===false ) {
-			$less_value .= "\n$key{";
-		}
-		#if($key!=='.wrap_component') $less_value .= "\n$key{";
+		if (is_object($obj_value)) {			
 
-		#
-		# MIXINGS
-		if (property_exists($obj_value, 'mixin')) {
-			foreach((array)$obj_value->mixin as $mixin_value) {
-				$less_value .= "\n $mixin_value;";
+			# If current key is not defined as css_prefix, add as new style
+			if (strpos($key, $css_prefix)===false ) {
+				$less_value .= "\n$key{";
 			}
-		}
+			#if($key!=='.wrap_component') $less_value .= "\n$key{";
 
-		#
-		# STYLE
-		if (property_exists($obj_value, 'style') && !empty($obj_value->style)) {
-			foreach((array)$obj_value->style as $style_key => $style_value) {
-				$less_value .= "\n $style_key:$style_value;";
+			
+			#
+			# MIXINGS
+			if (property_exists($obj_value, 'mixin')) {
+				foreach((array)$obj_value->mixin as $mixin_value) {
+					$less_value .= "\n $mixin_value;";
+				}
 			}
-		}
 
-		if (strpos($key, $css_prefix)===false ) {
-			$less_value .= "\n}";
+			#
+			# STYLE
+			if (property_exists($obj_value, 'style') && !empty($obj_value->style)) {
+				foreach((array)$obj_value->style as $style_key => $style_value) {
+					$less_value .= "\n $style_key:$style_value;";
+				}
+			}
+
+			if (strpos($key, $css_prefix)===false ) {
+				$less_value .= "\n}";
+			}
+			#if($key!=='.wrap_component') $less_value .= "\n}";
+		}else{
+			debug_log(__METHOD__." error. obj_value is not object ".json_encode($obj_value)." - css_prefix: ".json_encode($css_prefix)." - key: $key - terminoID : $terminoID", logger::ERROR);
 		}
-		#if($key!=='.wrap_component') $less_value .= "\n}";
 
 		return $less_value;
 	}#end convert_to_less

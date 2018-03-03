@@ -3,12 +3,13 @@
 	# VISUALIZADOR HTML	
 
 	$html = '';
-	switch($permissions) {
+	switch(true) {
 			
-		case 0	:	$html .= "";		
+		case $permissions===0 :
+					$html .= "";		
 					break;
 					
-		case ($permissions>=1)	:
+		case $permissions>=1 :
 					$html .= "<div class=\"widgets_wrapper\">";
 					foreach ((array)$ar_widget_html as $key => $widget_html) {
 						$html .= $widget_html;
@@ -18,7 +19,7 @@
 					break;							
 	}	
 
-	if(SHOW_DEBUG===true) {
+	if(SHOW_DEBUG===true && $modo==='edit') {
 		$html .= "<span class=\"component_info_debug debug_info\">".exec_time($start_time)."</span>";
 	}
 

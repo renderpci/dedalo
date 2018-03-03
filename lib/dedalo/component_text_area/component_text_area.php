@@ -92,6 +92,8 @@
 				}
 
 				$component_info = $this->get_component_info('json');
+
+				$dato = $this->get_dato();
 				
 				#
 				# FIX BROKEN TAGS										
@@ -123,12 +125,15 @@
 									$component_warning .= " (Fixed in ".$broken_index_tags->total.")";
 								}
 							}
-						}
+						}						
 					}
+
+					# FIX_BROKEN_PERSON_TAGS
+					$dato = $this->fix_broken_person_tags($dato);
 				}//end if ($modo=='edit' && in_array($this->tipo, $ar_fix_broquen_tags_tipos) )				
 				
 
-				$dato = $this->get_dato();
+				
 	
 				# Tool time machine context. Add chapters headers
 				#if (isset($context->context_name) && $context->context_name==='tool_time_machine') {					
@@ -216,14 +221,14 @@
 					$dato = component_text_area::resolve_titles($dato, $tipo, $section_tipo, $parent, null, $lang, true);
 				}
 
-				// addTagImgOnTheFly
-				$dato 				= TR::addTagImgOnTheFly($dato);
-
 
 				// Role .
 				if (isset($this->role)) {
+
 					$role = $this->role;
+
 				}else{
+
 					$role = "tranlation_lang";
 					/*
 					$source_lang 	= component_text_area::force_change_lang($tipo, $parent, 'edit', $lang, $section_tipo);				
@@ -233,7 +238,16 @@
 						$role = "tranlation_lang";
 					}*/
 				}
-				#dump($role, ' role ++ '.to_string());
+				#dump($role, ' role ++ '.to_string()); tranlation_lang
+
+				
+				// addTagImgOnTheFly
+				$img_options = new stdClass();
+					#if ($role==='tranlation_lang') {
+					#	$img_options->force_tr_tags_cdn = defined('TR_TAGS_CDN') ? TR_TAGS_CDN : false;
+					#}
+				$dato = TR::addTagImgOnTheFly($dato, $img_options);
+
 
 				$id_wrapper 		= 'wrapper_'.$identificador_unico;//.'_tool_lang';
 				$input_name 		= "{$tipo}_{$parent}";
@@ -350,12 +364,12 @@
 				break;
 		
 		case 'search':
-				# Showed only when permissions are >1
-				if ($permissions<1) return null;
-				
+				# dato is injected by trigger search when is needed
+				$dato = isset($this->dato) ? $this->dato : null;
+								
 				$ar_comparison_operators 	= $this->build_search_comparison_operators();
 				$ar_logical_operators 		= $this->build_search_logical_operators();
-				$valor 						= isset($_GET['tipo']) ? $_GET['tipo'] : null;
+				$valor 						= isset($_GET['tipo']) ? safe_xss($_GET['tipo']) : null;
 
 				# Search input name (var search_input_name is injected in search -> records_search_list.phtml)
 				# and recovered in component_common->get_search_input_name()

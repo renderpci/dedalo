@@ -6,16 +6,16 @@
 	# html_delimiter
 	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'in');
 
-	print "<div class=\"wrap_component css_wrap_order wrap_component_{$tipo}\" id=\"{$id_wrapper}\"
-	data-tipo=\"{$tipo}\"
-	data-lang=\"{$lang}\"
-	data-section_tipo=\"{$section_tipo}\"
-	data-parent=\"{$parent}\"
-	data-modo=\"{$modo}\"
-	data-dato=\"{$dato}\"
-	data-component_name=\"{$component_name}\"
-	data-component_info='{$component_info}'
-	>";
+	print "<div class=\"wrap_component css_wrap_order wrap_component_{$tipo}\" id=\"{$id_wrapper}\" ";
+	print "data-tipo=\"{$tipo}\" ";
+	print "data-lang=\"{$lang}\" ";
+	print "data-section_tipo=\"{$section_tipo}\" ";
+	print "data-parent=\"{$parent}\" ";
+	print "data-modo=\"{$modo}\" ";
+	print "data-dato=\"{$dato}\" ";
+	print "data-component_name=\"{$component_name}\" ";
+	print "data-component_info='{$component_info}' ";
+	print ">";
 	
 		
 		# ETIQUETA (LABEL)
@@ -25,31 +25,35 @@
 		$html_contenido = '';
 		switch($permissions) {
 				
-			case 0	:	$html_contenido .= "";
-						break;
+			case 0 :
+					$html_contenido .= "";
+					break;
 							
-			case 1	: 	$html_contenido .= " <span class=\"css_span_dato\">$dato</span>";
-						break;
-							
-			case ($permissions>=2) :
+			case 1 : 	
+					$html_contenido .= "<span class=\"css_span_dato\">$dato</span>";
+					break;
+			
+			case 2 :			
+			case 3 :
 					
-						$html_contenido .= " <input class=\"css_order\" type=\"text\" onchange=\"component_order.Save(this)\"
-						name=\"{$input_name}\" 
-						data-tipo=\"{$tipo}\"
-						data-section_tipo=\"{$section_tipo}\"
-						data-parent=\"{$parent}\"
-						data-lang=\"{$lang}\" 
-						value=\"{$dato}\" 
-						title=\"$html_title\"
-						/>";
-						
-						#$html_contenido .= " <span  class=\"css_span_log\"></span>";					
-						#$html_contenido .= " <span  class=\"css_span_ejemplo\">$ejemplo</span>";						
-						
-						if(SHOW_DEBUG) {
-							$html_contenido .= " <span class=\"debug_info notes\">".json_encode($dato).' ('.gettype($dato).")</span>";
-						}	
-						break;
+					$html_contenido .= "<input class=\"css_order\" type=\"text\" onchange=\"component_order.Save(this)\" ";
+					$html_contenido .= "name=\"{$input_name}\" ";
+					$html_contenido .= "data-role=\"component_order_input\" ";
+					$html_contenido .= "data-tipo=\"{$tipo}\" ";
+					$html_contenido .= "data-section_tipo=\"{$section_tipo}\" ";
+					$html_contenido .= "data-parent=\"{$parent}\" ";
+					$html_contenido .= "data-lang=\"{$lang}\" ";
+					$html_contenido .= "value=\"{$dato}\" ";
+					$html_contenido .= "title=\"$html_title\" ";
+					$html_contenido .= "/>";
+					
+					#$html_contenido .= " <span  class=\"css_span_log\"></span>";					
+					#$html_contenido .= " <span  class=\"css_span_ejemplo\">$ejemplo</span>";						
+					
+					if(SHOW_DEBUG) {
+						$html_contenido .= "<span class=\"debug_info notes\">".json_encode($dato).' ('.gettype($dato).")</span>";
+					}	
+					break;
 		}
 
 		# Prepare content to show in page

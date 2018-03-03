@@ -24,8 +24,8 @@
 			$ar_loaded_modelos_name = array_unique(common::$ar_loaded_modelos_name);
 
 			if(SHOW_DEBUG) {
-				$section = section::get_instance($section_id, $section_tipo);
-				$inverse_locators = $section->get_inverse_locators();
+				#$section = section::get_instance($section_id, $section_tipo);
+				#$inverse_locators = null; // $section->get_inverse_locators();
 			}			
 
 
@@ -37,10 +37,21 @@
 			$relation_list_html 		= '';
 			if (in_array('component_relation', $ar_loaded_modelos_name)) {
 				# tool_relation
-				$tool_relation_button_html = '';	# DESACTIVO	#$this->get_tool_relation_button_html();	#
+				$tool_relation_button_html = '';	# DESACTIVO	#$this->get_tool_relation_button_html();
 				$fixed_tools = true;
 			}
 
+			#
+			# BUTTONS
+			# Calculate and prepare current section buttons to use as : $this->section_obj->ar_buttons
+				$ar_buttons = (array)$this->section->get_ar_buttons();
+					#dump($ar_buttons['button_new'][0], ' ar_buttons ++ '.to_string());
+
+				# Button new 
+				$button_new_html = '';
+				if (isset($ar_buttons['button_new'][0]) && is_object($ar_buttons['button_new'][0])) {
+					$button_new_html = $ar_buttons['button_new'][0]->get_html();
+				}
 
 			#
 			# PHP : Info version
@@ -51,7 +62,7 @@
 			/*
 			$php_check_cache = 'none';
 			if(SHOW_DEBUG) {
-				include_once( DEDALO_LIB_BASE_PATH . '/common/class.DetectOpCodeCache.php');				
+				include_once( DEDALO_LIB_BASE_PATH . '/common/class.DetectOpCodeCache.php');
 				$ar_cache_type = array(
 					'hasOpCode',
 					'hasApc',

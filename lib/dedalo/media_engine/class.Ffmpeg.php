@@ -489,7 +489,13 @@ class Ffmpeg {
 			#dump(file_exists($src_file), "file_exists($src_file) ".to_string());
 		}			
 		
-		
+		$aspect_ratio = strtolower($AVObj->get_aspect_ratio());
+		if($aspect_ratio == '4x3') {			
+			$aspect_ratio = '-vf scale=540:404:force_original_aspect_ratio' ;
+		}else{
+			$aspect_ratio = '';	
+		}
+
 		# SI NO EXISTE EL DEFAULT, BUSCAMOS OTRO DE MAYOR A MENOR
 		if(!file_exists($src_file)) {			
 			$src_file		= $this->get_master_media_file($AVObj);		
@@ -550,7 +556,7 @@ class Ffmpeg {
 			
 		# paso 1 sólo video			
 		#$command	.= DEDALO_AV_FFMPEG_PATH . " -itsoffset -$timecode -i $src_file -y -vframes 1 -f rawvideo -an -vcodec mjpeg $target_file > /dev/null  ";
-		$command	.= DEDALO_AV_FFMPEG_PATH . " -ss $timecode -i $src_file -y -vframes 1 -f rawvideo -an -vcodec mjpeg $target_file ";
+		$command	.= DEDALO_AV_FFMPEG_PATH . " -ss $timecode -i $src_file -y -vframes 1 -f rawvideo -an -vcodec mjpeg $aspect_ratio $target_file ";
 			#dump( $command );
 
 		#if(SHOW_DEBUG===true) dump($command, "Admin Debug command for ".__METHOD__."<div class=\"notas\">sudo -u _www $command </div><hr>");		
@@ -763,7 +769,7 @@ class Ffmpeg {
 		# COMMAND: Full process
 		#$command  = "nice $ffmpeg_path -y -i $source_file -vf \"yadif=0:-1:0, scale=720:404:-1\" -vb 960k -g 75 -f mp4 -vcodec libx264 -acodec $acodec -ar 44100 -ab 128k -ac 2 -movflags faststart $target_file ";
 		#$command  = "nice $ffmpeg_path -y -i $source_file -vf \"yadif=0:-1:0, scale=720:404:-1\" -vb 960k -g 75 -f mp4 -vcodec libx264 -acodec $acodec -ar 44100 -ab 128k -ac 2 -movflags faststart $temp_target_file ";
-		$command  = "nice $ffmpeg_path -y -i $source_file -vf \"yadif=0:-1:0, scale=-1:{$heigth}\" -vb 960k -g 75 -f mp4 -vcodec libx264 -acodec $acodec -ar 44100 -ab 128k -ac 2 -movflags faststart $temp_target_file ";
+		$command  = "nice $ffmpeg_path -y -i $source_file -vf \"yadif=0:-1:0, scale=-2:{$heigth}\" -vb 960k -g 75 -f mp4 -vcodec libx264 -acodec $acodec -ar 44100 -ab 128k -ac 2 -movflags faststart $temp_target_file ";
 		$command .= "&& mv $temp_target_file $target_file ";
 		# Comando procesado sólo fast start
 		#$command = "nice $qt_faststart_path $source_file $target_file";

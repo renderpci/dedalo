@@ -1,12 +1,13 @@
 <?php
 
 	# VISUALIZADOR HTML	
-
-	$var_requested = common::get_request_var($tipo);
-	#if(isset($_REQUEST[$tipo])) $dato = $_REQUEST[$tipo];	#var_dump($_REQUEST[$tipo]);
-	if(!empty($var_requested)) $dato = $var_requested;
 	
-	print "\n<div class=\"wrap_component css_wrap_relation_index\" >";
+	print "<div class=\"wrap_component css_wrap_relation_index tooltip_active\" ";
+	print "data-component_name=\"{$component_name}\" ";
+	print "data-modo=\"{$modo}\" ";
+	print "data-dato='".json_encode($dato)."' ";
+	print 'title="'.search_development2::search_options_title( $this->search_operators_info() ).'" ';
+	print ">";
 	
 	# ETIQUETA (LABEL)
 	$html_label = component_common_draw::draw_label($this);
@@ -26,7 +27,7 @@
 
 					
 					# INPUT
-					$html_contenido .= "\n<input class=\"css_relation_index\" type=\"text\" name=\"{$search_input_name}\" value=\"\"/> ";
+					$html_contenido .= "<input class=\"css_relation_index\" type=\"text\" name=\"{$search_input_name}\" value=\"\"/> ";
 					
 
 					# LOGICAL OPERATORS
@@ -43,5 +44,5 @@
 	print $html_contenido;	
 
 	
-	print "\n</div><!-- /css_wrap_relation_index -->\n\n"; //wrap
+	print "</div>"; //wrap
 ?>

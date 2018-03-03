@@ -981,7 +981,7 @@ class Tesauro extends TesauroElements {
 
 
 	/**
-	* get_ts_map
+	* GET_AR_TS_MAP
 	* Load csv file /maps/csv_file_name.csv and get formatted array from file data
 	* @param string $csv_file_name name of file (without extension)
 	* @return array $ar_ts_map

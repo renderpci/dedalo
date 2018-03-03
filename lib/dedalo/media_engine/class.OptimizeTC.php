@@ -421,22 +421,24 @@ abstract class OptimizeTC {
 			return false;
 		}
 
-		$horas = (int)$seg / 3600 ;
+		$floor_seg = floor($seg);
+
+		$horas = $floor_seg / 3600 ;
 		if($horas<1){
 			$horas = 0 ;
 		}else{
-			$horas 	= floor($horas);
-			$seg   	= (int)$seg - ($horas * 3600);
+			$horas 		= floor($horas);
+			$floor_seg  = $floor_seg - ($horas * 3600);
 		}
-		$minutos = ((int)$seg / 60) ;
+		$minutos = ($floor_seg / 60) ;
 		if($minutos<1){
 			$minutos = 0 ;
 		}else{
-			$minutos = floor($minutos);
-			$seg 	 = (int)$seg - ($minutos * 60);
+			$minutos 	= floor($minutos);
+			$floor_seg	= $floor_seg - ($minutos * 60);
 		}
-		$segundos = floor($seg) ;
-		$mseconds = (int)(($seg - $segundos)*1000);
+		$segundos = $floor_seg;
+		$mseconds = round((($seg - floor($seg))*1000));
 		# format 00
 		$horas 		= str_pad($horas, 2, '0', STR_PAD_LEFT);
 		$minutos 	= str_pad($minutos, 2, '0', STR_PAD_LEFT);

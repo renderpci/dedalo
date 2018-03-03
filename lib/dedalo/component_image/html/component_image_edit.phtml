@@ -12,18 +12,18 @@ $js_url = DEDALO_LIB_BASE_URL.'/component_image/js/component_image_read.js';
 	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'in');
 
 	$wrap_style = isset($wrap_style) ? $wrap_style : '';
-	print "<div id=\"{$id_wrapper}\" class=\"wrap_component css_wrap_image wrap_component_{$tipo}\"
-	style=\"$wrap_style\"
-	data-tipo=\"{$tipo}\"
-	data-lang=\"{$lang}\"
-	data-parent=\"{$parent}\"
-	data-section_tipo=\"{$section_tipo}\"
-	data-modo=\"{$modo}\"
-	data-dato=\"{$valor}\"
-	data-component_name=\"{$component_name}\"
-	data-component_info='{$component_info}'
-	data-related_tipo='{$ar_related_component_tipo_json}'
-	>";
+	print "<div id=\"{$id_wrapper}\" class=\"wrap_component css_wrap_image wrap_component_{$tipo}\" ";
+	print "style=\"$wrap_style\" ";
+	print "data-tipo=\"{$tipo}\" ";
+	print "data-lang=\"{$lang}\" ";
+	print "data-parent=\"{$parent}\" ";
+	print "data-section_tipo=\"{$section_tipo}\" ";
+	print "data-modo=\"{$modo}\" ";
+	print "data-dato=\"{$valor}\" ";
+	print "data-component_name=\"{$component_name}\" ";
+	print "data-component_info='{$component_info}' ";
+	print "data-related_tipo='{$ar_related_component_tipo_json}' ";
+	print ">";
 	
 		
 		# ETIQUETA (LABEL)
@@ -34,67 +34,89 @@ $js_url = DEDALO_LIB_BASE_URL.'/component_image/js/component_image_read.js';
 		switch($permissions) {
 				
 			case 0 :
-					$html_contenido .= "";
-					break;
+				$html_contenido .= "";
+				break;
 							
 			case ($permissions>=1) :
 			
-					# IMAGE THUMB
-					$title = '';
-					if(SHOW_DEBUG) {
-						$title .= "image_path: ".$this->get_image_path($quality);
-					}
-	
-					
-					$open_tool_default='';
-					$add_class='';
-					# IMAGE NOT EXISTS. PLACE DEDALO IMAGE WITH LINK TO DEFAULT TOOL
-					if (component_security_tools::is_authorized_tool_for_logged_user('tool_upload') &&
-						!file_exists($this->get_image_path()) &&
-						!$this->get_original(DEDALO_IMAGE_QUALITY_ORIGINAL,false)
-						) {
-						$open_tool_default ="data-image_id=\"$image_id\"
-						data-quality=\"".DEDALO_IMAGE_QUALITY_ORIGINAL."\"
-						data-aditional_path=\"$aditional_path\"
-						data-initial_media_path=\"$initial_media_path\"
-						data-tipo=\"$tipo\"
-						data-parent=\"$parent\"
-						data-section_tipo=\"$section_tipo\"
-						onclick=\"tool_common.open_tool_upload(this)\"
-						title=\"Upload file in original quality\" ";
+				# IMAGE THUMB
+				$title = '';
+				if(SHOW_DEBUG) {
+					$title .= "image_path: ".$this->get_image_path($quality);
+				}
 
-						$add_class = 'no_file';
-					}
+				
+				$open_tool_default='';
+				$add_class='';
+				# IMAGE NOT EXISTS. PLACE DEDALO IMAGE WITH LINK TO DEFAULT TOOL
+				if (component_security_tools::is_authorized_tool_for_logged_user('tool_upload') &&
+					!file_exists($this->get_image_path()) &&
+					!$this->get_original(DEDALO_IMAGE_QUALITY_ORIGINAL,false)
+					) {
+					$open_tool_default .= "data-image_id=\"$image_id\" ";
+					$open_tool_default .= "data-quality=\"".DEDALO_IMAGE_QUALITY_ORIGINAL."\" ";
+					$open_tool_default .= "data-aditional_path=\"$aditional_path\" ";
+					$open_tool_default .= "data-initial_media_path=\"$initial_media_path\" ";
+					$open_tool_default .= "data-tipo=\"$tipo\" ";
+					$open_tool_default .= "data-parent=\"$parent\" ";
+					$open_tool_default .= "data-section_tipo=\"$section_tipo\" ";
+					$open_tool_default .= "data-original_img_height=\"$original_img_height\" ";
+					$open_tool_default .= "onclick=\"tool_common.open_tool_upload(this)\" ";
+					$open_tool_default .= "title=\"Upload file in original quality\" ";
 
-					$html_contenido .= "<div class=\"loading_image blink\">Loading image..</div>";
-					
-					# CANVAS : IMAGE					
-					$html_contenido .= "<canvas id=\"$identificador_unico\" class=\"canvas_edit $add_class\" $open_tool_default resize hidpi=\"on\">";
-					#$html_contenido .= $image_thumb_html ; # Rendered in thumb mode
-					$html_contenido .= " <img class=\"css_image\"
-					src=\"$image_url\"
-					id=\"img_$identificador_unico\"
-					data-image_id=\"$image_id\"
-					data-tipo=\"$tipo\"
-					data-section_tipo=\"{$section_tipo}\"
-					data-parent=\"$parent\"
-					data-lang=\"$lang\"
-					data-img_width=\"$img_width\"
-					data-img_height=\"$img_height\"
-					alt=\"$image_id\"
-					/>";
-					$html_contenido .= "</canvas>";
+					$add_class = 'no_file';
+				}
 
-					#$html_contenido .= "<a href=\"$image_url\" target=\"_blank\" > + ";
-					#$html_contenido .= "</a>";
+				$html_contenido .= "<div class=\"loading_image blink\">Loading image..</div>";
+				
+				# CANVAS : IMAGE
+		$html_contenido .= "<div class=\"canvas_container\">";	
+
+			#dump($img_width, ' img_width ++ '.to_string());
+			#dump($img_height, ' img_height ++ '.to_string());
+
+				#$html_contenido .= "<canvas id=\"$identificador_unico\" class=\"canvas_edit $add_class\" resize hidpi=\"on\" {$open_tool_default}>";
+				$html_contenido .= "<canvas id=\"$identificador_unico\" class=\"canvas_edit $add_class\" hidpi=\"on\" {$open_tool_default}>";
+				#$html_contenido .= $image_thumb_html ; # Rendered in thumb mode
+				/*
+				$html_contenido .= "<img class=\"css_image\" ";
+				$html_contenido .= "src=\"$image_url\" ";
+				$html_contenido .= "id=\"img_$identificador_unico\" ";
+				$html_contenido .= "data-image_id=\"$image_id\" ";
+				$html_contenido .= "data-tipo=\"$tipo\" ";
+				$html_contenido .= "data-section_tipo=\"{$section_tipo}\" ";
+				$html_contenido .= "data-parent=\"$parent\" ";
+				$html_contenido .= "data-lang=\"$lang\" ";
+				#if(empty($img_width)) $img_width = 539;
+				$html_contenido .= "data-img_width=\"$img_width\" ";
+				#if(empty($img_height)) $img_height = 404;
+				$html_contenido .= "data-img_height=\"$img_height\" ";
+				$html_contenido .= "alt=\"$image_id\" ";
+				$html_contenido .= "/>";
+				*/
+				$html_contenido .= "</canvas>";				
+
+
+		$html_contenido .= "</div>";		
+
+				#$html_contenido .= "<a href=\"$image_url\" target=\"_blank\" > + ";
+				#$html_contenido .= "</a>";
 											
 		}
 
 		# INIT : Init canvas in read only mode 
-		$html_contenido .= "<script>component_image_read.init_canvas('$identificador_unico','$id_wrapper');</script>";
+		$init_options = [
+			"canvas_id"  		  => $identificador_unico,
+			"id_wrapper" 		  => $id_wrapper,
+			"image_url"  		  => $image_url,
+			"original_img_height" => $original_img_height
+		];
+		$html_contenido .= "<script>";
+		$html_contenido .= "component_image_read.init(".json_encode($init_options).");";
+		$html_contenido .= "</script>";
 
 		# Prepare content to show in page
-		tools::prepare_content($html_contenido);	
+		tools::prepare_content($html_contenido);
 		
 
 		# PRINT HTML

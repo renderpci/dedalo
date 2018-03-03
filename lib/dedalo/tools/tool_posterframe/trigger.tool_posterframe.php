@@ -167,29 +167,36 @@ if($mode=='generate_identifying_image') {
 
 
 	#
-	# COMPONENT PORTAL	
-	$modelo_name 	  = 'component_portal';
-	$component_portal = component_common::get_instance($modelo_name,
-													   $select_val->component_portal,
-													   $select_val->section_id,
-													   'edit',
-													   DEDALO_DATA_NOLAN,
-													   $select_val->section_tipo);													   
-	
-	$portal_parent  			= $component_portal->get_parent();
-	$portal_tipo 				= $component_portal->get_tipo();
-	$portal_section_target_tipo = $component_portal->get_ar_target_section_tipo()[0]; // First only
-	$top_tipo 					= $select_val->section_tipo;
-	$top_id 					= $select_val->section_id;
-	$section_tipo 				= $component_portal->get_section_tipo();
-	$new_section_id 			= (int)component_portal::create_new_portal_record( $portal_parent, $portal_tipo, $portal_section_target_tipo, $top_tipo, $top_id, $section_tipo );
-		#dump($new_section_id, ' new_section_id ++ '.to_string());
-	if($new_section_id<1) die("Error on create portal new record");
+	# COMPONENT PORTAL
+		$modelo_name 	  = 'component_portal';
+		$component_portal = component_common::get_instance($modelo_name,
+														   $select_val->component_portal,
+														   $select_val->section_id,
+														   'edit',
+														   DEDALO_DATA_NOLAN,
+														   $select_val->section_tipo);
+
+		$portal_section_target_tipo = $component_portal->get_ar_target_section_tipo()[0]; // First only
+
+		$new_element_options  	= new stdClass();
+			$new_element_options->section_target_tipo = $portal_section_target_tipo;
+
+		$new_element_response 	= $component_portal->add_new_element($new_element_options);
+
+		if ($new_element_response->result===false) {
+			die("Error on create portal new record: ".$new_element_response->msg);
+		}
+		
+		$new_section_id = $new_element_response->section_id;
+		$added_locator 	= $new_element_response->added_locator;
+
+		# Check valid new_section_id
+		if($new_section_id<1) die("Error on create portal new record");
 
 
 	#
 	# COMPONENT IMAGE
-	$modelo_name = 'component_image';
+	$modelo_name 	 = 'component_image';
 	$component_image = component_common::get_instance($modelo_name,
 													  $select_val->component_image,
 													  $new_section_id,

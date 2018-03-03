@@ -44,14 +44,44 @@
 				$current_version_in_db = implode(".", $current_version_in_db);
 
 
-				$update_version = $this->get_update_version();
-				if($update_version){
+				$update_version = $this->get_update_version();				
+				if(!empty($update_version)) {
 					$update_version = implode(".", $update_version);
 				}
-				
+
+
+				# Aditional css / js
+				css::$ar_url[] = DEDALO_ROOT_WEB."/lib/jsoneditor/jsoneditor.min.css";
+				js::$ar_url[]  = DEDALO_ROOT_WEB."/lib/jsoneditor/jsoneditor.min.js";
+				#js::$ar_url[]  = DEDALO_LIB_BASE_URL."/component_json/js/component_json.js";
 
 				#session_write_close();
+
+				if(SHOW_DEBUG===true) {				
 				
+					#require_once( dirname(__FILE__) .'/upgrades/class.dato_v4_to_section_data_v5.php');
+
+					/*
+					$convert_section = section::get_instance(1, "rsc197");
+					$datos_column 	 = $convert_section->get_dato();
+					$a = dato_v4_to_section_data_v5::convert_section_dato_to_data($datos_column);*/
+
+					#dato_v4_to_section_data_v5::convert_table_data();
+
+					/*
+					if (isset($_GET['france']) && $_GET['france']=='1') {				
+					
+						$geo_options = new stdClass();
+							$geo_options->section_tipo 		= 'fr1';
+							$geo_options->lang 				= 'lg-fra';
+							$geo_options->base_value 		= 'France';
+							$geo_options->save 				= false;
+							$geo_options->set_english_name	= true;
+						tool_administration::add_geonames_code( $geo_options );
+					}*/
+				
+					
+				}
 				break;		
 		
 	}#end switch

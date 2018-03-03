@@ -24,16 +24,14 @@
 	switch($modo) {
 		
 		case 'search' :
-				# Showed only when permissions are >1
-				if ($permissions<1) return null;
+				# dato is injected by trigger search wen is needed
+				$dato = isset($this->dato) ? $this->dato : null;
 				
 				# Nothing to do
 				#return print "$component_name. working here..";
-				$ar_comparison_operators 	= $this->build_search_comparison_operators();
-				$ar_logical_operators 		= $this->build_search_logical_operators();
-				#$dato 						= isset($_REQUEST[$tipo]) ? json_decode($_REQUEST[$tipo]) : null;
-
-
+				#$ar_comparison_operators 	= $this->build_search_comparison_operators();
+				#$ar_logical_operators 		= $this->build_search_logical_operators();
+							
 				# Search input name (var search_input_name is injected in search -> records_search_list.phtml)
 				# and recovered in component_common->get_search_input_name()
 				# Normally is section_tipo + component_tipo, but when in portal can be portal_tipo + section_tipo + component_tipo

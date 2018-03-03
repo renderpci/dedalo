@@ -19,7 +19,9 @@ hr {
 	/*-webkit-transition: all 0.25s ease-in-out;
 	-moz-transition: all 0.25s ease-in-out;*/
 	transition:  background-color 0.25s ease-in-out;
-	cursor: pointer; 
+	cursor: pointer;
+
+	color: #9e9e9e; // 11-01-2018
 }
 
 
@@ -103,12 +105,12 @@ hr {
 	}
 	@keyframes blink-animation {
 	  to {
-	    visibility: hidden;
+		visibility: hidden;
 	  }
 	}
 	@-webkit-keyframes blink-animation {
 	  to {
-	    visibility: hidden;
+		visibility: hidden;
 	  }
 	}
 
@@ -294,12 +296,9 @@ hr {
 }
 .icon_warning {
 	//background-image: url("../../themes/default/glyphicons-halflings.png");
-
-	background-image: url("../../themes/default/svg_icons.svg");
-	background-position: -360px -144px;
-
-	background-repeat: no-repeat;
+	background-image: url("../../themes/default/svg_icons.svg");	
 	background-position: -144px -120px;
+	background-repeat: no-repeat;	
 	display: inline-block;
 	float: right;
 	width: 14px;
@@ -311,9 +310,11 @@ hr {
 }
 .notice_to_active_users {
 	position: absolute;
-    top: 27px;
-    z-index: 10;
+	top: 27px;
+	z-index: 10;
 }
+
+
 
 /* DEBUG
 ----------------------------------------- */
@@ -357,7 +358,7 @@ mark {
 	//opacity: 0.6;	
 	//color: #7B99C1 !important;
 	//color: #c4753c !important;
-	
+	color: inherit;
 	font-style: italic;
 	opacity: 0.8;
 }
@@ -384,9 +385,9 @@ mark {
 	width: 102px;
 	height: 57px;
 	background-size: contain;
-    background-repeat: no-repeat;
-    background-position: center;
-    background-color: white;
+	background-repeat: no-repeat;
+	background-position: center;
+	background-color: white;
 	}
 	.thumb_in_list:hover {
 		cursor: -webkit-zoom-in;
@@ -405,11 +406,11 @@ mark {
 	border-radius: 4px;
 	}
 	.table_portal_rows_list {		
-	    table-layout: fixed;
+		table-layout: fixed;
 	}
 	.table_rows_list tr {
 		background-color: #F9F9F9;
-  		background-color: rgba(249, 249, 249, 0.85);
+		background-color: rgba(249, 249, 249, 0.85);
 	}
 	.table_rows_list th {
 		padding: 5px;
@@ -468,12 +469,16 @@ mark {
 		table-layout: fixed;
 		}
 		.table_rows_list_activity th:nth-of-type(1) {
-			width: 56px;
+			width: 58px;
 		}
 		.table_rows_list_activity td:nth-of-type(1) {
-			text-align: right;
-			background-color: #C9EDB8;
-			white-space: nowrap;
+		text-align: right;
+		background-color: #c9edb8;
+		white-space: nowrap;
+		font-family: "Menlo",monospace;
+		padding: 3px;
+		padding-right: 5px;
+		padding-bottom: 0;
 		}
 		.table_rows_list_activity th:nth-of-type(2) {
 			text-align: right;
@@ -739,7 +744,7 @@ mark {
 	}
 	.ar_list_of_values_debug_info pre {
 		background-color: rgba(217, 227, 255, 0.7);
-  		border-radius: 5px;
+		border-radius: 5px;
 	}
 
 mark.row_debug_info {
@@ -749,59 +754,11 @@ mark.row_debug_info {
 }
 
 
-/* TOOLTIPS : PSEUDO TOOLTIPS WITH CSS
-------------------------------------------------------- */
-label.css_label.tooltips {
-  /*position: relative;
-  display: inline;*/
-  //min-height: 30px;
-	}
-	/*
-	label.css_label.tooltips span {
-	  position: absolute;
-	  min-width:140px;
-	  color: #FFFFFF;
-	  background: #424242;
-	  min-height: 39px;
-	  line-height: 39px;
-	  text-align: center;
-	  visibility: hidden;
-	  border-radius: 4px;
-	  padding-left: 7px;
-	  padding-right: 7px;
-	  z-index: 10000;
-	}
-	label.css_label.tooltips span:after {
-	  content: '';
-	  position: absolute;
-	  top: 100%;
-	  left: 50%;
-	  margin-left: -8px;
-	  width: 0; height: 0;
-	  border-top: 8px solid #424242;
-	  border-right: 8px solid transparent;
-	  border-left: 8px solid transparent;
-	}
-	label.css_label:hover.tooltips span {
-	  visibility: visible;
-	  opacity: 0.9;
-	  // bottom: 35px;
-	  top: -40px;
-	  left: 7%;
-	  left: 70px;
-	  margin-left: -76px;
-	  z-index: 999;
-	}
-	*/
-	div.tooltip {
-		//background-color: #B8D111;
-		overflow-wrap: break-word;
-  		word-wrap: break-word;
-  		width: 600px;
-	}
 
-	/* LABEL_WARNING (STATE DEPRECATED, ETC)
-	----------------------------------------- */
+		
+
+/* LABEL_WARNING (STATE DEPRECATED, ETC)
+----------------------------------------- */ 
 	label.label_warning {		
 		}
 		label.label_warning span {
@@ -820,12 +777,12 @@ label.css_label.tooltips {
 ----------------------------------------- */
 .wrap_section_group_div {
 	position: relative;
-    padding: 0;
-    border: none;
-    margin: 0;
-    float: left;
-    min-height: 2.333em;
-    width: 100%;
+	padding: 0;
+	border: none;
+	margin: 0;
+	float: left;
+	min-height: 2.333em;
+	width: 100%;
 	//background-color: rgba(176, 246, 218, 0.16);
 	@media screen and (max-width: @movil_max_width) {
 			width: 100% !important;
@@ -850,8 +807,8 @@ label.css_label.tooltips {
 		font-size: 7px;
 		margin-top: 64px;
 		margin-right: auto;
-	    margin-bottom: auto;
-	    margin-left: auto;
+		margin-bottom: auto;
+		margin-left: auto;
 		*/
 
 		background-position: center;
@@ -860,6 +817,29 @@ label.css_label.tooltips {
 		width: 100%;
 		min-height: 32px;
 		display: inline-block;
+	}
+
+
+
+/* ELEMENT_DRAGGABLE
+------------------------------------------------------- */
+	// Draggable backgroud icon
+	.element_draggable {
+		cursor: move;
+		background: url('../../themes/default/draggable.svg');
+		background-color: rgba(0, 0, 0, 0);
+		background-repeat: repeat;
+		background-position-x: 0%;
+		background-position-y: 0%;
+		background-size: auto auto;
+		background-color: rgba(0,0,0,0);
+		background-repeat: repeat;
+		background-position-x: 0;
+		background-position-y: 0;
+		background-size: auto auto;
+		background-position: right 5px bottom 7px;
+		background-repeat: no-repeat;
+		background-size: 12px;
 	}
 
 
@@ -891,17 +871,17 @@ label.css_label.tooltips {
    Custom select apperance 
 ------------------------------------------------------- */
 select.custom_dropdown {
-    -webkit-appearance: none;
-    -moz-appearance: none;
-    border: 0 !important;
-    -webkit-border-radius: 5px;
-    cursor: pointer;
-    /* background-color: transparent; */
-    background: transparent url(../../themes/default/drop-down-arrow.png) no-repeat right center;
-    background-size: 12px;
-    padding-left: 5px;
-    padding-right: 18px;
-    line-height: 1em;
+	-webkit-appearance: none;
+	-moz-appearance: none;
+	border: 0 !important;
+	-webkit-border-radius: 5px;
+	cursor: pointer;
+	/* background-color: transparent; */
+	background: transparent url(../../themes/default/drop-down-arrow.png) no-repeat right center;
+	background-size: 12px;
+	padding-left: 5px;
+	padding-right: 18px;
+	line-height: 1em;
 }
 
 
@@ -916,8 +896,8 @@ select.custom_dropdown {
 	padding-left: 5px;
 	padding-right: 5px;
 	border: #909090;
-    border-style: dashed;
-    border-width: thin;
+	border-style: dashed;
+	border-width: thin;
 }
 .structuration_label.stl_in {
 	border-radius: 4px 0 0 4px;
@@ -940,3 +920,13 @@ select.custom_dropdown {
 	overflow: visible !important;
 	z-index: 1 !important;
 }
+
+
+// .mce-edit-area
+.mce-container > iframe {
+	//height: 100hv !important;
+}
+
+
+
+

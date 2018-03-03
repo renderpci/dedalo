@@ -78,12 +78,24 @@ class component_relation_index extends component_relation_common {
 
 
 	/**
-	* ADD_INDEX
+	* ADD_LOCATOR
 	* Add one locator to current 'dato'. Verify is exists to avoid duplicates
 	* NOTE: This method updates component 'dato' but NOT save
 	* @return bool
 	*/
-	public function add_index( $locator ) {
+	public function add_locator( $locator ) {
+
+		$locator = clone($locator);
+
+		# Verify exists locator type
+		if (!property_exists($locator,'type')) {
+			$locator->type = $this->relation_type;
+		}
+
+		# Verify exists locator from_component_tipo
+		if (!property_exists($locator,'from_component_tipo')) {
+			$locator->from_component_tipo = $this->tipo;
+		}
 
 		if ($locator->type!=$this->relation_type) {
 			debug_log(__METHOD__." Stopped add index (struct) of invalid type (valid type is $this->relation_type). Received type: ".to_string($locator->type), logger::ERROR);
@@ -96,17 +108,29 @@ class component_relation_index extends component_relation_common {
 		}
 		
 		return true;
-	}//end add_index
+	}//end add_locator
 
 
 
 	/**
-	* REMOVE_INDEX
+	* REMOVE_LOCATOR
 	* Iterate current component 'dato' and if math requested locator, removes it the locator from the 'dato' array
 	* NOTE: This method updates component 'dato' and save
 	* @return bool
 	*/
-	public function remove_index( $locator ) {
+	public function remove_locator( $locator ) {
+
+		$locator = clone($locator);
+
+		# Verify exists locator type
+		if (!property_exists($locator,'type')) {
+			$locator->type = $this->relation_type;
+		}
+
+		# Verify exists locator from_component_tipo
+		if (!property_exists($locator,'from_component_tipo')) {
+			$locator->from_component_tipo = $this->tipo;
+		}
 
 		# Add current locator to component dato		
 		if (!$remove_locator_locator = $this->remove_locator_from_dato($locator)) {
@@ -114,7 +138,7 @@ class component_relation_index extends component_relation_common {
 		}
 		
 		return true;
-	}//end remove_index
+	}//end remove_locator
 
 
 
@@ -201,7 +225,7 @@ class component_relation_index extends component_relation_common {
 			$options->ar_tables 			= array('matrix_hierarchy');
 
 			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
-		
+			#dump($options, ' options ++ '.to_string());	
 
 		$ar_filter=array();
 		foreach ($options->fields as $key => $value) {
@@ -311,44 +335,6 @@ class component_relation_index extends component_relation_common {
 		
 		return null;
 	}//end get_locator_from_ar_relations
-
-
-
-	/**
-	* DELETE_TAG_INDEXATIONS
-	* @return array $ar_deleted
-	*/
-	public static function delete_tag_indexations($component_tipo, $section_tipo, $section_id, $tag_id, $lang) {
-		
-		$ar_indexations = self::get_indexations_from_tag($component_tipo, $section_tipo, $section_id, $tag_id, $lang);
-			#dump($ar_indexations, ' $ar_indexations ++ '.to_string());
-
-		$ar_deleted=array();
-		foreach ((array)$ar_indexations as $key => $index_obj) {
-			
-			$current_section_tipo 	= $index_obj->section_tipo;
-			$current_section_id 	= $index_obj->section_id;
-			$current_component_tipo	= $index_obj->locator->from_component_tipo;
-
-			# Delete locator
-			$component 	   = component_common::get_instance('component_relation_index',
-															 $current_component_tipo,
-															 $current_section_id,
-															 'edit',
-															 DEDALO_DATA_NOLAN,
-															 $current_section_tipo);
-			$component->remove_index( $index_obj->locator );
-			$component->Save();
-			debug_log(__METHOD__." removed locator from component_relation_index ($current_component_tipo, $current_section_tipo, $current_section_id) ".to_string($index_obj->locator), logger::DEBUG);
-		
-			$ar_deleted[] = array('component_tipo'=>$current_component_tipo,
-								  'section_tipo'=>$current_section_tipo,
-								  'section_id'=>$current_section_id,
-								  'removed_locator'=>$index_obj->locator);
-		}
-
-		return (array)$ar_deleted;
-	}//end delete_tag_indexations
 
 	
 

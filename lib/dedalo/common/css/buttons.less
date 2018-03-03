@@ -41,12 +41,17 @@
 	}
 
 /* HIDE BUTTONS TEXT ON SMALL SCREEN
+ * and inside inspector
 -------------------------------------------------------------- */
 .css_button_generic > span {
 	@media screen and (max-width: @movil_max_width) {
 		display: none;
     	}
 }
+#inspector_div .css_button_generic > span {
+	display: none;
+}
+
 
 
 /* BUTTON WITH ICON LEFT
@@ -275,5 +280,7 @@
 	.buttons_common;
 	background-image: url('../../themes/default/close.svg');	
 }
+
+
 
 

@@ -105,7 +105,7 @@ if (login::is_logged()) {
 			if( !empty($section_tipo) && $modo==='list' ) {
 				echo "<div id=\"current_section_label\" class=\"button_in_menu css_label text_unselectable section_label_list \">$section_name</div>";
 			}else if(!empty($section_tipo)) {
-				echo "<div id=\"current_section_label\" class=\"button_in_menu css_label text_unselectable section_label_edit\" title=\"".label::get_label('ir_a_seccion')."\" onclick=\"goto_url('?m=list&t=$section_tipo')\">";				
+				echo "<div id=\"current_section_label\" class=\"button_in_menu css_label text_unselectable section_label_edit\" title=\"".label::get_label('ir_al_listado')."\" onclick=\"goto_url('?m=list&t=$section_tipo')\">";				
 				echo $section_name;
 				echo ' <span id="current_section_id_label">'.section::$active_section_id.'</span>';
 				echo "</div>";

@@ -33,29 +33,6 @@ class tool_indexation extends tool_common {
 
 
 	/**
-	* GET_AR_INVERSE
-	* Format, filter and sort inverse_locators values for use in selector
-	* @return array $ar_inverse
-	*//* MOVED TO TOOL_COMMON
-	public function get_ar_inverse( $inverse_locators ) {
-		$ar_inverse=array();
-
-		$section_name = RecordObj_dd::get_termino_by_tipo( TOP_TIPO );
-		foreach ((array)$inverse_locators as $current_locator) {
-			if ($current_locator->section_tipo!=TOP_TIPO) {
-				continue;
-			}			
-			$ar_inverse[$current_locator->section_id] = "$section_name - $current_locator->section_id";				
-		}
-		natsort($ar_inverse);
-		
-		return $ar_inverse;
-	}#end get_ar_inverse
-	*/
-
-
-
-	/**
 	* DELETE_TAG
 	* @param object $request_options
 	* @return object $response
@@ -81,21 +58,42 @@ class tool_indexation extends tool_common {
 				}
 			}
 
-		#
-		# INDEX
-		# Delete all references to current tag in component_relation_index
-		$ar_index_deleted = (array)component_relation_index::delete_tag_indexations($component_tipo, $section_tipo, $section_id, $tag_id, $lang);
-			#dump($ar_index_deleted, ' ar_index_deleted ++ '.to_string());
-			$response->msg[] = "Deleted ".count($ar_index_deleted)." indexations ";		
-			$response->debug['index_deleted'] = $ar_index_deleted;
+		# GET INVERSE RELATIONS TO CURRENT TAG
+		# And remove it
+			$locator = new locator();
+				$locator->set_section_tipo($section_tipo);
+				$locator->set_section_id($section_id);
+				$locator->set_component_tipo($component_tipo);
+				$locator->set_tag_id($tag_id);
 			
+			$ar_locators = search_development2::calculate_inverse_locators( $locator );
 
-		#
-		# PORTALS
-		# Delete all references to current tag in component_portal
-		$ar_pointer_deleted = (array)component_portal::delete_tag_pointers($component_tipo, $section_tipo, $section_id, $tag_id, $lang);
-			$response->msg[] = "Deleted ".count($ar_pointer_deleted)." portal pointers ";	
-			$response->debug['portal_pointers_deleted'] = $ar_pointer_deleted;		
+			foreach ($ar_locators as $pseudo_locator) {
+
+				if (empty($pseudo_locator->from_component_tipo)) {
+					debug_log(__METHOD__." Error on locate property from_component_tipo in locator ".json_encode($pseudo_locator), logger::ERROR);
+					continue;
+				}
+
+				$current_component_tipo  = $pseudo_locator->from_component_tipo;
+				$current_section_tipo 	 = $pseudo_locator->from_section_tipo;
+				$current_section_id   	 = $pseudo_locator->from_section_id;
+
+				$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($from_component_tipo,true);
+				$component 		= component_common::get_instance($modelo_name,
+																 $current_component_tipo,
+																 $current_section_id,
+																 'edit',
+																 DEDALO_DATA_NOLAN,
+																 $current_section_tipo);
+				$current_locator = clone($locator);
+				$component->remove_locator( $current_locator );
+				$component->Save();
+
+				debug_log(__METHOD__." Deleted inverse relation in $modelo_name - $current_section_tipo - $current_component_tipo - $current_section_id - ".json_encode($pseudo_locator), logger::DEBUG);
+
+				$response->msg[] = "Deleted locator: ".json_encode($pseudo_locator);
+			}//end oreach ($ar_locators as $current_locator)
 
 
 		#

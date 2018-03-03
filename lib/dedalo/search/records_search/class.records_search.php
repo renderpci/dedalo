@@ -130,7 +130,7 @@ class records_search extends common {
 		$search_list_tipo = $this->get_search_list_tipo();
 
 		$ar_terminos_relacionados = RecordObj_dd::get_ar_terminos_relacionados($search_list_tipo, true, $simple=true);
-			#dump($ar_terminos_relacionados,'ar_terminos_relacionados');
+			#dump($ar_terminos_relacionados,'ar_terminos_relacionados - $search_list_tipo: '.$search_list_tipo);
 
 		#
 		# REMOVE_EXCLUDE_TERMS : CONFIG EXCLUDES
@@ -155,7 +155,7 @@ class records_search extends common {
 				# SECTION TIPO 
 				$current_section_tipo = $this->section_tipo;	// Default
 
-				if ($current_modelo_name=='component_portal') {
+				if ($current_modelo_name==='component_portal' || $current_modelo_name==='component_relation_portal') {
 					
 					$search_list = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($current_element_tipo, 'search_list', 'children'); //common::get_ar_related_by_model('search_list', $current_element_tipo);
 						#dump($search_list, ' search_list ++ '.to_string());
@@ -175,7 +175,7 @@ class records_search extends common {
 					foreach ((array)$search_list_ar_related as $search_related_tipo) {
 						$search_modelo_name = RecordObj_dd::get_modelo_name_by_tipo($search_related_tipo,true);
 						switch (true) {
-							case ($search_modelo_name=='section'):
+							case ($search_modelo_name==='section'):
 								$search_section_tipo = $search_related_tipo;
 								break;
 							case (strpos($search_modelo_name, 'component_')!==false ):
@@ -209,6 +209,7 @@ class records_search extends common {
 			}
 		}
 		#dump($this->get_ar_components_search(),'$this->ar_components_search');
+		#dump($ar_search_fields, ' ar_search_fields ++ '.to_string());
 
 		# CACHE
 		#$_SESSION['dedalo4']['config']['records_search'][$this->section_tipo]['ar_search_fields'] = serialize($ar_search_fields);

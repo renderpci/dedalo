@@ -28,70 +28,75 @@
 	$html_contenido  = '';
 	switch($permissions) {
 			
-		case 0	:	$html_contenido .= ""; 
-					break;
-						
-		case 1	: 	$html_contenido .= $valor;
-					break;	
-
+		case 0	:	
+			$html_contenido .= ""; 
+			break;
+		
+		case 1	:
+			$html_contenido .= $valor;
+			break;
 						
 		case 2 :
 		case 3 :					
 		
-					$html_contenido .= "<ul class=\"group\">";
-					$i=1; foreach ($ar_list_of_values->result as $value => $rotulo) {
+			$html_contenido .= "<ul class=\"group\">";
+			$i=1; foreach ($ar_list_of_values->result as $value => $rotulo) {
 
-						$value   = (string)$value; 
-						$locator = (object)json_handler::decode($value);	# Locator is json encoded object
+				$value   = (string)$value; 
+				$locator = (object)json_handler::decode($value);	# Locator is json encoded object
 
-						/*
-						if (isset($this->caller_dataset)) {
-							$locator->type 		 = $this->caller_dataset->type;
-							$locator->caller_key = $this->caller_dataset->caller_key;
+				/*
+				if (isset($this->caller_dataset)) {
+					$locator->type 		 = $this->caller_dataset->type;
+					$locator->caller_key = $this->caller_dataset->caller_key;
 
-							$value = (string)json_encode($locator);
-						}*/
-						#dump($locator," locator"); #dump($dato," dato");
-						
-						$checked  = in_array($locator, $dato) ? 'checked="checked"' : '';
-						$tabindex = $i==1 ? 'tabindex="1"' : '';
+					$value = (string)json_encode($locator);
+				}*/
+				#dump($locator," locator"); #dump($dato," dato");
+				
+				#$checked  = in_array($locator, $dato) ? 'checked="checked"' : '';
+				$checked  = '';
+				if (is_array($dato) && locator::in_array_locator($locator, $dato, array('section_id','section_tipo')) ) {
+					$checked  = 'checked="checked"';
+				}
 
-						$input_id = $input_name.'_'.$i;
-						
-						$html_contenido .= "<li>";
+				$tabindex = $i==1 ? 'tabindex="1"' : '';
 
-						# 
-						# INPUT
-						$html_contenido .= "<input type=\"checkbox\" class=\"css_check_box\" ";
-						$html_contenido .= "onfocus=\"component_common.select_wrap(null,'$id_wrapper');\" ";
-						$html_contenido .= "onchange=\"component_check_box.Save(this)\" ";
-						$html_contenido .= "name=\"{$input_name}\" ";
-						$html_contenido .= "id=\"{$input_id}\" ";
-						$html_contenido .= "data-tipo=\"{$tipo}\" ";
-						$html_contenido .= "data-lang=\"{$lang}\" ";
-						$html_contenido .= "data-section_tipo=\"{$section_tipo}\" ";
-						$html_contenido .= "data-parent=\"{$parent}\" ";
-						$html_contenido .= "value='$value' ";
-						$html_contenido .= "title=\"$html_title\" ";
-						$html_contenido .= "$checked ";
-						$html_contenido .= "$tabindex ";
-						$html_contenido .= "/>";
-						
-						#
-						# LABEL				
-						$html_contenido .= "<label for=\"$input_id\" class=\"css_check_box_rotulo\" {$required_code}>$rotulo</label>";
+				$input_id = $input_name.'_'.$i;
+				
+				$html_contenido .= "<li>";
 
-						$html_contenido .= "</li>";
-						$i++;
-					}
-					$html_contenido .= "</ul>";
-							
+				# 
+				# INPUT
+				$html_contenido .= "<input type=\"checkbox\" class=\"css_check_box\" ";
+				$html_contenido .= "onfocus=\"component_common.select_wrap(null,'$id_wrapper');\" ";
+				$html_contenido .= "onchange=\"component_check_box.Save(this)\" ";
+				$html_contenido .= "name=\"{$input_name}\" ";
+				$html_contenido .= "id=\"{$input_id}\" ";
+				$html_contenido .= "data-tipo=\"{$tipo}\" ";
+				$html_contenido .= "data-lang=\"{$lang}\" ";
+				$html_contenido .= "data-section_tipo=\"{$section_tipo}\" ";
+				$html_contenido .= "data-parent=\"{$parent}\" ";
+				$html_contenido .= "value='$value' ";
+				$html_contenido .= "title=\"$html_title\" ";
+				$html_contenido .= "$checked ";
+				$html_contenido .= "$tabindex ";
+				$html_contenido .= "/>";
+				
+				#
+				# LABEL				
+				$html_contenido .= "<label for=\"$input_id\" class=\"css_check_box_rotulo\" {$required_code}>$rotulo</label>";
+
+				$html_contenido .= "</li>";
+				$i++;
+			}
+			$html_contenido .= "</ul>";
+			break;
 	}
 
 
 	# Prepare content to show in page
 	tools::prepare_content($html_contenido);
-
 
 
 	

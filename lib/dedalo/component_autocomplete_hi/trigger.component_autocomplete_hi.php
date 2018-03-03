@@ -5,6 +5,7 @@ include( dirname(dirname(__FILE__)).'/config/config4.php');
 common::trigger_manager();
 
 
+
 /**
 * AUTOCOMPLETE
 * Get list of mathed DB results for current string by ajax call
@@ -30,7 +31,6 @@ function autocomplete($json_data) {
 				return $response;
 			}
 		}
-	
 
 	$hierarchy_types 	= json_decode($hierarchy_types);
 	$hierarchy_sections = json_decode($hierarchy_sections);
@@ -38,7 +38,7 @@ function autocomplete($json_data) {
 	$result = component_autocomplete_hi::autocomplete_hi_search($hierarchy_types,
 																$hierarchy_sections,
 																$string_to_search,
-																50,
+																60,
 																true,
 																true); //$ar_referenced_tipo, $string_to_search, $max_results=30, $show_modelo_name=true, $source_mode
 
@@ -61,13 +61,11 @@ function autocomplete($json_data) {
 
 
 
-
 /**
 * UPDATE_COMPONENT_RELATED
 * @return 
 */
 function update_component_related($json_data) {
-
 	global $start_time;
 
 	$response = new stdClass();
@@ -122,9 +120,9 @@ function update_component_related($json_data) {
 	}
 
 
-	return (object)$response;
-	
-}#end update_component_related
+	return (object)$response;	
+}//end update_component_related
+
 
 
 ?>

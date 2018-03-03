@@ -30,7 +30,7 @@ function search_thesaurus($json_data) {
 		}
 
 	$options = json_decode($options);
-	#dump( count($options->filter_by_search), ' $options->filter_by_search ++ '.to_string()); die();
+	#dump( $options->filter_by_search, ' $options->filter_by_search ++ '.to_string()); die();
 
 	$search_options = new stdClass();
 	foreach ($options->filter_by_search as $key => $value) {
@@ -58,14 +58,16 @@ function search_thesaurus($json_data) {
 
 	# model
 	$search_options->model = (bool)$options->model;
-
+	# limit
 	$search_options->limit = isset($options->limit) ? (int)$options->limit : 100;
-
-
+	
 	$n_vars = count(get_object_vars($search_options));	
 	if ($n_vars<1) {
 		return null;
 	}
+
+	# comparison_operator
+	$search_options->comparison_operator = $options->operators->comparison_operator;
 
 	$area_thesaurus = new area_thesaurus(DEDALO_TESAURO_TIPO);
 	$response 		= $area_thesaurus->search_thesaurus( $search_options );

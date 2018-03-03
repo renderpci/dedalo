@@ -20,8 +20,14 @@ class component_info extends component_common {
 	* GET_VALOR
 	* @return 
 	*/
-	public function get_valor() {
-		return null;
+	public function get_valor( $widget_lang=DEDALO_DATA_LANG ) {
+
+		$this->widget_lang = $widget_lang;
+
+		$valor = $this->get_html();
+		$valor = strip_tags($valor);
+
+		return $valor;
 	}//end get_valor
 
 

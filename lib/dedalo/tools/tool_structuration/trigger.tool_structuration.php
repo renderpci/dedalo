@@ -276,7 +276,7 @@ function add_index($json_data) {
 	$locator->type 				  = DEDALO_RELATION_TYPE_STRUCT_TIPO;
 	$locator->from_component_tipo = $tipo;
 		#dump($locator, ' locator ++ '.to_string());
-	$response->result = $component->add_index($locator);
+	$response->result = $component->add_locator($locator);
 	if($response->result===true) {
 		$component->Save();
 		$response->msg = "Added term $label, locator ".json_encode($locator)." to $modelo_name $tipo [$section_tipo - $section_id]";
@@ -335,7 +335,7 @@ function remove_index($json_data) {
 													 $section_tipo);	
 
 
-	$response->result = $component->remove_index($locator);
+	$response->result = $component->remove_locator($locator);
 	if($response->result===true) {
 		$component->Save();
 		$response->msg = "Removed term \"$term\", locator ".json_encode($locator)." on $modelo_name $component_tipo [$section_tipo - $section_id]";

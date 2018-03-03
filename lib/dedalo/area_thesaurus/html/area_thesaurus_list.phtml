@@ -13,14 +13,13 @@
 	# SEARCH FORM
 	$html ='';
 	$html .= "<div class=\"search_form_container\">";
-	#$html .= "<div class=\"beta\">Beta</div>";
 	$html .= $search_form_html;
 	$html .= "</div>";
 	
 	
 	$tipology_name_model_css = ($model_view===true) ? 'tipology_name_model' : null;
 
-
+	
 	#
 	# TREE HTML
 	$html .= "<ul id=\"thesaurus_list_wrapper\">";
@@ -28,7 +27,7 @@
 	$root_nodes=array();
 	$ar_hierarchy_selector = array();
 	foreach ($ar_hierarchy_typologies as $key => $tipology_section_id) {
-		#dump($row, ' row ++ '.to_string());
+		
 
 		#$tipology_section_id   	= $row['section_id'];
 		#$tipology_section_tipo 	= $row['section_tipo'];
@@ -36,7 +35,7 @@
 	
 		$tipology_section_tipo 	= area_thesaurus::$typologies_section_tipo;
 		$tipology_name 			= $this->get_tipology_name($tipology_section_id);
-
+	
 
 		// Filter by GET var hierarchy_types if is present
 		if(is_array($hierarchy_types)) {
@@ -49,7 +48,7 @@
 
 		#
 		# HIERARCHY TIPOLOGY NAME Like 'Toponimia'
-		$html .= "<div class=\"tipology_name $tipology_name_model_css\" onclick=\"area_thesaurus.toggle_tipology(this)\" data-state=\"show\"><strong>".trim($tipology_name)."</strong></div>";
+		$html .= "<div class=\"tipology_name $tipology_name_model_css\" onclick=\"area_thesaurus.toggle_tipology(this)\" data-state=\"show\" data-section_id=\"$tipology_section_id\"><strong>".trim($tipology_name)."</strong></div>";
 
 		#
 		# HIERARCHIES OF CURRENT TIPO Like 'España' for tipology_section_id 2
@@ -59,7 +58,7 @@
 			#dump($hierarchies_rows_obj, ' hierarchies_rows_obj ++ '.to_string());
 			
 			foreach ($hierarchies_rows_obj->result as $hierarchy_ar_value) foreach($hierarchy_ar_value as $hierarchy_key => $hierarchy_row) {
-							
+				
 				$hierarchy_section_id   		= $hierarchy_row['section_id'];
 				$hierarchy_section_tipo 		= $hierarchy_row['section_tipo'];
 				$hierarchy_term_tipo 			= DEDALO_HIERARCHY_TERM_TIPO;
@@ -67,7 +66,7 @@
 				# hierarchy_target_section_tipo is a json encoded array
 				$hierarchy_target_section_tipo 	= $hierarchy_row[$target_section_tipo];
 				$hierarchy_target_section_tipo  = json_decode($hierarchy_target_section_tipo)[0];
-
+	
 				if (empty($hierarchy_target_section_tipo)) {
 					debug_log(__METHOD__." Ignored hierarchy ID: $hierarchy_section_id ($hierarchy_name) with empty childrens target section tipo ".to_string(), logger::WARNING);
 					continue;
@@ -173,7 +172,7 @@
 	if ($thesaurus_list_mode==='search') {
 
 		$options = new stdClass();
-			$options->term = isset($_GET['term']) ? $_GET['term'] : false;	
+			$options->term = isset($_GET['term']) ? safe_xss($_GET['term']) : false;	
 		$search_data = $this->search_thesaurus( $options );
 		$search_data = json_encode($search_data);
 		/*
@@ -181,7 +180,10 @@
 		#$search_data = '{"ts1_65":{"section_tipo":"ts1","section_id":"65","modo":"edit","lang":"lg-spa","ar_elements":[{"type":"link","tipo":"hierarchy42","value":0},{"type":"term","tipo":"hierarchy25","value":"65"},{"type":"link_childrens","tipo":"hierarchy49","value":"button show childrens"}],"heritage":{"ts1_73":{"section_tipo":"ts1","section_id":"73","modo":"edit","lang":"lg-spa","ar_elements":[{"type":"link","tipo":"hierarchy42","value":0},{"type":"term","tipo":"hierarchy25","value":"73"},{"type":"link_childrens","tipo":"hierarchy49","value":"button show childrens"}],"heritage":{"ts1_74":{"section_tipo":"ts1","section_id":"74","modo":"edit","lang":"lg-spa","ar_elements":[{"type":"link","tipo":"hierarchy42","value":0},{"type":"term","tipo":"hierarchy25","value":"74 pepito"},{"type":"link_childrens","tipo":"hierarchy49","value":"button show childrens unactive"}]}}},"ts1_66":{"section_tipo":"ts1","section_id":"66","modo":"edit","lang":"lg-spa","ar_elements":[{"type":"link","tipo":"hierarchy42","value":0},{"type":"term","tipo":"hierarchy25","value":"66"},{"type":"link_childrens","tipo":"hierarchy49","value":"button show childrens"}],"heritage":{"ts1_67":{"section_tipo":"ts1","section_id":"67","modo":"edit","lang":"lg-spa","ar_elements":[{"type":"link","tipo":"hierarchy42","value":0},{"type":"term","tipo":"hierarchy25","value":"67  pepito pepet"},{"type":"link_childrens","tipo":"hierarchy49","value":"button show childrens unactive"}]}}}}}}';
 		$html .= " <script>ts_object.parse_search_result($search_data, document.querySelector('.search_test'))</script>";
 		*/
-		$html .= "<script>ts_object.parse_search_result($search_data, null, false)</script>";
+		$html .= "<script>";
+		$html .= "ts_object.parse_search_result($search_data, null, false);";
+		#$html .= "console.log(\"search_data:\",$search_data);";
+		$html .= "</script>";
 	
 	}else{
 	

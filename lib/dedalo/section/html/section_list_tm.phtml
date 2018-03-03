@@ -11,8 +11,7 @@
 	#$html_label 	= "<div class=\"css_section_titulo\" > SECTION: ".component_common_draw::draw_label($this)." </div>";
 	#$html_label  	.= "<div class=\"css_section_titulo\" > Número: ".$dato." </div>";
 		
-	
-	# CONTENIDO (INPUT)
+	# CONTENT
 	$html_content = "<div class=\"css_section_content section_content_list section_list_rows_content_div\" style=\"margin:0\">";
 	
 	switch(true) {
@@ -26,7 +25,11 @@
 					#$html_content .= " <a href=\"javascript:;\" onclick=\"New(this)\" data-tipo=\"{$tipo}\"> New ($tipo)</a> <div class=\"new_ajax_response\"></div> ";	
 					
 					# Content html
+					$html_content .= '<div class="css_section_list_wrap wrap_section_'.$tipo.' sgc_edit" id="wrap_'.$tipo.'_'.$modo.'">';
+					$html_content .= '<div class="css_section_group_content tab_content wrap_table_rows_list section_records_'.$modo.'" data-rol="section_records">';
 					$html_content .= $rows_list_html;
+					$html_content .= '</div><!-- /css_section_group_content -->';
+					$html_content .= '</div><!-- /css_section_list_wrap -->';
 						
 		case 2	: 
 		case 3	:	

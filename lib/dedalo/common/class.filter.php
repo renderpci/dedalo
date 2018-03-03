@@ -7,7 +7,7 @@
 abstract class filter {
 	
 
-	
+
 	/**
 	* GET_SQL_FILTER
 	* Build sql code filter from section tipo for current user
@@ -17,6 +17,9 @@ abstract class filter {
 	*/
 	public static function get_sql_filter( $filter_options ) {
 		$sql_filter='';
+
+
+		debug_log(__METHOD__." DEPRECATED METHOD. USE NEW SEARCH2 WAY ASAP !! ".to_string(), logger::ERROR);
 
 		#
 		# DEDALO_BYPASS_FILTER
@@ -220,6 +223,7 @@ abstract class filter {
 
 		return $sql_filter;
 	}//end get_sql_filter
+
 
 
 

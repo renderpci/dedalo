@@ -1,88 +1,70 @@
 <?php
 	
-	# VISUALIZADOR HTML	
+	# VISUALIZADOR HTML
+	$html_content = '';
 
-	# CUSTOM_STYLE
-	$custom_style = '';	//$total_rows<=1 ? 'style="display:none"' : '';
-		
-
-	# CUSTOM_CSS
-	# Add custom class in different modo''
-	$custom_css = '';
-	/*
-	switch ($modo) {
-		case 'edit':
-			$custom_css = 'css_wrap_rows_paginator_edit';
-			break;
-	}
-	*/
-		
-	# CONTENIDO (INPUT)
-	if(SHOW_DEBUG===true) {
-		#print "<!-- RECORD NAVIGATOR [section_tipo:$section_tipo] -->";
-	}
 	
-	$html_contenido  = "<div class=\"css_wrap_rows_paginator text_unselectable $custom_css\" data-options='".json_encode($options)."' $custom_style>";
+	$html_content  = '<div class="css_wrap_rows_paginator text_unselectable">';
 					
-		$html_contenido  .= "<div class=\"css_rows_paginator_content\">";		
-		#if ($total_rows>0) {			
-			
+		$html_content  .= '<div class="css_rows_paginator_content">';
 			
 			# LINKS
-			$html_contenido  .= "<div class=\"css_rows_paginator_div_links\">";
+			$html_content  .= '<div class="css_rows_paginator_div_links">';
 
 				#  To first page <<					
-				if($page_number>1) {							
-					$options->offset  = $first_page_offset;
-					$options->offset_list = $first_page_offset;						
-					$html_contenido  .= "<div onclick='search.load_rows(".json_encode($options).",this)' class=\"icon_bs paginator_first_icon link\"></div>";
+				if($page_number>1) {
+					$html_content  .= '<div class="icon_bs paginator_first_icon link" onclick="search.load_paginated_rows(this,'.(int)$first_page_offset.')"></div>';
 				}else{
-					$html_contenido  .= "<div class=\"icon_bs paginator_first_icon paginator_desactive\"></div>";
+					$html_content  .= '<div class="icon_bs paginator_first_icon paginator_desactive"></div>';
 				}
 				
 				#  To previous page <
-				if($prev_page_offset>=0) {						
-					$options->offset  = $prev_page_offset;
-					$options->offset_list = $prev_page_offset;
-					$html_contenido  .= "<div onclick='search.load_rows(".json_encode($options).",this)' class=\"icon_bs paginator_prev_icon link\"></div>";
+				if($prev_page_offset>=0) {
+					$html_content  .= '<div class="icon_bs paginator_prev_icon link" onclick="search.load_paginated_rows(this,'.(int)$prev_page_offset.')"></div>';
 				}else{
-					$html_contenido  .= "<div class=\"icon_bs paginator_prev_icon paginator_desactive\"></div>";
+					$html_content  .= '<div class="icon_bs paginator_prev_icon paginator_desactive"></div>';
 				}
 
 				#  To next page >
-				if($next_page_offset<$total_rows) {							
-					$options->offset  = $next_page_offset;
-					$options->offset_list = $next_page_offset;
-						#dump($options,"options en next button");
-					$html_contenido  .= "<div onclick='search.load_rows(".json_encode($options).",this)' class=\"icon_bs paginator_next_icon link\"></div>";
+				if($next_page_offset<$total_rows) {
+					$html_content  .= '<div class="icon_bs paginator_next_icon link" onclick="search.load_paginated_rows(this,'.(int)$next_page_offset.')"></div>';
 				}else{
-					$html_contenido  .= "<div class=\"icon_bs paginator_next_icon paginator_desactive\"></div>";
+					$html_content  .= '<div class="icon_bs paginator_next_icon paginator_desactive"></div>';
 				}
 			
 				#  To last page >>
-				if($page_number<$total_pages) {
-					$options->offset  = $last_page_offset;
-					$options->offset_list = $last_page_offset;
-					$html_contenido  .= "<div onclick='search.load_rows(".json_encode($options).",this)' class=\"icon_bs paginator_last_icon link\"></div>";
+				if($page_number<$total_pages) {					
+					$html_content  .= '<div class="icon_bs paginator_last_icon link" onclick="search.load_paginated_rows(this,'.(int)$last_page_offset.')"></div>';
 				}else{
-					$html_contenido  .= "<div class=\"icon_bs paginator_last_icon paginator_desactive\"></div>";
+					$html_content  .= '<div class="icon_bs paginator_last_icon paginator_desactive"></div>';
 				}		
 			
-			$html_contenido  .= "</div>";
+			$html_content  .= '</div>';
 
 
 			# INFO
-			$html_contenido  .= "<div class=\"css_rows_paginator_info\">Page $page_number of $total_pages. Displayed records from $page_row_begin to $page_row_end of $total_rows</div>";
+			$html_content  .= '<div class="css_rows_paginator_info">Page '.$page_number.' of '.$total_pages;
+			if($modo==="list") {
+				$html_content  .= '. Displayed records from '.$page_row_begin.' to '.$page_row_end.' of '.$total_rows;
+				$html_content  .= '. '.label::get_label('go_to_page').' ';
+			}
+			
+			if($modo==="edit") {
+				$html_content  .= '. '.label::get_label('go_to_record').' ';
+			}
+				$html_content  .= '<input id="go_to_page" placeholder="'.$page_number.'" onkeyUp="search.go_to_page(this, event, '.(int)$total_pages.', '.(int)$item_per_page.')">';
+				
+			$html_content  .= '</div>';
 			
 
 		#}#end if ($total_rows>0)			
-		$html_contenido  .= "</div>";// end <!-- /css_rows_paginator_content -->
+		$html_content  .= '</div>';// end <!-- /css_rows_paginator_content -->
 	
-	$html_contenido .= "</div>";//end <!-- /css_wrap_rows_paginator -->
+	$html_content .= '</div>';//end <!-- /css_wrap_rows_paginator -->
 	
 	
 	# PRINT HTML
-	print $html_contenido;
+	print $html_content;
 	
 
 ?>

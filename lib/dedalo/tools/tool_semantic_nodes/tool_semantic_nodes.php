@@ -53,24 +53,7 @@
 							#dump($context, ' context ++ '.to_string());
 					
 					$section->set_context($context);
-
-					// Remove previous search_options session for refresh link buttons
-					if (isset($_SESSION['dedalo4']['config']['search_options'])) {					
-						foreach((array)$_SESSION['dedalo4']['config']['search_options'] as $key => $value) {							
-							if ($key==$search_options_session_key) {
-								//dump($_SESSION['dedalo4']['config']['search_options'][$key], '$_SESSION[dedalo4][config][search_options][$key] ++ '.to_string());								
-								if (isset($_SESSION['dedalo4']['config']['search_options'][$key]->context->portal_parent)) {
-									$_SESSION['dedalo4']['config']['search_options'][$key]->context->portal_parent  = $parent;
-									$_SESSION['dedalo4']['config']['search_options'][$key]->context->portal_tipo 	= $tipo;
-									debug_log(__METHOD__." Updated session key:$key to context->portal_parent = $parent ".to_string(), logger::DEBUG);
-								}else{
-									unset($_SESSION['dedalo4']['config']['search_options'][$key]);
-									debug_log(__METHOD__." Removed session key: ".to_string($key), logger::DEBUG);
-								}
-								break;
-							}							
-						}
-					}
+					
 					$section_html = $section->get_html();
 
 				#DEDALO_LIB_BASE_URL + "/main/?m=list&tipo="+current_tipo+"&caller_id="+caller_id+"&caller_tipo="+caller_tipo;

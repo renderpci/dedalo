@@ -4,7 +4,7 @@ require_once( DEDALO_LIB_BASE_PATH . '/media_engine/class.AVObj.php');
 require_once( DEDALO_LIB_BASE_PATH . '/media_engine/class.PosterFrameObj.php');
 require_once( DEDALO_LIB_BASE_PATH . '/media_engine/class.AVPlayer.php');
 
-$share = isset($_GET['share']) ? $_GET['share'] : false;
+$share = isset($_GET['share']) ? safe_xss($_GET['share']) : false;
 if ($share) {
 
 	# Decode vars
@@ -66,11 +66,11 @@ $PosterFrameObj = new PosterFrameObj($reelID);
 	if (!file_exists($file_path)) {
 		$ar_valid	= $AVObj->get_ar_quality_with_file();
 		if (!empty($ar_valid[0])) {
+			
 			$quality = $ar_valid[0];
-			$AVObj->set_quality($quality);			
+			$AVObj->set_quality($quality);
+
 		}else{
-			//http://master.render.es/dedalo/lib/dedalo/main/?m=tool_upload&t=rsc35&parent=1&section_tipo=muvaet203&quality=original&top_tipo=muvaet78&top_id=
-			//reelID rsc35_muvaet203_1
 
 			$locator = explode("_", $reelID);
 			$component_tipo = $locator[0];
@@ -78,7 +78,6 @@ $PosterFrameObj = new PosterFrameObj($reelID);
 			$section_id = $locator[2];
 
 			header("Location: ".DEDALO_LIB_BASE_URL."/main/?m=tool_upload&t=".$component_tipo."&parent=".$section_id."&section_tipo=".$section_tipo."&quality=original");
-
 		}		
 	}
 

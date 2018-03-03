@@ -11,6 +11,14 @@
 
 	$file_name			= $modo;	
 	$html_list 			= $html_edit = '';
+
+
+	#
+	# ADITIONAL_CSS
+		$file_extra_css = DEDALO_EXTRAS_PATH .'/'. DEDALO_ENTITY . '/css/layout_print.css';
+		if (file_exists($file_extra_css)) {
+			css::$ar_url[] = DEDALO_LIB_BASE_URL .'/extras/'. DEDALO_ENTITY . '/css/layout_print.css';
+		}
 	
 
 
@@ -54,19 +62,19 @@
 						#
 						#
 						# PRINT_SEARCH_OPTIONS fix
-							$search_options_session_key = 'section_'.$tipo;
-							if (!isset($_SESSION['dedalo4']['config']['search_options'][$search_options_session_key])) {
-								throw new Exception("Error Processing Request. current_section_search_options not found", 1);
-							}
+							#$search_options_session_key = 'section_'.$tipo;
+							#if (!isset($_SESSION['dedalo4']['config']['search_options'][$search_options_session_key])) {
+							#	throw new Exception("Error Processing Request. current_section_search_options not found", 1);
+							#}
 							# Change some specific print options
-							$print_search_options = clone($_SESSION['dedalo4']['config']['search_options'][$search_options_session_key]);
-								$print_search_options->limit = 1;
-								$print_search_options->modo  = 'list';
+							#$print_search_options = clone($_SESSION['dedalo4']['config']['search_options'][$search_options_session_key]);
+							#$print_search_options->limit = 1;
+							#	$print_search_options->modo  = 'list';
 								# layout map full with all section components
-								$ar_components = (array)section::get_ar_children_tipo_by_modelo_name_in_section($tipo, 'component_', $from_cache=true, $resolve_virtual=false);	 #dump($ar_recursive_childrens, ' ar_recursive_childrens');
-								$print_search_options->layout_map = array($tipo => $ar_components);
+							#	$ar_components = (array)section::get_ar_children_tipo_by_modelo_name_in_section($tipo, 'component_', $from_cache=true, $resolve_virtual=false);	 #dump($ar_recursive_childrens, ' ar_recursive_childrens');
+							#	$print_search_options->layout_map = array($tipo => $ar_components);
 							
-								$_SESSION['dedalo4']['config']['ar_templates_search_options'][$tipo] = (object)$print_search_options;
+							#	$_SESSION['dedalo4']['config']['ar_templates_search_options'][$tipo] = (object)$print_search_options;
 									#dump($_SESSION['dedalo4']['config']['ar_templates_search_options'][$tipo],"current_search_options $tipo");
 									#dump($print_search_options,"print_search_options $tipo");
 
@@ -100,7 +108,7 @@
 						js::$ar_url[] = DEDALO_LIB_BASE_URL."/tools/".$tool_name."/js/".$tool_name.".js";
 						js::$ar_url[] = DEDALO_LIB_BASE_URL."/tools/tool_layout_print/js/tool_layout_edit.js";						
 							
-	
+						
 						# Is set in search::get_records_data. NOTE: Only contain records in last visualized list page
 						if (!isset($_SESSION['dedalo4']['config']['ar_templates_search_options'][$tipo])) {
 							echo "Please select template"; return ;
@@ -108,9 +116,28 @@
 						$search_options = clone($_SESSION['dedalo4']['config']['ar_templates_search_options'][$tipo]);
 						$ar_records		= search::get_records_data($search_options);
 							#dump($ar_records, ' ar_records');
+							$tool_layout_print_records = reset($ar_records->result);							
 
-						#$tool_layout_print_records = $_SESSION['dedalo4']['config']['ar_templates_search_options'][$tipo]->last_ar_id;
-						$tool_layout_print_records = reset($ar_records->result);
+								/*# SEARCH_OPTIONS
+									$search_options_id    = $tipo; // section tipo like oh1
+									$saved_search_options = section_records::get_search_options($search_options_id);
+								
+								# SEARCH_QUERY_OBJECT
+									# Use saved search options (deep cloned to avoid propagation of changes !)
+									$search_options 	 = unserialize(serialize($saved_search_options));
+									$search_query_object = $search_options->search_query_object;
+										#$search_query_object->limit   = 0;  // unset limit
+										#$search_query_object->offset  = 0;  // unset offset
+										#$search_query_object->order   = false;  // unset order
+										#$search_query_object->select  = []; // unset select
+								
+								# SEARCH
+									$search_develoment2  = new search_development2($search_query_object);
+									$rows_data 		 	 = $search_develoment2->search();
+										dump($rows_data, ' rows_data ++ '.to_string());
+						
+								$tool_layout_print_records = $rows_data->ar_records;*/
+
 						if (empty($tool_layout_print_records)) {
 							$msg = "<div class=\"error\">Sorry. No records found</div>";
 							print dd_error::wrap_error($msg);

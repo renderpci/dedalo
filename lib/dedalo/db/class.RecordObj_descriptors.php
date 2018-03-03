@@ -29,7 +29,7 @@ class RecordObj_descriptors extends RecordObj_matrix {
 
 		if(SHOW_DEBUG===true) {
 			if (!empty($parent) && strpos($parent, 'dd')===0) {
-				throw new Exception("Error Processing Request. parent wrong tipo '$parent' use 'RecordObj_descriptors_dd' to manage this term", 1);
+				throw new Exception("Error Processing Request. parent wrong tipo '$parent' use 'RecordObj_descriptors_dd' to manage this term prefix:dd", 1);
 			}
 		}
 

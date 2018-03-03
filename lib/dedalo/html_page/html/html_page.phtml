@@ -20,7 +20,7 @@ header('Content-Type: text/html');
 <link rel="shortcut icon" href="<?php echo DEDALO_ROOT_WEB ?>/favicon.ico" />
 <?php echo trim($css_link_code); ?>
 <script>
-var DEDALO_LIB_BASE_URL='<?php echo DEDALO_LIB_BASE_URL ?>',DEDALO_ROOT_WEB='<?php echo DEDALO_ROOT_WEB ?>',DEBUG=SHOW_DEBUG=<?php var_export(SHOW_DEBUG); ?>,SHOW_DEVELOPER=<?php var_export(SHOW_DEVELOPER);?>;
+var DEDALO_LIB_BASE_URL='<?php echo DEDALO_LIB_BASE_URL ?>',DEDALO_ROOT_WEB='<?php echo DEDALO_ROOT_WEB ?>',DEBUG=SHOW_DEBUG=<?php var_export(SHOW_DEBUG); ?>,SHOW_DEVELOPER=<?php var_export(SHOW_DEVELOPER); ?>,DEDALO_SECTION_ID_TEMP='<?php echo DEDALO_SECTION_ID_TEMP ?>',USE_CDN='<?php echo USE_CDN ?>';
 var page_globals = {
 	dedalo_version:'<?php echo DEDALO_VERSION ?>',
 	dedalo_application_lang:'<?php echo DEDALO_APPLICATION_LANG ?>',
@@ -34,23 +34,23 @@ var page_globals = {
 	context_name:'<?php if(isset($context_name)) echo $context_name ?>',
 	top_tipo:'<?php echo TOP_TIPO; #if(isset($top_tipo)) echo $top_tipo ?>',
 	top_id:'<?php echo TOP_ID;	#if(isset($top_id)) echo $top_id ?>',
-	tag_id:'<?php echo isset($_REQUEST["tag_id"]) ? $_REQUEST["tag_id"] : "" ?>',
+	tag_id:'<?php echo isset($_REQUEST["tag_id"]) ? safe_xss($_REQUEST["tag_id"]) : "" ?>',
 	user_id:'<?php if(isset($user_id)) echo $user_id ?>',
 	username:'<?php if(isset($username)) echo $username ?>',
 	full_username:'<?php if(isset($full_username)) echo $full_username ?>',
 	is_global_admin:<?php var_export($is_global_admin); ?>,
 	components_to_refresh:[],
 <?php if (isset($_REQUEST["portal_tipo"])) { ?>
-	portal_tipo:'<?php echo $_REQUEST["portal_tipo"] ?>',
+	portal_tipo:'<?php echo safe_xss($_REQUEST["portal_tipo"]) ?>',
 <?php } ?>
 <?php if (isset($_REQUEST["portal_parent"])) { ?>
-	portal_parent:'<?php echo $_REQUEST["portal_parent"] ?>',
+	portal_parent:'<?php echo safe_xss($_REQUEST["portal_parent"]) ?>',
 <?php } ?>
 <?php if (isset($_REQUEST["portal_section_tipo"])) { ?>
-	portal_section_tipo:'<?php echo $_REQUEST["portal_section_tipo"] ?>',
+	portal_section_tipo:'<?php echo safe_xss($_REQUEST["portal_section_tipo"]) ?>',
 <?php } ?>
 <?php #if (isset($_REQUEST["id_path"])) {   ?>
-	id_path:'<?php echo isset($_REQUEST["id_path"]) ? $_REQUEST["id_path"]:'' ?>',
+	id_path:'<?php echo isset($_REQUEST["id_path"]) ? safe_xss($_REQUEST["id_path"]):'' ?>',
 <?php #} ?>
 <?php if (defined('DEDALO_PROTECT_MEDIA_FILES') && DEDALO_PROTECT_MEDIA_FILES===true) {   ?>
 	dedalo_protect_media_files:1,
@@ -73,7 +73,7 @@ if(page_globals.section_tipo.length<3) {
 <?php echo trim($js_link_code) ?>
 </head>
 <body>
-<div id="html_page_wrap" class="<?php echo "html_page_wrap_{$modo} html_page_wrap_{$tipo}"; ?>">
+<div id="html_page_wrap" class="<?php echo "html_page_wrap_{$modo} html_page_wrap_{$tipo}"; if(SHOW_DEBUG===true && DEVELOPMENT_SERVER===true) {echo " daleks";}?>">
 	<?php
 
 

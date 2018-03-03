@@ -28,7 +28,7 @@
 					break;
 		
 		case 'page':
-					$total_records = (int)$this->search_options->full_count;
+					$total_records = (int)$this->search_options->search_query_object->full_count;
 
 					#$this->propagate_data();	
 					break;
@@ -37,14 +37,10 @@
 		
 
 
-		
-
-
 
 	# INCLUDE FILE HTML
 	$page_html	= DEDALO_LIB_BASE_PATH . '/tools/' . get_class($this).  '/html/' . get_class($this) . '_' . $file_name .'.phtml';
 	if( !include($page_html) ) {
 		echo "<div class=\"error\">Invalid mode $this->modo</div>";
-	}
-	
+	}	
 ?>

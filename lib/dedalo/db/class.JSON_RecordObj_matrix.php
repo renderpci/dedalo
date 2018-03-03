@@ -1,7 +1,9 @@
 <?php
 include(DEDALO_LIB_BASE_PATH . '/db/class.JSON_RecordDataBoundObject.php');
-
-
+/**
+* JSON_RECORDOBJ_MATRIX
+*
+*/
 class JSON_RecordObj_matrix extends JSON_RecordDataBoundObject {
 	
 	# MATRIX VARS
@@ -62,8 +64,9 @@ class JSON_RecordObj_matrix extends JSON_RecordDataBoundObject {
 		}else{
 			parent::__construct(NULL);
 		}
-	}	
-	
+	}//end __construct
+
+
 		
 	# define current table (tr for this obj)
 	protected function defineTableName() {
@@ -114,7 +117,8 @@ class JSON_RecordObj_matrix extends JSON_RecordDataBoundObject {
 		}
 		
 		return true;
-	}
+	}//end test_can_save
+
 
 
 	/**
@@ -126,7 +130,8 @@ class JSON_RecordObj_matrix extends JSON_RecordDataBoundObject {
 		if( $this->test_can_save()!==true ) {
 			$msg = " Error (test_can_save). No matrix data is saved! ";
 			trigger_error($msg, E_USER_ERROR);
-			debug_log(__METHOD__." $msg ".to_string(), logger::DEBUG);
+			debug_log(__METHOD__." $msg - matrix_table: $this->matrix_table - $this->section_tipo - $this->section_id - save_options: ".to_string($save_options), logger::ERROR);
+			
 			return $msg;
 		}
 		
@@ -136,13 +141,14 @@ class JSON_RecordObj_matrix extends JSON_RecordDataBoundObject {
 
 		# TIME MACHINE COPY SAVE (Return assigned id on save)
 		# Every record saved in matrix is saved as copy in 'matrix_time_machine' except logger and TM recover section
-		if(RecordObj_time_machine::$save_time_machine_version===true && $this->matrix_table!='matrix_activity')	{
+		if(RecordObj_time_machine::$save_time_machine_version===true && $this->matrix_table!=='matrix_activity')	{
 			# Exec time machine save and set returned id
 			$this->time_machine_last_id = $this->save_time_machine( $save_options );
 		}
 
+
 		return $id;
-	}
+	}//end Save
 
 
 
@@ -207,13 +213,11 @@ class JSON_RecordObj_matrix extends JSON_RecordDataBoundObject {
 		#die();
 
 		# Save obj	
-		$RecordObj_time_machine->Save( $save_options );	
+		$RecordObj_time_machine->Save( $save_options );
+
 		
 		return $RecordObj_time_machine->get_ID();
-	}
-		
-
-
+	}//end save_time_machine
 	
 	
 }

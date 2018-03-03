@@ -81,7 +81,7 @@ function remove_related($json_data) {
 		$response->result 	= false;
 		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
 	
-	$vars = array('tipo','parent','section_tipo','target_section_tipo','target_section_id');
+	$vars = array('tipo','parent','section_tipo','locator_to_delete');
 		foreach($vars as $name) {
 			$$name = common::setVarData($name, $json_data);
 			if (empty($$name)) {
@@ -99,14 +99,9 @@ function remove_related($json_data) {
 													  				$modo,
 													  				$lang,
 													  				$section_tipo);
-	$locator = new locator();
-		$locator->set_section_tipo($target_section_tipo);
-		$locator->set_section_id($target_section_id);
-		$locator->set_type($component_relation_related->get_relation_type());
-		$locator->set_from_component_tipo($tipo);
 
 	# Remove
-	$removed = (bool)$component_relation_related->remove_related( $locator );
+	$removed = (bool)$component_relation_related->remove_related( $locator_to_delete );
 	if ($removed===true) {
 		$component_relation_related->Save();
 
@@ -128,6 +123,76 @@ function remove_related($json_data) {
 
 	return (object)$response;
 }//end remove_related
+
+
+
+/**
+* AUTOCOMPLETE
+* Get list of mathed DB results for current string by ajax call
+* @param object $json_data
+*/
+function autocomplete($json_data) {
+	global $start_time;
+
+	# Write session to unlock session file
+	session_write_close();
+
+	$response = new stdClass();
+		$response->result 	= false;
+		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
+
+	$vars = array('tipo','section_tipo','top_tipo','divisor','search_query_object');
+		foreach($vars as $name) {
+			$$name = common::setVarData($name, $json_data);
+			# DATA VERIFY
+			#if ($name==='filter_sections') continue; # Skip non mandatory
+			if (empty($$name)) {
+				$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty '.$name.' (is mandatory)';
+				return $response;
+			}
+		}
+	
+	
+	if (!$search_query_object = json_decode($search_query_object)) {
+		$response->msg = "Trigger Error. Invalid search_query_object";
+		return $response;
+	}
+
+	if(SHOW_DEBUG===true) {
+		#debug_log(__METHOD__." search_query_object ".json_encode($search_query_object,  JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT), logger::DEBUG);
+	}
+
+	$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+
+	$component_autocomplete = component_common::get_instance($modelo_name,
+															 $tipo,
+															 null,
+															 'list',
+															 DEDALO_DATA_NOLAN,
+															 $section_tipo);
+
+	$result = (array)$component_autocomplete->autocomplete_search(
+															$search_query_object,														
+															$divisor);
+	
+	$response->result 	= $result;
+	$response->msg 		= 'Ok. Request done ['.__FUNCTION__.']';
+
+	#error_log(json_encode($result));
+
+	# Debug
+	if(SHOW_DEBUG===true) {
+		$debug = new stdClass();
+			$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
+			foreach($vars as $name) {
+				$debug->{$name} = $$name;
+			}
+
+		$response->debug = $debug;
+	}
+	
+	return (object)$response;
+}//end function autocomplete')
 
 
 

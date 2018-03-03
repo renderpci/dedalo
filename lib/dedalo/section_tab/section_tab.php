@@ -15,6 +15,9 @@
 	$identificador_unico 	= 'tab_' .$id. '_' .common::get_identificador_unico();
 	
 	$file_name				= $modo ;
+
+	# Add section group too
+	css::$ar_url[] = DEDALO_LIB_BASE_URL.'/section_group/css/section_group.css';
 	
 	# LOAD PAGE
 	

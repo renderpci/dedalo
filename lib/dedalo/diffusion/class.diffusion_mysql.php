@@ -218,6 +218,10 @@ class diffusion_mysql extends diffusion_sql  {
 
 			# Remove last ','
 			$sql_query_line = substr($sql_query_line, 0,-1);
+
+			#if(SHOW_DEBUG===true) {
+			#	debug_log(__METHOD__." sql_query_line ".to_string($sql_query_line), logger::ERROR);;
+			#}
 		
 			#
 			# EXEC SINGLE QUERY TO DATABASE
@@ -422,11 +426,12 @@ class diffusion_mysql extends diffusion_sql  {
 			$response->msg 	  = array();
 
 		$options = new stdClass();
-			$options->record_data 		= null;
-			$options->typology 	  		= null;
-			$options->delete_previous 	= true;
-			$options->section_tipo 		= null;
-			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}				
+			$options->record_data 			 = null;
+			$options->typology 	  			 = null;
+			$options->delete_previous 		 = true;
+			$options->section_tipo 			 = null;
+			$options->diffusion_element_tipo = null;
+			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
 	
 		if(SHOW_DEBUG===true) $start_time=microtime(1);
@@ -457,7 +462,27 @@ class diffusion_mysql extends diffusion_sql  {
 				#		$ts_options->table_name = $table_name;
 				#	$create_table_ar_fields = self::build_thesaurus_columns( $ts_options );
 				#}else{
-					$create_table_ar_fields = self::build_table_columns( $diffusion_section, $database_name);
+
+					$section_tipo = $options->section_tipo;
+
+					$diffusion_element_tables_map = diffusion_sql::get_diffusion_element_tables_map( $options->diffusion_element_tipo );
+						#dump($diffusion_element_tables_map, ' diffusion_element_tables_map ++ '.to_string());					
+
+					$table_map			= $diffusion_element_tables_map->{$section_tipo};
+					#$table_name   		= $table_map->name;
+					#$table_tipo 		= $table_map->table;
+					#$table_propiedades = $table_map->propiedades;
+					#$database_name  	= $table_map->database_name;
+					#$database_tipo  	= $table_map->database_tipo;
+					$table_from_alias 	= $table_map->from_alias;
+
+					$table_columns_options = new stdClass();
+						$table_columns_options->table_tipo 	  	 = $diffusion_section;
+						$table_columns_options->table_name 	  	 = $table_name;
+						$table_columns_options->database_name 	 = $database_name;
+						$table_columns_options->table_from_alias = $table_from_alias;
+
+					$create_table_ar_fields = self::build_table_columns( $table_columns_options ); // $diffusion_section, $database_name
 				#}
 				
 					#dump($create_table_ar_fields['ar_fields'], ' create_table_ar_fields ++ '.to_string());die();			
@@ -502,12 +527,14 @@ class diffusion_mysql extends diffusion_sql  {
 
 					$field_value = diffusion_mysql::conform_field_value($field_value);
 					
-					$ar_field_name[]  = $field_name;
+					$ar_field_name[]  = '`'.$field_name.'`';
 					$ar_field_value[] = $field_value;
 				}
 			
 				# Insert mysql record
-				$strQuery = "INSERT INTO `$database_name`.`$table_name` VALUES (NUll,".implode(',', $ar_field_value).");";
+				#$strQuery = "INSERT INTO `$database_name`.`$table_name` VALUES (NULL,".implode(',', $ar_field_value).");";
+				$strQuery = "INSERT INTO `$database_name`.`$table_name` (".implode(',', $ar_field_name).") VALUES (".implode(',', $ar_field_value).");";
+
 				#$result   = DBi::_getConnection_mysql()->query( $strQuery );
 				$result = self::exec_mysql_query( $strQuery, $table_name, $database_name );
 					if (!$result) {						
@@ -520,8 +547,12 @@ class diffusion_mysql extends diffusion_sql  {
 					$response->msg[] = "Inserted record section_id:$section_id, table:$table_name, lang:$lang";
 			}//end foreach ($ar_fields as $lang => $fields) iterate langs
 
+			debug_log(__METHOD__." ++ strQuery ".to_string($strQuery), logger::DEBUG);
+
 		}//end foreach ($ar_section_id as $section_id) 
 		#dump($result, ' result ++ '.to_string());
+
+
 
 
 		if(SHOW_DEBUG===true) {
@@ -544,14 +575,22 @@ class diffusion_mysql extends diffusion_sql  {
 	public static function conform_field_value($field_value) {
 
 		switch (true) {
+			case ($field_value==='[]'):
+				$field_value = "NULL";
+				break;
 			case (is_array($field_value) || is_object($field_value)):
-				# TYPE ARRAY/OBJECT : Convert to json
-				$field_value = "'".json_encode($field_value)."'";
+				if (empty($field_value)) {
+					$field_value = "NULL";
+				}else{
+					# TYPE ARRAY/OBJECT : Convert to json
+					$field_value = "'".json_encode($field_value)."'";
+				}				
 				#$sql_query_line .= "'$field_value',";
 				break;
-			case is_null($field_value):
+			case is_null($field_value):			
 				# TYPE NULL
 				$field_value = "NULL";
+				break;
 			case is_bool($field_value):
 				# TYPE BOOL
 				$field_value = (int)$field_value;
@@ -763,15 +802,28 @@ class diffusion_mysql extends diffusion_sql  {
 
 		if ($custom!==false) {
 			// Custom is a object
-			$field_name  = $custom->field_name;
-			$field_value = $custom->field_value;
-			$strQuery="DELETE FROM `$database_name`.`$table_name` WHERE `{$field_name}` = '{$field_value}' ";
+			$field_name  = (array)$custom->field_name; 	// arrayze to allow multiple
+			$field_value = (array)$custom->field_value; // arrayze to allow multiple
+			$ar_query = array();
+			foreach ((array)$field_name as $key => $current_field_name) {
+				$current_field_value = $field_value[$key];
+				/*
+				if (is_integer($current_field_value)) {
+					$ar_query[] = "`{$current_field_name}` = {$current_field_value}";
+				}else{
+					$ar_query[] = "`{$current_field_name}` = '{$current_field_value}'";
+				}*/
+				$ar_query[] = "`{$current_field_name}` = '{$current_field_value}'";	
+			}
+			$filter_query = implode(" AND ", $ar_query);
+			#$strQuery="DELETE FROM `$database_name`.`$table_name` WHERE `{$field_name}` = '{$field_value}' ";
+			$strQuery="DELETE FROM `$database_name`.`$table_name` WHERE {$filter_query} ";
+			
 		}else{
 			// Generic delete way
 			$strQuery="DELETE FROM `$database_name`.`$table_name` WHERE `section_id` = '$section_id' OR `section_id` = '{$section_tipo}_{$section_id}' ";
 		}
 	
-		#$result  = DBi::_getConnection_mysql()->query( $strQuery );
 		$result  = self::exec_mysql_query( $strQuery, $table_name, $database_name );
 			if (!$result) {
 				if(SHOW_DEBUG===true) {

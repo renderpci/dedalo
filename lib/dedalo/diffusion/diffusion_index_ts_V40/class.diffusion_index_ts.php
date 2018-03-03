@@ -264,7 +264,7 @@ class diffusion_index_ts extends diffusion {
 	* @return 
 	*/
 	public function get_list_data__WORKING_HERE( $section_tipo, $section_tipo_locators ) {
-		
+		/*
 		$search_options_session_key = 'ts_list_'.$section_tipo;
 
 		if (isset($_SESSION['dedalo4']['config']['search_options'][$search_options_session_key])) {						
@@ -301,7 +301,7 @@ class diffusion_index_ts extends diffusion {
 		}//end if (!empty($_SESSION['dedalo4']['config']['search_options'][$search_options_session_key]))		
 
 		$rows_data = search::get_records_data($options);
-
+		*/
 	}#end get_list_data
 
 

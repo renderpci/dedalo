@@ -104,9 +104,12 @@
 				break;
 		
 		case 'search':
+				# dato is injected by trigger search wen is needed
+				$dato = isset($this->dato) ? $this->dato : [''];
+				
 				# Operators
-				$ar_comparison_operators = $this->build_search_comparison_operators();
-				$ar_logical_operators 	 = $this->build_search_logical_operators();
+				#$ar_comparison_operators = $this->build_search_comparison_operators();
+				#$ar_logical_operators 	 = $this->build_search_logical_operators();
 				
 				# Search input name (var search_input_name is injected in search -> records_search_list.phtml)
 				# and recovered in component_common->get_search_input_name()

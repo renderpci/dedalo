@@ -2,9 +2,12 @@
 
 	# HTML VIEW
 	
-
-	#print "\n<!-- TEXT AREA [tipo:$tipo id_matrix:$id] -->";
-	print "<div class=\"wrap_component css_wrap_html_text css_wrap_html_text_{$modo}\" >";
+	print "<div class=\"wrap_component css_wrap_html_text css_wrap_html_text_{$modo} tooltip_active\" ";
+	print "data-component_name=\"{$component_name}\" ";
+	print "data-modo=\"{$modo}\" ";
+	print "data-dato='".json_encode($dato)."' ";
+	print 'title="'.search_development2::search_options_title( $this->search_operators_info() ).'" ';
+	print ">";
 	
 	# ETIQUETA (LABEL)
 	$html_label = component_common_draw::draw_label($this);

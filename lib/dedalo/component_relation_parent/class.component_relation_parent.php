@@ -7,7 +7,7 @@
 class component_relation_parent extends component_relation_common {
 	
 	# Current component relation_type (used to filter locators in 'relations' container data)
-	public $relation_type = DEDALO_RELATION_TYPE_PARENT_TIPO;
+	public $relation_type = false;	// Not used. DEDALO_RELATION_TYPE_PARENT_TIPO;
 
 	# test_equal_properties is used to verify duplicates when add locators
 	public $test_equal_properties = array('section_tipo','section_id','type','from_component_tipo');
@@ -38,6 +38,7 @@ class component_relation_parent extends component_relation_common {
 		}
 	}//end __construct
 	*/
+
 
 
 	# Override component_common method

@@ -4,12 +4,16 @@
 */
 
 
-class component_select_lang extends component_reference_common {
+class component_select_lang extends component_relation_common {
 	
 
 	# Overwrite __construct var lang passed in this component
 	protected $lang = DEDALO_DATA_NOLAN;
 
+	protected $relation_type = DEDALO_RELATION_TYPE_LINK;
+
+	# test_equal_properties is used to verify duplicates when add locators
+	public $test_equal_properties = array('section_tipo','section_id','type','from_component_tipo');
 
 
 	function __construct($tipo=null, $parent=null, $modo='edit', $lang=DEDALO_DATA_NOLAN, $section_tipo=null) {
@@ -48,10 +52,11 @@ class component_select_lang extends component_reference_common {
 
 
 	/**
-	* GET DATO
+	* GET DATO DESACTIVE 24-02-2018
 	* @return array $dato
 	*	$dato is always an array of locators
 	*/
+	/*
 	public function get_dato() {
 		$dato = parent::get_dato();
 
@@ -65,14 +70,15 @@ class component_select_lang extends component_reference_common {
 
 		return (array)$dato;
 	}//end get_dato
-
+	*/
 
 
 	/**
-	* SET_DATO
+	* SET_DATO DESACTIVE 24-02-2018
 	* @param array|string $dato
 	*	When dato is string is because is a json encoded dato
 	*/
+	/*
 	public function set_dato($dato) {
 		if (is_string($dato)) { # Tool Time machine case, dato is string
 			$dato = json_handler::decode($dato);
@@ -85,7 +91,7 @@ class component_select_lang extends component_reference_common {
 
 		parent::set_dato( (array)$dato );		
 	}//end set_dato
-
+	*/
 
 
 	/*
@@ -142,7 +148,7 @@ class component_select_lang extends component_reference_common {
 			foreach ((array)$ar_all_project_select_langs as $lang_code => $lang_name ) {
 				
 				$locator = lang::get_lang_locator_from_code( $lang_code );
-				if (locator::in_array_locator( $locator, (array)$dato, $ar_properties=array('section_tipo','section_id') )) {
+				if (locator::in_array_locator( $locator, (array)$dato, $ar_properties=array('section_id','section_tipo') )) {
 					$valor = $lang_name;
 					break;
 				}
@@ -284,7 +290,22 @@ class component_select_lang extends component_reference_common {
 	* @param string | array $dato_unchanged
 	* @return object $response
 	*/
-	public static function update_dato_version($update_version, $dato_unchanged, $reference_id) {
+	public static function update_dato_version($request_options) {
+
+		$options = new stdClass();
+			$options->update_version 	= null;
+			$options->dato_unchanged 	= null;
+			$options->reference_id 		= null;
+			$options->tipo 				= null;
+			$options->section_id 		= null;
+			$options->section_tipo 		= null;
+			$options->context 			= 'update_component_dato';
+			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
+
+			$update_version = $options->update_version;
+			$dato_unchanged = $options->dato_unchanged;
+			$reference_id 	= $options->reference_id;
+
 
 		$update_version = implode(".", $update_version);
 		#dump($dato_unchanged, ' dato_unchanged ++ -- '.to_string($update_version)); #die();
@@ -356,24 +377,22 @@ class component_select_lang extends component_reference_common {
 	* @return string $list_value
 	*/
 	public static function render_list_value($value, $tipo, $parent, $modo, $lang, $section_tipo, $section_id, $current_locator=null, $caller_component_tipo=null) {
-		
-		return $value;
-		/*
+				
 		$component 	= component_common::get_instance(__CLASS__,
 													 $tipo,
-												 	 $parent,
-												 	 'list',
+													 $parent,
+													 'list',
 													 DEDALO_DATA_NOLAN,
-												 	 $section_tipo);
+													 $section_tipo);
 
 		
 		# Use already query calculated values for speed
-		$ar_records   = (array)json_handler::decode($value);
-		$component->set_dato($ar_records);
+		#$ar_records   = (array)json_handler::decode($value);
+		#$component->set_dato($ar_records);
 		$component->set_identificador_unico($component->get_identificador_unico().'_'.$section_id); // Set unic id for build search_options_session_key used in sessions
 		
 		return  $component->get_valor($lang);
-		*/
+		/**/
 	}#end render_list_value
 
 

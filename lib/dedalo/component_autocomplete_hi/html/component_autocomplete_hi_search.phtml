@@ -1,12 +1,14 @@
 <?php
 
-	# VISUALIZADOR HTML	
-	
+	# VISUALIZADOR HTML		
 		
 	
-	print "<!-- ".__CLASS__." $label -->";
-
-	print "<div class=\"wrap_component css_wrap_autocomplete_hi\" id=\"{$id_wrapper}\">";
+	print "<div class=\"wrap_component css_wrap_autocomplete_hi wrap_autocomplete_hi_search tooltip_active\" id=\"{$id_wrapper}\" ";
+	print "data-component_name=\"{$component_name}\" ";
+	print "data-modo=\"{$modo}\" ";
+	print "data-dato='".json_encode($dato)."' ";
+	print 'title="'.search_development2::search_options_title( $this->search_operators_info() ).'" ';
+	print ">";
 	
 	# ETIQUETA (LABEL)
 	$html_label = component_common_draw::draw_label($this);
@@ -23,23 +25,23 @@
 		case 2	:
 		case 3	:
 				# COMPARISON OPERATORS
-				$html_content .= operator::get_search_comparison_operators_html($tipo,$ar_comparison_operators);
+				#$html_content .= operator::get_search_comparison_operators_html($tipo,$ar_comparison_operators);
 				
 				
 				#
 				# ROW
-				$html_content .= "\n <ul class=\"css_autocomplete_hi_valor in_search_mode\">";
+				$html_content .= "<ul class=\"css_autocomplete_hi_valor in_search_mode\">";
 				foreach ($ar_valor as $current_value => $value) {
 
 					$html_content .= "<li>";
 
 					# BTN DELETE
-					$html_content .= "\n <div class=\"icon_bs link css_autocomplete_hi_button_delete\"
-					data-tipo=\"{$tipo}\"
-					data-current_value='$current_value'
-					data-role=\"autocomplete_hi_button_delete\"
-					title=\"$label $parent\"
-					onclick=\"component_autocomplete_hi.delete(this)\"></div>";
+					$html_content .= "<div class=\"icon_bs link css_autocomplete_hi_button_delete\" ";
+					$html_content .= "data-tipo=\"{$tipo}\" ";
+					$html_content .= "data-current_value='$current_value' ";
+					$html_content .= "data-role=\"autocomplete_hi_button_delete\" ";
+					$html_content .= "title=\"$label $parent\" ";
+					$html_content .= "onclick=\"component_autocomplete_hi.delete(this)\"></div>";
 
 					# VALUE . STRING RESOLVED TO SHOW
 					$html_content .= $value;
@@ -59,12 +61,12 @@
 					case 'tree':
 
 						# BTN NEW ELEMENT
-						$html_content .= "<div class=\"icon_bs link new_autocomplete_hi in_search_mode\"
-						data-id_wrapper=\"$id_wrapper\"
-						data-hierarchy_types='{$hierarchy_types_json}'
-						data-hierarchy_sections='{$hierarchy_sections_json}'
-						data-component_name=\"{$component_name}\"
-						onclick=\"component_common.open_ts_window(this)\"></div>";
+						$html_content .= "<div class=\"icon_bs link new_autocomplete_hi in_search_mode\" ";
+						$html_content .= "data-id_wrapper=\"$id_wrapper\" ";
+						$html_content .= "data-hierarchy_types='{$hierarchy_types_json}' ";
+						$html_content .= "data-hierarchy_sections='{$hierarchy_sections_json}' ";
+						$html_content .= "data-component_name=\"{$component_name}\" ";
+						$html_content .= "onclick=\"component_common.open_ts_window(this)\"></div>";
 						break;
 					
 					case 'autocomplete':
@@ -90,7 +92,7 @@
 						# OPTIONS
 						if ($ar_filter_options!==false) {
 						
-							$html_content .= "<div class=\"icon_bs toponymy_list_button_options in_search_mode edit_hidden\"></div>";
+							$html_content .= "<div class=\"icon_bs toponymy_list_button_options in_search_mode edit_hidden\" onclick=\"component_autocomplete_hi.toggle_toponymy_list(this)\"></div>";
 
 							$cookie_name = 'toponymy_list_'.$section_tipo .'_'. $tipo;
 							$html_content .= "<ul class=\"toponymy_list text_unselectable\">";
@@ -122,7 +124,7 @@
 
 				#
 				# TREE RESOLUTION STATS
-				#$html_content .= "\n <div id=\"autocomplete_hi_tree_stats_{$tipo}\" class=\"css_autocomplete_hi_tree_stats\"> Calculating.. </div>";
+				#$html_content .= "<div id=\"autocomplete_hi_tree_stats_{$tipo}\" class=\"css_autocomplete_hi_tree_stats\"> Calculating.. </div>";
 
 				# INPUT DATA HIDDEN
 				$html_content .= "<input type=\"text\" name=\"{$search_input_name}\" class=\"css_autocomplete_hi_dato_hidden\" style=\"width:300px;\" ";
@@ -138,13 +140,13 @@
 				$html_content .= "/>";
 
 				if(SHOW_DEBUG===true) {
-					#$html_content .= "\n <span class=\"css_span_debugger\" id=\"debugger_{$parent}\" >{$debugger}</span>";
+					#$html_content .= "<span class=\"css_span_debugger\" id=\"debugger_{$parent}\" >{$debugger}</span>";
 					#$html_content .= "<div class=\"debug_info notes\">". json_encode($propiedades) ."</div>";
 				}
 				
 
 				# LOGICAL OPERATORS
-				$html_content .= operator::get_search_logical_operators_html($tipo,$ar_logical_operators);
+				#$html_content .= operator::get_search_logical_operators_html($tipo,$ar_logical_operators);
 
 
 				if(SHOW_DEBUG===true) {

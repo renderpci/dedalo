@@ -26,32 +26,32 @@
 					$row_number=1;
 					foreach ((array)$dato as $key => $current_locator) {
 
-
 						$current_section_id 	= $current_locator->section_id;
 						$current_section_tipo 	= $current_locator->section_tipo;
 						$current_tag_id 		= isset($current_locator->tag_id) ? $current_locator->tag_id : null;
 						$current_component_tipo = isset($current_locator->component_tipo) ? $current_locator->component_tipo : null;
 						
-						$current_row = $this->row_in_result( $current_locator, $rows_data->result );
+						$current_row = $this->row_in_result( $current_locator, $rows_data->ar_records );
 
-
-						/**/
+						
 						#dump($this->html_options, '$this->html_options->skip_records ++ '.to_string());
 						if (isset($this->html_options->skip_records) && $row_number <= $this->html_options->skip_records) {
 							$row_number++;
 							continue ;
 						}
 						
+						
 						if ($this->html_options->rows_limit && $row_number > $this->html_options->rows_limit) {
 
 							if (!isset($show_more) && !empty($portal_parent)) {
+								/*
 								$show_more ='';
-								$show_more .= "<a href=\"javascript:void(0);\" class=\"show_more_link\"
-								data-tipo=\"$tipo\"
-								data-parent=\"$portal_parent\"
-								data-section_tipo=\"$section_tipo\"
-								data-target=\"show_more_{$identificador_unico}\"
-								onclick=\"component_portal.show_more(this)\">";
+								$show_more .= "<a href=\"javascript:void(0);\" class=\"show_more_link\" ";
+								$show_more .= "data-tipo=\"$tipo\" ";
+								$show_more .= "data-parent=\"$portal_parent\" ";
+								$show_more .= "data-section_tipo=\"$section_tipo\" ";
+								$show_more .= "data-target=\"show_more_{$identificador_unico}\" ";
+								$show_more .= "onclick=\"component_portal.show_more(this)\">";
 								$show_more .= label::get_label('mostrar') .' + ';
 								if(SHOW_DEBUG) {
 									 $show_more .= " $portal_parent";
@@ -59,7 +59,7 @@
 								$show_more .= "</a>";
 								$show_more .= "<div id=\"show_more_{$identificador_unico}\"></div>";
 
-								$table .= $show_more;
+								$table .= $show_more;*/
 								continue;
 							}
 							
@@ -86,7 +86,7 @@
 								
 
 								/**/
-								$column_value = isset($current_row[$column_tipo]) ? $current_row[$column_tipo] : '';
+								$column_value = isset($current_row->$column_tipo) ? $current_row->$column_tipo : '';
 									#dump($column_value, ' column_value ++ '.to_string($rows_data->strQuery));
 								#echo $column_value;
 								$value = (string)$modelo_name::render_list_value($column_value, // value string from db
@@ -97,8 +97,7 @@
 																				 $target_section_tipo, // current section tipo
 																				 null,
 																				 $tipo
-																				);		
-
+																				);
 								
 								# DIV COLUMN	
 								# aditional td css selectors

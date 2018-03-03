@@ -21,7 +21,6 @@
 	switch($modo) {
 		
 		case 'button_inline':
-
 					break;
 
 		case 'button':
@@ -30,11 +29,11 @@
 						#dump($component_ar_langs,"component_ar_langs");
 
 					if(empty($component_ar_langs)) {
-						echo "";
-						return NULL;
+						echo "<div class=\"warning\">empty source</div>";
+						return null;
 					}
-					if ($traducible=='no') {
-						return NULL;
+					if ($traducible==='no') {
+						return null;
 					}				
 					break;
 

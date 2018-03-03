@@ -195,8 +195,10 @@ class diffusion_section_stats extends diffusion {
 		$ar_diffusion_map = $this->get_ar_diffusion_map_section_stats( $options->section_tipo );
 			#dump($ar_diffusion_map,'$ar_diffusion_map '); die();
 
-		$this->diffusion_map_object = new stdClass();		
+		$this->diffusion_map_object = new stdClass();
 
+
+		/*
 		#SEARCH FROM USER SELECTION
 		$search_options_session_key = 'section_'.$options->section_tipo;
 
@@ -212,8 +214,14 @@ class diffusion_section_stats extends diffusion {
 			$options_search_from_user->layout_map					= array();
 
 			#dump($options_search_from_user,'$options_search_from_user'); die();
-		}
+		}*/
 
+		// Allways new search options (21-2-2018)
+		$options_search_from_user = new stdClass();
+			$options_search_from_user->section_tipo 				= $options->section_tipo;
+			$options_search_from_user->search_options_session_key 	= 'current_edit';
+			$options_search_from_user->layout_map					= array();
+			$options_search_from_user->modo 						= 'edit';
 
 		# ITERATE ALL SECTIONS (included activity)
 		foreach ($ar_diffusion_map as $stats_tipo => $current_obj) {
@@ -270,17 +278,19 @@ class diffusion_section_stats extends diffusion {
 						$current_lang 	= ($traducible!=='si') ? DEDALO_DATA_NOLAN : DEDALO_DATA_LANG;
 							#dump($model_name, ' $model_name ++ '.to_string($current_lang)); continue;
 						
+						
 						#
 						# PORTALES
 						# Case portals change sql query and current column tipo
 						if (isset($current_obj->propiedades->stats_look_at)) {
 							#dump($current_obj->propiedades->stats_look_at);
 
-							$options_search_portal = clone($options_search_sesion);
+							#$options_search_portal = clone($options_search_sesion);
+							$options_search_portal = clone($options_search_from_user);
 							
-							$options_search_portal->layout_map 	= array($current_column_tipo);
-							$options_search_portal->limit		= false;
-							$options_search_portal->offset		= false;
+							$options_search_portal->layout_map 					= array($current_column_tipo);
+							$options_search_portal->limit						= false;
+							$options_search_portal->offset						= false;
 							$options_search_portal->search_options_session_key 	= 'current_edit';
 							$options_search_portal->modo 						= 'edit';
 
@@ -348,13 +358,22 @@ class diffusion_section_stats extends diffusion {
 						#
 						# COLUMNS
 						if ($i<1) {
-							$sql_columns .= "\n COUNT (datos#>>'{components, $current_column_tipo, dato, $current_lang $valor_arguments}') AS count,";
+							switch (true) {
+								case ($current_column_tipo==='dd543') :
+									$sql_columns .= "\n COUNT (datos#>>'{relations}') AS count,";
+									break;
+								default:
+									$sql_columns .= "\n COUNT (datos#>>'{components, $current_column_tipo, dato, $current_lang $valor_arguments}') AS count,";
+							}
 						}
+						
 						switch (true) {
+							case ($current_column_tipo==='dd543') :
+								$sql_columns .= "\n datos#>>'{relations}' AS $current_column_tipo";	
+								break;
 							case ($current_component_tipo==='dd1074') : # 'When' column (activity time is grouped by hour like '2014-10-23 21:56:49' => '21')
 								$sql_columns .= "\n substr(datos#>>'{components, $current_column_tipo, dato, $current_lang}', 12, 2) AS $current_column_tipo";	
-								break;
-							
+								break;							
 							default:
 								$sql_columns .= "\n datos#>>'{components, $current_column_tipo, dato, $current_lang $valor_arguments}' AS $current_column_tipo";	
 						}											
@@ -416,10 +435,11 @@ class diffusion_section_stats extends diffusion {
 						#dump($options_search_from_user,'$options_search_from_user');die();
 					$section_rows 	= search::get_records_data($options_search_from_user);
 						#dump($section_rows,'$section_rows');
-					
+
+
 					$result	= $section_rows->result; 
 					#dump($result,"result");
-					
+			
 
 					$sql_time = round(microtime(1)-$start_time,3);
 					
@@ -489,6 +509,7 @@ class diffusion_section_stats extends diffusion {
 						$js_obj->data 		= $this->washer($ar_stats, $current_component_tipo, $current_obj->propiedades);
 					$this->js_ar_obj[] = $js_obj;
 
+
 					# DIFFUSION_MAP_OBJECT					
 					$this->diffusion_map_object = new stdClass();
 					$this->diffusion_map_object->$section_tipo = new stdClass();
@@ -514,6 +535,7 @@ class diffusion_section_stats extends diffusion {
 			echo "<span style=\"float:left\">Time To Generate stats ".round(microtime(1)-$start_time,3)."</span>"; # <br>".$section_rows->strQuery;
 			#dump( $this->diffusion_map_object, 'var', array());;
 			#dump($section_rows->strQuery, '$section_rows->strQuery');
+			#dump($this->js_ar_obj, '$this->js_ar_obj ++ '.to_string());
 		}
 		
 		return $this->js_ar_obj;
@@ -754,11 +776,11 @@ class diffusion_section_stats extends diffusion {
 							#dump($key, ' key ++ modelo_name: '.to_string($modelo_name));						
 							$key_json = json_decode($key); 
 							if ($key_json && is_array($key_json)) {
-								foreach ($key_json as $current_locator) {															
+								foreach ($key_json as $current_locator) {
 								
 									$c_terminoID = component_autocomplete_ts::get_terminoID_by_locator( $current_locator );
 									#dump($c_terminoID, ' c_terminoID ++ '.to_string($key_json));
-									$key_resolved = RecordObj_ts::get_termino_by_tipo($c_terminoID, DEDALO_DATA_LANG, true, true); //$terminoID, $lang=NULL, $from_cache=false, $fallback=true
+									$key_resolved = RecordObj_dd::get_termino_by_tipo($c_terminoID, DEDALO_DATA_LANG, true, true); //$terminoID, $lang=NULL, $from_cache=false, $fallback=true
 									$key_resolved = strip_tags($key_resolved);
 									$current_value_obj=new stdClass();
 										$current_value_obj->$x_axis = (string)$key_resolved;
@@ -768,7 +790,14 @@ class diffusion_section_stats extends diffusion {
 
 									break; // For now only first element..
 								}
-							}							
+							}else{
+								$key_resolved = RecordObj_dd::get_termino_by_tipo($key, DEDALO_DATA_LANG, true, true); //$terminoID, $lang=NULL, $from_cache=false, $fallback=true
+								$key_resolved = strip_tags($key_resolved);
+								$current_value_obj=new stdClass();
+										$current_value_obj->$x_axis = (string)$key_resolved;
+										$current_value_obj->$y_axis = (int)$value;
+									$current_obj->values[] = $current_value_obj;
+							}						
 							break;
 
 						# DEFAULT BEHAVIOR

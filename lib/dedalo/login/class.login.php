@@ -37,7 +37,8 @@ class login extends common {
 
 			parent::load_structure_data();
 		}
-	}
+	}//end __construct
+
 
 
 	# define id
@@ -82,7 +83,7 @@ class login extends common {
 				$response->msg = "Error Processing Request: $var_name is empty!";
 				return $response;
 			}
-			$$var_name = $trigger_post_vars[$var_name];
+			$$var_name = safe_xss($trigger_post_vars[$var_name]);
 		}
 
 		$html='';
@@ -91,12 +92,12 @@ class login extends common {
 		$arguments=array();
 		$arguments["strPrimaryKeyName"] = 'section_id';
 		$arguments["section_tipo"]  	= DEDALO_SECTION_USERS_TIPO;
-		$current_version = tool_administration::get_current_version_in_db();
+		$current_data_version = tool_administration::get_current_version_in_db();
 		# Username query
 		$min_subversion = 22;
-		if( ($current_version[0] >= 4 && $current_version[1] >= 0 && $current_version[2] >= $min_subversion) || 
-			($current_version[0] >= 4 && $current_version[1] >= 5) ||
-			$current_version[0] > 4 ) {
+		if( ($current_data_version[0] >= 4 && $current_data_version[1] >= 0 && $current_data_version[2] >= $min_subversion) || 
+			($current_data_version[0] >= 4 && $current_data_version[1] >= 5) ||
+			$current_data_version[0] > 4 ) {
 			// Dato of component_input_text is array
 			$arguments["datos#>>'{components,".DEDALO_USER_NAME_TIPO.",dato,lg-nolan}'"] = json_encode((array)$username,JSON_UNESCAPED_UNICODE);
 		}else{
@@ -126,12 +127,14 @@ class login extends common {
 			# delay failed output after 2 seconds to prevent bruit force attacks
 	        sleep(2);
 			#exit("Error: User $username not exists !");
-			$response->msg = "Error: User $username not exists !";
+			$response->msg = "Error: User not exists or password si invalid!";
 			return $response;
 
 		}else{
 
 			foreach($ar_result as $section_id) {
+
+				$user_id = $section_id;
 				
 				# Search password
 				$password_encrypted = component_password::encrypt_password($password);
@@ -164,42 +167,49 @@ class login extends common {
 				}
 
 				if( isset($password_dato) && strlen($password_dato) ) {
+
+					if(!component_security_administrator::is_global_admin($user_id)) {
 						
-					##
-					# Verificamos si la cuenta está activa
-						$component_radio_button = component_common::get_instance('component_radio_button',DEDALO_CUENTA_ACTIVA_TIPO,$section_id,'edit',DEDALO_DATA_NOLAN,DEDALO_SECTION_USERS_TIPO);
-						$cuenta_activa_dato 	= $component_radio_button->get_dato();
-							#dump($cuenta_activa_dato,"cuenta_activa_dato");die();
+						#
+						# ACTIVE ACCOUNT CHECK
+							$modelo_name = RecordObj_dd::get_modelo_name_by_tipo(DEDALO_CUENTA_ACTIVA_TIPO,true);
+							$component_radio_button = component_common::get_instance($modelo_name,
+																					 DEDALO_CUENTA_ACTIVA_TIPO,
+																					 $section_id,
+																					 'edit',
+																					 DEDALO_DATA_NOLAN,
+																					 DEDALO_SECTION_USERS_TIPO);
+							$cuenta_activa_dato 	= $component_radio_button->get_dato();
+								#dump($cuenta_activa_dato,"cuenta_activa_dato"); die();
 
-						# OJO: El valor válido sólo puede ser 1 que es 'Si' en la lista de valores referenciada y se asigna como constante en config 'NUMERICAL_MATRIX_VALUE_YES'
-						if( empty($cuenta_activa_dato[0]) || !isset($cuenta_activa_dato[0]->section_id) || $cuenta_activa_dato[0]->section_id!=NUMERICAL_MATRIX_VALUE_YES ) {
 
-							#
-							# STOP : ACCOUNT INACTIVE
-							#
-							$activity_datos['result'] 	= "deny";
-							$activity_datos['cause'] 	= "account inactive";
-							$activity_datos['username']	= $username;
+							# OJO: El valor válido sólo puede ser 1 que es 'Si' en la lista de valores referenciada y se asigna como constante en config 'NUMERICAL_MATRIX_VALUE_YES'					
+							if( empty($cuenta_activa_dato[0]) || !isset($cuenta_activa_dato[0]->section_id) || $cuenta_activa_dato[0]->section_id!=NUMERICAL_MATRIX_VALUE_YES ) {
 
-							# LOGIN ACTIVITY REPORT
-							self::login_activity_report(
-								"Denied login attempted by: $username. Account inactive or not defined [1]",
-								NULL,
-								'LOG IN',
-								$activity_datos
-								);
+								#
+								# STOP : ACCOUNT INACTIVE
+								#
+								$activity_datos['result'] 	= "deny";
+								$activity_datos['cause'] 	= "account inactive";
+								$activity_datos['username']	= $username;
 
-							# delay failed output by 2 seconds to prevent bruit force attacks
-	        				sleep(2);
-							#exit("Error: Account inactive or not defined [1]");
-							$response->msg = "Error: Account inactive or not defined [1]";
-							return $response;
-						}
+								# LOGIN ACTIVITY REPORT
+								self::login_activity_report(
+									"Denied login attempted by: $username. Account inactive or not defined [1]",
+									NULL,
+									'LOG IN',
+									$activity_datos
+									);
 
-						$user_id = $section_id;
-
-						# No para global admin					
-						if(!component_security_administrator::is_global_admin($user_id)) {
+								# delay failed output by 2 seconds to prevent bruit force attacks
+								sleep(2);
+								#exit("Error: Account inactive or not defined [1]");
+								$response->msg = "Error: Account inactive or not defined [1]";
+								return $response;
+							}
+						
+						#
+						# PROFILE				
 							#dump(component_security_administrator::is_global_admin($user_id),"is_global_admin $user_id");
 							# USER : TEST SECURITY AREAS VALUES
 							/*
@@ -226,39 +236,48 @@ class login extends common {
 							}
 
 
-							# USER : TEST FILTER MASTER VALUES
+						#
+						# USER : TEST FILTER MASTER VALUES
 							# Comprobamos que el usuario tiene algún proyecto asignado antes de dejarlo entrar (los administradores suelen olvidarse de hacerlo)
 							$component_filter_master 	= component_common::get_instance('component_filter_master',
 																						 DEDALO_FILTER_MASTER_TIPO,
 																						 $user_id,
 																						 'edit',
 																						 DEDALO_DATA_LANG, DEDALO_SECTION_USERS_TIPO); 
-							$filter_master_dato 		= (array)$component_filter_master->get_dato();								
+							$filter_master_dato 		= (array)$component_filter_master->get_dato();
 							if (empty($filter_master_dato) || count($filter_master_dato)<1) {
 								#exit(label::get_label('error_usuario_sin_proyectos'));
 								$response->msg = label::get_label('error_usuario_sin_proyectos');
 								return $response;
 							}
-						}
+
+					}//end if(!component_security_administrator::is_global_admin($user_id))
+
 
 					#
 					# FULL_USERNAME
-					$component = component_common::get_instance('component_input_text',
-																DEDALO_FULL_USER_NAME_TIPO,
-																$user_id,
-																'edit',
-																DEDALO_DATA_NOLAN,
-																DEDALO_SECTION_USERS_TIPO);
-					$full_username = $component->get_valor();						
-	
+						$component = component_common::get_instance('component_input_text',
+																	DEDALO_FULL_USER_NAME_TIPO,
+																	$user_id,
+																	'edit',
+																	DEDALO_DATA_NOLAN,
+																	DEDALO_SECTION_USERS_TIPO);
+						$full_username = $component->get_valor();
+
+
 					#
-					# LOGIN (ALL IS OK) - INIT LOGIN SECUENCE WHEN ALL IS OK					
-					$init_user_login_secuence = login::init_user_login_secuence($user_id, $username, $full_username);
-
-
-					# RETURN OK AND RELOAD PAGE
-					$response->result = true;
-					$response->msg = " Login.. ";				
+					# LOGIN (ALL IS OK) - INIT LOGIN SECUENCE WHEN ALL IS OK
+						$init_user_login_secuence = login::init_user_login_secuence($user_id, $username, $full_username);
+						# dump($init_user_login_secuence);				
+						if ($init_user_login_secuence->result===false) {
+							# RETURN FALSE
+							$response->result = false;
+							$response->msg 	  = $init_user_login_secuence->msg;
+						}else if($init_user_login_secuence->result===true) {
+							# RETURN OK AND RELOAD PAGE
+							$response->result = true;
+							$response->msg 	  = " Login.. ";
+						}
 
 				}#if(isset($ar_password_id[0])
 
@@ -266,9 +285,8 @@ class login extends common {
 
 		}#if( !is_array($ar_result) || count($ar_result)==0 || empty($ar_result[0]) )
 
-
 		return (object)$response;
-	}#end Login
+	}//end Login
 
 
 
@@ -358,6 +376,10 @@ class login extends common {
 	*/
 	private static function init_user_login_secuence($user_id, $username, $full_username) {
 
+		$response = new stdClass();
+			$response->result 	= false;
+			$response->msg 	 	= 'Error on init_user_login_secuence';
+
 		#ob_implicit_flush(true);
 		
 		# RESET ALL SESSION VARS BEFORE INIT
@@ -366,6 +388,15 @@ class login extends common {
 			# Nothint to delete
 		#}	
 		
+		# DEDALO INIT TEST SECUENCE
+		require(DEDALO_LIB_BASE_PATH.'/config/dd_init_test.php');
+		if ($init_response->result===false) {
+			$response->result 	= false;
+			$response->msg 		= $init_response->msg;
+			return $response;
+		}
+
+
 		# IS_GLOBAL_ADMIN (before set user session vars)
 		$_SESSION['dedalo4']['auth']['is_global_admin'] = (bool)component_security_administrator::is_global_admin($user_id);
 		# IS_DEVELOPER (before set user session vars)
@@ -377,14 +408,8 @@ class login extends common {
 		$_SESSION['dedalo4']['auth']['full_username'] 	= $full_username;
 		$_SESSION['dedalo4']['auth']['is_logged']		= 1;
 
-
 		# CONFIG KEY
 		$_SESSION['dedalo4']['auth']['salt_secure']	= dedalo_encrypt_openssl(DEDALO_SALT_STRING);
-
-
-		# DEDALO INIT TEST SECUENCE
-		require(DEDALO_LIB_BASE_PATH.'/config/dd_init_test.php');
-		
 
 		# Auth cookie
 		if (defined('DEDALO_PROTECT_MEDIA_FILES') && DEDALO_PROTECT_MEDIA_FILES===true) {
@@ -435,9 +460,12 @@ class login extends common {
 			'LOG IN',
 			$activity_datos
 			);
+
+		$response->result 	= true;
+		$response->msg 	 	= 'Ok init_user_login_secuence is done';
 		
-		return true;
-	}#end init_user_login_secuence
+		return $response;
+	}//end init_user_login_secuence
 
 
 
@@ -494,27 +522,27 @@ class login extends common {
 
 			debug_log(__METHOD__." data 2 New data ".to_string($data), logger::DEBUG);
 
-			/* APACHE 2.2
-				$htaccess_text  = '';
+			# APACHE 2.2
+				# $htaccess_text  = '';
 
-				$htaccess_text .= '# Protect files and directories from prying eyes.'.PHP_EOL;
-				$htaccess_text .= '<FilesMatch "\.(deleted|sh|temp|tmp|import)$">'.PHP_EOL;
-	  			$htaccess_text .= 'Order allow,deny'.PHP_EOL;
-				$htaccess_text .= '</FilesMatch>'.PHP_EOL;
+				# $htaccess_text .= '# Protect files and directories from prying eyes.'.PHP_EOL;
+				# $htaccess_text .= '<FilesMatch "\.(deleted|sh|temp|tmp|import)$">'.PHP_EOL;
+	  			# $htaccess_text .= 'Order allow,deny'.PHP_EOL;
+				# $htaccess_text .= '</FilesMatch>'.PHP_EOL;
 
-				$htaccess_text .= '# Protect media files with realm'.PHP_EOL;
-				$htaccess_text .= 'AuthType Basic'.PHP_EOL;
-				$htaccess_text .= 'AuthName "Protected Login"'.PHP_EOL;
-				$htaccess_text .= 'AuthUserFile ".htpasswd"'.PHP_EOL;
-				$htaccess_text .= 'AuthGroupFile "/dev/null"'.PHP_EOL;
-				$htaccess_text .= 'SetEnvIf Cookie '.$data->$ktoday->cookie_name.'='.$data->$ktoday->cookie_value.' PASS=1'.PHP_EOL;
-				$htaccess_text .= 'SetEnvIf Cookie '.$data->$kyesterday->cookie_name.'='.$data->$kyesterday->cookie_value.' PASS=1'.PHP_EOL;
-				$htaccess_text .= 'Order deny,allow'.PHP_EOL;
-				$htaccess_text .= 'Deny from all'.PHP_EOL;
-				$htaccess_text .= 'Allow from env=PASS'.PHP_EOL;
-				$htaccess_text .= 'Require valid-user'.PHP_EOL;
-				$htaccess_text .= 'Satisfy any'.PHP_EOL;
-				*/
+				# $htaccess_text .= '# Protect media files with realm'.PHP_EOL;
+				# $htaccess_text .= 'AuthType Basic'.PHP_EOL;
+				# $htaccess_text .= 'AuthName "Protected Login"'.PHP_EOL;
+				# $htaccess_text .= 'AuthUserFile ".htpasswd"'.PHP_EOL;
+				# $htaccess_text .= 'AuthGroupFile "/dev/null"'.PHP_EOL;
+				# $htaccess_text .= 'SetEnvIf Cookie '.$data->$ktoday->cookie_name.'='.$data->$ktoday->cookie_value.' PASS=1'.PHP_EOL;
+				# $htaccess_text .= 'SetEnvIf Cookie '.$data->$kyesterday->cookie_name.'='.$data->$kyesterday->cookie_value.' PASS=1'.PHP_EOL;
+				# $htaccess_text .= 'Order deny,allow'.PHP_EOL;
+				# $htaccess_text .= 'Deny from all'.PHP_EOL;
+				# $htaccess_text .= 'Allow from env=PASS'.PHP_EOL;
+				# $htaccess_text .= 'Require valid-user'.PHP_EOL;
+				# $htaccess_text .= 'Satisfy any'.PHP_EOL;
+			
 
 			# APACHE 2.4
 			$htaccess_text  = '';
@@ -531,9 +559,20 @@ class login extends common {
 			$htaccess_text .= 'AuthGroupFile "/dev/null"'.PHP_EOL;
 			$htaccess_text .= 'SetEnvIf Cookie '.$data->$ktoday->cookie_name.'='.$data->$ktoday->cookie_value.' PASS=1'.PHP_EOL;
 			$htaccess_text .= 'SetEnvIf Cookie '.$data->$kyesterday->cookie_name.'='.$data->$kyesterday->cookie_value.' PASS=1'.PHP_EOL;
+			# Require any sentence
 			$htaccess_text .= '<RequireAny>'.PHP_EOL;
 			$htaccess_text .= 'Require env PASS'.PHP_EOL;
 			$htaccess_text .= 'Require valid-user'.PHP_EOL;
+
+			# INIT_COOKIE_AUTH_ADDONS (From config)
+			if ( defined('INIT_COOKIE_AUTH_ADDONS') ) {
+				if ($ar_lines = json_decode(INIT_COOKIE_AUTH_ADDONS)) {
+					foreach ((array)$ar_lines as $current_line) {
+						$htaccess_text .= $current_line . PHP_EOL;
+					}
+				}
+			}
+
 			$htaccess_text .= '</RequireAny>'.PHP_EOL;
 
 
@@ -638,7 +677,7 @@ class login extends common {
 
 			return true;
 		}
-	}#end verify_login
+	}//end verify_login
 
 
 
@@ -763,7 +802,7 @@ class login extends common {
 	* QUIT
 	* Made logout
 	*/
-	public static function Quit( $trigger_post_vars ) {
+	public static function Quit($trigger_post_vars) {
 
 		if (self::is_logged()!==true) {
 			return false;
@@ -840,6 +879,7 @@ class login extends common {
 	/**
 	* TEST_SU_DEFAULT_PASSWORD
 	* Check if admin user password default has ben changed or not
+	* If is fefault password returns true, else false
 	* @return bool true/false 
 	*/
 	public function test_su_default_password() {
@@ -850,26 +890,43 @@ class login extends common {
 													 'edit',
 													 DEDALO_DATA_NOLAN,
 													 DEDALO_SECTION_USERS_TIPO);
-		$dato 		= $component->get_dato();		
-		$default 	= login::SU_DEFAULT_PASSWORD; // Dedalo4debugChangePsW
+		$dato = $component->get_dato();		
+
+		if ($dato==='') {
+			return true;
+		}
+
+		/* 22-2-2018
+		$default = login::SU_DEFAULT_PASSWORD; // Dedalo4debugChangePsW	
 
 		$encryption_mode = encryption_mode();
 		
 		if( $encryption_mode==='openssl' ) {
-			if (dedalo_decrypt_openssl($dato)==$default) {
+
+			$dato_decrypt = dedalo_decrypt_openssl($dato);
+				dump($dato, '$dato ++ '.to_string());
+				dump($dato_decrypt, ' $dato_decrypt ++ '.to_string());
+			
+			if ($dato_decrypt===$default) {
 				return true;
 			}
+
 		}else if($encryption_mode==='mcrypt') {
-			if (dedalo_decryptStringArray($dato)==$default) {
+
+			$dato_decrypt = dedalo_decryptStringArray($dato);
+
+			if ($dato_decrypt===$default) {
 				return true;
 			}
+
 		}else{
+
 			debug_log(__METHOD__." UNKNOW ENCRYPTION MODE !! ".to_string(), logger::ERROR);
-		}
+		}*/
 
 
 		return false;
-	}#end test_su_default_password
+	}//end test_su_default_password
 
 
 

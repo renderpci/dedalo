@@ -49,8 +49,7 @@ function render_component($json_data) {
 
 	if ($role==="selector_source") {
 		$component_obj->role = "source_lang";
-	}
-	
+	}	
 
 	# Get component html
 	$html = $component_obj->get_html();
@@ -71,6 +70,7 @@ function render_component($json_data) {
 	
 	return (object)$response;
 }//end render_component
+
 
 
 /**

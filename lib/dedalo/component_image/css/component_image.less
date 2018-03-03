@@ -11,16 +11,23 @@
 .css_wrap_image, .css_wrap_image_tm {	
 	vertical-align: top;
 	overflow: hidden;
+	height: 400px;
+	position: relative;
 	}
 	.css_wrap_image .content_data {
 		//overflow: auto;
 		/*height: 600px;*/
+		height: 95%;
+		text-align: center;
 	}
 
 .css_wrap_image .loading_image {
-	position: absolute;
+	position: relative;
 	top: 45%;
-	left: 25%;
+}
+
+.table_row .css_wrap_list_image {
+	//height: 57px;
 }
 
 
@@ -31,35 +38,64 @@
 	padding: 0;
 	margin: 0;
 	overflow: hidden;
-	width: 100%;
-	text-align: center;
+	width: 100%;	
 	}
 	.table_portal_rows_list .css_wrap_image_portal_list .css_wrap_image_portal_list:before {
 		content: none;
 	}
 	.css_wrap_image_portal_list > .content_data {
 		width: 100%;
+		text-align: center;
+	}
+
+.css_wrap_list_image {	
+	vertical-align: top;
+	overflow: hidden;
+	height: 57px;
+	position: relative;
+	padding: 0;
 	}
  
+ img.css_image {
+ 	//height: 404px;
+ 	//width: auto;
+ }
 
 
 /* EDIT MODE
 ------------------------------------------------------- */
+.canvas_container {
+	width: 100%;
+	height: 100%;
+	text-align: center;
+	//position: absolute;
+	//top: 0;
+	//left: 0;
+	//overflow: hidden;
+	}
 .canvas_edit {
-	box-shadow: 0 2px 8px #999999;
+	
 	/*
 	max-width: 720px;
 	max-height: 404px;
 	*/
 	//max-width: 100%;
-	height: 400px;
-	/*display: none;*/
-	visibility: hidden;
+	//height: 400px;
+	//height: 100hv;
+	
+	height: 100%;
+	//width: 100%;
+	//visibility: hidden;
+	//box-shadow: 0 2px 8px #999999;
+
+	//height: 100vh;
+	//width: 100vw;
+	//box-shadow: 0 2px 8px #999999;
 	}
 	/* IMAGE */
-	.canvas_edit img.css_image {
-		/*box-shadow: 0 2px 8px #999999;*/
-	}
+	//.canvas_edit > img.css_image {
+	//	/*box-shadow: 0 2px 8px #999999;*/
+	//}
 	.image_buttons {
 		background-color: rgba(255,255,255,0.7);
 		display: block;
@@ -193,6 +229,7 @@
 .css_wrap_image .no_file {
 	cursor: pointer;
 	max-height: 100%;
+	//height: 100%;
 	}
 	.css_wrap_image  .no_file:hover {
 		opacity: 0.7;
@@ -213,6 +250,25 @@
 	position: absolute;
 	//background-color: #f2f2f2;
 	background-color: #ffffff;
+	background-color: rgba(255, 255, 255, 0.7803921568627451);
 }
+
+
+	/* test 
+	--------------- 
+	.sgc_edit>.wrap_component_mupreva660 {
+
+		width: 100%;
+    	height: 600px;
+    	background-color: #77C9C2;
+		}
+		.sgc_edit>.wrap_component_mupreva660 .css_label {
+			width: 100%;
+		}
+		.sgc_edit>.wrap_component_mupreva660 .content_data {
+			width: 100%;
+		}*/
+	
+
 
 

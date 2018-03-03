@@ -6,32 +6,32 @@
 	# html_delimiter
 	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'in');
 
-	print "<div class=\"wrap_component css_wrap_html_text wrap_component_{$tipo}\" id=\"{$id_wrapper}\"
-	data-tipo=\"{$tipo}\"
-	data-section_tipo=\"{$section_tipo}\"
-	data-parent=\"{$parent}\"
-	data-lang=\"{$lang}\"
-	data-modo=\"{$modo}\"
-	data-component_name=\"{$component_name}\"
-	data-component_info='{$component_info}' >";
+	print "<div class=\"wrap_component css_wrap_html_text wrap_component_{$tipo}\" id=\"{$id_wrapper}\" ";
+	print "data-tipo=\"{$tipo}\" ";
+	print "data-section_tipo=\"{$section_tipo}\" ";
+	print "data-parent=\"{$parent}\" ";
+	print "data-lang=\"{$lang}\" ";
+	print "data-modo=\"{$modo}\" ";
+	print "data-component_name=\"{$component_name}\" ";
+	print "data-component_info='{$component_info}' >";
 	
 	# ETIQUETA (LABEL)
 	$html_label = component_common_draw::draw_label($this);
 	
 	# CONTENIDO (INPUT)
 	$html_contenido = '';
-	switch($permissions) {	
+	switch(true) {	
 			
-		case 0	:	$html_contenido .= "";	
+		case $permissions===0:	$html_contenido .= "";	
 					break;
 						
-		case 1	: 	
+		case $permissions===1: 	
 					foreach ($dato as $key => $value) {
 						$html_contenido .= " <span class=\"css_span_dato \">".htmlentities($value)."</span>";
 					}
 					break;						
 		
-		case ($permissions>=2) :
+		case ($permissions>=2):
 
 					if(SHOW_DEBUG) {
 						#dump($dato, ' $dato');
@@ -44,25 +44,25 @@
 
 					##
 					# Text area
-					$html_contenido .= " <textarea class=\"css_input_text_layout\"
-					onchange=\"component_layout.Save(this)\"
-					id=\"{$editor_id}\" 
-					name=\"{$input_name}\"
-					title=\"$html_title\"
-					data-tipo=\"{$tipo}\"
-					data-lang=\"{$lang}\"
-					data-section_tipo=\"{$section_tipo}\"
-					data-parent=\"{$parent}\"
-					data-key_name=\"{$key}\"
-					data-context_name=\"$context_name\"
-					>$value</textarea>";
+					$html_contenido .= "<textarea class=\"css_input_text_layout\" ";
+					$html_contenido .= "onchange=\"component_layout.Save(this)\" ";
+					$html_contenido .= "id=\"{$editor_id}\"  ";
+					$html_contenido .= "name=\"{$input_name}\" ";
+					$html_contenido .= "title=\"$html_title\" ";
+					$html_contenido .= "data-tipo=\"{$tipo}\" ";
+					$html_contenido .= "data-lang=\"{$lang}\" ";
+					$html_contenido .= "data-section_tipo=\"{$section_tipo}\" ";
+					$html_contenido .= "data-parent=\"{$parent}\" ";
+					$html_contenido .= "data-key_name=\"{$key}\" ";
+					$html_contenido .= "data-context_name=\"$context_name\" ";
+					$html_contenido .= ">$value</textarea>";
 					
 					
 					#
 					# JSON EDITOR (EXPERIMENTAL)
-					$html_contenido .= "<div id=\"saveDocument\">Save</div>
-					<div id=\"editor_json\" style=\"height:800px;width:100%\"></div>
-					<script>
+					$html_contenido .= "<div id=\"saveDocument\" class=\"saveDocument\">Save</div>";
+					$html_contenido .= "<div id=\"editor_json\" class=\"editor_json\" style=\"\"></div>";
+					$html_contenido .= "<script>
 					  $('#$editor_id').hide()
 					  var options = {
 					    mode: 'code',

@@ -10,7 +10,7 @@
 		$header_html  .= "\n<!-- TOOL IMPORT FILES [tipo:$tipo] -->";
 		$header_html  .= "<div class=\"tool_header\">";
 		$header_html  .= " <div class=\"h2_title\"> TOOL IMPORT FILES $custom_tool_label ";
-		if(SHOW_DEBUG===true) {
+		#if(SHOW_DEBUG===true) {
 		$header_html  .= " <span class=\"notes\">[$import_mode] ";
 			if ($import_mode==='section') {
 				$header_html  .= " Creates one section $section_tipo and one portal record $target_section_tipo for each file ";
@@ -18,7 +18,7 @@
 				$header_html  .= " Creates one portal record $target_section_tipo for each file ";
 			}
 		$header_html  .= "</span>";
-		}		
+		#}		-+
 		$header_html  .= " </div>";
 		$header_html  .= " <div class=\"import_context_label\">";
 		if(SHOW_DEBUG && $context!=='form') {
@@ -33,14 +33,150 @@
 	# HELP INFO
 		if($context_name=='files' && isset($import_help)) {
 			echo $import_help;
-		}		
+		}
+
+	#
+	# IMPORT MODE SELECTOR 
+		if ($import_mode==='section') {
+			# Only in section mode (list)  
+			$checked = '';
+			$input_name ='control_field_destination';
+			$html  = '';
+			$html .= '<div class="tool_configuration_options">';
+				/*
+				$html .= '<div class="selector_import_file_name_mode">';
+				$html .= '<span>Import file name mode </span>';
+				$html .= '<select id="import_file_name_mode" onchange="set_import_mode(this.value)">';
+				$html .= '<option value="free">';
+				$html .= "Free name (default)";
+				$html .= '</option>';
+				$html .= '<option value="numbered">';
+				$html .= "Numbered files";
+				$html .= '</option>';
+				$html .= '</select>';
+				$html .= '</div>';
+				*/
+
+				$html .= '<div class="name_control_to_field">';
+
+					$html .= "<div class=\"switcher_publication text_unselectable\">";
+
+					$html .= "<input type=\"checkbox\" class=\"ios-toggle\" $checked onchange=\"set_import_mode('to_field',this.checked);\" ";
+					$html .= "name=\"control_field_destination\" ";
+					$html .= "id=\"control_field_destination\" ";
+					$html .= "/>";
+	  				$html .= "<label for=\"control_field_destination\" class=\"checkbox-label\" data-off=\"off\" data-on=\"on\"></label>";
+
+	  				$html .= "</div>";
+	  				$html .= "<span>".label::get_label('name_to_field')." </span>";
+	  				$html .= "<span>";
+	  					$html .= '<select id="map_components_help">';
+	  						foreach ($target_portal_map_name as $key => $component) {
+	  							$name_component = RecordObj_dd::get_termino_by_tipo($component);
+	  							$html .= '<option value="'.$key.'">';
+	  							$html .= $key.' = '.$name_component;
+	  							$html .= '</option>';
+	  						}
+	  					$html .= '</select>';
+
+	  				$html .= "</span>";
+
+				$html .= '</div>';
+
+				$html .= '<div class="name_control_to_section_id">';
+
+					$html .= "<div class=\"switcher_publication text_unselectable\">";
+
+					$html .= "<input type=\"checkbox\" class=\"ios-toggle\" $checked onchange=\"set_import_mode('numbered',this.checked);\" ";
+					$html .= "name=\"name_control_to_section_id\" ";
+					$html .= "id=\"name_control_to_section_id\" ";
+					$html .= "/>";
+	  				$html .= "<label for=\"name_control_to_section_id\" class=\"checkbox-label\" data-off=\"off\" data-on=\"on\"></label>";
+	  				
+	  				$html .= "</div>";
+	  				$html .= "<span>".label::get_label('name_to_record_id')." </span>";
+
+				$html .= '</div>';
+
+				$html .= '<div class="same_name_same_section">';
+
+					$html .= "<div class=\"switcher_publication text_unselectable\">";
+
+					$html .= "<input type=\"checkbox\" class=\"ios-toggle\" $checked onchange=\"set_import_mode('namered',this.checked);\" ";
+					$html .= "name=\"same_name_same_section\" ";
+					$html .= "id=\"same_name_same_section\" ";
+					$html .= "/>";
+	  				$html .= "<label for=\"same_name_same_section\" class=\"checkbox-label\" data-off=\"off\" data-on=\"on\"></label>";
+	  				
+	  				$html .= "</div>";
+	  				$html .= "<span>".label::get_label('same_name_same_record')." </span>";
+
+				$html .= '</div>';
+			$html .= '</div>';
+			echo $html;
+		}
 	
+
+	#
+	# GLOBAL SELECTORS
+		echo '<div class="global_selectors">';
+
+
+			#
+			# TARGET PORTAL TIPO SELECTOR       
+			$html  = '';
+			$html .= '<div id="global_target_portal_tipo">';
+			$html .= '<span>Target component (All)</span>';
+			$html .= '<select class="target_portal_tipo" onchange="propagate_target_portal_tipo(this.value)">';
+			# Default option
+			$html .= '<option value="'.$target_portal_tipo.'">';
+			$html .= RecordObj_dd::get_termino_by_tipo($target_portal_tipo);
+			if(SHOW_DEVELOPER===true) {
+				$html .= " [$target_portal_tipo]";
+			}
+			$html .= '</option>';
+			if(!empty($button_propiedades->additional_component_tipo)) foreach ($button_propiedades->additional_component_tipo as $current_tipo) {
+				$html .= '<option value="'.$current_tipo.'">';
+				$html .= RecordObj_dd::get_termino_by_tipo($current_tipo);
+				if(SHOW_DEVELOPER===true) {
+					$html .= " [$current_tipo]";
+				}
+				$html .= '</option>';
+			} 
+			$html .= '</select>';
+			$html .= '</div>';
+			echo $html;
+
+			#
+			# PROCESSOR SELECTOR
+			$html  = '';
+			$html .= '<div id="global_processor">';
+			$html .= '<span>Processor (All)</span>';
+			$html .= '<select class="file_processor" onchange="propagate_file_processor(this.value)">';
+			# Default option
+			$html .= '<option value="">Without processing</option>';
+			if(!empty($file_processor)) foreach ($file_processor as $file_processor_obj) {
+				$html .= '<option value="'.$file_processor_obj->function_name.'">';
+				$html .= $file_processor_obj->name;
+				if(SHOW_DEVELOPER===true) {
+					$html .= " [$file_processor_obj->function_name]";
+				}
+				$html .= '</option>';
+			}
+			$html .= '</select>';
+			$html .= '</div>';
+			echo $html;		
+			
+		echo '</div>';//end global selectors
+	
+		   
 
 	#
 	# FILES UPLOAD MANAGER HTML
 		include(DEDALO_LIB_BASE_PATH.'/tools/tool_import_files/html/jquery_upload.phtml');		
 		echo "<script>var upload_handler_url='$upload_handler_url';</script>";
-	
+
+
 	
 	#
 	# FORM (Temporal section)
@@ -58,11 +194,16 @@
 			$section->layout_map = $custom_layout_map;	// Inject custom layout map fron propiedades
 		}		
 		$section->show_inspector = (bool)false;
-			#dump($section->layout_map, ' section ++ '.to_string( $section->get_tipo() ));
+			
+		
+		# Check params
+			#dump($custom_params, ' custom_params ++ '.to_string());
+			#dump($section->layout_map, ' layout_map section ++ '.to_string( $section->get_tipo() ));
 		
 		
 		$section_temp_html  = '';
-		$section_temp_html .= "<div class=\"wrap_section_temp\">";
+		$section_temp_html .= "<div class=\"section_temp_title\">".RecordObj_dd::get_termino_by_tipo($temp_section_tipo)." <span class=\"notes\">[$temp_section_tipo]</span></div>";
+		$section_temp_html .= "<div class=\"wrap_section_temp\">";		
 		$section_temp_html .= $section->get_html();
 		$section_temp_html .= "</div>";
 		
@@ -77,33 +218,110 @@
 
 
 
-
-
-
 	#
 	# FOOTER HTML
 		$footer_html='';
 		$footer_html .= "<div class=\"import_context_label_footer \">";
-		$footer_html .= " <a id=\"button_import_images\" href=\"javascript:;\" class=\"btn btn-success fileinput-button\"
-		data-tipo=\"$tipo\"
-		data-section_tipo=\"$section_tipo\"
-		data-parent=\"$parent\"
-		data-import_mode=\"$import_mode\"
-		onclick=\"tool_import_files.import_files(this)\">
-							<strong>OK</strong> <span>".label::get_label('tool_import_images'). ' ' .strip_tags($custom_tool_label). " </span>
-						  </a>";
+		$footer_html .= "<a id=\"button_import_images\" href=\"javascript:void(0);\" class=\"btn btn-success fileinput-button\" ";
+		$footer_html .= "data-tipo=\"$tipo\" ";
+		$footer_html .= "data-section_tipo=\"$section_tipo\" ";
+		$footer_html .= "data-parent=\"$parent\" ";
+		$footer_html .= "data-import_mode=\"$import_mode\" ";
+		$footer_html .= "onclick=\"tool_import_files.import_files(this)\">";
+		$footer_html .= "<strong>OK</strong> <span>".label::get_label('tool_import_images'). ' ' .strip_tags($custom_tool_label). " </span>";
+		$footer_html .= "<span id=\"button_import_span\"></span>";
+		$footer_html .= "</a>";
+
 		$footer_html .= "</div>";
 		echo $footer_html;
+
+
 ?>
 <script>
 	// PAGE_GLOBALS : Set vars to enable components save data in session
 	page_globals.modo='edit';
 	// SGC_EDIT
-	var current_record_wrap = document.getElementById('current_record_wrap')
+	let current_record_wrap = document.getElementById('current_record_wrap')
 	if (current_record_wrap) {		
 		// sgc_edit . To enable structure css affect to components, add 'sgc_edit' class to component wrapper simulating a section group
 		current_record_wrap.classList.add('sgc_edit')
 	}
+	let button_import_span 	  = document.getElementById("button_import_span")
+	let import_file_name_mode = document.getElementById("import_file_name_mode")
+		if (import_file_name_mode) {
+			button_import_span.innerText = " ["+import_file_name_mode.options[import_file_name_mode.selectedIndex].innerText+"]"
+			import_file_name_mode.addEventListener("change",function(el){
+				button_import_span.innerText = " ["+this.options[this.selectedIndex].innerText+"]"
+			},false)
+		}
+		
+	function propagate_target_portal_tipo(value) {
+		let target_portal_tipo = document.querySelectorAll("select.target_portal_tipo")
+		const len = target_portal_tipo.length
+		for (let i = len - 1; i >= 0; i--) {
+			target_portal_tipo[i].value = value
+		}
+	}
+	function propagate_file_processor(value) {
+		let file_processor = document.querySelectorAll("select.file_processor")
+		const len = file_processor.length
+		for (let i = len - 1; i >= 0; i--) {
+			file_processor[i].value = value
+		}
+	}
+	function set_import_mode(mode,value) {
+
+		let jquery_upload_wrapper = document.querySelector("div.jquery_upload_wrapper")
+		if (value===true) {
+			jquery_upload_wrapper.classList.add(mode)
+			if(mode === 'numbered'){
+				document.getElementById("same_name_same_section").checked = false
+				jquery_upload_wrapper.classList.remove('namered')
+			}
+			if(mode === 'namered'){
+				document.getElementById("name_control_to_section_id").checked = false
+				jquery_upload_wrapper.classList.remove('numbered')
+			}
+		}else{
+			jquery_upload_wrapper.classList.remove(mode)
+		}
+
+		if(mode === 'to_field'){
+			let file_processor = document.querySelectorAll("span.target_component_span")
+			const len = file_processor.length
+				for (let i = len - 1; i >= 0; i--) {
+
+					const file_name = file_processor[i].dataset.file_name
+					const file_hashCode = file_processor[i].dataset.hashcode
+						//console.log(file_name,file_hashCode);
+					tool_import_files.fix_target_portal_tipo(file_name, file_hashCode, value)
+				}
+		}
+		
+	}
+	let file_processor_properties	= JSON.parse('<?php echo json_encode($file_processor) ?>');
+	let target_portal_map_name		= JSON.parse('<?php echo json_encode($target_portal_map_name) ?>');
+	let copy_all_filenames_to		= JSON.parse('<?php echo json_encode($copy_all_filenames_to) ?>');
+	let optional_copy_filename		= JSON.parse('<?php echo json_encode($optional_copy_filename) ?>');
+
+	if(SHOW_DEBUG===true) {
+		console.log("file_processor_properties:",file_processor_properties);
+		console.log("target_portal_map_name:",target_portal_map_name);
+		console.log("copy_all_filenames_to:",copy_all_filenames_to);
+		console.log("optional_copy_filename:",optional_copy_filename);
+	}
+	/*var hashCode = function(s){
+	  return s.split("").reduce(function(a,b){a=((a<<5)-a)+b.charCodeAt(0);return a&a},0);
+	}*/
+	
+	String.prototype.hashCode = function(){
+		var hash = 0;
+		if (this.length == 0) return hash;
+		for (i = 0; i < this.length; i++) {
+			char = this.charCodeAt(i);
+			hash = ((hash<<5)-hash)+char;
+			hash = hash & hash; // Convert to 32bit integer
+		}
+		return hash;
+	}
 </script>
-
-

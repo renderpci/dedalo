@@ -108,6 +108,7 @@
                 {% } else { %}
                     <span>{%=file.name%}</span>
                 {% } %}
+                <input type="text" readonly="true" value="{%=file.name%}" class="file_name_input_row" style="display: none"/>
             </p>
             {% if (file.error) { %}
                 <div><span class="label label-danger">Error</span> {%=file.error%}</div>
@@ -115,6 +116,55 @@
         </td>
         <td>
             <span class="size">{%=o.formatFileSize(file.size)%}</span>
+        </td>
+        <td>
+            <span class="size">Image processor </span>
+            <?php            
+            $html  = '';
+            $html .= '<select class="file_processor">';
+            # Default option
+            $html .= '<option value="">Without processing</option>';
+            if(!empty($file_processor)) foreach ($file_processor as $file_processor_obj) {
+                $html .= '<option value="'.$file_processor_obj->function_name.'">';
+                $html .= $file_processor_obj->name;
+                if(SHOW_DEVELOPER===true) {
+                    $html .= " [$file_processor_obj->function_name]";
+                }
+                $html .= '</option>';
+            }
+            $html .= '</select>';
+            echo $html;
+            ?>
+        </td>
+        <td>
+            <span class='target_component_span' data-file_name="{%=file.name%}" data-hashcode="{%=file.name.hashCode()%}" >Target component</span>
+            <?php
+            #
+            #  TARGET
+            # 
+            $html  = '';
+            $html .= '<select class="target_portal_tipo" id="{%=file.name.hashCode()%}">';
+            # Default option
+            $html .= '<option value="'.$target_portal_tipo.'">';
+            $html .= RecordObj_dd::get_termino_by_tipo($target_portal_tipo);
+            if(SHOW_DEVELOPER===true) {
+                $html .= " [$target_portal_tipo]";
+            }
+            $html .= '</option>';
+            if(!empty($button_propiedades->additional_component_tipo)) foreach ($button_propiedades->additional_component_tipo as $current_tipo) {
+
+                # Selected 
+                $html .= '<option value="'.$current_tipo.'">';
+                $html .= RecordObj_dd::get_termino_by_tipo($current_tipo);
+                if(SHOW_DEVELOPER===true) {
+                    $html .= " [$current_tipo]";
+                }
+                $html .= '</option>';
+            } 
+            $html .= '</select>';
+            echo $html;
+            ?>
+         
         </td>
         <td>
             {% if (file.deleteUrl) { %}
@@ -131,6 +181,7 @@
             {% } %}
         </td>
     </tr>
+
 {% } %}
 </script>
 <?php /*

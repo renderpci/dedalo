@@ -6,7 +6,7 @@
 	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'in', $modo, $lang);
 
 
-	print "\n<div class=\"wrap_component css_wrap_calculation wrap_component_{$tipo}\" id=\"{$id_wrapper}\" ";
+	print "<div class=\"wrap_component css_wrap_calculation wrap_component_{$tipo}\" id=\"{$id_wrapper}\" ";
 	print "data-tipo=\"{$tipo}\" ";
 	print "data-lang=\"{$lang}\" ";
 	print "data-section_tipo=\"{$section_tipo}\" ";
@@ -36,22 +36,27 @@
 
 						$html_content .= "<div class=\"css_calculation\" type=\"text\" ";
 						$html_content .= "id=\"{$identificador_unico}\" ";
-						$html_content .= "name=\"{$input_name}\" ";
+						$html_content .= "name=\"{$input_name}\" ";						
 						$html_content .= "data-tipo=\"{$tipo}\" ";
 						$html_content .= "data-section_tipo=\"{$section_tipo}\" ";
 						$html_content .= "data-parent=\"{$parent}\" ";
 						$html_content .= "data-lang=\"{$lang}\" ";
-						$html_content .= "data-formula ='{$preprocess_formula}' ";
+						$html_content .= "data-formula ='".$preprocess_formula."' ";
 						$html_content .= "title=\"$html_title\" ";
 						$html_content .= ">";
 						$html_content .= $dato;
 						$html_content .= "</div>";
+
+						#$html_content .= "<hr>".$preprocess_formula;
 
 						#$html_content .= "\n <span  class=\"css_span_log\"></span>";					
 						#$html_content .= "\n <span  class=\"css_span_ejemplo\">$ejemplo</span>";						
 						
 						if(SHOW_DEBUG) {
 							#$html_content .= "\n <span class=\"css_span_debugger\" id=\"debugger_{$tipo}\" >{$debugger}</span>";	
+							#$a = json_decode($preprocess_formula);
+							#dump($a, ' a ++ '.to_string());
+							#$html_content .= "<hr>". json_encode($a, JSON_PRETTY_PRINT);
 						}						
 						break;												
 		}
@@ -60,7 +65,10 @@
 		tools::prepare_content($html_content);	
 		
 		# Init tool
-		$html_content .= "<script>$component_name.init({uid:'$identificador_unico'})</script>";
+		$html_content .= "<script>";
+		#$html_content .= "alert('eee')";
+		$html_content .= "component_calculation.init({uid:'$identificador_unico'})";
+		$html_content .= "</script>";
 
 		# PRINT HTML
 		print $html_label;

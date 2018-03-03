@@ -52,7 +52,7 @@ class component_state extends component_common {
 		$this->dato = array_unique((array)$this->dato,SORT_REGULAR);
 		$result = parent::Save();
 
-		debug_log(__METHOD__." Saved $this->section_tipo - $this->parent - dato: ". to_string($this->dato), logger::DEBUG);
+		debug_log(__METHOD__." Saved $this->section_tipo - $this->parent - dato: ". json_encode($this->dato), logger::DEBUG);
 
 		if ($result) {
 			# Update caller sections (from inverse locators)
@@ -373,25 +373,34 @@ class component_state extends component_common {
 			return false;
 		}
 
-		$ar_locators = [];
+		$ar_ref_locators = [];
 		foreach ($inverse_locators as $current_locator) {
 
-			if (!isset($current_locator->section_tipo) || !isset($current_locator->section_id)) {
+			$current_section_tipo 	= $current_locator->from_section_tipo;
+			$current_section_id 	= $current_locator->from_section_id;
+
+			if (!isset($current_section_tipo) || !isset($current_section_id)) {
 				debug_log(__METHOD__." Omitted bad locator: ".to_string($current_locator), logger::WARNING);
 				continue;	//Skip
 			}
 
 			$ref_locator = new locator();
-				$ref_locator->set_section_tipo($current_locator->section_tipo);
-				$ref_locator->set_section_id($current_locator->section_id);		
+				$ref_locator->set_section_tipo($current_section_tipo);
+				$ref_locator->set_section_id($current_section_id);		
 			
-			$ar_locators[] = $ref_locator;
-		}
-		$ar_locators = array_unique((array)$ar_locators,SORT_REGULAR);
+			$ar_ref_locators[] = $ref_locator;
+		}		
 
-		foreach ($ar_locators as $current_locator) {
 
-			$key_changed = $current_locator->section_id .'_'. $current_locator->section_tipo;
+		// AR_REF_LOCATORS . Iterate again result locators
+		# Remove duplicates
+		$ar_ref_locators = array_unique((array)$ar_ref_locators,SORT_REGULAR);
+		foreach ($ar_ref_locators as $current_ref_locator) {
+
+			$current_section_tipo 	= $current_ref_locator->section_tipo;
+			$current_section_id 	= $current_ref_locator->section_id;
+
+			$key_changed = $current_section_id .'_'. $current_section_tipo;
 			if (in_array($key_changed, $ar_locator_changed)) {
 				
 				debug_log(__METHOD__." Skyp already changed: $key_changed ");				
@@ -399,8 +408,8 @@ class component_state extends component_common {
 			}
 			$ar_locator_changed[] = $key_changed ;
 
-			#$section_to_update 	= section::get_instance($current_locator->section_id, $current_locator->section_tipo);
-			$component_state_tipo	= section::get_ar_children_tipo_by_modelo_name_in_section($current_locator->section_tipo, 'component_state', true, true);
+			#$section_to_update 	= section::get_instance($current_section_id, $current_section_tipo);
+			$component_state_tipo	= section::get_ar_children_tipo_by_modelo_name_in_section($current_section_tipo, 'component_state', true, true);
 			#dump($ar_result,'get_ar_children_tipo_by_modelo_name_in_section '.$section_tipo);			
 
 			if (empty($component_state_tipo[0])) {
@@ -409,22 +418,23 @@ class component_state extends component_common {
 			
 			$component_state_to_update = component_common::get_instance('component_state',
 																		$component_state_tipo[0],
-																		$current_locator->section_id,
+																		$current_section_id,
 																		'list',
 																		DEDALO_DATA_NOLAN,
-																		$current_locator->section_tipo);					
+																		$current_section_tipo);					
 
 			# Force save (and trigger propagate_state again) every component_state_to of section related in inverse locators
 			$component_state_to_update->Save();	
 
 							
-			debug_log( __METHOD__." Propagated from $this->section_tipo - $this->parent to ".to_string($current_locator) );
+			debug_log( __METHOD__." Propagated from $this->section_tipo - $this->parent to ".json_encode($current_ref_locator) );
 					
-		}//end foreach ($ar_locators as $current_locator) {
+		}//end foreach ($ar_locators as $current_ref_locator) {
+
 
 		return true;
-
 	}#end propagate_state
+
 
 
 	/**

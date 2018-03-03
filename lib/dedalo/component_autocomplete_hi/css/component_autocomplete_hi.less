@@ -19,6 +19,15 @@
 		float: left;
 	}
 
+	// Search mode
+	.wrap_autocomplete_hi_search {
+
+		}
+		.wrap_autocomplete_hi_search.selected_wrap {
+			background-color: initial !important;
+		}
+
+
 /* VALOR TEXT */
 .css_autocomplete_hi_valor {
 	display: inline-block;	
@@ -35,19 +44,19 @@
 ----------------------------------------- */
 input.css_autocomplete_hi_search_field {
 	float: right;
-	width: 90px;
-	opacity: 0.5;
+	width: 100px;
+	//opacity: 0.5;
 	background: white url('../../themes/default/lupa2.svg') right center no-repeat;
 	background-size: auto 100%;
 	background-position-x: 75%;
-	transition: all 0.25s ease-in-out;
+	transition: all 0.2s ease-in-out;
 	}
 	input.css_autocomplete_hi_search_field:hover {
 		opacity: 1;
 	}
 	input.css_autocomplete_hi_search_field:focus {
 		opacity: 1;
-		width: 90px;
+		width: 120px;
 		background-position-x: 95%;
 	}
 
@@ -57,6 +66,7 @@ input.css_autocomplete_hi_search_field {
 	.new_autocomplete_hi.in_search_mode {
 		float: left;
 		margin-right: 10px;
+		width: initial !important;
 	}
 	div.toponymy_list_button_options.in_search_mode {
 		position: relative;

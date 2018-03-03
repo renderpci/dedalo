@@ -49,11 +49,25 @@ class component_filter extends component_common {
 		if ($modo==='edit' && defined('DEDALO_DEFAULT_PROJECT')) {
 			$dato = $this->get_dato();				
 			if(empty($dato)) {
-				#dump($dato," EMPTY DATO:  $this->parent - $this->tipo - $this->section_tipo");
-				$this->set_dato(array(DEDALO_DEFAULT_PROJECT => 2));
+				#
+				# FILTER always save default project
+				# Get current user projects
+				$user_id = navigator::get_user_id();
+				$user_projects = filter::get_user_projects($user_id);
+				if (!empty($user_projects)) {
+					# First user project
+					foreach ($user_projects as $project_key => $project_value) {
+						$new_dato = array($project_key => 2);
+						break;
+					}
+				}else{
+					# Default project defined in config
+					$new_dato = array(DEDALO_DEFAULT_PROJECT => 2);
+				}
+				$this->set_dato($new_dato);
 				$this->Save();
-				if(SHOW_DEBUG===true) {					
-					debug_log(__METHOD__." Saved component filter (tipo:$tipo, parent:$parent, section_tipo:$section_tipo) DEDALO_DEFAULT_PROJECT as ".DEDALO_DEFAULT_PROJECT);
+				if(SHOW_DEBUG===true) {
+					debug_log(__METHOD__." Saved component filter (tipo:$tipo, parent:$parent, section_tipo:$section_tipo) DEDALO_DEFAULT_PROJECT as ".json_encode($new_dato));
 				}
 			}
 		}
@@ -559,6 +573,43 @@ class component_filter extends component_common {
 		}
 		return $search_query;
 	}
+
+
+
+	/**
+	* RESOLVE_QUERY_OBJECT_SQL
+	* @return object $query_object
+	*/
+	public static function resolve_query_object_sql($query_object) {
+		
+		#$query_object->q = '=';//.$query_object->q;
+
+		# Always set fixed values
+		$query_object->type 	= 'jsonb';
+		$query_object->unaccent = false;
+
+		# component path
+		#$query_object->component_path = ['relations'];
+		$query_object->component_path[] = 'lg-nolan';
+
+		$q = $query_object->q;
+		
+		switch (true) {
+			# CONTAIN
+			case (strpos($q, '=')===0):
+			default:
+				$operator = '@>';
+				$q_clean  = '\''.$q.'\'';
+				$query_object->operator = $operator;
+				$query_object->q_parsed	= $q_clean;
+				break;
+		}//end switch (true) {
+
+		#dump($query_object, ' $query_object ++ '.to_string());	
+
+
+		return $query_object;
+	}//end resolve_query_object_sql
 
 
 

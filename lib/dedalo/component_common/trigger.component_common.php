@@ -40,8 +40,24 @@ function Save($json_data) {
 	if (!$dato_clean = json_decode($dato)) {
 		$dato_clean = $dato;
 	}
-	#dump($dato_clean, ' dato_clean ++ lang: '.to_string($dato_clean)); #die();
 	
+	# CALLER_DATASET check
+	if (!empty($caller_dataset)) {
+		$caller_dataset = json_decode($caller_dataset);
+	}
+	
+	# PERMISSIONS
+	if(isset($caller_dataset->component_tipo)) {
+		# if the component send a dataset, the tipo will be the component_tipo of the caller_dataset	
+		$permissions = common::get_permissions($section_tipo, $caller_dataset->component_tipo);
+	}else{
+		$permissions = common::get_permissions($section_tipo, $tipo);
+	}		
+	if ($permissions<2) {
+		$response->msg = "Trigger Error: Nothing is saved. Invalid user permissions for this component. ($permissions)";
+		return $response;
+	}
+
 	$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($tipo, true);
 
 	# CALLABLE : Verify component name is callable
@@ -49,14 +65,8 @@ function Save($json_data) {
 		#throw new Exception("Trigger Error: class: $modelo_name not found", 1);
 		$response->msg = "Trigger Error: Nothing is saved. class: '$modelo_name' not found in Dédalo";
 		return $response;
-	}
+	}	
 	
-	# PERMISSIONS
-	$permissions  = common::get_permissions($section_tipo, $tipo);
-	if ($permissions<2) {
-		$response->msg = "Trigger Error: Nothing is saved. Invalid user permissions for this component. ($permissions)";
-		return $response;
-	}
 	
 	# COMPONENT : Build component as construct ($id=NULL, $tipo=false, $modo='edit', $parent=NULL)
 	$component_obj = component_common::get_instance($modelo_name,
@@ -68,44 +78,51 @@ function Save($json_data) {
 	
 	# CALLER_DATASET optional
 	if (!empty($caller_dataset)) {
-		if ($caller_dataset = json_decode($caller_dataset)) {
-			$component_obj->caller_dataset = $caller_dataset;
-		}
+		
+		# inject component caller_dataset
+		$component_obj->caller_dataset = $caller_dataset;		
 
-		$old_dato 	= 'impossible data';
+		# force to save component
+		$old_dato 	= 'impossible data' . microtime(true);
 
 	}else{
 
+		# get current dato to compare with received dato
 		$old_dato 	= $component_obj->get_dato();
 	}
 	
 	
-		#dump($old_dato, ' $old_dato ++ '.to_string());
-	
 	# Assign received dato to component
 	$component_obj->set_dato( $dato_clean );
-	#debug_log(__METHOD__." dato_clean ".to_string($dato_clean), logger::DEBUG);		
 
 	# Check if dato is changed 
 	$new_dato	= $component_obj->get_dato();
-	#debug_log(__METHOD__." new_dato (get_dato) ".to_string($new_dato), logger::DEBUG);
+		#dump($new_dato, ' $new_dato ++ '.to_string());
 
 	if ($new_dato===$old_dato) {
 		
 		$response->result 	= $parent;
 		$response->msg 		= 'Ok. Request done [Save]. Data is not changed. Is not necessary update component db data';
-	
+
+			#dump($dato_clean, ' dato_clean ++ '.to_string());
+			#dump($new_dato, ' new_dato ++ '.to_string());
+			#dump($old_dato, ' old_dato ++ '.to_string());	
 	}else{
 
 		# Call the specific function of the current component that handles the data saving with your specific preprocessing language, etc ..
 		$section_id = $component_obj->Save();
-		#debug_log(__METHOD__." current (get_dato) ".to_string($component_obj->get_dato()), logger::DEBUG);	
+		#debug_log(__METHOD__." current (get_dato) ".to_string($component_obj->get_dato()), logger::DEBUG);
 
-		# Return id
-		$response->result 	= $section_id;
-		$response->msg 		= 'Ok. Request done [Save]';
-
-	}	
+		if ($section_id>0 || $parent===DEDALO_SECTION_ID_TEMP) {
+			# Return id
+			$response->result 	= $section_id;
+			$response->msg 		= 'Ok. Request done [Save]';
+		}else{			
+			$response->result 	= false;
+			$response->msg 		= 'Error. Received section_id is invalid [Save] '.json_encode($section_id);
+		}
+	}
+	
 	
 
 	# Debug

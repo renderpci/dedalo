@@ -45,60 +45,6 @@ class relation {
 
 
 	/**
-	* GET_PARENTS
-	* @return array $parents
-	*/
-	public function get_parents() {
-		trigger_error(__METHOD__." DEPRECATED METHOD! Use component_relation_parent instead");
-		
-		$parents = array();
-
-		$relations_locators = $this->get_relation_locators();		#dump($relations_locators, ' relations_locators ++ '.to_string());
-		foreach ($relations_locators as $locator) {
-			if ($locator->type===DEDALO_RELATION_TYPE_PARENT_TIPO) {
-				$parents[] = $locator;
-			}
-		}
-
-		return $this->parents = (array)$parents;
-	}//end get_childrens
-
-
-
-	/**
-	* GET_PARENTS_RECURSIVE
-	* @return array $parents_recursive
-	*/
-	public static function get_parents_recursive( $locator, $final2=array(), $recursive=false, $final=array() ) {
-		trigger_error(__METHOD__." DEPRECATED METHOD! Use component_relation_parent instead");
-
-		$relation = new relation( $locator->section_id , $locator->section_tipo );
-		$parents  = $relation->get_parents();
-		foreach ($parents as $key => $current_locator) {
-
-			$current_locator->childrens[] = $locator;
-
-			$final[] = $current_locator;
-			
-			if($recursive===true){
-				$final2 = self::get_parents_recursive($current_locator, $final, true);
-				if($key > 0){
-					$final2[] = self::get_parents_recursive($current_locator, $final, true);
-				}		
-			}else{
-				$a = self::get_parents_recursive($current_locator, $final, true);
-				#$final2[] = self::get_parents_recursive($current_locator, $final, true);
-				$final2[] = reset($a);
-			}		
-			
-		}//end foreach ($ar_parents as $current_locator) {
-
-		return $final2;
-	}//end get_parents_recursive
-
-
-
-	/**
 	* GET_CHILDRENS
 	* @return array $childrens
 	*/

@@ -24,9 +24,9 @@ abstract class common {
 	protected $bl_loaded_matrix_data;
 
 	# TABLE  matrix_table
-	#public $matrix_table ;
+	#public $matrix_table;
 
-	# context. Object with information about context of current element 
+	# context. Object with information about context of current element
 	public $context;
 	
 	# REQUIRED METHODS
@@ -103,7 +103,8 @@ abstract class common {
 			debug_log(__METHOD__." Error Processing Request. get_permissions: sub_tipo is empty ".to_string(), logger::ERROR);
 			return 0;
 		}
-		$permissions = security::get_security_permissions($tipo, $sub_tipo);		
+		$permissions = security::get_security_permissions($tipo, $sub_tipo);
+			
 						
 		return (int)$permissions;
 	}//end get_permissions
@@ -242,7 +243,7 @@ abstract class common {
 	* @param string $tipo
 	* @return string $matrix_table
 	*/
-	public static function get_matrix_table_from_tipo( $tipo ) {
+	public static function get_matrix_table_from_tipo($tipo) {
 		
 		if (empty($tipo)) {			
 			trigger_error("Error Processing Request. tipo is empty");
@@ -304,8 +305,8 @@ abstract class common {
 								#if (SHOW_DEBUG===true) dump($matrix_table,"INFO: Switched table to: $matrix_table for tipo:$tipo ");
 							$table_is_resolved = true;
 						}
-					}					
-			}//end switch			
+					}
+			}//end switch
 			
 		}else{
 			if(SHOW_DEBUG===true) {
@@ -336,6 +337,52 @@ abstract class common {
 
 		return (string)$matrix_table;
 	}//end get_matrix_table_from_tipo
+
+
+
+	/**
+	* GET_MATRIX_TABLES_WITH_RELATIONS
+	* Note: Currently tables are static. make a connection to db to do dynamic ASAP
+	* @return array $ar_tables
+	*/
+	public static function get_matrix_tables_with_relations() {
+
+		$ar_tables = array();
+
+		#if(SHOW_DEBUG===true) {
+		#	$start_time=microtime(1);
+		#}
+		
+		# Tables
+		# define('DEDALO_TABLES_LIST_TIPO', 'dd627'); // Matrix tables box elements
+		$ar_children_tables = RecordObj_dd::get_ar_childrens('dd627', 'norden');				
+		foreach ($ar_children_tables as $table_tipo) {
+			$RecordObj_dd = new RecordObj_dd( $table_tipo );
+			if( $propiedades = json_decode($RecordObj_dd->get_propiedades()) ) {
+				if (property_exists($propiedades,'inverse_relations') && $propiedades->inverse_relations===true) {
+					$ar_tables[] = RecordObj_dd::get_termino_by_tipo($table_tipo, DEDALO_STRUCTURE_LANG, true, false);
+				}
+			}			
+		}
+		
+		if (empty($ar_tables)) {
+			trigger_error("Error on read structure tables list. Old structure version < 26-01-2018 !");
+			$ar_tables = [
+				"matrix",
+				"matrix_list",
+				"matrix_activities",
+				"matrix_hierarchy"
+			];
+		}
+
+		#if(SHOW_DEBUG===true) {
+		#	$total = exec_time_unit($start_time,'ms')." ms";
+		#	debug_log(__METHOD__." Total time $total", logger::DEBUG);
+		#}
+		
+		
+		return $ar_tables;
+	}//end get_matrix_tables_with_relations
 
 
 
@@ -394,7 +441,7 @@ abstract class common {
 	* @return string $main_lang
 	*/
 	public static function get_main_lang( $section_tipo, $section_id=null ) {
-
+		#dump($section_tipo, ' section_tipo ++ '.to_string());
 		# Always fixed lang of languages as english
 		if ($section_tipo==='lg1') {
 			return 'lg-eng';
@@ -419,6 +466,13 @@ abstract class common {
 				 }
 			}
 			return 'lg-spa';
+		}else{
+
+			#$matrix_table = common::get_matrix_table_from_tipo($section_tipo);
+			#if ($matrix_table==='matrix_hierarchy') {
+			#	$main_lang = hierarchy::get_main_lang( $section_tipo );
+			#		dump($main_lang, ' main_lang ++ '.to_string());
+			#}
 		}
 		
 		static $current_main_lang;
@@ -428,22 +482,23 @@ abstract class common {
 
 		# If current section is virtual of DEDALO_THESAURUS_SECTION_TIPO, search main lang in self hierarchy
 		$ar_related_section_tipo = common::get_ar_related_by_model('section', $section_tipo);
-	
+		
 		switch (true) {
 			
 			# Thesaurus virtuals
 			case (isset($ar_related_section_tipo[0]) && $ar_related_section_tipo[0]===DEDALO_THESAURUS_SECTION_TIPO):
-				$main_lang = hierarchy::get_main_lang($section_tipo);	
+				$main_lang = hierarchy::get_main_lang($section_tipo);
 				if (empty($main_lang)) {
-					trigger_error("Empty main_lang for section_tipo: $section_tipo using 'hierarchy::get_main_lang'. Default value fallback is used (DEDALO_DATA_LANG_DEFAULT): ".DEDALO_DATA_LANG_DEFAULT);
+					debug_log(__METHOD__." Empty main_lang for section_tipo: $section_tipo using 'hierarchy::get_main_lang'. Default value fallback is used (DEDALO_DATA_LANG_DEFAULT): ".DEDALO_DATA_LANG_DEFAULT, logger::WARNING);
+					#trigger_error("Empty main_lang for section_tipo: $section_tipo using 'hierarchy::get_main_lang'. Default value fallback is used (DEDALO_DATA_LANG_DEFAULT): ".DEDALO_DATA_LANG_DEFAULT);
 					$main_lang = DEDALO_DATA_LANG_DEFAULT;
 				}
-				break;			
+				break;
 			
 			default:
 				$main_lang = DEDALO_DATA_LANG_DEFAULT;
 				break;
-		}				
+		}
 
 		$current_main_lang[$section_tipo] = $main_lang;
 
@@ -501,10 +556,10 @@ abstract class common {
 	/**
 	* GET_AR_LOADED_MODELOS
 	*//*
-	public static function get_ar_loaded_modelos() {		
+	public static function get_ar_loaded_modelos() {
 		if(is_array(common::$ar_loaded_modelos)){
 			#dump(common::$ar_loaded_modelos); echo "<hr>";
-			return array_unique(common::$ar_loaded_modelos);			
+			return array_unique(common::$ar_loaded_modelos);
 		}else{
 			return common::$ar_loaded_modelos;
 		}
@@ -585,8 +640,12 @@ abstract class common {
 		$$name = $default; 
 		if(isset($_REQUEST[$name])) $$name = $_REQUEST[$name];
 		
-		if(isset($$name))
+		if(isset($$name)) {
+			
+			$$name = safe_xss($$name);
+			
 			return $$name;
+		}
 
 		return false;
 	}//end setVar
@@ -605,8 +664,12 @@ abstract class common {
 		$$name = $default; 
 		if(isset($data_obj->{$name})) $$name = $data_obj->{$name};
 		
-		if(isset($$name))
+		if(isset($$name)) {
+			# Not sanitize here (can loose some transcriptions tags) !
+			#$$name = safe_xss($$name);
+						
 			return $$name;
+		}			
 
 		return false;
 	}//end setVar
@@ -619,6 +682,7 @@ abstract class common {
 	public static function get_page_query_string($remove_optional_vars=true) {
 		
 		$queryString = $_SERVER['QUERY_STRING']; # like max=10
+		$queryString = safe_xss($queryString);
 		
 		if($remove_optional_vars === false) return $queryString;
 		
@@ -1063,7 +1127,7 @@ abstract class common {
 			global$TIMER;$TIMER[__METHOD__.'_OUT_'.microtime(1)]=microtime(1);
 		}
 		
-		return (array)$ar_references;		
+		return (array)$ar_references;
 	}//end get_references
 
 
@@ -1076,15 +1140,16 @@ abstract class common {
 	public static function get_allowed_relation_types() {
 		
 		# For speed, we use constants now
-		$ar_allowed = array(DEDALO_RELATION_TYPE_PARENT_TIPO,
-							DEDALO_RELATION_TYPE_CHILDREN_TIPO,
+		$ar_allowed = array(DEDALO_RELATION_TYPE_CHILDREN_TIPO,
 							DEDALO_RELATION_TYPE_RELATED_TIPO,
+							DEDALO_RELATION_TYPE_EQUIVALENT_TIPO,
 							DEDALO_RELATION_TYPE_INDEX_TIPO,
 							DEDALO_RELATION_TYPE_STRUCT_TIPO,
 							DEDALO_RELATION_TYPE_MODEL_TIPO,
 							DEDALO_DATAFRAME_TYPE_UNCERTAINTY,
 							DEDALO_DATAFRAME_TYPE_TIME,
-							DEDALO_DATAFRAME_TYPE_SPACE
+							DEDALO_DATAFRAME_TYPE_SPACE,
+							DEDALO_RELATION_TYPE_LINK
 							); // DEDALO_RELATION_TYPE_RECORD_TIPO
 		/*
 		$tipo 		  = 'dd427';
@@ -1103,28 +1168,32 @@ abstract class common {
 	* @param php://input
 	* @return object $response
 	*/
-	public static function trigger_manager($request_options=false) {		
+	public static function trigger_manager($request_options=false) {
 
 		$options = new stdClass();
 			$options->test_login = true;
+			$options->source 	 = 'php://input';
 			if($request_options!==false) {
 				foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
-			}
-			
+			}			
 
 		# Set JSON headers for all responses
-		header('Content-Type: application/json');
+		#header('Content-Type: application/json');
+		header('Content-Type: application/json; charset=utf-8');
 
 		# JSON_DATA
 		# javascript common.get_json_data sends a stringify json object
 		# this object is getted here and decoded with all ajax request vars
-		$str_json = file_get_contents('php://input');
+		if ($options->source==='GET') {
+			$str_json = json_encode($_GET);
+		}else{
+			$str_json = file_get_contents('php://input');
+		}
 		if (!$json_data = json_decode($str_json)) {
 			$response = new stdClass();
 				$response->result 	= false;
 				$response->msg 		= "Error on read php://input data";
-			echo json_encode($response);
-			#exit();
+			#echo json_encode($response);					
 			return false;
 		}
 
@@ -1147,7 +1216,7 @@ abstract class common {
 				return false;
 			}
 		}			
-		
+	
 
 		# LOGGED USER CHECK. Can be disabled in options (login case)
 		if($options->test_login===true && login::is_logged()!==true) {

@@ -53,7 +53,6 @@
 
 						$value = (string)json_encode($locator);
 						
-							#dump($locator," locator "); dump($dato," dato ");
 						
 						#$checked  	= in_array($locator, $dato) ? 'checked="checked"' : '';
 						$checked  	= locator::in_array_locator( $locator, $dato, $ar_properties=array('section_tipo','section_id','type','from_key') ) ? 'checked="checked"' : '';

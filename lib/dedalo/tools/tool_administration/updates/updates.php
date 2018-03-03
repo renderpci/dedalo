@@ -6,6 +6,239 @@ global $updates;
 $updates = new stdClass();
 
 
+
+$v=483; #####################################################################################
+$updates->$v = new stdClass();
+
+	# UPDATE TO
+	$updates->$v->version_major 	 = 4;
+	$updates->$v->version_medium 	 = 8;
+	$updates->$v->version_minor 	 = 3;
+
+	# MINIM UPDATE FROM
+	$updates->$v->update_from_major  = 4;
+	$updates->$v->update_from_medium = 8;
+	$updates->$v->update_from_minor  = 2;
+
+
+	# DATABASE UPDATES 
+	/*$updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query("
+			CREATE TABLE \"relations\" (
+			  \"id\" serial NOT NULL,
+			  \"section_tipo\" character varying(254) NOT NULL,
+			  \"section_id\" integer NOT NULL,
+			  \"target_section_tipo\" character varying(254) NOT NULL,
+			  \"target_section_id\" integer NOT NULL,
+			  \"from_component_tipo\" character varying(254) NOT NULL,
+			  CONSTRAINT relations_id PRIMARY KEY (id)
+			);
+
+			CREATE INDEX relations_section_id ON public.relations USING btree (section_id);
+			CREATE INDEX relations_section_tipo ON public.relations USING btree (section_tipo);
+			CREATE INDEX relations_target_section_id ON public.relations USING btree (target_section_id);
+			CREATE INDEX relations_target_section_tipo ON public.relations USING btree (target_section_tipo);
+			CREATE INDEX relations_from_component_tipo ON public.relations USING btree (from_component_tipo);
+
+			CREATE INDEX relations_section_tipo_section_id ON public.relations USING btree (section_tipo,section_id);
+			CREATE INDEX relations_target_section_tipo_target_section_id ON public.relations USING btree (target_section_tipo,target_section_id);
+			CREATE INDEX relations_target_section_tipo_section_tipo ON public.relations USING btree (target_section_tipo,section_tipo);
+			CREATE INDEX relations_target_section_id_section_id ON public.relations USING btree (target_section_id,section_id);
+			");*/
+
+
+	$script_obj = new stdClass();
+		$script_obj->info   		= "Propagate relations to table 'relations'";
+		$script_obj->script_class   = "tool_administration";
+		$script_obj->script_method  = "generate_relations_table_data";
+		$script_obj->script_vars    = '*';
+	$updates->$v->run_scripts[] = $script_obj;
+
+
+
+$v=482; #####################################################################################
+$updates->$v = new stdClass();
+
+	# UPDATE TO
+	$updates->$v->version_major 	 = 4;
+	$updates->$v->version_medium 	 = 8;
+	$updates->$v->version_minor 	 = 2;
+
+	# MINIM UPDATE FROM
+	$updates->$v->update_from_major  = 4;
+	$updates->$v->update_from_medium = 8;
+	$updates->$v->update_from_minor  = 1;
+
+
+	# DATABASE UPDATES
+	$updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query("
+			DROP INDEX IF EXISTS matrix_relations_idx ;
+			DROP INDEX IF EXISTS matrix_users_relations_idx ;
+			DROP INDEX IF EXISTS matrix_projects_relations_idx ;
+			DROP INDEX IF EXISTS matrix_activities_relations_idx ;
+			DROP INDEX IF EXISTS matrix_layout_main_relations_idx ;
+			DROP INDEX IF EXISTS matrix_list_relations_idx ;
+			DROP INDEX IF EXISTS matrix_notes_relations_idx ;
+			DROP INDEX IF EXISTS matrix_profiles_relations_idx ;
+			DROP INDEX IF EXISTS matrix_indexations_relations_idx ;
+			DROP INDEX IF EXISTS matrix_structurations_relations_idx ;
+			DROP INDEX IF EXISTS matrix_dataframe_relations_idx ;
+			DROP INDEX IF EXISTS matrix_dd_relations_idx ;
+			DROP INDEX IF EXISTS matrix_layout_dd_relations_idx ;
+			DROP INDEX IF EXISTS matrix_activity_relations_idx ;
+			DROP INDEX IF EXISTS matrix_activity_order_section_id_desc ;			
+
+			CREATE INDEX matrix_relations_idx ON matrix USING GIN ((matrix.datos#>'{relations}') jsonb_path_ops);
+			CREATE INDEX matrix_users_relations_idx ON matrix_users USING gin ((datos#>'{relations}') jsonb_path_ops);
+			CREATE INDEX matrix_projects_relations_idx ON matrix_projects USING gin ((datos#>'{relations}') jsonb_path_ops);
+			CREATE INDEX matrix_activities_relations_idx ON matrix_activities USING gin ((datos#>'{relations}') jsonb_path_ops);
+			CREATE INDEX matrix_layout_main_relations_idx ON matrix_layout USING gin ((datos#>'{relations}') jsonb_path_ops);
+			CREATE INDEX matrix_list_relations_idx ON matrix_list USING gin ((datos#>'{relations}') jsonb_path_ops);
+			CREATE INDEX matrix_notes_relations_idx ON matrix_notes USING gin ((datos#>'{relations}') jsonb_path_ops);
+			CREATE INDEX matrix_profiles_relations_idx ON matrix_profiles USING gin ((datos#>'{relations}') jsonb_path_ops);
+			CREATE INDEX matrix_indexations_relations_idx ON matrix_indexations USING gin ((datos#>'{relations}') jsonb_path_ops);
+			CREATE INDEX matrix_structurations_relations_idx ON matrix_structurations USING gin ((datos#>'{relations}') jsonb_path_ops);
+			CREATE INDEX matrix_dataframe_relations_idx ON matrix_dataframe USING gin ((datos#>'{relations}') jsonb_path_ops);
+			CREATE INDEX matrix_dd_relations_idx ON matrix_dd USING gin ((datos#>'{relations}') jsonb_path_ops);
+			CREATE INDEX matrix_layout_dd_relations_idx ON matrix_layout_dd USING gin ((datos#>'{relations}') jsonb_path_ops);
+			CREATE INDEX matrix_activity_relations_idx ON matrix_activity USING gin ((datos#>'{relations}') jsonb_path_ops);
+			CREATE INDEX matrix_activity_order_section_id_desc ON public.matrix_activity USING btree (section_id DESC);
+			
+			DROP INDEX IF EXISTS matrix_langs_relations_idx ;
+			DROP INDEX IF EXISTS matrix_langs_hierarchy41_gin ;
+			CREATE INDEX matrix_langs_relations_idx ON matrix_langs USING gin ((datos#>'{relations}') jsonb_path_ops);
+			CREATE INDEX matrix_langs_hierarchy41_gin ON matrix_langs USING GIN ((datos#>'{components, hierarchy41, dato, lg-nolan}'));
+
+			DROP INDEX IF EXISTS matrix_hierarchy_relations_idx;
+			DROP INDEX IF EXISTS matrix_hierarchy_main_relations_idx;
+			CREATE INDEX matrix_hierarchy_relations_idx ON matrix_hierarchy USING GIN ((matrix_hierarchy.datos#>'{relations}') jsonb_path_ops);
+			CREATE INDEX matrix_hierarchy_main_relations_idx ON matrix_hierarchy_main USING GIN ((matrix_hierarchy_main.datos#>'{relations}') jsonb_path_ops);
+
+			DROP INDEX IF EXISTS matrix_hierarchy_section_tipo_section_id ;
+			DROP INDEX IF EXISTS matrix_langs_section_tipo_section_id ;
+			CREATE INDEX matrix_hierarchy_section_tipo_section_id ON public.matrix_hierarchy USING btree (section_id, section_tipo) TABLESPACE pg_default;
+			CREATE INDEX matrix_langs_section_tipo_section_id ON public.matrix_langs USING btree (section_id, section_tipo) TABLESPACE pg_default;
+			");
+			# CREATE INDEX matrix_test_relations_idx ON matrix_test USING gin ((datos#>'{relations}') jsonb_path_ops);
+			# ALTER TABLE matrix ADD UNIQUE (section_id, section_tipo);
+
+
+
+$v=481; #####################################################################################
+$updates->$v = new stdClass();
+
+	# UPDATE TO
+	$updates->$v->version_major 	 = 4;
+	$updates->$v->version_medium 	 = 8;
+	$updates->$v->version_minor 	 = 1;
+
+	# MINIM UPDATE FROM
+	$updates->$v->update_from_major  = 4;
+	$updates->$v->update_from_medium = 8;
+	$updates->$v->update_from_minor  = 0;
+
+
+	#UPDATE COMPONENTS
+	$updates->$v->components_update = ['component_date'];				
+
+
+
+$v=480; #####################################################################################
+$updates->$v = new stdClass();
+
+	# UPDATE TO
+	$updates->$v->version_major 	 = 4;
+	$updates->$v->version_medium 	 = 8;
+	$updates->$v->version_minor 	 = 0;
+
+	# MINIM UPDATE FROM
+	$updates->$v->update_from_major  = 4;
+	$updates->$v->update_from_medium = 7;
+	$updates->$v->update_from_minor  = 1;	
+	
+	# UPDATE COMPONENTS
+	#$updates->$v->components_update = ['component_relation_autocomplete'];
+
+	$alert 				 = new stdClass();
+	$alert->notification = 'Warning. This update is very critical. All database data will be migrated to a new incompatible format! ';
+	$alert->command 	 = 'Follow this steps:
+							<br> 1 - Dédalo version. Verify that you are running version code >= 4.8
+							<br> 2 - Backup. Make a complete DB backup and make sure is finished and reliable (you can use "Make backup" link above)
+							<br> 3 - Run update. Remember: rewrite all data takes a long time and is a good idea here tail error log for check the progress and avoid timeout confusions. 
+							<br> 4 - Server. On finish, restart your http and db server to avoid undesired cache problems
+							';
+	$updates->$v->alert_update[] 	= $alert;
+
+
+	# DATABASE UPDATES
+	$updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query("
+			CREATE TABLE IF NOT EXISTS \"relations\" (
+			  \"id\" serial NOT NULL,
+			  \"section_tipo\" character varying(254) NOT NULL,
+			  \"section_id\" integer NOT NULL,
+			  \"target_section_tipo\" character varying(254) NOT NULL,
+			  \"target_section_id\" integer NOT NULL,
+			  \"from_component_tipo\" character varying(254) NOT NULL,
+			  CONSTRAINT relations_id PRIMARY KEY (id)
+			);
+
+			CREATE INDEX IF NOT EXISTS relations_section_id ON public.relations USING btree (section_id);
+			CREATE INDEX IF NOT EXISTS relations_section_tipo ON public.relations USING btree (section_tipo);
+			CREATE INDEX IF NOT EXISTS relations_target_section_id ON public.relations USING btree (target_section_id);
+			CREATE INDEX IF NOT EXISTS relations_target_section_tipo ON public.relations USING btree (target_section_tipo);
+			CREATE INDEX IF NOT EXISTS relations_from_component_tipo ON public.relations USING btree (from_component_tipo);
+
+			CREATE INDEX IF NOT EXISTS relations_section_tipo_section_id ON public.relations USING btree (section_tipo,section_id);
+			CREATE INDEX IF NOT EXISTS relations_target_section_tipo_target_section_id ON public.relations USING btree (target_section_tipo,target_section_id);
+			CREATE INDEX IF NOT EXISTS relations_target_section_tipo_section_tipo ON public.relations USING btree (target_section_tipo,section_tipo);
+			CREATE INDEX IF NOT EXISTS relations_target_section_id_section_id ON public.relations USING btree (target_section_id,section_id);
+			");
+
+
+	# DATABASE UPDATES
+	require_once( dirname(dirname(__FILE__)) .'/upgrades/class.reference_dato_v47_to_relation_dato_v48.php');
+
+	# Update datos to section_data
+	$script_obj = new stdClass();
+		$script_obj->info   		= "Convert dato of reference components like portals, autocomplete, select, etc, to new vertical dato format (like component_relation..)";
+		$script_obj->script_class   = "reference_dato_v47_to_relation_dato_v48";
+		$script_obj->script_method  = "convert_table_data";		
+
+	$updates->$v->run_scripts[] = $script_obj;
+
+
+
+$v=471; #####################################################################################
+$updates->$v = new stdClass();
+
+	# UPDATE TO
+	$updates->$v->version_major 	 = 4;
+	$updates->$v->version_medium 	 = 7;
+	$updates->$v->version_minor 	 = 1;
+
+	# MINIM UPDATE FROM
+	$updates->$v->update_from_major  = 4;
+	$updates->$v->update_from_medium = 7;
+	$updates->$v->update_from_minor  = 0;
+
+	# DATABASE UPDATES
+	$updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query("
+									CREATE OR REPLACE FUNCTION check_array_component(condition bool, component_path jsonb)
+									  RETURNS SETOF jsonb AS $$
+									BEGIN
+									  IF condition THEN
+									    RETURN QUERY SELECT jsonb_array_elements(component_path);
+									  ELSE
+									    RETURN QUERY SELECT component_path;
+									  END IF;
+									END$$ LANGUAGE plpgsql;
+									");
+	// IMMUTABLE
+	
+	#UPDATE COMPONENTS
+	#
+
+
+
 $v=470; #####################################################################################
 $updates->$v = new stdClass();
 
@@ -30,6 +263,7 @@ $updates->$v = new stdClass();
 	
 	#UPDATE COMPONENTS
 	$updates->$v->components_update = ['component_date'];
+
 
 
 $v=451; #####################################################################################
@@ -64,6 +298,7 @@ $updates->$v = new stdClass();
 									");
 
 
+
 $v=450; #####################################################################################
 $updates->$v = new stdClass();
 
@@ -84,13 +319,13 @@ $updates->$v = new stdClass();
 
 	# RUN_SCRIPTS
 	# Order is important !
-	$scripts = array();
+	
 	/*
 	$script_obj = new stdClass();
 		$script_obj->script_class   = "hierarchy";
 		$script_obj->script_method  = "update_jer_from_4_0_to_4_1";
 		$script_obj->script_vars    = array('ts','no'); // prefijo, esmodelo
-	$scripts[] = $script_obj;
+	$updates->$v->run_scripts[] = $script_obj;
 	*/
 	/*
 	# LANGS (RUN ALWAYS BEFORE HIERARCHY_MAIN !!)
@@ -98,12 +333,12 @@ $updates->$v = new stdClass();
 		$script_obj->script_class   = "hierarchy";
 		$script_obj->script_method  = "update_jer_from_4_0_to_4_1";
 		$script_obj->script_vars    = array('lg','no');
-	$scripts[] = $script_obj;
+	$updates->$v->run_scripts[] = $script_obj;
 	$script_obj = new stdClass();
 		$script_obj->script_class   = "hierarchy";
 		$script_obj->script_method  = "update_jer_from_4_0_to_4_1";
 		$script_obj->script_vars    = array('lg','si');
-	$scripts[] = $script_obj;
+	$updates->$v->run_scripts[] = $script_obj;
 	*/
 	
 	/*
@@ -112,12 +347,12 @@ $updates->$v = new stdClass();
 		$script_obj->script_class   = "hierarchy";
 		$script_obj->script_method  = "update_jer_from_4_0_to_4_1";
 		$script_obj->script_vars    = array('ts','no');
-	$scripts[] = $script_obj;
+	$updates->$v->run_scripts[] = $script_obj;
 	$script_obj = new stdClass();
 		$script_obj->script_class   = "hierarchy";
 		$script_obj->script_method  = "update_jer_from_4_0_to_4_1";
 		$script_obj->script_vars    = array('ts','si');
-	$scripts[] = $script_obj;
+	$updates->$v->run_scripts[] = $script_obj;
 	*/
 	# HIERARCHY : ALL TOPONYMS
 	/*
@@ -127,12 +362,12 @@ $updates->$v = new stdClass();
 		$script_obj->script_class   = "hierarchy";
 		$script_obj->script_method  = "update_jer_from_4_0_to_4_1";
 		$script_obj->script_vars    = array('ad','no');
-	$scripts[] = $script_obj;
+	$updates->$v->run_scripts[] = $script_obj;
 	$script_obj = new stdClass();
 		$script_obj->script_class   = "hierarchy";
 		$script_obj->script_method  = "update_jer_from_4_0_to_4_1";
 		$script_obj->script_vars    = array('ad','si');
-	$scripts[] = $script_obj;
+	$updates->$v->run_scripts[] = $script_obj;
 	*/
 	/*
 	# Cuba
@@ -140,12 +375,12 @@ $updates->$v = new stdClass();
 		$script_obj->script_class   = "hierarchy";
 		$script_obj->script_method  = "update_jer_from_4_0_to_4_1";
 		$script_obj->script_vars    = array('cu','no');
-	$scripts[] = $script_obj;
+	$updates->$v->run_scripts[] = $script_obj;
 	$script_obj = new stdClass();
 		$script_obj->script_class   = "hierarchy";
 		$script_obj->script_method  = "update_jer_from_4_0_to_4_1";
 		$script_obj->script_vars    = array('cu','si');
-	$scripts[] = $script_obj;
+	$updates->$v->run_scripts[] = $script_obj;
 	*/
 	/*
 	# Portugal
@@ -153,12 +388,12 @@ $updates->$v = new stdClass();
 		$script_obj->script_class   = "hierarchy";
 		$script_obj->script_method  = "update_jer_from_4_0_to_4_1";
 		$script_obj->script_vars    = array('pt','no');
-	$scripts[] = $script_obj;
+	$updates->$v->run_scripts[] = $script_obj;
 	$script_obj = new stdClass();
 		$script_obj->script_class   = "hierarchy";
 		$script_obj->script_method  = "update_jer_from_4_0_to_4_1";
 		$script_obj->script_vars    = array('pt','si');
-	$scripts[] = $script_obj;
+	$updates->$v->run_scripts[] = $script_obj;
 	
 	/*
 	# USA
@@ -166,12 +401,12 @@ $updates->$v = new stdClass();
 		$script_obj->script_class   = "hierarchy";
 		$script_obj->script_method  = "update_jer_from_4_0_to_4_1";
 		$script_obj->script_vars    = array('us','no');
-	$scripts[] = $script_obj;
+	$updates->$v->run_scripts[] = $script_obj;
 	$script_obj = new stdClass();
 		$script_obj->script_class   = "hierarchy";
 		$script_obj->script_method  = "update_jer_from_4_0_to_4_1";
 		$script_obj->script_vars    = array('us','si');
-	$scripts[] = $script_obj;
+	$updates->$v->run_scripts[] = $script_obj;
 	*/
 	/*
 	# France
@@ -179,12 +414,12 @@ $updates->$v = new stdClass();
 		$script_obj->script_class   = "hierarchy";
 		$script_obj->script_method  = "update_jer_from_4_0_to_4_1";
 		$script_obj->script_vars    = array('fr','no');
-	$scripts[] = $script_obj;
+	$updates->$v->run_scripts[] = $script_obj;
 	$script_obj = new stdClass();
 		$script_obj->script_class   = "hierarchy";
 		$script_obj->script_method  = "update_jer_from_4_0_to_4_1";
 		$script_obj->script_vars    = array('fr','si',false);
-	$scripts[] = $script_obj;
+	$updates->$v->run_scripts[] = $script_obj;
 	*/
 	/*
 	# Spain
@@ -192,12 +427,12 @@ $updates->$v = new stdClass();
 		$script_obj->script_class   = "hierarchy";
 		$script_obj->script_method  = "update_jer_from_4_0_to_4_1";
 		$script_obj->script_vars    = array('es','no');
-	$scripts[] = $script_obj;
+	$updates->$v->run_scripts[] = $script_obj;
 	$script_obj = new stdClass();
 		$script_obj->script_class   = "hierarchy";
 		$script_obj->script_method  = "update_jer_from_4_0_to_4_1";
 		$script_obj->script_vars    = array('es','si');
-	$scripts[] = $script_obj;	
+	$updates->$v->run_scripts[] = $script_obj;	
 	*/
 	/*
 	# Algeria
@@ -205,12 +440,12 @@ $updates->$v = new stdClass();
 		$script_obj->script_class   = "hierarchy";
 		$script_obj->script_method  = "update_jer_from_4_0_to_4_1";
 		$script_obj->script_vars    = array('dz','no');
-	$scripts[] = $script_obj;
+	$updates->$v->run_scripts[] = $script_obj;
 	$script_obj = new stdClass();
 		$script_obj->script_class   = "hierarchy";
 		$script_obj->script_method  = "update_jer_from_4_0_to_4_1";
 		$script_obj->script_vars    = array('dz','si');
-	$scripts[] = $script_obj;
+	$updates->$v->run_scripts[] = $script_obj;
 	*/
 	/*
 	# Morocco
@@ -218,14 +453,15 @@ $updates->$v = new stdClass();
 		$script_obj->script_class   = "hierarchy";
 		$script_obj->script_method  = "update_jer_from_4_0_to_4_1";
 		$script_obj->script_vars    = array('ma','no');
-	$scripts[] = $script_obj;
+	$updates->$v->run_scripts[] = $script_obj;
 	$script_obj = new stdClass();
 		$script_obj->script_class   = "hierarchy";
 		$script_obj->script_method  = "update_jer_from_4_0_to_4_1";
 		$script_obj->script_vars    = array('ma','si');
-	$scripts[] = $script_obj;
-	*/
-	#$updates->$v->run_scripts = $scripts;
+	$updates->$v->run_scripts[] = $script_obj;
+	
+	#$updates->$v->run_scripts = $scripts;*/
+
 
 
 $v=4023; #####################################################################################
@@ -290,6 +526,7 @@ $updates->$v = new stdClass();
 	$updates->$v->components_update = ['component_password'];
 
 
+
 $v=4021; #####################################################################################
 $updates->$v = new stdClass();
 
@@ -315,6 +552,7 @@ $updates->$v = new stdClass();
 										WHERE \"id\" = '-1';
 									");
 	
+
 
 $v=4020; #####################################################################################
 $updates->$v = new stdClass();
@@ -349,7 +587,6 @@ $updates->$v = new stdClass();
 
 	# RUN_SCRIPTS
 	# Order is important !
-	$scripts = array();
 
 	/*
 	# LANGS (RUN ALWAYS BEFORE HIERARCHY_MAIN !!)
@@ -357,12 +594,12 @@ $updates->$v = new stdClass();
 		$script_obj->script_class   = "hierarchy";
 		$script_obj->script_method  = "update_jer_from_4_0_to_4_1";
 		$script_obj->script_vars    = array('lg','no');
-	$scripts[] = $script_obj;
+	$updates->$v->run_scripts[] = $script_obj;
 	$script_obj = new stdClass();
 		$script_obj->script_class   = "hierarchy";
 		$script_obj->script_method  = "update_jer_from_4_0_to_4_1";
 		$script_obj->script_vars    = array('lg','si');
-	$scripts[] = $script_obj;
+	$updates->$v->run_scripts[] = $script_obj;
 	*/
 	
 	/*
@@ -371,12 +608,12 @@ $updates->$v = new stdClass();
 		$script_obj->script_class   = "hierarchy";
 		$script_obj->script_method  = "update_jer_from_4_0_to_4_1";
 		$script_obj->script_vars    = array('ts','no');
-	$scripts[] = $script_obj;
+	$updates->$v->run_scripts[] = $script_obj;
 	$script_obj = new stdClass();
 		$script_obj->script_class   = "hierarchy";
 		$script_obj->script_method  = "update_jer_from_4_0_to_4_1";
 		$script_obj->script_vars    = array('ts','si');
-	$scripts[] = $script_obj;
+	$updates->$v->run_scripts[] = $script_obj;
 	
 	# HIERARCHY : ALL TOPONYMS
 	/*
@@ -386,12 +623,12 @@ $updates->$v = new stdClass();
 		$script_obj->script_class   = "hierarchy";
 		$script_obj->script_method  = "update_jer_from_4_0_to_4_1";
 		$script_obj->script_vars    = array('ad','no');
-	$scripts[] = $script_obj;
+	$updates->$v->run_scripts[] = $script_obj;
 	$script_obj = new stdClass();
 		$script_obj->script_class   = "hierarchy";
 		$script_obj->script_method  = "update_jer_from_4_0_to_4_1";
 		$script_obj->script_vars    = array('ad','si');
-	$scripts[] = $script_obj;
+	$updates->$v->run_scripts[] = $script_obj;
 	*/
 	/*
 	# Cuba
@@ -399,12 +636,12 @@ $updates->$v = new stdClass();
 		$script_obj->script_class   = "hierarchy";
 		$script_obj->script_method  = "update_jer_from_4_0_to_4_1";
 		$script_obj->script_vars    = array('cu','no');
-	$scripts[] = $script_obj;
+	$updates->$v->run_scripts[] = $script_obj;
 	$script_obj = new stdClass();
 		$script_obj->script_class   = "hierarchy";
 		$script_obj->script_method  = "update_jer_from_4_0_to_4_1";
 		$script_obj->script_vars    = array('cu','si');
-	$scripts[] = $script_obj;
+	$updates->$v->run_scripts[] = $script_obj;
 	*/
 	/*
 	# Portugal
@@ -412,12 +649,12 @@ $updates->$v = new stdClass();
 		$script_obj->script_class   = "hierarchy";
 		$script_obj->script_method  = "update_jer_from_4_0_to_4_1";
 		$script_obj->script_vars    = array('pt','no');
-	$scripts[] = $script_obj;
+	$updates->$v->run_scripts[] = $script_obj;
 	$script_obj = new stdClass();
 		$script_obj->script_class   = "hierarchy";
 		$script_obj->script_method  = "update_jer_from_4_0_to_4_1";
 		$script_obj->script_vars    = array('pt','si');
-	$scripts[] = $script_obj;
+	$updates->$v->run_scripts[] = $script_obj;
 	
 	/*
 	# USA
@@ -425,12 +662,12 @@ $updates->$v = new stdClass();
 		$script_obj->script_class   = "hierarchy";
 		$script_obj->script_method  = "update_jer_from_4_0_to_4_1";
 		$script_obj->script_vars    = array('us','no');
-	$scripts[] = $script_obj;
+	$updates->$v->run_scripts[] = $script_obj;
 	$script_obj = new stdClass();
 		$script_obj->script_class   = "hierarchy";
 		$script_obj->script_method  = "update_jer_from_4_0_to_4_1";
 		$script_obj->script_vars    = array('us','si');
-	$scripts[] = $script_obj;
+	$updates->$v->run_scripts[] = $script_obj;
 	*/
 	/*
 	# France
@@ -438,12 +675,12 @@ $updates->$v = new stdClass();
 		$script_obj->script_class   = "hierarchy";
 		$script_obj->script_method  = "update_jer_from_4_0_to_4_1";
 		$script_obj->script_vars    = array('fr','no');
-	$scripts[] = $script_obj;
+	$updates->$v->run_scripts[] = $script_obj;
 	$script_obj = new stdClass();
 		$script_obj->script_class   = "hierarchy";
 		$script_obj->script_method  = "update_jer_from_4_0_to_4_1";
 		$script_obj->script_vars    = array('fr','si',false);
-	$scripts[] = $script_obj;
+	$updates->$v->run_scripts[] = $script_obj;
 	*/
 	/*
 	# Spain
@@ -451,12 +688,12 @@ $updates->$v = new stdClass();
 		$script_obj->script_class   = "hierarchy";
 		$script_obj->script_method  = "update_jer_from_4_0_to_4_1";
 		$script_obj->script_vars    = array('es','no');
-	$scripts[] = $script_obj;
+	$updates->$v->run_scripts[] = $script_obj;
 	$script_obj = new stdClass();
 		$script_obj->script_class   = "hierarchy";
 		$script_obj->script_method  = "update_jer_from_4_0_to_4_1";
 		$script_obj->script_vars    = array('es','si');
-	$scripts[] = $script_obj;	
+	$updates->$v->run_scripts[] = $script_obj;	
 	*/
 	/*
 	# Algeria
@@ -464,12 +701,12 @@ $updates->$v = new stdClass();
 		$script_obj->script_class   = "hierarchy";
 		$script_obj->script_method  = "update_jer_from_4_0_to_4_1";
 		$script_obj->script_vars    = array('dz','no');
-	$scripts[] = $script_obj;
+	$updates->$v->run_scripts[] = $script_obj;
 	$script_obj = new stdClass();
 		$script_obj->script_class   = "hierarchy";
 		$script_obj->script_method  = "update_jer_from_4_0_to_4_1";
 		$script_obj->script_vars    = array('dz','si');
-	$scripts[] = $script_obj;
+	$updates->$v->run_scripts[] = $script_obj;
 	*/
 	/*
 	# Morocco
@@ -477,14 +714,13 @@ $updates->$v = new stdClass();
 		$script_obj->script_class   = "hierarchy";
 		$script_obj->script_method  = "update_jer_from_4_0_to_4_1";
 		$script_obj->script_vars    = array('ma','no');
-	$scripts[] = $script_obj;
+	$updates->$v->run_scripts[] = $script_obj;
 	$script_obj = new stdClass();
 		$script_obj->script_class   = "hierarchy";
 		$script_obj->script_method  = "update_jer_from_4_0_to_4_1";
 		$script_obj->script_vars    = array('ma','si');
-	$scripts[] = $script_obj;
+	$updates->$v->run_scripts[] = $script_obj;
 	*/
-	$updates->$v->run_scripts = $scripts;
 
 
 
@@ -532,12 +768,12 @@ $updates->$v = new stdClass();
 		$script_obj->script_class   = "hierarchy";
 		$script_obj->script_method  = "update_jer_from_4_0_to_4_1";
 		$script_obj->script_vars    = array('lg','no');
-	$scripts[] = $script_obj;
+	$updates->$v->run_scripts[] = $script_obj;
 	$script_obj = new stdClass();
 		$script_obj->script_class   = "hierarchy";
 		$script_obj->script_method  = "update_jer_from_4_0_to_4_1";
 		$script_obj->script_vars    = array('lg','si');
-	$scripts[] = $script_obj;
+	$updates->$v->run_scripts[] = $script_obj;
 	*/
 
 	# HIERARCHY_MAIN (LANGS MUST HAVE BEEN INSTALLED BEFORE!!! )
@@ -545,16 +781,14 @@ $updates->$v = new stdClass();
 		$script_obj->info   		= "Add records of hierarchy from jerarquias v3 to hierarchy v4. Note: Langs must have been installed before!";
 		$script_obj->script_class   = "hierarchy";
 		$script_obj->script_method  = "update_jerarquia_from_4_0_to_4_1";
-	$scripts[] = $script_obj;
+	$updates->$v->run_scripts[] = $script_obj;
 
 	$script_obj = new stdClass();
 		$script_obj->info   		= "Configure hierarchy section 'langs' ";
 		$script_obj->script_class   = "hierarchy";
 		$script_obj->script_method  = "set_lang_hierarchy";
 		$script_obj->script_vars    = array();
-	$scripts[] = $script_obj;
-
-	$updates->$v->run_scripts = $scripts;
+	$updates->$v->run_scripts[] = $script_obj;
 
 
 
@@ -581,7 +815,7 @@ $updates->$v = new stdClass();
 									CREATE INDEX matrix_lang_code ON matrix_langs USING btree ((datos#>>\'{components, hierarchy41, dato, lg-nolan}\')); ');
 
 
-	# LANGS (RUN ALWAYS BEFORE HIERARCHY_MAIN !!)	
+	# LANGS (RUN ALWAYS BEFORE HIERARCHY_MAIN !!)
 	$script_obj = new stdClass();
 		$script_obj->info   		= "Add records of langs from thesaurus v3 to v4";
 		$script_obj->script_class   = "hierarchy";

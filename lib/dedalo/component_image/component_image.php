@@ -64,11 +64,12 @@
 
 					# IMG : Dimensions w/h
 					$image_dimensions 	= $this->ImageObj->get_image_dimensions();
-						#dump($image_dimensions,'image_dimensions');
-					$img_width  = $image_dimensions[0];
-					$img_height = $image_dimensions[1];
+					
+					$original_img_width  = $image_dimensions[0];
+					$original_img_height = $image_dimensions[1];
 						#dump($image_dimensions ,'$image_dimensions ');	
-
+						
+						
 				# Related components
 				$ar_related_component_tipo 		= $this->get_ar_related_component_tipo();
 				$ar_related_component_tipo_json = json_encode($ar_related_component_tipo);			

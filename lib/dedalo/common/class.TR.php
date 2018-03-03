@@ -145,7 +145,12 @@ abstract class TR {
 					}else{
 						$string = "(\[(geo)-([a-z])-([0-9]{1,6})(-([^-]{0,22}))?-data:(.*?):data\])";	
 					}
-					break;			
+					break;
+			# GEO_FULL . Select complete tag like '[TC_00:01:25.627_TC]'
+			case 'geo_full' :
+					#$string = "(\[geo-[a-z]-[0-9]{1,6}-[^-]{0,22}?-data:.*?:data\])";
+					$string = "(\[geo-[a-z]-[0-9]{1,6}(-[^-]{0,22})?-data:(.*?):data\])";
+					break;	
 
 			# PAGE (pdf) [page-n-3]
 			case 'page' :
@@ -231,6 +236,7 @@ abstract class TR {
 			$options->personEditable 	= false;
 			$options->noteEditable 		= false;
 			$options->struct_as_labels	= false;
+			$options->force_tr_tags_cdn	= false;
 			if (is_object($request_options)) {
 				foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 			}
@@ -244,13 +250,11 @@ abstract class TR {
 			$codeHiliteOut	= '';
 		}	
 						
-		# url path to php script thats render image
+		# BTN_URL. url path to php script thats render image
 		$btn_url = '../../../inc/btn.php';
-		if(defined('TR_TAGS_CDN')) {
-			#$btn_url ='http://192.168.0.7:7070/dedalo4/inc/btn.php';
+		if(defined('TR_TAGS_CDN') && $options->force_tr_tags_cdn!==false) {		
 			$btn_url = TR_TAGS_CDN;
 		}
-
 
 		# INDEX IN
 		$pattern 	= TR::get_mark_pattern('indexIn'); // id,state,label,data
@@ -290,8 +294,8 @@ abstract class TR {
 
 		# TC
 		$pattern 	= TR::get_mark_pattern('tc'); //[TC_00:00:25.091_TC]
-		/*		
-		$text		= preg_replace_callback(
+		$text		= preg_replace($pattern, "<img id=\"$1\" src=\"{$btn_url}/$1\" class=\"tc\" data-type=\"tc\" data-tag_id=\"$1\" data-state=\"n\" data-label=\"$2\" data-data=\"$2\">", $text);		
+		/*$text		= preg_replace_callback(
             $pattern,
             function($matches) {
             	#dump($matches, ' matches ++ '.to_string());            	
@@ -303,13 +307,7 @@ abstract class TR {
             	return $a;
             },
             $text);*/
-		#$text		= preg_replace($pattern, "<img id=\"$2\" src=\"\" class=\"tc\" data-type=\"tc\" data-tag_id=\"$1\" data-state=\"n\" data-label=\"$2\" data-data=\"$2\">", $text);
-		$text		= preg_replace($pattern, "<img id=\"$1\" src=\"{$btn_url}/$1\" class=\"tc\" data-type=\"tc\" data-tag_id=\"$1\" data-state=\"n\" data-label=\"$2\" data-data=\"$2\">", $text);
-
-		# TC2
-		#$pattern 	= TR::get_mark_pattern('tc2');
-		#$text		= preg_replace($pattern, "<img id=\"[TC_$6_TC]\" src=\"{$btn_url}/[TC_$6_TC]\" class=\"tc2\" data-type=\"tc2\" data-tag_id=\"$4\" data-state=\"$3\" data-label=\"$5\" data-data=\"$6\">", $text);
-		
+	
 		# SVG
 		$pattern 	= TR::get_mark_pattern('svg');
 		#$text		= preg_replace($pattern, "<img id=\"$1\" src=\"{$btn_url}/$1\" class=\"svg\" />$codeHiliteOut", $text);

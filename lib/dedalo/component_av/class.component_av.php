@@ -702,7 +702,7 @@ class component_av extends component_common {
 	*/
 	public static function render_list_value($value, $tipo, $parent, $modo, $lang, $section_tipo, $section_id, $current_locator=null, $caller_component_tipo=null) {
 		
-		if ($modo==='portal_list_view_mosaic') {
+		#if ($modo==='portal_list_view_mosaic') {
 			$component	= component_common::get_instance(__CLASS__,
 														 $tipo,
 														 $parent,
@@ -710,13 +710,13 @@ class component_av extends component_common {
 														 $lang,
 														 $section_tipo);
 			$value 		= $component->get_html();
-		}
-
+		#}
+		/*
 		# Reset posterframe t var to force regenerate
 		preg_match("/t=(.{1,20})'\)/", $value, $output_array);
 		if (isset($output_array[1])) {
 			$value = str_replace($output_array[1], start_time(), $value);
-		}
+		}*/
 
 		return $value;
 	}//end render_list_value

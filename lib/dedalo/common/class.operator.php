@@ -21,6 +21,7 @@
  	* 3 - Calculate method 'set_static_operator_vars'
  	*/
  	public static function get_ar_operator( $lang=DEDALO_APPLICATION_LANG ) {
+ 		return null;
 
  		if ($lang==='lg-vlca') {
 			$lang = 'lg-cat';
@@ -84,7 +85,8 @@
 	* Get operator data static
 	*/
 	public static function get_operator($SQL_operator, $lang=DEDALO_APPLICATION_LANG) {
-		
+		return null;
+
 		if ($lang==='lg-vlca') {
 			$lang = 'lg-cat';
 		}
@@ -111,6 +113,7 @@
 	* Resolve inverse operator
 	*/
 	public static function get_var_from_operator($operator, $lang=DEDALO_APPLICATION_LANG) {
+		return null;
 
 		if ($lang==='lg-vlca') {
 			$lang = 'lg-cat';
@@ -137,6 +140,8 @@
 	* Calculate an fix all operators values from structure (all terms with model 'operator')
 	*/
 	protected static function set_static_operator_vars( $lang=DEDALO_APPLICATION_LANG ) {
+		return null;
+
 
 		if(SHOW_DEBUG===true) $start_time=microtime(1);
 
@@ -190,6 +195,9 @@
 	* @return string $selector_html
 	*/
 	public static function get_search_comparison_operators_html($tipo, $ar_comparison_operator) {
+		return null;
+
+
 		$selector_html='';
 		
 		$selector_html .= "<select class=\"css_operator_select comparison_operator\" name=\"{$tipo}_comparison_operator\" data-tipo=\"$tipo\" onchange=\"search.comparation_operator_options(this)\">";
@@ -218,6 +226,9 @@
 	* @return string $selector_html
 	*/
 	public static function get_search_logical_operators_html($tipo, $ar_logical_operator) {
+		return null;
+
+		
 		$selector_html='';
 
 		$selector_html .= "<select class=\"css_operator_select logical_operator\" name=\"{$tipo}_logical_operator\">";

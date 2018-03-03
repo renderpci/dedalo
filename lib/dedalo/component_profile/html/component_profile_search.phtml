@@ -2,10 +2,12 @@
 
 	# VISUALIZADOR HTML	
 
-	
-	#if(isset($_REQUEST[$tipo])) $dato = $_REQUEST[$tipo];	
-	#print "<!-- ".__CLASS__." -->";
-	print "<div class=\"wrap_component css_wrap_profile\">";
+	print "<div class=\"wrap_component css_wrap_profile tooltip_active\" ";
+	print "data-component_name=\"{$component_name}\" ";
+	print "data-modo=\"{$modo}\" ";
+	print "data-dato='".json_encode($dato)."' ";
+	print 'title="'.search_development2::search_options_title( $this->search_operators_info() ).'" ';
+	print ">";
 	
 	# ETIQUETA (LABEL)
 	$html_label = component_common_draw::draw_label($this);
@@ -47,5 +49,5 @@
 	print $html_content;	
 
 	
-	print "</div><!-- /css_wrap_profile -->"; //wrap
+	print "</div>"; //wrap
 ?>

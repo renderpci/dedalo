@@ -327,7 +327,8 @@ abstract class tools extends common {
 		# PATH
 		$bc_path='';
 		if (isset($_GET['bc_path'])) {
-			$bc_path .= trim( base64_decode($_GET['bc_path']) ) .' / ';
+			$safe_bc_path = safe_xss($_GET['bc_path']);
+			$bc_path .= trim( base64_decode($safe_bc_path) ) .' / ';
 		}
 
 		#
@@ -347,7 +348,7 @@ abstract class tools extends common {
 		# PATH
 		$id_path='';
 		if (isset($_GET['id_path'])) {
-			$id_path .= trim($_GET['id_path']);
+			$id_path .= trim( safe_xss($_GET['id_path']) );
 		}
 		if (empty($id_path)) {
 			$id_path = TOP_TIPO.'.'.TOP_ID;

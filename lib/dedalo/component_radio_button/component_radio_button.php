@@ -19,6 +19,7 @@
 	$component_name			= get_class($this);
 	$dato_string			= $this->get_dato_as_string();
 	$dato_json 				= json_encode($dato);
+	$relation_type 			= $this->relation_type;
 
 	if($permissions===0) return null;
 
@@ -59,8 +60,10 @@
 				break;						
 						
 		case 'search' :
-				# Showed only when permissions are >1
-				if ($permissions<1) return null;
+				# dato is injected by trigger search wen is needed
+				$dato = isset($this->dato) ? $this->dato : null;
+
+				$input_name 		= 'radio_button_'.$identificador_unico;
 				
 				$referenced_tipo 	= $this->get_referenced_tipo();
 				$ar_list_of_values	= $this->get_ar_list_of_values( DEDALO_DATA_LANG, null);

@@ -5,16 +5,16 @@
 	# html_delimiter
 	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'in');
 	
-	print "<div class=\"wrap_component css_wrap_inverse wrap_component_{$tipo}\" id=\"{$id_wrapper}\"
-	data-tipo=\"{$tipo}\"
-	data-lang=\"{$lang}\"
-	data-section_tipo=\"{$section_tipo}\"
-	data-parent=\"{$parent}\"
-	data-modo=\"{$modo}\"
-	data-dato=\"{$dato_json}\"
-	data-component_name=\"{$component_name}\"
-	data-component_info=\"\"
-	>";	
+	print "<div class=\"wrap_component css_wrap_inverse wrap_component_{$tipo}\" id=\"{$id_wrapper}\" ";
+	print "data-tipo=\"{$tipo}\" ";
+	print "data-lang=\"{$lang}\" ";
+	print "data-section_tipo=\"{$section_tipo}\" ";
+	print "data-parent=\"{$parent}\" ";
+	print "data-modo=\"{$modo}\" ";
+	print "data-dato=\"{$dato_json}\" ";
+	print "data-component_name=\"{$component_name}\" ";
+	print "data-component_info=\"\" ";
+	print ">";	
 		
 		# ETIQUETA (LABEL)
 		$html_label = component_common_draw::draw_label($this);
@@ -26,6 +26,10 @@
 		$html_content .= "<ul class=\"css_inverse\">";
 
 			foreach ($dato as $key => $current_locator) {
+
+				$current_section_id 	= $current_locator->from_section_id;
+				$current_section_tipo 	= $current_locator->from_section_tipo;
+				$current_component_tipo = $current_locator->from_component_tipo;
 	
 				$line = '';
 				foreach ($inverse_show as $ikey => $ivalue) {
@@ -33,7 +37,7 @@
 
 					# link to caller section
 					if ($ikey === 'link') {
-						$url = DEDALO_LIB_BASE_URL . '/main/?t='.$current_locator->section_tipo.'&id='.$current_locator->section_id;
+						$url = DEDALO_LIB_BASE_URL . '/main/?t='.$current_section_tipo.'&id='.$current_section_id;
 						$line .= "<a class=\"css_button_generic btn_go_inverse\" href=\"$url\">";
 						$line .= "<div class=\"link css_inverse_link\"></div>";
 						$line .= "</a>";
@@ -42,32 +46,32 @@
 					# section_id
 					if ($ikey === 'section_id') {
 						if(strlen($line)>0) $line .= ' ';
-						$line .= '<span class="inverse_show_section_id">'.$current_locator->section_id.'</span>';
+						$line .= '<span class="inverse_show_section_id">'.$current_section_id.'</span>';
 					}
 
 					# section_tipo
 					if ($ikey === 'section_tipo') {
 						if(strlen($line)>0) $line .= ' ';
-						$line .= '<span class="inverse_show_section_tipo">'.$current_locator->section_tipo.'</span>';
+						$line .= '<span class="inverse_show_section_tipo">'.$current_section_tipo.'</span>';
 					}
 
 					# section_label
 					if ($ikey === 'section_label') {
 						if(strlen($line)>0) $line .= ' ';
-						$label = RecordObj_dd::get_termino_by_tipo($current_locator->section_tipo);
+						$label = RecordObj_dd::get_termino_by_tipo($current_section_tipo);
 						$line .= '<span class="inverse_show_section_label">'.$label.'</span>';
 					}
 
 					# component_tipo
 					if ($ikey === 'component_tipo') {
 						if(strlen($line)>0) $line .= ' ';
-						$line .= '<span class="inverse_show_component_tipo">'.$current_locator->component_tipo.'</span>';
+						$line .= '<span class="inverse_show_component_tipo">'.$current_component_tipo.'</span>';
 					}
 
 					# component_label
 					if ($ikey === 'component_label') {
 						if(strlen($line)>0) $line .= ' ';
-						$label = RecordObj_dd::get_termino_by_tipo($current_locator->component_tipo);
+						$label = RecordObj_dd::get_termino_by_tipo($current_component_tipo);
 						$line .= '<span class="inverse_show_component_label">'.$label.'</span>';
 					}
 				}			
@@ -82,7 +86,7 @@
 		$html_content .= "</ul>";
 
 		if(SHOW_DEBUG===true) {
-			$html_content .= " <span class=\"debug_info notes\">".$dato_json."</span>";
+			$html_content .= "<span class=\"debug_info notes\">".$dato_json."</span>";
 		}
 
 		

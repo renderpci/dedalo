@@ -3,30 +3,31 @@
 	# VISUALIZADOR HTML	
 
 	
-	print "<!-- ROWS ACTIVITY [$id] -->";		
+	#print '<!-- ROWS ACTIVITY [$id] -->';		
 	
 
 	# CONTENIDO (INPUT)
-	$html_contenido  = "<tr>";	
+	$html_contenido  = '<tr>';	
 	
 	switch($permissions) {
 			
 		case 0	:	$html_contenido .= "<span class=\"css_span_dato\"> ".label::get_label('sin_acceso')." </span>";
 					break;
-						
+		
 		case ($permissions>=1):
 
+				/*
 				if( !is_array($ar_valor) || count($ar_valor)==0 ) {						
 					$html_contenido .= "<td class=\"section_list_td_border\">";
 					#$html_contenido .= "No records found.. ";
 					$html_contenido .= "</td>";
 					break;
-				}
+				}*/
 					
 				# TD ID
 				$title=null;
-				if(SHOW_DEBUG===true) $title .= "matrix id: $id ";
-				$html_contenido .= "<td class=\"section_list_td_border section_list_td_row\">";					
+				if(SHOW_DEBUG===true) $title .= "table id: $id ";
+				$html_contenido .= '<td class="section_list_td_border section_list_td_row">';					
 											
 					# ID TEXT
 					$html_contenido .= $section_id.' ';
@@ -38,7 +39,7 @@
 						#$html_contenido .= "<br><mark style=\"color:#a3a3a3;padding-right:5px\">$current_id</mark>";
 					}
 
-				$html_contenido .= "</td>";
+				$html_contenido .= '</td>';
 
 				
 
@@ -48,7 +49,7 @@
 					
 					$td_aditional_class = 'td_'.$component_tipo;
 
-					$html_contenido .= "<td class=\"section_list_td_border section_list_td_row $td_aditional_class\">";
+					$html_contenido .= '<td class="section_list_td_border section_list_td_row '.$td_aditional_class.'">';
 					#$current_component = logger_backend_activity::$ar_elements_activity_tipo[$component_tipo];
 
 					/*
@@ -178,13 +179,13 @@
 							$html_contenido .= $valor ; 
 							break;
 					}					
-					$html_contenido .= " </td>";
+					$html_contenido .= '</td>';
 				}
 
 
 					
 	}
-	$html_contenido .= "</tr>";
+	$html_contenido .= '</tr>';
 	
 	# PRINT HTML
 	print $html_contenido;

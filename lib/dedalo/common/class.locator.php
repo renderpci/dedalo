@@ -44,6 +44,7 @@ class locator extends stdClass {
 	const DELIMITER = '_';
 
 
+
 	/**
 	* __CONSTRUCT
 	* @param object $data 
@@ -58,11 +59,14 @@ class locator extends stdClass {
 			trigger_error("wrong data format. Object expected. Given: ".gettype($data));
 			return false;
 		}
-		foreach ($data as $key => $value) {
+		foreach ($data as $key => $value) {			
 			$method = 'set_'.$key;
 			$this->$method($value);
 		}
-	}
+
+		return true;
+	}//end __construct
+
 
 /*
 			#$rel_locator->set_section_top_tipo( $section_top_tipo );
@@ -163,6 +167,14 @@ class locator extends stdClass {
 		}
 		$this->type = (string)$value;
 	}
+	/**
+	* SET_TYPE_REL
+	* Only defined relation direction 
+	*/
+	public function set_type_rel($value) {
+		# No verification is made now		
+		$this->type_rel = (string)$value;
+	}
 
 
 	/**
@@ -229,6 +241,19 @@ class locator extends stdClass {
 
 
 	/**
+	* GET_TERM_ID
+	* Contract locator object as string like 'es_185' (section_tipo and section_id)
+	* @return string
+	*/
+	public static function get_term_id( $locator ) {
+		$term_id = $locator->section_tipo . '_' . $locator->section_id;
+
+		return $term_id;
+	}//end get_term_id
+
+
+
+	/**
 	* GET_STD_CLASS
 	* @return stdClass 
 	*/
@@ -284,36 +309,68 @@ class locator extends stdClass {
 	* COMPARE_LOCATORS
 	* @return bool $equal
 	*/
-	public static function compare_locators( $locator1, $locator2, $ar_properties=array('section_tipo','section_id') ) {
+	public static function compare_locators( $locator1, $locator2, $ar_properties=[], $ar_exclude_properties=['dataframe','ds'] ) {
+
+		if (empty($ar_properties)){
+			foreach ($locator1 as $property => $value) {
+				if (!in_array($property, $ar_exclude_properties)) {
+					$ar_properties[] = $property;
+				}				
+			}
+
+			foreach ($locator2 as $property => $value) {
+				if (!in_array($property, $ar_exclude_properties)) {
+					$ar_properties[] = $property;
+				}
+			}
+
+			$ar_properties = array_unique($ar_properties);
+		}
+	
+		
 
 		$equal = true;
 		
 		foreach ($ar_properties as $current_property) { // 'section_tipo','section_id','type','from_component_tipo','component_tipo','tag_id'
 
+			$property_exists_in_l1 = property_exists($locator1, $current_property);
+			$property_exists_in_l2 = property_exists($locator2, $current_property);
+
+
 			# Test property exists in all locators
-			if (!property_exists($locator1, $current_property) && !property_exists($locator2, $current_property)) {
+			#if (!property_exists($locator1, $current_property) && !property_exists($locator2, $current_property)) {
+			if ($property_exists_in_l1===false && $property_exists_in_l2===false) {	
 				# Skip not existing properties
 				#debug_log(__METHOD__." Skipped comparison property $current_property. Property not exits in any locator ", logger::DEBUG);
 				continue;
 			}
 
 			# Test property exists only in one locator
-			if (property_exists($locator1, $current_property) && !property_exists($locator2, $current_property)) {
+			#if (property_exists($locator1, $current_property) && !property_exists($locator2, $current_property)) {
+			if ($property_exists_in_l1===true && $property_exists_in_l2===false) {
 				#debug_log(__METHOD__." Property $current_property exists in locator1 but not exits in locator2 (false is returned): ".to_string($locator1).to_string($locator2), logger::DEBUG);
 				$equal = false;
 				break; 
 			}
-			if (property_exists($locator2, $current_property) && !property_exists($locator1, $current_property)) {
+			#if (property_exists($locator2, $current_property) && !property_exists($locator1, $current_property)) {
+			if ($property_exists_in_l2===true && $property_exists_in_l1===false) {	
 				#debug_log(__METHOD__." Property $current_property exists in locator2 but not exits in locator1 (false is returned): ".to_string($locator1).to_string($locator2), logger::DEBUG);
 				$equal = false;
 				break; 
 			}			
 
 			# Compare verified existing properties
-			if( $locator1->$current_property != $locator2->$current_property ) {				
-				$equal = false;
-				break; 
-			}
+			if ($current_property==='section_id') {
+				if( $locator1->$current_property != $locator2->$current_property ) {				
+					$equal = false;
+					break; 
+				}
+			}else{
+				if( $locator1->$current_property !== $locator2->$current_property ) {				
+					$equal = false;
+					break; 
+				}
+			}			
 		}
 
 		return (bool)$equal;
@@ -325,13 +382,21 @@ class locator extends stdClass {
 	* IN_ARRAY_LOCATOR
 	* @return bool $founded
 	*/
-	public static function in_array_locator( $locator, $ar_locator, $ar_properties=array('section_tipo','section_id') ) {
+	public static function in_array_locator( $locator, $ar_locator, $ar_properties=array() ) {
 		$founded = false;
-
-		foreach ((array)$ar_locator as $current_locator) {
+	
+		foreach ($ar_locator as $current_locator) {
 			$founded = self::compare_locators( $locator, $current_locator, $ar_properties );
 			if($founded===true) break;
 		}
+
+		#$ar = array_filter(
+		#		$ar_locator,
+		#		function($current_locator) use($locator, $ar_properties){
+		#			return self::compare_locators( $locator, $current_locator, $ar_properties );
+		#		}
+		#); return $ar;
+	
 
 		return $founded;
 	}//end in_array_locator
@@ -342,7 +407,7 @@ class locator extends stdClass {
 	* GET_KEY_IN_ARRAY_LOCATOR
 	* @return mixed bool | int $key_founded
 	*/
-	public static function get_key_in_array_locator( $locator, $ar_locator, $ar_properties=array('section_tipo','section_id') ) {
+	public static function get_key_in_array_locator( $locator, $ar_locator, $ar_properties=array('section_id','section_tipo') ) {
 		$key_founded = false;
 
 		foreach ((array)$ar_locator as $key => $current_locator) {

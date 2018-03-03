@@ -47,6 +47,7 @@ class tool_tc extends tool_common {
 		foreach ($matches_tc[1] as $key => $current_tc) {
 
 			$secs 		= OptimizeTC::TC2seg($current_tc);
+
 			$new_secs 	= $secs + (int)$offset_seconds;
 
 			if ($new_secs<0) {
@@ -103,9 +104,7 @@ class tool_tc extends tool_common {
 	* @return 
 	*/
 	public static function format_text_for_tool( $raw_text ) {
-		$options = new stdClass();
-			$options->deleteTC = false;
-		$raw_text = TR::deleteMarks($raw_text, $options);
+		
 		$raw_text = TR::addTagImgOnTheFly($raw_text);
 
 		return $raw_text;

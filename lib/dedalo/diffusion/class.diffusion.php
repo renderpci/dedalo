@@ -1,14 +1,11 @@
 <?php
 #require_once(DEDALO_LIB_BASE_PATH . '/diffusion/class.diffusion_mysql.php');
-if (defined('DIFFUSION_CUSTOM')) {
+if (defined('DIFFUSION_CUSTOM') && DIFFUSION_CUSTOM!==false) {
 	include(DIFFUSION_CUSTOM);
 }
-
 /*
 * CLASS DIFUSSION
 */
-
-// abstract 
 abstract class diffusion  {
 
 	protected $domain;
@@ -25,9 +22,9 @@ abstract class diffusion  {
 		#self::$ar_table_data = array();
 
 		$this->domain = DEDALO_DIFFUSION_DOMAIN;
-	}
+	}//end __construct
 
-	
+
 	
 	/**
 	* GET HTML CODE . RETURN INCLUDE FILE __CLASS__.PHP
@@ -88,7 +85,7 @@ abstract class diffusion  {
 		}
 
 		return array_values($ar_locators);
-	}#end clean_duplicates
+	}//end clean_duplicates
 
 
 
@@ -102,134 +99,145 @@ abstract class diffusion  {
 	* @return array $ar_dedalo_countries 
 	*/
 	protected static function get_ar_dedalo_countries( $request_options ) {
+		error_log("STOPPED UNACTIVE OLD METHOD GET_AR_DEDALO_COUNTRIES");
+		return array();
 
-		$ar_dedalo_countries=array();
+		## DEPRECATED 
+			$ar_dedalo_countries=array();
 
-		$options = new stdClass();				
-			$options->ts_map 				= false; # name of ts_map from propiedades
-			$options->curent_children_tipo  = false; # tipo of diffusion element
-			$options->request 				= false; # type of request (fields / columns)
-			$options->parent 				= false; # parent id matrix
-			$options->lang 					= false; # current iterate lang
-			$options->section_tipo 			= null;
-			
-			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
-		
-		# TS_MAP . Calculate ts_map
-		$ts_map = Tesauro::get_ar_ts_map( $options->ts_map );
-			#dump($ts_map, ' ts_map +');die();
-
-
-		switch ($options->request) {
-
-			case 'columns':
-				# Add all elements of first ts_map element as columns like array('country','autonomous_community','province'..)
-				foreach ((array)reset($ts_map) as $dedalo_country => $ar_value) {
-					$ar_dedalo_countries[] = $dedalo_country;
-				}
-				#dump($ar_dedalo_countries, '$ar_dedalo_countries ++ '.to_string());die();
-				break;
-			
-			case 'fields':
-
-				# POINTER TARGET COMPONENT (Normally component_autocomplete_ts)
-				$target_component_tipo  = RecordObj_dd::get_ar_terminos_relacionados($options->curent_children_tipo, true, true)[0];
-				$modelo_name 			= RecordObj_dd::get_modelo_name_by_tipo($target_component_tipo,true); 
-				$section_tipo 			= $options->section_tipo;
-				if (empty($section_tipo)) {
-					$section_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($target_component_tipo, 'section', 'parent')[0];
-						#dump($section_tipo, ' var ++ calculated from '.$modelo_name.' - '.to_string($target_component_tipo));
-				}
-				$target_component 	 	= component_common::get_instance($modelo_name,	// component_autocomplete_ts
-																		 $target_component_tipo,
-																		 $options->parent,
-																		 'list',
-																		 $options->lang,
-																		 $section_tipo,
-																		 false );
-				$dato   				= $target_component->get_dato(); # Dato is a ts term like 'es623'
-				if (is_array($dato)) {
-
-					# CASE VERSION >= 4.0.0	
-
-					$dato_untouch = $dato;				
-					$ar_locator   = $dato_untouch;
-					#$dato 	 		= $locator->section_tipo; // New format of component_autocomplete_ts is a locator for compatibility with future thesaurus
-
-					foreach ((array)$ar_locator as $key => $locator) {						
-					
-						if (!empty($locator) && !isset($locator->section_tipo)) debug_log(__METHOD__." section_tipo is not set ".to_string(), logger::WARNING);					
-						if (!empty($locator) && !isset($locator->section_id))   debug_log(__METHOD__." section_id is not set ".to_string(), logger::WARNING);
-
-						if (isset($locator->section_tipo) && isset($locator->section_id)) {
-							$prefix 	= RecordObj_dd::get_prefix_from_tipo($locator->section_tipo);
-							$terminoID 	= $prefix . $locator->section_id;
-						}else{
-							# Empty record case
-							$prefix 	= null;
-							$terminoID 	= null;
-						}
-						break; // Only one by now
-					}					
-					#debug_log(__METHOD__." Dato is not as expected type string (current: ". gettype($dato_untouch) ."). Changed to: $dato from: ".to_string($dato_untouch), logger::DEBUG);					
+			$options = new stdClass();				
+				$options->ts_map 				= false; # name of ts_map from propiedades
+				$options->ts_map_prefix 		= false; # optional name of ts_map_prefix from propiedades, it will put in the name of the field / column
+				$options->curent_children_tipo  = false; # tipo of diffusion element
+				$options->request 				= false; # type of request (fields / columns)
+				$options->parent 				= false; # parent id matrix
+				$options->lang 					= false; # current iterate lang
+				$options->section_tipo 			= null;
 				
-				}elseif (is_string($dato)) {
+				foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
+			
+			# TS_MAP . Calculate ts_map
+			$ts_map = Tesauro::get_ar_ts_map( $options->ts_map );
+				#dump($ts_map, ' ts_map +');die();
 
-					# CASE VERSION < 4.0.0	
 
-					$prefix = RecordObj_dd::get_prefix_from_tipo($dato);
-					if(empty($prefix) || !isset($ts_map[$prefix])) throw new Exception("Error Processing Request. Prefix $prefix is not defined in ts_map ($options->ts_map)", 1);
-					$terminoID = $dato ; // Pre 4.0 versions
-				}
-				#dump($dato, ' dato ++ '.to_string($dato_untouch));				
+			switch ($options->request) {
 
-				
-				if(empty($prefix)) {
-					
-					// Filled with empty values
+				case 'columns':
+					# Add all elements of first ts_map element as columns like array('country','autonomous_community','province'..)
 					foreach ((array)reset($ts_map) as $dedalo_country => $ar_value) {
-						$ar_dedalo_countries[$dedalo_country] = '';
-					}
-
-				}else if(!isset($ts_map[$prefix])) {
-
-					// Filled with the same value
-					$first_ts_map = reset($ts_map);					
-					foreach ((array)$first_ts_map as $dedalo_country => $ar_value) {
-						$ar_dedalo_countries[$dedalo_country] = strip_tags( RecordObj_ts::get_termino_by_tipo($terminoID,$options->lang) );												
-					}					
-
-				}else{
-
-					$RecordObj_ts 	= new RecordObj_ts($terminoID);
-					$ts_parents  	= (array)$RecordObj_ts->get_ar_parents_of_this();
-					# Add self dato to ts parents
-					$ts_parents[] 	= $terminoID;
-						#dump($ts_parents, ' ts_parents');
-
-					foreach ((array)$ts_map[$prefix] as $dedalo_country => $ar_value) {
-
-						$ar_dedalo_countries[$dedalo_country] = (string)''; # Defined and Empty default
-
-						foreach ($ts_parents as $current_parent) {
-							$RecordObj_ts 	= new RecordObj_ts($current_parent);
-							$modelo 	  	= $RecordObj_ts->get_modelo();	# Model of parent like 'es8869'
-							if (in_array($modelo, $ar_value)) {
-								$ar_dedalo_countries[$dedalo_country] = strip_tags( RecordObj_ts::get_termino_by_tipo($current_parent,$options->lang) );
-							}else{
-								#$ar_dedalo_countries[$dedalo_country] = '';
+						if($options->ts_map_prefix !== false){
+								$dedalo_country = $options->ts_map_prefix.$dedalo_country;
 							}
+						$ar_dedalo_countries[] = $dedalo_country;
+					}
+					#dump($ar_dedalo_countries, '$ar_dedalo_countries ++ '.to_string());die();
+					break;
+				
+				case 'fields':
+
+					# POINTER TARGET COMPONENT (Normally component_autocomplete_ts)
+					$target_component_tipo  = RecordObj_dd::get_ar_terminos_relacionados($options->curent_children_tipo, true, true)[0];
+					$modelo_name 			= RecordObj_dd::get_modelo_name_by_tipo($target_component_tipo,true); 
+					$section_tipo 			= $options->section_tipo;
+					if (empty($section_tipo)) {
+						$section_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($target_component_tipo, 'section', 'parent')[0];
+							#dump($section_tipo, ' var ++ calculated from '.$modelo_name.' - '.to_string($target_component_tipo));
+					}
+					$target_component 	 	= component_common::get_instance($modelo_name,	// component_autocomplete_ts
+																			 $target_component_tipo,
+																			 $options->parent,
+																			 'list',
+																			 $options->lang,
+																			 $section_tipo,
+																			 false );
+					$dato   				= $target_component->get_dato(); # Dato is a ts term like 'es623'
+					if (is_array($dato)) {
+
+						# CASE VERSION >= 4.0.0	
+
+						$dato_untouch = $dato;				
+						$ar_locator   = $dato_untouch;
+						#$dato 	 		= $locator->section_tipo; // New format of component_autocomplete_ts is a locator for compatibility with future thesaurus
+
+						foreach ((array)$ar_locator as $key => $locator) {						
+						
+							if (!empty($locator) && !isset($locator->section_tipo)) debug_log(__METHOD__." section_tipo is not set ".to_string(), logger::WARNING);					
+							if (!empty($locator) && !isset($locator->section_id))   debug_log(__METHOD__." section_id is not set ".to_string(), logger::WARNING);
+
+							if (isset($locator->section_tipo) && isset($locator->section_id)) {
+								$prefix 	= RecordObj_dd::get_prefix_from_tipo($locator->section_tipo);
+								$terminoID 	= $prefix . $locator->section_id;
+							}else{
+								# Empty record case
+								$prefix 	= null;
+								$terminoID 	= null;
+							}
+							break; // Only one by now
+						}					
+						#debug_log(__METHOD__." Dato is not as expected type string (current: ". gettype($dato_untouch) ."). Changed to: $dato from: ".to_string($dato_untouch), logger::DEBUG);					
+					
+					}elseif (is_string($dato)) {
+
+						# CASE VERSION < 4.0.0	
+
+						$prefix = RecordObj_dd::get_prefix_from_tipo($dato);
+						if(empty($prefix) || !isset($ts_map[$prefix])) throw new Exception("Error Processing Request. Prefix $prefix is not defined in ts_map ($options->ts_map)", 1);
+						$terminoID = $dato ; // Pre 4.0 versions
+					}
+					#dump($dato, ' dato ++ '.to_string($dato_untouch));				
+
+					
+					if(empty($prefix)) {
+						
+						// Filled with empty values
+						foreach ((array)reset($ts_map) as $dedalo_country => $ar_value) {
+							$ar_dedalo_countries[$dedalo_country] = '';
 						}
 
-					}#end foreach
-				}
-				#dump($ar_dedalo_countries, ' ar_dedalo_countries for parent:'.$options->parent);
-				break;
-		}#end switch $options->request
-		#dump($ar_dedalo_countries, ' ar_dedalo_countries ++ '.to_string($options));	
-		
-		return (array)$ar_dedalo_countries;
-	}#end get_ar_dedalo_countries
+					}else if(!isset($ts_map[$prefix])) {
+
+						// Filled with the same value
+						$first_ts_map = reset($ts_map);					
+						foreach ((array)$first_ts_map as $dedalo_country => $ar_value) {
+							$ar_dedalo_countries[$dedalo_country] = strip_tags( RecordObj_ts::get_termino_by_tipo($terminoID,$options->lang) );												
+						}					
+
+					}else{
+
+						$RecordObj_ts 	= new RecordObj_ts($terminoID);
+						$ts_parents  	= (array)$RecordObj_ts->get_ar_parents_of_this();
+						# Add self dato to ts parents
+						$ts_parents[] 	= $terminoID;
+							#dump($ts_parents, ' ts_parents');
+
+						foreach ((array)$ts_map[$prefix] as $dedalo_country => $ar_value) {
+
+							if($options->ts_map_prefix !== false){
+								$dedalo_country = $options->ts_map_prefix.$dedalo_country;
+							}
+
+							$ar_dedalo_countries[$dedalo_country] = (string)''; # Defined and Empty default
+
+							foreach ($ts_parents as $current_parent) {
+								$RecordObj_ts 	= new RecordObj_ts($current_parent);
+								$modelo 	  	= $RecordObj_ts->get_modelo();	# Model of parent like 'es8869'
+								if (in_array($modelo, $ar_value)) {
+									$ar_dedalo_countries[$dedalo_country] = strip_tags( RecordObj_ts::get_termino_by_tipo($current_parent,$options->lang) );
+								}else{
+									#$ar_dedalo_countries[$dedalo_country] = '';
+								}
+							}
+
+						}//end foreach
+					}
+					#dump($ar_dedalo_countries, ' ar_dedalo_countries for parent:'.$options->parent);
+					break;
+			}//end switch $options->request
+			#dump($ar_dedalo_countries, ' ar_dedalo_countries ++ '.to_string($options));	
+			
+			return (array)$ar_dedalo_countries;
+	}//end get_ar_dedalo_countries
 
 
 
@@ -243,7 +251,7 @@ abstract class diffusion  {
 			#dump($tipo_filter_master,'$tipo_filter_master');
 
 		return $diffusion_domains;
-	}
+	}//end get_diffusion_domains
 	
 
 
@@ -339,7 +347,7 @@ abstract class diffusion  {
 		}
 
 		return false;
-	}#end get_single_diffusion_map
+	}//end get_single_diffusion_map
 
 
 	
@@ -367,7 +375,7 @@ abstract class diffusion  {
 		
 
 		return $ar_childrens;
-	}#end get_all_ts_records
+	}//end get_all_ts_records
 	
 
 
@@ -438,10 +446,11 @@ abstract class diffusion  {
 
 			}#foreach ($ar_diffusion_element_tipo as $element_tipo)			
 
-		}//end foreach ($ar_diffusion_group as $diffusion_group_tipo)		
+		}//end foreach ($ar_diffusion_group as $diffusion_group_tipo)
+		#dump($ar_diffusion_map, ' ar_diffusion_map ++ '.to_string());		
 
 		return (object)$ar_diffusion_map;		
-	}#end get_ar_diffusion_map
+	}//end get_ar_diffusion_map
 
 
 
@@ -460,7 +469,7 @@ abstract class diffusion  {
 		}		
 
 		return $ar_diffusion_map_elements;
-	}#end get_ar_diffusion_map_elements
+	}//end get_ar_diffusion_map_elements
 	
 
 
@@ -481,7 +490,7 @@ abstract class diffusion  {
 	public function diffusion_complete_dump($diffusion_element, $resolve_references = true) {
 		// Override in every heritage class
 		throw new Exception("Error Processing Request", 1);	
-	}#end diffusion_complete_dump
+	}//end diffusion_complete_dump
 
 	
 

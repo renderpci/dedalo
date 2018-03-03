@@ -309,23 +309,27 @@ class tool_tr_print extends tool_common {
 		
 		$ar_interviews = array();
 		foreach ($inverse_locators as $current_locator) {
-			if ($current_locator->section_tipo==='oh1') {				
+
+			$current_section_tipo = $current_locator->from_section_tipo;
+			$current_section_id   = $current_locator->from_section_id;
+
+			if ($current_section_tipo==='oh1') {				
 
 				# Informants
 					$current_tipo= 'oh24';
 					$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_tipo, true); // component_portal
 					$component 	 = component_common::get_instance($modelo_name,
 																  $current_tipo,
-																  $current_locator->section_id,
+																  $current_section_id,
 																  'edit',
 																  DEDALO_DATA_NOLAN,
-																  $current_locator->section_tipo);
+																  $current_section_tipo);
 					$dato = $component->get_dato();
 					$informants = $this->get_informants_data( $dato );
 
 				# interview
 				$interview = new stdClass();
-					$interview->ID 		   = $current_locator->section_id;
+					$interview->ID 		   = $current_section_id;
 					$interview->informants = $informants;
 
 				$ar_interviews[] = $interview;

@@ -9,7 +9,7 @@ if($this->generate_json_element===true) {
 	// This "code" only builds var json_build_options and call javascript render_component_html
 	
 	$html_content = '';
-	$html_content .= '<div id="'.$id_wrapper.'">';
+	$html_content .= '<div id="'.$id_wrapper.'" class="wrap_component">';
 
 	$json_build_options = json_encode($this->get_json_build_options());
 		#dump($json_build_options, ' $json_build_options ++ '.to_string());
@@ -101,11 +101,11 @@ if($this->generate_json_element===true) {
 			$current_component_tipo = isset($current_locator->component_tipo) ? $current_locator->component_tipo : null;
 			$current_tag_id 		= isset($current_locator->tag_id) ? $current_locator->tag_id : null;
 
-			$current_row = $this->row_in_result( $current_locator, $rows_data->result );						
+			$current_row = $this->row_in_result( $current_locator, $rows_data->ar_records );						
 				#dump($current_row, ' current_row ++ '.to_string());
 
 			#
-			# Limit showed rows
+			# Limit rows
 			/*
 			if ($this->html_options->rows_limit && $key > $this->html_options->rows_limit) {
 				debug_log(__METHOD__." Limit number of records to sowh ".to_string($this->html_options->rows_limit), logger::DEBUG);
@@ -127,7 +127,7 @@ if($this->generate_json_element===true) {
 
 			# Permissions of target section. Applied to delete button									
 			$permission_section = common::get_permissions($target_section_tipo,$target_section_tipo);
-	
+		
 			#
 			# COLUMNS
 				$sort_id = !empty($rel_locator) ? $rel_locator : 0;
@@ -166,11 +166,11 @@ if($this->generate_json_element===true) {
 								$title .= ' - '.$current_component_tipo.' - '.$current_tag_id;
 							}
 
-							if(SHOW_DEBUG===true) {
+							if(SHOW_DEVELOPER===true) {
 								$title .= "\n url:$url \n modo $modo, context $context->context_name";
 							}
 							$edit_button = '';
-							if (empty($current_row['id'])) {
+							if (empty($current_row->section_id)) {
 								$edit_button .= "<div class='div_image_link link' title=\"$title\" onclick=\"alert('Deleted record')\"> ! </div>";
 							}else{
 								$additional_css_style = $permissions <2 ? 'style="height: 100%;"' : '' ;
@@ -179,10 +179,12 @@ if($this->generate_json_element===true) {
 								$edit_button .= "class=\"id_column_buttons button_edit link\" ";
 								$edit_button .= $additional_css_style;
 								$edit_button .= "title=\"$title\">";
-									# SECTION_ID TEXT
+									# SECTION_ID TEXT									
 									$edit_button .= "<span class=\"section_id_number\">";
+									if(SHOW_DEVELOPER===true) {
 									$edit_button .= $section_id;
-									$edit_button .= "</span>"; 
+									} 
+									$edit_button .= "</span>";									
 								$edit_button .= "</a>";											
 							}
 							$column_edit_value .= $edit_button;
@@ -190,22 +192,38 @@ if($this->generate_json_element===true) {
 
 						#
 						# DELETE RECORD BUTTON
-							$delete_button = '';
-							if ($permissions>=2) {								
+							$delete_button = '';							
+							if ($permissions>=2) {
+
+								# Defaults restrictive
+								$permission_target_section_delete = 0;
+								# Try to locate delete button inside
+								$delete_button_objects = section::get_ar_children_tipo_by_modelo_name_in_section($target_section_tipo, array('button_delete'), true, true, true, true);
+								#dump($delete_button_objects, ' delete_button_objects ++ '.to_string($target_section_tipo));
+								if (isset($delete_button_objects[0])) {
+									$permission_target_section_delete = common::get_permissions($delete_button_objects[0], $target_section_tipo);
+								}
+								#dump($permission_target_section_delete, ' permission_target_section_delete ++ '.to_string($delete_button_objects[0]));
+								
+								if(SHOW_DEBUG===true) {
+									$permission_target_section_delete = 2;  
+								}
+
 								$title	= label::get_label('borrar') .' '. label::get_label('recurso');													
 								$delete_button .= "<a href=\"javascript:void(0);\" class=\"id_column_buttons button_delete link\" ";
 								$delete_button .= "onclick=\"component_portal.open_delete_dialog(this)\" ";
 								$delete_button .= "data-rel_locator='{$rel_locator}' ";
-								$delete_button .= "data-permission_section=\"{$permission_section}\" ";
+								$delete_button .= "data-permission_target_section_delete=\"{$permission_target_section_delete}\" ";
 								$delete_button .= "title=\"$title\">";							
-								$delete_button .= "</a>";
+								$delete_button .= "</a>";								
 							}
 
-						$json_d->rows_data_values[$key][$column_tipo] = array('edit'=>$column_edit_value, 'delete'=>$delete_button);
+						$json_d->rows_data_values[$key][$column_tipo] = array('edit'   => $column_edit_value,
+																			  'delete' => $delete_button);
 
 					#
 					# TAG_ID
-					}else if($column_tipo=='tag_id') {						
+					}else if($column_tipo==='tag_id') {
 
 						if( isset($current_locator->component_tipo) && isset($current_locator->tag_id) ) {
 
@@ -248,6 +266,7 @@ if($this->generate_json_element===true) {
 
 						# aditional td css selectors
 						$td_css_selector = 'td_'.$modelo_name.' td_'.$column_tipo. ' column_'.$column_tipo;
+							#dump($td_css_selector, ' td_css_selector ++ '.to_string());
 
 						# Row value default
 						/*
@@ -260,9 +279,10 @@ if($this->generate_json_element===true) {
 						*/
 						#dump($modelo_name, ' PORTAL EDIT modelo_name ++ '.to_string($column_tipo));
 
-						
-						$column_value = isset($current_row[$column_tipo]) ? $current_row[$column_tipo] : null;
-							#dump($column_value, ' column_value ++ '.to_string());
+						# RECORDS FROM DATABASE
+						# $column_value = isset($current_row[$column_tipo]) ? $current_row[$column_tipo] : null;
+						$column_value = isset($current_row->$column_tipo) ? $current_row->$column_tipo : null;
+					
 
 						# Detect and avoid structure errors (portal list with deprecated elements for example)
 						if (strpos($modelo_name, 'component_')===false) {
@@ -282,7 +302,7 @@ if($this->generate_json_element===true) {
 								continue;
 							}
 						}
-
+	
 						# Overwrite default list mode when need. Set component propiedades 'elements_list_mode' as you want, like edit..
 						if (isset($propiedades->elements_list_mode->$column_tipo->mode)) {
 							$render_list_mode = $propiedades->elements_list_mode->$column_tipo->mode;
@@ -481,13 +501,13 @@ if (isset($pisuerga) && $pisuerga==='valladolid') {
 				$html_content .= "<div id=\"section_list_rows_content_div_{$this->tipo}\" class=\"section_list_rows_content_div portal_table_wraper\">";
 
 				# Table
-				$table_add_class = empty($rows_data->result) ? 'table_rows_list_empty' : null;
+				$table_add_class = empty($rows_data->ar_records) ? 'table_rows_list_empty' : null;
 				$table = "<table id=\"portal_table_{$tipo}\" class=\"table_rows_list table_portal_rows_list $table_add_class\">";
 				
 
 				#
 				# HEADERS (TH)
-				if ($this->html_options->header && !empty($rows_data->result)) {
+				if ($this->html_options->header && !empty($rows_data->ar_records)) {
 				
 					$table .= "<thead>";
 					$table .= "<tr>";
@@ -512,7 +532,7 @@ if (isset($pisuerga) && $pisuerga==='valladolid') {
 						}						
 							
 						$table .= "<th class=\"$td_css_selector\" style=\"$th_style\">";
-						$table .= " <div class=\"th_title\" title=\"$column_label\">$column_label</div>";
+						$table .= "<div class=\"th_title\" title=\"$column_label\">$column_label</div>";
 						# Absolute header th
 						#$table .= " <div class=\"th_title th_title_abs\">$column_label</div>";
 						$table .= "</th>";
@@ -521,7 +541,7 @@ if (isset($pisuerga) && $pisuerga==='valladolid') {
 					$table .= "</thead>";
 				}//end if ($this->html_options->header)
 
-				#dump($rows_data->result," rows_data->result");
+				#dump($rows_data->ar_records," rows_data->result");
 
 				
 				
@@ -538,7 +558,7 @@ if (isset($pisuerga) && $pisuerga==='valladolid') {
 					$current_component_tipo = isset($current_locator->component_tipo) ? $current_locator->component_tipo : null;
 					$current_tag_id 		= isset($current_locator->tag_id) ? $current_locator->tag_id : null;
 
-					$current_row = $this->row_in_result( $current_locator, $rows_data->result );						
+					$current_row = $this->row_in_result( $current_locator, $rows_data->ar_records );						
 						#dump($current_row, ' current_row ++ '.to_string());
 
 					#
@@ -618,11 +638,11 @@ if (isset($pisuerga) && $pisuerga==='valladolid') {
 										$table .= "<div class='div_image_link link' title=\"$title\" onclick=\"alert('Deleted record')\"> ! </div>";
 									}else{
 										$additional_css_style = $permissions <2 ? 'style="height: 100%;"' : '' ;
-										$table .= "<a href=\"javascript:void(0);\" onclick=\"component_portal.open_record(this,'$url')\"
-										id=\"portal_link_open_{$section_tipo}_{$section_id}\"
-										class=\"id_column_buttons button_edit link\"
-										$additional_css_style
-										title=\"$title\">";
+										$table .= "<a href=\"javascript:void(0);\" onclick=\"component_portal.open_record(this,'$url')\" ";
+										$table .= "id=\"portal_link_open_{$section_tipo}_{$section_id}\" ";
+										$table .= "class=\"id_column_buttons button_edit link\" ";
+										$table .= $additional_css_style." ";
+										$table .= "title=\"$title\">";
 											# SECTION_ID TEXT
 											$table .= "<span class=\"section_id_number\">";
 											$table .= " $section_id ";
@@ -636,10 +656,10 @@ if (isset($pisuerga) && $pisuerga==='valladolid') {
 									if ($permissions>=2) {
 										
 										$title	= label::get_label('borrar') .' '. label::get_label('recurso');										
-										$table .= "<a href=\"javascript:void(0);\" class=\"id_column_buttons button_delete link\" onclick=\"component_portal.open_delete_dialog(this)\"
-										data-rel_locator='{$rel_locator}'
-										data-permission_section=\"{$permission_section}\"
-										title=\"$title\">";
+										$table .= "<a href=\"javascript:void(0);\" class=\"id_column_buttons button_delete link\" onclick=\"component_portal.open_delete_dialog(this)\" ";
+										$table .= "data-rel_locator='{$rel_locator}' ";
+										$table .= "data-permission_section=\"{$permission_section}\" ";
+										$table .= "title=\"$title\">";
 										if(SHOW_DEBUG===true) {
 											/*
 											$table .= "<mark class=\"debug_info\">";
@@ -768,7 +788,7 @@ if (isset($pisuerga) && $pisuerga==='valladolid') {
 
 				# When no result, Empty row is render for drag
 				/*
-				if (empty($rows_data->result) && !empty($dato)) {
+				if (empty($rows_data->ar_records) && !empty($dato)) {
 					$table .= "<tr><td colspan=\"".count($ar_columns)."\">";
 					if(SHOW_DEBUG===true) {
 						$table .= "<div class=\"warning\">DEBUG INFO: I can't resolve this locator: <blockquote> ".to_string($dato,true)."</blockquote></div>";
@@ -793,7 +813,9 @@ if (isset($pisuerga) && $pisuerga==='valladolid') {
 				# DRAG ACTIVATE (for current table)
 				#
 				if ($this->html_options->sortable) {
-					$html_content .= "<script>component_portal.active_portal_table_sortable('portal_table_{$tipo}', '$dragable_connectWith')</script>";
+					$html_content .= "<script>";
+					$html_content .= "component_portal.active_portal_table_sortable('portal_table_{$tipo}', '$dragable_connectWith');";
+					$html_content .= "</script>";
 				}
 				break;
 
@@ -811,7 +833,7 @@ if (isset($pisuerga) && $pisuerga==='valladolid') {
 
 
 		# DEBUG INFO
-		if(SHOW_DEBUG===true && !empty($rows_data->result)) {
+		if(SHOW_DEBUG===true && !empty($rows_data->ar_records)) {
 			#dump($this, ' this 1 ');
 			$limit_time=SLOW_QUERY_MS/10;
 			$html_info='';

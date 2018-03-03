@@ -49,13 +49,9 @@
 		case 'list'	:	
 				break;	
 		
-		case 'search':
-				# Showed only when permissions are >1
-				if ($permissions<1) return null;
-				
-				if ($dato<1) {
-					$dato = null;
-				}
+		case 'search':				
+				# dato is injected by trigger search wen is needed
+				$dato = isset($this->dato) ? $this->dato : null;
 
 				$ar_comparison_operators 	= $this->build_search_comparison_operators();
 				$ar_logical_operators 		= $this->build_search_logical_operators();

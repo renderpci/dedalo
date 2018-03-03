@@ -73,7 +73,7 @@ class Navigation {
 				
 		global $administracion_abrev_title, $proyectos_title, $usuarios_title , $municipios_title, $actividad_title ;
 				
-		if(isset($_GET['t'])) $t = $_GET['t'];
+		if(isset($_GET['t'])) $t = safe_xss($_GET['t']);
 		global $comarcas_title ;
 		global $provincias_title ;
 		global $comunidades_title ;
@@ -115,13 +115,13 @@ class Navigation {
 		#if( $nombre == $ayuda_title && $localizacion2 == $ayuda_title ) $estilo='botonTablaZactual' ;
 		#if( $nombre == $estadisticas_title && $localizacion2 == $estadisticas_title ) $estilo='botonTablaZactual' ;
 			
-		$html .= '\n<table  border="0" cellpadding="0" cellspacing="0" class="'.$estilo.'">'  ;
+		$html .= '<table  border="0" cellpadding="0" cellspacing="0" class="'.$estilo.'">'  ;
 		$html .= '<tr>' ;
 		$html .= "<td height=\"16\" width=\"4\"><img src=\"../images/b_left.gif\" width=\"4\" height=\"16\" vspace=\"0\" onClick=\"javascript:top.location='$enlace';\"></td>" ;
 		$html .= '<td height="16" align="center" background="../images/b_center.gif" nowrap="nowrap"><div class="botonT"><a href="'.$enlace.'">'.$nombre.'</a></div></td>' ; 
 		$html .= '<td height="16" width="4"><img src="../images/b_right.gif" alt="." width="4" height="16" hspace="0" vspace="0"></td>' ;
 		$html .= '</tr>' ;
-		$html .= '</table>\n' ;
+		$html .= '</table>' ;
 		
 		return $html ;
 	}
@@ -221,11 +221,11 @@ class Navigation {
 		if(!$selected)
 		{
 			# CASO NORMAL
-			$html .= "\n<a class=\"$estilo\" href=\"$enlace\">$nombre</a>";
+			$html .= "<a class=\"$estilo\" href=\"$enlace\">$nombre</a>";
 			
 		}else{
 			# CASO SELECCIONADO
-			$html .= "\n<a class=\"$estiloSelected\">$nombre</a>";
+			$html .= "<a class=\"$estiloSelected\">$nombre</a>";
 		}
 		
 		return $html ;
@@ -239,9 +239,9 @@ class Navigation {
 		
 		$html = false ;
 		
-		$html .= "\n<div id=\"infoSituacion\">";
+		$html .= "<div id=\"infoSituacion\">";
 		$html .= "<strong>$zonaAct</strong> : $localizacion2 ";
-		$html .= "\n</div>";
+		$html .= "</div>";
 		
 		return $html ;
 	}
@@ -260,7 +260,7 @@ class Navigation {
 		/*
 		* caso municipios de nivel 3
 		*/
-		if(isset($_GET['t'])) $t = $_GET['t'];
+		if(isset($_GET['t'])) $t = safe_xss($_GET['t']);
 		global $municipios_title ;
 		global $comarcas_title ;
 		global $provincias_title ;
@@ -287,17 +287,17 @@ class Navigation {
 		if(!$selected) {
 			
 			# CASO NORMAL
-			$html .= "\n<a class=\"$estilo\" href=\"$enlace\">";
+			$html .= "<a class=\"$estilo\" href=\"$enlace\">";
 			$html .= $icono ;
 			$html .= $nombre ;
-			$html .= "\n</a>";
+			$html .= "</a>";
 			
 		}else{
 			# CASO SELECCIONADO
-			$html .= "\n<a class=\"$estiloSelected\" >";
+			$html .= "<a class=\"$estiloSelected\" >";
 			$html .= $icono ;
 			$html .= $nombre ;
-			$html .= "\n</a>";
+			$html .= "</a>";
 		}
 		
 		

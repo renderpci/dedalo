@@ -32,6 +32,9 @@
 			$component->set_context($component_context);
 				//dump($component, ' component ++ '.to_string());
 
+			// Reset component dato
+			$component->set_dato(null);
+
 			$html .= $component->get_html();
 				
 			

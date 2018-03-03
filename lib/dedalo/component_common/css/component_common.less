@@ -33,8 +33,8 @@
 		//clear: left;
 	}
 
-.selected_wrap {
-	background: @color_selected_wrap !important;
+.selected_wrap {	
+	background-color: @color_selected_wrap !important;
 }
 
 
@@ -201,7 +201,12 @@ input[type="text"], input[type="password"], textarea {
 		//transition: all 0.3s ease;
 		//font-weight: bold;
 		font-family: "Oxygen-Bold", "Helvetica Neue", Helvetica, Arial, sans-serif;
-		font-weight: 300;
+		//font-weight: 300;
+
+		// Sweet labels 11-01-2018 (Manolo's request)
+		font-weight: 100;
+		color: #9e9e9e;
+
 		@media screen and (max-width: @movil_max_width) {
 			width: 100% !important;
 			max-width: 100%;
@@ -261,11 +266,15 @@ div.dato_refecence_default_lang {
 ------------------------------------------------------- */
 .css_span_ejemplo {
 	font-style: italic;
-	display: inline-block;
-	color: #999999;
-	font-size: smaller;
-	margin-right: 5px;
-	position: relative;
+    display: inline-block;
+    color: #999;
+    font-size: smaller;
+    margin-right: 5px;
+    position: relative;
+    line-height: 1em;
+    vertical-align: middle; 
+    padding: 8px;
+    padding-bottom: 0;
 }
 
 

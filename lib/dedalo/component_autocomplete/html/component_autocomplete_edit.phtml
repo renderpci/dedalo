@@ -7,7 +7,7 @@
 	# html_delimiter
 	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'in', $modo, $lang);
 
-	print "<div class=\"wrap_component css_wrap_autocomplete wrap_component_{$tipo}\" id=\"{$id_wrapper}\" ";
+	print "<div class=\"wrap_component css_wrap_autocomplete wrap_component_{$modo} wrap_component_{$tipo}\" id=\"{$id_wrapper}\" ";
 	print "data-tipo=\"{$tipo}\" ";
 	print "data-lang=\"{$lang}\" ";
 	print "data-parent=\"{$parent}\" ";
@@ -19,6 +19,8 @@
 	print "data-dato='{$dato_json}' ";
 	print "data-component_name=\"{$component_name}\" ";
 	print "data-component_info='{$component_info}' ";
+	print "data-search_query_object='{$json_search_query_object}' ";
+	print "data-filter_by_list='{$json_filter_by_list}' ";
 	print ">";
 
 	# ETIQUETA (LABEL)
@@ -28,11 +30,11 @@
 	$html_content = '';
 	switch(true) {
 
-		case ($permissions == 0) :
+		case ($permissions === 0) :
 				$html_content .= "";
 				break;
 
-		case ($permissions == 1) : 
+		case ($permissions === 1) : 
 				$html_content .= $valor;
 				break;
 
@@ -44,19 +46,6 @@
 
 
 				if ($in_time_machine!==true) {
-
-					#
-					# NEW_ELEMENT_CONTAINER ajax loads here
-					$html_content .= "<div class=\"new_element_container\" data-type=\"new_element_container\"></div>";
-						if(SHOW_DEBUG===true) {
-							/*
-							$html_content .= "<div class=\"debug_info notes\">target_section_tipo: ".implode(', ', $ar_target_section_tipo)."</div>";
-							if (isset($propiedades->filtered_by)) {
-								$html_content .= "<div class=\"debug_info notes\">filtered_by: ".json_encode($propiedades->filtered_by)."</div>";	// filtered_by
-							}
-							$html_content .= "<div class=\"debug_info notes\">".str_replace('},', '},<br>', $dato_json) ."</div>";
-							*/
-						}
 
 					
 					# BUTTONS_AND_FIELDS
@@ -90,18 +79,17 @@
 						#
 						# INPUT SEARCH FIELD
 						$html_content .= "<input type=\"text\" class=\"css_autocomplete_search_field edit_hidden\" placeholder=\"".label::get_label('buscar')."...\" ";
+						$html_content .= "onfocus=\"component_autocomplete.activate(this)\" ";
 						$html_content .= "data-id_wrapper=\"$id_wrapper\" ";
 						$html_content .= "data-tipo='{$tipo}' ";
 						$html_content .= "data-section_tipo=\"{$section_tipo}\" ";
 						$html_content .= "data-parent='{$parent}' ";
 						$html_content .= "data-ar_target_section_tipo='{$ar_target_section_tipo_json}' ";
 						$html_content .= "data-tipo_to_search='{$tipo_to_search}' ";
-						$html_content .= "onfocus=\"component_autocomplete.activate(this)\" ";
 						$html_content .= "tabindex=\"1\" ";
 						$html_content .= "/>";
 
 					$html_content .= "</div>";//end div buttons_and_fields
-
 
 
 				}//end if (!$in_time_machine) {
@@ -109,6 +97,7 @@
 
 				# VALOR . STRING RESOLVED TO SHOW
 				$html_content .= "<ul class=\"css_autocomplete_valor\" data-role=\"autocomplete_valor\">";
+				$i=0;
 				foreach ($ar_valor as $current_value => $value) {
 
 					$current_locator  		= json_decode($current_value);
@@ -122,20 +111,23 @@
 
 					#
 					# BTN DELETE
-					if (!$in_time_machine) {							
+					if (!$in_time_machine) {
 					$html_content .= "<div class=\"icon_bs link css_autocomplete_button_delete edit_hidden\" ";
 					$html_content .= "onclick=\"component_autocomplete.delete(this)\" ";
 					$html_content .= "title=\"$label $parent\" ";
 					$html_content .= "data-tipo=\"{$tipo}\" ";
 					$html_content .= "data-current_value='$current_value' ";
 					$html_content .= "data-id_wrapper=\"$id_wrapper\" ";
-					$html_content .= "data-role=\"autocomplete_button_delete\" ";										
-					$html_content .= "></div>";						
+					$html_content .= "data-role=\"autocomplete_button_delete\" ";
+					$html_content .= "></div>";
 					}
 
 					#
 					# LABEL
 					$html_content .= "<span>$value</span>";
+
+
+
 
 					#
 					# BTN EDIT
@@ -148,6 +140,13 @@
 					$html_content .= "data-menu=\"0\" ";
 					$html_content .= "></a>";						
 					}
+
+					
+					# DATAFRAME MANAGER
+					if (isset($ar_dataframe_obj[$i])) {
+						$html_content .= $ar_dataframe_obj[$i]->get_html();
+					}
+					$i++;
 
 
 					#
@@ -169,8 +168,7 @@
 							
 						}
 						$html_content .= "</div>";
-					}
-					
+					}					
 
 					if(SHOW_DEBUG) {
 						#$html_content .= " <span class=\"notes\">$current_value</span>";
@@ -179,92 +177,233 @@
 					$html_content .= "</li>";
 				}
 				$html_content .= "</ul>";
+				
 
-
+				
 				#
-				# OPTIONS (filter_by_list)
-				#$filter_by_list= false;
-				if ($filter_by_list!==false) {
-					$html_content .= "<div class=\"icon_bs autocomplete_list_button_options edit_hidden\"></div>";
+				# OPTIONS 
+				$autosearch_options_html = '';
+				$autosearch_options_html .= "<div class=\"autosearch_options\" data-tipo=\"$tipo\">";
+	
+					#
+					# FILTER_BY_LIST
+						#$filter_by_list= false;
+						$ar_filters = [];
+						if ($filter_by_list!==false) {
+							#$autosearch_options_html .= "<div class=\"icon_bs autocomplete_list_button_options edit_hidden\"></div>";
 
-					$cookie_name = 'filter_by_list_'. $section_tipo .'_'. $tipo;
-					$html_content .= "<ul class=\"filter_by_list text_unselectable\">";
-					#$html_content .= "<div class=\"toponymy_list_close\">X</div>";
-					$html_content .= "<li><input type=\"checkbox\" id=\"select_all_{$tipo}\" onchange=\"component_autocomplete.select_all_filter_sections(this,'$cookie_name')\"/><label for=\"select_all_{$tipo}\">".label::get_label('todos')."</label></li><hr>";
-					$total = count($filter_by_list); $n=0;
-					foreach ($filter_by_list as $current_obj_value) {
-
-						$f_section_tipo   	= $current_obj_value->section_tipo;
-						$f_component_tipo 	= $current_obj_value->component_tipo;
-
-						# Calculate list values of each element
-						$c_modelo_name 		= RecordObj_dd::get_modelo_name_by_tipo($f_component_tipo,true);
-						$current_component  = component_common::get_instance($c_modelo_name,
-																			 $f_component_tipo,
-																			 null,
-																			 'list',
-																			 DEDALO_DATA_LANG,
-																			 $f_section_tipo);
-						$ar_list_of_values = $current_component->get_ar_list_of_values(DEDALO_DATA_LANG, false, false, false, $value_container='valor');
-							#dump($ar_list_of_values, ' ar_list_of_values ++ '.to_string());
-						foreach ((array)$ar_list_of_values->result as $hs_value => $hs_name) {
+							$cookie_name = 'filter_by_list_'. $section_tipo .'_'. $tipo;
+							$autosearch_options_html .= "<ul class=\"filter_by_list text_unselectable\">";
+							#$autosearch_options_html .= "<div class=\"toponymy_list_close\">X</div>";
 							
-							$current_value = json_decode($hs_value);
-							# Add component tipo to locator
-							$current_value->component_tipo = $f_component_tipo;							
+							$total = count($filter_by_list); $n=0;
+							foreach ($filter_by_list as $current_obj_value) {
+			
+								$f_section_tipo   	= $current_obj_value->section_tipo;
+								$f_component_tipo 	= $current_obj_value->component_tipo;
+									#dump($f_component_tipo, ' f_component_tipo ++ '.to_string());
 
-							$input_id = md5($hs_value);
-							$html_content .= "<li>";
-							$html_content .= "<input type=\"checkbox\" value='".json_encode($current_value)."' id=\"$input_id\" checked onchange=\"component_autocomplete.save_filter_sections(this,'$cookie_name')\"/>";
-							$html_content .= "<label for=\"$input_id\">";
-							$html_content .= $hs_name;
-							if(SHOW_DEBUG===true) {
-								#$html_content .= " <span class=\"notes\">[$hs_value]<span>";
+								if (!isset($all_selector_check)) {
+									$label_all = label::get_label('todos').' <span>'. RecordObj_dd::get_termino_by_tipo($f_component_tipo);
+									if (SHOW_DEVELOPER===true) {
+										$label_all .= ' <span style="opacity:0.5">['.$f_component_tipo.']</span>';
+									}
+									$label_all .= '<span>';
+									$all_selector_check = "<li><input type=\"checkbox\" id=\"select_all_{$tipo}\" onchange=\"component_autocomplete.select_all_filter_sections(this,'$cookie_name')\"/><label for=\"select_all_{$tipo}\">".$label_all."</label></li><hr>";
+									$autosearch_options_html .= $all_selector_check;
+								}
+
+								$ar_filters[] = $f_component_tipo;
+
+								# Calculate list values of each element
+								$c_modelo_name 		= RecordObj_dd::get_modelo_name_by_tipo($f_component_tipo,true);
+								$current_component  = component_common::get_instance($c_modelo_name,
+																					 $f_component_tipo,
+																					 null,
+																					 'list',
+																					 DEDALO_DATA_LANG,
+																					 $f_section_tipo);
+								$ar_list_of_values = $current_component->get_ar_list_of_values(DEDALO_DATA_LANG, false, false, false, $value_container='valor');
+									#dump($ar_list_of_values, ' ar_list_of_values ++ '.to_string());
+								foreach ((array)$ar_list_of_values->result as $hs_value => $hs_name) {
+
+									$current_value = json_decode($hs_value);
+
+									$current_locator = new locator();
+										$current_locator->set_type(DEDALO_RELATION_TYPE_LINK); # Add relation type (always link)
+										$current_locator->set_section_id($current_value->section_id);
+										$current_locator->set_section_tipo($current_value->section_tipo);										
+										$current_locator->set_from_component_tipo($f_component_tipo); # Add from_component_tipo
+									
+									$current_locator_json = json_encode($current_locator);						
+
+									$input_id = md5($hs_value);
+									$autosearch_options_html .= "<li>";
+									$autosearch_options_html .= "<input type=\"checkbox\" value='".$current_locator_json."' id=\"$input_id\" checked onchange=\"component_autocomplete.save_filter_sections(this,'$cookie_name')\"/>";
+									$autosearch_options_html .= "<label for=\"$input_id\">";
+									$autosearch_options_html .= $hs_name;
+									if(SHOW_DEBUG===true) {
+										#$autosearch_options_html .= " <span class=\"notes\">[$hs_value]<span>";
+									}
+									$autosearch_options_html .= "</label>";
+									$autosearch_options_html .= "</li>";
+								}
+								$n++;
+								if ($total>1 && $n<$total) {
+									$autosearch_options_html .= "<hr>";
+								}
 							}
-							$html_content .= "</label>";
-							$html_content .= "</li>";
+							$autosearch_options_html .= "</ul>";
+
+							$autosearch_options_html .= "<script>";
+							# Reset var 'activated' on load
+							#$autosearch_options_html .= "component_autocomplete.activated={};";
+							# Init component
+							$autosearch_options_html .= "component_autocomplete.init_filter_by_list({\"wrapper_id\":\"$id_wrapper\",\"cookie_name\":\"$cookie_name\",\"limit\":\"$limit\"});";
+							$autosearch_options_html .= "</script>";
+						}//end if ($filter_by_list!==false)
+
+
+					#
+					# FILTER FIELDS (ADVANCED SEARCH)
+						$filter_by_fields = false;
+						#$filter_obj = reset($search_query_object->filter);
+						$filter_obj = $search_query_object->filter;
+						#dump($filter_obj, ' filter_obj ++ '.to_string());
+
+						$autosearch_options_html .= "<div class=\"filter_fields text_unselectable\">";
+						$autosearch_options_html .= "<ul>";
+						foreach ($filter_obj as $operator => $ar_filter) foreach ($ar_filter as $key => $current_filter) {						
+
+							$first_path 			= reset($current_filter->path);
+							$last_path 				= end($current_filter->path);
+							$base_component_tipo 	= $first_path->component_tipo;
+							$current_component_tipo = $last_path->component_tipo;
+							$current_section_tipo 	= $last_path->section_tipo;
+							$current_modelo_name 	= $last_path->modelo;
+							$input_name 			= 'filter_field_'.$current_component_tipo;
+							$name 					= $last_path->name;
+
+							if (in_array($base_component_tipo, $ar_filters)) continue;
+
+							# type_map
+							if (isset($propiedades->source->type_map->$base_component_tipo)) {
+								$current_type_map = $propiedades->source->type_map->$base_component_tipo;
+								$current_type_map_json = json_encode($current_type_map);
+							}else{
+								$current_type_map_json = '[]';
+							}							
+							
+							
+							$autosearch_options_html .= "<li>";
+							#$autosearch_options_html .= "<div class=\"wrap_component\" data-dato=''>";
+							$autosearch_options_html .= "<label>$name</label>";
+							$autosearch_options_html .= "<input type=\"text\" class=\"filter_fields_input\" ";
+							$autosearch_options_html .= "name=\"{$input_name}\" ";
+							$autosearch_options_html .= "value=''";
+							if (SHOW_DEVELOPER===true) {
+							$autosearch_options_html .= "placeholder='$current_component_tipo'";
+							}							
+							$autosearch_options_html .= "data-tipo=\"{$current_component_tipo}\" ";
+							$autosearch_options_html .= "data-modelo=\"{$current_modelo_name}\" ";
+							#$autosearch_options_html .= "data-search_query_object='$current_search_query_object_json'";
+							$autosearch_options_html .= "data-type_map='$current_type_map_json'";
+							$autosearch_options_html .= "onkeyup=\"component_autocomplete.search_from_filter_fields(this)\"";
+							#$autosearch_options_html .= "onchange=\"component_common.fix_dato(this,'{$component_name}')\" ";
+							$autosearch_options_html .= "/>";
+							#$autosearch_options_html .= "</div>";//end wrap
+							
+							// Mode full component search							
+							/*$current_component  = component_common::get_instance($current_modelo_name,
+																				 $current_component_tipo,
+																				 null,
+																				 'search',
+																				 DEDALO_DATA_LANG,
+																				 $current_section_tipo);
+							$autosearch_options_html .= $current_component->get_html();*/
+							
+							$autosearch_options_html .= "</li>";
+
+							
+
+							if($key>0) $filter_by_fields = true;
 						}
-						$n++;
-						if ($total>1 && $n<$total) {
-							$html_content .= "<hr>";
-						}
+						$autosearch_options_html .= "</ul>";
+
+						# Operator selector
+							$autosearch_options_html .= "<div class=\"search_operators_div\">";
+							$operator_selected = isset($propiedades->source->operator) ? $propiedades->source->operator : 'or';						
+							$autosearch_options_html .= "<label>" .label::get_label('operadores_de_busqueda'). "</label> ";
+							$autosearch_options_html .= "<select class=\"operator_selector\" onchange=\"component_autocomplete.search_from_filter_fields(this)\">";
+							$op_label = RecordObj_dd::get_termino_by_tipo('dd1061',DEDALO_DATA_LANG,true);
+							$selected = ($operator_selected==='or') ? 'selected="selected"' : '';						
+							$autosearch_options_html .= "<option value='or' {$selected}>" .$op_label. "</option>";
+							$op_label = RecordObj_dd::get_termino_by_tipo('dd1060',DEDALO_DATA_LANG,true);		
+							$selected = ($operator_selected==='and') ? 'selected="selected"' : '';	
+							$autosearch_options_html .= "<option value='and' {$selected}>" .$op_label. "</option>";
+							$autosearch_options_html .= "</select>";
+							$autosearch_options_html .= "</div>";
+						
+						$autosearch_options_html .= "</div>";//end div filter_fields
+
+				$autosearch_options_html .= "</div>";//end autosearch_options				
+
+
+				# BUTTON SHOW OPTIONS
+					if ($filter_by_list!==false || $filter_by_fields!==false) {
+						$html_content .= "<div class=\"icon_bs autocomplete_list_button_options edit_hidden\" data-tipo=\"$tipo\" onclick=\"component_autocomplete.toggle_options(this)\"></div>";
 					}
-					$html_content .= "</ul>";
 
-					$html_content .= "<script>";
-					# Reset var 'activated' on load
-					#$html_content .= "component_autocomplete.activated={};";
-					# Init component
-					$html_content .= "component_autocomplete.init({\"wrapper_id\":\"$id_wrapper\",\"cookie_name\":\"$cookie_name\",\"limit\":\"$limit\"});";
-					$html_content .= "</script>";
-				}//end if ($filter_by_list!==false)
-
+				# autosearch_options_html (add after button)
+					$html_content .= $autosearch_options_html;
 
 				#
 				# INPUT DATA HIDDEN
-				$html_content .= "<input type=\"text\" class=\"css_autocomplete_dato_hidden debug_info\" ";
-				$html_content .= "name=\"{$input_name}\" ";
-				$html_content .= "data-type=\"autocomplete_dato_hidden\" ";
-				$html_content .= "data-role=\"autocomplete_dato_hidden\" ";
-				$html_content .= "data-tipo=\"{$tipo}\" ";
-				$html_content .= "data-section_tipo=\"{$section_tipo}\" ";
-				$html_content .= "data-parent=\"{$parent}\" ";
-				$html_content .= "data-lang=\"{$lang}\" ";
-				$html_content .= "data-ar_target_section_tipo='{$ar_target_section_tipo_json}' ";
-				$html_content .= "data-search_fields='{$search_fields_json}' ";
-				$html_content .= "data-dato_in_db='{$dato_json}' ";
-				$html_content .= "data-id_wrapper=\"$id_wrapper\" ";
-				$html_content .= "data-limit=\"$limit\" ";
-				$html_content .= "data-divisor=\"$divisor\" ";
-				$html_content .= "value='{$dato_json}' ";
-				$html_content .= "title='' ";
-				$html_content .= "disabled=\"disabled\" ";
-				$html_content .= "/>";
+					$html_content .= "<input type=\"text\" class=\"css_autocomplete_dato_hidden debug_info\" ";
+					$html_content .= "name=\"{$input_name}\" ";
+					$html_content .= "data-type=\"autocomplete_dato_hidden\" ";
+					$html_content .= "data-role=\"autocomplete_dato_hidden\" ";
+					$html_content .= "data-tipo=\"{$tipo}\" ";
+					$html_content .= "data-section_tipo=\"{$section_tipo}\" ";
+					$html_content .= "data-parent=\"{$parent}\" ";
+					$html_content .= "data-lang=\"{$lang}\" ";
+					$html_content .= "data-ar_target_section_tipo='{$ar_target_section_tipo_json}' ";
+					$html_content .= "data-search_fields='{$search_fields_json}' ";
+					$html_content .= "data-dato_in_db='{$dato_json}' ";
+					$html_content .= "data-id_wrapper=\"$id_wrapper\" ";
+					$html_content .= "data-limit=\"$limit\" ";
+					$html_content .= "data-divisor=\"$divisor\" ";
+					$html_content .= "value='{$dato_json}' ";
+					$html_content .= "title='' ";
+					$html_content .= "disabled=\"disabled\" ";
+					$html_content .= "/>";
 					// data-filter_by_list_component_tipo=\"$filter_by_list_component_tipo\"
 
+
+				#
+				# NEW_ELEMENT_CONTAINER ajax loads here
+				$html_content .= "<div class=\"new_element_container\" data-type=\"new_element_container\" data-tipo=\"{$tipo}\"></div>";
+					if(SHOW_DEBUG===true) {
+						/*
+						$html_content .= "<div class=\"debug_info notes\">target_section_tipo: ".implode(', ', $ar_target_section_tipo)."</div>";
+						if (isset($propiedades->filtered_by)) {
+							$html_content .= "<div class=\"debug_info notes\">filtered_by: ".json_encode($propiedades->filtered_by)."</div>";	// filtered_by
+						}
+						$html_content .= "<div class=\"debug_info notes\">".str_replace('},', '},<br>', $dato_json) ."</div>";
+						*/
+					}
+
+
+				
 				if(SHOW_DEBUG) {
 					#$html_content .= " <span class=\"css_span_debugger\" id=\"debugger_{$tipo}\" >{$debugger}</span>";
-					$html_content .= "<span class=\"debug_info\" id=\"debugger_{$tipo}\">".json_encode($search_fields, JSON_PRETTY_PRINT)."</span>";
+					$html_content .= "<span class=\"debug_info\" id=\"debugger_{$tipo}\">";
+					$html_content .= json_encode($search_fields, JSON_PRETTY_PRINT);
+					$html_content .= "<pre>";					
+					$json_indented_by_2 = preg_replace('/^(  +?)\\1(?=[^ ])/m', '$1', json_encode($search_query_object, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+					$html_content .= $json_indented_by_2;
+					$html_content .= "</pre>";
+					$html_content .= "</span>";
 				}
 				break;
 	}

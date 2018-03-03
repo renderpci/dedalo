@@ -10,6 +10,11 @@ require dirname(dirname(__FILE__)).'/config/config4.php';
 
 $TIMER['config4_includes']=microtime(1);
 
+# Avoid this page is showed inside external iframes 
+header('X-Frame-Options: SAMEORIGIN');
+# Avoid mim change content type
+#header('X-Content-Type-Options: nosniff');
+
 # FORCE REDIRECT TO DEDALO/MAIN 
 /*
 if ( strpos($_SERVER["REQUEST_URI"], '.php')!==false ) {
@@ -36,8 +41,8 @@ if ( strpos($_SERVER["REQUEST_URI"], '.php')!==false ) {
 
 	# Safe tipo test
 	# When tipo is defined, check if is valid (avoid sql injection)
-	if ($tipo!==false) {
-		if (safe_tipo($tipo)===false) die("Bad tipo ".htmlentities($tipo));
+	if ($tipo!==false) {		
+		if (safe_tipo($tipo)===false) die("Bad tipo");
 	}
 
 	#
@@ -111,7 +116,7 @@ if ( strpos($_SERVER["REQUEST_URI"], '.php')!==false ) {
 					
 					case (strpos($modelo_name,'component')!==false):
 
-						$section_tipo = isset($_REQUEST['section_tipo']) ? $_REQUEST['section_tipo'] : null;
+						$section_tipo = isset($_REQUEST['section_tipo']) ? safe_xss($_REQUEST['section_tipo']) : null;
 
 						#
 						# FIX SECTION TIPO
@@ -119,11 +124,11 @@ if ( strpos($_SERVER["REQUEST_URI"], '.php')!==false ) {
 
 						if ($modo==='tool_portal') {
 							$element = component_common::get_instance($modelo_name, $tipo, $parent, $modo, DEDALO_DATA_NOLAN, $section_tipo);
-							$target_section_tipo = isset($_REQUEST['target_section_tipo']) ? $_REQUEST['target_section_tipo'] : false;
+							$target_section_tipo = isset($_REQUEST['target_section_tipo']) ? safe_xss($_REQUEST['target_section_tipo']) : false;
 							$element->set_target_section_tipo($target_section_tipo);
 								
 						}else{
-							$tool_source_component_lang = isset($_GET['lang']) ? $_GET['lang'] : DEDALO_DATA_LANG;
+							$tool_source_component_lang = isset($_GET['lang']) ? safe_xss($_GET['lang']) : DEDALO_DATA_LANG;
 							$element = component_common::get_instance($modelo_name, $tipo, $parent, 'edit', $tool_source_component_lang, $section_tipo);
 						}
 						break;
@@ -186,7 +191,7 @@ if ( strpos($_SERVER["REQUEST_URI"], '.php')!==false ) {
 									$element_obj = new $modelo_name($tipo, $modo);
 									break;
 
-						default :	throw new Exception("Error Processing Request: modelo name '$modelo_name' not valid (1)", 1);
+						default :	throw new Exception("Error Processing Request: modelo name '".safe_xss($modelo_name)."' not valid (1)", 1);
 									break;
 						
 					}
@@ -222,7 +227,7 @@ if ( strpos($_SERVER["REQUEST_URI"], '.php')!==false ) {
 				break;
 
 		default : # MODO NOT VALID
-				throw new Exception("main: used modo: '$modo' is not valid in page vars!", 1);
+				die("main: used modo is not valid");
 				break;	
 	}
 

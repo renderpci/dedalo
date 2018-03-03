@@ -4,10 +4,16 @@
 *
 *
 */
-class component_publication extends component_reference_common {
+class component_publication extends component_relation_common {
 
 	# Overwrite __construct var lang passed in this component
 	protected $lang = DEDALO_DATA_NOLAN;
+
+	protected $relation_type = DEDALO_RELATION_TYPE_LINK;
+
+	# test_equal_properties is used to verify duplicates when add locators
+	public $test_equal_properties = array('section_tipo','section_id','type','from_component_tipo');
+
 
 	/**
 	* __CONSTRUCT
@@ -31,7 +37,7 @@ class component_publication extends component_reference_common {
 	}//end __construct
 
 
-
+	/*
 	# GET DATO : 
 	public function get_dato() {
 		$dato = parent::get_dato();
@@ -44,8 +50,10 @@ class component_publication extends component_reference_common {
 			$dato=array();
 		}		
 		return (array)$dato;
-	}
+	}*/
 
+
+	/*
 	# SET_DATO
 	public function set_dato($dato) {
 		if (is_string($dato) && strpos($dato, '}')!==false ) { # Tool Time machine case, dato is string
@@ -56,6 +64,7 @@ class component_publication extends component_reference_common {
 		}
 		parent::set_dato( (array)$dato );
 	}
+	*/
 
 	
 	/**
@@ -70,22 +79,28 @@ class component_publication extends component_reference_common {
 
 		switch ($this->modo) {
 
-			case 'diffusion':				
+			case 'diffusion': 
 				$dato = $this->get_dato();
-				
-				$object_si = new stdClass();
-					$object_si->section_id   = (string)NUMERICAL_MATRIX_VALUE_YES;
-					$object_si->section_tipo = (string)"dd64";
+				$value_to_return = 'no';
+				if (!empty($dato)) {				
+					
+					$object_si = new stdClass();
+						$object_si->section_id   = (string)NUMERICAL_MATRIX_VALUE_YES;
+						$object_si->section_tipo = (string)"dd64";
 
-				$object_no = new stdClass();
-					$object_no->section_id   = (string)NUMERICAL_MATRIX_VALUE_NO;
-					$object_no->section_tipo = (string)"dd64";
-				
-				if ($dato[0]==$object_si) {
-					return 'si';
-				}else{
-					return 'no';
+					$object_no = new stdClass();
+						$object_no->section_id   = (string)NUMERICAL_MATRIX_VALUE_NO;
+						$object_no->section_tipo = (string)"dd64";
+
+					$component_locator = reset($dato);
+					$compare_locators  = locator::compare_locators( $component_locator, $object_si, $ar_properties=['section_id','section_tipo']);
+					
+					if ($compare_locators===true) {
+						$value_to_return = 'si';
+					}
 				}
+
+				return $value_to_return;
 				break;
 			
 			default:				
@@ -112,9 +127,12 @@ class component_publication extends component_reference_common {
 				}				
 
 				# Test dato
+				$component_locator = reset($dato);
 				foreach ($ar_list_of_values->result as $locator => $rotulo) {
-					$locator = json_handler::decode($locator);	# Locator is json encoded object
-					if (in_array($locator, $dato)) {						
+					$value_locator = json_handler::decode($locator);	# Locator is json encoded object
+					
+					$compare_locators = locator::compare_locators( $component_locator, $value_locator, $ar_properties=['section_id','section_tipo']);					
+					if ($compare_locators===true) {						
 						return $this->valor = $rotulo;
 					}
 				}
@@ -245,7 +263,7 @@ class component_publication extends component_reference_common {
 	* @return string $list_value
 	*/
 	public static function render_list_value($value, $tipo, $parent, $modo, $lang, $section_tipo, $section_id, $current_locator=null, $caller_component_tipo=null) {
-	
+		
 		$component 	= component_common::get_instance(__CLASS__,
 													 $tipo,
 												 	 $parent,
@@ -255,10 +273,10 @@ class component_publication extends component_reference_common {
 
 		
 		# Use already query calculated values for speed
-		$ar_records   = (array)json_handler::decode($value);
-		if (!empty($ar_records)) {
-			$component->set_dato($ar_records);
-		}		
+		#$ar_records   = (array)json_handler::decode($value);
+		#if (!empty($ar_records)) {
+		#	$component->set_dato($ar_records);
+		#}		
 		$component->set_identificador_unico('2'.$component->get_identificador_unico().'_'.$section_id.'_'.$caller_component_tipo); // Set unic id for build search_options_session_key used in sessions
 	
 		if ($modo==='list') {
@@ -266,6 +284,7 @@ class component_publication extends component_reference_common {
 		}else{
 			$result = $component->get_html();
 		}
+		
 		return  $result;		
 	}#end render_list_value
 

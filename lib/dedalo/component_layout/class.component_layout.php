@@ -51,14 +51,18 @@ class component_layout extends component_common {
 	* SET_DATO
 	*/
 	public function set_dato($dato) {
-		if (!is_string($dato)) {
-			trigger_error("Error. Only string format is accepted as dato");
-			return false;
+		#dump($dato, ' dato ++ '.to_string());
+
+		if (is_string($dato)) {
+			if (!$dato = json_decode($dato)) {
+				trigger_error("Error. Only valid JSON is accepted as dato");
+				return false;
+			}			
 		}
 
 		//dump($dato, " dato 1".to_string());
 		# Dato is set as string. Convert to object before set
-		$dato = json_handler::decode($dato);
+		#$dato = json_handler::decode($dato);
 
 		if(!empty($dato) && !is_object($dato)) {
 			$dato = new layout_print();

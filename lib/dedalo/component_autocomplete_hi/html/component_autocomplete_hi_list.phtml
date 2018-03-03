@@ -4,17 +4,17 @@
 
 	print "<!-- ".__CLASS__." [tipo:$tipo] -->";
 	
-	print "<div class=\"wrap_component css_wrap_autocomplete_hi wrap_portal_list\" id=\"{$id_wrapper}\"
-				data-tipo=\"{$tipo}\"
-				data-lang=\"{$lang}\"
-				data-section_tipo=\"{$section_tipo}\"
-				data-parent=\"{$parent}\"
-				data-modo=\"{$modo}\"
-				data-from_modo=\"{$from_modo}\"
-				data-dato='{$dato_json}'
-				data-component_name=\"{$component_name}\"
-				data-component_info='{$component_info}'
-				>";
+	print "<div class=\"wrap_component css_wrap_autocomplete_hi wrap_portal_list\" id=\"{$id_wrapper}\" ";
+	print "data-tipo=\"{$tipo}\" ";
+	print "data-lang=\"{$lang}\" ";
+	print "data-section_tipo=\"{$section_tipo}\" ";
+	print "data-parent=\"{$parent}\" ";
+	print "data-modo=\"{$modo}\" ";
+	print "data-from_modo=\"{$from_modo}\" ";
+	print "data-dato='{$dato_json}' ";
+	print "data-component_name=\"{$component_name}\" ";
+	print "data-component_info='{$component_info}' ";
+	print ">";
 	
 	# CONTENIDO (INPUT)
 	$html_contenido = '';
@@ -35,7 +35,7 @@
 				#$html_contenido .= $valor ;
 				#break;
 
-					if($modo =='portal_list'){
+					if($modo==='portal_list'){
 						if(empty($ar_valor)){
 							$edit_class = 'css_autocomplete_ul_edit_in_portal';
 						}else{

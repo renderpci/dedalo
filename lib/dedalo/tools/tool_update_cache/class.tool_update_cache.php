@@ -22,7 +22,7 @@ class tool_update_cache {
 		}
 		$this->section_tipo = $section_tipo;
 		$this->modo 		= $modo;	
-	}
+	}//end __construct
 
 
 
@@ -34,7 +34,7 @@ class tool_update_cache {
 		ob_start();
 		include ( DEDALO_LIB_BASE_PATH .'/tools/'.get_called_class().'/'.get_called_class().'.php' );
 		return  ob_get_clean();
-	}
+	}//end get_html
 
 
 	/**
@@ -98,29 +98,21 @@ class tool_update_cache {
 		#
 		# RECORDS
 		# Use actual list search options as base to build current search
-			$search_options_session_key = 'section_'.$this->section_tipo;
-			if (!isset($_SESSION['dedalo4']['config']['search_options'][$search_options_session_key])) {
-				$search_options = new stdClass();
-			}else{
-				$search_options = clone($_SESSION['dedalo4']['config']['search_options'][$search_options_session_key]);	
-			}			
-			$search_options->modo 		= 'edit';	// Modo 'edit' allow use empty layout_map
-			$search_options->layout_map = array();
-			$search_options->offset 	= 0;
-			$search_options->limit 		= 0;
-			$search_options->full_count = false;
-			$search_options->search_options_session_key = $search_options_session_key.'_tool_update_cache';	// Unconflict name with source list session key
-			unset($search_options->layout_map_list);		
-
-			# Optionally, filter by id is supported in request options (when update one record for example)
-			# Format must be an array of locators
-			if (isset($options->filter_by_id)) {
-				$search_options->filter_by_id = $options->filter_by_id;
-			}
-
-			$records_data = search::get_records_data( $search_options );			
-				#dump($records_data, ' records_data ++ '.to_string()); 
-				#debug_log(__METHOD__." records_data ".to_string($records_data), logger::DEBUG);		
+			
+			# SEARCH_OPTIONS
+				$search_options_id    = $this->section_tipo; // section tipo like oh1
+				$saved_search_options = section_records::get_search_options($search_options_id);
+			
+			# SEARCH_QUERY_OBJECT
+				# Use saved search options (deep cloned to avoid propagation of changes !)
+					$search_options 	 = unserialize(serialize($saved_search_options));
+					$search_query_object = $search_options->search_query_object;
+						$search_query_object->limit  = 0;  // unset limit
+						$search_query_object->select = []; // unset select
+			
+			# SEARCH
+				$search_develoment2  = new search_development2($search_query_object);
+				$rows_data 		 	 = $search_develoment2->search();
 
 
 		if(SHOW_DEBUG===true && DEDALO_ENTITY==='development') {
@@ -128,11 +120,9 @@ class tool_update_cache {
 			#debug_log(__METHOD__." - Time ".round( microtime(TRUE) - $start_time ,4)." secs to query - Memory: ".tools::get_memory_usage('pid'));				
 		}
 
-		foreach ($records_data->result as $key => $ar_value) {
-			$row = reset($ar_value);		
-
-			$section_id = $row['section_id'];
-			#$datos = $rows['datos'];
+		foreach ($rows_data->ar_records as $key => $row) {
+			
+			$section_id = $row->section_id;		
 
 			if(SHOW_DEBUG===true && DEDALO_ENTITY==='development') {
 				$partial_time = start_time();
@@ -140,7 +130,7 @@ class tool_update_cache {
 
 			foreach ($related_terms as $current_component_tipo) {
 
-				$modelo_name 		= RecordObj_dd::get_modelo_name_by_tipo($current_component_tipo,true);
+				$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_component_tipo,true);
 				if (strpos($modelo_name, 'component_')===false) {					
 					debug_log(__METHOD__." Skipped element '$modelo_name' tipo: $current_component_tipo (is not a component) ".to_string(), logger::DEBUG);
 					continue;
@@ -191,7 +181,7 @@ class tool_update_cache {
 						break;
 				}
 				*/				
-			}#end foreach ($related_terms as $current_component_tipo)
+			}//end foreach ($related_terms as $current_component_tipo)
 
 			if(SHOW_DEBUG===true && DEDALO_ENTITY==='development') {
 				$time    = round( microtime(TRUE) - $partial_time ,4);
@@ -200,7 +190,7 @@ class tool_update_cache {
 			}
 			
 			#debug_log(__METHOD__." Updated cached of section $this->section_tipo - $section_id ".to_string(), logger::DEBUG);
-		}#end foreach ($records_data->result as $key => $ar_value)
+		}//end foreach ($records_data->result as $key => $ar_value)
 		
 		#sleep(1);
 		
@@ -214,7 +204,7 @@ class tool_update_cache {
 		RecordObj_time_machine::$save_time_machine_version = true;
 
 		$response->result 	  = true;
-		$response->msg 		  = "Updated cache of section $this->section_tipo successufully. Total records: ".count($records_data->result)." where elements: ".count($related_terms);
+		$response->msg 		  = "Updated cache of section $this->section_tipo successufully. Total records: ".count($rows_data->ar_records)." where elements: ".count($related_terms);
 		if(SHOW_DEBUG===true) {
 			$ar_components = array();
 			foreach ($related_terms as $tipo) {
@@ -225,135 +215,54 @@ class tool_update_cache {
 		
 
 		return $response;
-	}#end update_cache
-
-
-
-	/**
-	* REGENERATE_COMPONENT
-	* @param string
-	* @return (bool)
-	*/
-	protected function regenerate_component__DEPRECATED($current_component_tipo, $section_id, $section_tipo, $modelo_name=false ) {
-
-		if (!$modelo_name) {
-			$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_component_tipo,true);
-		}
-		
-		$RecordObj_dd 		= new RecordObj_dd($current_component_tipo);
-		$traducible 		= $RecordObj_dd->get_traducible();
-		if($traducible==='no') {
-			$current_lang = DEDALO_DATA_NOLAN;
-			$current_component 	= component_common::get_instance($modelo_name, $current_component_tipo, $section_id, 'list', $current_lang, $section_tipo, false);
-			#$current_component 	= new $modelo_name($current_component_tipo, $section_id, 'list', $current_lang, $section_tipo);
-			#$current_component->set_modo('list');
-			#$current_component->get_html();
-			switch (true) {
-				case (strpos($modelo_name, 'filter')!==false) :
-					$current_component->set_propagate_filter(false); # !IMPORTANT (to avoid calculate inverse search of portals, very long process)
-					break;
-				case ($modelo_name==='component_autocomplete_ts') :
-					$current_dato = $current_component->get_dato(); # !IMPORTANT Force get_dato update component dato and save it
-					break;				
-				default:
-			}			
-			$current_component->Save();
-			if(SHOW_DEBUG) {
-				#$label = $current_component->get_label();
-				#self::$debug_response .= "<br>  - [$section_id] Regenerated valor_list for $modelo_name ($current_component_tipo) $label in lang $current_lang ";
-			}
-		}else{
-			#$ar_lang = (array)unserialize(DEDALO_PROJECTS_DEFAULT_LANGS);
-			$ar_lang = array(DEDALO_DATA_LANG);
-			foreach ($ar_lang as $current_lang) {
-				$current_component 	= component_common::get_instance($modelo_name, $current_component_tipo, $section_id, 'list', $current_lang, $section_tipo, false);
-				#$current_component 	= new $modelo_name($current_component_tipo, $section_id, 'list', $current_lang, $section_tipo);
-				#$current_component->set_modo('list');
-				#$current_component->get_html();
-				$current_component->Save();
-				if(SHOW_DEBUG) {
-					#$label = $current_component->get_label();
-					#self::$debug_response .= "<br>  - [$section_id] Regenerated valor_list for  $modelo_name ($current_component_tipo) $label in lang $current_lang ";
-				}
-			}
-		}
-
-		#return true;
-	}//end regenerate_component__DEPRECATED
-
-
-	/**
-	* REGENERATE_PORTAL
-	* Le dice a los 'hijos del portal' que 'papá' portal los llama (añade inverse locator en cada sección referenciada por el portal)
-	* @return 
-	*/
-	public function regenerate_portal__DEPRECATED($current_component_tipo, $section_id, $section_tipo, $modelo_name) {
-		
-		$component = component_common::get_instance(  $modelo_name,
-													  $current_component_tipo,
-													  $section_id,
-													  'edit',
-													  DEDALO_DATA_NOLAN,
-													  $section_tipo,
-													  false);
-		$dato = $component->get_dato();
-		if(empty($dato)) return false;
-
-		$portal_inverse_locator = new locator();
-			$portal_inverse_locator->set_section_id( $component->get_parent() );
-			$portal_inverse_locator->set_section_tipo( $component->get_section_tipo() );
-			$portal_inverse_locator->set_component_tipo( $component->get_tipo() );
-
-		foreach ((array)$dato as $rel_locator) {
-
-			# Add inverse locator into the destination section
-			$section_to_add = section::get_instance($rel_locator->section_id, $rel_locator->section_tipo, false);
-
-			$section_to_add->add_inverse_locator($portal_inverse_locator);
-			$section_to_add->Save();
-
-			debug_log(__METHOD__." $modelo_name Added section inverse locator reference tipo:$current_component_tipo, parent:$section_id, section_tipo:$section_tipo -> ".to_string($rel_locator), logger::DEBUG);
-		}
-	}#end regenerate_portal
-
+	}//end update_cache
+	
 
 
 	/**
 	* REMOVE_INVERSE_LOCATORS_IN_SECTION
+	* Note that deletes OLD inverse locators stored in section dato
+	* @param string $section_tipo
+	*	You can use also a sequence of sections separated by commas like 'rsc197,rsc172'
 	* @see trigger.tool_administration.php
 	* @return bool
 	*/
-	public static function remove_inverse_locators_in_section( $section_tipo ) {
+	public static function remove_inverse_locators_in_section__DISABLED( $section_tipo ) {
 
-		# Get section all records
-		$result = section::get_resource_all_section_records_unfiltered($section_tipo);
-		while ($rows = pg_fetch_assoc($result)) {
+		#trigger_error("DEPRECATED WAY. Please define a direct db way to delete section old relations");
+		
+		$ar_section_tipo = explode(',', $section_tipo);
+		foreach ($ar_section_tipo as $current_section_tipo) {
 
-			$current_section_id = $rows['section_id'];
+			$current_section_tipo = trim($current_section_tipo);
 			
-			$section = section::get_instance($current_section_id, $section_tipo, false);
-			$inverse_locators = $section->get_inverse_locators(); // Force load section data
-			$section->remove_all_inverse_locator();
-			$section->Save();
+			# Get section all records
+			$result = section::get_resource_all_section_records_unfiltered($current_section_tipo);
+			while ($rows = pg_fetch_assoc($result)) {
 
-			#echo " Deleted inverse locators from $section_tipo - $current_section_id !<br>";
-			debug_log(__METHOD__." Deleted inverse locators from $section_tipo - $current_section_id : ".to_string($inverse_locators), logger::WARNING);
-		}
+				$current_section_id = $rows['section_id'];
+				
+				/*
+				$section 		  = section::get_instance($current_section_id, $current_section_tipo, false);
+				$section->get_dato(); // Force load section data
+				$inverse_locators = $section->get_inverse_locators();
+
+				if (!empty($inverse_locators)) {
+					$section->remove_all_inverse_locator();
+					$section->Save();
+
+					if(SHOW_DEBUG===true) {
+						debug_log(__METHOD__." Deleted inverse locators from $current_section_tipo - $current_section_id : ".json_encode($inverse_locators), logger::WARNING);
+					}
+				}*/
+			}
+
+		}//end foreach ($ar_section_tipo as $current_section_tipo)
+		
 		
 		return true;
 	}//end remove_inverse_locators_in_section
 
-
-
-
-	/**
-	* REGENERATE_AUTOCOMPLETE (ALIAS OF regenerate_portal)
-	* @return 
-	*/
-	public function regenerate_autocomplete__DEPRECATED( $current_component_tipo, $section_id, $section_tipo, $modelo_name ) {
-		#debug_log(__METHOD__." $modelo_name Added section inverse locator reference tipo:$current_component_tipo, parent:$section_id, section_tipo:$section_tipo ", logger::DEBUG);
-		return $this->regenerate_portal($current_component_tipo, $section_id, $section_tipo, $modelo_name);
-	}#end regenerate_autocomplete
 
 
 }

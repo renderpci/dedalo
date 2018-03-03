@@ -20,14 +20,14 @@
 	
 	# CONTENIDO (INPUT)
 	$html_contenido = '';
-	switch($permissions) {
+	switch(true) {
 			
-		case 0	:	
+		case ($permissions===0)	:	
 
 			$html_contenido .= " <span class=\"css_span_dato\"> No access here (html_text)! </span>";	
 			break;
 						
-		case 1	: 	
+		case ($permissions===1)	: 	
 
 			$html_contenido .= "<div class=\"html_text_content html_text_content_shadow\" >";
 			$html_contenido .= " <span class=\"css_span_dato\">$dato</span>";

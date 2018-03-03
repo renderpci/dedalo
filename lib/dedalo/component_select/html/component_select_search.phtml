@@ -2,10 +2,14 @@
 
 	# VISUALIZADOR HTML	
 
-	
-	#if(isset($_REQUEST[$tipo])) $dato = $_REQUEST[$tipo];	
-	#print "<!-- ".__CLASS__." -->";
-	print "<div class=\"wrap_component css_wrap_select\">";
+	print "<div class=\"wrap_component css_wrap_select tooltip_active\" ";
+	print "data-tipo=\"{$tipo}\" ";
+	print "data-component_name=\"{$component_name}\" ";
+	print "data-modo=\"{$modo}\" ";
+	print "data-dato='".json_encode($dato)."' ";
+	print 'title="'.search_development2::search_options_title( $this->search_operators_info() ).'" ';
+	print "data-relation_type='{$relation_type}' ";
+	print ">";
 	
 	# ETIQUETA (LABEL)
 	$html_label = component_common_draw::draw_label($this);
@@ -14,42 +18,61 @@
 	$html_content = '';
 	switch($permissions) {
 			
-		case 0	:	$html_content .= "";
-					break;						
+		case 0	:
+				$html_content .= "";
+				break;						
 		
 		default:
 
-					# COMPARISON OPERATORS
-					$html_content .= operator::get_search_comparison_operators_html($tipo,$ar_comparison_operators);
+				# COMPARISON OPERATORS
+				#$html_content .= operator::get_search_comparison_operators_html($tipo,$ar_comparison_operators);
+
+				
+				# SELECT
+				$html_content .= "<select class=\"css_select\" name=\"{$search_input_name}\" data-tipo=\"{$tipo}\" title=\"$html_title\" ";
+				$html_content .= "onchange=\"component_common.fix_dato(this,'{$component_name}')\" ";
+				$html_content .= "data-role=\"component_select_selector\" ";
+				$html_content .= ">";
 
 					
-					# SELECT
-					$html_content .= "<select class=\"css_select\" name=\"{$search_input_name}\" data-tipo=\"{$tipo}\" title=\"$html_title\">";
-						if(empty($dato)) {
+					$html_content .= "<option value=\"\"> </option>";
+					
+					/*foreach ($ar_list_of_values->result as $value => $rotulo) {
+						
+						if( $dato == $value) {
 							$checked = 'selected';
-						}else{
+						}else {
 							$checked = "";
 						}
-						$html_content .= "<option value=\"\" {$checked}> </option>";
-						
-						foreach ($ar_list_of_values->result as $value => $rotulo) {
-							
-							if( $dato == $value) {
-								$checked = 'selected';
-							}else {
-								$checked = "";
-							}
-							$html_content .= "<option value='$value' {$checked}> {$rotulo}</option>";
-						}					
-					$html_content .= "</select>";	
-					
+						$html_content .= "<option value='$value' {$checked}> {$rotulo}</option>";
+					}*/
 
-					# LOGICAL OPERATORS
-					$html_content .= operator::get_search_logical_operators_html($tipo,$ar_logical_operators);
+					# Available options
+					foreach ($ar_list_of_values->result as $value => $label) {
 
-					if(SHOW_DEBUG===true) {
-						$html_content .= "<span class=\"debug_info\">$search_input_name</span>";
+						$value   = (string)$value;
+						$locator = (object)json_handler::decode($value);	# Locator is json encoded object
+						#dump($locator," locator"); dump($dato," dato");
+
+						#$selected = in_array($locator, $dato) ? 'selected' : '';
+						$founded  = locator::in_array_locator( $locator, (array)$dato, $ar_properties=array('section_id','section_tipo') );
+						$selected = $founded ? 'selected' : '';
+
+						$html_content .= "<option value='$value' {$selected}>";
+						$html_content .= $label;
+						$html_content .= "</option>";
 					}
+
+
+				$html_content .= "</select>";	
+				
+
+				# LOGICAL OPERATORS
+				#$html_content .= operator::get_search_logical_operators_html($tipo,$ar_logical_operators);
+
+				if(SHOW_DEBUG===true) {
+					$html_content .= "<span class=\"debug_info\">$search_input_name</span>";
+				}
 											
 	}
 	
@@ -62,5 +85,5 @@
 	print $html_content;	
 
 	
-	print "</div><!-- /css_wrap_select -->"; //wrap
+	print "</div>"; //wrap
 ?>

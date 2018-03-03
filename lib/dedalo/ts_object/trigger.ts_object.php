@@ -2,8 +2,15 @@
 $start_time=microtime(1);
 include( dirname(dirname(__FILE__)).'/config/config4.php');
 include(DEDALO_LIB_BASE_PATH.'/ts_object/class.ts_object.php');
+
 # TRIGGER_MANAGER. Add trigger_manager to receive and parse requested data
-common::trigger_manager();
+$options = new stdClass();
+if (isset($_GET['mode']) && $_GET['mode']==='get_childrens_data') {
+	$options->source = 'GET';
+}else{
+	$options->source = 'php://input';
+}
+common::trigger_manager($options);
 
 # IGNORE_USER_ABORT
 ignore_user_abort(true);
@@ -294,34 +301,7 @@ function delete($json_data) {
 	}
 	
 
-	# REFERENCES . Calculate parents and removes references to current section
-	/*
-		$section_table 	= common::get_matrix_table_from_tipo($section_tipo); // Normally 'matrix_hierarchy'
-		$hierarchy_table= hierarchy::$table;	// Normally 'hierarchy'. Look too in 'matrix_hierarchy_main' table for references
-		$ar_tables 		= array( $section_table, $hierarchy_table);
-		$parents 		= component_relation_parent::get_parents($section_id, $section_tipo, $from_component_tipo=null, $ar_tables);
-		# dump($parents, ' $parents ++ '.to_string("$section_id, $section_tipo")); die();
-		foreach ((array)$parents as $current_parent) {
-		
-			# Target section data
-			$modelo_name 	= 'component_relation_children';
-			$modo 			= 'edit';
-			$lang			= DEDALO_DATA_NOLAN;
-			$component_relation_children = component_common::get_instance($modelo_name,
-																		  $current_parent->component_tipo,
-																		  $current_parent->section_id,
-																		  $modo,
-																		  $lang,
-																		  $current_parent->section_tipo);
-			
-			# NOTE: remove_me_as_your_children deletes current section references from component_relation_children and section->relations container
-			# $removed = (bool)$component_relation_children->remove_children_and_save($children_locator);
-			$removed = (bool)$component_relation_children->remove_me_as_your_children( $section_tipo, $section_id );
-			if ($removed) {
-				debug_log(__METHOD__." Removed references in component_relation_children ($current_parent->section_id, $current_parent->section_tipo) to $section_id, $section_tipo ".to_string(), logger::DEBUG);
-			}
-		}
-		*/
+	# REFERENCES . Calculate parents and removes references to current section	
 	$relation_response = component_relation_common::remove_parent_references($section_tipo, $section_id, false);
 
 
@@ -494,10 +474,10 @@ function save_order($json_data) {
 				return $response;
 			}
 		}
-
-	$ar_locators = json_decode($ar_locators);
+	
+	#$ar_locators = json_decode($ar_locators);
 	$dato = array();
-	foreach ($ar_locators as $current_locator) {
+	foreach ((array)$ar_locators as $current_locator) {
 		$locator = new locator();
 			$locator->set_section_tipo($current_locator->section_tipo);
 			$locator->set_section_id($current_locator->section_id);
@@ -515,9 +495,9 @@ function save_order($json_data) {
 																  $section_tipo);
 	// Current component dato is replaced completly with the new dato
 	// This action returns the dato parsed with method component_relation_common->set_dato()
-	$result = $component_relation_children->set_dato($dato);
-	$component_relation_children->Save();
-
+	$component_relation_children->set_dato($dato);
+	$result = $component_relation_children->Save();
+	
 
 	$response->result 	= $result;
 	$response->msg 		= 'Ok. Request done ['.__FUNCTION__.']';

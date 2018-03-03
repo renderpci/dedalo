@@ -24,18 +24,8 @@
 	
 	switch($modo) {	
 		
-		case 'button':
-			$section = section::get_instance( $parent, $section_tipo );
-			$inverse_locators = $section->get_inverse_locators();
-				#dump($inverse_locators, ' inverse_locators ++ '."$parent, $section_tipo ".to_string());
-			
-			$contain_references = false;
-			foreach ((array)$inverse_locators as $key => $current_locator) {
-				if ($current_locator->section_tipo===TOP_TIPO) {
-					$contain_references = true;
-					break;
-				}
-			}
+		case 'button':			
+			$contain_references = search_development2::have_inverse_relations($section_tipo, $section_id);
 			break;
 		
 		case 'page':
@@ -70,20 +60,26 @@
 
 			#
 			# TOP_ID
-			# Calculate TOP_ID from inverse data
+			# Calculate TOP_ID from inverse data when TOP_ID is empty
 			# dump(TOP_ID, 'TOP_ID ++ '.to_string());
-			#if (!TOP_ID) {
-				#dump($this, ' this ++ '.to_string());
-				$section = section::get_instance( $parent, $section_tipo );
-				$inverse_locators = $section->get_inverse_locators();
-					#dump($inverse_locators, ' inverse_locators ++ '."$parent, $section_tipo ".to_string());
-				
-				if (empty($inverse_locators)) {
-					//trigger_error("Warning: Indexing resource");
+			if (empty(TOP_ID)) {
+				# Reference locator (where component data locators point)
+				$target_reference_locator = new locator();
+					$target_reference_locator->set_section_tipo($section_tipo);
+					$target_reference_locator->set_section_id($section_id);
+
+				$inverse_locators = search_development2::calculate_inverse_locators( $target_reference_locator );
+
+				$ar_oh1 = array_filter($inverse_locators, function($current_locator) {
+					return $current_locator->from_section_tipo === TOP_TIPO;
+				});
+				#dump($ar_oh1, ' $ar_oh1 ++ '.to_string());
+
+				if (empty($ar_oh1)) {
 					echo "<div class=\"warning\">".label::get_label('por_favor_indexe_desde_una_seccion_de_inventario')." [2]</div>";
 					return ;
 				}
-			#}//end if (!TOP_ID) {
+			}//end if (!TOP_ID)
 			
 
 			# INVERSE_CODE

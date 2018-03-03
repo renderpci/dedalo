@@ -118,21 +118,6 @@ function assign_time_machine_value($json_data) {
 	$component_obj_to_save->Save();
 	
 
-	#
-	# COMPONENT PORTAL SEARCH_OPTIONS : Clear old data and force recreate
-	#dump($_SESSION['dedalo4']['config']['search_options'],"search_options");
-	if (get_class($component_obj_to_save)==='component_portal' && isset($_SESSION['dedalo4']['config']['search_options']) ) {
-		$target_section_tipo = $component_obj_to_save->get_ar_target_section_tipo()[0];		
-		foreach ($_SESSION['dedalo4']['config']['search_options'] as $key => $value) {
-			if ( strpos($key, $target_section_tipo)!==false ) {
-				unset($_SESSION['dedalo4']['config']['search_options'][$key]);
-				if(SHOW_DEBUG) {
-					error_log("trigger.tool_time_machine:assign_time_machine_value deleted search_options session key: $key");
-				}
-			}
-		}
-	}
-
 	$response->result 	= true;
 	$response->msg 		= 'Ok. Request done ['.__FUNCTION__.']';
 
@@ -177,7 +162,7 @@ function section_records_load_rows_history($json_data) {
 		}	
 	
 	# SECTIONS_TIME_MACHINE : Array of tm_id records of current section current_tipo_section with status 'deleted'
-	$ar_sections_time_machine	= (array)tool_time_machine::get_ar_sections_time_machine($current_tipo_section);
+	$ar_sections_time_machine = (array)tool_time_machine::get_ar_sections_time_machine($current_tipo_section);
 		#dump($ar_sections_time_machine,'$ar_sections_time_machine');die();
 
 	if (empty($ar_sections_time_machine)) {
@@ -192,7 +177,10 @@ function section_records_load_rows_history($json_data) {
 	}else{
 
 		# New section in 'list_tm' mode
-		$section = section::get_instance(NULL,$current_tipo_section,'list_tm');		
+		$section = section::get_instance(NULL,$current_tipo_section,'list_tm');
+		$context = new stdClass();
+			$context->context_name = 'default';
+		$section->set_context($context);
 
 		# AR_LOCATORS : locator build
 		# For compatibility with standar section_records way of manage "get_rows_data", we convert tm_id to section_id_matrix inside locator object
@@ -202,38 +190,14 @@ function section_records_load_rows_history($json_data) {
 			$locator = new stdClass();
 				$locator->section_id = (string)$tm_id;
 			$ar_locators[] = $locator;			
-		}
-		#dump($ar_locators,"ar_locators "); die();
-		/*
-		# LAYOUT MAP : Same as conventional list for current section	
-		$layout_map 		= component_layout::get_layout_map_from_section( $section );
-			#dump($layout_map,"layout_map");
-		
-		$options = new stdClass(); 
-			$options->section_tipo 		= $section->get_tipo();
-			$options->section_real_tipo = $section->get_section_real_tipo();
-			$options->layout_map 		= $layout_map;
-			$options->modo 				= 'list_tm';
-			$options->filter_by_id 		= $ar_locators;			 # Prepared before with locator object format
-			$options->context 			= $section->context;	 # inyectado a la sección y usado para generar pequeñas modificaciones en la visualización del section list como por ejemplo el link de enlazar un registro con un portal
-			$options->matrix_table  	= 'matrix_time_machine'; # Search in matrix_time_machine instead matrix
-			$options->json_field 		= 'dato';				 # Search in json container 'dato' instead matrix 'datos'	
-		
-		$section_records 	= new section_records($section->get_tipo(), $options);
-
-		$html_contenido='';
-		$html_contenido .= "<div id=\"section_list_rows_content_div_{$tipo}_tm\" class=\"section_list_rows_content_div\" >";
-		$html_contenido .= $section_records->get_html();
-		$html_contenido .= "</div>";
-		*/
-		#dump($section,'html_contenido'); die();
+		}		
 		
 		$options = new stdClass();
 			$options->filter_by_id = $ar_locators;
 
-		$html_contenido = $section->get_html($options);			
+		$html_content = $section->get_html($options);
 		
-		$response->result 	= $html_contenido;
+		$response->result 	= $html_content;
 		$response->msg 		= 'Ok. Request done ['.__FUNCTION__.']';
 	}
 	

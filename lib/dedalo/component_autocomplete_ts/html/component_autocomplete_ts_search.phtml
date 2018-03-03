@@ -1,10 +1,14 @@
 <?php
 
-	# VISUALIZADOR HTML	
+	# VISUALIZADOR HTML		
 	
-	print "<!-- ".__CLASS__." [tipo:$tipo] $label -->";
 
-	print "<div class=\"wrap_component css_wrap_autocomplete_ts\" id=\"{$id_wrapper}\">";
+	print "<div class=\"wrap_component css_wrap_autocomplete_ts tooltip_active\" id=\"{$id_wrapper}\" ";
+	print "data-component_name=\"{$component_name}\" ";
+	print "data-modo=\"{$modo}\" ";
+	print "data-dato='".json_encode($dato)."' ";
+	print 'title="'.search_development2::search_options_title( $this->search_operators_info() ).'" ';
+	print ">";
 	
 	# ETIQUETA (LABEL)
 	$html_label = component_common_draw::draw_label($this);
@@ -112,5 +116,5 @@
 	
 	
 	
-	print "</div><!-- /css_wrap_autocomplete_ts ".__CLASS__." [tipo:$tipo id_matrix:$parent] $label -->"; //wrap
+	print "</div>"; //wrap
 ?>

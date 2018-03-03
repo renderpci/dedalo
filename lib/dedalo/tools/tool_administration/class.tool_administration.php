@@ -1,15 +1,33 @@
 <?php
 require_once( dirname(dirname(dirname(__FILE__))) .'/config/config4.php');
 require_once(dirname(__FILE__) .'/updates/updates.php');
-
-
-
 /*
 * CLASS TOOL_ADMINISTRATION
 */
 class tool_administration extends tool_common {
 	
 	protected $section_obj ;
+
+	static $ar_tables_with_relations = array(
+			"matrix_users",
+			"matrix_projects",
+			"matrix",
+			"matrix_list",
+			"matrix_activities",
+			"matrix_hierarchy",
+			"matrix_hierarchy_main",
+			"matrix_langs",
+			"matrix_layout",
+			"matrix_notes",
+			"matrix_profiles",
+			"matrix_test",
+			"matrix_indexations",
+			"matrix_structurations",
+			"matrix_dataframe",
+			"matrix_dd",
+			"matrix_layout_dd",
+			"matrix_activity"
+			);
 
 	
 	
@@ -29,7 +47,7 @@ class tool_administration extends tool_common {
 
 		# CURRENT_VERSION_IN_DB : Force to create table and minimun data if not exists
 		self::get_current_version_in_db();
-	}
+	}//end __construct
 
 
 
@@ -137,46 +155,52 @@ class tool_administration extends tool_common {
 			$datos 			= (string)$rows['datos'];
 
 			$datos	= (object)json_handler::decode($datos);
-				#dump($datos->components->rsc29,"rsc29 ");	continue;		
+				#dump($datos->inverse_locators,"datos->inverse_locators ");	continue;		
 				
 			$before = "";
 			$after  = "";
+		
+			debug_log(__METHOD__." component_tipo: $component_tipo ".json_encode($datos), logger::DEBUG);
 
-			#if language is set, delete the language into the componet
-			if(!empty($language)) {
-				if (isset($datos->components->$component_tipo->dato->$language)) {
+			switch (true) {
+				case ($component_tipo==='inverse_locators' && property_exists($datos, $component_tipo)):
+					$before = json_encode($datos);
 
+					unset($datos->inverse_locators);
+					$proced = true;
+					break;
+
+				# If language is set, delete the language into the componet
+				case (!empty($language) && property_exists($datos->components, $component_tipo) && isset($datos->components->{$component_tipo}->dato->{$language})):
 					#dump($datos->components->$component_tipo->dato,"BEFORE dato $component_tipo $section_id");
 					$before = json_encode($datos->components->$component_tipo->dato);
 
-					unset($datos->components->$component_tipo->dato->$language);
+					unset($datos->components->{$component_tipo}->dato->{$language});
 
 					#dump($datos->components->$component_tipo->dato,"BEFORE dato $component_tipo $section_id");
 					$after = json_encode($datos->components->$component_tipo->dato);
 					
 					$proced = true;
-				}
-				//$proced = false;
+					break;
 
-			#if langage in not set, remove all component (dato, value, value_list,...)
-			}else if (isset($datos->components->$component_tipo)) {
+				# If langage in not set, remove all component (dato, value, value_list,...)
+				case (empty($language) && property_exists($datos->components, $component_tipo)):
+					#dump($datos->components->$component_tipo,"BEFORE dato $component_tipo $section_id");
+					$before = json_encode($datos->components->$component_tipo);
 
-				#dump($datos->components->$component_tipo,"BEFORE dato $component_tipo $section_id");
-				$before = json_encode($datos->components->$component_tipo);
+					unset($datos->components->$component_tipo);
 
-				unset($datos->components->$component_tipo);
+					$proced = true;
+					break;
 
-				$proced = true;
-
-			}else{
-
-				$proced = false;
-				$msg[] = "Not found dato for delete in $section_tipo - $section_id - $component_tipo";
-			}
+				default:
+					$proced = false;
+					$msg[] = "Not found dato for delete in $section_tipo - $section_id - $component_tipo";
+					break;
+			}			
 			#dump($datos->components,"AFTER dato ($component_tipo) $section_id");
 			#dump( htmlentities( $datos->components->rsc29->valor_list->$lang )," rsc29 valor_list");
-			#continue;
-			
+			#continue;			
 			
 			if($proced===true){
 
@@ -276,7 +300,7 @@ class tool_administration extends tool_common {
 	* GET_DEDALO_VERSION
 	* Get the program files version, the files need change for update the data.
 	* Download the Dédalo files and run the update procedure.
-	* @return string $current_version
+	* @return array $current_version
 	*/
 	public static function get_dedalo_version() {
 
@@ -388,21 +412,35 @@ class tool_administration extends tool_common {
 		if(isset($update->SQL_update)){
 			foreach ((array)$update->SQL_update as $key => $current_query) {
 				$SQL_update = self::SQL_update($current_query);
-				$msg[] = "Updated sql: ".to_string($SQL_update);
+				$cmsg  = $SQL_update->msg;
+				$msg[] = "Updated sql: ".to_string($cmsg);
+
+				if ($SQL_update->result===false) {
+					$response->result = false ;
+					$response->msg 	  = "Error on SQL_update. <br>".implode('<br>', $msg);
+					return $response;
+				}
 			}
 		}
 		# components_update
 		if(isset($update->components_update)){
 			foreach ($update->components_update as $modelo_name) {
 				$components_update[] = self::components_update($modelo_name, $current_version, $update_version);
-				$msg[] = "Updated components: ".to_string($modelo_name);
+				$msg[] = "Updated component: ".to_string($modelo_name);
 			}			
 		}
 		# run_scripts
 		if(isset($update->run_scripts)){
 			foreach ((array)$update->run_scripts as $current_script) {
 				$run_scripts = self::run_scripts($current_script);
-				$msg[] = "Updated run scripts: ".to_string($run_scripts);
+				$cmsg  = $run_scripts->msg;
+				$msg[] = "Updated run scripts: ".to_string($cmsg);
+
+				if ($run_scripts->result===false) {
+					$response->result = false ;
+					$response->msg 	  = "Error on run_scripts. <br>".implode('<br>', $msg);
+					return $response;
+				}
 			}
 		}
 		
@@ -475,7 +513,7 @@ class tool_administration extends tool_common {
 			$ar_component_tipo = section::get_ar_children_tipo_by_modelo_name_in_section($current_section_tipo, array($modelo_name), $from_cache=true, $resolve_virtual=true, $recursive=true, $search_exact=true);
 			if (empty($ar_component_tipo)) {
 				# Skip empty components sections
-				debug_log(__METHOD__." Skipped current_section_tipo '$current_section_tipo'. (Empty components) ".to_string(), logger::WARNING);
+				debug_log(__METHOD__." Skipped current_section_tipo '$current_section_tipo'. (Empty components of type $modelo_name) ".to_string(), logger::WARNING);
 				continue;
 			}			
 
@@ -510,12 +548,22 @@ class tool_administration extends tool_common {
 						$dato_unchanged = $component->get_dato_unchanged();
 						$reference_id 	= $current_section_tipo.'.'.$section_id.'.'.$current_component_tipo;
 
-						$response = $modelo_name::update_dato_version($update_version, $dato_unchanged, $reference_id);
+						$update_options = new stdClass();
+							$update_options->update_version = $update_version;
+							$update_options->dato_unchanged = $dato_unchanged;
+							$update_options->reference_id 	= $reference_id;
+							$update_options->tipo 			= $current_component_tipo;
+							$update_options->section_id 	= $section_id;
+							$update_options->section_tipo 	= $current_section_tipo;
+							$update_options->context 		= 'update_component_dato';
+
+						$response = $modelo_name::update_dato_version($update_options);
 						#debug_log(__METHOD__." UPDATE_DATO_VERSION COMPONENT RESPONSE [$modelo_name][{$current_section_tipo}-{$section_id}]: result: ".to_string($response->result), logger::DEBUG);
 
-						if($response->result === 1){
+						if($response->result===1) {
 							$component->updating_dato = true;
 							$component->set_dato($response->new_dato);
+							$component->update_diffusion_info_propagate_changes = false;
 							$component->Save();
 							#debug_log(__METHOD__." UPDATED dato from component [$modelo_name][{$current_section_tipo}-{$section_id}] ".to_string(), logger::DEBUG);
 							$i++;
@@ -534,7 +582,12 @@ class tool_administration extends tool_common {
 						$ar_time_machine_obj = tool_time_machine::update_records_in_time_machine($current_component_tipo, $section_id, $current_lang, $current_section_tipo);
 						foreach ($ar_time_machine_obj  as $current_time_machine_obj) {
 							$dato_unchanged = $current_time_machine_obj->get_dato();
-							$response 		= $modelo_name::update_dato_version($update_version, $dato_unchanged, $reference_id);
+
+							# Different options override
+							$update_options->dato_unchanged = $dato_unchanged;
+							$update_options->context 		= 'update_time_machine_dato';
+
+							$response 		= $modelo_name::update_dato_version($update_options);
 							#debug_log(__METHOD__." UPDATE_DATO_VERSION TIME_MACHINE RESPONSE [$modelo_name][{$current_section_tipo}-{$section_id}]: result: ".to_string($response->result), logger::DEBUG);
 							if($response->result === 1){
 								$current_time_machine_obj->set_dato($response->new_dato);
@@ -553,6 +606,7 @@ class tool_administration extends tool_common {
 
 					}//end foreach ($ar_langs as $current_lang) {
 				}//end foreach ($ar_component_tipo as $current_component_tipo) {
+
 			}//end while ($rows = pg_fetch_assoc($result)) {
 
 			// let GC do the memory job
@@ -576,19 +630,27 @@ class tool_administration extends tool_common {
 	*/
 	public static function SQL_update($SQL_update) {
 
+		$response = new stdClass();
+			$response->result 	= false;
+			$response->msg 		= 'Error. Request failed';
+
 		$result = pg_query(DBi::_getConnection(), $SQL_update);		
 		if(!$result) {
 			echo "Error: sorry an error ocurred on SQL_update code.";
 			if(SHOW_DEBUG===true) {
 				trigger_error( "<span class=\"error\">Error Processing SQL_update Request </span>". pg_last_error() );
-				dump($SQL_update,"SQL_update ".to_string( pg_last_error()  ));				
+				#dump($SQL_update,"SQL_update ".to_string( pg_last_error()  ));				
 				#throw new Exception("Error Processing SQL_update Request ". pg_last_error(), 1);;
 			}
-			return false;
+			$response->msg .= " Error Processing SQL_update Request: ". pg_last_error();
+			return $response;
 		}
 		debug_log(__METHOD__." Executed database update: ".to_string($SQL_update), logger::DEBUG);
 
-		return true;		
+		$response->result 	= true;
+		$response->msg 		= "Executed database update: ".to_string($SQL_update);
+
+		return (object)$response;		
 	}//end SQL_update
 
 	
@@ -718,15 +780,28 @@ class tool_administration extends tool_common {
 	* @return mixed $result
 	*/
 	public static function run_scripts( $script_obj ) {
+
+		$response = new stdClass();
+			$response->result 	= false;
+			$response->msg 		= 'Error. Request failed ['.__METHOD__.']';
 		
 		$script_class  = $script_obj->script_class;
 		$script_method = $script_obj->script_method;
-		$script_vars   = isset($script_obj->script_vars) ? $script_obj->script_vars : array();		
+		$script_vars   = isset($script_obj->script_vars) ? (array)$script_obj->script_vars : array();		
 
 		//$result = $script_class::$script_method( $script_obj->script_vars );
-		$result = call_user_func_array($script_class.'::'.$script_method, $script_vars);		
+		$result = call_user_func_array($script_class.'::'.$script_method, $script_vars);
+
+		if (is_object($result)) {
+			$response = $result; 
+		}else if ($result===false) {			
+			$response->msg .= ' False result is received for: '.$script_class.'::'.$script_method;
+		}else{
+			$response->result  = true;
+			$response->msg 	   = ' '.to_string($result);
+		}
 		
-		return $result;
+		return $response;
 	}//end run_scripts
 
 
@@ -838,6 +913,7 @@ class tool_administration extends tool_common {
 																		  $options->target_section_tipo,
 																		  false);
 					$target_component->set_dato( $dato );
+					$target_component->update_diffusion_info_propagate_changes = false;
 					$save_result = $target_component->Save();
 				}//end foreach langs
 
@@ -865,6 +941,7 @@ class tool_administration extends tool_common {
 					$locator->set_section_id( $target_parent );
 				
 				$component_portal->add_locator( $locator );
+				$component_portal->update_diffusion_info_propagate_changes = false;
 				$component_portal->Save();
 			}//end if (!is_null($options->source_portal_tipo))
 			
@@ -881,6 +958,456 @@ class tool_administration extends tool_common {
 
 		return (object)$response;
 	}//end move_component_data
+
+
+
+	/**
+	* RENUMERATE_SECTIONS
+	* @return 
+	*/
+	public static function renumerate_sections( $request_options ) {
+
+		$response = new stdClass();
+			$response->result 	= false;
+			$response->msg 		= 'Error. Request failed';
+
+		$options = new stdClass();			
+			$options->section_tipo 		= null;
+			$options->section_id_start 	= null;
+			$options->section_id_end	= null;
+			$options->counter_start 	= null;
+			$options->save 				= false;
+			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
+				#dump($options, ' options ++ '.to_string());
+
+		$table 	 = common::get_matrix_table_from_tipo($options->section_tipo);
+		$counter = (int)$options->counter_start;
+		$msg 	 = [];
+
+		$strQuery = "SELECT section_id, datos FROM \"$table\" WHERE section_tipo = '".$options->section_tipo."' AND (section_id >= ".$options->section_id_start." AND section_id <= ".$options->section_id_end.") ORDER BY section_id ASC ;";
+		$result   = pg_query(DBi::_getConnection(), $strQuery);
+		if (!$result) {
+			$response->msg .= " Error on select db records on table $table . ".pg_last_error();
+			return $response;
+		}
+		# Iterate found records
+		while ($rows = pg_fetch_assoc($result)) {
+
+			$section_id  = (int)$rows['section_id'];			
+
+			# Search for existing record with same section_id
+			$strQuery2 = "SELECT section_id FROM \"$table\" WHERE section_tipo = '".$options->section_tipo."' AND section_id = ".$counter." ;";
+			$result2   = pg_query(DBi::_getConnection(), $strQuery2);
+			$n_rows    = pg_num_rows($result2);
+			if ($n_rows>0) {
+				# Skip empty sections
+				$msg[] = "Skiped record of section_id $counter. Record already exists";
+				$counter++;
+				continue;
+			}
+
+			$datos  	 		= json_decode($rows['datos']);
+			$datos->section_id 	= $counter;
+			$datos_json			= json_encode($datos);
+
+			$strQuery3 = "UPDATE \"$table\" SET section_id = $1, datos = $2 WHERE section_tipo = $3 AND section_id = $4";
+			if ($options->save===true) {
+				$result3   = pg_query_params(DBi::_getConnection(), $strQuery3, array( $counter, $datos_json, $options->section_tipo, $section_id ));
+				if (!$result3) {
+					$response->msg .= " Error on UPDATE db record on table $table . ".pg_last_error();
+					return $response;
+				}
+				$msg[] = " + Updated record of section_id $section_id to $counter ";
+			}else{
+				$msg[] = " = [PREVIEW] Updated record of section_id $section_id to $counter ";
+			}
+			
+			debug_log(__METHOD__." $strQuery3 ".to_string(), logger::DEBUG);			
+
+			$counter++;
+		}//end while ($rows = pg_fetch_assoc($result))
+
+		if (empty($msg)) {
+			$msg[] = "No records are found to change";
+		}
+		
+		$response->result 	= true;
+		$response->msg 		= implode('<br>',$msg);
+
+		return $response;
+	}//end renumerate_sections
+
+
+
+	/**
+	* ADD_GEONAMES_CODE
+	* @return object $response
+	*/
+	public static function add_geonames_code( $request_options ) {
+		
+		$response = new stdClass();
+			$response->result 	= false;
+			$response->msg 		= 'Error. Request failed';
+
+		$options = new stdClass();
+			$options->section_tipo  	= null;
+			$options->lang  			= null;
+			$options->base_value  		= false; // Like "France"
+			$options->save 				= false;
+			$options->set_english_name	= false;
+			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
+
+		$term_tipo 			= DEDALO_THESAURUS_TERM_TIPO;
+		$geonames_id_tipo 	= DEDALO_THESAURUS_GEONAMES_ID_TIPO;
+		$parent_tipo 		= DEDALO_THESAURUS_RELATION_PARENT_TIPO;
+		$geolocation_tipo 	= DEDALO_THESAURUS_GEOLOCATION_TIPO;
+		
+		$term_modelo_name 			= RecordObj_dd::get_modelo_name_by_tipo($term_tipo, true);
+		$geonames_id_modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($geonames_id_tipo, true);
+		$parent_modelo_name 		= RecordObj_dd::get_modelo_name_by_tipo($parent_tipo, true);
+		$geolocation_modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($geolocation_tipo, true);
+
+		require_once(DEDALO_EXTRAS_PATH .'/geonames/class.geonames.php');
+
+		$result = section::get_resource_all_section_records_unfiltered($options->section_tipo);
+		$i=0;while ($rows = pg_fetch_assoc($result)) {
+
+			$section_id = $rows['section_id'];
+
+			#if ($section_id==1) {
+			#	continue;
+			#}
+
+			$ar_value = [];
+
+			# term
+				$component = component_common::get_instance($term_modelo_name,
+															 $term_tipo,
+															 $section_id,
+															 'list',
+															 $options->lang,
+															 $options->section_tipo);
+				$ar_value[] = $component->get_valor($options->lang);					
+
+			# parent
+				$component_parent   = component_common::get_instance($parent_modelo_name,
+																	 $parent_tipo,
+																	 $section_id,
+																	 'list',
+																	 DEDALO_DATA_NOLAN,
+																	 $options->section_tipo);
+				$dato = $component_parent->get_dato();
+				if (isset($dato[0])) {
+					$component2 = component_common::get_instance($term_modelo_name,
+																 $term_tipo,
+																 $dato[0]->section_id,
+																 'list',
+																 $options->lang,
+																 $options->section_tipo);
+					$ar_value[] = $component2->get_valor($options->lang);
+				}
+
+			# final_value
+				if ($options->base_value!==false) {
+					$ar_value[] = $options->base_value;
+				}				
+				$final_value = implode(' ', $ar_value);
+					#dump($final_value, ' final_value ++ '.to_string());
+
+				$username = geonames::get_geonames_account_username();
+				$url 	  = 'http://api.geonames.org/searchJSON?q='.urlencode($final_value).'&maxRows=1&username='.$username;
+				
+				$msg = "- CALLING GEONAMES URL API WITH USERNAME: $username - Q: $final_value - URL: $url";
+				debug_log(__METHOD__." $msg", logger::DEBUG);
+				
+				# Call to geonames web service API
+				$data 	= file_get_contents($url);
+				if (!$data 	= json_decode($data)) {
+					$i++;
+					debug_log(__METHOD__." ERROR ON GET DATA FROM GEONAMES ".to_string($url), logger::DEBUG);
+					continue;
+				}
+				$data_geonames = isset($data->geonames[0]) ? $data->geonames[0] : null;
+					#dump($data_geonames, ' $data_geonames ++ '.to_string());				
+					#debug_log(__METHOD__." data ".to_string($data->geonames[0]), logger::DEBUG);
+				
+				
+				if ( isset($data_geonames->geonameId)) {
+					$geonames_id  = $data_geonames->geonameId;
+					$lon 		  = $data_geonames->lng;
+					$lat 		  = $data_geonames->lat;
+					$english_name = $data_geonames->name;
+
+					# Geonames ID
+						$component_geonames_code = component_common::get_instance($geonames_id_modelo_name,
+																				  $geonames_id_tipo,
+																				  $section_id,
+																				  'edit',
+																				  DEDALO_DATA_NOLAN,
+																				  $options->section_tipo);
+						$component_geonames_code->set_dato( array($geonames_id) );
+						$component_geonames_code->Save();
+
+					# Geolocation coordinates
+						$component_geolocation 	 = component_common::get_instance($geolocation_modelo_name,
+																				  $geolocation_tipo,
+																				  $section_id,
+																				  'edit',
+																				  DEDALO_DATA_NOLAN,
+																				  $options->section_tipo);
+						$geolocation_dato = new stdClass();
+							$geolocation_dato->lat = $lat;
+							$geolocation_dato->lon = $lon;
+						$component_geolocation->set_dato( $geolocation_dato );
+						$component_geolocation->Save();
+
+					# name
+						if ($options->set_english_name===true && $options->lang!=='lg-eng') {
+							$component_term  = component_common::get_instance($term_modelo_name,
+																			  $term_tipo,
+																			  $section_id,
+																			  'list',
+																			  'lg-eng',
+																			  $options->section_tipo);
+							$component_term->set_dato( array($english_name) );
+							$component_term->Save();
+						}
+
+					debug_log(__METHOD__."- Updated section $options->section_tipo - $section_id ".to_string($geonames_id), logger::DEBUG);
+
+				}//end if (isset($data->geonameId))
+				
+			#if ($i>=3) {
+			#	break;
+			#}
+		$i++;}
+
+
+		$response->result 	= true;
+		$response->msg 		= 'Ok section $options->section_tipo done ['.$i.']';
+
+
+		return $response;
+	}//end add_geonames_code
+
+
+
+	/**
+	* GENERATE_RELATIONS_TABLE_DATA
+	* @return 
+	*/
+	public static function generate_relations_table_data( $tables='*' ) {
+		$response = new stdClass();
+			$response->result 	= false;
+			$response->msg 		= array('Error. Request failed '.__METHOD__);
+
+		$ar_msg = array();
+
+		if ($tables!=='*') {
+			$ar_tables = [];
+			$tables = explode(',', $tables);
+			foreach ($tables as $key => $table) {
+				$ar_tables[] = trim($table);
+			}
+		}		
+		
+		if (empty($ar_tables)) {
+			$ar_tables = tool_administration::$ar_tables_with_relations;
+		}
+
+		if ($tables==='*') {
+			# truncate current table data
+			$strQuery 	= "TRUNCATE \"relations\";";
+			$result 	= JSON_RecordDataBoundObject::search_free($strQuery);
+
+			$strQuery 	= "ALTER SEQUENCE relations_id_seq RESTART WITH 1;";
+			$result 	= JSON_RecordDataBoundObject::search_free($strQuery);
+		}
+		
+
+		foreach ($ar_tables as $key => $table) {
+
+			$counter = 1;
+			
+			// Get last id in the table
+			$strQuery 	= "SELECT id FROM $table ORDER BY id DESC LIMIT 1 ";
+			$result 	= JSON_RecordDataBoundObject::search_free($strQuery);
+			$rows 		= pg_fetch_assoc($result);
+			if (!$rows) {
+				continue;
+			}
+			$max 		= $rows['id'];
+
+			$min = 1;
+			if ($table==='matrix_users') {
+				$min = -1;
+			}
+		
+			// iterate from 1 to last id
+			for ($i=$min; $i<=$max; $i++) {
+				
+				$strQuery 	= "SELECT section_id, section_tipo, datos FROM $table WHERE id = $i";
+				$result 	= JSON_RecordDataBoundObject::search_free($strQuery);
+				if(!$result) {			
+					$msg = "Failed Search id $i. Data is not found.";
+					debug_log(__METHOD__." ERROR: $msg ".to_string(), logger::ERROR);
+					continue;
+				}
+				$n_rows = pg_num_rows($result);
+
+				if ($n_rows<1) continue;
+
+				while($rows = pg_fetch_assoc($result)) {
+
+					$section_id 	= $rows['section_id'];
+					$section_tipo 	= $rows['section_tipo'];
+					$datos 			= json_decode($rows['datos']);
+						#dump($datos, ' datos ++ '.to_string($id));
+
+					if (!empty($datos) && isset($datos->relations)) {
+
+						$component_dato = [];
+						foreach ($datos->relations as $key => $current_locator) {
+							$component_dato[$current_locator->from_component_tipo][] = $current_locator;
+						}
+					
+						foreach ($component_dato as $from_component_tipo => $ar_locators) {
+							$propagate_options = new stdClass();
+								$propagate_options->ar_locators  		= $ar_locators;
+								$propagate_options->section_id 	 		= $section_id;
+								$propagate_options->section_tipo 		= $section_tipo;
+								$propagate_options->from_component_tipo = $from_component_tipo;
+							$propagate_response = component_relation_common::propagate_component_dato_to_relations_table( $propagate_options );
+						}
+
+					}else{
+						debug_log(__METHOD__." ERROR: Empty datos from: $table $section_tipo $section_id ".to_string(), logger::ERROR);
+					}
+				}
+				if(SHOW_DEBUG===true) {
+					# Show log msg every 100 id
+					if ($counter===1) {
+						debug_log(__METHOD__." Updated section data table $table $i".to_string(), logger::DEBUG);
+					}
+					$counter++;	
+					if ($counter>300) {
+						$counter = 1;
+					}			
+				}				
+				
+				#break;
+			}//end for ($i=$min; $i<=$max; $i++)
+			$response->msg[] = " Updated table data table $table ";
+			debug_log(__METHOD__." Updated table data table $table  ", logger::WARNING);
+			#break; // stop now
+
+		}//end foreach ($ar_tables as $key => $table)
+
+		# Realocate updated files
+
+		$response->result = true;
+		$response->msg[0] = "Ok. All data is propagated successfully"; // Override first message
+		$response->msg    = "<br>".implode('<br>', $response->msg);
+		
+		return $response;
+	}//end generate_relations_table_data
+
+
+
+	/**
+	* EXPORT_HIERARCHY
+	* For MASTER toponomy export
+	* @return 
+	*/
+	public static function export_hierarchy($section_tipo) {
+
+		$response = new stdClass();
+			$response->result 	= false;
+			$response->msg 		= 'Error. Request failed '.__METHOD__;
+
+		if (!defined('EXPORT_HIERARCHY_PATH')) {
+			return $response;
+		}
+		
+		if ($section_tipo==='*') {
+
+			# Search all active
+			$strQuery = '
+			SELECT a.id, a.section_id, a.section_tipo,
+			 a.datos#>>\'{components, hierarchy5, valor_list, lg-eng}\' AS hierarchy5,
+			 a.datos#>>\'{components, hierarchy62, valor_list, lg-nolan}\' AS hierarchy62,
+			 a.datos#>>\'{components, hierarchy6, valor_list, lg-nolan}\' AS hierarchy6,
+			 a.datos#>>\'{components, hierarchy7, valor_list, lg-nolan}\' AS hierarchy7,
+			 a.datos#>>\'{components, hierarchy53, valor_list, lg-nolan}\' AS hierarchy53,
+			 a.datos#>>\'{components, hierarchy45, valor_list, lg-nolan}\' AS hierarchy45 
+			FROM "matrix_hierarchy_main" a 
+			WHERE a.id IN (SELECT a.id FROM "matrix_hierarchy_main" a WHERE  a.section_id IS NOT NULL 
+			 -- filter_by_section_tipo -- 
+			AND (a.section_tipo = \'hierarchy1\') AND (			
+			 -- filter_by_search hierarchy4 component_radio_button 
+			 a.datos#>\'{relations}\' @> \'[{"section_id":"1","section_tipo":"dd64","from_component_tipo":"hierarchy4"}]\'::jsonb 
+			) 
+			ORDER BY a.datos#>>\'{components, hierarchy6, valor, lg-nolan}\' ASC, a.section_id ASC)  
+			ORDER BY a.datos#>>\'{components, hierarchy6, valor, lg-nolan}\' ASC, a.section_id ASC
+			';
+			# perform query
+			$result = JSON_RecordObj_matrix::search_free($strQuery);
+
+			# loop the rows
+			$ar_section_tipo = [];
+			while ($rows = pg_fetch_assoc($result)) {				
+				$ar_section_tipo[] = $rows['hierarchy53']; // target section tipo (General term)
+			}
+
+			
+		}elseif($section_tipo==='all'){
+			
+			$ar_section_tipo = ['all'];
+		
+		}else{
+			
+			$ar_section_tipo = explode(',', $section_tipo);
+			foreach ($ar_section_tipo as $key => $current_section_tipo) {
+				$ar_section_tipo[$key] = trim($current_section_tipo);
+			}
+		}
+
+		$msg = [];
+		foreach ($ar_section_tipo as $key => $current_section_tipo) {
+			
+			$command  = '';			
+			$command .= 'cd "'.EXPORT_HIERARCHY_PATH.'" ; ';
+			#$command .= 'psql dedalo4_'.DEDALO_ENTITY.' -h localhost  ';
+			$command  .= DB_BIN_PATH."psql ".DEDALO_DATABASE_CONN." -U ".DEDALO_USERNAME_CONN." -p ".DEDALO_DB_PORT_CONN." -h ".DEDALO_HOSTNAME_CONN;
+			$command .= ' -c "\copy (SELECT section_id, section_tipo, datos FROM matrix_hierarchy WHERE ';
+			if ($current_section_tipo==='all') {
+				$command .= 'section_tipo IS NOT NULL ORDER BY section_tipo, section_id ASC) ';
+				$date = date("Y-m-d_His");
+				$command .= 'TO '.$current_section_tipo.'_'.$date.'.copy " ; ';
+				$command .= 'gzip -f '.$current_section_tipo.'_'.$date.'.copy';
+				
+			}else{
+				$command .= 'section_tipo = \''.$current_section_tipo.'\' ORDER BY section_id ASC) ';
+				$command .= 'TO '.$current_section_tipo.'.copy " ; ';
+				$command .= 'gzip -f '.$current_section_tipo.'.copy';
+			}
+			debug_log(__METHOD__." Exec command ".to_string($command), logger::DEBUG);
+			
+			$command_res = shell_exec($command);
+
+			debug_log(__METHOD__." Exec response (shell_exec) ".to_string($command_res), logger::DEBUG);
+
+			$msg[] = trim("section_tipo: ".$current_section_tipo." = ".to_string($command_res));
+		}//end foreach ($ar_section_tipo as $key => $current_section_tipo)
+
+
+		$response->result   = true;
+		$response->msg 		= "Ok. All data is exported successfully"; // Override first message
+		$response->msg     .= "<br>".implode('<br>', $msg);
+		
+		return $response;
+	}//end export_hierarchy
+
 
 
 

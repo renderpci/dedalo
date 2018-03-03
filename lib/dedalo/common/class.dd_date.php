@@ -7,9 +7,11 @@
 class dd_date extends stdClass {
 
 	// Errors Optional
- 	#public $errors;
- 	// Separator when format output
+	#public $errors;
+	// Separator when format output
 	static $separator = '-';
+	// Separator when format output
+	static $time_separator = ':';
 	// Virtual year days
 	static $virtual_year_days  = 372;
 	// Virtual month days
@@ -52,10 +54,14 @@ class dd_date extends stdClass {
 
 	/**
 	* SET_ERRORS
+	* @return bool true
 	*/
 	public function set_errors($value) {
-		$this->errors = $value;
-	}#end set_errors
+		debug_log(__METHOD__." Date error found. value: ".to_string($value), logger::WARNING);
+		#$this->errors = $value;
+
+		return true;
+	}//end set_errors
 
 
 
@@ -66,7 +72,7 @@ class dd_date extends stdClass {
 	*/
 	public function set_time($value) {
 		$this->time = (int)$value;
-	}#end set_time
+	}//end set_time
 
 
 
@@ -83,54 +89,60 @@ class dd_date extends stdClass {
 		}
 		*/
 		$this->year = (int)$value;
+
 		return true;
-	}
+	}//end set_year
 
 	/**
 	* SET_MONTH
-	* @return bool 
+	* @return bool true
 	*/
 	public function set_month($value, $constrain=false) {
 		if( (int)$value<1 || (int)$value>12 ) {
 		  #throw new Exception("Error Processing Request. Invalid month: $value", 1);
-		  $this->errors[] = "Error on set month. Value is not standard: ".to_string($value);
+		  #$this->errors[] = "Error on set month. Value is not standard: ".to_string($value);
+		  debug_log(__METHOD__." Error on set month. Value is not standard ".to_string($value), logger::WARNING);
 		  if ($constrain===true) return false;
 		}
 		$this->month = (int)$value;
 		return true;
-	}#end set_month
+	}//end set_month
 
 
 
 	/**
 	* SET_DAY
-	* @return bool 
+	* @return bool true
 	*/
 	public function set_day($value, $constrain=false) {
 		if( (int)$value<1 || (int)$value>31 ) {
-		 # throw new Exception("Error Processing Request. Invalid day: $value", 1);
-		  $this->errors[] = "Error on set day. Value is not standard: ".to_string($value);
-		  if ($constrain===true) return false;
+			# throw new Exception("Error Processing Request. Invalid day: $value", 1);
+			#$this->errors[] = "Error on set day. Value is not standard: ".to_string($value);
+			debug_log(__METHOD__." Error on set day. Value is not standard ".to_string($value), logger::WARNING);
+			if ($constrain===true) return false;
 		}
 		$this->day = (int)$value;
+
 		return true;
-	}#end set_day
+	}//end set_day
 
 
 
 	/**
 	* SET_HOUR
-	* @return bool 
+	* @return bool true
 	*/
 	public function set_hour($value, $constrain=false) {
 		if( (int)$value<0 || (int)$value>23 ) {
-		  #throw new Exception("Error Processing Request. Invalid hour: $value", 1);
-		  $this->errors[] = "Error on set hour. Value is invalid: ".to_string($value);
-		  if ($constrain===true) return false;
+			#throw new Exception("Error Processing Request. Invalid hour: $value", 1);
+			#$this->errors[] = "Error on set hour. Value is invalid: ".to_string($value);
+			debug_log(__METHOD__." Error on set hour. Value is invalid: ".to_string($value), logger::WARNING);
+			if ($constrain===true) return false;
 		}
 		$this->hour = (int)$value;
+
 		return true;
-	}#end set_hour
+	}//end set_hour
 
 
 
@@ -140,13 +152,14 @@ class dd_date extends stdClass {
 	*/
 	public function set_minute($value, $constrain=false) {
 		if( (int)$value<0 || (int)$value>59 ) {
-		  #throw new Exception("Error Processing Request. Invalid minute: $value", 1);
-		  $this->errors[] = "Error on set minute. Value is invalid: ".to_string($value);
-		  if ($constrain===true) return false;
+			#throw new Exception("Error Processing Request. Invalid minute: $value", 1);
+			#$this->errors[] = "Error on set minute. Value is invalid: ".to_string($value);
+			debug_log(__METHOD__." Error on set minute. Value is invalid: ".to_string($value), logger::WARNING);
+			if ($constrain===true) return false;
 		}
 		$this->minute = (int)$value;
 		return true;
-	}#end set_minute
+	}//end set_minute
 	#public function set_min($value, $constrain=false) {	return $this->set_minute($value, $constrain); }
 
 
@@ -157,12 +170,13 @@ class dd_date extends stdClass {
 	public function set_second($value, $constrain=false) {
 		if( (int)$value<0 || (int)$value>59 ) {
 			#throw new Exception("Error Processing Request. Invalid second: $value", 1);
-			$this->errors[] = "Error on set second. Value is invalid: ".to_string($value);
+			#$this->errors[] = "Error on set second. Value is invalid: ".to_string($value);
+			debug_log(__METHOD__." Error on set second. Value is invalid: ".to_string($value), logger::WARNING);
 			if ($constrain===true) return false;
 		}
 		$this->second = (int)$value;
 		return true;
-	}#end set_second
+	}//end set_second
 
 
 
@@ -173,12 +187,25 @@ class dd_date extends stdClass {
 	public function set_ms($value, $constrain=false) {
 		if( (int)$value<0 || (int)$value>999 ) {
 			#throw new Exception("Error Processing Request. Invalid ms: $value", 1);
-			$this->errors[] = "Error on set ms. Value is invalid: ".to_string($value);
+			#$this->errors[] = "Error on set ms. Value is invalid: ".to_string($value);
+			debug_log(__METHOD__." Error on set ms. Value is invalid: ".to_string($value), logger::WARNING);
 			if ($constrain===true) return false;
 		}
 		$this->ms = (int)$value;
 		return true;
-	}#end set_ms
+	}//end set_ms
+
+
+
+	/**
+	* SET_OP
+	* Only for search purposses
+	* @return 
+	*/
+	public function set_op($value) {
+		$this->op = (string)$value;
+		return true;
+	}//end set_op
 
 
 
@@ -280,7 +307,7 @@ class dd_date extends stdClass {
 
 
 		return (string)$dd_timestamp;
-	}#end get_dd_timestamp
+	}//end get_dd_timestamp
 
 
 
@@ -306,7 +333,7 @@ class dd_date extends stdClass {
 		#}	
 
 		return $this;
-	}#end get_date_from_timestamp
+	}//end get_date_from_timestamp
 
 
 
@@ -323,7 +350,9 @@ class dd_date extends stdClass {
 			#$elements = count($matches)-1;
 
 			# Year is mandatory
-			$this->set_year((int)$matches[5]); 
+			if (isset($matches[5])) {
+				$this->set_year((int)$matches[5]); 
+			}
 			
 			# Month
 			if (!empty($matches[4])) {
@@ -353,7 +382,7 @@ class dd_date extends stdClass {
 
 
 		return $this;
-	}#end set_date_from_input_field
+	}//end set_date_from_input_field
 
 
 
@@ -378,8 +407,9 @@ class dd_date extends stdClass {
 		$this->set_hour( (int)date('H',$time) );
 		$this->set_minute( (int)date('i',$time) );
 		$this->set_second( (int)date('s',$time) );
-	}#end correct_date
+	}//end correct_date
 	*/
+
 
 
 	/**
@@ -392,7 +422,7 @@ class dd_date extends stdClass {
 	public static function get_date_with_format( $date, $format="Y-m-d H:i:s" ) {
 		$date_with_format = date($format, strtotime($date));
 		return $date_with_format;
-	}#end get_date_with_format
+	}//end get_date_with_format
 
 
 
@@ -415,24 +445,15 @@ class dd_date extends stdClass {
 		$minute = !empty($dd_date->minute) ? (int)$dd_date->minute  : 0;
 		$second = !empty($dd_date->second) ? (int)$dd_date->second  : 0;
 
-			if($mode!=='period') {
-				if(!empty($dd_date->month)) {
-					$dd_date->month--; // Remove 1
-				}
-				if(!empty($dd_date->day)) {
-					$dd_date->day--; // Remove 1
-				}
+			# Rectified 25-11-2017
+			if(!empty($month)) {
+				$month--; // Remove 1
 			}
-			/*
-			// In periods, year can be empty
-			if(!empty($year) && !empty($dd_date->month)) {
-				$dd_date->month--; // Remove 1
+			if(!empty($day)) {
+				$day--; // Remove 1
 			}
-			// In periods, month can be empty
-			if(!empty($month) && !empty($dd_date->day)) {
-				$dd_date->day--; // Remove 1
-			}
-			*/
+		
+			$year 	= $year   >= 0 ? $year   : 0;
 			$month 	= $month  >= 0 ? $month  : 0;
 			$day 	= $day 	  >= 0 ? $day 	 : 0;
 			$hour 	= $hour   >= 0 ? $hour 	 : 0;
@@ -458,13 +479,13 @@ class dd_date extends stdClass {
 			$time += $second;
 		
 		return (int)$time;
-	}#end convert_date_to_seconds
+	}//end convert_date_to_seconds
 
 
 
 	/**
 	* CONVERT_SECONDS_TO_PERIOD
-	* Calculate current seconds in minutes, hours, days, totals and aproximative prtials.
+	* Calculate current seconds in minutes, hours, days, totals and aproximative partials.
 	* Note that non total values are aproximations because we need use 
 	* a reference year of 365 days and a reference month of 30 days
 	* @param int $seconds
@@ -512,13 +533,13 @@ class dd_date extends stdClass {
 		$response->result->days 		 = (int)$days_int;
 
 		return (object)$response;
-	}//end convert_seconds_to_period
+	}//end convert_seconds_to_period 
 	
 
 
 	/**
 	* __DESTRUCT
-	*/
+	*//*
 	public function __destruct() {
 
 		#$this->correct_date();
@@ -527,7 +548,7 @@ class dd_date extends stdClass {
 			//trigger_error( to_string($this->errors) );
 			debug_log(__METHOD__." Errors foud in dd_date ".to_string($this), logger::WARNING);
 		}
-	}#end __destruct
+	}//end __destruct */
 
 
 

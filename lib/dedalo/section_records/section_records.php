@@ -4,23 +4,31 @@
 
 	$tipo					= $this->get_tipo();
 	$permissions			= common::get_permissions($tipo,$tipo);
-	$modo					= $this->options->modo;
-	$context 				= $this->options->context;	// ??
+	$search_options 		= $this->search_options;
+	$modo					= $search_options->modo;
+	$context 				= $search_options->context;	// ??
 	$file_name				= $modo;
-
+	$records_data 			= $this->records_data;
+	$search_query_object 	= $search_options->search_query_object;
+	$section_tipo 			= $search_query_object->section_tipo;
+	
+	# Add section records self css/js libs
 	$cwd = basename(__DIR__);
-	css::$ar_url[] = DEDALO_LIB_BASE_URL."/$cwd/css/$cwd.css";
-	js::$ar_url[]  = DEDALO_LIB_BASE_URL."/$cwd/js/$cwd.js";
+	#css::$ar_url[] = DEDALO_LIB_BASE_URL."/$cwd/css/$cwd.css";
+	#js::$ar_url[]  = DEDALO_LIB_BASE_URL."/$cwd/js/$cwd.js";
 
+
+	# SEARCH_OPTIONS_JSON
+	# Ecode options JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_SLASHES 
+	$search_options_json = json_encode($search_options);
+	
 	
 	switch($modo) {
 
 		case 'edit':
 
-				include_once(DEDALO_LIB_BASE_PATH . '/section_records/record/class.record.php');				
-
 				#
-				# PAGINATOR HTML					
+				# PAGINATOR HTML
 					include_once(DEDALO_LIB_BASE_PATH . '/search/records_navigator/class.records_navigator.php');
 					$rows_paginator_html= '';
 
@@ -30,21 +38,22 @@
 						#dump($context_name, ' context_name edit ++ '.to_string(common::get_request_var('context')));
 
 					switch (true) {
-						case (isset($this->options->save_handler) && $this->options->save_handler!='database'):
+						case (isset($search_options->save_handler) && $this->search_options->save_handler!=='database'):
 							# ignore paginator when save_handler is not 'database'
 							break;
 						case $context_name==='list_in_portal':
 							# nothing to do (avoid show paginator when portal tool is opened)
 							break;						
-						default:
-							$rows_paginator 		= new records_navigator($this->rows_obj, $modo);
-							$rows_paginator_html	= $rows_paginator->get_html();
+						default:	
+							$rows_paginator 	 = new records_navigator($search_query_object, $modo, $context, null);
+							$rows_paginator_html = $rows_paginator->get_html();
 							break;
 					}
 
 				
 				#
 				# ROW HTML
+					include_once(DEDALO_LIB_BASE_PATH . '/section_records/record/class.record.php');
 					$record_html 	= '';
 					$record 		= new record($this, $modo);
 					$record_html	= $record->get_html();
@@ -53,75 +62,66 @@
 
 		case 'list_tm':
 
-				$file_name='list';
+				$file_name = 'list';
 
 		case 'list':
+				
+				# Section list propiedades
+				# Fix section_list propiedades (for use later)				
+				$propiedades  		= null;
+				$section_list_tipo 	= null;
+				$ar_section_list = section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, 'section_list');
+				if (!empty($ar_section_list[0])) {
+					$section_list_tipo = $ar_section_list[0];
+					$RecordObj_dd = new RecordObj_dd($section_list_tipo);
+					$propiedades  = json_decode($RecordObj_dd->get_propiedades());
+				}
+				$this->section_list_tipo = $section_list_tipo;
+				$this->propiedades 		 = $propiedades;
+				
 
-				include_once(DEDALO_LIB_BASE_PATH . '/section_records/rows_header/class.rows_header.php');
-				include_once(DEDALO_LIB_BASE_PATH . '/section_records/rows/class.rows.php');
-			
-				$section_list_tipo = key($this->rows_obj->options->layout_map);	
+				# Add list specific controllers
+				#include(DEDALO_LIB_BASE_PATH . '/section_records/rows_header/class.rows_header.php');
+				include(DEDALO_LIB_BASE_PATH . '/section_records/rows/class.rows.php');
 				
-				/*
-				$tool_update_cache = new tool_update_cache($tipo);
-				$tool_update_cache->update_cache();
-				if(SHOW_DEBUG) {					
-					#dump(tool_update_cache::$debug_response,'$tool_update_cache->debug_response');					
-				}
-				*/
-				
-				# BUTTON DELETE				
-				if (!$this->button_delete_permissions) {
-					$ar_children_tipo_by_modelo_name_in_section = section::get_ar_children_tipo_by_modelo_name_in_section($this->tipo, 'button_delete', $from_cache=true, $resolve_virtual=true); //$section_tipo, $ar_modelo_name_required, $from_cache=true, $resolve_virtual=false
-					# dump($ar_children_tipo_by_modelo_name_in_section, ' ar_children_tipo_by_modelo_name_in_section ++ '.to_string($this->tipo));
-					if (!empty($ar_children_tipo_by_modelo_name_in_section[0])) {
-						// Set current button_delete
-						$current_button_tipo = $ar_children_tipo_by_modelo_name_in_section[0];
-						$this->button_delete = new button_delete($current_button_tipo,null,$tipo);
-						#dump($ar_children_tipo_by_modelo_name_in_section[0], ',$ar_children_tipo_by_modelo_name_in_section[0] ++ '.to_string());
-						$this->button_delete_permissions = security::get_security_permissions( $tipo, $current_button_tipo);
-					}
-				}
-				#dump($file_name, ' file_name ++ '.to_string());
-				
-				#dump($this);
-				#dump($button_delete_permissions," button_delete_permissions");
-				if(SHOW_DEBUG) {
-					#dump($this->rows_obj->result,"this");
-				}
-				
-					/*	if (empty($this->rows_obj->result)) {
-							echo "<div class=\"no_results_msg\">No results found</div>";
-							if(SHOW_DEBUG) {
-								#dump($this->rows_obj->strQuery,"DEBUG: No results found whit this query");
-								#echo "DEBUG: No results found whit this query: ";
-								echo "<blockquote><pre>".$this->rows_obj->strQuery."</pre></blockquote>";
-							}					
-							return;
+				#			
+				# BUTTON DELETE 
+					if (!$this->button_delete_permissions) {
+						$ar_children_tipo_by_modelo_name_in_section = section::get_ar_children_tipo_by_modelo_name_in_section($this->tipo, 'button_delete', $from_cache=true, $resolve_virtual=true);
+						if (!empty($ar_children_tipo_by_modelo_name_in_section[0])) {
+							// Set current button_delete
+							$current_button_tipo = $ar_children_tipo_by_modelo_name_in_section[0];
+							$this->button_delete = new button_delete($current_button_tipo,null,$tipo);
+							$this->button_delete_permissions = security::get_security_permissions( $tipo, $current_button_tipo);
 						}
-					*/	
-				# BUILD ALL HTML ROWS (PAGINATOR, TH, TD)				
-				#$rows_search_html		= '';
+					}	
 					
 				#
 				# PAGINATOR HTML
-					$records_data 			= $this->rows_obj;
-					$rows_paginator 		= new records_navigator($records_data, $modo);
-					$rows_paginator_html	= $rows_paginator->get_html();
+					$rows_paginator 	 = new records_navigator($search_query_object, $modo, $context, $propiedades);
+					$rows_paginator_html = $rows_paginator->get_html();					
 				
 				#
 				# ROWS TABLE HTML
 					
 					# HEADER HTML (TH)
-					$rows_header 			= new rows_header($this, $modo);
-					$rows_header_html		= $rows_header->get_html();
+					#$rows_header 			= new rows_header($this, $modo);
+					#$rows_header_html		= $rows_header->get_html();
+					$rows_header_html = '';
+					if (!empty($records_data->ar_records)) {
+						ob_start();
+						include(dirname(__FILE__) . '/rows_header/rows_header.php' );
+						$rows_header_html = ob_get_clean();
+					}					
+					
 
 					# ROWS HTML (TD)
-					$rows 					= new rows($this, $modo);
-					$rows_html				= $rows->get_html();
+					$rows 		= new rows($this, $modo);
+					$rows_html	= $rows->get_html();
+
 				
-				
-				//if (isset($_REQUEST['m']) && $_REQUEST['m']!='list') {
+				#
+				# ADDITIONAL CSS/JS
 				if (common::get_request_var('m')!=='list') {
 					# Nothing to load
 				}else{
@@ -139,22 +139,22 @@
 						#js::$ar_url[] = DEDALO_ROOT_WEB.'/lib/store.js-master/store.min.js';
 				}
 
+				#
 				# ACTIVITY DEDALO_ACTIVITY_SECTION_TIPO
-					if ($tipo===DEDALO_ACTIVITY_SECTION_TIPO) {
-						$file_name = 'list_activity';
-					}
+					#if ($tipo===DEDALO_ACTIVITY_SECTION_TIPO) {
+					#	$file_name = 'list_activity';
+					#}
 				
 				break;
-		
+
 	}//end switch($modo)
 
 	
 
 
 	# LOAD PAGE	
-	$page_html	= 'html/' . get_class($this) . '_' . $file_name . '.phtml';		#dump($page_html);
+	$page_html	= 'html/' . get_class($this) . '_' . $file_name . '.phtml';
 	if( !include($page_html) ) {
 		echo "<div class=\"error\">Invalid mode $modo</div>";
-	}
-	
+	}	
 ?>

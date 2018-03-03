@@ -1,4 +1,4 @@
-<?php
+ <?php
 $start_time=microtime(1);
 include( dirname(dirname(__FILE__)).'/config/config4.php');
 # TRIGGER_MANAGER. Add trigger_manager to receive and parse requested data
@@ -9,9 +9,8 @@ common::trigger_manager();
 /**
 * AUTOCOMPLETE
 * Get list of mathed DB results for current string by ajax call
-* @param string $tipo_to_search
-* @param string $string_to_search
-*/
+* @param object $json_data
+*//*
 function autocomplete($json_data) {
 	global $start_time;
 
@@ -45,7 +44,7 @@ function autocomplete($json_data) {
 	$result = (array)component_autocomplete::autocomplete_search($tipo,
 																$ar_target_section_tipo,
 																$string_to_search,
-																40,
+																100,
 																$filter_sections,
 																$search_fields,
 																$divisor);
@@ -53,6 +52,8 @@ function autocomplete($json_data) {
 	$response->result 	= $result;
 	$response->msg 		= 'Ok. Request done ['.__FUNCTION__.']';
 
+	#error_log(json_encode($result));
+
 	# Debug
 	if(SHOW_DEBUG===true) {
 		$debug = new stdClass();
@@ -65,52 +66,60 @@ function autocomplete($json_data) {
 	}
 	
 	return (object)$response;
-}#end function autocomplete')
-
+}//end function autocomplete')*/
 
 
 /**
-* SUBMIT_NEW_ELEMENT
-* Fire submit form of new element
+* AUTOCOMPLETE
+* Get list of mathed DB results for current string by ajax call
+* @param object $json_data
 */
-function add_locator($json_data) {
+function autocomplete2($json_data) {
 	global $start_time;
 
 	# Write session to unlock session file
-	#session_write_close();
+	session_write_close();
 
 	$response = new stdClass();
 		$response->result 	= false;
 		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
 
-	$vars = array('tipo','parent','section_tipo','locator');
+	$vars = array('tipo','section_tipo','top_tipo','divisor','search_query_object');
 		foreach($vars as $name) {
 			$$name = common::setVarData($name, $json_data);
 			# DATA VERIFY
-			#if ($name==='dato') continue; # Skip non mandatory
+			#if ($name==='filter_sections') continue; # Skip non mandatory
 			if (empty($$name)) {
 				$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty '.$name.' (is mandatory)';
 				return $response;
 			}
 		}
 	
-	if(!$locator = json_decode($locator)){
-		$response->msg = 'Trigger Error: ('.__FUNCTION__.') Invalid locator';
+	
+	if (!$search_query_object = json_decode($search_query_object)) {
+		$response->msg = "Trigger Error. Invalid search_query_object";
 		return $response;
 	}
+	debug_log(__METHOD__." search_query_object ".to_string($search_query_object), logger::DEBUG);
+	#dump(null, ' trigger search_query_object ++ '. json_encode($search_query_object, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT)); die();
 
-	$modelo_name 			= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
-	$component_autocomplete = component_autocomplete::get_instance( $modelo_name,
-																	$tipo,
-																	$parent,
-																	'edit',
-																	DEDALO_DATA_NOLAN,
-																	$section_tipo);
+	$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 
-	$final = $component_autocomplete->add_locator($locator);
+	$component_autocomplete = component_common::get_instance($modelo_name,
+															 $tipo,
+															 null,
+															 'list',
+															 DEDALO_DATA_NOLAN,
+															 $section_tipo);
 
-	$response->result 	= $final;
+	$result = (array)$component_autocomplete->autocomplete_search2(
+															 $search_query_object,
+															 $divisor);
+	
+	$response->result 	= $result;
 	$response->msg 		= 'Ok. Request done ['.__FUNCTION__.']';
+
+	#error_log(json_encode($result));
 
 	# Debug
 	if(SHOW_DEBUG===true) {
@@ -124,71 +133,15 @@ function add_locator($json_data) {
 	}
 	
 	return (object)$response;
-}//end add_locator
+}//end function autocomplete')
 
-
-
-/**
-* SUBMIT_NEW_ELEMENT
-* Fire submit form of new element
-*/
-function remove_locator($json_data) {
-	global $start_time;
-
-	$response = new stdClass();
-		$response->result 	= false;
-		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
-
-	$vars = array('tipo','parent','section_tipo','locator');
-		foreach($vars as $name) {
-			$$name = common::setVarData($name, $json_data);
-			# DATA VERIFY
-			#if ($name==='dato') continue; # Skip non mandatory
-			if (empty($$name)) {
-				$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty '.$name.' (is mandatory)';
-				return $response;
-			}
-		}
-	
-	if(!$locator = json_decode($locator)){
-		$response->msg = 'Trigger Error: ('.__FUNCTION__.') Invalid locator';
-		return $response;
-	}
-
-	$modelo_name 			= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
-	$component_autocomplete = component_autocomplete::get_instance( $modelo_name,
-																	$tipo,
-																	$parent,
-																	'edit',
-																	DEDALO_DATA_NOLAN,
-																	$section_tipo);
-
-	$final = $component_autocomplete->remove_locator($locator);
-
-	$response->result 	= $final;
-	$response->msg 		= 'Ok. Request done ['.__FUNCTION__.']';
-
-	# Debug
-	if(SHOW_DEBUG===true) {
-		$debug = new stdClass();
-			$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
-			foreach($vars as $name) {
-				$debug->{$name} = $$name;
-			}
-
-		$response->debug = $debug;
-	}
-	
-	return (object)$response;
-}//end remove_locator
 
 
 
 /**
 * NEW_ELEMENT
 * Render form to submit new record to source list
-* @param string $tipo (component autocomplete tipo)
-* @param int $parent (component autocomplete parent id matrix)
+* @param object $json_data
 */
 function new_element($json_data) {
 	global $start_time;
@@ -247,13 +200,14 @@ function new_element($json_data) {
 	}
 	
 	return (object)$response;
-}#end function new_element')
+}//end function new_element')
 
 
 
 /**
 * SUBMIT_NEW_ELEMENT
 * Fire submit form of new element
+* @param object $json_data
 */
 function submit_new_element($json_data) {
 	global $start_time;
@@ -265,7 +219,8 @@ function submit_new_element($json_data) {
 		$response->result 	= false;
 		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
 
-	$vars = array('tipo','parent','section_tipo','target_section_tipo','ar_data','propiedades','top_tipo');
+	#$vars = array('tipo','parent','section_tipo','target_section_tipo','ar_data','propiedades','top_tipo');
+	$vars = array('tipo','parent','section_tipo','target_section_tipo','ar_data','top_tipo');
 		foreach($vars as $name) {
 			$$name = common::setVarData($name, $json_data);
 			# DATA VERIFY
@@ -275,8 +230,12 @@ function submit_new_element($json_data) {
 				return $response;
 			}
 		}
+
+	if (!$ar_data = json_decode($ar_data)) {
+		$response->msg = 'Trigger Error: ('.__FUNCTION__.') Error on json decode ar_data!';
+		return $response;
+	}
 	
-	$ar_data = json_decode($ar_data);
 	if (empty($target_section_tipo)) {		
 		$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty target_section_tipo is not valid!';
 		return $response;
@@ -288,9 +247,9 @@ function submit_new_element($json_data) {
 		return $response;
 	}
 
-	$new_autocomplete_record = component_autocomplete::create_new_autocomplete_record($parent, $tipo, $target_section_tipo, $section_tipo, $ar_data);
+	$new_locator = (object)component_autocomplete::create_new_autocomplete_record($parent, $tipo, $target_section_tipo, $section_tipo, $ar_data);
 
-	$response->result 	= $new_autocomplete_record;
+	$response->result 	= $new_locator;
 	$response->msg 		= 'Ok. Request done ['.__FUNCTION__.']';
 
 	# Debug
@@ -305,11 +264,122 @@ function submit_new_element($json_data) {
 	}
 	
 	return (object)$response;
-}#end function submit_new_element')
+}//end function submit_new_element')
 
 
 
+/**
+* ADD_LOCATOR
+* Fire submit form of new element
+*//*
+function add_locator($json_data) {
+	global $start_time;
 
+	# Write session to unlock session file
+	#session_write_close();
+
+	$response = new stdClass();
+		$response->result 	= false;
+		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
+
+	$vars = array('tipo','parent','section_tipo','locator');
+		foreach($vars as $name) {
+			$$name = common::setVarData($name, $json_data);
+			# DATA VERIFY
+			#if ($name==='dato') continue; # Skip non mandatory
+			if (empty($$name)) {
+				$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty '.$name.' (is mandatory)';
+				return $response;
+			}
+		}
+	
+	if(!$locator = json_decode($locator)){
+		$response->msg = 'Trigger Error: ('.__FUNCTION__.') Invalid locator';
+		return $response;
+	}
+
+	$modelo_name 			= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+	$component_autocomplete = component_autocomplete::get_instance( $modelo_name,
+																	$tipo,
+																	$parent,
+																	'edit',
+																	DEDALO_DATA_NOLAN,
+																	$section_tipo);
+
+	$final = $component_autocomplete->add_locator($locator);
+
+	$response->result 	= $final;
+	$response->msg 		= 'Ok. Request done ['.__FUNCTION__.']';
+
+	# Debug
+	if(SHOW_DEBUG===true) {
+		$debug = new stdClass();
+			$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
+			foreach($vars as $name) {
+				$debug->{$name} = $$name;
+			}
+
+		$response->debug = $debug;
+	}
+	
+	return (object)$response;
+}//end add_locator*/
+
+
+
+/**
+* REMOVE_LOCATOR
+* Fire submit form of new element
+*//*
+function remove_locator($json_data) {
+	global $start_time;
+
+	$response = new stdClass();
+		$response->result 	= false;
+		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
+
+	$vars = array('tipo','parent','section_tipo','locator');
+		foreach($vars as $name) {
+			$$name = common::setVarData($name, $json_data);
+			# DATA VERIFY
+			#if ($name==='dato') continue; # Skip non mandatory
+			if (empty($$name)) {
+				$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty '.$name.' (is mandatory)';
+				return $response;
+			}
+		}
+	
+	if(!$locator = json_decode($locator)){
+		$response->msg = 'Trigger Error: ('.__FUNCTION__.') Invalid locator';
+		return $response;
+	}
+
+	$modelo_name 			= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+	$component_autocomplete = component_autocomplete::get_instance( $modelo_name,
+																	$tipo,
+																	$parent,
+																	'edit',
+																	DEDALO_DATA_NOLAN,
+																	$section_tipo);
+
+	$final = $component_autocomplete->remove_locator($locator);
+
+	$response->result 	= $final;
+	$response->msg 		= 'Ok. Request done ['.__FUNCTION__.']';
+
+	# Debug
+	if(SHOW_DEBUG===true) {
+		$debug = new stdClass();
+			$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
+			foreach($vars as $name) {
+				$debug->{$name} = $$name;
+			}
+
+		$response->debug = $debug;
+	}
+	
+	return (object)$response;
+}//end remove_locator*/
 
 
 

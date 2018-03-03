@@ -2,13 +2,22 @@
 	
 	# CONTROLLER
 
-	$modo	 = $this->section_records_obj->options->modo;
-	$context = (object)$this->section_records_obj->rows_obj->options->context; # inyectado a la sección y usado para generar pequeñas modificaciones en la visualización del section list como por ejemplo el link de enlazar un registro con un portal
+	/*
+
+		For only one row in edit mode 
+
+	*/
+	
+	$search_options = $this->section_records_obj->search_options;	
+	$modo	 		= $this->section_records_obj->search_options->modo;
+	$context 		= (object)$this->section_records_obj->search_options->context; # inyectado a la sección y usado para generar pequeñas modificaciones en la visualización del section list como por ejemplo el link de enlazar un registro con un portal
 	if (!isset($context->context_name)) {
 		$context->context_name = false;
 	}
-	#dump($context,"context");
-	$result	 		= $this->section_records_obj->rows_obj->result;
+	if (isset($search_options->layout_map)) {
+		$layout_map = $search_options->layout_map;
+	}
+	$ar_records	 	= $this->section_records_obj->records_data->ar_records;
 	$tipo			= $this->section_records_obj->get_tipo();
 	$section_tipo 	= $tipo;
 	$permissions 	= common::get_permissions($section_tipo, $tipo);
@@ -17,31 +26,29 @@
 	$button_delete_permissions = (int)$this->section_records_obj->button_delete_permissions;
 
 
-	switch($modo) {		
+	switch($modo) {
 		
 		#
 		# EDIT
 		#
 		case 'edit':
-				#dump($this->section_records_obj->rows_obj, " var ".to_string());
-
+	
 				#
 				# FIRST RECORD (AND THE ONLY ONE RECORD)
 				# Get the only one (limit 1) record found in data->result
-					if ( !isset($result[0]) ) {						
+					if ( !isset($ar_records[0]) ) {						
 						return null;
 					}
-					$first_record 	= reset($result[0]);
-					$section_id 	= $first_record['section_id'];
-						#dump($section_id, " section_id ".to_string($tipo));
-					
+					$first_record = $ar_records[0];
+					$section_id   = $first_record->section_id;
+				
 					# record is not valid 
 					if($section_id<1 && strpos($section_id, DEDALO_SECTION_ID_TEMP)===false) {
 						if(SHOW_DEBUG) {
-							dump($section_id, "DEBUG WARNING: section_id is <1 in result: ".to_string($result));						
+							dump($section_id, "DEBUG WARNING: section_id is <1 in result: ".to_string($ar_records));				
 							return null;
-						}						
-					}		
+						}
+					}
 
 				#
 				# SECTION OBJ
@@ -70,7 +77,7 @@
 						if (!$is_authorized_record) {
 							$permissions = 0;
 							$section->set_permissions( $permissions ); // Fix permissions for current element (important)
-							$this->set_permissions( $permissions ); // Fix permissions for current element (important)
+							#$this->set_permissions( $permissions ); // Fix permissions for current element (important)
 						}
 					}
 
@@ -87,7 +94,7 @@
 							$current_section_obj  = clone $section;
 							# Inject real tipo to section object clone sended to layout when mode is edit
 							$current_section_obj->set_tipo($section_real_tipo);
-
+	
 							# 
 							# EXCLUDE ELEMENTS of current layout edit.
 							# Exclude elements can be overwrite with get/post request
@@ -118,7 +125,6 @@
 										}
 									}
 								}//end if (!empty($exclude_elements_tipo)) {
-							#dump($ar_exclude_elements,'ar_exclude_elements '.$section->tipo);
 						}#end if ($section->section_virtual==true )
  
 
@@ -130,28 +136,23 @@
 							$ar_exclude_elements = array_merge($ar_exclude_elements,$DEDALO_AR_EXCLUDE_COMPONENTS);
 							debug_log(__METHOD__." DEDALO_AR_EXCLUDE_COMPONENTS: Added terms to ar_exclude_elements: ".to_string($DEDALO_AR_EXCLUDE_COMPONENTS), logger::DEBUG);
 						}
-						#dump($ar_exclude_elements, ' ar_exclude_elements ++ '.to_string($DEDALO_AR_EXCLUDE_COMPONENTS));
 
 					#
 					# LAYOUT MAP : PENDIENTE UNIFICAR MAQUETACIÓN CON LAYOUT MAP A PARTIR DEL MODO EDIT <------
 					# Consulta el listado de componentes a mostrar en el listado / grupo actual
-						#dump($current_section_obj,"current_section_obj");die();					
-						$layout_map = component_layout::get_layout_map_from_section($current_section_obj); # Important: send obj section with REAL tipo to allow resolve structure
-							#dump($layout_map,"layout ");
-							#dump($section->permissions, ' $section->permissions');
-
-						#$layout_map = array( 'divalcdi36' => array(), 'divalcdi44' => array() );
-							#dump($layout_map, ' layout_map ++ '.to_string());
-						
-						
-						if ((int)$section->permissions>0) {									
+						#dump($current_section_obj,"current_section_obj");die();
+						if (empty($layout_map)) {
+							$layout_map = component_layout::get_layout_map_from_section($current_section_obj); # Important: send obj section with REAL tipo to allow resolve structure
+						}						
+							
+						if ((int)$section->permissions>0) {
 							# WALK : Al ejecutar el walk sobre el layout map podemos excluir del rendeo de html los elementos (section_group, componente, etc.) requeridos (virtual section)
 							if(SHOW_DEBUG) {
 								global$TIMER;$TIMER['component_layout::walk_layout_map'.'_IN_'.$section->get_tipo().'_'.$section->get_modo().'_'.microtime(1)]=microtime(1);
 							}
 							$ar = array();
 							$current_section_obj->set_tipo( $section->get_tipo() ); # Restore section tipo (needed for virtual sections resolution)
-								#dump($this, ' this');
+							
 							# ROWS_SEARCH
 							#$records_search = new records_search($this, $modo);
 							#$record_layout_html .= $records_search->get_html();
@@ -164,37 +165,14 @@
 							if(SHOW_DEBUG) {
 								global$TIMER;$TIMER['component_layout::walk_layout_map'.'_OUT_'.$section->get_tipo().'_'.$section->get_modo().'_'.microtime(1)]=microtime(1);
 							}
-						}//end if ($this->permissions===0) {
-
-						#dump($record_layout_html, " record_layout_html ".to_string());
-
+						}//end if ($this->permissions===0) 
 				
-				#
-				# SEARCH FORM . ROWS_SEARCH 
-				# Render search form html. NOTA: COMO NO SE RECARGA VIA AJAX, LO DEJAMOS EN section_edit.phtml
-					#$search_form_html 	= '';
-					#$records_search 	= new records_search($section, 'edit');
-					#$search_form_html 	= $records_search->get_html();
-								
-
-				#
-				# INSPECTOR HTML
-				# Render inspector html . NOTA: COMO NO SE RECARGA VIA AJAX, LO DEJAMOS EN section_edit.phtml
-					/*
-					$inspector_html = '';
-					$show_inspector	= $section->get_show_inspector();
-					if ($show_inspector) {						
-						$inspector 		= new inspector($modo, $tipo);
-						$inspector_html = $inspector->get_html();
-					}
-					*/					
 				
 				# LOAD HTML FOR CURRENT ROW
 					$row_html_file	= dirname(__FILE__) . '/html/'. basename(dirname(__FILE__)) .'_'. $modo .'.phtml';
 					include($row_html_file);
-
 				break;
-				
+	
 	}#end switch($modo)
 
 

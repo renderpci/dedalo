@@ -37,6 +37,8 @@
 	}
 	#dump($widgets, ' widgets ++ '.to_string());
 
+	$widget_lang = isset($this->widget_lang) ? $this->widget_lang : DEDALO_DATA_LANG;
+
 	$ar_widget_html=array();
 	foreach ($widgets as $widget_obj) {
 		#$start_time=microtime(1);
@@ -47,7 +49,7 @@
 		$widget->configure($widget_obj);
 
 		# Widget html
-		$ar_widget_html[] = $widget->get_html();
+		$ar_widget_html[] = $widget->get_html( $widget_lang );
 
 		#$total = exec_time_unit($start_time);
 		#debug_log(__METHOD__." total: $total - widget_name: ".to_string($widget_obj->widget_name), logger::WARNING);

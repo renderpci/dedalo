@@ -68,6 +68,25 @@ pre {
 label {
 	font-weight: 100;
 }
+// Aditional text showed in label, normally in search mode
+.label_add {
+	font-weight: 100 !important;
+    text-decoration: blink;
+    font-style: italic;
+    opacity: .6;
+    font-family: "Oxygen-light",sans-serif;
+    font-size: 90%;
+    line-height: 1em;
+}
+.label_modelo_name {
+	font-weight: 100 !important;     
+    font-family: "Oxygen-light",sans-serif;
+    font-size: 80%;
+    line-height: 1em;
+	color: #9c9c9c;
+	position: absolute;
+	right: 25px;
+}
 .main_font_light {
 	font-family: "Oxygen-light", sans-serif;
 }
@@ -103,7 +122,12 @@ q:before, q:after { content:''; content:none; }
 	display: none;
 	width: 100%;
 	height: 100%;
-	margin: 0;
+	margin: 0;	
+	height: 100vh;
+}
+.daleks {
+	background-image: url('../../themes/default/daleks.jpg');
+	background-size: cover;  
 }
 
 .css_html_page_titulo .css_label {
@@ -312,21 +336,64 @@ span.ajax_loading_msg {
 
 
 
-
+/* TOOLTIPS : PSEUDO TOOLTIPS WITH CSS
+------------------------------------------------------- */
+	label.css_label.tooltips {
+	  /*position: relative;
+	  display: inline;*/
+	  //min-height: 30px;
+		}
+		/*
+		label.css_label.tooltips span {
+		  position: absolute;
+		  min-width:140px;
+		  color: #FFFFFF;
+		  background: #424242;
+		  min-height: 39px;
+		  line-height: 39px;
+		  text-align: center;
+		  visibility: hidden;
+		  border-radius: 4px;
+		  padding-left: 7px;
+		  padding-right: 7px;
+		  z-index: 10000;
+		}
+		label.css_label.tooltips span:after {
+		  content: '';
+		  position: absolute;
+		  top: 100%;
+		  left: 50%;
+		  margin-left: -8px;
+		  width: 0; height: 0;
+		  border-top: 8px solid #424242;
+		  border-right: 8px solid transparent;
+		  border-left: 8px solid transparent;
+		}
+		label.css_label:hover.tooltips span {
+		  visibility: visible;
+		  opacity: 0.9;
+		  // bottom: 35px;
+		  top: -40px;
+		  left: 7%;
+		  left: 70px;
+		  margin-left: -76px;
+		  z-index: 999;
+		}
+		*/
 
 
 /* TOOLTIP  (jquery ui)
------------------------------------------ */
+----------------------------------------- 
 .ui-tooltip, .dd_tooltip:after {
 	background:#2E2E2E;
-	/* border: 1px solid white; */
+	// border: 1px solid white; 
 	border: none;
   }
   .ui-tooltip {
 	padding: 6px 10px;
 	color: #F6F6F6;
 	border-radius: 3px;
-	/*box-shadow: 0 0 8px #575757;*/
+	//box-shadow: 0 0 8px #575757;
 	font-size: 100%;
 	line-height: 1.4em;
   }
@@ -365,6 +432,19 @@ span.ajax_loading_msg {
 	top: auto;
   }
 
+	div.tooltip {
+		//background-color: #B8D111;
+		overflow-wrap: break-word;
+  		word-wrap: break-word;
+  		width: 600px;
+	}
+	*/
+.tooltip-inner {
+	text-align: left;
+ }
+ .tooltip {
+ 	
+ }
 
 
 /* DIALOG OVERRIDE 
@@ -384,6 +464,7 @@ span.ajax_loading_msg {
 		width: 96% !important;
 		z-index: 1001;
 	}
+
 
 
 /* JQUERY UI MODIFICATIONS

@@ -753,7 +753,22 @@ class component_security_areas extends component_common {
 	* UPDATE_DATO_VERSION
 	* @return 
 	*/
-	public static function update_dato_version($update_version, $dato_unchanged, $reference_id) {
+	public static function update_dato_version($request_options) {
+
+		$options = new stdClass();
+			$options->update_version 	= null;
+			$options->dato_unchanged 	= null;
+			$options->reference_id 		= null;
+			$options->tipo 				= null;
+			$options->section_id 		= null;
+			$options->section_tipo 		= null;
+			$options->context 			= 'update_component_dato';
+			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
+
+			$update_version = $options->update_version;
+			$dato_unchanged = $options->dato_unchanged;
+			$reference_id 	= $options->reference_id;
+			
 
 		$update_version = implode(".", $update_version);
 		#dump($dato_unchanged, ' dato_unchanged ++ -- '.to_string($update_version)); #die();

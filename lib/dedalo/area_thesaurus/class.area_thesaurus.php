@@ -82,13 +82,17 @@ class area_thesaurus extends area {
 														  $modo,
 														  $lang,
 														  $section_tipo);
-		$value = $component->get_valor(0);
-		
+		$value = $component->get_valor($lang);
+
 		if (empty($value)) {
 			$tipology_name = component_input_text::render_list_value($value, $tipo, $parent, $modo, $lang, $section_tipo);
 		}else{
 			$tipology_name = $value;
-		}	
+		}
+
+		if (empty($tipology_name)) {
+			$tipology_name = 'Tipology unstranslated ' . $tipo .' '. $parent;
+		}
 
 		return (string)$tipology_name;
 	}//end get_tipology_name
@@ -179,26 +183,42 @@ class area_thesaurus extends area {
 			$response->msg 		= '';
 
 		$options = new stdClass();
-			$options->term  		= false;
-			$options->section_id  	= false;
-			$options->hierarchy_id 	= false;
-			$options->model  		= false;
-			$options->limit 		= 1000;
+			$options->term  			  = false;
+			$options->section_id  		  = false;
+			$options->hierarchy_id 		  = false;
+			$options->model  			  = false;
+			$options->limit 			  = 1000;
+			$options->comparison_operator = false;
 			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 				#dump($options->model, ' options model ++ '.to_string());
 
 		# Active hierarchies
 			$active_hierarchies = hierarchy::get_active_hierarchies();
 				#dump($active_hierarchies, ' $active_hierarchies ++ '.to_string());
+				if (empty($active_hierarchies)) {
+					$response->result 	= false;
+					$response->msg 		= 'Failed get_active_hierarchies. No active hierarchies found!'.to_string();
+					return $response;
+				}
 
 		# Target section tipos
 			$target_string = $options->model===true ? 'target_section_model' : 'target_section';
 			$target_section_tipos = array_get_by_key($active_hierarchies, $target_string);
 				#dump($target_section_tipos, ' $target_section_tipos ++ '.to_string($options->model));
+				if (empty($target_section_tipos)) {
+					$response->result 	= false;
+					$response->msg 		= 'Failed target_section_tipos. No target_section_tipos found!'.to_string();
+					return $response;
+				}
 
 		# Terms and tables
 			$all_term_tipo_by_map = hierarchy::get_all_term_tipo_by_map( $target_section_tipos );
 				#dump($all_term_tipo_by_map, ' $all_term_tipo_by_map ++ '.to_string());
+				if (empty($all_term_tipo_by_map)) {
+					$response->result 	= false;
+					$response->msg 		= 'Failed get_all_term_tipo_by_map for target_section_tipos:'.to_string($target_section_tipos);
+					return $response;
+				}
 
 		# Move matrix table (bigger talble probably) to the end to optimize results
 		/*
@@ -223,14 +243,15 @@ class area_thesaurus extends area {
 			#dump($filter_section, ' filter_section ++ '.to_string());
 
 		# STRQUERY
-		$strQuery = '';
+		$strQuery = '';		
 		end($all_term_tipo_by_map);	// move the internal pointer to the end of the array
 		$last_key = key($all_term_tipo_by_map);	// fetches the key of the element pointed to by the internal pointer
 		foreach ($all_term_tipo_by_map as $table => $ar_terms) {
 
 			// EACH TABLE QUERY
-			$strQuery .= "\n SELECT section_tipo, section_id FROM $table WHERE ";
+			$strQuery .= "\n SELECT section_tipo, section_id FROM $table a WHERE ";
 
+			#
 			# Filter term
 			if ($options->term!==false) {
 
@@ -240,7 +261,17 @@ class area_thesaurus extends area {
 				#$last_term_tipo = end($ar_terms);
 				$ar_lines = array();
 				foreach ((array)$ar_terms as $term_tipo) {
-					$line = "\n f_unaccent(datos#>>'{components, $term_tipo, dato}') ILIKE f_unaccent('%".$term."%') ";
+
+					#$line = "\n f_unaccent(datos#>>'{components, $term_tipo, dato}') ILIKE f_unaccent('%".$term."%') ";
+						#dump($request_options, '$options->comparison_operator ++ '.to_string());
+					$comparison_operator = isset($options->comparison_operator->{$term_tipo}) ? $options->comparison_operator->{$term_tipo} : 'ILIKE';
+					$current_modelo_name = RecordObj_dd::get_modelo_name_by_tipo($term_tipo,true);
+					$search_query = $current_modelo_name::get_search_query( 'datos', $term_tipo, $tipo_de_dato_search='dato', $current_lang='all', $term, $comparison_operator);
+					if(SHOW_DEBUG===true) {
+						#error_log($search_query);	
+					}									
+					$line = "\n".$search_query;
+
 					if (!in_array($line, $ar_lines)) {
 						$ar_lines[] = $line;
 					}		
@@ -250,12 +281,14 @@ class area_thesaurus extends area {
 				$strQuery .= implode(" OR\n", $ar_lines);
 			}
 
+			#
 			# Filter section_id
 			if ($options->section_id!==false) {
 				if ($options->term!==false) $strQuery .= " AND ";
 				$strQuery .= "\n section_id = ".(int)$options->section_id." ";
 			}
 
+			#
 			# Filter hierarchy_id
 			if ($options->hierarchy_id!==false && ($options->section_id!==false || $options->term!==false)) {
 
@@ -280,11 +313,12 @@ class area_thesaurus extends area {
 			if($table!==$last_key) $strQuery .= "\n UNION ALL ";
 		}
 		$strQuery .= "\n LIMIT $options->limit ";
-		#dump($strQuery, ' $strQuery ++ '.to_string());		 
+				 
 
 		$result = JSON_RecordObj_matrix::search_free($strQuery);
 		$n_rows = pg_num_rows($result);
 		
+		# DEBUG LOG
 		debug_log(__METHOD__." strQuery: $strQuery ".exec_time($start_time," ").to_string(), logger::ERROR);
 		
 		if(SHOW_DEBUG===true) {

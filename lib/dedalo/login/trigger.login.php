@@ -17,7 +17,7 @@ function Login($json_data) {
 
 	$trigger_post_vars = array();
 	foreach ($json_data as $key => $value) {
-		$trigger_post_vars[$key] = $value;
+		$trigger_post_vars[$key] = trim($value); // trim to avoid write space errors
 	}
 	
 	# If all is ok, return string 'ok'

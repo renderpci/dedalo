@@ -173,9 +173,9 @@
 				# BUTTON PORTAL ADD RESOURCE
 					if ( isset($_GET['portal_tipo']) && strpos($context->context_name, 'portal')!==false ) {
 
-						$portal_tipo 		 = $_GET['portal_tipo'];
-						$portal_parent 		 = $_GET['portal_parent'];
-						$portal_section_tipo = $_GET['portal_section_tipo'];
+						$portal_tipo 		 = safe_xss($_GET['portal_tipo']);
+						$portal_parent 		 = safe_xss($_GET['portal_parent']);
+						$portal_section_tipo = safe_xss($_GET['portal_section_tipo']);
 
 						$button_action 	= 'tool_portal.add_resource(this)';#"tool_portal.add_fragment_resource(this)";
 						

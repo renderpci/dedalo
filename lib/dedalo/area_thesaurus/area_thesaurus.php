@@ -67,6 +67,10 @@
 				css::$ar_url[] = DEDALO_LIB_BASE_URL."/$element_name/css/$element_name.css";
 				js::$ar_url[]  = DEDALO_LIB_BASE_URL."/$element_name/js/$element_name.js";
 
+				$element_name = 'component_autocomplete';
+				css::$ar_url[] = DEDALO_LIB_BASE_URL."/$element_name/css/$element_name.css";
+				js::$ar_url[]  = DEDALO_LIB_BASE_URL."/$element_name/js/$element_name.js";
+
 				$element_name = 'diffusion_index_ts';
 				css::$ar_url[] = DEDALO_LIB_BASE_URL."/diffusion/$element_name/css/$element_name.css";
 				#js::$ar_url[]  = DEDALO_LIB_BASE_URL."/$element_name/js/$element_name.js";
@@ -92,11 +96,13 @@
 				#
 				# SEARCH FORM . ROWS_SEARCH 
 				# Render search form html DEDALO_LANGS_SECTION_TIPO
+				$search_form_html 	= '';
+				/*
 				$section = section::get_instance(null, DEDALO_THESAURUS_SECTION_TIPO,'list');
 					$search_form_html 	= '';
 					$records_search 	= new records_search($section, 'list');
 					$search_form_html 	= $records_search->get_html();
-						#dump($records_search, ' $records_search ++ '.to_string());
+						#dump($records_search, ' $records_search ++ '.to_string());*/
 				
 				#
 				# ACTIVE HIERARCHIES

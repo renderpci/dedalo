@@ -27,7 +27,7 @@ class tool_transcription extends tool_common {
 
 		# Fix related component (text)
 		#$this->component_related_obj = $this->get_component_related_obj();
-	}
+	}//end __construct
 
 
 	/**
@@ -92,10 +92,6 @@ class tool_transcription extends tool_common {
 
 		return $this->component_related_obj;
 	}//end get_component_related_obj
-
-
-	
-
 
 	
 	
@@ -213,17 +209,9 @@ class tool_transcription extends tool_common {
 		$response->msg 	   = "Ok Processing Request pdf_automatic_transcription: text processed";
 		$response->original = trim($original_text);
 		return $response;
-	}#end build_pdf_transcription
+	}//end build_pdf_transcription
 
 
-
-	
-
-
-
-
-
-	
 	
 }#end class tool_transcription
 

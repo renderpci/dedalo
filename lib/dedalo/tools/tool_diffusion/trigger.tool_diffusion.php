@@ -43,35 +43,32 @@ function export_list($json_data) {
 
 
 	# Reset msg
-	$response->msg = '';
+	$response->msg = '';	
 
-	$search_options_session_key = 'section_'.$section_tipo;
-	# dump($_SESSION['dedalo4']['config']['search_options'][$search_options_session_key], '$_SESSION ++ '.to_string());
-	if ( !isset($_SESSION['dedalo4']['config']['search_options'][$search_options_session_key]) ) {
-		$response->msg = "<span class=\"warning\">Warning. Error on publish records</span>";
-		if(SHOW_DEBUG) {
-			$response->msg .= "<hr>search_options_session_key ($search_options_session_key) not found in search_options session";
-		}
-	}
-	#dump($_SESSION['dedalo4']['config']['search_options'][$search_options_session_key], '$_SESSION ++ '.to_string());	
-
-	$options = clone($_SESSION['dedalo4']['config']['search_options'][$search_options_session_key]);
-		#$options->layout_map = array();
-		$options->modo 	 	 = 'edit';
-		$options->limit 	 = null;
-		$options->offset 	 = 0;
-		$options->order_by 	 = false;
-			#dump($options, ' options ++ '.to_string());
-
-	$records_data = search::get_records_data($options);
-		#dump($records_data, ' records_data ++ '.to_string());
+	# SEARCH_OPTIONS
+		$search_options_id    = $section_tipo; // section tipo like oh1
+		$saved_search_options = section_records::get_search_options($search_options_id);
+	
+	# SEARCH_QUERY_OBJECT
+		# Use saved search options (deep cloned to avoid propagation of changes !)
+		$search_options 	 = unserialize(serialize($saved_search_options));
+		$search_query_object = $search_options->search_query_object;
+			$search_query_object->limit   = 0;  // unset limit
+			$search_query_object->offset  = 0;  // unset offset
+			$search_query_object->order   = false;  // unset order
+			$search_query_object->select  = []; // unset select
+	
+	# SEARCH
+		$search_develoment2  = new search_development2($search_query_object);
+		$rows_data 		 	 = $search_develoment2->search();
+	
 	
 	$resolve_references = true;
 	$n_records_published= 0;	
-	foreach ((array)$records_data->result as $ar_value) foreach ((array)$ar_value as $key => $row) {
-		#dump($ar_value2, ' ar_value2 ++ '.to_string());
-		$section_id 	= (int)$row['section_id'];
-		$section_tipo 	= (string)$row['section_tipo'];
+	foreach ((array)$rows_data->ar_records as $row) {
+		
+		$section_id 	= (int)$row->section_id;
+		$section_tipo 	= (string)$row->section_tipo;
 		
 		$export_result = tool_diffusion::export_record($section_tipo, $section_id, $diffusion_element_tipo, $resolve_references=true);	
 

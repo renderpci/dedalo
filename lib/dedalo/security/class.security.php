@@ -336,19 +336,22 @@ class security {
 	private static function get_permissions_table() {
 
 		# DEBUG
-		if(SHOW_DEBUG===true) $start_time = start_time();
+		#if(SHOW_DEBUG===true) $start_time = start_time();
 
 		static $permissions_table;
 		
 		switch (true) {
 			# STATIC CACHE (RAM)
 			case (isset($permissions_table)):
-				#debug_log(__METHOD__." Loaded permissions_table static");
-				if(SHOW_DEBUG===true) {
-					#dump($permissions_table , '$permissions_table  ++ '.to_string( count($permissions_table) ));	die();
-				}
-				return $permissions_table ;
-				break;			
+				# Cached once by script run				
+				return $permissions_table;
+				break;
+
+			# DEVELOPMENT_SERVER (Non session cache is used)
+			case (defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true):
+				# Break and continue calculation without session cache
+				break;
+
 			# SESSION CACHE (HD)
 			case (isset($_SESSION['dedalo4']['auth']['permissions_table'])):
 				#debug_log(__METHOD__." Loaded permissions_table session");
@@ -439,7 +442,7 @@ class security {
 
 		# FINAL OBJECT OF PERMISSIONS (MIXED DATA AREAS / ACCESS)
 		foreach ($dato_access as $tipo => $obj_elements) {
-			if (isset($obj_mix->$tipo)) foreach ($obj_elements as $key => $value) {
+			if (isset($obj_mix->$tipo)) foreach ((array)$obj_elements as $key => $value) {
 				$obj_mix->$tipo->$key = $value;				
 			}			
 		}		

@@ -13,7 +13,7 @@ abstract class backup {
 	public static $jer_dd_columns 		  = '"terminoID", parent, modelo, esmodelo, esdescriptor, visible, norden, tld, traducible, relaciones, propiedades';
 	public static $descriptors_dd_columns = 'parent, dato, tipo, lang';
 	
-
+	public static $checked_download_str_dir = false;
 
 	/**
 	* INIT_BACKUP_SECUENCE
@@ -180,9 +180,8 @@ abstract class backup {
 
 		# BK Filesize
 		$file_bk_size = "0 MB";
-		if(file_exists($mysqlExportPath)) {
-			$file_bk_size = filesize($mysqlExportPath)/1024/1024;
-			$file_bk_size = number_format((float)$file_bk_size, 3, '.', '').' MB';
+		if(file_exists($mysqlExportPath)) {			
+			$file_bk_size = format_size_units( filesize($mysqlExportPath) );
 		}
 
 		$response->result 	= true;
@@ -411,11 +410,10 @@ abstract class backup {
 				if(SHOW_DEBUG===true) {
 					#$res_html .= "<pre>$command</pre>";
 					$file_size = "0";
-					if(file_exists($mysqlExportPath)) {
-						$file_size = filesize($mysqlExportPath)/1024/1024;
-						$file_size = number_format((float)$file_size, 3, '.', '');
+					if(file_exists($mysqlExportPath)) {					
+						$file_size = format_size_units( filesize($mysqlExportPath) );
 					}
-					$res_html .= "<br>File size: $file_size MB";
+					$res_html .= "<br>File size: $file_size";
 				}
 				$res_html .= '</div>';				
 				$response->result 	= true;
@@ -1160,10 +1158,25 @@ abstract class backup {
 			$obj->path  = DEDALO_LIB_BASE_PATH.'/backup/backups_structure/str_data';
 		$ar_files[] = $obj;
 
-		# EXTRAS
+
+
+		# EXTRAS		
+		$DEDALO_PREFIX_TIPOS = (array)unserialize(DEDALO_PREFIX_TIPOS);
+		# Check extras folder coherence with config DEDALO_PREFIX_TIPOS
+		foreach ($DEDALO_PREFIX_TIPOS as $current_prefix) {
+			$folder_path = DEDALO_EXTRAS_PATH .'/'. $current_prefix;
+			if( !is_dir($folder_path) ) {
+				if(!mkdir($folder_path, 0700,true)) {
+					debug_log(__METHOD__." Error on read or create extras folder in extras directory. Permission denied ".to_string($folder_path), logger::ERROR);
+					return false;
+				}
+				debug_log(__METHOD__." CREATED DIR: $folder_path  ".to_string(), logger::DEBUG);
+			}
+		}
+
 		# Get extras array list
 		$ar_extras_folders 	 = (array)glob(DEDALO_EXTRAS_PATH . '/*', GLOB_ONLYDIR);
-		$DEDALO_PREFIX_TIPOS = (array)unserialize(DEDALO_PREFIX_TIPOS);
+
 		$ar_extras = array();
 		foreach ($ar_extras_folders as $current_dir) {
 			$base_dir = basename($current_dir);
@@ -1241,6 +1254,25 @@ abstract class backup {
 
 		//close connection
 		curl_close($ch);
+
+		# Create downloads folder if not exists
+		if (backup::$checked_download_str_dir!==true) {
+			$folder_path = STRUCTURE_DOWNLOAD_DIR;
+			if( !is_dir($folder_path) ) {
+				if(!mkdir($folder_path, 0700,true)) {
+					debug_log(__METHOD__." Error on read or create backup STRUCTURE_DOWNLOAD_DIR directory. Permission denied ".to_string(), logger::ERROR);
+					return false;
+				}
+				debug_log(__METHOD__." CREATED DIR: $folder_path  ".to_string(), logger::DEBUG);
+			}
+			backup::$checked_download_str_dir = true;
+		}
+		
+
+		# Delete previous version file if exists
+		if (file_exists($target_dir .'/'. $obj->name)) {
+			unlink($target_dir .'/'. $obj->name);
+		}
 
 		# Write downloaded file to local directory
 		file_put_contents( $target_dir .'/'. $obj->name, $result);

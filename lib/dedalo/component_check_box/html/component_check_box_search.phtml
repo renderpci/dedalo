@@ -2,13 +2,12 @@
 
 	# VISUALIZADOR HTML	
 	
-	
-	if(isset($_REQUEST[$tipo])) $dato = $_REQUEST[$tipo];		#var_dump($_REQUEST[$tipo]);
-	
-	
-	#print "\n<!-- CHECK BOX [tipo:$tipo section_id_matrix:$parent] $label -->";
-
-	print "\n<div class=\"wrap_component css_wrap_check_box\">";
+	print "<div class=\"wrap_component css_wrap_check_box wrap_check_box_search tooltip_active\" ";
+	print "data-component_name=\"{$component_name}\" ";
+	print "data-modo=\"{$modo}\" ";
+	print "data-dato='".json_encode($dato)."' ";
+	print 'title="'.search_development2::search_options_title( $this->search_operators_info() ).'" ';
+	print ">";
 	
 	# ETIQUETA (LABEL)
 	$html_label = component_common_draw::draw_label($this);
@@ -19,37 +18,55 @@
 	
 	# CONTENIDO (INPUT)
 	$html_content = '';
-	switch($permissions) {
+	switch(true) {
 			
-		case 0	:	$html_content .= ""; 
-					break;
+		case $permissions===0	:
+			$html_content .= ""; 
+			break;
 						
 		case ($permissions>=1)	:
 					
-					# COMPARISON OPERATORS
-					$html_content .= operator::get_search_comparison_operators_html($tipo,$ar_comparison_operators);
+			# COMPARISON OPERATORS
+			#$html_content .= operator::get_search_comparison_operators_html($tipo,$ar_comparison_operators);
 
-		
-					foreach ($ar_list_of_values->result as $value => $rotulo) {
-						
-						$checked = (is_array($dato) && in_array($value, array_keys($dato))) ? 'checked="checked"' : '';
 
-						$html_content .= "\n <input class=\"css_check_box\" type=\"checkbox\" name=\"{$search_input_name}[]\" 
-						data-tipo=\"{$tipo}\"
-						value=\"{$value}\"
-						title=\"$html_title\" $checked />";						
-						$html_content .= "\n <label class=\"css_check_box_rotulo\"
-						$required_code >$rotulo</label> ";	
-					}
-					
-					# LOGICAL OPERATORS
-					$html_content .= operator::get_search_logical_operators_html($tipo,$ar_logical_operators);
+			$i=0;foreach ($ar_list_of_values->result as $value => $rotulo) {
+				#dump($value, ' value ++ '.to_string());
+				$value   = (string)$value; 
+				$locator = (object)json_handler::decode($value);	# Locator is json encoded object
+				
+				$checked  = '';
+				if (is_array($dato) && locator::in_array_locator($locator, $dato, array('section_id','section_tipo')) ) {
+					$checked  = 'checked="checked"';
+				}
 
-					if(SHOW_DEBUG===true) {
-						$html_content .= "<span class=\"debug_info\">$search_input_name</span>";
-					}			
-					
-					break;							
+				$current_id = $tipo .'_'. $i;
+
+				$html_content .= "<span class=\"check_box_item\">";
+				$html_content .= "<input class=\"css_check_box\" type=\"checkbox\" name=\"{$search_input_name}_array\" ";
+				$html_content .= "id=\"{$tipo}\" ";
+				$html_content .= "data-tipo=\"{$tipo}\" ";
+				$html_content .= "value='".$value."' ";
+				$html_content .= "title=\"$html_title\" ";
+				$html_content .= "onchange=\"component_common.fix_dato(this,'{$component_name}')\" ";
+				$html_content .= $checked;
+				$html_content .= "/>";						
+				$html_content .= " <label class=\"css_check_box_rotulo\" ";
+				$html_content .= $required_code;
+				$html_content .= ">";
+				$html_content .= $rotulo;
+				$html_content .= "</label> ";
+				$html_content .= "</span>";	
+			$i++;}
+			
+			# LOGICAL OPERATORS
+			#$html_content .= operator::get_search_logical_operators_html($tipo,$ar_logical_operators);
+
+			if(SHOW_DEBUG===true) {
+				$html_content .= "<span class=\"debug_info\">$search_input_name</span>";
+			}			
+			
+			break;							
 	}
 
 	# Prepare content to show in page
@@ -60,5 +77,5 @@
 	print $html_content;
 	
 	
-	print "\n</div>\n\n"; //wrap
+	print "</div>"; //wrap
 ?>

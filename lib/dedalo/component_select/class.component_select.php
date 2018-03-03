@@ -4,73 +4,12 @@
 *
 *
 */
-class component_select extends component_reference_common {
-	
-	# Overwrite __construct var lang passed in this component
-	protected $lang = DEDALO_DATA_NOLAN;
+class component_select extends component_relation_common {
 
+	protected $relation_type = DEDALO_RELATION_TYPE_LINK;
 
-	/**
-	* __CONSTRUCT
-	*/
-	function __construct($tipo=null, $parent=null, $modo='edit', $lang=DEDALO_DATA_NOLAN, $section_tipo=null) {
-
-		# Force always DEDALO_DATA_NOLAN
-		$lang = $this->lang;
-
-		# Build the componente normally
-		parent::__construct($tipo, $parent, $modo, $lang, $section_tipo);
-
-		if(SHOW_DEBUG) {
-			$traducible = $this->RecordObj_dd->get_traducible();
-			if ($traducible==='si') {
-				throw new Exception("Error Processing Request. Wrong component lang definition. This component $tipo (".get_class().") is not 'traducible'. Please fix this ASAP", 1);
-			}
-		}
-	}//end __construct
-
-
-
-	/**
-	* GET DATO
-	* @return array $dato
-	*	$dato is always an array of locators
-	*/
-	public function get_dato() {
-		$dato = parent::get_dato();
-
-		if (!empty($dato) && !is_array($dato)) {
-			#dump($dato,"dato");
-			trigger_error("Error: ".__CLASS__." dato type is wrong. Array expected and ".gettype($dato)." is received for tipo:$this->tipo, parent:$this->parent");
-			$this->set_dato(array());
-			$this->Save();
-		}
-		if ($dato===null) {
-			$dato=array();
-		}
-
-		return (array)$dato;
-	}//end get_dato
-
-
-
-	/**
-	* SET_DATO
-	* @param array|string $dato
-	*	When dato is string is because is a json encoded dato
-	*/
-	public function set_dato($dato) {
-		if (is_string($dato)) { # Tool Time machine case, dato is string
-			$dato = json_handler::decode($dato);
-		}
-		if (is_object($dato)) {
-			$dato = array($dato);			
-		}
-		# Ensures is a real non-associative array (avoid json encode as object)
-		$dato = is_array($dato) ? array_values($dato) : (array)$dato;
-
-		parent::set_dato( (array)$dato );
-	}//end set_dato
+	# test_equal_properties is used to verify duplicates when add locators
+	public $test_equal_properties = array('section_tipo','section_id','type','from_component_tipo');
 
 
 	
@@ -83,7 +22,7 @@ class component_select extends component_reference_common {
 
 		if (isset($this->valor)) {
 			if(SHOW_DEBUG) {
-				//error_log("Catched valor !!! from ".__METHOD__);
+				#error_log("Catched valor $lang !!! from ".__METHOD__);
 			}
 			return $this->valor;
 		}
@@ -97,7 +36,7 @@ class component_select extends component_reference_common {
 				foreach ($dato as $key => $current_value) {
 					if (!is_object($current_value)) {
 						if(SHOW_DEBUG) {
-							dump($dato," dato");
+							dump($dato," actual invalid dato: ");
 						}
 						trigger_error(__METHOD__." Wrong dato format. OLD format dato in $this->label $this->section_tipo - $this->tipo - $this->parent .Expected object locator, but received: ".gettype($current_value) .' : '. print_r($current_value,true) );
 						return $valor;
@@ -108,12 +47,12 @@ class component_select extends component_reference_common {
 			# Always run list of values
 			$referenced_tipo 	= $this->get_referenced_tipo();
 			$ar_list_of_values	= $this->get_ar_list_of_values( $lang, null, $referenced_tipo ); # Importante: Buscamos el valor en el idioma actual
-
+	
 			foreach ($ar_list_of_values->result as $locator => $label) {
 				$locator = json_handler::decode($locator);	# Locator is json encoded object
 					#dump($label, ' label ++ '.to_string($locator));
 				
-				$founded = locator::in_array_locator( $locator, $ar_locator=$dato, $ar_properties=array('section_tipo','section_id') );
+				$founded = locator::in_array_locator( $locator, $ar_locator=$dato, $ar_properties=array('section_id','section_tipo') );
 				if ($founded) {
 					$valor = $label;
 					break;
@@ -156,82 +95,7 @@ class component_select extends component_reference_common {
 
 		return $lang;
 	}#end get_valor_lang
-
-
-
-	/**
-	* BUILD_SEARCH_COMPARISON_OPERATORS 
-	* Note: Override in every specific component
-	* @param array $comparison_operators . Like array('=','!=')
-	* @return object stdClass $search_comparison_operators
-	*/
-	public function build_search_comparison_operators( $comparison_operators=array('=','!=') ) {
-		return (object)parent::build_search_comparison_operators($comparison_operators);
-	}#end build_search_comparison_operators
-
-
-
-	/**
-	* GET_SEARCH_QUERY
-	* Build search query for current component . Overwrite for different needs in other components 
-	* (is static to enable direct call from section_records without construct component)
-	* Params
-	* @param string $json_field . JSON container column Like 'dato'
-	* @param string $search_tipo . Component tipo Like 'dd421'
-	* @param string $tipo_de_dato_search . Component dato container Like 'dato' or 'valor'
-	* @param string $current_lang . Component dato lang container Like 'lg-spa' or 'lg-nolan'
-	* @param string $search_value . Value received from search form request Like 'paco'
-	* @param string $comparison_operator . SQL comparison operator Like 'ILIKE'
-	*
-	* @see class.section_records.php get_rows_data filter_by_search
-	* @return string $search_query . POSTGRE SQL query (like 'datos#>'{components, oh21, dato, lg-nolan}' ILIKE '%paco%' )
-	*//*
-	public static function get_search_query( $json_field, $search_tipo, $tipo_de_dato_search, $current_lang, $search_value, $comparison_operator='=') {
-		$search_query='';
 	
-		$search_value = json_decode($search_value);
-			if ( !$search_value || empty($search_value) ) {
-				return false;
-			}
-			if (is_object($search_value)) {
-				$search_value = array($search_value);
-			}
-			#dump($search_value, ' search_value ++ '.to_string());
-			if (!is_array($search_value)) {
-				debug_log(__METHOD__." Error invalid search_value. Only json encoded array of locators are accepted ".to_string($search_value), logger::ERROR);
-				#return false;
-			}
-
-
-		$json_field = 'a.'.$json_field; // Add 'a.' for mandatory table alias search
-
-		switch (true) {
-			case $comparison_operator==='=':
-				foreach ((array)$search_value as $current_value) {
-					$current_value = json_encode($current_value);
-					$search_query .= " $json_field#>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}' @> '[$current_value]'::jsonb OR \n";
-				}
-				$search_query = substr($search_query, 0,-5);
-
-				#$search_query = " $json_field#>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}' @> '[$search_value]'::jsonb ";
-				break;
-			case $comparison_operator==='!=':
-			default:
-				foreach ((array)$search_value as $current_value) {
-					$current_value = json_encode($current_value);
-					$search_query = " ($json_field#>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}' @> '[$current_value]'::jsonb)=FALSE OR \n";
-				}
-				$search_query = substr($search_query, 0,-5);
-				break;
-		}
-		
-		if(SHOW_DEBUG===true) {
-			$search_query = " -- filter_by_search $search_tipo ". get_called_class() ." \n".$search_query;
-			#dump($search_query, " search_query for search_value: ".to_string($search_value)); #return '';
-		}
-		return $search_query;
-	}//end get_search_query
-	*/
 
 
 	/**
@@ -268,7 +132,7 @@ class component_select extends component_reference_common {
 	* @param int $section_id
 	*
 	* @return string $list_value
-	*/
+	*//*
 	public static function render_list_value($value, $tipo, $parent, $modo, $lang, $section_tipo, $section_id, $current_locator=null, $caller_component_tipo=null) {
 	
 		$component 	= component_common::get_instance(__CLASS__,
@@ -283,9 +147,11 @@ class component_select extends component_reference_common {
 		$ar_records = is_string($value) ? (array)json_handler::decode($value) : (array)$value;
 		$component->set_dato($ar_records);
 		$component->set_identificador_unico($component->get_identificador_unico().'_'.$section_id.'_'.$caller_component_tipo); // Set unic id for build search_options_session_key used in sessions
-		
-		return  $component->get_html();		
-	}#end render_list_value
+		if($modo==='list'){
+			return $component->get_valor();
+		}
+		return  $component->get_html();
+	}#end render_list_value */
 
 
 
@@ -321,35 +187,23 @@ class component_select extends component_reference_common {
 
 
 	/**
-	* GET_SUBQUERY
-	* @return string $select_query
-	*//*
-	public static function get_subquery($request_options) {
-
-		$options = new stdClass();
-			$options->search_in 	 		= null;
-			$options->search_tipo 	 		= null;
-			$options->search_section_tipo 	= null;
-			$options->matrix_table 	 		= null;
-			$options->search_query 	 		= null;	
-			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
-
-		$subquery  = '';
-		if(SHOW_DEBUG===true) {
-			$subquery .= "\n-- ".__CLASS__." $options->search_tipo in $options->search_section_tipo subquery ";
-		}
-		#$subquery .= "\n{$options->search_tipo}->>'section_id' IN ( \n";
-		$subquery .= "\n{$options->search_in} IN ( \n";
-		$subquery .= " SELECT section_id::text FROM $options->matrix_table a WHERE \n";
-		#$subquery.= " f_unaccent(datos#>>'{components, $search_tipo, dato}') ILIKE f_unaccent('%[\"c%') AND \n";
-		$subquery .= " (a.section_tipo='$options->search_section_tipo') AND \n";
-		$subquery .= " ($options->search_query) \n) ";
-
-		return $subquery;
-	}//end get_subquery
+	* GET_DIFFUSION_VALUE
+	* Overwrite component common method
+	* Calculate current component diffusion value for target field (usually a mysql field)
+	* Used for diffusion_mysql to unify components diffusion value call
+	* @return string $diffusion_value
+	*
+	* @see class.diffusion_mysql.php
 	*/
+	public function get_diffusion_value( $lang=null ) {
 	
+		$diffusion_value = $this->get_valor($lang);
+		$diffusion_value = strip_tags($diffusion_value);
+
+		return (string)$diffusion_value;
+	}//end get_diffusion_value
+
 	
 
-}
+}//end class
 ?>

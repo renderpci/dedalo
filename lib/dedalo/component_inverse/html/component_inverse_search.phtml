@@ -1,7 +1,12 @@
 <?php
 
 	# VISUALIZADOR HTML	
-	print "<div class=\"wrap_component css_wrap_section_id\">";	
+	print "<div class=\"wrap_component css_wrap_section_id tooltip_active\" ";
+	print "data-component_name=\"{$component_name}\" ";
+	print "data-modo=\"{$modo}\" ";
+	print "data-dato='".json_encode($dato)."' ";
+	print 'title="'.search_development2::search_options_title( $this->search_operators_info() ).'" ';
+	print ">";
 	
 	
 	# ETIQUETA (LABEL)
@@ -17,9 +22,7 @@
 				$html_content .= operator::get_search_comparison_operators_html($tipo,$ar_comparison_operators);
 				
 				# INPUT
-				$html_content .= " <input class=\"input_css_inverse\" type=\"text\" name=\"{$search_input_name}\"
-				data-tipo=\"{$tipo}\"
-				title=\"$html_title\" />";
+				$html_content .= "<input class=\"input_css_inverse\" type=\"text\" name=\"{$search_input_name}\" data-tipo=\"{$tipo}\" title=\"$html_title\" />";
 
 				# LOGICAL OPERATORS
 				$html_content .= operator::get_search_logical_operators_html($tipo,$ar_logical_operators);
@@ -37,6 +40,6 @@
 	print $html_label;
 	print $html_content;
 
-	print "</div><!-- /css_wrap_section_id -->"; //wrap
+	print "</div>"; //wrap
 	
 ?>

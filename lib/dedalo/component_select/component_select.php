@@ -18,7 +18,8 @@
 	$identificador_unico	= $this->get_identificador_unico();
 	$component_name			= get_class($this);
 	$context 				= $this->get_context();
-	
+	$relation_type 			= $this->relation_type;
+
 
 	$file_name	= $modo;
 	$from_modo	= $modo;
@@ -26,7 +27,11 @@
 	if($permissions===0) return null;
 
 	switch($modo) {
-		
+
+		case 'edit_in_list':
+						$file_name = 'edit';
+						$wrap_style 	= '';	// 'width:100%'; // Overwrite possible custon component structure css
+				// Dont break here. Continue as modo edit		
 		
 		case 'edit'	:		
 				# Verify component content record is inside section record filter
@@ -35,6 +40,7 @@
 				# referenced section tipo
 				$referenced_tipo 	= $this->get_referenced_tipo();				
 				$ar_list_of_values  = $this->get_ar_list_of_values( DEDALO_DATA_LANG, null, $referenced_tipo );
+
 				$id_wrapper 		= 'wrapper_'.$identificador_unico;
 				$input_name 		= "{$tipo}_{$parent}";	
 				$component_info 	= $this->get_component_info('json');	
@@ -51,8 +57,8 @@
 				break;
 						
 		case 'search':
-				# Showed only when permissions are >1
-				if ($permissions<1) return null;
+				# dato is injected by trigger search when is needed
+				$dato = isset($this->dato) ? $this->dato : null;
 				
 				$referenced_tipo 		 = $this->get_referenced_tipo();
 				$ar_list_of_values		 = $this->get_ar_list_of_values( DEDALO_DATA_LANG, null );

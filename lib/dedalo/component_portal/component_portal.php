@@ -58,153 +58,132 @@
 				$file_name		= 'edit';
 
 				$wrap_style 	= ''; //'width:100%'; // Overwrite possible custon component structure css
+
+				#dump($modo, ' modo ++ '.to_string());
 				// Dont break here. Continue as modo edit
 		#case 'portal_list_view_mosaic':
 		#		$file_name		= 'edit';
 		case 'edit':
 
-				# Custom propiedades external dato 
-				if(isset($propiedades->source->mode) && $propiedades->source->mode === 'external'){
-					$this->set_dato_external();	// Forces update dato with calculated external dato	
-				}
-
-				$dato 				= $this->get_dato();
-				$dato_json 			= json_encode($dato);
-				$valor				= $this->get_dato_as_string();
-				$component_info 	= $this->get_component_info('json');
-				$exclude_elements 	= $this->get_exclude_elements();
-
-				
-				if (isset($propiedades->html_options)) foreach ($propiedades->html_options as $key => $value) {
-					$this->html_options->$key = $value;					
-				}
-	
-				$n_rows = count($dato);
-				if ($this->html_options->rows_limit!==false && $n_rows >= (int)$this->html_options->rows_limit) {
-					$this->html_options->buttons = false;
-				}
-
-
-				#
-				# EDIT VIEW CONFIG (propiedades)
-				$edit_view 			= 'full'; // Default portal view if nothing is set about
-				if(isset($propiedades->edit_view)) {
-					$edit_view		= $propiedades->edit_view;
-					$file_view 		= $modo.'_'.$edit_view;
-					#$file_name 		= $file_view;
-				}
-	
-				#dump($propiedades->edit_view, ' edit_view');
-				# dump($dato, ' dato');
-				
-
-				if (empty($dato)) {
-
-					# Empty object
-					$rows_data = new stdClass();
-						$rows_data->result = array();
-
-					$this->html_options->header = false;
-					$this->html_options->rows 	= false;
-
-				}else{
-					# unset($_SESSION['dedalo4']['config']['search_options'][$search_options_session_key]);				
-					if (isset($_SESSION['dedalo4']['config']['search_options'][$search_options_session_key])) {
-						
-						$options = (object)$_SESSION['dedalo4']['config']['search_options'][$search_options_session_key];		
-						$options->full_count = false; # Force update count records on non ajax call
-						$options->filter_by_locator = (array)$this->get_dato();	// Always update filter with current component dato					
-						# Set context
-						$context = $options->context;
-					
-					}else{						
-						
-						# LAYOUT_MAP : Calculate list for layout map
-						# All related terms are selected except section that is unset from the array								
-						$layout_map_virtual  	= $this->get_layout_map($edit_view);
-						$ar_target_section_tipo = $this->get_ar_target_section_tipo();
-							#dump( $layout_map_virtual,"layout_map_virtual ++"); #die();
-
-						# OPTIONS
-						$options = new stdClass();
-							$options->section_tipo  			 = reset($ar_target_section_tipo);
-							$options->filter_by_locator 		 = (array)$dato;
-							$options->layout_map  				 = $layout_map_virtual;
-							$options->modo  					 = 'portal_list';
-							$options->limit 					 = false; # IMPORTANT : No limit is applicated to portal list. All records are viewed always
-							$options->search_options_session_key = $search_options_session_key;
-								#dump($options," options");					
-
-							# OPTIONS CONTEXT : Configure section context							
-							$context = new stdClass();
-								$context->context_name 	= 'list_in_portal';
-								$context->portal_tipo 	= $tipo;
-								$context->portal_parent = $parent;
-
-							$options->context = $context;
-								#dump($options,"options");	
-
-					}//end if(!empty($_SESSION['dedalo4']['config']['search_options'][$search_options_session_key]))		
-
-
-					$rows_data = search::get_records_data($options);
-					if(SHOW_DEBUG===true) {
-						#dump($rows_data->result," get_records_data result ".to_string($options));
-					}					
-
-					#
-					# COMPONENT STATE DATO
-					/*
-					if (isset($this->component_state_tipo)) {
-
-						$state_options = $options;
-						$state_options->tipo_de_dato = 'dato';
-						$state_options->layout_map 	 = array($this->component_state_tipo);
-						$rows_data_state = search::get_records_data($state_options);
-							dump($rows_data_state, ' rows_data_state ++ '.to_string());		
-						
-						# STATE UPDATE DATA
-						$this->update_state($rows_data_state);
-					}
-					*/
-				}
-				#dump($rows_data," rows_data");
-
-				#
-				# COLUMNS
-				$ar_columns = $this->get_ar_columns($edit_view);
-					#dump($ar_columns, ' ar_columns ++ '.to_string());
-
 				#
 				# SEMANTIC NODES
-				if ( !empty($this->semantic_nodes) ) {
+				#if ( !empty($this->semantic_nodes) ) {
 					# JS/CSS ADD
-					js::$ar_url[]  = DEDALO_LIB_BASE_URL."/tools/tool_semantic_nodes/js/tool_semantic_nodes.js";
-					css::$ar_url[] = DEDALO_LIB_BASE_URL."/tools/tool_semantic_nodes/css/tool_semantic_nodes.css";
-				}		
-			
-				!isset($ar_target_section_tipo) ? $ar_target_section_tipo = $this->get_ar_target_section_tipo() : array();
-				$ar_target_section_tipo_json = json_encode($ar_target_section_tipo);
+				js::$ar_url[]  = DEDALO_LIB_BASE_URL."/tools/tool_semantic_nodes/js/tool_semantic_nodes.js";
+				css::$ar_url[] = DEDALO_LIB_BASE_URL."/tools/tool_semantic_nodes/css/tool_semantic_nodes.css";
+				#}
 
-				# Buttons new/add
-				$show_button_new = $this->get_show_button_new();					
+				if ($this->generate_json_element===false) {
+
+					# Custom propiedades external dato 
+					if(isset($propiedades->source->mode) && $propiedades->source->mode === 'external'){
+						$this->set_dato_external(true);	// Forces update dato with calculated external dato					
+					}
+
+					$dato 				= $this->get_dato();
+					$dato_json 			= json_encode($dato);
+					$valor				= $this->get_dato_as_string();
+					$component_info 	= $this->get_component_info('json');
+					$exclude_elements 	= $this->get_exclude_elements();
+
+					$ar_target_section_tipo 	 = $this->get_ar_target_section_tipo();
+					$ar_target_section_tipo_json = json_encode($ar_target_section_tipo);
+					
+					if (isset($propiedades->html_options)) foreach ($propiedades->html_options as $key => $value) {
+						$this->html_options->$key = $value;					
+					}
+		
+					$n_rows = count($dato);
+					if ($this->html_options->rows_limit!==false && $n_rows >= (int)$this->html_options->rows_limit) {
+						$this->html_options->buttons = false;
+					}
+
+					#
+					# EDIT VIEW CONFIG (propiedades)
+					$edit_view 			= 'full'; // Default portal view if nothing is set about
+					if(isset($propiedades->edit_view)) {
+						$edit_view		= $propiedades->edit_view;
+						$file_view 		= $modo.'_'.$edit_view;						
+					}
+					
+					$filter_by_locator = (array)$dato; //array_slice((array)$dato, 0, 10);
+					
+					if (empty($dato)) {
+
+						# Empty object
+						$rows_data = new stdClass();
+							$rows_data->ar_records = array();
+
+						$this->html_options->header = false;
+						$this->html_options->rows 	= false;
+
+					}else{											
+						
+						$context = new stdClass();
+							$context->context_name 	= 'list_in_portal';
+							$context->portal_tipo 	= $tipo;
+							$context->portal_parent = $parent;
+
+
+						# OPTIONS
+						#$search_options = new stdClass();
+						#	$search_options->modo  		= 'portal_list';
+						#	$search_options->context 	= $context;								
+
+
+						# SEARCH_QUERY_OBJECT . Add search_query_object to options
+						$search_query_object_options = new stdClass();
+							$search_query_object_options->filter_by_locator  = $filter_by_locator;
+							$search_query_object_options->section_tipo 		 = reset($ar_target_section_tipo);
+							$search_query_object_options->limit 		 	 = 0;
+						$search_query_object = $this->build_search_query_object($search_query_object_options);
+						
+						# Search
+						$search_develoment2  = new search_development2($search_query_object);
+						$rows_data 		 	 = $search_develoment2->search();
+
+						#
+						# COMPONENT STATE DATO
+						/*
+						if (isset($this->component_state_tipo)) {
+
+							$state_options = $options;
+							$state_options->tipo_de_dato = 'dato';
+							$state_options->layout_map 	 = array($this->component_state_tipo);
+							$rows_data_state = search::get_records_data($state_options);
+								dump($rows_data_state, ' rows_data_state ++ '.to_string());		
+							
+							# STATE UPDATE DATA
+							$this->update_state($rows_data_state);
+						}
+						*/
+					}
+					#dump($rows_data," rows_data");
+
+					#
+					# COLUMNS
+					$ar_columns = $this->get_ar_columns($edit_view);
 				
-				# Daggable
-				$dragable_connectWith = isset($propiedades->dragable_connectWith) ? "portal_table_".$propiedades->dragable_connectWith : null;
+					# Buttons new/add
+					$show_button_new = $this->get_show_button_new();					
+					
+					# Daggable
+					$dragable_connectWith = isset($propiedades->dragable_connectWith) ? "portal_table_".$propiedades->dragable_connectWith : null;
 
 
-				if (isset($propiedades->max_records)) {
-					$this->max_records = $propiedades->max_records;
-				}
+					if (isset($propiedades->max_records) && $this->max_records==null) {
+						$this->max_records = $propiedades->max_records;
+					}
 
-				$total_records  = count($dato);
-				$max_records 	= $this->max_records!==null ? (int)$this->max_records : 5;
-				$offset 		= $this->offset!==null ? (int)$this->offset : 0;
+					$total_records  = count($dato);
+					$max_records 	= $this->max_records!==null ? (int)$this->max_records : 5;
+					$offset 		= $this->offset!==null ? (int)$this->offset : 0;
 
-				#$max_records = 5; $offset = 1;
+					#$max_records = 5; $offset = 1;
 
-				# JS ADD
-				#js::$ar_url[]  = DEDALO_LIB_BASE_URL."/tools/tool_portal/js/tool_portal.js";				
+					# JS ADD
+					#js::$ar_url[]  = DEDALO_LIB_BASE_URL."/tools/tool_portal/js/tool_portal.js";
+				}			
 				break;
 
 		case 'portal_list' :
@@ -215,60 +194,38 @@
 		# LIST MODE
 		# Build section list from array of section's id stored in component_portal dato
 		case 'list' :
-				$dato = $this->get_dato();		#dump($dato); #dump($dato," dato $this->tipo - ". print_r($this,true) );				
-				if (empty($dato)) return null;		
+				$dato = $this->get_dato();
+				if (empty($dato)) return null;				
 				
-				#unset($_SESSION['dedalo4']['config']['search_options'][$search_options_session_key]);
-				
-				if (isset($_SESSION['dedalo4']['config']['search_options'][$search_options_session_key])) {
-					$options = $_SESSION['dedalo4']['config']['search_options'][$search_options_session_key];		
-					$options->full_count = false; # Force update count records on non ajax call						
-					# Set context
-					$context = $options->context;
-
-					$options->filter_by_id  = (array)$dato;
-					$options->filter_by_locator  = null;
-
-				}else{						
-					
-					# LAYOUT_MAP : Calculate list for layout map
-					# All related terms are selected except section that is unset from the array								
-					$layout_map_virtual  	= $this->get_layout_map();
-					$ar_target_section_tipo = $this->get_ar_target_section_tipo();
-						#dump( $layout_map_virtual,"layout_map_virtual - $target_section_tipo");#die();
-						#dump($layout_map_virtual, ' layout_map_virtual ++ '.to_string($this->section_list_key));
-	
-	
-					# OPTIONS
-					$options = new stdClass();
-						$options->section_tipo  	 = reset($ar_target_section_tipo);
-						#$options->section_tipo  	 = reset($dato)->section_tipo;
-						$options->filter_by_locator  = (array)$dato;
-						$options->layout_map  		 = $layout_map_virtual;
-						$options->modo  			 = 'portal_list';
-						$options->limit 			 = false; # IMPORTANT : No limit is applicated to portal list. All records are viewed always
-						#$options->limit 			 = 1;						
-						$options->search_options_session_key = $search_options_session_key;
-
-						# OPTIONS CONTEXT : Configure section context
-						$context = new stdClass();
-							$context->context_name 	= 'list_in_portal';
-							$context->portal_tipo 	= $tipo;
-							$context->portal_parent = $parent;
-
-						$options->context = $context;
-							#dump($options,"options");
-				}//end if (!empty($_SESSION['dedalo4']['config']['search_options'][$search_options_session_key]))
-				#dump($options, ' options ++ '.to_string($search_options_session_key));
-				
-				$rows_data = search::get_records_data($options);
-					#if($this->tipo==='oh25') dump($rows_data->result," rows_data");
-
-				$ar_columns = $this->get_ar_columns();
-					#if($this->tipo==='oh25') dump($ar_columns," ar_columns ".$this->section_list_key);
-				
-				!isset($ar_target_section_tipo) ? $ar_target_section_tipo = $this->get_ar_target_section_tipo() : array();
+				$ar_target_section_tipo 	 = $this->get_ar_target_section_tipo();
 				$ar_target_section_tipo_json = json_encode($ar_target_section_tipo);
+				$filter_by_locator 			 = (array)$dato;										
+
+				# CONTEXT : Configure section context
+				$context = new stdClass();
+					$context->context_name 	= 'list_in_portal';
+					$context->portal_tipo 	= $tipo;
+					$context->portal_parent = $parent;
+
+				# OPTIONS
+				$options = new stdClass();
+					$options->modo		= 'portal_list';	
+					$options->context 	= $context;				
+				
+				# SEARCH_QUERY_OBJECT . Add search_query_object to options
+					$search_query_object_options = new stdClass();
+						$search_query_object_options->limit 			 = 1;
+						$search_query_object_options->filter_by_locator  = $filter_by_locator;
+						$search_query_object_options->section_tipo 		 = reset($ar_target_section_tipo);
+					$search_query_object = $this->build_search_query_object($search_query_object_options);
+					
+				# SEARCH
+				$search_develoment2  = new search_development2($search_query_object);
+				$rows_data 		 	 = $search_develoment2->search();
+
+
+				# AR_COLUMNS
+				$ar_columns = $this->get_ar_columns();				
 				break;
 
 		# SEARCH MODE
@@ -316,18 +273,19 @@
 						
 					# LAYOUT_MAP : Calculate list for layout map
 					# All related terms are selected except section that is unset from the array								
-					$layout_map_virtual  = $this->get_layout_map();
-					$target_section_tipo = $this->get_ar_target_section_tipo()[0];
+					#$layout_map_virtual  = $this->get_layout_map();
+					$ar_target_section_tipo = $this->get_ar_target_section_tipo();
 						#dump( $layout_map_virtual,"layout_map_virtual - $target_section_tipo"); #die();
+					$filter_by_locator = (array)$dato;
 
 					# OPTIONS
 					$options = new stdClass();
-						$options->section_tipo  = $target_section_tipo;
-						$options->filter_by_id  = (array)$dato;
-						$options->layout_map  	= $layout_map_virtual;
 						$options->modo  		= 'portal_list';
-						$options->limit 		= false; # IMPORTANT : No limit is applicated to portal list. All records are viewed always
-						$options->search_options_session_key = $search_options_session_key;
+						#$options->section_tipo  = $target_section_tipo;
+						#$options->filter_by_id  = (array)$dato;
+						#$options->layout_map  	= $layout_map_virtual;						
+						#$options->limit 		= false; # IMPORTANT : No limit is applicated to portal list. All records are viewed always
+						#$options->search_options_session_key = $search_options_session_key;
 							#dump($options," options");					
 
 						# OPTIONS CONTEXT : Configure section context
@@ -340,10 +298,16 @@
 							#dump($options,"options");									
 					
 
-					$rows_data = search::get_records_data($options);
-					if(SHOW_DEBUG===true) {
-						#dump($rows_data->result," rows_data result ".to_string($options));
-					}						
+					#$rows_data = search::get_records_data($options);
+					# SEARCH_QUERY_OBJECT . Add search_query_object to options
+					$search_query_object_options = new stdClass();
+						#$search_query_object_options->limit 			 = 1;
+						$search_query_object_options->filter_by_locator  = $filter_by_locator;
+						$search_query_object_options->section_tipo 		 = reset($ar_target_section_tipo);
+					$search_query_object = $this->build_search_query_object($search_query_object_options);
+					# Search
+					$search_develoment2  = new search_development2($search_query_object);
+					$rows_data 		 	 = $search_develoment2->search();					
 				}
 				
 					#dump($rows_data," rows_data");
@@ -362,68 +326,51 @@
 				$exclude_elements 	= $this->get_exclude_elements();
 
 				# EDIT VIEW CONFIG (propiedades)
-					$edit_view 			= 'full'; // Default portal view if nothing is set about
-					if(isset($propiedades->edit_view)) {
-						$edit_view		= $propiedades->edit_view;
-						$file_view 		= $modo;//.'_'.$edit_view;
-						$file_name 		= 'list_view_mosaic';
-					}
-					#dump($file_view, ' file_view ++ '.to_string()); #die();	
+				$edit_view 			= 'full'; // Default portal view if nothing is set about
+				if(isset($propiedades->edit_view)) {
+					$edit_view		= $propiedades->edit_view;
+					$file_view 		= $modo;//.'_'.$edit_view;
+					$file_name 		= 'list_view_mosaic';
+				}				
+			
+
+				# LAYOUT_MAP : Calculate list for layout map
+				# All related terms are selected except section that is unset from the array								
+				$layout_map_virtual  	= $this->get_layout_map($edit_view);
+				$ar_target_section_tipo = $this->get_ar_target_section_tipo();
+				$filter_by_locator 		= (array)$dato;
+
+				# CONTEXT : Configure section context
+					$context = new stdClass();
+						$context->context_name 	= 'list_in_portal';
+						$context->portal_tipo 	= $tipo;
+						$context->portal_parent = $parent;
+
+				# OPTIONS
+				$options = new stdClass();
+					$options->modo 		= 'portal_list';
+					$options->context 	= $context;
+			
+				
+				# SEARCH_QUERY_OBJECT . Add search_query_object to options
+					$search_query_object_options = new stdClass();
+						#$search_query_object_options->limit 			 = 1;
+						$search_query_object_options->filter_by_locator  = $filter_by_locator;
+						$search_query_object_options->section_tipo 		 = reset($ar_target_section_tipo);
+					$search_query_object = $this->build_search_query_object($search_query_object_options);
 					
-				
-				#unset($_SESSION['dedalo4']['config']['search_options'][$search_options_session_key]); // TEMPORAL		
-				
-				if (isset($_SESSION['dedalo4']['config']['search_options'][$search_options_session_key])) {
-					$options = $_SESSION['dedalo4']['config']['search_options'][$search_options_session_key];		
-					$options->full_count = false; # Force update count records on non ajax call						
-					# Set context
-					$context = $options->context;
+				# SEARCH
+				$search_develoment2  = new search_development2($search_query_object);
+				$rows_data 		 	 = $search_develoment2->search();
 
-					$options->filter_by_id  	 = (array)$dato;
-					$options->filter_by_locator  = null;					
 
-				}else{
-
-					# LAYOUT_MAP : Calculate list for layout map
-					# All related terms are selected except section that is unset from the array								
-					$layout_map_virtual  	= $this->get_layout_map($edit_view);
-					$ar_target_section_tipo = $this->get_ar_target_section_tipo();
-						#dump( $layout_map_virtual,"layout_map_virtual - $target_section_tipo");die();
-						#dump($layout_map_virtual, ' layout_map_virtual ++ '.to_string($this->section_list_key));
-
-	
-					# OPTIONS
-					$options = new stdClass();
-						$options->section_tipo  	 = reset($ar_target_section_tipo);
-						#$options->section_tipo  	 = reset($dato)->section_tipo;
-						$options->filter_by_locator  = (array)$dato;
-						$options->layout_map  		 = $layout_map_virtual;
-						$options->modo  			 = 'portal_list';
-						$options->limit 			 = false; # IMPORTANT : No limit is applicated to portal list. All records are viewed always
-						#$options->limit 			 = 1;						
-						$options->search_options_session_key = $search_options_session_key;
-
-						# OPTIONS CONTEXT : Configure section context
-						$context = new stdClass();
-							$context->context_name 	= 'list_in_portal';
-							$context->portal_tipo 	= $tipo;
-							$context->portal_parent = $parent;
-
-						$options->context = $context;
-							#dump($options,"options");
-				}//end if (!empty($_SESSION['dedalo4']['config']['search_options'][$search_options_session_key]))
-				#dump($options, ' options ++ '.to_string($search_options_session_key));
-				
-				$rows_data = search::get_records_data($options);
-					#if($this->tipo==='oh25') dump($rows_data->result," rows_data");
-
+				# AR_COLUMNS
 				$ar_columns = $this->get_ar_columns();
-					#if($this->tipo==='oh25') dump($ar_columns," ar_columns ".$this->section_list_key);
 				
 				!isset($ar_target_section_tipo) ? $ar_target_section_tipo = $this->get_ar_target_section_tipo() : array();
 				$ar_target_section_tipo_json = json_encode($ar_target_section_tipo);
 
-			break;
+				break;
 		/*
 		# Case component_portal show inside list of sections from component_portal (Recursion)
 		case 'list_tm':

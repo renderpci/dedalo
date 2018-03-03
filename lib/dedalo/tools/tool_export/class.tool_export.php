@@ -18,6 +18,10 @@ class tool_export extends tool_common {
 
 	public static $delimiter = ';';
 
+
+	/**
+	* __CONSTRUCT
+	*/
 	public function __construct( $section_tipo, $modo, $data_format='standar' ) {
 
 		# Verify type section object
@@ -44,7 +48,8 @@ class tool_export extends tool_common {
 
 		# Fix records
 		$this->ar_records = null;
-	}
+	}//end __construct
+
 
 
 	/**
@@ -68,61 +73,59 @@ class tool_export extends tool_common {
 	* @return array|null
 	*/
 	public function get_records( $layout_map ) {
-
+	
 		if (!empty($this->ar_records)) {
 			return $this->ar_records;
 		}
 		
 		#
-		# RECORDS DATA
-		$section_tipo 				= $this->section_tipo;
-		$search_options_session_key = 'section_'.$section_tipo;
-		if (!isset($_SESSION['dedalo4']['config']['search_options'][$search_options_session_key])) {
-			trigger_error("Sorry, search_options_session_key [$search_options_session_key] not exits in session");
+		# SEARCH_OPTIONS
+		$section_tipo 		  = $this->section_tipo;
+		$search_options_id 	  = $section_tipo; // section tipo like oh1
+		$saved_search_options = section_records::get_search_options( $search_options_id );
+
+		if ($saved_search_options===false) {
+			trigger_error("Sorry, search_options [$search_options_id] not exits in section_records::get_search_options");
 			return null;
 		}
-		$options_search   = clone($_SESSION['dedalo4']['config']['search_options'][$search_options_session_key]);
-	
-			$options_search->search_options_session_key = $search_options_session_key.'_export';
-			$options_search->modo 						= 'edit';
-			$options_search->offset 					= false;
-			$options_search->limit 						= false;
-			$options_search->full_count 				= false;
-			$options_search->tipo_de_dato				= 'valor';
-			$options_search->layout_map					= $layout_map;
-				#dump($options_search," options_search");die();
-
-			# LAYOUT MAP FALLBACK . Is defined in session when browser list, but can be empty if we enter later to one record of section (edit mode)
-			if ( empty($options_search->layout_map) ) {
-				$section 			 = section::get_instance(null,$section_tipo,'list');
-				$options_search->layout_map = (array)component_layout::get_layout_map_from_section( $section );
-			}
-
-			if(SHOW_DEBUG) {
-				$lmkey = key($options_search->layout_map);				
-				foreach ( $options_search->layout_map[$lmkey] as $key => $value) {					
-					if ($value=='rsc36') {
-						#dump($value, ' value ++ '.to_string($key));
-						#unset( $options_search->layout_map[$lmkey][$key] );
-					}
-				}		
-			}
 		
-		$rows_data = search::get_records_data($options_search);
-			#dump($rows_data,"rows_data "); #die();
+		
+		# SEARCH_QUERY_OBJECT . Add search_query_object to options
+		$search_query_object = $saved_search_options->search_query_object;	
 
-		$this->ar_records = $rows_data->result;
+
+		# SELECT. layout map is used to set columns select in sesearch_query_object
+		$ar_component_tipo = reset($layout_map);
+		$search_query_object->select = []; // reset
+		foreach ($ar_component_tipo as $key => $component_tipo) {
+			
+			$path = search_development2::get_query_path($component_tipo, $section_tipo, false);
+
+			$path_element = new stdClass();
+				$path_element->path = $path;
+
+			# Parse current path with component and add
+			$search_query_object->select[] = search_development2::component_parser_select($path_element);			
+		}
+
+		# Reset search limit
+		$search_query_object->limit = 0;
+		
+		# SEARCH
+		$search_develoment2  = new search_development2($search_query_object);
+		$rows_data 		 	 = $search_develoment2->search();
+
+		$this->ar_records = $rows_data->ar_records;
 
 		return $this->ar_records;
-
-	}#end get_records
+	}//end get_records
 
 
 
 
 	/**
 	* EXPORT_TO
-	* @return 
+	* @return string $export_str_data
 	*/
 	public function export_to( $format, $ar_records=null, $encoding='UTF-8' ) {
 
@@ -130,12 +133,10 @@ class tool_export extends tool_common {
 			// Calculate records when not are already received
 			$ar_records = $this->get_records();
 		}
-		#dump($ar_records, ' ar_records ++ '.to_string());
 
 		$ar_records_deep_resolved=array();
-		foreach ((array)$ar_records as $key => $value) {
-			$row 		= reset($value);
-			$section_id = $row['section_id'];
+		foreach ((array)$ar_records as $key => $row) {			
+			$section_id = $row->section_id;
 			$ar_records_deep_resolved[$section_id] = $this->deep_resolve_row($row);
 		}
 		#dump($ar_records_deep_resolved, ' $ar_records_deep_resolved ++ '.to_string());		
@@ -199,6 +200,7 @@ class tool_export extends tool_common {
 	*/
 	public function change_encoding_from_uft8($result_string, $encoding='ISO-8859-1') {
 		$ISO_result_string= mb_convert_encoding($result_string, $encoding, 'UTF-8'); // ISO-8859-1 default 
+		
 		return $ISO_result_string;
 	}#end change_encoding_from_uft8
 
@@ -234,8 +236,8 @@ class tool_export extends tool_common {
 			
 			$modelo_name 	 = RecordObj_dd::get_modelo_name_by_tipo($key,true);
 			$tipo 			 = $key;
-			$parent 		 = $record['section_id'];
-			$section_tipo 	 = $record['section_tipo'];
+			$parent 		 = $record->section_id;
+			$section_tipo 	 = $record->section_tipo;
 			$component 	     = component_common::get_instance($modelo_name,
 															  $tipo,
 															  $parent,

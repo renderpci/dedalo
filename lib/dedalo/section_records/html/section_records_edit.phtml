@@ -1,13 +1,16 @@
 <?php
 
 	# VISUALIZADOR HTML
+	#if(SHOW_DEBUG===true) {
+	#	print "<!-- SECTION RECORDS EDIT [tipo:$tipo modo:$modo] -->";
+	#}
 	
-	print "<!-- SECTION RECORDS EDIT [tipo:$tipo modo:$modo] -->";
-	print "<div class=\"css_section_list_wrap\" id=\"wrap_{$tipo}_{$modo}\" data-options='".json_handler::encode($this->options)."'>";
+	print '<div class="css_section_list_wrap" id="wrap_'.$tipo.'_'.$modo.'" data-search_options="'.encodeURIComponent($search_options_json).'">';
 	
 	
 	# CONTENIDO 
-	$html_content  = "<div class=\"css_section_group_content tab_content section_records_{$modo}\" data-rol=\"section_records\">";
+	$html_content   ='';
+	$html_content  .= "<div class=\"css_section_group_content tab_content section_records_{$modo}\" data-rol=\"section_records\">";
 	
 	
 	switch(true) {
@@ -33,30 +36,35 @@
 					#dump($this, ' this 1 ');
 					$limit_time=SLOW_QUERY_MS;
 					$html_info='';
-					#dump($this->rows_obj,"");
-					if (isset($this->rows_obj->generated_time['get_records_data'])) {
-						$total_list_time = $this->rows_obj->generated_time['get_records_data'] + round(microtime(1)-$start_time,3);
+					#dump($this->records_data,"");
+					if (isset($this->records_data->generated_time['get_records_data'])) {
+						$total_list_time = $this->records_data->generated_time['get_records_data'] + round(microtime(1)-$start_time,3);
 						
 						$style='';
 						if ($total_list_time>$limit_time) {
 							$style = "color:red";
 						}		
-						$html_info .= "<div class=\"debug_sql_time\" style=\"{$style}\" onclick=\"$(this).children('pre').toggle()\"> Time To Generate section list: ";
+						$html_info .= "<div class=\"debug_sql_time\" style=\"{$style}\" ondblclick=\"$(this).children('pre').toggle()\"> Time To Generate section list: ";
 						$html_info .= $total_list_time;
-						$html_info .= ", get_records_data:".$this->rows_obj->generated_time['get_records_data']." (over {$this->rows_obj->options->full_count} records)";
+						$html_info .= ", get_records_data:".$this->records_data->generated_time['get_records_data']." (over {$this->search_options->search_query_object->full_count} records)";
 						$html_info .= ", HTML section edit: ".round(microtime(1)-$start_time,3);
-						if (isset($this->rows_obj->generated_time['records_navigator'])) {
-							$html_info .= ", records_navigator: ".$this->rows_obj->generated_time['records_navigator'];
+						if (isset($this->records_data->generated_time['records_navigator'])) {
+							$html_info .= ", records_navigator: ".$this->records_data->generated_time['records_navigator'];
 						}					
-						if (isset($this->rows_obj->generated_time['record'])) {		
-							$html_info .= ", record: ".$this->rows_obj->generated_time['record'];
+						if (isset($this->records_data->generated_time['record'])) {		
+							$html_info .= ", record: ".$this->records_data->generated_time['record'];
 						}
-						#dump($this->rows_obj->options->search_options_session_key," ");
-						if (isset($this->rows_obj->options->search_options_session_key)) {		
-							$html_info .= ", search_options_session_key: ".$this->rows_obj->options->search_options_session_key;
+						#dump($this->records_data->options->search_options_session_key," ");
+						if (isset($this->records_data->options->search_options_session_key)) {		
+							$html_info .= ", search_options_session_key: ".$this->records_data->options->search_options_session_key;
 						}
 						$html_info .= ", strQuery:";
-						$html_info .= "<pre style=\"display:none\"> ".$this->rows_obj->strQuery ."</pre>";
+						$html_info .= "<pre style=\"display:none\">".$this->records_data->strQuery ."</pre>";
+				
+						$search_options = $this->search_options;
+						$search_options = json_encode($search_options, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+						$html_info .= "<br><pre style=\"display:none\">$search_options</pre>";
+
 						$html_info .= "</div>";
 						#echo "<div> Time To Generate section list: HTML: ".round(microtime(1)-$start_time,3)."</div>";
 							
@@ -66,12 +74,15 @@
 								
 	}
 	
-	$html_content .= "</div><!-- /css_section_group_content -->";
+	#$html_content .= "</div><!-- /css_section_group_content -->";
 	
 	
 	# PRINT HTML
 	print $html_content;	
 	
-	
-	print "</div><!-- /css_section_list_wrap -->"; //wrap
+	print '</div>'; //wrap
+
+	#if(SHOW_DEBUG===true) {
+	#	print "<!-- /css_section_list_wrap -->"; //wrap
+	#}
 ?>

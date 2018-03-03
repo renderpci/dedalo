@@ -67,7 +67,7 @@ class AVPlayer extends Accessors {
 		# When request, add to source url
 		# Need streamer
 		if ( isset($_GET['vbegin']) && isset($_GET['vend']) ) {
-			$this->src .= "&vbegin=".$_GET['vbegin'].'&vend='.$_GET['vend'];
+			$this->src .= "&vbegin=".safe_xss($_GET['vbegin']).'&vend='.safe_xss($_GET['vend']);
 		}
 
 		$this->preload				= 'none'; # auto|metadata|none	
@@ -309,7 +309,7 @@ class AVPlayer extends Accessors {
 		$subtitle_track = null;
 
 		if(isset($_GET['subtitles_url'])){
-			$subtitles_url = $_GET['subtitles_url'];
+			$subtitles_url = safe_xss($_GET['subtitles_url']);
 			$subtitle_track= "<track label=\"Subtitle\" kind=\"subtitles\" srclang=\"en\" src=\"$subtitles_url\" default>";
 		}
 

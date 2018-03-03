@@ -103,9 +103,8 @@ class component_image extends component_common {
 
 		if(SHOW_DEBUG===true) {
 			global$TIMER;$TIMER[__METHOD__.'_OUT_'.$this->tipo.'_'.$this->modo.'_'.microtime(1)]=microtime(1);
-		}	
-
-	}#end __construct
+		}
+	}//end __construct
 
 
 
@@ -138,11 +137,8 @@ class component_image extends component_common {
 		}
 
 		return parent::Save();
+	}//end Save	
 
-	}#end Save
-
-
-	
 
 
 	/**
@@ -165,11 +161,14 @@ class component_image extends component_common {
 		}else{
 			$this->initial_media_path = false;
 		}
+
 		return $this->initial_media_path;
-	}
+	}//end get_initial_media_path
 
 
-	# GET DATO : Format {"component_tipo":"dd42","section_tipo":"rsc20","section_id":"7"}
+	/**
+	* GET DATO : Format {"component_tipo":"dd42","section_tipo":"rsc20","section_id":"7"}
+	*/
 	public function get_dato() {
 		$dato = parent::get_dato();		
 
@@ -187,13 +186,19 @@ class component_image extends component_common {
 			}
 			*/
 		}
-		return (object)$dato;
-	}
 
-	# SET_DATO
+		return (object)$dato;
+	}//end get_dato
+
+
+
+	/**
+	* set_dato
+	*/
 	public function set_dato($dato) {
+
 		parent::set_dato( (object)$dato );
-	}
+	}//end set_dato
 
 
 
@@ -203,8 +208,9 @@ class component_image extends component_common {
 	* GET VALUE . DEFAULT IS GET DATO . OVERWRITE IN EVERY DIFFERENT SPECIFIC COMPONENT
 	*/
 	public function get_valor() {
-		return $this->valor = $this->get_image_id();	
-	}
+
+		return $this->valor = $this->get_image_id() .'.'. DEDALO_IMAGE_EXTENSION;	
+	}//end get_valor
 
 
 
@@ -213,7 +219,7 @@ class component_image extends component_common {
 	* Return component value sended to export data
 	* @return string $valor_export
 	*/
-	public function get_valor_export( $valor=null, $lang=DEDALO_DATA_LANG, $quotes, $add_id ) {
+	public function get_valor_export( $valor=null, $lang=DEDALO_DATA_LANG, $quotes=null, $add_id=null ) {
 			
 		if (is_null($valor)) {
 			$dato = $this->get_dato();				// Get dato from DB
@@ -230,11 +236,8 @@ class component_image extends component_common {
 		
 		$valor 			= $this->get_image_url($image_quality, $test_file, $absolute);
 		
-		if(SHOW_DEBUG===true) {
-			#return "IMAGE: ".$valor;
-		}
+		
 		return $valor;
-
 	}#end get_valor_export
 
 
@@ -439,8 +442,11 @@ class component_image extends component_common {
 	}//end get_image_url
 
 
-	
-	# OVERRIDE COMPONENT_COMMON METHOD
+
+	/**
+	* GET_AR_TOOLS_OBJ
+	* Override component_common method
+	*/	
 	public function get_ar_tools_obj() {
 		
 		# Remove common tools (time machine and lang)
@@ -463,8 +469,11 @@ class component_image extends component_common {
 	*/
 	public function get_quality() {
 		if(!isset($this->quality))	return DEDALO_IMAGE_QUALITY_DEFAULT;
+		
 		return $this->quality;
-	}
+	}//end get_quality
+
+
 
 	/**
 	* SET_QUALITY
@@ -473,7 +482,9 @@ class component_image extends component_common {
 	public function set_quality($quality) {
 		$this->quality = $quality;
 		$this->ImageObj->set_quality($quality);
-	}
+
+		return true;
+	}//end set_quality
 
 
 
@@ -482,18 +493,23 @@ class component_image extends component_common {
 	*/
 	public function get_target_filename() {
 		#$this->ImageObj->set_quality( $this->get_quality() );
-		return $this->ImageObj->get_target_filename();	# Like d758-1.jpg
-		#return $this->image_id .'.'. DEDALO_IMAGE_EXTENSION ;
+		
+		return $this->ImageObj->get_target_filename();	# Like d758-1.jpg		
 	}
+
+
+
+	/**
+	* get_target_dir
+	*/
 	public function get_target_dir() {
 		#$this->ImageObj->set_quality( $this->get_quality() );
+
 		return $this->ImageObj->get_media_path_abs();
-		#return DEDALO_MEDIA_BASE_PATH . DEDALO_IMAGE_FOLDER .'/'. $this->get_quality() . $this->aditional_path  ;
-	}
+	}//end get_target_dir
 
 	
 
-	
 	/**
 	* GET_IMAGE_SIZE
 	* Alias of $ImageObj->get_size()
@@ -712,7 +728,6 @@ class component_image extends component_common {
 		$image_thumb_url 	 = $ImageObj->get_url();
 
 		return $image_thumb_url;
-
 	}#end get_thumb_url
 
 
@@ -731,8 +746,7 @@ class component_image extends component_common {
 		$ImageObj			 = new ImageObj($image_id, DEDALO_IMAGE_THUMB_DEFAULT, $aditional_path, $initial_media_path);
 		$image_thumb_path 	 = $ImageObj->get_local_full_path();
 		
-		return $image_thumb_path;
-		
+		return $image_thumb_path;		
 	}#end get_thumb_path
 
 
@@ -746,6 +760,7 @@ class component_image extends component_common {
 		$ImageObj->set_quality($quality);
 
 		$ar_info = $ImageObj->pixel_to_centimetres($quality, $dpi=DEDALO_IMAGE_PRINT_DPI);
+
 		return $ar_info;
 	}//end get_image_print_dimensions
 	
@@ -755,7 +770,7 @@ class component_image extends component_common {
 	* GET_SOURCE_QUALITY_TO_BUILD
 	* Iterate array DEDALO_IMAGE_AR_QUALITY (Order by quality big to small)
 	*//*
-	public function get_source_quality_to_build__DEPRECATED__($target_quality) {	
+	public function get_source_quality_to_build__DEPRECATED__($target_quality) {
 		
 		$ar_quality_source_valid = array();
 		$ar_quality 			 = unserialize(DEDALO_IMAGE_AR_QUALITY);
@@ -785,6 +800,7 @@ class component_image extends component_common {
 		return false;
 	}
 	*/
+
 
 
 	/**
@@ -889,7 +905,7 @@ class component_image extends component_common {
 			
 		return $result;
 	}//end get_original_file_path
-	
+
 	
 
 	/**
@@ -1017,7 +1033,6 @@ class component_image extends component_common {
 
 
 
-
 	/**
 	* IMAGE_VALUE_IN_TIME_MACHINE
 	* @param string $image_value . Is valor_list of current image. We need replace path to enable view deleted image
@@ -1111,7 +1126,7 @@ class component_image extends component_common {
 		}
 
 		return $value;
-	}#end render_list_value
+	}//end render_list_value
 
 
 
@@ -1157,5 +1172,4 @@ class component_image extends component_common {
 
 
 }
-
 ?>

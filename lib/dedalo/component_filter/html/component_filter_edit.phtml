@@ -23,85 +23,85 @@
 
 	
 	# CONTENIDO (INPUT)
-	$html_contenido  = '';
-	#$html_contenido .= " <div class=\"wrap_dato_component_filter\"> ";	
+	$html_content  = '';
+	#$html_content .= " <div class=\"wrap_dato_component_filter\"> ";	
 	switch($permissions) {
 			
 		case 0 :	
-				$html_contenido .= "";// " <span class=\"css_span_dato\"> ".label::get_label('sin_acceso')." ($component_name)</span>"; 
+				$html_content .= "";// " <span class=\"css_span_dato\"> ".label::get_label('sin_acceso')." ($component_name)</span>"; 
 				break;
 						
 		case 1 :
-				$html_contenido .= "<ul class=\"filter_projects_list\">";
+				$html_content .= "<ul class=\"filter_projects_list\">";
 				if (is_array ($ar_proyectos_section)) foreach ($ar_proyectos_section as $value => $rotulo) {
 					
 					if( is_array($dato) && in_array($value, array_keys($dato)) ) {
-						$html_contenido .= "<li>";
-						$html_contenido .= "- <label class=\"filter_checkbox_rotulo\">$rotulo</label>";
-						$html_contenido .= "</li>";
+						$html_content .= "<li>";
+						$html_content .= "- <label class=\"filter_checkbox_rotulo\">$rotulo</label>";
+						$html_content .= "</li>";
 					}
 				}
-				$html_contenido .= "</ul>";
+				$html_content .= "</ul>";
 				break;	
 						
 		case 2 :
 		case 3 :					
-				$html_contenido .= "<ul class=\"filter_projects_list\">";
+				$html_content .= "<ul class=\"filter_projects_list\">";
 					#dump($ar_proyectos_section, ' ar_proyectos_section ++ '.to_string());
 				$i=1;foreach((array)$ar_proyectos_section as $current_section_id => $rotulo) {
 					
-					$html_contenido .= "<li>";
+					$html_content .= "<li>";
 					
 						$checked  = is_array($dato) && in_array($current_section_id, array_keys($dato)) ? 'checked="checked"' : '';
 						$tabindex = $i==1 ? 'tabindex="1"' : '';
 
 						$input_id = $input_name.'_'.$i;
 
-						$html_contenido .= "<input type=\"checkbox\" class=\"filter_checkbox\" ";
-						$html_contenido .= "onfocus=\"component_common.select_wrap(null,'$id_wrapper')\" ";
-						$html_contenido .= "onchange=\"component_filter.Save(this)\" ";
-						$html_contenido .= "name=\"{$input_name}\" ";
-						$html_contenido .= "id=\"{$input_id}\" ";
-						$html_contenido .= "value=\"{$current_section_id}\" ";
-						$html_contenido .= "title=\"$html_title $current_section_id\" ";
-						$html_contenido .= "data-tipo=\"{$tipo}\" ";
-						$html_contenido .= "data-lang=\"{$lang}\" ";
-						$html_contenido .= "data-section_tipo=\"{$section_tipo}\" ";
-						$html_contenido .= "data-parent=\"{$parent}\" ";
-						$html_contenido .= $checked;
-						$html_contenido .= " ".$tabindex;
-						$html_contenido .= "/>";
+						$html_content .= "<input type=\"checkbox\" class=\"filter_checkbox\" ";
+						$html_content .= "onfocus=\"component_common.select_wrap(null,'$id_wrapper')\" ";
+						$html_content .= "onchange=\"component_filter.Save(this)\" ";
+						$html_content .= "name=\"{$input_name}\" ";
+						$html_content .= "id=\"{$input_id}\" ";
+						$html_content .= "value=\"{$current_section_id}\" ";
+						$html_content .= "title=\"$html_title $current_section_id\" ";
+						$html_content .= "data-tipo=\"{$tipo}\" ";
+						$html_content .= "data-lang=\"{$lang}\" ";
+						$html_content .= "data-section_tipo=\"{$section_tipo}\" ";
+						$html_content .= "data-parent=\"{$parent}\" ";
+						$html_content .= $checked;
+						$html_content .= " ".$tabindex;
+						$html_content .= "/>";
 						
-						$html_contenido .= "<label for=\"$input_id\" class=\"filter_checkbox_rotulo\">";
+						$html_content .= "<label for=\"$input_id\" class=\"filter_checkbox_rotulo\">";
 						if(SHOW_DEBUG===true) {
-							$html_contenido .= "[$current_section_id] ";
+							$html_content .= "[$current_section_id] ";
 						}
-						$html_contenido .= to_string($rotulo);
-						$html_contenido .= "</label>";
-						#$html_contenido .= " <span class=\"debug_info\">id: $current_section_id</span>";
+						$html_content .= to_string($rotulo);
+						$html_content .= "</label>";
+						#$html_content .= " <span class=\"debug_info\">id: $current_section_id</span>";
 						
-						$html_contenido .= "</li>";
+						$html_content .= "</li>";
 						
 				$i++;}
 
-				$html_contenido .= "</ul>";
+				$html_content .= "</ul>";
 		
 				if(SHOW_DEBUG===true) {			
-					#$html_contenido .= " <span class=\"css_span_debugger\" id=\"debugger_{$id}\" >{$debugger}</span>";
+					#$html_content .= " <span class=\"css_span_debugger\" id=\"debugger_{$id}\" >{$debugger}</span>";
 				}
 				break;					
 							
 	}
-	#$html_contenido .= " </div><!-- /wrap_dato_component_filter -->";#end wrap_dato_component_filter
+	#$html_content .= " </div><!-- /wrap_dato_component_filter -->";#end wrap_dato_component_filter
 	
 	
 	# Prepare content to show in page
-	tools::prepare_content($html_contenido);
+	tools::prepare_content($html_content);
 
 	
 	# PRINT HTML
 	print $html_label;
-	print $html_contenido;
+	print $html_content;
 	
 
 

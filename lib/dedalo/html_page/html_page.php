@@ -21,15 +21,24 @@
 	if($t) $tipo = $t;
 	if($m) $modo = $m;
 
-	# Modos autointerpretados
-	if(!$modo && !empty($id)) $modo = 'edit';
-	if(!$modo && empty($id) && !empty($tipo) ) $modo = 'list';
+	
 
-	#$modo = navigator::get_selected('modo');
+	# Modos autointerpretados
+	if($modo===false) {
+		if(empty($id)) {
+			$modo = 'list';
+		}else{
+			$modo = 'edit';
+		}
+	}
+
+
 	
 	# Store section tipo
 	navigator::set_selected('section', $tipo);
 
+
+	# SECTION_TIPO
 	if (!defined('SECTION_TIPO')) {
 		define('SECTION_TIPO', $tipo);
 		
@@ -44,23 +53,18 @@
 			}
 		}
 	}
-	
+
+
 
 	# DEBUG	
 	if(SHOW_DEBUG===true) {
 		unset($_SESSION['debug_content']);
 
 		if(!empty($_SESSION['dedalo4']['auth']))
-		$_SESSION['debug_content']['SESSION AUTH4']		= $_SESSION['dedalo4']['auth'];
+		$_SESSION['debug_content']['SESSION AUTH4']	  = $_SESSION['dedalo4']['auth'];
 		
 		if(!empty($_SESSION['dedalo4']['config']))
-		$_SESSION['debug_content']['SESSION CONFIG4']	= $_SESSION['dedalo4']['config'];
-
-		if (!defined('SECTION_TIPO')) {
-			#trigger_error("Error Processing Request. SECTION_TIPO is not defined", 1);
-			#echo "SECTION_TIPO is not defined";
-		}
-		#dump(SECTION_TIPO," SECTION_TIPO ".SECTION_TIPO." - ".trim($_SERVER['REQUEST_URI']) );
+		$_SESSION['debug_content']['SESSION CONFIG4'] = $_SESSION['dedalo4']['config'];
 	}
 
 	
@@ -127,7 +131,6 @@
 
 
 
-
 	# SELECTED MODO . Fix navigator modo (needed for buttons)
 		navigator::set_selected('modo', $modo);
 
@@ -152,10 +155,11 @@
 			$parent = $_SESSION['dedalo4']['config']['id'];
 		}else{
 			$parent = NULL;
-		}		
+		}
 
 		# JAVASCRIPT LINKS
-		$js_link_code	= js::get_js_link_code();		#dump($js_link_code,'js_link_code');
+		$js_link_code	= js::get_js_link_code();
+
 
 
 	#
@@ -166,7 +170,7 @@
 	
 
 	# LOG MESSAGES
-		global $log_messages;	#dump($log_messages.'$log_messages');
+		global $log_messages;
 
 
 		
@@ -184,17 +188,16 @@
 				$menu 		= new menu($modo);
 				$menu_html 	= $menu->get_html();			
 				ob_start();
-				include ( DEDALO_LIB_BASE_PATH . '/' . get_class() .'/html/' . get_class() . '_header.phtml' );
+				include ( DEDALO_LIB_BASE_PATH . '/' . get_class() . '/html/' . get_class() . '_header.phtml' );
 				$html_header = ob_get_clean();
 				break;
 
 			case ($context_name==='list_in_portal'):
-				$html_header .= "<div class=\"breadcrumb\">";
-				$html_header .=   strip_tags( tools::get_bc_path() ); // Remove possible <mark> tags
-				#dump(tools::get_bc_path(), 'tools::get_bc_path()');
-				$html_header .= " <div class=\"icon_bs close_window\" title=\"".label::get_label('cerrar')."\" onclick=\"window.close()\"></div>";
-				$html_header .= "</div>";
-				$html_header .= "<div class=\"breadcrumb_spacer\"></div>";
+				$html_header .= '<div class="breadcrumb">';
+				$html_header .= strip_tags( tools::get_bc_path() ); // Remove possible <mark> tags
+				$html_header .= "<div class=\"icon_bs close_window\" title=\"".label::get_label('cerrar')."\" onclick=\"window.close()\"></div>";
+				$html_header .= '</div>';
+				$html_header .= '<div class="breadcrumb_spacer"></div>';
 				break;
 
 			case (strpos($m, 'tool_')===false): //empty($context_name) && 
@@ -205,7 +208,7 @@
 					$menu_html 	= $menu->get_html();	
 				}
 				ob_start();
-				include ( DEDALO_LIB_BASE_PATH . '/' . get_class() .'/html/' . get_class() . '_header.phtml' );
+				include ( DEDALO_LIB_BASE_PATH . '/' . get_class() . '/html/' . get_class() . '_header.phtml' );
 				$html_header = ob_get_clean();
 				break;			
 			
@@ -213,7 +216,8 @@
 				$html_header = '';
 				break;
 		}
-			
+		
+
 
 	#
 	# PAGE TITLE

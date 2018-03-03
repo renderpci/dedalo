@@ -11,7 +11,9 @@ class tool_import_files extends tool_common {
 	protected $valid_extensions;
 
 
-
+	/**
+	* __CONSTRUCT
+	*/
 	public function __construct($component_obj, $modo='button') {
 				
 		# Fix modo
@@ -22,7 +24,7 @@ class tool_import_files extends tool_common {
 			#dump($component_obj, ' component_obj ++ '.to_string());
 
 		$this->set_up();
-	}
+	}//end __construct
 
 
 
@@ -35,7 +37,7 @@ class tool_import_files extends tool_common {
 		if(login::is_logged()!==true) die("<span class='error'> Auth error: please login </span>");
 		
 		# Usuario logeado actualmente
-   		$user_id		= navigator::get_user_id();	
+		$user_id		= navigator::get_user_id();	
 		$media_folder 	= DEDALO_IMAGE_FOLDER;
 		// tipo
 		$tipo = null;
@@ -88,7 +90,6 @@ class tool_import_files extends tool_common {
 
 
 	
-
 	/**
 	* FIND_ALL_FILES
 	* Read dir (can be accessible)
@@ -139,11 +140,19 @@ class tool_import_files extends tool_common {
 		#dump($ar_data,'$ar_data',to_string($dir));
 		
 		return $ar_data;
-	}
-
+	}//end find_all_files
 
 	
-	
+	/**
+	* SET_COMPONENT
+	* @return bool
+	*/
+	public function set_component($component_obj) {
+		# Fix current component/section
+		$this->component_obj = $component_obj;
+
+		return true;
+	}//end set_component	
 
 
 	/**
@@ -151,7 +160,7 @@ class tool_import_files extends tool_common {
 	* Extrae información de la imágen recibida usando una expresión regular para interpretar un patrón dado
 	* Devuelve un array con los datos extraidos
 	*/
-	function get_file_data( $dir, $file ) {	// , $regex="/(\d*)[-|_]?(\d*)_?(\w{0,}\b.*)\.([a-zA-Z]{3,4})\z/" 
+	public static function get_file_data($dir, $file) {	// , $regex="/(\d*)[-|_]?(\d*)_?(\w{0,}\b.*)\.([a-zA-Z]{3,4})\z/" 
 
 		$ar_data = array();
 	
@@ -169,45 +178,37 @@ class tool_import_files extends tool_common {
 		$ar_data['image']['image_url'] 			= DEDALO_ROOT_WEB . "/inc/img.php?s=".$ar_data['file_path'];
 		$ar_data['image']['image_preview_url']	= DEDALO_LIB_BASE_URL . '/tools/tool_import_files/foto_preview.php?f='.$ar_data['file_path'];
 			#dump($ar_data, ' ar_data');
+
+		# Regeg file info ^(.+)(-([a-zA-Z]{1}))\.([a-zA-Z]{3,4})$
+		# Format result preg_match '1-2-A.jpg' and 'gato-2-A.jpg'
+		# 0	=>	1-2-A.jpg 	: gato-2-A.jpg 	# full_name
+		# 1	=>	1-2-A 		: gato-2-A 		# name
+		# 2	=>	1 			: gato 			# base_name (name without order and letter)
+		# 3	=>	1 			: 				# section_id (empty when not numeric)
+		# 4	=>				: gato 			# base_string_name (empty when numeric)
+		# 5	=>	-2 			: -2 			# not used
+		# 6	=>	2 			: 2 			# portal_order
+		# 7	=>	-A 			: -A 			# not used
+		# 8	=>	A 			: A 			# target map (A,B,C..)
+		# 9	=>	jpg 		: jpg 			# extension
+
+		preg_match("/^((([\d]+)|([^-]+))([-](\d))?([-]([a-zA-Z]))?)\.([a-zA-Z]{3,4})$/", $file, $ar_match);
+			#dump($ar_match, ' ar_match ++ '.to_string($file));
+
+		$regex_data = new stdClass();
+			$regex_data->full_name 	  = $ar_match[0];
+			$regex_data->name 		  = $ar_match[1];
+			$regex_data->base_name    = $ar_match[2];
+			$regex_data->section_id   = $ar_match[3];
+			$regex_data->portal_order = $ar_match[6];
+			$regex_data->letter 	  = $ar_match[8];
+			$regex_data->extension 	  = $ar_match[9];
+
+		$ar_data['regex'] = $regex_data;
 		
+
 		return $ar_data;
-	}
-
-
-
-	/**
-	* PROPAGATE_TEMP_SECTION_DATA
-	* @param object $temp_section_data
-	* @param object $current_section
-	*//* MOVED TO TOOL COMMON
-	public function propagate_temp_section_data($temp_section_data, $section_tipo, $section_id) {
-
-		$ar_current_component = reset($temp_section_data);
-		foreach ($ar_current_component as $current_tipo => $current_component) {
-
-			$RecordObj_dd 	= new RecordObj_dd($current_tipo);
-			$traducible  	= $RecordObj_dd->get_traducible();
-			$current_lang   = $RecordObj_dd->get_traducible()!=='si' ? DEDALO_DATA_NOLAN : DEDALO_DATA_LANG;
-			
-			$component_dato_current_lang = $current_component->dato->$current_lang;
-
-			if (!isset($component_dato_current_lang)) {
-				if(SHOW_DEBUG) {
-					dump($current_component, ' $current_component ++ '.to_string());
-					trigger_error("Error: element $current_tipo without dato");
-				}
-				continue;
-			}			
-			
-			$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
-			$component 	 = component_common::get_instance($modelo_name, $current_tipo, $section_id, 'edit', $current_lang, $section_tipo);
-			$component->set_dato( $component_dato_current_lang );
-			$component->Save();
-			
-		}//end foreach ($temp_section_data as $key => $value) {
-
-		return true;
-	}#end propagate_temp_section_data*/
+	}//end get_file_data
 
 
 
@@ -220,7 +221,7 @@ class tool_import_files extends tool_common {
 	* @param string tipo $target_component 
 	* @return (bool)
 	*/
-	public function set_media_file($current_file, $target_section_tipo, $current_section_id, $tool_propiedades) {
+	public static function set_media_file($current_file, $target_section_tipo, $current_section_id, $tool_propiedades) {
 
 		$target_component 	= $tool_propiedades->target_component;
 		$modelo_name 		= RecordObj_dd::get_modelo_name_by_tipo($target_component,true);
@@ -231,8 +232,12 @@ class tool_import_files extends tool_common {
 				#
 				# COMPONENT IMAGE 
 				# (Is autosaved with defaults on create)
-				$component 	 = component_common::get_instance($modelo_name, $target_component, $current_section_id, 'list', DEDALO_DATA_LANG, $target_section_tipo);				
-
+				$component 	 = component_common::get_instance($modelo_name, 
+																$target_component, 
+																$current_section_id, 
+																'list', 
+																DEDALO_DATA_LANG, 
+																$target_section_tipo);
 				#
 				# get_image_id
 				$image_id 		= $component->get_image_id();		
@@ -314,9 +319,9 @@ class tool_import_files extends tool_common {
 					}
 				}
 				
-				# Copiamos el original
+				# Copy the original
 				if (!copy($source_full_path, $original_file_path)) {
-				    throw new Exception("<div class=\"info_line\">ERROR al copiar ".$source_full_path." a ".$original_file_path."</div>");
+					throw new Exception("<div class=\"info_line\">ERROR al copiar ".$source_full_path." a ".$original_file_path."</div>");
 				}
 
 				# JPG : la convertimos a jpg si no lo es ya
@@ -345,7 +350,71 @@ class tool_import_files extends tool_common {
 				trigger_error("Error. Media type not allowed");
 				break;
 		}		
-	}#end set_media_file
+	}//end set_media_file
+
+
+
+	/**
+	* FILE_PROCESSOR
+	* @return 
+	*/
+	public static function file_processor($request_options) {
+
+		$response = new stdClass();
+			$response->result 	= false;
+			$response->msg 		= 'Error. Request failed';
+
+		$options = new stdClass();
+			$options->file_processor 			= null;
+			$options->file_processor_properties = null;
+			$options->file_name 				= null;
+			$options->files_dir 				= null;
+			$options->section_tipo 				= null;
+			$options->section_id 				= null;
+			$options->target_section_tipo 		= null;
+			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
+
+
+		#
+		# FILE_PROCESSOR
+		# Global var button propiedades json data array
+		# Optional aditional file script processor defined in button import propiedaes
+		# Note that var $file_processor_properties is the button propiedades json data, NOT current element processor selection
+		
+		# Iterate each processor
+		foreach ((array)$options->file_processor_properties as $key => $file_processor_obj) {
+
+			if ($file_processor_obj->function_name!==$options->file_processor) {
+				continue;
+			}
+
+			$script_file = str_replace(['DEDALO_EXTRAS_PATH'], [DEDALO_EXTRAS_PATH], $file_processor_obj->script_file);
+			if(include_once($script_file)) {
+
+				$function_name 	  = $file_processor_obj->function_name;
+				if (is_callable($function_name)) {
+					$custom_arguments = (array)$file_processor_obj->custom_arguments;
+					$standard_options = [
+						"file_name" 		  => $options->file_name,
+						"file_path" 		  => $options->files_dir,
+						"section_tipo" 		  => $options->section_tipo,
+						"section_id" 		  => $options->section_id,
+						"target_section_tipo" => $options->target_section_tipo
+					];
+					$result = call_user_func($function_name, $standard_options, $custom_arguments);
+				}else{ debug_log(__METHOD__." Error on call file processor function: ".to_string($function_name), logger::ERROR); }
+			}else{ debug_log(__METHOD__." Error on include file processor file script_file: ".to_string($script_file), logger::ERROR); }
+
+			debug_log(__METHOD__." Processed file function_name $function_name with script $script_file".to_string(), logger::DEBUG);
+		}//end foreach ((array)$options->file_processor_properties as $key => $file_processor_obj)
+
+
+		$response->result 	= true;
+		$response->msg 		= 'Ok. Request done';
+
+
+		return (object)$response;
+	}//end file_processor
 
 
 	

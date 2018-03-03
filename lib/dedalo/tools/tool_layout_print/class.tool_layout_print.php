@@ -29,6 +29,7 @@ class tool_layout_print extends tool_common {
 	public $templates_default;	# Private default templates (matrix_layout_dd)
 	public $templates_public;	# Public editable templates (matrix_layout)
 
+
 	/**
 	* __CONSTRUCT
 	* @param obj $section_obj section object full
@@ -48,14 +49,16 @@ class tool_layout_print extends tool_common {
 		$this->modo = $modo;
 
 		$this->setup();	
-	}
+	}//end __construct
 
 
+
+	/**
+	* SETUP
+	*/
 	public function setup() {		
 
-	}
-
-
+	}//end setup
 
 
 
@@ -96,11 +99,10 @@ class tool_layout_print extends tool_common {
 		$html .= "\n</html>";
 		$html .= $options->js_links;
 
-		#return htmLawed($html);
-		return trim($html);
-		
-	}#end create_full_html_page
 
+		#return htmLawed($html);
+		return trim($html);		
+	}//end create_full_html_page
 
 
 
@@ -108,7 +110,7 @@ class tool_layout_print extends tool_common {
 	* RENDER_PAGES . Render ALL pages one by one
 	* @return string $html
 	*/
-	public static function render_pages( $request_options ) {		
+	public static function render_pages( $request_options ) {
 	
 		$options = new stdClass();
 			$options->pages 		= array();
@@ -319,9 +321,9 @@ class tool_layout_print extends tool_common {
 		}//end foreach ($options->records as $key => $current_record) {
 		
 		
-		return (object)$result;
-		
-	}#end render_pages
+		return (object)$result;		
+	}//end render_pages
+
 
 
 	/**
@@ -536,11 +538,9 @@ class tool_layout_print extends tool_common {
 			$page_result->footer_html = isset($footer_html) ? (string)$footer_html : false;
 
 
-			//dump($page_result, ' page_result'.to_string());
-
 		return (object)$page_result;
+	}//end render_page
 
-	}#end render_page
 
 
 	/**
@@ -590,9 +590,8 @@ class tool_layout_print extends tool_common {
 	 	}
 	 	$html .= "\n</style>";
 
-	 	return $html;
-		
-	}#end render_css_classes
+	 	return $html;		
+	}//end render_css_classes
 
 
 
@@ -744,9 +743,9 @@ class tool_layout_print extends tool_common {
 		#$html .= "\n <div $id $css_class $css_style $dataset $edit_events >\n " . $component_html . "\n </div><!-- /component $component->html_id -->";
 		$component_html = "<div $id $css_class $css_style $dataset $edit_events >" . trim($component_obj_html) . "</div>";		
 	
-		return trim($component_html);
 
-	}#end build_component_html
+		return trim($component_html);
+	}//end build_component_html
 
 
 	/**
@@ -786,9 +785,10 @@ class tool_layout_print extends tool_common {
 		$free_text_html .= " </div>"; // Content div out
 		$free_text_html .= "\n</div>"; // Wrapper out 
 
-		return trim($free_text_html);
 
-	}#end build_free_text_html
+		return trim($free_text_html);
+	}//end build_free_text_html
+
 
 
 	/**
@@ -870,8 +870,8 @@ class tool_layout_print extends tool_common {
 		}
 
 		return trim($header_footer_html);
+	}//end build_header_footer_html
 
-	}#end build_header_footer_html
 
 
 	/**
@@ -914,17 +914,9 @@ class tool_layout_print extends tool_common {
 				$attr .='';
 				break;
 		}
+
 		return $attr;
-	}#end build_attr
-
-
-
-
-
-
-
-
-
+	}//end build_attr
 
 
 
@@ -976,8 +968,10 @@ class tool_layout_print extends tool_common {
 
 			$ar_layout_obj[$array_key] = $layout_obj;
 		}
+
 		return $ar_layout_obj;
-	}
+	}//end get_ar_templates
+
 
 
 	/**
@@ -1002,9 +996,9 @@ class tool_layout_print extends tool_common {
 		$ar_section_id=array();
 		while ($rows = pg_fetch_assoc($result)) {
 			$ar_section_id[] = $rows['section_id'];
-		}#end while
+		}
 		return $ar_section_id;
-	}
+	}//end search_layout_records
 
 
 	/**
@@ -1132,9 +1126,9 @@ class tool_layout_print extends tool_common {
 			//$i++;
 		}
 		#dump($ar_section_resolved,"ar_components");
-		#die();
-		return $ar_section_resolved;
+		
 
+		return $ar_section_resolved;
 	}//end get_ar_components
 
 
@@ -1144,7 +1138,7 @@ class tool_layout_print extends tool_common {
 	* @return 
 	*/
 	public static function render_records_DEPRECATED( $request_options ) {
-
+		/*
 		$options = new stdClass();
 			$options->section_target_tipo 	= false;
 			$options->section_layout_id 	= false;
@@ -1163,46 +1157,54 @@ class tool_layout_print extends tool_common {
 		return;
 
 		#
-		# RECORDS DATA
-		$search_options_session_key = 'section_'.$options->section_target_tipo;
-		if (!isset($_SESSION['dedalo4']['config']['search_options'][$search_options_session_key])) {
-			throw new Exception("Error Processing Request: search_options for $search_options_session_key not found", 1);			
-		}
-		$options_search_from_user   = clone($_SESSION['dedalo4']['config']['search_options'][$search_options_session_key]);
+		# RECORDS DATA		
+		#$search_options_session_key = 'section_'.$options->section_target_tipo;
+		#if (!isset($_SESSION['dedalo4']['config']['search_options'][$search_options_session_key])) {
+		#	throw new Exception("Error Processing Request: search_options for $search_options_session_key not found", 1);			
+		#}
+		#$options_search_from_user   = clone($_SESSION['dedalo4']['config']['search_options'][$search_options_session_key]);
+		#
+		#	$options_search_from_user->search_options_session_key 	= 'current_edit';
+		#	$options_search_from_user->modo 						= 'edit';
+		#	$options_search_from_user->offset 						= false;
+		#	$options_search_from_user->limit 						= false;
+		#	$options_search_from_user->layout_map					= array();
+		#		#dump($options_search_from_user," options_search_from_user");die();
+		#
+		#$rows_data = search::get_records_data($options_search_from_user);
+		#	#dump($rows_data,"rows_data "); die();
 
-			$options_search_from_user->search_options_session_key 	= 'current_edit';
-			$options_search_from_user->modo 						= 'edit';
-			$options_search_from_user->offset 						= false;
-			$options_search_from_user->limit 						= false;
-			$options_search_from_user->layout_map					= array();
-				#dump($options_search_from_user," options_search_from_user");die();
+
+		# SEARCH_OPTIONS
+			$search_options_id    = $options->section_target_tipo; // section tipo like oh1
+			$saved_search_options = section_records::get_search_options($search_options_id);
 		
-		$rows_data = search::get_records_data($options_search_from_user);
-			#dump($rows_data,"rows_data "); die();
+		# SEARCH_QUERY_OBJECT
+			# Use saved search options (deep cloned to avoid propagation of changes !)
+			$search_options 	 = unserialize(serialize($saved_search_options));
+			$search_query_object = $search_options->search_query_object;
+				$search_query_object->limit   = 0;  // unset limit
+				$search_query_object->offset  = 0;  // unset offset
+				$search_query_object->order   = false;  // unset order
+				$search_query_object->select  = []; // unset select
+		
+		# SEARCH
+			$search_develoment2  = new search_development2($search_query_object);
+			$rows_data 		 	 = $search_develoment2->search();
 
-		foreach ($rows_data->result as $key => $ar_value) {
-			#dump($ar_value);
-			
+
+		foreach ($rows_data->ar_records as $key => $row) {				
 
 			# RENDER TEMPLATE . Render with first record of $tool_layout_print_records
 			#dump($section_layout_dato->edit,"section_layout_dato->edit");
-			$section_layout_rendered = (string)component_layout::render_template_full( $html_template->edit, reset($ar_value) );
+			$section_layout_rendered = (string)component_layout::render_template_full( $html_template->edit, $row );
 			return $section_layout_rendered;
 			
 			#dump($section_layout_rendered, ' section_layout_rendered '); break;
 
 		}//end foreach ($rows_data->result as $key => $value) {
-
-			/*
-			#
-				# RENDER TEMPLATE . Render with first record of $tool_layout_print_records
-				#dump($section_layout_dato->edit,"section_layout_dato->edit");
-				$section_layout_dato->edit = (string)component_layout::render_template_full( (string)$section_layout_dato->edit, reset($tool_layout_print_records) ) ;
-			*/
-
-	}#end render_records
-
-
+		*/
+	}//end render_records
 
 
 
@@ -1240,10 +1242,9 @@ class tool_layout_print extends tool_common {
 		
 		# Dumps the internal DOM tree back into string 
 		$html_template = trim($html->save());
-			#dump( htmlspecialchars($html_template) );
+		
 
 		return (string)$html_template;
-
 	}//end process_template
 
 
@@ -1281,9 +1282,9 @@ class tool_layout_print extends tool_common {
 			
 		}//end foreach ($ar_pages as $pkey => $current_page) {
 
-		return $urls_group_by_section;
 
-	}#end get_urls_group_by_section
+		return $urls_group_by_section;
+	}//end get_urls_group_by_section
 
 
 
@@ -1326,9 +1327,9 @@ class tool_layout_print extends tool_common {
 		}
 
 		return $ar_command;
+	}//end get_ar_command
 
-	}#end get_ar_command
+
 	
-	
-};#end tool_layout_print
+};//end tool_layout_print
 ?>

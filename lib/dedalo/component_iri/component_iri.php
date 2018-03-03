@@ -51,9 +51,9 @@
 				
 				# DATO_REFERENCE_LANG
 				$default_component = null;
-													
-				if (empty($dato) && $traducible=='si') {					
-					$default_component = $this->get_default_component();		
+				
+				if (strpos($parent, DEDALO_SECTION_ID_TEMP)===false &&  empty($dato) && $traducible==='si') {
+					$default_component = $this->get_default_component();
 				}
 
 				$valor	= '';
@@ -63,7 +63,7 @@
 				}
 
 				$mandatory 		= (isset($propiedades->mandatory) && $propiedades->mandatory===true) ? true : false;
-				$mandatory_json = json_encode($mandatory);									
+				$mandatory_json = json_encode($mandatory);
 				break;
 
 		case 'print' :
@@ -99,11 +99,12 @@
 				break;
 		
 		case 'search':
-				# Showed only when permissions are >1
-				if ($permissions<1) return null;
+				# dato is injected by trigger search wen is needed
+				$dato 	= $this->get_dato();
+				$valor 	= $this->get_valor();
 
-				$ar_comparison_operators = $this->build_search_comparison_operators();
-				$ar_logical_operators 	 = $this->build_search_logical_operators();
+				#$ar_comparison_operators = $this->build_search_comparison_operators();
+				#$ar_logical_operators 	 = $this->build_search_logical_operators();
 
 				#if(isset($_REQUEST[$tipo])) $dato = $_REQUEST[$tipo];
 				#$dato 			= json_encode($dato);

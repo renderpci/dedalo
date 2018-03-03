@@ -71,12 +71,13 @@ class component_inverse extends component_common {
 	}//end render_list_value
 
 
+
 	/**
 	* GET_VALOR_EXPORT
 	* Return component value sended to export data
 	* @return string $valor
 	*/
-	public function get_valor_export( $valor=null, $lang=DEDALO_DATA_LANG, $quotes=null, $add_id=null ) {
+	public function get_valor_export($valor=null, $lang=DEDALO_DATA_LANG, $quotes=null, $add_id=null) {
 
 		# When is received 'valor', set as dato to avoid trigger get_dato against DB 
 		# Received 'valor' is a json string (array of locators) from previous database search
@@ -93,6 +94,10 @@ class component_inverse extends component_common {
 		$ar_lines = [];
 		foreach ($dato as $key => $current_locator) {
 
+			$section_id   	= $current_locator->from_section_id;
+			$section_tipo 	= $current_locator->from_section_tipo;
+			$component_tipo = $current_locator->from_component_tipo;
+
 			$line = '';
 			foreach ($inverse_show as $ikey => $ivalue) {
 				if ($ivalue===false) continue;
@@ -100,32 +105,34 @@ class component_inverse extends component_common {
 				# section_id
 				if ($ikey === 'section_id') {
 					if(strlen($line)>0) $line .= ' ';
-					$line .= $current_locator->section_id;
+					#$line .= $current_locator->section_id;
+					$line .= $section_id;
 				}
 
 				# section_tipo
 				if ($ikey === 'section_tipo') {
 					if(strlen($line)>0) $line .= ' ';
-					$line .= $current_locator->section_tipo;
+					#$line .= $current_locator->section_tipo;
+					$line .= $section_tipo;
 				}
 
 				# section_label
 				if ($ikey === 'section_label') {
 					if(strlen($line)>0) $line .= ' ';
-					$label = RecordObj_dd::get_termino_by_tipo($current_locator->section_tipo, $lang);
+					$label = RecordObj_dd::get_termino_by_tipo($section_tipo, $lang);
 					$line .= $label;
 				}
 
 				# component_tipo
-				if ($ikey === 'component_tipo') {
+				if ($ikey === 'component_tipo' || $ikey === 'from_component_tipo') {
 					if(strlen($line)>0) $line .= ' ';
-					$line .= $current_locator->component_tipo;
+					$line .= $component_tipo;
 				}
 
 				# component_label
 				if ($ikey === 'component_label') {
 					if(strlen($line)>0) $line .= ' ';
-					$label = RecordObj_dd::get_termino_by_tipo($current_locator->component_tipo, $lang);
+					$label = RecordObj_dd::get_termino_by_tipo($component_tipo, $lang);
 					$line .= $label;
 				}
 			}			
@@ -136,7 +143,7 @@ class component_inverse extends component_common {
 		
 		
 		return $lines;
-	}#end get_valor_export
+	}//end get_valor_export
 
 
 
@@ -146,7 +153,7 @@ class component_inverse extends component_common {
 	* @param array $comparison_operators . Like array('=','!=')
 	* @return object stdClass $search_comparison_operators
 	*/
-	public function build_search_comparison_operators( $comparison_operators=array('=','!=') ) {
+	public function build_search_comparison_operators($comparison_operators=array('=','!=')) {
 		return (object)parent::build_search_comparison_operators($comparison_operators);
 	}//end build_search_comparison_operators
 
@@ -167,8 +174,10 @@ class component_inverse extends component_common {
 	* @see class.section_records.php get_rows_data filter_by_search
 	* @return string $search_query . POSTGRE SQL query (like 'datos#>'{components, oh21, dato, lg-nolan}' ILIKE '%paco%' )
 	*/
-	public static function get_search_query( $json_field, $search_tipo, $tipo_de_dato_search, $current_lang, $search_value, $comparison_operator='=') {
+	public static function get_search_query($json_field, $search_tipo, $tipo_de_dato_search, $current_lang, $search_value, $comparison_operator='=') {
 		
+		debug_log(__METHOD__." DISABLED OPTION !!! ".to_string(), logger::ERROR);
+		/*
 		$search_query='';
 		if ( empty($search_value) ) {
 			return $search_query;
@@ -193,7 +202,7 @@ class component_inverse extends component_common {
 			$search_query = " -- filter_by_search $search_tipo ". get_called_class() ." \n".$search_query;
 			#dump($search_query, " search_query for search_value: ".to_string($search_value)); #return '';
 		}
-		return $search_query;
+		return $search_query; */
 	}//end get_search_query
 
 
@@ -211,7 +220,7 @@ class component_inverse extends component_common {
 			return null;
 		}
 		$look_section_tipo = $ar_look_section_tipo[0];		
-		if ($locator->section_tipo!==$look_section_tipo) {
+		if ($locator->from_section_tipo!==$look_section_tipo) {
 			//debug_log(__METHOD__." Ignored section tipo ".to_string(), logger::DEBUG);
 			return null;
 		}
@@ -226,13 +235,13 @@ class component_inverse extends component_common {
 				# Components
 				$component = component_common::get_instance( $modelo_name,
 															 $current_tipo,
-															 $locator->section_id,
+															 $locator->from_section_id,
 															 'list',
 															 DEDALO_DATA_LANG,
-															 $locator->section_tipo);
+															 $locator->from_section_tipo);
 				$value = $component->get_valor();
 					#dump($value, ' value ++ '.to_string());
-				#$ar_value[] = $modelo_name::render_list_value($locator, $current_tipo, $locator->section_id, 'list', DEDALO_DATA_LANG, $locator->section_tipo, $locator->section_id);
+				#$ar_value[] = $modelo_name::render_list_value($locator, $current_tipo, $locator->section_id, 'list', DEDALO_DATA_LANG, $locator->from_section_tipo, $locator->section_id);
 				$ar_value[] = $value;
 			}
 		}

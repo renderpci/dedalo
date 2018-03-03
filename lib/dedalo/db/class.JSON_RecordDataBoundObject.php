@@ -545,7 +545,11 @@ abstract class JSON_RecordDataBoundObject {
 		# DATA IS NOT IN CACHE . Searching real data in DB
 		}else{			
 		
-			$result = pg_query(DBi::_getConnection(), $strQuery) or die("Cannot execute query: $strQuery\n". pg_last_error());
+			$result = pg_query(DBi::_getConnection(), $strQuery);// or die("Cannot execute query: $strQuery\n". pg_last_error());
+			if (!$result) {
+				dump(pg_last_error(), ' pg_last_error() ++ '.to_string($strQuery));
+				throw new Exception("Error Processing Request", 1);				
+			}
 			
 			while ($rows = pg_fetch_assoc($result)) {
 				$ar_records[] = $rows['key'];

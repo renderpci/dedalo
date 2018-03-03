@@ -42,7 +42,41 @@ abstract class DBi {
 			or die('Could not connect to database (52): ' .pg_last_error());
 			
 		return $pg_conn;
-	}
+	}//end _getConnection
+
+
+
+	/**
+	* _GETCONNECTION
+	* Get a new postgresql database connection without rehuse existing connections
+	*/
+	public static function _getNewConnection(
+		$host=DEDALO_HOSTNAME_CONN,
+		$user=DEDALO_USERNAME_CONN,
+		$password=DEDALO_PASSWORD_CONN,
+		$database=DEDALO_DATABASE_CONN,
+		$port=DEDALO_DB_PORT_CONN,
+		$socket=DEDALO_SOCKET_CONN) {		
+		
+		# basic str_connect with mandatory vars
+		$str_connect = "dbname=$database user=$user password=$password";
+
+		# Port is optional
+		if($port!==false) {
+			$str_connect = "port=$port ".$str_connect;
+		}
+
+		# Host is optional. When false, use default sockect connection
+		if($host!==false) {
+			$str_connect = "host=$host ".$str_connect;
+		}
+		
+		// Connecting, selecting database
+		$pg_conn = pg_connect($str_connect) 
+			or die('Could not connect to database (52-2): ' .pg_last_error());
+			
+		return $pg_conn;
+	}//end _getNewConnection
 
 
 	

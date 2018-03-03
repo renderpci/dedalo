@@ -1,10 +1,27 @@
-#/dedalo4/.htaccess
-#<IfModule mod_rewrite.c>
-#    RewriteEngine on
-#    RewriteRule  ^$ lib/dedalo/    [L]
-#    RewriteRule  ((?s).*) lib/dedalo/$1 [L]
-#</IfModule>
-php_value max_input_vars 5000
-php_value suhosin.get.max_vars 5000
-php_value suhosin.post.max_vars 5000
-php_value suhosin.request.max_vars 5000
+# Protect files and directories from prying eyes.
+<FilesMatch "\.(inc|test|temp|sh|backup|.*backup|TXT|txt|tpl|config|composer\.(json|lock))$|^#.*#$|\.php(~|\.sw[op]|\.bak|\.orig\.save)$">
+  <IfModule mod_authz_core.c>
+    Require all denied
+  </IfModule>
+  <IfModule !mod_authz_core.c>
+    Order allow,deny
+  </IfModule>
+</FilesMatch>
+
+<FilesMatch ".(eot|ttf|otf|woff|woff2)">
+  Header set Access-Control-Allow-Origin "*"
+</FilesMatch>
+
+# Don't show directory listings for URLs which map to a directory.
+Options -Indexes
+
+# Set the default handler.
+DirectoryIndex index.php index.html index.htm
+
+# Various header fixes.
+<IfModule mod_headers.c>
+  # Disable content sniffing, since it's an attack vector.
+  Header always set X-Content-Type-Options nosniff
+  # Disable Proxy header, since it's an attack vector.
+  RequestHeader unset Proxy
+</IfModule>

@@ -78,12 +78,24 @@ class component_relation_struct extends component_relation_common {
 
 
 	/**
-	* ADD_INDEX
+	* ADD_locator
 	* Add one locator to current 'dato'. Verify is exists to avoid duplicates
 	* NOTE: This method updates component 'dato' but NOT save
 	* @return bool
 	*/
-	public function add_index( $locator ) {
+	public function add_locator( $locator ) {
+
+		$locator = clone($locator);
+
+		# Verify exists locator type
+		if (!property_exists($locator,'type')) {
+			$locator->type = $this->relation_type;
+		}
+
+		# Verify exists locator from_component_tipo
+		if (!property_exists($locator,'from_component_tipo')) {
+			$locator->from_component_tipo = $this->tipo;
+		}		
 
 		if ($locator->type!=$this->relation_type) {
 			debug_log(__METHOD__." Stopped add index (struct) of invalid type (valid type is $this->relation_type). Received type: ".to_string($locator->type), logger::ERROR);
@@ -96,17 +108,29 @@ class component_relation_struct extends component_relation_common {
 		}
 		
 		return true;
-	}//end add_index
+	}//end add_locator
 
 
 
 	/**
-	* REMOVE_INDEX
+	* REMOVE_LOCATOR
 	* Iterate current component 'dato' and if math requested locator, removes it the locator from the 'dato' array
 	* NOTE: This method updates component 'dato' and save
 	* @return bool
 	*/
-	public function remove_index( $locator ) {
+	public function remove_locator( $locator ) {
+
+		$locator = clone($locator);
+
+		# Verify exists locator type
+		if (!property_exists($locator,'type')) {
+			$locator->type = $this->relation_type;
+		}
+
+		# Verify exists locator from_component_tipo
+		if (!property_exists($locator,'from_component_tipo')) {
+			$locator->from_component_tipo = $this->tipo;
+		}
 
 		# Add current locator to component dato		
 		if (!$remove_locator_locator = $this->remove_locator_from_dato($locator)) {
@@ -114,7 +138,7 @@ class component_relation_struct extends component_relation_common {
 		}
 		
 		return true;
-	}//end remove_index
+	}//end remove_locator
 
 
 
@@ -337,7 +361,7 @@ class component_relation_struct extends component_relation_common {
 															 'edit',
 															 DEDALO_DATA_NOLAN,
 															 $current_section_tipo);
-			$component->remove_index( $index_obj->locator );
+			$component->remove_locator( $index_obj->locator );
 			$component->Save();
 			debug_log(__METHOD__." removed locator from component_relation_struct ($current_component_tipo, $current_section_tipo, $current_section_id) ".to_string($index_obj->locator), logger::DEBUG);
 		

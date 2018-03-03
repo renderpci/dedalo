@@ -1,5 +1,9 @@
 <?php
-
+/**
+* JS
+*
+*
+*/
 class js {
 
 	static $ar_url = array();
@@ -9,6 +13,7 @@ class js {
 	#static $js_header_code = array();
 
 	static $ar_json_element = array();
+
 
 	
 	# JS LINK CODE . RETURN COMBINATED JS LINKS FOR INSERT IN HEADER  
@@ -117,7 +122,7 @@ class js {
 				#$html .= self::build_tag( DEDALO_LIB_BASE_URL . '/component_relation/js/component_relation.js' );
 
 				# button delete .En algunos contextos es necesario el js de button_delete aunque no tengamos cargado el componente. Por tanto lo cargaremos siempre
-				if(navigator::get_selected('modo')=='list') {
+				if(navigator::get_selected('modo')==='list') {
 				$html .= self::build_tag( DEDALO_LIB_BASE_URL . '/button_delete/js/button_delete.js' );
 				$html .= self::build_tag( DEDALO_LIB_BASE_URL . '/button_stats/js/button_stats.js' );
 				}				
@@ -171,15 +176,15 @@ class js {
 	public static function build_tag($url) {
 		if (strpos($url, 'section_group_')!==false) return null;
 
-		// LOCAL VERIONS
-		if (USE_CDN!==false) {			
+		// LOCAL VERSIONS
+		if (USE_CDN!==false) {
 			$url = USE_CDN . $url;
 		}
 
 		# Add version
 		$url = $url .'?'. DEDALO_VERSION;
 
-		$tag = "\n<script src=\"$url\"></script>";
+		$tag = PHP_EOL . '<script src="'.$url.'"></script>';
 
 		/*
 		// CDN VERSIONS
@@ -218,7 +223,7 @@ class js {
 		}*/
 
 		return $tag;
-	}
+	}//end build_tag
 
 
 
@@ -227,9 +232,11 @@ class js {
 	* @return 
 	*//*
 	public static function get_js_header_code() {
+		
 		return implode(';',js::$js_header_code);
 	}//end get_js_header_code
 	*/
+
 
 
 	/**
@@ -237,16 +244,18 @@ class js {
 	* @return 
 	*//*
 	public static function set_js_header_code($value) {
+		
 		js::$js_header_code[] = $value;
 	}//end set_js_header_code
 	*/
+
 
 
 	/**
 	* ADD_JSON_ELEMENT
 	* @return bool true
 	*/
-	public static function add_json_element( $data ) {	
+	public static function add_json_element( $data ) {
 		#dump($data, ' data ++ '.to_string());
 		js::$ar_json_element[] = $data;
 
@@ -272,6 +281,7 @@ class js {
 		return (string)$json_elements_data;
 	}//end get_json_elements_data
 	
-	
-}
+
+
+}//end js
 ?>

@@ -261,8 +261,23 @@ class component_iri extends component_common {
 	* UPDATE_DATO_VERSION
 	* @return object $response
 	*/
-	public static function update_dato_version($update_version, $dato_unchanged, $reference_id) {
+	public static function update_dato_version($request_options) {
 
+		$options = new stdClass();
+			$options->update_version 	= null;
+			$options->dato_unchanged 	= null;
+			$options->reference_id 		= null;
+			$options->tipo 				= null;
+			$options->section_id 		= null;
+			$options->section_tipo 		= null;
+			$options->context 			= 'update_component_dato';
+			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
+
+			$update_version = $options->update_version;
+			$dato_unchanged = $options->dato_unchanged;
+			$reference_id 	= $options->reference_id;
+
+		
 	}//end update_dato_version
 
 
@@ -338,8 +353,134 @@ class component_iri extends component_common {
 		if(SHOW_DEBUG===true) {
 			$search_query = " -- filter_by_search $search_tipo ". get_called_class() ." \n".$search_query;
 		}
+
 		return (string)$search_query;
 	}//end get_search_query
+
+
+
+	/**
+	* RESOLVE_QUERY_OBJECT_SQL
+	* @return object $query_object
+	*/
+	public static function resolve_query_object_sql($query_object) {
+		#debug_log(__METHOD__." query_object ".to_string($query_object), logger::DEBUG);
+		
+		$q = $query_object->q;
+		if (isset($query_object->type) && $query_object->type==='jsonb') {
+			$q = json_decode($q);
+		}
+
+		if (!is_object($q)) {
+			$q = json_decode($q);
+		}
+
+		$q = $q->iri;
+
+    	# Always set fixed values
+		$query_object->type = 'string';
+		
+		$q = pg_escape_string(stripslashes($q));
+		
+        switch (true) {
+        	/*
+			case ($q==='!*'):
+				$operator = 'IS NULL';
+				$q_clean  = '';
+				$query_object->operator = $operator;
+    			$query_object->q_parsed	= $q_clean;
+    			$query_object->unaccent = false;
+
+    			$clone = clone($query_object);
+	    			$clone->operator = '=';
+	    			$clone->q_parsed = "'[]'";
+
+				$logical_operator = '$or';
+    			$new_query_json = new stdClass;    			
+	    			$new_query_json->$logical_operator = [$query_object, $clone];
+    			# override
+    			$query_object = $new_query_json ;
+				break;
+			case ($q==='*'):
+				$operator = 'IS NOT NULL';
+				$q_clean  = '';
+				$query_object->operator = $operator;
+    			$query_object->q_parsed	= $q_clean;
+    			$query_object->unaccent = false;
+
+    			$clone = clone($query_object);
+	    			$clone->operator = '!=';
+	    			$clone->q_parsed = "'[]'";
+
+				$logical_operator ='$or';
+    			$new_query_json = new stdClass;    			
+    				$new_query_json->$logical_operator = [$query_object, $clone];    			
+    			# override
+    			$query_object = $new_query_json ;
+				break;
+			# IS DIFFERENT			
+			case (strpos($q, '!=')===0):
+				$operator = '!=';
+				$q_clean  = str_replace($operator, '', $q);
+				$query_object->operator = '!~';
+    			$query_object->q_parsed = '\'.*"'.$q_clean.'".*\'';
+    			$query_object->unaccent = false;
+				break;
+			# IS EQUAL
+			case (strpos($q, '=')===0):
+				$operator = '=';
+				$q_clean  = str_replace($operator, '', $q);
+				$query_object->operator = '~';
+    			$query_object->q_parsed	= '\'.*"'.$q_clean.'".*\'';
+    			$query_object->unaccent = false;
+				break;
+			# NOT CONTAIN
+			case (strpos($q, '-')===0):
+				$operator = '!~*';
+				$q_clean  = str_replace('-', '', $q);
+				$query_object->operator = $operator;
+    			$query_object->q_parsed	= '\'.*\[".*'.$q_clean.'.*\'';
+    			$query_object->unaccent = true;
+				break;
+			# CONTAIN				
+			case (substr($q, 0, 1)==='*' && substr($q, -1)==='*'):
+				$operator = '~*';
+				$q_clean  = str_replace('*', '', $q);
+				$query_object->operator = $operator;
+    			$query_object->q_parsed	= '\'.*\[".*'.$q_clean.'.*\'';
+    			$query_object->unaccent = true;
+				break;
+			# ENDS WITH
+			case (substr($q, 0, 1)==='*'):
+				$operator = '~*';
+				$q_clean  = str_replace('*', '', $q);
+				$query_object->operator = $operator;
+    			$query_object->q_parsed	= '\'.*\[".*'.$q_clean.'".*\'';
+    			$query_object->unaccent = true;
+				break;
+			# BEGINS WITH
+			case (substr($q, -1)==='*'):
+				$operator = '~*';
+				$q_clean  = str_replace('*', '', $q);
+				$query_object->operator = $operator;
+    			$query_object->q_parsed	= '\'.*\["'.$q_clean.'.*\'';
+    			$query_object->unaccent = true;
+				break;
+			*/
+			# CONTAIN
+			default:
+				$operator = '~*';
+				$q_clean  = str_replace('+', '', $q);				
+				$query_object->operator = $operator;
+				#$query_object->q_parsed	= '\'.*\[".*'.$q_clean.'.*\'';
+    			$query_object->q_parsed	= '\'.*\[{"iri":.*'.$q_clean.'.*}\]\''; // unaccent(nu4.datos#>>'{components,numisdata275,dato}') ~* unaccent('.*\[{"iri":.*net.*}\]'))
+    			$query_object->unaccent = true;
+				break;
+		}//end switch (true) {		
+       
+
+        return $query_object;
+	}//end resolve_query_object_sql
 
 
 

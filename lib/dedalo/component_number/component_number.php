@@ -5,8 +5,7 @@
 	$tipo 					= $this->get_tipo();
 	$parent 				= $this->get_parent();
 	$section_tipo 			= $this->get_section_tipo();
-	$modo					= $this->get_modo();		
-	$dato 					= $this->get_dato();
+	$modo					= $this->get_modo();	
 	$dato_reference_lang 	= NULL;
 	$traducible 			= $this->get_traducible();
 	$label 					= $this->get_label();				
@@ -14,8 +13,7 @@
 	$debugger				= $this->get_debugger();
 	$permissions			= $this->get_component_permissions();
 	$ejemplo				= $this->get_ejemplo();
-	$html_title				= "Info about $tipo";		
-	$valor					= $this->get_valor();				
+	$html_title				= "Info about $tipo";					
 	$lang					= $this->get_lang();
 	$lang_name				= $this->get_lang_name();
 	$identificador_unico	= $this->get_identificador_unico();
@@ -30,16 +28,22 @@
 	
 	switch($modo) {
 		case 'edit_in_list':
-						$file_name = 'edit';
-						$wrap_style 	= '';	// 'width:100%'; // Overwrite possible custon component structure css
+				$file_name = 'edit';
+				$wrap_style 	= '';	// 'width:100%'; // Overwrite possible custon component structure css
 				// Dont break here. Continue as modo edit
-						case 'tool_lang':
-						$file_name = 'edit';
+
+		case 'tool_lang':
+				$file_name = 'edit';
 
 		#case 'portal_edit'	:
 		#case 'portal_list'	:
-						#$file_name = 'edit';
-		case 'edit'	:	
+				#$file_name = 'edit';
+
+		case 'edit'	:
+
+				$dato 	= $this->get_dato();
+				$valor	= $this->get_valor();
+
 				# Verify component content record is inside section record filter
 				if ($this->get_filter_authorized_record()===false) return NULL ;
 
@@ -49,19 +53,26 @@
 					$from_modo = $var_requested;
 				}
 
-				$id_wrapper = 'wrapper_'.$identificador_unico;
-				$input_name = "{$tipo}_{$parent}";
+				$id_wrapper  = 'wrapper_'.$identificador_unico;
+				$input_name  = "{$tipo}_{$parent}";
 
-				$dato = htmlentities($dato);
+				// Converts to print as string formatted with . instead , for decimals
+				$dato_string = component_number::number_to_string($dato);
+					#dump($dato_text, ' $dato_text ++ '.to_string());
 										
-				$component_info 	= $this->get_component_info('json');
-												
+				$component_info = $this->get_component_info('json');												
 				break;
-		case 'print' :
-				$dato = htmlentities($dato);
 
+		case 'print' :
+				$dato 		 = $this->get_dato();
+				// Converts to print as string formatted with . instead , for decimals
+				$dato_string = component_number::number_to_string($dato);				
 				break;
-		case 'tool_time_machine'	:	
+
+		case 'tool_time_machine' :
+				$dato 	= $this->get_dato();
+				$valor	= $this->get_valor();
+				
 				$id_wrapper = 'wrapper_'.$identificador_unico.'_tm';
 				$input_name = "{$tipo}_{$parent}_tm";	
 				# Force file_name
@@ -71,6 +82,9 @@
 		case 'portal_list':
 		case 'list_tm' :
 		case 'list'	:
+				$dato 	= $this->get_dato();
+				$valor	= $this->get_valor();
+
 				$id_wrapper = 'wrapper_'.$identificador_unico;
 				$input_name = "{$tipo}_{$parent}";
 
@@ -80,7 +94,7 @@
 				$file_name = 'list';
 				break;
 						
-		case 'list_of_values'	:
+		case 'list_of_values':
 				break;
 
 		case 'relation':
@@ -92,11 +106,10 @@
 				break;
 		
 		case 'search':
-				# Showed only when permissions are >1
-				if ($permissions<1) return null;
-				
-				$dato = empty($dato) ? '' : $dato;
-
+				# dato is injected by trigger search wen is needed
+				$dato 	= $this->get_dato();
+				$valor	= $this->get_valor();			
+	
 				# Search input name (var search_input_name is injected in search -> records_search_list.phtml)
 				# and recovered in component_common->get_search_input_name()
 				# Normally is section_tipo + component_tipo, but when in portal can be portal_tipo + section_tipo + component_tipo
@@ -104,6 +117,8 @@
 				break;
 						
 		case 'list_thesaurus':
+				$dato 	= $this->get_dato();
+				$valor	= $this->get_valor();
 				$render_vars = $this->get_render_vars();
 				$icon_label = isset($render_vars->icon) ? $render_vars->icon : '';
 				break;					

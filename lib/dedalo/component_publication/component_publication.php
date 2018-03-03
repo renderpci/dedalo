@@ -15,7 +15,13 @@
 	$identificador_unico	= isset($this->identificador_unico) ? $this->identificador_unico : $this->get_identificador_unico();		
 	$component_name			= get_class($this);
 	$dato_string			= $this->get_dato_as_string();	
-	$file_name				= $modo;	
+	$file_name				= $modo;
+	$relation_type 			= $this->relation_type;
+
+	# Value yes
+	$value_yes = '[{"type":"'.$relation_type.'","section_id":"1","section_tipo":"dd64","from_component_tipo":"'.$tipo.'"}]';
+	# Value no
+	$value_no  = '[{"type":"'.$relation_type.'","section_id":"2","section_tipo":"dd64","from_component_tipo":"'.$tipo.'"}]';
 
 	if($permissions===0) return null;
 
@@ -29,7 +35,7 @@
 				if ($this->get_filter_authorized_record()===false) return NULL ;
 
 				$dato 				= $this->get_dato();
-				$dato_json 			= json_encode($dato);		
+				$dato_json 			= json_encode($dato);
 				$valor				= $this->get_valor();
 				$referenced_tipo 	= $this->get_referenced_tipo();
 				#$ar_list_of_values	= $this->get_ar_list_of_values( DEDALO_DATA_LANG, null );				
@@ -42,13 +48,12 @@
 		case 'list_tm' :
 				$file_name = 'list';							
 		case 'list' :
-
 				$valor  			= $this->get_valor();
 				echo $valor;
 				return;
 
 				$referenced_tipo 	= $this->get_referenced_tipo();
-				$ar_list_of_values	= $this->get_ar_list_of_values( DEDALO_DATA_LANG, null );				
+				#$ar_list_of_values	= $this->get_ar_list_of_values( DEDALO_DATA_LANG, null );				
 				$id_wrapper 		= 'wrapper_'.$identificador_unico;				
 				$input_name 		= 'publication_'.$identificador_unico;
 				#$js_code			= $this->generate_js();
@@ -62,17 +67,16 @@
 				break;						
 						
 		case 'search' :
-				# Showed only when permissions are >1
-				if ($permissions<1) return null;
+				$dato 				= $this->get_dato();
+				$dato_json 			= json_encode($dato);
+
+				$input_name 		= 'publication_'.$identificador_unico;
 				
 				$referenced_tipo 	= $this->get_referenced_tipo();
 				$ar_list_of_values	= $this->get_ar_list_of_values( DEDALO_DATA_LANG, null);			
-				
+					#dump($ar_list_of_values, ' $ar_list_of_values ++ '.to_string());
 				$ar_comparison_operators 	= $this->build_search_comparison_operators();
 				$ar_logical_operators 		= $this->build_search_logical_operators();
-
-				#$dato = isset($_REQUEST[$tipo]) ? $_REQUEST[$tipo] : null;
-				#get the change dato
 				
 				# Search input name (var search_input_name is injected in search -> records_search_list.phtml)
 				# and recovered in component_common->get_search_input_name()

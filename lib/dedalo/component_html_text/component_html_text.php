@@ -68,7 +68,8 @@
 					break;
 		
 		case 'tool_lang' :
-					$id_wrapper 		= 'wrapper_'.$identificador_unico.'_tool_lang';
+					#$id_wrapper 		= 'wrapper_'.$identificador_unico.'_tool_lang';
+					$id_wrapper 		= 'wrapper_'.$identificador_unico;
 					$input_name 		= "{$tipo}_{$parent}";
 					$text_area_tm 		= NULL;
 					$dato_reference_lang= NULL;
@@ -92,8 +93,8 @@
 					break;
 		
 		case 'search' :
-					# Showed only when permissions are >1
-					if ($permissions<1) return null;
+					# dato is injected by trigger search wen is needed
+					$dato = isset($this->dato) ? $this->dato : null;
 
 					# Search input name (var search_input_name is injected in search -> records_search_list.phtml)
 					# and recovered in component_common->get_search_input_name()

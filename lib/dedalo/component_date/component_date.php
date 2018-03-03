@@ -20,8 +20,7 @@
 	$component_name			= get_class($this);
 	$ejemplo 				= $this->get_ejemplo();
 	$propiedades 			= $this->get_propiedades();
-	$status 				= $this->get_status();
-	
+	$status 				= $this->get_status();	
 		
 
 	$file_name 				= $modo;
@@ -32,6 +31,7 @@
 	switch($modo) {
 		
 		case 'edit' :
+		case 'search' :
 				#$valor = $this->get_valor();
 				#dump($valor, ' valor'.to_string());
 				# Verify component content record is inside section record filter
@@ -49,9 +49,6 @@
 
 				$ar_dato = $dato;
 				$date_mode = $this->get_date_mode();
-				
-				$ar_dataframe_obj = array();
-				$ar_dataframe = isset($propiedades->dataframe) ? $propiedades->dataframe : false;
 
 				//create the array varibles for the modo
 				switch ($date_mode) {
@@ -66,7 +63,7 @@
 						$valor_year	= $valor_month = $valor_day = array();
 					default:
 						$input_name = array();
-						$valor	= array();
+						$valor		= array();
 						break;
 				}
 				$ar_dato = empty($dato) ? array("") : $dato;
@@ -97,7 +94,7 @@
 											: component_date::get_valor_local( $dd_date, false );
 							}
 							break;
-						case 'period':			
+						case 'period':
 							
 							$placeholder_year 	= 'Y';//labeL::get_label('anyos');
 							$placeholder_month 	= 'M';//labeL::get_label('meses');
@@ -129,11 +126,12 @@
 							if(!empty($current_dato)) {
 								$dd_date 	= new dd_date($current_dato);
 
-								$hour  	 = isset($dd_date->hour)	? $dd_date->hour : '00';
-								$minute  = isset($dd_date->minute)	? $dd_date->minute : '00';
-								$second  = isset($dd_date->second)	? $dd_date->second : '00';
 								$separator_time = ':';
-								$valor[$key] 	 = $hour . $separator_time . $minute . $separator_time . $second;
+								$hour  	 = isset($dd_date->hour)	? sprintf("%02d", $dd_date->hour)   : '';
+								$minute  = isset($dd_date->minute)	? $separator_time . sprintf("%02d", $dd_date->minute) : '';
+								$second  = isset($dd_date->second)	? $separator_time . sprintf("%02d", $dd_date->second) : '';								
+
+								$valor[$key] = $hour . $minute . $second;
 							}
 							break;
 						case 'date':
@@ -143,9 +141,9 @@
 								$dd_date 	= new dd_date($current_dato);
 
 								if (isset($propiedades->method->get_valor_local)) {
-									$valor[$key]	= component_date::get_valor_local( $dd_date, reset($propiedades->method->get_valor_local) );
+									$valor[$key] = component_date::get_valor_local( $dd_date, reset($propiedades->method->get_valor_local) );
 								}else{
-									$valor[$key]	= component_date::get_valor_local( $dd_date, false );
+									$valor[$key] = component_date::get_valor_local( $dd_date, false );
 										#dump($valor[$key], '$valor[$key] ++ '.to_string());
 								}
 							}
@@ -154,6 +152,8 @@
 
 					#
 					# DATAFRAME MANAGER	
+					$ar_dataframe_obj = array();
+					$ar_dataframe = isset($propiedades->dataframe) ? $propiedades->dataframe : false;
 					if($ar_dataframe !==false){
 						foreach ($ar_dataframe as $current_dataframe) {
 							if ($current_dataframe->tipo!==false) {
@@ -161,18 +161,21 @@
 								$ar_dataframe_obj[] = $dataframe_obj;
 							}	
 						}
-					}
-				
-					
+					}					
 
 				}//end foreach ($ar_dato as $key => $current_dato)
 
-				
-
-
 				#dump($date_mode, ' date_mode ++ '.to_string());
 				$mandatory 		= (isset($propiedades->mandatory) && $propiedades->mandatory===true) ? true : false;
-				$mandatory_json = json_encode($mandatory);	
+				$mandatory_json = json_encode($mandatory);
+
+				if ($modo==="search") {
+					$file_name = 'search';
+					# dato is injected by trigger search wen is needed
+					$dato = isset($this->dato) ? $this->dato : [''];
+					$ar_comparison_operators 	= $this->build_search_comparison_operators();
+					$ar_logical_operators 		= $this->build_search_logical_operators();
+				}
 				break;
 		
 		case 'portal_list'	:
@@ -271,12 +274,12 @@
 				$file_name  = 'edit';
 				break;
 				
+		case 'search__DES':
+				# dato is injected by trigger search wen is needed
+				$dato = isset($this->dato) ? $this->dato : [''];
 
-		case 'search':
-				# Showed only when permissions are >1
-				if ($permissions<1) return null;
+				$date_mode = $this->get_date_mode();
 				
-				$valor = '';
 				$ar_comparison_operators 	= $this->build_search_comparison_operators();
 				$ar_logical_operators 		= $this->build_search_logical_operators();
 

@@ -1,4 +1,7 @@
 <?php
+	die("Unused!!!");
+	/*
+
 
 	# VISUALIZADOR HTML
 	
@@ -56,7 +59,7 @@
 					if ($total_list_time>$limit_time) {
 						$style = "color:red";
 					}			
-					$html_info .= "<div class=\"debug_sql_time\" style=\"{$style}\" onclick=\"$(this).children('pre').toggle()\"> Time To Generate section list: ";
+					$html_info .= "<div class=\"debug_sql_time\" style=\"{$style}\" ondblclick=\"$(this).children('pre').toggle()\"> Time To Generate section list: ";
 					$html_info .= $total_list_time;
 					$html_info .= ", get_records_data:".$this->rows_obj->generated_time['get_records_data']." (over {$this->rows_obj->options->full_count} records)";
 					$html_info .= ", HTML section list: ".round(microtime(1)-$start_time,3);
@@ -75,6 +78,11 @@
 					}
 					$html_info .= ", strQuery:";
 					$html_info .= "<pre style=\"display:none\"> ".$this->rows_obj->strQuery ."</pre>";
+
+					$search_options = $_SESSION['dedalo4']['config']['search_options'][$this->rows_obj->options->search_options_session_key];
+					$search_options = json_encode($search_options, JSON_PRETTY_PRINT);
+					$html_info .= "<br><pre style=\"display:none\">$search_options</pre>";
+
 					$html_info .= "</div>";
 					#echo "<div> Time To Generate section list: HTML: ".round(microtime(1)-$start_time,3)."</div>";
 						
@@ -91,4 +99,5 @@
 	
 	
 	print "\n</div><!-- /css_section_list_wrap -->\n\n"; //wrap
+	*/
 ?>

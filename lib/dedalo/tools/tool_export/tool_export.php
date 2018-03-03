@@ -43,21 +43,23 @@
 				#
 				# COLUMNS
 				case 'columns':
-
-					#css::$ar_url[] = BOOTSTRAP_CSS_URL;
-					array_unshift(css::$ar_url_basic, BOOTSTRAP_CSS_URL);
+					
+					#array_unshift(css::$ar_url_basic, BOOTSTRAP_CSS_URL);
 					js::$ar_url[]  = DEDALO_ROOT_WEB.'/lib/jquery/grids/grids.min.js';
 
 					$section_label = RecordObj_dd::get_termino_by_tipo($section_tipo, DEDALO_APPLICATION_LANG, true, true);
 
+					# SAVED_SEARCH_OPTIONS
+					$search_options_id 	  = $section_tipo; // section tipo like oh1
+					$saved_search_options = section_records::get_search_options( $search_options_id );
+					$search_query_object  = $saved_search_options->search_query_object;
+
 					#
 					# Current searched records stats info
-					$search_options_session_key = 'section_'.$section_tipo;
-					if (!isset($_SESSION['dedalo4']['config']['search_options'][$search_options_session_key])) {
-						trigger_error("Sorry, search_options_session_key [$search_options_session_key] not exits in session");						
+					if (!$saved_search_options) {
+						trigger_error("Sorry, saved_search_options [$search_options_id] not exits");						
 					}
-					$total_records = isset($_SESSION['dedalo4']['config']['search_options'][$search_options_session_key]->full_count) ? $_SESSION['dedalo4']['config']['search_options'][$search_options_session_key]->full_count : 0;
-						#dump($options_search, ' options_search ++ '.to_string($total_records)); die();
+					$total_records = isset($search_query_object->full_count) ? $search_query_object->full_count : 0;
 					if ($total_records<1) {
 						return "Sorry, before export, navigate to section $section_label and select export option";
 					}

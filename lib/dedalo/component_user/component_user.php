@@ -33,8 +33,8 @@
 	switch($modo) {		
 		
 		case 'search' :
-				# Showed only when permissions are >1
-				if ($permissions<1) return null;
+				# dato is injected by trigger search when is needed
+				$dato = isset($this->dato) ? $this->dato : null;
 				
 				$file_name = 'list';
 

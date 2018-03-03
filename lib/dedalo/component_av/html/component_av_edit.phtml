@@ -48,15 +48,15 @@
 							 !$this->get_original_file_path(DEDALO_AV_QUALITY_ORIGINAL)
 							) {
 							
-							$open_tool_default = "data-video_id=\"$video_id\" ";
-							$open_tool_default = "data-quality=\"".DEDALO_AV_QUALITY_ORIGINAL."\" ";
-							$open_tool_default = "data-aditional_path=\"$aditional_path\" ";
-							$open_tool_default = "data-initial_media_path=\"$initial_media_path\" ";
-							$open_tool_default = "data-tipo=\"$tipo\" ";
-							$open_tool_default = "data-parent=\"$parent\" ";
-							$open_tool_default = "data-section_tipo=\"$section_tipo\" ";
-							$open_tool_default = "onclick=\"tool_common.open_tool_upload(this)\" ";
-							$open_tool_default = "title=\"Upload file in original quality\" ";
+							$open_tool_default .= "data-video_id=\"$video_id\" ";
+							$open_tool_default .= "data-quality=\"".DEDALO_AV_QUALITY_ORIGINAL."\" ";
+							$open_tool_default .= "data-aditional_path=\"$aditional_path\" ";
+							$open_tool_default .= "data-initial_media_path=\"$initial_media_path\" ";
+							$open_tool_default .= "data-tipo=\"$tipo\" ";
+							$open_tool_default .= "data-parent=\"$parent\" ";
+							$open_tool_default .= "data-section_tipo=\"$section_tipo\" ";
+							$open_tool_default .= "onclick=\"tool_common.open_tool_upload(this)\" ";
+							$open_tool_default .= "title=\"Upload file in original quality\" ";
 
 							$add_class = 'no_file';
 						}

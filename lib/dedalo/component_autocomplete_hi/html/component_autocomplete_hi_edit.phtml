@@ -113,7 +113,7 @@
 						# OPTIONS
 						if ($ar_filter_options!==false) {
 						
-							$html_content .= "<div class=\"icon_bs toponymy_list_button_options edit_hidden\"></div>";
+							$html_content .= "<div class=\"icon_bs toponymy_list_button_options edit_hidden\" onclick=\"component_autocomplete_hi.toggle_toponymy_list(this)\"></div>";
 
 							$cookie_name = 'toponymy_list_'.$section_tipo .'_'. $tipo;
 							$html_content .= "<ul class=\"toponymy_list text_unselectable\">";

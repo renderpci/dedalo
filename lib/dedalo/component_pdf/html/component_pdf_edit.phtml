@@ -40,7 +40,6 @@
 						$html_contenido .= " <div class=\"css_wrap_pdf_thumb\">";						
 						$html_contenido .= $pdf_thumb_html ; # Rendered in thumb mode
 						$html_contenido .= " </div>";
-
 					}
 					break;
 
@@ -67,18 +66,18 @@
 						$open_tool_default='';
 						$add_class='';
 						# FILE NOT EXISTS. PLACE DEDALO PDF WITH LINK TO DEFAULT TOOL
-						$open_tool_default ="data-pdf_id=\"$pdf_id\" ";
-						$open_tool_default ="data-quality=\"".DEDALO_PDF_QUALITY_DEFAULT."\" ";
-						$open_tool_default ="data-aditional_path=\"$aditional_path\" ";
-						$open_tool_default ="data-initial_media_path=\"$initial_media_path\" ";
-						$open_tool_default ="data-tipo=\"$tipo\" ";
-						$open_tool_default ="data-parent=\"$parent\" ";
-						$open_tool_default ="data-section_tipo=\"$section_tipo\" ";
-						$open_tool_default ="onclick=\"tool_common.open_tool_upload(this)\" ";
-						$open_tool_default ="title=\"Upload file in original quality\" ";
+						$open_tool_default .="data-pdf_id=\"$pdf_id\" ";
+						$open_tool_default .="data-quality=\"".DEDALO_PDF_QUALITY_DEFAULT."\" ";
+						$open_tool_default .="data-aditional_path=\"$aditional_path\" ";
+						$open_tool_default .="data-initial_media_path=\"$initial_media_path\" ";
+						$open_tool_default .="data-tipo=\"$tipo\" ";
+						$open_tool_default .="data-parent=\"$parent\" ";
+						$open_tool_default .="data-section_tipo=\"$section_tipo\" ";
+						$open_tool_default .="onclick=\"tool_common.open_tool_upload(this)\" ";
+						$open_tool_default .="title=\"Upload file in original quality\" ";
 
 						$html_contenido .= "<a class=\"css_wrap_pdf_thumb no_pdf_file\" $open_tool_default tabindex=\"1\">";
-						$html_contenido .= "<span class=\"\" >No file is loaded. Click to upload PDF</span>";
+						$html_contenido .= "<span class=\"\">No file is loaded. Click to upload PDF</span>";
 						$html_contenido .= "</a>";
 					}
 					break;

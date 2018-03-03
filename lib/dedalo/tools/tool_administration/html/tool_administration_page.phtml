@@ -2,9 +2,8 @@
 
 	# VISUALIZADOR HTML		
 
-	$html    = "\n<!-- TOOL ADMINISTRATION -->";	
-	$html   .= "\n<div class=\"wrap_tool wrap_tool_administration_page\" >";
-
+	$html    = "<!-- TOOL ADMINISTRATION -->";	
+	$html   .= "<div class=\"wrap_tool wrap_tool_administration_page\">";
 
 	
 	
@@ -29,7 +28,7 @@
 
 	#
 	# ADMIN UTILS
-	$html   .= "\n<div class=\"content_data block-content-1\" >";
+	$html   .= "<div class=\"content_data block-content-1\" >";
 
 		# Check PHP shell_exec permissions
 		$a = shell_exec("ls -l");
@@ -65,8 +64,9 @@
 			#
 			# UPDATE STRUCTURE
 				$html   .= "<div class=\"panel_option\">";
-				$html   .= "  <span class=\"glyphicon glyphicon-cog\" aria-hidden=\"true\"></span> ";			
-				if (DEDALO_ENTITY=="master") {
+				$html   .= "  <span class=\"glyphicon glyphicon-cog\" aria-hidden=\"true\"></span> ";
+				$from_remote = '';			
+				if (DEDALO_ENTITY==="master") {
 				$html   .= " <a> ".label::get_label('actualizar_estructura')." is a disabled for ".DEDALO_ENTITY." </a>";
 				}else{
 				if (defined('STRUCTURE_FROM_SERVER') && STRUCTURE_FROM_SERVER===true && !empty(STRUCTURE_SERVER_URL)) {
@@ -84,12 +84,12 @@
 				$html   .= "</div>";#end panel_option
 
 
+
 			#
 			# UPDATE VERSION
 				$html   .= "<div class=\"panel_option\"> ";
 				$html   .= "  <span class=\"glyphicon glyphicon-cog\" aria-hidden=\"true\"></span> ";
-				if($update_version) {				
-
+				if(!empty($update_version)) {
 					#$html   .= "  <div class=\"panel_option\">";
 					#$html   .= "  <span class=\"glyphicon glyphicon-cog\" aria-hidden=\"true\"></span> ";
 					#$html   .= "  <a href=\"javascript:;\"
@@ -97,18 +97,19 @@
 					#data-update_version=\"$update_version\" onclick=\"tool_administration.update_version(this,event)\">".label::get_label('actualizar')." ".label::get_label('datos')."</a>";
 					$html   .= "  <span>".label::get_label('actualizar')." ".label::get_label('datos')."</span>";
 
-					$html 	.= "  <span>[";
-					$html 	.= "  <span id=\"update_current_version\">Dédalo ver: $current_dedalo_version</span> - ";
-					$html 	.= "  <span id=\"update_current_version\">User data in PostgreSQL ver: $current_version_in_db</span>";
-					$html 	.= "  ]</span>";
+					#$html 	.= "  <span>[";
+					#$html 	.= "  <span id=\"update_current_version\">Dédalo ver: $current_dedalo_version</span> - ";
+					#$html 	.= "  <span id=\"update_current_version\">User data in PostgreSQL ver: $current_version_in_db</span>";
+					#$html 	.= "  ]</span>";
 					
 					$html   .= " <div class=\"panel_option_subcontent\">";
-					$html 	.= "  <span id=\"update_current_version\">$current_version_in_db</span>";
+					$html 	.= "  <span id=\"update_current_version\" style=\"color:#DC1105\">Current data version: $current_version_in_db</span>";
 					$html 	.= "  <span id=\"update_to_version\"> -----> $update_version</span>";
 
 
-					include(dirname(dirname(__FILE__)) .'/updates/updates.php');
+					include(dirname(dirname(__FILE__)) .'/updates/updates.php'); # Not once !
 					$update_version_plain = str_replace('.', '', $update_version);
+					#	dump($update_version_plain, ' update_version_plain ++ '.to_string());
 					if (isset($updates->$update_version_plain->alert_update)) {
 						foreach ($updates->$update_version_plain->alert_update as $akey => $avalue) {
 							$notification = $avalue->notification;
@@ -121,11 +122,13 @@
 					
 					#if(SHOW_DEBUG===true) {
 						// Show updates object (current target correspondence) with all config to apply to current update script
-						$html   .= " <input type=\"button\" class=\"btn btn-default btn-sm btn_update\" value=\"Run all update data version actions\"
-						data-mode=\"update_version\"
-						data-update_version=\"$update_version\"
-						onclick=\"tool_administration.update_version(this,event)\">";
+						$html   .= "<input type=\"button\" class=\"btn btn-default btn-sm btn_update\" value=\"Run all update data version actions\" ";
+						$html   .= "data-mode=\"update_version\" ";
+						$html   .= "data-update_version=\"$update_version\" ";
+						$html   .= "onclick=\"tool_administration.update_version(this,event)\" ";
+						$html   .= ">";
 						# Actions list
+						# dump($updates, '$updates->$update_version_plain ++ '.to_string());
 						if (isset($updates->$update_version_plain)) {
 							foreach ($updates->$update_version_plain as $key => $value) {
 								
@@ -147,21 +150,24 @@
 
 				}else{
 
-					$html   	.=  " <span>".label::get_label('actualizar')."</span>";
+					$html   .= "  <span>".label::get_label('actualizar')." ".label::get_label('datos')."</span> ";
 
-					$html 		.= "  <span id=\"update_current_version\">$current_dedalo_version</span>";
+					#$html 		.= "  <span id=\"update_current_version\">$current_dedalo_version</span>";
+					#$html 		.= "  <span id=\"update_current_version\">Current data version: $current_version_in_db</span>";
 					$html   	.= " <div class=\"panel_option_subcontent\">";
-					if($current_dedalo_version == $current_version_in_db){
+
+					#if($current_dedalo_version == $current_version_in_db) {
 						$html 	.= "  <span class=\"glyphicon glyphicon-ok-circle\" aria-hidden=\"true\" style=\"color:#5cbd39\"></span> ";
-						$html 	.= "  <span class=\"\" style=\"color:#5cbd39\">Data format is updated</span> ";
-					}else{
-						$html 	.= "  <span class=\"glyphicon glyphicon-ban-circle\" aria-hidden=\"true\" style=\"color:#f72f19\"></span> ";
-						$html 	.= "  <span id=\"update_current_version\">User data in PostgreSQL ver: $current_version_in_db</span> </br>";					
-						$html 	.= "  <span>ALERT: DON'T HAVE UPDATE!!</span> </br>";
-					}
+						$html 	.= "  <span class=\"\" style=\"color:#5cbd39\">Data format is updated [$current_version_in_db]</span> ";
+					#}else{
+					#	$html 	.= "  <span class=\"glyphicon glyphicon-ban-circle\" aria-hidden=\"true\" style=\"color:#f72f19\"></span> ";
+					#	$html 	.= "  <span id=\"update_current_version\">User data in PostgreSQL ver: $current_version_in_db</span> </br>";					
+					#	$html 	.= "  <span>ALERT: DON'T HAVE UPDATE!!</span> </br>";
+					#}
 					$html  		.= "  </div>";#end panel_option_subcontent
 				}
 				$html   .= "</div>";#end panel_option
+
 
 
 			/*
@@ -177,17 +183,35 @@
 			*/
 
 
+
 			#
 			# REMOVE_INVERSE_LOCATORS_IN_SECTION
+				/*
 				$html   .= "<div class=\"panel_option form-inline\">";
 				$html   .= "  <span class=\"glyphicon glyphicon-cog\" aria-hidden=\"true\"></span>";
-				$html   .= "  <span>".label::get_label('remove_inverse_locators_in_section')."</span>";
+				$html   .= "  <span>".label::get_label('remove_inverse_locators_in_section')." (old inverse locators, from section dato)</span>";
 				$html   .= " <div class=\"panel_option_subcontent\">";
-				$html   .= "  <input type=\"text\" id=\"remove_inverse_locators_in_section_section_tipo\" class=\"form-control input-sm\" autocomplete=\"off\" placeholder=\"".label::get_label('section_tipo')."\" />";
+				$html   .= "  <input type=\"text\" id=\"remove_inverse_locators_in_section_tables\" class=\"form-control input-sm\" style=\"width:50%\" autocomplete=\"off\" placeholder=\"".label::get_label('section_tipo')." (you can use sequences like 'rsc170,rsc197')\" />";
 				$html   .= "  <input type=\"button\" class=\"btn btn-default btn-sm\" value=\"".label::get_label('borrar')."\" data-mode=\"remove_inverse_locators_in_section\" onclick=\"tool_administration.remove_inverse_locators_in_section(this, event)\" />";
 				$html   .= "  <div id=\"remove_inverse_locators_in_section_response\"></div>";
 				$html   .= " </div>";#end panel_option_subcontent
 				$html   .= "</div>";#end panel_option
+				*/
+
+
+
+			#
+			# PROPAGATE_RELATIONS
+				$html   .= "<div class=\"panel_option form-inline\">";
+				$html   .= "  <span class=\"glyphicon glyphicon-cog\" aria-hidden=\"true\"></span>";
+				$html   .= "  <span>".label::get_label('propagar_relaciones')."</span>";
+				$html   .= " <div class=\"panel_option_subcontent\">";
+				$html   .= "  <input type=\"text\" id=\"propagate_relations_tables\" class=\"form-control input-sm\" style=\"width:50%\" autocomplete=\"off\" placeholder=\"".label::get_label('tablas')." (you can use sequences like 'matrix,matrix_list')\" />";
+				$html   .= "  <input type=\"button\" class=\"btn btn-default btn-sm\" value=\"Ok\" data-mode=\"propagate_relations\" onclick=\"tool_administration.propagate_relations(this, event)\" />";
+				$html   .= "  <div id=\"propagate_relations_response\"></div>";
+				$html   .= " </div>";#end panel_option_subcontent
+				$html   .= "</div>";#end panel_option
+
 
 
 			#
@@ -199,6 +223,7 @@
 				$html   .= "  <div id=\"build_structure_css_response\"></div>";
 				$html   .= " </div>";#end panel_option_subcontent
 				$html   .= "</div>";#end panel_option
+
 
 
 			#
@@ -221,6 +246,7 @@
 				$html   .= " </div>";#end panel_option_subcontent
 
 				$html   .= "</div>";#end panel_option
+
 
 
 			#
@@ -250,6 +276,56 @@
 				$html   .= "  <div id=\"remove_av_temporals_response\"></div>";
 				$html   .= " </div>";#end panel_option_subcontent
 				$html   .= "</div>";#end panel_option
+
+
+
+			#
+			# RENUMERATE SECTION_ID
+				$html   .= "<div class=\"panel_option form-inline\"> ";
+				
+				$html   .= " <span class=\"glyphicon glyphicon-cog\" aria-hidden=\"true\"></span>";
+				$html   .= " <span>".label::get_label('renumerar_secciones')."</span>";
+
+				$html   .= " <div class=\"panel_option_subcontent\">";
+
+				$html   .= "  <span title=\"section tipo\">".label::get_label('section_tipo')."</span>";
+				$html   .= "  <input type=\"text\" id=\"renumerate_section_tipo\" class=\"form-control input-sm\" style=\"width:120px;\" autocomplete=\"off\" placeholder=\"".'section_tipo'."\" />";
+
+				$html   .= "  <span title=\"component tipo\">".label::get_label('section_id_start')."</span>";
+				$html   .= "  <input type=\"text\" id=\"renumerate_section_id_start\" class=\"form-control input-sm\" style=\"width:90px;\" autocomplete=\"off\" placeholder=\"".'start'."\" />";
+
+				$html   .= "  <span title=\"component tipo\">".label::get_label('section_id_end')."</span>";
+				$html   .= "  <input type=\"text\" id=\"renumerate_section_id_end\" class=\"form-control input-sm\" style=\"width:90px;\" autocomplete=\"off\" placeholder=\"".'end'."\" />";
+
+				$html   .= "  <span title=\"component tipo\">".label::get_label('counter_start')."</span>";
+				$html   .= "  <input type=\"text\" id=\"renumerate_counter_start\" class=\"form-control input-sm\" style=\"width:110px;\" autocomplete=\"off\" placeholder=\"".'counter_start'."\" />";
+								
+				$html   .= "  <div class=\"checkbox\"><label><input type=\"checkbox\" id=\"renumerate_save\" class=\"form-control input-sm\" name=\"Save\" value=\"true\" /> <span>".label::get_label('salvar')."</span></label></div>";	
+				$html   .= "  <input type=\"button\" class=\"btn btn-default btn-sm\" value=\"".strip_tags(label::get_label('renumerate'))."\" data-mode=\"renumerate_sections\" onclick=\"tool_administration.renumerate_sections(this,event)\" />";
+				$html   .= "  <div id=\"renumerate_sections_response\"></div>";
+				$html   .= " </div>";#end panel_option_subcontent
+
+				$html   .= "</div>";#end panel_option
+
+
+			#
+			# EXPORT HIERARCHY (TOPONOMY)
+				$html   .= "<div class=\"panel_option form-inline\"> ";
+				
+				$html   .= " <span class=\"glyphicon glyphicon-cog\" aria-hidden=\"true\"></span>";
+				$html   .= " <span>".label::get_label('exportar_jerarquias').". Create files like es1.copy.gz in /install/import/hierarchy (for MASTER toponomy export)</span>";
+
+				$html   .= " <div class=\"panel_option_subcontent\">";
+
+				$html   .= "  <span title=\"section tipo\">".label::get_label('section_tipo')."</span>";
+				$html   .= "  <input type=\"text\" id=\"export_hierarchy_section_tipo\" class=\"form-control input-sm\" style=\"width:40.3%;\" autocomplete=\"off\" placeholder=\"section tipo like es1,es2 or * for all active\"/>";
+					
+				$html   .= "  <input type=\"button\" class=\"btn btn-default btn-sm\" value=\"".strip_tags(label::get_label('ok'))."\" data-mode=\"export_hierarchy\" onclick=\"tool_administration.export_hierarchy(this,event)\" />";
+				$html   .= "  <div id=\"export_hierarchy_response\"></div>";
+				$html   .= " </div>";#end panel_option_subcontent
+
+				$html   .= "</div>";#end panel_option
+
 
 
 			#
@@ -297,6 +373,7 @@
 				$html   .= "</div>";#end panel_option
 
 
+
 			#
 			# UPDATE_JER_FROM_4_0_TO_4_1
 				$html   .= "<div class=\"panel_option form-inline\"> ";			
@@ -310,6 +387,7 @@
 				$html   .= "  <div id=\"update_jer_from_4_0_to_4_1_response\"></div>";
 				$html   .= " </div>";#end panel_option_subcontent
 				$html   .= "</div>";#end panel_option
+
 
 
 		$html   .= "  </div>";//end panel-body
@@ -355,7 +433,66 @@
 		$html   .= "  </div>";//end panel-body
 		$html   .= "</div>";//end panel-info
 
-	$html   .= "\n</div>";//end content_data
+	$html   .= "</div>";//end content_data
+
+
+
+
+
+	#
+	# SEARCH_QUERY_OBJECT TEST
+	$html   .= "<div class=\"content_data\">";	// text_shadow_inset
+
+		# PANELS
+		$html   .= "<div class=\"panel panel-info\">";
+		$html   .= "  <div class=\"panel-heading\">";
+		$html   .= "    <h3 class=\"panel-title\"> SEARCH QUERY OBJECT TEST ENVIROMENT </h3>";
+		$html   .= "  </div>";
+		$html   .= "  <div class=\"panel-body\">";
+
+			#
+			# FORCE_UNLOCK_ALL_COMPONENTS
+			$html   .= "<div class=\"panel_option\">";
+
+			##
+			# Text area
+			$editor_id = 'json_editor';
+			$html .= "<textarea class=\"css_input_text_json\" ";
+			#$html .= "onchange=\"component_json.Save(this)\" ";
+			$html .= "id=\"{$editor_id}\"  ";
+			#$html .= "name=\"{$input_name}\" ";
+			#$html .= "title=\"$html_title\" ";			
+			$html .= ">{}</textarea>";
+
+			#
+			# JSON EDITOR (EXPERIMENTAL)
+			#$html .= "<div id=\"{$editor_id}_save_document\" class=\"saveDocument\">Save</div>";
+			$html .= "<div id=\"{$editor_id}_container\" class=\"editor_json\" style=\"height:500px\"></div>";
+			$html .= "<div id=\"convert_search_object_to_sql_query_response\" class=\"\"> convert_search_object_to_sql_query_response </div>";
+
+			$html .= "<script>";
+			$html .= "tool_administration.init_json_editor({\"editor_id\":\"{$editor_id}\"})";			
+			$html .= "</script>";
+			/*
+			$html   .= "  <span class=\"glyphicon glyphicon-cog\" aria-hidden=\"true\"></span>";
+			$html   .= "  <a href=\"javascript:;\" data-mode=\"force_unlock_all_components\" onclick=\"tool_administration.force_unlock_all_components(this, event)\">".label::get_label('desbloquear_todos_los_componentes')."</a>";
+			$html   .= " <div class=\"panel_option_subcontent\">";	
+			$html   .= "  <div id=\"force_unlock_all_components_response\"></div>";
+			$html   .= " </div>";#end panel_option_subcontent
+			*/
+			$html   .= "</div>";#end panel_option
+
+		
+		
+
+		$html   .= "  </div>";//end panel-body
+		$html   .= "</div>";//end panel-info
+
+	$html   .= "</div>";//end content_data
+
+
+
+
 
 	
 	#
@@ -419,7 +556,7 @@
 			$html .= tool_administration::show_info( "PHP user",
 													 $processUser['name'],
 													 $processUser
-													);
+													);			
 			}
 
 
@@ -731,10 +868,14 @@
 
 
 		#$html   .= "  </div>";//end panel-body		
-		$html   .= "</div>";//end #system_info_content
-	
+		$html   .= "</div>";//end #system_info_content	
 
 	$html .= "\n</div><!-- /content_data block-content-2 -->";
+
+
+
+
+	
 
 
 
@@ -774,5 +915,5 @@
 	
 
 	print $html;
-		
+
 ?>

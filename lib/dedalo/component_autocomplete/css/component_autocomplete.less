@@ -9,7 +9,9 @@
 /* WRAP DIV CONTAINER
 --------------------------------------------- */
 .css_wrap_autocomplete {
+	//background-color: @color_orange !important;
 
+	//min-height: 50px; // A
 	}
 	.css_wrap_autocomplete > .content_data {
 		/*
@@ -23,6 +25,8 @@
 		*/
 	}
 
+
+
 	/* BUTTONS_AND_FIELDS
 	--------------------------------------------- */
 	.css_wrap_autocomplete .buttons_and_fields {
@@ -31,11 +35,64 @@
 		//width: 100%;
 		position: relative;
 		height: 30px;
-
 		float: right;
-		//top: 17px;
-		//margin-bottom: 12px;
 		}
+
+		/* BTN DELETE */
+		.css_autocomplete_button_delete {
+			position: relative;
+			top: 0px;
+			margin-right: 5px;
+			background-position: -456px 0;
+			opacity: 0.3;
+		}
+		/* BTN EDIT SECTION */
+		.edit_autocomplete {
+			float: right;
+			position: relative;
+			top: -17px;
+			background-position: 0 -72px;
+			opacity: 0.3;
+		}
+		/* BTN EDIT ROW */
+		.edit_autocomplete_row {
+			top: 1px;
+		    left: 5px;
+		}
+		/* BTN NEW */
+		.new_autocomplete {
+			float: right;	
+			position: relative;
+			top: -17px;
+			right: 5px;
+			background-position: 0 -96px;
+			opacity: 0.3;
+		}
+
+
+
+
+	/* VALOR TEXT
+	--------------------------------------------- */
+	.css_autocomplete_valor {
+		display: inline-block;
+		color: #1a1a1a;
+		padding: 3px;
+		padding-left: 0px;
+		padding-right: 5px;	
+	}
+
+
+	/* THESAURUS CONTEXT
+	--------------------------------------------- */
+	.data_container .css_wrap_autocomplete .buttons_and_fields {
+		visibility: hidden;
+		display: none !important;
+	}
+	.data_container .css_wrap_autocomplete .css_autocomplete_button_delete {
+		visibility: hidden;
+		display: none !important;
+	}
 
 
 
@@ -44,7 +101,7 @@
 	--------------------------------------------- */
 	input.css_autocomplete_search_field {
 		float: right;
-		width: 90px;
+		width: 100px;
 		//right: -30px;
 		//position: relative;
 		right: 0;
@@ -53,14 +110,14 @@
 		background: white url('../../themes/default/lupa2.svg') right center no-repeat;
 		background-size: auto 100%;
 		background-position-x: 75%;
-		transition: all 0.25s ease-in-out;
+		transition: all 0.2s ease-in-out;
 		}
 		input.css_autocomplete_search_field:hover {
 			opacity: 1;
 		}
 		input.css_autocomplete_search_field:focus {
 			opacity: 1;
-			width: 90px;
+			width: 150px;
 			background-position-x: 95%;
 		}
 
@@ -74,13 +131,24 @@
 			opacity: 1
 		}
 		div.autocomplete_list_button_options.in_search_mode {
-			position: relative;
+			/*position: relative;
 			float: left;
 			top: 1px;
-			zoom: 1.45;
 			margin-right: 5px;
 			margin-left: 5px;
+			zoom: 1.45;
+			//transform: scale(200);*/
+
+			position: relative;			
+			top: 1px;
+			margin-right: 5px;
+			margin-left: 39px;
+			zoom: 1.45;
 		}
+
+	.ui-autocomplete-loading {
+		background: white url('../../themes/default/spinner.gif') right center no-repeat;
+	}
 
 
 
@@ -100,185 +168,117 @@
 		}
 
 
-	.ui-autocomplete-loading {
-		background: white url('../../themes/default/spinner.gif') right center no-repeat;
-	}
 
 
-	/* BTN DELETE */
-	.css_autocomplete_button_delete {
-		position: relative;
-		top: 0px;
-		margin-right: 5px;
-		background-position: -456px 0;
-		opacity: 0.3;
-	}
-	/* BTN EDIT SECTION */
-	.edit_autocomplete {
-		float: right;
-		position: relative;
-		top: -17px;
-		background-position: 0 -72px;
-		opacity: 0.3;
-	}
-	/* BTN EDIT ROW */
-	.edit_autocomplete_row {
-		top: 2px;
-	    left: 5px;
-	}
-	/* BTN NEW */
-	.new_autocomplete {
-		float: right;	
-		position: relative;
-		top: -17px;
-		right: 5px;
-		background-position: 0 -96px;
-		opacity: 0.3;
-	}
+	/* autocomplete_semantic_nodes
+	---------------------------------------- */
+		.autocomplete_semantic_nodes {
+			background-color: rgba(232, 232, 232, 0.81);
+			border-radius: 4px;
+			margin: 3px;
+			margin-left: 15px;
+			padding: 4px;	
+			display: block;
+			white-space: nowrap;
+			width: 100%;
+			min-height: 1.75em;
+		}
 
 
-	/* VALOR TEXT
-	--------------------------------------------- */
-	.css_autocomplete_valor {
+
+	.css_autocomplete_ul_edit_in_portal {
 		display: inline-block;
-		color: #1a1a1a;
-		padding: 3px;
-		padding-left: 0px;
-		padding-right: 5px;	
+		width: 16px;
+		height: 16px;
+		background-size: cover;
+		float: left;
+		background: url('../../themes/default/close.svg') center center no-repeat;
+		-webkit-transform: rotate(45deg);
+	    -moz-transform: rotate(45deg);
+	    -ms-transform: rotate(45deg);
+	    -o-transform: rotate(45deg);
+	    transform: rotate(45deg);
+	    -webkit-filter: brightness(0%);
+	    filter: brightness(0%);
+		    opacity: 0.4;
+		}
+		.css_autocomplete_ul_edit_in_portal:hover {
+			-webkit-filter: hue-rotate(150deg) brightness(100%) saturate(2);	
+			filter: hue-rotate(150deg) brightness(100%) saturate(2);
+			cursor: pointer;
+			opacity: 0.8;
+		}
+
+		.css_autocomplete_ul {
+
+		}
+
+	.css_autocomplete_button_close {
+		display: inline-block;
+		width: 16px;
+		height: 16px;
+		background-size: cover;
+		background: url('../../themes/default/close.svg') center center no-repeat;
+		//filter: hue-rotate(30deg) saturate(.5) brightness(0%) saturate(4)
+		-webkit-filter: brightness(0%);
+		filter: brightness(0%);
+		opacity: 0.4;
+		}
+		.css_autocomplete_button_close:hover {
+			-webkit-filter: brightness(100%);
+			filter:brightness(100%); 
+			cursor: pointer;
+			opacity: 0.8;
+		}
+
+
+
+	/* wrap_portal_list
+	----------------------- */
+		.css_wrap_autocomplete.wrap_portal_list > .content_data {
+			width: 100%;
+			padding: 3px;
+			}
+			.css_wrap_autocomplete.wrap_portal_list > .content_data .css_autocomplete_search_field {
+				//width: 75%;
+				background-position-x: 90%;
+				//right:0px;
+				//display: inline-block;
+				max-width: 82px;
+				z-index: 9;
+			}
+	
+
+
+	.css_wrap_autocomplete.wrap_portal_list >.content_data > input.css_autocomplete_search_field:focus {
+		background-position-x: 98%;
 	}
 
 
 
-.component_autocomplete_new_element {	
-	width: 100%;
-	display: block;
-	//margin-top: 15px;
-	margin-bottom: 5px;
-	}
-	.component_autocomplete_new_element input[type="text"] {
-		padding: 3px;
-		padding-left: 5px;
-		border: 1px solid #9E9E9E;
-		border-radius: 3px;
-		width: 65%;
-	}
-	.component_autocomplete_new_element input[type="button"] {
-		cursor: pointer;
-	}
+	/* filter_by_list
+	----------------------------------------*/
+	@filter_by_list_column_width : 25%;
 
-
-.autocomplete_semantic_nodes {
-	background-color: rgba(232, 232, 232, 0.81);
-	border-radius: 4px;
-	margin: 3px;
-	margin-left: 15px;
-	padding: 4px;	
-	display: block;
-	white-space: nowrap;
-	width: 100%;
-	min-height: 1.75em;
-}
-
-
-.css_autocomplete_ul_edit_in_portal{
-	display: inline-block;
-	width: 16px;
-	height: 16px;
-	background-size: cover;
-	float: left;
-	background: url('../../themes/default/close.svg') center center no-repeat;
-	-webkit-transform: rotate(45deg);
-    -moz-transform: rotate(45deg);
-    -ms-transform: rotate(45deg);
-    -o-transform: rotate(45deg);
-    transform: rotate(45deg);
-    -webkit-filter: brightness(0%);
-    filter: brightness(0%);
-    opacity: 0.4;
-}.css_autocomplete_ul_edit_in_portal:hover{
-	-webkit-filter: hue-rotate(150deg) brightness(100%) saturate(2);	
-	filter: hue-rotate(150deg) brightness(100%) saturate(2);
-	cursor: pointer;
-	opacity: 0.8;
-
-}
-.css_autocomplete_ul{
-
-}
-
-.css_autocomplete_button_close{
-	display: inline-block;
-	width: 16px;
-	height: 16px;
-	background-size: cover;
-	//float: right;
-	background: url('../../themes/default/close.svg') center center no-repeat;
-	//filter: hue-rotate(30deg) saturate(.5) brightness(0%) saturate(4)
-	-webkit-filter: brightness(0%);
-	filter: brightness(0%);
-	opacity: 0.4;
-}.css_autocomplete_button_close:hover{
-	-webkit-filter: brightness(100%);
-	filter:brightness(100%); 
-	cursor: pointer;
-	opacity: 0.8;
-}
-
-.css_wrap_autocomplete.wrap_portal_list > .content_data {
-	width: 100%;
-	padding: 3px;
-	}
-	.css_wrap_autocomplete.wrap_portal_list > .content_data .css_autocomplete_search_field {
-		//width: 75%;
-		background-position-x: 90%;
-		//right:0px;
-		//display: inline-block;
-		max-width: 82px;
-		z-index: 9;
-	}
-	/*
-	.css_wrap_autocomplete.wrap_portal_list > .content_data .css_autocomplete_valor {
-		width: 100%;
-		min-height: 22px;
-	}
-	.css_wrap_autocomplete.wrap_portal_list > .content_data .edit_autocomplete {
-		top:0px;
-		width: 20px;
-		float: none;
-
-	}
-	.css_wrap_autocomplete.wrap_portal_list > .content_data .new_autocomplete {
-		top:0px;
-		width: 20px;
-		right:0px;
-		float: none;
-	}
-	*/
-
-
-
-.css_wrap_autocomplete.wrap_portal_list >.content_data > input.css_autocomplete_search_field:focus {
-
-	background-position-x: 98%;
-}
-
-
-
-/* filter_by_list
-----------------------------------------*/
-@column_width : 25%;
 	/* button options to show/hide the options
 	----------------------------------------*/
 	.autocomplete_list_button_options {
-		background-position: -432px 0;
-		position: absolute;
-		top: -2px;
-		right: 30px;
 		opacity: .3;
-		zoom: 1.20;
+		background-position: -432px 0;
+		zoom: 121%;
+		-moz-transform: scale(1.21);
+		transform-origin: bottom;
+		float: right;
+		position: relative;
+		top: -16px;
+		right: 10px;
+	}
+	.wrap_autocomplete_search .autocomplete_list_button_options {
+		top: 0;
+		right: 0;
 	}
 	.filter_by_list {
-		display: none;
+		display: table;
 		//display: table;
 		background-color: #8E8E8E;
 		padding: 10px;	
@@ -297,9 +297,9 @@
 			//display: table;
 			float: left;
 			//width: 33%;
-			width: @column_width;
+			width: @filter_by_list_column_width;
 			display: flex; // Important for text-overflow ellipsis
-		}
+		}				
 		.filter_by_list input {
 			margin: 2px;
 			margin-right: 4px;
@@ -309,8 +309,13 @@
 			overflow: hidden;
 			text-overflow: ellipsis;
 			max-width: 90%;
-		}
-		.filter_by_list  hr {
+			}
+			.filter_by_list li > label > span {
+				position: absolute;
+				right: 150px;
+				padding-right: 15px;
+			}
+		.filter_by_list hr {
 			width: 100%;
 			display: -webkit-inline-box;
 			margin: 3px;
@@ -334,26 +339,117 @@
 				color: black;
 			}*/
 
-		.autocomplete_list_button_options {
-			float: right;
-			position: relative;
-			top: -16px;
-			opacity: .3;
-			background-position: -432px 0;
-			right: 8px;
-			zoom: 121%;
-		}
+		
 		.filter_by_list mark {
 			color: #f5c39f !important;
 		}
 
 
 
-/* SEARCH MODE OVERWRITE OPERATORS CSS
----------------------------------------- */
-	.wrap_component_search .comparison_operator {
-		float: left;
-		margin-right: 8px;
-	}
+		/* AUTOSEARCH_OPTIONS
+		---------------------------------------- */
+			.autosearch_options {
+				//background-color: #DFFE79;
+				display: none;
+				padding-right: 150px;
+				background-color: #8e8e8e;
+				color: #fcfcfc;
+				border-radius: 4px;
+				margin-top: 10px;
+				margin-bottom: 5px;
+				clear: both;
+				}
+			.autosearch_options.in_search_mode {
+				padding-right: 5px;
+				//padding-left: 150px;
+				}
 
+
+			.filter_fields {
+				text-align: right;
+				padding: 4px;
+				padding-top: 5px;
+				padding-bottom: 5px;
+				}
+				.filter_fields ul {
+					display: flex;
+				}
+				.filter_fields ul > li {
+					padding-left: 2px;
+					flex-grow: 1;
+				}
+				.filter_fields ul li label {
+					margin-right: 10px;				
+				}
+				.filter_fields ul li input {
+					//max-width: 150px;
+					width: 100%;
+				}
+			.filter_fields .search_operators_div {
+				padding-top: 5px;
+				padding-bottom: 5px;
+			}
+
+			.filter_fields.in_search_mode {
+				/*text-align: left;
+				padding-top: 0px;
+				padding-bottom: 0px;*/
+			}
+
+
+
+	/* COMPONENT_AUTOCOMPLETE_NEW_ELEMENT. 
+		Container where components for make new record are loaded
+	------------------------------------------------------------ */
+		.component_autocomplete_new_element {
+			width: 100%;
+			display: table;
+			//margin-top: 15px;
+			margin-bottom: 10px;
+			background-color: #cecece;
+			padding: 10px;
+			border-radius: 3px;
+
+			input.css_autocomplete_search_field {
+				width: initial;
+			}
+
+			input[type="button"] {
+				cursor: pointer;
+			}
+
+			.new_autocomplete {
+				display: none;
+			}
+		}
+
+
+
+	/* SEARCH MODE OVERWRITE OPERATORS CSS
+	---------------------------------------- */
+		.wrap_component_search .comparison_operator {
+			float: left;
+			margin-right: 8px;
+		}
+
+
+	/* UL LI DATAFRAME
+	------------------------------------------------------- */
+	.css_wrap_autocomplete .content_data ul > li {
+		//display: flex;
+
+		.dataframe_container{
+			white-space: nowrap;
+			width: 35px;
+			height: 10px;
+			position: relative;
+			display: inline-block ;
+			top: -9px;
+			float: right;
+
+			.css_wrap_check_box{
+				background-color: transparent !important
+			}
+		}
+	}
 

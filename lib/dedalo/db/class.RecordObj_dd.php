@@ -586,7 +586,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 	* GET_AR_RECURSIVE_CHILDRENS : Static version
 	* No hay aumento de velocidad apreciable entre la versión estática y dinámica. Sólo una reducción de unos 140 KB en el consumo de memoria
 	*/
-	public static function get_ar_recursive_childrens($terminoID, $is_recursion=false, $ar_exclude_models=false) {
+	public static function get_ar_recursive_childrens($terminoID, $is_recursion=false, $ar_exclude_models=false, $order_by=null) {
 
 		$ar_resolved=array();
 		
@@ -596,7 +596,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 		}
 
 		$RecordObj_dd = new RecordObj_dd($terminoID);
-		$ar_childrens = (array)$RecordObj_dd->get_ar_childrens_of_this('si',null,null);
+		$ar_childrens = (array)$RecordObj_dd->get_ar_childrens_of_this('si',null, $order_by);
 
 		foreach($ar_childrens as $current_terminoID) {
 
@@ -610,7 +610,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 			}
 
 			# Recursion
-			$ar_resolved = array_merge( $ar_resolved, (array)RecordObj_dd::get_ar_recursive_childrens($current_terminoID, true, $ar_exclude_models) );
+			$ar_resolved = array_merge( $ar_resolved, (array)RecordObj_dd::get_ar_recursive_childrens($current_terminoID, true, $ar_exclude_models, $order_by) );
 		}
 		
 		return $ar_resolved;

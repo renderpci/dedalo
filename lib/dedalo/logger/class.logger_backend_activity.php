@@ -162,7 +162,9 @@ class logger_backend_activity extends logger_backend {
 		#
 		# SECTION RECORD . Creamos los componentes para generar el dato 
 		#	
-			$main_components_obj = new stdClass();
+			$main_components_obj  = new stdClass();
+			$relations 			  = [];
+			$current_data_version = tool_administration::get_current_version_in_db();
 
 				# IP ADDRESS (user source ip) #############################################################					
 					$ip_address	= 'unknow';
@@ -190,9 +192,17 @@ class logger_backend_activity extends logger_backend {
 						$locator_user_id->set_section_id($user_id);
 						$locator_user_id->set_section_tipo(DEDALO_SECTION_USERS_TIPO);
 
-					$component_tipo = self::$_COMPONENT_QUIEN['tipo'];
-					$component_obj  = self::build_component_activity_object( array($locator_user_id) );
-					$main_components_obj->$component_tipo = $component_obj;
+					$component_tipo = self::$_COMPONENT_QUIEN['tipo'];					
+
+					# Switch data version
+					if( $current_data_version[0] >= 4 && $current_data_version[1] >= 8 ) {
+						$locator_user_id->set_type(DEDALO_RELATION_TYPE_LINK);
+						$locator_user_id->set_from_component_tipo($component_tipo);
+						$relations[] = $locator_user_id;
+					}else{
+						$component_obj  = self::build_component_activity_object( array($locator_user_id) );
+						$main_components_obj->$component_tipo = $component_obj;
+					}
 					/*
 					$component = self::$_COMPONENT_QUIEN;					
 					$component = new $component['modelo_name']($component['tipo'],$parent,'list',DEDALO_DATA_NOLAN);	#($id=NULL, $tipo=false, $modo='edit', $parent=NULL, $lang=DEDALO_DATA_LANG)
@@ -203,7 +213,7 @@ class logger_backend_activity extends logger_backend {
 					$main_components_obj->$component_tipo = $component_obj;
 					*/
 
-				# QUE (msg) # Message ########################################################################					
+				# QUE (msg) # Message ########################################################################### 
 					$message 	= str_replace("\t", ' ', $message);
 					$message 	= str_replace("\n", ' ', $message);
 					$message 	= trim($message);
@@ -251,7 +261,7 @@ class logger_backend_activity extends logger_backend {
 					$main_components_obj->$component_tipo = $component_obj;
 					*/
 
-				# DONDE (tipo) ################################################################################					
+				# DONDE (tipo) ################################################################################## 
 					$donde 		= $tipo_donde;
 					if(!strlen($tipo_donde)) $donde = 'unknow';
 
@@ -264,7 +274,7 @@ class logger_backend_activity extends logger_backend {
 					$component->set_dato($tipo_donde);
 					*/
 
-				# CUANDO (Time. timestamp formated) #############################################################					
+				# CUANDO (Time. timestamp formated) ############################################################# 
 					$time 		= component_date::get_timestamp_now_for_db();
 
 					$component_tipo = self::$_COMPONENT_CUANDO['tipo'];
@@ -277,7 +287,7 @@ class logger_backend_activity extends logger_backend {
 					$id =  $component->Save();
 					*/
 
-				# PROYECTOS (param 'datos' + url's ...)	#############################################################
+				# PROYECTOS (param 'datos' + url's ...)	######################################################### 
 					if ( !empty($user_id) && $user_id!='unknow' ) {
 						$projects_dato = (object)filter::get_user_projects($user_id);
 							#dump($projects_dato,"projects_dato");
@@ -300,7 +310,7 @@ class logger_backend_activity extends logger_backend {
 						*/
 					}
 
-				# DATOS (param 'datos' + url's ...)	#############################################################						
+				# DATOS (param 'datos' + url's ...)	############################################################# 
 					if (!is_array($datos)) {
 						$dato_array = array($datos);
 					}else{
@@ -334,11 +344,20 @@ class logger_backend_activity extends logger_backend {
 					}
 					*/
 
-					
+				# SECTION ############################################################# 
 					$section = section::get_instance(null, DEDALO_ACTIVITY_SECTION_TIPO, 'edit');
+					
 					$save_options = new stdClass();
 						$save_options->main_components_obj = $main_components_obj;
 							#dump($save_options,"save_options");die();
+
+					# Switch data version
+					if( $current_data_version[0] >= 4 && $current_data_version[1] >= 8 ) {
+						foreach ($relations as $clocator) {
+							$section->add_relation($clocator);
+						}
+					}
+
 					$id_section = $section->Save( $save_options );
 
 					if(SHOW_DEBUG===true) {

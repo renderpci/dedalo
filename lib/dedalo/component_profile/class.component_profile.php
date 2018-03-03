@@ -152,6 +152,10 @@ class component_profile extends component_common {
 	* @return int $profile_id
 	*/
 	public static function get_profile_from_user_id( $user_id ) {
+
+		if(SHOW_DEBUG===true || $user_id<1) {
+			return null;
+		}
 		
 		# Calculate current user profile id
 		$component_profile = component_common::get_instance('component_profile',

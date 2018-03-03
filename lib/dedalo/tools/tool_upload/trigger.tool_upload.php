@@ -11,6 +11,8 @@ if(login::is_logged()!==true) {
 	die();
 }
 
+set_time_limit(0);
+
 
 require_once( DEDALO_LIB_BASE_PATH . '/media_engine/class.AVObj.php');
 require_once( DEDALO_LIB_BASE_PATH . '/media_engine/class.PosterFrameObj.php');

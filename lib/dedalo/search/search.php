@@ -1,5 +1,5 @@
 <?php
-
+	
 		
 	switch($modo) {
 		
@@ -8,7 +8,7 @@
 
 		#case 'portal_edit'	:
 		#case 'portal_list'	:
-						#$file_name = 'edit';
+				#$file_name = 'edit';
 		case 'edit'	:
 
 				# Verify component content record is inside section record filter

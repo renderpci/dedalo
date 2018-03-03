@@ -453,7 +453,7 @@ background-color: #FFFF00;
 	text-align: left;
 	padding: 4px;
 	padding-left: 0px;
-	padding-top: 0px;
+	//padding-top: 0px;
 	color: #ECF4F8 !important;
 	position: fixed;
     left: 0;
@@ -462,6 +462,7 @@ background-color: #FFFF00;
     opacity: 0.95;
     overflow: hidden;
     line-height: 24px;
+    display: flex;   
 	}
 	.debug_line_wrap a,	.debug_line_wrap span {
 		color: #dcdcdc !important;
@@ -475,7 +476,7 @@ background-color: #FFFF00;
 		}
 		.debug_line_wrap a {
 			background-color: #5B5B5B;
-			margin-right: 1px;
+			margin-right: 1px;			
 			}
 			.debug_line_wrap a:hover {
 				background-color: #7E8284
@@ -594,12 +595,16 @@ background-color: #FFFF00;
 	#menu .menu_li_active>a{
 
 	}
-	#menu_wrapper .dedalo_aplication_langs_selector{
+	#menu_wrapper .dedalo_aplication_langs_selector {
 		float: right;
-		top: 10px;
-		right: 65px;
-		position: absolute;
-    	margin-left: 0px; 
+		//top: 10px;
+		//right: 65px;
+		//position: absolute;
+    	//margin-left: 0px;    
+
+		top: -35px;
+		right: 10px;
+		position: relative;	
 	}
 	#menu_wrapper #current_section_label {
 		display: block;

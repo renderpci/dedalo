@@ -2,7 +2,7 @@
 	
 	# CONTROLLER
 
-	if(SHOW_DEBUG===true) $start_time=microtime(1);
+	$start_time=microtime(1);
 
 	$tipo 					= $this->get_tipo();
 	$parent 				= $this->get_parent();
@@ -19,6 +19,7 @@
 	$identificador_unico	= $this->get_identificador_unico();
 	$component_name			= get_class($this);
 	$context 				= $this->get_context();
+	$relation_type 			= $this->relation_type;
 
 	$file_name = $modo;
 	
@@ -57,12 +58,12 @@
 				break;
 
 		case 'search':
-				# Showed only when permissions are >1
-				if ($permissions<1) return null;
+				# dato is injected by trigger search when is needed
+				$dato = isset($this->dato) ? $this->dato : null;
 				
 				$ar_all_project_select_langs	= common::get_ar_all_langs_resolved(DEDALO_DATA_LANG);				
-				$ar_comparison_operators 		= $this->build_search_comparison_operators();
-				$ar_logical_operators 	 		= $this->build_search_logical_operators();
+				#$ar_comparison_operators 		= $this->build_search_comparison_operators();
+				#$ar_logical_operators 	 		= $this->build_search_logical_operators();
 
 				# Search input name (var search_input_name is injected in search -> records_search_list.phtml)
 				# and recovered in component_common->get_search_input_name()

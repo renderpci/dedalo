@@ -26,11 +26,12 @@
 	
 	$file_name				= $modo;
 
-	
 	switch($modo) {
 		
 		case 'dataframe_edit' :
+		
 					$caller_dataset_json = json_encode($this->caller_dataset);
+					$this->set_relation_type($this->caller_dataset->type);
 						#dump($dato, ' dato ++ '.to_string());
 		case 'edit' :					
 					$id_wrapper = 'wrapper_'.$identificador_unico;
@@ -49,8 +50,8 @@
 					break;
 						
 		case 'search' :
-					# Showed only when permissions are >1
-					if ($permissions<1) return null;
+					# dato is injected by trigger search wen is needed
+					$dato = isset($this->dato) ? $this->dato : null;
 
 					$referenced_tipo	= $this->get_referenced_tipo();
 					$ar_list_of_values  = $this->get_ar_list_of_values(DEDALO_DATA_LANG, null);

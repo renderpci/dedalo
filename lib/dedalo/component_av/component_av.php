@@ -60,7 +60,7 @@
 					$player_id			= 'player_'.$video_id;
 					
 					$video_path 		= $this->get_video_path();
-					$subtitles_url		= $this->get_subtitles_url();			
+					$subtitles_url		= $this->get_subtitles_url();
 					break;
 
 		case 'posterframe':
@@ -80,7 +80,8 @@
 					$maxWidht 			= 540 ;
 					$maxHeight 			= 303 ;
 
-					$posterframe_url 	= $PosterFrameObj->get_thumb_url($maxWidht, $maxHeight, $fx='crop').'&t='.start_time();	
+					#$posterframe_url 	= $PosterFrameObj->get_thumb_url($maxWidht, $maxHeight, $fx='crop').'&t='.start_time();
+					$posterframe_url 	= $PosterFrameObj->get_url() . '?&t='.start_time();
 					$posterframe_url 	= str_replace('&', '&amp;', $posterframe_url);
 					break;
 		
@@ -103,7 +104,7 @@
 					$quality				= $this->get_quality();
 					$video_url				= $this->get_video_url();
 					$aditional_path			= $this->get_aditional_path();
-					$initial_media_path		= $this->get_initial_media_path();					
+					$initial_media_path		= $this->get_initial_media_path();
 
 					# LOAD MEDIA PLAYER ON IFRAME
 					$reelID 	= $video_id;		#dump($reelID);
@@ -147,54 +148,56 @@
 							$posterframe_url= DEDALO_LIB_BASE_URL.'/themes/default/0_audio.jpg';
 						}
 					}
-					#$video_url .= '?&t='.start_time();	# Avoid cache file				
+					#$video_url .= '?&t='.start_time();	# Avoid cache file
 					break;
 
 		case 'portal_list_view_mosaic':
-					$video_id 				= $this->get_video_id();
+				$video_id 				= $this->get_video_id();
 
-					# PosterFrameObj		
-					$PosterFrameObj 	= new PosterFrameObj($video_id);
-					#$maxWidht 			= 102 ;
-					#$maxHeight 			= 57  ; # 90
-					#$posterframe_url 	= $PosterFrameObj->get_thumb_url($maxWidht, $maxHeight, $fx='crop').'?&t='.start_time();
-					$posterframe_url 	= $PosterFrameObj->get_url() . '?&t='.start_time();
-					$posterframe_url 	= str_replace('&', '&amp;', $posterframe_url);
-						#dump($posterframe_url,$video_id);
-					$file_name 			= 'list';
-					break;
+				# PosterFrameObj		
+				$PosterFrameObj 	= new PosterFrameObj($video_id);
+				#$maxWidht 			= 102 ;
+				#$maxHeight 		= 57  ; # 90
+				#$posterframe_url 	= $PosterFrameObj->get_thumb_url($maxWidht, $maxHeight, $fx='crop').'?&t='.start_time();
+				$posterframe_url 	= $PosterFrameObj->get_url() . '?&t='.start_time();
+				$posterframe_url 	= str_replace('&', '&amp;', $posterframe_url);
+					#dump($posterframe_url,$video_id);
+				$file_name 			= 'list';
+				break;
 
 		case 'portal_list':
-					$file_name 			= 'list';
+				$file_name 			= 'list';
 		case 'list_tm':
-					$file_name			= 'list';
+				$file_name			= 'list';
 		case 'list':
-					$video_id 				= $this->get_video_id();
-					$quality				= $this->get_quality();
-					$video_url				= $this->get_video_url();
-					$aditional_path			= $this->get_aditional_path();
-					$initial_media_path		= $this->get_initial_media_path();
+				$video_id 				= $this->get_video_id();
+				$quality				= $this->get_quality();
+				$video_url				= $this->get_video_url();
+				$aditional_path			= $this->get_aditional_path();
+				$initial_media_path		= $this->get_initial_media_path();
 
-					#$video_width		= intval(720/7) .'px';
-					#$video_height		= intval(404/7) .'px';
-					#$posterframe_url 	= $this->get_posterframe_url();
+				#$video_width		= intval(720/7) .'px';
+				#$video_height		= intval(404/7) .'px';
+				#$posterframe_url 	= $this->get_posterframe_url();
 
-					# PosterFrameObj		
-					$PosterFrameObj 	= new PosterFrameObj($video_id);
-					$maxWidht 			= 102 ;
-					$maxHeight 			= 57  ; # 90
-					$posterframe_url 	= $PosterFrameObj->get_thumb_url($maxWidht, $maxHeight, $fx='crop').'?&t='.start_time();
-					$posterframe_url 	= str_replace('&', '&amp;', $posterframe_url);
-						#dump($posterframe_url,$video_id);
-					break;
+				# PosterFrameObj		
+				$PosterFrameObj 	= new PosterFrameObj($video_id);
+				$maxWidht 			= 102 ;
+				$maxHeight 			= 57  ; # 90
+				#$posterframe_url 	= $PosterFrameObj->get_thumb_url($maxWidht, $maxHeight, $fx='crop').'?&t='.start_time();
+				$posterframe_url 	= $PosterFrameObj->get_url() . '?&t='.start_time();
+				$posterframe_url 	= str_replace('&', '&amp;', $posterframe_url);
+					#dump($posterframe_url,$video_id);
+				break;
 
-		case 'search':	
-					return null;		
-					break;
+		case 'search':
+				echo "Sorry. This component is not searcheable at this time";
+				return null;
+				break;
 
 		case 'print':
-					$posterframe_url = $this->get_posterframe_url();
-					break;											
+				$posterframe_url = $this->get_posterframe_url();
+				break;
 	}
 
 	

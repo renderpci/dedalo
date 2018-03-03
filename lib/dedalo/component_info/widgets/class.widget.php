@@ -64,7 +64,8 @@ class widget {
 	* GET_HTML
 	* @return 
 	*/
-	public function get_html() {
+	public function get_html($lang=DEDALO_DATA_LANG) {
+
 		ob_start();
 		$widget_file = DEDALO_EXTRAS_PATH .''. $this->widget_path . '/' . $this->widget_name. '/' . $this->widget_name . '.php';
 		include( $widget_file );

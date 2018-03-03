@@ -5,7 +5,7 @@ include( dirname(dirname(__FILE__)).'/config/config4.php');
 common::trigger_manager();
 
 
-#debug_log(__METHOD__." TOP_TIPO ".to_string(TOP_TIPO), logger::DEBUG);
+
 /**
 * SAVE
 * @return object $response
@@ -40,7 +40,7 @@ function save($json_data) {
 	$dato 		= json_decode($dato);
 	$dato_count = count($dato);
 
-	$modelo_name 	  = 'component_portal';
+	$modelo_name 	  = RecordObj_dd::get_modelo_name_by_tipo($portal_tipo, true);
 	$modo 			  = 'edit';
 	$component_portal = component_common::get_instance( $modelo_name,
 														$portal_tipo,
@@ -112,19 +112,19 @@ function save($json_data) {
 
 
 /**
-* NEW_PORTAL_RECORD
+* ADD_NEW_ELEMENT
 * Save on matrix current relation
 * @param $portal_id (Int id matrix from portal component)
 * @param $portal_tipo (String tipo from portal
 * @param $target_section_tipo (String tipo from section)
+* @return object $response
 */
-function new_portal_record($json_data) {
+function add_new_element($json_data) {
 	global $start_time;
 
 	$response = new stdClass();
 		$response->result 	= false;
 		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
-
 
 	# Write session to unlock session file
 	#session_write_close();
@@ -138,17 +138,75 @@ function new_portal_record($json_data) {
 				$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty '.$name.' (is mandatory)';
 				return $response;
 			}
-		}	
-	
-	$new_portal_record = component_portal::create_new_portal_record($portal_parent,
-																	$portal_tipo,
-																	$target_section_tipo,
-																	$top_tipo,
-																	$top_id,
-																	$portal_section_tipo );
+		}
+		
+	$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($portal_tipo, true);
+	$component 		= component_common::get_instance($modelo_name,
+													 $portal_tipo,
+													 $portal_parent,
+													 'edit',
+													 DEDALO_DATA_NOLAN,
+													 $portal_section_tipo);
+	$add_options = new stdClass();
+		$add_options->section_target_tipo 	= $target_section_tipo;
+		$add_options->top_tipo 				= $top_tipo;
+		$add_options->top_id 				= $top_id;
 
-	$response->result 	= $new_portal_record;
-	$response->msg 		= 'Ok. Request done ['.__FUNCTION__.']';
+	$response = $component->add_new_element($add_options);	
+	
+	# Debug
+	if(SHOW_DEBUG===true) {
+		$debug = new stdClass();
+			$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
+			foreach($vars as $name) {
+				$debug->{$name} = $$name;
+			}
+
+		$response->debug = $debug;
+	}
+
+
+	return (object)$response;
+}//end add_new_element
+
+
+
+/**
+* REMOVE_ELEMENT
+* @return object $response
+*/
+function remove_element($json_data) {
+	global $start_time;
+
+	$response = new stdClass();
+		$response->result 	= false;
+		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
+
+
+	$vars = array('tipo','parent','section_tipo','locator','remove_mode');
+		foreach($vars as $name) {
+			$$name = common::setVarData($name, $json_data);
+			# DATA VERIFY
+			#if ($name==='top_id') continue; # Skip non mandatory
+			if (empty($$name)) {
+				$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty '.$name.' (is mandatory)';
+				return $response;
+			}
+		}
+
+	$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($tipo, true);
+	$component 		= component_common::get_instance($modelo_name,
+													 $tipo,
+													 $parent,
+													 'edit',
+													 DEDALO_DATA_NOLAN,
+													 $section_tipo);
+	
+	$remove_options = new stdClass();
+		$remove_options->locator 	 = $locator;
+		$remove_options->remove_mode = $remove_mode;
+	$response = $component->remove_element( $remove_options );
+
 
 	# Debug
 	if(SHOW_DEBUG===true) {
@@ -163,14 +221,14 @@ function new_portal_record($json_data) {
 
 
 	return (object)$response;
-}//end new_portal_record
+}//end remove_element
 
 
 
 /**
 * REMOVE_LOCATOR_FROM_PORTAL
 * Unlink reference from portal to section
-*/
+*/ /*
 function remove_locator_from_portal($json_data) {
 	global $start_time;
 
@@ -199,7 +257,8 @@ function remove_locator_from_portal($json_data) {
 		return $response;
 	}		
 	
-	$component_portal = component_common::get_instance('component_portal',
+	$modelo_name 	  = RecordObj_dd::get_modelo_name_by_tipo($portal_tipo, true);
+	$component_portal = component_common::get_instance( $modelo_name,
 														$portal_tipo,
 														$portal_parent,
 														'edit',
@@ -233,14 +292,14 @@ function remove_locator_from_portal($json_data) {
 
 
 	return (object)$response;
-}//end remove_locator_from_portal
+}//end remove_locator_from_portal */
 
 
 
 /**
 * REMOVE_RESOURCE_FROM_PORTAL
 * Remove resource section and unlink from portal
-*/
+*/ /*
 function remove_resource_from_portal($json_data) {
 	global $start_time;
 
@@ -268,7 +327,8 @@ function remove_resource_from_portal($json_data) {
 		return $response;
 	}
 	
-	$component_portal = component_common::get_instance('component_portal',
+	$modelo_name 	  = RecordObj_dd::get_modelo_name_by_tipo($portal_tipo, true);
+	$component_portal = component_common::get_instance( $modelo_name ,
 														$portal_tipo,
 													 	$portal_parent,
 													 	'edit',
@@ -300,7 +360,7 @@ function remove_resource_from_portal($json_data) {
 
 
 	return (object)$response;
-}//end remove_resource_from_portal
+}//end remove_resource_from_portal */
 
 
 
@@ -329,7 +389,8 @@ function show_more() {
 		$response->msg .= "<span class='error'> Error: 'section_tipo' is mandatory</span>"; return $response;
 	}
 	
-	$modelo_name 	  = 'component_portal';
+	#$modelo_name 	  = 'component_portal';
+	$modelo_name 	  = RecordObj_dd::get_modelo_name_by_tipo($portal_tipo, true);
 	$component_portal = component_common::get_instance($modelo_name,
 													   $portal_tipo,
 													   $portal_parent,

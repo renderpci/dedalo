@@ -1,41 +1,18 @@
 <?php
 /*
 * CLASS COMPONENT_RELATION_MODEL
+*
+*
 */
-
-
 class component_relation_model extends component_relation_common {
 	
-	# Overwrite __construct var lang passed in this component
-	protected $lang = DEDALO_DATA_NOLAN;
+	
+	protected $relation_type = DEDALO_RELATION_TYPE_MODEL_TIPO;
 
 	# test_equal_properties is used to verify duplicates when add locators
-	public $test_equal_properties = array('section_tipo','section_id','type','from_component_tipo');	
+	public $test_equal_properties = array('section_tipo','section_id','type','from_component_tipo');
 
 
-	/**
-	* __CONSTRUCT
-	*/
-	function __construct($tipo=null, $parent=null, $modo='edit', $lang=DEDALO_DATA_NOLAN, $section_tipo=null) {
-
-		# Force always DEDALO_DATA_NOLAN
-		$lang = $this->lang;
-
-		# Set relation_type for this component
-		$this->relation_type = DEDALO_RELATION_TYPE_MODEL_TIPO;
-
-		# Build the componente normally
-		parent::__construct($tipo, $parent, $modo, $lang, $section_tipo);
-
-		if(SHOW_DEBUG) {
-			$traducible = $this->RecordObj_dd->get_traducible();
-			if ($traducible==='si') {
-				throw new Exception("Error Processing Request. Wrong component lang definition. This component $tipo (".get_class().") is not 'traducible'. Please fix this ASAP", 1);
-			}
-		}
-	}//end __construct
-
-	
 
 	/**
 	* GET_VALOR
@@ -76,7 +53,7 @@ class component_relation_model extends component_relation_common {
 				$locator = json_handler::decode($locator);	# Locator is json encoded object
 					#dump($label, ' label ++ '.to_string($locator));
 
-				$founded = locator::in_array_locator( $locator, $ar_locator=$dato, $ar_properties=array('section_tipo','section_id') );
+				$founded = locator::in_array_locator( $locator, $ar_locator=$dato, $ar_properties=array('section_id','section_tipo') );
 				if ($founded) {
 					$valor = $label;
 					break;

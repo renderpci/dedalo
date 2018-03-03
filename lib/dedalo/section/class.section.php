@@ -9,70 +9,76 @@ include_once(DEDALO_LIB_BASE_PATH . '/search/records_navigator/class.records_nav
 
 class section extends common {
 
-	# Overwrite __construct var lang passed in this component
-	protected $lang = DEDALO_DATA_NOLAN;
+	/**
+	* CLASS VARS
+	*/ 
+		# Overwrite __construct var lang passed in this component
+		protected $lang = DEDALO_DATA_NOLAN;
 
-	# FIELDS
-	# protected $id;
-	protected $section_id;
-	protected $tipo;
-	protected $dato;
+		# FIELDS
+		# protected $id;
+		protected $section_id;
+		protected $tipo;
+		protected $dato;
 
-	# STATE
-	protected $modo;
+		# STATE
+		protected $modo;
 
-	# STRUCTURE DATA
-	protected $RecordObj_dd ;
-	protected $modelo ;
-	protected $norden ;
-	protected $label ;
+		# STRUCTURE DATA
+		protected $RecordObj_dd ;
+		protected $modelo ;
+		protected $norden ;
+		protected $label ;
 
-	public $ar_section_list_obj ;
-	public $ar_section_group_obj ;
-	public $ar_section_relations;			# array de etiquetas de esta sección (en relaciones)
-	public $rel_locator;					# usado cuando desglosamos una relación inversa (tag=>sections)
-	public $tag;							# usado cuando desglosamos una relación inversa (tag=>sections)
+		public $ar_section_list_obj ;
+		public $ar_section_group_obj ;
+		public $ar_section_relations;			# array de etiquetas de esta sección (en relaciones)
+		public $rel_locator;					# usado cuando desglosamos una relación inversa (tag=>sections)
+		public $tag;							# usado cuando desglosamos una relación inversa (tag=>sections)
 
-	protected static $ar_id_records ;		# array of records of current section (int id_matrix)
+		protected static $ar_id_records ;		# array of records of current section (int id_matrix)
 
-	# Buttons objs
-	public $ar_buttons ;
-	public $button_new_object ;
-	public $button_delete_object ;
+		# Buttons objs
+		public $ar_buttons ;
+		public $button_new_object ;
+		public $button_delete_object ;
 
-	public $caller_id;						# Necesario para calcular relation (también se admite como REQUEST['caller_id'])
-	public $caller_tipo;
-	public $ar_section_relations_for_current_tipo_section;	# Necesario para calcular relation
-	public $ar_id_section_custom;
+		public $caller_id;						# Necesario para calcular relation (también se admite como REQUEST['caller_id'])
+		public $caller_tipo;
+		public $ar_section_relations_for_current_tipo_section;	# Necesario para calcular relation
+		public $ar_id_section_custom;
 
-	public $ar_id_records_from_portal;
-	public $ar_all_project_langs;
+		public $ar_id_records_from_portal;
+		public $ar_all_project_langs;
 
-	public $show_inspector = true;			# default show: true
+		public $show_inspector = true;			# default show: true
 
-	# Array of components (tipo) to show in portal_list mode
-	# used by component_layout and set from component_portal
-	public $portal_layout_components;
-	public $portal_tipo;
+		# Array of components (tipo) to show in portal_list mode
+		# used by component_layout and set from component_portal
+		public $portal_layout_components;
+		public $portal_tipo;
 
-	public $section_virtual 	 = false;
-	public $section_real_tipo ;
+		public $section_virtual 	 = false;
+		public $section_real_tipo ;
 
-	static $active_section_id;
+		static $active_section_id;
 
-	public $is_temp = false;	# Used to force save data to session instead database. Default is false
-	
-	public $options;
-	# CACHE SECTIONS INSTANCES
-	#public static $ar_section_instances = array(); # array chache of called instances of components
+		public $is_temp = false;	# Used to force save data to session instead database. Default is false
+		
+		public $options;
+		# CACHE SECTIONS INSTANCES
+		#public static $ar_section_instances = array(); # array chache of called instances of components
 
-	#protected $relations; * Ver de fijar la variable en la sección al construir el objeto ......
+		#protected $relations; * Ver de fijar la variable en la sección al construir el objeto ......
 
 
-	# SAVE_HANDLER
-	# Default is 'database'. Other options like 'session' are accepted
-	# Note that section change automatically this value (to 'session' for example) when received section_id is like 'temp1' for manage this cases as temporal section
-	public $save_handler = 'database';
+		# SAVE_HANDLER
+		# Default is 'database'. Other options like 'session' are accepted
+		# Note that section change automatically this value (to 'session' for example) when received section_id is like 'temp1' for manage this cases as temporal section
+		public $save_handler = 'database';
+
+
+		#public $section_to_save;
 
 
 	# DIFFUSION INFO
@@ -113,8 +119,8 @@ class section extends common {
     	# key for cache
     	$key = $section_id .'_'. $tipo;
 
-    	$max_cache_instances = 160*2; // 500
-		$cache_slice_on 	 = 40*2; // 200 //$max_cache_instances/2;
+    	$max_cache_instances = 300; // 500
+		$cache_slice_on 	 = 100; // 200 //$max_cache_instances/2;
 
     	# OVERLOAD : If ar_section_instances > 99 , not add current section to cache to avoid overload
     	# array_slice ( array $array , int $offset [, int $length = NULL [, bool $preserve_keys = false ]] )
@@ -211,30 +217,35 @@ class section extends common {
 	*/
 	public function get_dato() {
 
-		if ($this->modo!=='edit') {
-			#return NULL;
+		# If section_id have a temporal string the save hander will be 'session' the section will save into the menory NOT to database
+		if( strpos($this->section_id, DEDALO_SECTION_ID_TEMP)!==false ){
+			$this->save_handler = 'session';
 		}
 
-			# If section_id have a temporal string the save hander will be 'session' the section will save into the menory NOT to database
-			if( strpos($this->section_id, DEDALO_SECTION_ID_TEMP)!==false ){
-				$this->save_handler = 'session';
-			}
+		#
+		# SAVE_HANDLER DIFFERENT TO DATABASE CASE
+		# Sometimes we need use section as temporal element without save real data to database. Is this case
+		# data is saved to session as temporal data and can be recovered from $_SESSION['dedalo4']['section_temp_data'] using key '$this->tipo.'_'.$this->section_id'
+		if (isset($this->save_handler) && $this->save_handler==='session') {
+		
 
-			#
-			# SAVE_HANDLER DIFFERENT TO DATABASE CASE
-			# Sometimes we need use section as temporal element without save real data to database. Is this case
-			# data is saved to session as temporal data and can be recovered from $_SESSION['dedalo4']['section_temp_data'] using key '$this->tipo.'_'.$this->section_id'
-			if (isset($this->save_handler) && $this->save_handler==='session') {
-				$temp_data_uid = $this->tipo.'_'.$this->section_id;
+			if (!isset($this->dato)) {
+
+				$temp_data_uid = $this->tipo.'_'.$this->section_id; 
 				# Fix dato as object
 				if (isset($_SESSION['dedalo4']['section_temp_data'][$temp_data_uid])) {
-					$section_temp_data = clone $_SESSION['dedalo4']['section_temp_data'][$temp_data_uid];
+					$section_temp_data = clone $_SESSION['dedalo4']['section_temp_data'][$temp_data_uid]; 
 					$this->dato = $section_temp_data;
+					#$this->bl_loaded_matrix_data = true;
 				}else{
+
 					$this->dato = new stdClass();
-				}				
-				return $this->dato;
+				}
+
 			}
+
+			return $this->dato;
+		}
 
 
 		if(SHOW_DEBUG===true) {
@@ -293,10 +304,7 @@ class section extends common {
 			# Fix dato as object
 			$this->dato = (object)$dato;
 				#dump($dato, ' dato ++ '.to_string());
-
-			# Fix inverse_locators 
-			$this->inverse_locators = isset($dato->inverse_locators) ? (array)$dato->inverse_locators : array();
-
+			
 			/* modificar esta verificación. con secciones virtuales no funciona..
 			if ( !empty($this->section_id) && (!property_exists($this->dato, 'section_tipo') || $this->dato->section_tipo!=$this->tipo) ) {
 				if(SHOW_DEBUG===true) {
@@ -453,7 +461,7 @@ class section extends common {
 	* Reconstruye el objeto global de la sección (de momento no se puede salvar sólo una parte del objeto json en postgresql)
 	* procesa los datos indirectos del componente (valor y valor_list) y guarda el nuevo objeto global reemplazando el anterior
 	*/
-	public function save_component_dato($component_obj) {
+	public function save_component_dato($component_obj, $component_data_type='direct') {
 
 		#dump($this->get_id(),"obj");die();
 		#dump(get_class($component_obj),"class");die("8");
@@ -470,76 +478,151 @@ class section extends common {
 
 		#
 		# SECTION GLOBAL DATO : Dato objeto global de la sección
-		$dato = $this->get_dato();
-			#dump($dato,"dato");
-			if (!is_object($dato)) {
-				throw new Exception("Error Processing Request. Section Dato is not object", 1);				
-			}
+		##$dato = $this->get_dato();
+		##	#dump($dato,"dato");
+		##	if (!is_object($dato)) {
+		##		throw new Exception("Error Processing Request. Section Dato is not object", 1);				
+		##	}
 
 		#
 		# COMPONENT_GLOBAL_DATO : Extrae la parte del componente desde el objeto global de la sección
 		$component_tipo 		= $component_obj->get_tipo();
 		$component_lang 		= $component_obj->get_lang();
-		$component_valor_lang 	= $component_obj->get_valor_lang();
-		$component_modelo_name 	= get_class($component_obj);	#RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
-		$component_traducible 	= $component_obj->get_traducible();
+		##$component_valor_lang 	= $component_obj->get_valor_lang();
+		##$component_modelo_name 	= get_class($component_obj);	#RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+		##$component_traducible 	= $component_obj->get_traducible();
 
 		if (empty($component_tipo)) {
 			throw new Exception("Error Processing Request: component_tipo is empty", 1);			
 		}
 
 			#unset($dato->components->$component_tipo);
+		#dump($component_obj, ' component_obj ++ '.to_string());
+		if ($component_data_type==='relation') {
+			##
+			# RELATION COMPONENTS
+				$this->set_component_relation_dato( $component_obj );				
+	
+		}else{
+			##
+			# DIRECT COMPONENTS
+				$this->set_component_direct_dato( $component_obj );
+		}
 
-			# SELECT COMPONENT IN SECTION DATO
-			if (isset($dato->components->$component_tipo)) {
-				# Si el dato del componente existe en la sección, lo seccionamos
-				$component_global_dato = $dato->components->$component_tipo;
-					#dump($component_global_dato,"component_global_dato");
-			}else{
-				# Si no existe, lo creamos con la información actual
-				$obj_global 						= new stdClass();
-				$obj_global->$component_tipo 		= new stdClass();
-				$component_global_dato 				= new stdClass();
-				$component_global_dato				= $obj_global->$component_tipo;
 
-				# INFO : Creamos la info del componente actual
-				$component_global_dato->info 		= new stdClass();
-				$component_global_dato->info->label  = RecordObj_dd::get_termino_by_tipo($component_tipo,null,true);
-				$component_global_dato->info->modelo = $component_modelo_name;
+		#
+		# DIFFUSION_INFO
+		$this->dato->diffusion_info = null;	// Always reset section diffusion_info on save components	
 
-				$component_global_dato->dato		= new stdClass();
-				$component_global_dato->valor		= new stdClass();
-				$component_global_dato->valor_list	= new stdClass();
-				$component_global_dato->dataframe	= new stdClass();			
+
+		#
+		# OPTIONAL STOP THE SAVE PROCESS TO DELAY DDBB ACCESS		
+		if (isset($component_obj->save_to_database) && $component_obj->save_to_database===false) {
+			# Stop here (remember make a real section save later!)
+			# No component time machine data will be saved when section saves later
+			#debug_log(__METHOD__." Stopped section save process component_obj->save_to_database = true ".to_string(), logger::ERROR);
+			return $this->section_id;
+		}
+
+
+
+		#
+		# TIME MACHINE DATA
+		# We save only current component lang 'dato' in time machine
+		$save_options = new stdClass();
+			$save_options->time_machine_data = $component_obj->get_dato_unchanged();
+			$save_options->time_machine_lang = $component_lang;
+			$save_options->time_machine_tipo = $component_tipo;
+
+		
+		$result = $this->Save( $save_options );
+
+		#
+		# DIFFUSION_INFO
+		# Note that this process can be very long if there are many inverse locators in this section
+		# To optimize save process in scripts of importation, you can dissable this option if is not really necessary
+		#		
+		#$dato->diffusion_info = null;	// Always reset section diffusion_info on save components
+		#register_shutdown_function( array($this, 'diffusion_info_propagate_changes') ); // exec on __destruct current section
+		if ($component_obj->update_diffusion_info_propagate_changes===true) {
+			$this->diffusion_info_propagate_changes();
+			# debug_log(__METHOD__." Deleted diffusion_info data for section $this->tipo - $this->section_id ", logger::DEBUG);
+		}
+		
+
+		return $result;
+	}#end save_component_dato
+
+
+
+	/**
+	* SET_COMPONENT_DIRECT_DATO
+	* @return 
+	*/
+	public function set_component_direct_dato( $component_obj ) {
+
+		$dato = $this->get_dato();
+			#dump($dato,"dato");
+			if (!is_object($dato)) {
+				throw new Exception("Error Processing Request. Section Dato is not object", 1);				
+			}
+
+		$component_tipo 		= $component_obj->get_tipo();
+		$component_lang 		= $component_obj->get_lang();
+		$component_valor_lang 	= $component_obj->get_valor_lang();
+		$component_modelo_name 	= get_class($component_obj);	#RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+		$component_traducible 	= $component_obj->get_traducible();
+		
+		# SELECT COMPONENT IN SECTION DATO
+		if (isset($dato->components->$component_tipo)) {
+			# Si el dato del componente existe en la sección, lo seccionamos
+			$component_global_dato = $dato->components->$component_tipo;
+				#dump($component_global_dato,"component_global_dato");
+		}else{
+			# Si no existe, lo creamos con la información actual
+			$obj_global 						= new stdClass();
+			$obj_global->$component_tipo 		= new stdClass();
+			$component_global_dato 				= new stdClass();
+			$component_global_dato				= $obj_global->$component_tipo;
+
+			# INFO : Creamos la info del componente actual
+			$component_global_dato->info 		= new stdClass();
+			$component_global_dato->info->label = RecordObj_dd::get_termino_by_tipo($component_tipo,null,true);
+			$component_global_dato->info->modelo= $component_modelo_name;
+
+			$component_global_dato->dato		= new stdClass();
+			$component_global_dato->valor		= new stdClass();
+			$component_global_dato->valor_list	= new stdClass();
+			$component_global_dato->dataframe	= new stdClass();
+		}
+
+
+		# DATO OBJ
+		if (!isset($component_global_dato->dato->$component_lang)) {
+			$component_global_dato->dato->$component_lang = new stdClass();
+			}
+
+		# VALOR OBJ
+		if (!isset($component_global_dato->valor)) {
+			$component_global_dato->valor = new stdClass();
+			}
+			if (!isset($component_global_dato->valor->$component_lang)) {
+				$component_global_dato->valor->$component_lang = new stdClass();
+			}
+
+		# VALOR LIST OBJ
+		if (!isset($component_global_dato->valor_list)) {
+			$component_global_dato->valor_list = new stdClass();
+			}
+			if (!isset($component_global_dato->valor_list->$component_lang)) {
+				$component_global_dato->valor_list->$component_lang = new stdClass();
+			}
+
+		# DATAFRAME  OBJ
+		if (!isset($component_global_dato->dataframe)) {
+			$component_global_dato->dataframe = new stdClass();
 			}
 	
-
-			# DATO OBJ
-			if (!isset($component_global_dato->dato->$component_lang)) {
-				$component_global_dato->dato->$component_lang = new stdClass();
-			}
-
-			# VALOR OBJ
-			if (!isset($component_global_dato->valor)) {
-				$component_global_dato->valor = new stdClass();
-				}
-				if (!isset($component_global_dato->valor->$component_lang)) {
-					$component_global_dato->valor->$component_lang = new stdClass();
-				}
-
-			# VALOR LIST OBJ
-			if (!isset($component_global_dato->valor_list)) {
-				$component_global_dato->valor_list = new stdClass();
-				}
-				if (!isset($component_global_dato->valor_list->$component_lang)) {
-					$component_global_dato->valor_list->$component_lang = new stdClass();
-				}
-
-			# DATAFRAME  OBJ
-			if (!isset($component_global_dato->dataframe)) {
-				$component_global_dato->dataframe = new stdClass();
-				}
-		
 		#
 		# DATO : Actualizamos el dato en el idioma actual		
 			$component_global_dato->dato->$component_lang = $component_obj->get_dato_unchanged(); ## IMPORTANT !!!!! (NO usar get_dato() aquí ya que puede cambiar el tipo fijo establecido por set_dato)
@@ -588,6 +671,7 @@ class section extends common {
 
 		#
 		# DATO_SEARCH
+			/*
 			switch ($component_modelo_name) {				
 				case 'component_autocomplete_ts':					
 					if (!isset($component_global_dato->dato_search)) {
@@ -599,7 +683,7 @@ class section extends common {
 					$component_global_dato->dato_search->$component_lang = $component_obj->get_dato_search();
 					break;
 				default: // Nothing to do
-			}
+			}*/
 
 
 		# DATAFRAME
@@ -617,52 +701,46 @@ class section extends common {
 			#dump($component_global_dato,"dato del componente");
 
 
-		#
-		# DIFFUSION_INFO
-		$dato->diffusion_info = null;	// Always reset section diffusion_info on save components	
+		$this->dato = $dato;
+
+		return $this->dato;
+	}//end set_component_direct_dato
 
 
-		#
-		# Fix main section dato
-		$this->dato = $dato;		
+
+	/**
+	* SET_COMPONENT_RELATION_DATO
+	* @return object $this->dato
+	*/
+	public function set_component_relation_dato( $component_obj ) {	
+		
+		$component_tipo 		= $component_obj->get_tipo();
+		$component_dato 		= $component_obj->get_dato();
+		$relation_type 		 	= $component_obj->get_relation_type();
+		$from_component_tipo 	= $component_tipo;
+
+		# Remove previous locators of current component
+		$this->remove_relations_from_component_tipo( $component_tipo );
+
+
+		if (!empty($component_dato)) {			
+
+			# Verify all locators are well formed
+			foreach ((array)$component_dato as $key => $current_locator) {				
+
+				# Add relation
+				$add_relation = $this->add_relation( $current_locator );
+				// If any fail, returns false
+				if($add_relation===false) {
+					debug_log(__METHOD__." ERROR ON ADD LOCATOR:  ".to_string($current_locator), logger::ERROR);
+					$result = false;
+				}
+			}			
+		}
 	
 
-		#
-		# OPTIONAL STOP THE SAVE PROCESS TO DELAY DDBB ACCESS		
-		if (isset($component_obj->save_to_database) && $component_obj->save_to_database===false) {
-			# Stop here (remember make a real section save later!)
-			# No component time machine data will be saved when section saves later
-			#debug_log(__METHOD__." Stopped section save process component_obj->save_to_database = true ".to_string(), logger::ERROR);
-			return $this->section_id;
-		}
-
-
-		#
-		# TIME MACHINE DATA
-		# We save only current component lang 'dato' in time machine
-		$save_options = new stdClass();
-			$save_options->time_machine_data = $component_obj->get_dato_unchanged();
-			$save_options->time_machine_lang = $component_lang;
-			$save_options->time_machine_tipo = $component_tipo;
-
-		
-		$result = $this->Save( $save_options );
-
-		#
-		# DIFFUSION_INFO
-		# Note that this process can be very long if there are many inverse locators in this section
-		# To optimize save process in scripts of importation, you can dissable this option if is not really necessary
-		#		
-		#$dato->diffusion_info = null;	// Always reset section diffusion_info on save components
-		#register_shutdown_function( array($this, 'diffusion_info_propagate_changes') ); // exec on __destruct current section
-		if ($component_obj->update_diffusion_info_propagate_changes===true) {
-			$this->diffusion_info_propagate_changes();
-			# debug_log(__METHOD__." Deleted diffusion_info data for section $this->tipo - $this->section_id ", logger::DEBUG);
-		}
-		
-
-		return $result;
-	}#end save_component_dato
+		return $this->dato;
+	}//end set_component_relation_dato
 
 
 
@@ -703,7 +781,6 @@ class section extends common {
 				'portal_tipo' 			=> $portal_tipo
 				);
 	}#end build_section_locator
-
 
 	
 
@@ -786,17 +863,16 @@ class section extends common {
 			# Sometimes we need use section as temporal element without save real data to database. Is this case
 			# data is saved to session as temporal data and can be recovered from $_SESSION['dedalo4']['section_temp_data'] using key '$this->tipo.'_'.$this->section_id'
 			if (isset($this->save_handler) && $this->save_handler==='session') {
-				#dump($this->dato, ' this->dato ++ '.to_string());
-				$temp_data_uid = $this->tipo.'_'.$this->section_id;
-				if(!isset($_SESSION['dedalo4']['section_temp_data'][$temp_data_uid])) {
-					$section_temp_data = (object)$this->dato;
-				}else{
-					$section_temp_data = (object)$this->get_dato();
-				}
 				
+				$temp_data_uid 		= $this->tipo.'_'.$this->section_id;								
+				$section_temp_data 	= (object)$this->dato;
+
 				# Set value to session
 				# Always encode and decode data before store in session to avoid problems on unserialize not loaded classes
 				$_SESSION['dedalo4']['section_temp_data'][$temp_data_uid] = json_decode( json_encode($section_temp_data) );
+
+				#debug_log(__METHOD__." + SAVED SECTION TEMP $this->tipo - $this->section_id : ".json_encode($_SESSION['dedalo4']['section_temp_data'][$temp_data_uid]), logger::DEBUG);
+				#dump($_SESSION['dedalo4']['section_temp_data'], ' $_SESSION ++ '.to_string());
 
 				return $this->section_id;
 			}
@@ -886,9 +962,9 @@ class section extends common {
 					$section_obj->diffusion_info 	= array(); // Empty array by default
 
 					# Inverse locators
-					if (isset($this->dato->inverse_locators)) {
-					$section_obj->inverse_locators 	= (array)$this->dato->inverse_locators;
-					}
+					#if (isset($this->dato->inverse_locators)) {
+					#$section_obj->inverse_locators 	= (array)$this->dato->inverse_locators;
+					#}
 
 					# Relations container
 					if (isset($this->dato->relations)) {
@@ -1012,7 +1088,7 @@ class section extends common {
 																			 DEDALO_SECTION_USERS_TIPO);
 				$dato_filter_master 		= $component_filter_master->get_dato();				
 				$element 					= array($this->section_id => "2");
-				$new_dato_filter_master		= (array)$dato_filter_master + $element;	dump($new_dato_filter_master, ' new_dato_filter_master ++ '.to_string());			
+				$new_dato_filter_master		= (array)$dato_filter_master + $element;			
 				$component_filter_master->set_dato($new_dato_filter_master);
 				$component_filter_master->Save();
 					#dump($component_filter_master,'component_filter_master');				
@@ -1099,19 +1175,9 @@ class section extends common {
 							"section_tipo"	=> $this->tipo
 							)
 				);
-
-				# Reset session search_options
-				/* DESACTIVO
-					$search_options_session_key = $this->tipo.'_'.$this->modo.'_'.TOP_TIPO;
-					if ( isset($_SESSION['dedalo4']['config']['search_options'][$search_options_session_key])) {
-						unset($_SESSION['dedalo4']['config']['search_options'][$search_options_session_key]);
-						debug_log(__METHOD__." Reset session search_options from Save->New record section key: $search_options_session_key");
-					}
-					*/				
+							
 			}#end if($this->tipo!=DEDALO_ACTIVITY_SECTION_TIPO)
-
-		}#end if ($this->id >= 1)
-	
+		}#end if ($this->id >= 1)	
 
 
 		# DEDALO_CACHE_MANAGER : reset caches
@@ -1125,7 +1191,7 @@ class section extends common {
 		}		
 
 		return $this->section_id;
-	}#end Save
+	}//end Save
 
 
 
@@ -1150,7 +1216,7 @@ class section extends common {
 		}
 
 		# matrix_table
-		$matrix_table 	= common::get_matrix_table_from_tipo($section_tipo);		
+		$matrix_table = common::get_matrix_table_from_tipo($section_tipo);		
 
 
 		switch($delete_mode) {
@@ -1257,7 +1323,7 @@ class section extends common {
 					#
 					# RELATION REFERENCES
 					# Remove all relation references (children, model, etc.)
-					$this->remove_all_relation_references();
+					# $this->remove_all_relation_references();
 
 
 					#
@@ -1311,17 +1377,10 @@ class section extends common {
 		}
 
 		# Reset session search_options
-		/* DESACTIVO
-			if (isset($_SESSION['dedalo4']['config']['search_options'][$this->tipo])) {
-				unset($_SESSION['dedalo4']['config']['search_options'][$this->tipo]);
-				if(SHOW_DEBUG===true) {
-					debug_log(__METHOD__." Reset session search_options from Delete section");
-				}			
-			}
-			*/		
+		# fa falta aixó ?
 
 		return true;
-	}
+	}//end Delete
 
 
 
@@ -1335,7 +1394,7 @@ class section extends common {
 		if(!empty($var_requested)) $pageNum = $var_requested;
 		//if(isset($_REQUEST['pageNum'])) $pageNum = $_REQUEST['pageNum'];
 		return DEDALO_DATABASE_CONN.'_section_get_html_'.$this->get_identificador_unico().'_'.$pageNum;
-	}
+	}//end get_section_cache_key_name
 
 
 
@@ -1547,20 +1606,20 @@ class section extends common {
 				# Build component obj
 				case (strpos($modelo_name, 'component_')!==false) :
 
-							$current_obj = component_common::get_instance($modelo_name, $terminoID, $parent,'edit', DEDALO_DATA_LANG, $this->tipo ); #$id=NULL, $tipo=NULL, $modo='edit', $parent=NULL, $lang=DEDALO_DATA_LANG
-							break;
+					$current_obj = component_common::get_instance($modelo_name, $terminoID, $parent,'edit', DEDALO_DATA_LANG, $this->tipo ); #$id=NULL, $tipo=NULL, $modo='edit', $parent=NULL, $lang=DEDALO_DATA_LANG
+					break;
 
 				# Build button obj
 				case (strpos($modelo_name, 'button_')!==false) :
 
-							if ($modelo_name==='button_delete') break; # Skip Delete buttons
+					if ($modelo_name==='button_delete') break; # Skip Delete buttons
 
-							$current_obj = new $modelo_name($terminoID, $target=$parent, $this->tipo);
-							$current_obj->set_context_tipo($tipo);
-							break;
+					$current_obj = new $modelo_name($terminoID, $target=$parent, $this->tipo);
+					$current_obj->set_context_tipo($tipo);
+					break;
 				
 				default :
-							trigger_error("Sorry, element $modelo_name is not defined for build object");
+					trigger_error("Sorry, element $modelo_name is not defined for build object");
 			}
 			
 
@@ -1597,10 +1656,10 @@ class section extends common {
 	*	Force resolve section if is virtal section. default false
 	*	Name of desired filtered model array. You can use partial name like 'component_' (string position search is made it)
 	*/
-	public static function get_ar_children_tipo_by_modelo_name_in_section($section_tipo, $ar_modelo_name_required, $from_cache=true, $resolve_virtual=false, $recursive=true, $search_exact=false) { # Nota: mantener default resolve_virtual=false !
+	public static function get_ar_children_tipo_by_modelo_name_in_section($section_tipo, $ar_modelo_name_required, $from_cache=true, $resolve_virtual=false, $recursive=true, $search_exact=false, $ar_tipo_exclude_elements=false) { # Nota: mantener default resolve_virtual=false !
 
 		$cache_uid = $section_tipo.'_'.serialize($ar_modelo_name_required).'_'.(int)$resolve_virtual.'_'.(int)$recursive;
-		if ($from_cache && isset($_SESSION['dedalo4']['config']['ar_children_tipo_by_modelo_name_in_section'][$cache_uid])) {
+		if ($from_cache===true && isset($_SESSION['dedalo4']['config']['ar_children_tipo_by_modelo_name_in_section'][$cache_uid])) {
 			return $_SESSION['dedalo4']['config']['ar_children_tipo_by_modelo_name_in_section'][$cache_uid];
 		}
 
@@ -1626,26 +1685,31 @@ class section extends common {
 				$section_tipo = $section_real_tipo;
 
 				# EXCLUDE ELEMENTS
-				$ar_tipo_exclude_elements 	= RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($original_tipo, $modelo_name='exclude_elements', $relation_type='children', $search_exact);
+				if ($ar_tipo_exclude_elements===false) {
+					$ar_tipo_exclude_elements = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($original_tipo, $modelo_name='exclude_elements', $relation_type='children', $search_exact);
+				}
 					#dump($tipo_exclude_elements,"tipo_exclude_elements ");
 				if (!isset($ar_tipo_exclude_elements[0])) {
-					throw new Exception("Error Processing Request. exclude_elements of section $original_tipo not found. Exclude elements is mandatory (1)", 1);				
-				}
-				$tipo_exclude_elements = $ar_tipo_exclude_elements[0];
-				
-				$ar_terminos_relacionados_to_exclude = RecordObj_dd::get_ar_terminos_relacionados($tipo_exclude_elements, $cache=false, $simple=true);
+					#throw new Exception("Error Processing Request. exclude_elements of section $original_tipo not found. Exclude elements is mandatory (1)", 1);
+					error_log("Warning. exclude_elements of section $original_tipo not found (1)");			
+				}else{
 
-				foreach ($ar_terminos_relacionados_to_exclude as $key => $component_tipo) {
+					$tipo_exclude_elements = $ar_tipo_exclude_elements[0];
 					
-					$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($component_tipo, true);
-					if($modelo_name === 'section_group'){
-						$ar_recursive_childrens = (array)self::get_ar_recursive_childrens($component_tipo);
-						//dump($ar_recursive_childrens,'ar_recursive_childrens');
-						$ar_terminos_relacionados_to_exclude = array_merge($ar_terminos_relacionados_to_exclude,$ar_recursive_childrens);
-					}					
+					$ar_terminos_relacionados_to_exclude = RecordObj_dd::get_ar_terminos_relacionados($tipo_exclude_elements, $cache=false, $simple=true);
 
-				}#end foreach ($ar_terminos_relacionados_to_exclude as $key => $component_tipo) {
-				#dump($ar_terminos_relacionados_to_exclude,'ar_terminos_relacionados_to_exclude');
+					foreach ($ar_terminos_relacionados_to_exclude as $key => $component_tipo) {
+						
+						$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($component_tipo, true);
+						if($modelo_name === 'section_group'){
+							$ar_recursive_childrens = (array)self::get_ar_recursive_childrens($component_tipo);
+							//dump($ar_recursive_childrens,'ar_recursive_childrens');
+							$ar_terminos_relacionados_to_exclude = array_merge($ar_terminos_relacionados_to_exclude,$ar_recursive_childrens);
+						}
+
+					}#end foreach ($ar_terminos_relacionados_to_exclude as $key => $component_tipo) {
+					#dump($ar_terminos_relacionados_to_exclude,'ar_terminos_relacionados_to_exclude');
+				}				
 			
 			}#end if($section_real_tipo!=$original_tipo) {
 
@@ -1733,14 +1797,17 @@ class section extends common {
 					continue;
 				}
 			}
-		}
+		}//end foreach($ar_recursive_childrens as $current_terminoID)	
+		#dump($section_ar_children_tipo,'section_ar_children_tipo',"array of tipos:'$modelo_name' childrens of this section tipo={$tipo} ");
+
+		# Cache session store
+		$_SESSION['dedalo4']['config']['ar_children_tipo_by_modelo_name_in_section'][$cache_uid] = $section_ar_children_tipo;
+
 		if(SHOW_DEBUG===true) {
 			global$TIMER;$TIMER[__METHOD__.'_OUT_'.$section_tipo.'_'.$cache_uid.'_'.microtime(1)]=microtime(1);
 		}
-		#dump($section_ar_children_tipo,'section_ar_children_tipo',"array of tipos:'$modelo_name' childrens of this section tipo={$tipo} ");
 
-		$_SESSION['dedalo4']['config']['ar_children_tipo_by_modelo_name_in_section'][$cache_uid] = $section_ar_children_tipo;
-		
+
 		return $section_ar_children_tipo;
 	}//end get_ar_children_tipo_by_modelo_name_in_section
 
@@ -1750,7 +1817,7 @@ class section extends common {
 	* GET_AR_RECURSIVE_CHILDRENS : private alias of RecordObj_dd::get_ar_recursive_childrens
 	* Note th use of $ar_exclude_models to exclude not desired section elements, like auxiliar sections in ich
 	*/
-	private static function get_ar_recursive_childrens( $tipo ) {		
+	public static function get_ar_recursive_childrens($tipo) {
 		#$RecordObj_dd			= new RecordObj_dd($tipo);
 		#$ar_recursive_childrens = (array)$RecordObj_dd->get_ar_recursive_childrens_of_this($tipo);
 		
@@ -1758,7 +1825,7 @@ class section extends common {
 		# Current elements and childrens are not considerated part of section and must be excluded in children results
 		$ar_exclude_models = array('box elements','area');		
 
-		$ar_recursive_childrens = RecordObj_dd::get_ar_recursive_childrens($tipo, false, $ar_exclude_models);
+		$ar_recursive_childrens = RecordObj_dd::get_ar_recursive_childrens($tipo, false, $ar_exclude_models, 'norden');
 
 		return (array)$ar_recursive_childrens;
 	}//end get_ar_recursive_childrens
@@ -1849,18 +1916,16 @@ class section extends common {
 			# Localizamos el elemento de tipo 'exclude_elements' que será hijo de la sección actual
 			# $exclude_elements_tipo = section::get_ar_children_tipo_by_modelo_name_in_section($this->tipo, 'exclude_elements')[0];
 			$ar_exclude_elements_tipo = section::get_ar_children_tipo_by_modelo_name_in_section($this->tipo, 'exclude_elements');
+			$ar_excluded_tipo 		  = array();
 				#dump($ar_exclude_elements_tipo, ' ar_exclude_elements_tipo');
 			if (!isset($ar_exclude_elements_tipo[0])) {
-				throw new Exception("Error Processing Request. exclude_elements of section $this->tipo not found. Exclude elements is mandatory (2)", 1);				
-			}
-			$exclude_elements_tipo = $ar_exclude_elements_tipo[0];			
-
-			if (!empty($exclude_elements_tipo)) {
+				#throw new Exception("Error Processing Request. exclude_elements of section $this->tipo not found. Exclude elements is mandatory (2)", 1);
+				error_log("Warning. exclude_elements of section $this->tipo not found (2)");				
+			}else{				
 				# Localizamos los elementos a excluir que son los términos relacionados con este elemento ('exclude_elements')
-				$ar_excluded_tipo = RecordObj_dd::get_ar_terminos_relacionados($exclude_elements_tipo, $cache=false, $simple=true);
-					#dump($ar_excluded_tipo,'$ar_excluded_tipo');
-
+				$ar_excluded_tipo = RecordObj_dd::get_ar_terminos_relacionados($ar_exclude_elements_tipo[0], $cache=false, $simple=true);							
 			}
+			
 			#dump($ar_exclude_elements,'ar_exclude_elements '.$this->tipo);
 			$ar_obj_button_all = $this->get_ar_children_objects_by_modelo_name_in_section('button_',true);			
 				#dump($ar_obj_button_all,'$ar_obj_button_all');
@@ -1917,7 +1982,7 @@ class section extends common {
 	* @return array $ar_all_project_langs
 	*	(like lg-spa, lg-eng)
 	*/
-	public function get_ar_all_project_langs(  ) {
+	public function get_ar_all_project_langs() {
 
 		$ar_all_project_langs = common::get_ar_all_langs();
 
@@ -2183,11 +2248,10 @@ class section extends common {
 	* @param string $section_tipo
 	* @return resource $result
 	*/
-	public static function get_resource_all_section_records_unfiltered($section_tipo) {
+	public static function get_resource_all_section_records_unfiltered($section_tipo, $select='section_id') {
 
-		$matrix_table 	= common::get_matrix_table_from_tipo($section_tipo);
-		$filter 		= "section_tipo = '$section_tipo'";
-		$strQuery 		= "-- ".__METHOD__." \nSELECT section_id FROM \"$matrix_table\" WHERE section_tipo = '$section_tipo' ORDER BY section_id ASC ";
+		$matrix_table 	= common::get_matrix_table_from_tipo($section_tipo);		
+		$strQuery 		= "-- ".__METHOD__." \nSELECT $select FROM \"$matrix_table\" WHERE section_tipo = '$section_tipo' ORDER BY section_id ASC ";
 		$result			= JSON_RecordObj_matrix::search_free($strQuery);
 		
 		return $result;
@@ -2207,7 +2271,7 @@ class section extends common {
 			'component_pdf',
 			'component_html_file' // Not remove nothing for now		
 			);
-	}
+	}//end get_media_components_modelo_name
 
 
 
@@ -2395,9 +2459,23 @@ class section extends common {
 																	 'edit',
 																	 DEDALO_DATA_NOLAN,
 																	 $this->tipo);
-				$dato 			  = array(DEDALO_DEFAULT_PROJECT=>2);
-				$component_filter->set_dato($dato);
-				$component_filter->Save();
+				#
+				# FILTER always save default project
+				# Get current user projects
+				$user_id = navigator::get_user_id();
+				$user_projects = filter::get_user_projects($user_id);
+				if (!empty($user_projects)) {
+					# First user project
+					foreach ($user_projects as $project_key => $project_value) {
+						$new_dato = array($project_key => 2);
+						break;
+					}
+				}else{
+					# Default project defined in config
+					$new_dato = array(DEDALO_DEFAULT_PROJECT => 2);
+				}
+				$this->set_dato($new_dato);
+				$this->Save();
 			}
 
 		#
@@ -2433,7 +2511,7 @@ class section extends common {
 	* DIFFUSION_INFO_ADD
 	* @param string $diffusion_element_tipo
 	*/
-	public function diffusion_info_add( $diffusion_element_tipo ) {
+	public function diffusion_info_add($diffusion_element_tipo) {
 		$dato = $this->get_dato();
 
 		if (!isset($dato->diffusion_info) || !is_object($dato->diffusion_info)) {	// property_exists($dato, 'diffusion_info')
@@ -2464,7 +2542,10 @@ class section extends common {
 
 		foreach((array)$inverse_locators as $locator) {
 
-			$section = section::get_instance($locator->section_id, $locator->section_tipo, $modo='list');
+			$current_section_tipo = $locator->from_section_tipo;
+			$current_section_id   = $locator->from_section_id;
+
+			$section = section::get_instance($current_section_id, $current_section_tipo, $modo='list');
 			$dato 	 = $section->get_dato();
 
 			if (!empty($dato->diffusion_info)) {
@@ -2477,9 +2558,9 @@ class section extends common {
 
 				// Save section with updated dato
 				$section->Save();
-				debug_log(__METHOD__." Propagated diffusion_info changes to section  $locator->section_tipo, $locator->section_id ".to_string(), logger::DEBUG);						
+				debug_log(__METHOD__." Propagated diffusion_info changes to section  $current_section_tipo, $current_section_id ".to_string(), logger::DEBUG);						
 			}else{
-				debug_log(__METHOD__." Unnecessary do diffusion_info changes to section  $locator->section_tipo, $locator->section_id ".to_string(), logger::DEBUG);
+				debug_log(__METHOD__." Unnecessary do diffusion_info changes to section  $current_section_tipo, $current_section_id ".to_string(), logger::DEBUG);
 			}			
 		}
 	}#end diffusion_info_propagate_changes
@@ -2490,7 +2571,7 @@ class section extends common {
 	* DIFFUSION_INFO_REMOVE
 	* @param string $diffusion_element_tipo
 	*//*
-	public function diffusion_info_remove__DES( $diffusion_element_tipo ) {
+	public function diffusion_info_remove__DES($diffusion_element_tipo) {
 		$dato = $this->get_dato();
 
 		if (!property_exists($dato, 'diffusion_info')) return false;
@@ -2505,7 +2586,7 @@ class section extends common {
 			#register_shutdown_function($this->diffusion_info_propagate_changes);
 			$this->diffusion_info_propagate_changes();
 		}
-	}#end diffusion_info_remove
+	}//end diffusion_info_remove
 	*/
 
 
@@ -2522,192 +2603,109 @@ class section extends common {
 			return true;
 		}
 		return false;
-	}#end diffusion_info_reset
+	}//end diffusion_info_reset
 	*/
 
 
 
 	/**
 	* GET_INVERSE_LOCATORS
+	* Alias of section->get_inverse_references
 	* @return array $inverse_locators
 	*/
 	public function get_inverse_locators() {
+		return $this->get_inverse_references();
+	}//end get_inverse_locators
+
+
+
+	/**
+	* GET_INVERSE_REFERENCES
+	* Get calculated inverse locators for all matrix tables
+	* @see search_development2::calculate_inverse_locator
+	* @return array $inverse_locators
+	*/
+	public function get_inverse_references() {
 
 		if (empty($this->section_id)) {
 			# Section not exists yet. Return empty array
 			return array();
 		}
 
-		$dato = $this->get_dato(); // Force load data
-
-		if( isset($dato->inverse_locators) )  {
-
-			# In rare cases sorce data inverse_locators is a aphp asociative array encoded with json. On decode, undesired object is created
-			if (is_object($dato->inverse_locators)) {
-				$ar_locators=array();
-				foreach ($dato->inverse_locators as $key => $value) {
-					$ar_locators[] = $value;
-				}
-				$dato->inverse_locators = $ar_locators;	// Replace object (json asociative array) for pure array with reindexed keys
-				debug_log(__METHOD__." Replaced invalid data (object) with real array compatible json encode ".to_string(), logger::DEBUG);
-			}
-
-			return (array)$dato->inverse_locators;
-		}
-		return array();
-	}//end get_inverse_locators
-
-
-
-	/**
-	* ADD_INVERSE_LOCATOR
-	* @param object locator $locator
-	*/
-	public function add_inverse_locator( $locator ) {
-
-		# matrix_list records don't store inverse locators (for speed)
-		# 29-09-2017 Paco
-		$matrix_table = common::get_matrix_table_from_tipo($this->tipo);
-		if ($matrix_table==="matrix_list") {
-			return false;
-		}
-
-		if (!is_object($locator)) {
-			if(SHOW_DEBUG===true) {
-				throw new Exception("Error Processing Request. var 'locator' is not of type locator ", 1);	
-			}
-			debug_log(__METHOD__." Invalid locator is received to add. Locator was ignored (type:".gettype($locator).") ".to_string($locator), logger::WARNING);
-			return false;		
-		}
-		$locator = new locator($locator);
+		#$inverse_locators = search_development2::get_inverse_relations_from_relations_table($this->tipo, $this->section_id);
 		
-		$inverse_locators = $this->get_inverse_locators();
-			#dump($inverse_locators, ' inverse_locators ++ '.to_string());
-
-		# DATA INTEGRITY: Clean possible bad format locators (old and beta errors)
-		foreach ((array)$inverse_locators as $key => $current_inverse_locator) {
-			if (!is_object($current_inverse_locator) || !isset($current_inverse_locator->section_id) || !isset($current_inverse_locator->section_tipo)) {				
-				unset($inverse_locators[$key]);
-				debug_log(__METHOD__." !! REMOVED BAD FORMAT INVERSE LOCATOR: (type:".gettype($current_inverse_locator).") ".to_string($current_inverse_locator), logger::WARNING);
-			}
-		}
-		# maintain array index after unset value. ! Important for encode json as array later (if keys are not correlatives, object is created)
-		$inverse_locators = array_values($inverse_locators);
+		# Create a minimal locator based on current section
+		$reference_locator = new locator();
+			$reference_locator->set_section_tipo($this->tipo);
+			$reference_locator->set_section_id($this->section_id);
 		
-		# Test if already exists
-		$object_exists = false;
-		foreach ((array)$inverse_locators as $key => $current_locator_obj) {
-			if ( $current_locator_obj->section_tipo === $locator->section_tipo 
-				 && $current_locator_obj->section_id == $locator->section_id 
-				) {
-				$object_exists=true;
-				break;				
-			}
-		}
-		#dump($dato,"object_exists");
-
-		if ($object_exists===false) {
-			array_push($inverse_locators, $locator);
-			//$inverse_locators[] = $locator;
-
-			# Force load 'dato' if not exists / loaded
-			if ( empty($this->dato) && $this->section_id>0 ) {
-				$this->get_dato();
-			}
-			if (empty($this->dato)) {
-				$this->dato = new stdClass();
-			}
-
-			$this->dato->inverse_locators = $inverse_locators;
-			//$this->set_inverse_locators($inverse_locators);
-
-			return true;
-		}
-
-		return false;
-	}//end add_inverse_locator
+		# Get calculated inverse locators for all matrix tables
+		$inverse_locators = search_development2::calculate_inverse_locators( $reference_locator );
 
 
-
-	/**
-	* REMOVE_INVERSE_LOCATOR
-	* @param object locator $locator
-	*/
-	public function remove_inverse_locator( $locator ) {
-
-		if(!is_object($locator)) {
-			return false;
-		}
-		$locator = new locator($locator);
-		
-		$inverse_locators = (array)$this->get_inverse_locators();
-
-		# Locator is locator object and inverse_locators are stdClass. Convert current locator to standar class to compare
-		$locator_std = json_encode($locator);
-		$locator_std = json_decode($locator_std);
-
-		foreach ($inverse_locators as $key => $current_locator) {
-			if ( $current_locator==$locator_std ) {
-				unset($inverse_locators[$key]);
-				break;
-			}
-		}
-		# maintain array index after unset value. ! Important for encode json as array later (if keys are not correlatives, object is created)
-		$inverse_locators = array_values($inverse_locators);
-
-		$this->dato->inverse_locators = $inverse_locators;
-		return false;
-	}//end remove_inverse_locator
-
-
-
-	/**
-	* REMOVE_ALL_INVERSE_LOCATOR
-	*/
-	public function remove_all_inverse_locator() {
-		$this->dato->inverse_locators = array();
-	}//end remove_all_inverse_locator
+		return (array)$inverse_locators;	
+	}//end get_inverse_references
 
 
 
 	/**
 	* REMOVE_ALL_INVERSE_REFERENCES
-	* @return 
+	* @return array $removed_locators
 	*/
 	public function remove_all_inverse_references() {
+
+		$removed_locators = [];
 		
-		$inverse_locators = $this->get_inverse_locators();
+		$inverse_locators = $this->get_inverse_locators();		
 		foreach ((array)$inverse_locators as $current_locator) {
+
+			$component_tipo = $current_locator->from_component_tipo;
+			$section_tipo 	= $current_locator->from_section_tipo;
+			$section_id 	= $current_locator->from_section_id;
 			
-			$modelo_name = RecordObj_dd::get_modelo_name_by_tipo( $current_locator->component_tipo, true );
-			if ($modelo_name!=='component_portal' && $modelo_name!=='component_autocomplete') {
+			$modelo_name = RecordObj_dd::get_modelo_name_by_tipo( $component_tipo, true );
+			#if ($modelo_name!=='component_portal' && $modelo_name!=='component_autocomplete' && $modelo_name!=='component_relation_children') {
+			if ('component_relation_common' !== get_parent_class($modelo_name)) {			
 				if(SHOW_DEBUG===true) {
-					trigger_error("ERROR (remove_all_inverse_references): Only portals are supported!! Received: $modelo_name");
+					trigger_error("ERROR (remove_all_inverse_references): Only portals are supported!! Ignored received: $modelo_name");
 				}
-				//return false;
+				continue;
 			}
+
 			$component 	 = component_common::get_instance(	$modelo_name,
-															$current_locator->component_tipo,
-															$current_locator->section_id,
+															$component_tipo,
+															$section_id,
 															'edit',
 															DEDALO_DATA_NOLAN,
-															$current_locator->section_tipo
+															$section_tipo
 															);
 			
-			$locator = new locator();
-				$locator->set_section_tipo($this->tipo);
-				$locator->set_section_id($this->section_id);			
+			$locator_to_remove = new locator();
+				$locator_to_remove->set_section_tipo($this->tipo);
+				$locator_to_remove->set_section_id($this->section_id);
+				$locator_to_remove->set_type($component->get_relation_type());
 
-			$component->remove_inverse_locator_reference( $locator );
-			$component->Save();
+			if (true === $component->remove_locator_from_dato( $locator_to_remove )) {
+				// Save component dato
+				$component->Save();
+			
+				$removed_locators[] = [
+					"removed_from" 		=> $current_locator,
+					"locator_to_remove" => $locator_to_remove
+				];
 
-			if(SHOW_DEBUG===true) {
-				debug_log(__METHOD__." Removed inverse reference to tipo:$this->tipo, section_id:$this->section_id in $modelo_name: tipo:$current_locator->component_tipo, section_id:$current_locator->section_id, section_tipo:$current_locator->section_tipo ");
-			}
+				if(SHOW_DEBUG===true) {
+					debug_log(__METHOD__." !!!! Removed inverse reference to tipo:$this->tipo, section_id:$this->section_id in $modelo_name: tipo:$current_locator->from_component_tipo, section_id:$current_locator->from_section_id, section_tipo:$current_locator->from_section_tipo ", logger::DEBUG);
+				}
+			}else{
+				debug_log(__METHOD__." Error on remove reference to current_locator ".json_encode($current_locator), logger::ERROR);
+			}			
 		}
 
-		return $inverse_locators;
-	}#end remove_all_inverse_references
+
+		return $removed_locators;
+	}//end remove_all_inverse_references
+
 
 
 
@@ -2766,7 +2764,7 @@ class section extends common {
 			return false;		
 		}
 
-		$current_type = $locator->type;		
+		$current_type = $locator->type;
 		$relations 	  = $this->get_relations();
 			#dump($relations, ' relations ++ '.to_string());	
 			
@@ -2775,6 +2773,7 @@ class section extends common {
 		foreach ((array)$relations as $key => $current_relation) {
 			if (!is_object($current_relation) || !isset($current_relation->section_id) || !isset($current_relation->section_tipo) || !isset($current_relation->type)) {		
 				//unset($relations[$key]);
+					dump($current_relation, ' current_relation ++ '.to_string());
 				#debug_log(__METHOD__." !! FOUNDED BAD FORMAT RELATION LOCATOR: (type:".gettype($current_relation).") ".to_string($current_relation), logger::WARNING);
 				throw new Exception("Error Processing Request. !! FOUNDED BAD FORMAT RELATION LOCATOR IN SECTION_RELATION DATA: (type:".gettype($current_relation).") ".to_string($current_relation), 1);				
 			}
@@ -2787,12 +2786,13 @@ class section extends common {
 		$relations = array_values($relations);
 		
 		# Test if already exists	
-		$ar_properties=array('section_tipo','section_id','type');
-		if (isset($locator->tag_id)) 		 	$ar_properties[] = 'tag_id';
-		if (isset($locator->component_tipo)) 	$ar_properties[] = 'component_tipo';
-		if (isset($locator->section_top_tipo))	$ar_properties[] = 'section_top_tipo';
-		if (isset($locator->section_top_id)) 	$ar_properties[] = 'section_top_id';
-		$object_exists = locator::in_array_locator( $locator, $ar_locator=$relations, $ar_properties );
+		/*$ar_properties=array('section_id','section_tipo','type');
+		if (isset($locator->from_component_tipo)) 	$ar_properties[] = 'from_component_tipo';
+		if (isset($locator->tag_id)) 		 		$ar_properties[] = 'tag_id';
+		if (isset($locator->component_tipo)) 		$ar_properties[] = 'component_tipo';
+		if (isset($locator->section_top_tipo))		$ar_properties[] = 'section_top_tipo';
+		if (isset($locator->section_top_id)) 		$ar_properties[] = 'section_top_id';*/
+		$object_exists = locator::in_array_locator( $locator, $ar_locator=$relations);
 		if ($object_exists===false) {
 
 			array_push($relations, $locator);
@@ -2820,38 +2820,6 @@ class section extends common {
 
 
 	/**
-	* ADD_RELATIONS
-	* Run add_relation for each locator element contained in received array
-	* If $remove_previous_of_current_type is true and $type!=false, previous locators of requested type will be removed.
-	* In this case, if $ar_relation array is empty, relations of current type will be empty (set dato empty cases)
-	* @param array $ar_relation
-	*	Array of locators
-	* @return bool $result
-	*	If any of added relation result is false (no added), this method return false. Otherwise true
-	* @see component_relation_common->set_dato
-	*/
-	public function add_relations( $ar_relation, $remove_previous_of_current_type=false, $type=false ) {
-		$result=true;
-
-		if ($remove_previous_of_current_type===true && !empty($type)) {
-			$this->remove_relations_of_type( $type );			
-		}
-
-		if(!empty($ar_relation)) {
-			foreach ((array)$ar_relation as $locator) {
-				$add_relation = $this->add_relation( $locator );
-				// If any fail, returns false
-				if($add_relation===false) $result = false;
-			}
-		}		
-		#dump($this->dato->relations, ' $this->dato->relations ++ type: '.to_string($type));
-
-		return (bool)$result;
-	}//end add_relations
-
-
-
-	/**
 	* REMOVE_RELATION
 	* @param object locator $locator
 	*/
@@ -2859,14 +2827,15 @@ class section extends common {
 		
 		$relations = (array)$this->get_relations();
 
-		$ar_properties=array('section_tipo','section_id','type');
-		if (isset($locator->tag_id)) 		 	$ar_properties[] = 'tag_id';
-		if (isset($locator->component_tipo)) 	$ar_properties[] = 'component_tipo';
-		if (isset($locator->section_top_tipo))	$ar_properties[] = 'section_top_tipo';
-		if (isset($locator->section_top_id)) 	$ar_properties[] = 'section_top_id';
+		$ar_properties=array('section_id','section_tipo','type');
+		if (isset($locator->from_component_tipo)) 	$ar_properties[] = 'from_component_tipo';
+		if (isset($locator->tag_id)) 		 		$ar_properties[] = 'tag_id';
+		if (isset($locator->component_tipo)) 		$ar_properties[] = 'component_tipo';
+		if (isset($locator->section_top_tipo))		$ar_properties[] = 'section_top_tipo';
+		if (isset($locator->section_top_id)) 		$ar_properties[] = 'section_top_id';
 
-		$new_relations = array();
-		$removed = false;
+		$removed 		= false;
+		$new_relations 	= array();		
 		foreach ($relations as $key => $current_locator_obj) {
 
 			# Test if already exists
@@ -2891,7 +2860,10 @@ class section extends common {
 		}
 
 		# Updates current dato relations with clean array of locators
-		$this->dato->relations = $new_relations;		
+		if ($removed===true) {
+			$this->dato->relations = $new_relations;
+		}
+				
 
 		return (bool)$removed;
 	}//end remove_relation
@@ -2899,39 +2871,44 @@ class section extends common {
 
 
 	/**
-	* REMOVE_RELATIONS_OF_TYPE
+	* REMOVE_RELATIONS_FROM_COMPONENT_TIPO
 	* Delete all locators of type requested from section relation dato
 	* Note this method not save
 	* @return array $ar_deleted_locators
 	*/
-	public function remove_relations_of_type( $relation_type ) {
+	public function remove_relations_from_component_tipo( $component_tipo ) {
 		
 		$relations = (array)$this->get_relations();
 
+		$removed 			 = false;
 		$ar_deleted_locators = array();
 		foreach ($relations as $key => $current_locator) {
 
-			# Test if type
-			if ( isset($current_locator->type) && $current_locator->type===$relation_type) {
+			# Test if from_component_tipo
+			if ( isset($current_locator->from_component_tipo) && $current_locator->from_component_tipo===$component_tipo) {
 				$ar_deleted_locators[] = $current_locator;
-				#debug_log(__METHOD__." Deleting locator of type $relation_type ".to_string($current_locator), logger::DEBUG);
 				unset($relations[$key]);
+				$removed = true;
+				#debug_log(__METHOD__." Deleting locator of type $relation_type ".to_string($current_locator), logger::DEBUG);
 			}
 		}
-		# maintain array index after unset value. ! Important for encode json as array later (if keys are not correlatives, object is created)
-		$relations = array_values($relations);
+		
+		if ($removed===true) {
+			# maintain array index after unset value. ! Important for encode json as array later (if keys are not correlatives, object is created)
+			$relations = array_values($relations);
+			# Update section dato relations on finish
+			$this->dato->relations = $relations;
+		}
 
-		# update section dato relations on finish
-		$this->dato->relations = $relations;
 
 		return (array)$ar_deleted_locators;
-	}//end remove_relations_of_type
+	}//end remove_relations_from_component_tipo
 
 
 
 	/**
 	* GET_SECTION_MAP
-	* Section map data is in 'propiedades' of element of model 'section_map' placed in first level of section
+	* Section map data is stored in 'propiedades' of element of model 'section_map' placed in first level of section
 	* 
 	* @return object $setion_map or null
 	*/
@@ -2953,11 +2930,9 @@ class section extends common {
 			$ar_children = section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, $ar_modelo_name_required, $from_cache=true, $resolve_virtual, $recursive=false, $search_exact=true);
 		}
 
-		if( !isset($ar_children[0]) ) {
-			$section_map = null;
-		
-		}else{
-
+		$section_map = null;
+		if( isset($ar_children[0]) ) {
+			
 			$tipo 			= $ar_children[0];
 			$RecordObj_dd 	= new RecordObj_dd($tipo);
 			$propiedades 	= $RecordObj_dd->get_propiedades();
@@ -2968,8 +2943,9 @@ class section extends common {
 				$section_map  = null;
 			}
 		}
-
+		# Store in cache for speed
 		$section_map_cache[$section_tipo] = $section_map;	
+
 
 		return $section_map;	
 	}//end get_section_map
@@ -2977,30 +2953,189 @@ class section extends common {
 
 
 	/**
-	* REMOVE_ALL_RELATION_REFERENCES
-	* Used on delete section, to exterminate locator references
-	* @return 
+	* PROPAGATE_TEMP_SECTION_DATA
+	* @param object $temp_section_data
+	* @param object $current_section
 	*/
-	private function remove_all_relation_references() {
+	public static function propagate_temp_section_data($temp_section_data, $section_tipo, $section_id) {
 
-		$response = new stdClass();
-			$response->result 	= false;
-			$response->msg 		= '';
+		# COMPONENTS
+		if (isset($temp_section_data->components)) {		
+			foreach ($temp_section_data->components as $current_tipo => $current_component) {
 
-		$section_tipo 	= $this->tipo;
-		$section_id 	= $this->section_id;
+				if ($current_tipo==='relations') {
+					trigger_error("BAD SECTION DATA IN temp_section_data !! ".json_encode($temp_section_data));
+					continue;
+				}
 
-		# remove_parent_references
-		$result = component_relation_common::remove_parent_references($section_tipo, $section_id, $filter=false);
-		debug_log(__METHOD__." Removed children references to current section $section_tipo - $section_id, ".to_string(), logger::DEBUG);
+				$RecordObj_dd 	= new RecordObj_dd($current_tipo);
+				$traducible  	= $RecordObj_dd->get_traducible();
+				$current_lang   = $traducible!=='si' ? DEDALO_DATA_NOLAN : DEDALO_DATA_LANG;
+				
+				$component_dato_current_lang = $current_component->dato->$current_lang;
 
-		# related references
-		# TO DO
+				if (!isset($component_dato_current_lang)) {
+					if(SHOW_DEBUG) {
+						dump($current_component, ' $current_component ++ '.to_string());
+						trigger_error("Error: element $current_tipo without dato");
+					}
+					continue;
+				}
+				
+				$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
+				$component 	 = component_common::get_instance(	$modelo_name,
+																$current_tipo, 
+																$section_id, 
+																'edit',
+																$current_lang, 
+																$section_tipo);
+				$component->set_dato( $component_dato_current_lang );
+				$component->Save();
+				
+			}//end foreach ($temp_section_data as $key => $value) {
+		}//end if (isset($temp_section_data->components))
 
-		return (object)$response;
-	}//end remove_all_relation_references	
+
+		# RELATION COMPONENTS
+		if (isset($temp_section_data->relations)) {
+			$ar_locators = [];
+			# Group locator by from_component_tipo
+			foreach ($temp_section_data->relations as $current_locator) {
+				$current_tipo = $current_locator->from_component_tipo;
+				$ar_locators[$current_tipo][] = $current_locator;
+			}
+			#dump($ar_locators, ' ar_locators ++ '.to_string());
+			# iterate relation components and set dato/save
+			foreach ($ar_locators as $current_tipo => $ar_current_locator) {
+				$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
+				$component 	 = component_common::get_instance(	$modelo_name,
+																$current_tipo,
+																$section_id,
+																'edit',
+																DEDALO_DATA_NOLAN,
+																$section_tipo,
+																false);
+				$component->get_dato();
+				$component->set_dato( $ar_current_locator );
+				$component->Save();
+
+				#debug_log(__METHOD__." Saved $modelo_name $current_tipo ($section_tipo - $section_id) dato: ".json_encode($ar_current_locator), logger::DEBUG);
+			}
+		}//end if (isset($temp_section_data->relations))
+
+
+		return true;
+	}//nd propagate_temp_section_data
+
+
+
+	/**
+	* BUILD_SEARCH_QUERY_OBJECT
+	* @return object $query_object
+	*/
+	public function build_search_query_object( $request_options=array() ) {
+
+		$start_time=microtime(1);
+	
+		$options = new stdClass();
+			$options->q 	 			= null;
+			$options->limit  			= 10;
+			$options->order  			= null;
+			$options->offset 			= 0;
+			$options->lang 				= DEDALO_DATA_LANG;			
+			$options->id 				= $this->tipo . '_' .$this->modo;
+			$options->section_tipo		= $this->tipo;
+			$options->select_fields		= 'default';
+			$options->filter_by_id		= false;
+			$options->full_count		= true;
+			#$options->forced_matrix_table = false;
+			if ($this->tipo===DEDALO_ACTIVITY_SECTION_TIPO) {
+				
+				#$order_obj = new stdClass();
+				#	$order_obj->direction 	= "DESC";
+				#	$order_obj->path 		= json_decode('[{"component_tipo": "section_id"}]');				
+				# Defaults for activity
+				$options->limit  		= 30;
+				#$options->order  		= [$order_obj];
+			}
+			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
+	
+		# SELECT
+			$select_group = [];
+			if ($options->select_fields===false) {
+				# No fields are required
+			}else{
+				# Default case
+				$layout_map = component_layout::get_layout_map_from_section( $this );
+				if (!empty($layout_map)) {
+					$ar_component_tipo = reset($layout_map);
+					foreach ($ar_component_tipo as $component_tipo) {
+						if (empty($component_tipo)) {
+							debug_log(__METHOD__." Ignored empty component tipo received from layout map: ".to_string($layout_map), logger::ERROR);
+							continue;
+						}
+						$select_element = new stdClass();
+							$select_element->path = search_development2::get_query_path($component_tipo, $this->tipo, false);					
+						# Add to group
+						$select_group[] = $select_element;
+					}
+				}				
+			}
+			
+
+		# FILTER
+			$filter_group = null;
+			if ($options->filter_by_id!==false) {
+
+				// Is an array of objects
+				$ar_section_id = [];
+				foreach ((array)$options->filter_by_id as $locator) {
+					$ar_section_id[] = (int)$locator->section_id;
+				}
+
+				$filter_element = new stdClass();
+					$filter_element->q 		= json_encode($ar_section_id);
+					$filter_element->path 	= json_decode('[
+	                    {
+	                        "section_tipo": "'.$this->tipo.'",
+	                        "component_tipo": "section_id",
+	                        "modelo": "component_section_id",
+	                        "name": "section_id"
+	                    }
+	                ]');
+					
+				$op = '$and';
+				$filter_group = new stdClass();
+					$filter_group->$op = [$filter_element];
+			}//end if ($options->filter_by_id!==false)
+
+
+		# QUERY OBJECT	
+		$query_object = new stdClass();
+			$query_object->id  	   		= $options->id;
+			$query_object->section_tipo = $options->section_tipo;
+			$query_object->limit   		= $options->limit;
+			$query_object->order   		= $options->order;
+			$query_object->offset  		= $options->offset;
+			$query_object->full_count  	= $options->full_count;			
+			# Used only for time machine list
+			#if ($options->forced_matrix_table!==false) {
+				# add forced_matrix_table (time machine case)
+			#	$query_object->forced_matrix_table = $options->forced_matrix_table;
+			#}
+			$query_object->filter  		= $filter_group;
+			$query_object->select  		= $select_group;
+			
+			
+		#dump( json_encode($query_object, JSON_PRETTY_PRINT), ' query_object ++ '.to_string());
+		#debug_log(__METHOD__." query_object ".json_encode($query_object, JSON_PRETTY_PRINT), logger::DEBUG);totaol
+		#debug_log(__METHOD__." total time ".exec_time_unit($start_time,'ms').' ms', logger::DEBUG);
+		
+
+		return (object)$query_object;
+	}//end build_search_query_object
 
 	
 
-}
+}//end section
 ?>

@@ -19,6 +19,8 @@
 		# Body
 		$html .= "<div class=\"css_section_group_content tab_content inspector_div_content\">";
 
+			$html .= $button_new_html;
+
 			# paginator placeholder
 			$html .= "<div id=\"wrap_inspector_paginator\"> Loading paginator.. </div>";
 		
@@ -37,7 +39,7 @@
 		$html .= "<div id=\"tools_info_wrapper\">";
 		# Header		
 		$html .= "<div class=\"css_section_group_titulo tab_title title_down_box text_unselectable border_radius_0\" data-tab_id=\"Inspector_tools_tap\">";
-		$html .= "  <label class=\"css_label\">".label::get_label('heramientas')."</label>";
+		$html .= "<label class=\"css_label\">".label::get_label('heramientas')."</label>";
 		$html .= "</div>";
 		# Body
 		$html .= "<div class=\"css_section_group_content tab_content inspector_div_content \" >";
@@ -94,7 +96,7 @@
 		$html .= "<div id=\"indexations_info_wrapper\">";
 		# Header
 		$html .= "<div class=\"css_section_group_titulo tab_title title_down_box text_unselectable border_radius_0\" data-tab_id=\"Inspector_relations_tap\">";
-		$html .= " <label class=\"css_label\">".label::get_label('indexaciones')."</label>";
+		$html .= "<label class=\"css_label\">".label::get_label('indexaciones')."</label>";
 		$html .= "</div>";
 		# Body
 		$html .= "<div class=\"css_section_group_content tab_content inspector_div_content \" >";
@@ -151,11 +153,11 @@
 			$html .= "<div id=\"others_info_wrapper\">";
 			# Header
 			$html .= "<div class=\"css_section_group_titulo tab_title title_down_box text_unselectable border_radius_0\" data-tab_id=\"Inspector_others_tap\">";
-			$html .= " <label class=\"css_label\">OTHERS</label>";
+			$html .= "<label class=\"css_label\">OTHERS</label>";
 			$html .= "</div>";
 			# Body
 			$html .= "<div class=\"css_section_group_content tab_content inspector_div_content\">";
-			$html .= " <div id=\"inspector_others\" class=\"inspector_info_body\">";
+			$html .= "<div id=\"inspector_others\" class=\"inspector_info_body\">";
 
 				# Dédalo version
 				#$html .= " Dédalo version ".DEDALO_VERSION. " - Build " .DEDALO_BUILD. "<br>";
@@ -178,12 +180,12 @@
 					*/
 			
 				# Inverse locators
-				if (isset($inverse_locators)) {
+				/*if (isset($inverse_locators)) {
 					$html .= "Inverse locators:<br>";
 					foreach ((array)$inverse_locators as $current_locator) {
-						$html .= $current_locator->section_tipo."->".$current_locator->component_tipo."->".$current_locator->section_id.'<br>';
+						$html .= $current_locator->from_section_tipo."->".$current_locator->from_component_tipo."->".$current_locator->from_section_id.'<br>';
 					}
-				}
+				}*/
 				
 				/*
 					if(isset($_SESSION['debug_content'])) {							
@@ -220,9 +222,9 @@
 					$html .= "</pre>";
 					*/
 			
-				$html .= "	<div id=\"load_time_inspector\"></div>";
+				$html .= "<div id=\"load_time_inspector\"></div>";
 
-			$html .= " </div>"; # <!-- /inspector_others -->
+			$html .= "</div>"; # <!-- /inspector_others -->
 			$html .= "</div>"; # <!-- /css_section_group_content -->
 			$html .= "</div>";//end tools_info_wrapper
 
@@ -237,10 +239,16 @@
 			$html .= "<div id=\"debug_info_wrapper\">";
 			# Header
 			$html .= "<div class=\"css_section_group_titulo tab_title title_down_box text_unselectable border_radius_0\" data-tab_id=\"Inspector_debug_tap\">";
-			$html .= " <label class=\"css_label\">Info</label>";
+			$html .= "<label class=\"css_label\">Info</label>";
 			$html .= "</div>";
 			# Body
-			$html .= "<div id=\"inspector_debug\" class=\"inspector_info_body css_section_group_content tab_content inspector_div_content\"></div>";
+			$html .= "<div id=\"inspector_debug\" class=\"inspector_info_body css_section_group_content tab_content inspector_div_content\">";			
+			$html .= "</div>";
+
+			$html .= "<div id=\"inspector_debug_dtl\" class=\"inspector_info_body css_section_group_content tab_content inspector_div_content\">";			
+			$html .= "<a href=\"javascript:void(0)\" onclick=\"inspector.open_data_link(this)\">DATA LINK</a>";
+			$html .= "</div>";
+			
 			$html .= "</div>";//end debug_info_wrapper
 		}#end iif(SHOW_DEBUG===true || DEDALO_ENTITY=='development')
 		
@@ -248,7 +256,9 @@
 	$html .= " </div>";#/inspector_div
 
 
-		
+	$html .= "<script>";
+	$html .= "inspector.init()";
+	$html .= "</script>";	
 	
 
 	print $html;

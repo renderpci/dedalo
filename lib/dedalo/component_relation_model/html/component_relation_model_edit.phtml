@@ -66,7 +66,7 @@
 					# Add fixed type
 					$locator->type = DEDALO_RELATION_TYPE_MODEL_TIPO;
 
-					$founded  = locator::in_array_locator( $locator, $ar_locator=$dato, $ar_properties=array('section_tipo','section_id','type') );
+					$founded  = locator::in_array_locator( $locator, $ar_locator=$dato, $ar_properties=array('section_id','section_tipo','type') );
 					$selected = $founded ? 'selected' : '';
 
 					$locator_json = json_encode($locator);

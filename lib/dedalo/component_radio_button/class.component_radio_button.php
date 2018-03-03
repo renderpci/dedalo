@@ -1,96 +1,22 @@
 <?php
 /*
 * CLASS COMPONENT RADIO BUTTON
+*
+*
 */
-
-
-class component_radio_button extends component_reference_common {
-
-
-	# Overwrite __construct var lang passed in this component
-	protected $lang = DEDALO_DATA_NOLAN;
-
-
-	function __construct($tipo=null, $parent=null, $modo='edit', $lang=DEDALO_DATA_NOLAN, $section_tipo=null) {
-
-		# Force always DEDALO_DATA_NOLAN
-		$lang = $this->lang;
-
-		# Creamos el componente normalmente
-		parent::__construct($tipo, $parent, $modo, $lang, $section_tipo);
-
-		/*
-		if(SHOW_DEBUG===true) {
-			$traducible = $this->RecordObj_dd->get_traducible();
-			if ($traducible=='si') {
-				throw new Exception("Error Processing Request. Wrong component lang definition. This component $tipo (".get_class().") is not 'traducible'. Please fix this ASAP", 1);
-			}
-		}
-		*/
-	}
-
-
-
-	# GET DATO : 
-	public function get_dato() {
-		$dato = parent::get_dato();
-		if (!empty($dato) && !is_array($dato)) {
-			#dump($dato,"dato");
-			trigger_error("Error: ".__CLASS__." dato type is wrong. Array expected and ".gettype($dato)." is received for tipo:$this->tipo, parent:$this->parent");
-			$this->set_dato(array());
-			$this->Save();
-		}
-		if ($dato===null) {
-			$dato=array();
-		}
-		#$dato = json_handler::decode(json_encode($dato));	# Force array of objects instead default array of arrays
-		#dump($dato," dato");
-		return (array)$dato;
-	}
-
-
-
-	# SET_DATO
-	public function set_dato($dato) {
-		if (is_string($dato)) { # Tool Time machine case, dato is string
-			$dato = json_handler::decode($dato);
-		}
-		
-		if (is_object($dato)) {
-			$dato = array($dato);
-		}else if (is_string($dato)) {
-			$dato = array();
-		}
-		
-		parent::set_dato( (array)$dato );
-	}
-
-
-
-	/* OLD
-	# GET DATO : Format "3"
-	public function get_dato() {
-		$dato = parent::get_dato();		
-		if(SHOW_DEBUG===true) {
-			if (is_array($dato) || is_object($dato)) {
-				dump($dato,"dato - parent:".$this->get_parent()." tipo:".$this->get_tipo());	dump($this,"this");
-				throw new Exception("Error Processing Request. Este componente contiuene un tipo de dato no válido (debe ser string)", 1);				
-			}
-		}		
-		return (string)$dato;
-	}
-
-
-
-	# SET_DATO
-	public function set_dato($dato) {
-		parent::set_dato( (string)$dato );
-	}
-	*/
+class component_radio_button extends component_relation_common {
 	
 
+	protected $relation_type = DEDALO_RELATION_TYPE_LINK;
 
-	# GET VALUE . DEFAULT IS GET DATO . OVERWRITE IN EVERY DIFFERENT SPECIFIC COMPONENT
+	# test_equal_properties is used to verify duplicates when add locators
+	public $test_equal_properties = array('section_tipo','section_id','type','from_component_tipo');
+
+
+
+	/**
+	* GET_VALOR
+	*/
 	public function get_valor( $lang=DEDALO_DATA_LANG ) {
 
 		if (isset($this->valor)) {
@@ -99,12 +25,25 @@ class component_radio_button extends component_reference_common {
 			}
 			return $this->valor;
 		}
-		
+
+		$dato = $this->get_dato();
+		if (empty($dato)) {
+			return $this->valor = null;
+		}
+		# Test dato format (b4 changed to object)
+		foreach ($dato as $key => $value) {
+			if (!is_object($value)) {
+				if(SHOW_DEBUG===true) {
+					dump($dato," dato");
+					trigger_error(__METHOD__." Wrong dato format. OLD format dato in $this->label $this->tipo .Expected object locator, but received: ".gettype($value) .' : '. print_r($value,true) );
+				}
+				return $this->valor = null;
+			}
+		}	
 
 		switch ($this->modo) {
 
-			case 'diffusion':				
-				$dato = $this->get_dato();
+			case 'diffusion': 
 				
 				$object_si = new stdClass();
 					$object_si->section_id   = (string)NUMERICAL_MATRIX_VALUE_YES;
@@ -121,42 +60,23 @@ class component_radio_button extends component_reference_common {
 				}
 				break;
 			
-			default:				
+			default:
 				
 				# Always run list of values
-				$ar_list_of_values	= $this->get_ar_list_of_values( $lang, null, false); # Importante: Buscamos el valor en el idioma actual
-				
-				$dato = $this->get_dato();
-				if (empty($dato)) {
-					return $this->valor = null;
-				}
-				
-				# Test dato format (b4 changed to object)
-				foreach ($dato as $key => $value) {
-					if (!is_object($value)) {
-						if(SHOW_DEBUG===true) {
-							dump($dato," dato");						
-							trigger_error(__METHOD__." Wrong dato format. OLD format dato in $this->label $this->tipo .Expected object locator, but received: ".gettype($value) .' : '. print_r($value,true) );
-						}
-						return $this->valor = null;
-					}
-				}
-					
+				$ar_list_of_values	= $this->get_ar_list_of_values( $lang, null, false); # Importante: Buscamos el valor en el idioma actual				
 
-				foreach ($ar_list_of_values->result as $locator => $rotulo) {
+				foreach ($ar_list_of_values->result as $clocator => $label) {
 
-					$locator = json_handler::decode($locator);	# Locator is json encoded object
+					$locator = json_decode($clocator);	# Locator is json encoded object
 						#dump($locator," locator - dato:".print_r($dato,true));
-
-					if (in_array($locator, $dato)) {						
-						return $this->valor = $rotulo;
+					if ( locator::in_array_locator( $locator, $dato, $ar_properties=array('section_id','section_tipo') ) ) {									
+						return $this->valor = $label;
 					}
 				}
 				break;
 				
 		}#end switch
-	}#end get_valor
-
+	}//end get_valor
 
 
 
@@ -183,7 +103,7 @@ class component_radio_button extends component_reference_common {
 			$lang = DEDALO_DATA_LANG;
 		}
 		return $lang;
-	}
+	}//end get_valor_lang
 
 
 
@@ -203,83 +123,8 @@ class component_radio_button extends component_reference_common {
 		$valor = $this->get_valor($lang);		
 		
 		return $valor;
-	}#end get_valor_export
+	}//end get_valor_export
 
-
-
-	/**
-	* BUILD_SEARCH_COMPARISON_OPERATORS 
-	* Note: Override in every specific component
-	* @param array $comparison_operators . Like array('=','!=')
-	* @return object stdClass $search_comparison_operators
-	*/
-	public function build_search_comparison_operators( $comparison_operators=array('=','!=') ) {
-		return (object)parent::build_search_comparison_operators($comparison_operators);
-	}//end build_search_comparison_operators
-
-
-
-	/**
-	* GET_SEARCH_QUERY
-	* Build search query for current component . Overwrite for different needs in other components 
-	* (is static to enable direct call from section_records without construct component)
-	* Params
-	* @param string $json_field . JSON container column Like 'dato'
-	* @param string $search_tipo . Component tipo Like 'dd421'
-	* @param string $tipo_de_dato_search . Component dato container Like 'dato' or 'valor'
-	* @param string $current_lang . Component dato lang container Like 'lg-spa' or 'lg-nolan'
-	* @param string $search_value . Value received from search form request Like 'paco'
-	* @param string $comparison_operator . SQL comparison operator Like 'ILIKE'
-	*
-	* @see class.section_records.php get_rows_data filter_by_search
-	* @return string $search_query . POSTGRE SQL query (like 'datos#>'{components, oh21, dato, lg-nolan}' ILIKE '%paco%' )
-	*//*
-	public static function get_search_query( $json_field, $search_tipo, $tipo_de_dato_search, $current_lang, $search_value, $comparison_operator='=') {
-			
-		$search_value = json_decode($search_value);
-			if ( !$search_value || empty($search_value) ) {
-				return false;
-			}		
-
-		if (is_object($search_value)) {
-			$search_value = array($search_value);
-		}
-
-		$json_field = 'a.'.$json_field; // Add 'a.' for mandatory table alias search
-
-		$search_query='';
-		$ar_data = array();
-		# Fixed
-		$tipo_de_dato_search='dato';
-		switch (true) {
-			case $comparison_operator==='!=':
-				$ar_data = array();
-				foreach ((array)$search_value as $current_value) {
-					$current_value = json_encode($current_value);
-					$ar_data[] = " ($json_field#>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}' @> '[$current_value]'::jsonb)=FALSE ";
-				}
-				break;
-
-			case $comparison_operator==='=':
-			default:
-				foreach ((array)$search_value as $current_value) {
-					$current_value = json_encode($current_value);
-					$ar_data[] = " $json_field#>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}' @> '[$current_value]'::jsonb ";
-				}
-				break;			
-		}
-		$search_query = implode(" OR ",$ar_data);
-		
-		if(SHOW_DEBUG===true) {
-			$search_query = " -- filter_by_search $search_tipo ". get_called_class() ." \n".$search_query ;
-			#dump($search_query, " search_query for search_value: ".to_string($search_value)); #return '';
-		}
-		
-
-		return $search_query;
-	}//end get_search_query
-	*/
-	
 
 
 	/**
@@ -296,7 +141,7 @@ class component_radio_button extends component_reference_common {
 	* @param int $section_id
 	*
 	* @return string $list_value
-	*/
+	*//*
 	public static function render_list_value($value, $tipo, $parent, $modo, $lang, $section_tipo, $section_id, $current_locator=null, $caller_component_tipo=null) {
 
 		$component 	= component_common::get_instance(__CLASS__,
@@ -313,7 +158,7 @@ class component_radio_button extends component_reference_common {
 		$component->set_identificador_unico($component->get_identificador_unico().'_'.$section_id.'_'.$caller_component_tipo); // Set unic id for build search_options_session_key used in sessions
 
 		return  $component->get_valor($lang);		
-	}#end render_list_value
+	}//end render_list_value */
 
 
 
@@ -343,11 +188,31 @@ class component_radio_button extends component_reference_common {
 	* @return bool
 	*/
 	public static function get_order_by_locator() {
+		
 		return true;
 	}//end get_order_by_locator
 
 
 
+	/**
+	* GET_DIFFUSION_VALUE
+	* Overwrite component common method
+	* Calculate current component diffusion value for target field (usually a mysql field)
+	* Used for diffusion_mysql to unify components diffusion value call
+	* @return string $diffusion_value
+	*
+	* @see class.diffusion_mysql.php
+	*/
+	public function get_diffusion_value( $lang=null ) {
+	
+		$diffusion_value = $this->get_valor($lang);
+		$diffusion_value = strip_tags($diffusion_value);
 
-}
+		return (string)$diffusion_value;
+	}//end get_diffusion_value
+
+
+
+
+}//end class
 ?>

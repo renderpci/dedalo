@@ -14,15 +14,15 @@
 		$ds_html .= "<span class=\"semantic_node_title\">$semantic_node_title</span>";
 	}
 
-	$ds_html .= "<div class=\"icon_bs link new_semantic_node\" onclick=\"tool_semantic_nodes.open_ts_window(this)\"
-	data-portal_locator_section_tipo=\"{$current_locator->section_tipo}\"
-	data-portal_locator_section_id=\"{$current_locator->section_id}\"
-	data-ds_key=\"{$ds_key}\"
-	data-semantic_wrapper_id=\"{$semantic_wrapper_id}\"
-	data-component_name=\"tool_semantic_nodes\"
-	data-hierarchy_types='[\"4\"]'
-	data-hierarchy_sections=\"\"
-	></div>";
+	$ds_html .= "<div class=\"icon_bs link new_semantic_node\" onclick=\"tool_semantic_nodes.open_ts_window(this)\" ";
+	$ds_html .= "data-portal_locator_section_tipo=\"{$current_locator->section_tipo}\" ";
+	$ds_html .= "data-portal_locator_section_id=\"{$current_locator->section_id}\" ";
+	$ds_html .= "data-ds_key=\"{$ds_key}\" ";
+	$ds_html .= "data-semantic_wrapper_id=\"{$semantic_wrapper_id}\" ";
+	$ds_html .= "data-component_name=\"tool_semantic_nodes\" ";
+	$ds_html .= "data-hierarchy_types='[\"4\"]' ";
+	$ds_html .= "data-hierarchy_sections=\"\" ";
+	$ds_html .= "></div>";
 	/*
 		$ds_html .= "<div class=\"button_add relation_related_add_from_tree_button\"
 			data-id_wrapper=\"$semantic_wrapper_id\"
@@ -45,13 +45,13 @@
 
 			$ds_html .= "<li>";
 
-			$ds_html .= "<div class=\"icon_bs link delete_semantic_node\" onclick=\"tool_semantic_nodes.remove_index(this,event)\"
-			data-portal_locator_section_tipo=\"{$current_locator->section_tipo}\"
-			data-portal_locator_section_id=\"{$current_locator->section_id}\"
-			data-ds_key=\"{$ds_key}\"
-			data-locator_ds='{$locator_ds_json}'
-			data-semantic_wrapper_id=\"{$semantic_wrapper_id}\"
-			></div>";
+			$ds_html .= "<div class=\"icon_bs link delete_semantic_node\" onclick=\"tool_semantic_nodes.remove_index(this,event)\" ";
+			$ds_html .= "data-portal_locator_section_tipo=\"{$current_locator->section_tipo}\" ";
+			$ds_html .= "data-portal_locator_section_id=\"{$current_locator->section_id}\" ";
+			$ds_html .= "data-ds_key=\"{$ds_key}\" ";
+			$ds_html .= "data-locator_ds='{$locator_ds_json}' ";
+			$ds_html .= "data-semantic_wrapper_id=\"{$semantic_wrapper_id}\" ";
+			$ds_html .= "></div>";
 
 			$ds_html .= "<span>";
 			$ds_html .= $term;

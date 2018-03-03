@@ -21,19 +21,15 @@
 		header("Location: ".DEDALO_LIB_BASE_URL."/main/?t=".MAIN_FALLBACK_SECTION);
 		exit();
 	}
-	if(SHOW_DEBUG) {
-		#dump($ar_parents , '$ar_parents ');
-		#dump($this->test_su_default_password(), '$this->test_su_default_password()');die();
-	}
 
-
+	# Test su password
+	$su_default_password = (bool)$this->test_su_default_password();
+		#dump($su_default_password, '$su_default_password');die();
+		
 	#
 	# Test if superuser psw is default
-	if( defined('DEDALO_TEST_INSTALL') && defined('DEDALO_TEST_INSTALL')===true && $this->test_su_default_password()===true ) {
-		if(SHOW_DEBUG) {
-			#dump(DEDALO_TEST_INSTALL, ' DEDALO_TEST_INSTALL');
-		}
-	
+	if( defined('DEDALO_TEST_INSTALL') && defined('DEDALO_TEST_INSTALL')===true && $su_default_password===true ) {
+			
 		# CSS includes
 		array_unshift(css::$ar_url_basic, BOOTSTRAP_CSS_URL);
 
@@ -41,7 +37,6 @@
 		include($page_html);
 		return;
 	}
-
 
 
 	

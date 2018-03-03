@@ -292,43 +292,25 @@ class diffusion_index_ts extends diffusion {
 	*/
 	public function get_list_data__WORKING_HERE( $section_tipo, $section_tipo_locators ) {
 		
-		$search_options_session_key = 'ts_list_'.$section_tipo;
-
-		if (isset($_SESSION['dedalo4']['config']['search_options'][$search_options_session_key])) {						
-			$options = clone($_SESSION['dedalo4']['config']['search_options'][$search_options_session_key]);		
-			$options->full_count = false; # Force update count records on non ajax call						
-			# Set context
-			$context = $options->context;
-		}else{
-			
-			# LAYOUT_MAP : Calculate list for layout map
-			# All related terms are selected except section that is unset from the array
-			$layout_map_virtual  	= $this->get_layout_map();
-			$ar_target_section_tipo = $this->get_ar_target_section_tipo();
-				#dump( $layout_map_virtual,"layout_map_virtual - $ar_target_section_tipo"); #die();
-
-			# OPTIONS
-			$options = new stdClass();
-				$options->section_tipo  	= reset($ar_target_section_tipo);
-				$options->filter_by_locator = (array)$dato;
-				$options->layout_map  		= $layout_map_virtual;
-				$options->modo  			= 'portal_list';
-				$options->limit 			= false; # IMPORTANT : No limit is applicated to portal list. All records are viewed always
-				$options->search_options_session_key = $search_options_session_key;
-					#dump($options," options");					
-
-				# OPTIONS CONTEXT : Configure section context
-				$context = new stdClass();
-					$context->context_name 	= 'list_in_portal';
-					$context->portal_tipo 	= $tipo;
-					$context->portal_parent = $parent;
-
-				$options->context = $context;
-					#dump($options,"options");									
-		}//end if (!empty($_SESSION['dedalo4']['config']['search_options'][$search_options_session_key]))		
-
-		$rows_data = search::get_records_data($options);
-	}#end get_list_data
+		/* WORKING HERE
+		
+		# SEARCH_OPTIONS
+			$search_options_id    = $options->section_tipo; // section tipo like oh1
+			$saved_search_options = section_records::get_search_options($search_options_id);
+		
+		# SEARCH_QUERY_OBJECT
+			# Use saved search options (deep cloned to avoid propagation of changes !)
+			$search_options 	 = unserialize(serialize($saved_search_options));
+			$search_query_object = $search_options->search_query_object;
+				$search_query_object->limit   = 0;  // unset limit
+				$search_query_object->offset  = 0;  // unset offset
+				$search_query_object->order   = false;  // unset order
+				$search_query_object->select  = []; // unset select
+		
+		# SEARCH
+			$search_develoment2  = new search_development2($search_query_object);
+			$rows_data 		 	 = $search_develoment2->search(); */
+	}#end get_list_data 
 
 
 

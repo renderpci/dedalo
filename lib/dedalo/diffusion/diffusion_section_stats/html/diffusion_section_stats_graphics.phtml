@@ -3,8 +3,8 @@
 	# VISUALIZADOR HTML	
 	
 	
-	print "\n<!-- DIFFUSION_SECTION_STATS_GRAPHICS -->";
-	print "\n<div class=\"css_wrap_diffusion_section_stats_graphics\" >";
+	print "<!-- DIFFUSION_SECTION_STATS_GRAPHICS -->";
+	print "<div class=\"css_wrap_diffusion_section_stats_graphics\">";
 	
 		# Close button
 		#echo "<div class=\"close_stats\" onclick=\"diffusion_section_stats.hide_stats_content(this)\"> ".label::get_label('cerrar')." </div>";
@@ -21,7 +21,7 @@
 					#
 					# SVG GRAPHIC BUILDED BY JS
 					echo "<script>";
-					echo "	diffusion_section_stats.build_charts(".json_handler::encode($ar_value).", '$key')";
+					echo "diffusion_section_stats.build_charts(".json_handler::encode($ar_value).", '$key');";					
 					echo "</script>";
 
 					
@@ -74,7 +74,7 @@
 
 	
 	
-	print "\n</div><!-- /css_wrap_diffusion_section_stats_graphics -->\n"; //wrap
+	print "</div><!-- /css_wrap_diffusion_section_stats_graphics -->"; //wrap
 
 	
 	

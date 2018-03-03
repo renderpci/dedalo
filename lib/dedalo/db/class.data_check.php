@@ -18,15 +18,34 @@ class data_check {
 			$response->result 	= true;
 			$response->msg 	 	= '';
 
+		// SHOW server_version;
+		$sql 	 		= " SHOW server_version; ";
+		$result_v 		= JSON_RecordObj_matrix::search_free($sql);
+		$server_version = pg_fetch_result($result_v, 0, 'server_version');
+		$ar_parts 		= explode('.', $server_version);
+		$server_major_version = (int)$ar_parts[0];
+			#dump($server_major_version, ' server_version ++ '.to_string());
 
 		$response->msg .= "TEST ALL SEQUENCES IN DATABASE: ".DEDALO_DATABASE_CONN;
+
+		$ar_skip_tables = array(); // 'sqlmapfile','sqlmapoutput'
+
 
 		# Find and iterate all db tables
 		$sql 	= " SELECT table_name FROM information_schema.tables WHERE table_schema='public' ORDER BY table_name ASC ";
 		$result = JSON_RecordObj_matrix::search_free($sql);
 		while ($rows = pg_fetch_assoc($result)) {
 				
-			$table_name = $rows['table_name'];		
+			$table_name = $rows['table_name'];
+
+			if (in_array($table_name, $ar_skip_tables)) {
+				continue; // Skip table
+			}
+
+			// Detected  sqlmap tables. 'sqlmapfile','sqlmapoutput'
+			if (strpos($table_name, 'sqlmap')!==false) {
+				throw new Exception("Error Processing Request. Security sql injection warning", 1);		
+			}
 
 			# Find last id in table
 			$sql 	 = " SELECT id FROM $table_name ORDER BY id DESC LIMIT 1 ";
@@ -37,13 +56,20 @@ class data_check {
 			$last_id = pg_fetch_result($result2, 0, 'id');
 
 			# Find vars in current sequence
-			$sql = " SELECT last_value, start_value, increment_by FROM {$table_name}_id_seq ; ";
-			$result3 = JSON_RecordObj_matrix::search_free($sql);
-
-			$last_value 	= pg_fetch_result($result3, 0, 'last_value');
-			$start_value 	= pg_fetch_result($result3, 0, 'start_value');
-			$increment_by 	= pg_fetch_result($result3, 0, 'increment_by');
-
+			if ($server_major_version>=10) {
+				$search_table = 'sequencename';
+				$sql = " SELECT last_value, start_value FROM pg_sequences WHERE $search_table = '".$table_name."_id_seq' ; ";				
+			}else{
+				$search_table = $table_name."_id_seq";
+				$sql = " SELECT last_value, start_value FROM $search_table ; ";	
+			}			
+			$result_seq 	= JSON_RecordObj_matrix::search_free($sql);
+			if (pg_num_rows($result_seq) === 0) {
+				debug_log(__METHOD__." Warning. {$table_name}_id_seq not found in $search_table ".to_string(), logger::WARNING);
+				continue;	// Skip empty tables
+			}
+			$last_value 	= pg_fetch_result($result_seq, 0, 'last_value');
+			$start_value 	= pg_fetch_result($result_seq, 0, 'start_value');
 
 			$response->msg .= "<hr><b>$table_name</b> - start_value: $start_value - seq last_value: $last_value ";
 			if ($last_value!=$last_id) {
@@ -52,7 +78,7 @@ class data_check {
 			}else{
 				$response->msg .= "[last id: $last_id]";
 			}
-			
+
 
 			if ($last_id>$last_value) {
 				$response->msg .= "<br><b>   WARNING: seq last_id > last_value [$last_id > $last_value]</b>";
@@ -79,9 +105,9 @@ class data_check {
 
 
 		return (object)$response;
-	}#end check_sequences
+	}//end check_sequences
 
 
 
-}
+}//end data_check
 ?>

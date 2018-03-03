@@ -29,7 +29,7 @@
 	
 	switch($modo) {		
 
-		case 'edit'	:									
+		case 'edit'	:
 				$id_wrapper 	= 'wrapper_'.$identificador_unico;
 				$input_name 	= $tipo;
 				$valor 			= $this->get_valor($lang);
@@ -55,8 +55,8 @@
 				break;
 		
 		case 'search' :
-				# Showed only when permissions are >1
-				if ($permissions<1) return null;
+				# dato is injected by trigger search wen is needed
+				$dato = isset($this->dato) ? $this->dato : null;
 				
 				$id_wrapper = 'wrapper_'.$identificador_unico;
 				$input_name = $section_tipo.'_'.$tipo;

@@ -6,61 +6,65 @@
 */
 abstract class component_common extends common {
 
-	# GENERAL VARS	
-	protected $tipo;					# string component tipo in structur ex ('dd22') eq. terminoID
-	protected $parent;					# int parent section_id
-	protected $section_tipo;			# string parent section tipo
-	protected $lang;					# string lang en estructura ('lg-esp')
-	protected $valor_lang;				# string Idioma del valor final del componente (si es una lista de valor, el idioma del campo al que apunta que puede ser traducible aunque el componente no lo sea dato"1" valor:"Si" o "yes")
-	protected $traducible;				# string definido en tesauro (si/no)
-	protected $modo;					# string default edit
-	protected $dato;					# object dato (json ecoded in db)
-	protected $valor;					# string usually dato
-	protected $dataframe;				# object dataframe
-	public $version_date;				# date normalmente despejado de time machine y asignado al component actual
+	# GENERAL VARS
+		protected $tipo;					# string component tipo in structur ex ('dd22') eq. terminoID
+		protected $parent;					# int parent section_id
+		protected $section_tipo;			# string parent section tipo
+		protected $lang;					# string lang en estructura ('lg-esp')
+		protected $valor_lang;				# string Idioma del valor final del componente (si es una lista de valor, el idioma del campo al que apunta que puede ser traducible aunque el componente no lo sea dato"1" valor:"Si" o "yes")
+		protected $traducible;				# string definido en tesauro (si/no)
+		protected $modo;					# string default edit
+		protected $dato;					# object dato (json ecoded in db)
+		protected $valor;					# string usually dato
+		protected $dataframe;				# object dataframe
+		public $version_date;				# date normalmente despejado de time machine y asignado al component actual
 
-	# STRUCTURE DATA
-	public $RecordObj_dd;				# obj ts
-	protected $modelo;
-	protected $norden;
-	protected $label;					# etiqueta
+		# STRUCTURE DATA
+		public $RecordObj_dd;				# obj ts
+		protected $modelo;
+		protected $norden;
+		protected $label;					# etiqueta
 
-	protected $required;				# field is required . Valorar de usar 'Usable en Indexación' (tesauro) para gestionar esta variable
-	protected $debugger;				# info for admin
-	protected $ejemplo;					# ex. 'MO36001-GA'
-	protected $ar_tools_name = array('tool_time_machine','tool_lang','tool_replace_component_data');
-	protected $ar_tools_obj;
-	protected $ar_authorized_tool_name;
+		protected $required;				# field is required . Valorar de usar 'Usable en Indexación' (tesauro) para gestionar esta variable
+		protected $debugger;				# info for admin
+		protected $ejemplo;					# ex. 'MO36001-GA'
+		protected $ar_tools_name = array('tool_time_machine','tool_lang','tool_replace_component_data');
+		protected $ar_tools_obj;
+		protected $ar_authorized_tool_name;
 
-	protected $exists_dato_in_any_lan = false;
-	protected $dato_resolved;
+		protected $exists_dato_in_any_lan = false;
+		protected $dato_resolved;
 
-	# Idioma esperado para este componente (usado para verificar que la estrucutra está bien formada)
-	protected $expected_lang;
+		# Idioma esperado para este componente (usado para verificar que la estrucutra está bien formada)
+		protected $expected_lang;
 
-	# parent section obj (optional, util for component_av...)
-	public $section_obj;
+		# parent section obj (optional, util for component_av...)
+		public $section_obj;
 
-	# referenced section tipo (used by component_autocomplete, compoent_radio_button.. for set target section_tipo (propiedades) - aditional to referenced component tipo (TR)- )
-	public $referenced_section_tipo;
+		# referenced section tipo (used by component_autocomplete, compoent_radio_button.. for set target section_tipo (propiedades) - aditional to referenced component tipo (TR)- )
+		public $referenced_section_tipo;
 
-	# CACHE COMPONENTS INTANCES
-	#public static $ar_component_instances = array();	# array chache of called instances of components
+		# CACHE COMPONENTS INTANCES
+		#public static $ar_component_instances = array();	# array chache of called instances of components
 
-	public $render_vars;
+		public $render_vars;
 
-	# search_input_name. injected for records search
-	public $search_input_name;
+		# search_input_name. injected for records search
+		public $search_input_name;
 
-	# generate_json component
-	public $generate_json_element = false;
+		# generate_json component
+		public $generate_json_element = false;
 
-	# diffusion_properties
-	public $diffusion_properties;
+		# diffusion_properties
+		public $diffusion_properties;
 
-	# update_diffusion_info_propagate_changes bool
-	# To optimize save process in scripts of importation, you can dissable (false) this option if is not really necessary
-	public $update_diffusion_info_propagate_changes;
+		# update_diffusion_info_propagate_changes bool
+		# To optimize save process in scripts of importation, you can dissable (false) this option if is not really necessary
+		public $update_diffusion_info_propagate_changes;
+
+		# Component definition. Used in component label
+		public $def;
+
 
 
 	/**
@@ -108,7 +112,7 @@ abstract class component_common extends common {
 			if ( (!empty($parent) 
 				 && ( (!is_numeric($parent) || abs($parent)<1)) && strpos($parent, DEDALO_SECTION_ID_TEMP)===false) )
 				{
-				dump($parent," parent");
+				dump($parent," parent - DEDALO_SECTION_ID_TEMP:".DEDALO_SECTION_ID_TEMP);
 				throw new Exception("Error Processing Request. trying to use wrong var: '$parent' as parent to load as component", 1);				
 			}			
 			$ar_valid_modo = array('edit','list','search','simple','list_tm','tool_portal','tool_lang','edit_tool','indexation','selected_fragment','tool_indexation','tool_transcription','print','edit_component','load_tr','update','portal_list','list_thesaurus','portal_list_view_mosaic','edit_in_list','edit_note','tool_structuration','dataframe_edit');
@@ -298,9 +302,9 @@ abstract class component_common extends common {
 
 
 		# SET_DATO_DEFAULT (new way 28-10-2016)
-		if ($this->modo==='edit') {
+		if ( $this->modo==='edit' ) {
 			$this->set_dato_default();
-		}				
+		}
 	}//end __construct
 
 
@@ -334,11 +338,14 @@ abstract class component_common extends common {
 				}
 
 				$this->set_dato($dato_default);
-				$this->id 	= $this->Save();
+
+				if ( strpos($this->parent, DEDALO_SECTION_ID_TEMP)===false ) {
+					$this->id 	= $this->Save();					
+				}				
 
 				# INFO LOG
 				if(SHOW_DEBUG===true) {
-					$msg = " Created ".get_called_class()." \"$this->label\" id:$this->id, tipo:$this->tipo, section_tipo:$this->section_tipo, modo:$this->modo with default data from 'propiedades': ".json_encode($propiedades->dato_default);
+					$msg = " Created ".get_called_class()." \"$this->label\" id:$this->parent, tipo:$this->tipo, section_tipo:$this->section_tipo, modo:$this->modo with default data from 'propiedades': ".json_encode($propiedades->dato_default);
 					debug_log(__METHOD__.$msg);
 				}
 
@@ -351,12 +358,22 @@ abstract class component_common extends common {
 	}//end set_dato_default
 
 
+
 	# define tipo
-	protected function define_tipo($tipo) {	$this->tipo = $tipo; }
+	protected function define_tipo($tipo) {
+		$this->tipo = $tipo;
+		return true;
+	}
 	# define lang
-	protected function define_lang($lang) {	$this->lang = $lang; }
+	protected function define_lang($lang) {
+		$this->lang = $lang;
+		return true;
+	}
 	# define modo
-	protected function define_modo($modo) {	$this->modo = $modo; }
+	protected function define_modo($modo) {
+		$this->modo = $modo;
+		return true;
+	}
 
 
 
@@ -364,11 +381,11 @@ abstract class component_common extends common {
 	* SET_DATO
 	* @return 
 	*/
-	public function set_dato($dato) {		
+	public function set_dato($dato) {
 
 		parent::set_dato($dato);
 
-		# Fix this component as data loaded to avoid overwite current dato setted with database dato
+		# Fix this component as data loaded to avoid overwite current dato setted, with database dato
 		# Set as loaded
 		$this->bl_loaded_matrix_data = true;
 	}//end set_dato
@@ -416,8 +433,11 @@ abstract class component_common extends common {
 	# Recover component var 'dato' without change type or other custom component changes
 	# This is a easy way to access internal protected var 'dato' from out of component (like section::save_component_dato) 
 	public function get_dato_unchanged() {
+
 		return $this->dato;
 	}//end get_dato_unchanged
+
+
 
 	# DATO REAL
 	/*
@@ -522,6 +542,7 @@ abstract class component_common extends common {
 	* GET_COMPONENT_CACHE_KEY_NAME
 	*/
 	public function get_component_cache_key_name() {
+
 		return DEDALO_DATABASE_CONN.'_component_get_html_'.$this->get_identificador_unico();
 	}//end get_component_cache_key_name
 
@@ -557,15 +578,25 @@ abstract class component_common extends common {
 						return cache::get($cache_key_name);
 					}
 				}					
-			}
-			# /DEDALO_CACHE_MANAGER #################################
+			}# /DEDALO_CACHE_MANAGER #################################
 		
 	
 		#
 		# HTML BUFFER
-		ob_start();
+		ob_start();		
+		switch ($this->modo) {
+			case 'edit':
+				include ( DEDALO_LIB_BASE_PATH .'/component_common/html/component_common_'. $this->modo .'.phtml' );
+				break;
+			case 'search':
+				include ( DEDALO_LIB_BASE_PATH .'/component_common/html/component_common_'. $this->modo .'.phtml' );
+				break;			
+			default:
+				# code...
+				break;
+		}
 		include ( DEDALO_LIB_BASE_PATH .'/'. get_called_class() .'/'. get_called_class() .'.php' );
-		$html =  ob_get_clean();
+		$html = ob_get_clean();
 
 
 			#
@@ -573,8 +604,7 @@ abstract class component_common extends common {
 			if(DEDALO_CACHE_MANAGER===true && CACHE_COMPONENTS===true) {
 				#if(strpos($cache_key_name, 'list')!=false) 
 				cache::set($cache_key_name, $html);
-			}
-			# /DEDALO_CACHE_MANAGER #################################
+			}# /DEDALO_CACHE_MANAGER #################################
 			
 
 
@@ -584,8 +614,9 @@ abstract class component_common extends common {
 			if ($total>0.080) {
 				#dump($total, ' total ++ '.$this->tipo .' '. get_called_class() );
 			}
-			if($this->modo==='edit')
-			$html = str_lreplace('</div>', "<span class=\"debug_info debug_component_total_time\">$total ms $this->modo</span></div>", $html);
+			if($this->modo==='edit') {
+				$html = str_lreplace('</div>', "<span class=\"debug_info debug_component_total_time\">$total ms $this->modo</span></div>", $html);
+			}
 		}
 
 		return $html;
@@ -629,11 +660,11 @@ abstract class component_common extends common {
 			$new_parent 		= $this->caller_dataset->section_id;
 			$new_modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($new_tipo, true);
 			$new_component 		= component_common::get_instance( $new_modelo_name,
-															      $new_tipo,
-															      $new_parent,
-															      'edit',
-															      $lang,
-															      $new_section_tipo);
+																  $new_tipo,
+																  $new_parent,
+																  'edit',
+																  $lang,
+																  $new_section_tipo);
 
 			# Force load current db dato to avoid loose it
 			$new_component->get_dato();
@@ -690,8 +721,13 @@ abstract class component_common extends common {
 
 		# SECTION : Preparamos la sección que será la que se encargue de salvar el dato del componente
 		$section 	= section::get_instance($parent, $section_tipo);
-		$section_id = $section->save_component_dato($this);
+		$section_id = $section->save_component_dato($this, 'direct');
 			#dump($section_id, ' section_id');
+
+		if(SHOW_DEBUG===true) {
+			#$section->get_dato();
+			#debug_log(__METHOD__." Saved component common section: ".json_encode($section), logger::DEBUG);;
+		}
 
 		#
 		# OPTIONAL STOP THE SAVE PROCESS TO DELAY DDBB ACCESS		
@@ -891,6 +927,7 @@ abstract class component_common extends common {
 		return $js_code;
 	}//end generate_js_OLD
 
+
 	
 	/**
 	* FILTRO
@@ -903,7 +940,7 @@ abstract class component_common extends common {
 		# realmente es necesaria cuando sea posible.				
 		return true;	
 	}//end get_filter_authorized_record
-	
+
 
 
 	# GET_EJEMPLO
@@ -995,7 +1032,6 @@ abstract class component_common extends common {
 
 
 
-
 	/**
 	* LOAD TOOLS
 	*/
@@ -1063,8 +1099,10 @@ abstract class component_common extends common {
 
 		if(SHOW_DEBUG===true) {
 			if (!is_null($valor) && !is_string($valor) && !is_numeric($valor)) {
+				$msg = "WARNING: CURRENT 'valor' in $this->tipo is NOT valid string. Type is:\"".gettype($valor).'" - valor:'.to_string($valor);
+				trigger_error($msg);
+				debug_log(__METHOD__." ".$msg, logger::WARNING);
 				dump(debug_backtrace(), 'get_valor debug_backtrace() ++ '.to_string());
-				debug_log(__METHOD__." WARNING: CURRENT 'valor' in $this->tipo is NOT valid string. Type is:\"".gettype($valor).'" - valor:'.to_string($valor), logger::WARNING);
 			}
 		}
 			
@@ -1184,7 +1222,7 @@ abstract class component_common extends common {
 	* GET DATO AS STRING
 	* Get dato formated as string
 	*/
-	function get_dato_as_string() {
+	public function get_dato_as_string() {
 
 		$dato = $this->get_dato();
 		#return var_export($dato,true);		
@@ -1292,7 +1330,7 @@ abstract class component_common extends common {
 	/**
 	* GET MODIFICATION DATE
 	*/
-	function get_mod_date() {
+	public function get_mod_date() {
 
 		$RecordObj_time_machine = $this->get_last_time_machine_obj();						#dump($RecordObj_time_machine );
 
@@ -1308,7 +1346,7 @@ abstract class component_common extends common {
 	/**
 	* GET MODIFICATED BY USER
 	*/
-	function get_mod_by_user_name() {
+	public function get_mod_by_user_name() {
 
 		$RecordObj_time_machine = $this->get_last_time_machine_obj();
 
@@ -1325,7 +1363,7 @@ abstract class component_common extends common {
 	* GET_LAST_TIME_MACHINE_OBJ
 	* @return object $RecordObj_time_machine
 	*/
-	function get_last_time_machine_obj() {		
+	public function get_last_time_machine_obj() {
 		
 		if(empty($this->parent)) return null;
 
@@ -1428,8 +1466,15 @@ abstract class component_common extends common {
 
 		# Selector de terminos relacionados en DB
 		# SELECT :
-		$strQuery_select='';		
-		foreach ($fields as $current_tipo) {						
+		$strQuery_select='';
+		foreach ($fields as $current_tipo) {
+
+			#$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
+			#if (strpos($modelo_name,'component_')===false) {
+			#	debug_log(__METHOD__." Skipped  $current_tipo - $modelo_name ".to_string(), logger::DEBUG);
+			#	continue;
+			#}
+
 			# SELECCIÓN EN EL LENGUAJE ACTUAL			
 			$RecordObj_dd 	= new RecordObj_dd($current_tipo);
 			$current_lang 	= $RecordObj_dd->get_traducible() ==='no' ? DEDALO_DATA_NOLAN : $options->lang;
@@ -1524,7 +1569,8 @@ abstract class component_common extends common {
 		$use_cache = true; // Default false
 		if ($this->modo==='list') {
 			$use_cache = true; // Used in section list for speed
-		}		
+		}
+
 
 		if(isset($this->ar_list_of_values)) {
 			if(SHOW_DEBUG===true) {
@@ -1535,7 +1581,7 @@ abstract class component_common extends common {
 
 		static $list_of_values_cache;
 	
-		$uid = $this->tipo.'_'.$this->modo.'_'.$this->lang.'_'.$referenced_section_tipo.'_'.rawurlencode($filter_custom);	//.'_'.$this->parent
+		$uid = $this->tipo.'_'.$this->modo.'_'.$lang.'_'.$referenced_section_tipo.'_'.rawurlencode($filter_custom);	//.'_'.$this->parent
 			#dump($uid, ' uid ++ '.to_string());
 		if($use_cache===true && isset($list_of_values_cache[$uid])) {
 			if(SHOW_DEBUG===true) {
@@ -1763,10 +1809,9 @@ abstract class component_common extends common {
 				-- ".__METHOD__."
 				SELECT section_id, section_tipo, $strQuery_select
 				FROM \"$matrix_table\" WHERE
-				$strQuery_where  $filter_propiedades $filter_custom				
-				ORDER BY {$terminoID_valor}_lang ASC
+				$strQuery_where  $filter_propiedades $filter_custom
 				";
-		#dump($strQuery,'$strQuery');
+		#dump($strQuery,'$strQuery');ORDER BY {$terminoID_valor}_lang ASC
 		
 		$strQuery = sanitize_query($strQuery);
 		$result	  = JSON_RecordObj_matrix::search_free($strQuery);
@@ -1860,6 +1905,7 @@ abstract class component_common extends common {
 		}
 		#dump($ar_final,'ar_final '.$strQuery);
 
+		asort($ar_final, SORT_NATURAL | SORT_FLAG_CASE);
 		# Set object
 		$list_of_values->result   = (array)$ar_final;
 		$list_of_values->strQuery = (string)$strQuery;
@@ -2033,7 +2079,8 @@ abstract class component_common extends common {
 	/**
 	* DECORE UNTRANSLATED
 	*/
-	public static function decore_untranslated($string) {		
+	public static function decore_untranslated($string) {
+		
 		return '<mark>'.to_string($string).'</mark>';
 	}//end decore_untranslated
 
@@ -2476,14 +2523,17 @@ abstract class component_common extends common {
 				break;
 		}
 
+		return $component_info;
 	}//end get_component_info
 
 	
 
 	public static function build_locator() {
+
 		throw new Exception("DEPRECATED METHOD", 1);		
 	}
 	public static function build_locator_relation() {
+
 		throw new Exception("DEPRECATED METHOD", 1);		
 	}
 
@@ -2495,6 +2545,7 @@ abstract class component_common extends common {
 	* If the component need change this langs (selects, radiobuttons...) overwritte this function
 	*/
 	public function get_valor_lang(){
+
 		return $this->lang;
 	}
 
@@ -2564,10 +2615,10 @@ abstract class component_common extends common {
 	* GET_REFERENCED_SECTION_TIPO
 	* (used by component_autocomplete, component_radio_button.. for set target section_tipo (propiedades) - aditional to referenced component tipo (TR)- )
 	* @return string $this->referenced_section_tipo from json propiedades section_tipo
-	*/
-	/*
-		ACABARÁ UNIFICÁNDOSE AL COMPORTAMIENTO DE PORTAL Y AUTOCOMPLETE
-
+	*
+	*
+	*	ACABARÁ UNIFICÁNDOSE AL COMPORTAMIENTO DE PORTAL Y AUTOCOMPLETE
+	*
 	*/
 	public function get_referenced_section_tipo($tipo) {
 
@@ -2588,6 +2639,7 @@ abstract class component_common extends common {
 
 		return $this->get_section_tipo_from_component_tipo($tipo);
 	}//end get_referenced_section_tipo
+
 
 
 	/**
@@ -2645,6 +2697,7 @@ abstract class component_common extends common {
 		
 		return (array)$ar_target_section_tipo;
 	}//end get_ar_target_section_tipo	
+
 
 
 	/**
@@ -2822,7 +2875,7 @@ abstract class component_common extends common {
 	* @see component_reference_common->get_select_query
 	* @return string $select_query
 	*/
-	public static function get_select_query($request_options) {
+	public static function get_select_query($request_options) { // Used by subquerys
 
 		$options = new stdClass();
 			$options->json_field  = 'dato';
@@ -2843,10 +2896,19 @@ abstract class component_common extends common {
 		}else{
 			$select_query .= "\n  {$json_field}#>'{components, $options->search_tipo, dato, $options->lang}' as $options->search_tipo";
 		}
-		
+		// $sql_columns .= "\n a.$sql_options->json_field#>>'{components, $current_column_tipo, ".$sql_options->tipo_de_dato.", $current_lang}' AS $current_column_tipo,";
 
 		return $select_query;
-	}//end get_select_query
+	}//end get_select_query	
+
+
+
+	/**
+	* GET_COLUMN_QUERY
+	* @return 
+	*/
+	#public function get_column_query($request_options) { // Used by subquerys		
+	#}//end get_column_query
 
 	
 
@@ -2855,8 +2917,16 @@ abstract class component_common extends common {
 	* Get model name array of components that can store references (locators)
 	* @return array $ar_components_with_references
 	*/
-	public static function get_ar_components_with_references() {		
-		return array('component_portal','component_autocomplete','component_autocomplete_hi','component_radio_button','component_check_box','component_select');
+	public static function get_ar_components_with_references() {
+		return [ 'component_autocomplete',
+				 'component_autocomplete_hi',
+				 'component_check_box',
+				 'component_portal',
+				 'component_radio_button',
+				 'component_select',
+				 'component_select_lang', // added 27-02-2018
+				 'component_publication'  // added 27-02-2018
+				];
 	}//end get_ar_components_with_references
 
 
@@ -3095,7 +3165,23 @@ abstract class component_common extends common {
 	* @return $response->result =1; // the component do the update"
 	* @return $response->result =2; // the component try the update but the dato don't need change"
 	*/
-	public static function update_dato_version($update_version, $dato_unchanged, $reference_id) {
+	public static function update_dato_version($request_options) {
+
+		$options = new stdClass();
+			$options->update_version 	= null;
+			$options->dato_unchanged 	= null;
+			$options->reference_id 		= null;
+			$options->tipo 				= null;
+			$options->section_id 		= null;
+			$options->section_tipo 		= null;
+			$options->context 			= 'update_component_dato';
+			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
+
+			$update_version = $options->update_version;
+			$dato_unchanged = $options->dato_unchanged;
+			$reference_id 	= $options->reference_id;
+
+		
 		$response = new stdClass();
 		$modelo_name = get_called_class();
 		$response->result =0;
@@ -3264,6 +3350,7 @@ abstract class component_common extends common {
 	* @return bool
 	*/
 	public static function get_order_by_locator() {
+
 		return false;
 	}//end get_order_by_locator
 
@@ -3351,6 +3438,11 @@ abstract class component_common extends common {
 	* @return string $search_input_name
 	*/
 	public function get_search_input_name() {
+		if (!isset($this->search_input_name)) {
+			// Default set
+			$this->search_input_name = $this->section_tipo.'_'.$this->tipo;
+		}
+
 		return $this->search_input_name;
 	}//end get_search_input_name
 
@@ -3381,9 +3473,10 @@ abstract class component_common extends common {
 	public static function extract_component_value_fallback($component, $lang=DEDALO_DATA_LANG, $mark=true) {
 	
 		$current_value = $component->get_valor($lang);
-
+	
 		if (empty($current_value)) {
 			$main_lang = DEDALO_DATA_LANG_DEFAULT;
+
 			# Try main lang	
 			if ($lang !== $main_lang) {
 				$component->set_lang($main_lang);
@@ -3406,8 +3499,21 @@ abstract class component_common extends common {
 					if (!empty($current_value)) break; # Stops when first data is found
 				}
 			}
+			# Try resolve
+			/*
+			if (empty($current_value)) {
+				dump($main_lang, ' main_lang ++ '.to_string());
+
+				$section_tipo = self::get_section_tipo_from_component_tipo($component->get_tipo());
+				$main_lang = common::get_main_lang($section_tipo);
+				$component->set_lang($main_lang);
+				$current_value = $component->get_valor($main_lang);			
+			}*/
+
 			# Set value as untranslated
-			$current_value = '<mark>'.$current_value.'</mark>';
+			if ($mark===true) {
+				$current_value = '<mark>'.$current_value.'</mark>';
+			}			
 		}
 
 		return $current_value;
@@ -3484,7 +3590,7 @@ abstract class component_common extends common {
 	*	Type of dataframe element (encoded type of uncertainty, time, space, etc.)
 	* @return bool
 	*/
-	public function update_dataframe_element( $locator=null, $from_key, $type ) {		
+	public function update_dataframe_element( $locator=null, $from_key, $type ) {
 
 		#debug_log(__METHOD__." update_dataframe_element from_key:".$from_key." - type:".$type ." locator ".to_string($locator) , logger::DEBUG);
 		$current_dataframe 	= (array)$this->get_dataframe();
@@ -3586,6 +3692,382 @@ abstract class component_common extends common {
 
 		return $this->permissions;
 	}//end get_component_permissions
+
+
+
+	################################## SEARCH 2 ########################################################
+
+
+
+	/**
+	* BUILD_SEARCH_QUERY_OBJECT
+	* @return object $query_object
+	*/
+	public function build_search_query_object( $request_options ) {
+
+		$start_time=microtime(1);
+	
+		$options = new stdClass();
+			$options->q 	 			= null;
+			$options->limit  			= 10;
+			$options->offset 			= 0;
+			$options->lang 				= 'all';
+			$options->logical_operator 	= '$or';
+			$options->id 				= 'temp';
+			$options->section_tipo		= null;
+			$options->add_filter		= true;
+			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
+
+		$id = $options->id;
+		$logical_operator = $options->logical_operator;	
+
+		# Defaults
+		$filter_group = null;
+		$select_group = array();
+
+		# propiedades
+		#$propiedades = $this->get_propiedades();
+		#	#dump($propiedades, ' propiedades ++ '.to_string());
+		#$ar_filter_by_list = [];
+		#if (isset($propiedades->source->filter_by_list)) {			
+		#	foreach ($propiedades->source->filter_by_list as $key => $filter_by_list_obj) {
+		#		$ar_filter_by_list[] = $filter_by_list_obj->component_tipo;
+		#	}
+		#}
+
+		# Default from options
+		$section_tipo = $options->section_tipo;
+
+		# iterate related terms
+		$ar_related_section_tipo  	= common::get_ar_related_by_model('section', $this->tipo);			
+		if (isset($ar_related_section_tipo[0])) {	
+
+			# Create from related terms
+			$section_tipo 				= reset($ar_related_section_tipo); // Note override section_tipo here !
+			$ar_terminos_relacionados 	= RecordObj_dd::get_ar_terminos_relacionados($this->tipo,true,true);		
+			foreach ($ar_terminos_relacionados as $current_tipo) {
+				$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
+				if (strpos($modelo_name,'component')!==0) continue;
+
+				$path = search_development2::get_query_path($current_tipo, $section_tipo);
+
+				# FILTER . filter_element (operator_group)
+					if ($options->add_filter===true) {	
+									
+						$filter_element = new stdClass();
+							$filter_element->q 		= $options->q;
+							$filter_element->lang 	= $options->lang;
+							$filter_element->path 	= $path;
+
+						if(!isset($filter_group)) {
+							$filter_group = new stdClass();
+						}
+						$filter_group->$logical_operator[] = $filter_element;
+					}
+				# SELECT . Select_element (select_group)
+					$select_element = new stdClass();
+						$select_element->path 	= $path;
+
+					$select_group[] = $select_element;
+			}
+		}
+				
+		$query_object = new stdClass();
+			$query_object->id  	   		= $id;
+			$query_object->section_tipo = $section_tipo;
+			$query_object->filter  		= $filter_group;
+			$query_object->select  		= $select_group;			
+			$query_object->limit   		= $options->limit;
+			$query_object->offset  		= $options->offset;
+		
+		#dump( json_encode($query_object, JSON_PRETTY_PRINT), ' query_object ++ '.to_string());
+		#debug_log(__METHOD__." query_object ".json_encode($query_object, JSON_PRETTY_PRINT), logger::DEBUG);totaol
+		#debug_log(__METHOD__." total time ".exec_time_unit($start_time,'ms').' ms', logger::DEBUG);
+		
+
+		return (object)$query_object;
+	}//end build_search_query_object
+
+
+
+	/**
+	* GET_SEARcH_QUERY2
+	* @return 
+	*/
+	public static function get_search_query2( $query_object ) {
+		#dump($query_object, ' query_object ++ '.to_string());
+		
+		# Example
+			# {
+			#   "q": "%pepe",
+			#   "lang": "lg-spa",
+			#   "path": [
+			#     {
+			#       "section_tipo": "oh1",
+			#       "component_tipo": "oh24",
+			#       "target_section": "rsc197"
+			#     },
+			#     {
+			#       "section_tipo": "rsc197",
+			#       "component_tipo": "rsc453"
+			#     }
+			#   ],
+			#   "component_path": [
+			#     "dato"
+			#   ]
+			# }
+
+		# Empty q case
+		if (empty($query_object->q)) {
+			#return array();
+		}
+
+		$component_tipo = end($query_object->path)->component_tipo;
+
+		# component path default
+		$query_object->component_path = ['components',$component_tipo,'dato'];
+		# component lang
+		if (!isset($query_object->lang)) {
+			# default
+			$query_object->lang = 'all';
+		}
+
+		# Component class name calling here
+		$called_class = get_called_class();
+			#dump($called_class, ' called_class ++ '.to_string());
+
+		# split multiple
+		$current_query_object = component_common::split_query($query_object);
+		#dump($ar_query_object, ' ar_query_object ++ '.to_string()); die();
+		# conform each object
+		if (search_development2::is_search_operator($current_query_object)===true) {
+			foreach ($current_query_object as $operator => $ar_elements) {
+				foreach ($ar_elements as $c_query_object) {
+					// Inject all resolved query objects
+					$c_query_object = $called_class::resolve_query_object_sql($c_query_object);
+				}
+			}
+		}else{
+			$current_query_object = $called_class::resolve_query_object_sql($current_query_object);
+		}
+		#dump($current_query_object, ' current_query_object ++ '.to_string());
+
+		# Convert to array always
+		$ar_query_object = is_array($current_query_object) ? $current_query_object : array($current_query_object);
+			#dump($ar_query_object, ' $ar_query_object ++ '.to_string());
+
+		return $ar_query_object;
+	}//end get_search_query2 
+
+
+
+	/**
+	* GET_SELECT_QUERY2
+	* @return 
+	*/
+	public static function get_select_query2( $select_object ) {
+		#dump($select_object, ' select_object ++ '.to_string());
+		/*
+		[path] => Array
+			(
+				[0] => stdClass Object
+					(
+						[name] => Título
+						[modelo] => component_input_text
+						[section_tipo] => numisdata224
+						[component_tipo] => numisdata231
+					)
+
+			)
+
+		[lang] => lg-spa
+		[component_path] => valor_list
+		*/	    
+
+		# component path
+		if(!isset($select_object->component_path)) {
+
+			$component_tipo = end($select_object->path)->component_tipo;        	
+
+			if (isset($select_object->lang)) {
+				$lang = $select_object->lang;
+			}else{
+				$RecordObj_dd = new RecordObj_dd($component_tipo);
+				$traducible   = $RecordObj_dd->get_traducible();
+				if ($traducible!=='si') {
+					$default_lang = DEDALO_DATA_NOLAN;
+				}else{
+					$default_lang = DEDALO_DATA_LANG;
+				}
+				$lang = $default_lang;
+			}
+
+			# Set default
+			$select_object->component_path = ['components',$component_tipo,'valor_list',$lang];
+		}
+
+		if(!isset($select_object->type)) {
+			$select_object->type = 'string';
+		}
+
+
+		return $select_object;
+	}//end get_select_query2
+
+
+
+	/**
+	* SPLIT_QUERY
+	* @return 
+	*/
+	public static function split_query($query_object) {
+		
+		$search_value = $query_object->q;		
+		#dump($query_object, ' query_object ++ '.to_string());
+
+		# For unification, all non string are json encoded
+		# This allow accept mixed values (encoded and no encoded)
+		if (!is_string($search_value)) {
+			$search_value = json_encode($search_value);
+		}
+
+		$operator_between = '$or';
+			
+		# JSON CASE
+		if ($json_value = json_decode($search_value)) {			
+	
+			if (count($json_value)>1) {
+				$group = new stdClass();
+					$name = $operator_between;
+					$group->$name = [];
+				foreach ($json_value as $current_value) {
+					$current_value 			= array($current_value);
+					$query_object->type 	= 'jsonb';
+					$query_object_clon 		= clone($query_object);
+					$query_object_clon->q 	= json_encode($current_value);
+					$group->$name[] 		= $query_object_clon;
+				}
+				$ar_query_object = $group;
+			}else{
+				#dump($json_value, ' query_object->q ++ '.to_string());
+				$query_object->type = 'jsonb';
+				$ar_query_object 	= $query_object;
+					#dump($ar_query_object, ' $ar_query_object ++ '.to_string());
+			}
+
+		# STRING CASE
+		}else{
+			# \S?"([^\"]+)"|\S?'([^\']+)'|[^\s]+
+			$pattern = '/\S?"([^\"]+)"|\S?\'([^\\\']+)\'|[^\s]+/iu';
+			preg_match_all($pattern, $search_value, $matches);
+
+			# split into searchable units
+			$total_count = count($matches[0]);
+			if ($total_count===1) {
+
+				$current_search_value = reset($matches[0]);
+				
+				$query_object->q = self::remove_first_and_last_quotes($current_search_value);				
+				$ar_query_object = $query_object;
+			
+			}else{
+
+				$group = new stdClass();
+					$name = $operator_between;
+					$group->$name = [];
+
+				foreach ($matches[0] as $key => $current_search_value) {					
+					
+					$query_object_clon 		= clone($query_object);
+					$query_object_clon->q 	= self::remove_first_and_last_quotes($current_search_value);					
+					$group->$name[] 		= $query_object_clon;				
+
+				}//end foreach ($matches[0] as $key => $value)
+
+				$ar_query_object = $group;
+
+			}//end if ($total_count===1) {
+
+		}
+		#dump($ar_query_object, ' ar_query_object ++ '.to_string());
+
+		return $ar_query_object;
+	}//end split_query
+
+
+
+	/**
+	* SEARCH_OPERATORS_INFO
+	* Return valid operators for search in current component
+	* @return array $ar_operators
+	*/
+	public function search_operators_info() {
+		
+		$ar_operators = [			
+			#'=' 	=> 'igual'
+		];
+
+		return $ar_operators;
+	}//end search_operators_info
+
+
+
+	/**
+	* REMOVE_FIRST_AND_LAST_QUOTES
+	* Removes first and last quotes (single or doubles) respecting existing operators
+	* @return string $string
+	*/
+	public static function remove_first_and_last_quotes($string) {
+
+		$first_2char 	= mb_substr($string, 0, 2);
+		$ar_operators 	= ['!=','>=','<='];
+		if (in_array($first_2char, $ar_operators)) {
+			
+			$op = $first_2char;
+			$current_string = mb_substr($string, 2);
+			$current_string = trim($current_string,'"\'');
+
+			$string = $op . $current_string;
+
+			return $string;
+		}
+		
+		$first_char 	= mb_substr($string, 0, 1);
+		$ar_operators 	= ['+','-','=','*','>','<'];
+		if (in_array($first_char, $ar_operators)) {
+			
+			$op = $first_char;
+			$current_string = mb_substr($string, 1);
+			$current_string = trim($current_string,'"\'');
+
+			$string = $op . $current_string;
+
+			return $string;
+		}
+
+		$string = trim($string,'"\'');
+
+		return $string;
+	}//end remove_first_and_last_quotes
+
+
+
+	/**
+	* GET_DEF
+	* Get componet structure definition 'def' if exists. Used in component label
+	* @see component_common_draw::draw_label()
+	* @return string $def
+	*/
+	public function get_def($lang=DEDALO_APPLICATION_LANG) {
+		
+		if (isset($this->def)) {
+			$def = $this->def;
+		}else{
+			$def = RecordObj_dd::get_def_by_tipo($this->tipo, $lang);
+		}
+
+		return $def;
+	}//end get_def
 
 
 

@@ -1,10 +1,9 @@
 <?php
 /*
-Clase principal del modelo del objeto
-
+* BUTTON_COMMON
+*
+*
 */
-
-
 class button_common extends common {
 	
 	protected $tipo ;
@@ -56,14 +55,14 @@ class button_common extends common {
 		if(SHOW_DEBUG===true) {
 			global$TIMER;$TIMER[__METHOD__.'_'.get_called_class().'_IN_'.$this->tipo.'_'.microtime(1)]=microtime(1);
 		}
-/*
+		/*
 		# No se meten en cahe ni devuelven nada
 		$permissions = 0;
 		if(login::is_logged()===true && isset($this->tipo)) {
 			$permissions = common::get_permissions($this->tipo);
 			if($permissions<1) return null;
 		}
-*/
+		*/
 		# DEDALO_CACHE_MANAGER : var
 		if(DEDALO_CACHE_MANAGER && CACHE_BUTTONS) {
 			$cache_key_name = $this->get_button_cache_key_name();
@@ -114,9 +113,8 @@ class button_common extends common {
 		
 		return $button ;
 		*/
-	}
+	}//end load_button
 	
 
-}
-
+}//end button_common
 ?>

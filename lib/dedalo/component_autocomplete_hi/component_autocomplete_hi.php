@@ -38,7 +38,7 @@
 				$input_name 	= $tipo;
 				$ar_valor 		= $this->get_valor($lang,'array');
 				$valor 			= $this->get_valor($lang);
-				$ar_link_fields	= json_handler::encode($this->ger_ar_link_fields());
+				$ar_link_fields	= json_encode($this->ger_ar_link_fields());
 				$component_info = $this->get_component_info('json');
 				$dato_json 		= json_encode($dato);
 
@@ -93,8 +93,8 @@
 				break;		
 						
 		case 'search' :
-				# Showed only when permissions are >1
-				if ($permissions<1) return null;
+				# dato is injected by trigger search wen is needed
+				$dato = isset($this->dato) ? $this->dato : null;
 				
 				$id_wrapper 			= 'wrapper_'.$identificador_unico;				
 				$valor 					= $this->get_valor($lang);
@@ -108,8 +108,8 @@
 				$ar_referenced_tipo 	= $this->get_ar_referenced_tipo();
 				$ar_referenced_tipo_json= json_handler::encode($this->get_ar_referenced_tipo());
 				
-				$ar_comparison_operators = $this->build_search_comparison_operators();
-				$ar_logical_operators 	 = $this->build_search_logical_operators();
+				#$ar_comparison_operators = $this->build_search_comparison_operators();
+				#$ar_logical_operators 	 = $this->build_search_logical_operators();
 
 				# SOURCE_MODE
 				$source_mode 		= $this->get_source_mode();
@@ -125,13 +125,14 @@
 				# OPTIONS TYPE
 				$options_type = $this->get_options_type();
 					#dump($options_type, ' $options_type ++ '.to_string($this->tipo));
-
+	
 				# AR_FILTER_OPTIONS
 				$ar_filter_options = false; // Default
 				switch ($options_type) {
 					case 'hierarchy':
 						$hierarchy_types 	= isset($propiedades->source->hierarchy_types) ? $propiedades->source->hierarchy_types : null;
 						$hierarchy_sections = isset($propiedades->source->hierarchy_sections) ? $propiedades->source->hierarchy_sections : null;
+							#dump($hierarchy_types, ' hierarchy_types ++ '.to_string()); return null;
 			
 						# Resolve hierarchy_sections for speed
 						if (!empty($hierarchy_types)) {

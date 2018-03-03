@@ -14,6 +14,8 @@
 	print "data-dato='{$dato_json}' ";
 	print "data-component_name=\"{$component_name}\" ";
 	print "data-component_info='{$component_info}' ";
+	print "data-value_yes='{$value_yes}' ";
+	print "data-value_no='{$value_no}' ";
 	print ">";
 
 
@@ -34,13 +36,19 @@
 				break;
 
 		case 2 :
-		case 3 :
-				# Value yes
-				$value_yes = '[{"section_id":"1","section_tipo":"dd64"}]';
-				# Value no
-				$value_no  = '[{"section_id":"2","section_tipo":"dd64"}]';
+		case 3 :				
 				# Checked add
-				$checked   = $dato_json===$value_yes ? 'checked="checked"' : '';
+				#$checked   = $dato_json===$value_yes ? 'checked="checked"' : '';
+				if(empty($dato)) {
+					$compare_locators = false;
+				}else{
+					$component_locator  	= reset($dato);
+					$value_yes_ar_locator 	= json_decode($value_yes);
+					$value_yes_locator 		= reset($value_yes_ar_locator);
+					$compare_locators 		= locator::compare_locators( $component_locator, $value_yes_locator, $ar_properties=['section_id','section_tipo']);
+				}
+				$checked = ($compare_locators===true) ? 'checked="checked"' : '';
+
 
 				# Switcher				
 				$html_content .= "<div class=\"switcher_publication text_unselectable\">";
@@ -60,9 +68,7 @@
 				# JS
 				$html_content .= "<script>";
 				$html_content .= "component_publication.init({";
-				$html_content .= "'id_wrapper':'".$id_wrapper."',";
-				$html_content .= "'value_yes':'$value_yes',";
-				$html_content .= "'value_no':'$value_no',";
+				$html_content .= "'id_wrapper':'".$id_wrapper."',";				
 				$html_content .= "'on_save':'component_publication.force_change_tag_state'";
 				$html_content .= "})";
 				$html_content .= "</script>";

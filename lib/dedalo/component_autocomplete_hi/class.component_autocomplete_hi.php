@@ -1,13 +1,15 @@
 <?php
 /*
-* COMPONENT_AUTOCOMPLETE_HI
+* component_autocomplete_hi
 * Replaces component_autocomplete_ts
 *
 */
-class component_autocomplete_hi extends component_reference_common {
+class component_autocomplete_hi extends component_relation_common {
 	
-	# Overwrite __construct var lang passed in this component
-	protected $lang = DEDALO_DATA_NOLAN;
+	protected $relation_type = DEDALO_RELATION_TYPE_LINK;
+
+	# test_equal_properties is used to verify duplicates when add locators
+	public $test_equal_properties = array('section_tipo','section_id','type','from_component_tipo');
 
 	# Array of related terms in structure (one or more)
 	protected $ar_terminos_relacionados;
@@ -17,69 +19,6 @@ class component_autocomplete_hi extends component_reference_common {
 
 	# Used by get_value (avoid recalculate value on every call)
 	private $ar_valor_resolved;
-
-	
-
-	function __construct($tipo=null, $parent=null, $modo='edit', $lang=DEDALO_DATA_NOLAN, $section_tipo=null) {
-
-		# Force always DEDALO_DATA_NOLAN
-		$lang = $this->lang;
-
-		# Creamos el componente normalmente
-		parent::__construct($tipo, $parent, $modo, $lang, $section_tipo);
-
-		if(SHOW_DEBUG===true) {
-			$traducible = $this->RecordObj_dd->get_traducible();
-			if ($traducible==='si') {
-				throw new Exception("Error Processing Request. Wrong component lang definition. This component $tipo (".get_class().") is not 'traducible'. Please fix this ASAP", 1);
-			}
-		}
-	}//end __construct
-
-
-
-	/**
-	* GET DATO : 
-	* OLD Format: "es967"
-	* NEW Format: Array(locator1,locator2,..)
-	*/
-	public function get_dato() {
-		$dato = parent::get_dato();
-
-		# Verify type
-		if (!is_array($dato) && !is_null($dato)) {
-			debug_log(__METHOD__." Error on get dato from DB. Current dato is not array: ".gettype($dato).". Dato returned will be conveted to array".to_string(), logger::ERROR);
-		}
-		
-		return (array)$dato;
-	}//end get_dato
-
-
-
-	/**
-	* SET_DATO
-	* @param array $dato
-	*/
-	public function set_dato($dato) {
-		
-		if (is_string($dato)) {
-			$dato = json_decode($dato);
-		}elseif (is_object($dato)) {
-			$dato = array($dato); // IMPORTANT 
-		}
-
-		# Remove possible duplicates and sure well formed array keys
-		$dato_unique=array();
-		foreach ((array)$dato as $locator) {
-			if ( !locator::in_array_locator( $locator, $dato_unique, $ar_properties=array('section_tipo','section_id')) ) {
-				$dato_unique[] = $locator;
-			}
-		}
-		$dato = $dato_unique;
-
-		
-		return parent::set_dato( (array)$dato );
-	}//end set_dato
 
 
 
@@ -116,7 +55,7 @@ class component_autocomplete_hi extends component_reference_common {
 			$propiedades = $this->get_propiedades();
 			$recursive 	 = (isset($propiedades->value_with_parents) && $propiedades->value_with_parents===true) ? true : false;
 			#dump($propiedades, ' propiedades ++ '.to_string());
-	#$recursive = false; 
+		#$recursive = false; 
 	
 			$ar_valor = array();
 			foreach ($dato as $key => $current_locator) {
@@ -207,12 +146,13 @@ class component_autocomplete_hi extends component_reference_common {
 	*/
 
 
+
 	/**
 	* CONVERT_DATO_TO_LOCATOR
 	* Convert old dato like 'es352' to standar locator like {"section_id":"es352","section_tipo":"es"}
 	* Warning: this is a temporal locator (22-10-2015) and will be changed in tesaurized versions
 	* @return object locator
-	*/
+	*//*
 	public static function convert_dato_to_locator($old_dato) {
 		trigger_error( __METHOD__ . " DEPRECATED METHOD!");
 		if (is_object($old_dato)) {
@@ -237,7 +177,7 @@ class component_autocomplete_hi extends component_reference_common {
 			#dump($locator, ' locator ++ '.to_string()); die();
 		
 		return (object)$locator;
-	}#end convert_dato_to_locator
+	}#end convert_dato_to_locator */
 
 
 
@@ -245,7 +185,7 @@ class component_autocomplete_hi extends component_reference_common {
 	* GET_TERMINOID_BY_LOCATOR
 	* @param object $locator
 	* @return string $terminoID
-	*/
+	*/ 
 	public static function get_terminoID_by_locator( $locator ) {
 
 		if(!isset($locator->section_tipo) || !isset($locator->section_id)) {
@@ -497,6 +437,7 @@ class component_autocomplete_hi extends component_reference_common {
 		if (!empty($hierarchy_types)) {
 			$hierarchy_sections = component_autocomplete_hi::add_hierarchy_sections_from_types($hierarchy_types, (array)$hierarchy_sections);
 		}*/
+		#dump($hierarchy_sections, ' hierarchy_sections ++ '.to_string());
 
 		# FILTER SECTIONS : Filter search by target sections (hierarchy_sections)
 		$ar_filter=array();
@@ -534,7 +475,7 @@ class component_autocomplete_hi extends component_reference_common {
 		
 		$result	= JSON_RecordObj_matrix::search_free($strQuery, false);
 			#dump(null, ' strQuery ++ '.to_string($strQuery)); die(); // --ORDER BY term ASC
-		#error_log($strQuery);
+			#error_log($strQuery);
 
 		$ar_term = array();
 		while ($rows = pg_fetch_assoc($result)) {			
@@ -547,7 +488,7 @@ class component_autocomplete_hi extends component_reference_common {
 				$term_lang = DEDALO_DATA_LANG;
 				$current_term = $current_term_obj->{$term_lang};
 			}elseif (property_exists($current_term_obj, 'lg-eng')) {
-				$term_lang = 'lg-eng';
+				$term_lang 	  = 'lg-eng';
 				$current_term = $current_term_obj->{$term_lang};
 			}else{
 				$current_term = reset($current_term_obj);
@@ -612,73 +553,6 @@ class component_autocomplete_hi extends component_reference_common {
 		return (array)$ar_term;
 	}//end autocomplete_hi_search
 
-	
-
-	/**
-	* BUILD_SEARCH_COMPARISON_OPERATORS 
-	* Note: Override in every specific component
-	* @param array $comparison_operators . Like array('=','!=')
-	* @return object stdClass $search_comparison_operators
-	*/
-	public function build_search_comparison_operators( $comparison_operators=array('=','!=') ) {
-		return (object)parent::build_search_comparison_operators($comparison_operators);
-	}#end build_search_comparison_operators
-
-
-
-	/**
-	* GET_SEARCH_QUERY (OVERWRITE COMPONENT COMMON)
-	* Build search query for current component . Overwrite for different needs in other components 
-	* (is static to enable direct call from section_records without construct component)
-	* Params
-	* @param string $json_field . JSON container column Like 'dato'
-	* @param string $search_tipo . Component tipo Like 'dd421'
-	* @param string $tipo_de_dato_search . Component dato container Like 'dato' or 'valor'
-	* @param string $current_lang . Component dato lang container Like 'lg-spa' or 'lg-nolan'
-	* @param string $search_value . Value received from search form request Like 'paco'
-	* @param string $comparison_operator . SQL comparison operator Like 'ILIKE'
-	*
-	* @see class.section_records.php get_rows_data filter_by_search
-	* @return string $search_query . POSTGRE SQL query (like 'datos#>'{components, oh21, dato, lg-nolan}' ILIKE '%paco%' )
-	*//*
-	public static function get_search_query( $json_field, $search_tipo, $tipo_de_dato_search, $current_lang, $search_value, $comparison_operator='=') {		
-		
-		$search_value = json_decode($search_value);
-			if ( !$search_value || empty($search_value) ) {
-				return false;
-			}
-
-		$json_field = 'a.'.$json_field; // Add 'a.' for mandatory table alias search
-
-		$search_query='';
-		# Fixed
-		$tipo_de_dato_search='dato';
-		switch (true) {
-			case $comparison_operator==='!=':
-				foreach ((array)$search_value as $current_value) {
-					$current_value = json_encode($current_value);
-					$search_query = " ($json_field#>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}' @> '[$current_value]'::jsonb)=FALSE OR \n";
-				}
-				$search_query = substr($search_query, 0,-5);
-				break;
-
-			case $comparison_operator==='=':
-			default:
-				foreach ((array)$search_value as $current_value) {
-					$current_value = json_encode($current_value);
-					$search_query .= " $json_field#>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}' @> '[$current_value]'::jsonb OR \n";
-				}
-				$search_query = substr($search_query, 0,-5);
-				break;			
-		}
-		
-		if(SHOW_DEBUG===true) {
-			$search_query = " -- filter_by_search $search_tipo ". get_called_class() ." \n".$search_query;
-			#dump($search_query, " search_query for search_value: ".to_string($search_value)); #return '';
-		}
-		return $search_query;
-	}//end get_search_query
-	*/
 
 
 	/**
@@ -695,7 +569,7 @@ class component_autocomplete_hi extends component_reference_common {
 	* @param int $section_id
 	*
 	* @return string $list_value
-	*/
+	*//*
 	public static function render_list_value($value, $tipo, $parent, $modo, $lang, $section_tipo, $section_id, $current_locator=null, $caller_component_tipo=null) {
 		
 		$component	= component_common::get_instance(__CLASS__,
@@ -714,7 +588,7 @@ class component_autocomplete_hi extends component_reference_common {
 		$value = $component->get_html();
 		
 		return $value;
-	}#end render_list_value
+	}//end render_list_value */
 
 
 
@@ -757,13 +631,13 @@ class component_autocomplete_hi extends component_reference_common {
 	* es necesario sobre-escribirlo, como en component_portal, que ha de resolverse obigatoriamente en cada row de listado
 	* @see class.section.php
 	* @return string $html
-	*/
+	*/ /*
 	public function get_valor_list_html_to_save() {
 		
 		$dato = $this->get_dato();
 		
 		return $dato;
-	}//end get_valor_list_html_to_save
+	}//end get_valor_list_html_to_save */
 
 
 
@@ -827,6 +701,207 @@ class component_autocomplete_hi extends component_reference_common {
 
 		return $options_type;
 	}//end get_options_type
+
+
+
+	/**
+	* GET_DIFFUSION_VALUE
+	* Overwrite component common method
+	* Calculate current component diffusion value for target field (usually a mysql field)
+	* Used for diffusion_mysql to unify components diffusion value call
+	* @return string $diffusion_value
+	*
+	* @see class.diffusion_mysql.php
+	*/
+	public function get_diffusion_value( $lang=null, $type=false ) {		
+	
+		$diffusion_value = $this->get_valor($lang);
+		$diffusion_value = strip_tags($diffusion_value);	
+			#dump($diffusion_value, ' diffusion_value ++ '.to_string());
+		#$term = $this->get_legacy_political_map_term( DEDALO_DATA_LANG, $dato_key=0, $type='municipality');
+			#dump($term, ' term ++ '.to_string());
+
+		return (string)$diffusion_value;
+	}//end get_diffusion_value
+
+
+
+	### GET_LEGACY_MODEL
+
+
+
+	/**
+	* get_legacy_political_map_term
+	* @return 
+	*/
+	public function get_legacy_political_map_term( $lang=DEDALO_DATA_LANG, $dato_key=0, $type='municipality' ) {
+		$value = '';
+
+		$dato = $this->get_dato();
+		if (!empty($dato[$dato_key])) {			
+
+			$ar_hierarchy 	= [];
+			$locator		= $dato[$dato_key];
+			$political_map 	= self::get_legacy_political_map($locator->section_tipo);
+				#dump($political_map, ' political_map ++ '.to_string());
+			if (!empty($political_map[$type])) {
+
+				# political_model_locator. Get current model locator to requested type (like es2,8868 for municipality in spain)
+				$political_model_locator = reset($political_map[$type]);
+					#dump($political_model_locator, ' political_model_locator ++ '.to_string());
+				# model_obj. Get model info (name and locator)
+				$model_obj 				 = self::get_legacy_model($locator, $lang);
+					#dump($model_obj, ' model_obj ++ '.to_string());
+
+				if ($political_model_locator->section_tipo===$model_obj->locator->section_tipo && 
+					$political_model_locator->section_id==$model_obj->locator->section_id) {
+
+					$term = ts_object::get_term_by_locator( $locator, $lang, $from_cache=true );
+					return strip_tags($term);
+				}
+				#$ar_hierarchy[] = $locator;
+
+				$ar_parents	= component_relation_parent::get_parents($locator->section_id, $locator->section_tipo);
+				while (!empty($ar_parents[0])) {				
+					$locator 	= $ar_parents[0];
+					$model_obj	= self::get_legacy_model($locator, $lang);
+					#$ar_hierarchy[] = $locator;
+					if ($political_model_locator->section_tipo===$model_obj->locator->section_tipo &&
+						$political_model_locator->section_id==$model_obj->locator->section_id) {
+
+						$term = ts_object::get_term_by_locator( $locator, $lang, $from_cache=true );
+						return strip_tags($term);
+					}
+
+					$ar_parents	= component_relation_parent::get_parents($locator->section_id, $locator->section_tipo);
+				}
+				#dump($ar_hierarchy, ' ar_hierarchy ++ '.to_string());
+				/*
+					$ar_term = [];
+					foreach ($ar_hierarchy as $key => $locator) {
+						$term = ts_object::get_term_by_locator( $locator, $lang, $from_cache=true );
+						$ar_term[] = strip_tags($term);
+					}
+					dump($ar_term, ' $ar_term ++ '.to_string());
+
+					# [0] => <mark>Cornellà de Llobregat</mark>
+				    # [1] => <mark>Baix Llobregat</mark>
+				    # [2] => <mark>Barcelona</mark>
+				    # [3] => <mark>Catalunya</mark>
+				    # [4] => <mark>España</mark>
+				    # [5] => Espanya
+
+					switch ($type) {
+						case 'municipality':
+							$value = reset($ar_term);
+							break;
+						case 'country':
+							$value = end($ar_term);
+							break;
+						case 'comarca':					
+							switch ($locator->section_tipo) {						
+								case 'es1':						
+								default:
+									$level = 1;
+									break;
+							}					
+							$value = isset($ar_term[$level]) ? $ar_term[$level] : '';										
+							break;
+
+
+						default:
+							# code...
+							break;
+					}
+				*/
+				#$value = strip_tags($value);
+			}//end if (!empty($political_map[$type])) {
+		}//end if (!empty($dato[$dato_key]))
+		
+
+
+		return $value;
+	}//end get_legacy_political_map_term
+
+
+
+	/**
+	* GET_legacy_POLITICAL_MAP
+	* Return an array of political map models of each country
+	* This is a legacy function for compatibility with old publication tables
+	* and is NOT a future way of work
+	* @return 
+	*/
+	public static function get_legacy_political_map( $section_tipo ) {
+		
+		switch ($section_tipo) {
+			# Spain
+			case 'es1':
+				$country 				= json_decode('[{"section_tipo":"es2","section_id":"8868"}]');
+				$autonomous_community 	= json_decode('[{"section_tipo":"es2","section_id":"8869"}]');
+				$province 				= json_decode('[{"section_tipo":"es2","section_id":"8870"}]');
+				$comarca 				= json_decode('[{"section_tipo":"es2","section_id":"8871"}]');
+				$municipality 			= json_decode('[{"section_tipo":"es2","section_id":"8872"}]');
+				# models
+				$ar_models = [
+					'country' 				=> $country,
+					'autonomous_community' 	=> $autonomous_community,
+					'province' 				=> $province,
+					'comarca' 				=> $comarca,
+					'municipality' 			=> $municipality
+				];
+				break;
+			# France
+			case 'fr1':
+				$country 				= json_decode('[{"section_tipo":"fr2","section_id":"41189"}]');
+				$autonomous_community 	= json_decode('[]');
+				$province 				= json_decode('[{"section_tipo":"fr2","section_id":"41190"}]');
+				$comarca 				= json_decode('[{"section_tipo":"fr2","section_id":"41191"}]');
+				$municipality 			= json_decode('[{"section_tipo":"fr2","section_id":"41192"}]');
+				# models
+				$ar_models = [
+					'country' 				=> $country,
+					'autonomous_community' 	=> $autonomous_community,
+					'province' 				=> $province,
+					'comarca' 				=> $comarca,
+					'municipality' 			=> $municipality
+				];
+				break;
+			default:
+				$ar_models = [];
+				break;
+		}
+
+
+		return $ar_models;
+	}//end get_legacy_political_map
+
+
+
+	/**
+	* GET_LEGACY_MODEL
+	* @return object $model_obj
+	*/
+	public static function get_legacy_model( $locator, $lang=DEDALO_DATA_LANG ) {
+
+		$parent 		= $locator->section_id;
+		$section_tipo	= $locator->section_tipo;
+		$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo(DEDALO_THESAURUS_RELATION_MODEL_TIPO, true);
+		$component 		= component_common::get_instance($modelo_name,
+														 DEDALO_THESAURUS_RELATION_MODEL_TIPO,
+														 $parent,
+														 'list',
+														 $lang,
+														 $section_tipo);
+		$dato  = (array)$component->get_dato();
+		$value = $component->get_valor($lang);
+
+		$model_obj = new stdClass();
+			$model_obj->name 	= $value;
+			$model_obj->locator = reset($dato);
+
+		return $model_obj;
+	}//end get_legacy_model
 
 
 
