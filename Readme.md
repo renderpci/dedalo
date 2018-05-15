@@ -34,7 +34,8 @@ You can see Dédalo in action:
 Some projects using Dédalo to manage their Cultural Heritage or Oral Archive:
 
 <p><strong>Projects: </strong> 
-
+<p><a href="http://www.occupation-memories.org/de/archive/index.html" target="_blank">Freie Universität Berlin</a></p>
+<p><a href="https://numisdata.org/sardinia/" target="_blank">Findsopts in Sardinia</a></p>
 <p><a href="http://museoprehistoriavalencia.org/web_mupreva/?q=en" target="_blank">Museu de Prehistòria de València</a></p>	
 <p><a href="http://bancmemorial.gencat.cat/web/home/?&amp;lang=eng" target="_blank">Memorial Democràtic</a> (Banco audiovisual de Memoria Colectiva)</p>
 <p><a href="http://www.mujerymemoria.org" target="_blank">Mujer y Memoria</a> (Woman and Memory - Mothers and daughters of the Spanish transition. An oral history project)</p>	
