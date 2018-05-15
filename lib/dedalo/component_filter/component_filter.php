@@ -19,8 +19,8 @@
 	$file_name 				= $modo;
 
 	if($permissions===0) return null;
-	
 
+	
 	switch($modo) {
 		
 		case 'search' :
@@ -38,15 +38,13 @@
 				$search_input_name = $this->get_search_input_name();
 				#break;
 		case 'ajax' :
-		case 'edit' :	
+		case 'edit' :
 				# Verify component content record is inside section record filter
 				#if ($this->get_filter_authorized_record()===false) return NULL ;
 
-		
-
 				# Cuando se muestra en portales, fijar como no visible en estructura
 				$visible = $this->RecordObj_dd->get_visible();
-				if($visible=='no') {
+				if($visible==='no') {
 					if (SHOW_DEBUG) {
 						$permissions = 1;
 						$valor = $this->get_valor();
@@ -55,7 +53,7 @@
 					}
 				}			
 				
-				$ar_proyectos_section = $this->get_ar_projects_for_current_section(); 	#dump($ar_proyectos_section,"ar_proyectos_section");
+				$ar_proyectos_section = $this->get_ar_projects_for_current_section();
 				$id_wrapper 		  = 'wrapper_'.$identificador_unico; 
 				$input_name 		  = "{$tipo}_{$parent}";
 				$component_info		  = $this->get_component_info('json');				
@@ -63,7 +61,7 @@
 				$dato_json 			  = json_encode($dato);
 				break;
 
-		case 'tool_time_machine' :				
+		case 'tool_time_machine' :
 				$ar_proyectos_section = $this->get_ar_projects_for_current_section();
 				$id_wrapper = 'wrapper_'.$identificador_unico.'_tm';
 				$input_name = "{$tipo}_{$parent}_tm";
@@ -74,7 +72,7 @@
 		case 'list_tm' :
 				$file_name = 'list';
 
-		case 'list' :				
+		case 'list' :
 				#$valor = $this->get_valor();
 				$ar_proyectos_section = (array)$this->get_ar_projects_for_current_section();
 				if(SHOW_DEBUG) {
@@ -90,7 +88,7 @@
 		case 'lang'	:
 				break;
 		case 'print' :
-				$valor = $this->get_valor('html_concat');
+				$valor = $this->get_valor($lang, 'html_concat');
 				break;
 	}
 		

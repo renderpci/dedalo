@@ -8,8 +8,9 @@ if (defined('DIFFUSION_CUSTOM') && DIFFUSION_CUSTOM!==false) {
 */
 abstract class diffusion  {
 
+
 	protected $domain;
-	public $ar_diffusion_map;	
+	public $ar_diffusion_map;
 
 
 	/**
@@ -17,11 +18,10 @@ abstract class diffusion  {
 	* @param object $options . Default null
 	*/
 	function __construct($options=null) {
-		#$this->ar_diffusion_map 	= $this->get_ar_diffusion_map();
-		#self::$ar_database 		= $this->get_ar_database();
-		#self::$ar_table_data = array();
 
 		$this->domain = DEDALO_DIFFUSION_DOMAIN;
+
+		return true;
 	}//end __construct
 
 
@@ -247,9 +247,9 @@ abstract class diffusion  {
 	*/
 	public static function get_diffusion_domains() {
 
-		$diffusion_domains = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(DEDALO_DIFFUSION_TIPO, $modelo_name='diffusion_domain', $relation_type='children');
-			#dump($tipo_filter_master,'$tipo_filter_master');
-
+		$diffusion_domains = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(DEDALO_DIFFUSION_TIPO,
+																						$modelo_name='diffusion_domain',
+																						$relation_type='children');
 		return $diffusion_domains;
 	}//end get_diffusion_domains
 	
@@ -264,8 +264,7 @@ abstract class diffusion  {
 	* @return string $current_children like 'dd15'
 	*/
 	public static function get_my_diffusion_domain($diffusion_domain_name, $caller_class_name) {
-		#return (array)$caller_class_name;
-	
+		
 		# Array of all diffusion domains
 		$diffusion_domains = (array)diffusion::get_diffusion_domains();
 			#dump($diffusion_domains,'$diffusion_domains');
@@ -276,7 +275,6 @@ abstract class diffusion  {
 
 			if($current_name===$diffusion_domain_name) {				
 
-				/**/
 				#
 				# NUEVO MODO (más rápido) : Por propiedad 'class_name' . Evita la necesidad de utilizar el modelo cuando no es un modelo estándar de Dédalo
 				$ar_childrens = RecordObj_dd::get_ar_childrens($current_tipo);
@@ -299,6 +297,8 @@ abstract class diffusion  {
 				*/
 			}
 		}
+
+		return null;
 	}//end get_my_diffusion_domain
 
 
@@ -307,12 +307,12 @@ abstract class diffusion  {
 	* GET_SINGLE_DIFFUSION_MAP
 	* Get diffusion mapa of current only one section
 	* @return 
-	*/
+	*//* NOT USED
 	public function get_single_diffusion_map( $section_tipo ) {
+		
 		$diffusion_map = array();	
 
-		$domain = $this->domain;
-		
+		$domain = $this->domain;		
 		$domain = 'diffusion_index_ts';
 
 
@@ -347,14 +347,14 @@ abstract class diffusion  {
 		}
 
 		return false;
-	}//end get_single_diffusion_map
+	}//end get_single_diffusion_map */
 
 
 	
 	/**
 	* GET_ALL_TS_RECORDS
 	* @return array
-	*/
+	*//* NOT USED
 	public static function get_all_ts_records( $table, $root=0 ) {
 
 		$start_time = start_time();
@@ -375,7 +375,7 @@ abstract class diffusion  {
 		
 
 		return $ar_childrens;
-	}//end get_all_ts_records
+	}//end get_all_ts_records */
 	
 
 

@@ -108,26 +108,6 @@ class component_radio_button extends component_relation_common {
 
 
 	/**
-	* GET_VALOR_EXPORT
-	* Return component value sended to export data
-	* @return string $valor
-	*/
-	public function get_valor_export( $valor=null, $lang=DEDALO_DATA_LANG, $quotes, $add_id ) {
-		
-		if (is_null($valor)) {
-			$dato = $this->get_dato();				// Get dato from DB
-		}else{
-			$this->set_dato( json_decode($valor) );	// Use parsed json string as dato
-		}
-
-		$valor = $this->get_valor($lang);		
-		
-		return $valor;
-	}//end get_valor_export
-
-
-
-	/**
 	* RENDER_LIST_VALUE
 	* Overwrite for non default behaviour
 	* Receive value from section list and return proper value to show in list

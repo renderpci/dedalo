@@ -1,11 +1,12 @@
 <?php
 /*
-* component_autocomplete_hi
+* COMPONENT_AUTOCOMPLETE_HI
 * Replaces component_autocomplete_ts
 *
 */
 class component_autocomplete_hi extends component_relation_common {
 	
+
 	protected $relation_type = DEDALO_RELATION_TYPE_LINK;
 
 	# test_equal_properties is used to verify duplicates when add locators
@@ -54,8 +55,12 @@ class component_autocomplete_hi extends component_relation_common {
 			# Propiedades
 			$propiedades = $this->get_propiedades();
 			$recursive 	 = (isset($propiedades->value_with_parents) && $propiedades->value_with_parents===true) ? true : false;
-			#dump($propiedades, ' propiedades ++ '.to_string());
-		#$recursive = false; 
+			if(SHOW_DEBUG===true) {
+				#dump($propiedades, ' propiedades ++ '.to_string());
+				#dump($recursive, ' recursive ++ '.to_string());
+				#$recursive = false; 
+			}			
+			
 	
 			$ar_valor = array();
 			foreach ($dato as $key => $current_locator) {
@@ -94,7 +99,7 @@ class component_autocomplete_hi extends component_relation_common {
 	*/
 	public function get_valor_export( $valor=null, $lang=DEDALO_DATA_LANG, $quotes, $add_id ) {
 		
-		if (is_null($valor)) {
+		if (empty($valor)) {
 			$dato = $this->get_dato();				// Get dato from DB
 		}else{
 			$this->set_dato( json_decode($valor) );	// Use parsed json string as dato
@@ -103,12 +108,8 @@ class component_autocomplete_hi extends component_relation_common {
 		$valor_export = $this->get_valor($lang);
 		$valor_export = br2nl($valor_export);
 
-		if(SHOW_DEBUG===true) {
-			#return "AUTOCOMPLETE_hi: ".$valor_export;
-		}
-
 		return $valor_export;
-	}#end get_valor_export
+	}//end get_valor_export
 
 
 
@@ -142,7 +143,7 @@ class component_autocomplete_hi extends component_relation_common {
 		#dump($dato_search, ' dato_search1 ++ '.to_string());		
 
 		return $dato_search;
-	}#end get_dato_search
+	}//end get_dato_search
 	*/
 
 
@@ -177,7 +178,7 @@ class component_autocomplete_hi extends component_relation_common {
 			#dump($locator, ' locator ++ '.to_string()); die();
 		
 		return (object)$locator;
-	}#end convert_dato_to_locator */
+	}//end convert_dato_to_locator */
 
 
 
@@ -198,72 +199,7 @@ class component_autocomplete_hi extends component_relation_common {
 		$terminoID 	  = substr($section_tipo,0,strlen($section_tipo)-1).$section_id;
 		
 		return (string)$terminoID;
-	}#end get_terminoID_by_locator
-
-
-
-	/**
-	* GET_AR_REFERENCED_TIPO
-	*//*
-	public function get_ar_referenced_tipo() {
-
-		if(isset($this->ar_referenced_tipo)) return $this->ar_referenced_tipo;
-		
-		$ar_referenced_tipo = array();
-
-		# COMPONENT PROPIEDADES VAR
-		$propiedades = $this->get_propiedades();
-		$source_mode = $this->get_source_mode();
-
-		if ( isset($propiedades->jer_tipo) ) {
-			
-			# TEMPORAL
-			$ar_tesauro_by_jer_tipo = RecordObj_jer::get_ar_tesauro_by_jer_tipo($propiedades->jer_tipo);
-			foreach ($ar_tesauro_by_jer_tipo as $tld) {
-				$ar_referenced_tipo[] = strtolower($tld)."1";
-			}
-			debug_log(__METHOD__." Deprecated source mode. Please use new format like 'propiedades->source->mode' ".to_string(), logger::ERROR);
-
-		}else if (isset($propiedades->source->mode) && isset($propiedades->source->value)) {
-
-			# New source format
-			switch ($propiedades->source->mode) {
-				case 'jer_tipo':
-					$ar_tesauro_by_jer_tipo = RecordObj_jer::get_ar_tesauro_by_jer_tipo( (int)$propiedades->source->value );
-					foreach ($ar_tesauro_by_jer_tipo as $tld) {
-						$ar_referenced_tipo[] = strtolower($tld)."1";
-					}
-						
-					break;
-				case 'childrens_of':
-					$ar_parents = (array)$propiedades->source->value;
-					foreach ($ar_parents as $current_parent) {						
-						$ar_childrens = RecordObj_ts::get_ar_childrens($current_parent, $order_by='norden');
-							#dump($ar_childrens, ' ar_childrens'.to_string());
-						foreach ((array)$ar_childrens as $current_tipo) {
-							$ar_referenced_tipo[] = $current_tipo;
-
-						}
-					}
-
-					break;
-				case 'tree':
-					# Tipos to hide / exclude
-
-					$ar_referenced_tipo = $propiedades->source->value;
-					break;
-				default:
-					debug_log(__METHOD__." Invalid source->mode ".to_string($propiedades->source->mode), logger::ERROR);
-			}
-
-		}else{			
-			debug_log(__METHOD__." Not defined source->mode (propiedades->source->mode)", logger::ERROR);
-		}
-		#dump($ar_referenced_tipo, ' ar_referenced_tipo ++ '.to_string());		
-				
-		return $this->ar_referenced_tipo = $ar_referenced_tipo;
-	}//end get_ar_referenced_tipo
-	*/
+	}//end get_terminoID_by_locator
 
 
 
@@ -287,7 +223,7 @@ class component_autocomplete_hi extends component_relation_common {
 			debug_log(__METHOD__." Not defined source->mode (propiedades->source->mode)", logger::ERROR);
 			return '';
 		}
-	}#end get_source_mode
+	}//end get_source_mode
 
 
 
@@ -371,13 +307,106 @@ class component_autocomplete_hi extends component_relation_common {
 	* @return array $hierarchy_sections_from_types
 	*/
 	public static function get_hierarchy_sections_from_types( $hierarchy_types ) {
+		
 		$hierarchy_sections_from_types = array();
 
+		
+		$hierarchy_section_tipo = DEDALO_HIERARCHY_SECTION_TIPO;
+		$hierarchy_name_tipo 	= DEDALO_HIERARCHY_TERM_TIPO;		
+
+	
+		$ar_filter = [];
+		# Active
+		$active_locator = new locator();
+			$active_locator->set_section_id(NUMERICAL_MATRIX_VALUE_YES);
+			$active_locator->set_section_tipo(DEDALO_SECTION_SI_NO_TIPO);
+			$active_locator->set_type(DEDALO_RELATION_TYPE_LINK);
+			$active_locator->set_from_component_tipo(DEDALO_HIERARCHY_ACTIVE_TIPO);
+
+		$ar_filter[] = '{
+				"q": '.json_encode(json_encode($active_locator)).',
+				"path": [
+					{
+						"section_tipo": "'.$hierarchy_section_tipo.'",
+						"component_tipo": "'.DEDALO_HIERARCHY_ACTIVE_TIPO.'",
+						"modelo": "'.RecordObj_dd::get_modelo_name_by_tipo(DEDALO_HIERARCHY_ACTIVE_TIPO,true).'",
+						"name": "Active"
+					}
+				]
+			}';
+		# Typology
+		foreach ((array)$hierarchy_types as $key => $value) {
+
+			$typology_locator = new locator();
+				$typology_locator->set_section_id($value);
+				$typology_locator->set_section_tipo(DEDALO_HIERARCHY_TYPES_SECTION_TIPO);
+				$typology_locator->set_type(DEDALO_RELATION_TYPE_LINK);
+				$typology_locator->set_from_component_tipo(DEDALO_HIERARCHY_TIPOLOGY_TIPO);
+
+			$ar_filter[] = '{
+				"q": '.json_encode(json_encode($typology_locator)).',
+				"path": [
+					{
+						"section_tipo": "hierarchy1",
+						"component_tipo": "hierarchy9",
+						"modelo": "component_select",
+						"name": "Typology"
+					}
+				]
+			}';
+		}//end foreach ((array)$hierarchy_types as $key => $value)
+		
+		$filter = implode(',',$ar_filter);
+		
+		$search_query_object = json_decode('
+			{
+			  "id": "get_hierarchy_sections_from_types",
+			  "section_tipo": "'.$hierarchy_section_tipo.'",
+			  "skip_projects_filter":"true",
+			  "limit":0,
+			  "filter": {
+				"$and": [
+				  '.$filter.'
+				]
+			  },
+			  "select": [
+				{
+				  "path": [
+					{
+					  "section_tipo": "'.$hierarchy_section_tipo.'",
+					  "component_tipo": "'.$hierarchy_name_tipo.'",
+					  "modelo": "'.RecordObj_dd::get_modelo_name_by_tipo($hierarchy_name_tipo,true).'",
+					  "name": "Hierarchy name",
+					  "lang": "all"
+					}
+				  ]
+				},
+				{
+				  "path": [
+					{
+					  "section_tipo": "'.$hierarchy_section_tipo.'",
+					  "component_tipo": "'.DEDALO_HIERARCHY_TARGET_SECTION_TIPO.'",
+					  "modelo": "'.RecordObj_dd::get_modelo_name_by_tipo($hierarchy_name_tipo,true).'",
+					  "name": "Target thesaurus"
+					}
+				  ]
+				}
+			  ]
+			}
+		');
+		#dump( json_encode($search_query_object, JSON_PRETTY_PRINT), ' search_query_object ++ '.to_string());
+
+		$search_development2 = new search_development2($search_query_object);
+		$result = $search_development2->search();
+			#dump($result, ' result ++ '.to_string());
+
+		/* OLD WAY
 		foreach ((array)$hierarchy_types as $tipology_section_id) {
 		
 			#
 			# HIERARCHIES OF CURRENT TIPO Like 'España' for tipology_section_id 2
 			$search_hierarchies_options = area_thesaurus::get_options_for_search_hierarchies(DEDALO_HIERARCHY_TYPES_SECTION_TIPO, $tipology_section_id);
+				#dump($search_hierarchies_options, ' search_hierarchies_options ++ '.to_string());
 			# Calculate rows from database using search class like lists
 			$hierarchies_rows_obj = search::get_records_data($search_hierarchies_options);
 				#dump($hierarchies_rows_obj, ' hierarchies_rows_obj ++ '.to_string());
@@ -391,6 +420,13 @@ class component_autocomplete_hi extends component_relation_common {
 				}				
 			}
 		}
+		dump($hierarchy_sections_from_types, ' hierarchy_sections_from_types ++ '.to_string()); */
+
+		$target_section_tipo = DEDALO_HIERARCHY_TARGET_SECTION_TIPO;
+		foreach ($result->ar_records as $key => $row) {
+			$hierarchy_sections_from_types[] = $row->{$target_section_tipo};
+		}
+		
 
 		return (array)$hierarchy_sections_from_types;
 	}//end get_hierarchy_sections_from_types
@@ -404,15 +440,33 @@ class component_autocomplete_hi extends component_relation_common {
 	* and create an array unique
 	* @return array $hierarchy_sections
 	*/
-	public static function add_hierarchy_sections_from_types($hierarchy_types, $hierarchy_sections=array()) {		
+	public static function add_hierarchy_sections_from_types($hierarchy_types, $hierarchy_sections=array()) {
 
-		$hierarchy_sections_from_types = component_autocomplete_hi::get_hierarchy_sections_from_types( $hierarchy_types );
-			#dump($hierarchy_sections_from_types, ' hierarchy_sections_from_types ++ '.to_string()); die();
-		// Mix result with hierarchy_sections
-		$hierarchy_sections = array_merge((array)$hierarchy_sections_from_types, (array)$hierarchy_sections);
-		// Remove duplicates
-		$hierarchy_sections = array_unique($hierarchy_sections);
+		$hierarchy_sections = [];
 
+		$hierarchy_sections_from_types = [];
+		foreach ((array)$hierarchy_types as $current_type) {
+			$sections_from_types = component_autocomplete_hi::get_hierarchy_sections_from_types( $current_type );
+			$hierarchy_sections_from_types = array_merge($hierarchy_sections_from_types, $sections_from_types);
+		}		
+		#dump($hierarchy_sections_from_types, ' hierarchy_sections_from_types ++ '.to_string($hierarchy_types)); #die();
+		
+		# Add hierarchy_sections_from_types
+		foreach ($hierarchy_sections_from_types as $current_section_tipo) {
+			if (!in_array($current_section_tipo, $hierarchy_sections)) {
+				$hierarchy_sections[] = $current_section_tipo;
+			}
+		}
+
+		# Add hierarchy_sections
+		foreach ($hierarchy_sections as $current_section_tipo) {
+			if (!in_array($current_section_tipo, $hierarchy_sections)) {
+				$hierarchy_sections[] = $current_section_tipo;
+			}
+		}
+
+		$hierarchy_sections = array_values($hierarchy_sections);
+		
 
 		return (array)$hierarchy_sections;
 	}//end add_hierarchy_sections_from_types
@@ -426,17 +480,17 @@ class component_autocomplete_hi extends component_relation_common {
 	* @return array ar_result 
 	*	Array format: id_matrix=>dato_string 
 	*/
-	public static function autocomplete_hi_search($hierarchy_types, $hierarchy_sections, $string_to_search, $max_results=30, $show_modelo_name=false, $show_parent_name=false) {		
+	public static function autocomplete_hi_search($hierarchy_types, $hierarchy_sections, $string_to_search, $max_results=30, $show_modelo_name=false, $show_parent_name=false, $from_component_tipo) {		
 		if(SHOW_DEBUG===true) $start_time = start_time();
 
 		#$show_modelo_name=false;
 		#$show_parent_name=false;
 		
 		# HIERARCHY_SECTIONS_FROM_TYPES : search all target section of all hierarchies with type=$hierarchy_types
-		/* Already calculated in compoonent modo edit
-		if (!empty($hierarchy_types)) {
-			$hierarchy_sections = component_autocomplete_hi::add_hierarchy_sections_from_types($hierarchy_types, (array)$hierarchy_sections);
-		}*/
+		# Already calculated in compoonent modo edit
+		#if (!empty($hierarchy_types)) {
+		#	$hierarchy_sections = component_autocomplete_hi::add_hierarchy_sections_from_types($hierarchy_types, (array)$hierarchy_sections);
+		#}
 		#dump($hierarchy_sections, ' hierarchy_sections ++ '.to_string());
 
 		# FILTER SECTIONS : Filter search by target sections (hierarchy_sections)
@@ -481,9 +535,9 @@ class component_autocomplete_hi extends component_relation_common {
 		while ($rows = pg_fetch_assoc($result)) {			
 			$current_section_tipo 	= $rows['section_tipo'];
 			$current_section_id 	= $rows['section_id'];
-			$current_term_obj 		= json_decode($rows['term']);
-			
+			/*			
 			# current_term. Select lang name
+			$current_term_obj 		= json_decode($rows['term']);
 			if (property_exists($current_term_obj, DEDALO_DATA_LANG)) {
 				$term_lang = DEDALO_DATA_LANG;
 				$current_term = $current_term_obj->{$term_lang};
@@ -492,13 +546,48 @@ class component_autocomplete_hi extends component_relation_common {
 				$current_term = $current_term_obj->{$term_lang};
 			}else{
 				$current_term = reset($current_term_obj);
-			}
+			}*/
+			$current_term = component_common::get_value_with_fallback_from_dato_full( $rows['term'], $decore_untranslated=false );
 			
 
 			$locator = new locator();
 				$locator->set_section_tipo($current_section_tipo);
 				$locator->set_section_id($current_section_id);
+				$locator->set_type(DEDALO_RELATION_TYPE_LINK);
+				$locator->set_from_component_tipo($from_component_tipo);				
 			$locator_json = json_encode($locator);
+						
+	
+			# Parent name . parent locator is always calculated and is not in current record (data is as locator children in parent record)
+			if($show_parent_name===true) {
+
+				$parent_name= false;
+				/*
+				// 2 way
+				// Using get_parents_recursive an iteratin all
+				#$ar_parents = component_relation_parent::get_parents($current_section_id, $current_section_tipo, $from_component_tipo=null, $ar_tables=['matrix_hierarchy']);
+				$ar_parents = component_relation_parent::get_parents_recursive($current_section_id, $current_section_tipo, $skip_root=true);
+					#dump($ar_parents, ' ar_parents ++ '.to_string());
+
+				$ar_names =[];
+				foreach ($ar_parents as $key => $current_parent) {
+					$parent_name = ts_object::get_term_by_locator( $current_parent, DEDALO_DATA_LANG, $from_cache=true );
+					if (!empty($parent_name)) {						
+						$ar_names[] = $parent_name;
+					}
+				}
+				if (!empty($ar_names)) {
+					$current_term .= ' - ' . implode(', ', $ar_names) . '';
+				}*/
+
+				// 3 way
+				// Directly, with recursive options true
+				$current_valor = component_relation_common::get_locator_value( $locator, DEDALO_DATA_LANG, $current_section_tipo, $recursive=true );
+				if (!empty($current_valor)) {
+					$current_term .= ' - '.$current_valor;
+				}		
+				
+			}
 
 			# Aditional info
 			# Model name . model locator is in relations, in current record
@@ -512,24 +601,6 @@ class component_autocomplete_hi extends component_relation_common {
 							$current_term .= ' - ' . $model_name;
 						}
 						break;
-					}
-				}
-			}			
-
-			# Parent name . parent locator is always calculated and is not in current record (data is as locator children in parent record)
-			if($show_parent_name===true) {
-				$parent_name= false;
-				$component = component_common::get_instance('component_relation_parent',
-															 DEDALO_THESAURUS_RELATION_PARENT_TIPO,
-															 $current_section_id,
-															 'list',
-															 DEDALO_DATA_NOLAN,
-															 $current_section_tipo);
-				$dato = $component->get_dato();
-				if (isset($dato[0])) {
-					$parent_name = ts_object::get_term_by_locator( $dato[0], DEDALO_DATA_LANG, $from_cache=true );
-					if (!empty($parent_name)) {
-						$current_term .= ' (' . $parent_name . ')';
 					}
 				}
 			}
@@ -713,7 +784,7 @@ class component_autocomplete_hi extends component_relation_common {
 	*
 	* @see class.diffusion_mysql.php
 	*/
-	public function get_diffusion_value( $lang=null, $type=false ) {		
+	public function get_diffusion_value( $lang=null, $type=false ) {
 	
 		$diffusion_value = $this->get_valor($lang);
 		$diffusion_value = strip_tags($diffusion_value);	
@@ -723,6 +794,25 @@ class component_autocomplete_hi extends component_relation_common {
 
 		return (string)$diffusion_value;
 	}//end get_diffusion_value
+
+
+
+	/**
+	* MAP_LOCATOR_TO_TERM_ID
+	* Alias of diffusion_sql::map_locator_to_term_id
+	* @return string | null $term_id
+	*/
+	public function map_locator_to_term_id() {
+
+		$term_id = null;
+
+		$dato = $this->get_dato();
+		if (!empty($dato)) {
+			$term_id = diffusion_sql::map_locator_to_term_id(null, $dato);
+		}
+
+		return $term_id;
+	}//end map_locator_to_term_id
 
 
 
@@ -785,11 +875,11 @@ class component_autocomplete_hi extends component_relation_common {
 					dump($ar_term, ' $ar_term ++ '.to_string());
 
 					# [0] => <mark>Cornellà de Llobregat</mark>
-				    # [1] => <mark>Baix Llobregat</mark>
-				    # [2] => <mark>Barcelona</mark>
-				    # [3] => <mark>Catalunya</mark>
-				    # [4] => <mark>España</mark>
-				    # [5] => Espanya
+					# [1] => <mark>Baix Llobregat</mark>
+					# [2] => <mark>Barcelona</mark>
+					# [3] => <mark>Catalunya</mark>
+					# [4] => <mark>España</mark>
+					# [5] => Espanya
 
 					switch ($type) {
 						case 'municipality':

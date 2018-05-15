@@ -2,7 +2,7 @@
 
 	# VISUALIZADOR HTML	
 
-	print "<div class=\"wrap_component css_wrap_input_text\" id=\"wrap_{$tipo} tooltip_active\" ";
+	print "<div class=\"wrap_component css_wrap_input_text tooltip_active\" id=\"wrap_{$tipo} tooltip_active\" ";
 	print "data-component_name=\"{$component_name}\" ";
 	print "data-modo=\"{$modo}\" ";
 	print "data-dato='".json_encode($dato)."' ";
@@ -25,17 +25,19 @@
 						
 		case ($permissions>=2)	:
 					# COMPARISON OPERATORS
-					$html_content .= operator::get_search_comparison_operators_html($tipo,$ar_comparison_operators);
+					#$html_content .= operator::get_search_comparison_operators_html($tipo,$ar_comparison_operators);
 		
-					$html_content .= "<input class=\"css_input_text_large_search\" type=\"text\" name=\"{$search_input_name}\" ";
+					$html_content .= "<textarea class=\"css_input_text_large_search\" type=\"text\" name=\"{$search_input_name}\" ";
 					$html_content .= "id=\"{$identificador_unico}\" ";
 					$html_content .= "data-tipo=\"{$tipo}\" ";
 					$html_content .= "data-lang=\"{$lang}\" ";
-					$html_content .= "value=\"\" ";
-					$html_content .= "title=\"$html_title\" />";
+					$html_content .= "onchange=\"component_common.fix_dato(this,'{$component_name}')\" ";
+					$html_content .= "title=\"$html_title\" >";
+					$html_content .= $dato;
+					$html_content .= "</textarea>";
 
 					# LOGICAL OPERATORS
-					$html_content .= operator::get_search_logical_operators_html($tipo,$ar_logical_operators);
+					#$html_content .= operator::get_search_logical_operators_html($tipo,$ar_logical_operators);
 					break;
 	}
 

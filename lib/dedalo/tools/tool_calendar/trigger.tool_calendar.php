@@ -273,8 +273,8 @@ function save_one_event( $options ) {
 				throw new Exception("Error Processing Request. Component filter not found", 1);		
 			}
 			$component_tipo = $ar_component_tipo[0];
-			$component  = component_common::get_instance('component_filter', $component_tipo, $section_id, 'edit', DEDALO_DATA_NOLAN, $section_tipo);			
-			$component->Save();	// Save default dato defined in propiedades
+			$component  = component_common::get_instance('component_filter', $component_tipo, $section_id, 'edit', DEDALO_DATA_NOLAN, $section_tipo); # Already saves default project when load in edit mode		
+			# Already saves default project when load in edit mode
 		}else{
 			$section_id = (int)$options->section_id;
 		}

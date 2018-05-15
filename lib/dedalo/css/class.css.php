@@ -64,7 +64,7 @@ class css {
 			css::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/search/css/search.css';				
 
 			# COMPONENTS common css
-			#css::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/component_common/css/component_common.css';
+			css::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/component_common/css/component_common.css';
 
 			switch ($modo) {
 				case 'edit':

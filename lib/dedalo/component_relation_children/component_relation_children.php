@@ -50,14 +50,14 @@
 				}
 
 				# Parent area is model (default is false)
-				$parent_area_is_model = false;
+				/*$parent_area_is_model = false;
 				if (!empty($target_section_tipo)) {
 					$RecordObj_dd = new RecordObj_dd($target_section_tipo);
 					$parent_area  = $RecordObj_dd->get_parent();
 					if ($parent_area===DEDALO_THESAURUS_VIRTUALS_MODELS_AREA_TIPO) {
 						$parent_area_is_model = true;
 					}
-				}
+				}*/
 				
 				#dump($parent_area_is_model, ' parent_area_is_model ++ '.to_string($parent_area));
 				break;

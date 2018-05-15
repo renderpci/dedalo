@@ -76,7 +76,7 @@
 							$hierarchy_sections = component_autocomplete_hi::add_hierarchy_sections_from_types($hierarchy_types, (array)$hierarchy_sections);
 							$hierarchy_types 	= null; // Remove filter by type because we know all hierarchy_sections now
 						}
-
+	
 						$ar_filter_options = $this->get_ar_filter_options($options_type, $hierarchy_sections);
 						break;
 					
@@ -86,7 +86,8 @@
 							$ar_filter_options = $this->get_ar_filter_options($options_type, $propiedades->source->filter_by_list);
 						}
 						break;
-				}				
+				}
+				#dump($ar_filter_options, ' ar_filter_options ++ '.to_string());			
 
 				# LIMIT (Max items allow. 0 for unlimited)
 				$limit = isset($propiedades->limit) ? (int)$propiedades->limit : 0;
@@ -103,13 +104,13 @@
 				$valor_searched 		= NULL;
 				$valor_searched_string 	= NULL;
 				$ar_valor 				= $this->get_valor($lang,'array');
-				#$dato_json 				= json_encode($dato);
+				$dato_json 				= json_encode($dato);
 
 				$ar_referenced_tipo 	= $this->get_ar_referenced_tipo();
 				$ar_referenced_tipo_json= json_handler::encode($this->get_ar_referenced_tipo());
 				
-				#$ar_comparison_operators = $this->build_search_comparison_operators();
-				#$ar_logical_operators 	 = $this->build_search_logical_operators();
+				# q_operator is injected by trigger search2
+				$q_operator = isset($this->q_operator) ? $this->q_operator : null;
 
 				# SOURCE_MODE
 				$source_mode 		= $this->get_source_mode();
@@ -132,7 +133,7 @@
 					case 'hierarchy':
 						$hierarchy_types 	= isset($propiedades->source->hierarchy_types) ? $propiedades->source->hierarchy_types : null;
 						$hierarchy_sections = isset($propiedades->source->hierarchy_sections) ? $propiedades->source->hierarchy_sections : null;
-							#dump($hierarchy_types, ' hierarchy_types ++ '.to_string()); return null;
+							#dump($hierarchy_sections, ' hierarchy_sections ++ '.to_string()); #return null;
 			
 						# Resolve hierarchy_sections for speed
 						if (!empty($hierarchy_types)) {
@@ -152,7 +153,7 @@
 				}
 
 				# LIMIT (Max items allow. 0 for unlimited)
-				$limit = isset($propiedades->limit) ? (int)$propiedades->limit : 0;
+				$limit = 1;
 				break;
 						
 		case 'list_tm' :

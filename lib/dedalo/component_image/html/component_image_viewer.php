@@ -13,8 +13,12 @@ $page_title = pathinfo($f,PATHINFO_BASENAME);
 <title><?php echo $page_title ?></title>
 </head>
 <body style="margin:0">
-<img id="image_current" src="<?php echo $f ?>" onload="getBackgroundColor(this)" style="position: fixed;top: 50%;left: 50%;transform: translate(-50%, -50%);" onMouseUp="window.close()">
-<button type="submit" class="btn btn-primary start" style="position:absolute;right: 10px;bottom: 10px;z-index: 9999" onclick="download_original_image(this, event)">
+<?php 
+/*
+position: fixed;top: 50%;left: 50%;transform: translate(-50%, -50%);
+*/ ?>
+<img id="image_current" src="<?php echo $f ?>" onload="getBackgroundColor(this)" style="max-width:100%;" onMouseUp="window.close()">
+<button type="submit" class="btn btn-primary start" style="position:fixed;right: 10px;bottom: 10px;z-index: 9999" onclick="download_original_image(this, event)">
     <i class="glyphicon glyphicon-download"></i>
     <span> </span>
 </button>

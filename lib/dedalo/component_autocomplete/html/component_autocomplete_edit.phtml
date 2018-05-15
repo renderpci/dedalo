@@ -253,14 +253,7 @@
 									$autosearch_options_html .= "<hr>";
 								}
 							}
-							$autosearch_options_html .= "</ul>";
-
-							$autosearch_options_html .= "<script>";
-							# Reset var 'activated' on load
-							#$autosearch_options_html .= "component_autocomplete.activated={};";
-							# Init component
-							$autosearch_options_html .= "component_autocomplete.init_filter_by_list({\"wrapper_id\":\"$id_wrapper\",\"cookie_name\":\"$cookie_name\",\"limit\":\"$limit\"});";
-							$autosearch_options_html .= "</script>";
+							$autosearch_options_html .= "</ul>";							
 						}//end if ($filter_by_list!==false)
 
 
@@ -393,8 +386,21 @@
 						*/
 					}
 
+				#
+				# JS Init component
+				$html_content .= "<script>";
+				# Init component
+				$init_options = new stdClass();
+					$init_options->component_name 	= $component_name;
+					$init_options->wrapper_id 		= $id_wrapper;
+					$init_options->cookie_name 		= isset($cookie_name) ? $cookie_name : null;
+					$init_options->limit 			= $limit;
+				$html_content .= "component_common.init(".json_encode($init_options).");";
+				$html_content .= "</script>";
 
-				
+
+				#######
+
 				if(SHOW_DEBUG) {
 					#$html_content .= " <span class=\"css_span_debugger\" id=\"debugger_{$tipo}\" >{$debugger}</span>";
 					$html_content .= "<span class=\"debug_info\" id=\"debugger_{$tipo}\">";

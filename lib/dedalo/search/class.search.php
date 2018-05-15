@@ -45,8 +45,9 @@ class search extends common {
 			return null;
 		}
 
-		#dump($options,'options');
-		error_log("Llamada get_rows_data con section_tipo:$options->section_tipo ");
+		# WARNING
+		$caller = debug_backtrace()[0];
+		error_log("!!!!!!!!!!! Llamada get_rows_data con section_tipo:$options->section_tipo (CHANGE TO NEW SEARCH IF IS POSSIBLE) ".json_encode($caller, JSON_PRETTY_PRINT) );
 
 		# SECTION TIPO : mandatory		
 		$section_tipo = $options->section_tipo;

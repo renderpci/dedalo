@@ -14,7 +14,7 @@ include dirname(dirname(dirname(dirname(__FILE__)))) .'/config/config4.php';
 	define('WEB_VIDEO_BASE_URL' 		, DEDALO_MEDIA_BASE_URL .'/'. DEDALO_AV_FOLDER .'/'. DEDALO_AV_QUALITY_DEFAULT );
 
 	// API_WEB_USER_CODE . Verification user code (must be identical in config of client and server)
-	define('API_WEB_USER_CODE' 			, 'aR17empa92sd546asBh2');
+	define('API_WEB_USER_CODE' 			, 'my api code');
 	if (!isset($_REQUEST['code']) || $_REQUEST['code']!==API_WEB_USER_CODE) {
 		echo json_encode("Sorry. Invalid user code");
 		die(); 

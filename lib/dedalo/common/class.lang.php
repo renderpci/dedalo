@@ -217,7 +217,7 @@ class lang {
 			return null;
 		}
 
-		$section_tipo 	 = DEDALO_LANGS_SECTION_TIPO;
+		$section_tipo = DEDALO_LANGS_SECTION_TIPO;
 
 			# Test section tipo and modelo_name exists (TEMPORAL FOR INSTALATIONS BEFORE 4.5)		
 			$section_modelo_name = RecordObj_dd::get_modelo_name_by_tipo($section_tipo, true);

@@ -123,7 +123,7 @@
 																 //$id);
 																 null);
 						
-						$ar_valor[$current_component_tipo] = (string)$value;	
+						$ar_valor[$current_component_tipo] = (string)$value;
 
 						#
 						# PORTALS. Portal with multiple list cases

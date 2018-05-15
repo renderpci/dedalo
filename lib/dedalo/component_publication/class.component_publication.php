@@ -25,15 +25,6 @@ class component_publication extends component_relation_common {
 
 		# Creamos el componente normalmente
 		parent::__construct($tipo, $parent, $modo, $lang, $section_tipo);
-
-		/*
-		if(SHOW_DEBUG===true) {
-			$traducible = $this->RecordObj_dd->get_traducible();
-			if ($traducible=='si') {
-				throw new Exception("Error Processing Request. Wrong component lang definition. This component $tipo (".get_class().") is not 'traducible'. Please fix this ASAP", 1);
-			}
-		}
-		*/
 	}//end __construct
 
 
@@ -169,30 +160,7 @@ class component_publication extends component_relation_common {
 			$lang = DEDALO_DATA_LANG;
 		}
 		return $lang;
-	}
-
-
-	/**
-	* GET_VALOR_EXPORT
-	* Return component value sended to export data
-	* @return string $valor
-	*/
-	public function get_valor_export( $valor=null, $lang=DEDALO_DATA_LANG, $quotes, $add_id ) {
-		
-		if (is_null($valor)) {
-			$dato = $this->get_dato();				// Get dato from DB
-		}else{
-			$this->set_dato( json_decode($valor) );	// Use parsed json string as dato
-		}
-
-		$valor = $this->get_valor($lang);
-		
-		if(SHOW_DEBUG===true) {
-			#return "RADIO_BUTTON: ".$valor;
-		}
-		return $valor;
-
-	}#end get_valor_export
+	}	
 
 
 

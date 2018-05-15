@@ -145,6 +145,7 @@
 								}else{
 									$valor[$key] = component_date::get_valor_local( $dd_date, false );
 										#dump($valor[$key], '$valor[$key] ++ '.to_string());
+
 								}
 							}
 							break;

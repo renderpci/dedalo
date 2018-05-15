@@ -4,7 +4,6 @@
 */
 require_once(DEDALO_LIB_BASE_PATH . '/media_engine/class.PdfObj.php');
 
-
 class component_pdf extends component_common {
 	
 
@@ -88,7 +87,23 @@ class component_pdf extends component_common {
 			global$TIMER;$TIMER[__METHOD__.'_OUT_'.$this->tipo.'_'.$this->modo.'_'.microtime(1)]=microtime(1);
 		}
 
+		return true;
 	}#end __construct
+
+
+
+	/**
+	* SAVE
+	* Overwrite component common method
+	* This component don´t save any data for now
+	* @return int $section_id
+	*/
+	public function Save() {
+		
+		$section_id = $this->get_parent();
+
+		return (int)$section_id;
+	}//end Save
 
 
 
@@ -181,6 +196,7 @@ class component_pdf extends component_common {
 
 	# SET_DATO
 	public function set_dato($dato) {
+		
 		parent::set_dato( (object)$dato );
 	}
 	
@@ -192,6 +208,7 @@ class component_pdf extends component_common {
 	* GET VALUE . DEFAULT IS GET DATO . OVERWRITE IN EVERY DIFFERENT SPECIFIC COMPONENT
 	*/
 	public function get_valor() {
+		
 		return $this->valor = $this->get_pdf_id() ;
 	}
 	
@@ -233,6 +250,7 @@ class component_pdf extends component_common {
 	*/
 	public function get_quality() {
 		if(!isset($this->quality))	return DEDALO_PDF_QUALITY_DEFAULT;
+		
 		return $this->quality;
 	}
 
@@ -242,9 +260,11 @@ class component_pdf extends component_common {
 	* UPLOAD NEEDED
 	*/
 	public function get_target_filename() {
+		
 		return $this->pdf_id .'.'. DEDALO_PDF_EXTENSION ;
 	}
 	public function get_target_dir() {
+		
 		#return DEDALO_MEDIA_BASE_PATH . DEDALO_PDF_FOLDER .'/'. $this->get_quality() ;
 		return $this->PdfObj->get_media_path_abs();
 	}
@@ -357,9 +377,6 @@ class component_pdf extends component_common {
 		return $PdfObj->get_file_exists();
 	}
 
-	
-
-	
 
 
 	/**
@@ -524,8 +541,7 @@ class component_pdf extends component_common {
 			}
 		}
 
-		return $url;
-		
+		return $url;		
 	}#end get_pdf_thumb
 
 
@@ -557,8 +573,8 @@ class component_pdf extends component_common {
 														  $section_tipo);
 			$value = $component->get_html();
 		#}
-		return $value;
 
+		return $value;
 	}#end render_list_value
 
 
@@ -589,7 +605,7 @@ class component_pdf extends component_common {
 	*/
 	public function get_valor_export( $valor=null, $lang=DEDALO_DATA_LANG, $quotes, $add_id ) {
 		
-		if (is_null($valor)) {
+		if (empty($valor)) {
 			$dato = $this->get_dato();				// Get dato from DB
 		}else{
 			$this->set_dato( json_decode($valor) );	// Use parsed json string as dato
@@ -601,7 +617,6 @@ class component_pdf extends component_common {
 		$valor 			= $this->get_pdf_thumb($force_create, $absolute);	// Note this absolute url is converted to image on export
 
 		return $valor;
-
 	}#end get_valor_export
 
 
@@ -610,13 +625,12 @@ class component_pdf extends component_common {
 	* GET_RELATED_COMPONENT_TEXT_AREA_TIPO
 	* @return string | null $related_component_text_area_tipo
 	*/
-	public function get_related_component_text_area_tipo() {		
+	public function get_related_component_text_area_tipo() {
 
 		$modelo_name = 'component_text_area';
 		$related_component_text_area_tipo = common::get_ar_related_by_model($modelo_name, $this->tipo);
 
-		return $related_component_text_area_tipo;
-		
+		return $related_component_text_area_tipo;		
 	}#end get_related_component_text_area_tipo
 
 

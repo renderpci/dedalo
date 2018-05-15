@@ -28,6 +28,8 @@
 				# TOOL CSS / JS MAIN FILES
 				css::$ar_url[] = DEDALO_LIB_BASE_URL."/tools/".$tool_name."/css/".$tool_name.".css";
 				js::$ar_url[]  = DEDALO_LIB_BASE_URL."/tools/".$tool_name."/js/".$tool_name.".js";
+				js::$ar_url[]  = DEDALO_LIB_BASE_URL."/tools/".$tool_name."/js/Blob.js";
+				js::$ar_url[]  = DEDALO_LIB_BASE_URL."/tools/".$tool_name."/js/FileSaver.js";
 					
 				#
 				# CSS includes
@@ -50,7 +52,11 @@
 				$options 	= new stdClass();
 				$response 	= $this->get_ar_tc_text( $options );
 				$ar_tc_text = $response->result;
-				#$preview_text = $response->result;	
+				#$preview_text = $response->result;
+
+				# PSEUDO VTT
+				$duration 	= $this->get_av_duration();
+				$pseudo_vtt = tool_tr_print::build_pseudo_vtt($ar_tc_text, $duration);
 
 				# ORIGINAL_TEXT
 				$original_text = $this->get_original_text();

@@ -25,7 +25,7 @@ class reference_dato_v47_to_relation_dato_v48 {
 	* CONVERT_REFERENCE_DATO_TO_RELATION_DATO
 	* @return 
 	*/
-	public static function convert_reference_dato_to_relation_dato( stdClass $datos_column ) {
+	public static function convert_reference_dato_to_relation_dato( stdClass $datos_column, $ar_models_to_change, $move_to_relations_container ) {
 
 		$is_changed = false;
 
@@ -48,8 +48,6 @@ class reference_dato_v47_to_relation_dato_v48 {
 		# 		$data->$key = $value;
 		# 	}
 		# }
-
-		$ar_models_to_change = self::$ar_models_to_change;
 		
 		if (isset($dato->components)) {
 		
@@ -63,21 +61,23 @@ class reference_dato_v47_to_relation_dato_v48 {
 				$lg_nolan = DEDALO_DATA_NOLAN;
 				if (isset($component->dato->{$lg_nolan})) {
 					
-					foreach ((array)$component->dato->{$lg_nolan} as $lkey => $lvalue) {
-						if (!isset($lvalue->section_tipo) || !isset($lvalue->section_id)) {
-							continue;
+					if($move_to_relations_container===true) {
+						foreach ((array)$component->dato->{$lg_nolan} as $lkey => $lvalue) {
+							if (!isset($lvalue->section_tipo) || !isset($lvalue->section_id)) {
+								continue;
+							}
+							$locator = new locator();
+								$locator->set_section_tipo($lvalue->section_tipo);
+								$locator->set_section_id($lvalue->section_id);
+								$locator->set_type(DEDALO_RELATION_TYPE_LINK);
+								$locator->set_from_component_tipo($key_tipo);
+							
+							# Move data to relations container
+							$dato->relations[] = $locator;
 						}
-						$locator = new locator();
-							$locator->set_section_tipo($lvalue->section_tipo);
-							$locator->set_section_id($lvalue->section_id);
-							$locator->set_type(DEDALO_RELATION_TYPE_LINK);
-							$locator->set_from_component_tipo($key_tipo);
-						
-						# Move data to relations container
-						$dato->relations[] = $locator;
 					}
 					
-					# Remove after move data
+					# Remove whole component after move data
 					unset($dato->components->$key_tipo);
 
 					$is_changed = true;
@@ -99,30 +99,29 @@ class reference_dato_v47_to_relation_dato_v48 {
 
 	/**
 	* CONVERT_TABLE_DATA
-	* @return 
+	* @return object $response
 	*/
-	public static function convert_table_data() {
+	public static function convert_table_data( $ar_models_json=null, $move_to_relations_container=true ) {
 
 		$response = new stdClass();
 			$response->result 	= false;
 			$response->msg 		= array('Error. Request failed convert_table_data');
 
 		$ar_msg = array();
-
-		# Check files alocation is good. If not stop all and warning to user
-		/*$allow_response = self::check_files_alocation();
-		$response->msg[] = $allow_response->msg;
-		if ($allow_response->result!==true) {
-			$response->result = false;
-			$response->msg    = "<br>".implode('<br>', $response->msg);
-			return $response;
-		}*/
-
-		#$response->msg   .= "<br>".implode('<br>', $msg);
-		#return $response;
-
 		
+		# ar_models_to_change
+		if (empty($ar_models_json)) {
+			$ar_models_to_change = (array)self::$ar_models_to_change;
+		}else{
+			$ar_models_to_change = (array)json_decode($ar_models_json);
+		}
+		if (empty($ar_models_to_change) || !is_array($ar_models_to_change)) {
+			throw new Exception("Error Processing Request. Empty ar_models_to_change ", 1);			
+		}
+		
+		# ar_tables
 		$ar_tables = tool_administration::$ar_tables_with_relations;
+		debug_log(__METHOD__." Tables to process: ".to_string($ar_tables), logger::DEBUG);
 
 		foreach ($ar_tables as $key => $table) {
 
@@ -135,12 +134,14 @@ class reference_dato_v47_to_relation_dato_v48 {
 			if (!$rows) {
 				continue;
 			}
-			$max 		= $rows['id'];
+			$max 		= $rows['id'];			
 
 			$min = 1;
 			if ($table==='matrix_users') {
 				$min = -1;
 			}
+
+			debug_log(__METHOD__." Processing table $table records from $min to $max ".to_string(), logger::DEBUG);
 		
 			// iterate from 1 to last id
 			for ($i=$min; $i<=$max; $i++) {
@@ -153,7 +154,6 @@ class reference_dato_v47_to_relation_dato_v48 {
 					continue;
 				}
 				$n_rows = pg_num_rows($result);
-
 				if ($n_rows<1) continue;
 
 				while($rows = pg_fetch_assoc($result)) {
@@ -163,9 +163,9 @@ class reference_dato_v47_to_relation_dato_v48 {
 						#dump($datos, ' datos ++ '.to_string($id));
 
 					if (!empty($datos)) {
-						$data_response = self::convert_reference_dato_to_relation_dato( $datos );
+						$data_response = self::convert_reference_dato_to_relation_dato( $datos, $ar_models_to_change, (bool)$move_to_relations_container );
 						if ($data_response->is_changed===false) {
-							continue;
+							continue; // Skip update table
 						}
 
 						$data_encoded 	= json_encode($data_response->dato);
@@ -180,14 +180,16 @@ class reference_dato_v47_to_relation_dato_v48 {
 							continue;
 						}
 						#pg_close(DBi::_getConnection());
+						#debug_log(__METHOD__." Updated (removed old path components content) record from table: $table - $id - ".to_string($ar_models_to_change), logger::ERROR);
+
 					}else{
 						debug_log(__METHOD__." ERROR: Empty datos from: $table - $id ".to_string(), logger::ERROR);
 					}
-				}
+				}//end while($rows = pg_fetch_assoc($result)) {
 				if(SHOW_DEBUG===true) {
 					# Show log msg every 100 id					
 					if ($counter===1) {
-						debug_log(__METHOD__." Updated section data table $table - id $id  ".to_string(), logger::DEBUG);					
+						debug_log(__METHOD__." Updated section data table $table - id $id  (total:$max) - ".to_string($ar_models_to_change), logger::DEBUG);					
 					}
 					$counter++;	
 					if ($counter>300) {

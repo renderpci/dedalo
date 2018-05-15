@@ -75,7 +75,7 @@ class tool_replace_component_data extends tool_common {
 
 			$component_obj = component_common::get_instance($modelo_name, $tipo, $parent, 'list', $lang, $section_tipo);
 				#dump($component, ' component'.to_string());
-			if ($component_obj->get_dato()!=$source_dato) {
+			if ($component_obj->get_dato()!==$source_dato) {
 				$component_obj->set_dato($source_dato);
 				$component_obj->Save();				
 			}

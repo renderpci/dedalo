@@ -21,7 +21,7 @@ function autocomplete($json_data) {
 		$response->result 	= false;
 		$response->msg 		= 'Error. Request failed [get_component_json_data]';	
 	
-	$vars = array('hierarchy_types','hierarchy_sections','string_to_search');
+	$vars = array('hierarchy_types','hierarchy_sections','string_to_search','from_component_tipo');
 		foreach($vars as $name) {
 			$$name = common::setVarData($name, $json_data);
 			# DATA VERIFY
@@ -31,16 +31,18 @@ function autocomplete($json_data) {
 				return $response;
 			}
 		}
-
+	
 	$hierarchy_types 	= json_decode($hierarchy_types);
 	$hierarchy_sections = json_decode($hierarchy_sections);
 
 	$result = component_autocomplete_hi::autocomplete_hi_search($hierarchy_types,
 																$hierarchy_sections,
 																$string_to_search,
-																60,
-																true,
-																true); //$ar_referenced_tipo, $string_to_search, $max_results=30, $show_modelo_name=true, $source_mode
+																60, // max_results
+																true, // show_modelo_name
+																true, // show_parent_name
+																$from_component_tipo); // from_component_tipo
+																//$hierarchy_types, $hierarchy_sections, $string_to_search, $max_results=30, $show_modelo_name=false, $show_parent_name=false, $from_component_tipo
 
 	$response->result 	= $result;
 	$response->msg 		= 'Ok. Request done ['.__FUNCTION__.']';

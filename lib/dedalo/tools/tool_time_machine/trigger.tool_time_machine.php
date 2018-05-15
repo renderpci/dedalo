@@ -282,4 +282,64 @@ function section_records_recover_section($json_data) {
 
 
 
+/**
+* LOAD_ROWS
+* @param $json_data
+*/
+function load_rows($json_data) {
+	global $start_time;
+
+	$response = new stdClass();
+		$response->result 	= false;
+		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
+
+	$vars = array('parent','tipo','section_tipo','lang','limit','offset');
+		foreach($vars as $name) {
+			$$name = common::setVarData($name, $json_data);
+			# DATA VERIFY
+			if ($name==='limit' || $name==='offset') continue; # Skip non mandatory
+			if (empty($$name)) {
+				$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty '.$name.' (is mandatory)';
+				return $response;
+			}
+		}
+		
+	
+	$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true); 
+	$component_obj	= component_common::get_instance($modelo_name,
+													 $tipo,
+													 $parent,
+													 'edit',
+													 $lang,
+													 $section_tipo);
+	# tool time machine
+	$tool_time_machine 	= new tool_time_machine($component_obj, 'rows');
+
+	$tool_time_machine->limit  = $limit;
+	$tool_time_machine->offset = $offset;
+
+	# result
+	$rows_html 		   	= $tool_time_machine->get_html();
+	
+
+	$response->result 	= $rows_html;
+	$response->msg 		= 'Ok. Request done ['.__FUNCTION__.']';
+
+	# Debug
+	if(SHOW_DEBUG===true) {
+		$debug = new stdClass();
+			$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
+			foreach($vars as $name) {
+				$debug->{$name} = $$name;
+			}
+			#$debug->dato_time_machine = $dato_time_machine;
+
+		$response->debug = $debug;
+	}
+	
+	return (object)$response;
+}//end load_rows
+
+
+
 ?>

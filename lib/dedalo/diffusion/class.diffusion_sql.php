@@ -233,9 +233,9 @@ class diffusion_sql extends diffusion  {
 		}#end foreach ($ar_table_children as $curent_children_tipo)
 		#dump($ar_table_data, ' ar_table_data'); die();	
 
-		#return self::$ar_table[$database_name][$table_tipo] = $ar_table_data;
+		
 		return $ar_table_data;
-	}#end build_table_columns
+	}//end build_table_columns
 
 
 
@@ -986,10 +986,10 @@ class diffusion_sql extends diffusion  {
 				$current_component 				= component_common::get_instance($modelo_name,
 																				 $termino_relacionado,
 																				 $options->parent,
-																				 'list',
+																				 'list', // Note that list have dato fallback (in section)
 																				 $options->lang,
 																				 $options->section_tipo,
-																				 false);				
+																				 false);
 				$dato 					= $current_component->get_dato();
 				$diffusion_modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($options->tipo,true);
 
@@ -997,8 +997,9 @@ class diffusion_sql extends diffusion  {
 				# Diffusion element
 				$diffusion_term 		= new RecordObj_dd($options->tipo);
 				$propiedades 			= $diffusion_term->get_propiedades(true);	# Format: {"data_to_be_used": "dato"}
+
 				# Fix diffusion element propiedades on target component to enable configure response value
-				$current_component->set_diffusion_properties($propiedades);
+				$current_component->set_diffusion_properties($propiedades);				
 
 				# switch cases
 				switch (true) {
@@ -1059,17 +1060,41 @@ class diffusion_sql extends diffusion  {
 						}
 						break;
 
+					case (is_object($propiedades) && property_exists($propiedades, 'data_to_be_used') && $propiedades->data_to_be_used==='dataframe'):
+						foreach ((array)$dato as $current_locator) {
+							if (isset($current_locator->dataframe)) {
+								foreach ($current_locator->dataframe as $key => $locator_dataframe) {
+										$ar_term_dataframe[] = ts_object::get_term_by_locator( $locator_dataframe, $options->lang, $from_cache=true );					
+								}
+							}
+						}
+						if (!empty($ar_term_dataframe)) {
+							$ar_field_data['field_value'] = implode('|', $ar_term_dataframe);
+						}
+						break;
+
 					default:
 						# Set unified diffusion value
 						$ar_field_data['field_value'] =	$current_component->get_diffusion_value( $options->lang );
-						
+							#dump($ar_field_data['field_value'], '1 $ar_field_data[field_value] ++ '.$current_component->get_tipo().' '.$current_component->get_lang());
 						# Fallback to main lang
 						if (empty($ar_field_data['field_value'])) {
 							$main_lang = common::get_main_lang($current_component->get_section_tipo(), $current_component->get_parent());
 								#dump($main_lang, ' main_lang ++ $options->lang: '.to_string($options->lang) ." - section_tipo: ".$current_component->get_section_tipo());
 							$current_component->set_lang($main_lang);
 							$ar_field_data['field_value'] =	$current_component->get_diffusion_value( $main_lang );
+								#dump($ar_field_data['field_value'], '2 $ar_field_data[field_value] ++ '.$current_component->get_tipo().' '.$current_component->get_lang());
+
+							# Fallback to ALL langs ... last try
+							if (empty($ar_field_data['field_value'])) {
+								foreach (common::get_ar_all_langs() as $current_t_lang) {
+								 	$current_component->set_lang($current_t_lang);
+									$ar_field_data['field_value'] =	$current_component->get_diffusion_value( $current_t_lang );
+									if (!empty($ar_field_data['field_value'])) break;
+								 }
+							}
 						}
+						#debug_log(__METHOD__." ar_field_datafield_value ".$current_component->get_tipo().' '.to_string( $ar_field_data['field_value'] ), 'DEBUG');
 						break;
 				}//switch (true) {
 				break;
@@ -1157,7 +1182,7 @@ class diffusion_sql extends diffusion  {
 			$options->diffusion_element_tipo= null;
 			$options->recursion_level 		= 0;
 			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
-				#dump($options, ' options ++ '.to_string()); die();
+				#dump($options, ' options ++ '.to_string()); #die();
 		#
 		# Mandatory vars
 			if(empty($options->section_tipo) || empty($options->section_id) || empty($options->diffusion_element_tipo)) {
@@ -1174,18 +1199,18 @@ class diffusion_sql extends diffusion  {
 
 		#
 		# DIFFUSION_ELEMENT_TIPO (structre diffusion_element like oh63 for 'Historia oral web')
-			$diffusion_element_tipo = $options->diffusion_element_tipo;
+			$diffusion_element_tipo = $options->diffusion_element_tipo;			
 
 		#
 		# TABLE INFO
-			$diffusion_element_tables_map = diffusion_sql::get_diffusion_element_tables_map( $diffusion_element_tipo );			
+			$diffusion_element_tables_map = diffusion_sql::get_diffusion_element_tables_map( $diffusion_element_tipo );
 			$section_tipo = $options->section_tipo;	
 			if (!property_exists($diffusion_element_tables_map, $section_tipo)) {
 				if(SHOW_DEBUG===true) {
 					#dump($options, ' options ++ $resolve_references: '.to_string($resolve_references));
 					#dump($diffusion_element_tables_map, ' diffusion_element_tables_map ++ section_tipo: '.to_string($section_tipo));
 				}
-				#debug_log(__METHOD__." ERROR ON UPDATE RECORD[2] section_id: $options->section_id - section_tipo: $options->section_tipo - diffusion_element_tipo: $diffusion_element_tipo. Undefined section_tipo $section_tipo var in diffusion_element_tables_map. PROBABLY THE TARGET TABLE FOR (".RecordObj_dd::get_termino_by_tipo($section_tipo, DEDALO_DATA_LANG).") NOT EXISTS IN SQL. If you want resolve this reference, create a duffusion table for this data ($options->section_tipo) or check mysql tables for problems with table creation. ".to_string(), logger::ERROR);
+				debug_log(__METHOD__." ERROR ON UPDATE RECORD[2] section_id: $options->section_id - section_tipo: $options->section_tipo - diffusion_element_tipo: $diffusion_element_tipo. Undefined section_tipo $section_tipo var in diffusion_element_tables_map. PROBABLY THE TARGET TABLE FOR (".RecordObj_dd::get_termino_by_tipo($section_tipo, DEDALO_DATA_LANG).") NOT EXISTS IN SQL. If you want resolve this reference, create a duffusion table for this data ($options->section_tipo) or check mysql tables for problems with table creation. ".to_string(), logger::ERROR);
 				return false;
 			}
 			$table_map			= $diffusion_element_tables_map->{$section_tipo};
@@ -1196,7 +1221,6 @@ class diffusion_sql extends diffusion  {
 			$database_tipo  	= $table_map->database_tipo;
 			$table_from_alias 	= $table_map->from_alias;
 		
-
 		#
 		# DATABASE_NAME . Resolve database_tipo in current diffusion map. Like 'web_aup'
 			/*
@@ -1481,8 +1505,7 @@ class diffusion_sql extends diffusion  {
 
 		$response->result = true;
 		$response->msg .= "Ok. Record updated $options->section_id and n references: ".count($ar_resolved_static);
-			#dump($response, ' response ++++++ '.to_string($options->section_id));
-		
+				
 
 		return $response;
 	}//end update_record
@@ -1491,7 +1514,8 @@ class diffusion_sql extends diffusion  {
 
 	/**
 	* SAVE_GLOBAL_SEARCH_DATA
-	* @return 
+	* v. 1.2 [18-03-2018]
+	* @return object $save
 	*/
 	public function save_global_search_data( $request_options ) {
 		
@@ -1500,23 +1524,28 @@ class diffusion_sql extends diffusion  {
 			$options->diffusion_section 	 = null;
 			$options->section_tipo 			 = null;
 			$options->diffusion_element_tipo = null;
-			$options->ar_field_data 		 = null;			
+			$options->ar_field_data 		 = null;
 			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
-		#dump($options->ar_field_data, ' options ++ '.to_string()); die();
-		#dump($options->global_search_map, '$options->global_search_map ++ '.to_string());
 
 		# FULL_DATA
-			$full_data_tipos = (array)$options->global_search_map->full_data;
-			$title_tipos 	 = (array)$options->global_search_map->list_data->title;
-			$summary_tipos 	 = (array)$options->global_search_map->list_data->summary;
-			$fields_tipos 	 = (array)$options->global_search_map->list_data->fields;
-			$image_tipo 	 = isset($options->global_search_map->list_data->image) ? $options->global_search_map->list_data->image : null;
-			$filter_date_tipo= isset($options->global_search_map->filter_date) ? $options->global_search_map->filter_date : 'not_used';
-			$ar_fields 		 = (array)$options->ar_field_data['ar_fields'];
-			$table_name 	 = $options->ar_field_data['table_name'];
-			$database_name 	 = $options->ar_field_data['database_name'];
-				#dump($options->ar_field_data, ' $options->ar_field_data ++ '.to_string());
+			$full_data_tipos 	= (array)$options->global_search_map->full_data;
+			$name_surname_tipos = (array)$options->global_search_map->name_surname;
+			$title_tipos 	 	= (array)$options->global_search_map->list_data->title;
+			$summary_tipos 	 	= (array)$options->global_search_map->list_data->summary;
+			$fields_tipos 	 	= (array)$options->global_search_map->list_data->fields;
+			$image_tipo 	 	= isset($options->global_search_map->list_data->image) ? $options->global_search_map->list_data->image : null;
+			$filter_date_tipo	= isset($options->global_search_map->filter_date) ? $options->global_search_map->filter_date : 'not_used';
+			$ar_fields 		 	= (array)$options->ar_field_data['ar_fields'];
+			$table_name 	 	= $options->ar_field_data['table_name'];
+			$database_name 	 	= $options->ar_field_data['database_name'];
+				
 			$ar_fields_global = array();
+
+			if(SHOW_DEBUG===true) {
+				#dump($options->ar_field_data, ' options ++ '.to_string()); die();
+				#dump($options->global_search_map, '$options->global_search_map ++ '.to_string());
+				#dump($options->ar_field_data, ' $options->ar_field_data ++ '.to_string()); #die();
+			}
 
 			#
 			# MDCAT
@@ -1543,8 +1572,6 @@ class diffusion_sql extends diffusion  {
 					'typology'
 				];
 
-			#dump($options->ar_field_data, ' options->ar_field_data ++ '.to_string());
-
 			$fields_array = [];
 	
 			foreach ($ar_fields as $section_id => $ar_langs) {
@@ -1554,13 +1581,14 @@ class diffusion_sql extends diffusion  {
 				foreach ($ar_langs as $lang => $ar_columns) {
 					#dump($ar_columns, ' ar_columns ++ '.to_string());
 					
-					$list_data[$lang] 		 = new stdClass();
+					$list_data[$lang] = new stdClass();
 						$list_data[$lang]->title 	= [];
 						$list_data[$lang]->summary  = [];
 
-					$full_data[$lang] 		 = [];
-					$filter_date_data[$lang] = [];
-					$filter_mdcat[$lang] 	 = [];		
+					$full_data[$lang] 		 	= [];
+					$name_surname_data[$lang]	= [];
+					$filter_date_data[$lang] 	= [];
+					$filter_mdcat[$lang] 	 	= [];
 
 					foreach ($ar_columns as $column) {
 						switch ($column['field_name']) {
@@ -1577,12 +1605,23 @@ class diffusion_sql extends diffusion  {
 									$full_value = trim( strip_tags($column['field_value']) );
 									if (!empty($full_value)) {
 										$full_data[$lang][] = $full_value;
-									}									
+									}
+								}
+
+								# name_surname_tipos . Added 18-03-2018 !!
+								if (in_array($column['tipo'], $name_surname_tipos)) {
+									if (is_array($column['field_value'])) {
+										$column['field_value'] = json_encode($column['field_value']);
+									}
+									$name_surname_value = trim( strip_tags($column['field_value']) );
+									if (!empty($name_surname_value)) {
+										$name_surname_data[$lang][] = $name_surname_value;
+									}
 								}
 
 								# Fields (special container json)
-								if(in_array($column['tipo'], $fields_tipos)) {									
-									$fields_array[$column['tipo']] = $column['field_value'];								
+								if(in_array($column['tipo'], $fields_tipos)) {
+									$fields_array[$column['tipo']] = $column['field_value'];
 								}
 
 								# title
@@ -1597,39 +1636,39 @@ class diffusion_sql extends diffusion  {
 									$summary_value = trim($column['field_value']);
 									if (!empty($summary_value)) {
 										$list_data[$lang]->summary[] = $summary_value;
-									}									
+									}
 								}
 								# image
 								elseif ($column['tipo']===$image_tipo) {
 									$list_data[$lang]->image = $column['field_value'];
-								}								
+								}
 								# filter_date
 								elseif ($column['tipo']===$filter_date_tipo) {
 									$filter_date_data[$lang][] = $column['field_value'];
 								}
+
+								$current_field_value = $column['field_value'];
 								
 								# mdcat_tipos
 								foreach ($mdcat_tipos as $current_column_name) {
-									if (!isset($options->global_search_map->{$current_column_name})) continue;
-										#dump($current_column_name, ' current_column_name ++ '.to_string($options->global_search_map->{$current_column_name}));
-										#$a = $column['tipo'] .' - '.$options->global_search_map->{$current_column_name};
-										#dump($a, ' $a ++ '.to_string());									
+									if (!isset($options->global_search_map->{$current_column_name})) continue;																
 
 									if ($column['tipo']===$options->global_search_map->{$current_column_name} && !empty($column['field_value'])) {
-
-										#dump($column['tipo'], ' $column[tipo] ++ '.to_string());
 
 										#$list_data[$lang]->{$current_column_name} = $column['field_value'];
 										#dump( $$column['tipo'] , '$column[field_value] ++ '.to_string($current_column_name));
 										$current_field_value = $column['field_value'];
+											
 										switch ($current_column_name) {
 											case 'end_date':
 												$ar_current_field_value = (array)explode(',', $current_field_value);
 												$current_field_value 	= end($ar_current_field_value);
+												$current_field_value 	= strtotime($current_field_value);
 												break;
 											case 'start_date':
 												$ar_current_field_value = (array)explode(',', $current_field_value);
 												$current_field_value 	= reset($ar_current_field_value);
+												$current_field_value 	= strtotime($current_field_value);
 												break;
 											case 'pub_year':
 												$ar_current_field_value = (array)explode(',', $current_field_value);
@@ -1637,32 +1676,32 @@ class diffusion_sql extends diffusion  {
 												#dump($current_field_value, ' current_field_value ++ '.to_string());
 												$current_field_value 	= date("Y", strtotime($current_field_value));
 												break;
-											default:												
+											default:
 												break;
 										}
 										$ar_fields_global[$pseudo_section_id][$lang][] = [
-											'field_name'  => '`'.$current_column_name.'`',
+											#'field_name'  => '`'.$current_column_name.'`',
+											'field_name'  => ''.$current_column_name.'',
 											'field_value' => $current_field_value
 										];
-										#dump($current_field_value, ' current_field_value current_column_name ++ '.to_string($current_column_name));									
+										#dump($current_field_value, ' current_field_value current_column_name ++ '.to_string($current_column_name));
 										#break;
-									}										
-								}									
-															
+									}
+								}
 								break;
-						}						
+						}
 					}//end foreach ($ar_columns as $column)
 
 
 					# SECTION_ID
 						$ar_fields_global[$pseudo_section_id][$lang][] = [
-							'field_name'  => '`section_id`',
+							'field_name'  => 'section_id',
 							'field_value' => $pseudo_section_id
 						];
 
 					# LANG
 						$ar_fields_global[$pseudo_section_id][$lang][] = [
-							'field_name'  => '`lang`',
+							'field_name'  => 'lang',
 							'field_value' => $lang
 						];
 					
@@ -1673,16 +1712,22 @@ class diffusion_sql extends diffusion  {
 						if (!empty($list_data[$lang]->image)) {
 							$image_parts 				= explode(',', $list_data[$lang]->image);
 							$list_data[$lang]->image 	= $image_parts[0]; // Only first image is used
-						}						
+						}
 						$ar_fields_global[$pseudo_section_id][$lang][] = [
-							'field_name'  => '`list_data`',
+							'field_name'  => 'list_data',
 							'field_value' => json_encode($list_data[$lang], JSON_UNESCAPED_UNICODE)
-						];						
+						];
 
 					# FULL_DATA
 						$ar_fields_global[$pseudo_section_id][$lang][] = [
-							'field_name'  => '`full_data`',
+							'field_name'  => 'full_data',
 							'field_value' => implode(' ',$full_data[$lang])
+						];
+
+					# NAME_SURNAME_DATA . Added 18-03-2018 !!
+						$ar_fields_global[$pseudo_section_id][$lang][] = [
+							'field_name'  => 'name_surname',
+							'field_value' => implode(' ',$name_surname_data[$lang])
 						];
 
 					# FIELDS
@@ -1695,14 +1740,14 @@ class diffusion_sql extends diffusion  {
 							$ar_objects[] = $fields_obj;
 						}
 						$ar_fields_global[$pseudo_section_id][$lang][] = [
-							'field_name'  => '`fields`',
+							'field_name'  => 'fields',
 							'field_value' => json_encode($ar_objects, JSON_UNESCAPED_UNICODE)
 						];						
 
 					# FILTER_DATE
 						$filter_date = isset($filter_date_data[$lang][0]) ? $filter_date_data[$lang][0] : null;
 						$ar_fields_global[$pseudo_section_id][$lang][] = [
-							'field_name'  => '`filter_date`',
+							'field_name'  => 'filter_date',
 							'field_value' => $filter_date
 						];
 
@@ -1712,13 +1757,13 @@ class diffusion_sql extends diffusion  {
 							'section_id' => $section_id
 						];
 						$ar_fields_global[$pseudo_section_id][$lang][] = [
-							'field_name'  => '`link`',
+							'field_name'  => 'link',
 							'field_value' => json_encode($link_obj)
 						];
 
 					# TABLE
 						$ar_fields_global[$pseudo_section_id][$lang][] = [
-							'field_name'  => '`table`',
+							'field_name'  => 'table',
 							'field_value' => $table_name
 						];
 				}
@@ -1787,13 +1832,12 @@ class diffusion_sql extends diffusion  {
 	* Select from ar_diffusion_map_elements the current request element by tipo
 	* @return object $diffusion_element | bool false
 	*/
-	public static function get_diffusion_element_from_element_tipo( $diffusion_element_tipo ) {		
+	public static function get_diffusion_element_from_element_tipo( $diffusion_element_tipo ) {
 
 		$ar_diffusion_map_elements = self::get_ar_diffusion_map_elements();
 		if (!isset($ar_diffusion_map_elements[$diffusion_element_tipo])) {
 			return false;
 		}
-
 
 		return $ar_diffusion_map_elements[$diffusion_element_tipo];
 	}#end get_diffusion_element_from_element_tipo
@@ -1810,7 +1854,7 @@ class diffusion_sql extends diffusion  {
 
 		static $ar_diffusion_element_tables_map;
 
-		#if (isset($diffusion_element_tables_map)) {			
+		#if (isset($diffusion_element_tables_map)) {		
 		#	return $diffusion_element_tables_map;
 		#}
 
@@ -1818,26 +1862,45 @@ class diffusion_sql extends diffusion  {
 		if (isset($ar_diffusion_element_tables_map[$diffusion_element_tipo])) {
 			return $ar_diffusion_element_tables_map[$diffusion_element_tipo];
 		}
-		
 
-		$diffusion_element_tables_map = new stdClass();		
+
+		$diffusion_element_tables_map = new stdClass();
+
+		#
+		# DIFFUSION_ELEMENT_TIPO_TABLES . Point of start to calculate diffusion tables
+		$diffusion_element_tipo_tables = $diffusion_element_tipo; // Default
+
+		# Override in 'propiedades' the base point for calculate diffusion tables
+		# This is useful for development purposes, and allow publish in different database without duplicate all tables structure for each difusion_element 
+		$diffusion_element_tipo_obj = new RecordObj_dd($diffusion_element_tipo);
+		$propiedades = $diffusion_element_tipo_obj->get_propiedades(true);
+		if (isset($propiedades->force_source_tables_tipo)) {
+			# Override 
+			$diffusion_element_tipo_tables = $propiedades->force_source_tables_tipo;
+			debug_log(__METHOD__." Overrided diffusion_element_tipo $diffusion_element_tipo to $diffusion_element_tipo_tables for calculate diffusion tables ".to_string(), logger::DEBUG);
+		}
 
 		#
 		# TABLES
 		# Search inside current entity_domain and iterate all tables resolving alias and store target sections of every table
-		$ar_terminoID = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($diffusion_element_tipo, $modelo_name='table', $relation_type='children_recursive', $search_exact=false);
-			#dump($ar_terminoID, ' ar_terminoID ++ '.to_string($diffusion_element_tipo));
+		$ar_terminoID = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($diffusion_element_tipo_tables, // Note that can be different to diffusion_element_tipo
+																				   $modelo_name='table',
+																				   $relation_type='children_recursive',
+																				   $search_exact=false);
+			#dump($ar_terminoID, ' ar_terminoID ++ '.to_string($diffusion_element_tipo_tables));
 		
 		$diffusion_element = self::get_diffusion_element_from_element_tipo($diffusion_element_tipo);
-		#dump($diffusion_element, ' diffusion_element ++ '.to_string());
+			#dump($diffusion_element, ' diffusion_element ++ '.to_string());
 		
-		# DATABASE_NAME
-		# Database name is overwrited by config db name. This allow for example, use 'web_myentity' when diffusion domain is 'default' (instead of 'web_default')
+		#
+		# DATABASE_NAME . Diffusion domain web_default case
+		# Database name is overwrited by config db name. This allow for example, use db 'web_myentity' when diffusion domain is 'default' (instead of db 'web_default')
 		$database_name = $diffusion_element->database_name;
-		if (MYSQL_DEDALO_DATABASE_CONN!==$database_name) {
+		if ($database_name!==MYSQL_DEDALO_DATABASE_CONN && MYSQL_DEDALO_DATABASE_CONN==='web_default') {
 			$database_name = MYSQL_DEDALO_DATABASE_CONN;
 			debug_log(__METHOD__." Using config db (".MYSQL_DEDALO_DATABASE_CONN.") as database overwriting diffusion defined (diffusion_element->database_name) ".to_string(), logger::WARNING);
 		}
+		#debug_log(__METHOD__." Using database_name: $database_name ".to_string(), logger::DEBUG);
 
 		# DATABASE_TIPO		
 		$database_tipo = $diffusion_element->database_tipo;
@@ -2021,7 +2084,7 @@ class diffusion_sql extends diffusion  {
 
 	/**
 	* DIFFUSION_COMPLETE_DUMP
-	* @return 
+	* @return object $response
 	*/
 	public function diffusion_complete_dump( $diffusion_element_tipo, $resolve_references=true ) {
 
@@ -2170,6 +2233,7 @@ class diffusion_sql extends diffusion  {
 	*/
 	public function get_elements_of_type() {
 		
+		// No used yet
 	}//end get_elements_of_type
 
 
@@ -2360,11 +2424,27 @@ class diffusion_sql extends diffusion  {
 	*/
 	public static function map_locator_to_terminoID($options, $dato) {
 
+		//debug_log(__METHOD__." options ".to_string($options), logger::DEBUG);
+		$ar_filter = false;
+		if (isset($options->propiedades->process_dato_arguments->filtered_dato_by)) {
+			$ar_filter = $options->propiedades->process_dato_arguments->filtered_dato_by;
+		}
+		#debug_log(__METHOD__." ar_filter ".to_string($ar_filter), logger::DEBUG);
+
+
 		$terminoID = null;
 
 		if (!empty($dato)) {
 			$terminoID = array();
 			foreach ($dato as $current_locator) {
+
+				if ($ar_filter!==false) foreach ($ar_filter as $filter_obj) {
+					foreach ($filter_obj as $f_property => $f_value) {
+						if (!property_exists($current_locator, $f_property) || $current_locator->{$f_property} != $f_value) {
+							continue 3; // Ignore
+						}
+					}
+				}
 
 				$section_tipo 	= $current_locator->section_tipo;
 				$section_id 	= $current_locator->section_id;
@@ -2386,6 +2466,7 @@ class diffusion_sql extends diffusion  {
 	* @return string $section_tipo
 	*/
 	public static function map_locator_to_term_id($options, $dato) {
+
 		return self::map_locator_to_terminoID($options, $dato);
 	}//end map_locator_to_term_id
 
@@ -2423,8 +2504,6 @@ class diffusion_sql extends diffusion  {
 				}
 			}
 		}
-		#dump($options, ' options ++ '.to_string());
-		#dump($norder, ' norder ++ dato: '.to_string($dato));
 
 		return (int)$norder;
 	}//end map_parent_to_norder
@@ -2654,6 +2733,8 @@ class diffusion_sql extends diffusion  {
 	* @return string
 	*/
 	public static function build_geolocation_data($options, $dato) {
+		#dump($options, ' options ++ '.to_string());
+		#dump($dato, ' dato ++ '.to_string());
 
 		$request_options = new stdClass();
 			$request_options->raw_text = $dato;
@@ -2666,7 +2747,7 @@ class diffusion_sql extends diffusion  {
 		$options = new stdClass();
 			$options->raw_text			= false;		
 			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
-
+		
 		
 		$ar_elements = component_text_area::build_geolocation_data($options->raw_text);
 		$response 	 = json_encode($ar_elements, JSON_UNESCAPED_UNICODE);
@@ -2682,6 +2763,7 @@ class diffusion_sql extends diffusion  {
 	* @return string 
 	*/
 	public static function return_empty_string( $options, $dato ) {
+		
 		return '';
 	}//end return_empty_string
 
@@ -2692,6 +2774,7 @@ class diffusion_sql extends diffusion  {
 	* @return 
 	*/
 	public static function object_to_string( $options, $dato ) {
+		
 		return json_encode($dato);
 	}//end object_to_string
 
@@ -2728,12 +2811,14 @@ class diffusion_sql extends diffusion  {
 			if (empty($locator->section_tipo) || empty($locator->section_id) || empty($modelo_name)) {
 				continue;
 			}
+
 			$component 	= component_common::get_instance($modelo_name,
 														 $target_component_tipo,
 														 $locator->section_id,
 														 'list',
-														 DEDALO_DATA_LANG,
-														 $locator->section_tipo);
+														 $options->lang,
+														 $locator->section_tipo,
+														 false);
 			
 			$method 	= isset($process_dato_arguments->component_method) ? $process_dato_arguments->component_method : 'get_diffusion_value';
 
@@ -2768,15 +2853,19 @@ class diffusion_sql extends diffusion  {
 			}
 		}
 
-
+		# Remove duplicates (experimental for numisdata fichero : material 18-04-2018)
+		#$ar_value = array_unique($ar_value);
 		
-		#dump($value, ' value ++ '.to_string());
 		$value = implode(',',$ar_value);
+
+		# Remove duplicates 
+		#$uar_value 	= explode(',',$value);
+		#$uar_value 	= array_unique($uar_value);			
+		#$value 		= implode(',',$ar_value);
 
 		if (empty($value) && $value!='0') {
 			$value = null;
 		}
-
 		
 
 		return $value;
@@ -2801,8 +2890,20 @@ class diffusion_sql extends diffusion  {
 		
 		$date_obj = $dato[$selected_key]->$selected_date;
 
-		$dd_date = new dd_date($date_obj);
-		$value 	 = $dd_date->get_dd_timestamp($date_format="Y-m-d H:i:s", $padding=true);
+		// date_format
+		$date_format = isset($process_dato_arguments->date_format) ? $process_dato_arguments->date_format : 'full';
+		switch ($date_format) {
+			case 'year':
+				$dd_date = new dd_date($date_obj);
+				$value 	 = $dd_date->year;
+				break;
+			
+			default:
+				// Default
+				$dd_date = new dd_date($date_obj);
+				$value 	 = $dd_date->get_dd_timestamp($date_format="Y-m-d H:i:s", $padding=true);
+				break;
+		}
 		
 
 		return $value;

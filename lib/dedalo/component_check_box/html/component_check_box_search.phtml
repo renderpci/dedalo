@@ -6,6 +6,7 @@
 	print "data-component_name=\"{$component_name}\" ";
 	print "data-modo=\"{$modo}\" ";
 	print "data-dato='".json_encode($dato)."' ";
+	print 'data-q_operator="'.$q_operator.'" ';
 	print 'title="'.search_development2::search_options_title( $this->search_operators_info() ).'" ';
 	print ">";
 	
@@ -28,12 +29,19 @@
 					
 			# COMPARISON OPERATORS
 			#$html_content .= operator::get_search_comparison_operators_html($tipo,$ar_comparison_operators);
-
+			$html_content .= '<input class="q_operator" type="text" value="'.$q_operator.'" ';
+			$html_content .= "onchange=\"component_common.fix_dato(this,'{$component_name}')\" ";
+			$html_content .=' />';
 
 			$i=0;foreach ($ar_list_of_values->result as $value => $rotulo) {
 				#dump($value, ' value ++ '.to_string());
 				$value   = (string)$value; 
-				$locator = (object)json_handler::decode($value);	# Locator is json encoded object
+				$locator = (object)json_handler::decode($value);	# Locator is json encoded object					
+
+				# Add from_component_tipo
+				$locator->from_component_tipo = $tipo;
+
+				$locator_json = json_encode($locator);
 				
 				$checked  = '';
 				if (is_array($dato) && locator::in_array_locator($locator, $dato, array('section_id','section_tipo')) ) {
@@ -44,14 +52,14 @@
 
 				$html_content .= "<span class=\"check_box_item\">";
 				$html_content .= "<input class=\"css_check_box\" type=\"checkbox\" name=\"{$search_input_name}_array\" ";
-				$html_content .= "id=\"{$tipo}\" ";
+				$html_content .= "id=\"{$current_id}\" ";
 				$html_content .= "data-tipo=\"{$tipo}\" ";
-				$html_content .= "value='".$value."' ";
+				$html_content .= 'value=\''.$locator_json.'\' ';
 				$html_content .= "title=\"$html_title\" ";
 				$html_content .= "onchange=\"component_common.fix_dato(this,'{$component_name}')\" ";
 				$html_content .= $checked;
 				$html_content .= "/>";						
-				$html_content .= " <label class=\"css_check_box_rotulo\" ";
+				$html_content .= "<label class=\"css_check_box_rotulo\" for=\"{$current_id}\" ";
 				$html_content .= $required_code;
 				$html_content .= ">";
 				$html_content .= $rotulo;

@@ -126,7 +126,7 @@ class tool_import_marc21 extends tool_common {
 			$component		= component_common::get_instance('component_filter',
 															 $component_tipo,
 															 $section_id,
-															 'edit',
+															 'list', # mode 'list' avoid autosave default dato
 															 DEDALO_DATA_NOLAN,
 															 $section_tipo,
 															 false);

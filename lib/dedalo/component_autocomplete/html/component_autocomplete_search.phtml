@@ -15,6 +15,7 @@
 	print "data-component_name=\"{$component_name}\" ";
 	print "data-modo=\"{$modo}\" ";
 	print "data-dato='".json_encode($dato)."' ";
+	print "data-q_operator='".$q_operator."' ";
 	print "data-component_info='{$component_info}' ";
 	print "data-search_query_object='{$json_search_query_object}' ";
 	print "data-filter_by_list='{$json_filter_by_list}' ";
@@ -23,7 +24,10 @@
 
 	# ETIQUETA (LABEL)
 	$html_label = component_common_draw::draw_label($this);
-$permissions=3;
+	
+
+	$permissions=3;
+
 	# CONTENIDO (INPUT)
 	$html_content = '';
 	switch(true) {
@@ -108,14 +112,7 @@ $permissions=3;
 								$autosearch_options_html .= "<hr>";
 							}
 						}
-						$autosearch_options_html .= "</ul>";
-
-						$autosearch_options_html .= "<script>";
-						# Reset var 'activated' on load
-						#$autosearch_options_html .= "component_autocomplete.activated={};";
-						# Init component
-						$autosearch_options_html .= "component_autocomplete.init_filter_by_list({\"wrapper_id\":\"$id_wrapper\",\"cookie_name\":\"$cookie_name\",\"limit\":\"$limit\"});";
-						$autosearch_options_html .= "</script>";
+						$autosearch_options_html .= "</ul>";						
 					}//end if ($filter_by_list!==false)
 
 				#
@@ -210,6 +207,26 @@ $permissions=3;
 					$html_content .= "<div class=\"icon_bs autocomplete_list_button_options edit_hidden\" data-tipo=\"$tipo\" onclick=\"component_autocomplete.toggle_options(this)\"></div>";
 				}
 
+			#OPERATOR
+			$html_content .= '<input class="q_operator" type="text" value="'.$q_operator.'" ';
+			$html_content .= "onchange=\"component_common.fix_dato(this,'{$component_name}')\" ";
+			$html_content .=' />';
+
+
+			#
+			# INPUT SEARCH FIELD
+			$html_content .= "<input type=\"text\" class=\"css_autocomplete_search_field in_search_mode\" placeholder=\"".label::get_label('buscar')."...\" ";
+			$html_content .= "onfocus=\"component_autocomplete.activate(this)\" ";
+			$html_content .= "data-id_wrapper=\"$id_wrapper\" ";
+			$html_content .= "data-tipo='{$tipo}' ";
+			$html_content .= "data-section_tipo=\"{$section_tipo}\" ";
+			$html_content .= "data-parent='{$parent}' ";
+			$html_content .= "data-ar_target_section_tipo='{$ar_target_section_tipo_json}' ";
+			$html_content .= "data-tipo_to_search='{$tipo_to_search}' ";
+			$html_content .= "tabindex=\"1\" ";
+			$html_content .= "autocomplete=\"off\" ";
+			$html_content .= "autocorrect=\"off\" ";
+			$html_content .= "/>";
 
 
 			#
@@ -242,20 +259,7 @@ $permissions=3;
 			# BUTTONS_AND_FIELDS
 			#$html_content .= "<div class=\"buttons_and_fields\">";		
 
-				#
-				# INPUT SEARCH FIELD
-				$html_content .= "<input type=\"text\" class=\"css_autocomplete_search_field in_search_mode\" placeholder=\"".label::get_label('buscar')."...\" ";
-				$html_content .= "onfocus=\"component_autocomplete.activate(this)\" ";
-				$html_content .= "data-id_wrapper=\"$id_wrapper\" ";
-				$html_content .= "data-tipo='{$tipo}' ";
-				$html_content .= "data-section_tipo=\"{$section_tipo}\" ";
-				$html_content .= "data-parent='{$parent}' ";
-				$html_content .= "data-ar_target_section_tipo='{$ar_target_section_tipo_json}' ";
-				$html_content .= "data-tipo_to_search='{$tipo_to_search}' ";
-				$html_content .= "tabindex=\"1\" ";
-				$html_content .= "autocomplete=\"off\" ";
-				$html_content .= "autocorrect=\"off\" ";
-				$html_content .= "/>";
+				
 
 
 			#$html_content .= "</div>";//end div buttons_and_fields
@@ -268,11 +272,6 @@ $permissions=3;
 					#if ($filter_by_list!==false || $filter_by_fields!==false) {
 					#	$html_content .= "<div class=\"icon_bs autocomplete_list_button_options in_search_mode edit_hidden\" data-tipo=\"$tipo\" onclick=\"component_autocomplete.toggle_options(this)\"></div>";
 					#}
-
-
-
-							
-
 
 			
 				
@@ -299,6 +298,20 @@ $permissions=3;
 					#$html_content .= "onchange=\"component_common.fix_dato(this,'{$component_name}')\" ";
 					$html_content .= "/>";
 					// data-filter_by_list_component_tipo=\"$filter_by_list_component_tipo\"
+
+
+			#
+			# JS Init component
+			$html_content .= "<script>";
+			# Init component
+			$init_options = new stdClass();
+				$init_options->component_name 	= $component_name;
+				$init_options->wrapper_id 		= $id_wrapper;
+				$init_options->cookie_name 		= isset($cookie_name) ? $cookie_name : null;
+				$init_options->limit 			= $limit;
+			$html_content .= "component_common.init(".json_encode($init_options).");";
+			$html_content .= "</script>";
+
 
 		#################
 

@@ -100,15 +100,8 @@ class dataframe extends common {
 															 $this->caller_section_id,
 															 $modo,
 															 DEDALO_DATA_LANG,
-															 $this->caller_section_tipo);
-
-			# Dato inject
-			$dataframe_data = $this->get_dataframe_data_of_type($type);
-
-			if (isset($dataframe_data[$this->caller_key])) {
-				$component_obj->set_dato($dataframe_data[$this->caller_key]);
-			}
-
+															 $this->caller_section_tipo,
+															 false); // Cache false
 			# Configure component
 			$component_obj->caller_dataset = new stdClass();
 				$component_obj->caller_dataset->component_tipo  = $this->component_obj->get_tipo();
@@ -120,6 +113,14 @@ class dataframe extends common {
 			# Heritage permisions from caller component
 			$permissions = common::get_permissions($this->component_obj->get_section_tipo(), $this->component_obj->get_tipo());
 			$component_obj->set_permissions($permissions);
+
+			# Dato inject
+			$dataframe_data = $this->get_dataframe_data_of_type($type);
+			if (isset($dataframe_data[$this->caller_key])) {
+				$component_obj->set_dato($dataframe_data[$this->caller_key]);
+			}else{
+				$component_obj->set_dato([]);
+			}
 
 			$ar_component_obj[] = $component_obj;
 		}//end foreach ($ar_component_tipo as $current_component_tipo) 
@@ -138,7 +139,7 @@ class dataframe extends common {
 	public function get_dataframe_data_of_type($type) {
 		
 		$dataframe 		= (array)$this->component_obj->get_dataframe();
-			#dump($dataframe, ' dataframe ++ '.to_string());
+			//dump($dataframe, ' dataframe ++ '.to_string());
 			#	dump($type, ' type ++ '.to_string());
 		$ar_locators 	= array();
 		foreach ($dataframe as $frame_obj) {
@@ -152,7 +153,7 @@ class dataframe extends common {
 				$ar_locators[$frame_obj->from_key] = $frame_obj;
 			}
 		}
-	#dump($ar_locators, ' ar_locators ++ '.to_string());
+	//dump($ar_locators, ' ar_locators ++ '.to_string());
 		return $ar_locators;
 	}//end get_dataframe_data_of_type
 

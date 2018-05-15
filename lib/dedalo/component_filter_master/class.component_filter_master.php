@@ -1,26 +1,15 @@
 <?php
 /*
 * CLASS COMPONENT FILTER MASTER
-
-1 - Miramos su relación (llama a Proyectos)
-2 - Despejamos el tipo (dd156)
-3 - Despejar a qué áreas tiene acceso este usuario (llamando al component_security_areas en su registro)
-4 - Buscamos el  component_security_areas de proyectos (del tipo de la sesión del relacionado en proyectos, sacamos el hijo que toca)
-5 - Buscamos en matrix, con las áreas obtenidas que el usuario tiene acceso,  los proyectos que se corresponden.
-6 - Generamos los checkbox de selección con las secciones obtenidas y con la etiqueta despejada del tipo (dd156) 
-
+*
+*
 */
+class component_filter_master extends component_filter {
 
 
-class component_filter_master extends component_common {
-
-	private $user_id ;
-
+	private $user_id;
 	protected $caller_id;
 
-	# Overwrite __construct var lang passed in this component
-	protected $lang = DEDALO_DATA_NOLAN;
-	
 
 	/**
 	* __CONSTRUCT	
@@ -35,43 +24,9 @@ class component_filter_master extends component_common {
 		if(!empty($parent)) {
 			$this->caller_id = $parent;			
 		}
-
-		#$id = $this->get_id();	dump($id,'id');
-		#dump($tipo,'tipo');
-		#dump($parent,'parent');
-
-		#dump($this,"component_filter_master");
-	}
-
-
-	/**
-	* NOTA ACERCA DE GET DATO (24-08-2014) :
-	* De momento, cambiaremos el tipo para la variable 'dato' en get_dato() por compatibilidad de los métodos de las clases de los componentes actuales.
-	* Sería muy recomendable modificar cada uno de los componentes para poder unificar los tipos de entrada y salida, ya que esta fórmula es muy dada a errores
-	* Esto es aplicable a TODOS los componentes
-	*/
-
-	/**
-	* GET DATO : Format {"7":2,"269":2,"298":2}
-	* @see component_filter->get_dato() for maintain unifyed format of projetcs
-	*/
-	public function get_dato() {
-		$dato = parent::get_dato();
-		return (array)$dato;
-	}
-
-
-
-	/**
-	* SET_DATO
-	* @see component_filter->set_dato() for maintain unifyed format of projetcs
-	*/
-	public function set_dato($dato) {
-		if (empty($dato)) {
-			$dato=array();
-		}
-		parent::set_dato( (object)$dato );
-	}
+		
+		return true;	
+	}//end __construct
 
 
 
@@ -84,51 +39,30 @@ class component_filter_master extends component_common {
 		unset($_SESSION['dedalo4']['config']['get_user_projects']);
 
 		return parent::Save();
+	}//end Save
+
+
+	/*
+	* GET_AR_TOOLS_OBJ
+	* Override component_common method
+	*/
+	public function get_ar_tools_obj() {
+		# no tools area avilable for this component
+		return null;
 	}
 
 
-	
-	# Override component_common method
-	public function get_ar_tools_obj() {
-		return NULL;
-	}		
-
-	
 
 	/**
-	* GET VALOR
-	* Devuelve los valores del array 'dato' separados por '<br>'
+	* PROPAGATE_FILTER
+	* Propagate all current filter dato (triggered when save) to component_filters of children portals (recursive)
 	*/
-	public function get_valor() {
-		
-		$dato 	= (array)$this->get_dato();
-		$html 	= '';
-		
-		foreach ($dato as $section_id => $state) {
+	public function propagate_filter() {
+		# Nothing to do
+		debug_log(__METHOD__." Invalid call !! ".to_string(), logger::ERROR);
 
-			if($state!=2) continue;
-
-			$current_component = component_common::get_instance('component_input_text',
-																DEDALO_PROJECTS_NAME_TIPO,
-																$section_id,
-																'list',
-																DEDALO_DATA_LANG,
-																DEDALO_SECTION_PROJECTS_TIPO);
-			$name = $current_component->get_valor();
-				
-			$html .= $name ;
-			if(SHOW_DEBUG) {
-				#$html .= " [$section_id]";
-				#dump($name, " name ".to_string());
-			}
-			if(!empty($name)) {
-				$html .= '<br>';
-			}						
-		}
-		$html = substr($html, 0, -4);
-		
-		return $html;		
-	}//end get_valor
+		return null;
+	}//end propagate_filter
 
 
 
@@ -137,13 +71,13 @@ class component_filter_master extends component_common {
 	* Devuelve un array de section_id de los proyectos que usan las areas autorizadas (estado 2) al usuario actual
 	* @return $ar_projects_final
 	*	Array formated as id=>project_name  like: [250] => Proyecto de Historia Oral
-	*/
-	protected function get_ar_proyectos_section() {
+	*//*
+	protected function get_ar_proyectos_section__OLD() {
 
 		$user_id 			= navigator::get_user_id();
 		$ar_projects_final	= array();
 
-		$logged_user_is_global_admin 	= (bool)component_security_administrator::is_global_admin( $user_id );
+		$logged_user_is_global_admin = (bool)component_security_administrator::is_global_admin( $user_id );
 
 		if ($logged_user_is_global_admin===true) {
 			# ALL PROJECTS
@@ -203,121 +137,80 @@ class component_filter_master extends component_common {
 		}
 		
 		return $ar_projects_final;
-	}//end get_ar_proyectos_section
-
-
-
-	/*
-	* GET_VALOR_LANG
-	* Return the main component lang
-	* If the component need change this langs (selects, radiobuttons...) overwritte this function
-	*/
-	public function get_valor_lang(){
-
-		$relacionados = (array)$this->RecordObj_dd->get_relaciones();
-		
-		#dump($relacionados,'$relacionados');
-		if(empty($relacionados)){
-			return $this->lang;
-		}
-
-		$termonioID_related = array_values($relacionados[0])[0];
-		$RecordObjt_dd = new RecordObj_dd($termonioID_related);
-
-		if($RecordObjt_dd->get_traducible() === 'no'){
-			$lang = DEDALO_DATA_NOLAN;
-		}else{
-			$lang = DEDALO_DATA_LANG;
-		}
-
-		return $lang;
-	}
+	}//end get_ar_proyectos_section */
 
 
 
 	/**
-	* RENDER_LIST_VALUE
-	* Overwrite for non default behaviour
-	* Receive value from section list and return proper value to show in list
-	* Sometimes is the same value (eg. component_input_text), sometimes is calculated (e.g component_portal)
-	* @param string $value
-	* @param string $tipo
-	* @param int $parent
-	* @param string $modo
-	* @param string $lang
-	* @param string $section_tipo
-	* @param int $section_id
-	*
-	* @return string $list_value
-	*/
-	public static function render_list_value($value, $tipo, $parent, $modo, $lang, $section_tipo, $section_id, $current_locator=null, $caller_component_tipo=null) {
+	* UPDATE_DATO_VERSION
+	* @return object $response
+	*//*
+	public static function update_dato_version($request_options) {
 
-		$current_valor  = $value;
-		$ar_val 		= json_decode($current_valor);
-		$component  	= component_common::get_instance(__CLASS__,
-														 $tipo,
-													 	 $parent,
-													 	 'list',
-														 DEDALO_DATA_NOLAN,
-													 	 $section_tipo);
-		$component->set_dato($ar_val);
-		$valor = $component->get_valor();
+		$options = new stdClass();
+			$options->update_version 	= null;
+			$options->dato_unchanged 	= null;
+			$options->reference_id 		= null;
+			$options->tipo 				= null;
+			$options->section_id 		= null;
+			$options->section_tipo 		= null;
+			$options->context 			= 'update_component_dato';
+			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
+
+			$update_version = $options->update_version;
+			$dato_unchanged = $options->dato_unchanged;
+			$reference_id 	= $options->reference_id;
 		
-		return $valor;
-		
-	}#end render_list_value
 
+		$update_version = implode(".", $update_version);
 
+		switch ($update_version) {
+			case '4.9.0':
 
-	/**
-	* GET_VALOR_EXPORT
-	* Return component value sended to export data
-	* @return string $valor
-	*/
-	public function get_valor_export( $valor=null, $lang=DEDALO_DATA_LANG, $quotes, $add_id ) {
-			
-		if (is_null($valor)) {
-			$dato = $this->get_dato();				// Get dato from DB
-		}else{
-			$this->set_dato( json_decode($valor) );	// Use parsed json string as dato
+					# Compatibility old dedalo instalations
+					# Old dato is and object (associative array for php)
+					// Like {"1": 2}
+					if (!empty($dato_unchanged)) {
+						// Old format is received case
+						$ar_locators = [];
+						foreach ($dato_unchanged as $key => $value) {
+
+							if (isset($value->section_id) && isset($value->section_tipo)) {
+								# Updated dato (is locator)
+								$filter_locator = $value;					
+
+							}else{
+								# Old dato Like {"1": 2}
+								$filter_locator = new locator();
+									$filter_locator->set_section_tipo(DEDALO_FILTER_SECTION_TIPO_DEFAULT);
+									$filter_locator->set_section_id($key);
+									$filter_locator->set_type(DEDALO_RELATION_TYPE_FILTER);
+									$filter_locator->set_from_component_tipo($options->tipo);
+							}
+							# Add to clean array
+							$ar_locators[] = $filter_locator;				
+						}
+						# Replace old formatted value with new formatted array of locators
+						$new_dato = $ar_locators;
+						$response = new stdClass();
+							$response->result   = 1;
+							$response->new_dato = $new_dato;
+							$response->msg = "[$reference_id] Dato is changed from ".to_string($dato_unchanged)." to ".to_string($new_dato).".<br />";
+						return $response;
+
+					}else{
+
+						debug_log(__METHOD__." No project found in $options->section_tipo - $options->tipo - $options->section_id ".to_string(), logger::DEBUG);
+						$response = new stdClass();
+						$response->result = 2;
+						$response->msg = "[$reference_id] Current dato don't need update.<br />";	// to_string($dato_unchanged)." 
+						return $response;
+					}
+				break;
 		}
-
-		$valor_export = $this->get_valor('html');
-		if (strlen($valor_export)) {
-			$valor_export = '·'.trim(str_replace('<br>', PHP_EOL.'·',$valor_export));
-			$valor_export = stripslashes($valor_export);
-		}
-		
-		if(SHOW_DEBUG) {
-			#return "FILTER: ".$valor_export;
-		}
-
-		return $valor_export;
-	}#end get_valor_export
-
-
-
-	/**
-	* GET_VALOR_LIST_HTML_TO_SAVE
-	* Usado por section:save_component_dato
-	* Devuelve a section el html a usar para rellenar el 'campo' 'valor_list' al guardar
-	* Por defecto será el html generado por el componente en modo 'list', pero en algunos casos
-	* es necesario sobre-escribirlo, como en component_portal, que ha de resolverse obigatoriamente en cada row de listado
-	*
-	* En este caso, usaremos únicamente el valor en bruto devuelto por el método 'get_dato_unchanged'
-	*
-	* @see class.section.php
-	* @return mixed $result
-	*/
-	public function get_valor_list_html_to_save() {
-		$result = $this->get_dato_unchanged();
-
-		return $result;
-	}//end get_valor_list_html_to_save
-
-
+	}//end update_dato_version */
 	
-	
+
 	
 }
 ?>

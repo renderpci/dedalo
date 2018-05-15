@@ -9,85 +9,58 @@
 
 	$html='';
 
+
 	#
-	# SEARCH FORM
-	$html ='';
+	# BUTTONS
+	$html .= '<div class="section_buttons_container">';
+	# Button tool_ts_print
+	$tool_ts_print = new tool_ts_print($this, 'button');
+	$html .= $tool_ts_print->get_html();
+	$html .= '</div>';
+
+	#
+	# SEARCH FORM	
 	$html .= "<div class=\"search_form_container\">";
 	$html .= $search_form_html;
+	$html .= '<div id="search_response"></div>';
 	$html .= "</div>";
+
 	
 	
 	$tipology_name_model_css = ($model_view===true) ? 'tipology_name_model' : null;
-
+	
+	$html .= '<table class="table_rows_list" data-search_options="'.encodeURIComponent($search_options_json).'"></table>';
 	
 	#
 	# TREE HTML
 	$html .= "<ul id=\"thesaurus_list_wrapper\">";
 	#foreach ($ar_hierarchy_typologies->result as $ar_value) foreach($ar_value as $key => $row) {
-	$root_nodes=array();
-	$ar_hierarchy_selector = array();
-	foreach ($ar_hierarchy_typologies as $key => $tipology_section_id) {
+	$root_nodes 			= array();
+	$ar_hierarchy_selector  = array();	
+	# dump($ar_sections_by_type, ' ar_sections_by_type ++ '.to_string());
+	foreach ($ar_sections_by_type as $tipology_section_id => $ar_items) {
 		
-
-		#$tipology_section_id   	= $row['section_id'];
-		#$tipology_section_tipo 	= $row['section_tipo'];
-		#$tipology_name 			= $row[area_thesaurus::$typologies_name_tipo];
-	
-		$tipology_section_tipo 	= area_thesaurus::$typologies_section_tipo;
-		$tipology_name 			= $this->get_tipology_name($tipology_section_id);
-	
-
-		// Filter by GET var hierarchy_types if is present
-		if(is_array($hierarchy_types)) {
-			if (!in_array($tipology_section_id, $hierarchy_types)) {
-				continue;
-			}
-		}
+		$tipology_name = reset($ar_items)->typology_name;		
 
 		$html .= "<li>";
 
 		#
 		# HIERARCHY TIPOLOGY NAME Like 'Toponimia'
 		$html .= "<div class=\"tipology_name $tipology_name_model_css\" onclick=\"area_thesaurus.toggle_tipology(this)\" data-state=\"show\" data-section_id=\"$tipology_section_id\"><strong>".trim($tipology_name)."</strong></div>";
-
-		#
-		# HIERARCHIES OF CURRENT TIPO Like 'España' for tipology_section_id 2
-		$search_hierarchies_options = area_thesaurus::get_options_for_search_hierarchies($tipology_section_tipo, $tipology_section_id);
-		# Calculate rows from database using search class like lists
-		$hierarchies_rows_obj = search::get_records_data($search_hierarchies_options);
-			#dump($hierarchies_rows_obj, ' hierarchies_rows_obj ++ '.to_string());
-			
-			foreach ($hierarchies_rows_obj->result as $hierarchy_ar_value) foreach($hierarchy_ar_value as $hierarchy_key => $hierarchy_row) {
+					
+			foreach ($ar_items as $item) {
 				
-				$hierarchy_section_id   		= $hierarchy_row['section_id'];
-				$hierarchy_section_tipo 		= $hierarchy_row['section_tipo'];
+				$hierarchy_section_id   		= $item->section_id;
+				$hierarchy_section_tipo 		= DEDALO_HIERARCHY_SECTION_TIPO;
 				$hierarchy_term_tipo 			= DEDALO_HIERARCHY_TERM_TIPO;
-				$hierarchy_name 				= json_decode($hierarchy_row[$hierarchy_term_tipo])[0];
-				# hierarchy_target_section_tipo is a json encoded array
-				$hierarchy_target_section_tipo 	= $hierarchy_row[$target_section_tipo];
-				$hierarchy_target_section_tipo  = json_decode($hierarchy_target_section_tipo)[0];
-	
-				if (empty($hierarchy_target_section_tipo)) {
-					debug_log(__METHOD__." Ignored hierarchy ID: $hierarchy_section_id ($hierarchy_name) with empty childrens target section tipo ".to_string(), logger::WARNING);
-					continue;
-				}
-
-				#$hierarchy_childrens 			= json_decode($hierarchy_row[$hierarchy_childrens_tipo]);				
-					#dump($hierarchy_row, '$hierarchy_target_section_tipo ++ '.to_string($hierarchy_childrens_tipo));
-					#dump($hierarchy_row, ' hierarchy_target_section_tipo ++ '.to_string($hierarchy_target_section_tipo));
+				$hierarchy_name 				= $item->hierarchy_target_section_name;		
+				$hierarchy_target_section_tipo  = $item->hierarchy_target_section_tipo;
 
 				# Permissions
 				$current_permissions = common::get_permissions( $hierarchy_target_section_tipo, $hierarchy_target_section_tipo);
 				# dump($current_permissions, ' $current_permissions ++ '.to_string($hierarchy_target_section_tipo));
 				if ($current_permissions<2) {
 					continue;
-				}
-					
-				// Filter by GET var hierarchy_sections if is present				 
-				if(is_array($hierarchy_sections)) {					
-					if (!in_array($hierarchy_target_section_tipo, $hierarchy_sections)) {
-						continue;
-					}
 				}
 				
 				
@@ -112,7 +85,7 @@
 					$html .= "</div>";//end id_column_content
 					*/
 					# elements container
-					$html .= " <div class=\"elements_container\">";
+					$html .= "<div class=\"elements_container\">";
 					#$html .= "  <div class=\"list_thesaurus_element hierarchy_name\" data-tipo=\"$hierarchy_term_tipo\" data-type=\"root\" data-section_tipo=\"$hierarchy_section_tipo\" data-section_id=\"$hierarchy_section_id\">";
 					#$html .= $hierarchy_name;
 					#$html .= "<span>";
@@ -121,11 +94,10 @@
 					#$html .= " </a>";
 					#$html .= "</span>";
 					#$html .= "  </div>";//end hierarchy_name
-					$html .= "  <div id=\"{$root_node_id}\" class=\"list_thesaurus_element\" data-tipo=\"$hierarchy_childrens_tipo\" data-type=\"link_childrens\"></div>";
-					$html .= " </div>";//end elements_container
+					$html .= "<div id=\"{$root_node_id}\" class=\"list_thesaurus_element\" data-tipo=\"$hierarchy_childrens_tipo\" data-type=\"link_childrens\"></div>";
+					$html .= "</div>";//end elements_container					
 					
-					
-					$html .= " <div class=\"childrens_container\" data-role=\"childrens_container\" data-section_id=\"$hierarchy_section_id\">";
+					$html .= "<div class=\"childrens_container\" data-role=\"childrens_container\" data-section_id=\"$hierarchy_section_id\">";
 					#$html .= "   <div id=\"{$root_node_id}\" data-tipo=\"".$hierarchy_childrens_tipo."\">";
 					#
 					# LIST ROOT BUILDER
@@ -138,8 +110,7 @@
 					*/
 					#}					
 					#$html .= "   </div>"; // This div is replaced for ajax result
-					$html .= " </div>";			
-					
+					$html .= " </div>";					
 				
 				/*
 				$html .= "<div class=\"wrap_ts_object\" data-section_tipo=\"{$hierarchy_section_tipo}\" data-section_id=\"{$hierarchy_section_id}\" data-target_section_tipo=\"$hierarchy_target_section_tipo\">";
@@ -169,24 +140,24 @@
 
 	#
 	# SEARCH ROOT BUILDER
-	if ($thesaurus_list_mode==='search') {
+	/*if ($thesaurus_list_mode==='search') {
 
 		$options = new stdClass();
 			$options->term = isset($_GET['term']) ? safe_xss($_GET['term']) : false;	
 		$search_data = $this->search_thesaurus( $options );
 		$search_data = json_encode($search_data);
-		/*
-		$html .= " <div class=\"childrens_container search_test\" data-role=\"childrens_container\" id=\"search_test\"> search_test </div>";
-		#$search_data = '{"ts1_65":{"section_tipo":"ts1","section_id":"65","modo":"edit","lang":"lg-spa","ar_elements":[{"type":"link","tipo":"hierarchy42","value":0},{"type":"term","tipo":"hierarchy25","value":"65"},{"type":"link_childrens","tipo":"hierarchy49","value":"button show childrens"}],"heritage":{"ts1_73":{"section_tipo":"ts1","section_id":"73","modo":"edit","lang":"lg-spa","ar_elements":[{"type":"link","tipo":"hierarchy42","value":0},{"type":"term","tipo":"hierarchy25","value":"73"},{"type":"link_childrens","tipo":"hierarchy49","value":"button show childrens"}],"heritage":{"ts1_74":{"section_tipo":"ts1","section_id":"74","modo":"edit","lang":"lg-spa","ar_elements":[{"type":"link","tipo":"hierarchy42","value":0},{"type":"term","tipo":"hierarchy25","value":"74 pepito"},{"type":"link_childrens","tipo":"hierarchy49","value":"button show childrens unactive"}]}}},"ts1_66":{"section_tipo":"ts1","section_id":"66","modo":"edit","lang":"lg-spa","ar_elements":[{"type":"link","tipo":"hierarchy42","value":0},{"type":"term","tipo":"hierarchy25","value":"66"},{"type":"link_childrens","tipo":"hierarchy49","value":"button show childrens"}],"heritage":{"ts1_67":{"section_tipo":"ts1","section_id":"67","modo":"edit","lang":"lg-spa","ar_elements":[{"type":"link","tipo":"hierarchy42","value":0},{"type":"term","tipo":"hierarchy25","value":"67  pepito pepet"},{"type":"link_childrens","tipo":"hierarchy49","value":"button show childrens unactive"}]}}}}}}';
-		$html .= " <script>ts_object.parse_search_result($search_data, document.querySelector('.search_test'))</script>";
-		*/
+		
+		#$html .= " <div class=\"childrens_container search_test\" data-role=\"childrens_container\" id=\"search_test\"> search_test </div>";
+		##$search_data = '{"ts1_65":{"section_tipo":"ts1","section_id":"65","modo":"edit","lang":"lg-spa","ar_elements":[{"type":"link","tipo":"hierarchy42","value":0},{"type":"term","tipo":"hierarchy25","value":"65"},{"type":"link_childrens","tipo":"hierarchy49","value":"button show childrens"}],"heritage":{"ts1_73":{"section_tipo":"ts1","section_id":"73","modo":"edit","lang":"lg-spa","ar_elements":[{"type":"link","tipo":"hierarchy42","value":0},{"type":"term","tipo":"hierarchy25","value":"73"},{"type":"link_childrens","tipo":"hierarchy49","value":"button show childrens"}],"heritage":{"ts1_74":{"section_tipo":"ts1","section_id":"74","modo":"edit","lang":"lg-spa","ar_elements":[{"type":"link","tipo":"hierarchy42","value":0},{"type":"term","tipo":"hierarchy25","value":"74 pepito"},{"type":"link_childrens","tipo":"hierarchy49","value":"button show childrens unactive"}]}}},"ts1_66":{"section_tipo":"ts1","section_id":"66","modo":"edit","lang":"lg-spa","ar_elements":[{"type":"link","tipo":"hierarchy42","value":0},{"type":"term","tipo":"hierarchy25","value":"66"},{"type":"link_childrens","tipo":"hierarchy49","value":"button show childrens"}],"heritage":{"ts1_67":{"section_tipo":"ts1","section_id":"67","modo":"edit","lang":"lg-spa","ar_elements":[{"type":"link","tipo":"hierarchy42","value":0},{"type":"term","tipo":"hierarchy25","value":"67  pepito pepet"},{"type":"link_childrens","tipo":"hierarchy49","value":"button show childrens unactive"}]}}}}}}';
+		#$html .= " <script>ts_object.parse_search_result($search_data, document.querySelector('.search_test'))</script>";
+		
 		$html .= "<script>";
 		$html .= "ts_object.parse_search_result($search_data, null, false);";
 		#$html .= "console.log(\"search_data:\",$search_data);";
 		$html .= "</script>";
 	
-	}else{
-	
+	}else{*/
+		/*
 		// List mode
 		function cmp($a, $b) {if ($a == $b) {return 0;}return ($a < $b) ? -1 : 1;}
 		uasort($ar_hierarchy_selector, 'cmp');
@@ -194,13 +165,22 @@
 		foreach ($ar_hierarchy_selector as $key => $value) {
 			$ar_hierarchy_obj[] = array('id' => $key, 'label' => $value);
 		}
+		if(SHOW_DEBUG===true) {
 			#dump($ar_hierarchy_obj, ' ar_hierarchy_obj ++ '.to_string());
+			#dump($ar_hierarchy_obj, ' ar_hierarchy_obj ++ '.to_string());
+		}
+		*/
 		$html .= "<script>";
 		$html .= "area_thesaurus.root_nodes=".json_encode($root_nodes).";";
-		$html .= "area_thesaurus.ar_hierarchy=".json_encode($ar_hierarchy_obj).";";
+		#$html .= "area_thesaurus.ar_hierarchy=".json_encode($ar_hierarchy_obj).";";
+		
+		$init_options = new stdClass();
+			$init_options->model_view = $model_view;
+
+		$html .= 'area_thesaurus.init('.json_encode($init_options).');';
 		$html .= "</script>";
 
-	}//end if ($thesaurus_list_mode==='search') 
+	#}//end if ($thesaurus_list_mode==='search') 
 	
 	#$_SERVER['PHP_AUTH_USER'] = 'pepe';
 	#dump($_SERVER['PHP_AUTH_USER'], '$_SERVER[PHP_AUTH_USER] ++ '.to_string());
@@ -209,6 +189,19 @@
 	$html .= "</ul>";
 	echo $html;
 
+
+
+	#
+	# DEBUG
+	if(SHOW_DEBUG===true) {
+		$debug_html  = '';
+		$debug_html .= '<div id="debug_sql_time" class="debug_sql_time" style="position:absolute;" ondblclick="$(this).children(\'pre\').toggle()">';
+		$debug_html .= 'Debug info <span class="exec_time"></span>';
+		$debug_html .= '<pre style="display:none">Available when search is made</pre>';
+		$debug_html .= '</div>';
+		echo $debug_html;
+	}
+	
 
 	/*
 	# ETIQUETA (LABEL)

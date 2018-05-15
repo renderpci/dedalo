@@ -128,17 +128,16 @@
 				#
 				# DATAFRAME MANAGER	
 				$ar_dataframe_obj = array();
-				
-				foreach ($dato as $key => $value) {
-						
-					$ar_dataframe = isset($propiedades->dataframe) ? $propiedades->dataframe : false;
-					if($ar_dataframe !==false){
+
+				$ar_dataframe = isset($propiedades->dataframe) ? $propiedades->dataframe : false;
+				if($ar_dataframe !==false){
+					foreach ($dato as $key => $value) {
 						foreach ($ar_dataframe as $current_dataframe) {
 							if ($current_dataframe->tipo!==false) {
 								$dataframe_obj = new dataframe($current_dataframe->tipo, $current_dataframe->type, $this, 'dataframe_edit', $key);
 								$ar_dataframe_obj[] = $dataframe_obj;
 
-								#dump($ar_dataframe_obj[0]->get_html(), ' $ar_dataframe_obj[$i]->get_html(); ++ '.to_string());
+								//dump($ar_dataframe_obj[0]->get_html(), ' $ar_dataframe_obj[$i]->get_html(); ++ '.to_string());
 							}	
 						}
 					}
@@ -158,6 +157,9 @@
 				# dato is injected by trigger search wen is needed
 				$dato = isset($this->dato) ? $this->dato : [];
 
+				# Limit
+				$limit = 1;
+
 				$component_info 	= $this->get_component_info('json');
 				$in_time_machine 	= false;
 
@@ -175,9 +177,6 @@
 					$filter_by_list = $propiedades->source->filter_by_list;
 				}
 				$json_filter_by_list = json_encode($filter_by_list);
-
-				# Limit
-				#$limit = 100;
 				
 				$referenced_tipo			 	= $this->get_referenced_tipo();
 				#$ar_list_of_values			 = $this->get_ar_list_of_values(DEDALO_DATA_LANG, null); // $this->get_ar_list_of_values( $lang, null, $this->ar_referenced_section_tipo, $filter_custom );
@@ -190,7 +189,10 @@
 				$dato_json 						= json_handler::encode($dato);
 
 				//$ar_comparison_operators 	 	= $this->build_search_comparison_operators();
-				//$ar_logical_operators 	 	 	= $this->build_search_logical_operators();	
+				//$ar_logical_operators 	 	 	= $this->build_search_logical_operators();
+
+				# q_operator is injected by trigger search2
+				$q_operator = isset($this->q_operator) ? $this->q_operator : null;
 
 				# Search input name (var search_input_name is injected in search -> records_search_list.phtml)
 				# and recovered in component_common->get_search_input_name()
@@ -207,9 +209,6 @@
 				# SEARCH_FIELDS
 				$search_fields 		= $this->get_search_fields($tipo);
 				$search_fields_json = json_encode($search_fields);
-
-				# Limit
-				$limit = isset($propiedades->limit) ? (int)$propiedades->limit : 0;
 				
 				# Divisor
 				$divisor = $this->get_divisor();

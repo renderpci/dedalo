@@ -178,8 +178,8 @@ class RecordObj_descriptors_dd extends RecordObj_matrix {
 			$current_lang				= $RecordObj_descriptors_dd->get_lang();
 				#dump($RecordObj_descriptors_dd,'$current_lang '.$matrix_table);
 			
-			if($current_lang != $lang) {				
-				$ar_translations[$id]	= $current_lang;
+			if($current_lang !== $lang) {				
+				$ar_translations[$id] = $current_lang;
 			}				
 		}
 		#dump($ar_translations,'$ar_translations '.$lang );

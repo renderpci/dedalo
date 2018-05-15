@@ -3,36 +3,28 @@
 	# VISUALIZADOR HTML	
 	
 	
-	# ETIQUETA (LABEL)
-	#$html_label = component_common_draw::draw_label($this);
-	
 	# CONTENIDO (INPUT)
-	$html_contenido = '';
-	switch($permissions) {
+	$html_content = '';
+	switch(true) {
 			
-		case 0	:	$html_contenido .= "";
+		case $permissions===0:
+					$html_content .= "";
 					break;	
 						
-		case ($permissions>=1):
-		
-					
-					#$html_contenido .= "\n <span class=\"css_span_dato\">$valor</span>";			
+		case ($permissions>=1):		
+								
 					if (!empty($dato)) {
 
-						$dato_keys = array_keys((array)$dato);	
-						#dump($ar_proyectos_section,"ar_proyectos_section");
-						#dump($dato_keys,"dato_keys");
+						$html_content .= "<ul>";
+						foreach ($ar_proyectos_section as $key => $row) {
 
-						$html_contenido .= "<ul>";
-						foreach ($ar_proyectos_section as $project_id => $project_name) {
+							if (!locator::in_array_locator( $row->locator, (array)$dato )) {
+								continue;
+							}
 
-							if (!in_array($project_id, $dato_keys)) continue; # Skip
-
-							#$html_contenido .= "\n <span class=\"css_span_dato\" title=\"$project_id\">$project_name</span>, ";
-							$html_contenido .= "\n<li title=\"project_id: $project_id\">$project_name</li>";
+							$html_content .= "<li title=\"project_id: $row->locator->section_id\">$row->label</li>";
 						}
-						$html_contenido .= "</ul>";
-							#dump($html_contenido,"html_contenido");	
+						$html_content .= "</ul>";
 					}
 					break;
 										
@@ -40,6 +32,6 @@
 	
 	
 	# PRINT HTML
-	print $html_contenido;
+	print $html_content;
 	
 ?>

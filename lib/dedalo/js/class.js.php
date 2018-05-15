@@ -59,13 +59,7 @@ class js {
 
 			# component common functions	
 			js::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/component_common/js/component_common.js';
-
-
-			# temporal !!!! Cargarlo cuando se genere el search ????
-			js::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/component_autocomplete/js/component_autocomplete.js';
-
-			
-		
+	
 			#js::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/tools/tool_portal/js/tool_portal.js'; // Cuando añadimos un fragmento, no está disponible..			
 			js::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/common/js/lang/'.DEDALO_APPLICATION_LANG.'.js';
 			

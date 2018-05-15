@@ -36,7 +36,7 @@ class area extends common  {
 		# common load tesauro data of current obj
 		parent::load_structure_data();
 
-		#dump($this,'this');
+		return true;
 	}
 
 	# define tipo

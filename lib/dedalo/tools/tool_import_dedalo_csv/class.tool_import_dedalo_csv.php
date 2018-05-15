@@ -121,6 +121,10 @@ class tool_import_dedalo_csv extends tool_common {
 																  $lang,
 																  $section_tipo,
 																  false);
+				
+				$propiedades 		= json_decode($RecordObj_dd->get_propiedades());
+				$with_lang_versions = isset($propiedades->with_lang_versions) ? $propiedades->with_lang_versions : false;
+
 				# Configure component
 					# DIFFUSION_INFO
 					# Note that this process can be very long if there are many inverse locators in this section
@@ -165,8 +169,10 @@ class tool_import_dedalo_csv extends tool_common {
 				}
 
 
+
+
 				# Elements 'translatables' can be formated as json values like {"lg-eng":"My value","lg-spa":"Mi valor"}				
-				if ($traducible===true && is_object($value)) {
+				if (($traducible===true || $with_lang_versions===true) && is_object($value)) {
 					debug_log(__METHOD__." Parsing multilanguaje value [$component_tipo - $section_tipo - $section_id]: ".to_string($value), logger::DEBUG);
 					foreach ($value as $v_key => $v_value) {
 						
@@ -197,7 +203,7 @@ class tool_import_dedalo_csv extends tool_common {
 						$nolan = 'lg-nolan';
 						$value = $value->{$nolan};
 					}
-
+	
 					if (is_object($value) && property_exists($value, 'dataframe') && !property_exists($value, 'dato')) {
 						// Element without dato. Only the dataframe is saved					
 					}else{
@@ -280,8 +286,7 @@ class tool_import_dedalo_csv extends tool_common {
 	public static function get_csv_files( $dir ) {
 		
 		$result = tool_common::read_files($dir, $valid_extensions=array('csv'));
-		#dump($result, ' result ++ '.to_string()); exit();
-
+		
 		$files_info = array();
 		foreach ($result as $current_file_name) {
 			$file = $dir .'/'. $current_file_name;
@@ -290,22 +295,25 @@ class tool_import_dedalo_csv extends tool_common {
 			$n_records 	= count($ar_data)-1;
 			$n_columns 	= count($file_info);
 			$files_info[$current_file_name] = 'Records: '.$n_records.' - Columns: '.$n_columns.'<br>'.implode(', ', $file_info).'';
-
-			# Reference first row		
-			$ar_reference = array(); foreach ($ar_data[1] as $key => $value) {
-				$current_key = $key.']['.$ar_data[0][$key];
-
-				$value = str_replace('U+003B', ';', $value);
-
-				# Test valid json
-				if (strpos($value,'[')===0 || strpos($value,'{')===0) {
-					$test = json_decode($value);
-					if ($test===null) {
-						$value = "<span class=\"error\">ERROR!! BAD JSON FORMAT</span>: ".$value;
-					}
-				}
+	
+			# Reference first row
+			$ar_reference = array();
+			$preview_max = 10;		
+			foreach ($ar_data as $dkey => $current_line) {
 				
-				$ar_reference[$current_key] = $value;
+				foreach ($current_line as $key => $value) {					
+					$value = str_replace('U+003B', ';', $value);
+					# Test valid json
+					if (strpos($value,'[')===0 || strpos($value,'{')===0) {
+						$test = json_decode($value);
+						if ($test===null) {
+							$current_line = "<span class=\"error\">ERROR!! BAD JSON FORMAT</span>: ".$value;
+						}
+					}					
+				}
+				$ar_reference[] = $current_line;
+				// Stop on reach limit
+				if ($dkey>=$preview_max) break;
 			}
 			$files_info[$current_file_name] .= "<pre style=\"white-space:pre;display:none\">Reference row 1: ".print_r($ar_reference,true)."</pre>";
 		}

@@ -68,7 +68,9 @@
 				$mandatory_json = json_encode($mandatory);
 
 				$propiedades_json 	= json_encode($propiedades);
-				$context 			= $this->get_context();						
+				$context 			= $this->get_context();
+
+				$with_lang_versions = isset($propiedades->with_lang_versions) ? $propiedades->with_lang_versions : false;			
 				break;
 
 		case 'print' :

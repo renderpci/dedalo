@@ -91,7 +91,7 @@ function load_components($json_data) {
 		return $response;
 	}
 
-
+	
 	$html = '';
 	foreach ((array)$components as $key => $component_info) {
 		
@@ -113,17 +113,26 @@ function load_components($json_data) {
 		#	$component->search_input_name = $component_info->component_tipo.'_'.$component_info->section_id;
 		#}
 
+		# DATO CLEAN
 		if (isset($component_info->clean) && $component_info->clean===true) {
 			$component->set_dato(null);
 		}
 
+		# DATO SET CUSTOM VALUE
 		if (!empty($component_info->current_value)) {
 			$current_value = $component_info->current_value;
 			$component->set_dato($current_value);
-			debug_log(__METHOD__." Set current_value as  ".to_string($current_value), logger::DEBUG);
+			#debug_log(__METHOD__." [trigger.search2.load_components] Set current_value as  ".to_string($current_value), logger::DEBUG);
 		}
 
-		$html .= $component->get_html();
+		# Q_OPERATOR
+		if(isset($component_info->q_operator)) {			
+			$component->q_operator = $component_info->q_operator;  // Inject q_operator value
+		}
+
+		$component_html = $component->get_html();
+		
+		$html .= $component_html;
 	}
 	
 	

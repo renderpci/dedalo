@@ -1,5 +1,40 @@
 **UPDATES AND CHANGES**
 
+*Ver 4.9.0 - 14-05-2018
+Today we introduce the update of the V4 to 4.9.0
+
+This update fixed some issues and bugs for the V4.8.4
+
+This version change the format of the component_filter, named project inside the records. This version ends the transition of the all component_relations to new model and apply the new search version.
+
+The component_filter chang the format from the traditional object {"1":"2"} to the normalized locator [{"section_id":"1", "section_tipo":"dd153"}].
+
+And the new relation model add to the locator the new two propieties "from_component_tipo" with the tipo of the compoment that has the information and the "type" with the normalized type relation: 
+	[{"type":"dd675","section_id":"1","section_tipo":"dd153","from_component_tipo":"mdcat1487"}]
+
+This version fix some issues in the search and close the beta situation with the new search model. 
+
+The next step will be the addaptation of our model to the SQL/JSON:2016 that will be implemented in postgres this year.
+
+
+*Ver 4.8.4 - 28-03-2018
+Today we introduce the update of the V4 to 4.8.4
+
+This update fixed some issues and bugs for the V4.8.3
+
+This version implement the new search to the thesaurus context. The new filter do joins between main secion to sections that has relations and we uptade the concept to build joins with multiple sections to multiple sections. The concept is that the user need search between multiple main sections, for ex: toponymy that the main sections can be: Spain, France, Italy, etc... es1, fr1, it1, etc... Normally the components of this sections will be the same, like term component, that is because the thesarurs, normally, is builded like virtual sections of the "real" thesaurus section.
+
+We introduce into the JSON_QUERY_OBJECT the propertie "section", one array of main sections. If this array is configurated with more that 1 section, the joins will be named with "mix" in the main path (first section_tipo in normal position). And will be builded the WHERE clause with all sections of the array.
+
+Limitations of the search: today the search can use ONLY one matrix table for the main sections, for ex: 
+	- matrix_hierarchy for sections es1, fr1, it1, etc
+but is not possible use two matrix tables for the main sections, for ex:
+	- matrix_hierarchy for es1,fr1,it1, etc
+	- matrix_languages for lg1
+This limitation is only for MAIN sections (the first position of the path), not for the relations (second or more deep positions in the path), that can be in multiple tables:
+	- matrix for oh1 and relations with matrix_list, matrix_hierarchy, matrix_langs, etc
+This limitation is not a problem and we don't change it for now. 
+
 *Ver 4.8.3 - 03-03-2018
 Today we introduce the update of the V4 to 4.8.3
 

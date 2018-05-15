@@ -17,7 +17,7 @@ class component_check_box extends component_relation_common {
 	* GET VALOR
 	* GET VALUE . DEFAULT IS GET DATO . OVERWRITE IN EVERY DIFFERENT SPECDIFIC COMPONENT
 	*/
-	public function get_valor( $lang=DEDALO_DATA_LANG) {
+	public function get_valor( $lang=DEDALO_DATA_LANG ) {
 
 		$dato = $this->get_dato();
 		if (empty($dato)) {
@@ -100,6 +100,7 @@ class component_check_box extends component_relation_common {
 
 
 	public function get_dato_as_string() {
+
 		return json_handler::encode($this->get_dato());
 	}//end get_dato_as_string
 

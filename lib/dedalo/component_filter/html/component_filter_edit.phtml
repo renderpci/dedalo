@@ -33,11 +33,11 @@
 						
 		case 1 :
 				$html_content .= "<ul class=\"filter_projects_list\">";
-				if (is_array ($ar_proyectos_section)) foreach ($ar_proyectos_section as $value => $rotulo) {
+				foreach ($ar_proyectos_section as $key => $row) {
 					
-					if( is_array($dato) && in_array($value, array_keys($dato)) ) {
+					if (locator::in_array_locator( $row->locator, (array)$dato )) {
 						$html_content .= "<li>";
-						$html_content .= "- <label class=\"filter_checkbox_rotulo\">$rotulo</label>";
+						$html_content .= "- <label class=\"filter_checkbox_rotulo\">$row->label</label>";
 						$html_content .= "</li>";
 					}
 				}
@@ -47,12 +47,21 @@
 		case 2 :
 		case 3 :					
 				$html_content .= "<ul class=\"filter_projects_list\">";
-					#dump($ar_proyectos_section, ' ar_proyectos_section ++ '.to_string());
-				$i=1;foreach((array)$ar_proyectos_section as $current_section_id => $rotulo) {
+				
+				$i=1;foreach((array)$ar_proyectos_section as $key => $row) {
 					
 					$html_content .= "<li>";
 					
-						$checked  = is_array($dato) && in_array($current_section_id, array_keys($dato)) ? 'checked="checked"' : '';
+						$checked  = '';  //is_array($dato) && in_array($current_section_id, array_keys($dato)) ? 'checked="checked"' : '';
+						if (locator::in_array_locator( $row->locator, (array)$dato, ['section_id','section_tipo'])) {
+							$checked  = 'checked="checked"';
+						}
+
+						# Complete locator
+						$locator = $row->locator;
+						$locator->from_component_tipo = $tipo;
+						$locator->type 				  = $this->relation_type;						
+
 						$tabindex = $i==1 ? 'tabindex="1"' : '';
 
 						$input_id = $input_name.'_'.$i;
@@ -62,21 +71,20 @@
 						$html_content .= "onchange=\"component_filter.Save(this)\" ";
 						$html_content .= "name=\"{$input_name}\" ";
 						$html_content .= "id=\"{$input_id}\" ";
-						$html_content .= "value=\"{$current_section_id}\" ";
-						$html_content .= "title=\"$html_title $current_section_id\" ";
+						$html_content .= "value='".json_encode($locator)."' ";
 						$html_content .= "data-tipo=\"{$tipo}\" ";
 						$html_content .= "data-lang=\"{$lang}\" ";
 						$html_content .= "data-section_tipo=\"{$section_tipo}\" ";
 						$html_content .= "data-parent=\"{$parent}\" ";
-						$html_content .= $checked;
-						$html_content .= " ".$tabindex;
+						$html_content .= $checked .' ';
+						$html_content .= $tabindex .' ';
 						$html_content .= "/>";
 						
 						$html_content .= "<label for=\"$input_id\" class=\"filter_checkbox_rotulo\">";
 						if(SHOW_DEBUG===true) {
-							$html_content .= "[$current_section_id] ";
+							$html_content .= '['.$row->locator->section_id.'] ';
 						}
-						$html_content .= to_string($rotulo);
+						$html_content .= $row->label;
 						$html_content .= "</label>";
 						#$html_content .= " <span class=\"debug_info\">id: $current_section_id</span>";
 						

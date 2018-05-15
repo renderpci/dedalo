@@ -710,6 +710,7 @@ class diffusion_section_stats extends diffusion {
 						# PROJECTS : components with model component_filter
 						case ($modelo_name==='component_filter'):
 							if(!isset($table_temp)) $table_temp=array();
+							
 							# Convert json data like '{"2": "2", "4": "2"}' to php array and get only keys like 'Array("2","4")' 
 							$ar_keys = array_keys( (array)json_handler::decode($key,true) );
 								#dump($ar_keys, 'ar_keys', array());

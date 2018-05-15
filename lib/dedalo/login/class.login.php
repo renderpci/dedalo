@@ -661,8 +661,21 @@ class login extends common {
 			
 			
 			if (empty($_SESSION['dedalo4']['auth']['user_id'])) {
-				# exit possible session
+
+				# Store current lang for not loose
+				$dedalo_application_lang = isset($_SESSION['dedalo4']['config']['dedalo_application_lang']) ? $_SESSION['dedalo4']['config']['dedalo_application_lang'] : false;
+				$dedalo_data_lang 		 = isset($_SESSION['dedalo4']['config']['dedalo_data_lang']) ? $_SESSION['dedalo4']['config']['dedalo_data_lang'] : false;
+            
+				# remove complete session
 				unset($_SESSION['dedalo4']);
+
+				# Restore langs
+				if ($dedalo_application_lang) {
+					$_SESSION['dedalo4']['config']['dedalo_application_lang'] = $dedalo_application_lang;
+				}
+				if ( $dedalo_data_lang) {
+					$_SESSION['dedalo4']['config']['dedalo_data_lang'] 		  = $dedalo_data_lang;
+				}				
 			}
 
 			return false;
@@ -844,10 +857,12 @@ class login extends common {
 
 		#unset($_SESSION['dedalo4']['auth']);
 		#unset($_SESSION['dedalo4']['config']);
+		$cookie_name = session_name();
 		unset($_SESSION['dedalo4']);
-		setcookie('PHPSESSID', null, -1, '/');
+		#setcookie('PHPSESSID', null, -1, '/');
+		setcookie($cookie_name, null, -1, '/');
 		#unset($_SESSION);
-
+		debug_log(__METHOD__."Uset session and cookie. cookie_name: $cookie_name ".to_string(), logger::DEBUG);
 
 		return true;
 	}//end Quit

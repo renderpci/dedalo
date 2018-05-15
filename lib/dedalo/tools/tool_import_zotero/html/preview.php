@@ -72,59 +72,92 @@ if (empty($ar_files[0])) {
 	# JSON TABLE
 	# Data map like 'rsc140' => 'title'
 	$data_map  		= (array)tool_import_zotero::get_data_map();
+		#dump($data_map, ' data_map ++ '.to_string());
 	# Section tipo (for links to go current record)
 	$section_tipo 	= ZOTERO_SECTION_TIPO_VIRTUAL_BIBLIOGRAFIA;	# 'rsc205'; # is virtual section (Bibliografía)
-
+	
 	foreach ((array)$file_data as $key => $current_obj) {
 
 		$added_caption=false;
-		$html .= '<table class="table_preview">';		
+		$html .= '<table class="table_preview">';
 		foreach ($current_obj as $name => $value) {
 
-			$current_tipo = array_search($name, $data_map);
+			#$current_tipo = array_search($name, $data_map);
+			$ar_filter_result = array_filter($data_map, function($element) use($name) {			
+				return $name === $element['name'];
+			});
+			if (empty($ar_filter_result)) {				
+				$current_tipo = false;
+			}else{
+				$current_tipo = reset($ar_filter_result)['tipo'];
+			}
 
 			# CAPTION
 			if ( !$added_caption ) {
 				$html .= '<caption>';
 
-				$checked = "checked";
+				$checked = "checked"; // Default is checked
 				
-				$call_number_name 	= 'call-number';		#dump($current_obj->$call_number_name, '$current_obj->$call_number_name');				
-				if (!isset($current_obj->$call_number_name) || empty($current_obj->$call_number_name) ) {
-					$checked = '';
-					$html .= "<span class=\"error\">".label::get_label('sin_fichero')."</span>";
-				}else{
-					$file_name 		= trim($current_obj->$call_number_name).'.pdf';
-					$file_path 		= TOOL_IMPORT_ZOTERO_UPLOAD_DIR . $file_name;
-					if(!file_exists($file_path)) {
+				if (defined('ZOTERO_IMPORT_SOURCE_ID') && ZOTERO_IMPORT_SOURCE_ID!==false) {
+					// Id from custom field like 'call-number'
+					$id_name 	= ZOTERO_IMPORT_SOURCE_ID; //'call-number';				
+					if (!isset($current_obj->$id_name) || empty($current_obj->$id_name) ) {
 						$checked = '';
 						$html .= "<span class=\"error\">".label::get_label('sin_fichero')."</span>";
+					}else{
+						$file_name 		= (int)trim($current_obj->$id_name).'.pdf'; 	
+						$file_path 		= TOOL_IMPORT_ZOTERO_UPLOAD_DIR . $file_name;
+						if(!file_exists($file_path)) {
+							$checked = '';
+							$html .= "<span class=\"error\">".label::get_label('sin_fichero')."</span>";
+						}
+					}				
+				}else{
+					# Default
+					$id_name 	= 'id';				
+					if (!isset($current_obj->$id_name) || empty($current_obj->$id_name) ) {
+						$checked = '';
+						$html .= "<span class=\"error\">".label::get_label('sin_fichero')."</span>";
+					}else{
+						$ar_parts 	= explode('/', $current_obj->id);
+						$zotero_id  = end($ar_parts);
+						$file_name 	= trim($zotero_id).'.pdf';
+						$file_path 	= TOOL_IMPORT_ZOTERO_UPLOAD_DIR . $file_name;
+						if(!file_exists($file_path)) {
+							$checked = '';
+							$html .= "<span class=\"error\">".label::get_label('sin_fichero')."</span>";
+						}
 					}
 				}
+				#dump($file_name, ' file_name ++ '.to_string());
 				
 				#
 				# Checkbox
-				$html .= "<input type=\"checkbox\" name=\"import_zotero_checkbox[]\" value=\"$key\" $checked />";
-
+				$html .= "<input type=\"checkbox\" id=\"import_zotero_checkbox_$key\" name=\"import_zotero_checkbox[]\" value=\"$key\" $checked />";
 
 				#
 				# Title
 				if (property_exists($current_obj, 'title')) {
-					$html .= '<span>'.$current_obj->title.'</span>';
+					$html .= '<label for="import_zotero_checkbox_'.$key.'">'.$current_obj->title.'</label>';
 				}else{
 					$html .= '<span> </span>';
-				}
-				
+				}				
 
 				#
 				# Button go_to_file
 				# $section_id = tool_import_zotero::get_section_id_from_zotero_id($current_obj->id); OLD WORLD
-				$optional_id = 'call-number';
-				if (isset($current_obj->$optional_id)) {
-					$section_id = (int)$current_obj->$optional_id;	// Optionally, if is defined zotero->call-number, use this as section id
+				$section_id = null;
+				if (defined('ZOTERO_IMPORT_SOURCE_ID') && ZOTERO_IMPORT_SOURCE_ID!==false) {					
+					$optional_id = ZOTERO_IMPORT_SOURCE_ID;
+					if (isset($current_obj->$optional_id)) {
+						$section_id = (int)$current_obj->$optional_id;	// Optionally, if is defined zotero->call-number, use this as section id
+					}
 				}else{
-					$section_id = (int)$current_obj->id;	// Default, get from zotero id
-				}
+					$ar_parts 	= explode('/', $current_obj->id);
+					$zotero_id  = end($ar_parts);
+					$section_id = tool_import_zotero::get_section_id_from_zotero_id($zotero_id);
+				}				
+
 				
 				if ($section_id>0) {
 					$url='?t='.$section_tipo.'&id='.$section_id;			
@@ -135,7 +168,7 @@ if (empty($ar_files[0])) {
 						$html .= " [$section_id]";
 					}
 					$html .= "</div>";
-				}				
+				}
 
 				$html .= '</caption>';
 				$added_caption=true;			
@@ -154,7 +187,14 @@ if (empty($ar_files[0])) {
 				# TD Type (like rsc52)
 				if(SHOW_DEBUG) {
 					$html .= '<td>';
-					$html .= "$current_tipo";
+					$html .= $current_tipo;
+					if (!empty($current_tipo)) {
+						try{
+							$html .= ' - '.RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
+						} catch (Exception $e) {
+						    debug_log(__METHOD__." Exception: ".$e->getMessage(), logger::DEBUG);
+						}
+					}					
 					$html .= '</td>';
 				}
 				
@@ -189,7 +229,7 @@ if (empty($ar_files[0])) {
 							$value .= "<br>".to_string($prev_value);
 						}
 					}
-					if ($name==$call_number_name) {
+					if ($name==$id_name) {
 						$value = trim($value).'.pdf';
 					}
 

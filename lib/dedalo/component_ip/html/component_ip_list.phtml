@@ -4,47 +4,47 @@
 
 	# ELEMENTOS
 	
-	#print "\n<!-- COMPONENT_IP [tipo:$tipo section_id_matrix:$parent] -->";	
-	print "\n <div class=\"div_ip_list\">";
+	print '<div class="div_ip_list">';
 		
 	# CONTENIDO (INPUT)
-	$html_contenido = '';
-	switch($permissions) {
+	$html_content = '';
+	switch(true) {
 			
-		case 0	:
-				$html_contenido .= ''; 		
+		case $permissions===0	:
+				$html_content .= '';
 				break;
 					
 		case ($permissions>=1)	:
 			
-				$html_contenido .= "\n <span class=\"css_span_dato list_ip_dato\"
-				data-tipo=\"{$tipo}\"
-				data-section_tipo=\"{$section_tipo}\"
-				data-parent=\"{$parent}\"
-				data-lang=\"{$lang}\"
-				>$dato</span>";
+				$html_content .= "<span class=\"css_span_dato list_ip_dato\" ";
+				$html_content .= "data-tipo=\"{$tipo}\" ";
+				$html_content .= "data-section_tipo=\"{$section_tipo}\" ";
+				$html_content .= "data-parent=\"{$parent}\" ";
+				$html_content .= "data-lang=\"{$lang}\" ";
+				$html_content .= ">";
+				$html_content .= $dato;
+				$html_content .= "</span>";
 
 				# GEOIP FLAGS : geoip_info
 				if (isset($geoip_info) && is_object($geoip_info)) {
 					
-					#$html_contenido .= "\n<span class=\"city_span\">$geoip_info->city</span>" ;
-					$html_contenido .= "\n<a href=\"$geoiptoolURL\" target=\"_blank\" title=\"Info\">";
-					# Flag (http://cdn.whatismyipaddress.com/images/flags/mx.png)							
-					$html_contenido .= "\n<img src=\"".DEDALO_LIB_BASE_URL."/themes/default/flags/{$geoip_info->code}.gif\" class=\"flag_img\" title=\"$geoip_info->continent $geoip_info->country $geoip_info->region_name\" />" ; 
-					#$html_contenido .= "\n<img src=\"http://cdn.mmcreation.com/icon/flags-iso/flat/16/".strtolower($code).".png\" class=\"flag_img\" title=\"$continent_code $country $region_name\" />" ;			
-					$html_contenido .= "\n</a>";
-				}		
-				
-				
-				break;					
-							
+					#$html_content .= "<span class=\"city_span\">$geoip_info->city</span>" ;
+					$html_content .= '<a href="'.$geoiptoolURL.'" target="_blank">';
+					# Flag (http://cdn.whatismyipaddress.com/images/flags/mx.png)
+					$flag_url 	= DEDALO_LIB_BASE_URL.'/themes/default/flags/'.$geoip_info->code.'.gif';
+					$title 		= $geoip_info->continent .' '. $geoip_info->country .' '. $geoip_info->region_name;
+					$html_content .= '<img src="'.$flag_url.'" class="flag_img" title="'.$title.'" />'; 
+					$html_content .= '</a>';
+				}
+				break;
 	}	
 
 	
 	# PRINT HTML	
-	print $html_contenido;
+	print $html_content;
 
 
-	print "\n </div><!-- /div_ip_list -->";
+	print '</div><!-- /div_ip_list -->';
+	
 	
 ?>

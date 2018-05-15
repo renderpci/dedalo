@@ -17,21 +17,18 @@
 		
 					if (!empty($dato)) {
 
-						$dato_keys = array_keys((array)$dato);	
-						#dump($ar_proyectos_section,"ar_proyectos_section");
-						#dump($dato_keys,"dato_keys");
-
 						$html_contenido .= "<ul>";
-						foreach ($ar_proyectos_section as $project_id => $project_name) {
+						foreach ($ar_proyectos_section as $key => $row) {
 
-							if (!in_array($project_id, $dato_keys)) continue; # Skip
+							if (!locator::in_array_locator( $row->locator, (array)$dato )) {
+								continue;
+							}
 
-							#$html_contenido .= "\n <span class=\"css_span_dato\" title=\"$project_id\">$project_name</span>, ";
-							$html_contenido .= "<li title=\"project_id: $project_id\">$project_name</li>";
+							$html_contenido .= "<li title=\"project_id: $row->locator->section_id\">$row->label</li>";
 						}
 						$html_contenido .= "</ul>";	
-					}			
-					break;					
+					}
+					break;
 										
 	}
 	

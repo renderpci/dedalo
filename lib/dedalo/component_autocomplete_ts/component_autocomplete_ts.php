@@ -70,9 +70,9 @@
 
 				$ar_referenced_tipo 	= $this->get_ar_referenced_tipo();
 				$ar_referenced_tipo_json= json_handler::encode($this->get_ar_referenced_tipo());
-				
-				$ar_comparison_operators = $this->build_search_comparison_operators();
-				$ar_logical_operators 	 = $this->build_search_logical_operators();
+			
+				# q_operator is injected by trigger search2
+				$q_operator = $this->q_operator;
 
 				# SOURCE_MODE
 				$source_mode = $this->get_source_mode();

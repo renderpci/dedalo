@@ -94,28 +94,8 @@ class component_select extends component_relation_common {
 		}
 
 		return $lang;
-	}#end get_valor_lang
+	}//end get_valor_lang
 	
-
-
-	/**
-	* GET_VALOR_EXPORT
-	* Return component value sended to export data
-	* @return string $valor
-	*/
-	public function get_valor_export( $valor=null, $lang=DEDALO_DATA_LANG, $quotes, $add_id ) {
-
-		# When is received 'valor', set as dato to avoid trigger get_dato against DB 
-		# Received 'valor' is a json string (array of locators) from previous database search
-		if (!is_null($valor)) {
-			$dato = json_decode($valor);
-			$this->set_dato($dato);
-		}
-		$valor = $this->get_valor($lang);
-		
-		return $valor;
-	}#end get_valor_export
-
 
 
 	/**
@@ -202,6 +182,27 @@ class component_select extends component_relation_common {
 
 		return (string)$diffusion_value;
 	}//end get_diffusion_value
+
+
+
+	/**
+	* GET_DIFFUSION_DATO
+	* @return 
+	*/
+	public function get_diffusion_dato() {
+
+			$dato = $this->get_dato();
+			if (is_array($dato)) {
+				$ar_id =array();
+				foreach ($dato as $current_locator) {
+					$ar_id[] = $current_locator->section_id;
+				}
+				$final_dato = $ar_id;
+			}
+			$diffusion_value = json_encode($final_dato);
+
+		return (string)$diffusion_value;
+	}//end get_diffusion_dato
 
 	
 

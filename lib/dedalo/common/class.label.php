@@ -34,7 +34,7 @@
  		# DEBUG NOT STORE SESSION LABELS
  		#if(SHOW_DEBUG===true) unset($ar_label);
 
- 		if(isset(label::$ar_label[$lang])) return label::$ar_label[$lang];		
+ 		if(isset(label::$ar_label[$lang])) return label::$ar_label[$lang];
 
 
 		switch (true) {
@@ -65,8 +65,11 @@
 				}								
 		}
 
-		return label::$ar_label[$lang];
- 	}
+		$ar_label = label::$ar_label[$lang];
+	
+
+		return $ar_label;
+ 	}//end get_ar_label
  	
 
  	/**
@@ -182,6 +185,53 @@
 			
 		return $ar_label;
 	}//end set_static_label_vars
+
+
+
+	/**
+	* GET_TERMINOID_FROM_LABEL
+	* Resolve terminoID from label propiedades property 'label'
+	*/
+	public static function get_terminoID_from_label( $label ) {
+
+		if(SHOW_DEBUG===true) $start_time=microtime(1);
+
+		$terminoID = null;	
+		
+		if(SHOW_DEBUG===true) {
+			global$TIMER;$TIMER[__METHOD__.'_IN_'.microtime(1)]=microtime(1);			
+		}		
+		
+		$ar_terminoID_by_modelo_name = (array)RecordObj_dd::get_ar_terminoID_by_modelo_name($modelo_name='label'); 
+			#dump($ar_terminoID_by_modelo_name,'$ar_terminoID_by_modelo_name',"label: label ");
+		
+		foreach ($ar_terminoID_by_modelo_name as $current_terminoID) {
+			
+			$RecordObj_dd 	= new RecordObj_dd($current_terminoID);			
+			$propiedades 	= $RecordObj_dd->get_propiedades();
+			$vars_obj 		= json_decode($propiedades);
+
+			# No data in field 'propiedades'
+			if(empty($vars_obj) || empty($vars_obj->name)) {
+				trigger_error("Term $current_terminoID with model 'label' dont't have properly configurated 'propiedades'. Please solve this ASAP");
+				continue;
+			}			
+
+			if ($vars_obj->name===$label) {
+				$terminoID = $current_terminoID;
+				break;
+			}
+		}		
+
+		if(SHOW_DEBUG===true) {
+			global$TIMER;$TIMER[__METHOD__.'_OUT_'.microtime(1)]=microtime(1);
+			#error_log("Calculated labels ".count($ar_terminoID_by_modelo_name));
+			debug_log(__METHOD__." Total  ".exec_time_unit($start_time,'ms').' ms');
+		}
+
+			
+		return $terminoID;
+	}//end get_terminoID_from_label
 
 
 

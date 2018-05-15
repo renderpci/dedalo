@@ -14,6 +14,13 @@
 			
 			if ($modelo_name==='section') continue;
 
+			$current_lang = $lang;
+			$RecordObj_dd = new RecordObj_dd($current_tipo);
+			if ($RecordObj_dd->get_traducible()==='no') {
+				$current_lang = DEDALO_DATA_NOLAN;
+			}
+			#dump($current_lang, ' current_lang ++ '.to_string($current_tipo));
+
 			/*
 			if ($modelo_name!='component_input_text') {
 				if(SHOW_DEBUG) {
@@ -27,7 +34,7 @@
 														 $current_tipo,
 														 $parent= DEDALO_SECTION_ID_TEMP,
 														 'edit',
-														 $lang,
+														 $current_lang,
 														 $target_section_tipo);
 			$component->set_context($component_context);
 				//dump($component, ' component ++ '.to_string());

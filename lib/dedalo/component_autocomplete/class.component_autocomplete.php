@@ -189,7 +189,7 @@ class component_autocomplete extends component_relation_common {
 	*/
 	public function get_valor_export( $valor=null, $lang=DEDALO_DATA_LANG, $quotes, $add_id ) {
 		
-		if (is_null($valor)) {
+		if (empty($valor)) {
 			$dato = $this->get_dato();				// Get dato from DB
 		}else{
 			$this->set_dato( json_decode($valor) );	// Use parsed json string as dato
@@ -216,7 +216,7 @@ class component_autocomplete extends component_relation_common {
 		foreach ($ar_terminos_relacionados as $key => $ar_value) {
 			$modelo = key($ar_value);
 			$tipo 	= $ar_value[$modelo];
-			if (!in_array($modelo, $ar_skip)) {				
+			if (!in_array($modelo, $ar_skip)) {
 				$fields[] = $tipo;
 			}
 		}
@@ -250,6 +250,7 @@ class component_autocomplete extends component_relation_common {
 		if(SHOW_DEBUG===true) {
 			#return "AUTOCOMPLETE: ".$valor_export;
 		}
+
 		return $valor_export;
 	}//end get_valor_export
 
@@ -606,13 +607,16 @@ class component_autocomplete extends component_relation_common {
 
 		# Remove option of sub_select_by_id (not work on left joins)
 		$search_query_object->allow_sub_select_by_id = false;
+		# Avoid auto add filter by user projects in search
+		$search_query_object->skip_projects_filter 	 = true;
 
 		if(SHOW_DEBUG===true) {
-			debug_log(__METHOD__." search_query_object ".json_encode($search_query_object,  JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT), logger::DEBUG);
+			debug_log(__METHOD__." search_query_object ".json_encode($search_query_object, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT), logger::DEBUG);
 		}		
 		
 		$search_development2 = new search_development2($search_query_object);
 		$rows_data 		 	 = $search_development2->search();
+			#dump($rows_data, ' rows_data ++ '.to_string());
 
 		$ar_result = [];
 		foreach ($rows_data->ar_records as $key => $row) {			
@@ -630,6 +634,11 @@ class component_autocomplete extends component_relation_common {
 			foreach ($row as $key => $value) {
 				if ($key==='section_id' || $key==='section_tipo') continue;
 				if(!empty($value)) {
+					#if ($decoded_value = json_decode($value)) {
+					#	if (is_object($decoded_value)) {
+							$value = component_common::get_value_with_fallback_from_dato_full( $value, $mark=false );
+					#	}
+					#}
 					$ar_full_label[] = $value;
 				}
 			}
@@ -779,7 +788,6 @@ class component_autocomplete extends component_relation_common {
 		if ($section_tipo!==DEDALO_SECTION_PROJECTS_TIPO) {
 			# All except main section Projects
 			$target_ar_filter  = section::get_ar_children_tipo_by_modelo_name_in_section($target_section_tipo, 'component_filter', true, true);
-
 			if (!isset($target_ar_filter[0])) {
 				if(SHOW_DEBUG===true) {
 					throw new Exception("Error Processing Request. target component_filter is not defined! ($target_section_tipo)", 1);
@@ -789,7 +797,7 @@ class component_autocomplete extends component_relation_common {
 			$target_component_filter = component_common::get_instance('component_filter',
 																	  $target_ar_filter[0],
 																	  $section_id,
-																	  'edit',
+																	  'list', // 'list' mode avoid autosave default project
 																	  DEDALO_DATA_NOLAN,
 																	  $target_section_tipo);
 			$target_component_filter->set_dato($source_component_filter_dato);
@@ -812,12 +820,19 @@ class component_autocomplete extends component_relation_common {
 			
 			if (isset($propiedades->filtered_by)) foreach($propiedades->filtered_by as $current_tipo => $current_value) {
 				#dump($current_value, ' current_tipo - '.$current_tipo);
+
+				$current_lang = DEDALO_DATA_LANG;
+				$RecordObj_dd = new RecordObj_dd($current_tipo);
+				if ($RecordObj_dd->get_traducible()==='no') {
+					$current_lang = DEDALO_DATA_NOLAN;
+				}
+
 				$curren_modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
 				$component 			= component_common::get_instance($curren_modelo_name,
 																	$current_tipo,
 																	$section_id,
 																	'edit',
-																	DEDALO_DATA_LANG,
+																	$current_lang,
 																	$target_section_tipo);
 				$component->set_dato($current_value);
 				$component->Save();
@@ -837,13 +852,19 @@ class component_autocomplete extends component_relation_common {
 		# )
 		#
 		foreach ($ar_data as $current_tipo => $current_value) {
+
+			$current_lang = DEDALO_DATA_LANG;
+			$RecordObj_dd = new RecordObj_dd($current_tipo);
+			if ($RecordObj_dd->get_traducible()==='no') {
+				$current_lang = DEDALO_DATA_NOLAN;
+			}
 			
 			$curren_modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
 			$component = component_common::get_instance($curren_modelo_name,
 														$current_tipo,
 														$section_id,
 														'edit',
-														DEDALO_DATA_LANG,
+														$current_lang,
 														$target_section_tipo);	
 			$component->set_dato( $current_value );
 			$component->Save();
@@ -1238,11 +1259,36 @@ class component_autocomplete extends component_relation_common {
 	*/
 	public function get_diffusion_value( $lang=null ) {
 	
+		$this->valor = null;
+	
+		$this->set_lang($lang);
+
 		$diffusion_value = $this->get_valor($lang);
 		$diffusion_value = strip_tags($diffusion_value);
 
 		return (string)$diffusion_value;
 	}//end get_diffusion_value
+
+
+
+	/**
+	* GET_DIFFUSION_DATO
+	* @return 
+	*/
+	public function get_diffusion_dato() {
+
+			$dato = $this->get_dato();
+			if (is_array($dato)) {
+				$ar_id =array();
+				foreach ($dato as $current_locator) {
+					$ar_id[] = $current_locator->section_id;
+				}
+				$final_dato = $ar_id;
+			}
+			$diffusion_value = json_encode($final_dato);
+
+		return (string)$diffusion_value;
+	}//end get_diffusion_dato
 
 
 

@@ -100,8 +100,10 @@ function autocomplete2($json_data) {
 		$response->msg = "Trigger Error. Invalid search_query_object";
 		return $response;
 	}
-	debug_log(__METHOD__." search_query_object ".to_string($search_query_object), logger::DEBUG);
-	#dump(null, ' trigger search_query_object ++ '. json_encode($search_query_object, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT)); die();
+	if(SHOW_DEBUG===true) {
+		#debug_log(__METHOD__." search_query_object ".to_string($search_query_object), logger::DEBUG);
+		#dump(null, ' trigger search_query_object ++ '. json_encode($search_query_object, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT)); die();
+	}	
 
 	$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 

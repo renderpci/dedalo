@@ -13,7 +13,7 @@
 	print "data-parent=\"{$parent}\" ";
 	print "data-lang=\"{$lang}\" ";
 	print "data-modo=\"{$modo}\" ";
-	print "data-dato='$dato_string' ";
+	print "data-dato='{$dato_string}' ";
 	print "data-component_name=\"{$component_name}\" ";
 	# Override component info to avoid load component tools here
 	#print "data-component_info='{$component_info}' ";
@@ -39,7 +39,7 @@
 					break;	
 
 						
-		case ($permissions>=2) :					
+		case ($permissions>=2) :
 		
 					$html_content .= "<ul class=\"group\">";
 					$i=1; foreach ($ar_list_of_values->result as $value => $rotulo) {
@@ -52,7 +52,8 @@
 						$locator->from_key 	= $this->caller_dataset->caller_key;
 
 						$value = (string)json_encode($locator);
-						
+							#dump($locator, ' locator ++ '.to_string( $tipo ));
+
 						
 						#$checked  	= in_array($locator, $dato) ? 'checked="checked"' : '';
 						$checked  	= locator::in_array_locator( $locator, $dato, $ar_properties=array('section_tipo','section_id','type','from_key') ) ? 'checked="checked"' : '';

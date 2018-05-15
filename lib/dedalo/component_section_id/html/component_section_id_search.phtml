@@ -25,13 +25,9 @@
 	
 	# CONTENIDO (INPUT)
 	$html_content = '';
-	#switch($permissions) {
+	switch(true) {
 
-		#case ($permissions>=1) :
-
-				# COMPARISON OPERATORS
-				$html_content .= operator::get_search_comparison_operators_html($tipo,$ar_comparison_operators);
-				
+		case ($permissions>=1) :
 				
 				# INPUT
 				$html_content .= "<input class=\"input_css_section_id\" type=\"text\" name=\"{$search_input_name}\" ";
@@ -42,13 +38,12 @@
 				#$html_content .= "placeholder=\"$allowed_operators\" ";
 				$html_content .= "/>";
 
-				# LOGICAL OPERATORS
-				$html_content .= operator::get_search_logical_operators_html($tipo,$ar_logical_operators);
 
 				if(SHOW_DEBUG===true) {
 					$html_content .= "<span class=\"debug_info\">$search_input_name</span>";
 				}
-	#}
+				break;
+	}
 
 	# Prepare content to show in page
 	tools::prepare_content($html_content);

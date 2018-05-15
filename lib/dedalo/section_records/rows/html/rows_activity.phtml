@@ -9,10 +9,11 @@
 	# CONTENIDO (INPUT)
 	$html_contenido  = '<tr>';	
 	
-	switch($permissions) {
+	switch(true) {
 			
-		case 0	:	$html_contenido .= "<span class=\"css_span_dato\"> ".label::get_label('sin_acceso')." </span>";
-					break;
+		case ($permissions===0) :
+				$html_contenido .= "<span class=\"css_span_dato\"> ".label::get_label('sin_acceso')." </span>";
+				break;
 		
 		case ($permissions>=1):
 
@@ -30,9 +31,7 @@
 				$html_contenido .= '<td class="section_list_td_border section_list_td_row">';					
 											
 					# ID TEXT
-					$html_contenido .= $section_id.' ';
-					#$html_contenido .= $current_id.' ';
-					
+					$html_contenido .= $section_id.' ';								
 
 					if(SHOW_DEBUG===true) {
 						#$html_contenido .= '<br>'.$section_id.' ';

@@ -31,6 +31,9 @@ class tool_time_machine extends tool_common {
 	public $section_tipo;
 	public $user_name;
 
+	public $limit;
+	public $offset;
+
 	/*
 	* Queda unificar el comportamiento con tool lang ... <-----------------------
 	*/
@@ -54,6 +57,7 @@ class tool_time_machine extends tool_common {
 		#$this->load_data_from_component();
 		#$this->load_structure_data();
 		
+		return true;
 	}//end __construct
 
 
@@ -62,13 +66,13 @@ class tool_time_machine extends tool_common {
 	* STATIC COMPOUND ARRAY OF TIME_MACHINE OBJTECTS (ONE FOR EVERY TIME_MACHINE RECORD)
 	* @see Used by trigger.tool_time_machine.php
 	*/
-	public static function get_ar_component_time_machine($tipo, $parent, $lang=NULL, $section_tipo) {
+	public static function get_ar_component_time_machine($tipo, $parent, $lang=null, $section_tipo, $limit=10, $offset=0) {
 
 		# Creamos un objeto time_machine con los datos recibidos
-		$RecordObj_time_machine		= new RecordObj_time_machine(NULL);
+		$RecordObj_time_machine		= new RecordObj_time_machine(null);
 
 		# creamos un array con las coincidencias existentes
-		$ar_time_machine_records	= $RecordObj_time_machine->get_ar_time_machine_of_this($tipo, $parent, $lang, $section_tipo);
+		$ar_time_machine_records	= $RecordObj_time_machine->get_ar_time_machine_of_this($tipo, $parent, $lang, $section_tipo, $limit, $offset);
 			#dump($ar_time_machine_records,'ar_time_machine_records'); exit();
 
 		$ar_time_machine_obj = array();
@@ -82,7 +86,7 @@ class tool_time_machine extends tool_common {
 			# Add current TM object
 			$ar_time_machine_obj[]	= $RecordObj_time_machine;
 		}
-		#dump($ar_time_machine_obj,"ar_time_machine_obj");
+		
 
 		return $ar_time_machine_obj;
 	}//end get_ar_component_time_machine
@@ -95,7 +99,7 @@ class tool_time_machine extends tool_common {
 	*/
 	public static function get_ar_sections_time_machine($section_tipo) {
 
-		if($section_tipo === DEDALO_ACTIVITY_SECTION_TIPO) return NULL;
+		if($section_tipo===DEDALO_ACTIVITY_SECTION_TIPO) return null;
 
 		if(SHOW_DEBUG) $start_time = start_time();
 
@@ -118,7 +122,8 @@ class tool_time_machine extends tool_common {
 		$arguments['tipo']				= $section_tipo ;
 		$arguments['state']				= 'deleted';
 		$arguments['order_by_asc']		= 'id';
-		$RecordObj_time_machine			= new RecordObj_time_machine(NULL);
+		#$arguments['sql_limit']			= 5;
+		$RecordObj_time_machine			= new RecordObj_time_machine(null);
 		#$RecordObj_time_machine->set_use_cache(false);
 		$ar_records_tm 					= (array)$RecordObj_time_machine->search($arguments);
 			#dump($ar_records_tm,"ar_records_tm for tipo: $section_tipo ".print_r($arguments,true));#die();
@@ -130,7 +135,7 @@ class tool_time_machine extends tool_common {
 			$arguments=array();
 			$arguments['strPrimaryKeyName']= 'id_matrix' ;
 			$arguments['id']				= $current_id_tm ;			
-			$RecordObj_time_machine			= new RecordObj_time_machine(NULL);
+			$RecordObj_time_machine			= new RecordObj_time_machine(null);
 			$RecordObj_time_machine->set_use_cache(false);
 			$ar_records 					= $RecordObj_time_machine->search($arguments);
 			$id_matrix = $ar_records[0];
@@ -208,8 +213,7 @@ class tool_time_machine extends tool_common {
 		$section->restore_deleted_section_media_files();
 		if(SHOW_DEBUG) {
 			#dump($section, ' section');
-		}
-		
+		}		
 
 
 		# LOGGER ACTIVITY : QUE(action normalized like 'LOAD EDIT'), LOG LEVEL(default 'logger::INFO'), TIPO(like 'dd120'), DATOS(array of related info)
@@ -281,7 +285,7 @@ class tool_time_machine extends tool_common {
 
 	/**
 	* UPDATE_RECORDS_IN_TIME_MACHINE
-	* @return 
+	* @return array $ar_time_machine_obj
 	*/
 	public static function update_records_in_time_machine($tipo, $parent, $lang=NULL, $section_tipo) {
 
@@ -305,14 +309,14 @@ class tool_time_machine extends tool_common {
 		}
 		#dump($ar_time_machine_obj,"ar_time_machine_obj");exit();
 
-		return $ar_time_machine_obj;
-		
-	}#end update_records_in_time_machine
+		return $ar_time_machine_obj;		
+	}//end update_records_in_time_machine
 
 
 
 	/**
 	* GET SOURCE LANGS
+	* @return array $ar_source_langs
 	*/
 	public function get_source_langs() {
 		
@@ -322,6 +326,11 @@ class tool_time_machine extends tool_common {
 		foreach ($component_ar_langs as $current_lang) {
 
 			$name = lang::get_name_from_code($current_lang);
+
+			if (empty($name)) {
+				$name = $current_lang;
+			}
+
 			$ar_source_langs[$current_lang] = $name;
 		}
 	

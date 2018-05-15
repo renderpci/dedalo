@@ -488,8 +488,9 @@ abstract class subtitles {
 		$string = str_replace('<br />', " ", $string);				# convert br to ' '	
 		$string = str_replace('<strong>', '<b>', $string);
 		$string = str_replace('</strong>', '</b>', $string);
-		$string = str_replace('<em>', '<i>', $string);	
-		$string = str_replace('</em>', '</i>', $string);							
+		$string = str_replace('<em>', '<i>', $string);
+		$string = str_replace('</em>', '</i>', $string);
+		$string = str_replace(['&nbsp;'], [' '], $string);
 		
 		$options = new stdClass();
 			$options->deleteTC = false;

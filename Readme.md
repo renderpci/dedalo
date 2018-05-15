@@ -6,17 +6,18 @@
 
 Dédalo is a knowledge management system for Cultural Heritage (tangible and intangible), Natural Heritage and Oral History/Memory. 
 
-Dédalo is a Open Source software based in a new paradigm of programing: develop objects with a ontology model and control the app flow with the ontology descriptors, related terms, no descriptors, TG, TE, etc. The objects have a MVC structure linked to the ontology and the database is a NoSQL model. The data is stored in JSONB (binary).
+Dédalo is a Open Source software based in a new paradigm of programing: develop objects with a ontology model. The ontology control the app flow with the descriptors, related terms, no descriptors, TG, TE, etc. The objects are builded with a MVC structure and are linked to the ontology. The database use a NoSQL model, all data is stored in JSONB (binary).
 
-Dédalo use the structure Ontology for three things:
+Dédalo use the structured Ontology for three things:
 
 	1. Make the data structured. (user data is stored without fixed structure)
-	2. Do the programing objects in the execution time (in real time).
+	2. Build the programing objects in the execution time (in real time).
 	3. Interpret the code and the data and translate to multiple formats (RDF, JSON-LD, SQL, CSV, XML, Dublin Core, HTML, PDF, etc)
 
 The ontology can be changed in the time and this will change the data and the programing code; you can develop new functionalities without change the data, and you can change the metadata without change the code or the data.
 
-Dédalo is based in linked data model, and use a relative, multireference and universal locator. THe locator can find a entity, section, component, and tag. In other words, the locator can find, archives (in others entities), records, fields, and part of the fields (sub-field data).
+Dédalo is based in linked data model, and use a relative, multireference and universal locator. The locator can find:
+entity, section, component, and tag. In other words, the locator can find, archives (in others entities), records, fields, and part of the fields (sub-field data).
 
 Dédalo is a real multilingual app (Dédalo can use any language) in the interface and the managed data, has a multi-thesaurus engine and manage multiple resources and resolutions for video, image, pdf, notation scores, etc. 
 
@@ -35,7 +36,7 @@ Some projects using Dédalo to manage their Cultural Heritage or Oral Archive:
 <p><strong>Projects: </strong> 
 
 <p><a href="http://museoprehistoriavalencia.org/web_mupreva/?q=en" target="_blank">Museu de Prehistòria de València</a></p>	
-<p><a href="http://bancmemorial.gencat.cat/web/home/?&amp;lang=eng" target="_blank">Memorial Democràtic</a> (Banco audiovisual de la Memoria Colectiva)</p>
+<p><a href="http://bancmemorial.gencat.cat/web/home/?&amp;lang=eng" target="_blank">Memorial Democràtic</a> (Banco audiovisual de Memoria Colectiva)</p>
 <p><a href="http://www.mujerymemoria.org" target="_blank">Mujer y Memoria</a> (Woman and Memory - Mothers and daughters of the Spanish transition. An oral history project)</p>	
 <p><a href="http://memorialdemocratic.gencat.cat/ca/exposicions/expcicions_virtuals/catalunya_en_transicio/" target="_blank">
 	Catalonia in transition</a> (Transition in Catalonia - Memorial Democràtic)</p>
@@ -49,7 +50,7 @@ Some projects using Dédalo to manage their Cultural Heritage or Oral Archive:
 
 - PHP 7.0+
 - Apache 2.4.2+
-- Postgres 9.5+
+- Postgres 9.6+
 - MySQL 5.6+ (NOT REQUIRED, only if you want use it for publication)
 
 *libs required for the Dédalo*
@@ -96,8 +97,8 @@ Some projects using Dédalo to manage their Cultural Heritage or Oral Archive:
 6. Change the file /lib/dedalo/config/sample.config4_db.php with your DB configuration.
 7. Rename the /lib/dedalo/config/sample.config4_db.php to /lib/dedalo/config/config4_db.php.
 8. Run Dédalo into the browser. 
-9. Fix your root password (you can change only once), the default account is: root (this user is a superuser and only for development or debuger the application).
-10. Create one Administrator user account with all access to the system.(this user will be the administrator of the system)
+9. Fix your root password (you can change it only once), the default account is: root (this user is a superuser and only for development or debuger the application).
+10. Create one Administrator user account with all access to the system. This user will be the administrator of the system.
 11. Logout and login with the Administrator acount.
 12. Create Users and Projects as you need.
 Optional: Import the toponymy that you will need (Dédalo install DB will not provide specific toponymy by default anymore).
@@ -106,12 +107,12 @@ Optional: Import the toponymy that you will need (Dédalo install DB will not pr
 
 *Please read the "Updates.md" file for specific notes, procedures, etc, of the versions.*
 
-Dédalo have three updates procedures:
+Dédalo have three main updates procedures:
 
 1. Update the code files (php, js, css, html, etc)
 	-  Make backup of all files.
 	-  Download the new files and change the files in your server
-	-  You will need see the new config files and put the changes into your own config files (/lib/dedalo/config4.php and /lib/dedalo/config4_db.php) is not possible change it automatically because are the configuration specific of the users. If you don't change the config files, Dédalo will require the new "define" variables and will stop the app.
+	-  You will need see the new config files and put the changes into your own config files (/lib/dedalo/config4.php and /lib/dedalo/config4_db.php) is not possible change this files automatically because are the configuration files and has specific pw and paths of the users. If you don't change the config files, Dédalo will require the new "define" variables and will stop the app.
 
 2. Update the ontology structure with the sections, components, list, etc
 	-  Do the first update step
@@ -132,7 +133,7 @@ Dédalo have three updates procedures:
 
 **IMPORT TOPONYMY**
 
-1. first create the toponymy into the Hierarchy menu into THesaurus:
+1. first create the toponymy into the Hierarchy menu into Thesaurus:
 	-  Login in Dédalo
 	-  Go to "Thesaurus -> Hierarchy" section
 	-  Find the country that you want import
@@ -168,26 +169,26 @@ Dédalo in the server part is tested into the next Operating Systems:
 - CentOS 6.5 (deprecated update as soon as possible), 6.6, 7.1
 - Red Hat Enterprise Linux 6.5 (deprecated update as soon as possible), 6.6, 7.1
 - Debian 8.7
-- MacOsX 10.8 (deprecated update as soon as possible), 10.9, 10.10+
+- MacOsX 10.9 (deprecated update as soon as possible), 10.10, 10.11+
 
 All other Linux will be compatible but we don't test it.
 
-Windows: is possible that Dédalo can run, but NO TESTED.
+Windows: is possible that Dédalo can run, but we NO TESTED.
 
 **USE**
 
 Dédalo version 4, is only certificated and proved into the webkit browsers (Chrome, Safari,...). 
-Firefox situation: Is possible use Firefox, but not in production, this version of Dédalo(V4.7+) is compatible, but we need feedback from the users, please comment your experience. 
+Firefox situation: This version of Dédalo(V4.8+) is full compatible, and can be used in production, but we need more feedback from the users, please comment your experience. 
 
 Browser	|	Version |	certificated
 --------- | --------- | ---------
 Chrome	|	60+ | YES - recomended
 Chrome	|	50+ | Deprecated (Please update as soon as posible)	 
 Chrome	|	0 to 50 | NO	 
-Safari	|	9+ | YES
-Safari	|	7 to 8 | Deprecated (Please update as soon as posible)
-Safari	|	0 to 6 | NO	
-Firefox	|	49+ | The compatibility now is complete, but we need feedback to resolve issues in the diary work with Firefox (15-09-2017), please test it and comment it.
+Safari	|	9+ | YES;Safari has a conflict with the users section with the pw component and the browser autofill. USE IT WITH CARE.
+Safari	|	8 | Deprecated (Please update as soon as posible)
+Safari	|	0 to 7 | NO	
+Firefox	|	50+ | The compatibility now is complete, but we need feedback to resolve issues in the diary work with Firefox (28-03-2018), please test it and comment it.
 Firefox	|	40-49 | NO
 Firefox	|	0-40 | NO
 EDGE	| All 	| For us NO, we don't test it. But, is possible that Dédalo run fine in the last versions, because Microsoft say that EDGE is ECMA and HTML5 standards compatible. But we insist that we don't test it.

@@ -115,7 +115,7 @@ class records_search extends common {
 	/**
 	* GET_AR_SEARCH_FIELDS
 	* Localiza los componentes de la sección actual que quedarán disponibles como filtros para las búsquedas
-	*/
+	*//*
 	protected function get_ar_search_fields() {
 
 		# CACHE	
@@ -222,7 +222,7 @@ class records_search extends common {
 		}
 
 		return (array)$ar_search_fields ;
-	}//end get_ar_search_fields
+	}//end get_ar_search_fields */
 
 
 

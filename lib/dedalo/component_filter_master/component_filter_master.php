@@ -13,8 +13,7 @@
 	$debugger				= $this->get_debugger();
 	$permissions			= common::get_permissions($section_tipo,$tipo);
 	$ejemplo				= NULL;
-	$html_title				= "Info about $tipo";
-	$valor					= $this->get_valor();
+	$html_title				= "Info about $tipo";	
 	$lang					= $this->get_lang();
 	$identificador_unico	= $this->get_identificador_unico();
 	$component_name			= get_class($this);
@@ -27,7 +26,7 @@
 	switch($modo) {
 		
 		case 'edit'	:
-				$ar_proyectos_section = (array)$this->get_ar_proyectos_section();
+				$ar_proyectos_section = (array)$this->get_ar_projects_for_current_section();
 				$id_wrapper = 'wrapper_'.$identificador_unico;
 				$input_name = "{$tipo}_{$parent}";
 				$component_info 	= $this->get_component_info('json');
@@ -48,8 +47,22 @@
 				$file_name 	= 'edit';	
 				break;
 
+		case 'search' :
+				# dato is injected by trigger search wen is needed
+				$dato = isset($this->dato) ? $this->dato : null;
+				
+				# Nothing to do
+				#return print "$component_name. working here..";
+				#$ar_comparison_operators 	= $this->build_search_comparison_operators();
+				#$ar_logical_operators 		= $this->build_search_logical_operators();
+							
+				# Search input name (var search_input_name is injected in search -> records_search_list.phtml)
+				# and recovered in component_common->get_search_input_name()
+				# Normally is section_tipo + component_tipo, but when in portal can be portal_tipo + section_tipo + component_tipo
+				$search_input_name = $this->get_search_input_name();
+				#break;
 		case 'ajax'		:	
-				$ar_proyectos_section = $this->get_ar_proyectos_section(); #die();
+				$ar_proyectos_section = $this->get_ar_projects_for_current_section(); #die();
 				break;
 						
 		case 'search'	:
@@ -73,7 +86,8 @@
 					echo "<span class=\"error\">Proyects is empty.<br>Please set at least one</span>";
 					return;
 				}
-				$ar_proyectos_section = (array)$this->get_ar_proyectos_section();
+				# $valor = $this->get_valor();
+				$ar_proyectos_section = (array)$this->get_ar_projects_for_current_section();
 				if(SHOW_DEBUG) {
 					#dump($ar_proyectos_section, " ar_proyectos_section ".to_string());
 				}

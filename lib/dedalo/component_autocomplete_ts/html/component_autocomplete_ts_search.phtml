@@ -22,10 +22,6 @@
 		case 1	:
 		case 2	:
 		case 3	:
-			#
-			# COMPARISON OPERATORS
-			$html_content .= operator::get_search_comparison_operators_html($tipo,$ar_comparison_operators);
-
 			
 			#
 			# VALOR . STRING RESOLVED TO SHOW
@@ -95,10 +91,7 @@
 			title='$ar_referenced_tipo_json'
 			/>";		
 
-			#
-			# LOGICAL OPERATORS
-			$html_content .= operator::get_search_logical_operators_html($tipo,$ar_logical_operators);
-
+			
 			if(SHOW_DEBUG===true) {
 				$html_content .= "<span class=\"debug_info\">$search_input_name</span>";
 			}

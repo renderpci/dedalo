@@ -14,7 +14,7 @@
 	print "data-modo=\"{$modo}\" ";
 	print "data-dato='{$dato_json}' ";
 	print "data-component_name=\"{$component_name}\" ";
-	print "data-component_info='{$component_info}' ";
+	print "data-component_info='{$component_info}' ";	
 	print ">";
 
 	# ETIQUETA (LABEL)
@@ -39,7 +39,9 @@
 				# CONTEXT
 				# Set as disabled on time machine context 
 				$disabled = (isset($context->context_name) && $context->context_name=='tool_time_machine') ? 'disabled="disabled"' : '';
-		
+						
+
+
 				$html_content .= "<select class=\"css_select_lang\" ";
 				$html_content .= "onchange=\"component_select_lang.Save(this)\" ";
 				$html_content .= "onfocus=\"component_common.select_wrap(null,'$id_wrapper')\" ";
@@ -69,10 +71,14 @@
 					foreach ((array)$ar_all_project_select_langs as $current_lang_code => $current_label) {
 			
 						$current_locator 		= lang::get_lang_locator_from_code($current_lang_code);
+						
+						# Set from component tipo
+						#$current_locator->from_component_tipo = $tipo;
+						
 						$current_locator_json 	= json_encode($current_locator);
 
 						# Selected
-						$selected 				= locator::in_array_locator( $current_locator, (array)$dato, $ar_properties=array('section_id','section_tipo') ) ? 'selected' : false;
+						$selected = locator::in_array_locator( $current_locator, (array)$dato, $ar_properties=array('section_id','section_tipo') ) ? 'selected' : false;
 						if ($selected!==false) {
 							$option_selected = true;
 						}
@@ -101,7 +107,7 @@
 
 
 				if(SHOW_DEVELOPER===true) {
-					$html_content .= " <span class=\"debug_info notes\">".json_encode($dato)."</span>";
+					$html_content .= "<span class=\"debug_info notes\">".json_encode($dato)."</span>";
 					$html_content .= "<span class=\"component_select_lang_debug debug_info\">".exec_time($start_time)."</span>";					
 				}				
 				break;

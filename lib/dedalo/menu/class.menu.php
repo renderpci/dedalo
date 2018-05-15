@@ -35,7 +35,7 @@ class menu extends common {
 			$arguments_tree['dato'] = $ar_authorized_areas;
 				#dump($ar_authorized_areas,'ar_authorized_areas');
 		}
-
+	#dump($ar_authorized_areas, ' arguments_tree ++ '.to_string());
 		$html = self::get_menu_structure_html($option='create_link', $arguments_tree);
 		
 		if(SHOW_DEBUG===true) {
@@ -222,7 +222,6 @@ class menu extends common {
 			$user_id_logged 			 = navigator::get_user_id();
 			$logged_user_is_global_admin = component_security_administrator::is_global_admin($user_id_logged);
 
-		
 		foreach((array)$ar_structure as $tipo => $value) {
 
 			$show = true;
@@ -242,6 +241,8 @@ class menu extends common {
 			# current logged user is not global admin, current <li> element
 			# is not included in final tree html
 			*/
+			//	dump($arguments_tree['dato'], ' $arguments_tree['dato'] ++ '.to_string());die();
+
 			if(isset($arguments_tree['dato'])) {
 
 				$dato = $arguments_tree['dato'];

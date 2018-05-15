@@ -255,14 +255,14 @@ class dd_date extends stdClass {
 
 		# month
 		if (!isset($month) || $month<1) {
-		  $month = 1;
+		  $month = 0;
 		}
 		if($padding===true)
 		$month = sprintf("%02d", $month);
 
 		# day
 		if (!isset($day) || $day<1) {
-		  $day = 1;
+		  $day = 0;
 		}
 		if($padding===true)
 		$day = sprintf("%02d", $day);
@@ -338,7 +338,7 @@ class dd_date extends stdClass {
 
 
 	/**
-	* set_date_from_input_field
+	* SET_DATE_FROM_INPUT_FIELD
 	* @return dd_date object $this
 	*/
 	public function set_date_from_input_field( $search_field_value ) {

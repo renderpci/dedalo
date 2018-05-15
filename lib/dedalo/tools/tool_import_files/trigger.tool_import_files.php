@@ -308,6 +308,11 @@ function import_files($json_data) {
 			$total++;
 		}//end foreach ((array)$ar_data as $key => $value_obj)
 
+	//reset the temporary section of the components, for empty the fields.
+	if (isset($_SESSION['dedalo4']['section_temp_data'][$temp_data_uid])) {
+			unset( $_SESSION['dedalo4']['section_temp_data'][$temp_data_uid]);
+	}
+
 	$response->result 	= true;
 	$response->msg 		= 'Import files done successfully. Total: '.$total ." of " .count($ar_data);
 

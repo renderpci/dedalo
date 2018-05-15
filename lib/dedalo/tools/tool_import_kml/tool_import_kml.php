@@ -57,7 +57,13 @@
 
 
 				# Project temporal value
-				$this->project_dato = json_decode('{"'.DEDALO_DEFAULT_PROJECT.'":2}');				
+				$filter_locator = new locator();
+					$filter_locator->set_section_tipo(DEDALO_FILTER_SECTION_TIPO_DEFAULT);
+					$filter_locator->set_section_id(DEDALO_DEFAULT_PROJECT);
+					$filter_locator->set_type(DEDALO_RELATION_TYPE_FILTER);
+					$filter_locator->set_from_component_tipo($component_tipo);
+				$project_dato 		= [$filter_locator];
+				$this->project_dato = $project_dato;
 				break;
 
 		case 'upload':

@@ -40,6 +40,13 @@ switch ($m) {
 		# Thumb obj
 		$thumb = new Thumb($source);
 		break;
+
+	case 'free':
+		$source = DEDALO_MEDIA_BASE_PATH .'/'. $SID;
+		#dump($source, ' source ++ '.to_string());
+		# Thumb obj
+		$thumb = new Thumb($source);
+		break;
 	
 	default:
 		throw new Exception("Error Processing Request. Mode $m is not valid!", 1);		

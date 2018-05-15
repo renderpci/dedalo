@@ -7,6 +7,38 @@ $updates = new stdClass();
 
 
 
+$v=490; #####################################################################################
+$updates->$v = new stdClass();
+
+	# UPDATE TO
+	$updates->$v->version_major 	 = 4;
+	$updates->$v->version_medium 	 = 9;
+	$updates->$v->version_minor 	 = 0;
+
+	# MINIM UPDATE FROM
+	$updates->$v->update_from_major  = 4;
+	$updates->$v->update_from_medium = 8;
+	$updates->$v->update_from_minor  = 3;
+
+
+	#UPDATE COMPONENTS
+	# Note that current update saves data directly in 'relations' container and geenrate table relations relations all in one pass
+	$updates->$v->components_update = ['component_filter_master','component_filter'];
+
+
+	# DATABASE UPDATES
+	require_once( dirname(dirname(__FILE__)) .'/upgrades/class.reference_dato_v47_to_relation_dato_v48.php');
+
+	# Update datos to section_data
+	$script_obj = new stdClass();
+		$script_obj->info   		= "Convert dato of some reference components (component_filter), to new relation dato format (like component_relation..)";
+		$script_obj->script_class   = "reference_dato_v47_to_relation_dato_v48";
+		$script_obj->script_method  = "convert_table_data";
+		$script_obj->script_vars    = [json_encode(['component_filter_master','component_filter']), $move_to_relations_container=false]; // Note that only ONE argument as array is sended
+	$updates->$v->run_scripts[] = $script_obj;
+	
+
+
 $v=483; #####################################################################################
 $updates->$v = new stdClass();
 
@@ -44,6 +76,17 @@ $updates->$v = new stdClass();
 			CREATE INDEX relations_target_section_tipo_section_tipo ON public.relations USING btree (target_section_tipo,section_tipo);
 			CREATE INDEX relations_target_section_id_section_id ON public.relations USING btree (target_section_id,section_id);
 			");*/
+
+	# DATABASE UPDATES
+	require_once( dirname(dirname(__FILE__)) .'/upgrades/class.reference_dato_v47_to_relation_dato_v48.php');
+
+	# Update datos to section_data
+	$script_obj = new stdClass();
+		$script_obj->info   		= "Convert dato of some reference components (component_publication, component_select_lang), to new relation dato format (like component_relation..)";
+		$script_obj->script_class   = "reference_dato_v47_to_relation_dato_v48";
+		$script_obj->script_method  = "convert_table_data";
+		$script_obj->script_vars    = json_encode(['component_publication','component_select_lang']); // Note that only ONE argument encoded is sended
+	$updates->$v->run_scripts[] = $script_obj;
 
 
 	$script_obj = new stdClass();
@@ -138,7 +181,7 @@ $updates->$v = new stdClass();
 
 
 	#UPDATE COMPONENTS
-	$updates->$v->components_update = ['component_date'];				
+	$updates->$v->components_update = ['component_date'];	// Force recalculate inaccurate time			
 
 
 

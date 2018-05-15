@@ -108,8 +108,11 @@ class tool_tr_print extends tool_common {
 					$ar_final[$tc_tag] = $value_obj;
 				}
 			}
-		}//foreach ($ar_fragments as $key => $value) {
-		#dump($ar_final, ' $ar_final ++ '.to_string());
+		}//foreach ($ar_fragments as $key => $value) 
+
+		if(SHOW_DEBUG===true) {
+			#dump($ar_final, ' $ar_final ++ '.to_string()); die();
+		}		
 		
 		#$response->result = self::format_text_for_tool( $raw_text );
 		$response->result = true;
@@ -117,6 +120,104 @@ class tool_tr_print extends tool_common {
 
 		return (object)$response;
 	}//end get_ar_tc_text
+
+
+
+	/**
+	* BUILD_PSEUDO_VTT
+	* @return string $vtt_text
+	*/
+	public static function build_pseudo_vtt( $ar_tc_text, $duration ) {
+		$vtt_text = '';
+
+		if (empty($ar_tc_text)) {
+			return $vtt_text;
+		}
+
+		$ar_lines = [];
+
+		// Remove array keys
+		$ar_tc_base = array_values($ar_tc_text);
+
+		foreach ($ar_tc_base as $key => $obj_value) {		
+
+			$current_tc = $obj_value->tc;
+			$next_tc 	= isset($ar_tc_base[$key+1]) ? $ar_tc_base[$key+1]->tc : $duration;
+			$text 		= tool_tr_print::clean_vtt_text($obj_value->fragment);		
+			
+			$ar_lines[] =  $key+1 .PHP_EOL . $current_tc . htmlentities(' --> ') . $next_tc . PHP_EOL . $text . PHP_EOL;
+		}
+
+		$vtt_text = 'WEBVTT' . PHP_EOL . PHP_EOL . implode(PHP_EOL, $ar_lines);
+	
+
+		return $vtt_text;
+	}//end build_pseudo_vtt
+
+
+
+	/**
+	* GET_AV_DURATION
+	* @return string $av_duration
+	*	Timecode like '00:01:55.680'
+	*/
+	public function get_av_duration() {
+		
+		# Actually rsc35
+		$related_component_av_tipo = $this->component_obj->get_related_component_av_tipo();
+		
+		$modelo_name  	= RecordObj_dd::get_modelo_name_by_tipo($related_component_av_tipo,true);
+		$parent 		= $this->component_obj->get_parent();
+		$section_tipo 	= $this->component_obj->get_section_tipo();
+		$component_av 	= component_common::get_instance($modelo_name,
+														 $related_component_av_tipo,
+														 $parent,
+														 'list',
+														 DEDALO_DATA_NOLAN,
+														 $section_tipo);
+
+
+		$av_duration = $component_av->get_duration_seconds('timecode');
+
+		return $av_duration;
+	}//end get_av_duration
+
+
+
+	/**
+	* CLEAN_VTT_TEXT
+	* @return string $text
+	*/
+	public static function clean_vtt_text($text) {
+
+		#$text = subtitles::clean_text_for_subtitles($text);
+
+		# CONVERT ENCODING (Traducciones mal formadas provinientes de Babel)
+		html_entity_decode($text);
+
+		$text	= strip_tags($text, '<br><strong><em>');
+
+		$text = str_replace(['<br />','<br>'], "\n", $text);
+		$text = str_replace('<strong>', '<b>', $text);
+		$text = str_replace('</strong>', '</b>', $text);
+		$text = str_replace('<em>', '<i>', $text);
+		$text = str_replace('</em>', '</i>', $text);
+		$text = str_replace(['&nbsp;'], [' '], $text);
+		$text = str_replace(['  ',"\n\n"], [' ',"\n"], $text);
+		$text = str_replace(['  ',"\n\n"], [' ',"\n"], $text);
+		$text = str_replace(["\n</b>"], ['<b>'], $text);
+
+		$text = TR::deleteMarks($text);
+
+		$text = preg_replace("/^:[ ]?/", "", $text);
+
+		$text = subtitles::revise_tag_in_line($text,'b');
+		$text = subtitles::revise_tag_in_line($text,'i');
+
+		$text = trim($text);
+
+		return $text;
+	}//end clean_vtt_text
 
 
 
@@ -239,8 +340,8 @@ class tool_tr_print extends tool_common {
 														  $section_tipo);
 			$dato    = $component->get_dato();
 			$value 	 = null;
-			if (!empty($dato)) {			
-			$dd_date = new dd_date($dato);	 // dd_date::get_date_with_format( $dato, $format="Y-m-d" );			
+			if (!empty($dato[0])) {
+			$dd_date = new dd_date($dato[0]);	 // dd_date::get_date_with_format( $dato, $format="Y-m-d" );
 			$value   = $dd_date->get_dd_timestamp($date_format="d-m-Y");
 			}
 			$tr_data->date = $value;

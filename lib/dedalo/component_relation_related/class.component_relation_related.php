@@ -255,26 +255,6 @@ class component_relation_related extends component_relation_common {
 
 
 	/**
-	* GET_VALOR_EXPORT
-	* Return component value sended to export data
-	* @return string $valor
-	*/
-	public function get_valor_export( $valor=null, $lang=DEDALO_DATA_LANG, $quotes, $add_id ) {
-
-		# When is received 'valor', set as dato to avoid trigger get_dato against DB 
-		# Received 'valor' is a json string (array of locators) from previous database search
-		if (!is_null($valor)) {
-			$dato = json_decode($valor);
-			$this->set_dato($dato);
-		}
-		$valor = $this->get_valor($lang);
-		
-		return $valor;
-	}#end get_valor_export
-
-
-
-	/**
 	* GET_DATO_WITH_REFERENCES
 	* return the full dato of the component, the real dato with the calculated references
 	* @return 
@@ -312,7 +292,11 @@ class component_relation_related extends component_relation_common {
 				$references = [];
 				break;
 		}
-
+		
+		if(SHOW_DEBUG===true) {
+			#dump($references, ' references ++ '.to_string());
+		}
+	
 		return $references;		
 	}//end get_calculated_references
 
@@ -529,7 +513,7 @@ class component_relation_related extends component_relation_common {
 					$element->section_id 			= $dato_locator->section_id;
 					$element->from_component_tipo 	= $dato_locator->from_component_tipo;
 					#$element->label 				= ts_object::get_term_by_locator( $dato_locator, DEDALO_DATA_LANG, $from_cache=true);
-					$element->label 				= self::get_locator_value( $dato_locator, DEDALO_DATA_LANG, null ,false, $ar_componets_related, $divisor);
+					$element->label 				= self::get_locator_value( $dato_locator, DEDALO_DATA_LANG, null, false, $ar_componets_related, $divisor); // $locator, $lang=DEDALO_DATA_LANG, $section_tipo, $show_parents=false, $ar_componets_related=false, $divisor=false
 				
 				# Only add dato when is recursion, not at the first call
 				if ($recursion===true) {
@@ -540,21 +524,21 @@ class component_relation_related extends component_relation_common {
 
 				# References to dato
 				# Recursion (dato)
-				$ar_result 		= self::get_references_recursive($tipo, $dato_locator, $type_rel , true );
+				$ar_result 		= self::get_references_recursive($tipo, $dato_locator, $type_rel , true);
 				$ar_references 	= array_merge($ar_references, $ar_result);
 			}		
 
 			# References to references
 			foreach ($ar_references as $key => $current_locator) {
 				# Recursion (references)
-				$ar_result = self::get_references_recursive($tipo, $current_locator, $type_rel, true );
+				$ar_result = self::get_references_recursive($tipo, $current_locator, $type_rel, true);
 				$ar_references = array_merge($ar_references, $ar_result);
 			}
 			#dump($ar_resolved, ' ar_resolved ++ '.to_string());
 
 		}//end if ($type_rel===DEDALO_RELATION_TYPE_RELATED_MULTIDIRECTIONAL_TIPO)
 
-
+	
 		return $ar_references;
 	}//end get_references_recursive
 
@@ -674,7 +658,7 @@ class component_relation_related extends component_relation_common {
 						break;
 				}*/
 
-				$label = self::get_locator_value( $element, DEDALO_DATA_LANG, null ,false, $ar_componets_related, $divisor);
+				$label = self::get_locator_value( $element, DEDALO_DATA_LANG, null, false, $ar_componets_related, $divisor );
 
 				$element->label = $label;
 			}else{
@@ -816,8 +800,16 @@ class component_relation_related extends component_relation_common {
 
 			// Remove first 2 elements of array (section_tipo, srection_id)
 			$ar_fields = array_slice($ar_values,2);
+			#dump($ar_fields, ' ar_fields ++ '.to_string());
 
-			$current_label = implode($divisor, $ar_fields);
+			$ar_label = [];
+			foreach ($ar_fields as $field_tipo => $field_value) {
+				if (!empty($field_value)) {
+					$ar_label[] = component_common::get_value_with_fallback_from_dato_full( $field_value, $decore_untranslated=false );
+				}				
+			}
+
+			$current_label = implode($divisor, $ar_label);
 		
 			$ar_result[$locator_json] = $current_label;
 		}
@@ -825,6 +817,29 @@ class component_relation_related extends component_relation_common {
 		
 		return (array)$ar_result;
 	}//end autocomplete_search2
+
+
+
+	/**
+	* GET_DIFFUSION_VALUE
+	* Overwrite component common method
+	* Calculate current component diffusion value for target field (usually a mysql field)
+	* Used for diffusion_mysql to unify components diffusion value call
+	* @return string $diffusion_value
+	*
+	* @see class.diffusion_mysql.php
+	*/
+	public function get_diffusion_value( $lang=null, $type=false ) {
+	
+		$diffusion_value = $this->get_valor($lang, $format='array');
+		$diffusion_value = implode('<br>', $diffusion_value);
+		$diffusion_value = strip_tags($diffusion_value, '<br>');
+			#dump($diffusion_value, ' diffusion_value ++ '.to_string());
+		#$term = $this->get_legacy_political_map_term( DEDALO_DATA_LANG, $dato_key=0, $type='municipality');
+			#dump($term, ' term ++ '.to_string());
+
+		return (string)$diffusion_value;
+	}//end get_diffusion_value
 
 
 

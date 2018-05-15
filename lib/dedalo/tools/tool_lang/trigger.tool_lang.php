@@ -166,7 +166,8 @@ function automatic_translation($json_data) {
 					return $response;
 				}
 			}	
-
+			#debug_log(__METHOD__." options ".to_string($json_data), logger::DEBUG);
+			
 	// Options are the same as reveived json_data object
 	$options  = $json_data;
 	$response = tool_lang::automatic_translation($options);

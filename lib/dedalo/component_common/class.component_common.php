@@ -28,7 +28,7 @@ abstract class component_common extends common {
 		protected $required;				# field is required . Valorar de usar 'Usable en Indexación' (tesauro) para gestionar esta variable
 		protected $debugger;				# info for admin
 		protected $ejemplo;					# ex. 'MO36001-GA'
-		protected $ar_tools_name = array('tool_time_machine','tool_lang','tool_replace_component_data');
+		protected $ar_tools_name = array('tool_time_machine','tool_lang','tool_replace_component_data','tool_add_component_data');
 		protected $ar_tools_obj;
 		protected $ar_authorized_tool_name;
 
@@ -118,7 +118,9 @@ abstract class component_common extends common {
 			$ar_valid_modo = array('edit','list','search','simple','list_tm','tool_portal','tool_lang','edit_tool','indexation','selected_fragment','tool_indexation','tool_transcription','print','edit_component','load_tr','update','portal_list','list_thesaurus','portal_list_view_mosaic','edit_in_list','edit_note','tool_structuration','dataframe_edit');
 			if ( empty($modo) || !in_array($modo, $ar_valid_modo) ) {
 				#dump($modo," modo");
-				#throw new Exception("Error Processing Request. trying to use wrong var: '$modo' as modo to load as component", 1);			
+				if(SHOW_DEBUG===true) {
+					throw new Exception("Error Processing Request. trying to use wrong var: '$modo' as modo to load as component", 1);	;
+				}						
 				debug_log(__METHOD__." trying to use empty or invalid modo: '$modo' as modo to load component $tipo. modo: ".to_string($modo), logger::DEBUG);	
 			}
 			if ( empty($lang) || strpos($lang, 'lg-')===false ) {
@@ -294,7 +296,13 @@ abstract class component_common extends common {
 		# Establecemos el lenguaje preliminar (aunque todavía no están cargados lo datos de matrix, ya tenemos la información de si es o no traducible
 		# a partir de la carga de la estructura)
 		if ($this->traducible==='no') {
-			$this->lang = DEDALO_DATA_NOLAN;
+			$propiedades = $this->get_propiedades();
+			if (isset($propiedades->with_lang_versions) && $propiedades->with_lang_versions===true) {	
+				# Allow tool lang on non translatable components				
+			}else{
+				# Force nolan
+				$this->lang = DEDALO_DATA_NOLAN;
+			}			
 		}		
 				
 		$this->ar_tools_obj		= false;
@@ -397,7 +405,7 @@ abstract class component_common extends common {
 	*/
 	protected function get_dato() {
 
-		if(isset($this->dato_resolved)) {			
+		if(isset($this->dato_resolved)) {
 			return $this->dato_resolved;
 		}
 		
@@ -1035,7 +1043,7 @@ abstract class component_common extends common {
 	/**
 	* LOAD TOOLS
 	*/
-	public function load_tools() {
+	public function load_tools( $check_lang_tools=true ) {
 
 		if(strpos($this->modo, 'edit')===false ){
 			if(SHOW_DEBUG===true) {
@@ -1050,14 +1058,15 @@ abstract class component_common extends common {
 		# Load all tools of current component
 		$ar_tools_name = $this->get_ar_tools_name();
 			#dump($ar_tools_name,'ar_tools_name PRE AUTH');
-
-		$traducible = $this->RecordObj_dd->get_traducible();
-			#dump($traducible,"traducible");
-		
-		if ($traducible==='no' || $this->lang===DEDALO_DATA_NOLAN) {
-			$key = array_search('tool_lang',$ar_tools_name);
-			if($key!==false){
-				unset($ar_tools_name[$key]);			    	
+				
+		# check_lang_tools default is true
+		if ($check_lang_tools===true) {
+			$traducible = $this->RecordObj_dd->get_traducible();
+			if ($traducible==='no' || $this->lang===DEDALO_DATA_NOLAN) {
+				$key = array_search('tool_lang',$ar_tools_name);
+				if($key!==false){
+					unset($ar_tools_name[$key]);
+				}
 			}
 		}
 		#dump($ar_tools_name,'ar_tools_name PRE AUTH');
@@ -1120,7 +1129,7 @@ abstract class component_common extends common {
 	*/
 	public function get_valor_export( $valor=null, $lang=DEDALO_DATA_LANG, $quotes, $add_id ) {
 		
-		if (is_null($valor)) {
+		if (empty($valor)) {
 			$valor = $this->get_valor($lang);
 		}
 
@@ -1776,19 +1785,7 @@ abstract class component_common extends common {
 					$current_lang = $RecordObj_dd->get_traducible()==='no' ? DEDALO_DATA_NOLAN : DEDALO_DATA_LANG;
 
 					$filter_propiedades .= "AND datos#>'{components,$current_component_tipo,dato,$current_lang}' @> '$current_value_flat'::jsonb ";
-					if ($p_value!==$end_value) $filter_propiedades .=" \n";
-					/*
-					#$p_value = json_encode($p_value);
-					#dump($p_value," p_value:$p_key");
-					#$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($p_key);								
-					$RecordObj_dd 	= new RecordObj_dd($p_key);
-					$current_lang 	= ($RecordObj_dd->get_traducible() =='no' ? DEDALO_DATA_NOLAN : $lang);
-					$filter_propiedades .= "AND ".JSON_RecordObj_matrix::build_pg_filter('btree','datos',$p_key,$current_lang,$p_value);					
-					#dump($filter_propiedades," filter_propiedades");
-					//AND datos#>'{components,rsc90,dato,lg-nolan}' @> '[{"section_tipo": "dd911","section_id": "3"}]'::jsonb
-					//AND datos #>'{components,rsc90,dato,lg-nolan}' ?| array['section_id','section_tipo'] '
-					if ( $p_value != end($this->propiedades->filtered_by) ) $filter_propiedades .=" \n";
-					*/
+					if ($p_value!==$end_value) $filter_propiedades .=" \n";					
 				}
 			}
 
@@ -3522,6 +3519,53 @@ abstract class component_common extends common {
 
 
 	/**
+	* GET_VALUE_WITH_FALLBACK_FROM_DATO_FULL
+	* Recive a full dato of translatable component and try to find a no empty lang
+	* Expected dato is a string like '{"lg-eng": "", "lg-spa": "Comedor"}'
+	* @return string $value
+	*/
+	public static function get_value_with_fallback_from_dato_full( string $dato_full_json, $decore_untranslated=false ) {
+		
+		if (!$decoded_obj = json_decode($dato_full_json)) {
+			debug_log(__METHOD__." Error on decode dato_full_json ".to_string($dato_full_json ), logger::ERROR);
+			return $dato_full_json;
+		}
+	
+		$value = '';
+
+		$current_lang 	= DEDALO_DATA_LANG;
+		$default_lang 	= DEDALO_APPLICATION_LANGS_DEFAULT;
+		$is_fallback	= false;
+		if (!empty($decoded_obj->$current_lang)) {
+			// Current lang
+			$value = $decoded_obj->$current_lang;		
+		}else{
+			// Fallbacks
+			if($current_lang!==DEDALO_APPLICATION_LANGS_DEFAULT && !empty($decoded_obj->$default_lang)) {				
+				$value = $decoded_obj->$default_lang;
+				$is_fallback = true;
+			}else{
+				// Select the first not empty				
+				foreach ($decoded_obj as $c_lang => $c_value) {
+					if (!empty($c_value)) {
+						$value = $c_value;
+						$is_fallback = true;
+						break;
+					}
+				}
+			}
+		}
+
+		if ($is_fallback===true && $decore_untranslated===true) {
+			$value = self::decore_untranslated($value);
+		}
+
+		return $value;
+	}//end get_value_with_fallback_from_dato_full
+
+
+
+	/**
 	* GET_JSON_build_options
 	* Collect vars to js call to component for build html
 	* @return object $options
@@ -3662,7 +3706,7 @@ abstract class component_common extends common {
 
 			# Fix dataframe
 			$component_data 	= $section->get_all_component_data($this->tipo);
-				#dump($component_data, ' component_data ++ '.to_string());
+				#dump($component_data, ' component_data ++ '.to_string($this->tipo));
 			if (isset($component_data->dataframe)) {
 				$this->dataframe 	= (array)$component_data->dataframe;
 			}else{
@@ -3687,7 +3731,12 @@ abstract class component_common extends common {
 			return $this->permissions;
 		}
 
-		$this->permissions = common::get_permissions($this->section_tipo, $this->tipo);	
+		# Thesaurus exception
+		if ($this->section_tipo===DEDALO_THESAURUS_SECTION_TIPO && $this->modo==='search') {
+			$this->permissions = 2; // Allow users to search in thesaurus
+		}else{
+			$this->permissions = common::get_permissions($this->section_tipo, $this->tipo);	
+		}
 
 
 		return $this->permissions;
@@ -3765,8 +3814,12 @@ abstract class component_common extends common {
 						$filter_group->$logical_operator[] = $filter_element;
 					}
 				# SELECT . Select_element (select_group)
+					# Add options lang
+					$end_path = end($path);
+					$end_path->lang = $options->lang;
+
 					$select_element = new stdClass();
-						$select_element->path 	= $path;
+						$select_element->path = $path;						
 
 					$select_group[] = $select_element;
 			}
@@ -3795,7 +3848,7 @@ abstract class component_common extends common {
 	* @return 
 	*/
 	public static function get_search_query2( $query_object ) {
-		#dump($query_object, ' query_object ++ '.to_string());
+		#dump($query_object, ' query_object original ++ '.to_string());
 		
 		# Example
 			# {
@@ -3818,9 +3871,9 @@ abstract class component_common extends common {
 			# }
 
 		# Empty q case
-		if (empty($query_object->q)) {
+		#if (empty($query_object->q)) {
 			#return array();
-		}
+		#}
 
 		$component_tipo = end($query_object->path)->component_tipo;
 
@@ -3838,7 +3891,7 @@ abstract class component_common extends common {
 
 		# split multiple
 		$current_query_object = component_common::split_query($query_object);
-		#dump($ar_query_object, ' ar_query_object ++ '.to_string()); die();
+			#dump($current_query_object, ' current_query_object aftert split ++ '.to_string()); die();
 		# conform each object
 		if (search_development2::is_search_operator($current_query_object)===true) {
 			foreach ($current_query_object as $operator => $ar_elements) {
@@ -3887,23 +3940,31 @@ abstract class component_common extends common {
 		# component path
 		if(!isset($select_object->component_path)) {
 
-			$component_tipo = end($select_object->path)->component_tipo;        	
+			$end_path 		= end($select_object->path);
+			$component_tipo = $end_path->component_tipo; 
 
-			if (isset($select_object->lang)) {
-				$lang = $select_object->lang;
-			}else{
-				$RecordObj_dd = new RecordObj_dd($component_tipo);
-				$traducible   = $RecordObj_dd->get_traducible();
-				if ($traducible!=='si') {
-					$default_lang = DEDALO_DATA_NOLAN;
+			if (isset($end_path->lang) && $end_path->lang==='all') {				
+	      		$select_object->component_path = ['components',$component_tipo,'valor_list'];
+	      	}else{
+
+		      	if (isset($end_path->lang)) {
+					$lang = $end_path->lang;
 				}else{
-					$default_lang = DEDALO_DATA_LANG;
+					$RecordObj_dd = new RecordObj_dd($component_tipo);
+					$traducible   = $RecordObj_dd->get_traducible();
+					if ($traducible!=='si') {
+						$default_lang = DEDALO_DATA_NOLAN;
+					}else{
+						$default_lang = DEDALO_DATA_LANG;
+					}
+					$lang = $default_lang;
 				}
-				$lang = $default_lang;
-			}
 
-			# Set default
-			$select_object->component_path = ['components',$component_tipo,'valor_list',$lang];
+				# Set default
+				$select_object->component_path = ['components',$component_tipo,'valor_list',$lang];
+	      	}
+
+			
 		}
 
 		if(!isset($select_object->type)) {
@@ -4068,6 +4129,17 @@ abstract class component_common extends common {
 
 		return $def;
 	}//end get_def
+
+
+
+	/**
+	* GET_MY_SECTION
+	* @return 
+	*/
+	public function get_my_section() {
+
+		return section::get_instance($this->parent, $this->section_tipo);
+	}//end get_my_section
 
 
 

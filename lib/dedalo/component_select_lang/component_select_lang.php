@@ -62,8 +62,9 @@
 				$dato = isset($this->dato) ? $this->dato : null;
 				
 				$ar_all_project_select_langs	= common::get_ar_all_langs_resolved(DEDALO_DATA_LANG);				
-				#$ar_comparison_operators 		= $this->build_search_comparison_operators();
-				#$ar_logical_operators 	 		= $this->build_search_logical_operators();
+				
+				# q_operator is injected by trigger search2
+				$q_operator = isset($this->q_operator) ? $this->q_operator : null;
 
 				# Search input name (var search_input_name is injected in search -> records_search_list.phtml)
 				# and recovered in component_common->get_search_input_name()

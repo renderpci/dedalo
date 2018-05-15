@@ -79,9 +79,12 @@
 
 		# ROWS . Records of current componet existing in 'matrix_time_machine'
 		case 'rows':
+
+				$limit  = isset($this->limit) ? $this->limit : 10;
+				$offset = isset($this->offset) ? $this->offset : 0;
 				
 				# ROWS ARRAY 
-				$ar_component_time_machine	= tool_time_machine::get_ar_component_time_machine($tipo, $parent, $lang, $section_tipo);
+				$ar_component_time_machine	= tool_time_machine::get_ar_component_time_machine($tipo, $parent, $lang, $section_tipo, $limit, $offset);
 					#dump($ar_component_time_machine,"ar_component_time_machine");die();
 
 				#add name resolution to the row
@@ -90,7 +93,11 @@
 					if($userID == -1){
 						$tm_obj->user_name = 'Admin debuger';
 					}else{
-						$obj_user_name	= component_common::get_instance('component_input_text', DEDALO_FULL_USER_NAME_TIPO, $userID, 'edit', DEDALO_DATA_NOLAN, DEDALO_SECTION_USERS_TIPO);
+						$obj_user_name	= component_common::get_instance('component_input_text',
+																		 DEDALO_FULL_USER_NAME_TIPO,
+																		 $userID,
+																		 'edit',
+																		 DEDALO_DATA_NOLAN, DEDALO_SECTION_USERS_TIPO);
 						$user_name = $obj_user_name->get_valor();
 						$tm_obj->user_name =$user_name;
 					}						

@@ -55,7 +55,8 @@ class component_portal extends component_relation_common {
 		if(SHOW_DEBUG===true) {
 			$traducible = $this->RecordObj_dd->get_traducible();
 			if ($traducible==='si') {
-				throw new Exception("Error Processing Request. Wrong component lang definition. This component $tipo (".get_class().") is not 'traducible'. Please fix this ASAP", 1);				
+				#throw new Exception("Error Processing Request. Wrong component lang definition. This component $tipo (".get_class().") is not 'traducible'. Please fix this ASAP", 1);
+				trigger_error("Error Processing Request. Wrong component lang definition. This component $tipo (".get_class().") is not 'traducible'. Please fix this ASAP");			
 			}
 		}
 		/*
@@ -403,7 +404,7 @@ class component_portal extends component_relation_common {
 			$section_new = section::get_instance(null, $section_target_tipo);
 
 			$save_options = new stdClass();
-				$save_options->is_portal 	= true;
+				$save_options->is_portal 	= true; // Important set true !
 				$save_options->portal_tipo 	= $this->tipo;
 				$save_options->top_tipo 	= $options->top_tipo;
 				$save_options->top_id 		= $options->top_id;
@@ -421,14 +422,21 @@ class component_portal extends component_relation_common {
 		# 3 PROYECTOS SET. Creamos un nuevo registro de filtro ('component_filter') hijo de la nueva sección creada, que heredará los datos del filtro de la sección principal
 		# Set target section projects filter settings as current secion
 		# Los proyectos se heredan desde el registro actual donde está el portal hacia el registro destino del portal 
-			$ar_component_filter = (array)$section_new->get_ar_children_objects_by_modelo_name_in_section('component_filter',true);
-			if (empty($ar_component_filter[0])) {
-				$msg = __METHOD__." Error target section 'component_filter' not found ! ";
+			#$ar_component_filter = (array)$section_new->get_ar_children_objects_by_modelo_name_in_section('component_filter',true);
+			$ar_tipo_component_filter = section::get_ar_children_tipo_by_modelo_name_in_section($section_target_tipo, 'component_filter', $from_cache=true, $resolve_virtual=true);
+			if (!isset($ar_tipo_component_filter[0])) {
+				$msg = __METHOD__." Error target section 'component_filter' not found in $section_target_tipo ! ";
 				trigger_error($msg);
 				$response->msg .= $msg;
 				return $response;		
-			}else {
-				$component_filter	= $ar_component_filter[0];
+			}else{
+				$component_filter 	= component_common::get_instance('component_filter',
+																	 $ar_tipo_component_filter[0],
+																	 $new_section_id,
+																	 'list', // Important 'list' to avoid auto save default value !!
+																	 DEDALO_DATA_NOLAN,
+																	 $section_target_tipo
+																	);
 				$component_filter->set_dato($component_filter_dato);
 				$component_filter->Save();
 			}
@@ -530,9 +538,13 @@ class component_portal extends component_relation_common {
 		$section 		= section::get_instance($section_id, $section_tipo);
 
 		# 1.1 PROYECTOS DE PROYECTOS : Portales de la sección proyectos
-		if ($section_tipo===DEDALO_SECTION_PROJECTS_TIPO) {
+		if ($section_tipo===DEDALO_FILTER_SECTION_TIPO_DEFAULT) {
 			
-			$component_filter_dato 	= array($section_id=>"2"); # Será su propio filtro
+			#$component_filter_dato 	= array($section_id=>"2"); # Será su propio filtro
+			$filter_locator = new locator();
+				$filter_locator->set_section_tipo($section_tipo);
+				$filter_locator->set_section_id($section_id);
+			$component_filter_dato = [$filter_locator];
 		
 		}else{
 
@@ -543,10 +555,9 @@ class component_portal extends component_relation_common {
 				throw new Exception("Error Processing Request: 'component_filter' is empty 1", 1);				
 			}else {
 				$component_filter		= $ar_children_objects_by_modelo_name_in_section[0];
-				$component_filter_dato 	= $component_filter->get_dato();
+				$component_filter_dato 	= $component_filter->get_dato_generic(); // Without 'from_component_tipo' and 'type' properties
 			}
 		}
-
 
 		return $component_filter_dato;
 	}//end get_current_section_filter_data

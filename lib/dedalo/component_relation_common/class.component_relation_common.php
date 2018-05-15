@@ -41,8 +41,9 @@ class component_relation_common extends component_common {
 
 		if(SHOW_DEBUG) {
 			$traducible = $this->RecordObj_dd->get_traducible();
-			if ($traducible=='si') {
-				throw new Exception("Error Processing Request. Wrong component lang definition. This component $tipo (".get_class().") is not 'traducible'. Please fix this ASAP", 1);
+			if ($traducible==='si') {
+				#throw new Exception("Error Processing Request. Wrong component lang definition. This component $tipo (".get_class().") is not 'traducible'. Please fix this ASAP", 1);
+				trigger_error("Error Processing Request. Wrong component lang definition. This component $tipo (".get_class().") is not 'traducible'. Please fix this ASAP");
 			}
 		}
 	}//end __construct
@@ -61,34 +62,29 @@ class component_relation_common extends component_common {
 		$this->load_component_dato();
 
 		return $this->dato;
-		/*
-			if(isset($this->dato)) {
-				$dato = $this->dato;
-			}else{
-				$dato = $this->get_my_section_relations( $this->relation_type );
-				$this->bl_loaded_matrix_data = true;
-			}
-
-			if (!empty($dato) && !is_array($dato)) {
-				#dump($dato,"dato");
-				trigger_error("Error: ".__CLASS__." dato type is wrong. Array expected and ".gettype($dato)." is received for tipo:$this->tipo, parent:$this->parent");
-				$this->set_dato(array());
-				$this->Save();
-			}
-			if ($dato===null) {
-				$dato=array();
-			}
-
-			#$propiedades = $this->get_propiedades();
-			#if(isset($propiedades->source->mode) && $propiedades->source->mode === 'external'){
-			#	$dato = $this->set_dato_external($dato);	// Forces update dato with calculated external dato					
-			#}
-
-			# Fix dato
-			$this->dato = $dato;
-
-			return (array)$dato;*/
 	}//end get_dato
+
+
+
+	/**
+	* GET_DATO_GENERIC
+	* @return array $ar_generic_dato
+	*/
+	public function get_dato_generic() {
+		
+		# Dato without from_component_tipo property
+		$ar_generic_dato = [];
+		foreach ((array)$this->dato as $key => $current_locator) {
+			$generic_locator = new stdClass();
+				$generic_locator->section_tipo 	= $current_locator->section_tipo;
+				$generic_locator->section_id 	= $current_locator->section_id;
+				#$generic_locator->type 		= $current_locator->type;
+			$ar_generic_dato[] = $generic_locator;
+		}
+
+		return $ar_generic_dato;
+	}//end get_dato_generic
+
 
 
 	/**
@@ -100,8 +96,7 @@ class component_relation_common extends component_common {
 	*/
 	public function get_dato_with_references() {
 
-		return $this->get_dato();
-		
+		return $this->get_dato();		
 	}//end get_dato_with_references
 
 
@@ -132,15 +127,16 @@ class component_relation_common extends component_common {
 			foreach ((array)$dato as $key => $current_locator) {
 
 				if (!is_object($current_locator)) {
-					debug_log(__METHOD__." Error on set locator (is not object) ".json_encode($current_locator), logger::ERROR);
-					throw new Exception("Error Processing Request", 1);
-					
+					$msg = " Error on set locator (is not object) ".json_encode($current_locator);
+					trigger_error( __METHOD__ . $msg );
+					debug_log( __METHOD__ . $msg, logger::ERROR);
+					throw new Exception("Error Processing Request. Look server log for details", 1);			
 				}
 				
 				// type
 				if (!isset($current_locator->type)) {
 					$current_locator->type = $relation_type;
-					debug_log(__METHOD__." Fixed bad formed locator (empty type) [$this->section_tipo, $this->parent, $this->tipo] ".to_string(), logger::WARNING);
+					debug_log(__METHOD__." Fixed bad formed locator (empty type) [$this->section_tipo, $this->parent, $this->tipo] ". get_called_class().' '.to_string(), logger::WARNING);
 				//}else if ($current_locator->type!==$relation_type) {
 					//debug_log(__METHOD__." Fixed bad formed locator (bad type $current_locator->type to $relation_type) [$this->section_tipo, $this->parent, $this->tipo] ".to_string(), logger::WARNING);
 					//$current_locator->type = $relation_type;					
@@ -148,10 +144,10 @@ class component_relation_common extends component_common {
 				// from_component_tipo
 				if (!isset($current_locator->from_component_tipo)) {
 					$current_locator->from_component_tipo = $from_component_tipo;
-					debug_log(__METHOD__." Fixed bad formed locator (empty from_component_tipo) [$this->section_tipo, $this->parent, $from_component_tipo] ".to_string(), logger::WARNING);
+					#debug_log(__METHOD__." Fixed bad formed locator (empty from_component_tipo) [$this->section_tipo, $this->parent, $from_component_tipo] ".get_called_class().' '.to_string(), logger::WARNING);
 				}else if ($current_locator->from_component_tipo!==$from_component_tipo) {
+					debug_log(__METHOD__." Fixed bad formed locator (bad from_component_tipo $current_locator->from_component_tipo) [$this->section_tipo, $this->parent, $from_component_tipo] ".get_called_class().' '.to_string(), logger::WARNING);
 					$current_locator->from_component_tipo = $from_component_tipo;
-					debug_log(__METHOD__." Fixed bad formed locator (bad from_component_tipo $current_locator->from_component_tipo) [$this->section_tipo, $this->parent, $from_component_tipo] ".to_string(), logger::WARNING);
 				}
 			}
 		}
@@ -159,6 +155,7 @@ class component_relation_common extends component_common {
 
 		parent::set_dato( (array)$dato );	
 	}//end set_dato
+
 
 
 	/**
@@ -182,6 +179,7 @@ class component_relation_common extends component_common {
 				}
 			}
 			$dato = $this->get_dato();
+				#dump($dato, ' dato ++ '.to_string($this->tipo));
 
 			$this->dataframe = [];
 
@@ -196,6 +194,7 @@ class component_relation_common extends component_common {
 			# Set as loaded
 			$this->bl_loaded_matrix_data = true;
 		
+		return true;
 	}//end load_component_dataframe
 
 
@@ -219,18 +218,9 @@ class component_relation_common extends component_common {
 			# Set as loaded
 			$this->bl_loaded_matrix_data = true;
 		}
+
+		return true;
 	}//end load_component_dato
-	
-
-
-	/**
-	* GET_MY_SECTION
-	* @return 
-	*/
-	public function get_my_section() {
-
-		return section::get_instance($this->parent, $this->section_tipo);
-	}//end get_my_section
 
 
 
@@ -252,7 +242,13 @@ class component_relation_common extends component_common {
 			}
 			$relations = $filtered_relations;
 		#}
-
+		if(SHOW_DEBUG===true) {
+			if ($this->tipo=='rsc91') {
+				#dump($relations, ' relations ++ '.to_string());
+				#dump($relations, ' relations ++ '.to_string($this->tipo));
+			}
+		}
+	
 		return (array)$relations;
 	}//end get_my_section_relations
 
@@ -281,6 +277,8 @@ class component_relation_common extends component_common {
 		
 		# maintain array index after unset value. ! Important for encode json as array later (if keys are not correlatives, undesired object is created)
 		$dato = array_values($dato);
+
+		#dump($dato, ' dato ++ '.to_string()); dump($locator, ' locator ++ '.to_string()); die();
 		
 		# Test if already exists
 		/*
@@ -446,7 +444,7 @@ class component_relation_common extends component_common {
 		if( (empty($parent) || empty($tipo) || empty($lang)) )
 			throw new Exception("Save: More data are needed!  section_tipo:$section_tipo, parent:$parent, tipo,$tipo, lang,$lang", 1);
 
-
+	
 		# SECTION : Preparamos la sección que será la que se encargue de salvar el dato del componente
 		$section 	= section::get_instance($parent, $section_tipo);
 		$section_id = $section->save_component_dato($this, 'relation');
@@ -500,7 +498,7 @@ class component_relation_common extends component_common {
 			return $response;
 		}
 	
-		if (empty($options->from_component_tipo)) {
+		if (empty($options->from_component_tipo)) {			
 			$response->msg[] = " options->from_component_tipo is mandatory ! Stopped action";
 			$response->msg   = implode(', ', $response->msg);
 			debug_log(__METHOD__." $response->msg ".to_string(), logger::ERROR);
@@ -519,14 +517,14 @@ class component_relation_common extends component_common {
 		
 		foreach ((array)$options->ar_locators as $key => $locator) {
 
-			if(!isset($locator->from_component_tipo)) {
-				debug_log(__METHOD__." Error. empty from_component_tipo. Ignored insert locator: ".to_string($locator), logger::ERROR);
+			if(!isset($locator->section_tipo)) {
+				debug_log(__METHOD__." Error. empty section_tipo. Ignored insert locator: ".to_string($locator), logger::ERROR);
 				continue;
 			}
 
 			$target_section_tipo = $locator->section_tipo;
 			$target_section_id 	 = $locator->section_id;
-			$from_component_tipo = $locator->from_component_tipo;
+			#$from_component_tipo = $locator->from_component_tipo; // Already defined before
 
 
 			# Create new
@@ -538,9 +536,10 @@ class component_relation_common extends component_common {
 				debug_log(__METHOD__." ERROR: $msg ".to_string(), logger::ERROR);
 				$response->msg[] = $msg;
 			}else{
-				$msg = " Created relations row $section_id, $section_tipo, $from_component_tipo ";
+				$msg = " Created relations row ({$section_tipo}-{$section_id}) target_section_id:$target_section_id, target_section_tipo:$target_section_tipo, from_component_tipo:$from_component_tipo";
 				$response->msg[] = $msg;
 				if(SHOW_DEBUG===true) {
+					$msg .= ' ('.RecordObj_dd::get_termino_by_tipo($section_tipo).' - '.RecordObj_dd::get_termino_by_tipo($from_component_tipo).')';
 					debug_log(__METHOD__." OK: ".$msg, logger::DEBUG);
 				}				
 			}
@@ -611,12 +610,17 @@ class component_relation_common extends component_common {
 	* @return string $valor
 	*/
 	public static function get_locator_value( $locator, $lang=DEDALO_DATA_LANG, $section_tipo, $show_parents=false, $ar_componets_related=false, $divisor=false ) {
+		if(SHOW_DEBUG===true) {
+			$start_time=microtime(1);
+			#dump($ar_componets_related, ' ar_componets_related ++ '.to_string());;
+		}
 
 		if (empty($locator) || !is_object($locator)) {
 			return false;
 		}
 		$locator = new locator($locator);
-		if($ar_componets_related!==false){
+		if($ar_componets_related!==false && !empty($ar_componets_related)){
+
 			$value  	= array();
 			foreach ($ar_componets_related as $component_tipo) {
 				$modelo_name 	   = RecordObj_dd::get_modelo_name_by_tipo($component_tipo, true);
@@ -644,31 +648,39 @@ class component_relation_common extends component_common {
 		}else{
 
 			$valor = ts_object::get_term_by_locator( $locator, $lang, true );
-
+	
 			if ($show_parents===true) {
-				#$ar_parents = relation::get_parents_recursive( $locator );
+
+				#$ar_parents = component_relation_parent::get_parents_recursive( $locator );
 				#$ar_parents = component_relation_parent::get_parents($locator->section_id, $locator->section_tipo, $from_component_tipo=null, $ar_tables=null);
 				#$ar_parents = component_relation_parent::get_parents_recursive($locator->section_id, $locator->section_tipo);
 				# NOTE: get_parents_recursive is disabled because generate some problems to fix. For now we use only first parent
-				$ar_parents	= component_relation_parent::get_parents($locator->section_id, $locator->section_tipo);
-					#dump($ar_parents, ' $ar_parents ++ '.to_string($locator));
-
+				#$ar_parents	= component_relation_parent::get_parents($locator->section_id, $locator->section_tipo);					
+				$ar_parents   = component_relation_parent::get_parents_recursive($locator->section_id, $locator->section_tipo, $skip_root=true);			
+				$n_ar_parents = count($ar_parents);
+	
 				$ar_parents_resolved = array();
-				foreach ($ar_parents as $current_locator) {
-					$current_value 			= ts_object::get_term_by_locator( $current_locator, $lang, true );
+				$i=0;foreach ($ar_parents as $current_locator) {
+
+					// Only add first and last parent
+					#if ($i>0 && $i<($n_ar_parents-1)) {
+					#	$i++;
+					#	continue;
+					#}
+
+					$current_value = ts_object::get_term_by_locator( $current_locator, $lang, true );
 						#dump($current_parent, ' current_parent ++ '.to_string());
 					if (!empty($current_value)) {
 						$ar_parents_resolved[]  = $current_value;
-					}				
-					break;
-				}
+					}								
+					//break;
+
+				$i++;}
 				if (!empty($ar_parents_resolved)) {
-					$valor .= ', '.implode(', ', $ar_parents_resolved);
+					$valor .= ', <span class="notes">'.implode(', ', $ar_parents_resolved).'</span>';
 				}				
 			}
-		}
-
-	
+		}	
 
 
 		/*
@@ -681,6 +693,11 @@ class component_relation_common extends component_common {
 			$valor .= " <span class=\"debug_info notes\">".json_encode($locator)."</span>";
 		}
 		*/
+		if(SHOW_DEBUG===true) {
+			$total = exec_time_unit($start_time,'ms')." ms";
+			#debug_log(__METHOD__." Total time $total ".to_string(), logger::DEBUG);
+		}
+
 		
 		return (string)$valor;
 	}//end get_locator_value
@@ -1068,7 +1085,7 @@ class component_relation_common extends component_common {
 	* @return object $query_object
 	*/
 	public static function resolve_query_object_sql($query_object) {
-		
+		#dump($query_object, ' $query_object 1 ++ '.to_string());	
     	# Always set fixed values
 		$query_object->type 	= 'jsonb';
 		$query_object->unaccent = false;
@@ -1086,11 +1103,20 @@ class component_relation_common extends component_common {
 		}
 
 		$q = str_replace(array('[',']'), '', $q);
+
+		$q_operator = isset($query_object->q_operator) ? $query_object->q_operator : null;
 		
 				
         switch (true) {
+        	# IS DIFFERENT			
+			case ($q_operator==='!=' && !empty($q)):
+				$operator = '@>';
+				$q_clean  = '(\'['.$q.']\'::jsonb)=FALSE';
+				$query_object->operator = $operator;
+    			$query_object->q_parsed = $q_clean;
+				break;
         	# IS NULL
-			case ($q==='='):
+			case ($q_operator==='='):
 				$operator = '@>';
 				$q_obj = new stdClass();
 					$q_obj->from_component_tipo = end($query_object->path)->component_tipo;
@@ -1100,7 +1126,7 @@ class component_relation_common extends component_common {
     			$query_object->q_parsed	= $q_clean;
 				break;
 			# IS NOT NULL
-			case ($q==='*'):
+			case ($q_operator==='*'):
 				$operator = '@>';
 				$q_obj = new stdClass();
 					$q_obj->from_component_tipo = end($query_object->path)->component_tipo;
@@ -1108,29 +1134,38 @@ class component_relation_common extends component_common {
 				$q_clean  = '\''.json_encode($ar_q).'\'';
 				$query_object->operator = $operator;
     			$query_object->q_parsed = $q_clean;
-				break;
-			# IS DIFFERENT			
-			case (strpos($q, '!=')===0):
-				$operator = '@>';
-				$q_clean  = str_replace('!=', '', $q);
-				$query_object->operator = $operator;
-    			$query_object->q_parsed = '(\''.$q_clean.'\'::jsonb)=FALSE';
-				break;
-			# CONTAIN
-			case (strpos($q, '=')===0):			
+				break;			
+			# CONTAIN	
 			default:
-				$operator = '@>';				
+				$operator = '@>';
 				$q_clean  = '\'['.$q.']\'';
 				$query_object->operator = $operator;
-    			$query_object->q_parsed	= $q_clean;    			
+    			$query_object->q_parsed	= $q_clean;
 				break;
 		}//end switch (true) {
-
 		#dump($query_object, ' $query_object ++ '.to_string());	
        
 
         return $query_object;
 	}//end resolve_query_object_sql
+
+
+
+	/**
+	* SEARCH_OPERATORS_INFO
+	* Return valid operators for search in current component
+	* @return array $ar_operators
+	*/
+	public function search_operators_info() {
+		
+		$ar_operators = [
+			'*' 	 => 'no_vacio', // not null
+			'=' 	 => 'vacio',
+			'!=' 	 => 'distinto_de',
+		];
+
+		return $ar_operators;
+	}//end search_operators_info
 
 
 
@@ -1244,7 +1279,7 @@ class component_relation_common extends component_common {
 
 		#dump($new_dato, ' new_dato ++ '.to_string());
 			
-		$value_to_search = $new_dato;
+		$value_to_search  = $new_dato;
 		$ar_filter_fields = [];
 
 		foreach ($ar_component_to_search as $component_to_search) {
@@ -1341,9 +1376,10 @@ class component_relation_common extends component_common {
 	}//end set_dato_external
 
 
+
 	/**
 	* SET_RELATION_TYPE
-	* @return 
+	* @return bool true
 	*/
 	public function set_relation_type($type) {
 		
@@ -1351,10 +1387,36 @@ class component_relation_common extends component_common {
 
 		$this->relation_type = $type;
 
-		debug_log(__METHOD__." Changed relation type to $type from $old ".to_string(), logger::DEBUG);
+		if(SHOW_DEBUG===true) {
+			if ($old!==$type) {
+				debug_log(__METHOD__." Changed relation type to $type from $old ".to_string(" in component:".$this->tipo)." ".get_called_class().' '.RecordObj_dd::get_termino_by_tipo($this->tipo) , logger::DEBUG);
+			}
+		}		
+		
 
 		return true;
 	}//end set_relation_type
+
+
+
+	/**
+	* GET_VALOR_EXPORT
+	* Return component value sended to export data
+	* @return string $valor
+	*/
+	public function get_valor_export( $valor=null, $lang=DEDALO_DATA_LANG, $quotes, $add_id ) {
+		
+		if (empty($valor)) {
+			$dato = $this->get_dato();				// Get dato from DB
+		}else{
+			$this->set_dato( json_decode($valor) );	// Use parsed json string as dato
+		}
+
+		$valor_export = $this->get_valor($lang);
+		$valor_export = br2nl($valor_export);
+		
+		return $valor_export;
+	}//end get_valor_export
 
 
 

@@ -85,27 +85,10 @@ class logger_backend_activity extends logger_backend {
 	}
 
 
-	public static function build_component_activity_object_OLD($component, $value_list=null) {
-		
-		$component_lang = DEDALO_DATA_NOLAN;	#$component->get_lang();
-
-		$component_obj = new stdClass();
-			$component_obj->dato = new stdClass();
-			$component_obj->dato->$component_lang = new stdClass();
-			$component_obj->dato->$component_lang = $component->get_dato();
-			/*					
-			$component_obj->value_list = new stdClass();
-			$component_obj->value_list->$component_lang = new stdClass();
-			if (!empty($value_list)) {
-				$component_obj->value_list->$component_lang = $value_list;
-			}else{
-				$component_obj->value_list->$component_lang = $component->get_html();
-			}
-			*/		
-
-		return $component_obj;
-	}
-
+	
+	/**
+	* BUILD_COMPONENT_ACTIVITY_OBJECT
+	*/
 	public static function build_component_activity_object($dato) {
 		
 		$component_lang = DEDALO_DATA_NOLAN;
@@ -117,6 +100,28 @@ class logger_backend_activity extends logger_backend {
 		return $component_obj;
 	}
 
+
+	/*
+	public static function build_component_activity_object_OLD($component, $value_list=null) {
+		
+		$component_lang = DEDALO_DATA_NOLAN;	#$component->get_lang();
+
+		$component_obj = new stdClass();
+			$component_obj->dato = new stdClass();
+			$component_obj->dato->$component_lang = new stdClass();
+			$component_obj->dato->$component_lang = $component->get_dato();
+							
+			#$component_obj->value_list = new stdClass();
+			#$component_obj->value_list->$component_lang = new stdClass();
+			#if (!empty($value_list)) {
+			#	$component_obj->value_list->$component_lang = $value_list;
+			#}else{
+			#	$component_obj->value_list->$component_lang = $component->get_html();
+			#}				
+
+		return $component_obj;
+	}*/
+
 	/**
 	* LOG MESSAGES
 	* 	LINE:
@@ -127,7 +132,7 @@ class logger_backend_activity extends logger_backend {
 	public function log_message( $message, $log_level=logger::INFO, $tipo_donde=NULL, $projects=array(), $datos=NULL ) {
 
 		#dump($projects,"log_message message:$message - donde:$donde");
-//return null;
+
 
 		/*
 		*EXCEPCIONES A LA CREACIÓN DEL LOG
@@ -166,7 +171,7 @@ class logger_backend_activity extends logger_backend {
 			$relations 			  = [];
 			$current_data_version = tool_administration::get_current_version_in_db();
 
-				# IP ADDRESS (user source ip) #############################################################					
+				# IP ADDRESS (user source ip) #############################################################
 					$ip_address	= 'unknow';
 					if (isset($_SERVER['REMOTE_ADDR']))
 					$ip_address	= $_SERVER["REMOTE_ADDR"];
@@ -288,26 +293,13 @@ class logger_backend_activity extends logger_backend {
 					*/
 
 				# PROYECTOS (param 'datos' + url's ...)	######################################################### 
-					if ( !empty($user_id) && $user_id!='unknow' ) {
-						$projects_dato = (object)filter::get_user_projects($user_id);
-							#dump($projects_dato,"projects_dato");
-						
-						$component_tipo = self::$_COMPONENT_PROYECTOS['tipo'];
-						$component_obj  = self::build_component_activity_object($projects_dato);
-						$main_components_obj->$component_tipo = $component_obj;
-						/*
-						$component = self::$_COMPONENT_PROYECTOS ;
-						$component = new $component['modelo_name']($component['tipo'],$parent,'edit',DEDALO_DATA_NOLAN);	#($id=NULL, $tipo=false, $modo='edit', $parent=NULL, $lang=DEDALO_DATA_LANG)
-						$component->set_dato($projects_dato);
-						$component->set_propagate_filter(false); # Bypass portal test
-						if(
-							!empty($projects_dato) && 
-							is_array($projects_dato) && 
-							count($projects_dato)>0
-						   ){
-							$id =  $component->Save();
-						}						
-						*/
+					if ( !empty($user_id) && $user_id!=='unknow' ) {
+						$projects_dato = filter::get_user_projects($user_id);
+						# dump($projects_dato, ' $projects_dato ++ '.to_string());
+						foreach ($projects_dato as $project_locator) {
+							$project_locator->from_component_tipo = self::$_COMPONENT_PROYECTOS['tipo'];
+							$relations[] = $project_locator;
+						}
 					}
 
 				# DATOS (param 'datos' + url's ...)	############################################################# 
@@ -346,18 +338,19 @@ class logger_backend_activity extends logger_backend {
 
 				# SECTION ############################################################# 
 					$section = section::get_instance(null, DEDALO_ACTIVITY_SECTION_TIPO, 'edit');
-					
-					$save_options = new stdClass();
-						$save_options->main_components_obj = $main_components_obj;
-							#dump($save_options,"save_options");die();
 
 					# Switch data version
-					if( $current_data_version[0] >= 4 && $current_data_version[1] >= 8 ) {
-						foreach ($relations as $clocator) {
-							$section->add_relation($clocator);
-						}
-					}
-
+					#if( $current_data_version[0] >= 4 && $current_data_version[1] >= 8 ) {
+					#	foreach ($relations as $clocator) {
+					#		$section->add_relation($clocator);
+					#	}
+					#}
+					
+					$save_options = new stdClass();
+						$save_options->main_components_obj 	= $main_components_obj;
+						$save_options->main_relations 		= $relations;
+							#dump($save_options,"save_options");die();				
+					
 					$id_section = $section->Save( $save_options );
 
 					if(SHOW_DEBUG===true) {
@@ -402,8 +395,9 @@ class logger_backend_activity extends logger_backend {
 							counter::update_counter($tipo);
 						}
 						*/
-		
-	}
+	
+		return true;
+	}//end log_message
 
 
 

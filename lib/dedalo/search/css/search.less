@@ -209,7 +209,7 @@
 		}		
 		#search_response {
 			margin-left: 10px;
-
+			margin-top: 5px;
 		}
 
 
@@ -343,13 +343,16 @@
 /* SEARCH 2 
 ----------------------------------------------------------------------------------------- */
 	// selected_color 
-	@selected_color  : #F67215; // @color_orange;	//
+	@selected_color  : #ff9620; // @color_orange;	//
 	// Component color
 	@component_color : lighten(@selected_color, 25%);
 	// Component color hover
-	@component_color_hover : darken(@selected_color, 15%);
+	@component_color_hover : #ff9620;//darken(@selected_color, 15%);
 	// bg_color_global container
 	@bg_color_global : #efefef; //#F7F7F7;
+
+	@bg_component_color : #f6f6f6;
+	@bg_section_group_color: #969ca1;
 
 	// Button open first list
 	.button_open_search2 {
@@ -390,9 +393,9 @@
 		}
 
 		// Button toggle container_selector (list of fields) and Button toggle presets
-		@color_backgrouund_selector : #b9b9b9;
+		@color_background_selector : #b9b9b9;
 		#toggle_container_selector, #toggle_container_selection_presets {
-			background-color: @color_backgrouund_selector;
+			background-color: @color_background_selector;
 			writing-mode: vertical-lr;
 			width: 24px;
 			text-transform: uppercase;
@@ -425,7 +428,7 @@
 	// Target section container (receive all json elements inside recursive)
 	.search_section_container.target_container {
 		display: flex;
-		background-color: @selected_color;
+		background-color: rgba(201,201,201,0.3);
 	}
 	
 		// Section label bar
@@ -434,9 +437,9 @@
 			padding: 3px;
 			padding-left: 4px;
 			padding-right: 4px;
-			border-right: 1px solid #efefef;
+			border-right: 1px solid #a5a5a5;
 			//background-color: @bg_color_global;  
-			background-color: @color_backgrouund_selector;
+			background-color: #575a5c;;
 			color: #ffffff;
 			// Avoid click events affect here (received with :after)
 			pointer-events: none;
@@ -466,7 +469,7 @@
 			.search_section_container ul li {
 				padding: 4px;
 				padding-right: 22px;
-				border-right: 1px solid #ffffff;
+				border-right: 1px solid #a5a5a5;
 				-moz-user-select: none;
 			-khtml-user-select: none;
 			-webkit-user-select: none;
@@ -475,14 +478,14 @@
 
 		// Items list section_group
 		li.search_section_group_label {
-			background-color: #575A5C;
+			background-color: @bg_section_group_color; //#575A5C;
 			color: #ffffff;
 		}
 		// Items list components
 		li.search_component_label {
-			background-color: @component_color;
+			background-color: @bg_component_color;
 			//background-color: rgba(251, 251, 251, 0.48);
-			border-bottom: 1px solid #666;			
+			border-bottom: 0.5px solid #666;			
 			}
 			li.search_component_label:hover {
 				background-color: @component_color_hover;
@@ -561,7 +564,7 @@
 
 
 		/* search2_container_selection
-		---------------------------------------------------------- */			
+		---------------------------------------------------------- */
 			#search2_container_selection {
 
 				}
@@ -574,7 +577,7 @@
 					top: 60px;
 				}
 				.search_group {					
-					border: 1px solid #7B96B1;
+					border: 0.5px solid #b9b9b9;
 					padding: 5px;
 					padding-right: 24px;
 					padding-left: 28px;
@@ -728,12 +731,20 @@
 
 			/* buttons
 			--------------------------- */
-			.button_reset, .button_submit {
+			.button_reset {
 				margin: 5px;
 				margin-right: 0;
+				display: block;
+				flex-grow: 1;
 			}
 			.button_submit {
+				margin: 5px;
+				margin-right: 0;
 				margin-right: 7px;
+			}
+			.reset_group{
+				display: flex;
+				 flex-direction: column;
 			}
 
 
@@ -895,7 +906,9 @@
 					#button_save_preset.show {
 						//display: table;
 					}
-
+				#button_save_preset.in_thesaurus {
+					top: -100px;
+				}
 
 
 	/* SEARCH_OPTIONS_TITLE
@@ -921,4 +934,33 @@
 		top: -1px;
 	}
 
+
+
+	#thesaurus_search_selector {
+		//display:inline-block;
+		//margin-left:20px;
+		//background-color:antiquewhite;
+		margin-top: 7px;
+		display: none;
+		}
+		#thesaurus_search_selector > ul {
+			display: flex;
+			flex-flow: wrap;
+			justify-content: flex-start;
+		}
+		#thesaurus_search_selector > ul > li {
+			padding-right: 10px;
+			//background-color: #D4DF93;
+			padding:5px;
+			white-space: nowrap;
+			cursor: pointer;
+		}
+		#thesaurus_search_selector > ul > li > input {
+			//margin-right: 5px;
+			cursor: pointer;
+		}
+		#thesaurus_search_selector > ul > li > label {
+			margin-left: 3px;
+			cursor: pointer;
+		}
 

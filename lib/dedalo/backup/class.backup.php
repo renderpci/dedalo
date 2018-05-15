@@ -1224,22 +1224,17 @@ abstract class backup {
 
 
 	/**
-	* DOWNLOAD_REMOTE_STRUCTURE_FILE
-	* @return bool
+	* GET_REMOTE_DATA
+	* @return string $result
 	*/
-	public static function download_remote_structure_file($obj, $target_dir) {
+	public static function get_remote_data($data) {
 		
-		//open connection
-		$ch = curl_init();
-
-		$data = array(
-				"code" => STRUCTURE_SERVER_CODE,
-				"type" => $obj->type,
-				"name" => $obj->name
-			);
 		$data_string = "data=" . json_encode($data);
 
-		//set the url, number of POST vars, POST data
+		// open connection
+		$ch = curl_init();
+
+		// set the url, number of POST vars, POST data
 		curl_setopt($ch, CURLOPT_URL, STRUCTURE_SERVER_URL); // LIke http://domain.com/get-post.php
 		curl_setopt($ch, CURLOPT_POST, true);
 		curl_setopt($ch, CURLOPT_POSTFIELDS, $data_string);
@@ -1247,13 +1242,37 @@ abstract class backup {
 		curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
 		#curl_setopt($ch, CURLOPT_HEADER, false);
 
-		//execute post
-		$result = curl_exec($ch);
-			#dump($result, ' $result ++ '.to_string($ch));
-			#debug_log(__METHOD__." result ".to_string($result), logger::DEBUG);
+		# Avoid verify ssl certificates (very slow)
+		curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
 
-		//close connection
+		// execute post
+		$result = curl_exec($ch);
+		#debug_log(__METHOD__." result ".to_string($result), logger::DEBUG);
+
+		// close connection
 		curl_close($ch);
+		
+		// file_get_contents option
+		$result = file_get_contents(STRUCTURE_SERVER_URL . '?' .$data_string);
+
+		return $result;
+	}//end get_remote_data
+
+
+
+	/**
+	* DOWNLOAD_REMOTE_STRUCTURE_FILE
+	* @return bool
+	*/
+	public static function download_remote_structure_file($obj, $target_dir) {
+
+		$data = array(
+				"code" => STRUCTURE_SERVER_CODE,
+				"type" => $obj->type,
+				"name" => $obj->name
+			);
+
+		$result = self::get_remote_data($data);
 
 		# Create downloads folder if not exists
 		if (backup::$checked_download_str_dir!==true) {
@@ -1290,26 +1309,31 @@ abstract class backup {
 
 		$response = new stdClass();
 			$response->result 	= false;
-			$response->msg 		= 'Error. Request failed '.__METHOD__;
-		
-		//open connection
-		$ch = curl_init();
+			$response->msg 		= 'Error. Request failed '.__METHOD__;		
 
 		$data = array(
 				"code" 				=> STRUCTURE_SERVER_CODE,
-				"check_connection" 	=>true	
+				"check_connection" 	=> true
 			);
 		$data_string = "data=" . json_encode($data);
+
+
+		//open connection
+		$ch = curl_init();
 
 		//set the url, number of POST vars, POST data
 		curl_setopt($ch, CURLOPT_URL, STRUCTURE_SERVER_URL); // LIke http://domain.com/get-post.php
 		curl_setopt($ch, CURLOPT_POST, true);
-		curl_setopt($ch, CURLOPT_POSTFIELDS, $data_string);	
+		curl_setopt($ch, CURLOPT_POSTFIELDS, $data_string);
 		curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
 		curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
 		curl_setopt($ch, CURLOPT_HEADER, true);    // we want headers
 		#curl_setopt($ch, CURLOPT_NOBODY, true);    // we don't need body
 		curl_setopt($ch, CURLOPT_TIMEOUT,10);
+		#curl_setopt($ch, CURLOPT_VERBOSE,true);
+
+		# Avoid verify ssl certificates (very slow)
+		curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
 
 		//execute post
 		$result = curl_exec($ch);
@@ -1336,6 +1360,10 @@ abstract class backup {
 				$msg 	= "Error. check_remote_server problem found (status code: $httpcode)";				
 				break;
 		}
+		
+		#$response->result = true;
+		#$httpcode = 200; // Force fake 200
+		#$msg = "Ok";
 
 		# Decore msg
 		if ($httpcode===200) {

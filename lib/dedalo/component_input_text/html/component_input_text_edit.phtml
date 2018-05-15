@@ -125,6 +125,27 @@
 				#$html_content .= " <span  class=\"css_span_log\"></span>";
 				#$html_content .= " <span  class=\"css_span_ejemplo\">$ejemplo</span>";
 
+
+
+				$RecordObj_dd = new RecordObj_dd($tipo);
+				$propiedades  = json_decode($RecordObj_dd->get_propiedades());
+				if (isset($propiedades->with_lang_versions) && $propiedades->with_lang_versions===true) {
+					
+					$component 			= component_common::get_instance(__CLASS__,
+																		 $tipo,
+																	 	 $parent,
+																	 	 $modo,
+																		 DEDALO_DATA_LANG,
+																	 	 $section_tipo);
+					#$add_value = component_common::extract_component_value_fallback($component);
+					$add_value = $component->get_valor($lang);
+					if (!empty($add_value)) {
+						$html_content .= ' <span class="">'.$add_value.'</span>';
+					}
+				}
+
+
+
 				if(SHOW_DEBUG===true) {
 					$html_content .= "<span class=\"debug_info notes\">".$dato_json."</span>";
 				}
@@ -134,10 +155,11 @@
 				$html_content .= "<script>";				
 				// Init
 				$init_options = array(
-					"uid" 			=> $identificador_unico,
-					"modo" 			=> $modo,
-					"propiedades" 	=> $propiedades,
-					"traducible" 	=> $traducible
+					"uid" 				 => $identificador_unico,
+					"modo" 				 => $modo,
+					"propiedades" 		 => $propiedades,
+					"traducible" 		 => $traducible,
+					"with_lang_versions" => $with_lang_versions
 				);
 				$html_content .= "component_input_text.init(".json_encode($init_options).");";
 				// First test on load element

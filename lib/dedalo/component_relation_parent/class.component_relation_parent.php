@@ -17,27 +17,18 @@ class component_relation_parent extends component_relation_common {
 
 
 	/**
-	* __CONSTRUCT
-	*//*
-	function __construct($tipo=null, $parent=null, $modo='edit', $lang=DEDALO_DATA_NOLAN, $section_tipo=null) {
-
-		# Force always DEDALO_DATA_NOLAN
-		$lang = $this->lang;
-
-		# relation_type
-		$this->relation_type = DEDALO_RELATION_TYPE_PARENT_TIPO;
-
-		# Build the componente normally
-		parent::__construct($tipo, $parent, $modo, $lang, $section_tipo);
-
-		if(SHOW_DEBUG) {
-			$traducible = $this->RecordObj_dd->get_traducible();
-			if ($traducible=='si') {
-				throw new Exception("Error Processing Request. Wrong component lang definition. This component $tipo (".get_class().") is not 'traducible'. Please fix this ASAP", 1);
-			}
-		}
-	}//end __construct
+	* SAVE
+	* Overwrite relation common action
+	* @return bool true
 	*/
+	public function Save() {
+		# Noting to do. This component don`t save
+
+		$section_id = $this->parent;
+
+		# RETURN SECTION ID
+		return (int)$section_id;
+	}//end Save
 
 
 
@@ -102,7 +93,9 @@ class component_relation_parent extends component_relation_common {
 				continue;
 			}
 			$result = component_relation_parent::add_parent($this->tipo, $this->parent, $this->section_tipo, $children_section_tipo, $children_section_id, $component_relation_children_tipo);
-		}		
+		}
+
+		return true;
 	}//end set_dato
 
 
@@ -293,60 +286,95 @@ class component_relation_parent extends component_relation_common {
 	* @param string $section_tipo
 	* @return array $parents_recursive
 	*/
-	public static function get_parents_recursive($section_id, $section_tipo) {
+	public static function get_parents_recursive($section_id, $section_tipo, $skip_root=true) {
 
 		static $ar_resolved_parents_recursive = array();
 
 		$key_resolve = $section_tipo.'_'.$section_id;
+		if (isset($ar_resolved_parents_recursive[$key_resolve])) {
+			return $ar_resolved_parents_recursive[$key_resolve];
+		}
 
 		$parents_recursive = array();
 		
 		// Add first level
 		$ar_parents 	   = component_relation_parent::get_parents($section_id, $section_tipo);
 		$parents_recursive = $ar_parents;
-			#dump($parents_recursive, ' parents_recursive ++ '.to_string());
 
+		/*
 		# Avoid infinite loop on bad configurated thesaurus
 		if (in_array($key_resolve, $ar_resolved_parents_recursive)) {
-			/*
-			$key = array_search($key_resolve, $ar_resolved_parents_recursive);
-			$resolved = $ar_resolved_parents_recursive[$key];
-			$ar_resolved_parents_recursive = array(); // reset
-			return array();*/
 			
-			if(SHOW_DEBUG===true) {
-				#trigger_error("Error on ".__METHOD__.". Infinite loop is stopped for: <br> $key_resolve <h5> Please, review your config about parent of $key_resolve</h5>");
-				#dump($ar_resolved_parents_recursive, ' ar_resolved_parents_recursive ++ '.to_string());
-				#throw new Exception("Error Processing Request", 1);				
-			}
 			$ar_resolved_parents_recursive = array(); // reset
 			return $parents_recursive;
-		}
+		}*/
 		
+
 		# Set as resolved
-		$ar_resolved_parents_recursive[] = $key_resolve;
+		#$ar_resolved_parents_recursive[] = $key_resolve;		
 	
 		foreach ($ar_parents as $current_locator) {
-
+			# Check self recursion
 			if ($current_locator->section_id==$section_id && $current_locator->section_tipo===$section_tipo) {
 				# Wrong recursion prevention
 				debug_log(__METHOD__." Wrong recursion detected for $section_id, $section_tipo . Skipped resolution ".to_string(), logger::ERROR);
 				continue;
 			}
+
 			// Add every parent level
-			$current_ar_parents	= component_relation_parent::get_parents_recursive($current_locator->section_id, $current_locator->section_tipo);
+			$current_ar_parents	= component_relation_parent::get_parents_recursive($current_locator->section_id, $current_locator->section_tipo, $skip_root);
 			foreach ($current_ar_parents as $c_parent) {
 				#debug_log(__METHOD__." c_parent ".to_string($c_parent), logger::DEBUG);
-				if ($c_parent->section_tipo===DEDALO_HIERARCHY_SECTION_TIPO) continue; // Skip root hierarchy term 
+				if ($skip_root===true) {
+					if ($c_parent->section_tipo===DEDALO_HIERARCHY_SECTION_TIPO) continue; // Skip root hierarchy term 
+				}
+				
 				# Add to array
 				$parents_recursive[] = $c_parent;
 			}
 			#$parents_recursive  = array_merge($parents_recursive, $current_ar_parents);
 		}
+
+		# Set as resolved
+		$ar_resolved_parents_recursive[$key_resolve] = $parents_recursive;
 		
 		
 		return (array)$parents_recursive;
 	}//end get_parents_recursive
+
+
+
+	/**
+	* GET_PARENT_RECURSIVE2
+	* @return array $parents
+	*/
+	public static function get_parent_recursive2($section_id, $section_tipo) {
+
+		# Sólo test de momento 
+		
+		$matrix_table = common::get_matrix_table_from_tipo($section_tipo);
+
+		$strQuery = 'SELECT section_id FROM '.$matrix_table.' WHERE section_tipo = \''.$section_tipo.'\' AND datos#>\'{relations}\' @> \'[{"section_tipo":"'.$section_tipo.'","section_id":"'.$section_id.'","type":"'.DEDALO_RELATION_TYPE_CHILDREN_TIPO.'"}]\' LIMIT 1;';
+		$result	  = JSON_RecordObj_matrix::search_free($strQuery);
+		
+		$parents = array();
+		while ($rows = pg_fetch_assoc($result)) {
+			$current_section_id = $rows['section_id'];
+
+			$locator = new locator();
+				$locator->set_section_tipo($section_tipo);
+				$locator->set_section_id($current_section_id);
+				$locator->set_component_tipo('hierarchy49');		
+			
+			# Add current
+			$parents[] = $locator;
+
+			# Recursion
+			$parents = array_merge($parents, self::get_parent_recursive2($current_section_id, $section_tipo));		
+		}
+
+		return $parents;
+	}//end get_parent_recursive2
 
 
 	
@@ -465,25 +493,6 @@ class component_relation_parent extends component_relation_common {
 		return $search_query;
 	}//end get_search_query
 	*/
-
-
-	/**
-	* GET_VALOR_EXPORT
-	* Return component value sended to export data
-	* @return string $valor
-	*/
-	public function get_valor_export( $valor=null, $lang=DEDALO_DATA_LANG, $quotes, $add_id ) {
-
-		# When is received 'valor', set as dato to avoid trigger get_dato against DB 
-		# Received 'valor' is a json string (array of locators) from previous database search
-		if (!is_null($valor)) {
-			$dato = json_decode($valor);
-			$this->set_dato($dato);
-		}
-		$valor = $this->get_valor($lang);
-		
-		return $valor;
-	}#end get_valor_export
 	
 
 

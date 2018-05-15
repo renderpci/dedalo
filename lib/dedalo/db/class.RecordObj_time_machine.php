@@ -71,29 +71,38 @@ class RecordObj_time_machine extends RecordDataBoundObject {
 	}
 	
 	
-		
-	# AR TIME MACHINE : Array de registros de time_machine para el id_matrix recibido
-	public static function get_ar_time_machine_of_this($tipo, $parent, $lang=NULL, $section_tipo) {
+	/**
+	* GET_AR_TIME_MACHINE_OF_THIS		
+	* AR TIME MACHINE : Array de registros de time_machine para el id_matrix recibido
+	*/
+	public static function get_ar_time_machine_of_this($tipo, $parent, $lang=null, $section_tipo, $limit=10, $offset=0) {
+
+
+		/// Temporal !!!
+		$limit = 1000000;
 				
 		$ar_time_machine_of_this 	= array();
 		
 		$arguments=array();			
-		$arguments['tipo']			= $tipo ;
-		$arguments['section_id']	= $parent ;
-		$arguments['section_tipo']	= $section_tipo ;
+		$arguments['tipo']			= $tipo;
+		$arguments['section_id']	= $parent;
+		$arguments['section_tipo']	= $section_tipo;
 		if(!empty($lang))
-		$arguments['lang']			= $lang ;
+		$arguments['lang']			= $lang;
+		$arguments['sql_limit']		= $limit;
+		$arguments['offset']		= $offset;
 		$arguments['order_by_desc']	= 'timestamp';
 		
 		$RecordObj_time_machine		= new RecordObj_time_machine(NULL);
-		$ar_id						= $RecordObj_time_machine->search($arguments);
+		$ar_time_machine_of_this	= $RecordObj_time_machine->search($arguments);
 			#dump($ar_id,'ar_id '.print_r($arguments,true));
 		
-		foreach($ar_id as $id) {
-			$ar_time_machine_of_this[] = $id;			
-		}
+		#$ar_time_machine_of_this = array_values($ar_id);
+		#foreach($ar_id as $id) {
+		#	$ar_time_machine_of_this[] = $id;
+		#}
 		
-		return $ar_time_machine_of_this ;
+		return $ar_time_machine_of_this;
 	}	
 	
 

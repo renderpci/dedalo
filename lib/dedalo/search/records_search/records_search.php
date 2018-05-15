@@ -1,18 +1,18 @@
 <?php
 	
 	# CONTROLLER
-	$modo							= $this->get_modo();
-	$section_tipo 					= $this->section_tipo;	
-	$permissions					= common::get_permissions($section_tipo, $this->search_list_tipo);	
-	
+	$modo					= $this->get_modo();
+	$section_tipo 			= $this->section_tipo;	
+	$permissions			= common::get_permissions($section_tipo, $this->search_list_tipo);	
+	$ar_sections_by_type 	= isset($this->ar_sections_by_type) ? $this->ar_sections_by_type : null;
 	
 	#
 	# OPTIONS CUSTOM
 	# inyectado a la sección y usado para generar pequeñas modificaciones en la visualización del section list como por ejemplo el link de enlazar un registro con un portal
 	$context = (object)$this->section_obj->context;
-		#dump($context, ' context ++ '.to_string()); 
+	/* 
 	switch (true) {		
-		case ( isset($context->context_name) && $context->context_name=='section_tool' && isset($context->tool_section_tipo) ):
+		case ( isset($context->context_name) && $context->context_name==='section_tool' && isset($context->tool_section_tipo) ):
 			#
 			# SECTION TOOL CASE
 			# When current section is 'section_tool', $section_obj->context->section_tool was set with section_tool propiedades. In this case
@@ -23,7 +23,7 @@
 			$search_options_session_key	= 'section_'.$section_tipo;		
 			break;
 	}
-
+	*/
 	if (!isset($context->context_name)) {
 		$context->context_name = false;
 	}
@@ -37,12 +37,6 @@
 	if ($permissions<1) {
 		echo "<span class=\"css_span_dato\">Access denied</span>";
 		#return false;
-	}
-
-	# Notify element load to common
-	# Force load some css / js used later
-	foreach (['component_input_text','component_radio_button'] as $key => $value) {
-		common::notify_load_lib_element_tipo($value, 'edit');
 	}
 	
 	
@@ -93,14 +87,19 @@
 		case 'portal_list':
 				$file_name = 'list';
 
+		case 'thesaurus':
+				$file_name = 'list';
+
 		case 'list':
+				/*
 				# FIELDS
 				$ar_search_fields = $this->get_ar_search_fields();
 					#dump($ar_search_fields, ' $ar_search_fields ++ '.to_string());
 
 				# BUTTONS						
 				$ar_tools_search = $this->get_ar_tools_search();
-					#dump($ar_tools_search, ' ar_tools_search ++ '.to_string());				
+					#dump($ar_tools_search, ' ar_tools_search ++ '.to_string());
+				*/			
 				break;
 
 		case 'relation':

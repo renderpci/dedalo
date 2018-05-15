@@ -6,16 +6,16 @@
 	# html_delimiter
 	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'in');
 
-	print "<div class=\"wrap_component css_wrap_ip wrap_component_{$tipo}\" id=\"{$id_wrapper}\"
-	data-tipo=\"{$tipo}\"
-	data-lang=\"{$lang}\"
-	data-section_tipo=\"{$section_tipo}\"
-	data-parent=\"{$parent}\"
-	data-modo=\"{$modo}\"
-	data-dato=\"$dato\"
-	data-component_name=\"{$component_name}\"
-	data-component_info='{$component_info}'
-	>";
+	print "<div class=\"wrap_component css_wrap_ip wrap_component_{$tipo}\" id=\"{$id_wrapper}\" ";
+	print "data-tipo=\"{$tipo}\" ";
+	print "data-lang=\"{$lang}\" ";
+	print "data-section_tipo=\"{$section_tipo}\" ";
+	print "data-parent=\"{$parent}\" ";
+	print "data-modo=\"{$modo}\" ";
+	print "data-dato=\"$dato\" ";
+	print "data-component_name=\"{$component_name}\" ";
+	print "data-component_info='{$component_info}' ";
+	print ">";
 	
 	
 	# ETIQUETA (LABEL)
@@ -23,52 +23,52 @@
 
 	
 	# CONTENIDO (INPUT)
-	$html_contenido = '';
-	switch($permissions) {
+	$html_content = '';
+	switch(true) {
 			
-		case 0	:
-				$html_contenido .= ''; 		
+		case $permissions===0	:
+				$html_content .= '';
 				break;
 					
 		case ($permissions>=1)	:
 			
-				$html_contenido .= " <span class=\"css_span_dato list_ip_dato\"
-				data-tipo=\"{$tipo}\"
-				data-section_tipo=\"{$section_tipo}\"
-				data-parent=\"{$parent}\"
-				data-lang=\"{$lang}\"
-				>$dato</span>";
+				$html_content .= "<span class=\"css_span_dato list_ip_dato\" ";
+				$html_content .= "data-tipo=\"{$tipo}\" ";
+				$html_content .= "data-section_tipo=\"{$section_tipo}\" ";
+				$html_content .= "data-parent=\"{$parent}\" ";
+				$html_content .= "data-lang=\"{$lang}\" ";
+				$html_content .= ">";
+				$html_content .= $dato;
+				$html_content .= "</span>";
 
 
 				# GEOIP FLAGS : geoip_info
 				if (isset($geoip_info) && is_object($geoip_info)) {
 					
-					#$html_contenido .= "<span class=\"city_span\">$geoip_info->city</span>" ;
-					$html_contenido .= "<a href=\"$geoip_info->geo_tool_link\" target=\"_blank\" title=\"Info\">";
-					# Flag (http://cdn.whatismyipaddress.com/images/flags/mx.png)							
-					$html_contenido .= "<img src=\"".DEDALO_LIB_BASE_URL."/themes/default/flags/{$geoip_info->code}.gif\" class=\"flag_img\" title=\"$geoip_info->continent $geoip_info->country $geoip_info->region_name\" />" ; 
-					#$html_contenido .= "<img src=\"http://cdn.mmcreation.com/icon/flags-iso/flat/16/".strtolower($code).".png\" class=\"flag_img\" title=\"$continent_code $country $region_name\" />" ;			
-					$html_contenido .= "</a>";
+					#$html_content .= "<span class=\"city_span\">$geoip_info->city</span>" ;
+					$html_content .= '<a href="'.$geoip_info->geo_tool_link.'" target="_blank">';
+					# Flag (http://cdn.whatismyipaddress.com/images/flags/mx.png)
+					$flag_url 	= DEDALO_LIB_BASE_URL.'/themes/default/flags/'.$geoip_info->code.'.gif';
+					$title 		= $geoip_info->continent .' '. $geoip_info->country .' '. $geoip_info->region_name;
+					$html_content .= '<img src="'.$flag_url.'" class="flag_img" title="'.$title.'" />'; 
+					$html_content .= '</a>';
 				}
 		
 				
 				if(SHOW_DEBUG) {
-					#$html_contenido .= " <span class=\"css_span_debugger\" id=\"debugger_{$tipo}\" >{$debugger}</span>";
+					#$html_content .= " <span class=\"css_span_debugger\" id=\"debugger_{$tipo}\" >{$debugger}</span>";
 				}
 				break;
-				
-				
-							
 	}	
 
 	
 	# Prepare content to show in page
-	tools::prepare_content($html_contenido);
+	tools::prepare_content($html_content);
 
 	
 	# PRINT HTML
 	print $html_label;
-	print $html_contenido;
+	print $html_content;
 	
 
 

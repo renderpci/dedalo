@@ -37,6 +37,10 @@
 		
 		# Value option
 		foreach ((array)$ar_select_langs as $current_lang => $current_lang_name) {
+
+			if ($current_lang===DEDALO_DATA_NOLAN) {
+				$current_lang_name = DEDALO_DATA_NOLAN;
+			}
 			
 			$selected 		= ($desired_lang === $current_lang) ? ' selected' : '';
 			$html_selector .= "<option value='{$current_lang}'{$selected}>$current_lang_name</option>";

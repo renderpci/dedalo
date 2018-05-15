@@ -211,7 +211,6 @@
 				# Additional css / js
 				js::$ar_url[]  = DEDALO_LIB_BASE_URL . '/section_records/js/section_records.js';
 				css::$ar_url[] = DEDALO_LIB_BASE_URL . '/section_records/css/section_records.css';
-
 				
 				#
 				# ROWS_LIST . SECTION LIST
@@ -380,6 +379,24 @@
 					}
 				
 				#
+				# NOTIFY_LOAD_LIB_ELEMENT
+				# Remember that versions >= 4.8.2 loads list html by ajax. Because this we need notify the load here 
+				# Section list components. notify_load_lib_element to prepare css / js to ajax load records
+					$ar_terminos_relacionados = RecordObj_dd::get_ar_terminos_relacionados($section_list_tipo, $cache=true, $simple=true);
+					foreach ($ar_terminos_relacionados as $related_term_tipo) {
+						$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($related_term_tipo,true);
+						common::notify_load_lib_element_tipo($modelo_name, 'list');
+					}
+					# Temporal !
+					if ($tipo==='oh1') {
+						css::$ar_url[] = DEDALO_LIB_BASE_URL . '/extras/oh/widgets/media_icons/css/media_icons.css';
+						css::$ar_url[] = DEDALO_LIB_BASE_URL . '/extras/oh/widgets/descriptors/css/descriptors.css';
+
+						js::$ar_url[]  = DEDALO_LIB_BASE_URL . '/extras/oh/widgets/descriptors/js/descriptors.js';
+					}
+
+				
+				#
 				# SEARCH FORM . ROWS_SEARCH 
 				# Render search form html
 					$search_form_html 	= '';
@@ -407,7 +424,7 @@
 				# BUTTONS
 				# Calculate and prepare current section buttons to use as : $this->section_obj->ar_buttons
 					$ar_buttons = (array)$this->get_ar_buttons();
-				
+			
 				#
 				# ADITIONAL_CSS
 					if (defined('DEDALO_ADITIONAL_CSS') && DEDALO_ADITIONAL_CSS===true && isset($propiedades->aditional_css)) {

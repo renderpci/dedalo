@@ -9,7 +9,7 @@
 		$html_selector ='';
 		#$html_selector .= "\n <span class=\"rotulo_tool_lang_selector\">".label::get_label('idioma').":</span> ";
 		$html_selector .= "<select class=\"tool_lang_selector_source css_select\" onchange=\"tool_time_machine.change_tool_lang_source(this)\">";
-					
+		
 			# Empty option
 			#$html_selector .= "\n <option value=\"\"> </option>";
 			foreach ((array)$ar_source_langs as $current_lang => $current_lang_name) {
@@ -100,5 +100,15 @@
 		?>
 
 	</div><!-- css_time_machine_record_rows -->
+
+
+	<?php if(SHOW_DEBUG===true) { ?>
+	<div class="row_buttons">
+		<button type="button" class="btn btn-default" onclick="tool_time_machine.load_more(this)">Load more</button>
+		<button type="button" class="btn btn-default" onclick="tool_time_machine.load_all(this)">Load all</button>
+	</div>
+	<?php }	?>
+	
+
 
 </div><!-- tm_rows -->

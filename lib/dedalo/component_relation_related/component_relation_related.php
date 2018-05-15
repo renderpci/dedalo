@@ -7,8 +7,7 @@
 	$section_id 			= $parent;
 	$section_tipo			= $this->get_section_tipo();
 	$propiedades			= $this->get_propiedades();
-	$modo					= $this->get_modo();		
-	$dato 					= $this->get_dato();
+	$modo					= $this->get_modo();	
 	$label 					= $this->get_label();
 	$required				= $this->get_required();
 	$debugger				= $this->get_debugger();
@@ -18,7 +17,8 @@
 	$lang					= $this->get_lang();
 	$identificador_unico	= $this->get_identificador_unico();
 	$component_name			= get_class($this);
-	$context 				= $this->get_context();	
+	$context 				= $this->get_context();
+	$dato 					= $this->get_dato();
 	$file_name 				= $modo;
 	
 	if($permissions===0) return null;

@@ -71,15 +71,17 @@
 				# SECURITY
 				# Verify current record is authorized for current user. If not, force set permissions to 0
 				# Only test when section_id is nor temp
+					/* REMOVED 31-03-2018
 					if (strpos($section_id, DEDALO_SECTION_ID_TEMP)===false) {					
 						$is_authorized_record = (bool)filter::is_authorized_record($section_id, $tipo);
 							#dump($is_authorized_record,"is_authorized_record");
 						if (!$is_authorized_record) {
 							$permissions = 0;
-							$section->set_permissions( $permissions ); // Fix permissions for current element (important)
-							#$this->set_permissions( $permissions ); // Fix permissions for current element (important)
+							$section->set_permissions( $permissions ); // Fix permissions for current element (important)							
 						}
 					}
+					*/
+					
 
 				#
 				# RECORD_LAYOUT_HTML

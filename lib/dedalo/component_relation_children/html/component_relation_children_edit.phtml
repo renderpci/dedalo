@@ -55,7 +55,18 @@
 
 						$hierarchy_types_json 	   = '';
 						$hierarchy_sections_json   = json_encode(array($target_section_tipo));
-						$parent_area_is_model_json = json_encode($parent_area_is_model);
+						
+						# parent_area_is_model
+						if (isset($_GET['model']) && $_GET['model']==1) {
+							$parent_area_is_model = true;
+						}else{
+							$parent_area_is_model = false;
+						}
+						if ($tipo===DEDALO_HIERARCHY_CHIDRENS_MODEL_TIPO) {
+							$parent_area_is_model = true; // hierarchy select model children case
+						}
+						$parent_area_is_model_json 	= json_encode($parent_area_is_model);
+
 
 						# BTN LINK ELEMENT
 						$html_content .= "<div class=\"button_add relation_children_add_from_tree_button\" ";

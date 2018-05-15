@@ -112,7 +112,7 @@ class component_security_areas extends component_common {
 	* @return 
 	*/
 	public static function get_ar_authorized_areas_for_user($user_id, $mode_result='full') {
-		
+
 		$ar_authorized_areas = array();
 
 		if(empty($user_id)) return $ar_authorized_areas;

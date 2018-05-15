@@ -48,6 +48,8 @@ class tool_export extends tool_common {
 
 		# Fix records
 		$this->ar_records = null;
+
+		return true;
 	}//end __construct
 
 
@@ -63,7 +65,9 @@ class tool_export extends tool_common {
 			$propiedades = json_handler::decode($button_obj->RecordObj_dd->get_propiedades());
 
 			// in process..		
-		}		
+		}
+
+		return true;	
 	}//end set_up
 
 
@@ -87,8 +91,7 @@ class tool_export extends tool_common {
 		if ($saved_search_options===false) {
 			trigger_error("Sorry, search_options [$search_options_id] not exits in section_records::get_search_options");
 			return null;
-		}
-		
+		}		
 		
 		# SEARCH_QUERY_OBJECT . Add search_query_object to options
 		$search_query_object = $saved_search_options->search_query_object;	
@@ -108,8 +111,9 @@ class tool_export extends tool_common {
 			$search_query_object->select[] = search_development2::component_parser_select($path_element);			
 		}
 
-		# Reset search limit
-		$search_query_object->limit = 0;
+		# Reset search limit and offset
+		$search_query_object->limit  = 0;
+		$search_query_object->offset = 0;
 		
 		# SEARCH
 		$search_develoment2  = new search_development2($search_query_object);
@@ -231,8 +235,7 @@ class tool_export extends tool_common {
 			if ($key==='section_tipo') {
 				#$row_deep_resolved[$key] = $quotes.$value.$quotes;
 				continue;	// Skip resolve non field elements
-			}
-			
+			}			
 			
 			$modelo_name 	 = RecordObj_dd::get_modelo_name_by_tipo($key,true);
 			$tipo 			 = $key;
@@ -246,6 +249,7 @@ class tool_export extends tool_common {
 															  $section_tipo,
 															  false);
 			if($this->data_format==='dedalo') {
+				
 				# Full source untouched dato				
 				$valor_export 	 = $this->get_valor_dedalo($component);
 
@@ -253,6 +257,7 @@ class tool_export extends tool_common {
 				$valor_export 	 = str_replace(';','U+003B',$valor_export);	
 				
 			}else{
+
 				$valor_export 	 = $component->get_valor_export( $value, $lang, $quotes, $add_id=false );
 				#$valor_export 	 = str_replace(PHP_EOL, '; ', $valor_export);
 				$valor_export 	 = addslashes($valor_export);
@@ -271,7 +276,7 @@ class tool_export extends tool_common {
 
 	/**
 	* GET_VALOR_DEDALO
-	* @return 
+	* @return string $valor_dedalo
 	*/
 	public function get_valor_dedalo( $component ) {
 
@@ -284,38 +289,51 @@ class tool_export extends tool_common {
 
 		$RecordObj_dd = new RecordObj_dd($tipo);
 		$traducible   = $RecordObj_dd->get_traducible();	//==='si' ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
-		
-		if ($traducible==='no') {
 
-			$valor_export = '';
 
-			$dato = $component->get_dato();
-			#$dato = $section->get_component_dato($tipo, $lang, $lang_fallback=false);
-			if (!empty($dato)) {
-				$valor_export = json_encode($dato, JSON_UNESCAPED_UNICODE);
-			}
+		$valor_dedalo = '';
+
+	
+		if (get_parent_class($component)==='component_relation_common' || strpos($component, 'filter')!==false) {
 			
+			# Relations
+			$ar_valor = $component->get_dato();
+
 		}else{
 
-			$valor_export = '';
-			$ar_valor = array();
-			
-			$ar_langs = common::get_ar_all_langs();
-			foreach ($ar_langs as $current_lang) {
-				
-				$dato = $section->get_component_dato($tipo, $current_lang, $lang_fallback=false);
+			#if ($traducible==='no') {
+			/*
+				$dato = $component->get_dato();
+				#$dato = $section->get_component_dato($tipo, $lang, $lang_fallback=false);
 				if (!empty($dato)) {
-					$ar_valor[$current_lang] = $dato;
+					$valor_dedalo = json_encode($dato, JSON_UNESCAPED_UNICODE) ." +++++++++++++";
 				}
-			}
-			#dump($ar_valor, ' $ar_valor ++ '.to_string());
-			if (!empty($ar_valor)) {
-				$valor_export = json_encode($ar_valor, JSON_UNESCAPED_UNICODE);
-			}
-			#dump($valor_export, ' $valor_export ++ '.to_string());
+			*/
+			#}else{
+				
+				$ar_valor = [];
+				
+				$ar_langs = common::get_ar_all_langs();
+				# Add nolan as lang
+				$ar_langs[] = DEDALO_DATA_NOLAN;
+				foreach ($ar_langs as $current_lang) {
+					
+					$dato = $section->get_component_dato($tipo, $current_lang, $lang_fallback=false);
+					if (!empty($dato)) {
+						$ar_valor[$current_lang] = $dato;
+					}
+				}
+				#dump($ar_valor, ' $ar_valor ++ '.to_string());				
+				#dump($valor_dedalo, ' $valor_dedalo ++ '.to_string());
+			#}
 		}
 
-		return (string)$valor_export;
+		if (!empty($ar_valor)) {
+			$valor_dedalo = json_encode($ar_valor, JSON_UNESCAPED_UNICODE);
+		}		
+		
+
+		return (string)$valor_dedalo;
 	}//end get_valor_dedalo
 
 
@@ -350,7 +368,7 @@ class tool_export extends tool_common {
 
 	/**
 	* COLUMNS_TO_LAYOUT_MAP
-	* @return 
+	* @return array $layout_map
 	*/
 	public static function columns_to_layout_map( $columns, $section_tipo ) {
 
@@ -409,6 +427,7 @@ class tool_export extends tool_common {
 	* @return string $str
 	*/
 	public static function normalize_name( $str ) {
+
 		$str = strip_tags($str); 
 	    $str = preg_replace('/[\r\n\t ]+/', ' ', $str);
 	    $str = preg_replace('/[\"\*\/\:\<\>\?\'\|]+/', ' ', $str);

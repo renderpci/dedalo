@@ -1,9 +1,9 @@
 <?php
 /*
 * CLASS COMPONENT_SELECT_LANG
+*
+*
 */
-
-
 class component_select_lang extends component_relation_common {
 	
 
@@ -13,7 +13,8 @@ class component_select_lang extends component_relation_common {
 	protected $relation_type = DEDALO_RELATION_TYPE_LINK;
 
 	# test_equal_properties is used to verify duplicates when add locators
-	public $test_equal_properties = array('section_tipo','section_id','type','from_component_tipo');
+	#public $test_equal_properties = array('section_tipo','section_id','type','from_component_tipo');
+
 
 
 	function __construct($tipo=null, $parent=null, $modo='edit', $lang=DEDALO_DATA_NOLAN, $section_tipo=null) {
@@ -27,7 +28,8 @@ class component_select_lang extends component_relation_common {
 		if(SHOW_DEBUG) {
 			$traducible = $this->RecordObj_dd->get_traducible();
 			if ($traducible==='si') {
-				throw new Exception("Error Processing Request. Wrong component lang definition. This component $tipo (".get_class().") is not 'traducible'. Please fix this ASAP", 1);
+				#throw new Exception("Error Processing Request. Wrong component lang definition. This component $tipo (".get_class().") is not 'traducible'. Please fix this ASAP", 1);
+				trigger_error("Error Processing Request. Wrong component lang definition. This component $tipo (".get_class().") is not 'traducible'. Please fix this ASAP");
 			}
 		}
 	}//end __construct
@@ -116,7 +118,7 @@ class component_select_lang extends component_relation_common {
 	* Get value . default is get dato . overwrite in every different specific component
 	* @return string | null $valor
 	*/
-	public function get_valor($lang=DEDALO_DATA_LANG) {				
+	public function get_valor($lang=DEDALO_DATA_LANG) {
 
 		if (isset($this->valor)) {
 			if(SHOW_DEBUG) {
@@ -181,29 +183,8 @@ class component_select_lang extends component_relation_common {
 		return (array)$ar_all_project_langs;
 	}//end get_ar_all_project_select_langs
 	*/
-
 	
 
-	/**
-	* GET_VALOR_EXPORT
-	* Return component value sended to export data
-	* @return string $valor
-	*/
-	public function get_valor_export( $valor=null, $lang=DEDALO_DATA_LANG, $quotes, $add_id ) {
-
-		# When is received 'valor', set as dato to avoid trigger get_dato against DB 
-		# Received 'valor' is a json string (array of locators) from previous database search
-		if (!is_null($valor)) {
-			$dato = json_decode($valor);
-			$this->set_dato($dato);
-		}
-		$valor = $this->get_valor($lang);
-		
-		return $valor;
-	}#end get_valor_export
-	
-
-	
 
 	/**
 	* BUILD_SEARCH_COMPARISON_OPERATORS 
@@ -212,8 +193,9 @@ class component_select_lang extends component_relation_common {
 	* @return object stdClass $search_comparison_operators
 	*/
 	public function build_search_comparison_operators( $comparison_operators=array('=','!=') ) {
+		
 		return (object)parent::build_search_comparison_operators($comparison_operators);
-	}#end build_search_comparison_operators
+	}//end build_search_comparison_operators
 
 
 
@@ -279,7 +261,7 @@ class component_select_lang extends component_relation_common {
 		}
 
 		return $tipo;		
-	}#end get_related_component_text_area
+	}//end get_related_component_text_area
 
 
 
@@ -357,7 +339,7 @@ class component_select_lang extends component_relation_common {
 				# code...
 				break;
 		}		
-	}#end update_dato_version
+	}//end update_dato_version
 
 
 
@@ -391,9 +373,8 @@ class component_select_lang extends component_relation_common {
 		#$component->set_dato($ar_records);
 		$component->set_identificador_unico($component->get_identificador_unico().'_'.$section_id); // Set unic id for build search_options_session_key used in sessions
 		
-		return  $component->get_valor($lang);
-		/**/
-	}#end render_list_value
+		return  $component->get_valor($lang);	
+	}//end render_list_value
 
 
 

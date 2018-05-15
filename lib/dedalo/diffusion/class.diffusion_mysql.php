@@ -29,7 +29,9 @@ class diffusion_mysql extends diffusion_sql  {
 	* @return 
 	*/
 	public static function exec_mysql_query( $sql, $table_name=null, $database_name, $multi_query=false ) {
-		
+				
+		debug_log(__METHOD__." Connecting database: $database_name - table: $table_name ".to_string(), logger::DEBUG);
+
 		$mysql_conn = DBi::_getConnection_mysql(MYSQL_DEDALO_HOSTNAME_CONN,
 										 		MYSQL_DEDALO_USERNAME_CONN,
 										 		MYSQL_DEDALO_PASSWORD_CONN,
@@ -485,7 +487,7 @@ class diffusion_mysql extends diffusion_sql  {
 					$create_table_ar_fields = self::build_table_columns( $table_columns_options ); // $diffusion_section, $database_name
 				#}
 				
-					#dump($create_table_ar_fields['ar_fields'], ' create_table_ar_fields ++ '.to_string());die();			
+				#dump($create_table_ar_fields['ar_fields'], ' create_table_ar_fields ++ '.to_string());die();			
 				self::create_table( array('database_name' 	=> $database_name,
 										  'table_name' 		=> $table_name,
 										  'engine' 			=> $engine,
@@ -499,8 +501,7 @@ class diffusion_mysql extends diffusion_sql  {
 		foreach ((array)$ar_section_id as $section_id => $ar_fields) {
 			# Iterate one or more records
 			#$ar_fields 	= $options->record_data['ar_fields'][$section_id];
-				#dump($ar_fields, ' ar_fields ++ section_id: '.to_string($section_id));	continue;			
-			
+				#dump($ar_fields, ' ar_fields ++ section_id: '.to_string($section_id));	continue;
 
 			# First, delete current record in all langs if exists
 				if ($options->delete_previous===true) {
@@ -527,7 +528,8 @@ class diffusion_mysql extends diffusion_sql  {
 
 					$field_value = diffusion_mysql::conform_field_value($field_value);
 					
-					$ar_field_name[]  = '`'.$field_name.'`';
+					#$ar_field_name[]  = '`'.$field_name.'`';
+					$ar_field_name[]  = strpos($field_name, '`')===0 ? $field_name : '`'.$field_name.'`'; // 2018-03-16 !!
 					$ar_field_value[] = $field_value;
 				}
 			
@@ -553,8 +555,6 @@ class diffusion_mysql extends diffusion_sql  {
 		#dump($result, ' result ++ '.to_string());
 
 
-
-
 		if(SHOW_DEBUG===true) {
 			$response->debug = exec_time($start_time);
 		}
@@ -562,6 +562,7 @@ class diffusion_mysql extends diffusion_sql  {
 		$response->result = true;
 		$response->new_id = self::$insert_id;
 		$response->msg    = implode(",\n", $response->msg);		#dump($response, ' response');
+		
 		return (object)$response;
 	}#end save_record
 

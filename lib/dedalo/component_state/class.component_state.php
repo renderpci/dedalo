@@ -20,15 +20,8 @@ class component_state extends component_common {
 
 
 	public function __construct($tipo=NULL, $parent=NULL, $modo='edit', $lang=DEDALO_DATA_LANG, $section_tipo=null) {
-		/*
-		$tipo="oh28";
-		$section_tipo="oh1";
-		$parent="3";
-		$lang="lg-nolan";
-		$modo="edit_component";
-		*/
+		
 		parent::__construct($tipo, $parent, $modo, $lang, $section_tipo);
-
 	
 		# Set default options (self component like every tool)
 		$this->options = new stdClass();
@@ -37,7 +30,8 @@ class component_state extends component_common {
 			$this->options->section_tipo 	= $this->section_tipo;
 			$this->options->section_id		= $this->parent;
 			$this->options->component_tipo 	= $this->tipo;
-				#dump($this->options, ' options ++ '.to_string($modo));			
+		
+		return true;		
 	}//end __construct
 
 
@@ -52,7 +46,10 @@ class component_state extends component_common {
 		$this->dato = array_unique((array)$this->dato,SORT_REGULAR);
 		$result = parent::Save();
 
-		debug_log(__METHOD__." Saved $this->section_tipo - $this->parent - dato: ". json_encode($this->dato), logger::DEBUG);
+		if(SHOW_DEBUG===true) {
+			debug_log(__METHOD__." Saved $this->section_tipo - $this->parent - dato: ". json_encode($this->dato), logger::DEBUG);
+			#debug_log(__METHOD__." called by ".json_encode(debug_backtrace()[0], JSON_PRETTY_PRINT), logger::DEBUG);;
+		}		
 
 		if ($result) {
 			# Update caller sections (from inverse locators)
@@ -70,8 +67,11 @@ class component_state extends component_common {
 	*/
 	public function get_dato() {
 		$dato = parent::get_dato();
+
 		return (array)$dato;
 	}
+
+
 
 	/**
 	* SET_DATO
@@ -80,8 +80,11 @@ class component_state extends component_common {
 		if(is_string($dato)){
 			$dato =  json_handler::decode($dato);
 		}
-		parent::set_dato( (array)$dato );
+		
+		return parent::set_dato( (array)$dato );
 	}	
+
+
 
 	/**
 	* GET_AR_TOOLS_OBJ
@@ -139,10 +142,10 @@ class component_state extends component_common {
 				$ar_state[] = $options;
 			}
 		}
-		#dump($ar_state, ' ar_state ++ '.to_string());
+		
 		
 		return $this->ar_state = $ar_state;		
-	}#end configure_for_component
+	}//end configure_for_component
 
 
 	/**
@@ -163,11 +166,10 @@ class component_state extends component_common {
 		$RecordObj_dd 	= new RecordObj_dd($state_map_tipo);
 		$related_terms 	= (array)$RecordObj_dd->get_relaciones();
 		
-		$related_terms[] = array($this->get_modelo()=>$this->tipo);	// Add current component state too
-			#dump($related_terms, ' related_terms ++ '.to_string());
+		$related_terms[] = array($this->get_modelo()=>$this->tipo);	// Add current component state too		
 		foreach($related_terms as $ar_value) foreach($ar_value as $odelo => $current_tipo) {
+			
 			$ar_state_id = array();			
-			#dump($current_tipo, ' tipo ++ '.to_string());
 			$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
 			$component 	 = component_common::get_instance($modelo_name,
 														  $current_tipo,
@@ -175,8 +177,8 @@ class component_state extends component_common {
 														  'edit',
 														  DEDALO_DATA_LANG,
 														  $this->section_tipo);
-			$propiedades = $component->get_propiedades();
-				#dump($propiedades, ' propiedades ++ '.to_string($current_tipo));
+
+			$propiedades = $component->get_propiedades();			
 			if (isset($propiedades->state)) foreach((array)$propiedades->state as $ar_locator_obj) {
 				
 				foreach ($ar_locator_obj as $key => $locator_obj) {					
@@ -228,9 +230,9 @@ class component_state extends component_common {
 		#dump($ar_state_id, ' ar_state_id ++ '.to_string());
 		#dump($this->get_dato(), ' this->get_dato() ++ '.to_string());
 		
-		$this->Save();
-
+		return $this->Save();
 	}#end set_defaults
+
 
 
 	/**
@@ -257,7 +259,8 @@ class component_state extends component_common {
 		$this->set_dato($dato);
 
 		return true;
-	}
+	}//end remove_portal_locator
+
 
 
 	/**
@@ -289,9 +292,10 @@ class component_state extends component_common {
 		
 		
 		return true;
-	}#end update_state_locator
+	}//end update_state_locator
 	
 	
+
 	/**
 	* UPDATE_STATE
 	* Add / update current dato whith received locator
@@ -353,8 +357,8 @@ class component_state extends component_common {
 		#dump($dato, ' dato final ++ '.to_string($locator_state->section_id));
 
 		return (array)$this->dato;
+	}//end update_state
 
-	}//end update_state	
 
 
 	/**
@@ -468,9 +472,10 @@ class component_state extends component_common {
 				}
 				break;
 			}
-		}	
+		}
+
 		return (array)$valor_for_checkbox;
-	}
+	}//get_valor_for_checkbox
 
 
 
@@ -484,9 +489,10 @@ class component_state extends component_common {
 		if(SHOW_DEBUG===true) {
 			#return "STATE: n/a";
 		}
-		return "n/a";
 
+		return "n/a";
 	}#end get_valor_export
+
 
 	
 	/**
@@ -613,7 +619,7 @@ class component_state extends component_common {
 		}
 
 		return $this->valor;
-	}
+	}//end get_valor
 
 
 
@@ -743,7 +749,6 @@ class component_state extends component_common {
 			#dump($ar_graph, ' ar_graph ++ '.to_string());
 		
 		return $ar_graph;
-
 	}#end get_ar_graph
 
 
@@ -895,7 +900,8 @@ class component_state extends component_common {
 	* GET_PROCESS_TYPE_NAME
 	* @return 
 	*/
-	public function get_process_type_name( $type ) {		
+	public function get_process_type_name( $type ) {
+
 		return label::get_label($type);
 	}#end get_process_type_name
 	
@@ -914,7 +920,7 @@ class component_state extends component_common {
 		if(!isset($map[$key])) return null;
 
 		return $map[$key];
-	}
+	}//end map_tool_name
 
 
 
@@ -1190,7 +1196,7 @@ class component_state extends component_common {
 	* @return string $list_value
 	*/
 	public static function render_list_value($value, $tipo, $parent, $modo, $lang, $section_tipo, $section_id, $current_locator=null, $caller_component_tipo=null) {
-
+	
 		$current_valor  = $value;
 		$valor 			= '';
 		if(!empty($current_valor)) {					
@@ -1204,6 +1210,7 @@ class component_state extends component_common {
 			#$component->set_valor($ar_val);
 			$valor 		= $component->get_html();
 		}
+		
 
 		return $valor;
 	}#end render_list_value

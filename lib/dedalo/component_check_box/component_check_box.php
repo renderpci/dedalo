@@ -6,7 +6,6 @@
 	$parent 				= $this->get_parent();
 	$section_tipo			= $this->get_section_tipo();
 	$modo					= $this->get_modo();		
-	$dato 					= $this->get_dato();	
 	$label 					= $this->get_label();
 	$required				= $this->get_required();
 	$debugger				= $this->get_debugger();	
@@ -25,24 +24,26 @@
 	if ($this->get_filter_authorized_record()===false) return NULL ;
 	
 	$file_name				= $modo;
-
+	$id_wrapper = 'wrapper_'.$identificador_unico;
 	switch($modo) {
 		
 		case 'dataframe_edit' :
-		
 					$caller_dataset_json = json_encode($this->caller_dataset);
 					$this->set_relation_type($this->caller_dataset->type);
-						#dump($dato, ' dato ++ '.to_string());
-		case 'edit' :					
-					$id_wrapper = 'wrapper_'.$identificador_unico;
+					$id_wrapper = 'wrapper_'.$identificador_unico.'_'.$this->caller_dataset->component_tipo ;
+					
+		case 'edit' :
+					$dato		= $this->get_dato();				
+					
 					$input_name = "{$tipo}_{$parent}";	
 					$referenced_tipo		= $this->get_referenced_tipo();
 					$ar_list_of_values		= $this->get_ar_list_of_values(DEDALO_DATA_LANG, null);							
 					$dato_string			= $this->get_dato_as_string();
-					$component_info 		= $this->get_component_info('json');
+					$component_info 		= $this->get_component_info('json');					
 					break;
 
-		case 'tool_time_machine' :					
+		case 'tool_time_machine' :
+					$dato		= $this->get_dato();				
 					$id_wrapper = 'wrapper_'.$identificador_unico.'_tm';
 					$input_name = "{$tipo}_{$parent}_tm";							
 					# Force file_name
@@ -55,8 +56,9 @@
 
 					$referenced_tipo	= $this->get_referenced_tipo();
 					$ar_list_of_values  = $this->get_ar_list_of_values(DEDALO_DATA_LANG, null);
-					$ar_comparison_operators 	= $this->build_search_comparison_operators();
-					$ar_logical_operators 		= $this->build_search_logical_operators();
+
+					# q_operator is injected by trigger search2
+					$q_operator = isset($this->q_operator) ? $this->q_operator : null;
 
 					# Search input name (var search_input_name is injected in search -> records_search_list.phtml)
 					# and recovered in component_common->get_search_input_name()

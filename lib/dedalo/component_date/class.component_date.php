@@ -15,6 +15,7 @@
 */
 class component_date extends component_common {
 	
+
 	# Overwrite __construct var lang passed in this component
 	protected $lang = DEDALO_DATA_NOLAN;
 
@@ -37,7 +38,8 @@ class component_date extends component_common {
 
 		if(SHOW_DEBUG===true) {
 			if ($this->RecordObj_dd->get_traducible()==='si') {
-				throw new Exception("Error Processing Request. Wrong component lang definition. This component $tipo (".get_class().") is not 'traducible'. Please fix this ASAP", 1);				
+				#throw new Exception("Error Processing Request. Wrong component lang definition. This component $tipo (".get_class().") is not 'traducible'. Please fix this ASAP", 1);
+				trigger_error("Error Processing Request. Wrong component lang definition. This component $tipo (".get_class().") is not 'traducible'. Please fix this ASAP");		
 			}
 		}
 	}//end __construct
@@ -264,7 +266,7 @@ class component_date extends component_common {
 							$valor_start = $dd_date->get_dd_timestamp("Y-m");
 							if(isset($current_dato->start->month)) {
 							}else{
-								$valor_start = $dd_date->get_dd_timestamp("Y");
+								$valor_start = $dd_date->get_dd_timestamp("Y", $padding=false);
 							}
 						}
 						
@@ -287,7 +289,7 @@ class component_date extends component_common {
 								if(isset($current_dato->end->month)) {
 									$valor_end = $dd_date->get_dd_timestamp("Y-m");
 								}else{
-									$valor_end = $dd_date->get_dd_timestamp("Y");
+									$valor_end = $dd_date->get_dd_timestamp("Y", $padding=false);
 								}
 							}
 						$ar_valor[$key] .= ' <> '. $valor_end;
@@ -321,12 +323,27 @@ class component_date extends component_common {
 				default:
 					if(!empty($current_dato)) {
 						$dd_date		= new dd_date($current_dato);
-						$ar_valor[$key] = $dd_date->get_dd_timestamp("Y-m-d");
+						#$ar_valor[$key] = $dd_date->get_dd_timestamp("Y-m-d");
+
+						if(isset($current_dato->day)) {
+							$valor = $dd_date->get_dd_timestamp("Y-m-d");
+						}else{
+							$valor = $dd_date->get_dd_timestamp("Y-m");
+							if(isset($current_dato->month)) {
+							}else{
+								$valor = $dd_date->get_dd_timestamp("Y", $padding=false);
+							}
+						}
+
+						$ar_valor[$key] .= $valor;
+
 					}
 					break;
 			}
 		}
+
 		$valor = implode('|',$ar_valor);
+		
 		return (string)$valor;
 	}//end get_valor
 
@@ -368,13 +385,14 @@ class component_date extends component_common {
 	*/
 	public function get_valor_export( $valor=null, $lang=DEDALO_DATA_LANG, $quotes, $add_id ) {
 		
-		if (is_null($valor)) {
+		if (empty($valor)) {
 			$dato = $this->get_dato();				// Get dato from DB
+			$valor = $this->get_valor($lang);
 		}else{
-			$this->set_dato( json_decode($valor) );	// Use parsed json string as dato
+			#$this->set_dato( json_decode($valor) );	// Use parsed json string as dato
 		}
 
-		$valor = $this->get_valor($lang);
+		
 		#$valor = strip_tags($valor); // Removes the span tag used in list mode
 		/*
 		$previous_modo = $this->get_modo();
@@ -383,9 +401,7 @@ class component_date extends component_common {
 		# Restore modo after 
 		$this->set_modo($previous_modo);
 		*/
-		if(SHOW_DEBUG===true) {
-			#return "DATE: ".$valor;
-		}
+		
 		return (string)$valor;
 	}//end get_valor_export
 
@@ -779,11 +795,15 @@ class component_date extends component_common {
 	* @return object $query_object
 	*/
 	public static function resolve_query_object_sql($query_object) {
-
+debug_log(__METHOD__." query_object ".to_string($query_object), logger::DEBUG);
 		// Check if q is an valid object
 		// Note that if q is number, json_decode not will generate error here
 		if (!$q_object = json_decode($query_object->q)) {
 			#debug_log(__METHOD__." Error on decode query_object->q ".to_string($query_object), logger::WARNING);
+		}
+
+		if (empty($query_object->q) && empty($query_object->q_operator)) {
+			return $query_object;
 		}
 	
 		// Case search with plain text like from autocomplete 
@@ -822,7 +842,7 @@ class component_date extends component_common {
 			}else{
 
 				$query_object->operator = '=';
-    			$query_object->q_parsed	= "'espárragos'";
+    			$query_object->q_parsed	= "'INVALID VALUE!'";
 				return $query_object;
 			}
 		}
@@ -1437,6 +1457,22 @@ class component_date extends component_common {
 					break;
 
 				case 'date':
+				/*
+					$dd_date 	= new dd_date($dato);
+					if(isset($dato->day)) {
+
+							$timestamp = $dd_date->get_dd_timestamp("Y-m-d");
+					}else{
+							$timestamp = $dd_date->get_dd_timestamp("Y-m");
+						if(isset($dato->month)) {
+							}else{
+									$timestamp = $dd_date->get_dd_timestamp("Y");
+								}
+						}
+
+					$ar_diffusion_values[] = $timestamp;
+					break;*/
+
 				default:
 					$dd_date 		 = new dd_date($dato);
 					$timestamp 		 = $dd_date->get_dd_timestamp("Y-m-d H:i:s");

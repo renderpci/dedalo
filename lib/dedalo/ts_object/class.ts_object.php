@@ -516,7 +516,8 @@ class ts_object extends Accessors {
 			if ($obj_value->type==='term') {
 				if(SHOW_DEBUG===true) {
 					if (!is_string($obj_value->value)) {
-						dump($obj_value->value, '$obj_value->value ++ EXPECTED STRING. In stead received type: '.gettype($obj_value->value) ." - ".to_string($obj_value->value));
+						#dump($obj_value->value, '$obj_value->value ++ EXPECTED STRING. Instead received type: '.gettype($obj_value->value) ." - ".to_string($obj_value->value));
+						debug_log(__METHOD__."  ".'$obj_value->value ++ EXPECTED STRING. But received type: '.gettype($obj_value->value) ." - value:".to_string($obj_value->value), logger::ERROR);
 					}
 				}
 				$ar_elements[$key]->value = '<span class="no_descriptor">' . $obj_value->value . '</span>';				
@@ -586,7 +587,8 @@ class ts_object extends Accessors {
 															  'edit',
 															  $lang,
 															  $section_tipo);
-			$valor = $component->get_valor($lang);			
+			$valor = $component->get_valor($lang);
+				# dump($valor, ' valor ++ '.to_string());	
 			if (empty($valor)) {
 							
 				$main_lang = hierarchy::get_main_lang( $locator->section_tipo );
@@ -618,7 +620,12 @@ class ts_object extends Accessors {
 		#debug_log(__METHOD__." valor $cache_uid ".htmlentities($valor), logger::DEBUG); 
 
 		# Cache control (session)
-		$_SESSION['dedalo4']['config']['term_by_locator'][$cache_uid] = $valor;
+		if(SHOW_DEBUG===true) {
+			#$_SESSION['dedalo4']['config']['term_by_locator'][$cache_uid] = $valor;
+		}else{
+			$_SESSION['dedalo4']['config']['term_by_locator'][$cache_uid] = $valor;
+		}
+		
 		
 		
 		return $valor;

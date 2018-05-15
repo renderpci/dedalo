@@ -21,87 +21,91 @@
 	$html_label = component_common_draw::draw_label($this);
 	
 	# CONTENIDO (INPUT)
-	$html_contenido = '';
+	$html_content = '';
 	switch(true) {
 			
-		case ($permissions===0) :
+		case ($permissions===0):
 
-				$html_contenido .= ""; 
+				$html_content .= ""; 
 				break;
 						
 		case ($permissions===1)	:
 
-				$html_contenido .= "<ul class=\"filter_master_list\">";
+				$html_content .= "<ul class=\"filter_master_list\">";				
 
-				$i=1;foreach ($ar_proyectos_section as $value => $rotulo) {
+				foreach ($ar_proyectos_section as $key => $row) {
 					
-					$html_contenido .= "<li>";						
-					$html_contenido .= "- <label class=\"css_check_box_filter_master_rotulo\">$rotulo</label>";						
-					$html_contenido .= "</li>";
+					if (locator::in_array_locator( $row->locator, (array)$dato )) {
+						$html_content .= "<li>";
+						$html_content .= "- <label class=\"css_check_box_filter_master_rotulo\">$row->label</label>";
+						$html_content .= "</li>";
+					}
+				}
 
-				$i++;}
-
-				$html_contenido .= "</ul>";
+				$html_content .= "</ul>";
 				break;	
 						
-		case ($permissions>=2)	:					
+		case ($permissions>=2):					
 
 				$disabled = ((int)$user_id_logged===(int)$user_id_viewed) ? 'disabled' : '';
 
-				$html_contenido .= "<ul class=\"filter_master_list\">";
+				$html_content .= "<ul class=\"filter_master_list\">";
 
-				$i=1;foreach ($ar_proyectos_section as $current_section_id => $rotulo) {
+				$i=1;foreach ($ar_proyectos_section as $key => $row) {
 					
-					$html_contenido .= "<li>";
+					$html_content .= "<li>";
+						
+						$checked  = '';  //is_array($dato) && in_array($current_section_id, array_keys($dato)) ? 'checked="checked"' : '';
+						if (locator::in_array_locator( $row->locator, (array)$dato )) { // ['section_id','section_tipo']
+							$checked  = 'checked="checked"';
+						}						
 
-						$checked  = is_array($dato) && in_array($current_section_id, array_keys($dato)) ? 'checked="checked"' : '';
 						$tabindex = ($i==1) ? 'tabindex="1"' : '';
 
 						$input_id = $input_name.'_'.$i;
 
-						$html_contenido .= "\n <input class=\"css_check_box_filter_master\" type=\"checkbox\"
-						onchange=\"component_filter_master.Save(this)\"
-						name=\"{$input_name}\"
-						id=\"{$input_id}\"
-						value=\"{$current_section_id}\"
-						title=\"$html_title\"
-						data-tipo=\"{$tipo}\"
-						data-lang=\"{$lang}\"
-						data-section_tipo=\"{$section_tipo}\"
-						data-parent=\"{$parent}\"
-						$checked
-						$disabled
-						$tabindex
-						/>";
+						$html_content .= "<input class=\"css_check_box_filter_master\" type=\"checkbox\" ";
+						$html_content .= "onchange=\"component_filter_master.Save(this)\" ";
+						$html_content .= "name=\"{$input_name}\" ";
+						$html_content .= "id=\"{$input_id}\" ";
+						$html_content .= "value='".json_encode($row->locator)."' ";
+						$html_content .= "data-tipo=\"{$tipo}\" ";
+						$html_content .= "data-lang=\"{$lang}\" ";
+						$html_content .= "data-section_tipo=\"{$section_tipo}\" ";
+						$html_content .= "data-parent=\"{$parent}\" ";
+						$html_content .= "$checked ";
+						$html_content .= "$disabled ";
+						$html_content .= "$tabindex ";
+						$html_content .= "/>";
 						
-						$html_contenido .= "<label for=\"$input_id\" class=\"css_check_box_filter_master_rotulo\" $required >";
+						$html_content .= "<label for=\"$input_id\" class=\"css_check_box_filter_master_rotulo\" $required >";
 						if(SHOW_DEBUG===true) {
-							$html_contenido .= "[$current_section_id] ";
+							$html_content .= '['.$row->locator->section_id.'] ';
 						}
-						$html_contenido .= $rotulo;
-						$html_contenido .= "</label>";	
+						$html_content .= $row->label;
+						$html_content .= "</label>";	
 						
-					$html_contenido .= "</li>";
+					$html_content .= "</li>";
 
 				$i++;}
 
-				$html_contenido .= "</ul>";
+				$html_content .= "</ul>";
 				
 	
 				if(SHOW_DEBUG) {
-					#$html_contenido .= "\n <span class=\"css_span_debugger\" id=\"debugger_{$tipo}\" >{$debugger}</span>";
+					#$html_content .= "\n <span class=\"css_span_debugger\" id=\"debugger_{$tipo}\" >{$debugger}</span>";
 				}
 				break;							
 	}
 
 
 	# Prepare content to show in page
-	tools::prepare_content($html_contenido);
+	tools::prepare_content($html_content);
 
 	
 	# PRINT HTML
 	print $html_label;
-	print $html_contenido;
+	print $html_content;
 
 
 	print "\n</div>\n\n"; //wrap

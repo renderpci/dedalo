@@ -12,9 +12,11 @@ class component_number extends component_common {
 	* GET_DATO
 	*/
 	public function get_dato() {
-		$dato = parent::get_dato();
-		$format_dato = $this->set_format_form_type($dato);
 
+		$dato = parent::get_dato();				
+
+		$format_dato = $this->set_format_form_type($dato);
+		
 		return $format_dato;
 	}//end get_dato
 
@@ -25,8 +27,12 @@ class component_number extends component_common {
 	*/
 	public function set_dato($dato) {
 
-		$format_dato = $this->set_format_form_type($dato);
+		if ($dato==='') {
+			$dato = null;
+		}
 
+		$format_dato = $this->set_format_form_type($dato);
+	
 		return parent::set_dato( $format_dato );			
 	}//end set_dato
 

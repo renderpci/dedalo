@@ -222,20 +222,18 @@ class diffusion_index_ts extends diffusion {
 
 		#
 		# FILTER RESULT BY USER PROJECTS
-		if( ($is_global_admin = component_security_administrator::is_global_admin($user_id))!==true ) {
+		if( false===component_security_administrator::is_global_admin($user_id) ) {
 
 			# USER PROJECTS : All projects that current user can view
 			$ar_user_projects = (array)filter::get_user_projects( $user_id );
-			$ar_user_projects = array_keys($ar_user_projects);
-				#dump($ar_user_projects,"ar_user_projects"); die();
-			
+				#dump($ar_user_projects, ' ar_user_projects ++ '.to_string());
+						
 			# Filter
 			foreach ($ar_section_top_tipo as $section_top_tipo => $ar_values) {
-
+	
 				# COMPONENT FILTER BY SECTION TIPO
 				$section_real_tipo 		= section::get_section_real_tipo_static($section_top_tipo);
-				$component_filter_tipo  = section::get_ar_children_tipo_by_modelo_name_in_section($section_real_tipo, 'component_filter')[0];
-				
+				$component_filter_tipo  = section::get_ar_children_tipo_by_modelo_name_in_section($section_real_tipo, 'component_filter')[0];				
 				if (empty($component_filter_tipo)) {
 					if(SHOW_DEBUG===true) {
 						throw new Exception("Error Processing Request. component_filter_tipo not found in section tipo: $section_top_tipo", 1);
@@ -243,7 +241,7 @@ class diffusion_index_ts extends diffusion {
 					continue;	// Skip this				
 				}
 
-				# ar_keys are section id_matrix of current section tipo
+				# ar_keys are section_id of current section tipo records
 				$ar_keys = array_keys($ar_values);
 					#dump($ar_keys,"ar_keys for $section_top_tipo , $component_filter_tipo");
 
@@ -256,15 +254,19 @@ class diffusion_index_ts extends diffusion {
 																		DEDALO_DATA_NOLAN,
 																		$section_top_tipo
 																		);
-					$dato 				= (array)$component_filter->get_dato();
-					# Projects of current record (stored in his component_filter dato)
-					$ar_filter_projects = array_keys($dato);
-						#dump($ar_filter_projects,"dato $component_filter_tipo,$section_top_tipo");
-						$ar_intersect 	= (array)array_intersect($ar_filter_projects,$ar_user_projects);
-							#dump($result,"result");
-						if (count($ar_intersect)<1) {
-							unset($ar_section_top_tipo[$section_top_tipo][$current_id_section]);
+					$component_filter_dato = (array)$component_filter->get_dato();
+	
+					$in_user_projects = false;
+					foreach ($ar_user_projects as $user_project_locator) {
+						if (true===locator::in_array_locator($user_project_locator, $component_filter_dato, $ar_properties=['section_id','section_tipo'])) {
+							$in_user_projects = true;
+							break;
 						}
+					}					
+					if ($in_user_projects===false) {
+						debug_log(__METHOD__." Removed row from thesaurus index_ts list (project not mathc with user projects) ".to_string($ar_section_top_tipo[$section_top_tipo][$current_id_section]), logger::DEBUG);
+						unset($ar_section_top_tipo[$section_top_tipo][$current_id_section]);						
+					}
 				}				
 			}
 			# DELETE EMPTY TOP TIPOS ARRAYS

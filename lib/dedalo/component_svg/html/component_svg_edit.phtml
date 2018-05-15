@@ -1,0 +1,91 @@
+<?php
+
+	# VISUALIZADOR HTML
+	
+
+	# html_delimiter
+	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'in', $modo, $lang);
+
+
+	$wrap_style = isset($wrap_style) ? $wrap_style : '';
+	print "<div class=\"wrap_component css_wrap_svg wrap_component_{$modo} wrap_component_{$tipo}\" id=\"{$id_wrapper}\" ";
+	print "style=\"$wrap_style\" ";
+	print "data-tipo=\"{$tipo}\" ";
+	print "data-lang=\"{$lang}\" ";
+	print "data-section_tipo=\"{$section_tipo}\" ";
+	print "data-parent=\"{$parent}\" ";
+	print "data-modo=\"{$modo}\" ";
+	print "data-dato='{$dato_json}' ";
+	print "data-component_name=\"{$component_name}\" ";
+	print "data-component_info='{$component_info}' ";
+	print ">";
+	
+
+	# LABEL
+	$html_label = component_common_draw::draw_label($this);
+	
+
+	# CONTENIT
+	$html_content = '';
+	switch($permissions) {
+
+		case 0 :
+				$html_content .= "";
+				break;
+
+		case 1 :
+				
+				break;
+
+		case 2 :
+		case 3 :
+
+				if(SHOW_DEBUG===true) {
+					$html_content .= "<span class=\"debug_info notes\">".$dato_json."</span>";
+				}
+
+				$dato = '<svg version="1.1" id="Layer_1" xmlns:x="&ns_extend;" xmlns:i="&ns_ai;" xmlns:graph="&ns_graphs;"
+	 xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:a="http://ns.adobe.com/AdobeSVGViewerExtensions/3.0/"
+	 x="0px" y="0px" viewBox="0 0 35.5 47.1" enable-background="new 0 0 35.5 47.1" xml:space="preserve">
+<path fill="#1A1A1A" d="M0.8,30h0.7h7.2h0.7v-0.7v-5h7.2v12.2v0.7h0.7H26v3.6v0.7h0.7h7.2h0.7v-0.7v-8.6v-0.7h-0.7h-7.2H26v0.7v3.6
+	h-7.9V24.3H26v3.6v0.7h0.7h7.2h0.7v-0.7v-8.6v-0.7h-0.7h-7.2H26v0.7v3.6h-7.9V11.3H26v3.6v0.7h0.7h7.2h0.7v-0.7V6.3V5.6h-0.7h-7.2
+	H26v0.7v3.6h-8.6h-0.7v0.7v12.2H9.5v-5v-0.7H8.8H1.6H0.8v0.7v11.5V30z M2.3,28.6V18.5H8v4.9c0,0.1,0,0.1,0,0.2c0,0,0,0,0,0.1v4.9
+	H2.3z M27.4,40.1v-3.5v-0.3v-3.4h5.8v7.2H27.4z M27.4,27.1V20h5.8v7.2H27.4z M27.4,14.2v-3.5v-0.3V7h5.8v7.2H27.4z"/>
+</svg>';
+
+				# JS				
+				$html_content .= "<script>";				
+				// Init
+				$init_options = array(
+					"uid" 			=> $identificador_unico,
+					"modo" 			=> $modo,
+					"propiedades" 	=> $propiedades,
+					"dato" 			=> $dato,
+					"id_wrapper" 	=> $id_wrapper
+				);
+				$html_content .= "component_svg.init(".json_encode($init_options).");";				
+				$html_content .= "</script>";
+				
+				
+				break;
+	}
+
+	# Prepare content to show in page
+	tools::prepare_content($html_content);
+
+
+	# PRINT HTML
+	if($modo!=='edit_in_list'){
+		print $html_label;
+	}		
+	print $html_content;
+
+
+	print "</div>"; //wrap
+
+	
+
+	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'out', $modo, $lang);
+
+	
+?>

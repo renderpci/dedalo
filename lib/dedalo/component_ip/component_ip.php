@@ -37,20 +37,7 @@
 		case 'edit':
 				$id_wrapper         = $this->get_id_wrapper();
 				$component_info 	= $this->get_component_info('json');
-				break;
-		
-		case 'search' :
-				# dato is injected by trigger search wen is needed
-				$dato = isset($this->dato) ? $this->dato : null;
-				
-				$file_name = 'list';
-
-				# Search input name (var search_input_name is injected in search -> records_search_list.phtml)
-				# and recovered in component_common->get_search_input_name()
-				# Normally is section_tipo + component_tipo, but when in portal can be portal_tipo + section_tipo + component_tipo
-				$search_input_name = $this->get_search_input_name();
-				return null;
-				break;
+				break;		
 
 		case 'list_tm' :
 				$file_name = 'list';						
@@ -58,8 +45,17 @@
 		case 'list'	:
 				$geoip_info = component_ip::get_geoip_info( $ip, 'city' );
 					#dump($geoip_info, ' geoip_info ++ '.to_string());
+				break;
+
+		case 'search' :
+				# dato is injected by trigger search wen is needed
+				$dato = isset($this->dato) ? $this->dato : null;
+				
+				# Search input name (var search_input_name is injected in search -> records_search_list.phtml)
+				# and recovered in component_common->get_search_input_name()
+				# Normally is section_tipo + component_tipo, but when in portal can be portal_tipo + section_tipo + component_tipo
+				$search_input_name = $this->get_search_input_name();				
 				break;						
-						
 	}
 
 	

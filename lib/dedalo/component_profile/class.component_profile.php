@@ -37,7 +37,8 @@ class component_profile extends component_common {
 		if(SHOW_DEBUG===true) {
 			$traducible = $this->RecordObj_dd->get_traducible();
 			if ($traducible==='si') {
-				throw new Exception("Error Processing Request. Wrong component lang definition. This component $tipo (".get_class().") is not 'traducible'. Please fix this ASAP", 1);
+				#throw new Exception("Error Processing Request. Wrong component lang definition. This component $tipo (".get_class().") is not 'traducible'. Please fix this ASAP", 1);
+				trigger_error("Error Processing Request. Wrong component lang definition. This component $tipo (".get_class().") is not 'traducible'. Please fix this ASAP");
 			}
 		}
 	}
@@ -153,7 +154,8 @@ class component_profile extends component_common {
 	*/
 	public static function get_profile_from_user_id( $user_id ) {
 
-		if(SHOW_DEBUG===true || $user_id<1) {
+		#if(SHOW_DEBUG===true || $user_id<1) {
+		if($user_id<1) {
 			return null;
 		}
 		

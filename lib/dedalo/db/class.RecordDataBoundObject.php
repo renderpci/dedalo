@@ -381,6 +381,7 @@ abstract class RecordDataBoundObject {
 		$strPrimaryKeyName	= $this->strPrimaryKeyName;
 		$strQuery			= '';
 		$strQuery_limit 	= '';
+		$strQuery_offset 	= '';
 		$SQL_CACHE 			= false;
 	
 
@@ -451,7 +452,11 @@ abstract class RecordDataBoundObject {
 									break;				
 				# LIMIT
 				case ($key==='sql_limit'):
-									$strQuery_limit = "LIMIT $value ";
+									$strQuery_limit = ' LIMIT '.(int)$value;
+									break;
+				# OFFSET
+				case ($key==='offset'):
+									$strQuery_offset = ' OFFSET '.(int)$value;
 									break;
 
 				# SI $key ES 'group_by', INTERPRETAMOS $value COMO SQL en formato "GROUP BY $value"
@@ -561,8 +566,8 @@ abstract class RecordDataBoundObject {
 			$strQuery = substr($strQuery, 5);
 		}
 		#$strQuery = trim('SELECT '. $SQL_CACHE .$strPrimaryKeyName. ' FROM '.DEDALO_DATABASE_CONN.'.'.$this->strTableName.' WHERE '. $strQuery .' '. $strQuery_limit) ;	#$strQuery .= 'SQL_CACHE ';
-		$strQuery = trim('SELECT '. $SQL_CACHE .'"'.$strPrimaryKeyName. '" FROM "'.$this->strTableName.'" WHERE '. $strQuery .' '. $strQuery_limit) ;	#$strQuery .= 'SQL_CACHE ';
-			#dump( stripslashes( $strQuery ),'strQuery');
+		$strQuery = trim('SELECT '. $SQL_CACHE .'"'.$strPrimaryKeyName. '" FROM "'.$this->strTableName.'" WHERE '. $strQuery . $strQuery_limit . $strQuery_offset) ;	#$strQuery .= 'SQL_CACHE ';
+			#debug_log(__METHOD__." strQuery ".to_string($strQuery), logger::DEBUG);
 
 
 		# CACHE : Static var

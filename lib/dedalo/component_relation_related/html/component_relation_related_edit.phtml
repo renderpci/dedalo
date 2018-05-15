@@ -41,11 +41,11 @@
 			#	$html_content .= "<div class=\"css_relation_related_button_close\" onclick=\"component_common.change_mode_component(this, 'edit', '$from_modo')\"></div>";
 			#}
 
-			$html_content .= "<div class=\"wrap_relation_related_values\">";
+			$html_content .= "<div class=\"wrap_relation_related_values\">";				
 
 				# BTN LINK ELEMENT (FROM LIST)
 				$html_content .= "<div class=\"button_add relation_related_add_button\" ";
-				$html_content .= "data-target_section_tipo=\"$target_section_tipo\" ";
+				$html_content .= "data-target_section_tipo=\"$target_section_tipo\" ";				
 				$html_content .= "title=\"Add from list\" ";
 				$html_content .= "onclick=\"component_relation_related.open_related_selector_window(this,event)\" ";
 				$html_content .= "></div>";
@@ -62,12 +62,21 @@
 						#$hierarchy_types_json 	 = '';
 						#$hierarchy_sections_json = '';	// Don't restrict here! 	json_encode(array($target_section_tipo));
 
+						# parent_area_is_model
+						if (isset($_GET['model']) && $_GET['model']==1) {
+							$parent_area_is_model = true;
+						}else{
+							$parent_area_is_model = false;
+						}
+						$parent_area_is_model_json 	= json_encode($parent_area_is_model);
+
 						# BTN LINK ELEMENT (FROM TREE)
 						$html_content .= "<div class=\"button_add relation_related_add_from_tree_button\" ";
 						$html_content .= "data-id_wrapper=\"$id_wrapper\" ";
 						$html_content .= "data-component_name=\"$component_name\" ";
 						#$html_content .= "data-hierarchy_types='{$hierarchy_types_json}' ";
 						#$html_content .= "data-hierarchy_sections='{$hierarchy_sections_json}' ";
+						$html_content .= "data-parent_area_is_model='{$parent_area_is_model_json}' ";
 						$html_content .= "title=\"Add from tree\" ";
 						$html_content .= "onclick=\"component_common.open_ts_window(this)\" ";
 						$html_content .= "></div>";
@@ -85,7 +94,7 @@
 
 				#
 				# TERMS
-				#dump($dato, ' dato ++ '.to_string());
+				# dump($ar_valor, ' ar_valor ++ '.to_string());
 				#foreach ((array)$dato as $key => $current_locator) {
 				foreach ($ar_valor as $current_value => $value) {
 

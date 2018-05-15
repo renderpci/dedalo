@@ -132,6 +132,13 @@ class tool_lang extends tool_common {
 		$source_babel	= substr($source_lang,3,2);
 		$target_babel	= substr($target_lang,3,2);
 
+		if ($source_lang==='lg-deu') {
+			$source_babel	= 'deu';
+			if ($target_lang==='lg-eng') {
+				$target_babel = 'eng';
+			}			
+		}
+
 		return $source_babel . '-' . $target_babel ;
 	}//end get_babel_direction
 

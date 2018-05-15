@@ -122,13 +122,26 @@ class component_text_area extends component_common {
 	* SET_DATO
 	*/
 	public function set_dato($dato) {
-		if($dato==='""') $dato = ''; // empty dato json encoded
+		if($dato==='""') {
+			$dato = ''; // empty dato json encoded
+		}elseif ($dato==='<br data-mce-bogus="1">') {
+			$dato = ''; // empty tinyMCE container !
+		}
 
 		# Change &nbsp; for space . Optimizes chars time calculations
 		#$dato = str_replace('&nbsp;', " ", $dato);
 
 		# Change < / > for safe [ / ]
 		#$dato = str_replace(array('<','>'),array('[',']'),$dato);
+
+		if(is_array($dato)) {
+			debug_log(__METHOD__." Error dato is array instead expected string. First value will be used ".to_string($dato), logger::ERROR);
+			$dato = reset($dato);	
+		}
+		
+		if(SHOW_DEBUG===true) {
+			
+		}
 
 		parent::set_dato( (string)$dato );
 	}//end set_dato
@@ -282,11 +295,11 @@ class component_text_area extends component_common {
 	*/
 	public function get_valor_export( $valor=null, $lang=DEDALO_DATA_LANG, $quotes, $add_id ) {
 		
-		if (is_null($valor)) {
+		#if (empty($valor)) {
 			$dato = $this->get_dato();				// Get dato from DB
-		}else{
-			$this->set_dato( $valor );	// Use parsed json string as dato
-		}
+		#}else{
+		#	$this->set_dato( $valor );	// Use parsed json string as dato
+		#}
 
 		$valor_export = $this->get_valor($lang);
 		#$valor_export = br2nl($valor_export);
@@ -1595,9 +1608,10 @@ class component_text_area extends component_common {
 			$list_value = $value;
 		}
 
-		if (!is_string($list_value)) {
+		if (!is_string($list_value)) {			
+			dump($list_value, ' render_list_value : list_value expected string. But received: '.gettype($list_value) .to_string($list_value)); 
 			dump( debug_backtrace() );
-			dump($list_value, ' list_value ++ '.to_string()); die();
+			die();
 		}		
 
 		# TRUNCATE ALL FRAGMENTS		
@@ -1625,6 +1639,8 @@ class component_text_area extends component_common {
 		
 		$diffusion_value = $this->get_dato();  # Important: use raw text
 
+		# Decode entrities
+		$diffusion_value = html_entity_decode($diffusion_value);
 
 		return (string)$diffusion_value;
 	}//end get_diffusion_value
@@ -2388,23 +2404,23 @@ class component_text_area extends component_common {
 
         switch (true) {
         	# IS NULL
-			case ($q==='='):
+			case ($q==='!*'):
 				$operator = 'IS NULL';
 				$q_clean  = '';
 				$query_object->operator = $operator;
     			$query_object->q_parsed	= $q_clean;
     			$query_object->unaccent = false;
-    			/*
-    			$clone = clone($query_object);
-    			$clone->operator = '=';
-    			$clone->q_parsed	 = '\'\'';
 
-    			$new_query_json = new stdClass;
-    			$logical_operator ='$or';
-    			$new_query_json->$logical_operator[] = $query_object;
-    			$new_query_json->$logical_operator[] = $clone;
+				$clone = clone($query_object);
+	    			$clone->operator = '~*';
+	    			$clone->q_parsed = '\'.*""\'';
+
+				$logical_operator = '$or';
+    			$new_query_json = new stdClass;    			
+	    			$new_query_json->$logical_operator = [$query_object, $clone];
     			# override
-    			$query_object = $new_query_json ;*/
+    			$query_object = $new_query_json ;
+
 				break;
 			# IS NOT NULL
 			case ($q==='*'):
@@ -2413,17 +2429,19 @@ class component_text_area extends component_common {
 				$query_object->operator = $operator;
     			$query_object->q_parsed	= $q_clean;
     			$query_object->unaccent = false;
-    			/*
-    			$clone = clone($query_object);
-    			$clone->operator = '!=';
-    			$clone->q_parsed	 = '[]';
 
-    			$new_query_json = new stdClass;
-    			$logical_operator ='$or';
-    			$new_query_json->$logical_operator[] = $query_object;
-    			$new_query_json->$logical_operator[] = $clone;
-    			# override
-    			$query_object = $new_query_json ;*/
+				$clone = clone($query_object);
+	    			//$clone->operator = '!=';
+	    			$clone->operator = '!~';
+	    			$clone->q_parsed = '\'.*""\'';
+
+
+				$logical_operator ='$and';
+    			$new_query_json = new stdClass;    			
+    				$new_query_json->$logical_operator = [$query_object, $clone];    
+
+				# override
+    			$query_object = $new_query_json ;
 				break;
 			# IS DIFFERENT			
 			case (strpos($q, '!=')===0):
@@ -2433,13 +2451,13 @@ class component_text_area extends component_common {
     			$query_object->q_parsed	= '\'.*"'.$q_clean.'".*\'';
     			$query_object->unaccent = false;
 				break;
-			# IS EQUAL
+			# IS SIMILAR
 			case (strpos($q, '=')===0):
 				$operator = '=';
 				$q_clean  = str_replace($operator, '', $q);
 				$query_object->operator = '~';
     			$query_object->q_parsed	= '\'.*"'.$q_clean.'".*\'';
-    			$query_object->unaccent = false;
+    			$query_object->unaccent = true;
 				break;
 			# NOT CONTAIN
 			case (strpos($q, '-')===0):
@@ -2473,6 +2491,14 @@ class component_text_area extends component_common {
     			$query_object->q_parsed	= '\'.*"'.$q_clean.'.*\'';
     			$query_object->unaccent = true;
 				break;
+			# LITERAL
+			case (substr($q, 0, 1)==='\"' && substr($q, -1)==='\"'):
+				$operator = '~';
+				$q_clean  = str_replace('\"', '', $q);
+				$query_object->operator = $operator;
+				$query_object->q_parsed	= '\'.*"'.$q_clean.'".*\'';
+				$query_object->unaccent = false;
+				break;
 			# CONTAIN
 			default:
 				$operator = '~*';
@@ -2480,14 +2506,34 @@ class component_text_area extends component_common {
 				$query_object->operator = $operator;
     			$query_object->q_parsed	= '\'.*".*'.$q_clean.'.*\'';
     			$query_object->unaccent = true;
-				break;
+				break;			
 		}//end switch (true) {		
        
 
         return $query_object;
 	}//end resolve_query_object_sql
 
+	/**
+	* SEARCH_OPERATORS_INFO
+	* Return valid operators for search in current component
+	* @return array $ar_operators
+	*/
+	public function search_operators_info() {
+		
+		$ar_operators = [
+			'*' 	 => 'no_vacio', // not null
+			'!*' 	 => 'campo_vacio', // null	
+			'=' 	 => 'similar_a',
+			'!=' 	 => 'distinto_de',
+			'-' 	 => 'no_contiene',
+			'*text*' => 'contiene',
+			'text*'  => 'empieza_con',
+			'*text'  => 'acaba_con',
+			'"text"' => 'literal',
+		];
 
+		return $ar_operators;
+	}//end search_operators_info
 
 	
 }//end component_text_area

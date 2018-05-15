@@ -35,7 +35,7 @@
 				if($from_modo !== 'edit'){
 					$html_content .= "<div class=\"css_autocomplete_hi_button_close\" onclick=\"component_common.change_mode_component(this, 'edit', '$from_modo')\"></div>";
 				}
-				
+			
 
 				#
 				# ROW
@@ -63,10 +63,11 @@
 					$html_content .= "</li>";
 				}
 				$html_content .= "</ul>";
+				
 
-				$hierarchy_types_json 	 = json_encode($hierarchy_types);
-				$hierarchy_sections_json = json_encode($hierarchy_sections);
-
+				$hierarchy_types_json 	 = json_encode( array_values((array)$hierarchy_types) );
+				$hierarchy_sections_json = json_encode( array_values((array)$hierarchy_sections) );
+		
 				# SOURCE_MODE SWITCH
 				switch ($source_mode) {
 					case 'tree':
@@ -127,15 +128,19 @@
 								$html_content .= "</li>";
 							}
 							$html_content .= "</ul>";
-
 						}//end if ($ar_filter_options!==false)
 						
 						# JAVASCRIPT
 						$html_content .= "<script>";
 						# Reset var 'activated' on load
-						$html_content .= "component_autocomplete_hi.activated={};";
+						#$html_content .= "component_autocomplete_hi.activated={};";
 						# Init component
-						$html_content .= "component_autocomplete_hi.init({\"wrapper_id\":\"$id_wrapper\",\"cookie_name\":\"$cookie_name\",\"limit\":\"$limit\"});";
+						$init_options = new stdClass();
+							$init_options->component_name 	= $component_name;
+							$init_options->wrapper_id 		= $id_wrapper;
+							$init_options->cookie_name 		= $cookie_name;
+							$init_options->limit 			= $limit;
+						$html_content .= "component_common.init(".json_encode($init_options).");";
 						$html_content .= "</script>";
 						
 						break;

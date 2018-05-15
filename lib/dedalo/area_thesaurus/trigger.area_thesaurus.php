@@ -18,7 +18,7 @@ function search_thesaurus($json_data) {
 		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
 
 	# set vars
-	$vars = array('options');
+	$vars = array('search_options');
 		foreach($vars as $name) {
 			$$name = common::setVarData($name, $json_data);
 			# DATA VERIFY
@@ -29,45 +29,6 @@ function search_thesaurus($json_data) {
 			}
 		}
 
-	$options = json_decode($options);
-	#dump( $options->filter_by_search, ' $options->filter_by_search ++ '.to_string()); die();
-
-	$search_options = new stdClass();
-	foreach ($options->filter_by_search as $key => $value) {
-		switch ($key) {
-			case 'hierarchy20_hierarchy22': // section id
-				$search_options->section_id = $value;
-				break;
-			case 'hierarchy20_hierarchy25': // term
-				$search_options->term = $value;
-				break;
-			case 'hierarchy20_hierarchy28': // note
-				$search_options->note = $value;
-				break;
-			case 'hierarchy20_hierarchy33': // observations
-				$search_options->observations = $value;
-				break;
-			case 'hierarchy_id': // observations
-				$search_options->hierarchy_id = $value;
-				break;
-			default:
-				# code...
-				break;
-		}
-	}
-
-	# model
-	$search_options->model = (bool)$options->model;
-	# limit
-	$search_options->limit = isset($options->limit) ? (int)$options->limit : 100;
-	
-	$n_vars = count(get_object_vars($search_options));	
-	if ($n_vars<1) {
-		return null;
-	}
-
-	# comparison_operator
-	$search_options->comparison_operator = $options->operators->comparison_operator;
 
 	$area_thesaurus = new area_thesaurus(DEDALO_TESAURO_TIPO);
 	$response 		= $area_thesaurus->search_thesaurus( $search_options );

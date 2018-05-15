@@ -6,6 +6,19 @@
 @import "@{common_css}/library.less";
 
 
+
+/* Overwrite jquery ui defaults
+------------------------------------------------------- */
+.ui-autocomplete {
+     z-index: 9999 !important;
+}
+.ui-autocomplete-loading {
+	//background: white url('../../themes/default/spinner.gif') right center no-repeat !important;
+	background: white url('../../themes/default/spinner.svg') right center no-repeat !important;
+}
+
+
+
 /* WRAP
 ------------------------------------------------------- */
 .wrap_component {
@@ -308,6 +321,24 @@ div.dato_refecence_default_lang {
 
 
 
+.search_component > .wrap_component > .content_data > input.q_operator {
+	width: 10% !important;
+	margin-right: 5px;
+	display: inline-block;
+	min-width: initial;
+	height: 2em;
+	text-align: center;
+	//vertical-align: middle;
+	float: left;
+	}
+	.search_component > .wrap_component > .content_data > input.q_operator:focus {		
+		//background-color: #4F4F4F;
+		//color: #ffffff;
+		//border-radius: 4px;
+	}
+
+
+
 /* DEBUG
 ------------------------------------------------------- */
 .debug_component_total_time {
@@ -360,6 +391,11 @@ div.dato_refecence_default_lang {
 .selected_wrap > .select_fast_lang_switch {
 	//display: block;
 	opacity: 1;
+}
+
+
+.component_with_value {
+	background-color: #ffdca9;
 }
 
 

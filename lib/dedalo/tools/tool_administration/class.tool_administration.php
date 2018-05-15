@@ -244,7 +244,7 @@ class tool_administration extends tool_common {
 	* Get the version of the data into the DB
 	* The data version need to be compatible with the program files, but, 
 	* when Dédalo program change (for update), the data and the program is un-sync before admin run the update
-	* @return string $current_version
+	* @return array $current_version
 	*/
 	public static function get_current_version_in_db() {
 		$current_version = array();
@@ -427,6 +427,7 @@ class tool_administration extends tool_common {
 			foreach ($update->components_update as $modelo_name) {
 				$components_update[] = self::components_update($modelo_name, $current_version, $update_version);
 				$msg[] = "Updated component: ".to_string($modelo_name);
+				debug_log(__METHOD__." Updated component ".to_string($modelo_name), logger::DEBUG);
 			}			
 		}
 		# run_scripts
@@ -486,7 +487,23 @@ class tool_administration extends tool_common {
 			# Activity data is not updated
 			if($current_section_tipo === DEDALO_ACTIVITY_SECTION_TIPO){
 				continue;
-			}			
+			}
+
+			# Skip sections
+			$ar_section_skip = [
+				#'mdcat656', // Donde se para
+				#'mdcat656', // condena
+				#'mdcat813', // censo simbologia franquista
+				'lg1', // lenguajes
+				'on1', // omomasticos
+				'dc1', // cronologicos
+				'ts1', // tematicos,
+				'hu1', // hungria
+				'cu1', // cuba
+			];
+			if (in_array($current_section_tipo, $ar_section_skip)) {
+				continue;
+			}
 
 			#
 			# Test if target table exists (avoid errors on update components of "too much updated" structures)
@@ -558,12 +575,14 @@ class tool_administration extends tool_common {
 							$update_options->context 		= 'update_component_dato';
 
 						$response = $modelo_name::update_dato_version($update_options);
+							#dump($response, ' response ++ '.to_string());
 						#debug_log(__METHOD__." UPDATE_DATO_VERSION COMPONENT RESPONSE [$modelo_name][{$current_section_tipo}-{$section_id}]: result: ".to_string($response->result), logger::DEBUG);
 
 						if($response->result===1) {
 							$component->updating_dato = true;
 							$component->set_dato($response->new_dato);
 							$component->update_diffusion_info_propagate_changes = false;
+							$component->set_dato_resolved($response->new_dato); // Fix as resolved
 							$component->Save();
 							#debug_log(__METHOD__." UPDATED dato from component [$modelo_name][{$current_section_tipo}-{$section_id}] ".to_string(), logger::DEBUG);
 							$i++;
@@ -639,7 +658,7 @@ class tool_administration extends tool_common {
 			echo "Error: sorry an error ocurred on SQL_update code.";
 			if(SHOW_DEBUG===true) {
 				trigger_error( "<span class=\"error\">Error Processing SQL_update Request </span>". pg_last_error() );
-				#dump($SQL_update,"SQL_update ".to_string( pg_last_error()  ));				
+				dump(null,"SQL_update ".to_string($SQL_update));				
 				#throw new Exception("Error Processing SQL_update Request ". pg_last_error(), 1);;
 			}
 			$response->msg .= " Error Processing SQL_update Request: ". pg_last_error();

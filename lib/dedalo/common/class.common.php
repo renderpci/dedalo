@@ -406,13 +406,13 @@ abstract class common {
 	* When isset lang, valor and dato are cleaned
 	* and $this->bl_loaded_matrix_data is reset to force load from database again
 	*/
-	public function set_lang($lang){
+	public function set_lang($lang) {
 
-		if($lang!==DEDALO_DATA_LANG) {
+		#if($lang!==DEDALO_DATA_LANG) {
 
 			# FORCE reload dato from database when dato is requested again 
 			$this->set_to_force_reload_dato();
-		}		
+		#}		
 
 		$this->lang = $lang;
 	}//end set_lang
@@ -1149,7 +1149,8 @@ abstract class common {
 							DEDALO_DATAFRAME_TYPE_UNCERTAINTY,
 							DEDALO_DATAFRAME_TYPE_TIME,
 							DEDALO_DATAFRAME_TYPE_SPACE,
-							DEDALO_RELATION_TYPE_LINK
+							DEDALO_RELATION_TYPE_LINK,
+							DEDALO_RELATION_TYPE_FILTER
 							); // DEDALO_RELATION_TYPE_RECORD_TIPO
 		/*
 		$tipo 		  = 'dd427';

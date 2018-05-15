@@ -80,7 +80,10 @@
 		padding: 3px;
 		padding-left: 0px;
 		padding-right: 5px;	
-	}
+		}
+		.css_autocomplete_valor.in_search_mode {
+			//float: left;
+		}
 
 
 	/* THESAURUS CONTEXT
@@ -111,13 +114,14 @@
 		background-size: auto 100%;
 		background-position-x: 75%;
 		transition: all 0.2s ease-in-out;
+		width: initial !important;
 		}
 		input.css_autocomplete_search_field:hover {
 			opacity: 1;
 		}
 		input.css_autocomplete_search_field:focus {
 			opacity: 1;
-			width: 150px;
+			//width: 150px;
 			background-position-x: 95%;
 		}
 
@@ -126,7 +130,7 @@
 		input.css_autocomplete_search_field.in_search_mode,
 		.new_autocomplete.in_search_mode {
 			position: relative;
-			float: left;
+			float: none;
 			margin-right: 10px;
 			opacity: 1
 		}
@@ -145,10 +149,6 @@
 			margin-left: 39px;
 			zoom: 1.45;
 		}
-
-	.ui-autocomplete-loading {
-		background: white url('../../themes/default/spinner.gif') right center no-repeat;
-	}
 
 
 
