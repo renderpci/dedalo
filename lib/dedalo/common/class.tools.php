@@ -203,9 +203,6 @@ abstract class tools extends common {
 	}
 
 
-	
-
-
 
 	/**
 	* ECHO MEMORY USAGE FORMATED

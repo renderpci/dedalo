@@ -76,13 +76,7 @@ class navigator extends Accessors {
 			}
 		}
 	}
-	/*
-	private function get_http_vars() {
-		
-		foreach(self::$ar_vars as $name) {
-			eval( "if( !empty(\$_REQUEST[\$name]) ) self::\$selected_$name = \$_REQUEST[\$name];" );
-		}
-	}*/	
+	
 		
 	private function set_session_vars() {
 		/*
