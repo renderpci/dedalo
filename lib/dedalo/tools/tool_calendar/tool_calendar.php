@@ -7,7 +7,6 @@
 	$tipo 				= $section_obj->get_tipo();
 	$modo 				= $this->get_modo();
 	$tool_name 			= get_class($this);
-	//$context_name		= $_REQUEST['context_name'];
 	$context_name 		= common::get_request_var('context_name');
 	$section_name 		= RecordObj_dd::get_termino_by_tipo($tipo,DEDALO_DATA_LANG,true);
 	
@@ -23,7 +22,7 @@
 	foreach ($button->propiedades as $key => $value) { 
 	$ar_tool_data[$key] = $value;
 	}
-	#dump($ar_tool_data,"ar_tool_data ");
+	
 
 	if (isset($ar_tool_data['backgound_events_tipo'])) {
 		# Calculate button
@@ -35,7 +34,6 @@
 			
 		}
 	}
-	//dump($ar_tool_data," ar_tool_data");
 
 	# STORE CURRENT ar_tool_data
 	$_SESSION['dedalo4'][$tool_name][$tipo] = $ar_tool_data;
