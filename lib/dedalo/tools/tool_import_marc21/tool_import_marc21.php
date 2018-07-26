@@ -5,8 +5,7 @@
 
 	$section_obj 		= $this->section_obj;
 	$tipo 				= $section_obj->get_tipo();
-	$modo 				= $this->get_modo();
-	#$context_name		= $_REQUEST['context_name'];	
+	$modo 				= $this->get_modo();		
 	$tool_name 			= get_class($this);
 	$file_name			= $modo;
 
