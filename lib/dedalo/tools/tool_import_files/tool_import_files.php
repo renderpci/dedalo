@@ -70,7 +70,7 @@
 							js::$ar_url[] = DEDALO_LIB_BASE_URL."/tools/".$tool_name."/js/".$tool_name.".js";					
 						
 						# FILES UPLOAD MANAGER
-						$button_tipo = isset($_REQUEST['button_tipo']) ? $_REQUEST['button_tipo'] : false;	# Needed for build var 'upload_dir_custom'
+						$button_tipo = get_request_var('button_tipo'); // Core function. Needed for build var 'upload_dir_custom'
 						#$upload_handler_url = DEDALO_LIB_BASE_URL . '/tools/tool_import_files/inc/upload_handler.php?t='.$tipo;
 						$upload_handler_url = TOOL_IMPORT_FILES_HANDLER_URL;
 
@@ -103,7 +103,7 @@
 
 						# CUSTOM_PARAMS
 						# _GET custom_params overwrite normal tool propiedades defined in button import_files
-						$custom_params = isset($_GET['custom_params']) ? json_decode($_GET['custom_params']) : false;
+						$custom_params = isset($_GET['custom_params']) ? json_decode( safe_xss($_GET['custom_params']) ) : false;
 						if ($custom_params && isset($custom_params->tool_import_files)) {
 							# Overwrite default propiedades
 							$propiedades->ar_tools_name->tool_import_files = $custom_params->tool_import_files;
