@@ -7,7 +7,7 @@ require_once( dirname(dirname(dirname(dirname(__FILE__)))) .'/config/config4.php
 require_once( dirname(dirname(__FILE__)) .'/class.tool_import_zotero.php');  # Read constants from here
 
 # Button tipo set
-$button_tipo = isset($_REQUEST['button_tipo']) ? $_REQUEST['button_tipo'] : null;
+$button_tipo = get_request_var('button_tipo'); // Core function.
 
 #
 # SEARCH FOR JSON ZOTERO FILE
