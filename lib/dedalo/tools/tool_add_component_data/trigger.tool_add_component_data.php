@@ -5,7 +5,7 @@ header('Content-Type: text/event-stream');
 header('Cache-Control: no-cache'); // recommended to prevent caching of event data.
 
 
-	$bb = $_REQUEST['bb'];
+	$bb = safe_xss($_REQUEST['bb']);
 
 	for ($i=1; $i <= 10 ; $i++) { 
 
