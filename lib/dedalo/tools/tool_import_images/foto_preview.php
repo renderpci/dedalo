@@ -3,7 +3,7 @@ $TOP_TIPO=false;
 require_once( dirname(dirname(dirname(__FILE__))) .'/config/config4.php');
 require_once( DEDALO_LIB_BASE_PATH . '/media_engine/class.ImageObj.php');
 
-$photo=$_REQUEST['f'];
+$photo = safe_xss($_REQUEST['f']);
 
 # Accept images with get vars
 $ar = explode('?', $photo);
