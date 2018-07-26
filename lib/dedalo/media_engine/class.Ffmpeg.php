@@ -575,14 +575,18 @@ class Ffmpeg {
 	*/
 	public function build_fragment(AVObj $AVObj, $tcin, $tcout, $target_filename, $watermark=0) {
 
-		$ffmpeg_installed_path  	= DEDALO_AV_FFMPEG_PATH;	#dump($ffmpeg_installed_path,'$ffmpeg_installed_path');
+		$ffmpeg_installed_path  	= DEDALO_AV_FFMPEG_PATH;
 		$reelID 					= $AVObj->get_reelID();
 		$source_file 				= $AVObj->get_media_path_abs() . $reelID .'.'. $AVObj->get_extension();
 		$target_filename_path 		= $AVObj->get_media_path_abs() . 'fragments/' . $target_filename;
 
 		$tcin_secs 	= OptimizeTC::TC2seg($tcin);
-		$tcout_secs = OptimizeTC::TC2seg($tcout);
-		$duracion 	= $tcout_secs - $tcin_secs;
+		$tcout_secs = OptimizeTC::TC2seg($tcout);		
+		$duration 	= $tcout_secs - $tcin_secs;
+		# duration is float like 538.521 and need to be converted to tc like 00:06:53.734
+		$duration 	= OptimizeTC::seg2tc($duration);
+
+		debug_log(__METHOD__." ++ build_fragment duration ".$duration, logger::WARNING);
 		
 		$watermark_file = DEDALO_AV_WATERMARK_FILE;
 
@@ -608,10 +612,10 @@ class Ffmpeg {
 
 		if ($watermark==1) {
 
-			$target_filename_path_temp 		= $AVObj->get_media_path_abs() .'fragments/temp_'. $target_filename;
+			$target_filename_path_temp = $AVObj->get_media_path_abs() .'fragments/temp_'. $target_filename;
 
-			#$command = "nice -n 19 $ffmpeg_installed_path -i $source_file -ss $tcin -t $duracion -vcodec copy -acodec copy -y $target_filename_path_temp";
-			$command = "nice -n 19 $ffmpeg_installed_path -ss $tcin  -i $source_file -t $duracion -vcodec copy -acodec copy -y $target_filename_path_temp";
+			#$command = "nice -n 19 $ffmpeg_installed_path -i $source_file -ss $tcin -t $duration -vcodec copy -acodec copy -y $target_filename_path_temp";
+			$command  = "nice -n 19 $ffmpeg_installed_path -ss $tcin  -i $source_file -t ".$duration." -vcodec copy -acodec copy -y $target_filename_path_temp";
 
 			$command .= " && nice -n 19 $ffmpeg_installed_path -i $target_filename_path_temp -vf 'movie=$watermark_file [watermark]; [in][watermark] overlay=main_w-overlay_w-10:10 [out]' -y $target_filename_path";
 			
@@ -622,8 +626,8 @@ class Ffmpeg {
 		}else{
 
 			# nice -n 19 
-			#$command = "$ffmpeg_installed_path -i $source_file -ss $tcin -t $duracion -vcodec copy -acodec copy -y $target_filename_path";
-			$command = "$ffmpeg_installed_path -ss $tcin -i $source_file -t $duracion -vcodec copy -acodec copy -y $target_filename_path";
+			#$command = "$ffmpeg_installed_path -i $source_file -ss $tcin -t $duration -vcodec copy -acodec copy -y $target_filename_path";
+			$command = "$ffmpeg_installed_path -ss $tcin -i $source_file -t ".$duration." -vcodec copy -acodec copy -y $target_filename_path";
 
 			# EXEC COMMAND
 			$command_exc = exec_::exec_command($command);
