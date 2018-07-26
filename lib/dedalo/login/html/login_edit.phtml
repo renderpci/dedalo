@@ -29,7 +29,6 @@
 			
 			#
 			# USERNAME
-			#$html_contenido .= $html_username;
 			$username_value = (DEDALO_ENTITY=='dedalo4_demo') ? "dedalo" : null;
 			$html_contenido .= "<input type=\"text\" ";
 			$html_contenido .= "class=\"login_input\" ";
@@ -42,7 +41,6 @@
 			
 			#
 			# PASSWORD
-			#$html_contenido .= $html_password;
 			$username_password = (DEDALO_ENTITY=='dedalo4_demo') ? "dedalo4Demo" : null;
 			$html_contenido .= "<input type=\"password\" ";
 			$html_contenido .= "class=\"login_input\" ";
@@ -91,7 +89,6 @@
 					#$html_contenido .= " : ".DEDALO_DB_PORT_CONN." ";
 					$html_contenido .= "</span>";
 				}
-
 			
 		
 			$html_contenido .= "</div>";
