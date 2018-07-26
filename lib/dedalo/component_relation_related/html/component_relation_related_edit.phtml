@@ -5,7 +5,7 @@
 	# ELEMENTOS
 
 	# html_delimiter
-	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'in');
+	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'in', $modo, $lang);
 
 	print "<div class=\"wrap_component css_wrap_relation_related wrap_component_{$modo} wrap_component_{$tipo}\" id=\"{$id_wrapper}\" ";
 	print "data-tipo=\"{$tipo}\" ";
@@ -13,7 +13,7 @@
 	print "data-parent=\"{$parent}\" ";
 	print "data-section_tipo=\"{$section_tipo}\" ";
 	print "data-modo=\"{$modo}\" ";
-	print "data-dato='{$dato_string}' ";
+	#print "data-dato='{$dato_json}' ";
 	print "data-component_name=\"{$component_name}\" ";
 	print "data-component_info='{$component_info}' ";
 	print "data-hierarchy_sections='".json_encode($hierarchy_sections)."' ";
@@ -46,6 +46,13 @@
 			# AUTOCOMPLETE SERVICE
 			$autocomplete_wrapper_id = 'aw_' . $identificador_unico;
 			$html_content .= '<div class="autocomplete_wrapper" id="'.$autocomplete_wrapper_id.'"></div>';
+
+
+			# INPUT DATA HIDDEN
+			$html_content .= "<input type=\"text\" name=\"{$search_input_name}\" class=\"relation_related_dato_hidden\" style=\"width:100%;display:none\" ";
+			$html_content .= "data-limit=\"$limit\" ";
+			$html_content .= "value='{$dato_json}' ";
+			$html_content .= "/>";
 
 
 			#
@@ -109,7 +116,7 @@
 						break;
 				}//end switch ($source_mode)
 
-
+				/*
 				#
 				# TERMS
 				# dump($ar_valor, ' ar_valor ++ '.to_string());
@@ -120,7 +127,7 @@
 					$current_section_id 	= $current_locator->section_id;
 					$current_section_tipo 	= $current_locator->section_tipo;
 					
-					$html_content .= "<div class=\"relation_related_input_line\">";
+					$html_content .= "<div class=\"relation_related_input_line css_relation_related_valor\">";
 
 					# REMOVE BUTTON
 					$html_content .= "<input type=\"button\" class=\"button_remove component_relation_related_button_remove\" value=\"\" ";
@@ -140,6 +147,34 @@
 
 					$html_content .= "</div>";//relation_related_input_line
 				}//end foreach ((array)$dato as $key => $current_locator)
+				*/
+
+				# TERMS
+				$html_content .= "<ul class=\"css_relation_related_valor in_search_mode\">";
+				foreach ($ar_valor as $current_value => $value) {
+
+					$current_locator  		= json_decode($current_value);
+					$current_section_id 	= $current_locator->section_id;
+					$current_section_tipo 	= $current_locator->section_tipo;
+
+					$html_content .= "<li>";
+
+					# BTN DELETE
+					$html_content .= "<div class=\"icon_bs link css_relation_related_button_delete\" ";
+					$html_content .= "data-tipo=\"{$tipo}\" ";
+					$html_content .= "data-current_value='$current_value' ";
+					$html_content .= "data-role=\"relation_related_button_delete\" ";
+					$html_content .= "title=\"$label $parent\" ";
+					$html_content .= "onclick=\"component_relation_related.delete(this)\"></div>";
+					#$html_content .= "onclick=\"component_relation_related.remove_locator(this)\"></div>";
+
+					# VALUE . STRING RESOLVED TO SHOW					
+					$html_content .= $value;					
+					$html_content .= ' <span class="notes">['.$current_locator->section_tipo.'_'.$current_locator->section_id.']</span>';
+					
+					$html_content .= "</li>";
+				}
+				$html_content .= "</ul>";
 
 
 				#
@@ -215,7 +250,7 @@
 
 
 	# html_delimiter
-	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'out');
+	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'out', $modo, $lang);
 
 
 

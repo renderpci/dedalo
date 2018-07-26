@@ -71,9 +71,9 @@ function add_related($json_data) {
 
 
 /**
-* REMOVE_related
+* REMOVE_RELATED DEPRECATED
 * @return bool
-*/
+*//*
 function remove_related($json_data) {
 	global $start_time;
 
@@ -123,7 +123,7 @@ function remove_related($json_data) {
 
 	return (object)$response;
 }//end remove_related
-
+*/
 
 
 ?>
