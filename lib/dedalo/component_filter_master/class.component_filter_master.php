@@ -16,13 +16,14 @@ class component_filter_master extends component_filter {
 	*/
 	function __construct($tipo=false, $parent=null, $modo='edit', $lang=NULL, $section_tipo=null) {
 		
+		// Note that parent is NOT component_common here (is component_filter)
 		parent::__construct($tipo, $parent, $modo, DEDALO_DATA_NOLAN, $section_tipo);
 
 		$this->user_id  = $this->get_parent();
 
 		# caller_id from parent var (default)
 		if(!empty($parent)) {
-			$this->caller_id = $parent;			
+			$this->caller_id = $parent;
 		}
 		
 		return true;	
@@ -83,7 +84,7 @@ class component_filter_master extends component_filter {
 			# ALL PROJECTS
 			$strQuery 	= "SELECT section_id FROM matrix_projects ORDER BY section_id ASC";
 			$result		= JSON_RecordObj_matrix::search_free($strQuery);
-			while ($rows = pg_fetch_assoc($result)) {				
+			while ($rows = pg_fetch_assoc($result)) {
 				$ar_proyectos_section_id[] = $rows['section_id'];
 			}
 			#dump($ar_proyectos_section_id, ' ar_proyectos_section_id');#die();
