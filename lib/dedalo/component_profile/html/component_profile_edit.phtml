@@ -21,19 +21,19 @@
 	$html_label = component_common_draw::draw_label($this);
 	
 	# CONTENIDO (INPUT)
-	$html_contenido = '';
+	$html_content = '';
 	switch($permissions) {
 			
 		case 0:	
-			$html_contenido .= "";
+			$html_content .= "";
 			break;
 
 		case 1:	
-			$html_contenido .= $valor;
+			$html_content .= $valor;
 			break;					
 		
 		case ($permissions>1):		
-			$html_contenido .= " <select class=\"css_select_profile\" name=\"{$input_name}\" id=\"$identificador_unico\" onchange=\"component_profile.Save(this)\"
+			$html_content .= " <select class=\"css_select_profile\" name=\"{$input_name}\" id=\"$identificador_unico\" onchange=\"component_profile.Save(this)\"
 			data-tipo=\"{$tipo}\"
 			data-lang=\"{$lang}\"
 			data-section_tipo=\"{$section_tipo}\"
@@ -47,21 +47,21 @@
 					$checked = "";
 				}
 				# First option (custom)
-				$html_contenido .= " <option value=\"0\" {$checked}> Custom </option>";
+				$html_content .= " <option value=\"0\" {$checked}> Custom </option>";
 				
 				# DB Options
 				foreach ($ar_select_values as $value => $rotulo) {					
 					
 					$checked = ($value == $dato) ? 'selected' : '';
 
-					$html_contenido .= " <option value=\"{$value}\" {$checked}> {$rotulo}</option>";							
+					$html_content .= " <option value=\"{$value}\" {$checked}> {$rotulo}</option>";							
 				}
 
-			$html_contenido .= " </select>";
+			$html_content .= " </select>";
 
 			/*
-			#$html_contenido .= "<div class=\"icon_bs icon_apply\"></div>";
-			$html_contenido .= " <input type=\"button\" value=\"".label::get_label('aplicar')."\" class=\"css_button_generic apply_profile_button\" onclick=\"component_profile.apply_profile(this)\">";
+			#$html_content .= "<div class=\"icon_bs icon_apply\"></div>";
+			$html_content .= " <input type=\"button\" value=\"".label::get_label('aplicar')."\" class=\"css_button_generic apply_profile_button\" onclick=\"component_profile.apply_profile(this)\">";
 			*/			
 
 
@@ -69,23 +69,34 @@
 			# button_value
 			if ($is_global_admin===true) {
 				$button_value 	 = label::get_label('ir_al_perfil');
-				$html_contenido .= " <input type=\"button\" value=\"$button_value\" class=\"btn btn-default btn-xs go_to_profile\" onclick=\"component_profile.go_to_profile(this, '$profile_section_tipo', '$identificador_unico')\">";
+				$html_content .= " <input type=\"button\" value=\"$button_value\" class=\"btn btn-default btn-xs go_to_profile\" onclick=\"component_profile.go_to_profile(this, '$profile_section_tipo', '$identificador_unico')\">";
 			}
 		
 			
 			if(SHOW_DEBUG) {
-				$html_contenido .= " <span class=\"debug_info\"> (Current dato: $dato)</span>";	
+				$html_content .= " <span class=\"debug_info\"> (Current dato: $dato)</span>";	
 			}
+
+			#
+			# JS Init component
+			$html_content .= '<script>';
+			# Init component
+			$init_options = new stdClass();
+				$init_options->component_name 	= $component_name;
+				$init_options->wrapper_id 		= $id_wrapper;
+			$html_content .= 'component_common.init('.json_encode($init_options).');';
+			$html_content .= '</script>';
+			break;
 			
 	}
 
 	# Prepare content to show in page
-	tools::prepare_content($html_contenido);
+	tools::prepare_content($html_content);
 	
 	
 	# PRINT HTML
 	print $html_label;
-	print $html_contenido;	
+	print $html_content;	
 	
 	
 	print "</div>"; //wrap

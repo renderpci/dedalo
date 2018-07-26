@@ -22,47 +22,57 @@
 		$html_label = component_common_draw::draw_label($this);
 		
 		# CONTENIDO (INPUT)
-		$html_contenido = '';
+		$html_content = '';
 		switch($permissions) {
 				
 			case 0 :
-					$html_contenido .= "";
+					$html_content .= "";
 					break;
 							
 			case 1 : 	
-					$html_contenido .= "<span class=\"css_span_dato\">$dato</span>";
+					$html_content .= "<span class=\"css_span_dato\">$dato</span>";
 					break;
 			
 			case 2 :			
 			case 3 :
 					
-					$html_contenido .= "<input class=\"css_order\" type=\"text\" onchange=\"component_order.Save(this)\" ";
-					$html_contenido .= "name=\"{$input_name}\" ";
-					$html_contenido .= "data-role=\"component_order_input\" ";
-					$html_contenido .= "data-tipo=\"{$tipo}\" ";
-					$html_contenido .= "data-section_tipo=\"{$section_tipo}\" ";
-					$html_contenido .= "data-parent=\"{$parent}\" ";
-					$html_contenido .= "data-lang=\"{$lang}\" ";
-					$html_contenido .= "value=\"{$dato}\" ";
-					$html_contenido .= "title=\"$html_title\" ";
-					$html_contenido .= "/>";
+					$html_content .= "<input class=\"css_order\" type=\"text\" onchange=\"component_order.Save(this)\" ";
+					$html_content .= "name=\"{$input_name}\" ";
+					$html_content .= "data-role=\"component_order_input\" ";
+					$html_content .= "data-tipo=\"{$tipo}\" ";
+					$html_content .= "data-section_tipo=\"{$section_tipo}\" ";
+					$html_content .= "data-parent=\"{$parent}\" ";
+					$html_content .= "data-lang=\"{$lang}\" ";
+					$html_content .= "value=\"{$dato}\" ";
+					$html_content .= "title=\"$html_title\" ";
+					$html_content .= "/>";
 					
-					#$html_contenido .= " <span  class=\"css_span_log\"></span>";					
-					#$html_contenido .= " <span  class=\"css_span_ejemplo\">$ejemplo</span>";						
+					#$html_content .= " <span  class=\"css_span_log\"></span>";					
+					#$html_content .= " <span  class=\"css_span_ejemplo\">$ejemplo</span>";						
 					
 					if(SHOW_DEBUG) {
-						$html_contenido .= "<span class=\"debug_info notes\">".json_encode($dato).' ('.gettype($dato).")</span>";
+						$html_content .= "<span class=\"debug_info notes\">".json_encode($dato).' ('.gettype($dato).")</span>";
 					}	
+
+					#
+					# JS Init component
+					$html_content .= '<script>';
+					# Init component
+					$init_options = new stdClass();
+						$init_options->component_name 	= $component_name;
+						$init_options->wrapper_id 		= $id_wrapper;
+					$html_content .= 'component_common.init('.json_encode($init_options).');';
+					$html_content .= '</script>';	
 					break;
 		}
 
 		# Prepare content to show in page
-		tools::prepare_content($html_contenido);	
+		tools::prepare_content($html_content);	
 		
 
 		# PRINT HTML
 		print $html_label;
-		print $html_contenido;
+		print $html_content;
 	
 	
 	print "</div><!-- /css_wrap_order ORDER [tipo:$tipo section_id:$parent] $label -->"; //wrap

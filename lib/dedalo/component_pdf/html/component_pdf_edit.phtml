@@ -26,71 +26,81 @@
 		$html_label = component_common_draw::draw_label($this);
 
 		# CONTENIDO (INPUT)
-		$html_contenido = '';
+		$html_content = '';
 		switch($permissions) {
 
 			case 0 :
-					$html_contenido .= "";
-					break;
+				$html_content .= "";
+				break;
 
 			case 1 :
-					# pdf THUMB
-					if($file_exists) {
+				# pdf THUMB
+				if($file_exists) {
 
-						$html_contenido .= " <div class=\"css_wrap_pdf_thumb\">";						
-						$html_contenido .= $pdf_thumb_html ; # Rendered in thumb mode
-						$html_contenido .= " </div>";
-					}
-					break;
+					$html_content .= " <div class=\"css_wrap_pdf_thumb\">";						
+					$html_content .= $pdf_thumb_html ; # Rendered in thumb mode
+					$html_content .= " </div>";
+				}
+				break;
 
 			case 2 :
 			case 3 :
-					# pdf THUMB
-					if($file_exists) {
+				# pdf THUMB
+				if($file_exists) {
 
-						$html_contenido .= "<div class=\"css_wrap_pdf_thumb\" onclick=\"\">";
-						/*
-						#Embed PDF File
-						$html_contenido .= "<object class=\"pdf_object_thumb\" type=\"application/pdf\"
-												data=\"$pdf_url\"?>?#zoom=50&scrollbar=1&toolbar=0&navpanes=0\" id=\"pdf_content\">
-												<param name=\"zoom\" value=\"50%\" />
-					    						<p>Your browser does not support pdf view.</p>
-					    					</object>";
-						*/
+					$html_content .= "<div class=\"css_wrap_pdf_thumb\" onclick=\"\">";
+					/*
+					#Embed PDF File
+					$html_content .= "<object class=\"pdf_object_thumb\" type=\"application/pdf\"
+											data=\"$pdf_url\"?>?#zoom=50&scrollbar=1&toolbar=0&navpanes=0\" id=\"pdf_content\">
+											<param name=\"zoom\" value=\"50%\" />
+				    						<p>Your browser does not support pdf view.</p>
+				    					</object>";
+					*/
 
-						$html_contenido .= $pdf_thumb_html ; # Rendered in thumb mode
-						$html_contenido .= "</div>";
+					$html_content .= $pdf_thumb_html ; # Rendered in thumb mode
+					$html_content .= "</div>";
 
-					}else{
+				}else{
 
-						$open_tool_default='';
-						$add_class='';
-						# FILE NOT EXISTS. PLACE DEDALO PDF WITH LINK TO DEFAULT TOOL
-						$open_tool_default .="data-pdf_id=\"$pdf_id\" ";
-						$open_tool_default .="data-quality=\"".DEDALO_PDF_QUALITY_DEFAULT."\" ";
-						$open_tool_default .="data-aditional_path=\"$aditional_path\" ";
-						$open_tool_default .="data-initial_media_path=\"$initial_media_path\" ";
-						$open_tool_default .="data-tipo=\"$tipo\" ";
-						$open_tool_default .="data-parent=\"$parent\" ";
-						$open_tool_default .="data-section_tipo=\"$section_tipo\" ";
-						$open_tool_default .="onclick=\"tool_common.open_tool_upload(this)\" ";
-						$open_tool_default .="title=\"Upload file in original quality\" ";
+					$open_tool_default='';
+					$add_class='';
+					# FILE NOT EXISTS. PLACE DEDALO PDF WITH LINK TO DEFAULT TOOL
+					$open_tool_default .="data-pdf_id=\"$pdf_id\" ";
+					$open_tool_default .="data-quality=\"".DEDALO_PDF_QUALITY_DEFAULT."\" ";
+					$open_tool_default .="data-aditional_path=\"$aditional_path\" ";
+					$open_tool_default .="data-initial_media_path=\"$initial_media_path\" ";
+					$open_tool_default .="data-tipo=\"$tipo\" ";
+					$open_tool_default .="data-parent=\"$parent\" ";
+					$open_tool_default .="data-section_tipo=\"$section_tipo\" ";
+					$open_tool_default .="onclick=\"tool_common.open_tool_upload(this)\" ";
+					$open_tool_default .="title=\"Upload file in original quality\" ";
 
-						$html_contenido .= "<a class=\"css_wrap_pdf_thumb no_pdf_file\" $open_tool_default tabindex=\"1\">";
-						$html_contenido .= "<span class=\"\">No file is loaded. Click to upload PDF</span>";
-						$html_contenido .= "</a>";
-					}
-					break;
+					$html_content .= "<a class=\"css_wrap_pdf_thumb no_pdf_file\" $open_tool_default tabindex=\"1\">";
+					$html_content .= "<span class=\"\">No file is loaded. Click to upload PDF</span>";
+					$html_content .= "</a>";
+				}
+
+				#
+				# JS Init component
+				$html_content .= '<script>';
+				# Init component
+				$init_options = new stdClass();
+					$init_options->component_name 	= $component_name;
+					$init_options->wrapper_id 		= $id_wrapper;
+				$html_content .= 'component_common.init('.json_encode($init_options).');';
+				$html_content .= '</script>';	
+				break;
 
 		}
 
 		# Prepare content to show in page
-		tools::prepare_content($html_contenido);
+		tools::prepare_content($html_content);
 
 
 		# PRINT HTML
 		print $html_label;
-		print $html_contenido;		
+		print $html_content;		
 
 
 	print "</div>"; //wrap

@@ -24,46 +24,53 @@
 		$html_label = component_common_draw::draw_label($this);
 		
 		# CONTENIDO (INPUT)
-		$html_contenido = '';
+		$html_content = '';
 		switch($permissions) {
 				
 			case 0 :	
-					$html_contenido .= "";
+					$html_content .= "";
 					break;
 							
 			case ($permissions>=1) :
 
-					#$html_contenido .= "<div class=\"vex-tabdiv \" >";
-					
-					$html_contenido .= " <canvas class=\"vextab-player\" width=\"\" height=\"112\" id=\"view-0\" style=\"\"></canvas>";						
-					#$html_contenido .= " <textarea class=\"editor\" style=\"width: 750px; height: 200px;\"></textarea>";
-					$html_contenido .= " <canvas id=\"$canvas_id\" class=\"canvas-score\"></canvas>";
-					$html_contenido .= " <div class=\"div_error_score\" id=\"$div_error_id\">Error</div>";
+				#$html_content .= "<div class=\"vex-tabdiv \" >";
+				
+				$html_content .= " <canvas class=\"vextab-player\" width=\"\" height=\"112\" id=\"view-0\" style=\"\"></canvas>";						
+				#$html_content .= " <textarea class=\"editor\" style=\"width: 750px; height: 200px;\"></textarea>";
+				$html_content .= " <canvas id=\"$canvas_id\" class=\"canvas-score\"></canvas>";
+				$html_content .= " <div class=\"div_error_score\" id=\"$div_error_id\">Error</div>";
 
-					#$html_contenido .= "<div class=\"vex-tabdiv\">vex-tabdiv</div>";	
-					
-					#$html_contenido .= "</div><!-- /vex-tabdiv -->";
-							
+				#$html_content .= "<div class=\"vex-tabdiv\">vex-tabdiv</div>";	
+				
+				#$html_content .= "</div><!-- /vex-tabdiv -->";
 						
-					if(SHOW_DEBUG) {
-						#$html_contenido .= " <span class=\"css_span_debugger\" id=\"debugger_{$tipo}\" >{$debugger}</span>";	
-					}	
-					break;
-									
+					
+				if(SHOW_DEBUG) {
+					#$html_content .= " <span class=\"css_span_debugger\" id=\"debugger_{$tipo}\" >{$debugger}</span>";	
+				}
+
+				#
+				# JS Init component
+				$html_content .= '<script>';
+				# Init component
+				$init_options = new stdClass();
+					$init_options->component_name 	= $component_name;
+					$init_options->id_wrapper 		= $id_wrapper;
+					$init_options->uid 				= $identificador_unico;
+				$html_content .= 'component_common.init('.json_encode($init_options).');';
+				$html_content .= '</script>';
+				break;									
 		}
 
 
-		# INIT : Init text editor 
-		$html_contenido .= "<script>component_score.init('$id_wrapper')</script>";
-
 
 		# Prepare content to show in page
-		tools::prepare_content($html_contenido);
+		tools::prepare_content($html_content);
 		
 
 		# PRINT HTML
 		print $html_label;
-		print $html_contenido;
+		print $html_content;
 	
 	
 	print "</div>"; //wrap

@@ -24,110 +24,125 @@
 		$html_label = component_common_draw::draw_label($this);
 
 		# CONTENIDO (INPUT)
-		$html_contenido = '';
+		$html_content = '';
 		switch(true) {
 
 			case ($permissions===0) :
-					$html_contenido .= "";
+					$html_content .= "";
 					break;
 
 			case ($permissions===1) :
 					foreach ($dato as $value) {
-						$html_contenido .= " <span class=\"css_span_dato\">$value</span>";
+						$html_content .= " <span class=\"css_span_dato\">$value</span>";
 					}
 					break;
 
 			case ($permissions>=2) :
 
-					# Avoid autocomplete input username in Users section
-					$remove_autocomplete = null;
-					if ($section_tipo==DEDALO_SECTION_USERS_TIPO) {
-						$remove_autocomplete = "readonly onfocus=\"this.removeAttribute('readonly');component_common.select_wrap(null,'$id_wrapper');\"";
-					}else{
-						$remove_autocomplete = '';//"onfocus=\"component_common.select_wrap(null,'$id_wrapper')\";\"";
-						$remove_autocomplete = "onfocus=\"component_common.select_wrap_on_tab_focus(this,'$id_wrapper')\"";
-					}
+				# Avoid autocomplete input username in Users section
+				$remove_autocomplete = null;
+				if ($section_tipo==DEDALO_SECTION_USERS_TIPO) {
+					$remove_autocomplete = "readonly onfocus=\"this.removeAttribute('readonly');component_common.select_wrap(null,'$id_wrapper');\"";
+				}else{
+					$remove_autocomplete = '';//"onfocus=\"component_common.select_wrap(null,'$id_wrapper')\";\"";
+					$remove_autocomplete = "onfocus=\"component_common.select_wrap_on_tab_focus(this,'$id_wrapper')\"";
+				}
 
-					# Read only mode (set in propiedades)
-					$read_only = null;
-					if (isset($propiedades->read_only) && $propiedades->read_only==true) {
-						$read_only = 'readonly';
-					}
-					# Button add
-					$html_contenido .= "<div class=\"css_button_generic btn_add_iri\" onclick=\"component_iri.add_iri(this)\">";
-					$html_contenido .= "<div class=\"link css_iri_add\"></div>";
-					$html_contenido .= "</div>";
-					
-					if(empty($dato)){
-						$obj_value = new stdClass();
-						$obj_value->iri = "";
-						$dato_view = array($obj_value);						
-					}else{
-						$dato_view = $dato;
-					}
+				# Read only mode (set in propiedades)
+				$read_only = null;
+				if (isset($propiedades->read_only) && $propiedades->read_only==true) {
+					$read_only = 'readonly';
+				}
+				# Button add
+				$html_content .= "<div class=\"css_button_generic btn_add_iri\" onclick=\"component_iri.add_iri(this)\">";
+				$html_content .= "<div class=\"link css_iri_add\"></div>";
+				$html_content .= "</div>";
+				
+				if(empty($dato)){
+					$obj_value = new stdClass();
+					$obj_value->iri = "";
+					$dato_view = array($obj_value);						
+				}else{
+					$dato_view = $dato;
+				}
 
-					$html_contenido .= "<ul>";
-					foreach ($dato_view as $key => $obj_value) {
+				$html_content .= "<ul>";
+				foreach ($dato_view as $key => $obj_value) {
 
+					if(isset($obj_value->iri)){
 						# Correct issues with quotes
 						$value = htmlentities($obj_value->iri);
-
-						$html_contenido .= "<li class=\"input-group\">";
-
-						# Input
-						$html_contenido .= "<input type=\"text\" id=\"{$id_wrapper}_input_{$key}\" class=\"form-control99 css_iri\" onchange=\"component_iri.Save(this)\" ";
-						$html_contenido .= "data-tipo=\"{$tipo}\" ";
-						$html_contenido .= "data-section_tipo=\"{$section_tipo}\" ";
-						$html_contenido .= "data-parent=\"{$parent}\" ";
-						$html_contenido .= "data-lang=\"{$lang}\" ";
-						$html_contenido .= "data-mandatory='{$mandatory_json}' ";
-						$html_contenido .= "value=\"{$value}\" ";
-						$html_contenido .= "title=\"$html_title\" ";
-						$html_contenido .= "name=\"{$input_name}\" ";
-						$html_contenido .= "autocomplete=\"off\" ";
-						$html_contenido .= $remove_autocomplete." ";
-						$html_contenido .= $read_only." ";
-						$html_contenido .= "tabindex=\"1\" ";					
-						$html_contenido .= "/>";
-
-						# Button link
-						$html_contenido .= "<a class=\"input-group-addon css_button_generic btn_go_iri\" onclick=\"component_iri.go_iri_link(this)\">";
-						$html_contenido .= "<div class=\"link css_iri_link\"></div>";
-						$html_contenido .= "</a>";
-
-						$html_contenido .= "</li>";
-
-					}//end foreach
-					$html_contenido .= "</ul>";
-
-					
-					#<div class="input-group">
-					#  <input type="text" class="form-control" placeholder="Recipient's username" aria-describedby="basic-addon2">
-					#  <span class="input-group-addon" id="basic-addon2">@example.com</span>
-					#</div>
-					
-
-					#$html_contenido .= "<script>setAttribute(“autocomplete”,”off”)</script>";
-
-					#readonly onfocus=\"this.removeAttribute('readonly');\"
-
-					#$html_contenido .= " <span  class=\"css_span_log\"></span>";
-					#$html_contenido .= " <span  class=\"css_span_ejemplo\">$ejemplo</span>";
-
-
-					if(SHOW_DEBUG===true) {
-						$html_contenido .= " <span class=\"debug_info notes\">".$dato_json."</span>";
+					}else{
+						$value = "";
 					}
-					break;
+
+					$html_content .= "<li class=\"input-group\">";
+
+					# Input
+					$html_content .= "<input type=\"text\" id=\"{$id_wrapper}_input_{$key}\" class=\"form-control99 css_iri\" onchange=\"component_iri.Save(this)\" ";
+					$html_content .= "data-tipo=\"{$tipo}\" ";
+					$html_content .= "data-section_tipo=\"{$section_tipo}\" ";
+					$html_content .= "data-parent=\"{$parent}\" ";
+					$html_content .= "data-lang=\"{$lang}\" ";
+					$html_content .= "data-mandatory='{$mandatory_json}' ";
+					$html_content .= "value=\"{$value}\" ";
+					$html_content .= "title=\"$html_title\" ";
+					$html_content .= "name=\"{$input_name}\" ";
+					$html_content .= "autocomplete=\"off\" ";
+					$html_content .= $remove_autocomplete." ";
+					$html_content .= $read_only." ";
+					$html_content .= "tabindex=\"1\" ";					
+					$html_content .= "/>";
+
+					# Button link
+					$html_content .= "<a class=\"input-group-addon css_button_generic btn_go_iri\" onclick=\"component_iri.go_iri_link(this)\">";
+					$html_content .= "<div class=\"link css_iri_link\"></div>";
+					$html_content .= "</a>";
+
+					$html_content .= "</li>";
+					
+
+				}//end foreach
+				$html_content .= "</ul>";
+
+				
+				#<div class="input-group">
+				#  <input type="text" class="form-control" placeholder="Recipient's username" aria-describedby="basic-addon2">
+				#  <span class="input-group-addon" id="basic-addon2">@example.com</span>
+				#</div>
+				
+
+				#$html_content .= "<script>setAttribute(“autocomplete”,”off”)</script>";
+
+				#readonly onfocus=\"this.removeAttribute('readonly');\"
+
+				#$html_content .= " <span  class=\"css_span_log\"></span>";
+				#$html_content .= " <span  class=\"css_span_ejemplo\">$ejemplo</span>";
+
+
+				if(SHOW_DEBUG===true) {
+					$html_content .= " <span class=\"debug_info notes\">".$dato_json."</span>";
+				}
+
+				#
+				# JS Init component
+				$html_content .= '<script>';
+				# Init component
+				$init_options = new stdClass();
+					$init_options->component_name 	= $component_name;
+					$init_options->wrapper_id 		= $id_wrapper;
+				$html_content .= 'component_common.init('.json_encode($init_options).');';
+				$html_content .= '</script>';
+				break;
 		}
 
 		# Prepare content to show in page
-		tools::prepare_content($html_contenido);
+		tools::prepare_content($html_content);
 
 
 		# PRINT HTML
 		print $html_label;
-		print $html_contenido;
+		print $html_content;
 
 
 	print "</div><!-- /css_wrap_iri ".__CLASS__." [tipo:$tipo section_id_matrix:$parent] $label -->"; //wrap

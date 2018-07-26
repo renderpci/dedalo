@@ -74,11 +74,12 @@
 					$parse = parse_url($url);
 					$from_remote = " from remote: <strong>".$parse['host']."</strong>";
 				}
+
 				$html   .= "  <a href=\"javascript:;\" data-mode=\"update_structure\" onclick=\"tool_administration.update_structure(this,event)\">".label::get_label('actualizar_estructura')."</a>".$from_remote;	
 				}
 				$html   .= " <div class=\"panel_option_subcontent\">";
 				$dedalo_structure_info = RecordObj_dd::get_termino_by_tipo(DEDALO_ROOT_TIPO,'lg-spa');
-				#$html   .= "<div>$dedalo_structure_info</div>";			
+				$html   .= "  <div class=\"notes\">".json_encode( unserialize(DEDALO_PREFIX_TIPOS) )."</div>";			
 				$html   .= "  <div id=\"update_structure_response\">Current: $dedalo_structure_info</div>";
 				$html   .= " </div>";#end panel_option_subcontent
 				$html   .= "</div>";#end panel_option
@@ -395,7 +396,7 @@
 				if(SHOW_DEBUG===true) {				
 				$html   .= "<div class=\"panel_option form-inline\"> ";			
 				$html   .= " <span class=\"glyphicon glyphicon-cog\" aria-hidden=\"true\"></span>";				
-				$url 	 = DEDALO_LIB_BASE_URL."/publication/client_api/v1/docu/ui?code=" . API_WEB_USER_CODE;
+				$url 	 = DEDALO_LIB_BASE_URL."/publication/server_api/v1/docu/ui?code=" . API_WEB_USER_CODE;
 				$html   .= " <a href=\"$url\" target=\"_blank\" data-mode=\"\">API DOC</a>";
 				$html   .= "</div>";#end panel_option
 				}
