@@ -11,7 +11,7 @@
 	print "data-parent=\"{$parent}\" ";
 	print "data-section_tipo=\"{$section_tipo}\" ";
 	print "data-modo=\"{$modo}\" ";
-	print "data-dato='{$dato_string}' ";
+	#print "data-dato='{$dato_string}' ";
 	print "data-component_name=\"{$component_name}\" ";
 	print "data-component_info='{$component_info}' ";
 	print "data-hierarchy_sections='".json_encode($hierarchy_sections)."' ";  // Default hierarchy_sections
@@ -130,10 +130,9 @@
 					$value = ts_object::get_term_by_locator( $current_locator, DEDALO_DATA_LANG, $from_cache=true );
 					
 					$html_content .= '<span class="locator_label">';
-					$html_content .= $value;
-					#if(SHOW_DEVELOPER===true) {
-						$html_content .= ' <span class="notes">['.$current_locator->section_tipo.'_'.$current_locator->section_id.']</span>';
-					#}
+					$html_content .= $value;					
+					$html_content .= ' <span class="notes">['.$current_locator->section_tipo.'_'.$current_locator->section_id.']</span>';
+					
 					$html_content .= '</span>';
 
 					$html_content .= "</div>";//relation_children_input_line
