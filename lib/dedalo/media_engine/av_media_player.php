@@ -105,7 +105,7 @@ $PosterFrameObj = new PosterFrameObj($reelID);
 	#$AVPlayer->set_autoplay('autoplay');
 	$player_type 		= 'qt';
 	if(isset($_REQUEST['player_type'])) {
-		$player_type 	= $_REQUEST['player_type'];
+		$player_type 	= safe_xss($_REQUEST['player_type']);
 		$_SESSION['player_type'] = $player_type;		
 	}else if(isset($_SESSION['player_type'])) {		
 		$player_type 	= $_SESSION['player_type'];		
