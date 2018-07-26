@@ -12,8 +12,7 @@
 
 	$is_authorized_tool_for_logged_user = component_security_tools::is_authorized_tool_for_logged_user($tool_name);
 		#dump($is_authorized_tool_for_logged_user, ' is_authorized_tool_for_logged_user ++ '.to_string($tool_name));
-		if (!$is_authorized_tool_for_logged_user) {
-			echo " <div class=\"warning\">Sorry. Tool not allowed</div>";
+		if (!$is_authorized_tool_for_logged_user) {			
 			return;
 		}
 	

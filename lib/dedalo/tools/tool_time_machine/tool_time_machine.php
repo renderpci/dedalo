@@ -8,7 +8,7 @@
 	$section_tipo			= $this->source_component->get_section_tipo();
 	$lang 					= $this->source_component->get_lang();
 	if (!empty($_REQUEST['lang'])) {
-	$lang 					= $_REQUEST['lang'];
+	$lang 					= safe_xss($_REQUEST['lang']);
 	}
 	$lang_name 				= lang::get_name_from_code( $lang, 'lg-eng' );
 	$label 					= $this->source_component->get_label();

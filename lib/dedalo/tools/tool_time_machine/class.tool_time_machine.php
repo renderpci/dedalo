@@ -126,7 +126,7 @@ class tool_time_machine extends tool_common {
 		$RecordObj_time_machine			= new RecordObj_time_machine(null);
 		#$RecordObj_time_machine->set_use_cache(false);
 		$ar_records_tm 					= (array)$RecordObj_time_machine->search($arguments);
-			#dump($ar_records_tm,"ar_records_tm for tipo: $section_tipo ".print_r($arguments,true));#die();
+			#dump($ar_records_tm,"ar_records_tm for tipo: $section_tipo ".print_r($arguments,true)); die();
 
 		$ar_sections_time_machine = $ar_records_tm;
 		/*
