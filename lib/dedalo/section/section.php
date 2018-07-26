@@ -26,20 +26,11 @@
 			$context_obj->context_name = $context_name;
 		$this->set_context($context_obj);
 	}
-	/*
-	if(isset($_REQUEST['context_name']))  {
-		
-		$context_obj = new stdClass();
-			$context_obj->context_name = $_REQUEST['context_name'];
-		$this->set_context($context_obj);
-	}
-	*/
+	
 	$context = $this->get_context();
-		#dump($context, ' context ++ '.to_string());
 
 	# Test is a complete section or process
-	$var_requested = common::get_request_var('t');
-	//$is_process_section = (isset($_REQUEST['t']) && $_REQUEST['t']!= $tipo) ? true : false;
+	$var_requested 		= common::get_request_var('t');	
 	$is_process_section = (!empty($var_requested) && $var_requested!==$tipo) ? true : false;
 
 	#
@@ -75,9 +66,8 @@
 				#
 				# RECORDS_HTML
 				# Render search form html using search.
-				# We know the current record id but we search like a list filtered by id for maintain always the same criterion
+				# We know the current record id but we search like a list filtered by id for maintain always the same criterion					
 					
-					//if (!isset($_REQUEST['offset'])) {
 					$offset 			  = common::get_request_var('offset');
 					$search_options_id 	  = $this->tipo; // section tipo like oh1
 					$saved_search_options = section_records::get_search_options( $search_options_id );
@@ -112,7 +102,7 @@
 							$search_options->search_query_object->offset = $offset;
 							$search_options->search_query_object->select = [];				
 
-					}//end if (empty($_REQUEST['offset'])) 			
+					}//end if 		
 
 
 				#
@@ -172,7 +162,8 @@
 					}
 
 				if ( strpos($context_name, 'portal')!==false ) {
-					js::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/tools/tool_portal/js/tool_portal.js'; // Cuando añadimos un fragmento, no está disponible..	
+					#js::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/tools/tool_portal/js/tool_portal.js'; // Cuando añadimos un fragmento, no está disponible..	
+					js::$ar_url[] = DEDALO_LIB_BASE_URL . '/tools/tool_portal/js/tool_portal.js'; // Cuando añadimos un fragmento, no está disponible..	
 				}
 
 				#
@@ -282,8 +273,7 @@
 									#
 									# FILTER_BY_SECTION_CREATOR_PORTAL_TIPO
 									# When received request 'm=tool_portal', options is set with param filter_by_section_creator_portal_tipo=$portal_tipo
-									
-									//$portal_tipo = $_REQUEST['t'];
+																		
 									$portal_tipo = common::get_request_var('t');
 									$search_options->filter_by_section_creator_portal_tipo = $portal_tipo;
 									break;
@@ -331,10 +321,7 @@
 
 					$section_rows 	= new section_records($this->tipo, $search_options);
 					$rows_list_html = $section_rows->get_html();
-						#dump($section_rows, " section_rows ".to_string());
-						#dump($this->tipo, ' this->tipo ++ '.to_string());
-						#dump($_REQUEST['t'], ' tipo ++ '.to_string());
-
+					
 					
 					if ($search_options_edited===true) {
 						section::set_search_options($search_options, $search_options_id);
@@ -371,7 +358,8 @@
 				# SECTION LIST PROPIEDADES
 					$section_list_tipo 			= null;
 					$section_list_propiedades 	= null;
-					$ar_section_list = section::get_ar_children_tipo_by_modelo_name_in_section($this->tipo, 'section_list');
+					$ar_section_list = section::get_ar_children_tipo_by_modelo_name_in_section($this->tipo, ['section_list'], $from_cache=true, $resolve_virtual=false, $recursive=true, $search_exact=true);
+
 					if (!empty($ar_section_list[0])) {
 						$section_list_tipo  	  = $ar_section_list[0];
 						$RecordObj_dd 			  = new RecordObj_dd($section_list_tipo);
@@ -456,6 +444,7 @@
 							$search_query_object_options->filter_by_id  = $options->filter_by_id;							
 						$search_query_object = $this->build_search_query_object($search_query_object_options);
 						$search_options->search_query_object = $search_query_object;
+							#dump($search_query_object, ' search_query_object ++ '.json_encode($search_query_object, JSON_PRETTY_PRINT));
 
 					# Add to filter the received options
 					$section_rows 	= new section_records($this->tipo, $search_options);
