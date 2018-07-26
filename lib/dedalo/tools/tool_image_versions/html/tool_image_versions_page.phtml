@@ -151,7 +151,8 @@
 			# UPLOAD ROW
 			if ( $permissions>=2 && component_security_tools::is_authorized_tool_for_logged_user('tool_upload') ) {
 
-				$current_section_tipo = isset($_GET['section_tipo']) ?  $_GET['section_tipo'] : ''; 	
+				$var_requested 		= common::get_request_var('section_tipo');
+				$current_section_tipo = !empty($var_requested) ? $var_requested : '';
 
 				$html .= " <tr>";
 				$html .= " <td>". label::get_label('subir')."</td>" ;
@@ -159,16 +160,16 @@
 					$td_style = null; if($quality==DEDALO_IMAGE_QUALITY_DEFAULT) $td_style = 'td_default_quality';
 		    		$html .= " <td class=\"$td_style\">";
 
-					$html .= "<div class=\"icon_bs link tool_upload_icon\"
-					data-image_id=\"$image_id\"
-					data-quality=\"$quality\"
-					data-aditional_path=\"$aditional_path\"
-					data-initial_media_path=\"$initial_media_path\"
-					data-tipo=\"$tipo\"
-					data-parent=\"$parent\"
-					data-section_tipo=\"$current_section_tipo\"
-					onclick=\"tool_common.open_tool_upload(this)\"
-					></div>";	    		    	
+					$html .= "<div class=\"icon_bs link tool_upload_icon\" ";
+					$html .= "data-image_id=\"$image_id\" ";
+					$html .= "data-quality=\"$quality\" ";
+					$html .= "data-aditional_path=\"$aditional_path\" ";
+					$html .= "data-initial_media_path=\"$initial_media_path\" ";
+					$html .= "data-tipo=\"$tipo\" ";
+					$html .= "data-parent=\"$parent\" ";
+					$html .= "data-section_tipo=\"$current_section_tipo\" ";
+					$html .= "onclick=\"tool_common.open_tool_upload(this)\" ";
+					$html .= "></div>";	    		    	
 					$html .= " </td>";
 				}
 				$html .= " </tr>";
@@ -252,16 +253,16 @@
 			    	
 		    		if( file_exists($this->component_obj->get_image_path($quality)) ) {
 		    			
-				    	$html .= "<div class=\"icon_bs link image_delete_icon\"
-				    	data-image_id=\"$image_id\"
-				    	data-quality=\"$quality\"
-				    	data-aditional_path=\"$aditional_path\"
-				    	data-initial_media_path=\"$initial_media_path\"
-				    	data-tipo=\"$tipo\"
-				    	data-parent=\"$parent\"
-				    	data-section_tipo=\"$section_tipo\"
-				    	onclick=\"tool_image_versions.delete_version(this)\"
-				    	></div>";
+				    	$html .= "<div class=\"icon_bs link image_delete_icon\" ";
+				    	$html .= "data-image_id=\"$image_id\" ";
+				    	$html .= "data-quality=\"$quality\" ";
+				    	$html .= "data-aditional_path=\"$aditional_path\" ";
+				    	$html .= "data-initial_media_path=\"$initial_media_path\" ";
+				    	$html .= "data-tipo=\"$tipo\" ";
+				    	$html .= "data-parent=\"$parent\" ";
+				    	$html .= "data-section_tipo=\"$section_tipo\" ";
+				    	$html .= "onclick=\"tool_image_versions.delete_version(this)\" ";
+				    	$html .= "></div>";
 			    	  }
 
 			    	$html .= " </td>";
@@ -291,12 +292,18 @@
 
 						#dump($source_file,'$source_file '.$target_file);
 						$title = "Convert ".$this->component_obj->get_original()." to ".DEDALO_IMAGE_EXTENSION. " (width same quality)";
-						$html .= "<div class=\"icon_bs link image_generate_icon\"
-						data-image_id=\"$image_id\" data-quality=\"$quality\" data-aditional_path=\"$aditional_path\" data-initial_media_path=\"$initial_media_path\" data-source_file=\"$source_file\" data-target_file=\"$target_file\" data-flags=\"\" 
-						data-tipo=\"$tipo\" data-parent=\"$parent\"
-						onclick=\"tool_image_versions.convert_simple(this)\"
-						title=\"$title\"
-						></div>";
+						$html .= "<div class=\"icon_bs link image_generate_icon\" ";
+						$html .= "data-image_id=\"$image_id\" ";
+						$html .= "data-quality=\"$quality\" ";
+						$html .= "data-aditional_path=\"$aditional_path\" ";
+						$html .= "data-initial_media_path=\"$initial_media_path\" ";
+						$html .= "data-source_file=\"$source_file\" ";
+						$html .= "data-target_file=\"$target_file\" ";
+						$html .= "data-flags=\"\" ";
+						$html .= "data-tipo=\"$tipo\" data-parent=\"$parent\" ";
+						$html .= "onclick=\"tool_image_versions.convert_simple(this)\" ";
+						$html .= "title=\"$title\" ";
+						$html .= "></div>";
 						/*
 						# ORIGINAL ICON (TIF, PSD, ETC.)
 				    	$source_quality = $previous_quality;						
