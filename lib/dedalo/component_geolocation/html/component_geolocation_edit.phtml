@@ -92,11 +92,18 @@
 					# MAP
 						$html_content .= " <div class=\"leaflet_map\" id=\"$identificador_unico\"><!-- Map content here --></div>";
 
-						$html_content .= "<script>";
-						$html_content .= "component_geolocation.DEDALO_GEO_PROVIDER='".DEDALO_GEO_PROVIDER."';";
-						$html_content .= "component_geolocation.init_map('$identificador_unico'); ";
-						$html_content .= "</script>";	
 					
+					#
+					# JS Init component
+					$html_content .= '<script>';
+					# Init component
+					$init_options = new stdClass();
+						$init_options->component_name 		= $component_name;
+						$init_options->wrapper_id 			= $id_wrapper;
+						$init_options->uid 					= $identificador_unico;
+						$init_options->DEDALO_GEO_PROVIDER 	= DEDALO_GEO_PROVIDER;
+					$html_content .= 'component_common.init('.json_encode($init_options).');';
+					$html_content .= '</script>';
 					break;														
 		}
 
