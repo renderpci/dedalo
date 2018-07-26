@@ -1,55 +1,71 @@
 <?php
 
 	# VISUALIZADOR HTML	
+		
 	
-	
-	print "\n<!-- TEXT AREA [tipo:$tipo section_id_matrix:$parent] -->";
-	print "\n<div class=\"wrap_component css_wrap_text_area wrap_component_{$tipo}\" 
-	data-tipo=\"{$tipo}\"
-	data-lang=\"{$lang}\"
-	data-section_tipo=\"{$section_tipo}\"
-	data-parent=\"{$parent}\"
-	data-dato=\"{$dato_raw}\"
-	data-component_name=\"{$component_name}\"
-	>";
+
+	print "<div class=\"wrap_component css_wrap_text_area wrap_component_{$tipo}\"  ";
+	print "data-tipo=\"{$tipo}\" ";
+	print "data-lang=\"{$lang}\" ";
+	print "data-section_tipo=\"{$section_tipo}\" ";
+	print "data-parent=\"{$parent}\" ";
+	print "data-dato=\"{$dato_raw}\" ";
+	print "data-component_name=\"{$component_name}\" ";
+	print ">";
 	
 	# ETIQUETA (LABEL)
 	$html_label = component_common_draw::draw_label($this);
 	
 	# CONTENIDO (INPUT)
-	$html_contenido = '';
-	switch($permissions) {
+	$html_content = '';
+	switch(true) {
 			
-		case 0	:	$html_contenido .= "\n <span class=\"css_span_dato\"> No access here (text_area)! </span>";	
-					break;
+		case $permissions===0	:	
+			$html_content .= " <span class=\"css_span_dato\"> No access here (text_area)! </span>";	
+			break;
 						
-		case 1	: 	$html_contenido .= "\n <span class=\"css_span_dato\">$dato</span>";
-					break;	
+		case $permissions===1	: 	
+			$html_content .= " <span class=\"css_span_dato\">$dato</span>";
+			break;	
 						
 		
 		case ($permissions>=2)	:
 		
-					$html_contenido .= "\n <textarea class=\"css_text_area\" 
-					id=\"{$identificador_unico}\" name=\"{$tipo}_{$parent}\" 
-					data-tipo=\"{$tipo}\" data-lang=\"{$lang}\" data-section_tipo=\"{$section_tipo}\" data-parent=\"{$parent}\" 
-					title=\"$html_title\">$dato</textarea>";
-					#$html_contenido .= "\n <span  class=\"css_span_ejemplo \">$ejemplo</span>";
-					#$html_contenido .= "\n <span class=\"css_span_log\"></span>";
-		
-					if(SHOW_DEBUG) {
-						$html_contenido .= "\n <span class=\"css_span_debugger\" id=\"debugger_{$tipo}\" >{$debugger}</span>";	
-					}
-					break;
-					
-					
-							
+			$html_content .= "<textarea class=\"css_text_area\" ";
+			$html_content .= "id=\"{$identificador_unico}\" ";
+			$html_content .= "name=\"{$tipo}_{$parent}\" ";
+			$html_content .= "data-tipo=\"{$tipo}\" ";
+			$html_content .= "data-lang=\"{$lang}\" ";
+			$html_content .= "data-section_tipo=\"{$section_tipo}\" ";
+			$html_content .= "data-parent=\"{$parent}\" ";
+			$html_content .= "title=\"$html_title\">";
+			$html_content .= $dato;
+			$html_content .= "</textarea>";
+			#$html_content .= " <span  class=\"css_span_ejemplo \">$ejemplo</span>";
+			#$html_content .= " <span class=\"css_span_log\"></span>";
+
+			if(SHOW_DEBUG) {
+				$html_content .= " <span class=\"css_span_debugger\" id=\"debugger_{$tipo}\" >{$debugger}</span>";	
+			}
+
+			#
+			# JS Init component
+			$html_content .= '<script>';
+			# Init component
+			$init_options = new stdClass();
+				$init_options->component_name 	= $component_name;
+				$init_options->id_wrapper 		= $id_wrapper;
+				$init_options->uid 				= $identificador_unico;
+			$html_content .= 'component_common.init('.json_encode($init_options).');';
+			$html_content .= '</script>';	
+			break;							
 	}
 	
 	
 	# PRINT HTML
 	print $html_label;
-	print $html_contenido;
+	print $html_content;
 	
 	
-	print "\n</div>\n\n"; //wrap
+	print "</div>"; //wrap
 ?>
