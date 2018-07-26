@@ -5,7 +5,7 @@
 	# html_delimiter
 	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'in', $modo, $lang);
 	
-	print "<div class=\"wrap_component css_wrap_autocomplete_hi wrap_component_{$tipo}\" id=\"{$id_wrapper}\" ";
+	print "<div class=\"wrap_component css_wrap_autocomplete_hi wrap_component_{$modo} wrap_component_{$tipo}\" id=\"{$id_wrapper}\" ";
 	print "data-tipo=\"{$tipo}\" ";
 	print "data-lang=\"{$lang}\" ";
 	print "data-section_tipo=\"{$section_tipo}\" ";
@@ -15,6 +15,8 @@
 	print "data-dato='{$dato_json}' ";
 	print "data-component_name=\"{$component_name}\" ";
 	print "data-component_info='{$component_info}' ";
+	print "data-hierarchy_sections='". json_encode($hierarchy_sections)."' ";  // Default hierarchy_sections
+	print "data-relation_type='{$relation_type}' ";
 	print ">";
 
 	# ETIQUETA (LABEL)
@@ -45,13 +47,20 @@
 					$html_content .= "<li>";
 
 					# BTN DELETE
-					$html_content .= "<div class=\"icon_bs link css_autocomplete_hi_button_delete edit_hidden\" ";
-					$html_content .= "onclick=\"component_autocomplete_hi.delete(this)\" ";
-					$html_content .= "data-tipo=\"{$tipo}\" ";
-					$html_content .= "data-current_value='$current_value' ";
-					$html_content .= "data-role=\"autocomplete_hi_button_delete\" ";
-					$html_content .= "title=\"$label $parent\" ";
-					$html_content .= "></div>";
+					switch ($source_mode) {
+						case 'slave':	
+							// No delete button
+							break;
+						default:		
+							$html_content .= "<div class=\"icon_bs link css_autocomplete_hi_button_delete edit_hidden\" ";
+							$html_content .= "onclick=\"component_autocomplete_hi.delete(this)\" ";
+							$html_content .= "data-tipo=\"{$tipo}\" ";
+							$html_content .= "data-current_value='$current_value' ";
+							$html_content .= "data-role=\"autocomplete_hi_button_delete\" ";
+							$html_content .= "title=\"$label $parent\" ";
+							$html_content .= "></div>";
+							break;
+					}
 
 					# VALUE . STRING RESOLVED TO SHOW
 					$value = strip_tags($value);
@@ -70,6 +79,9 @@
 		
 				# SOURCE_MODE SWITCH
 				switch ($source_mode) {
+					case 'slave':
+						// Nothing to do
+						break;
 					case 'tree':
 
 						# BTN NEW ELEMENT
@@ -94,6 +106,7 @@
 				
 						#
 						# INPUT SEARCH FIELD
+						/* *****
 						$html_content .= "<input class=\"css_autocomplete_hi_search_field\" type=\"text\" placeholder=\"".label::get_label('buscar')."...\" ";
 						$html_content .= "data-id_wrapper=\"$id_wrapper\" ";
 						$html_content .= "data-tipo=\"$tipo\" ";
@@ -103,7 +116,12 @@
 						$html_content .= "tabindex=\"1\" ";
 						$html_content .= "autocomplete=\"off\" ";
 						$html_content .= "autocorrect=\"off\" ";
-						$html_content .= "/>";
+						$html_content .= "/>"; */
+
+						#
+						# AUTOCOMPLETE SERVICE
+						$autocomplete_wrapper_id = 'aw_' . $identificador_unico;
+						$html_content .= '<div class="autocomplete_wrapper" id="'.$autocomplete_wrapper_id.'"></div>';
 
 						if(SHOW_DEBUG===true) {
 							#$html_content .= "<div class=\"debug_info notes\">ar_referenced_tipo: ".implode(', ', $ar_referenced_tipo)."</div>";
@@ -121,10 +139,11 @@
 							#$html_content .= "<div class=\"toponymy_list_close\">X</div>";
 							$html_content .= "<li><input type=\"checkbox\" id=\"select_all_{$tipo}\" onchange=\"component_autocomplete_hi.select_all_hierarchy_sections(this,'$cookie_name')\"> <label for=\"select_all_{$tipo}\">".label::get_label('todos')."</label></li><hr>";
 							foreach ((array)$ar_filter_options as $fo_key => $fo_label) {
-								$current_id = md5($fo_key);
+								$current_id = $tipo.'_'.md5($fo_key);
 								$html_content .= "<li>";
-								$html_content .= "<input type=\"checkbox\" value='".$fo_key."' id=\"$current_id\" checked onchange=\"component_autocomplete_hi.save_hierarchy_sections(this,'$cookie_name')\">";
-								$html_content .= "<label for=\"$current_id\">$fo_label</label>";
+								$html_content .= "<input type=\"checkbox\" value='".$fo_key."' id=\"$current_id\" checked ";
+								$html_content .= "onchange=\"component_autocomplete_hi.save_hierarchy_sections(this,'$cookie_name')\">";
+								$html_content .= '<label for="'.$current_id.'">'.$fo_label.'</label>';
 								$html_content .= "</li>";
 							}
 							$html_content .= "</ul>";
@@ -140,6 +159,8 @@
 							$init_options->wrapper_id 		= $id_wrapper;
 							$init_options->cookie_name 		= $cookie_name;
 							$init_options->limit 			= $limit;
+							$init_options->min_length 		= $min_length;
+							$init_options->uid 				= $identificador_unico;
 						$html_content .= "component_common.init(".json_encode($init_options).");";
 						$html_content .= "</script>";
 						
