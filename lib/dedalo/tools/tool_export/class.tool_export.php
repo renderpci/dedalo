@@ -58,8 +58,8 @@ class tool_export extends tool_common {
 	* SET_UP
 	*/
 	static function set_up() {
-		$var_requested 		= common::get_request_var('button_tipo');
-		//if (isset($_REQUEST['button_tipo'])) {
+		
+		$var_requested = common::get_request_var('button_tipo');		
 		if (!empty($var_requested)) {
 			$button_obj  = new button_import($var_requested, null, $this->section_tipo);
 			$propiedades = json_handler::decode($button_obj->RecordObj_dd->get_propiedades());
