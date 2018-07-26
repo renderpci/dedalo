@@ -35,6 +35,22 @@
 		float: right;
 		width: 20%;
 		padding-top: 10px;
+
+		// Added 12-07-2018
+		position: fixed;
+		//top: 52px;
+		margin: 0;
+		right: 0px;
+		@media screen and (max-width: @tablet_max_width) { // 980px
+			width: 100%;
+			padding-left: 10px;
+			padding-right: 10px;
+			position: relative !important;
+
+			// Added 12-07-2018
+			position: relative;
+			top: 0;
+		}
 	}
 
 
@@ -45,30 +61,18 @@
 		width: 80%;
 		margin: 0;
 		padding-left: 5px;
-	    padding-right: 5px;
-	    padding-top: 4px;
+	    padding-right: 10px;
+	    padding-top: 8px;
+	    @media screen and (max-width: @tablet_max_width) { // 980px
+			width: 100%;			
+		}
 		}
 		.css_section_content a {
 			font-weight: normal;
 			text-decoration: none;		
 		}
 
-	@media screen and (max-width: 980px) { /* 736 */
-		#sidebar {
-			width: 100%;
-			padding-left: 10px;
-			padding-right: 10px;
-			position: relative !important;
-			}
-			#inspector_div {
-				width: 100% !important;
-				padding-left: 10px;
-				padding-right: 10px;
-			}
-		.css_section_content {
-			width: 100%;
-		}
-	}
+	
 
 	/* PORTAL
 	----------------------------------------- */
