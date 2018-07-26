@@ -8,7 +8,6 @@ class component_relation_related extends component_relation_common {
 	
 	# relation_type . Determines inverse resolutions and locator format
 	# DEDALO_RELATION_TYPE_RELATED_TIPO (Default)
-	# DEDALO_RELATION_TYPE_EQUIVALENT_TIPO
 	# protected $relation_type = DEDALO_RELATION_TYPE_RELATED_TIPO; // Default
 	protected $relation_type ; // Set on construct from propiedades
 
@@ -777,7 +776,7 @@ class component_relation_related extends component_relation_common {
 		$search_query_object->allow_sub_select_by_id = false;
 
 		#$search_query_object = $this->build_search_query_object($request_options);
-			#dump(null, ' search_query_object ++ '.to_string( json_encode($search_query_object, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT)));
+			#dump(null, ' search_query_object ++ '.to_string( json_encode($search_query_object, JSON_UNESCAPED_UNICODE | JSON_HEX_APOS | JSON_PRETTY_PRINT)));
 		
 		$search_development2 = new search_development2($search_query_object);
 		#$search_development2->parse_query_object();
