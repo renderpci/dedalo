@@ -109,7 +109,18 @@
 				if(SHOW_DEVELOPER===true) {
 					$html_content .= "<span class=\"debug_info notes\">".json_encode($dato)."</span>";
 					$html_content .= "<span class=\"component_select_lang_debug debug_info\">".exec_time($start_time)."</span>";					
-				}				
+				}
+
+				#
+				# JS Init component
+				$html_content .= '<script>';
+				# Init component
+				$init_options = new stdClass();
+					$init_options->component_name 	= $component_name;
+					$init_options->id_wrapper 		= $id_wrapper;
+					$init_options->uid 				= $identificador_unico;
+				$html_content .= 'component_common.init('.json_encode($init_options).');';
+				$html_content .= '</script>';			
 				break;
 	}
 
