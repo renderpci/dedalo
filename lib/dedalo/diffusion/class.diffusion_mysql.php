@@ -30,7 +30,7 @@ class diffusion_mysql extends diffusion_sql  {
 	*/
 	public static function exec_mysql_query( $sql, $table_name=null, $database_name, $multi_query=false ) {
 				
-		debug_log(__METHOD__." Connecting database: $database_name - table: $table_name ".to_string(), logger::DEBUG);
+		#debug_log(__METHOD__." Connecting database: $database_name - table: $table_name ".to_string(), logger::DEBUG);
 
 		$mysql_conn = DBi::_getConnection_mysql(MYSQL_DEDALO_HOSTNAME_CONN,
 										 		MYSQL_DEDALO_USERNAME_CONN,
@@ -40,6 +40,8 @@ class diffusion_mysql extends diffusion_sql  {
 										 		MYSQL_DEDALO_SOCKET_CONN);
 		# Set as class static var
 		#self::$mysql_conn;
+
+		#error_log("++++++++++ sql 1 : ".$sql);
 
 		if ($multi_query===true) {
 			$result = $mysql_conn->multi_query( $sql );
@@ -51,7 +53,9 @@ class diffusion_mysql extends diffusion_sql  {
 			#debug_log(__METHOD__." Skipped (key:$key) db_data value for database: $database_name : ".to_string($mysql_conn->error), logger::WARNING);
 			if(SHOW_DEBUG===true) {
 				#dump( $mysql_conn->error, "error".to_string() );
+				error_log("++++++++++ SQL ERROR QUERY : ".$sql);
 				$query_clean = trim($sql);
+				error_log("error_log sql: ".$sql);
 				dump($mysql_conn->error, ' sql ERROR: query ++ '.PHP_EOL.to_string($sql).PHP_EOL);
 				#throw new Exception("Error Processing Request. MySQL query_insert_data error ".to_string($mysql_conn->error), 1);
 			}
@@ -496,7 +500,9 @@ class diffusion_mysql extends diffusion_sql  {
 			}
 			$ar_verified_tables[] = $table_name; // Store state to avoid verify every time for every record
 		}//end if ( !in_array($table_name, (array)$ar_verified_tables) ) {
-		
+
+		# Array with available table fields (for avoid write non existing fields on save)
+		$real_table_fields = self::get_real_table_fields($database_name, $table_name);
 
 		foreach ((array)$ar_section_id as $section_id => $ar_fields) {
 			# Iterate one or more records
@@ -525,6 +531,11 @@ class diffusion_mysql extends diffusion_sql  {
 				foreach ($fields as $key => $field) {
 					$field_name  = $field['field_name'];
 					$field_value = $field['field_value'];
+
+					if (!in_array($field_name, $real_table_fields)) {
+						debug_log(__METHOD__." Skipped field $field_name because not exists in table  $table_name", logger::WARNING);
+						continue; # Skip
+					}
 
 					$field_value = diffusion_mysql::conform_field_value($field_value);
 					
@@ -564,7 +575,41 @@ class diffusion_mysql extends diffusion_sql  {
 		$response->msg    = implode(",\n", $response->msg);		#dump($response, ' response');
 		
 		return (object)$response;
-	}#end save_record
+	}//end save_record
+
+
+
+	/**
+	* GET_REAL_TABLE_FIELDS
+	* Return an array of available columns in current table
+	* @return array $real_table_fields
+	*/
+	public static function get_real_table_fields($database_name, $table_name) {
+
+		static $real_table_fields_data;
+		if (isset($real_table_fields_data[$table_name])) {
+			return $real_table_fields_data[$table_name];
+		}
+
+		$real_table_fields = [];		
+
+		$strQuery = "DESCRIBE $table_name ;";
+		$result   = self::exec_mysql_query( $strQuery, $table_name, $database_name );
+		if (!$result) {			
+			return $real_table_fields;		
+		}
+		
+		while ($row = $result->fetch_assoc()) {
+			$real_table_fields[] = $row["Field"];
+		}
+		$result->free();
+
+		# Cache
+		$real_table_fields_data[$table_name] = $real_table_fields;
+
+
+		return $real_table_fields;
+	}//end get_real_table_fields
 
 
 
