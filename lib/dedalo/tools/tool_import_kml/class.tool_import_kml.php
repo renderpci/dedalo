@@ -60,7 +60,7 @@ class tool_import_kml extends tool_common {
 		}
 
 		# button_tipo is always send in url
-		$this->button_import_tipo = $_GET['button_tipo'];
+		$this->button_import_tipo = safe_xss($_GET['button_tipo']);
 
 		$RecordObj_dd = new RecordObj_dd($this->button_import_tipo);
 		# Fix tool propiedades from button propiedades
