@@ -99,7 +99,7 @@ function load_components($json_data) {
 			# Default
 			$component_info->modo = 'search';
 		}
-
+	
 		$component_tipo = $component_info->component_tipo;
 
 		$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($component_info->component_tipo,true);
