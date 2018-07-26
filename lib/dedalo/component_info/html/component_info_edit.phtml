@@ -22,37 +22,48 @@
 		$html_label = component_common_draw::draw_label($this);
 		
 		# CONTENIDO (INPUT)
-		$html_contenido = '';
+		$html_content = '';
 		switch($permissions) {
 				
-			case 0	:	$html_contenido .= "";
+			case 0	:	$html_content .= "";
 						break;
 							
-			case 1	: 	$html_contenido .= "";
+			case 1	: 	$html_content .= "";
 						break;	
 							
 			case 2	:
 			case 3	:		
 						
-						#$html_contenido .= "Info: <br>";
-						foreach ((array)$ar_widget_html as $key => $widget_html) {
-							$html_contenido .= $widget_html;
-							#$html_contenido .= "<hr>";
-						}
+				#$html_content .= "Info: <br>";
+				foreach ((array)$ar_widget_html as $key => $widget_html) {
+					$html_content .= $widget_html;
+					#$html_content .= "<hr>";
+				}
 
-						$html_contenido .= "<a href=\"javascript:;\" class=\"update_info edit_hidden\" onclick=\"component_info.update_info(this);\" data-wrapper_id=\"$id_wrapper\">";
-						$html_contenido .= label::get_label('actualizar');
-						$html_contenido .= "</a>";
+				$html_content .= "<a href=\"javascript:;\" class=\"update_info edit_hidden\" onclick=\"component_info.update_info(this);\" data-wrapper_id=\"$id_wrapper\">";
+				$html_content .= label::get_label('actualizar');
+				$html_content .= "</a>";
+
+				#
+				# JS Init component
+				$html_content .= '<script>';
+				# Init component
+				$init_options = new stdClass();
+					$init_options->component_name 	= $component_name;
+					$init_options->wrapper_id 		= $id_wrapper;
+				$html_content .= 'component_common.init('.json_encode($init_options).');';
+				$html_content .= '</script>';
+				break;
 		}
 
 	
 		# Prepare content to show in page
-		tools::prepare_content($html_contenido);	
+		tools::prepare_content($html_content);	
 		
 
 		# PRINT HTML
 		print $html_label;
-		print $html_contenido;	
+		print $html_content;	
 	
 
 	print "</div>"; //wrap
