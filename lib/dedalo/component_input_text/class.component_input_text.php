@@ -185,7 +185,7 @@ class component_input_text extends component_common {
 			$value = $component->get_html();
 
 		}else{
-
+	
 
 				# Si el valor está vacío, es posible que este componente no tenga dato en este idioma. Si es así,
 				# verificamos que NO estamos en el lenguaje principal (de momento config:DEDALO_DATA_LANG_DEFAULT)
@@ -199,25 +199,31 @@ class component_input_text extends component_common {
 				$empty_list_value = "\n".' <span class="css_span_dato"></span>';
 				if (empty($value) || $value===$empty_list_value) {
 
-					$main_lang = common::get_main_lang( $section_tipo, $parent );			
+
+
+					#$main_lang = common::get_main_lang( $section_tipo, $parent );			
 					# main lang
-					if ($main_lang!=$lang) {
+					#if ($main_lang!=$lang) {
 
 						$component 	= component_common::get_instance(__CLASS__,
 																	 $tipo,
 																 	 $parent,
 																 	 $modo,
-																	 $main_lang,
+																	 DEDALO_DATA_LANG,
 																 	 $section_tipo); 
+
+						$dato_full = $component->get_dato_full();
+							#dump($dato_full, ' dato_full ++ '.to_string());
+						$value = component_common::get_value_with_fallback_from_dato_full( $dato_full, true );
 						
-						$value = $component->get_valor($main_lang);
-						$value = component_common::decore_untranslated( $value );
+					#	$value = $component->get_valor($main_lang);
+					#	$value = component_common::decore_untranslated( $value );
 							#dump($value, ' value ++ '.to_string($main_lang));
 						
 						#$component->set_lang($main_lang);
 						#$valor = $component->get_valor($main_lang);
 						#$valor = component_common::decore_untranslated( $valor );
-					}
+					#}
 				}			
 		
 		}//end if (strpos($modo, 'edit')!==false)	
@@ -488,6 +494,10 @@ class component_input_text extends component_common {
 		
 		$q = pg_escape_string(stripslashes($q));
 
+		# Prepend if exists
+		#if (isset($query_object->q_operator)) {
+		#	$q = $query_object->q_operator . $q;
+		#}
 		
         switch (true) {
 			case ($q==='!*'):
