@@ -22,7 +22,10 @@ class js {
 		
 		$html 	= '';		
 		
-		# Insertamos las librerías principales			
+		# Insertamos las librerías principales	
+
+			js::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/common/js/enviroment.js.php';
+			#js::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/common/js/lang/'.DEDALO_APPLICATION_LANG.'.js';	
 
 			# JQUERY LIBS
 			js::$ar_url_basic[] = JQUERY_LIB_URL_JS;
@@ -45,7 +48,6 @@ class js {
 			js::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/html_page/js/html_page.js';
 			js::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/html_page/js/keyboard_shortcuts.js';
 
-
 			# LOGIN
 			js::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/login/js/login.js';
 
@@ -57,11 +59,13 @@ class js {
 			js::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/common/js/common.js';			
 			js::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/tools/tool_common/js/tool_common.js';
 
+			# JS SERVICES
+			js::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/js/services/service_autocomplete.js';
+
 			# component common functions	
 			js::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/component_common/js/component_common.js';
 	
 			#js::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/tools/tool_portal/js/tool_portal.js'; // Cuando añadimos un fragmento, no está disponible..			
-			js::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/common/js/lang/'.DEDALO_APPLICATION_LANG.'.js';
 			
 			# SEARCH		
 			js::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/search/js/search.js' ;
@@ -78,10 +82,10 @@ class js {
 					js::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/tools/tool_update_cache/js/tool_update_cache.js';
 					break;
 			}
-				
+			
 			# Ponemos las librerías básicas al principio de la lista
 			js::$ar_url = array_merge(js::$ar_url_basic, js::$ar_url);
-
+	
 		
 		# Recorremos los elemetos usados, por modeloID es decir: root=dd117, etc..
 		$ar_excepciones  		= array('relation_list');
@@ -101,7 +105,7 @@ class js {
 		# eliminamos las duplicidades de links	
 		js::$ar_url = array_unique(js::$ar_url);
 
-
+	
 		# ITERATE AR_URL TO BUILD FINAL HTML
 		foreach (js::$ar_url as $url) {
 				
