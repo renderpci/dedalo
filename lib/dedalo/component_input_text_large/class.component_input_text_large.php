@@ -76,8 +76,9 @@ class component_input_text_large extends component_common {
     			$query_object->unaccent = false;
 
     			$clone = clone($query_object);
-	    			$clone->operator = '=';
-	    			$clone->q_parsed = "''";
+	    			$clone->operator = '~*';
+	    			//$clone->q_parsed = "''";
+	    			$clone->q_parsed = '\'.*\""\'';
 
 				$logical_operator = '$or';
     			$new_query_json = new stdClass;    			
@@ -93,10 +94,11 @@ class component_input_text_large extends component_common {
     			$query_object->unaccent = false;
 
     			$clone = clone($query_object);
-	    			$clone->operator = '!=';
-	    			$clone->q_parsed = "''";
+	    			$clone->operator = '!~';
+	    			//$clone->q_parsed = "''";
+	    			$clone->q_parsed = '\'.*\""\'';
 
-				$logical_operator ='$or';
+				$logical_operator ='$and';
     			$new_query_json = new stdClass;    			
     				$new_query_json->$logical_operator = [$query_object, $clone];    			
     			# override

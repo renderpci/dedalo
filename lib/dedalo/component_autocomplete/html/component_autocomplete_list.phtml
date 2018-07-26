@@ -2,21 +2,22 @@
 
 	# VISUALIZADOR HTML	
 	
-	print "<!-- ".__CLASS__." [tipo:$tipo section_id:$parent] $label -->";
-	#print "<!-- COMPONENT_AUTOCOMPLETE [tipo:$tipo section_id:$parent] $label -->";
-	print "<div class=\"wrap_component css_wrap_autocomplete wrap_portal_list\" id=\"{$id_wrapper}\"
-				data-tipo=\"{$tipo}\"
-				data-lang=\"{$lang}\"
-				data-parent=\"{$parent}\"
-				data-section_tipo=\"{$section_tipo}\"
-				data-ar_target_section_tipo='{$ar_target_section_tipo_json}'
-				data-tipo_to_search='{$tipo_to_search}'
-				data-modo=\"{$modo}\"
-				data-from_modo=\"{$from_modo}\"
-				data-dato='{$dato_json}'
-				data-component_name=\"{$component_name}\"
-				data-component_info='{$component_info}'
-				>";
+	# html_delimiter
+	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'in', $modo, $lang);
+
+	print "<div class=\"wrap_component css_wrap_autocomplete wrap_portal_list\" id=\"{$id_wrapper}\" ";
+	print "data-tipo=\"{$tipo}\" ";
+	print "data-lang=\"{$lang}\" ";
+	print "data-parent=\"{$parent}\" ";
+	print "data-section_tipo=\"{$section_tipo}\" ";
+	print "data-ar_target_section_tipo='{$ar_target_section_tipo_json}' ";
+	print "data-tipo_to_search='{$tipo_to_search}' ";
+	print "data-modo=\"{$modo}\" ";
+	print "data-from_modo=\"{$from_modo}\" ";
+	print "data-dato='{$dato_json}' ";
+	print "data-component_name=\"{$component_name}\" ";
+	print "data-component_info='{$component_info}' ";
+	print ">";
 	
 	# ETIQUETA (LABEL)
 	#$html_label = component_common_draw::draw_label($this);
@@ -26,40 +27,41 @@
 	switch($permissions) {
 			
 		case 0:	
-				$html_contenido .= "";		
-				break;
+			$html_contenido .= "";
+			break;
 		
-		case 1:
-										
-				$html_contenido .= $valor ;
-				break;
+		case 1:									
+			$html_contenido .= $valor ;
+			break;
 
 		case ($permissions>=2)	:
-				# VALOR . STRING RESOLVED TO SHOW
+			# VALOR . STRING RESOLVED TO SHOW
 
-				#$html_contenido .= $valor ;
-				#break;
+			#$html_contenido .= $valor ;
+			#break;
 
-					if($modo =='portal_list'){
-						if(empty($ar_valor)){
-							$edit_class = 'css_autocomplete_ul_edit_in_portal';
-						}else{
-							$edit_class = 'css_autocomplete_ul';
-						}
-						$html_contenido .= " <ul class=\"$edit_class\" onclick=\"component_common.change_mode_component(this, '$modo','edit')\">";
+				if($modo =='portal_list'){
+					if(empty($ar_valor)){
+						$edit_class = 'css_autocomplete_ul_edit_in_portal';
 					}else{
-						$html_contenido .= " <ul>";
+						$edit_class = 'css_autocomplete_ul';
 					}
+					$html_contenido .= " <ul class=\"$edit_class\" onclick=\"component_common.change_mode_component(this, '$modo','edit')\">";
+				}else{
+					$html_contenido .= " <ul>";
+				}
+				
+				foreach ($ar_valor as $value_obj) {
 					
-					foreach ($ar_valor as $current_value => $value) {
-						$html_contenido .= "<li>";
-							$html_contenido .= $value;
-						$html_contenido .= "</li>";
-					}
-					$html_contenido .= "</ul>";
+					$value = $value_obj->label;
 
-				break;
-					
+					$html_contenido .= "<li>";
+						$html_contenido .= $value;
+					$html_contenido .= "</li>";
+				}
+				$html_contenido .= "</ul>";
+
+			break;					
 	}			
 	
 	# Prepare content to show in page
@@ -70,4 +72,8 @@
 	
 	
 	echo "</div>"; //css_wrap_autocomplete
+	
+
+	# html_delimiter
+	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'out', $modo, $lang);
 ?>

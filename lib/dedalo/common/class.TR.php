@@ -129,12 +129,26 @@ abstract class TR {
 					}
 					break;
 
-			# SVG
+			# SVG (From now 18-05-2018 v4.9.0, will be used to manage tags from the component component_svg)
 			case 'svg' :
 					if ($id) {
 						$string = "(\[svg-[a-z]-{$id}(-[^-]{0,22}-data:.*?:data)?\])";
 					}else{
 						$string = "(\[(svg)-([a-z])-([0-9]{1,6})(-([^-]{0,22}))?-data:(.*?):data\])";
+					}
+					break;
+			case 'svg_full_text' :
+
+					$string = "\[svg-[a-z]-[0-9]{1,6}-[^-]{0,22}?-data:.*?:data\]";
+
+					break;
+
+			# DRAW (Old svg renamed 18-05-2018. Pre 4.9.0 . Now manage images over draws js paper data)
+			case 'draw' :
+					if ($id) {
+						$string = "(\[draw-[a-z]-{$id}(-[^-]{0,22}-data:.*?:data)?\])";
+					}else{
+						$string = "(\[(draw)-([a-z])-([0-9]{1,6})(-([^-]{0,22}))?-data:(.*?):data\])";
 					}
 					break;
 
@@ -146,9 +160,8 @@ abstract class TR {
 						$string = "(\[(geo)-([a-z])-([0-9]{1,6})(-([^-]{0,22}))?-data:(.*?):data\])";	
 					}
 					break;
-			# GEO_FULL . Select complete tag like '[TC_00:01:25.627_TC]'
+			# GEO_FULL . Select complete tag 
 			case 'geo_full' :
-					#$string = "(\[geo-[a-z]-[0-9]{1,6}-[^-]{0,22}?-data:.*?:data\])";
 					$string = "(\[geo-[a-z]-[0-9]{1,6}(-[^-]{0,22})?-data:(.*?):data\])";
 					break;	
 
@@ -294,11 +307,11 @@ abstract class TR {
 
 		# TC
 		$pattern 	= TR::get_mark_pattern('tc'); //[TC_00:00:25.091_TC]
-		$text		= preg_replace($pattern, "<img id=\"$1\" src=\"{$btn_url}/$1\" class=\"tc\" data-type=\"tc\" data-tag_id=\"$1\" data-state=\"n\" data-label=\"$2\" data-data=\"$2\">", $text);		
+		$text		= preg_replace($pattern, "<img id=\"$1\" src=\"{$btn_url}/$1\" class=\"tc\" data-type=\"tc\" data-tag_id=\"$1\" data-state=\"n\" data-label=\"$2\" data-data=\"$2\">", $text);
 		/*$text		= preg_replace_callback(
             $pattern,
             function($matches) {
-            	#dump($matches, ' matches ++ '.to_string());            	
+            	#dump($matches, ' matches ++ '.to_string());
             	$_1 = $matches[1];
             	$_2 = $matches[2];
             	$id = 'tc_'.str_replace(array(':','.'),'_', $_2);
@@ -310,8 +323,46 @@ abstract class TR {
 	
 		# SVG
 		$pattern 	= TR::get_mark_pattern('svg');
+		preg_match($pattern, $text, $matches);
+		if (!empty($matches)) {			
+			#$text		= preg_replace($pattern, "<img id=\"[$2-$3-$4-$6]\" src=\"{$btn_url}/[$2-$3-$4-$6]\" class=\"svg\" data-type=\"svg\" data-tag_id=\"$4\" data-state=\"$3\" data-label=\"$6\" data-data=\"$7\">", $text);
+			#$text		= preg_replace($pattern, '<img id="['.${2}.'-'.${3}.'-'.${4}.'-'.${6}.']" src="'. ${7} .'" class="svg" data-type="svg" data-tag_id="'.${4}.'" data-state="'.${3}.'" data-label="'.${6}.'" data-data="'.${7}.'">', $text);
+			$text = preg_replace_callback(
+		        $pattern,
+		        function ($matches) {
+
+		        	$new_text = null;
+
+		        	$_2 = $matches[2];
+		        	$_3 = $matches[3];
+		        	$_4 = $matches[4];
+		        	$_5 = $matches[5];
+		        	$_6 = $matches[6];
+		        	$_7 = $matches[7];		        		
+
+		        	# data is a locator encoded as text
+		        	# Restore double quotes from saved safe locator string
+		        	$locator_text = str_replace('\'','"',$_7);
+		        	if($locator = json_decode($locator_text) ) {
+	
+		        		$url  = component_svg::get_url_from_locator($locator);
+
+		        		# Replace double quotes for safe management in text editor
+			        	$data = str_replace('"','\'',$_7);
+
+			            $new_text = '<img id="['.$_2.'-'.$_3.'-'.$_4.'-'.$_6.']" src="'.$url.'" class="svg" data-type="svg" data-tag_id="'.$_4.'" data-state="'.$_3.'" data-label="'.$_6.'" data-data="'.$data.'">';
+			            
+		        	}
+		        	return $new_text;	        	
+		        },
+		        $text
+		    );
+		}
+
+		# DRAW
+		$pattern 	= TR::get_mark_pattern('draw');
 		#$text		= preg_replace($pattern, "<img id=\"$1\" src=\"{$btn_url}/$1\" class=\"svg\" />$codeHiliteOut", $text);
-		$text		= preg_replace($pattern, "<img id=\"[$2-$3-$4-$6]\" src=\"{$btn_url}/[$2-$3-$4-$6]\" class=\"svg\" data-type=\"svg\" data-tag_id=\"$4\" data-state=\"$3\" data-label=\"$6\" data-data=\"$7\">", $text);
+		$text		= preg_replace($pattern, "<img id=\"[$2-$3-$4-$6]\" src=\"{$btn_url}/[$2-$3-$4-$6]\" class=\"draw\" data-type=\"draw\" data-tag_id=\"$4\" data-state=\"$3\" data-label=\"$6\" data-data=\"$7\">", $text);
 
 		# GEO
 		$pattern 	= TR::get_mark_pattern('geo');
@@ -387,6 +438,7 @@ abstract class TR {
 			$options->deleteTC 			= true;
 			$options->deleteIndex 		= true;
 			$options->deleteSvg 		= true;
+			$options->deleteDraw 		= true;
 			$options->deleteGeo 		= true;
 			$options->delete_page 		= true;
 			$options->delete_person 	= true;
@@ -413,6 +465,12 @@ abstract class TR {
 		# Svg clear
 		if($options->deleteSvg===true) {
 			$pattern 	= TR::get_mark_pattern('svg');
+			$string 	= preg_replace($pattern, '', $string);
+		}
+
+		# Draw clear
+		if($options->deleteDraw===true) {
+			$pattern 	= TR::get_mark_pattern('draw');
 			$string 	= preg_replace($pattern, '', $string);
 		}
 

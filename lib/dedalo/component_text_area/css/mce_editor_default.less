@@ -9,7 +9,7 @@ body.mce-content-body {
 	//font-size: 12px;
 	//line-height: 15px;
 	font-size: 13px;
-	line-height: 16px;
+	//line-height: 1.1em;
 	//font-family: "san_francisco";
 	}
 	body.mce-content-body img {
@@ -95,6 +95,9 @@ img.tc2 {
 img.svg {
 	height: 15px;
 }
+img.draw {
+	height: 15px;
+}
 img.page {
 	height: 15px;
 }
@@ -106,10 +109,29 @@ img.struct {
 }
 
 
+// VIEWING_GLYPHS mode (big text and images)
+body.mce-content-body.viewing_glyphs {
+	//font-size: 60px !important;
+	font-size: 46px !important;
+	line-height: 1.1em;
+	img {
+		//height: 56px;
+		height: 22px;
+		opacity: 1 !important;
+		top: -12px;
+	}
+	img.svg {
+		//height: 62px;
+		height: 48px;
+		top: 0;
+	}
+}
+
+
 
 /* SECTION_STRUCT
 -------------------------------------------------- */
-.section_struct {  
+.section_struct {
     padding: 3px;
     padding-left: 15px;
     border: #909090;

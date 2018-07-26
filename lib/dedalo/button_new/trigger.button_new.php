@@ -39,6 +39,14 @@ function new_record($json_data) {
 
 	# Section save returs the section_id created
 	$section_id = $section->Save($options);
+
+
+	# Update search_query_object full_count property
+	$search_options = section_records::get_search_options($section_tipo);
+	if ($search_options->search_query_object) {
+		$search_options->search_query_object->full_count = true; // Force re-count records
+	}
+
 	
 	$response->result 	= $section_id;
 	$response->msg 		= 'Ok. Request done ['.__FUNCTION__.']';

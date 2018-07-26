@@ -3,9 +3,9 @@
 	# VISUALIZADOR HTML	
 	
 	
-	print "\n<!-- CHECK BOX [tipo:$tipo section_id_matrix:$parent] $label -->";
+	print "\<!-- CHECK BOX [tipo:$tipo section_id_matrix:$parent] $label -->";
 
-	print "\n<div class=\"css_wrap_check_box\" >";
+	print "\<div class=\"css_wrap_check_box\" >";
 	
 	# ETIQUETA (LABEL)
 	$html_label = component_common_draw::draw_label($this);
@@ -43,7 +43,17 @@
 						data-tipo=\"{$tipo}\" data-section_tipo=\"{$section_tipo}\" data-parent=\"{$parent}\" data-lang=\"{$lang}\"
 						value=\"{$value}\" title=\"$html_title\" $checked />";						
 						$html_contenido .= "\n <label class=\"css_check_box_rotulo\" $required >$rotulo</label>";	
-					}					
+					}
+
+					#
+					# JS Init component
+					$html_content .= '<script>';
+					# Init component
+					$init_options = new stdClass();
+						$init_options->component_name 	= $component_name;
+						$init_options->wrapper_id 		= $id_wrapper;
+					$html_content .= 'component_common.init('.json_encode($init_options).');';
+					$html_content .= '</script>';				
 					break;
 							
 	}

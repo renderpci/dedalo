@@ -21,19 +21,40 @@
 	if($permissions===0) return null;
 	
 	# Verify component content record is inside section record filter
-	if ($this->get_filter_authorized_record()===false) return null ;
-	
+	if ($this->get_filter_authorized_record()===false) return null;
 	
 
 	switch($modo) {		
 	
 		case 'edit'	:
-				$id_wrapper 		= 'wrapper_'.$identificador_unico;
-				$input_name 		= "{$tipo}_{$parent}";
-				$dato 				= $this->get_dato();
-				$dato_json 			= json_handler::encode($dato);				
-				$component_info 	= $this->get_component_info('json');								
-				$propiedades_json 	= json_encode($propiedades);							
+		//case 'player' :
+				#
+				# JS includes additionals
+					#js::$ar_url[] = PAPER_JS_URL;
+					#js::$ar_url[] = DEDALO_LIB_BASE_URL . '/component_image/js/component_image_read.js' ;
+				
+				$id_wrapper 	= 'wrapper_'.$identificador_unico;
+				$component_info = $this->get_component_info('json');
+				$svg_id 		= $this->get_svg_id(); // Equivalent of image SID
+				$file_path 		= $this->get_file_path();
+
+				# file exsists
+				$file_exists 	= file_exists($file_path);
+				if ($file_exists===true) {
+					# URL
+					$file_url	= $this->get_url();
+					# Force refresh always 
+					$file_url	.= '?' . start_time();
+				}else{
+					$file_url	= component_svg::get_default_svg_url();
+				}
+
+				# file_content				
+				$file_content 	= null; // file_get_contents($file_path);				
+						
+				# Related components
+				#$ar_related_component_tipo 		= $this->get_ar_related_component_tipo();
+				#$ar_related_component_tipo_json = json_encode($ar_related_component_tipo);						
 				break;
 
 		case 'print' :
@@ -48,18 +69,24 @@
 				break;		
 										
 		case 'list'	:
-				if(empty($valor)) return null;	
-				break;		
-		
-		case 'search':
-				# dato is injected by trigger search wen is needed
-				$dato = isset($this->dato) ? $this->dato : '';
-								
-				# Search input name (var search_input_name is injected in search -> records_search_list.phtml)
-				# and recovered in component_common->get_search_input_name()
-				# Normally is section_tipo + component_tipo, but when in portal can be portal_tipo + section_tipo + component_tipo
-				$search_input_name = $this->get_search_input_name();
-				break;							
+				# file exsists
+				$file_path 		= $this->get_file_path();
+				$file_exists 	= file_exists($file_path);
+
+				if ($file_exists===true) {
+					# URL
+					$file_url	= $this->get_url();
+					# Force refresh always 
+					$file_url	.= '?' . start_time();
+				}else{
+					$file_url	= '';
+				}
+				break;	
+		case 'list_thesaurus':
+				$render_vars = $this->get_render_vars();
+					#dump($render_vars, ' render_vars ++ '.to_string());
+				$icon_label = isset($render_vars->icon) ? $render_vars->icon : '';
+				break;								
 	}
 	
 

@@ -675,7 +675,6 @@ abstract class backup {
 		// Import the database and output the status to the page
 		$command  = DB_BIN_PATH.'pg_restore -h '.DEDALO_HOSTNAME_CONN.' -p '.DEDALO_DB_PORT_CONN. ' -U "'.DEDALO_USERNAME_CONN.'" --dbname '.DEDALO_DATABASE_CONN.' ';
 		$command .= '--no-password --clean --no-owner "'.$mysqlImportFilename.'"' ;
-		#$command = DB_BIN_PATH.'pg_restore --host '.DEDALO_HOSTNAME_CONN.' --port '.DEDALO_DB_PORT_CONN. ' --username '.DEDALO_USERNAME_CONN.' --dbname '.DEDALO_DATABASE_CONN.' --no-password --clean --verbose '.$mysqlImportFilename ;
 
 		# LOW PRIORITY ( nice , at 22:56 , etc)
 		#$command = "nice ".$command ;

@@ -16,27 +16,22 @@
 	$html_content = '';
 	switch(true) {
 			
-		case ($permissions==0)	:
+		case ($permissions===0)	:
 			$html_content .= "";
 			break;
 	
 		case ($permissions>=1)	:
 
-			# COMPARISON OPERATORS
-			$html_content .= operator::get_search_comparison_operators_html($tipo,$ar_comparison_operators);
-
 			# INPUT
-			$html_content .= "<span id=\"search_component_$tipo\">";	
+			#$html_content .= "<span id=\"search_component_$tipo\">";	
 			$html_content .= "<input class=\"css_input_text text_area_search\" type=\"text\" name=\"{$search_input_name}\" id=\"{$identificador_unico}\" ";
 			$html_content .= "data-tipo=\"{$tipo}\" ";
 			$html_content .= "data-modo=\"{$modo}\" ";
 			$html_content .= "value=\"{$dato}\" ";
 			$html_content .= "onchange=\"component_common.fix_dato(this,'{$component_name}')\" ";
 			$html_content .= "/>";
-			$html_content .= "</span>";
-
-			# LOGICAL OPERATORS
-			$html_content .= operator::get_search_logical_operators_html($tipo,$ar_logical_operators);								
+			#$html_content .= "</span>";
+			break;						
 	}
 
 	# Prepare content to show in page

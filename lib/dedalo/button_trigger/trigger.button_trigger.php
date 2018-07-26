@@ -19,7 +19,7 @@ if(empty($mode)) exit("<span class='error'> Trigger: Error Need mode..</span>");
 
 
 # NEW	
-if ($mode=='trigger') {
+if ($mode==='trigger') {
 	
 	
 	die();
@@ -28,8 +28,8 @@ if ($mode=='trigger') {
 
 # TESAURO PRESENTACION
 # TESAURO_ALFABETICO_GENERATE_HTML_FILE	
-if ($mode=='tesauro_presentacion_generate_pdf_file') {	
-	#dump($_REQUEST);die();
+if ($mode==='tesauro_presentacion_generate_pdf_file') {	
+	
 	require_once(DEDALO_LIB_BASE_PATH.'/common/class.exec_.php');
 
 	if (empty($target_url)) {
@@ -52,20 +52,22 @@ if ($mode=='tesauro_presentacion_generate_pdf_file') {
 		die("Error. Empty section_tipo");
 	}
 
-	#echo 'http://'.$_SERVER['HTTP_HOST'] . $target_url .'?lang_filter='.$lang_filter; die();
-
 
 	if (!isset($title_pagina)) {
 		$title_pagina='Page';
 	}
+
 	#
 	# PDF
-	/**/
-	#$component_pdf 	 = new component_pdf($component_pdf_tipo, $component_parent, 'edit', $lang_filter);	#$id=NULL, $tipo=NULL, $modo='edit', $parent=NULL, $lang=DEDALO_DATA_LANG
-	$component_pdf 	 = component_common::get_instance('component_pdf',$component_pdf_tipo,$component_parent,'edit',$lang_filter, $section_tipo);
-		#dump($component_pdf,'$component_pdf');
+	$component_pdf 	 	= component_common::get_instance('component_pdf',
+														$component_pdf_tipo,
+														$component_parent,
+														'edit',
+														$lang_filter,
+														$section_tipo);
+	
 	$pdf_target_path = $component_pdf->get_pdf_path();
-		#error_log($pdf_target_path);
+	
 
 	if( strpos($_SERVER['HTTP_HOST'], '8888')!==false ) {
 		$ar_pages[] = 'http://'.$_SERVER['HTTP_HOST'] . $target_url .'?lang='.$lang_filter;
@@ -118,7 +120,6 @@ if ($mode=='tesauro_presentacion_generate_pdf_file') {
 	}	
 
 	exit();
-
 }#end if ($mode=='tesauro_presentacion_generate_pdf_file') 
 
 
@@ -126,10 +127,8 @@ if ($mode=='tesauro_presentacion_generate_pdf_file') {
 
 
 # TESAURO_ALFABETICO_GENERATE_HTML_FILE	
-if ($mode=='tesauro_alfabetico_generate_html_file') {
+if ($mode==='tesauro_alfabetico_generate_html_file') {
 	
-	#dump($_REQUEST);die();
-
 	if (empty($target_url)) {
 		die("Error. Empty target_url");
 	}
@@ -149,14 +148,10 @@ if ($mode=='tesauro_alfabetico_generate_html_file') {
 		die("Error. Empty section_tipo");
 	}
 
-	# Test data override get vars 
-	#$ar_prefix_filter = array('dc');
-
 
 	#
 	# HTML FILE
 	# Llama a '/dedalo/ts/lib/trigger.ts_works.php' que rendea el html correspondiente
-	/**/
 	$target_url_full = 'http://'.$_SERVER['HTTP_HOST'] . $target_url .'?mode=tesauro_alfabetico_html&lang_filter='.$lang_filter.'&ar_prefix_filter='.implode(',', $ar_prefix_filter);
 	# Leemos el fichero desde la url (se genera en dedalo3)
 	$html	= file_get_contents($target_url_full);	
@@ -180,19 +175,17 @@ if ($mode=='tesauro_alfabetico_generate_html_file') {
 
 	#
 	# PDF
-	/**/
-	#$component_pdf 	 = new component_pdf($component_pdf_tipo, $component_parent, 'edit', $lang_filter);	#$id=NULL, $tipo=NULL, $modo='edit', $parent=NULL, $lang=DEDALO_DATA_LANG
-	$component_pdf 	 = component_common::get_instance('component_pdf',$component_pdf_tipo,$component_parent,'edit',$lang_filter, $section_tipo);
-		#dump($component_pdf,'$component_pdf');
+	$component_pdf 	 	= component_common::get_instance('component_pdf',
+														 $component_pdf_tipo,
+														 $component_parent,
+														 'edit',
+														 $lang_filter,
+														 $section_tipo);
 	$pdf_target_path = $component_pdf->get_pdf_path();
-		#error_log($pdf_target_path);
 	
 	if(!empty($pdf_target_path)) {
 
-		#$html_file_full_url = 'http://' . $_SERVER['HTTP_HOST'] . $html_file_url ;	#.'?columnize=1';
-		#$html_file_full_url = urlencode($html_file_full_url);
-
-		$target_url_full = 'http://'.$_SERVER['HTTP_HOST'] . $target_url .'?mode=tesauro_alfabetico_pdf&lang_filter='.$lang_filter.'&ar_prefix_filter='.implode(',', $ar_prefix_filter).'&pdf_target_path='.$pdf_target_path;
+		$target_url_full = 'http://'.$_SERVER['HTTP_HOST'].$target_url.'?mode=tesauro_alfabetico_pdf&lang_filter='.$lang_filter.'&ar_prefix_filter='.implode(',', $ar_prefix_filter).'&pdf_target_path='.$pdf_target_path;
 		#$target_url_full = urlencode($target_url_full);
 
 		# leemos el fichero url	.
@@ -232,9 +225,8 @@ if ($mode=='tesauro_alfabetico_generate_html_file') {
 
 
 # TESAURO_JERARQUICO_GENERATE_HTML_FILE	
-if ($mode=='tesauro_jerarquico_generate_html_file') {
+if ($mode==='tesauro_jerarquico_generate_html_file') {
 
-	#dump($_REQUEST);die();
 	if (empty($target_url)) {
 		die("Error. Empty target_url");
 	}
@@ -254,10 +246,6 @@ if ($mode=='tesauro_jerarquico_generate_html_file') {
 		die("Error. Empty section_tipo");
 	}
 
-	# Test data override get vars 
-	#$ar_prefix_filter = array('dc');
-
-
 	#
 	# HTML FILE
 	# Llama a '/dedalo/ts/lib/trigger.ts_works.php' que rendea el html correspondiente
@@ -267,8 +255,12 @@ if ($mode=='tesauro_jerarquico_generate_html_file') {
 	
 	if(!empty($html)) {
 
-		#$component_html_file 	= new component_html_file($component_tipo,$component_parent,'edit',DEDALO_DATA_LANG); #$id=NULL, $tipo=NULL, $modo='edit', $parent=NULL, $lang=DEDALO_DATA_LANG
-		$component_html_file 	= component_common::get_instance('component_html_file',$component_tipo,$component_parent,'edit',DEDALO_DATA_LANG, $section_tipo);
+		$component_html_file 	= component_common::get_instance('component_html_file',
+																 $component_tipo,
+																 $component_parent,
+																 'edit',
+																 DEDALO_DATA_LANG,
+																 $section_tipo);
 		$valor 					= $component_html_file->get_valor();
 
 		$target_file_path 		= DEDALO_MEDIA_BASE_PATH . DEDALO_HTML_FILES_FOLDER .'/'.$valor .'.'.DEDALO_HTML_FILES_EXTENSION;	
@@ -287,19 +279,12 @@ if ($mode=='tesauro_jerarquico_generate_html_file') {
 
 	#
 	# PDF
-	#$component_pdf 	 = new component_pdf($component_pdf_tipo, $component_parent, 'edit', $lang_filter);	#$id=NULL, $tipo=NULL, $modo='edit', $parent=NULL, $lang=DEDALO_DATA_LANG
 	$component_pdf 	 = component_common::get_instance('component_pdf',$component_pdf_tipo,$component_parent,'edit',$lang_filter,$section_tipo);
-		#dump($component_pdf,'$component_pdf');
 	$pdf_target_path = $component_pdf->get_pdf_path();
-		#error_log($pdf_target_path);
 	
 	if(!empty($pdf_target_path)) {
 
-		#$html_file_full_url = 'http://' . $_SERVER['HTTP_HOST'] . $html_file_url ;	#.'?columnize=1';
-		#$html_file_full_url = urlencode($html_file_full_url);
-
-		$target_url_full = 'http://'.$_SERVER['HTTP_HOST'] . $target_url .'?mode=tesauro_jerarquico_pdf&lang_filter='.$lang_filter.'&ar_prefix_filter='.implode(',', $ar_prefix_filter).'&pdf_target_path='.$pdf_target_path;
-
+		$target_url_full = 'http://'.$_SERVER['HTTP_HOST'].$target_url.'?mode=tesauro_jerarquico_pdf&lang_filter='.$lang_filter.'&ar_prefix_filter='.implode(',', $ar_prefix_filter).'&pdf_target_path='.$pdf_target_path;
 
 		# leemos el fichero url	.
 		# Realmente no esperamos respuesta, pues el trigger requerido ya guarda el resultado en su sitio. 

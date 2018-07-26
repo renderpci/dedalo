@@ -4,15 +4,19 @@
 		
 	
 	print "<div class=\"wrap_component css_wrap_autocomplete_hi wrap_autocomplete_hi_search tooltip_active\" id=\"{$id_wrapper}\" ";
+	print "data-tipo=\"{$tipo}\" ";
+	print "data-relation_type='{$relation_type}' ";
 	print "data-component_name=\"{$component_name}\" ";
 	print "data-modo=\"{$modo}\" ";
 	print "data-dato='".json_encode($dato)."' ";
 	print 'data-q_operator="'.$q_operator.'" ';
 	print 'title="'.search_development2::search_options_title( $this->search_operators_info() ).'" ';
+	print "data-hierarchy_sections='". json_encode($hierarchy_sections)."' "; // Default hierarchy_sections
 	print ">";
 	
 	# ETIQUETA (LABEL)
 	$html_label = component_common_draw::draw_label($this);
+
 	
 	# CONTENIDO (INPUT)
 	$html_content = '';
@@ -25,13 +29,11 @@
 		case 1	:
 		case 2	:
 		case 3	:
-				# COMPARISON OPERATORS
-				#$html_content .= operator::get_search_comparison_operators_html($tipo,$ar_comparison_operators);
-
-				#OPERATOR
+				
+				# Q_OPERATOR
 				$html_content .= '<input class="q_operator" type="text" value="'.$q_operator.'" ';
 				$html_content .= "onchange=\"component_common.fix_dato(this,'{$component_name}')\" ";
-				$html_content .=' />';				
+				$html_content .=' />';
 
 
 				$hierarchy_types_json 	 = json_encode($hierarchy_types);
@@ -55,6 +57,7 @@
 				
 						#
 						# INPUT SEARCH FIELD
+						/*
 						$html_content .= "<input class=\"css_autocomplete_hi_search_field in_search_mode\" type=\"text\" placeholder=\"".label::get_label('buscar')."...\" ";
 						$html_content .= "data-id_wrapper=\"$id_wrapper\" ";
 						$html_content .= "data-tipo=\"$tipo\" ";
@@ -64,7 +67,12 @@
 						$html_content .= "tabindex=\"1\" ";
 						$html_content .= "autocomplete=\"off\" ";
 						$html_content .= "autocorrect=\"off\" ";
-						$html_content .= "/>";
+						$html_content .= "/>";*/
+
+						#
+						# AUTOCOMPLETE SERVICE
+						$autocomplete_wrapper_id = 'aw_' . $identificador_unico;
+						$html_content .= '<div class="autocomplete_wrapper" id="'.$autocomplete_wrapper_id.'"></div>';
 
 						# Reset var 'activated' on load
 						#$html_content .= "<script>component_autocomplete_hi.activated={}</script>";
@@ -94,15 +102,18 @@
 						# JAVASCRIPT
 						$html_content .= "<script>";
 						# Reset var 'activated' on load
-					##	$html_content .= "component_autocomplete_hi.activated={};";
+						#$html_content .= "component_autocomplete_hi.activated={};";
 						# Init component
 						$init_options = new stdClass();
 							$init_options->component_name 	= $component_name;
 							$init_options->wrapper_id 		= $id_wrapper;
 							$init_options->cookie_name 		= $cookie_name;
 							$init_options->limit 			= $limit;
+							$init_options->min_length 		= $min_length;
+							$init_options->uid 				= $identificador_unico;
 						$html_content .= "component_common.init(".json_encode($init_options).");";
 						$html_content .= "</script>";
+
 						break;
 				}//end switch ($source_mode)
 
@@ -141,15 +152,14 @@
 
 				# INPUT DATA HIDDEN
 				$html_content .= "<input type=\"text\" name=\"{$search_input_name}\" class=\"css_autocomplete_hi_dato_hidden\" style=\"width:300px;\" ";
-				$html_content .= "data-tipo=\"{$tipo}\" ";
-				$html_content .= "data-section_tipo=\"{$section_tipo}\" ";
-				$html_content .= "data-parent=\"{$parent}\" ";
-				$html_content .= "data-lang=\"{$lang}\" ";
-				$html_content .= "data-link_fields='{$ar_link_fields}' ";
+				#$html_content .= "data-tipo=\"{$tipo}\" ";
+				#$html_content .= "data-section_tipo=\"{$section_tipo}\" ";
+				#$html_content .= "data-parent=\"{$parent}\" ";
+				#$html_content .= "data-lang=\"{$lang}\" ";
+				#$html_content .= "data-link_fields='{$ar_link_fields}' ";				
 				$html_content .= "data-role=\"autocomplete_hi_dato_hidden\" ";
-				$html_content .= "data-role=\"autocomplete_hi_dato_hidden\" ";
-				$html_content .= "data-limit=\"$limit\" ";
-				$html_content .= "data-options_type=\"$options_type\" ";
+				#$html_content .= "data-limit=\"$limit\" ";
+				#$html_content .= "data-options_type=\"$options_type\" ";
 				$html_content .= "value='{$dato_json}' ";
 				$html_content .= "/>";
 
@@ -159,14 +169,10 @@
 				}
 				
 
-				# LOGICAL OPERATORS
-				#$html_content .= operator::get_search_logical_operators_html($tipo,$ar_logical_operators);
-
-
 				if(SHOW_DEBUG===true) {
 					$html_content .= "<span class=\"debug_info\">$search_input_name</span>";
 				}
-				break;											
+				break;
 	}
 
 	# Prepare content to show in page

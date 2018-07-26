@@ -33,12 +33,6 @@
 		$this->set_context($context);
 	}
 	
-
-	/*
-	if (isset($_REQUEST['context_name'])) {
-		$context_name = $_REQUEST['context_name'];
-	}
-	*/
 	#get the change modo from portal list to edit
 	/*
 	$var_requested = common::get_request_var('context_name');
@@ -179,6 +173,12 @@
 					}	
 				}
 				$ar_related_component_name_json = json_encode($ar_related_component_name);
+	
+
+				# WRAP_CSS_SELECTORS
+				# Aditional wrap selectors useful in some context like tool modes
+				$wrap_css_selectors = isset($propiedades->wrap_css_selectors->{$modo}) ? $propiedades->wrap_css_selectors->{$modo} : '';
+
 
 				#
 				# STATE PROCESS

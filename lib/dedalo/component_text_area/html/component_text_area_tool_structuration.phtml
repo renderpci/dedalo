@@ -14,7 +14,7 @@
 		print "data-original_lang=\"{$source_lang}\" ";
 		print "data-modo=\"{$modo}\" ";
 		print "data-role=\"{$role}\" ";
-		#print "data-dato=\"{$dato_raw}\" ";
+		print "data-component_info='{$component_info}' ";
 		print "data-component_name=\"{$component_name}\" ";
 		print ">";
 
@@ -142,7 +142,7 @@
 			# Select current tag when is received by request as 'tag_id' like 'tag_id=1'
 			# tag_id is int value
 			if (!empty($_REQUEST['tag_id'])) {
-				$tagName = '[index-n-'.(int)$_REQUEST['tag_id'].']';	# [index-n-3]
+				$tagName = '[index-n-'.(int)safe_xss($_REQUEST['tag_id']).']';	# [index-n-3]
 				$html_content .= "<script>";
 				$html_content .= "$(document).ready(function() {";
 				$html_content .= " setTimeout(function(){";	

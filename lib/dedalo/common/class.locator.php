@@ -311,11 +311,15 @@ class locator extends stdClass {
 	*/
 	public static function compare_locators( $locator1, $locator2, $ar_properties=[], $ar_exclude_properties=['dataframe','ds'] ) {
 
+		if (!is_object($locator1) || !is_object($locator2)) {
+			return false;
+		}
+
 		if (empty($ar_properties)){
 			foreach ($locator1 as $property => $value) {
 				if (!in_array($property, $ar_exclude_properties)) {
 					$ar_properties[] = $property;
-				}				
+				}
 			}
 
 			foreach ($locator2 as $property => $value) {
@@ -325,13 +329,17 @@ class locator extends stdClass {
 			}
 
 			$ar_properties = array_unique($ar_properties);
-		}
-	
+		}	
 		
 
 		$equal = true;
 		
-		foreach ($ar_properties as $current_property) { // 'section_tipo','section_id','type','from_component_tipo','component_tipo','tag_id'
+		foreach ((array)$ar_properties as $current_property) { // 'section_tipo','section_id','type','from_component_tipo','component_tipo','tag_id'
+
+			#if (!is_object($locator1) || !is_object($locator2)) {
+			#	$equal = false;
+			#	break;
+			#}
 
 			$property_exists_in_l1 = property_exists($locator1, $current_property);
 			$property_exists_in_l2 = property_exists($locator2, $current_property);

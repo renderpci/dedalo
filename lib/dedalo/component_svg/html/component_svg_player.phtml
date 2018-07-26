@@ -47,21 +47,20 @@
 				$svg_container_id = 'svg_container_' . $identificador_unico;
 				$html_content .= '<div class="svg_container" id="'.$svg_container_id.'"></div>';
 
-							
-				#
-				# JS Init component
-				$html_content .= '<script>';
-				$init_options = new stdClass();
-					$init_options->component_name 	= $component_name;
-					$init_options->uid 				= $identificador_unico;
-					$init_options->modo 			= $modo;
-					$init_options->propiedades 		= $propiedades;
-					$init_options->file_url 		= $file_url;
-					$init_options->file_exists 		= $file_exists;
-					$init_options->file_content 	= $file_content;
-					$init_options->svg_id 			= $svg_id;
-				$html_content .= "component_common.init(".json_encode($init_options).");";
-				$html_content .= '</script>';
+				# JS				
+				$html_content .= "<script>";
+				// Init
+				$init_options = array(
+					"uid" 			=> $identificador_unico,
+					"modo" 			=> $modo,
+					"propiedades" 	=> $propiedades,
+					"file_url" 		=> $file_url,
+					"file_exists" 	=> $file_exists,
+					"file_content"	=> $file_content,
+					"svg_id" 		=> $svg_id
+				);
+				$html_content .= "component_svg.init(".json_encode($init_options).");";
+				$html_content .= "</script>";
 				
 				
 				break;

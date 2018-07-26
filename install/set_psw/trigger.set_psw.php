@@ -60,6 +60,7 @@ if($mode=='set_psw') {
 	    ?>\n" . $contents
 	);
 
+	#exit();
 
 } #if($mode=='set_psw')
 ?>

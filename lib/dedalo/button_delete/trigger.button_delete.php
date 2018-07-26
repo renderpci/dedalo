@@ -39,6 +39,13 @@ function Del($json_data) {
 	$delete 	= $section->Delete($delete_mode);
 
 
+	# Update search_query_object full_count property
+	$search_options = section_records::get_search_options($section_tipo);
+	if ($search_options->search_query_object) {
+		$search_options->search_query_object->full_count = true; // Force re-count records
+	}
+
+
 	$response->result 	= $delete;
 	$response->msg 		= 'Ok. Request done ['.__FUNCTION__.']';
 

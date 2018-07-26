@@ -50,10 +50,11 @@ class component_filter extends component_relation_common {
 		#		throw new Exception("Error Processing Request. Wrong component lang definition. This component $tipo (".get_class().") is not 'traducible'. Please fix this ASAP", 1);				
 		#	}
 		#}
+		#debug_log(__METHOD__." get_called_class ".get_called_class(), logger::DEBUG);
 
 		# DEDALO_DEFAULT_PROJECT
 		# Dato : Verificamos que hay un dato. Si no, asignamos el dato por defecto definido en config 
-		if ($modo==='edit') {
+		if ($modo==='edit' && get_called_class()==='component_filter') { // Remember that component_filter_master extends this class
 			$dato = $this->get_dato();				
 			if(empty($dato)) {
 				#
@@ -106,7 +107,7 @@ class component_filter extends component_relation_common {
 			}
 				
 			$ar_path 	= ['components', $this->tipo, 'dato', DEDALO_DATA_NOLAN];
-			$section 	= $this->get_my_section();				
+			$section 	= section::get_instance($this->parent, $this->section_tipo);			
 			$dato 		= $section->get_dato_in_path($ar_path);
 			
 			$this->dato = $dato; // Old dato format (<4.9)
@@ -181,8 +182,8 @@ class component_filter extends component_relation_common {
 		# PORTAL CASE
 		# Si la sección a que pertenece este componente tiene portal, propagaremos los cambios a todos los recursos 
 		# existentes en el portal de esta sección (si los hay)
-		if ($this->propagate_filter) {			
-			$this->propagate_filter();			
+		if ($this->propagate_filter) {
+			$this->propagate_filter();
 		}//if ($propagate_filter) {
 
 		# Returns parent Save result at end
@@ -365,7 +366,7 @@ class component_filter extends component_relation_common {
 				$component_filter_master 	= component_common::get_instance('component_filter_master',
 																			 DEDALO_FILTER_MASTER_TIPO,
 																			 $user_id,
-																			 'edit',
+																			 'list',
 																			 DEDALO_DATA_NOLAN,
 																			 DEDALO_SECTION_USERS_TIPO);
 				$dato = (array)$component_filter_master->get_dato();
@@ -467,7 +468,8 @@ class component_filter extends component_relation_common {
 			#dump($ar_proyectos_for_current_section,'$ar_proyectos_for_current_section');
 			#debug_log(__METHOD__." exec_time ".exec_time($start_time). to_string(), logger::WARNING);
 		}		
-*/
+		*/
+		
 		return (array)$ar_proyectos_for_current_section;
 	}//end get_ar_projects_for_current_section
 
@@ -677,7 +679,7 @@ class component_filter extends component_relation_common {
 	*/
 	public static function convert_dato_pre_490( $dato, $from_component_tipo ) {
 		
-		if (!empty($dato)) {
+		if (!empty($dato) && $dato!='[]') {
 			// Old format is received case
 
 			$ar_locators = [];

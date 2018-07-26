@@ -46,8 +46,14 @@ class dd_date extends stdClass {
 			if (!isset($value) || is_null($value)) continue; // Skip empty values	
 
 			$method = 'set_'.$key;
-			$this->$method($value, $constrain);		
+			if (method_exists($this, $method)) {
+				$this->$method($value, $constrain);
+			}else{
+				debug_log(__METHOD__." Ignored received property: $key not defined as set metohd ".to_string(), logger::DEBUG);
+			}			
 		}
+
+		return true;
 	}//end __construct
 
 

@@ -19,33 +19,51 @@ function autocomplete($json_data) {
 
 	$response = new stdClass();
 		$response->result 	= false;
-		$response->msg 		= 'Error. Request failed [get_component_json_data]';	
+		$response->msg 		= 'Error. Request failed ['.__METHOD__.']';	
 	
-	$vars = array('hierarchy_types','hierarchy_sections','string_to_search','from_component_tipo');
+	$vars = array('hierarchy_types','hierarchy_sections','string_to_search','from_component_tipo','distinct_values','relation_type','search_tipos','filter_custom');
 		foreach($vars as $name) {
 			$$name = common::setVarData($name, $json_data);
 			# DATA VERIFY
-			if ($name==='max_records' || $name==='offset') continue; # Skip non mandatory
+			if ($name==='hierarchy_types' || $name==='distinct_values' || $name==='search_tipos' || $name==='filter_custom') continue; # Skip non mandatory
 			if (empty($$name)) {
-				$response->msg = "Trigger Error: (get_component_json_data) Empty ".$name." (is mandatory)";
+				$response->msg = 'Trigger Error: ('.__METHOD__.') Empty '.$name.' (is mandatory)';
 				return $response;
 			}
 		}
 	
-	$hierarchy_types 	= json_decode($hierarchy_types);
-	$hierarchy_sections = json_decode($hierarchy_sections);
+	$hierarchy_types 	= null; // json_decode($hierarchy_types);	
 
-	$result = component_autocomplete_hi::autocomplete_hi_search($hierarchy_types,
-																$hierarchy_sections,
-																$string_to_search,
-																60, // max_results
-																true, // show_modelo_name
-																true, // show_parent_name
-																$from_component_tipo); // from_component_tipo
-																//$hierarchy_types, $hierarchy_sections, $string_to_search, $max_results=30, $show_modelo_name=false, $show_parent_name=false, $from_component_tipo
 
-	$response->result 	= $result;
-	$response->msg 		= 'Ok. Request done ['.__FUNCTION__.']';
+	if (empty($search_tipos)) {
+		$search_tipos = [DEDALO_THESAURUS_TERM_TIPO];
+	}
+	if (is_string($search_tipos) && strpos($search_tipos,'[')===0) {
+		$search_tipos = json_decode($search_tipos);
+	}
+	#debug_log(__METHOD__." search_tipos ".print_r($search_tipos,true), logger::DEBUG);
+
+	$options = new stdClass();
+		$options->hierarchy_types 		= $hierarchy_types;
+		$options->hierarchy_sections 	= $hierarchy_sections;
+		$options->string_to_search 		= $string_to_search;
+		$options->max_results 			= 40;
+		$options->show_modelo_name 		= true;
+		$options->show_parent_name 		= true;
+		$options->distinct_values 		= $distinct_values;
+		$options->from_component_tipo 	= $from_component_tipo;
+		$options->relation_type 		= $relation_type; // DEDALO_RELATION_TYPE_LINK;
+		$options->search_tipos 			= $search_tipos;
+		$options->filter_custom 		= $filter_custom;
+
+
+	// $hierarchy_types, $hierarchy_sections, $string_to_search, $max_results=30, $show_modelo_name=false, $show_parent_name=false, $from_component_tipo, $distinct_values
+	$search = component_autocomplete_hi::autocomplete_hi_search($options);
+																
+
+	$response->result 				= $search->result;
+	$response->search_query_object 	= $search->search_query_object; // json encoded object
+	$response->msg 					= 'Ok. Request done ['.__FUNCTION__.']';
 
 	# Debug
 	if(SHOW_DEBUG===true) {
@@ -65,7 +83,7 @@ function autocomplete($json_data) {
 
 /**
 * UPDATE_COMPONENT_RELATED
-* @return 
+* @return object $response
 */
 function update_component_related($json_data) {
 	global $start_time;
@@ -124,6 +142,101 @@ function update_component_related($json_data) {
 
 	return (object)$response;	
 }//end update_component_related
+
+
+
+/**
+* BUILD_GRID_IMAGES
+* @return object $response
+*/
+function build_grid_images($json_data) {
+	global $start_time;
+
+	session_write_close();
+
+	$response = new stdClass();
+		$response->result 	= false;
+		$response->msg 		= 'Error. Request failed '.__METHOD__;	
+	
+	$vars = array('search_query_object','component_tipo');
+		foreach($vars as $name) {
+			$$name = common::setVarData($name, $json_data);
+			# DATA VERIFY
+			#if ($name==='max_records' || $name==='offset' || $name==='distinct_values') continue; # Skip non mandatory
+			if (empty($$name)) {
+				$response->msg = "Trigger Error: (".__METHOD__.") Empty ".$name." (is mandatory)";
+				return $response;
+			}
+		}
+
+	// Filter is indexable
+	$filter_indexable = json_decode('
+      {
+        "q": "{\"section_id\":\"1\",\"section_tipo\":\"dd64\",\"type\":\"dd151\",\"from_component_tipo\":\"hierarchy24\"}",
+        "q_operator": null,
+        "path": [
+          {
+            "section_tipo": "hierarchy20",
+            "component_tipo": "hierarchy24",
+            "modelo": "component_radio_button",
+            "name": "Usable in indexing"
+          }
+        ]
+      }
+    ');
+
+	$op = '$and';
+	$search_query_object->filter->$op[] = $filter_indexable;
+	#dump($search_query_object, ' search_query_object ++ '.to_string());
+
+	// Search
+	$search_development2 = new search_development2($search_query_object);
+	$search_result 		 = $search_development2->search();
+	$ar_records 		 = $search_result->ar_records;
+
+	$ar_items = [];
+	foreach ($ar_records as $key => $row) {
+		
+		$locator = new locator();
+			$locator->set_section_tipo($row->section_tipo);
+			$locator->set_section_id($row->section_id);
+			$locator->set_component_tipo($component_tipo);
+
+		$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+		$component 		= component_common::get_instance($modelo_name,
+														 $component_tipo,
+														 $row->section_id,
+														 'list',
+														 DEDALO_DATA_NOLAN,
+														 $row->section_tipo);
+		$url = $component->get_url();
+
+		$item = new stdClass();
+			$item->url 		= $url . '?' . start_time();
+			$item->locator 	= $locator;
+			
+
+		$ar_items[] = $item;
+	}
+
+
+	$response->result 	 = $ar_items;
+	$response->msg 		 = 'Ok. Request done ['.__FUNCTION__.']';
+
+
+	# Debug
+	if(SHOW_DEBUG===true) {
+		$debug = new stdClass();
+			$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
+			foreach($vars as $name) {
+				$debug->{$name} = $$name;
+			}
+
+		$response->debug = $debug;
+	}
+
+	return (object)$response;
+}//end build_grid_images
 
 
 

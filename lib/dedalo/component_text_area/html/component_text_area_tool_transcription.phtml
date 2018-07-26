@@ -7,14 +7,14 @@
 	# html_delimiter
 	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'in', $modo);
 
-	# wrapper
-	print "<div class=\"css_wrap_text_area wrap_component text_area_tool_transcription\" id=\"{$id_wrapper}\" ";
+	# wrapper  $wrap_css_selectors
+	print "<div class=\"wrap_component css_wrap_text_area wrap_component_{$tipo} text_area_tool_transcription $wrap_css_selectors\" id=\"{$id_wrapper}\" ";
 	print "data-tipo=\"{$tipo}\" ";
 	print "data-section_tipo=\"{$section_tipo}\" ";
 	print "data-parent=\"{$parent}\" ";
 	print "data-lang=\"{$lang}\" ";
 	print "data-modo=\"{$modo}\" ";
-	#print "data-dato=\"{$dato_raw}\" ";
+	print "data-component_info='{$component_info}' ";
 	print "data-component_name=\"{$component_name}\" ";
 	print "data-related_tipo='{$ar_related_component_tipo_json}' ";
 	print ">";

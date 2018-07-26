@@ -42,14 +42,23 @@
 
 					
 					# INIT : Init text editor	
-					$html_content .= "<script>";
+					$html_content .= '<script>';
 					#$html_content .= "var init=new component_text_area.init({uid:'$identificador_unico',modo:'$modo',propiedades:'$propiedades_json'});";
 					//$html_content .= "a.init({uid:'$identificador_unico',modo:'$modo',propiedades:'$propiedades_json'});";
 					#$html_content .= "console.log(init.inited);";
 					#$html_content .= "Object.create(component_text_area).init({uid:'$identificador_unico',modo:'$modo',propiedades:'$propiedades_json'});";
-					$html_content .= "component_text_area.init({uid:'$identificador_unico',modo:'$modo',propiedades:'$propiedades_json'});";
+					#$html_content .= "component_text_area.init({uid:'$identificador_unico',modo:'$modo',propiedades:'$propiedades_json'});";
+					$init_options = new stdClass();
+						$init_options->component_name 	= $component_name;
+						$init_options->id_wrapper 		= $id_wrapper;
+						$init_options->uid 				= $identificador_unico;
+						$init_options->modo 			= $modo;
+						$init_options->permissions 		= $permissions;
+						$init_options->propiedades 		= $propiedades;
+
+					$html_content .= 'component_common.init('.json_encode($init_options).');';
 					#$html_content .= "alert('aaaaa');";
-					$html_content .= "</script>";
+					$html_content .= '</script>';
 					
 					
 		}

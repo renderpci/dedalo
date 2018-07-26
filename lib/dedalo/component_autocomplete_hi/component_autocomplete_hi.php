@@ -11,14 +11,14 @@
 	$label 					= $this->get_label();
 	$required				= $this->get_required();
 	$debugger				= $this->get_debugger();
-	#$permissions			= isset($this->permissions) ? $this->permissions : common::get_permissions($section_tipo,$tipo);
 	$permissions			= $this->get_component_permissions();
 	$ejemplo				= NULL;
 	$html_title				= "Info about $parent";
 	$ar_tools_obj			= $this->get_ar_tools_obj();	
 	$lang					= $this->get_lang();
 	$identificador_unico	= $this->get_identificador_unico();	
-	$component_name			= get_class($this);	
+	$component_name			= get_class($this);
+	$relation_type 			= $this->get_relation_type();
 
 	
 	if($permissions===0) return null;
@@ -31,7 +31,10 @@
 	
 	switch($modo) {		
 
-		case 'edit'	:
+		case 'tool_transcription' :
+				$file_name = 'edit';
+
+		case 'edit'	:		
 
 				$dato 			= $this->get_dato();
 				$id_wrapper 	= 'wrapper_'.$identificador_unico;
@@ -42,19 +45,11 @@
 				$component_info = $this->get_component_info('json');
 				$dato_json 		= json_encode($dato);
 
-				#$ar_referenced_tipo 	= $this->get_ar_referenced_tipo();
-				#$ar_referenced_tipo_json= json_handler::encode($this->get_ar_referenced_tipo());
-					#dump($ar_referenced_tipo, ' $ar_referenced_tipo ++ '.to_string());				
-
-				#dump($hierarchy_types, ' hierarchy_types ++ '.to_string());
-				#dump($hierarchy_sections, ' hierarchy_sections ++ '.to_string());
-
-				#get the change modo from portal list to edit
+				# get the change modo from portal list to edit
 				$var_requested = common::get_request_var('from_modo');
 				if (!empty($var_requested)) {
 					$from_modo = $var_requested;
 				}
-
 
 				# SOURCE_MODE
 				$source_mode = $this->get_source_mode();
@@ -63,6 +58,7 @@
 				# OPTIONS TYPE
 				$options_type = $this->get_options_type();
 					#dump($options_type, ' $options_type ++ '.to_string($this->tipo));
+					#dump($propiedades, ' propiedades ++ '.to_string());
 				
 				# AR_FILTER_OPTIONS
 				$ar_filter_options = false; // Default
@@ -76,7 +72,7 @@
 							$hierarchy_sections = component_autocomplete_hi::add_hierarchy_sections_from_types($hierarchy_types, (array)$hierarchy_sections);
 							$hierarchy_types 	= null; // Remove filter by type because we know all hierarchy_sections now
 						}
-	
+						
 						$ar_filter_options = $this->get_ar_filter_options($options_type, $hierarchy_sections);
 						break;
 					
@@ -87,10 +83,12 @@
 						}
 						break;
 				}
-				#dump($ar_filter_options, ' ar_filter_options ++ '.to_string());			
-
+				#dump($ar_filter_options, ' ar_filter_options ++ '.to_string());
+				
 				# LIMIT (Max items allow. 0 for unlimited)
 				$limit = isset($propiedades->limit) ? (int)$propiedades->limit : 0;
+
+				$min_length = isset($propiedades->min_length) ? (int)$propiedades->min_length : 1;
 				break;		
 						
 		case 'search' :
@@ -150,10 +148,12 @@
 							$ar_filter_options = $this->get_ar_filter_options($options_type, $propiedades->source->filter_by_list);
 						}
 						break;
-				}
+				}				
 
 				# LIMIT (Max items allow. 0 for unlimited)
 				$limit = 1;
+
+				$min_length = isset($propiedades->min_length) ? (int)$propiedades->min_length : 1; 
 				break;
 						
 		case 'list_tm' :

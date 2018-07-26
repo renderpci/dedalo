@@ -26,6 +26,13 @@
 	}
 
 
+	/* TOOL_DESCRIPTION CASE
+	--------------------------------------------- */
+	//.wrap_autocomplete_tool_description .content_data {
+	//	width: 100%;
+	//}
+
+
 
 	/* BUTTONS_AND_FIELDS
 	--------------------------------------------- */
@@ -45,6 +52,7 @@
 			margin-right: 5px;
 			background-position: -456px 0;
 			opacity: 0.3;
+			min-width: 15px;
 		}
 		/* BTN EDIT SECTION */
 		.edit_autocomplete {
@@ -79,10 +87,20 @@
 		color: #1a1a1a;
 		padding: 3px;
 		padding-left: 0px;
-		padding-right: 5px;	
+		padding-right: 5px;
+
+		min-width: 70%;
+		}
+		.css_autocomplete_valor > li {
+			display: flex;
+			max-width: 95%;
 		}
 		.css_autocomplete_valor.in_search_mode {
 			//float: left;
+		}
+		.css_autocomplete_valor.in_search_mode > li {
+			display: block;
+			max-width: 100%;
 		}
 
 
@@ -388,6 +406,10 @@
 			.filter_fields .search_operators_div {
 				padding-top: 5px;
 				padding-bottom: 5px;
+				
+				margin-left: 10px;
+				margin-top: 4px;
+				display: inline-block;
 			}
 
 			.filter_fields.in_search_mode {

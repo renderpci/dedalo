@@ -9,7 +9,7 @@ abstract class component_common_draw {
 	
 	# DRAW LABEL  
 	public static function draw_label($component_obj, stdClass $options=null) {
-	
+		
 		$html = '';
 
 		$modo = $component_obj->get_modo();
@@ -20,7 +20,7 @@ abstract class component_common_draw {
 		if($component_obj->get_required())
 			$required_code = 'style="font-weight:bold"';
 		
-		$label= $component_obj->get_label();		
+		$label = $component_obj->get_label();		
 		if ($modo==='search') {
 			$label_add  = RecordObj_dd::get_termino_by_tipo($component_obj->get_section_tipo(), DEDALO_DATA_LANG, true, true);
 			$label	.= ' <span class="label_add">(' . $label_add .')</span>';

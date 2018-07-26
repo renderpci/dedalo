@@ -24,7 +24,7 @@
 	if($permissions===0) return null;
 	
 	# Verify component content record is inside section record filter
-	if ($this->get_filter_authorized_record()===false) return NULL ;
+	if ($this->get_filter_authorized_record()===false) return NULL;
 
 	$file_name				= $modo;
 	$image_id 				= $this->get_image_id();
@@ -72,7 +72,7 @@
 						
 				# Related components
 				$ar_related_component_tipo 		= $this->get_ar_related_component_tipo();
-				$ar_related_component_tipo_json = json_encode($ar_related_component_tipo);			
+				$ar_related_component_tipo_json = json_encode($ar_related_component_tipo);
 				break;
 
 		case 'portal_list':

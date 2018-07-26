@@ -14,28 +14,23 @@
 	
 	# CONTENIDO (INPUT)
 	$html_content = '';
-	switch($permissions) {
+	switch(true) {
 			
-		case 0	:	$html_content .= "<span class=\"css_span_dato\"> No access here (html_text)! </span>";	
-					break;						
+		case $permissions===0 :
+			$html_content .= "";
+			break;				
 		
-		case ($permissions>=1)	:
-					/*
-					$html_content .= "\n <textarea class=\"css_html_text\" 
-					id=\"{$identificador_unico}\" name=\"{$tipo}\" 
-					data-tipo=\"{$tipo}\" 
-					title=\"$html_title\">$dato</textarea>";
-					*/
-					$html_content .= "<input class=\"css_input_text\" type=\"text\" ";
-					$html_content .= "name=\"{$search_input_name}\" ";
-					$html_content .= "data-tipo=\"{$tipo}\" ";
-					$html_content .= "value=\"{$dato}\" ";
-					$html_content .= "title=\"$html_title\" ";
-					$html_content .= "/>";
-				
-				if(SHOW_DEBUG===true) {
-					$html_content .= "<span class=\"debug_info\">$search_input_name</span>";
-				}
+		case ($permissions>=1) :
+			
+			$html_content .= "<input class=\"css_input_text\" type=\"text\" ";
+			$html_content .= "name=\"{$search_input_name}\" ";
+			$html_content .= "data-tipo=\"{$tipo}\" ";
+			$html_content .= "value=\"{$dato}\" ";
+			$html_content .= "title=\"$html_title\" ";
+			$html_content .= "data-role=\"input_field\" ";
+			$html_content .= "onchange=\"component_common.fix_dato(this,'{$component_name}')\" ";
+			$html_content .= "/>";
+			break;			
 	}
 
 	# Prepare content to show in page

@@ -9,6 +9,8 @@ if(login::is_logged()!==true) die("<span class='error'> Auth error: please login
 	$vars = array('mode');
 		foreach($vars as $name) $$name = common::setVar($name);
 
+
+
 # mode
 	if(empty($mode)) exit("<span class='error'> Trigger: Error Need mode..</span>");
 
@@ -48,28 +50,6 @@ if($mode=='autocomplete_ts') {
 	exit();
 }
 
-
-/**
-* FIRE_TREE_RESOLUTION
-* Launch method to precalculate tesauro tree
-* @param $ar_tipo_to_search
-*//*
-if($mode=='fire_tree_resolution_DES') {
-
-	if (empty($ar_tipo_to_search)) {
-		return "Error: ar_tipo_to_search is not defined!";
-	}
-
-	$result = component_autocomplete_ts::get_tree_resolution($ar_tipo_to_search);
-
-	if (is_array($result)) {
-		print count($result) ." records from: $ar_tipo_to_search";	
-	}else{
-		print "Ops.. Error on get_tree_resolution for $ar_tipo_to_search";
-	}	
-	exit();
-}
-*/
 
 
 ?>

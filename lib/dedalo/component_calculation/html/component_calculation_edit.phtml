@@ -24,51 +24,58 @@
 		
 		# CONTENIDO (INPUT)
 		$html_content = '';
-		switch($permissions) {
+		switch(true) {
 				
-			case 0	:	$html_content .= "";
-						break;
+			case $permissions===0	:
+				$html_content .= '';
+				break;
 							
-			case 1	: 	$html_content .= "<span class=\"css_span_dato\">$dato</span>";
-						break;	
+			case $permissions===1	:
+				$html_content .= "<span class=\"css_span_dato\">$dato</span>";
+				break;	
 							
 			case ($permissions>=2) :
 
-						$html_content .= "<div class=\"css_calculation\" type=\"text\" ";
-						$html_content .= "id=\"{$identificador_unico}\" ";
-						$html_content .= "name=\"{$input_name}\" ";						
-						$html_content .= "data-tipo=\"{$tipo}\" ";
-						$html_content .= "data-section_tipo=\"{$section_tipo}\" ";
-						$html_content .= "data-parent=\"{$parent}\" ";
-						$html_content .= "data-lang=\"{$lang}\" ";
-						$html_content .= "data-formula ='".$preprocess_formula."' ";
-						$html_content .= "title=\"$html_title\" ";
-						$html_content .= ">";
-						$html_content .= $dato;
-						$html_content .= "</div>";
+				$html_content .= "<div class=\"css_calculation\" type=\"text\" ";
+				$html_content .= "id=\"{$identificador_unico}\" ";
+				$html_content .= "name=\"{$input_name}\" ";						
+				$html_content .= "data-tipo=\"{$tipo}\" ";
+				$html_content .= "data-section_tipo=\"{$section_tipo}\" ";
+				$html_content .= "data-parent=\"{$parent}\" ";
+				$html_content .= "data-lang=\"{$lang}\" ";
+				$html_content .= "data-formula ='".$preprocess_formula."' ";
+				$html_content .= "title=\"$html_title\" ";
+				$html_content .= ">";
+				$html_content .= $dato;
+				$html_content .= "</div>";			
 
-						#$html_content .= "<hr>".$preprocess_formula;
-
-						#$html_content .= "\n <span  class=\"css_span_log\"></span>";					
-						#$html_content .= "\n <span  class=\"css_span_ejemplo\">$ejemplo</span>";						
-						
-						if(SHOW_DEBUG) {
-							#$html_content .= "\n <span class=\"css_span_debugger\" id=\"debugger_{$tipo}\" >{$debugger}</span>";	
-							#$a = json_decode($preprocess_formula);
-							#dump($a, ' a ++ '.to_string());
-							#$html_content .= "<hr>". json_encode($a, JSON_PRETTY_PRINT);
-						}						
-						break;												
+				#$html_content .= "<hr>".$preprocess_formula;
+				#$html_content .= "\n <span  class=\"css_span_log\"></span>";					
+				#$html_content .= "\n <span  class=\"css_span_ejemplo\">$ejemplo</span>";						
+				
+				if(SHOW_DEBUG) {
+					#$html_content .= "\n <span class=\"css_span_debugger\" id=\"debugger_{$tipo}\" >{$debugger}</span>";	
+					#$a = json_decode($preprocess_formula);
+					#dump($a, ' a ++ '.to_string());
+					#$html_content .= "<hr>". json_encode($a, JSON_PRETTY_PRINT);
+				}
+				break;												
 		}
 
 		# Prepare content to show in page
 		tools::prepare_content($html_content);	
 		
-		# Init tool
-		$html_content .= "<script>";
-		#$html_content .= "alert('eee')";
-		$html_content .= "component_calculation.init({uid:'$identificador_unico'})";
-		$html_content .= "</script>";
+		
+		#
+		# JS Init component
+		$html_content .= '<script>';
+		# Init component
+		$init_options = new stdClass();
+			$init_options->component_name 	= $component_name;
+			$init_options->wrapper_id 		= $id_wrapper;
+			$init_options->uid 				= $identificador_unico;
+		$html_content .= 'component_common.init('.json_encode($init_options).');';
+		$html_content .= '</script>';
 
 		# PRINT HTML
 		print $html_label;

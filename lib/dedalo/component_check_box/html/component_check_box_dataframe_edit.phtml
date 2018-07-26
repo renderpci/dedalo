@@ -24,81 +24,94 @@
 	# ETIQUETA (LABEL)
 	#$html_label = component_common_draw::draw_label($this);
 
-	$required_code 	= NULL;
+	$required_code 	= null;
 	#if($required)
 	#	$required_code = 'style="font-weight:bold"';
 	
 	# CONTENIDO (INPUT)
 	$html_content  = '';
-	switch($permissions) {
+	switch(true) {
 			
-		case 0	:	$html_content .= ""; 
-					break;
+		case $permissions==0 :
+			$html_content .= ""; 
+			break;
 						
-		case 1	: 	$html_content .= $valor;
-					break;	
+		case $permissions===1 : 	
+			$html_content .= $valor;
+			break;
 
 						
 		case ($permissions>=2) :
 		
-					$html_content .= "<ul class=\"group\">";
-					$i=1; foreach ($ar_list_of_values->result as $value => $rotulo) {
+			$html_content .= "<ul class=\"group\">";
+			$i=1; foreach ($ar_list_of_values->result as $value => $rotulo) {
 
-						$value   	= (string)$value; 
-						$locator 	= (object)json_handler::decode($value);	# Locator is json encoded object
-						
-						
-						$locator->type 		= $this->caller_dataset->type;
-						$locator->from_key 	= $this->caller_dataset->caller_key;
+				$value   	= (string)$value; 
+				$locator 	= (object)json_handler::decode($value);	# Locator is json encoded object
+				
+				
+				$locator->type 		= $this->caller_dataset->type;
+				$locator->from_key 	= $this->caller_dataset->caller_key;
 
-						$value = (string)json_encode($locator);
-							#dump($locator, ' locator ++ '.to_string( $tipo ));
+				$value = (string)json_encode($locator);
+					#dump($locator, ' locator ++ '.to_string( $tipo ));
 
-						
-						#$checked  	= in_array($locator, $dato) ? 'checked="checked"' : '';
-						$checked  	= locator::in_array_locator( $locator, $dato, $ar_properties=array('section_tipo','section_id','type','from_key') ) ? 'checked="checked"' : '';
-						$tabindex = $i==1 ? 'tabindex="1"' : '';
+				
+				#$checked  	= in_array($locator, $dato) ? 'checked="checked"' : '';
+				$checked  	= locator::in_array_locator( $locator, $dato, $ar_properties=array('section_tipo','section_id','type','from_key') ) ? 'checked="checked"' : '';
+				$tabindex = $i==1 ? 'tabindex="1"' : '';
 
-						$input_id = $input_name.'_'.$i;
-						
-						$html_content .= "<li>";
+				$input_id = $input_name.'_'.$i;
+				
+				$html_content .= "<li>";
 
-						# 
-						# INPUT
-						$html_content .= "<input type=\"checkbox\" class=\"css_check_box tooltip_active\" ";
-						//$html_content .= "onfocus=\"component_common.select_wrap(null,'$id_wrapper');\" ";
-						//$html_content .= "onfocus=\"component_common.select_wrap(this);\" ";
-						$html_content .= "onchange=\"component_check_box.Save(this)\" ";
-						$html_content .= "name=\"{$input_name}\" ";
-						$html_content .= "id=\"{$input_id}\" ";
-						$html_content .= "data-tipo=\"{$tipo}\" ";
-						$html_content .= "data-lang=\"{$lang}\" ";
-						$html_content .= "data-modo=\"{$modo}\" ";
-						$html_content .= "data-section_tipo=\"{$section_tipo}\" ";
-						$html_content .= "data-parent=\"{$parent}\" ";
-						$html_content .= "data-caller_dataset='{$caller_dataset_json}' ";
-						$html_content .= "value='$value' ";
-						$html_content .= "title=\"$html_title\" ";
-						$html_content .= "$checked ";
-						$html_content .= "$tabindex ";
-						$html_content .= "/>";
-						
-						#
-						# LABEL				
-						#$html_content .= "<label for=\"$input_id\" class=\"css_check_box_rotulo\" {$required_code}>$rotulo</label>";
-						$html_content .= "<label for=\"$input_id\" class=\"css_check_box_rotulo\" {$required_code}>?</label>";
+				# 
+				# INPUT
+				$html_content .= "<input type=\"checkbox\" class=\"css_check_box tooltip_active\" ";
+				//$html_content .= "onfocus=\"component_common.select_wrap(null,'$id_wrapper');\" ";
+				//$html_content .= "onfocus=\"component_common.select_wrap(this);\" ";
+				$html_content .= "onchange=\"component_check_box.Save(this)\" ";
+				#$html_content .= 'onchange=\'component_common.call_action({"component_name":"'.$component_name.'","action":"Save","arguments":[this]})\' ';
+				$html_content .= "name=\"{$input_name}\" ";
+				$html_content .= "id=\"{$input_id}\" ";
+				$html_content .= "data-tipo=\"{$tipo}\" ";
+				$html_content .= "data-lang=\"{$lang}\" ";
+				$html_content .= "data-modo=\"{$modo}\" ";
+				$html_content .= "data-section_tipo=\"{$section_tipo}\" ";
+				$html_content .= "data-parent=\"{$parent}\" ";
+				$html_content .= "data-caller_dataset='{$caller_dataset_json}' ";
+				$html_content .= "value='$value' ";
+				$html_content .= "title=\"$html_title\" ";
+				$html_content .= "$checked ";
+				$html_content .= "$tabindex ";
+				$html_content .= "/>";
+				
+				#
+				# LABEL				
+				#$html_content .= "<label for=\"$input_id\" class=\"css_check_box_rotulo\" {$required_code}>$rotulo</label>";
+				$html_content .= "<label for=\"$input_id\" class=\"css_check_box_rotulo\" {$required_code}>?</label>";
 
-						$html_content .= "</li>";
-						$i++;
-					}
-					$html_content .= "</ul>";
-							
+				$html_content .= "</li>";
+				$i++;
+			}
+			$html_content .= "</ul>";
+
+
+			#
+			# JS Init component
+			$html_content .= '<script>';
+			# Init component
+			$init_options = new stdClass();
+				$init_options->component_name 	= $component_name;
+				$init_options->wrapper_id 		= $id_wrapper;
+			$html_content .= 'component_common.init('.json_encode($init_options).');';
+			$html_content .= '</script>';
+			break;
 	}
 
 
 	# Prepare content to show in page
 	tools::prepare_content($html_content);
-
 
 
 	

@@ -56,9 +56,15 @@
 				#$html_content .= " <span  class=\"css_span_log\"></span>";
 				#$html_content .= " <span  class=\"css_span_ejemplo \">$ejemplo</span>";
 						
-				if(SHOW_DEBUG) {
-					#$html_content .= " <span class=\"css_span_debugger\" id=\"debugger_{$tipo}\" >{$debugger}</span>";
-				}
+				#
+				# JS Init component
+				$html_content .= '<script>';
+				# Init component
+				$init_options = new stdClass();
+					$init_options->component_name 	= $component_name;
+					$init_options->wrapper_id 		= $id_wrapper;
+				$html_content .= 'component_common.init('.json_encode($init_options).');';
+				$html_content .= '</script>';
 				break;
 		}
 

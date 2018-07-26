@@ -148,8 +148,8 @@ class component_calculation extends component_common {
 																		 $section_tipo);
 					$data_resolved->$component_tipo = $current_componet->get_valor();
 				}// end foreach ($data->component_tipo as $component_tipo)
-
 				break;
+
 			case 'all':
 			/*
 				$search_options_session_key = 'section_'.$this->section_tipo.$this->component_tipo;
@@ -163,7 +163,7 @@ class component_calculation extends component_common {
 					$total = $_SESSION['dedalo4']['config']['sum_total'][$search_options_session_key];
 
 				}else{
-*/
+			*/
 					foreach ($data->component_tipo as $component_tipo) {
 						$component 		= new RecordObj_dd($component_tipo);
 						$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
@@ -175,19 +175,18 @@ class component_calculation extends component_common {
 						}
 
 						$search_options = new StdClass;
-						$search_options->section_tipo =$section_tipo;
-						$search_options->component_tipo =$component_tipo;
-						$search_options->matrix_table =common::get_matrix_table_from_tipo($section_tipo);
-
+							$search_options->section_tipo   = $section_tipo;
+							$search_options->component_tipo = $component_tipo;
+						
 						$data_resolved->$component_tipo = $this->get_sum_from_component_tipo($search_options);
 					}
 
 					# Store for speed
 					#$_SESSION['dedalo4']['config']['sum_total'][$search_options_session_key] = $total;
 				#}
-
 				break;
-			case 'search_session':
+
+			case 'search_session':				
 
 				foreach ($data->component_tipo as $component_tipo) {
 						$component 		= new RecordObj_dd($component_tipo);
@@ -200,9 +199,9 @@ class component_calculation extends component_common {
 						}
 
 						$search_options = new StdClass;
-						$search_options->section_tipo =$section_tipo;
-						$search_options->component_tipo =$component_tipo;
-						$search_options->matrix_table =common::get_matrix_table_from_tipo($section_tipo);
+							$search_options->section_tipo   = $section_tipo;
+							$search_options->component_tipo = $component_tipo;							
+						
 						if($data->value ==='value'){
 							$data_resolved->$component_tipo = $this->get_values_from_component_tipo($search_options, $data);
 								#dump($data_resolved, ' data_resolved'.to_string());
@@ -211,10 +210,10 @@ class component_calculation extends component_common {
 						}
 						
 					}
-
 				break;
+
 			default:
-				$section_id = $data->section_id ;
+				$section_id = $data->section_id;
 				break;
 		}
 
@@ -434,7 +433,7 @@ class component_calculation extends component_common {
 	* GET_SUM_FROM_COMPONENT_TIPO
 	* @return 
 	*/
-	public function get_sum_from_component_tipo($search_options) {
+	public function get_sum_from_component_tipo__DEPECATED($search_options) {
 
 		$options = new stdClass();
 			$options->section_tipo 		= $search_options->section_tipo;
@@ -465,9 +464,105 @@ class component_calculation extends component_common {
 	* GET_SUM_FROM_COMPONENT_TIPO
 	* @return 
 	*/
-	public function get_values_from_component_tipo($search_options, $data) {
+	public function get_sum_from_component_tipo($search_options) {
+
+		#dump($search_options, ' search_options ++ '.to_string());		
+
+		$current_section_tipo 	= $search_options->section_tipo;
+		$current_tipo 		  	= $search_options->component_tipo;	
+		$modelo_name 			= RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
+
+		$RecordObj_dd 	= new RecordObj_dd($current_tipo);
+		$traducible 	= $RecordObj_dd->get_traducible();
+		$lang 			= $traducible==='si' ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
+
+		# section_id filter
+		$section_id_filter = '';
+		if (isset($search_options->section_id)) {
+
+			$section_id_filter = '
+			{
+				"q": "'.$search_options->section_id.'",
+                "path": [
+                    {
+                        "modelo": "component_section_id"
+                    }
+                ],
+                "component_path": [
+                    "section_id"
+                ]
+			}
+			';
+		}
+
+		$search_query_object = json_decode('{
+		    "id": "sum_from_component_tipo",
+		    "modo": "list",
+		    "section_tipo": ["'.$current_section_tipo.'"],
+		    "limit": 0,
+		    "parsed" : false,
+		    "filter": {
+		        "$and": [
+		            {
+		                "q": "*",
+		                "q_operator": null,
+		                "path": [
+		                    {
+		                        "section_tipo": "'.$current_section_tipo.'",
+		                        "component_tipo": "'.$current_tipo.'",
+		                        "modelo": "'.$modelo_name.'",
+		                        "name": "Sum",
+		                        "lang": "'.$lang.'"	
+		                    }
+		                ]
+		            }'.$section_id_filter.'
+		        ]
+		    },
+		    "select": [
+		        {
+		            "path": [
+		                {
+		                    "section_tipo": "'.$current_section_tipo.'",
+		                    "component_tipo": "'.$current_tipo.'",
+		                    "modelo": "'.$modelo_name.'",
+		                    "name": "Sum",
+		                    "selector": "dato",
+		                    "lang": "'.$lang.'"	            		
+		                }
+		            ]
+		        }
+		    ]
+		}');
+		#dump($search_query_object, ' $search_query_object ++ '.to_string()); exit();
+		#dump(null, ' search_query_object ++ '.json_encode($search_query_object, JSON_PRETTY_PRINT)); #exit(); // , JSON_UNESCAPED_UNICODE | JSON_HEX_APOS
+
+
+		# Search records
+		$search_development2 = new search_development2($search_query_object);
+		$search_result 		 = $search_development2->search();
+		$ar_records 		 = $search_result->ar_records;
+
+		$ar_values = [];
+		foreach ($ar_records as $key => $row) {			
+			$value = $row->{$current_tipo};
+			$ar_values[] = (int)$value; 
+		}
+
+		$total = array_sum($ar_values);
+
+		return $total;
+	}//end get_sum_from_component_tipo
+
+
+
+	/**
+	* GET_SUM_FROM_COMPONENT_TIPO
+	* @return 
+	*/
+	public function get_values_from_component_tipo__OLD($search_options, $data) {
 
 		$search_sesion = $_SESSION['dedalo4']['config']['search_options']['section_'.$search_options->section_tipo];
+
 
 		$options = clone $search_sesion;		
 
@@ -529,5 +624,272 @@ class component_calculation extends component_common {
 
 		return $value;		
 	}//end get_sum_from_component_tipo
+
+
+
+	/**
+	* GET_VALUES_FROM_COMPONENT_TIPO
+	* @return 
+	*/
+	public function get_values_from_component_tipo($search_options, $data) {
+
+		#dump($search_options, ' search_options ++ '.to_string());
+		#dump($data, ' data ++ '.to_string());
+
+
+		$current_section_tipo = $search_options->section_tipo;
+		$current_tipo 		  = $search_options->component_tipo;
+
+		$RecordObj_dd 	= new RecordObj_dd($current_tipo);
+		$traducible 	= $RecordObj_dd->get_traducible();
+		$lang 			= $traducible==='si' ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN; 
+
+		if(!isset($_SESSION['dedalo4']['config']['search_options'][$current_section_tipo])) {
+
+			#$q_op 	 = '$and';
+			#$filter_obj = new stdClass();
+				#$filter_obj->{$q_op} = [];
+
+			$search_query_object = new stdClass();
+				$search_query_object->id  	   		= 'new_temp';
+				$search_query_object->section_tipo 	= $current_section_tipo;
+				$search_query_object->filter  		= [];
+				$search_query_object->select  		= [];
+
+		}else{
+
+			$search_query_object  = clone $_SESSION['dedalo4']['config']['search_options'][$current_section_tipo]->search_query_object;
+		}
+		
+			#dump($search_query_object, ' search_query_object ++ '.to_string());
+
+		# Select
+		$select = [];
+		$path   = search_development2::get_query_path($current_tipo, $current_section_tipo, false);
+		$element = new stdClass();
+			$element->path = $path;
+			$element->component_path = ["components",$current_tipo,"dato",$lang];
+		
+		$select[] = $element;
+
+		$search_query_object->select 	 = $select;
+		$search_query_object->limit  	 = 0;
+		$search_query_object->offset 	 = 0;
+		$search_query_object->parsed 	 = false;
+		$search_query_object->full_count = false;		
+
+
+		# Filter element optional
+		if(isset($data->component_filter_dato)) {
+
+			$q_op 	 = '$and';
+			$q_op_or = '$or';
+			
+			if (!empty($search_query_object->filter)) {
+			
+				$current_filter = json_decode(json_encode($search_query_object->filter));
+
+				$filter_obj = new stdClass();
+					$filter_obj->{$q_op} = [$current_filter];
+				
+				$search_query_object->filter = $filter_obj;
+			}			
+
+			$component_filter_dato = $data->component_filter_dato;
+			foreach ($component_filter_dato as $search) {
+				foreach ($search as $current_component_tipo => $q) {
+
+					$path    = search_development2::get_query_path($current_component_tipo, $current_section_tipo, false);
+					$element = new stdClass();
+						$element->path = $path;
+						$element->q    = $q;					
+
+					if (isset($search_query_object->filter->{$q_op})) {
+						$search_query_object->filter->{$q_op}[] = $element;
+					}else{
+
+						$filter_element = new stdClass();
+							$filter_element->{$q_op}[] = $element;
+
+						$current_filter = json_decode(json_encode($search_query_object->filter));
+						if (isset($current_filter->{$q_op_or}) && !empty($current_filter->{$q_op_or})) {
+							$filter_element->{$q_op}[] = $current_filter;
+						}					
+
+						$search_query_object->filter = $filter_element;
+					}					
+				}
+			}					
+		}
+		#dump($search_query_object, ' search_query_object ++ '.to_string()); #exit();
+		#dump(null, ' search_query_object ++ '.json_encode($search_query_object, JSON_PRETTY_PRINT)); exit();
+		
+		# Search records
+		$search_development2 = new search_development2($search_query_object);
+		$search_result 		 = $search_development2->search();
+		$ar_records 		 = $search_result->ar_records;
+
+
+		$ar_values = [];
+		foreach ($ar_records as $key => $row) {
+
+			$component_dato = $row->{$current_tipo};
+
+			$ar_values[] = $component_dato;
+		}
+
+
+		return $ar_values;
+	}//end get_values_from_component_tipo
+
+
+
+	/**
+	* RESOLVE_QUERY_OBJECT_SQL
+	* @return object $query_object
+	*/
+	public static function resolve_query_object_sql($query_object) {
+		
+    	# Always set fixed values
+		$query_object->type = 'string';
+
+		$q = $query_object->q;
+		$q = pg_escape_string(stripslashes($q));
+
+        switch (true) {
+        	# IS NULL
+			case ($q==='!*'):
+				$operator = 'IS NULL';
+				$q_clean  = '';
+				$query_object->operator = $operator;
+    			$query_object->q_parsed	= $q_clean;
+    			$query_object->unaccent = false;
+
+				$clone = clone($query_object);
+	    			$clone->operator = '~*';
+	    			$clone->q_parsed = '\'.*""\'';
+
+				$logical_operator = '$or';
+    			$new_query_json = new stdClass;    			
+	    			$new_query_json->$logical_operator = [$query_object, $clone];
+    			# override
+    			$query_object = $new_query_json ;
+
+				break;
+			# IS NOT NULL
+			case ($q==='*'):
+				$operator = 'IS NOT NULL';
+				$q_clean  = '';
+				$query_object->operator = $operator;
+    			$query_object->q_parsed	= $q_clean;
+    			$query_object->unaccent = false;
+
+				$clone = clone($query_object);
+	    			//$clone->operator = '!=';
+	    			$clone->operator = '!~';
+	    			$clone->q_parsed = '\'.*""\'';
+
+
+				$logical_operator ='$and';
+    			$new_query_json = new stdClass;    			
+    				$new_query_json->$logical_operator = [$query_object, $clone];    
+
+				# override
+    			$query_object = $new_query_json ;
+				break;
+			# IS DIFFERENT			
+			case (strpos($q, '!=')===0):
+				$operator = '!=';
+				$q_clean  = str_replace($operator, '', $q);
+				$query_object->operator = '!~';
+    			$query_object->q_parsed	= '\'.*"'.$q_clean.'".*\'';
+    			$query_object->unaccent = false;
+				break;
+			# IS SIMILAR
+			case (strpos($q, '=')===0):
+				$operator = '=';
+				$q_clean  = str_replace($operator, '', $q);
+				$query_object->operator = '~';
+    			$query_object->q_parsed	= '\'.*"'.$q_clean.'".*\'';
+    			$query_object->unaccent = true;
+				break;
+			# NOT CONTAIN
+			case (strpos($q, '-')===0):
+				$operator = '!~*';
+				$q_clean  = str_replace('-', '', $q);
+				$query_object->operator = $operator;
+    			$query_object->q_parsed	= '\'.*'.$q_clean.'.*\'';
+    			$query_object->unaccent = true;
+				break;	
+			# CONTAIN				
+			case (substr($q, 0, 1)==='*' && substr($q, -1)==='*'):
+				$operator = '~*';
+				$q_clean  = str_replace('*', '', $q);
+				$query_object->operator = $operator;
+    			$query_object->q_parsed	= '\'.*".*'.$q_clean.'.*\'';
+    			$query_object->unaccent = true;
+				break;
+			# ENDS WITH
+			case (substr($q, 0, 1)==='*'):
+				$operator = '~*';
+				$q_clean  = str_replace('*', '', $q);
+				$query_object->operator = $operator;
+    			$query_object->q_parsed	= '\'.*".*'.$q_clean.'".*\'';
+    			$query_object->unaccent = true;
+				break;
+			# BEGINS WITH
+			case (substr($q, -1)==='*'):
+				$operator = '~*';
+				$q_clean  = str_replace('*', '', $q);
+				$query_object->operator = $operator;
+    			$query_object->q_parsed	= '\'.*"'.$q_clean.'.*\'';
+    			$query_object->unaccent = true;
+				break;
+			# LITERAL
+			case (substr($q, 0, 1)==='\"' && substr($q, -1)==='\"'):
+				$operator = '~';
+				$q_clean  = str_replace('\"', '', $q);
+				$query_object->operator = $operator;
+				$query_object->q_parsed	= '\'.*"'.$q_clean.'".*\'';
+				$query_object->unaccent = false;
+				break;
+			# CONTAIN
+			default:
+				$operator = '~*';
+				$q_clean  = $q;
+				$query_object->operator = $operator;
+    			$query_object->q_parsed	= '\'.*".*'.$q_clean.'.*\'';
+    			$query_object->unaccent = true;
+				break;			
+		}//end switch (true) {		
+       
+
+        return $query_object;
+	}//end resolve_query_object_sql
+
+	/**
+	* SEARCH_OPERATORS_INFO
+	* Return valid operators for search in current component
+	* @return array $ar_operators
+	*/
+	public function search_operators_info() {
+		
+		$ar_operators = [
+			'*' 	 => 'no_vacio', // not null
+			'!*' 	 => 'campo_vacio', // null	
+			'=' 	 => 'similar_a',
+			'!=' 	 => 'distinto_de',
+			'-' 	 => 'no_contiene',
+			'*text*' => 'contiene',
+			'text*'  => 'empieza_con',
+			'*text'  => 'acaba_con',
+			'"text"' => 'literal',
+		];
+
+		return $ar_operators;
+	}//end search_operators_info
+
+
+
 }
 ?>

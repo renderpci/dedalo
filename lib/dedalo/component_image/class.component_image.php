@@ -4,9 +4,9 @@
 */
 require_once(DEDALO_LIB_BASE_PATH . '/media_engine/class.ImageObj.php');
 
-
 class component_image extends component_common {
 	
+
 	# Overwrite __construct var lang passed in this component
 	protected $lang = DEDALO_DATA_NOLAN;
 
@@ -26,12 +26,13 @@ class component_image extends component_common {
 	# Default image dimensions (as showed in section edit)
 	public $widht 	= 539;
 	public $height 	= 404;
-
 	
 
 	
-	# COMPONENT_IMAGE CONSTRUCT
-	function __construct($tipo, $parent, $modo='edit', $lang=null, $section_tipo=null) {
+	/**
+	* __CONSTRUCT
+	*/
+	public function __construct($tipo, $parent, $modo='edit', $lang=null, $section_tipo=null) {
 
 		if(SHOW_DEBUG===true) {
 			$start_time = microtime(1);
@@ -65,7 +66,7 @@ class component_image extends component_common {
 			# Dato
 			$this->set_dato($locator);
 			$this->need_save=true;
-		}#end if(empty($dato->counter) && $this->parent>0)
+		}//end if(empty($dato->counter) && $this->parent>0)
 		*/
 
 			#
@@ -98,12 +99,14 @@ class component_image extends component_common {
 				error_log("Updated ".RecordObj_dd::get_termino_by_tipo($this->tipo)." locator (to ".$locator->get_flat().") of current ".get_called_class()." (tipo:$this->tipo - section_tipo:$this->section_tipo - parent:$this->parent - lang:$this->lang) $total ms");
 			}
 					
-		}#end if ($this->need_save)
+		}//end if ($this->need_save)
 		*/
 
 		if(SHOW_DEBUG===true) {
 			global$TIMER;$TIMER[__METHOD__.'_OUT_'.$this->tipo.'_'.$this->modo.'_'.microtime(1)]=microtime(1);
 		}
+
+		return true;
 	}//end __construct
 
 
@@ -143,7 +146,6 @@ class component_image extends component_common {
 
 	/**
 	* GET_INITIAL_MEDIA_PATH
-	*
 	*/
 	public function get_initial_media_path() {
 		$component_tipo = $this->tipo;
@@ -164,6 +166,7 @@ class component_image extends component_common {
 
 		return $this->initial_media_path;
 	}//end get_initial_media_path
+
 
 
 	/**
@@ -193,7 +196,7 @@ class component_image extends component_common {
 
 
 	/**
-	* set_dato
+	* SET_DATO
 	*/
 	public function set_dato($dato) {
 
@@ -238,7 +241,7 @@ class component_image extends component_common {
 		
 		
 		return $valor;
-	}#end get_valor_export
+	}//end get_valor_export
 
 
 
@@ -325,7 +328,7 @@ class component_image extends component_common {
 					$dato 		= trim($component->get_valor(0));			
 
 					# Add / at begin if not exits
-					if ( substr($dato, 0, 1) != '/' ) {
+					if ( substr($dato, 0, 1) !== '/' ) {
 						$dato = '/'.$dato;
 					}
 
@@ -344,7 +347,7 @@ class component_image extends component_common {
 
 						$ar_aditional_path[$this->image_id] = '/'.$max_items_folder*(floor($parent_section_id / $max_items_folder));
 
-						# Final dato mus be an array to saved into component_input_text 
+						# Final dato must be an array to saved into component_input_text 
 						$final_dato = array( $ar_aditional_path[$this->image_id] );
 						$component->set_dato( $final_dato );
 						$component->Save();
@@ -489,10 +492,10 @@ class component_image extends component_common {
 
 
 	/**
-	* UPLOAD NEEDED
+	* GET_TARGET_FILENAME
+	* Upload needed
 	*/
 	public function get_target_filename() {
-		#$this->ImageObj->set_quality( $this->get_quality() );
 		
 		return $this->ImageObj->get_target_filename();	# Like d758-1.jpg		
 	}
@@ -500,10 +503,9 @@ class component_image extends component_common {
 
 
 	/**
-	* get_target_dir
+	* GET_TARGET_DIR
 	*/
 	public function get_target_dir() {
-		#$this->ImageObj->set_quality( $this->get_quality() );
 
 		return $this->ImageObj->get_media_path_abs();
 	}//end get_target_dir
@@ -516,7 +518,7 @@ class component_image extends component_common {
 	*/
 	public function get_image_size($quality=false) {
 		
-		if(!$quality) $quality = $this->get_quality();
+		if($quality===false) $quality = $this->get_quality();
 		
 		$ImageObj 		= $this->ImageObj;
 		$ImageObj->set_quality($quality);
@@ -528,13 +530,13 @@ class component_image extends component_common {
 
 	/**
 	* CONVERT_QUALITY
-	* @return (BOOL)
+	* @return bool
 	*/
 	public function convert_quality( $source_quality, $target_quality ) {
 
 		if ($target_quality===DEDALO_IMAGE_QUALITY_ORIGINAL || $target_quality===DEDALO_IMAGE_THUMB_DEFAULT) {
 			if(SHOW_DEBUG===true) {
-				throw new Exception("Error Processing Request. Wrong target quality: $target_quality", 1);				;
+				throw new Exception("Error Processing Request. Wrong target quality: $target_quality", 1);
 			}
 			return false;
 		}
@@ -575,9 +577,7 @@ class component_image extends component_common {
 
 		$flags = '-thumbnail '.$target_pixels_width.'x'.$target_pixels_height ;
 		ImageMagick::convert($source_image, $target_image, $flags);
-			#dump($flags,"$source_image, $target_image");
-			#chmod($source_image, 0777);
-			#chmod($target_image, 0777);		
+				
 
 		return true;
 	}//end convert_quality
@@ -586,7 +586,7 @@ class component_image extends component_common {
 
 	/**
 	* GENERATE_DEFAULT
-	* @return bool true / false
+	* @return bool
 	*/
 	public function generate_default($overwrite=false) {
 
@@ -623,13 +623,13 @@ class component_image extends component_common {
 		}
 
 		return true;		
-	}#end generate_default
+	}//end generate_default
 
 
 
 	/**
 	* GENERATE_DEFAULT_FROM_ORIGINAL_REAL
-	* @return 
+	* @return bool true
 	*/
 	public function generate_default_from_original_real($overwrite=true) {
 		
@@ -709,7 +709,7 @@ class component_image extends component_common {
 		return array('path'=>$image_thumb_path,
 					 'url' =>$image_thumb_url,
 					);
-	}#end generate_thumb
+	}//end generate_thumb
 
 
 
@@ -728,13 +728,13 @@ class component_image extends component_common {
 		$image_thumb_url 	 = $ImageObj->get_url();
 
 		return $image_thumb_url;
-	}#end get_thumb_url
+	}//end get_thumb_url
 
 
 
 	/**
 	* GET_THUMB_PATH
-	* @return 
+	* @return string $image_thumb_path
 	*/
 	public function get_thumb_path() {
 		# common data
@@ -747,12 +747,13 @@ class component_image extends component_common {
 		$image_thumb_path 	 = $ImageObj->get_local_full_path();
 		
 		return $image_thumb_path;		
-	}#end get_thumb_path
+	}//end get_thumb_path
 
 
 
 	/**
 	* GET_IMAGE_PRINT_DIMENSIONS
+	* @return array $ar_info
 	*/
 	public function get_image_print_dimensions($quality) {
 
@@ -795,7 +796,7 @@ class component_image extends component_common {
 				}
 			}
 			
-		}#end foreach($ar_quality as $quality)
+		}//end foreach($ar_quality as $quality)
 		
 		return false;
 	}
@@ -961,7 +962,7 @@ class component_image extends component_common {
 				}
 			}
 						
-		}#end foreach
+		}//end foreach
 
 		#
 		# Original image remove
@@ -969,7 +970,7 @@ class component_image extends component_common {
 		# WORK IN PROGRESS !!		
 
 		return true;
-	}#end remove_component_media_files
+	}//end remove_component_media_files
 
 	
 
@@ -1026,10 +1027,10 @@ class component_image extends component_common {
 							
 			debug_log(__METHOD__." Successful Moved file \n$last_file_path to \n$new_file_path ".to_string(), logger::DEBUG);			
 			
-		}#end foreach
+		}//end foreach
 
 		return true;
-	}#end restore_component_media_files
+	}//end restore_component_media_files
 
 
 
@@ -1061,7 +1062,7 @@ class component_image extends component_common {
 			#dump($final_image_value, ' final_image_value ++ '.to_string());
 		
 		return (string)$final_image_value;
-	}#end image_value_in_time_machine
+	}//end image_value_in_time_machine
 	*/
 
 
@@ -1091,7 +1092,7 @@ class component_image extends component_common {
 		$last_file_path = end($ar_files);		
 
 		return $last_file_path;
-	}#end get_deleted_image
+	}//end get_deleted_image
 
 
 
@@ -1145,29 +1146,7 @@ class component_image extends component_common {
 
 
 		return (string)$diffusion_value;
-	}//end get_diffusion_value
-		
-
-
-	/**
-	* __DESTRUCT
-	* @return 
-	*/
-	public function __destruct() {
-		/*
-		if ($this->need_save) {
-
-			$this->generate_thumb();
-			
-			# result devuelve el id de la sección parent creada o editada
-			$result = $this->Save();
-			if(SHOW_DEBUG===true) {
-				#$total=round(microtime(true)-$start_time,3);
-				#error_log("Updated ".RecordObj_dd::get_termino_by_tipo($this->tipo)." locator (to ".$locator->get_flat().") of current ".get_called_class()." (tipo:$this->tipo - section_tipo:$this->section_tipo - parent:$this->parent - lang:$this->lang) $total ms");
-			}					
-		}#end if ($this->need_save)
-		*/
-	}#end __destruct
+	}//end get_diffusion_value	
 
 
 
