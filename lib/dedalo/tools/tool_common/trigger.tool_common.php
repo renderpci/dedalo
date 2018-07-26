@@ -91,13 +91,7 @@ function upload_file() {
 		$response->msg ="Error on move tmp file to: " . $file_final_path;
 		return $response;
 	}
-	/*
-	dump($vars, ' vars ++ '.to_string());
 	
-	dump($_REQUEST, ' $_REQUEST ++ ** '.to_string());
-	dump($_FILES, ' _FILES ++ ** '.to_string());
-	*/
-
 	$file_size_mb 		= ceil($file_size/1024/1024); 
 
 	$response->result 	= $file_final_path;
