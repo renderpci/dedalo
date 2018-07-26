@@ -102,7 +102,7 @@
 							# Exclude elements can be overwrite with get/post request
 								if (!empty($_REQUEST['exclude_elements'])) {
 									# Override default exclude elements
-									$exclude_elements_tipo = trim($_REQUEST['exclude_elements']);
+									$exclude_elements_tipo = trim( safe_xss($_REQUEST['exclude_elements']) );
 								}else{
 									# Localizamos el elemento de tipo 'exclude_elements' que será hijo de la sección actual
 									$ar_exclude_elements_tipo = section::get_ar_children_tipo_by_modelo_name_in_section($section->get_tipo(),'exclude_elements',true,false); //section_tipo, $ar_modelo_name_required, $from_cache=true, $resolve_virtual=true																	
