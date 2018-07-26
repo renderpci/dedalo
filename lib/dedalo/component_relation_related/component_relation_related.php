@@ -37,9 +37,8 @@
 
 				$id_wrapper 		= 'wrapper_'.$identificador_unico;
 				$input_name 		= "{$tipo}_{$parent}";
-				$component_info 	= $this->get_component_info('json');
-				$dato_string		= json_handler::encode($dato);
-
+				$component_info 	= $this->get_component_info('json');				
+				$dato_json			= json_encode($dato);
 
 				# target_section_tipo
 				$target_section_tipo = $section_tipo;
@@ -50,8 +49,8 @@
 				$tipo_to_search			= $this->get_tipo_to_search();
 
 				$ar_valor 	= $this->get_valor($lang,'array');
-				$valor  	= implode('<br>',$ar_valor);	
-
+				$valor  	= implode('<br>',$ar_valor);
+				
 				# Inverse relations to current term
 				# $inverse_related = component_relation_related::get_inverse_related($section_id, $section_tipo);
 					#dump($inverse_related, ' inverse_related ++ '.to_string());
@@ -120,6 +119,9 @@
 				# search_tipos
 				$term_tipo 		= hierarchy::get_element_tipo_from_section_map( $section_tipo, 'term' );
 				$search_tipos 	= [$term_tipo]; // DEDALO_THESAURUS_TERM_TIPO
+
+				$search_input_name = $this->get_search_input_name();
+				$limit = 0;
 				break;
 
 		case 'tool_time_machine' :
