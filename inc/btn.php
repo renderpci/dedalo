@@ -1,4 +1,6 @@
 <?php
+include(dirname(dirname(__FILE__)) .'/lib/dedalo/config/core_functions.php');
+
 # set some time Important!
 $myDateTimeZone = 'Europe/Madrid';
 date_default_timezone_set($myDateTimeZone);
@@ -16,7 +18,9 @@ if (strpos($_SERVER["REQUEST_URI"],'[/index')!==false) {
 }else if( !$text = pathinfo($_SERVER["REQUEST_URI"])['basename']){
 	die("Need text!");
 }
-//var_dump(pathinfo($_SERVER["REQUEST_URI"]));
+
+$text = safe_xss($text);
+
 # Text to show
 $text = trim(stripslashes(urldecode($text)));
 $text = strip_tags($text, '');
@@ -61,6 +65,15 @@ switch (true) {
 		$ar_parts 	= explode('-', $text);
 		$text 		= $ar_parts[2];
 		$imgBase 	= "../images/btn_base/svg-{$state}-x2.png";
+		break;
+	case (strpos($text,'[draw-')!==false):
+		$type = 'draw' ;
+		# mode [svg-n-1-data:***]
+		$state 		= substr($text,6,1);
+		$last_minus = strrpos($text, '-');
+		$ar_parts 	= explode('-', $text);
+		$text 		= $ar_parts[2];
+		$imgBase 	= "../images/btn_base/draw-{$state}-x2.png";
 		break;
 	case (strpos($text,'[geo-')!==false):
 		$type = 'geo';
@@ -179,6 +192,13 @@ switch($type) {
 					$font_size 	= ($font_size *2)+2;
 					break;
 
+	case 'draw':	$colorText	= $white ;
+					$colorBG 	= $black ;
+					#$font_name	= $font; // --
+					#$font_size	= 7.9  ; # 11 o 10.88
+					$font_size 	= ($font_size *2)+2;
+					break;
+
 	case 'geo':		$colorText	= $white ;
 					$colorBG 	= $black ;
 					#$font_name	= $font; // --
@@ -238,6 +258,7 @@ switch ($type) {
 		$offsetY = 2;
 		break;
 	case 'svg':
+	case 'draw':
 	case 'page':
 		$offsetY = 2;
 	case 'person':
@@ -263,6 +284,7 @@ if (PHP_OS==='Darwin') {
 		case 'index':
 			break;
 		case 'svg':
+		case 'draw':
 		case 'page':
 		case 'person':
 			$offsetX = 8;

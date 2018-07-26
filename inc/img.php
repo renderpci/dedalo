@@ -1,9 +1,12 @@
 <?php
+include(dirname(dirname(__FILE__)) .'/lib/dedalo/config/core_functions.php');
 session_write_close();
 
+
+
 if(!isset($source)) $source = false;
-if(isset($_REQUEST['source']))	$source = $_REQUEST['source'];
-if(isset($_REQUEST['s']))		$source = $_REQUEST['s'];
+if(isset($_REQUEST['source']))	$source = safe_xss($_REQUEST['source']);
+if(isset($_REQUEST['s']))		$source = safe_xss($_REQUEST['s']);
 if(!$source) die("Not source! $source");
 
 # Accept images with get vars
@@ -17,7 +20,7 @@ $myDateTimeZone 		= 'Europe/Madrid';
 date_default_timezone_set($myDateTimeZone);
 
 if(!isset($fx)) $fx = false;
-if(isset($_REQUEST['fx']))	$fx = $_REQUEST['fx'];
+if(isset($_REQUEST['fx']))	$fx = safe_xss($_REQUEST['fx']);
 
 # Load obj ficha
 require_once(dirname(__FILE__).'/class.Thumb.php');
@@ -26,39 +29,45 @@ $thumb 		= new Thumb($source);
 
 # FX 
 
+	$req_w = isset($_REQUEST['w']) ? safe_xss($_REQUEST['w']) : false;
+	$req_h = isset($_REQUEST['h']) ? safe_xss($_REQUEST['h']) : false;
+	$req_p = isset($_REQUEST['p']) ? safe_xss($_REQUEST['p']) : false;
+
 	# crop image
 	if($fx=='crop') {
 		
 		# width
 		if(!isset($w)) $w = 64;
-		if(isset($_REQUEST['w']))	$w = $_REQUEST['w'];
+		if($req_w!==false) $w = $req_w;
 		
 		# height
 		if(!isset($h)) $h = 48;
-		if(isset($_REQUEST['h']))	$h = $_REQUEST['h'];
+		if($req_h!==false) $h = $req_h;
 		
 		# position
 		if(!isset($p)) $p = 'center';
-		if(isset($_REQUEST['p']))	$p = $_REQUEST['p'];
+		if($req_p!==false) $p = $req_p;
 		
 		$thumb->crop($cwidth=$w, $cheight=$h, $pos=$p);
 	}
 	
+
 	# resize image
 	if($fx=='resize') {		
 		
 		# value max
 		if(!isset($w)) $w = 484;
-		if(isset($_REQUEST['w']))	$w = $_REQUEST['w'];
+		if($req_w!==false) $w = $req_w;
 		
 		# property (widht or height)
 		if(!isset($h)) $h = 390;
-		if(isset($_REQUEST['h']))	$h = $_REQUEST['h'];
+		if($req_h!==false) $h = $req_h;
 		
 		#$thumb->resize($value=$rv, $prop=$rp);
 		$thumb->resizeWithLimits($maxWidht=$w,$maxHeight=$h) ;
 	}
-/**/
+
+
 
 # HEADERS
 header("Cache-Control: private, max-age=10800, pre-check=10800");
