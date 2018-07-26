@@ -411,7 +411,7 @@ class section extends common {
 	* this function will be the only comunication with the component for get the information (08-2017)
 	*/
 	public function get_all_component_data($component_tipo) {
-
+		
 		$component_data = null;
 
 		if(SHOW_DEBUG===true) {
@@ -724,24 +724,41 @@ class section extends common {
 		$from_component_tipo 	= $component_tipo;
 			#dump($component_dato, ' component_dato ++ '.to_string()); die();
 
-		# Remove previous locators of current component
-		$this->remove_relations_from_component_tipo( $component_tipo );
+		# Remove all previous locators of current component
+		$this->remove_relations_from_component_tipo( $component_tipo, 'relations' );
+
+		# Remove all existing search locators of current component
+		$this->remove_relations_from_component_tipo( $component_tipo, 'relations_search' );
 
 
 		if (!empty($component_dato)) {			
 
-			# Verify all locators are well formed
+			# ADD_RELATION . Add locator one by one
 			foreach ((array)$component_dato as $key => $current_locator) {				
 
 				# Add relation
-				$add_relation = $this->add_relation( $current_locator );
-				// If any fail, returns false
+				$add_relation = $this->add_relation( $current_locator, 'relations' );
+				// If something fail, advise
 				if($add_relation===false) {
 					debug_log(__METHOD__." ERROR ON ADD LOCATOR:  ".to_string($current_locator), logger::ERROR);
-					$result = false;
+					#$result = false;
 				}
-			}			
-		}
+			}
+
+			# SEARCH_RELATIONS . If component have search_relations, add too
+			if ($relations_search_value = $component_obj->get_relations_search_value()) {
+				
+				foreach ($relations_search_value as $current_search_locator) {
+					# Add relation
+					$add_relation = $this->add_relation( $current_search_locator, 'relations_search' );
+					// If something fail, advise					
+					if($add_relation===false) {
+						debug_log(__METHOD__." ERROR ON ADD SEARCH LOCATOR:  ".to_string($current_search_locator), logger::ERROR);					
+					}
+				}
+			}
+
+		}//end if (!empty($component_dato))
 	
 
 		return $this->dato;
@@ -1610,6 +1627,9 @@ class section extends common {
 	*/
 	public static function get_ar_children_tipo_by_modelo_name_in_section($section_tipo, $ar_modelo_name_required, $from_cache=true, $resolve_virtual=false, $recursive=true, $search_exact=false, $ar_tipo_exclude_elements=false) { # Nota: mantener default resolve_virtual=false !
 
+		# AR_MODELO_NAME_REQUIRED cast 'ar_modelo_name_required' to array
+		$ar_modelo_name_required = (array)$ar_modelo_name_required;
+
 		static $cache_ar_children_tipo;
 		$cache_uid = $section_tipo.'_'.serialize($ar_modelo_name_required).'_'.(int)$resolve_virtual.'_'.(int)$recursive;
 		if ($from_cache===true) {			
@@ -1645,7 +1665,7 @@ class section extends common {
 				if ($ar_tipo_exclude_elements===false) {
 					$ar_tipo_exclude_elements = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($original_tipo, $modelo_name='exclude_elements', $relation_type='children', $search_exact);
 				}
-					#dump($tipo_exclude_elements,"tipo_exclude_elements ");
+				#dump($tipo_exclude_elements,"tipo_exclude_elements ");
 				if (!isset($ar_tipo_exclude_elements[0])) {
 					#throw new Exception("Error Processing Request. exclude_elements of section $original_tipo not found. Exclude elements is mandatory (1)", 1);
 					error_log("Warning. exclude_elements of section $original_tipo not found (1)");			
@@ -1670,10 +1690,7 @@ class section extends common {
 			
 			}#end if($section_real_tipo!=$original_tipo) {
 		}//end if($resolve_virtual)
-
-
-		# AR_MODELO_NAME_REQUIRED cast 'ar_modelo_name_required' to array
-		$ar_modelo_name_required 	= (array)$ar_modelo_name_required;
+		
 		$tipo 						= $section_tipo;
 		$section_ar_children_tipo 	= array();
 
@@ -1735,7 +1752,7 @@ class section extends common {
 				
 				if (strpos($modelo_name, $modelo_name_required)!==false && !in_array($current_terminoID, $section_ar_children_tipo) ) {
 
-					if($search_exact===true && $modelo_name!=$modelo_name_required) {
+					if($search_exact===true && $modelo_name!==$modelo_name_required) {
 						# No is accepted model
 					}else{
 						$section_ar_children_tipo[] = $current_terminoID;	
@@ -1761,7 +1778,6 @@ class section extends common {
 		if(SHOW_DEBUG===true) {
 			global$TIMER;$TIMER[__METHOD__.'_OUT_'.$section_tipo.'_'.$cache_uid.'_'.microtime(1)]=microtime(1);
 		}
-
 
 		return $section_ar_children_tipo;
 	}//end get_ar_children_tipo_by_modelo_name_in_section
@@ -1807,6 +1823,7 @@ class section extends common {
 				return $current_portal_tipo;
 			}
 		}
+
 		return false;
 	}//end get_portal_tipo_from_component
 
@@ -1840,6 +1857,7 @@ class section extends common {
 				return $current_portal_tipo;
 			}
 		}
+
 		return false;
 	}//end get_portal_tipo_from_component_in_search_list
 
@@ -1927,6 +1945,8 @@ class section extends common {
 		foreach ($ar_buttons as $current_button_object) {
 			return $current_button_object;	# Only first element		
 		}
+
+		return null;
 	}//end get_button
 	
 
@@ -1985,6 +2005,8 @@ class section extends common {
 
 		# del filtro, sacamos los términos relacionados
 		#$ar_terminos_relacionados = RecordObj_dd::get_ar_terminos_relacionados($filter_tipo, $cache=true, $simple=true);
+
+		return false;
 	}//end get_ar_projects_by_section
 
 
@@ -1996,7 +2018,19 @@ class section extends common {
 		die("REHACER");
 		$dato = $this->get_dato();
 		if( isset($dato->created_date->ar_section_creator) )  return $dato->created_date->ar_section_creator;
+
+		return false;
 	}//end get_ar_section_creator
+
+
+
+	/**
+	* GET_SECTION_TIPO : alias of $this->get_tipo()
+	*/
+	public function get_section_tipo() {
+		
+		return $this->get_tipo();
+	}//end get_section_tipo
 
 
 
@@ -2006,23 +2040,8 @@ class section extends common {
 	* tal que: {"section_id":"2"..}
 	*/
 	public function get_section_id() {
-		return $this->section_id;
-		/*
-		if ($this->modo!='edit') {
-			return null;
-		}
 
-		if (!isset($this->section_id)) {
-			trigger_error("Triying get_section_id without section section_id defined.. modo:$this->modo");
-			#throw new Exception("Error Processing Request", 1);							
-		}
-		$dato = $this->get_dato();
-		if( isset($dato->section_id) ){
-			//dump($dato->section_id); 
-			return $dato->section_id;
-		}   
-		return false;
-		*/
+		return $this->section_id;		
 	}//end get_section_id
 
 
@@ -2040,6 +2059,8 @@ class section extends common {
 		$dato = $this->get_dato(); // Force load
 		$dato->created_date = $date;
 		$this->set_dato($dato); // Force update
+
+		return true;
 	}#end set_created_date
 
 
@@ -2057,6 +2078,8 @@ class section extends common {
 		$dato = $this->get_dato(); // Force load
 		$dato->modified_date = $date;
 		$this->set_dato($dato); // Force update
+
+		return true;
 	}#end set_modified_date
 
 
@@ -2069,6 +2092,7 @@ class section extends common {
 			return false;
 		};
 		$valor_local = component_date::timestamp_to_date($dato->created_date, $full=true);
+		
 		return $valor_local;
 	}//end get_created_date
 
@@ -2083,6 +2107,7 @@ class section extends common {
 			return false;
 		};
 		$valor_local = component_date::timestamp_to_date($dato->modified_date, $full=true);
+		
 		return $valor_local;
 	}//end get_modified_date
 
@@ -2094,6 +2119,7 @@ class section extends common {
 	public function get_created_by_userID() {
 		$dato = $this->get_dato();
 		if( isset($dato->created_by_userID) )  return $dato->created_by_userID;
+		
 		return false;
 	}//end get_created_by_userID
 
@@ -2168,6 +2194,8 @@ class section extends common {
 				return $section_info;
 				break;
 		}
+
+		return null;
 	}//end get_section_info
 
 
@@ -2220,6 +2248,7 @@ class section extends common {
 	* @return array
 	*/
 	public static function get_media_components_modelo_name() {
+
 		return array(
 			'component_av',
 			'component_image',
@@ -2270,7 +2299,7 @@ class section extends common {
 				}
 			}
 			
-		}# end foreach
+		}
 			
 		return true;
 	}//end remove_section_media_files
@@ -2318,19 +2347,10 @@ class section extends common {
 				}
 			}
 		
-		}# end foreach
+		}#end foreach
 			
 		return true;
 	}//end restore_deleted_section_media_files
-
-
-
-	/**
-	* GET_SECTION_TIPO : alias of $this->get_tipo()
-	*/
-	public function get_section_tipo() {
-		return $this->get_tipo();
-	}
 
 
 
@@ -2434,7 +2454,11 @@ class section extends common {
 			#debug_log(__METHOD__." $msg ", logger::DEBUG);
 		}
 		return true;
-	}#end forced_create_record	
+	}//end forced_create_record
+
+
+	
+	### /DIFFUSION INFO #####################################################################################
 
 
 
@@ -2537,6 +2561,7 @@ class section extends common {
 	*/
 
 
+
 	/**
 	* DIFFUSION_INFO_RESET
 	* @return bool
@@ -2552,6 +2577,11 @@ class section extends common {
 		return false;
 	}//end diffusion_info_reset
 	*/
+
+
+
+	
+	### INVERSE LOCATORS / REFERENCES #####################################################################################
 
 
 
@@ -2655,41 +2685,33 @@ class section extends common {
 
 
 
+	### RELATIONS #####################################################################################
+
+
 
 	/**
 	* GET_RELATIONS
 	* @return array $relations
 	*
 	* Ver de fijar la variable en la sección al construir el objeto ......
-	*
 	*/
-	public function get_relations() {
+	public function get_relations( $relations_container='relations' ) {
+
+		# Deafault array empty
+		$relations = [];
 
 		if (empty($this->section_id)) {
 			# Section not exists yet. Return empty array
-			return array();
+			return $relations;
 		}
 
 		$dato = $this->get_dato(); // Force load data
 
-		if( isset($dato->relations) )  {
-			#dump($dato->section_id, ' dato->section_id ++ '.to_string());
-			#dump((array)$dato->relations, ' var ++ '.to_string());
-
-				# Option conterrting to locator objects
-				/*
-				$relations=array();
-				foreach ((array)$dato->relations as $value) {
-					$relations[] = new locator($value);
-				}
-					dump($relations, ' relations ++ '.to_string());
-				return $relations;
-				*/
-
-			return (array)$dato->relations;
+		if( isset($dato->{$relations_container}) )  {
+			$relations = (array)$dato->{$relations_container};
 		}
 
-		return array();
+		return $relations;
 	}//end get_relations
 
 
@@ -2699,7 +2721,7 @@ class section extends common {
 	* @param object locator $locator
 	*	locator with valid 'type' property defined mandatory	
 	*/
-	public function add_relation( $locator ) {
+	public function add_relation( $locator, $relations_container='relations' ) {
 
 		if(empty($locator)) return false;
 
@@ -2712,16 +2734,15 @@ class section extends common {
 			return false;		
 		}
 
-		$current_type = $locator->type;
-		$relations 	  = $this->get_relations();
-			#dump($relations, ' relations ++ '.to_string());	
-			
+		$current_type 	= $locator->type;
+		$relations 		= $this->get_relations( $relations_container );
+			#dump($relations, ' relations ++ '.to_string());			
 
 		# DATA INTEGRITY: Clean possible bad format locators (old and beta errors)
 		foreach ((array)$relations as $key => $current_relation) {
 			if (!is_object($current_relation) || !isset($current_relation->section_id) || !isset($current_relation->section_tipo) || !isset($current_relation->type)) {		
 				//unset($relations[$key]);
-					dump($current_relation, ' current_relation ++ '.to_string());
+				dump($current_relation, ' current_relation ++ '.to_string());
 				#debug_log(__METHOD__." !! FOUNDED BAD FORMAT RELATION LOCATOR: (type:".gettype($current_relation).") ".to_string($current_relation), logger::WARNING);
 				throw new Exception("Error Processing Request. !! FOUNDED BAD FORMAT RELATION LOCATOR IN SECTION_RELATION DATA: (type:".gettype($current_relation).") ".to_string($current_relation), 1);				
 			}
@@ -2754,7 +2775,8 @@ class section extends common {
 				$this->dato = new stdClass();
 			}
 
-			$this->dato->relations = (array)$relations;
+			# Add to container
+			$this->dato->{$relations_container} = (array)$relations;
 			//$this->set_relations($relations);
 
 			return true;
@@ -2771,9 +2793,10 @@ class section extends common {
 	* REMOVE_RELATION
 	* @param object locator $locator
 	*/
-	public function remove_relation( $locator ) {
+	public function remove_relation( $locator, $relations_container='relations' ) {
 		
-		$relations = (array)$this->get_relations();
+		$relations = $this->get_relations( $relations_container );
+		
 
 		$ar_properties=array('section_id','section_tipo','type');
 		if (isset($locator->from_component_tipo)) 	$ar_properties[] = 'from_component_tipo';
@@ -2783,7 +2806,7 @@ class section extends common {
 		if (isset($locator->section_top_id)) 		$ar_properties[] = 'section_top_id';
 
 		$removed 		= false;
-		$new_relations 	= array();		
+		$new_relations 	= [];		
 		foreach ($relations as $key => $current_locator_obj) {
 
 			# Test if already exists
@@ -2809,7 +2832,9 @@ class section extends common {
 
 		# Updates current dato relations with clean array of locators
 		if ($removed===true) {
-			$this->dato->relations = $new_relations;
+
+			#$this->dato->relations = $new_relations;
+			$this->dato->{$relations_container} = $new_relations;
 		}
 				
 
@@ -2824,33 +2849,43 @@ class section extends common {
 	* Note this method not save
 	* @return array $ar_deleted_locators
 	*/
-	public function remove_relations_from_component_tipo( $component_tipo ) {
-		
-		$relations = (array)$this->get_relations();
+	public function remove_relations_from_component_tipo( $component_tipo, $relations_container='relations' ) {
+
+		$relations = $this->get_relations( $relations_container );
 
 		$removed 			 = false;
-		$ar_deleted_locators = array();
+		$ar_deleted_locators = [];
+		$new_relations 		 = [];
 		foreach ($relations as $key => $current_locator) {
 
 			# Test if from_component_tipo
-			if ( isset($current_locator->from_component_tipo) && $current_locator->from_component_tipo===$component_tipo) {
-				$ar_deleted_locators[] = $current_locator;
-				unset($relations[$key]);
+			if (isset($current_locator->from_component_tipo) && $current_locator->from_component_tipo===$component_tipo) {
+				# Ignoerd locator
+				$ar_deleted_locators[] = $current_locator;				
 				$removed = true;
-				#debug_log(__METHOD__." Deleting locator of type $relation_type ".to_string($current_locator), logger::DEBUG);
+				debug_log(__METHOD__." Deleted locator in $relations_container. $component_tipo - $current_locator->section_tipo - $component_tipo ".to_string($current_locator), logger::DEBUG);
+			}else{
+				# Add normally
+				$new_relations[] = $current_locator;
 			}
 		}
 		
 		if ($removed===true) {
 			# maintain array index after unset value. ! Important for encode json as array later (if keys are not correlatives, object is created)
-			$relations = array_values($relations);
+			#$relations = array_values($relations);
+
 			# Update section dato relations on finish
-			$this->dato->relations = $relations;
+			$this->dato->{$relations_container} = $new_relations;
 		}
 
 
 		return (array)$ar_deleted_locators;
 	}//end remove_relations_from_component_tipo
+
+
+
+	
+	### /RELATIONS #####################################################################################
 
 
 
@@ -3077,7 +3112,7 @@ class section extends common {
 			
 			
 		#dump( json_encode($query_object, JSON_PRETTY_PRINT), ' query_object ++ '.to_string());
-		#debug_log(__METHOD__." query_object ".json_encode($query_object, JSON_PRETTY_PRINT), logger::DEBUG);totaol
+		#debug_log(__METHOD__." query_object ".json_encode($query_object, JSON_PRETTY_PRINT), logger::DEBUG);
 		#debug_log(__METHOD__." total time ".exec_time_unit($start_time,'ms').' ms', logger::DEBUG);
 		
 
