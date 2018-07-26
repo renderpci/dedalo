@@ -178,7 +178,7 @@ function update_structure($json_data) {
 		unset($_SESSION['dedalo4'][$key]);
 	}
 
-	session_write_close();
+	#session_write_close();
 
 
 	#
@@ -189,7 +189,7 @@ function update_structure($json_data) {
 			$ar_label 	 = label::get_ar_label($lang); // Get all properties
 				#dump($ar_label, ' ar_label');
 			
-			file_put_contents( DEDALO_LIB_BASE_PATH.$label_path, 'get_label='.json_encode($ar_label,JSON_UNESCAPED_UNICODE).'');			
+			file_put_contents( DEDALO_LIB_BASE_PATH.$label_path, 'const get_label='.json_encode($ar_label,JSON_UNESCAPED_UNICODE).'');			
 			debug_log(__METHOD__." Generated js labels file for lang: $lang - $label_path ".to_string(), logger::DEBUG);
 		}
 
