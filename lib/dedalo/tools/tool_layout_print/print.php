@@ -5,25 +5,29 @@
 * This script render final document necessary to create the pdf file from DEDALO_PDF_RENDERER (wkhtmltopdf)
 * Is accesible for DEDALO_PDF_RENDERER without login (user data is created from actual logged user)
 */
-
 require_once( dirname(dirname(dirname(__FILE__))) .'/config/config4.php');
 require_once( dirname(__FILE__) .'/class.tool_layout_print.php'); 
 
 	#
 	# VERIFY VARS
-		if( !isset($_REQUEST['template_tipo']) ) return print("Error Processing Request. Few vars are received (template_tipo)");
-		if( !isset($_REQUEST['template_id'])   ) {
-				dump($_REQUEST, " _REQUEST ".to_string());
-			return print("Error Processing Request. Few vars are received (template_id)");
+		if( !isset($_REQUEST['template_tipo']) ) { 
+			return print('Error Processing Request. Few vars are received (template_tipo)');
 		}
-		if( !isset($_REQUEST['section_tipo'])  ) return print("Error Processing Request. Few vars are received (section_tipo)");
-		if( !isset($_REQUEST['section_id'])	   ) return print("Error Processing Request. Few vars are received (section_id)");
+		if( !isset($_REQUEST['template_id'])   ) {			
+			return print('Error Processing Request. Few vars are received (template_id)');
+		}
+		if( !isset($_REQUEST['section_tipo'])  ) {
+			return print('Error Processing Request. Few vars are received (section_tipo)');
+		}
+		if( !isset($_REQUEST['section_id'])	   ) {
+			return print('Error Processing Request. Few vars are received (section_id)');
+		}
 
 	# VARS
-		$section_tipo 		= (string)$_REQUEST['section_tipo'];
-		$section_id 		= (string)$_REQUEST['section_id'];	
-		$section_layout_tipo= (string)$_REQUEST['template_tipo'];
-		$section_layout_id 	= (string)$_REQUEST['template_id'];	
+		$section_tipo 		= (string)common::setVar('section_tipo');
+		$section_id 		= (string)common::setVar('section_id');	
+		$section_layout_tipo= (string)common::setVar('template_tipo');
+		$section_layout_id 	= (string)common::setVar('template_id');
 	
 	
 	#
@@ -32,7 +36,7 @@ require_once( dirname(__FILE__) .'/class.tool_layout_print.php');
 		$autologged=false;
 		if(login::is_logged()!==true) {
 
-			$user_id 	= isset($_REQUEST['user_id']) ? (int)$_REQUEST['user_id'] : false;
+			$user_id 	= isset($_REQUEST['user_id']) ? (int)safe_xss($_REQUEST['user_id']) : false;
 		
 			$_SESSION['dedalo4']['auth']['user_id']   	= $user_id;
 			$_SESSION['dedalo4']['auth']['is_logged'] 	= 1;
