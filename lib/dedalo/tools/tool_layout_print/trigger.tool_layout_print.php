@@ -8,15 +8,7 @@ if(login::is_logged()!==true) {
 	print dd_error::wrap_error($string_error);
 	die();
 }
-// it's safe to overwrite the $_POST if the content-type is application/json
-// because the $_POST var will be empty
-/*
-$headers = getallheaders();
-if ($headers["Content-Type"] == "application/json")
-$_REQUEST = json_decode(file_get_contents("php://input"), true) ?: [];
-	#dump($_POST, ' _POST ++ '.to_string());
-*/	
-#dump($_REQUEST, ' _REQUEST ++ '.to_string()); exit();
+
 
 # set vars
 $vars = array('mode','type','html_content','dato','layout_label','template_id','component_layout_tipo','section_target_tipo','section_layout_id','section_layout_tipo');	// ,'tipo','parent','layout_section'
@@ -190,7 +182,7 @@ if( $mode=='render_pdf' ) {
 		$response->msg 	 = '';
 		$response->debug = array();
 
-	$render_pdf_data = isset($_REQUEST['render_pdf_data']) ? $_REQUEST['render_pdf_data'] : false;
+	$render_pdf_data = common::setVar('render_pdf_data');
 	if (empty($render_pdf_data) || !json_decode($render_pdf_data)) {
 		$response->msg .= "Sorry. Invalid/empty render_pdf_data";
 		echo json_encode($response);
@@ -198,8 +190,7 @@ if( $mode=='render_pdf' ) {
 	}
 
 	$render_pdf_data = json_decode($render_pdf_data);
-		#dump($render_pdf_data, ' render_pdf_data ++ '.to_string());
-
+	
 
 	foreach ((array)$render_pdf_data as $key => $command_obj) {
 		$element_html = '';
@@ -227,7 +218,7 @@ if( $mode=='render_pdf' ) {
 		if($result['exit_status'] === "0"){
 			// command execution succeeds
 			$element_html .= trim("<a href=\"$pdf_url\" class=\"icon_pdf_big\" target=\"_blank\"></a><label>View pdf file ".$label."</label>");		
-		} else {
+		}else{
 		    // command execution failure
 		    $element_html .= trim("<span class=\"error\">Sorry. Error on render pdf file</span>");
 		}
@@ -285,8 +276,7 @@ if( $mode=='delete_template' ) {
 * 
 * @return 
 */
-if( $mode=='print_pages' ) {
-	#dump($_REQUEST, ' _REQUEST');
+if( $mode=='print_pages' ) {	
 
 	# Verify vars set in previous step (context_name=list)
 	if( !isset($_SESSION['dedalo4']['config']['ar_templates_mix']) ||
@@ -296,9 +286,9 @@ if( $mode=='print_pages' ) {
 	  ) throw new Exception("Error Processing Request. Few vars are received", 1);
 
 	# VARS
-	$section_tipo 		= (string)$_GET['section_tipo'];	
-	$section_layout_tipo= (string)$_GET['template_tipo'];
-	$section_layout_id 	= (string)$_GET['template_id'];
+	$section_tipo 		= (string)safe_xss($_GET['section_tipo']);	
+	$section_layout_tipo= (string)safe_xss($_GET['template_tipo']);
+	$section_layout_id 	= (string)safe_xss($_GET['template_id']);
 	$ar_css_url 		= array(
 							DEDALO_LIB_BASE_URL."/tools/tool_layout_print/css/tool_layout_render.css"
 						);
