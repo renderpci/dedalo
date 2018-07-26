@@ -34,7 +34,7 @@ class records_search extends common {
 		$this->section_obj 	= $section_obj;
 		$this->section_tipo = $section_obj->get_tipo();
 		$this->modo 		= $modo;
-	}
+	}//end __construct
 
 
 
@@ -244,7 +244,7 @@ class records_search extends common {
 		$search_list_tipo = $this->get_search_list_tipo();
 
 
-		$tools_search_tipo 	= RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($search_list_tipo, 'tools_search', 'termino_relacionado', $search_exact=true);
+		$tools_search_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($search_list_tipo, 'tools_search', 'termino_relacionado', $search_exact=true);
 		if(empty($tools_search_tipo[0])) {			
 			if(SHOW_DEBUG===true) {
 				#throw new Exception("Error Processing Request: tools_search:tools_search_tipo not found in structure ($search_list_tipo)", 1);
@@ -283,8 +283,8 @@ class records_search extends common {
 
 		# CACHE
 		#$_SESSION['dedalo4']['config']['records_search'][$section_tipo]['ar_tools_search'] = serialize($ar_tools_search);
-
 		#dump($ar_tools_search,'$ar_tools_search');
+
 		return $ar_tools_search ;
 	}
 
@@ -295,14 +295,14 @@ class records_search extends common {
 	*/
 	public function set_ar_component_search_obj() {
 
-		$ar_component_search			= array();
+		$ar_component_search = array();
 
 		if( is_array($this->ar_components_search)) foreach($this->ar_components_search as $terminoID_group) {
 
 
 			$RecordObj_dd	= new RecordObj_dd($terminoID_group);
 			$tools_search	= $RecordObj_dd->get_ar_childrens_of_this();
-
+	
 			if( is_array($tools_search) ) foreach($tools_search as $tipo) {
 
 				#$RecordObj_dd	= new RecordObj_dd($tipo);
@@ -312,17 +312,18 @@ class records_search extends common {
 				
 				switch($modelo) {
 
-					case (strpos($modelo, 'component_') !== false)	: 	$this->ar_components_search_obj[]	= component_common::get_instance($modelo, $tipo, 'search', $this->section->get_ID(), DEDALO_DATA_LANG);
+					case (strpos($modelo, 'component_') !== false)	: 	$this->ar_components_search_obj[] = component_common::get_instance($modelo, $tipo, 'search', $this->section->get_ID(), DEDALO_DATA_LANG);
 																		break;
 
-					case (strpos($modelo, 'button_') 	!== false)	: 	$this->ar_buttons_search_obj[]		= new $modelo($tipo, NULL, 'search', 0, DEDALO_DATA_LANG);
+					case (strpos($modelo, 'button_') 	!== false)	: 	$this->ar_buttons_search_obj[]	  = new $modelo($tipo, NULL, 'search', 0, DEDALO_DATA_LANG);
 																		break;
 				}
-
 			}
 		}
 		#dump($this->ar_components_search_obj,'$this->ar_components_search_obj');
-	}
+
+		return true;
+	}//end set_ar_component_search_obj
 
 
 
@@ -334,12 +335,14 @@ class records_search extends common {
 
 		if( is_array($this->ar_components_tipo)) foreach($this->ar_components_tipo as $current_tipo) {
 
-			#$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
-			$this->ar_component_obj[] = component_common::get_instance(null, $current_tipo, $parent, 'search');
+			$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
+			$this->ar_component_obj[] = component_common::get_instance($modelo_name, $current_tipo, 'search', $parent);
 
 			# LOAD CURRENT COMPONENT
 		}
-	}
+
+		return true;
+	}//end set_ar_component_obj
 
 
 
