@@ -2486,12 +2486,22 @@ class diffusion_sql extends diffusion  {
 
 			$current_locator = new locator();
 				$current_locator->set_section_tipo($options->section_tipo);
-				$current_locator->set_section_id($options->parent);			
+				$current_locator->set_section_id($options->parent);
 
 			$parent_locator = reset($dato);
-			$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($parent_locator->component_tipo, true); // component_relation_children
+			
+			if (isset($parent_locator->from_component_tipo)) {
+				$current_component_tipo = $parent_locator->from_component_tipo;
+			}elseif (isset($parent_locator->component_tipo)) {
+				$current_component_tipo = $parent_locator->component_tipo;
+				debug_log(__METHOD__." ERROR: Expected locator->from_component_tipo but found ocator->component_tipo. Please fix this data ASAP ".to_string(), logger::ERROR);
+			}else{
+				throw new Exception("Error Processing Request. Not found component tipo in locator: ".to_string($parent_locator), 1);
+			}
+			
+			$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($current_component_tipo, true); // component_relation_children
 			$component 		= component_common::get_instance($modelo_name,
-															 $parent_locator->component_tipo,
+															 $current_component_tipo,
 															 $parent_locator->section_id,
 															 'list',
 															 DEDALO_DATA_NOLAN,
@@ -2881,17 +2891,27 @@ class diffusion_sql extends diffusion  {
 
 		$process_dato_arguments = (object)$options->propiedades->process_dato_arguments;
 		$selected_key 			= isset($process_dato_arguments->selected_key)  ? (int)$process_dato_arguments->selected_key : 0;
-		$selected_date 			= isset($process_dato_arguments->selected_date) ? (string)$process_dato_arguments->selected_date : 'start';
-		
+		$selected_date 			= isset($process_dato_arguments->selected_date) ? $process_dato_arguments->selected_date : false; // 'start';
+		$date_format 			= isset($process_dato_arguments->date_format) ? $process_dato_arguments->date_format : 'full';
 
-		if (!isset($dato[$selected_key]) || !isset($dato[$selected_key]->$selected_date)) {			
+		if (!isset($dato[$selected_key])) {
 			return null;
 		}
-		
-		$date_obj = $dato[$selected_key]->$selected_date;
 
-		// date_format
-		$date_format = isset($process_dato_arguments->date_format) ? $process_dato_arguments->date_format : 'full';
+		if ($selected_date!==false) {
+			
+			if (!isset($dato[$selected_key]->$selected_date)) {			
+				return null;
+			}
+			$date_obj = $dato[$selected_key]->$selected_date;
+		
+		}else{
+			
+			$date_obj = $dato[$selected_key];
+		}
+		
+
+		// date_format		
 		switch ($date_format) {
 			case 'year':
 				$dd_date = new dd_date($date_obj);
