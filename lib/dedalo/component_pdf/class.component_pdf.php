@@ -31,10 +31,10 @@ class component_pdf extends component_common {
 		# Creamos el componente normalmente
 		parent::__construct($tipo, $parent, $modo, $lang, $section_tipo);
 
+		/*
 		# Dato : Verificamos que hay un dato. Si no, asignamos el dato por defecto en el idioma actual
 		$dato = $this->get_dato();
-			#dump(empty($dato)," dato $modo");
-
+		*/
 		$need_save=false;
 		if($this->parent>0 && !isset($dato->section_id)) {
 
@@ -51,7 +51,7 @@ class component_pdf extends component_common {
 			$this->set_dato($locator);
 			$need_save=true;
 		}#end if(empty($dato->counter) && $this->parent>0)
-
+		
 
 			#
 			# CONFIGURACIÓN NECESARIA PARA PODER SALVAR (Al salvar se guarda una versión valor_list html que no funciona si no no están estas variables asignadas)
@@ -71,7 +71,7 @@ class component_pdf extends component_common {
 			$this->PdfObj = new PdfObj( $this->pdf_id, $this->get_quality(), $this->aditional_path, $this->initial_media_path );
 				#dump($this->PdfObj,"PdfObj en construct");
 
-
+		/*
 		if ($need_save) {
 			# result devuelve el id de la sección parent creada o editada
 			$result = $this->Save();
@@ -86,7 +86,8 @@ class component_pdf extends component_common {
 		if(SHOW_DEBUG===true) {
 			global$TIMER;$TIMER[__METHOD__.'_OUT_'.$this->tipo.'_'.$this->modo.'_'.microtime(1)]=microtime(1);
 		}
-
+		*/
+		
 		return true;
 	}#end __construct
 
@@ -143,14 +144,14 @@ class component_pdf extends component_common {
 			
 			if(isset($propiedades->max_items_folder) && empty($dato)) {
 
-						$max_items_folder  = $propiedades->max_items_folder;
-						$parent_section_id = $this->parent;
+				$max_items_folder  = $propiedades->max_items_folder;
+				$parent_section_id = $this->parent;
 
-						$ar_aditional_path[$this->pdf_id] = '/'.$max_items_folder*(floor($parent_section_id / $max_items_folder));
+				$ar_aditional_path[$this->pdf_id] = '/'.$max_items_folder*(floor($parent_section_id / $max_items_folder));
 
-						$component->set_dato( $ar_aditional_path[$this->pdf_id] );
-						$component->Save();
-					}
+				$component->set_dato( $ar_aditional_path[$this->pdf_id] );
+				$component->Save();
+			}
 
 		}else{
 			$ar_aditional_path[$this->pdf_id] = false;
