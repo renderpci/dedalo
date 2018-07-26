@@ -122,6 +122,10 @@ class dataframe extends common {
 				$component_obj->set_dato([]);
 			}
 
+			# Notify 
+			#common::notify_load_lib_element_tipo($modelo_name, $this->modo);
+			
+
 			$ar_component_obj[] = $component_obj;
 		}//end foreach ($ar_component_tipo as $current_component_tipo) 
 		
