@@ -36,64 +36,76 @@
 
 		case 2 :
 		case 3 :
-				if($modo !== 'edit_in_list'){
-					if($from_modo !== 'edit' ){
-						$html_content .= "<div class=\"css_select_button_close\" onclick=\"component_common.change_mode_component(this, 'edit', '$from_modo')\"></div>";
-					}	
-				}
+			if($modo !== 'edit_in_list'){
+				if($from_modo !== 'edit' ){
+					$html_content .= "<div class=\"css_select_button_close\" onclick=\"component_common.change_mode_component(this, 'edit', '$from_modo')\"></div>";
+				}	
+			}
+			
+			#
+			# CONTEXT
+			# Set as disabled on time machine context 
+			$disabled = (isset($context->context_name) && $context->context_name=='tool_time_machine') ? 'disabled="disabled"' : '';
+
+			$html_content .= "<select class=\"css_select\" ";
+			$html_content .= "onchange=\"component_select.Save(this)\" ";
+			$html_content .= "onfocus=\"component_common.select_wrap(document.getElementById('$id_wrapper'));\" ";
+			$html_content .= "name=\"{$input_name}\" ";
+			$html_content .= "data-role=\"component_select_selector\" ";
+			$html_content .= "data-tipo=\"{$tipo}\" ";
+			$html_content .= "data-lang=\"{$lang}\" ";
+			$html_content .= "data-section_tipo=\"{$section_tipo}\" ";
+			$html_content .= "data-parent=\"{$parent}\" ";
+			$html_content .= "title=\"$html_title\" ";
+			$html_content .= "$disabled ";
+			$html_content .= "tabindex=\"1\" ";
+			$html_content .= ">";
+
+			$selected = empty($dato) ? 'selected' : '';
 				
-				#
-				# CONTEXT
-				# Set as disabled on time machine context 
-				$disabled = (isset($context->context_name) && $context->context_name=='tool_time_machine') ? 'disabled="disabled"' : '';
+				# Empty option
+				$html_content .= "<option value=\"\" {$selected}> </option>";
 
-				$html_content .= "<select class=\"css_select\" ";
-				$html_content .= "onchange=\"component_select.Save(this)\" ";
-				$html_content .= "onfocus=\"component_common.select_wrap(document.getElementById('$id_wrapper'));\" ";
-				$html_content .= "name=\"{$input_name}\" ";
-				$html_content .= "data-role=\"component_select_selector\" ";
-				$html_content .= "data-tipo=\"{$tipo}\" ";
-				$html_content .= "data-lang=\"{$lang}\" ";
-				$html_content .= "data-section_tipo=\"{$section_tipo}\" ";
-				$html_content .= "data-parent=\"{$parent}\" ";
-				$html_content .= "title=\"$html_title\" ";
-				$html_content .= "$disabled ";
-				$html_content .= "tabindex=\"1\" ";
-				$html_content .= ">";
+				# Available options
+				foreach ($ar_list_of_values->result as $value => $label) {
 
-				$selected = empty($dato) ? 'selected' : '';
-					
-					# Empty option
-					$html_content .= "<option value=\"\" {$selected}> </option>";
+					$value   = (string)$value;
+					$locator = (object)json_handler::decode($value);	# Locator is json encoded object
+					#dump($locator," locator"); dump($dato," dato");
 
-					# Available options
-					foreach ($ar_list_of_values->result as $value => $label) {
+					#$selected = in_array($locator, $dato) ? 'selected' : '';
+					$founded  = locator::in_array_locator( $locator, $ar_locator=$dato, $ar_properties=array('section_id','section_tipo') );
+					$selected = $founded ? 'selected' : '';
 
-						$value   = (string)$value;
-						$locator = (object)json_handler::decode($value);	# Locator is json encoded object
-						#dump($locator," locator"); dump($dato," dato");
-
-						#$selected = in_array($locator, $dato) ? 'selected' : '';
-						$founded  = locator::in_array_locator( $locator, $ar_locator=$dato, $ar_properties=array('section_id','section_tipo') );
-						$selected = $founded ? 'selected' : '';
-
-						$html_content .= "<option value='$value' {$selected}>";
-						$html_content .= $label;
-						$html_content .= "</option>";
-					}
-
-				$html_content .= "</select>";
-
-				# Button open section referenced
-				#$html_content .= "<input type=\"button\" value=\"Source\" class=\"css_button_generic\" onclick=\"component_select.open_section(this)\" />";
-				$html_content .= "<a href=\"javascript:;\" class=\"icon_bs link edit_select edit_hidden\" onclick=\"component_select.open_section(this)\"></a>";
-
-
-				if(SHOW_DEBUG===true) {
-					$html_content .= "<div class=\"debug_info notes\">".json_encode( $dato )."</div>";				
-					#$html_content .= " <span class=\"css_span_debugger\" id=\"debugger_{$tipo}\" >{$debugger}</span>";
+					$html_content .= "<option value='$value' {$selected}>";
+					$html_content .= $label;
+					$html_content .= "</option>";
 				}
-				break;
+
+			$html_content .= "</select>";
+
+			# Button open section referenced
+			#$html_content .= "<input type=\"button\" value=\"Source\" class=\"css_button_generic\" onclick=\"component_select.open_section(this)\" />";
+			$html_content .= "<a href=\"javascript:;\" class=\"icon_bs link edit_select edit_hidden\" onclick=\"component_select.open_section(this)\"></a>";
+
+
+			if(SHOW_DEBUG===true) {
+				$html_content .= "<div class=\"debug_info notes\">".json_encode( $dato )."</div>";				
+				#$html_content .= " <span class=\"css_span_debugger\" id=\"debugger_{$tipo}\" >{$debugger}</span>";
+			}
+
+			#
+			# JS Init component
+			$html_content .= '<script>';
+			# Init component
+			$init_options = new stdClass();
+				$init_options->component_name 	= $component_name;
+				$init_options->id_wrapper 		= $id_wrapper;
+				$init_options->uid 				= $identificador_unico;
+				$init_options->mandatory 		= $mandatory;
+			$html_content .= 'component_common.init('.json_encode($init_options).');';
+			$html_content .= '</script>';
+			break;
 	}
 
 	# Prepare content to show in page
@@ -112,11 +124,6 @@
 
 	print "</div>"; //wrap
 
-
-	// First test on load element
-	if ($mandatory===true) {
-		echo "<script>component_select.mandatory('{$id_wrapper}')</script>";
-	}
 
 
 	# html_delimiter
