@@ -41,7 +41,7 @@ function process_file($json_data) {
 		return $response;
 	}	
 
-	# Needed for class tool_import_kml
+	# Inject. Needed for class tool_import_kml
 	$_GET['button_tipo'] = $button_import_tipo;
 
 	# Create tool
