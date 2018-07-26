@@ -61,12 +61,16 @@ class tool_indexation extends tool_common {
 		# GET INVERSE RELATIONS TO CURRENT TAG
 		# And remove it
 			$locator = new locator();
+				$locator->set_type(DEDALO_RELATION_TYPE_INDEX_TIPO);
 				$locator->set_section_tipo($section_tipo);
 				$locator->set_section_id($section_id);
 				$locator->set_component_tipo($component_tipo);
-				$locator->set_tag_id($tag_id);
-			
+				$locator->set_tag_id($tag_id);				
+
+						
 			$ar_locators = search_development2::calculate_inverse_locators( $locator );
+				#dump($ar_locators, ' ar_locators ++ '.to_string());
+				#dump($locator, ' locator ++ '.to_string());
 
 			foreach ($ar_locators as $pseudo_locator) {
 
@@ -79,7 +83,7 @@ class tool_indexation extends tool_common {
 				$current_section_tipo 	 = $pseudo_locator->from_section_tipo;
 				$current_section_id   	 = $pseudo_locator->from_section_id;
 
-				$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($from_component_tipo,true);
+				$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($current_component_tipo,true);
 				$component 		= component_common::get_instance($modelo_name,
 																 $current_component_tipo,
 																 $current_section_id,
