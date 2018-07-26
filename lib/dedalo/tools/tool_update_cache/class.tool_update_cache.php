@@ -146,41 +146,7 @@ class tool_update_cache {
 				if ($result!==true) {
 					debug_log(__METHOD__." Error on regenerate componet $modelo_name - $current_component_tipo - $this->section_tipo - $section_id ".to_string(), logger::ERROR);
 				}
-				/*
-				switch ($modelo_name) {
-					
-					case 'component_state':						
-						$current_component 	= component_common::get_instance($modelo_name,
-																			 $current_component_tipo,
-																			 $section_id,
-																			 'edit',
-																			 DEDALO_DATA_NOLAN,
-																			 $this->section_tipo);				
-						$dato = $current_component->get_dato();
-						if ( empty($dato) ) {
-							$current_component->set_defaults();	// Set default values and save it
-							debug_log(__METHOD__." Updated with defaults component_state $current_component_tipo - $section_id ".to_string(), logger::DEBUG);
-						}
-						break;										
-					case 'component_portal':
-						$this->regenerate_portal($current_component_tipo, $section_id, $this->section_tipo, $modelo_name);
-						break;
-					case 'component_autocomplete':
-						$this->regenerate_autocomplete($current_component_tipo, $section_id, $this->section_tipo, $modelo_name);
-						break;
-					case 'component_radio_button':
-					case 'component_check_box':
-					case 'component_select':
-					case 'component_relation':
-					case 'component_filter':
-					case 'component_password':
-						continue; # Skip this components for now			
-						break;		
-					default:
-						$this->regenerate_component($current_component_tipo, $section_id, $this->section_tipo, $modelo_name);
-						break;
-				}
-				*/				
+				
 			}//end foreach ($related_terms as $current_component_tipo)
 
 			if(SHOW_DEBUG===true && DEDALO_ENTITY==='development') {
