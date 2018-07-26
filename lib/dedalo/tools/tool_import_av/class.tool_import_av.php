@@ -8,10 +8,9 @@ if(login::is_logged()!==true) die("<span class='error'> Auth error: please login
 
 # UPLOAD_DIR_CUSTOM is button_tipo
 $var_requested 		= common::get_request_var('button_tipo');
-//$upload_dir_custom = isset($_REQUEST['button_tipo']) ? '/'.$_REQUEST['button_tipo'] : '';
-$upload_dir_custom = !empty($var_requested) ? '/'.$var_requested : '';
+$upload_dir_custom  = !empty($var_requested) ? '/'.$var_requested : '';
 if (empty($upload_dir_custom)) {
-	error_log("WARNING TOOL_IMPORT_AV: EMPTY upload_dir_custom: $upload_dir_custom");
+	error_log("WARNING TOOL_IMPORT_AV: EMPTY upload_dir_custom");
 }
 
 # TOOL IMPORT IMAGES
@@ -30,8 +29,7 @@ class tool_import_av extends tool_common {
 
 
 	public function __construct($component_obj, $modo='button') {
-			#dump($component_obj, " component_obj ".to_string());
-		
+				
 		# Fix modo
 		$this->modo = $modo;
 
