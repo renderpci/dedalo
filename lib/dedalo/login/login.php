@@ -24,8 +24,7 @@
 
 	# Test su password
 	$su_default_password = (bool)$this->test_su_default_password();
-		#dump($su_default_password, '$su_default_password');die();
-		
+			
 	#
 	# Test if superuser psw is default
 	if( defined('DEDALO_TEST_INSTALL') && defined('DEDALO_TEST_INSTALL')===true && $su_default_password===true ) {
@@ -37,8 +36,6 @@
 		include($page_html);
 		return;
 	}
-
-
 	
 
 	# LANG JUMP
@@ -48,29 +45,12 @@
 	# USERNAME
 	$tipo_username	= DEDALO_USER_NAME_TIPO;
 	$username_label = RecordObj_dd::get_termino_by_tipo($tipo_username, DEDALO_DATA_LANG,true);
-	/*
-	$tipo_username	= NULL;
-	$html_username 	= '';
-	$name			= 'username';
-	if(isset($ar_components_obj[$name]) && is_object($ar_components_obj[$name])) {		
-		$ar_components_obj[$name]->set_id($name);
-		$tipo_username	= $ar_components_obj[$name]->get_tipo();
-		$html_username 	= $ar_components_obj[$name]->get_html();			#var_dump($ar_components_obj[$name]);		 
-	}
-	*/
+	
 	
 	# PASSWORD	
 	$tipo_password	= DEDALO_USER_PASSWORD_TIPO;
 	$password_label = RecordObj_dd::get_termino_by_tipo($tipo_password, DEDALO_DATA_LANG,true);
-	/*
-	$html_password 	= '';
-	$name			= 'password';
-	if(isset($ar_components_obj[$name]) && is_object($ar_components_obj[$name])) {
-		$tipo_password	= $ar_components_obj[$name]->get_tipo();	#dump($ar_components_obj[$name],"[$name]");
-		$ar_components_obj[$name]->set_id($name);
-		$html_password = $ar_components_obj[$name]->get_html();		
-	}
-	*/
+	
 	
 	# EMAIL
 	$html_email 	= '';
@@ -78,7 +58,7 @@
 	if(isset($ar_components_obj[$name]) && is_object($ar_components_obj[$name])) {
 		$ar_components_obj[$name]->set_ejemplo(NULL);
 		$ar_components_obj[$name]->set_id($name);
-		$html_email		= $ar_components_obj[$name]->get_html();			#var_dump($html_password);
+		$html_email		= $ar_components_obj[$name]->get_html();
 	}
 	
 	# BUTTON LOGIN (SEND) 
@@ -86,8 +66,7 @@
 	$name			= 'button_login';
 	if(isset($ar_components_obj[$name]) && is_object($ar_components_obj[$name])) {
 		$ar_components_obj[$name]->set_ejemplo(NULL);
-		$html_button_login		= $ar_components_obj[$name]->get_html();	#dump($ar_components_obj[$name]);
-			#dump($html_button_login);
+		$html_button_login		= $ar_components_obj[$name]->get_html();
 	}
 	
 	
@@ -105,6 +84,6 @@
 							break; false;
 	}
 		
-	$page_html	= 'html/' . get_class($this) . '_' . $file_name . '.phtml';		#dump($page_html);
+	$page_html	= 'html/' . get_class($this) . '_' . $file_name . '.phtml';
 	include($page_html);
 ?>
