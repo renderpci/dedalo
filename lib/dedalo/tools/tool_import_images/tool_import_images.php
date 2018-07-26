@@ -14,7 +14,7 @@
 	$tipo 				= $section_obj->get_tipo();
 	$section_tipo 		= $tipo;
 	$modo 				= $this->get_modo();
-	$context_name		= $_REQUEST['context_name'];
+	$context_name		= common::setVar('context_name');
 	#$modelo_name 		= RecordObj_dd::get_modelo_name_by_tipo($tipo);
 	$tool_name 			= get_class($this);
 
@@ -120,7 +120,7 @@
 							}							
 							
 							# IMAGES UPLOAD MANAGER
-							$button_tipo = isset($_REQUEST['button_tipo']) ? $_REQUEST['button_tipo'] : '';	# Needed for build var 'upload_dir_custom'
+							$button_tipo = common::setVar('button_tipo',''); # Needed for build var 'upload_dir_custom'
 							$upload_handler_url = DEDALO_LIB_BASE_URL . '/tools/tool_import_images/trigger.tool_import_images.php?button_tipo='.$button_tipo.'&top_tipo='.TOP_TIPO;
 							ob_start();
 							include('html/jquery_upload.phtml');
