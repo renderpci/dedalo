@@ -179,19 +179,42 @@ abstract class tool_common extends common {
 		# section_map is in properties of structure element 'section_map', inside current section structure
 		$section_map = section::get_section_map( $section_tipo );
 			#dump($section_map, ' section_map ++ '.to_string());
+
+		$separator = ' - ';
 		
 		if (is_object($section_map) && property_exists($section_map, "default") && property_exists($section_map->default, $type)) {
-			$element_tipo 	= $section_map->default->$type;
-			$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($element_tipo,true);
-			$component 		= component_common::get_instance($modelo_name,
-															 $element_tipo,
-															 $section_id,
-															 'list',
-															 DEDALO_DATA_LANG,
-															 $section_tipo);			
+			
+			if (is_array($section_map->default->$type)) {
+				// Is json encoded array
+				$ar_component_tipo = $section_map->default->$type;
+			}else{
+				// Is string
+				$ar_component_tipo = [$section_map->default->$type];
+			}
+
+			$ar_labels = [];
+			$ar_values = [];			
+			foreach ($ar_component_tipo as $key => $element_tipo) {
+				
+				$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($element_tipo,true);
+				$component 		= component_common::get_instance($modelo_name,
+																 $element_tipo,
+																 $section_id,
+																 'list',
+																 DEDALO_DATA_LANG,
+																 $section_tipo);
+				$ar_labels[] = $component->get_label();
+
+				$value = $component->get_valor();
+				if (!empty($value)) {			
+					$ar_values[] = $value;
+				}						
+			}
+						
 			$response = new stdClass();
-				$response->label = $component->get_label();
-				$response->value = $component->get_valor();			
+				$response->label = implode($separator, $ar_labels);
+				$response->value = implode($separator, $ar_values);
+
 		}else{
 			$response = null;
 		}
