@@ -36,64 +36,70 @@ function export_list($json_data) {
 			}
 		}
 
+	$seconds = 60 * 15; set_time_limit($seconds);
+
 	# Write session to unlock session file
 	session_write_close();
 
-	$seconds = 60 * 10; set_time_limit($seconds); 
 
+	try{
+		# Reset msg
+		$response->msg = '';	
 
-	# Reset msg
-	$response->msg = '';	
-
-	# SEARCH_OPTIONS
-		$search_options_id    = $section_tipo; // section tipo like oh1
-		$saved_search_options = section_records::get_search_options($search_options_id);
-	
-	# SEARCH_QUERY_OBJECT
-		# Use saved search options (deep cloned to avoid propagation of changes !)
-		$search_options 	 = unserialize(serialize($saved_search_options));
-		$search_query_object = $search_options->search_query_object;
-			$search_query_object->limit   = 0;  // unset limit
-			$search_query_object->offset  = 0;  // unset offset
-			$search_query_object->order   = false;  // unset order
-			$search_query_object->select  = []; // unset select
-	
-	# SEARCH
-		$search_develoment2  = new search_development2($search_query_object);
-		$rows_data 		 	 = $search_develoment2->search();
-	
-	
-	$resolve_references = true;
-	$n_records_published= 0;	
-	foreach ((array)$rows_data->ar_records as $row) {
+		# SEARCH_OPTIONS
+			$search_options_id    = $section_tipo; // section tipo like oh1
+			$saved_search_options = section_records::get_search_options($search_options_id);
 		
-		$section_id 	= (int)$row->section_id;
-		$section_tipo 	= (string)$row->section_tipo;
+		# SEARCH_QUERY_OBJECT
+			# Use saved search options (deep cloned to avoid propagation of changes !)
+			$search_options 	 = unserialize(serialize($saved_search_options));
+			$search_query_object = $search_options->search_query_object;
+				$search_query_object->limit   = 0;  // unset limit
+				$search_query_object->offset  = 0;  // unset offset
+				$search_query_object->order   = false;  // unset order
+				$search_query_object->select  = []; // unset select
 		
-		$export_result = tool_diffusion::export_record($section_tipo, $section_id, $diffusion_element_tipo, $resolve_references=true);	
+		# SEARCH
+			$search_develoment2  = new search_development2($search_query_object);
+			$rows_data 		 	 = $search_develoment2->search();
+		
+		
+		$resolve_references = true;
+		$n_records_published= 0;	
+		foreach ((array)$rows_data->ar_records as $row) {
+			
+			$section_id 	= (int)$row->section_id;
+			$section_tipo 	= (string)$row->section_tipo;
+			
+			$export_result = tool_diffusion::export_record($section_tipo, $section_id, $diffusion_element_tipo, $resolve_references=true);	
 
-		if($export_result->result==true) {
-			$n_records_published++;
+			if($export_result->result==true) {
+				$n_records_published++;
+			}else{
+				$response->msg .= $export_result->msg;
+				debug_log(__METHOD__." export_result ".to_string($export_result), logger::DEBUG);
+			}
+		}
+		$response->n_records_published = $n_records_published;	
+
+		if ($n_records_published>0) {
+			#echo "Published record: $section_id ";
+			$response->result = true;
+			$response->msg .= sprintf("<span class=\"ok\">Ok. Published %s records successfully</span>",$n_records_published);
+			
 		}else{
-			$response->msg .= $export_result->msg;
-			debug_log(__METHOD__." export_result ".to_string($export_result), logger::DEBUG);
+			$response->result = false;
+			$response->msg .= "<span class=\"warning\">Warning. Error on publish records. $n_records_published records area publish</span>";
+			if(SHOW_DEBUG) {
+				#dump($response, ' response ++ '.to_string());;
+			}
 		}
-	}
-	$response->n_records_published = $n_records_published;	
-
-	if ($n_records_published>0) {
-		#echo "Published record: $section_id ";
-		$response->result = true;
-		$response->msg .= sprintf("<span class=\"ok\">Ok. Published %s records successfully</span>",$n_records_published);
 		
-	}else{
+	}catch (Exception $e) {
 		$response->result = false;
-		$response->msg .= "<span class=\"warning\">Warning. Error on publish records. $n_records_published records area publish</span>";
-		if(SHOW_DEBUG) {
-			#dump($response, ' response ++ '.to_string());;
-		}
+		$response->msg 	  = 'EXCEPTION: ' . $e->getMessage();
 	}
-	
+
 
 	# Debug
 	if(SHOW_DEBUG===true) {
@@ -118,7 +124,7 @@ function export_list($json_data) {
 function export_record($json_data) {
 	global $start_time;
 
-	set_time_limit ( $seconds=300 ); // Avoid some infinite loop cases when data is bad formed
+	$seconds = 60 * 5; set_time_limit($seconds); // Avoid some infinite loop cases when data is bad formed	
 
 	# Write session to unlock session file
 	session_write_close();	
@@ -139,10 +145,18 @@ function export_record($json_data) {
 			}
 		}	
 
-	$result = tool_diffusion::export_record($section_tipo, $section_id, $diffusion_element_tipo);
-
-	$response->result = $result->result;
-	$response->msg 	  = $result->msg;
+	
+	try{
+		$result = tool_diffusion::export_record($section_tipo, $section_id, $diffusion_element_tipo);
+		
+		$response->result = $result->result;
+		$response->msg 	  = $result->msg;
+		
+	}catch (Exception $e) {
+		$response->result = false;
+		$response->msg 	  = 'EXCEPTION: ' . $e->getMessage();
+	}
+	
 
 	# Debug
 	if(SHOW_DEBUG===true) {
@@ -168,8 +182,11 @@ function export_record($json_data) {
 function diffusion_complete_dump($json_data) {
 	global $start_time;
 
+	$seconds = 60 * 30; set_time_limit($seconds); // Avoid some infinite loop cases when data is bad formed
+
 	# Write session to unlock session file
 	session_write_close();
+	
 
 	$response = (object)tool_diffusion::diffusion_complete_dump();
 
