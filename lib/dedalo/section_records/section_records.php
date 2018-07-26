@@ -33,9 +33,7 @@
 					$rows_paginator_html= '';
 
 					// CONTEXT
-					//$context_name 		= isset($_GET['context_name']) ? $_GET['context_name'] : false;
-					$context_name 			= common::get_request_var('context_name');
-						#dump($context_name, ' context_name edit ++ '.to_string(common::get_request_var('context')));
+					$context_name = common::get_request_var('context_name');
 
 					switch (true) {
 						case (isset($search_options->save_handler) && $this->search_options->save_handler!=='database'):
