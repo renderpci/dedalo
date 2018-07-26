@@ -59,7 +59,8 @@
 					
 						#
 						# PORTAL BUTTONS: SHOW ALL / SHOW FILTERED 
-						# Add buttons for tool_portal mode (modo is 'list' but url request contain var m=tool_portal)
+						# Add buttons for tool_portal mode (modo is 'list' but url request contain var m=tool_portal)						
+						/*
 						if ( common::get_request_var('m')=='tool_portal' ) {
 
 							$current_btn_label = label::get_label('mostrar_todos');
@@ -67,7 +68,7 @@
 
 							$html_buttons .= "<div id=\"btn_tool_portal_show_full\" class=\"css_button_generic btn_inside_section_buttons_container $current_btn_class\" ";
 							#$html_buttons .= "onclick=\"tool_portal.show_more_toggle(this)\" ";
-							$html_buttons .= "onclick=\"search.show_all(this)\" ";
+							$html_buttons .= "onclick=\"search2.show_all(this, true)\" ";
 							#$html_buttons .= "data-search_options_session_key=\"$search_options_session_key\" ";
 							$html_buttons .= "data-mode=\"$current_btn_class\" ";							
 							$html_buttons .= ">";
@@ -79,7 +80,7 @@
 							$html_buttons .= "</span>";
 							$html_buttons .= "</div>";
 						}//end if (isset($_REQUEST['m']) && $_REQUEST['m']=='tool_portal') {
-
+						*/
 
 						#
 						# SECTION TOP BUTTONS (new, stats, print, etc)
