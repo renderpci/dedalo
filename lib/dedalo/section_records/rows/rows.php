@@ -96,9 +96,16 @@
 					# Note row is a object
 					foreach($row as $current_component_tipo => $db_value) {						
 						# Skip non component columns
-						if ($current_component_tipo==='section_id' || $current_component_tipo==='section_tipo' || strpos($current_component_tipo, '_order')!==false) continue;
+						if ($current_component_tipo==='section_id' || $current_component_tipo==='section_tipo' || $current_component_tipo==='id' || strpos($current_component_tipo, '_order')!==false) continue;
 	
 						$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_component_tipo,true);
+
+						if(SHOW_DEBUG===true) {
+							if (empty($modelo_name)) {
+								trigger_error("Error. Empty modelo_name for component: ".to_string($current_component_tipo));
+								dump($current_component_tipo, ' current_component_tipo ++ '.to_string());
+							}
+						}
 						
 						# NOTIFIED : Notificamos la carga del component a common
 						if ($notified===false) {
