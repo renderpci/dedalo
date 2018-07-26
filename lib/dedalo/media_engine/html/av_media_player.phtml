@@ -10,17 +10,20 @@
 print $css_link_code;
 print css::build_tag(DEDALO_LIB_BASE_URL .'/media_engine/css/av_media_player.css');
 ?>
+<?php #print js::build_tag(DEDALO_LIB_BASE_URL . '/common/js/enviroment.js.php'); ?>
+<?php 
+$page_globals = new stdClass();
+	# version
+	$page_globals->dedalo_version 			= DEDALO_VERSION;
+	# lang
+	$page_globals->dedalo_application_lang 	= DEDALO_APPLICATION_LANG;
+	$page_globals->dedalo_data_lang 		= DEDALO_DATA_LANG;
+	$page_globals->dedalo_data_nolan 		= DEDALO_DATA_NOLAN;	
+	# modo
+	$page_globals->modo 					= isset($modo) ? $modo : null;
+?>
 <script>
-var DEDALO_LIB_BASE_URL	= '<?php echo DEDALO_LIB_BASE_URL ?>' ;
-var page_globals = new Object();
-	page_globals.dedalo_version 		 = '<?php echo DEDALO_VERSION ?>'
-	page_globals.dedalo_application_lang = '<?php echo DEDALO_APPLICATION_LANG ?>'
-	page_globals.dedalo_data_lang		 = '<?php echo DEDALO_DATA_LANG ?>'
-	page_globals.dedalo_data_nolan		 = '<?php echo DEDALO_DATA_NOLAN ?>'
-	page_globals._parent				 = '<?php #echo $parent ?>'
-	page_globals.modo					 = '<?php echo $modo ?>'
-	page_globals.caller_id				 = '<?php #echo $caller_id ?>'
-	page_globals.caller_tipo			 = '<?php #echo $caller_tipo ?>'
+const page_globals=<?php echo SHOW_DEBUG===true ? json_encode($page_globals, JSON_PRETTY_PRINT) : json_encode($page_globals) ?>;
 </script>
 <?php echo $js_link_code ?>
 
