@@ -104,6 +104,7 @@ class menu extends common {
 					case ($option==='create_link'):
 
 						# TESAURO LINK IN MENU
+						/*
 						if(SHOW_DEBUG===true) {						
 						$tesauro_html = '';
 						$tesauro_html .= '<li class="has-sub menu_li_inactive">';
@@ -116,6 +117,7 @@ class menu extends common {
 						$tesauro_html .= "</li>";
 						$menu_structure_html .= $tesauro_html;
 						}
+						*/
 
 						# STRUCTURE LINK IN MENU
 						if(SHOW_DEBUG===true && $logged_user_is_global_admin===true && file_exists(DEDALO_LIB_BASE_PATH.'/dd')) {
