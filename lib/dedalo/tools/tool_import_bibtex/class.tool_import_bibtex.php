@@ -130,11 +130,9 @@ class tool_import_bibtex extends tool_common {
 	public static function set_up() {
 
 		$var_requested 		= common::get_request_var('button_tipo');
-		$var_requested_t	= common::get_request_var('t');
-		#if (isset($_REQUEST['button_tipo']) && isset($_REQUEST['t']) ) {
+		$var_requested_t	= common::get_request_var('t');		
 		if (!empty($var_requested) && !empty($var_requested_t) ) {
 
-			#$button_import_obj = new button_import($_REQUEST['button_tipo'], null, $_REQUEST['t']);
 			$button_import_obj = new button_import($var_requested, null, $var_requested_t);
 			$propiedades 	   = json_handler::decode($button_import_obj->RecordObj_dd->get_propiedades());
 			if (isset($propiedades->process_script)) {
