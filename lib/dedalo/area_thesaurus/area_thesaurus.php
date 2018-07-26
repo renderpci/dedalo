@@ -69,8 +69,7 @@
 				];
 				foreach ($ar_component_name as $current_modelo_name) {
 					common::notify_load_lib_element_tipo($current_modelo_name, 'edit');
-				}*/
-				
+				}*/				
 
 
 				#
@@ -78,11 +77,11 @@
 				# Get all available sections except when filters are present
 				$hierarchy_types_filter = false;
 				if (isset($_GET['hierarchy_types'])) {
-					$hierarchy_types_filter = json_decode($_GET['hierarchy_types']);
+					$hierarchy_types_filter = json_decode( safe_xss($_GET['hierarchy_types']) );
 				}
 				$hierarchy_sections_filter = false;
 				if (isset($_GET['hierarchy_sections'])) {
-					$hierarchy_sections_filter = json_decode($_GET['hierarchy_sections']);
+					$hierarchy_sections_filter = json_decode( safe_xss($_GET['hierarchy_sections']) );
 				}
 				$hierarchy_sections = $this->get_hierarchy_sections($hierarchy_types_filter, $hierarchy_sections_filter);
 				
