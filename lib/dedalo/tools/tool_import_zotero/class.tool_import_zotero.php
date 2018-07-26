@@ -49,7 +49,7 @@ class tool_import_zotero extends tool_common {
 
 		if (isset($_REQUEST['button_tipo']) && isset($_REQUEST['t']) ) {
 
-			$button_import_obj = new button_import($_REQUEST['button_tipo'], null, $_REQUEST['t']);
+			$button_import_obj = new button_import( safe_xss($_REQUEST['button_tipo']), null, safe_xss($_REQUEST['t']) );
 			$propiedades 	   = json_handler::decode($button_import_obj->RecordObj_dd->get_propiedades());
 			if (isset($propiedades->process_script)) {
 				if ( !include_once(DEDALO_LIB_BASE_PATH.$propiedades->process_script) ) {
