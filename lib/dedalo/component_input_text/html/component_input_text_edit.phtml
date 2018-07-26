@@ -152,24 +152,29 @@
 
 				# JS
 				if($context->context_name==='default') {
-				$html_content .= "<script>";				
-				// Init
-				$init_options = array(
-					"uid" 				 => $identificador_unico,
-					"modo" 				 => $modo,
-					"propiedades" 		 => $propiedades,
-					"traducible" 		 => $traducible,
-					"with_lang_versions" => $with_lang_versions
-				);
-				$html_content .= "component_input_text.init(".json_encode($init_options).");";
-				// First test on load element
-				if ($mandatory===true) {
-					$html_content .= "component_input_text.mandatory('{$id_wrapper}');";
-				}
-				if ($fix_tool_lang===true) {
-					$html_content .= "set_localStorage('last_target_lang','$lang');";
-				}
-				$html_content .= "</script>";
+					
+					#
+					# JS Init component
+					$html_content .= '<script>';
+					# Init component
+					$init_options = new stdClass();
+						$init_options->component_name 		= $component_name;
+						$init_options->wrapper_id 			= $id_wrapper;
+						$init_options->uid 					= $identificador_unico;
+						$init_options->modo 				= $modo;
+						$init_options->propiedades 			= $propiedades;
+						$init_options->traducible 			= $traducible;
+						$init_options->with_lang_versions 	= $with_lang_versions;
+					$html_content .= 'component_common.init('.json_encode($init_options).');';
+
+					// First test on load element
+					if ($mandatory===true) {
+						$html_content .= "component_input_text.mandatory('{$id_wrapper}');";
+					}
+					if ($fix_tool_lang===true) {
+						$html_content .= "set_localStorage('last_target_lang','$lang');";
+					}
+					$html_content .= '</script>';
 				}
 				
 				break;
