@@ -70,10 +70,10 @@
 /* COMMON
 ------------------------------------------------------ */
 	.tool_transcription_left, .tool_transcription_right {
-		display: block; 
-		height: 49.98%;
+		display: block;		
 		position: relative;
 		float: left;
+		height: 49.98%;
 		height: 98%;
 	}
 
@@ -81,7 +81,7 @@
 /* LEFT AREA (text)
 ------------------------------------------------------ */
 	.tool_transcription_left {
-		/*background-color: #86c4ca;*/
+		//background-color: #86c4ca;
 		width: 44.5%;  
 	}
 
@@ -282,8 +282,51 @@
 		---------------------------------------- */
 		.wrap_component.text_area_tool_transcription {
 			position: absolute;
-			height: calc(100% + 4px); //width: calc(100.5% + 4px); // Adjust as needed 
+			height: calc(100% + 1px); //width: calc(100.5% + 4px); // Adjust as needed 
 			//background-color: #40F588
 			//padding: 0;
 		}
+
+
+
+		// LEFT Override
+		#tool_transcription_left {
+
+			// TEXT AREA Override
+			.wrap_component.text_area_tool_transcription.viewing_glyphs {
+				height: 50vh;
+				background-color: #CDF6CF;
+				position: relative;
+				float: none;
+				display: block;
+				overflow: hidden;
+			}
+
+			// AUTOCOMPLETE HI Override
+			.wrap_component_tool_transcription {
+				height: 50vh;
+				background-color: #FAF6B1;
+				//display: none;
+
+				.content_data {
+					width: 100%;
+				}
+				.css_autocomplete_hi_button_close, .css_autocomplete_hi_valor {
+					display: none;
+				}
+
+				.toponymy_list_button_options {
+					position: relative;
+					top: 5px;
+					right: 5px;
+				}
+			}
+				
+		}
+
+
+		
+
+
+
 

@@ -163,7 +163,7 @@ function section_records_load_rows_history($json_data) {
 	
 	# SECTIONS_TIME_MACHINE : Array of tm_id records of current section current_tipo_section with status 'deleted'
 	$ar_sections_time_machine = (array)tool_time_machine::get_ar_sections_time_machine($current_tipo_section);
-		#dump($ar_sections_time_machine,'$ar_sections_time_machine');die();
+		#dump($ar_sections_time_machine,'$ar_sections_time_machine'); die();
 
 	if (empty($ar_sections_time_machine)) {
 		if(SHOW_DEBUG) {
@@ -184,7 +184,7 @@ function section_records_load_rows_history($json_data) {
 
 		# AR_LOCATORS : locator build
 		# For compatibility with standar section_records way of manage "get_rows_data", we convert tm_id to section_id_matrix inside locator object
-		# like '$locator->section_id_matrix = $tm_id'
+		# like '$locator->section_id = $tm_id'
 		$ar_locators=array();
 		foreach ($ar_sections_time_machine as $key => $tm_id) {
 			$locator = new stdClass();
