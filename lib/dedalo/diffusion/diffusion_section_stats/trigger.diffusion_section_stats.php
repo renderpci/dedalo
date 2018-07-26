@@ -4,7 +4,6 @@ require_once( dirname(dirname(dirname(__FILE__))).'/config/config4.php');
 
 #if(login::is_logged()!==true) die("<span class='error'> Auth error: please login </span>");
 
-	#dump($_REQUEST);
 
 # set vars
 	$vars = array('mode','launcher','date');
@@ -62,8 +61,7 @@ if($mode=='save_stats_data') {
 		);
 		
 		
-		if (SHOW_DEBUG) {		
-			#dump($_REQUEST);exit();
+		if (SHOW_DEBUG===true) {		
 			$date = component_date::get_timestamp_now_for_db();
 			error_log("-> launched save_stats_data from dedalo_cron $date");
 		}
