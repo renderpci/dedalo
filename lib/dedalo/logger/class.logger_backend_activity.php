@@ -197,7 +197,7 @@ class logger_backend_activity extends logger_backend {
 						$locator_user_id->set_section_id($user_id);
 						$locator_user_id->set_section_tipo(DEDALO_SECTION_USERS_TIPO);
 
-					$component_tipo = self::$_COMPONENT_QUIEN['tipo'];					
+					$component_tipo = self::$_COMPONENT_QUIEN['tipo'];
 
 					# Switch data version
 					if( $current_data_version[0] >= 4 && $current_data_version[1] >= 8 ) {
@@ -296,9 +296,11 @@ class logger_backend_activity extends logger_backend {
 					if ( !empty($user_id) && $user_id!=='unknow' ) {
 						$projects_dato = filter::get_user_projects($user_id);
 						# dump($projects_dato, ' $projects_dato ++ '.to_string());
-						foreach ($projects_dato as $project_locator) {
-							$project_locator->from_component_tipo = self::$_COMPONENT_PROYECTOS['tipo'];
-							$relations[] = $project_locator;
+						foreach ((array)$projects_dato as $project_locator) {
+							if (isset($project_locator->from_component_tipo)) {
+								$project_locator->from_component_tipo = self::$_COMPONENT_PROYECTOS['tipo'];
+								$relations[] = $project_locator;
+							}							
 						}
 					}
 
