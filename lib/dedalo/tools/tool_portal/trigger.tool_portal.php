@@ -96,8 +96,7 @@ function add_resource($json_data) {
 			$debug->portal_parent 		= $portal_parent;
 			$debug->portal_section_tipo = $portal_section_tipo;
 			$debug->rel_locator  		= $rel_locator;
-			$debug->prev_locator 		= $prev_locator;
-			$debug->request 			= $_REQUEST;
+			$debug->prev_locator 		= $prev_locator;			
 	
 		$response->debug = $debug;
 	}
