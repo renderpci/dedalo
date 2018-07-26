@@ -1,18 +1,17 @@
 <?php
 /*
 * CLASS TOOL_ADD_COMPONENT_DATA
+*
+*
 */
-
-
 class tool_add_component_data extends tool_common {
 
-
-	
 	
 
 	# av component
 	protected $component_obj ;
 	public $search_options;
+
 
 
 	/**
@@ -103,8 +102,7 @@ class tool_add_component_data extends tool_common {
 		
 
 		return (array)$ar_records;
-	}#end propagate_data
-
+	}//end propagate_data
 
 
 
