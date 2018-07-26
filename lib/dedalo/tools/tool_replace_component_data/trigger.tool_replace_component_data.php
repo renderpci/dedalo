@@ -5,7 +5,7 @@ header('Content-Type: text/event-stream');
 header('Cache-Control: no-cache'); // recommended to prevent caching of event data.
 
 
-	$bb = $_REQUEST['bb'];
+	$bb = safe_xss($_REQUEST['bb']);
 
 	for ($i=1; $i <= 10 ; $i++) { 
 
@@ -40,18 +40,17 @@ if(empty($mode)) exit("<span class='error'> Trigger: Error Need mode..</span>");
 
 
 
-
-
 /**
 * BUILD_SUBTITLES_TEXT
 */
-if ($mode=='replace_data') {
+if ($mode==='replace_data') {
 
-	$vars = array('component_tipo','parent','section_tipo','json_data');
+	$vars = array('json_data');
 		foreach($vars as $name) $$name = common::setVar($name);
 
+	
 	if (isset($json_data)) {
-		$data = json_decode($json_data);
+		$data = json_decode($json_data);	
 		foreach ($data as $key => $value) {
 			$$key = $value;
 		}
@@ -119,6 +118,5 @@ if ($mode=='replace_data') {
 
 
 	exit();
-
 }//end if ($mode=='replace_data')
 ?>
