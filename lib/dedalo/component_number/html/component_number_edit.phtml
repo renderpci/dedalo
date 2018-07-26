@@ -33,33 +33,43 @@
 							
 			case ($permissions>=2) :	//dump($from_modo, ' from_modo ++ '.to_string());
 						
-						if($modo !== 'edit_in_list'){
-							if($from_modo !== 'edit'){
-								$html_content .= "<div class=\"css_number_button_close\" onclick=\"component_common.change_mode_component(this, 'edit', '$from_modo')\"></div>";
-							}
-						}					
+				if($modo !== 'edit_in_list'){
+					if($from_modo !== 'edit'){
+						$html_content .= "<div class=\"css_number_button_close\" onclick=\"component_common.change_mode_component(this, 'edit', '$from_modo')\"></div>";
+					}
+				}					
 
-						$html_content .= "<input class=\"css_number\" type=\"text\" onchange=\"component_number.Save(this)\" ";
-						$html_content .= "name=\"{$input_name}\" ";
-						$html_content .= "data-tipo=\"{$tipo}\" ";
-						$html_content .= "data-section_tipo=\"{$section_tipo}\" ";
-						$html_content .= "data-parent=\"{$parent}\" ";
-						$html_content .= "data-lang=\"{$lang}\" ";
-						$html_content .= 'value="'.$dato_string.'" ';
-						$html_content .= "title=\"$html_title\" ";
-						$html_content .= "onkeyup=\"component_number.keyup_fix_number_format(this)\" ";
-						$html_content .= "/>";
-						
-						$html_content .= "<span class=\"css_span_log\"></span>";					
-						#$html_content .= "<span class=\"css_span_ejemplo\">$ejemplo</span>";						
-						
-						if(SHOW_DEBUG) {
-							$html_content .= "<span class=\"css_span_debugger debug_info\" id=\"debugger_{$tipo}\" >";
-							#$html_content .= "{$debugger}";
-							$html_content .= "Raw dato: ". var_export($dato,true);
-							$html_content .= "</span>";
-						}	
-						break;									
+				$html_content .= "<input class=\"css_number\" type=\"text\" onchange=\"component_number.Save(this)\" ";
+				$html_content .= "name=\"{$input_name}\" ";
+				$html_content .= "data-tipo=\"{$tipo}\" ";
+				$html_content .= "data-section_tipo=\"{$section_tipo}\" ";
+				$html_content .= "data-parent=\"{$parent}\" ";
+				$html_content .= "data-lang=\"{$lang}\" ";
+				$html_content .= 'value="'.$dato_string.'" ';
+				$html_content .= "title=\"$html_title\" ";
+				$html_content .= "onkeyup=\"component_number.keyup_fix_number_format(this)\" ";
+				$html_content .= "/>";
+				
+				$html_content .= "<span class=\"css_span_log\"></span>";					
+				#$html_content .= "<span class=\"css_span_ejemplo\">$ejemplo</span>";						
+				
+				if(SHOW_DEBUG) {
+					$html_content .= "<span class=\"css_span_debugger debug_info\" id=\"debugger_{$tipo}\" >";
+					#$html_content .= "{$debugger}";
+					$html_content .= "Raw dato: ". var_export($dato,true);
+					$html_content .= "</span>";
+				}
+
+				#
+				# JS Init component
+				$html_content .= '<script>';
+				# Init component
+				$init_options = new stdClass();
+					$init_options->component_name 	= $component_name;
+					$init_options->wrapper_id 		= $id_wrapper;
+				$html_content .= 'component_common.init('.json_encode($init_options).');';
+				$html_content .= '</script>';	
+				break;									
 		}
 
 		# Prepare content to show in page

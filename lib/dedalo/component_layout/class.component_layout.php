@@ -227,7 +227,7 @@ class component_layout extends component_common {
 							$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($terminoID,true);
 							# Exclude 'tools_search'
 							if(strpos($modelo_name, 'component_')!==false) {
-								$layout_map[$section_list_tipo][]	= $terminoID;
+								$layout_map[$section_list_tipo][] = $terminoID;
 							}								
 						}else{
 							error_log("Current section list don't have any component to show. Please configure properly this section list in structure");

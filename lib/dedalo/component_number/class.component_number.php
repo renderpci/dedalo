@@ -223,7 +223,7 @@ class component_number extends component_common {
 		$sequence_separator = ',';
 
         switch (true) {
-        	/*
+        	
         	# BETWEEN
 			case (strpos($q, $between_separator)!==false):
 				// Transform "12...25" to "12 AND 25"
@@ -233,11 +233,11 @@ class component_number extends component_common {
 
 				$query_object_one = clone $query_object;
 					$query_object_one->operator = '>=';
-					$query_object_one->q_parsed	= $first_val;
+					$query_object_one->q_parsed	= '\''.$first_val.'\'';
 
 				$query_object_two = clone $query_object;
 					$query_object_two->operator = '<=';
-					$query_object_two->q_parsed	= $second_val;
+					$query_object_two->q_parsed	= '\''.$second_val.'\'';
 
 				// Return an array instead object
 				#$query_object = [$query_object_one,$query_object_two];
@@ -259,7 +259,7 @@ class component_number extends component_common {
 					if ($value<1) continue;
 					$query_object_current = clone $query_object;
 						$query_object_current->operator = '=';
-						$query_object_current->q_parsed	= $value;
+						$query_object_current->q_parsed	= '\''.$value.'\'';
 					$ar_result[] = $query_object_current;
 				}
 				// Return an subquery instead object
@@ -268,7 +268,7 @@ class component_number extends component_common {
 					$new_object->{$cop} = $ar_result;
 				$query_object = $new_object;
 				break;
-				*/
+				/**/
 			# BIGGER OR EQUAL THAN
 			case (substr($q, 0, 2)==='>='):
 				$operator = '>=';
@@ -331,6 +331,25 @@ class component_number extends component_common {
 
 		return $ar_operators;
 	}//end search_operators_info
+
+
+
+	/**
+	* GET_DIFFUSION_VALUE
+	* Calculate current component diffsuion value for target field (usually a mysql field)
+	* Used for diffusion_mysql to unify components diffusion value call
+	* @return string $diffusion_value
+	*
+	* @see class.diffusion_mysql.php
+	*/
+	public function get_diffusion_value( $lang ) {
+		
+		$dato 			 = parent::get_dato();
+		$diffusion_value = intval($dato);
+		
+
+		return (int)$diffusion_value;
+	}//end get_diffusion_value
 
 
 
