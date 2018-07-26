@@ -359,7 +359,7 @@ abstract class JSON_RecordDataBoundObject {
 			if (isset(debug_backtrace()[1]['function'])) {
 				$strQuery = '-- search_free : '.debug_backtrace()[1]['function']."\n".$strQuery;
 			}
-		}		
+		}
 		# $result = pg_query(DBi::_getConnection(), $strQuery);	
 
 
