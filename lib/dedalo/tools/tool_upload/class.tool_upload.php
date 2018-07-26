@@ -30,8 +30,9 @@ class tool_upload extends tool_common {
 
 		$this->file_obj = new stdClass();
 
-	}
 
+		return true;
+	}//end __construct
 
 
 
@@ -48,9 +49,7 @@ class tool_upload extends tool_common {
 			$response->result 			 = 0;
 			$response->html 			 = null;
 			$response->update_components = [];
-
-		
-		
+			
 
 		# Current component name
 		$component_name = get_class( $this->component_obj );
@@ -58,7 +57,7 @@ class tool_upload extends tool_common {
 		# VARS : Fix
 		switch ($component_name) {
 			case 'component_av' :
-					$SID 					= $this->component_obj->get_video_id();						
+					$SID 					= $this->component_obj->get_video_id();
 					#$folder_path			= DEDALO_MEDIA_BASE_PATH . DEDALO_AV_FOLDER . '/' . $quality;
 					$this->component_obj->set_quality($quality);
 					$folder_path			= $this->component_obj->get_target_dir();
@@ -66,14 +65,21 @@ class tool_upload extends tool_common {
 					$current_extension 		= DEDALO_AV_EXTENSION;
 					$ar_allowed_extensions 	= unserialize(DEDALO_AV_EXTENSIONS_SUPPORTED);
 					break;
-			case 'component_image' :					
-					$SID 					= $this->component_obj->get_image_id();						
+			case 'component_image' :
+					$SID 					= $this->component_obj->get_image_id();
 					#$folder_path			= DEDALO_MEDIA_BASE_PATH . DEDALO_IMAGE_FOLDER . '/' . $quality;
 					$this->component_obj->set_quality($quality);
 					$folder_path			= $this->component_obj->get_target_dir();	//DEDALO_MEDIA_BASE_PATH . DEDALO_IMAGE_FOLDER .'/'. $this->aditional_path . $this->get_quality() ;
 						#dump($folder_path,'$folder_path'); die();
 					$current_extension 		= DEDALO_IMAGE_EXTENSION;
 					$ar_allowed_extensions 	= unserialize(DEDALO_IMAGE_EXTENSIONS_SUPPORTED);
+					break;
+			case 'component_svg' :
+					$SID 					= $this->component_obj->get_svg_id();					
+					$folder_path			= $this->component_obj->get_target_dir();	//DEDALO_MEDIA_BASE_PATH . DEDALO_IMAGE_FOLDER .'/'. $this->aditional_path . $this->get_quality() ;
+						#dump($folder_path,'$folder_path'); die();
+					$current_extension 		= DEDALO_SVG_EXTENSION;
+					$ar_allowed_extensions 	= unserialize(DEDALO_SVG_EXTENSIONS_SUPPORTED);
 					break;
 			case 'component_pdf' : 
 					$SID 					= $this->component_obj->get_pdf_id();
@@ -395,9 +401,14 @@ class tool_upload extends tool_common {
 	* @param $ar_allowed_extensions array
 	*/
 	protected function rename_old_files_if_exists( $SID, $folder_path, $ar_allowed_extensions ) {	//$SID, $folder_path, $nombre_archivo, $curent_allowed_extension, $ar_allowed_extensions
-
+	
+		
 		# DELETED FOLDER : Verificamos / creamos el directorio "deleted"
-		if(!file_exists($folder_path . "/deleted")) mkdir($folder_path."/deleted", 0777,true);
+		if(!file_exists($folder_path . "/deleted")) {
+			if(!mkdir($folder_path."/deleted", 0777,true)) {
+				trigger_error("Error on create dir: $folder_path . Permission denied");
+			}
+		}
 
 		$dateMovement = date("Y-m-d_Gis"); # like 2011-02-08_182033
 
