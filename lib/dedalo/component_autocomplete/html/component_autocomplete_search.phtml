@@ -20,6 +20,7 @@
 	print "data-search_query_object='{$json_search_query_object}' ";
 	print "data-filter_by_list='{$json_filter_by_list}' ";
 	print 'title="'.search_development2::search_options_title( $this->search_operators_info() ).'" ';
+	print "data-divisor=\"$divisor\" ";
 	print ">";
 
 	# ETIQUETA (LABEL)
@@ -91,10 +92,10 @@
 								$current_locator = new locator();
 									$current_locator->set_type(DEDALO_RELATION_TYPE_LINK); # Add relation type (always link)
 									$current_locator->set_section_id($current_value->section_id);
-									$current_locator->set_section_tipo($current_value->section_tipo);										
+									$current_locator->set_section_tipo($current_value->section_tipo);
 									$current_locator->set_from_component_tipo($f_component_tipo); # Add from_component_tipo
 								
-								$current_locator_json = json_encode($current_locator);						
+								$current_locator_json = json_encode($current_locator);
 
 								$input_id = md5($hs_value);
 								$autosearch_options_html .= "<li>";
@@ -232,20 +233,23 @@
 			#
 			# ROW
 			$html_content .= "<ul class=\"css_autocomplete_valor in_search_mode\" data-role=\"autocomplete_valor\">";			
-			foreach ($ar_valor as $current_value => $value) {
+			foreach ($ar_valor as $current_value => $value_obj) {
+
+				$current_label = $value_obj->label;
+				$current_value = json_encode($value_obj->value);
 
 				$html_content .= "<li>";
 
 				# BTN DELETE
 				$html_content .= "<div class=\"icon_bs link css_autocomplete_button_delete\" ";
 				$html_content .= "data-tipo=\"{$tipo}\" ";
-				$html_content .= "data-current_value='$current_value' ";
+				$html_content .= "data-current_value='".$current_value."' ";
 				$html_content .= "data-role=\"autocomplete_button_delete\" ";
 				$html_content .= "title=\"$label $parent\" ";
 				$html_content .= "onclick=\"component_autocomplete.delete(this)\"></div>";
 
 				# VALUE . STRING RESOLVED TO SHOW
-				$html_content .= $value;
+				$html_content .= $current_label;
 				if(SHOW_DEBUG===true) {
 					#$html_content .= " <span class=\"notes\">$current_value</span>";
 				}
