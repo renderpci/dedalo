@@ -80,7 +80,7 @@ class search_development2_tm extends search_development2 {
 		foreach ($search_query_object->select as $key => $select_object) {
 
 			$path 				 = $select_object->path;
-			$table_alias 		 = $this->get_table_alias_from_path($path);
+			$table_alias 		 = $this->get_table_alias_from_path($path); // $this->matrix_table; //
 			$last_item 		 	 = end($path);
 			$component_tipo 	 = $last_item->component_tipo;
 			$column_alias 		 = $component_tipo;
