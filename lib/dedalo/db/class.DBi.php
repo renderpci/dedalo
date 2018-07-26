@@ -90,8 +90,6 @@ abstract class DBi {
 		$database=MYSQL_DEDALO_DATABASE_CONN,
 		$port=MYSQL_DEDALO_DB_PORT_CONN,
 		$socket=MYSQL_DEDALO_SOCKET_CONN) {
-
-			#dump($host, "$host, $user, $password, $database, $port, $socket");
 		
 		static $mysqli;
 
@@ -117,26 +115,28 @@ abstract class DBi {
 		$mysqli = mysqli_init();
 		
 		if (!$mysqli) {
-			die('Dedalo '.__METHOD__ . ' Failed mysqli_init');
+			#die('Dedalo '.__METHOD__ . ' Failed mysqli_init');
+			throw new Exception(' Dedalo '.__METHOD__ . ' Failed mysqli_init ', 1);
 		}
 
 		#$mysqli->options(MYSQLI_OPT_INT_AND_FLOAT_NATIVE, 1);
 		
 		# AUTOCOMMIT : SET AUTOCOMMIT (Needed for InnoDB save)
 		if (!$mysqli->options(MYSQLI_INIT_COMMAND, 'SET AUTOCOMMIT = 1')) {
-			die('Dedalo '.'Setting MYSQLI_INIT_COMMAND failed');
+			#die('Dedalo '.'Setting MYSQLI_INIT_COMMAND failed');
+			throw new Exception(' Connect Error. Setting MYSQLI_INIT_COMMAND failed ', 1);
 		}
 		
 		# TIMEOUT : SET CONNECT_TIMEOUT
 		if (!$mysqli->options(MYSQLI_OPT_CONNECT_TIMEOUT, 10)) {
-			die('Dedalo '.'Setting MYSQLI_OPT_CONNECT_TIMEOUT failed');
+			#die('Dedalo '.'Setting MYSQLI_OPT_CONNECT_TIMEOUT failed');
+			throw new Exception(' Connect Error. Setting MYSQLI_OPT_CONNECT_TIMEOUT failed ', 1);
 		}
 		
 		# CONNECT
-		if (!$mysqli->real_connect($host, $user, $password, $database,  $port, $socket)) {
-			die( wrap_pre('Dedalo '.'Connect Error (' . mysqli_connect_errno() . ') '
-					. mysqli_connect_error())
-					);
+		if (!$mysqli->real_connect($host, $user, $password, $database,  $port, $socket)) {			
+			throw new Exception(' Connect Error on mysqli->real_connect '.mysqli_connect_errno().' - '.mysqli_connect_error(), 1);
+			#die( wrap_pre('Dedalo '.'Connect Error (' . mysqli_connect_errno() . ') ' . mysqli_connect_error()) );
 		}
 		
 		#echo 'Success... ' . $mysqli->host_info . "\n";
@@ -146,10 +146,9 @@ abstract class DBi {
 			printf("Error loading character set utf8: %s\n", $mysqli->error);
 		}
 
-		#dump($mysqli);
 				
 		return $mysqli;
-	}
+	}//end _getConnection_mysql
 
 
 
