@@ -1,0 +1,105 @@
+<?php
+
+	# VISUALIZADOR HTML
+	$html    = "<!-- $tool_name $modo -->";
+
+	#
+	# TOOL HEADER
+	include($tool_name.'_header.phtml');
+
+
+	#
+	# TOOL BODY
+	$html .= '<div class="wrap_'.$tool_name.'_page">';
+
+
+		# SVG Selector
+		$html .= '<div class="container_left">';		
+		$current_tipo 		= $svg_source_tipo;
+		$current_model 		= RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
+		$current_component 	= component_common::get_instance($current_model,
+															 $current_tipo,
+															 1,
+															 'edit',
+															 DEDALO_DATA_NOLAN,
+															 $section_tipo);
+		$html .= $current_component->get_html();
+		$html .= '</div>';//end container_left
+
+
+		# Components
+		$html .= '<div class="container_rigth">';
+		$ar_used_values = [];
+		foreach ($section_groups as $current_section_group) {
+
+			$section_group_tipo = $current_section_group->tipo;
+
+			$sg_ar_components = array_filter($ar_components, function($element) use($section_group_tipo) {
+				return ($element->section_group===$section_group_tipo);
+			});
+
+			$html .= '<div class="section_group_container container_'.$section_group_tipo.'">';
+				
+				foreach ($sg_ar_components as $key => $current_element) {
+
+					$current_component  = $current_element->component;
+					$current_tipo 		= $current_component->get_tipo();
+	
+					# Skip propiedades defined skip_components
+					if (in_array($current_tipo, $skip_components)) {
+						continue;
+					}else{
+						if (!isset($current_component->context)) {
+							$current_component->context = new stdClass();
+						}
+						$current_component->context->skip_components = $skip_components;
+					}
+	
+					#if (get_class($current_component)!=='component_portal') {
+						$current_component->set_modo($tool_name);
+					#}
+
+					$current_component_dato = $current_component->get_dato();
+						#dump($current_component_dato, '$current_component_dato ++ '.to_string());
+					if (isset($current_component_dato[0])) {
+						$pseudo_locator_dato = $current_component_dato[0]->section_tipo .'_'. $current_component_dato[0]->section_id;
+					}else{
+						$pseudo_locator_dato = $key;
+					}					
+										
+					if (in_array($pseudo_locator_dato, $ar_used_values)) {
+						
+						$value  = "Sorry. Target component value duplicate found! <div class=\"notes\">" .to_string($current_component_dato[0])."</div>";
+						$value .= "Please change <i>".$current_component->get_label()."</i> value in <i>".$section_label."</i>";
+						$value .= "<br><h4><a href=\"".DEDALO_LIB_BASE_URL."/main/?t=$section_tipo&id=$section_id\" target=\"_blank\">Go to section: ".$section_label."</a></h4>";
+					
+					}else{
+
+						$value = $current_component->get_html();
+					}
+
+					$ar_used_values[] = $pseudo_locator_dato; 
+
+					#
+					# Component wrap
+					$html .= '<div class="component_container container_'.$current_tipo.'">';
+					$html .= $value;
+					$html .= '</div>';
+				}
+
+			$html .= '</div>';
+		}
+		$html .= '</div>';//end container_rigth
+
+
+		
+	$html .= '</div>'; //<!-- /wrap_tool_description_page -->"; //page body wrap
+
+
+	# INSPECTOR LOG TOOL_LANG ()
+	$html 	.= "<div id=\"inspector_log\" class=\"tool_inspector_log\"> </div>";
+
+
+
+	print $html;		
+?>

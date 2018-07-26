@@ -1,0 +1,131 @@
+// Vars
+@common_css: "../../../common/css";
+
+// Usage
+@import "@{common_css}/library.less";
+
+
+html {
+
+}
+body {
+ 	display: flex;
+    flex-direction: column;
+}
+
+.html_page_wrap_tool_description, .html_page_wrap_tool_description .content_html {
+	height: 100%;
+}
+
+.tool_description_icon {
+	background-color: @color_trascription;
+	background-image: url(../../../themes/default/icon_transcription_hover.svg);
+	// Adjust icon size
+	background-size: 18px !important;
+    background-position-y: 3px !important;
+    background-position-x: 6px !important;
+} 
+
+/* TOOL_DESCRIPTION CASE
+	--------------------------------------------- */
+	.html_page_wrap_tool_description .content_data {
+		width: 100%;		
+	}
+
+
+/* HEADER
+------------------------------------------------------ */
+	.header_tool {
+
+		}
+		.header_tool .select_fast_lang_switch {
+			float: left;
+			position: relative;	
+			top: 3px;
+			left: 10px;
+			text-transform: capitalize;
+			padding-right: 20px;
+		}
+		//.header_tool .lang_selector_in_header .select_fast_lang_switch select {
+		.header_tool .lang_selector_in_header .select_fast_lang_switch{
+			opacity: 1;
+			margin-left: 5px;
+			margin-right: 10px;
+			color: #000000;
+			max-width: 84px;
+		}
+		.header_tool .lang_selector_in_header{
+			padding: 2px;
+			padding-right: 10px;
+			padding-left: 10px;
+		}
+		.header_tool #header_info {
+			display:block;
+			float: left;
+			position: relative;
+			margin-left: 15px;
+			top: 8px;
+			line-height: 1em;
+		}
+
+
+
+/* PAGE
+------------------------------------------------------ */
+	.wrap_tool_description_page {
+		//background-color: #F590F0;
+		margin: 0;
+		padding: 0;
+		display: block;
+		position: absolute;
+		
+		//width: 100%;
+		//height: 96%;		
+		//overflow: hidden;
+		
+		width: 99.9%;
+		height: ~"calc(100% - 30px)";
+	}
+
+
+
+/* INSPECTOR
+------------------------------------------------------ */
+	.tool_description_inspector_log {
+		/* width: 100px; 
+		background-color: #949494;*/
+		min-width: 154px;
+		/*white-space: nowrap;*/
+		text-align: center;
+		display: block;
+		float: right;	
+		position: absolute;
+		top: 0px;
+		right:0;
+		z-index: 2000;
+		opacity: .8;
+	}
+
+
+
+/* TAGS INSPECTOR
+------------------------------------------------------ */
+	#tags_inspector {
+		background-color: #99C9F5;
+		height: 24px;
+		width: 100%;
+	}
+
+
+	.view_tool_description_item {
+		text-align: left;
+	}
+
+
+
+	.html_page_wrap_tool_description .toponymy_list li {
+		width: 100%;
+	}
+	
+
+
