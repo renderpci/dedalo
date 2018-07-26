@@ -52,6 +52,9 @@ if(login::is_logged()!==true) {
 						case 'pdf' : 
 								$SID = $this->component_obj->get_pdf_id();
 								break;
+						case 'svg' : 
+								$SID = $this->component_obj->get_svg_id();
+								break;
 					}							
 					break;
 
@@ -113,6 +116,20 @@ if(login::is_logged()!==true) {
 								}
 								# Final target folder
 								$target_folder_path	= DEDALO_MEDIA_BASE_PATH . DEDALO_IMAGE_FOLDER . $this->component_obj->initial_media_path . '/'. $quality . $this->component_obj->aditional_path ;
+									#dump($target_folder_path, ' target_folder_path');
+								break;
+
+						# MEDIA TYPE: SVG
+						case 'svg':
+								$SID 		= $this->component_obj->get_svg_id();
+								$valid_extensions_json = json_encode(unserialize(DEDALO_SVG_EXTENSIONS_SUPPORTED));
+
+								// Fix values
+								$this->component_obj->get_initial_media_path();
+								$this->component_obj->get_aditional_path();
+								
+								# Final target folder
+								$target_folder_path	= DEDALO_MEDIA_BASE_PATH . DEDALO_SVG_FOLDER . $this->component_obj->initial_media_path . '/'. $this->component_obj->aditional_path ;
 									#dump($target_folder_path, ' target_folder_path');
 								break;
 
