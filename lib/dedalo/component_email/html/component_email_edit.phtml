@@ -22,18 +22,18 @@
 	
 	# CONTENIDO (INPUT)
 	$html_content = '';
-	switch($permissions) {
+	switch(true) {
 			
-		case 0	:
+		case $permissions===0 :
 				$html_content .= "";
 				break;
 						
-		case 1	: 	
+		case $permissions===1 : 	
 				$html_content .= "<span class=\"css_span_dato\">$dato</span>";
 				break;	
 		
-		case 2	:
-		case 3	:
+		case $permissions>=2 :
+	
 				# INPUT EMAIL	
 				$html_content .= "<input class=\"css_email\" type=\"text\" ";
 				$html_content .= "onfocus=\"component_common.select_wrap(null,'$id_wrapper');\" ";
@@ -70,6 +70,15 @@
 					}						
 				}
 
+				#
+				# JS Init component
+				$html_content .= '<script>';
+				# Init component
+				$init_options = new stdClass();
+					$init_options->component_name 	= $component_name;
+					$init_options->wrapper_id 		= $id_wrapper;
+				$html_content .= 'component_common.init('.json_encode($init_options).');';
+				$html_content .= '</script>';
 				break;
 	}
 

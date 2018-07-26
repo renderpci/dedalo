@@ -123,7 +123,6 @@ function Save($json_data) {
 		}
 	}
 	
-	
 
 	# Debug
 	if(SHOW_DEBUG===true) {
@@ -150,8 +149,7 @@ function Save($json_data) {
 	}
 
 	# Write session to unlock session file
-	#session_write_close();
-	
+	#session_write_close();	
 
 	return (object)$response;
 }//end Save
@@ -251,9 +249,10 @@ function load_component_by_ajax($json_data) {
 /**
 * GET_COMPONENT_JSON_DATA
 * Load ajax json component
-*/
-function get_component_json_data($json_data) {
+*//*
+function get_component_json_data__DEACTIVATED($json_data) {
 	global $start_time;
+
 
 	# Write session to unlock session file
 	session_write_close();
@@ -262,17 +261,19 @@ function get_component_json_data($json_data) {
 		$response->result 	= false;
 		$response->msg 		= 'Error. Request failed [get_component_json_data]';	
 	
-	$vars = array('section_id','section_tipo','component_tipo','lang','dato','modo','max_records','offset','top_tipo','top_id'); // ,'current_tipo_section','context_name','arguments')		
+	$vars = array('section_id','section_tipo','component_tipo','lang','dato','modo','max_records','offset','top_tipo','top_id', 'propiedades'); // ,'current_tipo_section','context_name','arguments')		
 		foreach($vars as $name) {
 			$$name = common::setVarData($name, $json_data);
 			# DATA VERIFY
-			if ($name==='max_records' || $name==='offset' || $name==='dato' || $name==='top_id') continue; # Skip non mandatory
+			if ($name==='max_records' || $name==='offset' || $name==='dato' || $name==='top_id' || $name==='propiedades') continue; # Skip non mandatory
 			if (empty($$name)) {
 				$response->msg = "Trigger Error: (get_component_json_data) Empty ".$name." (is mandatory)";
 				return $response;
 			}
 		}
 
+	#debug_log(__METHOD__." propiedades ".json_encode($propiedades, JSON_PRETTY_PRINT), logger::DEBUG);
+	
 	$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
 	$component_obj 	= component_common::get_instance($modelo_name,
 													 $component_tipo,
@@ -280,7 +281,7 @@ function get_component_json_data($json_data) {
 													 $modo,
 													 $lang,
 													 $section_tipo);
-	# Portal config
+	# Portal config. Inject custom params
 	if ($max_records) {
 		$component_obj->set_max_records($max_records);
 	}
@@ -288,16 +289,25 @@ function get_component_json_data($json_data) {
 		$component_obj->set_offset($offset);
 	}
 
+	#
+	# PROPIEDADES OVERWRITES
+	#if ($propiedades) {
+	#	$component_obj->set_propiedades($propiedades);
+	#}	
+	#$component_obj->set_max_records(1);
+
 	# If dato is received, inject dato to current component (portal time machine case for example)
 	if ($dato) {
 		$component_obj->set_dato($dato);
 	}
 
-	# Get component html
-	$json = $component_obj->get_from_json();
-	
+	# Get component json data
+	$component_json_data = $component_obj->get_json();
+	if(SHOW_DEBUG===true) {
+		#debug_log(__METHOD__." component_obj (modo:$modo) ".json_encode($component_obj, JSON_PRETTY_PRINT), logger::DEBUG);
+	}		
 
-	$response->result 	= $json;
+	$response->result 	= $component_json_data;
 	$response->msg 		= 'Ok. Request done [get_component_json_data]';
 
 	# Debug
@@ -318,7 +328,7 @@ function get_component_json_data($json_data) {
 
 	return (object)$response;
 }//get_component_json_data
-
+*/
 
 
 ?>

@@ -36,8 +36,47 @@
 				$html_content .= "";
 				break;
 
-			case 1	: 	
-				$html_content .= "<span class=\"css_span_dato\">$valor</span>";
+			case 1	:
+				$html_content .= "<ul>";
+				foreach ($ar_dato as $key => $dato) {
+					
+					$html_content .= "<li>";
+
+					switch ($date_mode) {
+						case 'range':
+							$value_start = isset($valor_start[$key]) ? $valor_start[$key] : '';
+							$value_end = isset($valor_end[$key]) ? ' <> '.$valor_end[$key] : '';
+							$html_content .= "<span class=\"css_span_dato\">".$value_start.$value_end ."</span>";
+							break;
+						case 'period':
+							# YEAR
+							$value_year = isset($valor_year[$key]) ? $valor_year[$key] : '';
+							# MONTH
+							$value_month = isset($valor_month[$key]) ? ' - '.$valor_month[$key] : '';
+							# DAY
+							$value_day = isset($valor_day[$key]) ? ' - '.$valor_day[$key] : '';
+							$html_content .= "<span class=\"css_span_dato\">".$value_day.$value_month.$value_year."</span>";
+							break;
+						case 'time':
+							# TIME
+							$value = isset($valor[$key]) ? $valor[$key] : '';
+							$html_content .= "<span class=\"css_span_dato\">".$value."</span>";
+							break;
+						case 'date':
+						default:
+							// Single date case (end date)
+							$add_class='';
+							if ( !empty($propiedades) &&
+								 isset($propiedades->method->get_valor_local) &&
+								 reset($propiedades->method->get_valor_local)==true
+								) $add_class = 'full';
+
+							$value = isset($valor[$key]) ? $valor[$key] : '';
+							$html_content .= "<span class=\"css_span_dato\">".$value."</span>";
+						}//end switch
+						$html_content .= "</li>";
+					}//end foreach
+					$html_content .= "</ul>";
 				break;
 
 			case ($permissions>=2) :
@@ -244,6 +283,16 @@
 
 				# Save handler js
 				#$html_content .= "<script>$('#$identificador_unico').on(\"change\",function(){component_date.Save(this);})</script>";
+
+				#
+				# JS Init component
+				$html_content .= '<script>';
+				# Init component
+				$init_options = new stdClass();
+					$init_options->component_name 	= $component_name;
+					$init_options->wrapper_id 		= $id_wrapper;
+				$html_content .= 'component_common.init('.json_encode($init_options).');';
+				$html_content .= '</script>';
 
 				if(SHOW_DEBUG) {
 					$html_content .= "<span class=\"debug_info current_date_info\">date_mode: $date_mode  - current date: <span>$dato_json</span></span>";

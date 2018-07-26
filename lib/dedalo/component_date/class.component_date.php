@@ -795,7 +795,7 @@ class component_date extends component_common {
 	* @return object $query_object
 	*/
 	public static function resolve_query_object_sql($query_object) {
-debug_log(__METHOD__." query_object ".to_string($query_object), logger::DEBUG);
+	
 		// Check if q is an valid object
 		// Note that if q is number, json_decode not will generate error here
 		if (!$q_object = json_decode($query_object->q)) {
@@ -846,16 +846,14 @@ debug_log(__METHOD__." query_object ".to_string($query_object), logger::DEBUG);
 				return $query_object;
 			}
 		}
-		#dump($q_object, ' q_object ++ '.to_string());
-
-
+		
 		$component_tipo = end($query_object->path)->component_tipo;
         $RecordObj   	= new RecordObj_dd($component_tipo);
         $propiedades 	= json_decode($RecordObj->get_propiedades());
         $date_mode 	 	= isset($propiedades->date_mode) ? $propiedades->date_mode : 'date';
 	
 		$query_object->component_path = ['components',$component_tipo,'dato',DEDALO_DATA_NOLAN];
-		$query_object->type 		  ='jsonb';
+		$query_object->type 		  = 'jsonb';
 		
         switch ($date_mode) {
 
@@ -867,8 +865,8 @@ debug_log(__METHOD__." query_object ".to_string($query_object), logger::DEBUG);
         			# Operator : remove if exists
 					#$q_clean  = preg_replace("/^(\W{1,2})?/", "", $q);
 	        		// Extract directly from calculated time in javascript
-					$q_clean  = isset($q_object->time) ? $q_object->time : 0;
-					$operator = isset($q_object->op) ? $q_object->op : '=';
+					$q_clean  = !empty($q_object->time) ? $q_object->time : 0;
+					$operator = !empty($q_object->op) ? $q_object->op : '=';
 
 					$dd_date = new dd_date($q_object);
 					#$dd_date->get_date_from_timestamp( $q_clean );
@@ -957,8 +955,8 @@ debug_log(__METHOD__." query_object ".to_string($query_object), logger::DEBUG);
         	case 'time':
 
 				// Extract directly from calculated time in javascript
-				$q_clean  = isset($q_object->time) ? $q_object->time : 0;
-				$operator = isset($q_object->op) ? $q_object->op : '=';
+				$q_clean  = !empty($q_object->time) ? $q_object->time : 0;
+				$operator = !empty($q_object->op) ? $q_object->op : '=';
 
 				if ($operator!=="=") {
 					
@@ -1006,30 +1004,30 @@ debug_log(__METHOD__." query_object ".to_string($query_object), logger::DEBUG);
 
 				// Generic for date
 				// Extract directly from calculated time in javascript
-				$q_clean  = isset($q_object->time) ? $q_object->time : 0;
-				$operator = isset($q_object->op) ? $q_object->op : '=';
+				$q_clean  = !empty($q_object->time) ? $q_object->time : 0;
+				$operator = !empty($q_object->op) ? $q_object->op : '=';
 				
 				$query1 = new stdClass();
 					$query1->component_path 	= ['time'];
 					$query1->operator 			= $operator;
 					$query1->q_parsed			= '\''.$q_clean.'\'';
-					$query1->type 				= 'jsonb';		
+					$query1->type 				= 'jsonb';
 
 				$group_op_name = '$or';	
 				$group_array_elements = new stdClass();
 					$group_array_elements->{$group_op_name} = [$query1];
 
 				# query_object config
-				$query_object->q_info 			= '';//clone $q_object;
+				$query_object->q_info 			= '';
 				$query_object->q_parsed			= null;
 				$query_object->format 			= 'array_elements';
 				$query_object->array_elements 	= $group_array_elements;
 					
 				$final_query_object = $query_object;
-        		break;
+				break;
 
-        }//end switch ($date_mode)
-        #dump($final_query_object, ' final_query_object ++ '.to_string());
+		}//end switch ($date_mode)
+		#dump($final_query_object, ' final_query_object ++ '.to_string());
 
 
 		return $final_query_object;
@@ -1043,8 +1041,8 @@ debug_log(__METHOD__." query_object ".to_string($query_object), logger::DEBUG);
 	* @return array $ar_operators
 	*/
 	public function search_operators_info() {
-		
-		$ar_operators = [			
+	
+		$ar_operators = [
 			'>=' 	=> 'mayor_o_igual_que',
 			'<='	=> 'menor_o_igual_que',
 			'>' 	=> 'mayor_que',
