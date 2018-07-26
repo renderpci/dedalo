@@ -42,21 +42,23 @@ class tool_import_files extends tool_common {
 		// tipo
 		$tipo = null;
 		if (isset($this->component_obj)) {
+			
 			$tipo = $this->component_obj->get_tipo();
+
 		}else{
-			$var_requested_t 	= common::get_request_var('t');
-			#$tipo	= isset($_GET['t']) ? $_GET['t'] : '';
-			$tipo	= !empty($var_requested_t) ? $var_requested_t : '';	// When varname is t (default page call)
-			#$tipo	= isset($_REQUEST['tipo']) ? $_REQUEST['tipo'] : $tipo;
-			$var_requested 		= common::get_request_var('tipo');
-			$tipo	= !empty($var_requested) ? $var_requested : $tipo;	// When varname is tipo fallback	
+
+			$var_requested_t = common::get_request_var('t');			
+			$tipo			 = !empty($var_requested_t) ? $var_requested_t : '';	// When varname is t (default page call)
+			
+			$var_requested 	 = common::get_request_var('tipo');
+			$tipo			 = !empty($var_requested) ? $var_requested : $tipo;	// When varname is tipo fallback	
 		}
 		
 
 		# UPLOAD_DIR_CUSTOM is section_tipo
 		$upload_dir_custom = isset($tipo) ? '/'.$tipo : null;
 		if (empty($upload_dir_custom)) {
-			trigger_error(__METHOD__." WARNING TOOL_IMPORT_FILES: EMPTY upload_dir_custom: $upload_dir_custom");
+			trigger_error(__METHOD__." WARNING TOOL_IMPORT_FILES: EMPTY upload_dir_custom");
 		}
 
 		# TOOL IMPORT IMAGES
