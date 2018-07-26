@@ -7,7 +7,7 @@ require_once( dirname(dirname(dirname(__FILE__))) .'/config/config4.php');
 if(login::is_logged()!==true) die("<span class='error'> Auth error: please login </span>");
 
 # UPLOAD_DIR_CUSTOM is button_tipo
-$upload_dir_custom = isset($_REQUEST['button_tipo']) ? '/'.$_REQUEST['button_tipo'] : '';
+$upload_dir_custom = isset($_REQUEST['button_tipo']) ? '/'.safe_xss($_REQUEST['button_tipo']) : '';
 if (empty($upload_dir_custom)) {
 	debug_log(__METHOD__." WARNING TOOL_IMPORT_IMAGES: EMPTY upload_dir_custom: $upload_dir_custom".to_string(), logger::WARNING);
 }
@@ -28,8 +28,7 @@ class tool_import_images extends tool_common {
 
 
 	public function __construct($component_obj, $modo='button') {
-			#dump($component_obj, " component_obj ".to_string());
-		
+			
 		# Fix modo
 		$this->modo = $modo;
 
