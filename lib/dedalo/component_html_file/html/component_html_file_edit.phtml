@@ -3,17 +3,17 @@
 	# VISUALIZADOR HTML	
 	
 	
-	print "\n<!-- html_file [tipo:$tipo section_id_matrix:$parent] $label -->";
+	print "<!-- html_file [tipo:$tipo section_id_matrix:$parent] $label -->";
 
-	print "\n<div class=\"wrap_component css_wrap_html_file wrap_component_{$tipo}\" id=\"{$id_wrapper}\"
-	data-tipo=\"{$tipo}\" data-lang=\"{$lang}\"
-	data-section_tipo=\"{$section_tipo}\"
-	data-parent=\"{$parent}\"
-	data-modo=\"{$modo}\"
-	data-dato=\"{$valor}\"
-	data-component_name=\"{$component_name}\"
-	data-component_info='{$component_info}'
-	>";
+	print "<div class=\"wrap_component css_wrap_html_file wrap_component_{$tipo}\" id=\"{$id_wrapper}\" ";
+	print "data-tipo=\"{$tipo}\" data-lang=\"{$lang}\" ";
+	print "data-section_tipo=\"{$section_tipo}\" ";
+	print "data-parent=\"{$parent}\" ";
+	print "data-modo=\"{$modo}\" ";
+	print "data-dato=\"{$valor}\" ";
+	print "data-component_name=\"{$component_name}\" ";
+	print "data-component_info='{$component_info}' ";
+	print ">";
 	
 		
 		# ETIQUETA (LABEL)
@@ -28,25 +28,31 @@
 							
 			case ($permissions>=1) :
 			
-						# html_file THUMB
-						$html_contenido .= "\n <div class=\"html_file_info\" >";
-						#$html_contenido .= to_string($dato) ;
-						$html_contenido .= $html_file_id ;
-						if(file_exists($html_file_path)) {
-							$html_contenido .= " <a href=\"$html_file_url\" target=\"_blank\"> Open file </a> ";
-						}else{
-							$html_contenido .= " No file ";
-							if(SHOW_DEBUG) {
-								$html_contenido .= " - Filepath:" . $html_file_path;
-							}
-						}
-						
-						$html_contenido .= "\n </div>";		
-						
-						if(SHOW_DEBUG) {
-							#$html_contenido .= "\n <span class=\"css_span_debugger\" id=\"debugger_{$tipo}\" >{$debugger}</span>";	
-						}
-						break;					
+				# html_file THUMB
+				$html_contenido .= "\n <div class=\"html_file_info\" >";
+				#$html_contenido .= to_string($dato) ;
+				$html_contenido .= $html_file_id ;
+				if(file_exists($html_file_path)) {
+					$html_contenido .= " <a href=\"$html_file_url\" target=\"_blank\"> Open file </a> ";
+				}else{
+					$html_contenido .= " No file ";
+					if(SHOW_DEBUG) {
+						$html_contenido .= " - Filepath:" . $html_file_path;
+					}
+				}
+				
+				$html_contenido .= "\n </div>";		
+				
+				#
+				# JS Init component
+				$html_content .= '<script>';
+				# Init component
+				$init_options = new stdClass();
+					$init_options->component_name 	= $component_name;
+					$init_options->wrapper_id 		= $id_wrapper;
+				$html_content .= 'component_common.init('.json_encode($init_options).');';
+				$html_content .= '</script>';
+				break;					
 												
 		}
 
