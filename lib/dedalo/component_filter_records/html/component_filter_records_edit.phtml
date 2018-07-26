@@ -69,6 +69,15 @@
 				
 			$html_content .= "</div>";//end wrap_parent_values
 			
+			#
+			# JS Init component
+			$html_content .= '<script>';
+			# Init component
+			$init_options = new stdClass();
+				$init_options->component_name 	= $component_name;
+				$init_options->wrapper_id 		= $id_wrapper;
+			$html_content .= 'component_common.init('.json_encode($init_options).');';
+			$html_content .= '</script>';
 			break;
 	}
 
