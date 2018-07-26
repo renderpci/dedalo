@@ -11,7 +11,6 @@
 	switch($modo) {
 
 			case 'dataframe_edit' :
-
 				
 				break;
 
