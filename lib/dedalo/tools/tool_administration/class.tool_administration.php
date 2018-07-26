@@ -2,7 +2,7 @@
 require_once( dirname(dirname(dirname(__FILE__))) .'/config/config4.php');
 require_once(dirname(__FILE__) .'/updates/updates.php');
 /*
-* CLASS TOOL_ADMINISTRATION
+* CLASS TOOL_ADMINISTRATION - B
 */
 class tool_administration extends tool_common {
 	
@@ -167,6 +167,9 @@ class tool_administration extends tool_common {
 					$before = json_encode($datos);
 
 					unset($datos->inverse_locators);
+					
+					$after = json_encode($datos);
+
 					$proced = true;
 					break;
 
@@ -247,7 +250,12 @@ class tool_administration extends tool_common {
 	* @return array $current_version
 	*/
 	public static function get_current_version_in_db() {
-		$current_version = array();
+		
+		static $current_version;
+
+		if (isset($current_version)) {
+			return $current_version;
+		}
 
 		#
 		# Test table exists	and create if not
@@ -272,7 +280,7 @@ class tool_administration extends tool_common {
 
 		#echo "<br> strQuery: $strQuery <br>";
 		#perform query
-		$result   = JSON_RecordObj_matrix::search_free($strQuery);
+		$result = JSON_RecordObj_matrix::search_free($strQuery);
 
 		#loop the rows
 		while ($rows = pg_fetch_assoc($result)) {
@@ -283,15 +291,18 @@ class tool_administration extends tool_common {
 			$datos	= (object)json_handler::decode($datos);
 		}
 
-		if (isset($datos)) {		
-			$ar_version = explode(".", $datos->dedalo_version);
+		$current_version = array();
 
+		if (isset($datos)) {
+
+			$ar_version = explode(".", $datos->dedalo_version);
+			
 			$current_version[0] = (int)$ar_version[0];
 			$current_version[1] = (int)$ar_version[1];
 			$current_version[2] = (int)$ar_version[2];
 		}
 
-		return $current_version;		
+		return $current_version;	
 	}//end get_current_version_in_db
 
 
@@ -373,7 +384,7 @@ class tool_administration extends tool_common {
 
 	/**
 	* UPDATE_VERSION
-	* @return 
+	* @return object $response
 	*/
 	public static function update_version() {
 		global $updates;
@@ -382,7 +393,7 @@ class tool_administration extends tool_common {
 			$response->result 	= false;
 			$response->msg 		= '';
 
-		$current_version 	= self::get_current_version_in_db();
+		$current_version = self::get_current_version_in_db();
 
 		$msg = array();
 
@@ -391,8 +402,13 @@ class tool_administration extends tool_common {
 		# Before update version dato, we force a backup of all database
 		//self::make_backup();
 
+		#
+		# DISABLE LOGIN AND TIME MACHINE SAVE FOR ALL UPDATE PROCESS (From v4.9.1 24-05-2018)
+		logger_backend_activity::$enable_log 				= false;
+		#RecordObj_time_machine::$save_time_machine_version  = false;
 
-		#Select the correct update from file updates
+
+		# Select the correct update from file updates
 		foreach ($updates as $key => $version_to_update) {
 			if($current_version[0] == $version_to_update->update_from_major){
 				if($current_version[1] == $version_to_update->update_from_medium){
@@ -491,15 +507,46 @@ class tool_administration extends tool_common {
 
 			# Skip sections
 			$ar_section_skip = [
-				#'mdcat656', // Donde se para
-				#'mdcat656', // condena
-				#'mdcat813', // censo simbologia franquista
-				'lg1', // lenguajes
-				'on1', // omomasticos
-				'dc1', // cronologicos
-				'ts1', // tematicos,
-				'hu1', // hungria
-				'cu1', // cuba
+				/*
+				#'lg1', // lenguajes
+				#'on1', // omomasticos
+				#'dc1', // cronologicos
+				#'ts1', // tematicos
+				#'hu1', // hungria
+				#'cu1', // cuba
+				"es1",
+				"fr1",
+				"dz1",
+				"pt1",
+				"lg1",
+				"ma1",
+				"mupreva2434",
+				"mupreva2435",
+				"mupreva2436",
+				"mupreva2437",
+				"mupreva2438",				
+				"mupreva357",
+				"mupreva123",
+				"mupreva21",
+				"mupreva22",
+				"mupreva1",
+				"mupreva120",
+				"mupreva1258",
+				"mupreva1385",
+				"mupreva156",
+				"mupreva159",
+				"mupreva162",
+				"mupreva20",				
+				"mupreva2384",
+				"mupreva2541",
+				"mupreva268",
+				"mupreva380",
+				"mupreva398",
+				"mupreva473",
+				"mupreva500",
+				"mupreva770",
+				"rsc332"
+				*/
 			];
 			if (in_array($current_section_tipo, $ar_section_skip)) {
 				continue;
@@ -509,7 +556,7 @@ class tool_administration extends tool_common {
 			# Test if target table exists (avoid errors on update components of "too much updated" structures)
 			$current_table = common::get_matrix_table_from_tipo($current_section_tipo);
 			if (!in_array($current_table, $tables) ) {
-				debug_log(__METHOD__." Skipped section ($current_section_tipo) because table ($current_table) not exists ".to_string(), logger::WARNING);
+				debug_log(__METHOD__." Skipped section ($current_section_tipo) because table ($current_table) not exists ".to_string(), logger::ERROR);
 				continue;
 			}
 			
@@ -1296,7 +1343,7 @@ class tool_administration extends tool_common {
 								$propagate_options->section_id 	 		= $section_id;
 								$propagate_options->section_tipo 		= $section_tipo;
 								$propagate_options->from_component_tipo = $from_component_tipo;
-							$propagate_response = component_relation_common::propagate_component_dato_to_relations_table( $propagate_options );
+							$propagate_response = search_development2::propagate_component_dato_to_relations_table( $propagate_options );
 						}
 
 					}else{
