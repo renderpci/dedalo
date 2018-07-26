@@ -16,8 +16,7 @@
 		exit();
 	}
 
-# URL_LOCATOR
-	#var_dump($_GET);
+# URL_LOCATOR	
 	if (!isset($_GET['url_locator'])) {
 		$response = new stdClass();
 			$response->result 	= false;
@@ -35,7 +34,7 @@
 		echo json_encode($msg);
 		die();
 	}
-	#var_dump($ar_parts);
+	
 	$locator = new locator();
 	
 		# section_tipo	
@@ -54,13 +53,11 @@
 			$locator->set_tag_id($ar_parts[3]);
 		}
 
-# echo json_encode($locator);
 
 # SECTION FULL DATO
 	$section = section::get_instance($locator->section_id, $locator->section_tipo);
 	$dato 	 = $section->get_dato();
-	#echo json_encode($dato, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
-
+	
 	switch (true) {
 		case (!empty($locator->tag_id) && !empty($locator->component_tipo)):
 			$data = isset($dato->components->{$locator->component_tipo}) ? $dato->components->{$locator->component_tipo} : null;
