@@ -128,6 +128,7 @@ class login extends common {
 	        sleep(2);
 			#exit("Error: User $username not exists !");
 			$response->msg = "Error: User not exists or password si invalid!";
+			error_log("DEDALO LOGIN ERROR : Invalid user or password");
 			return $response;
 
 		}else{
@@ -138,10 +139,12 @@ class login extends common {
 				
 				# Search password
 				$password_encrypted = component_password::encrypt_password($password);
-				$component_password = component_common::get_instance('component_password', DEDALO_USER_PASSWORD_TIPO, $section_id, 'edit', DEDALO_DATA_NOLAN,DEDALO_SECTION_USERS_TIPO);					
+				$component_password = component_common::get_instance('component_password',
+																	 DEDALO_USER_PASSWORD_TIPO,
+																	 $section_id,
+																	 'edit',
+																	 DEDALO_DATA_NOLAN,DEDALO_SECTION_USERS_TIPO);
 				$password_dato 		= $component_password->get_dato();
-					#dump($component_password,"component_password ");die();
-					#dump($password_dato,"password_dato:$password_dato -  password_encrypted:$password_encrypted");die(" die en login");
 				
 				if( $password_encrypted!==$password_dato ) {
 
@@ -161,8 +164,9 @@ class login extends common {
 						);
 					# delay failed output by 2 seconds to prevent bruit force attacks
 	        		sleep(2);
-					#exit("Error: Wrong password [1]");
+					
 					$response->msg = "Error: Wrong password [1]";
+					error_log("DEDALO LOGIN ERROR : Wrong password");
 					return $response;
 				}
 
@@ -205,6 +209,7 @@ class login extends common {
 								sleep(2);
 								#exit("Error: Account inactive or not defined [1]");
 								$response->msg = "Error: Account inactive or not defined [1]";
+								error_log("DEDALO LOGIN ERROR : Account inactive");
 								return $response;
 							}
 						
@@ -224,7 +229,7 @@ class login extends common {
 							$component_profile 		  = component_common::get_instance('component_profile',
 																						DEDALO_USER_PROFILE_TIPO,
 																						$user_id,
-																						'edit',
+																						'list',
 																						DEDALO_DATA_NOLAN,
 																						DEDALO_SECTION_USERS_TIPO);
 							$profile_dato 	  		  = $component_profile->get_dato();
@@ -242,7 +247,7 @@ class login extends common {
 							$component_filter_master 	= component_common::get_instance('component_filter_master',
 																						 DEDALO_FILTER_MASTER_TIPO,
 																						 $user_id,
-																						 'edit',
+																						 'list',
 																						 DEDALO_DATA_LANG, DEDALO_SECTION_USERS_TIPO); 
 							$filter_master_dato 		= (array)$component_filter_master->get_dato();
 							if (empty($filter_master_dato) || count($filter_master_dato)<1) {
@@ -591,7 +596,8 @@ class login extends common {
 		$_SESSION['dedalo4']['auth']['cookie_auth'] = $data;
 
 		# SET COOKIE
-		setcookie($data->$ktoday->cookie_name, $data->$ktoday->cookie_value, time() + (86400 * 1), '/'); // 86400 = 1 day
+		#setcookie($data->$ktoday->cookie_name, $data->$ktoday->cookie_value, time() + (86400 * 1), '/'); // 86400 = 1 day
+		setcookie($data->$ktoday->cookie_name, $data->$ktoday->cookie_value, time() + (86400 * 1), '/', DEDALO_HOST, TRUE, TRUE); // 86400 = 1 day
 
 		return true;
 	}//end init_cookie_auth
@@ -847,11 +853,15 @@ class login extends common {
 			$ktoday 	 = date("Y_m_d");
 			$kyesterday  = date("Y_m_d",strtotime("-1 day"));
 
+			# Format: setcookie("emailCookie", $email, 0, "/", "www.example.com", TRUE);
+	
 			if (isset($cookie_auth->$ktoday->cookie_name)) {
-				setcookie($cookie_auth->$ktoday->cookie_name, null, -1, '/');
+				#setcookie($cookie_auth->$ktoday->cookie_name, null, -1, '/');
+				setcookie($cookie_auth->$ktoday->cookie_name, null, -1, '/', DEDALO_HOST, TRUE, TRUE);
 			}
 			if (isset($cookie_auth->$kyesterday->cookie_name)) {
-				setcookie($cookie_auth->$kyesterday->cookie_name, null, -1, '/');
+				#setcookie($cookie_auth->$kyesterday->cookie_name, null, -1, '/');
+				setcookie($cookie_auth->$kyesterday->cookie_name, null, -1, '/', DEDALO_HOST, TRUE, TRUE);
 			}
 		}			
 
@@ -859,10 +869,10 @@ class login extends common {
 		#unset($_SESSION['dedalo4']['config']);
 		$cookie_name = session_name();
 		unset($_SESSION['dedalo4']);
-		#setcookie('PHPSESSID', null, -1, '/');
-		setcookie($cookie_name, null, -1, '/');
+		#setcookie($cookie_name, null, -1, '/');
+		setcookie($cookie_name, null, -1, '/', DEDALO_HOST, TRUE, TRUE);
 		#unset($_SESSION);
-		debug_log(__METHOD__."Uset session and cookie. cookie_name: $cookie_name ".to_string(), logger::DEBUG);
+		debug_log(__METHOD__." Unset session and cookie. cookie_name: $cookie_name ".to_string(), logger::DEBUG);
 
 		return true;
 	}//end Quit
@@ -909,36 +919,7 @@ class login extends common {
 
 		if ($dato==='') {
 			return true;
-		}
-
-		/* 22-2-2018
-		$default = login::SU_DEFAULT_PASSWORD; // Dedalo4debugChangePsW	
-
-		$encryption_mode = encryption_mode();
-		
-		if( $encryption_mode==='openssl' ) {
-
-			$dato_decrypt = dedalo_decrypt_openssl($dato);
-				dump($dato, '$dato ++ '.to_string());
-				dump($dato_decrypt, ' $dato_decrypt ++ '.to_string());
-			
-			if ($dato_decrypt===$default) {
-				return true;
-			}
-
-		}else if($encryption_mode==='mcrypt') {
-
-			$dato_decrypt = dedalo_decryptStringArray($dato);
-
-			if ($dato_decrypt===$default) {
-				return true;
-			}
-
-		}else{
-
-			debug_log(__METHOD__." UNKNOW ENCRYPTION MODE !! ".to_string(), logger::ERROR);
-		}*/
-
+		}		
 
 		return false;
 	}//end test_su_default_password
