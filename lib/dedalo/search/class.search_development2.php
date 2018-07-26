@@ -38,13 +38,24 @@ class search_development2 {
 	# skip_projects_filter
 	protected $skip_projects_filter;
 
+	# sql_query_order_default
+	protected $sql_query_order_default;
+
+	# sql_query_order_window_subselect
+	# Specific order sql sentence for window subselect
+	protected $sql_query_order_window_subselect;
+
+	# relations cache
+	# Store already selected relation columns to avoid overload query with multiple relations components
+	protected $relations_cache;
+
 	
 
 	/**
 	* __CONSTRUCT
 	*/
 	public function __construct($search_query_object) {
-		# Set up class minimun vars
+		# Set up class minim vars
 		$this->set_up($search_query_object);
 	}//end __construct
 
@@ -55,7 +66,13 @@ class search_development2 {
 	*/
 	public function set_up($search_query_object) {
 
-		$this->search_query_object = $search_query_object ;
+		# Accepted objects json encoded too
+		if (is_string($search_query_object)) {
+			$search_query_object = json_decode($search_query_object);
+		}
+
+		$this->search_query_object = (object)$search_query_object;
+		#debug_log(__METHOD__." search_query_object ".to_string($search_query_object), logger::DEBUG);
 
 		# section tipo check and fixes
 		if (!isset($this->search_query_object->section_tipo)) {
@@ -76,10 +93,11 @@ class search_development2 {
 		}else{
 			$this->main_section_tipo_alias = self::trim_tipo($this->main_section_tipo);
 		}
-		#$this->main_section_tipo_alias = 'a';
 
-		$this->matrix_table  = common::get_matrix_table_from_tipo($this->main_section_tipo);
-		
+		# matrix_table (for time machine if always fixe, not calculated)
+		if (get_class($this)!=='search_development2_tm') {
+			$this->matrix_table  = common::get_matrix_table_from_tipo($this->main_section_tipo);
+		}		
 
 		# Default select
 		if(!isset($this->search_query_object->select)) {
@@ -96,7 +114,7 @@ class search_development2 {
 			$this->search_query_object->offset = false;
 		}
 
-		# Default records limit
+		# Default records count
 		if(!isset($this->search_query_object->full_count)) {
 			$this->search_query_object->full_count = false;
 		}
@@ -133,6 +151,7 @@ class search_development2 {
 			$this->skip_projects_filter = true; // Skip filter 
 		}
 
+
 		return true;
 	}//end set_up
 
@@ -157,23 +176,49 @@ class search_development2 {
 			return null;
 		}
 
+		$ar_relations_cache_solved = [];
+
 		# Build a temporal table with array of records found in query
-		$ar_records  = array();
-		$pg_num_fields = pg_num_fields($result);
+		$ar_records  	= [];
+		$pg_num_fields 	= pg_num_fields($result);
 		while ($rows = pg_fetch_assoc($result)) {
 
 			$row = new stdClass();
 			
-			for ($i=0; $i < $pg_num_fields; $i++) { 
+			# Result columns
+			for ($i=0; $i < $pg_num_fields; $i++) {
+
 				$field_name  = pg_field_name($result, $i);
 				$field_value = $rows[$field_name];
+
+				# Skip temp relations_xxx columns and store their solved values
+				if (strpos($field_name, 'relations_')===0) {
+					$ar_relations_cache_solved[$field_name] = $field_value;
+					continue;
+				}
+
 				# Add property
 				$row->{$field_name} = $field_value;
-			}		
+			}
+
+			# Relation components. Get relations data from relations column and parse virtual columns values for each component
+			if (isset($this->relations_cache)) foreach ((array)$this->relations_cache as $table_alias => $ar_component_tipo) {
+				foreach ($ar_component_tipo as $component_tipo) {
+					$field_name  	= $component_tipo;
+					$property_name 	= 'relations_' . $table_alias;
+					#$field_value 	= $ar_relations_cache_solved[$property_name]; // Full relations data
+					$field_value 	= self::get_filtered_relations($ar_relations_cache_solved[$property_name], $component_tipo); // Filtered by from_component_tipo
+
+					# Add property
+					$row->{$field_name} = $field_value;
+				}
+			}
+			#debug_log(__METHOD__." row ".to_string($row), logger::DEBUG);
 
 			$ar_records[] = $row;
 		}
 		#debug_log(__METHOD__." total time ".exec_time_unit($start_time,'ms'.' ms', logger::DEBUG);
+
 
 		#
 		# FULL_COUNT
@@ -203,11 +248,35 @@ class search_development2 {
 				}				
 				#$this->search_query_object->generated_time['get_records_data'] = round(microtime(1)-$start_time,3);
 				#dump($records_data, '$records_data', array());
+				$this->search_query_object->generated_time = $records_data->generated_time['get_records_data'];
 			}
-
+			#debug_log(__METHOD__." search_query_object ".json_encode($this->search_query_object, JSON_PRETTY_PRINT), logger::DEBUG);
 
 		return $records_data;
 	}//end search
+
+
+
+	/**
+	* GET_FILTERED_RELATIONS
+	* @return string $filtered_relations
+	* json encoded array
+	*/
+	public static function get_filtered_relations($relations_data_string, $component_tipo) {
+		
+		$filtered_relations = [];
+
+		if($relations_data = json_decode($relations_data_string)) {
+
+			$filtered_relations = array_filter($relations_data, function($locator) use($component_tipo) {
+				return (isset($locator->from_component_tipo) && $locator->from_component_tipo===$component_tipo);
+			});
+
+			$filtered_relations = array_values($filtered_relations); // Avoid json encoding objects
+		}
+
+		return json_encode($filtered_relations);
+	}//end get_filtered_relations
 
 
 
@@ -222,7 +291,8 @@ class search_development2 {
 		#dump($this->search_query_object, 'preparsed $this->search_query_object 1 ++ '.to_string());
 		
 		# FILTER
-			if (!empty($this->search_query_object->filter)) {			
+			if (!empty($this->search_query_object->filter)) {		
+
 				# conform_search_query_object. Conform recursively each filter object asking the components
 				foreach ($this->search_query_object->filter as $op => $ar_value) {
 					$new_search_query_object_filter = self::conform_search_query_object($op, $ar_value);
@@ -300,10 +370,10 @@ class search_development2 {
 	
 		foreach ($ar_value as $search_object) {
 			if (!is_object($search_object)) {
+				dump($search_object, ' receibed object (search_object) : '.to_string());
 				debug_log(__METHOD__." Invalid (ignored) non object search_object: ".to_string($search_object), logger::DEBUG);
 				debug_log(__METHOD__." ar_value: ".json_encode($ar_value), logger::DEBUG);
-				throw new Exception("Error Processing Request", 1);
-				
+				throw new Exception("Error Processing Request. search_object must be an object", 1);				
 				continue;
 			}
 
@@ -343,7 +413,10 @@ class search_development2 {
 
 	/**
 	* PARSE_SEARCH_QUERY_OBJECT
-	* @return 
+	* Build full final sql query to send to DDBB
+	* @param bool $full_count
+	*	default false
+	* @return string $sql_query
 	*/
 	public function parse_search_query_object( $full_count=false ) {
 		#dump($this->search_query_object->filter, ' this->search_query_object->filter 1 ++ '.to_string());
@@ -362,18 +435,30 @@ class search_development2 {
 			#dump( null, '$this->search_query_object->filter 2 ++ '.json_encode($this->search_query_object, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE ));  #die();
 			#$debug_json_string = json_encode($this->search_query_object->filter, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
 			#debug_log(__METHOD__." DEBUG_JSON_STRING \n".to_string().$debug_json_string, logger::DEBUG);
+			#$this->remove_distinct=true;
 		}
 		
-		# Search elements. Order is important
-		$main_from_sql  	= $this->build_main_from_sql();
+
+		# Search elements. Order is important		
 		$main_where_sql 	= $this->build_main_where_sql();
-		$sql_query_order 	= $this->build_sql_query_order();
+		$sql_query_order 	= $this->build_sql_query_order();	// Order before select !
 		$sql_query_select 	= $this->build_sql_query_select($full_count);		
 		$sql_filter 		= $this->build_sql_filter();
-		$sql_projects_filter= $this->build_sql_projects_filter();		
+		$sql_projects_filter= $this->build_sql_projects_filter();			
 		$sql_joins 			= $this->get_sql_joins();
+		$main_from_sql  	= $this->build_main_from_sql();	
 		$sql_limit 			= $this->search_query_object->limit;
 		$sql_offset 		= $this->search_query_object->offset;
+
+		if (empty($sql_query_order)) {
+			$sql_query_order = $this->build_sql_query_order_default();
+		}		
+
+		# FORCE FALSE ALWAYS THAT EXIST $this->ar_sql_joins . Pending solve subquery pagination issue !		
+		#if (!empty($sql_joins)) {
+		#	$this->allow_sub_select_by_id = false;
+		#}
+		#debug_log(__METHOD__." search_query_object ".json_encode($this->search_query_object, JSON_PRETTY_PRINT), logger::DEBUG);
 
 	
 		# sql_query
@@ -385,72 +470,201 @@ class search_development2 {
 				# Only for count
 
 				# SELECT
-					$sql_query .= 'SELECT '   . $sql_query_select;
+					if(SHOW_DEBUG===true) {
+						$sql_query .= '-- Only for count' . PHP_EOL;
+					}
+					$sql_query .= 'SELECT ' . $sql_query_select;
 				# FROM
-					$sql_query .= "\nFROM "   . $main_from_sql;
+					$sql_query .= PHP_EOL . 'FROM ' . $main_from_sql;
 					# join virtual tables
 					$sql_query .= $sql_joins;
+					# join filter projects
+					if (!empty($this->filter_join)) {
+					$sql_query .= PHP_EOL . $this->filter_join;
+					}
 				# WHERE
-					$sql_query .= "\nWHERE "  . $main_where_sql;
+					$sql_query .= PHP_EOL . 'WHERE ' . $main_where_sql;
 					if (!empty($sql_filter)) {
 						$sql_query .= $sql_filter;
 					}
-					if (!empty($sql_projects_filter)) {
-						$sql_query .= $sql_projects_filter;
+					#if (!empty($sql_projects_filter)) {
+					#	$sql_query .= $sql_projects_filter;
+					#}
+					if (!empty($this->filter_join_where)) {
+						$sql_query .= $this->filter_join_where;
 					}
 				break;
 
-			case (empty($this->search_query_object->order)):
+			case (empty($this->search_query_object->order)):					
 				# Search Without order
 
 				# SELECT
-					$sql_query .= 'SELECT '   . $sql_query_select;
+					if(SHOW_DEBUG===true) {
+						$sql_query .= '-- Search Without order' . PHP_EOL;
+					}
+					$sql_query .= 'SELECT ' . $sql_query_select;
 				# FROM
-					$sql_query .= "\nFROM "   . $main_from_sql;
-					# ADD FOR SPEED OFFSET // WHERE nu4.section_id in (SELECT nu4.section_id FROM matrix AS nu4
-					if($this->allow_sub_select_by_id!==false) $sql_query .= "\nWHERE ".$this->main_section_tipo_alias.".id in (SELECT ".$this->main_section_tipo_alias.".id FROM ".$main_from_sql; // ++
+					$sql_query .= PHP_EOL . 'FROM ' . $main_from_sql;
+
+					# ADD FOR SPEED SUBQUERY // WHERE nu4.section_id in (SELECT nu4.section_id FROM matrix AS nu4
+					if($this->allow_sub_select_by_id===true) {
+						# desactivo $sql_query .= PHP_EOL 'WHERE '.$this->main_section_tipo_alias.".id in (SELECT ".$this->main_section_tipo_alias.".id FROM ".$main_from_sql;
+						//$sql_query .= PHP_EOL . 'WHERE '.$this->main_section_tipo_alias.'.section_id in (';
+						//$sql_query .= PHP_EOL . 'SELECT DISTINCT ON('.$this->main_section_tipo_alias.'.section_id) '.$this->main_section_tipo_alias.'.section_id FROM '.$main_from_sql;
+						$sql_query .= PHP_EOL . 'WHERE '.$this->main_section_tipo_alias.'.id in (';
+						$sql_query .= PHP_EOL . 'SELECT DISTINCT ON('.$this->main_section_tipo_alias.'.id) '.$this->main_section_tipo_alias.'.id FROM '.$main_from_sql;
+					}
 					# join virtual tables
 					$sql_query .= $sql_joins;
+					# join filter projects
+					if (!empty($this->filter_join)) {
+					$sql_query .= PHP_EOL . $this->filter_join;
+					}
 				# WHERE
-					$sql_query .= "\nWHERE "  . $main_where_sql;					
+					$sql_query .= PHP_EOL . 'WHERE ' . $main_where_sql;					
 					if (!empty($sql_filter)) {
 						$sql_query .= $sql_filter;
 					}
-					if (!empty($sql_projects_filter)) {
-						$sql_query .= $sql_projects_filter;
+					#if (!empty($sql_projects_filter)) {
+					#	$sql_query .= $sql_projects_filter;
+					#}
+					if (!empty($this->filter_join_where)) {
+						$sql_query .= $this->filter_join_where;
 					}
-				# ORDER (default for maintain result consistency)					
-					$sql_query .= "\nORDER BY " . $this->build_sql_query_order_defult();
-
+				# ORDER (default for maintain result consistency)
+					#if($this->allow_sub_select_by_id===true) {
+					#	$sql_query .= PHP_EOL . 'ORDER BY '.$this->main_section_tipo_alias.'.id ASC';// . $this->build_sql_query_order_default();
+					#}else{
+					#	$sql_query .= PHP_EOL . 'ORDER BY ' . $sql_query_order; //$this->build_sql_query_order_default();
+					#}
+					if (isset($this->sql_query_order_window_subselect)) {
+						$sql_query .= PHP_EOL . 'ORDER BY ' . $this->sql_query_order_window_subselect;
+						if(SHOW_DEBUG===true) {
+							$sql_query .= ' --sql_query_order_window_subselect ';
+						}
+					}else{
+						#$sql_query .= PHP_EOL . 'ORDER BY ' . $sql_query_order; //$this->build_sql_query_order_default();
+						#$sql_query .= PHP_EOL . 'ORDER BY ' . $this->main_section_tipo_alias.'.id';
+						if($this->allow_sub_select_by_id===true) {							
+							$default_order = ($this->main_section_tipo===DEDALO_ACTIVITY_SECTION_TIPO) ? 'DESC' : 'ASC';
+							$sql_query .= PHP_EOL . 'ORDER BY ' . $this->main_section_tipo_alias.'.id '.$default_order;
+							if(SHOW_DEBUG===true) {
+								$sql_query .= ' --allow_sub_select_by_id=true ';
+							}
+						}else{
+							$sql_query .= PHP_EOL . 'ORDER BY ' . $sql_query_order;
+							if(SHOW_DEBUG===true) {
+								$sql_query .= ' -- allow_sub_select_by_id=false ';
+							}
+						}
+					}
 				# LIMIT
 					if ($this->search_query_object->limit>0) {
-						$sql_query .= "\nLIMIT " . $sql_limit;
+						$sql_query .= PHP_EOL . 'LIMIT ' . $sql_limit;
 					}
 				# OFFSET
 					if ($this->search_query_object->offset>0) {
-						$sql_query .= " OFFSET " . $sql_offset;
-					}
-				
+						$sql_query .= ' OFFSET ' . $sql_offset;
+					}				
 				# ADD FOR SPEED SUBQUERY
-					if($this->allow_sub_select_by_id!==false) {
-						$sql_query .= "\n) ORDER BY " . $this->build_sql_query_order_defult();
-					}						
+					if($this->allow_sub_select_by_id===true) {
+						// $sql_query .= PHP_EOL .') AND '.$main_where_sql; //$this->main_section_tipo_alias.'.section_tipo=\''.$this->main_section_tipo.'\'';
+						$sql_query .= PHP_EOL . ') ';
+						$sql_query .= PHP_EOL . 'ORDER BY ' . $sql_query_order; //$this->build_sql_query_order_default();																				 
+						if ($this->search_query_object->limit>0) {
+						$sql_query .= PHP_EOL . 'LIMIT ' . $sql_limit;
+						}
+					}								
 				break;
-
+			
 			default:
 				# Search With order
+				/*
+					# SELECT mu1.section_id,
+					# mu1.section_tipo,
+					# mu1.datos#>'{relations}' as relations_mu1,
+					# mu1.datos#>>'{components,mupreva776,valor_list,lg-vlca}' as mupreva776,
+					# mu1.datos#>>'{components,mupreva15,valor_list,lg-vlca}' as mupreva15,
+					# mu1.datos#>>'{components,mupreva776,valor_list,lg-vlca}' as mupreva776_order
+					# FROM matrix AS mu1
+					# WHERE mu1.section_id in (SELECT  mu1.section_id FROM matrix AS mu1
+					# INNER JOIN relations as f ON (f.section_tipo=mu1.section_tipo AND f.section_id=mu1.section_id AND f.from_component_tipo='mupreva16' AND f.target_section_tipo='dd153' AND
+					#  (f.target_section_id=1))
+					# WHERE (mu1.section_tipo='mupreva1')
+					#  ORDER BY mu1.datos#>>'{components,mupreva776,valor_list,lg-vlca}' ASC
+					# LIMIT 10
+					# ) AND (mu1.section_tipo='mupreva1')
+					#  ORDER BY mupreva776_order ASC
+
+					# SELECT
+						$sql_query .= '-- +++++++++ ' .PHP_EOL;
+						$sql_query .= 'SELECT ' . $sql_query_select;
+					# FROM
+						$sql_query .= PHP_EOL . 'FROM ' . $main_from_sql;
+
+						# ADD FOR SPEED SUBQUERY // WHERE nu4.section_id in (SELECT nu4.section_id FROM matrix AS nu4
+						if($this->allow_sub_select_by_id===true) {
+							# desactivo $sql_query .= PHP_EOL 'WHERE '.$this->main_section_tipo_alias.".id in (SELECT ".$this->main_section_tipo_alias.".id FROM ".$main_from_sql;
+							$sql_query .= PHP_EOL . 'WHERE '.$this->main_section_tipo_alias.'.section_id in ';
+							$sql_query .= '(SELECT '.$this->main_section_tipo_alias.'.section_id FROM '.$main_from_sql;
+						}
+						# join virtual tables
+						$sql_query .= $sql_joins;
+						# join filter projects
+						if (!empty($this->filter_join)) {
+						$sql_query .= PHP_EOL . $this->filter_join;
+						}
+					# WHERE
+						$sql_query .= PHP_EOL . 'WHERE ' . $main_where_sql;					
+						if (!empty($sql_filter)) {
+							$sql_query .= $sql_filter;
+						}
+						if (!empty($sql_projects_filter)) {
+							$sql_query .= $sql_projects_filter;
+						}
+					# ORDER (default for maintain result consistency)
+						#if($this->allow_sub_select_by_id===true) {
+						#	$sql_query .= PHP_EOL . 'ORDER BY '.$this->main_section_tipo_alias.'.id ASC';// . $this->build_sql_query_order_default();
+						#}else{
+							$sql_query .= PHP_EOL . 'ORDER BY ' . $sql_query_order; //$this->build_sql_query_order_default();
+						#}
+					# LIMIT
+						if ($this->search_query_object->limit>0) {
+							$sql_query .= PHP_EOL . 'LIMIT ' . $sql_limit;
+						}
+					# OFFSET
+						if ($this->search_query_object->offset>0) {
+							$sql_query .= ' OFFSET ' . $sql_offset;
+						}				
+					# ADD FOR SPEED SUBQUERY
+						if($this->allow_sub_select_by_id===true) {
+							$sql_query .= PHP_EOL .') AND '.$main_where_sql; //$this->main_section_tipo_alias.'.section_tipo=\''.$this->main_section_tipo.'\'';
+							$sql_query .= PHP_EOL . ' ORDER BY ' . $sql_query_order; //$this->build_sql_query_order_default();
+							if ($this->search_query_object->limit>0) {
+							$sql_query .= PHP_EOL . 'LIMIT ' . $sql_limit;
+							}
+						}
+					break;*/
+
 			
 				$query_inside = '';
 				# SELECT
-					$query_inside .= 'SELECT '   . $sql_query_select;
+					if(SHOW_DEBUG===true) {
+						$sql_query .= '-- Search With order' . PHP_EOL;
+					}
+					$query_inside .= 'SELECT ' . $sql_query_select;
 				# FROM
-					$query_inside .= "\nFROM "   . $main_from_sql;
+					$query_inside .= PHP_EOL . 'FROM ' . $main_from_sql;
 					# ADD FOR SPEED OFFSET // WHERE nu4.section_id in (SELECT nu4.section_id FROM matrix AS nu4
 					#$query_inside .= "\n WHERE ".$this->main_section_tipo_alias.".section_id in (SELECT ".$this->main_section_tipo_alias.".section_id FROM ".$main_from_sql; // ++
 					# join virtual tables
 					$query_inside .= $sql_joins;
+					# join filter projects
+					#if (!empty($this->filter_join)) {
+					#$query_inside .= PHP_EOL . $this->filter_join;
+					#}
 				# WHERE
-					$query_inside .= "\nWHERE "  . $main_where_sql;
+					$query_inside .= PHP_EOL . 'WHERE ' . $main_where_sql;
 					if (!empty($sql_filter)) {
 						$query_inside .= $sql_filter;
 					}
@@ -458,24 +672,24 @@ class search_development2 {
 						$query_inside .= $sql_projects_filter;
 					}
 				# ORDER (default for maintain result consistency)					
-					$query_inside .= "\nORDER BY " . $this->build_sql_query_order_defult();
+					$query_inside .= PHP_EOL . 'ORDER BY ' . $this->build_sql_query_order_default();
 					# ADD FOR SPEED OFFSET
 					#$query_inside .= "\n) ORDER BY " . $this->build_sql_query_order(); // ++
 
-				# Query wrap
-				$sql_query .= 'SELECT * FROM (';
-				$sql_query .= PHP_EOL . $query_inside. PHP_EOL;
-				$sql_query .= ') main_select';
-				# ORDER					
-					$sql_query .= "\nORDER BY " . $sql_query_order;
-				# LIMIT
-					if ($this->search_query_object->limit>0) {
-						$sql_query .= "\nLIMIT " . $sql_limit;
-					}
-				# OFFSET
-					if ($this->search_query_object->offset>0) {
-						$sql_query .= ' OFFSET ' . $sql_offset;
-					}
+				# QUERY WRAP
+					$sql_query .= 'SELECT * FROM (';
+					$sql_query .= PHP_EOL . $query_inside. PHP_EOL;
+					$sql_query .= ') main_select';
+					# ORDER					
+						$sql_query .= PHP_EOL . 'ORDER BY ' . $sql_query_order;
+					# LIMIT
+						if ($this->search_query_object->limit>0) {
+							$sql_query .= PHP_EOL . 'LIMIT ' . $sql_limit;
+						}
+					# OFFSET
+						if ($this->search_query_object->offset>0) {
+							$sql_query .= ' OFFSET ' . $sql_offset;
+						}
 				break;
 		}
 		
@@ -483,10 +697,134 @@ class search_development2 {
 
 		#dump(null, ' sql_query ++ '.to_string($sql_query)); die();
 		#debug_log(__METHOD__." SQL QUERY: ".to_string($sql_query), logger::DEBUG);
+		#debug_log(__METHOD__." this->search_query_object: ".to_string($this->search_query_object), logger::DEBUG);
 		#debug_log(__METHOD__." total time ".exec_time_unit($start_time,'ms').' ms', logger::DEBUG);
 		
 		return $sql_query;
 	}//end parse_search_query_object
+
+
+
+	/**
+	* BUILD_SQL_QUERY_SELECT
+	* @return string $sql_query_select
+	*/
+	public function build_sql_query_select($full_count=false) {
+
+		if ($full_count===true) {
+			return $this->build_full_count_sql_query_select();
+		}
+
+		$search_query_object = $this->search_query_object;
+		
+		$ar_sql_select = [];
+		$ar_key_path   = [];
+
+		if ($this->remove_distinct===true) {
+			$ar_sql_select[] = $this->main_section_tipo_alias.'.section_id';
+		}else{			
+			$ar_sql_select[] = 'DISTINCT ON ('.$this->main_section_tipo_alias.'.section_id) '.$this->main_section_tipo_alias.'.section_id';								
+		}		
+
+		$ar_sql_select[] = $this->main_section_tipo_alias.'.section_tipo';
+		
+		foreach ($search_query_object->select as $key => $select_object) {
+
+			$path 				 = $select_object->path;
+			$table_alias 		 = $this->get_table_alias_from_path($path);
+			$last_item 		 	 = end($path);
+			$component_tipo 	 = $last_item->component_tipo;
+			$column_alias 		 = $component_tipo;
+			$modelo_name 		 = $last_item->modelo;
+			$select_object_type  = isset($select_object->type) ? $select_object->type : 'string';
+			#$aply_distinct 	 = isset($last_item->distinct_values) ? $last_item->distinct_values : false; // From item path
+			$aply_distinct 		 = (isset($search_query_object->distinct_values) && $search_query_object->distinct_values===$component_tipo) ? true : false; // From global object
+			$component_path 	 = implode(',', $select_object->component_path);
+			if ($this->main_section_tipo===DEDALO_ACTIVITY_SECTION_TIPO) {
+				# In activity section, data container is allways 'dato'
+				$component_path  = str_replace('valor_list', 'dato', $component_path);
+			}
+
+			$sql_select = '';
+	
+			if ($modelo_name==='component_section_id') {
+				
+				$sql_select .= $table_alias.'.section_id';
+				$sql_select .= ' as '.$column_alias;
+
+			}else{
+
+				if ($component_path==='relations') {
+					
+					if (!isset($this->relations_cache[$table_alias])) {
+
+						# Add original always to conserve row property position
+						$ar_sql_select[] = '\'\''.' as '.$column_alias;
+
+						# New temporal column
+						$sql_select .= $table_alias.'.datos#>\'{relations}\'';
+						$column_alias = 'relations_' . $table_alias; // Override table alias for generic name
+
+						$this->relations_cache[$table_alias][] = $component_tipo;						
+
+					}else{
+						# Already exists a relations column. Skip select again
+						$sql_select .= '\'\'';						
+					}					
+				
+				}else{
+
+					$sql_select .= $table_alias.'.datos';
+					if($select_object_type==='string') {
+						$sql_select .= '#>>';
+					}else{
+						$sql_select .= '#>';
+					}
+					$sql_select .= '\'{';
+					$sql_select .= $component_path;
+					$sql_select .= '}\'';
+				}				
+
+				# All
+				if ($aply_distinct===true) {
+					# Define as default order prevent apply default behavior
+					$this->sql_query_order_default = $sql_select .' ASC';
+					# Define custom sql_query_order_window_subselect
+					$this->sql_query_order_window_subselect = $this->main_section_tipo_alias.'.id, ' . $sql_select .' ASC';
+					# Wrap sentence
+					$sql_select = 'DISTINCT ON ('.$sql_select.') '.$sql_select;					 
+				}
+				$sql_select .= ' as '.$column_alias;
+			}
+
+			# Add line
+			if ($aply_distinct===true) {
+				# Force key 0 to overwrite first select line
+				$ar_sql_select[0] = $sql_select;
+				# Move section_id column to end of select
+				$ar_sql_select[] = $this->main_section_tipo_alias.'.section_id';
+			}else{
+				$ar_sql_select[] = $sql_select;
+			}			
+
+			#if ($n_levels>1) {
+			#	$this->join_group[] = $this->build_sql_join($select_object->path);
+			#}
+
+			$this->join_group[] = $this->build_sql_join($select_object->path);
+		}
+
+		# Add order columns to select when need
+		foreach ((array)$this->order_columns as $select_line) {
+			$ar_sql_select[] = $select_line;
+		}	
+
+		# Join all
+		$sql_query_select = implode(','.PHP_EOL, $ar_sql_select);
+
+
+		return $sql_query_select;
+	}//end build_sql_query_select
 
 
 
@@ -506,9 +844,17 @@ class search_development2 {
 		$section_tipo 	 = $this->main_section_tipo;
 		$section_alias 	 = $this->main_section_tipo_alias;
 		$datos_container = ($this->matrix_table==='matrix_time_machine') ? 'dato' : 'datos';
-		
+
 		# Logged user id
 		$user_id = (int)navigator::get_user_id();
+
+		static $sql_projects_filter_data;
+		$uid = $section_tipo.'_'.$user_id;
+		if (isset($sql_projects_filter_data[$uid])) {
+			#debug_log(__METHOD__." Cached filter sql code returned for section $section_tipo".to_string(), logger::DEBUG);
+			return $sql_projects_filter_data[$uid];
+		}		
+		
 		$is_global_admin = (bool)component_security_administrator::is_global_admin($user_id);
 		if ($is_global_admin!==true) {
 
@@ -653,7 +999,8 @@ class search_development2 {
 						#$sql_filter .= '(';
 						
 						# Filter by any of user projects
-						$ar_query = [];
+						$ar_query 		= [];
+						$ar_filter_join = [];
 						foreach ($ar_projects as $key => $current_project_locator) {
 							$search_locator = new locator();
 								$search_locator->set_section_tipo($current_project_locator->section_tipo);
@@ -664,24 +1011,33 @@ class search_development2 {
 								}								
 
 							$ar_query[] = $section_alias.'.'.$datos_container.'#>\'{relations}\'@>\'['.json_encode($search_locator).']\'::jsonb';
+							#$ar_query[] = $section_alias.'.'.$datos_container.'@>\'{"relations":['.json_encode($search_locator).']}\'::jsonb';
+
+							$ar_filter_join[] = 'f.target_section_id='.(int)$current_project_locator->section_id;
 						}
 						$sql_filter .=  '(' . implode(' OR ',$ar_query) . ')';
 
-						# Filter by user created record
-						#$sql_filter .= PHP_EOL . ' OR (' . $section_alias.'.'.$datos_container.'@>\'{"created_by_userID":'.$user_id.'}\'::jsonb';
-						#$sql_filter .= ' AND (' . $section_alias.'.'.$datos_container.'#>\'{relations}\'@>\'[{"from_component_tipo":"'.$component_filter_tipo.'"}]\'::jsonb)=FALSE)';
-
-						#$sql_filter .= PHP_EOL . ')';
+						# Join of projects
+						#$filter_join  = 'INNER JOIN relations as f ON (f.section_tipo='.$this->main_section_tipo_alias.'.section_tipo AND f.section_id='.$this->main_section_tipo_alias.'.section_id ';
+						$filter_join  = 'LEFT JOIN relations as f ON (f.section_tipo='.$this->main_section_tipo_alias.'.section_tipo AND f.section_id='.$this->main_section_tipo_alias.'.section_id ';
+						$filter_join .= 'AND f.from_component_tipo=\''.$component_filter_tipo.'\'';
+						#$filter_join .= ' f.section_tipo=\''.$this->main_section_tipo.'\' AND ';
+						#$filter_join .= ' AND f.target_section_tipo=\''.DEDALO_SECTION_PROJECTS_TIPO.'\' AND'.PHP_EOL.' ('. implode(' OR ',$ar_filter_join).')';
+						$filter_join .= ')';
+						$this->filter_join = $filter_join;
+						$this->filter_join_where = PHP_EOL .' AND ('. implode(' OR ',$ar_filter_join).')';
+	
+						#if(SHOW_DEBUG!==true) {
+							# Delete old filter except for reference to debuger
+							#$sql_filter = '';
+						#}
 					}
 					break;
 			}
 
 			# FILTER_USER_RECORDS_BY_ID
 			if (defined('DEDALO_FILTER_USER_RECORDS_BY_ID') && DEDALO_FILTER_USER_RECORDS_BY_ID===true) {
-
-				if(SHOW_DEBUG===true || DEVELOPMENT_SERVER===true) {
-					$sql_filter .= "\n-- filter_user_records_by_id --";
-				}	
+					
 				$filter_user_records_by_id = filter::get_filter_user_records_by_id( navigator::get_user_id() );
 				if ( isset($filter_user_records_by_id[$section_tipo]) ) {
 					$ar_filter = array();
@@ -689,6 +1045,9 @@ class search_development2 {
 						$ar_filter[] = $section_alias . '.section_id = ' . (int)$current_id;
 					}
 					if (!empty($ar_filter)) {
+						if(SHOW_DEBUG===true || DEVELOPMENT_SERVER===true) {
+						$sql_filter .= "\n-- filter_user_records_by_id --";
+						}
 						$sql_filter .= PHP_EOL . ' AND ('.implode(' OR ',$ar_filter) . ') ';
 					}
 				}
@@ -700,6 +1059,9 @@ class search_development2 {
 
 		}//endif ($is_global_admin!==true) {
 
+		# Cache
+		$sql_projects_filter_data[$uid] = $sql_projects_filter;
+
 
 		return $sql_projects_filter;
 	}//end build_sql_projects_filter
@@ -707,17 +1069,24 @@ class search_development2 {
 
 
 	/**
-	* BUILD_SQL_QUERY_ORDER_DEFULT
-	* @return string $sql_query_order_defult
+	* BUILD_SQL_QUERY_ORDER_DEFaULT
+	* @return string $sql_query_order_default
 	*/
-	public function build_sql_query_order_defult() {
+	public function build_sql_query_order_default() {
 
-		$section_tipo = $this->main_section_tipo;
+		if (isset($this->sql_query_order_default)) {
+			return $this->sql_query_order_default;
+		}
+
+		$section_tipo  = $this->main_section_tipo;
 
 		$default_order = ($section_tipo===DEDALO_ACTIVITY_SECTION_TIPO) ? 'DESC' : 'ASC';
+
+		$sql_query_order_default = $this->main_section_tipo_alias.'.section_id '.$default_order;
+	
 		
-		return $this->main_section_tipo_alias.'.section_id '.$default_order;
-	}//end build_sql_query_order_defult
+		return $sql_query_order_default;
+	}//end build_sql_query_order_default
 
 
 
@@ -752,13 +1121,15 @@ class search_development2 {
 					$table_alias= $this->get_table_alias_from_path($path);
 					$selector 	= implode(',', $order_obj->component_path);
 					$alias 		= $component_tipo . '_order';
-					$column 	= $table_alias . '.datos#>>\'{'.$selector.'}\' as '.$alias;
+					$base 		= $table_alias . '.datos#>>\'{'.$selector.'}\'';
+					$column 	= $base .' as '.$alias;
 
 					# Add to global order columns (necessary for order...)
 					# This array is added when query select is calculated
 					$this->order_columns[] = $column;
 
 					$line = $alias . ' ' . $direction;
+					#$line = $base . ' ' . $direction;
 					#debug_log(__METHOD__." line ".to_string($line), logger::DEBUG);		
 				}					
 
@@ -817,7 +1188,7 @@ class search_development2 {
 		# Avoid root user is showed
 		if ($main_section_tipo===DEDALO_SECTION_USERS_TIPO) {
 			$main_where_sql .= ' AND '.$main_section_tipo_alias.'.section_id>0 ';
-		}
+		}		
 
 		# Fix values
 		$this->main_where_sql = $main_where_sql;
@@ -908,102 +1279,6 @@ class search_development2 {
 
 
 	/**
-	* BUILD_SQL_QUERY_SELECT
-	* @return string $sql_query_select
-	*/
-	public function build_sql_query_select($full_count=false) {
-
-		if ($full_count===true) {
-			return $this->build_full_count_sql_query_select();
-		}
-
-		$search_query_object = $this->search_query_object;
-
-		#dump($search_query_object->select, ' search_query_object->select ++ '.to_string());
-		$ar_sql_select = [];
-		$ar_key_path   = [];
-
-		if ($this->remove_distinct===true) {
-			$ar_sql_select[] = $this->main_section_tipo_alias.'.section_id';
-		}else{
-			$ar_sql_select[] = 'DISTINCT ON ('.$this->main_section_tipo_alias.'.section_id) '.$this->main_section_tipo_alias.'.section_id';
-		}		
-		
-
-		$ar_sql_select[] = $this->main_section_tipo_alias.'.section_tipo';
-		#$ar_sql_select[] = "oh1_oh24_rsc197_rsc85.datos#>>'{components,rsc85,dato}' ";
-		
-		foreach ($search_query_object->select as $key => $select_object) {
-
-			$path 				 = $select_object->path;
-			$table_alias 		 = $this->get_table_alias_from_path($path);
-			$last_item 		 	 = end($path);
-			$component_tipo 	 = $last_item->component_tipo;
-			$column_alias 		 = $component_tipo;
-			$modelo_name 		 = $last_item->modelo;
-			$select_object_type  = isset($select_object->type) ? $select_object->type : 'string';
-			$component_path 	 = implode(',', $select_object->component_path);
-			if ($this->main_section_tipo===DEDALO_ACTIVITY_SECTION_TIPO) {
-				# In activity section, data container is allways 'dato'
-				$component_path  = str_replace('valor_list', 'dato', $component_path);
-			}
-			#>>\'{components,'.$component_tipo.',valor_list,'.$select_object->lang.'}\' as '.$column_alias;
-
-			$sql_select 	 = '';
-	
-			if ($modelo_name==='component_section_id') {
-				
-				$sql_select .= $table_alias.'.section_id';
-				$sql_select .= ' as '.$column_alias;
-
-			}else{
-
-				if ($component_path==='relations') {
-					
-					$sql_select .= '\'\'';
-				
-				}else{
-
-					$sql_select .= $table_alias.'.datos';
-					if($select_object_type==='string') {
-						$sql_select .= '#>>';
-					}else{
-						$sql_select .= '#>';
-					}
-					$sql_select .= '\'{';
-						$sql_select .= $component_path;
-					$sql_select .= '}\'';
-				}				
-
-				$sql_select .= ' as '.$column_alias;
-			}
-
-			# Add line
-			$ar_sql_select[] = $sql_select;
-
-			#if ($n_levels>1) {
-			#	$this->join_group[] = $this->build_sql_join($select_object->path);
-			#}
-
-			$this->join_group[] = $this->build_sql_join($select_object->path);
-		}
-
-		# Add order columns to select when need
-		foreach ((array)$this->order_columns as $select_line) {
-			$ar_sql_select[] = $select_line;
-		}
-		
-
-		# Join all
-		$sql_query_select = implode(','.PHP_EOL, $ar_sql_select);
-
-
-		return $sql_query_select;
-	}//end build_sql_query_select
-
-
-
-	/**
 	* BUILD_full_count_SQL_QUERY_SELECT
 	* @return string $sql_query_select
 	*/
@@ -1027,7 +1302,7 @@ class search_development2 {
 		$ar_key_join 		= [];
 		$base_key 			= '';
 		$total_paths 		= count($path);
-
+	
 		foreach ($path as $key => $step_object) {
 			
 			if ($key===0) {
@@ -1048,7 +1323,6 @@ class search_development2 {
 			}else{
 				$ar_key_join[]	= self::trim_tipo($step_object->section_tipo) .'_'. self::trim_tipo($step_object->component_tipo);
 			}
-
 			
 			$matrix_table		= common::get_matrix_table_from_tipo($step_object->section_tipo);
 			$last_section_tipo 	= $step_object->section_tipo;
@@ -1058,14 +1332,30 @@ class search_development2 {
 			#debug_log(__METHOD__." t_name2 ".to_string($t_name2), logger::DEBUG);
 			$t_relation			= 'r_'.$t_name ;
 
-			if (!isset($this->ar_sql_joins[$t_name])) {
+			if (!isset($this->ar_sql_joins[$t_name])) {				
 
 				$sql_join  = "\n";
 				if(SHOW_DEBUG===true) {
 					$section_name = RecordObj_dd::get_termino_by_tipo($step_object->section_tipo, null, true, false);
 					$sql_join  .= "-- JOIN GROUP $matrix_table - $t_name - $section_name\n";
 				}
-				$sql_join .= ' LEFT JOIN '.$rel_table.' AS '.$t_relation.' ON ('. $current_key.'.section_tipo=' . $t_relation.'.section_tipo AND '.$t_relation.'.target_section_tipo=\''.$last_section_tipo.'\' AND '. $current_key. '.section_id='. $t_relation.'.section_id) '."\n";
+				# Join relation table
+				$sql_join .= ' LEFT JOIN ' .$rel_table. ' AS ' .$t_relation. ' ON (';
+				$sql_join .= $current_key. '.section_id=' .$t_relation. '.section_id';
+				$sql_join .= ' AND ' . $current_key.'.section_tipo=' . $t_relation.'.section_tipo';
+				#$sql_join .= ' AND ' .$t_relation. '.target_section_tipo=\'' .$last_section_tipo. '\'';
+
+				# join_from_component_tipo
+				if (isset($path[$key-1])) {
+					$from_component_tipo = $path[$key-1]->component_tipo;
+					$sql_join .= ' AND ' . $t_relation .'.from_component_tipo=\'' .$from_component_tipo. '\'';
+				}else{
+					$sql_join .= ' AND ' .$t_relation. '.target_section_tipo=\'' .$last_section_tipo. '\'';
+				}
+								
+				$sql_join .= ')'.PHP_EOL;
+				
+				# Join next table
 				$sql_join .= ' LEFT JOIN '.$matrix_table.' AS '.$t_name .' ON ('. $t_relation.'.target_section_id='.$t_name.'.section_id AND '.$t_relation.'.target_section_tipo='.$t_name.'.section_tipo)';
 				
 				// Add to joins
@@ -1173,7 +1463,7 @@ class search_development2 {
 				}
 
 				if($search_object_unaccent===true) {
-					$sql_where .= 'unaccent(';
+					$sql_where .= 'f_unaccent(';
 				}
 					
 				$sql_where .= $table_alias . '.datos';
@@ -1195,7 +1485,7 @@ class search_development2 {
 				$sql_where .= ' '.$search_object->operator.' ';
 
 				if($search_object_unaccent===true) {
-					$sql_where .= 'unaccent(';
+					$sql_where .= 'f_unaccent(';
 				}
 
 				# q
@@ -1275,13 +1565,16 @@ class search_development2 {
 	public static function resolve_array_elements( $array_elements, $component_tipo ) {
 		
 		$sql_where = '';
+		#debug_log(__METHOD__." ****** array_elements ".to_string($array_elements), logger::DEBUG);
 		
 		foreach ($array_elements as $current_operator => $group_elements) {
 			#dump($group_elements, ' $group_elements ++ '.to_string($current_operator)); die();
+
+			$operator_sql = strtoupper(substr($current_operator, 1));
 			
 			$group_query = [];
-			foreach ($group_elements as $search_unit) {
-				
+			foreach ($group_elements as $search_unit) {				
+
 				if (strpos(key($search_unit),'$')!==false) {
 					
 					// Recursion
@@ -1293,7 +1586,7 @@ class search_development2 {
 					$sql_query .= $component_tipo.'_array_elements';
 					$sql_query .= ($search_unit->type==='string') ? '#>>' : '#>';
 					$sql_query .= '\'{'	. implode(',',$search_unit->component_path) . '}\'';
-					$sql_query .= ' '.$search_unit->operator.' ';
+					$sql_query .= ' '.$search_unit->operator.' ';					
 					$sql_query .= $search_unit->q_parsed;
 				}					
 
@@ -1303,7 +1596,7 @@ class search_development2 {
 			}//end foreach ($second_group as $search_unit)	
 
 			# Join elements with current operator
-			$sql_where .= '('. implode(' '.strtoupper(substr($current_operator, 1)).' ', $group_query) . ') ';
+			$sql_where .= '('. implode(' '. $operator_sql .' ', $group_query) . ') ';
 
 		}//foreach ($array_elements as $current_operator => $group_elements)
 
@@ -1511,11 +1804,20 @@ class search_development2 {
 	*/
 	public static function calculate_inverse_locators( $reference_locator ) {
 		#debug_log(__METHOD__." locator received:  ".to_string($reference_locator), logger::DEBUG);
-		$ar_tables_to_search = common::get_matrix_tables_with_relations();
 
 		# compare
-			$compare = json_encode($reference_locator);
+		$compare = json_encode($reference_locator);
+			#debug_log(__METHOD__." compare: ".$compare, logger::DEBUG);
 
+		static $ar_inverse_locators_data;
+		$uid = $compare;
+		if (isset($ar_inverse_locators_data[$uid])) {
+			return $ar_inverse_locators_data[$uid];
+		}
+
+		$ar_tables_to_search = common::get_matrix_tables_with_relations();
+		#debug_log(__METHOD__." ar_tables_to_search: ".json_encode($ar_tables_to_search), logger::DEBUG);
+	
 		$ar_query=array();
 		foreach ($ar_tables_to_search as $table) {
 
@@ -1523,6 +1825,7 @@ class search_development2 {
 			$query  .= PHP_EOL . 'SELECT section_tipo, section_id, datos#>\'{relations}\' AS relations';
 			$query  .= PHP_EOL . 'FROM "'.$table.'"';
 			$query  .= PHP_EOL . 'WHERE datos#>\'{relations}\' @> \'['.$compare.']\'::jsonb';
+			#$query  .= PHP_EOL . 'WHERE datos @> \'{"relations":['.$compare.']}\'::jsonb';
 			
 			$ar_query[] = $query;
 		}
@@ -1570,6 +1873,7 @@ class search_development2 {
 		}
 		#debug_log(__METHOD__." ar_inverse_locators ".to_string($ar_inverse_locators), logger::DEBUG);
 
+		$ar_inverse_locators_data[$uid] = $ar_inverse_locators;
 
 		return (array)$ar_inverse_locators;
 	}//end calculate_inverse_locators
@@ -1683,6 +1987,86 @@ class search_development2 {
 
 
 
+	/**
+	* PROPAGATE_COMPONENT_DATO_TO_RELATIONS_TABLE
+	* Get complete component relation dato and generate rows into relations table for fast LEFT JOIN
+	* @return object $response
+	*/
+	public static function propagate_component_dato_to_relations_table( $request_options ) {
+
+		$response = new stdClass();
+			$response->result 	= false;
+			$response->msg 		= array('Error. Request failed '.__METHOD__);
+
+		$options = new stdClass();
+			$options->ar_locators 		  = null;
+			$options->section_tipo 		  = null;
+			$options->section_id 		  = null;
+			$options->from_component_tipo = null;
+			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
+
+		if (strpos($options->section_id, DEDALO_SECTION_ID_TEMP)!==false) {
+			$response->result 	= true;
+			$response->msg 		= 'Ok. Request skipped for temp section: '.DEDALO_SECTION_ID_TEMP.' - '.__METHOD__;
+			return $response;
+		}
+	
+		if (empty($options->from_component_tipo)) {			
+			$response->msg[] = " options->from_component_tipo is mandatory ! Stopped action";
+			$response->msg   = implode(', ', $response->msg);
+			debug_log(__METHOD__." $response->msg ".to_string(), logger::ERROR);
+			return $response;
+		}
+		
+		$table = 'relations';
+		
+		$section_id 		 = $options->section_id;
+		$section_tipo 		 = $options->section_tipo;
+		$from_component_tipo = $options->from_component_tipo;
+		
+		# DELETE . Remove all relations of current component
+		$strQuery 	= "DELETE FROM $table WHERE section_id = $section_id AND section_tipo = '$section_tipo' AND from_component_tipo = '$from_component_tipo' ";
+		$result 	= JSON_RecordDataBoundObject::search_free($strQuery);
+		
+		foreach ((array)$options->ar_locators as $key => $locator) {
+
+			if(!isset($locator->section_tipo)) {
+				debug_log(__METHOD__." Error. empty section_tipo. Ignored insert locator: ".to_string($locator), logger::ERROR);
+				continue;
+			}
+
+			$target_section_tipo = $locator->section_tipo;
+			$target_section_id 	 = $locator->section_id;
+			#$from_component_tipo = $locator->from_component_tipo; // Already defined before			
+
+			# INSERT . Create new
+			$strQuery = "INSERT INTO $table (section_id, section_tipo, target_section_id, target_section_tipo, from_component_tipo) VALUES ($1, $2, $3, $4, $5) RETURNING id";
+			# Exec query
+			$result = pg_query_params(DBi::_getConnection(), $strQuery, array( $section_id, $section_tipo, $target_section_id, $target_section_tipo, $from_component_tipo ));
+			if(!$result) {			
+				$msg = " Failed Insert relations record - $strQuery";
+				debug_log(__METHOD__." ERROR: $msg ".to_string(), logger::ERROR);
+				$response->msg[] = $msg;
+			}else{
+				$msg = " Created relations row ({$section_tipo}-{$section_id}) target_section_id:$target_section_id, target_section_tipo:$target_section_tipo, from_component_tipo:$from_component_tipo";
+				$response->msg[] = $msg;
+				if(SHOW_DEBUG===true) {
+					$msg .= ' ('.RecordObj_dd::get_termino_by_tipo($section_tipo).' - '.RecordObj_dd::get_termino_by_tipo($from_component_tipo).')';
+					debug_log(__METHOD__." OK: ".$msg, logger::DEBUG);
+				}				
+			}
+		}
+
+
+		$response->result = true;
+		$response->msg[0] = "Ok. Relations row successfully"; // Override first message
+		$response->msg    = "<br>".implode('<br>', $response->msg);
+		
+		return $response;
+	}//end propagate_component_dato_to_relations_table
+
+
+
 	############################ SEARCH2 #################################
 
 
@@ -1690,7 +2074,7 @@ class search_development2 {
 	/**
 	* GET_COMPONENTS_FROM_SECTION
 	* Used to build search presets
-	* @return object $reponse
+	* @return object $response
 	*/
 	public static function get_components_from_section($ar_section_tipo, $path=[], $ar_tipo_exclude_elements=false) {
 		#dump($section_tipo, ' section_tipo ++ '.to_string());
@@ -1707,32 +2091,55 @@ class search_development2 {
 									'component_image',
 									'component_av',
 									'component_security_administrator',
-									'component_relation_children',
-									'component_relation_related',
+									//'component_relation_children',
+									//'component_relation_related',
 									'component_relation_model',
-									'component_relation_parent',
+									//'component_relation_parent', // Working here..
 									'component_relation_index',
 									'component_relation_struct',
-									'component_geolocation'
+									'component_geolocation',
+									'section_tab'								
 								];
 
 		# Manage multiple sections
-		# section_tipo can be an array of section_tipo. For avoid duplicatios, check and group similar sections (like es1, co1, ..)
+		# section_tipo can be an array of section_tipo. For avoid duplications, check and group similar sections (like es1, co1, ..)
 		#$ar_section_tipo = (array)$section_tipo;
 
 		foreach ((array)$ar_section_tipo as $section_tipo) {
-		
 
+			# section label
 			$section_label 	  = RecordObj_dd::get_termino_by_tipo($section_tipo, DEDALO_DATA_LANG , true, true);
 
 			$ar_children 	  = section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, ['component'], $from_cache=true, $resolve_virtual=true, $recursive=true, $search_exact=false, $ar_tipo_exclude_elements);
 			$ar_section_group = section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, ['section_group','section_group_div','section_tab'], $from_cache=true, $resolve_virtual=true, $recursive=true, $search_exact=true, $ar_tipo_exclude_elements);
-		
-			foreach ($ar_section_group as $section_group_tipo) {
+			
+			
+			$ar_section_group_parsed = [];
+			foreach ($ar_section_group as $section_group_tipo) {				
 
+				$current_section_group_modelo = RecordObj_dd::get_modelo_name_by_tipo($section_group_tipo,true);
+				switch ($current_section_group_modelo) {
+					case 'section_tab':
+						# Section tab case need resolve children tabs
+						$ar_tabs = RecordObj_dd::get_ar_childrens($section_group_tipo, $order_by='norden');
+						foreach ($ar_tabs as $tab_tipo) {
+							$ar_section_group_parsed[] = $tab_tipo;
+						}
+						break;					
+					default:
+						# Add regular section group
+						$ar_section_group_parsed[] = $section_group_tipo;
+						break;
+				}
+			}		
+
+			foreach ($ar_section_group_parsed as $section_group_tipo) {				
+
+				# section_group_label
 				$section_group_label 		= RecordObj_dd::get_termino_by_tipo($section_group_tipo, DEDALO_DATA_LANG , true, true);
 				$ar_section_group_childrens = RecordObj_dd::get_ar_childrens($section_group_tipo, $order_by='norden');
-		
+				#$ar_section_group_childrens = RecordObj_dd::get_ar_recursive_childrens($section_group_tipo, $is_recursion=false, $ar_exclude_models=false, $order_by='norden');				
+			
 				foreach ($ar_section_group_childrens as $component_tipo) {
 					
 					if (!in_array($component_tipo, $ar_children)) {
