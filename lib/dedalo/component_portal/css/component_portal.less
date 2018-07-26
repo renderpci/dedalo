@@ -19,7 +19,7 @@
 		//top: -25px;
 		//margin-bottom: -20px;		
 		//background-color: #edbff5;  
-		//overflow: auto;
+		overflow: auto;
 	}
 	/* hide main label (> first label only) */
 	.css_wrap_portal > .css_label {
@@ -50,6 +50,9 @@
 	/*z-index: 9000 !important;*/
 	position: relative;
 	top: -3px;
+
+	padding-top: 3px;
+    padding-bottom: 3px;
 }
 .show_more_link {
 	text-transform: capitalize;
@@ -80,7 +83,7 @@
 .btn_view_single{
 	background: url('../../themes/default/view_single_line.svg') center center no-repeat;
 }
-.btn_view_mosaic{
+.btn_view_mosaic {
 	background: url('../../themes/default/view_mosaic.svg') center center no-repeat;
 }
 
@@ -331,9 +334,10 @@ th.tag_id_column {
 		}
 	
 		.mosaic_ul {
-			//background-color: #A3A3A3;
-			width: 100%;
-			min-height: 50px;
+			//background-color: #76BDD4;
+			//width: 100%;
+			height: 100%; // 13-06-2018
+			//min-height: 50px;
 			//display: table;
 			//padding-top: 5px;
 			}
@@ -638,11 +642,19 @@ th.tag_id_column {
 		//background-color: #FFCD95;
 		width: 100%;
 		min-height: 50px;
+		display: table;
 
 		.id_column {
 			//display: none;
 		}
 
+		.css_wrap_image_portal_list_view_mosaic,
+		.css_wrap_image_portal_list_view_mosaic .content_data,
+		.div_image_portal_list_view_mosaic
+		 {
+			display: table;
+			width: 100%;
+		}
 	
 		.mosaic_li {
 			//background-color: #a1b796;
@@ -651,7 +663,8 @@ th.tag_id_column {
 			margin: 0;
 			float: left;			
 			//display: block;
-			display: flex;
+			//display: flex;
+			display: table;
 			//flex-wrap: nowrap;	//nowrap | wrap | wrap-reverse;
 
 			position: relative;
@@ -766,8 +779,47 @@ th.tag_id_column {
 			text-align: right;			
 		}
 	}
-	
 
+
+	/* portal_btn_pagination
+	-------------------------------------------------------------- */
+	.portal_btn_pagination {
+		//background-color: #C9C1F4;		
+		z-index: 999999;
+		padding: 5px;
+		display: block;
+		float: right;
+		height: 23px;
+		width: 25px;
+		opacity: .4;
+		background-color: #f2f2f2;
+		text-align: center;
+		font-weight: bold;
+		line-height: 11px;
+		font-size: 14px;
+		border: 1px solid #e1e0e0;
+		border-radius: 4px;
+		}		
+		.portal_btn_pagination.active {
+			opacity: 1;
+			cursor: pointer;
+		}
+		.portal_btn_pagination.active:hover {
+			background-color: #F3AA43;
+			color: #ffffff;
+		}
+		.portal_btn_pagination.active:active {
+			opacity: 0.4;
+		}
+		.portal_btn_pagination_left {
+			margin-left: 6px;
+		}
+
+
+	.loading_portal {
+		width: 100%;
+		height: 80px;
+	}
 	
 
 

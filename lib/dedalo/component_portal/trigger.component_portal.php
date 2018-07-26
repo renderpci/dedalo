@@ -5,7 +5,6 @@ include( dirname(dirname(__FILE__)).'/config/config4.php');
 common::trigger_manager();
 
 
-
 /**
 * SAVE
 * @return object $response
@@ -222,6 +221,67 @@ function remove_element($json_data) {
 
 	return (object)$response;
 }//end remove_element
+
+
+
+/**
+* BUILD_COMPONENT_JSON_DATA
+* @return object $response 
+*/
+function build_component_json_data($json_data) {
+	global $start_time;
+
+	$response = new stdClass();
+		$response->result 	= false;
+		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
+
+
+	$vars = array('tipo','parent','modo','lang','section_tipo','propiedades','build_options');
+		foreach($vars as $name) {
+			$$name = common::setVarData($name, $json_data);
+			# DATA VERIFY
+			if ($name==='propiedades') continue; # Skip non mandatory
+			if (empty($$name)) {
+				$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty '.$name.' (is mandatory)';
+				return $response;
+			}
+		}
+	#debug_log(__METHOD__." Portal trigger ** build_options ".to_string($build_options), logger::DEBUG); #die();
+
+	$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+	$component   	= component_common::get_instance($modelo_name,
+													 $tipo,
+													 $parent,
+													 $modo,
+													 $lang,
+													 $section_tipo);
+
+	// Inject custom propiedades here as needed
+	if (!empty($propiedades)) {
+		$component->set_propiedades($propiedades);
+	}
+
+
+	
+	$result = $component->build_component_json_data($build_options);
+
+	$response->result 	= $result;
+	$response->msg 		= 'Ok. Request done ['.__FUNCTION__.']';
+
+	# Debug
+	if(SHOW_DEBUG===true) {
+		$debug = new stdClass();
+			$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
+			foreach($vars as $name) {
+				$debug->{$name} = $$name;
+			}
+
+		$response->debug = $debug;
+	}
+
+
+	return (object)$response;
+}//end build_component_json_data
 
 
 

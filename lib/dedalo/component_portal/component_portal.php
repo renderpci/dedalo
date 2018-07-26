@@ -23,7 +23,6 @@
 	if (isset($context->context_name) && $context->context_name==='tool_time_machine') {
 		$this->set_show_button_new(false);
 	}
-	//dump($context, ' context ++ '.to_string());
 	
 	$propiedades			= $this->get_propiedades();
 	$id_wrapper 			= 'wrapper_'.$identificador_unico;
@@ -34,19 +33,20 @@
 	$portal_parent 			= $parent;
 
 	# TIME MACHINE SPECIFIC KEY CHANGES
-	#$id_time_machine_key = isset($_REQUEST['id_time_machine']) ? '_'.$_REQUEST['id_time_machine'] : '';
+	#$id_time_machine_key = isset($_REQUEST['id_time_machine']) ? '_'.safe_xss($_REQUEST['id_time_machine']) : '';
 
 	#get the change id_time_machine_key
-	$var_requested 	= common::get_request_var('id_time_machine');
-	$id_time_machine_key = !empty($var_requested) ? '_'.$var_requested : '';
+	#$var_requested 	= common::get_request_var('id_time_machine');
+	#$id_time_machine_key = !empty($var_requested) ? '_'.$var_requested : '';
 
 	# SEARCH_OPTIONS_SESSION_KEY
 	#$search_options_session_key = 'portal_edit'.$identificador_unico.'_'.TOP_TIPO.'_'.TOP_ID.$id_time_machine_key;
-	$search_options_session_key = 'portal_'.$modo.'_'.$section_tipo.'_'.$tipo.'_'.$parent.'_'.$this->section_list_key;
+	#$search_options_session_key = 'portal_'.$modo.'_'.$section_tipo.'_'.$tipo.'_'.$parent.'_'.$this->section_list_key;
 	#$dato = $this->get_dato();
 	#$search_options_session_key = 'portal_'.$modo.'_'.$section_tipo.'_'.$tipo.'_'.$parent.'_'. md5(json_encode($dato)); // En pruebas !!
 	#debug_log(__METHOD__." POR RREVISAR A FONDO EL KEY search_options_session_key !!!! ".to_string($this->section_list_key), logger::DEBUG);
 		#dump($modo, ' modo ++ '.to_string());
+
 
 	switch($modo) {
 		
@@ -63,6 +63,10 @@
 				// Dont break here. Continue as modo edit
 		#case 'portal_list_view_mosaic':
 		#		$file_name		= 'edit';
+
+		case 'tool_description':
+				$file_name		= 'edit';			
+
 		case 'edit':
 
 				#
@@ -73,7 +77,37 @@
 				css::$ar_url[] = DEDALO_LIB_BASE_URL."/tools/tool_semantic_nodes/css/tool_semantic_nodes.css";
 				#}
 
-				if ($this->generate_json_element===false) {
+				#dump($this->generate_json_element, ' file_name ++ '.to_string($this->generate_json_element));
+				#debug_log(__METHOD__." tipo:$this->tipo - modo:$modo - generate_json_element:".to_string($this->generate_json_element), logger::DEBUG);
+
+				$dato 			= $this->get_dato();
+				$component_info	= $this->get_component_info('json');
+
+				$ar_target_section_tipo 	 = $this->get_ar_target_section_tipo();
+				$ar_target_section_tipo_json = json_encode($ar_target_section_tipo);
+	
+				$max_records 	= isset($this->propiedades->max_records) ? (int)$this->propiedades->max_records : 10;
+				$offset 		= 0; // Initial is 0
+				$n_rows 		= count($dato);
+
+				# extension_autocomplete
+				$extension_autocomplete = $this->get_extension_autocomplete();
+				if ($extension_autocomplete!==false) {
+					# code...
+				}
+
+				#if ($this->generate_json_element===true) {
+
+					# tool_description case overrides
+					# if ($modo==='tool_description') {
+					# 	$file_name 	 = 'edit';
+					# 	$max_records = 1;
+					# }
+
+					#$json_build_options = json_encode($this->get_json_build_options());
+						#dump($json_build_options, ' $json_build_options ++ '.to_string());	return;				
+				/*
+				}else{
 
 					# Custom propiedades external dato 
 					if(isset($propiedades->source->mode) && $propiedades->source->mode === 'external'){
@@ -88,6 +122,8 @@
 
 					$ar_target_section_tipo 	 = $this->get_ar_target_section_tipo();
 					$ar_target_section_tipo_json = json_encode($ar_target_section_tipo);
+
+
 					
 					if (isset($propiedades->html_options)) foreach ($propiedades->html_options as $key => $value) {
 						$this->html_options->$key = $value;					
@@ -100,13 +136,14 @@
 
 					#
 					# EDIT VIEW CONFIG (propiedades)
-					$edit_view 			= 'full'; // Default portal view if nothing is set about
+					$edit_view 		= 'full'; // Default portal view if nothing is set about
 					if(isset($propiedades->edit_view)) {
-						$edit_view		= $propiedades->edit_view;
-						$file_view 		= $modo.'_'.$edit_view;						
+						$edit_view	= $propiedades->edit_view;
+						$file_view 	= $modo.'_'.$edit_view;
 					}
+					#debug_log(__METHOD__." propiedades - edit_view:$edit_view -  ".to_string($propiedades->edit_view), logger::DEBUG);						
 					
-					$filter_by_locator = (array)$dato; //array_slice((array)$dato, 0, 10);
+					$filter_by_locator = (array)$dato;
 					
 					if (empty($dato)) {
 
@@ -117,18 +154,20 @@
 						$this->html_options->header = false;
 						$this->html_options->rows 	= false;
 
-					}else{											
+						#throw new Exception("Stopped Processing Request. Empty dato here !", 1);						
+
+					}else{
 						
 						$context = new stdClass();
 							$context->context_name 	= 'list_in_portal';
 							$context->portal_tipo 	= $tipo;
 							$context->portal_parent = $parent;
 
-
+	
 						# OPTIONS
 						#$search_options = new stdClass();
 						#	$search_options->modo  		= 'portal_list';
-						#	$search_options->context 	= $context;								
+						#	$search_options->context 	= $context;
 
 
 						# SEARCH_QUERY_OBJECT . Add search_query_object to options
@@ -143,34 +182,34 @@
 						$rows_data 		 	 = $search_develoment2->search();
 
 						#
-						# COMPONENT STATE DATO
-						/*
-						if (isset($this->component_state_tipo)) {
-
-							$state_options = $options;
-							$state_options->tipo_de_dato = 'dato';
-							$state_options->layout_map 	 = array($this->component_state_tipo);
-							$rows_data_state = search::get_records_data($state_options);
-								dump($rows_data_state, ' rows_data_state ++ '.to_string());		
-							
-							# STATE UPDATE DATA
-							$this->update_state($rows_data_state);
-						}
-						*/
+						# COMPONENT STATE DATO					
+						#if (isset($this->component_state_tipo)) {
+						#
+						#	$state_options = $options;
+						#	$state_options->tipo_de_dato = 'dato';
+						#	$state_options->layout_map 	 = array($this->component_state_tipo);
+						#	$rows_data_state = search::get_records_data($state_options);
+						#		dump($rows_data_state, ' rows_data_state ++ '.to_string());		
+						#	
+						#	# STATE UPDATE DATA
+						#	$this->update_state($rows_data_state);
+						#}						
 					}
 					#dump($rows_data," rows_data");
+
 
 					#
 					# COLUMNS
 					$ar_columns = $this->get_ar_columns($edit_view);
+						#dump($ar_columns, ' /////////////////////////////// ar_columns ++ '.to_string($edit_view));
 				
 					# Buttons new/add
-					$show_button_new = $this->get_show_button_new();					
+					$show_button_new = $this->get_show_button_new();
 					
 					# Daggable
 					$dragable_connectWith = isset($propiedades->dragable_connectWith) ? "portal_table_".$propiedades->dragable_connectWith : null;
 
-
+					# max_records
 					if (isset($propiedades->max_records) && $this->max_records==null) {
 						$this->max_records = $propiedades->max_records;
 					}
@@ -178,12 +217,22 @@
 					$total_records  = count($dato);
 					$max_records 	= $this->max_records!==null ? (int)$this->max_records : 5;
 					$offset 		= $this->offset!==null ? (int)$this->offset : 0;
-
-					#$max_records = 5; $offset = 1;
-
+	
 					# JS ADD
 					#js::$ar_url[]  = DEDALO_LIB_BASE_URL."/tools/tool_portal/js/tool_portal.js";
-				}			
+					# tool_description case	
+
+					# tool_description case overrides
+					# if ($modo==='tool_description') {
+					# 	$edit_view		= 'view_description_tool';
+					# 	$file_view 		= 'edit_'.$edit_view;
+					# 	$max_records 	= 1;
+					# 	$file_name		= $file_view;
+					# }
+					#debug_log(__METHOD__." file_name: $file_name - file_view: $file_view - modo: $modo".to_string(), logger::DEBUG);
+
+				}//end if ($this->generate_json_element===true)	
+				*/
 				break;
 
 		case 'portal_list' :
@@ -195,11 +244,11 @@
 		# Build section list from array of section's id stored in component_portal dato
 		case 'list' :
 				$dato = $this->get_dato();
-				if (empty($dato)) return null;				
+				if (empty($dato)) return null;
 				
 				$ar_target_section_tipo 	 = $this->get_ar_target_section_tipo();
 				$ar_target_section_tipo_json = json_encode($ar_target_section_tipo);
-				$filter_by_locator 			 = (array)$dato;										
+				$filter_by_locator 			 = (array)$dato;
 
 				# CONTEXT : Configure section context
 				$context = new stdClass();
@@ -209,8 +258,8 @@
 
 				# OPTIONS
 				$options = new stdClass();
-					$options->modo		= 'portal_list';	
-					$options->context 	= $context;				
+					$options->modo		= 'portal_list';
+					$options->context 	= $context;
 				
 				# SEARCH_QUERY_OBJECT . Add search_query_object to options
 					$search_query_object_options = new stdClass();
@@ -225,7 +274,7 @@
 
 
 				# AR_COLUMNS
-				$ar_columns = $this->get_ar_columns();				
+				$ar_columns = $this->get_ar_columns();
 				break;
 
 		# SEARCH MODE
@@ -318,7 +367,7 @@
 		
 		case 'portal_list_view_mosaic':
 				
-				$dato 				= $this->get_dato();			
+				$dato 				= $this->get_dato();
 				if (empty($dato)) return null;
 
 				$valor				= $this->get_dato_as_string();
@@ -331,9 +380,8 @@
 					$edit_view		= $propiedades->edit_view;
 					$file_view 		= $modo;//.'_'.$edit_view;
 					$file_name 		= 'list_view_mosaic';
-				}				
+				}
 			
-
 				# LAYOUT_MAP : Calculate list for layout map
 				# All related terms are selected except section that is unset from the array								
 				$layout_map_virtual  	= $this->get_layout_map($edit_view);
@@ -369,8 +417,63 @@
 				
 				!isset($ar_target_section_tipo) ? $ar_target_section_tipo = $this->get_ar_target_section_tipo() : array();
 				$ar_target_section_tipo_json = json_encode($ar_target_section_tipo);
-
 				break;
+
+		case 'tool_description': // tool_description view_tool_description
+			#echo "XXXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXXX "; #return;
+			$dato 				= $this->get_dato();
+			if (empty($dato)) return null;
+
+			$valor				= $this->get_dato_as_string();
+			$component_info 	= $this->get_component_info('json');
+			$exclude_elements 	= $this->get_exclude_elements();
+
+			# EDIT VIEW CONFIG (propiedades)
+			$edit_view 			= 'full'; // Default portal view if nothing is set about
+			if(isset($propiedades->edit_view)) {
+				$edit_view		= $propiedades->edit_view;
+				$file_view 		= $modo;//.'_'.$edit_view;
+				$file_name 		= 'list_view_mosaic';
+			}
+		
+			# LAYOUT_MAP : Calculate list for layout map
+			# All related terms are selected except section that is unset from the array
+			$layout_map_virtual  	= $this->get_layout_map($edit_view);
+			$ar_target_section_tipo = $this->get_ar_target_section_tipo();
+			$filter_by_locator 		= (array)$dato;
+
+			# CONTEXT : Configure section context
+				$context = new stdClass();
+					$context->context_name 	= 'list_in_portal';
+					$context->portal_tipo 	= $tipo;
+					$context->portal_parent = $parent;
+
+			# OPTIONS
+			$options = new stdClass();
+				$options->modo 		= 'portal_list';
+				$options->context 	= $context;
+		
+			
+			# SEARCH_QUERY_OBJECT . Add search_query_object to options
+				$search_query_object_options = new stdClass();
+					#$search_query_object_options->limit 			 = 1;
+					$search_query_object_options->filter_by_locator  = $filter_by_locator;
+					$search_query_object_options->section_tipo 		 = reset($ar_target_section_tipo);
+				$search_query_object = $this->build_search_query_object($search_query_object_options);
+				
+			# SEARCH
+			$search_develoment2  = new search_development2($search_query_object);
+			$rows_data 		 	 = $search_develoment2->search();
+
+
+			# AR_COLUMNS
+			$ar_columns = $this->get_ar_columns();
+			
+			!isset($ar_target_section_tipo) ? $ar_target_section_tipo = $this->get_ar_target_section_tipo() : array();
+			$ar_target_section_tipo_json = json_encode($ar_target_section_tipo);
+			break;
+						
+		
 		/*
 		# Case component_portal show inside list of sections from component_portal (Recursion)
 		case 'list_tm':

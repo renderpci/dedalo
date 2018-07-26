@@ -116,7 +116,9 @@ class component_portal extends component_relation_common {
 		if(SHOW_DEBUG===true) {
 			$component_name = RecordObj_dd::get_termino_by_tipo($tipo,null,true);
 			global$TIMER;$TIMER[__METHOD__.'_' .$component_name.'_OUT_'.$tipo.'_'.$modo.'_'.$parent.'_'.microtime(1)]=microtime(1);
-		}		
+		}
+
+		return true;	
 	}//end __construct
 
 
@@ -129,7 +131,7 @@ class component_portal extends component_relation_common {
 	public function get_valor( $lang=DEDALO_DATA_LANG, $data_to_be_used='valor', $separator_rows='<br>', $separator_fields=', ' ) {
 		$start_time = microtime(1);
 
-		if (isset($this->valor)) {			
+		if (isset($this->valor)) {
 			return $this->valor;
 		}
 
@@ -169,7 +171,7 @@ class component_portal extends component_relation_common {
 
 		$dato = $this->get_dato();
 		
-		if (empty($dato)) {			
+		if (empty($dato)) {
 			return '';
 		}
 
@@ -236,7 +238,7 @@ class component_portal extends component_relation_common {
 
 
 		return (string)$valor_export;
-	}#end get_valor_export
+	}//end get_valor_export
 
 
 
@@ -600,7 +602,7 @@ class component_portal extends component_relation_common {
 				# Almacenamos el array de etiquetas de esta sección para usarlo en el listado de relaciones en la clase 'rows'
 				$ar_section_relations[$id_record][] = $rel_locator;				
 			}
-		}# end foreach ($dato as $rel_locator)
+		}//end foreach ($dato as $rel_locator)
 
 
 		switch ($modo) {
@@ -617,6 +619,8 @@ class component_portal extends component_relation_common {
 				return $ar_section_relations;
 				break;
 		}
+
+		return false;
 	}//end get_ar_section_relations_for_current_section_tipo_static
 
 
@@ -680,6 +684,8 @@ class component_portal extends component_relation_common {
 		
 		if ($this->section_list_key===0 && isset($this->layout_map) && !empty($this->layout_map)) return $this->layout_map;
 
+			#dump($view, ' $view ++ '.to_string());
+
 		$ar_related=array();
 		switch ($this->modo) {
 			case 'list':
@@ -712,26 +718,25 @@ class component_portal extends component_relation_common {
 					$ar_terms = (array)RecordObj_dd::get_ar_childrens($this->tipo); 	#dump($ar_terms, " childrens $this->tipo".to_string());				
 					foreach ($ar_terms as $current_term) {
 						# Locate 'edit_views' in childrens
-						$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_term,true);
-						if ($modelo_name==='edit_view') {
-							$view_name = RecordObj_dd::get_termino_by_tipo($current_term);
+						$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_term,true);						
+						if ($modelo_name!=='edit_view') continue;
 
-							if($view===$view_name){
-								# Use related terms as new list
-								$ar_related = (array)RecordObj_dd::get_ar_terminos_relacionados($current_term, $cache=true, $simple=true);
-								# Fix / set current edit_view propiedades to portal propiedades
-								$RecordObj_dd 			= new RecordObj_dd($current_term);
-								$edit_view_propiedades 	= json_decode($RecordObj_dd->get_propiedades());
-								# dump($edit_view_propiedades, ' edit_view_propiedades->edit_view_options ++ '.to_string());		
-								if ( isset($edit_view_propiedades->edit_view_options) ) {
-									$this->edit_view_options = $edit_view_propiedades->edit_view_options;									
-								}								
-								break;
+						$view_name = RecordObj_dd::get_termino_by_tipo($current_term);	
+						if($view===$view_name){
+							# Use related terms as new list
+							$ar_related = (array)RecordObj_dd::get_ar_terminos_relacionados($current_term, $cache=true, $simple=true);
+							# Fix / set current edit_view propiedades to portal propiedades
+							$RecordObj_dd 			= new RecordObj_dd($current_term);
+							$edit_view_propiedades 	= json_decode($RecordObj_dd->get_propiedades());
+							# dump($edit_view_propiedades, ' edit_view_propiedades->edit_view_options ++ '.to_string());		
+							if ( isset($edit_view_propiedades->edit_view_options) ) {
+								$this->edit_view_options = $edit_view_propiedades->edit_view_options;									
 							}
-						}
+							break;
+						}						
 					}
 				}
-			break;
+				break;
 		}//end switch ($this->modo)	
 
 		# PORTAL_SECTION_TIPO : Find portal_section_tipo in related terms and store for use later
@@ -1178,29 +1183,18 @@ class component_portal extends component_relation_common {
 	* @return string $list_value
 	*/
 	public static function render_list_value($value, $tipo, $parent, $modo, $lang, $section_tipo, $section_id, $current_locator=null, $caller_component_tipo=null, $section_list_key=0) {
-		
+	
+		$component = component_common::get_instance(__CLASS__,
+													$tipo,
+													$parent,
+													$modo,
+													DEDALO_DATA_NOLAN,
+													$section_tipo);
+	
+
 		if ($modo==='list' || $modo==='portal_list') {
-
-			##$parent    = null; // Force null always !important
-			$component = component_common::get_instance(__CLASS__,
-														$tipo,
-														$parent,
-														$modo,
-														DEDALO_DATA_NOLAN,
-														$section_tipo);
-			
 			$component->html_options->rows_limit = 1;
-
-		}else{
-
-			$component = component_common::get_instance(__CLASS__,
-														$tipo,
-														$parent,
-														$modo,
-														DEDALO_DATA_NOLAN,
-														$section_tipo);
 		}
-
 
 		# Set section_list_key for select what section list (can exists various) is selected to layout map
 		$component->set_section_list_key( (int)$section_list_key );
@@ -1342,71 +1336,6 @@ class component_portal extends component_relation_common {
 
 
 	/**
-	* GET_JSON_build_options
-	* Collect vars to js call to component for build html
-	* @return object $options
-	*//*
-	public function get_json_build_options() {
-		
-		$options = parent::get_json_build_options();
-			#dump($options, ' options ++ '.to_string());
-		
-		# add dato
-		$options->dato = $this->get_dato();
-
-
-		return $options;
-	}//end get_json_build_options
-	*/
-
-
-
-	/**
-	* GET_FROM_JSON
-	* @return object $json_d
-	*/
-	public function get_from_json() {
-		# Set to false
-		$this->generate_json_element = false;
-
-		# Include controler
-		include ( DEDALO_LIB_BASE_PATH .'/'. get_called_class() .'/'. get_called_class() .'.php' );
-		#dump($json_d, ' json_d ++ '.to_string());
-
-		return (object)$json_d;
-	}//end get_from_json
-
-
-
-	/**
-	* GET_JSON_build_options
-	* Collect vars to js call to component for build html
-	* @return object $options
-	*/
-	public function get_json_build_options() {
-
-		/* common options reference:
-		$options->section_tipo 	 = $this->get_section_tipo();
-		$options->section_id   	 = $this->get_parent();
-		$options->component_tipo = $this->get_tipo();
-		$options->model_name 	 = get_class($this);
-		$options->lang 	 		 = $this->get_lang();
-		$options->modo 	 		 = $this->get_modo();
-		$options->unic_id 		 = 'wrapper_'.$this->get_identificador_unico();*/
-		
-		// Component common options
-		$options = parent::get_json_build_options();
-
-		
-		// Specific component options
-		$options->dato = $this->get_dato();
-
-		return (object)$options;
-	}//end get_json_build_options
-
-
-
-	/**
 	* SET_LOCATOR_ORDER
 	* @return bool
 	*/
@@ -1457,14 +1386,14 @@ class component_portal extends component_relation_common {
 		$options = new stdClass();
 			$options->q 	 			= null;
 			$options->limit  			= 10;
-			$options->order  			= null;
 			$options->offset 			= 0;
+			$options->full_count		= false;
+			$options->order  			= null;			
 			$options->lang 				= DEDALO_DATA_LANG;			
 			$options->id 				= 'temp';
 			$options->section_tipo		= null;
 			$options->select_fields		= 'default';
-			$options->filter_by_locator	= false;
-			$options->full_count		= true;			
+			$options->filter_by_locator	= false;						
 			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 	
 		# Defaults		
@@ -1496,10 +1425,10 @@ class component_portal extends component_relation_common {
 
 		# FILTER
 			$filter_group = null;
+			$ar_section_id = [];
 			if ($options->filter_by_locator!==false) {
 
-					// Is an array of objects
-					$ar_section_id = [];
+					// Is an array of objects					
 					foreach ((array)$options->filter_by_locator as $key => $value_obj) {
 						$current_section_id = (int)$value_obj->section_id;
 						if (!in_array($current_section_id, $ar_section_id)) {
@@ -1523,15 +1452,16 @@ class component_portal extends component_relation_common {
 						$filter_group->$op = [$filter_element];
 			}//end if ($options->filter_by_locator!==false)
 
+		$total_locators = count($ar_section_id);
 
 		# QUERY OBJECT	
 		$query_object = new stdClass();
 			$query_object->id  	   		= $options->id;
 			$query_object->section_tipo = $section_tipo;
-			$query_object->limit   		= $options->limit;
-			$query_object->order   		= $options->order;
+			$query_object->limit   		= $options->limit;			
 			$query_object->offset  		= $options->offset;
-			$query_object->full_count  	= $options->full_count;			
+			$query_object->full_count  	= $total_locators>0 ? $total_locators : false ;//$options->full_count;
+			$query_object->order   		= $options->order;		
 			# Used only for time machine list
 			#if ($options->forced_matrix_table!==false) {
 				# add forced_matrix_table (time machine case)
@@ -1542,12 +1472,506 @@ class component_portal extends component_relation_common {
 			
 			
 		#dump( json_encode($query_object, JSON_PRETTY_PRINT), ' query_object ++ '.to_string());
-		#debug_log(__METHOD__." query_object ".json_encode($query_object, JSON_PRETTY_PRINT), logger::DEBUG);totaol
+		#debug_log(__METHOD__." query_object ".json_encode($query_object, JSON_PRETTY_PRINT), logger::DEBUG);
 		#debug_log(__METHOD__." total time ".exec_time_unit($start_time,'ms').' ms', logger::DEBUG);
 		
 
 		return (object)$query_object;
 	}//end build_search_query_object
+
+
+
+	/**
+	* BUILD_COMPONENT_JSON_DATA
+	* @return object $json_d
+	*/
+	public function build_component_json_data( $build_options ) {
+
+		$max_records 	= $build_options->max_records;
+		$offset 		= $build_options->offset;
+			#debug_log(__METHOD__." max_records: $max_records - offset: $offset".to_string(), logger::DEBUG);
+
+		$propiedades 	= $this->get_propiedades();
+			#debug_log(__METHOD__."  propiedades ".to_string($propiedades), logger::DEBUG);
+
+		$modo 			= $this->get_modo();
+		$tipo 			= $this->get_tipo();
+		$section_tipo 	= $this->get_section_tipo();
+		$parent 		= $this->get_parent();
+		$label 			= $this->get_label();
+		$permissions	= $this->get_component_permissions();
+		$context		= $this->get_context();
+		if (isset($context->context_name) && $context->context_name==='tool_time_machine') {
+			$this->set_show_button_new(false);
+		}
+
+		# Custom propiedades external dato 
+		if(isset($propiedades->source->mode) && $propiedades->source->mode==='external') {
+			$this->set_dato_external(true);	// Forces update dato with calculated external dato					
+		}
+
+		$dato 				= $this->get_dato();
+		$dato_json 			= json_encode($dato);
+		$valor				= $this->get_dato_as_string();
+		$component_info 	= $this->get_component_info('json');
+		$exclude_elements 	= $this->get_exclude_elements();
+
+		$ar_target_section_tipo 	 = $this->get_ar_target_section_tipo();
+		$ar_target_section_tipo_json = json_encode($ar_target_section_tipo);
+		
+		if (isset($propiedades->html_options)) foreach ($propiedades->html_options as $key => $value) {
+			$this->html_options->$key = $value;
+		}
+
+		$n_rows = count($dato);
+		#if ($this->html_options->rows_limit!==false && $n_rows >= (int)$this->html_options->rows_limit) {
+		#	$this->html_options->buttons = false;
+		#}
+
+		#
+		# EDIT VIEW CONFIG (propiedades)
+		$edit_view 		= 'full'; // Default portal view if nothing is set about
+		if(isset($propiedades->edit_view)) {
+			$edit_view	= $propiedades->edit_view;
+			$file_view 	= $modo.'_'.$edit_view;
+		}
+		#debug_log(__METHOD__." propiedades - edit_view:$edit_view -  ".to_string($propiedades->edit_view), logger::DEBUG);						
+		
+		if (empty($dato)) {
+
+			# Empty object
+			$rows_data = new stdClass();
+				$rows_data->ar_records = array();
+
+			$this->html_options->header = false;
+			$this->html_options->rows 	= false;
+
+			#throw new Exception("Stopped Processing Request. Empty dato here !", 1);						
+
+		}else{
+
+			$filter_by_locator = (array)$dato;
+			
+			$context = new stdClass();
+				$context->context_name 	= 'list_in_portal';
+				$context->portal_tipo 	= $tipo;
+				$context->portal_parent = $parent;
+
+			# OPTIONS
+			#$search_options = new stdClass();
+			#	$search_options->modo  		= 'portal_list';
+			#	$search_options->context 	= $context;
+
+			#
+			# SEARCH_QUERY_OBJECT . Add search_query_object to options
+			$search_query_object_options = new stdClass();
+				$search_query_object_options->filter_by_locator  = $filter_by_locator;
+				$search_query_object_options->section_tipo 		 = reset($ar_target_section_tipo);
+				#$search_query_object_options->limit 		 	 = 0;
+
+				# paginations options
+				$search_query_object_options->limit 		 	= $max_records;
+				$search_query_object_options->offset 		 	= $offset;
+				#$search_query_object_options->full_count 		= count($dato);
+
+			$search_query_object = $this->build_search_query_object($search_query_object_options);
+				#debug_log(__METHOD__." search_query_object ".json_encode($search_query_object, JSON_PRETTY_PRINT), logger::DEBUG);
+			
+			# Search
+			$search_develoment2  = new search_development2($search_query_object);
+			$rows_data 		 	 = $search_develoment2->search();
+
+			#
+			# COMPONENT STATE DATO
+			/*
+			if (isset($this->component_state_tipo)) {
+
+				$state_options = $options;
+				$state_options->tipo_de_dato = 'dato';
+				$state_options->layout_map 	 = array($this->component_state_tipo);
+				$rows_data_state = search::get_records_data($state_options);
+					dump($rows_data_state, ' rows_data_state ++ '.to_string());		
+				
+				# STATE UPDATE DATA
+				$this->update_state($rows_data_state);
+			}
+			*/
+		}
+		#dump($rows_data," rows_data");
+
+
+		#
+		# COLUMNS
+		$ar_columns = $this->get_ar_columns($edit_view);
+
+		# Buttons new/add
+		$show_button_new = $this->get_show_button_new();
+		
+		# Daggable
+		$dragable_connectWith = isset($propiedades->dragable_connectWith) ? "portal_table_".$propiedades->dragable_connectWith : null;
+
+		# max_records
+		#if (isset($propiedades->max_records) && $this->max_records==null) {
+		#	$this->max_records = $propiedades->max_records;
+		#}
+
+		#$total_records  = count($dato);
+		#$max_records 	= $this->max_records!==null ? (int)$this->max_records : 5;
+		#$offset 		= $this->offset!==null ? (int)$this->offset : 0;
+		
+
+		#################### 
+		
+
+		$ar_columns_plus = array();
+		foreach ($ar_columns as $c_tipo => $c_label) {
+			$label_lower = strtolower($c_label);
+			if ($label_lower==='edit' || $label_lower==='rol' || $label_lower==='tag_id') {
+				$name = $label_lower;
+			}else{
+				$name = RecordObj_dd::get_modelo_name_by_tipo($c_tipo,true);
+			}
+
+			$column_data = new stdClass();
+				$column_data->label = $c_label;
+				$column_data->name 	= $name;
+				$column_data->tipo 	= $c_tipo;
+
+			#$ar_columns_plus[$c_tipo] = array('label'=>$c_label,'name'=>$name);
+			$ar_columns_plus[] = $column_data;
+		}
+		//dump($ar_columns, ' ar_columns ++ '.to_string($tipo));
+
+		$json_d = new stdClass();
+			$json_d->dato 					= $dato;
+			$json_d->propiedades 			= $propiedades;
+			$json_d->label 					= $label;
+			$json_d->permissions 			= $permissions;
+			$json_d->component_info 		= $component_info;
+			$json_d->exclude_elements 		= $exclude_elements;
+			$json_d->html_options 			= $this->html_options;			
+			$json_d->context 				= $context;
+			$json_d->rows_data 				= $rows_data;
+			$json_d->ar_columns 			= $ar_columns_plus;
+			$json_d->ar_target_section_tipo = $ar_target_section_tipo;
+			$json_d->show_button_new 		= $show_button_new;
+			$json_d->dragable_connectWith 	= $dragable_connectWith;
+			$json_d->n_rows 				= $n_rows;
+			$json_d->max_records 			= $max_records;
+			$json_d->offset 				= $offset;
+
+			/*
+			$json_data->edit_view 			= $edit_view;
+			$json_data->file_view 			= $file_view;
+			$json_data->file_name 			= $file_name;
+			*/
+			$json_d->rows_data_values 		= array();
+
+
+			$row_number=0; foreach((array)$dato as $key => $current_locator) {
+
+				# MAX_RECORDS Limit
+				if( $row_number >= $max_records+$offset ){
+					break;
+				}
+			
+				$row_number++;
+
+				# Offset
+				if ($row_number <= $offset) {
+					continue; # Skip print offset records
+				}
+
+				if (!isset($current_locator->section_tipo) || !isset($current_locator->section_id)) {
+					debug_log(__METHOD__."ERROR. Skipped invalid locator ".to_string($current_locator), logger::ERROR);
+					trigger_error("ERROR. Skipped invalid locator ");
+					continue; # Skip invalid locator
+				}
+				
+				$current_section_id 	= $current_locator->section_id;
+				$current_section_tipo 	= $current_locator->section_tipo;
+				$current_component_tipo = isset($current_locator->component_tipo) ? $current_locator->component_tipo : null;
+				$current_tag_id 		= isset($current_locator->tag_id) ? $current_locator->tag_id : null;
+
+				$current_row = $this->row_in_result( $current_locator, $rows_data->ar_records );						
+					#dump($current_row, ' current_row ++ '.to_string());
+
+				#
+				# Limit rows
+				/*
+				if ($this->html_options->rows_limit && $key > $this->html_options->rows_limit) {
+					debug_log(__METHOD__." Limit number of records to sowh ".to_string($this->html_options->rows_limit), logger::DEBUG);
+					break; # Limit number of records to sowh
+				}
+				*/
+
+				#
+				# REL_LOCATOR : locator like object
+					$rel_locator 								= json_encode($current_locator);
+					$json_d->rows_data_values[$key]['locator'] 	= $rel_locator;
+
+				#
+				# SECTION ID
+					$section_id 		 = $current_section_id;
+					$target_section_tipo = $current_section_tipo;
+
+				#debug_log(__METHOD__." **************** here  - modo:$modo - key:$key - ar_columns ".json_encode($ar_columns, JSON_PRETTY_PRINT), logger::DEBUG);	
+				
+				# Permissions of target section. Applied to delete button
+				$permission_section = common::get_permissions($target_section_tipo,$target_section_tipo);
+				
+				#
+				# COLUMNS
+					$sort_id = !empty($rel_locator) ? $rel_locator : 0;
+					$table='';															
+					foreach ($ar_columns as $column_tipo => $column_label) {
+
+						#
+						# EDIT COLUMN
+						if ($column_tipo==='edit') {
+							if (!$this->html_options->id_column) continue;
+
+							# SECTION_ID TEXT
+							$column_edit_value = '';
+
+							#
+							# EDIT BUTTON
+								$context_http_query = http_build_query($context);
+								$url  = htmlspecialchars("?t=$target_section_tipo&id=$section_id&m=edit&portal_section_tipo={$section_tipo}&{$context_http_query}");
+								$url .= "&locator=". urlencode($rel_locator);
+								$url .= "&top_tipo=".TOP_TIPO."&top_id=".TOP_ID;
+								$url .= "&exclude_elements=".$exclude_elements;
+
+								# Breadcrumb : add bc_path = url vars
+								$bc_path = tools::get_bc_path();
+									#dump($bc_path, ' bc_path');
+								$url 	.= "&bc_path=". base64_encode($bc_path);
+
+								# id_path
+								$id_path = tools::get_id_path($section_tipo.'.'.$section_id);
+									#dump($section_id_path,"id_path - $section_id");
+								$url 	.= "&id_path=". $id_path;								
+
+								# Title
+								$title = label::get_label('editar_registro').' '.$section_id;
+								if (!empty($current_tag_id)) {
+									$title .= ' - '.$current_component_tipo.' - '.$current_tag_id;
+								}
+
+								if(SHOW_DEVELOPER===true) {
+									$title .= "\n url:$url \n modo $modo, context $context->context_name";
+								}
+								$edit_button = '';
+								if (empty($current_row->section_id)) {
+									$edit_button .= "<div class='div_image_link link' title=\"$title\" onclick=\"alert('Deleted record')\"> ! </div>";
+								}else{
+									$additional_css_style = $permissions <2 ? 'style="height: 100%;"' : '' ;
+									$edit_button .= "<a href=\"javascript:void(0);\" onclick=\"component_portal.open_record(this,'$url')\" ";
+									$edit_button .= "id=\"portal_link_open_{$section_tipo}_{$section_id}\" ";
+									$edit_button .= "class=\"id_column_buttons button_edit link\" ";
+									$edit_button .= $additional_css_style;
+									$edit_button .= "title=\"$title\">";
+										# SECTION_ID TEXT									
+										$edit_button .= "<span class=\"section_id_number\">";
+										if(SHOW_DEVELOPER===true) {
+										$edit_button .= $section_id;
+										} 
+										$edit_button .= "</span>";									
+									$edit_button .= "</a>";											
+								}
+								$column_edit_value .= $edit_button;
+							
+
+							#
+							# DELETE RECORD BUTTON
+								$delete_button = '';							
+								if ($permissions>=2) {
+
+									# Defaults restrictive
+									$permission_target_section_delete = 0;
+									# Try to locate delete button inside
+									$delete_button_objects = section::get_ar_children_tipo_by_modelo_name_in_section($target_section_tipo, array('button_delete'), true, true, true, true);
+									#dump($delete_button_objects, ' delete_button_objects ++ '.to_string($target_section_tipo));
+									if (isset($delete_button_objects[0])) {
+										$permission_target_section_delete = common::get_permissions($delete_button_objects[0], $target_section_tipo);
+									}
+									#dump($permission_target_section_delete, ' permission_target_section_delete ++ '.to_string($delete_button_objects[0]));
+									
+									if(SHOW_DEBUG===true) {
+										$permission_target_section_delete = 2;  
+									}
+
+									$title	= label::get_label('borrar') .' '. label::get_label('recurso');													
+									$delete_button .= "<a href=\"javascript:void(0);\" class=\"id_column_buttons button_delete link\" ";
+									$delete_button .= "onclick=\"component_portal.open_delete_dialog(this)\" ";
+									$delete_button .= "data-rel_locator='{$rel_locator}' ";
+									$delete_button .= "data-permission_target_section_delete=\"{$permission_target_section_delete}\" ";
+									$delete_button .= "title=\"$title\">";							
+									$delete_button .= "</a>";								
+								}
+
+							$json_d->rows_data_values[$key][$column_tipo] = array('edit'   => $column_edit_value,
+																				  'delete' => $delete_button);
+
+						#
+						# TAG_ID
+						}else if($column_tipo==='tag_id') {
+
+							if( isset($current_locator->component_tipo) && isset($current_locator->tag_id) ) {
+
+								$component_name = RecordObj_dd::get_termino_by_tipo($current_locator->component_tipo);
+								$tag_id_column_value = '';
+								$tag_id_column_value .= "<div class=\"tag_id tooltip_active\" title=\"$component_name\">";											
+								$tag_id_column_value .= $current_locator->tag_id;
+								$tag_id_column_value .= "</div>";
+
+								$json_d->rows_data_values[$key][$column_tipo] = $tag_id_column_value;
+							}
+
+						#
+						# DEDALO SEMANTICS COLUMNS
+						}else if ( strpos($column_tipo, 'ds_')===0 ) {
+
+							# Convert column name from 'ds_myname' to 'myname'
+							$ds_key = substr($column_tipo, 3);
+
+							# Mandatory vars to create semantic_node column
+							$semantic_wrapper_id = $ds_key.'_'.$current_locator->section_tipo.'_'.$current_locator->section_id;
+							$ds_element 		 = isset($current_locator->ds->$ds_key) ? $current_locator->ds->$ds_key : null;
+								#dump($current_locator, ' current_locator ++ '.to_string());
+								#dump($ds_element, ' ds_element ++ '.to_string());
+							
+							$ds_value = '';
+							$ds_value .= "<div class=\"td_ds\">";
+							ob_start();
+							include(DEDALO_LIB_BASE_PATH . '/tools/tool_semantic_nodes/html/tool_semantic_nodes_node.phtml');
+							$ds_value .= ob_get_clean();
+							$ds_value .= "</div>";
+
+							$json_d->rows_data_values[$key][$column_tipo] = $ds_value;				
+
+						#
+						# COMPONENTS COLUMNS
+						}else{
+
+							$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($column_tipo, true);
+
+							# aditional td css selectors
+							$td_css_selector = 'td_'.$modelo_name.' td_'.$column_tipo. ' column_'.$column_tipo;
+								#dump($td_css_selector, ' td_css_selector ++ '.to_string());
+
+							# Row value default
+							/*
+							if (!isset($current_row[$column_tipo])) {
+								$table .= "<td class=\"$td_css_selector\">"; 	dump($current_row[$column_tipo], ' excluded column_tipo ++ '.to_string($column_tipo));
+								$table .= ' '; // User with NO access to this column
+								$table .= "</td>";
+								continue;
+							}
+							*/
+							#dump($modelo_name, ' PORTAL EDIT modelo_name ++ '.to_string($column_tipo));
+
+							# RECORDS FROM DATABASE
+							# $column_value = isset($current_row[$column_tipo]) ? $current_row[$column_tipo] : null;
+							$column_value = isset($current_row->$column_tipo) ? $current_row->$column_tipo : null;
+						
+
+							# Detect and avoid structure errors (portal list with deprecated elements for example)
+							if (strpos($modelo_name, 'component_')===false) {
+								dump($modelo_name, ' wrong modelo_name ++ column_tipo: '.to_string($column_tipo));
+								continue;
+							}
+
+							$render_list_mode = 'portal_list';
+							// Verificar este supuesto !!!
+			
+							switch ($edit_view) {
+								case 'view_mosaic':
+									$render_list_mode = 'portal_list_view_mosaic';
+									if ($modelo_name!=='component_image' && $modelo_name!=='component_av' && $modelo_name!=='component_portal') {
+										# Only accept component_image as column
+										debug_log(__METHOD__." Skipped component $column_label ($column_tipo) modelo_name: $modelo_name. Only component_image/component_av/component_portal are valid in mosaic mode ", logger::DEBUG);
+										continue;
+									}
+									break;
+								case 'view_tool_description':
+									if ($modelo_name==='component_portal') {
+										$render_list_mode = 'portal_list_view_mosaic';
+									}else{
+										$render_list_mode = 'edit';
+									}
+									break;
+								default:
+
+									break;
+							}
+							#debug_log(__METHOD__." ++++++++++++++++++++++++++ render_list_mode ".to_string($render_list_mode), logger::ERROR);
+					
+		
+							# Overwrite default list mode when need. Set component propiedades 'elements_list_mode' as you want, like edit..
+							if (isset($propiedades->elements_list_mode->$column_tipo->mode)) {
+								$render_list_mode = $propiedades->elements_list_mode->$column_tipo->mode;
+							}
+	
+							if ($render_list_mode==='edit') {
+								$current_component = component_common::get_instance( $modelo_name,
+																					 $column_tipo,
+																					 $section_id,
+																					 $render_list_mode,
+																					 DEDALO_DATA_LANG,
+																					 $target_section_tipo);
+								$value = $current_component->get_html();
+							}else{
+								$value = (string)$modelo_name::render_list_value($column_value, // value string from db
+																			 $column_tipo, // current component tipo
+																			 $section_id, // current portal row section id
+																			 $render_list_mode, // mode get form properties or default
+																			 DEDALO_DATA_LANG, // current data lang
+																			 $target_section_tipo, // current section tipo
+																			 $section_id, // Current portal parent
+																			 $current_locator, // Used by text_area to select fragment
+																			 $tipo // Current component_portal tipo
+																			);	
+							}
+
+							#
+							# TD COLUMN					
+							if (is_string($value)) {						
+								$json_d->rows_data_values[$key][$column_tipo] = $value;
+							}else{						
+								$json_d->rows_data_values[$key][$column_tipo] = to_string($value);
+							}
+						}//end if ($modelo_name=='component_portal')
+					}//end foreach ($ar_columns as $column_tipo => $column_label)
+
+
+				
+			
+			#$row_number++;
+			}//end foreach((array)$dato as $key => $current_locator)
+			#dump($dato, ' dato ++ '.to_string());
+			#dump($json_d->rows_data_values, '$json_d->rows_data_values ++ '.to_string());
+			#dump($json_d, ' json_d ++ '.to_string());
+
+			# Important : Rebuild array indexes to avoid objects when use offset
+			$json_d->rows_data_values = array_values($json_d->rows_data_values);
+		
+
+		return $json_d;
+	}//end build_component_json_data
+
+
+
+	/**
+	* GET_EXTENSION_AUTOCOMPLETE
+	* @return 
+	*/
+	public function get_extension_autocomplete() {
+		
+
+
+		return false;
+	}//end get_extension_autocomplete
 
 
 

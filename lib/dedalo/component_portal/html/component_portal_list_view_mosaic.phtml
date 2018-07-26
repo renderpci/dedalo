@@ -111,7 +111,7 @@ if($this->generate_json_element===true) {
 					#
 					# LI
 						# dump($ar_columns, ' ar_columns ++ '.to_string());
-						$mosaic_html .= "<li class=\"mosaic_li\" style=\"$image_styles\">";
+						$mosaic_html .= "<li class=\"portal_item_{$tipo} mosaic_li\" style=\"$image_styles\">";
 						foreach ($ar_columns as $column_tipo => $column_label) {
 
 							if ($column_tipo==='edit') {
@@ -214,9 +214,9 @@ if($this->generate_json_element===true) {
 				#
 				# DRAG ACTIVATE (for current table)
 				#
-				if ($this->html_options->sortable) {					
-					$html_contenido .= "<script>component_portal.active_portal_table_sortable('portal_table_{$tipo}', 'none')</script>";
-				}				
+				#if ($this->html_options->sortable) {					
+				#	$html_contenido .= "<script>component_portal.active_portal_table_sortable('portal_table_{$tipo}', 'none')</script>";
+				#}				
 				break;
 		}//end switch($permissions)
 
