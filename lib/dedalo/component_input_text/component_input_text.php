@@ -28,16 +28,16 @@
 	# Verify component content record is inside section record filter
 	if ($this->get_filter_authorized_record()===false) return null ;
 	
-	
+
 
 	switch($modo) {		
 		
 		case 'edit_in_list':
 				// Fix always edit as modo / filename
 				//$modo 			= 'edit';
-				$file_name		= 'edit';
+				$file_name	= 'edit';
 
-				$wrap_style 	= '';	// 'width:100%'; // Overwrite possible custon component structure css
+				$wrap_style = '';	// 'width:100%'; // Overwrite possible custon component structure css
 				// Dont break here. Continue as modo edit		
 		case 'tool_lang':
 				$file_name = 'edit';
@@ -71,6 +71,19 @@
 				$context 			= $this->get_context();
 
 				$with_lang_versions = isset($propiedades->with_lang_versions) ? $propiedades->with_lang_versions : false;			
+				
+				/*
+				if ($tipo==="rsc23") {
+					$this->valor = $this->get_valor();
+					$a = get_object_vars( $this );
+					$b = [];
+					foreach ($this as $key => $value) {
+						$b[$key] = $value;
+					}
+					echo '<pre>'.json_encode($b, JSON_PRETTY_PRINT).'</pre>';
+					dump($this, ' this ++ '.to_string());
+				}
+				*/
 				break;
 
 		case 'print' :
