@@ -134,7 +134,7 @@ class AVPlayer extends Accessors {
 		# verify media file
 		if(!$this->AVObj->get_file_exists()) {
 			$info_path = false;
-			if( SHOW_DEBUG ) {
+			if( SHOW_DEBUG===true ) {
 				$info_path = $this->AVObj->get_media_path().$this->AVObj->get_name().'.'.$this->AVObj->get_extension();
 			}
 			return "<div style=\"margin:0px;padding-top:200px;font-size:14px; color:#999999\"> Media not available <br> $info_path </div>"; #{$this->AVObj->get_media_path()}
@@ -192,10 +192,7 @@ class AVPlayer extends Accessors {
 			
 			#$html .= "<img src=\"{$this->poster}\" height=\"{$this->height}\" alt=\"Posterframe {$this->poster}\" />";
 			#$this->height = '24';
-			#$this->height = '0';
-			if(SHOW_DEBUG) {
-				#dump($this->quality, ' $this->quality');;
-			}
+			#$this->height = '0';			
 		}
 		#dump($modo, ' modo');		
 				
@@ -304,8 +301,7 @@ class AVPlayer extends Accessors {
 		$html5type .= "\"";
 		$src = $this->src;
 		$html5_source_type_code = $this->get_html5_source_type_code();
-			#dump($_REQUEST, ' _REQUEST ++ '.to_string());
-			#dump($src, ' src ++ '.to_string());		
+		
 		$subtitle_track = null;
 
 		if(isset($_GET['subtitles_url'])){
@@ -375,7 +371,7 @@ class AVPlayer extends Accessors {
 											break;
 						}																				
 					});
-					if(DEBUG) console.log('-> url: {$src}, ".__METHOD__." ');
+					if(SHOW_DEBUG===true) console.log('-> url: {$src}, ".__METHOD__." ');
 				</script>";
 				
 		return $html;
