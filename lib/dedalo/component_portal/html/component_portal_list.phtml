@@ -74,7 +74,7 @@
 							$target_section_tipo= $current_section_tipo;
 
 						# COLUMNS
-							$table .= "<div class=\"\" data-section_id=\"$section_id\">";
+							$table .= "<div class=\"portal_item_{$tipo}\" data-section_id=\"$section_id\">";
 							foreach ($ar_columns as $column_tipo => $column_label) {
 
 								if($column_tipo=='edit' || $column_tipo=='tag_id' || strpos($column_tipo, 'ds_')===0 ) continue; // Skip edit and semantic columns column
