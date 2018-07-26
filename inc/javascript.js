@@ -56,7 +56,7 @@ function go2_last_list() {
 		window.location = last_list ;		
 		
 	}catch(err){ 
-		if(DEBUG) alert(err)
+		if(SHOW_DEBUG===true) alert(err)
 	}	
 }
 
@@ -185,23 +185,7 @@ function Toggle2(div, label_button) {
   label.innerText = "[ + ]";
   }
  }
- 
-  // Multi toogle 
-function multiToogle_DESACTIVO_XXX(div_name,activa,desactiva) {
-  /*alert(div +' '+activa +' '+ desactiva)*/
-  divObj = document.getElementById(div_name);
-  if(!divObj) alert(' Opss. Sorry: Beta function. ' + div1 +' - '+ activa +' - '+ desactiva );
-  
-  var current_style = divObj.style.display;	//alert(current_style)
-  
-  if(!current_style || current_style=='' || current_style=='undefined') current_style = 'none';
-  
-  if (current_style == desactiva) {
-	divObj.style.display = activa ;
-  }else{
-	divObj.style.display = desactiva ;
-  }  
-}
+
 
   // Simple toogle 
 function simpleToogle(div) {
