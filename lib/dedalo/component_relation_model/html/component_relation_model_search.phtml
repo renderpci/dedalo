@@ -7,6 +7,7 @@
 	print "data-modo=\"{$modo}\" ";
 	print "data-dato='".json_encode($dato)."' ";
 	print 'title="'.search_development2::search_options_title( $this->search_operators_info() ).'" ';
+	print "data-search_tipos='".json_encode($search_tipos)."' ";
 	print ">";
 	
 	# ETIQUETA (LABEL)

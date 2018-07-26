@@ -117,8 +117,7 @@
 
 					$html_content .= "</div>";//relation_index_input_line
 				}//end foreach ((array)$dato as $key => $current_locator)
-				
-				
+							
 
 
 
@@ -130,6 +129,17 @@
 					$html_content .= wrap_pre( to_string($this->get_my_section_relations($this->relation_type)), false );
 					$html_content .= "</span>";
 				}
+
+				#
+				# JS Init component
+				$html_content .= '<script>';
+				# Init component
+				$init_options = new stdClass();
+					$init_options->component_name 	= $component_name;
+					$init_options->id_wrapper 		= $id_wrapper;
+					$init_options->uid 				= $identificador_unico;
+				$html_content .= 'component_common.init('.json_encode($init_options).');';
+				$html_content .= '</script>';
 				break;
 	}
 

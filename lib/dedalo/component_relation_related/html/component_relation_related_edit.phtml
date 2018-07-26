@@ -16,8 +16,9 @@
 	print "data-dato='{$dato_string}' ";
 	print "data-component_name=\"{$component_name}\" ";
 	print "data-component_info='{$component_info}' ";
-	print "data-search_query_object='{$json_search_query_object}' ";
-	print "data-filter_by_list='{$json_filter_by_list}' ";
+	print "data-hierarchy_sections='".json_encode($hierarchy_sections)."' ";
+	print "data-relation_type=\"{$relation_type}\" ";
+	print "data-search_tipos='".json_encode($search_tipos)."' ";
 	print ">";
 
 	# ETIQUETA (LABEL)
@@ -41,7 +42,24 @@
 			#	$html_content .= "<div class=\"css_relation_related_button_close\" onclick=\"component_common.change_mode_component(this, 'edit', '$from_modo')\"></div>";
 			#}
 
-			$html_content .= "<div class=\"wrap_relation_related_values\">";				
+			#
+			# AUTOCOMPLETE SERVICE
+			$autocomplete_wrapper_id = 'aw_' . $identificador_unico;
+			$html_content .= '<div class="autocomplete_wrapper" id="'.$autocomplete_wrapper_id.'"></div>';
+
+
+			#
+			# JS Init component
+			$html_content .= '<script>';
+			$init_options = new stdClass();
+				$init_options->component_name 	= $component_name;
+				$init_options->uid 				= $identificador_unico;
+			$html_content .= "component_common.init(".json_encode($init_options).");";
+			$html_content .= '</script>';
+
+			
+
+			$html_content .= "<div class=\"wrap_relation_related_values\">";
 
 				# BTN LINK ELEMENT (FROM LIST)
 				$html_content .= "<div class=\"button_add relation_related_add_button\" ";
@@ -157,212 +175,19 @@
 
 
 				#
-				# AUTOCOMPLETE ELEMENTS					
-
-					
+				# AUTOCOMPLETE ELEMENTS
+					/*
 					# INPUT SEARCH FIELD
 					$html_content .= "<input type=\"text\" class=\"css_autocomplete_search_field css_relation_related_search_field edit_hidden\" placeholder=\"".label::get_label('buscar')."...\" ";
 					$html_content .= "onfocus=\"component_relation_related.activate(this)\" ";
-					$html_content .= "data-id_wrapper=\"$id_wrapper\" ";
-					$html_content .= "data-tipo='{$tipo}' ";
-					$html_content .= "data-section_tipo=\"{$section_tipo}\" ";
-					$html_content .= "data-parent='{$parent}' ";
-					$html_content .= "data-ar_target_section_tipo='{$ar_target_section_tipo_json}' ";
-					#$html_content .= "data-tipo_to_search='{$tipo_to_search}' ";
-					$html_content .= "data-search_fields='{$search_fields_json}' ";
-					$html_content .= "data-limit=\"$limit\" ";
-					$html_content .= "data-divisor=\"$divisor\" ";
 					$html_content .= "tabindex=\"1\" ";
 					$html_content .= "/>";
-					
+					*/					
 
 			$html_content .= "</div>";//end wrap_parent_values
 
 
 
-			#
-			# OPTIONS 
-			$html_content .= "<div class=\"autosearch_options\" data-tipo=\"$tipo\" style=\"\">";
-
-				#
-				# FILTER_BY_LIST
-					#$filter_by_list= false;
-					$ar_filters = [];
-					if ($filter_by_list!==false) {
-						#$html_content .= "<div class=\"icon_bs autocomplete_list_button_options edit_hidden\"></div>";
-
-						$cookie_name = 'filter_by_list_'. $section_tipo .'_'. $tipo;
-						$html_content .= "<ul class=\"filter_by_list text_unselectable\">";
-						#$html_content .= "<div class=\"toponymy_list_close\">X</div>";
-						
-						$total = count($filter_by_list); $n=0;
-						foreach ($filter_by_list as $current_obj_value) {
-		
-							$f_section_tipo   	= $current_obj_value->section_tipo;
-							$f_component_tipo 	= $current_obj_value->component_tipo;
-								#dump($f_component_tipo, ' f_component_tipo ++ '.to_string());
-
-							if (!isset($all_selector_check)) {
-								$label_all = label::get_label('todos').' <span>'. RecordObj_dd::get_termino_by_tipo($f_component_tipo);
-								if (SHOW_DEVELOPER===true) {
-									$label_all .= ' <span style="opacity:0.5">['.$f_component_tipo.']</span>';
-								}
-								$label_all .= '<span>';
-								$all_selector_check = "<li><input type=\"checkbox\" id=\"select_all_{$tipo}\" onchange=\"component_relation_related.select_all_filter_sections(this,'$cookie_name')\"/><label for=\"select_all_{$tipo}\">".$label_all."</label></li><hr>";
-								$html_content .= $all_selector_check;
-							}
-
-							$ar_filters[] = $f_component_tipo;
-
-							# Calculate list values of each element
-							$c_modelo_name 		= RecordObj_dd::get_modelo_name_by_tipo($f_component_tipo,true);
-							$current_component  = component_common::get_instance($c_modelo_name,
-																				 $f_component_tipo,
-																				 null,
-																				 'list',
-																				 DEDALO_DATA_LANG,
-																				 $f_section_tipo);
-							$ar_list_of_values = $current_component->get_ar_list_of_values(DEDALO_DATA_LANG, false, false, false, $value_container='valor');
-								#dump($ar_list_of_values, ' ar_list_of_values ++ '.to_string());
-							foreach ((array)$ar_list_of_values->result as $hs_value => $hs_name) {
-
-								$current_value = json_decode($hs_value);
-
-								$current_locator = new locator();
-									$current_locator->set_type(DEDALO_RELATION_TYPE_LINK); # Add relation type (always link)
-									$current_locator->set_section_id($current_value->section_id);
-									$current_locator->set_section_tipo($current_value->section_tipo);										
-									$current_locator->set_from_component_tipo($f_component_tipo); # Add from_component_tipo
-								
-								$current_locator_json = json_encode($current_locator);						
-
-								$input_id = md5($hs_value);
-								$html_content .= "<li>";
-								$html_content .= "<input type=\"checkbox\" value='".$current_locator_json."' id=\"$input_id\" checked onchange=\"component_relation_related.save_filter_sections(this,'$cookie_name')\"/>";
-								$html_content .= "<label for=\"$input_id\">";
-								$html_content .= $hs_name;
-								if(SHOW_DEBUG===true) {
-									#$html_content .= " <span class=\"notes\">[$hs_value]<span>";
-								}
-								$html_content .= "</label>";
-								$html_content .= "</li>";
-							}
-							$n++;
-							if ($total>1 && $n<$total) {
-								$html_content .= "<hr>";
-							}
-						}
-						$html_content .= "</ul>";
-
-						$html_content .= "<script>";
-						# Reset var 'activated' on load
-						#$html_content .= "component_relation_related.activated={};";
-						# Init component
-						$html_content .= "component_relation_related.init_filter_by_list({\"wrapper_id\":\"$id_wrapper\",\"cookie_name\":\"$cookie_name\",\"limit\":\"$limit\"});";
-						$html_content .= "</script>";
-					}//end if ($filter_by_list!==false)
-
-
-				#
-				# FILTER FIELDS (ADVANCED SEARCH)
-					$filter_by_fields = false;
-					if (!empty($search_query_object->filter)) {
-											
-						$filter_obj = reset($search_query_object->filter);
-						#dump($filter_obj, ' filter_obj ++ '.to_string());
-						$html_content .= "<div class=\"filter_fields text_unselectable\">";
-						$html_content .= "<ul>";
-						#foreach ($filter_obj as $operator => $ar_filter) foreach ($ar_filter as $key => $current_filter) {
-						foreach ($filter_obj as $operator => $current_filter) {
-
-							$base_component_tipo 	= reset($current_filter->path)->component_tipo;
-							$current_component_tipo = end($current_filter->path)->component_tipo;
-							$input_name 			= 'filter_field_'.$current_component_tipo;
-
-							if (in_array($base_component_tipo, $ar_filters)) continue;
-							
-							$name = end($current_filter->path)->name;
-
-							/*
-								$path = new stdClass();
-									$path->path = $current_filter->path;
-
-								# current_search_query_object
-								$current_search_query_object = new stdClass();
-									$current_search_query_object->filter[][$operator][] = $current_filter;
-									$current_search_query_object->select[]				= $path;
-									$current_search_query_object->limit 				= $query_object_options->limit;
-								
-								$current_search_query_object_json = json_encode($current_search_query_object, JSON_UNESCAPED_UNICODE);
-									#dump($current_search_query_object, ' current_search_query_object_json ++ '.to_string());
-								*/
-
-							# type_map
-							if (isset($propiedades->source->type_map->$base_component_tipo)) {
-								$current_type_map = $propiedades->source->type_map->$base_component_tipo;
-								$current_type_map_json = json_encode($current_type_map);
-							}else{
-								$current_type_map_json = '[]';
-							}
-
-							$html_content .= "<li>";
-							$html_content .= "<label>$name</label>";
-							$html_content .= "<input type=\"text\" class=\"filter_fields_input\" ";
-							$html_content .= "name=\"{$input_name}\" ";
-							$html_content .= "value=''";
-							if (SHOW_DEVELOPER===true) {
-							$html_content .= "placeholder='$current_component_tipo'";
-							}							
-							$html_content .= "data-tipo=\"{$current_component_tipo}\" ";
-							#$html_content .= "data-search_query_object='$current_search_query_object_json'";
-							$html_content .= "data-type_map='$current_type_map_json'";
-							$html_content .= "onkeyup=\"component_relation_related.search_from_filter_fields(this)\"";
-							$html_content .= "/>";
-							$html_content .= "</li>";
-
-							$filter_by_fields = true;						
-						}
-						$html_content .= "</ul>";
-
-						# Operator selector
-							$html_content .= "<div class=\"search_operators_div\">";
-							$operator_selected = isset($propiedades->source->operator) ? $propiedades->source->operator : 'or';						
-							$html_content .= "<label>" .label::get_label('operadores_de_busqueda'). "</label> ";
-							$html_content .= "<select class=\"operator_selector\" onchange=\"component_relation_related.search_from_filter_fields(this)\">";
-							$op_label = RecordObj_dd::get_termino_by_tipo('dd1061',DEDALO_DATA_LANG,true);
-							$selected = ($operator_selected==='or') ? 'selected="selected"' : '';						
-							$html_content .= "<option value='or' {$selected}>" .$op_label. "</option>";
-							$op_label = RecordObj_dd::get_termino_by_tipo('dd1060',DEDALO_DATA_LANG,true);		
-							$selected = ($operator_selected==='and') ? 'selected="selected"' : '';	
-							$html_content .= "<option value='and' {$selected}>" .$op_label. "</option>";
-							$html_content .= "</select>";
-							$html_content .= "</div>";
-
-						
-						$html_content .= "</div>";//end div filter_fields
-					}
-
-			$html_content .= "</div>";//end autosearch_options
-			
-
-
-			# BUTTON SHOW OPTIONS
-				if ($filter_by_list!==false || $filter_by_fields!==false) {
-					$html_content .= "<div class=\"icon_bs autocomplete_list_button_options edit_hidden\" data-tipo=\"$tipo\" onclick=\"component_relation_related.toggle_options(this)\"></div>";
-				}
-
-
-
-
-
-
-
-
-			/*
-			$html_content .= "<input type=\"button\" class=\"relation_related_add_button\" value=\"Add relation\"		
-			data-target_section_tipo=\"$target_section_tipo\"
-			onclick=\"component_relation_related.open_related_selector_window(this,event)\" />";
-			*/
 
 			if(SHOW_DEBUG===true) {
 				#$html_content .= " <div class=\"debug_info\"> Current val: <strong>$valor</strong></div>";

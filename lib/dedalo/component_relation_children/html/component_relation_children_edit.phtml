@@ -14,6 +14,9 @@
 	print "data-dato='{$dato_string}' ";
 	print "data-component_name=\"{$component_name}\" ";
 	print "data-component_info='{$component_info}' ";
+	print "data-hierarchy_sections='".json_encode($hierarchy_sections)."' ";  // Default hierarchy_sections
+	print "data-relation_type=\"{$relation_type}\" ";
+	print "data-search_tipos='".json_encode($search_tipos)."' ";
 	print ">";
 
 	# ETIQUETA (LABEL)
@@ -35,10 +38,26 @@
 		case 2 :
 		case 3 :
 
+			#
+			# AUTOCOMPLETE SERVICE
+			$autocomplete_wrapper_id = 'aw_' . $identificador_unico;
+			$html_content .= '<div class="autocomplete_wrapper" id="'.$autocomplete_wrapper_id.'"></div>';
+
+
+			#
+			# JS Init component
+			$html_content .= '<script>';		
+			$init_options = new stdClass();
+				$init_options->component_name 	= $component_name;
+				$init_options->uid 				= $identificador_unico;
+			$html_content .= "component_common.init(".json_encode($init_options).");";			
+			$html_content .= '</script>';
+
+			
+
 			$html_content .= "<div class=\"wrap_relation_children_values\">";
 
-				# ADD BUTTON
-				/**/
+				# ADD BUTTON			
 				$html_content .= "<div class=\"button_add relation_children_add_button\" ";
 				$html_content .= "data-target_section_tipo=\"$target_section_tipo\" ";
 				$html_content .= "onclick=\"component_relation_children.open_children_selector_window(this,event)\" ";
@@ -77,20 +96,7 @@
 						$html_content .= "data-hierarchy_sections='{$hierarchy_sections_json}' ";
 						$html_content .= "onclick=\"component_common.open_ts_window(this,event)\"></div>";
 
-						/*
-						#
-						# INPUT SEARCH FIELD
-						$html_content .= " <input class=\"css_autocomplete_hi_search_field\" type=\"text\" placeholder=\"".label::get_label('buscar')."...\"
-						data-id_wrapper=\"$id_wrapper\"
-						data-tipo=\"$tipo\"
-						data-hierarchy_types='{$hierarchy_types_json}'
-						data-hierarchy_sections='{$hierarchy_sections_json}'
-						onfocus=\"component_autocomplete_hi.activate(this)\"
-						tabindex=\"1\"
-						autocomplete=\"off\"
-						autocorrect=\"off\"
-						/>";
-						*/
+						
 						if(SHOW_DEBUG===true) {
 							#$html_content .= "<div class=\"debug_info notes\">ar_referenced_tipo: ".implode(', ', $ar_referenced_tipo)."</div>";
 							#$html_content .= "<div class=\"debug_info notes\">".str_replace('},', '},<br>', $dato_json) ."</div>";
@@ -121,12 +127,13 @@
 					$html_content .= "/>";
 
 					# TERM STRING
-					$value = ts_object::get_term_by_locator( $current_locator, DEDALO_DATA_LANG, $from_cache=true );					
+					$value = ts_object::get_term_by_locator( $current_locator, DEDALO_DATA_LANG, $from_cache=true );
+					
 					$html_content .= '<span class="locator_label">';
 					$html_content .= $value;
-					if(SHOW_DEVELOPER===true) {
-						$html_content .= '<span class="notes">['.$current_locator->section_tipo.'_'.$current_locator->section_id.']</span>';
-					}
+					#if(SHOW_DEVELOPER===true) {
+						$html_content .= ' <span class="notes">['.$current_locator->section_tipo.'_'.$current_locator->section_id.']</span>';
+					#}
 					$html_content .= '</span>';
 
 					$html_content .= "</div>";//relation_children_input_line
@@ -135,7 +142,6 @@
 
 
 			$html_content .= "</div>";//end wrap_parent_values
-			
 
 
 			if(SHOW_DEBUG===true) {

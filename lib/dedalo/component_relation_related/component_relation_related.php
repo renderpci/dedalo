@@ -19,6 +19,7 @@
 	$component_name			= get_class($this);
 	$context 				= $this->get_context();
 	$dato 					= $this->get_dato();
+	$relation_type 			= $this->get_relation_type();
 	$file_name 				= $modo;
 	
 	if($permissions===0) return null;
@@ -36,7 +37,7 @@
 
 				$id_wrapper 		= 'wrapper_'.$identificador_unico;
 				$input_name 		= "{$tipo}_{$parent}";
-				$component_info 	= $this->get_component_info('json');				
+				$component_info 	= $this->get_component_info('json');
 				$dato_string		= json_handler::encode($dato);
 
 
@@ -46,14 +47,16 @@
 				$ar_target_section_tipo 	 = [];	//$this->get_ar_target_section_tipo();
 				$ar_target_section_tipo_json = json_encode($ar_target_section_tipo);
 				
-				$tipo_to_search			= $this->get_tipo_to_search();	
+				$tipo_to_search			= $this->get_tipo_to_search();
+
+				$ar_valor 	= $this->get_valor($lang,'array');
+				$valor  	= implode('<br>',$ar_valor);	
 
 				# Inverse relations to current term
 				# $inverse_related = component_relation_related::get_inverse_related($section_id, $section_tipo);
 					#dump($inverse_related, ' inverse_related ++ '.to_string());
 
 				# REFERENCES
-
 				$references = $this->get_calculated_references();
 				/*
 				switch ($this->relation_type_rel) {
@@ -73,6 +76,7 @@
 				*/			
 				#dump($references, ' $references ++ '.to_string());
 
+				/* *************** 
 				# FIlTER_BY_LIST (Propiedades option)
 				$filter_by_list = false; // Default
 				if (isset($propiedades->source->filter_by_list)) {
@@ -93,10 +97,7 @@
 				$limit = isset($propiedades->limit) ? (int)$propiedades->limit : 0;
 				
 				# Divisor
-				$divisor = $this->get_divisor();
-
-				$ar_valor 	= $this->get_valor($lang,'array');
-				$valor  	= implode('<br>',$ar_valor);
+				$divisor = $this->get_divisor();				
 
 				# search_query_object
 				$query_object_options = new stdClass();
@@ -104,9 +105,21 @@
 					$query_object_options->limit  	= 40;
 					$query_object_options->offset 	= 0;
 				$search_query_object 		= $this->build_search_query_object($query_object_options);
-				$json_search_query_object 	= json_encode( $search_query_object, JSON_UNESCAPED_UNICODE);
+				$json_search_query_object 	= json_encode( $search_query_object, JSON_UNESCAPED_UNICODE | JSON_HEX_APOS);
 					#dump($search_query_object, ' search_query_object ++ '.to_string());
 					#dump(json_encode( $search_query_object, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE), '$search_query_object ++ '.to_string());
+					*/
+
+				# hierarchy_type . Get hierarchy_type from current section
+				$hierarchy_type 	= hierarchy::get_hierarchy_type_from_section_tipo($section_tipo);
+				# hierarchy_types .  Array of all (only one in this case)
+				$hierarchy_types 	= [$hierarchy_type];
+				# hierarchy_sections .  Calculate all sections of current types
+				$hierarchy_sections = component_autocomplete_hi::get_hierarchy_sections_from_types( $hierarchy_types );
+				
+				# search_tipos
+				$term_tipo 		= hierarchy::get_element_tipo_from_section_map( $section_tipo, 'term' );
+				$search_tipos 	= [$term_tipo]; // DEDALO_THESAURUS_TERM_TIPO
 				break;
 
 		case 'tool_time_machine' :
@@ -117,15 +130,38 @@
 						
 		case 'search':
 				# dato is injected by trigger search wen is needed
-				$dato = isset($this->dato) ? $this->dato : null;
+				$dato 		= isset($this->dato) ? $this->dato : [];
+				$dato_json	= json_encode($dato);
+
+				$ar_valor 	= $this->get_valor($lang,'array');
+				$valor  	= implode('<br>',$ar_valor);
+
+				$id_wrapper 	= 'wrapper_'.$identificador_unico;
+				$component_info = $this->get_component_info('json');
+
+				# q_operator is injected by trigger search2
+				$q_operator = isset($this->q_operator) ? $this->q_operator : null;
+
+				# hierarchy_type . Get hierarchy_type from current section
+				$hierarchy_type 	= hierarchy::get_hierarchy_type_from_section_tipo($section_tipo);
+				# hierarchy_types .  Array of all (only one in this case)
+				$hierarchy_types 	= [$hierarchy_type];
+				# hierarchy_sections .  Calculate all sections of current types
+				$hierarchy_sections = component_autocomplete_hi::get_hierarchy_sections_from_types( $hierarchy_types );
 							
-				$ar_comparison_operators = $this->build_search_comparison_operators();
-				$ar_logical_operators 	 = $this->build_search_logical_operators();
+				#$ar_comparison_operators = $this->build_search_comparison_operators();
+				#$ar_logical_operators 	 = $this->build_search_logical_operators();
 
 				# Search input name (var search_input_name is injected in search -> records_search_list.phtml)
 				# and recovered in component_common->get_search_input_name()
 				# Normally is section_tipo + component_tipo, but when in portal can be portal_tipo + section_tipo + component_tipo
 				$search_input_name = $this->get_search_input_name();
+
+				# search_tipos
+				$term_tipo 		= hierarchy::get_element_tipo_from_section_map( $section_tipo, 'term' );
+				$search_tipos 	= [$term_tipo]; // DEDALO_THESAURUS_TERM_TIPO
+
+				$limit = 1;
 				break;
 					
 		case 'portal_list' :

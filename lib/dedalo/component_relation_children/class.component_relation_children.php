@@ -5,7 +5,7 @@
 *
 */
 class component_relation_children extends component_relation_common {
-		
+
 
 	protected $relation_type = DEDALO_RELATION_TYPE_CHILDREN_TIPO;
 

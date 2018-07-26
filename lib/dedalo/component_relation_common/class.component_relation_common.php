@@ -26,6 +26,41 @@ class component_relation_common extends component_common {
 
 
 	/**
+	* GET_COMPONENTS_WITH_RELATIONS
+	* Array of components modelo name that usin locators in dato and extends component_relation_common
+	* @return array
+	*/
+	public static function get_components_with_relations() {
+		
+		$components_with_relations = [
+			'component_autocomplete',
+			'component_autocomplete_hi',
+			'component_check_box',
+			'component_filter',
+			'component_filter_master',
+			'component_filter',
+			'component_portal',
+			'component_filter',
+			'component_publication',
+			'component_radio_button',
+			'component_relation_children',
+			'component_relation_index',
+			'component_relation_model',
+			'component_relation_parent',
+			'component_relation_related',
+			'component_relation_struct',
+			'component_relation_children',
+			'component_select',
+			'component_select_lang',
+			'component_select_lang',
+		];
+
+		return $components_with_relations;
+	}//end get_components_with_relations
+
+
+
+	/**
 	* __CONSTRUCT
 	*/
 	public function __construct($tipo=null, $parent=null, $modo='edit', $lang=DEDALO_DATA_NOLAN, $section_tipo=null) {
@@ -316,7 +351,7 @@ class component_relation_common extends component_common {
 	* REMOVE_LOCATOR_FROM_DATO
 	* @return bool
 	*/
-	public function remove_locator_from_dato( $locator ) {
+	public function remove_locator_from_dato( $locator, $ar_properties=[] ) {
 
 		if (empty($locator)) {
 			return false;
@@ -346,7 +381,7 @@ class component_relation_common extends component_common {
 		foreach($dato as $key => $current_locator_obj) {
 
 			# Test if already exists
-			$equal = locator::compare_locators( $current_locator_obj, $locator );
+			$equal = locator::compare_locators( $current_locator_obj, $locator, $ar_properties );
 			if ( $equal===true ) {			
 			
 				$removed = true;
@@ -385,15 +420,11 @@ class component_relation_common extends component_common {
 		$lang 			= DEDALO_DATA_LANG;
 		$modo 			= $this->get_modo();
 
-			#dump($modo, ' modo ++ '.to_string());
-			#dump($this->caller_dataset, ' caller_dataset ++ '.to_string($modo));
-
 		#
 		# DATAFRAME MODE
 		if (strpos($modo,'dataframe')===0 && isset($this->caller_dataset)) {
 
-			#debug_log(__METHOD__." caller_dataset ".to_string($this->caller_dataset), logger::DEBUG);
-			
+			#debug_log(__METHOD__." caller_dataset ".to_string($this->caller_dataset), logger::DEBUG);			
 
 			$new_tipo 			= $this->caller_dataset->component_tipo;
 			$new_section_tipo 	= $this->caller_dataset->section_tipo;
@@ -418,8 +449,6 @@ class component_relation_common extends component_common {
 				debug_log(__METHOD__." Stopped ?? dataframe save to DDBB $this->section_tipo : $new_section_tipo , $this->parent : $new_parent ".to_string(), logger::WARNING);
 				#$new_component->save_to_database = false;
 			}
-
-		#	dump($this->dataframe, ' $component_dato[$this->caller_dataset->caller_key]) ++ '.to_string());
 
 			if(isset($component_dato[$this->caller_dataset->caller_key])){
 				$component_dato[$this->caller_dataset->caller_key]->dataframe = $new_component->dataframe;
@@ -464,94 +493,13 @@ class component_relation_common extends component_common {
 				$relation_options->section_id 			= $parent;
 				$relation_options->from_component_tipo 	= $tipo;
 				$relation_options->ar_locators 			= $this->get_dato();
-			$propagate_response = component_relation_common::propagate_component_dato_to_relations_table($relation_options);
-		}//end if ($this->save_to_database_relations===true)
+			$propagate_response = search_development2::propagate_component_dato_to_relations_table($relation_options);
+		}
 
 
 		# RETURN SECTION ID
 		return (int)$section_id;
 	}//end Save
-
-
-
-	/**
-	* PROPAGATE_COMPONENT_DATO_TO_RELATIONS_TABLE
-	* Get complete component relation dato and generate rows into relations table for fast LEFT JOIN
-	* @return object $response
-	*/
-	public static function propagate_component_dato_to_relations_table( $request_options ) {
-
-		$response = new stdClass();
-			$response->result 	= false;
-			$response->msg 		= array('Error. Request failed '.__METHOD__);
-
-		$options = new stdClass();
-			$options->ar_locators 		  = null;
-			$options->section_tipo 		  = null;
-			$options->section_id 		  = null;
-			$options->from_component_tipo = null;
-			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
-
-		if (strpos($options->section_id, DEDALO_SECTION_ID_TEMP)!==false) {
-			$response->result 	= true;
-			$response->msg 		= 'Ok. Request skipped for temp section: '.DEDALO_SECTION_ID_TEMP.' - '.__METHOD__;
-			return $response;
-		}
-	
-		if (empty($options->from_component_tipo)) {			
-			$response->msg[] = " options->from_component_tipo is mandatory ! Stopped action";
-			$response->msg   = implode(', ', $response->msg);
-			debug_log(__METHOD__." $response->msg ".to_string(), logger::ERROR);
-			return $response;
-		}
-		
-		$table = 'relations';
-		
-		$section_id 		 = $options->section_id;
-		$section_tipo 		 = $options->section_tipo;
-		$from_component_tipo = $options->from_component_tipo;
-		
-		# remove all relations of current component
-		$strQuery 	= "DELETE FROM $table WHERE section_id = $section_id AND section_tipo = '$section_tipo' AND from_component_tipo = '$from_component_tipo' ";
-		$result 	= JSON_RecordDataBoundObject::search_free($strQuery);
-		
-		foreach ((array)$options->ar_locators as $key => $locator) {
-
-			if(!isset($locator->section_tipo)) {
-				debug_log(__METHOD__." Error. empty section_tipo. Ignored insert locator: ".to_string($locator), logger::ERROR);
-				continue;
-			}
-
-			$target_section_tipo = $locator->section_tipo;
-			$target_section_id 	 = $locator->section_id;
-			#$from_component_tipo = $locator->from_component_tipo; // Already defined before
-
-
-			# Create new
-			$strQuery 	= "INSERT INTO $table (section_id, section_tipo, target_section_id, target_section_tipo, from_component_tipo) VALUES ($1, $2, $3, $4, $5) RETURNING id";
-			# Exec query
-			$result = pg_query_params(DBi::_getConnection(), $strQuery, array( $section_id, $section_tipo, $target_section_id, $target_section_tipo, $from_component_tipo ));
-			if(!$result) {			
-				$msg = " Failed Insert relations record - $strQuery";
-				debug_log(__METHOD__." ERROR: $msg ".to_string(), logger::ERROR);
-				$response->msg[] = $msg;
-			}else{
-				$msg = " Created relations row ({$section_tipo}-{$section_id}) target_section_id:$target_section_id, target_section_tipo:$target_section_tipo, from_component_tipo:$from_component_tipo";
-				$response->msg[] = $msg;
-				if(SHOW_DEBUG===true) {
-					$msg .= ' ('.RecordObj_dd::get_termino_by_tipo($section_tipo).' - '.RecordObj_dd::get_termino_by_tipo($from_component_tipo).')';
-					debug_log(__METHOD__." OK: ".$msg, logger::DEBUG);
-				}				
-			}
-		}		
-
-
-		$response->result = true;
-		$response->msg[0] = "Ok. Relations row successfully"; // Override first message
-		$response->msg    = "<br>".implode('<br>', $response->msg);
-		
-		return $response;
-	}//end propagate_component_dato_to_relations_table
 
 
 
@@ -609,7 +557,7 @@ class component_relation_common extends component_common {
 	* Resolve locator to string value to show in list etc.
 	* @return string $valor
 	*/
-	public static function get_locator_value( $locator, $lang=DEDALO_DATA_LANG, $section_tipo, $show_parents=false, $ar_componets_related=false, $divisor=false ) {
+	public static function get_locator_value( $locator, $lang=DEDALO_DATA_LANG, $section_tipo, $show_parents=false, $ar_componets_related=false, $divisor=', ' ) {
 		if(SHOW_DEBUG===true) {
 			$start_time=microtime(1);
 			#dump($ar_componets_related, ' ar_componets_related ++ '.to_string());;
@@ -657,29 +605,32 @@ class component_relation_common extends component_common {
 				# NOTE: get_parents_recursive is disabled because generate some problems to fix. For now we use only first parent
 				#$ar_parents	= component_relation_parent::get_parents($locator->section_id, $locator->section_tipo);					
 				$ar_parents   = component_relation_parent::get_parents_recursive($locator->section_id, $locator->section_tipo, $skip_root=true);			
-				$n_ar_parents = count($ar_parents);
-	
-				$ar_parents_resolved = array();
-				$i=0;foreach ($ar_parents as $current_locator) {
+				#$n_ar_parents = count($ar_parents);
+					#dump($ar_parents, ' ar_parents ++ '.to_string($locator)); die();
+			
+				$ar_parents_values  = array();
+				#$ar_locators_resolved = [$locator->section_tipo.'_'.$locator->section_id];
+				foreach ($ar_parents as $current_locator) {
 
-					// Only add first and last parent
-					#if ($i>0 && $i<($n_ar_parents-1)) {
-					#	$i++;
+					#if (true===in_array($current_locator->section_tipo.'_'.$current_locator->section_id, $ar_locators_resolved)) {
+					#	debug_log(__METHOD__." SKIPPED ALREADY RESOLVED LOCATOR TO PREVENT INFINITE LOOP ".to_string($current_locator->section_tipo.'_'.$current_locator->section_id), logger::ERROR);
 					#	continue;
 					#}
 
-					$current_value = ts_object::get_term_by_locator( $current_locator, $lang, true );
+					$current_value = ts_object::get_term_by_locator( $current_locator, $lang, $from_cache=true );
 						#dump($current_parent, ' current_parent ++ '.to_string());
 					if (!empty($current_value)) {
-						$ar_parents_resolved[]  = $current_value;
-					}								
+						$ar_parents_values[]  = $current_value;
+					}
 					//break;
-
-				$i++;}
-				if (!empty($ar_parents_resolved)) {
-					$valor .= ', <span class="notes">'.implode(', ', $ar_parents_resolved).'</span>';
-				}				
-			}
+					#$ar_locators_resolved[] = $current_locator->section_tipo.'_'.$current_locator->section_id;
+				}
+				if (!empty($ar_parents_values)) {
+					#debug_log(__METHOD__."  ".to_string($ar_parents_values), logger::DEBUG);
+					$valor .= ', <span class="notes">'.implode($divisor, $ar_parents_values).'</span>';
+				}
+				
+			}//end if ($show_parents===true)
 		}	
 
 
@@ -722,30 +673,17 @@ class component_relation_common extends component_common {
 	*/
 	public static function render_list_value($value, $tipo, $parent, $modo, $lang, $section_tipo, $section_id, $current_locator=null, $caller_component_tipo=null) {
 	
-		/*$ar_locators = [];
-		if (!empty($value)) {
-			if ($value = json_decode($value)) {
-				$ar_locators = array_filter($value, function($item) use($tipo) {
-					return $item->from_component_tipo === $tipo;
-				});
-			}
-		}*/
-		#$ar_locators = (array)json_decode($value);
-		#$parent = null; // Avoid self load dato 
-
 		$component 	= component_common::get_instance(get_called_class(),
 													 $tipo,
-												 	 $parent,
-												 	 $modo, //'list',
+													 $parent,
+													 $modo, //'list',
 													 DEDALO_DATA_NOLAN,
-												 	 $section_tipo);
+													 $section_tipo);	
 
-		#$component->set_dato($ar_locators);
-
-		
 		# Use already query calculated values for speed
 		#$ar_records = (array)json_handler::decode($value);
 		#$component->set_dato($ar_records);
+
 		$component->set_identificador_unico($component->get_identificador_unico().'_'.$section_id.'_'.$caller_component_tipo); // Set unic id for build search_options_session_key used in sessions
 		
 		if ($modo==='edit_in_list') {
@@ -784,37 +722,42 @@ class component_relation_common extends component_common {
 		$ar_removed=array();
 		foreach ((array)$parents as $current_parent) {
 
+			$current_component_tipo = $current_parent->from_component_tipo;
+			$current_section_tipo 	= $current_parent->section_tipo;
+			$current_section_id 	= $current_parent->section_id;
+
 			if ($filter!==false) {				
 				# compare current with filter
 				$process=false;
 				foreach ($filter as $current_locator) {
-					if ($current_locator->section_id==$current_parent->section_id && $current_locator->section_tipo===$current_parent->section_tipo) {
+					if ($current_locator->section_id==$current_section_id && $current_locator->section_tipo===$current_section_tipo) {
 						$process = true; break;
 					}
 				}
 				if(!$process) continue; // Skip current section
 			}
 		
-			# Target section data
-			$modelo_name 	= 'component_relation_children';
-			$modo 			= 'edit';
-			$lang			= DEDALO_DATA_NOLAN;
+		
+			# Target section data			
+			$modelo_name 			= RecordObj_dd::get_modelo_name_by_tipo($current_component_tipo,true); // 'component_relation_children';
+			$modo 					= 'edit';
+			$lang					= DEDALO_DATA_NOLAN;
 			$component_relation_children = component_common::get_instance($modelo_name,
-																		  $current_parent->component_tipo,
-																		  $current_parent->section_id,
+																		  $current_component_tipo,
+																		  $current_section_id,
 																		  $modo,
 																		  $lang,
-																		  $current_parent->section_tipo);
+																		  $current_section_tipo);
 			
 			# NOTE: remove_me_as_your_children deletes current section references from component_relation_children and section->relations container
 			# $removed = (bool)$component_relation_children->remove_children_and_save($children_locator);
 			$removed = (bool)$component_relation_children->remove_me_as_your_children( $section_tipo, $section_id );
-			if ($removed) {
+			if ($removed===true) {
 				$component_relation_children->Save();
-				debug_log(__METHOD__." Removed references in component_relation_children ($current_parent->section_id, $current_parent->section_tipo) to $section_id, $section_tipo ".to_string(), logger::DEBUG);
-				$ar_removed[] = array('section_tipo' 	=> $current_parent->section_tipo,
-									  'section_id' 	 	=> $current_parent->section_id,
-									  'component_tipo' 	=> $current_parent->component_tipo
+				debug_log(__METHOD__." Removed references in component_relation_children ($current_section_id, $current_section_tipo) to $section_id, $section_tipo ".to_string(), logger::DEBUG);
+				$ar_removed[] = array('section_tipo' 	=> $current_section_tipo,
+									  'section_id' 	 	=> $current_section_id,
+									  'component_tipo' 	=> $current_component_tipo
 									 );
 			}
 		}//end foreach ((array)$parents as $current_parent)
@@ -986,34 +929,34 @@ class component_relation_common extends component_common {
 	public static function get_search_query2__DES( $query_object ) {
 		
 		# {
-        #   "q": "%pepe",
-        #   "lang": "lg-spa",
-        #   "path": [
-        #     {
-        #       "section_tipo": "oh1",
-        #       "component_tipo": "oh24",
-        #       "target_section": "rsc197"
-        #     },
-        #     {
-        #       "section_tipo": "rsc197",
-        #       "component_tipo": "rsc453"
-        #     }
-        #   ],
-        #   "component_path": [
-        #     "dato"
-        #   ]
-        # }
+		#   "q": "%pepe",
+		#   "lang": "lg-spa",
+		#   "path": [
+		#     {
+		#       "section_tipo": "oh1",
+		#       "component_tipo": "oh24",
+		#       "target_section": "rsc197"
+		#     },
+		#     {
+		#       "section_tipo": "rsc197",
+		#       "component_tipo": "rsc453"
+		#     }
+		#   ],
+		#   "component_path": [
+		#     "dato"
+		#   ]
+		# }
 
 		#$component_tipo = end($query_object->path)->component_tipo;
 
-        # component path
-        $query_object->component_path = ['relations'];
-       
-       	/*
-        # split multiple
-        $current_query_object = component_common::split_query($query_object);
+		# component path
+		$query_object->component_path = ['relations'];
+	   
+		/*
+		# split multiple
+		$current_query_object = component_common::split_query($query_object);
 		#dump($ar_query_object, ' ar_query_object ++ '.to_string()); die();
-        # conform each object
+		# conform each object
 		if (search_development2::is_search_operator($current_query_object)===true) {
 			foreach ($current_query_object as $operator => $ar_elements) {
 				foreach ($ar_elements as $c_query_object) {
@@ -1086,7 +1029,7 @@ class component_relation_common extends component_common {
 	*/
 	public static function resolve_query_object_sql($query_object) {
 		#dump($query_object, ' $query_object 1 ++ '.to_string());	
-    	# Always set fixed values
+		# Always set fixed values
 		$query_object->type 	= 'jsonb';
 		$query_object->unaccent = false;
 
@@ -1107,15 +1050,15 @@ class component_relation_common extends component_common {
 		$q_operator = isset($query_object->q_operator) ? $query_object->q_operator : null;
 		
 				
-        switch (true) {
-        	# IS DIFFERENT			
+		switch (true) {
+			# IS DIFFERENT
 			case ($q_operator==='!=' && !empty($q)):
 				$operator = '@>';
 				$q_clean  = '(\'['.$q.']\'::jsonb)=FALSE';
 				$query_object->operator = $operator;
-    			$query_object->q_parsed = $q_clean;
+				$query_object->q_parsed = $q_clean;
 				break;
-        	# IS NULL
+			# IS NULL
 			case ($q_operator==='='):
 				$operator = '@>';
 				$q_obj = new stdClass();
@@ -1123,7 +1066,7 @@ class component_relation_common extends component_common {
 				$ar_q 	  = array($q_obj);
 				$q_clean  = '(\''.json_encode($ar_q).'\'::jsonb)=FALSE';
 				$query_object->operator = $operator;
-    			$query_object->q_parsed	= $q_clean;
+				$query_object->q_parsed	= $q_clean;
 				break;
 			# IS NOT NULL
 			case ($q_operator==='*'):
@@ -1133,20 +1076,20 @@ class component_relation_common extends component_common {
 				$ar_q 	  = array($q_obj);
 				$q_clean  = '\''.json_encode($ar_q).'\'';
 				$query_object->operator = $operator;
-    			$query_object->q_parsed = $q_clean;
-				break;			
-			# CONTAIN	
+				$query_object->q_parsed = $q_clean;
+				break;
+			# CONTAIN
 			default:
 				$operator = '@>';
 				$q_clean  = '\'['.$q.']\'';
 				$query_object->operator = $operator;
-    			$query_object->q_parsed	= $q_clean;
+				$query_object->q_parsed	= $q_clean;
 				break;
 		}//end switch (true) {
 		#dump($query_object, ' $query_object ++ '.to_string());	
-       
 
-        return $query_object;
+
+		return $query_object;
 	}//end resolve_query_object_sql
 
 
@@ -1226,7 +1169,6 @@ class component_relation_common extends component_common {
 	* @return dato
 	*/
 	public function set_dato_external($save=false) {
-
 		$start_time=microtime(1);
 
 		$dato 						= $this->get_dato();
@@ -1246,8 +1188,7 @@ class component_relation_common extends component_common {
 
 		$new_dato = [];
 		
-		# get if the search need add fields data:
-		
+		# get if the search need add fields data:		
 		if(isset($propiedades->source->data_from_field )){
 			$data_from_field  = $propiedades->source->data_from_field;
 
@@ -1263,8 +1204,6 @@ class component_relation_common extends component_common {
 																	false);
 				$component_dato = $component_data_for_search->get_dato_with_references();
 
-
-
 				foreach ($component_dato as $current_locator) {
 					$locator_dato 		= new locator();
 					$locator_dato->set_section_id($current_locator->section_id);
@@ -1273,69 +1212,78 @@ class component_relation_common extends component_common {
 					$new_dato[] = $locator_dato;
 				}
 			}			
-		}
-		
+		}		
+		# Add locator at end
 		$new_dato[] = $locator;
-
-		#dump($new_dato, ' new_dato ++ '.to_string());
-			
-		$value_to_search  = $new_dato;
-		$ar_filter_fields = [];
-
-		foreach ($ar_component_to_search as $component_to_search) {
 		
-			# get the modelo_name of the componet to search
-			$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($component_to_search,true);
+		/*	
+			$value_to_search  = $new_dato;
+			$ar_filter_fields = [];
+			foreach ($ar_component_to_search as $component_to_search) {
+				
+				# get the modelo_name of the componet to search
+				$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($component_to_search,true);
 
-			//get the query model of the component to secarch
-			foreach ($value_to_search as $value) {
-				$ar_filter_fields[]	= $modelo_name::get_search_query( $json_field='datos', $component_to_search, $tipo_de_dato_search='dato', DEDALO_DATA_NOLAN, json_encode($value), $comparison_operator='=');
+				//get the query model of the component to secarch
+				foreach ($value_to_search as $value) {
+					$ar_filter_fields[]	= $modelo_name::get_search_query( $json_field='datos', $component_to_search, $tipo_de_dato_search='dato', DEDALO_DATA_NOLAN, json_encode($value), $comparison_operator='=');
+				}
+				
+				break; // Only one exists
 			}
-			
-			break; // Only one exists
-		}
-		$filter_fields = implode(' OR ', $ar_filter_fields);
-		# MATRIX TABLE : Only from first term for now
-			$matrix_table = common::get_matrix_table_from_tipo( $ar_section_to_search[0] );	
+			$filter_fields = implode(' OR ', $ar_filter_fields);
+			# MATRIX TABLE : Only from first term for now
+				$matrix_table = common::get_matrix_table_from_tipo( $ar_section_to_search[0] );	
 
-		# TARGET SECTIONS : Filter search by target sections (hierarchy_sections)
-			$filter_target_section = '';
-			$ar_filter=array();
-			foreach ($ar_section_to_search as $current_section_tipo) {
-				$ar_filter[] = "a.section_tipo='$current_section_tipo'";
+			# TARGET SECTIONS : Filter search by target sections (hierarchy_sections)
+				$filter_target_section = '';
+				$ar_filter=array();
+				foreach ($ar_section_to_search as $current_section_tipo) {
+					$ar_filter[] = "a.section_tipo='$current_section_tipo'";
+				}
+				$filter_target_section = '(' . implode(' OR ', $ar_filter) . ')';
+
+			# ORDER
+				$order 	= "a.section_id ASC";				
+
+			# Build the search query
+			$strQuery = PHP_EOL.sanitize_query("
+			 -- ".__METHOD__."
+				SELECT a.section_id, a.section_tipo
+				FROM \"$matrix_table\" a
+				WHERE
+				$filter_target_section
+				AND ( $filter_fields )
+				ORDER BY $order ;
+				"
+				);
+			if(SHOW_DEBUG===true) {
+				#error_log("*** set_dato_external *** ".$strQuery);
 			}
-			$filter_target_section = '(' . implode(' OR ', $ar_filter) . ')';
 
-		# ORDER
-			$order 	= "a.section_id ASC";				
+			$result	= JSON_RecordObj_matrix::search_free($strQuery, false);
 
-		# Build the search query
-		$strQuery = PHP_EOL.sanitize_query("
-		 -- ".__METHOD__."
-			SELECT a.section_id, a.section_tipo
-			FROM \"$matrix_table\" a
-			WHERE
-			$filter_target_section
-			AND ( $filter_fields )
-			ORDER BY $order ;
-			"
-			);
-		if(SHOW_DEBUG===true) {
-			error_log("***** ".$strQuery);
-		}
+			if(SHOW_DEBUG===true) {
+				$subtotal = exec_time_unit($start_time,'ms')." ms";
+				debug_log(__METHOD__." Subsubtotal time $subtotal [$this->section_tipo, $this->tipo, $this->parent] ".get_class($this) .' : '. RecordObj_dd::get_termino_by_tipo($this->tipo) ." ". to_string($strQuery), logger::DEBUG);
+			}
 
-		$result	= JSON_RecordObj_matrix::search_free($strQuery, false);
+			# Build the locators with the result
+			$ar_result = array();
+			while ($rows = pg_fetch_assoc($result)) {
+				$locator 		= new locator();
+					$locator->set_section_id($rows['section_id']);
+					$locator->set_section_tipo($rows['section_tipo']);
+					$locator->set_type($this->get_relation_type());
+					$locator->set_from_component_tipo($this->get_tipo());
+				$ar_result[] = $locator;
+			}
+		*/
 
-		# Build the locators with the result
-		$ar_result = array();
-		while ($rows = pg_fetch_assoc($result)) {
-			$locator 		= new locator();
-				$locator->set_section_id($rows['section_id']);
-				$locator->set_section_tipo($rows['section_tipo']);
-				$locator->set_type($this->get_relation_type());
-				$locator->set_from_component_tipo($this->get_tipo());
-			$ar_result[] = $locator;
-		}
+		# From locators inside property 'relations'
+		#$ar_result = $this->get_external_result($new_dato, $ar_component_to_search, $ar_section_to_search);
+		# From table 'relations' (x number of locators in new_dato is fast aprox. because 'OR' problem in indexes)
+		$ar_result = $this->get_external_result_from_relations_table($new_dato, $ar_component_to_search);
 		
 		$changed = false;
 
@@ -1366,14 +1314,136 @@ class component_relation_common extends component_common {
 		}
 
 		if(SHOW_DEBUG===true) {
-			$total = exec_time_unit($start_time,'ms')." ms";
-			debug_log(__METHOD__." Total time $total - $total_ar_result locators".to_string(), logger::DEBUG);
+			//$total = exec_time_unit($start_time,'ms')." ms";
+			//debug_log(__METHOD__." Total time $total - $total_ar_result locators [$this->section_tipo, $this->tipo, $this->parent] ".get_class($this) .' : '. RecordObj_dd::get_termino_by_tipo($this->tipo) . to_string(), logger::DEBUG);
 		}
 
 		#return $dato;
 		#$this->set_dato($ar_result);
 		return true;
 	}//end set_dato_external
+
+
+
+	/**
+	* GET_EXTERNAL_RESULT
+	* @return array $ar_result
+	* 	Array of locators
+	*/
+	private function get_external_result($new_dato, $ar_component_to_search, $ar_section_to_search) {
+		$start_time=microtime(1);
+
+		$value_to_search  = $new_dato;
+		$ar_filter_fields = [];
+		foreach ($ar_component_to_search as $component_to_search) {
+			
+			# get the modelo_name of the componet to search
+			$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($component_to_search,true);
+
+			//get the query model of the component to secarch
+			foreach ($value_to_search as $value) {
+				$ar_filter_fields[]	= $modelo_name::get_search_query( $json_field='datos', $component_to_search, $tipo_de_dato_search='dato', DEDALO_DATA_NOLAN, json_encode($value), $comparison_operator='=');
+			}			
+			break; // Only one exists
+		}
+		$filter_fields = implode(' OR ', $ar_filter_fields);
+		
+		# MATRIX TABLE : Only from first term for now
+			$matrix_table = common::get_matrix_table_from_tipo( $ar_section_to_search[0] );	
+
+		# TARGET SECTIONS : Filter search by target sections (hierarchy_sections)
+			$filter_target_section = '';
+			$ar_filter=array();
+			foreach ($ar_section_to_search as $current_section_tipo) {
+				$ar_filter[] = "a.section_tipo='$current_section_tipo'";
+			}
+			$filter_target_section = '(' . implode(' OR ', $ar_filter) . ')';
+
+		# ORDER
+			$order 	= "a.section_id ASC";				
+
+		# Build the search query
+		$strQuery = PHP_EOL.sanitize_query("
+		 -- ".__METHOD__."
+			SELECT a.section_id, a.section_tipo
+			FROM \"$matrix_table\" a
+			WHERE
+			$filter_target_section
+			AND ( $filter_fields )
+			ORDER BY $order ;
+			"
+			);
+
+		$result	= JSON_RecordObj_matrix::search_free($strQuery, false);
+
+		if(SHOW_DEBUG===true) {
+			$subtotal = exec_time_unit($start_time,'ms')." ms";
+			debug_log(__METHOD__." Subsubtotal time $subtotal [$this->section_tipo, $this->tipo, $this->parent] ".get_class($this) .' : '. RecordObj_dd::get_termino_by_tipo($this->tipo) ." ". to_string($strQuery), logger::DEBUG);
+		}
+
+		# Build the locators with the result
+		$ar_result = array();
+		while ($rows = pg_fetch_assoc($result)) {
+			$locator 		= new locator();
+				$locator->set_section_id($rows['section_id']);
+				$locator->set_section_tipo($rows['section_tipo']);
+				$locator->set_type($this->get_relation_type());
+				$locator->set_from_component_tipo($this->get_tipo());
+			$ar_result[] = $locator;
+		}
+
+		return $ar_result;
+	}//end get_external_result
+
+
+
+	/**
+	* GET_EXTERNAL_RESULT_FROM_RELATIONS_TABLE
+	* @return array $ar_result
+	* 	Array of locators
+	*/
+	private function get_external_result_from_relations_table($new_dato, $ar_component_to_search) {
+		$start_time=microtime(1);
+
+		$value_to_search  = $new_dato;
+		$ar_filter_fields = [];
+		foreach ($ar_component_to_search as $component_to_search_tipo) {
+
+			// get the query model of the component to search
+			foreach ($value_to_search as $current_locator) {
+				# model: (a.target_section_tipo='numisdata3' AND a.target_section_id=14 AND a.from_component_tipo='numisdata161')
+				$ar_filter_fields[]	= '(target_section_tipo=\''.$current_locator->section_tipo.'\' AND target_section_id='.(int)$current_locator->section_id.' AND from_component_tipo=\''.$component_to_search_tipo.'\')';
+			}			
+			break; // Only one exists
+		}
+		$filter_fields = implode( PHP_EOL.' OR ', $ar_filter_fields);			
+
+		# Build the search query		
+		$strQuery =  PHP_EOL.'-- '.__METHOD__ .PHP_EOL. 'SELECT section_id, section_tipo FROM "relations" WHERE' .PHP_EOL . $filter_fields;
+		if(SHOW_DEBUG===true) {
+			//error_log("***+++ set_dato_external *** ".$strQuery);
+		}
+
+		$result	= JSON_RecordObj_matrix::search_free($strQuery, false);
+
+		if(SHOW_DEBUG===true) {
+			//$subtotal = exec_time_unit($start_time,'ms')." ms";
+			//debug_log(__METHOD__." Subsubtotal time $subtotal [$this->section_tipo, $this->tipo, $this->parent] ".get_class($this) .' : '. RecordObj_dd::get_termino_by_tipo($this->tipo) ." ". to_string($strQuery), logger::DEBUG);
+		}
+
+		# Build the locators with the result
+		$ar_result = array();
+		while ($rows = pg_fetch_assoc($result)) {
+			$locator = new locator();
+				$locator->set_section_id($rows['section_id']);
+				$locator->set_section_tipo($rows['section_tipo']);
+				$locator->set_type($this->get_relation_type());
+				$locator->set_from_component_tipo($this->get_tipo());
+			$ar_result[] = $locator;
+		}
+
+		return $ar_result;
+	}//end get_external_result_from_relations_table
 
 
 
@@ -1417,6 +1487,18 @@ class component_relation_common extends component_common {
 		
 		return $valor_export;
 	}//end get_valor_export
+
+
+
+	/**
+	* GET_RELATIONS_SEARCH_VALUE
+	* @return bool false
+	* Default response for calls to this method. Overwrited in component_autocomplete_hi
+	*/
+	public function get_relations_search_value() {
+
+		return false;
+	}//end get_relations_search_value
 
 
 

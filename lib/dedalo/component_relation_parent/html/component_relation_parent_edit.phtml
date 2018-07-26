@@ -8,6 +8,7 @@
 
 	print "<div class=\"wrap_component css_wrap_relation_parent wrap_component_{$modo} wrap_component_{$tipo}\" id=\"{$id_wrapper}\" ";
 	print "data-tipo=\"{$tipo}\" ";
+	print "data-from_component_tipo=\"{$from_component_tipo}\" ";
 	print "data-lang=\"{$lang}\" ";
 	print "data-parent=\"{$parent}\" ";
 	print "data-section_tipo=\"{$section_tipo}\" ";
@@ -15,6 +16,9 @@
 	print "data-component_name=\"{$component_name}\" ";
 	print "data-component_info='{$component_info}' ";
 	print "data-children_component_tipo=\"{$children_component_tipo}\" ";
+	print "data-relation_type=\"".DEDALO_RELATION_TYPE_CHILDREN_TIPO."\" "; // Note that use CHILDREN_TIPO for search only pouposes
+	print "data-search_tipos='".json_encode($search_tipos)."' ";
+	print "data-hierarchy_sections='".json_encode($hierarchy_sections)."' ";  // Default hierarchy_sections
 	print ">";
 
 	# ETIQUETA (LABEL)
@@ -35,72 +39,57 @@
 		case 2 :
 		case 3 :
 
-			$html_content .= "<div class=\"wrap_relation_parent_values\">";
+			#
+			# AUTOCOMPLETE SERVICE
+			$autocomplete_wrapper_id = 'aw_' . $identificador_unico;
+			$html_content .= '<div class="autocomplete_wrapper" id="'.$autocomplete_wrapper_id.'"></div>';
 
-				# ADD BUTTON
-				/*
-				$html_content .= "<div class=\"button_add relation_parent_add_button\"
-				data-target_tipo=\"$section_tipo\"
-				onclick=\"component_relation_parent.open_parent_selector_window(this,event)\">
-				</div>";
-				*/
+			
+			#
+			# JS Init component
+			$html_content .= '<script>';
+			$init_options = new stdClass();
+				$init_options->component_name 	= $component_name;
+				$init_options->uid 				= $identificador_unico;
+			$html_content .= "component_common.init(".json_encode($init_options).");";
+			$html_content .= '</script>';
 
-					# SOURCE_MODE SWITCH
-					$source_mode = 'tree';
-					switch ($source_mode) {
-						
-						case 'tree':
-						case 'autocomplete':
-						default:
+			$html_content .= "<div class=\"wrap_relation_parent_values\">";				
 
-							$hierarchy_types_json 	 	= '';
-							$hierarchy_sections_json 	= json_encode(array($section_tipo));
+				# SOURCE_MODE SWITCH
+				$source_mode = 'tree';
+				switch ($source_mode) {
+					
+					case 'tree':
+					case 'autocomplete':
+					default:
 
-							# parent_area_is_model
-							if (isset($_GET['model']) && $_GET['model']==1) {
-								$parent_area_is_model = true;
-							}else{
-								$parent_area_is_model = false;
-							}
-							$parent_area_is_model_json 	= json_encode($parent_area_is_model);
+						$hierarchy_types_json 	 	= '';
+						$hierarchy_sections_json 	= json_encode(array($section_tipo));
 
-							# BTN LINK ELEMENT
-							$html_content .= "<div class=\"button_add relation_parent_add_button\" ";
-							$html_content .= "data-id_wrapper=\"$id_wrapper\" ";
-							$html_content .= "data-component_name=\"$component_name\" ";
-							$html_content .= "data-hierarchy_types='{$hierarchy_types_json}' ";
-							$html_content .= "data-hierarchy_sections='{$hierarchy_sections_json}' ";
-							$html_content .= "data-parent_area_is_model='{$parent_area_is_model_json}' ";
-							$html_content .= "onclick=\"component_common.open_ts_window(this)\" ";
-							$html_content .= "></div>";
+						# parent_area_is_model
+						if (isset($_GET['model']) && $_GET['model']==1) {
+							$parent_area_is_model = true;
+						}else{
+							$parent_area_is_model = false;
+						}
+						$parent_area_is_model_json 	= json_encode($parent_area_is_model);
 
-							/*
-							#
-							# INPUT SEARCH FIELD
-							$html_content .= "\n <input class=\"css_autocomplete_hi_search_field\" type=\"text\" placeholder=\"".label::get_label('buscar')."...\"
-							data-id_wrapper=\"$id_wrapper\"
-							data-tipo=\"$tipo\"
-							data-hierarchy_types='{$hierarchy_types_json}'
-							data-hierarchy_sections='{$hierarchy_sections_json}'
-							onfocus=\"component_autocomplete_hi.activate(this)\"
-							tabindex=\"1\"
-							autocomplete=\"off\"
-							autocorrect=\"off\"
-							/>";
-							*/
-							if(SHOW_DEBUG===true) {
-								#$html_content .= "<div class=\"debug_info notes\">ar_referenced_tipo: ".implode(', ', $ar_referenced_tipo)."</div>";
-								#$html_content .= "<div class=\"debug_info notes\">".str_replace('},', '},<br>', $dato_json) ."</div>";
-							}	
-
-							# Reset var 'activated' on load
-							#$html_content .= "<script>component_autocomplete_hi.activated={}</script>";
-							break;
-					}//end switch ($source_mode)
-
+						# BTN LINK ELEMENT
+						$html_content .= "<div class=\"button_add relation_parent_add_button\" ";
+						$html_content .= "data-id_wrapper=\"$id_wrapper\" ";
+						$html_content .= "data-component_name=\"$component_name\" ";
+						$html_content .= "data-hierarchy_types='{$hierarchy_types_json}' ";
+						$html_content .= "data-hierarchy_sections='{$hierarchy_sections_json}' ";
+						$html_content .= "data-parent_area_is_model='{$parent_area_is_model_json}' ";
+						$html_content .= "onclick=\"component_common.open_ts_window(this)\" ";
+						$html_content .= "></div>";
+						break;
+				}//end switch ($source_mode)
 
 
 				# TERMS
+				/*
 				foreach ((array)$dato as $key => $current_locator) {
 
 					$html_content .= "<div class=\"relation_parent_input_line\">";
@@ -124,8 +113,41 @@
 
 					$html_content .= "</div>";//relation_parent_input_line
 				}
+				*/
+
+				#
+				# TERMS
+				$html_content .= "<ul class=\"css_relation_parent_valor\">";
+				foreach ($ar_values as $item) {
+
+					$current_locator 	  = $item->value;
+					$current_locator_json = json_encode($current_locator);
+
+					$html_content .= "<li>";
+
+					# BTN DELETE
+					$html_content .= "<div class=\"icon_bs link css_relation_parent_button_delete\" ";
+					$html_content .= 'data-current_value=\''.$current_locator_json.'\' ';
+					$html_content .= "onclick=\"component_relation_parent.delete(this)\">";
+					$html_content .= "</div>";
+
+
+					# VALUE . STRING RESOLVED TO SHOW
+					$html_content .= $item->label;
+					$html_content .= ' <span class="notes">['.$current_locator->section_tipo.'_'.$current_locator->section_id.']</span>';
+					
+					$html_content .= "</li>";
+				}
+				$html_content .= "</ul>";
 
 			$html_content .= "</div>";//end wrap_parent_values
+
+
+			# INPUT DATA HIDDEN
+				$html_content .= "<input type=\"text\" name=\"{$search_input_name}\" class=\"relation_parent_dato_hidden\" style=\"width:100%;display:none\" "; // display:none
+				$html_content .= "data-limit=\"$limit\" ";
+				$html_content .= "value='{$dato_json}' ";
+				$html_content .= "/>";
 
 
 			if(SHOW_DEBUG===true) {

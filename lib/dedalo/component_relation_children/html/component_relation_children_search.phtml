@@ -1,12 +1,18 @@
 <?php
 
 	# VISUALIZADOR HTML	
-		
-	print "<div class=\"wrap_component css_wrap_relation_children tooltip_active\" ";
+	
+	print "<div class=\"wrap_component css_wrap_relation_children tooltip_active in_search_mode\" id=\"{$id_wrapper}\" ";
+	print "data-tipo=\"{$tipo}\" ";
+	print "data-section_tipo=\"{$section_tipo}\" ";
+	print "data-hierarchy_sections='".json_encode($hierarchy_sections)."' ";  // Default hierarchy_sections
 	print "data-component_name=\"{$component_name}\" ";
+	print "data-component_info='{$component_info}' ";
 	print "data-modo=\"{$modo}\" ";
 	print "data-dato='".json_encode($dato)."' ";
 	print 'title="'.search_development2::search_options_title( $this->search_operators_info() ).'" ';
+	print "data-relation_type='{$relation_type}' ";
+	print "data-search_tipos='".json_encode($search_tipos)."' ";
 	print ">";
 	
 	# ETIQUETA (LABEL)
@@ -16,27 +22,77 @@
 	$html_content = '';
 	switch(true) {
 			
-		case ($permissions=0)	:	$html_content .= "";
-					break;
+		case $permissions===0	:
+				$html_content .= "";
+				break;
 						
 		
-		case ($permissions>=1)	:
+		case ($permissions>=1):
 
-					# COMPARISON OPERATORS
-					$html_content .= operator::get_search_comparison_operators_html($tipo,$ar_comparison_operators);
+				# Q_OPERATOR
+				$html_content .= '<input class="q_operator" type="text" value="'.$q_operator.'" ';
+				$html_content .= "onchange=\"component_common.fix_dato(this,'{$component_name}')\" ";
+				$html_content .=' />';
 
-					
-					# INPUT
-					$html_content .= "<input class=\"css_relation_children\" type=\"text\" name=\"{$search_input_name}\" value=\"\"/> ";
-					
-
-					# LOGICAL OPERATORS
-					$html_content .= operator::get_search_logical_operators_html($tipo,$ar_logical_operators);
+				#
+				# AUTOCOMPLETE SERVICE
+				$autocomplete_wrapper_id = 'aw_' . $identificador_unico;
+				$html_content .= '<div class="autocomplete_wrapper" id="'.$autocomplete_wrapper_id.'"></div>';
 
 
+				#
+				# INIT COMPONENT
+				$html_content .= '<script>';
+				$init_options = new stdClass();
+					$init_options->component_name 	= $component_name;
+					$init_options->uid 				= $identificador_unico;
+				$html_content .= "component_common.init(".json_encode($init_options).");";
+				$html_content .= '</script>';
+
+				#
+				# TERMS
+				$html_content .= "<ul class=\"css_relation_children_valor in_search_mode\">";
+				foreach ($ar_valor as $current_value => $value) {
+
+					$html_content .= "<li>";
+
+					# BTN DELETE
+					$html_content .= "<div class=\"icon_bs link css_relation_children_button_delete\" ";
+					$html_content .= "data-tipo=\"{$tipo}\" ";
+					$html_content .= "data-current_value='$current_value' ";
+					$html_content .= "data-role=\"relation_children_button_delete\" ";
+					$html_content .= "title=\"$label $parent\" ";
+					$html_content .= "onclick=\"component_relation_children.delete(this)\"></div>";
+
+					# VALUE . STRING RESOLVED TO SHOW
+					//$value = strip_tags($value);
+					$html_content .= $value;
 					if(SHOW_DEBUG===true) {
-						$html_content .= "<span class=\"debug_info\">$search_input_name</span>";
-					}											
+						#$html_content .= " <span class=\"notes\">$current_value</span>";
+					}
+
+					$html_content .= "</li>";
+				}
+				$html_content .= "</ul>";
+
+				# INPUT DATA HIDDEN
+				$html_content .= "<input type=\"text\" name=\"{$search_input_name}\" class=\"relation_children_dato_hidden\" style=\"width:300px;display: none\" ";
+				#$html_content .= "data-tipo=\"{$tipo}\" ";
+				#$html_content .= "data-section_tipo=\"{$section_tipo}\" ";
+				#$html_content .= "data-parent=\"{$parent}\" ";
+				#$html_content .= "data-lang=\"{$lang}\" ";
+				#$html_content .= "data-link_fields='{$ar_link_fields}' ";
+				#$html_content .= "data-role=\"relation_children_dato_hidden\" ";
+				$html_content .= "data-limit=\"$limit\" ";
+				#$html_content .= "data-options_type=\"$options_type\" ";
+				$html_content .= "value='{$dato_json}' ";
+				$html_content .= "/>";
+
+				
+
+				if(SHOW_DEBUG===true) {
+					$html_content .= "<span class=\"debug_info\">$search_input_name</span>";
+				}
 	}
 	
 	# Prepare content to show in page

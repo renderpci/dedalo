@@ -17,7 +17,8 @@
 	$lang					= $this->get_lang();
 	$identificador_unico	= $this->get_identificador_unico();
 	$component_name			= get_class($this);
-	$context 				= $this->get_context();	
+	$context 				= $this->get_context();
+	$relation_type 			= $this->get_relation_type();
 	$file_name 				= $modo;
 	
 	if($permissions===0) return null;
@@ -58,8 +59,31 @@
 						$parent_area_is_model = true;
 					}
 				}*/
-				
-				#dump($parent_area_is_model, ' parent_area_is_model ++ '.to_string($parent_area));
+				if ($section_tipo===DEDALO_HIERARCHY_SECTION_TIPO) {
+					if ($tipo===DEDALO_HIERARCHY_CHIDRENS_MODEL_TIPO) {
+						# model
+						$_current_target_tipo = DEDALO_HIERARCHY_TARGET_SECTION_MODEL_TIPO;
+					}else{
+						# term
+						$_current_target_tipo = DEDALO_HIERARCHY_TARGET_SECTION_TIPO;
+					}
+					
+					$_modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($_current_target_tipo,true);
+					$_component 	= component_common::get_instance($_modelo_name,
+																	 $_current_target_tipo,
+																	 $parent,
+																	 'list',
+																	 $lang,
+																	 $section_tipo);
+					
+					$hierarchy_sections = (array)$_component->get_dato(); // Is array
+				}else{
+					$hierarchy_sections = [$section_tipo];
+				}
+
+				# search_tipos
+				$term_tipo 		= hierarchy::get_element_tipo_from_section_map( $section_tipo, 'term' );
+				$search_tipos 	= [$term_tipo]; // DEDALO_THESAURUS_TERM_TIPO				
 				break;
 
 		case 'tool_time_machine' :
@@ -70,15 +94,55 @@
 						
 		case 'search':
 				# dato is injected by trigger search wen is needed
-				$dato = isset($this->dato) ? $this->dato : null;
-							
-				$ar_comparison_operators = $this->build_search_comparison_operators();
-				$ar_logical_operators 	 = $this->build_search_logical_operators();
+				$dato 		= isset($this->dato) ? $this->dato : [];
+				$dato_json 	= json_encode($dato);
+				
+				$ar_valor 	= [];				
+				foreach ((array)$dato as $key => $current_locator) {
+					$current_locator_json = json_encode($current_locator);
+					$value = ts_object::get_term_by_locator( $current_locator, DEDALO_DATA_LANG, $from_cache=true );
+
+					$ar_valor[$current_locator_json] = $value;
+				}
+
+				$id_wrapper 	= 'wrapper_'.$identificador_unico;				
+				$component_info = $this->get_component_info('json');
+
+				# q_operator is injected by trigger search2
+				$q_operator = isset($this->q_operator) ? $this->q_operator : null;
 
 				# Search input name (var search_input_name is injected in search -> records_search_list.phtml)
 				# and recovered in component_common->get_search_input_name()
 				# Normally is section_tipo + component_tipo, but when in portal can be portal_tipo + section_tipo + component_tipo
 				$search_input_name = $this->get_search_input_name();
+
+				if ($section_tipo===DEDALO_HIERARCHY_SECTION_TIPO) {
+					if ($tipo===DEDALO_HIERARCHY_CHIDRENS_MODEL_TIPO) {
+						# model
+						$_current_target_tipo = DEDALO_HIERARCHY_TARGET_SECTION_MODEL_TIPO;
+					}else{
+						# term
+						$_current_target_tipo = DEDALO_HIERARCHY_TARGET_SECTION_TIPO;
+					}
+					
+					$_modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($_current_target_tipo,true);
+					$_component 	= component_common::get_instance($_modelo_name,
+																	 $_current_target_tipo,
+																	 $parent,
+																	 'list',
+																	 $lang,
+																	 $section_tipo);
+					
+					$hierarchy_sections = (array)$_component->get_dato(); // Is array
+				}else{
+					$hierarchy_sections = [$section_tipo];
+				}
+
+				# search_tipos
+				$term_tipo 		= hierarchy::get_element_tipo_from_section_map( $section_tipo, 'term' );
+				$search_tipos 	= [$term_tipo]; // DEDALO_THESAURUS_TERM_TIPO
+
+				$limit = 1;
 				break;
 					
 		case 'portal_list' :

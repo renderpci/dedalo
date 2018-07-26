@@ -35,7 +35,11 @@
 				$input_name 		= "{$tipo}_{$parent}";
 				$component_info 	= $this->get_component_info('json');
 				$valor				= $this->get_valor();
-				$dato_string		= json_handler::encode($dato);				
+				$dato_string		= json_handler::encode($dato);
+
+				# search_tipos
+				$term_tipo 		= hierarchy::get_element_tipo_from_section_map( $section_tipo, 'term' );
+				$search_tipos 	= [$term_tipo]; // DEDALO_THESAURUS_TERM_TIPO			
 				break;
 
 		case 'tool_time_machine' :
@@ -58,6 +62,10 @@
 				# and recovered in component_common->get_search_input_name()
 				# Normally is section_tipo + component_tipo, but when in portal can be portal_tipo + section_tipo + component_tipo
 				$search_input_name = $this->get_search_input_name();
+
+				# search_tipos
+				$term_tipo 		= hierarchy::get_element_tipo_from_section_map( $section_tipo, 'term' );
+				$search_tipos 	= [$term_tipo]; // DEDALO_THESAURUS_TERM_TIPO
 				break;
 					
 		case 'portal_list' :

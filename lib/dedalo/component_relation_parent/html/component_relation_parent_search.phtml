@@ -2,12 +2,21 @@
 
 	# VISUALIZADOR HTML	
 
-	print "<div class=\"wrap_component css_wrap_relation_parent tooltip_active\" ";
+	print "<div class=\"wrap_component css_wrap_relation_parent tooltip_active in_search_mode\" id=\"{$id_wrapper}\" ";
+	print "data-tipo=\"{$tipo}\" ";
+	print "data-from_component_tipo=\"{$from_component_tipo}\" ";
+	print "data-section_tipo=\"{$section_tipo}\" ";
+	print "data-hierarchy_sections='".json_encode($hierarchy_sections)."' ";  // Default hierarchy_sections
 	print "data-component_name=\"{$component_name}\" ";
+	print "data-component_info='{$component_info}' ";
 	print "data-modo=\"{$modo}\" ";
 	print "data-dato='".json_encode($dato)."' ";
 	print 'title="'.search_development2::search_options_title( $this->search_operators_info() ).'" ';
+	print "data-relation_type=\"".DEDALO_RELATION_TYPE_CHILDREN_TIPO."\" "; // Note that use CHILDREN_TIPO for search only purposes
+	print "data-search_tipos='".json_encode($search_tipos)."' ";	
 	print ">";
+
+	
 	
 	# ETIQUETA (LABEL)
 	$html_label = component_common_draw::draw_label($this);
@@ -15,28 +24,65 @@
 	# CONTENIDO (INPUT)
 	$html_content = '';
 	switch($permissions) {
-			
-		case 0	:	$html_content .= "";
-					break;
-						
+		
+		case 0	:
+				$html_content .= "";
+				break;
+		
 		
 		case ($permissions>=1)	:
 
-					# COMPARISON OPERATORS
-					$html_content .= operator::get_search_comparison_operators_html($tipo,$ar_comparison_operators);
+				# Q_OPERATOR
+				$html_content .= '<input class="q_operator" type="text" value="'.$q_operator.'" ';
+				$html_content .= "onchange=\"component_common.fix_dato(this,'{$component_name}')\" ";
+				$html_content .=' />';
 
+				#
+				# AUTOCOMPLETE SERVICE
+				$autocomplete_wrapper_id = 'aw_' . $identificador_unico;
+				$html_content .= '<div class="autocomplete_wrapper" id="'.$autocomplete_wrapper_id.'"></div>';
+
+				#
+				# INIT COMPONENT
+				$html_content .= '<script>';
+				$init_options = new stdClass();
+					$init_options->component_name 	= $component_name;
+					$init_options->uid 				= $identificador_unico;
+				$html_content .= "component_common.init(".json_encode($init_options).");";
+				$html_content .= '</script>';
+
+				#
+				# TERMS
+				$html_content .= "<ul class=\"css_relation_parent_valor in_search_mode\">";
+				foreach ($ar_values as $item) {
+
+					$current_locator 	  = $item->value;
+					$current_locator_json = json_encode($current_locator);
+
+					$html_content .= "<li>";
+
+					# BTN DELETE
+					$html_content .= "<div class=\"icon_bs link css_relation_parent_button_delete\" ";
+					$html_content .= 'data-current_value=\''.$current_locator_json.'\' ';
+					$html_content .= "onclick=\"component_relation_parent.delete(this)\">";
+					$html_content .= "</div>";
+
+
+					# VALUE . STRING RESOLVED TO SHOW
+					$html_content .= $item->label;
+					$html_content .= ' <span class="notes">['.$current_locator->section_tipo.'_'.$current_locator->section_id.']</span>';
 					
-					# INPUT
-					$html_content .= "<input class=\"css_relation_parent\" type=\"text\" name=\"{$search_input_name}\" value=\"\"/> ";
-					
+					$html_content .= "</li>";
+				}
+				$html_content .= "</ul>";
 
-					# LOGICAL OPERATORS
-					$html_content .= operator::get_search_logical_operators_html($tipo,$ar_logical_operators);
-
-					if(SHOW_DEBUG===true) {
-						$html_content .= "<span class=\"debug_info\">$search_input_name</span>";
-					}
-											
+				#
+				# INPUT DATA HIDDEN
+				$html_content .= "<input type=\"text\" name=\"{$search_input_name}\" class=\"relation_parent_dato_hidden\" style=\"width:100%;display:none\" "; // display:none
+				$html_content .= "data-limit=\"$limit\" ";
+				$html_content .= "value='{$dato_json}' ";
+				$html_content .= "/>";
+				break;													
 	}
 	
 	# Prepare content to show in page

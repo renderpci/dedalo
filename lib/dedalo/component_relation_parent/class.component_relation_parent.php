@@ -6,6 +6,7 @@
 */
 class component_relation_parent extends component_relation_common {
 	
+
 	# Current component relation_type (used to filter locators in 'relations' container data)
 	public $relation_type = false;	// Not used. DEDALO_RELATION_TYPE_PARENT_TIPO;
 
@@ -72,6 +73,7 @@ class component_relation_parent extends component_relation_common {
 	*	When dato is string is because is a json encoded dato
 	*/
 	public function set_dato($dato) {
+		
 		if (is_string($dato)) { # Tool Time machine case, dato is string
 			$dato = json_handler::decode($dato);
 		}
@@ -79,10 +81,17 @@ class component_relation_parent extends component_relation_common {
 			$dato = array($dato);
 		}
 		# Ensures is a real non-associative array (avoid json encode as object)
-		$dato = is_array($dato) ? array_values($dato) : (array)$dato;	
-		
+		$dato = is_array($dato) ? array_values($dato) : (array)$dato;
 
-		# Add (used only in importations and similar)
+		// search mode
+		if ($this->modo==="search") {
+			# Fix dato
+			$this->dato = $dato;
+
+			return true;
+		}		
+
+		# Add (used only in importations and similar) Note that SAVE (component_relation_children) !!
 		$component_relation_children_tipo = component_relation_parent::get_component_relation_children_tipo($this->tipo);
 		foreach ($dato as $current_locator) {
 			
@@ -92,6 +101,7 @@ class component_relation_parent extends component_relation_common {
 				debug_log(__METHOD__." Skipped Bad locator found on set dato ($this->tipo, $this->parent, $this->section_tipo): locator: ".to_string($current_locator), logger::ERROR);
 				continue;
 			}
+			# Note component_relation_children saves here
 			$result = component_relation_parent::add_parent($this->tipo, $this->parent, $this->section_tipo, $children_section_tipo, $children_section_id, $component_relation_children_tipo);
 		}
 
@@ -259,13 +269,22 @@ class component_relation_parent extends component_relation_common {
 				}
 			}//end if (empty($from_component_tipo)) {
 
-			$parent = new stdClass();
-				$parent->section_tipo	= $current_section_tipo;
-				$parent->section_id 	= $current_section_id;
-				$parent->component_tipo = empty($from_component_tipo) ? $calculated_from_component_tipo : $from_component_tipo;
+			# Changed by locator full 19-07-2018
+			#$parent = new stdClass();
+			#	$parent->section_tipo	= $current_section_tipo;
+			#	$parent->section_id 	= $current_section_id;
+			#	$parent->component_tipo = empty($from_component_tipo) ? $calculated_from_component_tipo : $from_component_tipo;
+
+			// {"section_tipo":"on1","section_id":"2411","type":"dd48","from_component_tipo":"hierarchy49"}
+			$current_from_component_tipo = empty($from_component_tipo) ? $calculated_from_component_tipo : $from_component_tipo;
+			$parent_locator = new locator();
+				$parent_locator->set_section_tipo($current_section_tipo);
+				$parent_locator->set_section_id($current_section_id);
+				$parent_locator->set_type(DEDALO_RELATION_TYPE_CHILDREN_TIPO);
+				$parent_locator->set_from_component_tipo($current_from_component_tipo);
 
 			# parents
-			$parents[] = $parent;
+			$parents[] = $parent_locator;
 		}//end while
 
 		if(SHOW_DEBUG===true) {
@@ -288,11 +307,13 @@ class component_relation_parent extends component_relation_common {
 	*/
 	public static function get_parents_recursive($section_id, $section_tipo, $skip_root=true) {
 
-		static $ar_resolved_parents_recursive = array();
+		static $ar_parents_recursive_resolved = array();
+		static $locators_resolved 			  = array();
 
 		$key_resolve = $section_tipo.'_'.$section_id;
-		if (isset($ar_resolved_parents_recursive[$key_resolve])) {
-			return $ar_resolved_parents_recursive[$key_resolve];
+		if (isset($ar_parents_recursive_resolved[$key_resolve])) {
+			#debug_log(__METHOD__." RETURN ALREADY RESOLVED VALUE FROM ".to_string($key_resolve), logger::DEBUG);
+			return $ar_parents_recursive_resolved[$key_resolve];
 		}
 
 		$parents_recursive = array();
@@ -301,25 +322,19 @@ class component_relation_parent extends component_relation_common {
 		$ar_parents 	   = component_relation_parent::get_parents($section_id, $section_tipo);
 		$parents_recursive = $ar_parents;
 
-		/*
-		# Avoid infinite loop on bad configurated thesaurus
-		if (in_array($key_resolve, $ar_resolved_parents_recursive)) {
-			
-			$ar_resolved_parents_recursive = array(); // reset
-			return $parents_recursive;
-		}*/
-		
+		# Self include as reolved
+		$locators_resolved[] = $section_tipo.'_'.$section_id;
 
-		# Set as resolved
-		#$ar_resolved_parents_recursive[] = $key_resolve;		
 	
 		foreach ($ar_parents as $current_locator) {
-			# Check self recursion
-			if ($current_locator->section_id==$section_id && $current_locator->section_tipo===$section_tipo) {
-				# Wrong recursion prevention
-				debug_log(__METHOD__." Wrong recursion detected for $section_id, $section_tipo . Skipped resolution ".to_string(), logger::ERROR);
+			# Check self recursion			
+			if (in_array($current_locator->section_tipo.'_'.$current_locator->section_id, $locators_resolved)) {
+				#debug_log(__METHOD__." SKIPPED $section_id, $section_tipo . Skipped resolution ".to_string(), logger::ERROR);
 				continue;
 			}
+
+			# Self include as reolved
+			$locators_resolved[] = $current_locator->section_tipo.'_'.$current_locator->section_id;
 
 			// Add every parent level
 			$current_ar_parents	= component_relation_parent::get_parents_recursive($current_locator->section_id, $current_locator->section_tipo, $skip_root);
@@ -331,12 +346,14 @@ class component_relation_parent extends component_relation_common {
 				
 				# Add to array
 				$parents_recursive[] = $c_parent;
-			}
-			#$parents_recursive  = array_merge($parents_recursive, $current_ar_parents);
+
+				# Self include as reolved
+				$locators_resolved[] = $c_parent->section_tipo.'_'.$c_parent->section_id;
+			}			
 		}
 
 		# Set as resolved
-		$ar_resolved_parents_recursive[$key_resolve] = $parents_recursive;
+		$ar_parents_recursive_resolved[$key_resolve] = $parents_recursive;
 		
 		
 		return (array)$parents_recursive;
@@ -502,7 +519,7 @@ class component_relation_parent extends component_relation_common {
 	* @return bool $result
 	*/
 	public static function add_parent($tipo, $parent, $section_tipo, $children_section_tipo, $children_section_id, $children_component_tipo) {
-		
+		#dump($tipo, ' tipo ++ '."tipo:$tipo, parent:$parent, section_tipo:$section_tipo, children_section_tipo:$children_section_tipo, children_section_id:$children_section_id, children_component_tipo:$children_component_tipo".to_string());
 		$result=false;
 	
 		$modelo_name 	= 'component_relation_children';
@@ -554,6 +571,90 @@ class component_relation_parent extends component_relation_common {
 
 		return (bool)$result;
 	}//end remove_parent
+
+
+
+	/**
+	* RESOLVE_CHILDRENS
+	* @return 
+	*/
+	private function resolve_childrens() {
+		
+	}//end resolve_childrens
+
+
+
+	/**
+	* RESOLVE_QUERY_OBJECT_SQL
+	* @return object $query_object
+	*/
+	public static function resolve_query_object_sql($query_object) {
+				
+		$q = $query_object->q;
+
+		# Like
+		# [section_tipo] => on1
+		# [section_id] => 6286
+		# [type] => dd48
+		# [from_component_tipo] => hierarchy49
+
+		$parent_locators = json_decode($q);
+		if (!is_array($parent_locators)) {
+			$parent_locators = [$parent_locators];
+		}
+		#dump($parent_locators, ' parent_locators ++ '.to_string());
+		$ar_childrens = [];
+		foreach ($parent_locators as $key => $current_locator) {
+			
+			$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($current_locator->from_component_tipo,true);
+			$component 		= component_common::get_instance($modelo_name,
+															 $current_locator->from_component_tipo,
+															 $current_locator->section_id,
+															 'list',
+															 DEDALO_DATA_NOLAN,
+															 $current_locator->section_tipo);
+			$component_children_dato = $component->get_dato();
+			#dump($component_children_dato, ' component_children_dato ++ '.to_string());
+
+			foreach ($component_children_dato as $children_locator) {
+				$ar_childrens[] = $children_locator->section_id;
+			}			
+		}
+		
+		
+		# Always set fixed values
+		$query_object->type = 'number';
+
+		# Always set format to column
+		$query_object->format = 'column';		
+
+		# component path
+		$query_object->component_path = ['section_id'];
+		
+		# unaccent
+		$query_object->unaccent = false;	
+
+      
+		$ar_parts 	= $ar_childrens;
+		$ar_result  = []; 
+		foreach ($ar_parts as $key => $value) {
+			$value = (int)$value;
+			if ($value<1) continue;
+			$query_object_current = clone $query_object;
+				$query_object_current->operator = '=';
+				$query_object_current->q_parsed	= $value;
+			$ar_result[] = $query_object_current;
+		}
+		// Return an subquery instead object
+		$cop = '$or';
+		$new_object = new stdClass();
+			$new_object->{$cop} = $ar_result;
+		$query_object = $new_object;				
+       	dump($query_object, ' query_object ++ '.to_string());	
+
+
+		return $query_object;
+	}//end resolve_query_object_sql
 
 
 	

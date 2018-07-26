@@ -132,8 +132,18 @@ class component_relation_index extends component_relation_common {
 			$locator->from_component_tipo = $this->tipo;
 		}
 
+		# Properties to compare for match locator to remove
+		$ar_properties = [
+			'type',
+			'section_tipo',
+			'section_id',
+			'component_tipo',
+			'tag_id',
+			'from_component_tipo'
+		];
+
 		# Add current locator to component dato		
-		if (!$remove_locator_locator = $this->remove_locator_from_dato($locator)) {
+		if (!$remove_locator_locator = $this->remove_locator_from_dato($locator, $ar_properties)) {
 			return false;
 		}
 		
