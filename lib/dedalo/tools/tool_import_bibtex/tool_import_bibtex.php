@@ -6,7 +6,7 @@
 	$section_obj 		= $this->section_obj;
 	$tipo 				= $section_obj->get_tipo();
 	$modo 				= $this->get_modo();
-	$context_name		= $_REQUEST['context_name'];	
+	$context_name		= safe_xss($_REQUEST['context_name']);	
 	$tool_name 			= get_class($this);
 	$file_name			= $modo;
 
@@ -42,7 +42,7 @@
 					$html_upload = ob_get_clean();	
 					*/
 
-				$button_tipo = isset($_GET['button_tipo']) ? $_REQUEST['button_tipo'] : null;
+				$button_tipo = isset($_GET['button_tipo']) ? safe_xss($_REQUEST['button_tipo']) : null;
 				
 				#
 				# MEDIA folder
