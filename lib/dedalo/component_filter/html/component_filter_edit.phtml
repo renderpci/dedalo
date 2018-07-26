@@ -25,13 +25,13 @@
 	# CONTENIDO (INPUT)
 	$html_content  = '';
 	#$html_content .= " <div class=\"wrap_dato_component_filter\"> ";	
-	switch($permissions) {
+	switch(true) {
 			
-		case 0 :	
+		case $permissions===0 :	
 				$html_content .= "";// " <span class=\"css_span_dato\"> ".label::get_label('sin_acceso')." ($component_name)</span>"; 
 				break;
 						
-		case 1 :
+		case $permissions===1 :
 				$html_content .= "<ul class=\"filter_projects_list\">";
 				foreach ($ar_proyectos_section as $key => $row) {
 					
@@ -44,8 +44,7 @@
 				$html_content .= "</ul>";
 				break;	
 						
-		case 2 :
-		case 3 :					
+		case $permissions>=2 :							
 				$html_content .= "<ul class=\"filter_projects_list\">";
 				
 				$i=1;foreach((array)$ar_proyectos_section as $key => $row) {
@@ -93,10 +92,16 @@
 				$i++;}
 
 				$html_content .= "</ul>";
-		
-				if(SHOW_DEBUG===true) {			
-					#$html_content .= " <span class=\"css_span_debugger\" id=\"debugger_{$id}\" >{$debugger}</span>";
-				}
+
+				#
+				# JS Init component
+				$html_content .= '<script>';
+				# Init component
+				$init_options = new stdClass();
+					$init_options->component_name 	= $component_name;
+					$init_options->wrapper_id 		= $id_wrapper;
+				$html_content .= 'component_common.init('.json_encode($init_options).');';
+				$html_content .= '</script>';		
 				break;					
 							
 	}
