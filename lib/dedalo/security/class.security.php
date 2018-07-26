@@ -27,6 +27,7 @@ class security {
 
 	private $filename_user_ar_permissions_table;
 	
+
 	
 	#  CONSTRUCT
 	function __construct() {
@@ -63,9 +64,8 @@ class security {
 
 		# FILENAME_USER_AR_PERMISSIONS_TABLE
 		# $this->filename_user_ar_permissions_table = DEDALO_LIB_BASE_PATH . '/backup/users/user_ar_permissions_table_' . $this->user_id . '.data';		
-	}
+	}//end __construct
 
-	
 	
 	
 	/**
@@ -155,12 +155,10 @@ class security {
 				die($msg);
 			}
 			*/
+		}//end if( array_key_exists($tipo, (array)security::$ar_permissions_table) )
 
-		}#end if( array_key_exists($tipo, (array)security::$ar_permissions_table) )
-
-	}#end get_security_permissions
-
-
+		return 0;
+	}//end get_security_permissions
 
 	
 	
@@ -320,7 +318,7 @@ class security {
 		# file_put_contents($this->filename_user_ar_permissions_table, serialize($ar_permissions_table) );
 
 		return (array)$ar_permissions_table;
-	}#end get_permissions_table
+	}//end get_permissions_table
 	*/
 	
 
@@ -375,7 +373,7 @@ class security {
 		$_SESSION['dedalo4']['auth']['permissions_table'] = $permissions_table;		
 
 		return (object)$permissions_table;
-	}#end get_permissions_table
+	}//end get_permissions_table
 
 	
 
@@ -466,7 +464,7 @@ class security {
 			#dump($permissions_table, ' permissions_table ++ '.to_string($user_id));
 	
 		return (object)$permissions_table;
-	}#end get_permissions_table_of_specific_user
+	}//end get_permissions_table_of_specific_user
 
 
 
@@ -484,82 +482,6 @@ class security {
 	}//end reset_permissions_table
 
 
-	
-	
-	/**
-	* GET_AR_CHILDRENS_PERMISSIONS
-	* Auxiliar method
-	*//*
-	private function get_ar_childrens_permissions__DEPRECATED($parent,$ar_permissions_in_matrix_for_current_user,$permission_value) {
-		
-		$ar_permissions_table	= array();
-		
-		$RecordObj_dd			= new RecordObj_dd($parent);
-		$ar_childrens			= $RecordObj_dd->get_ar_childrens_of_this();
-		
-		if(is_array($ar_childrens)) foreach($ar_childrens as $children_terminoID ) {
-			
-			if( !array_key_exists($children_terminoID, $ar_permissions_in_matrix_for_current_user) ) {
-				
-				$ar_permissions_table[$children_terminoID]	= $permission_value;
-					#echo " - $parent:$children_terminoID \n";	
-				
-				$ar_permissions_table2	= security::get_ar_childrens_permissions($children_terminoID,$ar_permissions_in_matrix_for_current_user,$permission_value);
-				
-				$ar_permissions_table	= array_merge($ar_permissions_table, $ar_permissions_table2);				
-			}			
-		}			
-		
-		return $ar_permissions_table;	
-	}
-	*/
 
-	
-	/**
-	* GET LOGGED USSER ID
-	*//*
-	private static function get_logged_user_id__DEPRECATED() {
-
-		# USER ID
-		if(empty($_SESSION['dedalo4']['auth']['user_id'])) {
-			if(SHOW_DEBUG===true) {
-				dump($this);
-				throw new Exception("Session user_id is not defined!", 1);
-			}			
-			die("Sorry. userID is not defined");				
-		}		
-		$this->user_id = $_SESSION['dedalo4']['auth']['user_id'];
-	}
-	*/
-
-
-
-
-	/**
-	* CALCULATE ONCE permissions tipo
-	*//*
-	private function calculate_permissions_tipo__DEPRECATED() {
-		
-		#$_SESSION['dedalo4']['config']['permissions_tipo']	= 'dd128' ;		# TIPO DEL CAMPO PERMISSIONS
-		#$_SESSION['dedalo4']['config']['permissions_dato']	= 'dd148' ;		# TIPO DEL CAMPO PERMISSIONS QUE CONTIENE EL DATO
-		
-		# PERMISSIONS TIPO
-		# SEARCH MODELO IN TESAURO		
-		$RecordObj_dd	= new RecordObj_dd($root_tipo);
-		$ar_childrens	= $RecordObj_dd->get_ar_childrens_of_this();
-		
-		if(is_array($ar_childrens)) foreach($ar_childrens as $tipo) {
-			
-			$RecordObj_dd	= new RecordObj_dd($tipo);
-			$modeloID		= $RecordObj_dd->get_modelo();
-			$modelo			= RecordObj_dd::get_termino_by_tipo($modeloID);
-			
-			if($modelo == 'login')	return $tipo ;			
-		}
-	}
-	*/
-	
-	
-
-}
+}//end class
 ?>
