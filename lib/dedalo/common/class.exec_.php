@@ -1,11 +1,13 @@
 <?php
 /*
 * CLASS EXEC COMMAND
+*
+*
 */
-
-
 class exec_ {
-	
+
+
+
 	/**
 	* EXEC COMMAND
 	*/
@@ -17,7 +19,6 @@ class exec_ {
 
 			# Scape command for security			
 			$command = escapeshellcmd($command) . ' '.$to;
-
 			
 
 			# Exec command and get output
@@ -64,10 +65,11 @@ class exec_ {
 		}
 	}
 	
-	
 
 	
-	##
+	/**
+	* GETCOMMANDPATH
+	*/
 	private static function getCommandPath($command = '') {
 		// note: security vulnerability... 
 		// should validate that $command doesn't 
@@ -119,14 +121,11 @@ class exec_ {
 	                    'exit_status'  => $matches[0],
 	                    'output'       => str_replace("Exit status : " . $matches[0], '', nl2br( trim($complete_output) ))
 	                 );
-	}//end 
-
-	
+	}//end live_execute_command	
 	
 					
 	
-}
-
+}//end class exec_
 
 
 
@@ -177,7 +176,8 @@ class Process{
         if ($this->status() === false)return true;
         else return false;
     }
-}
+}//end class Process
+
 
 
 ?>

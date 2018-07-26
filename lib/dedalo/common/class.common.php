@@ -28,6 +28,9 @@ abstract class common {
 
 	# context. Object with information about context of current element
 	public $context;
+
+	# public propiedades
+	public $propiedades;
 	
 	# REQUIRED METHODS
 	#abstract protected function define_id($id);
@@ -347,17 +350,23 @@ abstract class common {
 	*/
 	public static function get_matrix_tables_with_relations() {
 
-		$ar_tables = array();
+		static $ar_tables;
 
-		#if(SHOW_DEBUG===true) {
-		#	$start_time=microtime(1);
-		#}
+		if (isset($ar_tables)) {
+			return $ar_tables;
+		}
+
+		$ar_tables = [];
 		
 		# Tables
 		# define('DEDALO_TABLES_LIST_TIPO', 'dd627'); // Matrix tables box elements
 		$ar_children_tables = RecordObj_dd::get_ar_childrens('dd627', 'norden');				
 		foreach ($ar_children_tables as $table_tipo) {
 			$RecordObj_dd = new RecordObj_dd( $table_tipo );
+			$modelo_name  = RecordObj_dd::get_modelo_name_by_tipo($table_tipo,true);
+			if ($modelo_name!=='matrix_table') {
+				continue;
+			}
 			if( $propiedades = json_decode($RecordObj_dd->get_propiedades()) ) {
 				if (property_exists($propiedades,'inverse_relations') && $propiedades->inverse_relations===true) {
 					$ar_tables[] = RecordObj_dd::get_termino_by_tipo($table_tipo, DEDALO_STRUCTURE_LANG, true, false);
@@ -374,11 +383,7 @@ abstract class common {
 				"matrix_hierarchy"
 			];
 		}
-
-		#if(SHOW_DEBUG===true) {
-		#	$total = exec_time_unit($start_time,'ms')." ms";
-		#	debug_log(__METHOD__." Total time $total", logger::DEBUG);
-		#}
+		#debug_log(__METHOD__." ar_tables ".json_encode($ar_tables), logger::DEBUG);
 		
 		
 		return $ar_tables;
@@ -437,15 +442,21 @@ abstract class common {
 
 
 	/**
-	* GET_MAIN_LANG
+	* GET_MAIN_LANG__OLD
 	* @return string $main_lang
-	*/
-	public static function get_main_lang( $section_tipo, $section_id=null ) {
+	*//*
+	public static function get_main_lang__OLD( $section_tipo, $section_id=null ) {
 		#dump($section_tipo, ' section_tipo ++ '.to_string());
 		# Always fixed lang of languages as english
 		if ($section_tipo==='lg1') {
 			return 'lg-eng';
 		}
+
+		static $current_main_lang;
+		if (isset($current_main_lang[$section_tipo])) {
+			return $current_main_lang[$section_tipo];
+		}
+
 		# De momento, el main_lang default para todas las jerarquias será lg-spa porque es nuestra base de trabajo
 		# Dado que cada section id puede tener un main_lang diferente, estudiar este caso..
 		if ($section_tipo==='hierarchy1') {
@@ -466,6 +477,7 @@ abstract class common {
 				 }
 			}
 			return 'lg-spa';
+		
 		}else{
 
 			#$matrix_table = common::get_matrix_table_from_tipo($section_tipo);
@@ -473,12 +485,11 @@ abstract class common {
 			#	$main_lang = hierarchy::get_main_lang( $section_tipo );
 			#		dump($main_lang, ' main_lang ++ '.to_string());
 			#}
+
+
 		}
 		
-		static $current_main_lang;
-		if (isset($current_main_lang[$section_tipo])) {
-			return $current_main_lang[$section_tipo];
-		}
+		
 
 		# If current section is virtual of DEDALO_THESAURUS_SECTION_TIPO, search main lang in self hierarchy
 		$ar_related_section_tipo = common::get_ar_related_by_model('section', $section_tipo);
@@ -501,6 +512,85 @@ abstract class common {
 		}
 
 		$current_main_lang[$section_tipo] = $main_lang;
+
+
+		return (string)$main_lang;
+	}//end get_main_lang */
+
+
+
+	/**
+	* GET_MAIN_LANG
+	* @return string $main_lang
+	*/
+	public static function get_main_lang( $section_tipo, $section_id=null ) {
+		#dump($section_tipo, ' section_tipo ++ '.to_string());
+		# Always fixed lang of languages as english
+		if ($section_tipo==='lg1') {
+			return 'lg-eng';
+		}
+
+		static $current_main_lang;
+		$uid = $section_tipo.'_'.$section_id;
+		if (isset($current_main_lang[$uid])) {
+			return $current_main_lang[$uid];
+		}
+
+		# De momento, el main_lang default para todas las jerarquias será lg-spa porque es nuestra base de trabajo
+		# Dado que cada section id puede tener un main_lang diferente, estudiar este caso..
+		# DEDALO_HIERARCHY_SECTION_TIPO = hierarchy1
+		if ($section_tipo===DEDALO_HIERARCHY_SECTION_TIPO) {
+
+			$main_lang = 'lg-spa'; # Default for hierarchy
+
+			if (!is_null($section_id)) {
+				$section = section::get_instance($section_id, $section_tipo);
+				$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo(DEDALO_HIERARCHY_LANG_TIPO,true);
+				$component 		= component_common::get_instance($modelo_name,
+																 DEDALO_HIERARCHY_LANG_TIPO,
+																 $section_id,
+																 'list',
+																 DEDALO_DATA_NOLAN,
+																 $section_tipo);
+				 $dato = $component->get_dato();
+				 if (isset($dato[0])) {
+				 	$lang_code = lang::get_code_from_locator($dato[0], $add_prefix=true);
+				 	# dump($lang_code, ' lang_code ++ '.to_string());
+				 	$main_lang = $lang_code;
+				 }
+			}			
+		
+		}else{
+
+			#$matrix_table = common::get_matrix_table_from_tipo($section_tipo);
+			#if ($matrix_table==='matrix_hierarchy') {
+			#	$main_lang = hierarchy::get_main_lang( $section_tipo );
+			#		dump($main_lang, ' main_lang ++ '.to_string());
+			#}
+
+			# If current section is virtual of DEDALO_THESAURUS_SECTION_TIPO, search main lang in self hierarchy
+			$ar_related_section_tipo = common::get_ar_related_by_model('section', $section_tipo);
+			
+			switch (true) {
+				
+				# Thesaurus virtuals
+				case (isset($ar_related_section_tipo[0]) && $ar_related_section_tipo[0]===DEDALO_THESAURUS_SECTION_TIPO):
+					$main_lang = hierarchy::get_main_lang($section_tipo);
+					if (empty($main_lang)) {
+						debug_log(__METHOD__." Empty main_lang for section_tipo: $section_tipo using 'hierarchy::get_main_lang'. Default value fallback is used (DEDALO_DATA_LANG_DEFAULT): ".DEDALO_DATA_LANG_DEFAULT, logger::WARNING);
+						#trigger_error("Empty main_lang for section_tipo: $section_tipo using 'hierarchy::get_main_lang'. Default value fallback is used (DEDALO_DATA_LANG_DEFAULT): ".DEDALO_DATA_LANG_DEFAULT);
+						$main_lang = DEDALO_DATA_LANG_DEFAULT;
+					}
+					break;
+				
+				default:
+					$main_lang = DEDALO_DATA_LANG_DEFAULT;
+					break;
+			}
+		}
+		#debug_log(__METHOD__." main_lang ".to_string($main_lang), logger::DEBUG);		
+
+		$current_main_lang[$uid] = $main_lang;
 
 
 		return (string)$main_lang;
@@ -643,7 +733,7 @@ abstract class common {
 		if(isset($$name)) {
 			
 			$$name = safe_xss($$name);
-			
+						
 			return $$name;
 		}
 
@@ -696,7 +786,7 @@ abstract class common {
 		$posAND 	= strpos($queryString, '&');
 		$posEQUAL 	= strpos($queryString, '=');
 		
-		# Recorre y recompone el query sin incluir las variables opcionales
+		# go through and rebuild the query without the optional variables
 		if($posAND !== false){ # query tipo ?captacionID=1&informantID=6&list=0
 			
 			$ar_pares = explode('&', $queryString);		
@@ -756,29 +846,6 @@ abstract class common {
 
 
 
-	/*
-	public function get_caller_id() {
-		if(!empty($_REQUEST['caller_id'])) return $_REQUEST['caller_id'];
-		return NULL;
-	}
-	
-	public function get_caller_tipo_____DEPRECATED() {
-		$caller_id = common::get_caller_id();
-		if(empty($caller_id)) return NULL;
-		
-		# calculate caller tipo (caller is id_matrix of a secion (ussually relation) )
-		#throw new Exception("Review this method please (tipo is not set)", 1);
-		return self::get_tipo_by_id($caller_id, $table='matrix');
-		
-		#$section_obj = section::get_instance($caller_id);
-		#$caller_tipo = $section_obj->get_tipo();
-		#return $caller_tipo;
-		
-	}
-	*/
-
-
-
 	/**
 	* GET_CONTEXT
 	* @return object $context
@@ -814,18 +881,7 @@ abstract class common {
 					$context->context_name = 'default';
 			}
 
-		}//end if (empty($context))
-
-		
-		/*
-		if (!empty($_REQUEST['context']) && empty($context)) {
-			$context 			= $_REQUEST['context'];
-		}
-		if (empty($context)) {
-			$context 			= 'default';
-		}
-		*/
-		#dump($context, ' context 2 ++ '. gettype($context). to_string());
+		}//end if (empty($context))		
 
 
 		return (object)$context;
@@ -903,11 +959,10 @@ abstract class common {
 
 		# Read string from database str
 		$propiedades = $this->RecordObj_dd->get_propiedades();
-		if (!is_string($propiedades)) {
-			#dump($this," ");
-		}else{
-			return json_handler::decode($propiedades);
-		}		
+
+		$propiedades_obj = json_handler::decode($propiedades);
+
+		return $propiedades_obj;
 	}//end get_propiedades
 
 
@@ -923,6 +978,7 @@ abstract class common {
 			$propiedades = $value;
 		}
 
+		# Fix propiedades obj
 		$this->propiedades = (object)$propiedades;
 
 		return true;
@@ -974,7 +1030,13 @@ abstract class common {
 	* GET_AR_RELATED_BY_MODEL
 	* @return array $ar_related_by_model
 	*/
-	public static function get_ar_related_by_model($modelo_name, $tipo) {
+	public static function get_ar_related_by_model($modelo_name, $tipo, $strict=true) {
+
+		static $ar_related_by_model_data;
+		$uid = $modelo_name.'_'.$tipo;
+		if (isset($ar_related_by_model_data[$uid])) {
+			return $ar_related_by_model_data[$uid];
+		}
 
 		$RecordObj_dd = new RecordObj_dd($tipo);
 		$relaciones   = $RecordObj_dd->get_relaciones();
@@ -986,11 +1048,22 @@ abstract class common {
 			#$related_terms[$tipo] = RecordObj_dd::get_termino_by_tipo($modelo_tipo, DEDALO_STRUCTURE_LANG, true, false);	//$terminoID, $lang=NULL, $from_cache=false, $fallback=true
 			# Calcular siempre el modelo por seguridad
 			$current_modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_tipo, true);
-			if ($current_modelo_name===$modelo_name) {
-				$ar_related_by_model[] = $current_tipo;
+			if ($strict===true) {
+				// Default compare equal
+				if ($current_modelo_name===$modelo_name) {
+					$ar_related_by_model[] = $current_tipo;
+				}
+			}else{
+				if (strpos($current_modelo_name, $modelo_name)!==false) {
+					$ar_related_by_model[] = $current_tipo;
+				}
 			}
+			
 		}
-			#dump($ar_related_by_model, ' ar_related_by_model ++ '.to_string($modelo_name));
+		#debug_log(__METHOD__." ar_related_by_model - modelo_name:$modelo_name - tipo:$tipo - ar_related_by_model:".json_encode($ar_related_by_model), logger::DEBUG);
+
+		$ar_related_by_model_data[$uid] = $ar_related_by_model;
+
 		return $ar_related_by_model;
 	}//end get_ar_related_by_model
 
@@ -1141,8 +1214,9 @@ abstract class common {
 		
 		# For speed, we use constants now
 		$ar_allowed = array(DEDALO_RELATION_TYPE_CHILDREN_TIPO,
+							DEDALO_RELATION_TYPE_PARENT_TIPO,
 							DEDALO_RELATION_TYPE_RELATED_TIPO,
-							DEDALO_RELATION_TYPE_EQUIVALENT_TIPO,
+							#DEDALO_RELATION_TYPE_EQUIVALENT_TIPO,
 							DEDALO_RELATION_TYPE_INDEX_TIPO,
 							DEDALO_RELATION_TYPE_STRUCT_TIPO,
 							DEDALO_RELATION_TYPE_MODEL_TIPO,
@@ -1186,7 +1260,13 @@ abstract class common {
 		# javascript common.get_json_data sends a stringify json object
 		# this object is getted here and decoded with all ajax request vars
 		if ($options->source==='GET') {
-			$str_json = json_encode($_GET);
+			#$str_json = json_encode($_GET);
+			// Verify all get vars before json encode
+			$get_obj = new stdClass();
+			foreach ($_GET as $key => $value) {
+				$get_obj->{$key} = safe_xss($value);
+			}
+			$str_json = json_encode($get_obj);
 		}else{
 			$str_json = file_get_contents('php://input');
 		}
@@ -1194,7 +1274,7 @@ abstract class common {
 			$response = new stdClass();
 				$response->result 	= false;
 				$response->msg 		= "Error on read php://input data";
-			#echo json_encode($response);					
+			#echo json_encode($response);
 			return false;
 		}
 
@@ -1252,7 +1332,7 @@ abstract class common {
 		}else{
 			$response = new stdClass();
 				$response->result 	= false;
-				$response->msg 		= 'Error. Request failed.'.$json_data->mode.' not exists';
+				$response->msg 		= 'Error. Request failed. json_data->mode not exists';
 			echo json_encode($response);
 		}
 

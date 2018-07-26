@@ -6,7 +6,7 @@
 	$section_tipo 			= $this->get_section_tipo();
 	$target_tipo			= $this->get_target();
 	$id 					= $this->get_target();
-	$modo					= $this->get_modo();		
+	$modo					= $this->get_modo();
 	$label 					= $this->get_label();
 	$propiedades 			= $this->get_propiedades();
 	$debugger				= $this->get_debugger();
@@ -40,7 +40,6 @@
 					break;
 						
 		case 'list_of_values':
-					break;						
 					break;
 	}
 	

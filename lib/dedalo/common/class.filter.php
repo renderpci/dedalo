@@ -107,7 +107,7 @@ abstract class filter {
 			$component_filter_master = component_common::get_instance('component_filter_master',
 																	  DEDALO_FILTER_MASTER_TIPO,
 																	  $user_id,
-																	  'edit',
+																	  'list',
 																	  DEDALO_DATA_NOLAN,
 																	  DEDALO_SECTION_USERS_TIPO);
 			$dato = (array)$component_filter_master->get_dato();
@@ -233,7 +233,7 @@ abstract class filter {
 
 			debug_log(__METHOD__." DEPRECATED METHOD. USE NEW SEARCH2 WAY ASAP !! ".to_string(), logger::ERROR);
 			if(SHOW_DEBUG===true) {
-				var_dump(debug_backtrace());
+				#var_dump(debug_backtrace());
 			}
 		
 			
