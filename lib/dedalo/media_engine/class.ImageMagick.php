@@ -225,6 +225,7 @@ class ImageMagick {
 			#dump($colorspace_info,'colorspace_info');
 
 		# Layers info
+		# get thumbail identification
 		$layers_file_info = (array)self::get_layers_file_info( $source_file );
 		$ar_valid_layers  = array();
 		foreach ($layers_file_info as $layer_key => $layer_type) {
@@ -312,7 +313,15 @@ class ImageMagick {
 	* @return array $ar_layers
 	*/
 	public static function get_layers_file_info( $source_file ) {
-		# identify -format "{\"%[scene]\":\"%[tiff:subfiletype]\"}\n" -quiet 21900.tif
+		
+		$ar_layers = array();
+		# get the type of TIFF format 
+		# 1 single image
+		# 2 multipage NOT SUPPORTED SPLIT THE IMAGES BEFORE IMPORT OAND CONVERT
+		# 3 true layer tiff
+		$command 		= MAGICK_PATH . 'identify -quiet -format "%n %[tiff:has-layers]\n" '. $source_file .' | tail -1';
+		$tiff_format  	= shell_exec($command);
+
 		$command = MAGICK_PATH . 'identify -format "%[scene]:%[tiff:subfiletype]\n" -quiet '. $source_file;
 	    $output  = shell_exec($command); 
 	   		#dump($output, ' output ++ '.to_string( $command ));
@@ -320,13 +329,19 @@ class ImageMagick {
 	
 	   	$output  = trim($output);
 	    $ar_part = explode("\n", $output);
-	    $ar_layers = array();
-	    foreach ($ar_part as $value) {
+	    
+	    foreach ($ar_part as $key => $value) {
 
 	    	$ar_part2 = explode(":", $value);
 
 	    	$layer_key 	= $ar_part2[0];
-	    	$layer_type = $ar_part2[1];
+
+	    	if($tiff_format <= 2 && $key > 0){
+	    		$layer_type = 'REDUCEDIMAGE';
+	    	}else{
+	    		$layer_type = $ar_part2[1];
+	    	}
+	    	
 
 	    	$ar_layers[$layer_key] = $layer_type;
 	    }
