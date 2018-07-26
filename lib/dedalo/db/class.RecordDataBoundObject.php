@@ -626,9 +626,8 @@ abstract class RecordDataBoundObject {
 					$ar_records[]=$rows[$strPrimaryKeyName];
 			}
 			*/
-			#dump($strQuery);
 		
-			$result = pg_query(DBi::_getConnection(), $strQuery);	# or die("Cannot (1) execute query: $strQuery <br>\n". pg_last_error());
+			$result = pg_query(DBi::_getConnection(), $strQuery);
 			
 			#$result = pg_prepare(DBi::_getConnection(), "", $strQuery);		
 			#$result = pg_execute(DBi::_getConnection(), "",array());
