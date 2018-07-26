@@ -101,14 +101,34 @@ if ( strpos($_SERVER["REQUEST_URI"], '.php')!==false ) {
 				# build element (component / section)
 				$tool_name 	 = $modo;
 
-				$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+				$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);		
 				switch (true) {
+					
+					case ($modelo_name==='section_tool 99999'):
+
+						$current_section_id   = !empty($id) ? $id : null;
+						$current_section_tipo = isset($_REQUEST['section_tipo']) ? safe_xss($_REQUEST['section_tipo']) : null;
+						
+						/*
+						$RecordObj_dd 		 = new RecordObj_dd($tipo);
+						$current_propiedades = $RecordObj_dd->get_propiedades(true);	
+						if (!isset($current_propiedades->context->target_section_tipo)) {
+							trigger_error("Undefined propiedades->context->target_section_tipo in structure of section_tool $tipo");
+						}
+						*/
+						$element = section::get_instance($current_section_id, $current_section_tipo);
+						$element->set_tool_section_tipo($tipo);						
+
+						#
+						# FIX SECTION TIPO
+						define('SECTION_TIPO', $current_section_tipo);
+						break;
 					
 					case ($modelo_name==='section'):
 
 						$current_section_id = !empty($id) ? $id : null;
 						$element = section::get_instance($current_section_id, $tipo);
-
+	
 						#
 						# FIX SECTION TIPO
 						define('SECTION_TIPO', $tipo);
@@ -134,7 +154,7 @@ if ( strpos($_SERVER["REQUEST_URI"], '.php')!==false ) {
 						break;
 
 					default:
-						$element = null;					
+						$element = null;
 				}				
 				#dump($element, ' element ++ '.to_string($modo));
 				
@@ -142,12 +162,12 @@ if ( strpos($_SERVER["REQUEST_URI"], '.php')!==false ) {
 				$tool_obj 		= new $tool_name($element, 'page');
 				$content		= $tool_obj->get_html();
 
-				$html 			= html_page::get_html($content);		
+				$html 			= html_page::get_html($content);
 				print($html);
 				break;
 		
 		# SECTION
-		case ($modo==='edit' || $modo==='list' || $modo==='section_tool') :				
+		case ($modo==='edit' || $modo==='list' || $modo==='section_tool') :	
 
 				#
 				# MODELO_NAME : Can be section / area 
