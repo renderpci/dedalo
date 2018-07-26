@@ -11,29 +11,11 @@ require_once(DEDALO_LIB_BASE_PATH . '/media_engine/class.Thumb.php');
 # Write session to unlock session file
 session_write_close();
 
-/*
-if(login::is_logged()!==true) {
-	$string_error = "Auth error: please login";
-	print dd_error::wrap_error($string_error);
-	die();
-}
-*/
-
-/*
-# SETVAR
-function setVar($name, $default=false) {
-	$$name = $default; 
-	if(isset($_GET[$name])) $$name = $_GET[$name];
-	if(isset($$name))
-	return $$name ;
-}
-*/
 
 # set vars
 $vars = array('m','quality','SID','w','h','fx','p','prop','aditional_path','initial_media_path');
 	foreach($vars as $name) $$name = common::setVar($name);
 
-#dump($_REQUEST, ' _REQUEST');die();
 
 # LOAD VISTA TEMPLATE CODE
 $page_html = dirname(__FILE__).'/html/img.phtml';
