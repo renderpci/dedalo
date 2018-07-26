@@ -6,6 +6,51 @@ global $updates;
 $updates = new stdClass();
 
 
+###### 491 
+/*
+
+CREATE EXTENSION btree_gin;
+
+*/
+
+
+/* en proceso !!
+$v=491; #####################################################################################
+$updates->$v = new stdClass();
+
+	# UPDATE TO
+	$updates->$v->version_major 	 = 4;
+	$updates->$v->version_medium 	 = 9;
+	$updates->$v->version_minor 	 = 1;
+
+	# MINIM UPDATE FROM
+	$updates->$v->update_from_major  = 4;
+	$updates->$v->update_from_medium = 9;
+	$updates->$v->update_from_minor  = 0;
+
+	
+	# DATABASE UPDATES
+	$updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query("
+		-- DELETE DUPLICATES
+		DELETE FROM relations a USING (
+			SELECT MIN(id) as id, section_tipo, section_id, target_section_tipo, target_section_id, from_component_tipo
+		        FROM relations 
+		        GROUP BY (section_tipo, section_id, target_section_tipo, target_section_id, from_component_tipo) HAVING COUNT(*) > 1
+			) b
+			WHERE 
+		    a.section_tipo = b.section_tipo 
+		AND a.section_id = b.section_id 
+		AND a.target_section_tipo = b.target_section_tipo 
+		AND a.target_section_id = b.target_section_id 
+		AND a.from_component_tipo = b.from_component_tipo 
+		AND a.id <> b.id ;
+
+		-- CONSTRAIN RELATIONS ALL FIELDS
+		ALTER TABLE public.relations ADD CONSTRAINT "relations_all_constraint" UNIQUE("section_tipo", "section_id", "target_section_tipo", "target_section_id", "from_component_tipo");
+		");
+		*/		
+
+
 
 $v=490; #####################################################################################
 $updates->$v = new stdClass();
