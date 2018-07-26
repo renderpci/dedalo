@@ -7,7 +7,6 @@
 	$modo 				= $this->get_modo();
 	$var_requested 		= common::get_request_var('context_name');
 	$context_name		= !empty($var_requested) ? $var_requested : null;;	
-	//$context_name		= isset($_REQUEST['context_name']) ? $_REQUEST['context_name'] : null;;	
 	$tool_name 			= get_class($this);
 	$file_name			= $modo;	
 	
@@ -29,13 +28,11 @@
 		case 'page': # Default called from main page. We will use upload as html file and script
 
 			# TOOL CSS / JS MAIN FILES
-			css::$ar_url[] = DEDALO_LIB_BASE_URL."/tools/".$tool_name."/css/".$tool_name.".css";
-			js::$ar_url[]  = DEDALO_LIB_BASE_URL."/tools/".$tool_name."/js/".$tool_name.".js";
+			css::$ar_url[] 	= DEDALO_LIB_BASE_URL."/tools/".$tool_name."/css/".$tool_name.".css";
+			js::$ar_url[]  	= DEDALO_LIB_BASE_URL."/tools/".$tool_name."/js/".$tool_name.".js";
 
-			$var_requested 		= common::get_request_var('button_tipo');
-
-			//$button_tipo = isset($_GET['button_tipo']) ? $_REQUEST['button_tipo'] : null;
-			$button_tipo = !empty($var_requested) ? $var_requested : null;
+			$var_requested 	= common::get_request_var('button_tipo');
+			$button_tipo 	= !empty($var_requested) ? $var_requested : null;
 
 			# Context
 			switch ($context_name) {
