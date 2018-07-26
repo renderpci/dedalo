@@ -1,10 +1,8 @@
 <?php
 require_once( dirname(dirname(dirname(dirname(__FILE__)))) .'/config/config4.php');
-
-
-
 /*
-* CLASS REFERENCE_DATO_V47_TO_RELATION_DATO_V48
+* CLASS REFERENCE_DATO_V47_TO_RELATION_DATO_V48 - C
+*
 */
 class reference_dato_v47_to_relation_dato_v48 {
 
@@ -51,26 +49,33 @@ class reference_dato_v47_to_relation_dato_v48 {
 		
 		if (isset($dato->components)) {
 		
+			$lg_nolan = DEDALO_DATA_NOLAN;
 			foreach ((array)$dato->components as $key_tipo => $component) {
 
 				$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($key_tipo, true);
 				if (!in_array($modelo_name, $ar_models_to_change)) {
 					continue;
 				}
-
-				$lg_nolan = DEDALO_DATA_NOLAN;
+				
 				if (isset($component->dato->{$lg_nolan})) {
 					
 					if($move_to_relations_container===true) {
 						foreach ((array)$component->dato->{$lg_nolan} as $lkey => $lvalue) {
+
 							if (!isset($lvalue->section_tipo) || !isset($lvalue->section_id)) {
+								debug_log(__METHOD__." ++ BAD LOCATOR FOUND IN $modelo_name - $key_tipo ".to_string($lvalue), logger::ERROR);
 								continue;
 							}
-							$locator = new locator();
-								$locator->set_section_tipo($lvalue->section_tipo);
-								$locator->set_section_id($lvalue->section_id);
-								$locator->set_type(DEDALO_RELATION_TYPE_LINK);
-								$locator->set_from_component_tipo($key_tipo);
+
+							if (!isset($lvalue->type)) {
+								$lvalue->type = DEDALO_RELATION_TYPE_LINK;
+							}
+
+							if (!isset($lvalue->from_component_tipo)) {
+								$lvalue->from_component_tipo = $key_tipo;
+							}
+
+							$locator = $lvalue;
 							
 							# Move data to relations container
 							$dato->relations[] = $locator;
@@ -121,7 +126,7 @@ class reference_dato_v47_to_relation_dato_v48 {
 		
 		# ar_tables
 		$ar_tables = tool_administration::$ar_tables_with_relations;
-		debug_log(__METHOD__." Tables to process: ".to_string($ar_tables), logger::DEBUG);
+		debug_log(__METHOD__." Tables to process: ".to_string($ar_tables), logger::ERROR);
 
 		foreach ($ar_tables as $key => $table) {
 
@@ -134,14 +139,14 @@ class reference_dato_v47_to_relation_dato_v48 {
 			if (!$rows) {
 				continue;
 			}
-			$max 		= $rows['id'];			
+			$max 		= $rows['id'];
 
 			$min = 1;
 			if ($table==='matrix_users') {
 				$min = -1;
 			}
 
-			debug_log(__METHOD__." Processing table $table records from $min to $max ".to_string(), logger::DEBUG);
+			debug_log(__METHOD__." Processing table $table records from $min to $max ".to_string(), logger::ERROR);
 		
 			// iterate from 1 to last id
 			for ($i=$min; $i<=$max; $i++) {
@@ -189,7 +194,7 @@ class reference_dato_v47_to_relation_dato_v48 {
 				if(SHOW_DEBUG===true) {
 					# Show log msg every 100 id					
 					if ($counter===1) {
-						debug_log(__METHOD__." Updated section data table $table - id $id  (total:$max) - ".to_string($ar_models_to_change), logger::DEBUG);					
+						debug_log(__METHOD__." Updated section data table $table - id $id  (total:$max) - ".to_string($ar_models_to_change), logger::ERROR);					
 					}
 					$counter++;	
 					if ($counter>300) {
@@ -200,7 +205,7 @@ class reference_dato_v47_to_relation_dato_v48 {
 				#break;
 			}//end for ($i=$min; $i<=$max; $i++)
 			$response->msg[] = " Updated table data table $table ";
-			debug_log(__METHOD__." Updated table data table $table  ", logger::WARNING);
+			debug_log(__METHOD__." Updated table data table $table  ", logger::ERROR);
 			#break; // stop now
 
 		}//end foreach ($ar_tables as $key => $table)
@@ -275,13 +280,6 @@ class reference_dato_v47_to_relation_dato_v48 {
 
 		return (object)$response;
 	}//end check_files_alocation
-
-
-
-	
-
-
-
 
 
 
