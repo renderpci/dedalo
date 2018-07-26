@@ -15,6 +15,9 @@
 	background-color: #4ce6e4;*/
 	/*
 	width: 235px !important;*/
+	@media screen and (max-width: @tablet_max_width) { // 980px		
+		width: 100% !important;			
+	}
 }
 #inspector_div.inspector_fixed {
 	position: fixed;
@@ -42,6 +45,9 @@
 	max-height: 280px;
 	overflow: auto;
 	*/
+	@media screen and (max-width: @movil_max_width) { // 768px
+		box-shadow: none;
+	}
 }
 .inspector_div_content select { width: 87px}
 /*#inspector_div .inspector_div_content * { margin-left:4px; margin-right: 4px; }*/
