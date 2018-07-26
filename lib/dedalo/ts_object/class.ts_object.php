@@ -1,6 +1,6 @@
 <?php
 /*
-* CLASS ts_object
+* CLASS TS_OBJECT
 * Manage tesaurus hierarchycal elements. Every element is a section used as thesaurus term
 * 
 */
@@ -272,12 +272,28 @@ class ts_object extends Accessors {
 					# dump($dato, ' dato ++ '.to_string($element_tipo));
 					$type_rel = $component->get_type_rel();
 
-					if($type_rel !== DEDALO_RELATION_TYPE_RELATED_UNIDIRECTIONAL_TIPO){
+					if($type_rel!==DEDALO_RELATION_TYPE_RELATED_UNIDIRECTIONAL_TIPO){
 						$component_rel = $component->get_references(); //$component->relation_type_rel
 						#$inverse_related = component_relation_related::get_inverse_related($this->section_id, $this->section_tipo, DEDALO_RELATION_TYPE_RELATED_BIDIRECTIONAL_TIPO);
 						$dato = array_merge($dato, $component_rel);
 					}
+				}else if ($modelo_name==='component_svg'){						
+						# file exsists check
+						$file_path = $component->get_file_path();
+						if (file_exists($file_path)===true) {
+							# URL
+							$file_url  = $component->get_url();
+							# Force refresh always
+							$file_url .= '?' . start_time();
+						}else{
+							$file_url = "";
+						}
+
+						$dato = $file_url;
+						#debug_log(__METHOD__." dato ".to_string($dato), logger::DEBUG);
 				}
+
+
 				#if ($element_tipo==='hierarchy25') {
 				#	debug_log(__METHOD__." dato $modelo_name - element_tipo:$element_tipo - section_id:$this->section_id - $lang - valor:". $component->get_valor($lang).' - dato:'. to_string($dato), logger::DEBUG);
 				#}
@@ -549,8 +565,11 @@ class ts_object extends Accessors {
 
 		# Cache control (session)
 		$cache_uid = $locator->section_tipo.'_'.$locator->section_id.'_'.$lang;
-		if ($from_cache===true && isset($_SESSION['dedalo4']['config']['term_by_locator'][$cache_uid])) {
-			return $_SESSION['dedalo4']['config']['term_by_locator'][$cache_uid];
+		#if ($from_cache===true && isset($_SESSION['dedalo4']['config']['term_by_locator'][$cache_uid])) {
+		#	return $_SESSION['dedalo4']['config']['term_by_locator'][$cache_uid];
+		static $term_by_locator_data;
+		if ($from_cache===true && isset($term_by_locator_data[$cache_uid])) {
+			return $term_by_locator_data[$cache_uid];
 		}
 
 		$valor = false;
@@ -590,19 +609,29 @@ class ts_object extends Accessors {
 			$valor = $component->get_valor($lang);
 				# dump($valor, ' valor ++ '.to_string());	
 			if (empty($valor)) {
-							
-				$main_lang = hierarchy::get_main_lang( $locator->section_tipo );
-		
-				if($lang!==$main_lang) {
-					$component->set_lang($main_lang);
-					$valor = $component->get_valor($main_lang);
-					if (strlen($valor)>0) {
-						$valor = component_common::decore_untranslated( $valor );
-					}
+						
+				#$main_lang = hierarchy::get_main_lang( $locator->section_tipo );
+				#	#dump($main_lang, ' main_lang ++ '.to_string($locator->section_tipo));
+				#if($lang!==$main_lang) {
+				#	$component->set_lang($main_lang);
+				#	$valor = $component->get_valor($main_lang);
+				#	if (strlen($valor)>0) {
+				#		$valor = component_common::decore_untranslated( $valor );
+				#	}
+				#
+				#	# return component to previous lang
+				#	$component->set_lang($lang);
+				#}
+				#
+				#if (empty($valor)) {
 
-					# return component to previous lang
-					$component->set_lang($lang);
-				}
+					$dato_full = $component->get_dato_full();
+					$valor = component_common::get_value_with_fallback_from_dato_full($dato_full, true);
+					if (is_array($valor)) {
+						$valor = implode(', ', $valor);
+					}
+					#dump($valor, ' valor ++ '.to_string());
+				#}
 			}
 		}
 		#dump($valor, ' valor ++ '.to_string($locator->section_tipo."-".$locator->section_id));
@@ -619,14 +648,10 @@ class ts_object extends Accessors {
 		*/
 		#debug_log(__METHOD__." valor $cache_uid ".htmlentities($valor), logger::DEBUG); 
 
-		# Cache control (session)
-		if(SHOW_DEBUG===true) {
-			#$_SESSION['dedalo4']['config']['term_by_locator'][$cache_uid] = $valor;
-		}else{
-			$_SESSION['dedalo4']['config']['term_by_locator'][$cache_uid] = $valor;
-		}
-		
-		
+		# Cache control (session)		
+		#$_SESSION['dedalo4']['config']['term_by_locator'][$cache_uid] = $valor;
+		$term_by_locator_data[$cache_uid] = $valor;
+				
 		
 		return $valor;
 	}//end get_term_by_locator

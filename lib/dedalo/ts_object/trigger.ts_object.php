@@ -78,26 +78,34 @@ function get_childrens_data($json_data) {
 		$options->model = true;
 	}
 	
+	try{		
 
-	$childrens_data = array();
-	foreach ((array)$childrens as $locator) {
-		
-		$section_id 		= $locator->section_id;
-		$section_tipo 		= $locator->section_tipo;				
+		$childrens_data = array();
+		foreach ((array)$childrens as $locator) {
+			
+			$section_id 		= $locator->section_id;
+			$section_tipo 		= $locator->section_tipo;				
 
-		$ts_object  		= new ts_object( $section_id, $section_tipo, $options );
-		$childrens_object 	= $ts_object->get_childrens_data();
-		#debug_log(__METHOD__." childrens_object ".to_string($childrens_object), logger::DEBUG);
+			$ts_object  		= new ts_object( $section_id, $section_tipo, $options );
+			$childrens_object 	= $ts_object->get_childrens_data();
+			#debug_log(__METHOD__." childrens_object ".to_string($childrens_object), logger::DEBUG);
 
-		# Add only descriptors
-		#if ($childrens_object->is_descriptor===true) {
-			$childrens_data[] 	= $childrens_object;
-		#}		
-	}
+			# Add only descriptors
+			#if ($childrens_object->is_descriptor===true) {
+				$childrens_data[] 	= $childrens_object;
+			#}		
+		}
+
+		$response->result 	= (array)$childrens_data;
+		$response->msg 		= 'Ok. Request done [get_childrens_data]';
 	
+	}catch(Exception $e) {
 
-	$response->result 	= (array)$childrens_data;
-	$response->msg 		= 'Ok. Request done [get_childrens_data]';
+		$response->result 	= false;
+		$response->msg 		= 'Error. Caught exception: '.$e->getMessage();		
+	}
+
+	
 
 	# Debug
 	if(SHOW_DEBUG===true) {
