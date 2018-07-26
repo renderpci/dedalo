@@ -31,7 +31,6 @@ class component_text_area extends component_common {
 	}//end __construct
 
 
-
 	/**
 	* FORCE_CHANGE_LANG
 	* If defined component_select_lang as related term of current component, the lang of the component
@@ -212,9 +211,10 @@ class component_text_area extends component_common {
 	}//end Save
 
 
+
 	/**
 	* ALT_SAVE
-	* @return 
+	* @return bool true
 	*/
 	public function alt_save() {
 		//get the current dato with all text
@@ -255,8 +255,7 @@ class component_text_area extends component_common {
 		$alt_save_component->set_dato($ar_current_locator);
 		$alt_save_component->Save();
 
-		return true;
-		
+		return true;		
 	}//end alt_save
 
 
