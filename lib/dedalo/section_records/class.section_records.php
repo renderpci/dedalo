@@ -50,13 +50,10 @@ class section_records extends common {
 		$start_time=microtime(1); // Used later in phtml for statistics
 		
 		#
-		# SAVE_HANDLER . Is defined in section and injected in this->search_options sended to current class
-		#dump($this->search_options, ' this->search_options ++ '.to_string());
+		# SAVE_HANDLER . Is defined in section and injected in this->search_options sended to current class		
 		if (isset($this->search_options->save_handler) && $this->search_options->save_handler==='session') {
-		#dump($this->search_options, ' this->search_options ++ '.to_string());
-		#dump($_GET, ' _GET ++ '.to_string());
-			//trigger_error("Working here ".__METHOD__);
-			/* to_review 14-2-2018 */
+					
+			// to_review 14-2-2018
 			# Mimic database result	with a placebo records_data 				
 			$ar_data = array();
 
@@ -65,26 +62,16 @@ class section_records extends common {
 				$row->section_tipo 	= $this->search_options->search_query_object->section_tipo;
 
 			$ar_data[] = $row;
-			/*
-			foreach ($this->search_options->filter_by_id as $key => $value) {							
-				$ar_data[] = array($value->section_id => array( 'id'=> $value->section_id,
-																'section_id' => $value->section_id,
-																'section_tipo' => $value->section_tipo)
-									);
-				break;
-			}*/
+			
 			$records_data = new stdClass();
-				$records_data->ar_records 			= $ar_data;
-				#$records_data->search_query_object 	= null;
-	
-			$this->records_data = $records_data;			
+				$records_data->ar_records = $ar_data;
+				#$records_data->search_query_object = null;		
 		
 		}else{		
 		#
 		# DEFAULT CASE (save_handler is 'database')	
 
-			$search_options = $this->search_options;
-			
+			$search_options = $this->search_options;			
 
 			# Calculate rows from database. Exec search
 			if ( $search_options->modo==='list_tm' ) {
@@ -99,19 +86,19 @@ class section_records extends common {
 			}			
 			$records_data = $search_development2->search();
 
-
+			#
 			# Save current search options
 			if ($this->search_options->modo==='list') {
 				$search_options_id = $this->tipo; // section tipo like oh1
 				section_records::set_search_options($search_options, $search_options_id);
-			}
-
-
-			# Fix records_data
-			$this->records_data = $records_data;
+			}			
 
 			#debug_log(__METHOD__." this->search_options **** ".json_encode($this->search_options), logger::DEBUG);						
 		}
+
+
+		# Fix records_data
+		$this->records_data = $records_data;
 
 
 		# Include controller
