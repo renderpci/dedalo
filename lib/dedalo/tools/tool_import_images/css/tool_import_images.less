@@ -1,0 +1,382 @@
+// Vars
+@common_css: "../../../common/css";
+
+// Usage
+@import "@{common_css}/library.less";
+
+
+
+BODY {
+	/**/
+	background-image: url('../../../themes/default/dedalo_icon_big.png');
+	background-repeat: no-repeat;
+	background-position: 0px 0px;
+	min-height: 1024px;
+}
+
+.tool_header {
+	/*background-color: #f3e3b6;*/
+	margin: 0;
+	padding: 5px;
+	padding-top: 10px;
+	line-height: 1.4em !important;
+	display: inline-block;
+	}
+	.h2_title {
+		font-size: 19px;
+		padding: 4px;
+		padding-top: 3px;
+		padding-left:20px;
+		min-width: 15%;
+		text-align: left;
+		display: inline-block;
+		vertical-align: top;	
+		height: auto;
+	}
+	.import_context_label {
+		margin-left: 20px;
+		font-size: 14px;
+		margin-top: 5px;
+	}
+	.import_context_label A {
+		margin-right: 10px;
+	}
+	.debug_info {
+		display: inline;
+		color: #9c9c9c;
+		font-size: 89%;
+		font-weight: normal;
+	}
+
+
+/*-- import help --*/
+.import_help {
+	padding: 5px;
+	padding-top: 10px;
+	padding-left: 20px;
+	color: #938b78;
+	}	
+	.import_help::before {
+		background-position: -96px -96px !important;		
+	}
+
+
+
+/*-- process page --*/
+TABLE.import_options {	
+	background-color: rgba(232, 232, 232, 0.6);
+	box-shadow: 2px 0px 8px #7f7f7f inset;
+	font-size: 94%;
+	border-radius: 5px;
+	position: relative;
+	margin: 5px;
+	padding: 5px;
+	display: inline-block;
+	vertical-align: top;
+	left: 15%;
+	}
+	TABLE.import_options td, TABLE.import_options th {
+		padding: 4px;
+		padding-left: 8px;
+		line-height: 1.0em;
+		padding-right: 10px;
+	}
+
+
+
+/*-- JQUERY UPLOAD --*/
+.jquery_upload_wrapper {
+	margin-top: 20px;
+	text-align:left;
+	margin:20px;
+	background-color:#e8e8e8;
+	background-color:rgba(232, 232, 232, 0.76);
+	width: 96%;
+	/*box-shadow: 2px 0px 8px #7f7f7f ;*/
+	font-size: 96%;
+	border-radius: 5px;
+	min-width: 650px;
+
+	border: 1px solid transparent;
+	border-color: #d6d6d6;
+	}
+	.jquery_upload_wrapper .container {
+		/*background-color: #c4e363;*/
+		width: 100%;
+	}
+	.jquery_upload_wrapper .fileupload-buttonbar {
+		height: 50px;
+		margin: 20px;
+		margin-left: -15px;
+	}
+
+/*-- BOOTSTRAP OVERWRITE --*/
+BODY {
+	background-color: transparent !important; 
+	}
+	.table-striped>tbody>tr:nth-child(odd)>td, .table-striped>tbody>tr:nth-child(odd)>th {
+		background-color: #ececec !important;
+	}
+
+
+
+
+
+/*-- preview form --*/
+.wrapper_preview {
+	padding: 0;	
+	margin: 0px;
+	margin-top: 0px;
+	width: 98%;
+}
+.wrapper_preview .error {	
+	margin-left: 15px;
+}
+
+FORM.form_preview {
+	text-align:left;
+	margin:10px;
+	background-color:rgba(232, 232, 232, 0.8);
+	width: 99.9%;
+	box-shadow: 2px 0px 8px #7f7f7f;/**/
+	font-size: 98%;
+	display: block;
+}
+
+TABLE.table_preview {
+	border-collapse:collapse;
+   	/*border:solid black 1px;*/
+   	font-size: 98%;
+   	text-align:left;
+	margin:10px;
+	background-color:#e8e8e8;
+	width: 98%;
+	box-shadow: 2px 0px 8px #7f7f7f;/**/		
+	}
+	TABLE.table_preview TD {
+		text-align:left;
+		padding:3px;
+		border: 1px solid transparent;
+		border-color: #bfbfbf;
+	}
+	TABLE.table_preview .td_title {
+		width:200px;		
+		font-weight:bold;
+		white-space: nowrap;	
+	}
+	TABLE.table_preview .td_title::first-letter {
+		text-transform: uppercase;
+	}
+	TABLE.table_preview .td_content {
+				
+	}
+	TABLE.table_preview CAPTION,
+	.caption {
+		font-size: 16px;
+		width: 50%;
+		padding: 4px;
+		padding-left: 6px;
+		text-align: center;	
+		border-radius: 4px 4px 0 0;
+		color: #ffffff;
+		/*box-shadow: 2px -1px 8px #7f7f7f;*/
+		background-color: #428bca;
+		border-color: #357ebd;
+		background-image: none;
+		height: 30px !important;
+		white-space: nowrap;
+		cursor: pointer;
+	}
+	TABLE.table_preview .image_source {
+			display: inline-block;
+			min-width: 100px;
+			vertical-align: top;
+			margin-right: 15px;
+		}
+		TABLE.table_preview .image_source .image_source_title {			
+			padding-left: 5px;
+		}
+		TABLE.table_preview .image_source .image_source_title:first-letter {
+			text-transform: capitalize;
+		}
+
+		TABLE.table_preview .image_source IMG,
+		IMG.image_preview,
+		.preview IMG
+		{
+			box-shadow: 1px 1px 6px #888888;
+			border-radius: 1px;
+			margin: 4px;
+			margin-bottom: 6px;
+			max-width:400px;
+			max-height:260px;			
+			margin-right:10px;
+			cursor: -webkit-zoom-in;
+		}
+
+		.tr_warning {
+			background-color: #fd9706;
+			color: #fdfffd
+		}
+	
+
+	FORM.form_preview {
+		margin-top: 30px;
+		margin-bottom: 40px;
+		padding-top: 20px;
+		padding-bottom: 20px;	
+		}
+		FORM.form_preview SPAN {
+			margin-left: 20px;
+			margin-right: 0px;
+		}
+		FORM.form_preview .submit_import,
+		.button_back {
+			padding-top: 7px;
+			padding-left: 8px;
+			padding-right: 8px;
+			margin-right: 10px;
+			margin-left: 20px;
+			font-weight: normal;
+			text-transform: uppercase;
+		}
+		FORM.form_preview .quality_selector {
+			margin-right: 10px;
+		}
+		.processing_msg {
+			height: 22px;
+			line-height: 22px;
+			background-color: rgba(201, 237, 184, 0.5);
+			padding: 10px;
+			border-radius: 4px;			
+			display: inline;	
+			}
+			.processing_msg::before {
+				content:" ";
+				/*
+				background-image: url("../../../themes/default/glyphicons-halflings.png");	
+				background-position: -72px -96px;
+				*/
+				background-image: url('../../../themes/default/spinner.gif');
+				background-repeat: no-repeat;
+				display: inline-block;
+				width: 20px;
+				height: 20px;
+				line-height: 20px;
+				vertical-align: text-top;
+				margin-right: 4px;
+				opacity: 0.8;
+			}
+		#target_id {
+			width: 80px;
+			text-align: center;
+		}
+		.form_line2 {
+			margin: 20px;
+			margin-top: 30px;
+		}
+
+
+.form_spacer {
+	width: 100%;
+	display: block;
+	clear: both;
+	height: 25px;
+}
+
+.div_checkbox {
+	display: inline-block;
+	margin-right: 5px;
+	float: right;
+}
+
+
+
+#button_import_images {
+	margin: 40px;
+	margin-left: 10px;
+	float: right;
+}
+#button_gestion_de_archivos {
+	margin: 0px;
+	margin-right: 10px;
+	margin-bottom: 50px;
+	float: right;
+}
+
+.div_caption {
+	display: table-caption;
+	
+	position: relative;
+	top: 20px;
+	right: 20px;
+	float: right;
+	/*padding: 5px;	
+	border-radius: 4px;*/
+	background-color: #428bca !important;	
+	}
+	.div_caption::before {
+		background-position: -120px -96px;
+	}
+	.div_caption a {
+		color: #ffffff !important;
+	}
+
+
+
+/*-- response import --*/
+.wrap_response_import {
+	margin: 25px;
+	}
+	.cabecera_ficha {
+		width: 10%;
+		padding-left: 10px;
+		padding-right: 10px;
+		text-align: left;
+		white-space:nowrap;/**/
+		display: table;
+		box-shadow: none;
+		background-color:#5cb85c;
+		border: 1px solid transparent;
+		border-color: #4cae4c;
+	}
+	.wrap_response_ficha {
+		margin: 0px;
+		margin-bottom: 30px;
+		text-align:left;		
+		background-color:#e8e8e8;		
+		/*box-shadow: 2px 1px 8px #7f7f7f;*/
+		border: 1px solid transparent;
+		border-color: #bfbfbf;
+		padding: 5px;
+	}
+	.info_line {
+		margin-left: 5px;
+		line-height: 1.3em;
+		color:#595959;
+		font: 12px / 18px "Lucida Grande", "Lucida Sans Unicode", Helvetica, Arial, Verdana, sans-serif;	
+		-webkit-font-smoothing: antialiased;
+	}
+	.info_line::before {
+		content:"";
+		background-image: url("../../../themes/default/glyphicons-halflings.png");	
+		background-position: -72px -96px;
+		background-repeat: no-repeat;
+		display: inline-block;
+		width: 14px;
+		height: 14px;
+		line-height: 14px;
+		vertical-align: text-top;
+		margin-right: 4px;
+		opacity: 0.4;
+	}
+	.info_line::after {
+		content: " ";
+		display: block;
+		clear: both;
+	} 
+	.alert_icon::before {
+		background-position: 0 -120px !important;
+		/* margin-left: 15px; */
+	}
+

@@ -1,0 +1,31 @@
+<?php
+
+	# VISUALIZADOR HTML	
+
+	# ETIQUETA (LABEL)
+	$html_label = component_common_draw::draw_label($this);
+	
+	# CONTENIDO (INPUT)
+	$html_content = '';
+	switch($permissions) {
+			
+		case 0	:	$html_content .= "\n <span class=\"css_span_dato\"> No access here (select)! </span>";		
+					break;
+											
+		case ($permissions>=1)	:
+										
+					$html_content .= $value;					
+
+
+					if(SHOW_DEBUG) {
+						$html_content .= "\n <span class=\"css_span_debugger\" id=\"debugger_{$tipo}\" >{$debugger}</span>";	
+					}
+					break;		
+											
+	}
+	
+	# PRINT HTML
+	//print $html_label;
+	print $html_content;
+	
+?>

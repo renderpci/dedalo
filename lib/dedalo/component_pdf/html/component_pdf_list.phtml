@@ -1,0 +1,50 @@
+<?php
+
+	# VISUALIZADOR HTML	
+
+	# ELEMENTOS
+	#print "\n<!-- PDF [tipo:$tipo section_id_matrix:$parent] -->";	
+		
+	# CONTENIDO (INPUT)
+	$html_contenido = '';
+	switch($permissions) {
+			
+		case 0	:	
+			$html_contenido .= ''; 		
+			break;
+					
+		case 1	:
+		case 2	:
+		case 3	:
+
+			$js_action = "onclick=\"component_pdf.open_pdf(this)\"";
+		
+			if($file_exists) {					
+
+				if($pdf_thumb) {
+					$style = "background-image:url('$pdf_thumb')";								
+					$html_contenido .= "\n <div class=\"thumb_in_list div_image_image_in_list\" style=\"$style\" $js_action
+					data-pdf_url=\"$pdf_url\"
+					data-pdf_viewer_url=\"$pdf_viewer_url\"
+					></div>";
+				}else{
+					$html_contenido .= "<div class=\"pdf_thumb_icon\" $js_action
+					data-pdf_url=\"$pdf_url\"
+					data-pdf_viewer_url=\"$pdf_viewer_url\"
+					></div>";	
+				}					
+			}	
+									
+	}
+
+	
+	# PRINT HTML	
+	print $html_contenido;
+	
+
+	#if(SHOW_DEBUG) {
+	#	$total=round(microtime(1)-$this->start_time,3);
+	#	echo "<span class=\"debug_info ar_list_of_values_debug_info\">Time: $total</span>";
+	#}
+	
+?>

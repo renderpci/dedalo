@@ -1,0 +1,662 @@
+/*
+MENU
+#menu_div_wrap {
+z-index: 1000;
+background-color: #f5f181; padding: 10px
+}
+#menu_div_wrap UL {
+list-style: none;
+}
+#menu_div_wrap LI {
+margin: 0px;
+}
+.menu_ul_create_link {
+display: inline-block;
+margin: 5px;
+position: relative;
+}
+.menu_ul_create_link SPAN, A {
+display: inline;
+}
+.ui-menu {
+min-width: 110px;
+font-size: 0.95em !important;
+/*MENU SHADOW
+box-shadow: inset 0 1px 8px #999999;
+}
+.menu_a_span {
+color: #808080;
+font-size: 10px;
+padding-left: 5px;
+text-decoration: none !important;
+}
+.menu_a_span_hilite {
+color: #000000;
+background-color: #FFFF00;
+}
+*/
+
+// Variables
+@common_css: "../../common/css";
+
+// Usage
+@import "@{common_css}/library.less"; 
+
+
+
+/* MENU WRAPPER
+------------------------------------------------------- */
+#menu_wrapper {
+	z-index: 1002;
+	position: fixed;
+	top: 0px;
+	left:0px;
+	display: block;
+	clear: both;
+	width: 100%;
+	min-width: 932px;
+	/*height: 32px;*/
+	height: 29px;
+	box-shadow: 0 2px 3px rgba(0, 0, 0, 0.4);
+	background: #2e2e2e;
+	}
+	.menu_wrapper_debug {
+		background: linear-gradient(to bottom, rgba(210,107,25,0.8) 0%,rgba(156,62,0,0.8) 100%) !important;
+	}
+	.menu_wrapper_debug_development {
+		background: linear-gradient(to bottom, rgba(214,21,0,0.9) 0%,rgba(135,0,13,0.9) 100%) !important; /* W3C */
+	}
+	.menu_wrapper_debug_master {
+		//background: linear-gradient(to bottom, rgba(44, 177, 20, 0.8) 0, rgba(12, 115, 34, 0.8) 100%) !important;
+		background: linear-gradient(to bottom, rgba(35, 189, 7, 0.8) 0, rgba(9, 97, 28, 0.8) 100%) !important
+	}
+	.menu_wrapper_global_admin {
+		//background-image: url('../../themes/default/dedalo_logo_red.svg');
+		border-top: 1px solid #f78a1c;
+	} 
+
+	/*-- Button in menu common --*/
+	#menu_wrapper .button_in_menu {
+		position: relative;
+		float: right;
+		display: inline-block;
+		cursor: pointer;
+	}
+
+	/*-- Quit button --*/
+	#menu_wrapper #quit {
+		float: left;
+		top: 7px;
+		left: 10px;
+		z-index: 100;
+		color: #ffffff;
+		font-size: 16px;
+		transition: color 0s ease-in-out;
+		/*background-color:#d4d4d4;
+		background-position: -120px -72px;
+		border-radius: 3px;*/
+		}
+		#menu_wrapper #quit:active {
+			color: #7F7F7F;
+		}
+	/*-- Toggle button --*/
+	#menu_wrapper #toggle_menu {
+		float: left;
+		top: 7px;
+		left: 40px;
+		z-index: 100;
+		color: #ffffff;
+		font-size: 32px;
+		transition: color 0s ease-in-out;
+		display: none;
+		/*background-color:#d4d4d4;
+		background-position: -120px -72px;
+		border-radius: 3px;*/
+		}
+
+	/*-- Dedalo icon top --*/
+	#menu_wrapper .dedalo_icon_top {
+		width: 20px;
+		height: 20px;
+		position: absolute;
+		top: 5px;
+		left: 45px;
+		background-image: url('../../themes/default/dedalo_logo.svg');
+		background-repeat: no-repeat;
+		background-size: 90%;
+		background-position: center;
+	}
+	
+
+
+
+
+
+/* MENU : Menu tree
+------------------------------------------------------- */
+@menu_bg_color_active : #ffa43d;
+@menu_box_shadow : 5px 5px 15px rgba(0, 0, 0, 0.1);
+
+#menu {
+	font-family: "Oxygen-light";
+	//-webkit-font-smoothing: subpixel-antialiased;
+	z-index: 100;
+	float: left;
+	display: inline-block;
+	margin: 0;
+	margin-left: 64px;
+	padding: 0;
+	text-align: left;
+	}
+	#menu li {
+		margin: 0 2px;
+		padding: 0 0 0px;
+		float: left;
+		position: relative;
+		list-style: none;
+	}
+	// link common
+	#menu a {
+		color: #EEECEC;
+		text-decoration: none;
+		display: block;
+		width: 100%;
+		margin: 0;
+		padding: 4px;
+		padding-left: 6px;
+		letter-spacing: 0.7px;
+		font-weight: 300 !important;
+		font-size: 13px;
+		}
+		// On click menu link a
+		#menu a:active {
+			background-color: darken(@menu_bg_color_active, 13%) !important;
+		}
+	// main level link
+	#menu > li > a {
+		padding: 6px;
+		/*padding-bottom: 5px;*/
+	}
+
+
+	// level 2 list
+	#menu ul {
+		background: #fcfcfc;
+		display: none;
+		margin: 0;
+		padding: 0;
+		min-width: 200px;
+		position: absolute;
+		top: 25px;
+		left: -1px;
+		box-shadow: @menu_box_shadow;
+		/*left: -2px;*/
+		border: 1px solid #B4B4B4;
+		border-radius: 4px;
+		}
+		#menu ul a {
+			color: #4F4F4F;
+		}
+
+
+
+	// Removes first ul top border radius
+	#menu > li > ul  {
+		border-radius: 0px 0px 4px 4px; /* top left, top right, bottom right, bottom left */
+	}
+
+	// dropdown
+	#menu li > ul {
+		margin-top: 4px;
+	}
+
+
+	#menu ul li {
+		border: 1px solid #7F7F7F;
+		border-style: none none inset;
+		float: none;
+		margin: 0;
+		padding-top: 2px;
+		padding-bottom: 2px;
+		padding-right: 0px;
+		padding-left: 0px;
+		}
+
+
+	#menu ul li:last-child {
+		border: none;
+	}
+
+
+	// level 3+ list
+	#menu ul ul {
+		left: 100%;
+		top: -5px;
+	}
+	/*rounded corners for first and last child
+	#menu ul li:first-child {
+		border-top-left-radius: 4px;
+		border-radius-topleft: 4px;
+		border-top-right-radius: 4px;
+		border-radius-topright: 4px;
+	}
+	#menu ul li:last-child {
+		border-bottom-left-radius: 4px;
+		border-radius-bottomleft: 4px;
+		border-bottom-right-radius: 4px;
+		border-radius-bottomright: 4px;
+	}
+	*/
+	/*clearfix
+	#menu:after {
+		content: ".";
+		display: block;
+		clear: both;
+		visibility: hidden;
+		line-height: 0;
+		height: 0;
+	}*/
+
+
+	// ACTIVE
+	#menu .menu_li_active > a {
+		background: @menu_bg_color_active;
+		color: #ffffff !important;
+		/*border-bottom: 1px solid #ffa43d;*/
+	}
+	#menu .menu_li_active ul {
+		display: block !important;
+	}
+
+	// INACTIVE
+	#menu .menu_li_inactive > a {
+		background:transparent !important;
+	}
+	#menu .menu_li_inactive ul {
+		display: none !important;
+	}
+
+	// ARROW : Add arrow right
+	#menu li.has-sub::after {
+		content: " ";
+		display: inline-block;
+	    width: 0;
+	    height: 0;
+	    margin-left: 3px;
+	    vertical-align: middle;
+
+	  	border-bottom: 5px solid transparent;
+	    border-top: 5px solid transparent;
+	    border-left: 5px solid #000000;
+
+		position: absolute;
+	    right: 8px;
+	    top: 9px;
+	    pointer-events: none;
+		}
+		// arrow white on active
+		#menu li.has-sub.menu_li_active::after {
+			border-left: 5px solid #FFFFFF;
+		}
+
+		// Hides arrow in first level of li (fisrt menu line)
+		#menu > li.has-sub::after {
+			display: none;
+		}
+
+		// shadow for fir level when active
+		#menu > li.menu_li_active {
+			box-shadow: @menu_box_shadow;
+			/*border-left: 1px solid #b4b4b4;*/
+		}
+
+
+
+
+	/* LOGGED USERNAME
+	------------------------------------------------------- */
+	#menu_wrapper .logged_user_name {
+		color:#c9c9c9;
+		float: left;
+		margin-left: 10px;
+		margin-right: 10px;
+		top: 6px;
+		cursor: default;
+	}
+
+
+	/*-- Log messages checkbox --
+	#menu_wrapper .div_log_messages_checkbox {
+		float: left;
+		color:#c9c9c9;
+		margin-left: 20px;
+		top: 5px;
+		cursor: default;
+		}
+		.div_log_messages_checkbox input {margin-left: 3px;}
+	*/
+
+
+	/* APLICATION LANG SELECTOR
+	------------------------------------------------------- */
+	#menu_wrapper .dedalo_aplication_langs_selector {
+		float: left;
+		margin-left: 5px;
+		top: 2px;
+		position: relative;
+		background-color: #373737;
+		//box-shadow: inset 2px 2px 4px #3f3f3f;
+		color: #cccccc;
+		border-radius: 6px;
+		border-color: transparent;
+		line-height: 1em;
+		opacity: 0.8;
+	}
+	#menu_wrapper .dedalo_aplication_langs_selector.unsync {
+		color: #fdcf39;
+    	opacity: 0.9;
+	}
+
+
+
+	/* LABEL SECTION NAME
+	------------------------------------------------------- */
+	#menu_wrapper #current_section_label {
+		right: 10px;
+		top: 0;
+		width: auto;
+		color: #fff;
+		margin: 0;
+		margin-right: 5px;
+		padding: 7px;
+		padding-left: 9px;
+		padding-right: 9px;
+		line-height: 1.5em;
+		font-size: 100%;
+		white-space: nowrap;
+		/* border-radius: 4px; */
+		cursor: default;
+		letter-spacing: .7px;
+		font-weight: 300 !important;
+		font-size: 13px;
+		font-family: 'Oxygen-light';
+		-webkit-font-smoothing: subpixel-antialiased;
+		height: 29px;
+		}
+		#menu_wrapper #current_section_label.section_label_edit {
+			//background-color: #000000;
+		}
+		#menu_wrapper #current_section_label.section_label_edit:hover {
+			cursor: pointer !important;
+			background-color: @menu_bg_color_active;
+		}
+		#menu_wrapper #current_section_label.section_label_edit:active {
+			background-color: darken(@menu_bg_color_active, 13%) !important;
+		}
+		#menu_wrapper #current_section_label mark {
+			color: #FFFFFF !important;
+			opacity: 0.9;
+		}
+		/*
+		#menu_wrapper #current_section_label::before {
+			content: '';
+			//background-image: url("../../themes/default/glyphicons-halflings.png");
+			background-image: url("../../themes/default/icon_list.svg");			
+			margin-right: 7px;	
+			width: 14px;
+			height: 14px;
+		  	float: left; 
+		  	opacity: 1;		  
+		}
+		*/
+		
+
+	/* BUTTON INSPECTOR
+	------------------------------------------------------- */
+	#menu_wrapper #button_toggle_inspector {
+		position: relative;
+		float: right;
+		display: inline-block;
+		cursor: pointer;
+		right: 9px;
+		top: 9px;
+		width: 25px;
+		height: 25px;
+		background-image: url(../../themes/default/inspector.svg);
+		background-repeat: no-repeat;
+		}
+		#button_toggle_inspector .button_toggle_inspector_in_dialog {
+			top: 0px;
+		}
+
+
+
+
+	.menu_wrapper_space {
+		height: 29px;
+	}
+
+
+
+
+
+/* DEBUG_LINE_WRAP
+------------------------------------------------- */
+.debug_line_wrap {
+	font-family: 'Oxygen-light';
+	font-weight: 100;
+	width: 100%;
+	height: 24px;
+	background-color: rgb(107, 107, 107);
+	margin-top: 29px;
+	margin-bottom: 24px;
+	text-align: left;
+	padding: 4px;
+	padding-left: 0px;
+	//padding-top: 0px;
+	color: #ECF4F8 !important;
+	position: fixed;
+    left: 0;
+    top: 0;
+    z-index: 1001;
+    opacity: 0.95;
+    overflow: hidden;
+    line-height: 24px;
+    display: flex;   
+	}
+	.debug_line_wrap a,	.debug_line_wrap span {
+		color: #dcdcdc !important;
+		text-decoration: none;
+		margin: 0;
+		padding: 2px;
+		padding-left: 9px;
+		padding-right: 9px;
+		display: inline;
+		line-height: 1em;		
+		}
+		.debug_line_wrap a {
+			background-color: #5B5B5B;
+			margin-right: 1px;			
+			}
+			.debug_line_wrap a:hover {
+				background-color: #7E8284
+			}
+	.debug_line_wrap_spacer {
+		height: 24px;
+	}
+
+
+
+
+//@media screen and (min-width: 980px) {
+@media screen and (min-width: @movil_max_width) { // 768px
+	#menu{
+		display: inline-block !important;
+	}
+}
+
+//@media screen and (max-width: 1024px) {
+@media screen and (max-width: @content_data_max_width) { // 1152px
+	#menu_wrapper .logged_user_name {
+		display: none;
+	}
+}
+
+//@media screen and (max-width: 980px) {
+@media screen and (max-width: @movil_max_width) { // 768px
+	#menu_wrapper {
+		position: relative;
+		min-height: 45px;
+		height: auto;
+		min-width: 0px;
+		background: #090909;
+		text-align: right;
+	}
+	#menu_wrapper .menu_background{
+		position: relative;
+		min-height: 45px;
+		height: auto;
+		min-width: 0px;
+		background: #090909;
+		text-align: right;
+	}
+	#menu_wrapper .dedalo_icon_top{
+		width: 30px;
+		height: 30px;
+		position: absolute;
+		top: 5px;
+		left: 50%;
+	}
+	#menu_wrapper #quit{
+	    top: 0px;
+		width: 45px;
+		height: 45px;
+		text-align: center;
+   		line-height: 45px;
+	}
+
+	#menu_wrapper #toggle_menu{
+	    top: 0px;
+		width: 45px;
+		height: 45px;
+		text-align: center;
+   		line-height: 45px;
+   		display: inline-block;
+   		-webkit-user-select: none;
+		-khtml-user-select: none;
+		-moz-user-select: none;
+		-o-user-select: none;
+		user-select: none;
+	}
+	#menu {
+		float: none;
+		margin-left: 0px;
+		margin-top: 0;
+		width: 100%;
+		display: none;
+	}
+	#menu li {
+		float: none;
+		margin: 0px;
+	}
+	#menu ul li {
+		background-color: #ffffff;
+		z-index: 100;
+	}
+	#menu ul{
+		position: relative;
+		top: 0px;
+		left: 0px;
+		box-shadow: none;
+		border: none;
+		border-radius: 0px;
+		margin-top: 0px;
+	}
+		// Removes first ul top border radius
+	#menu > li > ul  {
+		border-radius: 0px; /* top left, top right, bottom right, bottom left */
+	}
+
+	// dropdown
+	#menu li > ul {
+		margin-top: 0px;
+	}
+	#menu ul ul{
+		left:0px;
+		top: 0px;
+	}
+	#menu>li>a{
+		padding: 10px;
+	}
+	#menu a{
+		font-size: 16px;
+		padding: 10px;
+	}
+	#menu .menu_li_active>a{
+
+	}
+	#menu_wrapper .dedalo_aplication_langs_selector {
+		float: right;
+		//top: 10px;
+		//right: 65px;
+		//position: absolute;
+    	//margin-left: 0px;    
+
+		top: -35px;
+		right: 10px;
+		position: relative;	
+	}
+	#menu_wrapper #current_section_label {
+		display: block;
+		position: inherit;
+		float: none;
+		top: 0px;
+		right: 0px;
+		font-size: 16px;
+		border-radius: 0;
+		height: 40px;
+		line-height: 40px;
+		padding-left: 10px;
+		padding-right: 10px;
+		padding-top: 0px;
+		padding-bottom: 0px;
+		margin-right: 0px;
+		text-align: center;
+		color: #090909;
+		background-color: #efefef;
+	}
+	#menu_wrapper #current_section_label.section_label_edit{
+		background-color: #ebebeb;
+	}
+	#menu_wrapper #button_toggle_inspector{
+		//position: absolute;
+		top: 0px;
+		width: 45px;
+		height: 45px;
+		background-position-x: 50%;
+		background-position-y: 50%;
+		background-size: 25px;
+	}
+
+	#menu li.has-sub::after {
+		top: 17px;
+	}
+
+
+	// debug_line_wrapposition: relative;
+	.debug_line_wrap {
+		position: relative;
+		height: initial;
+		padding-left: 20px;
+		padding-right: 20px;
+		margin: 0;
+		z-index: 100;
+	}
+	.menu_wrapper_space {
+		height: 0px;
+	}
+	.debug_line_wrap_spacer {
+		height: 0px;
+	}
+
+}//end @media screen and (max-width: 980px) {

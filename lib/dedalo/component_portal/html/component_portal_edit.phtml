@@ -1,0 +1,66 @@
+<?php
+
+# VIEW HTML
+	
+	# html_delimiter
+	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'in', $modo, $lang);
+	
+	// INFO
+	// This "code" only builds var json_build_options and call again this component from javascript render_component_html
+	// debug_log(__METHOD__." json_build_options ".to_string($json_build_options), logger::DEBUG);
+	
+	$html_content  = '';
+	$html_content .= '<div id="'.$id_wrapper.'" class="wrap_component css_wrap_portal wrap_component_'.$modo.' wrap_component_view_full wrap_component_'.$tipo.'" ';
+	$html_content .= 'data-tipo="'.$tipo.'" ';
+	$html_content .= 'data-parent="'.$parent.'" ';
+	$html_content .= 'data-section_tipo="'.$section_tipo.'" ';
+	$html_content .= 'data-lang="'.$lang.'" ';
+	$html_content .= 'data-modo="'.$modo.'" ';
+	$html_content .= 'data-label="'.$label.'" ';
+	$html_content .= 'data-dato=\''.json_encode($dato).'\' ';
+	$html_content .= 'data-target_section_tipo=\''.$ar_target_section_tipo_json.'\' ';
+	$html_content .= 'data-component_name="'.$component_name.'" ';
+	$html_content .= 'data-component_info=\''.$component_info.'\' ';
+	# Paginations vars
+	$html_content .= 'data-max_records="'.$max_records.'" ';
+	$html_content .= 'data-offset="'.$offset.'" ';
+	$html_content .= 'data-n_rows="'.$n_rows.'" ';
+	$html_content .= '>';
+
+
+	# Loading
+	$html_content .= '<div class="loading_portal">';
+	# ETIQUETA (LABEL)
+	$html_content .= component_common_draw::draw_label($this);
+	#$html_content .= 'Loading data..';
+	$html_content .= '</div>';
+
+	
+	#
+	# JS Init component
+	$html_content .= '<script>';
+	# Init component
+	$init_options = new stdClass();
+		$init_options->id_wrapper 		= $id_wrapper;
+		$init_options->uid 				= $identificador_unico;
+		$init_options->context 			= $context;
+		$init_options->permissions 		= $permissions;
+		$init_options->component_name 	= $component_name;
+		$init_options->new_instance 	= true;
+	$html_content .= 'component_common.init('.json_encode($init_options).');';
+	$html_content .= '</script>';
+
+
+	$html_content .= '</div>';
+	
+
+
+	# Prepare content to show in page
+	//tools::prepare_content($html_content);
+
+	echo $html_content;
+
+
+	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'out', $modo, $lang);
+
+?>

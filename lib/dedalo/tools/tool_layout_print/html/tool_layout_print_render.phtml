@@ -1,0 +1,91 @@
+<?php
+
+
+$html='';
+
+	/**/
+	$html .= '<div class="top">';
+	$html .= "\n<div class=\"section_title \" > TOOL LAYOUT PRINT : $section_title</div>";
+	if(SHOW_DEBUG) {
+		$html .= "<div class=\"layout_debug_info\">context_name: $context_name</div>";
+	}
+	$html .= '</div>';
+	
+		
+		
+	#
+	# PAGES CONTAINER . Pages are added by javascript in this div
+	$html .= "<div id=\"render_msg\">";
+
+		$html .= "<div id=\"wrap_info_stats\" class=\"\">";
+
+			#
+			# INFO STATS
+			$html .= "<div id=\"info_stats\" class=\"\">";
+			$html .= " <span>".label::get_label('total_records')."</span> <strong>$n_records</strong><br>";
+			$html .= " <span>".label::get_label('total_pages')."</span> <strong>$n_pages</strong>";
+			$html .= "</div>";
+
+
+			#
+			# TRIGGER COMMAND
+			$html .= "<div id=\"render_pdf_response\" class=\"\">";
+			$html .= " <span class=\"printing_animated\"></span> <br><br>".label::get_label('rendering_pdf');	//<span class=\"css_spinner\"></span>
+			$html .= "</div>";
+
+		$html .= "</div>";
+
+
+
+		#
+		# DEBUG INFO
+		$html .= "<div id=\"render_pdf_response_debug\">";
+		$html .= "";
+		$html .= "</div>";
+			
+		
+
+		#
+		# MESSAGES
+		$html .= "<div>";
+		#$html .= "".implode("<br>", $ar_msg);
+		$html .= "</div>";
+
+
+		#
+		# PAGES HTML LINK
+		if(SHOW_DEBUG) {
+			
+			$html .= "<br> Pages html:";
+			if (isset($header_html_url)) {
+				#$html .= "<br>HEADER <a href=\"$header_html_url\" target=\"_blank\">$header_html_url</a>";
+			}
+			if (isset($footer_html_url)) {
+				$html .= "<br>Footer <br><a href=\"$footer_html_url\" target=\"_blank\">$footer_html_url</a>";
+			}
+			foreach ($urls_group_by_section as $key => $ar_url) {
+				$html .= "<hr><div>Page $key</div>";
+			foreach ($ar_url as $url) {
+				$html .= "<a href=\"$url\" target=\"_blank\">$url</a><br>";
+			}
+				$html .= "";
+			}
+			#$html .= "<br>command: <br><div>".$command."</div>";
+			#$html .= "<br>command (pre): <br><pre>".$command."</pre>";
+			/**/
+		}
+
+	
+	$html .= "</div>";//end #render_msg
+		
+		
+
+	#
+	# SCRIPT AJAX CALL
+	$html .= "<script>var render_pdf_data='".json_encode($render_pdf_data)."'; tool_layout_print.render_pdf(render_pdf_data)</script>";	
+
+	
+
+
+echo $html;
+?>

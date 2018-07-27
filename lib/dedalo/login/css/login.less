@@ -1,0 +1,153 @@
+/* CSS Document */
+
+
+.login_body {
+	background-image: url('../../themes/default/dedalo_icon_big.png');
+	background-repeat: no-repeat;
+	background-position: 0px top;
+	background-size: 527px 1024px ;/**/
+	height: 1024px;
+	position: absolute;
+	width: 100%;
+}
+/* WRAP DIV CONTAINER */
+.css_wrap_login {
+	color:#333;
+	width:auto;
+	display:none;
+	padding:25px;	
+	background-color: rgba(255,255,255,0.75);	
+	position: absolute;
+	/*left: 37%;
+	top: 20%;*/		
+	/*box-shadow: 1px 1px 8px #999999 inset;*/	
+	border:solid 1px #E6E6E6;
+	border-radius:8px;
+	width: 320px;
+
+	margin-left: auto;
+	margin-right: auto;
+	position: relative;
+	margin-top: 207px;
+	transition: all 0.25s ease-in-out;
+
+		@media screen and (max-width: 980px) {
+			margin-top: 35%;
+		}
+	}
+	.css_wrap_login .css_form {
+		text-align: center;
+	}
+	.maintenance_advice {
+		padding-bottom: 15px;
+		color: #F56500;
+		font-size: 1.6em;
+    	text-align: center;
+	}
+	.maintenance_mode_class {
+		opacity: 0.35;
+	}
+	/*-- LANG SELECTOR --*/
+	.css_wrap_login > .css_form > .dedalo_aplication_langs_selector {
+		margin-bottom: 19px;		
+		position: relative;		
+		font-size: 12px !important;
+		-webkit-appearance: none;
+		border: 1px;
+		border-style: solid;
+		border-color: #d2d2d2;
+		border-radius: 4px;
+		padding: 8px;
+		padding-right: 44px;
+		background-image: url('../../themes/default/select_2x.png');
+		background-repeat: no-repeat;
+		background-position-x: 95%;
+		background-position-y: center;
+		background-size: 10px 6px;
+		width: 100%;
+		height: 35px;
+		-moz-appearance: none;
+		text-indent: 0.01px;
+		text-overflow: '';		
+	}
+	/*-- LABELS --*/
+	.css_wrap_login label {
+		min-width:93px !important;
+		padding-top:6px!important;
+		text-align: right !important;
+		letter-spacing:1px !important;
+	}
+	/*-- INPUTS --*/
+	.css_wrap_login #login_username,
+	.css_wrap_login #login_password {
+		width:100%; 
+		min-height:2.5em;
+		margin-bottom:5px;	
+		font-weight: lighter;
+		letter-spacing:1px;
+		box-shadow: none;
+		text-align: left;
+		padding-left: 10px;
+		font-size: 1.0em;
+	}
+	
+	/*-- BUTTON LOGIN --*/
+	.css_wrap_login .css_button_login {
+		margin: 0;
+		margin-top: 10px;
+		padding: 10px;
+		position: relative;
+		font-size: 1.31em;
+		width: 100%;
+	}	
+	.css_wrap_login .login_ajax_response {
+		display: block;
+		padding: 0px;
+		text-align: center;
+		min-height: 20px;
+		}		
+		.css_wrap_login .login_ajax_response .error, .css_wrap_login .login_ajax_response .ok {
+		    width: 100%;
+		    padding: 8px;
+		    margin: 0;
+		}
+		.css_wrap_login .login_ajax_response .ok {
+			margin-top: 18px;
+			margin-bottom: 10px;
+			background-color: rgba(0, 204, 0, 0.69);
+		}
+	.building_backup {
+		background-color: #f7f7f7;
+		color: #999999;
+		padding: 6px;
+		margin: 2px;
+		border-radius: 3px;
+		display: block;
+	}
+	.dedalo_version {
+		color: #a1a1a1;
+		font-size: 0.9em;
+	}
+
+
+	.set_pasw_input {
+		text-align: right;
+		padding-top: 15px;
+		padding-bottom: 10px;
+		width: 100%;
+		text-align: left;			
+		}
+	.set_button {
+		//padding-right: 20%;
+		padding-top: 10px;		
+		} 
+		.set_button > input {
+			cursor: pointer;
+			width: 100%;
+		}
+
+	.css_wrap_login input[type="text"], 
+	.css_wrap_login input[type="password"] {
+		width: 100%;
+		padding: 5px;
+	}

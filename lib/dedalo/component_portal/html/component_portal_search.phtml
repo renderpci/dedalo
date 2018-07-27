@@ -1,0 +1,45 @@
+<?php
+
+	# VISUALIZADOR HTML	
+	
+	# html_delimiter
+	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'in');
+
+	print "<div class=\"css_wrap_portal wrap_component\" id=\"{$id_wrapper}\" ";
+	print "data-tipo=\"{$tipo}\" ";
+	print "data-lang=\"{$lang}\" ";
+	print "data-section_tipo=\"{$section_tipo}\" ";
+	print "data-parent=\"{$parent}\" ";
+	print "data-modo=\"{$modo}\" ";
+	print "data-dato=\"{$valor}\" ";
+	print "data-component_name=\"{$component_name}\" ";
+	print ">";
+	
+		
+		# ETIQUETA (LABEL)
+		$html_label = component_common_draw::draw_label($this);
+		
+		# CONTENIDO (INPUT)
+		$html_contenido = '';
+		switch($permissions) {
+				
+			case 0	:	$html_contenido .= "<span class=\"css_span_dato\"> ".label::get_label('sin_acceso')." (portal)</span>";
+						break;
+							
+			case 1	: 	$html_contenido .= "<span class=\"css_span_dato\">$valor</span>";
+						break;	
+							
+			case 2	:
+			case 3	:
+						$html_contenido .= "<span class=\"css_span_dato\"> portal </span>";
+						break;	
+		}		
+		
+		print $html_contenido;
+	
+	
+	print "</div>"; //wrap
+
+	# html_delimiter
+	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'out');
+?>

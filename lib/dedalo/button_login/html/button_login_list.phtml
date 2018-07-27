@@ -1,0 +1,36 @@
+<?php
+
+	# VISUALIZADOR HTML	
+
+			
+	
+	print "\n<!-- BUTTON LOGIN [tipo:$tipo id_matrix:$id] -->";
+
+	print "\n<div class=\"css_wrap_button_send\" >";
+	
+	# ETIQUETA (LABEL)
+	//$html_label = component_common_draw::draw_label($this);
+	
+	# CONTENIDO (INPUT)
+	$html_contenido = '';
+	
+	switch($permissions) {
+			
+		case 0	:	$html_contenido .= "";
+					break;
+						
+		case 1	: 	$html_contenido .= "";
+					break;	
+						
+		case ($permissions>=2)	:
+		
+					$html_contenido .= "\n <input class=\"css_button_send\" type=\"button\" onclick=\"Login(this)\" data-tipo=\"{$target_tipo}\" value=\"$label\" title=\"$html_title\" />";											
+	}
+	
+	
+	# PRINT HTML
+	print $html_contenido;
+	
+	
+	print "\n</div>\n\n"; //wrap
+?>

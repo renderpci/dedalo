@@ -1,0 +1,293 @@
+// Vars
+@common_css: "../../../common/css";
+
+// Usage
+@import "@{common_css}/library.less";
+
+
+.tool_indexation_icon {
+	background-color: @color_indexation;
+	background-image: url(../../../themes/default/icon_structuration_hover.svg);
+} 
+
+
+
+/* PAGE 
+-------------------------------------- */
+.wrap_tool_indexation_page {
+	display: block;
+	width: 99.9%;
+	text-align: left;
+	}
+	.wrap_tool_indexation_page .content_data {
+		width: 100%;
+	}
+
+.tool_indexation_delete_icon {
+	background-position: -456px 0px;
+	margin-right: 4px;
+}
+
+
+.left_side, .right_side {
+	width: 100%;
+	height: 100%;
+}
+
+.left_side {
+	/*
+	clear: left;
+	float: left;
+	width: 53%;
+	padding: 0;
+	margin: 0;
+	
+	background-color: #CAE42C;
+	*/
+	}
+
+.right_side {
+	/*
+	float: right;
+	width: 47%;
+	padding:0;
+	margin: 0;
+	
+	background-color: #8DE2E4;
+	*/
+	}
+
+
+	/* LEFT SIDE
+	------------------------------------------- */
+	.left_side .indexation_page_tesauro {
+		//background-color: aqua;
+		height: 100%;
+		display: table;
+		width: 100%;
+		overflow: hidden;
+		position: relative;
+		}
+
+
+
+	/* AV IFRAME
+	------------------------------------------- */	
+	.left_side .media_frame {
+		width: 100%;
+		height:99.40%;
+		//height: 70%;
+		//max-height: 460px;
+		padding: 0;
+		margin: 0;
+		overflow: hidden;
+		border: none;
+		//background-color: #6ED03E
+		display: none;
+		}
+
+
+
+	.left_side .indexation_page_tesauro {
+		/*
+		position: absolute;
+		height:100%;
+		width: 100%;*/
+	}
+	/* THESAURUS IFRAME
+	------------------------------------------- */	
+	.left_side .tesaurus_frame {
+		width: 100%;
+		height:99.40%;
+		padding: 0;
+		margin: 0;
+		overflow: hidden;
+		border: none;
+	}
+
+/* TEXT (COMPONENT TEXT AREA) */
+.right_side .indexation_page_text {
+	display: table;
+	width: 100%;
+	//height: 350px;
+
+	height: 100%;
+	overflow: auto;
+	max-height: 60%;	// fallback for browsers without support for calc() 
+	max-height: ~"calc(100% - 320px)";
+
+	//background-color: #81D980
+}
+/* INDEX LIST */
+.right_side .indexation_page_list {
+	padding: 10px;
+	}
+	.right_side .indexation_page_list .content_data {
+		display: block;
+		width: 100%;
+	}
+
+.terminos_list {
+	margin-top: 10px;
+	padding: 5px;
+}
+.terminos_list_title {
+	margin-bottom: 8px;
+	position: relative;
+	left: -3px;	
+	text-transform:capitalize;
+	font-weight: bold;
+}
+li.tool_indexation_index_list_termino {
+	width: auto;
+	max-width: 580px;
+	text-overflow: ellipsis;
+	overflow: hidden;
+	white-space: nowrap;
+	line-height: 1.6em;
+	clear: both;
+}
+.tool_indexation_show_fragment {
+	background-position: -216px -48px;
+	float: right;
+	top: 16px;
+    right: 15px;
+}
+.tool_indexation_delete_fragment {
+
+}
+/* fragment_id_info label
+------------------------------------- */
+.fragment_id_info {
+    text-transform: uppercase;
+    font-weight: bold;
+    font-size: 12px;
+    color: #ffffff;
+    background-color: #ffab01;
+    text-shadow: none;
+    padding: 5px;
+    padding-left: 8px;
+    padding-right: 8px;
+    padding-bottom: 4px;
+    border-radius: 4px;
+}
+
+.wrap_tag_state_selector {
+	text-transform: capitalize;
+	}
+	.wrap_tag_state_selector select {
+		margin-left: 5px;
+		margin-right: 10px;
+	}
+
+.top_id_selector {
+	padding: 2px;
+	display: inline-block;
+	}
+	.top_id_selector label {
+		padding-left: 10px;
+		padding-right: 5px;
+		text-transform: capitalize;
+	}
+
+
+
+.wrap_tool_indexation_page label.css_label.tooltips {
+	max-width: 250px;
+}
+
+
+
+
+/* TABS
+--------------------------------------------------------- */
+	#section_tab_1:checked ~ #section_tab_1_content,
+	#section_tab_2:checked ~ #section_tab_2_content
+	{ 
+		display: block; 
+	}
+	.common_line {
+		float: left;
+	}
+	.css_section_tab_content > label {
+		float: right;
+		text-transform: capitalize;
+	}
+	.css_section_tab_content > section {
+		clear: both;
+	}
+	div.selected_fragment {
+		margin: 0;
+	}
+	.css_section_tab_content>section {
+		padding-top: 0;
+	}
+	.section_tab .btn {
+		margin: 15px;
+		margin-left: 1px;
+	}
+
+
+
+
+/* SPLIT PANES
+--------------------------------------------------------- */
+	#indexation_container {
+		width: 100%;
+		height: 96.8%; // fallback
+		height: ~"calc(100% - 30px)"; // Note the strange format ~"value" is necessary for less
+
+		position: absolute;
+	}
+	.split {
+	-webkit-box-sizing: border-box;
+	   -moz-box-sizing: border-box;
+			box-sizing: border-box;
+
+	overflow-y: auto;
+	overflow-x: hidden;
+	width: 100%;
+	//display: block;
+	display: table;
+	}
+
+	.gutter {
+		background-color: #eee;
+		background-repeat: no-repeat;
+		background-position: 50%;
+		cursor: move;
+		cursor: grab;
+		cursor: -moz-grab;
+		cursor: -webkit-grab;
+		}
+		.gutter:active { 
+			cursor: grabbing;
+			cursor: -moz-grabbing;
+			cursor: -webkit-grabbing;
+		}
+
+	@tool_common_path: '../../../tools/tool_common';
+	.gutter.gutter-horizontal {
+		background-image: url('@{tool_common_path}/images/grips/vertical.png');
+	}
+	.gutter.gutter-vertical {
+		background-image: url('@{tool_common_path}/images/grips/horizontal.png');
+	}
+
+	.split.split-horizontal, .gutter.gutter-horizontal {
+		height: 100%;
+		float: left;
+	}
+
+
+.tool_indexation_fast_lang_switch {
+	top: 27px;
+	right: 5px;
+	opacity: 1;
+	height: 22px;
+}
+
+
+.lang_info_debug {
+	top: -8px;
+}

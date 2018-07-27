@@ -1,0 +1,59 @@
+/* Remove non used elements of view
+----------------------------------------------- */
+	#header, #footer {
+		display: none;
+	}
+	#content {
+		padding: 0;
+		margin: 0;
+	}
+	body {
+		background-color: #000000;
+	}
+
+
+
+/* Slide
+----------------------------------------------- */
+	#slider_content{
+	    height: 100vh;
+	    width: 100vw;
+	    position: relative;
+	    overflow: hidden;
+	}
+
+
+	#slidebox {
+		position: relative;
+		//height: 100vh;
+		//width: 100vw;
+		height: 100%;
+	    width: 100%;
+		border: none;
+	}
+
+	//.slides {
+	//	height: 100vh;
+	//    width: 100vw;
+	//}
+	.flexslider .slides li { 
+		height: 100vh; 
+		width: 100vw;
+		overflow: hidden;
+	}
+
+	.imagen_slider {
+		//height: 100vh;
+	    //width: 100vw;
+	    height: 100%;
+	    width: 100%;
+	    background-size: contain;
+	    background-position: center;
+	    background-repeat: no-repeat;
+	    background-color: #000000;
+	}
+
+	// Hide direction navigators
+	.flex-direction-nav {
+		display: none !important;
+	}

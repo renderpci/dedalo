@@ -1,0 +1,65 @@
+<?php
+
+	# VISUALIZADOR HTML	
+
+	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'in', $modo, $lang);
+
+	print "<div class=\"wrap_component css_wrap_date wrap_portal_list\" id=\"{$id_wrapper}\" ";
+	print "data-tipo=\"{$tipo}\" ";
+	print "data-lang=\"{$lang}\" ";
+	print "data-section_tipo=\"{$section_tipo}\" ";
+	print "data-parent=\"{$parent}\" ";
+	print "data-modo=\"{$modo}\" ";
+	print "data-from_modo=\"{$from_modo}\" ";
+	print "data-dato='{$dato}' ";
+	print "data-component_name=\"{$component_name}\" ";
+	print "data-component_info='{$component_info}' ";
+	print ">";
+		
+	# CONTENIDO (INPUT)
+	$html_content = '';
+	switch(true) {
+			
+		case ($permissions==0)	:	$html_content .= "\n <span class=\"css_span_sin_acceso\">".label::get_label('sin_acceso')."</span>";		
+					break;
+					
+		case ($permissions==1)	:
+			
+					$html_content .= "\n <span class=\"css_span_dato\">$valor</span>";
+					
+					break;
+
+		case ($permissions>=2)	:
+
+					if($modo =='portal_list'){
+
+						if(empty($dato)){
+							$html_content .= " <span class=\"css_number_span_edit_in_portal\" onclick=\"component_common.change_mode_component(this, '$modo','edit')\">";
+							$html_content .= "</span>";
+							break;	
+							#$edit_class = 'css_number_span_edit_in_portal';	
+						}else{
+							$html_content .= " <span class=\"css_number_span\" onclick=\"component_common.change_mode_component(this, '$modo','edit')\">$valor</span>";
+							#$edit_class = 'css_number_span';
+						}
+						#$html_content .= " <span class=$edit_class onclick=\"component_common.change_mode_component(this, '$modo','edit')\">";
+							
+					}else{
+
+						$html_content .= " <span class=\"number_in_list css_span_dato\">$valor</span>";
+					}
+
+
+					break;
+					
+					
+							
+	}
+
+	# Prepare content to show in page
+	tools::prepare_content($html_content);
+	
+	# PRINT HTML	
+	print $html_content;	
+	
+?>

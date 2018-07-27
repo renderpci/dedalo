@@ -1,0 +1,22 @@
+<?php
+
+	# VISUALIZADOR HTML	
+	
+			
+	# CONTENIDO
+	$html_contenido  = '';
+	$html_contenido .= "<div class=\"list_thesaurus_element relation_model_list_thesaurus\" onclick=\"component_relation_model.show_component_in_row_thesaurus(this)\"
+	data-section_tipo=\"$section_tipo\"
+	data-parent=\"$parent\"
+	data-tipo=\"$tipo\"
+	data-lang=\"$lang\"
+	data-modo=\"edit\"
+	>";
+	$html_contenido .= $icon_label;
+	$html_contenido .= "</div>";
+	
+	
+	# PRINT HTML
+	print $html_contenido;	
+	
+?>

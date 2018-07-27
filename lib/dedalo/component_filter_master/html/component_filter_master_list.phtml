@@ -1,0 +1,37 @@
+<?php
+
+	# VISUALIZADOR HTML	
+	
+	
+	# CONTENIDO (INPUT)
+	$html_content = '';
+	switch(true) {
+			
+		case $permissions===0:
+					$html_content .= "";
+					break;	
+						
+		case ($permissions>=1):		
+								
+					if (!empty($dato)) {
+
+						$html_content .= "<ul>";
+						foreach ($ar_proyectos_section as $key => $row) {
+
+							if (!locator::in_array_locator( $row->locator, (array)$dato )) {
+								continue;
+							}
+
+							$html_content .= "<li title=\"project_id: $row->locator->section_id\">$row->label</li>";
+						}
+						$html_content .= "</ul>";
+					}
+					break;
+										
+	}//end switch($permissions) {
+	
+	
+	# PRINT HTML
+	print $html_content;
+	
+?>

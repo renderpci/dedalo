@@ -1,0 +1,122 @@
+<?php
+
+	# VISUALIZADOR HTML	
+
+	
+	# html_delimiter
+	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'in');
+
+	print "<div class=\"wrap_component css_wrap_{$component_name} wrap_component_{$tipo}\" id=\"{$id_wrapper}\" ";
+	print "data-tipo=\"{$tipo}\" ";
+	print "data-section_tipo=\"{$section_tipo}\" ";
+	print "data-parent=\"{$parent}\" ";
+	print "data-lang=\"{$lang}\" ";
+	print "data-modo=\"{$modo}\" ";
+	print "data-component_name=\"{$component_name}\" ";
+	print "data-component_info='{$component_info}' >";
+	
+	# ETIQUETA (LABEL)
+	$html_label = component_common_draw::draw_label($this);
+	
+	# CONTENIDO (INPUT)
+	$html_content = '';
+	switch(true) {	
+			
+		case $permissions===0:	$html_content .= "";	
+					break;
+						
+		case $permissions===1: 	
+					foreach ($dato as $key => $value) {
+						$html_content .= " <span class=\"css_span_dato \">".htmlentities($value)."</span>";
+					}
+					break;						
+		
+		case ($permissions>=2):
+
+				if(SHOW_DEBUG) {
+					#dump($dato, ' $dato');
+				}
+				$key  ='full';
+					#dump($dato, " dato ".to_string());
+				$value= (string)json_encode($dato,JSON_PRETTY_PRINT);
+
+				$editor_id = $identificador_unico.'_'.$key;
+
+				##
+				# Text area
+				$html_content .= "<textarea class=\"css_input_text_json\" ";
+				$html_content .= "onchange=\"component_json.Save(this)\" ";
+				$html_content .= "id=\"{$editor_id}\"  ";
+				$html_content .= "name=\"{$input_name}\" ";
+				$html_content .= "title=\"$html_title\" ";
+				$html_content .= "data-tipo=\"{$tipo}\" ";
+				$html_content .= "data-lang=\"{$lang}\" ";
+				$html_content .= "data-section_tipo=\"{$section_tipo}\" ";
+				$html_content .= "data-parent=\"{$parent}\" ";
+				$html_content .= "data-key_name=\"{$key}\" ";
+				$html_content .= "data-context_name=\"$context_name\" ";
+				$html_content .= ">$value</textarea>";
+				
+				
+				#
+				# JSON EDITOR (EXPERIMENTAL)
+				$html_content .= "<div id=\"{$editor_id}_save_document\" class=\"saveDocument\">Save</div>";
+				$html_content .= "<div id=\"{$editor_id}_container\" class=\"editor_json\"></div>";
+				/*
+				$html_content .= "<script>
+				  $('#$editor_id').hide()
+				  var options = {
+				    mode: 'code',
+				    modes: ['code', 'form', 'text', 'tree', 'view'], // allowed modes
+				    error: function (err) {
+				      alert(err.toString());
+				    }
+				  };  
+				  // create the editor
+				  var container = document.getElementById('editor_json');
+				  var editor = new JSONEditor(container,options, $value);
+				  // Send JSON text to input and force save
+				  document.getElementById('saveDocument').onclick = function () {
+				    $('#$editor_id')
+				    	.val(editor.getText())
+				    	.trigger('change');
+				  	};
+				</script>";
+				*/
+				#$html_content .= "<script>";
+				#$html_content .= "component_json.init({\"editor_id\":\"{$editor_id}\"})";
+				#$html_content .= "</script>";
+
+				#
+				# JS Init component
+				$html_content .= '<script>';
+				# Init component
+				$init_options = new stdClass();
+					$init_options->component_name 	= $component_name;
+					$init_options->wrapper_id 		= $id_wrapper;
+					$init_options->editor_id 		= $editor_id;
+				$html_content .= 'component_common.init('.json_encode($init_options).');';
+				$html_content .= '</script>';
+				break;						
+	}
+
+	# INIT : Init text editor	
+	#$html_content .= "<script>component_html_text.init('$identificador_unico','$modo','$propiedades_json');</script>";
+	
+	
+	# Prepare content to show in page
+	tools::prepare_content($html_content);
+
+	
+	# PRINT HTML
+	print $html_label;
+	print $html_content;
+	
+	
+	print "</div>"; //wrap
+
+	# html_delimiter
+	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'out');
+
+
+?>

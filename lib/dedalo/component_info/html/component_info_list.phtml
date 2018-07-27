@@ -1,0 +1,30 @@
+<?php
+
+	# VISUALIZADOR HTML	
+
+	$html = '';
+	switch(true) {
+			
+		case $permissions===0 :
+					$html .= "";		
+					break;
+					
+		case $permissions>=1 :
+					$html .= "<div class=\"widgets_wrapper\">";
+					foreach ((array)$ar_widget_html as $key => $widget_html) {
+						$html .= $widget_html;
+						#$html .= "<hr>";
+					}
+					$html .= "</div>";
+					break;							
+	}	
+
+	if(SHOW_DEBUG===true && $modo==='edit') {
+		$html .= "<span class=\"component_info_debug debug_info\">".exec_time($start_time)."</span>";
+	}
+
+	
+	# PRINT HTML	
+	print $html;
+	
+?>

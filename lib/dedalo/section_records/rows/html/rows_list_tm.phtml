@@ -1,0 +1,82 @@
+<?php
+	
+	# VISUALIZADOR HTML	
+
+	print "<!-- ROWS [$section_id] -->";	
+
+	# CONTENIDO (INPUT)
+	$html_content  = "<tr class=\"\" data-dato='$rel_locator'>";		
+	
+	switch(true) {
+			
+		case $permissions==0	:
+					$html_content .= "<span class=\"css_span_dato\">".label::get_label('sin_acceso')."</span>";
+					break;
+						
+		case ($permissions>=1)	:
+					
+					if( !is_array($ar_valor) || count($ar_valor)==0 ) {
+						
+						$html_content .= "<td class=\"section_list_td_border\">";
+						#$html_content .= "No records found.. ";
+						$html_content .= "</td>";
+						
+					}else{
+					
+						# TD ID
+						$title=null;
+						if(SHOW_DEBUG===true) $title .= "section_id: $section_id";
+						$html_content .= "<td class=\"section_list_td_border section_list_td_row id_column\" title=\"$title\">";		
+						
+							if(SHOW_DEBUG===true) {
+								$html_content .= "<mark style=\"color:#a3a3a3;padding-right:5px\">$section_id</mark>";
+							}
+
+							# SECTION_ID TEXT
+							$html_content .= "  $section_id ";							
+							
+							#
+							# BUTTON RESTORE
+							$title = label::get_label('recuperar') .' '.label::get_label('registro');
+							if(SHOW_DEBUG===true) $title .= " id time machine: $id_time_machine";
+					        $html_content .= "
+					        <!-- BUTTON RECOVER -->
+					        <div class=\"icon_bs tool_time_machine_goback_icon link\" title=\"$title\"
+					        data-tipo=\"$section_tipo\"
+					        data-section_id=\"$section_id\"
+					        data-id_time_machine=\"$id_time_machine\"
+					        onclick=\"tool_time_machine.section_records_recover_section(this)\"
+					        ></div> ";
+
+					        $html_content .= label::get_label('recuperar');
+
+
+							# DEBUG INFO
+							if(SHOW_DEBUG===true) {
+								#$html_content .= " <span class=\"css_span_debugger\" id=\"debugger_{$id}\" >{$id}</span>";	
+							}
+							
+						$html_content .= "</td>";		
+						
+						# TD DATOS
+						foreach($ar_valor as $component_tipo => $valor_list) {
+
+							# aditional td css selectors
+							$modelo_name 	 = RecordObj_dd::get_modelo_name_by_tipo($component_tipo, true);
+							$td_css_selector = 'td_'.$modelo_name;
+
+							$html_content .= "<td class=\"section_list_td_border section_list_td_row $td_css_selector\" data-tipo=\"$component_tipo\">";
+							$html_content .= "<div>";
+							$html_content .= $valor_list;
+							$html_content .= "</div>";
+							$html_content .= "</td>";
+						}
+					}
+	}
+	$html_content .= "</tr>";
+	
+	# PRINT HTML
+	print $html_content;
+	
+
+?>

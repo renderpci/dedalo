@@ -1,0 +1,365 @@
+<?php
+
+	# VISUALIZADOR HTML	
+/*
+if($this->generate_json_element===true) {
+	
+	$html_content = '';
+	$html_content .= '<div id="'.$id_wrapper.'">';
+
+	$json_build_options = json_encode($this->get_json_build_options());
+	#dump($json_build_options, ' $json_build_options ++ '.to_string());
+	$html_content .= "<script>component_portal.init();section.render_component_html( ".$json_build_options." );</script>";
+	#$html_content .= "<script>console.log('$json_build_options')</script>";
+
+	$html_content .= '</div>';
+
+	# Prepare content to show in page
+	//tools::prepare_content($html_content);
+
+	echo $html_content;
+
+}else{
+*/
+	# html_delimiter
+	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'in');
+	
+
+	print "<div id=\"portal_table_{$tipo}\" class=\"wrap_component css_wrap_portal wrap_component_{$modo} wrap_component_{$edit_view} wrap_component_{$tipo}\" ";
+	print "id=\"{$id_wrapper}\" ";
+	print "data-tipo=\"{$tipo}\" ";
+	print "data-lang=\"{$lang}\" ";
+	print "data-section_tipo=\"{$section_tipo}\" ";
+	print "data-parent=\"{$parent}\" ";
+	print "data-modo=\"{$modo}\" ";
+	print "data-component_name=\"{$component_name}\" ";
+	print "data-component_info='{$component_info}' ";
+	print "data-dato='{$valor}' ";
+	print "data-target_section_tipo='{$ar_target_section_tipo_json}' ";
+	print ">";
+	
+		
+		# ETIQUETA (LABEL)
+		$html_label = component_common_draw::draw_label($this);
+
+		
+		# CONTENIDO (INPUT)
+		$html_contenido = '';
+		switch(true) {
+				
+			case ($permissions<1):	
+				$html_contenido .= "";
+				break;
+							
+			case ($permissions>=1):
+
+				#
+				# HEADER ROW HTML
+					#$html_contenido .= "<div class=\"portal_header_row \">";
+				
+					#
+					# BUTTONS
+					if ($this->html_options->buttons && ($show_button_new===true || empty($dato)) ) {
+						
+						#
+						# BUTTON NEW HTML
+						if( $permissions>=2 && $modo!='print') {
+							foreach ($ar_target_section_tipo as $current_target_section_tipo) {										
+								$button_new = "<div class=\"css_button_generic btn_new_ep\" onclick=\"component_portal.new_portal_record(this)\"
+								data-portal_tipo=\"{$this->tipo}\" 
+								data-portal_parent=\"{$this->parent}\"
+								data-portal_section_tipo=\"{$this->section_tipo}\"
+								data-target_section_tipo=\"{$current_target_section_tipo}\"
+								title=\"parent:$parent - tipo:$tipo\" >";
+								$button_new .= "<div class=\"icon_bs link new_portal_record\"></div> ";
+								$button_new .= "<span>";
+								$button_new .= ''. RecordObj_dd::get_termino_by_tipo($current_target_section_tipo, DEDALO_DATA_LANG);	//.': '.label::get_label('nuevo');#. " $label" ;
+								$button_new .= "</span>";
+								$button_new .= "</div>";
+
+								$html_contenido .= $button_new;
+								break; // Only first for now
+							}
+						}
+						
+						#
+						# BUTTON SELECT EXISTING RECORD HTML (BUTTON TOOL_PORTAL)	
+						if($modo!='print') {
+													
+							foreach ($ar_target_section_tipo as $current_target_section_tipo) {
+								$button_select  = '';
+								$button_select .= "<div class=\"css_button_generic btn_new_ep\" onclick=\"tool_common.open_tool_portal(this)\" ";
+								$button_select .= "data-tipo=\"{$tipo}\" ";
+								$button_select .= "data-top_tipo=\"".TOP_TIPO."\" ";
+								$button_select .= "data-parent=\"{$parent}\" ";
+								$button_select .= "data-section_tipo=\"{$section_tipo}\" ";
+								$button_select .= "data-target_section_tipo=\"{$current_target_section_tipo}\" ";
+								$button_select .= "title=\"parent:$parent - tipo:$tipo\" ";
+								$button_select .= ">";
+								$button_select .= "<div class=\"icon_bs link find_portal_record\"></div> ";
+								$button_select .= "<span>";
+								$button_select .= ''. RecordObj_dd::get_termino_by_tipo($current_target_section_tipo, DEDALO_DATA_LANG);	//.': '.label::get_label('existente');
+								$button_select .= "</span>";
+								$button_select .= "</div>";
+								$html_contenido .= $button_select;
+							}//end foreach ($ar_target_section_tipo as $current_target_section_tipo) {
+							
+						}//end if($modo!='print')
+
+						#
+						# VIEW MODE ICON BTN_VIEW_TOOGLE
+						if($modo!='print') {
+							$button_toggle_view = "<div class=\"btn_view_toogle btn_view_mosaic\" onclick=\"component_portal.toggle_views(this)\"
+							data-view=\"mosaic\"></div>";
+							$html_contenido .= $button_toggle_view;
+						}
+					}//end buttons if ($show_button_new===true || !is_array($dato))
+					
+					#$html_contenido .= "</div><!-- /portal_header_row -->";
+
+				#
+				# SECTION HTML (LIST ROWS)
+				#
+				# $html_contenido .= "<div id=\"section_list_rows_content_div_{$this->tipo}\" class=\"section_list_rows_content_div portal_table_wraper\" >";
+	
+				if (isset($this->edit_view_options)) {
+					# Config from propiedades
+					$element_width 	= $this->edit_view_options->element_width;
+					$element_height = $this->edit_view_options->element_height;
+				}else{
+					# Defaults
+					$element_width 	= '20%';
+					$element_height = '100px';
+					debug_log(__METHOD__." Using defaults to view mosaic images portal_tipo:$tipo ($element_width x $element_height) ".to_string(), logger::DEBUG);
+				}
+				$image_styles = "width:$element_width;height:$element_height";
+				
+				
+				#
+				# MOSAIC ROWS
+				# dump($dato, ' dato ++ '.to_string());	
+				$mosaic_html  = '';
+				$mosaic_html .= "<ul class=\"tbody mosaic_ul\">";						
+				$row_number=0; foreach((array)$dato as $key => $current_locator) {
+
+					$row_number++;
+
+					$current_section_id 	= $current_locator->section_id;
+					$current_section_tipo 	= $current_locator->section_tipo;
+					$current_component_tipo = isset($current_locator->component_tipo) ? $current_locator->component_tipo : null;
+					$current_tag_id 		= isset($current_locator->tag_id) ? $current_locator->tag_id : null;
+
+					$current_row = $this->row_in_result( $current_locator, $rows_data->ar_records );
+						#dump($current_row, ' $current_row ++ '.to_string($current_locator));				
+
+					#
+					# ROWS_LIMIT Limit showed rows
+					if ($this->html_options->rows_limit && $row_number > $this->html_options->rows_limit) {
+						debug_log(__METHOD__." Limited number of records to $this->html_options->rows_limit. Skipped next records ".to_string(), logger::DEBUG);
+						break; # Limit number of records to sowh
+					}
+
+					#
+					# REL_LOCATOR : locator like object
+						$rel_locator = json_encode($current_locator);
+
+					#
+					# SECTION ID
+						$section_id 		 = $current_section_id;
+						$target_section_tipo = $current_section_tipo;
+
+					# Permissions of target section. Applied to delete button									
+						$permission_section = common::get_permissions($target_section_tipo,$target_section_tipo);
+
+					#
+					# LI
+						# dump($ar_columns, ' ar_columns ++ '.to_string());
+						$sort_id  = !empty($rel_locator) ? $rel_locator : 0;
+						$mosaic_html .= "<li class=\"portal_element_sortable mosaic_li\" data-dato='$sort_id' style=\"$image_styles\">";
+						foreach ($ar_columns as $column_tipo => $column_label) {
+
+							if ($column_tipo==='edit') {
+								# Skip automatic created column 'edit'
+								continue;
+							}
+
+							$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($column_tipo, true);
+							if ($modelo_name!=='component_image' && $modelo_name!=='component_av'&& $modelo_name!=='component_portal') {
+								# Only accept component_image as column
+								debug_log(__METHOD__." Skipped component $column_label ($column_tipo) modelo_name: $modelo_name. Only component_image are valid in mosaic mode ", logger::DEBUG);
+								continue;
+							}					
+						
+							#
+							# EDIT BUTTON
+								$context_http_query = http_build_query($context);
+								$url  = htmlspecialchars("?t=$target_section_tipo&id=$section_id&m=edit&portal_section_tipo={$section_tipo}&{$context_http_query}");
+								$url .= "&locator=". urlencode($rel_locator);
+								$url .= "&top_tipo=".TOP_TIPO."&top_id=".TOP_ID;
+								$url .= "&exclude_elements=".$exclude_elements;
+
+								# Breadcrumb : add bc_path = url vars
+								$bc_path = tools::get_bc_path();
+									#dump($bc_path, ' bc_path');
+								$url 	.= "&bc_path=". base64_encode($bc_path);
+
+								# id_path
+								$id_path = tools::get_id_path($section_tipo.'.'.$section_id);
+									#dump($section_id_path,"id_path - $section_id");
+								$url 	.= "&id_path=". $id_path;
+									
+
+								# Title
+								$title = label::get_label('editar_registro').' '.$section_id;
+								if (!empty($current_tag_id)) {
+									$title .= ' - '.$current_component_tipo.' - '.$current_tag_id;
+								}
+								if(SHOW_DEBUG) $title .= " url:$url  modo $modo, context $context->context_name";
+
+								if (empty($current_row['id'])) {
+									$mosaic_html .= "<div class='div_image_link link' title=\"$title\" onclick=\"alert('Deleted record')\"> ! </div>";
+								}else{
+									$mosaic_html .= "<a href=\"javascript:void(0);\" class=\"button_edit link\" onclick=\"component_portal.open_record(this,'$url')\"
+													id=\"portal_link_open_{$section_tipo}_{$section_id}\"
+													title=\"$title\">";
+										# SECTION_ID TEXT
+										/*
+										$mosaic_html .= "<span class=\"section_id_number\">";
+										$mosaic_html .= " $section_id ";
+										$mosaic_html .= "</span>";
+										*/
+									$mosaic_html .= "</a>";											
+								}
+
+							#
+							# DELETE RECORD BUTTON
+								if ($permissions>=2) {
+									$title 		  = label::get_label('borrar') .' '. label::get_label('recurso');									
+									$mosaic_html .= "<a href=\"javascript:void(0);\" class=\"id_column_buttons button_delete link\" onclick=\"component_portal.open_delete_dialog(this)\"
+												data-rel_locator='{$rel_locator}'
+												data-permission_section=\"{$permission_section}\"
+												title=\"$title\">";
+									
+									if(SHOW_DEBUG) {
+										/*
+										$mosaic_html .= "<mark class=\"row_debug_info\">";
+										$mosaic_html .= $target_section_tipo;
+										$mosaic_html .= '-'.$current_section_id;
+										$mosaic_html .= isset($current_component_tipo) ? '-'.$current_component_tipo : '';
+										$mosaic_html .= isset($current_tag_id) ? '-'.$current_tag_id : '';
+										$mosaic_html .= "</mark>";
+										*/
+									}
+									$mosaic_html .= "</a>";
+								}
+
+							#
+							# COMPONENTS COLUMNS
+								# aditional td css selectors
+								$td_css_selector = 'li_'.$modelo_name.' li_'.$column_tipo;
+								
+								$column_value = isset($current_row->$column_tipo) ? $current_row->$column_tipo : null;
+								$value = (string)$modelo_name::render_list_value($column_value, // value string from db
+																				 $column_tipo, // current component tipo
+																				 $section_id, // current portal row section id
+																				 'portal_list_view_mosaic', // mode fixed list
+																				 DEDALO_DATA_LANG, // current data lang
+																				 $target_section_tipo, // current section tipo
+																				 $section_id, // Current portal parent
+																				 $current_locator, // Used by text_area to select fragment
+																				 $tipo
+																				);
+
+								
+								#
+								# TD COLUMN
+								$mosaic_html .= "<div class=\"$td_css_selector\">";
+								if (is_string($value)) {
+									$mosaic_html .= $value;
+								}else{
+									$mosaic_html .= to_string($value);
+								}
+								$mosaic_html .= "</div>";
+							
+
+						}//end foreach ($ar_columns as $column_tipo => $column_label)
+						$mosaic_html .= "</li>";
+
+				}//end foreach((array)$dato as $key => $current_locator)
+
+
+				$mosaic_html .= "</ul>";
+				
+
+				$html_contenido .= $mosaic_html;
+
+				
+				#$html_contenido .= "</div>";
+
+
+
+				#
+				# DRAG ACTIVATE (for current table)
+				#
+				if ($this->html_options->sortable) {
+					$html_contenido .= "<script>component_portal.active_portal_table_sortable('portal_table_{$tipo}', '$dragable_connectWith')</script>";
+				}
+				break;
+		}//end switch($permissions)
+
+
+		# Prepare content to show in page
+		tools::prepare_content($html_contenido);	
+		
+
+		# PRINT HTML
+		if ($show_button_new && $this->html_options->buttons) {
+			print $html_label;
+		}
+
+
+		if(SHOW_DEBUG && !empty($rows_data->result)) {
+			#dump($this, ' this 1 ');
+			$limit_time=SLOW_QUERY_MS/10;
+			$html_info='';
+			#dump($rows_data,"");
+			$total_list_time = $rows_data->generated_time['get_records_data'] + round(microtime(1)-$start_time,3);
+			$style='';
+			if ($total_list_time>$limit_time) {
+				$style = "color:red";
+			}			
+			$html_info .= "<div class=\"debug_info portal_debug_info\" style=\"{$style}\" onclick=\"$(this).children('pre').toggle()\"> Time: ";
+			$html_info .= $total_list_time;
+			#$html_info .= ", get_rows_data:".$rows_data->generated_time['get_rows_data']." (over {$rows_data->options->full_count} records)";
+			#$html_info .= ", HTML section list: ".round(microtime(1)-$start_time,3);
+			if (isset($rows_data->generated_time['rows_paginator'])) {
+				#$html_info .= ", rows_paginator: ".$rows_data->generated_time['rows_paginator'];
+			}			
+			if (isset($rows_data->generated_time['rows_header'])) {
+				#$html_info .= ", rows_header: ".$rows_data->generated_time['rows_header'];
+			}
+			if (isset($rows_data->generated_time['rows'])) {		
+				#$html_info .= ", rows: ".$rows_data->generated_time['rows'];
+			}
+			#dump($rows_data->options->search_options_session_key," ");
+			if (isset($rows_data->options->search_options_session_key)) {		
+				$html_info .= ", ".$rows_data->options->search_options_session_key;
+			}
+			$html_info .= "";
+			$html_info .= "<pre style=\"display:none\"> ".$rows_data->strQuery ."</pre>";
+			$html_info .= "</div>";
+			#echo "<div> Time To Generate section list: HTML: ".round(microtime(1)-$start_time,3)."</div>";
+				
+			$html_contenido .= $html_info; 
+		}#end if(SHOW_DEBUG)
+		
+		print $html_contenido;
+	
+	
+	print "</div>";
+
+	# html_delimiter
+	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'out');
+
+//}
+?>

@@ -1,0 +1,46 @@
+<?php
+	
+	# VISUALIZADOR HTML
+	if(SHOW_DEBUG===true) {
+		print "<!-- SECTION ROWS EDIT [section_id:$section_id tipo:$tipo] -->";
+	}
+	
+
+	print "<div id=\"current_record_wrap\" class=\"records main_section_{$modo}\" ";
+	print "data-section_id=\"{$section_id}\" ";
+	print "data-tipo=\"{$tipo}\" ";
+	print "data-section_info='{$section_info}' ";
+	print ">";
+
+		# CONTENT
+		$html_content  = '';
+
+		#$html_content .= "\n<div class=\"css_section_content\" id=\"section_{$identificador_unico}\" >";			
+		
+			# Fields
+			switch(true) {
+					
+				case $permissions===0	:
+							$html_content .= "<span class=\"css_span_dato\">";
+							$html_content .= label::get_label('contenido_no_autorizado');
+							$html_content .= " (Section $tipo - $modo)</span>";
+							break;
+								
+				case ($permissions>=1)	:						
+
+							#
+							# RECORD_LAYOUT_HTML		
+							$html_content .= $record_layout_html;
+							break;			
+			}	
+		
+
+	print $html_content;
+
+	print '</div>';#end main_list
+
+	if(SHOW_DEBUG===true) {
+		print "<!-- /records -->";#end main_list;
+	}
+
+?>

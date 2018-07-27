@@ -1,0 +1,66 @@
+// Vars
+@common_css: "../../common/css";
+
+// Usage
+@import "@{common_css}/library.less";
+
+
+
+
+
+/* WRAP DIV CONTAINER */
+.css_wrap_text_area , .css_wrap_text_area_tm { padding:5px; }
+
+
+/* INPUT TEXT */
+.css_text_area {
+	
+	padding:3px;
+	border:solid 1px #9E9E9E;	
+	border-radius: 3px;	
+	box-shadow: 0 0 6px #999999 inset;	
+	transition: all 0.01s ease-in-out;	
+	width:70%;
+	vertical-align: top;
+	min-height:14px;
+}
+.css_text_area_lang { width:52% }
+
+
+.css_text_area:hover {	
+	
+	background-color:#F1F1F1;
+	/*
+	-moz-transform: scale(1.05);
+	-webkit-transform: scale(1.05);
+	*/
+}
+
+.css_text_area:focus {		
+	box-shadow: 0 0 5px #ccc;
+	-webkit-transform	: scale(1.01);	
+	-moz-transform		: scale(1.01);	
+	-op-transform		: scale(1.01);
+	transform			: scale(1.01);	
+}
+
+.css_text_area:active {
+		
+}
+
+.mceLayout { display: inline-table; background-color: #faff84; }
+
+
+
+
+/* VARIANTES EXCLUSIVAS DE ESTE COMPONENTE 
+********************************************************************************************************************************************************/
+
+.css_text_area_amarillo_bg {
+	background-color:#FFFF00;
+}
+
+
+.css_text_area_naranja_bg {
+	background-color:#F60;
+}

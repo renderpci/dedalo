@@ -1,0 +1,1 @@
+<?php require('trigger.tool_import_images.php');?>

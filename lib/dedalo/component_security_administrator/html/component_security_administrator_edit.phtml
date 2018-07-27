@@ -1,0 +1,103 @@
+<?php
+
+	# VISUALIZADOR HTML	
+
+	
+	# html_delimiter
+	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'in');
+
+	print "<div class=\"wrap_component css_wrap_security_administrator wrap_component_{$tipo}\" id=\"{$id_wrapper}\" ";
+	print "data-tipo=\"{$tipo}\" ";
+	print "data-lang=\"{$lang}\" ";
+	print "data-parent=\"{$parent}\" ";
+	print "data-section_tipo=\"{$section_tipo}\" ";
+	print "data-modo=\"{$modo}\" ";
+	print "data-dato=\"{$dato_string}\" ";
+	print "data-component_name=\"{$component_name}\" ";
+	print "data-component_info='{$component_info}' ";
+	print ">";
+	
+	# ETIQUETA (LABEL)
+	$html_label = component_common_draw::draw_label($this);	
+	
+
+
+	# CONTENIDO (INPUT)
+	$html_contenido = '';	
+	switch($permissions) {
+			
+		case 0	:	
+				$html_contenido .= ""; 
+				break;
+						
+		case 1	:
+
+				# CASE CHECKED				
+				$checked = (int)$dato===1 ? 'checked="checked"' : '';
+
+				$html_contenido .= "<input type=\"checkbox\" class=\"css_security_administrator\" ";
+				$html_contenido .= "id=\"{$identificador_unico}\" ";
+				$html_contenido .= "name=\"{$tipo}_{$parent}\" ";
+				$html_contenido .= "value=\"{$tipo}\" ";
+				$html_contenido .= "title=\"$html_title\" ";
+				$html_contenido .= "$checked ";
+				$html_contenido .= "disabled ";
+				$html_contenido .= "/>";
+				break;	
+				
+		case ($permissions>=2) :
+
+				/**
+				* Por defecto será 'disabled' o inactivo.
+				* Si el usuario  actual es global_admin y no está editándose a si mismo, 
+				* se mostrará como editable
+				*/
+				# DISABLED
+				$disabled = 'disabled';
+				if($is_global_admin===true && $parent != $logged_user_id) $disabled = '';
+
+				
+				# CASE CHECKED				
+				$checked = (int)$dato===1 ? 'checked="checked"' : '';
+
+
+				$html_contenido .= "<input type=\"checkbox\" class=\"css_security_administrator\" ";
+				$html_contenido .= "onchange=\"component_security_administrator.Save(this)\" ";				
+				$html_contenido .= "id=\"{$identificador_unico}\" ";
+				$html_contenido .= "name=\"{$tipo}_{$parent}\" ";
+				$html_contenido .= "value=\"{$tipo}\" ";
+				$html_contenido .= "data-tipo=\"{$tipo}\" ";
+				$html_contenido .= "data-lang=\"{$lang}\" ";
+				$html_contenido .= "data-section_tipo=\"{$section_tipo}\" ";
+				$html_contenido .= "data-parent=\"{$parent}\" ";
+				$html_contenido .= "title=\"$html_title\" ";
+				$html_contenido .= "$checked ";
+				$html_contenido .= "$disabled ";
+				$html_contenido .= "/>";
+		
+				if(SHOW_DEBUG) {
+					#$html_contenido .= " <span class=\"css_span_debugger\" id=\"debugger_{$tipo}\" >{$debugger}</span>";	
+				}				
+				break;							
+	}
+
+
+	# Prepare content to show in page
+	tools::prepare_content($html_contenido);	
+	
+	# PRINT HTML
+	print $html_label;
+	print $html_contenido;
+
+
+	if ($permissions>=2) {
+		print "<script>$(function() { component_security_administrator.update_filter_master_view( + document.getElementById('$identificador_unico').checked ); })</script>";
+	}	
+	
+	print "</div>"; //wrap
+
+	# html_delimiter
+	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'out');
+
+
+?>

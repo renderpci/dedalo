@@ -1,0 +1,79 @@
+<?php
+
+	# VISUALIZADOR HTML	
+
+	print "<div class=\"wrap_component css_wrap_date tooltip_active\" id=\"wrap_{$tipo}\" ";
+	print "data-mode=\"$date_mode\" ";
+	print "data-component_name=\"{$component_name}\" ";
+	print "data-modo=\"{$modo}\" ";
+	print "data-dato='".json_encode($dato)."' ";
+	print 'title="'.search_development2::search_options_title( $this->search_operators_info() ).'" ';
+	print ">";
+
+	# ETIQUETA (LABEL)
+	$html_label = component_common_draw::draw_label($this);
+	
+	# CONTENIDO (INPUT)
+	$html_content = '';
+	switch(true) {
+			
+		case $permissions===0:
+					$html_content .= "";
+					break;
+						
+		case ($permissions>=1):
+	
+					# COMPARISON OPERATORS
+					$html_content .= operator::get_search_comparison_operators_html($tipo,$ar_comparison_operators);
+
+					$html_content .= "<ul>";
+					foreach ((array)$ar_dato as $key => $dato) {
+						
+						$html_content .= "<li>";
+					
+						$value = isset($valor[$key]) ? $valor[$key] : '';
+
+						// If operator exists prepend to value (search values)
+						if (isset($dato->op)) {
+							$value = $dato->op . $value;
+						}
+					
+						#$html_content .= "<span id=\"search_component_$tipo\">";
+
+						$html_content .= "<input class=\"css_date\" type=\"text\" ";
+						#$html_content .= "name=\"{$search_input_name}\" ";
+						$html_content .= "data-role=\"date_time\" ";
+						$html_content .= "value=\"{$value}\" ";
+						#$html_content .= "data-tipo=\"{$tipo}\" ";
+						#$html_content .= "data-parent=\"{$parent}\" ";
+						#$html_content .= "data-lang=\"{$lang}\"	";				
+						$html_content .= "onchange=\"component_common.fix_dato(this,'{$component_name}')\" ";
+						$html_content .= "/>";					
+
+						#$html_content .= "</span>";
+
+						$html_content .= " <span class=\"css_span_ejemplo\">Format $ejemplo</span>";	
+
+					
+						$html_content .= "</li>";
+					}//end foreach ($ar_dato as $key => $dato)
+					$html_content .= "</ul>";
+
+
+					# LOGICAL OPERATORS
+					$html_content .= operator::get_search_logical_operators_html($tipo,$ar_logical_operators);
+				
+					
+					break;				
+	}
+	
+	# Prepare content to show in page
+	tools::prepare_content($html_content);
+
+	# PRINT HTML
+	print $html_label;
+	print $html_content;
+	
+	
+	print "</div>"; //wrap
+?>

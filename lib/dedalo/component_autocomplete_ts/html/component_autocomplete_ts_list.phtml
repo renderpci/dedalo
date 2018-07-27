@@ -1,0 +1,67 @@
+<?php
+
+	# VISUALIZADOR HTML	
+
+	print "\n<!-- COMPONENT_AUTOCOMPLETE_TS [tipo:$tipo] -->";
+	
+	print "\n<div class=\"wrap_component css_wrap_autocomplete_ts wrap_portal_list\" id=\"{$id_wrapper}\"
+				data-tipo=\"{$tipo}\"
+				data-lang=\"{$lang}\"
+				data-section_tipo=\"{$section_tipo}\"
+				data-parent=\"{$parent}\"
+				data-modo=\"{$modo}\"
+				data-from_modo=\"{$from_modo}\"
+				data-dato='{$dato_json}'
+				data-component_name=\"{$component_name}\"
+				data-component_info='{$component_info}'
+				>";
+	
+	# CONTENIDO (INPUT)
+	$html_contenido = '';
+	switch($permissions) {
+			
+		case 0:	
+				$html_contenido .= "";
+				break;
+											
+		case 1:
+				
+				$html_contenido .= $valor ;
+				break;
+
+		case ($permissions>=2)	:
+				# VALOR . STRING RESOLVED TO SHOW
+
+				#$html_contenido .= $valor ;
+				#break;
+
+					if($modo =='portal_list'){
+						if(empty($ar_valor)){
+							$edit_class = 'css_autocomplete_ul_edit_in_portal';
+						}else{
+							$edit_class = 'css_autocomplete_ul';
+						}
+						$html_contenido .= "\n <ul class=$edit_class onclick=\"component_common.change_mode_component(this, '$modo','edit')\">";
+					}else{
+						$html_contenido .= "\n <ul>";
+					}
+					
+					foreach ($ar_valor as $current_value => $value) {
+						$html_contenido .= "<li>";
+							$html_contenido .= $value;
+						$html_contenido .= "</li>";
+					}
+					$html_contenido .= "</ul>";
+
+				break;
+					
+	}
+	
+	# Prepare content to show in page
+	tools::prepare_content($html_contenido);
+	
+	# PRINT HTML
+	print $html_contenido;	
+	
+	
+?>

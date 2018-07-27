@@ -1,0 +1,53 @@
+<?php
+
+	# VISUALIZADOR HTML	
+	
+	print "\n<!-- TEXT AREA [tipo:$tipo section_id_matrix:$parent] -->";
+	print "\n<div class=\"css_wrap_text_area_lang\" id=\"wrap_{$identificador_unico}\">";
+	
+	# ETIQUETA (LABEL)
+	$html_label = "$lang_name <br>";
+	
+	# CONTENIDO (INPUT)
+	$html_contenido = '';
+	switch($permissions) {
+			
+		case 0	:	$html_contenido .= "\n <span class=\"css_span_dato\"> No access here (text_area)! </span>";	
+					break;
+						
+		case 1	: 	$html_contenido .= "\n <span class=\"css_span_dato\">$dato</span>";
+					break;	
+						
+		
+		case ($permissions>=2)	:
+		
+					$html_contenido .= "\n <textarea class=\"css_text_area css_text_area_lang\" 
+					id=\"{$identificador_unico}\" name=\"{$tipo}_{$parent}\" 
+					data-tipo=\"{$tipo}\" data-lang=\"{$lang}\" 
+					title=\"$html_title\">$dato</textarea>";
+					$html_contenido .= "\n <div class=\"css_lang_image_delete div_image_link\" onclick=\"tool_lang.delete_lang(this)\" data-tipo=\"$tipo\" ></div>";
+		
+					if(SHOW_DEBUG) {
+						$html_contenido .= "\n <span class=\"css_span_debugger\" id=\"debugger_{$ipo}\" >{$debugger}</span>";	
+					}			
+	}
+	
+	
+	# PRINT HTML
+	print $html_label;
+	print $html_contenido;
+	
+	
+	print "\n</div>\n\n"; //wrap
+?>
+
+<script>
+$('<?php echo "#{$identificador_unico}" ?>').each(function() {
+	
+	$(this).data('oldVal', $(this).val());
+	
+	// autoesize text area with jquery plugin
+	$(this).css('max-height','300px').autosize();	
+});
+</script>
+

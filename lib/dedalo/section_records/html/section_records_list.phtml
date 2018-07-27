@@ -1,0 +1,125 @@
+<?php
+
+	# VISUALIZADOR HTML	
+	
+	#print '<!-- SECTION RECORDS LIST [tipo:$tipo modo:$modo] -->';
+	
+	# Stats loads here
+	#print '<div class="div_main_list"></div>';
+	
+
+	#print '<div class="css_section_list_wrap wrap_section_'.$tipo.' sgc_edit" id="wrap_'.$tipo.'_'.$modo.'" data-options=\''.json_handler::encode($this->search_options).'\' >';
+	
+	
+	# CONTENIDO
+	$html_content  ='';	
+	#$html_content .= '<div class="css_section_group_content tab_content wrap_table_rows_list section_records_'.$modo.' wrap_section_records_'.$section_list_tipo.'" data-rol="section_records">';
+	
+	
+	switch(true) {
+			
+		case ($permissions===0)	:
+				$html_content .= '<span class="css_span_dato">'.label::get_label('sin_acceso').'</span>';
+				break;
+						
+		case ($permissions>=1) :
+
+				#$html_content .= "<div id=\"stats_info\"><!-- Stats content here --></div>";
+				
+				# SEARCH FILTER
+					#$html_content .= $rows_search_html;
+				
+				# PAGINATOR
+				$html_content .= $rows_paginator_html;
+
+				# LIST (Search,paginator,rows)
+				##$html_content .= "<div class=\"main_list main_list_{$modo}\">";
+				#$html_content .= "<div class=\"records main_section_{$modo}\">";
+
+
+					# TABLE
+					$table_style = $section_tipo===DEDALO_ACTIVITY_SECTION_TIPO ? 'table_rows_list_activity' : ''; // 
+					$html_content .= '<table class="table_rows_list '.$table_style.'" data-search_options="'.encodeURIComponent($search_options_json).'">'; // css_section_list_table box_shadow_1 box_border_radius_1
+						#$html_content .= '<script>';
+						#$html_content .= 'section.search_options=\''.trim($search_options_json).'\';';
+						#$html_content .= 'console.log("section.search_options ++:",section.search_options);';
+						#$html_content .= '</script>';
+									
+						# TH TITULOS
+						$html_content .= '<thead>';
+						$html_content .= $rows_header_html;
+						$html_content .= '</thead>';
+						
+						# TD DATOS
+						$html_content .= '<tbody>';
+						$html_content .= $rows_html;
+						$html_content .= '</tbody>';
+						
+					$html_content .= '</table>';
+
+
+					# PAGINATOR
+					#$html_content .= $rows_paginator_html;					
+
+				#$html_content .= "</div><!-- /records -->";#end main_list
+
+
+				if(SHOW_DEVELOPER===true) {
+					
+					$limit_time=SLOW_QUERY_MS;
+					$html_info='';
+					
+					$total_list_time = $this->records_data->generated_time['get_records_data'] + round(microtime(1)-$start_time,3);
+					$style='';
+					if ($total_list_time>$limit_time) {
+						$style = "color:red";
+					}			
+					$html_info .= "<div class=\"debug_sql_time\" style=\"{$style}\" ondblclick=\"$(this).children('pre').toggle()\"> Time To Generate section list: ";
+					$html_info .= $total_list_time;
+					$html_info .= ", get_records_data:".$this->records_data->generated_time['get_records_data']." (over {$this->search_options->search_query_object->full_count} records)";
+					$html_info .= ", HTML section list: ".round(microtime(1)-$start_time,3);
+					if (isset($this->records_data->generated_time['rows_paginator'])) {
+						$html_info .= ", rows_paginator: ".$this->records_data->generated_time['rows_paginator'];
+					}			
+					if (isset($this->records_data->generated_time['rows_header'])) {
+						$html_info .= ", rows_header: ".$this->records_data->generated_time['rows_header'];
+					}
+					if (isset($this->records_data->generated_time['rows'])) {		
+						$html_info .= ", rows: ".$this->records_data->generated_time['rows'];
+					}
+					#dump($this->records_data->options->search_options_session_key," ");
+					if (isset($this->records_data->options->search_options_session_key)) {		
+						$html_info .= ", search_options_session_key: ".$this->records_data->options->search_options_session_key;
+					}
+					$html_info .= ", strQuery:";
+					$html_info .= '<pre style="display:none">'.trim($this->records_data->strQuery) .'</pre>';
+
+					$search_options = $this->search_options->search_query_object;
+					$search_options = json_encode($search_options, JSON_PRETTY_PRINT);
+					$html_info .= "<br><pre style=\"display:none\">$search_options</pre>";
+
+					$html_info .='</div>';
+					#echo "<div> Time To Generate section list: HTML: ".round(microtime(1)-$start_time,3)."</div>";
+						
+					$html_content .= $html_info;
+				}#end if(SHOW_DEVELOPER)
+	
+	}
+	#$html_content .= '</div><!-- /css_section_group_content -->';
+
+	# JS calls
+	$html_content .= '<script>';
+
+	$section_records_options = new stdClass();
+		$section_records_options->ar_js  = array_unique(js::$ar_url);
+		$section_records_options->ar_css = array_unique(css::$ar_url);	
+	$html_content .= 'section_records.init('.json_encode($section_records_options).')';
+	$html_content .= '</script>';
+
+	
+	# PRINT HTML
+	print $html_content;	
+	
+	
+	#print '</div><!-- /css_section_list_wrap -->'; //wrap
+?>

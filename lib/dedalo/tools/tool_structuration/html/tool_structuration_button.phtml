@@ -1,0 +1,41 @@
+<?php
+
+	# VISUALIZADOR HTML	
+		
+	# BUTTON TOOL IN INSPECTOR
+	$html_tool     = '';
+	
+	if ($contain_references) {
+
+		$title	  = label::get_label('abrir').' '.label::get_label('herramienta');
+		
+		$html_tool .= "<a href=\"javascript:void(0);\" class=\"id_column_buttons button_structuration link\" title=\"$title\" onclick=\"tool_common.open_{$tool_name}(this)\"
+		data-section_tipo=\"{$section_tipo}\"
+		data-tipo=\"{$tipo}\"
+		data-parent=\"{$parent}\"
+		data-caller_id=\"{$parent}\"
+		>";
+			$html_tool .= "<span class='section_id_number'>";
+			$html_tool .= " $section_id ";
+			$html_tool .= "</span>";
+		$html_tool .= "</a>";
+
+	}else{
+
+		$title	      = label::get_label('sin_referencias');
+		$html_tool   .= "\n<div class=\"icon_bs tool_warning link\" onclick=\"alert('$title')\"
+		data-section_tipo=\"{$section_tipo}\"
+		data-tipo=\"{$tipo}\"
+		data-parent=\"{$parent}\"
+		data-caller_id=\"{$parent}\"
+		title=\"$title\"></div>";
+	}
+
+	#$html_tool   .= label::get_label('tool_structuration');	#" structuration";
+
+	#$html_tool   .= "</div>";#/tool_inspector_div
+
+	# PRINT HTML
+	print $html_tool;
+	
+?>

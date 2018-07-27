@@ -1,0 +1,61 @@
+<?php
+	
+	# VISUALIZADOR HTML	
+	
+	# html_delimiter
+	print component_common_draw::html_delimiter($component_name, $tipo, null, $label, 'in', $modo);
+
+	print "<div id=\"$section_group_id\" class=\"css_section_group_wrap wrap_section_group wrap_section_group_{$tipo} box_shadow_1 box_border_radius_1\">";
+	
+
+		#
+		# ETIQUETA (LABEL)	
+		$html_label  = "<div class=\"css_section_group_titulo tab_title title_down_box text_unselectable\" data-tab_id=\"{$tipo}\">";
+		$html_label .= component_common_draw::draw_label($this);		
+		$html_label .= "</div>";	
+			
+
+		#
+		# CONTENIDO (INPUT)
+		$html_contenido = "<div class=\"css_section_group_content tab_content section_group_content_{$modo} sgc_{$modo}\">";
+
+		
+			switch($permissions) {
+					
+				case 0	:
+					$html_contenido .= "<span class=\"css_span_dato\"> ".label::get_label('sin_acceso')." (group)</span>"; 		
+					break;
+								
+				case 1	:
+				case 2	: 
+				case 3	:
+					#$html_contenido .= '<div class="gridster"><ul>';
+					$html_contenido .= $components_html;	
+					#$html_contenido .= '</ul></div>';		
+					break;			
+			}
+
+		
+		$html_contenido .= "</div>";
+
+		if(SHOW_DEBUG===true) {
+			$html_contenido .= "<!-- /css_section_group_content -->";
+		}
+
+
+		# Prepare content to show in page
+		#tools::prepare_content($html_contenido);
+		
+		
+		# PRINT HTML
+		print $html_label;
+		print $html_contenido;
+
+	
+	print "</div>"; //wrap
+
+	# html_delimiter
+	print component_common_draw::html_delimiter($component_name, $tipo, null, $label, 'out', $modo);
+
+
+?>

@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Media Player</title>
+<link rel="shortcut icon" href="/favicon.ico" />
+<?php
+print $css_link_code;
+print css::build_tag(DEDALO_LIB_BASE_URL .'/media_engine/css/av_media_player.css');
+?>
+<?php #print js::build_tag(DEDALO_LIB_BASE_URL . '/common/js/enviroment.js.php'); ?>
+<?php 
+$page_globals = new stdClass();
+	# version
+	$page_globals->dedalo_version 			= DEDALO_VERSION;
+	# lang
+	$page_globals->dedalo_application_lang 	= DEDALO_APPLICATION_LANG;
+	$page_globals->dedalo_data_lang 		= DEDALO_DATA_LANG;
+	$page_globals->dedalo_data_nolan 		= DEDALO_DATA_NOLAN;	
+	# modo
+	$page_globals->modo 					= isset($modo) ? $modo : null;
+?>
+<script>
+const page_globals=<?php echo SHOW_DEBUG===true ? json_encode($page_globals, JSON_PRETTY_PRINT) : json_encode($page_globals) ?>;
+</script>
+<?php echo $js_link_code ?>
+
+</head>
+<body>
+<div id="wrap_edit_video">
+		 
+	  
+	
+
+	<!-- PLAYER HTML Media container -->
+	<div class="videoContainer" >
+	<?php echo $player ?>
+	</div>
+	
+	
+	<!-- MSG LOAD control de video -->	
+	<div id="loading_msg" class="select_none blink"> Loading... </div>
+	
+	
+	<!-- Botones control de video -->		
+	<div id="video_controls" class="select_none">	
+		
+	   
+		<?php
+		switch($modo) {
+			
+			case 'posterframe' :	
+					$standar = $AVObj->get_media_standar();
+					if($standar === 'ntsc'){
+						$rate = '0.033';
+					}else{
+						$rate = '0.040';
+					}
+					echo "<div class=\"css_button_generic css_av_video_controls_rew av_player_btn play_pause\">Play</div>";
+					echo "<!-- TC Display -->
+						  <div id=\"TCdiv\">
+							<span id=\"loading_msg\" class=\"blink\"> loading </span>
+						  </div>";
+					echo "<div class=\"css_button_generic css_av_video_controls_rew av_player_btn\" onClick=\"controlVideo('-10')\">&lt; 10 seg</div>";
+					echo "<div class=\"css_button_generic css_av_video_controls_rew av_player_btn\" onClick=\"controlVideo('-5')\">&lt; 5 seg</div>";
+					echo "<div class=\"css_button_generic css_av_video_controls_rew av_player_btn\" onClick=\"controlVideo('-$rate')\"> - 1 </div>";
+					echo "<div class=\"css_button_generic css_av_video_controls_rew av_player_btn\" onClick=\"controlVideo('$rate')\"> + 1 </div>";
+					echo "<div class=\"css_button_generic css_av_video_controls_rew av_player_btn\" onClick=\"controlVideo('5')\">5 seg &gt;</div>";
+					echo "<div class=\"css_button_generic css_av_video_controls_rew av_player_btn\" onClick=\"controlVideo('10')\">10 seg &gt;</div>";
+					/*
+					echo "<div class=\"css_button_generic css_av_video_controls_rew av_player_btn btn_posterframe\"
+					data-video_id=\"$reelID\" data-quality=\"$quality\"
+					onClick=\"window.opener.component_av.generate_posterframe(this, player_get_current_time_in_seconds())\" 
+					> ". strtoupper(label::get_label('crear')). " POSTERFRAME </div>";
+					*/			
+					break;	  
+			
+			default :	
+
+					echo "<div class=\"css_button_generic css_av_video_controls_rew av_player_btn\" onClick=\"goto_time('0')\" >".label::get_label('inicio')."</div>";
+					if($AVObj->get_tcin())
+					echo "<a class=\"css_button_generic css_av_video_controls_rew av_player_btn\" onClick=\"goto_time('$tcin')\">".label::get_label('fragmento')."</a>";
+					
+					echo "<div class=\"css_button_generic css_av_video_controls_rew av_player_btn play_pause\">Play</div>";
+					
+					echo "<!-- TC Display -->
+						  <div id=\"TCdiv\">
+							<span id=\"loading_msg\" class=\"blink\"> loading </span>
+						  </div>";
+					echo "<div class=\"css_button_generic css_av_video_controls_rew av_player_btn\" onClick=\"controlVideo('-10')\">&lt; 10 seg</div>";
+					echo "<div class=\"css_button_generic css_av_video_controls_rew av_player_btn\" onClick=\"controlVideo('-5')\">&lt; 5 seg</div>";
+					echo "<div class=\"css_button_generic css_av_video_controls_rew av_player_btn\" onClick=\"controlVideo('5')\">5 seg &gt;</div>";
+					echo "<div class=\"css_button_generic css_av_video_controls_rew av_player_btn\" onClick=\"controlVideo('10')\">10 seg &gt;</div>";
+					# Reload button
+					echo "<div class=\"css_button_generic css_av_video_controls_rew av_player_btn\" onClick=\"set_and_load_media(src,1)\">".label::get_label('recargar')."</div>";
+					/*
+					$recargar_title = label::get_label('recargar');
+					echo "<script type=\"text/javascript\">							
+							document.write('<div class=\"css_button_generic css_av_video_controls_rew av_player_btn\" onClick=\"set_and_load_media(src,1);\">$recargar_title</div>');
+						  </script>";
+					*/
+					echo $quality_selector_html;					
+					break;			
+		}		
+		?>   
+		
+		 
+	</div><!-- /video_controls -->
+		
+   
+	<?php
+		# CONFIG
+		print "\n <div class=\"player_icon config_icon select_none\" onclick=\"av_media_player.toggle_config_player_content()\"> </div>";
+		print "<div class=\"config_player_content select_none\">";   
+
+		#echo $configure_keys_html;	
+		?>
+		<!-- PLAYER SELECTOR -->
+		<div class="player_type_links">
+			
+			<?php echo $configure_keys_html; ?>
+
+			<div class="text_shadow_inset">
+				Player:         
+				<a class=" " href="javascript:load_player_type('qt')">html5/qt</a>
+				<a class=" " href="javascript:load_player_type('mediaelement')">mediaelement</a>
+				<a class=" " href="javascript:load_player_type('jwplayer')">jwplayer</a>
+			</div>
+		</div>
+
+		<?php
+		if (isset($url_public)) {
+			echo "<div id=\"public_url\">Public URL <input tipe=\"text\" value=\"$url_public\" onclick=\"select()\" ></div>";
+		}
+		?>
+		
+		<!-- DEBUG -->
+		<?php if( SHOW_DEBUG ){?>    
+		<div class="debugDIV">
+			TC 
+			<?php echo "tcin: $tcin - tcout: $tcout "; ?><br>
+			Media 
+			<a href="<?php echo $AVObj->get_url() ;?>" target="_blank" style="color:#666"><?php echo $AVObj->get_url();?></a> 
+			<?php echo $AVObj->get_size();?>  <br>
+			Posterframe             
+			<a href="<?php echo $PosterFrameObj->get_url() ;?>" target="_blank" style="color:#666"><?php echo $PosterFrameObj->get_url();?></a> 
+			<?php echo $PosterFrameObj->get_size();?>
+			   
+			<div id="debugMovie">  </div>
+		</div>                 
+		<?php }//if( SHOW_DEBUG ){?>  
+
+		<?php
+		print "</div><!-- /config_player_content -->";
+
+		if(SHOW_DEBUG===true) {
+			if(isset($share_decoded))
+				echo "<br><div class=\"notes\">DEBUG INFO DECODE share_decoded: $share_decoded</div>";
+		}
+	?> 
+	
+				
+<br><br>
+</div>
+</body>
+</html>
+<?php /*
+<script language="JavaScript" type="text/javascript" src="<?php echo DEDALO_LIB_BASE_URL ?>/component_common/js/component_common.js"></script>
+*/ ?>
+<?php
+print js::build_tag(DEDALO_LIB_BASE_URL . '/media_engine/js/av_media_player_commands.js');
+print js::build_tag(DEDALO_LIB_BASE_URL . '/media_engine/js/av_media_player.js');
+?>

@@ -1,0 +1,316 @@
+// Variables
+@common_css: "../../common/css";
+
+// Usage
+@import "@{common_css}/library.less"; 
+
+/* INSPECTOR
+---------------------------------------- */
+#inspector_div {
+	display:block;
+	padding: 0px;
+	margin: 0px;
+	width: 97%;
+	/*position: fixed;	
+	background-color: #4ce6e4;*/
+	/*
+	width: 235px !important;*/
+	@media screen and (max-width: @tablet_max_width) { // 980px		
+		width: 100% !important;			
+	}
+}
+#inspector_div.inspector_fixed {
+	position: fixed;
+	top: 0px;
+	width: 18.5% !important;
+}
+.inspector_div_content {
+	position: relative;
+	display: block;
+	margin: 0;
+	padding: 0;
+	/**/
+	padding-top: 4px;
+	padding-bottom: 4px;
+	
+	color: #999999;
+	font-family: Arial, Helvetica, sans-serif;	
+	box-shadow: inset 0px -2px 3px rgb(220, 220, 220);
+	width: 100%;
+	/*
+	background-color: #F9F9F9; 
+	background-color: rgba(249, 249, 249, 0.82);
+	*/
+	/*
+	max-height: 280px;
+	overflow: auto;
+	*/
+	@media screen and (max-width: @movil_max_width) { // 768px
+		box-shadow: none;
+	}
+}
+.inspector_div_content select { width: 87px}
+/*#inspector_div .inspector_div_content * { margin-left:4px; margin-right: 4px; }*/
+.key, .value {
+	line-height: 1em;
+	margin-bottom: 1px;
+	padding: 1px;
+}
+.key {
+	display: inline-block;
+	min-width: 50px;
+	background-color: #eeeeee;
+	margin-right: 0px;
+	padding-left: 2px;
+	padding-right: 2px;
+	text-align: right;
+	border-radius: 2px;
+	
+}
+.value {
+	display: inline;
+	margin-left: 2px;
+	max-height: 300px;
+	max-width: 40px;
+	text-overflow: ellipsis;
+	overflow: hidden;
+	/*white-space: nowrap; Don't forget this one
+	display: inline-block;*/
+	word-break: break-all;
+}
+.value_bold {
+	color: #333333;
+	font-weight: bold;
+}
+.capitalize {
+	text-transform: capitalize;
+}
+
+/* INSPECTOR INFO
+---------------------------------------- */
+.inspector_info_body {
+	min-height: 13px;	
+	width: auto;
+	padding-left: 6px;	
+}
+.inspector_info_body_fixed {
+	min-height: 0px;
+}
+
+#inspector_info {
+	min-height: 22px;
+	padding-left: 5px;
+}
+/* INSPECTOR TOOLS
+---------------------------------------- */
+#inspector_tools {
+	padding-left: 6px;
+}
+/* INSPECTOR RELATIONS
+---------------------------------------- */
+#inspector_relations {
+	padding-left: 6px;
+}
+#inspector_relation_list_tag {
+	min-height: 0px;
+	/*background-color: #a1e2dc;*/
+}
+#inspector_relation_list_sections {
+	display: block;
+	max-height: 360px;
+	overflow: auto;
+	padding: 0;
+	/*background-color: #bbe26d;*/
+}
+#inspector_relation_list_sections TD { }
+.title_group_relation_reverse_records {
+	font-size: 104%;
+	padding: 0;
+	padding-left: 4px;
+	padding-top: 3px;
+	text-transform: uppercase;
+	color: #222222;
+}
+/* INSPECTOR INDEXATIONS
+---------------------------------------- */
+#inspector_indexations {
+	padding-left: 6px;
+	max-height: 250px;
+	overflow: auto;
+}
+/* INSPECTOR DEBUG
+---------------------------------------- */
+#inspector_debug {
+	
+}
+#inspector_debug .key {
+	//margin-left: 4px;
+}
+.css_span_debugger {
+	font-style: italic;
+	color: #999999;
+	font-size: smaller;
+}
+/* INSPECTOR EVENTS
+---------------------------------------- */
+#inspector_events {
+	min-height: 16px;
+	padding-left: 4px;
+}
+/* INSPECTOR OTHERS
+---------------------------------------- */
+#inspector_others {
+	min-height: 16px;
+	padding-left: 4px;
+}
+/* INSPECTOR ACTIVITY LOG
+---------------------------------------- */
+#inspector_log {
+	display: block;
+	margin-top: 2px;
+	margin-bottom: 2px;
+	padding-left: 4px;
+	padding-right: 4px;
+	z-index: 10;
+}
+#inspector_log .ok, #inspector_log .error {
+	margin: 0px;
+	max-width: 99.9%;
+	opacity: 0.7;
+	float: right;
+	clear: both;
+	margin-bottom: 1px;
+	}
+	#inspector_log .ok::after {
+		content: "x";
+		position: relative;
+		float: right;
+		padding-left: 10px;
+		cursor: pointer;
+		font-weight: bold;
+	}
+
+	#tools_info_wrapper #inspector_log .ok,
+	#tools_info_wrapper #inspector_log .error {
+		width: 99.9%;
+	}
+
+#inspector_log .span_save {
+	margin-top: 2px;
+	width: 100%;
+	min-width: 160px;
+	display: block;
+	background-position: 200px center !important;
+	/*position: fixed;
+	top: 4px;
+	left:130px;*/
+}
+
+/* INSPECTOR COMMONS*/
+#inspector_info, #inspector_relations, #inspector_debug, #inspector_others {
+	max-height: 158px;
+	overflow: auto;
+}
+
+.label_lang_data_selector {
+	display: inline-block;
+	margin-right: 5px;
+}
+.label_lang_data_selector:first-letter {
+	 text-transform: uppercase;
+}
+
+
+/* PAGINATOR
+---------------------------------------- */
+#wrap_inspector_paginator {
+	margin-bottom: 5px;
+	}
+	#wrap_inspector_paginator .css_rows_paginator_content {
+		padding: 5px;
+	}
+	#wrap_inspector_paginator .css_rows_paginator_div_links {
+		zoom: 1.4;
+		vertical-align: middle;
+	}
+
+
+
+/* TOOLS COMMON
+---------------------------------------- */
+div.tool_inspector_div {
+	display:block;
+	margin: 0px;
+	margin-bottom: 4px;
+	margin-top: 2px;
+	padding-top: 2px;
+	border-bottom:1px solid #c9c9c9;
+	line-height: 1.6em;	
+	}
+	div.tool_inspector_div:first-letter {
+		text-transform: capitalize;
+	}
+	div.tool_inspector_div > .icon_bs {
+		top: -1px;
+	}
+
+/* Elimina la última línea separadora del bottom */
+div#inspector_tools .tool_inspector_div:last-of-type {
+    border-bottom:none;
+}
+div.tool_inspector_div .icon_bs {
+	margin-right: 3px;
+}
+
+
+
+@media screen and (max-width: @movil_max_width) { // 768px
+
+	// Title of info group
+	#inspector_div > .css_section_group_titulo {
+		display: none;
+	}
+	// info group content info
+	#inspector_div #inspector_info {
+		display: none;
+		}
+
+	// Other inspector elements
+	#tools_info_wrapper, #indexations_info_wrapper, #others_info_wrapper, #debug_info_wrapper {
+		display: none;
+	}
+
+	/*
+	#sidebar .css_wrap_rows_paginator {
+		height: 28px;
+		top: 0;
+		position: relative;
+		text-align: center;
+		zoom: 1.7;
+	}
+	*/	
+
+}//end @media screen and (max-width: @movil_max_width)
+
+
+/* INSPECTOR LOG SHOWED IN TOOLS
+---------------------------------------- */
+	.tool_inspector_log {
+		text-align: right;
+		position: fixed;
+	    right: 0;
+	    margin-right: 0;
+	    top: 29px;
+	    opacity: 0.9;
+	    width: 37%;
+		min-height: 1.3em;
+		//background-color: #AFEBFF
+
+		.span_save {
+			white-space: nowrap;
+		}
+	}
+
+
+
+

@@ -1,0 +1,30 @@
+<?php
+
+	# VISUALIZADOR HTML
+	$html = '';
+	#$html    = "<!-- TOOL TIME MACHINE ACTUAL SOURCE COMPONENT [tipo:$tipo section_id:$id] -->";
+	
+	# Wrap
+	$html   .= "<div class=\"css_wrap_time_machine\">";
+		
+		# Header
+		$html 	.= "<div class=\"css_time_machine_label css_tool_label text_shadow_inset\">";
+		$html 	.= label::get_label('contenido_actual');
+		$html 	.= " [$lang]";
+		if(SHOW_DEBUG===true) {
+			
+		}		
+		$html 	.= "</div>";
+
+		# Component html
+		$html   .= $source_component_html;
+
+		# Footer info					
+		$html 	.= "<div class=\"tm_component_footer_info\">".label::get_label('ahora')."</div>";
+	
+	$html   .= "</div>"; //wrap css_wrap_time_machine
+
+
+	print $html;	
+		
+?>

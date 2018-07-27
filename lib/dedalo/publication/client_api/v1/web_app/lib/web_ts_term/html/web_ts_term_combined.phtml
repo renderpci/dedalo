@@ -1,0 +1,81 @@
+<?php
+$html = '';
+
+$html .= "<li class=\"web_ts_term_li clearfix\">";
+	
+	#
+	# TERM Name
+	#dump($this->options, ' this->options ++ '.to_string());
+	$add_class = '';
+	if (isset($this->highlight)) {
+		$add_class = 'highlight_term';
+	}
+	$html .= "<div id=\"web_ts_term_".$this->term_id."\" class=\"web_ts_term_name $add_class\">";
+	$html .= $this->term;
+	if(SHOW_DEBUG===true) {
+		$html .= " <small>[".$this->term_id."]</small>";
+	}
+	$html .= "</div>";
+	
+
+	#
+	# INDEX TOGGLE BUTTON
+	# Note that $this->indexation is a string (array json encoded)
+	if (!empty($this->indexation) && $this->indexation!='[]') {
+		$html .= "<div id=\"button_toggle_indexation_{$this->term_id}\" ";
+		$html .= "class=\"button_plus unselectable\" ";
+		$html .= "rel=\"tooltip\" ";
+		#$html .= "title=\"" . tstring('mostrar_ocultar_videos') . "\" ";
+		#$html .= "onclick=\"web_ts_term.toggle_indexation(this)\" ";
+		$html .= "onclick=\"search_combined.add_term_to_container(this)\" ";
+		$html .= "data-term_id=\"" . $this->term_id . "\" ";
+		$html .= "data-term=\"" . $this->term . "\" ";
+		$html .= "data-ar_indexation='".$this->indexation."' ";
+		$html .= "></div>";
+	}
+
+	
+
+	#
+	# CHILDRENS TOGGLE BUTTON
+	# note that $this->ar_childrens is a php array
+	if (!empty($this->ar_childrens)) {
+		$ar_childrens_json = json_encode($this->ar_childrens);
+		$title = tstring('mostrar_ocultar_temas');
+		$html .= "<div class=\"web_ts_term_icon icon_show_childrens arrow_right unselectable\" ";
+		$html .= "rel=\"tooltip\" ";
+		$html .= "title=\"$title\" ";
+		$html .= "data-term_id=\"$this->term_id\" ";
+		$html .= "data-ar_childrens='$ar_childrens_json' ";
+		$html .= "onclick=\"web_ts_term.toggle_childrens(this)\" ";
+		$html .= "></div>";
+	}
+
+
+
+	#
+	# INDEX_WRAPPER
+	$html .= "<div id=\"index_wrapper_{$this->term_id}\" class=\"index_wrapper\"></div>";
+
+
+$html .= "</li>";
+
+
+#
+# CHILDRENS_WRAPPER . Ajax target to load childrens
+$html .= "<ul id=\"childrens_wrapper_{$this->term_id}\" class=\"childrens_wrapper\"></ul>";
+
+
+
+
+
+#
+# OPEN CHILDRENS FORCE
+/*
+if (isset($this->options->open_childrens)) {
+	$html .= "<script>if(!web_ts_term_to_open) var web_ts_term_to_open={}; web_ts_term_to_open['$this->term_id'] = '{$this->term_id}';</script>";
+}
+*/
+
+echo $html;
+?>

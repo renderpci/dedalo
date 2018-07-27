@@ -1,0 +1,125 @@
+<?php
+
+	# VISUALIZADOR HTML		
+	
+	print "<div class=\"wrap_component css_wrap_component_publication tooltip_active\" ";
+	print "data-component_name=\"{$component_name}\" ";
+	print "data-modo=\"{$modo}\" ";
+	print "data-value_yes='{$value_yes}' ";
+	print "data-value_no='{$value_no}' ";
+	print "data-dato='".json_encode($dato)."' ";
+	print 'data-q_operator="'.$q_operator.'" ';
+	print 'title="'.search_development2::search_options_title( $this->search_operators_info() ).'" ';
+	print ">";
+	
+	
+	# ETIQUETA (LABEL)
+	$html_label = component_common_draw::draw_label($this);
+
+	
+	# CONTENIDO (INPUT)
+	$html_content = '';
+	switch(true) {
+			
+		case $permissions===0	:	
+				$html_content .= "";
+				break;
+		
+		case ($permissions>=1)	:
+					
+				# COMPARISON OPERATORS
+				#$html_content .= operator::get_search_comparison_operators_html($tipo,$ar_comparison_operators);
+
+				$html_content .= '<input class="q_operator" type="text" value="'.$q_operator.'" ';
+				$html_content .= "onchange=\"component_common.fix_dato(this,'{$component_name}')\" ";
+				$html_content .=' />';
+
+				# Checked add
+				if(empty($dato)) {
+					$compare_locators = false;
+				}else{
+					$component_locator  	= reset($dato);
+					$value_yes_ar_locator 	= json_decode($value_yes);
+					$value_yes_locator 		= reset($value_yes_ar_locator);
+					$compare_locators 		= locator::compare_locators( $component_locator, $value_yes_locator, $ar_properties=['section_id','section_tipo']);
+				}
+				$checked = ($compare_locators===true) ? 'checked="checked"' : '';
+
+				# Switcher
+				/*		
+				$html_content .= "<div class=\"switcher_publication text_unselectable\">";
+
+				$html_content .= "<input type=\"checkbox\" class=\"ios-toggle\" $checked ";
+				$html_content .= "name=\"$input_name\" ";
+				$html_content .= "id=\"{$input_name}\" ";
+				$html_content .= "onchange=\"component_common.fix_dato(this,'{$component_name}')\" ";				
+				$html_content .= "/>";
+				
+  				$html_content .= "<label for=\"$input_name\" class=\"checkbox-label\" data-off=\"off\" data-on=\"on\"></label>";
+
+  				$html_content .= "</div>";//end switcher_publication
+  				*/
+  				$html_content .= "<ul class=\"radio_button_ul_list\">";
+				
+				# INPUT
+				#$html_content .= "<span id=\"search_component_$tipo\">";
+				$i=0; foreach ($ar_list_of_values->result as $value => $rotulo) {
+
+					$search_input_id = $search_input_name .'_'.$i;
+
+					$value   = (string)$value;
+					$locator = (object)json_handler::decode($value);	# Locator is json encoded object					
+	
+					#$checked  = is_array($dato) && in_array($locator, $dato) ? true : false;
+					$checked  = '';
+					if (is_array($dato) && locator::in_array_locator($locator, $dato, array('section_id','section_tipo')) ) {
+						$checked  = 'checked="checked"';
+					}
+
+					if (!property_exists($locator, 'type')) {
+						$locator->type = DEDALO_RELATION_TYPE_LINK;
+					}
+					if (!property_exists($locator, 'from_component_tipo')) {
+						$locator->from_component_tipo = $tipo;
+					}
+					
+					$locator_string = json_encode($locator);
+
+
+					$html_content .= "<li>";
+					
+					$html_content .= "<input class=\"css_radio_button_publication\" type=\"radio\" name=\"{$search_input_name}\" id=\"$search_input_id\" ";
+					#$html_content .= "data-tipo=\"{$tipo}\" ";
+					$html_content .= "name=\"{$input_name}\" ";
+					$html_content .= "value='$locator_string' ";
+					$html_content .= "$checked ";
+					$html_content .= "onchange=\"component_common.fix_dato(this,'{$component_name}')\" ";
+					$html_content .= "onclick=\"component_publication.check_radio(this,event)\" ";
+					$html_content .= "/>";
+
+					$html_content .= " <label for=\"{$search_input_id}\" class=\"radio_button_publication_label\">$rotulo</label>";
+
+					$html_content .= "</li>";
+
+				$i++;}
+				#$html_content .= "</span>";
+
+				$html_content .= "</ul>";//end radio_button_ul_list
+
+
+				# LOGICAL OPERATORS
+				#$html_content .= operator::get_search_logical_operators_html($tipo,$ar_logical_operators);				
+				break;
+	}
+
+	# Prepare content to show in page
+	tools::prepare_content($html_content);
+	
+	
+	# PRINT HTML
+	print $html_label;
+	print $html_content;
+	
+	
+	print "</div>"; //wrap
+?>

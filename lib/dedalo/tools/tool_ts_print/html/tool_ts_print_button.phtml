@@ -1,0 +1,25 @@
+<?php
+
+
+	# VISUALIZADOR HTML
+	$html_tool  ='';
+	$html_tool .= "<div class=\"css_button_generic btn_inside_section_buttons_container tool_ts_print\" "; // css_button_new button_add_record
+	$html_tool .= "onclick=\"tool_common.open_tool_ts_print(this)\" ";
+	#$html_tool .= "data-tipo=\"$tipo\" ";
+	#$html_tool .= "data-parent=\"$parent\" ";
+	#$html_tool .= "data-section_tipo=\"$section_tipo\" ";
+	#$html_tool .= "data-lang=\"$lang\" ";
+	$html_tool .= ">";
+	#$html_tool .= "<div class=\"icon_bs tool_ts_print_icon\"></div>";
+	$html_tool .= "<span>";
+	$html_tool .= label::get_label('tool_ts_print');
+	$html_tool .= "</span>";
+	$html_tool .= "</div>";
+
+	#<div class="css_button_generic btn_inside_section_buttons_container css_button_new button_add_record" onclick="button_new.New(this)" data-tipo="ts1" data-section_tipo="ts1" title="New"><span>New</span></div>
+	
+	
+	# PRINT HTML
+	echo $html_tool;
+	
+?>

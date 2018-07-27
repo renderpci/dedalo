@@ -1,0 +1,28 @@
+<?php
+
+	# VISUALIZADOR HTML
+
+
+	# CONTENIDO THUMB
+	$html_contenido = '';
+	switch($permissions) {
+			
+		case 0	:	$html_contenido .= "";
+					break;
+
+					
+		case ($permissions>=1) :
+
+
+				$html_contenido .= "\n <div class=\"player_container\">";
+				$html_contenido .= "\n   <img class=\"css_image\" src=\"$image_url\" />";
+				$html_contenido .= "\n </div>";
+
+				
+					
+	}
+	
+	# PRINT HTML	
+	print $html_contenido;	
+
+?>

@@ -1,0 +1,49 @@
+<?php
+/*
+	# VISUALIZADOR HTML	
+	
+	
+	print "\n<!-- EMAIL [tipo:$tipo id_matrix:$id] -->";
+
+	print "\n<div class=\"css_wrap_email\" id=\"wrap_{$identificador_unico}\">";
+	
+	# ETIQUETA (LABEL)
+	$html_label = component_common_draw::draw_label($this);
+	
+	# CONTENIDO (INPUT)
+	$html_contenido = '';					
+	switch($permissions) {
+			
+		case 0	:	$html_contenido .= ''; 		
+					break;
+						
+		case 1	: 	$html_contenido .= "\n <span class=\"css_span_dato\">$dato</span>";
+					break;	
+						
+		case ($permissions>=2)	:
+					
+					$html_contenido .= "\n <input class=\"css_email bg_email\" type=\"text\" 				 
+					id=\"{$identificador_unico}\" name=\"{$tipo}_{$id}_tm\" 
+					data-tipo=\"{$tipo}\" data-id_matrix=\"{$id}\" data-lang=\"{$lang}\" 
+					value=\"{$dato}\" 
+					title=\"$html_title\" 
+					disabled />";
+										
+					if(SHOW_DEBUG) {
+						#$html_contenido .= "\n <span class=\"css_span_debugger\" id=\"debugger_{$id}\" >{$debugger}</span>";	
+					}
+					break;
+		
+					
+							
+	}
+	
+	
+	# PRINT HTML
+	print $html_label;
+	print $html_contenido;
+	
+	
+	print "\n</div>\n\n"; //wrap
+*/
+?>

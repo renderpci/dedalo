@@ -1,0 +1,151 @@
+
+.web_ts_term_ul {
+	list-style: none;
+	clear: both;
+	display: table;
+	}
+	.web_ts_term_ul:first-child {
+		
+	}
+	.web_ts_term_li {
+		/*background-color: #CFF5BE;*/		 
+		padding-right: 0;
+		font-weight: normal;
+		clear: both;
+		display: table;
+		width: 100%;
+		border-bottom: 1px solid #F2F2F2;
+		}
+		.web_ts_term_name {
+			display: block;
+			float: left;
+			padding: 6px;
+			}
+			.web_ts_term_name small {
+				opacity: 0.4;
+			}
+		.web_ts_term_name.highlight_term {
+			/**/
+			background-color: #6C20AC;
+			padding: 5px;
+			padding-left: 10px;
+			padding-right: 10px;
+			color: white;
+			border-radius: 4px;
+			
+			/*
+			font-size: 16px;
+			font-weight: bold;
+			border-bottom: 2px solid #e15200;
+			color: #555;
+			text-shadow: 0 0 0 transparent, 0 1px 0 #fff;
+			padding-left: 5px;
+			padding-right: 5;
+			margin-right: 4px;
+			*/
+		}
+		.web_ts_term_icon {			
+			display: block;
+			width: 21px;
+			height: 21px;
+			float: left;
+			margin-top: 6px;
+			margin-left: 10px;
+			padding-left: 4px;
+			padding-right: 4px;				
+			text-align: center;
+			cursor: pointer;
+			border-radius: 3px;			
+			vertical-align: middle;
+		}
+		.icon_show_index {
+			background-color: #F5BD7D;
+			line-height: 17px;
+			color: #FFFFFF;
+			padding-top: 2px;
+			}
+			.icon_show_index:before {
+				content: "i";
+			}
+		.icon_show_childrens {
+
+		}
+		ul.childrens_wrapper {
+			display: none;
+			text-align: left;
+			max-width: 100%;
+			margin: 5px;	
+			margin-left: 50px;
+			clear: both;
+		}
+		div.index_wrapper {
+			display: none;
+			text-align: left;
+			width: 100%;
+			//max-width: 792px;
+			max-width: 554px;
+			min-height: 75px;
+			margin: 0;
+			padding-top: 7px;
+			padding-bottom: 7px;
+			clear: both;
+			/*background-color: #C8F50B;*/			
+		}
+
+
+		.loading {
+			background-image: url(../../images/spinner.gif);
+			background-repeat: no-repeat;
+			background-position: left 50% center;
+			padding: 10px;
+		}
+
+		/* ARROWS
+		----------------------------------------*/
+			.arrow_right {
+				font-family: 'Glyphicons Halflings';
+				background-color: #F57E2C;
+				/*animation: roll 0.1s;
+				transform: rotate(0deg);*/
+				line-height: 17px;
+				padding-left: 5px;
+				color: #FFFFFF;
+				/*width: 21px;
+				height: 21px;*/
+				width: 25px;
+				padding-top: 2px;
+    			font-size: 13px;
+				}
+				.arrow_right:before {
+					/*content: ">";*/
+					content:"\e250";
+				}
+			.arrow_dow {
+				background-color: #10F55A;
+				/*animation: roll 0.15s;
+				transform: rotate(90deg);*/
+
+				padding-bottom: 1px;
+				padding-top: 3px;
+    			padding-left: 3px;    			
+				}
+				.arrow_dow:before {
+					/*content:"\e114";*/
+					content:"\e252";
+				}
+			@keyframes roll {
+			  0% {
+			    transform: rotate(0);
+			  }
+			  100% {
+			    transform: rotate(90deg);
+			  }
+			}
+
+
+
+
+
+
+
+		

@@ -1,0 +1,46 @@
+<?php
+
+	# VISUALIZADOR HTML	
+	
+	
+	print "<!-- SECURITY ACCESS [tipo:$tipo section_id_matrix:$parent] -->";
+	print "<div class=\"css_wrap_radio_button\" >";
+	
+	# ETIQUETA (LABEL)
+	$html_label = component_common_draw::draw_label($this);
+	
+	# CONTENIDO (INPUT)
+	$html_contenido = '';
+	switch($permissions) {
+			
+		case 0	:	$html_contenido .= "<span class=\"css_span_dato\"> No access here (security_access)! </span>";
+					break;
+						
+		case 1	: 	$html_contenido .= "<span class=\"css_span_dato\">$dato</span>";
+					break;	
+						
+		case ($permissions>=2)	:
+					
+					if(!isset($valor)) $valor = 'En construccion';
+					$html_contenido .= "<span class=\"css_span_dato\">$valor</span>";	
+					/*
+					foreach ($ar_list_of_values->result as $value => $rotulo) {
+						
+						if( $dato == $value) {
+							$checked = 'checked="checked"';
+						}else {
+							$checked = "";
+						}
+						$html_contenido .= "\n <input class=\"css_radio_button\" type=\"radio\" name=\"{$tipo}\" data-tipo=\"{$tipo}\" value=\"{$value}\" id=\"{$id}\" title=\"$html_title\" $checked />";
+						$html_contenido .= "\n <label class=\"css_radio_button_rotulo\" $required >$rotulo</label>";	
+					}
+					*/		
+	}	
+	
+	
+	# PRINT HTML
+	#print $html_label;
+	print $html_contenido;
+	
+	echo "</div>"; //wrap
+?>

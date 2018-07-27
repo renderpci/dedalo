@@ -1,0 +1,55 @@
+<?php
+
+	# VISUALIZADOR HTML	
+	
+	print "<div class=\"wrap_component css_wrap_email tooltip_active\" ";
+	print "data-component_name=\"{$component_name}\" ";
+	print "data-modo=\"{$modo}\" ";
+	print "data-dato='".json_encode($dato)."' ";
+	print 'title="'.search_development2::search_options_title( $this->search_operators_info() ).'" ';
+	print ">";
+	
+	# ETIQUETA (LABEL)
+	$html_label = component_common_draw::draw_label($this);
+	
+	# CONTENIDO (INPUT)
+	$html_content = '';
+	switch($permissions) {
+			
+		case 0	:	$html_content .= "";
+					break;
+						
+		case 1	: 	$html_content .= "<span class=\"css_span_dato\">$dato</span>";
+					break;	
+						
+		case ($permissions>=2)	:
+					# COMPARISON OPERATORS
+					$html_content .= operator::get_search_comparison_operators_html($tipo,$ar_comparison_operators);
+		
+					$html_content .= "<input class=\"css_email\" type=\"text\" name=\"{$search_input_name}\" ";
+					$html_content .= "id=\"{$identificador_unico}\" ";
+					$html_content .= "data-tipo=\"{$tipo}\" ";
+					$html_content .= "data-section_tipo=\"{$section_tipo}\" ";
+					$html_content .= "data-parent=\"{$parent}\" ";
+					$html_content .= "data-lang=\"{$lang}\" ";
+					$html_content .= "value=\"{$dato}\" ";
+					$html_content .= "title=\"$html_title\" ";
+					$html_content .= "/>";
+
+					# LOGICAL OPERATORS
+					$html_content .= operator::get_search_logical_operators_html($tipo,$ar_logical_operators);
+
+					if(SHOW_DEBUG===true) {
+						$html_content .= "<span class=\"debug_info\">$search_input_name</span>";
+					}
+					break;					
+	}
+	
+	
+	# PRINT HTML
+	print $html_label;
+	print $html_content;
+	
+	
+	print "</div>"; //wrap
+?>

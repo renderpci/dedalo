@@ -1,0 +1,37 @@
+<?php
+	
+	# VISUALIZADOR HTML	
+	
+	print "<!-- SECTION SEARCH [tipo:$tipo id_matrix:$id] -->";
+	print "<div class=\"css_section_wrap\" >";
+	
+	
+	# ETIQUETA (LABEL)	
+	$html_label 	 = "<div class=\"css_section_titulo\"><hr>SECTION: ".component_common_draw::draw_label($this)."</div>";
+	$html_label  	.= "<div class=\"css_section_titulo\">Número: ".$dato."</div>";
+		
+	
+	# CONTENIDO (INPUT)
+	$html_contenido = "<div class=\"css_section_content\">";
+	switch($permissions) {
+			
+		case 0	:
+				$html_contenido .= "<span class=\"css_span_dato\">".label::get_label('sin_acceso')."</span>";
+				break;
+		
+		case 1	:						
+		case 2	: 
+		case 3	:	
+				$html_contenido .= $html_section_add;	
+				break;			
+	}
+	$html_contenido .= "</div><!-- /css_section_content -->";
+	
+	
+	# PRINT HTML
+	print $html_label;
+	print $html_contenido;
+	
+	
+	print "</div><!-- /css_section_wrap -->"; //wrap
+?>

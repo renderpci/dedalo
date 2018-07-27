@@ -1,0 +1,20 @@
+<?php
+
+
+	# VISUALIZADOR HTML
+	$html_tool  ='';
+	$html_tool .= "<div class=\"link\" onclick=\"tool_common.open_tool_tr_print(this)\" ";
+	$html_tool .= "data-tipo=\"$tipo\" ";
+	$html_tool .= "data-parent=\"$parent\" ";
+	$html_tool .= "data-section_tipo=\"$section_tipo\" ";
+	$html_tool .= "data-lang=\"$lang\" ";
+	$html_tool .= ">";
+	$html_tool .= "<div class=\"icon_bs tool_tr_print_icon\"></div>";
+	$html_tool .= label::get_label('tool_tr_print');
+	$html_tool .= "</div>";
+	
+	
+	# PRINT HTML
+	echo $html_tool;
+	
+?>

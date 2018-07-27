@@ -1,0 +1,66 @@
+// Variables
+@common_css: "../../common/css";
+
+// Usage
+@import "@{common_css}/library.less"; 
+
+
+/* COMPONENT_FILTER_MASTER
+------------------------------------------------------- */
+.css_wrap_filter_master {
+	line-height: 1.1em;	
+	}
+	/* CSS_WRAP_FILTER_MASTER_UNACTIVE (Activated by JS on Admin general)
+	------------------------------------------------------- */
+	.css_wrap_filter_master_unactive {
+		opacity: 0.5;
+		pointer-events:none;
+	}
+	.css_wrap_filter_master .content_data {
+		line-height: 1.6em;
+		/*
+			-moz-column-count: 3;
+		 -webkit-column-count: 3;
+				 column-count: 3;
+		*/
+		max-height: 286px;
+		overflow: auto;
+	}
+	.css_wrap_filter_master .content_data ul.filter_master_list {
+		display: table;
+		}
+		.css_wrap_filter_master ul.filter_master_list li {
+			list-style: none;
+			display: table-row;
+			margin: 0;			
+			}
+			.css_wrap_filter_master ul.filter_master_list li::before {
+			   
+			}
+			.css_wrap_filter_master ul.filter_master_list li:hover {
+				color: #000000;
+			}
+
+
+	/*	INPUT 
+	------------------------------------------------------- */
+	.css_wrap_filter_master input.css_check_box_filter_master {
+		padding: 2px;
+		border: 1px solid #9E9E9E;
+		border-radius: 3px;
+		box-shadow: inset 0 0 6px #999999;
+		cursor: pointer;
+		}
+		.css_wrap_filter_master input.css_check_box_filter_master:hover {
+			background-color: #F1F1F1;			
+		}
+		.css_wrap_filter_master input.css_check_box_filter_master:focus {
+		}
+		.css_wrap_filter_master input.css_check_box_filter_master:active {
+		}
+
+	.css_wrap_filter_master label.css_check_box_filter_master_rotulo {
+		padding-left: 5px;
+		display: table-cell;
+	}
+

@@ -1,0 +1,87 @@
+<?php
+
+	# VISUALIZADOR HTML
+	
+	
+	# html_delimiter
+	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'in', $modo, $lang);
+
+	print "<div class=\"wrap_component css_wrap_input_text_large wrap_component_{$tipo}\" id=\"{$id_wrapper}\" ";
+	print "data-tipo=\"{$tipo}\" ";
+	print "data-lang=\"{$lang}\" ";
+	print "data-section_tipo=\"{$section_tipo}\" ";
+	print "data-parent=\"{$parent}\" ";
+	print "data-modo=\"{$modo}\" ";
+	print "data-dato=\"{$dato}\" ";
+	print "data-component_name=\"{$component_name}\" ";
+	print "data-component_info='{$component_info}' ";
+	print ">";
+	
+		
+		# ETIQUETA (LABEL)
+		$html_label = component_common_draw::draw_label($this);
+		
+		# CONTENIDO (INPUT)
+		$html_content = '';
+		switch($permissions) {
+				
+			case 0	:	
+				$html_content .= "";
+				break;
+							
+			case 1	: 	
+				$html_content .= "<span class=\"css_span_dato\">$dato</span>";
+				break;	
+							
+			case 2	:
+			case 3	:
+				# Dato reference default lang
+				/*
+				if ($modo!='tool_lang') {
+				$html_content .= " <div class=\"dato_refecence_default_lang\">$dato_reference_lang</div>";
+				}
+				*/	
+
+				$html_content .= "<textarea class=\"css_input_text_large\" name=\"{$input_name}\" ";
+				$html_content .= "onchange=\"component_input_text_large.Save(this)\" ";
+				$html_content .= "id=\"$identificador_unico\" ";
+				$html_content .= "data-tipo=\"{$tipo}\" ";
+				$html_content .= "data-parent=\"{$parent}\" ";
+				$html_content .= "data-section_tipo=\"{$section_tipo}\" ";
+				$html_content .= "data-lang=\"{$lang}\" ";
+				$html_content .= "title=\"$html_title\">";
+				$html_content .= $dato;
+				$html_content .= "</textarea>";
+				
+				#$html_content .= " <span  class=\"css_span_log\"></span>";
+				#$html_content .= " <span  class=\"css_span_ejemplo \">$ejemplo</span>";
+						
+				#
+				# JS Init component
+				$html_content .= '<script>';
+				# Init component
+				$init_options = new stdClass();
+					$init_options->component_name 	= $component_name;
+					$init_options->wrapper_id 		= $id_wrapper;
+				$html_content .= 'component_common.init('.json_encode($init_options).');';
+				$html_content .= '</script>';
+				break;
+		}
+
+		# Prepare content to show in page
+		tools::prepare_content($html_content);
+		
+
+		# PRINT HTML
+		print $html_label;
+		print $html_content;
+	
+	
+	print "</div>"; //wrap
+
+
+	# html_delimiter
+	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'out', $modo, $lang);
+
+
+?>

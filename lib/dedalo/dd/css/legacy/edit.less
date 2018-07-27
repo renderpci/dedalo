@@ -1,0 +1,72 @@
+@charset "UTF-8";
+/* CSS Document */
+
+@images_path : "../../../../../images/";
+
+.table_edit {
+	/**/
+	background-image:url("../../../../../images/table_ramp.jpg"); 
+	background-position:0px 21px;
+	background-repeat:repeat-x;
+	background-color:#c1c3c5;
+	/*
+	background-image: -moz-linear-gradient(top, #d7d7d9, #c4c5c7);	
+	background-image: -webkit-gradient(linear, left top, left bottom, from(#d7d7d9), to(#c4c5c7)); 
+	*/	  
+	border-collapse:collapse; 
+	width:60%; 
+	margin:10px;
+	
+	-moz-box-shadow		: 2px 2px 8px #888888;
+	-webkit-box-shadow	: 2px 2px 8px #888888;
+	box-shadow			: 2px 4px 8px #888888;
+}
+
+.table_edit td { padding:2px;}
+.table_edit .td_paddind_right { padding-right:15px }
+
+.topTDround {
+	color:#303030;	
+	background-color:#a9a9a9;
+	background-image:url("../../../../../images/th_ramp2.png");
+	background-repeat:repeat-x;
+	height:20px;
+	
+	-webkit-border-top-left-radius	: 5px;
+	-webkit-border-top-right-radius	: 5px;
+	-moz-border-radius-topleft		: 5px;
+	-moz-border-radius-topright		: 5px;
+	border-radius-topleft			: 5px;
+	border-radius-topright			: 5px;
+}
+
+.tdRightRound {
+	border-right:none !important;		
+	
+	-webkit-border-top-right-radius: 21px;
+	-moz-border-radius-topright: 21px;
+	border-top-right-radius: 21px;	
+}
+
+.td_header {
+	color:#303030;
+	/*background-color:#5e5e5e;*/	
+	background-image:url("../../../../../images/th_ramp.png");
+	background-repeat:repeat-x;
+	height:21px;
+	text-align:left;
+	
+	-webkit-user-select: none;
+	-khtml-user-select: none;
+	-moz-user-select: none;
+	-o-user-select: none;	
+	
+	padding-left:5px !important;
+}
+
+.td_header_grid { color:#CCCCCC; text-transform:capitalize}
+
+.flecha_open_tboby { display: inline-block; width:16px; height:16px; vertical-align:middle; background-image:url("../../../../../images/iconos/flecha_grey_right.png"); background-repeat:no-repeat }
+.flecha_close_tboby { display: inline-block; width:16px; height:16px; vertical-align:middle; background-image:url("../../../../../images/iconos/flecha_grey_down.png"); background-repeat:no-repeat }
+
+

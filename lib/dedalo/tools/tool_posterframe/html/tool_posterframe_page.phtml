@@ -1,0 +1,92 @@
+<?php
+
+	# VISUALIZADOR HTML		
+
+	$html    = "<!-- TOOL PAGE [tipo:$tipo] -->";	
+	$html   .= "<div class=\"wrap_tool wrap_tool_posterframe_page\" >";
+
+		
+		# DIV CONTENT
+		$html 	.= "<div class=\"tool_posterframe_content\">";
+
+
+			# PLAYER
+			$html 	.= "<div id=\"player_av\">";
+			$html 	.= 	$html_media_player_posterframe;
+			$html 	.= "</div>";
+			
+			
+			# OPTIONS
+			$html .= "<div class=\"tool_posterframe_options\">";
+
+
+				#
+				# IDENTIFYING_IMAGE
+				$html .= "<div id=\"identifying_image_wrapper\">";
+				
+					# BUTTON CREATE IDENTIFYING IMAGE
+					if (!empty($ar_identifying_image)) {
+
+						$html .= "<div class=\"css_button_generic identifying_image_new\" ";
+						$html .= "data-video_id=\"$video_id\" ";
+						$html .= "data-quality=\"$quality\" ";
+						$html .= "data-parent=\"$parent\" ";
+						$html .= "onClick=\"tool_posterframe.generate_identifying_image(this, component_av.player_get_current_time_in_seconds())\" ";
+						$html .= ">";
+						$html .= label::get_label('crear_imagen_identificativa');
+						$html .= "</div>";
+
+						$html .= "<select id=\"identifying_image_selector\" class=\"css_button_generic\">";
+						foreach ($ar_identifying_image as $key => $value) {
+							$option_value = json_encode($value);
+							$section_name = RecordObj_dd::get_termino_by_tipo($value['section_tipo']);
+							$html .= "<option value='$option_value' >$section_name - ".$value['section_id']."</option>";
+						}
+						$html .= "</select>";
+					}
+
+				$html .= "</div>";//end identifying_image_wrapper
+
+				
+				#
+				# POSTERFRAME
+				$html .= "<div id=\"posterframe_wrapper\">";
+
+					# BUTTON DELETE
+					$html .= "<div class=\"icon_bs posterframe_button_delete\" ";
+					$html .= "data-video_id=\"$video_id\" data-quality=\"$quality\" ";
+					$html .= "data-parent=\"$parent\" ";
+					$html .= "onclick=\"tool_posterframe.delete_posterframe(this)\" ";
+					$html .= "></div>";
+
+					# BUTTON NEW
+					$html .= "<div class=\"css_button_generic posterframe_button_new\" ";
+					$html .= "data-video_id=\"$video_id\" data-quality=\"$quality\" ";
+					$html .= "data-parent=\"$parent\" ";
+					$html .= "onClick=\"tool_posterframe.generate_posterframe(this, component_av.player_get_current_time_in_seconds())\"  ";
+					$html .= ">". label::get_label('crear'). " Posterframe ";
+					$html .= "</div>";
+					
+
+					# THUMB IMAGE
+					$html .= "<div class=\"posterframe_thumb_image\" style=\"background-image:url('$posterframe_url');\"></div>";
+				
+				$html .= "</div>";//end posterframe_wrapper
+
+
+
+			$html .= "</div><!-- /tool_posterframe_options -->";			
+
+
+		$html 	.= "</div><!-- /tool_posterframe_content -->";
+
+	# INSPECTOR LOG TOOL
+	$html 	.= "<div id=\"inspector_log\" class=\"tool_transcription_inspector_log\"> </div>";
+	$html   .= "</div><!-- /wrap_tool_posterframe_page -->"; //page wrap
+
+	
+	
+
+	print $html;
+		
+?>

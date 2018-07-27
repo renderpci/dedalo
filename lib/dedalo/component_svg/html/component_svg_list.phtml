@@ -1,0 +1,21 @@
+<?php
+
+	# VIEW HTML
+		
+	# CONTENT
+	$html_content = '';
+	switch(true) {
+		
+		case ($permissions===0):
+				$html_content .= "";
+				break;
+		
+		case ($permissions>=1):
+				$html_content .= '<img src="'.$file_url.'" />';
+				break;
+	}
+
+	
+	# PRINT HTML	
+	print $html_content;
+?>

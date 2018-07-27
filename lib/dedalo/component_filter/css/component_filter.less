@@ -1,0 +1,87 @@
+// Variables
+@common_css: "../../common/css";
+
+// Usage
+@import "@{common_css}/library.less"; 
+
+
+
+/* COMPONENT_FILTER
+------------------------------------------------------- */
+.css_wrap_filter {
+	line-height: 1.1em;
+	}
+	.css_wrap_filter > .content_data {
+		line-height: 1.6em;
+		/*
+			-moz-column-count: 3;
+		 -webkit-column-count: 3;
+				 column-count: 3;
+		*/
+		max-height: 175px;
+		overflow: auto;
+	}
+	.css_wrap_filter > .content_data ul.filter_projects_list {
+		display: table;
+		}
+		.css_wrap_filter ul.filter_projects_list li {
+			list-style: none;
+			display: table-row;
+			margin: 0;			
+			}
+			.css_wrap_filter ul.filter_projects_list li::before {
+			   
+			}
+			.css_wrap_filter ul.filter_projects_list li:hover {
+				color: #000000;
+			}
+
+
+
+
+	/*	INPUT 
+	------------------------------------------------------- */
+	.css_wrap_filter input.filter_checkbox {
+		padding: 2px;
+		border: 1px solid; //  #9E9E9E
+		border-radius: 3px;
+		//box-shadow: inset 0 0 6px #999999;
+		cursor: pointer;
+		}
+		.css_wrap_filter input.filter_checkbox:hover {
+			background-color: #F1F1F1;			
+		}
+		.css_wrap_filter input.filter_checkbox:focus {		
+		}
+		.css_wrap_filter input.filter_checkbox:active {
+		}
+
+	.css_wrap_filter label.filter_checkbox_rotulo {
+		padding-left: 5px;
+		display: table-cell;
+		font-weight: 100;
+	}
+
+
+	.filter_without_selection {
+		background-color: #ff0000 !important;
+		border-radius: 3px;
+	}
+
+
+
+/*	WRAP_FILTER_SEARCH 
+------------------------------------------------------- */
+.css_wrap_filter.wrap_component_search {	
+	//background-color: #AEED5D;	
+	}
+	.css_wrap_filter.wrap_component_search > .content_data {
+		//background-color: #71EDE1;
+		max-height: 134px;
+	}
+	.css_wrap_filter.wrap_component_search > .content_data .wrap_dato_component_filter {
+		padding: 0;
+	}
+
+
+

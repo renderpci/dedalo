@@ -1,0 +1,411 @@
+
+// Vars
+@common_css: "../../common/css";
+
+// Usage
+@import "@{common_css}/library.less";
+
+
+
+/* Overwrite jquery ui defaults
+------------------------------------------------------- */
+.ui-autocomplete {
+     z-index: 9999 !important;
+}
+.ui-autocomplete-loading {
+	//background: white url('../../themes/default/spinner.gif') right center no-repeat !important;
+	background: white url('../../themes/default/spinner.svg') right center no-repeat !important;
+}
+
+
+
+/* WRAP
+------------------------------------------------------- */
+.wrap_component {
+	position: relative;
+	float: left;
+	//overflow: hidden;
+	padding: 5px;	
+	border:none;
+	margin: 0;	
+	min-height: 2.333em;
+	width: 100%;
+	//transition: all .180s ease-in-out;
+	//display: flex;
+	// flex-wrap: wrap;
+
+	//pointer-events: initial;
+	//background-color: rgba(175, 204, 246, 0.16);
+	//border-top: 1px solid #EBEBEB;
+		@media screen and (max-width: @movil_max_width) {
+			width: 100% !important;
+		}
+	}
+	.wrap_component::before {
+		//content: " ";
+		//clear: left;
+	}
+
+.selected_wrap {	
+	background-color: @color_selected_wrap !important;
+}
+
+
+/* LOCKED_WRAP . Apperance when component is locked
+------------------------------------------------------- */
+.locked_wrap {
+	/*background-color: #ED2112;*/	
+	user-select: none;
+        -moz-user-select: none;
+        -khtml-user-select: none;
+        -webkit-user-select: none;
+        -o-user-select: none;
+    opacity: 0.80;    
+    //pointer-events:none;   
+	}
+	.locked_wrap > label {
+		color: red;
+	}
+	.locked_wrap > .content_data {
+		//opacity: 0.35;
+		//cursor: not-allowed;
+		//pointer-events:none; 
+		}
+		.locked_wrap > .content_data::before {
+			content: " ";
+			display: block;
+			position: absolute;
+			width: 100%;
+			height: 100%;
+			top: 0;
+			left: 0;
+			background-color: @color_locked_wrap;
+			z-index: 999;
+			opacity: 0.16;
+			//pointer-events:none; 
+		}
+	.locked_wrap::before {
+		content: "\e033";
+		position: absolute;
+		color: red;
+		right: 10px;
+		font-family: 'Glyphicons Halflings';
+	    font-style: normal;
+	    font-weight: 400;
+	    -webkit-font-smoothing: antialiased;
+	    z-index: 1;
+	}
+	.locked_wrap_username {
+		font-family: Arial, sans-serif;
+		font-size: 96%;
+		padding-left: 4px;
+	}
+	
+.locked_wrap_overlay {
+	background-color: @color_label_error; //#ED0019;
+	z-index: 2;
+	position: absolute;
+	width: 100%;
+	height: 100%;
+	margin: 0;
+	padding: 0;
+	left: 0;
+	top: 0;
+	opacity: 0.7;
+}
+
+
+
+
+/* CONTENT DATA
+------------------------------------------------------- */
+.content_data {
+	position: relative;
+	display: inline-block;
+	padding: 0;
+	margin: 0;	
+	width: 83%;
+	height: 100%;
+	/*background-color:#fff7e0;*/
+	}	
+	@media screen and (max-width: @content_data_max_width) {
+		.content_data {
+			display: block !important;
+			width: 100% !important;
+		}
+		.css_wrap_image .content_data {
+			text-align: center;
+		}
+	}
+
+
+
+/* INPUTS
+------------------------------------------------------- */
+input[type="text"], input[type="password"], textarea {
+	padding: 3px;
+	padding-left: 6px;
+	padding-right: 6px;
+	margin-top: 0;
+	border: 1px solid;
+	border-color: @color_input_border;
+	color: #3F3F3F;
+	border-radius: 3px;
+	//box-shadow: inset 0 0 5px #D2D2D2;
+	//transition: all 0.09s ease-in-out;
+	background-color: #FFFFFF;
+	font-size: 12px;
+	}
+	input[type=text]:hover, input[type="password"]:hover {
+		background-color: #F8F8F8;
+	}
+	input[type="text"]:focus, input[type="password"]:focus {		
+		box-shadow: 0 0 10px #BEBEBE;
+		color: #000000;
+		z-index: 2001 !important;
+	}
+	input[type="text"]:active {
+		background-color: #FFFFFF;
+	}
+
+	input::-webkit-input-placeholder {
+		color: #D2D2D2
+	}
+	
+	/* OVERWRITE TINYMCE TEXT AREA
+	------------------------------------------------------- */
+	.mce-panel {
+		border-color: @color_input_border !important;
+	}
+
+
+
+/* LABEL
+------------------------------------------------------- */
+	.label {
+		display: inline-block;
+		padding: 4px;
+		padding-top: 3px;		
+		min-width: 15%;
+		height: auto;
+		line-height: 1em;
+		text-align: left;	
+		word-wrap: break-word;
+		vertical-align: top;
+		font-size: 100%;
+		color: @color_component_label;
+		border:none;
+		cursor: pointer;
+		-webkit-user-select: none;
+		 -khtml-user-select: none;
+		   -moz-user-select: none;
+		     -o-user-select: none;
+		        user-select: none;		
+	}
+	/* LABEL IN WRAP COMPONENT CONTEXT */
+	.wrap_component .label {
+		width: 17%;
+		//max-width: 90px;
+		max-width: 16.66%;
+		text-overflow: ellipsis;
+		overflow: hidden;
+		white-space: nowrap;
+		cursor:default;
+		//transition: all 0.3s ease;
+		//font-weight: bold;
+		font-family: "Oxygen-Bold", "Helvetica Neue", Helvetica, Arial, sans-serif;
+		//font-weight: 300;
+
+		// Sweet labels 11-01-2018 (Manolo's request)
+		font-weight: 100;
+		color: #9e9e9e;
+
+		@media screen and (max-width: @movil_max_width) {
+			width: 100% !important;
+			max-width: 100%;
+		}
+		}
+		.wrap_component .label:hover {
+
+		}
+
+
+
+.css_label_naranja {
+	color: #F60;
+}
+.css_label_grey_bg_50 {
+	background-color: #626262;
+	padding: 3px;
+}
+.css_hide_label {
+	visibility: hidden;
+}
+.css_label_titulo {
+	font-weight: bold;
+	font-size: 13px;
+	color: #EEE;
+	width: auto;
+}
+
+
+
+/* TEXT DATO STRING
+------------------------------------------------------- */
+.css_span_dato {
+	/*
+	-webkit-user-select: none;
+	-khtml-user-select: none;
+	-moz-user-select: none;
+	-o-user-select: none;
+	user-select: none;
+	*/
+	line-height: 1.3em;
+	display: inline-block;
+	padding: 2px;
+	//padding-left: 4px;
+	color: #404040;
+	font-size: 96%;	
+}
+div.dato_refecence_default_lang {
+	font-style: italic;
+	color: #3A5880 !important;
+	opacity: 0.6;
+}
+
+
+
+/* EJEMPLO TEXT
+------------------------------------------------------- */
+.css_span_ejemplo {
+	font-style: italic;
+    display: inline-block;
+    color: #999;
+    font-size: smaller;
+    margin-right: 5px;
+    position: relative;
+    line-height: 1em;
+    vertical-align: middle; 
+    padding: 8px;
+    padding-bottom: 0;
+}
+
+
+
+/* TOOL LABEL
+------------------------------------------------------- */
+.css_tool_label {
+	display: inline-block;
+	padding-left: 5px;
+	padding-right: 5px;	
+	text-transform: uppercase;
+	color: @color_component_label;
+	font-size: 130%;
+}
+
+
+
+.tools_container_div {
+	position: relative;
+	z-index: 2000;
+}
+
+
+
+/* SEARCH OPERATORS
+------------------------------------------------------- */
+.css_operator_select{
+	padding: 2px;
+	cursor: pointer;	
+}
+
+
+
+.search_component > .wrap_component > .content_data > input.q_operator {
+	width: 10% !important;
+	margin-right: 5px;
+	display: inline-block;
+	min-width: initial;
+	height: 2em;
+	text-align: center;
+	//vertical-align: middle;
+	float: left;
+	}
+	.search_component > .wrap_component > .content_data > input.q_operator:focus {		
+		//background-color: #4F4F4F;
+		//color: #ffffff;
+		//border-radius: 4px;
+	}
+
+
+
+/* DEBUG
+------------------------------------------------------- */
+.debug_component_total_time {
+	position: absolute;
+	padding: 0;
+	right: 5px;
+	top: -1px;
+	font-size: 80%;
+}
+
+
+
+/* OVERRIDE JQUERY UI
+------------------------------------------------------- */
+.ui-menu-item {
+	font-weight: normal !important;
+	}
+	.ui-menu-item:hover {
+		
+	}
+
+
+/* mandatory common
+------------------------------------------------------- */
+.wrap_component .mandatory {
+	border-color: red;
+	background-color: rgba(255, 0, 0, 0.11);
+}
+
+
+.select_fast_lang_switch {
+	position: absolute;
+    //right: 57px;
+   // top: 3px;
+    z-index: 9;
+    //height: 26px;
+
+    right: 2px;
+    top: 2px;
+    height: 20px;
+
+    top: 0;
+    right: 0;
+    margin: 2px;
+
+    //display: none;
+    opacity: 0;
+}
+
+.selected_wrap > .select_fast_lang_switch {
+	//display: block;
+	opacity: 1;
+}
+
+
+.component_with_value {
+	background-color: #ffdca9;
+}
+
+
+/* component_tools_container
+------------------------------------------------------- */
+	.component_tools_container {
+		//position: absolute;
+		float: right;
+		right: 0;
+		top: 0;
+		margin: 5px;
+	}
+

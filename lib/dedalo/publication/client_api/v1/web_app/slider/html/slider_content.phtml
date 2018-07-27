@@ -1,0 +1,27 @@
+<div id="slider_content">
+<?php
+	#
+	# HTML SLIDER
+	$html='';
+	$html .= "<div id=\"slidebox\" class=\"flexslider\">";
+	$html .= "\n<ul class=\"slides\">";
+	#
+	# Images iterate
+	# dump($ar_images, ' ar_images ++ '.to_string());
+	foreach ($ar_images as $key => $image) {
+
+		$image_url = $image->image;
+		$image_url = str_replace('1.5MB', '7MB', $image_url);
+		
+		$html .= "\n<li>";
+		$html .= "<div class=\"imagen_slider\" style=\"background-image: url('$image_url');\"></div>";
+		$html .= "</li>";
+
+	}//end foreach ($ar_images as $key => $image)
+	$html .= "\n</ul><!-- /slides -->";
+	$html .= "\n</div>";//end slidebox	
+	
+	echo $html;
+?>
+
+</div>

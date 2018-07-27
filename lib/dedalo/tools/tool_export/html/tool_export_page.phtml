@@ -1,0 +1,21 @@
+<?php
+/**
+* TOOL_EXPORT PAGE
+*/
+
+$html='';
+
+	$html   .= "\n<!-- TOOL PAGE [tipo:$section_tipo] -->";
+	$html   .= "\n<div class=\"tool_title text_shadow_inset\" > TOOL EXPORT </div>";
+
+	#
+	# WRAP_TOOL_EXPORT
+	$html .= "<div id=\"wrap_tool_export\" class=\"wrap_tool\">";
+	
+	$html .= 	$page_content_html;
+
+	$html .= "</div>";
+	
+
+echo $html;
+?>

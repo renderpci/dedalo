@@ -1,0 +1,106 @@
+<?php
+	
+	# VISUALIZADOR HTML
+
+	// Arrow maker
+	$arrow = function( $tipo, $label, $path=null ) {
+
+		$current_order = false;		
+		
+		$order = isset($this->search_options->search_query_object->order) ? (array)$this->search_options->search_query_object->order : null;
+
+		if ($tipo==='section_id') {
+			$path_element = new stdClass();
+				$path_element->component_tipo = 'section_id';			
+			$path = [$path_element];
+			$path = json_encode($path);
+		}
+
+		if (!empty($path) && !empty($order[0])) {
+	
+			$ar_elements = array_filter($order, function($element) use($tipo) {
+				
+				$end_path = reset($element->path);
+				# dump($end_path->component_tipo, ' end_path ++ '.to_string($tipo));
+				if ($tipo===$end_path->component_tipo) {
+					return true;
+				}
+			});
+		}		
+		
+		if (isset($ar_elements[0])) {
+			$current_order = $ar_elements[0]->direction;
+		}
+
+		
+	
+		if ($current_order==='DESC') {
+			# Arrow UP
+			$arrow_html = '<div onClick="search.load_ordered_rows(this,\''.$tipo.'\',\'ASC\',\''.encodeURIComponent($path).'\')" class="flechas flecha_orden_ascendent div_image_link" title="Sort by '.$label.' Ascending"></div>';
+		}else{
+			# Arrow DOWN
+			$arrow_html = '<div onClick="search.load_ordered_rows(this,\''.$tipo.'\',\'DESC\',\''.encodeURIComponent($path).'\')" class="flechas flecha_orden_descendent div_image_link" title="Sort by '.$label.' Descending"></div>';
+		}
+		return $arrow_html;
+	};
+
+
+
+	$html_content  = '<tr>';
+	
+
+		# TD ID
+		$html_content .= '<th class="id_column"';
+		#$html_content .= 'data-resizable-column-id="ID" ';
+		$html_content .= '>';
+			
+			$html_content .= '<div class="th_title">';
+			$html_content .= 'ID';
+			$html_content .= '</div>';
+			$html_content .= $arrow('section_id', 'section_id', null);
+
+		$html_content .= '</th>';
+		
+
+		# TD DATOS
+		foreach ($ar_label_data as $value) {
+
+			$tipo  = $value['tipo'];
+			$label = $value['label'];
+			$path  = isset($value['path']) ? $value['path'] : null;
+			$path  = json_encode($path, JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP | JSON_HEX_TAG);
+
+			$td_css_selector_tipo = 'th_column_'.$tipo;
+
+			$th_style = '';
+			# Overwrite default column width when need. Set component propiedades 'elements_list_mode' as you want, like edit..
+			if (isset($propiedades->elements_list_mode->$tipo->column_width)) {
+				$column_width = $propiedades->elements_list_mode->$tipo->column_width;
+				$th_style = ' style="width:"'.$column_width.'" ';
+			}
+			
+			$html_content .= '<th ';
+			$html_content .= 'class="'.$td_css_selector_tipo.'"';
+			$html_content .= $th_style;
+			#$html_content .= 'data-resizable-column-id="'.$tipo.'"';
+			$html_content .= '>';
+			
+				$html_content .= '<div class="th_title">';
+				$html_content .= $label;
+				$html_content .= '</div>';
+				$html_content .= $arrow($tipo, $label, $path);
+				
+
+			$html_content .= '</th>';
+		}
+
+
+	$html_content .= '</tr>';
+
+	
+	# PRINT HTML
+	print $html_content;
+
+	
+
+?>

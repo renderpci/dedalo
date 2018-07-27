@@ -1,0 +1,200 @@
+<?php
+
+	# VISUALIZADOR HTML	
+
+	$html    = "<!-- TOOL LANG PAGE [tipo:$tipo parent:$parent] -->";
+		
+	$html   .= "<div class=\"wrap_tool_lang_page\" >";
+
+
+	$html	.= "<div class=\"header_tool\">";
+
+		#
+		# TOOL NAME
+		$html .= "<div class=\"header_info header_tool_name tool_lang_icon\">";
+		$html .= label::get_label($tool_name) ;
+		$html .= "</div>";//end header_tool_name
+
+		#
+		# HEADER_TOOL_TABS
+		$html .= "<ul class=\"header_tool_tabs\">";
+		$html .= "<li class=\"tab_active\" onclick=\"tool_common.change_view_selector(this,'source_lang','tool_lang_component_source')\">".label::get_label('idioma_de_origen')."</li>";
+		$html .= "<li class=\"\" onclick=\"tool_common.change_view_selector(this,'media','tool_lang_component_source')\">Video</li>";
+		$html .= "</ul>";
+		$html .= "<script>";
+		$html .= "tool_common.media_frame_url='$av_player_url';";
+		$html .= "</script>";
+
+		#
+		# INFO
+		$html .= "<div class=\"header_info\">";
+		$html .= $section_label;
+		$html .= ' | ' . $section_id . ' | ';
+		if (is_object($inverse_code)) {
+			$html .= $inverse_code->value;
+		}
+		$html .= "</div>";//end header_info
+
+		# TOP_ID SELECTOR
+		if (isset($inverse_locators) && is_array($inverse_locators)) {
+			
+			$html .= "<div class=\"top_id_selector\">";
+
+			$html .= "<label>".label::get_label('enfoque')."</label> : ";
+			$html .= "<select id=\"top_id_selector\" class=\"custom_dropdown\" onchange=\"$tool_name.update_top_id(this)\">";
+			#$html .= " <option></option>";
+			$ar_inverse = $this->get_ar_inverse($inverse_locators);
+			foreach ($ar_inverse as $current_id => $current_name) {
+				$selected = $current_id==TOP_ID ? 'selected' : '';
+				$html .= "<option value=\"$current_id\" {$selected}>$current_name</option>";
+			}
+			$html .= "</select>";
+
+			$html .= "<script>";
+			$html .= "{$tool_name}.update_top_id(document.getElementById('top_id_selector'));";			
+			$html .= "</script>";
+
+			$html .= "</div>";//end top_id_selector	
+		}
+
+		#
+		# STATE
+		$html	.= "<div id=\"component_state_place\">";
+		$html	.= "<!-- ajax content here -->";
+		$html	.= "</div>";
+
+
+	$html	.= "</div>";//end header_tool
+
+
+		# CONTENT TITLE
+		#$html 	.= "<div class=\"css_tool_label text_shadow_inset\">TOOL LANG page</div>";
+		
+		# TOP DIV
+		$html 	.= "<div id=\"tool_lang_top\">";
+		
+			# DIV SOURCE COMPONENT
+			$html 	.= "<div id=\"tool_lang_component_source\">";
+			$html   .= "<!-- TOOL LANG SOURCE COMPONENT [tipo:$tipo parent:$parent] -->";				
+			$html 	.= "<div class=\"css_tool_label text_shadow_inset\">".label::get_label('idioma_de_origen')."</div>";
+
+						# SOURCE LANG SELECTOR
+			$html   .= "<div class=\"selector_source_lang text_shadow_inset\">";	
+			$html   .= $selector_source_lang_html;
+			$html   .= "</div>";
+
+			$html   .= "<div id=\"wrap_tool_lang_component_source\">";	
+			$html   .= $component_obj_source_html;	
+			$html   .= "</div>"; //css_wrap_tool_lang
+
+
+			# nParagrapsLeft
+			$html .= "<div class=\"nParagrapsLeft_div text_shadow_inset\">".label::get_label("total_parrafos").":<span id=\"nParagrapsLeft\">1</span></div>";
+
+			$html .= "</div><!-- /tool_lang_component_source -->";
+
+			#media video
+			$html .= "<iframe id=\"videoFrame\" name=\"videoFrame\" class=\"media_frame\" src=\"\"></iframe>"; // {$av_player_url}
+			
+
+			# DIV TARGET COMPONENT
+			$html 	.= "<div id=\"tool_lang_component_target\">";			
+			$html   .= "<!-- TOOL LANG TARGET COMPONENT [tipo:$tipo parent:$parent] -->";			
+			$html 	.= "<div class=\"css_tool_label text_shadow_inset\">".label::get_label('idioma_de_destino')."</div>";
+
+			# TARGET LANG SELECTOR
+			$html   .= "<div class=\"selector_target_lang text_shadow_inset\">";	
+			$html   .= $selector_target_lang_html;
+			if (SHOW_DEBUG===TRUE) {
+			$html   .= "<span class=\"debug_info\">[last_target_lang: $this->last_target_lang]</span>";
+			}			
+			$html   .= "</div>";
+
+
+			$html   .= "<div id=\"wrap_tool_lang_component_target\">";		
+			$html   .= $component_obj_target_html;	
+			$html   .= "</div>"; //css_wrap_tool_lang
+
+			# nParagrapsRight
+			$html .= "<div class=\"nParagrapsRight_div text_shadow_inset\">".label::get_label("total_parrafos").":<span id=\"nParagrapsRight\">1</span></div>";
+			
+			$html .= "</div><!-- /tool_lang_component_target -->";
+		
+		$html 	.= "</div><!-- /tool_lang_top -->";
+
+
+		# SELECTORS DIV
+		$html 	.= "<div class=\"tool_lang_selectors\">";
+
+			
+
+			
+
+
+		$html 	.= "</div><!-- /tool_lang_selectors -->";
+
+
+		# OPTIONS DIV
+		if ($permissions>=2) {		
+		$html 	.= "<div class=\"tool_lang_options\">";
+		
+			
+			# SOURCE OPTIONS
+			$html   .= "<div class=\"source_options\">";	
+				
+							
+				# SELECT TEXT
+				#$html .= "<div class=\"css_button_generic\" onclick=\"tool_lang.select_source_text()\">".label::get_label("selecionar_texto")."</div>";
+
+				# RELOAD SOURCE COMPONENT
+				#$html .= "<div class=\"css_button_generic\" onclick=\"tool_lang.reload_source_component()\">Reload source_component</div>";
+
+				# COPY SOURCE TEXT TO TARGET 
+				$html .= "<div class=\"css_button_generic\" onclick=\"tool_lang.copy_source_text_to_target(this)\">".label::get_label("copiar_a_destino")."</div>";
+
+				# TRADUCCIÓN AUTOMÁTICA
+				$html .= "<div class=\"css_button_generic\" onclick=\"tool_lang.automatic_translation(this)\">".label::get_label("traduccion_automatica")."</div>";
+
+
+			$html   .= "</div><!-- /source_options -->";
+
+
+			# TARGET OPTIONS
+			$html	.= "<div class=\"target_options\">";
+
+				$html .= " <div class=\"propagate_optionsDIV\">";
+
+				$checked = NULL;
+				$html .= "<input class=\"css_radio_button\" type=\"radio\" name=\"propagate_options\" value=\"only_never\" checked=\"checked\"/>";
+				$html .= "<label class=\"css_radio_button_rotulo\" >".label::get_label("solo_nuevas")."</label>";
+				$html .= "<input class=\"css_radio_button\" type=\"radio\" name=\"propagate_options\" value=\"replace_all\"/>";
+				$html .= "<label class=\"css_radio_button_rotulo\" >".label::get_label("reemplazar_todas")."</label>";
+
+				$html .= "</div>";
+
+				$html .= "<div id=\"propagate_marks_btn\" class=\"css_button_generic\" onclick=\"tool_lang.propagate_marks(this)\">".label::get_label("propagar_marcas")."</div>";
+							
+			$html   .= "</div><!-- /target_options -->"; 
+
+		
+		$html 	.= "</div><!-- /tool_lang_options -->";
+		}#end if ($permissions>=2)
+
+	
+	
+	$html   .= "</div><!-- /wrap_tool_lang_page -->"; //page wrap	
+
+
+	
+	# INSPECTOR LOG TOOL_LANG ()
+	$html 	.= "<div id=\"inspector_log\" class=\"tool_inspector_log\"> </div>";
+	
+
+	# Init tool
+	$html .= "<script>";
+	$html .= "$tool_name.init({textarea_lang:'$original_lang'});";
+	$html .= "</script>";
+
+	print $html;
+		
+?>

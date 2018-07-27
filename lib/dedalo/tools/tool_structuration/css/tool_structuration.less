@@ -1,0 +1,517 @@
+// Vars
+@common_css: "../../../common/css";
+
+// Usage
+@import "@{common_css}/library.less";
+
+
+.tool_structuration_icon {
+	//background-color: #48bac3;
+	background-color: @color_structuration;
+	background-image: url(../../../themes/default/icon_structuration_hover.svg);
+} 
+
+
+body {
+	-webkit-user-select: none !important;
+  -khtml-user-select: none !important;
+  -moz-user-select: none !important;
+  -o-user-select: none !important;
+  user-select: none !important;
+}
+
+
+/* PAGE 
+-------------------------------------- */
+.wrap_tool_indexation_page {
+	display: block;
+	width: 99.9%;
+	text-align: left;
+
+	}
+	.wrap_tool_indexation_page .content_data {
+		width: 100%;
+	}
+
+	.content_html {
+		//background-color: #cfd8d8;
+		}
+		.content_html .container {
+			padding-left: 6px;
+			padding-right: 6px;
+		}
+
+.tool_structuration_delete_icon {
+	background-position: -456px 0px;
+	margin-right: 4px;
+}
+
+
+
+
+
+
+
+
+
+.left_side, .right_side {
+	width: 100%;
+	height: 100%;
+}
+
+.left_side {
+	/*
+	clear: left;
+	float: left;
+	width: 53%;
+	padding: 0;
+	margin: 0;	
+	background-color: #CAE42C;
+	*/
+	}
+
+.right_side {
+	/*
+	float: right;
+	width: 47%;
+	padding:0;
+	margin: 0;
+	
+	background-color: #8DE2E4;
+	*/
+	}
+
+
+	/* LEFT SIDE
+	------------------------------------------- */
+	.left_side .indexation_page_tesauro {
+		//background-color: aqua;
+		height: 100%;
+		display: table;
+		width: 100%;
+		overflow: hidden;
+		position: relative;
+		}
+
+
+
+	/* AV IFRAME
+	------------------------------------------- */	
+	.left_side .media_frame {
+		width: 100%;
+		height:99.40%;
+		//height: 70%;
+		//max-height: 460px;
+		padding: 0;
+		margin: 0;
+		overflow: hidden;
+		border: none;
+		//background-color: #6ED03E
+		display: none;
+		}
+
+
+
+	/* THESAURUS IFRAME
+	------------------------------------------- */	
+	.left_side .tesaurus_frame {
+		width: 100%;
+		height:99.40%;
+		//height: 50%;
+		padding: 0;
+		margin: 0;
+		overflow: hidden;
+		border: none;
+		}
+
+
+
+/* TEXT (COMPONENT TEXT AREA) 
+------------------------------------------- 
+.right_side .indexation_page_text {
+	display: table;
+	width: 100%;
+	height: 350px;
+}*/
+/* INDEX LIST 
+------------------------------------------- */
+.right_side .indexation_page_list {
+	padding: 10px;
+	//height: 230px;
+	//background-color: #81D980
+	}
+	.right_side .indexation_page_list .content_data {
+		display: block;
+		width: 100%;
+	}
+
+.terminos_list {
+	margin-top: 10px;
+	padding: 5px;
+}
+.terminos_list_title {
+	margin-bottom: 8px;
+	position: relative;
+	left: -3px;	
+	text-transform:capitalize;
+	font-weight: bold;
+}
+li.tool_indexation_index_list_termino {
+	width: auto;
+	max-width: 580px;
+	text-overflow: ellipsis;
+	overflow: hidden;
+	white-space: nowrap;
+	line-height: 1.6em;
+	clear: both;
+}
+.tool_structuration_show_fragment {
+	background-position: -216px -48px;
+	float: right;
+    top: 16px;
+    right: 15px;
+	}
+	.section_tab .selected_fragment {
+		display: none;
+	}
+.tool_structuration_delete_fragment {
+
+}
+/* fragment_id_info label
+------------------------------------- */
+.fragment_id_info {
+	text-transform: uppercase;
+    font-weight: bold;
+    font-size: 12px;
+    color: #ffffff;
+    //background-color: #ffab01; // orange
+    background-color: #b9b9b9; // grey
+    text-shadow: none;
+    padding: 5px;
+    padding-left: 8px;
+    padding-right: 8px;
+    padding-bottom: 4px;
+    border-radius: 4px;
+}
+
+.wrap_tag_state_selector {
+	text-transform: capitalize;
+	}
+	.wrap_tag_state_selector select {
+		margin-left: 5px;
+		margin-right: 10px;
+	}
+
+
+
+
+
+.wrap_tool_indexation_page label.css_label.tooltips {
+	max-width: 250px;
+} 
+
+
+
+/* TABS
+--------------------------------------------------------- */
+	#section_tab_1:checked ~ #section_tab_1_content,
+	#section_tab_2:checked ~ #section_tab_2_content
+	{ 
+		display: block; 
+	}
+	.common_line {
+		float: left;
+	}
+	.css_section_tab_content > label {
+		float: right;
+		text-transform: capitalize;
+	}
+	.css_section_tab_content > section {
+		clear: both;
+	}
+	div.selected_fragment {
+		margin: 0;
+	}
+	.css_section_tab_content>section {
+		padding-top: 0;
+	}
+	.section_tab .btn {
+		margin: 15px;
+		margin-left: 1px;
+	}
+
+
+
+/* SPLIT PANES
+--------------------------------------------------------- */
+	#indexation_container {		
+		height: 96.8%; // fallback
+		height: ~"calc(100% - 30px)"; // Note the strange format ~"value" is necessary for less	
+
+		width: 100%;
+		position: absolute;
+	}
+	.split {
+	-webkit-box-sizing: border-box;
+	   -moz-box-sizing: border-box;
+			box-sizing: border-box;
+
+	overflow-y: auto;
+	overflow-x: hidden;
+	width: 100%;
+	//display: block;
+	display: table;
+	}
+
+	.gutter {
+		background-color: #eee;
+		background-repeat: no-repeat;
+		background-position: 50%;
+		cursor: move;
+		cursor: grab;
+		cursor: -moz-grab;
+		cursor: -webkit-grab;
+		}
+		.gutter:active { 
+			cursor: grabbing;
+			cursor: -moz-grabbing;
+			cursor: -webkit-grabbing;
+		}
+
+	@tool_common_path: '../../../tools/tool_common';
+	.gutter.gutter-horizontal {
+		background-image: url('@{tool_common_path}/images/grips/vertical.png');
+	}
+	.gutter.gutter-vertical {
+		background-image: url('@{tool_common_path}/images/grips/horizontal.png');
+	}
+
+	.split.split-horizontal, .gutter.gutter-horizontal {
+		height: 100%;
+		float: left;
+	}
+
+
+
+
+#text_preview_wrapper {
+		//max-height: calc(100% - 230px);
+	//overflow: auto;
+	//max-height: 60%;	// fallback for browsers without support for calc() 
+	//max-height: ~"calc(100% - 290px)";
+	//min-height: 310px;
+	}
+
+	#text_preview {
+		
+	}
+	#text_buttons {
+		padding: 10px;
+		padding-bottom: 0;
+		clear: both;
+		min-height: 40px;
+		}
+		#text_buttons button {
+			margin-right: 5px;
+		}
+
+.css_wrap_text_area .content_data > .css_label {
+	width: 100%;
+	display: block;
+	max-width: initial;
+}
+
+.button_save_text {
+	float: right;
+}
+
+#tool_info_log {
+	//background-color: #94EDE0;
+	display: inline;
+	padding: 6px;
+	color: #6b6b6b
+}
+
+#current_lang {
+    right: 40px;
+    position: absolute;
+    top: 4px;
+    color: #cecece;
+    	-webkit-user-select: none;
+		-khtml-user-select: none;
+		-moz-user-select: none;
+		-o-user-select: none;
+		user-select: none;
+}
+/*
+.icon_bs {
+	vertical-align: top;
+}*/
+
+.text_area_tool_structuration {
+	height: 182px;
+	//max-height: ~"calc(100% - 290px)";
+	overflow: auto;
+}
+
+
+/* OVERRIDE css_input_text_large
+--------------------------------------------------------- */
+textarea.css_input_text_large {
+	min-height: 3em;
+}
+
+
+
+/* CHAPTER HEADERS
+--------------------------------------------------------- */
+	.text_area_tool_structuration h2 {
+		-webkit-user-select: none !important;
+		-khtml-user-select: none !important;
+		-moz-user-select: none !important;
+		-o-user-select: none !important;
+		user-select: none !important;
+
+		padding-bottom: 5px;
+	    line-height: 1em;
+
+	    font-family: "Oxygen-light", sans-serif;
+		}
+		.text_area_tool_structuration h2 .order,
+		.text_area_tool_structuration h2 .title {
+			padding-right: 5px;
+			font-size: 18px;
+			//color: #A8A8A8
+			font-weight: initial;
+			font-style: initial;
+			display: inline;
+		}
+		.text_area_tool_structuration h2 .order {
+			
+		} 
+		.text_area_tool_structuration h2 .title {
+			
+		} 
+
+
+
+/* COMPONENTS
+--------------------------------------------------------- */
+	// Order
+	.wrap_component_rsc383 {
+		width: 8%;
+		}
+		.wrap_component_rsc383 .css_label {
+			overflow: initial;
+		}
+	// Title
+	.wrap_component_rsc372 {
+		//width: 92%;
+	}
+
+
+/* SECTIONS
+--------------------------------------------------------- */
+	section.deleted {
+		//background-color: #4ea0ff !important;
+		background-color: rgba(78, 160, 255, 0.4) !important;
+		//border-color: #4ea0ff;
+    	//border-width: 1px;
+	}
+	section.to_review {
+		//background-color: #fc623d !important;
+		background-color: rgba(252, 98, 61, 0.4) !important;
+		//border-color: #fc623d;
+    	//border-width: 1px;
+	}
+
+
+/* TOC
+--------------------------------------------------------- */
+	.toc {
+		padding: 15px;
+		padding-top: 10px;
+		padding-bottom: 10px;
+		/* background-color: #e6e6e6; */
+		/* margin: 10px; */
+		margin-bottom: 15px;
+		border: solid 1px #a7a7a7;
+		border-radius: 3px;
+		}
+		.toc h2 {
+			padding-bottom: 0;
+		}
+
+
+/* CARET
+--------------------------------------------------------- */
+	.text_caret {
+		background-color: #000000;
+		display: inline-block;
+		margin: 0;
+		min-height: 0.8em;
+		width: 1px;
+		/*
+		width: 1px;
+		margin-left: 1px;
+		margin-right: 1px;
+		*/		
+	}
+	.text_caret:before {
+		content: "|"
+	}
+
+
+
+/* TAGS
+--------------------------------------------------------- */
+	#text_preview img:active {
+		opacity: 0.4;
+	}
+	#text_preview img.note,
+	#text_preview img.tc,
+	#text_preview img.person {
+		cursor: pointer;
+	}
+
+
+
+/* VIEW_SELECTOR (Thesaurus / Media)
+--------------------------------------------------------- */
+	.label_view_selector {
+		margin-left: 15px;
+		margin-right: 3px;
+	}
+	#view_selector {
+		text-transform: capitalize;
+	}
+
+
+
+/* BUTTONS
+--------------------------------------------------------- */
+.glyphicon-lock {
+	padding-left: 4px;
+}
+.button_border_active > span {
+	display: none;
+	border: 1px solid #44b941;
+    color: #359c32;
+    //background-color: rgba(68, 185, 65, 0.14);
+	}	
+
+
+
+/* INSPECTOR_LOG . Overwrite
+--------------------------------------------------------- */
+
+
+.tool_structuration_fast_lang_switch {
+	//top: 5px;
+	top: 24px;
+	right: 5px;
+	opacity: 1;
+	height: 22px;
+}
+
+

@@ -1,0 +1,6 @@
+<?php
+# SEARCH MODE
+# Loads component js and css if are not loaded
+$component_name = get_called_class(); //get_class($this);
+print '<script>component_common.load_component_class(\''.$component_name.'\')</script>';
+?>

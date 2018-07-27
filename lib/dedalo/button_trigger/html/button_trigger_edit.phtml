@@ -1,0 +1,44 @@
+<?php
+
+	# VISUALIZADOR HTML	
+
+	
+	#print "\n\n<!-- BUTTON TRIGGER [tipo:$tipo id_matrix:$id] -->";
+
+	#print "\n<div class=\"css_wrap_button_trigger\">";
+	
+	# CONTENIDO
+	$html_contenido = '';
+	
+	switch(true) {
+						
+		case ($permissions>=2) :
+
+				$js_action = 'button_trigger.trigger(this)';
+				if ($js_exec_function!==false) {
+					$js_action = $js_exec_function .'(this, event)';
+				}
+
+				# BUTTON
+				$html_contenido .= "<div class='css_button_generic css_button_trigger' onclick=\"{$js_action}\"
+				data-parent='$this->parent'
+				data-tipo='$tipo'
+				data-propiedades='$propiedades_json'
+				>";
+				$html_contenido .= $label;
+				$html_contenido .= "</div>";
+
+
+				# RESPONSE
+				$html_contenido .= "<div class='button_trigger_response' id=\"button_trigger_$tipo\">";
+				$html_contenido .= "";
+				$html_contenido .= "</div>";
+	}
+	
+	
+	# PRINT HTML
+	print $html_contenido;
+	
+	
+	#print "\n</div><!-- /css_wrap_button_trigger -->\n\n"; //wrap
+?>

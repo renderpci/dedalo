@@ -1,0 +1,44 @@
+<?php
+	
+	# VISUALIZADOR HTML	
+		
+	# CONTENIDO (INPUT)
+	$html_content  = '<tr>';	
+
+					
+		# TD ID
+		$html_content .= '<th class="id_column"';
+		#$html_content .= 'data-resizable-column-id="ID" ';
+		$html_content .= '>';
+			
+			$html_content .= '<div class="th_title">';
+			$html_content .= 'ID';
+			$html_content .= '</div>';
+
+		$html_content .= '</th>';
+
+
+		
+		# TD DATOS					
+		foreach($ar_label_data as $value) {
+
+			$tipo  = $value['tipo'];
+			$label = $value['label'];
+			
+			$html_content .= " <th>";
+			
+				$html_content .= '<div class="th_title">';
+				$html_content .= $label;
+				$html_content .= '</div>';
+
+			$html_content .= '</th>';						
+		}
+
+	
+	$html_content .= '</tr>';
+
+	
+	# PRINT HTML
+	print $html_content;
+
+?>

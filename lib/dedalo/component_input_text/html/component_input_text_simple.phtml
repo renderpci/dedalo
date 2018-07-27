@@ -1,0 +1,29 @@
+<?php
+
+	# VISUALIZADOR HTML		
+
+	print "<div class=\"css_wrap_input_text\">";
+	
+		# LABEL
+		$html_label = component_common_draw::draw_label($this);
+		
+		# CONTENT
+		$html_content = '';
+
+		$html_content .= "<input class=\"css_input_text\" type=\"text\" ";
+		$html_content .= "onchange=\"component_input_text.Save(this)\" ";
+		$html_content .= "id=\"{$identificador_unico}\" ";
+		$html_content .= "name=\"{$tipo}_{$parent}\" ";
+		$html_content .= "data-tipo=\"{$tipo}\" ";
+		$html_content .= "data-modo=\"login\" ";
+		$html_content .= "value=\"\" ";
+		$html_content .= "title=\"$html_title\" ";
+		$html_content .= "placeholder=\"$label\" ";
+		$html_content .= "/>";
+		
+		# PRINT HTML
+		print $html_label;
+		print $html_content;	
+	
+	print "</div>"; //wrap
+?>

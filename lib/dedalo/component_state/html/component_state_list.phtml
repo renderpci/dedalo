@@ -1,0 +1,45 @@
+<?php
+
+	# VISUALIZADOR HTML	
+		
+	# CONTENIDO 
+	$html_content = '';
+	switch($permissions) {
+			
+		case 0	:	
+				$html_content .= ''; 		
+				break;
+					
+		case ($permissions>=1) :
+
+				#dump($ar_valor, ' $ar_valor ++ '.to_string());
+				foreach ($ar_valor as $process_name => $ar_values) {						
+					#dump($ar_values, ' ar_values ++ '.to_string( $process_name.' : '));
+					
+					$show_icon = isset($ar_values['show_icon']) ? $ar_values['show_icon'] : false;
+					if ($show_icon===false) continue;	// Skip this
+
+					$title = '';
+					foreach ($ar_values as $key => $element_object) {
+						if($key==='show_icon' || !is_object($element_object)) continue;	// Skip 'show_icon' info and possible no objects data
+
+						$title .= $this->element_object_to_text($element_object)."\n";
+					}
+					$title = trim($title);
+					
+					$current_class 	= $ar_values['show_icon'];	// state name locator like dd174_1
+					$html_content .= "<div class=\"icon_state_list $current_class\" title=\"$title\"></div>";						
+
+				}//end foreach ($ar_valor as $key => $ar_values) {
+
+				if(SHOW_DEBUG===true) {
+					$html_content .= "<span class=\"component_state_debug debug_info\">".exec_time($start_time)."</span>";
+				}
+				break;							
+	}	
+
+	$html_content = '<div>'.$html_content.'</div>';
+	
+	# PRINT HTML	
+	print $html_content;
+?>

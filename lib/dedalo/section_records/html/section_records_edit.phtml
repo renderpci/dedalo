@@ -1,0 +1,88 @@
+<?php
+
+	# VISUALIZADOR HTML
+	#if(SHOW_DEBUG===true) {
+	#	print "<!-- SECTION RECORDS EDIT [tipo:$tipo modo:$modo] -->";
+	#}
+	
+	print '<div class="css_section_list_wrap" id="wrap_'.$tipo.'_'.$modo.'" data-search_options="'.encodeURIComponent($search_options_json).'">';
+	
+	
+	# CONTENIDO 
+	$html_content   ='';
+	$html_content  .= "<div class=\"css_section_group_content tab_content section_records_{$modo}\" data-rol=\"section_records\">";
+	
+	
+	switch(true) {
+			
+		case ($permissions===0)	:
+				$html_content .= "<span class=\"css_span_dato\"> ".label::get_label('sin_acceso')." </span>";
+				break;
+		
+		case ($permissions>=1) :
+			
+				#
+				# PAGINATOR HTML
+				$html_content .= isset($rows_paginator_html) ? $rows_paginator_html : '';
+
+				#
+				# ROWS LIST HTML (ONE RECORD)
+				#$html_content .= "<div class=\"records main_section_{$modo}\">";									
+				$html_content .= $record_html;
+				#$html_content .= "</div><!-- /records -->";#end main_list
+
+
+				if(SHOW_DEVELOPER===true) {
+					#dump($this, ' this 1 ');
+					$limit_time=SLOW_QUERY_MS;
+					$html_info='';
+					#dump($this->records_data,"");
+					if (isset($this->records_data->generated_time['get_records_data'])) {
+						$total_list_time = $this->records_data->generated_time['get_records_data'] + round(microtime(1)-$start_time,3);
+						
+						$style='';
+						if ($total_list_time>$limit_time) {
+							$style = "color:red";
+						}		
+						$html_info .= "<div class=\"debug_sql_time\" style=\"{$style}\" ondblclick=\"$(this).children('pre').toggle()\"> Time To Generate section list: ";
+						$html_info .= $total_list_time;
+						$html_info .= ", get_records_data:".$this->records_data->generated_time['get_records_data']." (over {$this->search_options->search_query_object->full_count} records)";
+						$html_info .= ", HTML section edit: ".round(microtime(1)-$start_time,3);
+						if (isset($this->records_data->generated_time['records_navigator'])) {
+							$html_info .= ", records_navigator: ".$this->records_data->generated_time['records_navigator'];
+						}					
+						if (isset($this->records_data->generated_time['record'])) {		
+							$html_info .= ", record: ".$this->records_data->generated_time['record'];
+						}
+						#dump($this->records_data->options->search_options_session_key," ");
+						if (isset($this->records_data->options->search_options_session_key)) {		
+							$html_info .= ", search_options_session_key: ".$this->records_data->options->search_options_session_key;
+						}
+						$html_info .= ", strQuery:";
+						$html_info .= "<pre style=\"display:none\">".$this->records_data->strQuery ."</pre>";
+				
+						$search_options = $this->search_options;
+						$search_options = json_encode($search_options, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+						$html_info .= "<br><pre style=\"display:none\">$search_options</pre>";
+
+						$html_info .= "</div>";
+						#echo "<div> Time To Generate section list: HTML: ".round(microtime(1)-$start_time,3)."</div>";
+							
+						$html_content .= $html_info;
+					}
+				}#end if(SHOW_DEVELOPER===true)
+								
+	}
+	
+	#$html_content .= "</div><!-- /css_section_group_content -->";
+	
+	
+	# PRINT HTML
+	print $html_content;	
+	
+	print '</div>'; //wrap
+
+	#if(SHOW_DEBUG===true) {
+	#	print "<!-- /css_section_list_wrap -->"; //wrap
+	#}
+?>

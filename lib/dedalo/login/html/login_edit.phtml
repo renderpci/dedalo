@@ -1,0 +1,117 @@
+<?php
+
+	# VISUALIZADOR HTML	
+	
+	print "<!-- LOGIN [tipo:$tipo id_matrix:$id] -->";
+	print "<div class=\"login_body\">";		
+	print "<div class=\"css_wrap_login\" id=\"wrap_login\">";	
+
+	#
+	# MAINTENANCE
+	$maintenance_mode_class='';
+	if (DEDALO_MAINTENANCE_MODE===true) {
+		$label = label::get_label('sitio_en_mantenimiento');		
+		if ( strpos($label, '.')!==false ) {
+			$label = substr($label, 0, strpos($label, '.') );
+		}
+		echo "<div class=\"maintenance_advice main_font_light\">$label</div>";
+		$maintenance_mode_class = 'maintenance_mode_class';
+	}
+
+	print "<form class=\"css_form $maintenance_mode_class\" name=\"form_login\" id=\"form_login\" action=\"\" onsubmit=\"login.Login()\" method=\"post\">";
+
+
+		# CONTENIDO (INPUT)
+		$html_contenido = '';
+
+			# LANG JUMP
+			$html_contenido .= $dedalo_aplication_langs_selector_html;
+			
+			#
+			# USERNAME
+			$username_value = (DEDALO_ENTITY=='dedalo4_demo') ? "dedalo" : null;
+			$html_contenido .= "<input type=\"text\" ";
+			$html_contenido .= "class=\"login_input\" ";
+			$html_contenido .= "id=\"login_username\" ";
+			$html_contenido .= "name=\"login_username\" ";
+			$html_contenido .= "value=\"$username_value\" ";
+			$html_contenido .= "placeholder=\"".$username_label."\" ";
+			$html_contenido .= "maxlength=\"64\" ";
+			$html_contenido .= "/>";
+			
+			#
+			# PASSWORD
+			$username_password = (DEDALO_ENTITY=='dedalo4_demo') ? "dedalo4Demo" : null;
+			$html_contenido .= "<input type=\"password\" ";
+			$html_contenido .= "class=\"login_input\" ";
+			$html_contenido .= "id=\"login_password\" ";
+			$html_contenido .= "name=\"login_password\" ";
+			$html_contenido .= "value=\"$username_password\" ";
+			$html_contenido .= "placeholder=\"".$password_label."\" ";
+			$html_contenido .= "maxlength=\"64\" ";
+			$html_contenido .= "/>";
+
+			$html_contenido .= $html_button_login;
+			
+			$html_contenido .= "<input type=\"hidden\" id=\"tipo_login\" value=\"$tipo\">";
+			$html_contenido .= "<input type=\"hidden\" id=\"tipo_username\" value=\"$tipo_username\">";
+			$html_contenido .= "<input type=\"hidden\" id=\"tipo_password\" value=\"$tipo_password\">";
+			$html_contenido .= "<input type=\"hidden\" id=\"tipo_active_account\" value=\"$tipo_active_account\">";
+
+		
+			#
+			# AJAX RESPONSE	
+			$html_contenido .= "<div id=\"login_ajax_response\" class=\"login_ajax_response\">  </div>";
+
+			#
+			# VERSION : Dedalo verrsion info
+			$html_contenido .= "<div class=\"dedalo_version\"> Dédalo version ".DEDALO_VERSION. " - Build " .DEDALO_BUILD ;
+
+				# Postgres user and db name
+				if(DEDALO_ENTITY=='development') {
+					$html_contenido .= "<br> ".DEDALO_USERNAME_CONN." -> ".DEDALO_DATABASE_CONN ;
+				}
+				
+
+				try {
+				    $str_version 	 = RecordObj_dd::get_termino_by_tipo(DEDALO_ROOT_TIPO);
+					$html_contenido .= "<br>DD version: $str_version";
+				} catch (Exception $e) {
+				    echo 'Excepction: ',  $e->getMessage(), "\n";
+				}
+
+
+				if(DEVELOPMENT_SERVER===true) {
+					$html_contenido .= "<span class=\"note\">";
+					$html_contenido .= " ".DEDALO_DATABASE_CONN." ";
+					$html_contenido .= "  - ".DEDALO_HOSTNAME_CONN." ";
+					$html_contenido .= "  - ".DEDALO_USERNAME_CONN." ";
+					#$html_contenido .= " : ".DEDALO_DB_PORT_CONN." ";
+					$html_contenido .= "</span>";
+				}
+			
+		
+			$html_contenido .= "</div>";
+
+
+		# DEDALO_BACKUP_ON_LOGIN
+		$html_contenido .= "<script>";
+		$html_contenido .= "DEDALO_BACKUP_ON_LOGIN='".DEDALO_BACKUP_ON_LOGIN."';";
+		if (DEDALO_MAINTENANCE_MODE===true) {
+		$html_contenido .= "setTimeout(function(){window.location.reload(true);},30000);";
+		}
+		#$html_contenido .= "console.log('browser_info:',login.get_browser_info());";
+		$html_contenido .= "</script>";
+
+		
+		
+		# PRINT HTML
+		print $html_contenido;
+
+
+	
+	
+	print "</form>";	
+	print "</div>"; //css_wrap_login	
+	print "</div>"; //login_body
+?>

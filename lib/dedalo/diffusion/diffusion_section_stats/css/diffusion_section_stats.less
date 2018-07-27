@@ -1,0 +1,170 @@
+
+/* STATS_CONTAINER
+------------------------------------------------------- */
+.css_wrap_diffusion_section_stats_graphics {
+	display: table;
+	width: 100%;
+}
+#stats_container {
+	width: 100%;
+	clear: both;
+	// margin-bottom: 80px;
+	padding: 0;
+	margin: 0;
+	padding-top: 10px;
+	}
+	/*-- Current Wrapper --*/
+	#stats_container .wrap_stats_graphic {
+		display: inline-block;      
+		width: 100%;
+		min-width: 300px;
+		height: auto;
+		min-height: 300px;		
+		/*overflow: hidden;*/
+		border-radius: 6px;
+		box-shadow: 1px 1px 12px #a3a3a3 inset;
+		background-color: rgba(245, 245, 245, 0.75);
+		
+		-webkit-user-select: none;
+		-khtml-user-select: none;
+		-moz-user-select: none;
+		-o-user-select: none;
+		user-select: none;
+		}
+		/*-- Titulo --*/
+		#stats_container .wrap_stats_graphic .titulo_chart {
+			font-size: 30px;
+			line-height: 30px;
+			margin: 0px;
+			padding-left: 15px;
+			padding-top: 10px;
+			text-transform: capitalize;
+			/*
+			background-color: #bfedf3;
+			*/
+		}
+		#stats_container .wrap_stats_graphic .titulo_chart span {
+			font-size: 16px;
+			color: #b3b3b3;
+			text-transform: none;
+			font-weight: 300;
+		}
+
+		/*-- SVG --*/
+		#stats_container .wrap_stats_graphic svg {
+			min-width: 300px;
+			min-height:460px;		
+		}
+		#stats_container .wrap_stats_graphic .chart {
+			/*    
+			border: 2px;
+			display: block;
+			margin: 0px;
+			*/
+			/*
+			margin: 10px;
+			Minimum height and width is a good idea to prevent negative SVG dimensions...
+			For example width should be =< margin.left + margin.right + 1,
+			of course 1 pixel for the entire chart would not be very useful, BUT should not have errors
+			*/
+		}
+		#stats_container .wrap_stats_graphic .stats_pie {
+
+		}
+		#stats_container .wrap_stats_graphic .stats_bar {
+			min-width: 600px;
+			min-height: 400px;           
+			position: relative;
+			left: -10px;
+		}
+		#stats_container .wrap_stats_graphic .stats_bar_horizontal {
+			/*
+			height: 385px;
+			width: 565px !important; 
+			margin-top: 80px;*/
+			padding-left: 40px;
+			width: 97%;
+		}
+
+
+		/* STATS_ITEM_INFO DIV
+		------------------------------------------------------- */
+		#stats_container .current_stats_item_info {
+			display: none;
+			}
+			/* Table
+			------------------------------------------------------- */
+			#stats_container table {
+				background-color: #e6e6e6;
+				margin-left: 5px;
+				margin-bottom: 30px;
+				width: 98%;
+				border-radius: 6px;
+				box-shadow: 1px 1px 12px #a3a3a3 inset;
+				background-color: rgba(245, 245, 245, 0.75);			
+			}
+			#stats_container table th,
+			#stats_container table td {
+				padding: 5px;
+				border-bottom: 1px solid rgba(220, 220, 220, 0.55);
+			}
+			#stats_container table th {
+				background-color: rgba(210, 210, 210, 0.75);
+			}
+			#stats_container table th:nth-of-type(1),
+			#stats_container table td:nth-of-type(1) {
+				text-align: right;
+				width: 60px;
+			}
+			#stats_container table th span {
+				display: none;
+			}
+			
+
+		/* Info button
+		------------------------------------------------------- */
+		#stats_container .info_button {
+			width: 14px;
+			height: 14px;
+			/*background-color: rgba(210, 210, 210, 0.75);*/
+			background-position: -264px 0;
+			float: right;
+			top: inherit;
+			right: 10px;
+			bottom: 10px;
+			border-radius: 4px;
+		}
+
+	 
+
+/* Close button
+------------------------------------------------------- */
+.close_stats {
+	/*
+	width: 20px;
+	height: 16px;
+	*/
+	float: right;
+	position: relative;
+	right: 5px;
+	top: 5px;
+	cursor: pointer;
+}
+
+
+TEXT.nv-legend-text{
+	background-color: #ff6a07 !important;
+}
+
+
+/*
+.nv-legendWrap {
+	width: 100%;
+	background-color: #f36523 !important;
+	
+}
+.nv-series {
+	background-color: #f3e76b;
+}
+
+*/

@@ -1,0 +1,41 @@
+<?php
+
+	# VISUALIZADOR HTML	
+
+	
+	# CONTENIDO (INPUT)
+	$html_contenido = '';
+	switch($permissions) {
+			
+		case 0	:	
+			$html_contenido .= "";	
+			break;						
+		
+		case 1	:
+		case 2	:
+		case 3	:		
+			
+			# Fragment info div
+			$html_contenido .= "
+			<div class=\"fragment_id_info\" 
+			data-section_tipo=\"{$section_tipo}\"
+			data-parent=\"$parent\"
+			data-tipo=\"$tipo\"
+			data-modo=\"{$modo}\"
+			data-caller_id=\"$caller_id\"
+			data-rel_locator='$rel_locator'
+			> 
+			<b>Index id $tag_value </b>
+			</div>
+			";
+	}
+	
+
+	# Prepare content to show in page
+	tools::prepare_content($html_contenido);
+
+
+	# PRINT HTML
+	print $html_contenido;
+	
+?>

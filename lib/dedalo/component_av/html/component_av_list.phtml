@@ -1,0 +1,29 @@
+<?php
+
+	# VISUALIZADOR HTML	
+
+		
+	# CONTENIDO
+	$html_content = '';
+	switch(true) {
+			
+		case $permissions===0:	
+			$html_content .= '';
+			break;
+					
+		case ($permissions>=1):
+				
+						
+			$html_content .= "<div class=\"thumb_in_list av_posterframe_in_list\" ";
+			$html_content .= "style=\"background-image:url('".$posterframe_url."')\" ";
+			$html_content .= "onclick=\"tool_common.open_player(this,{'type':'component_av','reelID':'$video_id','quality':'".DEDALO_AV_QUALITY_DEFAULT."'});\" ";
+			$html_content .= "data-video_id=\"$video_id\" ";
+			$html_content .= "alt=\"$video_id\" ";
+			$html_content .= "></div>";
+	}	
+
+	
+	# PRINT HTML	
+	print $html_content;	
+	
+?>

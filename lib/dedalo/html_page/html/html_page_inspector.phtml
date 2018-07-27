@@ -1,0 +1,93 @@
+<?php
+	
+
+	die("POR IMPLEMENTAR !!!!!");
+
+
+/*
+
+	# LOADED COMPONENTS 	
+	if($modo=='edit')
+	$ar_loaded_modelos = common::get_ar_loaded_modelos_resolved();	#dump($ar_loaded_modelos,'$ar_loaded_modelos');
+
+	
+
+	# SIDEBAR
+	$html_sidebar	 = NULL;
+	
+	
+	# INSPECTOR DIV
+	$html_sidebar .= "\n <div id=\"inspector_div\" class=\"inspector_div box_shadow_1 box_border_radius_1 \">";			
+		
+		# INFO
+		$html_sidebar .= "\n<div class=\"css_section_group_titulo tab_title title_down_box text_unselectable\"><label class=\"css_label\">INFO</label></div>";
+		$html_sidebar .= "\n<div class=\"css_section_group_content tab_content inspector_div_content \" >";
+		$html_sidebar .= "\n<div id=\"inspector_info\"></div>";
+		#$html_sidebar .= "\n<div id=\"inspector_log\"></div>";			
+		$html_sidebar .= "\n</div>";
+		
+		
+		
+		# TOOLS
+		$html_sidebar .= "\n<div class=\"css_section_group_titulo tab_title title_down_box text_unselectable border_radius_0\" 
+		data-tab_id=\"Inspector_tools_tap\"><label class=\"css_label\">".label::get_label('heramientas')."</label></div>";
+		$html_sidebar .= "\n<div class=\"css_section_group_content tab_content inspector_div_content \" >";
+		$html_sidebar .= "\n<div id=\"inspector_tools\"></div>";
+		$html_sidebar .= "\n<div id=\"inspector_tools_log\"></div>";
+		$html_sidebar .= "\n</div>";
+
+		
+
+		# DEBUG
+		#if(SHOW_DEBUG===true) {
+			$html_sidebar .= "\n<div class=\"css_section_group_titulo tab_title title_down_box text_unselectable border_radius_0\" 
+			data-tab_id=\"Inspector_debug_tap\"><label class=\"css_label\">Debug</label></div>";
+			$html_sidebar .= "\n<div id=\"inspector_debug\" class=\"css_section_group_content tab_content inspector_div_content \" >  </div>";
+		#}
+
+		# TINYMCE EVENTS (COMPONENT_TEXT_AREA)
+		# If any 'component_text_area' is loaded, show TINYMCE EVENTS inspector tap
+		if (in_array('component_text_area', $ar_loaded_modelos)) {
+			
+			$html_sidebar .= "\n<div class=\"css_section_group_titulo tab_title title_down_box text_unselectable border_radius_0\" 
+			data-tab_id=\"Inspector_events_tap\"><label class=\"css_label\">Events</label></div>";
+			$html_sidebar .= "\n<div class=\"css_section_group_content tab_content inspector_div_content \" >";
+			$html_sidebar .= "\n<div id=\"inspector_events\"></div>";
+			$html_sidebar .= "\n</div>";
+		}
+		
+		# OTHERS
+		
+		$iconv = iconv_get_encoding('all');		
+		$html_sidebar .= "\n<div class=\"css_section_group_titulo tab_title title_down_box text_unselectable border_radius_0\" 
+		data-tab_id=\"Inspector_others_tap\"><label class=\"css_label\">Others</label></div>";
+		$html_sidebar .= "\n<div class=\"css_section_group_content tab_content inspector_div_content \" >";
+		$html_sidebar .= "\n<div id=\"inspector_others\">";
+
+		$html_sidebar .= "	Dédalo version ".DEDALO_VERSION."<br>
+							Section: ". navigator::get_selected('section') . " ($label) <br>
+							MySQLi version ". mysqli_get_client_info() . "<br>
+							PHP version ". phpversion() . " - cache: $check_cache <br>						
+							";
+		$html_sidebar .= "	PHP iconv input_encoding ". iconv_get_encoding('input_encoding'). "<br>
+							PHP iconv output_encoding ". iconv_get_encoding('output_encoding') . "<br>	
+							PHP iconv internal_encoding ". iconv_get_encoding('internal_encoding') . "<br>
+							";
+		$html_sidebar .= "	</div><!-- /inspector_others -->";			
+		$html_sidebar .= "\n</div><!-- /css_section_group_content -->";
+
+
+		# LOG
+		$html_sidebar .= "\n<div class=\"css_section_group_titulo tab_title title_down_box text_unselectable\"><label class=\"css_label\">ACTIVITY LOG</label></div>";
+		$html_sidebar .= "\n<div class=\"css_section_group_content tab_content inspector_div_content \" >";
+		$html_sidebar .= "\n<div id=\"inspector_log\"></div>";			
+		$html_sidebar .= "\n</div>";
+		
+		
+	$html_sidebar .= "\n </div>";#/inspector
+		
+	
+
+*/
+	print $html_sidebar;
+?>

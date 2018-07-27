@@ -1,0 +1,108 @@
+/*
+	MIXINS
+*/
+
+// padding left / right 10
+.padding_lef_right {
+	padding-left: 10px;
+	padding-right: 10px;
+}
+
+/* wrap_component
+---------------------------------- */
+
+	.inverse {
+		background-color: rgba(129, 129, 129, 0.80);
+		color: #FFFFFF !important;
+		.label  {
+			color: #FFFFFF !important;
+		}
+	}
+
+
+	/* LINES
+	---------------------------------- */
+	.line_top {
+		border-top: 1px solid #EBEBEB;
+	}
+	.line_bottom {
+		border-top: 1px solid #EBEBEB;
+	}
+	.line_left {
+		border-left: 1px solid #EBEBEB;
+	}
+	.line_right {
+		border-right: 1px solid #EBEBEB;
+	}
+
+	
+	/* WIDTH
+	---------------------------------- */
+	.width_20 {
+		width: 20%;
+		.line_right;
+	}
+
+	.width_25 {
+		width: 25%;
+		.line_right;
+	}
+
+	.width_33 {
+		width: 33.33%;
+		.line_right;		
+	}
+
+	.width_50 {
+		width: 50%;
+		.line_right;
+	}
+
+	.width_66 {
+		width: 66%;
+		.line_right;
+	}
+
+	.width_75 {
+		width: 75%;
+		.line_right;
+	}
+
+	
+	
+
+
+
+/* COMPONENT MODES
+---------------------------------- */
+	.vertical {			
+		.label  {
+			width: 100%;
+			max-width: 100%;
+			min-height: initial;
+			padding-left: 0;
+			//background-color: #FFD700;
+		}
+		.content_data {
+			width: 100%;
+			display: block;
+			//display: table; // En pruebas (6-10-2016) !!! estaba anteriormrnte en 'block'
+			//background-color: #FFA5ED;
+		}
+		//background-color: #00FFFF;
+		min-height: 4.667em;	// 56px;
+		.line_right;
+		.padding_lef_right;
+	}
+
+	.inline {
+
+	}
+
+	.no_label {
+		.label  {
+			display: none;
+		}
+	}
+
+	

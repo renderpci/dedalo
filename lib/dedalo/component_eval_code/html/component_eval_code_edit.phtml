@@ -1,0 +1,54 @@
+<?php
+
+	# VISUALIZADOR HTML	
+	
+	print "\n<!-- COMPONENT_EVAL_CODE [tipo:$tipo section_id_matrix:$parent] -->";
+	print "\n<div class=\"wrap_component css_wrap_component_eval_code wrap_component_{$tipo}\"
+	data-tipo=\"{$tipo}\"
+	data-lang=\"{$lang}\"
+	data-section_tipo=\"{$section_tipo}\"
+	data-parent=\"{$parent}\"
+	data-modo=\"{$modo}\"
+	data-dato=\"{$valor}\"
+	data-component_name=\"{$component_name}\"
+	data-component_info='{$component_info}'
+	>";
+	
+	# ETIQUETA (LABEL)
+	$html_label = component_common_draw::draw_label($this);
+	
+
+	# CONTENIDO (INPUT)
+	$html_contenido = '';
+	switch($permissions) {
+			
+		case 0	:	$html_contenido .= "";
+					break;
+						
+		case 1	: 	$html_contenido .= "\n <span class=\"css_span_dato\">$dato</span>";
+					break;	
+						
+		case ($permissions>=2)	:
+		
+					$html_contenido .= "\n <div class=\"css_component_eval_code\">$valor</div> ";					
+					#$html_contenido .= "\n <span  class=\"css_span_log\"></span>";
+															
+					if(SHOW_DEBUG) {
+						#$html_contenido .= "\n <span class=\"css_span_debugger\" id=\"debugger_{$tipo}\" >{$debugger}</span>";	
+					}
+					break;
+					
+											
+	}
+
+	# Prepare content to show in page
+	tools::prepare_content($html_contenido);
+	
+	
+	# PRINT HTML
+	print $html_label;
+	print $html_contenido;
+	
+	
+	print "\n</div><!-- /wrap component_eval_code -->\n\n"; //wrap
+?>

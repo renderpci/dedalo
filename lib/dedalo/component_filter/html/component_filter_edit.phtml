@@ -1,0 +1,128 @@
+<?php
+
+	# VISUALIZADOR HTML	
+
+		
+	# html_delimiter
+	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'in', $modo, $lang);
+
+	print '<div class="wrap_component css_wrap_filter wrap_component_'.$tipo.'" id="'.$id_wrapper.'" ';
+	print 'data-tipo="'.$tipo.'" ';
+	print 'data-lang="'.$lang.'" ';
+	print 'data-section_tipo="'.$section_tipo.'" ';
+	print 'data-parent="'.$parent.'" ';
+	print 'data-modo="'.$modo.'" ';
+	print 'data-dato=\''.$dato_json.'\' ';
+	print 'data-component_name="'.$component_name.'" ';
+	print 'data-component_info=\''.$component_info.'\' ';
+	print '>';
+	
+	
+	# ETIQUETA (LABEL)
+	$html_label = component_common_draw::draw_label($this);
+
+	
+	# CONTENIDO (INPUT)
+	$html_content  = '';
+	#$html_content .= " <div class=\"wrap_dato_component_filter\"> ";	
+	switch(true) {
+			
+		case $permissions===0 :	
+				$html_content .= "";// " <span class=\"css_span_dato\"> ".label::get_label('sin_acceso')." ($component_name)</span>"; 
+				break;
+						
+		case $permissions===1 :
+				$html_content .= "<ul class=\"filter_projects_list\">";
+				foreach ($ar_proyectos_section as $key => $row) {
+					
+					if (locator::in_array_locator( $row->locator, (array)$dato )) {
+						$html_content .= "<li>";
+						$html_content .= "- <label class=\"filter_checkbox_rotulo\">$row->label</label>";
+						$html_content .= "</li>";
+					}
+				}
+				$html_content .= "</ul>";
+				break;	
+						
+		case $permissions>=2 :							
+				$html_content .= "<ul class=\"filter_projects_list\">";
+				
+				$i=1;foreach((array)$ar_proyectos_section as $key => $row) {
+					
+					$html_content .= "<li>";
+					
+						$checked  = '';  //is_array($dato) && in_array($current_section_id, array_keys($dato)) ? 'checked="checked"' : '';
+						if (locator::in_array_locator( $row->locator, (array)$dato, ['section_id','section_tipo'])) {
+							$checked  = 'checked="checked"';
+						}
+
+						# Complete locator
+						$locator = $row->locator;
+						$locator->from_component_tipo = $tipo;
+						$locator->type 				  = $this->relation_type;						
+
+						$tabindex = $i==1 ? 'tabindex="1"' : '';
+
+						$input_id = $input_name.'_'.$i;
+
+						$html_content .= "<input type=\"checkbox\" class=\"filter_checkbox\" ";
+						$html_content .= "onfocus=\"component_common.select_wrap(null,'$id_wrapper')\" ";
+						$html_content .= "onchange=\"component_filter.Save(this)\" ";
+						$html_content .= "name=\"{$input_name}\" ";
+						$html_content .= "id=\"{$input_id}\" ";
+						$html_content .= "value='".json_encode($locator)."' ";
+						$html_content .= "data-tipo=\"{$tipo}\" ";
+						$html_content .= "data-lang=\"{$lang}\" ";
+						$html_content .= "data-section_tipo=\"{$section_tipo}\" ";
+						$html_content .= "data-parent=\"{$parent}\" ";
+						$html_content .= $checked .' ';
+						$html_content .= $tabindex .' ';
+						$html_content .= "/>";
+						
+						$html_content .= "<label for=\"$input_id\" class=\"filter_checkbox_rotulo\">";
+						if(SHOW_DEBUG===true) {
+							$html_content .= '['.$row->locator->section_id.'] ';
+						}
+						$html_content .= $row->label;
+						$html_content .= "</label>";
+						#$html_content .= " <span class=\"debug_info\">id: $current_section_id</span>";
+						
+						$html_content .= "</li>";
+						
+				$i++;}
+
+				$html_content .= "</ul>";
+
+				#
+				# JS Init component
+				$html_content .= '<script>';
+				# Init component
+				$init_options = new stdClass();
+					$init_options->component_name 	= $component_name;
+					$init_options->wrapper_id 		= $id_wrapper;
+				$html_content .= 'component_common.init('.json_encode($init_options).');';
+				$html_content .= '</script>';		
+				break;					
+							
+	}
+	#$html_content .= " </div><!-- /wrap_dato_component_filter -->";#end wrap_dato_component_filter
+	
+	
+	# Prepare content to show in page
+	tools::prepare_content($html_content);
+
+	
+	# PRINT HTML
+	print $html_label;
+	print $html_content;
+	
+
+
+	print "</div>"; //wrap
+
+
+	# html_delimiter
+	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'out', $modo, $lang);
+
+
+?>

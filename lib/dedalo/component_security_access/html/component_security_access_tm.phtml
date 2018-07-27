@@ -1,0 +1,57 @@
+<?php
+
+	# VISUALIZADOR HTML	
+	
+	print "<!-- SECURITY ACCESS [tipo:$tipo id_matrix:$id] -->";
+	print "<div class=\"css_wrap_security_access\" id=\"wrap_{$tipo}\">";
+	
+	# ETIQUETA (LABEL)
+	$html_label = component_common_draw::draw_label($this);
+	
+	# CONTENIDO (INPUT)
+	$html_contenido = '';
+	switch($permissions) {
+			
+		case 0	:	$html_contenido .= "<span class=\"css_span_dato\"> No access here (security_access)! </span>";	
+					break;
+						
+		case 1	: 	$html_contenido .= "<span class=\"css_span_dato\"> No read access here (security_access)!</span>";
+					break;	
+						
+		case ($permissions>=2)	:
+		
+					/* FORMATO:
+					<ul class="menu" id="security_access_ul">  
+					<li class="expanded"><a href="#">Create content</a>
+					  
+						<ul class="menu"> 
+						<li class="leaf"><a href="#">Map</a></li> 
+						<li class="leaf"><a href="#">Page</a></li> 
+						<li class="leaf"><a href="#">Story</a></li> 
+						</ul> 
+						
+					</li>
+					</ul>
+					*/
+					
+					$html_contenido .= "<span class='error'> ESTE TIME MACHINE ESTÁ POR ACABAR ... </span>";
+						
+					$html_contenido .= " <!-- Tree --> " ;					
+					
+					$html_contenido .= $tree_html;
+													
+					if($permissions==3){
+						$html_contenido .= "<br><span class=\"css_span_debugger\" id=\"debugger_{$id}\" >{$debugger}</span>";		
+					}
+					break;							
+							
+	}	
+		
+	
+	# PRINT HTML
+	print $html_label;
+	print $html_contenido;
+	
+	
+	print "</div>"; //wrap
+?>

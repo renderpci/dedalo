@@ -1,0 +1,35 @@
+
+<h1><?php print_r($_SERVER['SERVER_NAME']); ?> API Test enviroment</h1>
+<h5>Calling to <?php echo parse_url(JSON_TRIGGER_URL)['host'] ?></h5>
+<ul id="page_lang_selector">
+<?php 
+foreach (json_decode(WEB_AR_LANGS) as $lang => $lang_name) {
+	echo " <li><a href=\"?lang={$lang}\">{$lang_name}</a></li>".PHP_EOL;
+}
+?>
+</ul>
+<?php
+# Menu
+echo $menu_html;
+
+
+# Breadcrumb
+if ($this->breadcrumb!==false) {
+	echo PHP_EOL.'<ul id="breadcrumb">';
+	foreach ($this->breadcrumb as $key => $breadcrumb_row) {
+
+		if (empty($breadcrumb_row)) {
+			error_log(" Empty breadcrumb_row ");
+			continue;
+		}
+
+		$link = $breadcrumb_row->web_path;
+
+		echo '<li>';
+		echo '<a href="'.$link.'">';
+		echo $breadcrumb_row->term;
+		echo '</a>';
+		echo '</li>';
+	} 
+	echo '</ul>';
+}//end if ($this->breadcrumb!==false)
