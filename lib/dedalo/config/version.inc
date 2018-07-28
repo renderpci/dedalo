@@ -1410,7 +1410,7 @@
 	/**
 	* @todo
 	* - Solucionar el tema de los lenguajes en componentes que no deben tener lenguaje (por ejemplo relaciones). Si cambiamos el idioma base de dedalo (DEDALO_DATA_LANG) ya no funcionarán los vínculos
-	* - Valorar usar una clase para las constantes de configuración del programa, Sería más flexible (podría albergar objetos y arrays sin serializar) y más ordenado.
+	* - Valorar usar una clase para  las constantes de configuración del programa, Sería más flexible (podría albergar objetos y arrays sin serializar) y más ordenado.
 		Ejemplo:
 		class app {
 		    const MY_CONSTANT = array("a","b"); const MY_CONSTANT_OBJ = new stdClass();
@@ -1419,7 +1419,7 @@
 
 
 	# Version
-	$DEDALO_VERSION = '4.9.8b'; # 3 
+	$DEDALO_VERSION = '4.9.8c'; # 4
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
