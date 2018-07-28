@@ -1419,12 +1419,14 @@
 
 
 	# Version
-	$DEDALO_VERSION = '4.9.8j';
+
+	$DEDALO_VERSION = '4.9.8b'; # 1
+
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '25-07-2018');
+	define('DEDALO_BUILD'	, '28-07-2018');
 
 
 	/*

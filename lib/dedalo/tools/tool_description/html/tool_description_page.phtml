@@ -85,9 +85,10 @@
 					$html .= $value;
 					
 
+					# look_inside
 					# Iterate relationable components too
 					$current_modelo_name = get_class($current_component);
-					if( true===in_array($current_modelo_name, component_relation_common::get_components_with_relations()) ) {
+					if( $look_inside===true && true===in_array($current_modelo_name, component_relation_common::get_components_with_relations()) ) {
 						#
 						# INDIRECT COMPONENTS
 						$ar_related_component_tipo = common::get_ar_related_by_model('component_',$current_tipo,false);
