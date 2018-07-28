@@ -1419,7 +1419,7 @@
 
 
 	# Version
-	$DEDALO_VERSION = '4.9.8c'; # 4
+	$DEDALO_VERSION = '4.9.8c'; # 6
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
@@ -1436,6 +1436,7 @@
 		if (file_exists($last_modification_timestamp_file)) {
 			$last_modification_timestamp = file_get_contents($last_modification_timestamp_file);
 		}else{
+
 			// Reads folder (dedalo lib) recursively and get the more recently edited file date
 			$last_modification_timestamp = get_last_modification_date(DEDALO_LIB_BASE_PATH,null,array('/acc/','/backups','/temp/'));
 			file_put_contents($last_modification_timestamp_file, $last_modification_timestamp);
