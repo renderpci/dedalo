@@ -1419,7 +1419,7 @@
 
 
 	# Version
-	$DEDALO_VERSION = '4.9.8b'; # 1
+	$DEDALO_VERSION = '4.9.8b'; # 3 
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
