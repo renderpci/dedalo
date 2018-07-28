@@ -73,9 +73,6 @@
 
 			# skip_components
 				$skip_components = isset($propiedades->context->skip_components) ? (array)$propiedades->context->skip_components : [];
-			
-			# look_inside
-				$look_inside = isset($propiedades->look_inside) ? (bool)$propiedades->look_inside : false;
 
 			break;		
 	}//end switch
