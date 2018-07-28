@@ -40,8 +40,8 @@
 
 			$html .= '<div class="section_group_container container_'.$section_group_tipo.'">';
 				
-				foreach ($sg_ar_components as $key => $current_element) {
-
+				foreach ($sg_ar_components as $key => $current_element) {	
+					
 					$current_component  = $current_element->component;
 					$current_tipo 		= $current_component->get_tipo();
 	
@@ -84,9 +84,9 @@
 					$html .= '<div class="component_container container_'.$current_tipo.'">';
 					$html .= $value;
 					
-
 					# look_inside
-					# Iterate relationable components too
+					$look_inside = isset($current_element->component->propiedades->look_inside) ? (bool)$current_element->component->propiedades->look_inside : false;
+					# Iterate relationable components too when look_inside is true
 					$current_modelo_name = get_class($current_component);
 					if( $look_inside===true && true===in_array($current_modelo_name, component_relation_common::get_components_with_relations()) ) {
 						#
@@ -114,7 +114,7 @@
 
 								$value = $current_component->get_html();								
 								
-								$html .= '<div class="component_container container_'.$current_component_tipo.'">';
+								$html .= '<div class="component_container container_look_inside container_'.$current_component_tipo.'">';
 								$html .= $value;
 								$html .= '</div>';
 							}
