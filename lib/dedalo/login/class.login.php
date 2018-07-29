@@ -83,7 +83,14 @@ class login extends common {
 				$response->msg = "Error Processing Request: $var_name is empty!";
 				return $response;
 			}
-			$$var_name = safe_xss($trigger_post_vars[$var_name]);
+			if ($var_name==='password') {
+				# Untouch var always
+				$$var_name = $trigger_post_vars[$var_name];
+			}else{
+				# Check safe var
+				$$var_name = safe_xss($trigger_post_vars[$var_name]);
+			}
+			
 		}
 
 		$html='';
