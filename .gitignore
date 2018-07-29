@@ -20,6 +20,8 @@ lib/dedalo/des/*
 str_data*
 lib/dedalo/diffusion/diffusion_index_ts_V40
 lib/dedalo/publication/client_api/v1/sample*
+lib/dedalo/common/js/lang/*
+lib/dedalo/common/css/structure.css
 
 # extras ignore all except common
 lib/*/extras/*
@@ -28,6 +30,7 @@ lib/*/extras/*
 # Ignore paths that contain generated content.
 media/*
 media_test
+lib/*/backup/backups
 lib/*/backup/backups/*
 lib/*/backup/users
 lib/*/backup/backups_structure
