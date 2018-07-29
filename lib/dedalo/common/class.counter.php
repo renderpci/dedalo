@@ -204,15 +204,21 @@ abstract class counter {
 			$sql2 	 = 'SELECT section_id FROM "'.$table_name.'" WHERE section_tipo = \''.$section_tipo.'\' ORDER BY section_id DESC LIMIT 1 ';
 			$result2 = JSON_RecordObj_matrix::search_free($sql2);
 			if (pg_num_rows($result2) === 0) {
-				continue;	// Skip empty tables
+				$last_section_id = 0;	// Skip empty tables
+			}else{
+				$last_section_id = (int)pg_fetch_result($result2, 0, 'section_id');
 			}
-			$last_section_id = (int)pg_fetch_result($result2, 0, 'section_id');
-
+			
 			$section_name = RecordObj_dd::get_termino_by_tipo($section_tipo);
-			$response->msg .= "<hr><b>$section_tipo $section_name</b> - counter: $counter_section_id - last_section_id: $last_section_id ";
+			$response->msg .= "<hr><b>-- $section_tipo $section_name</b> - counter: $counter_section_id - last_section_id: $last_section_id ";
 			if ($last_section_id!=$counter_section_id) {
 				$response->msg .= "[?]";
-				$response->msg .= "<h5 style=\"padding:5px;padding-left:50px\"><span style=\"color:#b97800\">UPDATE \"matrix_counter\" SET dato = $last_section_id WHERE tipo = '$section_tipo'; </span></h5>";
+				if($last_section_id > 0){
+					$response->msg .= "<h5 style=\"padding:5px;padding-left:50px\"><span style=\"color:#b97800\">UPDATE \"matrix_counter\" SET dato = $last_section_id WHERE tipo = '$section_tipo'; </span></h5>";
+				}else{
+					$response->msg .= "<h5 style=\"padding:5px;padding-left:50px\"><span style=\"color:#b97800\">DELETE FROM \"matrix_counter\"  WHERE tipo = '$section_tipo'; </span></h5>";
+				}
+				
 			
 				#$response->msg .= "<br><b>   WARNING: last_section_id != counter_section_id [$last_section_id != $counter_section_id]</b>";
 				#$response->msg .= "<br>FIX AUTOMATIC TO $last_section_id start</pre>";
