@@ -1,0 +1,19 @@
+<IfModule mod_rewrite.c>
+
+	RewriteEngine On
+		
+	#
+	# Geta last dir name and send as var area_name to index page
+	RewriteCond %{REQUEST_FILENAME} !-d
+	RewriteCond %{REQUEST_FILENAME} !-f
+	#RewriteRule ^/?(\w+)+/?$ index.php?area_name=$1 [QSA,L]
+	RewriteRule ^/?([\S]+)+/?$ web.php?area_name=$1 [QSA,L]
+
+
+	#
+	# Fallback when no dir is defined in url 
+	RewriteCond %{REQUEST_FILENAME} !-f
+	RewriteRule ^(.*)$ web.php?area_name=main_home [QSA,L]
+	#RewriteRule ^(.*)$ web.php?area_name=
+
+</IfModule>

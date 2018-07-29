@@ -51,7 +51,7 @@ robots.txt
 koala-config.json
 .DS_Store
 .eslintrc
-.htaccess
+#.htaccess
 .htaccess~
 .htaccess~~
 .htaccess~~~

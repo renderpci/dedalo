@@ -1,0 +1,7 @@
+#/dedalo4/lib/dedalo/main/.htaccess
+#<IfModule mod_rewrite.c>
+#    RewriteEngine On
+#    RewriteCond %{REQUEST_FILENAME} !-d
+#    RewriteCond %{REQUEST_FILENAME} !-f
+#    RewriteRule ^((?s).*)$ index.php?_url=/$1 [QSA,L]
+#</IfModule>
