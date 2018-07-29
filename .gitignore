@@ -9,40 +9,40 @@ server_config_api.php
 json_config.php
 
 # various
-lib/*
-!lib/dedalo
+/lib/*
+!/lib/dedalo
 acc
 _acc
 des
 test
 install/import/hierarchy
-lib/dedalo/des/*
+/lib/dedalo/des/*
 str_data*
-lib/dedalo/diffusion/diffusion_index_ts_V40
-lib/dedalo/publication/client_api/v1/sample*
-lib/dedalo/common/js/lang/*
-lib/dedalo/common/css/structure.css
+/lib/dedalo/diffusion/diffusion_index_ts_V40
+/lib/dedalo/publication/client_api/v1/sample*
+/lib/dedalo/common/js/lang/*
+/lib/dedalo/common/css/structure.css
 
 # extras ignore all except common
-lib/*/extras/*
-!lib/*/extras/oh
+/lib/*/extras/*
+!/lib/*/extras/oh
 
 # Ignore paths that contain generated content.
 media/*
 media_test
-lib/*/backup/backups
-lib/*/backup/backups/*
-lib/*/backup/users
-lib/*/backup/backups_structure
-lib/*/backup/users
+/lib/*/backup/backups
+/lib/*/backup/backups/*
+/lib/*/backup/users
+/lib/*/backup/backups_structure
+/lib/*/backup/users
 temp
 write
 template_maps
 tpl
-lib/dedalo/publication/client_api/*/docu/ui/*
-lib/dedalo/publication/server_api/*/docu/ui/*
-lib/dedalo/tools/tool_layout_print/data/*
-lib/dedalo/tools/tool_layout_print/print_pdf/*
+/lib/dedalo/publication/client_api/*/docu/ui/*
+/lib/dedalo/publication/server_api/*/docu/ui/*
+/lib/dedalo/tools/tool_layout_print/data/*
+/lib/dedalo/tools/tool_layout_print/print_pdf/*
 
 # Ignore default text files
 robots.txt
