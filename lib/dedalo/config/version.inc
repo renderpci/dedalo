@@ -1399,6 +1399,11 @@
 		files : re-order and remove old files and folders (old thesaurus and related)
 
 	
+	Valencia 29-07-2018 4.9.8e
+		Login : fixed password issue with some chars on safe_xss check
+
+
+
 
 	WORK IN PROGRESS
 		component_date : mark as "red or similar" restricted an other terms based in x param..
@@ -1419,7 +1424,7 @@
 
 
 	# Version
-	$DEDALO_VERSION = '4.9.8d';
+	$DEDALO_VERSION = '4.9.8e';
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
