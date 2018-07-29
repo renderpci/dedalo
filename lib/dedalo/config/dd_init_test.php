@@ -361,6 +361,15 @@ if (!function_exists('openssl_encrypt')) {
 		}
 	}
 
+# STRUCTURE CSS
+# Generate css structure file (in not extist)	
+	$file_path = DEDALO_LIB_BASE_PATH.'/common/css/structure.css';	
+	if (!file_exists(DEDALO_LIB_BASE_PATH.$file_path)) {		 	
+	
+		$response = (object)css::build_structure_css();		
+		debug_log(__METHOD__." Generated structure css file: ".$response->msg, logger::DEBUG);			
+	}
+
 # SEQUENCES TEST
 	require(DEDALO_LIB_BASE_PATH.'/db/class.data_check.php');
 	$data_check = new data_check();
