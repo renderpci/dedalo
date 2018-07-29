@@ -106,9 +106,9 @@ class common {
 
 	/**
 	* SAFE_XSS
-	* @return 
+	* @return mixed $value
 	*/
-	function safe_xss($value) {
+	public static function safe_xss($value) {
 
 		if (is_string($value)) {
 			$value = strip_tags($value,'<br><strong><em>');
