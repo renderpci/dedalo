@@ -246,17 +246,14 @@ class css {
 
 			$less_code .= $less_line; // Add
 		
-		}//end while ($rows = pg_fetch_assoc($result)) {
-		#dump($less_code, ' less_code ++ '.to_string($terminoID));		
-		
+		}//end while ($rows = pg_fetch_assoc($result)) {		
 
 		#
 		# MXINS. Get mixixns file
 		$file_name = DEDALO_LIB_BASE_PATH . self::$mixins_file_path;
 		if ($mixins_code = file_get_contents($file_name)) {
 			$less_code = $mixins_code.$less_code;
-		}
-		#echo $less_code;		 
+		}	 
 
 		#
 		# Write final file
@@ -266,33 +263,27 @@ class css {
 		$less->setFormatter("compressed");	// lessjs (default) | compressed | classic
 		
 		# PRESERVE COMMENTS : true | false	
-		#$less->setPreserveComments(false);	// true | false	
+		#$less->setPreserveComments(false);	// true | false
+		
+		$compiled_css = $less->compile( $less_code );
 
-		#try {
-			$compiled_css = $less->compile( $less_code );
-			#echo $compiled_css;
+		# Delete old version if exists
+		if ( file_exists($file_name) && !unlink($file_name)) {
+			$response->result 	= false;
+			$response->msg 	  	= "Error on remove old css file ($file_name) ";	
+		}
 
-			if (!unlink($file_name)) {
-				$response->result 	= false;
-				$response->msg 	  	= "Error on remove old css file ($file_name) ";	
-			}
-
-			if( !$write = file_put_contents($file_name, $compiled_css) ) {
-				$response->result 	= false;
-				$response->msg 	  	= "Error on write css file ($file_name) ".to_string($write);				
-			}else{
-				$file_size = format_size_units( filesize($file_name) );
-				$response->result 	 = true;
-				$response->msg 	  	 = "File css created successful. Size: $file_size";
-				$response->file_path = self::$structure_file_path;				
-			}
-			debug_log(__METHOD__." Response: ".to_string($response), logger::DEBUG);
-
-		#} catch (exception $e) {
-		#	debug_log(__METHOD__." Fatal error ".$e->getMessage(), logger::ERROR);
-		#	//echo "Fatal error: " . $e->getMessage();
-		#}
-		#$response->code = "<pre>".nl2br($compiled_css) ."</pre>";
+		if( !$write = file_put_contents($file_name, $compiled_css) ) {
+			$response->result 	= false;
+			$response->msg 	  	= "Error on write css file ($file_name) ".to_string($write);
+		}else{
+			$file_size = format_size_units( filesize($file_name) );
+			$response->result 	 = true;
+			$response->msg 	  	 = "File css created successful. Size: $file_size";
+			$response->file_path = self::$structure_file_path;				
+		}
+		debug_log(__METHOD__." Response: ".to_string($response), logger::DEBUG);
+	
 
 		return (object)$response;
 	}#end build_structure_css
