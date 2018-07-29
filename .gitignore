@@ -30,6 +30,7 @@ str_data*
 # Ignore paths that contain generated content.
 media/*
 media_test
+backups
 /lib/*/backup/backups
 /lib/*/backup/backups/*
 /lib/*/backup/users
