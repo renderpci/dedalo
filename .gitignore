@@ -34,7 +34,6 @@ media_test
 /lib/*/backup/backups/*
 /lib/*/backup/users
 /lib/*/backup/backups_structure
-/lib/*/backup/users
 temp
 write
 template_maps
