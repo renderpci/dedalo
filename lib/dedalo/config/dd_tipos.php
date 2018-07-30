@@ -99,6 +99,7 @@ define('DEDALO_THESAURUS_SECTION_TIPO'					, 'hierarchy20');
 define('DEDALO_THESAURUS_TERM_TIPO'						, 'hierarchy25');
 define('DEDALO_THESAURUS_CODE_TIPO'						, 'hierarchy41');
 define('DEDALO_THESAURUS_GEOLOCATION_TIPO'				, 'hierarchy31');
+define('DEDALO_THESAURUS_RELATED_TIPO'					, 'hierarchy35');
 define('DEDALO_THESAURUS_RELATION_PARENT_TIPO'			, 'hierarchy36');
 define('DEDALO_THESAURUS_RELATION_MODEL_TIPO'			, 'hierarchy27');
 define('DEDALO_THESAURUS_RELATION_CHIDRENS_TIPO'		, 'hierarchy49');
@@ -115,14 +116,20 @@ define('DEDALO_THESAURUS_BUTTON_NEW_TIPO'				, 'hierarchy38');
 define('DEDALO_THESAURUS_BUTTON_DELETE_TIPO'			, 'hierarchy39');
 
 # Relation types
-define('DEDALO_RELATION_TYPE_PARENT_TIPO'				, 'dd47');
 define('DEDALO_RELATION_TYPE_CHILDREN_TIPO'				, 'dd48');
+define('DEDALO_RELATION_TYPE_PARENT_TIPO'				, 'dd47');
 define('DEDALO_RELATION_TYPE_INDEX_TIPO'				, 'dd96');
 define('DEDALO_RELATION_TYPE_STRUCT_TIPO'				, 'dd490');
 define('DEDALO_RELATION_TYPE_MODEL_TIPO'				, 'dd98');
+define('DEDALO_RELATION_TYPE_LINK'						, 'dd151');
+define('DEDALO_RELATION_TYPE_FILTER'					, 'dd675');
+
+#define('DEDALO_RELATION_TYPE_EQUIVALENT_TIPO'			, 'dd47');
 define('DEDALO_RELATION_TYPE_RELATED_TIPO'				, 'dd89');
 	# Relation related types
-	define('DEDALO_RELATION_TYPE_RELATED_BIDIRECTIONAL_TIPO', 'dd467');
+	define('DEDALO_RELATION_TYPE_RELATED_UNIDIRECTIONAL_TIPO',  'dd620');
+	define('DEDALO_RELATION_TYPE_RELATED_BIDIRECTIONAL_TIPO',   'dd467');
+	define('DEDALO_RELATION_TYPE_RELATED_MULTIDIRECTIONAL_TIPO','dd621');
 #define('DEDALO_RELATION_TYPE_RECORD_TIPO'				, 'ddXXX'); // working here
 
 # Data frames types
@@ -155,6 +162,9 @@ define('DEDALO_TEXTAREA_FIX_BROQUEN_TAGS_TIPOS'			, serialize( array(DEDALO_COMP
 # LANGS
 define('DEDALO_LANGS_SECTION_TIPO'						, 'lg1');
 
+# SEARCH PRESETS
+define('DEDALO_TEMP_PRESET_SECTION_TIPO'				, 'dd655');
+
 
 
 if (!defined('DEDALO_PROTOCOL')) {
@@ -164,25 +174,18 @@ if (!defined('DEDALO_PROTOCOL')) {
 
 
 # TOP_TIPO
-# if (!empty($_REQUEST['top_tipo'])) {
 if ( false !== ($request_var_top_tipo = get_request_var('top_tipo')) ) {	
 	define('TOP_TIPO', $request_var_top_tipo);
-#}else if (!empty($_REQUEST['t'])) {
 }else if ( false !== ($request_var_t = get_request_var('t')) ) {
 	define('TOP_TIPO', $request_var_t);
 }else if (isset($TOP_TIPO)) {
 	define('TOP_TIPO', $TOP_TIPO);	
 }else{
-	define('TOP_TIPO', false);
-	#if(SHOW_DEBUG) {			
-	#	error_log("--> WARNING: TOP_TIPO is empty. (bool)FALSE is assigned now ".$_SERVER['REQUEST_URI']);						
-	#}
+	define('TOP_TIPO', false);	
 }
 # TOP_ID
-#if (!empty($_REQUEST['top_id'])) {
 if ( false !== ($request_var_top_id = get_request_var('top_id')) ) {
 	define('TOP_ID', $request_var_top_id);
-#}else if (!empty($_REQUEST['id'])) {
 }else if ( false !== ($request_var_id = get_request_var('id')) ) {
 	define('TOP_ID', $request_var_id);
 }else{
@@ -190,5 +193,3 @@ if ( false !== ($request_var_top_id = get_request_var('top_id')) ) {
 }
 
 
-
-?>
