@@ -7,11 +7,8 @@ include(DEDALO_LIB_BASE_PATH . '/db/class.RecordObj_matrix.php');
 include(DEDALO_LIB_BASE_PATH . '/db/class.JSON_RecordObj_matrix.php');
 include(DEDALO_LIB_BASE_PATH . '/db/class.RecordObj_time_machine.php');
 include(DEDALO_LIB_BASE_PATH . '/db/class.RecordObj_dd.php');
-include(DEDALO_LIB_BASE_PATH . '/db/class.RecordObj_descriptors.php');
 include(DEDALO_LIB_BASE_PATH . '/db/class.RecordObj_descriptors_dd.php');
 include(DEDALO_LIB_BASE_PATH . '/db/class.json_handler.php');
-#include(DEDALO_LIB_BASE_PATH . '/db/class.RecordDataBoundObject.php');
-#include(DEDALO_LIB_BASE_PATH . '/db/class.JSON_RecordDataBoundObject.php');
 include(DEDALO_LIB_BASE_PATH . '/common/class.common.php');
 include(DEDALO_LIB_BASE_PATH . '/common/class.lang.php');
 include(DEDALO_LIB_BASE_PATH . '/common/class.navigator.php');
@@ -25,8 +22,9 @@ include(DEDALO_LIB_BASE_PATH . '/common/class.locator.php');
 include(DEDALO_LIB_BASE_PATH . '/common/class.dd_date.php');
 include(DEDALO_LIB_BASE_PATH . '/common/class.relation.php');
 include(DEDALO_LIB_BASE_PATH . '/component_common/class.component_common.php');
-include(DEDALO_LIB_BASE_PATH . '/component_common/class.component_relation_common.php');
 include(DEDALO_LIB_BASE_PATH . '/component_common/class.component_reference_common.php');
+include(DEDALO_LIB_BASE_PATH . '/component_relation_common/class.component_relation_common.php');
+include(DEDALO_LIB_BASE_PATH . '/search/class.search_development2.php');
 
 	
 class class_loader {
