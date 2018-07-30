@@ -1,5 +1,6 @@
 <?php
-#namespace dedalo4;
+
+
 
 /**
 * DUMP
@@ -21,7 +22,7 @@ function dump($val, $var_name=NULL, $arguments=array()){
 	
 	
 	// Backtrace info of current execution
-	$bt = debug_backtrace(); #print_r($bt);
+	$bt = debug_backtrace();
 
 
 	$html .= " DUMP ".PHP_EOL."  Caller: ".str_replace(DEDALO_ROOT,'',$bt[0]['file']);
@@ -88,24 +89,34 @@ function dump($val, $var_name=NULL, $arguments=array()){
 	
 
 	# PRINT
-	if(SHOW_DEBUG===true) { //
-		#if ($print!=false)
-	print wrap_pre($html);
-		#print trim($html);
-		//echo "<script>console.log('PHP: ".$html."');</script>";
+	if(SHOW_DEBUG===true) {
+		
+		// print wrap_pre($html);		
+		// echo "<script>console.log('PHP: ".$html."');</script>";
+
+		$str_json = file_get_contents('php://input');
+		#error_log("++++>>>> ".to_string($str_json));
+		if (!$str_json) {			
+			// not exists call php://input
+			print wrap_pre($html);
+		}
 	}
 
 	# LOG MESSAGE
 	#$GLOBALS['log_messages'][] = wrap_pre($html);
 
-	# CONSOLE ERROR LOG
-	error_log('-->'.$html);
+	# CONSOLE ERROR LOG ALWAYS
+	error_log(PHP_EOL.'-->'.$html);
 
 
 	#return wrap_pre($html);
-	return trim($html);
+	return $html;
 }
 
+
+/**
+* WRAP_PRE
+*/
 function wrap_pre($string, $add_header_html=true) {
 	$html='';
 	#$html .= "\n<html xmlns=\"http://www.w3.org/1999/xhtml\" ><body>";
@@ -217,6 +228,8 @@ function exec_time_unit($start, $unit='ms', $round=3) {
 	return round($total,3);
 }
 
+
+
 # TO_STRING
 function to_string($var=null) {
 	if ($var===null) return $var;
@@ -228,21 +241,22 @@ function to_string($var=null) {
 	if (is_array($var)) {
 		if ( is_string(current($var)) || is_numeric(current($var)) ) {			
 			return implode('|', $var);	
-		}else if( is_object( current($var) ) ){
+		}else if( is_object( current($var) ) ){			
 			foreach ($var as $obj) {
 				$ar_ob[] = $obj;
 			}
 			#return implode('|', $ar_ob);
 			return print_r($ar_ob,true);
-		}else if( empty($var)){
+		}else if(empty($var)){
 			return 'Array(empty)';
 		}
 		return print_r($var,true);	
 			
 	}else if (is_object($var)) {		
-		$var = json_encode($var);
-		$var = json_decode($var);
-		return '<pre>'.print_r($var,true).'</pre>';
+		$var = json_encode($var, JSON_PRETTY_PRINT);
+		return $var;
+		#$var = json_decode($var);		
+		#return '<pre>'.print_r($var,true).'</pre>';
 	}else if (is_bool($var)) {
 		$var = (int)$var;
 	}	
@@ -371,7 +385,7 @@ function is_serialized($str) {
 */
 function encryption_mode() {
 
-	# Overwrites calculated mode. Usefull for clean install
+	# Overwrites calculated mode. Useful for clean install
 	if (defined('ENCRYPTION_MODE')) {
 		return ENCRYPTION_MODE;
 	}
@@ -383,7 +397,7 @@ function encryption_mode() {
 		($current_version[0] >= 4 && $current_version[1] >= 5) ||
 		 $current_version[0] > 4
 	  ) { 
-	  	return 'openssl';
+		return 'openssl';
 	}else{
 		debug_log(__METHOD__." !! USING OLD CRYPT METHOD (mcrypt). Please use openssl ".to_string(), logger::WARNING);
 		return 'mcrypt';
@@ -459,7 +473,10 @@ function alist ($array) {  //This function prints a text array as an html list.
 
 
 
-# ARRAY_KEYS_RECURSIVE : FLAT ARRAY
+/**
+* ARRAY_KEYS_RECURSIVE
+* Flat an array
+*/
 function array_keys_recursive(array $array) {
 
 	$keys = array();
@@ -474,7 +491,7 @@ function array_keys_recursive(array $array) {
 	return $keys;
 }
 
-$codHeader = '<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />';
+
 
 /**
 * CLEAN_URL_VARS : Elimina variables no deseadas del query en la url
@@ -570,8 +587,8 @@ function fix_cascade_config4_var($var_name, $var_default_value) {
 	switch (true) {
 		# REQUEST (GET/POST)
 		case !empty($_REQUEST[$var_name]) :
-			$var_value = trim($_REQUEST[$var_name]);
-			$_SESSION['dedalo4']['config'][$var_name]	= $var_value; # Save in session too			
+			$var_value = trim( safe_xss($_REQUEST[$var_name]) );
+			$_SESSION['dedalo4']['config'][$var_name]= $var_value; # Save in session too			
 			break;
 		# SESSION
 		case !empty($_SESSION['dedalo4']['config'][$var_name]) :
@@ -743,7 +760,7 @@ function array_get_by_key_r($array, $key, &$results) {
  * which is entirely left up to your discretion.
  * http://www.pgregg.com/donate/
  *
- * Please do not remove this header, or source attibution from this file.
+ * Please do not remove this header, or source attribution from this file.
  */
 
 
@@ -992,7 +1009,7 @@ function notice_to_active_users( $ar_options ) {
 			# code...
 			break;
 	}
-	// Write msg in globas var array
+	// Write msg in globals var array
 	$GLOBALS['log_messages'][] = $msg;
 	*/
 }//end notice_to_active_users
@@ -1001,7 +1018,7 @@ function notice_to_active_users( $ar_options ) {
 
 /**
 * GET_REQUEST_VAR
-* Check if var exists in $_REQUEST enviroment. If not do a fallback to search var in php://input (for
+* Check if var exists in $_REQUEST environment. If not do a fallback to search var in php://input (for
 * example in trigger json requests)
 * @return mixed string | bool $var_value
 */
@@ -1010,7 +1027,7 @@ function get_request_var($var_name) {
 	$var_value = false;
 
 	if(isset($_REQUEST[$var_name]))  {
-		$var_value = $_REQUEST[$var_name];
+		$var_value = $_REQUEST[$var_name];		
 	}else{
 		#get the change modo from portal list to edit
 		$str_json = file_get_contents('php://input');
@@ -1020,8 +1037,225 @@ function get_request_var($var_name) {
 		}
 	}
 
+	# Safe XSS
+	$var_value = safe_xss($var_value);
+
 	return $var_value;
 }//end get_request_var
+
+
+
+/**
+* SAFE_XSS
+* @return mixed $value
+*/
+function safe_xss($value) {
+
+	if (is_string($value)) {
+
+		if ($decode_json=json_decode($value)) {
+			// If var is a stringify json, not verify string now
+		}else{
+			$value = strip_tags($value,'<br><strong><em>');
+			$value = htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
+		}
+	}	
+	#error_log("value: ".to_string($value));
+
+	return $value;
+}//end safe_xss
+
+
+
+/**
+* SAFE_SQL_QUERY
+* @return mixed $value
+*/
+function safe_sql_query($sql_query) {
+	
+	// WORKING HERE..
+	
+	/*
+	if (is_string($value)) {
+
+		if ($decode_json=json_decode($value)) {
+			// If var is a stringify json, not verify string now
+		}else{
+			$value = strip_tags($value,'<br><strong><em>');
+			$value = htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
+		}
+	}	
+	#error_log("value: ".to_string($value));
+	*/
+
+	return $sql_query;	
+}//end safe_sql_query
+
+
+
+/***
+ * Starts a session with a specific timeout and a specific GC probability.
+ * @param int $timeout The number of seconds until it should time out.
+ * @param int $probability The probability, in int percentage, that the garbage 
+ *        collection routine will be triggered right now.
+ * @param string $cookie_path The base path for the cookie.
+ */
+$sessiondb = null;
+function session_start_manager($request_options) {
+global $sessiondb;
+	#if (session_status()===PHP_SESSION_ACTIVE) return false;
+
+	$options = new stdClass();
+		$options->save_handler 			= 'files';
+		$options->timeout_seconds 		= 1400;
+		$options->probability 			= 100;
+		$options->cookie_path 			= '/';
+		$options->cookie_domain 		= null;
+		$options->save_path 			= false; # /tmp/php
+		$options->aditional_save_path	= false; # /session_custom_sec
+		$options->session_name			= false;
+		foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
+	
+	switch ($options->save_handler) {
+		case 'memcached':
+			ini_set('session.save_handler', 'memcached');
+			# Connection type: '127.0.0.1:11211' , '/usr/local/var/memcached/memcached.sock'
+			ini_set('session.save_path', $options->save_path);
+
+			// Start the session!
+			session_start();
+			break;
+		
+		case 'files':
+			$timeout 	 	= $options->timeout_seconds;
+			$probability 	= $options->probability;
+			$cookie_path 	= $options->cookie_path;
+			$cookie_domain 	= $options->cookie_domain;
+
+			// Set lifetime of cache (this no affect to session duration)
+			session_cache_expire( intval($timeout*60) ); 	#in minutes (*60)	Default php usually : 180
+
+			// Set the max lifetime
+			ini_set("session.gc_maxlifetime", $timeout);
+		 
+			// Set the session cookie to timeout
+			ini_set("session.cookie_lifetime", $timeout);
+
+			if ($options->save_path!==false) {
+				ini_set( 'session.save_path', $options->save_path);
+			}
+
+			if ($options->session_name!==false) {
+				session_name($options->session_name);
+			}		
+		 
+			if ($options->aditional_save_path!==false) {
+				// Change the save path. Sessions stored in the same path
+				// all share the same lifetime; the lowest lifetime will be
+				// used for all. Therefore, for this to work, the session
+				// must be stored in a directory where only sessions sharing
+				// it's lifetime are. Best to just dynamically create on.			
+				$path = ini_get("session.save_path") . $options->aditional_save_path;
+				if(!file_exists($path)) {
+					if(!mkdir($path, 0700)) {
+						trigger_error("Failed to create session save path directory '$path'. Check permissions.", E_USER_ERROR);
+					}
+				}
+				ini_set("session.save_path", $path);
+			}
+		 
+			// Set the chance to trigger the garbage collection.
+			ini_set("session.gc_probability", $probability);
+			ini_set("session.gc_divisor", 100); // Should always be 100
+
+			// Start the session!
+			session_start();
+
+			// Renew the time left until this session times out.
+			// If you skip this, the session will time out based
+			// on the time when it was created, rather than when
+			// it was last used.
+			if(isset($_COOKIE[session_name()])) {
+				#setcookie(session_name(), $_COOKIE[session_name()], time() + $timeout, $cookie_path, $cookie_domain);
+				setcookie(session_name(), $_COOKIE[session_name()], time() + $timeout, $cookie_path, $cookie_domain, TRUE, TRUE);
+			}
+			break;
+
+		case 'postgresql':
+			#
+			# manejador de sesiones
+			#
+			require_once 'session/PGSessions.php';
+			$connectionString = 'pgsql:host='.DEDALO_HOSTNAME_CONN.' port='.DEDALO_DB_PORT_CONN.' dbname='.DEDALO_DATABASE_CONN.' user='.DEDALO_USERNAME_CONN.' password='.DEDALO_PASSWORD_CONN;
+			$pdo_connection   = new PDO($connectionString);
+
+			#use \PGSessions\PGSessions;
+			$sessions_handler = new PGSessions($pdo_connection);
+			session_set_save_handler($sessions_handler, true);
+			#session_name('MySessionName');
+			#session_start();
+			#session_regenerate_id(true);
+
+			session_start();
+			break;
+	}	
+ 
+	return true;
+}//end session_start_manager
+
+
+
+/**
+* SAFE_TIPO
+* Remove extra malicious code
+* @return string $tipo
+*/
+function safe_tipo( $tipo ) {
+
+	preg_match("/^[a-z]+[0-9]+$/", $tipo, $output_array);
+	if (empty($output_array[0])) {
+		return false;
+	}
+	
+	/*
+	if ( strpos($tipo,',')!==false || strpos($tipo,';')!==false || strpos($tipo,'\'')!==false || strpos($tipo,'"')!==false ) {
+		#exit("bad tipo ".htmlentities($tipo));
+		debug_log(__METHOD__." bad tipo ".to_string($tipo), logger::ERROR);
+		return false;
+	}*/
+
+	return $tipo;
+}//end safe_tipo
+
+
+/**
+* FORMAT_SIZE_UNITS
+* Format bytes to more human readable unit like KG, MB, GB
+*/
+function format_size_units($bytes) {
+	if ($bytes >= 1073741824) {
+		$bytes = number_format($bytes / 1073741824, 2) . ' GB';
+	}elseif ($bytes >= 1048576) {
+		$bytes = number_format($bytes / 1048576, 2) . ' MB';
+	}elseif ($bytes >= 1024) {
+		$bytes = number_format($bytes / 1024, 2) . ' KB';
+	}elseif ($bytes > 1) {
+		$bytes = $bytes . ' bytes';
+	}elseif ($bytes == 1) {
+		$bytes = $bytes . ' byte';
+	}else {
+		$bytes = '0 bytes';
+	}
+
+	return $bytes;
+}//end format_size_units
+
+
+
+function encodeURIComponent($str) {
+    $revert = array('%21'=>'!', '%2A'=>'*', '%27'=>"'", '%28'=>'(', '%29'=>')');
+    return strtr(rawurlencode($str), $revert);
+}
 
 
 
