@@ -887,10 +887,12 @@ class component_date extends component_common {
         			# Operator : remove if exists
 					#$q_clean  = preg_replace("/^(\W{1,2})?/", "", $q);
 	        		// Extract directly from calculated time in javascript
-					$q_clean  = !empty($q_object->time) ? $q_object->time : 0;
-					$operator = !empty($q_object->op) ? $q_object->op : '=';
+					$q_clean  = !empty($q_object->start->time) ? $q_object->start->time : 0;
+					$operator = !empty($q_object->start->op) ? $q_object->start->op : '=';
 
-					$dd_date = new dd_date($q_object);
+
+
+					$dd_date = new dd_date($q_object->start);
 					#$dd_date->get_date_from_timestamp( $q_clean );
 					#$q_clean = dd_date::convert_date_to_seconds($dd_date);
 					
@@ -1013,7 +1015,7 @@ class component_date extends component_common {
 				}				
 
 				# query_object config
-				$query_object->q_info 			= clone $query_object->q;
+				$query_object->q_info 			= '';
 				$query_object->q_parsed			= null;
 				$query_object->format 			= 'array_elements';
 				$query_object->array_elements 	= $group_array_elements;
@@ -1023,14 +1025,14 @@ class component_date extends component_common {
 
         	case 'date':
         	default:
+    			// Generic for date
+        		// Extract directly from calculated time in javascript
 
-				// Generic for date
-				// Extract directly from calculated time in javascript
-				$q_clean  = !empty($q_object->time) ? $q_object->time : 0;
-				$operator = !empty($q_object->op) ? $q_object->op : '=';
+				$q_clean  = !empty($q_object->start->time) ? $q_object->start->time : 0;
+				$operator = !empty($q_object->start->op) ? $q_object->start->op : '=';
 				
 				$query1 = new stdClass();
-					$query1->component_path 	= ['time'];
+					$query1->component_path 	= ['start','time'];
 					$query1->operator 			= $operator;
 					$query1->q_parsed			= '\''.$q_clean.'\'';
 					$query1->type 				= 'jsonb';
