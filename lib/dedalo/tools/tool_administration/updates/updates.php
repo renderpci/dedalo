@@ -6,15 +6,7 @@ global $updates;
 $updates = new stdClass();
 
 
-###### 491 
-/*
 
-CREATE EXTENSION btree_gin;
-
-*/
-
-
-/* en proceso !!
 $v=491; #####################################################################################
 $updates->$v = new stdClass();
 
@@ -28,8 +20,15 @@ $updates->$v = new stdClass();
 	$updates->$v->update_from_medium = 9;
 	$updates->$v->update_from_minor  = 0;
 
+	#UPDATE COMPONENTS
+	$updates->$v->components_update = ['component_date'];	// Force recalculate inaccurate time			
 	
+	/* en proceso !!
+
 	# DATABASE UPDATES
+
+	CREATE EXTENSION btree_gin;
+
 	$updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query("
 		-- DELETE DUPLICATES
 		DELETE FROM relations a USING (
@@ -672,143 +671,6 @@ $updates->$v = new stdClass();
 									CREATE SEQUENCE matrix_notes_id_seq; 
 									ALTER TABLE public.matrix_notes ALTER COLUMN id SET DEFAULT nextval('matrix_notes_id_seq'::regclass);
 									");
-
-	# RUN_SCRIPTS
-	# Order is important !
-
-	/*
-	# LANGS (RUN ALWAYS BEFORE HIERARCHY_MAIN !!)
-	$script_obj = new stdClass();
-		$script_obj->script_class   = "hierarchy";
-		$script_obj->script_method  = "update_jer_from_4_0_to_4_1";
-		$script_obj->script_vars    = array('lg','no');
-	$updates->$v->run_scripts[] = $script_obj;
-	$script_obj = new stdClass();
-		$script_obj->script_class   = "hierarchy";
-		$script_obj->script_method  = "update_jer_from_4_0_to_4_1";
-		$script_obj->script_vars    = array('lg','si');
-	$updates->$v->run_scripts[] = $script_obj;
-	*/
-	
-	/*
-	# TS
-	$script_obj = new stdClass();
-		$script_obj->script_class   = "hierarchy";
-		$script_obj->script_method  = "update_jer_from_4_0_to_4_1";
-		$script_obj->script_vars    = array('ts','no');
-	$updates->$v->run_scripts[] = $script_obj;
-	$script_obj = new stdClass();
-		$script_obj->script_class   = "hierarchy";
-		$script_obj->script_method  = "update_jer_from_4_0_to_4_1";
-		$script_obj->script_vars    = array('ts','si');
-	$updates->$v->run_scripts[] = $script_obj;
-	
-	# HIERARCHY : ALL TOPONYMS
-	/*
-	/*
-	# Andorra
-	$script_obj = new stdClass();
-		$script_obj->script_class   = "hierarchy";
-		$script_obj->script_method  = "update_jer_from_4_0_to_4_1";
-		$script_obj->script_vars    = array('ad','no');
-	$updates->$v->run_scripts[] = $script_obj;
-	$script_obj = new stdClass();
-		$script_obj->script_class   = "hierarchy";
-		$script_obj->script_method  = "update_jer_from_4_0_to_4_1";
-		$script_obj->script_vars    = array('ad','si');
-	$updates->$v->run_scripts[] = $script_obj;
-	*/
-	/*
-	# Cuba
-	$script_obj = new stdClass();
-		$script_obj->script_class   = "hierarchy";
-		$script_obj->script_method  = "update_jer_from_4_0_to_4_1";
-		$script_obj->script_vars    = array('cu','no');
-	$updates->$v->run_scripts[] = $script_obj;
-	$script_obj = new stdClass();
-		$script_obj->script_class   = "hierarchy";
-		$script_obj->script_method  = "update_jer_from_4_0_to_4_1";
-		$script_obj->script_vars    = array('cu','si');
-	$updates->$v->run_scripts[] = $script_obj;
-	*/
-	/*
-	# Portugal
-	$script_obj = new stdClass();
-		$script_obj->script_class   = "hierarchy";
-		$script_obj->script_method  = "update_jer_from_4_0_to_4_1";
-		$script_obj->script_vars    = array('pt','no');
-	$updates->$v->run_scripts[] = $script_obj;
-	$script_obj = new stdClass();
-		$script_obj->script_class   = "hierarchy";
-		$script_obj->script_method  = "update_jer_from_4_0_to_4_1";
-		$script_obj->script_vars    = array('pt','si');
-	$updates->$v->run_scripts[] = $script_obj;
-	
-	/*
-	# USA
-	$script_obj = new stdClass();
-		$script_obj->script_class   = "hierarchy";
-		$script_obj->script_method  = "update_jer_from_4_0_to_4_1";
-		$script_obj->script_vars    = array('us','no');
-	$updates->$v->run_scripts[] = $script_obj;
-	$script_obj = new stdClass();
-		$script_obj->script_class   = "hierarchy";
-		$script_obj->script_method  = "update_jer_from_4_0_to_4_1";
-		$script_obj->script_vars    = array('us','si');
-	$updates->$v->run_scripts[] = $script_obj;
-	*/
-	/*
-	# France
-	$script_obj = new stdClass();
-		$script_obj->script_class   = "hierarchy";
-		$script_obj->script_method  = "update_jer_from_4_0_to_4_1";
-		$script_obj->script_vars    = array('fr','no');
-	$updates->$v->run_scripts[] = $script_obj;
-	$script_obj = new stdClass();
-		$script_obj->script_class   = "hierarchy";
-		$script_obj->script_method  = "update_jer_from_4_0_to_4_1";
-		$script_obj->script_vars    = array('fr','si',false);
-	$updates->$v->run_scripts[] = $script_obj;
-	*/
-	/*
-	# Spain
-	$script_obj = new stdClass();
-		$script_obj->script_class   = "hierarchy";
-		$script_obj->script_method  = "update_jer_from_4_0_to_4_1";
-		$script_obj->script_vars    = array('es','no');
-	$updates->$v->run_scripts[] = $script_obj;
-	$script_obj = new stdClass();
-		$script_obj->script_class   = "hierarchy";
-		$script_obj->script_method  = "update_jer_from_4_0_to_4_1";
-		$script_obj->script_vars    = array('es','si');
-	$updates->$v->run_scripts[] = $script_obj;	
-	*/
-	/*
-	# Algeria
-	$script_obj = new stdClass();
-		$script_obj->script_class   = "hierarchy";
-		$script_obj->script_method  = "update_jer_from_4_0_to_4_1";
-		$script_obj->script_vars    = array('dz','no');
-	$updates->$v->run_scripts[] = $script_obj;
-	$script_obj = new stdClass();
-		$script_obj->script_class   = "hierarchy";
-		$script_obj->script_method  = "update_jer_from_4_0_to_4_1";
-		$script_obj->script_vars    = array('dz','si');
-	$updates->$v->run_scripts[] = $script_obj;
-	*/
-	/*
-	# Morocco
-	$script_obj = new stdClass();
-		$script_obj->script_class   = "hierarchy";
-		$script_obj->script_method  = "update_jer_from_4_0_to_4_1";
-		$script_obj->script_vars    = array('ma','no');
-	$updates->$v->run_scripts[] = $script_obj;
-	$script_obj = new stdClass();
-		$script_obj->script_class   = "hierarchy";
-		$script_obj->script_method  = "update_jer_from_4_0_to_4_1";
-		$script_obj->script_vars    = array('ma','si');
-	$updates->$v->run_scripts[] = $script_obj;
-	*/
 
 
 
