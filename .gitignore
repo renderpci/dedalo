@@ -26,6 +26,9 @@ lib/dedalo/common/css/structure.css
 # extras ignore all except common
 #lib/*/extras/*
 #!lib/*/extras/oh
+lib/dedalo/extras/geonames/files/*
+#lib/dedalo/extras/*/str_data
+
 
 # Ignore paths that contain generated content.
 media/*
