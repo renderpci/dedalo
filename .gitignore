@@ -24,8 +24,8 @@ lib/dedalo/common/js/lang/*
 lib/dedalo/common/css/structure.css
 
 # extras ignore all except common
-lib/*/extras/*
-!lib/*/extras/oh
+#lib/*/extras/*
+#!lib/*/extras/oh
 
 # Ignore paths that contain generated content.
 media/*
