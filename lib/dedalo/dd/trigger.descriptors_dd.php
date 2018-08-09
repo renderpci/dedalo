@@ -18,11 +18,11 @@ if(login::is_logged()!==true) {
 
 
 # set vars
-$vars = array('id','mode','terminoID_lang','terminoID','termino','parent','lang', 'tipo', 'dato');
-if(is_array($vars)) foreach($vars as $name)	$$name = common::setVar($name);
+$vars = ['id','mode','terminoID_lang','terminoID','termino','parent','lang', 'tipo', 'dato'];
+foreach($vars as $name)	$$name = common::setVar($name);
 
 
-if($mode=='removeDescriptor') {
+if($mode==='removeDescriptor') {
 	
 	if(!$id || !$terminoID) die("Need more data! id:$id - terminoID:$terminoID ");
 	

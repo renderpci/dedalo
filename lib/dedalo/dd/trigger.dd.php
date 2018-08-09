@@ -33,7 +33,26 @@ require_once(DEDALO_LIB_BASE_PATH .'/dd/class.RecordObj_dd_edit.php');
 $codHeader = '<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />';
 
 # set vars
-$vars = array('accion','terminoID','parent','termino','terminoIDlist','terminoIDresalte','modo','type','tabla','id','ts_lang','lang2load','terminoID_to_link','dato','def','nombre','modelo','nHijos');
+$vars = array(
+	'accion',
+	'terminoID',
+	'parent',
+	'termino',
+	'terminoIDlist',
+	'terminoIDresalte',
+	'modo',
+	'type',
+	'tabla',
+	'id',
+	'ts_lang',
+	'lang2load',
+	'terminoID_to_link',
+	'dato',
+	'def',
+	'nombre',
+	'modelo',
+	'nHijos'
+);
 foreach($vars as $name)	$$name = common::setVar($name);
 
 
@@ -41,7 +60,7 @@ foreach($vars as $name)	$$name = common::setVar($name);
 /**
 * SHOW_INDEXATIONS : diffusion_index_ts
 *//*
-if($accion=='show_indexations') {
+if($accion==='show_indexations') {
 
 	# DATA VERIFY
 	if(empty($terminoID) || strlen($terminoID)<3) exit("Trigger Error: terminoID is mandatory");	
@@ -60,7 +79,7 @@ if($accion=='show_indexations') {
 /**
 * INSERTTS 
 */
-if($accion=='insertTS') {
+if($accion==='insertTS') {
 	$html ='';
 	if(!$parent)	exit("Need more vars: parent: $parent ");
 	if(!$modo)		exit("Need more vars: modo: $modo ");
@@ -163,7 +182,7 @@ if($accion=='insertTS') {
 /**
 * UPDATE_TR_ORDER
 */
-if($accion=='update_tr_order') {
+if($accion==='update_tr_order') {
 
 	if(empty($terminoID))	exit("Need more vars: terminoID");
 	if(empty($dato))		exit("Need more vars: dato");
@@ -197,33 +216,34 @@ if($accion=='update_tr_order') {
 /**
 * SAVEDESCRIPTORFROMLIST : Inline edit in tree
 */
-if($accion=='saveDescriptorFromList') {
+if($accion==='saveDescriptorFromList') {
 	
-	if(!$terminoID || strlen($terminoID)<2) die("Need more data! terminoID:$terminoID ");
+	if(!$terminoID || strlen($terminoID)<2) die("Need more data! (terminoID) ");
+
+	# Write session to unlock session file
+	# session_write_close();
+	
 	
 	$html='';
-	
 
-	if(strlen($lang)<3) {
-		#$lang	= Jerarquia::get_mainLang($terminoID);
-		$lang   = 'lg-spa';	# Fixed main lang for dd structure
-			#dump($lang,'lang'); 
+	$lang = $ts_lang;
+
+	if(empty($lang) || strlen($lang)<3) {
+		$lang = 'lg-spa';	# Fixed main lang for dd structure
 	}
 	
 	$parent = $terminoID;
-	$lang 	= $lang;
+
+	debug_log(__METHOD__." lang ".to_string($lang), logger::DEBUG);	
 
 	$matrix_table				= RecordObj_descriptors_dd::$descriptors_matrix_table;
-	$RecordObj_descriptors_dd	= new RecordObj_descriptors_dd($matrix_table, NULL, $parent, $lang, $tipo='termino');
+	$RecordObj_descriptors_dd	= new RecordObj_descriptors_dd($matrix_table, null, $parent, $lang, $tipo='termino');
 	$RecordObj_descriptors_dd->set_dato($termino);
 	$RecordObj_descriptors_dd->Save();
 	
 	$html .= " Saved! ";
 
 	echo $html;
-
-	# Write session to unlock session file
-	session_write_close();	
 	
 	exit();
 }
@@ -233,7 +253,7 @@ if($accion=='saveDescriptorFromList') {
 /**
 * DELETE V4 Beta3
 */
-if($accion=='deleteTS') {
+if($accion==='deleteTS') {
 	
 	if(!$terminoID) exit("Need more vars: terminoID: $terminoID ");	
 	
@@ -339,7 +359,7 @@ if($accion=='deleteTS') {
 /**
 * EDIT V4 beta3
 */
-if($accion=='editTS') {
+if($accion==='editTS') {
 	
 	if(!$_POST) exit();
 					
@@ -489,7 +509,7 @@ if($accion=='editTS') {
 /**
 * LISTADOHIJOS : listados (al abrir la flecha,etc..)
 */
-if($accion=='listadoHijos') {
+if($accion==='listadoHijos') {
 
 	if(!$terminoID) 	exit("Need more vars: terminoID: $terminoID ");
 	
@@ -513,7 +533,7 @@ if($accion=='listadoHijos') {
 * SEARCH : searchTSform : Búsqueda formulario
 * Al recibir get accion = "searchTSform", buscamos recursivamente los padres de cada termino coincidente para crear la secuencia de apertura de divs. Guardamos el resultado en la cookie cookieOpenDivs_dd
 */
-if($accion=='searchTSform') {
+if($accion==='searchTSform') {
 	
 	$type = $nombre ;
 
