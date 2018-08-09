@@ -1,0 +1,47 @@
+html,body {
+	margin:0;
+	padding:0px;
+	font-size:12px;
+	font-family: "Arial", sans-serif;
+	-webkit-font-smoothing: antialiased;
+	background-color: transparent !important;
+}
+
+.fm_button {
+	display: inline-block;
+	font-size: 100%;
+	font-weight: 300;
+	cursor: pointer;
+	line-height: 1.2em;
+	color: #2e2e2e;
+	transition: background-color 0.5s ease;
+	user-select: none;
+	-webkit-user-select: none;
+	box-sizing: border-box;
+	border-radius: 4px;
+	padding: 4px;
+	padding-right: 6px;
+	padding-left: 6px;
+	margin-top: 1px;
+	width: auto;
+	min-width: 100px;
+	background-color: rgba(201, 201, 201, 0.3);
+	}
+	.fm_button:before {
+		content: '';
+		background-image: url("../../../../themes/default/glyphicons-halflings.png");
+		margin-right: 4px;
+		width: 14px;
+		height: 14px;
+		float: left;
+		opacity: 0.5;
+		background-position: -240px -24px;
+		/*background-position: -336px -96px;*/
+	}
+	.fm_button:hover {
+		opacity: 1;
+		background-color: rgba(201, 201, 201, 0.6);
+	}
+	.fm_button:active {
+		opacity: 0.4;
+	}

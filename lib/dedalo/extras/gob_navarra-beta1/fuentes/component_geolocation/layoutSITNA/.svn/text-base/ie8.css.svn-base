@@ -1,0 +1,202 @@
+﻿
+html, body {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    font-family: Arial, helvetica, sans-serif;
+    overflow: hidden;
+}
+
+a {
+    color:#c00;
+}
+a:visited {
+    color:#700;
+}
+a:hover { 
+    color:#f00;
+    text-decoration:none;
+}
+
+.tc-ctl-nav-slider,.tc-ctl-nav-bar {
+    display: block;
+}
+
+.tc-ctl-toc-tree {
+    font-size: 1em;
+    max-height: 20em;
+    overflow: auto;
+}
+
+li.tc-ctl-toc-node {
+    line-height: 2.4em;
+}
+
+li.tc-ctl-toc-node input[type=checkbox] {
+    width: 1.2em;
+    height: 1.2em;
+    margin-top: 0.5em;
+}
+
+ul.tc-ctl-toc-branch li.tc-ctl-toc-node.tc-lastchild {
+     background: #fff url(img/lastnode.png) no-repeat;
+}
+ul.tc-ctl-toc-branch li.tc-ctl-toc-node.tc-collapsed.tc-lastchild {
+     background: #fff url(img/lastnode-collapsed.png) no-repeat;
+}
+ul.tc-ctl-toc-branch li.tc-ctl-toc-leaf.tc-lastchild {
+    background: #fff url(img/lastleaf.png) no-repeat;
+}
+
+li.tc-ctl-bms-node label span {
+    border: 0.3em solid #ccc;
+}
+
+li.tc-ctl-bms-node label span.tc-checked {
+    border: 0.3em solid #c00;
+}
+
+.tc-ctl-attrib div p {
+    -ms-filter: "progid:DXImageTransform.Microsoft.Shadow(Strength=2, Direction=135, Color='#000000')";
+}
+
+.tc-ctl-meas-len,.tc-ctl-meas-area {
+    width: auto;
+    border-right: 1px solid #ccc;
+    position: inherit;
+    left: auto;
+    top: auto;
+    border: 0;
+}
+
+.tc-ctl-meas-select label span.tc-checked {
+    border-color: #666;
+    border-bottom-color: #fff;
+}
+
+.slide-panel {
+	max-width: 21em;
+}
+
+.slide-panel > h1 {
+    position:absolute;
+    display: block;
+    background-color: black;
+    color: #fff;
+    cursor: pointer;
+	text-transform: lowercase;
+	text-indent: 0;
+	text-align: center;
+	vertical-align: middle;
+	line-height: 2em;
+	margin: 0.5em;
+    font-size: 0.8em;
+	font-weight: normal;
+	width: 10em;
+	height: 2em;
+    padding: 0;
+}
+	
+.left-panel > h1 {
+	right: 0;
+	margin-right: -10em;
+	bottom: 0.5em;
+
+	filter: progid:DXImageTransform.Microsoft.BasicImage(rotation=1);
+}
+
+.right-panel > h1 {
+	left: 0;
+	margin-left: -2em;
+	bottom: 0.5em;
+
+	filter: progid:DXImageTransform.Microsoft.BasicImage(rotation=3);
+}
+
+
+.tools-panel {
+    top: 0;
+	height: auto;
+	width: 21em;
+	max-height: 80%;
+    border-left: 1px solid #ccc;
+    border-bottom: 1px solid #ccc;
+}
+
+.tools-panel.right-collapsed {
+	width: 0;
+}
+
+.legend-panel {
+    border-right: 1px solid #ccc;
+}
+
+.legend-panel {
+    height: auto;
+    max-height: 100%;
+}
+
+.tc-ctl-legend-tree {
+    height: auto;
+    max-height: 38em;
+}
+
+.tc-ctl-legend-watch,.tc-ctl-legend-title {
+	display: inline;
+	vertical-align: top;
+}
+
+.right-collapsed > h1 {
+    opacity: 1;
+    -webkit-box-shadow: 2px 2px 5px 0px rgba(0,0,0,0.2);
+    -moz-box-shadow: 2px 2px 5px 0px rgba(0,0,0,0.2);
+    box-shadow: 2px 2px 5px 0px rgba(0,0,0,0.2);
+}
+
+.left-collapsed > h1 {
+    opacity: 1;
+    -webkit-box-shadow: 2px 2px 5px 0px rgba(0,0,0,0.2);
+    -moz-box-shadow: 2px 2px 5px 0px rgba(0,0,0,0.2);
+    box-shadow: 2px 2px 5px 0px rgba(0,0,0,0.2);
+}
+
+.ovmap-panel,.legend-panel {
+    min-height: 10em;
+}
+
+.ovmap-panel {
+	height: auto;
+}
+
+#tools-tab:after,#legend-tab:after,#ovmap-tab:after {
+	content: none;
+}
+	
+#legend-tab,#ovmap-tab {
+	bottom: 8em;
+}
+
+.tc-ctl-load-dots{
+	background-color: transparent;
+}
+
+.tc-ctl-load-bar {
+	height: 20px;
+	background-image: url(img/loading.gif);
+}
+
+ul.tc-ctl-bms-branch input[type=radio],.tc-ctl-meas-select input[type=radio] {
+	position: absolute;
+	display: inherit;
+	width: 100%;
+	height: 100%;
+	filter: alpha(opacity=0);
+}
+
+label.tc-ctl-meas-btn-len span:before {
+    text-indent: 10%;
+}
+
+label.tc-ctl-meas-btn-area span:before {
+    text-indent: 10%;
+}

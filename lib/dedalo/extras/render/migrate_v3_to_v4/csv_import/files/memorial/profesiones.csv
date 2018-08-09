@@ -1,0 +1,111 @@
+UserID,Inversa,id,prefesion
+1024,"[{""section_id"": ""1024"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""}]",1,Actor
+542,"[{""section_id"": ""542"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""}]",2,Administrativa
+537,"[{""section_id"": ""537"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""},{""section_id"": ""1012"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""},{""section_id"": ""384"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""},{""section_id"": ""463"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""}]",3,Advocada
+518,"[{""section_id"": ""518"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""},{""section_id"": ""532"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""}]",4,advocada laboralista
+435,"[{""section_id"": ""435"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""}]",5,Agent comercial
+524,"[{""section_id"": ""524"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""}]",6,ajudant de cuina i hostal
+520,"[{""section_id"": ""520"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""}]",7,Ajustador de matrius
+289,"[{""section_id"": ""289"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""}]",8,apoderat de banca
+495,"[{""section_id"": ""495"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""}]",9,arquitecte
+336,"[{""section_id"": ""336"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""}]",10,Artista plàstic
+975,"[{""section_id"": ""975"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""}]",11,arxiver
+192,"[{""section_id"": ""192"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""}]",12,Barber
+225,"[{""section_id"": ""225"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""}]",13,bibliotecària
+477,"[{""section_id"": ""477"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""}]",14,Botiguer
+551,"[{""section_id"": ""551"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""}]",15,cambrer
+522,"[{""section_id"": ""522"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""},{""section_id"": ""543"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""}]",16,Capellà
+465,"[{""section_id"": ""465"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""}]",17,cartera
+1015,"[{""section_id"": ""1015"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""}]",18,Catedràtic d'Universitat
+1026,"[{""section_id"": ""1026"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""}]",19,Cineasta
+484,"[{""section_id"": ""484"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""}]",20,Cisteller
+547,"[{""section_id"": ""547"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""}]",21,Comercial
+519,"[{""section_id"": ""519"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""},{""section_id"": ""535"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""},{""section_id"": ""1050"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""}]",22,Comerciant
+1003,"[{""section_id"": ""1003"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""}]",23,Compositor
+287,"[{""section_id"": ""287"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""},{""section_id"": ""335"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""},{""section_id"": ""433"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""},{""section_id"": ""459"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""},{""section_id"": ""516"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""}]",24,Comptable
+338,"[{""section_id"": ""338"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""}]",25,Conductor
+192,"[{""section_id"": ""192"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""}]",26,Conserge de la Diputació de Girona
+290,"[{""section_id"": ""290"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""}]",27,Conserver
+367,"[{""section_id"": ""367"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""}]",28,Constructor i promotor d'obres
+216,"[{""section_id"": ""216"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""}]",29,cooperativista
+291,"[{""section_id"": ""291"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""}]",30,Cuiner
+246,"[{""section_id"": ""246"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""},{""section_id"": ""383"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""}]",31,"Dependenta, negoci familiar."
+210,"[{""section_id"": ""210"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""}]",32,Director Centre Cívic Ter
+297,"[{""section_id"": ""297"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""},{""section_id"": ""521"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""}]",33,director comercial
+1023,"[{""section_id"": ""1023"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""},{""section_id"": ""1029"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""},{""section_id"": ""1010"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""}]",34,Director d'escena
+1014,"[{""section_id"": ""1014"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""}]",35,Director de fotografia
+823,"[{""section_id"": ""823"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""}]",36,Director de l'Institut de Química Avançada de Catalunya
+283,"[{""section_id"": ""283"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""}]",37,ebenista
+369,"[{""section_id"": ""369"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""},{""section_id"": ""1011"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""},{""section_id"": ""1018"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""},{""section_id"": ""1021"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""}]",38,Economista
+466,"[{""section_id"": ""466"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""}]",39,Editor
+506,"[{""section_id"": ""506"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""}]",40,Electromecànic
+515,"[{""section_id"": ""515"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""}]",41,Eletricista
+549,"[{""section_id"": ""549"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""}]",42,empleada a tallers manufacturers
+422,"[{""section_id"": ""422"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""}]",43,Empleada de Telefónica
+539,"[{""section_id"": ""539"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""}]",44,Empleat banca
+494,"[{""section_id"": ""494"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""}]",45,Empleat Pirelli
+464,"[{""section_id"": ""464"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""},{""section_id"": ""1007"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""},{""section_id"": ""1027"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""}]",46,Empresari
+243,"[{""section_id"": ""243"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""},{""section_id"": ""490"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""}]",47,Enginyer
+339,"[{""section_id"": ""339"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""},{""section_id"": ""1049"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""}]",48,Enginyer químic
+1033,"[{""section_id"": ""1033"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""}]",49,Enginyer tècnic agrícol
+226,"[{""section_id"": ""226"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""}]",50,Enquadernació
+384,"[{""section_id"": ""384"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""},{""section_id"": ""463"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""},{""section_id"": ""438"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""}]",51,Escriptor
+385,"[{""section_id"": ""385"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""}]",52,Esteticista
+509,"[{""section_id"": ""509"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""}]",53,Ex-capellà
+216,"[{""section_id"": ""216"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""}]",54,Ferroviari
+527,"[{""section_id"": ""527"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""}]",55,fusté
+1019,"[{""section_id"": ""1019"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""}]",56,Geòleg
+375,"[{""section_id"": ""375"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""}]",57,Gerent de fàbrica
+197,"[{""section_id"": ""197"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""}]",58,Gestor administratiu
+1020,"[{""section_id"": ""1020"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""}]",59,Historiador
+294,"[{""section_id"": ""294"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""}]",60,Indústria
+293,"[{""section_id"": ""293"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""}]",61,Indústria surera
+293,"[{""section_id"": ""293"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""}]",62,Indústria tèxtil
+337,"[{""section_id"": ""337"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""}]",63,Industrial
+978,"[{""section_id"": ""978"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""},{""section_id"": ""94"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""},{""section_id"": ""427"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""},{""section_id"": ""436"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""}]",64,Infermera
+1028,"[{""section_id"": ""1028"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""}]",65,informàtic
+1048,"[{""section_id"": ""1048"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""}]",66,Jubilada
+1004,"[{""section_id"": ""1004"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""}]",67,Jurista
+334,"[{""section_id"": ""334"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""}]",68,Lampista
+448,"[{""section_id"": ""448"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""},{""section_id"": ""449"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""},{""section_id"": ""450"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""},{""section_id"": ""451"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""},{""section_id"": ""452"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""},{""section_id"": ""453"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""},{""section_id"": ""454"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""}]",69,Marina mercant
+298,"[{""section_id"": ""298"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""},{""section_id"": ""341"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""},{""section_id"": ""366"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""}]",70,Mecànic
+1019,"[{""section_id"": ""1019"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""}]",71,Membre del Parlament Europeu
+371,"[{""section_id"": ""371"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""},{""section_id"": ""444"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""},{""section_id"": ""217"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""}]",72,mestra
+530,"[{""section_id"": ""530"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""}]",73,mestressa de casa
+223,"[{""section_id"": ""223"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""},{""section_id"": ""996"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""}]",74,Metge
+1047,"[{""section_id"": ""1047"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""},{""section_id"": ""1028"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""},{""section_id"": ""1005"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""}]",75,Militar
+1008,"[{""section_id"": ""1008"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""}]",76,Músic
+377,"[{""section_id"": ""377"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""},{""section_id"": ""468"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""}]",77,Obrer construcció
+544,"[{""section_id"": ""544"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""}]",78,Obrer del metall
+215,"[{""section_id"": ""215"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""},{""section_id"": ""382"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""}]",79,Obrer industrial
+550,"[{""section_id"": ""550"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""}]",80,operari textil
+524,"[{""section_id"": ""524"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""}]",81,operaria d'un escorxador... 
+1100,"[{""section_id"": ""1100"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""}]",82,Otorrinolaringòleg
+219,"[{""section_id"": ""219"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""},{""section_id"": ""228"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""},{""section_id"": ""296"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""},{""section_id"": ""303"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""},{""section_id"": ""340"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""},{""section_id"": ""460"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""},{""section_id"": ""492"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""},{""section_id"": ""512"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""},{""section_id"": ""517"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""},{""section_id"": ""540"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""},{""section_id"": ""546"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""},{""section_id"": ""549"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""},{""section_id"": ""524"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""}]",83,Pagès
+213,"[{""section_id"": ""213"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""},{""section_id"": ""493"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""}]",84,Paleta
+217,"[{""section_id"": ""217"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""},{""section_id"": ""1005"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""},{""section_id"": ""207"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""},{""section_id"": ""331"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""},{""section_id"": ""332"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""},{""section_id"": ""342"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""},{""section_id"": ""439"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""},{""section_id"": ""1036"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""}]",85,Periodista
+193,"[{""section_id"": ""193"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""},{""section_id"": ""507"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""}]",86,Perruquera
+438,"[{""section_id"": ""438"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""},{""section_id"": ""1013"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""},{""section_id"": ""1034"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""},{""section_id"": ""333"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""},{""section_id"": ""545"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""},{""section_id"": ""244"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""},{""section_id"": ""363"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""},{""section_id"": ""404"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""},{""section_id"": ""437"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""}]",87,Polític
+509,"[{""section_id"": ""509"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""}]",88,Professor
+333,"[{""section_id"": ""333"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""},{""section_id"": ""545"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""}]",89,Professor de secundària
+366,"[{""section_id"": ""366"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""}]",90,Professor escola taller
+1009,"[{""section_id"": ""1009"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""},{""section_id"": ""1017"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""},{""section_id"": ""244"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""},{""section_id"": ""363"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""},{""section_id"": ""404"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""}]",91,Professor universitari
+500,"[{""section_id"": ""500"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""},{""section_id"": ""1076"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""}]",92,Químic
+192,"[{""section_id"": ""192"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""}]",93,Ram del Suro
+384,"[{""section_id"": ""384"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""},{""section_id"": ""463"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""}]",94,redactor
+478,"[{""section_id"": ""478"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""}]",95,Restauració
+511,"[{""section_id"": ""511"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""}]",96,Sastre
+195,"[{""section_id"": ""195"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""},{""section_id"": ""446"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""}]",97,Servei domèstic
+437,"[{""section_id"": ""437"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""}]",98,Sindicalista
+212,"[{""section_id"": ""212"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""}]",99,Sindicalista banca
+218,"[{""section_id"": ""218"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""}]",100,Sindicalista construcció
+423,"[{""section_id"": ""423"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""}]",101,Tapisser
+533,"[{""section_id"": ""533"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""}]",102,Taxista
+380,"[{""section_id"": ""380"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""}]",103,Tècnic /enginyer industrial
+548,"[{""section_id"": ""548"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""}]",104,tenia una bodega
+214,"[{""section_id"": ""214"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""}]",105,Tèxtil
+526,"[{""section_id"": ""526"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""}]",106,Torner
+211,"[{""section_id"": ""211"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""}]",107,Transportista
+425,"[{""section_id"": ""425"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""}]",108,treballa en un taller de fer bàscules
+524,"[{""section_id"": ""524"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""}]",109,treballadora en una fàbrica tèxtil
+496,"[{""section_id"": ""496"",""section_tipo"": ""rsc197"",""component_tipo"": ""rsc94""}]",110,vidrier

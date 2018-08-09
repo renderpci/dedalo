@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<rdf:RDF xmlns:dcterms="http://purl.org/dc/terms/" xmlns:void="http://rdfs.org/ns/void#" xmlns:nmo="http://nomisma.org/ontology" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:foaf="http://xmlns.com/foaf/0.1/" xmlns:xsd="http://www.w3.org/2001/XMLSchema#">
+  <nmo:NumismaticObject rdf:about="http://www.museuprehistoriavalencia.org/nomisma/id/es/23976">
+    <dcterms:title xml:lang="es">RIC 348a, Antoní Pius, 23976</dcterms:title>
+    <dcterms:identifier>23976</dcterms:identifier>
+    <nmo:hasCollection rdf:resource="http://nomisma.org/id/mpv/Custòdia i estalvi Vitrina 180"/>
+    <nmo:hasTypeSeriesItem rdf:resource="http://numismatics.org/ocre/id/ric.3.ant.348a"/>
+    <nmo:hasAxis rdf:datatype="xsd:integer"/>
+    <nmo:hasWeight rdf:datatype="xsd:decimal">0</nmo:hasWeight>
+    <dcterms:isPartOf rdf:resource="http://nomisma.org/id/lliria_hoard"/>
+    <nmo:hasObverse>
+      <rdf:Description rdf:about="http://www.museuprehistoriavalencia.org/nomisma/id/es/23976#anverso">
+        <foaf:depiction rdf:resource="http://www.museudeprehistoria.org/nomisma/media/image/catalogo/1.5MB/23000/23900/23976-1.jpg"/>
+        <foaf:thumbnail rdf:resource="http://www.museudeprehistoria.org/nomisma/media/image/catalogo/thumb/23000/23900/23976-1.jpg"/>
+      </rdf:Description>
+    </nmo:hasObverse>
+    <nmo:hasReverse>
+      <rdf:Description rdf:about="http://www.museuprehistoriavalencia.org/nomisma/id/es/23976#reverso">
+        <foaf:depiction rdf:resource="http://www.museudeprehistoria.org/nomisma/media/image/catalogo/1.5MB/23000/23900/23976-2.jpg"/>
+        <foaf:thumbnail rdf:resource="http://www.museudeprehistoria.org/nomisma/media/image/catalogo/thumb/23000/23900/23976-2.jpg"/>
+      </rdf:Description>
+    </nmo:hasReverse>
+    <void:inDataset rdf:resource="http://www.museuprehistoriavalencia.org/nomisma/data"/>
+  </nmo:NumismaticObject>
+  <nmo:NumismaticObject rdf:about="http://www.museuprehistoriavalencia.org/nomisma/id/es/36012">
+    <dcterms:title xml:lang="es">RIC 72, Nerón, 36012</dcterms:title>
+    <dcterms:identifier>36012</dcterms:identifier>
+    <nmo:hasCollection rdf:resource="http://nomisma.org/id/mpv"/>
+    <nmo:hasTypeSeriesItem rdf:resource="http://numismatics.org/ocre/id/ric.1(2).ner.72"/>
+    <nmo:hasAxis rdf:datatype="xsd:integer">5</nmo:hasAxis>
+    <nmo:hasWeight rdf:datatype="xsd:decimal">3.41</nmo:hasWeight>
+    <dcterms:isPartOf rdf:resource="http://nomisma.org/id/lliria_hoard"/>
+    <nmo:hasObverse>
+      <rdf:Description rdf:about="http://www.museuprehistoriavalencia.org/nomisma/id/es/36012#anverso">
+        <foaf:depiction rdf:resource="http://www.museudeprehistoria.org/nomisma/media/image/catalogo/1.5MB/36000/36000/36012-1.jpg"/>
+        <foaf:thumbnail rdf:resource="http://www.museudeprehistoria.org/nomisma/media/image/catalogo/thumb/36000/36000/36012-1.jpg"/>
+      </rdf:Description>
+    </nmo:hasObverse>
+    <nmo:hasReverse>
+      <rdf:Description rdf:about="http://www.museuprehistoriavalencia.org/nomisma/id/es/36012#reverso">
+        <foaf:depiction rdf:resource="http://www.museudeprehistoria.org/nomisma/media/image/catalogo/1.5MB/36000/36000/36012-2.jpg"/>
+        <foaf:thumbnail rdf:resource="http://www.museudeprehistoria.org/nomisma/media/image/catalogo/thumb/36000/36000/36012-2.jpg"/>
+      </rdf:Description>
+    </nmo:hasReverse>
+    <void:inDataset rdf:resource="http://www.museuprehistoriavalencia.org/nomisma/data"/>
+  </nmo:NumismaticObject>
+</rdf:RDF>

@@ -1,0 +1,102 @@
+html,body {
+	margin:0;
+	padding:0px;
+	font-size:12px;
+	font-family: "Arial", sans-serif;
+	-webkit-font-smoothing: antialiased;
+	background-color: rgba(242, 242, 242, 1);
+}
+
+.fm_button,
+.fm_button_wait,
+.fm_button_fail,
+.fm_button_ok {
+	display: inline-block;
+	font-size: 80%;
+	font-weight: 200;
+	cursor: pointer;
+	line-height: 1.2em;
+	color: #2e2e2e;
+	transition: background-color 0.5s ease;
+	user-select: none;
+	-webkit-user-select: none;
+	box-sizing: border-box;
+	border-radius: 3px;
+	padding: 3px;
+	padding-right: 4px;
+	padding-left: 4px;
+	margin-top: 1px;
+	width: 22px;
+}
+
+.fm_button {
+	opacity: 0.9;
+	background-color: #BFBFBF;
+	background-color: rgba(201, 201, 201, 0.8);	
+	}
+	.fm_button:before {
+		content: '';
+		background-image: url("../../../../themes/default/glyphicons-halflings.png");
+		margin-right: 4px;
+		width: 14px;
+		height: 14px;
+		float: left;
+		opacity: 0.5;
+		background-position: -240px -24px;
+		/*background-position: -336px -96px;*/
+	}
+	.fm_button:hover {
+		opacity: 1;
+		background-color: rgba(201, 201, 201, 0.6);
+	}
+	.fm_button:active {
+		opacity: 0.4;
+	}
+
+.fm_button_wait {
+	background-color: rgba(29, 150, 190, 0.8);
+	/*background-color: rgba(14, 150, 201, 0.8);*/
+	}
+	.fm_button_wait:before {
+		content: '';
+		background-image: url("../../../../themes/default/glyphicons-halflings.png");
+		margin-right: 4px;
+		width: 14px;
+		height: 14px;
+		float: left;
+		opacity: 0.5;
+		background-position: -216px -24px;
+		/*background-position: -336px -96px;*/
+	}
+
+.fm_button_ok {
+	background-color: rgba(42, 182, 23, 0.6);
+	/*background-color: rgba(14, 150, 201, 0.8);*/
+	}
+	.fm_button_ok:before {
+		content: '';
+		background-image: url("../../../../themes/default/glyphicons-halflings.png");
+		margin-right: 4px;
+		width: 14px;
+		height: 14px;
+		float: left;
+		opacity: 0.5;
+		background-position: -288px 0px;
+		/*background-position: -336px -96px;*/
+	}
+
+.fm_button_fail {
+	background-color: rgba(223, 59, 38, 0.8);
+	/*background-color: rgba(14, 150, 201, 0.8);*/
+	}
+	.fm_button_fail:before {
+		content: '';
+		background-image: url("../../../../themes/default/glyphicons-halflings.png");
+		margin-right: 4px;
+		width: 14px;
+		height: 14px;
+		float: left;
+		opacity: 0.5;
+		background-position: -312px 0px;
+		/*background-position: -336px -96px;*/
+	}

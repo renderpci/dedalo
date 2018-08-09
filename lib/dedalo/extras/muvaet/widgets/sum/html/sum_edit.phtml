@@ -1,0 +1,15 @@
+<?php
+
+	# VISUALIZADOR HTML	
+	$html ='';	
+
+	
+	$html .= "<div id=\"widget_sum\" class=\"widget_sum\">";		
+	$html .= "Total: <span class=\"sum_total\">$total</span>";
+	$html .= "</div>";
+
+	$html .= "<script>widget_sum.activate_listener_value('".$component_target_tipo."')</script>";	// widget_sum.init('widget_sum'); 
+
+	print $html;
+
+?>

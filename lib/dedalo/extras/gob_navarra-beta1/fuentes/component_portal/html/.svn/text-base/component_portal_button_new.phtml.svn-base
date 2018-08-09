@@ -1,0 +1,41 @@
+<?php
+
+	# VISUALIZADOR HTML	
+
+			
+		# CONTENIDO (INPUT)
+		$html_contenido = '';
+
+		switch($permissions) {
+			
+			case 0	:	$html_contenido .= "\n <span class=\"css_span_dato {$ar_css['css_span_dato']}\"> ".label::get_label('contenido_no_autorizado')." </span>";
+						break;
+							
+			case ($permissions>=1)	:
+			
+						# BUTTON NEW HTML
+						$html_contenido .= "\n<div class=\"css_button_generic btn_new_ep\" 
+						data-portal_tipo=\"{$this->tipo}\" 
+						data-target_section_tipo=\"{$target_section_tipo}\" 
+						data-portal_id=\"{$this->portal_id}\"
+						onclick=\"component_portal.new_portal_record(this)\"
+						title=\"id:$id - parent:$parent - tipo:$tipo\"
+						>";
+						$html_contenido .= '+';
+						$html_contenido .= ' '. ucfirst(label::get_label('nuevo')) ;#. " $label" ;
+
+					
+
+						$html_contenido .= "\n</div>";
+
+						if (SHOW_DEBUG) {
+							$html_contenido .= "<span class=\"debug_info\">id:$id - parent:$parent - tipo:$tipo </span>";
+						}
+						break;
+		}
+		
+								
+
+		# PRINT HTML
+		print $html_contenido;
+?>

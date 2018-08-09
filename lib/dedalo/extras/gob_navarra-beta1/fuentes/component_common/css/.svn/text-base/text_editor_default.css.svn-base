@@ -1,0 +1,60 @@
+@charset "UTF-8";
+/* CSS Document */
+
+
+body { 
+	/*
+	font-family: 'Open Sans',verdana,sans-serif;font-style:normal;font-weight:400;font-size:14px;color:#666;
+	background-color:#333333;
+	*/	
+	font-family: Verdana, Geneva, sans-serif;
+	font-size:12px;
+}
+
+img .index { vertical-align: baseline; margin:20px !important}
+
+.mceContentBody { 
+	padding:7px;
+	margin: 0px;
+
+	border:solid 1px #9E9E9E;	
+	border-radius		: 3px;
+
+	-webkit-box-shadow	: 0 0 6px #999999 inset;	
+	-moz-box-shadow		: 0 0 6px #999999;	
+	box-shadow			: 0 0 6px #999999 inset;	
+	
+	-webkit-transition	: all 0.03s ease-in-out;	
+	-moz-transition		: all 0.03s ease-in-out;
+	transition			: all 0.03s ease-in-out;
+}
+
+
+.mceContentBody:hover {	
+	
+	background-color:#F1F1F1;
+	/*
+	-moz-transform: scale(1.05);
+	-webkit-transform: scale(1.05);
+	*/
+}
+
+.mceContentBody:focus {
+	
+}
+
+.mceContentBody:active {
+		
+}
+
+dedalo-rel { 
+	background-color:#ceec96; color:#3f3f3f; 
+	padding: 2px; 
+	padding-left: 20px; 
+	padding-right: 5px; 
+	display: block; 
+	background-image: url('../../themes/default/images/spinner.gif'); 
+	background-repeat: no-repeat;
+
+}
+

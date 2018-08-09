@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" 
+	xmlns:dcterms="http://purl.org/dc/terms/"
+	xmlns:void="http://rdfs.org/ns/void#">
+	<void:Dataset rdf:about="http://www.museuprehistoriavalencia.org/nomisma/data/">
+		<dcterms:title>Museu de Prehistòria de València</dcterms:title>
+		<dcterms:description>The Museu de Prehistoria de Valencia holds a large collection of archaeological objects, most of them recovered in the valencian territory, located in the mediterranean coast of Spain. The numismatic collection contains about 25,000 coins and objets related with the history of money.</dcterms:description>
+		<dcterms:publisher>Museu de Prehistòria de València - Diputació de València</dcterms:publisher>
+		<dcterms:license rdf:resource="http://creativecommons.org/licenses/by-nc-sa/4.0/"/>
+		<void:uriSpace>http://www.museodeprehistoria.org/nomisma/id/</void:uriSpace>
+		<void:dataDump rdf:resource="http://www.museuprehistoriavalencia.org/nomisma/data/nomisma.rdf"/>
+	</void:Dataset>
+</rdf:RDF>
