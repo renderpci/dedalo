@@ -44,7 +44,7 @@ abstract class tool_common extends common {
 	* @param string $file
 	* @return string $html
 	*/
-	public static function read_csv_file_as_array( $file, $skip_header=false, $csv_delimiter=';', $enclosure='"' ) {
+	public static function read_csv_file_as_array( $file, $skip_header=false, $csv_delimiter=';', $enclosure='"', $escape='"' ) {
 
 		if(!file_exists($file)) {
 			echo "File not found: $file";
@@ -56,7 +56,7 @@ abstract class tool_common extends common {
 		$f = fopen($file, "r");
 		
 		$csv_array=array(); // , $enclosure
-		$i=0; while (($line = fgetcsv($f, 500000, $csv_delimiter)) !== false) { //, $enclosure
+		$i=0; while (($line = fgetcsv($f, 0, $csv_delimiter, $enclosure, $escape)) !== false) { //, $enclosure
 
 			if ($skip_header && $i===0) {
 				$i++;
