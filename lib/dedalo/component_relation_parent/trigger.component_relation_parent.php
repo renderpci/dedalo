@@ -20,7 +20,7 @@ function add_parent($json_data) {
 		$response->result 	= false;
 		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';	
 	
-	$vars = array('tipo','parent','section_tipo','children_section_tipo','children_section_id','children_component_tipo');
+	$vars = array('tipo','parent','section_tipo','children_section_tipo','children_section_id');
 		foreach($vars as $name) {
 			$$name = common::setVarData($name, $json_data);
 			# DATA VERIFY
@@ -31,7 +31,7 @@ function add_parent($json_data) {
 			}
 		}
 
-	$add_parent = component_relation_parent::add_parent($tipo, $parent, $section_tipo, $children_section_tipo, $children_section_id, $children_component_tipo); 
+	$add_parent = component_relation_parent::add_parent($tipo, $parent, $section_tipo, $children_section_tipo, $children_section_id); 
 		
 	$response->result 	= $add_parent;
 	$response->msg 		= 'Ok. Request done ['.__FUNCTION__.']';

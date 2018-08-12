@@ -2,19 +2,19 @@
 
 	# VISUALIZADOR HTML	
 
-	print "<div class=\"wrap_component css_wrap_relation_parent tooltip_active in_search_mode\" id=\"{$id_wrapper}\" ";
+	print '<div class="wrap_component css_wrap_relation_parent tooltip_active in_search_mode" id="'.$id_wrapper.'" ';
+	print 'title="'.search_development2::search_options_title( $this->search_operators_info() ).'" ';
 	print "data-tipo=\"{$tipo}\" ";
-	print "data-from_component_tipo=\"{$from_component_tipo}\" ";
+	#print "data-from_component_tipo=\"{$from_component_tipo}\" ";
 	print "data-section_tipo=\"{$section_tipo}\" ";
-	print "data-hierarchy_sections='".json_encode($hierarchy_sections)."' ";  // Default hierarchy_sections
 	print "data-component_name=\"{$component_name}\" ";
 	print "data-component_info='{$component_info}' ";
 	print "data-modo=\"{$modo}\" ";
-	print "data-dato='".json_encode($dato)."' ";
-	print 'title="'.search_development2::search_options_title( $this->search_operators_info() ).'" ';
+	print "data-dato='".json_encode($dato)."' ";	
 	print "data-relation_type=\"".DEDALO_RELATION_TYPE_CHILDREN_TIPO."\" "; // Note that use CHILDREN_TIPO for search only purposes
-	print "data-search_tipos='".json_encode($search_tipos)."' ";	
-	print ">";
+	print "data-search_tipos='".json_encode($search_tipos)."' ";
+	print "data-hierarchy_sections='".json_encode($hierarchy_sections)."' ";
+	print '>';
 
 	
 	
@@ -78,10 +78,10 @@
 
 				#
 				# INPUT DATA HIDDEN
-				$html_content .= "<input type=\"text\" name=\"{$search_input_name}\" class=\"relation_parent_dato_hidden\" style=\"width:100%;display:none\" "; // display:none
-				$html_content .= "data-limit=\"$limit\" ";
-				$html_content .= "value='{$dato_json}' ";
-				$html_content .= "/>";
+				$html_content .= '<input type="text" name="'.$search_input_name.'" class="relation_parent_dato_hidden" style="width:100%;display:none" '; // display:none
+				$html_content .= 'data-limit="'.$limit.'" ';
+				$html_content .= 'value=\''.$dato_json.'\' ';
+				$html_content .= '/>';
 				break;													
 	}
 	

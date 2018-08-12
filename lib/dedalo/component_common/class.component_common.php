@@ -3521,6 +3521,9 @@ abstract class component_common extends common {
 			}
 		}
 
+		// Flat possible array values to string
+		$value = to_string($value);
+
 		if ($is_fallback===true && $decore_untranslated===true) {
 			$value = self::decore_untranslated($value);
 		}
