@@ -7,22 +7,20 @@ $updates = new stdClass();
 
 
 
-$v=491; #####################################################################################
+$v=492; #####################################################################################
 $updates->$v = new stdClass();
 
 	# UPDATE TO
 	$updates->$v->version_major 	 = 4;
 	$updates->$v->version_medium 	 = 9;
-	$updates->$v->version_minor 	 = 1;
+	$updates->$v->version_minor 	 = 2;
 
 	# MINIM UPDATE FROM
 	$updates->$v->update_from_major  = 4;
 	$updates->$v->update_from_medium = 9;
-	$updates->$v->update_from_minor  = 0;
+	$updates->$v->update_from_minor  = 1;
 
-	#UPDATE COMPONENTS
-	$updates->$v->components_update = ['component_date'];	// Force recalculate inaccurate time			
-	
+
 	/* en proceso !!
 
 	# DATABASE UPDATES
@@ -47,7 +45,25 @@ $updates->$v = new stdClass();
 		-- CONSTRAIN RELATIONS ALL FIELDS
 		ALTER TABLE public.relations ADD CONSTRAINT "relations_all_constraint" UNIQUE("section_tipo", "section_id", "target_section_tipo", "target_section_id", "from_component_tipo");
 		");
-		*/		
+		*/
+
+
+
+$v=491; #####################################################################################
+$updates->$v = new stdClass();
+
+	# UPDATE TO
+	$updates->$v->version_major 	 = 4;
+	$updates->$v->version_medium 	 = 9;
+	$updates->$v->version_minor 	 = 1;
+
+	# MINIM UPDATE FROM
+	$updates->$v->update_from_major  = 4;
+	$updates->$v->update_from_medium = 9;
+	$updates->$v->update_from_minor  = 0;
+
+	#UPDATE COMPONENTS
+	$updates->$v->components_update = ['component_date'];	// Force recalculate inaccurate time			
 
 
 
