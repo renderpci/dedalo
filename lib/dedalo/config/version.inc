@@ -1403,6 +1403,12 @@
 		Login : fixed password issue with some chars on safe_xss check
 
 
+	Valencia 12-08-2018 4.9.9
+		component_relation_children : enable different sources (sections) defined in structure
+		component_relation_parent : enable different sources (sections) from defined component_relation_children sources
+
+
+
 
 
 	WORK IN PROGRESS
@@ -1424,12 +1430,12 @@
 
 
 	# Version
-	$DEDALO_VERSION = '4.9.8e';
+	$DEDALO_VERSION = '4.9.9';
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '29-07-2018');  
+	define('DEDALO_BUILD'	, '12-08-2018');  
 
 
 	/*
