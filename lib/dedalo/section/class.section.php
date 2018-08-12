@@ -1624,6 +1624,7 @@ class section extends common {
 	* @param bool $resolve_virtual
 	*	Force resolve section if is virtal section. default false
 	*	Name of desired filtered model array. You can use partial name like 'component_' (string position search is made it)
+	* @return array $section_ar_children_tipo
 	*/
 	public static function get_ar_children_tipo_by_modelo_name_in_section($section_tipo, $ar_modelo_name_required, $from_cache=true, $resolve_virtual=false, $recursive=true, $search_exact=false, $ar_tipo_exclude_elements=false) { # Nota: mantener default resolve_virtual=false !
 
