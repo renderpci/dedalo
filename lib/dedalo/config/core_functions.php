@@ -84,8 +84,7 @@ function dump($val, $var_name=NULL, $arguments=array()){
 			$html .= " ". print_r($bt[2]['file'],true);
 			$html .= PHP_EOL . " Function: ". print_r($bt[2]['function'],true);
 			$html .= " [Line: ". print_r($bt[2]['line'],true)."]";
-		}
-	
+		}	
 	
 
 	# PRINT
@@ -111,7 +110,8 @@ function dump($val, $var_name=NULL, $arguments=array()){
 
 	#return wrap_pre($html);
 	return $html;
-}
+}//end dump
+
 
 
 /**
@@ -136,10 +136,13 @@ function wrap_pre($string, $add_header_html=true) {
 		$html .= '</body></html>';
 	}
 	return $html;
-}
+}//end wrap_pre
 
 
 
+/**
+* WRAP_HTML
+*/
 function wrap_html($string, $htmlspecialchars=true) {
 	$html='';
 	$html .= '<!DOCTYPE html>';
@@ -152,10 +155,13 @@ function wrap_html($string, $htmlspecialchars=true) {
 	$html .= nl2br( $string );
 	$html .= '</body></html>';
 	return $html;
-}
+}//end wrap_html
 
 
 
+/**
+* DEBUG_LOG
+*/
 function debug_log($info, $level=logger::DEBUG) {
 	if(!SHOW_DEBUG) return false;
 	/* level ref
@@ -187,18 +193,21 @@ function file_get_contents_curl($url) {
 	curl_setopt($ch, CURLOPT_FOLLOWLOCATION, 1);
 	$data = curl_exec($ch);
 	curl_close($ch);
+	
 	return $data;
-}
+}//end file_get_contents_curl
 
 
 
 # START_TIME
 function start_time() {
 	$mtime = explode(' ',microtime());
+	
 	return $mtime[1]+$mtime[0];
 }
 # EXEC_TIME
 function exec_time($start, $method=NULL, $result=NULL) {
+	
 	$end = start_time();
 	$total = $end - $start;
 	$total = $total*1000;
@@ -213,11 +222,12 @@ function exec_time($start, $method=NULL, $result=NULL) {
 	if(!empty($result))
 	$final_string .= ' Res '.to_string($result) ;
 
-	#return $final_string ;
+	
 	return '<pre>'.$final_string.'</pre>' ;
-}
+}//end exec_time
 # EXEC_TIME_UNIT
 function exec_time_unit($start, $unit='ms', $round=3) {
+	
 	$end = start_time();
 	$total = $end - $start;
 	if($unit==='ms') {
@@ -226,7 +236,7 @@ function exec_time_unit($start, $unit='ms', $round=3) {
 		$total = $total; 
 	}  
 	return round($total,3);
-}
+}//end exec_time_unit
 
 
 
@@ -239,9 +249,9 @@ function to_string($var=null) {
 	}
 
 	if (is_array($var)) {
-		if ( is_string(current($var)) || is_numeric(current($var)) ) {			
+		if ( is_string(current($var)) || is_numeric(current($var)) ) {
 			return implode('|', $var);	
-		}else if( is_object( current($var) ) ){			
+		}else if( is_object( current($var) ) ){
 			foreach ($var as $obj) {
 				$ar_ob[] = $obj;
 			}
@@ -252,22 +262,23 @@ function to_string($var=null) {
 		}
 		return print_r($var,true);	
 			
-	}else if (is_object($var)) {		
+	}else if (is_object($var)) {
 		$var = json_encode($var, JSON_PRETTY_PRINT);
 		return $var;
-		#$var = json_decode($var);		
+		#$var = json_decode($var);
 		#return '<pre>'.print_r($var,true).'</pre>';
 	}else if (is_bool($var)) {
 		$var = (int)$var;
-	}	
+	}
+
 	return "$var";
-}
+}//end to_string
 
 
 # GET_LAST_MODIFICATION_DATE : Get last modified file date in all Dedalo files
 # This will return a timestamp, you will have to use date() like date("d-m-Y H:i:s ", $ret));
 function get_last_modification_date($path, $allowedExtensions=null, $ar_exclude=array('/acc/','/backups/')) {
-	#error_log('---- PATH: '.$path);
+	
 	// Only take into account those files whose extensions you want to show.
 	if (empty($allowedExtensions)) {
 		$allowedExtensions = array(
@@ -297,9 +308,11 @@ function get_last_modification_date($path, $allowedExtensions=null, $ar_exclude=
 			$ret = get_last_modification_date($fn,$allowedExtensions,$ar_exclude);    
 			// This will return a timestamp, you will have to use date().
 	}
-	#dump($ret,'$ret');
+	
 	return $ret;
-}
+}//end get_last_modification_date
+
+
 
 # CRIPTO : if (!function_exists('mcrypt_encrypt'))
 function dedalo_encryptStringArray ($stringArray, $key = DEDALO_INFORMACION) {
@@ -309,8 +322,9 @@ function dedalo_encryptStringArray ($stringArray, $key = DEDALO_INFORMACION) {
 	
 	if (!function_exists('mcrypt_encrypt')) throw new Exception("Error Processing Request: Lib MCRYPT unavailable.", 1);
 	$s = strtr(base64_encode(mcrypt_encrypt(MCRYPT_RIJNDAEL_256, md5($key), serialize($stringArray), MCRYPT_MODE_CBC, md5(md5($key)))), '+/=', '-_,');
+	
 	return $s;
-}
+}//end dedalo_encryptStringArray
 function dedalo_decryptStringArray ($stringArray, $key = DEDALO_INFORMACION) {
 
 	#debug_log(__METHOD__." 2 ".to_string( debug_backtrace() ), logger::ERROR);
@@ -324,18 +338,9 @@ function dedalo_decryptStringArray ($stringArray, $key = DEDALO_INFORMACION) {
 		debug_log(__METHOD__." Current string is not correctly serialized ! ".to_string(), logger::DEBUG);
 		return false;
 	}
-	/*
-		try {
-			if ($s == serialize(false)) {
-				$s = unserialize($s);
-			}		
-		} catch (Exception $e) {
-			$s = false;
-		}
-			
-		return $s;
-		*/
-}
+}//end dedalo_decryptStringArray
+
+
 
 # CRIPTO : if (!function_exists('mcrypt_encrypt'))
 function dedalo_encrypt_openssl($stringArray, $key=DEDALO_INFORMACION) {
@@ -350,7 +355,7 @@ function dedalo_encrypt_openssl($stringArray, $key=DEDALO_INFORMACION) {
 	$output = base64_encode(openssl_encrypt(serialize($stringArray), $encrypt_method, md5(md5($key)), 0, $iv));
 
 	return $output;
-}
+}//end dedalo_encrypt_openssl
 function dedalo_decrypt_openssl($stringArray, $key=DEDALO_INFORMACION) {
 	
 	if (!function_exists('openssl_decrypt')) throw new Exception("Error Processing Request: Lib OPENSSL unavailable.", 1);
@@ -369,13 +374,17 @@ function dedalo_decrypt_openssl($stringArray, $key=DEDALO_INFORMACION) {
 		debug_log(__METHOD__." Current string is not correctly serialized ! ".to_string(), logger::ERROR);
 		return false;
 	}
-}
+}//end dedalo_decrypt_openssl
 
 
 
+/**
+* IS_SERIALIZED
+*/
 function is_serialized($str) {
+	
 	return ($str == serialize(false) || @unserialize($str) !== false);
-}
+}//end is_serialized
 
 
 /**
@@ -402,7 +411,8 @@ function encryption_mode() {
 		debug_log(__METHOD__." !! USING OLD CRYPT METHOD (mcrypt). Please use openssl ".to_string(), logger::WARNING);
 		return 'mcrypt';
 	}
-}
+}//end encryption_mode
+
 
 
 /**
@@ -432,8 +442,9 @@ function array_key_path($needle, $haystack, $forbidden = array(), $path = array(
 	  return array_merge($path, (array)$key);
 	}
   }
+
   return false;
-}
+}//end array_key_path
 
 
 
@@ -453,8 +464,9 @@ function &array_path(&$array, $path) {
   if ($path) foreach ($path as $index) {
 	$offset =& $offset[$index];
   }
+  
   return $offset;
-}
+}//end array_path
 
 
 
@@ -468,8 +480,9 @@ function alist ($array) {  //This function prints a text array as an html list.
 	$alist .= "<li>$array[$i]";
   }
   $alist .= "</ul>";
+  
   return $alist;
-}
+}//end alist
 
 
 
@@ -487,9 +500,10 @@ function array_keys_recursive(array $array) {
 		if (is_array($array[$key])) {
 			$keys = array_merge($keys, array_keys_recursive($array[$key]));
 		}
-	} 
+	}
+
 	return $keys;
-}
+}//end array_keys_recursive
 
 
 
@@ -552,7 +566,8 @@ function clean_url_vars($current_var=array()) {
 	if(substr($qs, -1)=='&') $qs = substr($qs, 0, -1);
 	
 	return $qs ;
-}
+}//end clean_url_vars
+
 
 
 # SANITIZE_OUTPUT
@@ -572,10 +587,14 @@ function sanitize_output($buffer) {
 	return $buffer;
 }
 
+
+
 # SANITIZE_QUERY
 function sanitize_query($strQuery) {
+	
 	return trim(str_replace("\t", "", $strQuery));
 }
+
 
 
 /**
@@ -588,7 +607,7 @@ function fix_cascade_config4_var($var_name, $var_default_value) {
 		# REQUEST (GET/POST)
 		case !empty($_REQUEST[$var_name]) :
 			$var_value = trim( safe_xss($_REQUEST[$var_name]) );
-			$_SESSION['dedalo4']['config'][$var_name]= $var_value; # Save in session too			
+			$_SESSION['dedalo4']['config'][$var_name]= $var_value; # Save in session too
 			break;
 		# SESSION
 		case !empty($_SESSION['dedalo4']['config'][$var_name]) :
@@ -599,8 +618,11 @@ function fix_cascade_config4_var($var_name, $var_default_value) {
 			$var_value = $var_default_value;
 			break;
 	}
+
 	return $var_value;
-}
+}//end fix_cascade_config4_var
+
+
 
 /**
 * ARRAY_FLATTEN
@@ -614,7 +636,8 @@ function array_flatten($array) {
 	   else {$return[$key] = $value;}
    }
    return $return;
-}
+}//end array_flatten
+
 
 
 /**
@@ -639,7 +662,7 @@ function verify_dedalo_prefix_tipos($tipo=null) {
 	
 	return false;
 	*/
-}
+}//end verify_dedalo_prefix_tipos
 
 
 
@@ -656,7 +679,8 @@ function build_sorter($key) {
 		return strnatcmp($a[$key], $b[$key]);
 		#return strcmp($a[$key], $b[$key]);
 	};
-}
+}//end build_sorter
+
 
 
 /**
@@ -682,6 +706,7 @@ function search_string_in_array($array, $search_string) {
 }//end search_string_in_array
 
 
+
 /**
 * ADD_ACCENTS
 * Converts string to lowervase string containing various combinations to simplify preg_match searches
@@ -692,13 +717,12 @@ function add_accents($string) {
 	$array2 = array('[aàáâãäå]','[cçćĉċč]','[eèéêë]','[iìíîï]','[nñ]','[oòóôõö]','[uùúûü]','[yýÿ]');
 
 	return str_replace($array1, $array2, mb_strtolower($string));
-}
+}//end add_accents
 
 
 
 /**
 * CONVERT_SPECIAL_CHARS
-
 function convert_special_chars($string) {
 	$array1 = array('ñ');
 	$array2 = array('n');
@@ -709,6 +733,7 @@ function convert_special_chars($string) {
 	return $final_string;
 }
 */
+
 
 
 /**
@@ -764,25 +789,32 @@ function array_get_by_key_r($array, $key, &$results) {
  */
 
 
+
 // decbin32
 // In order to simplify working with IP addresses (in binary) and their
 // netmasks, it is easier to ensure that the binary strings are padded
 // with zeros out to 32 characters - IP addresses are 32 bit numbers
 function decbin32 ($dec) {
+  
   return str_pad(decbin($dec), 32, '0', STR_PAD_LEFT);
 }
 
-// ip_in_range
-// This function takes 2 arguments, an IP address and a "range" in several
-// different formats.
-// Network ranges can be specified as:
-// 1. Wildcard format:     1.2.3.*
-// 2. CIDR format:         1.2.3/24  OR  1.2.3.4/255.255.255.0
-// 3. Start-End IP format: 1.2.3.0-1.2.3.255
-// The function will return true if the supplied IP is within the range.
-// Note little validation is done on the range inputs - it expects you to
-// use one of the above 3 formats.
+
+
+/**
+* IP_IN_RANGE
+* This function takes 2 arguments, an IP address and a "range" in several
+* different formats.
+* Network ranges can be specified as:
+* 1. Wildcard format:     1.2.3.*
+* 2. CIDR format:         1.2.3/24  OR  1.2.3.4/255.255.255.0
+* 3. Start-End IP format: 1.2.3.0-1.2.3.255
+* The function will return true if the supplied IP is within the range.
+* Note little validation is done on the range inputs - it expects you to
+* use one of the above 3 formats.
+*/
 function ip_in_range($ip, $range) {
+  
   if (strpos($range, '/') !== false) {
 	// $range is in IP/NETMASK format
 	list($range, $netmask) = explode('/', $range, 2);
@@ -791,7 +823,7 @@ function ip_in_range($ip, $range) {
 	  $netmask = str_replace('*', '0', $netmask);
 	  $netmask_dec = ip2long($netmask);
 	  return ( (ip2long($ip) & $netmask_dec) == (ip2long($range) & $netmask_dec) );
-	} else {
+	}else{
 	  // $netmask is a CIDR size block
 	  // fix the range argument
 	  $x = explode('.', $range);
@@ -810,7 +842,7 @@ function ip_in_range($ip, $range) {
 
 	  return (($ip_dec & $netmask_dec) == ($range_dec & $netmask_dec));
 	}
-  } else {
+  }else{
 	// range might be 255.255.*.* or 1.2.3.0-1.2.3.255
 	if (strpos($range, '*') !==false) { // a.b.*.* format
 	  // Just convert to A-B format by setting * to 0 for A and 255 for B
@@ -834,9 +866,13 @@ function ip_in_range($ip, $range) {
 }//end ip_in_range
 
 
+
 function br2nl($string) {
+	
 	return str_replace( array('<br>','<br />'), "\n", $string );
 }
+
+
 
 /**
 * GET_TOP_TIPO
@@ -858,6 +894,8 @@ function get_top_tipo() {
 	}
 }*/
 
+
+
 /**
 * GET_HTTP_RESPONSE_CODE
 */
@@ -870,7 +908,7 @@ function get_http_response_code($theURL) {
 		)
 	);
 	$headers = get_headers($theURL);
-		#dump($headers, ' headers ++ '.to_string());
+	
 	return (int)substr($headers[0], 9, 3);
 }//end get_http_response_code
 
@@ -918,6 +956,7 @@ function app_lang_to_tld2($lang) {
 			$tld2='es';
 			break;
 	}
+
 	return $tld2;
 }//end app_lang_to_tld2
 
@@ -937,12 +976,12 @@ function str_lreplace($search, $replace, $subject) {
 
 
 /**
- * Class casting
- *
- * @param string|object $destination
- * @param object $sourceObject
- * @return object
- */
+* CAST
+*
+* @param string|object $destination
+* @param object $sourceObject
+* @return object
+*/
 function cast($destination, $sourceObject) {
 	
 	if (is_string($destination)) {
@@ -963,6 +1002,7 @@ function cast($destination, $sourceObject) {
 			$destination->$name = $value;
 		}
 	}
+
 	return $destination;
 }//end cast
 
@@ -1228,6 +1268,24 @@ function safe_tipo( $tipo ) {
 }//end safe_tipo
 
 
+
+/**
+* SAFE_SECTION_ID
+* Remove extra malicious code
+* @return string $section_id
+*/
+function safe_section_id( $section_id ) {
+
+	preg_match("/^[0-9]+$/", $section_id, $output_array);
+	if (empty($output_array[0])) {
+		return false;
+	}
+
+	return $section_id;
+}//end safe_section_id
+
+
+
 /**
 * FORMAT_SIZE_UNITS
 * Format bytes to more human readable unit like KG, MB, GB
@@ -1254,8 +1312,9 @@ function format_size_units($bytes) {
 
 function encodeURIComponent($str) {
     $revert = array('%21'=>'!', '%2A'=>'*', '%27'=>"'", '%28'=>'(', '%29'=>')');
+    
     return strtr(rawurlencode($str), $revert);
-}
+}//end encodeURIComponent
 
 
 

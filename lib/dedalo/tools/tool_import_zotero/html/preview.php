@@ -7,7 +7,7 @@ require_once( dirname(dirname(dirname(dirname(__FILE__)))) .'/config/config4.php
 require_once( dirname(dirname(__FILE__)) .'/class.tool_import_zotero.php');  # Read constants from here
 
 # Button tipo set
-$button_tipo = get_request_var('button_tipo'); // Core function.
+$button_tipo = safe_tipo( get_request_var('button_tipo') ); // Core function.
 
 #
 # SEARCH FOR JSON ZOTERO FILE
@@ -20,9 +20,7 @@ if (empty($ar_files[0])) {
 			echo "<div class=\"no_json_file_found\">Sorry. Only one JSON file can be processed at once. Please, delete additional json files </div>";
 			return;
 		}
-	#dump($ar_files, ' ar_files');exit();
 	$file_data = json_decode(file_get_contents($ar_files[0]));	// @return expected: array of objects 
-	#dump($file_data, ' file_data');#exit();
 
 
 	
@@ -72,7 +70,6 @@ if (empty($ar_files[0])) {
 	# JSON TABLE
 	# Data map like 'rsc140' => 'title'
 	$data_map  		= (array)tool_import_zotero::get_data_map();
-		#dump($data_map, ' data_map ++ '.to_string());
 	# Section tipo (for links to go current record)
 	$section_tipo 	= ZOTERO_SECTION_TIPO_VIRTUAL_BIBLIOGRAFIA;	# 'rsc205'; # is virtual section (Bibliografía)
 	
@@ -129,7 +126,6 @@ if (empty($ar_files[0])) {
 						}
 					}
 				}
-				#dump($file_name, ' file_name ++ '.to_string());
 				
 				#
 				# Checkbox

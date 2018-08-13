@@ -66,7 +66,6 @@ class tool_administration extends tool_common {
 		if ($version[0]==4 && $version[1]==0 && $version[2]<=10) {
 
 			$tables = (array)backup::get_tables();
-				#dump($tables, ' tables ++ '.to_string());
 
 			if (in_array('matrix_notifications', $tables) ) {
 				# Table already exists
@@ -155,7 +154,6 @@ class tool_administration extends tool_common {
 			$datos 			= (string)$rows['datos'];
 
 			$datos	= (object)json_handler::decode($datos);
-				#dump($datos->inverse_locators,"datos->inverse_locators ");	continue;		
 				
 			$before = "";
 			$after  = "";
@@ -175,12 +173,10 @@ class tool_administration extends tool_common {
 
 				# If language is set, delete the language into the componet
 				case (!empty($language) && property_exists($datos->components, $component_tipo) && isset($datos->components->{$component_tipo}->dato->{$language})):
-					#dump($datos->components->$component_tipo->dato,"BEFORE dato $component_tipo $section_id");
 					$before = json_encode($datos->components->$component_tipo->dato);
 
 					unset($datos->components->{$component_tipo}->dato->{$language});
 
-					#dump($datos->components->$component_tipo->dato,"BEFORE dato $component_tipo $section_id");
 					$after = json_encode($datos->components->$component_tipo->dato);
 					
 					$proced = true;
@@ -188,7 +184,6 @@ class tool_administration extends tool_common {
 
 				# If langage in not set, remove all component (dato, value, value_list,...)
 				case (empty($language) && property_exists($datos->components, $component_tipo)):
-					#dump($datos->components->$component_tipo,"BEFORE dato $component_tipo $section_id");
 					$before = json_encode($datos->components->$component_tipo);
 
 					unset($datos->components->$component_tipo);
@@ -201,26 +196,21 @@ class tool_administration extends tool_common {
 					$msg[] = "Not found dato for delete in $section_tipo - $section_id - $component_tipo";
 					break;
 			}			
-			#dump($datos->components,"AFTER dato ($component_tipo) $section_id");
-			#dump( htmlentities( $datos->components->rsc29->valor_list->$lang )," rsc29 valor_list");
 			#continue;			
 			
 			if($proced===true){
 
 		 		$datos = (string)json_handler::encode($datos);		
 				$datos = pg_escape_string($datos);
-				#dump($datos," section_real_tipo");
 
 				// Save section dato			
 				$strQuery = "UPDATE \"$matrix_table\" SET datos = '$datos' WHERE id = $id";
-					#dump($strQuery, ' strQuery');
 					#debug_log(__METHOD__." strQuery ".to_string($strQuery), logger::DEBUG);
 					
 				#if check "save" proced to save the new dato into the DB row (update the row)
 				if ($save===true) {
 					$update_result 	= pg_query(DBi::_getConnection(), $strQuery);
 					if (!$update_result) {
-						# dump($strQuery,"strQuery");
 						$msg[] = pg_last_error();
 						$msg[] = "Error on Update row id:$id - pg_last_error:". pg_last_error(); //substr($strQuery, 0,250)
 					}else {
@@ -260,7 +250,6 @@ class tool_administration extends tool_common {
 		#
 		# Test table exists	and create if not
 		$table_exits = self::table_exits("matrix_updates");
-			#dump($table_exits, ' $table_exits ++ '.to_string()); die();
 		
 		if (!$table_exits) {
 			self::create_table(
@@ -334,7 +323,7 @@ class tool_administration extends tool_common {
 	*/
 	public static function get_update_version() {
 		global $updates;
-			#dump($updates, ' updates'.to_string());
+
 		$update_version = array();
 		$current_version = self::get_current_version_in_db();
 		if (empty($current_version)) {
@@ -622,7 +611,6 @@ class tool_administration extends tool_common {
 							$update_options->context 		= 'update_component_dato';
 
 						$response = $modelo_name::update_dato_version($update_options);
-							#dump($response, ' response ++ '.to_string());
 						#debug_log(__METHOD__." UPDATE_DATO_VERSION COMPONENT RESPONSE [$modelo_name][{$current_section_tipo}-{$section_id}]: result: ".to_string($response->result), logger::DEBUG);
 
 						if($response->result===1) {
@@ -758,7 +746,6 @@ class tool_administration extends tool_common {
 			$rows = pg_num_rows($result);
 			$table_exits = $rows>0 ? true : false;
 			#$table_exits = (bool)pg_fetch_result($result, 0, 0);
-				#dump($table_exits, ' table_exits ++ '.to_string($strQuery));	 die();
 		}		
 
 		return (bool)$table_exits;
@@ -781,7 +768,6 @@ class tool_administration extends tool_common {
 		}
 		$strQuery .= "\n  CONSTRAINT {$table_name}_{$key} PRIMARY KEY($key)";
 		$strQuery .= "\n);";
-			#dump($strQuery, ' $strQuery ++ '.to_string()); die();
 
 		if(!pg_query(DBi::_getConnection(), $strQuery)) {				
 			throw new Exception("Error Processing SQL_update Request ". pg_last_error(), 1);
@@ -818,7 +804,6 @@ class tool_administration extends tool_common {
 		$dir_path = DEDALO_MEDIA_BASE_PATH . DEDALO_AV_FOLDER . '/tmp';
 
 		$files = glob( $dir_path . '/*' ); // get all file names
-			#dump($files, ' files ++ '.to_string($dir_path));
 
 		foreach($files as $file){ // iterate files
 			if(is_file($file)) {
@@ -1044,7 +1029,6 @@ class tool_administration extends tool_common {
 			$options->counter_start 	= null;
 			$options->save 				= false;
 			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
-				#dump($options, ' options ++ '.to_string());
 
 		$table 	 = common::get_matrix_table_from_tipo($options->section_tipo);
 		$counter = (int)$options->counter_start;
@@ -1178,7 +1162,6 @@ class tool_administration extends tool_common {
 					$ar_value[] = $options->base_value;
 				}				
 				$final_value = implode(' ', $ar_value);
-					#dump($final_value, ' final_value ++ '.to_string());
 
 				$username = geonames::get_geonames_account_username();
 				$url 	  = 'http://api.geonames.org/searchJSON?q='.urlencode($final_value).'&maxRows=1&username='.$username;
@@ -1194,7 +1177,6 @@ class tool_administration extends tool_common {
 					continue;
 				}
 				$data_geonames = isset($data->geonames[0]) ? $data->geonames[0] : null;
-					#dump($data_geonames, ' $data_geonames ++ '.to_string());				
 					#debug_log(__METHOD__." data ".to_string($data->geonames[0]), logger::DEBUG);
 				
 				
@@ -1328,7 +1310,6 @@ class tool_administration extends tool_common {
 					$section_id 	= $rows['section_id'];
 					$section_tipo 	= $rows['section_tipo'];
 					$datos 			= json_decode($rows['datos']);
-						#dump($datos, ' datos ++ '.to_string($id));
 
 					if (!empty($datos) && isset($datos->relations)) {
 
@@ -1453,9 +1434,9 @@ class tool_administration extends tool_common {
 				$command .= 'gzip -f '.$current_section_tipo.'_'.$date.'.copy';
 				
 			}else{
-				$command .= 'section_tipo = \''.$current_section_tipo.'\' ORDER BY section_id ASC) ';
-				$command .= 'TO '.$current_section_tipo.'.copy " ; ';
-				$command .= 'gzip -f '.$current_section_tipo.'.copy';
+				$command .= 'section_tipo = \''.safe_tipo($current_section_tipo).'\' ORDER BY section_id ASC) ';
+				$command .= 'TO '.safe_tipo($current_section_tipo).'.copy " ; ';
+				$command .= 'gzip -f '.safe_tipo($current_section_tipo).'.copy';
 			}
 			debug_log(__METHOD__." Exec command ".to_string($command), logger::DEBUG);
 			

@@ -120,8 +120,8 @@
 							}							
 							
 							# IMAGES UPLOAD MANAGER
-							$button_tipo = common::setVar('button_tipo',''); # Needed for build var 'upload_dir_custom'
-							$upload_handler_url = DEDALO_LIB_BASE_URL . '/tools/tool_import_images/trigger.tool_import_images.php?button_tipo='.$button_tipo.'&top_tipo='.TOP_TIPO;
+							$button_tipo 		= common::setVar('button_tipo',''); # Needed for build var 'upload_dir_custom'
+							$upload_handler_url = DEDALO_LIB_BASE_URL . '/tools/tool_import_images/trigger.tool_import_images.php?button_tipo='.safe_tipo($button_tipo).'&top_tipo='.TOP_TIPO;
 							ob_start();
 							include('html/jquery_upload.phtml');
 							$body_html = ob_get_clean();

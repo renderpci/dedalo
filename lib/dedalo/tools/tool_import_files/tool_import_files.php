@@ -70,7 +70,7 @@
 							js::$ar_url[] = DEDALO_LIB_BASE_URL."/tools/".$tool_name."/js/".$tool_name.".js";					
 						
 						# FILES UPLOAD MANAGER
-						$button_tipo = get_request_var('button_tipo'); // Core function. Needed for build var 'upload_dir_custom'
+						$button_tipo 		= safe_tipo( get_request_var('button_tipo') ); // Core function. Needed for build var 'upload_dir_custom'
 						#$upload_handler_url = DEDALO_LIB_BASE_URL . '/tools/tool_import_files/inc/upload_handler.php?t='.$tipo;
 						$upload_handler_url = TOOL_IMPORT_FILES_HANDLER_URL;
 

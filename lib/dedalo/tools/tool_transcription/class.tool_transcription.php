@@ -123,23 +123,15 @@ class tool_transcription extends tool_common {
 		#
 		# FILE TEXT FROM PDF . Create a new text file from pdf text content
 		$text_filename 	= substr($options->path_pdf, 0, -4) .'.txt';
-		if(SHOW_DEBUG) {
-			#error_log("text_filename: $text_filename");
-		}
+		
 		$command  = PDF_AUTOMATIC_TRANSCRIPTION_ENGINE . " -enc UTF-8 $options->path_pdf";
-		$output   = exec( "$command 2>&1", $result);			# Generate text version file in same dir as pdf
+		$output   = exec( "$command 2>&1", $result);	# Generate text version file in same dir as pdf
 		if ( strpos( strtolower($output), 'error')) {
 			$response->result = 'error';
 			$response->msg 	  = "$output";
 			return $response;			
 		}
 		
-		if(SHOW_DEBUG) {
-			#dump($command, ' command');
-			#dump($output, ' output');
-			#dump($result, ' result');
-		}
-
 		if (!file_exists($text_filename)) {
 			$response->result = 'error';
 			$response->msg 	  = "Error Processing Request pdf_automatic_transcription: Text file not found";
@@ -178,7 +170,6 @@ class tool_transcription extends tool_common {
 		# PAGES TAGS	
 		$original_text = str_replace("","", $pdf_text);
 		$pages = explode("", $pdf_text);
-		#dump($pages,"pages ");die();
 		$i=(int)$options->first_page;
 		$pdf_text='';
 		foreach ($pages as $current_page) {		
@@ -197,7 +188,6 @@ class tool_transcription extends tool_common {
 
 	
 }//end class tool_transcription
-
 
 
 

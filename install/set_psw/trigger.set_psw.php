@@ -1,6 +1,3 @@
-<?php # Remove this line and the next line to re-configure the application
-	    die('Error: Sorry, the application has already been configured.'); 
-	    ?>
 <?php
 $TOP_TIPO=false;
 require_once( dirname(dirname(dirname(__FILE__))) .'/lib/dedalo/config/config4.php');
@@ -17,7 +14,7 @@ if(empty($mode)) exit("<span class='error'> Trigger: Error Need mode..</span>");
 
 	
 
-if($mode=='set_psw') {
+if($mode==='set_psw') {
 
 	if (empty($username) || empty($password) || empty($reference) ) {
 		exit("Error: few vars");
@@ -47,9 +44,9 @@ if($mode=='set_psw') {
 	$strQuery 	= "UPDATE matrix_users SET datos = $1 WHERE section_id = $2 AND section_tipo = $3";
 	$result 	= pg_query_params(DBi::_getConnection(), $strQuery, array( json_handler::encode($dato), -1, DEDALO_SECTION_USERS_TIPO ));
 	if(!$result) {
-		if(SHOW_DEBUG) {
-			dump($strQuery,"strQuery");
-			throw new Exception("Error Processing Save Update Request ". pg_last_error(), 1);;
+		debug_log(__METHOD__." strQuery ".to_string($strQuery), logger::ERROR);
+		if(SHOW_DEBUG) {			
+			throw new Exception("Error Processing Save Update Request ". pg_last_error(), 1);
 		}
 		return "Error: sorry an error ocurred on UPDATE record. Data is not saved";
 	}	
