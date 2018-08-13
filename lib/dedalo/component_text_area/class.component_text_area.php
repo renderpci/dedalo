@@ -173,10 +173,12 @@ class component_text_area extends component_common {
 
 
 	/**
-	* SAVE OVERRIDE
-	* Overwrite component_common method to set always lang to config:DEDALO_DATA_NOLAN before save
+	* SAVE
+	* Overwrite component_common method
+	* @param bool $update_all_langs_tags_state
+	* @param bool $clean_text
 	*/
-	public function Save( $update_all_langs_tags_state=false, $cleant_text=true ) {
+	public function Save( $update_all_langs_tags_state=false, $clean_text=true ) {
 		
 		# revisamos las etiquetas para actualizar el estado de las mismas en los demás idiomas
 		# para evitar un bucle infinito, en la orden 'Save' de las actualizaciones, pasaremos '$update_all_langs_tags_state=false'
@@ -195,18 +197,16 @@ class component_text_area extends component_common {
 		}
 
 		# Clean dato 
-		if ($cleant_text) {
+		if ($clean_text) {
 			$dato_current = TR::limpiezaPOSTtr($dato_current);
 		}
 		#$dato_clean 	= mb_convert_encoding($dato_clean, "UTF-8", "auto");
 
 		# Set dato again (cleaned)
 		$this->dato 	= $dato_current;
-		if(SHOW_DEBUG) {
-			#dump($this->dato,"salvando desde el componente text area");
-		}
+		
 
-		# A partir de aquí, salvamos de forma estándar
+		# From here, we save in the standard way
 		return parent::Save();
 	}//end Save
 
@@ -214,9 +214,11 @@ class component_text_area extends component_common {
 
 	/**
 	* ALT_SAVE
+	* Executed before save component when component structure propiedades have defined alt_save actions
 	* @return bool true
 	*/
 	public function alt_save() {
+		
 		//get the current dato with all text
 		$dato_current 	= $this->dato;
 		$section_id 	= $this->get_parent();
@@ -232,9 +234,10 @@ class component_text_area extends component_common {
 			$pattern = TR::get_mark_pattern($current_mark);
 			preg_match_all($pattern, $dato_current, $ar_tag);
 
-			//data key = 7, 7 is the locartor store in the result of the preg_match_all
+			// Array result key 7 is the locator stored in the result of the preg_match_all
 			$data_key = 7;
-			//the locator inside the tag are with ' and is necsary change to "
+			
+			// The locator inside the tag are with ' and is necessary change to "
 			foreach ($ar_tag[$data_key] as $pseudo_locator) {
 				$current_locator = str_replace("'", "\"", $pseudo_locator);
 				$current_locator = json_decode($current_locator);
@@ -251,7 +254,7 @@ class component_text_area extends component_common {
 															 'edit',
 															 DEDALO_DATA_NOLAN,
 															 $section_tipo);
-		// set the dato of the compoment with the locartors
+		// set the dato of the compoment with the locators
 		$alt_save_component->set_dato($ar_current_locator);
 		$alt_save_component->Save();
 
@@ -2285,8 +2288,8 @@ class component_text_area extends component_common {
 		
 		$this->set_dato($new_dato);
 
-		# Save component data. Defaults arguments: $update_all_langs_tags_state=false, $cleant_text=true 
-		$this->Save($update_all_langs_tags_state=false, $cleant_text=true);
+		# Save component data. Defaults arguments: $update_all_langs_tags_state=false, $clean_text=true 
+		$this->Save($update_all_langs_tags_state=false, $clean_text=true);
 			
 		
 		return true;
