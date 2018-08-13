@@ -24,7 +24,7 @@ class component_text_area extends component_common {
 			}					
 		}
 
-		# Creamos el componente normalmente
+		# We build the component normally
 		parent::__construct($tipo, $parent, $modo, $lang, $section_tipo);
 
 		return true;
@@ -107,7 +107,7 @@ class component_text_area extends component_common {
 	public function get_dato() {
 		$dato = parent::get_dato();
 
-		# Compatibility old dedalo3 instalations		
+		# Compatibility old dedalo3 installations	
 		if ( strpos($dato, '[index_')!==false || strpos($dato, '[out_index_')!==false ) {
 			$this->dato = $this->convert_tr_v3_v4( $dato );	// Update index tags format
 			$this->Save();
@@ -254,7 +254,12 @@ class component_text_area extends component_common {
 															 'edit',
 															 DEDALO_DATA_NOLAN,
 															 $section_tipo);
-		// set the dato of the compoment with the locators
+		if(SHOW_DEBUG===true) {
+			#debug_log(__METHOD__." $component_tipo - $modelo_name - $section_tipo - $section_id ".to_string(), logger::DEBUG);
+			#debug_log(__METHOD__." ar_current_locator ".to_string($ar_current_locator), logger::DEBUG);
+		}
+
+		// Set the dato of the component with the locators
 		$alt_save_component->set_dato($ar_current_locator);
 		$alt_save_component->Save();
 
@@ -348,7 +353,7 @@ class component_text_area extends component_common {
 
 	/**
 	* GET_VALOR_EXPORT
-	* Return component value sended to export data
+	* Return component value sent to export data
 	* @return string $valor
 	*/
 	public function get_valor_export( $valor=null, $lang=DEDALO_DATA_LANG, $quotes, $add_id ) {
@@ -578,7 +583,7 @@ class component_text_area extends component_common {
 
 		# Search math patern tags
 		preg_match_all($pattern,  $dato,  $matches, PREG_PATTERN_ORDER);
-			#dump($matches,'$matches',"matches to patern: $pattern");
+			#dump($matches,'$matches',"matches to pattern: $pattern");
 
 		return $matches;
 	}//end get_ar_relation_tags
@@ -765,7 +770,7 @@ class component_text_area extends component_common {
 	* DELETE_TAG_FROM_ALL_LANGS
 	* Search all component data langs and delete tag an update (save) dato on every lang 
 	* @param string $tag like '[index-n-2]'
-	* @return array $ar_langs_changed (langs afected)
+	* @return array $ar_langs_changed (langs affected)
 	* @see trigger.tool_indexation mode 'delete_tag'
 	*/
 	public function delete_tag_from_all_langs($tag_id, $tag_type) {
@@ -1198,7 +1203,7 @@ class component_text_area extends component_common {
 				$raw_text = $tag_in . " Deleted tag $tag_id (tag not exists in original lang $source_lang) " . $tag_out . $blank_space . $raw_text;
 
 			}else{
-				// Yes. Founded current broken tag in the orininal lang. Lets go..
+				// Yes. Founded current broken tag in the original lang. Lets go..
 
 				# GET KNOWED FULL STRUCT TAG DATA FROM SOURCE ;-)
 				# Override tag_in and out calculated with real full data locator
@@ -1274,7 +1279,7 @@ class component_text_area extends component_common {
 						}
 						#dump($ar_different_tags, ' ar_different_tags ++ '.to_string());
 
-						# Remove diffrent tags from source text only to compute
+						# Remove different tags from source text only to compute
 						#dump($reference_fragment, ' reference_fragment 1 ++ '.to_string());
 						$reference_fragment = str_replace($ar_different_tags, '', $reference_fragment);
 						#dump($reference_fragment, ' reference_fragment 2 ++ '.to_string());
@@ -1578,7 +1583,7 @@ class component_text_area extends component_common {
 
 	/**
 	* RENDER_LIST_VALUE
-	* Overwrite for non default behaviour
+	* Overwrite for non default behavior
 	* Receive value from section list and return proper value to show in list
 	* Sometimes is the same value (eg. component_input_text), sometimes is calculated (e.g component_portal)
 	* @param string $value
@@ -1968,7 +1973,7 @@ class component_text_area extends component_common {
 
 				$obj_value->section_id = $section_id; // inject current record section id (parent)
 
-				# Add direclty
+				# Add directly
 				$ar_objects[] = $obj_value;
 				
 			}else{

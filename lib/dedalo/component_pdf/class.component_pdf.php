@@ -50,7 +50,7 @@ class component_pdf extends component_common {
 			# Dato
 			$this->set_dato($locator);
 			$need_save=true;
-		}#end if(empty($dato->counter) && $this->parent>0)
+		}//end if(empty($dato->counter) && $this->parent>0)
 		
 
 			#
@@ -61,15 +61,12 @@ class component_pdf extends component_common {
 
 			# INITIAL MEDIA PATH SET
 			$this->initial_media_path = $this->get_initial_media_path();
-				#dump($this->initial_media_path, ' this->initial_media_path');
 
 			# ADITIONAL_PATH : Set and fix current aditional image path
 			$this->aditional_path = $this->get_aditional_path();
-				#dump($this->aditional_path,'$this->aditional_path');
 
 			# PDFOBJ : Add a PdfObj obj
 			$this->PdfObj = new PdfObj( $this->pdf_id, $this->get_quality(), $this->aditional_path, $this->initial_media_path );
-				#dump($this->PdfObj,"PdfObj en construct");
 
 		/*
 		if ($need_save) {
@@ -81,7 +78,7 @@ class component_pdf extends component_common {
 				$name = RecordObj_dd::get_termino_by_tipo($this->tipo,true);
 				error_log("DEBUG INFO ".__METHOD__." Saved $name with dato ".$locator->get_flat()." of current ".get_called_class()." (tipo:$this->tipo - section_tipo:$this->section_tipo - parent:$this->parent - lang:$this->lang)");
 			}		
-		}#end if ($need_save)
+		}//end if ($need_save)
 		
 		if(SHOW_DEBUG===true) {
 			global$TIMER;$TIMER[__METHOD__.'_OUT_'.$this->tipo.'_'.$this->modo.'_'.microtime(1)]=microtime(1);
@@ -89,7 +86,7 @@ class component_pdf extends component_common {
 		*/
 		
 		return true;
-	}#end __construct
+	}//end __construct
 
 
 
@@ -138,7 +135,6 @@ class component_pdf extends component_common {
 			if ( substr($dato, -1) === '/' ) {
 				$dato = substr($dato, 0, -1);
 			}
-			#dump($dato,'$dato');
 
 			$ar_aditional_path[$this->pdf_id] = $dato;
 			
@@ -170,8 +166,6 @@ class component_pdf extends component_common {
 		$component_tipo = $this->tipo;
 		$parent_section = section::get_instance($this->parent,$this->section_tipo);
 		$propiedades 	= $parent_section->get_propiedades();
-			#dump($propiedades," propiedades component_tipo:$component_tipo"); 
-			#dump($propiedades->initial_media_path->$component_tipo," ");
 
 		if (isset($propiedades->initial_media_path->$component_tipo)) {
 			$this->initial_media_path = $propiedades->initial_media_path->$component_tipo;
@@ -227,7 +221,6 @@ class component_pdf extends component_common {
 		$dato = $this->get_dato();
 		if (!isset($dato->section_id)) {
 			if(SHOW_DEBUG===true) {
-				#dump($dato, ' dato ++ '.to_string());
 				trigger_error(__METHOD__." Component dato (parent:$this->parent,section_tipo:$this->section_tipo) is empty for: ".to_string($dato));
 			}
 			return 0;	
@@ -309,7 +302,6 @@ class component_pdf extends component_common {
 		$quality 	= $this->get_quality();
 		$pdf_id 	= $this->get_pdf_id();
 
-			#dump($this->PdfObj,"PdfObj");dump($this,"this");
 		if (!isset($this->PdfObj)) {
 			throw new Exception("Error Processing Request (get_pdf_url)", 1);			
 		}
@@ -396,9 +388,7 @@ class component_pdf extends component_common {
 		foreach ($ar_quality as $current_quality) {
 			# media_path
 			$media_path = $this->get_pdf_path($current_quality);
-			if(SHOW_DEBUG===true) {
-				#dump($media_path, ' media_path $current_quality:'.$current_quality);
-			}
+			
 			if (!file_exists($media_path)) continue; # Skip
 			
 			# move / rename file
@@ -417,14 +407,13 @@ class component_pdf extends component_common {
 
 			if(SHOW_DEBUG===true) {
 				$msg=__METHOD__." \nMoved file \n$media_path to \n$media_path_moved";
-				error_log($msg);
-				dump($msg, ' msg');
+				error_log($msg);				
 			}
-		}#end foreach
+		}//end foreach
 		
 
 		return true;
-	}#end remove_component_media_files
+	}//end remove_component_media_files
 
 
 
@@ -444,14 +433,10 @@ class component_pdf extends component_common {
 			# media_path
 			$media_path = $this->get_target_dir().'/deleted';
 			$pdf_id 	= $this->get_pdf_id();
-			if(SHOW_DEBUG===true) {
-				#dump($media_path, "media_path $current_quality:$current_quality - get_pdf_id:$pdf_id");
-			}
+			
 			$file_pattern 	= $media_path.'/'.$pdf_id.'_*.'.DEDALO_PDF_EXTENSION;
 			$ar_files 		= glob($file_pattern);
-			if(SHOW_DEBUG===true) {
-				#dump($ar_files, ' ar_files');
-			}
+			
 			if (empty($ar_files)) {
 				error_log("No files to restore were found for pdf_id:$pdf_id. Nothing was restored (1)");
 				continue; // Skip
@@ -464,13 +449,12 @@ class component_pdf extends component_common {
 			if(SHOW_DEBUG===true) {
 				$msg=__METHOD__." \nMoved file \n$last_file_path to \n$new_file_path";
 				error_log($msg);
-				#dump($msg, ' msg');
 			}
 
-		}#end foreach
+		}//end foreach
 
 		return true;
-	}#end restore_component_media_files
+	}//end restore_component_media_files
 
 
 
@@ -525,7 +509,6 @@ class component_pdf extends component_common {
 			$command 	= MAGICK_PATH ."convert -alpha off {$path}[0] -thumbnail '$dimensions' -background white -flatten -gravity center -unsharp 0x.5 -quality 90 $thumb_path";
 			
 			exec($command.' 2>&1', $output, $result);
-				#dump($command, ' $command ++ '.to_string()); dump($output, ' result ++ '.to_string($result));
 
 			if ($result===0) {
 				# All is ok
@@ -543,7 +526,7 @@ class component_pdf extends component_common {
 		}
 
 		return $url;		
-	}#end get_pdf_thumb
+	}//end get_pdf_thumb
 
 
 
@@ -576,7 +559,7 @@ class component_pdf extends component_common {
 		#}
 
 		return $value;
-	}#end render_list_value
+	}//end render_list_value
 
 
 
@@ -618,7 +601,7 @@ class component_pdf extends component_common {
 		$valor 			= $this->get_pdf_thumb($force_create, $absolute);	// Note this absolute url is converted to image on export
 
 		return $valor;
-	}#end get_valor_export
+	}//end get_valor_export
 
 
 
@@ -632,7 +615,7 @@ class component_pdf extends component_common {
 		$related_component_text_area_tipo = common::get_ar_related_by_model($modelo_name, $this->tipo);
 
 		return $related_component_text_area_tipo;		
-	}#end get_related_component_text_area_tipo
+	}//end get_related_component_text_area_tipo
 
 
 

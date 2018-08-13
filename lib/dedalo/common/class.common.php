@@ -1192,9 +1192,8 @@ abstract class common {
 				$section_tipo	= $rows['section_tipo'];
 				
 				$ar_references[$id] = $section_tipo;
-
 			}//end while
-			#dump($ar_references,"ar_references total: ".round(microtime(1)-$star_time,3));
+			
 		
 		if(SHOW_DEBUG===true) {
 			global$TIMER;$TIMER[__METHOD__.'_OUT_'.microtime(1)]=microtime(1);
@@ -1274,7 +1273,7 @@ abstract class common {
 			$response = new stdClass();
 				$response->result 	= false;
 				$response->msg 		= "Error on read php://input data";
-			#echo json_encode($response);
+			
 			return false;
 		}
 

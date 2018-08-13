@@ -23,7 +23,7 @@ $vars = array('mode','type','html_content','dato','layout_label','template_id','
 * SAVE_LAYOUT
 * Store DOM html of page in component_layout
 */
-if( $mode=='save_template' ) {
+if($mode=='save_template') {
 
 	#$vars = array('section_layout_id','section_layout_tipo','layout_label','component_layout_tipo','type','html_content');
 		#foreach($vars as $name) $$name = common::setVar($name);
@@ -92,82 +92,56 @@ if( $mode=='save_template' ) {
 		#
 		# DATO REQUEST (json stringnified)		
 		$dato	= json_decode($dato);
-		if(!is_object($dato)) {
-			if(SHOW_DEBUG) {
-				dump($dato, '$dato '.to_string());;
-			}
-			exit('Error: dato wrong format. '.$dato);
+		if(!is_object($dato)) {			
+			debug_log(__METHOD__." Error: dato wrong format ".to_string($dato), logger::ERROR);
+			exit('Error: dato wrong format.');
 		}
-		if (!is_array($dato->$type)) {
-			if(SHOW_DEBUG) {
-				dump($dato->$type, '$dato->$type '.to_string());;
-			}
-			exit('Error: dato->type wrong format. Array expected '.$dato);
+		if (!is_array($dato->$type)) {			
+			debug_log(__METHOD__."Error: expected array. dato->type:  ".to_string($dato->$type), logger::ERROR);
+			exit('Error: dato->type wrong format. Array expected');
 		}
-		//dump($dato, ' dato ++ '.to_string()); die();
 
 		#
 		# WRITE / OVERWRITE CURRENT DATO OBJECT
 		$original_dato->$type = (array)$dato->$type;	// Insert part
 		$original_dato_string = json_encode($original_dato); // Always set as string
 		
-		if(SHOW_DEBUG) {
-			#dump($original_dato, " original_dato ".to_string());;
-		}
-		
+				
 		$component_layout->set_dato( $original_dato_string );
 		$component_layout->Save();
-		if(SHOW_DEBUG) {
-			#error_log("Generated component_layout: " .json_encode($dato) );
-		}
-
+		
 
 	#
 	# SECTION TARGET 
 		$component_input_text = component_common::get_instance('component_input_text',$component_section_tipo,$section_layout_id,'edit',DEDALO_DATA_NOLAN,$section_layout_tipo);
 		$component_input_text->set_dato($section_target_tipo);
 		$component_input_text->Save();
-		if(SHOW_DEBUG) {
-			#error_log("Saved SECTION TARGET:  $section_target_tipo");
-		}
-	
+			
 
 	#
 	# LABEL
 		$component_input_text = component_common::get_instance('component_input_text',$component_label_tipo,$section_layout_id,'edit',DEDALO_DATA_LANG,$section_layout_tipo);
 		$component_input_text->set_dato($layout_label);
 		$component_input_text->Save();
-		if(SHOW_DEBUG) {
-			#error_log("Saved LABEL:  $layout_label");
-		}
-
+		
 
 	#
 	# Update session label name
 	$ar_templates_mix = (array)$_SESSION['dedalo4']['config']['ar_templates_mix'];
-		#dump($ar_templates_mix," ar_templates_mix");
 	foreach ((array)$ar_templates_mix as $key => $obj_value) {
-			#dump($obj_value, " obj_value - $key".to_string());
 		if ($obj_value->section_id==$section_layout_id && 
 			$obj_value->component_layout_tipo==$component_layout_tipo
 			) {
 			$_SESSION['dedalo4']['config']['ar_templates_mix'][$key]->label 			  = (string)$layout_label;	# Update session layout_label
 			$_SESSION['dedalo4']['config']['ar_templates_mix'][$key]->section_layout_dato = (object)$dato;			# Update session section_layout_dato
-			if(SHOW_DEBUG) {
-				#error_log("Set session ar_templates_mix - $key - label : $layout_label");
-			}
 			break;
 		}
 	}
 
-	if(SHOW_DEBUG) {
-		#error_log("Saved component_layout [$component_layout_tipo] id:".$section_layout_id." ");
-	} 
 
 	echo (int)$section_layout_id;
 	exit();
-
-}#end if( $mode=='save_layout' ) 
+}//end if( $mode=='save_layout' ) 
 
 
 
@@ -176,7 +150,7 @@ if( $mode=='save_template' ) {
 * Trigger terminal command and return result
 * @return string $result
 */
-if( $mode=='render_pdf' ) {
+if($mode==='render_pdf') {
 
 	$response = new stdClass();	
 		$response->msg 	 = '';
@@ -184,7 +158,8 @@ if( $mode=='render_pdf' ) {
 
 	$render_pdf_data = common::setVar('render_pdf_data');
 	if (empty($render_pdf_data) || !json_decode($render_pdf_data)) {
-		$response->msg .= "Sorry. Invalid/empty render_pdf_data";
+		$response->msg .= "Sorry. Invalid/empty argument";
+		debug_log(__METHOD__." $response->msg : render_pdf_data ".to_string(), logger::ERROR);
 		echo json_encode($response);
 		exit;
 	}
@@ -204,7 +179,6 @@ if( $mode=='render_pdf' ) {
 		# Exec command
 		$result = exec_::live_execute_command($command,false);
 		#$result  = shell_exec($command." ");	// > /dev/null 2>/dev/null &
-			#dump($result, ' result ++ '.to_string($command));
 		
 		if(SHOW_DEBUG) {
 			
@@ -238,7 +212,6 @@ if( $mode=='render_pdf' ) {
 
 	echo json_encode($response); 
 	return;
-
 }//end render_pdf
 
 
@@ -249,12 +222,11 @@ if( $mode=='render_pdf' ) {
 * Delete request template record 
 * @return echo 'ok'
 */
-if( $mode=='delete_template' ) {
+if($mode==='delete_template') {
 
 	if(empty($section_layout_tipo)) exit('Error: section_layout_tipo not defined');
 	if(empty($section_layout_id)) 	exit('Error: section_layout_id not defined');
 
-		#dump($section_layout_tipo,"section_layout_tipo ");die();
 
 	#
 	# Section
@@ -267,8 +239,8 @@ if( $mode=='delete_template' ) {
 
 	echo "ok";
 	exit();
+}//end if( $mode=='delete_template' )
 
-}#end if( $mode=='delete_template' )
 
 
 /**
@@ -276,7 +248,7 @@ if( $mode=='delete_template' ) {
 * 
 * @return 
 */
-if( $mode=='print_pages' ) {	
+if($mode==='print_pages') {	
 
 	# Verify vars set in previous step (context_name=list)
 	if( !isset($_SESSION['dedalo4']['config']['ar_templates_mix']) ||
@@ -299,15 +271,13 @@ if( $mode=='print_pages' ) {
 	}
 	$search_options = clone($_SESSION['dedalo4']['config']['ar_templates_search_options'][$section_tipo]);
 	$ar_records		= search::get_records_data($search_options);
-		#dump($ar_records, ' ar_records'); die();
+	
 	$tool_layout_print_records = reset($ar_records->result);
 		
-	$ar_templates_mix 		= (array)$_SESSION['dedalo4']['config']['ar_templates_mix']; # Set in previous step (context_name=list)
-		#dump($ar_templates_mix," ar_templates_mix");
+	$ar_templates_mix = (array)$_SESSION['dedalo4']['config']['ar_templates_mix']; # Set in previous step (context_name=list)
 
 	$array_key 	  = $section_layout_tipo .'_'. $section_layout_id;
 	$template_obj = clone($_SESSION['dedalo4']['config']['ar_templates_mix'][$array_key]);
-		#dump($template_obj, ' template_obj'.to_string());						
 
 	$section_layout_label 	= isset($template_obj->label) ? $template_obj->label : '';
 	$component_layout_tipo 	= $template_obj->component_layout_tipo;
@@ -315,7 +285,6 @@ if( $mode=='print_pages' ) {
 	# component_layout
 	$component_layout    = component_common::get_instance('component_layout',$component_layout_tipo,$section_layout_id,'print',DEDALO_DATA_NOLAN,$section_layout_tipo);
 	$section_layout_dato = (object)$component_layout->get_dato();
-		#dump($section_layout_dato->pages, ' section_layout_dato'); die();
 
 	#
 	# WRITE TO DISK
@@ -386,15 +355,13 @@ if( $mode=='print_pages' ) {
 /**
 * VIEW_ONE_PAGE
 */
-if( $mode=='view_one_page' ) {
-
-	
-
+if($mode==='view_one_page') {
+	 
 }//end view_one_page
 
 
 
 
 
-die("Sorry. Mode ($mode) not supported")
+die("Sorry. Mode not supported");
 ?>

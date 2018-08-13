@@ -63,7 +63,6 @@ abstract class backup {
 				$last_modification_time_secs = get_last_modification_date( $file_path, $allowedExtensions=array('backup'), $ar_exclude=array('/acc/'));
 				$current_time_secs 			 = time();
 				$difference_in_hours 		 = round( ($current_time_secs/3600) - round($last_modification_time_secs/3600), 0 );
-					#dump($difference_in_hours, ' difference_in_hours ++ '.to_string( ($current_time_secs/3600).' - '.($last_modification_time_secs/3600) ));
 				if ( $difference_in_hours < DEDALO_BACKUP_TIME_RANGE ) {
 					$msg = " Skipped backup. A recent backup (about $difference_in_hours hours early) already exists. Is not necessary build another";					
 					debug_log(__METHOD__." $msg ".to_string(), logger::DEBUG);					
@@ -221,8 +220,6 @@ abstract class backup {
 		while($rows = pg_fetch_assoc($result)) {		
 			$tableList[] = $rows['table_name'];
 		}
-		#dump($tableList, ' $tableList ++ '.to_string($strQuery));
-
 
 		return (array)$tableList;
 	}//end get_tables
@@ -256,7 +253,6 @@ abstract class backup {
 				#debug_log(__METHOD__." matrix_dd copy command ".to_string($command), logger::ERROR);
 				break;
 		}		
-		#dump($res, ' res ++ '.to_string($path_file));
 
 		if (!file_exists($path_file)) {
 			throw new Exception("Error Processing Request. File $path_file not created!", 1);			
@@ -322,20 +318,17 @@ abstract class backup {
 				# DELETE . Remove previous records
 				#$strQuery = "DELETE FROM \"matrix_descriptors_dd\" WHERE \"parent\" LIKE '{$tld}%';"; #pg_query(DBi::_getConnection(), $strQuery);
 				$command = $command_base . " -c \"DELETE FROM \"$table\" \" "; # -c "DELETE FROM \"jer_dd\" WHERE \"terminoID\" LIKE 'dd%'"				
-				#dump($command, ' command ++ '.to_string());
 				$res .= shell_exec($command);
 				#$res .= exec( $command );
 				$command_history[] = $command;
 
 				# COPY . Load data from file
 				$command = $command_base . " -c \"\copy matrix_dd from {$path_file}\" ";
-				#dump($command, ' command ++ '.to_string());
 				$res .= shell_exec($command);
 				#$res .= exec( $command );
 				$command_history[] = $command;
 				break;		
 		}
-		#dump($res, ' res ++ '.to_string($path_file));
 		$res = str_replace("\n",' ',$res);
 		
 		#debug_log(__METHOD__." res:$res - command: ".implode('; ',$command_history), logger::DEBUG);
@@ -678,7 +671,6 @@ abstract class backup {
 
 		# LOW PRIORITY ( nice , at 22:56 , etc)
 		#$command = "nice ".$command ;
-			#dump($command, ' command');
 
 		#exec($command,$output,$worked);
 		exec($command.' 2>&1', $output, $worked_result);
@@ -924,7 +916,6 @@ abstract class backup {
 					if (empty($res1)) {
 						$msg .= "<br>Error on import $table {$tld} . Please try again";
 						if(SHOW_DEBUG===true) {
-							#dump($res1, '$res1 ++ '.to_string($res1));
 							#throw new Exception("Error Processing Request: $msg", 1);
 						}
 						#print("<div class=\"error\">$msg</div>");
@@ -942,7 +933,6 @@ abstract class backup {
 					if (empty($res2)) {
 						$msg .= "<br>Error on import $table {$tld} . Please try again";
 						if(SHOW_DEBUG===true) {
-							#dump($res2, '$res2 ++ '.to_string($res2));
 							#throw new Exception("Error Processing Request: $msg", 1);
 						}
 						#print("<div class=\"error\">$msg</div>");
@@ -1084,7 +1074,6 @@ abstract class backup {
 
 		# File permissions
 		$perms = decoct(fileperms($file) & 0777);
-			#dump($perms, ' perms ++ '.to_string());
 		if ($perms!='600') {
 			#die( wrap_pre("Error. Database system configuration not allow import (2). pgpass invalid permissions") );
 			$response->msg 		= 'Error. Database system configuration not allow import (2). pgpass invalid permissions '.__METHOD__;
