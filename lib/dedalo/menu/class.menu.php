@@ -187,7 +187,7 @@ class menu extends common {
 			//dump($propiedades, ' propiedades ++ '.to_string());
 		}
 		
-		$link = "<a href=\"$url\">$termino</a>";
+		$link = "<a href=\"javascript:menu.load_ref('$url')\">$termino</a>";
 
 		return $link;
 	}
