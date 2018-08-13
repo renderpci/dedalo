@@ -23,7 +23,7 @@ $vars = array('mode','type','html_content','dato','layout_label','template_id','
 * SAVE_LAYOUT
 * Store DOM html of page in component_layout
 */
-if($mode=='save_template') {
+if($mode==='save_template') {
 
 	#$vars = array('section_layout_id','section_layout_tipo','layout_label','component_layout_tipo','type','html_content');
 		#foreach($vars as $name) $$name = common::setVar($name);
@@ -76,7 +76,7 @@ if($mode=='save_template') {
 		if (empty($section_layout_id)) {
 			throw new Exception("Error Processing Request", 1);			
 		}
-		if(SHOW_DEBUG) {
+		if(SHOW_DEBUG===true) {
 			error_log("Generated section_layout_id:  $section_layout_id - tipo:$section_layout_tipo");
 		}
 
@@ -141,7 +141,7 @@ if($mode=='save_template') {
 
 	echo (int)$section_layout_id;
 	exit();
-}//end if( $mode=='save_layout' ) 
+}//end if( $mode==='save_layout' ) 
 
 
 
@@ -169,8 +169,15 @@ if($mode==='render_pdf') {
 
 	foreach ((array)$render_pdf_data as $key => $command_obj) {
 		$element_html = '';
+		
 
 		$command 	= rawurldecode($command_obj->command);
+		# Check valid command
+		if (strpos($command, DEDALO_PDF_RENDERER)!==0) {
+			debug_log(__METHOD__." Security problem found! DEDALO_PDF_RENDERER not defined in current command ".to_string($command), logger::ERROR);
+			continue;
+		}
+
 		$pdf_url 	= rawurldecode($command_obj->pdf_url);
 		$pdf_path 	= rawurldecode($command_obj->pdf_path);
 		$label 		= rawurldecode($command_obj->label);
@@ -180,7 +187,7 @@ if($mode==='render_pdf') {
 		$result = exec_::live_execute_command($command,false);
 		#$result  = shell_exec($command." ");	// > /dev/null 2>/dev/null &
 		
-		if(SHOW_DEBUG) {
+		if(SHOW_DEBUG===true) {
 			
 			$response->debug[$key] = $result;
 
@@ -197,7 +204,7 @@ if($mode==='render_pdf') {
 		    $element_html .= trim("<span class=\"error\">Sorry. Error on render pdf file</span>");
 		}
 
-		if(SHOW_DEBUG) {
+		if(SHOW_DEBUG===true) {
 			$size = @ filesize($pdf_path);
 			if ($size && $size>0) {
 				$KB = (int)$size/1000 ;
@@ -233,13 +240,13 @@ if($mode==='delete_template') {
 	$section = section::get_instance($section_layout_id, $section_layout_tipo);
 	$result  = $section->Delete('delete_record');
 
-	if(SHOW_DEBUG) {
+	if(SHOW_DEBUG===true) {
 		error_log($result);
 	}
 
 	echo "ok";
 	exit();
-}//end if( $mode=='delete_template' )
+}//end if( $mode==='delete_template' )
 
 
 
@@ -348,7 +355,7 @@ if($mode==='print_pages') {
 	echo $html;
 
 	exit();
-}//end if( $mode=='print_pages' ) {	
+}//end if( $mode==='print_pages' ) {	
 	
 
 

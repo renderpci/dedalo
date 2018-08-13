@@ -1246,6 +1246,23 @@ global $sessiondb;
 
 
 /**
+* SAFE_Table
+* Remove extra malicious code
+* @return string $tipo
+*/
+function safe_table( $table ) {
+
+	preg_match("/^[a-zA-Z_]+$/", $table, $output_array);
+	if (empty($output_array[0])) {
+		return false;
+	}
+	
+	return $table;
+}//end safe_table
+
+
+
+/**
 * SAFE_TIPO
 * Remove extra malicious code
 * @return string $tipo

@@ -672,7 +672,14 @@ class component_relation_common extends component_common {
 	* @return string $list_value
 	*/
 	public static function render_list_value($value, $tipo, $parent, $modo, $lang, $section_tipo, $section_id, $current_locator=null, $caller_component_tipo=null) {
-	
+		
+		# Activity case (in transition from component_autocomplete_ts to component_autocomplete_hi)
+		# Current stored data is in format: "dd546": {"dato": {"lg-nolan": "dd242"}} bypassing the component in write
+    	# file rows_activity.phtml parses current value to label in current lang
+		if ($tipo==='dd545' || $tipo==='dd546') {
+			return $value;
+		}
+
 		$component 	= component_common::get_instance(get_called_class(),
 													 $tipo,
 													 $parent,

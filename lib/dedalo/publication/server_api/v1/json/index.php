@@ -2,7 +2,8 @@
 #include(dirname(dirname(dirname(dirname(dirname(__FILE__))))) .'/config/core_functions.php');
 
 # Allow CORS
-header("Access-Control-Allow-Origin: *");
+$ACCESS_CONTROL_ALLOW_ORIGIN = defined('ACCESS_CONTROL_ALLOW_ORIGIN') ? ACCESS_CONTROL_ALLOW_ORIGIN : '*';
+header("Access-Control-Allow-Origin: {$ACCESS_CONTROL_ALLOW_ORIGIN}");
 
 #header("Access-Control-Allow-Methods: POST, GET, OPTIONS");
 #header("Access-Control-Request-Method: POST");

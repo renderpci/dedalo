@@ -644,21 +644,17 @@ class component_text_area extends component_common {
 		
 		# Build in/out regex pattern to search
 		$regexp = $tag_in ."(.*)". $tag_out;
-			#dump($tag_type,'regexp',"regexp for $tag_id : $regexp - ".to_string($tag_type)); #die();		
 
 		# Search fragment_text
 			# Dato raw from matrix db				
 			$dato = $raw_text ;	#parent::get_dato();
-				#dump($dato, ' dato ++ '.to_string($regexp));
 			#if( preg_match_all("/$regexp/", $dato, $matches, PREG_SET_ORDER) ) {
 			if( preg_match_all("/$regexp/", $dato, $matches, PREG_SET_ORDER|PREG_OFFSET_CAPTURE) ) {
-				#dump($matches,'$matches');
 				$key_fragment = 3;
 			    foreach($matches as $match) {
-			        #dump($match,'$match',"regexp: $regexp for id:$id");
 			        if (isset($match[$key_fragment][0])) {
 
-			        	$fragment_text = $match[$key_fragment][0];	#dump($fragment_text,'$fragment_text',"regexp: $regexp for id:$id");#
+			        	$fragment_text = $match[$key_fragment][0];
 
 			        	# Clean fragment_text
 			        	$fragment_text = TR::deleteMarks($fragment_text);
@@ -691,7 +687,6 @@ class component_text_area extends component_common {
 		$pattern_tc  = TR::get_mark_pattern('tc_full',$standalone=true);
 		#$pattern_tc  = "/(\[TC_[0-9][0-9]:[0-9][0-9]:[0-9][0-9]\.[0-9]{1,3}_TC\])/";
 		$ar_fragments = preg_split($pattern_tc, $raw_text, -1, PREG_SPLIT_NO_EMPTY | PREG_SPLIT_DELIM_CAPTURE);	
-			#dump($ar_fragments, ' ar_fragments ++ '.to_string());
 		
 		return $ar_fragments;
 	}//end get_fragments_text_by_tc
@@ -725,7 +720,7 @@ class component_text_area extends component_common {
 		else{
 		*/
 		if (empty($rel_locator)) {
-			if(SHOW_DEBUG) {
+			if(SHOW_DEBUG===true) {
 				dump($rel_locator,'$rel_locator');
 			}			
 			$msg = "rel_locator $rel_locator is not valid!";
@@ -751,7 +746,6 @@ class component_text_area extends component_common {
 				$tag_type = 'index';
 				break;
 		}
-		#dump($tag_type, ' tag_type ++ '.to_string($rel_locator->type));
 
 		$component_text_area = component_common::get_instance('component_text_area',
 															  $component_tipo,
@@ -784,7 +778,7 @@ class component_text_area extends component_common {
 		}else{
 			$component_ar_langs = (array)$this->get_component_ar_langs();
 		}
-		#dump($component_ar_langs, ' component_ar_langs');*/
+		*/
 
 		$component_ar_langs = (array)$this->get_component_ar_langs();
 
@@ -846,12 +840,10 @@ class component_text_area extends component_common {
 		# INDEX IN
 		$pattern = TR::get_mark_pattern($mark='indexIn',$standalone=false);
 		preg_match_all($pattern,  $raw_text,  $matches_indexIn, PREG_PATTERN_ORDER);
-			#dump($matches_indexIn,"matches_indexIn ".to_string($pattern));		
 
 		# INDEX OUT
 		$pattern = TR::get_mark_pattern($mark='indexOut',$standalone=false);
 		preg_match_all($pattern,  $raw_text,  $matches_indexOut, PREG_PATTERN_ORDER);
-			#dump($matches_indexOut,"matches_indexOut ".to_string($pattern));
 
 		$index_tag_id = 3;
 		
@@ -867,11 +859,9 @@ class component_text_area extends component_common {
 				$tag_in   = self::change_tag_state( $tag_in, $state='d', $tag_in );	// Change state to 'd'
 				$pair 	  = $tag_in.''.$tag_out;	// concatenate in-out
 				$raw_text = str_replace($tag_out, $pair, $raw_text);
-					#dump($raw_text, ' raw_text ++** '.$pair .to_string($tag_in));	
 				$changed_tags++;
 			}
 		}
-		#dump($ar_missing_indexIn, ' ar_missing_indexIn ++ '.to_string());
 
 		# INDEX MISSING OUT
 		$ar_missing_indexOut=array();
@@ -883,25 +873,19 @@ class component_text_area extends component_common {
 
 				# Add deleted tag
 				$tag_out   = self::change_tag_state( $tag_out, $state='d', $tag_out );	// Change state to 'd'
-					#dump($tag_out, ' tag_out ++ '.to_string());
 				$pair 	  = $tag_in.''.$tag_out;	// concatenate in-out
 				$raw_text = str_replace($tag_in, $pair, $raw_text);
-					#dump($raw_text, ' raw_text ++** '.$pair .to_string($tag_in));
 				$changed_tags++;
 			}
 		}
-		#dump($ar_missing_indexOut, ' ar_missing_indexOut ++ '.to_string()); 
 		
 
 		# TESAURUS INDEXATIONS INTEGRITY VERIFY
 		$ar_indexations = $this->get_component_indexations(DEDALO_RELATION_TYPE_INDEX_TIPO); // DEDALO_RELATION_TYPE_STRUCT_TIPO - DEDALO_RELATION_TYPE_INDEX_TIPO
-			#dump($ar_indexations, ' ar_indexations ++ '.to_string());
 		$ar_indexations_tag_id = array();
 		foreach ($ar_indexations as $ar_locator) {
-			#dump($current_index, ' $current_index ++ '.to_string());
 			
 			foreach ($ar_locator as $locator) {
-				#dump($locator, ' locator ++ '.to_string());
 				if(!property_exists($locator,'tag_id')) continue;
 				
 				$l_section_tipo 		= $locator->section_tipo;
@@ -914,13 +898,11 @@ class component_text_area extends component_common {
 					$l_from_component_tipo=== DEDALO_THESAURUS_INDEXATIONS_TIPO
 					) {
 					$tag_id = $locator->tag_id;
-						#dump($tag_id, ' $tag_id ++ '.to_string());
 					$ar_indexations_tag_id[] = $tag_id;
 				}
 			}//end foreach ($ar_locator as $locator) {				
 		}
 		$ar_indexations_tag_id = array_unique($ar_indexations_tag_id);
-		#dump($ar_indexations_tag_id, ' $ar_indexations_tag_id ++ '.to_string());
 
 
 		# PORTALS POINTERS
@@ -932,23 +914,19 @@ class component_text_area extends component_common {
 			}
 		}
 		#sort($ar_indexations_tag_id);
-		#dump($ar_indexations_tag_id, ' ar_indexations_tag_id ++ '.to_string());
 
 		# Add portal tags to index tags array
 		$ar_indexations_tag_id = array_merge($ar_indexations_tag_id, $ar_portal_tag_id );
 		$ar_indexations_tag_id = array_unique($ar_indexations_tag_id);
-		#dump($ar_indexations_tag_id, ' $ar_indexations_tag_id ++ '.to_string($ar_portal_tag_id));
 
 
 		$added_tags = 0;
 		if (!empty($ar_indexations_tag_id)) {
 
 			$all_text_tags = array_unique(array_merge($matches_indexIn[$index_tag_id], $matches_indexOut[$index_tag_id]));
-				#dump($all_text_tags, ' $all_text_tags ++ '.to_string());
 
 			foreach ($ar_indexations_tag_id as $current_tag_id) {
 				if (!in_array($current_tag_id, $all_text_tags)) {
-					#dump($current_tag_id, ' current_tag_id +++++++++ '.to_string());
 					#$new_pair = "[index-d-{$current_tag_id}][/index-d-{$current_tag_id}] ";
 
 					$tag_in   = TR::build_tag('indexIn',  'd', $current_tag_id, '', '');
@@ -1013,12 +991,10 @@ class component_text_area extends component_common {
 		# INDEX IN
 		$pattern = TR::get_mark_pattern($mark='structIn',$standalone=false);
 		preg_match_all($pattern,  $raw_text,  $matches_indexIn, PREG_PATTERN_ORDER);
-			#dump($matches_indexIn,"matches_indexIn ".to_string($pattern));		
 
 		# INDEX OUT
 		$pattern = TR::get_mark_pattern($mark='structOut',$standalone=false);
 		preg_match_all($pattern,  $raw_text,  $matches_indexOut, PREG_PATTERN_ORDER);
-			#dump($matches_indexOut,"matches_indexOut ".to_string($pattern));
 
 		$index_tag_id = 3;
 		
@@ -1034,41 +1010,33 @@ class component_text_area extends component_common {
 				$tag_in   = self::change_tag_state( $tag_in, $state='d', $tag_in );	// Change state to 'd'
 				$pair 	  = $tag_in.''.$tag_out;	// concatenate in-out
 				$raw_text = str_replace($tag_out, $pair, $raw_text);
-					#dump($raw_text, ' raw_text ++** '.$pair .to_string($tag_in));	
 				$changed_tags++;				
 			}
 		}
-		#dump($ar_missing_indexIn, ' ar_missing_indexIn ++ '.to_string());
 
 		# INDEX MISSING OUT
 		$ar_missing_indexOut=array();
 		foreach ($matches_indexIn[$index_tag_id] as $key => $value) {
 			if (!in_array($value, $matches_indexOut[$index_tag_id])) {
-				$tag_in  = $matches_indexIn[0][$key];	// As we only have the in tag, we create out tag
-				$tag_out = str_replace('[', '[/', $tag_in);
+				$tag_in  	= $matches_indexIn[0][$key];	// As we only have the in tag, we create out tag
+				$tag_out 	= str_replace('[', '[/', $tag_in);
 				$ar_missing_indexOut[] = $tag_out;
 
 				# Add deleted tag
-				$tag_out   = self::change_tag_state( $tag_out, $state='d', $tag_out );	// Change state to 'd'
-					#dump($tag_out, ' tag_out ++ '.to_string());
-				$pair 	  = $tag_in.''.$tag_out;	// concatenate in-out
-				$raw_text = str_replace($tag_in, $pair, $raw_text);
-					#dump($raw_text, ' raw_text ++** '.$pair .to_string($tag_in));
+				$tag_out   	= self::change_tag_state( $tag_out, $state='d', $tag_out );	// Change state to 'd'
+				$pair 	  	= $tag_in.''.$tag_out;	// concatenate in-out
+				$raw_text 	= str_replace($tag_in, $pair, $raw_text);
 				$changed_tags++;
 			}
 		}
-		#dump($ar_missing_indexOut, ' ar_missing_indexOut ++ '.to_string()); 
 		
 
 		# TESAURUS INDEXATIONS INTEGRITY VERIFY
 		$ar_indexations = $this->get_component_indexations(DEDALO_RELATION_TYPE_STRUCT_TIPO); // DEDALO_RELATION_TYPE_STRUCT_TIPO - DEDALO_RELATION_TYPE_INDEX_TIPO
-			#dump($ar_indexations, ' ar_indexations ++ '.to_string());
 		$ar_indexations_tag_id = array();
 		foreach ($ar_indexations as $ar_locator) {
-			#dump($current_index, ' $current_index ++ '.to_string());
 			
 			foreach ($ar_locator as $locator) {
-				#dump($locator, ' locator ++ '.to_string());
 				if(!property_exists($locator,'tag_id')) continue;
 				
 				$l_section_tipo 	= $locator->section_tipo;
@@ -1079,18 +1047,15 @@ class component_text_area extends component_common {
 					$l_component_tipo=== $this->tipo
 					) {
 					$tag_id = $locator->tag_id;
-						#dump($tag_id, ' $tag_id ++ '.to_string());
 					$ar_indexations_tag_id[] = $tag_id;
 				}
 			}//end foreach ($ar_locator as $locator) {				
 		}
 		$ar_indexations_tag_id = array_unique($ar_indexations_tag_id);
-		#dump($ar_indexations_tag_id, ' $ar_indexations_tag_id ++ '.to_string());
 
 		/*
 		# PORTALS POINTERS
 		$ar_portal_pointers = component_portal::get_component_pointers($this->tipo, $this->section_tipo, $this->parent, $tag_id=null);
-			#dump($ar_portal_pointers, ' ar_portal_pointers ++ '.to_string());
 		$ar_portal_tag_id = array();
 		foreach ($ar_portal_pointers as $key => $portal_locator) {
 			if (isset($portal_locator->tag_id)) {
@@ -1108,14 +1073,12 @@ class component_text_area extends component_common {
 		if (!empty($ar_indexations_tag_id)) {
 
 			$all_text_tags = array_unique(array_merge($matches_indexIn[$index_tag_id], $matches_indexOut[$index_tag_id]));
-				#dump($all_text_tags, ' $all_text_tags ++ '.to_string());
 	
 			// Forced lang when is available is de source lang
 			$source_lang = self::force_change_lang($this->tipo, $this->parent, $this->modo, $this->lang, $this->section_tipo);
 
 			foreach ($ar_indexations_tag_id as $current_tag_id) {
 				if (!in_array($current_tag_id, $all_text_tags)) {
-					#dump($current_tag_id, ' current_tag_id +++++++++ '.to_string());
 					#$new_pair = "[index-d-{$current_tag_id}][/index-d-{$current_tag_id}] ";
 
 					$state = 'd';
@@ -1196,8 +1159,6 @@ class component_text_area extends component_common {
 			# INDEX IN
 			$pattern = TR::get_mark_pattern('structIn',$standalone=false, $tag_id); //$mark, $standalone=true, $id=false, $data=false, $state=false		
 			preg_match($pattern,  $source_raw_text,  $matches_indexIn, PREG_OFFSET_CAPTURE);			
-				#dump($tag_real_position, ' tag_real_position ++ '.to_string($matches_indexIn[0][1]));
-				#dump($matches_indexIn,"matches_indexIn $source_lang - ".to_string($pattern));
 			if (empty($matches_indexIn[0][0])) {
 				// No. tag not found in original lan. Not exists the same tag in the original lang ...				
 				$raw_text = $tag_in . " Deleted tag $tag_id (tag not exists in original lang $source_lang) " . $tag_out . $blank_space . $raw_text;
@@ -1208,16 +1169,12 @@ class component_text_area extends component_common {
 				# GET KNOWED FULL STRUCT TAG DATA FROM SOURCE ;-)
 				# Override tag_in and out calculated with real full data locator
 				$tag_in_full = $matches_indexIn[0][0];
-					#dump($tag_in_full, ' tag_in_full ++ '.to_string());
 				preg_match("/data:(.*):data/", $tag_in_full, $output_array);
-					#dump($output_array, ' current_data ++ '.to_string());
 				$data_locator = $output_array[1];
 				if (!empty($output_array[1])) {
-					#dump($tag_in, ' tag_in ++ 1'.to_string());
 					$tag_in  = preg_replace("/(data:.*:data)/", 'data:'.$data_locator.':data', $tag_in);
 					$tag_out = preg_replace("/(data:.*:data)/", 'data:'.$data_locator.':data', $tag_out);
 				}
-				#dump($tag_in, ' tag_in ++ 2'.to_string());
 
 				$raw_text = $tag_in ." Deleted tag " . $tag_id . " (tag found in original lang $source_lang) ". $tag_out . $blank_space . $raw_text;
 
@@ -1228,10 +1185,8 @@ class component_text_area extends component_common {
 					$tag_real_position = mb_strlen(substr($source_raw_text, 0, $matches_indexIn[0][1]));	
 					#$tag_position 	= $matches_indexIn[0][1]; 	dump($tag_position, ' tag_position ++ '.to_string());
 					$pre_fragment 	= mb_substr($source_raw_text, 0, $tag_real_position); 
-						#dump($pre_fragment, ' pre_fragment ++ '.to_string($tag_real_position));
 					$tc_pattern 	= TR::get_mark_pattern($mark='tc',$standalone=false);
 					preg_match_all($tc_pattern,  $pre_fragment,  $matches_tc, PREG_PATTERN_ORDER);
-						#dump($matches_tc, ' matches_tc ++ '.to_string());
 						#debug_log(__METHOD__." matches_tc $tc_pattern - ".to_string($matches_tc), logger::ERROR);				
 					
 					#
@@ -1246,7 +1201,6 @@ class component_text_area extends component_common {
 						}
 					}			
 
-					#dump($tc_target_position, ' tc_target_position ++ '.to_string());
 					if ($tc_target_position!==false) {
 
 						# REFERENCE_FRAGMENT
@@ -1254,14 +1208,11 @@ class component_text_area extends component_common {
 						$reference_fragment = mb_substr($pre_fragment, $last_tc_position);					
 
 						$src_ar_tags_of_type = TR::get_tags_of_type_in_text($reference_fragment, array("index","person","reference","note"));
-							#dump($src_ar_tags_of_type, ' $src_ar_tags_of_type ++ '.to_string());
 						
 						#$post_fragment = mb_substr($raw_text, $tc_target_position);
 						$post_fragment = mb_substr($raw_text, $tc_target_position, (strlen($reference_fragment)*2) );			
-							#dump($post_fragment, ' $post_fragment ++ '.to_string());
 
 						$target_ar_tags_of_type = TR::get_tags_of_type_in_text($post_fragment, array("index","person","reference","note"));
-							#dump($target_ar_tags_of_type, ' $target_ar_tags_of_type ++ '.to_string());
 
 						# Tags existing in target text that exists in source
 						$ar_different_tags = array();
@@ -1272,33 +1223,25 @@ class component_text_area extends component_common {
 							        return $obj->tag == $tag_obj->tag;
 							    }
 							);
-							#dump($ar_found, ' ar_found ++ '.to_string($tag_obj->tag));
 							if (empty($ar_found)) {
 								$ar_different_tags[] = $tag_obj->tag;
 							}
 						}
-						#dump($ar_different_tags, ' ar_different_tags ++ '.to_string());
 
 						# Remove different tags from source text only to compute
-						#dump($reference_fragment, ' reference_fragment 1 ++ '.to_string());
 						$reference_fragment = str_replace($ar_different_tags, '', $reference_fragment);
-						#dump($reference_fragment, ' reference_fragment 2 ++ '.to_string());
 						
 						# Count spaces into source reference_fragment
 						preg_match_all("/ |&nbsp;/",  $reference_fragment,  $matches_spaces_reference);
 						$n_blank_spaces = count($matches_spaces_reference[0]);
-							#dump($n_blank_spaces, ' $n_blank_spaces ++ '.to_string());
 						# Count spaces into target post_fragment
 						preg_match_all("/ |&nbsp;/",  $post_fragment,  $matches_spaces, PREG_OFFSET_CAPTURE); //PREG_PATTERN_ORDER
-							#dump($matches_spaces, ' matches_spaces ++ '.count($matches_spaces[0]));
 						# If we found the equivalent space key in target that in source, set in this point the rebuilded tag
 						$key = $n_blank_spaces -1;
 						if (isset($matches_spaces[0][$key])) {
-							#dump($matches_spaces[0][$key], '$matches_spaces[0][$key] ++ '.to_string());
 							#$space_position = $matches_spaces[0][$key][1];
 							# Real position in chars
 							$space_position = mb_strlen(substr($post_fragment, 0, $matches_spaces[0][$key][1]));
-								#dump($space_position, ' space_position ++ '.to_string($matches_spaces[0][$key][1]));
 							$cut_position = $tc_target_position + $space_position;
 							$raw_text = mb_substr($raw_text,0, $cut_position) . $tag_in ." DELETED TAG $tag_id AT NEAR LAST TC ". $tag_out . mb_substr($raw_text, $cut_position);
 						}else{
@@ -1328,7 +1271,6 @@ class component_text_area extends component_common {
 		
 		$pattern = TR::get_mark_pattern($mark='person',$standalone=false);
 		preg_match_all($pattern,  $raw_text,  $matches, PREG_PATTERN_ORDER);
-			#dump($matches, ' matches ++ '.to_string());
 		//  <img id=\"[$2-$3-$4-$5]\" src=\"{$btn_url}/[$2-$3-$4-$5]\" class=\"person\" data-type=\"person\" data-tag_id=\"$4\" data-state=\"$3\" data-label=\"$5\" data-data=\"$6\">", $text);
 		$type_key   = 1;	
 		$state_key 	= 2;
@@ -1431,11 +1373,9 @@ class component_text_area extends component_common {
 			$current_section_id   	= $rows['section_id'];
 			$current_section_tipo 	= $rows['section_tipo'];
 			$relations 				= json_decode($rows['relations']);
-				#dump($relation, ' relation ++ '.to_string());
 
 			$ar_indexations[] = $relations;
 		}//end while
-		#dump($ar_indexations, ' $ar_indexations ++ '.to_string());
 
 		return (array)$ar_indexations;
 	}//end get_component_indexations
@@ -1463,17 +1403,14 @@ class component_text_area extends component_common {
 
 		$ar_indexations = array();
 		while ($rows = pg_fetch_assoc($result)) {
-			#dump($rows, ' rows ++ '.to_string());
 			#$current_section_id   	= $rows['section_id'];
 			#$current_section_tipo 	= $rows['section_tipo'];
 			#$relations 				= json_decode($rows['relations']);
-				#dump($relation, ' relation ++ '.to_string());
 
 			$term_id = $rows['section_tipo'].'_'.$rows['section_id'];
  
 			$ar_indexations[] = $term_id;
 		}//end while
-		#dump($ar_indexations, ' $ar_indexations ++ '.to_string());
 
 		$indexations_locators = json_encode($ar_indexations);
 
@@ -1487,7 +1424,7 @@ class component_text_area extends component_common {
 	* GET_DIFFUSION_OBJ
 	*/
 	public function get_diffusion_obj( $propiedades ) {
-		#dump($propiedades,'$propiedades');
+
 		$diffusion_obj = parent::get_diffusion_obj( $propiedades );
 		/*
 		$diffusion_obj->component_name		= get_class($this);
@@ -1503,12 +1440,10 @@ class component_text_area extends component_common {
 
 		if(isset($propiedades['rel_locator'])) {
 
-			#dump($propiedades['rel_locator'],"propiedades rel_locator");
 			$rel_locator_obj= $propiedades['rel_locator'];
 			#$rel_locator 	= component_common::build_locator_from_obj( $rel_locator_obj );
 			$fragment_info	= component_text_area::get_fragment_text_from_rel_locator( $rel_locator_obj );
 			$texto 			= $this->get_dato();
-				#dump($fragment_info, ' fragment_info ++ '.to_string($rel_locator_obj));
 
 			# FRAGMENT
 			$diffusion_obj->columns['fragment']	= $fragment_info[0];
@@ -1531,7 +1466,6 @@ class component_text_area extends component_common {
 					$tag_out_pos 	= $fragment_info[2];
 					$tc_in 		 	= OptimizeTC::optimize_tcIN($texto, false, $tag_in_pos, $in_margin=0);
 					$tc_out 	 	= OptimizeTC::optimize_tcOUT($texto, false, $tag_out_pos, $in_margin=100);
-						#dump($tc_in ,"tc_in - tc_out:$tc_out, tag_in_pos:$tag_in_pos - tag_out_pos:$tag_out_pos ");
 
 					$tcin_secs		= OptimizeTC::TC2seg($tc_in);
 			        $tcout_secs		= OptimizeTC::TC2seg($tc_out);
@@ -1557,9 +1491,6 @@ class component_text_area extends component_common {
 
 					$diffusion_obj->columns['video_id']	= $video_id;
 			        #$diffusion_obj->columns['video_url']	= $duracion_tc;
-
-			        #dump($diffusion_obj, ' diffusion_obj ++ '.to_string());
-
 					break;
 
 				case 'component_image':
@@ -1573,7 +1504,6 @@ class component_text_area extends component_common {
 				default:
 					throw new Exception("Error Processing Request. Current related $related_modelo_name is not valid. Please configure textarea for this media ", 1);					
 			}
-			#dump($diffusion_obj,'$diffusion_obj');
 		}		
 		
 		return $diffusion_obj;
@@ -1597,7 +1527,6 @@ class component_text_area extends component_common {
 	* @return string $list_value
 	*/ // ($value, $tipo, $parent, $modo, $lang, $section_tipo, $section_id, $caller_component_tipo=null) ? locator ?? 
 	public static function render_list_value($value, $tipo, $parent, $modo, $lang, $section_tipo, $section_id, $locator=null, $caller_component_tipo=null) {
-		#dump($value, ' value ++ '.$tipo.' - '.to_string($locator)); //get_fragment_text_from_tag( $tag_id, $tag_type, $raw_text ) {
 		
 		# Ignore DB data
 		$value = null;
@@ -1628,7 +1557,7 @@ class component_text_area extends component_common {
 		#if (empty($value)) {
 			/*
 			# Fallback 1 Fallback to main_lang
-			$main_lang = common::get_main_lang( $section_tipo );	#dump($main_lang, ' main_lang ++ '.to_string(DEDALO_DATA_LANG_DEFAULT));
+			$main_lang = common::get_main_lang( $section_tipo );
 			if ($main_lang!=$lang) {
 
 				$component 	= component_common::get_instance(__CLASS__,
@@ -1640,7 +1569,7 @@ class component_text_area extends component_common {
 				
 				$value = $component->get_valor($main_lang);
 				#$value = component_common::decore_untranslated( $value );
-					#dump($value, ' value ++ '.to_string($main_lang));
+				
 				$calculated_value=true;
 			}
 			*/			
@@ -1671,9 +1600,11 @@ class component_text_area extends component_common {
 			$list_value = $value;
 		}
 
-		if (!is_string($list_value)) {			
-			dump($list_value, ' render_list_value : list_value expected string. But received: '.gettype($list_value) .to_string($list_value)); 
-			dump( debug_backtrace() );
+		if (!is_string($list_value)) {
+			if(SHOW_DEBUG===true) {
+				dump($list_value, ' render_list_value : list_value expected string. But received: '.gettype($list_value) .to_string($list_value));
+				throw new Exception("Error Processing Request. list_value expected string", 1);				
+			}			
 			die();
 		}		
 
@@ -1868,7 +1799,6 @@ class component_text_area extends component_common {
 
 		$tipo = null;
 		$related_terms = $this->get_ar_related_by_model('component_select_lang');
-			#dump($related_terms, ' related_terms ++ '.to_string());
 
 		switch (true) {
 			case count($related_terms)===1 :
@@ -1901,13 +1831,10 @@ class component_text_area extends component_common {
 		# INDEX IN
 		#$pattern = TR::get_mark_pattern($mark='indexIn',$standalone=false);
 		$pattern = TR::get_mark_pattern($type.'In', $standalone=true);
-			#dump($pattern, ' pattern ++ '.to_string($type));
 		preg_match_all($pattern,  $raw_text,  $matches_indexIn, PREG_PATTERN_ORDER);
-			#dump($matches_indexIn,"matches_indexIn ".to_string($pattern));
 		$total_indexIn = 0;
 		if (!empty($matches_indexIn[0])) {
 			$total_indexIn = count($matches_indexIn[0]);
-			#dump($matches_indexIn, ' matches_indexIn[0] ++ '.$type." - ".to_string($total_indexIn)); #die(); return array();
 		}
 		
 
@@ -1931,11 +1858,9 @@ class component_text_area extends component_common {
 			}else{
 				$ar_index = component_relation_index::get_indexations_from_tag($component_tipo, $section_tipo, $section_id, $tag_id, DEDALO_DATA_LANG);
 			}			
-			#dump($ar_descriptors, ' ar_descriptors ++ '.to_string());
 
 			$ar_descriptors[$full_tag] = $ar_index;
 		}
-		#dump($ar_descriptors, ' $ar_descriptors ++ '.to_string()); die();
 		
 		return (array)$ar_descriptors;
 	}//end get_descriptors

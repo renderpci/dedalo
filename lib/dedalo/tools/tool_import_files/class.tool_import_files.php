@@ -251,13 +251,24 @@ class tool_import_files extends tool_common {
 				# Path of file like '/Users/pepe/Dedalo/media/media_mupreva/image/temp/files/user_1/'
 				$source_path 		= $current_file['dir_path'];
 				# Full path to file located in temporal files uploads like '/Users/pepe/Dedalo/media/media_mupreva/image/temp/files/user_1/1253-2.jpg'
-				$source_full_path 	= $current_file['file_path'];		
+				$source_full_path 	= $current_file['file_path'];
 				# File current extension like 'jpg'
 				$extension 			= $current_file['extension'];
 				# File name full like '1253-2.jpg'
 				$file_name_full 	= $current_file['file_name_full'];
 				# File name without extension
 				$file_name 			= $current_file['file_name'];
+
+				# Safe paths
+				if (strpos($source_path, '../')!==false || 
+					strpos($source_full_path, '../')!==false ||
+					strpos($extension, '../')!==false || 
+					strpos($file_name_full, '../')!==false ||
+					strpos($file_name, '../')!==false
+					) {
+					throw new Exception("Error Processing Request. Unauthorized path", 1);
+					return false;
+				}
 
 
 				#

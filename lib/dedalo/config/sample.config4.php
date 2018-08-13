@@ -449,7 +449,7 @@
 
 ################################################################
 # DEDALO_TEST_INSTALL
-# If true, check current admin user password on login page
+# If true, check current admin user credentials on login page
 	define('DEDALO_TEST_INSTALL', true);
 
 

@@ -96,19 +96,12 @@ class ts_term {
 				$options->sql_filter 	= "term_id = '".$this->term_id."'" . PUBLICACION_FILTER_SQL;
 				$options->order 		= null;
 				#$options->limit 		= 1;
-					#dump($options, ' options');
 
 				$rows_data = (object)web_data::get_rows_data( $options );
-					#dump($rows_data, ' rows_data');
 				#$cms_data 	= (object)end($rows_data->result);
-					#dump($cms_data, ' cms_data'); #die();
 
 			if (isset($rows_data->result[0])) {
-				#dump(reset($rows_data->result)[FIELD_TERM], ' var ++ '.to_string());
-				#dump($rows_data->result[0]['descriptor'], '$rows_data->result[0][descriptor] ++ '.to_string());
-					#dump($rows_data->result[0], '$rows_data->result[0] A ++ '.to_string());
 				#$rows_data->result[0] = (array)web_data::no_descriptor_to_descriptor( (object)$rows_data->result[0] );
-					#dump($rows_data->result[0], '$rows_data->result[0] B ++ '.to_string());
 
 				# Store some resolved vars for reuse
 				$this->indexation 	= (string)$rows_data->result[0]['indexation'];
@@ -161,7 +154,6 @@ class ts_term {
 			$options->order 		= '`'.FIELD_NORDER.'` ASC';
 
 			$rows_data	= (object)web_data::get_rows_data( $options );
-				#dump($rows_data, ' rows_data ' .to_string($options) );
 			
 		if (!empty($rows_data->result)) {
 
@@ -229,7 +221,6 @@ class ts_term {
 			$options->limit 		= 1;
 
 		$rows_data	= (object)web_data::get_rows_data( $options );
-				#dump($rows_data, ' rows_data');
 		if (!empty($rows_data->result)) {
 			$have_childrens = true;
 		}else{
@@ -314,25 +305,16 @@ class ts_term {
 	*/
 	public function get_ar_indexation() {
 		
-		$ar_indexation_valid = $ar_indexation = array();
-		
-		if ($this->term_id==='ts176') {
-			#dump($this->indexation, ' $this->indexation ++ '.to_string());
-		}		
+		$ar_indexation_valid = $ar_indexation = array();		
 
-		if ($ar_indexation = json_decode($this->indexation)) {
-			#dump($ar_indexation, ' ar_indexation ++ '.to_string());	
-
-			if ($this->term_id==='ts176') {
-				#dump($ar_indexation, ' $ar_indexation ++ '.to_string());
-			}		
+		if ($ar_indexation = json_decode($this->indexation)) {			
 			
 			#
 			# VERIFY RESOURCE IS AHORIZED FOR DIFFUSION (diffusion='yes')		
 			foreach ($ar_indexation as $current_locator) {			
 				
 				$publication = self::get_publication_from_locator($current_locator);			
-				if ($publication=='yes') {
+				if ($publication==='yes') {
 					$ar_indexation_valid[] = $current_locator;
 				}else{
 					#dump($current_locator, 'EXCLUDED current_locator ++ '.to_string());
@@ -340,8 +322,6 @@ class ts_term {
 				
 			}//end foreach ($ar_indexation as $current_locator) {
 		}
-		#dump($ar_indexation, ' ar_indexation ++ '.to_string());
-		#dump($ar_indexation_valid, ' $ar_indexation_valid ++ '.to_string($term_id));
 
 		return $ar_indexation_valid;
 	}//end get_ar_indexation
@@ -371,7 +351,6 @@ class ts_term {
 				$rows_data = (object)web_data::get_rows_data( $options );
 				if (!empty($rows_data->result)) {
 					$publication = 'yes';
-					#dump($rows_data->result, ' rows_data ++ '.to_string());
 				}else{
 					#dump($current_section_id, ' $current_section_id ++ '.to_string());
 				}
@@ -387,7 +366,6 @@ class ts_term {
 						$options->limit 		= 1;
 						
 					$rows_data_interview = (object)web_data::get_rows_data( $options );
-						#dump(reset($rows_data_interview->result), ' rows_data ++ '.to_string($options)); #die();
 
 					if (!empty($rows_data_interview->result)) {
 						$publication = 'yes';
@@ -406,7 +384,6 @@ class ts_term {
 				$options->limit 		= 1;		
 				
 				$rows_data = (object)web_data::get_rows_data( $options );
-					#dump(reset($rows_data->result)['publication'], ' rows_data ++ '.to_string($options));die();
 
 				if (isset($rows_data->result[0]['publication'])) {
 					$publication = $rows_data->result[0]['publication'];
@@ -422,7 +399,6 @@ class ts_term {
 					$options->limit 		= 1;
 					
 				$rows_data_interview = (object)web_data::get_rows_data( $options );
-					#dump(reset($rows_data_interview->result)['publication'], ' rows_data ++ '.to_string($options));die();
 
 				if (isset($rows_data_interview->result[0]['publication'])) {
 					$publication = $rows_data_interview->result[0]['publication'];
@@ -455,7 +431,6 @@ class ts_term {
 			}		
 			
 			$parent = self::get_parent( $parent );
-				#dump($parent, ' parent ++ parent_inicial '.to_string( $parent_inicial ));
 
 		} while ( !empty($parent) && $parent!==$parent_inicial );
 
@@ -484,7 +459,6 @@ class ts_term {
 				$thesaurus_table = $tvalue; break;
 			}
 		}
-		#dump($thesaurus_table, ' thesaurus_table ++ '.to_string($term_id));
 		
 		$options = new stdClass();
 			$options->table 		= (string)$thesaurus_table;
@@ -498,7 +472,6 @@ class ts_term {
 			$row 	= reset($rows_data->result);
 		}		
 		$parent 	= isset($row['parent']) ? $row['parent'] : false;
-			#dump($parent, ' parent ++ '.to_string($term_id));
 
 		if (strpos($parent,'[')===0) {
 			# is json array
@@ -518,9 +491,8 @@ class ts_term {
 	public static function get_prefix_from_term_id($term_id) {
 		preg_match("/\D+/", $term_id, $output_array);
 		if (empty($output_array[0])) {
-			if(SHOW_DEBUG) {
+			if(SHOW_DEBUG===true) {
 				#throw new Exception("Error Processing Request from term_id:'$term_id' ", 1);	
-				#dump($term_id,"term_id received ");	
 				dump(debug_backtrace()[0]," debug_backtrace Invalid term_id received ". json_encode($term_id));	
 			}
 			error_log(__METHOD__." Error: Invalid term_id received. Impossible get_prefix_from_term_id this term_id : ". json_encode($term_id)." " );

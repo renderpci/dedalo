@@ -109,12 +109,11 @@ abstract class counter {
 	public static function consolidate_counter( $section_tipo, $matrix_table, $counter_matrix_table='matrix_counter' ) {
 		
 		# BIGGER_SECTION_ID . Search bigger section_tipo existent
-		$strQuery = 'SELECT section_id FROM "'.$matrix_table.'" WHERE section_tipo = $1 ORDER BY section_id DESC LIMIT 1';
-		$result   = pg_query_params(DBi::_getConnection(), $strQuery, array( $section_tipo ));
+		$strQuery = 'SELECT section_id FROM "$1" WHERE section_tipo = $2 ORDER BY section_id DESC LIMIT 1';
+		$result   = pg_query_params(DBi::_getConnection(), $strQuery, array( $matrix_table, $section_tipo ));
 		$rows 	  = (array)pg_fetch_assoc($result);
 
 		$bigger_section_id = reset($rows);
-			#dump($bigger_section_id, 'consolidate_counter strQuery:'.$strQuery);			
 			if (empty($bigger_section_id)) {
 				return false;
 			}
@@ -217,8 +216,7 @@ abstract class counter {
 					$response->msg .= "<h5 style=\"padding:5px;padding-left:50px\"><span style=\"color:#b97800\">UPDATE \"matrix_counter\" SET dato = $last_section_id WHERE tipo = '$section_tipo'; </span></h5>";
 				}else{
 					$response->msg .= "<h5 style=\"padding:5px;padding-left:50px\"><span style=\"color:#b97800\">DELETE FROM \"matrix_counter\"  WHERE tipo = '$section_tipo'; </span></h5>";
-				}
-				
+				}				
 			
 				#$response->msg .= "<br><b>   WARNING: last_section_id != counter_section_id [$last_section_id != $counter_section_id]</b>";
 				#$response->msg .= "<br>FIX AUTOMATIC TO $last_section_id start</pre>";
