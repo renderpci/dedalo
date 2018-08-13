@@ -543,6 +543,7 @@ class component_autocomplete_hi extends component_relation_common {
 			$options->relation_type 		= DEDALO_RELATION_TYPE_LINK;
 			$options->search_tipos 			= [DEDALO_THESAURUS_TERM_TIPO];
 			$options->filter_custom 		= false;
+			$options->op 					= '$and';
 			foreach ($request_options as $key => $value) {
 				if (property_exists($options, $key)) {
 					$options->$key = $value;
@@ -571,7 +572,7 @@ class component_autocomplete_hi extends component_relation_common {
 			$ar_filter[] = "a.section_tipo='$target_section_tipo'";
 		}
 		$filter_sections = '(' . implode(' OR ', $ar_filter) . ')';
-		debug_log(__METHOD__." options ".to_string($options), logger::DEBUG);
+		#debug_log(__METHOD__." options ".to_string($options), logger::DEBUG);
 
 		# MATRIX TABLE : Only from first term for now
 		#$matrix_table = common::get_matrix_table_from_tipo( $hierarchy_sections[0] );
@@ -599,8 +600,7 @@ class component_autocomplete_hi extends component_relation_common {
 			$q .= '*'; // Begins with.. by default
 		}
 
-		#$op = '$and';
-		$op = '$or';		
+		$op = $options->op; // '$and';		
 
 		// NEW WAY
 		# search_query_object (can be string or object)
@@ -612,8 +612,12 @@ class component_autocomplete_hi extends component_relation_common {
 			$search_query_object->distinct_values 	= $distinct_values;
 			# Filter
 			$search_query_object->filter 		 	= new stdClass();
-				$search_query_object->filter->{$op} = [];
+				#$search_query_object->filter->{$op} = [];
 
+				$search_tipos_op = count($options->search_tipos)>1 ? '$or' : '$and';
+				if (count($options->search_tipos)>1) {
+					# code...
+				}
 				foreach ($options->search_tipos as $current_search_tipo) {									
 					$filter_obj = new stdClass();
 						$filter_obj->q 			= $q;
@@ -629,7 +633,7 @@ class component_autocomplete_hi extends component_relation_common {
 						$filter_obj->path 		= [$path_obj];
 						$filter_obj->lang 		= 'all';
 
-					$search_query_object->filter->{$op}[] = $filter_obj;
+					$search_query_object->filter->{$search_tipos_op}[] = $filter_obj;
 				}
 				
 				# propiedades filter_custom
