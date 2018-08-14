@@ -724,53 +724,6 @@ class ts_object extends Accessors {
 		return (int)$permissions;
 	}//end get_permissions_element
 
-
-
-	/**
-	* SORT_ELEMENTS
-	* Sort locators by order value
-	* @return array $sorted_ar_locators
-	*//*
-	public static function sort_elements($ar_locators, $order='asc') {
-		$sorted_ar_locators = array();
-
-		foreach ($ar_locators as $key => $current_locator) {
-
-			#$element_tipo = hierarchy::get_element_tipo_from_section_map( $current_locator->section_tipo, 'order' );
-			$element_tipo = ts_object::get_component_order_tipo($current_locator->section_tipo);			
-			#dump($element_tipo, ' section_tipo ++ '.to_string($current_locator->section_tipo));
-			if (is_null($element_tipo)) {
-
-				$order_value = 100;
-
-			}else{
-				$component 		= component_common::get_instance('component_order',
-																 $element_tipo,
-																 $current_locator->section_id,
-																 'list',
-																 DEDALO_DATA_NOLAN,
-																 $current_locator->section_tipo);
-				$order_value = (int)$component->get_dato();				
-			}
-
-			$sorted_ar_locators[$key] = array('locator'=>$current_locator,'order'=>$order_value);
-		}		
-		usort($sorted_ar_locators, function($a, $b) {
-		    return $a['order'] - $b['order'];
-		});
-
-		$final_array = array();
-		foreach ($sorted_ar_locators as $key => $ar_value) {
-			$final_array[] = $ar_value['locator'];
-		}
-		$sorted_ar_locators = $final_array;
-		#dump($sorted_ar_locators, ' sorted_ar_locators ++ '.to_string($ar_locators));
-
-		return (array)$sorted_ar_locators;
-	}//end sort_elements
-	*/
-
-
 	
 }//end ts_object
 ?>
