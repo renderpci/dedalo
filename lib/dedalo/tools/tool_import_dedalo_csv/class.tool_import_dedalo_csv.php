@@ -109,6 +109,12 @@ class tool_import_dedalo_csv extends tool_common {
 			
 				# Target component is always the csv map element with current key
 				$component_tipo	= $csv_map[$key];
+
+				if (empty($component_tipo)) {
+					debug_log(__METHOD__." !!!!!!!! ignored empty component_tipo on csv_map key: $key - csv_map: ".to_string($csv_map), logger::ERROR);
+					continue;
+				}
+
 				$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo, true);
 				$modo 			= 'list';
 				$RecordObj_dd 	= new RecordObj_dd($component_tipo);
