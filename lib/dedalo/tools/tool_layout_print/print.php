@@ -10,17 +10,21 @@ require_once( dirname(__FILE__) .'/class.tool_layout_print.php');
 
 	#
 	# VERIFY VARS
-		if( !isset($_REQUEST['template_tipo']) ) { 
-			return print('Error Processing Request. Few vars are received (template_tipo)');
+		if( !isset($_REQUEST['template_tipo']) ) {
+			debug_log(__METHOD__." Error Processing Request. Few vars are received (template_tipo) ".to_string(), logger::ERROR);
+			return print('Error Processing Request. Few vars are received 1');
 		}
-		if( !isset($_REQUEST['template_id'])   ) {			
-			return print('Error Processing Request. Few vars are received (template_id)');
+		if( !isset($_REQUEST['template_id'])   ) {
+			debug_log(__METHOD__." Error Processing Request. Few vars are received (template_id) ".to_string(), logger::ERROR);			
+			return print('Error Processing Request. Few vars are received 2');
 		}
 		if( !isset($_REQUEST['section_tipo'])  ) {
-			return print('Error Processing Request. Few vars are received (section_tipo)');
+			debug_log(__METHOD__." Error Processing Request. Few vars are received (section_tipo) ".to_string(), logger::ERROR);	
+			return print('Error Processing Request. Few vars are received 3');
 		}
 		if( !isset($_REQUEST['section_id'])	   ) {
-			return print('Error Processing Request. Few vars are received (section_id)');
+			debug_log(__METHOD__." Error Processing Request. Few vars are received (section_id) ".to_string(), logger::ERROR);
+			return print('Error Processing Request. Few vars are received 4');
 		}
 
 	# VARS
@@ -28,28 +32,8 @@ require_once( dirname(__FILE__) .'/class.tool_layout_print.php');
 		$section_id 		= (string)common::setVar('section_id');	
 		$section_layout_tipo= (string)common::setVar('template_tipo');
 		$section_layout_id 	= (string)common::setVar('template_id');
-	
-	
-	#
-	# AUTOLOGIN
-		/*
-		$autologged=false;
-		if(login::is_logged()!==true) {
 
-			$user_id 	= isset($_REQUEST['user_id']) ? (int)safe_xss($_REQUEST['user_id']) : false;
-		
-			$_SESSION['dedalo4']['auth']['user_id']   	= $user_id;
-			$_SESSION['dedalo4']['auth']['is_logged'] 	= 1;
-			$_SESSION['dedalo4']['auth']['salt_secure'] = DEDALO_SALT_STRING;
 
-			if(login::is_logged()!==true) {
-				$string_error = "Auth error: please login";
-				print dd_error::wrap_error($string_error);
-				die();
-			}
-			$autologged=true;
-		}//end if(login::is_logged()!==true) {
-		*/
 
 	#
 	# TEMPLATE FROM DATA
@@ -188,9 +172,9 @@ require_once( dirname(__FILE__) .'/class.tool_layout_print.php');
 
 	#
 	# AUTOLOGOUT
-	if ($autologged) {
+	#if ($autologged) {
 		#unset($_SESSION['dedalo4']['auth']);
-	}
+	#}
 
 #echo "ok ($user_id)";
 exit();

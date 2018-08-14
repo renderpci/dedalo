@@ -253,7 +253,7 @@ abstract class JSON_RecordDataBoundObject {
 				
 				# MATRIX_ACTIVITY INSERT (async pg_send_query)
 				case 'matrix_activity':
-					$strQuery 	= "INSERT INTO $this->strTableName (datos) VALUES ('$datos')";
+					$strQuery = 'INSERT INTO "'.$this->strTableName.'" (datos) VALUES (\''.$datos.'\')';
 					# PG_SEND_QUERY is async query					
 					pg_send_query(DBi::_getConnection(), $strQuery);
 					$result = pg_get_result(DBi::_getConnection()); # RESULT (pg_get_result for pg_send_query is needed)					
@@ -264,18 +264,13 @@ abstract class JSON_RecordDataBoundObject {
 
 					if(empty($section_id) || empty($section_tipo)) {
 						#throw new Exception("Error Processing Request. section_id and section_tipo", 1);	
-						error_log("Error Processing Request. section_id:$section_id and section_tipo:$section_tipo,  table:$this->strTableName - $this->ID");
+						error_log("Error Processing Request. section_id:$section_id and section_tipo:$section_tipo, table:$this->strTableName - $this->ID");
 					}
-					#dump($this," this");die();
-
-					if ($this->force_insert_on_save===true) {
-						# Insert record with defined id and datos
-						$strQuery 	= "INSERT INTO $this->strTableName (section_id, section_tipo, datos) VALUES ($1, $2, $3) RETURNING id";
-					}else{
-						# Insert record datos and receive a new id
-						$strQuery 	= "INSERT INTO $this->strTableName (section_id, section_tipo, datos) VALUES ($1, $2, $3) RETURNING id";
-					}								
-					$result = pg_query_params(DBi::_getConnection(), $strQuery, array( $section_id, $section_tipo, $datos ));
+					
+					# Insert record datos and receive a new id
+					$strQuery = 'INSERT INTO "'.$this->strTableName.'" (section_id, section_tipo, datos) VALUES ($1, $2, $3) RETURNING id';
+													
+					$result   = pg_query_params(DBi::_getConnection(), $strQuery, array( $section_id, $section_tipo, $datos ));
 
 					if($result===false) {
 						if(SHOW_DEBUG===true) {
