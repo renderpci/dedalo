@@ -5,6 +5,8 @@
 #
 # Control what areas are showed in profiles an menu
 
+# Reviewed: 12-05-2018
+
 /* 
 	MAIN MENU AREAS INFO
 
@@ -22,7 +24,6 @@ $areas_allow = []; // allow override deny always
 
 
 # DEFAULT DENY AREAS
-$areas_deny[] = 'dd137';	// Private list of values
-$areas_deny[] = 'rsc1';		// Media
-
-
+$areas_deny[] = 'dd137';		// Private list of values
+$areas_deny[] = 'rsc1';			// Media real section
+$areas_deny[] = 'hierarchy20';	// Thesaurus real section
