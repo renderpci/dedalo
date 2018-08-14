@@ -44,6 +44,11 @@
 			// Dont break here. Continue as modo edit		
 
 		case 'edit'	:
+		case 'tool_description':
+
+			if ($modo==='tool_description') {
+				$file_name	= 'edit';
+			}
 			
 			# Custom propiedades external dato 
 			if(isset($propiedades->source->mode) && $propiedades->source->mode==='external'){
@@ -264,8 +269,8 @@
 			$file_name = 'edit';
 			break;
 
-		case 'tool_description':
-
+		case 'tool_description9999':
+	
 			// Fix always edit as modo / filename
 			if (empty($dato)) {
 				

@@ -37,9 +37,13 @@
 			break;
 
 		case ($permissions>=2):
+
+
 			
+
+			#
+			# INDIRECT COMPONENTS
 			$html_content .= "<ul>";
-			
 			
 			foreach ((array)$dato as $current_locator) {
 								
@@ -59,20 +63,20 @@
 																			 $current_section_id,
 																			 'edit',
 																			 DEDALO_DATA_LANG,
-																			 $current_section_tipo);					;
+																			 $current_section_tipo);
 
 					$value = $current_component->get_html();
-					#$value .= json_encode($current_locator);					
+					#$value .= json_encode($current_locator);
 					
 					$html_content .= "<li>";
 					$html_content .= $value;
-					$html_content .= "</li>";					
+					$html_content .= "</li>";
 				}
 			}			
 			
 			$html_content .= "</ul>";
 
-			break;					
+			break;
 	}			
 	
 	# Prepare content to show in page

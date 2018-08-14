@@ -47,7 +47,6 @@
 
 
 				if ($in_time_machine!==true) {
-
 					
 					# BUTTONS_AND_FIELDS
 					$html_content .= '<div class="buttons_and_fields">';
@@ -92,7 +91,6 @@
 
 					$html_content .= '</div>';//end div buttons_and_fields
 
-
 				}//end if (!$in_time_machine) {
 
 
@@ -123,7 +121,6 @@
 						$html_content .= "data-role=\"autocomplete_button_delete\" ";
 						$html_content .= "></div>";
 						}
-
 
 					#
 					# VALUE
@@ -236,7 +233,9 @@
 									
 									$current_locator_json = json_encode($current_locator);						
 
-									$input_id = md5($hs_value);
+									
+									$input_id = hash('sha256', $hs_value);
+
 									$autosearch_options_html .= "<li>";
 									$autosearch_options_html .= "<input type=\"checkbox\" value='".$current_locator_json."' id=\"$input_id\" checked onchange=\"component_autocomplete.save_filter_sections(this,'$cookie_name')\"/>";
 									$autosearch_options_html .= "<label for=\"$input_id\">";
