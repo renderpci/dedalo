@@ -21,7 +21,6 @@ class tool_import_files extends tool_common {
 
 		# Fix current component/section
 		$this->component_obj = $component_obj;	
-			#dump($component_obj, ' component_obj ++ '.to_string());
 
 		$this->set_up();
 	}//end __construct
@@ -64,7 +63,6 @@ class tool_import_files extends tool_common {
 		# TOOL IMPORT IMAGES
 		define('TOOL_IMPORT_FILES_UPLOAD_DIR', DEDALO_MEDIA_BASE_PATH.$media_folder.'/temp'.'/files/'.'user_'.$user_id.$upload_dir_custom.'/');
 		define('TOOL_IMPORT_FILES_UPLOAD_URL', DEDALO_MEDIA_BASE_URL .$media_folder.'/temp'.'/files/'.'user_'.$user_id.$upload_dir_custom.'/');
-		#dump(TOOL_IMPORT_FILES_UPLOAD_DIR, 'TOOL_IMPORT_FILES_UPLOAD_DIR');
 
 		# FILES HANDLER
 		define('TOOL_IMPORT_FILES_HANDLER_URL', DEDALO_LIB_BASE_URL.'/tools/tool_import_files/inc/files_handler.php?t='.$tipo);
@@ -113,7 +111,6 @@ class tool_import_files extends tool_common {
 		if (!$root) {
 			return array();
 		}
-		#dump($root, ' root ++ '.to_string());
 		
 		natsort($root);
 		foreach($root as $value) {
@@ -139,7 +136,6 @@ class tool_import_files extends tool_common {
 
 		# SORT ARRAY (By custom core function build_sorter)
 		#usort($ar_data, build_sorter('numero_recurso'));
-		#dump($ar_data,'$ar_data',to_string($dir));
 		
 		return $ar_data;
 	}//end find_all_files
@@ -179,7 +175,6 @@ class tool_import_files extends tool_common {
 		
 		$ar_data['image']['image_url'] 			= DEDALO_ROOT_WEB . "/inc/img.php?s=".$ar_data['file_path'];
 		$ar_data['image']['image_preview_url']	= DEDALO_LIB_BASE_URL . '/tools/tool_import_files/foto_preview.php?f='.$ar_data['file_path'];
-			#dump($ar_data, ' ar_data');
 
 		# Regeg file info ^(.+)(-([a-zA-Z]{1}))\.([a-zA-Z]{3,4})$
 		# Format result preg_match '1-2-A.jpg' and 'gato-2-A.jpg'
@@ -195,7 +190,6 @@ class tool_import_files extends tool_common {
 		# 9	=>	jpg 		: jpg 			# extension
 
 		preg_match("/^((([\d]+)|([^-]+))([-](\d))?([-]([a-zA-Z]))?)\.([a-zA-Z]{3,4})$/", $file, $ar_match);
-			#dump($ar_match, ' ar_match ++ '.to_string($file));
 
 		$regex_data = new stdClass();
 			$regex_data->full_name 	  = $ar_match[0];
@@ -299,7 +293,6 @@ class tool_import_files extends tool_common {
 								error_log("Error on get DateTimeOriginal from image metadata");
 							}							
 						}					
-						#dump($DateTimeOriginal, " $DateTimeOriginal ".to_string($command));	
 						if ($DateTimeOriginal && !empty($DateTimeOriginal)) {
 							
 							$dd_date 			= new dd_date();							
@@ -307,7 +300,6 @@ class tool_import_files extends tool_common {
 
 							$regex   = "/^(-?[0-9]+)-?:?\/?.?([0-9]+)?-?:?\/?.?([0-9]+)? ?([0-9]+)?:?([0-9]+)?:?([0-9]+)?/";
 							preg_match($regex, $original_dato, $matches);    
-							  #dump($matches, ' matches');
 							if(isset($matches[1])) $dd_date->set_year((int)$matches[1]); 
 							if(isset($matches[2])) $dd_date->set_month((int)$matches[2]);
 							if(isset($matches[3])) $dd_date->set_day((int)$matches[3]);

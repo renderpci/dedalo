@@ -81,7 +81,6 @@ class component_text_area extends component_common {
 					}
 				}
 			}
-			#dump($lang, ' lang ++ '.to_string());			
 		}
 
 		if(SHOW_DEBUG===true) {
@@ -335,7 +334,6 @@ class component_text_area extends component_common {
 			default:
 
 				$dato = parent::get_dato();	
-				#dump($dato,'dato');
 
 				$dato = TR::deleteMarks($dato);
 				$dato = self::decode_dato_html($dato);
@@ -409,14 +407,12 @@ class component_text_area extends component_common {
 		# Search tags
 		$matches 		= $this->get_ar_relation_tags();
 		$key 	 		= 0;		
-			#dump(max($matches[$key]),'max($matches[$key])');		
 		if (empty($matches[$key])) {
 			return $ar_changed_tags ;
 		}
 
 		# Eliminamos duplicados (las etiquetas in/out se devuelven igual, como [index-n-1],[index-n-1])
 		$ar_tags = array_unique($matches[$key]); 
-			#dump($ar_tags,'ar_tags');
 
 		# iterate all tags comparing fragments
 		if(is_array($ar_tags)) foreach ($ar_tags as $tag) {			
@@ -430,10 +426,7 @@ class component_text_area extends component_common {
 				$ar_changed_tags[] = $tag;
 			}
 					
-			#dump($source_fragment_text,'$source_fragment_text');
-			#dump($target_fragment_text,'$target_fragment_text');
 		}
-		#dump($ar_changed_tags,'$ar_changed_tags');
 		$ar_final['changed_tags']	= $ar_changed_tags;
 
 		# Ya tenemos calculadas las etiquetas de los fragmentos que han cambiado		
@@ -458,14 +451,12 @@ class component_text_area extends component_common {
 					$text_raw 			= $component_text_area->get_dato();
 					$text_raw_updated 	= self::change_tag_state( $ar_changed_tags, $state='r', $text_raw );
 					$component_text_area->set_dato($text_raw_updated);	
-						#dump($text_raw_updated,'$text_raw_updated',"for id: $id_matrix");
 					$component_text_area->Save(false);	# Important: arg 'false' is mandatory for avoid infinite loop
 					$ar_changed_records[] = $id_matrix;
 				}
 			}
 			$ar_final['changed_records']= $ar_changed_records;			
 		}		
-		#dump($ar_final,'ar_final');
 
 		return $ar_final;
 		*/
@@ -492,15 +483,13 @@ class component_text_area extends component_common {
 
 		if(is_array($ar_tag)) foreach ($ar_tag as $tag) {
 			
-			$id 				= TR::tag2value($tag);			#dump($id, ' id ++ '.to_string($ar_tag));
+			$id 				= TR::tag2value($tag);
 
 			# patrón válido tanto para 'in' como para 'out' tags
 			#$pattern 			= "/(\[\/{0,1}index-)([a-z])(-$id\])/";  /\[\/{0,1}index-[a-z]-1(-.{0,8}-data:.*?:data)?\]/
 			$pattern 			= TR::get_mark_pattern($mark='index', $standalone=true, false, $data=false);
-				#dump($pattern, ' $pattern ++ '.to_string());
 
 			preg_match_all($pattern, $text_raw, $matches);
-				#dump($matches, ' matches ++ '.to_string($text_raw)); 
 
 			foreach ((array)$matches[3] as $key => $value) {
 				if ($value==$id) {
@@ -514,7 +503,6 @@ class component_text_area extends component_common {
 					$label = $matches[5][0];
 					$data  = $matches[6][0];
 					$new_tag = TR::build_tag($type, $state, $id, $label, $data);
-						#dump($new_tag, ' new_tag ++ '.to_string());
 
 					# reemplazamos sólo la letra correspondiente al estado de la etiqueta
 					$text_raw_updated = str_replace($tag, $new_tag, $text_raw);
@@ -525,7 +513,6 @@ class component_text_area extends component_common {
 			# reemplazamos sólo la letra correspondiente al estado de la etiqueta
 			#$replacement		= "$1".$state."$2";
 			#$text_raw_updated 	= preg_replace($pattern, $replacement, $text_raw);
-			#	dump($text_raw_updated, ' text_raw_updated - state : '.$state.' ++ '.to_string($text_raw));
 		}		
 
 		return $text_raw_updated ;
@@ -583,7 +570,6 @@ class component_text_area extends component_common {
 
 		# Search math patern tags
 		preg_match_all($pattern,  $dato,  $matches, PREG_PATTERN_ORDER);
-			#dump($matches,'$matches',"matches to pattern: $pattern");
 
 		return $matches;
 	}//end get_ar_relation_tags
@@ -1062,11 +1048,9 @@ class component_text_area extends component_common {
 				$ar_portal_tag_id[] = $portal_locator->tag_id;
 			}
 		}
-		#dump($ar_indexations_tag_id, ' ar_indexations_tag_id ++ '.to_string());
 		# Add portal tags to index tags array
 		$ar_indexations_tag_id = array_merge($ar_indexations_tag_id, $ar_portal_tag_id );
 		$ar_indexations_tag_id = array_unique($ar_indexations_tag_id);
-		#dump($ar_indexations_tag_id, ' $ar_indexations_tag_id ++ '.to_string($ar_portal_tag_id));
 		*/
 
 		$added_tags = 0;
@@ -1183,7 +1167,7 @@ class component_text_area extends component_common {
 					# SOURCE LANG	
 					# Real position in chars
 					$tag_real_position = mb_strlen(substr($source_raw_text, 0, $matches_indexIn[0][1]));	
-					#$tag_position 	= $matches_indexIn[0][1]; 	dump($tag_position, ' tag_position ++ '.to_string());
+					#$tag_position 	= $matches_indexIn[0][1];
 					$pre_fragment 	= mb_substr($source_raw_text, 0, $tag_real_position); 
 					$tc_pattern 	= TR::get_mark_pattern($mark='tc',$standalone=false);
 					preg_match_all($tc_pattern,  $pre_fragment,  $matches_tc, PREG_PATTERN_ORDER);
@@ -1732,19 +1716,15 @@ class component_text_area extends component_common {
 			# NEXT fragments keys(1,2,..) (if tags exists)
 			/*
 				$tags_en_texto	= (array)$this->get_ar_relation_tags();		// No contempla las marcas 'struct' !!!
-					#dump($tags_en_texto, ' $tags_en_texto ++ '.to_string());
 				if (!empty($tags_en_texto[0]) && count($tags_en_texto[0])>0) {
-					#dump($tags_en_texto[0], '$tags_en_texto[0] ++ '.to_string());
 					$tag_id_key = 4;
 					foreach ($tags_en_texto[0] as $key => $tag) {					
-						#dump($tag, ' tag ++ '.to_string($key));
 						// $tag here is like [index-n-8-label in 8-data::data]
 						switch (true) {
 							case (strpos($tag, 'index')!==false):
 								$tag_type = 'index';
 								$pattern  = TR::get_mark_pattern('indexIn');
 								preg_match($pattern, $tag, $matches);
-									#dump($matches, ' matches ++ '.to_string());
 								$tag_id = $matches[$tag_id_key];
 								break;
 							
@@ -1752,7 +1732,6 @@ class component_text_area extends component_common {
 							#	$tag_type = 'struct';
 							#	$pattern  = TR::get_mark_pattern('structIn');
 							#	preg_match($pattern, $tag, $matches);
-							#		#dump($matches, ' matches ++ '.to_string());
 							#	$tag_id = $matches[$tag_id_key];
 							#	break;
 							default:
@@ -1760,11 +1739,9 @@ class component_text_area extends component_common {
 								$tag_type = 'index';
 								$pattern  = TR::get_mark_pattern('indexIn');
 								preg_match($pattern, $tag, $matches);
-									#dump($matches, ' matches ++ '.to_string());
 								$tag_id = $matches[$tag_id_key];
 								break;
 						}
-						#dump($tag_id, ' tag_id ++ '.to_string($key));
 						#continue;
 
 						$ar_fragmento = (array)component_text_area::get_fragment_text_from_tag($tag_id, $tag_type, $this->dato);					
@@ -1920,7 +1897,6 @@ class component_text_area extends component_common {
 				}			
 			}
 		}
-		#dump($ar_objects, ' ar_objects ++ '.to_string()); #exit();
 		
 		$resolved=array();
 		foreach ((array)$ar_objects as $key => $obj_value) {
@@ -1981,7 +1957,6 @@ class component_text_area extends component_common {
 				$resolved[] = $lkey;
 			}
 		}
-		#dump($tags_person, ' tags_person ++ '.to_string());
 		
 		return (array)$tags_person;
 	}//end get_tags_person
@@ -1999,8 +1974,6 @@ class component_text_area extends component_common {
 
 		$section = section::get_instance($this->parent, $this->section_tipo);
 		$my_inverse_locators = $section->get_inverse_locators();
-			#dump($my_inverse_locators, ' $my_inverse_locators ++ '.to_string());		
-			#$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);	
 
 		// Calculate all references to this resource of section tipo $section_tipo (like 'oh1')
 		$ar_caller_section_id = array();
@@ -2130,14 +2103,12 @@ class component_text_area extends component_common {
 		 -- search pseudo locator in all langs
 		 a.datos#>>'{components, rsc36, dato}' ILIKE '%".$search_string."%'::text;
 		";
-		#dump($strQuery, ' $strQuery ++ '.to_string($strQuery ));
 
 		$result = JSON_RecordObj_matrix::search_free($strQuery);
 		$n_rows = pg_num_rows($result);		
 		while ($rows = pg_fetch_assoc($result)) {
 			$ar_section_id[] = $rows['section_id'];		
 		}
-		#dump($ar_section_id, ' ar_section_id ++ '.to_string());		
 
 		return (array)$ar_section_id;
 	}//end person_used
@@ -2239,18 +2210,14 @@ class component_text_area extends component_common {
 		}
 		
 		$pattern 			= TR::get_mark_pattern($mark='structIn', $standalone=true, false, $data=false);
-			#dump($pattern, ' $pattern ++ '.to_string());
 
 		$matches = array();
 		preg_match_all($pattern, $raw_text, $matches);
-			#dump($matches, ' matches ++ '.to_string($raw_text));
-			#dump($raw_text, ' raw_text ++ '.to_string());
 
 		$data_key 	 = 7;
 		$modelo_name = RecordObj_dd::get_modelo_name_by_tipo(DEDALO_STRUCTURATION_TITLE_TIPO,true);		
 		$ar_resolved = array();
 		foreach ((array)$matches[$data_key] as $key => $current_locator) {
-			#dump($current_locator, ' current_locator ++ '.to_string());			
 			
 			#$source_current_locator = md5($current_locator);
 			#if (in_array($source_current_locator, $ar_resolved)) {
@@ -2272,7 +2239,6 @@ class component_text_area extends component_common {
 															 $lang,
 															 $current_locator->section_tipo);
 			$value = $component->get_valor();
-				#dump($value, ' value ++ '.to_string(DEDALO_DATA_LANG.' - '. $current_locator->section_id.' - '.DEDALO_STRUCTURATION_SECTION_TIPO.' - '.$current_locator->section_tipo));
 
 			if ($lang_fallback===true && empty($value)) {
 				# Fallback				
@@ -2282,7 +2248,6 @@ class component_text_area extends component_common {
 					$component->set_lang($main_lang);
 					$value = $component->get_valor();
 					#$value = '<em>'.$value.'</em>';
-						#dump($value, ' value ++ '.to_string($main_lang));
 
 					# Restore old lang to component
 					$component->set_lang($old_lang);
@@ -2298,7 +2263,6 @@ class component_text_area extends component_common {
 					# code...
 					break;
 			}			
-			#dump(null, ' value ++ '.to_string($value));
 
 			$full_tag = $matches[0][$key];
 			$raw_text = str_replace($full_tag, $full_tag . $value, $raw_text);
@@ -2309,7 +2273,6 @@ class component_text_area extends component_common {
 			}
 			*/
 			#$ar_resolved[] = $source_current_locator;
-				#dump($ar_resolved, ' $ar_resolved ++ '.to_string($source_current_locator));		
 		}		
 	
 
@@ -2329,7 +2292,6 @@ class component_text_area extends component_common {
 		#$request_options->raw_text = '[geo-n-1--data:{\'type\':\'FeatureCollection\',\'features\':[{\'type\':\'Feature\',\'properties\':{},\'geometry\':{\'type\':\'Point\',\'coordinates\':[2.097785,41.393268]}}]}:data]Bateria antiaèria de Sant Pere Màrtir. Esplugues de Llobregat&nbsp;[geo-n-2--data:{\'type\':\'FeatureCollection\',\'features\':[{\'type\':\'Feature\',\'properties\':{},\'geometry\':{\'type\':\'Point\',\'coordinates\':[2.10389792919159,41.393728914379295]}}]}:data]&nbsp;Texto dos';
 		#$request_options->raw_text = 'Hola que tal [geo-n-1--data:{\'type\':\'FeatureCollection\',\'features\':[{\'type\':\'Feature\',\'properties\':{},\'geometry\':{\'type\':\'Point\',\'coordinates\':[2.097785,41.393268]}}]}:data]Bateria antiaèria de Sant Pere Màrtir. Esplugues de Llobregat&nbsp;[geo-n-2--data:{\'type\':\'FeatureCollection\',\'features\':[{\'type\':\'Feature\',\'properties\':{},\'geometry\':{\'type\':\'Point\',\'coordinates\':[2.10389792919159,41.393728914379295]}}]}:data] Texto dos';
 
-		#dump($raw_text, ' $raw_text 1 ++ : '.to_string($raw_text));
 		#$raw_text = str_replace("'", '"', $raw_text);
 
 		#[geo-n-1-data:{'type':'FeatureCollection','features':[{'type':'Feature','properties':{},'geometry':{'type':'Point','coordinates':[2.097785,41.393268]}}]}:data]
@@ -2350,7 +2312,6 @@ class component_text_area extends component_common {
 		# split by pattern
 		$pattern_geo_full = TR::get_mark_pattern('geo_full',$standalone=true);
 		$result 		  = preg_split($pattern_geo_full, $options->raw_text, -1, PREG_SPLIT_NO_EMPTY | PREG_SPLIT_DELIM_CAPTURE);
-			#dump($result, ' result ++ '.to_string());	
 
 		/* sample result
 		[0] => [geo-n-1--data:{'type':'FeatureCollection','features':[{'type':'Feature','properties':{},'geometry':{'type':'Point','coordinates':[2.097785,41.393268]}}]}:data]
@@ -2381,7 +2342,6 @@ class component_text_area extends component_common {
 	    		}
 
 	    		preg_match_all($pattern_geo, $value, $matches);
-	    			#dump($matches, ' matches ++ '.to_string());
 	    		$layer_id = (int)$matches[$key_tag_id][0];
 	    		$geo_data = $matches[$key_data][0];
 	    			
@@ -2416,12 +2376,9 @@ class component_text_area extends component_common {
 	    	}
 	    }//end foreach ((array)$result as $key => $value)
 
-		#dump($result, ' result ++ '.to_string($pattern_geo));
-		#dump($ar_elements, ' ar_elements ++ '.to_string());
 
 		#$response->result = $ar_elements;
 		#$response->msg 	  = 'Ok. Request done. build_geolocation_data';
-		#dump($ar_elements, ' ar_elements ++ '.to_string());
 
 		#return $response;
 		return $ar_elements;//json_encode($ar_elements, JSON_UNESCAPED_UNICODE);
