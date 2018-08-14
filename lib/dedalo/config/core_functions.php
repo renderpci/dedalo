@@ -315,34 +315,6 @@ function get_last_modification_date($path, $allowedExtensions=null, $ar_exclude=
 
 
 # CRIPTO : if (!function_exists('mcrypt_encrypt'))
-function dedalo_encryptStringArray ($stringArray, $key = DEDALO_INFORMACION) {
-
-	#debug_log(__METHOD__." 1 ".to_string( debug_backtrace() ), logger::ERROR);
-	#dump(debug_backtrace(), ' var ++ '.to_string());
-	
-	if (!function_exists('mcrypt_encrypt')) throw new Exception("Error Processing Request: Lib MCRYPT unavailable.", 1);
-	$s = strtr(base64_encode(mcrypt_encrypt(MCRYPT_RIJNDAEL_256, md5($key), serialize($stringArray), MCRYPT_MODE_CBC, md5(md5($key)))), '+/=', '-_,');
-	
-	return $s;
-}//end dedalo_encryptStringArray
-function dedalo_decryptStringArray ($stringArray, $key = DEDALO_INFORMACION) {
-
-	#debug_log(__METHOD__." 2 ".to_string( debug_backtrace() ), logger::ERROR);
-	#dump(debug_backtrace(), ' var ++ '.to_string());
-	
-	if (!function_exists('mcrypt_encrypt')) throw new Exception("Error Processing Request: Lib MCRYPT unavailable.", 1);
-	$s = rtrim(mcrypt_decrypt(MCRYPT_RIJNDAEL_256, md5($key), base64_decode(strtr($stringArray, '-_,', '+/=')), MCRYPT_MODE_CBC, md5(md5($key))), "\0");
-	if ( is_serialized($s) ) {
-		return unserialize($s);
-	}else{
-		debug_log(__METHOD__." Current string is not correctly serialized ! ".to_string(), logger::DEBUG);
-		return false;
-	}
-}//end dedalo_decryptStringArray
-
-
-
-# CRIPTO : if (!function_exists('mcrypt_encrypt'))
 function dedalo_encrypt_openssl($stringArray, $key=DEDALO_INFORMACION) {
 	
 	if (!function_exists('openssl_encrypt')) throw new Exception("Error Processing Request: Lib OPENSSL unavailable.", 1);
@@ -367,7 +339,6 @@ function dedalo_decrypt_openssl($stringArray, $key=DEDALO_INFORMACION) {
 
 	$output = openssl_decrypt(base64_decode($stringArray), $encrypt_method, md5(md5($key)), 0, $iv);
 	
-	//$s = rtrim(mcrypt_decrypt(MCRYPT_RIJNDAEL_256, md5($key), base64_decode(strtr($stringArray, '-_,', '+/=')), MCRYPT_MODE_CBC, md5(md5($key))), "\0");
 	if ( is_serialized($output) ) {
 		return unserialize($output);
 	}else{

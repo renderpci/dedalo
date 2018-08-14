@@ -611,7 +611,7 @@ class login extends common {
 	*/
 	private static function get_auth_cookie_name() {
 		$date = getdate();
-	    $cookie_name = md5( 'dedalo_c_name_'.$date['year'].$date['mon'].$date['mday'].$date['weekday']. mt_rand() );
+		$cookie_name = hash('sha512', 'dedalo_c_name_'.$date['year'].$date['mon'].$date['mday'].$date['weekday']. random_bytes(8));
 
 	    return $cookie_name;
 	}//end get_auth_cookie_name
@@ -631,8 +631,8 @@ class login extends common {
 	*/
 	private static function get_auth_cookie_value() {
 		$date = getdate();
-	    $cookie_value = md5( 'dedalo_c_value_'.$date['wday'].$date['yday'].$date['mday'].$date['month']. mt_rand() );
-	    
+	    $cookie_value = hash('sha512', 'dedalo_c_value_'.$date['wday'].$date['yday'].$date['mday'].$date['month']. random_bytes(8) );
+	    debug_log(__METHOD__." cookie_value ".to_string($cookie_value), logger::ERROR);
 	    return $cookie_value;
 	}//end get_auth_cookie_value
 
