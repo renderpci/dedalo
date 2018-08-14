@@ -42,7 +42,7 @@
 					$html_upload = ob_get_clean();	
 					*/
 
-				$button_tipo = isset($_GET['button_tipo']) ? safe_xss($_REQUEST['button_tipo']) : null;
+				$button_tipo = isset($_GET['button_tipo']) ? safe_tipo($_REQUEST['button_tipo']) : null;
 				
 				#
 				# MEDIA folder

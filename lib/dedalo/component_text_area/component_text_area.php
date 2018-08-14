@@ -369,7 +369,7 @@
 								
 				$ar_comparison_operators 	= $this->build_search_comparison_operators();
 				$ar_logical_operators 		= $this->build_search_logical_operators();
-				$valor 						= isset($_GET['tipo']) ? safe_xss($_GET['tipo']) : null;
+				$valor 						= isset($_GET['tipo']) ? safe_tipo($_GET['tipo']) : null;
 
 				# Search input name (var search_input_name is injected in search -> records_search_list.phtml)
 				# and recovered in component_common->get_search_input_name()
@@ -409,8 +409,9 @@
 				}
 
 				if (!is_string($list_value)) {
-					dump( debug_backtrace() );
-					dump($list_value, ' list_value ++ '.to_string()); die();
+					debug_log(__METHOD__." Error. Expected string in list_value: ".to_string($list_value), logger::DEBUG);
+					trigger_error("Error. Expected string in list_value");					 
+					die();
 				}		
 
 				# TRUNCATE ALL FRAGMENTS		
