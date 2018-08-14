@@ -66,17 +66,19 @@
 				$html   .= "<div class=\"panel_option\">";
 				$html   .= "  <span class=\"glyphicon glyphicon-cog\" aria-hidden=\"true\"></span> ";
 				$from_remote = '';			
-				if (DEDALO_ENTITY==="master") {
-				$html   .= " <a> ".label::get_label('actualizar_estructura')." is a disabled for ".DEDALO_ENTITY." </a>";
-				}else{
+
 				if (defined('STRUCTURE_FROM_SERVER') && STRUCTURE_FROM_SERVER===true && !empty(STRUCTURE_SERVER_URL)) {
 					$url = STRUCTURE_SERVER_URL;
 					$parse = parse_url($url);
 					$from_remote = " from remote: <strong>".$parse['host']."</strong>";
+
+					$html   .= "  <a href=\"javascript:;\" data-mode=\"update_structure\" onclick=\"tool_administration.update_structure(this,event)\">".label::get_label('actualizar_estructura')."</a>".$from_remote;	
+
+				}else if (!defined('STRUCTURE_FROM_SERVER') || STRUCTURE_FROM_SERVER===false) {
+					$html   .= " <a> ".label::get_label('actualizar_estructura')." is a disabled for ".DEDALO_ENTITY." </a>";
 				}
 
-				$html   .= "  <a href=\"javascript:;\" data-mode=\"update_structure\" onclick=\"tool_administration.update_structure(this,event)\">".label::get_label('actualizar_estructura')."</a>".$from_remote;	
-				}
+				
 				$html   .= " <div class=\"panel_option_subcontent\">";
 				$dedalo_structure_info = RecordObj_dd::get_termino_by_tipo(DEDALO_ROOT_TIPO,'lg-spa');
 				$html   .= "  <div class=\"notes\">".json_encode( unserialize(DEDALO_PREFIX_TIPOS) )."</div>";			

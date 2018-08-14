@@ -6,9 +6,9 @@
 	$tipo 				= $section_obj->get_tipo();
 	$modo 				= $this->get_modo();
 	$tool_name 			= get_class($this);
-	$context_name		= safe_xss($_REQUEST['context_name']);
 	$section_title 		= $section_obj->get_label();
-
+	$context_name		= safe_xss($_REQUEST['context_name']);
+	
 	$file_name			= $modo;	
 	$html_list 			= $html_edit = '';
 
@@ -35,15 +35,12 @@
 					#
 					# TEMPLATES LIST
 						$ar_templates_public = $this->get_ar_templates('public');
-							#dump($ar_templates_public,"ar_templates_public public");
 
 						$ar_templates_private = $this->get_ar_templates('private');
-							#dump($ar_templates_private,"ar_templates_private private");
 
 						# Store resolved data
 						$ar_templates_mix = array_merge($ar_templates_public, $ar_templates_private);
 						$_SESSION['dedalo4']['config']['ar_templates_mix'] = $ar_templates_mix;
-							#dump($ar_templates_mix,"ar_templates_mix");
 
 
 					# Aditional css / js
@@ -51,8 +48,6 @@
 					js::$ar_url[]  = DEDALO_LIB_BASE_URL."/tools/".$tool_name."/js/".$tool_name.".js";
 
 					if(SHOW_DEBUG) {
-						#dump($section_obj," ");
-						#dump(reset($_SESSION['dedalo4']['config']['tool_layout_print_records'][$section_obj->get_tipo()])," ");
 					}
 
 					#
@@ -67,19 +62,17 @@
 						#$print_search_options->limit = 1;
 						#	$print_search_options->modo  = 'list';
 							# layout map full with all section components
-						#	$ar_components = (array)section::get_ar_children_tipo_by_modelo_name_in_section($tipo, 'component_', $from_cache=true, $resolve_virtual=false);	 #dump($ar_recursive_childrens, ' ar_recursive_childrens');
+						#	$ar_components = (array)section::get_ar_children_tipo_by_modelo_name_in_section($tipo, 'component_', $from_cache=true, $resolve_virtual=false);
 						#	$print_search_options->layout_map = array($tipo => $ar_components);
 						
 						#	$_SESSION['dedalo4']['config']['ar_templates_search_options'][$tipo] = (object)$print_search_options;
-								#dump($_SESSION['dedalo4']['config']['ar_templates_search_options'][$tipo],"current_search_options $tipo");
-								#dump($print_search_options,"print_search_options $tipo");
 
 						# Page areas fixed titles
 						$public_templates_title  = 'Custom templates';
 						$private_templates_title = 'Default templates';
 
 					ob_start();
-					include ( DEDALO_LIB_BASE_PATH .'/tools/'.get_called_class().'/html/'.get_called_class().'_'.$context_name.'.phtml' );
+					include ( DEDALO_LIB_BASE_PATH .'/tools/'.get_called_class().'/html/'.get_called_class().'_list.phtml' );
 					$html_list = ob_get_clean();
 					break;
 				
@@ -111,7 +104,6 @@
 					}
 					$search_options = clone($_SESSION['dedalo4']['config']['ar_templates_search_options'][$tipo]);
 					$ar_records		= search::get_records_data($search_options);
-						#dump($ar_records, ' ar_records');
 						$tool_layout_print_records = reset($ar_records->result);							
 
 							/*# SEARCH_OPTIONS
@@ -130,7 +122,6 @@
 							# SEARCH
 								$search_develoment2  = new search_development2($search_query_object);
 								$rows_data 		 	 = $search_develoment2->search();
-									dump($rows_data, ' rows_data ++ '.to_string());
 					
 							$tool_layout_print_records = $rows_data->ar_records;*/
 
@@ -139,25 +130,14 @@
 						print dd_error::wrap_error($msg);
 						return;
 					}
-						#dump($tool_layout_print_records, ' tool_layout_print_records');	# die();
-						#dump($tool_layout_print_records," tool_layout_print_records");
-						#dump(reset($tool_layout_print_records)," tool_layout_print_records");
 					
-					#dump($_SESSION['dedalo4']['config']['ar_templates_mix']," ");
 
 					# Components from this section (left side)
 					$ar_section_resolved	= $this->get_ar_components($tipo, reset($tool_layout_print_records));
 					
-					#$ar_section_resolved['all_sections'][]= $tipo;
-					if(SHOW_DEBUG) {
-						#dump($context_name, " context_name ".to_string());
-						#dump($ar_section_resolved,'$ar_section_resolved');
-					}
-
-					$section_layout_tipo 	= (string)safe_xss($_GET['template_tipo']);
-					$section_layout_id 		= (string)safe_xss($_GET['template_id']);	
+					$section_layout_tipo 	= (string)safe_tipo( safe_xss($_GET['template_tipo']) );
+					$section_layout_id 		= (string)safe_section_id( safe_xss($_GET['template_id']) );
 					$ar_templates_mix 		= (array)$_SESSION['dedalo4']['config']['ar_templates_mix']; # Set in previous step (context_name=list)
-						#dump($ar_templates_mix," ar_templates_mix");
 					
 					$array_key 	  = $section_layout_tipo .'_'. $section_layout_id;
 					if (isset($_SESSION['dedalo4']['config']['ar_templates_mix'][$array_key])) {
@@ -168,9 +148,7 @@
 						$ar_components_tipo = section::get_ar_children_tipo_by_modelo_name_in_section($section_layout_tipo, 'component_layout', false); #Important cache false							
 						$template_obj = new stdClass();
 							$template_obj->component_layout_tipo = reset($ar_components_tipo);
-					}
-					
-						#dump($current_template, ' current_template'.to_string());						
+					}					
 				
 					$section_layout_label 	= isset($template_obj->label) ? $template_obj->label : '';
 					$component_layout_tipo 	= $template_obj->component_layout_tipo;
@@ -178,7 +156,6 @@
 					# component_layout
 					$component_layout    = component_common::get_instance('component_layout',$component_layout_tipo,$section_layout_id,'print',DEDALO_DATA_NOLAN,$section_layout_tipo);
 					$section_layout_dato = (object)$component_layout->get_dato();
-						#dump($section_layout_dato->pages, ' section_layout_dato'); die();
 
 					#
 					# RENDER PAGES . Render with first record of $tool_layout_print_records
@@ -214,7 +191,6 @@
 					$search_options_session_key = 'section_'.$tipo;
 					if (isset($_SESSION['dedalo4']['config']['search_options'][$search_options_session_key]) 
 						&& isset($_SESSION['dedalo4']['config']['search_options'][$search_options_session_key]->full_count)) {
-						#dump($_SESSION['dedalo4']['config']['search_options'][$search_options_session_key], '$_SESSION ++ '.to_string());
 						$n_records = $_SESSION['dedalo4']['config']['search_options'][$search_options_session_key]->full_count;
 					}
 					$n_records 	= isset($n_records) ? $n_records : count($ar_records->result);					
@@ -222,7 +198,7 @@
 					
 
 					ob_start();
-					include ( DEDALO_LIB_BASE_PATH .'/tools/'.get_called_class().'/html/'.get_called_class().'_'.$context_name.'.phtml' );
+					include ( DEDALO_LIB_BASE_PATH .'/tools/'.get_called_class().'/html/'.get_called_class().'_edit.phtml' );
 					$html_edit = ob_get_clean();	
 					break;
 
@@ -257,11 +233,10 @@
 							$print_search_options->modo = 'list';
 							$print_search_options->limit = false;
 							# layout map full with all section components
-							$ar_components = (array)section::get_ar_children_tipo_by_modelo_name_in_section($tipo, 'component_', $from_cache=true, $resolve_virtual=false);	 #dump($ar_recursive_childrens, ' ar_recursive_childrens');
+							$ar_components = (array)section::get_ar_children_tipo_by_modelo_name_in_section($tipo, 'component_', $from_cache=true, $resolve_virtual=false);
 							$print_search_options->layout_map = array($tipo => $ar_components);
 						
 						$ar_records		= search::get_records_data($print_search_options);
-							#dump($ar_records, ' ar_records '); exit();
 					
 
 					#
@@ -269,7 +244,6 @@
 						$section_layout_tipo 	= (string)safe_xss($_GET['template_tipo']);
 						$section_layout_id 		= (string)safe_xss($_GET['template_id']);	
 						$ar_templates_mix 		= (array)$_SESSION['dedalo4']['config']['ar_templates_mix']; # Set in previous step (context_name=list)
-							#dump($ar_templates_mix," ar_templates_mix");
 						
 						$array_key = $section_layout_tipo .'_'. $section_layout_id;
 						if (!isset($_SESSION['dedalo4']['config']['ar_templates_mix'][$array_key])) {							
@@ -282,17 +256,13 @@
 						# component_layout
 						$component_layout    = component_common::get_instance('component_layout',$component_layout_tipo,$section_layout_id,'print',DEDALO_DATA_NOLAN,$section_layout_tipo);
 						$section_layout_dato = (object)$component_layout->get_dato();
-							#dump($section_layout_dato->pages, ' section_layout_dato'); die();
 
 					#
 					# RENDER PAGES . Render with first record of $tool_layout_print_records
-						#dump($ar_records->result, '$ar_records->result'.to_string());
 						$ar_2 = array();
 						foreach ((array)$ar_records->result as $key => $current_record) {
-							#dump($current_record, ' current_record'.to_string());
 							$ar_2[] = reset($current_record);
 						}//end foreach ((array)$ar_records->result as $key => $current_record) {
-							#dump($ar_2, ' ar_2'.to_string());die();
 
 							#$current_record = (object)reset($current_record);	
 							$pages_rendered = '';
@@ -304,17 +274,15 @@
 									$options->tipo 			= $tipo;
 
 								$result = tool_layout_print::render_pages( $options );
-									#dump($result, ' result'.to_string()); die(); // key format: [2_oh1_2] 
 								#$pages_rendered = implode('', $result->ar_pages);
 								
 							}//end if (isset($section_layout_dato->pages)) {
-							#dump($result->header_html, ' header_html ++ '.to_string());
 						
 						
 					#
 					# SAVE PAGES . Save html files to disk
 					$user_id 		 	= $_SESSION['dedalo4']['auth']['user_id'];
-					$print_files_path	= '/print/'.$tipo.'/'.$user_id;
+					$print_files_path	= '/print/'.safe_tipo($tipo).'/'.safe_section_id($user_id);
 					$pages_html_temp 	= DEDALO_MEDIA_BASE_PATH . $print_files_path;
 					if(!file_exists($pages_html_temp)) mkdir($pages_html_temp, 0775,true);
 					
@@ -361,9 +329,13 @@
 
 
 					ob_start();
-					include ( DEDALO_LIB_BASE_PATH .'/tools/'.get_called_class().'/html/'.get_called_class().'_'.$context_name.'.phtml' );
+					include ( DEDALO_LIB_BASE_PATH .'/tools/'.get_called_class().'/html/'.get_called_class().'_render.phtml' );
 					$html_render = ob_get_clean();	
 					break;
+
+				default:
+					trigger_error("Invalid context_name !");
+					return null;
 
 			}//end switch ($context_name)
 			break;
