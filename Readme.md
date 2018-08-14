@@ -14,7 +14,7 @@ Dédalo use the structured Ontology for three things:
 	2. Build the programing objects in the execution time (in real time).
 	3. Interpret the code and the data and translate to multiple formats (RDF, JSON-LD, SQL, CSV, XML, Dublin Core, HTML, PDF, etc)
 
-The ontology can be changed in the time and this will change the data and the programing code; you can develop new functionalities without change the data, and you can change the metadata without change the code or the data.
+The ontology can be changed by the time and this will change the data and the programing code; you can develop new functionalities without change the data, and you can change the metadata without change the code or the data.
 
 Dédalo is based in linked data model, and use a relative, multireference and universal locator. The locator can find:
 entity, section, component, and tag. In other words, the locator can find, archives (in others entities), records, fields, and part of the fields (sub-field data).
