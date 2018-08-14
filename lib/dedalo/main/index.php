@@ -107,7 +107,7 @@ if ( strpos($_SERVER["REQUEST_URI"], '.php')!==false ) {
 					case ($modelo_name==='section_tool 99999'):
 
 						$current_section_id   = !empty($id) ? $id : null;
-						$current_section_tipo = isset($_REQUEST['section_tipo']) ? safe_xss($_REQUEST['section_tipo']) : null;
+						$current_section_tipo = isset($_REQUEST['section_tipo']) ? safe_tipo($_REQUEST['section_tipo']) : null;
 						
 						/*
 						$RecordObj_dd 		 = new RecordObj_dd($tipo);
@@ -136,7 +136,7 @@ if ( strpos($_SERVER["REQUEST_URI"], '.php')!==false ) {
 					
 					case (strpos($modelo_name,'component')!==false):
 
-						$section_tipo = isset($_REQUEST['section_tipo']) ? safe_xss($_REQUEST['section_tipo']) : null;
+						$section_tipo = isset($_REQUEST['section_tipo']) ? safe_tipo($_REQUEST['section_tipo']) : null;
 
 						#
 						# FIX SECTION TIPO
@@ -144,11 +144,11 @@ if ( strpos($_SERVER["REQUEST_URI"], '.php')!==false ) {
 
 						if ($modo==='tool_portal') {
 							$element = component_common::get_instance($modelo_name, $tipo, $parent, $modo, DEDALO_DATA_NOLAN, $section_tipo);
-							$target_section_tipo = isset($_REQUEST['target_section_tipo']) ? safe_xss($_REQUEST['target_section_tipo']) : false;
+							$target_section_tipo = isset($_REQUEST['target_section_tipo']) ? safe_tipo($_REQUEST['target_section_tipo']) : false;
 							$element->set_target_section_tipo($target_section_tipo);
 								
 						}else{
-							$tool_source_component_lang = isset($_GET['lang']) ? safe_xss($_GET['lang']) : DEDALO_DATA_LANG;
+							$tool_source_component_lang = isset($_GET['lang']) ? safe_lang($_GET['lang']) : DEDALO_DATA_LANG;
 							$element = component_common::get_instance($modelo_name, $tipo, $parent, 'edit', $tool_source_component_lang, $section_tipo);
 						}
 						break;
