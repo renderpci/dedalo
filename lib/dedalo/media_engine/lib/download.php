@@ -130,7 +130,6 @@ function find_file ($dirname, $fname, &$file_path) {
 // get full file path (including subfolders)
 $file_path = '';
 find_file(BASE_DIR, $fname, $file_path);
- # dump(BASE_DIR.$image_id, ' BASE_DIR.$video_id ++ '.to_string());
 
 if(isset($video_id) && is_dir(BASE_DIR.$video_id)){
 	$org_folder = BASE_DIR.$video_id;

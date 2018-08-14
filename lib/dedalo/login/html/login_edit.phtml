@@ -29,7 +29,7 @@
 			
 			#
 			# USERNAME
-			$username_value = (DEDALO_ENTITY=='dedalo4_demo') ? "dedalo" : null;
+			$username_value = (DEDALO_ENTITY==='dedalo4_demo') ? "dedalo" : null;
 			$html_contenido .= "<input type=\"text\" ";
 			$html_contenido .= "class=\"login_input\" ";
 			$html_contenido .= "id=\"login_username\" ";
@@ -41,7 +41,7 @@
 			
 			#
 			# PASSWORD
-			$username_password = (DEDALO_ENTITY=='dedalo4_demo') ? "dedalo4Demo" : null;
+			$username_password = (DEDALO_ENTITY==='dedalo4_demo') ? "dedalo4Demo" : null;
 			$html_contenido .= "<input type=\"password\" ";
 			$html_contenido .= "class=\"login_input\" ";
 			$html_contenido .= "id=\"login_password\" ";

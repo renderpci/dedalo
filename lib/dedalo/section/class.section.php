@@ -149,7 +149,6 @@ class section extends common {
     	if(SHOW_DEBUG===true) {
     		#debug_log('ar_section_instances: '.count($ar_section_instances));;
     	}
-    	#dump( array_keys($ar_section_instances), ' ar_section_instances'); 	
        
         return $ar_section_instances[$key];
     }//end get_instance
@@ -187,7 +186,6 @@ class section extends common {
 		/*
 			# Relaciones
 			$relaciones = $this->RecordObj_dd->get_relaciones()[0];
-			#dump($relaciones,'relaciones '.$this->tipo);
 
 			if(!empty($relaciones)) {
 				foreach ($relaciones as $key => $value) {
@@ -253,11 +251,9 @@ class section extends common {
 			#global$TIMER;$TIMER[__METHOD__.'_IN_'.$this->tipo.'_'.$this->modo.'_'.microtime(1)]=microtime(1);
 		}
 			/*
-		#dump($this,'pre load_matrix_data');
 		parent::load_matrix_data();
 
 		$dato = parent::get_dato();
-		#dump($this,'post load_matrix_data');
 		*/
 
 		# CACHE DATO
@@ -276,7 +272,6 @@ class section extends common {
 			#$this->bl_loaded_matrix_data = true;
 			debug_log(__METHOD__." error on get dato . Trying get dato from section $this->tipo, section_id = ".to_string($this->section_id), logger::DEBUG);
 			if(SHOW_DEBUG===true) {
-				#dump($this,"this section");
 				#throw new Exception("Error on get dato:  Trying get dato in modo edit without section_id section. Section section_id = ($this->section_id) in modo $this->modo", 1);
 			}			
 			
@@ -299,18 +294,15 @@ class section extends common {
 			$JSON_RecordObj_matrix	= new JSON_RecordObj_matrix($matrix_table,$this->section_id, $tipo);
 
 			$dato = $JSON_RecordObj_matrix->get_dato();
-				#dump($dato,"dato $matrix_table - $this->section_id"); die();
 
 			# Fix dato as object
 			$this->dato = (object)$dato;
-				#dump($dato, ' dato ++ '.to_string());
 			
 			/* modificar esta verificación. con secciones virtuales no funciona..
 			if ( !empty($this->section_id) && (!property_exists($this->dato, 'section_tipo') || $this->dato->section_tipo!=$this->tipo) ) {
 				if(SHOW_DEBUG===true) {
 					dump($this->dato->section_tipo, "dato->section_tipo/tipo: ".$this->dato->section_tipo."/$this->tipo");
 				}
-				#dump($this->dato, ' $this->dato');
 				throw new Exception("Error Processing Request. Section tipo inconsistency detected!", 1);					
 			}
 			*/
@@ -359,12 +351,7 @@ class section extends common {
 
 		$section_tipo 	= $this->tipo;
 		$datos 			= $this->get_dato();
-			#dump($datos,'$datos');
-			#if ($component_tipo==='oh22') {
-			#	dump($datos,"DATOS A OF FILTER section_tipo:$section_tipo - section_id:$this->section_id, $lang");#die();
-			#}
-			#dump($datos," datos");
-		
+				
 		
 		if (is_object($datos)) {
 
@@ -385,17 +372,12 @@ class section extends common {
 			}
 			
 		}else{
-			trigger_error("Error on read component_dato $component_tipo" ); 
-			#dump($datos->components->$component_tipo->dato->$lang,'$datos->components->$component_tipo->dato->$lang');
+			trigger_error("Error on read component_dato ". safe_tipo($component_tipo) ); 
 		}
 
 		if(SHOW_DEBUG===true) {
 			#$start_time = start_time();
-			global$TIMER;$TIMER[__METHOD__.'_OUT_'.$component_tipo.'_'.$lang .'_'.$this->modo.'_'.microtime(1)]=microtime(1);
-			#if ($component_tipo==='oh22') {
-			#	dump($datos," DATOS B OF FILTER section_tipo:$section_tipo - section_id:$this->section_id");	
-			#}
-			#dump($component_dato," component_dato component_tipo:$component_tipo - lang:$lang");	
+			global$TIMER;$TIMER[__METHOD__.'_OUT_'.$component_tipo.'_'.$lang .'_'.$this->modo.'_'.microtime(1)]=microtime(1);				
 		}
 		#debug_log(__METHOD__." component_dato ".to_string($component_dato), logger::DEBUG);
 
@@ -429,12 +411,7 @@ class section extends common {
 
 		$section_tipo 	= $this->tipo;
 		$section_data 	= $this->get_dato();
-			#dump($section_data,'$section_data');
-			#if ($component_tipo==='oh22') {
-			#	dump($section_data,"section_DATa A OF FILTER section_tipo:$section_tipo - section_id:$this->section_id, $lang");#die();
-			#}
-			#dump($section_data," section_data");
-		
+				
 		
 		if (is_object($section_data)) {
 
@@ -443,7 +420,6 @@ class section extends common {
 			}
 		}else{
 			trigger_error("Error on read component_data $component_tipo" ); 
-			#dump($section_data->components->$component_tipo->dato->$lang,'$section_data->components->$component_tipo->dato->$lang');
 		}
 
 		if(SHOW_DEBUG===true) {
@@ -464,10 +440,6 @@ class section extends common {
 	*/
 	public function save_component_dato($component_obj, $component_data_type='direct') {
 
-		#dump($this->get_id(),"obj");die();
-		#dump(get_class($component_obj),"class");die("8");
-		#dump($component_obj->get_tipo(),"tipo");
-
 		# La sección es necesaria antes de gestionar el dato del componente. Si no existe, la crearemos previamente
 		if (abs($this->get_section_id())<1  && strpos($this->get_section_id(), DEDALO_SECTION_ID_TEMP)===false) {
 			$section_id = $this->Save();
@@ -480,7 +452,6 @@ class section extends common {
 		#
 		# SECTION GLOBAL DATO : Dato objeto global de la sección
 		##$dato = $this->get_dato();
-		##	#dump($dato,"dato");
 		##	if (!is_object($dato)) {
 		##		throw new Exception("Error Processing Request. Section Dato is not object", 1);				
 		##	}
@@ -496,9 +467,7 @@ class section extends common {
 		if (empty($component_tipo)) {
 			throw new Exception("Error Processing Request: component_tipo is empty", 1);			
 		}
-
-			#unset($dato->components->$component_tipo);
-		#dump($component_obj, ' component_obj ++ '.to_string());
+		
 		if ($component_data_type==='relation') {
 			##
 			# RELATION COMPONENTS
@@ -565,9 +534,11 @@ class section extends common {
 		$dato = $this->get_dato();
 			
 			if (!is_object($dato)) {
-				dump($dato,"section dato");
-				dump($this,"section object");
-				dump($component_obj, ' component_obj ++ '.to_string());
+				if(SHOW_DEBUG===true) {
+					dump($dato,"section dato");
+					dump($this,"section object");
+					dump($component_obj, ' component_obj ++ '.to_string());;
+				}				
 				throw new Exception("Error Processing Request. Section Dato is not object", 1);
 			}
 
@@ -581,7 +552,6 @@ class section extends common {
 		if (isset($dato->components->$component_tipo)) {
 			# Si el dato del componente existe en la sección, lo seccionamos
 			$component_global_dato = $dato->components->$component_tipo;
-				#dump($component_global_dato,"component_global_dato");
 		}else{
 			# Si no existe, lo creamos con la información actual
 			$obj_global 						= new stdClass();
@@ -630,7 +600,6 @@ class section extends common {
 		#
 		# DATO : Actualizamos el dato en el idioma actual		
 			$component_global_dato->dato->$component_lang = $component_obj->get_dato_unchanged(); ## IMPORTANT !!!!! (NO usar get_dato() aquí ya que puede cambiar el tipo fijo establecido por set_dato)
-				#dump($component_global_dato,"component_global_dato");
 	
 		#
 		# VALOR : Actualizamos el valor en el idioma actual
@@ -671,7 +640,6 @@ class section extends common {
 			}else{
 				$component_global_dato->valor_list->$component_lang = $component_obj->get_dato_unchanged();	
 			}
-				#dump($component_global_dato->valor_list->$component_lang);#die();
 
 		#
 		# DATO_SEARCH
@@ -702,8 +670,6 @@ class section extends common {
 			$dato->components->$component_tipo = new stdClass();
 		}
 		$dato->components->$component_tipo = $component_global_dato;
-			#dump($component_global_dato,"dato del componente");
-			#dump($dato, ' set_component_direct_dato section_saved dato ++ section_id: '.to_string($this->section_id));
 
 		$this->dato = $dato;
 
@@ -722,7 +688,6 @@ class section extends common {
 		$component_dato 		= $component_obj->get_dato();
 		$relation_type 		 	= $component_obj->get_relation_type();
 		$from_component_tipo 	= $component_tipo;
-			#dump($component_dato, ' component_dato ++ '.to_string()); die();
 
 		# Remove all previous locators of current component
 		$this->remove_relations_from_component_tipo( $component_tipo, 'relations' );
@@ -792,7 +757,6 @@ class section extends common {
 		if (is_null($top_tipo) || empty($top_tipo) || !$top_tipo) {
 			if(SHOW_DEBUG===true) {
 				debug_log(__METHOD__." empty received top_tipo. Fallback made to top_tipo = $top_tipo - ".TOP_TIPO." - tipe: ".gettype($top_tipo) , logger::DEBUG);
-				#dump(debug_backtrace());
 			}
 			$top_tipo = TOP_TIPO;			
 		}		
@@ -845,9 +809,7 @@ class section extends common {
 					$options->$key = $value;
 				}
 			}
-			#dump($options,"options"); #dump($save_options,"save_options");die();
 		}
-		#dump($options,"options"); #die();#dump($save_options,"save_options");die();
 
 		$tipo = $this->get_tipo();
 
@@ -1195,7 +1157,6 @@ class section extends common {
 
 					# CHILDRENS : Calculate component childrens of current section
 					$children_components = (array)$this->get_ar_children_objects_by_modelo_name_in_section('component_', $resolve_virtual=true);
-						#dump($children_components,"children_components");die( " !! BORRADO DE DATOS EN PROCESO  ");
 
 					# No borraremos los datos de algunos componentes ('component_av', 'component_image' , 'component_pdf',...)
 					$ar_components_modelo_no_delete_dato = array( 'component_av', 'component_image' , 'component_pdf', 'component_filter');
@@ -1220,7 +1181,9 @@ class section extends common {
 
 					if(SHOW_DEBUG===true) {
 						if ((int)$this->section_id===0) {
-							dump((int)$this->section_id,"this section_id");
+							if(SHOW_DEBUG===true) {
+								dump((int)$this->section_id,"this section_id");
+							}							
 							throw new Exception("Error Processing Request. Record is NOT deleted (1)", 1);					
 						}
 					}
@@ -1272,7 +1235,6 @@ class section extends common {
 						
 						return false;
 					}
-					#dump($RecordObj_time_machine, 'RecordObj_time_machine', array()); die();
 
 					
 					#
@@ -1280,8 +1242,6 @@ class section extends common {
 					# Delete matrix record
 					$JSON_RecordObj_matrix	= new JSON_RecordObj_matrix($matrix_table, $this->section_id, $section_tipo);					
 					$JSON_RecordObj_matrix->MarkForDeletion();
-						#dump($JSON_RecordObj_matrix," JSON_RecordObj_matrix"); #die();
-						#return true;
 					
 					
 					#
@@ -1383,7 +1343,6 @@ class section extends common {
 			if(DEDALO_CACHE_MANAGER===true && CACHE_SECTIONS===true) {
 				$cache_key_name = $this->get_section_cache_key_name();
 				if (cache::exists($cache_key_name)) {
-					#dump($cache_key_name,"COMPONENT SHOW FROM CACHE");
 					#debug_log(__METHOD__. " readed data from section cache key: $cache_key_name");
 					return cache::get($cache_key_name);
 				}
@@ -1494,7 +1453,6 @@ class section extends common {
 					# OVERWRITE CURRENT SECTION TIPO WITH REAL SECTION TIPO
 					$tipo = $section_real_tipo;
 				}
-				#dump($tipo,'section tipo');
 				/*
 				# EXCLUDE ELEMENTS
 					$tipo_exclude_elements 	= RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($original_tipo, $modelo_name='exclude_elements', $relation_type='children')[0];
@@ -1507,19 +1465,14 @@ class section extends common {
 						# LAYOUT MAP : PENDIENTE UNIFICAR MAQUETACIÓN CON LAYOUT MAP A PARTIR DEL MODO EDIT <------
 						# Consulta el listado de componentes a mostrar en el listado / grupo actual					
 						$layout_map = component_layout::get_layout_map_from_section( $real_section );
-						if(SHOW_DEBUG===true) {
-							dump($layout_map,'layout_map');
-						}						
+												
 
 						$html = component_layout::walk_layout_map($real_section, $layout_map, $ar, $ar_exclude_elements);
 
 
 					#$ar_exclude_elements 	= RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($tipo_exclude_elements, $modelo_name=array('section_group','component_'), $relation_type='termino_relacionado');
-						#dump($tipo_exclude_elements,'tipo_exclude_elements');
-						dump($ar_terminos_relacionados,'ar_terminos_relacionados');
 						*/
 			}
-			#dump($tipo,"");die();
 
 
 		# STATIC CACHE
@@ -1595,9 +1548,7 @@ class section extends common {
 			# Add well formed object to array
 			if(is_object($current_obj))
 				$ar_section_obj[] = $current_obj;
-
 		}
-		#dump($ar_section_obj,'ar_section_obj',"array of elements:'$modelo_name' childrens of this section tipo={$tipo} id={$this->get_id()}");
 
 
 		# STORE CACHE DATA
@@ -1624,6 +1575,7 @@ class section extends common {
 	* @param bool $resolve_virtual
 	*	Force resolve section if is virtal section. default false
 	*	Name of desired filtered model array. You can use partial name like 'component_' (string position search is made it)
+	* @return array $section_ar_children_tipo
 	*/
 	public static function get_ar_children_tipo_by_modelo_name_in_section($section_tipo, $ar_modelo_name_required, $from_cache=true, $resolve_virtual=false, $recursive=true, $search_exact=false, $ar_tipo_exclude_elements=false) { # Nota: mantener default resolve_virtual=false !
 
@@ -1665,7 +1617,6 @@ class section extends common {
 				if ($ar_tipo_exclude_elements===false) {
 					$ar_tipo_exclude_elements = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($original_tipo, $modelo_name='exclude_elements', $relation_type='children', $search_exact);
 				}
-				#dump($tipo_exclude_elements,"tipo_exclude_elements ");
 				if (!isset($ar_tipo_exclude_elements[0])) {
 					#throw new Exception("Error Processing Request. exclude_elements of section $original_tipo not found. Exclude elements is mandatory (1)", 1);
 					error_log("Warning. exclude_elements of section $original_tipo not found (1)");			
@@ -1679,13 +1630,11 @@ class section extends common {
 						
 						$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($component_tipo, true);
 						if($modelo_name === 'section_group'){
-							$ar_recursive_childrens = (array)self::get_ar_recursive_childrens($component_tipo);
-							//dump($ar_recursive_childrens,'ar_recursive_childrens');
+							$ar_recursive_childrens 			 = (array)self::get_ar_recursive_childrens($component_tipo);
 							$ar_terminos_relacionados_to_exclude = array_merge($ar_terminos_relacionados_to_exclude,$ar_recursive_childrens);
 						}
 
 					}#end foreach ($ar_terminos_relacionados_to_exclude as $key => $component_tipo) {
-					#dump($ar_terminos_relacionados_to_exclude,'ar_terminos_relacionados_to_exclude');
 				}				
 			
 			}#end if($section_real_tipo!=$original_tipo) {
@@ -1730,7 +1679,6 @@ class section extends common {
 				#$RecordObj_dd			= new RecordObj_dd($tipo);
 				#$ar_recursive_childrens = (array)$RecordObj_dd->get_ar_recursive_childrens_of_this($tipo);
 				$ar_recursive_childrens = (array)self::get_ar_recursive_childrens($tipo);
-					#dump($ar_recursive_childrens, 'ar_recursive_childrens', array('tipo'=>$tipo));
 			}
 		*/
 
@@ -1769,7 +1717,6 @@ class section extends common {
 				}
 			}
 		}//end foreach($ar_recursive_childrens as $current_terminoID)	
-		#dump($section_ar_children_tipo,'section_ar_children_tipo',"array of tipos:'$modelo_name' childrens of this section tipo={$tipo} ");
 
 		# Cache session store
 		$cache_ar_children_tipo[$cache_uid];
@@ -1813,12 +1760,10 @@ class section extends common {
 	public static function get_portal_tipo_from_component($section_tipo, $component_tipo_inside_portal) {
 		#$ar_portals = (array)section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, 'component_portal');
 		$ar_portals = (array)section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, array('component_portal'), $from_cache=true, $resolve_virtual=true, $recursive=true, $search_exact=true);
-			#dump($ar_portals, ' $ar_portals ++ '.to_string());
 		if (empty($ar_portals)) return false;
 		foreach ($ar_portals as $current_portal_tipo) {
 			# portal related terms
 			$ar_related = RecordObj_dd::get_ar_terminos_relacionados($current_portal_tipo, true, true);
-				#dump($ar_related, ' $ar_related ++ '.to_string());
 			if (in_array($component_tipo_inside_portal, $ar_related)) {
 				return $current_portal_tipo;
 			}
@@ -1839,7 +1784,6 @@ class section extends common {
 	public static function get_portal_tipo_from_component_in_search_list($section_tipo, $component_tipo_inside_portal) {
 		#$ar_portals = (array)section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, 'component_portal');
 		$ar_portals = (array)section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, array('component_portal'), $from_cache=true, $resolve_virtual=true, $recursive=true, $search_exact=true);
-			#dump($ar_portals, ' $ar_portals ++ '.to_string());
 		if (empty($ar_portals)) return false;
 		foreach ($ar_portals as $current_portal_tipo) {
 
@@ -1852,7 +1796,6 @@ class section extends common {
 
 			# portal related terms
 			$ar_related = RecordObj_dd::get_ar_terminos_relacionados($portal_search_list[0], true, true);
-				#dump($ar_related, ' $ar_related ++ '.to_string());
 			if (in_array($component_tipo_inside_portal, $ar_related)) {
 				return $current_portal_tipo;
 			}
@@ -1883,14 +1826,12 @@ class section extends common {
 		# VIRTUAL SECTION
 		#	
 		# SECTION VIRTUAL CASE
-		#dump($this->section_virtual,"virtual");
 		if ($this->section_virtual===true ) {
 			# Exclude elements of layout edit.
 			# Localizamos el elemento de tipo 'exclude_elements' que será hijo de la sección actual
 			# $exclude_elements_tipo = section::get_ar_children_tipo_by_modelo_name_in_section($this->tipo, 'exclude_elements')[0];
 			$ar_exclude_elements_tipo = section::get_ar_children_tipo_by_modelo_name_in_section($this->tipo, 'exclude_elements');
 			$ar_excluded_tipo 		  = array();
-				#dump($ar_exclude_elements_tipo, ' ar_exclude_elements_tipo');
 			if (!isset($ar_exclude_elements_tipo[0])) {
 				#throw new Exception("Error Processing Request. exclude_elements of section $this->tipo not found. Exclude elements is mandatory (2)", 1);
 				error_log("Warning. exclude_elements of section $this->tipo not found (2)");				
@@ -1899,9 +1840,7 @@ class section extends common {
 				$ar_excluded_tipo = RecordObj_dd::get_ar_terminos_relacionados($ar_exclude_elements_tipo[0], $cache=false, $simple=true);							
 			}
 			
-			#dump($ar_exclude_elements,'ar_exclude_elements '.$this->tipo);
 			$ar_obj_button_all = $this->get_ar_children_objects_by_modelo_name_in_section('button_',true);			
-				#dump($ar_obj_button_all,'$ar_obj_button_all');
 			$ar_secton_real_buttons = array();
 			foreach ($ar_obj_button_all as $current_obj_button) {
 				if(!in_array($current_obj_button->get_tipo(), $ar_excluded_tipo)){
@@ -1911,21 +1850,18 @@ class section extends common {
 			#add the specific buttons of the virtual section, if the virtual have buttons add to the list.
 			$ar_section_virtual_buttons = $this->get_ar_children_objects_by_modelo_name_in_section('button_',false);
 			$ar_buttons = array_merge($ar_section_virtual_buttons,$ar_secton_real_buttons);
-			#dump($ar_buttons,'$ar_buttons in virtual section');
 
 		}else{
 			#if the section is a real section see the buttons directly
 			#$ar_buttons = section::get_ar_children_tipo_by_modelo_name_in_section($this->tipo, 'button_');
 			$ar_buttons = $this->get_ar_children_objects_by_modelo_name_in_section('button_',false);
-			#dump($ar_buttons,'$ar_buttons_real');
 		}#end if ($this->section_virtual==true )
 
 		# Group result by modelo name
 		if($ar_buttons) foreach ($ar_buttons as $current_obj_button) {
-			$current_modelo_name = get_class($current_obj_button);		#dump($current_modelo_name,'$current_modelo_name');
+			$current_modelo_name = get_class($current_obj_button);
 			$this->ar_buttons[$current_modelo_name][] = $current_obj_button;
 		}
-		#dump($this->ar_buttons,'$this->ar_buttons');
 
 		if(SHOW_DEBUG===true) {
 			global$TIMER;$TIMER[__METHOD__.'_OUT_'.$this->tipo.'_'.$this->modo.'_'.microtime(1)]=microtime(1);
@@ -1979,13 +1915,13 @@ class section extends common {
 		$modelo_name	= 'filter_';
 
 		# Obtenemos el filtro (terminoID)
-		$filtroID		= RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($tipo=$section , $modelo_name, $relation_type='children'); 				#dump($filtroID);
+		$filtroID		= RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($tipo=$section , $modelo_name, $relation_type='children');
 
 		# Obtenemos su filtro relacionado
-		$filtroID_rel	= RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($tipo=$filtroID, $modelo_name, $relation_type='termino_relacionado'); 		#dump($filtroID_rel);
+		$filtroID_rel	= RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($tipo=$filtroID, $modelo_name, $relation_type='termino_relacionado');
 
 		# Buscamos el termino relacionado con el filtro encontrado
-		$filtroID_rel2	= RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($tipo=$filtroID_rel, $modelo_name, $relation_type='termino_relacionado');	#dump($filtroID_rel2);
+		$filtroID_rel2	= RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($tipo=$filtroID_rel, $modelo_name, $relation_type='termino_relacionado');
 
 		/*
 		# los recorremos para filtrar por modelo
@@ -1993,7 +1929,7 @@ class section extends common {
 
 			$RecordObj_dd	= new RecordObj_dd($terminoID);
 			$modelo			= $RecordObj_dd->get_modelo();
-			$modelo_name	= $RecordObj_dd->get_termino_by_tipo($modelo);	#dump($modelo_name);
+			$modelo_name	= $RecordObj_dd->get_termino_by_tipo($modelo);
 
 			if(strpos($modelo_name,'filter_') !== false) {
 				$filter_tipo = $terminoID;
@@ -2183,7 +2119,6 @@ class section extends common {
 
 		$section_info->label					= (string)rawurlencode($this->get_label());
 		$section_info->section_id				= (string)$this->get_section_id();
-			#dump($section_info,"section_info");
 
 		switch ($format) {
 			case 'json':
@@ -2270,11 +2205,7 @@ class section extends common {
 		$section_tipo 	= $this->tipo;
 		$section_id 	= $this->section_id;
 		$section_dato 	= $this->get_dato();
-		if(SHOW_DEBUG===true) {
-			#dump($section_dato->components, ' section_dato');
-			#debug_log(__METHOD__." Called method $section_tipo - $section_id ".__METHOD__);
-		}
-
+		
 		$ar_media_elements = section::get_media_components_modelo_name();
 		
 		if (!isset($section_dato->components)) {
@@ -2287,10 +2218,7 @@ class section extends common {
 			
 			$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
 			if (!in_array($modelo_name, $ar_media_elements)) continue; # Skip
-
-			if(SHOW_DEBUG===true) {
-				#dump($component_value, "component_value $component_tipo - $modelo_name");
-			}
+			
 
 			$component = component_common::get_instance($modelo_name, $component_tipo, $section_id, 'edit', DEDALO_DATA_LANG, $section_tipo);
 			if ( !$component->remove_component_media_files() ) {
@@ -2317,17 +2245,11 @@ class section extends common {
 		$section_tipo 	= $this->tipo;
 		$section_id 	= $this->section_id;
 		$section_dato 	= $this->get_dato();
-		if(SHOW_DEBUG===true) {
-			#dump($section_dato->components, ' section_dato');
-			#debug_log(__METHOD__." Called method $section_tipo - $section_id ".__METHOD__);
-		}
-
+		
 		$ar_media_elements = section::get_media_components_modelo_name();
 		
-		if (!isset($section_dato->components)) {
-			if(SHOW_DEBUG===true) {
-				debug_log(__METHOD__." Nothing to remove");
-			}
+		if (!isset($section_dato->components)) {			
+			debug_log(__METHOD__." Nothing to remove ".to_string(), logger::DEBUG);			
 			return false;
 		}
 
@@ -2335,11 +2257,7 @@ class section extends common {
 		
 			$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
 			if (!in_array($modelo_name, $ar_media_elements)) continue; # Skip
-
-			if(SHOW_DEBUG===true) {
-				#dump($component_value, "component_value $component_tipo - $modelo_name");
-			}
-
+			
 			$component = component_common::get_instance($modelo_name, $component_tipo, $section_id, 'edit', DEDALO_DATA_LANG, $section_tipo);
 			if ( !$component->restore_component_media_files() ) {
 				if(SHOW_DEBUG===true) {
@@ -2378,13 +2296,10 @@ class section extends common {
 			$strQuery = "SELECT section_id FROM \"$matrix_table\" WHERE section_id = $this->section_id AND section_tipo = '$section_tipo' ";
 			$result	  = JSON_RecordObj_matrix::search_free($strQuery);
 			$num_rows = pg_num_rows($result);
-				#dump($strQuery, ' strQuery '." $this->section_id - $this->tipo");
 
 			# Record already exists. Not continue
-			if($num_rows>0) {
-				if(SHOW_DEBUG===true) {
-					debug_log(__METHOD__." == SECTION : Record already exists ($this->section_id, $section_tipo)");
-				}
+			if($num_rows>0) {				
+				debug_log(__METHOD__." == SECTION : Record already exists ($this->section_id, $section_tipo) ".to_string(), logger::ERROR);
 				return false;
 			}
 		}
@@ -2401,8 +2316,8 @@ class section extends common {
 		$strQuery = "INSERT INTO \"$matrix_table\" (section_id, section_tipo, datos) VALUES ($1, $2, $3)";		
 		$result   = pg_query_params(DBi::_getConnection(), $strQuery, array( $this->section_id, $this->tipo, json_encode($datos) ));
 		if(!$result) {
-			if(SHOW_DEBUG===true) {
-				dump($strQuery,"strQuery section_id:$section_id, section_tipo:$this->tipo");	
+			debug_log(__METHOD__."Error Processing Save Insert Request: strQuery section_id:$section_id, section_tipo:$this->tipo ".to_string($strQuery), logger::DEBUG);	
+			if(SHOW_DEBUG===true) {				
 				throw new Exception("Error Processing Save Insert Request ". pg_last_error(), 1);;
 			}
 			return "!!! Error: sorry an error ocurred on INSERT record. Data is not saved";
@@ -2414,10 +2329,8 @@ class section extends common {
 		# FILTER always save default project
 			// $section_tipo, $ar_modelo_name_required, $from_cache=true, $resolve_virtual=false, $recursive=true, $search_exact=false
 			$ar_filter_tipo = section::get_ar_children_tipo_by_modelo_name_in_section($this->tipo, array('component_filter'), true, true, true, false);
-				#dump($filter_tipo, ' filter_tipo');
 			if (!isset($ar_filter_tipo[0])) {
 				
-				#throw new Exception("Error Processing Request. component_filter not found in this section ($this->tipo - $this->section_id)", 1);
 				debug_log(__METHOD__." Error Processing Request. component_filter not found in this section ($this->tipo - $this->section_id) ".to_string(), logger::DEBUG);		
 			
 			}else{
@@ -2507,7 +2420,6 @@ class section extends common {
 	public function diffusion_info_propagate_changes() {
 		
 		$inverse_locators = $this->get_inverse_locators();
-		#dump($inverse_locators, ' $inverse_locators ++ '.to_string()); #die();
 
 		foreach((array)$inverse_locators as $locator) {
 
@@ -2726,24 +2638,20 @@ class section extends common {
 		if(empty($locator)) return false;
 
 		if (!is_object($locator) || !isset($locator->type)) {
-			if(SHOW_DEBUG===true) {
-				dump($locator, ' locator ++ '.to_string());
+			debug_log(__METHOD__." Invalid locator is received to add. Locator was ignored (type:".gettype($locator).") ".to_string($locator), logger::ERROR);
+			if(SHOW_DEBUG===true) {				
 				throw new Exception("Error Processing Request. var 'locator' not contains property 'type' ", 1);	
-			}
-			debug_log(__METHOD__." Invalid locator is received to add. Locator was ignored (type:".gettype($locator).") ".to_string($locator), logger::WARNING);
+			}			
 			return false;		
 		}
 
 		$current_type 	= $locator->type;
 		$relations 		= $this->get_relations( $relations_container );
-			#dump($relations, ' relations ++ '.to_string());			
 
 		# DATA INTEGRITY: Clean possible bad format locators (old and beta errors)
 		foreach ((array)$relations as $key => $current_relation) {
 			if (!is_object($current_relation) || !isset($current_relation->section_id) || !isset($current_relation->section_tipo) || !isset($current_relation->type)) {		
-				//unset($relations[$key]);
-				dump($current_relation, ' current_relation ++ '.to_string());
-				#debug_log(__METHOD__." !! FOUNDED BAD FORMAT RELATION LOCATOR: (type:".gettype($current_relation).") ".to_string($current_relation), logger::WARNING);
+				//unset($relations[$key]);				
 				throw new Exception("Error Processing Request. !! FOUNDED BAD FORMAT RELATION LOCATOR IN SECTION_RELATION DATA: (type:".gettype($current_relation).") ".to_string($current_relation), 1);				
 			}
 			#if ($remove_previous_of_current_type && $current_relation->type===$current_type) {
@@ -2958,7 +2866,7 @@ class section extends common {
 				$component_dato_current_lang = $current_component->dato->$current_lang;
 
 				if (!isset($component_dato_current_lang)) {
-					if(SHOW_DEBUG) {
+					if(SHOW_DEBUG===true) {
 						dump($current_component, ' $current_component ++ '.to_string());
 						trigger_error("Error: element $current_tipo without dato");
 					}
@@ -2987,7 +2895,6 @@ class section extends common {
 				$current_tipo = $current_locator->from_component_tipo;
 				$ar_locators[$current_tipo][] = $current_locator;
 			}
-			#dump($ar_locators, ' ar_locators ++ '.to_string());
 			# iterate relation components and set dato/save
 			foreach ($ar_locators as $current_tipo => $ar_current_locator) {
 				$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
@@ -3109,11 +3016,6 @@ class section extends common {
 			#}
 			$query_object->filter  		= $filter_group;
 			$query_object->select  		= $select_group;
-			
-			
-		#dump( json_encode($query_object, JSON_PRETTY_PRINT), ' query_object ++ '.to_string());
-		#debug_log(__METHOD__." query_object ".json_encode($query_object, JSON_PRETTY_PRINT), logger::DEBUG);
-		#debug_log(__METHOD__." total time ".exec_time_unit($start_time,'ms').' ms', logger::DEBUG);
 		
 
 		return (object)$query_object;
@@ -3138,7 +3040,6 @@ class section extends common {
 			}
 			$raw_path = $raw_path->{$value};
 		}
-		#dump($raw_path, ' raw_path ++ '.to_string());
 
 		if ($path_exists===true) {
 			$dato_in_path = $raw_path;

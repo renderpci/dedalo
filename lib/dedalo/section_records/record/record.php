@@ -107,13 +107,11 @@
 									# Localizamos el elemento de tipo 'exclude_elements' que será hijo de la sección actual
 									$ar_exclude_elements_tipo = section::get_ar_children_tipo_by_modelo_name_in_section($section->get_tipo(),'exclude_elements',true,false); //section_tipo, $ar_modelo_name_required, $from_cache=true, $resolve_virtual=true																	
 									$exclude_elements_tipo 	  = reset($ar_exclude_elements_tipo);
-										#dump($ar_exclude_elements_tipo,"exclude_elements_tipo for tipo: $section->tipo - $exclude_elements_tipo");
 								}							
 
 								if (!empty($exclude_elements_tipo)) {
 									# Localizamos los elementos a excluir que son los términos relacionados con este elemento ('exclude_elements')
 									$ar_related = RecordObj_dd::get_ar_terminos_relacionados($exclude_elements_tipo, $cache=false, $simple=true);
-										#dump($ar_related,'$ar_related');
 									# Los recorremos y almacenams tanto los directos como los posibles hijos (recuerda que se pueden excluir section groups completos)
 									foreach ($ar_related as $current_excude_tipo) {
 										# Exclusión directa
@@ -142,7 +140,6 @@
 					#
 					# LAYOUT MAP : PENDIENTE UNIFICAR MAQUETACIÓN CON LAYOUT MAP A PARTIR DEL MODO EDIT <------
 					# Consulta el listado de componentes a mostrar en el listado / grupo actual
-						#dump($current_section_obj,"current_section_obj");die();
 						if (empty($layout_map)) {
 							$layout_map = component_layout::get_layout_map_from_section($current_section_obj); # Important: send obj section with REAL tipo to allow resolve structure
 						}						
@@ -158,11 +155,8 @@
 							# ROWS_SEARCH
 							#$records_search = new records_search($this, $modo);
 							#$record_layout_html .= $records_search->get_html();
-							#dump($section->get_tipo(),"section_list"); #die();						
 
 							$record_layout_html .= component_layout::walk_layout_map($current_section_obj, $layout_map, $ar, $ar_exclude_elements);
-								#dump($record_layout_html, ' record_layout_html ++ '.to_string());
-								#dump($ar_exclude_elements,"layout ".$current_section_obj->get_tipo());							
 
 							if(SHOW_DEBUG) {
 								global$TIMER;$TIMER['component_layout::walk_layout_map'.'_OUT_'.$section->get_tipo().'_'.$section->get_modo().'_'.microtime(1)]=microtime(1);

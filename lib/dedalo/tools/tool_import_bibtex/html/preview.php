@@ -7,7 +7,7 @@ require_once( dirname(dirname(dirname(dirname(__FILE__)))) .'/config/config4.php
 require_once( dirname(dirname(__FILE__)) .'/class.tool_import_bibtex.php');  # Read constants from here
 
 # Button tipo set
-$button_tipo = get_request_var('button_tipo'); // Core function
+$button_tipo = safe_tipo( get_request_var('button_tipo') ); // Core function
 
 #
 # SEARCH FOR .BIB FILE
@@ -18,13 +18,10 @@ if (empty($ar_files[0])) {
 		}
 		if (count($ar_files)>1) {
 			echo "<div class=\"no_bib_file_found\">Sorry. Only one BIB file can be processed at once. Please, delete additional BIB files </div>";
-			#dump($ar_files, ' ar_files');
 			return;
 		}
-	#dump($ar_files, ' ar_files');exit();
 	#$file_data = json_decode(file_get_contents($ar_files[0]));	// @return expected: array of objects 
 	$file_data = tool_import_bibtex::parse_bibex($ar_files[0]);
-		#dump($file_data, ' file_data');	exit();
 
 
 	
@@ -74,7 +71,6 @@ if (empty($ar_files[0])) {
 	# JSON TABLE
 	# Data map like 'rsc140' => 'title'
 	$data_map  		= (array)tool_import_bibtex::get_data_map();
-		#dump($data_map, ' data_map ++ '.to_string());
 	# Section tipo (for links to go current record)
 	$section_tipo 	= BIBLIO_SECTION_TIPO_VIRTUAL_BIBLIOGRAFIA;	# 'rsc205'; # is virtual section (Bibliografía)
 
@@ -88,8 +84,6 @@ if (empty($ar_files[0])) {
 
 	foreach ((array)$file_data as $key => $current_obj) {
 
-		#dump($current_obj, ' current_obj ++ '.to_string()); continue;
-		#dump($current_obj['file'], '$file_data->$file_name_data');	continue;	
 		$current_obj = (object)$current_obj;	// Convert to object for easy selections
 
 		#
@@ -102,7 +96,6 @@ if (empty($ar_files[0])) {
 			$file_name 	= tool_import_bibtex::resolve_filename($current_obj->$file_name_data);
 			$file_path 	= TOOL_IMPORT_BIBTEX_UPLOAD_DIR . $file_name;			
 		}		
-		#dump(file_exists( $file_path ), ' file_name ++ '.to_string( $file_path )); continue;
 
 		$added_caption=false;
 		$html .= '<table class="table_preview">';		
@@ -110,7 +103,6 @@ if (empty($ar_files[0])) {
 
 			#$current_tipo = array_search($name, $data_map);
 			$current_tipo = isset($data_map[$name]) ? $data_map[$name] : null;
-				#dump($current_tipo, ' current_tipo ++ '.to_string($name." - ".$value)); continue;
 
 			# CAPTION
 			if ( !$added_caption ) {

@@ -52,11 +52,9 @@ class Ffmpeg {
 
 		# CREATE A NEW AVOBJ AS MASTER MEDIA 
 		$master_media_file_obj = $this->get_master_media_file_obj($AVObj); 
-		# dump($master_media_file_obj, ' master_media_file_obj');  die();
 		
 		# MEDIA STANDAR (PAL/NTSC)
 		$media_standar	= strtolower($master_media_file_obj->get_media_standar());
-			#dump($media_standar, ' media_standar ++ '.to_string());
 		
 		if($media_standar) {
 			$media_standar = '_' . $media_standar ;
@@ -201,7 +199,6 @@ class Ffmpeg {
 		
 		# verify setting exists
 		if( !in_array($setting, $this->ar_settings) ) die("Error: setting: '$setting' not exits! (create_av_alternate). Please contact with your admin to create");		
-		# dump($setting, ' setting ++ '.to_string()); die();
 		# import vars from settings file		
 		require_once(DEDALO_AV_FFMPEG_SETTINGS .'/'. $setting .'.php');
 
@@ -280,7 +277,6 @@ class Ffmpeg {
 		  		 while (false !== ($file = readdir($handle))) {
 		  		 	$extension = pathinfo($file,PATHINFO_EXTENSION);
 		  		 	if($extension === 'VOB' && filesize($src_file.'/VIDEO_TS/'.$file) > $vob_filesize){
-		  		 		#dump($file,'$file: '.filesize($src_file.'/VIDEO_TS/'.$file));
 		  		 		$is_all_ok 	= true;
 		  		 		//reset the size of the vob (for the end files of the video)
 		  		 		$vob_filesize = 0;
@@ -440,7 +436,6 @@ class Ffmpeg {
 		
 		
 		if(SHOW_DEBUG===true) {
-			#dump($command, "sudo -u _www $command");			
 			debug_log(__METHOD__." Creating AV version:\n ".to_string($command), logger::DEBUG);
 		}
 		#$av_alternate_command_exc = exec_::exec_command($command);
@@ -482,12 +477,7 @@ class Ffmpeg {
 	public function create_posterframe(AVObj $AVObj, $timecode, $ar_target=false) {
 		
 		# SRC VIDEO FILE
-		$src_file			= $AVObj->get_media_path_abs()	. $AVObj->get_name() . '.' . $AVObj->get_extension();
-		if(SHOW_DEBUG===true) {
-			#dump($src_file,'$src_file 1');
-			#dump($AVObj, " AVObj ".to_string());	
-			#dump(file_exists($src_file), "file_exists($src_file) ".to_string());
-		}			
+		$src_file = $AVObj->get_media_path_abs()	. $AVObj->get_name() . '.' . $AVObj->get_extension();
 		
 		$aspect_ratio = strtolower($AVObj->get_aspect_ratio());
 		if($aspect_ratio == '4x3') {			
@@ -501,9 +491,7 @@ class Ffmpeg {
 			$src_file		= $this->get_master_media_file($AVObj);		
 		}
 		if (!$src_file) {
-			if(SHOW_DEBUG===true) {
-				dump($src_file, "NOT FOUND src_file 2".to_string());;
-			}
+			debug_log(__METHOD__." Error: src_file not found src_file 2. ".to_string($src_file), logger::ERROR);			
 			return false;
 		}
 		
@@ -552,14 +540,11 @@ class Ffmpeg {
 		# Convertivos el valor recibido a número flotante y 
 		# redondeamos a 3 decimales el valor para pasarloa ffmpeg tipo '40.100'
 		$timecode = number_format((float)$timecode, 3, '.', '');
-			#dump( $timecode );
 			
 		# paso 1 sólo video			
 		#$command	.= DEDALO_AV_FFMPEG_PATH . " -itsoffset -$timecode -i $src_file -y -vframes 1 -f rawvideo -an -vcodec mjpeg $target_file > /dev/null  ";
 		$command	.= DEDALO_AV_FFMPEG_PATH . " -ss $timecode -i $src_file -y -vframes 1 -f rawvideo -an -vcodec mjpeg $aspect_ratio $target_file ";
-			#dump( $command );
 
-		#if(SHOW_DEBUG===true) dump($command, "Admin Debug command for ".__METHOD__."<div class=\"notas\">sudo -u _www $command </div><hr>");		
 
 		# EXEC COMMAND									
 		$posterFrame_command_exc = exec_::exec_command($command);		
@@ -596,7 +581,7 @@ class Ffmpeg {
 				$create_dir = mkdir($fragments_folder, 0777);
 				if(!$create_dir) {
 					if(SHOW_DEBUG===true) {
-						dump($fragments_folder, 'trying to create: $fragments_folder');
+						debug_log(__METHOD__." Error trying to create: $fragments_folder ".to_string(), logger::ERROR);
 					}
 					throw new Exception("Error on read or create directory for \"fragments\" folder. Permission denied ! ", 1);
 				}
@@ -604,7 +589,7 @@ class Ffmpeg {
 			
 			# fragments dir set permissions 0777
 			$wantedPerms = 0777;
-			$actualPerms = fileperms($fragments_folder);	#dump($actualPerms,'$actualPerms');
+			$actualPerms = fileperms($fragments_folder);
 			if($actualPerms < $wantedPerms) {
 				$chmod = chmod($fragments_folder, $wantedPerms);
 				if(!$chmod) die(" Sorry. Error on set valid permissions to directory for \"fragments\".  ") ;
@@ -656,7 +641,6 @@ class Ffmpeg {
 		$file_path 			= $AVObj->get_name() . '.' . $AVObj->get_extension();	//$AVObj->get_local_full_path();		
 		$file_path_temp 	= $AVObj->get_name() . '_temp.' . $AVObj->get_extension();;	//str_replace('.mp4', '_.mp4', $file_path);
 		$file_path_original = $AVObj->get_name() . '_untouched.' . $AVObj->get_extension();;	//str_replace('.mp4', '_.mp4', $file_path);
-			#dump($file_path, " file_path - ".to_string($file_path_temp));return;
 
 		$source_file_path = $AVObj->get_local_full_path();
 
@@ -682,7 +666,6 @@ class Ffmpeg {
 		# Remove temp file
 		$command .= "&& rm -f $file_path_temp ";
 
-		#dump($command, ' command'.to_string()); die();
 		
 		try {
 
@@ -699,8 +682,6 @@ class Ffmpeg {
 
 		if(SHOW_DEBUG===true) {
 			debug_log(__METHOD__." Exec command conform headers: sudo -u _www $command .".to_string($result), logger::DEBUG);
-			#error_log("Admin Debug command for ".__METHOD__."<div class=\"notas\">sudo -u _www $command </div><hr>");
-			#dump($result, " result ".to_string($command));
 		}
 
 		return $result;
@@ -717,7 +698,6 @@ class Ffmpeg {
 		$qt_faststart_installed_path 	= DEDALO_AV_FASTSTART_PATH;
 
 		$output_file_path = $AVObj->get_local_full_path();
-			#dump($output_file_path, ' file_path'); return;	
 
 		$command  = '';
 
@@ -822,7 +802,6 @@ class Ffmpeg {
 		
 	    $command = DEDALO_AV_FFPROBE_PATH . ' -v quiet -print_format json -show_format ' . $source_file . ' 2>&1';  
 	    $output  = json_decode( shell_exec($command) );  
-	   		#dump($output, ' output ++ '.to_string());
 
 	   	return $output;
 
@@ -837,7 +816,6 @@ class Ffmpeg {
 		
 	    $command = DEDALO_AV_FFPROBE_PATH . ' -v quiet -show_streams -print_format json ' . $source_file . ' 2>&1';  
 	    $output  = json_decode( shell_exec($command) );  
-	   		#dump($output, ' output ++ '.to_string( $command ));
 
 	   	return $output;
 

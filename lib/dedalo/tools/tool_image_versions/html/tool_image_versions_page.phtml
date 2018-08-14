@@ -151,7 +151,7 @@
 			# UPLOAD ROW
 			if ( $permissions>=2 && component_security_tools::is_authorized_tool_for_logged_user('tool_upload') ) {
 
-				$var_requested 		= common::get_request_var('section_tipo');
+				$var_requested 		  = common::get_request_var('section_tipo');
 				$current_section_tipo = !empty($var_requested) ? $var_requested : '';
 
 				$html .= " <tr>";

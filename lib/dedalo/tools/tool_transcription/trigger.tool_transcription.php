@@ -169,7 +169,6 @@ function pdf_automatic_transcription($json_data) {
 	#
 	# PAGES TAGS	
 	$pages = explode("", $pdf_text);
-	#dump($pages,"pages ");die();
 	$i=1;
 	$pdf_text='';
 	foreach ($pages as $current_page) {		
@@ -193,7 +192,6 @@ function pdf_automatic_transcription($json_data) {
 	$component_text_area->Save(false, false);
 
 
-	//dump($component_text_area,"component_text_area - target_tipo: $target_tipo - section_id: $section_id");
 	$response->result 	= true;
 	$response->msg 		= 'Ok. Request done ['.__FUNCTION__.']';
 

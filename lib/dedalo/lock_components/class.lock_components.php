@@ -49,11 +49,9 @@ class lock_components {
 			$insert_result = pg_query_params(DBi::_getConnection(), $strQuery, array(1,$dato));
 		}else{
 			$dato = pg_fetch_result($res, 0, 0);
-				#dump($dato, ' dato ++ '.to_string());
 		}
 
 		$dato = (array)json_decode($dato);
-		#debug_log(__METHOD__." event_element: ".to_string($event_element), logger::DEBUG);
 
 
 		#
@@ -339,7 +337,6 @@ class lock_components {
 										$current_event_element->section_id,
 										$current_event_element->date
 										);
-										#dump($msg, ' msg ++ '.to_string());
 										
 					$ar_user_actions[] = $msg;
 				}

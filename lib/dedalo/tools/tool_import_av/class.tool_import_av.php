@@ -16,7 +16,6 @@ if (empty($upload_dir_custom)) {
 # TOOL IMPORT IMAGES
 define('TOOL_IMPORT_AV_UPLOAD_DIR'	, DEDALO_MEDIA_BASE_PATH . DEDALO_AV_FOLDER .'/temp'.'/files/' .'user_'.$_SESSION['dedalo4']['auth']['user_id'].$upload_dir_custom.'/' );
 define('TOOL_IMPORT_AV_UPLOAD_URL'	, DEDALO_MEDIA_BASE_URL  . DEDALO_AV_FOLDER .'/temp'.'/files/' .'user_'.$_SESSION['dedalo4']['auth']['user_id'].$upload_dir_custom.'/');
-#dump(TOOL_IMPORT_AV_UPLOAD_DIR, 'TOOL_IMPORT_AV_UPLOAD_DIR');
 
 
 class tool_import_av extends tool_common {
@@ -69,7 +68,6 @@ class tool_import_av extends tool_common {
 		}		
 
 		$button_import_obj = new button_import($button_tipo, null, $this->section_tipo);
-			#dump($button_import_obj,'button_import_obj');
 
 		$propiedades = json_handler::decode($button_import_obj->RecordObj_dd->get_propiedades());
 
@@ -124,7 +122,6 @@ class tool_import_av extends tool_common {
 
 		# SORT ARRAY (By custom core function build_sorter)
 		#usort($ar_data, build_sorter('numero_recurso'));
-		#dump($ar_data,'$ar_data');
 		
 		return $ar_data;
 	}
@@ -171,7 +168,6 @@ class tool_import_av extends tool_common {
 		$ar_data['tamano_archivo'] 				= number_format(filesize($ar_data['file_path'])/1024/1024,3)." MB"; # 1.7 MB		
 		#$ar_data['imagen']['image_url'] 		= DEDALO_ROOT_WEB . "/inc/img.php?s=".$ar_data['file_path'];
 		#$ar_data['imagen']['image_preview_url']	= DEDALO_LIB_BASE_URL . '/tools/tool_import_av/foto_preview.php?f='.$ar_data['file_path'];
-			#dump($ar_data, ' ar_data');
 		
 		return $ar_data;
 	}
@@ -206,7 +202,6 @@ class tool_import_av extends tool_common {
 
 		# Creamos el path final
 		$path_final = '/'.implode('/', $ar_folder);
-			#dump($path_final,'path_final for '.$numero);
 	
 		return $path_final;
 	}
