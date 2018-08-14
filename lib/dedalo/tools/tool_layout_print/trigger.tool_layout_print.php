@@ -265,7 +265,7 @@ if($mode==='print_pages') {
 	  ) throw new Exception("Error Processing Request. Few vars are received", 1);
 
 	# VARS
-	$section_tipo 		= (string)safe_xss($_GET['section_tipo']);	
+	$section_tipo 		= (string)safe_tipo($_GET['section_tipo']);	
 	$section_layout_tipo= (string)safe_xss($_GET['template_tipo']);
 	$section_layout_id 	= (string)safe_xss($_GET['template_id']);
 	$ar_css_url 		= array(

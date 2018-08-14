@@ -168,7 +168,7 @@ $start_time=microtime(1);
 		echo $msg = "Data is NOT imported <hr>"; ob_flush();flush();
 	}
 
-	$section_tipo	= isset($_GET['section_tipo']) ? safe_xss($_GET['section_tipo']) : false;
+	$section_tipo	= isset($_GET['section_tipo']) ? safe_tipo($_GET['section_tipo']) : false;
 	if($section_tipo==false) {
 		echo $msg = "Data is NOT imported: section_tipo is empty <hr>"; ob_flush();flush();
 	}

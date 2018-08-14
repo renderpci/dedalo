@@ -14,7 +14,7 @@ ignore_user_abort(true);
 $start_time=microtime(1);
 
 
-	echo $msg = "Adding geonames matched data for existing toponomy section records (based on equal names) ".safe_xss($_GET['section_tipo'])."<hr>"; ob_flush();flush();
+	echo $msg = "Adding geonames matched data for existing toponomy section records (based on equal names) ".safe_tipo($_GET['section_tipo'])."<hr>"; ob_flush();flush();
 
 
 	$vars = array('section_tipo','lang','base_value');
