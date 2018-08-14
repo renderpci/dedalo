@@ -10,6 +10,7 @@
 	$required				= $this->get_required();
 	$debugger				= $this->get_debugger();
 	$permissions			= $this->get_component_permissions();
+	$propiedades 			= $this->get_propiedades();
 	$ejemplo				= null;
 	$html_title				= "Info about $tipo";
 	$lang					= $this->get_lang();
@@ -24,9 +25,10 @@
 		
 		case 'edit'	:
 				# Verify component content record is inside section record filter
-				if ($this->get_filter_authorized_record()===false) return null; //($lang=DEDALO_DATA_LANG, $id_path=false, $referenced_section_tipo=false, $filter_custom=false) 
-				$dato 					 = $this->get_dato();
-				$dato_json 				 = json_encode($dato);
+				if ($this->get_filter_authorized_record()===false) return null;
+				
+				$dato		= $this->get_dato();
+				$dato_json 	= json_encode($dato);
 
 				$ar_values = [];
 				foreach ((array)$dato as $key => $current_locator) {
@@ -34,22 +36,45 @@
 						$item->label = 	ts_object::get_term_by_locator( $current_locator, DEDALO_DATA_LANG, $from_cache=true );
 						$item->value = 	$current_locator;
 					$ar_values[] = $item;
-				}
-
-				$search_input_name = $this->get_search_input_name();
+				}				
 
 				$id_wrapper 			 = 'wrapper_'.$identificador_unico;
-				$input_name 			 = "{$tipo}_{$parent}";
+				$input_name 			 = $tipo.'_'.$parent;
+				$search_input_name 		 = $this->get_search_input_name();
 				$component_info 		 = $this->get_component_info('json');
-				$children_component_tipo = component_relation_parent::get_component_relation_children_tipo($tipo);
-				$hierarchy_sections 	 = [$section_tipo];
+				
+				#
+				# MY_COMPONENT_CHILDREN_TIPO AND PROPIEDADES
+				# component_children is related in structure to current component. This get source sections to look and constrain the target sections tipo
+				$my_component_children_tipo 			= component_relation_parent::get_component_relation_children_tipo($tipo);
+				$RecordObj 								= new RecordObj_dd($my_component_children_tipo);				
+				$my_component_children_tipo_propiedades = $RecordObj->get_propiedades(true);
+				
+				#
+				# HIERARCHY_SECTIONS
+				$hierarchy_types 	= isset($my_component_children_tipo_propiedades->source->hierarchy_types) 	 ? $my_component_children_tipo_propiedades->source->hierarchy_types : null;
+				$hierarchy_sections = isset($my_component_children_tipo_propiedades->source->hierarchy_sections) ? $my_component_children_tipo_propiedades->source->hierarchy_sections : null;
+	
+				# Resolve hierarchy_sections for speed
+				if (!empty($hierarchy_types)) {
+					$hierarchy_sections = component_autocomplete_hi::add_hierarchy_sections_from_types($hierarchy_types, (array)$hierarchy_sections);
+					$hierarchy_types 	= null; // Remove filter by type because we know all hierarchy_sections now
+				}
+				
+				# Fallback to default (self section)
+				if (empty($hierarchy_sections)) {
+					$hierarchy_sections = [$section_tipo];
+				}
 
 				# search_tipos
-				$term_tipo 		= hierarchy::get_element_tipo_from_section_map( $section_tipo, 'term' );
-				$search_tipos 	= [$term_tipo]; // DEDALO_THESAURUS_TERM_TIPO
+				$search_tipos = [];
+				foreach ($hierarchy_sections as $current_section_tipo) {
+					$current_term_tipo 	= hierarchy::get_element_tipo_from_section_map( $current_section_tipo, 'term' );
+					if (!in_array($current_term_tipo, $search_tipos)) {
+						$search_tipos[] = $current_term_tipo;
+					}
+				}			
 				
-				$from_component_tipo = DEDALO_THESAURUS_RELATION_CHIDRENS_TIPO; //'hierarchy49';
-
 				$limit = 1;
 				break;
 
@@ -85,12 +110,38 @@
 				# Normally is section_tipo + component_tipo, but when in portal can be portal_tipo + section_tipo + component_tipo
 				$search_input_name = $this->get_search_input_name();
 
+				#
+				# MY_COMPONENT_CHILDREN_TIPO AND PROPIEDADES
+				# component_children is related in structure to current component. This get source sections to look and constrain the target sections tipo
+				$my_component_children_tipo 			= component_relation_parent::get_component_relation_children_tipo($tipo);
+				$RecordObj 								= new RecordObj_dd($my_component_children_tipo);				
+				$my_component_children_tipo_propiedades = $RecordObj->get_propiedades(true);
+				
+				#
+				# HIERARCHY_SECTIONS
+				$hierarchy_types 	= isset($my_component_children_tipo_propiedades->source->hierarchy_types) 	 ? $my_component_children_tipo_propiedades->source->hierarchy_types : null;
+				$hierarchy_sections = isset($my_component_children_tipo_propiedades->source->hierarchy_sections) ? $my_component_children_tipo_propiedades->source->hierarchy_sections : null;
+	
+				# Resolve hierarchy_sections for speed
+				if (!empty($hierarchy_types)) {
+					$hierarchy_sections = component_autocomplete_hi::add_hierarchy_sections_from_types($hierarchy_types, (array)$hierarchy_sections);
+					$hierarchy_types 	= null; // Remove filter by type because we know all hierarchy_sections now
+				}
+				
+				# Fallback to default (self section)
+				if (empty($hierarchy_sections)) {
+					$hierarchy_sections = [$section_tipo];
+				}
+
 				# search_tipos
-				$term_tipo 		= hierarchy::get_element_tipo_from_section_map( $section_tipo, 'term' );
-				$search_tipos 	= [$term_tipo]; // DEDALO_THESAURUS_TERM_TIPO
-				
-				$from_component_tipo = DEDALO_THESAURUS_RELATION_CHIDRENS_TIPO; //'hierarchy49';
-				
+				$search_tipos = [];
+				foreach ($hierarchy_sections as $current_section_tipo) {
+					$current_term_tipo 	= hierarchy::get_element_tipo_from_section_map( $current_section_tipo, 'term' );
+					if (!in_array($current_term_tipo, $search_tipos)) {
+						$search_tipos[] = $current_term_tipo;
+					}
+				}
+								
 				$limit = 1;
 				break;
 					

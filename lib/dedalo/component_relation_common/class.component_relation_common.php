@@ -154,7 +154,6 @@ class component_relation_common extends component_common {
 
 			# Ensures is a real non-associative array (avoid json encode as object)
 			$dato = is_array($dato) ? array_values($dato) : (array)$dato;
-				#dump($dato, ' dato ++ '.to_string());
 
 			# Verify all locators are well formed
 			$relation_type 		 = $this->relation_type;
@@ -186,7 +185,6 @@ class component_relation_common extends component_common {
 				}
 			}
 		}
-		#dump($dato, ' dato ++ '.to_string());
 
 		parent::set_dato( (array)$dato );	
 	}//end set_dato
@@ -214,7 +212,6 @@ class component_relation_common extends component_common {
 				}
 			}
 			$dato = $this->get_dato();
-				#dump($dato, ' dato ++ '.to_string($this->tipo));
 
 			$this->dataframe = [];
 
@@ -278,10 +275,7 @@ class component_relation_common extends component_common {
 			$relations = $filtered_relations;
 		#}
 		if(SHOW_DEBUG===true) {
-			if ($this->tipo=='rsc91') {
-				#dump($relations, ' relations ++ '.to_string());
-				#dump($relations, ' relations ++ '.to_string($this->tipo));
-			}
+			
 		}
 	
 		return (array)$relations;
@@ -312,8 +306,6 @@ class component_relation_common extends component_common {
 		
 		# maintain array index after unset value. ! Important for encode json as array later (if keys are not correlatives, undesired object is created)
 		$dato = array_values($dato);
-
-		#dump($dato, ' dato ++ '.to_string()); dump($locator, ' locator ++ '.to_string()); die();
 		
 		# Test if already exists
 		/*
@@ -672,7 +664,15 @@ class component_relation_common extends component_common {
 	* @return string $list_value
 	*/
 	public static function render_list_value($value, $tipo, $parent, $modo, $lang, $section_tipo, $section_id, $current_locator=null, $caller_component_tipo=null) {
-	
+		
+		# Activity case (in transition from component_autocomplete_ts to component_autocomplete_hi)
+		# Current stored data is in format: "dd546": {"dato": {"lg-nolan": "dd242"}} bypassing the component in write
+    	# file rows_activity.phtml parses current value to label in current lang
+		#if ($tipo==='dd545' || $tipo==='dd546') {
+		#	debug_log(__METHOD__." tipo: $tipo - section_tipo: $section_tipo - section_id: $section_id - parent: $parent - value: ".to_string($value), logger::DEBUG);
+		#	return $value;
+		#}
+
 		$component 	= component_common::get_instance(get_called_class(),
 													 $tipo,
 													 $parent,
@@ -717,7 +717,6 @@ class component_relation_common extends component_common {
 		$hierarchy_table= hierarchy::$table;	// Normally 'hierarchy'. Look too in 'matrix_hierarchy_main' table for references
 		$ar_tables 		= array( $section_table, $hierarchy_table);
 		$parents 		= component_relation_parent::get_parents($section_id, $section_tipo, $from_component_tipo=null, $ar_tables);
-		# dump($parents, ' $parents ++ '.to_string("$section_id, $section_tipo")); die();
 
 		$ar_removed=array();
 		foreach ((array)$parents as $current_parent) {
@@ -825,13 +824,11 @@ class component_relation_common extends component_common {
 		# Add from_component_tipo to all locators to refine the search
 		if($ar_locators = json_decode($search_value)) {
 			#if ($search_tipo==="hierarchy9") {
-			#	dump($ar_locators, ' ar_locators ++ $search_tipo: '.to_string($search_tipo) ." - search_value:".to_string($search_value));
 			#}			
 			#if (!is_array($ar_locators)) {
 			#	$ar_locators = array($ar_locators);
 			#}
 			foreach ((array)$ar_locators as $current_locator) {
-				#dump($current_locator, ' $current_locator ++ '.to_string($search_tipo));
 				$current_locator->from_component_tipo = $search_tipo;
 			}
 			$search_value = json_encode($ar_locators);
@@ -955,7 +952,6 @@ class component_relation_common extends component_common {
 		/*
 		# split multiple
 		$current_query_object = component_common::split_query($query_object);
-		#dump($ar_query_object, ' ar_query_object ++ '.to_string()); die();
 		# conform each object
 		if (search_development2::is_search_operator($current_query_object)===true) {
 			foreach ($current_query_object as $operator => $ar_elements) {
@@ -966,14 +962,12 @@ class component_relation_common extends component_common {
 		}else{
 			$current_query_object = self::resolve_query_object_sql($current_query_object);
 		}
-		#dump($current_query_object, ' current_query_object ++ '.to_string());
 
 		# Convert to array always
 		$ar_query_object = array($current_query_object);*/
 
 		# Component class name calling here
 		#$called_class = get_called_class();
-		#	dump($called_class, '$called_class ++ '.to_string());
 
 		$ar_query_object = component_common::get_search_query2($query_object);
 
@@ -988,7 +982,6 @@ class component_relation_common extends component_common {
 	* @return 
 	*/
 	public static function get_select_query2( $select_object ) {
-		#dump($select_object, ' select_object ++ '.to_string());
 		/*
 		[path] => Array
 			(
@@ -1028,7 +1021,6 @@ class component_relation_common extends component_common {
 	* @return object $query_object
 	*/
 	public static function resolve_query_object_sql($query_object) {
-		#dump($query_object, ' $query_object 1 ++ '.to_string());	
 		# Always set fixed values
 		$query_object->type 	= 'jsonb';
 		$query_object->unaccent = false;
@@ -1086,7 +1078,6 @@ class component_relation_common extends component_common {
 				$query_object->q_parsed	= $q_clean;
 				break;
 		}//end switch (true) {
-		#dump($query_object, ' $query_object ++ '.to_string());	
 
 
 		return $query_object;

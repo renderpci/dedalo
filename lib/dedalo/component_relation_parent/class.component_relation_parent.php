@@ -43,7 +43,7 @@ class component_relation_parent extends component_relation_common {
 
 	/**
 	* GET DATO
-	* This component don't store data, only manages calculated data from component_relations_children generated data
+	* This component don't store data, only manages calculated data from component_relation_children generated data
 	* stored in section 'relations' container
 	* @return array $dato
 	*	$dato is always an array of locators
@@ -137,13 +137,68 @@ class component_relation_parent extends component_relation_common {
 	* @return array $parents
 	*/
 	protected function get_my_parents() {
-		
-		# Calculate current target component_relation_children_tipo from structure
-		$from_component_tipo = component_relation_parent::get_component_relation_children_tipo($this->tipo);
 
-		$parents = component_relation_parent::get_parents($this->parent, $this->section_tipo, $from_component_tipo);
+		$target_component_children_tipos = component_relation_parent::get_target_component_children_tipos($this->tipo);
+
+		$parents = [];
+		foreach ($target_component_children_tipos as $children_component_tipo) {
+			$parents = array_merge($parents, component_relation_parent::get_parents($this->parent, $this->section_tipo, $children_component_tipo));
+		}
 
 		return (array)$parents;
+
+		/*
+			# Calculate current target component_relation_children_tipo from structure
+			$from_component_tipo = component_relation_parent::get_component_relation_children_tipo($this->tipo);
+		
+			#$parents = component_relation_parent::get_parents($this->parent, $this->section_tipo, $from_component_tipo);
+
+			#
+			# Look in children propiedades different possible sources
+			$RecordObj 								= new RecordObj_dd($from_component_tipo);
+			$my_component_children_tipo_propiedades = $RecordObj->get_propiedades(true);
+
+			# hierarchy_sections
+			$hierarchy_types 	= isset($my_component_children_tipo_propiedades->source->hierarchy_types) 	 ? $my_component_children_tipo_propiedades->source->hierarchy_types : null;
+			$hierarchy_sections = isset($my_component_children_tipo_propiedades->source->hierarchy_sections) ? $my_component_children_tipo_propiedades->source->hierarchy_sections : null;
+			# Resolve hierarchy_sections for speed
+			if (!empty($hierarchy_types)) {
+				$hierarchy_sections = component_autocomplete_hi::add_hierarchy_sections_from_types($hierarchy_types, (array)$hierarchy_sections);
+			}
+			#dump($hierarchy_sections, ' hierarchy_sections ++ '.to_string());
+
+			if (empty($hierarchy_sections)) {
+				# Only from current section component children
+				$parents = component_relation_parent::get_parents($this->parent, $this->section_tipo, $from_component_tipo);
+			}else{
+				# Look component children across all related sections
+				$modelo_name = 'component_relation_children';
+				$parents 	 = [];
+				$ar_resolved = [];
+				foreach ($hierarchy_sections as $children_section_tipo) {
+					# Resolve children component tipo from children_section_tipo
+					$ar_children_component_tipo = section::get_ar_children_tipo_by_modelo_name_in_section(	$children_section_tipo,
+																											[$modelo_name],
+																											true, # from_cache
+																											true, # resolve_virtual
+																											true, # recursive
+																											true, # search_exact
+																											false); # ar_tipo_exclude_elements
+					$children_component_tipo = reset($ar_children_component_tipo);
+					if (in_array($children_component_tipo, $ar_resolved)) {
+						continue;
+					}
+
+						#dump($children_component_tipo, ' children_component_tipo ++ '.to_string($children_section_tipo));
+					$parents = array_merge($parents, component_relation_parent::get_parents($this->parent, $this->section_tipo, $children_component_tipo));
+					#dump($parents, ' parents ++ children_component_tipo - '." parent:$this->parent, section_tipo:$this->section_tipo, children_component_tipo:$children_component_tipo ".to_string());
+					debug_log(__METHOD__." parent:$this->parent, section_tipo:$this->section_tipo, children_component_tipo:$children_component_tipo ".to_string($parents), logger::DEBUG);
+					$ar_resolved[] = $children_component_tipo;
+				}
+			}
+
+			return (array)$parents;
+		*/
 	}//end get_my_parents
 
 
@@ -455,7 +510,7 @@ class component_relation_parent extends component_relation_common {
 		}
 
 		return $lang;*/
-	}#end get_valor_lang
+	}//end get_valor_lang
 
 
 
@@ -467,7 +522,7 @@ class component_relation_parent extends component_relation_common {
 	*/
 	public function build_search_comparison_operators( $comparison_operators=array('=','!=') ) {
 		return (object)parent::build_search_comparison_operators($comparison_operators);
-	}#end build_search_comparison_operators
+	}//end build_search_comparison_operators
 
 
 
@@ -518,19 +573,27 @@ class component_relation_parent extends component_relation_common {
 	* Add a children to referenced component_relation_children
 	* @return bool $result
 	*/
-	public static function add_parent($tipo, $parent, $section_tipo, $children_section_tipo, $children_section_id, $children_component_tipo) {
+	public static function add_parent($tipo, $parent, $section_tipo, $children_section_tipo, $children_section_id) {
 		#dump($tipo, ' tipo ++ '."tipo:$tipo, parent:$parent, section_tipo:$section_tipo, children_section_tipo:$children_section_tipo, children_section_id:$children_section_id, children_component_tipo:$children_component_tipo".to_string());
-		$result=false;
-	
-		$modelo_name 	= 'component_relation_children';
-		#$component_tipo = self::get_component_relation_children_tipo($tipo);
-		$modo 			= 'edit';
-		$lang 			= DEDALO_DATA_NOLAN;	
+		$result = false;
+		
+		$modelo_name = 'component_relation_children';
+
+		# Resolve children component tipo from children_section_tipo
+		$ar_children_component_tipo = section::get_ar_children_tipo_by_modelo_name_in_section(	$children_section_tipo,
+																								[$modelo_name],
+																								true, # from_cache
+																								true, # resolve_virtual
+																								true, # recursive
+																								true, # search_exact
+																								false); # ar_tipo_exclude_elements
+		$children_component_tipo = reset($ar_children_component_tipo);
+		
 		$component_relation_children   = component_common::get_instance($modelo_name,
 														  				$children_component_tipo,
 														  				$children_section_id,
-														  				$modo,
-														  				$lang,
+														  				'edit',
+														  				DEDALO_DATA_NOLAN,
 														  				$children_section_tipo);
 		
 		$added = (bool)$component_relation_children->make_me_your_children( $section_tipo, $parent );
@@ -580,6 +643,7 @@ class component_relation_parent extends component_relation_common {
 	*/
 	private function resolve_childrens() {
 		
+		return true;
 	}//end resolve_childrens
 
 
@@ -589,7 +653,7 @@ class component_relation_parent extends component_relation_common {
 	* @return object $query_object
 	*/
 	public static function resolve_query_object_sql($query_object) {
-				
+		
 		$q = $query_object->q;
 
 		# Like
@@ -602,39 +666,44 @@ class component_relation_parent extends component_relation_common {
 		if (!is_array($parent_locators)) {
 			$parent_locators = [$parent_locators];
 		}
-		#dump($parent_locators, ' parent_locators ++ '.to_string());
+		
 		$ar_childrens = [];
 		foreach ($parent_locators as $key => $current_locator) {
 			
-			$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($current_locator->from_component_tipo,true);
-			$component 		= component_common::get_instance($modelo_name,
-															 $current_locator->from_component_tipo,
-															 $current_locator->section_id,
-															 'list',
-															 DEDALO_DATA_NOLAN,
-															 $current_locator->section_tipo);
-			$component_children_dato = $component->get_dato();
-			#dump($component_children_dato, ' component_children_dato ++ '.to_string());
+			$current_component_relation_parent_tipo = $current_locator->from_component_tipo;
+			$target_component_children_tipos 		= component_relation_parent::get_target_component_children_tipos($current_component_relation_parent_tipo);
 
-			foreach ($component_children_dato as $children_locator) {
-				$ar_childrens[] = $children_locator->section_id;
-			}			
+			$parents = [];
+			foreach ($target_component_children_tipos as $children_component_tipo) {
+
+				$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($children_component_tipo,true); // component_relation_children
+				$component 		= component_common::get_instance($modelo_name,
+																 $children_component_tipo,
+																 $current_locator->section_id,
+																 'list',
+																 DEDALO_DATA_NOLAN,
+																 $current_locator->section_tipo);
+				$component_children_dato = $component->get_dato();
+				foreach ($component_children_dato as $children_locator) {
+					$ar_childrens[] = $children_locator->section_id;
+				}
+			}
 		}
-		
+		#dump($ar_childrens, ' ar_childrens ++ '.to_string());
 		
 		# Always set fixed values
 		$query_object->type = 'number';
 
 		# Always set format to column
-		$query_object->format = 'column';		
+		$query_object->format = 'column';
 
 		# component path
 		$query_object->component_path = ['section_id'];
 		
 		# unaccent
-		$query_object->unaccent = false;	
+		$query_object->unaccent = false;
 
-      
+
 		$ar_parts 	= $ar_childrens;
 		$ar_result  = []; 
 		foreach ($ar_parts as $key => $value) {
@@ -649,12 +718,71 @@ class component_relation_parent extends component_relation_common {
 		$cop = '$or';
 		$new_object = new stdClass();
 			$new_object->{$cop} = $ar_result;
-		$query_object = $new_object;				
-       	dump($query_object, ' query_object ++ '.to_string());	
-
+		$query_object = $new_object;
 
 		return $query_object;
 	}//end resolve_query_object_sql
+
+
+
+	/**
+	* GET_TARGET_COMPONENT_CHILDREN_TIPOS
+	* Resolve all possible component relation children targeted to current component relation parent
+	* @return array $target_component_children_tipos
+	*/
+	public static function get_target_component_children_tipos($component_tipo) {
+
+		# Static cache
+		static $ar_resolved_target_component_children_tipos = [];
+		if (isset($ar_resolved_target_component_children_tipos[$component_tipo])) {
+			return $ar_resolved_target_component_children_tipos[$component_tipo];
+		}
+
+		$target_component_children_tipos = [];
+		
+		# Calculate current target component_relation_children_tipo from structure
+		$from_component_tipo = component_relation_parent::get_component_relation_children_tipo($component_tipo);
+	
+		#
+		# Look in children propiedades different possible sources
+		$RecordObj 								= new RecordObj_dd($from_component_tipo);
+		$my_component_children_tipo_propiedades = $RecordObj->get_propiedades(true);
+
+		# hierarchy_sections
+		$hierarchy_types 	= isset($my_component_children_tipo_propiedades->source->hierarchy_types) 	 ? $my_component_children_tipo_propiedades->source->hierarchy_types : null;
+		$hierarchy_sections = isset($my_component_children_tipo_propiedades->source->hierarchy_sections) ? $my_component_children_tipo_propiedades->source->hierarchy_sections : null;
+		# Resolve hierarchy_sections for speed
+		if (!empty($hierarchy_types)) {
+			$hierarchy_sections = component_autocomplete_hi::add_hierarchy_sections_from_types($hierarchy_types, (array)$hierarchy_sections);
+		}
+
+		if (empty($hierarchy_sections)) {
+			# Default
+			$target_component_children_tipos[] = $from_component_tipo;
+		}else{
+			# Look component children across all related sections
+			$modelo_name = 'component_relation_children';			
+			foreach ($hierarchy_sections as $children_section_tipo) {
+				# Resolve children component tipo from children_section_tipo
+				$ar_children_component_tipo = section::get_ar_children_tipo_by_modelo_name_in_section(	$children_section_tipo,
+																										[$modelo_name],
+																										true, # from_cache
+																										true, # resolve_virtual
+																										true, # recursive
+																										true, # search_exact
+																										false); # ar_tipo_exclude_elements
+				$children_component_tipo = reset($ar_children_component_tipo);
+				if (!in_array($children_component_tipo, $target_component_children_tipos)) {
+					$target_component_children_tipos[] = $children_component_tipo;
+				}
+			}
+		}
+
+		# Static cache
+		$ar_resolved_target_component_children_tipos[$component_tipo] = $target_component_children_tipos;
+
+		return $target_component_children_tipos;
+	}//end get_target_component_children_tipos
 
 
 	
