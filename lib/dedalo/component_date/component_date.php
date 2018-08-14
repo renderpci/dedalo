@@ -62,8 +62,12 @@
 						$input_name_year	=	$input_name_month	=	$input_name_day	= array();
 						$valor_year	= $valor_month = $valor_day = array();
 					default:
-						$input_name = array();
-						$valor		= array();
+						$uid_start	=	$input_name_start	= array();
+						$valor_start = array();
+
+						// PREVIOUS TO 4.9.1
+						//$input_name = array();
+						//$valor		= array();
 						break;
 				}
 				$ar_dato = empty($dato) ? array("") : $dato;
@@ -136,6 +140,19 @@
 							break;
 						case 'date':
 						default:
+							$uid_start[$key] 		  	= 'start_'.$key.'_'.$identificador_unico;
+							$input_name_start[$key] 	= 'start_'.$key.'_'."{$tipo}_{$parent}";
+
+							# Start
+							if(isset($current_dato->start)) {
+								$dd_date	= new dd_date($current_dato->start);
+								$valor_start[$key]= isset($propiedades->method->get_valor_local) 
+											? component_date::get_valor_local( $dd_date, reset($propiedades->method->get_valor_local) ) 
+											: component_date::get_valor_local( $dd_date, false );
+							}
+
+							//REVIOUS TO 4.9.1
+							/*
 							$input_name[$key]	= $key."_{$tipo}_{$parent}";
 							if(!empty($current_dato)) {								
 								$dd_date 	= new dd_date($current_dato);
@@ -148,6 +165,7 @@
 
 								}
 							}
+							*/
 							break;
 					}
 
@@ -202,7 +220,9 @@
 					case 'period':	
 						$valor_year	= $valor_month = $valor_day = array();
 					default:
-						$valor	= array();
+						$valor_start = array();
+						//PRECIOUS 4.9.1
+						//$valor	= array();
 						break;
 				}
 
@@ -240,6 +260,16 @@
 						case 'date':
 						default:
 
+							# Start
+							if(isset($current_dato->start)) {
+								$dd_date	= new dd_date($current_dato->start);
+								$valor_start[]= isset($propiedades->method->get_valor_local) 
+											? component_date::get_valor_local( $dd_date, reset($propiedades->method->get_valor_local) ) 
+											: component_date::get_valor_local( $dd_date, false );
+							}
+
+							//PREVIUOS 4.9.1
+							/*
 							if(!empty($current_dato)) {
 								$dd_date 	= new dd_date($current_dato);
 
@@ -249,6 +279,7 @@
 									$valor[]	= component_date::get_valor_local( $dd_date, false );
 								}
 							}
+							*/
 							break;
 					}
 				}
@@ -263,7 +294,9 @@
 						$valor_month	= implode(' | ', $valor_month);
 						$valor_day		= implode(' | ', $valor_day);
 					default:
-						$valor			= implode(' | ', $valor);
+						$valor_start	= implode(' | ', $valor_start);
+						//PREVIUOS 4.9.1
+						//$valor			= implode(' | ', $valor);
 						break;
 				}
 				break;

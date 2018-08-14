@@ -70,9 +70,11 @@
 								 isset($propiedades->method->get_valor_local) &&
 								 reset($propiedades->method->get_valor_local)==true
 								) $add_class = 'full';
-
-							$value = isset($valor[$key]) ? $valor[$key] : '';
-							$html_content .= "<span class=\"css_span_dato\">".$value."</span>";
+							$value_start = isset($valor_start[$key]) ? $valor_start[$key] : '';
+							$html_content .= "<span class=\"css_span_dato\">".$value_start."</span>";
+							// PREVIOUS 4.9.1
+							//$value = isset($valor[$key]) ? $valor[$key] : '';
+							//$html_content .= "<span class=\"css_span_dato\">".$value."</span>";
 						}//end switch
 						$html_content .= "</li>";
 					}//end foreach
@@ -242,6 +244,30 @@
 								 reset($propiedades->method->get_valor_local)==true
 								) $add_class = 'full';
 
+							$value_start = isset($valor_start[$key]) ? $valor_start[$key] : '';
+							$html_content .= "<div class=\"css_date_imput_twice_date\">";
+							$html_content .= "<input type=\"text\" class=\"css_date full $add_class\" id=\"".$uid_start[$key]."\" ";
+							$html_content .= "onclick=\"component_date.activate_datepicker(this)\" ";
+							$html_content .= "onchange=\"component_date.Save(this,'$date_mode')\" ";
+							$html_content .= "onfocus=\"component_common.select_wrap(null,'$id_wrapper');\" ";
+							$html_content .= "name=\"".$input_name_start[$key]."\" ";
+							$html_content .= "data-role=\"range_start\" ";
+							$html_content .= "data-tipo=\"{$tipo}\" ";
+							$html_content .= "data-lang=\"{$lang}\" ";
+							$html_content .= "data-section_tipo=\"{$section_tipo}\" ";
+							$html_content .= "data-parent=\"{$parent}\" ";
+							$html_content .= "data-modo=\"{$modo}\" ";
+							$html_content .= "value=\"".$value_start."\" ";
+							$html_content .= "title=\"$html_title\" ";
+							$html_content .= "placeholder=\"$ejemplo\" ";
+							$html_content .= "tabindex=\"1\" ";
+							$html_content .= "/>";
+							$html_content .= " </div> ";
+
+
+
+							//PREVIOUS 4.9.1
+							/*
 							$value = isset($valor[$key]) ? $valor[$key] : '';
 							$html_content .= "<div class=\"css_date_imput_twice_date\">";
 							$html_content .= "<input type=\"text\" class=\"css_date full $add_class\" id=\"date_{$key}_{$identificador_unico}\" ";
@@ -261,6 +287,7 @@
 							$html_content .= "tabindex=\"1\" ";
 							$html_content .= "/>";
 							$html_content .= "</div> ";
+							*/
 
 							# DATAFRAME MANAGER
 							if (isset($ar_dataframe_obj[$key])) {

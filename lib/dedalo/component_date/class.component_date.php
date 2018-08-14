@@ -87,14 +87,16 @@ class component_date extends component_common {
 	/**
 	* GET_DATO
 	* Dato change to object with year, month, day, hour, minute, second separated in key->value like
-	* {
+	* [{"start":{
 	*    "year": -500000,
 	*    "month": 10,
 	*    "day": 3,
 	*    "hour": 19,
 	*    "minute": 56,
 	*    "second": 43
-	* }
+	* }}]
+	*
+	*
 	*/
 	public function get_dato() {
 		
@@ -321,6 +323,25 @@ class component_date extends component_common {
 
 				case 'date':
 				default:
+					# Start
+					$valor_start = '';
+					if(isset($current_dato->start)) {
+						$dd_date	= new dd_date($current_dato->start);
+
+						if(isset($current_dato->start->day)) {
+							$valor_start = $dd_date->get_dd_timestamp("Y-m-d");
+						}else{
+							$valor_start = $dd_date->get_dd_timestamp("Y-m");
+							if(isset($current_dato->start->month)) {
+							}else{
+								$valor_start = $dd_date->get_dd_timestamp("Y", $padding=false);
+							}
+						}
+						
+						$ar_valor[$key] .= $valor_start;
+					}
+					/*
+					* PREVIOUS TO 4.9.1
 					if(!empty($current_dato)) {
 						$dd_date		= new dd_date($current_dato);
 						#$ar_valor[$key] = $dd_date->get_dd_timestamp("Y-m-d");
@@ -337,7 +358,8 @@ class component_date extends component_common {
 
 						$ar_valor[$key] .= $valor;
 
-					}
+					}*/
+
 					break;
 			}
 		}
@@ -865,10 +887,12 @@ class component_date extends component_common {
         			# Operator : remove if exists
 					#$q_clean  = preg_replace("/^(\W{1,2})?/", "", $q);
 	        		// Extract directly from calculated time in javascript
-					$q_clean  = !empty($q_object->time) ? $q_object->time : 0;
-					$operator = !empty($q_object->op) ? $q_object->op : '=';
+					$q_clean  = !empty($q_object->start->time) ? $q_object->start->time : 0;
+					$operator = !empty($q_object->start->op) ? $q_object->start->op : '=';
 
-					$dd_date = new dd_date($q_object);
+
+
+					$dd_date = new dd_date($q_object->start);
 					#$dd_date->get_date_from_timestamp( $q_clean );
 					#$q_clean = dd_date::convert_date_to_seconds($dd_date);
 					
@@ -991,7 +1015,7 @@ class component_date extends component_common {
 				}				
 
 				# query_object config
-				$query_object->q_info 			= clone $query_object->q;
+				$query_object->q_info 			= '';
 				$query_object->q_parsed			= null;
 				$query_object->format 			= 'array_elements';
 				$query_object->array_elements 	= $group_array_elements;
@@ -1001,14 +1025,14 @@ class component_date extends component_common {
 
         	case 'date':
         	default:
+    			// Generic for date
+        		// Extract directly from calculated time in javascript
 
-				// Generic for date
-				// Extract directly from calculated time in javascript
-				$q_clean  = !empty($q_object->time) ? $q_object->time : 0;
-				$operator = !empty($q_object->op) ? $q_object->op : '=';
+				$q_clean  = !empty($q_object->start->time) ? $q_object->start->time : 0;
+				$operator = !empty($q_object->start->op) ? $q_object->start->op : '=';
 				
 				$query1 = new stdClass();
-					$query1->component_path 	= ['time'];
+					$query1->component_path 	= ['start','time'];
 					$query1->operator 			= $operator;
 					$query1->q_parsed			= '\''.$q_clean.'\'';
 					$query1->type 				= 'jsonb';
@@ -1143,7 +1167,9 @@ class component_date extends component_common {
 			break;
 
 			case 'date':
-				$order_by_resolved  = "a.$json_field#>'{components, $search_tipo, $tipo_de_dato_order, $current_lang}'->0->'time' ".$order_direction;
+				$order_by_resolved  = "a.$json_field#>'{components, $search_tipo, $tipo_de_dato_order, $current_lang}'->0->'start'->'time' ".$order_direction;
+				//PREVIOUS TO 4.9.1
+				//$order_by_resolved  = "a.$json_field#>'{components, $search_tipo, $tipo_de_dato_order, $current_lang}'->0->'time' ".$order_direction;
 			default:
 		}
 
@@ -1224,6 +1250,8 @@ class component_date extends component_common {
 		}		
 
 		// Default date mode
+		// PREVIOUS 4.9.1
+		/*
 		if( isset($current_dato->year) ) {
 
 			$dd_date = new dd_date($current_dato); 
@@ -1234,6 +1262,7 @@ class component_date extends component_common {
 			$dd_date->set_time( $time );
 			$current_dato = $dd_date;
 		}
+		*/
 		// Time date mode
 		else if( isset($current_dato->hour) ) {
 			$dd_date = new dd_date($current_dato); 
@@ -1276,6 +1305,57 @@ class component_date extends component_common {
 		$update_version = implode(".", $update_version);
 
 		switch ($update_version) {
+
+			case '4.9.1':
+				if (!empty($dato_unchanged)) {
+					
+					/* 	Change the dato to be compatible with the range format {"start":{...}}
+					*	From:
+					*	[{"time":64313740800,"year":2001}]
+					*	To:
+					*	[{"start":{"time":64313740800,"year":2001}}]
+					*/
+
+					//Check the date format for update only the normal date format
+					switch (true) {
+						case isset($dato_unchanged[0]->start):
+						case isset($dato_unchanged[0]->period):
+							$response = new stdClass();
+							$response->result = 2;
+							$response->msg = "[$reference_id] Current dato don't need update.<br />";	// to_string($dato_unchanged)." 
+
+							break;
+						default:
+							$converion = new stdClass();
+
+							foreach ($dato_unchanged as $value) {
+								$converion->start = $value;
+							}
+							$new_dato = [];
+
+							$new_dato[] = $converion;
+
+							$response = new stdClass();
+							$response->result = 1;
+							$response->new_dato = $new_dato;
+							$response->msg = "[$reference_id] Dato is changed from ".to_string($dato_unchanged)." to ".to_string($new_dato).".<br />";
+
+							//dump($new_dato, ' new_dato '.json_decode($new_dato));die();
+
+							break;
+					}
+
+					
+					return $response;
+
+				}else{
+					$response = new stdClass();
+					$response->result = 2;
+					$response->msg = "[$reference_id] Current dato don't need update.<br />";	// to_string($dato_unchanged)." 
+					return $response;
+				}	
+				break;
+
 
 			case '4.8.1':
 				if (!empty($dato_unchanged)) {
