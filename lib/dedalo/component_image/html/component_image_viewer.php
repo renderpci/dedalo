@@ -1,9 +1,8 @@
 <?php
 include( dirname(dirname(dirname(__FILE__))).'/config/config4.php');
 $f = common::setVar('f');
-$page_title = pathinfo($f,PATHINFO_BASENAME);
+$page_title = pathinfo($f, PATHINFO_BASENAME);
 # BOOTSTRAP_CSS_URL
-
 ?>
 <html>
 <head>

@@ -38,7 +38,8 @@ class exec_ {
 			return ('Exception: '. $e->getMessage(). "\n");		
 		}
 		return true ;
-	}
+	}//end exec_command
+
 
 	
 	/**
@@ -49,7 +50,6 @@ class exec_ {
 		try {			
 			#exec("sh $file > /dev/null &", $output); # funciona!!! <<<<
 			#exec("sh $file > /dev/null 2>&1 & echo $!", $output); # return pid
-			#dump($file,"file");
 
 			$response = exec("sh $file > /dev/null 2>&1 & echo $!", $output); 
 			
@@ -63,14 +63,15 @@ class exec_ {
 			
 			return ('Exception: '. $e->getMessage(). "\n");		
 		}
-	}
+
+	}//end exec_sh_file
 	
 
 	
 	/**
 	* GETCOMMANDPATH
 	*/
-	private static function getCommandPath($command = '') {
+	private static function getCommandPath($command='') {
 		// note: security vulnerability... 
 		// should validate that $command doesn't 
 		// contain anything bad
@@ -81,7 +82,8 @@ class exec_ {
 		} else {
 			return false;
 		}
-	}
+	
+	}//end getCommandPath
 
 
 	/**
@@ -113,8 +115,6 @@ class exec_ {
 
 	    // get exit status
 	    preg_match('/[0-9]+$/', $complete_output, $matches);
-
-	    #dump($complete_output, ' $complete_output ++ '.to_string());
 
 	    // return exit status and intended output
 	    return array (

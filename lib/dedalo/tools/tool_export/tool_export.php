@@ -65,7 +65,7 @@
 					$target_list = array();//$this->get_ar_columns();
 
 					ob_start();
-					include ( DEDALO_LIB_BASE_PATH .'/tools/'.get_called_class().'/html/'.get_called_class().'_'.$context_name.'.phtml' );
+					include ( DEDALO_LIB_BASE_PATH .'/tools/'.get_called_class().'/html/'.get_called_class().'_columns.phtml' );
 					$page_content_html = ob_get_clean();
 					break;
 

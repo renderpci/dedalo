@@ -988,21 +988,22 @@ abstract class common {
 	
 	/**
 	* GET_RELACIONES : Obtiene las relaciones del tipo del componente actual decodificando el json de '$this->RecordObj_dd->get_relaciones()'
-	*/
+	*//*
 	public function get_relaciones() {
 		if(SHOW_DEBUG===true) {
-			$bt = debug_backtrace();
-			dump($bt, ' bt ++ '.to_string());
+			$bt = debug_backtrace();			
+			debug_log(__METHOD__." DEPRECATED METHOD. USE 'get_ar_related_by_model' instead. - ".to_string($bt), logger::ERROR);
 		}
 		trigger_error("DEPRECATED METHOD. USE 'get_ar_related_by_model' instead");
 		$relaciones = $this->RecordObj_dd->get_relaciones();
 		
-		if(SHOW_DEBUG===true && strpos(DEDALO_HOST, 'localhost')!==false) {
-			error_log("Common get relaciones usado. Fijar esto ASAP porque sólo devuelve la primera");;
+		if(SHOW_DEBUG===true) {
+			error_log("Common get relaciones usado. Fijar esto ASAP porque sólo devuelve la primera");
 		}
 		
 		return (array)$relaciones[0];
 	}//end get_relaciones
+	*/
 
 
 
@@ -1192,9 +1193,8 @@ abstract class common {
 				$section_tipo	= $rows['section_tipo'];
 				
 				$ar_references[$id] = $section_tipo;
-
 			}//end while
-			#dump($ar_references,"ar_references total: ".round(microtime(1)-$star_time,3));
+			
 		
 		if(SHOW_DEBUG===true) {
 			global$TIMER;$TIMER[__METHOD__.'_OUT_'.microtime(1)]=microtime(1);
@@ -1274,7 +1274,7 @@ abstract class common {
 			$response = new stdClass();
 				$response->result 	= false;
 				$response->msg 		= "Error on read php://input data";
-			#echo json_encode($response);
+			
 			return false;
 		}
 
