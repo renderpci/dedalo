@@ -8,7 +8,7 @@
 	$ar_tools_obj			= false;
 	$ar_components_obj		= $this->load_components();						
 	$tipo_active_account	= $this->get_tipo_active_account();
-	
+	$component_name			= get_class($this);
 	$file_name				= $modo;
 
 	
@@ -67,23 +67,26 @@
 	if(isset($ar_components_obj[$name]) && is_object($ar_components_obj[$name])) {
 		$ar_components_obj[$name]->set_ejemplo(NULL);
 		$html_button_login		= $ar_components_obj[$name]->get_html();
-	}
-	
+	}	
 	
 	
 	switch($modo) {
-		
-		case 'edit'		:						
-							break;
 
-		case 'simple'	:
-							$file_name  = 'edit';					
-							break;
-						
-		case 'recover'	:						
-							break; false;
+		case 'edit':				
+				break;
+
+		case 'simple':
+				$file_name  = 'edit';
+				break;
+
+		case 'recover':
+				return false;
+				break;
 	}
 		
-	$page_html	= 'html/' . get_class($this) . '_' . $file_name . '.phtml';
-	include($page_html);
+	
+	$page_html	= dirname(__FILE__) . '/html/' . $component_name . '_' . $file_name . '.phtml';
+	if( !include($page_html) ) {
+		echo "<div class=\"error\">Invalid mode $this->modo</div>";
+	}
 ?>

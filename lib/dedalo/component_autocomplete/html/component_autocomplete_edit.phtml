@@ -233,7 +233,9 @@
 									
 									$current_locator_json = json_encode($current_locator);						
 
-									$input_id = md5($hs_value);
+									
+									$input_id = hash('sha256', $hs_value);
+
 									$autosearch_options_html .= "<li>";
 									$autosearch_options_html .= "<input type=\"checkbox\" value='".$current_locator_json."' id=\"$input_id\" checked onchange=\"component_autocomplete.save_filter_sections(this,'$cookie_name')\"/>";
 									$autosearch_options_html .= "<label for=\"$input_id\">";

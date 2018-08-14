@@ -409,8 +409,9 @@
 				}
 
 				if (!is_string($list_value)) {
-					dump( debug_backtrace() );
-					dump($list_value, ' list_value ++ '.to_string()); die();
+					debug_log(__METHOD__." Error. Expected string in list_value: ".to_string($list_value), logger::DEBUG);
+					trigger_error("Error. Expected string in list_value");					 
+					die();
 				}		
 
 				# TRUNCATE ALL FRAGMENTS		

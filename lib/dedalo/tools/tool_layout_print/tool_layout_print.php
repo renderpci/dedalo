@@ -6,9 +6,9 @@
 	$tipo 				= $section_obj->get_tipo();
 	$modo 				= $this->get_modo();
 	$tool_name 			= get_class($this);
-	$context_name		= safe_xss($_REQUEST['context_name']);
 	$section_title 		= $section_obj->get_label();
-
+	$context_name		= safe_xss($_REQUEST['context_name']);
+	
 	$file_name			= $modo;	
 	$html_list 			= $html_edit = '';
 
@@ -72,7 +72,7 @@
 						$private_templates_title = 'Default templates';
 
 					ob_start();
-					include ( DEDALO_LIB_BASE_PATH .'/tools/'.get_called_class().'/html/'.get_called_class().'_'.$context_name.'.phtml' );
+					include ( DEDALO_LIB_BASE_PATH .'/tools/'.get_called_class().'/html/'.get_called_class().'_list.phtml' );
 					$html_list = ob_get_clean();
 					break;
 				
@@ -198,7 +198,7 @@
 					
 
 					ob_start();
-					include ( DEDALO_LIB_BASE_PATH .'/tools/'.get_called_class().'/html/'.get_called_class().'_'.$context_name.'.phtml' );
+					include ( DEDALO_LIB_BASE_PATH .'/tools/'.get_called_class().'/html/'.get_called_class().'_edit.phtml' );
 					$html_edit = ob_get_clean();	
 					break;
 
@@ -282,7 +282,7 @@
 					#
 					# SAVE PAGES . Save html files to disk
 					$user_id 		 	= $_SESSION['dedalo4']['auth']['user_id'];
-					$print_files_path	= '/print/'.$tipo.'/'.$user_id;
+					$print_files_path	= '/print/'.safe_tipo($tipo).'/'.safe_section_id($user_id);
 					$pages_html_temp 	= DEDALO_MEDIA_BASE_PATH . $print_files_path;
 					if(!file_exists($pages_html_temp)) mkdir($pages_html_temp, 0775,true);
 					
@@ -329,9 +329,13 @@
 
 
 					ob_start();
-					include ( DEDALO_LIB_BASE_PATH .'/tools/'.get_called_class().'/html/'.get_called_class().'_'.$context_name.'.phtml' );
+					include ( DEDALO_LIB_BASE_PATH .'/tools/'.get_called_class().'/html/'.get_called_class().'_render.phtml' );
 					$html_render = ob_get_clean();	
 					break;
+
+				default:
+					trigger_error("Invalid context_name !");
+					return null;
 
 			}//end switch ($context_name)
 			break;

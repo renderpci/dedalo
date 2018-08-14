@@ -191,7 +191,6 @@ class login extends common {
 																					 DEDALO_DATA_NOLAN,
 																					 DEDALO_SECTION_USERS_TIPO);
 							$cuenta_activa_dato 	= $component_radio_button->get_dato();
-								#dump($cuenta_activa_dato,"cuenta_activa_dato"); die();
 
 
 							# OJO: El valor válido sólo puede ser 1 que es 'Si' en la lista de valores referenciada y se asigna como constante en config 'NUMERICAL_MATRIX_VALUE_YES'					
@@ -222,13 +221,11 @@ class login extends common {
 						
 						#
 						# PROFILE				
-							#dump(component_security_administrator::is_global_admin($user_id),"is_global_admin $user_id");
 							# USER : TEST SECURITY AREAS VALUES
 							/*
 							# Comprobamos que el usuario tiene algún área asignada antes de dejarlo entrar (los administradores suelen olvidarse de hacerlo)
 							$component_security_areas 	= component_common::get_instance('component_security_areas', DEDALO_COMPONENT_SECURITY_AREAS_USER_TIPO, $user_id, 'edit', DEDALO_DATA_LANG,DEDALO_SECTION_USERS_TIPO);
 							$security_areas_dato 		= (object)$component_security_areas->get_dato();
-								#dump($security_areas_dato,"security_areas_dato $user_id"); die();
 							if (empty($security_areas_dato) || count((array)$security_areas_dato)<1) {
 								exit(label::get_label('error_usuario_sin_areas'));
 							}
@@ -240,7 +237,6 @@ class login extends common {
 																						DEDALO_DATA_NOLAN,
 																						DEDALO_SECTION_USERS_TIPO);
 							$profile_dato 	  		  = $component_profile->get_dato();
-								#dump($profile_dato,"profile_dato $user_id"); die();
 							if (empty($profile_dato) || $profile_dato<1) {
 								#exit(label::get_label('error_usuario_sin_perfil'));
 								$response->msg = label::get_label('error_usuario_sin_perfil');
@@ -280,7 +276,6 @@ class login extends common {
 					#
 					# LOGIN (ALL IS OK) - INIT LOGIN SECUENCE WHEN ALL IS OK
 						$init_user_login_secuence = login::init_user_login_secuence($user_id, $username, $full_username);
-						# dump($init_user_login_secuence);				
 						if ($init_user_login_secuence->result===false) {
 							# RETURN FALSE
 							$response->result = false;
@@ -395,7 +390,6 @@ class login extends common {
 		#ob_implicit_flush(true);
 		
 		# RESET ALL SESSION VARS BEFORE INIT
-		#dump($_SESSION,'$_SESSION');		
 		#if(isset($_SESSION)) foreach ($_SESSION as $key => $value) {
 			# Nothint to delete
 		#}	
@@ -617,7 +611,7 @@ class login extends common {
 	*/
 	private static function get_auth_cookie_name() {
 		$date = getdate();
-	    $cookie_name = md5( 'dedalo_c_name_'.$date['year'].$date['mon'].$date['mday'].$date['weekday']. mt_rand() );
+		$cookie_name = hash('sha512', 'dedalo_c_name_'.$date['year'].$date['mon'].$date['mday'].$date['weekday']. random_bytes(8));
 
 	    return $cookie_name;
 	}//end get_auth_cookie_name
@@ -637,8 +631,8 @@ class login extends common {
 	*/
 	private static function get_auth_cookie_value() {
 		$date = getdate();
-	    $cookie_value = md5( 'dedalo_c_value_'.$date['wday'].$date['yday'].$date['mday'].$date['month']. mt_rand() );
-	    
+	    $cookie_value = hash('sha512', 'dedalo_c_value_'.$date['wday'].$date['yday'].$date['mday'].$date['month']. random_bytes(8) );
+	    debug_log(__METHOD__." cookie_value ".to_string($cookie_value), logger::ERROR);
 	    return $cookie_value;
 	}//end get_auth_cookie_value
 
@@ -663,7 +657,6 @@ class login extends common {
 	private static function verify_login() {
 		#global $maintenance_mode;
 		#debug_log(__METHOD__." maintenance_mode ".to_string($maintenance_mode), logger::DEBUG);
-		#dump($_SESSION['dedalo4']['auth']['user_id'], '$_SESSION[dedalo4][auth][user_id] ++ '.to_string());
 
 		# NO ESTÁ AUTENTIFICADO
 		if( empty($_SESSION['dedalo4']['auth']['user_id']) || 
@@ -732,10 +725,10 @@ class login extends common {
 	*/
 	protected function load_components() {
 
-		$ar_components	= array();		#dump($this->tipo,'tipo',"load_components");
+		$ar_components	= array();
 
 		$RecordObj_dd	= new RecordObj_dd($this->tipo);
-		$ar_childrens 	= $RecordObj_dd->get_ar_childrens_of_this();	 	#dump($ar_childrens);
+		$ar_childrens 	= $RecordObj_dd->get_ar_childrens_of_this();
 
 		if(is_array($ar_childrens)) foreach($ar_childrens as $terminoID) {
 
@@ -749,19 +742,17 @@ class login extends common {
 			$modo			= 'simple';
 
 			$ar_terminos_relacionados	= $RecordObj_dd->get_relaciones();
-				#dump($ar_terminos_relacionados,'$ar_terminos_relacionados');
-
 
 			switch($modelo_current) {
 				/*
 				case 'login_username'	:
 
 						if(isset($ar_terminos_relacionados[0]))	foreach($ar_terminos_relacionados[0] as $key => $current_tipo) {
-							$ar_components['username']	= component_common::get_instance('component_input_text', $current_tipo, 0, $modo, DEDALO_DATA_NOLAN, DEDALO_SECTION_USERS_TIPO);						#var_dump($ar_terminos_relacionados	);	#die();
+							$ar_components['username']	= component_common::get_instance('component_input_text', $current_tipo, 0, $modo, DEDALO_DATA_NOLAN, DEDALO_SECTION_USERS_TIPO);
 							break;
 						}
 						# Store session user tipo (used in matrix time machine)
-						$_SESSION['dedalo4']['config']['user_name_tipo'] = $current_tipo ;		#dump($_SESSION['dedalo4']['config']['user_name'],"$current_tipo");
+						$_SESSION['dedalo4']['config']['user_name_tipo'] = $current_tipo;
 
 						break;
 
@@ -796,9 +787,7 @@ class login extends common {
 
 				#default	: print(__METHOD__ . "  <span class='error'>modelo: $modelo_current [$terminoID] is not valid !</span>");
 			}
-
-		}
-		#tools::var_dump_pre($ar_components); #die();
+		}		
 		$this->ar_components = $ar_components;
 
 		return 	$this->ar_components;

@@ -28,7 +28,7 @@ class RecordObj_descriptors_dd extends RecordObj_matrix {
 		}
 		
 		if(SHOW_DEBUG===true) {
-			if(empty($matrix_table) || $matrix_table!='matrix_descriptors_dd') {				
+			if(empty($matrix_table) || $matrix_table!='matrix_descriptors_dd') {		
 				dump($matrix_table,"id:$id - parent:$parent - tipo:$tipo - lang:$lang");
 				dump(debug_backtrace(),"Error: Only matrix_descriptors_dd is accepted by now ");							
 				throw new Exception("Error Processing Request. Matrix wrong name ", 1);			

@@ -125,8 +125,13 @@ class tool_administration extends tool_common {
 
 		$msg = array();
 
+		# Safe vars
+		$section_tipo 	= safe_tipo($section_tipo);
+		$component_tipo = safe_tipo($component_tipo);
+
 		#select matrix table
-		$matrix_table 	= common::get_matrix_table_from_tipo($section_tipo);
+		$matrix_table 	= safe_table(common::get_matrix_table_from_tipo($section_tipo));
+
 		$proced = false;
 
 
@@ -716,8 +721,8 @@ class tool_administration extends tool_common {
 	public static function update_dedalo_data_version($version_to_update) {
 
 		$values = new stdClass();
-		$values->dedalo_version = $version_to_update;
-		$values->update_date 	= date('Y-m-d H:i:s',time());
+			$values->dedalo_version = $version_to_update;
+			$values->update_date 	= date('Y-m-d H:i:s',time());
 
 		$str_values = json_encode($values);
 
@@ -863,7 +868,9 @@ class tool_administration extends tool_common {
 	*/
 	public static function get_approximate_row_count( $matrix_table ) {
 		
-		$total_records= 0;		
+		$total_records= 0;
+
+		$matrix_table = safe_table($matrix_table);
 
 		$strQuery = "SELECT reltuples AS approximate_row_count FROM pg_class WHERE relname = '$matrix_table';";
 		$result   = pg_query(DBi::_getConnection(), $strQuery);
@@ -1030,7 +1037,14 @@ class tool_administration extends tool_common {
 			$options->save 				= false;
 			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
+		# Safe section_tipo and section id
+		$options->section_tipo 		= safe_tipo($options->section_tipo);
+		$options->section_id_start 	= safe_section_id($options->section_id_start);
+		$options->section_id_end 	= safe_section_id($options->section_id_end);
+
+
 		$table 	 = common::get_matrix_table_from_tipo($options->section_tipo);
+		$table 	 = safe_table($table);
 		$counter = (int)$options->counter_start;
 		$msg 	 = [];
 

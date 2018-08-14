@@ -2,12 +2,8 @@
 
 
 
-
-
-
-
 # PREDIS SESSION MANAGER
-if(DEDALO_CACHE_MANAGER=='redis') {
+if(DEDALO_CACHE_MANAGER==='redis') {
 
     # CACHE CLASS
     require_once(DEDALO_LIB_BASE_PATH.'/cache/class.cache.php');
@@ -59,7 +55,7 @@ if(DEDALO_CACHE_MANAGER=='redis') {
 
 
 # MEMCACHED SESSION MANAGER
-}elseif(DEDALO_CACHE_MANAGER=='memcached') {
+}elseif(DEDALO_CACHE_MANAGER==='memcached') {
 
         /*
         $memcache_host = '127.0.0.1';
@@ -115,10 +111,9 @@ if(DEDALO_CACHE_MANAGER=='redis') {
         */
 
 # ZEBRA_DB SESSION MANAGER
-}elseif(DEDALO_CACHE_MANAGER=='zebra_db') {
+}elseif(DEDALO_CACHE_MANAGER==='zebra_db') {
 
         // try to connect to the MySQL server
-        #$link = mysqli_connect(DEDALO_HOSTNAME_CONN, DEDALO_USERNAME_CONN, DEDALO_PASSWORD_CONN, DEDALO_DATABASE_CONN) or die('Could not connect to database!');
         require_once(DEDALO_LIB_BASE_PATH . '/config/config4_db.php');        
         #require_once(DEDALO_LIB_BASE_PATH . '/config/class.Error.php');
         $link = DBi::_getConnection();

@@ -30,7 +30,6 @@ class dd_date extends stdClass {
 
 		# Nothing to do on construct (for now)
 		if (!is_object($data)) {
-			#dump($data, ' data ++ '.to_string());
 			#trigger_error("wrong data format. object expected. Given type: ".gettype($data));
 		#	throw new Exception("Error Processing Request", 1);
 			
@@ -325,7 +324,6 @@ class dd_date extends stdClass {
 
 		$regex   = "/^(-?[0-9]+)-?([0-9]+)?-?([0-9]+)? ?([0-9]+)?:?([0-9]+)?:?([0-9]+)?/";
 		preg_match($regex, $timestamp, $matches);    
-			#dump($matches, ' matches');
 
 		if(isset($matches[1])) $this->set_year((int)$matches[1]); 
 		if(isset($matches[2])) $this->set_month((int)$matches[2]);
@@ -352,7 +350,6 @@ class dd_date extends stdClass {
 		#$regex   = "/^(-?[0-9]+)-?([0-9]+)?-?([0-9]+)? ?([0-9]+)?:?([0-9]+)?:?([0-9]+)?/";
 		$regex   = "/^(([0-9]{1,2})-)?(([0-9]{1,2})-)?(-?[0-9]{1,12}) ?([0-9]+)?:?([0-9]+)?:?([0-9]+)?$/";
 		preg_match($regex, $search_field_value, $matches);    
-			#dump($matches, ' matches - ' .count($matches));
 			#$elements = count($matches)-1;
 
 			# Year is mandatory
@@ -525,8 +522,6 @@ class dd_date extends stdClass {
 		# days (aproximate measurement)
 		$days_int 	= $rest_days;
 
-
-		#dump($days_total, ' days_total ++ '." years:$years_int, months:$months_int, days:$rest_days ".to_string());
 
 		# Absolute values
 		$response->result->seconds_total = (int)$seconds;
