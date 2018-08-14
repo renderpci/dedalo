@@ -1217,9 +1217,9 @@ global $sessiondb;
 
 
 /**
-* SAFE_Table
+* SAFE_TABLE
 * Remove extra malicious code
-* @return string $tipo
+* @return string $table
 */
 function safe_table( $table ) {
 
@@ -1230,6 +1230,23 @@ function safe_table( $table ) {
 	
 	return $table;
 }//end safe_table
+
+
+
+/**
+* SAFE_LANG
+* Remove extra malicious code
+* @return string $lang
+*/
+function safe_lang( $lang ) {
+
+	preg_match("/^lg-[a-z]{2,8}$/", $lang, $output_array);
+	if (empty($output_array[0])) {
+		return false;
+	}
+	
+	return $lang;
+}//end safe_lang
 
 
 
