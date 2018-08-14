@@ -20,23 +20,30 @@ lib/dedalo/des/*
 str_data*
 lib/dedalo/diffusion/diffusion_index_ts_V40
 lib/dedalo/publication/client_api/v1/sample*
+lib/dedalo/common/js/lang/*
+structure.css
 
 # extras ignore all except common
-lib/*/extras/*
-!lib/*/extras/oh
+#lib/*/extras/*
+#!lib/*/extras/oh
+lib/dedalo/extras/geonames/files/*
+#lib/dedalo/extras/*/str_data
+
 
 # Ignore paths that contain generated content.
 media/*
 media_test
+lib/*/backup/backups
 lib/*/backup/backups/*
 lib/*/backup/users
 lib/*/backup/backups_structure
-lib/*/backup/users
+backups
 temp
 write
 template_maps
 tpl
 lib/dedalo/publication/client_api/*/docu/ui/*
+lib/dedalo/publication/server_api/*/docu/ui/*
 lib/dedalo/tools/tool_layout_print/data/*
 lib/dedalo/tools/tool_layout_print/print_pdf/*
 
@@ -47,7 +54,7 @@ robots.txt
 koala-config.json
 .DS_Store
 .eslintrc
-.htaccess
+#.htaccess
 .htaccess~
 .htaccess~~
 .htaccess~~~
@@ -56,3 +63,7 @@ koala-config.json
 *.data
 .smbdelete*
 *~
+
+/lib/dedalo/common/css/structure.css
+
+/config.codekit3
