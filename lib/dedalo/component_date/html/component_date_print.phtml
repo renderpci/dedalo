@@ -50,7 +50,9 @@
 
 						case 'date':
 						default:
-							$html_contenido .= $valor;
+							$html_contenido .= "$valor_start";
+							// PREVIOUS TO 4.9.1
+							//$html_content .= $valor ;
 
 				}//end switch ($date_mode) {
 				$html_contenido .= "</div>";
