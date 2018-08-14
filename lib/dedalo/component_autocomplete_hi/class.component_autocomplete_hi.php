@@ -543,6 +543,7 @@ class component_autocomplete_hi extends component_relation_common {
 			$options->relation_type 		= DEDALO_RELATION_TYPE_LINK;
 			$options->search_tipos 			= [DEDALO_THESAURUS_TERM_TIPO];
 			$options->filter_custom 		= false;
+			$options->op 					= '$and';
 			foreach ($request_options as $key => $value) {
 				if (property_exists($options, $key)) {
 					$options->$key = $value;
@@ -571,7 +572,7 @@ class component_autocomplete_hi extends component_relation_common {
 			$ar_filter[] = "a.section_tipo='$target_section_tipo'";
 		}
 		$filter_sections = '(' . implode(' OR ', $ar_filter) . ')';
-			#dump($filter_sections, ' filter_sections ++ '.to_string()); die();
+		#debug_log(__METHOD__." options ".to_string($options), logger::DEBUG);
 
 		# MATRIX TABLE : Only from first term for now
 		#$matrix_table = common::get_matrix_table_from_tipo( $hierarchy_sections[0] );
@@ -599,7 +600,7 @@ class component_autocomplete_hi extends component_relation_common {
 			$q .= '*'; // Begins with.. by default
 		}
 
-		$op = '$and';		
+		$op = $options->op; // '$and';		
 
 		// NEW WAY
 		# search_query_object (can be string or object)
@@ -611,23 +612,29 @@ class component_autocomplete_hi extends component_relation_common {
 			$search_query_object->distinct_values 	= $distinct_values;
 			# Filter
 			$search_query_object->filter 		 	= new stdClass();
-				$search_query_object->filter->{$op} = [];
+				#$search_query_object->filter->{$op} = [];
 
-				$filter_obj = new stdClass();
-					$filter_obj->q 			= $q;
-					$filter_obj->q_operator = null;
-					$filter_obj->q_split 	= false;
-					
-						$path_obj = new stdClass();
-							$path_obj->section_tipo 	= DEDALO_THESAURUS_SECTION_TIPO;
-							$path_obj->component_tipo 	= $term_tipo;
-							$path_obj->modelo 			= 'component_input_text';
-							$path_obj->name 			= 'Term';
+				$search_tipos_op = count($options->search_tipos)>1 ? '$or' : '$and';
+				if (count($options->search_tipos)>1) {
+					# code...
+				}
+				foreach ($options->search_tipos as $current_search_tipo) {									
+					$filter_obj = new stdClass();
+						$filter_obj->q 			= $q;
+						$filter_obj->q_operator = null;
+						$filter_obj->q_split 	= false;
+						
+							$path_obj = new stdClass();
+								$path_obj->section_tipo 	= DEDALO_THESAURUS_SECTION_TIPO; // Fixed (is not important here)
+								$path_obj->component_tipo 	= $current_search_tipo;
+								$path_obj->modelo 			= 'component_input_text';
+								$path_obj->name 			= 'Term';
 
-					$filter_obj->path 		= [$path_obj];
-					$filter_obj->lang 		= 'all';
+						$filter_obj->path 		= [$path_obj];
+						$filter_obj->lang 		= 'all';
 
-				$search_query_object->filter->{$op}[] = $filter_obj;
+					$search_query_object->filter->{$search_tipos_op}[] = $filter_obj;
+				}
 				
 				# propiedades filter_custom
 				if (!empty($filter_custom)) {
@@ -638,19 +645,23 @@ class component_autocomplete_hi extends component_relation_common {
 			# Select
 			$search_query_object->select = [];
 				
-				$select_obj = new stdClass();
+				foreach ($options->search_tipos as $current_search_tipo) {
+					$select_obj = new stdClass();
 
-				$path_obj = new stdClass();
-					$path_obj->section_tipo 	= DEDALO_THESAURUS_SECTION_TIPO;
-					$path_obj->component_tipo 	= $term_tipo;
-					$path_obj->modelo 			= 'component_input_text';
-					$path_obj->name 			= 'Term';
-					$path_obj->selector 		= 'valor';
-					$path_obj->lang 			= 'all';
-				$select_obj->path = [$path_obj];
-				# Select add
-				$search_query_object->select[] = $select_obj;
+					$path_obj = new stdClass();
+						$path_obj->section_tipo 	= DEDALO_THESAURUS_SECTION_TIPO; // Fixed (is not important here)
+						$path_obj->component_tipo 	= $current_search_tipo; //$term_tipo;
+						$path_obj->modelo 			= 'component_input_text';
+						$path_obj->name 			= 'Term';
+						$path_obj->selector 		= 'valor';
+						$path_obj->lang 			= 'all';
+					$select_obj->path = [$path_obj];
+					
+					# Select add 
+					$search_query_object->select[] = $select_obj;
+				}
 
+				if($show_modelo_name===true) {
 					$select_obj = new stdClass();
 						
 					$path_obj = new stdClass();
@@ -659,9 +670,10 @@ class component_autocomplete_hi extends component_relation_common {
 						$path_obj->modelo 			= 'component_relation_model';
 						$path_obj->name 			= 'Model';
 					$select_obj->path = [$path_obj];
-				# Select add
-				$search_query_object->select[] = $select_obj;
-	
+					
+					# Select add (model)
+					$search_query_object->select[] = $select_obj;
+				}
 
 		$freeze_search_query_object = json_encode($search_query_object); // , JSON_UNESCAPED_UNICODE | JSON_HEX_APOS
 		
@@ -681,9 +693,16 @@ class component_autocomplete_hi extends component_relation_common {
 		foreach ($ar_records as $key => $row) {
 			
 			$current_section_tipo 	= $row->section_tipo;
-			$current_section_id 	= $row->section_id;
-			$current_term_tipo 		= $row->{$term_tipo};
-			$current_relations 		= $row->{DEDALO_THESAURUS_RELATION_MODEL_TIPO};		
+			$current_section_id 	= $row->section_id;			
+			$current_relations 		= $row->{DEDALO_THESAURUS_RELATION_MODEL_TIPO};
+
+			$current_term_tipo 		= ''; //$row->{$term_tipo};
+			foreach ($options->search_tipos as $current_search_tipo) {
+				if (!empty($row->{$current_search_tipo})) {
+					$current_term_tipo = $row->{$current_search_tipo};
+					break;
+				}				
+			}	
 		
 			$current_term  = component_common::get_value_with_fallback_from_dato_full( $current_term_tipo, $decore_untranslated=false );
 			$original_term = $current_term;
