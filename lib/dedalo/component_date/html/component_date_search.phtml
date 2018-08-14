@@ -42,7 +42,21 @@
 
 						$html_content .= "<input class=\"css_date\" type=\"text\" ";
 						#$html_content .= "name=\"{$search_input_name}\" ";
-						$html_content .= "data-role=\"date_time\" ";
+						switch ($date_mode) {
+							case 'range':
+								$html_content .= "data-role=\"range_start\" ";
+								break;
+							case 'period':
+								$html_content .= "data-role=\"period_year\" ";
+								break;
+							case 'time':
+								$html_content .= "data-role=\"date_time\" ";
+								break;
+							case 'date':
+							default:
+								$html_content .= "data-role=\"range_start\" ";
+								break;
+							}
 						$html_content .= "value=\"{$value}\" ";
 						#$html_content .= "data-tipo=\"{$tipo}\" ";
 						#$html_content .= "data-parent=\"{$parent}\" ";

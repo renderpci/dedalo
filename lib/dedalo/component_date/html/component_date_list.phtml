@@ -66,8 +66,10 @@
 
 						case 'date':
 						default:
-							$html_content .= $valor ;
+							$html_content .= $valor_start;
 							break;
+							// PREVIOUS TO 4.9.1
+							//$html_content .= $valor ;
 					}
 					
 					$html_content .= "</span>";
@@ -131,7 +133,9 @@
 
 						case 'date':
 						default:
-							$html_content .= $valor ;
+							$html_content .= $valor_start;
+							// PREVIOUS TO 4.9.1
+							//$html_content .= $valor ;
 							break;
 					}
 					
