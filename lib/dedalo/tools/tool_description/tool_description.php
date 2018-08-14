@@ -72,8 +72,8 @@
 				$svg_source_tipo = $propiedades->context->svg_source_tipo;
 
 			# skip_components
-				$skip_components = (array)$propiedades->context->skip_components;
-							
+				$skip_components = isset($propiedades->context->skip_components) ? (array)$propiedades->context->skip_components : [];
+
 			break;		
 	}//end switch
 
