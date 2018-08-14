@@ -174,7 +174,7 @@ if (!defined('DEDALO_PROTOCOL')) {
 
 
 # TOP_TIPO
-if ( false !== ($request_var_top_tipo = get_request_var('top_tipo')) ) {	
+if ( false !== ($request_var_top_tipo = get_request_var('top_tipo')) ) {
 	define('TOP_TIPO', $request_var_top_tipo);
 }else if ( false !== ($request_var_t = get_request_var('t')) ) {
 	define('TOP_TIPO', $request_var_t);
