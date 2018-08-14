@@ -59,13 +59,13 @@
       <g class="com.sun.star.drawing.PolyPolygonShape">
        <g id="id3">
         <rect class="BoundingBox" stroke="none" fill="none" x="704" y="91" width="5393" height="3718"/>
-        <path fill="rgb(0,0,0)" stroke="none" d="M 704,3807 L 3400,92 6096,3808 704,3807 Z"/>
+        <path fill="rgb(238,238,238)" stroke="none" d="M 704,3807 L 3400,92 6096,3808 704,3807 Z"/>
        </g>
       </g>
       <g class="com.sun.star.drawing.PolyPolygonShape">
        <g id="id4">
         <rect class="BoundingBox" stroke="none" fill="none" x="634" y="5935" width="5394" height="3718"/>
-        <path fill="rgb(0,0,0)" stroke="none" d="M 635,5935 L 3331,9652 6027,5935 635,5935 Z"/>
+        <path fill="rgb(238,238,238)" stroke="none" d="M 635,5935 L 3331,9652 6027,5935 635,5935 Z"/>
        </g>
       </g>
      </g>
