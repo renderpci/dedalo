@@ -24,6 +24,7 @@ class js {
 		
 		# Insertamos las librerías principales	
 
+			# Dédalo enviroment vars
 			js::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/common/js/enviroment.js.php';
 			#js::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/common/js/lang/'.DEDALO_APPLICATION_LANG.'.js';	
 
@@ -65,13 +66,15 @@ class js {
 			# component common functions	
 			js::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/component_common/js/component_common.js';
 	
+			# TOOL_PORTAL
 			#js::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/tools/tool_portal/js/tool_portal.js'; // Cuando añadimos un fragmento, no está disponible..			
 			
-			# SEARCH		
-			js::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/search/js/search.js' ;
-
 			# COMPONENT_PORTAL
 			#js::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/component_portal/js/component_portal.js';
+			
+			# SEARCH		
+			js::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/search/js/search.js';
+			
 
 			switch ($modo) {
 				case 'edit':
