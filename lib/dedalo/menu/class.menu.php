@@ -122,9 +122,11 @@ class menu extends common {
 						# STRUCTURE LINK IN MENU
 						if(SHOW_DEBUG===true && $logged_user_is_global_admin===true && file_exists(DEDALO_LIB_BASE_PATH.'/dd')) {
 							$menu_structure_html .= '<li class="has-sub menu_li_inactive">';
-								$menu_structure_html .= '<a href="'.DEDALO_LIB_BASE_URL.'/dd/dd_list.php?modo=tesauro_edit">Structure</a>';
+								$structure_path = DEDALO_LIB_BASE_URL.'/dd/dd_list.php?modo=tesauro_edit';
+								$modelo_path 	= DEDALO_LIB_BASE_URL.'/dd/dd_list.php?modo=modelo_edit';
+								$menu_structure_html .= "<a href=\"javascript:menu.load_ref('$structure_path')\">Structure</a>";
 								$menu_structure_html .= '<ul>';
-								$menu_structure_html .= '<li><a href="'.DEDALO_LIB_BASE_URL.'/dd/dd_list.php?modo=modelo_edit">Modelo</a></li>';
+								$menu_structure_html .= "<li><a href=\"javascript:menu.load_ref('$modelo_path')\">Modelo</a></li>";
 								$menu_structure_html .= '</ul>';
 							$menu_structure_html .= '</li>';
 						}
@@ -187,7 +189,7 @@ class menu extends common {
 			//dump($propiedades, ' propiedades ++ '.to_string());
 		}
 		
-		$link = "<a href=\"$url\">$termino</a>";
+		$link = "<a href=\"javascript:menu.load_ref('$url')\">$termino</a>";
 
 		return $link;
 	}
