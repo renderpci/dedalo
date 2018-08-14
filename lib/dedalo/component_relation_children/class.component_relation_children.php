@@ -1,6 +1,6 @@
 <?php
 /*
-* CLASS component_relation_children
+* COMPONENT_RELATION_CHILDREN
 *
 *
 */

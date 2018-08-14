@@ -46,11 +46,11 @@
 
 			#
 			# JS Init component
-			$html_content .= '<script>';		
+			$html_content .= '<script>';
 			$init_options = new stdClass();
 				$init_options->component_name 	= $component_name;
-				$init_options->uid 				= $identificador_unico;
-			$html_content .= "component_common.init(".json_encode($init_options).");";			
+				$init_options->uid 				= $identificador_unico;				
+			$html_content .= "component_common.init(".json_encode($init_options).");";
 			$html_content .= '</script>';
 
 			
@@ -73,7 +73,7 @@
 					default:
 
 						$hierarchy_types_json 	   = '';
-						$hierarchy_sections_json   = json_encode(array($target_section_tipo));
+						$hierarchy_sections_json   = json_encode((array)$hierarchy_sections);
 						
 						# parent_area_is_model
 						if (isset($_GET['model']) && $_GET['model']==1) {

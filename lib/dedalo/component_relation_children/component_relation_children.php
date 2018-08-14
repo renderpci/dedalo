@@ -51,15 +51,9 @@
 				}
 
 				# Parent area is model (default is false)
-				/*$parent_area_is_model = false;
-				if (!empty($target_section_tipo)) {
-					$RecordObj_dd = new RecordObj_dd($target_section_tipo);
-					$parent_area  = $RecordObj_dd->get_parent();
-					if ($parent_area===DEDALO_THESAURUS_VIRTUALS_MODELS_AREA_TIPO) {
-						$parent_area_is_model = true;
-					}
-				}*/
+				# hierarchy_sections			
 				if ($section_tipo===DEDALO_HIERARCHY_SECTION_TIPO) {
+					
 					if ($tipo===DEDALO_HIERARCHY_CHIDRENS_MODEL_TIPO) {
 						# model
 						$_current_target_tipo = DEDALO_HIERARCHY_TARGET_SECTION_MODEL_TIPO;
@@ -74,16 +68,35 @@
 																	 $parent,
 																	 'list',
 																	 $lang,
-																	 $section_tipo);
-					
+																	 $section_tipo);					
 					$hierarchy_sections = (array)$_component->get_dato(); // Is array
+				
 				}else{
-					$hierarchy_sections = [$section_tipo];
+					
+					$hierarchy_types 	= isset($propiedades->source->hierarchy_types) 	  ? $propiedades->source->hierarchy_types 	 : null;
+					$hierarchy_sections = isset($propiedades->source->hierarchy_sections) ? $propiedades->source->hierarchy_sections : null;
+		
+					# Resolve hierarchy_sections for speed
+					if (!empty($hierarchy_types)) {
+						$hierarchy_sections = component_autocomplete_hi::add_hierarchy_sections_from_types($hierarchy_types, (array)$hierarchy_sections);
+						$hierarchy_types 	= null; // Remove filter by type because we know all hierarchy_sections now
+					}
+					
+					# Fallback to default (self section)
+					if (empty($hierarchy_sections)) {
+						$hierarchy_sections = [$section_tipo];
+					}
 				}
+				#dump($hierarchy_sections, ' hierarchy_sections ++ '.to_string());
 
 				# search_tipos
-				$term_tipo 		= hierarchy::get_element_tipo_from_section_map( $section_tipo, 'term' );
-				$search_tipos 	= [$term_tipo]; // DEDALO_THESAURUS_TERM_TIPO				
+				$search_tipos = [];
+				foreach ($hierarchy_sections as $current_section_tipo) {
+					$current_term_tipo 	= hierarchy::get_element_tipo_from_section_map( $current_section_tipo, 'term' );
+					if (!in_array($current_term_tipo, $search_tipos)) {
+						$search_tipos[] = $current_term_tipo;
+					}
+				}
 				break;
 
 		case 'tool_time_machine' :
