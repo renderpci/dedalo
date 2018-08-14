@@ -5,7 +5,8 @@
 	$tipo 					= $this->get_tipo();
 	$modo					= $this->get_modo();
 	$parent					= $this->get_parent();
-	$section_tipo 			= $this->get_section_tipo();		
+	$section_tipo 			= $this->get_section_tipo();
+	$properties				= $this->get_propiedades();		
 	$dato 					= $this->get_dato();
 	$dato_limited_leng		= substr($dato, 0,25);
 	$label 					= $this->get_label();
@@ -37,6 +38,8 @@
 				$id_wrapper 	= 'wrapper_'.$identificador_unico;
 				$input_name 	= "{$tipo}_{$parent}";
 				$component_info	= $this->get_component_info('json');
+				$mandatory 		= (isset($properties->mandatory) && $properties->mandatory===true) ? true : false;
+				$mandatory_json = json_encode($mandatory);
 				break;
 						
 		case 'simple':
