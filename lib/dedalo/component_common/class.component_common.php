@@ -2089,28 +2089,6 @@ abstract class component_common extends common {
 
 
 	/**
-	* DATO_ALREADY_EXISTS
-	* Test if passed dato already esists in matrix
-	* @return bool(true/false)
-	*/
-	public static function dato_already_exists($dato, $component_tipo, $lang=DEDALO_DATA_LANG, $section_tipo) {
-
-		$arguments=array();
-		$arguments["datos#>'{components, $component_tipo, dato,  $lang}'"] = json_encode($dato);
-		$matrix_table			= common::get_matrix_table_from_tipo($section_tipo);
-		$JSON_RecordObj_matrix	= new JSON_RecordObj_matrix($matrix_table,NULL,$section_tipo );
-		$ar_records				= $JSON_RecordObj_matrix->search($arguments,$matrix_table);
-
-		if (count($ar_records)>0) {
-			return true;
-		}else{
-			return false;
-		}
-	}//end dato_already_exists
-
-
-
-	/**
 	* GET_SECTION_TIPO_FROM_COMPONENT_TIPO
 	*//*
 	public static function get_section_tipo_from_component_tipo($component_tipo) {
@@ -3968,6 +3946,120 @@ abstract class component_common extends common {
 	}//end remove_first_and_last_quotes
 
 
+	/**
+	* AUTOCOMPLETE_SEARCH
+	* @return array $ar_result
+	*/
+	public function autocomplete_search($search_query_object, $divisor=', ') {
+	
+		#$request_options = new stdClass();
+		#	$request_options->q 	 			= $string_to_search;
+		#	$request_options->limit  			= $max_results;
+		#	$request_options->offset 			= 0;
+		#	$request_options->logical_operator 	= $logical_operator;
+		
+		#$query_object = $this->build_search_query_object($request_options);
+		#dump(null, ' query_object ++ '. json_encode($query_object, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT)); die();
+
+		# Remove option of sub_select_by_id (not work on left joins)
+		$search_query_object->allow_sub_select_by_id = false;
+		# Avoid auto add filter by user projects in search
+		if (!property_exists($search_query_object,'skip_projects_filter')) {
+			$search_query_object->skip_projects_filter 	= true;
+		}
+
+
+		if(SHOW_DEBUG===true) {
+			debug_log(__METHOD__." search_query_object - modo:$this->modo - ".json_encode($search_query_object, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT), logger::DEBUG);
+		}		
+		
+		$search_development2 = new search_development2($search_query_object);
+		$rows_data 		 	 = $search_development2->search();
+			#dump($rows_data, ' rows_data ++ '.to_string());
+
+		$propiedades 	 = $this->get_propiedades();
+		$search_list_add = isset($propiedades->search_list_add) ? $propiedades->search_list_add : false;
+			#dump($propiedades, ' propiedades ++ '.to_string());
+
+		$components_with_relations = component_relation_common::get_components_with_relations();
+
+		$ar_result = [];
+		foreach ($rows_data->ar_records as $key => $row) {
+			#dump($row, ' row ++ '.to_string());		
+
+			$locator = new locator();
+				$locator->set_section_tipo($row->section_tipo);
+				$locator->set_section_id($row->section_id);
+				$locator->set_type(DEDALO_RELATION_TYPE_LINK);
+				$locator->set_from_component_tipo($this->tipo);
+
+			$locator_json = json_encode($locator);
+
+			# Join all fields except 2 first fixed (section_id, section_tipo)
+			$ar_full_label = [];
+			foreach ($row as $key => $value) {
+				if ($key==='section_id' || $key==='section_tipo') continue;				
+				if(!empty($value)) {
+
+					$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($key,true);
+					if (in_array($modelo_name, $components_with_relations) || $modelo_name==='component_text_area') {
+						// Resolve value with component					
+						$value = $modelo_name::render_list_value($value, $key, $row->section_id, 'list', DEDALO_DATA_LANG, $row->section_tipo, $row->section_id, null, null);
+					}else{
+						// Extract value from row data
+						#dump($value, ' value ++ '.to_string());
+						$value = component_common::get_value_with_fallback_from_dato_full( $value, $mark=false );
+							
+					}
+					
+					#$value = to_string($value);
+					if (is_string($value)) {
+						$value = strip_tags($value);	
+					}else{
+						$value = to_string($value); //gettype($value);
+					}
+					$ar_full_label[] = $value;
+				}
+			}
+
+			$value = implode($divisor, $ar_full_label);
+
+			// Add custom resolved values from same section. For example, add municipality for resolve a name ambiguity
+			if ($search_list_add!==false) {
+				$ar_dd_value = [];
+				foreach ($search_list_add as $add_tipo) {
+					$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($add_tipo,true);
+					$component 		= component_common::get_instance($modelo_name,
+																	 $add_tipo,
+																	 $row->section_id,
+																	 'list',
+																	 DEDALO_DATA_LANG,
+																	 $row->section_tipo);
+					$current_value = strip_tags( $component->get_valor(DEDALO_DATA_LANG) );
+					if (!empty($current_value)) {
+						$ar_dd_value[] = $current_value;
+					}
+				}
+				if (!empty($ar_dd_value)) {
+					$value .= $divisor . implode($divisor, $ar_dd_value); // Add string to existing value
+				}
+			}
+			
+			$value_obj = new stdClass();
+				$value_obj->value = $value;
+				$value_obj->label = $value;
+				$value_obj->key   = $locator_json;			
+
+			$ar_result[] = $value_obj;
+		}
+
+		
+		return (array)$ar_result;
+	}//end autocomplete_search
+
+
+
+	################################## / end SEARCH 2 ########################################################
 
 	/**
 	* GET_DEF

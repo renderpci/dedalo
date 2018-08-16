@@ -67,6 +67,9 @@
 				$mandatory 		= (isset($propiedades->mandatory) && $propiedades->mandatory===true) ? true : false;
 				$mandatory_json = json_encode($mandatory);
 
+				$unique 		= (isset($propiedades->unique) && $propiedades->unique===true) ? true : false;
+				$unique_json	= json_encode($unique);
+
 				$propiedades_json 	= json_encode($propiedades);
 				$context 			= $this->get_context();
 
@@ -84,6 +87,26 @@
 					dump($this, ' this ++ '.to_string());
 				}
 				*/
+
+				/*
+				* JSON version of the component
+				*/
+				$json_context = '@context';
+				$json_component = new stdClass();
+				$json_component->$json_context	= new stdClass();
+				$json_component->data			= new stdClass();
+				$json_component->data->dato 		= $dato;
+				$json_component->data->value 		= $valor;
+				$json_component->$json_context->tipo 			= $tipo;
+				$json_component->$json_context->translated 		= $traducible;
+				$json_component->$json_context->model 			= $component_name;
+				$json_component->$json_context->properties		= $propiedades;
+				$json_component->$json_context->label			= $label;
+				$json_component->$json_context->section_id		= $parent;
+				$json_component->$json_context->lang			= $lang;
+				$json_component->$json_context->section_tipo	= $section_tipo;
+
+				//dump($json_component,'$json_component');
 				break;
 
 		case 'print' :

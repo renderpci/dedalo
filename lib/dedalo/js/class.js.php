@@ -61,7 +61,7 @@ class js {
 			js::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/tools/tool_common/js/tool_common.js';
 
 			# JS SERVICES
-			js::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/js/services/service_autocomplete.js';
+			js::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/services/service_autocomplete/js/service_autocomplete.js';
 
 			# component common functions	
 			js::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/component_common/js/component_common.js';

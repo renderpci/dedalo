@@ -22,7 +22,7 @@ class component_autocomplete extends component_relation_common {
 	public $tipo_to_search;
 
 
-	
+
 	/**
 	* GET_DATO
 	*/

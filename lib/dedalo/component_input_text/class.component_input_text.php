@@ -104,43 +104,6 @@ class component_input_text extends component_common {
 	}//end get_valor
 
 
-
-	/**
-	* SAVE OVERRIDE
-	* Overwrite component_common method to set always lang to config:DEDALO_DATA_NOLAN before save
-	*/
-	public function Save() {
-
-		# Dato candidate to save
-		$dato = $this->dato;		
-
-		switch (true) {
-
-			case ($this->section_tipo===DEDALO_SECTION_USERS_TIPO) :
-				
-					# Test is dato already exists
-			 		$dato_already_exists = component_common::dato_already_exists($dato, $this->tipo, DEDALO_DATA_NOLAN, $this->section_tipo);
-			 			#dump($dato_already_exists,'$dato_already_exists');
-
-			 		# Error trigger
-			 		if($dato_already_exists) {
-			 			$valor = $this->get_valor();
-			 			$msg = "Error: ".label::get_label('usuario_ya_existe')." [$valor]";		 			
-			 			return $msg;
-			 		}
-					break;
-			
-			default:
-					# Nothing to do
-					break;
-		}
-
-		# A partir de aquí, salvamos de forma estándar
-		return parent::Save();		
-	}//end Save
-
-
-
 	/**
 	* LOAD TOOLS
 	*//**/
@@ -369,6 +332,7 @@ class component_input_text extends component_common {
 
 	/**
 	* GET_SEARCH_QUERY
+	* DEPRECATED 12-08-2018
 	* Build search query for current component . Overwrite for different needs in other components 
 	* (is static to enable direct call from section_records without construct component)
 	* Params
