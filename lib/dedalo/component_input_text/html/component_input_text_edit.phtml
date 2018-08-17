@@ -17,8 +17,10 @@
 	print "data-modo=\"{$modo}\" ";
 	print "data-dato='{$dato_json}' ";
 	print "data-unique='{$unique_json}' ";
-	if($unique === true){
+	if($unique_disable_save_json === true){
 		print "data-is_saveable=\"false\" ";
+	}else{
+		print "data-is_saveable=\"true\" ";
 	}
 	print "data-component_name=\"{$component_name}\" ";
 	print "data-component_info='{$component_info}' ";

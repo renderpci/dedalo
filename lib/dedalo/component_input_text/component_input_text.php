@@ -67,8 +67,10 @@
 				$mandatory 		= (isset($propiedades->mandatory) && $propiedades->mandatory===true) ? true : false;
 				$mandatory_json = json_encode($mandatory);
 
-				$unique 		= (isset($propiedades->unique) && $propiedades->unique===true) ? true : false;
-				$unique_json	= json_encode($unique);
+				$unique 					= (isset($propiedades->unique->check) && $propiedades->unique->check===true) ? true : false;
+				$unique_json				= json_encode($unique);
+				$unique_disable_save 		= (isset($propiedades->unique->disable_save) && $propiedades->unique->disable_save===true) ? true : false;
+				$unique_disable_save_json	= json_encode($unique_disable_save);
 
 				$propiedades_json 	= json_encode($propiedades);
 				$context 			= $this->get_context();
