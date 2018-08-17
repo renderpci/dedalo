@@ -10,42 +10,31 @@
 --------------------------------------------- */
 .css_wrap_autocomplete {
 	//background-color: @color_orange !important;
-
-	//min-height: 50px; // A
 	}
 	.css_wrap_autocomplete > .content_data {
-		/*
-		display: block;
-		min-height: 21px;
-		width: 100%;
-		position: relative;
-		*/
-		/*
-		left: 17%;		
-		*/
+		
 	}
-
-
-	/* TOOL_DESCRIPTION CASE
-	--------------------------------------------- */
-	//.wrap_autocomplete_tool_description .content_data {
-	//	width: 100%;
-	//}
 
 
 
 	/* BUTTONS_AND_FIELDS
 	--------------------------------------------- */
 	.css_wrap_autocomplete .buttons_and_fields {
+		/*
 		//background-color: #FDE853;
 		display: block;
 		//width: 100%;
 		position: relative;
 		height: 30px;
 		float: right;
+		*/
+		position: absolute;
+		top: 0px;
+		opacity: .3;
+		right: 0;
 		}
 
-		/* BTN DELETE */
+		// BTN DELETE 
 		.css_autocomplete_button_delete {
 			position: relative;
 			top: 0px;
@@ -54,7 +43,7 @@
 			opacity: 0.3;
 			min-width: 15px;
 		}
-		/* BTN EDIT SECTION */
+		// BTN EDIT SECTION
 		.edit_autocomplete {
 			float: right;
 			position: relative;
@@ -62,12 +51,12 @@
 			background-position: 0 -72px;
 			opacity: 0.3;
 		}
-		/* BTN EDIT ROW */
+		// BTN EDIT ROW
 		.edit_autocomplete_row {
 			top: 1px;
 		    left: 5px;
 		}
-		/* BTN NEW */
+		// BTN NEW
 		.new_autocomplete {
 			float: right;	
 			position: relative;
@@ -82,44 +71,49 @@
 
 	/* VALOR TEXT
 	--------------------------------------------- */
-	.css_autocomplete_valor {
+	ul.css_autocomplete_valor {
 		display: inline-block;
 		color: #1a1a1a;
 		padding: 3px;
 		padding-left: 0px;
 		padding-right: 5px;
-
 		min-width: 70%;
 		}
-		.css_autocomplete_valor > li {
+		ul.css_autocomplete_valor.in_search_mode {
+			margin-top: 25px;
+			display: table;
+			width: 100%;
+		}
+		ul.css_autocomplete_valor > li {
 			display: flex;
 			max-width: 95%;
 		}
-		.css_autocomplete_valor.in_search_mode {
+		ul.css_autocomplete_valor.in_search_mode {
 			//float: left;
 		}
-		.css_autocomplete_valor.in_search_mode > li {
+		ul.css_autocomplete_valor.in_search_mode > li {
 			display: block;
 			max-width: 100%;
 		}
 
 
+
 	/* THESAURUS CONTEXT
 	--------------------------------------------- */
-	.data_container .css_wrap_autocomplete .buttons_and_fields {
-		visibility: hidden;
-		display: none !important;
-	}
-	.data_container .css_wrap_autocomplete .css_autocomplete_button_delete {
-		visibility: hidden;
-		display: none !important;
-	}
+		.data_container .css_wrap_autocomplete .buttons_and_fields {
+			visibility: hidden;
+			display: none !important;
+		}
+		.data_container .css_wrap_autocomplete .css_autocomplete_button_delete {
+			visibility: hidden;
+			display: none !important;
+		}
 
 
 
 
 	/* AUTOCOMPLETE SEARCH FIELD 
-	--------------------------------------------- */
+	--------------------------------------------- 
 	input.css_autocomplete_search_field {
 		float: right;
 		width: 100px;
@@ -143,8 +137,8 @@
 			background-position-x: 95%;
 		}
 
-		/* Search variant
-		----------------------------------------- */
+		/// Search variant
+		----------------------------------------- 
 		input.css_autocomplete_search_field.in_search_mode,
 		.new_autocomplete.in_search_mode {
 			position: relative;
@@ -153,13 +147,13 @@
 			opacity: 1
 		}
 		div.autocomplete_list_button_options.in_search_mode {
-			/*position: relative;
-			float: left;
-			top: 1px;
-			margin-right: 5px;
-			margin-left: 5px;
-			zoom: 1.45;
-			//transform: scale(200);*/
+			//position: relative;
+			//float: left;
+			//top: 1px;
+			//margin-right: 5px;
+			//margin-left: 5px;
+			//zoom: 1.45;
+			//transform: scale(200);
 
 			position: relative;			
 			top: 1px;
@@ -167,7 +161,7 @@
 			margin-left: 39px;
 			zoom: 1.45;
 		}
-
+		*/
 
 
 	/* DATO HIDDEN INPUT
@@ -227,9 +221,7 @@
 			opacity: 0.8;
 		}
 
-		.css_autocomplete_ul {
-
-		}
+	
 
 	.css_autocomplete_button_close {
 		display: inline-block;
@@ -252,7 +244,7 @@
 
 
 	/* wrap_portal_list
-	----------------------- */
+	---------------------------------------- */
 		.css_wrap_autocomplete.wrap_portal_list > .content_data {
 			width: 100%;
 			padding: 3px;
@@ -265,12 +257,9 @@
 				max-width: 82px;
 				z-index: 9;
 			}
-	
-
-
-	.css_wrap_autocomplete.wrap_portal_list >.content_data > input.css_autocomplete_search_field:focus {
-		background-position-x: 98%;
-	}
+		.css_wrap_autocomplete.wrap_portal_list >.content_data > input.css_autocomplete_search_field:focus {
+			background-position-x: 98%;
+		}
 
 
 
@@ -289,7 +278,7 @@
 		float: right;
 		position: relative;
 		top: -16px;
-		right: 10px;
+		right: 7px;
 	}
 	.wrap_autocomplete_search .autocomplete_list_button_options {
 		top: 0;
@@ -369,11 +358,11 @@
 			.autosearch_options {
 				//background-color: #DFFE79;
 				display: none;
-				padding-right: 150px;
+				padding-right: 0; //100px;
 				background-color: #8e8e8e;
 				color: #fcfcfc;
 				border-radius: 4px;
-				margin-top: 10px;
+				margin-top: 0; //10px;
 				margin-bottom: 5px;
 				clear: both;
 				}
@@ -453,6 +442,7 @@
 			float: left;
 			margin-right: 8px;
 		}
+
 
 
 	/* UL LI DATAFRAME

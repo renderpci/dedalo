@@ -17,6 +17,8 @@
 	print "data-component_info='{$component_info}' ";
 	print "data-hierarchy_sections='". json_encode($hierarchy_sections)."' ";  // Default hierarchy_sections
 	print "data-relation_type='{$relation_type}' ";
+	print 'data-search_query_object=\''.$json_search_query_object.'\' ';
+	print "data-limit=\"$limit\" ";
 	print ">";
 
 	# ETIQUETA (LABEL)
@@ -174,17 +176,18 @@
 
 				# INPUT DATA HIDDEN
 				$html_content .= "<input type=\"text\" name=\"{$input_name}\" class=\"css_autocomplete_hi_dato_hidden debug_info\" ";
+				$html_content .= "value='{$dato_json}' ";
 				$html_content .= "data-tipo=\"{$tipo}\" ";
-				$html_content .= "data-section_tipo=\"{$section_tipo}\" ";
-				$html_content .= "data-parent=\"{$parent}\" ";
-				$html_content .= "data-lang=\"{$lang}\" ";
+				#$html_content .= "data-section_tipo=\"{$section_tipo}\" ";
+				#$html_content .= "data-parent=\"{$parent}\" ";
+				#$html_content .= "data-lang=\"{$lang}\" ";
+				// AR_LINK_FIELDS. Used for geolocation propagation value
 				if(!empty($ar_link_fields) && $ar_link_fields !== '[]'){
 					$html_content .= "data-link_fields='{$ar_link_fields}' ";
 				}
-				$html_content .= "data-role=\"autocomplete_hi_dato_hidden\" ";
-				$html_content .= "data-limit=\"$limit\" ";
-				$html_content .= "data-options_type=\"$options_type\" ";
-				$html_content .= "value='{$dato_json}' ";
+				$html_content .= "data-role=\"dato_hidden\" ";
+				#$html_content .= "data-limit=\"$limit\" ";
+				#$html_content .= "data-options_type=\"$options_type\" ";				
 				$html_content .= "/>";
 
 				if(SHOW_DEBUG===true) {

@@ -3946,6 +3946,7 @@ abstract class component_common extends common {
 	}//end remove_first_and_last_quotes
 
 
+
 	/**
 	* AUTOCOMPLETE_SEARCH
 	* @return array $ar_result
@@ -4059,7 +4060,9 @@ abstract class component_common extends common {
 
 
 
-	################################## / end SEARCH 2 ########################################################
+	################################## /end SEARCH 2 ########################################################
+
+
 
 	/**
 	* GET_DEF

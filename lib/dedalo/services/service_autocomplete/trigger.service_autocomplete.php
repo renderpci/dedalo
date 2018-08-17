@@ -42,26 +42,24 @@ function autocomplete_search($json_data) {
 	*/
 	if(SHOW_DEBUG===true) {
 		#debug_log(__METHOD__." search_query_object ".to_string($search_query_object), logger::DEBUG);
-		#dump(null, ' trigger search_query_object ++ '. json_encode($search_query_object, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT)); die();
+		#dump(null, ' trigger search_query_object ++ '. json_encode($search_query_object, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT)); #die();
 	}	
 
 	$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
-
-	$component = component_common::get_instance($modelo_name,
+	$component 	 = component_common::get_instance($modelo_name,
 												 $component_tipo,
 												 null,
 												 'list',
 												 DEDALO_DATA_LANG,
 												 $section_tipo);
 
-	$result = (array)$component->autocomplete_search(
-													 $search_query_object,
-													 $divisor);
+	$result 	 = (array)$component->autocomplete_search(
+												 $search_query_object,
+												 $divisor);
 	
 	$response->result 	= $result;
 	$response->msg 		= 'Ok. Request done ['.__FUNCTION__.']';
 
-	#error_log(json_encode($result));
 
 	# Debug
 	if(SHOW_DEBUG===true) {

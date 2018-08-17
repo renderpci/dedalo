@@ -3,16 +3,19 @@
 	# VISUALIZADOR HTML		
 		
 	
-	print "<div class=\"wrap_component css_wrap_autocomplete_hi wrap_autocomplete_hi_search tooltip_active\" id=\"{$id_wrapper}\" ";
+	print '<div class="wrap_component css_wrap_autocomplete_hi wrap_autocomplete_hi_search tooltip_active" id="'.$id_wrapper.'" ';
+	print 'title="'.search_development2::search_options_title( $this->search_operators_info() ).'" ';
 	print "data-tipo=\"{$tipo}\" ";
+	print "data-section_tipo=\"{$section_tipo}\" ";
 	print "data-relation_type='{$relation_type}' ";
 	print "data-component_name=\"{$component_name}\" ";
 	print "data-modo=\"{$modo}\" ";
 	print "data-dato='".json_encode($dato)."' ";
-	print 'data-q_operator="'.$q_operator.'" ';
-	print 'title="'.search_development2::search_options_title( $this->search_operators_info() ).'" ';
-	print "data-hierarchy_sections='". json_encode($hierarchy_sections)."' "; // Default hierarchy_sections
-	print ">";
+	print 'data-q_operator="'.$q_operator.'" ';	
+	#print "data-hierarchy_sections='". json_encode($hierarchy_sections)."' "; // Default hierarchy_sections
+	print 'data-search_query_object=\''.$json_search_query_object.'\' ';
+	print "data-limit=\"$limit\" ";
+	print '>';
 	
 	# ETIQUETA (LABEL)
 	$html_label = component_common_draw::draw_label($this);
@@ -71,8 +74,8 @@
 
 						#
 						# AUTOCOMPLETE SERVICE
-						$autocomplete_wrapper_id = 'aw_' . $identificador_unico;
-						$html_content .= '<div class="autocomplete_wrapper" id="'.$autocomplete_wrapper_id.'"></div>';
+						#$autocomplete_wrapper_id = 'aw_' . $identificador_unico;
+						#$html_content .= '<div class="autocomplete_wrapper" id="'.$autocomplete_wrapper_id.'"></div>';
 
 						# Reset var 'activated' on load
 						#$html_content .= "<script>component_autocomplete_hi.activated={}</script>";
@@ -145,6 +148,12 @@
 				$html_content .= "</ul>";
 
 
+				#
+				# AUTOCOMPLETE SERVICE
+				$autocomplete_wrapper_id = 'aw_' . $identificador_unico;
+				$html_content .= '<div class="autocomplete_wrapper in_search_mode" id="'.$autocomplete_wrapper_id.'"></div>';
+
+
 
 				#
 				# TREE RESOLUTION STATS
@@ -152,12 +161,12 @@
 
 				# INPUT DATA HIDDEN
 				$html_content .= "<input type=\"text\" name=\"{$search_input_name}\" class=\"css_autocomplete_hi_dato_hidden\" style=\"width:300px;\" ";
-				#$html_content .= "data-tipo=\"{$tipo}\" ";
+				$html_content .= "value='{$dato_json}' ";
+				$html_content .= "data-tipo=\"{$tipo}\" ";
 				#$html_content .= "data-section_tipo=\"{$section_tipo}\" ";
 				#$html_content .= "data-parent=\"{$parent}\" ";
-				#$html_content .= "data-lang=\"{$lang}\" ";
-				#$html_content .= "data-link_fields='{$ar_link_fields}' ";				
-				$html_content .= "data-role=\"autocomplete_hi_dato_hidden\" ";
+				#$html_content .= "data-lang=\"{$lang}\" ";			
+				$html_content .= "data-role=\"dato_hidden\" ";
 				#$html_content .= "data-limit=\"$limit\" ";
 				#$html_content .= "data-options_type=\"$options_type\" ";
 				$html_content .= "value='{$dato_json}' ";

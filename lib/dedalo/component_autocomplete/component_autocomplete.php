@@ -172,7 +172,7 @@
 				$component_info 	= $this->get_component_info('json');
 				$in_time_machine 	= false;
 
-				# search_query_object
+				# SEARCH_QUERY_OBJECT
 				$query_object_options = new stdClass();
 					$query_object_options->q 	  				= null;
 					$query_object_options->limit  				= 40;
@@ -213,8 +213,7 @@
 				# and recovered in component_common->get_search_input_name()
 				# Normally is section_tipo + component_tipo, but when in portal can be portal_tipo + section_tipo + component_tipo
 				$search_input_name = $this->get_search_input_name();
-					#dump($search_input_name, ' $search_input_name ++ '.to_string());
-
+				
 				# FIlTER_BY_LIST (Propiedades option)
 				$filter_by_list = false; // Default
 				if (isset($propiedades->source->filter_by_list)) {
@@ -224,7 +223,7 @@
 				# SEARCH_FIELDS
 				$search_fields 		= $this->get_search_fields($tipo);
 				$search_fields_json = json_encode($search_fields);
-				
+								
 				# Divisor
 				$divisor = $this->get_divisor();
 				break;
