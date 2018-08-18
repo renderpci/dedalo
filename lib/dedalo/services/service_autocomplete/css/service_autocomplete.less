@@ -10,18 +10,21 @@
 /* INPUT
 ------------------------------------------------------- */
 .autocomplete_wrapper {
-	float: right;
-    position: relative;
+	
+	width: 100%;
+	z-index: 10;
+	padding: 10px;
+	left: 0px;
 	}
 	.autocomplete_wrapper input.autocomplete_input {
 		//background-color: #C8F54D;
-		float: right;
-		width: 100px;
+		//float: right;
+		width: 100%;
 		background: #fff url("../../../themes/default/lupa2.svg") right center no-repeat;
 		background-size: auto 100%;
-		background-position-x: 75%;
+		background-position-x: 95%;
 		transition: all .2s ease-in-out;		
-		opacity: 0.5;
+		//opacity: 0.5;
 	}
 	.autocomplete_wrapper input.autocomplete_input:focus {
 		opacity: 1;
@@ -34,3 +37,4 @@
 	    top: 0;
 	    left: 40px;
 	}
+

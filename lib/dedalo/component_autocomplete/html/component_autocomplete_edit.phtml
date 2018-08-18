@@ -160,7 +160,7 @@
 								
 								$autosearch_options_html .= "<li>";
 								#$autosearch_options_html .= "<div class=\"wrap_component\" data-dato=''>";
-								$autosearch_options_html .= "<label>$name</label>";
+								$autosearch_options_html .= "<label class=\"css_label label\">$name</label>";
 								$autosearch_options_html .= "<input type=\"text\" class=\"filter_fields_input\" ";
 								$autosearch_options_html .= "name=\"{$input_name}\" ";
 								$autosearch_options_html .= "value=''";
@@ -309,15 +309,7 @@
 					$html_content .= '</ul>';
 
 
-				#
-				# AUTOSEARCH_OPTIONS (add after button)
-					$html_content .= $autosearch_options_html;
 
-
-				#
-				# AUTOCOMPLETE SERVICE
-					$autocomplete_wrapper_id = 'aw_' . $identificador_unico;
-					$html_content .= '<div class="autocomplete_wrapper" id="'.$autocomplete_wrapper_id.'"></div>';
 
 
 				#
@@ -395,19 +387,24 @@
 					$html_content .= "/>";
 					// data-filter_by_list_component_tipo=\"$filter_by_list_component_tipo\"
 
-
 				#
-				# NEW_ELEMENT_CONTAINER ajax loads here
-					$html_content .= "<div class=\"new_element_container\" data-role=\"new_element_container\" data-tipo=\"{$tipo}\"></div>";
-						if(SHOW_DEBUG===true) {
-							/*
-							$html_content .= "<div class=\"debug_info notes\">target_section_tipo: ".implode(', ', $ar_target_section_tipo)."</div>";
-							if (isset($propiedades->filtered_by)) {
-								$html_content .= "<div class=\"debug_info notes\">filtered_by: ".json_encode($propiedades->filtered_by)."</div>";	// filtered_by
-							}
-							$html_content .= "<div class=\"debug_info notes\">".str_replace('},', '},<br>', $dato_json) ."</div>";
-							*/
-						}
+				# COMPONENT OPTIONS CONTAINER
+				$html_content .= '<div class="component_options_container">';
+				
+					#
+					# NEW_ELEMENT_CONTAINER ajax loads here
+						$html_content .= "<div class=\"new_element_container\" data-role=\"new_element_container\" data-tipo=\"{$tipo}\"></div>";
+
+					#
+					# AUTOSEARCH_OPTIONS (add after button)
+						$html_content .= $autosearch_options_html;
+
+					#
+					# AUTOCOMPLETE SERVICE
+						$autocomplete_wrapper_id = 'aw_' . $identificador_unico;
+						$html_content .= '<div class="autocomplete_wrapper" id="'.$autocomplete_wrapper_id.'"></div>';
+
+				$html_content .= '</div>';
 
 
 				#
