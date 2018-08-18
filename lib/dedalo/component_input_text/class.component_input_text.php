@@ -458,6 +458,8 @@ class component_input_text extends component_common {
 		
 		$q = pg_escape_string(stripslashes($q));
 
+		$q_operator = isset($query_object->q_operator) ? $query_object->q_operator : null;
+
 		# Prepend if exists
 		#if (isset($query_object->q_operator)) {
 		#	$q = $query_object->q_operator . $q;
@@ -509,7 +511,7 @@ class component_input_text extends component_common {
     			$query_object = $new_query_json ;
 				break;
 			# IS DIFFERENT			
-			case (strpos($q, '!=')===0):
+			case (strpos($q, '!=')===0 || $q_operator==='!='):
 				$operator = '!=';
 				$q_clean  = str_replace($operator, '', $q);
 				$query_object->operator = '!~';
@@ -517,7 +519,7 @@ class component_input_text extends component_common {
     			$query_object->unaccent = false;
 				break;
 			# IS SIMILAR
-			case (strpos($q, '=')===0):
+			case (strpos($q, '=')===0 || $q_operator==='='):
 				$operator = '=';
 				$q_clean  = str_replace($operator, '', $q);
 				$query_object->operator = '~*';
@@ -525,7 +527,7 @@ class component_input_text extends component_common {
     			$query_object->unaccent = true;
 				break;
 			# NOT CONTAIN
-			case (strpos($q, '-')===0):
+			case (strpos($q, '-')===0 || $q_operator==='-'):
 				$operator = '!~*';
 				$q_clean  = str_replace('-', '', $q);
 				$query_object->operator = $operator;
