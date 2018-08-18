@@ -128,7 +128,7 @@
 						
 		case 'search' :
 				# dato is injected by trigger search wen is needed
-				$dato = isset($this->dato) ? $this->dato : null;
+				$dato = isset($this->dato) ? $this->dato : [];
 				
 				$id_wrapper 			= 'wrapper_'.$identificador_unico;				
 				$valor 					= $this->get_valor($lang);
