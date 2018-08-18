@@ -55,10 +55,10 @@
 							$plain_value = implode(',', (array)$dato[$current_section_tipo]);
 						}
 
-						$label = RecordObj_dd::get_termino_by_tipo($current_section_tipo, DEDALO_DATA_LANG, true, true); //, $terminoID, $lang=NULL, $from_cache=false, $fallback=true					
+						$current_label = RecordObj_dd::get_termino_by_tipo($current_section_tipo, DEDALO_DATA_LANG, true, true); //, $terminoID, $lang=NULL, $from_cache=false, $fallback=true					
 
 						$data = array(
-							'label' 	  => $label,
+							'label' 	  => $current_label,
 							'permissions' => $section_permissions,
 							'plain_value' => $plain_value,
 							);

@@ -3,18 +3,19 @@
 	# VISUALIZADOR HTML
 
 
-	print "<!-- ".__CLASS__." [tipo:$tipo section_id:$parent section_tipo:$section_tipo] $label -->";
+	# html_delimiter
+	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'in', $modo, $lang);
 
-	print "<div class=\"wrap_component css_wrap_filter_records wrap_component_{$modo} wrap_component_{$tipo}\" id=\"{$id_wrapper}\"
-	data-tipo=\"{$tipo}\"
-	data-lang=\"{$lang}\"
-	data-parent=\"{$parent}\"
-	data-section_tipo=\"{$section_tipo}\"
-	data-modo=\"{$modo}\"
-	data-dato='{$dato_string}'
-	data-component_name=\"{$component_name}\"
-	data-component_info='{$component_info}'
-	>";
+	print "<div class=\"wrap_component css_wrap_filter_records wrap_component_{$modo} wrap_component_{$tipo}\" id=\"{$id_wrapper}\" ";
+	print "data-tipo=\"{$tipo}\" ";
+	print "data-lang=\"{$lang}\" ";
+	print "data-parent=\"{$parent}\" ";
+	print "data-section_tipo=\"{$section_tipo}\" ";
+	print "data-modo=\"{$modo}\" ";
+	print "data-dato='{$dato_string}' ";
+	print "data-component_name=\"{$component_name}\" ";
+	print "data-component_info='{$component_info}' ";
+	print ">";
 
 	# ETIQUETA (LABEL)
 	$html_label = component_common_draw::draw_label($this);
@@ -31,43 +32,44 @@
 			$html_content .= $this->valor;
 			break;
 
-
 		case 2 :
 		case 3 :
 
-			$html_content .= "<div class=\"wrap_filter_records_values\">";
+			$html_content .= '<div class="wrap_filter_records_values">';
 
-
-				$html_content .= "<ul>";
+				$html_content .= '<ul>';
 
 				# header
-				$html_content .= "<li class=\"head\">";
-				$html_content .= " <div>";
-				$html_content .= " <span class=\"c_section_tipo\">Tipo</span>";
-				$html_content .= " <span class=\"c_label\">Section name</span>";
-				$html_content .= " <span class=\"c_value\">Value</span>";
-				$html_content .= " </div>";
-				$html_content .= "</li>";
+				$html_content .= '<li class="head">';
+				$html_content .= '<div>';
+				$html_content .= '<span class="c_section_tipo">Tipo</span>';
+				$html_content .= '<span class="c_label">Section name</span>';
+				$html_content .= '<span class="c_value">Value</span>';
+				$html_content .= '</div>';
+				$html_content .= '</li>';
 
 				# rows				
 				foreach ($ar_sections as $current_section_tipo => $ar_value) {
 
 					$value = $ar_value['plain_value'];
 
-					$html_content .= "<li class=\"row\">";
-					$html_content .= " <div>";
-					$html_content .= " <span class=\"c_section_tipo\">".$current_section_tipo."</span>";
-					$html_content .= " <span class=\"c_label\">".$ar_value['label']."</span>";
-					$html_content .= " <input class=\"c_records\" type=\"text\" value=\"$value\" placeholder=\"Comma separated id like 1,2,3\" onchange=\"component_filter_records.Save(this)\"
-					data-role=\"component_filter_records_input\"
-					data-current_section_tipo=\"$current_section_tipo\"
-					/>";
-					$html_content .= " </div>";
-					$html_content .= "</li>";
+					$html_content .= '<li class="row">';
+					$html_content .= '<div>';
+					$html_content .= '<span class="c_section_tipo">'.$current_section_tipo.'</span>';
+					$html_content .= '<span class="c_label">'.$ar_value['label'].'</span>';
+					$html_content .= '<input class="c_records" type="text" ';
+					$html_content .= 'value="'.$value.'" ';
+					$html_content .= 'placeholder="Comma separated id like 1,2,3" ';
+					$html_content .= 'onchange="component_filter_records.Save(this)" ';
+					$html_content .= 'data-role="component_filter_records_input" ';
+					$html_content .= 'data-current_section_tipo="'.$current_section_tipo.'" ';
+					$html_content .= '/>';
+					$html_content .= '</div>';
+					$html_content .= '</li>';
 				}
-				$html_content .= "</ul>";
+				$html_content .= '</ul>';
 				
-			$html_content .= "</div>";//end wrap_parent_values
+			$html_content .= '</div>';//end wrap_parent_values
 			
 			#
 			# JS Init component
@@ -90,5 +92,6 @@
 	print $html_content;
 
 
-	print "</div><!-- /css_wrap_filter_records [tipo:$tipo section_id:$parent] $label -->"; //wrap
+	# html_delimiter
+	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'out', $modo, $lang);
 ?>
