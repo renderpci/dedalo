@@ -1,13 +1,10 @@
-<?php
-	
+<?php	
 
 	# HTML VIEW
-	
 
-
-	$html    = "\n<!-- TOOL PAGE [tipo:$component_tipo] -->";
-	$html   .= "\n<div class=\"wrap_tool wrap_tool_replace_component_data_page\" >";
-	$html   .= "\n<div class=\"content_data tool_replace_component_data_text\" >";
+	$html    = "<!-- TOOL PAGE [tipo:$component_tipo] -->";
+	$html   .= "<div class=\"wrap_tool wrap_tool_replace_component_data_page\" >";
+	$html   .= "<div class=\"content_data tool_replace_component_data_text\" >";
 
 	
 		// 'Se reemplazara el contenido del campo: %s en los %s registros actuales con el valor %s'
@@ -22,39 +19,34 @@
 		}
 		
 		$total_records 	= "<label>$total_records</label>";
-		if ($lang==DEDALO_DATA_NOLAN) {
+		if ($lang===DEDALO_DATA_NOLAN) {
 			$lang_text		= "<label>". label::get_label('todos') ."</label>";
 		}else{
 			$lang_text		= "<label>". lang::get_name_from_code( $lang, DEDALO_DATA_LANG ) ."</label>";
 		}
 		
-			#dump($lang, " lang ".to_string());
 
-		$html   .= sprintf($dialog, $label, $total_records, $valor, $lang_text );
+		$html .= sprintf($dialog, $label, $total_records, $valor, $lang_text);
 
-		# Cancel button
-		//$html .= "<div class=\"css_button_generic button_cancel\" onclick=\"top.$('#dialog_page_iframe').dialog('close');\">".label::get_label('cancelar')."</div>";
-
+		
 		# Ok button
-		$html .= "<div class=\"css_button_generic button_replace\" onclick=\"tool_replace_component_data.replace_data(this)\"
-		data-component_tipo=\"$component_tipo\"
-		data-parent=\"$section_id\"
-		data-section_tipo=\"$section_tipo\"
-		>";
+		$html .= "<div class=\"css_button_generic button_replace\" onclick=\"tool_replace_component_data.replace_data(this)\" ";
+		$html .= "data-component_tipo=\"$component_tipo\" ";
+		$html .= "data-parent=\"$section_id\" ";
+		$html .= "data-section_tipo=\"$section_tipo\" ";
+		$html .= ">";
 		$html .= label::get_label('tool_do_replace');
 		$html .= "</div>";
 
 
-
-		$html .= "<div id=\"tool_replace_component_data_response\"></div>";
+		$html .= '<div id="tool_replace_component_data_response"></div>';
 	
-	$html .= "\n</div><!-- /content_data -->";
-	$html .= "\n</div><!-- /wrap_tool -->"; //wrap_tool
+	$html .= "</div><!-- /content_data -->";
+	$html .= "</div><!-- /wrap_tool -->"; //wrap_tool
 
 	
 	# INSPECTOR LOG TOOL
-	$html .= "\n<div id=\"inspector_log\" class=\"tool_transcription_inspector_log\"> </div>";
-
+	$html .= "<div id=\"inspector_log\" class=\"tool_transcription_inspector_log\"> </div>";
 
 
 
