@@ -76,6 +76,19 @@ function Save($json_data) {
 													$lang,
 													$section_tipo);
 	
+	#unique value server check
+	$properties = $component_obj->get_propiedades();
+
+	if(isset($properties->unique->server_check) && $properties->unique->server_check===true){
+		$check_dato = (is_array($dato_clean)) ?	reset($dato_clean) : $dato_clean;
+		$unique_server_check = $component_obj->unique_server_check($check_dato);
+		if($unique_server_check === false){
+			//Trigger Error: Nothing is saved.
+			$response->msg = label::get_label("value_already_exists");
+			return $response;
+		}
+	}
+
 	# CALLER_DATASET optional
 	if (!empty($caller_dataset)) {
 		
@@ -104,9 +117,6 @@ function Save($json_data) {
 		$response->result 	= $parent;
 		$response->msg 		= 'Ok. Request done [Save]. Data is not changed. Is not necessary update component db data';
 
-			#dump($dato_clean, ' dato_clean ++ '.to_string());
-			#dump($new_dato, ' new_dato ++ '.to_string());
-			#dump($old_dato, ' old_dato ++ '.to_string());	
 	}else{
 
 		# Call the specific function of the current component that handles the data saving with your specific preprocessing language, etc ..
