@@ -120,36 +120,46 @@
 						$html_content .= "autocorrect=\"off\" ";
 						$html_content .= "/>"; */
 
-						#
-						# AUTOCOMPLETE SERVICE
-						$autocomplete_wrapper_id = 'aw_' . $identificador_unico;
-						$html_content .= '<div class="autocomplete_wrapper" id="'.$autocomplete_wrapper_id.'"></div>';
-
+						
 						if(SHOW_DEBUG===true) {
 							#$html_content .= "<div class=\"debug_info notes\">ar_referenced_tipo: ".implode(', ', $ar_referenced_tipo)."</div>";
 							$html_content .= "<div class=\"debug_info notes\">".str_replace('},', '},<br>', $dato_json) ."</div>";
 						}
 
-						#
-						# OPTIONS
-						if ($ar_filter_options!==false) {
-						
-							$html_content .= "<div class=\"icon_bs toponymy_list_button_options edit_hidden\" onclick=\"component_autocomplete_hi.toggle_toponymy_list(this)\"></div>";
 
-							$cookie_name = 'toponymy_list_'.$section_tipo .'_'. $tipo;
-							$html_content .= "<ul class=\"toponymy_list text_unselectable\">";
-							#$html_content .= "<div class=\"toponymy_list_close\">X</div>";
-							$html_content .= "<li><input type=\"checkbox\" id=\"select_all_{$tipo}\" onchange=\"component_autocomplete_hi.select_all_hierarchy_sections(this,'$cookie_name')\"> <label for=\"select_all_{$tipo}\">".label::get_label('todos')."</label></li><hr>";
-							foreach ((array)$ar_filter_options as $fo_key => $fo_label) {
-								$current_id = $tipo.'_'.md5($fo_key);
-								$html_content .= "<li>";
-								$html_content .= "<input type=\"checkbox\" value='".$fo_key."' id=\"$current_id\" checked ";
-								$html_content .= "onchange=\"component_autocomplete_hi.save_hierarchy_sections(this,'$cookie_name')\">";
-								$html_content .= '<label for="'.$current_id.'">'.$fo_label.'</label>';
-								$html_content .= "</li>";
-							}
-							$html_content .= "</ul>";
-						}//end if ($ar_filter_options!==false)
+						#
+						# COMPONENT OPTIONS CONTAINER
+						$html_content .= '<div class="component_options_container">';
+
+							#
+							# OPTIONS
+							if ($ar_filter_options!==false) {
+							
+								$html_content .= "<div class=\"icon_bs toponymy_list_button_options edit_hidden\" onclick=\"component_autocomplete_hi.toggle_toponymy_list(this)\"></div>";
+
+								$cookie_name = 'toponymy_list_'.$section_tipo .'_'. $tipo;
+								$html_content .= "<ul class=\"toponymy_list text_unselectable\">";
+								#$html_content .= "<div class=\"toponymy_list_close\">X</div>";
+								$html_content .= "<li><input type=\"checkbox\" id=\"select_all_{$tipo}\" onchange=\"component_autocomplete_hi.select_all_hierarchy_sections(this,'$cookie_name')\"> <label for=\"select_all_{$tipo}\">".label::get_label('todos')."</label></li><hr>";
+								foreach ((array)$ar_filter_options as $fo_key => $fo_label) {
+									$current_id = $tipo.'_'.md5($fo_key);
+									$html_content .= "<li>";
+									$html_content .= "<input type=\"checkbox\" value='".$fo_key."' id=\"$current_id\" checked ";
+									$html_content .= "onchange=\"component_autocomplete_hi.save_hierarchy_sections(this,'$cookie_name')\">";
+									$html_content .= '<label for="'.$current_id.'">'.$fo_label.'</label>';
+									$html_content .= "</li>";
+								}
+								$html_content .= "</ul>";
+							}//end if ($ar_filter_options!==false)
+
+
+							#
+							# AUTOCOMPLETE SERVICE
+							$autocomplete_wrapper_id = 'aw_' . $identificador_unico;
+							$html_content .= '<div class="autocomplete_wrapper" id="'.$autocomplete_wrapper_id.'"></div>';
+
+
+						$html_content .= '</div>';
 						
 						# JAVASCRIPT
 						$html_content .= "<script>";
