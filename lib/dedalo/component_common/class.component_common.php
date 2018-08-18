@@ -443,18 +443,6 @@ abstract class component_common extends common {
 	}//end get_dato_unchanged
 
 
-
-	# DATO REAL
-	/*
-	public function get_dato_real() {
-		$dato_real = $this->get_dato();
-
-		return $dato_real;
-	}//end get_dato_real
-	*/
-
-
-
 	/**
 	* LOAD MATRIX DATA
 	* Get data once from matrix about parent, dato
@@ -2086,46 +2074,6 @@ abstract class component_common extends common {
 		return $dato;
 	}//end remove_object_in_dato
 
-
-
-	/**
-	* GET_SECTION_TIPO_FROM_COMPONENT_TIPO
-	*//*
-	public static function get_section_tipo_from_component_tipo($component_tipo) {
-
-		debug_log(__METHOD__." DEPRECATED . Please avoid call this method. Will be REMOVED soon ".to_string(), logger::WARNING);
-
-		if(SHOW_DEBUG===true) {
-			#dump(debug_backtrace(), ' debug_backtrace '.to_string());
-			#debug_log(__METHOD__." Please avoid call this method. Will be DEPRECATED soon ".to_string()); // sorry: ar_list_of_values uses this method..
-		}		
-
-		$section_tipo = null;
-
-		# SRTUCTURE PARENTS
-		$RecordObj_dd 		= new RecordObj_dd($component_tipo);
-		$ar_parents_of_this = $RecordObj_dd->get_ar_parents_of_this($ksort=false);
-
-		# MODELO
-		foreach ($ar_parents_of_this as $current_tipo) {
-
-			#if(!is_null($section_tipo)) {
-			#	dump($ar_parents_of_this,'$ar_parents_of_this');
-			#	throw new Exception("Error Processing Request. Inconsistent data. More than one section found!", 1);
-			#}
-
-			$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
-			if($modelo_name==='section') {
-				$section_tipo = $current_tipo;
-				break;
-			}
-		}		
-
-		return $section_tipo;
-	}//end get_section_tipo_from_component_tipo
-	*/
-
-
 	
 	/**
 	* GET_DIFFUSION_OBJ
@@ -2710,15 +2658,6 @@ abstract class component_common extends common {
 		return $select_query;
 	}//end get_select_query	
 
-
-
-	/**
-	* GET_COLUMN_QUERY
-	* @return 
-	*/
-	#public function get_column_query($request_options) { // Used by subquerys		
-	#}//end get_column_query
-
 	
 
 	/**
@@ -2739,65 +2678,6 @@ abstract class component_common extends common {
 				 'component_filter_master'  // added 6-05-2018
 				];
 	}//end get_ar_components_with_references
-
-
-
-	/**
-	* UPDATE_STATE
-	* (common because is used by various components and tools, ..)
-	* @param object $state_obj ("lang":"toolXXX":1)
-	* @return object $this->component_state set and store component_state)
-	*/
-	protected function update_state_OLD($state_obj) {
-
-		if(!is_object($state_obj)){
-			throw new Exception("Error Processing Request this no is a object".to_string($state_obj), 1);
-		}
-
-		$section_id 	= $this->component_obj->get_parent();
-		$component_tipo = $this->component_obj->get_tipo();
-		$section_tipo	= $this->component_obj->get_section_tipo();
-
-		$locator_state 	= new locator();
-			$locator->set_section_tipo($section_tipo);
-			$locator->set_section_id($section_id);
-			$locator->set_component_tipo($component_tipo);
-			$locator->set_status($state_obj);
-
-		$component_state = $this->component_obj->get_component_state_obj();
-
-		return $component_state->update_state($locator_state);			
-	}//end update_state_OLD
-
-
-
-	/**
-	* GET_STATE
-	* (common because is used by various components and tools, ..)
-	* @param object $state_obj ("lang":"toolXXX":1)
-	* @return object $this->component_state set and store component_state)
-	*/
-	protected function get_state_OLD($tool_name=null,$lang=DEDALO_DATA_LANG) {
-
-		$component_state = $this->component_obj->get_component_state_obj();
-
-		$section_id 	= $this->component_obj->get_parent();
-		$component_tipo = $this->component_obj->get_tipo();
-		$section_tipo	= $this->component_obj->get_section_tipo();
-
-		$locator_state 	= new locator();
-			$locator->set_section_tipo($section_tipo);
-			$locator->set_section_id($section_id);
-			$locator->set_component_tipo($component_tipo);
-
-		$my_state 		= $component_state->get_my_state($locator_state);
-
-		if(!empty($tool_name)){
-			$my_state = $my_state->state->$lang->$tool_name;
-		}
-
-		return $my_state;
-	}//end get_state_OLD
 
 
 
@@ -3402,49 +3282,6 @@ abstract class component_common extends common {
 
 
 	/**
-	* GET_JSON_build_options
-	* Collect vars to js call to component for build html
-	* @return object $options
-	*//* DEPRECATED 
-	public function get_json_build_options() {
-		
-		$options = new stdClass();
-			$options->section_tipo 	 = $this->get_section_tipo();
-			$options->section_id   	 = $this->get_parent();
-			$options->component_tipo = $this->get_tipo();
-			$options->model_name 	 = get_class($this);
-			$options->lang 	 		 = $this->get_lang();
-			$options->modo 	 		 = $this->get_modo();
-			$options->unic_id 		 = 'wrapper_'.$this->get_identificador_unico();
-			$options->context 		 = $this->get_context();
-			$options->propiedades 	 = $this->get_propiedades();
-			$options->dato 	 		 = $this->get_dato();
-				#debug_log(__METHOD__." options ".to_string($options), logger::DEBUG);
-			
-		return $options;
-	}//end get_json_build_options */
-
-
-
-	/**
-	* GET_JSON
-	* Generic method. Overwrite when component need custom behavior
-	* @return object $json_d
-	*//* NOT USED
-	public function get_json() {
-
-		# Set to false
-		$this->generate_json_element = false;
-
-		# Include controler
-		include ( DEDALO_LIB_BASE_PATH .'/'. get_called_class() .'/'. get_called_class() .'.php' );
-
-		return (object)$json_d;
-	}//end get_json */
-
-
-
-	/**
 	* GET_DATAFRAME
 	* @return (object)dataframe
 	*/
@@ -3584,7 +3421,6 @@ abstract class component_common extends common {
 	################################## SEARCH 2 ########################################################
 
 
-
 	/**
 	* BUILD_SEARCH_QUERY_OBJECT
 	* @return object $query_object
@@ -3595,6 +3431,8 @@ abstract class component_common extends common {
 	
 		$options = new stdClass();
 			$options->q 	 			= null;
+			$options->q_operator		= null;
+			$options->q_split			= null;
 			$options->limit  			= 10;
 			$options->offset 			= 0;
 			$options->lang 				= 'all';
@@ -3611,21 +3449,12 @@ abstract class component_common extends common {
 		$filter_group = null;
 		$select_group = array();
 
-		# propiedades
-		#$propiedades = $this->get_propiedades();
-		#$ar_filter_by_list = [];
-		#if (isset($propiedades->source->filter_by_list)) {			
-		#	foreach ($propiedades->source->filter_by_list as $key => $filter_by_list_obj) {
-		#		$ar_filter_by_list[] = $filter_by_list_obj->component_tipo;
-		#	}
-		#}
-
 		# Default from options
 		$section_tipo = $options->section_tipo;
 
 		# iterate related terms
-		$ar_related_section_tipo  	= common::get_ar_related_by_model('section', $this->tipo);			
-		if (isset($ar_related_section_tipo[0])) {	
+		$ar_related_section_tipo = common::get_ar_related_by_model('section', $this->tipo);			
+		if (isset($ar_related_section_tipo[0])) {
 
 			# Create from related terms
 			$section_tipo 				= reset($ar_related_section_tipo); // Note override section_tipo here !
@@ -3659,6 +3488,25 @@ abstract class component_common extends common {
 
 					$select_group[] = $select_element;
 			}
+		}else{
+			if($options->add_filter === true){
+
+				$path = search_development2::get_query_path($this->tipo, $section_tipo);
+
+				$filter_element = new stdClass();
+					$filter_element->q 	 			= $options->q ;
+					$filter_element->q_operator  	= $options->q_operator ;
+					$filter_element->q_split 		= $options->q_split;
+					$filter_element->lang 			= $options->lang;
+					$filter_element->path			= $path;
+
+				$filter_group = new stdClass();
+					$filter_group->$logical_operator = [$filter_element];
+			}
+			$select_group_element = new stdClass();
+				$select_group_element->path = $path;
+
+			$select_group = [$select_group_element];
 		}
 				
 		$query_object = new stdClass();
@@ -4060,7 +3908,7 @@ abstract class component_common extends common {
 
 
 
-	################################## /end SEARCH 2 ########################################################
+	################################## //end SEARCH 2 ########################################################
 
 
 
@@ -4092,6 +3940,35 @@ abstract class component_common extends common {
 		return section::get_instance($this->parent, $this->section_tipo);
 	}//end get_my_section
 
+
+
+	/**
+	* UNIQUE_SERVER_CHECK
+	* @return 
+	*/
+	public function unique_server_check($dato){
+
+		$options = new stdClass();
+			$options->q 	 			= '='.$dato;
+			$options->q_operator		= '';
+			$options->q_split 			= false;
+			$options->section_tipo		= $this->get_section_tipo();
+			$options->component_name 	= $this->get_component_name();
+			$options->component_tipo	= $this->get_tipo();
+			$options->name 				= $this->get_label();
+			$options->limit  			= 1;
+			$options->logical_operator 	= '$or';
+			
+		$search_query_object = $this->build_search_query_object($options);
+
+		$search_development2 = new search_development2($search_query_object);
+		$response = $search_development2->search();
+
+		$result = (count($response->ar_records)>0) ?  false : true; 
+
+		return $result;
+
+	}//end unique_server_check
 
 
 	/**

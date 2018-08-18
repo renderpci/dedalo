@@ -63,15 +63,17 @@
 				if (empty($dato) && $traducible=='si') {					
 					$default_component = $this->get_default_component();		
 				}
-				*/		
+				*/
+				# Check if the compoment is mandatory
 				$mandatory 		= (isset($propiedades->mandatory) && $propiedades->mandatory===true) ? true : false;
 				$mandatory_json = json_encode($mandatory);
 
+				#Check unique value
 				$unique 					= (isset($propiedades->unique->check) && $propiedades->unique->check===true) ? true : false;
 				$unique_json				= json_encode($unique);
 				$unique_disable_save 		= (isset($propiedades->unique->disable_save) && $propiedades->unique->disable_save===true) ? true : false;
 				$unique_disable_save_json	= json_encode($unique_disable_save);
-
+				
 				$propiedades_json 	= json_encode($propiedades);
 				$context 			= $this->get_context();
 
