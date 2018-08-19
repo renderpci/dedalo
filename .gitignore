@@ -69,3 +69,5 @@ koala-config.json
 /config.codekit3
 lib/dedalo/*/*-min.js
 lib/dedalo/*/*-min.css
+lib/dedalo/*/*.css
+lib/dedalo/*/*.css.map
