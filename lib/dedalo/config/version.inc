@@ -1408,7 +1408,9 @@
 		component_relation_parent : enable different sources (sections) from defined component_relation_children sources
 
 
-
+	Valencia 17-08-2018 4.9.9c
+		component_autocomplete : Unifified using service autocomple
+		component_autocomplete_hi : Unifified using service autocomple
 
 
 	WORK IN PROGRESS
@@ -1430,12 +1432,12 @@
 
 
 	# Version
-	$DEDALO_VERSION = '4.9.9';
+	$DEDALO_VERSION = '4.9.9ca';
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '12-08-2018');  
+	define('DEDALO_BUILD'	, '18-08-2018');  
 
 
 	/*
