@@ -60,7 +60,6 @@
 			
 			$tipo_to_search			= $this->get_tipo_to_search();
 			$ar_valor 				= $this->get_valor($lang,'array');				
-			#$valor  				= implode('<br>',$ar_valor);
 			$ar_labels = array_map(function($element){
 				return $element->label;
 			},$ar_valor);				
@@ -71,7 +70,6 @@
 			$input_name 			= "{$tipo}_{$parent}";
 			$component_info 		= $this->get_component_info('json');
 			$dato_json 				= json_handler::encode($dato);
-				#dump($dato_json, ' dato_json ++ '.to_string());
 
 			#get the change modo from portal list to edit
 			$from_modo_requested = common::get_request_var('from_modo');
@@ -88,11 +86,6 @@
 				css::$ar_url[] = DEDALO_LIB_BASE_URL."/tools/tool_semantic_nodes/css/tool_semantic_nodes.css";
 			}
 
-			/*$in_time_machine =  (isset($_REQUEST['m']) && $_REQUEST['m']=='tool_time_machine') || 
-								(isset($_REQUEST['mode']) && safe_xss($_REQUEST['mode'])==='load_preview_component') ? true : false;
-
-			*/
-
 			#get the change in_time_machine
 			$var_requested_m 	= common::get_request_var('m');
 			$var_requested 		= common::get_request_var('mode');
@@ -106,15 +99,11 @@
 				$filter_by_list = $propiedades->source->filter_by_list;
 			}
 			$json_filter_by_list = json_encode($filter_by_list);
-
-			#$referenced_tipo = $this->get_referenced_tipo();
 			
 			# SEARCH_FIELDS
 			$search_fields 		= $this->get_search_fields($tipo);
-				#dump($search_fields, ' $search_fields ++ '.to_string($tipo));
 			$search_fields_json = json_encode($search_fields);
 								
-			#$terminoID_valor = reset($fields); // Select first field tipo
 
 			# Limit
 			$limit = isset($propiedades->limit) ? (int)$propiedades->limit : 0;
@@ -132,11 +121,8 @@
 				# skip_projects_filter true on edit mode
 				$search_query_object->skip_projects_filter 	= true;
 			$json_search_query_object 	= json_encode( $search_query_object, JSON_UNESCAPED_UNICODE | JSON_HEX_APOS );
-				#dump($search_query_object, ' search_query_object ++ '.to_string());
-				#dump(json_encode( $search_query_object, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE), '$search_query_object ++ '.to_string());
 
 			#$filter_by_list_component_tipo = isset($propiedades->source->filter_by_list->component_tipo) ? $propiedades->source->filter_by_list->component_tipo : null;
-				#dump($filter_by_list_component_tipo, ' filter_by_list_component_tipo ++ '.to_string($propiedades));
 			
 			#
 			# DATAFRAME MANAGER	
@@ -189,9 +175,7 @@
 				$json_filter_by_list = json_encode($filter_by_list);
 				
 				$referenced_tipo			 	= $this->get_referenced_tipo();
-				#$ar_list_of_values			 	= $this->get_ar_list_of_values(DEDALO_DATA_LANG, null); // $this->get_ar_list_of_values( $lang, null, $this->ar_referenced_section_tipo, $filter_custom );
 				$ar_valor 						= $this->get_valor($lang,'array');	
-				#$valor  						= implode('<br>',$ar_valor);
 				$ar_labels = array_map(function($element){
 					return $element->label;
 				},$ar_valor);				
@@ -202,9 +186,6 @@
 				$ar_target_section_tipo_json 	= json_encode($ar_target_section_tipo);
 				$tipo_to_search					= $this->get_tipo_to_search();
 				$dato_json 						= json_handler::encode($dato);
-
-				//$ar_comparison_operators 	 	= $this->build_search_comparison_operators();
-				//$ar_logical_operators 	 	 	= $this->build_search_logical_operators();
 
 				# q_operator is injected by trigger search2
 				$q_operator = isset($this->q_operator) ? $this->q_operator : null;
@@ -275,7 +256,7 @@
 				
 				$this->set_modo('edit');
 				$html = $this->get_html();
-				echo $html;			
+				echo $html;
 				return; // Stop here
 
 			}else{
