@@ -274,13 +274,15 @@
 						#
 						# BTN EDIT
 							if (!$in_time_machine && $open_section_tipo_permissions>=2) {
-							$html_content .= "<a href=\"javascript:;\" class=\"icon_bs link edit_autocomplete edit_autocomplete_row edit_hidden\" ";
+							#$html_content .= "<a href=\"javascript:;\" class=\"icon_bs link edit_autocomplete edit_autocomplete_row edit_hidden\" ";
+							$html_content .= "<div class=\"icon_bs link edit_autocomplete edit_autocomplete_row edit_hidden\" ";
 							$html_content .= "onclick=\"component_autocomplete.open_element(this)\" ";
 							$html_content .= "data-section_tipo=\"$current_section_tipo\" ";
 							$html_content .= "data-section_id=\"$current_section_id\" ";
 							$html_content .= "data-modo=\"edit\" ";
 							$html_content .= "data-menu=\"0\" ";
-							$html_content .= "></a>";
+							#$html_content .= "></a>";
+							$html_content .= "></div>";
 							}
 
 
