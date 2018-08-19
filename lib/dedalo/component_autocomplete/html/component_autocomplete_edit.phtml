@@ -47,6 +47,16 @@
 					if($from_modo!=='edit' && $from_modo!=='tool_description'){
 						$html_content .= "<div class=\"css_autocomplete_button_close\" onclick=\"component_common.change_mode_component(this, 'edit', '$from_modo')\"></div>";
 					}
+					if($modo!=='edit' || $from_modo!=='edit'){
+						$css_autocomplete_valor				= 'css_autocomplete_valor_edit_in_list';
+						$css_component_options_container 	= 'component_options_container_edit_in_list';
+						$css_autocomplete_wrapper 			= 'autocomplete_wrapper_edit_list';
+						$html_label 	 					= '';
+					}else{
+						$css_autocomplete_valor				= '';
+						$css_component_options_container 	= 'component_options_container';
+						$css_autocomplete_wrapper 			= '';
+					}
 
 				#
 				# OPTIONS 
@@ -229,7 +239,7 @@
 
 				#
 				# VALOR . STRING RESOLVED TO SHOW
-					$html_content .= '<ul class="css_autocomplete_valor" data-role="autocomplete_valor">';
+					$html_content .= '<ul class="css_autocomplete_valor '.$css_autocomplete_valor.'" data-role="autocomplete_valor">';
 					$i=0;
 					foreach ($ar_valor as $value_obj) {
 
@@ -321,11 +331,23 @@
 
 							#$url_edit = "?t=".reset($ar_target_section_tipo).'&menu=0';	// To first section only  onclick=\"window.open('$url_edit')\"
 							$open_section_tipo = reset($ar_target_section_tipo);
-
+							
+							# BUTTON SHOW OPTIONS
+							if ($filter_by_list!==false || $filter_by_fields!==false) {
+								$html_content .= "<div class=\"icon_bs autocomplete_list_button_options edit_hidden\" data-tipo=\"$tipo\" onclick=\"component_autocomplete.toggle_options(this)\"></div>";
+							}
+							
 							# Permissions of target section. Apply to current buttons
 							$open_section_tipo_permissions = common::get_permissions($open_section_tipo,$open_section_tipo);
 							if ($open_section_tipo_permissions>=2) {
-								
+
+								#
+								# BTN NEW ELEMENT
+								$html_content .= "<div class=\"icon_bs link new_autocomplete edit_hidden\" ";
+								$html_content .= "onclick=\"component_autocomplete.new_element(this,'$id_wrapper')\" ";
+								$html_content .= "data-target_section_tipo=\"".reset($ar_target_section_tipo)."\" ";							
+								$html_content .= "></div>";
+
 								#
 								# BTN EDIT WHOLE SECTION
 								$open_section_id   = null;
@@ -336,32 +358,6 @@
 								$html_content .= "data-menu=\"1\" ";
 								$html_content .= "></a>";
 
-								#
-								# BTN NEW ELEMENT
-								$html_content .= "<div class=\"icon_bs link new_autocomplete edit_hidden\" ";
-								$html_content .= "onclick=\"component_autocomplete.new_element(this,'$id_wrapper')\" ";
-								$html_content .= "data-target_section_tipo=\"".reset($ar_target_section_tipo)."\" ";							
-								$html_content .= "></div>";
-							}
-
-							/*
-							#
-							# INPUT SEARCH FIELD
-							$html_content .= "<input type=\"text\" class=\"css_autocomplete_search_field edit_hidden\" placeholder=\"".label::get_label('buscar')."...\" ";
-							$html_content .= "onfocus=\"component_autocomplete.activate(this)\" ";
-							#$html_content .= "data-id_wrapper=\"$id_wrapper\" ";
-							#$html_content .= "data-tipo='{$tipo}' ";
-							#$html_content .= "data-section_tipo=\"{$section_tipo}\" ";
-							#$html_content .= "data-parent='{$parent}' ";
-							#$html_content .= "data-ar_target_section_tipo='{$ar_target_section_tipo_json}' ";
-							#$html_content .= "data-tipo_to_search='{$tipo_to_search}' ";
-							$html_content .= "tabindex=\"1\" ";
-							$html_content .= "/>";
-							*/
-
-							# BUTTON SHOW OPTIONS
-							if ($filter_by_list!==false || $filter_by_fields!==false) {
-								$html_content .= "<div class=\"icon_bs autocomplete_list_button_options edit_hidden\" data-tipo=\"$tipo\" onclick=\"component_autocomplete.toggle_options(this)\"></div>";
 							}
 
 						$html_content .= '</div>';//end div buttons_and_fields
@@ -389,7 +385,7 @@
 
 				#
 				# COMPONENT OPTIONS CONTAINER
-				$html_content .= '<div class="component_options_container">';
+				$html_content .= '<div class="'.$css_component_options_container.'">';
 				
 					#
 					# NEW_ELEMENT_CONTAINER ajax loads here
@@ -402,7 +398,7 @@
 					#
 					# AUTOCOMPLETE SERVICE
 						$autocomplete_wrapper_id = 'aw_' . $identificador_unico;
-						$html_content .= '<div class="autocomplete_wrapper" id="'.$autocomplete_wrapper_id.'"></div>';
+						$html_content .= '<div class="autocomplete_wrapper '.$css_autocomplete_wrapper.'" id="'.$autocomplete_wrapper_id.'"></div>';
 
 				$html_content .= '</div>';
 

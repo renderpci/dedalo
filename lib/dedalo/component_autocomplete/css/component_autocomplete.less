@@ -28,11 +28,19 @@
 		height: 30px;
 		float: right;
 		*/
+		//display: flex;
+		align-items: center;
+		justify-content: flex-end;
 		display: none;
 		position: absolute;
-		top: 0px;
-		opacity: .5;
+		/* opacity: .5; */
 		right: 0;
+		top: -17px;
+		background-color: @color_selected_wrap;
+		padding-left: 2px;
+		padding-right: 2px;
+		border-top-left-radius: 3px;
+		border-top-right-radius: 3px;
 		}
 
 		// BTN DELETE 
@@ -46,11 +54,9 @@
 		}
 		// BTN EDIT SECTION
 		.edit_autocomplete {
-			float: right;
-			position: relative;
-			top: -17px;
 			background-position: 0 -72px;
 			opacity: 0.3;
+			margin-left: 3px;
 		}
 		// BTN EDIT ROW
 		.edit_autocomplete_row {
@@ -58,13 +64,10 @@
 		    left: 5px;
 		}
 		// BTN NEW
-		.new_autocomplete {
-			float: right;	
-			position: relative;
-			top: -17px;
-			right: 5px;
+		.new_autocomplete {	
 			background-position: 0 -96px;
 			opacity: 0.3;
+			margin-left: 3px;
 		}
 
 
@@ -96,6 +99,11 @@
 			display: block;
 			max-width: 100%;
 		}
+
+	ul.css_autocomplete_valor_edit_in_list{
+		display: inline-block;
+		width: 45%;
+	}
 
 
 
@@ -220,13 +228,10 @@
 	.autocomplete_list_button_options {
 		opacity: .3;
 		background-position: -432px 0;
-		zoom: 121%;
-		-moz-transform: scale(1.21);
+		zoom: 120%;
+		-moz-transform: scale(1.20);
 		transform-origin: bottom;
-		float: right;
-		position: relative;
-		top: -16px;
-		right: 7px;
+		margin-left: 3px;
 	}
 	.wrap_autocomplete_search .autocomplete_list_button_options {
 		top: 0;
