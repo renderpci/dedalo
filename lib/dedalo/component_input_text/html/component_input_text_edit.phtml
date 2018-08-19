@@ -68,7 +68,7 @@
 
 				# Avoid autocomplete input username in Users section
 				$remove_autocomplete = null;
-				if ($section_tipo==DEDALO_SECTION_USERS_TIPO) {
+				if ($section_tipo===DEDALO_SECTION_USERS_TIPO) {
 					$remove_autocomplete = "readonly onfocus=\"this.removeAttribute('readonly');component_common.select_wrap(null,'$id_wrapper');\"";
 				}else{
 					$remove_autocomplete = '';//"onfocus=\"component_common.select_wrap(null,'$id_wrapper')\";\"";
@@ -106,19 +106,19 @@
 					}
 					if($unique === true){
 						$html_content .= "onkeyup=\"component_input_text.is_unique(this)\" ";
-					}					
+					}
+					$html_content .= "id=\"{$id_wrapper}_input_{$key}\" ";
+					$html_content .= "name=\"{$input_name}\" ";
+					$html_content .= "value=\"{$value}\" ";
+					$html_content .= "title=\"$html_title\" ";
+					$html_content .= "$read_only ";
+					$html_content .= "autocomplete=\"off\" ";
+					$html_content .= "$remove_autocomplete "; // Events to remove autocomplete safari behavior
 					$html_content .= "data-tipo=\"{$tipo}\" ";
 					$html_content .= "data-section_tipo=\"{$section_tipo}\" ";
 					$html_content .= "data-parent=\"{$parent}\" ";
 					$html_content .= "data-lang=\"{$lang}\" ";
 					$html_content .= "data-mandatory='{$mandatory_json}' ";
-					$html_content .= "value=\"{$value}\" ";
-					$html_content .= "title=\"$html_title\" ";
-					$html_content .= "name=\"{$input_name}\" ";
-					$html_content .= "autocomplete=\"off\" ";
-					$html_content .= "$remove_autocomplete ";
-					$html_content .= "$read_only ";
-					$html_content .= "id=\"{$id_wrapper}_input_{$key}\" ";
 					$html_content .= "/>";
 					
 					$html_content .= "</li>"; // tabindex=\"1\"
