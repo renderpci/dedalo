@@ -73,7 +73,7 @@ function autocomplete($json_data) {
 * AUTOCOMPLETE
 * Get list of mathed DB results for current string by ajax call
 * @param object $json_data
-*/
+*//*
 function autocomplete2($json_data) {
 	global $start_time;
 
@@ -136,6 +136,7 @@ function autocomplete2($json_data) {
 	
 	return (object)$response;
 }//end function autocomplete')
+*/
 
 
 
