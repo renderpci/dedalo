@@ -44,27 +44,13 @@
 			#	$html_content .= "<div class=\"css_relation_related_button_close\" onclick=\"component_common.change_mode_component(this, 'edit', '$from_modo')\"></div>";
 			#}
 
+			
 			#
-			# AUTOCOMPLETE SERVICE
-			$autocomplete_wrapper_id = 'aw_' . $identificador_unico;
-			$html_content .= '<div class="autocomplete_wrapper" id="'.$autocomplete_wrapper_id.'"></div>';
-
-
 			# INPUT DATA HIDDEN
 			$html_content .= "<input type=\"text\" name=\"{$search_input_name}\" class=\"relation_related_dato_hidden\" style=\"width:100%;display:none\" ";
 			$html_content .= "data-limit=\"$limit\" ";
 			$html_content .= "value='{$dato_json}' ";
 			$html_content .= "/>";
-
-
-			#
-			# JS Init component
-			$html_content .= '<script>';
-			$init_options = new stdClass();
-				$init_options->component_name 	= $component_name;
-				$init_options->uid 				= $identificador_unico;
-			$html_content .= "component_common.init(".json_encode($init_options).");";
-			$html_content .= '</script>';
 
 			
 
@@ -181,6 +167,30 @@
 			
 
 			$html_content .= "</div>";//end wrap_parent_values
+
+
+
+			#
+			# COMPONENT_OPTIONS_CONTAINER
+			$html_content .= '<div class="component_options_container">';
+
+				#
+				# AUTOCOMPLETE SERVICE
+				$autocomplete_wrapper_id = 'aw_' . $identificador_unico;
+				$html_content .= '<div class="autocomplete_wrapper" id="'.$autocomplete_wrapper_id.'"></div>';
+
+
+			$html_content .= '</div>';//end component_options_container
+
+
+			#
+			# JS Init component
+			$html_content .= '<script>';
+			$init_options = new stdClass();
+				$init_options->component_name 	= $component_name;
+				$init_options->uid 				= $identificador_unico;
+			$html_content .= "component_common.init(".json_encode($init_options).");";
+			$html_content .= '</script>';
 
 
 

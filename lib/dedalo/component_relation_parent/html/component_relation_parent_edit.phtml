@@ -38,23 +38,9 @@
 
 		case 2 :
 		case 3 :
+				
 
-			#
-			# AUTOCOMPLETE SERVICE
-			$autocomplete_wrapper_id = 'aw_' . $identificador_unico;
-			$html_content .= '<div class="autocomplete_wrapper" id="'.$autocomplete_wrapper_id.'"></div>';
-
-			
-			#
-			# JS Init component
-			$html_content .= '<script>';
-			$init_options = new stdClass();
-				$init_options->component_name 	= $component_name;
-				$init_options->uid 				= $identificador_unico;
-			$html_content .= "component_common.init(".json_encode($init_options).");";
-			$html_content .= '</script>';
-
-			$html_content .= '<div class="wrap_relation_parent_values">';				
+			$html_content .= '<div class="wrap_relation_parent_values">';
 
 				# SOURCE_MODE SWITCH
 				$source_mode = 'tree';
@@ -82,34 +68,7 @@
 						$html_content .= '></div>';
 						break;
 				}//end switch ($source_mode)
-
-
-				# TERMS
-				/*
-				foreach ((array)$dato as $key => $current_locator) {
-
-					$html_content .= "<div class=\"relation_parent_input_line\">";
-
-					# REMOVE BUTTON
-					$html_content .= "<input type=\"button\" class=\"button_remove component_relation_parent_button_remove\" value=\"\" ";
-					$html_content .= "data-role=\"component_relation_parent_button_remove\" ";
-					$html_content .= "data-children_section_tipo=\"$current_locator->section_tipo\" ";
-					$html_content .= "data-children_section_id=\"$current_locator->section_id\" ";
-					$html_content .= "data-children_component_tipo=\"$current_locator->component_tipo\" ";
-					$html_content .= "onclick=\"component_relation_parent.remove_parent(this)\" />";
-
-					# TERM STRING
-					$value = ts_object::get_term_by_locator( $current_locator, DEDALO_DATA_LANG, $from_cache=true );
-					$html_content .= '<span class="locator_label">';
-					$html_content .= $value;
-					if(SHOW_DEBUG===true) {
-						$html_content .= ' <span class="notes">['.$current_locator->section_tipo.'_'.$current_locator->section_id.']</span>';
-					}
-					$html_content .= '</span>';
-
-					$html_content .= "</div>";//relation_parent_input_line
-				}
-				*/
+				
 
 				#
 				# TERMS
@@ -144,6 +103,29 @@
 				$html_content .= 'data-limit="'.$limit.'" ';
 				$html_content .= 'value=\''.$dato_json.'\' ';
 				$html_content .= "/>";
+
+
+			#
+			# COMPONENT_OPTIONS_CONTAINER
+			$html_content .= '<div class="component_options_container">';
+
+				#
+				# AUTOCOMPLETE SERVICE
+				$autocomplete_wrapper_id = 'aw_' . $identificador_unico;
+				$html_content .= '<div class="autocomplete_wrapper" id="'.$autocomplete_wrapper_id.'"></div>';
+
+
+			$html_content .= '</div>';//end component_options_container
+
+
+			#
+			# JS Init component
+			$html_content .= '<script>';
+			$init_options = new stdClass();
+				$init_options->component_name 	= $component_name;
+				$init_options->uid 				= $identificador_unico;
+			$html_content .= "component_common.init(".json_encode($init_options).");";
+			$html_content .= '</script>';
 
 
 			if(SHOW_DEBUG===true) {

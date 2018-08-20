@@ -91,47 +91,48 @@
 						#$html_content .= "<script>component_autocomplete_hi.activated={}</script>";
 						break;
 				}//end switch ($source_mode)
+				
 
-
-
+				#
 				# TERMS
-				foreach ((array)$dato as $key => $current_locator) {
+				$html_content .= '<ul class="css_relation_children_valor">';
+				foreach ($ar_values as $item) {
 
-					$html_content .= "<div class=\"relation_children_input_line\">";
-
+					$current_locator 	  = $item->value;
 					$current_locator_json = json_encode($current_locator);
 
-					# REMOVE BUTTON
-					$html_content .= "<input type=\"button\" class=\"button_remove component_relation_children_button_remove\" ";
-					$html_content .= "value=\"\" ";
-					$html_content .= "data-role=\"component_relation_children_button_remove\" ";
-					$html_content .= "data-target_section_tipo=\"$current_locator->section_tipo\" ";
-					$html_content .= "data-target_section_id=\"$current_locator->section_id\" ";
-					$html_content .= "data-dato='$current_locator_json' ";
-					$html_content .= "onclick=\"component_relation_children.remove_children(this)\" ";
-					$html_content .= "/>";
+					$html_content .= '<li>';
 
-					# TERM STRING
-					$value = ts_object::get_term_by_locator( $current_locator, DEDALO_DATA_LANG, $from_cache=true );
-					
-					$html_content .= '<span class="locator_label">';
-					$html_content .= $value;					
+					# BTN DELETE
+					$html_content .= '<div class="icon_bs link css_relation_parent_button_delete" ';
+					$html_content .= 'data-current_value=\''.$current_locator_json.'\' ';
+					$html_content .= 'onclick="component_relation_children.remove_children(this)">';
+					$html_content .= '</div>';
+
+					# VALUE . STRING RESOLVED TO SHOW
+					$html_content .= $item->label;
 					$html_content .= ' <span class="notes">['.$current_locator->section_tipo.'_'.$current_locator->section_id.']</span>';
 					
-					$html_content .= '</span>';
-
-					$html_content .= "</div>";//relation_children_input_line
-				}//end foreach ((array)$dato as $key => $current_locator)
-
+					$html_content .= '</li>';
+				}
+				$html_content .= '</ul>';
 
 
 			$html_content .= "</div>";//end wrap_parent_values
 
 
 			#
-			# AUTOCOMPLETE SERVICE
-			$autocomplete_wrapper_id = 'aw_' . $identificador_unico;
-			$html_content .= '<div class="autocomplete_wrapper" id="'.$autocomplete_wrapper_id.'"></div>';
+			# COMPONENT_OPTIONS_CONTAINER
+			$html_content .= '<div class="component_options_container">';
+
+				#
+				# AUTOCOMPLETE SERVICE
+				$autocomplete_wrapper_id = 'aw_' . $identificador_unico;
+				$html_content .= '<div class="autocomplete_wrapper" id="'.$autocomplete_wrapper_id.'"></div>';
+
+
+			$html_content .= '</div>';//end component_options_container
+			
 
 
 			#

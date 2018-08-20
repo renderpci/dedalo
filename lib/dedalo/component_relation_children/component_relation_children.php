@@ -34,6 +34,14 @@
 				$component_info 		= $this->get_component_info('json');			
 				$dato_string			= json_handler::encode($dato);
 
+				$ar_values = [];
+				foreach ((array)$dato as $key => $current_locator) {
+					$item = new stdClass();
+						$item->label = 	ts_object::get_term_by_locator( $current_locator, DEDALO_DATA_LANG, $from_cache=true );
+						$item->value = 	$current_locator;
+					$ar_values[] = $item;
+				}
+
 				# target_section_tipo
 				$target_section_tipo = $section_tipo;				
 				if (isset($propiedades->target_values)) {
