@@ -90,12 +90,7 @@
 				$offset 		= 0; // Initial is 0
 				$n_rows 		= count($dato);
 
-				# extension_autocomplete
-				$extension_autocomplete = $this->get_extension_autocomplete();
-				if ($extension_autocomplete!==false) {
-					# code...
-				}
-
+				
 				#if ($this->generate_json_element===true) {
 
 					# tool_description case overrides

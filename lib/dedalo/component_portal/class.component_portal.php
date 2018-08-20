@@ -1041,55 +1041,6 @@ class component_portal extends component_relation_common {
 	* ROW_IN_RESULT
 	* Select match row in result if exists from locator
 	* @return object $row / bool false
-	*//*
-	public function row_in_result__OLD( $locator, $result ) {
-
-		if (empty($result)) {
-			return false;
-		}
-		foreach ($result as $key => $table_rows) {
-		foreach ($table_rows as $current_id => $row) {
-			
-			$section_id 	= $row['section_id'];
-			$section_tipo 	= $row['section_tipo'];
-
-			$ar_parts = explode('.', $current_id);	// current_id can have format like '8842' (link to whole section) or '8842.rs30.1' (link to partial section)
-				#dump($ar_parts, ' ar_parts ++ '.to_string());
-				$matrix_id 		= $ar_parts[0];	// mandatory
-				$component_tipo = isset($ar_parts[1]) ? $ar_parts[1] : false;	// optional
-				$tag_id 		= isset($ar_parts[2]) ? $ar_parts[2] : false;	// optional
-			
-			
-			if ($tag_id && isset($locator->tag_id) && $section_id == $locator->section_id && $section_tipo === $locator->section_tipo && $tag_id==$locator->tag_id) {
-				$findit = true;
-			}else if (!$tag_id && $section_id == $locator->section_id && $section_tipo === $locator->section_tipo) {
-				$findit = true;
-			}else{
-				$findit = false;
-			}
-
-			if ($findit) {
-				# add current_id as current_id (rel_locator
-				$row['current_id'] = $current_id;
-				return $row;
-			}	    	
-		}}
-
-		$virtual_row = array(
-						"current_id" => null,
-						"section_id" => $locator->section_id,
-						"section_tipo" => $locator->section_tipo,
-						);
-
-		return $virtual_row;		
-	}//end row_in_result*/
-
-
-
-	/**
-	* ROW_IN_RESULT
-	* Select match row in result if exists from locator
-	* @return object $row / bool false
 	*/
 	public function row_in_result( $locator, $ar_result ) {
 		
@@ -1962,19 +1913,6 @@ class component_portal extends component_relation_common {
 
 		return $json_d;
 	}//end build_component_json_data
-
-
-
-	/**
-	* GET_EXTENSION_AUTOCOMPLETE
-	* @return 
-	*/
-	public function get_extension_autocomplete() {
-		
-
-
-		return false;
-	}//end get_extension_autocomplete
 
 
 
