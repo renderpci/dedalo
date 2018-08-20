@@ -2932,7 +2932,7 @@ class section extends common {
 			$options->limit  			= 10;
 			$options->order  			= null;
 			$options->offset 			= 0;
-			$options->lang 				= DEDALO_DATA_LANG;			
+			$options->lang 				= DEDALO_DATA_LANG;
 			$options->id 				= $this->tipo . '_' .$this->modo;
 			$options->section_tipo		= $this->tipo;
 			$options->select_fields		= 'default';
@@ -2941,11 +2941,11 @@ class section extends common {
 			$options->remove_distinct	= false;
 
 			#$options->forced_matrix_table = false;
-			if ($this->tipo===DEDALO_ACTIVITY_SECTION_TIPO) {
+			if ($options->section_tipo===DEDALO_ACTIVITY_SECTION_TIPO) {
 				
 				#$order_obj = new stdClass();
 				#	$order_obj->direction 	= "DESC";
-				#	$order_obj->path 		= json_decode('[{"component_tipo": "section_id"}]');				
+				#	$order_obj->path 		= json_decode('[{"component_tipo": "section_id"}]');
 				# Defaults for activity
 				$options->limit  		= 30;
 				#$options->order  		= [$order_obj];
@@ -2967,7 +2967,7 @@ class section extends common {
 							continue;
 						}
 						$select_element = new stdClass();
-							$select_element->path = search_development2::get_query_path($component_tipo, $this->tipo, false);					
+							$select_element->path = search_development2::get_query_path($component_tipo, $options->section_tipo, false);					
 						# Add to group
 						$select_group[] = $select_element;
 					}
@@ -2988,7 +2988,7 @@ class section extends common {
 					$filter_element->q 		= json_encode($ar_section_id);
 					$filter_element->path 	= json_decode('[
 	                    {
-	                        "section_tipo": "'.$this->tipo.'",
+	                        "section_tipo": "'.$options->section_tipo.'",
 	                        "component_tipo": "section_id",
 	                        "modelo": "component_section_id",
 	                        "name": "section_id"

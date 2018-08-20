@@ -648,9 +648,6 @@ class component_autocomplete extends component_relation_common {
 		#	$request_options->offset 			= 0;
 		#	$request_options->logical_operator 	= $logical_operator;
 		
-		#$query_object = $this->build_search_query_object($request_options);
-		#dump(null, ' query_object ++ '. json_encode($query_object, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT)); die();
-
 		# Remove option of sub_select_by_id (not work on left joins)
 		$search_query_object->allow_sub_select_by_id = false;
 		# Avoid auto add filter by user projects in search

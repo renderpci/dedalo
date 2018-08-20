@@ -142,7 +142,6 @@
 							$search_options->context = $context;
 
 						# SEARCH_QUERY_OBJECT . Add search_query_object to options
-							#$search_query_object = $section->build_search_query_object();
 							$search_query_object = new stdClass();
 								$search_query_object->id  	   		= 'thesaurus';
 								$search_query_object->section_tipo  = $ar_section_tipos;
