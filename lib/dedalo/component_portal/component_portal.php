@@ -266,6 +266,7 @@
 						$search_query_object_options->limit 			 = 1;
 						$search_query_object_options->filter_by_locator  = $filter_by_locator;
 						$search_query_object_options->section_tipo 		 = reset($ar_target_section_tipo);
+						$search_query_object_options->tipo 				 = $tipo;
 					$search_query_object = $this->build_search_query_object($search_query_object_options);
 					
 				# SEARCH
@@ -353,7 +354,8 @@
 						#$search_query_object_options->limit 			 = 1;
 						$search_query_object_options->filter_by_locator  = $filter_by_locator;
 						$search_query_object_options->section_tipo 		 = reset($ar_target_section_tipo);
-					$search_query_object = $this->build_search_query_object($search_query_object_options);
+						$search_query_object_options->tipo 		 		 = $tipo;
+					$search_query_object = self::build_search_query_object($search_query_object_options);
 					# Search
 					$search_develoment2  = new search_development2($search_query_object);
 					$rows_data 		 	 = $search_develoment2->search();					
@@ -405,7 +407,8 @@
 						#$search_query_object_options->limit 			 = 1;
 						$search_query_object_options->filter_by_locator  = $filter_by_locator;
 						$search_query_object_options->section_tipo 		 = reset($ar_target_section_tipo);
-					$search_query_object = $this->build_search_query_object($search_query_object_options);
+						$search_query_object_options->tipo 				 = $tipo;
+					$search_query_object = self::build_search_query_object($search_query_object_options);
 					
 				# SEARCH
 				$search_develoment2  = new search_development2($search_query_object);
@@ -459,7 +462,8 @@
 					#$search_query_object_options->limit 			 = 1;
 					$search_query_object_options->filter_by_locator  = $filter_by_locator;
 					$search_query_object_options->section_tipo 		 = reset($ar_target_section_tipo);
-				$search_query_object = $this->build_search_query_object($search_query_object_options);
+					$search_query_object_options->tipo 				 = $tipo;
+				$search_query_object = self::build_search_query_object($search_query_object_options);
 				
 			# SEARCH
 			$search_develoment2  = new search_development2($search_query_object);

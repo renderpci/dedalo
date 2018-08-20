@@ -3,16 +3,18 @@
 	# VISUALIZADOR HTML	
 	
 	print "<div class=\"wrap_component css_wrap_relation_children tooltip_active in_search_mode\" id=\"{$id_wrapper}\" ";
+	print 'title="'.search_development2::search_options_title( $this->search_operators_info() ).'" ';
 	print "data-tipo=\"{$tipo}\" ";
 	print "data-section_tipo=\"{$section_tipo}\" ";
 	print "data-hierarchy_sections='".json_encode($hierarchy_sections)."' ";  // Default hierarchy_sections
 	print "data-component_name=\"{$component_name}\" ";
 	print "data-component_info='{$component_info}' ";
 	print "data-modo=\"{$modo}\" ";
-	print "data-dato='".json_encode($dato)."' ";
-	print 'title="'.search_development2::search_options_title( $this->search_operators_info() ).'" ';
+	print "data-dato='".json_encode($dato)."' ";	
 	print "data-relation_type='{$relation_type}' ";
 	print "data-search_tipos='".json_encode($search_tipos)."' ";
+	print 'data-search_query_object=\''.$json_search_query_object.'\' ';
+	print "data-limit=\"$limit\" ";
 	print ">";
 	
 	# ETIQUETA (LABEL)
@@ -37,7 +39,7 @@
 				#
 				# AUTOCOMPLETE SERVICE
 				$autocomplete_wrapper_id = 'aw_' . $identificador_unico;
-				$html_content .= '<div class="autocomplete_wrapper" id="'.$autocomplete_wrapper_id.'"></div>';
+				$html_content .= '<div class="autocomplete_wrapper in_search_mode" id="'.$autocomplete_wrapper_id.'"></div>';
 
 
 				#
@@ -74,6 +76,7 @@
 					$html_content .= "</li>";
 				}
 				$html_content .= "</ul>";
+
 
 				# INPUT DATA HIDDEN
 				$html_content .= "<input type=\"text\" name=\"{$search_input_name}\" class=\"relation_children_dato_hidden\" style=\"width:300px;display: none\" ";

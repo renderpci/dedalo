@@ -3234,7 +3234,7 @@ abstract class component_common extends common {
 			$decoded_obj = $dato_full_json;
 		}else{
 			if (!$decoded_obj = json_decode($dato_full_json)) {
-				debug_log(__METHOD__." Error on decode dato_full_json ".to_string($dato_full_json ), logger::ERROR);
+				debug_log(__METHOD__." Error on decode dato_full_json: ".to_string($dato_full_json), logger::ERROR);
 				return $dato_full_json;
 			}
 		}
@@ -3421,11 +3421,12 @@ abstract class component_common extends common {
 	################################## SEARCH 2 ########################################################
 
 
+
 	/**
 	* BUILD_SEARCH_QUERY_OBJECT
 	* @return object $query_object
 	*/
-	public function build_search_query_object( $request_options ) {
+	public static function build_search_query_object( $request_options ) {
 
 		$start_time=microtime(1);
 	
@@ -3440,25 +3441,28 @@ abstract class component_common extends common {
 			$options->id 				= 'temp';
 			$options->section_tipo		= null;
 			$options->add_filter		= true;
+			$options->tipo				= null;
 			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
-		$id = $options->id;
-		$logical_operator = $options->logical_operator;	
+		$id 			  = $options->id;
+		$logical_operator = $options->logical_operator;
+		$tipo 			  = $options->tipo; // $this->tipo;
+		# Default from options
+		$section_tipo = $options->section_tipo;
+
 
 		# Defaults
 		$filter_group = null;
 		$select_group = array();
-
-		# Default from options
-		$section_tipo = $options->section_tipo;
+		
 
 		# iterate related terms
-		$ar_related_section_tipo = common::get_ar_related_by_model('section', $this->tipo);			
+		$ar_related_section_tipo = common::get_ar_related_by_model('section', $tipo);			
 		if (isset($ar_related_section_tipo[0])) {
 
 			# Create from related terms
 			$section_tipo 				= reset($ar_related_section_tipo); // Note override section_tipo here !
-			$ar_terminos_relacionados 	= RecordObj_dd::get_ar_terminos_relacionados($this->tipo, true, true);		
+			$ar_terminos_relacionados 	= RecordObj_dd::get_ar_terminos_relacionados($tipo, true, true);		
 			foreach ($ar_terminos_relacionados as $current_tipo) {
 				$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_tipo, true);
 				if (strpos($modelo_name,'component')!==0) continue;
@@ -3491,7 +3495,7 @@ abstract class component_common extends common {
 		}else{
 			if($options->add_filter === true){
 
-				$path = search_development2::get_query_path($this->tipo, $section_tipo);
+				$path = search_development2::get_query_path($tipo, $section_tipo);
 
 				$filter_element = new stdClass();
 					$filter_element->q 	 			= $options->q ;
@@ -3807,9 +3811,6 @@ abstract class component_common extends common {
 		#	$request_options->offset 			= 0;
 		#	$request_options->logical_operator 	= $logical_operator;
 		
-		#$query_object = $this->build_search_query_object($request_options);
-		#dump(null, ' query_object ++ '. json_encode($query_object, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT)); die();
-
 		# Remove option of sub_select_by_id (not work on left joins)
 		$search_query_object->allow_sub_select_by_id = false;
 		# Avoid auto add filter by user projects in search
@@ -3823,18 +3824,13 @@ abstract class component_common extends common {
 		}		
 		
 		$search_development2 = new search_development2($search_query_object);
-		$rows_data 		 	 = $search_development2->search();
-			#dump($rows_data, ' rows_data ++ '.to_string());
+		$rows_data 		 	 = $search_development2->search();	
 
-		$propiedades 	 = $this->get_propiedades();
-		$search_list_add = isset($propiedades->search_list_add) ? $propiedades->search_list_add : false;
-			#dump($propiedades, ' propiedades ++ '.to_string());
-
-		$components_with_relations = component_relation_common::get_components_with_relations();
+		$components_with_relations 	= component_relation_common::get_components_with_relations();
+		$propiedades 	 			= $this->get_propiedades();
 
 		$ar_result = [];
 		foreach ($rows_data->ar_records as $key => $row) {
-			#dump($row, ' row ++ '.to_string());		
 
 			$locator = new locator();
 				$locator->set_section_tipo($row->section_tipo);
@@ -3845,35 +3841,54 @@ abstract class component_common extends common {
 			$locator_json = json_encode($locator);
 
 			# Join all fields except 2 first fixed (section_id, section_tipo)
-			$ar_full_label = [];
+			$ar_full_label  = [];
+			$ar_original 	= [];
 			foreach ($row as $key => $value) {
 				if ($key==='section_id' || $key==='section_tipo') continue;				
 				if(!empty($value)) {
 
 					$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($key,true);
-					if (in_array($modelo_name, $components_with_relations) || $modelo_name==='component_text_area') {
+					if (true===in_array($modelo_name, $components_with_relations) || $modelo_name==='component_text_area') {
 						// Resolve value with component					
 						$value = $modelo_name::render_list_value($value, $key, $row->section_id, 'list', DEDALO_DATA_LANG, $row->section_tipo, $row->section_id, null, null);
 					}else{
 						// Extract value from row data
-						#dump($value, ' value ++ '.to_string());
-						$value = component_common::get_value_with_fallback_from_dato_full( $value, $mark=false );
-							
-					}
-					
-					#$value = to_string($value);
-					if (is_string($value)) {
-						$value = strip_tags($value);	
-					}else{
-						$value = to_string($value); //gettype($value);
-					}
-					$ar_full_label[] = $value;
+						$value = component_common::get_value_with_fallback_from_dato_full( $value, $mark=false );							
+					}					
+
+					if (!empty($value)) {
+
+						if (is_string($value)) {
+							$value = strip_tags($value);
+						}else{
+							$value = to_string($value); //gettype($value);
+						}
+
+						// Add value
+						$ar_full_label[] = $value;
+						$ar_original[] 	 = $value;
+					}					
 				}
-			}
-
-			$value = implode($divisor, $ar_full_label);
-
-			// Add custom resolved values from same section. For example, add municipality for resolve a name ambiguity
+			}//end foreach ($row as $key => $value)
+			
+			#
+			# SHOW_PARENT_NAME Parent name . Parent locator is always calculated and is not in current record (data is as locator children in parent record)			
+			$show_parent_name = isset($propiedades->show_parent_name) ? $propiedades->show_parent_name : false;
+			if($show_parent_name===true) {				
+				// Directly, with recursive options true
+				// $locator, $lang=DEDALO_DATA_LANG, $section_tipo, $show_parents=false, $ar_componets_related=false, $divisor=false
+				$current_valor = component_relation_common::get_locator_value( $locator, DEDALO_DATA_LANG, $current_section_tipo, $show_parents=true, false, ', ');
+				if (!empty($current_valor)) {
+					// Remove first value (self)
+					$current_valor = substr($current_valor, strpos($current_valor,', ')+2);
+					// Add value
+					$ar_full_label[] = strip_tags($current_valor);
+				}
+			}//end if($show_parent_name===true)
+			
+			#
+			# SEARCH_LIST_ADD Add custom resolved values from same section. For example, add municipality for resolve a name ambiguity			
+			$search_list_add = isset($propiedades->search_list_add) ? $propiedades->search_list_add : false;
 			if ($search_list_add!==false) {
 				$ar_dd_value = [];
 				foreach ($search_list_add as $add_tipo) {
@@ -3886,21 +3901,24 @@ abstract class component_common extends common {
 																	 $row->section_tipo);
 					$current_value = strip_tags( $component->get_valor(DEDALO_DATA_LANG) );
 					if (!empty($current_value)) {
-						$ar_dd_value[] = $current_value;
+						// Add value
+						$ar_full_label[] = strip_tags($current_value);
 					}
 				}
-				if (!empty($ar_dd_value)) {
-					$value .= $divisor . implode($divisor, $ar_dd_value); // Add string to existing value
-				}
-			}
+			}//end if ($search_list_add!==false)
+
+			// Final value string
+			$label 	  = implode($divisor, $ar_full_label);
+			$original = implode(', ', $ar_original);
 			
 			$value_obj = new stdClass();
-				$value_obj->value = $value;
-				$value_obj->label = $value;
+				$value_obj->value = $original;
+				$value_obj->label = $label;
 				$value_obj->key   = $locator_json;			
 
 			$ar_result[] = $value_obj;
-		}
+		}//end foreach ($rows_data->ar_records as $key => $row)
+		#debug_log(__METHOD__." ar_result ".to_string($ar_result), logger::DEBUG);
 
 		
 		return (array)$ar_result;
@@ -3944,7 +3962,7 @@ abstract class component_common extends common {
 
 	/**
 	* UNIQUE_SERVER_CHECK
-	* @return 
+	* @return bool
 	*/
 	public function unique_server_check($dato){
 
@@ -3954,12 +3972,12 @@ abstract class component_common extends common {
 			$options->q_split 			= false;
 			$options->section_tipo		= $this->get_section_tipo();
 			$options->component_name 	= $this->get_component_name();
-			$options->component_tipo	= $this->get_tipo();
+			$options->tipo				= $this->get_tipo();
 			$options->name 				= $this->get_label();
 			$options->limit  			= 1;
 			$options->logical_operator 	= '$or';
 			
-		$search_query_object = $this->build_search_query_object($options);
+		$search_query_object = self::build_search_query_object($options);
 
 		$search_development2 = new search_development2($search_query_object);
 		$response = $search_development2->search();
@@ -3967,8 +3985,8 @@ abstract class component_common extends common {
 		$result = (count($response->ar_records)>0) ?  false : true; 
 
 		return $result;
-
 	}//end unique_server_check
+
 
 
 	/**

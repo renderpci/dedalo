@@ -97,17 +97,7 @@
 				
 				# Divisor
 				$divisor = $this->get_divisor();				
-
-				# search_query_object
-				$query_object_options = new stdClass();
-					$query_object_options->q 	 	= null;
-					$query_object_options->limit  	= 40;
-					$query_object_options->offset 	= 0;
-				$search_query_object 		= $this->build_search_query_object($query_object_options);
-				$json_search_query_object 	= json_encode( $search_query_object, JSON_UNESCAPED_UNICODE | JSON_HEX_APOS);
-					#dump($search_query_object, ' search_query_object ++ '.to_string());
-					#dump(json_encode( $search_query_object, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE), '$search_query_object ++ '.to_string());
-					*/
+				*/
 
 				# hierarchy_type . Get hierarchy_type from current section
 				$hierarchy_type 	= hierarchy::get_hierarchy_type_from_section_tipo($section_tipo);
@@ -122,6 +112,23 @@
 
 				$search_input_name = $this->get_search_input_name();
 				$limit = 0;
+
+				#
+				# SEARCH_QUERY_OBJECT
+				$search_query_object_options = new stdClass();
+					$search_query_object_options->q 	 			= null;
+					$search_query_object_options->limit  			= 40;
+					$search_query_object_options->lang 				= 'all';
+					$search_query_object_options->logical_operator 	= '$or';
+					$search_query_object_options->id 				= 'temp';
+					$search_query_object_options->section_tipo		= []; //$hierarchy_sections; // Normally hierarchy_sections
+					$search_query_object_options->search_tipos 		= [DEDALO_THESAURUS_TERM_TIPO];
+					$search_query_object_options->distinct_values	= false;
+					$search_query_object_options->show_modelo_name 	= true;
+					$search_query_object_options->filter_custom 	= null;
+					$search_query_object_options->tipo 				= $tipo;
+				$search_query_object 		= component_autocomplete_hi::build_search_query_object($search_query_object_options);
+				$json_search_query_object 	= json_encode( $search_query_object, JSON_UNESCAPED_UNICODE | JSON_HEX_APOS);
 				break;
 
 		case 'tool_time_machine' :
@@ -164,6 +171,23 @@
 				$search_tipos 	= [$term_tipo]; // DEDALO_THESAURUS_TERM_TIPO
 
 				$limit = 1;
+
+				#
+				# SEARCH_QUERY_OBJECT
+				$search_query_object_options = new stdClass();
+					$search_query_object_options->q 	 			= null;
+					$search_query_object_options->limit  			= 40;
+					$search_query_object_options->lang 				= 'all';
+					$search_query_object_options->logical_operator 	= '$or';
+					$search_query_object_options->id 				= 'temp';
+					$search_query_object_options->section_tipo		= []; //$hierarchy_sections; // Normally hierarchy_sections
+					$search_query_object_options->search_tipos 		= [DEDALO_THESAURUS_TERM_TIPO];
+					$search_query_object_options->distinct_values	= false;
+					$search_query_object_options->show_modelo_name 	= true;
+					$search_query_object_options->filter_custom 	= null;
+					$search_query_object_options->tipo 				= $tipo;
+				$search_query_object 		= component_autocomplete_hi::build_search_query_object($search_query_object_options);
+				$json_search_query_object 	= json_encode( $search_query_object, JSON_UNESCAPED_UNICODE | JSON_HEX_APOS);
 				break;
 					
 		case 'portal_list' :
