@@ -140,13 +140,11 @@
 						#
 						# FILTER FIELDS (ADVANCED SEARCH)
 							$filter_by_fields = false;
-							#$filter_obj = reset($search_query_object->filter);
 							$filter_obj = $search_query_object->filter;
-							#dump($filter_obj, ' filter_obj ++ '.to_string());
 
 							$autosearch_options_html .= "<div class=\"filter_fields text_unselectable\">";
 							$autosearch_options_html .= "<ul>";
-							foreach ($filter_obj as $operator => $ar_filter) foreach ($ar_filter as $key => $current_filter) {						
+							foreach ($filter_obj as $operator => $ar_filter) foreach ($ar_filter as $key => $current_filter) {					
 
 								$first_path 			= reset($current_filter->path);
 								$last_path 				= end($current_filter->path);
@@ -175,7 +173,7 @@
 								$autosearch_options_html .= "name=\"{$input_name}\" ";
 								$autosearch_options_html .= "value=''";
 								if (SHOW_DEVELOPER===true) {
-								$autosearch_options_html .= "placeholder='$current_component_tipo'";
+									$autosearch_options_html .= "placeholder='$current_component_tipo'";
 								}							
 								$autosearch_options_html .= "data-tipo=\"{$current_component_tipo}\" ";
 								$autosearch_options_html .= "data-modelo=\"{$current_modelo_name}\" ";
