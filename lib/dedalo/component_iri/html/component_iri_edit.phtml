@@ -34,6 +34,10 @@
 			case ($permissions===1) :
 					foreach ($dato as $value) {
 						$html_content .= " <span class=\"css_span_dato\">$value</span>";
+						# Button link
+						$html_content .= "<a class=\"input-group-addon css_button_generic btn_go_iri\" onclick=\"component_iri.go_iri_link(this)\">";
+						$html_content .= "<div class=\"link css_iri_link\"></div>";
+						$html_content .= "</a>";
 					}
 					break;
 
@@ -53,72 +57,91 @@
 				if (isset($propiedades->read_only) && $propiedades->read_only==true) {
 					$read_only = 'readonly';
 				}
-				# Button add
-				$html_content .= "<div class=\"css_button_generic btn_add_iri\" onclick=\"component_iri.add_iri(this)\">";
-				$html_content .= "<div class=\"link css_iri_add\"></div>";
-				$html_content .= "</div>";
-				
-				if(empty($dato)){
-					$obj_value = new stdClass();
-					$obj_value->iri = "";
-					$dato_view = array($obj_value);						
-				}else{
-					$dato_view = $dato;
-				}
+				#IRI content
+				$html_content .= "<div class=\"css_iri_content\">";
 
-				$html_content .= "<ul>";
-				foreach ($dato_view as $key => $obj_value) {
 
-					if(isset($obj_value->iri)){
-						# Correct issues with quotes
-						$value = htmlentities($obj_value->iri);
+					if(empty($dato)){
+						$obj_value = new stdClass();
+						$obj_value->iri = "";
+						$dato_view = array($obj_value);						
 					}else{
-						$value = "";
+						$dato_view = $dato;
 					}
 
-					$html_content .= "<li class=\"input-group\">";
+					$html_content .= "<ul>";
+					foreach ($dato_view as $key => $obj_value) {
 
-					# Input
-					$html_content .= "<input type=\"text\" id=\"{$id_wrapper}_input_{$key}\" class=\"form-control99 css_iri\" onchange=\"component_iri.Save(this)\" ";
-					$html_content .= "data-tipo=\"{$tipo}\" ";
-					$html_content .= "data-section_tipo=\"{$section_tipo}\" ";
-					$html_content .= "data-parent=\"{$parent}\" ";
-					$html_content .= "data-lang=\"{$lang}\" ";
-					$html_content .= "data-mandatory='{$mandatory_json}' ";
-					$html_content .= "value=\"{$value}\" ";
-					$html_content .= "title=\"$html_title\" ";
-					$html_content .= "name=\"{$input_name}\" ";
-					$html_content .= "autocomplete=\"off\" ";
-					$html_content .= $remove_autocomplete." ";
-					$html_content .= $read_only." ";
-					$html_content .= "tabindex=\"1\" ";					
-					$html_content .= "/>";
+						if(isset($obj_value->iri)){
+							# Correct issues with quotes
+							$value_iri = htmlentities($obj_value->iri);
+						}else{
+							$value_iri = "";
+						}
 
-					# Button link
-					$html_content .= "<a class=\"input-group-addon css_button_generic btn_go_iri\" onclick=\"component_iri.go_iri_link(this)\">";
-					$html_content .= "<div class=\"link css_iri_link\"></div>";
-					$html_content .= "</a>";
+						if(isset($obj_value->title)){
+							# Correct issues with quotes
+							$value_title = htmlentities($obj_value->title);
+						}else{
+							$value_title = "";
+						}
 
-					$html_content .= "</li>";
+						$html_content .= "<li class=\"input-group\">";
+
+						# Input
+						$html_content .= "<input type=\"text\" id=\"{$id_wrapper}_input_{$key}\" class=\"css_iri\" onchange=\"component_iri.Save(this)\" ";
+						$html_content .= "data-tipo=\"{$tipo}\" ";
+						$html_content .= "data-section_tipo=\"{$section_tipo}\" ";
+						$html_content .= "data-parent=\"{$parent}\" ";
+						$html_content .= "data-lang=\"{$lang}\" ";
+						$html_content .= "data-mandatory='{$mandatory_json}' ";
+						$html_content .= "value=\"{$value_title}\" ";
+						$html_content .= "title=\"$html_title\" ";
+						$html_content .= "name=\"{$input_name}\" ";
+						$html_content .= 'placeholder="'.label::get_label('title').'" ';
+						$html_content .= "autocomplete=\"off\" ";
+						$html_content .= $remove_autocomplete." ";
+						$html_content .= $read_only." ";
+						$html_content .= "tabindex=\"1\" ";
+						$html_content .= "/>";
+
+						# Input
+						$html_content .= "<input type=\"url\" id=\"{$id_wrapper}_input_url_{$key}\" class=\"css_iri\" onchange=\"component_iri.Save(this)\" ";
+						$html_content .= "onfocus=\"component_iri.validate_iri(this)\" ";
+						$html_content .= "data-tipo=\"{$tipo}\" ";
+						$html_content .= "data-section_tipo=\"{$section_tipo}\" ";
+						$html_content .= "data-parent=\"{$parent}\" ";
+						$html_content .= "data-lang=\"{$lang}\" ";
+						$html_content .= "data-mandatory='{$mandatory_json}' ";
+						$html_content .= "value=\"{$value_iri}\" ";
+						$html_content .= "title=\"$html_title\" ";
+						$html_content .= "name=\"{$input_name}\" ";
+						$html_content .= "placeholder=\"http://\" ";
+						$html_content .= 'pattern="(https?)?:\/\/.*\..+" ';
+						$html_content .= "autocomplete=\"off\" ";
+						$html_content .= $remove_autocomplete." ";
+						$html_content .= $read_only." ";
+						$html_content .= "tabindex=\"2\" ";
+						$html_content .= "/>";
+
+						# Button link
+						$html_content .= "<a class=\"input-group-addon css_button_generic btn_go_iri\" onclick=\"component_iri.go_iri_link(this)\">";
+						$html_content .= "<div class=\"link css_iri_link\"></div>";
+						$html_content .= "</a>";
+
+						$html_content .= "</li>";
+						
+					}//end foreach
+					$html_content .= "</ul>";
+
+					# Button add
+					$html_content .= "<div class=\"css_button_generic btn_add_iri\" onclick=\"component_iri.add_iri(this)\">";
+					$html_content .= "<div class=\"link css_iri_add\"></div>";
+					$html_content .= "</div>";
 					
 
-				}//end foreach
-				$html_content .= "</ul>";
-
-				
-				#<div class="input-group">
-				#  <input type="text" class="form-control" placeholder="Recipient's username" aria-describedby="basic-addon2">
-				#  <span class="input-group-addon" id="basic-addon2">@example.com</span>
-				#</div>
-				
-
-				#$html_content .= "<script>setAttribute(“autocomplete”,”off”)</script>";
-
-				#readonly onfocus=\"this.removeAttribute('readonly');\"
-
-				#$html_content .= " <span  class=\"css_span_log\"></span>";
-				#$html_content .= " <span  class=\"css_span_ejemplo\">$ejemplo</span>";
-
+				#end IRI content
+				$html_content .= "</div>";
 
 				if(SHOW_DEBUG===true) {
 					$html_content .= " <span class=\"debug_info notes\">".$dato_json."</span>";

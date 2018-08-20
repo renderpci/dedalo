@@ -6,26 +6,26 @@
 	*[ 
 	*	{
 	*    "iri": "http://www.render.es/dedalo",
-	*    "display": "dedalo"
+	*    "title": "dedalo"
 	* 	}
 	*]
 	$iri->iri						= (string)$iri; //mandatory
-	$iri->display					= (string)$display; //aditional no mandatory
+	$iri->title						= (string)$title; //aditional no mandatory
 
 	Note that properties can exists or not (are created on the fly). Final result object only contain set properties and iri object can be empty or partially set.
-	For example, one link with display have only $iri
+	For example, one link with title have only $iri
 
 */
 class dd_iri extends stdClass {
 
 	/* Created on the fly
 		private $iri;
-		private $display;
+		private $title;
 	*/
 
 	# Mandatory and protected (use set/get to access)
 	#protected $iri;
-	#protected $display;
+	#protected $title;
 
 	const DELIMITER = '_';
 
@@ -74,11 +74,11 @@ class dd_iri extends stdClass {
 	* Verify values and set property to current object
 	*/
 	/**
-	* SET_DSIPLAY
+	* SET_TITLE
 	*/
-	public function set_display($value) {
+	public function set_title($value) {
 
-		$this->display = (string)$value;
+		$this->title = (string)$value;
 	}
 
 

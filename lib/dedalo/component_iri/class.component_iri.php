@@ -12,11 +12,11 @@ class component_iri extends component_common {
 
 	/**
 	* GET DATO
-	* Array with objects, every object have two properties: "iri" mandatory with string value and "display" optional with string value
+	* Array with objects, every object have two properties: "iri" mandatory with string value and "title" optional with string value
 	*[ 
 	*	{
 	*    "iri": "http://www.render.es/dedalo",
-	*    "display": "dedalo"
+	*    "title": "dedalo"
 	* 	}
 	*]
 	*/
@@ -91,6 +91,8 @@ class component_iri extends component_common {
 			$valor='';
 			$last_value = end($dato);
 			foreach ($dato as $key => $value) {
+				$valor .= $value->title;
+				$valor .= ' | ';
 				$valor .= $value->iri;
 				if ($value !== $last_value) {
 					$valor .= ', ';

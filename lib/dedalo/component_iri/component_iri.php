@@ -57,8 +57,8 @@
 				}
 
 				$valor	= '';
-				if(isset($dato->iri)) {
-					$dd_iri	= new dd_iri($dato->iri);
+				if(isset($dato->iri) || isset($dato->title)) {
+					$dd_iri	= new dd_iri($dato);
 					$valor	= component_iri::get_valor( $dd_iri );
 				}
 
