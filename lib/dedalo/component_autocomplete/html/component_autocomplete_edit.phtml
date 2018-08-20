@@ -167,22 +167,20 @@
 								
 								
 								$autosearch_options_html .= "<li>";
-								#$autosearch_options_html .= "<div class=\"wrap_component\" data-dato=''>";
+								# Label
 								$autosearch_options_html .= "<label class=\"css_label label\">$name</label>";
+								# Input
 								$autosearch_options_html .= "<input type=\"text\" class=\"filter_fields_input\" ";
+								$autosearch_options_html .= 'onkeyup="component_autocomplete.search_from_filter_fields(this)" ';
 								$autosearch_options_html .= "name=\"{$input_name}\" ";
-								$autosearch_options_html .= "value=''";
+								$autosearch_options_html .= 'value="" ';								
 								if (SHOW_DEVELOPER===true) {
-									$autosearch_options_html .= "placeholder='$current_component_tipo'";
+								$autosearch_options_html .= 'placeholder="'.$current_component_tipo.'" ';
 								}							
 								$autosearch_options_html .= "data-tipo=\"{$current_component_tipo}\" ";
 								$autosearch_options_html .= "data-modelo=\"{$current_modelo_name}\" ";
-								#$autosearch_options_html .= "data-search_query_object='$current_search_query_object_json'";
-								$autosearch_options_html .= "data-type_map='$current_type_map_json'";
-								$autosearch_options_html .= "onkeyup=\"component_autocomplete.search_from_filter_fields(this)\"";
-								#$autosearch_options_html .= "onchange=\"component_common.fix_dato(this,'{$component_name}')\" ";
+								$autosearch_options_html .= "data-type_map='$current_type_map_json'";								
 								$autosearch_options_html .= "/>";
-								#$autosearch_options_html .= "</div>";//end wrap
 								
 								// Mode full component search							
 								/*$current_component  = component_common::get_instance($current_modelo_name,
@@ -191,8 +189,7 @@
 																					 'search',
 																					 DEDALO_DATA_LANG,
 																					 $current_section_tipo);
-								$autosearch_options_html .= $current_component->get_html();*/
-								
+								$autosearch_options_html .= $current_component->get_html();*/								
 								$autosearch_options_html .= "</li>";
 								
 
