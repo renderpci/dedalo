@@ -9,9 +9,7 @@
 	$section_id 	= navigator::get_selected('id');
 	$section_tipo 	= $this->tipo;	//navigator::get_selected('area');
 	$section_label	= RecordObj_dd::get_termino_by_tipo($section_tipo,null,true) ;#$section->get_label();
-	
-		#dump($section_id,'$section_id');
-		#dump($section_tipo,'$section_tipo');
+
 	
 	$fixed_tools 	= false;
 
@@ -53,42 +51,6 @@
 					$button_new_html = $ar_buttons['button_new'][0]->get_html();
 				}
 
-			#
-			# PHP : Info version
-			#$php_info = phpversion();
-
-			#
-			# PHP CACHE : Detect cache
-			/*
-			$php_check_cache = 'none';
-			if(SHOW_DEBUG) {
-				include_once( DEDALO_LIB_BASE_PATH . '/common/class.DetectOpCodeCache.php');
-				$ar_cache_type = array(
-					'hasOpCode',
-					'hasApc',
-					'hasEaccelerator',
-					'hasIoncube',
-					'hasZend',
-					'hasNusphere'
-					);
-				foreach ($ar_cache_type as $current_function) {					
-					$check_cache = \DetectOpCodeCache\DetectOpCodeCache::$current_function();
-					if ($check_cache) {
-						$php_check_cache = substr($current_function, 3);
-						break;
-					}
-				}
-				#dump($php_check_cache, ' php_check_cache'); die();
-			}
-			*/
-			
-			#
-			# DB : Info version
-			/*
-			$db_info  = 'PostgreSQL ';
-			$db_info .= pg_version(DBi::_getConnection())['server'];
-				#dump($db_info,'$db_info');
-			*/		
 			break;
 
 		case 'list'	:
