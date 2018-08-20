@@ -90,23 +90,6 @@
 
 				$min_length = isset($propiedades->min_length) ? (int)$propiedades->min_length : 1;
 
-				/*
-				$options = new stdClass();
-					$options->q 	 			= null;
-					$options->limit  			= 40;
-					$options->offset 			= 0;
-					$options->lang 				= 'all';
-					$options->logical_operator 	= '$or';
-					$options->id 				= 'autocomplete_hi_search';
-					$options->section_tipo		= $hierarchy_sections; // Normally hierarchy_sections
-					$options->search_tipos 		= [DEDALO_THESAURUS_TERM_TIPO];
-					$options->distinct_values	= false;
-					$options->show_modelo_name 	= true;
-					$options->filter_custom 	= null;					
-				$search_query_object = json_encode($this->build_search_query_object($options), JSON_PRETTY_PRINT);
-					dump($search_query_object, ' search_query_object ++ '.to_string());
-					*/
-
 				#
 				# SEARCH_QUERY_OBJECT
 				$search_query_object_options = new stdClass();
@@ -121,7 +104,8 @@
 					$search_query_object_options->distinct_values	= false;
 					$search_query_object_options->show_modelo_name 	= true;
 					$search_query_object_options->filter_custom 	= null;
-				$search_query_object 		= $this->build_search_query_object($search_query_object_options);
+					$search_query_object_options->tipo 			 	= $tipo;
+				$search_query_object 		= component_autocomplete_hi::build_search_query_object($search_query_object_options);
 				$json_search_query_object 	= json_encode( $search_query_object, JSON_UNESCAPED_UNICODE | JSON_HEX_APOS);
 					#dump($json_search_query_object, ' json_search_query_object ++ '.to_string());
 				break;		
@@ -204,7 +188,8 @@
 					$search_query_object_options->distinct_values	= false;
 					$search_query_object_options->show_modelo_name 	= true;
 					$search_query_object_options->filter_custom 	= null;
-				$search_query_object 		= $this->build_search_query_object($search_query_object_options);
+					$search_query_object_options->tipo 			 	= $tipo;
+				$search_query_object 		= component_autocomplete_hi::build_search_query_object($search_query_object_options);
 				$json_search_query_object 	= json_encode( $search_query_object, JSON_UNESCAPED_UNICODE | JSON_HEX_APOS);
 					#dump($json_search_query_object, ' json_search_query_object ++ '.to_string());
 				break;

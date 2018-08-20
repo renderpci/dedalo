@@ -763,7 +763,7 @@ class component_relation_related extends component_relation_common {
 	/**
 	* AUTOCOMPLETE_SEARCH2
 	* @return array $ar_result
-	*/
+	*//*
 	public function autocomplete_search($search_query_object, $divisor=', ') {
 	
 		#$request_options = new stdClass();
@@ -797,7 +797,7 @@ class component_relation_related extends component_relation_common {
 			// Conver object to array
 			$ar_values = get_object_vars($row);				
 
-			// Remove first 2 elements of array (section_tipo, srection_id)
+			// Remove first 2 elements of array (section_tipo, section_id)
 			$ar_fields = array_slice($ar_values,2);
 			#dump($ar_fields, ' ar_fields ++ '.to_string());
 
@@ -816,6 +816,7 @@ class component_relation_related extends component_relation_common {
 		
 		return (array)$ar_result;
 	}//end autocomplete_search2
+	*/
 
 
 

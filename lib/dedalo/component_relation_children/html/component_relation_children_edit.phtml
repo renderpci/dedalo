@@ -11,12 +11,13 @@
 	print "data-parent=\"{$parent}\" ";
 	print "data-section_tipo=\"{$section_tipo}\" ";
 	print "data-modo=\"{$modo}\" ";
-	#print "data-dato='{$dato_string}' ";
 	print "data-component_name=\"{$component_name}\" ";
 	print "data-component_info='{$component_info}' ";
 	print "data-hierarchy_sections='".json_encode($hierarchy_sections)."' ";  // Default hierarchy_sections
 	print "data-relation_type=\"{$relation_type}\" ";
 	print "data-search_tipos='".json_encode($search_tipos)."' ";
+	print 'data-search_query_object=\''.$json_search_query_object.'\' ';
+	print "data-limit=\"$limit\" ";
 	print ">";
 
 	# ETIQUETA (LABEL)
@@ -37,22 +38,6 @@
 
 		case 2 :
 		case 3 :
-
-			#
-			# AUTOCOMPLETE SERVICE
-			$autocomplete_wrapper_id = 'aw_' . $identificador_unico;
-			$html_content .= '<div class="autocomplete_wrapper" id="'.$autocomplete_wrapper_id.'"></div>';
-
-
-			#
-			# JS Init component
-			$html_content .= '<script>';
-			$init_options = new stdClass();
-				$init_options->component_name 	= $component_name;
-				$init_options->uid 				= $identificador_unico;				
-			$html_content .= "component_common.init(".json_encode($init_options).");";
-			$html_content .= '</script>';
-
 			
 
 			$html_content .= "<div class=\"wrap_relation_children_values\">";
@@ -141,6 +126,22 @@
 
 
 			$html_content .= "</div>";//end wrap_parent_values
+
+
+			#
+			# AUTOCOMPLETE SERVICE
+			$autocomplete_wrapper_id = 'aw_' . $identificador_unico;
+			$html_content .= '<div class="autocomplete_wrapper" id="'.$autocomplete_wrapper_id.'"></div>';
+
+
+			#
+			# JS Init component
+			$html_content .= '<script>';
+			$init_options = new stdClass();
+				$init_options->component_name 	= $component_name;
+				$init_options->uid 				= $identificador_unico;
+			$html_content .= "component_common.init(".json_encode($init_options).");";
+			$html_content .= '</script>';
 
 
 			if(SHOW_DEBUG===true) {

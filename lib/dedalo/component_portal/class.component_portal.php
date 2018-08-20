@@ -1379,7 +1379,7 @@ class component_portal extends component_relation_common {
 	* BUILD_SEARCH_QUERY_OBJECT
 	* @return object $query_object
 	*/
-	public function build_search_query_object( $request_options=array() ) {
+	public static function build_search_query_object( $request_options=array() ) {
 
 		$start_time=microtime(1);
 	
@@ -1388,30 +1388,32 @@ class component_portal extends component_relation_common {
 			$options->limit  			= 10;
 			$options->offset 			= 0;
 			$options->full_count		= false;
-			$options->order  			= null;			
-			$options->lang 				= DEDALO_DATA_LANG;			
+			$options->order  			= null;
+			$options->lang 				= DEDALO_DATA_LANG;
 			$options->id 				= 'temp';
 			$options->section_tipo		= null;
 			$options->select_fields		= 'default';
-			$options->filter_by_locator	= false;						
+			$options->filter_by_locator	= false;
+			$options->tipo 				= null;
 			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 	
 		# Defaults		
-		$section_tipo = $options->section_tipo;		
+		$section_tipo 	= $options->section_tipo;	
+		$tipo 			= $options->tipo;	
 
 		# SELECT
 			$select_group = [];
-			$ar_related_section_tipo = common::get_ar_related_by_model('section', $this->tipo);
+			$ar_related_section_tipo = common::get_ar_related_by_model('section', $tipo);
 			if (isset($ar_related_section_tipo[0])) {	
 
 				# Create from related terms
 				$section_tipo 				= reset($ar_related_section_tipo); // Note override section_tipo here !
-				$ar_terminos_relacionados 	= RecordObj_dd::get_ar_terminos_relacionados($this->tipo,true,true);		
+				$ar_terminos_relacionados 	= RecordObj_dd::get_ar_terminos_relacionados($tipo,true,true);		
 				foreach ($ar_terminos_relacionados as $current_tipo) {
 					$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
 					if (strpos($modelo_name,'component')!==0) continue;
 
-					#$path_base  = search_development2::get_query_path($this->tipo, $this->section_tipo, false);
+					#$path_base  = search_development2::get_query_path($tipo, $this->section_tipo, false);
 					$path = search_development2::get_query_path($current_tipo, $section_tipo, false);
 										
 					# SELECT . Select_element (select_group)
@@ -1567,6 +1569,7 @@ class component_portal extends component_relation_common {
 			$search_query_object_options = new stdClass();
 				$search_query_object_options->filter_by_locator  = $filter_by_locator;
 				$search_query_object_options->section_tipo 		 = reset($ar_target_section_tipo);
+				$search_query_object_options->tipo 		 		 = $this->tipo;
 				#$search_query_object_options->limit 		 	 = 0;
 
 				# paginations options
@@ -1574,7 +1577,7 @@ class component_portal extends component_relation_common {
 				$search_query_object_options->offset 		 	= $offset;
 				#$search_query_object_options->full_count 		= count($dato);
 
-			$search_query_object = $this->build_search_query_object($search_query_object_options);
+			$search_query_object = self::build_search_query_object($search_query_object_options);
 				#debug_log(__METHOD__." search_query_object ".json_encode($search_query_object, JSON_PRETTY_PRINT), logger::DEBUG);
 			
 			# Search
