@@ -3424,6 +3424,7 @@ abstract class component_common extends common {
 
 	/**
 	* BUILD_SEARCH_QUERY_OBJECT
+	* Generic builder for search_query_object (override when need)
 	* @return object $query_object
 	*/
 	public static function build_search_query_object( $request_options ) {
@@ -3446,23 +3447,21 @@ abstract class component_common extends common {
 
 		$id 			  = $options->id;
 		$logical_operator = $options->logical_operator;
-		$tipo 			  = $options->tipo; // $this->tipo;
+		$tipo 			  = $options->tipo;
 		# Default from options
 		$section_tipo = $options->section_tipo;
 
-
 		# Defaults
 		$filter_group = null;
-		$select_group = array();
-		
+		$select_group = array();		
 
 		# iterate related terms
-		$ar_related_section_tipo = common::get_ar_related_by_model('section', $tipo);			
+		$ar_related_section_tipo = common::get_ar_related_by_model('section', $tipo);
 		if (isset($ar_related_section_tipo[0])) {
 
 			# Create from related terms
 			$section_tipo 				= reset($ar_related_section_tipo); // Note override section_tipo here !
-			$ar_terminos_relacionados 	= RecordObj_dd::get_ar_terminos_relacionados($tipo, true, true);		
+			$ar_terminos_relacionados 	= RecordObj_dd::get_ar_terminos_relacionados($tipo, true, true);	
 			foreach ($ar_terminos_relacionados as $current_tipo) {
 				$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_tipo, true);
 				if (strpos($modelo_name,'component')!==0) continue;
@@ -3488,7 +3487,7 @@ abstract class component_common extends common {
 					$end_path->lang = $options->lang;
 
 					$select_element = new stdClass();
-						$select_element->path = $path;						
+						$select_element->path = $path;
 
 					$select_group[] = $select_element;
 			}
@@ -3517,7 +3516,7 @@ abstract class component_common extends common {
 			$query_object->id  	   		= $id;
 			$query_object->section_tipo = $section_tipo;
 			$query_object->filter  		= $filter_group;
-			$query_object->select  		= $select_group;			
+			$query_object->select  		= $select_group;
 			$query_object->limit   		= $options->limit;
 			$query_object->offset  		= $options->offset;
 		
@@ -3801,34 +3800,32 @@ abstract class component_common extends common {
 
 	/**
 	* AUTOCOMPLETE_SEARCH
+	* Generic autocomplete search (override when need different way)
+	* Get a formed search_query_object, exec the search and return an array of formated results
 	* @return array $ar_result
 	*/
 	public function autocomplete_search($search_query_object, $divisor=', ') {
-	
-		#$request_options = new stdClass();
-		#	$request_options->q 	 			= $string_to_search;
-		#	$request_options->limit  			= $max_results;
-		#	$request_options->offset 			= 0;
-		#	$request_options->logical_operator 	= $logical_operator;
-		
+			
 		# Remove option of sub_select_by_id (not work on left joins)
 		$search_query_object->allow_sub_select_by_id = false;
+		
 		# Avoid auto add filter by user projects in search
 		if (!property_exists($search_query_object,'skip_projects_filter')) {
 			$search_query_object->skip_projects_filter 	= true;
 		}
 
-
 		if(SHOW_DEBUG===true) {
 			debug_log(__METHOD__." search_query_object - modo:$this->modo - ".json_encode($search_query_object, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT), logger::DEBUG);
 		}		
 		
+		# Search with search_query_object
 		$search_development2 = new search_development2($search_query_object);
 		$rows_data 		 	 = $search_development2->search();	
 
 		$components_with_relations 	= component_relation_common::get_components_with_relations();
 		$propiedades 	 			= $this->get_propiedades();
 
+		// ar_result is array ob objects
 		$ar_result = [];
 		foreach ($rows_data->ar_records as $key => $row) {
 
@@ -3872,7 +3869,7 @@ abstract class component_common extends common {
 			}//end foreach ($row as $key => $value)
 			
 			#
-			# SHOW_PARENT_NAME Parent name . Parent locator is always calculated and is not in current record (data is as locator children in parent record)			
+			# SHOW_PARENT_NAME (PROPIEDADES) Parent name . Parent locator is always calculated and is not in current record (data is as locator children in parent record)			
 			$show_parent_name = isset($propiedades->show_parent_name) ? $propiedades->show_parent_name : false;
 			if($show_parent_name===true) {				
 				// Directly, with recursive options true
@@ -3887,7 +3884,7 @@ abstract class component_common extends common {
 			}//end if($show_parent_name===true)
 			
 			#
-			# SEARCH_LIST_ADD Add custom resolved values from same section. For example, add municipality for resolve a name ambiguity			
+			# SEARCH_LIST_ADD (PROPIEDADES) Add custom resolved values from same section. For example, add municipality for resolve a name ambiguity			
 			$search_list_add = isset($propiedades->search_list_add) ? $propiedades->search_list_add : false;
 			if ($search_list_add!==false) {
 				$ar_dd_value = [];
@@ -3907,7 +3904,7 @@ abstract class component_common extends common {
 				}
 			}//end if ($search_list_add!==false)
 
-			// Final value string
+			// Final value strings
 			$label 	  = implode($divisor, $ar_full_label);
 			$original = implode(', ', $ar_original);
 			

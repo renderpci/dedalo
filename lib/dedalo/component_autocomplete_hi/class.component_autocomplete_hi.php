@@ -898,7 +898,7 @@ class component_autocomplete_hi extends component_relation_common {
 
 			$ar_result[] = $value_obj;
 		}
-		debug_log(__METHOD__." ar_result: ".to_string($ar_result), logger::DEBUG);
+		#debug_log(__METHOD__." ar_result: ".to_string($ar_result), logger::DEBUG);
 
 		
 		return (array)$ar_result;
