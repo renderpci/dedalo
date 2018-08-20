@@ -284,7 +284,7 @@
 			}
 			.filter_by_list li > label > span {
 				position: absolute;
-				right: 150px;
+				right: 0;
 				padding-right: 15px;
 				color: #7c7c7c;	
 			}
@@ -333,7 +333,9 @@
 				//margin-top: 0; //10px;
 				//margin-bottom: 5px;
 				clear: both;
-				background-color: #cdcdcd;
+				//background-color: #cdcdcd;
+				background-color: darken(@color_selected_wrap, 5%);
+				
 				}
 			.autosearch_options.in_search_mode {
 				padding-right: 5px;
@@ -388,10 +390,10 @@
 		.component_autocomplete_new_element {
 			width: 100%;
 			display: table;
-			//margin-top: 15px;
-			margin-bottom: 10px;
+			//margin-top: 15px;		
 			//background-color: #cecece;
-			padding: 10px;
+			padding: 5px;
+			padding-bottom: 20px;
 			//border-radius: 3px;
 			border-bottom: 0.5px solid #ccc;
 
