@@ -70,11 +70,11 @@ echo trim(js::get_js_link_code());
 	<form id="form1" name="form1" method="post" action="trigger.dd.php" onsubmit="return dd.validate_form(this);">
 				
 		<!-- ID -->
-		ID <input type="text" name="terminoID" id="terminoID" value="<?php echo $terminoID ?>" onClick="this.select();">
+		ID <input type="text" name="terminoID" id="terminoID" value="<?php echo $terminoID ?>"">
 		
 		<!-- TERMINO -->
 		<?php echo $termino_title ?>		
-		<div class="icon-help" onClick="ts.mostrarInfo(this,event);"></div>
+		<?php /*<div class="icon-help" onClick="ts.mostrarInfo(this,event);"></div>*/?>
 		<input type="text" name="termino" id="termino" value="<?php echo $termino ?>" onClick="this.select();">
 
 		<!-- DEF -->

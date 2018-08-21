@@ -20,7 +20,7 @@ asort($ar_all_modelos_ordered);
 	#dump($ar_all_modelos_ordered);
 
 ?>
-<select name="modelo" id="modelo"  style="color:#333333;width:160px">
+<select name="modelo" id="modelo"  style="color:#333333;width:90px">
 	<option value="" <?php if (!(strcmp("", $modeloGet))) {echo "selected=\"selected\"";} ?> > </option>
 	<?php
 	if(count($ar_all_modelos_ordered)>0) foreach($ar_all_modelos_ordered as $modeloID => $modelo) { 
