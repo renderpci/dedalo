@@ -387,10 +387,20 @@ class component_portal extends component_relation_common {
 		# We get current portal filter data (projects) to heritage in the new portal record
 			$component_filter_dato = $this->get_current_section_filter_data();
 			if(empty($component_filter_dato)) {
-				$msg = __METHOD__." Error on get filter data from this section ! ";
-				trigger_error($msg);
-				$response->msg .= $msg;
-				return $response;
+
+				debug_log(__METHOD__." Empty filter value in current section. Default project value will be used (section tipo: $this->section_tipo, section_id: $this->section_id) ".to_string(), logger::WARNING);
+
+				# Default value is used
+				# Temp section case Use default project here
+				$locator = new locator();
+					$locator->set_section_tipo(DEDALO_SECTION_PROJECTS_TIPO);
+					$locator->set_section_id(DEDALO_DEFAULT_PROJECT);
+				$component_filter_dato = [$locator];
+
+				#$msg = __METHOD__." Error on get filter data from this section ! ";
+				#trigger_error($msg);
+				#$response->msg .= $msg;
+				#return $response;
 			}
 
 		#
@@ -554,11 +564,11 @@ class component_portal extends component_relation_common {
 			$ar_children_objects_by_modelo_name_in_section = (array)$section->get_ar_children_objects_by_modelo_name_in_section($search_model,true);
 
 			if (empty($ar_children_objects_by_modelo_name_in_section[0])) {
-				throw new Exception("Error Processing Request: 'component_filter' is empty 1", 1);				
+				throw new Exception("Error Processing Request: 'component_filter' is empty 1", 1);
 			}else {
 				$component_filter		= $ar_children_objects_by_modelo_name_in_section[0];
 				$component_filter_dato 	= $component_filter->get_dato_generic(); // Without 'from_component_tipo' and 'type' properties
-			}
+			}						
 		}
 
 		return $component_filter_dato;
@@ -1347,7 +1357,7 @@ class component_portal extends component_relation_common {
 			$options->filter_by_locator	= false;
 			$options->tipo 				= null;
 			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
-	
+		
 		# Defaults		
 		$section_tipo 	= $options->section_tipo;	
 		$tipo 			= $options->tipo;	
@@ -1528,7 +1538,7 @@ class component_portal extends component_relation_common {
 				$search_query_object_options->offset 		 	= $offset;
 				#$search_query_object_options->full_count 		= count($dato);
 
-			$search_query_object = self::build_search_query_object($search_query_object_options);
+			$search_query_object = component_portal::build_search_query_object($search_query_object_options);
 				#debug_log(__METHOD__." search_query_object ".json_encode($search_query_object, JSON_PRETTY_PRINT), logger::DEBUG);
 			
 			# Search

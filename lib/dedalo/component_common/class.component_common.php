@@ -1306,13 +1306,13 @@ abstract class component_common extends common {
 		#
 		# LOCATORS (If empty, return '') if we sent the ar_locator property to resolve it, the resolution will be directly wihtout check the structure of the component.
 		# if the caller is a component that send your own dato is necesary calculate the component structure.
-		if($options->ar_locators == false){
-			$ar_locators = (array)$this->get_dato();
-				if (empty($ar_locators)) {
-					$valor_from_ar_locators->result='';
-					$valor_from_ar_locators->debug='No locators found '.$this->get_tipo();
-					return $valor_from_ar_locators;
-				}
+		if($options->ar_locators === false){
+			$ar_locators = (array)$this->get_dato();				
+			if (empty($ar_locators)) {
+				$valor_from_ar_locators->result = '';
+				$valor_from_ar_locators->debug  = 'No locators found '.$this->get_tipo();
+				return $valor_from_ar_locators;
+			}
 
 			#
 			# TERMINOS_RELACIONADOS . Obtenemos los terminos relacionados del componente actual	
@@ -1323,11 +1323,10 @@ abstract class component_common extends common {
 			$fields=array();
 			foreach ($ar_terminos_relacionados as $key => $ar_value) {
 				
-				$modelo 	 = key($ar_value);			
+				$modelo 	 = key($ar_value);
 				$tipo 		 = $ar_value[$modelo];
 				$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
-				if ($modelo_name==='section') {
-				#if ($modelo===MODELO_SECTION) { // 
+				if ($modelo_name==='section') {				
 					$section_tipo = $tipo;
 					$matrix_table = common::get_matrix_table_from_tipo( $section_tipo );							
 				}else{
@@ -1367,7 +1366,13 @@ abstract class component_common extends common {
 		#
 		# WHERE : Filtro de locators en DB
 		$strQuery_where='';
-		foreach ($ar_locators as $current_locator) {			
+		foreach ($ar_locators as $current_locator) {
+			if (empty($current_locator->section_id)) {
+				#throw new Exception("Error Processing Request BAD LOCATOR", 1);
+				
+				debug_log(__METHOD__." IGNORED BAD LOCATOR:  ".to_string($current_locator), logger::ERROR);
+				continue;
+			}
 			$current_section_id 	= $current_locator->section_id;
 			$current_section_tipo 	= $current_locator->section_tipo;
 			
