@@ -59,7 +59,6 @@
 
 				$wrap_style 	= ''; //'width:100%'; // Overwrite possible custon component structure css
 
-				#dump($modo, ' modo ++ '.to_string());
 				// Dont break here. Continue as modo edit
 		#case 'portal_list_view_mosaic':
 		#		$file_name		= 'edit';
@@ -72,13 +71,11 @@
 				#
 				# SEMANTIC NODES
 				#if ( !empty($this->semantic_nodes) ) {
-					# JS/CSS ADD
+				# JS/CSS ADD
 				js::$ar_url[]  = DEDALO_LIB_BASE_URL."/tools/tool_semantic_nodes/js/tool_semantic_nodes.js";
 				css::$ar_url[] = DEDALO_LIB_BASE_URL."/tools/tool_semantic_nodes/css/tool_semantic_nodes.css";
 				#}
 
-				#dump($this->generate_json_element, ' file_name ++ '.to_string($this->generate_json_element));
-				#debug_log(__METHOD__." tipo:$this->tipo - modo:$modo - generate_json_element:".to_string($this->generate_json_element), logger::DEBUG);
 
 				$dato 			= $this->get_dato();
 				$component_info	= $this->get_component_info('json');
@@ -89,7 +86,6 @@
 				$max_records 	= isset($this->propiedades->max_records) ? (int)$this->propiedades->max_records : 10;
 				$offset 		= 0; // Initial is 0
 				$n_rows 		= count($dato);
-
 				
 				#if ($this->generate_json_element===true) {
 
@@ -170,7 +166,8 @@
 							$search_query_object_options->filter_by_locator  = $filter_by_locator;
 							$search_query_object_options->section_tipo 		 = reset($ar_target_section_tipo);
 							$search_query_object_options->limit 		 	 = 0;
-						$search_query_object = $this->build_search_query_object($search_query_object_options);
+							$search_query_object_options->tipo 		 	 	 = $tipo;
+						$search_query_object = component_portal::build_search_query_object($search_query_object_options);
 						
 						# Search
 						$search_develoment2  = new search_development2($search_query_object);
@@ -261,8 +258,8 @@
 						$search_query_object_options->limit 			 = 1;
 						$search_query_object_options->filter_by_locator  = $filter_by_locator;
 						$search_query_object_options->section_tipo 		 = reset($ar_target_section_tipo);
-						$search_query_object_options->tipo 				 = $tipo;
-					$search_query_object = $this->build_search_query_object($search_query_object_options);
+						$search_query_object_options->tipo 				 = $this->tipo;
+					$search_query_object = component_portal::build_search_query_object($search_query_object_options);
 					
 				# SEARCH
 				$search_develoment2  = new search_development2($search_query_object);
@@ -331,7 +328,6 @@
 						#$options->layout_map  	= $layout_map_virtual;						
 						#$options->limit 		= false; # IMPORTANT : No limit is applicated to portal list. All records are viewed always
 						#$options->search_options_session_key = $search_options_session_key;
-							#dump($options," options");					
 
 						# OPTIONS CONTEXT : Configure section context
 						$context = new stdClass();
@@ -349,8 +345,8 @@
 						#$search_query_object_options->limit 			 = 1;
 						$search_query_object_options->filter_by_locator  = $filter_by_locator;
 						$search_query_object_options->section_tipo 		 = reset($ar_target_section_tipo);
-						$search_query_object_options->tipo 		 		 = $tipo;
-					$search_query_object = self::build_search_query_object($search_query_object_options);
+						$search_query_object_options->tipo 		 		 = $this->tipo;
+					$search_query_object = component_portal::build_search_query_object($search_query_object_options);
 					# Search
 					$search_develoment2  = new search_development2($search_query_object);
 					$rows_data 		 	 = $search_develoment2->search();					
@@ -402,8 +398,9 @@
 						#$search_query_object_options->limit 			 = 1;
 						$search_query_object_options->filter_by_locator  = $filter_by_locator;
 						$search_query_object_options->section_tipo 		 = reset($ar_target_section_tipo);
-						$search_query_object_options->tipo 				 = $tipo;
-					$search_query_object = self::build_search_query_object($search_query_object_options);
+						$search_query_object_options->tipo 				 = $this->tipo;
+					$search_query_object = component_portal::build_search_query_object($search_query_object_options);
+						dump($search_query_object, ' search_query_object ++ '.to_string());
 					
 				# SEARCH
 				$search_develoment2  = new search_development2($search_query_object);
@@ -457,8 +454,8 @@
 					#$search_query_object_options->limit 			 = 1;
 					$search_query_object_options->filter_by_locator  = $filter_by_locator;
 					$search_query_object_options->section_tipo 		 = reset($ar_target_section_tipo);
-					$search_query_object_options->tipo 				 = $tipo;
-				$search_query_object = self::build_search_query_object($search_query_object_options);
+					$search_query_object_options->tipo 				 = $this->tipo;
+				$search_query_object = component_portal::build_search_query_object($search_query_object_options);
 				
 			# SEARCH
 			$search_develoment2  = new search_development2($search_query_object);

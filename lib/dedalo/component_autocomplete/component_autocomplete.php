@@ -118,7 +118,7 @@
 				$query_object_options->offset 			= 0;
 				$query_object_options->section_tipo 	= $section_tipo;
 				$query_object_options->tipo 			= $tipo;
-			$search_query_object 		= self::build_search_query_object($query_object_options);
+			$search_query_object 		= component_autocomplete::build_search_query_object($query_object_options);
 				# skip_projects_filter true on edit mode
 				$search_query_object->skip_projects_filter 	= true;
 			$json_search_query_object 	= json_encode( $search_query_object, JSON_UNESCAPED_UNICODE | JSON_HEX_APOS );
@@ -166,7 +166,7 @@
 					$query_object_options->offset 				= 0;
 					$query_object_options->skip_projects_filter = false; // false in search mode
 					$query_object_options->tipo 				= $tipo;
-				$search_query_object 		= self::build_search_query_object($query_object_options);
+				$search_query_object 		= component_autocomplete::build_search_query_object($query_object_options);
 				$json_search_query_object 	= json_encode( $search_query_object, JSON_UNESCAPED_UNICODE | JSON_HEX_APOS);
 
 				# FIlTER_BY_LIST (Propiedades option)

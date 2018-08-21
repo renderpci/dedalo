@@ -616,7 +616,7 @@ class component_autocomplete_hi extends component_relation_common {
 			$search_query_object_options->distinct_values	= $distinct_values;
 			$search_query_object_options->show_modelo_name 	= $options->show_modelo_name;
 			$search_query_object_options->filter_custom 	= $options->filter_custom;
-		$search_query_object = self::build_search_query_object($search_query_object_options);
+		$search_query_object = component_autocomplete_hi::build_search_query_object($search_query_object_options);
 
 		$freeze_search_query_object = json_encode($search_query_object); // , JSON_UNESCAPED_UNICODE | JSON_HEX_APOS
 		
