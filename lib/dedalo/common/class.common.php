@@ -440,85 +440,6 @@ abstract class common {
 	}//end set_to_force_reload_dato
 
 
-
-	/**
-	* GET_MAIN_LANG__OLD
-	* @return string $main_lang
-	*//*
-	public static function get_main_lang__OLD( $section_tipo, $section_id=null ) {
-		#dump($section_tipo, ' section_tipo ++ '.to_string());
-		# Always fixed lang of languages as english
-		if ($section_tipo==='lg1') {
-			return 'lg-eng';
-		}
-
-		static $current_main_lang;
-		if (isset($current_main_lang[$section_tipo])) {
-			return $current_main_lang[$section_tipo];
-		}
-
-		# De momento, el main_lang default para todas las jerarquias será lg-spa porque es nuestra base de trabajo
-		# Dado que cada section id puede tener un main_lang diferente, estudiar este caso..
-		if ($section_tipo==='hierarchy1') {
-			if (!is_null($section_id)) {
-				$section = section::get_instance($section_id, $section_tipo);
-				$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo(DEDALO_HIERARCHY_LANG_TIPO,true);
-				$component 		= component_common::get_instance($modelo_name,
-																 DEDALO_HIERARCHY_LANG_TIPO,
-																 $section_id,
-																 'list',
-																 DEDALO_DATA_NOLAN,
-																 $section_tipo);
-				 $dato = $component->get_dato();
-				 if (isset($dato[0])) {
-				 	$lang_code = lang::get_code_from_locator($dato[0], $add_prefix=true);
-				 	# dump($lang_code, ' lang_code ++ '.to_string());
-				 	return $lang_code;
-				 }
-			}
-			return 'lg-spa';
-		
-		}else{
-
-			#$matrix_table = common::get_matrix_table_from_tipo($section_tipo);
-			#if ($matrix_table==='matrix_hierarchy') {
-			#	$main_lang = hierarchy::get_main_lang( $section_tipo );
-			#		dump($main_lang, ' main_lang ++ '.to_string());
-			#}
-
-
-		}
-		
-		
-
-		# If current section is virtual of DEDALO_THESAURUS_SECTION_TIPO, search main lang in self hierarchy
-		$ar_related_section_tipo = common::get_ar_related_by_model('section', $section_tipo);
-		
-		switch (true) {
-			
-			# Thesaurus virtuals
-			case (isset($ar_related_section_tipo[0]) && $ar_related_section_tipo[0]===DEDALO_THESAURUS_SECTION_TIPO):
-				$main_lang = hierarchy::get_main_lang($section_tipo);
-				if (empty($main_lang)) {
-					debug_log(__METHOD__." Empty main_lang for section_tipo: $section_tipo using 'hierarchy::get_main_lang'. Default value fallback is used (DEDALO_DATA_LANG_DEFAULT): ".DEDALO_DATA_LANG_DEFAULT, logger::WARNING);
-					#trigger_error("Empty main_lang for section_tipo: $section_tipo using 'hierarchy::get_main_lang'. Default value fallback is used (DEDALO_DATA_LANG_DEFAULT): ".DEDALO_DATA_LANG_DEFAULT);
-					$main_lang = DEDALO_DATA_LANG_DEFAULT;
-				}
-				break;
-			
-			default:
-				$main_lang = DEDALO_DATA_LANG_DEFAULT;
-				break;
-		}
-
-		$current_main_lang[$section_tipo] = $main_lang;
-
-
-		return (string)$main_lang;
-	}//end get_main_lang */
-
-
-
 	/**
 	* GET_MAIN_LANG
 	* @return string $main_lang
@@ -983,28 +904,6 @@ abstract class common {
 
 		return true;
 	}//end set_propiedades
-
-
-	
-	/**
-	* GET_RELACIONES : Obtiene las relaciones del tipo del componente actual decodificando el json de '$this->RecordObj_dd->get_relaciones()'
-	*//*
-	public function get_relaciones() {
-		if(SHOW_DEBUG===true) {
-			$bt = debug_backtrace();			
-			debug_log(__METHOD__." DEPRECATED METHOD. USE 'get_ar_related_by_model' instead. - ".to_string($bt), logger::ERROR);
-		}
-		trigger_error("DEPRECATED METHOD. USE 'get_ar_related_by_model' instead");
-		$relaciones = $this->RecordObj_dd->get_relaciones();
-		
-		if(SHOW_DEBUG===true) {
-			error_log("Common get relaciones usado. Fijar esto ASAP porque sólo devuelve la primera");
-		}
-		
-		return (array)$relaciones[0];
-	}//end get_relaciones
-	*/
-
 
 
 	/**

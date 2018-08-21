@@ -16,7 +16,6 @@ class section extends common {
 		protected $lang = DEDALO_DATA_NOLAN;
 
 		# FIELDS
-		# protected $id;
 		protected $section_id;
 		protected $tipo;
 		protected $dato;
@@ -30,9 +29,6 @@ class section extends common {
 
 		# Buttons objs
 		public $ar_buttons ;
-
-		#relation list
-		public $relation_list ;
 
 		public $caller_id;						# Necesario para calcular relation (también se admite como REQUEST['caller_id'])
 
@@ -48,19 +44,11 @@ class section extends common {
 		public $is_temp = false;	# Used to force save data to session instead database. Default is false
 		
 		public $options;
-		# CACHE SECTIONS INSTANCES
-		#public static $ar_section_instances = array(); # array chache of called instances of components
-
-		#protected $relations; * Ver de fijar la variable en la sección al construir el objeto ......
-
 
 		# SAVE_HANDLER
 		# Default is 'database'. Other options like 'session' are accepted
 		# Note that section change automatically this value (to 'session' for example) when received section_id is like 'temp1' for manage this cases as temporal section
 		public $save_handler = 'database';
-
-
-		#public $section_to_save;
 
 
 	# DIFFUSION INFO
@@ -1435,25 +1423,6 @@ class section extends common {
 					# OVERWRITE CURRENT SECTION TIPO WITH REAL SECTION TIPO
 					$tipo = $section_real_tipo;
 				}
-				/*
-				# EXCLUDE ELEMENTS
-					$tipo_exclude_elements 	= RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($original_tipo, $modelo_name='exclude_elements', $relation_type='children')[0];
-
-					$ar_terminos_relacionados = RecordObj_dd::get_ar_terminos_relacionados($tipo_exclude_elements, $cache=false, $simple=true);					
-
-						$real_section = section::get_instance(null,$section_real_tipo);					
-						
-						/*
-						# LAYOUT MAP : PENDIENTE UNIFICAR MAQUETACIÓN CON LAYOUT MAP A PARTIR DEL MODO EDIT <------
-						# Consulta el listado de componentes a mostrar en el listado / grupo actual					
-						$layout_map = component_layout::get_layout_map_from_section( $real_section );
-												
-
-						$html = component_layout::walk_layout_map($real_section, $layout_map, $ar, $ar_exclude_elements);
-
-
-					#$ar_exclude_elements 	= RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($tipo_exclude_elements, $modelo_name=array('section_group','component_'), $relation_type='termino_relacionado');
-						*/
 			}
 
 

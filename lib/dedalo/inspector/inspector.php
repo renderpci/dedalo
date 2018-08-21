@@ -19,7 +19,7 @@
 			
 			#
 			# LOADED COMPONENTS	
-			$ar_loaded_modelos_name = array_unique(common::$ar_loaded_modelos_name);
+			#$ar_loaded_modelos_name = array_unique(common::$ar_loaded_modelos_name);
 
 			if(SHOW_DEBUG) {
 				#$section = section::get_instance($section_id, $section_tipo);
@@ -30,13 +30,7 @@
 			# TOOL_RELATION
 			# When component_relations is loaded, inspector load fixed tool_relation for current section record
 			# Load button to open dialog tool window and list of records related to current section
-			$tool_relation_button_html 	= '';
-			$relation_list_html 		= '';
-			if (in_array('component_relation', $ar_loaded_modelos_name)) {
-				# tool_relation
-				$tool_relation_button_html = '';	# DESACTIVO	#$this->get_tool_relation_button_html();
-				$fixed_tools = true;
-			}
+			$relation_list_html 	= $this->get_relation_list_button_html();			
 
 			#
 			# BUTTONS

@@ -117,18 +117,13 @@
 								<label class=\"css_label\">".label::get_label('relaciones')."</label>
 								</div>";
 			$html .= "<div class=\"css_section_group_content tab_content inspector_div_content \" >";
-
-				# Relations tag (dynamic)
-				#$html .= " <div id=\"inspector_relation_list_tag\" class=\"inspector_info_body\"> $tool_relation_button_html </div>";
 				
 				# Relations section (fixed)/*
 				$html .= " <div id=\"inspector_relation_list_sections\" class=\"inspector_info_body\">";
 				$html .= "<div class=\"relaciones_list_title\">".label::get_label('ficha')."</div>";
-				$html .= $relation_list_html ;
 				$html .= "</div>";
-
 			$html .= "</div>";
-			
+			$html .= $relation_list_html;
 				
 
 		
@@ -146,42 +141,6 @@
 			# Body
 			$html .= "<div class=\"css_section_group_content tab_content inspector_div_content\">";
 			$html .= "<div id=\"inspector_others\" class=\"inspector_info_body\">";
-
-							
-				/*
-					if(isset($_SESSION['debug_content'])) {							
-						foreach ($_SESSION['debug_content'] as $key => $value) {
-							if(strpos($key, 'RecordDataBoundObject')!==false) {
-								$key = str_replace('RecordDataBoundObject', 'RDBO', $key);
-								$html .= "$key : ". count($value) ."<br>";
-							}
-							
-						}
-					}
-					#$html .= print_r($_SESSION['debug_content']['common::show_loaded_modelos']);
-					
-					$_SESSION['debug_content']['Load'.' cache']
-					$_SESSION['debug_content']['Load']
-					$_SESSION['debug_content']['search'.' cache']
-					$_SESSION['debug_content']['search']
-					$_SESSION['common::show_loaded_modelos']
-					*/
-
-				/*
-					$iconv = iconv_get_encoding('all');
-					$html .= "	PHP iconv input_encoding ". iconv_get_encoding('input_encoding'). "<br>
-										PHP iconv output_encoding ". iconv_get_encoding('output_encoding') . "<br>	
-										PHP iconv internal_encoding ". iconv_get_encoding('internal_encoding') . "<br>
-										";
-					*/
-
-				/*
-					$processUser = posix_getpwuid(posix_geteuid());
-					$html .= "User running php: <b>".$processUser['name']."</b>";
-					$html .= "<pre>";
-					$html .= print_r($processUser,true);
-					$html .= "</pre>";
-					*/
 			
 				$html .= "<div id=\"load_time_inspector\"></div>";
 

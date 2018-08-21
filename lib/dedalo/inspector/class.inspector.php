@@ -47,50 +47,32 @@ class inspector {
 	/**
 	* GET_TOOL_RELATION_BUTTON_HTML
 	*/
-	protected function get_tool_relation_button_html() {
+	protected function get_relation_list_button_html() {
 
 		if(SHOW_DEBUG) $start_time = start_time();
 
 		$current_section_id = navigator::get_selected('id');
-			#dump($current_section_id,'current_section_id');
 
 		$current_section_tipo = navigator::get_selected('section');
-		#dump($current_section_tipo,'current_section_tipo');
-		/*
-		$section 			 = section::get_instance($current_section_id, $current_section_tipo);
-		$ar_children_objects = $section->get_ar_children_objects_by_modelo_name_in_section('component_relation');
-			#dump($ar_children_objects,'ar_children_objects');
-		*/
-		$ar_component_relation_tipo	= section::get_ar_children_tipo_by_modelo_name_in_section($current_section_tipo, 'component_relation',true);
 
-		if (empty($ar_component_relation_tipo[0])) return null;
+		//get the relation_list
+		$ar_modelo_name_required = array('relation_list');
+		$resolve_virtual 		 = false;
 
+		// Locate relation_list element in current section (virtual ot not)
+		$ar_children = section::get_ar_children_tipo_by_modelo_name_in_section($current_section_tipo, $ar_modelo_name_required, $from_cache=true, $resolve_virtual, $recursive=false, $search_exact=true);
 
-		$component_relation_tipo = $ar_component_relation_tipo[0];
-		$component_relation 	 = component_common::get_instance('component_relation',
-																  $component_relation_tipo,
-																  $current_section_id,
-																  'edit',
-																  DEDALO_DATA_LANG,
-																  $current_section_tipo);
+		// If not found children, try resolving real section
+		if (empty($ar_children)) {
+			$resolve_virtual = true;
+			$ar_children = section::get_ar_children_tipo_by_modelo_name_in_section($current_section_tipo, $ar_modelo_name_required, $from_cache=true, $resolve_virtual, $recursive=false, $search_exact=true);
+		}// end if (empty($ar_children))
 
-		$tool_relation_obj 	= $component_relation->load_specific_tool('tool_relation');
+		$relation_list = new relation_list($ar_children[0],$current_section_id, $current_section_tipo, 'button' );
 
-		if (is_object($tool_relation_obj)) {
-			$html 			= $tool_relation_obj->get_html();
-			return $html;
-		}
+		$relation_list_html = $relation_list->get_html();
 
-		/*
-		$component_relation = $ar_children_objects[0];
-		$tool_relation_obj 	= $component_relation->load_tools('tool_relation');
-			#dump($tool_relation_obj,'tool_relation_obj');
-
-		if (isset($tool_relation_obj[0])) {
-			$html 		= $tool_relation_obj[0]->get_html();
-			return $html;
-		}
-		*/			
+		return $relation_list_html;
 	}//end get_tool_relation_button_html
 
 
