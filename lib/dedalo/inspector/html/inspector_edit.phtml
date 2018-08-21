@@ -43,21 +43,9 @@
 		$html .= "</div>";
 		# Body
 		$html .= "<div class=\"css_section_group_content tab_content inspector_div_content \" >";
-			
+
 			#
 			# FIXED SECTION TOOLS				
-			
-				
-				/* # TOOL_DIFFUSION for export to mysql OLD 
-					if (defined('DEDALO_DIFFUSION_MAP') && (bool)component_security_tools::is_authorized_tool_for_logged_user('tool_diffusion')) {				
-						$DEDALO_DIFFUSION_MAP = unserialize(DEDALO_DIFFUSION_MAP);
-						if (isset($DEDALO_DIFFUSION_MAP[$section_tipo])) {
-							$tool_diffusion = new tool_diffusion($section_tipo,'button_inspector');
-							$tool_diffusion->section_id = $section_id;
-							$html  .= $tool_diffusion->get_html();
-						}
-					}
-					*/		
 						
 				# TOOL_DIFFUSION BUTTONS (for export to database, etc.) 
 				# dump( tool_diffusion::have_section_diffusion($section_tipo), ' var ++ '.to_string($section_tipo));
@@ -90,6 +78,21 @@
 		$html .= "</div>";//end tools_info_wrapper
 
 
+#
+		# ACTIVITY LOG
+		#
+		$html .= "<div id=\"tools_info_wrapper\">";
+		# Header
+		$html .= "<div class=\"css_section_group_titulo tab_title title_down_box text_unselectable\">";
+		$html .= " <label class=\"css_label\">ACTIVITY LOG</label>";
+		$html .= "</div>";
+		# Body				
+		$html .= "<div class=\"css_section_group_content tab_content inspector_div_content\">";
+		$html .= " <div id=\"inspector_log\" class=\"inspector_info_body\"></div>";			
+		$html .= "</div>";
+		$html .= "</div>";//end tools_info_wrapper
+
+
 		#
 		# INDEXATIONS
 		#
@@ -108,7 +111,7 @@
 		#
 		# RELATIONS
 		#
-		/* DESACTIVO TEMPORALMENTE
+
 			$html .= "<div class=\"css_section_group_titulo tab_title title_down_box text_unselectable border_radius_0\" 
 								data-tab_id=\"Inspector_relations_tap\">
 								<label class=\"css_label\">".label::get_label('relaciones')."</label>
@@ -118,29 +121,14 @@
 				# Relations tag (dynamic)
 				#$html .= " <div id=\"inspector_relation_list_tag\" class=\"inspector_info_body\"> $tool_relation_button_html </div>";
 				
-				# Relations section (fixed)
+				# Relations section (fixed)/*
 				$html .= " <div id=\"inspector_relation_list_sections\" class=\"inspector_info_body\">";
 				$html .= "<div class=\"relaciones_list_title\">".label::get_label('ficha')."</div>";
 				$html .= $relation_list_html ;
 				$html .= "</div>";
 
 			$html .= "</div>";
-			*/
-
-
-		#
-		# ACTIVITY LOG
-		#
-		$html .= "<div id=\"tools_info_wrapper\">";
-		# Header
-		$html .= "<div class=\"css_section_group_titulo tab_title title_down_box text_unselectable\">";
-		$html .= " <label class=\"css_label\">ACTIVITY LOG</label>";
-		$html .= "</div>";
-		# Body				
-		$html .= "<div class=\"css_section_group_content tab_content inspector_div_content\">";
-		$html .= " <div id=\"inspector_log\" class=\"inspector_info_body\"></div>";			
-		$html .= "</div>";
-		$html .= "</div>";//end tools_info_wrapper
+			
 				
 
 		
@@ -159,34 +147,7 @@
 			$html .= "<div class=\"css_section_group_content tab_content inspector_div_content\">";
 			$html .= "<div id=\"inspector_others\" class=\"inspector_info_body\">";
 
-				# Dédalo version
-				#$html .= " Dédalo version ".DEDALO_VERSION. " - Build " .DEDALO_BUILD. "<br>";
-			
-				/*
-					$html .= " <span class=\"key\">TOP_TIPO:</span> <span class=\"value\"><b>". TOP_TIPO . "</b></span> ";
-					$html .= " <span class=\"key\">TOP_ID:</span> <span class=\"value\"><b>".TOP_ID."</b></span><br>";
-					$html .= " DB info: ".$db_info ."<br>";
-					$html .= " PHP version: ". $php_info. " - cache: $php_check_cache <br>";
-					$html .= " PHP memory usage: ". tools::get_memory_usage('pid') ."<br>";		
-					if (defined('DEDALO_CACHE_MANAGER') && !empty(DEDALO_CACHE_MANAGER)) {
-						$html .= " Dedalo cache manager: ". DEDALO_CACHE_MANAGER ;		
-					}
-					if (defined('DEDALO_CACHE_MANAGER_DB') && DEDALO_CACHE_MANAGER_DB) {
-						$html .= ' : '.DEDALO_CACHE_MANAGER_DB.'<br>';
-					}
-					if (defined('DEDALO_ENTITY')) {
-						$html .= "DEDALO_ENTITY: ".DEDALO_ENTITY.'<br>';
-					}
-					*/
-			
-				# Inverse locators
-				/*if (isset($inverse_locators)) {
-					$html .= "Inverse locators:<br>";
-					foreach ((array)$inverse_locators as $current_locator) {
-						$html .= $current_locator->from_section_tipo."->".$current_locator->from_component_tipo."->".$current_locator->from_section_id.'<br>';
-					}
-				}*/
-				
+							
 				/*
 					if(isset($_SESSION['debug_content'])) {							
 						foreach ($_SESSION['debug_content'] as $key => $value) {

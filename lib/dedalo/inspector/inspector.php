@@ -23,7 +23,6 @@
 
 			if(SHOW_DEBUG) {
 				#$section = section::get_instance($section_id, $section_tipo);
-				#$inverse_locators = null; // $section->get_inverse_locators();
 			}			
 
 
