@@ -177,32 +177,6 @@ class component_inverse extends component_common {
 	public static function get_search_query($json_field, $search_tipo, $tipo_de_dato_search, $current_lang, $search_value, $comparison_operator='=') {
 		
 		debug_log(__METHOD__." DISABLED OPTION !!! ".to_string(), logger::ERROR);
-		/*
-		$search_query='';
-		if ( empty($search_value) ) {
-			return $search_query;
-		}
-
-		$search_value_edit = '[{"section_id":"'.$search_value.'"}]';
-
-		switch (true) {
-			case $comparison_operator==='!=':
-				$search_query = " ($json_field#>'{inverse_locators}' @> '".$search_value_edit."'::jsonb)=FALSE ";
-				break;
-
-			case $comparison_operator==='=':
-			default:
-				$search_query = " $json_field#>'{inverse_locators}' @> '".$search_value_edit."'::jsonb "; 
-				break;
-		}
-		
-		
-		
-		if(SHOW_DEBUG) {
-			$search_query = " -- filter_by_search $search_tipo ". get_called_class() ." \n".$search_query;
-			#dump($search_query, " search_query for search_value: ".to_string($search_value)); #return '';
-		}
-		return $search_query; */
 	}//end get_search_query
 
 
