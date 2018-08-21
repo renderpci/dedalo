@@ -1731,7 +1731,7 @@ class component_portal extends component_relation_common {
 								}else{
 									$additional_css_style = $permissions <2 ? 'style="height: 100%;"' : '' ;
 									$edit_button .= "<a href=\"javascript:void(0);\" onclick=\"component_portal.open_record(this,'$url')\" ";
-									$edit_button .= "id=\"portal_link_open_{$section_tipo}_{$section_id}\" ";
+									$edit_button .= "id=\"portal_link_open_{$tipo}_{$section_tipo}_{$section_id}\" ";
 									$edit_button .= "class=\"id_column_buttons button_edit link\" ";
 									$edit_button .= $additional_css_style;
 									$edit_button .= "title=\"$title\">";
