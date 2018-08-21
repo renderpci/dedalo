@@ -173,14 +173,14 @@ class component_relation_common extends component_common {
 
 				// section_id
 				if (!isset($current_locator->section_id) || !isset($current_locator->section_tipo)) {
-					debug_log(__METHOD__." IGNORED bad formed locator (empty section_id or section_tipo) [$this->section_tipo, $this->parent, $this->tipo] ". get_called_class().' - $current_locator: '.to_string($current_locator), logger::ERROR);
+					debug_log(__METHOD__." IGNORED bad formed locator (empty section_id or section_tipo) [$this->section_tipo, $this->parent, $this->tipo] ". get_called_class().' - current_locator: '.to_string($current_locator), logger::ERROR);
 					#throw new Exception("Error Processing Request. Look server log for details", 1);
 					continue;
 				}
 				
 				// type
 				if (!isset($current_locator->type)) {
-					debug_log(__METHOD__." Fixing bad formed locator (empty type) [$this->section_tipo, $this->parent, $this->tipo] ". get_called_class().' - $current_locator: '.to_string($current_locator), logger::WARNING);
+					debug_log(__METHOD__." Fixing bad formed locator (empty type) [$this->section_tipo, $this->parent, $this->tipo] ". get_called_class().' - current_locator: '.to_string($current_locator), logger::WARNING);
 					$current_locator->type = $relation_type;
 				//}else if ($current_locator->type!==$relation_type) {
 					//debug_log(__METHOD__." Fixed bad formed locator (bad type $current_locator->type to $relation_type) [$this->section_tipo, $this->parent, $this->tipo] ".to_string(), logger::WARNING);

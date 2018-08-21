@@ -761,66 +761,6 @@ class component_relation_related extends component_relation_common {
 
 
 	/**
-	* AUTOCOMPLETE_SEARCH2
-	* @return array $ar_result
-	*//*
-	public function autocomplete_search($search_query_object, $divisor=', ') {
-	
-		#$request_options = new stdClass();
-		#	$request_options->q 	 			= $string_to_search;
-		#	$request_options->limit  			= $max_results;
-		#	$request_options->offset 			= 0;
-		#	$request_options->logical_operator 	= $logical_operator;
-
-		# Remove option of sub_select_by_id (not work on left joins)
-		$search_query_object->allow_sub_select_by_id = false;
-
-		#$search_query_object = $this->build_search_query_object($request_options);
-			#dump(null, ' search_query_object ++ '.to_string( json_encode($search_query_object, JSON_UNESCAPED_UNICODE | JSON_HEX_APOS | JSON_PRETTY_PRINT)));
-		
-		$search_development2 = new search_development2($search_query_object);
-		#$search_development2->parse_query_object();
-		$result_table = $search_development2->search();
-			#dump($result_table, ' result_table ++ '.to_string());
-
-		$ar_result = [];
-		foreach ($result_table->ar_records as $key => $row) {
-
-			$locator = new locator();
-				$locator->set_section_tipo($row->section_tipo);
-				$locator->set_section_id($row->section_id);
-				$locator->set_type(DEDALO_RELATION_TYPE_LINK);
-				$locator->set_from_component_tipo($this->tipo);
-
-			$locator_json = json_encode($locator);
-
-			// Conver object to array
-			$ar_values = get_object_vars($row);				
-
-			// Remove first 2 elements of array (section_tipo, section_id)
-			$ar_fields = array_slice($ar_values,2);
-			#dump($ar_fields, ' ar_fields ++ '.to_string());
-
-			$ar_label = [];
-			foreach ($ar_fields as $field_tipo => $field_value) {
-				if (!empty($field_value)) {
-					$ar_label[] = component_common::get_value_with_fallback_from_dato_full( $field_value, $decore_untranslated=false );
-				}				
-			}
-
-			$current_label = implode($divisor, $ar_label);
-		
-			$ar_result[$locator_json] = $current_label;
-		}
-	
-		
-		return (array)$ar_result;
-	}//end autocomplete_search2
-	*/
-
-
-
-	/**
 	* GET_DIFFUSION_VALUE
 	* Overwrite component common method
 	* Calculate current component diffusion value for target field (usually a mysql field)
