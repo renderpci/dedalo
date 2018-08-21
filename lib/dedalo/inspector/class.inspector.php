@@ -31,32 +31,10 @@ class inspector {
 
 		if(SHOW_DEBUG) $start_time = start_time();
 
-		/*
-		# DEDALO_CACHE_MANAGER : var
-		$cache_var='get_html_inspector_'.navigator::get_selected('area').'_'.navigator::get_selected('id').'_'.navigator::get_selected('modo');
-		if(DEDALO_CACHE_MANAGER && cache::exists($cache_var)) {
-			dump($cache_var,"COMPONENT SHOW FROM CACHE");
-			return cache::get($cache_var);
-		}
-		#dump($cache_var,'$cache_var');
-		*/
-
 		ob_start();
 		include ( DEDALO_LIB_BASE_PATH .'/'. __CLASS__ .'/'. __CLASS__ .'.php' );
 		$html =  ob_get_clean();
 		
-
-		/*
-		# DEDALO_CACHE_MANAGER : Lo metemos en cache
-		if(DEDALO_CACHE_MANAGER) {
-			# For now, only in list mode (and variants like portal_list, etc..)
-			#if (strpos($cache_var, '_list')!==false ) {
-				cache::set($cache_var, $html);
-				#error_log("Added cache: $cache_var ");
-			#}
-		}
-		*/
-		 
 		if(SHOW_DEBUG) {
 			#$GLOBALS['log_messages'] .= exec_time($start_time, __METHOD__. ' ' );
 			global$TIMER;$TIMER[__METHOD__.'_'.get_called_class().'_'.$this->modo.'_'.microtime(1)]=microtime(1);
