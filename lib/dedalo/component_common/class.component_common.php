@@ -3909,6 +3909,10 @@ abstract class component_common extends common {
 				}
 			}//end if ($search_list_add!==false)
 
+			if(SHOW_DEBUG===true) {
+				$ar_full_label[] = ' ['.$row->section_tipo.'_'.$row->section_id.']';
+			}
+
 			// Final value strings
 			$label 	  = implode($divisor, $ar_full_label);
 			$original = implode(', ', $ar_original);
