@@ -25,38 +25,20 @@ class section extends common {
 		protected $modo;
 
 		# STRUCTURE DATA
-		protected $RecordObj_dd ;
 		protected $modelo ;
-		protected $norden ;
 		protected $label ;
-
-		public $ar_section_list_obj ;
-		public $ar_section_group_obj ;
-		public $ar_section_relations;			# array de etiquetas de esta sección (en relaciones)
-		public $rel_locator;					# usado cuando desglosamos una relación inversa (tag=>sections)
-		public $tag;							# usado cuando desglosamos una relación inversa (tag=>sections)
-
-		protected static $ar_id_records ;		# array of records of current section (int id_matrix)
 
 		# Buttons objs
 		public $ar_buttons ;
-		public $button_new_object ;
-		public $button_delete_object ;
+
+		#relation list
+		public $relation_list ;
 
 		public $caller_id;						# Necesario para calcular relation (también se admite como REQUEST['caller_id'])
-		public $caller_tipo;
-		public $ar_section_relations_for_current_tipo_section;	# Necesario para calcular relation
-		public $ar_id_section_custom;
 
-		public $ar_id_records_from_portal;
 		public $ar_all_project_langs;
 
 		public $show_inspector = true;			# default show: true
-
-		# Array of components (tipo) to show in portal_list mode
-		# used by component_layout and set from component_portal
-		public $portal_layout_components;
-		public $portal_tipo;
 
 		public $section_virtual 	 = false;
 		public $section_real_tipo ;
@@ -1808,6 +1790,7 @@ class section extends common {
 
 	/**
 	* GET_AR_BUTTONS
+	* resolve the buttons of this section and load it in : $this->ar_buttons
 	* Calcula los bonones de esta sección y los deja disponibles como : $this->ar_buttons
 	* @see section_records.php modo:list 
 	*/
@@ -2447,49 +2430,6 @@ class section extends common {
 
 		return true;
 	}#end diffusion_info_propagate_changes
-
-
-
-	/**
-	* DIFFUSION_INFO_REMOVE
-	* @param string $diffusion_element_tipo
-	*//*
-	public function diffusion_info_remove__DES($diffusion_element_tipo) {
-		$dato = $this->get_dato();
-
-		if (!property_exists($dato, 'diffusion_info')) return false;
-
-		if (isset($dato->diffusion_info->$diffusion_element_tipo)) {
-			
-			# Remove diffusion element info
-			unset($dato->diffusion_info->$current_diffusion_element_tipo);
-			$this->set_dato($dato); // Force update section dato	
-
-			# Propagate changes to parent sections (inverse_locators)
-			#register_shutdown_function($this->diffusion_info_propagate_changes);
-			$this->diffusion_info_propagate_changes();
-		}
-	}//end diffusion_info_remove
-	*/
-
-
-
-	/**
-	* DIFFUSION_INFO_RESET
-	* @return bool
-	*//*
-	public function diffusion_info_reset__DES() {
-		$dato = $this->get_dato();
-
-		if (!empty($dato->diffusion_info)) {
-			$dato->diffusion_info = null; // Default value
-			$this->set_dato($dato);
-			return true;
-		}
-		return false;
-	}//end diffusion_info_reset
-	*/
-
 
 
 	
