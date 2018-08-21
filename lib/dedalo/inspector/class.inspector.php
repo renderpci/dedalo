@@ -77,7 +77,7 @@ class inspector {
 			#dump($current_section_id,'current_section_id');
 
 		$current_section_tipo = navigator::get_selected('section');
-			#dump($current_section_tipo,'current_section_tipo');
+		#dump($current_section_tipo,'current_section_tipo');
 		/*
 		$section 			 = section::get_instance($current_section_id, $current_section_tipo);
 		$ar_children_objects = $section->get_ar_children_objects_by_modelo_name_in_section('component_relation');
