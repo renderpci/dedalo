@@ -23,12 +23,13 @@ function get_relation_list_json($json_data) {
 		foreach($vars as $name) {
 			$$name = common::setVarData($name, $json_data);
 			if (empty($$name)) {
-				exit("Error. ".$$name." is mandatory");
+				return $response;
 			}
 		}
 	$relation_list 		= new relation_list($tipo, $section_id, $section_tipo, $modo='edit');
-	$relation_list_json = $relation_list->get_json();
 
+	$relation_list_json = $relation_list->get_json();
+dump($relation_list_json);
 	if ($relation_list_json !== false) {
 		$response->result 	= $relation_list_json;
 		$response->msg 		= 'Ok. Request done ['.__FUNCTION__.']';

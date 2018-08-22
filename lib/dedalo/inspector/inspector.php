@@ -32,19 +32,9 @@
 			# Load button to open dialog tool window and list of records related to current section
 			#$relation_list_html 	= $this->get_relation_list_button_html();
 			$relation_list 	= $this->get_relation_list();
-			#$ection_id 		= navigator::get_selected('id');
-			#$section_tipo 	= navigator::get_selected('section');
+			$section_id 	= $this->section->get_section_id();
 
 			$relation_list_name = RecordObj_dd::get_termino_by_tipo($relation_list,DEDALO_APPLICATION_LANG, true);
-
-			$init_options = new stdClass();
-				$init_options->relation_list_name 	= $relation_list_name;
-				$init_options->modo 				= $modo;
-				$init_options->tipo 				= $relation_list;
-				$init_options->section_tipo 		= $section_tipo;
-				$init_options->section_id 			= $section_id;
-			$init_json = json_encode($init_options, JSON_HEX_APOS);
-
 
 			#
 			# BUTTONS

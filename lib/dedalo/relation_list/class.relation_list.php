@@ -114,9 +114,6 @@ class relation_list {
 							}
 						}
 					}
-
-				}else{
-					return false;
 				}
 				
 			}// end if (!in_array($current_section_tipo, $sections_related )

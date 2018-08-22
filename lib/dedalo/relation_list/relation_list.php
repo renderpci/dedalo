@@ -9,8 +9,7 @@ $modo 			= $this->modo;
 $permissions	= common::get_permissions($tipo, $tipo);
 $json 			= null;
 
-
-if($permissions===0) return null;
+if($permissions===0) return false;
 
 $file_name = $modo;
 
