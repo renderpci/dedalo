@@ -608,6 +608,10 @@ abstract class common {
 	* NOTIFY_LOAD_LIB_ELEMENT_TIPO
 	*/
 	public static function notify_load_lib_element_tipo($modelo_name, $modo) {
+
+		if ($modo!=='edit') {
+			return false;
+		}
 			
 		if (empty($modelo_name) || in_array($modelo_name, common::$ar_loaded_modelos_name)) {
 			return false;

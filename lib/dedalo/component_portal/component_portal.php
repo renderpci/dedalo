@@ -400,7 +400,7 @@
 						$search_query_object_options->section_tipo 		 = reset($ar_target_section_tipo);
 						$search_query_object_options->tipo 				 = $this->tipo;
 					$search_query_object = component_portal::build_search_query_object($search_query_object_options);
-						dump($search_query_object, ' search_query_object ++ '.to_string());
+						#dump($search_query_object, ' search_query_object ++ '.to_string());
 					
 				# SEARCH
 				$search_develoment2  = new search_development2($search_query_object);

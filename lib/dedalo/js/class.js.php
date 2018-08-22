@@ -79,7 +79,7 @@ class js {
 			switch ($modo) {
 				case 'edit':
 					js::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/tools/tool_indexation/js/tool_indexation.js';
-					js::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/tools/tool_lang_multi/js/tool_lang_multi.js';
+					#js::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/tools/tool_lang_multi/js/tool_lang_multi.js'; // Not used for now
 					js::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/relation_list/js/relation_list.js';
 				case 'list':
 					js::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/tools/tool_time_machine/js/tool_time_machine.js';
@@ -94,11 +94,9 @@ class js {
 		# Recorremos los elemetos usados, por modeloID es decir: root=dd117, etc..
 		$ar_excepciones  		= array('relation_list');
 		$ar_loaded_modelos_name = array_unique(common::$ar_loaded_modelos_name);
-			#dump($ar_loaded_modelos_name, ' ar_loaded_modelos_name ++ '.to_string());
+		
 		foreach($ar_loaded_modelos_name as $modelo_name) {
-			
-			#$modelo_name = RecordObj_dd::get_termino_by_tipo($modeloID);
-			
+						
 			# Load específico del componente actual
 			if (!in_array($modelo_name, $ar_excepciones)) {
 				js::$ar_url[] 	= DEDALO_LIB_BASE_URL . '/'. $modelo_name .'/js/'. $modelo_name .'.js';				
@@ -108,7 +106,7 @@ class js {
 
 		# eliminamos las duplicidades de links	
 		js::$ar_url = array_unique(js::$ar_url);
-
+	
 	
 		# ITERATE AR_URL TO BUILD FINAL HTML
 		foreach (js::$ar_url as $url) {
