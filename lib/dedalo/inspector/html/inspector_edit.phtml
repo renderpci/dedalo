@@ -111,19 +111,23 @@
 		#
 		# RELATIONS
 		#
-
-			$html .= "<div class=\"css_section_group_titulo tab_title title_down_box text_unselectable border_radius_0\" 
-								data-tab_id=\"Inspector_relations_tap\">
-								<label class=\"css_label\">".label::get_label('relaciones')."</label>
-								</div>";
-			$html .= "<div class=\"css_section_group_content tab_content inspector_div_content \" >";
+			$html .= "<div id=\"relations_info_wrapper\">";
+				$html .= "<div class=\"css_section_group_titulo tab_title title_down_box text_unselectable border_radius_0\" data-tab_id=\"Inspector_relations_list_tap\"";
+				$html .= 'onclick=\'relation_list.init(this,'.$init_json.')\' ';
+				$html .= " >";
+				$html .= "<label class=\"css_label\">".label::get_label('relaciones')."</label>";
+				$html .= "</div>";
+				$html .= "<div class=\"css_section_group_content tab_content inspector_div_content\" >";
 				
-				# Relations section (fixed)/*
-				$html .= " <div id=\"inspector_relation_list_sections\" class=\"inspector_info_body\">";
-				$html .= "<div class=\"relaciones_list_title\">".label::get_label('ficha')."</div>";
+				
+					
+					# Relations section (fixed)/*
+					$html .= " <div id=\"inspector_relation_list_sections\" class=\"inspector_info_body\">";
+					#$html .= "<div class=\"relaciones_list_title\">".label::get_label('ficha')."</div>";
+					$html .= "</div>";
 				$html .= "</div>";
 			$html .= "</div>";
-			$html .= $relation_list_html;
+			//$html .= $relation_list_html;
 				
 
 		

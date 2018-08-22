@@ -47,11 +47,9 @@ class inspector {
 	/**
 	* GET_TOOL_RELATION_BUTTON_HTML
 	*/
-	protected function get_relation_list_button_html() {
+	protected function get_relation_list() {
 
 		if(SHOW_DEBUG) $start_time = start_time();
-
-		$current_section_id = navigator::get_selected('id');
 
 		$current_section_tipo = navigator::get_selected('section');
 
@@ -60,19 +58,19 @@ class inspector {
 		$resolve_virtual 		 = false;
 
 		// Locate relation_list element in current section (virtual ot not)
-		$ar_children = section::get_ar_children_tipo_by_modelo_name_in_section($current_section_tipo, $ar_modelo_name_required, $from_cache=true, $resolve_virtual, $recursive=false, $search_exact=true);
+		$ar_relation_list = section::get_ar_children_tipo_by_modelo_name_in_section($current_section_tipo, $ar_modelo_name_required, $from_cache=true, $resolve_virtual, $recursive=false, $search_exact=true);
 
 		// If not found children, try resolving real section
-		if (empty($ar_children)) {
+		if (empty($ar_relation_list)) {
 			$resolve_virtual = true;
-			$ar_children = section::get_ar_children_tipo_by_modelo_name_in_section($current_section_tipo, $ar_modelo_name_required, $from_cache=true, $resolve_virtual, $recursive=false, $search_exact=true);
-		}// end if (empty($ar_children))
+			$ar_relation_list = section::get_ar_children_tipo_by_modelo_name_in_section($current_section_tipo, $ar_modelo_name_required, $from_cache=true, $resolve_virtual, $recursive=false, $search_exact=true);
+		}// end if (empty($ar_relation_list))
 
-		$relation_list = new relation_list($ar_children[0],$current_section_id, $current_section_tipo, 'button' );
-
-		$relation_list_html = $relation_list->get_html();
-
-		return $relation_list_html;
+		if(isset($ar_relation_list[0])){
+			$relation_list = $ar_relation_list[0];
+			return $relation_list;
+		}
+		
 	}//end get_tool_relation_button_html
 
 

@@ -47,7 +47,9 @@ class css {
 			css::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/common/css/common.css';
 			css::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/common/css/buttons.css';
 
+			# COMMON services
 			css::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/services/service_autocomplete/css/service_autocomplete.css';
+			css::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/relation_list/css/relation_list.css';
 
 			# TOOLS COMMON
 			css::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/tools/tool_common/css/tool_common.css';
