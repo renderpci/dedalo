@@ -30,7 +30,11 @@
 			# TOOL_RELATION
 			# When component_relations is loaded, inspector load fixed tool_relation for current section record
 			# Load button to open dialog tool window and list of records related to current section
-			$relation_list_html 	= $this->get_relation_list_button_html();			
+			#$relation_list_html 	= $this->get_relation_list_button_html();
+			$relation_list 	= $this->get_relation_list();
+			$section_id 	= $this->section->get_section_id();
+
+			$relation_list_name = RecordObj_dd::get_termino_by_tipo($relation_list,DEDALO_APPLICATION_LANG, true);
 
 			#
 			# BUTTONS

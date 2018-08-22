@@ -47,7 +47,9 @@ class css {
 			css::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/common/css/common.css';
 			css::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/common/css/buttons.css';
 
+			# COMMON services
 			css::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/services/service_autocomplete/css/service_autocomplete.css';
+			css::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/relation_list/css/relation_list.css';
 
 			# TOOLS COMMON
 			css::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/tools/tool_common/css/tool_common.css';
@@ -157,10 +159,20 @@ class css {
 
 		if (strpos($url, 'section_group_')!==false) return null;
 
+		#title
+		$uri = $url;
+		$uri_parts 			= explode('/', $uri);
+		$original_title 	= $uri_parts[sizeof($uri_parts)-1];
+		$title 				= str_replace('.css', '', $original_title);
+		$title 				= str_replace('.', '_', $title);
+		$title 				= str_replace('-', '_', $title);
+		$title 				= str_replace('_', '', $title);
+
+
 		if (USE_CDN!==false) {
 			$url = USE_CDN . $url;
 		}
-
+		
 		# Add version
 		$url = $url.'?'.DEDALO_VERSION;
 
@@ -176,7 +188,7 @@ class css {
 			}			
 		}		
 
-		$tag = "\n<link href=\"$url\" rel=\"stylesheet\"{$media_attr}>";
+		$tag = "\n<link href=\"$url\" rel=\"stylesheet\"{$media_attr}\">";
 
 		return $tag;
 	}//edn build_tag
