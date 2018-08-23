@@ -19,7 +19,7 @@ function get_relation_list_json($json_data) {
 		$response->result 	= false;
 		$response->msg 		= 'Error. Request failed [get_json]';
 	
-	$vars = array('tipo','section_tipo','section_id','modo');
+	$vars = array('tipo','section_tipo','section_id','modo','value_resolved');
 		foreach($vars as $name) {
 			$$name = common::setVarData($name, $json_data);
 			if (empty($$name)) {
@@ -27,9 +27,9 @@ function get_relation_list_json($json_data) {
 			}
 		}
 	$relation_list 		= new relation_list($tipo, $section_id, $section_tipo, $modo='edit');
-
+	$relation_list->set_value_resolved($value_resolved); 
 	$relation_list_json = $relation_list->get_json();
-dump($relation_list_json);
+
 	if ($relation_list_json !== false) {
 		$response->result 	= $relation_list_json;
 		$response->msg 		= 'Ok. Request done ['.__FUNCTION__.']';

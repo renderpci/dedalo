@@ -53,7 +53,7 @@ class relation_list {
 
 
 	/**
-	* GET_JSON
+	* GET_REALTION_LIST_OBJ
 	*
 	*/
 	public function get_realtion_list_obj($ar_inverse_references, $value_resolved = false){
@@ -129,7 +129,7 @@ class relation_list {
 
 		return $json;
 
-	}//get_json
+	}//get_realtion_list_obj
 
 
 
@@ -182,12 +182,16 @@ class relation_list {
 
 
 
+	/**
+	* GET_JSON
+	* 
+	*/
 	public function get_json(){
 
 		if(SHOW_DEBUG===true) $start_time = start_time();		
 		
 			# Class name is called class (ex. component_input_text), not this class (common)	
-			include ( DEDALO_LIB_BASE_PATH .'/'. get_called_class() .'/'. get_called_class() .'.php' );
+			include ( DEDALO_LIB_BASE_PATH .'/'. get_called_class() .'/'. get_called_class() .'_json.php' );
 
 		if(SHOW_DEBUG===true) {
 			#$GLOBALS['log_messages'][] = exec_time($start_time, __METHOD__. ' ', "html");
@@ -195,7 +199,13 @@ class relation_list {
 		}
 		
 		return $json;
+	}//end get_json
+
+
+	public function set_value_resolved($value_resolved){
+		$this->value_resolved = $value_resolved;
 	}
+
 
 }//relation_list
 

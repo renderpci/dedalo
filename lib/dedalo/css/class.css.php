@@ -159,16 +159,6 @@ class css {
 
 		if (strpos($url, 'section_group_')!==false) return null;
 
-		#title
-		$uri = $url;
-		$uri_parts 			= explode('/', $uri);
-		$original_title 	= $uri_parts[sizeof($uri_parts)-1];
-		$title 				= str_replace('.css', '', $original_title);
-		$title 				= str_replace('.', '_', $title);
-		$title 				= str_replace('-', '_', $title);
-		$title 				= str_replace('_', '', $title);
-
-
 		if (USE_CDN!==false) {
 			$url = USE_CDN . $url;
 		}
