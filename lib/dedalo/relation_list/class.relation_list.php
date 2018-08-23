@@ -31,7 +31,7 @@ class relation_list {
 	* @see search_development2::calculate_inverse_locator
 	* @return array $inverse_locators
 	*/
-	public function get_inverse_references() {
+	public function get_inverse_references($limit=1, $offset=0, $count=false) {
 
 		if (empty($this->section_id)) {
 			# Section not exists yet. Return empty array
@@ -44,7 +44,7 @@ class relation_list {
 			$reference_locator->set_section_id($this->section_id);
 		
 		# Get calculated inverse locators for all matrix tables
-		$inverse_locators = search_development2::calculate_inverse_locators( $reference_locator );
+		$inverse_locators = search_development2::calculate_inverse_locators( $reference_locator, $limit, $offset, $count);
 
 
 		return (array)$inverse_locators;	
@@ -205,6 +205,20 @@ class relation_list {
 	public function set_value_resolved($value_resolved){
 		$this->value_resolved = $value_resolved;
 	}
+
+	public function set_limit($limit){
+		$this->limit = $limit;
+	}
+
+	public function set_offset($offset){
+		$this->offset = $offset;
+	}
+
+	public function set_count($count){
+		$this->count = $count;
+	}
+
+
 
 
 }//relation_list

@@ -1802,7 +1802,7 @@ class search_development2 {
 	*	Basic locator with section_tipo and section_id properties
 	* @return array $ar_inverse_locators
 	*/
-	public static function calculate_inverse_locators( $reference_locator ) {
+	public static function calculate_inverse_locators( $reference_locator, $limit=false, $offset= false, $count=false ) {
 		#debug_log(__METHOD__." locator received:  ".to_string($reference_locator), logger::DEBUG);
 
 		# compare
@@ -1822,7 +1822,11 @@ class search_development2 {
 		foreach ($ar_tables_to_search as $table) {
 
 			$query   = '';
-			$query  .= PHP_EOL . 'SELECT section_tipo, section_id, datos#>\'{relations}\' AS relations';
+			if($count === true){
+				$query  .= PHP_EOL . 'SELECT COUNT(*)';
+			}else{
+				$query  .= PHP_EOL . 'SELECT section_tipo, section_id, datos#>\'{relations}\' AS relations';
+			}
 			$query  .= PHP_EOL . 'FROM "'.$table.'"';
 			$query  .= PHP_EOL . 'WHERE datos#>\'{relations}\' @> \'['.$compare.']\'::jsonb';
 			#$query  .= PHP_EOL . 'WHERE datos @> \'{"relations":['.$compare.']}\'::jsonb';
@@ -1833,7 +1837,18 @@ class search_development2 {
 		$strQuery  = '';
 		$strQuery .= implode(' UNION ALL ', $ar_query);
 		// Set order to maintain results stable
-		$strQuery .= PHP_EOL . 'ORDER BY section_id ASC;';		
+
+		if($count === false){
+			$strQuery .= PHP_EOL . 'ORDER BY section_id ASC';
+			if($limit !== false){
+				$strQuery .= PHP_EOL . 'LIMIT '.$limit;
+				if($offset !== false){
+					$strQuery .= PHP_EOL . 'OFFSET '.$offset;
+				}
+			}
+		}
+
+		$strQuery .= ';';
 
 		if(SHOW_DEBUG===true) {
 			#debug_log(__METHOD__." strQuery ".to_string($strQuery), logger::DEBUG);
@@ -1844,36 +1859,43 @@ class search_development2 {
 			trigger_error("Error Processing Request : Sorry cannot execute non resource query: ".PHP_EOL."<hr> $strQuery");
 			return null;
 		}
-
-		# Note that row relations contains all relations and not only searched because we need
-		# filter relations array for each records to get only desired coincidences
-
-		// Compare all properties of received locator in each relations locator
-		$ar_properties = array();
-		foreach ($reference_locator as $key => $value) {
-			$ar_properties[] = $key;
-		}
-
 		$ar_inverse_locators = array();
-		while ($rows = pg_fetch_assoc($result)) {
+		if($count === false){
+			# Note that row relations contains all relations and not only searched because we need
+			# filter relations array for each records to get only desired coincidences
 
-			$current_section_id   	= $rows['section_id'];
-			$current_section_tipo 	= $rows['section_tipo'];
-			$current_relations 		= (array)json_decode($rows['relations']);
+			// Compare all properties of received locator in each relations locator
+			$ar_properties = array();
+			foreach ($reference_locator as $key => $value) {
+				$ar_properties[] = $key;
+			}
 
-			foreach ($current_relations as $current_locator) {
-				if ( true===locator::compare_locators($reference_locator, $current_locator, $ar_properties) ) {
-					// Add some temporal info to current locator for build component later
-					$current_locator->from_section_tipo = $current_section_tipo;
-					$current_locator->from_section_id 	= $current_section_id;
-					// Note that '$current_locator' contains 'from_component_tipo' property, useful for know when component is called
-					$ar_inverse_locators[] = $current_locator;
-				}
-			}			
+			
+			while ($rows = pg_fetch_assoc($result)) {
+
+				$current_section_id   	= $rows['section_id'];
+				$current_section_tipo 	= $rows['section_tipo'];
+				$current_relations 		= (array)json_decode($rows['relations']);
+
+				foreach ($current_relations as $current_locator) {
+					if ( true===locator::compare_locators($reference_locator, $current_locator, $ar_properties) ) {
+						// Add some temporal info to current locator for build component later
+						$current_locator->from_section_tipo = $current_section_tipo;
+						$current_locator->from_section_id 	= $current_section_id;
+						// Note that '$current_locator' contains 'from_component_tipo' property, useful for know when component is called
+						$ar_inverse_locators[] = $current_locator;
+					}
+				}			
+			}
+			#debug_log(__METHOD__." ar_inverse_locators ".to_string($ar_inverse_locators), logger::DEBUG);
+
+			$ar_inverse_locators_data[$uid] = $ar_inverse_locators;
+		}else{
+			while ($rows = pg_fetch_assoc($result)) {
+				$ar_inverse_locators[] = $rows;
+			}
 		}
-		#debug_log(__METHOD__." ar_inverse_locators ".to_string($ar_inverse_locators), logger::DEBUG);
 
-		$ar_inverse_locators_data[$uid] = $ar_inverse_locators;
 
 		return (array)$ar_inverse_locators;
 	}//end calculate_inverse_locators
