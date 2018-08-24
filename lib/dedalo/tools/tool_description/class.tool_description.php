@@ -92,7 +92,10 @@ class tool_description extends tool_common {
 							
 				$current_alias_component 	= new RecordObj_dd($current_alias_component_tipo);
 				$current_alias_properties 	= $current_alias_component->get_propiedades(true);
-				$current_component_tipo 	= $current_alias_properties->alias_of;
+				# Inject in propiedades current component tipo
+				$current_alias_properties->alias_component_tipo = $current_alias_component_tipo;
+
+				$current_component_tipo 	= $current_alias_properties->alias_of;				
 
 				if(isset($current_component_tipo)){
 					
