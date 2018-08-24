@@ -209,7 +209,7 @@ class css {
 				$filter .= "OR ";
 			}
 		}
-		$strQuery = "SELECT \"terminoID\",\"propiedades\" FROM \"jer_dd\" WHERE \"propiedades\" LIKE '%\"css\"%' AND ($filter) ";
+		$strQuery = "SELECT \"terminoID\",\"propiedades\" FROM \"jer_dd\" WHERE \"propiedades\" LIKE '%\"css\"%' AND ($filter) ORDER BY \"terminoID\" ASC";
 		# debug_log(__METHOD__." $strQuery ".to_string(), logger::DEBUG);
 		$result   = pg_query(DBi::_getConnection(), $strQuery);
 		while ($rows = pg_fetch_assoc($result)) {
@@ -223,11 +223,12 @@ class css {
 			}			
 			$css_obj = $propiedades->css;
 
+			#if($terminoID!=='numisdata203' && $terminoID!=='numisdata77') continue;
+
 			#
 			# get_css_prefix
 			$css_prefix = css::get_css_prefix($terminoID);
-				#dump($css_prefix, ' $css_prefix ++ '.to_string());
-
+		
 			# Section
 			//$section_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($terminoID, 'section', 'parent', $search_exact=true);
 			//wrap_section_{$modo}
@@ -235,18 +236,20 @@ class css {
 			#
 			# LESS CODE
 			$less_line='';
-			$less_line .= ".sgc_edit>";
+			// En pruebas (el apliarlo solo a los de css_prefix wrap_component -los componentes-) 24-08-2018
+			#if (!isset($propiedades->alias_of)) {
+			if($css_prefix==='wrap_component'){				
+				$less_line .= ".sgc_edit>";	
+			}
 			$less_line .= ".".$css_prefix."_".$terminoID."{";
 			foreach ($css_obj as $key => $obj_value) {
+				if (isset($propiedades->alias_of) && $key==='wrap_component') {
+					#$key = 'alias';
+				}
 				$less_line .= self::convert_to_less($key, $obj_value, $css_prefix, $terminoID);
 			}
-			$less_line .= "\n}";
-
-			if(SHOW_DEBUG===true) {
-				if($terminoID==='hierarchy25') {
-					#dump($less_line, ' $less_line ++ '.to_string());
-				}
-			}			
+			$less_line .= "\n}";			
+					
 
 			$less_code .= $less_line; // Add
 		
@@ -286,7 +289,7 @@ class css {
 			$response->msg 	  	 = "File css created successful. Size: $file_size";
 			$response->file_path = self::$structure_file_path;				
 		}
-		debug_log(__METHOD__." Response: ".to_string($response), logger::DEBUG);
+		#debug_log(__METHOD__." Response: ".to_string($response), logger::DEBUG);
 	
 
 		return (object)$response;
@@ -298,23 +301,26 @@ class css {
 	* CONVERT_TO_LESS
 	* @return string $less_value
 	*/
-	public static function convert_to_less( $key, $obj_value, $css_prefix, $terminoID ) {		
-		
+	public static function convert_to_less($key, $obj_value, $css_prefix, $terminoID) {
+	
 		$less_value  = '';
 
-		if (is_object($obj_value)) {			
+		if (is_object($obj_value)) {
+
+			$enclose = false;
+			if(strpos($key, $css_prefix)===false && ($css_prefix==='alias' && $key==='.wrap_component')===false) {
+				$enclose = true;
+			}
 
 			# If current key is not defined as css_prefix, add as new style
-			if (strpos($key, $css_prefix)===false ) {
+			if ($enclose===true) {
 				$less_value .= "\n$key{";
 			}
-			#if($key!=='.wrap_component') $less_value .= "\n$key{";
-
 			
 			#
 			# MIXINGS
 			if (property_exists($obj_value, 'mixin')) {
-				foreach((array)$obj_value->mixin as $mixin_value) {
+				foreach((array)$obj_value->mixin as $mixin_value) {					
 					$less_value .= "\n $mixin_value;";
 				}
 			}
@@ -322,15 +328,15 @@ class css {
 			#
 			# STYLE
 			if (property_exists($obj_value, 'style') && !empty($obj_value->style)) {
-				foreach((array)$obj_value->style as $style_key => $style_value) {
+				foreach((array)$obj_value->style as $style_key => $style_value) {					
 					$less_value .= "\n $style_key:$style_value;";
 				}
 			}
 
-			if (strpos($key, $css_prefix)===false ) {
+			if ($enclose===true) {
 				$less_value .= "\n}";
 			}
-			#if($key!=='.wrap_component') $less_value .= "\n}";
+
 		}else{
 			debug_log(__METHOD__." error. obj_value is not object ".json_encode($obj_value)." - css_prefix: ".json_encode($css_prefix)." - key: $key - terminoID : $terminoID", logger::ERROR);
 		}
@@ -364,6 +370,10 @@ class css {
 			case ($modelo_name === 'section_list') :
 				$css_prefix = 'wrap_section_records';
 				break;
+
+			case ($modelo_name === 'component_alias') :
+				$css_prefix = 'alias';
+				break;				
 
 			case strpos($modelo_name, 'component')!==false :
 				$css_prefix = 'wrap_component';

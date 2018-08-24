@@ -8,7 +8,7 @@
 	// INFO
 	// This "code" only builds var json_build_options and call again this component from javascript render_component_html
 	// debug_log(__METHOD__." json_build_options ".to_string($json_build_options), logger::DEBUG);
-	$component_alias_css = isset($propiedades->alias_component_tipo) ? ' wrap_component_'.$propiedades->alias_component_tipo : '';
+	$component_alias_css = isset($propiedades->alias_component_tipo) ? ' alias_'.$propiedades->alias_component_tipo : '';
 	
 	$html_content  = '';
 	$html_content .= '<div id="'.$id_wrapper.'" class="wrap_component css_wrap_portal wrap_component_'.$modo.' wrap_component_view_full wrap_component_'.$tipo . $component_alias_css.'" ';
