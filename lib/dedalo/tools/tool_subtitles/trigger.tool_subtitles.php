@@ -53,15 +53,15 @@ function build_subtitles_text($json_data) {
 														 DEDALO_DATA_NOLAN,
 														 $section_tipo);
 	$video_duration_secs = $av_component_obj->get_duration_seconds();
-	debug_log(__METHOD__." video_duration_secs ".to_string($video_duration_secs), logger::DEBUG);
+	debug_log(__METHOD__." (trigger) video_duration_secs ".to_string($video_duration_secs), logger::DEBUG);
 
 
 	$tool_subtitles = new tool_subtitles($component_obj);
 
 	$options = new stdClass();
 		$options->sourceText  	= $component_obj->get_dato();	# clean text fragment without <p>, [TC], [INDEX] tags		
-		$options->maxCharLine 	= $line_lenght;		# max number of char for subtitle line. Default 144		
-		$options->total_ms 		= $video_duration_secs * 1000; 		# video duration in ms
+		$options->maxCharLine 	= $line_lenght;					# max number of char for subtitle line. Default 144		
+		$options->total_ms 		= $video_duration_secs * 1000; 	# video duration in ms
 		#dump($options, ' options'); die();
 
 	preg_match("/\[TC_[0-9][0-9]:[0-9][0-9]:[0-9][0-9].[0-9][0-9][0-9]_TC\]/", $options->sourceText, $output_array);

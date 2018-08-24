@@ -207,8 +207,7 @@ class component_security_access extends component_common {
 	public static function get_ar_ts_childrens_recursive($terminoID) {
 
 		if(SHOW_DEBUG===true) {
-			#$start_time=microtime(1);
-			#dump($terminoID, ' terminoID ++ '.to_string());
+			$start_time=microtime(1);
 		}
 		
 		# STATIC CACHE
@@ -228,23 +227,23 @@ class component_security_access extends component_common {
 
 				# Real section
 				//($section_tipo, $ar_modelo_name_required, $from_cache=true, $resolve_virtual=false, $recursive=true, $search_exact=false)
-				$ar_ts_childrens   = section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, $ar_modelo_name_required, $from_cache=true, $resolve_virtual=true, $recursive=false, $search_exact=false);	
+				$ar_ts_childrens   = section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, $ar_modelo_name_required, true, true, false, false);
 				
 				# Virtual section too is neccesary (buttons specifics)
-				$ar_ts_childrens_v = section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, $ar_modelo_name_required, $from_cache=true, $resolve_virtual=false, $recursive=false, $search_exact=false);
+				$ar_ts_childrens_v = section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, $ar_modelo_name_required, true, false, false, false);
 				$ar_ts_childrens = array_merge($ar_ts_childrens, $ar_ts_childrens_v);				
 				break;
 			
 			default:
 				# AREAS
-				$RecordObj_dd			= new RecordObj_dd($terminoID);
-				$ar_ts_childrens		= $RecordObj_dd->get_ar_childrens_of_this();				
+				$RecordObj_dd	 = new RecordObj_dd($terminoID);
+				$ar_ts_childrens = $RecordObj_dd->get_ar_childrens_of_this();				
 				//if (count($ar_ts_childrens)<1) return array();				
 				break;
 		}
 		
 
-		$ar_exclude_modelo = array('component_security_administrator','section_list','search_list','semantic_node','box_elements','exclude_elements');		# ,'filter'	,'tools','search_list'
+		$ar_exclude_modelo = array('component_security_administrator','section_list','search_list','semantic_node','box_elements','exclude_elements'); # ,'filter','tools'
 		foreach((array)$ar_ts_childrens as $children_terminoID) {			
 			$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($children_terminoID,true);			
 			foreach($ar_exclude_modelo as $exclude_modelo) {					
@@ -267,22 +266,18 @@ class component_security_access extends component_common {
 					}
 				}								
 			}
-			#dump($ar_temp, ' ar_temp 2 ++ '.to_string($DEDALO_AR_EXCLUDE_COMPONENTS));
-	
-	
-			#if(count($ar_ts_childrens)>0) 				
-			$ar_current[$terminoID][$children_terminoID] = $ar_temp;		#echo " - $children_terminoID : " .count($ar_ts_childrens) ." $ar_temp <br>\n";		
+					
+			$ar_current[$terminoID][$children_terminoID] = $ar_temp;	
 		}
-
 		
 		$ar_tesauro[$terminoID] = $ar_current[$terminoID];
 		
 		# STORE CACHE DATA
 		$ar_stat_data[$terminoID_source] = $ar_tesauro[$terminoID];
-			#dump($ar_tesauro[$terminoID], ' $ar_tesauro[$terminoID] ++ '.to_string($terminoID));
 
 		if(SHOW_DEBUG===true) {
-			#$total=round(microtime(1)-$start_time,3); dump($total, 'total');	#dump($ar_authorized_areas_for_user, 'ar_authorized_areas_for_user');				
+			$total=round(microtime(1)-$start_time,3);
+			#debug_log(__METHOD__." ar_tesauro ($total) ".to_string($ar_tesauro), logger::DEBUG);				
 		}
 	
 		return $ar_tesauro[$terminoID];		
