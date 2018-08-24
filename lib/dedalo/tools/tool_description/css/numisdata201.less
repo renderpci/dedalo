@@ -82,7 +82,8 @@
 	}
 
 
-
+	@portal_height : 50vh;
+	@portal_min_height : 400px;
 
 	// Portal tipos (images and obverse/reverse legend)
 	.container_numisdata77 {
@@ -96,13 +97,13 @@
 		// All wraps inside 
 		.view_tool_description_li .wrap_component {
 			//background-color: #F48E63
-			width: 50%;		
+			//width: 50%;		
 		}
 		// Portals inside (images)
 		.view_tool_description_li .wrap_component.css_wrap_portal { // 
 			 //background-color: #A9F9D9;
-			height: 50vh;	
-			min-height: 400px;
+			height: @portal_height; // 50vh;	
+			min-height: @portal_min_height;
 		}
 		.view_tool_description_item.component_portal {		
 			//background-color: #F8EA8E;
@@ -130,6 +131,16 @@
 		}
 
 	}//end container_numisdata77
+
+
+	// Wrapper de los portales superiores (mosaic)
+	.view_tool_description_item.component_portal {
+		height: @portal_height; // 50vh;	
+		min-height: @portal_min_height;	
+
+		float: left;
+		width: 50%;
+	}
 
 
 
@@ -189,4 +200,10 @@
 		width: ~"calc(100% + 10px)";
 		left: -5px;
 	}
+
+
+
+	
+
+
 
