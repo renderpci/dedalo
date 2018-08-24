@@ -1802,18 +1802,19 @@ class search_development2 {
 	*	Basic locator with section_tipo and section_id properties
 	* @return array $ar_inverse_locators
 	*/
-	public static function calculate_inverse_locators( $reference_locator, $limit=false, $offset= false, $count=false ) {
+	public static function calculate_inverse_locators( $reference_locator, $limit=false, $offset=false, $count=false ) {
 		#debug_log(__METHOD__." locator received:  ".to_string($reference_locator), logger::DEBUG);
 
 		# compare
 		$compare = json_encode($reference_locator);
-			#debug_log(__METHOD__." compare: ".$compare, logger::DEBUG);
 
-		static $ar_inverse_locators_data;
-		$uid = $compare;
-		if (isset($ar_inverse_locators_data[$uid])) {
-			return $ar_inverse_locators_data[$uid];
-		}
+		# Cache
+		#static $ar_inverse_locators_data;
+		#$uid = md5($compare) . '_' . (int)$limit . '_' . (int)$offset . '_' . (int)$count;
+		#if (isset($ar_inverse_locators_data[$uid])) {
+		#	debug_log(__METHOD__." Returning cached result !! ".to_string($uid), logger::DEBUG);
+		#	return $ar_inverse_locators_data[$uid];
+		#}		
 
 		$ar_tables_to_search = common::get_matrix_tables_with_relations();
 		#debug_log(__METHOD__." ar_tables_to_search: ".json_encode($ar_tables_to_search), logger::DEBUG);
@@ -1869,7 +1870,6 @@ class search_development2 {
 			foreach ($reference_locator as $key => $value) {
 				$ar_properties[] = $key;
 			}
-
 			
 			while ($rows = pg_fetch_assoc($result)) {
 
@@ -1888,13 +1888,15 @@ class search_development2 {
 				}			
 			}
 			#debug_log(__METHOD__." ar_inverse_locators ".to_string($ar_inverse_locators), logger::DEBUG);
-
-			$ar_inverse_locators_data[$uid] = $ar_inverse_locators;
+			
 		}else{
 			while ($rows = pg_fetch_assoc($result)) {
 				$ar_inverse_locators[] = $rows;
 			}
 		}
+
+		# Cache
+		#$ar_inverse_locators_data[$uid] = $ar_inverse_locators;
 
 
 		return (array)$ar_inverse_locators;
