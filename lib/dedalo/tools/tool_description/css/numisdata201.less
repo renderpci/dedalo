@@ -17,59 +17,59 @@
 
 /* WRAP_TOOL_DESCRIPTION_PAGE
 ------------------------------------------------------ */
-.wrap_tool_description_page {
-	//display: inline-block;
-	display: flex;
-}
+	.wrap_tool_description_page {
+		display: grid;
+	    grid-template-columns: 234px 1fr;
+	    grid-template-areas: "sidebar top" "sidebar bottom";
+	    grid-template-rows: auto;
+	}
+
+	.container_numisdata572 {
+		grid-area: sidebar;
+		background-color: #83F05C
+	}
+	
+	// Section group 1
+	.container_numisdata191 {
+		grid-area: top;
+		background-color: #E2EF66
+	}
+	// Section group 2
+	.container_numisdata199 {
+		grid-area: bottom;
+		background-color: #E9CDED
+	}
 
 
-.container_left {
-	background-color: #f7f7f7;
-	width: 10%;
-	height: 100%;
-	//min-height: 100vh;
-	//float: left;
-	//position: absolute;
-	min-width: 160px;
-}
-.container_rigth {
-	//background-color: #f7f7f7;
-	width: 90%;
-	height: 100%;
-	//min-height: 100vh;
-	//float: left;
-	position: relative;
-	//margin-left: 30px;
-	//left: 10%;
-}
+	.portal_item_numisdata77 {
+		display: grid;
+	    grid-template-columns: 1fr 1fr;	    
+	    grid-template-rows: 1.7fr 1fr;
+	}
 
+	.container_numisdata199 {
+		display: grid;
+	    grid-template-columns: 1fr 1fr;
+	    grid-template-rows: auto;
+	}
 
 
 // Section groups
 .section_group_container {
-	//display: table;
-	width: 100%;
+	
 	}
 	.section_group_container.container_numisdata191 {
-		//background-color: #EFFD11;
-		display: flex;
-		flex-wrap: wrap;
-		//height: 70%;
-		min-height: 645px;
-		//overflow: hidden;
+	
 	}
 	.section_group_container.container_numisdata199 {
-		//background-color: #2CFF17;
-		display: flex;
-		flex-wrap: wrap;
-		//height: 30%;
+		
 	}
 	
 	.section_group_container.container_numisdata191 > * {
-		//display: none
+		
 	}
 	.section_group_container.container_numisdata199 > * {
-		//display: none
+		
 	}
 
 
@@ -80,54 +80,50 @@
 		width: 90%;
 		max-width: 90%;
 	}
+	// Left search autocomplete
+	.wrap_component_numisdata560 {
+	 	.component_options_container {
+	 		display: block;
+	 		width: ~"calc(100% + 15px)";
+	 	}
+	 	.grid_images_container {
+	 		background-color: transparent;
+	 		padding-bottom: 5px;
+	 	}
+	}
 
 
-	@portal_height : 50vh;
-	@portal_min_height : 400px;
+
 
 	// Portal tipos (images and obverse/reverse legend)
 	.container_numisdata77 {
-		//background-color: antiquewhite;
-	//	min-height: 60vh;
-		//padding-bottom: 20px;
-		//display: table;
-	    width: 100%;
 		
-
 		// All wraps inside 
 		.view_tool_description_li .wrap_component {
-			//background-color: #F48E63
-			//width: 50%;		
+			
 		}
 		// Portals inside (images)
 		.view_tool_description_li .wrap_component.css_wrap_portal { // 
-			 //background-color: #A9F9D9;
-			height: @portal_height; // 50vh;	
-			min-height: @portal_min_height;
+			
 		}
 		.view_tool_description_item.component_portal {		
-			//background-color: #F8EA8E;
-			//position: relative;
+			
 		}
 		.view_tool_description_item.component_portal > .wrap_component {
-			//position: absolute;
-			//height: 50%;
+			
 		}
 		// images
 		.view_tool_description_li .wrap_component .css_wrap_list_image {
-			//height: 50vh;
-			height:100%;
-			width: 100%;
-			//display: flex;
+			
 		}
 		// portal buttons
 		.css_button_generic, .more_items_wrapper, .btn_view_toogle {
-			visibility: hidden;
+			//visibility: hidden;
+			display: none;
 		}
 		// portals in mosaic edit_view (images)
 		.mosaic_li {
-			border: none;
-			height: 100% !important;
+			
 		}
 
 	}//end container_numisdata77
@@ -135,11 +131,7 @@
 
 	// Wrapper de los portales superiores (mosaic)
 	.view_tool_description_item.component_portal {
-		height: @portal_height; // 50vh;	
-		min-height: @portal_min_height;	
-
-		float: left;
-		width: 50%;
+		
 	}
 
 
@@ -152,14 +144,7 @@
 
 	// Common 
 	.container_numisdata199 > .component_container {
-	//.container_numisdata40, .container_numisdata71, .container_numisdata60, .container_numisdata72 {
-		//background-color:#BDF7F0;
-		width: 50%;
-		//height: 12.5vh;		
-		float: left;		
-		display: table;
-		//padding-top: 20px; 
-		height: 8.5vh;	
+	
 	}
 
 
@@ -185,20 +170,17 @@
 	// Left search autocomplete
 	.wrap_component_numisdata560 {
 	 	.component_options_container {
-	 		display: block;
-	 		//width: ~"calc(100% + 15px)";
+	 		
 	 	}
 	 	.grid_images_container {
-	 		background-color: transparent;
-	 		padding-bottom: 5px;
+	 		
 	 	}
 	}
 
 
 
 	.component_options_container {
-		width: ~"calc(100% + 10px)";
-		left: -5px;
+		
 	}
 
 
