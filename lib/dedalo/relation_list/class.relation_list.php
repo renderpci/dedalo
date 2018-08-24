@@ -123,8 +123,14 @@ class relation_list extends common {
 			}// end if (!in_array($current_section_tipo, $sections_related )
 
 			# 2 get ar_data
-			$ar_data_result = $this->get_ar_data($current_locator, $ar_relation_components[$current_section_tipo], $value_resolved);
-			$ar_data 	= array_merge($ar_data, $ar_data_result);
+			if (isset($ar_relation_components[$current_section_tipo])) {
+				$current_component 	= $ar_relation_components[$current_section_tipo];
+			}else{
+				$current_component 	= null;
+				debug_log(__METHOD__." Section without relation_list. Please, define relation_list for section: $current_section_tipo ".to_string(), logger::WARNING);
+			}					
+			$ar_data_result = $this->get_ar_data($current_locator, $current_component, $value_resolved);			
+			$ar_data 		= array_merge($ar_data, $ar_data_result);
 		}// end foreach
 
 		$context = 'context';
