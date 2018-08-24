@@ -1852,7 +1852,7 @@ class search_development2 {
 		$strQuery .= ';';
 
 		if(SHOW_DEBUG===true) {
-			#debug_log(__METHOD__." strQuery ".to_string($strQuery), logger::DEBUG);
+			//debug_log(__METHOD__." strQuery ".to_string($strQuery), logger::DEBUG);
 		}		
 
 		$result	= JSON_RecordObj_matrix::search_free($strQuery);
