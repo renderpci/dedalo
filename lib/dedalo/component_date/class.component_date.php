@@ -1316,6 +1316,9 @@ class component_date extends component_common {
 					*	[{"start":{"time":64313740800,"year":2001}}]
 					*/
 
+					if(!is_array($dato_unchanged)){
+						$dato_unchanged = (array)$dato_unchanged;
+					}
 					//Check the date format for update only the normal date format
 					switch (true) {
 						case isset($dato_unchanged[0]->start):
@@ -1326,14 +1329,14 @@ class component_date extends component_common {
 
 							break;
 						default:
-							$converion = new stdClass();
+							$conversion = new stdClass();
 
 							foreach ($dato_unchanged as $value) {
-								$converion->start = $value;
+								$conversion->start = $value;
 							}
 							$new_dato = [];
 
-							$new_dato[] = $converion;
+							$new_dato[] = $conversion;
 
 							$response = new stdClass();
 							$response->result = 1;

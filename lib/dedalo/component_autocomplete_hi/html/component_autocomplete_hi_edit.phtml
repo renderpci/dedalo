@@ -78,22 +78,24 @@
 
 				$hierarchy_types_json 	 = json_encode( array_values((array)$hierarchy_types) );
 				$hierarchy_sections_json = json_encode( array_values((array)$hierarchy_sections) );
-		
+
+				# BTN NEW ELEMENT
+				$button_tree = '';
+				$button_tree .= "<div class=\"icon_bs link new_autocomplete_hi edit_hidden\" ";
+				$button_tree .= "data-id_wrapper=\"$id_wrapper\" ";
+				$button_tree .= "data-component_name=\"$component_name\" ";
+				$button_tree .= "data-hierarchy_types='{$hierarchy_types_json}' ";
+				$button_tree .= "data-hierarchy_sections='{$hierarchy_sections_json}' ";
+				$button_tree .= "onclick=\"component_common.open_ts_window(this)\"></div>";
+
 				# SOURCE_MODE SWITCH
 				switch ($source_mode) {
 					case 'slave':
 						// Nothing to do
 						break;
 					case 'tree':
-
-						# BTN NEW ELEMENT
-						$html_content .= "<div class=\"icon_bs link new_autocomplete_hi edit_hidden\" ";
-						$html_content .= "data-id_wrapper=\"$id_wrapper\" ";
-						$html_content .= "data-component_name=\"$component_name\" ";
-						$html_content .= "data-hierarchy_types='{$hierarchy_types_json}' ";
-						$html_content .= "data-hierarchy_sections='{$hierarchy_sections_json}' ";
-						$html_content .= "onclick=\"component_common.open_ts_window(this)\"></div>";
-
+						# BTN NEW TREE ELEMENT
+						$html_content .= $button_tree;
 						/*
 						data-termino_id=\"$ds_terminoID\"
 						data-locator_section_tipo=\"{$current_locator->section_tipo}\"
@@ -102,7 +104,9 @@
 						data-semantic_wrapper_id=\"{$semantic_wrapper_id}\"
 						*/
 						break;
-					
+					case 'mix':
+						# BTN NEW TREE ELEMENT
+						$html_content .= $button_tree;
 					case 'autocomplete':
 					default:
 				
