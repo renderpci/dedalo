@@ -341,6 +341,7 @@ if (!function_exists('openssl_encrypt')) {
 
 # LANGS JS
 # Generate js files with all labels (in not extist current lang file)	
+/* Moved to common/js/enviroment.js.php
 	$folder_path = DEDALO_LIB_BASE_PATH.'/common/js/lang';
 	if( !is_dir($folder_path) ) {
 		if(!mkdir($folder_path, 0777,true)) {
@@ -359,7 +360,7 @@ if (!function_exists('openssl_encrypt')) {
 			file_put_contents( DEDALO_LIB_BASE_PATH.$label_path, 'const get_label='.json_encode($ar_label,JSON_UNESCAPED_UNICODE).'');			
 			debug_log(__METHOD__." Generated js labels file for lang: $lang - $label_path ".to_string(), logger::DEBUG);			
 		}
-	}
+	}*/
 
 # STRUCTURE CSS
 # Generate css structure file (in not extist)	
@@ -382,8 +383,6 @@ if (!function_exists('openssl_encrypt')) {
 		}
 	}
 
-# AREA TREE 
-area::get_ar_ts_children_all_areas_hierarchized(true);
 
 
 # All is ok
