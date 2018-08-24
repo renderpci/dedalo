@@ -4,12 +4,16 @@
 * Manage the relations of the sections
 * build the list of the relations between sections
 */
-class relation_list {
+class relation_list extends common {
 
 	protected $tipo;
 	protected $section_id;
 	protected $section_tipo;
 	protected $modo;
+	protected $value_resolved;
+	protected $limit;
+	protected $offset;
+	protected $count;
 
 	/**
 	* CONSTRUCT
@@ -201,7 +205,7 @@ class relation_list {
 		return $json;
 	}//end get_json
 
-
+/*
 	public function set_value_resolved($value_resolved){
 		$this->value_resolved = $value_resolved;
 	}
@@ -217,6 +221,7 @@ class relation_list {
 	public function set_count($count){
 		$this->count = $count;
 	}
+	*/
 
 
 

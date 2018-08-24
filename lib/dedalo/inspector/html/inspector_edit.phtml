@@ -113,16 +113,10 @@
 		#
 			$html .= "<div id=\"relations_info_wrapper\">";
 				$html .= "<div id=\"inspector_relation_list\" class=\"css_section_group_titulo tab_title title_down_box text_unselectable border_radius_0\" data-tab_id=\"Inspector_relations_list_tap\"";
-				$html .= 'data-relation_list_name=\''.$relation_list_name .'\' ';
-				$html .= 'data-modo="'.$modo .'" ';
-				$html .= 'data-tipo="'.$relation_list .'" ';
-				$html .= 'data-section_tipo="'.$section_tipo .'" ';
-				$html .= 'data-section_id="'.$section_id .'" ';
-				$html .= 'data-limit="10" ';
-				$html .= 'data-offset="0" ';
-				$html .= 'onclick=\'relation_list.init(this)\' ';
 				$html .= " >";
+				
 				$html .= "<label class=\"css_label\">".label::get_label('relaciones')."</label>";
+				$html .= $relation_list_button_html;
 				$html .= "</div>";
 				$html .= "<div class=\"css_section_group_content tab_content inspector_div_content\" >";
 				
