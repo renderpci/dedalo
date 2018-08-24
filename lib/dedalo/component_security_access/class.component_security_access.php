@@ -224,7 +224,7 @@ class component_security_access extends component_common {
 			case 'section':
 
 				$section_tipo 			 = $terminoID;
-				$ar_modelo_name_required = array('section_group','section_tab','button_');
+				$ar_modelo_name_required = array('section_group','section_tab','button_','relation_list');
 
 				# Real section
 				//($section_tipo, $ar_modelo_name_required, $from_cache=true, $resolve_virtual=false, $recursive=true, $search_exact=false)
@@ -244,7 +244,7 @@ class component_security_access extends component_common {
 		}
 		
 
-		$ar_exclude_modelo = array('component_security_administrator','relation_list','section_list','search_list','semantic_node','box_elements','exclude_elements');		# ,'filter'	,'tools','search_list'
+		$ar_exclude_modelo = array('component_security_administrator','section_list','search_list','semantic_node','box_elements','exclude_elements');		# ,'filter'	,'tools','search_list'
 		foreach((array)$ar_ts_childrens as $children_terminoID) {			
 			$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($children_terminoID,true);			
 			foreach($ar_exclude_modelo as $exclude_modelo) {					
@@ -567,7 +567,7 @@ class component_security_access extends component_common {
 		foreach ((array)$ar_ts_childrens as $children_terminoID) {				
 			
 			$modelo_name 			= RecordObj_dd::get_modelo_name_by_tipo($children_terminoID,true);								
-			$ar_exclude_modelo		= array('component_security_administrator','relation_list','section_list','box_elements','exclude_elements');		# ,'filter'	,'tools','search_list'
+			$ar_exclude_modelo		= array('component_security_administrator','section_list','box_elements','exclude_elements');		# ,'filter'	,'tools','search_list'
 			$exclude_this_modelo 	= false;
 			foreach($ar_exclude_modelo as $modelo_exclude) {					
 				if( strpos($modelo_name, $modelo_exclude)!==false ) {
