@@ -10,7 +10,7 @@ $value_resolved	= $this->value_resolved;
 $limit			= $this->limit;
 $offset			= $this->offset;
 $count			= $this->count;
-$permissions	= common::get_permissions($tipo, $tipo);
+$permissions	= common::get_permissions($section_tipo, $tipo);
 $json 			= null;
 
 if($permissions===0) return false;
