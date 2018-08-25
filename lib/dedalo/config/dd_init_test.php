@@ -340,8 +340,7 @@ if (!function_exists('openssl_encrypt')) {
 }
 
 # LANGS JS
-# Generate js files with all labels (in not extist current lang file)	
-/* Moved to common/js/enviroment.js.php
+# Generate js files with all labels (in not extist current lang file)
 	$folder_path = DEDALO_LIB_BASE_PATH.'/common/js/lang';
 	if( !is_dir($folder_path) ) {
 		if(!mkdir($folder_path, 0777,true)) {
@@ -352,23 +351,23 @@ if (!function_exists('openssl_encrypt')) {
 	}
 	$ar_langs 	 = (array)unserialize(DEDALO_APPLICATION_LANGS);
 	foreach ($ar_langs as $lang => $label) {
-		$label_path  = '/common/js/lang/' . $lang . '.js';	
-		if (!file_exists(DEDALO_LIB_BASE_PATH.$label_path)) {		 	
+		$label_path  = '/common/js/lang/' . $lang . '.js';
+		if (!file_exists(DEDALO_LIB_BASE_PATH.$label_path)) {
 			$ar_label = label::get_ar_label($lang); // Get all properties
 				#dump($ar_label, ' ar_label');
 			
-			file_put_contents( DEDALO_LIB_BASE_PATH.$label_path, 'const get_label='.json_encode($ar_label,JSON_UNESCAPED_UNICODE).'');			
-			debug_log(__METHOD__." Generated js labels file for lang: $lang - $label_path ".to_string(), logger::DEBUG);			
+			file_put_contents( DEDALO_LIB_BASE_PATH.$label_path, 'const get_label='.json_encode($ar_label,JSON_UNESCAPED_UNICODE).'');
+			debug_log(__METHOD__." Generated js labels file for lang: $lang - $label_path ".to_string(), logger::DEBUG);
 		}
-	}*/
+	}
 
 # STRUCTURE CSS
 # Generate css structure file (in not extist)	
-	$file_path = DEDALO_LIB_BASE_PATH.'/common/css/structure.css';	
-	if (!file_exists(DEDALO_LIB_BASE_PATH.$file_path)) {		 	
+	$file_path = DEDALO_LIB_BASE_PATH.'/common/css/structure.css';
+	if (!file_exists(DEDALO_LIB_BASE_PATH.$file_path)) {
 	
-		$response = (object)css::build_structure_css();		
-		debug_log(__METHOD__." Generated structure css file: ".$response->msg, logger::DEBUG);			
+		$response = (object)css::build_structure_css();
+		debug_log(__METHOD__." Generated structure css file: ".$response->msg, logger::DEBUG);
 	}
 
 # SEQUENCES TEST
@@ -377,7 +376,7 @@ if (!function_exists('openssl_encrypt')) {
 	$response 	= $data_check->check_sequences();
 	if ($response->result!=true) {
 		debug_log(__METHOD__." $response->msg ".to_string(), logger::WARNING);
-		if(isset($_SESSION['dedalo4']['auth']['user_id']) && $_SESSION['dedalo4']['auth']['user_id']=="-1") { 
+		if(isset($_SESSION['dedalo4']['auth']['user_id']) && $_SESSION['dedalo4']['auth']['user_id']==DEDALO_SUPERUSER) {
 			$init_response->msg .= trim("Error on ".$response->msg);
 			return $init_response;
 		}
