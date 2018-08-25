@@ -183,7 +183,6 @@ function update_structure($json_data) {
 
 	#
 	# UPDATE JAVASCRIPT LABELS
-	/* Moved to common/js/enviroment.js.php
 		$ar_langs 	 = (array)unserialize(DEDALO_APPLICATION_LANGS);
 		foreach ($ar_langs as $lang => $label) {
 			$label_path  = '/common/js/lang/' . $lang . '.js';			
@@ -192,7 +191,7 @@ function update_structure($json_data) {
 			
 			file_put_contents( DEDALO_LIB_BASE_PATH.$label_path, 'const get_label='.json_encode($ar_label,JSON_UNESCAPED_UNICODE).'');			
 			debug_log(__METHOD__." Generated js labels file for lang: $lang - $label_path ".to_string(), logger::DEBUG);
-		}*/
+		}
 
 
 	#
