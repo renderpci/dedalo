@@ -14,6 +14,7 @@
 
 
 		# SVG Selector
+		/*
 		$html .= '<div class="container_left">';		
 		$current_tipo 		= $svg_source_tipo;
 		$current_model 		= RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
@@ -25,10 +26,10 @@
 															 $section_tipo);
 		$html .= $current_component->get_html();
 		$html .= '</div>';//end container_left
-
+		*/
 
 		# Components
-		$html .= '<div class="container_rigth">';
+		#$html .= '<div class="container_rigth">';
 		$ar_used_values = [];
 		foreach ($section_groups as $current_section_group) {
 
@@ -126,7 +127,7 @@
 
 			$html .= '</div>';
 		}
-		$html .= '</div>';//end container_rigth
+		#$html .= '</div>';//end container_rigth
 
 
 		
