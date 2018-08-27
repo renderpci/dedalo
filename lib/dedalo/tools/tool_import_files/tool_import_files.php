@@ -79,6 +79,11 @@
 						# target_portal_map_name
 						$target_portal_map_name = null;
 
+
+						# Defaults
+						$copy_all_filenames_to  = null;
+						$optional_copy_filename = null;
+
 						# BUTTON IMPORT (SECTION LIST) info
 						if (!empty($button_tipo)) {
 							

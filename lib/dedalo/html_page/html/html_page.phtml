@@ -32,6 +32,7 @@ $page_globals = new stdClass();
 	# tipos
 	$page_globals->tipo 		= $tipo;
 	$page_globals->section_tipo = defined('SECTION_TIPO') ? SECTION_TIPO : null;
+	$page_globals->section_name = defined('SECTION_TIPO') ? RecordObj_dd::get_termino_by_tipo(SECTION_TIPO,DEDALO_APPLICATION_LANG) : null;
 	# top
 	$page_globals->top_tipo 	= TOP_TIPO;
 	$page_globals->top_id 		= TOP_ID;
