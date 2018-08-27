@@ -78,6 +78,8 @@
 					$html .= "data-tipo=\"{$this->transcription->component_tipo}\" ";
 					$html .= "data-section_tipo=\"$current_locator->section_tipo\" ";
 					$html .= "data-parent=\"$current_locator->section_id\" ";
+					$html .= "data-top_tipo=\"$section_tipo\" ";
+					$html .= "data-top_id=\"$parent\" ";
 					$html .= "data-context_name=\"component_av\" ";
 					$html .= "onclick=\"tool_common.open_tool_transcription(this)\">TR</a>";
 			}}
@@ -97,6 +99,8 @@
 					$html .= "data-tipo=\"{$this->indexation->component_tipo}\" ";
 					$html .= "data-section_tipo=\"$current_locator->section_tipo\" ";
 					$html .= "data-parent=\"$current_locator->section_id\" ";
+					$html .= "data-top_tipo=\"$section_tipo\" ";
+					$html .= "data-top_id=\"$parent\" ";
 					$html .= "onclick=\"tool_common.open_tool_indexation(this)\">IN</a>";
 			}}
 
@@ -115,6 +119,8 @@
 					$html .= "data-tipo=\"{$this->structuration->component_tipo}\" ";
 					$html .= "data-section_tipo=\"$current_locator->section_tipo\" ";
 					$html .= "data-parent=\"$current_locator->section_id\" ";
+					$html .= "data-top_tipo=\"$section_tipo\" ";
+					$html .= "data-top_id=\"$parent\" ";
 					$html .= "onclick=\"tool_common.open_tool_structuration(this)\">ST</a>";
 			}}
 
@@ -133,6 +139,8 @@
 					$html .= "data-tipo=\"{$this->translation->component_tipo}\" ";
 					$html .= "data-section_tipo=\"$current_locator->section_tipo\" ";
 					$html .= "data-parent=\"$current_locator->section_id\" ";
+					$html .= "data-top_tipo=\"$section_tipo\" ";
+					$html .= "data-top_id=\"$parent\" ";
 					$html .= "onclick=\"tool_common.open_tool_lang(this)\">";
 					$html .= "TL";
 					$html .= "</a>";	

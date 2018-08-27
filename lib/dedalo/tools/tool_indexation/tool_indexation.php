@@ -57,7 +57,7 @@
 				#
 				# TOP_ID
 				# Calculate TOP_ID from inverse data when TOP_ID is empty				
-				if (empty(TOP_ID)) {
+				if (empty(TOP_ID) || !is_numeric(TOP_ID)) {
 					# Reference locator (where component data locators point)
 					$target_reference_locator = new locator();
 						$target_reference_locator->set_section_tipo($section_tipo);

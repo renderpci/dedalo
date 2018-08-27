@@ -20,14 +20,15 @@
 	data-context_name=\"$component_name\"
 	title=\"$title\"></div>";
 	*/
-	$html_tool .= "<a href=\"javascript:void(0);\" class=\"id_column_buttons button_transcription link\" title=\"$title\" onclick=\"tool_common.open_tool_transcription(this)\"
-	data-tipo=\"{$tipo}\"
-	data-section_tipo=\"{$section_tipo}\"
-	data-parent=\"{$parent}\"
-	data-lang=\"{$lang}\"
-	data-tab_id=\"img_lang_{$tipo}_{$parent}\"
-	data-context_name=\"$component_name\"
-	>";
+	$html_tool .= "<a href=\"javascript:void(0);\" class=\"id_column_buttons button_transcription link\" title=\"$title\" onclick=\"tool_common.open_tool_transcription(this)\" ";
+	$html_tool .= "data-tipo=\"{$tipo}\" ";
+	$html_tool .= "data-section_tipo=\"{$section_tipo}\" ";
+	$html_tool .= "data-parent=\"{$parent}\" ";
+	$html_tool .= "data-lang=\"{$lang}\" ";
+	$html_tool .= "data-tab_id=\"img_lang_{$tipo}_{$parent}\" ";
+	$html_tool .= 'data-top_tipo="'.TOP_TIPO.'" ';
+	$html_tool .= "data-context_name=\"$component_name\" ";
+	$html_tool .= ">";
 		$html_tool .= "<span class='section_id_number'>";
 		$html_tool .= " $section_id ";
 		$html_tool .= "</span>";
@@ -35,7 +36,6 @@
 
 	# TOOL NAME	
 	#$html_tool   .= label::get_label($tool_name="tool_transcription");
-
 
 	
 
