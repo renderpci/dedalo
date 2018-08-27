@@ -30,6 +30,9 @@
 		}
 		$button_delete_actions_json = json_encode($button_delete_actions);
 
+		#relation_list
+		$relation_list_tipo = section::get_relation_list($this->section_records_obj->tipo);
+
 
 
 	#

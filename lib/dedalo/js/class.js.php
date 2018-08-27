@@ -74,13 +74,15 @@ class js {
 			
 			# SEARCH		
 			js::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/search/js/search.js';
+
+			#RELATION_LIST
+			js::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/relation_list/js/relation_list.js';
 			
 
 			switch ($modo) {
 				case 'edit':
 					js::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/tools/tool_indexation/js/tool_indexation.js';
 					#js::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/tools/tool_lang_multi/js/tool_lang_multi.js'; // Not used for now
-					js::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/relation_list/js/relation_list.js';
 				case 'list':
 					js::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/tools/tool_time_machine/js/tool_time_machine.js';
 					js::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/tools/tool_update_cache/js/tool_update_cache.js';
@@ -92,7 +94,7 @@ class js {
 	
 		
 		# Recorremos los elemetos usados, por modeloID es decir: root=dd117, etc..
-		$ar_excepciones  		= array('relation_list');
+		$ar_excepciones  		= array();
 		$ar_loaded_modelos_name = array_unique(common::$ar_loaded_modelos_name);
 		
 		foreach($ar_loaded_modelos_name as $modelo_name) {

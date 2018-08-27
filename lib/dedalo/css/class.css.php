@@ -80,7 +80,7 @@ class css {
 
 		# Recorremos los componentes usados por modeloID es decir: root=dd117, etc..
 		$ar_url_elements=array();		
-		$ar_excepciones 		= array('relation_list');
+		$ar_excepciones 		= array();
 		$ar_loaded_modelos_name = array_unique(common::$ar_loaded_modelos_name);
 		foreach($ar_loaded_modelos_name as $modelo_name) {
 			# Load específico del componente actual	
@@ -128,7 +128,7 @@ class css {
 
 				# button delete
 				# En algunos contextos es necesario el js de button_delete aunque no tengamos cargado el componente. Por tanto lo cargaremos siempre				
-				#$html .= self::build_tag( DEDALO_LIB_BASE_URL . '/button_delete/css/button_delete.css' );
+				$html .= self::build_tag( DEDALO_LIB_BASE_URL . '/button_delete/css/button_delete.css' );
 				#$html .= self::build_tag( DEDALO_LIB_BASE_URL . '/button_stats/css/button_stats.css' );
 				
 				$added_component_commons = true;

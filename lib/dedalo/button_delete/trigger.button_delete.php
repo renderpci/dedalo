@@ -22,7 +22,8 @@ function Del($json_data) {
 		foreach($vars as $name) {
 			$$name = common::setVarData($name, $json_data);
 			# DATA VERIFY
-			# if ($name==='top_tipo' || $name==='top_id') continue; # Skip non mandatory
+			 if ($name==='top_tipo' || $name==='top_id') continue; # Skip non mandatory
+			
 			if (empty($$name)) {
 				$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty '.$name.' (is mandatory)';
 				return $response;
@@ -62,7 +63,6 @@ function Del($json_data) {
 	
 	return (object)$response;
 }//end Del
-
 
 
 ?>

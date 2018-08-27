@@ -34,7 +34,7 @@
 			$section_id 		= $this->section->get_section_id();
 
 			$relation_list_button_html = '';
-			$relation_list_tipo = $this->get_relation_list();
+			$relation_list_tipo = section::get_relation_list($section_tipo);
 			if($relation_list_tipo){
 				$relation_list 		= new relation_list($relation_list_tipo, $section_id, $section_tipo, $modo='button');
 				$relation_list_button_html = $relation_list->get_html();
