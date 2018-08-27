@@ -103,7 +103,7 @@ const page_globals=<?php echo SHOW_DEBUG===true ? json_encode($page_globals, JSO
 			print_r(error_get_last());
 			print "</pre>";
 		}
-		print "</div><!-- /log_messages -->";
+		print '</div><!-- /log_messages -->';
 		
 	
 	#
@@ -134,23 +134,15 @@ const page_globals=<?php echo SHOW_DEBUG===true ? json_encode($page_globals, JSO
 			&& login::is_logged()
 			)
 		{
-			print "<div class=\"css_button_generic button_back link\" onclick=\"goto_url(document.referrer);\">";
+			print '<div class="css_button_generic button_back link" onclick="goto_url(document.referrer);">';
 			print label::get_label('volver') ;
-			print "</div>";
+			print '</div>';
 		}
-
-
-		#
-		# DIALOG FRAME
-		# Used by tool_av_versions, etc.. to create a modal dialog window
-		print "<iframe id=\"dialog_page_iframe\" class=\"dialog_page_iframe\" src=\"about:blank\"></iframe>";
-		
-
 
 		#
 		# TIME TO LOAD
 		if(SHOW_DEBUG===true) {
-			if($modo!='relation') include(DEDALO_LIB_BASE_PATH.'/html_page/html/html_page_time_to_load.phtml');
+			if($modo!=='relation') include(DEDALO_LIB_BASE_PATH.'/html_page/html/html_page_time_to_load.phtml');
 		}
 	?>
 
