@@ -57,10 +57,10 @@
 
 			# CUSTOM_CSS_FILE_PATH
 			# To specify a custom css file for manage current tool css, create a css file named like 'numisdata201.css' (tool_tipo.css) in tool css dir
-			$custom_css_file_path = DEDALO_LIB_BASE_PATH.'/tools/'.$tool_name.'/css/'.$tool_tipo.'.css';
-			if (file_exists($custom_css_file_path)) {
-				css::$ar_url[] = DEDALO_LIB_BASE_URL.'/tools/'.$tool_name.'/css/'.$tool_tipo.'.css';
-			}
+			#$custom_css_file_path = DEDALO_LIB_BASE_PATH.'/tools/'.$tool_name.'/css/'.$tool_tipo.'.css';
+			#if (file_exists($custom_css_file_path)) {
+			#	css::$ar_url[] = DEDALO_LIB_BASE_URL.'/tools/'.$tool_name.'/css/'.$tool_tipo.'.css';
+			#}
 
 			# Inverse_code
 				$inverse_code = tool_common::get_inverse_element('code', $section_id, $section_tipo);

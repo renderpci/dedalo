@@ -10,7 +10,7 @@
 
 	#
 	# TOOL BODY
-	$html .= '<div class="wrap_'.$tool_name.'_page">';
+	$html .= '<div class="wrap_'.$tool_name.'_page wrap_section_'.$tool_tipo.'">';
 
 
 		# Components
@@ -24,7 +24,7 @@
 				return ($element->section_group===$section_group_tipo);
 			});
 
-			$html .= '<div class="section_group_container container_'.$section_group_tipo.'">';
+			$html .= '<div class="section_group_container container_'.$section_group_tipo.' wrap_section_group_'.$section_group_tipo.'">';
 				
 				foreach ($sg_ar_components as $key => $current_element) {	
 					

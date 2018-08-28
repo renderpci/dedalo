@@ -223,7 +223,9 @@ class css {
 			}			
 			$css_obj = $propiedades->css;
 
-			#if($terminoID!=='numisdata203' && $terminoID!=='numisdata77') continue;
+			// Debug only
+			#$ar_term = ['numisdata201','numisdata572','numisdata573','numisdata560'];
+			#if(!in_array($terminoID, $ar_term)) continue;
 
 			#
 			# get_css_prefix
@@ -239,13 +241,10 @@ class css {
 			// En pruebas (el apliarlo solo a los de css_prefix wrap_component -los componentes-) 24-08-2018
 			#if (!isset($propiedades->alias_of)) {
 			if($css_prefix==='wrap_component'){				
-				$less_line .= ".sgc_edit>";	
+				$less_line .= '.sgc_edit>';	
 			}
-			$less_line .= ".".$css_prefix."_".$terminoID."{";
-			foreach ($css_obj as $key => $obj_value) {
-				if (isset($propiedades->alias_of) && $key==='wrap_component') {
-					#$key = 'alias';
-				}
+			$less_line .= '.'.$css_prefix.'_'.$terminoID.'{';
+			foreach ($css_obj as $key => $obj_value) {				
 				$less_line .= self::convert_to_less($key, $obj_value, $css_prefix, $terminoID);
 			}
 			$less_line .= "\n}";			
@@ -253,7 +252,8 @@ class css {
 
 			$less_code .= $less_line; // Add
 		
-		}//end while ($rows = pg_fetch_assoc($result)) {		
+		}//end while ($rows = pg_fetch_assoc($result)) {
+		#debug_log(__METHOD__." less_code ".to_string($less_code), logger::DEBUG);	
 
 		#
 		# MXINS. Get mixixns file
@@ -357,7 +357,7 @@ class css {
 		$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($tipo,false);
 			#dump($modelo_name, ' modelo_name ++ '.to_string());
 
-		switch (true) {			
+		switch (true) {		
 
 			case ($modelo_name === 'section_group_div'):
 				$css_prefix = 'wrap_section_group_div';
@@ -369,6 +369,10 @@ class css {
 
 			case ($modelo_name === 'section_list') :
 				$css_prefix = 'wrap_section_records';
+				break;
+			// section, section_tool
+			case strpos($modelo_name, 'section')===0 :
+				$css_prefix = 'wrap_section';
 				break;
 
 			case ($modelo_name === 'component_alias') :
