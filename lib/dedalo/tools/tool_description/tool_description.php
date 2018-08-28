@@ -54,9 +54,6 @@
 			css::$ar_url[] = DEDALO_LIB_BASE_URL."/tools/".$tool_name."/css/".$tool_name.".css";
 			js::$ar_url[]  = DEDALO_LIB_BASE_URL."/tools/".$tool_name."/js/".$tool_name.".js";
 
-			//$propiedades = $this->component_obj->get_propiedades();
-			//	dump($propiedades, ' $propiedades ++ '.to_string());		
-
 
 			# CUSTOM_CSS_FILE_PATH
 			# To specify a custom css file for manage current tool css, create a css file named like 'numisdata201.css' (tool_tipo.css) in tool css dir
@@ -65,12 +62,9 @@
 				css::$ar_url[] = DEDALO_LIB_BASE_URL.'/tools/'.$tool_name.'/css/'.$tool_tipo.'.css';
 			}
 
-			# INVERSE_CODE
+			# Inverse_code
 				$inverse_code = tool_common::get_inverse_element('code', $section_id, $section_tipo);
 	
-			# AUTOCOMPLETE_HI
-				$svg_source_tipo = $propiedades->context->svg_source_tipo;
-
 			# skip_components
 				$skip_components = isset($propiedades->context->skip_components) ? (array)$propiedades->context->skip_components : [];
 
