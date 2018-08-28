@@ -2,9 +2,12 @@
 
 	# VISUALIZADOR HTML	
 
-	print "<!-- ".__CLASS__." [tipo:$tipo] -->";
-	
-	print "<div class=\"wrap_component css_wrap_autocomplete_hi wrap_portal_list\" id=\"{$id_wrapper}\" ";
+	print "<!-- ".$component_name." [tipo:$tipo] -->";
+
+	$component_alias_css = isset($propiedades->alias_component_tipo) ? ' alias_'.$propiedades->alias_component_tipo : '';
+
+	print '<div class="wrap_component css_wrap_'.$component_name.' wrap_portal_list wrap_component_'.$tipo. $component_alias_css.'" ';
+	print "id=\"{$id_wrapper}\" ";
 	print "data-tipo=\"{$tipo}\" ";
 	print "data-lang=\"{$lang}\" ";
 	print "data-section_tipo=\"{$section_tipo}\" ";
