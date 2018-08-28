@@ -678,7 +678,7 @@ class component_layout extends component_common {
 				# SECTION TAB					
 				case ($element_modelo_name==='section_tab') :
 						
-						#$ar_tab_html = array();
+						$ar_tab_html = array();
 						# Buscamos sus tabs (son hijos)
 						$ar_tabs = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($terminoID, $modelo_name='tab', $relation_type='children');
 							#dump($ar_tabs,'ar_tabs');

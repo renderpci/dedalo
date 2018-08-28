@@ -1,6 +1,6 @@
 <?php
 /*
-* CLASS SECTION GROUP
+* CLASS SECTION TAB
 */
 
 

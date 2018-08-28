@@ -40,7 +40,7 @@
 				foreach ($ar_tab_html as $tab_tipo => $tab_html) {
 					$css_custom .= "#section_tab_{$tab_tipo}:checked ~ #section_tab_content_{$tab_tipo},";
 				}
-				$css_custom = substr($css_custom, 0,-1) . '{ display: block; }';
+				$css_custom = substr($css_custom, 0,-1) . '{ display: table; }';
 				$html_content .= '<style>'.$css_custom.'</style>';
 
 				# TABS JS
