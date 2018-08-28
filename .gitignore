@@ -64,8 +64,9 @@ koala-config.json
 .smbdelete*
 *~
 
-/config.codekit3
+config.codekit3
 lib/dedalo/*/*-min.js
 lib/dedalo/*/*-min.css
 #lib/dedalo/*/*.css
 #lib/dedalo/*/*.css.map
+lib/dedalo/*/*/js/*-min.js
