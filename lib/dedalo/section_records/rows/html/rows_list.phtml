@@ -306,8 +306,9 @@
 									$title = label::get_label('borrar').' '.$section_id;
 									$html_content .= "<a href=\"javascript:;\" class=\"id_column_buttons $id_column_buttons_css button_delete link\" ";
 									$html_content .= "onclick=\"button_delete.open_delete_dialog(this)\" ";
-									$html_content .= "data-tipo=\"{$section_tipo}\" ";
+									$html_content .= "data-section_tipo=\"{$section_tipo}\" ";
 									$html_content .= "data-section_id=\"{$id}\" ";
+									$html_content .= "data-relation_list_tipo=\"{$relation_list_tipo}\" ";
 									$html_content .= "data-button_delete_actions='{$button_delete_actions_json}' ";
 									$html_content .= "title=\"$title\">";
 									if(SHOW_DEBUG===true) {

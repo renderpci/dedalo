@@ -512,7 +512,7 @@ class search_development2 {
 						//$sql_query .= PHP_EOL . 'WHERE '.$this->main_section_tipo_alias.'.section_id in (';
 						//$sql_query .= PHP_EOL . 'SELECT DISTINCT ON('.$this->main_section_tipo_alias.'.section_id) '.$this->main_section_tipo_alias.'.section_id FROM '.$main_from_sql;
 						$sql_query .= PHP_EOL . 'WHERE '.$this->main_section_tipo_alias.'.id in (';
-						$sql_query .= PHP_EOL . 'SELECT DISTINCT ON('.$this->main_section_tipo_alias.'.id) '.$this->main_section_tipo_alias.'.id FROM '.$main_from_sql;
+						$sql_query .= PHP_EOL . 'SELECT DISTINCT ON('.$this->main_section_tipo_alias.'.section_id) '.$this->main_section_tipo_alias.'.id FROM '.$main_from_sql;
 					}
 					# join virtual tables
 					$sql_query .= $sql_joins;
@@ -547,7 +547,7 @@ class search_development2 {
 						#$sql_query .= PHP_EOL . 'ORDER BY ' . $this->main_section_tipo_alias.'.id';
 						if($this->allow_sub_select_by_id===true) {							
 							$default_order = ($this->main_section_tipo===DEDALO_ACTIVITY_SECTION_TIPO) ? 'DESC' : 'ASC';
-							$sql_query .= PHP_EOL . 'ORDER BY ' . $this->main_section_tipo_alias.'.id '.$default_order;
+							$sql_query .= PHP_EOL . 'ORDER BY ' . $this->main_section_tipo_alias.'.section_id '.$default_order;
 							if(SHOW_DEBUG===true) {
 								$sql_query .= ' --allow_sub_select_by_id=true ';
 							}
