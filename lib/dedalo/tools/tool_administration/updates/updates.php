@@ -274,7 +274,7 @@ $updates->$v = new stdClass();
 
 	# DATABASE UPDATES
 	$updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query("
-			CREATE SEQUENCE public.relations_id_seq;
+			CREATE SEQUENCE IF NOT EXISTS public.relations_id_seq;
 			
 			CREATE TABLE IF NOT EXISTS \"relations\" (
 			  \"id\" integer NOT NULL DEFAULT nextval('relations_id_seq'::regclass),
