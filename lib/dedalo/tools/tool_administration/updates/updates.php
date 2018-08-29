@@ -306,7 +306,9 @@ $updates->$v = new stdClass();
 	$script_obj = new stdClass();
 		$script_obj->info   		= "Convert dato of reference components like portals, autocomplete, select, etc, to new vertical dato format (like component_relation..)";
 		$script_obj->script_class   = "reference_dato_v47_to_relation_dato_v48";
-		$script_obj->script_method  = "convert_table_data";		
+		$script_obj->script_method  = "convert_table_data";
+		$script_obj->script_vars    = json_encode(['component_autocomplete','component_autocomplete_hi','component_check_box','component_portal','component_radio_button','component_select']); // Note that only ONE argument encoded is sended
+						
 
 	$updates->$v->run_scripts[] = $script_obj;
 
