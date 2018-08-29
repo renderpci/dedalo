@@ -89,36 +89,27 @@ class section extends common {
     	# key for cache
     	$key = $section_id .'_'. $tipo;
 
-    	$max_cache_instances = 300; // 500
-		$cache_slice_on 	 = 100; // 200 //$max_cache_instances/2;
+    	$max_cache_instances = 300*2; // Default 300
+		$cache_slice_on 	 = 100*2; // Default 100
 
     	# OVERLOAD : If ar_section_instances > 99 , not add current section to cache to avoid overload
     	# array_slice ( array $array , int $offset [, int $length = NULL [, bool $preserve_keys = false ]] )
-    	if (isset($ar_section_instances) && count($ar_section_instances)>$max_cache_instances) { // 200 | 300
-			#$first_section = reset($ar_section_instances);
-    		#unset($first_section);
+    	if (isset($ar_section_instances) && count($ar_section_instances)>$max_cache_instances) { // 200 | 300			
     		$ar_section_instances = array_slice($ar_section_instances, $cache_slice_on, null, true); // 100 | 150
     		if(SHOW_DEBUG===true) {
-    			debug_log(__METHOD__.' '.DEDALO_HOST." Overload secions prevent (max $max_cache_instances). Unset first $cache_slice_on cache items [$key]");
+    			debug_log(__METHOD__.' '.DEDALO_HOST." Overload secions prevent (max $max_cache_instances). Unset first $cache_slice_on cache items [$key]", logger::DEBUG);
     		}
 
     		// let GC do the memory job
 			time_nanosleep(0, 10000000); // 10 ms
-    		#return new section($section_id, $tipo, $modo);
     	}
 
     	# FIND CURRENT INSTANCE IN CACHE
     	if ( !array_key_exists($key, (array)$ar_section_instances) ) {    		  	
     		$ar_section_instances[$key] = new section($section_id, $tipo, $modo);
     		#debug_log(__METHOD__." NO exite una instancia de la sección $key. Se devuelve el objeto estático");
-    	}else{
-    		if(SHOW_DEBUG===true) {
-    			#debug_log(__METHOD__." Ya exite una instancia de la sección $key. Se devuelve el objeto estático");
-    		}			
     	}
-    	if(SHOW_DEBUG===true) {
-    		#debug_log('ar_section_instances: '.count($ar_section_instances));;
-    	}
+    	
        
         return $ar_section_instances[$key];
     }//end get_instance
