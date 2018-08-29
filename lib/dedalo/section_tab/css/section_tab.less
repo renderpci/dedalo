@@ -15,11 +15,7 @@
 		width: 100%;
 	}
 
-	> input {
-		display: none;
-	}
-
-	> label {
+	.section_tab_label {
 		display: inline-block;
 		margin: 0 0 -1px;
 		padding: 7px 25px;
@@ -27,22 +23,27 @@
 		text-align: center;
 		color: #bbb;
 		border: 1px solid transparent;
+		-webkit-user-select: none;
+		-khtml-user-select: none;
+		-moz-user-select: none;
+		-o-user-select: none;
+		user-select: none;
 	}
-	> label:before {
+	.section_tab_label:before {
 		//font-family: fontawesome;
 		//font-weight: normal;
 		margin-right: 10px;
 	}
-	> label:hover {
+	.section_tab_label:hover {
 		color: #888;
 		cursor: pointer;
 	}
 
-	> input:checked + label {
+	.section_tab_active {
 		color: #555;
 		border: 1px solid #ddd;
 		border-top: 2px solid orange;
-		border-bottom: 1px solid #fff;
+		border-bottom: 1px solid #fbfbfb;
 		background-color: rgba(249,249,249,0.65);
 	}
 

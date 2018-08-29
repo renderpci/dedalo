@@ -18,31 +18,36 @@
 				# TABS LABELS
 				$i=0; foreach ($ar_tab_html as $tab_tipo => $tab_html) {
 					$name = RecordObj_dd::get_termino_by_tipo($tab_tipo,DEDALO_DATA_LANG,true);
-					$checked = $i===0 ? 'checked' : null;
-					$checked  = null;
+					$active = $i===0 ? 'section_tab_active' : '';
 
-					$html_content .= "<input id=\"section_tab_{$tab_tipo}\" type=\"radio\" name=\"tabs\" $checked onclick=\"section_tabs.set_tab_active(this)\">";
-					$html_content .= "<label for=\"section_tab_{$tab_tipo}\" >$name</label>";
+					$html_content .= "<span id=\"section_tab_{$tab_tipo}\" class=\"section_tab_label $active\" name=\"tabs\" data-tipo=\"$tab_tipo\" onclick=\"section_tabs.set_tab_active(this)\">";
+					$html_content .= $name;
+						
+					$html_content .= "</span>";
 					$i++;
 				}
-				
-				# TABS CONTENT
+
+				$i=0;
 				foreach ($ar_tab_html as $tab_tipo => $tab_html) {
-					
-					$html_content .= "<section id=\"section_tab_content_{$tab_tipo}\" class=\"sgc_{$modo}\">";
+					$checked = $i===0 ? 'style="display: table;"' : null;
+		
+					$html_content .= "<section id=\"section_tab_content_{$tab_tipo}\" class=\"sgc_{$modo} section_tab_content\" $checked >";
 					$html_content .= $tab_html;
 					$html_content .= "</section>";
+					
 				}
+
 
 				# TABS CSS
 				# CSS control interactions between label and content and is necessary create custom css for each case
+				/*
 				$css_custom = '';
 				foreach ($ar_tab_html as $tab_tipo => $tab_html) {
 					$css_custom .= "#section_tab_{$tab_tipo}:checked ~ #section_tab_content_{$tab_tipo},";
 				}
 				$css_custom = substr($css_custom, 0,-1) . '{ display: table; }';
 				$html_content .= '<style>'.$css_custom.'</style>';
-
+				*/
 				# TABS JS
 				# Select last active tab on every navigation
 				$html_content .= "<script>section_tabs.select_tab_active()</script>";
