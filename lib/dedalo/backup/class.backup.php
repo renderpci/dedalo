@@ -28,11 +28,12 @@ abstract class backup {
 		
 		try {
 			# NAME : File name formated as date . (One hour resolution)
-			# $user_id 		= isset($_SESSION['dedalo4']['auth']['user_id']) ? $_SESSION['dedalo4']['auth']['user_id'] : '';			
-			if($skip_backup_time_range===true) {
-				$db_name 		= date("Y-m-d_His") .'.'. DEDALO_DATABASE_CONN .'.'. DEDALO_DB_TYPE .'_'. $user_id .'_forced';
+			# $user_id 		= isset($_SESSION['dedalo4']['auth']['user_id']) ? $_SESSION['dedalo4']['auth']['user_id'] : '';
+			$ar_dd_data_version = tool_administration::get_current_version_in_db();			
+			if($skip_backup_time_range===true) {				
+				$db_name	= date("Y-m-d_His") .'.'. DEDALO_DATABASE_CONN .'.'. DEDALO_DB_TYPE .'_'. $user_id .'_forced_dbv' . implode('-', $ar_dd_data_version);
 			}else{
-				$db_name 		= date("Y-m-d_H") .'.'. DEDALO_DATABASE_CONN .'.'. DEDALO_DB_TYPE .'_'. $user_id ;
+				$db_name	= date("Y-m-d_H") .'.'. DEDALO_DATABASE_CONN .'.'. DEDALO_DB_TYPE .'_'. $user_id .'_dbv' . implode('-', $ar_dd_data_version);
 			}	
 
 			$file_path		= DEDALO_LIB_BASE_PATH.'/backup/backups';
