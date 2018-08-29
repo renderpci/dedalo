@@ -94,7 +94,7 @@ class js {
 	
 		
 		# Recorremos los elemetos usados, por modeloID es decir: root=dd117, etc..
-		$ar_excepciones  		= array();
+		$ar_excepciones  		= array('component_autocomplete_ts');
 		$ar_loaded_modelos_name = array_unique(common::$ar_loaded_modelos_name);
 		
 		foreach($ar_loaded_modelos_name as $modelo_name) {

@@ -1,12 +1,9 @@
 <?php
 /*
-* CLASS COMPONENT REF
- La idea es que sea un puntero hacia otros componentes. Que guarde el id_matrix y el tipo y se resuelva al mostrarse.
- Ejemplo: guardamos el id_matrix del usuario actual desde activity y al mostrar el componente en los listado de actividad, mostramos su resolución
- en lugar de su dato (Admin por )... por acabar..
+* COMPONENT_AUTOCOMPLETE_TS
+*
+*
 */
-
-
 class component_autocomplete_ts extends component_common {
 	
 	# Overwrite __construct var lang passed in this component
