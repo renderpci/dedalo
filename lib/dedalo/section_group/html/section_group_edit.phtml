@@ -17,39 +17,48 @@
 
 		#
 		# CONTENIDO (INPUT)
-		$html_contenido = "<div class=\"css_section_group_content tab_content section_group_content_{$modo} sgc_{$modo}\">";
+		$html_content = "<div class=\"css_section_group_content tab_content section_group_content_{$modo} sgc_{$modo}\">";
 
 		
 			switch($permissions) {
 					
 				case 0	:
-					$html_contenido .= "<span class=\"css_span_dato\"> ".label::get_label('sin_acceso')." (group)</span>"; 		
+					$html_content .= "<span class=\"css_span_dato\"> ".label::get_label('sin_acceso')." (group)</span>"; 		
 					break;
 								
 				case 1	:
 				case 2	: 
 				case 3	:
-					#$html_contenido .= '<div class="gridster"><ul>';
-					$html_contenido .= $components_html;	
-					#$html_contenido .= '</ul></div>';		
+					#$html_content .= '<div class="gridster"><ul>';
+					$html_content .= $components_html;	
+					#$html_content .= '</ul></div>';		
 					break;			
 			}
 
 		
-		$html_contenido .= "</div>";
+		$html_content .= "</div>";
+
+
+		$html_content .= '<script>';
+				# Init component
+				$init_options = new stdClass();
+					$init_options->component_name 	= $component_name;
+					$init_options->wrapper_id 		= $tipo;
+				$html_content .= 'component_common.init('.json_encode($init_options).');';
+				$html_content .= '</script>';
 
 		if(SHOW_DEBUG===true) {
-			$html_contenido .= "<!-- /css_section_group_content -->";
+			$html_content .= "<!-- /css_section_group_content -->";
 		}
 
 
 		# Prepare content to show in page
-		#tools::prepare_content($html_contenido);
+		#tools::prepare_content($html_content);
 		
 		
 		# PRINT HTML
 		print $html_label;
-		print $html_contenido;
+		print $html_content;
 
 	
 	print "</div>"; //wrap
