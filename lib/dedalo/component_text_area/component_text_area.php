@@ -221,6 +221,7 @@
 					$dato = component_text_area::resolve_titles($dato, $tipo, $section_tipo, $parent, null, $lang, true);
 				}
 
+				$component_info = $this->get_component_info('json');
 
 				// Role .
 				if (isset($this->role)) {
