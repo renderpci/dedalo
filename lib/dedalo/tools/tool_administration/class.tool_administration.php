@@ -495,9 +495,15 @@ class tool_administration extends tool_common {
 		foreach ($ar_section_tipo as $current_section_tipo) {
 
 			# Activity data is not updated [REMOVED 29-08-2018 TO ALLOW FILTER AND FILTER MASTER UPDATES]
-			#if($current_section_tipo === DEDALO_ACTIVITY_SECTION_TIPO){
-			#	continue;
-			#}
+			if($current_section_tipo===DEDALO_ACTIVITY_SECTION_TIPO) {
+				# component_ip, component_autocomplete, component_autocomplete_ts, component_date, component_input_text, component_filter
+				if ($modelo_name==='component_filter' || $modelo_name==='component_autocomplete' || $modelo_name==='component_ip') {
+					# Do the update
+				}else{
+					# Skip update
+					continue;
+				}
+			}
 
 			# Skip sections
 			$ar_section_skip = [
@@ -518,7 +524,7 @@ class tool_administration extends tool_common {
 				"mupreva2435",
 				"mupreva2436",
 				"mupreva2437",
-				"mupreva2438",				
+				"mupreva2438",
 				"mupreva357",
 				"mupreva123",
 				"mupreva21",
@@ -530,7 +536,7 @@ class tool_administration extends tool_common {
 				"mupreva156",
 				"mupreva159",
 				"mupreva162",
-				"mupreva20",				
+				"mupreva20",
 				"mupreva2384",
 				"mupreva2541",
 				"mupreva268",
