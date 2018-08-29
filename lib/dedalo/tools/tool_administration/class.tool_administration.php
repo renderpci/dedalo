@@ -494,10 +494,10 @@ class tool_administration extends tool_common {
 		$ar_section_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name('section');
 		foreach ($ar_section_tipo as $current_section_tipo) {
 
-			# Activity data is not updated
-			if($current_section_tipo === DEDALO_ACTIVITY_SECTION_TIPO){
-				continue;
-			}
+			# Activity data is not updated [REMOVED 29-08-2018 TO ALLOW FILTER AND FILTER MASTER UPDATES]
+			#if($current_section_tipo === DEDALO_ACTIVITY_SECTION_TIPO){
+			#	continue;
+			#}
 
 			# Skip sections
 			$ar_section_skip = [
