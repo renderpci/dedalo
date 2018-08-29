@@ -200,7 +200,13 @@ class component_layout extends component_common {
 
 					$current_section_to_list = $section_tipo;
 
-					#dump($this->section_obj->get_RecordObj_dd()->get_relaciones()[0],'$this->section_obj');
+					if(SHOW_DEBUG===true) {
+						$current_modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_section_to_list,true);
+						if (strpos($current_modelo_name, 'section')!==0) {
+							throw new Exception("Error Processing Request. Current section_tipo is not a section: $section_tipo, $current_modelo_name", 1);							
+						}
+					}
+
 					#
 					# RELACIONES (SECTION VIRTUAL)
 					$relaciones = $section_obj->get_RecordObj_dd()->get_relaciones()[0];
