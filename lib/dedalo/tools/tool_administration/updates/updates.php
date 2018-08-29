@@ -274,8 +274,10 @@ $updates->$v = new stdClass();
 
 	# DATABASE UPDATES
 	$updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query("
+			CREATE SEQUENCE public.relations_id_seq;
+			
 			CREATE TABLE IF NOT EXISTS \"relations\" (
-			  \"id\" integer NOT NULL DEFAULT nextval('matrix_users_id_seq'::regclass),
+			  \"id\" integer NOT NULL DEFAULT nextval('relations_id_seq'::regclass),
 			  \"section_tipo\" character varying(254) NOT NULL,
 			  \"section_id\" integer NOT NULL,
 			  \"target_section_tipo\" character varying(254) NOT NULL,
