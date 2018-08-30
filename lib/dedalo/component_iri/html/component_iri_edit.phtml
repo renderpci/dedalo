@@ -88,24 +88,29 @@
 
 						$html_content .= "<li class=\"input-group\">";
 
-						# Input
-						$html_content .= "<input type=\"text\" id=\"{$id_wrapper}_input_{$key}\" class=\"css_iri\" onchange=\"component_iri.Save(this)\" ";
-						$html_content .= "data-tipo=\"{$tipo}\" ";
-						$html_content .= "data-section_tipo=\"{$section_tipo}\" ";
-						$html_content .= "data-parent=\"{$parent}\" ";
-						$html_content .= "data-lang=\"{$lang}\" ";
-						$html_content .= "data-mandatory='{$mandatory_json}' ";
-						$html_content .= "value=\"{$value_title}\" ";
-						$html_content .= "title=\"$html_title\" ";
-						$html_content .= "name=\"{$input_name}\" ";
-						$html_content .= 'placeholder="'.label::get_label('title').'" ';
-						$html_content .= "autocomplete=\"off\" ";
-						$html_content .= $remove_autocomplete." ";
-						$html_content .= $read_only." ";
-						$html_content .= "tabindex=\"1\" ";
-						$html_content .= "/>";
+						# Title
+						$css_optional='';
+						if(!$use_title){
+							$css_optional='css_iri_off';
+						}
+							$html_content .= "<input type=\"text\" id=\"{$id_wrapper}_input_{$key}\" class=\"css_iri $css_optional\" onchange=\"component_iri.Save(this)\" ";
+							$html_content .= "data-tipo=\"{$tipo}\" ";
+							$html_content .= "data-section_tipo=\"{$section_tipo}\" ";
+							$html_content .= "data-parent=\"{$parent}\" ";
+							$html_content .= "data-lang=\"{$lang}\" ";
+							$html_content .= "data-mandatory='{$mandatory_json}' ";
+							$html_content .= "value=\"{$value_title}\" ";
+							$html_content .= "title=\"$html_title\" ";
+							$html_content .= "name=\"{$input_name}\" ";
+							$html_content .= 'placeholder="'.label::get_label('title').'" ';
+							$html_content .= "autocomplete=\"off\" ";
+							$html_content .= $remove_autocomplete." ";
+							$html_content .= $read_only." ";
+							$html_content .= "tabindex=\"1\" ";
+							$html_content .= "/>";
 
-						# Input
+
+						# IRI
 						$html_content .= "<input type=\"url\" id=\"{$id_wrapper}_input_url_{$key}\" class=\"css_iri\" onchange=\"component_iri.Save(this)\" ";
 						$html_content .= "onfocus=\"component_iri.validate_iri(this)\" ";
 						$html_content .= "data-tipo=\"{$tipo}\" ";
@@ -113,6 +118,7 @@
 						$html_content .= "data-parent=\"{$parent}\" ";
 						$html_content .= "data-lang=\"{$lang}\" ";
 						$html_content .= "data-mandatory='{$mandatory_json}' ";
+						$html_content .= "data-source_for_component=\"{$source_for_component}\" ";
 						$html_content .= "value=\"{$value_iri}\" ";
 						$html_content .= "title=\"$html_title\" ";
 						$html_content .= "name=\"{$input_name}\" ";
@@ -135,7 +141,12 @@
 					$html_content .= "</ul>";
 
 					# Button add
-					$html_content .= "<div class=\"css_button_generic btn_add_iri\" onclick=\"component_iri.add_iri(this)\">";
+
+					$css_optional='';
+					if(!$multiple_value){
+						$css_optional='css_iri_off';
+					}
+					$html_content .= "<div class=\"css_button_generic btn_add_iri $css_optional\" onclick=\"component_iri.add_iri(this)\">";
 					$html_content .= "<div class=\"link css_iri_add\"></div>";
 					$html_content .= "</div>";
 					

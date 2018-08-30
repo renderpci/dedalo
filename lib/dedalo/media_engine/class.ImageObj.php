@@ -10,7 +10,7 @@ class ImageObj extends MediaObj {
 	protected $image_id ;			# image_id
 	protected $quality ;			# like 'A2,A4,A0..'
 			
-	function __construct($image_id, $quality=false, $aditional_path=false, $initial_media_path) {
+	function __construct($image_id, $quality=false, $aditional_path=false, $initial_media_path, $external_source=false) {
 		
 		# SPECIFIC VARS
 		$this->set_image_id($image_id);
@@ -25,6 +25,7 @@ class ImageObj extends MediaObj {
 		*/
 		$this->initial_media_path = $initial_media_path;
 		$this->aditional_path 	  = $aditional_path;
+		$this->external_source 	  = $external_source;
 		
 		parent::__construct($image_id);
 	}
@@ -48,13 +49,29 @@ class ImageObj extends MediaObj {
 	}	
 	protected function define_mime_type() {	
 		return DEDALO_IMAGE_MIME_TYPE;
-	}	
+	}
+	protected function define_external_source() {	
+		return $this->external_source;
+	}
 	
 	public function get_media_path() {
-		return DEDALO_MEDIA_BASE_URL . DEDALO_IMAGE_FOLDER . $this->initial_media_path . '/' . $this->quality . $this->aditional_path . '/';
+		if($this->external_source){
+			$external_parts = pathinfo($this->external_source);
+			$media_path = $external_parts['dirname']. '/';
+			return $media_path;
+		}else{
+			return DEDALO_MEDIA_BASE_URL . DEDALO_IMAGE_FOLDER . $this->initial_media_path . '/' . $this->quality . $this->aditional_path . '/';
+		}
+		
 	}
 	public function get_media_path_abs() {
-		return DEDALO_MEDIA_BASE_PATH . DEDALO_IMAGE_FOLDER. $this->initial_media_path. '/'  . $this->quality . $this->aditional_path . '/';
+		if($this->external_source){
+			$external_parts = pathinfo($this->external_source);
+			$media_path = $external_parts['dirname']. '/';
+			return $media_path;
+		}else{
+			return DEDALO_MEDIA_BASE_PATH . DEDALO_IMAGE_FOLDER. $this->initial_media_path. '/'  . $this->quality . $this->aditional_path . '/';
+		}	
 	}
 	
 	
@@ -69,14 +86,22 @@ class ImageObj extends MediaObj {
 	}
 
 	public function get_target_filename() {
-		return $this->image_id .'.'. $this->extension ;
+		if($this->external_source){
+			$external_parts = pathinfo($this->external_source);
+			return $external_parts['basename'];
+		}else{
+			return $this->image_id .'.'. $this->extension ;
+		}
 	}
 	
 	
 	/**
 	* SET QUALITY
-	* Asigna la calidad recibida verificando que existe en el arary de calidades definido en config
-	* So no existe, asigna la calidad por defecto
+	* Assign the quality received verifying that it exists in the array of qualities defined in config 
+	* If it does not exist, assign the default quality
+	*
+	* Asigna la calidad recibida verificando que existe en el array de calidades definido en config
+	* Si no existe, asigna la calidad por defecto
 	*/
 	protected function set_quality($quality) {
 		
@@ -138,10 +163,11 @@ class ImageObj extends MediaObj {
 		$initial_media_path = $this->initial_media_path;
 		$aditional_path 	= $this->aditional_path;
 		$SID 				= $this->image_id;
+		$external_source 	= $this->external_source;
 		$w 					= $maxWidht;
 		$h 					= $maxHeight;
 		# 'm','quality','SID','w','h','fx','p','prop'
-		$thumb_url = DEDALO_LIB_BASE_URL . '/media_engine/img.php?m=' .$m. '&quality=' .$quality. '&initial_media_path=' .$initial_media_path. '&aditional_path=' .$aditional_path. '&SID=' .$SID. '&w=' .$w. '&h=' .$h. '&fx=' .$fx. '&p=' .$p. '&prop=' .$prop  ;  	
+		$thumb_url = DEDALO_LIB_BASE_URL . '/media_engine/img.php?m=' .$m. '&quality=' .$quality. '&initial_media_path=' .$initial_media_path. '&aditional_path=' .$aditional_path. '&SID=' .$SID. '&external_source='.$external_source. '&w=' .$w. '&h=' .$h. '&fx=' .$fx. '&p=' .$p. '&prop=' .$prop  ;  	
 			#dump($thumb_url,'thumb_url');
 
 		return $thumb_url;
@@ -154,11 +180,16 @@ class ImageObj extends MediaObj {
 	*/
 	public function get_image_dimensions() {
 
-		$image_id 	= $this->image_id;
-		$quality 	= $this->quality;
-		$media_path_abs = $this->media_path_abs;
+		if($this->external_source){
+			$filename = $this->external_source;
+		}else{
 
-		$filename 	= $media_path_abs . $image_id .'.'. DEDALO_IMAGE_EXTENSION ;
+			$image_id 	= $this->image_id;
+			$quality 	= $this->quality;
+			$media_path_abs = $this->media_path_abs;
+
+			$filename 	= $media_path_abs . $image_id .'.'. DEDALO_IMAGE_EXTENSION ;
+		}
 
 		if ( !file_exists( $filename )) {
 			return false ;
@@ -248,34 +279,6 @@ class ImageObj extends MediaObj {
 
 		# Verificamos si la calidad recibida es convertible a número.
 
-
-		# APROXIMACION PACO 
-			/*
-			# source
-			$source_pixels = $source_pixels_width * $source_pixels_height ;
-				dump($source_pixels,'$source_pixels');
-
-			# source megabytes
-			$source_megabytes = (($source_pixels * 3) / 1024) / 1024;
-				dump($source_megabytes,'$source_megabytes');
-
-			# target
-			$target_megabytes 	= component_image::convert_quality_to_megabytes($target_quality);
-				dump($target_megabytes,'$target_megabytes');		
-
-			# proportion megabytes
-			$prop = ($source_megabytes / $target_megabytes) ;
-			$prop = sqrt($prop);
-				dump($prop,'$prop');		
-
-			$target_width  = intval($source_pixels_width / $prop)  ;
-			$target_height = intval($source_pixels_height / $prop) ;
-
-			$result = array($target_width,$target_height);
-			
-			return $result;		
-			*/
-
 		# APROXIMACION ALEX
 			# ratio
 			$source_ratio = $source_pixels_width / $source_pixels_height ;
@@ -311,6 +314,30 @@ class ImageObj extends MediaObj {
 	}
 	*/
 
-	
+	public function get_file_exists(){
+
+		$source	= $this->get_local_full_path();
+
+		if (file_exists($source)) {
+			return true;
+		}else{
+
+			$ch = curl_init($source);    
+			curl_setopt($ch, CURLOPT_NOBODY, true);
+			curl_exec($ch);
+			$code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+
+			if($code == 200){
+				$status = true;
+			}else{
+				$status = false;
+			}
+			curl_close($ch);
+			return $status;
+		}
+
+		return false;
+		
+	}
 }
 ?>

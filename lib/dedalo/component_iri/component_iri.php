@@ -63,6 +63,10 @@
 				}
 
 				$mandatory 		= (isset($propiedades->mandatory) && $propiedades->mandatory===true) ? true : false;
+				$use_title 		= (isset($propiedades->use_title) && $propiedades->use_title===false) ? false : true;
+				$multiple_value = (isset($propiedades->multiple_value) && $propiedades->multiple_value===false) ? false : true;
+				$source_for_component = (isset($propiedades->source_for_component)) ? $propiedades->source_for_component : false;
+
 				$mandatory_json = json_encode($mandatory);
 				break;
 

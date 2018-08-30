@@ -20,7 +20,8 @@ class component_image extends component_common {
 	
 	public $aditional_path;
 	public $initial_media_path;	# A optional file path to files to conform path as /media/images/my_initial_media_path/<1.5MB/..
-
+	public $external_source;
+	
 	public $ImageObj; # Instance of ImageObj with current data 
 
 	# Default image dimensions (as showed in section edit)
@@ -84,23 +85,13 @@ class component_image extends component_common {
 				$this->aditional_path = $this->get_aditional_path();
 					#dump($this->aditional_path,'$this->aditional_path');
 
+				# ADITIONAL_PATH : Set and fix current aditional image path
+				$this->external_source = $this->get_external_source();
+
 				# IMAGEOBJ : Add a ImageObj obj
-				$this->ImageObj = new ImageObj( $this->get_image_id(), $this->get_quality(), $this->aditional_path, $this->initial_media_path );
+				$this->ImageObj = new ImageObj( $this->get_image_id(), $this->get_quality(), $this->aditional_path, $this->initial_media_path, $this->external_source);
 					#dump($this->ImageObj,"ImageObj en construct");
 
-			
-		/*
-		if ($this->need_save) {
-			
-			# result devuelve el id de la sección parent creada o editada
-			$result = $this->Save();
-			if(SHOW_DEBUG===true) {
-				$total=round(microtime(true)-$start_time,3);
-				error_log("Updated ".RecordObj_dd::get_termino_by_tipo($this->tipo)." locator (to ".$locator->get_flat().") of current ".get_called_class()." (tipo:$this->tipo - section_tipo:$this->section_tipo - parent:$this->parent - lang:$this->lang) $total ms");
-			}
-					
-		}//end if ($this->need_save)
-		*/
 
 		if(SHOW_DEBUG===true) {
 			global$TIMER;$TIMER[__METHOD__.'_OUT_'.$this->tipo.'_'.$this->modo.'_'.microtime(1)]=microtime(1);
@@ -173,7 +164,7 @@ class component_image extends component_common {
 	* GET DATO : Format {"component_tipo":"dd42","section_tipo":"rsc20","section_id":"7"}
 	*/
 	public function get_dato() {
-		$dato = parent::get_dato();		
+		$dato = parent::get_dato();
 
 		if(SHOW_DEBUG===true) {			
 			#dump($dato,"dato  (tipo:$this->tipo - section_tipo:$this->section_tipo - parent:$this->parent - lang:$this->lang)");
@@ -247,6 +238,9 @@ class component_image extends component_common {
 
 	/**
 	* GET IMAGE ID
+	* By default it's built with the type of the current component_image and the order number, eg. 'dd20_rsc750_1'
+	* It can be overwritten in properties with json ex. {"image_id": "dd851"} and will be read from the content of the referenced component
+	*
 	* Por defecto se construye con el tipo del component_image actual y el número de orden, ej. 'dd20_rsc750_1'
 	* Se puede sobreescribir en propiedades con json ej. {"image_id":"dd851"} y se leerá del contenido del componente referenciado
 	*/
@@ -277,20 +271,15 @@ class component_image extends component_common {
 		}
 
 		#
-		# CASE 2 FALLBACK DEFAULT NAME : Default behavior like 'dd20_rsc750_1'
-		/*
-		$dato = $this->get_dato();
-		if (!isset($dato->section_id)) {			
-			if(SHOW_DEBUG===true) {
-				if($this->parent>0)			
-				trigger_error(__METHOD__." Warning: Component image dato is empty. component_tipo:$component_tipo, parent:$this->parent, section_tipo:$this->section_tipo");
-			}
-			return 0;	
+		# CASE 2 EXTERNAL SOURCE: 
+
+		$external_source = $this->get_external_source();
+		if($external_source){
+			$external_parts = pathinfo($external_source);
+			$image_id = $external_parts['filename'];
+			return $image_id;
 		}
-		$locator  = new locator($dato);
-		$image_id = $locator->get_flat($dato);
-			#dump($image_id,'image_id');	
-		*/
+
 		$image_id = $this->tipo.'_'.$this->section_tipo.'_'.$this->parent;
 
 		return $this->image_id = $image_id;
@@ -390,7 +379,7 @@ class component_image extends component_common {
 	public function get_image_path($quality=false) {
 
 		if(!$quality) {
-		$quality = $this->get_quality();	
+			$quality = $this->get_quality();	
 		}		
 
 		$ImageObj = $this->ImageObj;
@@ -444,6 +433,36 @@ class component_image extends component_common {
 		return $image_url;
 	}//end get_image_url
 
+
+
+
+	public function get_external_source(){
+
+		$propiedades = $this->get_propiedades();
+		$external_source = false;
+		if (isset($propiedades->external_source) && !empty($this->get_parent()) ) {
+			
+			$component_tipo 	= $propiedades->external_source;
+			$component_model 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+
+			$component 	= component_common::get_instance($component_model,
+														 $component_tipo,
+														 $this->get_parent(),
+														 'edit',
+														 DEDALO_DATA_NOLAN,
+														 $this->get_section_tipo());
+
+			$dato	= $component->get_dato();
+			if($dato){
+				$dato = reset($dato);
+			}
+
+			if(isset($dato->iri) && !empty($dato->iri)){
+				$external_source = $dato->iri;
+			}
+		}
+		return $external_source;
+	}
 
 
 	/**
@@ -765,43 +784,6 @@ class component_image extends component_common {
 		return $ar_info;
 	}//end get_image_print_dimensions
 	
-	
-
-	/**
-	* GET_SOURCE_QUALITY_TO_BUILD
-	* Iterate array DEDALO_IMAGE_AR_QUALITY (Order by quality big to small)
-	*//*
-	public function get_source_quality_to_build__DEPRECATED__($target_quality) {
-		
-		$ar_quality_source_valid = array();
-		$ar_quality 			 = unserialize(DEDALO_IMAGE_AR_QUALITY);
-			#dump($ar_quality,'$ar_quality');		
-
-		foreach($ar_quality as $current_quality) {
-
-			# Current file
-			$filename = $this->get_image_path($current_quality);			
-			
-			if (file_exists($filename)) {
-
-				# Add current quality as source valid 
-				$ar_quality_source_valid[] = $current_quality;
-					#dump($filename,'$file_exists');
-			}else{
-
-				# Return first value found inside array of quality
-				if(!empty($ar_quality_source_valid)) foreach ($ar_quality_source_valid as $quality_source) {
-
-					if ($current_quality == $target_quality) return $quality_source;						
-				}
-			}
-			
-		}//end foreach($ar_quality as $quality)
-		
-		return false;
-	}
-	*/
-
 
 
 	/**

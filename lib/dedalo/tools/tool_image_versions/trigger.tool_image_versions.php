@@ -292,24 +292,7 @@ if($mode=='delete_version') {
 	if(file_exists($file)) {
 		
 		try{
-			/* OLD WAY
-				# delete folder exists ?
-				$folder_path_del	= $folder_path . "deleted/";	
-				if( !is_dir($folder_path_del) ) {
-				$create_dir 	= mkdir($folder_path_del, 0777,true);
-				if(!$create_dir) throw new Exception(" Error on read or create directory \"deleted\". Permission denied . The files are not deleted") ;
-				}
-				
-				# delete folder set permissions
-				$wantedPerms 	= 0777;
-				$actualPerms 	= fileperms($folder_path_del);
-				if($actualPerms < $wantedPerms) chmod($folder_path_del, $wantedPerms);
-				
-				# move / rename file
-				$rename 		= rename($file, $folder_path_del . "/$image_id" . '_deleted_' . date("Y-m-d") . '.' . $ImageObj->get_extension() );
-				if(!$rename) 	throw new Exception(" Error on move files to folder \"deleted\" . Permission denied . The files are not deleted");			
-				*/
-
+			
 			# Save component (update valor list)
 			$component_image = component_common::get_instance(	'component_image',
 																$tipo,
@@ -500,27 +483,7 @@ if($mode=='download_file') {
 		$file_name_showed 	= $original_file_name;
 	}//end if (isset($ar[1]) &&  isset($ar[2])) {
 
-		#dump($file_name, ' file_name'); exit();
-		#dump($initial_media_path, ' initial_media_path');
-		#dump($base_dir, ' base_dir');
-
-	/*
-	# Extract tipo from image_id like dd732-1.mp4 => dd732
-	try {
-		$ar 	= explode('-', $image_id);
-		$tipo 	= $ar[0];
-		if (!empty($tipo)) {
-			$prefijo = RecordObj_dd::get_prefix_from_tipo($tipo);
-			if (empty($prefijo)) {
-				$tipo = 'dd1'; # Case image name is custom DEFAULT
-			}
-		}
-	} catch (Exception $e) {
-		error_log($e);
-	}
-	*/
-
-
+		
 	/*
 	# Extract tipo from image_id like dd732-1.mp4 => dd732
 	$ar 	= explode('-', $image_id);

@@ -28,10 +28,11 @@ class Thumb {
       $this->height = $info[1];  
       $this->type	= $info[2];     
       
-      //---Dependiendo del tipo de imagen crear una nueva imagen  
-      switch($this->type){          
+      //---Dependiendo del tipo de imagen crear una nueva imagen 
+
+      switch($this->type){
          case IMAGETYPE_JPEG:  
-            $this->image = imagecreatefromjpeg($this->source);  
+            $this->image = imagecreatefromjpeg($this->source);
          break;          
          case IMAGETYPE_GIF:  
             $this->image = imagecreatefromgif($this->source);  
@@ -43,6 +44,18 @@ class Thumb {
 	  
 	  return $this->image ;   
    }  
+
+   function Load_image_from_url(){
+
+      $ch = curl_init();
+      curl_setopt($ch, CURLOPT_URL, $imageurl); 
+      curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1); 
+      curl_setopt($ch, CURLOPT_BINARYTRANSFER, 1); // also, this seems wise considering output is image.
+      $data = curl_exec($ch);
+      curl_close($ch);
+
+      $image = imagecreatefromstring($data);
+   }
      
 	//---Método de guardar la imagen  
 	function save($name, $quality = 100) {  
