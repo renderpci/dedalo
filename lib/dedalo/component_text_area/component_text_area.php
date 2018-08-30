@@ -108,6 +108,8 @@
 								if(SHOW_DEBUG===true) {
 									$component_warning .= " (Fixed in ".$broken_index_tags->total.")";
 								}
+								// Get updated dato again
+								$dato = $this->get_dato();
 							}
 						}
 						# FIX_BROKEN_STRUCT_TAGS
@@ -118,6 +120,8 @@
 								if(SHOW_DEBUG===true) {
 									$component_warning .= " (Fixed in ".$broken_index_tags->total.")";
 								}
+								// Get updated dato again
+								$dato = $this->get_dato();
 							}
 						}						
 					}
@@ -125,9 +129,7 @@
 					# FIX_BROKEN_PERSON_TAGS
 					$dato = $this->fix_broken_person_tags($dato);
 				}//end if ($modo=='edit' && in_array($this->tipo, $ar_fix_broquen_tags_tipos) )				
-				
-
-				
+								
 	
 				# Tool time machine context. Add chapters headers
 				#if (isset($context->context_name) && $context->context_name==='tool_time_machine') {					
