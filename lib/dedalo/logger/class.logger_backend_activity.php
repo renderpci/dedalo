@@ -165,8 +165,8 @@ class logger_backend_activity extends logger_backend {
 	
 
 		#
-		# SECTION RECORD . Creamos los componentes para generar el dato 
-		#	
+		# SECTION RECORD . Creamos los componentes para generar el dato
+		#
 			$main_components_obj  = new stdClass();
 			$relations 			  = [];
 			$current_data_version = tool_administration::get_current_version_in_db();
@@ -191,7 +191,7 @@ class logger_backend_activity extends logger_backend {
 					$main_components_obj->$component_tipo = $component_obj;
 					*/
 
-				# QUIEN (store user section id_matrix and calculate name on view) ###########################
+				# WHO (store user section id_matrix and calculate name on view) ###########################
 					$user_id = isset($_SESSION['dedalo4']['auth']['user_id']) ? $_SESSION['dedalo4']['auth']['user_id'] : '-666';
 					$locator_user_id = new locator();
 						$locator_user_id->set_section_id($user_id);
@@ -203,22 +203,13 @@ class logger_backend_activity extends logger_backend {
 					if( $current_data_version[0] >= 4 && $current_data_version[1] >= 8 ) {
 						$locator_user_id->set_type(DEDALO_RELATION_TYPE_LINK);
 						$locator_user_id->set_from_component_tipo($component_tipo);
-						$relations[] = $locator_user_id;
+						$relations[] = $locator_user_id; // Direct to relations container
 					}else{
 						$component_obj  = self::build_component_activity_object( array($locator_user_id) );
 						$main_components_obj->$component_tipo = $component_obj;
 					}
-					/*
-					$component = self::$_COMPONENT_QUIEN;					
-					$component = new $component['modelo_name']($component['tipo'],$parent,'list',DEDALO_DATA_NOLAN);	#($id=NULL, $tipo=false, $modo='edit', $parent=NULL, $lang=DEDALO_DATA_LANG)
-					$component->set_dato($user_id);
-					
-					$component_obj = self::build_component_activity_object($component);
-					$component_tipo = $component->get_tipo();
-					$main_components_obj->$component_tipo = $component_obj;
-					*/
 
-				# QUE (msg) # Message ########################################################################### 
+				# WHAT (msg) # Message ########################################################################### 
 					$message 	= str_replace("\t", ' ', $message);
 					$message 	= str_replace("\n", ' ', $message);
 					$message 	= trim($message);
@@ -266,7 +257,7 @@ class logger_backend_activity extends logger_backend {
 					$main_components_obj->$component_tipo = $component_obj;
 					*/
 
-				# DONDE (tipo) ################################################################################## 
+				# WHERE (tipo) ################################################################################## 
 					$donde 		= $tipo_donde;
 					if(!strlen($tipo_donde)) $donde = 'unknow';
 
@@ -279,7 +270,7 @@ class logger_backend_activity extends logger_backend {
 					$component->set_dato($tipo_donde);
 					*/
 
-				# CUANDO (Time. timestamp formated) ############################################################# 
+				# WHEN (Time. timestamp formated) ############################################################# 
 					$time 		= component_date::get_timestamp_now_for_db();
 
 					$component_tipo = self::$_COMPONENT_CUANDO['tipo'];
@@ -292,19 +283,25 @@ class logger_backend_activity extends logger_backend {
 					$id =  $component->Save();
 					*/
 
-				# PROYECTOS (param 'datos' + url's ...)	######################################################### 
+				# PROJECTS (param 'datos' + url's ...)	######################################################### 
 					if ( !empty($user_id) && $user_id!=='unknow' ) {
 						$projects_dato = filter::get_user_projects($user_id);
-						# dump($projects_dato, ' $projects_dato ++ '.to_string());
-						foreach ((array)$projects_dato as $project_locator) {
-							if (isset($project_locator->from_component_tipo)) {
-								$project_locator->from_component_tipo = self::$_COMPONENT_PROYECTOS['tipo'];
-								$relations[] = $project_locator;
-							}							
+						$project_relations = [];												
+						if (!empty($projects_dato)) {
+							
+							foreach ((array)$projects_dato as $project_locator) {
+								if (isset($project_locator->from_component_tipo)) {
+									# Override from_component_tipo
+									$project_locator->from_component_tipo = self::$_COMPONENT_PROYECTOS['tipo'];
+									$project_relations[] = $project_locator;
+								}
+							}
+							# Add to relations container
+							$relations = array_merge($relations, $project_relations);
 						}
 					}
 
-				# DATOS (param 'datos' + url's ...)	############################################################# 
+				# DATA (param 'datos' + url's ...)	############################################################# 
 					if (!is_array($datos)) {
 						$dato_array = array($datos);
 					}else{
@@ -353,7 +350,24 @@ class logger_backend_activity extends logger_backend {
 						$save_options->main_relations 		= $relations;
 							#dump($save_options,"save_options");die();				
 					
+					# Save. Returns created section_id (auto created by table sequence 'matrix_activity_section_id_seq')
 					$id_section = $section->Save( $save_options );
+
+					# 
+					# POST SAVE ACTIONS
+						if (!empty($project_relations)) {
+							
+							# (!) Note that here no relations are written to relations table automatically, we need launch action manually
+							# without pass by component
+							$relation_options = new stdClass();
+								$relation_options->section_tipo 		= DEDALO_ACTIVITY_SECTION_TIPO;
+								$relation_options->section_id 			= $id_section;
+								$relation_options->from_component_tipo 	= self::$_COMPONENT_PROYECTOS['tipo'];
+								$relation_options->ar_locators 			= $project_relations;
+							$propagate_response = search_development2::propagate_component_dato_to_relations_table($relation_options);						
+						}
+						
+
 
 					if(SHOW_DEBUG===true) {
 						#$GLOBALS['log_messages'] .= exec_time($start_time, __METHOD__, 'logger_backend_activity '.$id_section);

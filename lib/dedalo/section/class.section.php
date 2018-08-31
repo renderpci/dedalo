@@ -965,7 +965,12 @@ class section extends common {
 
 			##
 			# LOGGER ACTIVITY : QUE(action normalized like 'LOAD EDIT'), LOG LEVEL(default 'logger::INFO'), TIPO(like 'dd120'), DATOS(array of related info)
-			if($this->tipo!==DEDALO_ACTIVITY_SECTION_TIPO) {
+			if($this->tipo===DEDALO_ACTIVITY_SECTION_TIPO) {
+
+				# (!) Note that value returned by Save action, in case of activity, is the section_id auto created by table sequence 'matrix_activity_section_id_seq', not by counter
+				$this->section_id = (int)$saved_id_matrix;
+
+			}else{
 				
 				# TOP_ID : Si se crea desde un portal, el top_id está fijado en sesion "TOP_ID". Si no, es el propio section_id de la sección creada
 				if($options->is_portal===true) {
@@ -1065,7 +1070,6 @@ class section extends common {
 					# Set defaults method already saves on finish
 					$component_state->set_defaults();
 				}//end if (isset($ar_component_state[0]))
-
 
 
 			}//end if($this->tipo!==DEDALO_ACTIVITY_SECTION_TIPO)							

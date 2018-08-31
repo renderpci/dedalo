@@ -198,51 +198,37 @@ abstract class JSON_RecordDataBoundObject {
 	/**
 	* SAVE
 	* Updates current record
+	* @param object $save_options
+	* @return int
 	*/
 	public function Save( $save_options=null ) {
 
-		#dump($this->ID,"this->ID");dump($this->datos,"this->datos");die();
-		/*
-		$save_options = new stdClass();
-			$save_options->new_record = false;
-
-		if (!is_null($new_save_options)) foreach ($save_options as $key => $value) {
-			if (property_exists($save_options, $key)) {
-				$save_options->$key = $value;
-			}
-		}
-		*/
-
-		# DATOS : JSON ENCODE ALWAYS !!!
-		$datos = json_handler::encode($this->datos);
-			#dump($datos, ' save datos ++ '.to_string());
-
-		# Section_id is always int
-		$section_id = intval($this->section_id);
-
-		# Check valid section_tipo for safety
-		# Safe tipo test
+		# SECTION_TIPO. Check valid section_tipo for safety
 		if (!$section_tipo = safe_tipo($this->section_tipo)) {
 			die("Bad tipo ".htmlentities($this->section_tipo));
 		}
 
+		# DATOS : JSON ENCODE ALWAYS !!!
+		$datos = json_handler::encode($this->datos);
+		
+		# SECTION_ID. Section_id is always int
+		$section_id = intval($this->section_id);
 		
 		#
 		# SAVE UPDATE : Record already exists
 		if( $save_options->new_record!==true && $section_id>0 && $this->force_insert_on_save!==true ) {
 
 			# Si no se ha modificado nada, ignoramos la orden de salvar
-			if(!isset($this->arRelationMap['datos'])) return false;			
+			if(!isset($this->arRelationMap['datos'])) return false;
 			
 			$strQuery 	= "UPDATE $this->strTableName SET datos = $1 WHERE section_id = $2 AND section_tipo = $3";
-			$result 	= pg_query_params(DBi::_getConnection(), $strQuery, array( $datos, $section_id, $section_tipo ));
-			#dump($strQuery,"strQuery");
+			$result 	= pg_query_params(DBi::_getConnection(), $strQuery, array( $datos, $section_id, $section_tipo));			
 			if($result===false) {
 				if(SHOW_DEBUG===true) {
 					dump($datos,"strQuery $strQuery , section_id:$section_id, section_tipo:$section_tipo");
 					throw new Exception("Error Processing Save Update Request ". pg_last_error(), 1);;
 				}
-				return "Error: sorry an error ocurred on UPDATE record '$this->ID'. Data is not saved";
+				return "Error: sorry an error occurred on UPDATE record '$this->ID'. Data is not saved";
 			}			
 			
 		#
@@ -253,10 +239,20 @@ abstract class JSON_RecordDataBoundObject {
 				
 				# MATRIX_ACTIVITY INSERT (async pg_send_query)
 				case 'matrix_activity':
-					$strQuery = 'INSERT INTO "'.$this->strTableName.'" (datos) VALUES (\''.$datos.'\')';
+					$strQuery = 'INSERT INTO "'.$this->strTableName.'" (datos) VALUES (\''.$datos.'\') RETURNING section_id';
 					# PG_SEND_QUERY is async query					
 					pg_send_query(DBi::_getConnection(), $strQuery);
-					$result = pg_get_result(DBi::_getConnection()); # RESULT (pg_get_result for pg_send_query is needed)					
+					$result = pg_get_result(DBi::_getConnection()); # RESULT (pg_get_result for pg_send_query is needed)
+
+					// Return sequence auto created section_id
+					$section_id = pg_fetch_result($result,0,'section_id');
+					if ($section_id===false) {
+						if(SHOW_DEBUG===true) {
+							dump($strQuery,"strQuery");
+							throw new Exception("Error Processing Request: ".pg_last_error(), 1);
+						}
+					}
+					return (int)$section_id;
 					break;
 				
 				# DEFAULT INSERT (sync pg_query_params)
@@ -290,13 +286,14 @@ abstract class JSON_RecordDataBoundObject {
 					# Fix new received id (id matrix)
 					$this->ID = $id;
 
-					# Return always current existin or created id
+					# Return always current existing or created id
 					return (int)$this->ID;
 					break;
-			}
-			#dump($strQuery,"strQuery INSERT");#die();			
+			}//end switch($this->strTableName)			
 			
-		}//end switch($this->strTableName)		
+		}//end if( $save_options->new_record!==true && $section_id>0 && $this->force_insert_on_save!==true )
+
+		return false;
 	}//end Save
 
 

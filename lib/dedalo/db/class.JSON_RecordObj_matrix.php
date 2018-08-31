@@ -109,7 +109,7 @@ class JSON_RecordObj_matrix extends JSON_RecordDataBoundObject {
 			return true;
 		}
 		
-		# Other tables. Test valid user
+		# Other tables. Test valid user (fast check only auth->user_id in session)
 		if ( !isset($_SESSION['dedalo4']['auth']['user_id']) ) {
 			$msg = "Save matrix: valid 'userID' value is mandatory. No data is saved! ";
 			trigger_error($msg);
@@ -131,13 +131,11 @@ class JSON_RecordObj_matrix extends JSON_RecordDataBoundObject {
 			$msg = " Error (test_can_save). No matrix data is saved! ";
 			trigger_error($msg, E_USER_ERROR);
 			debug_log(__METHOD__." $msg - matrix_table: $this->matrix_table - $this->section_tipo - $this->section_id - save_options: ".to_string($save_options), logger::ERROR);
-			
-			error_log( __METHOD__." $msg - matrix_table: $this->matrix_table - $this->section_tipo - $this->section_id - save_options: ".to_string($save_options));
-
 			return $msg;
 		}
 		
 		# MATRIX SAVE (with parent RecordDataBoundObject)
+		# Returned id can be false (error on save), matrix id (normal case), section_id (activity case)
 		$id = parent::Save($save_options);
 		
 

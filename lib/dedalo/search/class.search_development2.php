@@ -144,11 +144,18 @@ class search_development2 {
 				$this->remove_distinct = $search_query_object->remove_distinct;
 			}
 		}
-
-		# Set skip_projects_filter
-		$this->skip_projects_filter = isset($this->search_query_object->skip_projects_filter) ? $this->search_query_object->skip_projects_filter : false;		
-		if ($this->matrix_table==='matrix_list' || $this->matrix_table==='matrix_dd' || $this->matrix_table==='matrix_hierarchy' || $this->matrix_table==='matrix_hierarchy_main' || $this->matrix_table==='matrix_langs') {
-			$this->skip_projects_filter = true; // Skip filter 
+		
+		# Set skip_projects_filter. Default is false
+		$this->skip_projects_filter = isset($this->search_query_object->skip_projects_filter) ? $this->search_query_object->skip_projects_filter : false;
+		$ar_tables_skip_prejects = [
+			'matrix_list',
+			'matrix_dd',
+			'matrix_hierarchy',
+			'matrix_hierarchy_main',
+			'matrix_langs'
+		];
+		if (in_array($this->matrix_table, $ar_tables_skip_prejects, true)) {
+			$this->skip_projects_filter = true; // Skip filter
 		}
 
 
@@ -2075,8 +2082,10 @@ class search_development2 {
 				$msg = " Created relations row ({$section_tipo}-{$section_id}) target_section_id:$target_section_id, target_section_tipo:$target_section_tipo, from_component_tipo:$from_component_tipo";
 				$response->msg[] = $msg;
 				if(SHOW_DEBUG===true) {
-					$msg .= ' ('.RecordObj_dd::get_termino_by_tipo($section_tipo).' - '.RecordObj_dd::get_termino_by_tipo($from_component_tipo).')';
-					debug_log(__METHOD__." OK: ".$msg, logger::DEBUG);
+					if ($section_tipo!==DEDALO_ACTIVITY_SECTION_TIPO) {
+						$msg .= ' ('.RecordObj_dd::get_termino_by_tipo($section_tipo).' - '.RecordObj_dd::get_termino_by_tipo($from_component_tipo).')';
+						debug_log(__METHOD__." OK: ".$msg, logger::DEBUG);
+					}					
 				}				
 			}
 		}
