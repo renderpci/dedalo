@@ -13,7 +13,7 @@ session_write_close();
 
 
 # set vars
-$vars = array('m','quality','SID','w','h','fx','p','prop','aditional_path','initial_media_path');
+$vars = array('m','quality','SID','w','h','fx','p','prop','aditional_path','initial_media_path','external_source');
 	foreach($vars as $name) $$name = common::setVar($name);
 
 

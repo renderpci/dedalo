@@ -44,13 +44,12 @@ $js_url = DEDALO_LIB_BASE_URL.'/component_image/js/component_image_read.js';
 				if(SHOW_DEBUG) {
 					$title .= "image_path: ".$this->get_image_path($quality);
 				}
-
 				
 				$open_tool_default='';
 				$add_class='';
 				# IMAGE NOT EXISTS. PLACE DEDALO IMAGE WITH LINK TO DEFAULT TOOL
 				if (component_security_tools::is_authorized_tool_for_logged_user('tool_upload') &&
-					!file_exists($this->get_image_path()) &&
+					!$this->ImageObj->get_file_exists() &&
 					!$this->get_original(DEDALO_IMAGE_QUALITY_ORIGINAL,false)
 					) {
 					$open_tool_default .= "data-image_id=\"$image_id\" ";
@@ -72,52 +71,14 @@ $js_url = DEDALO_LIB_BASE_URL.'/component_image/js/component_image_read.js';
 				# CANVAS : IMAGE
 		$html_content .= "<div class=\"canvas_container\">";	
 
-			#dump($img_width, ' img_width ++ '.to_string());
-			#dump($img_height, ' img_height ++ '.to_string());
-
-				#$html_content .= "<canvas id=\"$identificador_unico\" class=\"canvas_edit $add_class\" resize hidpi=\"on\" {$open_tool_default}>";
 				$html_content .= "<canvas id=\"$identificador_unico\" class=\"canvas_edit $add_class\" hidpi=\"on\" {$open_tool_default}>";
-				#$html_content .= $image_thumb_html ; # Rendered in thumb mode
-				/*
-				$html_content .= "<img class=\"css_image\" ";
-				$html_content .= "src=\"$image_url\" ";
-				$html_content .= "id=\"img_$identificador_unico\" ";
-				$html_content .= "data-image_id=\"$image_id\" ";
-				$html_content .= "data-tipo=\"$tipo\" ";
-				$html_content .= "data-section_tipo=\"{$section_tipo}\" ";
-				$html_content .= "data-parent=\"$parent\" ";
-				$html_content .= "data-lang=\"$lang\" ";
-				#if(empty($img_width)) $img_width = 539;
-				$html_content .= "data-img_width=\"$img_width\" ";
-				#if(empty($img_height)) $img_height = 404;
-				$html_content .= "data-img_height=\"$img_height\" ";
-				$html_content .= "alt=\"$image_id\" ";
-				$html_content .= "/>";
-				*/
+				
 				$html_content .= "</canvas>";				
 
 
 		$html_content .= "</div>";		
-
-				#$html_content .= "<a href=\"$image_url\" target=\"_blank\" > + ";
-				#$html_content .= "</a>";
 											
 		}
-
-		#
-		# JS Init component
-		# INIT : Init canvas in read only mode
-		/*
-		$init_options = [
-			"canvas_id"  		  => $identificador_unico,
-			"id_wrapper" 		  => $id_wrapper,
-			"image_url"  		  => $image_url,
-			"original_img_height" => $original_img_height
-		];
-		$html_content .= "<script>";
-		$html_content .= "component_image_read.init(".json_encode($init_options).");";
-		$html_content .= "</script>";
-		*/
 
 		#
 		# JS Init component

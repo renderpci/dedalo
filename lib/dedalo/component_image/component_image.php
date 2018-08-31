@@ -31,6 +31,7 @@
 	$quality				= $this->get_quality();
 	$aditional_path			= $this->get_aditional_path();
 	$initial_media_path		= $this->get_initial_media_path();
+	$external_source		= $this->get_external_source();
 	
 	switch($modo) {
 

@@ -15,6 +15,7 @@
 	$quality 				= $this->component_obj->get_quality();
 	$aditional_path 		= $this->component_obj->get_aditional_path();
 	$initial_media_path 	= $this->component_obj->get_initial_media_path();
+	$external_source 		= $this->component_obj->get_external_source();
 	$modo 					= $this->get_modo();
 	$file_name 				= $modo;	
 
@@ -32,7 +33,6 @@
 					break;
 
 		case 'page':
-					#$js_url = DEDALO_ROOT_WEB .'/lib/jquery/jquery.fullscreen-min.js';
 
 					# Because components are loaded by ajax, we need prepare js/css elements from tool
 					#					
@@ -46,6 +46,24 @@
 					# THUMB (PLAYER)
 					$this->component_obj->set_modo('thumb');
 					$thumb_html = $this->component_obj->get_html();
+
+					$properties =  $this->component_obj->get_propiedades();
+
+					$external_source_html = false;
+					if (isset($properties->external_source)) {
+						
+						$component_tipo 	= $properties->external_source;
+						$component_model 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+
+						$component 	= component_common::get_instance(	$component_model,
+																	 	$component_tipo,
+																	 	$parent,
+																	 	'edit',
+																	 	DEDALO_DATA_NOLAN,
+																		$section_tipo);
+
+						$external_source_html	= $component->get_html();
+					}
 					
 					$ar_quality			= unserialize(DEDALO_IMAGE_AR_QUALITY);
 

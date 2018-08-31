@@ -22,6 +22,14 @@
 		$html .= $thumb_html;
 		$html .= "</div>";
 
+		# EXTERNAL SOURCE HTML
+		$html .= "<div class=\"external_source\">";
+		#$html .= "<span class=\"helper\"></span>";
+		$html .= $external_source_html;
+		$html .= "</div>";
+
+		
+
 		# VERSIONS
 		$html .= "<table class=\"table_versions\">";
     
@@ -304,20 +312,7 @@
 						$html .= "onclick=\"tool_image_versions.convert_simple(this)\" ";
 						$html .= "title=\"$title\" ";
 						$html .= "></div>";
-						/*
-						# ORIGINAL ICON (TIF, PSD, ETC.)
-				    	$source_quality = $previous_quality;						
-						$title = null;
-						if(isset($previous_quality)) {							
-
-							$ar_target 		= ImageObj::get_target_pixels_to_quality_conversion($previous_width, $previous_height, $quality);
-							$widht_target 	= $ar_target[0];
-							$height_target 	= $ar_target[1];
-								#dump($ar_target,"$widht_target x $height_target - source_quality:$source_quality - target_quality:$quality ($previous_width x $previous_height)");
-							
-							$title 			= "Convert from Q:$source_quality ($previous_width x $previous_height)to Q:$quality ($widht_target x $height_target)";
-						}						
-						*/
+					
 
 						$previous_quality 	= $quality;
 									
@@ -332,26 +327,7 @@
 						
 						$source_quality = $previous_quality;											
 						$title = null;
-						/* OLD WORLD					
-						if(isset($previous_quality)) {							
-
-							$ar_target 		= ImageObj::get_target_pixels_to_quality_conversion($previous_width, $previous_height, $quality);
-							$widht_target 	= $ar_target[0];
-							$height_target 	= $ar_target[1];
-								#dump($ar_target,"$widht_target x $height_target - source_quality:$source_quality - target_quality:$quality ($previous_width x $previous_height)");
-							
-							$title 			= "Convert from Q:$source_quality ($previous_width x $previous_height)to Q:$quality ($widht_target x $height_target)";
-						}
-						# Si la calidad target es válida para calcular el tamaño 
-						if($widht_target>0 && $height_target>0) {
-							$html .= "<div class=\"icon_bs link image_generate_icon\"
-							data-image_id=\"$image_id\" data-quality=\"$quality\" data-aditional_path=\"$aditional_path\" data-source_quality=\"$source_quality\" data-target_quality=\"$quality\"
-							data-tipo=\"$tipo\" data-parent=\"$parent\"
-							onclick=\"tool_image_versions.generate_version(this)\"
-							title=\"$title\"
-							></div>";
-						}
-						*/	
+						
 						$html .= "<div class=\"icon_bs link image_generate_icon\"
 							data-image_id=\"$image_id\" data-quality=\"$quality\" data-aditional_path=\"$aditional_path\" data-initial_media_path=\"$initial_media_path\" data-source_quality=\"$source_quality\" data-target_quality=\"$quality\"
 							data-tipo=\"$tipo\" data-parent=\"$parent\"
