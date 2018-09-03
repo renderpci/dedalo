@@ -15,22 +15,17 @@ if ($mode==='toggle_childrens') {
 		foreach($vars as $name)	$$name = common::setVar($name);
 
 		if(!$term_id || !$ar_childrens) return 'Error: few vars';
-		#dump($ar_childrens, ' ar_childrens ++ '.to_string()); die();
-	
+			
 
 	$html='';
-	if ($ar_childrens = json_decode($ar_childrens)) {
+	if (!empty($ar_childrens)) {
 	
-		#dump($ar_childrens, ' ar_childrens ++ '.to_string());
-
 		# Load childrens data from server api as json
 		$options = new stdClass();
 			$options->dedalo_get 	= 'thesaurus_term';
 			$options->ar_term_id 	= $ar_childrens;
 			$options->lang  	 	= WEB_CURRENT_LANG_CODE;
 		$ar_ts_terms = json_web_data::get_data($options);
-			#dump($ar_ts_terms, ' ar_ts_terms ++ '.to_string(WEB_CURRENT_LANG_CODE));
-
 		
 		switch ($tree_mode) {
 			case 'search_combined':
@@ -72,7 +67,7 @@ if ($mode==='toggle_indexation') {
 		#dump($ar_indexation, ' ar_indexation ++ '.to_string($term_id)); #die();
 
 	$html='';
-	if ($ar_indexation = json_decode($ar_indexation)) {
+	if (!empty($ar_indexation)) {
 		#dump($ar_indexation, ' ar_indexation ++ '.to_string());
 
 		# Load indexation data from server api as json

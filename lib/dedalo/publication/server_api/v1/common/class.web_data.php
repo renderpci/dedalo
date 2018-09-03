@@ -2263,13 +2263,14 @@ class web_data {
 						$ar[] = "term_id != '{$restricted_term}'";
 					}
 					$term_filter .= ' AND (' . implode(' AND ', $ar) . ') ';
-				}
-				#error_log($term_filter);				
+				}								
 
 				# Remove unused terms
 				if ($remove_unused_terms===true) {
 					$term_filter .= ' AND (indexation IS NOT NULL OR childrens IS NOT NULL)';
-				}				
+				}
+				#error_log($term_filter);			
+
 
 				$sd_options = new stdClass();
 					$sd_options->table 	 	= $table;
@@ -2279,7 +2280,7 @@ class web_data {
 					$sd_options->limit 	 	= 0;
 
 				$search_data = (object)web_data::get_rows_data( $sd_options );
-					#dump($search_data, ' search_data ++ '.to_string($sd_options));	
+					#debug_log(__METHOD__." search data ".to_string($search_data), logger::DEBUG);
 
 				$ar_data = (array)$search_data->result;			
 				

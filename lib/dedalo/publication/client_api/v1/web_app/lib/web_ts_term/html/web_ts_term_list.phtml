@@ -46,7 +46,7 @@ $html .= "<li class=\"web_ts_term_li clearfix\">";
 		$html .= "rel=\"tooltip\" ";
 		$html .= "title=\"$title\" ";
 		$html .= "data-term_id=\"$this->term_id\" ";
-		$html .= "data-ar_childrens='$ar_childrens_json' ";
+		$html .= 'data-ar_childrens=\''.$ar_childrens_json.'\' ';
 		$html .= "onclick=\"web_ts_term.toggle_childrens(this)\" ";
 		$html .= "></div>";
 	}
