@@ -29,6 +29,7 @@ abstract class MediaObj extends Accessors {
 	abstract protected function define_extension();
 	abstract protected function define_media_path();
 	abstract protected function define_media_path_abs();
+	abstract protected function define_media_path_server();
 	abstract protected function define_mime_type();
 	
 	
@@ -40,6 +41,7 @@ abstract class MediaObj extends Accessors {
 		$this->extension		= $this->define_extension();
 		$this->media_path		= $this->define_media_path();
 		$this->media_path_abs	= $this->define_media_path_abs();
+		$this->media_path_server= $this->define_media_path_server();
 		$this->mime_type		= $this->define_mime_type();
 	}
 	

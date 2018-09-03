@@ -2128,7 +2128,7 @@ class search_development2 {
 									//'component_relation_related',
 									'component_relation_model',
 									//'component_relation_parent', // Working here..
-									'component_relation_index',
+									//'component_relation_index',
 									'component_relation_struct',
 									'component_geolocation',
 									'section_tab'								

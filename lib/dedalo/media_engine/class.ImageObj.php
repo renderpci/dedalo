@@ -46,7 +46,10 @@ class ImageObj extends MediaObj {
 	}
 	protected function define_media_path_abs() {
 		return $this->get_media_path_abs();
-	}	
+	}
+	protected function define_media_path_server() {
+		return $this->get_media_path_server();
+	}
 	protected function define_mime_type() {	
 		return DEDALO_IMAGE_MIME_TYPE;
 	}
@@ -72,8 +75,11 @@ class ImageObj extends MediaObj {
 		}else{
 			return DEDALO_MEDIA_BASE_PATH . DEDALO_IMAGE_FOLDER. $this->initial_media_path. '/'  . $this->quality . $this->aditional_path . '/';
 		}	
+	}	
+
+	public function get_media_path_server() {
+			return DEDALO_MEDIA_BASE_PATH . DEDALO_IMAGE_FOLDER. $this->initial_media_path. '/'  . DEDALO_IMAGE_QUALITY_ORIGINAL . $this->aditional_path . '/';
 	}
-	
 	
 	# GET DEFAULT QUALITY
 	public static function get_quality_default() {

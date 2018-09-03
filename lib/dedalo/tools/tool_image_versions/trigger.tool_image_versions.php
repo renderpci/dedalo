@@ -1,4 +1,5 @@
 <?php
+$start_time=microtime(1);
 require_once( dirname(dirname(dirname(__FILE__))) .'/config/config4.php');
 require_once( DEDALO_LIB_BASE_PATH . '/media_engine/class.ImageObj.php');
 
@@ -7,7 +8,7 @@ if(login::is_logged()!==true) die("<span class='error'> Auth error: please login
 
 
 # set vars
-	$vars = array('mode','image_id','quality','aditional_path','initial_media_path','source_quality','target_quality','tipo','parent','section_tipo','degrees','extension');
+	$vars = array('mode','image_id','quality','aditional_path','initial_media_path','source_quality','target_quality','tipo','parent','section_tipo','degrees','extension', 'external_source');
 	foreach($vars as $name) $$name = common::setVar($name);
 	
 # mode
@@ -171,6 +172,7 @@ if($mode=='generate_version') {
 	session_write_close();
 	die();
 }#and generate_version
+
 
 
 /**
@@ -522,7 +524,6 @@ if($mode=='download_file') {
 
 	exit();
 }#end download
-
 
 
 ?>

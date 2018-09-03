@@ -367,6 +367,23 @@ class tool_upload extends tool_common {
 
 
 	/**
+	* LOAD_IMAGE_FROM_URL
+	* @return $image
+	*/
+	public function load_image_from_url($imageurl, $local_store){
+
+	file_put_contents($local_store, file_get_contents($imageurl));
+
+	if(!file_exists($local_store)){
+		return false;
+	}
+	
+	return true;
+   }
+
+
+
+	/**
 	* ERROR_NUMBER_TO_TEXT
 	* @param $f_error_number int
 	* @return $f_error_text strint

@@ -30,6 +30,7 @@
 		case 'dataframe_edit' :
 					$caller_dataset_json = json_encode($this->caller_dataset);
 					$this->set_relation_type($this->caller_dataset->type);
+					$dataframe_value = $this->get_dataframe_value($this->RecordObj_dd->get_parent());
 					$id_wrapper = 'wrapper_'.$identificador_unico.'_'.$this->caller_dataset->component_tipo ;
 					
 		case 'edit' :

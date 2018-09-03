@@ -44,18 +44,6 @@ class Thumb {
 	  
 	  return $this->image ;   
    }  
-
-   function Load_image_from_url(){
-
-      $ch = curl_init();
-      curl_setopt($ch, CURLOPT_URL, $imageurl); 
-      curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1); 
-      curl_setopt($ch, CURLOPT_BINARYTRANSFER, 1); // also, this seems wise considering output is image.
-      $data = curl_exec($ch);
-      curl_close($ch);
-
-      $image = imagecreatefromstring($data);
-   }
      
 	//---Método de guardar la imagen  
 	function save($name, $quality = 100) {  

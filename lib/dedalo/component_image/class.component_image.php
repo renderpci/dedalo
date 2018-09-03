@@ -439,6 +439,7 @@ class component_image extends component_common {
 	public function get_external_source(){
 
 		$propiedades = $this->get_propiedades();
+
 		$external_source = false;
 		if (isset($propiedades->external_source) && !empty($this->get_parent()) ) {
 			
@@ -452,14 +453,19 @@ class component_image extends component_common {
 														 DEDALO_DATA_NOLAN,
 														 $this->get_section_tipo());
 
+
 			$dato	= $component->get_dato();
 			if($dato){
 				$dato = reset($dato);
 			}
 
-			if(isset($dato->iri) && !empty($dato->iri)){
+			#dump(empty($dato->dataframe));
+			if(!empty($dato->dataframe)){
+				if(isset($dato->iri) && !empty($dato->iri)){
 				$external_source = $dato->iri;
+				}
 			}
+			
 		}
 		return $external_source;
 	}
