@@ -14,7 +14,7 @@
 /* VERSIONS */
 .wrap_tool_image_versions_page .content_data {
 	display: block;
-	margin-top: 15px;
+	
 	width: 730px;
 	margin-left: auto;
 	margin-right: auto;
@@ -47,6 +47,10 @@
 .table_versions .td_default_quality {
 	background-color:#f0f0f0;
 	
+}
+
+.table_versions_off{
+	display: none;
 }
 .image_info {
 	color:#999999;
@@ -96,7 +100,9 @@
 	height: 415px;
 	position: relative;
 	}
+	/*
 	.thumb_container img {
+		width: initial;
 		max-width: 99%;
 		max-height: 412px;
 		vertical-align: middle;		
@@ -107,13 +113,33 @@
 	    left: 0;  
 	    right: 0;  
 	    margin: auto;  
+	}*/
+	.thumb_container .content_data{
+		margin: 0;
 	}
+	.thumb_container label{
+		display: none;
+	}
+
+	.thumb_container .wrap_component{
+		max-width: 99%;
+		max-height: 412px;
+		vertical-align: middle;
+	}
+
+
 
 	.external_source{
 		display: flex;
 		border-bottom: 1px solid #ededed;
 	}.external_source .wrap_component{
 		background-color: unset !important;
+	}
+
+	.css_download_external_source{
+		position: relative;
+		top: 50%;
+		transform: translateY(-50%);
 	}
 
 

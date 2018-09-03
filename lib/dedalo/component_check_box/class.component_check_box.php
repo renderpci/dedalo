@@ -177,5 +177,15 @@ class component_check_box extends component_relation_common {
 
 
 
+	public function get_dataframe_value($type){
+
+		$dataframe_value = RecordObj_dd::get_termino_by_tipo($type,DEDALO_APPLICATION_LANG, true);
+
+		return $dataframe_value;
+
+	}
+
+
+
 }
 ?>

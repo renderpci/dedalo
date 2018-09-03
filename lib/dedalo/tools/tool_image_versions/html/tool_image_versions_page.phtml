@@ -22,16 +22,42 @@
 		$html .= $thumb_html;
 		$html .= "</div>";
 
+
 		# EXTERNAL SOURCE HTML
 		$html .= "<div class=\"external_source\">";
 		#$html .= "<span class=\"helper\"></span>";
 		$html .= $external_source_html;
+
+			$var_requested 		  = common::get_request_var('section_tipo');
+			$current_section_tipo = !empty($var_requested) ? $var_requested : '';
+			$original_quality 	= DEDALO_IMAGE_QUALITY_ORIGINAL;
+			$target_quality  	= DEDALO_IMAGE_QUALITY_DEFAULT;
+			$image_id = $tipo .'_'.$current_section_tipo.'_'.$parent;
+
+			# Get the external source to local file
+			$html .= "<div class=\"css_button_generic btn_get_external_source \" onclick=\"tool_image_versions.get_the_external_source_to_file(this)\" ";
+
+					$html .= "data-image_id=\"$image_id\" ";
+					$html .= "data-quality=\"$original_quality\" ";
+					$html .= "data-target_quality=\"$target_quality\" ";
+					$html .= "data-aditional_path=\"$aditional_path\" ";
+					$html .= "data-initial_media_path=\"$initial_media_path\" ";
+					$html .= "data-tipo=\"$tipo\" ";
+					$html .= "data-parent=\"$parent\" ";
+					$html .= "data-section_tipo=\"$current_section_tipo\" ";
+			$html .=">";
+			#$html .= label::get_label('descargar');
+			$html .= "<label class=\"css_download_external_source\">".label::get_label('descargar')."</label>";			
+			$html .= "</div>";
+			
 		$html .= "</div>";
 
-		
-
+		$active_class ='';
+		if($external_source_active){
+			$active_class = 'table_versions_off';
+		}
 		# VERSIONS
-		$html .= "<table class=\"table_versions\">";
+		$html .= "<table class=\"table_versions $active_class\">";
     
     	
 	    	#

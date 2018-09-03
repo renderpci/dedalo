@@ -43,13 +43,13 @@
 					# JS includes
 						js::$ar_url[] = DEDALO_LIB_BASE_URL."/$component_name/js/$component_name.js";
 
-					# THUMB (PLAYER)
-					$this->component_obj->set_modo('thumb');
+					$this->component_obj->set_modo('edit');
 					$thumb_html = $this->component_obj->get_html();
 
 					$properties =  $this->component_obj->get_propiedades();
 
 					$external_source_html = false;
+					$external_source_active = false;
 					if (isset($properties->external_source)) {
 						
 						$component_tipo 	= $properties->external_source;
@@ -63,6 +63,19 @@
 																		$section_tipo);
 
 						$external_source_html	= $component->get_html();
+
+						$dato	= $component->get_dato();
+						if($dato){
+							$dato = reset($dato);
+						}
+
+						#dump(empty($dato->dataframe));
+						if(!empty($dato->dataframe)){
+							if(isset($dato->iri) && !empty($dato->iri)){
+								$external_source_active = true;
+							}
+						}
+			
 					}
 					
 					$ar_quality			= unserialize(DEDALO_IMAGE_AR_QUALITY);

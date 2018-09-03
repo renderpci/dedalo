@@ -68,6 +68,19 @@
 				$source_for_component = (isset($propiedades->source_for_component)) ? $propiedades->source_for_component : false;
 
 				$mandatory_json = json_encode($mandatory);
+
+				#
+				# DATAFRAME MANAGER	
+				$ar_dataframe_obj = array();
+				$ar_dataframe = isset($propiedades->dataframe) ? $propiedades->dataframe : false;
+				if($ar_dataframe !==false){
+					foreach ($ar_dataframe as $key => $current_dataframe) {
+						if ($current_dataframe->tipo!==false) {
+							$dataframe_obj = new dataframe($current_dataframe->tipo, $current_dataframe->type, $this, 'dataframe_edit', $key);
+							$ar_dataframe_obj[] = $dataframe_obj;
+						}	
+					}
+				}			
 				break;
 
 		case 'print' :
