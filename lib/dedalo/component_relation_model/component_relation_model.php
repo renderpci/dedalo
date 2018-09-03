@@ -50,22 +50,23 @@
 						
 		case 'search':
 				# dato is injected by trigger search wen is needed
-				$dato = isset($this->dato) ? $this->dato : null;
-				
-				$referenced_tipo 		 = $this->get_referenced_tipo();
-				$ar_list_of_values		 = $this->get_ar_list_of_values( DEDALO_DATA_LANG, null );
-				
-				$ar_comparison_operators = $this->build_search_comparison_operators();
-				$ar_logical_operators 	 = $this->build_search_logical_operators();
-
+				$dato 				= isset($this->dato) ? $this->dato : null;
+				$id_wrapper 		= 'wrapper_'.$identificador_unico;
+				$component_info 	= $this->get_component_info('json');			
+				$referenced_tipo 	= $this->get_referenced_tipo();
+				$ar_list_of_values  = $this->get_ar_list_of_values( DEDALO_DATA_LANG, null, $referenced_tipo );
+	
 				# Search input name (var search_input_name is injected in search -> records_search_list.phtml)
 				# and recovered in component_common->get_search_input_name()
 				# Normally is section_tipo + component_tipo, but when in portal can be portal_tipo + section_tipo + component_tipo
-				$search_input_name = $this->get_search_input_name();
+				$search_input_name 	= $this->get_search_input_name();
 
 				# search_tipos
 				$term_tipo 		= hierarchy::get_element_tipo_from_section_map( $section_tipo, 'term' );
 				$search_tipos 	= [$term_tipo]; // DEDALO_THESAURUS_TERM_TIPO
+
+				# q_operator is injected by trigger search2
+				$q_operator = isset($this->q_operator) ? $this->q_operator : null;
 				break;
 					
 		case 'portal_list' :

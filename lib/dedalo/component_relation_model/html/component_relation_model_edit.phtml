@@ -33,7 +33,6 @@
 				$html_content .= $this->valor;
 				break;
 
-
 		case 2 :
 		case 3 :
 
@@ -42,18 +41,18 @@
 				# Set as disabled on time machine context 
 				$disabled = (isset($context->context_name) && $context->context_name=='tool_time_machine') ? 'disabled="disabled"' : '';
 
-				$html_content .= " <select class=\"css_relation_model\"
-				onchange=\"component_relation_model.Save(this)\"
-				onfocus=\"component_common.select_wrap(null,'$id_wrapper');\"
-				name=\"{$input_name}\"
-				data-tipo=\"{$tipo}\"
-				data-lang=\"{$lang}\"
-				data-section_tipo=\"{$section_tipo}\"
-				data-parent=\"{$parent}\"
-				title=\"$html_title\"
-				$disabled
-				tabindex=\"1\"
-				> ";
+				$html_content .= "<select class=\"css_relation_model\" "
+				$html_content .= "onchange=\"component_relation_model.Save(this)\" "
+				$html_content .= "onfocus=\"component_common.select_wrap(null,'$id_wrapper');\" "
+				$html_content .= "name=\"{$input_name}\" "
+				$html_content .= "data-tipo=\"{$tipo}\" "
+				$html_content .= "data-lang=\"{$lang}\" "
+				$html_content .= "data-section_tipo=\"{$section_tipo}\" "
+				$html_content .= "data-parent=\"{$parent}\" "
+				$html_content .= "title=\"$html_title\" "
+				$html_content .= "$disabled "
+				$html_content .= "tabindex=\"1\" "
+				$html_content .= "> ";
 
 				$selected = empty($dato) ? 'selected' : '';
 				

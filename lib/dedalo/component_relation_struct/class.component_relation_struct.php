@@ -449,7 +449,23 @@ class component_relation_struct extends component_relation_common {
 	}//end get_component_relation_struct_from_section_tipo
 	*/
 
-	
+
+
+	/**
+	* SEARCH_OPERATORS_INFO
+	* Return valid operators for search in current component
+	* @return array $ar_operators
+	*/
+	public function search_operators_info() {
+		
+		$ar_operators = [
+			'*' 	 => 'no_vacio', // not null
+			'=' 	 => 'vacio'
+		];
+
+		return $ar_operators;
+	}//end search_operators_info
+
 	
 
 }//end component_relation_struct
