@@ -1432,7 +1432,7 @@
 
 
 	# Version
-	$DEDALO_VERSION = '4.9.9cb';
+	$DEDALO_VERSION = '4.9.9cc';
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
