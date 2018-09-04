@@ -203,8 +203,6 @@ class diffusion_cedis {
 
 		$ar_dates = array();
 		foreach ((array)$dato as $key => $locator) {
-			#$section = section::get_instance($locator->section_id, $locator->section_tipo);
-			#$date 	 = $section->get_modified_date();
 
 			$parent 		= $locator->section_id;
 			$section_tipo 	= $locator->section_tipo;
@@ -220,7 +218,12 @@ class diffusion_cedis {
 				continue;
 			}
 
-			$dd_date = new dd_date($dato[0]->start);
+			$date_raw = reset($dato);
+			if (isset($date_raw->start)) {
+				$date_raw = $date_raw->start; // Compatible new date format data version update 4.9.1
+			}
+
+			$dd_date = new dd_date($date_raw);
 			$date 	 = $dd_date->get_dd_timestamp("Y-m-d H:i:s");
 
 			$date = dd_date::get_date_with_format($date, $format="Y-m-d H:i:s");
