@@ -1305,7 +1305,29 @@ class component_date extends component_common {
 		$update_version = implode(".", $update_version);
 
 		switch ($update_version) {
+			/* EN PROCESO
+			case '4.9.2':
+					
+				# Transform old dato in activity section
+				if ($options->section_tipo===DEDALO_ACTIVITY_SECTION_TIPO && !empty($dato_unchanged) && is_string($dato_unchanged)) {
+					
+					$dd_date    = new dd_date();
+					$new_dato 	= (object)$dd_date->get_date_from_timestamp( $dato_unchanged );
+											
+					$response = new stdClass();
+						$response->result =1;
+						$response->new_dato = $new_dato;
+						$response->msg = "[$reference_id] Dato is changed from ".to_string($dato_unchanged)." to ".to_string($new_dato).".<br />";
+					return $response;					
 
+				}else{
+					$response = new stdClass();
+						$response->result = 2;
+						$response->msg = "[$reference_id] Current dato don't need update.<br />";	// to_string($dato_unchanged)." 
+						return $response;
+				}
+				break;
+				*/
 			case '4.9.1':
 				if (!empty($dato_unchanged)) {
 					
@@ -1555,7 +1577,11 @@ class component_date extends component_common {
 					break;*/
 
 				default:
-					$dd_date 		 = new dd_date($dato);
+					$current_date = reset($dato);
+					if (isset($current_date->start)) {
+						$current_date = $current_date->start;
+					}
+					$dd_date 		 = new dd_date($current_date);
 					$timestamp 		 = $dd_date->get_dd_timestamp("Y-m-d H:i:s");
 					$ar_diffusion_values[] = $timestamp;
 					break;
