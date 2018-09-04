@@ -42,15 +42,15 @@ abstract class component_common_draw {
 		$warning_code='';
 		$propiedades = $component_obj->get_propiedades();			
 		if (isset($propiedades->state_of_component)) {
-			if (property_exists($propiedades->state_of_component, 'deprecated')) {
-				$msg 			= label::get_label( $propiedades->state_of_component->deprecated->msg );
-				$component_name = RecordObj_dd::get_termino_by_tipo($propiedades->state_of_component->deprecated->target_component);
-				$warning_text =	sprintf($msg, $component_name);			 
-				$html 		 .= '<label class="css_label label tooltip_active label_warning" '.$required_code .'title="'.$warning_text.'">';
-				$html 		 .= '<span class="glyphicon glyphicon-warning-sign"></span>';
-				$html 		 .= $label;
-				$html 		 .= '</label>';
-			}
+			$state_of_component = key((array)$propiedades->state_of_component);
+			$msg 			= label::get_label( $propiedades->state_of_component->$state_of_component->msg );
+			$component_name = RecordObj_dd::get_termino_by_tipo($propiedades->state_of_component->$state_of_component->target_component,DEDALO_APPLICATION_LANG);
+			$warning_text =	sprintf($msg, $component_name);			 
+			$html 		 .= '<label class="css_label label tooltip_active label_warning label_warning_'.$state_of_component.'" '.$required_code .'title="'.$warning_text.'">';
+			$html 		 .= '<span class="glyphicon glyphicon-warning-sign"></span>';
+			$html 		 .= $label;
+			$html 		 .= '</label>';
+			
 		}else{
 
 			if (empty($def)) {
