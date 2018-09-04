@@ -82,7 +82,8 @@ $updates->$v = new stdClass();
 
 
 	#UPDATE COMPONENTS
-	# Note that current update saves data directly in 'relations' container and geenrate table relations relations all in one pass
+	# Note that current update saves data directly in 'relations' container and generate table relations relations all in one pass
+	# (!) Si se hizo esta actualización utilizando Dédalo versión < 4.9.9cg (31-08-2018) NO pasó por la tabla activity y por tanto los datos de proyecto no estarán actualizados.
 	$updates->$v->components_update = ['component_filter_master','component_filter'];
 
 
