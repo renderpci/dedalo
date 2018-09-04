@@ -476,7 +476,7 @@ mark {
 		border-left: none;
 		vertical-align: top;
 		padding: 3px;
-		overflow: hidden;
+		overflow: hidden; 
 		}
 
 	/* ACTIVITY LIST TABLE
@@ -536,9 +536,10 @@ mark {
 		// What
 		//.table_rows_list_activity th:nth-of-type(6), .table_rows_list_activity td:nth-of-type(6) {
 		.table_rows_list_activity .th_column_dd545, .table_rows_list_activity .td_dd545 {
-			width: 80px;
+			width: 115px;
 			white-space: nowrap;
-
+			overflow: hidden;
+			text-overflow: ellipsis;
 		}
 		// Data
 		.table_rows_list_activity .th_column_dd551, .table_rows_list_activity .td_dd551 {
@@ -793,11 +794,19 @@ mark.row_debug_info {
 		label.label_warning span {
 			//cursor: help;
 			font-size: 10px;
-			color: #FF3900;
+			//color: #FF3900;
 			opacity: 0.85;
 			padding-left: 1px;
 			margin-right: 5px;
 		}
+		label.label_warning_deprecated span {
+			color: #FF3900;
+		}
+
+		label.label_warning_alternative span {
+			color: inherit;
+		}
+
 
 
 
