@@ -44,10 +44,14 @@
 						
 		case 'search':
 				# dato is injected by trigger search wen is needed
-				$dato = isset($this->dato) ? $this->dato : null;
-							
-				$ar_comparison_operators = $this->build_search_comparison_operators();
-				$ar_logical_operators 	 = $this->build_search_logical_operators();
+				$dato 		= isset($this->dato) ? $this->dato : null;
+				$dato_json 	= json_encode($dato);
+
+				$id_wrapper 	= 'wrapper_'.$identificador_unico;				
+				$component_info = $this->get_component_info('json');
+
+				# q_operator is injected by trigger search2
+				$q_operator = isset($this->q_operator) ? $this->q_operator : null;
 
 				# Search input name (var search_input_name is injected in search -> records_search_list.phtml)
 				# and recovered in component_common->get_search_input_name()
