@@ -393,7 +393,7 @@ class locator extends stdClass {
 	public static function in_array_locator( $locator, $ar_locator, $ar_properties=array() ) {
 		$founded = false;
 	
-		foreach ($ar_locator as $current_locator) {
+		foreach ((array)$ar_locator as $current_locator) {
 			$founded = self::compare_locators( $locator, $current_locator, $ar_properties );
 			if($founded===true) break;
 		}
