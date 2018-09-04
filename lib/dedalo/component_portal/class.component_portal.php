@@ -1182,30 +1182,41 @@ class component_portal extends component_relation_common {
 	*/
 	public function get_diffusion_value( $lang=null ) {
 		
-		$diffusion_value = $this->get_image_url(DEDALO_IMAGE_QUALITY_DEFAULT);
+		$diffusion_value = null;
 
 		# Propiedades of diffusion element that references this component
 		$diffusion_properties = $this->get_diffusion_properties();
 
-		# If not isset propiedades->data_to_be_used, we understand that is 'dato' for speed
-		if (!isset($diffusion_properties->data_to_be_used)) {
-			$data_to_be_used = 'dato';
-			$dato = $this->get_dato();
-			if (is_array($dato)) {
-				$ar_id =array();
-				foreach ($dato as $current_locator) {
-					$ar_id[] = $current_locator->section_id;
-				}
-				$dato = $ar_id;
-			}
-			$diffusion_value = $dato;
-		}else{
-			# 'Default' behaviour is now get_valor (...)
-			$data_to_be_used = 'valor_list';// Changed from valor to valor_list because input_text valor is an json array. $diffusion_properties->data_to_be_used;			
-			$diffusion_value = $this->get_valor( $lang, $data_to_be_used, $separator_rows='<br>', $separator_fields=', ' );
-			#dump($diffusion_value, '$diffusion_value ++ '.to_string($this->tipo));
-		}
+		$data_to_be_used = isset($diffusion_properties->data_to_be_used) ? $diffusion_properties->data_to_be_used : 'dato';
 
+		switch ($data_to_be_used) {
+			case 'valor_list':
+				$diffusion_value = $this->get_valor( $lang, 'valor_list', $separator_rows='<br>', $separator_fields=', ' );
+				break;
+			case 'dato_full':
+				$ar_values = null;
+				$dato = $this->get_dato();
+				if (!empty($dato)) {
+					$ar_values = [];
+					foreach ((array)$dato as $current_locator) {
+						$ar_values[] = $current_locator;
+					}
+				}
+				$diffusion_value = $ar_values;
+				break;
+			case 'dato':
+			default:
+				$ar_values = null;
+				$dato = $this->get_dato();
+				if (!empty($dato)) {
+					$ar_values = [];
+					foreach ((array)$dato as $current_locator) {
+						$ar_values[] = $current_locator->section_id;
+					}
+				}
+				$diffusion_value = $ar_values;
+				break;		
+		}
 
 		return $diffusion_value;
 	}//end get_diffusion_value

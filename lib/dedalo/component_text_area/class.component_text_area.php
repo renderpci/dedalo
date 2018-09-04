@@ -1558,7 +1558,7 @@ class component_text_area extends component_common {
 			}
 			*/			
 		#}//end calculated_value
-		
+
 
 		#$obj_value = json_decode($value); # Evitamos los errores del handler accediendo directamente al json_decode de php
 		$obj_value = $value;
@@ -1569,27 +1569,30 @@ class component_text_area extends component_common {
 
 		#
 		# Portal tables can reference fragments of text inside components (tags). In this cases
-		# we verify current required text is from correct component and tag		
+		# we verify current required text is from correct component and tag
 		if ( isset($locator->component_tipo) && isset($locator->tag_id) ) {
 			$locator_component_tipo = $locator->component_tipo;
 			$locator_tag_id 		= $locator->tag_id;
 			if ($locator_component_tipo===$tipo) {
+				# Override current_tag	
 				$current_tag = (int)$locator_tag_id;
 			}
 		}
 		
 		if (is_object($obj_value) && isset($obj_value->$current_tag)) {
 			$list_value = $obj_value->$current_tag;
-		}else{
+		}else{			
 			$list_value = $value;
 		}
 
 		if (!is_string($list_value)) {
 			if(SHOW_DEBUG===true) {
-				dump($list_value, ' render_list_value : list_value expected string. But received: '.gettype($list_value) .to_string($list_value));
-				throw new Exception("Error Processing Request. list_value expected string", 1);				
+				#dump($list_value, ' render_list_value : list_value expected string. But received: '.gettype($list_value) .to_string($list_value));
+				#throw new Exception("Error Processing Request. list_value expected string", 1);				
 			}			
-			die();
+			
+			debug_log(__METHOD__." Invalid value! Force convert to string ".to_string($value), logger::ERROR);
+			$list_value = to_string($list_value);			
 		}		
 
 		# TRUNCATE ALL FRAGMENTS		
@@ -1712,9 +1715,9 @@ class component_text_area extends component_common {
 			$key=0;
 			$Object_fragment->$key = $text_fragment;
 			
-			# DEPECATED 25-07-2018
-			# NEXT fragments keys(1,2,..) (if tags exists)
-			/*
+			# DEPECATED 25-07-2018 
+			# REACTIVATED 03-09-2018
+			# NEXT fragments keys(1,2,..) (if tags exists)			
 				$tags_en_texto	= (array)$this->get_ar_relation_tags();		// No contempla las marcas 'struct' !!!
 				if (!empty($tags_en_texto[0]) && count($tags_en_texto[0])>0) {
 					$tag_id_key = 4;
@@ -1758,7 +1761,7 @@ class component_text_area extends component_common {
 						$Object_fragment->$tag_id = $fragmento_text;
 					}
 				}//end if (!empty($tags_en_texto[0]) && count($tags_en_texto[0])>0)
-			*/
+			
 		
 		# Return it to anterior mode after get the html
 		$this->set_modo($modo_previous);	# Important!

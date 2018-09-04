@@ -189,6 +189,62 @@ class diffusion_cedis {
 
 
 	/**
+	* CALCULATE_DATE_TAPE
+	* Returns last date of audiovisual rsc44 (Date of capture) inside portal (interview)
+	* @return 
+	*/
+	public static function calculate_date_tape( $options, $dato, $format='d.m.Y' ) {
+
+		$date = null;
+
+		$source_tipo = reset($options->propiedades->data_source); // Like 'rsc44'
+		$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($source_tipo,true);
+		$lang 		 = $options->lang;
+
+		$ar_dates = array();
+		foreach ((array)$dato as $key => $locator) {
+
+			$parent 		= $locator->section_id;
+			$section_tipo 	= $locator->section_tipo;
+
+			$component 		= component_common::get_instance($modelo_name,
+															 $source_tipo,
+															 $parent,
+															 'list',
+															 $lang,
+															 $section_tipo);
+			$dato = (array)$component->get_dato();
+			if (empty($dato)) {
+				continue;
+			}
+
+			$date_raw = reset($dato);
+			if (isset($date_raw->start)) {
+				$date_raw = $date_raw->start; // Compatible new date format data version update 4.9.1
+			}
+
+			$dd_date = new dd_date($date_raw);
+			$date 	 = $dd_date->get_dd_timestamp("Y-m-d H:i:s");
+
+			$date = dd_date::get_date_with_format($date, $format="Y-m-d H:i:s");
+			$ar_dates[] = $date;
+		}
+
+		if (!empty($ar_dates)) {
+			$max  = max(array_map('strtotime', $ar_dates));
+			$last = date('Y-m-d H:i:s', $max); // Like 2012-06-11 08:30:49
+
+			// Format: string dd.mm.yyyy
+			$date = date($format, strtotime($last));
+		}
+		
+
+		return $date;
+	}//end calculate_date_tape
+
+
+
+	/**
 	* CALCULATE_IMAGE_NAME
 	* Returns first image indentify file name
 	* @return 
