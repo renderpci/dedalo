@@ -806,7 +806,9 @@ class web_data {
 	/**
 	* GET_REEL_TERMS
 	* Resuelve TODOS los términos utilizados en la transcripción de la cinta/s dada/s
-	* @param string $av_section_id (one or various separated by comma)
+	* @param object $request_options
+	* 	string $request_options->av_section_id (one or various numbers separated by comma)
+	* 	string $request_options->lang like 'lg-spa' (optional)
 	* @return 
 	*/
 	public static function get_reel_terms( $request_options ) {
@@ -829,12 +831,12 @@ class web_data {
 			$ar_filter[] = "`indexation` LIKE '%\"section_id\":\"$current_av_section_id\",\"section_tipo\":\"$AUDIOVISUAL_SECTION_TIPO\",\"component_tipo\":\"$TRANSCRIPTION_TIPO\"%'";
 			#$ar_filter[] = "MATCH (`indexation`) AGAINST ('\"section_id\":\"$current_av_section_id\",\"section_tipo\":\"$AUDIOVISUAL_SECTION_TIPO\",\"component_tipo\":\"$TRANSCRIPTION_TIPO\"')";
 		}
-		$sql_filter = implode(' OR ', $ar_filter);
+		$sql_filter = '('.implode(' OR ', $ar_filter).')';
 
 
 		$response = new stdClass();
 			$response->result 	= false;
-			#$response->msg 		= 'Error. Request failed (get_reel_terms)';
+			#$response->msg 	= 'Error. Request failed (get_reel_terms)';
 		
 		// Format: "section_top_id":"30","section_tipo":"rsc167","section_id":"39"
 		
@@ -843,7 +845,7 @@ class web_data {
 			$s_options->ar_fields 	= array(FIELD_TERM_ID,FIELD_TERM,'indexation');
 			$s_options->lang 		= $options->lang;
 			$s_options->order 		= FIELD_TERM ." ASC";
-			#$s_options->sql_filter 	= (string)"`index` LIKE '%\"section_id\":\"$av_section_id\",\"component_tipo\":\"$TRANSCRIPTION_TIPO\"%'" . PUBLICACION_FILTER_SQL;
+			#$s_options->sql_filter = (string)"`index` LIKE '%\"section_id\":\"$av_section_id\",\"component_tipo\":\"$TRANSCRIPTION_TIPO\"%'" . PUBLICACION_FILTER_SQL;
 			$s_options->sql_filter 	= (string)$sql_filter;
 
 		$rows_data	= (object)web_data::get_rows_data( $s_options );
@@ -887,6 +889,98 @@ class web_data {
 
 		return (object)$response;
 	}//end get_reel_terms
+
+
+
+	/**
+	* GET_REEL_FRAGMENTS_OF_TYPE
+	* Return all fragments inside reel transcription (of passed type like 'index')
+	* @param string $av_section_id (one or various separated by comma)
+	* @return 
+	*/
+	public static function get_reel_fragments_of_type( $request_options ) {
+
+		$response = new stdClass();
+			$response->result 	= false;
+			$response->msg 		= 'Error. Request failed. '.__METHOD__;
+
+		$options = new stdClass();
+			$options->av_section_id = null;
+			$options->type 			= 'indexIn'; // Deafult is indexIn
+			$options->lang 			= WEB_CURRENT_LANG_CODE;
+			$options->return_text	= false;
+			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
+
+		#
+		# Transcription text
+		$TRANSCRIPTION_TIPO 		= TRANSCRIPTION_TIPO;
+		$AUDIOVISUAL_SECTION_TIPO 	= AUDIOVISUAL_SECTION_TIPO;		
+		
+		$sql_filter = '(section_id = '.(int)$options->av_section_id.')';		
+				
+		$s_options = new stdClass();
+			$s_options->table 		= (string)TABLE_AUDIOVISUAL;
+			$s_options->ar_fields 	= array(TRANSCRIPTION_TIPO);
+			$s_options->lang 		= (string)$options->lang;
+			$s_options->sql_filter 	= (string)$sql_filter;
+
+		$rows_data	= (object)web_data::get_rows_data( $s_options );
+			#dump($rows_data, ' rows_data ++ '.to_string()); die();
+
+		$raw_text = '';
+		if (is_array($rows_data->result)) foreach($rows_data->result as $key => $value) {			
+			$raw_text = $value[TRANSCRIPTION_TIPO];
+			break;
+		}
+		
+		#
+		# Find indexations etc.
+		$pattern 	= TR::get_mark_pattern($options->type);
+		preg_match_all($pattern, $raw_text, $matches);
+			#dump($matches, ' matches ++ '.to_string());
+		$key_tag 	= 1;
+		$key_tag_id = 4;
+
+		$ar_tag_id = $matches[$key_tag_id];
+
+		$ar_fragments = [];
+		$fr_options = new stdClass();			
+			$fr_options->lang   		 		= $options->lang;
+			$fr_options->raw_text 		 		= $raw_text;
+			$fr_options->av_section_id  		= $options->av_section_id;
+			$fr_options->component_tipo 	 	= TRANSCRIPTION_TIPO;
+			$fr_options->section_tipo 	 	 	= AUDIOVISUAL_SECTION_TIPO;
+			$fr_options->video_url 	 	 		= null; # Like 'http://mydomain.org/dedalo/media/av/404/'
+			$fr_options->margin_seconds_in  	= null;
+			$fr_options->margin_seconds_out 	= null;
+			$fr_options->fragment_terms_inside 	= false; # If true, calculate terms indexed inide this fragment 
+			$fr_options->indexation_terms 		= false; # If true, calculate all terms used in this indexation
+		
+		foreach ($ar_tag_id as $tag_id) {
+			# Set tag_id
+			$fr_options->tag_id = $tag_id;
+
+			$fragment = web_data::build_fragment($fr_options);
+				#dump($fragment, ' fragment ++ '.to_string());
+			
+			$element = new stdClass();
+				$element->tag_id  	 = $tag_id;
+				$element->tcin_secs  = $fragment->tcin_secs;
+				$element->tcout_secs = $fragment->tcout_secs;
+
+				if ($options->return_text===true) {
+				$element->fragm = $fragment->fragm;
+				}
+
+			$ar_fragments[] = $element;
+		}
+
+		$response->result 	= $ar_fragments;
+		$response->msg 		= 'Ok. Request done. '.__METHOD__;
+
+
+		return (object)$response;
+	}//end get_reel_fragments_of_type
 
 
 
@@ -3509,7 +3603,7 @@ class web_data {
 
 
 
-
+/*
 function _mb_ereg_search_all($str, $re, $resultOrder = 0){
 
     // 0 mimics PREG_PATTERN_ORDER
@@ -3534,4 +3628,5 @@ function _mb_ereg_search_all($str, $re, $resultOrder = 0){
 
 	return $matches;
 }
+*/
 ?>

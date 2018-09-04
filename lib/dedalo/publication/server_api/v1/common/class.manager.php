@@ -136,7 +136,6 @@ class manager {
 				$dedalo_data = (object)web_data::get_free_search( $options );
 				break;
 
-
 			## FULL ##
 			case 'full_reel':
 				#
@@ -163,11 +162,17 @@ class manager {
 				# Execute data retrieving
 				$dedalo_data = (object)web_data::get_search_tipos( $options );
 				break;
+			
+			case 'reel_fragments_of_type':
+				#
+				# Execute data retrieving
+				$dedalo_data = (object)web_data::get_reel_fragments_of_type( $options );
+				break;	
 
 			default:
 				$dedalo_data = new stdClass();
 					$dedalo_data->result = false;
-					$dedalo_data->msg = "Error. Undefined method (dedalo_get) : ".$options->dedalo_get;
+					$dedalo_data->msg 	 = "Error. Undefined method (dedalo_get) : ".$options->dedalo_get;
 				break;
 		}
 	
