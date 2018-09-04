@@ -10,7 +10,7 @@
 
 ################################################################
 # CUSTOM Development working vars (API CLIENT)
-	$WEB_ENTITY = $_SERVER['SERVER_NAME'];	
+	$WEB_ENTITY = 'entity_name';	
 	define('WEB_ENTITY',$WEB_ENTITY);
 	
 	
