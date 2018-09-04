@@ -19,7 +19,7 @@ $page_globals = new stdClass();
 	# modo
 	$page_globals->modo 					= $modo;
 	# user_id
-	$page_globals->user_id 					= (isset($user_id)) $user_id : null;
+	$page_globals->user_id 					= (isset($user_id)) ? $user_id : null;
 ?>
 <script>
 const page_globals=<?php echo SHOW_DEBUG===true ? json_encode($page_globals, JSON_PRETTY_PRINT) : json_encode($page_globals) ?>;
