@@ -480,67 +480,80 @@ mark {
 		}
 
 	/* ACTIVITY LIST TABLE
-	----------------------------------------- */
+	----------------------------------------- */			
 	.table_rows_list_activity {
 		table-layout: fixed;
 		}
-		.table_rows_list_activity th:nth-of-type(1) {
-			width: 58px;
-		}
-		.table_rows_list_activity td:nth-of-type(1) {
-		text-align: right;
-		background-color: #c9edb8;
-		white-space: nowrap;
-		font-family: "Menlo",monospace;
-		padding: 3px;
-		padding-right: 5px;
-		padding-bottom: 0;
-		}
-		.table_rows_list_activity th:nth-of-type(2) {
-			text-align: right;
-			width: 120px;
-		}
-		.table_rows_list_activity th:nth-of-type(3) {
-			width: 82px;
-		}
-		.table_rows_list_activity th:nth-of-type(4), .table_rows_list_activity td:nth-of-type(4) {
-			width: 95px;
-			white-space: nowrap;
-			overflow: hidden;
-			text-overflow: ellipsis;
-		}
-		.table_rows_list_activity th:nth-of-type(5), .table_rows_list_activity td:nth-of-type(5) {
-			width: 150px;
-			white-space: nowrap;
-			overflow: hidden;
-			text-overflow: ellipsis;
-		}
-		.table_rows_list_activity th:nth-of-type(6), .table_rows_list_activity td:nth-of-type(6) {
-			width: 143px;
-			white-space: nowrap;
-		}
-		.table_rows_list_activity th:nth-of-type(7) {
-		}
-		.table_rows_list_activity th:nth-of-type(8) {
-			width: 12%;
+		.table_rows_list_activity tr:hover {
+			background-color: #C9EDB8
 		}
 		.table_rows_list_activity td {
 			padding: 2px;
 			padding-bottom: 0;
-			}
-			.table_rows_list_activity tr:hover {
-				background-color: #C9EDB8
-			}
-		
-		/*.table_rows_list_activity td div {*/
+		}	
+		// ID
+		.table_rows_list_activity th:nth-of-type(1) {
+			width: 58px;
+		}
+		.table_rows_list_activity td:nth-of-type(1) {
+			text-align: right;
+			background-color: #c9edb8;
+			white-space: nowrap;
+			font-family: "Menlo",monospace;
+			padding: 3px;
+			padding-right: 5px;
+			padding-bottom: 0;
+		}
+		// Date (when)
+		.table_rows_list_activity .th_column_dd547 {
+			text-align: right;
+			width: 138px;
+		}
+		.table_rows_list_activity .td_dd547 {
+			text-align: right;		
+			padding-right: 4px;
+			white-space: nowrap;		
+		}
+		// user (who)
+		.table_rows_list_activity .th_column_dd543 {
+			width: 80px;
+			overflow: hidden;
+			text-overflow: ellipsis;
+		}
+		// ip address
+		.table_rows_list_activity th:nth-of-type(4), .table_rows_list_activity td:nth-of-type(4) {
+			width: 95px;
+			white-space: nowrap;			
+		}
+		// Where
+		//.table_rows_list_activity th:nth-of-type(5), .table_rows_list_activity td:nth-of-type(5) {
+		.table_rows_list_activity .th_column_dd546, .table_rows_list_activity .td_dd546 {
+			width: 155px;
+			white-space: nowrap;
+			overflow: hidden;
+			text-overflow: ellipsis;
+		}
+		// What
+		//.table_rows_list_activity th:nth-of-type(6), .table_rows_list_activity td:nth-of-type(6) {
+		.table_rows_list_activity .th_column_dd545, .table_rows_list_activity .td_dd545 {
+			width: 80px;
+			white-space: nowrap;
+
+		}
+		// Data
+		.table_rows_list_activity .th_column_dd551, .table_rows_list_activity .td_dd551 {
+		}
 		.table_rows_list_activity .datos_activity {
 			height: 16px;
 			overflow: hidden;
 			cursor: s-resize;
-			}
-			.table_rows_list_activity .datos_activity:hover {
-				
-			}
+		}
+		// Projects
+		//.table_rows_list_activity th:nth-of-type(8) {
+		.table_rows_list_activity .th_column_dd550, .table_rows_list_activity .td_dd550 {
+			width: 12%;
+		}
+		
 
 
 		/* TD_CSS_SELECTOR
