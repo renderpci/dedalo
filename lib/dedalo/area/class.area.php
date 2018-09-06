@@ -82,7 +82,6 @@ class area extends common  {
 		gc_disable();
 		
 		if(SHOW_DEBUG===true) $start_time=microtime(1);
-
 		
 
 		if (isset($_SESSION['dedalo4']['config']['ar_ts_children_all_areas_hierarchized']) ) {
@@ -91,7 +90,7 @@ class area extends common  {
 			}else{
 				
 			}
-			return $_SESSION['dedalo4']['config']['ar_ts_children_all_areas_hierarchized'];			
+			return $_SESSION['dedalo4']['config']['ar_ts_children_all_areas_hierarchized'];		
 		}
 
 		# AREA_ROOT
@@ -151,12 +150,14 @@ class area extends common  {
 
 		#
 		# ALLOW DENY AREAS
-		if (SHOW_DEBUG===true || SHOW_DEVELOPER===true) {
+		if (SHOW_DEBUG===true) { //  || SHOW_DEVELOPER===true
 			# All elements are accepted
 		}else{
 			# Remove not accepted elements
-			$ar_all = area::walk_recursive_remove($ar_all, 'area::area_to_remove');			
-		}	
+			
+		}
+		# Remove always for clarity	
+		$ar_all = area::walk_recursive_remove($ar_all, 'area::area_to_remove');
 
 
 		# Store in session for speed
@@ -184,6 +185,9 @@ class area extends common  {
 
 		if( !include(DEDALO_LIB_BASE_PATH . '/config/config4_areas.php') ) {
 			debug_log(__METHOD__." ERROR ON LOAD FILE config4_areas . Using empy values as default ".to_string(), logger::ERROR);
+			if(SHOW_DEBUG===true) {
+				throw new Exception("Error Processing Request. config4_areas file not found", 1);;
+			}			
 
 			$areas_deny  = array();
 			$areas_allow = array();
