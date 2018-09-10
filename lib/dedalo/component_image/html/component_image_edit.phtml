@@ -1,10 +1,4 @@
 <?php
-/*
-$js_url = DEDALO_LIB_BASE_URL.'/component_image/js/component_image_read.js';
-?>
-<script>var url = '<?php echo $js_url ?>';</script>
-<?php
-*/
 
 	# VISUALIZADOR HTML	
 
@@ -23,17 +17,21 @@ $js_url = DEDALO_LIB_BASE_URL.'/component_image/js/component_image_read.js';
 	print "data-component_name=\"{$component_name}\" ";
 	print "data-component_info='{$component_info}' ";
 	print "data-related_tipo='{$ar_related_component_tipo_json}' ";
+	print 'data-original_img_height="'.$original_img_height.'" ';
+	print 'data-original_img_width="'.$original_img_width.'" ';
+	print 'data-canvas_id="'.$identificador_unico.'" ';
 	print ">";
 	
 		
 		# ETIQUETA (LABEL)
 		$html_label = component_common_draw::draw_label($this);
 		
+
 		# CONTENIDO (INPUT)
 		$html_content = '';
-		switch($permissions) {
+		switch(true) {
 				
-			case 0 :
+			case $permissions===0 :
 				$html_content .= "";
 				break;
 							
@@ -67,32 +65,29 @@ $js_url = DEDALO_LIB_BASE_URL.'/component_image/js/component_image_read.js';
 				}
 
 				$html_content .= "<div class=\"loading_image blink\">Loading image..</div>";
-				
+		
+
 				# CANVAS : IMAGE
-		$html_content .= "<div class=\"canvas_container\">";	
+				$html_content .= "<div class=\"canvas_container\">";
+				$html_content .= "<canvas id=\"$identificador_unico\" class=\"canvas_edit $add_class\" hidpi=\"on\" {$open_tool_default}>";				
+				$html_content .= "</canvas>";
+				$html_content .= "</div>";
 
-				$html_content .= "<canvas id=\"$identificador_unico\" class=\"canvas_edit $add_class\" hidpi=\"on\" {$open_tool_default}>";
-				
-				$html_content .= "</canvas>";				
-
-
-		$html_content .= "</div>";		
-											
+				#
+				# JS Init component
+				$html_content .= '<script>';
+				# Init component
+				$init_options = new stdClass();
+					$init_options->component_name 	= $component_name;
+					$init_options->init_mode 		= 'read';
+					$init_options->wrapper_id 		= $id_wrapper;
+					$init_options->image_url 		= $image_url;
+				$html_content .= 'component_common.init('.json_encode($init_options).');';
+				$html_content .= '</script>';
+				break;
 		}
 
-		#
-		# JS Init component
-		$html_content .= '<script>';
-		# Init component
-		$init_options = new stdClass();
-			$init_options->component_name 		= $component_name;
-			$init_options->wrapper_id 			= $id_wrapper;
-			$init_options->canvas_id 			= $identificador_unico;
-			$init_options->image_url 			= $image_url;
-			$init_options->original_img_height 	= $original_img_height;
-			$init_options->init_mode 			= 'read';
-		$html_content .= 'component_common.init('.json_encode($init_options).');';
-		$html_content .= '</script>';
+		
 
 		# Prepare content to show in page
 		tools::prepare_content($html_content);
