@@ -1,5 +1,6 @@
 # Protect files and directories from prying eyes.
-<FilesMatch "\.(inc|test|temp|sh|backup|.*backup|TXT|txt|tpl|config|composer\.(json|lock))$|^#.*#$|\.php(~|\.sw[op]|\.bak|\.orig\.save)$">
+# Directories are final path only, not between. 
+<FilesMatch "(\.(inc|sh|txt|tpl|backup|composer\.(json|lock))$|^#.*#$|\.php(~|\.sw[op]|\.orig\.save)$|deleted|test|temp|backup|config)">
   <IfModule mod_authz_core.c>
     Require all denied
   </IfModule>
@@ -7,6 +8,10 @@
     Order allow,deny
   </IfModule>
 </FilesMatch>
+
+# Deny paths final and between
+#RewriteEngine On
+#RewriteRule (config) - [F,L]
 
 <FilesMatch ".(eot|ttf|otf|woff|woff2)">
   Header set Access-Control-Allow-Origin "*"
