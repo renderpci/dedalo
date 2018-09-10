@@ -212,10 +212,16 @@ class area extends common  {
 	*/ 
 	public static function walk_recursive_remove(array $array, callable $callback) {
 
+		$user_id = (int)$_SESSION['dedalo4']['auth']['user_id'];
+
 	    foreach ($array as $k => $v) {
 	    	
-	    	#$to_remove = $callback($k); 
-	    	$to_remove = area::area_to_remove($k);      		
+	    	if (SHOW_DEBUG===true && $user_id===DEDALO_SUPERUSER ) {
+	    		$to_remove = false;
+	    	}else{
+	    		$to_remove = area::area_to_remove($k);
+	    	}
+	    	
             if ($to_remove===true) { 
                 unset($array[$k]);
             }else if(is_array($v)) {
