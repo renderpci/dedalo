@@ -500,7 +500,7 @@ class web_data {
 			}
 			if(empty($rows[$current_field_ar_id])) return $ar_portal;
 			$current_ar_value = json_decode($rows[$current_field_ar_id]);
-			#dump($current_ar_value, " current_ar_value ".to_string());	 		
+			 		
 		 	
 		 	if(is_array($current_ar_value)) foreach ($current_ar_value as $p_value) {
 
@@ -509,7 +509,25 @@ class web_data {
 		 			$portal_options->lang  = $options->lang;
 		 			if (isset($options->resolve_portal)) {
 		 			$portal_options->resolve_portal = $options->resolve_portal;
-		 			}	 			
+		 			}	
+
+		 			# Resolve_portals_custom deeper
+		 			# If you need deep resolve, define resolve_portals_custom usin table name like:
+		 			# [
+					#	'eventos' 	 		 => 'eventos',
+					#	'eventos.documentos' => 'image'
+					# ]
+		 			if ($options->resolve_portals_custom!==false) {
+		 				# Defined resolve_portals_custom for this table
+	 					$portal_options->resolve_portals_custom = new stdClass();
+		 				foreach ($options->resolve_portals_custom as $name => $target) {
+		 					$field = explode('.', $name);
+		 					if (isset($field[1])) {		 						
+		 						$field = $field[1];			
+		 						$portal_options->resolve_portals_custom->{$field} = $target;
+		 					}
+		 				}	 					
+	 				}	
 
 		 			$filter = PUBLICACION_FILTER_SQL;
 		 			if( !empty($options->portal_filter) 
