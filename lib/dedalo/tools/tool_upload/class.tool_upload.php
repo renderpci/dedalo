@@ -634,7 +634,7 @@ class tool_upload extends tool_common {
 
 						#
 						# DEFAULT_IMAGE_FORMAT : If uploaded file is not in Dedalo standar format (jpg), is converted, and original is conserved (like filename.tif)
-						$this->file_obj->default_format_file = $this->build_standar_image_format();
+						$this->file_obj->default_format_file = component_image::build_standar_image_format($this->file_obj->uploaded_file_path);
 						
 						#
 						# THUMB . Eliminamos el thumb anterior si existiese. Los thumbs se crean automáticamente al solicitarlos (list)
@@ -737,30 +737,6 @@ class tool_upload extends tool_common {
 		return $result;
 	}#end postprocessing_file
 
-
-
-
-	/**
-	* BUILD_standar_IMAGE_FORMAT
-	* If uploaded file is not in Dedalo standar format (jpg), is converted, and original is conserved (like filename.tif)
-	*/
-	protected function build_standar_image_format() {
-
-		$f_extension 	= strtolower(pathinfo($this->file_obj->uploaded_file_path, PATHINFO_EXTENSION));
-		if ($f_extension!=DEDALO_IMAGE_EXTENSION) {
-			$new_file_path 	= substr($this->file_obj->uploaded_file_path, 0, -(strlen($f_extension)) ).DEDALO_IMAGE_EXTENSION;
-			ImageMagick::convert($this->file_obj->uploaded_file_path, $new_file_path);
-				#dump($new_file_path,"converted from: $this->file_obj->uploaded_file_path");
-
-			return $new_file_path;
-		
-		}else{
-			return $this->file_obj->uploaded_file_path;
-		}		
-	}//end build_standar_image_format
-
-
-	
 
 	
 }

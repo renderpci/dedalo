@@ -622,17 +622,17 @@ class component_image extends component_common {
 
 
 		if (defined('DEDALO_IMAGE_QUALITY_RETOUCHED') && DEDALO_IMAGE_QUALITY_RETOUCHED!==false) {
-			# source data (default modify is source)
+			# source data (modified is source)
 			$source_ImageObj	 = new ImageObj($image_id, DEDALO_IMAGE_QUALITY_RETOUCHED, $aditional_path, $initial_media_path);
 			$original_image_path = $source_ImageObj->get_local_full_path();
-			$real_orig_quality	 = DEDALO_IMAGE_QUALITY_RETOUCHED;			
+			$real_orig_quality	 = DEDALO_IMAGE_QUALITY_RETOUCHED;	// Modified		
 		}
 
 		if (!isset($original_image_path) || !file_exists($original_image_path)) {
 			# source data (default quality is source)
 			$source_ImageObj	 = new ImageObj($image_id, DEDALO_IMAGE_QUALITY_ORIGINAL, $aditional_path, $initial_media_path);
 			$original_image_path = $source_ImageObj->get_local_full_path();
-			$real_orig_quality	 = DEDALO_IMAGE_QUALITY_ORIGINAL;
+			$real_orig_quality	 = DEDALO_IMAGE_QUALITY_ORIGINAL; // Original
 		}		
 
 		if (!file_exists($original_image_path)) {
@@ -1134,7 +1134,35 @@ class component_image extends component_common {
 
 
 		return (string)$diffusion_value;
-	}//end get_diffusion_value	
+	}//end get_diffusion_value
+
+
+
+	/**
+	* BUILD_STANDAR_IMAGE_FORMAT
+	* If uploaded file is not in Dedalo standar format (jpg), is converted, and original is conserved (like filename.tif)
+	* Used in tool_upload postprocessing file
+	*/
+	public static function build_standar_image_format($uploaded_file_path) {
+
+		$f_extension 	= strtolower(pathinfo($uploaded_file_path, PATHINFO_EXTENSION));
+		if ($f_extension!==DEDALO_IMAGE_EXTENSION) {
+			
+			# Create new file path
+			$new_file_path = substr($uploaded_file_path, 0, -(strlen($f_extension)) ).DEDALO_IMAGE_EXTENSION;
+			# Convert
+			ImageMagick::convert($uploaded_file_path, $new_file_path);
+
+			$file_path = $new_file_path;
+		
+		}else{
+
+			# Unchanged path
+			$file_path = $uploaded_file_path;
+		}
+
+		return $file_path;	
+	}//end build_standar_image_format
 
 
 
