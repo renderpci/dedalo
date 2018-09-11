@@ -1302,6 +1302,23 @@ class component_portal extends component_relation_common {
 	*/
 	public function regenerate_component() {
 		
+
+		# Custom propiedades external dato 
+		$propiedades = $this->get_propiedades();
+
+
+		if(isset($propiedades->source->mode) && $propiedades->source->mode === 'external'){
+			$this->set_dato_external(true, true);	// Forces update dato with calculated external dato	
+		}else{
+
+		# Force loads dato always !IMPORTANT
+		$this->get_dato();
+
+		# Save component data
+		$this->Save();
+
+		}
+		
 		return true;
 	}//end regenerate_component
 

@@ -2895,6 +2895,7 @@ class section extends common {
 			}else{
 				# Default case
 				$layout_map = component_layout::get_layout_map_from_section( $this );
+				
 				if (!empty($layout_map)) {
 					$ar_component_tipo = reset($layout_map);
 					foreach ($ar_component_tipo as $component_tipo) {

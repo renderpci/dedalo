@@ -1173,7 +1173,7 @@ class component_relation_common extends component_common {
 	* @see used by component_autocomplete and component_portal
 	* @return dato
 	*/
-	public function set_dato_external($save=false) {
+	public function set_dato_external($save=false, $changed=false) {
 		$start_time=microtime(1);
 
 		$dato 						= $this->get_dato();
@@ -1290,7 +1290,7 @@ class component_relation_common extends component_common {
 		# From table 'relations' (x number of locators in new_dato is fast aprox. because 'OR' problem in indexes)
 		$ar_result = $this->get_external_result_from_relations_table($new_dato, $ar_component_to_search);
 		
-		$changed = false;
+		
 
 		foreach ((array)$dato as $key => $current_locator) {
 			if(	locator::in_array_locator( $current_locator, $ar_result, $ar_properties=array('section_id','section_tipo') ) === false){
@@ -1314,7 +1314,7 @@ class component_relation_common extends component_common {
 			$this->set_dato($dato);
 			if ($save===true) {
 				$this->Save();
-				debug_log(__METHOD__." Saved modified dato to maintain order - $total_ar_result locators".to_string(), logger::DEBUG);
+				debug_log(__METHOD__." Saved modified dato to sustain the order - $total_ar_result locators in section_id = $section_id ".to_string(), logger::DEBUG);
 			}
 		}
 
