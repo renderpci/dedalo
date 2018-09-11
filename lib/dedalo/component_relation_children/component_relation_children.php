@@ -118,7 +118,7 @@
 					$search_query_object_options->logical_operator 	= '$or';
 					$search_query_object_options->id 				= 'temp';
 					$search_query_object_options->section_tipo		= []; //$hierarchy_sections; // Normally hierarchy_sections
-					$search_query_object_options->search_tipos 		= [DEDALO_THESAURUS_TERM_TIPO];
+					$search_query_object_options->search_tipos 		= $search_tipos; // [DEDALO_THESAURUS_TERM_TIPO];
 					$search_query_object_options->distinct_values	= false;
 					$search_query_object_options->show_modelo_name 	= true;
 					$search_query_object_options->filter_custom 	= null;
