@@ -668,19 +668,7 @@ class tool_upload extends tool_common {
 							require( POSTPROCESSING_IMAGE_SCRIPT );
 							$result = custom_postprocessing_image($this);
 								#dump($result, ' result');
-						}
-						
-						/* INNECESARIO !! (YA SE EJECUTA LUEGO)
-						# DEFAULT VERSION (1.5MB USSUALY)
-						if ($quality==DEDALO_IMAGE_QUALITY_ORIGINAL) {
-							# Create default version too
-							$this->component_obj->convert_quality( $quality, DEDALO_IMAGE_QUALITY_DEFAULT );
-							# Create thumb from default quality version
-							$this->component_obj->generate_thumb();
-							
-							debug_log(__METHOD__." Converted original image (".DEDALO_IMAGE_QUALITY_ORIGINAL.") to default quality (".DEDALO_IMAGE_QUALITY_DEFAULT.") ".to_string(), logger::DEBUG);
-						}
-						*/
+						}						
 
 						# Save force update data and create default and thumb qualitys
 						$this->component_obj->Save();
@@ -740,4 +728,3 @@ class tool_upload extends tool_common {
 
 	
 }
-?>
