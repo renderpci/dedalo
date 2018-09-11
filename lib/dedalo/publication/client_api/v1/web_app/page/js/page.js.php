@@ -8,7 +8,8 @@ $page_globals = array(
 		"__WEB_BASE_URL__" 		=> __WEB_BASE_URL__,
 		"WEB_CURRENT_LANG_CODE" => WEB_CURRENT_LANG_CODE,
 		"__WEB_ROOT_WEB__" 		=> __WEB_ROOT_WEB__,
-		"__WEB_TEMPLATE_WEB__" 	=> __WEB_TEMPLATE_WEB__
+		"__WEB_TEMPLATE_WEB__" 	=> __WEB_TEMPLATE_WEB__,
+		"WEB_ENTITY" 			=> WEB_ENTITY
 	);
 	
 $titles = json_encode(lang::get_lang_obj(WEB_CURRENT_LANG_CODE));
