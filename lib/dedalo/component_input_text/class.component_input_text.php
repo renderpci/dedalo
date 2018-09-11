@@ -104,6 +104,7 @@ class component_input_text extends component_common {
 	}//end get_valor
 
 
+
 	/**
 	* LOAD TOOLS
 	*//**/
