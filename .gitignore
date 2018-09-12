@@ -72,3 +72,5 @@ lib/dedalo/*/*-min.css
 lib/dedalo/*/*/js/*-min.js
 
 /lib/dedalo/extras/media_protection/cookie/cookie_auth.php
+
+/lib/dedalo/extras/media_protection/cookie/cookie_auth.php
