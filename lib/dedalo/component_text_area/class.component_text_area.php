@@ -333,14 +333,31 @@ class component_text_area extends component_common {
 			
 			default:
 
-				$dato = parent::get_dato();	
+				#$dato = parent::get_dato();	
 
-				$dato = TR::deleteMarks($dato);
-				$dato = self::decode_dato_html($dato);
-				#$dato = addslashes($dato);					
+				$value		= $this->get_valor_list_html_to_save(100000);
+				$current_tag = 0;
+				$list_value = $value->$current_tag;
+						
+
+				if (!is_string($list_value)) {
+					if(SHOW_DEBUG===true) {
+						#dump($list_value, ' render_list_value : list_value expected string. But received: '.gettype($list_value) .to_string($list_value));
+						#throw new Exception("Error Processing Request. list_value expected string", 1);				
+					}			
+					
+					debug_log(__METHOD__." Invalid value! Force convert to string ".to_string($value), logger::ERROR);
+					$dato = to_string($list_value);			
+				}else{
+					$dato = $list_value;	
+				}		
+
+				#$dato = TR::deleteMarks($dato);
+				#$dato = self::decode_dato_html($dato);
+				##$dato = addslashes($dato);					
 
 				# Desactivo porque elimina el '<mar>'
-				$dato = filter_var($dato, FILTER_UNSAFE_RAW);	# FILTER_SANITIZE_STRING
+				#$dato = filter_var($dato, FILTER_UNSAFE_RAW);	# FILTER_SANITIZE_STRING
 				break;
 		}		
 
@@ -1641,7 +1658,7 @@ class component_text_area extends component_common {
 	* @see class.section.php
 	* @return string $html
 	*/
-	public function get_valor_list_html_to_save() {
+	public function get_valor_list_html_to_save($max_char = 256) {
 		# Store current modo
 		$modo_previous = $this->get_modo();
 
@@ -1651,8 +1668,6 @@ class component_text_area extends component_common {
 			#
 			# OBJECT WITH THE FRAGMENT OF THE TEXT
 			$Object_fragment	= new stdClass();
-			$max_char 			= 256;
-			#$valor 			= (string)$this->get_valor(); // Full text source
 			$valor 				= (string)$this->get_dato(); // Full text source
 			
 			// remove all dedalo marks except the svg;
