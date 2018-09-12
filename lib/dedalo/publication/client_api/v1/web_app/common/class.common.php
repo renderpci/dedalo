@@ -202,6 +202,26 @@ class common {
 	}//end date_to_object
 
 
+
+	/**
+	* GET_BASE_LINKS
+	* @return string $base_links
+	*/
+	public static function get_base_links() {
+		
+		$url_path  = pathinfo($_SERVER['PHP_SELF'], PATHINFO_DIRNAME);
+		$ar_path   = explode('/', $url_path);
+		$base_path = $ar_path[1];
+		if($base_path===WEB_DISPATCH_DIR) {
+			$base_links = '/'.$base_path.'/';
+		}else{
+			$base_links = '/'.$base_path.'/'.WEB_DISPATCH_DIR.'/';
+		}
+
+		return $base_links;		
+	}//end get_base_links
+
+
 	
 
 }//end common
