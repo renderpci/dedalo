@@ -490,8 +490,10 @@ class login extends common {
 		$ktoday 	= date("Y_m_d");
 		$kyesterday = date("Y_m_d",strtotime("-1 day"));
 
-		$cookie_file = DEDALO_EXTRAS_PATH.'/media_protection/cookie/cookie_auth.php';
-		if ($cookie_file_exists  = file_exists($cookie_file)) {
+		$cookie_file 		= DEDALO_EXTRAS_PATH.'/media_protection/cookie/cookie_auth.php';
+		$cookie_file_exists = file_exists($cookie_file);
+		if ($cookie_file_exists===true) {
+
 			$current_file = file_get_contents($cookie_file);
 			$ar_data 	  = json_decode($current_file);
 		}
@@ -594,11 +596,11 @@ class login extends common {
 			}	
 		}			
 
-		$_SESSION['dedalo4']['auth']['cookie_auth'] = $data;
-
-		# SET COOKIE
+		$_SESSION['dedalo4']['auth']['cookie_auth'] = $data;	
+		# SET COOKIE		
+		$cookie_properties = common::get_cookie_properties();
 		#setcookie($data->$ktoday->cookie_name, $data->$ktoday->cookie_value, time() + (86400 * 1), '/'); // 86400 = 1 day
-		setcookie($data->$ktoday->cookie_name, $data->$ktoday->cookie_value, time() + (86400 * 1), '/', DEDALO_HOST, TRUE, TRUE); // 86400 = 1 day
+		setcookie($data->$ktoday->cookie_name, $data->$ktoday->cookie_value, time() + (86400 * 1), '/', $cookie_properties->domain, $cookie_properties->secure, $cookie_properties->httponly);
 
 		return true;
 	}//end init_cookie_auth
@@ -611,6 +613,7 @@ class login extends common {
 	*/
 	private static function get_auth_cookie_name() {
 		$date = getdate();
+		#$cookie_name = md5( 'dedalo_c_name_'.$date['year'].$date['mon'].$date['mday'].$date['weekday']. mt_rand() );
 		$cookie_name = hash('sha512', 'dedalo_c_name_'.$date['year'].$date['mon'].$date['mday'].$date['weekday']. random_bytes(8));
 
 	    return $cookie_name;
@@ -631,8 +634,9 @@ class login extends common {
 	*/
 	private static function get_auth_cookie_value() {
 		$date = getdate();
-	    $cookie_value = hash('sha512', 'dedalo_c_value_'.$date['wday'].$date['yday'].$date['mday'].$date['month']. random_bytes(8) );
-	    debug_log(__METHOD__." cookie_value ".to_string($cookie_value), logger::ERROR);
+		#$cookie_value = md5( 'dedalo_c_value_'.$date['wday'].$date['yday'].$date['mday'].$date['month']. mt_rand() );
+		$cookie_value = hash('sha512', 'dedalo_c_value_'.$date['wday'].$date['yday'].$date['mday'].$date['month']. random_bytes(8) );
+
 	    return $cookie_value;
 	}//end get_auth_cookie_value
 
@@ -843,21 +847,22 @@ class login extends common {
 			$activity_datos
 			);
 
+		# Cookie properties
+		$cookie_properties = common::get_cookie_properties();
+
 		# Delete auth cookie
 		if (defined('DEDALO_PROTECT_MEDIA_FILES') && DEDALO_PROTECT_MEDIA_FILES===true) {
 			$cookie_auth = (object)$_SESSION['dedalo4']['auth']['cookie_auth'];
 			$ktoday 	 = date("Y_m_d");
 			$kyesterday  = date("Y_m_d",strtotime("-1 day"));
-
-			# Format: setcookie("emailCookie", $email, 0, "/", "www.example.com", TRUE);
 	
 			if (isset($cookie_auth->$ktoday->cookie_name)) {
 				#setcookie($cookie_auth->$ktoday->cookie_name, null, -1, '/');
-				setcookie($cookie_auth->$ktoday->cookie_name, null, -1, '/', DEDALO_HOST, TRUE, TRUE);
+				setcookie($cookie_auth->$ktoday->cookie_name, null, -1, '/', $cookie_properties->domain, $cookie_properties->secure, $cookie_properties->httponly);
 			}
 			if (isset($cookie_auth->$kyesterday->cookie_name)) {
 				#setcookie($cookie_auth->$kyesterday->cookie_name, null, -1, '/');
-				setcookie($cookie_auth->$kyesterday->cookie_name, null, -1, '/', DEDALO_HOST, TRUE, TRUE);
+				setcookie($cookie_auth->$kyesterday->cookie_name, null, -1, '/', $cookie_properties->domain, $cookie_properties->secure, $cookie_properties->httponly);
 			}
 		}			
 
@@ -866,7 +871,7 @@ class login extends common {
 		$cookie_name = session_name();
 		unset($_SESSION['dedalo4']);
 		#setcookie($cookie_name, null, -1, '/');
-		setcookie($cookie_name, null, -1, '/', DEDALO_HOST, TRUE, TRUE);
+		setcookie($cookie_name, null, -1, '/', $cookie_properties->domain, $cookie_properties->secure, $cookie_properties->httponly);
 		#unset($_SESSION);
 		debug_log(__METHOD__." Unset session and cookie. cookie_name: $cookie_name ".to_string(), logger::DEBUG);
 

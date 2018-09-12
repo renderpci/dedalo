@@ -1256,5 +1256,27 @@ abstract class common {
 
 
 
+	/**
+	* GET_COOKIE_PROPERTIES
+	* @return object $cookie_properties
+	* Calculate safe cookie properties to use on set/delete http cookies
+	*/
+	public static function get_cookie_properties() {
+		
+		# Cookie properties
+		$domain 	= $_SERVER['SERVER_NAME'];
+		$secure 	= stripos( $_SERVER['SERVER_PROTOCOL'],'https') === true ? true : false;
+		$httponly 	= true; # Not accessible for javascript, only for http/s requests
+
+		$cookie_properties = new stdClass();
+			$cookie_properties->domain 	 = $domain;
+			$cookie_properties->secure 	 = $secure;
+			$cookie_properties->httponly = $httponly;
+
+		return $cookie_properties;
+	}//end get_cookie_properties
+
+
+
 }//end class
 ?>
