@@ -286,7 +286,7 @@ class web_data {
 			#$ar_data = $final_ar_data;
 
 			# Debug properties
-			if(SHOW_DEBUG===true) {		
+			if(SHOW_DEBUG===true) {
 				if (isset($count_query)) {
 				$response->debug['count_query']= $count_query;
 				}
@@ -295,8 +295,8 @@ class web_data {
 				#error_log("strQuery: ".$strQuery);
 			}
 			# Fixed properties
-			$response->result 			= $ar_data;
-			$response->msg    			= "Ok request done";
+			$response->result 	= $ar_data;
+			$response->msg    	= "Ok request done";
 			
 
 			return $response;
@@ -517,10 +517,11 @@ class web_data {
 					#	'eventos' 	 		 => 'eventos',
 					#	'eventos.documentos' => 'image'
 					# ]
-		 			if ($options->resolve_portals_custom!==false) {
+		 			if ($resolve_portals_custom!==false) {
 		 				# Defined resolve_portals_custom for this table
 	 					$portal_options->resolve_portals_custom = new stdClass();
-		 				foreach ($options->resolve_portals_custom as $name => $target) {
+	 					# (!) Note that $resolve_portals_custom is different that $options->resolve_portals_custom because is already parsed
+		 				foreach ($resolve_portals_custom as $name => $target) {
 		 					$field = explode('.', $name);
 		 					if (isset($field[1])) {		 						
 		 						$field = $field[1];			
