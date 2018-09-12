@@ -335,7 +335,7 @@
 					# aditional td css selectors
 					$selector_name 	 	  = RecordObj_dd::get_modelo_name_by_tipo($component_tipo, true);
 					$selector_name 		  = empty($selector_name) ? $component_tipo : $selector_name;
-					$td_css_selector 	  = 'td_'.$modelo_name;
+					$td_css_selector 	  = 'td_'.$selector_name;
 					$td_css_selector_tipo = 'column_'.$component_tipo;
 
 					$html_content .= '<td class="section_list_td_border section_list_td_row '.$td_css_selector.' '.$td_css_selector_tipo.'" data-tipo="'.$component_tipo.'">';
