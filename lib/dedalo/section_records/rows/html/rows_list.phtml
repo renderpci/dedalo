@@ -333,7 +333,8 @@
 				foreach($ar_valor as $component_tipo => $valor_list) {
 
 					# aditional td css selectors
-					$modelo_name 	 	  = RecordObj_dd::get_modelo_name_by_tipo($component_tipo, true);
+					$selector_name 	 	  = RecordObj_dd::get_modelo_name_by_tipo($component_tipo, true);
+					$selector_name 		  = empty($selector_name) ? $component_tipo : $selector_name;
 					$td_css_selector 	  = 'td_'.$modelo_name;
 					$td_css_selector_tipo = 'column_'.$component_tipo;
 
