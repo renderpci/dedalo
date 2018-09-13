@@ -1713,8 +1713,8 @@ class diffusion_cedis {
 		$indexations_from_tag = component_relation_struct::get_indexations_from_tag($component_tipo, $section_tipo, $section_id, $tag_id, null);
 
 		$ar_term_id = array();
-		foreach ($indexations_from_tag as $key => $current_locator) {
-			$ar_term_id[] = $current_locator->section_tipo .'_'. $current_locator->section_id;
+		foreach ($indexations_from_tag as $key => $current_data) {
+			$ar_term_id[] = $current_data->section_tipo .'_'. $current_data->section_id;
 		}
 
 		return $ar_term_id; 
