@@ -261,7 +261,7 @@ class component_relation_struct extends component_relation_common {
 		$strQuery .= implode(" UNION ALL ", $ar_query);
 		// Set order to maintain results stable
 		$strQuery .= " ORDER BY section_id ASC";
-		#dump($strQuery, ' strQuery ++ '.to_string($strQuery));
+		#dump(null, ' strQuery ++ '.to_string($strQuery));
 
 		$result = JSON_RecordObj_matrix::search_free($strQuery);
 
@@ -354,9 +354,9 @@ class component_relation_struct extends component_relation_common {
 	*/
 	public static function delete_tag_indexations($component_tipo, $section_tipo, $section_id, $tag_id, $lang) {
 		
-		$ar_indexations = self::get_indexations_from_tag($component_tipo, $section_tipo, $section_id, $tag_id, $lang);
-			#dump($ar_indexations, ' $ar_indexations ++ '.to_string());
-
+		$ar_indexations = self::get_indexations_from_tag($component_tipo, $section_tipo, $section_id, $tag_id, $lang);		
+		debug_log(__METHOD__." Founded ar_indexations total: ".count($ar_indexations).' : '.to_string($ar_indexations), logger::DEBUG);
+		
 		$ar_deleted=array();
 		foreach ((array)$ar_indexations as $key => $index_obj) {
 			

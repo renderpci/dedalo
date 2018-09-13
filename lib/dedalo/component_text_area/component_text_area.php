@@ -98,8 +98,33 @@
 						if(SHOW_DEBUG===true) {
 							$save=false;
 							debug_log(__METHOD__." Stopped save broken tags for debugger only ".to_string(), logger::DEBUG);
+						}						
+						switch ($modo) {
+							case 'indexation':
+							case 'tool_indexation':
+								# FIX_BROKEN_INDEX_TAGS	
+								$broken_index_tags = $this->fix_broken_index_tags($save);
+								break;
+							case 'tool_structuration':
+								# FIX_BROKEN_STRUCT_TAGS
+								$broken_index_tags = $this->fix_broken_struct_tags($save);
+								break;
+							default:
+								# Nothing to do
+								break;
 						}
+
 						$component_warning = '';
+						if (isset($broken_index_tags) && $broken_index_tags->result) {
+							$component_warning .= ' '.$broken_index_tags->msg;
+							if(SHOW_DEBUG===true) {
+								$component_warning .= " (Fixed in ".$broken_index_tags->total.")";
+							}
+							// Get updated dato again
+							$dato = $this->get_dato();
+						}
+
+						/*
 						# FIX_BROKEN_INDEX_TAGS						
 						if ($modo==='indexation' || $modo==='tool_indexation') {
 							$broken_index_tags = $this->fix_broken_index_tags($save);
@@ -123,7 +148,8 @@
 								// Get updated dato again
 								$dato = $this->get_dato();
 							}
-						}						
+						}
+						*/					
 					}
 
 					# FIX_BROKEN_PERSON_TAGS
