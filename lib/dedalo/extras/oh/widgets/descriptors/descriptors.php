@@ -60,7 +60,6 @@
 															  $section_tipo);
 				$ar_locators = $component->get_dato();
 			}
-			# dump($ar_locators, ' ar_locators ++ '.to_string());
 
 			if (empty($ar_locators)) {
 				return null;
@@ -70,14 +69,22 @@
 			# INDEXATIONS BY SECTION_ID (cinta)
 			$ar_indexations = array();
 			foreach ($ar_locators as $key => $locator) {
-				#dump(RecordObj_descriptors::get_indexations_for_locator( $locator ), 'RecordObj_descriptors::get_indexations_for_locator( $locator ) ++ '.to_string());
-				#$indexations = RecordObj_descriptors::get_indexations_for_locator( $locator );
-				$indexations = component_relation_index::get_indexations_for_locator( $locator );
-					#dump($indexations, ' indexations ++ '.to_string());
-					
+								
+				$current_component_tipo = $locator->from_component_tipo;
+				$current_section_tipo 	= $locator->section_tipo;
+				$current_section_id 	= $locator->section_id;
+				
+				$current_options = new stdClass();
+					$current_options->fields = new stdClass();
+						$current_options->fields->section_tipo 	= $current_section_tipo;
+						$current_options->fields->section_id 	= $current_section_id;
+						$current_options->fields->component_tipo= false;
+						$current_options->fields->type 			= DEDALO_RELATION_TYPE_INDEX_TIPO;
+						$current_options->fields->tag_id 		= false;
+				$indexations = component_relation_index::get_indexations_search($current_options);
+				
 				$ar_indexations[$locator->section_id] = $indexations;
 			}
-			#dump($ar_indexations, ' ar_indexations ++ '.to_string());
 			if (empty($ar_indexations)) {
 				return null;
 			}
@@ -86,17 +93,20 @@
 			# TERMS STATS (number of every term uses)
 			$ar_terms 	= array();
 			$total_index= 0;
-			foreach ($ar_indexations as $section_id => $ar_value) foreach ($ar_value as $pseudo_locator => $count) {
-				#dump($pseudo_locator, ' pseudo_locator ++ '.to_string($count));
+			foreach ($ar_indexations as $section_id => $ar_locators) foreach ($ar_locators as $current_locator) {
+
+				$pseudo_locator = new locator();
+					$pseudo_locator->set_section_tipo($current_locator->from_section_tipo);
+					$pseudo_locator->set_section_id($current_locator->from_section_id);
+				$pseudo_locator = json_encode($pseudo_locator);
+
 				if (isset($ar_terms[$pseudo_locator])) {
-					$ar_terms[$pseudo_locator] += $count;
-						#dump($pseudo_locator, ' pseudo_locator ++ '.to_string());
+					$ar_terms[$pseudo_locator] += 1;
 				}else{
-					$ar_terms[$pseudo_locator]=$count;
+					$ar_terms[$pseudo_locator] = 1;
 				}
-				$total_index += $count;
+				$total_index += 1;
 			}
-			#dump($ar_terms, '$ar_terms ++ '.to_string());
 
 
 			$ar_terms_resolved = array();
@@ -107,7 +117,7 @@
 				$ar_terms_resolved[$termino] = $total;
 			}
 			ksort($ar_terms_resolved, SORT_NATURAL);
-			
+			#dump($ar_terms_resolved, ' ar_terms_resolved ++ '.to_string());
 
 			$widget_base_url = $this->get_widget_base_url();
 			

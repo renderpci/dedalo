@@ -121,7 +121,7 @@ function fragment_info($json_data) {
 
 	#
 	# Indexations list
-	$indexations_list = component_relation_struct::get_indexations_from_tag($component_tipo, $section_tipo, $section_id, $tag_id, $lang);
+	$indexations_list = component_relation_struct::get_indexations_from_tag($component_tipo, $section_tipo, $section_id, $tag_id);
 
 	#
 	# Struct notes

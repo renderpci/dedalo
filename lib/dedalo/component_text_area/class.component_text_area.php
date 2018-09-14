@@ -897,22 +897,18 @@ class component_text_area extends component_common {
 		# TESAURUS INDEXATIONS INTEGRITY VERIFY
 		$ar_indexations = $this->get_component_indexations(DEDALO_RELATION_TYPE_INDEX_TIPO); // DEDALO_RELATION_TYPE_STRUCT_TIPO - DEDALO_RELATION_TYPE_INDEX_TIPO
 		$ar_indexations_tag_id = array();
-		foreach ($ar_indexations as $ar_locator) {
-			
-			foreach ($ar_locator as $locator) {
-				if(!property_exists($locator,'tag_id')) continue;
-								
-				if ($locator->section_tipo===$this->section_tipo &&
-					$locator->section_id==$this->parent &&
-					$locator->component_tipo===$this->tipo &&
-					$locator->type===DEDALO_RELATION_TYPE_INDEX_TIPO
-					) {
+		foreach ($ar_indexations as $locator) {			
+			if(!property_exists($locator,'tag_id')) continue;
 
-					$tag_id = $locator->tag_id;
-					# Add tag_id
-					$ar_indexations_tag_id[] = $tag_id;
-				}
-			}//end foreach ($ar_locator as $locator) {				
+			if ($locator->section_tipo===$this->section_tipo &&
+				$locator->section_id==$this->parent &&
+				$locator->component_tipo===$this->tipo &&
+				$locator->type===DEDALO_RELATION_TYPE_INDEX_TIPO
+				) {
+
+				# Add tag_id
+				$ar_indexations_tag_id[] = $locator->tag_id;
+			}
 		}
 		$ar_indexations_tag_id = array_unique($ar_indexations_tag_id);
 
@@ -936,7 +932,7 @@ class component_text_area extends component_common {
 		if (!empty($ar_indexations_tag_id)) {
 
 			$all_text_tags = array_unique(array_merge($matches_indexIn[$index_tag_id], $matches_indexOut[$index_tag_id]));
-	dump($all_text_tags, ' all_text_tags ++ '.to_string());
+
 			foreach ($ar_indexations_tag_id as $current_tag_id) {
 				if (!in_array($current_tag_id, $all_text_tags)) {
 					#$new_pair = "[index-d-{$current_tag_id}][/index-d-{$current_tag_id}] ";
@@ -978,7 +974,6 @@ class component_text_area extends component_common {
 
 			$response->total = round(microtime(1)-$start_time,4)*1000 ." ms";
 		}
-
 			
 		return $response;		
 	}//end fix_broken_index_tags
@@ -1047,22 +1042,18 @@ class component_text_area extends component_common {
 		# TESAURUS STRUCTURATIONS INTEGRITY VERIFY
 		$ar_indexations = $this->get_component_indexations(DEDALO_RELATION_TYPE_STRUCT_TIPO); // DEDALO_RELATION_TYPE_STRUCT_TIPO - DEDALO_RELATION_TYPE_INDEX_TIPO
 		$ar_indexations_tag_id = array();
-		foreach ($ar_indexations as $ar_locator) {
+		foreach ($ar_indexations as $locator) {			
+			if(!property_exists($locator,'tag_id')) continue;
 			
-			foreach ($ar_locator as $locator) {
-				if(!property_exists($locator,'tag_id')) continue;
-				
-				if ($locator->section_tipo===$this->section_tipo && 
-					$locator->section_id==$this->parent &&
-					$locator->component_tipo===$this->tipo &&
-					$locator->type===DEDALO_RELATION_TYPE_STRUCT_TIPO
-					) {
+			if ($locator->section_tipo===$this->section_tipo && 
+				$locator->section_id==$this->parent &&
+				$locator->component_tipo===$this->tipo &&
+				$locator->type===DEDALO_RELATION_TYPE_STRUCT_TIPO
+				) {
 
-					$tag_id = $locator->tag_id;
-					# Add tag_id
-					$ar_indexations_tag_id[] = $tag_id;
-				}
-			}//end foreach ($ar_locator as $locator) {				
+				# Add tag_id
+				$ar_indexations_tag_id[] = $locator->tag_id;
+			}
 		}
 		$ar_indexations_tag_id = array_unique($ar_indexations_tag_id);
 		
@@ -1370,24 +1361,13 @@ class component_text_area extends component_common {
 		# Search relation index in hierarchy tables
 		$options = new stdClass();
 			$options->fields = new stdClass();
-			$options->fields->section_tipo 	= $this->section_tipo;
-			$options->fields->section_id 	= $this->parent;
-			$options->fields->component_tipo= $this->tipo;
-			$options->fields->type 			= $type;
-			$options->ar_tables 			= array('matrix_hierarchy');
+				$options->fields->section_tipo 	= $this->section_tipo;
+				$options->fields->section_id 	= $this->parent;
+				$options->fields->component_tipo= $this->tipo;
+				$options->fields->type 			= $type;	
 
-		$result = component_relation_index::get_indexations_search( $options );
-
-		$ar_indexations = array();
-		while ($rows = pg_fetch_assoc($result)) {
-
-			$current_section_id   	= $rows['section_id'];
-			$current_section_tipo 	= $rows['section_tipo'];
-			$relations 				= json_decode($rows['relations']);
-
-			$ar_indexations[] = $relations;
-		}//end while
-
+		$ar_indexations = component_relation_index::get_indexations_search( $options );
+		
 		return (array)$ar_indexations;
 	}//end get_component_indexations
 
@@ -1827,10 +1807,9 @@ class component_text_area extends component_common {
 	* looking for index in tags inside
 	* @return array $ar_descriptors
 	*/
-	public static function get_descriptors( $raw_text, $section_tipo, $section_id, $component_tipo, $type='indexIn' ) {
+	public static function get_descriptors( $raw_text, $section_tipo, $section_id, $component_tipo, $type='index' ) {
 		
-		$ar_descriptors = array();	
-		
+		$ar_descriptors = array();		
 
 		# Search index in locators
 		# INDEX IN
@@ -1842,7 +1821,6 @@ class component_text_area extends component_common {
 			$total_indexIn = count($matches_indexIn[0]);
 		}
 		
-
 		if ($total_indexIn===0) {
 			return $ar_descriptors;
 		}
@@ -1850,14 +1828,7 @@ class component_text_area extends component_common {
 		$full_tag = $matches_indexIn[0][0];
 		$tag_id_key = 4;
 		foreach ($matches_indexIn[$tag_id_key] as $key => $tag_id) {
-			/*
-			$locator = new locator();
-				$locator->set_section_tipo($section_tipo);
-				$locator->set_section_id($section_id);
-				$locator->set_component_tipo($component_tipo);
 			
-			$ar_index = RecordObj_descriptors::get_indexations_for_locator( $locator );
-			$ar_descriptors[$tag] = $ar_index;*/
 			if ($type==="struct") {
 				$ar_index = component_relation_struct::get_indexations_from_tag($component_tipo, $section_tipo, $section_id, $tag_id, DEDALO_DATA_LANG);
 			}else{
@@ -1867,6 +1838,7 @@ class component_text_area extends component_common {
 			$ar_descriptors[$full_tag] = $ar_index;
 		}
 		
+
 		return (array)$ar_descriptors;
 	}//end get_descriptors
 

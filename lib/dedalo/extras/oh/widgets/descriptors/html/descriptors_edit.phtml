@@ -8,7 +8,7 @@
 
 	#
 	# HEADER
-	$html .= "<li class=\"tab_title\">";
+	$html .= "<li class=\"tab_title\" onclick=\"descriptors.toggle_tab_content(this)\">";
 	#$html .= "  <div class=\"label_first header\">".label::get_label('total')."</div>";
 	$total_terms = count($ar_terms);	
 	$additional_style = $total_terms<1 ? 'style="background:none"' : '';	
@@ -25,8 +25,8 @@
 
 				#$termino = RecordObj_ts::get_termino_by_tipo($terminoID, DEDALO_DATA_LANG, true, true);
 				
-				$html .= " <div class=\"label_first\">".$total."</div>";
-				$html .= " <div class=\"label_second\">".$term."</div>";				
+				$html .= "<div class=\"label_first\">".$total."</div>";
+				$html .= "<div class=\"label_second\">".$term."</div>";				
 				
 			$html .= "</li>";
 

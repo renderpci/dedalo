@@ -93,7 +93,7 @@ function remove_index($json_data) {
 		foreach($vars as $name) {
 			$$name = common::setVarData($name, $json_data);
 			if ($name==='term') continue; # Skip non mandatory
-			if (empty($$name)) {
+			if (empty($$name) || $$name==='undefined') {
 				$response->msg = 'Error. Empty mandatory var '.$name;
 				return $response;
 			}
@@ -132,6 +132,7 @@ function remove_index($json_data) {
 
 	return (object)$response;
 }//end remove_index
+
 
 
 /**
@@ -257,7 +258,7 @@ function indexations_list($json_data) {
 	}	
 	$response->result 			= true;
 	$response->indexations_list = $ar_indexations;
-	
+
 	
 	# Debug
 	if(SHOW_DEBUG===true) {

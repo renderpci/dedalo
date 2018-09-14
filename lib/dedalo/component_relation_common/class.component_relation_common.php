@@ -372,18 +372,10 @@ class component_relation_common extends component_common {
 			trigger_error("Incorrect locator type ! Expected $this->relation_type and received $locator->type. tipo:$this->tipo, section_tipo:$this->section_tipo, parent:$this->parent");
 			return false;
 		}
-		/*
-		$ar_properties=array('section_id','section_tipo','type');
-		if (isset($locator->from_component_tipo)) 	$ar_properties[] = 'from_component_tipo';
-		if (isset($locator->tag_id)) 		 		$ar_properties[] = 'tag_id';
-		if (isset($locator->component_tipo)) 		$ar_properties[] = 'component_tipo';
-		if (isset($locator->section_top_tipo))		$ar_properties[] = 'section_top_tipo';
-		if (isset($locator->section_top_id)) 		$ar_properties[] = 'section_top_id';
-		*/
 
 		$removed 		= false;
 		$new_relations 	= array();
-		$dato = (array)$this->get_dato();	
+		$dato = (array)$this->get_dato($ar_properties);		
 		foreach($dato as $key => $current_locator_obj) {
 
 			# Test if already exists
@@ -1498,12 +1490,44 @@ class component_relation_common extends component_common {
 	/**
 	* GET_RELATIONS_SEARCH_VALUE
 	* @return bool false
-	* Default response for calls to this method. Overwrited in component_autocomplete_hi
+	* Default response for calls to this method. Overwritten in component_autocomplete_hi
 	*/
 	public function get_relations_search_value() {
 
 		return false;
 	}//end get_relations_search_value
+
+
+
+	/**
+	* GET_INDEXATIONS_SEARCH
+	* PROTECTED (!) not call directly 
+	* @see component_relation_index::get_indexations_search
+	* @see component_relation_struct::get_indexations_search
+	*
+	* @return resource $result
+	*//*
+	protected static function get_indexations_search( $options ) {
+		
+		$locator = new locator();
+			$locator->set_section_tipo($options->fields->section_tipo);
+			$locator->set_section_id($options->fields->section_id);
+			if (isset($options->fields->component_tipo) && $options->fields->component_tipo!==false) {
+			$locator->set_component_tipo($options->fields->component_tipo);
+			}
+			if (isset($options->fields->type) && $options->fields->type!==false) {
+			$locator->set_type($options->fields->type);
+			}
+			if (isset($options->fields->tag_id) && $options->fields->tag_id!==false) {
+			$locator->set_tag_id($options->fields->tag_id);
+			}
+		
+		$result = search_development2::calculate_inverse_locators( $locator, $limit=false, $offset=false, $count=false );
+
+
+		return $result;
+	}//end get_indexations_search
+	*/
 
 
 
