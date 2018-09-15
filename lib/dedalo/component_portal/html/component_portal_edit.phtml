@@ -26,6 +26,7 @@
 	$html_content .= 'data-max_records="'.$max_records.'" ';
 	$html_content .= 'data-offset="'.$offset.'" ';
 	$html_content .= 'data-n_rows="'.$n_rows.'" ';
+	$html_content .= 'data-context=\''.json_encode($context).'\' ';
 	$html_content .= '>';
 
 
@@ -48,6 +49,7 @@
 		$init_options->permissions 		= $permissions;
 		$init_options->component_name 	= $component_name;
 		$init_options->new_instance 	= true;
+		$init_options->dato 			= $dato;
 	$html_content .= 'component_common.init('.json_encode($init_options).');';
 	$html_content .= '</script>';
 

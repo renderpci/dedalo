@@ -6,8 +6,6 @@
 	$parent 				= $this->get_parent();
 	$section_tipo			= $this->get_section_tipo();
 	$modo					= $this->get_modo();
-
-	$dato_reference_lang 	= NULL;
 	$traducible 			= $this->get_traducible();
 	$label 					= $this->get_label();
 	$debugger				= $this->get_debugger();
@@ -20,10 +18,10 @@
 	$identificador_unico	= $this->get_identificador_unico();
 	$component_name			= get_class($this);
 	$context				= $this->get_context();
+
 	if (isset($context->context_name) && $context->context_name==='tool_time_machine') {
 		$this->set_show_button_new(false);
 	}
-	
 	$propiedades			= $this->get_propiedades();
 	$id_wrapper 			= 'wrapper_'.$identificador_unico;
 	$button_new_html 		= NULL;
@@ -69,13 +67,10 @@
 		case 'edit':
 
 				#
-				# SEMANTIC NODES
-				#if ( !empty($this->semantic_nodes) ) {
-				# JS/CSS ADD
+				# SEMANTIC NODES JS/CSS ADD
 				js::$ar_url[]  = DEDALO_LIB_BASE_URL."/tools/tool_semantic_nodes/js/tool_semantic_nodes.js";
 				css::$ar_url[] = DEDALO_LIB_BASE_URL."/tools/tool_semantic_nodes/css/tool_semantic_nodes.css";
-				#}
-
+				
 
 				$dato 			= $this->get_dato();
 				$component_info	= $this->get_component_info('json');

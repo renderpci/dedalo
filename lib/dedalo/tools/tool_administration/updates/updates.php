@@ -45,7 +45,14 @@ $updates->$v = new stdClass();
 		-- CONSTRAIN RELATIONS ALL FIELDS
 		ALTER TABLE public.relations ADD CONSTRAINT "relations_all_constraint" UNIQUE("section_tipo", "section_id", "target_section_tipo", "target_section_id", "from_component_tipo");
 		");
-		*/
+
+	$updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query('
+		CREATE INDEX matrix_time_machine_combined
+	    ON public.matrix_time_machine USING btree
+	    (tipo COLLATE pg_catalog."default", section_id, section_tipo COLLATE pg_catalog."default", lang COLLATE pg_catalog."default")
+	    TABLESPACE pg_default;
+	    ');
+	*/
 
 
 

@@ -236,11 +236,11 @@ function build_component_json_data($json_data) {
 		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
 
 
-	$vars = array('tipo','parent','modo','lang','section_tipo','propiedades','build_options');
+	$vars = array('tipo','parent','modo','lang','section_tipo','propiedades','dato','context','build_options');
 		foreach($vars as $name) {
 			$$name = common::setVarData($name, $json_data);
 			# DATA VERIFY
-			if ($name==='propiedades') continue; # Skip non mandatory
+			if ($name==='propiedades' || $name==='dato' || $name==='context') continue; # Skip non mandatory
 			if (empty($$name)) {
 				$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty '.$name.' (is mandatory)';
 				return $response;
@@ -261,8 +261,16 @@ function build_component_json_data($json_data) {
 		$component->set_propiedades($propiedades);
 	}
 
+	// Context
+	if (!empty($context)) {
+		$component->set_context($context);
 
-	
+		// Inject received dato here ONLY when context_name is tool_time_machine
+		if (isset($context->context_name) && $context->context_name==='tool_time_machine') {
+			$component->set_dato($dato);
+		}
+	}
+
 	$result = $component->build_component_json_data($build_options);
 
 	$response->result 	= $result;

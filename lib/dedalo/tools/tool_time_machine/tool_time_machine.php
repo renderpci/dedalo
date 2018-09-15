@@ -200,7 +200,8 @@
 					# Extraemos el dato del registro solicitado de matrix_time_machine
 					$RecordObj_time_machine = new RecordObj_time_machine($id_time_machine);
 					$dato 					= $RecordObj_time_machine->get_dato();
-					$timestamp 				= $RecordObj_time_machine->get_timestamp();					
+					$timestamp 				= $RecordObj_time_machine->get_timestamp();
+
 
 					# Override component dato information with time machine dato (Warning: dato is always string in matrix_time_machine. Manage properly in each component)
 					$source_component->set_dato($dato);
