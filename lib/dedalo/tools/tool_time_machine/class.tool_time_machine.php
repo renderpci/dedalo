@@ -56,6 +56,9 @@ class tool_time_machine extends tool_common {
 			#dump($this->section_tipo," section_tipo");
 		#$this->load_data_from_component();
 		#$this->load_structure_data();
+
+		$this->lang = $component_obj->get_lang();
+	
 		
 		return true;
 	}//end __construct
@@ -68,11 +71,8 @@ class tool_time_machine extends tool_common {
 	*/
 	public static function get_ar_component_time_machine($tipo, $parent, $lang=null, $section_tipo, $limit=10, $offset=0) {
 
-		# Creamos un objeto time_machine con los datos recibidos
-		$RecordObj_time_machine		= new RecordObj_time_machine(null);
-
 		# creamos un array con las coincidencias existentes
-		$ar_time_machine_records	= $RecordObj_time_machine->get_ar_time_machine_of_this($tipo, $parent, $lang, $section_tipo, $limit, $offset);
+		$ar_time_machine_records = RecordObj_time_machine::get_ar_time_machine_of_this($tipo, $parent, $lang, $section_tipo, $limit, $offset);
 			#dump($ar_time_machine_records,'ar_time_machine_records'); exit();
 
 		$ar_time_machine_obj = array();

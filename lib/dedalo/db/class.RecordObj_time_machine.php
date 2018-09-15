@@ -1,9 +1,9 @@
 <?php
-require_once(DEDALO_LIB_BASE_PATH . '/db/class.RecordDataBoundObject.php');
-
-
-
-
+include_once(DEDALO_LIB_BASE_PATH . '/db/class.RecordDataBoundObject.php');
+/**
+* RECORDOBJ_TIME_MACHINE
+*
+*/
 class RecordObj_time_machine extends RecordDataBoundObject {
 	
 	# MATRIX VARS
@@ -53,7 +53,7 @@ class RecordObj_time_machine extends RecordDataBoundObject {
 			"state" 				=> "state",		# string char 32
 			"dato" 					=> "dato",		# jsonb format			
 			));
-	}
+	}//end defineRelationMap
 
 
 
@@ -61,16 +61,19 @@ class RecordObj_time_machine extends RecordDataBoundObject {
 		$dato = parent::get_dato();
 		$dato = json_handler::decode($dato);
 		return $dato;
-	}
-	
+	}//end get_dato
+
+
+
 	public function set_dato($dato, $raw=false) {
 		#dump($dato,"dato before");
 		$dato = json_handler::encode($dato);
 		#dump($dato,"dato after");
 		parent::set_dato( $dato, $raw );
-	}
-	
-	
+	}//end set_dato
+
+
+
 	/**
 	* GET_AR_TIME_MACHINE_OF_THIS		
 	* AR TIME MACHINE : Array de registros de time_machine para el id_matrix recibido
@@ -79,9 +82,9 @@ class RecordObj_time_machine extends RecordDataBoundObject {
 
 
 		/// Temporal !!!
-		$limit = 1000000;
+		#$limit = 1000000;
 				
-		$ar_time_machine_of_this 	= array();
+		$ar_id 	= array();
 		
 		$arguments=array();			
 		$arguments['tipo']			= $tipo;
@@ -93,8 +96,8 @@ class RecordObj_time_machine extends RecordDataBoundObject {
 		$arguments['offset']		= $offset;
 		$arguments['order_by_desc']	= 'timestamp';
 		
-		$RecordObj_time_machine		= new RecordObj_time_machine(NULL);
-		$ar_time_machine_of_this	= $RecordObj_time_machine->search($arguments);
+		$RecordObj_time_machine	= new RecordObj_time_machine(NULL);
+		$ar_id					= $RecordObj_time_machine->search($arguments);
 			#dump($ar_id,'ar_id '.print_r($arguments,true));
 		
 		#$ar_time_machine_of_this = array_values($ar_id);
@@ -102,12 +105,10 @@ class RecordObj_time_machine extends RecordDataBoundObject {
 		#	$ar_time_machine_of_this[] = $id;
 		#}
 		
-		return $ar_time_machine_of_this;
-	}	
-	
+		return $ar_id;
+	}//end get_ar_time_machine_of_this
 
 
-	
 	
 }
 ?>

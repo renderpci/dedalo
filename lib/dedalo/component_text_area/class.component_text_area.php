@@ -680,6 +680,24 @@ class component_text_area extends component_common {
 
 
 	/**
+	* CLEAN_RAW_TEXT_FOR_PREVIEW
+	* Used when we have a raw text from database and we want show a preview for tool time machine list for example
+	* @return string $text
+	*/
+	public static function clean_raw_text_for_preview($raw_text) {
+		
+		$text = $raw_text;
+
+		# Clean fragment_text
+    	$text 	= TR::deleteMarks($text);
+    	$text 	= html_entity_decode($text);
+
+    	return $text;
+	}//end clean_raw_text_for_preview
+
+
+
+	/**
 	* GET_FRAGMENTS_TEXT_BY_TC
 	* @param string $raw_text (String transcription complete as raw text with all tags)
 	* @return array $ar_fragments

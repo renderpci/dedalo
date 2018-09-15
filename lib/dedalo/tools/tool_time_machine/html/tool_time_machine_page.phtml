@@ -3,19 +3,21 @@
 * TIME MACHINE MAIN PAGE
 */
 
+
 	# VISUALIZADOR HTML	
 	$html = '';
 	#$html    = "<!-- TOOL TIME MACHINE PAGE [tipo:$tipo section_id:$parent] -->";	
-	$html   .= "<div class=\"wrap_time_machine_page\" data-tipo=\"$tipo\" data-parent=\"$parent\" data-section_tipo=\"$section_tipo\" data-lang=\"$lang\">";
+	$html   .= "<div id=\"wrap_time_machine_page\" data-tipo=\"$tipo\" data-parent=\"$parent\" data-section_tipo=\"$section_tipo\" data-lang=\"$lang\">";
 
 		# CONTENT TITLE
 		#$html 	.= "<div class=\"css_time_machine_label css_tool_label text_shadow_inset\">Time Machine page</div>";
-				
+
+
 		#
 		# ORIGINAL COMPONENT
 		# Current active matrix version of current component
 		$html 	.= "<div id=\"tm_component_actual\">";		
-		$html 	.= 	 $source_html;
+		$html 	.= $source_html;
 		$html 	.= "</div>";
 		
 
@@ -23,7 +25,7 @@
 		# PREVIEW COMPONENT
 		# Historic TM component. Default is last save (previous of actual) of source component
 		$html 	.= "<div id=\"tm_component_time_machine\">";
-		$html 	.= 	 $preview_html;
+		$html 	.= $preview_html;
 		$html 	.= "</div>";
 
 
@@ -31,27 +33,76 @@
 		# ROWS  
 		# Versions selector
 		$html 	.= "<div id=\"tm_selector_time_machine\">";
-		$html 	.= 	 $rows_html;
-		$html 	.= "</div>";
+		#$html 	.= $rows_html;
 
-
-		#
-		# INSPECTOR_LOG
-		$html 	.= "<div id=inspector_log></div>";
-
+		#$html 	.= '<div id="tm_rows">'
+		$html 	.= '<div id="info_line_tm">'; // css_tool_label  text_shadow_inset
+		# label
+		$html 	.= '<span class="css_tool_label">'.label::get_label('historico').'</span>';		
+		# Lang selector
+		if (!empty($ar_source_langs)) {
+		$html_selector  ='';
+		$html_selector .= '<select class="tool_lang_selector_source css_select" onchange="tool_time_machine.change_tool_lang_source(this)">';		
+		foreach ((array)$ar_source_langs as $current_lang => $current_lang_name) {
+			$selected 		= ($current_lang === $lang) ? 'selected' : '';
+			$html_selector .= '<option value="'.$current_lang.'" '.$selected.'>'.$current_lang_name.'</option>';
+		}
+		$html_selector .= '</select>';
+		$html 	.= $html_selector;
+		}else{
+			$html 	.= '<span></span>';
+		}
+		# Info about rows
+		$html 	.= '<div id="info_rows"></div>';
 		
-		#
-		# LOAD PREVIEW AND ROWS BY AJAX /**/		
-		$html   .= "<script>";
-		$html   .= "tool_time_machine.load_preview_component('$tipo','$parent','$lang',null,'$this->section_tipo');";	
-		#$html   .= "//tool_time_machine.load_rows_history($id,'$tipo','$lang','$current_tipo_section');											
-		$html   .= "</script>";
+		if ($permissions>=2) {
+			$html .= '<!-- BUTTONS APPLY / CLOSE -->';
+			$html .= '<div id="tm_header_'.$tipo.'_'.$id.'_'.$lang.'" class="tm_header_div div_image_link apply_and_save_link" onclick="tool_time_machine.assign_time_machine_value(this)" ';
+			$html .= 'data-tipo="'.$tipo.'" ';
+			$html .= 'data-section_tipo="'.$section_tipo.'" ';
+			$html .= 'data-parent="'.$parent.'" ';
+			$html .= 'data-lang="'.$lang.'" ';
+			$html .= '>';	
+			$html .= '<div class="tm_apply_and_save_text text_shadow_inset">'.label::get_label('aplicar_y_salvar').'</div>';
+			$html .= '<div class="css_time_machine_image_aplicate div_image_link"></div>';
+			#$html .= '<div class="close_tool_tm div_image_link" onclick="close_tm(this)">Close</div>';
+			$html .= '</div>';
+		}
+		$html 	.= '</div>';//end css_time_machine_label
+				
+		$html 	.= '<!-- TM ROWS -->';
+		$html 	.= '<div id="time_machine_record_rows">'; // shadow_inset				
+		#$html 	.= 'Loading..'; // Ajax load content here
+		$html 	.= '</div><!-- //time_machine_record_rows -->';
+
+		#$html 	.= '</div><!-- tm_rows -->';
+
+		$html 	.= "</div>";		
 		
 		
 	$html   .= "</div><!-- /wrap_time_machine_page -->";
+
+
+	
+
+	#
+	# INSPECTOR_LOG
+	$html 	.= "<div id=inspector_log></div>";
+
+
+	#
+	# LOAD PREVIEW AND ROWS BY AJAX		
+	$html   .= "<script>";
+	$html   .= "";
+	$init_options = new stdClass();
+		$init_options->tipo 		= $tipo;
+		$init_options->parent 		= $parent;
+		$init_options->lang 		= $lang;
+		$init_options->section_tipo = $this->section_tipo;
+	$html 	.= 'tool_time_machine.init('.json_encode($init_options).')';
+	$html   .= "</script>";
+	
 	
 
 
 	print $html;
-		
-?>

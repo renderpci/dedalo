@@ -36,6 +36,7 @@
 		# PAGE . Estructural TM page
 		case 'page':
 
+
 				# Because components are loaded by ajax, we need prepare js/css elements from tool
 				#
 				# CSS
@@ -66,45 +67,54 @@
 				#$this->set_modo('page');	# restore modo
 
 				# Build rows html
-				$this->set_modo('rows');	# change temp
-				$rows_html = $this->get_html();
-				$this->set_modo('page');	# restore modo
+				#$this->set_modo('rows');	# change temp
+				#$rows_html = $this->get_html();
+				#$this->set_modo('page');	# restore modo
 
 				#$source_component_html 			= $source_component->get_html();
-				#$component_obj_time_machine_html= 'Loading last time machine saved data..';					
+				#$component_obj_time_machine_html= 'Loading last time machine saved data..';
+
+				$permissions 	 = common::get_permissions($section_tipo,$tipo);
+				$ar_source_langs = $this->get_source_langs();					
 				break;
 
 		# ROWS . Records of current componet existing in 'matrix_time_machine'
-		case 'rows':
+		case 'rows_UNUSED MOVED TO JSON':
 
 				$limit  = isset($this->limit) ? $this->limit : 10;
 				$offset = isset($this->offset) ? $this->offset : 0;
-				
+
 				# ROWS ARRAY 
 				$ar_component_time_machine	= tool_time_machine::get_ar_component_time_machine($tipo, $parent, $lang, $section_tipo, $limit, $offset);
-
+	
 				#add name resolution to the row
+				$username_model = RecordObj_dd::get_modelo_name_by_tipo(DEDALO_FULL_USER_NAME_TIPO,true);
 				foreach ((array)$ar_component_time_machine as $tm_obj) {
-					$userID					= $tm_obj->get_userID();
-					if($userID == -1){
-						$tm_obj->user_name = 'Admin debuger';
+					$userID = $tm_obj->get_userID();					
+					if($userID==DEDALO_SUPERUSER){
+						$user_name = 'Admin debuger';
 					}else{
-						$obj_user_name	= component_common::get_instance('component_input_text',
+						$obj_user_name	= component_common::get_instance($username_model, // 'component_input_text',
 																		 DEDALO_FULL_USER_NAME_TIPO,
 																		 $userID,
-																		 'edit',
-																		 DEDALO_DATA_NOLAN, DEDALO_SECTION_USERS_TIPO);
-						$user_name = $obj_user_name->get_valor();
-						$tm_obj->user_name =$user_name;
-					}						
+																		 'list',
+																		 DEDALO_DATA_NOLAN,
+																		 DEDALO_SECTION_USERS_TIPO);
+						$user_name = $obj_user_name->get_valor();						
+					}
+					# Add user name
+					$tm_obj->user_name = $user_name;
 				}
+				#dump($ar_component_time_machine, ' ar_component_time_machine ++ '.to_string());
 
-				#$ar_source_langs = common::get_ar_all_langs_resolved();
-				$ar_source_langs = $this->get_source_langs();
+				
+				#$ar_source_langs = $this->get_source_langs();
+				#$permissions 	 = common::get_permissions($section_tipo,$tipo);
 
+				/* USED ?
 				# current_tipo_section is needed for relation tm !
 				$ar_rel_locator_for_current_tipo_section 	= array();
-				$current_tipo_section 						= common::setVar('current_tipo_section');
+				$current_tipo_section 						= common::setVar('current_tipo_section');				
 				if ( !empty($current_tipo_section) ) {
 					# Estamos en el time machine de una relación
 					# Calcularemos los registros relacionados para excluir aquellos en que no aparece la sección actual
@@ -115,8 +125,7 @@
 
 					$ar_rel_locator_for_current_tipo_section = $component_relation->get_ar_section_relations_for_current_tipo_section('ar_rel_locator');
 				}
-
-				$permissions = common::get_permissions($section_tipo,$tipo);
+				*/				
 				break;
 		
 		# SOURCE . Actual component source composed from current record of 'matrix' about current component

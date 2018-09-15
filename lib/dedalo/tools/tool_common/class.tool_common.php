@@ -40,6 +40,28 @@ abstract class tool_common extends common {
 
 
 	/**
+	* GET_JSON
+	* @return object $json
+	* Returns a var with all data encpsulated in a json object / array
+	*/
+	public function get_json(){
+
+		if(SHOW_DEBUG===true) $start_time = start_time();		
+		
+			# Class name is called class (ex. component_input_text), not this class (common)
+			include ( DEDALO_LIB_BASE_PATH .'/tools/'.get_called_class().'/'.get_called_class().'_json.php' );
+
+		if(SHOW_DEBUG===true) {
+			#$GLOBALS['log_messages'][] = exec_time($start_time, __METHOD__. ' ', "html");
+			#global$TIMER;$TIMER[__METHOD__.'_'.get_called_class().'_'.$this->tipo.'_'.$this->modo.'_'.microtime(1)]=microtime(1);
+		}
+		
+		return $json;
+	}//end get_json
+
+
+
+	/**
 	* READ_CSV_FILE_AS_ARRAY
 	* @param string $file
 	* @return string $html

@@ -302,27 +302,31 @@ function load_rows($json_data) {
 				$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty '.$name.' (is mandatory)';
 				return $response;
 			}
-		}
-		
+		}		
 	
 	$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true); 
 	$component_obj	= component_common::get_instance($modelo_name,
 													 $tipo,
 													 $parent,
-													 'edit',
+													 'list', // (!) Must be 'list' to avoid automatic change of component_text_area to original lang
 													 $lang,
 													 $section_tipo);
 	# tool time machine
 	$tool_time_machine 	= new tool_time_machine($component_obj, 'rows');
 
+	# Set rows options
 	$tool_time_machine->limit  = $limit;
 	$tool_time_machine->offset = $offset;
 
 	# result
-	$rows_html 		   	= $tool_time_machine->get_html();
+	#$rows_html = $tool_time_machine->get_html();
+	$rows_json 	= $tool_time_machine->get_json();
+
+	# Now result is a json encoded array
+	$ar_rows 	= json_decode($rows_json);
 	
 
-	$response->result 	= $rows_html;
+	$response->result 	= $ar_rows;
 	$response->msg 		= 'Ok. Request done ['.__FUNCTION__.']';
 
 	# Debug

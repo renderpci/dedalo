@@ -2048,6 +2048,30 @@ class section extends common {
 
 		return $user_name;
 	}//end get_modified_by_user_name
+
+
+
+	/**
+	* GET_USER_NAME_BY_USERID
+	* @return string $usesr_name
+	*/
+	public static function get_user_name_by_userID(int $userID) {
+		
+		if($userID==DEDALO_SUPERUSER){
+			$user_name = 'Admin debuger';
+		}else{
+			$username_model = RecordObj_dd::get_modelo_name_by_tipo(DEDALO_FULL_USER_NAME_TIPO,true);
+			$obj_user_name	= component_common::get_instance($username_model, // 'component_input_text',
+															 DEDALO_FULL_USER_NAME_TIPO,
+															 $userID,
+															 'list',
+															 DEDALO_DATA_NOLAN,
+															 DEDALO_SECTION_USERS_TIPO);
+			$user_name = $obj_user_name->get_valor();						
+		}
+
+		return $user_name;
+	}//end get_user_name_by_userID
 	
 
 
