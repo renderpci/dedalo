@@ -718,8 +718,9 @@
 			$ffmpeg = shell_exec(DEDALO_AV_FFMPEG_PATH." -version ");
 			$ffmpeg_config = shell_exec(DEDALO_AV_FFMPEG_PATH." -buildconf ");
 			preg_match("/ffmpeg version (.*) Copyright/", $ffmpeg, $output_array);
+			$info = $output_array[1] ?? null;
 			$html .= tool_administration::show_info( "FFMPEG",
-													 $output_array[1] ." - ". DEDALO_AV_FFMPEG_PATH,
+													 $info ." - ". DEDALO_AV_FFMPEG_PATH,
 													 $ffmpeg . $ffmpeg_config 
 													);
 
@@ -728,8 +729,9 @@
 			# FFPROBE
 			$ffprobe = shell_exec(DEDALO_AV_FFPROBE_PATH." -version ");	
 			preg_match("/ffprobe version (.*) Copyright/", $ffprobe, $output_array);
+			$info = $output_array[1] ?? null;
 			$html .= tool_administration::show_info( "PROBE",
-													 $output_array[1] ." - ". DEDALO_AV_FFPROBE_PATH,
+													 $info ." - ". DEDALO_AV_FFPROBE_PATH,
 													 $ffprobe
 													);
 
@@ -741,18 +743,15 @@
 													 $faststart
 													);
 
-
-
 			#
 			# IMAGE MAGICK
 			$result = shell_exec(MAGICK_PATH."convert -version ");
-			preg_match("/Version: ImageMagick (\S*)\s/", $result, $output_array);	
-			$image_magick_version = isset($output_array[1]) ? $output_array[1] : "Unavailable";
+			preg_match("/Version: ImageMagick (\S*)\s/", $result, $output_array);			
+			$info = $output_array[1] ?? null;
 			$html .= tool_administration::show_info( "IMAGE MAGICK",
-													 $image_magick_version ." - ". MAGICK_PATH,
+													 $info ." - ". MAGICK_PATH,
 													 $result
 													);
-
 
 			#
 			# NODE JS
@@ -760,8 +759,7 @@
 			$html .= tool_administration::show_info( "NODE JS",
 													 $result." - ".DEDALO_NODEJS,
 													 $result
-													);
-			
+													);			
 
 			#
 			# TINYMCE
@@ -771,8 +769,9 @@
 			$result = fgets($f);
 			fclose($f);
 			preg_match("/\/\/\s(\S*)\s/", $result, $output_array);
+			$info = $output_array[1] ?? null;
 			$html .= tool_administration::show_info( "TINYMCE",
-													 $output_array[1]." - ".$path,
+													 $info." - ".$path,
 													 $result
 													);
 
@@ -786,8 +785,9 @@
 			$result = fgets($f);
 			fclose($f);
 			preg_match("/\*\!\sjQuery v(\S*)\s/", $result, $output_array);
+			$info = $output_array[1] ?? null;
 			$html .= tool_administration::show_info( "JQUERY",
-													 $output_array[1]." - ".$path,
+													 $info." - ".$path,
 													 $result
 													);
 
@@ -799,8 +799,9 @@
 			$lines = file($path);//file in to an array
 			$result = $lines[1]; //line 2
 			preg_match("/js v(\S*)\s-/", $result, $output_array);
+			$info = $output_array[1] ?? null;
 			$html .= tool_administration::show_info( "PAPER",
-													 $output_array[1]." - ".$path,
+													 $info." - ".$path,
 													 $result
 													);
 
@@ -812,9 +813,9 @@
 			$lines = file($path);//file in to an array
 			$result = $lines[1]; //line 2
 			preg_match("/Leaflet ([0-9]\.[0-9]\.[0-9])\+.{1,12},/", $result, $output_array);
-			#$result = $output_array[1];
+			$info = $output_array[1] ?? null;
 			$html .= tool_administration::show_info( "LEAFLET",
-													 $output_array[1]." - ".$path,
+													 $info." - ".$path,
 													 $result
 													);		
 			
