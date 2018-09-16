@@ -101,7 +101,7 @@
 					$search_query_object_options->id 				= 'autocomplete_hi_search';
 					$search_query_object_options->section_tipo		= []; //$hierarchy_sections; // Normally hierarchy_sections
 					$search_query_object_options->search_tipos 		= [DEDALO_THESAURUS_TERM_TIPO];
-					$search_query_object_options->distinct_values	= false;
+					$search_query_object_options->distinct_values	= isset($propiedades->distinct_values) ? $propiedades->distinct_values : false;
 					$search_query_object_options->show_modelo_name 	= true;
 					$search_query_object_options->filter_custom 	= null;
 					$search_query_object_options->tipo 			 	= $tipo;

@@ -797,7 +797,8 @@ class search_development2 {
 					# Define as default order prevent apply default behavior
 					$this->sql_query_order_default = $sql_select .' ASC';
 					# Define custom sql_query_order_window_subselect
-					$this->sql_query_order_window_subselect = $this->main_section_tipo_alias.'.id, ' . $sql_select .' ASC';
+						# (!) Commented 16-09-2018 because not work with distinct_values true clause
+						### $this->sql_query_order_window_subselect = $this->main_section_tipo_alias.'.id, ' . $sql_select .' ASC';
 					# Wrap sentence
 					$sql_select = 'DISTINCT ON ('.$sql_select.') '.$sql_select;					 
 				}
