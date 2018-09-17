@@ -1497,12 +1497,15 @@ class search_development2 {
 				}
 
 				# q
-				$sql_where .= $search_object->q_parsed;
+				// Escape parenthesis
+				$q_parsed_clean = str_replace(['(',')'], ['\(','\)'], $search_object->q_parsed);
+				$sql_where .= $q_parsed_clean;
 				#$sql_where .= pg_escape_string(stripslashes($search_object->q_parsed));
 
 				if($search_object_unaccent===true) {
 					$sql_where .= ')';
 				}
+				debug_log(__METHOD__." sql_where ".to_string($sql_where), logger::DEBUG);
 				break;
 
 			case 'array_elements':
