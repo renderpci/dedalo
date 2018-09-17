@@ -13,7 +13,7 @@
 	print "data-lang=\"{$lang}\" ";
 	print "data-modo=\"{$modo}\" ";
 	#print "data-dato=\"{$dato_raw}\" ";
-	print "data-context_name=\"{$context->context_name}\" ";
+	print "data-context_name=\"{$context_name}\" ";
 	print "data-component_name=\"{$component_name}\" ";
 	print "data-component_info='{$component_info}' ";
 	print "data-related_tipo='{$ar_related_component_tipo_json}' ";
@@ -113,7 +113,7 @@
 					$html_content .= "data-modo=\"{$modo}\" ";
 					$html_content .= "data-section_tipo=\"{$section_tipo}\" ";
 					$html_content .= "data-canvas_id=\"$canvas_id\" ";
-					$html_content .= "data-context_name=\"$context->context_name\" ";
+					$html_content .= "data-context_name=\"$context_name\" ";
 					$html_content .= "title=\"$html_title\" ";
 					$html_content .= "tabindex=\"1\">$dato</textarea>";
 				

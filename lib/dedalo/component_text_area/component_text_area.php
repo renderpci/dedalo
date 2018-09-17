@@ -26,12 +26,13 @@
 
 	# Context
 	$context = $this->get_context();
-		#dump($context, ' context ++ '.to_string());
+	
 	$req_context_name = common::get_request_var('context_name');
 	if (false!==$req_context_name) {
 		$context->context_name = $req_context_name;
 		$this->set_context($context);
 	}
+	$context_name = isset($context->context_name) ? $context->context_name : null;
 	
 	#get the change modo from portal list to edit
 	/*
