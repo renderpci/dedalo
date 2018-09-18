@@ -235,7 +235,7 @@
 				
 				$ar_target_section_tipo 	 = $this->get_ar_target_section_tipo();
 				$ar_target_section_tipo_json = json_encode($ar_target_section_tipo);
-				$filter_by_locator 			 = (array)$dato;
+				$filter_by_locator[] 		 = reset($dato);
 
 				# CONTEXT : Configure section context
 				$context = new stdClass();
@@ -255,7 +255,7 @@
 						$search_query_object_options->section_tipo 		 = reset($ar_target_section_tipo);
 						$search_query_object_options->tipo 				 = $this->tipo;
 					$search_query_object = component_portal::build_search_query_object($search_query_object_options);
-					
+
 				# SEARCH
 				$search_develoment2  = new search_development2($search_query_object);
 				$rows_data 		 	 = $search_develoment2->search();
