@@ -110,38 +110,45 @@
 		}
 		.main_buttons {
 			display: none;
-			z-index: 99;			
+			z-index: 99;
+			height: 1.5em;			
 			}
 			.main_buttons input[type="button"] {
 				border: 1px solid #DADADA;
 				}
 				.main_buttons input[type="button"]:hover {
 					opacity: 0.8;
-					border: 1px solid #eeeeee;
+					//border: 1px solid #eeeeee;
 					color: #000000;
 				}
 				.main_buttons input[type="button"]:active {
-					background-color: #F3FBFF;
+					background-color: #B9BFC2;
 				}
-		.image_buttons input {
-			font-family: Arial, sans-serif;
+		.image_buttons input[type="button"] {
+			cursor: pointer;
+			//font-family: Arial, sans-serif;
 			margin-left: 5px;
 			background: none;
-			border: none;
-			background-color:#fdb533;
+			border: 1px solid darken(#ffb615, 2%);
+			background-color: #ffb615;
 			border-radius: 8px;
 			color: #ffffff;
 			padding: 4px;
+			padding-left: 10px;
+			padding-right: 10px;
 			font-weight: normal !important;		
-			text-transform: capitalize;
-			padding-left: 5px;
-			padding-right: 5px;
-			cursor: pointer;
+			text-transform: capitalize;			
+			
+			z-index: 99999;
+			display: inline-block;
+			border-radius: 3px;
+			//box-shadow: none;
 		}
 		.image_buttons .save_image_path {
-			background-color: #616161;
-			margin-left: 15px;
-			box-shadow: 0 2px 8px #999999 inset;
+			background-color: #616161 !important;
+			border: 1px solid darken(#616161, 2%);
+			margin-left: 20px;			
+			//box-shadow: 0 2px 8px #999999 inset;
 		}
 
 		/*  CANVAS TRASCRIPTION
