@@ -184,7 +184,6 @@
 
 				}//end foreach ($ar_dato as $key => $current_dato)
 
-				#dump($date_mode, ' date_mode ++ '.to_string());
 				$mandatory 		= (isset($propiedades->mandatory) && $propiedades->mandatory===true) ? true : false;
 				$mandatory_json = json_encode($mandatory);
 

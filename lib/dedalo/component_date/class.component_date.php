@@ -858,8 +858,12 @@ class component_date extends component_common {
 				$dd_date->set_time($time);
 				$dd_date->set_op($op);
 
+				// Encapsulate object in start property to follow new date format (2018-09-19)
+				$date_default_obj = new stdClass();
+					$date_default_obj->start = $dd_date;
+
 				// Replace q_object
-				$q_object 	= $dd_date;
+				$q_object 	= $date_default_obj;				
 				#debug_log(__METHOD__." Created new q_object from: $query_object->q  ->  ".to_string($q_object), logger::WARNING);
 			}else{
 
