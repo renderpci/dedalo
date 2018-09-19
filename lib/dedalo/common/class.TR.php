@@ -249,6 +249,7 @@ abstract class TR {
 			$options->personEditable 	= false;
 			$options->noteEditable 		= false;
 			$options->struct_as_labels	= false;
+			$options->btn_url			= '../../../inc/btn.php';
 			$options->force_tr_tags_cdn	= false;
 			if (is_object($request_options)) {
 				foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
@@ -264,7 +265,7 @@ abstract class TR {
 		}	
 						
 		# BTN_URL. url path to php script thats render image
-		$btn_url = '../../../inc/btn.php';
+		$btn_url = $options->btn_url;
 		if(defined('TR_TAGS_CDN') && $options->force_tr_tags_cdn!==false) {		
 			$btn_url = TR_TAGS_CDN;
 		}
