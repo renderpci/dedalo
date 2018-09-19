@@ -9,7 +9,9 @@ class manager {
 
 
 	#static $version = "1.0.0"; // 06-06-2017
-	static $version = "1.0.1"; // 23-06-2017
+	#static $version = "1.0.1"; // 23-06-2018
+	static $version = "1.0.2"; // 17-09-2018
+
 
 
 	/**
@@ -167,7 +169,13 @@ class manager {
 				#
 				# Execute data retrieving
 				$dedalo_data = (object)web_data::get_reel_fragments_of_type( $options );
-				break;	
+				break;
+
+			case 'image_data':
+				#
+				# Execute data retrieving
+				$dedalo_data = (object)web_data::get_image_data( $options );
+				break;
 
 			default:
 				$dedalo_data = new stdClass();
@@ -182,4 +190,3 @@ class manager {
 
 
 }//end class manager
-?>

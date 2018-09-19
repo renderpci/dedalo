@@ -5,6 +5,8 @@ include(dirname(__FILE__).'/class.free_node.php');
 include(dirname(__FILE__).'/class.full_node.php');
 include(dirname(__FILE__).'/class.video_view_data.php');
 include(dirname(__FILE__).'/class.map.php');
+include(dirname(__FILE__).'/class.image.php');
+include(dirname(__FILE__).'/class.notes.php');
 include(dirname(dirname(dirname(dirname(dirname(__FILE__))))).'/media_engine/class.OptimizeTC.php');
 /**
 * WEB_DATA
@@ -40,7 +42,8 @@ class web_data {
 	#static $version = "1.0.25";  // 10-01-2018
 	#static $version = "1.0.26";  // 23-03-2018
 	#static $version = "1.0.27";  // 29-03-2018
-	static $version = "1.0.28";  // 17-07-2018
+	#static $version = "1.0.28";  // 17-07-2018
+	static $version = "1.0.29";  // 17-09-2018
 
 	/* ROWS_DATA (SQL)
 	----------------------------------------------------------------------- */
@@ -178,7 +181,7 @@ class web_data {
 			#debug_log(__METHOD__." Executing query ".trim($strQuery), logger::ERROR);
 			#if (strpos($sql_options->sql_filter, 'Barcelona')!==false ) {		
 				#dump($sql_options->sql_filter, ' strQuery ++ +++++++++++++++++++++++++++++++++++++++++++++++++++++++++ '.to_string($strQuery));
-			#	error_log($strQuery);
+				#error_log($strQuery);
 			#}
 			
 			# EXEC QUERY
@@ -241,7 +244,7 @@ class web_data {
 					}else{
 						$field_data = $rows[$current_field];
 					}				
-
+					
 
 					# Default behaviour
 					$ar_data[$i][$current_field] = $field_data;
@@ -317,7 +320,7 @@ class web_data {
 			$query_fields='';
 			foreach ((array)$ar_fields as $current_field) {				
 				
-				if (strpos($current_field, 'DISTINCT')!==false || $current_field=='*' || strpos($current_field, 'MATCH')!==false || strpos($current_field, ' AS ')!==false) {
+				if (strpos($current_field, 'DISTINCT')!==false || strpos($current_field, 'CONCAT')!==false || $current_field=='*' || strpos($current_field, 'MATCH')!==false || strpos($current_field, ' AS ')!==false) {
 					$query_fields .= $current_field;
 				}else{
 					$query_fields .= '`'.$current_field.'`';
@@ -3239,7 +3242,7 @@ class web_data {
 		* @return array $ar_result
 		*/
 		public static function get_search_tipos($request_options) {
-	
+		
 			$options = new stdClass();
 				$options->ar_query 	= [];
 				$options->limit 	= 10;
@@ -3259,6 +3262,7 @@ class web_data {
 				foreach ($options->ar_query as $key => $value_obj) {
 
 					$current_value = addslashes($value_obj->value);
+					$current_name  = $value_obj->name;					
 
 					if (!isset($value_obj->eq)) {
 						$value_obj->eq = 'LIKE';
@@ -3296,7 +3300,7 @@ class web_data {
 								$ar_monedas_filter[] = $row->section_id;
 							}
 							
-							$ar_filter[] = '('.implode(' OR ', $monedas_ar_filter).')';
+							$ar_filter[$current_name][] = '('.implode(' OR ', $monedas_ar_filter).')';
 							break;
 
 						// TS_LUGAR_DE_HALLAZGO . SUBQUERY
@@ -3359,7 +3363,7 @@ class web_data {
 								# Store for filter later
 								$ar_monedas_filter[] = $row_monedas->section_id;
 							}
-							if(!empty($monedas_ar_filter))	$ar_filter[] = '('.implode(' OR ', $monedas_ar_filter).')';
+							if(!empty($monedas_ar_filter))	$ar_filter[$current_name][] = '('.implode(' OR ', $monedas_ar_filter).')';
 							break;
 
 						// TS_CULTURA . SUBQUERY
@@ -3384,7 +3388,7 @@ class web_data {
 							$web_data = self::get_rows_data($cultura_options);
 							foreach ($web_data->result as $key => $row) {
 								$row = (object)$row;
-								$ar_filter[] = '`cultura` LIKE \'%"'.$row->term_id.'"%\''; // Filter for table tipos
+								$ar_filter[$current_name][] = '`cultura` LIKE \'%"'.$row->term_id.'"%\''; // Filter for table tipos
 							}
 							break;
 						
@@ -3400,10 +3404,10 @@ class web_data {
 									$ar_field = array_values($ar_field); # Reset keys
 									if (!empty($ar_field) && !empty($ar_field[0]->value)) {																		
 										# Existe valor de fecha_inicio
-										$ar_filter[] = '(CAST(`fecha_inicio` AS INT) >= '.$current_value.')';
+										$ar_filter[$current_name][] = '(CAST(`fecha_inicio` AS INT) >= '.$current_value.')';
 										
 									}else{
-										$ar_filter[] = '((`fecha_fin` IS NULL AND `fecha_inicio` = '.$current_value.') OR (CAST(`fecha_fin` AS INT) >= '.$current_value.' AND CAST(`fecha_inicio` AS INT) <= '.$current_value.'))';
+										$ar_filter[$current_name][] = '((`fecha_fin` IS NULL AND `fecha_inicio` = '.$current_value.') OR (CAST(`fecha_fin` AS INT) >= '.$current_value.' AND CAST(`fecha_inicio` AS INT) <= '.$current_value.'))';
 									}								
 								
 								}elseif ($value_obj->name==='fecha_fin') {
@@ -3414,25 +3418,25 @@ class web_data {
 									$ar_field = array_values($ar_field); # Reset keys
 									if (!empty($ar_field) && !empty($ar_field[0]->value)) {																		
 										# Existe valor de fecha_inicio
-										$ar_filter[] = '(CAST(`fecha_fin` AS INT) <= '.$current_value.')';
+										$ar_filter[$current_name][] = '(CAST(`fecha_fin` AS INT) <= '.$current_value.')';
 									
 									}else{
 										# No hay fecha de inicio
-										$ar_filter[] = '(`fecha_fin` = '.$current_value.')';
-									}
-									#$ar_filter[] = '(`fecha_fin` <= '.$current_value.')';
+										$ar_filter[$current_name][] = '(`fecha_fin` = '.$current_value.')';
+									}									
 								}							
 
 							}else{
 								switch ($value_obj->eq) {
 									case '=':
-										$ar_filter[] = '`'.$value_obj->name."` = '".$current_value.'\'';
+										$ar_filter[$current_name][] = '`'.$value_obj->name."` = '".$current_value.'\'';
 										break;
+									case 'LIKE':
 									default:
 										if ($value_obj->search_mode==='int') {
-											$ar_filter[] = '`'.$value_obj->name."` = ".(int)$current_value;
+											$ar_filter[$current_name][] = '`'.$value_obj->name."` = ".(int)$current_value;
 										}else{
-											$ar_filter[] = '`'.$value_obj->name."` LIKE '%".$current_value."%'";
+											$ar_filter[$current_name][] = '`'.$value_obj->name."` LIKE '%".$current_value."%'";
 										}
 										break;
 								}//end switch ($value_obj->eq)																				
@@ -3453,8 +3457,12 @@ class web_data {
 					}
 				}
 
-
-				$filter = '('.implode(' '.$options->operator.' ', $ar_filter).')';
+				// Create final filter
+				$ar_filter_final = [];
+				foreach ($ar_filter as $current_name => $ar_value) {
+					$ar_filter_final[] = '('.implode(' OR ', $ar_value).')';
+				}
+				$filter = '('.implode(' '.$options->operator.' ', $ar_filter_final).')';
 			}
 			debug_log(__METHOD__." filter ".to_string($filter), 'DEBUG');
 			
@@ -3618,6 +3626,37 @@ class web_data {
 
 
 
+	/* IMAGE
+	----------------------------------------------------------------------- */
+	public static function get_image_data( $request_options ) {	
+		
+		$options = new stdClass();
+			$options->section_id				= false;
+			$options->lang 						= WEB_CURRENT_LANG_CODE;
+			$options->btn_url 					= __CONTENT_BASE_URL__ . '/dedalo/inc/btn.php';
+			$options->description_with_images 	= true;
+			$options->description_clean 		= true;
+			$options->add_notes 				= true;
+			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
+
+		$response = new stdClass();
+			$response->result = false;
+			$response->msg 	  = 'Error. Request get_image_data failed';	
+
+		$image = new image( $options->section_id, $fn_options=$options );
+		$image->load_data(); # Froce to load data
+			#dump($image, ' image ++ '.to_string());
+		
+
+		$response->result = $image;
+		$response->msg 	  = 'Ok. Request get_image_data done successfully';
+
+
+		return $response;
+	}//end get_ar_fragments_from_reel
+
+
+
 }//end class web_data
 
 
@@ -3648,4 +3687,3 @@ function _mb_ereg_search_all($str, $re, $resultOrder = 0){
 	return $matches;
 }
 */
-?>
