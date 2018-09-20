@@ -1432,12 +1432,12 @@
 
 
 	# Version
-	$DEDALO_VERSION = '4.9.9cg';
+	$DEDALO_VERSION = '4.9.9cq';
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '14-09-2018');  
+	define('DEDALO_BUILD'	, '20-09-2018');  
 
 
 	/*
