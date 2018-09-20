@@ -1,6 +1,8 @@
 {
     "require": {
         "geoip2/geoip2": "~2.0",
-    	"leafo/lessphp": "0.4.0"
+    	"leafo/lessphp": "0.4.0",
+        "react/event-loop": "^1.0",
+        "react/http": "^0.8.3"
   }
 }
