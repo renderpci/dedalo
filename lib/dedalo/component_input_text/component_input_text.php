@@ -76,6 +76,7 @@
 				
 				$propiedades_json 	= json_encode($propiedades);
 				$context 			= $this->get_context();
+				$context_name 		= isset($context->context_name) ? $context->context_name : 'default';
 
 				$with_lang_versions = isset($propiedades->with_lang_versions) ? $propiedades->with_lang_versions : false;			
 				

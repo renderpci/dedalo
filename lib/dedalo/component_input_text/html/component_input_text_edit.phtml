@@ -101,7 +101,7 @@
 					$html_content .= "<li>";
 
 					$html_content .= "<input class=\"css_input_text\" type=\"text\" ";
-					if($context->context_name==='default') {
+					if($context_name==='default') {
 						$html_content .= "onchange=\"component_input_text.Save(this)\" ";
 					}
 					if($unique === true){
@@ -160,7 +160,7 @@
 				}
 
 				# JS
-				if($context->context_name==='default') {
+				if($context_name==='default') {
 					
 					#
 					# JS Init component
