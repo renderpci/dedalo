@@ -42,13 +42,18 @@
 	if (!defined('SECTION_TIPO')) {
 		define('SECTION_TIPO', $tipo);
 		
-		if(SHOW_DEBUG===true) {
+		# Check if requested tipo exists or is not a valid section
+		# (!) When you edit config file and set a not yet loaded section tipo like 'numistada1' (with base structure), execution is stopped here to notify the problem to admin.
+		if(SHOW_DEBUG===true || DEDALO_TEST_INSTALL===true) {
 			$modelo_name = RecordObj_dd::get_modelo_name_by_tipo(SECTION_TIPO, true);
 			if ($modelo_name!=='section' && strpos($modelo_name, 'area')===false ) {
 				#throw new Exception("DEBUG INFO: Error Processing Request current assigned SECTION_TIPO is not a section ($tipo - $modelo_name)", 1);
-				echo "DEBUG INFO: Current requested SECTION_TIPO is not a section.
-				<br> tipo: $tipo <br>
-					 modelo_name: $modelo_name";
+				echo show_msg("ERROR: Current requested SECTION_TIPO is not a section.
+				<br> tipo: $tipo 
+				<br> modelo_name: $modelo_name", 'ERROR');
+				if (SECTION_TIPO===MAIN_FALLBACK_SECTION) {
+					echo wrap_pre("A problem with config MAIN_FALLBACK_SECTION was found!. Please verify tipo ".MAIN_FALLBACK_SECTION." in structure.", 'WARNING');
+				}
 				die();				
 			}
 		}
