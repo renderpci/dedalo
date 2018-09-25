@@ -48,11 +48,15 @@
 			$modelo_name = RecordObj_dd::get_modelo_name_by_tipo(SECTION_TIPO, true);
 			if ($modelo_name!=='section' && strpos($modelo_name, 'area')===false ) {
 				#throw new Exception("DEBUG INFO: Error Processing Request current assigned SECTION_TIPO is not a section ($tipo - $modelo_name)", 1);
-				echo show_msg("ERROR: Current requested SECTION_TIPO is not a section.
+				$msg = "ERROR: Current requested SECTION_TIPO is not a section/area.
 				<br> tipo: $tipo 
-				<br> modelo_name: $modelo_name", 'ERROR');
+				<br> modelo_name: $modelo_name";
+				debug_log(__METHOD__." $msg ", logger::ERROR);
+				echo show_msg($msg, 'ERROR');
 				if (SECTION_TIPO===MAIN_FALLBACK_SECTION) {
-					echo wrap_pre("A problem with config MAIN_FALLBACK_SECTION was found!. Please verify tipo ".MAIN_FALLBACK_SECTION." in structure.", 'WARNING');
+					$msg = "A problem with config MAIN_FALLBACK_SECTION was found!. Please verify tipo ".MAIN_FALLBACK_SECTION." in structure.";
+					debug_log(__METHOD__." $msg ", logger::ERROR);
+					echo wrap_pre($msg);
 				}
 				die();				
 			}
