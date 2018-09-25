@@ -27,24 +27,34 @@
 
 
 			# FIXED TOOLS 
-			# TOOL_RELATION
-			# When component_relations is loaded, inspector load fixed tool_relation for current section record
+			# RELATION_LIST
+			# When component_relations is loaded, inspector load fixed relation_list for current section record
 			# Load button to open dialog tool window and list of records related to current section
-			#$relation_list_html 	= $this->get_relation_list_button_html();
 			$section_id 		= $this->section->get_section_id();
 
 			$relation_list_button_html = '';
-			$relation_list_tipo = section::get_relation_list($section_tipo);
+			$model_required_rl = array('relation_list');
+			$relation_list_tipo = section::get_ar_childrens_by_model($section_tipo, $model_required_rl);
+			$relation_list_name = RecordObj_dd::get_termino_by_tipo($relation_list_tipo);
 			if($relation_list_tipo){
 				$relation_list 		= new relation_list($relation_list_tipo, $section_id, $section_tipo, $modo='button');
 				$relation_list_button_html = $relation_list->get_html();
 			}
+
+			# TIME_MACHINE_LIST
+			# When term time_machine is loaded, inspector load fixed time_machine_list for current section record
+			# Load button to open dialog tool window and list of records of time_machine to current section
+			$time_machine_button_html = '';
+			$model_required_tm = array('time_machine_list');
+			$time_machine_tipo = section::get_ar_childrens_by_model($section_tipo, $model_required_tm);
+			$time_machine_name = RecordObj_dd::get_termino_by_tipo($time_machine_tipo);
+			if($time_machine_tipo){
+				$time_machine_list 		= new time_machine_list($time_machine_tipo, $section_id, $section_tipo, $modo='button');
+				$time_machine_button_html = $time_machine_list->get_html();
+			}
 			
 
-			
-			
-
-			//dump($relation_list,'$relation_list_button_html');
+			//dump($time_machine_list,'$relation_list_button_html');
 
 			//$relation_list_name = RecordObj_dd::get_termino_by_tipo($relation_list,DEDALO_APPLICATION_LANG, true);
 

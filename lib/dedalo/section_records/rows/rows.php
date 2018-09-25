@@ -31,7 +31,8 @@
 		$button_delete_actions_json = json_encode($button_delete_actions);
 
 		#relation_list
-		$relation_list_tipo = section::get_relation_list($this->section_records_obj->tipo);
+		$model_required_rl = array('relation_list');
+		$relation_list_tipo = section::get_ar_childrens_by_model($this->section_records_obj->tipo, $model_required_rl);
 
 
 

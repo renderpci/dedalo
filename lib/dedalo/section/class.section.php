@@ -2107,33 +2107,34 @@ class section extends common {
 
 
 	/**
-	* GET_RELATION_LIST
+	* GET_AR_CHILDRENS_BY_MODEL
+	* get the childrens of the section by modelo_name required
+	* childrens like relation_list or time machine_list
 	*/
-	public static function get_relation_list($section_tipo) {
+	public static function get_ar_childrens_by_model($section_tipo, $modelo_name) {
 
 		if(SHOW_DEBUG) $start_time = start_time();
 
 		$current_section_tipo = $section_tipo;
 
-		//get the relation_list
-		$ar_modelo_name_required = array('relation_list');
+		$ar_modelo_name_required = $modelo_name;
 		$resolve_virtual 		 = false;
 
-		// Locate relation_list element in current section (virtual ot not)
-		$ar_relation_list = section::get_ar_children_tipo_by_modelo_name_in_section($current_section_tipo, $ar_modelo_name_required, $from_cache=true, $resolve_virtual, $recursive=false, $search_exact=true);
+		// Locate childrens element in current section (virtual ot not)
+		$ar_childrens = section::get_ar_children_tipo_by_modelo_name_in_section($current_section_tipo, $ar_modelo_name_required, $from_cache=true, $resolve_virtual, $recursive=false, $search_exact=true);
 
 		// If not found children, try resolving real section
-		if (empty($ar_relation_list)) {
+		if (empty($ar_childrens)) {
 			$resolve_virtual = true;
-			$ar_relation_list = section::get_ar_children_tipo_by_modelo_name_in_section($current_section_tipo, $ar_modelo_name_required, $from_cache=true, $resolve_virtual, $recursive=false, $search_exact=true);
-		}// end if (empty($ar_relation_list))
+			$ar_childrens = section::get_ar_children_tipo_by_modelo_name_in_section($current_section_tipo, $ar_modelo_name_required, $from_cache=true, $resolve_virtual, $recursive=false, $search_exact=true);
+		}// end if (empty($ar_childrens))
 
-		if(isset($ar_relation_list[0])){
-			$relation_list = $ar_relation_list[0];
-			return $relation_list;
+		if(isset($ar_childrens[0])){
+			$childrens = $ar_childrens[0];
+			return $childrens;
 		}
 		
-	}//end get_relation_list
+	}//end get_ar_childrens_by_model
 
 
 

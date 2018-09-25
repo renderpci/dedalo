@@ -599,33 +599,6 @@ abstract class RecordDataBoundObject {
 
 		# DATA IS NOT IN CACHE . Searching real data in DB
 		}else{
-
-			# WITHOUT STATEMENT : Direct call
-			/*
-			$result = DBi::_getConnection()->query($strQuery);
-			if(!$result) {
-				if(SHOW_DEBUG===true) {
-					$msg = __METHOD__ . " Failed Search: $strQuery,'strQuery' Error (table '$this->strTableName' exists?) " . DBi::_getConnection()->error ;
-				}else{
-					$msg = "Failed Search (RDBO). Data is not found. Please contact with your admin (2) " ;
-				}
-				throw new Exception($msg, 1);
-			}
-			*/
-			/*
-			# Sin buffer . Create array with all records founded
-			if(($result->num_rows)>0) while ($rows = $result->fetch_array(MYSQLI_ASSOC) ) {
-				#$id			 = $rows[$strPrimaryKeyName];
-				$ar_records[]= $rows[$strPrimaryKeyName];
-			}
-			*/
-			/*
-			# Con buffer . Create array with all records founded
-			#$result->data_seek(0);
-			while ($rows = $result->fetch_assoc()) {
-					$ar_records[]=$rows[$strPrimaryKeyName];
-			}
-			*/
 		
 			$result = pg_query(DBi::_getConnection(), $strQuery);
 			

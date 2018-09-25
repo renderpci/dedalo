@@ -83,6 +83,8 @@ class js {
 				case 'edit':
 					js::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/tools/tool_indexation/js/tool_indexation.js';
 					#js::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/tools/tool_lang_multi/js/tool_lang_multi.js'; // Not used for now
+					js::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/time_machine_list/js/time_machine_list.js';
+
 				case 'list':
 					js::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/tools/tool_time_machine/js/tool_time_machine.js';
 					js::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/tools/tool_update_cache/js/tool_update_cache.js';

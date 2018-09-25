@@ -115,6 +115,7 @@
 				$html .= "<div id=\"inspector_relation_list\" class=\"css_section_group_titulo tab_title title_down_box text_unselectable border_radius_0\" data-tab_id=\"Inspector_relations_list_tap\"";
 				$html .= " >";
 				
+				//$html .= "<label class=\"css_label\">".$relation_list_name."</label>";
 				$html .= "<label class=\"css_label\">".label::get_label('relaciones')."</label>";
 				$html .= $relation_list_button_html;
 				$html .= "</div>";
@@ -124,6 +125,30 @@
 					
 					# Relations section (fixed)/*
 					$html .= " <div id=\"wrap_relation_list_sections\" class=\"inspector_info_body\">";
+					#$html .= "<div class=\"relaciones_list_title\">".label::get_label('ficha')."</div>";
+					$html .= "</div>";
+				$html .= "</div>";
+			$html .= "</div>";
+			//$html .= $relation_list_html;
+			
+
+			#
+		# RELATIONS
+		#
+			$html .= "<div id=\"time_machine_info_wrapper\">";
+				$html .= "<div id=\"inspector_time_machine_list\" class=\"css_section_group_titulo tab_title title_down_box text_unselectable border_radius_0\" data-tab_id=\"Inspector_time_machine_tap\"";
+				$html .= " >";
+				
+				$html .= "<label class=\"css_label\">".$time_machine_name."</label>";
+				//label::get_label('last_changes')
+				$html .= $time_machine_button_html;
+				$html .= "</div>";
+				$html .= "<div class=\"css_section_group_content tab_content inspector_div_content\" >";
+				
+				
+					
+					# Relations section (fixed)/*
+					$html .= " <div id=\"wrap_time_machine_list_sections\" class=\"inspector_info_body\">";
 					#$html .= "<div class=\"relaciones_list_title\">".label::get_label('ficha')."</div>";
 					$html .= "</div>";
 				$html .= "</div>";

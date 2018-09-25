@@ -73,6 +73,8 @@ class css {
 			switch ($modo) {
 				case 'edit':
 					css::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/tools/tool_lang_multi/css/tool_lang_multi.css';
+					css::$ar_url_basic[] = DEDALO_LIB_BASE_URL . '/time_machine_list/css/time_machine_list.css';
+
 				case 'list':
 					break;
 			}		

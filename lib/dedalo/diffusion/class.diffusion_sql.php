@@ -2794,7 +2794,7 @@ class diffusion_sql extends diffusion  {
 	* RESOLVE_VALUE
 	* @return 
 	*/
-	public static function resolve_value( $options, $dato, $separator = " | " ) {
+	public static function resolve_value( $options, $dato, $default_separator = " | " ) {
 		#dump($options, ' options ++ '.to_string());
 		#dump($dato, ' dato ++ '.to_string());
 
@@ -2865,6 +2865,8 @@ class diffusion_sql extends diffusion  {
 
 		# Remove duplicates (experimental for numisdata fichero : material 18-04-2018)
 		#$ar_value = array_unique($ar_value);
+
+		$separator 	= isset($process_dato_arguments->separator) ? $process_dato_arguments->separator : $default_separator;
 		
 		$value = implode($separator,$ar_value);
 

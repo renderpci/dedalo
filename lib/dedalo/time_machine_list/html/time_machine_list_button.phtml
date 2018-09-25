@@ -1,0 +1,31 @@
+<?php
+
+	$html_content = '';
+	switch($permissions) {
+
+		case 0 :
+				$html_content .= "";
+				break;
+
+		case 1 :
+		case 2 :
+		case 3 :
+
+			$html_content .= "<span id=\"time_machine_list_button\" class=\"icon_bs text_unselectable time_machine_list_button\" ";
+					$html_content .= 'data-modo="'.$modo .'" ';
+					$html_content .= 'data-tipo="'.$tipo .'" ';
+					$html_content .= 'data-section_tipo="'.$section_tipo .'" ';
+					$html_content .= 'data-section_id="'.$section_id .'" ';
+					$html_content .= 'data-limit="10" ';
+					$html_content .= 'data-offset="0" ';
+					$html_content .= 'onclick=\'time_machine_list.init(this)\' ';
+					$html_content .= " >";
+			$html_content .= "</span>";
+			break;
+
+	}
+
+	print $html_content;	
+
+	
+?>
