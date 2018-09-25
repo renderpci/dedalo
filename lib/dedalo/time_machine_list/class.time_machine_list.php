@@ -48,6 +48,7 @@ class time_machine_list extends common {
 
 		if($count === true){
 			$limit = null;
+			$offset=0;
 		}
 
 		$ar_time_machine_records = RecordObj_time_machine::get_ar_time_machine_of_this('', $this->section_id, null, $this->section_tipo, $limit, $offset);
@@ -97,6 +98,9 @@ class time_machine_list extends common {
 				case 'component_state':
 					$value ='';
 					break;
+				case 'section':
+					continue;
+					break;
 				default:
 					if (!is_string($dato)) {
 						$current_component = component_common::get_instance(
@@ -107,6 +111,7 @@ class time_machine_list extends common {
 																	$lang,
 																	$this->section_tipo
 						);
+						$current_component->set_dato($dato);
 						$value = $current_component->get_valor();
 						#$value = json_encode($dato, JSON_UNESCAPED_UNICODE);
 						
@@ -122,7 +127,7 @@ class time_machine_list extends common {
 			if (strlen($value)>$max_long) {
 				$value = mb_substr($value, 0, $max_long) . '..';	
 			}
-			
+
 			$lang_label = null;
 			if($lang !== 'lg-nolan'){
 				$lang_label = lang::get_name_from_code($lang);
