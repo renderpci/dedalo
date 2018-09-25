@@ -42,19 +42,22 @@ class time_machine_list extends common {
 			return array();
 		}
 
+		$json 			= new stdClass;
+		$ar_context 	= [];
+		$ar_data		= [];
+
 		if($count === true){
 			$limit = null;
 		}
 
 		$ar_time_machine_records = RecordObj_time_machine::get_ar_time_machine_of_this('', $this->section_id, null, $this->section_tipo, $limit, $offset);
 		# Get calculated inverse locators for all matrix tables
-		
+		#dump($ar_time_machine_records, '$ar_time_machine_records**************');
 
 		if($count === true){
 			$json->data 	= $ar_time_machine_records;
 			return (array)$json;
 		}
-
 
 		$ar_time_machine_obj = array();
 
@@ -70,91 +73,99 @@ class time_machine_list extends common {
 			$ar_component_time_machine[]	= $RecordObj_time_machine;
 		}
 
-			$ar_data = [];
-			foreach((array)$ar_component_time_machine as $tm_obj) {
-				
-				$date					= component_date::timestamp_to_date($tm_obj->get_timestamp(), $seconds=true);
-				$userID					= $tm_obj->get_userID();
-				$mod_user_name			= section::get_user_name_by_userID($userID);
-				$id_time_machine		= $tm_obj->get_ID();
-				$component_tipo 		= $tm_obj->get_tipo();
-				$lang					= $tm_obj->get_lang();
-				$dato					= $tm_obj->get_dato();
-				$uid 					= $tm_obj->get_identificador_unico();
-				$show_row 		 		= false;
+		foreach((array)$ar_component_time_machine as $tm_obj) {
+			
+			$date					= component_date::timestamp_to_date($tm_obj->get_timestamp(), $seconds=true);
+			$userID					= $tm_obj->get_userID();
+			$mod_user_name			= section::get_user_name_by_userID($userID);
+			$id_time_machine		= $tm_obj->get_ID();
+			$component_tipo 		= $tm_obj->get_tipo();
+			$lang					= $tm_obj->get_lang();
+			$dato					= $tm_obj->get_dato();
+			$uid 					= $tm_obj->get_identificador_unico();
+			$show_row 		 		= false;
 
-				$component_label = RecordObj_dd::get_termino_by_tipo($component_tipo);
+			$component_label = RecordObj_dd::get_termino_by_tipo($component_tipo, DEDALO_DATA_LANG);
 
-				$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+			$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
 
-				switch ($modelo_name) {
-					case 'component_text_area':
-						$value	= component_text_area::clean_raw_text_for_preview($dato);
-						$value 	= strip_tags($value);						
-						break;		
-					default:
-						if (!is_string($dato)) {
-							$current_component = component_common::get_instance(
-																		$modelo_name, 
-																		$component_tipo, 
-																		$this->section_id,
-																		'list', 
-																		$lang, 
-																		$this->section_tipo
-							);
-							$value = $current_component->get_valor();
-							#$value = json_encode($dato, JSON_UNESCAPED_UNICODE);
-							
-						}else{
-							$value = $dato;
-							$value = strip_tags($value);
-						}
-						#$value	= to_string($dato);
-						break;
-				}				
-				
-				$max_long = 50;
-				if (strlen($value)>$max_long) {
-					$value = mb_substr($value, 0, $max_long) . '..';	
-				}
-
-				$value = json_encode($value, JSON_UNESCAPED_UNICODE);
-
-				$lang_label = null;
-				if($lang !== 'lg-nolan'){
-					$lang_label = lang::get_name_from_code($lang);
-				}
+			switch ($modelo_name) {
+				case 'component_text_area':
+					$value	= component_text_area::clean_raw_text_for_preview($dato);
+					$value 	= strip_tags($value);					
+					break;
+				case 'component_state':
+					$value ='';
+					break;
+				default:
+					if (!is_string($dato)) {
+						$current_component = component_common::get_instance(
+																	$modelo_name, 
+																	$component_tipo, 
+																	$this->section_id,
+																	'list', 
+																	$lang, 
+																	$this->section_tipo
+						);
+						$value = $current_component->get_valor();
+						#$value = json_encode($dato, JSON_UNESCAPED_UNICODE);
 						
+					}else{
+						$value = $dato;
+						$value = strip_tags($value);
+					}
+					#$value	= to_string($dato);
+					break;
+			}
 
-				// Row object
-				$row_obj = new stdClass();
-					$row_obj->date 					= $date;
-					$row_obj->userID 				= $userID;
-					$row_obj->mod_user_name 		= $mod_user_name;
-					$row_obj->id_time_machine 		= $id_time_machine;
-					$row_obj->component_tipo 		= $component_tipo;
-					$row_obj->component_label 		= $component_label;
-					$row_obj->section_id 			= $this->section_id;
-					$row_obj->section_tipo  		= $this->section_tipo;
-					$row_obj->lang 					= $lang;
-					$row_obj->lang_label			= $lang_label;
-					$row_obj->value 				= $value;
-					$row_obj->uid 					= $uid;
+			$max_long = 50;
+			if (strlen($value)>$max_long) {
+				$value = mb_substr($value, 0, $max_long) . '..';	
+			}
 
-				$ar_data[] = $row_obj;
-				
-			}//end foreach((array)$ar_component_time_machine as $tm_obj)
+			$value = json_encode($value, JSON_UNESCAPED_UNICODE);
+
+			$lang_label = null;
+			if($lang !== 'lg-nolan'){
+				$lang_label = lang::get_name_from_code($lang);
+			}
+					
+
+			// Row object
+			$row_obj = new stdClass();
+				$row_obj->date 					= $date;
+				$row_obj->userID 				= $userID;
+				$row_obj->mod_user_name 		= $mod_user_name;
+				$row_obj->id_time_machine 		= $id_time_machine;
+				$row_obj->component_tipo 		= $component_tipo;
+				$row_obj->component_label 		= $component_label;
+				$row_obj->section_id 			= $this->section_id;
+				$row_obj->section_tipo  		= $this->section_tipo;
+				$row_obj->lang 					= $lang;
+				$row_obj->lang_label			= $lang_label;
+				$row_obj->value 				= $value;
+
+			$ar_data[] = $row_obj;
+			
+		}//end foreach((array)$ar_component_time_machine as $tm_obj)
 
 
 			// JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE
 			#$json = json_encode($ar_data, JSON_HEX_QUOT);
 
 		#dump($ar_data,'$ar_data');
-		#$context = 'context';
-		#$json->$context = $ar_context;
-		$json->data 	= $ar_data;
+		$row_header = new stdClass();
+			$row_header->date =	label::get_label('tiempo');
+			$row_header->mod_user_name = label::get_label('modificado');
+			$row_header->component_label = label::get_label('donde');
+			$row_header->lang_label = label::get_label('idioma');
+			$row_header->value = label::get_label('que');
 
-		#return $json;
+		$ar_context[] = $row_header;
+
+		$context = 'context';
+		$json->$context = $ar_context;
+		$json->data 	= $ar_data;
 
 		return (array)$json;	
 	}//end get_inverse_references

@@ -93,6 +93,7 @@ class RecordObj_time_machine extends RecordDataBoundObject {
 		$arguments['section_tipo']	= $section_tipo;
 		if(!empty($lang))
 		$arguments['lang']			= $lang;
+		if(!empty($limit))
 		$arguments['sql_limit']		= $limit;
 		$arguments['offset']		= $offset;
 		$arguments['order_by_desc']	= 'timestamp';
