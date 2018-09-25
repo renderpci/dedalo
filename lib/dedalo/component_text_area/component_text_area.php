@@ -19,8 +19,7 @@
 	#$lang_name				= $this->get_lang_name();
 	$identificador_unico	= $this->get_identificador_unico();
 	$component_name			= get_class($this);
-	$valor					= $this->get_valor();
-	$dato_raw 				= tools::truncate_text(htmlspecialchars($valor),300);
+	
 
 	if($permissions===0) return null;
 
@@ -248,7 +247,7 @@
 				if ($tipo===DEDALO_COMPONENT_RESOURCES_TR_TIPO) {
 					# Resolve chapters for current text
 					$dato = component_text_area::resolve_titles($dato, $tipo, $section_tipo, $parent, null, $lang, true);
-				}
+				}				
 
 				$component_info = $this->get_component_info('json');
 
@@ -411,8 +410,7 @@
 
 				#if(empty($dato)) return null;
 				$file_name 	= 'list';
-				$value 		= $this->get_valor_list_html_to_save();
-					#dump($value, ' value ++ '.to_string());
+				$value 		= $this->get_valor_list_html_to_save();			
 
 				#$obj_value = json_decode($value); # Evitamos los errores del handler accediendo directamente al json_decode de php
 				$obj_value = $value;
@@ -457,68 +455,14 @@
 		case 'list_tm':
 				$file_name = 'list';
 						
-		case 'list':
-				/*
-					//if(strlen($valor)>$max_char) $valor = substr($valor,0,$max_char).'..';
-					$max_char 		 = 256;
-					$obj_fragmentos	 = new stdClass();
-
-					# 
-					# First fragment (key 'full') always is a substring of whole text
-					$fragmento_text = substr($valor,0,$max_char);
-					if (strlen($valor)>$max_char) {
-						$fragmento_text .= '..';
-					}
-					$page_html	= DEDALO_LIB_BASE_PATH .'/'. get_class($this) . '/html/' . get_class($this) . '_' . $file_name . '.phtml';
-					ob_start();
-					include ( $page_html);
-					$html =  ob_get_clean();
-					$key=0;
-					$obj_fragmentos->full = trim($html);
-					
-					#
-					# Next fragments keys(1,2,..) (if tags exists)
-					$tags_en_texto	= (array)$this->get_ar_relation_tags();
-						#dump($tags_en_texto,"tags_en_texto");
-					if (count($tags_en_texto[0])>0) {
-
-						foreach ($tags_en_texto[0] as $key => $tag) {
-
-							$ar_fragmento = (array)$this->get_fragment_text_from_tag($tag_id, $tag_type, $this->dato);
-									#dump($ar_fragmento,"ar_fragmento");
-							
-							if(strlen($ar_fragmento[0])>$max_char) {
-								$fragmento_text = substr($ar_fragmento[0],0,$max_char);
-								if (strlen($ar_fragmento[0])>$max_char) {
-									$fragmento_text .= '..';
-								}
-							} else{
-								$fragmento_text = $ar_fragmento[0];
-							}
-							#dump ($fragmento_text); die();
-							$tag_id = $tags_en_texto[3][$key];
-								#dump ($tag_id); #die();
-							
-							$page_html	= DEDALO_LIB_BASE_PATH .'/'. get_class($this) . '/html/' . get_class($this) . '_' . $file_name . '.phtml';
-							ob_start();
-							include ( $page_html);
-							$html =  ob_get_clean();
-							#$html = trim($html);
-
-							$obj_fragmentos->$tag_id = trim($html);
-						}
-						#dump ($obj_fragmentos);
-					}
-					#dump(json_handler::encode($obj_fragmentos),"obj_fragmentos");
-					$html_final = json_handler::encode($obj_fragmentos);		#dump(json_decode($html_final),"deciode");
-					print $html_final; #error_log($html_final);
-					return;
-				*/
+		case 'list':				
 				break;
 
 		case 'relation':# Force modo list
 				$file_name 	= 'list';
 				$max_char 	= 256;
+				$valor 		= $this->get_valor();
+				$dato_raw 	= tools::truncate_text(htmlspecialchars($valor),300);
 				if(strlen($valor)>$max_char) $valor = mb_substr($valor,0,$max_char).'..';
 				break;						
 		
@@ -539,8 +483,7 @@
 				$render_vars = $this->get_render_vars();
 					#dump($render_vars, ' render_vars ++ '.to_string());
 				$icon_label = isset($render_vars->icon) ? $render_vars->icon : '';
-				break;
-		
+				break;		
 
 		default:
 	}

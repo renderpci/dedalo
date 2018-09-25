@@ -1677,6 +1677,7 @@ class component_text_area extends component_common {
 			# OBJECT WITH THE FRAGMENT OF THE TEXT
 			$Object_fragment	= new stdClass();
 			$valor 				= (string)$this->get_dato(); // Full text source
+				#dump($valor, ' valor ++ '.to_string());
 			
 			// remove all dedalo marks except the svg;
 			$options 		= new stdClass();
