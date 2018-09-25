@@ -104,7 +104,7 @@ class time_machine_list extends common {
 																	$component_tipo, 
 																	$this->section_id,
 																	'list', 
-																	$lang, 
+																	$lang,
 																	$this->section_tipo
 						);
 						$value = $current_component->get_valor();
@@ -122,9 +122,7 @@ class time_machine_list extends common {
 			if (strlen($value)>$max_long) {
 				$value = mb_substr($value, 0, $max_long) . '..';	
 			}
-
-			$value = json_encode($value, JSON_UNESCAPED_UNICODE);
-
+			
 			$lang_label = null;
 			if($lang !== 'lg-nolan'){
 				$lang_label = lang::get_name_from_code($lang);

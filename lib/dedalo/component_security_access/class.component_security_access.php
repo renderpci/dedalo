@@ -223,7 +223,7 @@ class component_security_access extends component_common {
 			case 'section':
 
 				$section_tipo 			 = $terminoID;
-				$ar_modelo_name_required = array('section_group','section_tab','button_','relation_list');
+				$ar_modelo_name_required = array('section_group','section_tab','button_','relation_list','time_machine_list');
 
 				# Real section
 				//($section_tipo, $ar_modelo_name_required, $from_cache=true, $resolve_virtual=false, $recursive=true, $search_exact=false)
