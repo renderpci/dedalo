@@ -130,20 +130,20 @@ class time_machine_list extends common {
 				$lang_label = lang::get_name_from_code($lang);
 			}
 					
-
 			// Row object
 			$row_obj = new stdClass();
 				$row_obj->date 					= $date;
 				$row_obj->userID 				= $userID;
 				$row_obj->mod_user_name 		= $mod_user_name;
 				$row_obj->id_time_machine 		= $id_time_machine;
-				$row_obj->component_tipo 		= $component_tipo;
+				$row_obj->tipo 					= $component_tipo; //change to component_tipo when the tipo go out
 				$row_obj->component_label 		= $component_label;
-				$row_obj->section_id 			= $this->section_id;
+				$row_obj->parent 				= $this->section_id; //change to section_id when the parent go out
 				$row_obj->section_tipo  		= $this->section_tipo;
 				$row_obj->lang 					= $lang;
 				$row_obj->lang_label			= $lang_label;
 				$row_obj->value 				= $value;
+				$row_obj->tool_name 			= 'tool_time_machine';
 
 			$ar_data[] = $row_obj;
 			
