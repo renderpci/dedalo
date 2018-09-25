@@ -1323,4 +1323,26 @@ function encodeURIComponent($str) {
 
 
 
+/**
+* SHOW_MSG
+* Decore msg with error, warning, etc. css
+*/
+function show_msg($msg, $type='ERROR') {
+
+	switch ($type) {
+		case 'WARNING':
+			$msg = '<div style="background-color:orange; color:white; padding:5px">'.$msg.'</div>';
+			break;
+		
+		case 'ERROR':
+		default:
+			$msg = '<div style="background-color:red; color:white; padding:5px">'.$msg.'</div>';
+			break;
+	}
+
+	return $msg;
+}//end show_msg
+
+
+
 ?>
