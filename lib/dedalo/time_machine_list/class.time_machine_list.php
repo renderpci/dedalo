@@ -85,9 +85,10 @@ class time_machine_list extends common {
 			$dato					= $tm_obj->get_dato();
 			$uid 					= $tm_obj->get_identificador_unico();
 			$show_row 		 		= false;
+			
+			if(empty($component_tipo)) continue;
 
 			$component_label = RecordObj_dd::get_termino_by_tipo($component_tipo, DEDALO_DATA_LANG);
-
 			$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
 
 			switch ($modelo_name) {
