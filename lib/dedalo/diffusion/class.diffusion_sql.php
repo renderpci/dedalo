@@ -1673,8 +1673,9 @@ class diffusion_sql extends diffusion  {
 											case 'pub_year':
 												$ar_current_field_value = (array)explode(',', $current_field_value);
 												$current_field_value 	= reset($ar_current_field_value);
-												#dump($current_field_value, ' current_field_value ++ '.to_string());
-												$current_field_value 	= date("Y", strtotime($current_field_value));
+												$ar_part = explode('-', $current_field_value);
+												$year 	 = isset($ar_part[0]) ? $ar_part[0] : null;
+												$current_field_value 	= $year;
 												break;
 											default:
 												break;
