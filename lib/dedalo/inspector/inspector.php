@@ -47,7 +47,7 @@
 			$time_machine_button_html = '';
 			$model_required_tm = array('time_machine_list');
 			$time_machine_tipo = section::get_ar_childrens_by_model($section_tipo, $model_required_tm);
-			$time_machine_name = RecordObj_dd::get_termino_by_tipo($time_machine_tipo);
+			$time_machine_name = RecordObj_dd::get_termino_by_tipo($time_machine_tipo, DEDALO_APPLICATION_LANG);
 			if($time_machine_tipo){
 				$time_machine_list 		= new time_machine_list($time_machine_tipo, $section_id, $section_tipo, $modo='button');
 				$time_machine_button_html = $time_machine_list->get_html();
