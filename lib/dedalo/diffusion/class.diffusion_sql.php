@@ -2431,6 +2431,9 @@ class diffusion_sql extends diffusion  {
 		}
 		#debug_log(__METHOD__." ar_filter ".to_string($ar_filter), logger::DEBUG);
 
+		if (isset($options->propiedades->process_dato_arguments->use_parent)) {
+			$use_parent = $options->propiedades->process_dato_arguments->use_parent;
+		}
 
 		$terminoID = null;
 
@@ -2444,6 +2447,10 @@ class diffusion_sql extends diffusion  {
 							continue 3; // Ignore
 						}
 					}
+				}
+				if($use_parent === true){
+					$ar_parents = component_relation_parent::get_parents($current_locator->section_id, $current_locator->section_tipo);
+					$current_locator = $ar_parents[0];
 				}
 
 				$section_tipo 	= $current_locator->section_tipo;
