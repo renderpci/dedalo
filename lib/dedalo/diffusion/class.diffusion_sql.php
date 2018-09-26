@@ -2434,6 +2434,8 @@ class diffusion_sql extends diffusion  {
 
 		if (isset($options->propiedades->process_dato_arguments->use_parent)) {
 			$use_parent = $options->propiedades->process_dato_arguments->use_parent;
+		}else{
+			$use_parent = false;
 		}
 
 		$terminoID = null;
@@ -2449,7 +2451,7 @@ class diffusion_sql extends diffusion  {
 						}
 					}
 				}
-				if($use_parent === true){
+				if($use_parent===true){
 					$ar_parents = component_relation_parent::get_parents($current_locator->section_id, $current_locator->section_tipo);
 					$current_locator = $ar_parents[0];
 				}
