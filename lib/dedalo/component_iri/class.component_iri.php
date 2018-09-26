@@ -91,7 +91,7 @@ class component_iri extends component_common {
 			$valor='';
 			$last_value = end($dato);
 			foreach ($dato as $key => $value) {
-				$valor .= $value->title;
+				$valor .= isset($value->title) ? $value->title : '';
 				$valor .= ' | ';
 				$valor .= $value->iri;
 				if ($value !== $last_value) {
