@@ -535,19 +535,26 @@ abstract class common {
 	*/
 	public function get_identificador_unico() {
 
-		# Nota: estaba desactivo ¿? en 25-11-2015. Cambiado portque tool_time_machine lo necesita activo (ver trigger.tool_time_machine )
+		# Nota: estaba desactivo ¿? en 25-11-2015. Cambiado porque tool_time_machine lo necesita activo (ver trigger.tool_time_machine )
 		if (isset($this->identificador_unico) && $this->get_modo()==='tool_time_machine') {
-		#if (isset($this->identificador_unico)) {
 			return $this->identificador_unico;
 		}
+		
+		$id 			= $this->get_id();
+		$tipo 			= $this->get_tipo();
+		$parent 		= $this->get_parent();
+		$lang 			= $this->get_lang();
+		$modo 			= $this->get_modo();
+		$variant 		= $this->get_variant();
+		$section_tipo 	= $this->get_section_tipo();
 
-		#if(!empty($this->tipo)) {
-		#	$permissions = common::get_permissions($this->tipo);
-		#}
-
-		$this->identificador_unico = $this->get_id().'_'.$this->get_tipo().'_'.$this->get_parent().'_'.$this->get_lang().'_'.$this->get_modo().'_'.$this->get_variant().'_'.$this->get_section_tipo();	# .'_'.mt_rand(1,999); #dump($identificador_unico);
-			#$identificador_unico = $this->get_tipo() . '_' . $this->get_id() . '_' . $this->get_lang() . '_' . $this->get_modo();	#dump($identificador_unico);		
-			#dump($this->identificador_unico,'$this->identificador_unico');	
+		$this->identificador_unico = $id.'_'.$tipo.'_'.$parent.'_'.$lang.'_'.$modo.'_'.$variant.'_'.$section_tipo;
+				
+		// Allow show more than one component with same tipo in search mode creating unique uid for each one
+		if ($modo==='search') {
+			$time_suffix = microtime(false);
+			$this->identificador_unico = $this->identificador_unico .'_'. str_replace(['.',' '], '', $time_suffix);
+		}
 
 		return (string)$this->identificador_unico;
 	}//end get_identificador_unico
