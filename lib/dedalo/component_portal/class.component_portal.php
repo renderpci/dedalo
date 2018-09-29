@@ -55,7 +55,6 @@ class component_portal extends component_relation_common {
 		if(SHOW_DEBUG===true) {
 			$traducible = $this->RecordObj_dd->get_traducible();
 			if ($traducible==='si') {
-				#throw new Exception("Error Processing Request. Wrong component lang definition. This component $tipo (".get_class().") is not 'traducible'. Please fix this ASAP", 1);
 				trigger_error("Error Processing Request. Wrong component lang definition. This component $tipo (".get_class().") is not 'traducible'. Please fix this ASAP");			
 			}
 		}
@@ -145,7 +144,7 @@ class component_portal extends component_relation_common {
 				#dump($valor_from_ar_locators, ' valor_from_ar_locators');
 		
 		if(SHOW_DEBUG===true) {
-			$total_list_time = round(microtime(1)-$start_time,3);
+			#$total_list_time = round(microtime(1)-$start_time,3);
 			#$bt = debug_backtrace();
 			#dump($bt, ' bt');
 			#debug_log(__METHOD__." WARNING CALLED GET VALOR IN COMPONENT PORTAL !! ({$total_list_time}ms) ".$this->tipo, logger::WARNING);
@@ -1301,22 +1300,22 @@ class component_portal extends component_relation_common {
 	* @return bool
 	*/
 	public function regenerate_component() {
-		
 
 		# Custom propiedades external dato 
 		$propiedades = $this->get_propiedades();
 
-
 		if(isset($propiedades->source->mode) && $propiedades->source->mode === 'external'){
-			$this->set_dato_external(true, true);	// Forces update dato with calculated external dato	
+			
+			// Forces update dato with calculated external dato	
+			$this->set_dato_external(true, true);
+		
 		}else{
 
-		# Force loads dato always !IMPORTANT
-		$this->get_dato();
+			# Force loads dato always !IMPORTANT
+			$this->get_dato();
 
-		# Save component data
-		$this->Save();
-
+			# Save component data
+			$this->Save();
 		}
 		
 		return true;
@@ -1331,7 +1330,6 @@ class component_portal extends component_relation_common {
 	public function set_locator_order($locator, $norder) {
 		
 		$dato = $this->get_dato();
-			#dump($dato, ' dato ++ '.to_string());
 
 		# Remove requested locator from dato
 		$ar_values 		= array();
@@ -1402,12 +1400,10 @@ class component_portal extends component_relation_common {
 					$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
 					if (strpos($modelo_name,'component')!==0) continue;
 
-					#$path_base  = search_development2::get_query_path($tipo, $this->section_tipo, false);
 					$path = search_development2::get_query_path($current_tipo, $section_tipo, false);
 										
 					# SELECT . Select_element (select_group)
-						$select_element = new stdClass();
-							#$select_element->path = array_merge($path_base, $path);
+						$select_element = new stdClass();							
 							$select_element->path = $path;
 
 						$select_group[] = $select_element;
@@ -1460,12 +1456,6 @@ class component_portal extends component_relation_common {
 			#}
 			$query_object->filter  		= $filter_group;
 			$query_object->select  		= $select_group;
-			
-			
-		#dump( json_encode($query_object, JSON_PRETTY_PRINT), ' query_object ++ '.to_string());
-		#debug_log(__METHOD__." query_object ".json_encode($query_object, JSON_PRETTY_PRINT), logger::DEBUG);
-		#debug_log(__METHOD__." total time ".exec_time_unit($start_time,'ms').' ms', logger::DEBUG);
-		
 
 		return (object)$query_object;
 	}//end build_search_query_object
@@ -1589,7 +1579,6 @@ class component_portal extends component_relation_common {
 			}
 			*/
 		}
-		#dump($rows_data," rows_data");
 
 
 		#
