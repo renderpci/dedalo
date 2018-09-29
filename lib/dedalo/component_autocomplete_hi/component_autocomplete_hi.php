@@ -34,7 +34,7 @@
 		case 'tool_transcription' :
 				$file_name = 'edit';
 
-		case 'edit'	:		
+		case 'edit'	:
 
 				$dato 			= $this->get_dato();
 				$id_wrapper 	= 'wrapper_'.$identificador_unico;

@@ -1368,9 +1368,6 @@ class component_date extends component_common {
 							$response->result = 1;
 							$response->new_dato = $new_dato;
 							$response->msg = "[$reference_id] Dato is changed from ".to_string($dato_unchanged)." to ".to_string($new_dato).".<br />";
-
-							//dump($new_dato, ' new_dato '.json_decode($new_dato));die();
-
 							break;
 					}
 

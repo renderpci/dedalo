@@ -914,7 +914,6 @@ class component_autocomplete extends component_relation_common {
 		if (!empty($propiedades)) {
 			
 			if (isset($propiedades->filtered_by)) foreach($propiedades->filtered_by as $current_tipo => $current_value) {
-				#dump($current_value, ' current_tipo - '.$current_tipo);
 
 				$current_lang = DEDALO_DATA_LANG;
 				$RecordObj_dd = new RecordObj_dd($current_tipo);

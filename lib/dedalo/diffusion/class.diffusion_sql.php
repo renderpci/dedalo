@@ -820,8 +820,7 @@ class diffusion_sql extends diffusion  {
 		#
 		# COMPONENT PUBLICATION - CHECK (once)
 		$component_publication_bool_value = (bool)self::get_component_publication_bool_value($options->component_publication_tipo, $options->section_id, $options->section_tipo);
-			#dump($component_publication_bool_value, ' component_publication_bool_value ++ '.to_string());			
-			
+
 		if ($component_publication_bool_value===false) {
 			# Delete this record
 			if ($options->delete_previous===true) {
@@ -1199,7 +1198,7 @@ class diffusion_sql extends diffusion  {
 
 		#
 		# DIFFUSION_ELEMENT_TIPO (structre diffusion_element like oh63 for 'Historia oral web')
-			$diffusion_element_tipo = $options->diffusion_element_tipo;			
+			$diffusion_element_tipo = $options->diffusion_element_tipo;
 
 		#
 		# TABLE INFO
@@ -1354,7 +1353,7 @@ class diffusion_sql extends diffusion  {
 				if (isset($database_propiedades->engine)) {
 					$save_options->record_data['engine'] = $database_propiedades->engine; // If defined in database propiedades
 				}
-				#dump($save_options, ' save_options ++ '.to_string($diffusion_section)); die();
+				#dump($save_options, ' save_options ++ '.to_string($diffusion_section)); #die();
 
 				$save = diffusion_mysql::save_record($save_options);
 					$ar_record_updated[] = $options;

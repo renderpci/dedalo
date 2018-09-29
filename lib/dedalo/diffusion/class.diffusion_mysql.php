@@ -513,7 +513,7 @@ class diffusion_mysql extends diffusion_sql  {
 				if ($options->delete_previous===true) {
 					$delete_result = self::delete_sql_record($section_id, $database_name, $table_name, $options->section_tipo, false);
 					$response->msg[] = $delete_result->msg;
-				}				
+				}			
 			
 			#
 			# IS_PUBLICABLE : Skip non publicable records
