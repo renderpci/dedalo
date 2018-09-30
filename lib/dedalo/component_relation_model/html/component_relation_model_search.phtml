@@ -37,10 +37,10 @@
 
 					# Empty option
 					$html_content .= "<option value=\"\"> </option>";					
-					foreach ($ar_list_of_values->result as $value => $label) {
+					foreach ($ar_list_of_values->result as $key => $item) {
 
-						$value   = (string)$value;
-						$locator = (object)json_handler::decode($value);	# Locator is json encoded object
+						$label   = (string)$item->label;
+						$locator = (object)$item->value;
 
 						# Add fixed type
 						$locator->type = DEDALO_RELATION_TYPE_MODEL_TIPO;

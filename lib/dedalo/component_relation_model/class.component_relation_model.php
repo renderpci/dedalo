@@ -45,22 +45,21 @@ class component_relation_model extends component_relation_common {
 				}
 			}
 
-			# Always run list of values
-			$referenced_tipo 	= $this->get_referenced_tipo();
-			$ar_list_of_values	= $this->get_ar_list_of_values( $lang, null, $referenced_tipo ); # Importante: Buscamos el valor en el idioma actual
+			# Always run list of values			
+			$ar_list_of_values	= $this->get_ar_list_of_values2($lang);
+			foreach ($ar_list_of_values->result as $key => $item) {
+				
+				$locator = $item->value;
+				$label 	 = $item->label;
 
-			foreach ($ar_list_of_values->result as $locator => $label) {
-				$locator = json_handler::decode($locator);	# Locator is json encoded object
-					#dump($label, ' label ++ '.to_string($locator));
-
-				$founded = locator::in_array_locator( $locator, $ar_locator=$dato, $ar_properties=array('section_id','section_tipo') );
-				if ($founded) {
+				if (true===locator::in_array_locator( $locator, $ar_locator=$dato, $ar_properties=array('section_id','section_tipo') )) {
 					$valor = $label;
 					break;
 				}
 			}
 
 		}//end if (!empty($dato)) 
+		#dump($valor, ' valor ++ '.to_string());
 
 		# Set component valor
 		$this->valor = $valor;

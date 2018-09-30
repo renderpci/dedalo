@@ -58,10 +58,10 @@
 				
 				$html_content .= " <option value=\"\" {$selected}> </option>";
 
-				foreach ($ar_list_of_values->result as $value => $label) {
+				foreach ($ar_list_of_values->result as $key => $item) {
 
-					$value   = (string)$value;
-					$locator = (object)json_handler::decode($value);	# Locator is json encoded object
+					$label   = (string)$item->label;
+					$locator = (object)$item->value;
 
 					# Add fixed type
 					$locator->type = DEDALO_RELATION_TYPE_MODEL_TIPO;
@@ -72,11 +72,7 @@
 					$locator_json = json_encode($locator);
 
 					$html_content .= "<option value='". $locator_json ."' {$selected}>";
-					$html_content .= $label;
-					
-					if(SHOW_DEBUG===true) {
-						#$html_content .= " - ". $locator_json;
-					}
+					$html_content .= $label;					
 					
 					$html_content .= "</option>";
 				}
@@ -113,9 +109,9 @@
 	print $html_label;
 	print $html_content;
 
-	if(SHOW_DEBUG===true) {
-		echo $ar_list_of_values->debug;
-	}
+	#if(SHOW_DEBUG===true) {
+	#	echo $ar_list_of_values->debug;
+	#}
 
 	print "</div>"; //wrap
 

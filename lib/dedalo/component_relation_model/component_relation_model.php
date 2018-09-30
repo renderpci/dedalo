@@ -30,7 +30,7 @@
 				if ($this->get_filter_authorized_record()===false) return null; //($lang=DEDALO_DATA_LANG, $id_path=false, $referenced_section_tipo=false, $filter_custom=false) 
 
 				$referenced_tipo 	= $this->get_referenced_tipo();
-				$ar_list_of_values  = $this->get_ar_list_of_values( DEDALO_DATA_LANG, null, $referenced_tipo );
+				$ar_list_of_values  = $this->get_ar_list_of_values2();
 				$id_wrapper 		= 'wrapper_'.$identificador_unico;
 				$input_name 		= "{$tipo}_{$parent}";
 				$component_info 	= $this->get_component_info('json');
@@ -54,7 +54,7 @@
 				$id_wrapper 		= 'wrapper_'.$identificador_unico;
 				$component_info 	= $this->get_component_info('json');			
 				$referenced_tipo 	= $this->get_referenced_tipo();
-				$ar_list_of_values  = $this->get_ar_list_of_values( DEDALO_DATA_LANG, null, $referenced_tipo );
+				$ar_list_of_values  = $this->get_ar_list_of_values2();
 	
 				# Search input name (var search_input_name is injected in search -> records_search_list.phtml)
 				# and recovered in component_common->get_search_input_name()
