@@ -20,52 +20,41 @@ class component_select extends component_relation_common {
 	*/
 	public function get_valor($lang=DEDALO_DATA_LANG) {
 
-		if (isset($this->valor)) {
-			if(SHOW_DEBUG) {
-				#error_log("Catched valor $lang !!! from ".__METHOD__);
-			}
+		if (isset($this->valor)) {			
 			return $this->valor;
 		}
-
-		$valor  = null;		
-		$dato   = $this->get_dato();
-		if (!empty($dato)) {
-			
-			# Test dato format (b4 changed to object)
-			if(SHOW_DEBUG) {
-				foreach ($dato as $key => $current_value) {
-					if (!is_object($current_value)) {
-						if(SHOW_DEBUG) {
-							dump($dato," actual invalid dato: ");
-						}
-						trigger_error(__METHOD__." Wrong dato format. OLD format dato in $this->label $this->section_tipo - $this->tipo - $this->parent .Expected object locator, but received: ".gettype($current_value) .' : '. print_r($current_value,true) );
-						return $valor;
-					}
-				}
-			}		
-
-			# Always run list of values
-			$referenced_tipo 	= $this->get_referenced_tipo();
-			$ar_list_of_values	= $this->get_ar_list_of_values( $lang, null, $referenced_tipo ); # Importante: Buscamos el valor en el idioma actual
-	
-			foreach ($ar_list_of_values->result as $locator => $label) {
-				$locator = json_handler::decode($locator);	# Locator is json encoded object
-					#dump($label, ' label ++ '.to_string($locator));
-				
-				$founded = locator::in_array_locator( $locator, $ar_locator=$dato, $ar_properties=array('section_id','section_tipo') );
-				if ($founded) {
-					$valor = $label;
-					break;
-				}
-			}
-
-		}//end if (!empty($dato)) 
-
-		# Set component valor
-		$this->valor = $valor;
 		
+		$dato = $this->get_dato();
+		if (empty($dato)) {
+			return $this->valor = null;
+		}			
+			
+		# Test dato format (b4 changed to object)		
+		foreach ($dato as $key => $current_value) {
+			if (!is_object($current_value)) {
+				if(SHOW_DEBUG) {
+					dump($dato," actual invalid dato: ");
+				}
+				trigger_error(__METHOD__." Wrong dato format. OLD format dato in $this->label $this->section_tipo - $this->tipo - $this->parent .Expected object locator, but received: ".gettype($current_value) .' : '. print_r($current_value,true) );
+				return $this->valor = null;
+			}
+		}		
 
-		return $valor;
+		$ar_list_of_values = $this->get_ar_list_of_values2($lang); # Importante: Buscamos el valor en el idioma actual		
+		$ar_values = [];
+		foreach ($ar_list_of_values->result as $key => $item) {
+			
+			$locator = $item->value;
+
+			if ( true===locator::in_array_locator($locator, $dato, array('section_id','section_tipo')) ) {
+				$ar_values[] = $item->label;
+			}
+		}
+
+		# Set value
+		$this->valor = implode(', ', $ar_values);			
+
+		return $this->valor;
 	}//end get_valor
 
 

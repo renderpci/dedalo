@@ -39,12 +39,11 @@
 
 				# referenced section tipo
 				$referenced_tipo 	= $this->get_referenced_tipo();				
-				$ar_list_of_values  = $this->get_ar_list_of_values( DEDALO_DATA_LANG, null, $referenced_tipo );
+				$ar_list_of_values  = $this->get_ar_list_of_values2();
 
 				$id_wrapper 		= 'wrapper_'.$identificador_unico;
 				$input_name 		= "{$tipo}_{$parent}";	
-				$component_info 	= $this->get_component_info('json');	
-				$valor				= $this->get_valor();
+				$component_info 	= $this->get_component_info('json');				
 				$dato_string		= json_handler::encode($dato);				
 				$mandatory 			= (isset($propiedades->mandatory) && $propiedades->mandatory===true) ? true : false;
 				$mandatory_json 	= json_encode($mandatory);
@@ -61,7 +60,7 @@
 				$dato = isset($this->dato) ? $this->dato : null;
 				
 				$referenced_tipo 		 = $this->get_referenced_tipo();
-				$ar_list_of_values		 = $this->get_ar_list_of_values( DEDALO_DATA_LANG, null );
+				$ar_list_of_values  = $this->get_ar_list_of_values2();
 				
 				# q_operator is injected by trigger search2
 				$q_operator = isset($this->q_operator) ? $this->q_operator : null;

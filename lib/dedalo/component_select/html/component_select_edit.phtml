@@ -31,7 +31,8 @@
 				break;
 
 		case 1 :
-				$html_content .= $this->valor;
+				$valor = $this->get_valor();
+				$html_content .= $valor;
 				break;
 
 		case 2 :
@@ -60,29 +61,27 @@
 			$html_content .= "$disabled ";
 			$html_content .= "tabindex=\"1\" ";
 			$html_content .= ">";
-
-			$selected = empty($dato) ? 'selected' : '';
 				
 				# Empty option
-				$html_content .= "<option value=\"\" {$selected}> </option>";
+				$html_content .= "<option value=\"\"></option>";
 
 				# Available options
-				foreach ($ar_list_of_values->result as $value => $label) {
+				foreach ($ar_list_of_values->result as $key => $item) {
 
-					$value   = (string)$value;
-					$locator = (object)json_handler::decode($value);	# Locator is json encoded object
-					#dump($locator," locator"); dump($dato," dato");
+					$locator = (object)$item->value;
+					$label   = (string)$item->label;
 
-					#$selected = in_array($locator, $dato) ? 'selected' : '';
 					$founded  = locator::in_array_locator( $locator, $ar_locator=$dato, $ar_properties=array('section_id','section_tipo') );
 					$selected = $founded ? 'selected' : '';
 
-					$html_content .= "<option value='$value' {$selected}>";
+					$html_content .= '<option value=\''.json_encode($item->value).'\' '.$selected.'>';
 					$html_content .= $label;
-					$html_content .= "</option>";
+					$html_content .= '</option>';
 				}
 
 			$html_content .= "</select>";
+
+
 
 			# Button open section referenced
 			#$html_content .= "<input type=\"button\" value=\"Source\" class=\"css_button_generic\" onclick=\"component_select.open_section(this)\" />";
@@ -118,9 +117,9 @@
 	}
 	print $html_content;
 
-	if(SHOW_DEBUG) {
-		#echo $ar_list_of_values->debug;
-	}
+	#if(SHOW_DEBUG) {
+	#	echo $ar_list_of_values->debug;
+	#}
 
 	print "</div>"; //wrap
 

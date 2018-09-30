@@ -53,19 +53,19 @@
 					}*/
 
 					# Available options
-					foreach ($ar_list_of_values->result as $value => $label) {
+					foreach ($ar_list_of_values->result as $key => $item) {
 
-						$value   = (string)$value;
-						$locator = (object)json_handler::decode($value);	# Locator is json encoded object
+						$locator = (object)$item->value;
+						$label   = (string)$item->label;	# Locator is json encoded object
 						#dump($locator," locator"); dump($dato," dato");
 
 						#$selected = in_array($locator, $dato) ? 'selected' : '';
-						$founded  = locator::in_array_locator( $locator, (array)$dato, $ar_properties=array('section_id','section_tipo') );
+						$founded  = locator::in_array_locator( $locator, $ar_locator=$dato, $ar_properties=array('section_id','section_tipo') );
 						$selected = $founded ? 'selected' : '';
 
-						$html_content .= "<option value='$value' {$selected}>";
+						$html_content .= '<option value=\''.json_encode($item->value).'\' '.$selected.'>';
 						$html_content .= $label;
-						$html_content .= "</option>";
+						$html_content .= '</option>';					
 					}
 
 
