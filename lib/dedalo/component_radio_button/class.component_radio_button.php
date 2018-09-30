@@ -20,9 +20,6 @@ class component_radio_button extends component_relation_common {
 	public function get_valor( $lang=DEDALO_DATA_LANG ) {
 
 		if (isset($this->valor)) {
-			if(SHOW_DEBUG===true) {
-				//error_log("Catched valor !!! from ".__METHOD__);
-			}
 			return $this->valor;
 		}
 
@@ -30,6 +27,7 @@ class component_radio_button extends component_relation_common {
 		if (empty($dato)) {
 			return $this->valor = null;
 		}
+
 		# Test dato format (b4 changed to object)
 		foreach ($dato as $key => $value) {
 			if (!is_object($value)) {
@@ -48,34 +46,35 @@ class component_radio_button extends component_relation_common {
 				$object_si = new stdClass();
 					$object_si->section_id   = (string)NUMERICAL_MATRIX_VALUE_YES;
 					$object_si->section_tipo = (string)"dd64";
-
-				$object_no = new stdClass();
-					$object_no->section_id   = (string)NUMERICAL_MATRIX_VALUE_NO;
-					$object_no->section_tipo = (string)"dd64";
 				
-				if ($dato[0]==$object_si) {
-					return 'si';
+				if ($dato[0]===$object_si) {
+					$valor = 'si';
 				}else{
-					return 'no';
+					$valor = 'no';
 				}
 				break;
 			
 			default:
 				
 				# Always run list of values
-				$ar_list_of_values	= $this->get_ar_list_of_values( $lang, null, false); # Importante: Buscamos el valor en el idioma actual				
+				$ar_list_of_values = $this->get_ar_list_of_values2($lang); # Importante: Buscamos el valor en el idioma actual		
+				$valor = '';
+				foreach ($ar_list_of_values->result as $key => $item) {
+					
+					$locator = $item->value;
 
-				foreach ($ar_list_of_values->result as $clocator => $label) {
-
-					$locator = json_decode($clocator);	# Locator is json encoded object
-						#dump($locator," locator - dato:".print_r($dato,true));
-					if ( locator::in_array_locator( $locator, $dato, $ar_properties=array('section_id','section_tipo') ) ) {									
-						return $this->valor = $label;
+					if ( true===locator::in_array_locator($locator, $dato, array('section_id','section_tipo')) ) {
+						$valor = $item->label;
+						break;
 					}
 				}
+				# Set value
+				$this->valor = $valor;
 				break;
 				
 		}#end switch
+
+		return $valor;
 	}//end get_valor
 
 

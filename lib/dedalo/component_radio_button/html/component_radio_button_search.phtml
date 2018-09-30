@@ -37,12 +37,12 @@
 				
 				# INPUT
 				#$html_content .= "<span id=\"search_component_$tipo\">";
-				$i=0; foreach ($ar_list_of_values->result as $value => $rotulo) {
+				$i=0; foreach ($ar_list_of_values->result as $key => $item) {
 
 					$search_input_id = $search_input_name .'_'.$i;
 
-					$value   = (string)$value;
-					$locator = (object)json_handler::decode($value);	# Locator is json encoded object
+					$label   = (string)$item->label;
+					$locator = (object)$item->value;
 
 					if (!property_exists($locator, 'type')) {
 						$locator->type = DEDALO_RELATION_TYPE_LINK;
@@ -51,7 +51,7 @@
 						$locator->from_component_tipo = $tipo;
 					}
 
-					$locator_string = json_encode($locator);
+					$locator_json = json_encode($locator);
 
 	
 					#$checked  = is_array($dato) && in_array($locator, $dato) ? true : false;
@@ -65,13 +65,13 @@
 					$html_content .= "<input class=\"css_radio_button\" type=\"radio\" name=\"{$search_input_name}\" id=\"$search_input_id\" ";
 					#$html_content .= "data-tipo=\"{$tipo}\" ";
 					$html_content .= "name=\"{$input_name}\" ";
-					$html_content .= "value='$locator_string' ";
+					$html_content .= "value='{$locator_json}' ";
 					$html_content .= "$checked ";
 					$html_content .= "onchange=\"component_common.fix_dato(this,'{$component_name}')\" ";
 					$html_content .= "onclick=\"component_radio_button.check_radio(this,event)\" ";
 					$html_content .= "/>";
 
-					$html_content .= "<label for=\"{$search_input_id}\" class=\"css_radio_button_rotulo\">$rotulo</label>";
+					$html_content .= "<label for=\"{$search_input_id}\" class=\"css_radio_button_rotulo\">$label</label>";
 
 					$html_content .= "</li>";
 

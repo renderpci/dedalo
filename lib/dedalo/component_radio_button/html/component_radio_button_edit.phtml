@@ -35,10 +35,10 @@
 
 		case 1	:
 				$html_content .= "<ul class=\"radio_button_ul_list\">";
-				$i=1; foreach((array)$ar_list_of_values->result as $value => $rotulo) {
+				$i=1; foreach((array)$ar_list_of_values->result as $key => $item) {
 
-					$value   = (string)$value;
-					$locator = (object)json_handler::decode($value);	# Locator is json encoded object
+					$label   = (string)$item->label;
+					$locator = (object)$item->value;
 
 					#$checked  = is_array($dato) && in_array($locator, $dato) ? true : false;
 					$checked  = '';
@@ -59,7 +59,7 @@
 
 						#
 						# LABEL
-						$html_content .= "<label for=\"$input_id\" class=\"css_radio_button_rotulo $checked_style\" {$required_code}>$rotulo</label>";
+						$html_content .= "<label for=\"$input_id\" class=\"css_radio_button_rotulo $checked_style\" {$required_code}>$label</label>";
 
 					$html_content .= "</li>";
 					$i++;
@@ -71,11 +71,10 @@
 		case 3 :
 				$html_content .= "<ul class=\"radio_button_ul_list\">";
 
-				$i=1; foreach((array)$ar_list_of_values->result as $value => $rotulo) {
+				$i=1; foreach((array)$ar_list_of_values->result as $key => $item) {
 
-					$value   = (string)$value;
-					$locator = (object)json_handler::decode($value);	# Locator is json encoded object
-						#dump($locator, ' value ++ '.to_string());
+					$label   = (string)$item->label;
+					$locator = (object)$item->value;
 
 					if (!property_exists($locator, 'type')) {
 						$locator->type = DEDALO_RELATION_TYPE_LINK;
@@ -84,7 +83,7 @@
 						$locator->from_component_tipo = $tipo;
 					}
 
-					$locator_string = json_encode($locator);
+					$locator_json = json_encode($locator);
 
 					#$checked  = is_array($dato) && in_array($locator, $dato) ? 'checked="checked"' : '';
 					$checked  = '';
@@ -110,7 +109,7 @@
 						$html_content .= "data-section_tipo=\"{$section_tipo}\" ";
 						$html_content .= "data-parent=\"{$parent}\" ";
 						$html_content .= "data-mandatory='{$mandatory_json}' ";
-						$html_content .= "value='$locator_string' ";
+						$html_content .= "value='$locator_json' ";
 						$html_content .= "title=\"$html_title\" ";
 						$html_content .= "$checked ";
 						$html_content .= "$tabindex ";
@@ -118,7 +117,7 @@
 
 						#
 						# LABEL
-						$html_content .= "<label for=\"$input_id\" class=\"css_radio_button_rotulo\" $required_code >$rotulo</label>";
+						$html_content .= "<label for=\"$input_id\" class=\"css_radio_button_rotulo\" $required_code >$label</label>";
 
 					$html_content .= "</li>";
 					$i++;
