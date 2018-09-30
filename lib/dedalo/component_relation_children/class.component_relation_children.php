@@ -279,5 +279,58 @@ class component_relation_children extends component_relation_common {
 
 
 
+	/**
+	* GET_CHILDRENS_RECURSIVE
+	* @return 
+	*/
+	public static function get_childrens_recursive($section_id, $section_tipo, $component_tipo=null) {
+		
+		$ar_childrens_recursive = [];
+
+		static $locators_resolved = array();
+
+		# Infinite loops prevention
+		$pseudo_locator = $section_id .'_'. $section_tipo;
+		if (in_array($pseudo_locator, $locators_resolved)) {
+			if(SHOW_DEBUG===true) {
+				debug_log(__METHOD__." Skipped already resolved locator ".to_string($pseudo_locator), logger::DEBUG);
+			}
+			return [];
+		}
+
+		# Locate component children in current section when is not received
+		# Search always (using cache) for allow mix different section tipo (like beginning from root hierarchy note)
+		$ar_tipos = section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, [get_called_class()], $from_cache=true, $resolve_virtual=true, $recursive=true, $search_exact=true, $ar_tipo_exclude_elements=false);
+		$component_tipo = reset($ar_tipos);
+		
+		# Create first component to get dato
+		$component 		= component_common::get_instance(get_called_class(),
+														 $component_tipo,
+														 $section_id,
+														 'list',
+														 DEDALO_DATA_LANG,
+														 $section_tipo,
+														 false);
+		$dato = $component->get_dato();			
+
+		if (!empty($dato)) {
+
+			$ar_childrens_recursive = array_merge($ar_childrens_recursive, $dato);
+
+			# Set as resolved to avoid loops
+			$locators_resolved[] = $section_id .'_'. $section_tipo;
+			
+			foreach ((array)$dato as $key => $current_locator) {
+				$ar_childrens_recursive = array_merge($ar_childrens_recursive, self::get_childrens_recursive($current_locator->section_id, $current_locator->section_tipo, $component_tipo));
+			}
+
+		}
+
+
+		return $ar_childrens_recursive;
+	}//end get_childrens_recursive
+
+
+
 }//end component_relation_children
 ?>
