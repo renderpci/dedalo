@@ -22,7 +22,7 @@ require_once( dirname(dirname(dirname(dirname(__FILE__)))).'/config/config4.php'
 
 	$modelo_name 		  	= 'component_autocomplete';
 	$component 			  	= component_common::get_instance($modelo_name,$author_tipo,null,'list',DEDALO_DATA_NOLAN, $referenced_section_tipo);
-	$all_component_values 	= $component->get_ar_list_of_values( DEDALO_DATA_LANG, null );	
+	$all_component_values 	= $component->get_ar_list_of_values2( DEDALO_DATA_LANG );	
 	#$html .= $component->get_html();
 
 	$html .=" Autor: ";
@@ -31,8 +31,10 @@ require_once( dirname(dirname(dirname(dirname(__FILE__)))).'/config/config4.php'
 		$author_html  = '';		
 		$author_html .= "<select name=\"author\" id=\"author\">";
 		$author_html .= " <option value=\"\" ></option>";
-		foreach ($all_component_values->result as $author_id => $nombre) {
+		foreach ($all_component_values->result as $key => $item) {
 
+			$author_id 	= json_encode($item->value);
+			$nombre 	= $item->label;
 			#$author_id = urlencode($author_id);
 
 			$author_html .= " <option value='$author_id' >";
