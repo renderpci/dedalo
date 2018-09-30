@@ -92,11 +92,17 @@
 						$html_info .= ", search_options_session_key: ".$this->records_data->options->search_options_session_key;
 					}
 					$html_info .= ", strQuery:";
-					$html_info .= '<pre style="display:none">'.trim($this->records_data->strQuery) .'</pre>';
 
+					// strQuery for debug
+					$html_info .= '<pre style="display:none">'.trim($this->records_data->strQuery) .'</pre>';
+	
+					// search_query_object json ecoded for debug
 					$search_options = $this->search_options->search_query_object;
 					$search_options = json_encode($search_options, JSON_PRETTY_PRINT);
 					$html_info .= "<br><pre style=\"display:none\">$search_options</pre>";
+
+					// search_query_object_preparse for debug
+					$html_info .= '<br><pre style="display:none">'.json_encode($this->search_query_object_preparse, JSON_PRETTY_PRINT).'</pre>';
 
 					$html_info .='</div>';
 					#echo "<div> Time To Generate section list: HTML: ".round(microtime(1)-$start_time,3)."</div>";
