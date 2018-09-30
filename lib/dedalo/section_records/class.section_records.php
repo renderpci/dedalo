@@ -91,7 +91,10 @@ class section_records extends common {
 			if ($this->search_options->modo==='list') {
 				$search_options_id = $this->tipo; // section tipo like oh1
 				section_records::set_search_options($search_options, $search_options_id);
-			}			
+			}
+
+			// Fix search_development2 search_query_object_preparse for debug
+			$this->search_query_object_preparse = $search_development2->search_query_object_preparse;
 
 			#debug_log(__METHOD__." this->search_options **** ".json_encode($this->search_options), logger::DEBUG);						
 		}
