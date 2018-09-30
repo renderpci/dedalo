@@ -104,11 +104,12 @@
 																						 'list',
 																						 DEDALO_DATA_LANG,
 																						 $f_section_tipo);
-									$ar_list_of_values = $current_component->get_ar_list_of_values(DEDALO_DATA_LANG, false, false, false, $value_container='valor');
-										#dump($ar_list_of_values, ' ar_list_of_values ++ '.to_string());
-									foreach ((array)$ar_list_of_values->result as $hs_value => $hs_name) {
 
-										$current_value = json_decode($hs_value);
+									$ar_list_of_values = $current_component->get_ar_list_of_values2(DEDALO_DATA_LANG);
+									foreach ((array)$ar_list_of_values->result as $key => $item) {
+
+										$current_label = $item->label;
+										$current_value = $item->value;
 
 										$current_locator = new locator();
 											$current_locator->set_type(DEDALO_RELATION_TYPE_LINK); # Add relation type (always link)
@@ -116,17 +117,16 @@
 											$current_locator->set_section_tipo($current_value->section_tipo);										
 											$current_locator->set_from_component_tipo($f_component_tipo); # Add from_component_tipo
 										
-										$current_locator_json = json_encode($current_locator);						
-
+										$current_locator_json = json_encode($current_locator);
 										
-										$input_id = hash('sha256', $hs_value);
+										$input_id = hash('sha256', $current_locator_json);
 
 										$autosearch_options_html .= "<li>";
 										$autosearch_options_html .= "<input type=\"checkbox\" value='".$current_locator_json."' id=\"$input_id\" checked onchange=\"component_autocomplete.save_filter_sections(this,'$cookie_name')\"/>";
 										$autosearch_options_html .= "<label for=\"$input_id\">";
-										$autosearch_options_html .= $hs_name;
+										$autosearch_options_html .= $current_label;
 										if(SHOW_DEBUG===true) {
-											#$autosearch_options_html .= " <span class=\"notes\">[$hs_value]<span>";
+											#$autosearch_options_html .= " <span class=\"notes\">[$current_locator_json]<span>";
 										}
 										$autosearch_options_html .= "</label>";
 										$autosearch_options_html .= "</li>";
@@ -442,11 +442,11 @@
 	print $html_label;
 	print $html_content;
 
-	if(SHOW_DEBUG) {
-		if (isset($this->ar_list_of_values->debug)) {
-			echo $this->ar_list_of_values->debug;
-		}
-	}
+	#if(SHOW_DEBUG) {
+	#	if (isset($this->ar_list_of_values->debug)) {
+	#		echo $this->ar_list_of_values->debug;
+	#	}
+	#}
 
 	print "</div>"; //wrap
 
