@@ -678,8 +678,11 @@ function convert_search_object_to_sql_query($json_data) {
 		#$sql_query = addslashes($sql_query);
 		$sql_query = "<pre style=\"font-size:12px\">".$sql_query."</pre>";
 
+		$rows = $search_development2->search();
+
 		$response->result 	= true;
 		$response->msg 		= $sql_query;
+		$response->rows 	= $rows;
 	}		
 
 	
