@@ -40,10 +40,10 @@
 		case 3 :					
 		
 			$html_content .= "<ul class=\"group\">";
-			$i=1; foreach ($ar_list_of_values->result as $value => $rotulo) {
+			$i=1; foreach ($ar_list_of_values->result as $key => $item) {
 
-				$value   = (string)$value; 
-				$locator = (object)json_handler::decode($value);	# Locator is json encoded object	
+				$locator = (object)$item->value;
+				$label   = (string)$item->label;
 
 				# Add from_component_tipo
 				$locator->from_component_tipo = $tipo;
@@ -80,7 +80,7 @@
 				
 				#
 				# LABEL				
-				$html_content .= "<label for=\"$current_id\" class=\"css_check_box_rotulo\" {$required_code}>$rotulo</label>";
+				$html_content .= "<label for=\"$current_id\" class=\"css_check_box_rotulo\" {$required_code}>$label</label>";
 
 				$html_content .= "</li>";
 				$i++;
@@ -110,9 +110,9 @@
 	print $html_content;
 
 	
-	if(SHOW_DEBUG && isset($ar_list_of_values->debug)) {
-		echo $ar_list_of_values->debug;
-	}
+	#if(SHOW_DEBUG && isset($ar_list_of_values->debug)) {
+	#	echo $ar_list_of_values->debug;
+	#}
 	
 	
 	print "</div>"; //wrap

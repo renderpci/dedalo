@@ -19,6 +19,10 @@ class component_check_box extends component_relation_common {
 	*/
 	public function get_valor( $lang=DEDALO_DATA_LANG ) {
 
+		if (isset($this->valor)) {
+			return $this->valor;
+		}
+
 		$dato = $this->get_dato();
 		if (empty($dato)) {
 			return $this->valor = null;
@@ -35,39 +39,20 @@ class component_check_box extends component_relation_common {
 			}
 		}
 		
-		# Always run list of values
-		$ar_list_of_values	= $this->get_ar_list_of_values( $lang, null ); # Importante: Buscamos el valor en el idioma actual
+		$ar_list_of_values = $this->get_ar_list_of_values2($lang); # Importante: Buscamos el valor en el idioma actual		
+		$ar_values = [];
+		foreach ($ar_list_of_values->result as $key => $item) {
+			
+			$locator = $item->value;
 
-		$valor=array();
-		foreach ($ar_list_of_values->result as $locator => $rotulo) {
-			$locator = json_handler::decode($locator);	# Locator is json encoded object
-			if (in_array($locator, $dato)) {
-				$valor[] = $rotulo;				
+			if ( true===locator::in_array_locator($locator, $dato, array('section_id','section_tipo')) ) {
+				$ar_values[] = $item->label;
 			}
 		}
-		$this->valor = implode(', ', $valor);
-		return $this->valor ;
+		# Set value
+		$this->valor = implode(', ', $ar_values);
 
-		/* OLD
-		$dato = $this->get_dato();
-			#dump($dato,'dato LANG: '.$lang);
-		if (!empty($dato)) {
-			$referenced_tipo 	= $this->get_referenced_tipo();
-			$ar_list_of_values	= (array)$this->get_ar_list_of_values( $lang, null );
-			$valor='';
-			foreach ((array)$dato as $id_matrix => $state) {
-				if($state!=2) continue;
-				
-				if( in_array($id_matrix, array_keys($ar_list_of_values)) ) {
-					$valor .= $ar_list_of_values[$id_matrix];
-					$valor .= ", ";
-				}
-			}
-			$valor = substr($valor, 0, -2);
-				#dump($valor,'valor');
-		}
-		return $valor;
-		*/		
+		return $this->valor;		
 	}//end get_valor
 
 

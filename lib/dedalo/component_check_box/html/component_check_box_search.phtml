@@ -33,10 +33,10 @@
 			$html_content .= "onchange=\"component_common.fix_dato(this,'{$component_name}')\" ";
 			$html_content .=' />';
 
-			$i=0;foreach ($ar_list_of_values->result as $value => $rotulo) {
-				#dump($value, ' value ++ '.to_string());
-				$value   = (string)$value; 
-				$locator = (object)json_handler::decode($value);	# Locator is json encoded object					
+			$i=0;foreach ($ar_list_of_values->result as $key => $item) {
+				
+				$label   = (string)$item->label;
+				$locator = (object)$item->value;
 
 				# Add from_component_tipo
 				$locator->from_component_tipo = $tipo;
@@ -62,7 +62,7 @@
 				$html_content .= "<label class=\"css_check_box_rotulo\" for=\"{$current_id}\" ";
 				$html_content .= $required_code;
 				$html_content .= ">";
-				$html_content .= $rotulo;
+				$html_content .= $label;
 				$html_content .= "</label> ";
 				$html_content .= "</span>";	
 			$i++;}

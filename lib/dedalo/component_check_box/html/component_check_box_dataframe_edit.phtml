@@ -44,20 +44,17 @@
 		case ($permissions>=2) :
 		
 			$html_content .= "<ul class=\"group\">";
-			$i=1; foreach ($ar_list_of_values->result as $value => $rotulo) {
+			$i=1; foreach ($ar_list_of_values->result as $key => $item) {
 
-				$value   	= (string)$value; 
-				$locator 	= (object)json_handler::decode($value);	# Locator is json encoded object
+				$label   	= (string)$item->label;
+				$locator 	= (object)$item->value;
 				
-				
+				# complete locator properties
 				$locator->type 		= $this->caller_dataset->type;
 				$locator->from_key 	= $this->caller_dataset->caller_key;
 
-				$value = (string)json_encode($locator);
-					#dump($locator, ' locator ++ '.to_string( $tipo ));
-
+				$locator_json = (string)json_encode($locator);
 				
-				#$checked  	= in_array($locator, $dato) ? 'checked="checked"' : '';
 				$checked  	= locator::in_array_locator( $locator, $dato, $ar_properties=array('section_tipo','section_id','type','from_key') ) ? 'checked="checked"' : '';
 				$tabindex = $i==1 ? 'tabindex="1"' : '';
 
@@ -80,7 +77,7 @@
 				$html_content .= "data-section_tipo=\"{$section_tipo}\" ";
 				$html_content .= "data-parent=\"{$parent}\" ";
 				$html_content .= "data-caller_dataset='{$caller_dataset_json}' ";
-				$html_content .= "value='$value' ";
+				$html_content .= "value='{$locator_json}' ";
 				$html_content .= "title=\"$html_title\" ";
 				$html_content .= "$checked ";
 				$html_content .= "$tabindex ";
@@ -120,9 +117,9 @@
 	print $html_content;
 
 	
-	if(SHOW_DEBUG && isset($ar_list_of_values->debug)) {
-		echo $ar_list_of_values->debug;
-	}
+	#if(SHOW_DEBUG && isset($ar_list_of_values->debug)) {
+	#	echo $ar_list_of_values->debug;
+	#}
 	
 	
 	print "</div>"; //wrap

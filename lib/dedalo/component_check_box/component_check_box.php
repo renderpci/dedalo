@@ -30,15 +30,14 @@
 		case 'dataframe_edit' :
 					$caller_dataset_json = json_encode($this->caller_dataset);
 					$this->set_relation_type($this->caller_dataset->type);
-					$dataframe_value = $this->get_dataframe_value($this->RecordObj_dd->get_parent());
-					$id_wrapper = 'wrapper_'.$identificador_unico.'_'.$this->caller_dataset->component_tipo ;
+					$dataframe_value 	 = $this->get_dataframe_value($this->RecordObj_dd->get_parent());
+					$id_wrapper 		 = 'wrapper_'.$identificador_unico.'_'.$this->caller_dataset->component_tipo ;
 					
 		case 'edit' :
-					$dato		= $this->get_dato();				
-					
-					$input_name = "{$tipo}_{$parent}";	
+					$dato					= $this->get_dato();					
+					$input_name 			= "{$tipo}_{$parent}";	
 					$referenced_tipo		= $this->get_referenced_tipo();
-					$ar_list_of_values		= $this->get_ar_list_of_values(DEDALO_DATA_LANG, null);							
+					$ar_list_of_values  	= $this->get_ar_list_of_values2();
 					$dato_string			= $this->get_dato_as_string();
 					$component_info 		= $this->get_component_info('json');					
 					break;
@@ -55,8 +54,8 @@
 					# dato is injected by trigger search wen is needed
 					$dato = isset($this->dato) ? $this->dato : null;
 
-					$referenced_tipo	= $this->get_referenced_tipo();
-					$ar_list_of_values  = $this->get_ar_list_of_values(DEDALO_DATA_LANG, null);
+					$referenced_tipo		= $this->get_referenced_tipo();
+					$ar_list_of_values  	= $this->get_ar_list_of_values2();
 
 					# q_operator is injected by trigger search2
 					$q_operator = isset($this->q_operator) ? $this->q_operator : null;
@@ -71,7 +70,7 @@
 		case 'list_tm' :	
 					$file_name 	= 'list';					
 		case 'list' :					
-					$valor		= $this->get_valor();
+					$valor		= $this->get_valor($lang);
 					break;
 
 		case 'relation' :	
@@ -83,7 +82,7 @@
 					break;
 
 		case 'print' :
-					$valor = $this->get_valor();
+					$valor = $this->get_valor($lang);
 					break;
 	}
 	
