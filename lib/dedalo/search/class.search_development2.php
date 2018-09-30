@@ -9,9 +9,11 @@ class search_development2 {
 
 	# matrix table relations name
 	private static $relations_table = 'relations';
-
+	
+	# json object untouched, before parse (for debug purposes)
+	public $search_query_object_preparse;
 	# json object to parse
-	protected $search_query_object;
+	protected $search_query_object;	
 	# from base, section tipo initial from 
 	protected $main_from_sql;
 	# join_group
@@ -71,8 +73,14 @@ class search_development2 {
 			$search_query_object = json_decode($search_query_object);
 		}
 
+		if (SHOW_DEVELOPER===true && (!isset($this->search_query_object->parsed) || $this->search_query_object->parsed===false)) {
+			# Set and fix class property search_query_object
+			$this->search_query_object_preparse = json_decode(json_encode($search_query_object));
+		}
+
+		# Set and fix class property search_query_object
 		$this->search_query_object = (object)$search_query_object;
-		#debug_log(__METHOD__." search_query_object ".to_string($search_query_object), logger::DEBUG);
+		#debug_log(__METHOD__." search_query_object ".to_string($search_query_object), logger::DEBUG);	
 
 		# section tipo check and fixes
 		if (!isset($this->search_query_object->section_tipo)) {
@@ -94,7 +102,7 @@ class search_development2 {
 			$this->main_section_tipo_alias = self::trim_tipo($this->main_section_tipo);
 		}
 
-		# matrix_table (for time machine if always fixe, not calculated)
+		# matrix_table (for time machine if always fixed, not calculated)
 		if (get_class($this)!=='search_development2_tm') {
 			$this->matrix_table  = common::get_matrix_table_from_tipo($this->main_section_tipo);
 		}		
@@ -121,8 +129,8 @@ class search_development2 {
 
 		#$this->preparsed_search_query_object = false;
 		if (!isset($this->search_query_object->parsed)) {
-			$this->search_query_object->parsed = false;
-		}
+			$this->search_query_object->parsed = false;			
+		}		
 
 		# Set order_columns as empty array 
 		$this->order_columns = [];
@@ -1700,7 +1708,7 @@ class search_development2 {
 		# Add first level always
 		$current_path = new stdClass();
 			
-			$current_path->name 	  	  = RecordObj_dd::get_termino_by_tipo($tipo, DEDALO_DATA_LANG, true, true);
+			$current_path->name 	  	  = strip_tags(RecordObj_dd::get_termino_by_tipo($tipo, DEDALO_DATA_LANG, true, true));
 			$current_path->modelo 	  	  = $term_model;		
 			$current_path->section_tipo   = $section_tipo;
 			$current_path->component_tipo = $tipo;
