@@ -63,75 +63,68 @@ class component_publication extends component_relation_common {
 	* GET VALUE . DEFAULT IS GET DATO . OVERWRITE IN EVERY DIFFERENT SPECIFIC COMPONENT
 	*/
 	public function get_valor( $lang=DEDALO_DATA_LANG ) {
+			
+		$dato = $this->get_dato();
 
-		if (isset($this->valor)) {			
-			#return $this->valor;
-		}		
+		# Test dato format (b4 changed to object)
+		if(SHOW_DEBUG===true) {
+			if (!empty($dato)) foreach ($dato as $key => $value) {
+				if (!empty($value) && !is_object($value)) {
+					if(SHOW_DEBUG===true) {
+						dump($dato," +++ dato Wrong dato format. OLD format dato in $this->label $this->tipo .Expected object locator, but received: ".gettype($value));							
+					}
+					debug_log(__METHOD__." Wrong dato format. OLD format dato in $this->label $this->tipo .Expected object locator, but received: ".gettype($value) .' : '. print_r($value,true), logger::ERROR);
+					return $this->valor = null;
+				}
+			}
+		}
 
 		switch ($this->modo) {
 
-			case 'diffusion': 
-				$dato = $this->get_dato();
-				$value_to_return = 'no';
+			case 'diffusion':
+
+				$valor = 'no';
 				if (!empty($dato)) {				
 					
 					$object_si = new stdClass();
 						$object_si->section_id   = (string)NUMERICAL_MATRIX_VALUE_YES;
 						$object_si->section_tipo = (string)"dd64";
 
-					$object_no = new stdClass();
-						$object_no->section_id   = (string)NUMERICAL_MATRIX_VALUE_NO;
-						$object_no->section_tipo = (string)"dd64";
-
 					$component_locator = reset($dato);
 					$compare_locators  = locator::compare_locators( $component_locator, $object_si, $ar_properties=['section_id','section_tipo']);
 					
 					if ($compare_locators===true) {
-						$value_to_return = 'si';
+						$valor = 'si';
 					}
 				}
-
-				return $value_to_return;
 				break;
 			
-			default:				
-				
-				# Always run list of values
-				$ar_list_of_values	= $this->get_ar_list_of_values( $lang, null, false); # Importante: Buscamos el valor en el idioma actual
-					#dump($ar_list_of_values, ' $ar_list_of_values ++ '.to_string());			
-				
-				$dato = $this->get_dato();
-					#dump($dato, ' dato ++ '.to_string());
-				if (empty($dato)) {
-					return $this->valor = null;
-				}
-				
-				# Test dato format (b4 changed to object)
-				foreach ($dato as $key => $value) {
-					if (!empty($value) && !is_object($value)) {
-						if(SHOW_DEBUG===true) {
-							dump($dato," +++ dato Wrong dato format. OLD format dato in $this->label $this->tipo .Expected object locator, but received: ".gettype($value));							
-						}
-						debug_log(__METHOD__." Wrong dato format. OLD format dato in $this->label $this->tipo .Expected object locator, but received: ".gettype($value) .' : '. print_r($value,true), logger::ERROR);
-						return $this->valor = null;
-					}
-				}				
+			default:
 
-				# Test dato
-				$component_locator = reset($dato);
-				foreach ($ar_list_of_values->result as $locator => $rotulo) {
-					$value_locator = json_handler::decode($locator);	# Locator is json encoded object
-					
-					$compare_locators = locator::compare_locators( $component_locator, $value_locator, $ar_properties=['section_id','section_tipo']);					
-					if ($compare_locators===true) {						
-						return $this->valor = $rotulo;
+				$valor = null;
+				if (!empty($dato)) {									
+
+					# Always run list of values
+					$ar_list_of_values	= $this->get_ar_list_of_values2($lang); # Importante: Buscamos el valor en el idioma actual				
+					$component_locator  = reset($dato);
+					foreach ($ar_list_of_values->result as $key => $item) {
+						
+						$locator = $item->value;
+											
+						if (true===locator::compare_locators( $component_locator, $locator, $ar_properties=['section_id','section_tipo'])) {						
+							$valor = $item->label;
+							break;
+						}
 					}
 				}
 				break;
 				
 		}#end switch
 
-		return null;
+		# Set value
+		$this->valor = $valor;
+
+		return $valor;
 	}#end get_valor
 
 

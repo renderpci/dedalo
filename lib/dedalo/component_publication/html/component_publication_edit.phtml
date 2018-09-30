@@ -31,8 +31,9 @@
 				$html_content .= "";
 				break;
 
-		case 1	: 	
-				$html_content .= "$valor";
+		case 1	:
+				$valor = $this->get_valor();
+				$html_content .= $valor;
 				break;
 
 		case 2 :

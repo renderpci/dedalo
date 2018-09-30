@@ -35,10 +35,8 @@
 				if ($this->get_filter_authorized_record()===false) return NULL ;
 
 				$dato 				= $this->get_dato();
-				$dato_json 			= json_encode($dato);
-				$valor				= $this->get_valor();
+				$dato_json 			= json_encode($dato);				
 				$referenced_tipo 	= $this->get_referenced_tipo();
-				#$ar_list_of_values	= $this->get_ar_list_of_values( DEDALO_DATA_LANG, null );				
 				$id_wrapper 		= 'wrapper_'.$identificador_unico;			
 				$input_name 		= 'publication_'.$identificador_unico; 
 				#$js_code			= $this->generate_js();
@@ -53,7 +51,6 @@
 				return;
 
 				$referenced_tipo 	= $this->get_referenced_tipo();
-				#$ar_list_of_values	= $this->get_ar_list_of_values( DEDALO_DATA_LANG, null );				
 				$id_wrapper 		= 'wrapper_'.$identificador_unico;				
 				$input_name 		= 'publication_'.$identificador_unico;
 				#$js_code			= $this->generate_js();
@@ -61,9 +58,9 @@
 				break;
 
 		case 'tool_time_machine' :			
-				$file_name 	= 'edit';
-				$id_wrapper = 'wrapper_'.$identificador_unico.'_tm';
-				$input_name = "{$tipo}_{$parent}_tm";	
+				$file_name 			= 'edit';
+				$id_wrapper 		= 'wrapper_'.$identificador_unico.'_tm';
+				$input_name 		= "{$tipo}_{$parent}_tm";	
 				break;						
 						
 		case 'search' :
@@ -73,7 +70,7 @@
 				$input_name 		= 'publication_'.$identificador_unico;
 				
 				$referenced_tipo 	= $this->get_referenced_tipo();
-				$ar_list_of_values	= $this->get_ar_list_of_values( DEDALO_DATA_LANG, null);			
+				$ar_list_of_values	= $this->get_ar_list_of_values2(DEDALO_DATA_LANG);
 				
 				# q_operator is injected by trigger search2
 				$q_operator = isset($this->q_operator) ? $this->q_operator : null;
