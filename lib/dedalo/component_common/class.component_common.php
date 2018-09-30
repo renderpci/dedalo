@@ -1443,7 +1443,7 @@ abstract class component_common extends common {
 	*		"others":"..."
 	* 	} parent
 	*/
-	public function get_ar_list_of_values($lang=DEDALO_DATA_LANG, $id_path=false, $referenced_section_tipo=false, $filter_custom=false, $value_container='valor') {
+	public function get_ar_list_of_values__DEPERECATED($lang=DEDALO_DATA_LANG, $id_path=false, $referenced_section_tipo=false, $filter_custom=false, $value_container='valor') {
 	
 		if(SHOW_DEBUG===true) {
 			global$TIMER;$TIMER[__METHOD__.'_IN_'.$this->tipo.'_'.$this->modo.'_'.$this->parent.'_'.microtime(1)]=microtime(1);;
@@ -1472,17 +1472,78 @@ abstract class component_common extends common {
 			return $this->ar_list_of_values = $list_of_values_cache[$uid];
 		}
 
+		$start_time = microtime(1);
+
+		# vars
+		$list_of_values		= new stdClass();
+		$ar_final 			= array();
+		$tipo 				= $this->tipo;
+		$filter_propiedades ='';
+
+
+		# AR_VALUES_FROM_COMPONENT_DATO
+		if (isset($this->propiedades->filtered_by_search)) {
+
+			$search_query_object = json_decode( json_encode($this->propiedades->filtered_by_search) );
+			$search_development2 = new search_development2($search_query_object);
+			$records_data 		 = $search_development2->search();
+				#dump($records_data, ' records_data ++ '.to_string());
+			$ar_current_dato = $records_data->ar_records;
+			/*
+			$ar_current_dato = [];
+			foreach ($this->propiedades->filtered_by_search as $key => $filter_element) {
+				
+				$current_modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($filter_element->component_tipo,true);
+				$current_component 		= component_common::get_instance($current_modelo_name,
+																		 $filter_element->component_tipo,
+																		 $filter_element->section_id,
+																		 'list',
+																		 DEDALO_DATA_LANG,
+																		 $filter_element->section_tipo);
+				$current_dato = $current_component->get_dato();
+					#dump($urrent_dato, ' urrent_dato ++ '.to_string());
+				$ar_current_dato = array_merge($ar_current_dato, $current_dato);
+			}
+			*/
+			/*
+			# $modelo_name, $tipo, $strict=true
+			$ar_componets_related = common::get_ar_related_by_model('component_', $this->tipo, false);
+
+			$result = [];
+			foreach ($ar_current_dato as $key => $current_locator) {
+				$key_result = new stdClass();
+					$key_result->section_id   = $current_locator->section_id;
+					$key_result->section_tipo = $current_locator->section_tipo;
+
+				$result[json_encode($key_result)] = component_relation_common::get_locator_value( $current_locator, DEDALO_DATA_LANG, $current_locator->section_tipo, $show_parents=false, $ar_componets_related, $divisor=', ' );
+			}
+			# Sort result for easy user select
+			asort($result, SORT_NATURAL | SORT_FLAG_CASE);
+			#dump($result, ' result 11 ++ '.to_string());
+
+			$list_of_values	= new stdClass();
+				$list_of_values->result   = (array)$result;
+				$list_of_values->msg 	  = 'Ok. Values from "ar_values_from_component_dato" executed';
+				$list_of_values->strQuery = null;
+
+			return $list_of_values;
+			*/
+			$ar_filter_propiedades = [];
+			foreach ($ar_current_dato as $key => $value) {
+				$ar_filter_propiedades[] = 'section_id=' . (int)$value->section_id;
+			}
+			if (empty($ar_filter_propiedades)) {
+				$filter_propiedades = 'AND (section_id=0) '; // Impossible value
+			}else{
+				$filter_propiedades = 'AND ('.implode(' OR ', $ar_filter_propiedades).') ';
+			}			
+		}
+
 	
 		#if ($this->modo =='list' && isset($_SESSION['config4']['get_ar_list_of_values'][$uid]) ) {
 		#	return $_SESSION['config4']['get_ar_list_of_values'][$uid];
 		#}
-
-		$start_time = microtime(1);
-
-		# vars
-		$list_of_values	= new stdClass();
-		$ar_final 		= array();
-		$tipo 			= $this->tipo;
+		
 		
 		#
 		# AR_TERMINOS_RELACIONADOS
@@ -1524,7 +1585,7 @@ abstract class component_common extends common {
 				$matrix_table = common::get_matrix_table_from_tipo($terminoID_valor); // Fix matrix table
 			}
 			$ar_terminos_relacionados = $fields;
-
+	
 			
 
 		#
@@ -1559,11 +1620,10 @@ abstract class component_common extends common {
 
 
 		#
-		# PROPIEDADES : Filtrado por propiedades (opcional)
-			$filter_propiedades='';
+		# PROPIEDADES : Filtrado por propiedades (opcional)			
 			
 			#
-			# filtered_by_field_value
+			# FILTERED_BY_FIELD_VALUE
 			if (isset($this->propiedades->filtered_by_field_value)) {
 				#trigger_error("Sorry: Working here");
 				/*
@@ -1573,7 +1633,7 @@ abstract class component_common extends common {
 							"dd508": "ich32"
 						}
 					}
-				*/							
+				*/
 				# 1 Obtenemos el valor actual del value_component_tipo 
 				$value_component_tipo  	= reset($this->propiedades->filtered_by_field_value);
 				$value_section_tipo 	= $value_component_tipo;	// SOLUCIONAR EL TENER EL DATO DE SECCIÓN EN PROPIEDADES !!!
@@ -1665,6 +1725,7 @@ abstract class component_common extends common {
 					
 					if ($p_value!==$end_value) $filter_propiedades .=" \n";					
 				}
+				#debug_log(__METHOD__." filter_propiedades ".to_string($filter_propiedades), logger::DEBUG);
 			}
 
 
@@ -1779,10 +1840,11 @@ abstract class component_common extends common {
 			if ($total_list_time>$limit_time || $total_list_time>0.020) {
 				$style = "color:red";
 			}			
-			$html_info .= "<div class=\"debug_info ar_list_of_values_debug_info\" style=\"{$style}\" onclick=\"$(this).children('pre').toggle()\"> Time: ";
+			#$html_info .= "<div class=\"debug_info ar_list_of_values_debug_info\" style=\"{$style}\" onclick=\"$(this).children('pre').toggle()\">";
+			$html_info .= ' Time: ';
 			$html_info .= $total_list_time;
-			$html_info .= "<pre style=\"display:none\"> ".$strQuery ."</pre>";
-			$html_info .= "</div>";
+			#$html_info .= "<pre style=\"display:none\"> ".$strQuery ."</pre>";
+			#$html_info .= "</div>";
 			#echo "<div> Time To Generate section list: HTML: ".round(microtime(1)-$start_time,3)."</div>";
 			
 			$list_of_values->debug = $html_info;
@@ -1811,6 +1873,75 @@ abstract class component_common extends common {
 		# Fix var
 		return $this->ar_list_of_values = $list_of_values;	
 	}//end get_ar_list_of_values
+
+
+
+	/**
+	* GET_AR_LIST_OF_VALUES2
+	* @return array $ar_list_of_values
+	*/
+	public function get_ar_list_of_values2($lang=DEDALO_DATA_LANG) {
+
+		$start_time = microtime(1);	
+
+		switch (true) {
+			case isset($this->propiedades->filtered_by_search):
+				$search_query_object = json_decode( json_encode($this->propiedades->filtered_by_search) );
+				break;
+			
+			default:
+				# get_ar_related_by_model: $modelo_name, $tipo, $strict=true
+  				#$target_section_tipo = common::get_ar_related_by_model('section', $this->tipo, true);
+  				$target_section_tipo = $this->get_ar_target_section_tipo();
+
+				# new search_query_object
+				$search_query_object = new stdClass();
+					$search_query_object->section_tipo 			= reset($target_section_tipo);
+					$search_query_object->limit 				= 0;
+					$search_query_object->skip_projects_filter 	= true;				
+				break;
+		}
+
+		$search_development2 = new search_development2($search_query_object);		
+		$records_data 		 = $search_development2->search();
+		$ar_current_dato 	 = $records_data->ar_records;		
+				
+		# get_ar_related_by_model: $modelo_name, $tipo, $strict=true
+		$ar_componets_related = common::get_ar_related_by_model('component_', $this->tipo, false);
+	
+		$result = [];
+		foreach ($ar_current_dato as $key => $current_locator) {
+			
+			# value. is a basic locator section_id, section_tipo
+			$value = new stdClass();
+				$value->section_id   = $current_locator->section_id;
+				$value->section_tipo = $current_locator->section_tipo;
+
+			# get_locator_value: $locator, $lang, $section_tipo, $show_parents=false, $ar_componets_related, $divisor=', '
+			$label = component_relation_common::get_locator_value($current_locator, $lang, $current_locator->section_tipo, false, $ar_componets_related, ', ');
+
+			$item = new stdClass();
+				$item->value = $value;
+				$item->label = $label;
+			
+			$result[] = $item;
+		}
+		# Sort result for easy user select
+		usort($result, function($a,$b){
+			return strcmp($a->label, $b->label);
+		});		
+
+		$response	= new stdClass();
+			$response->result   			= (array)$result;
+			$response->msg 	  				= 'Ok';
+			if(SHOW_DEBUG===true) {
+				$response->search_query_object 	= json_encode($search_query_object, JSON_PRETTY_PRINT);
+				$response->debug 				= 'Total time:' . exec_time_unit($start_time,'ms').' ms';
+			}			
+		#dump($response, ' response ++ '.to_string());
+
+		return $response;		
+	}//end get_ar_list_of_values2
 
 
 
