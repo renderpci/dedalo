@@ -1024,10 +1024,14 @@ class component_autocomplete_hi extends component_relation_common {
 																		 'list',
 																		 DEDALO_DATA_LANG,
 																		 $f_section_tipo);
-					$ar_list_of_values = $current_component->get_ar_list_of_values(DEDALO_DATA_LANG, false, false, false, $value_container='valor');
-						#dump($ar_list_of_values, ' ar_list_of_values ++ '.to_string());
-					foreach ((array)$ar_list_of_values->result as $hs_value => $hs_name) {
-						$ar_filter_options[$hs_value] = $hs_name;
+
+					$ar_list_of_values = $current_component->get_ar_list_of_values2(DEDALO_DATA_LANG);		
+					foreach ((array)$ar_list_of_values->result as $hs_value => $item) {
+						
+						$current_label 	= $item->label;
+						$current_key 	= json_encode($item->value);
+
+						$ar_filter_options[$current_key] = $current_label;
 					}
 				}
 				break;
