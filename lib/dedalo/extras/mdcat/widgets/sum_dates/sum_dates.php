@@ -149,6 +149,10 @@
 					$date_in = (array)$component_date_in->get_dato();
 						#dump($date_in, ' date_in ++ in 1 - '.$date_in_component_tipo.' - '.to_string($locator_section_id));
 					$date_in = reset($date_in); # Now date is an array
+					# Compatible new date format 01-10-2018
+					if (isset($date_in->start)) {
+						$date_in = $date_in->start;
+					}
 					if(!empty($date_in)) {
 						$dd_date = new dd_date($date_in);
 						$timestamp_in = $dd_date->get_dd_timestamp("Y-m-d");
@@ -173,6 +177,10 @@
 					$date_out = (array)$component_date_out->get_dato();
 						#dump($date_out, ' date_out ++ out 2- '.$date_out_component_tipo.' - '.to_string($locator_section_id));
 					$date_out = reset($date_out); # Now date is an array
+					# Compatible new date format 01-10-2018
+					if (isset($date_out->start)) {
+						$date_out = $date_out->start;
+					}
 					if (!empty($date_out)) {
 						$dd_date = new dd_date($date_out);
 						$timestamp_out = $dd_date->get_dd_timestamp("Y-m-d");
@@ -210,7 +218,11 @@
 																	   DEDALO_DATA_NOLAN,
 																	   $locator_section_tipo);
 					$date_in = (array)$component_date_in->get_dato();	
-					$date_in = reset($date_in);					
+					$date_in = reset($date_in);
+					# Compatible new date format 01-10-2018
+					if (isset($date_in->start)) {
+						$date_in = $date_in->start;
+					}				
 
 					$ar_dates_in[] = $date_in;
 					$ar_dates_all[]= $date_in;
@@ -225,6 +237,10 @@
 																	   $locator_section_tipo);
 					$date_out = (array)$component_date_out->get_dato();
 					$date_out = reset($date_out);
+					# Compatible new date format 01-10-2018
+					if (isset($date_out->start)) {
+						$date_out = $date_out->start;
+					}
 						#dump($date_out, ' date_out ++ '.to_string());
 					#if (empty($date_out)) continue; // Skip empty dates
 
