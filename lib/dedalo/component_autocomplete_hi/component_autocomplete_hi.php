@@ -51,6 +51,39 @@
 					$from_modo = $var_requested;
 				}
 
+				#
+				# HIERARCHY_TERMS_CONSTRAIN. Defined in propiedades, constrain searched terms using children terms
+				if (isset($propiedades->source->hierarchy_terms_constrain)) {
+					$ar_childrens = [];
+					foreach ((array)$propiedades->source->hierarchy_terms_constrain as $key => $item) {
+						$resursive = (bool)$item->recursive;
+						# Get childrens						
+						$ar_childrens = array_merge($ar_childrens, component_relation_children::get_childrens($item->section_id, $item->section_tipo, null, $resursive));						
+					}
+					$constrain_data = $ar_childrens;
+					#dump($constrain_data, ' constrain_data ++ '.to_string());
+					
+
+					$filter_custom = [];
+					$component_section_id_tipo = section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, ['component_section_id'], true, true, true, true, false);
+					$path = new stdClass();
+						$path->section_tipo 	= $section_tipo;
+						# get_ar_children_tipo_by_modelo_name_in_section($section_tipo, $ar_modelo_name_required, $from_cache=true, $resolve_virtual=false, $recursive=true, $search_exact=false, $ar_tipo_exclude_elements=false)
+						$path->component_tipo 	= reset($component_section_id_tipo);
+						$path->modelo 			= 'component_section_id';
+						$path->name 			= 'Id';
+
+					foreach ($ar_childrens as $key => $current_children) {						
+						$filter_item = new stdClass();
+							$filter_item->q 	= $current_children->section_id;
+							$filter_item->path 	= [$path];
+
+						$filter_custom[] = $filter_item;
+					}
+				}//end if (isset($propiedades->source->hierarchy_terms_constrain))
+				
+
+
 				# SOURCE_MODE
 				$source_mode = $this->get_source_mode();
 					#dump($source_mode, ' source_mode ++ '.to_string());
@@ -103,7 +136,7 @@
 					$search_query_object_options->search_tipos 		= [DEDALO_THESAURUS_TERM_TIPO];
 					$search_query_object_options->distinct_values	= isset($propiedades->distinct_values) ? $propiedades->distinct_values : false;
 					$search_query_object_options->show_modelo_name 	= true;
-					$search_query_object_options->filter_custom 	= null;
+					$search_query_object_options->filter_custom 	= isset($filter_custom) ? $filter_custom : null; // See $propiedades->source->hierarchy_terms_constrain above
 					$search_query_object_options->tipo 			 	= $tipo;
 				$search_query_object 		= component_autocomplete_hi::build_search_query_object($search_query_object_options);
 				$json_search_query_object 	= json_encode( $search_query_object, JSON_UNESCAPED_UNICODE | JSON_HEX_APOS);

@@ -738,6 +738,7 @@ class component_autocomplete_hi extends component_relation_common {
 			$options->show_modelo_name 	= true;
 			$options->filter_custom 	= null;
 			$options->tipo				= null;
+			$options->filter_items 		= false;
 			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 		
 		# search_query_object (can be string or object)
@@ -769,11 +770,17 @@ class component_autocomplete_hi extends component_relation_common {
 					$search_query_object->filter->{$search_tipos_op}[] = $filter_obj;
 				}
 				
-				# propiedades filter_custom
+				# propiedades filter_custom or hierarchy_terms_constrain
 				if (!empty($options->filter_custom)) {
+					$op_and = '$and';
+					$op_or 	= '$or';
+					$group = new stdClass();
+						$group->{$op_or} = [];	
 					foreach ((array)$options->filter_custom as $current_filter) {
-						$search_query_object->filter->{$op}[] = $current_filter;
+						#$search_query_object->filter->{$op}[] = $current_filter;
+						$group->{$op_or}[] = $current_filter;
 					}
+					$search_query_object->filter->{$op_and}[] = $group;
 				}
 			# Select
 			$search_query_object->select = [];
@@ -807,7 +814,7 @@ class component_autocomplete_hi extends component_relation_common {
 					# Select add (model)
 					$search_query_object->select[] = $select_obj;
 				}
-		
+		#dump( json_encode($search_query_object, JSON_PRETTY_PRINT) , ' search_query_object ++ '.to_string());
 
 		return (object)$search_query_object;
 	}//end build_search_query_object
@@ -861,7 +868,7 @@ class component_autocomplete_hi extends component_relation_common {
 				
 				// Directly, with recursive options true
 				// $locator, $lang=DEDALO_DATA_LANG, $section_tipo, $show_parents=false, $ar_componets_related=false, $divisor=false
-				$current_valor = component_relation_common::get_locator_value( $locator, DEDALO_DATA_LANG, $current_section_tipo, $show_parents=true, false, ', ');
+				$current_valor = component_relation_common::get_locator_value( $locator, DEDALO_DATA_LANG, $current_section_tipo, $show_parents=true, false, ', ' );
 				#debug_log(__METHOD__." current_valor ".to_string($current_valor), logger::DEBUG);
 				if (!empty($current_valor)) {
 					$current_term = $current_valor;
