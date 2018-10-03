@@ -1272,8 +1272,8 @@ abstract class common {
 		
 		# Cookie properties
 		$domain 	= $_SERVER['SERVER_NAME'];
-		$secure 	= stripos( $_SERVER['SERVER_PROTOCOL'],'https') === true ? true : false;
-		$httponly 	= true; # Not accessible for javascript, only for http/s requests
+		$secure 	= stripos( $_SERVER['SERVER_PROTOCOL'],'https') === true ? 'true' : 'false';
+		$httponly 	= 'true'; # Not accessible for javascript, only for http/s requests
 
 		$cookie_properties = new stdClass();
 			$cookie_properties->domain 	 = $domain;
