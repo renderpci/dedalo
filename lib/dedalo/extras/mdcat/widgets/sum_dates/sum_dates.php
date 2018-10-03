@@ -1,6 +1,6 @@
 <?php
 
-	# CONTROLLER	
+	# CONTROLLER
 
 		$widget_name 				 	= $this->widget_name;
 		$modo 						 	= $this->component_info->get_modo();
@@ -30,7 +30,7 @@
 				}	
 				$sum_intervals = $f->diff($e);
 				
-				return $sum_intervals;			
+				return $sum_intervals;
 			}//end sum_intervals
 
 
@@ -268,7 +268,7 @@
 					switch (true) {
 
 						case ( !empty($date_in->year) && !empty($date_out->year) ):
-							$interval = date_interval($date_in, $date_out);							
+							$interval = date_interval($date_in, $date_out);
 							break;
 
 						case ( empty($date_in->year) && empty($date_out->year) ):
@@ -280,7 +280,7 @@
 							$date_in_default  = custom_date_add_sub($date_out, $default_interval, 'sub');
 							$interval 		  = date_interval($date_in_default, $date_out);
 							$estitmated_time_add[] = $interval;
-							break;										
+							break;
 						
 						case ( !empty($date_in->year) && empty($date_out->year) ):
 
@@ -291,17 +291,17 @@
 							}else{
 								$estitmated_time_undefined=true;
 								foreach ($ar_dates_all as $key2 => $current_date_all) {
-									if( $key2 <= $key*2 ) continue; // ignore previous keys					
+									if( $key2 <= $key*2 ) continue; // ignore previous keys
 									if(!empty($current_date_all->year)) {
-										$interval = date_interval($date_in, $current_date_all);									
+										$interval = date_interval($date_in, $current_date_all);
 										$key_jump = (int)floor($key2/2);
 										if (is_out($key2)) {
 											$key_jump++;
 										}
 										break;
 									}
-								}//end foreach ($ar_dates_all as $key2 => $current_date_all)								
-							}							
+								}//end foreach ($ar_dates_all as $key2 => $current_date_all)
+							}
 							break;
 					}
 
@@ -328,21 +328,19 @@
 					$period = (object)$period->result;
 				}
 				#dump($period, ' period ++ '.to_string());
-				*/					
-				break;				
+				*/
+				break;
 
 			default:
 				return "Sorry. Mode: $modo is not supported";
 		}//end switch ($modo)
 
 
-		
-				
-	
-		
+
+
 	$page_html = dirname(__FILE__) . '/html/' . $widget_name . '_' . $filename . '.phtml';	
 	if( !include($page_html) ) {
 		echo "<div class=\"error\">Invalid widget mode $modo</div>";
 	}
 
-?>
+
