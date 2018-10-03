@@ -770,7 +770,7 @@ class component_autocomplete_hi extends component_relation_common {
 					$search_query_object->filter->{$search_tipos_op}[] = $filter_obj;
 				}
 				
-				# propiedades filter_custom or hierarchy_terms_constrain
+				# propiedades filter_custom or hierarchy_terms constrain
 				if (!empty($options->filter_custom)) {
 					$op_and = '$and';
 					$op_or 	= '$or';

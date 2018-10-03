@@ -89,10 +89,12 @@
 				$button_tree .= "data-component_name=\"$component_name\" ";
 				$button_tree .= "data-hierarchy_types='{$hierarchy_types_json}' ";
 				$button_tree .= "data-hierarchy_sections='{$hierarchy_sections_json}' ";
+				$button_tree .= "data-hierarchy_terms='{$hierarchy_terms_json}' ";
 				$button_tree .= "onclick=\"component_common.open_ts_window(this)\"></div>";
 
 				# SOURCE_MODE SWITCH
 				switch ($source_mode) {
+
 					case 'slave':
 						// Nothing to do
 						break;

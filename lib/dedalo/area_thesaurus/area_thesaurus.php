@@ -71,7 +71,6 @@
 					common::notify_load_lib_element_tipo($current_modelo_name, 'edit');
 				}*/				
 
-
 				#
 				# HIERARCHY_SECTIONS
 				# Get all available sections except when filters are present
@@ -111,6 +110,60 @@
 				}
 				#dump($ar_section_tipos, ' ar_section_tipos ++ '.to_string());
 
+				#
+				# FILTER_CUSTOM. hierarchy_terms
+				$filter_custom = null;				
+				if (isset($_GET['hierarchy_terms'])) {
+					if($hierarchy_terms = json_decode( safe_xss($_GET['hierarchy_terms']) )) {
+
+						// Reset $ar_section_tipos to use only filter sections
+						$ar_section_tipos = [];
+
+						$filter_custom = new stdClass();
+
+						$filter_custom->{OP_OR} = [];						
+
+						$path = new stdClass();
+							$path->component_tipo 	= 'hierarchy22';
+							$path->modelo 			= 'component_section_id';
+							$path->name 			= 'Id';
+
+						$path_section = new stdClass();
+							$path_section->modelo 	= 'section';
+							$path_section->name 	= 'Section tipo column';
+
+						foreach ($hierarchy_terms as $key => $current_term) {							
+
+							// Explode pseudo locator like 'dc1_1425' to section_tipo, section_id
+							$ar = explode('_', $current_term);
+
+							$current_section_tipo 	= $ar[0];
+							$current_section_id 	= (int)$ar[1];							
+
+							# Update path section tipo
+							$path->section_tipo 	= $current_section_tipo;							
+
+							# Add to ar_section_tipos
+							$ar_section_tipos[] = $current_section_tipo;
+
+							$filter_item = new stdClass();
+								$filter_item->q 			= $current_section_id;
+								$filter_item->path 			= [$path];
+						
+							$filter_item_section = new stdClass();
+								$filter_item_section->q 	= $current_section_tipo;
+								$filter_item_section->path 	= [$path_section];								
+
+							$group = new stdClass();
+								$group->{OP_AND} = [$filter_item, $filter_item_section];
+
+							$filter_custom->{OP_OR}[] = $group;
+						}
+						#dump($filter_custom, ' filter_custom ++ '.to_string()); die();
+					}
+				}//end if (isset($_GET['hierarchy_terms']))
+
+
 				$ar_sections_group = [];
 				foreach ($ar_section_tipos as $key => $current_tipo) {
 					$ar_related_by_model = common::get_ar_related_by_model('section', $current_tipo);
@@ -149,10 +202,11 @@
 								#$search_query_object->order   		= $options->order;
 								#$search_query_object->offset  		= $options->offset;
 								#$search_query_object->full_count  	= true;									
-								$search_query_object->filter  		= null;
+								$search_query_object->filter  		= isset($filter_custom) ? $filter_custom : null;
 								$search_query_object->select  		= [];
-						
+							
 							$search_options->search_query_object = $search_query_object;
+								#dump(json_encode($search_options, JSON_PRETTY_PRINT), ' search_options ++ '.to_string());
 					}else{
 						# Use saved search options
 						$search_options = $saved_search_options;
@@ -172,6 +226,7 @@
 					$records_search->ar_real_section_tipo = array_keys($ar_sections_group); // Inject ar_sections_group
 					$search_form_html 	= $records_search->get_html();
 						#dump($records_search, ' $records_search ++ '.to_string());
+					
 						
 				#
 				# TEST

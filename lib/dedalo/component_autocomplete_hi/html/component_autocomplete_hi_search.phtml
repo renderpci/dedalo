@@ -44,14 +44,16 @@
 
 				# SOURCE_MODE SWITCH
 				switch ($source_mode) {
+
 					case 'tree':
 
 						# BTN NEW ELEMENT
 						$html_content .= "<div class=\"icon_bs link new_autocomplete_hi in_search_mode\" ";
 						$html_content .= "data-id_wrapper=\"$id_wrapper\" ";
+						$html_content .= "data-component_name=\"{$component_name}\" ";
 						$html_content .= "data-hierarchy_types='{$hierarchy_types_json}' ";
 						$html_content .= "data-hierarchy_sections='{$hierarchy_sections_json}' ";
-						$html_content .= "data-component_name=\"{$component_name}\" ";
+						$html_content .= "data-hierarchy_terms='{$hierarchy_terms_json}' ";						
 						$html_content .= "onclick=\"component_common.open_ts_window(this)\"></div>";
 						break;
 					

@@ -170,13 +170,11 @@
 			#dump($ar_hierarchy_obj, ' ar_hierarchy_obj ++ '.to_string());
 		}
 		*/
-		$html .= "<script>";
-		$html .= "area_thesaurus.root_nodes=".json_encode($root_nodes).";";
-		#$html .= "area_thesaurus.ar_hierarchy=".json_encode($ar_hierarchy_obj).";";
-		
+		$html .= "<script>";		
 		$init_options = new stdClass();
-			$init_options->model_view = $model_view;
-
+			$init_options->model_view 	  = $model_view;
+			$init_options->root_nodes 	  = $root_nodes;
+			$init_options->search_options = isset($filter_custom) ? $search_options : false;
 		$html .= 'area_thesaurus.init('.json_encode($init_options).');';
 		$html .= "</script>";
 

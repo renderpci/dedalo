@@ -52,17 +52,21 @@
 				}
 
 				#
-				# HIERARCHY_TERMS_CONSTRAIN. Defined in propiedades, constrain searched terms using children terms
-				if (isset($propiedades->source->hierarchy_terms_constrain)) {
-					$ar_childrens = [];
-					foreach ((array)$propiedades->source->hierarchy_terms_constrain as $key => $item) {
+				# HIERARCHY_TERMS. Defined in propiedades, constrain searched terms using children terms
+				$hierarchy_terms_json = null;
+				if (isset($propiedades->source->hierarchy_terms)) {
+					$ar_childrens 	 = [];
+					$hierarchy_terms = [];
+					foreach ((array)$propiedades->source->hierarchy_terms as $key => $item) {
 						$resursive = (bool)$item->recursive;
 						# Get childrens						
-						$ar_childrens = array_merge($ar_childrens, component_relation_children::get_childrens($item->section_id, $item->section_tipo, null, $resursive));						
+						$ar_childrens = array_merge($ar_childrens, component_relation_children::get_childrens($item->section_id, $item->section_tipo, null, $resursive));	
+
+						# Add pseudo locator
+						$hierarchy_terms[] = $item->section_tipo .'_'. $item->section_id;			
 					}
 					$constrain_data = $ar_childrens;
-					#dump($constrain_data, ' constrain_data ++ '.to_string());
-					
+									
 
 					$filter_custom = [];
 					$component_section_id_tipo = section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, ['component_section_id'], true, true, true, true, false);
@@ -73,15 +77,16 @@
 						$path->modelo 			= 'component_section_id';
 						$path->name 			= 'Id';
 
-					foreach ($ar_childrens as $key => $current_children) {						
+					foreach ($ar_childrens as $key => $current_children) {
 						$filter_item = new stdClass();
 							$filter_item->q 	= $current_children->section_id;
 							$filter_item->path 	= [$path];
 
 						$filter_custom[] = $filter_item;
 					}
-				}//end if (isset($propiedades->source->hierarchy_terms_constrain))
-				
+
+					$hierarchy_terms_json = json_encode($hierarchy_terms);
+				}//end if (isset($propiedades->source->hierarchy_terms))				
 
 
 				# SOURCE_MODE
@@ -136,13 +141,13 @@
 					$search_query_object_options->search_tipos 		= [DEDALO_THESAURUS_TERM_TIPO];
 					$search_query_object_options->distinct_values	= isset($propiedades->distinct_values) ? $propiedades->distinct_values : false;
 					$search_query_object_options->show_modelo_name 	= true;
-					$search_query_object_options->filter_custom 	= isset($filter_custom) ? $filter_custom : null; // See $propiedades->source->hierarchy_terms_constrain above
+					$search_query_object_options->filter_custom 	= isset($filter_custom) ? $filter_custom : null; // See $propiedades->source->hierarchy_terms above
 					$search_query_object_options->tipo 			 	= $tipo;
 				$search_query_object 		= component_autocomplete_hi::build_search_query_object($search_query_object_options);
 				$json_search_query_object 	= json_encode( $search_query_object, JSON_UNESCAPED_UNICODE | JSON_HEX_APOS);
 					#dump($json_search_query_object, ' json_search_query_object ++ '.to_string());
 				break;		
-						
+		
 		case 'search' :
 				# dato is injected by trigger search wen is needed
 				$dato = isset($this->dato) ? $this->dato : [];
