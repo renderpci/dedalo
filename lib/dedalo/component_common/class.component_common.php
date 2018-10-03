@@ -434,6 +434,23 @@ abstract class component_common extends common {
 
 
 
+	/**
+	* GET_DATO_FULL
+	* @return 
+	*/
+	public function get_dato_full() {
+		
+		$section = section::get_instance($this->parent, $this->section_tipo);
+
+		$all_component_data = $section->get_all_component_data($this->tipo);
+
+		$dato_full = isset($all_component_data->dato) ? $all_component_data->dato : null;
+
+		return $dato_full;
+	}//end get_dato_full
+
+
+
 	# GET_DATO_UNCHANGED
 	# Recover component var 'dato' without change type or other custom component changes
 	# This is a easy way to access internal protected var 'dato' from out of component (like section::save_component_dato) 
@@ -1891,7 +1908,7 @@ abstract class component_common extends common {
 			
 			default:
 				# get_ar_related_by_model: $modelo_name, $tipo, $strict=true
-  				#$target_section_tipo = common::get_ar_related_by_model('section', $this->tipo, true);
+  				# $target_section_tipo = common::get_ar_related_by_model('section', $this->tipo, true);
   				$target_section_tipo = $this->get_ar_target_section_tipo();
 
 				# new search_query_object
@@ -3285,72 +3302,58 @@ abstract class component_common extends common {
 	/**
 	* EXTRACT_COMPONENT_VALUE_FALLBACK
 	* 21-04-2017 Paco
-	* @return string $current_value
+	* @return string $value
 	*/
 	public static function extract_component_value_fallback($component, $lang=DEDALO_DATA_LANG, $mark=true) {
 	
-		$current_value = $component->get_valor($lang);
+		# Try directe value
+		$value = $component->get_valor($lang);
 	
-		if (empty($current_value)) {
-			$main_lang = DEDALO_DATA_LANG_DEFAULT;
+		if (empty($value)) {			
 
-			# Try main lang	
+			# Try main lang. (Used config DEDALO_DATA_LANG_DEFAULT as main_lang)
+			$main_lang = DEDALO_DATA_LANG_DEFAULT;
 			if ($lang !== $main_lang) {
 				$component->set_lang($main_lang);
-				$current_value = $component->get_valor($main_lang);					
+				$value = $component->get_valor($main_lang);
 			}
+
 			# Try nolan
-			if (empty($current_value)) {
+			if (empty($value)) {
 				$component->set_lang(DEDALO_DATA_NOLAN);
-				$current_value = $component->get_valor(DEDALO_DATA_NOLAN);
+				$value = $component->get_valor(DEDALO_DATA_NOLAN);
 			}
-			# Try all langs sequence
-			if (empty($current_value)) {
-				$data_langs = common::get_ar_all_langs();
+
+			# Try all projects langs sequence
+			if (empty($value)) {
+				$data_langs = common::get_ar_all_langs(); # Langs from config projects
 				foreach ($data_langs as $current_lang) {
 					if ($current_lang===$lang || $current_lang===$main_lang) {
 						continue; // Already checked
 					}
 					$component->set_lang($current_lang);
-					$current_value = $component->get_valor($current_lang);
-					if (!empty($current_value)) break; # Stops when first data is found
+					$value = $component->get_valor($current_lang);
+					if (!empty($value)) break; # Stops when first data is found
 				}
 			}
 			# Try resolve
 			/*
-			if (empty($current_value)) {
+			if (empty($value)) {
 
 				$section_tipo = self::get_section_tipo_from_component_tipo($component->get_tipo());
 				$main_lang = common::get_main_lang($section_tipo);
 				$component->set_lang($main_lang);
-				$current_value = $component->get_valor($main_lang);			
+				$value = $component->get_valor($main_lang);			
 			}*/
 
 			# Set value as untranslated
 			if ($mark===true) {
-				$current_value = '<mark>'.$current_value.'</mark>';
+				$value = '<mark>'.$value.'</mark>';
 			}			
 		}
 
-		return $current_value;
+		return $value;
 	}//end extract_component_value_fallback
-
-
-
-	/**
-	* GET_DATO_FULL
-	* @return 
-	*/
-	public function get_dato_full() {
-		
-		$section = section::get_instance($this->parent, $this->section_tipo);
-
-		$all_component_data = $section->get_all_component_data($this->tipo);
-
-		$dato_full = isset($all_component_data->dato) ? $all_component_data->dato : null;
-
-		return $dato_full;
-	}//end get_dato_full
 
 
 
@@ -3366,6 +3369,7 @@ abstract class component_common extends common {
 			return null;
 		}
 		
+		# decoded_obj . Unify received 'dato_full_json' in object format
 		if (is_object($dato_full_json)) {
 			$decoded_obj = $dato_full_json;
 		}else{
@@ -3374,12 +3378,48 @@ abstract class component_common extends common {
 				return $dato_full_json;
 			}
 		}
-		
-	
-		$value = '';
 
-		$current_lang 	= DEDALO_DATA_LANG;
-		$default_lang 	= DEDALO_APPLICATION_LANGS_DEFAULT;
+		# Declare as false
+		$is_fallback  = false;
+
+		# Try directe value
+		$lang 	= DEDALO_DATA_LANG;
+		$value	= isset($decoded_obj->$lang) ? $decoded_obj->$lang : null;
+		
+
+		if (empty($value)) {
+		
+			# Try main lang. (Used config DEDALO_DATA_LANG_DEFAULT as main_lang)
+			$main_lang = DEDALO_DATA_LANG_DEFAULT;
+			if ($lang !== $main_lang) {
+				$value = isset($decoded_obj->$main_lang) ? $decoded_obj->$main_lang : null;
+			}
+
+			# Try nolan
+			if (empty($value)) {
+				$nolan_lang = DEDALO_DATA_NOLAN;
+				$value = isset($decoded_obj->$nolan_lang) ? $decoded_obj->$nolan_lang : null;
+			}
+
+			# Try all projects langs sequence
+			if (empty($value)) {
+				$data_langs = common::get_ar_all_langs(); # Langs from config projects
+				foreach ($data_langs as $current_lang) {
+					if ($current_lang===$lang || $current_lang===$main_lang) {
+						continue; // Already checked
+					}
+					$value = isset($decoded_obj->$current_lang) ? $decoded_obj->$current_lang : null;
+					if (!empty($value)) break; # Stops when first data is found
+				}
+			}
+
+			# Set as fallback value
+			$is_fallback = true;
+		}
+
+		
+		/* OLD WAY
+		$default_lang 	= DEDALO_DATA_LANG_DEFAULT; //DEDALO_APPLICATION_LANGS_DEFAULT;
 		$is_fallback	= false;
 		if (!empty($decoded_obj->$current_lang)) {
 			// Current lang
@@ -3404,6 +3444,7 @@ abstract class component_common extends common {
 				}				
 			}
 		}
+		*/
 
 		// Flat possible array values to string
 		$value = to_string($value);
