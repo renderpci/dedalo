@@ -84,7 +84,7 @@ class search_development2 {
 
 		# section tipo check and fixes
 		if (!isset($this->search_query_object->section_tipo)) {
-			throw new Exception("Error: section_tipo is not defined!", 1);			
+			throw new Exception("Error: section_tipo is not defined!", 1);
 		}
 
 		# section_tipo is always and array
@@ -215,7 +215,7 @@ class search_development2 {
 				# Add property
 				$row->{$field_name} = $field_value;
 			}
-
+			/*
 			# Relation components. Get relations data from relations column and parse virtual columns values for each component
 			if (isset($this->relations_cache)) foreach ((array)$this->relations_cache as $table_alias => $ar_component_tipo) {
 				foreach ($ar_component_tipo as $component_tipo) {
@@ -227,7 +227,7 @@ class search_development2 {
 					# Add property
 					$row->{$field_name} = $field_value;
 				}
-			}
+			}*/
 			#debug_log(__METHOD__." row ".to_string($row), logger::DEBUG);
 
 			$ar_records[] = $row;
@@ -361,7 +361,7 @@ class search_development2 {
 		
 		$path				= $select_object->path;
 		$component_tipo 	= end($path)->component_tipo;
-		if ($component_tipo==='section_id') {
+		if ($component_tipo==='section_id' || $component_tipo==='section_tipo') {
 			return $select_object; // No parse section_id
 		}
 		$modelo_name 		= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);				
@@ -527,7 +527,8 @@ class search_development2 {
 						//$sql_query .= PHP_EOL . 'WHERE '.$this->main_section_tipo_alias.'.section_id in (';
 						//$sql_query .= PHP_EOL . 'SELECT DISTINCT ON('.$this->main_section_tipo_alias.'.section_id) '.$this->main_section_tipo_alias.'.section_id FROM '.$main_from_sql;
 						$sql_query .= PHP_EOL . 'WHERE '.$this->main_section_tipo_alias.'.id in (';
-						$sql_query .= PHP_EOL . 'SELECT DISTINCT ON('.$this->main_section_tipo_alias.'.section_id) '.$this->main_section_tipo_alias.'.id FROM '.$main_from_sql;
+						#$sql_query .= PHP_EOL . 'SELECT DISTINCT ON('.$this->main_section_tipo_alias.'.section_id) '.$this->main_section_tipo_alias.'.id FROM '.$main_from_sql; # Removed 03-10-2018
+						$sql_query .= PHP_EOL . 'SELECT DISTINCT ON('.$this->main_section_tipo_alias.'.section_id,'.$this->main_section_tipo_alias.'.section_tipo) '.$this->main_section_tipo_alias.'.id FROM '.$main_from_sql;
 					}
 					# join virtual tables
 					$sql_query .= $sql_joins;
