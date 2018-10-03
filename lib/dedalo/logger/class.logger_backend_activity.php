@@ -312,13 +312,20 @@ class logger_backend_activity extends logger_backend {
 					if (strpos($message, 'LOAD')!==false) {
 						# URL
 						$url 			= 'unknow';
-						if (isset($_SERVER['REQUEST_URI']))
-						$url 			= urldecode( 'http://'.$_SERVER['HTTP_HOST'].$_SERVER['REQUEST_URI'] );
+						if (isset($_SERVER['REQUEST_URI'])) {
+							$request_uri= safe_xss($_SERVER['REQUEST_URI']);
+							# Remove possible attack chars like: ', %27, ;
+							$request_uri= str_replace(array('\'','%27',';'), '', $request_uri);
+							$request_uri= pg_escape_string($request_uri);						
+							$url 		= urldecode( DEDALO_PROTOCOL . $_SERVER['HTTP_HOST'] . $request_uri );							
+						}						
 						$dato_array['url'] = tools::build_link($url, array('url'=>$url,'css'=>'list_link'));
 						# Referrer
 						$referrer 		= 'unknow';
-						if (isset($_SERVER['HTTP_REFERER']))
-						$referrer 		= $_SERVER['HTTP_REFERER'];
+						if (isset($_SERVER['HTTP_REFERER'])) {
+							$referrer 	= safe_xss($_SERVER['HTTP_REFERER']);
+							$referrer 	= str_replace('\'', '', $referrer);
+						}						
 						$dato_array['ref'] = tools::build_link($referrer, array('url'=>$referrer,'css'=>'list_link'));
 					}
 
