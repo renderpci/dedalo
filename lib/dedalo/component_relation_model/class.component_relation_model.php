@@ -93,7 +93,26 @@ class component_relation_model extends component_relation_common {
 		}
 
 		return $lang;
-	}#end get_valor_lang
+	}//end get_valor_lang
+
+
+
+	/**
+	* GET_DIFFUSION_VALUE
+	* Overwrite component common method
+	* Calculate current component diffusion value for target field (usually a mysql field)
+	* Used for diffusion_mysql to unify components diffusion value call
+	* @return string $diffusion_value
+	*
+	* @see class.diffusion_mysql.php
+	*/
+	public function get_diffusion_value( $lang=null, $type=false ) {
+	
+		$diffusion_value = $this->get_valor($lang);
+		$diffusion_value = strip_tags($diffusion_value);
+	
+		return (string)$diffusion_value;
+	}//end get_diffusion_value
 
 
 
