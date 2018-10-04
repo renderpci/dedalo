@@ -1952,7 +1952,7 @@ abstract class component_common extends common {
 			$response->result   			= (array)$result;
 			$response->msg 	  				= 'Ok';
 			if(SHOW_DEBUG===true) {
-				$response->search_query_object 	= json_encode($search_query_object, JSON_PRETTY_PRINT);
+				$response->search_query_object 	= json_encode($search_query_object, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
 				$response->debug 				= 'Total time:' . exec_time_unit($start_time,'ms').' ms';
 			}			
 		#dump($response, ' response ++ '.to_string());
@@ -3982,7 +3982,7 @@ abstract class component_common extends common {
 	* @return array $ar_result
 	*/
 	public function autocomplete_search($search_query_object, $divisor=', ') {
-			
+		
 		# Remove option of sub_select_by_id (not work on left joins)
 		$search_query_object->allow_sub_select_by_id = false;
 		
@@ -4051,7 +4051,7 @@ abstract class component_common extends common {
 			if($show_parent_name===true) {				
 				// Directly, with recursive options true
 				// $locator, $lang=DEDALO_DATA_LANG, $section_tipo, $show_parents=false, $ar_componets_related=false, $divisor=false
-				$current_valor = component_relation_common::get_locator_value( $locator, DEDALO_DATA_LANG, $current_section_tipo, $show_parents=true, false, ', ');
+				$current_valor = component_relation_common::get_locator_value( $locator, DEDALO_DATA_LANG, $row->section_tipo, $show_parents=true, false, ', ');
 				if (!empty($current_valor)) {
 					// Remove first value (self)
 					$current_valor = substr($current_valor, strpos($current_valor,', ')+2);
