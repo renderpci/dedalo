@@ -215,7 +215,8 @@ class search_development2 {
 				# Add property
 				$row->{$field_name} = $field_value;
 			}
-			/*
+			
+			
 			# Relation components. Get relations data from relations column and parse virtual columns values for each component
 			if (isset($this->relations_cache)) foreach ((array)$this->relations_cache as $table_alias => $ar_component_tipo) {
 				foreach ($ar_component_tipo as $component_tipo) {
@@ -227,7 +228,7 @@ class search_development2 {
 					# Add property
 					$row->{$field_name} = $field_value;
 				}
-			}*/
+			}
 			#debug_log(__METHOD__." row ".to_string($row), logger::DEBUG);
 
 			$ar_records[] = $row;
@@ -1392,7 +1393,7 @@ class search_development2 {
 	* @return string $trimmed_tipo
 	*/
 	public static function trim_tipo($tipo, $max=2) {
-		
+
 		preg_match("/^([a-z]+)([0-9]+)$/", $tipo, $matches);
 
 		$name 	= $matches[1];
