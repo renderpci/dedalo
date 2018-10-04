@@ -441,7 +441,9 @@ class area_thesaurus extends area {
 		$response->msg 	  	= "Records found: $total_records";
 		$response->result 	= $result;
 		$response->total  	= $total_records;
-		$response->strQuery = $search_result->strQuery;
+		if(SHOW_DEBUG===true) {
+			$response->strQuery = $search_result->strQuery;
+		}		
 	
 
 		return (object)$response;

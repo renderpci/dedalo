@@ -420,7 +420,7 @@ class component_relation_parent extends component_relation_common {
 	* GET_PARENT_RECURSIVE2
 	* @return array $parents
 	*/
-	public static function get_parent_recursive2($section_id, $section_tipo) {
+	public static function get_parent_recursive2__UNUSED($section_id, $section_tipo) {
 
 		# Sólo test de momento 
 		

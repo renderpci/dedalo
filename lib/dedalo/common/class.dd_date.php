@@ -48,7 +48,7 @@ class dd_date extends stdClass {
 			if (method_exists($this, $method)) {
 				$this->$method($value, $constrain);
 			}else{
-				debug_log(__METHOD__." Ignored received property: $key not defined as set metohd ".to_string(), logger::DEBUG);
+				debug_log(__METHOD__." Ignored received property: $key not defined as set metohd. Data: ".to_string($data), logger::DEBUG);
 			}			
 		}
 

@@ -42,7 +42,7 @@
 
 				# target_section_tipo
 				$target_section_tipo = $section_tipo;
-
+	
 				$ar_target_section_tipo 	 = [];	//$this->get_ar_target_section_tipo();
 				$ar_target_section_tipo_json = json_encode($ar_target_section_tipo);
 				
@@ -98,14 +98,14 @@
 				# Divisor
 				$divisor = $this->get_divisor();				
 				*/
-
+				
 				# hierarchy_type . Get hierarchy_type from current section
 				$hierarchy_type 	= hierarchy::get_hierarchy_type_from_section_tipo($section_tipo);
 				# hierarchy_types .  Array of all (only one in this case)
 				$hierarchy_types 	= [$hierarchy_type];
 				# hierarchy_sections .  Calculate all sections of current types
 				$hierarchy_sections = component_autocomplete_hi::get_hierarchy_sections_from_types( $hierarchy_types );
-				
+								
 				# search_tipos
 				$term_tipo 		= hierarchy::get_element_tipo_from_section_map( $section_tipo, 'term' );
 				$search_tipos 	= [$term_tipo]; // DEDALO_THESAURUS_TERM_TIPO
@@ -121,7 +121,7 @@
 					$search_query_object_options->lang 				= 'all';
 					$search_query_object_options->logical_operator 	= '$or';
 					$search_query_object_options->id 				= 'temp';
-					$search_query_object_options->section_tipo		= []; //$hierarchy_sections; // Normally hierarchy_sections
+					$search_query_object_options->section_tipo		= []; // Added from wrapper hierarchy_sections on the fly in service autosearch
 					$search_query_object_options->search_tipos 		= $search_tipos; // [DEDALO_THESAURUS_TERM_TIPO];
 					$search_query_object_options->distinct_values	= false;
 					$search_query_object_options->show_modelo_name 	= true;
@@ -151,12 +151,14 @@
 				# q_operator is injected by trigger search2
 				$q_operator = isset($this->q_operator) ? $this->q_operator : null;
 
+				
 				# hierarchy_type . Get hierarchy_type from current section
 				$hierarchy_type 	= hierarchy::get_hierarchy_type_from_section_tipo($section_tipo);
 				# hierarchy_types .  Array of all (only one in this case)
 				$hierarchy_types 	= [$hierarchy_type];
 				# hierarchy_sections .  Calculate all sections of current types
 				$hierarchy_sections = component_autocomplete_hi::get_hierarchy_sections_from_types( $hierarchy_types );
+				
 							
 				#$ar_comparison_operators = $this->build_search_comparison_operators();
 				#$ar_logical_operators 	 = $this->build_search_logical_operators();
@@ -180,8 +182,8 @@
 					$search_query_object_options->lang 				= 'all';
 					$search_query_object_options->logical_operator 	= '$or';
 					$search_query_object_options->id 				= 'temp';
-					$search_query_object_options->section_tipo		= []; //$hierarchy_sections; // Normally hierarchy_sections
-					$search_query_object_options->search_tipos 		= [DEDALO_THESAURUS_TERM_TIPO];
+					$search_query_object_options->section_tipo		= []; // Added from wrapper hierarchy_sections on the fly in service autosearch
+					$search_query_object_options->search_tipos 		= $search_tipos;
 					$search_query_object_options->distinct_values	= false;
 					$search_query_object_options->show_modelo_name 	= true;
 					$search_query_object_options->filter_custom 	= null;

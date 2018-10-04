@@ -578,7 +578,7 @@ class component_relation_common extends component_common {
 																	$locator->section_tipo);
 
 				$current_value = component_common::extract_component_value_fallback($current_component,$lang,true);
-					#dump($modelo_name , ' $modelo_name  ++ '.to_string());
+					#dump($current_value , ' $current_value  ++ '.to_string($component_tipo));
 				
 				$value[] = $current_value;
 			}//end foreach ($ar_componets_related as $component_tipo) 
