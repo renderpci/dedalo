@@ -241,15 +241,58 @@ class locator extends stdClass {
 
 
 	/**
-	* GET_TERM_ID
+	* GET_TERM_ID_FROM_LOCATOR
 	* Contract locator object as string like 'es_185' (section_tipo and section_id)
-	* @return string
+	* @return string|array $term_id
 	*/
-	public static function get_term_id( $locator ) {
-		$term_id = $locator->section_tipo . '_' . $locator->section_id;
+	public static function get_term_id_from_locator( $locator ) {
+
+		if (is_string($locator)) {
+			// Decode json
+			$locator = json_decode($locator);
+		}
+
+		if (is_array($locator)) {
+			$ar_locators = [];
+			foreach ($locator as $key => $current_locator) {
+				$ar_locators[] = $current_locator->section_tipo . '_' . $current_locator->section_id;
+			}
+			return $ar_locators;
+		}else{
+			$term_id = $locator->section_tipo . '_' . $locator->section_id;
+		}
+		
 
 		return $term_id;
-	}//end get_term_id
+	}//end get_term_id_from_locator
+
+
+
+	/**
+	* GET_SECTION_ID_FROM_LOCATOR
+	* Get section_id value of current locator
+	* @return string|array $section_id
+	*/
+	public static function get_section_id_from_locator( $locator ) {
+
+		if (is_string($locator)) {
+			// Decode json
+			$locator = json_decode($locator);
+		}
+
+		if (is_array($locator)) {
+			$ar_locators = [];
+			foreach ($locator as $key => $current_locator) {
+				$ar_locators[] = (int)$current_locator->section_id;
+			}
+			return $ar_locators;
+		}else{
+			$section_id = (int)$locator->section_id;
+		}
+		
+
+		return $section_id;
+	}//end get_section_id_from_locator
 
 
 
