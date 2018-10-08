@@ -2305,7 +2305,7 @@ class component_text_area extends component_common {
 	* @return 
 	*/
 	public static function build_geolocation_data($raw_text) {
-		
+
 		# Test data
 		#$request_options->raw_text = '[geo-n-1--data:{'type':'FeatureCollection','features':[{'type':'Feature','properties':{},'geometry':{'type':'Point','coordinates':[2.097785,41.393268]}}]}:data]Bateria antiaèria de Sant Pere Màrtir. Esplugues de Llobregat&nbsp;[geo-n-2--data:{'type':'FeatureCollection','features':[{'type':'Feature','properties':{},'geometry':{'type':'Point','coordinates':[2.10389792919159,41.393728914379295]}}]}:data]&nbsp;Texto dos';
 		#$request_options->raw_text = '[geo-n-1--data:{\'type\':\'FeatureCollection\',\'features\':[{\'type\':\'Feature\',\'properties\':{},\'geometry\':{\'type\':\'Point\',\'coordinates\':[2.097785,41.393268]}}]}:data]Bateria antiaèria de Sant Pere Màrtir. Esplugues de Llobregat&nbsp;[geo-n-2--data:{\'type\':\'FeatureCollection\',\'features\':[{\'type\':\'Feature\',\'properties\':{},\'geometry\':{\'type\':\'Point\',\'coordinates\':[2.10389792919159,41.393728914379295]}}]}:data]&nbsp;Texto dos';
@@ -2317,8 +2317,7 @@ class component_text_area extends component_common {
 		#"(\[geo-[a-z]-[0-9]{1,6}-[^-]{0,22}?-data:.*?:data\])";
 
 		$options = new stdClass();
-			$options->raw_text = $raw_text;
-			
+			$options->raw_text = $raw_text;			
 
 		#$response = new stdClass();
 		#	$response->result = false;
@@ -2331,13 +2330,20 @@ class component_text_area extends component_common {
 		# split by pattern
 		$pattern_geo_full = TR::get_mark_pattern('geo_full',$standalone=true);
 		$result 		  = preg_split($pattern_geo_full, $options->raw_text, -1, PREG_SPLIT_NO_EMPTY | PREG_SPLIT_DELIM_CAPTURE);
-
+	
 		/* sample result
 		[0] => [geo-n-1--data:{'type':'FeatureCollection','features':[{'type':'Feature','properties':{},'geometry':{'type':'Point','coordinates':[2.097785,41.393268]}}]}:data]
 	    [1] => Bateria antiaèria de Sant Pere Màrtir. Esplugues de Llobregat&nbsp;
 	    [2] => [geo-n-2--data:{'type':'FeatureCollection','features':[{'type':'Feature','properties':{},'geometry':{'type':'Point','coordinates':[2.10389792919159,41.393728914379295]}}]}:data]
 	    [3] => &nbsp;Texto dos
 	    */
+	    #dump($result, ' result ++ '.to_string());
+
+	    $format_text = function($text) {    
+			$text = str_replace("&nbsp;"," ",$text);
+			$text = trim($text);
+			return $text;
+	    };
 
 	    $ar_elements = array();
 	    $pattern_geo = TR::get_mark_pattern('geo',$standalone=true);
@@ -2348,17 +2354,17 @@ class component_text_area extends component_common {
 	    		$tag_string  = $value;
 	    		$next_row_id = (int)($key+2);
 	    		$text 		 = '';
-	    		if (isset($result[$next_row_id]) && strpos($result[$next_row_id],'[geo-')!==0) {
-	    			$text = $result[$next_row_id];
-	    			$text = str_replace("&nbsp;"," ",$text);
-	    			$text = trim($text);
-	    			#$text = str_replace('"', '\'', $text);
-	    			#$text = json_encode($text);
-	    			#$text = json_decode($text);
-	    			#$text = rawurlencode($text);
-	    			// JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_SLASHES 
-	    			$text = json_encode($text, JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_SLASHES);
+	    		if (isset($result[$next_row_id]) && strpos($result[$next_row_id],'[geo-')!==0 && strpos($result[$next_row_id],'-')!==0 && strpos($result[$next_row_id],'{\'type')!==0) { // && strpos($result[$next_row_id],'{\'type')!==0 && trim($result[$next_row_id])!=='-'
+	    			$text = $format_text( $result[$next_row_id] );	    				    			
+	    		}elseif (isset($result[$next_row_id+1]) && strpos($result[$next_row_id+1],'[geo-')!==0 && strpos($result[$next_row_id+1],'-')!==0 && strpos($result[$next_row_id+1],'{\'type')!==0) { // {\u0027type
+	    			$text = $format_text( $result[$next_row_id+1] );	    			
+	    		}elseif (isset($result[$next_row_id+2]) && strpos($result[$next_row_id+2],'[geo-')!==0 && strpos($result[$next_row_id+2],'-')!==0 && strpos($result[$next_row_id+2],'{\'type')!==0) { // {\u0027type
+	    			$text = $format_text( $result[$next_row_id+2] );
 	    		}
+	    		// JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_SLASHES 
+	    		if (!empty($text)) {
+	    			$text = json_encode($text, JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+	    		}	    			
 
 	    		preg_match_all($pattern_geo, $value, $matches);
 	    		$layer_id = (int)$matches[$key_tag_id][0];
@@ -2394,7 +2400,7 @@ class component_text_area extends component_common {
 	    		}
 	    	}
 	    }//end foreach ((array)$result as $key => $value)
-
+		#dump($ar_elements, ' ar_elements ++ '.to_string());
 
 		#$response->result = $ar_elements;
 		#$response->msg 	  = 'Ok. Request done. build_geolocation_data';
