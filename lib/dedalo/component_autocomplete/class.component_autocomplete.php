@@ -372,7 +372,7 @@ class component_autocomplete extends component_relation_common {
 	/**
 	* AUTOCOMPLETE_SEARCH2
 	* @return array $ar_result
-	*/
+	*//*
 	public function autocomplete_search2($search_query_object, $divisor=', ') {
 	
 		#$request_options = new stdClass();
@@ -476,6 +476,7 @@ class component_autocomplete extends component_relation_common {
 		
 		return (array)$ar_result;
 	}//end autocomplete_search2
+	*/
 
 
 
@@ -513,7 +514,7 @@ class component_autocomplete extends component_relation_common {
 
 			# COMPONENTS_WITH_REFERENCES case like autocomplete, select, etc.. 
 			$search_query = array();
-			if(in_array($search_modelo_name, component_common::get_ar_components_with_references())) {
+			if(in_array($search_modelo_name, component_relation_common::get_components_with_relations())) {
 				$search_query 		= (array)component_autocomplete::get_search_subquery($search_field, $string_to_search);
 				$subquery_type 		= 'with_references';
 			}else{
@@ -962,7 +963,7 @@ class component_autocomplete extends component_relation_common {
 				$field->component_tipo 	= $c_tipo;
 
 			# COMPONENTS_WITH_REFERENCES case like autocomplete, select, etc.. 
-			if(in_array($modelo_name, component_common::get_ar_components_with_references())) {
+			if(in_array($modelo_name, component_relation_common::get_components_with_relations())) {
 				$field->search 	= $this->get_search_fields($c_tipo);
 			}
 

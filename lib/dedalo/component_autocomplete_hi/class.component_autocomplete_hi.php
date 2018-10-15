@@ -70,7 +70,7 @@ class component_autocomplete_hi extends component_relation_common {
 			foreach ($dato as $key => $current_locator) {
 			
 				# $locator, $lang=DEDALO_DATA_LANG, $section_tipo, $show_parents=false, $ar_componets_related=false, $divisor=false )
-				$current_valor = component_relation_common::get_locator_value( $current_locator, $lang, $this->section_tipo, $show_parents );
+				$current_valor = component_relation_common::get_locator_value($current_locator, $lang, $show_parents);
 				#dump($current_valor, ' current_valor ++ '.to_string()); break;
 
 				#
@@ -664,7 +664,7 @@ class component_autocomplete_hi extends component_relation_common {
 				
 				// Directly, with recursive options true
 				// $locator, $lang=DEDALO_DATA_LANG, $section_tipo, $show_parents=false, $ar_componets_related=false, $divisor=false
-				$current_valor = component_relation_common::get_locator_value( $locator, DEDALO_DATA_LANG, $current_section_tipo, $show_parents=true, false, ', ');
+				$current_valor = component_relation_common::get_locator_value( $locator, DEDALO_DATA_LANG, $show_parents=true, false, ', ');
 				#debug_log(__METHOD__." current_valor ".to_string($current_valor), logger::DEBUG);
 				if (!empty($current_valor)) {
 					$current_term = $current_valor;
@@ -824,92 +824,97 @@ class component_autocomplete_hi extends component_relation_common {
 	/**
 	* AUTOCOMPLETE_SEARCH
 	* @return array $ar_result
-	*/
-	public function autocomplete_search($search_query_object, $divisor=', ') {
+	*//*
+	public function autocomplete_search__DEPRECATED(object $search_query_object, string $divisor=', ') {
 
-		$search_tipos 			= [DEDALO_THESAURUS_TERM_TIPO];
-		$show_modelo_name 		= true;
-		$show_parent_name 		= true;
-		$relation_type 			= DEDALO_RELATION_TYPE_LINK;
-		$from_component_tipo 	= $this->tipo;
-	
-		$search_development2 = new search_development2($search_query_object);
-		$search_result 		 = $search_development2->search();
-			
-		$ar_result = array();		
-		foreach ($search_result->ar_records as $key => $row) {
-			
-			$current_section_tipo 	= $row->section_tipo;
-			$current_section_id 	= $row->section_id;			
-			$current_relations 		= $row->{DEDALO_THESAURUS_RELATION_MODEL_TIPO};
+		// Exec search
+			$search_development2 = new search_development2($search_query_object);
+			$search_result 		 = $search_development2->search();
 
-			$current_term_tipo 		= ''; //$row->{$term_tipo};
-			foreach ($search_tipos as $current_search_tipo) {
-				if (!empty($row->{$current_search_tipo})) {
-					$current_term_tipo = $row->{$current_search_tipo};
-					break;
-				}				
-			}	
+		// Set defaults for resolve row additions
+			$search_tipos 			= [DEDALO_THESAURUS_TERM_TIPO];
+			$show_modelo_name 		= true;
+			$show_parent_name 		= true;
+			$relation_type 			= DEDALO_RELATION_TYPE_LINK;
+			$from_component_tipo 	= $this->tipo;		
 		
-			$current_term  = component_common::get_value_with_fallback_from_dato_full( $current_term_tipo, $decore_untranslated=false );
-			$original_term = $current_term;
+		// Iterate rows to conform as final array result
+			$ar_result = array();
+			foreach ($search_result->ar_records as $key => $row) {
 				
-			# Parent name . 
-			# Parent locator is always calculated and is not in current record (data is as locator children in parent record)
-			if($show_parent_name===true) {
+				// Row data. Row is a locator. Extact locator data here
+					$current_section_tipo 	= $row->section_tipo;
+					$current_section_id 	= $row->section_id;			
+					$current_relations 		= $row->{DEDALO_THESAURUS_RELATION_MODEL_TIPO};
 
-				# Build locator
-				$locator = new locator();
-					$locator->set_section_tipo($current_section_tipo);
-					$locator->set_section_id($current_section_id);
-					$locator->set_type($relation_type);
-					$locator->set_from_component_tipo($from_component_tipo);
-				$locator_json = json_encode($locator);
-				
-				// Directly, with recursive options true
-				// $locator, $lang=DEDALO_DATA_LANG, $section_tipo, $show_parents=false, $ar_componets_related=false, $divisor=false
-				$current_valor = component_relation_common::get_locator_value( $locator, DEDALO_DATA_LANG, $current_section_tipo, $show_parents=true, false, ', ' );
-				#debug_log(__METHOD__." current_valor ".to_string($current_valor), logger::DEBUG);
-				if (!empty($current_valor)) {
-					$current_term = $current_valor;
-				}
-			}
-
-			# Aditional info
-			# Model name . model locator is in relations, in current record
-			if($show_modelo_name===true) {
-				$relations  = json_decode($current_relations);
-				$model_name = false;
-				foreach ((array)$relations as $rel_locator) {
-					if ($rel_locator->type===DEDALO_RELATION_TYPE_MODEL_TIPO) {
-						$model_name = ts_object::get_term_by_locator( $rel_locator, DEDALO_DATA_LANG, $from_cache=true );
-						if (!empty($model_name)) {
-							$current_term .= ' - ' . $model_name;
+					$current_term_tipo 		= ''; //$row->{$term_tipo};
+					foreach ($search_tipos as $current_search_tipo) {
+						if (!empty($row->{$current_search_tipo})) {
+							$current_term_tipo = $row->{$current_search_tipo};
+							break;
 						}
-						break;
+					}	
+			
+				// Resolve value with lang fallback
+					$current_term  = component_common::get_value_with_fallback_from_dato_full( $current_term_tipo, $decore_untranslated=false );
+					$original_term = $current_term;
+					
+				// Parent name. Parent locator is always calculated and is not in current record (data is as locator children in parent record)
+					if($show_parent_name===true) {
+
+						# Build locator
+						$locator = new locator();
+							$locator->set_section_tipo($current_section_tipo);
+							$locator->set_section_id($current_section_id);
+							$locator->set_type($relation_type);
+							$locator->set_from_component_tipo($from_component_tipo);
+						$locator_json = json_encode($locator);
+						
+						// Directly, with recursive options true
+						// $locator, $lang=DEDALO_DATA_LANG, $section_tipo, $show_parents=false, $ar_componets_related=false, $divisor=false
+						$current_valor = component_relation_common::get_locator_value($locator, DEDALO_DATA_LANG, true, false, ', ');
+						#debug_log(__METHOD__." current_valor ".to_string($current_valor), logger::DEBUG);
+						if (!empty($current_valor)) {
+							$current_term = $current_valor;
+						}
 					}
-				}
+
+				// Aditional info. Model name . model locator is in relations, in current record
+					if($show_modelo_name===true) {
+						$relations  = json_decode($current_relations);
+						$model_name = false;
+						foreach ((array)$relations as $rel_locator) {
+							if ($rel_locator->type===DEDALO_RELATION_TYPE_MODEL_TIPO) {
+								$model_name = ts_object::get_term_by_locator( $rel_locator, DEDALO_DATA_LANG, $from_cache=true );
+								if (!empty($model_name)) {
+									$current_term .= ' - ' . $model_name;
+								}
+								break;
+							}
+						}
+					}
+
+				// // Debug added
+					if(SHOW_DEBUG===true) {
+						$current_term .= ' ['.$current_section_tipo.'_'.$current_section_id.']';
+					}	
+
+				// Final value. Store key - value
+					$current_term = strip_tags($current_term);
+
+					$value_obj = new stdClass();
+						$value_obj->value = strip_tags($original_term);
+						$value_obj->label = $current_term;
+						$value_obj->key   = $locator_json;
+
+					$ar_result[] = $value_obj;
 			}
-
-			if(SHOW_DEBUG===true) {
-				$current_term .= ' ['.$current_section_tipo.'_'.$current_section_id.']';
-			}	
-
-			# Store key - value
-			$current_term = strip_tags($current_term);
-
-			$value_obj = new stdClass();
-				$value_obj->value = strip_tags($original_term);
-				$value_obj->label = $current_term;
-				$value_obj->key   = $locator_json;
-
-			$ar_result[] = $value_obj;
-		}
-		#debug_log(__METHOD__." ar_result: ".to_string($ar_result), logger::DEBUG);
+			#debug_log(__METHOD__." ar_result: ".to_string($ar_result), logger::DEBUG);
 
 		
 		return (array)$ar_result;
 	}//end autocomplete_search
+	*/
 
 
 
@@ -1013,7 +1018,11 @@ class component_autocomplete_hi extends component_relation_common {
 			// Default is hierarchy use
 			case 'hierarchy':
 				foreach ((array)$ar_value as $hs_section_tipo) {
-					$ar_filter_options[$hs_section_tipo] = RecordObj_dd::get_termino_by_tipo($hs_section_tipo, DEDALO_DATA_LANG, true, true);
+
+					$current_label 	= strip_tags(RecordObj_dd::get_termino_by_tipo($hs_section_tipo, DEDALO_DATA_LANG, true, true));
+					$current_key 	= $hs_section_tipo;
+					
+					$ar_filter_options[$current_key] = $current_label;
 				}
 				break;
 			// Generic use compatible with old component_autocomplete
@@ -1035,7 +1044,7 @@ class component_autocomplete_hi extends component_relation_common {
 					$ar_list_of_values = $current_component->get_ar_list_of_values2(DEDALO_DATA_LANG);		
 					foreach ((array)$ar_list_of_values->result as $hs_value => $item) {
 						
-						$current_label 	= $item->label;
+						$current_label 	= strip_tags($item->label);
 						$current_key 	= json_encode($item->value);
 
 						$ar_filter_options[$current_key] = $current_label;
@@ -1043,6 +1052,9 @@ class component_autocomplete_hi extends component_relation_common {
 				}
 				break;
 		}
+
+		// Sort elements		
+		asort($ar_filter_options, SORT_NATURAL);
 		
 		return $ar_filter_options;
 	}//end get_ar_filter_options

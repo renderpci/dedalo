@@ -7,6 +7,136 @@ common::trigger_manager();
 
 
 /**
+* NEW_ELEMENT
+* Render form to submit new record to source list
+* @param object $json_data
+*/
+function new_element($json_data) {
+	global $start_time;
+
+	# Write session to unlock session file
+	session_write_close();
+
+	$response = new stdClass();
+		$response->result 	= false;
+		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
+
+	$vars = array('tipo','parent','section_tipo','target_section_tipo','tipo_to_search','top_tipo');
+		foreach($vars as $name) {
+			$$name = common::setVarData($name, $json_data);
+			# DATA VERIFY
+			if ($name==='dato') continue; # Skip non mandatory
+			if (empty($$name)) {
+				$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty '.$name.' (is mandatory)';
+				return $response;
+			}
+		}
+	
+	
+	$lang = DEDALO_DATA_LANG;
+	
+	$ar_terminos_relacionados = RecordObj_dd::get_ar_terminos_relacionados($tipo, true, true);
+		#dump($ar_terminos_relacionados, ' ar_terminos_relacionados ++ '.to_string());
+	
+	if(SHOW_DEBUG) {
+		#$ar_related = common::get_ar_related_by_model('section' $tipo);
+		if (empty($ar_terminos_relacionados)) {
+			$response->msg = 'Trigger Error: ('.__FUNCTION__.') Missing required ar_terminos_relacionados for current component';
+			return $response;
+		}		
+	}
+	
+	// View html page
+	$page_html	= DEDALO_LIB_BASE_PATH .'/component_autocomplete/html/component_autocomplete_new.phtml';
+	ob_start();
+	include ( $page_html );
+	$html = ob_get_clean();
+
+
+	$response->result 	= $html;
+	$response->msg 		= 'Ok. Request done ['.__FUNCTION__.']';
+
+	# Debug
+	if(SHOW_DEBUG===true) {
+		$debug = new stdClass();
+			$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
+			foreach($vars as $name) {
+				$debug->{$name} = $$name;
+			}
+
+		$response->debug = $debug;
+	}
+	
+	return (object)$response;
+}//end function new_element')
+
+
+
+/**
+* SUBMIT_NEW_ELEMENT
+* Fire submit form of new element
+* @param object $json_data
+*/
+function submit_new_element($json_data) {
+	global $start_time;
+
+	# Write session to unlock session file
+	#session_write_close();
+
+	$response = new stdClass();
+		$response->result 	= false;
+		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
+
+	#$vars = array('tipo','parent','section_tipo','target_section_tipo','ar_data','propiedades','top_tipo');
+	$vars = array('tipo','parent','section_tipo','target_section_tipo','ar_data','top_tipo');
+		foreach($vars as $name) {
+			$$name = common::setVarData($name, $json_data);
+			# DATA VERIFY
+			#if ($name==='dato') continue; # Skip non mandatory
+			if (empty($$name)) {
+				$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty '.$name.' (is mandatory)';
+				return $response;
+			}
+		}
+
+	if (!$ar_data = json_decode($ar_data)) {
+		$response->msg = 'Trigger Error: ('.__FUNCTION__.') Error on json decode ar_data!';
+		return $response;
+	}
+	
+	if (empty($target_section_tipo)) {		
+		$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty target_section_tipo is not valid!';
+		return $response;
+	}	
+
+	$referenced_tipo = key($ar_data);
+	if ( !is_object($ar_data) || empty($referenced_tipo) ) {
+		$response->msg = 'Trigger Error: ('.__FUNCTION__.') ar_data is not object!';
+		return $response;
+	}
+
+	$new_locator = (object)component_autocomplete::create_new_autocomplete_record($parent, $tipo, $target_section_tipo, $section_tipo, $ar_data);
+
+	$response->result 	= $new_locator;
+	$response->msg 		= 'Ok. Request done ['.__FUNCTION__.']';
+
+	# Debug
+	if(SHOW_DEBUG===true) {
+		$debug = new stdClass();
+			$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
+			foreach($vars as $name) {
+				$debug->{$name} = $$name;
+			}
+
+		$response->debug = $debug;
+	}
+	
+	return (object)$response;
+}//end function submit_new_element')
+
+
+
+/**
 * AUTOCOMPLETE
 * Get list of mathed DB results for current string by ajax call
 * @param object $json_data
@@ -140,137 +270,6 @@ function autocomplete2($json_data) {
 
 
 
-
-/**
-* NEW_ELEMENT
-* Render form to submit new record to source list
-* @param object $json_data
-*/
-function new_element($json_data) {
-	global $start_time;
-
-	# Write session to unlock session file
-	session_write_close();
-
-	$response = new stdClass();
-		$response->result 	= false;
-		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
-
-	$vars = array('tipo','parent','section_tipo','target_section_tipo','tipo_to_search','top_tipo');
-		foreach($vars as $name) {
-			$$name = common::setVarData($name, $json_data);
-			# DATA VERIFY
-			if ($name==='dato') continue; # Skip non mandatory
-			if (empty($$name)) {
-				$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty '.$name.' (is mandatory)';
-				return $response;
-			}
-		}
-	
-	
-	$lang = DEDALO_DATA_LANG;
-	
-	$ar_terminos_relacionados = RecordObj_dd::get_ar_terminos_relacionados($tipo, true, true);
-		#dump($ar_terminos_relacionados, ' ar_terminos_relacionados ++ '.to_string());
-	
-	if(SHOW_DEBUG) {
-		#$ar_related = common::get_ar_related_by_model('section' $tipo);
-		if (empty($ar_terminos_relacionados)) {
-			$response->msg = 'Trigger Error: ('.__FUNCTION__.') Missing required ar_terminos_relacionados for current component';
-			return $response;
-		}		
-	}
-	
-	// View html page
-	$page_html	= DEDALO_LIB_BASE_PATH .'/component_autocomplete/html/component_autocomplete_new.phtml';
-	ob_start();
-	include ( $page_html );
-	$html = ob_get_clean();
-
-
-	$response->result 	= $html;
-	$response->msg 		= 'Ok. Request done ['.__FUNCTION__.']';
-
-	# Debug
-	if(SHOW_DEBUG===true) {
-		$debug = new stdClass();
-			$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
-			foreach($vars as $name) {
-				$debug->{$name} = $$name;
-			}
-
-		$response->debug = $debug;
-	}
-	
-	return (object)$response;
-}//end function new_element')
-
-
-
-/**
-* SUBMIT_NEW_ELEMENT
-* Fire submit form of new element
-* @param object $json_data
-*/
-function submit_new_element($json_data) {
-	global $start_time;
-
-	# Write session to unlock session file
-	#session_write_close();
-
-	$response = new stdClass();
-		$response->result 	= false;
-		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
-
-	#$vars = array('tipo','parent','section_tipo','target_section_tipo','ar_data','propiedades','top_tipo');
-	$vars = array('tipo','parent','section_tipo','target_section_tipo','ar_data','top_tipo');
-		foreach($vars as $name) {
-			$$name = common::setVarData($name, $json_data);
-			# DATA VERIFY
-			#if ($name==='dato') continue; # Skip non mandatory
-			if (empty($$name)) {
-				$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty '.$name.' (is mandatory)';
-				return $response;
-			}
-		}
-
-	if (!$ar_data = json_decode($ar_data)) {
-		$response->msg = 'Trigger Error: ('.__FUNCTION__.') Error on json decode ar_data!';
-		return $response;
-	}
-	
-	if (empty($target_section_tipo)) {		
-		$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty target_section_tipo is not valid!';
-		return $response;
-	}	
-
-	$referenced_tipo = key($ar_data);
-	if ( !is_object($ar_data) || empty($referenced_tipo) ) {
-		$response->msg = 'Trigger Error: ('.__FUNCTION__.') ar_data is not object!';
-		return $response;
-	}
-
-	$new_locator = (object)component_autocomplete::create_new_autocomplete_record($parent, $tipo, $target_section_tipo, $section_tipo, $ar_data);
-
-	$response->result 	= $new_locator;
-	$response->msg 		= 'Ok. Request done ['.__FUNCTION__.']';
-
-	# Debug
-	if(SHOW_DEBUG===true) {
-		$debug = new stdClass();
-			$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
-			foreach($vars as $name) {
-				$debug->{$name} = $$name;
-			}
-
-		$response->debug = $debug;
-	}
-	
-	return (object)$response;
-}//end function submit_new_element')
-
-
-
 /**
 * ADD_LOCATOR
 * Fire submit form of new element
@@ -385,5 +384,3 @@ function remove_locator($json_data) {
 }//end remove_locator*/
 
 
-
-?>

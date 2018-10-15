@@ -37,10 +37,8 @@ class component_relation_common extends component_common {
 			'component_autocomplete_hi',
 			'component_check_box',
 			'component_filter',
-			'component_filter_master',
-			'component_filter',
-			'component_portal',
-			'component_filter',
+			'component_filter_master',			
+			'component_portal',			
 			'component_publication',
 			'component_radio_button',
 			'component_relation_children',
@@ -48,11 +46,9 @@ class component_relation_common extends component_common {
 			'component_relation_model',
 			'component_relation_parent',
 			'component_relation_related',
-			'component_relation_struct',
-			'component_relation_children',
+			'component_relation_struct',			
 			'component_select',
-			'component_select_lang',
-			'component_select_lang',
+			'component_select_lang'
 		];
 
 		return $components_with_relations;
@@ -555,7 +551,7 @@ class component_relation_common extends component_common {
 	* Resolve locator to string value to show in list etc.
 	* @return string $valor
 	*/
-	public static function get_locator_value( $locator, $lang=DEDALO_DATA_LANG, $section_tipo, $show_parents=false, $ar_componets_related=false, $divisor=', ' ) {
+	public static function get_locator_value( $locator, $lang=DEDALO_DATA_LANG, $show_parents=false, $ar_componets_related=false, $divisor=', ', $include_self=true ) {
 		if(SHOW_DEBUG===true) {
 			$start_time=microtime(1);
 			#dump($ar_componets_related, ' ar_componets_related ++ '.to_string());;
@@ -577,7 +573,7 @@ class component_relation_common extends component_common {
 																	$lang,
 																	$locator->section_tipo);
 
-				$current_value = component_common::extract_component_value_fallback($current_component,$lang,true);
+				$current_value = component_common::extract_component_value_fallback($current_component, $lang, true);
 					#dump($current_value , ' $current_value  ++ '.to_string($component_tipo));
 				
 				$value[] = $current_value;
@@ -591,11 +587,14 @@ class component_relation_common extends component_common {
 			
 			$valor = implode($divisor, $ar_values_clean);
 
-		}else{
-
-			$valor = ts_object::get_term_by_locator( $locator, $lang, true );
+		}else{					
 	
 			if ($show_parents===true) {
+
+				$ar_values = [];
+				if ($include_self===true) {
+					$ar_values[] = ts_object::get_term_by_locator( $locator, $lang, true );
+				}	
 
 				#$ar_parents = component_relation_parent::get_parents_recursive( $locator );
 				#$ar_parents = component_relation_parent::get_parents($locator->section_id, $locator->section_tipo, $from_component_tipo=null, $ar_tables=null);
@@ -606,7 +605,6 @@ class component_relation_common extends component_common {
 				#$n_ar_parents = count($ar_parents);
 					#dump($ar_parents, ' ar_parents ++ '.to_string($locator)); die();
 			
-				$ar_parents_values  = array();
 				#$ar_locators_resolved = [$locator->section_tipo.'_'.$locator->section_id];
 				foreach ($ar_parents as $current_locator) {
 
@@ -615,19 +613,21 @@ class component_relation_common extends component_common {
 					#	continue;
 					#}
 
-					$current_value = ts_object::get_term_by_locator( $current_locator, $lang, $from_cache=true );
-						#dump($current_parent, ' current_parent ++ '.to_string());
+					$current_value = ts_object::get_term_by_locator( $current_locator, $lang, true );
 					if (!empty($current_value)) {
-						$ar_parents_values[]  = $current_value;
+						$ar_values[]  = $current_value;
 					}
 					//break;
 					#$ar_locators_resolved[] = $current_locator->section_tipo.'_'.$current_locator->section_id;
 				}
-				if (!empty($ar_parents_values)) {
-					#debug_log(__METHOD__."  ".to_string($ar_parents_values), logger::DEBUG);
-					$valor .= ', <span class="notes">'.implode($divisor, $ar_parents_values).'</span>';
-				}
 				
+				#debug_log(__METHOD__."  ".to_string($ar_parents_values), logger::DEBUG);
+				$valor = implode($divisor, $ar_values);
+				
+			}else{
+
+				$valor = ts_object::get_term_by_locator( $locator, $lang, true );
+
 			}//end if ($show_parents===true)
 		}	
 
@@ -1145,7 +1145,7 @@ class component_relation_common extends component_common {
 
 		$ar_term = [];
 		foreach ((array)$dato as $key => $locator) {
-			$term_id = locator::get_term_id($locator);
+			$term_id = locator::get_term_id_from_locator($locator);
 			$ar_term[] = $term_id;
 		}
 
@@ -1528,6 +1528,118 @@ class component_relation_common extends component_common {
 		return $result;
 	}//end get_indexations_search
 	*/
+
+
+
+	/**
+	* GET_FILTER_LIST_DATA
+	* Create all data needed for build service autocomplete filter options interface
+	* @param array $filter_by_list
+	* @return array $filter_fields_data
+	*/
+	public static function get_filter_list_data($filter_by_list) {
+
+		$filter_list_data = [];
+		foreach ((array)$filter_by_list as $current_obj_value) {
+
+			$f_section_tipo   	= $current_obj_value->section_tipo;
+			$f_component_tipo 	= $current_obj_value->component_tipo;		
+		
+			# Calculate list values of each element
+			$c_modelo_name 		= RecordObj_dd::get_modelo_name_by_tipo($f_component_tipo,true);
+			$current_component  = component_common::get_instance($c_modelo_name,
+																 $f_component_tipo,
+																 null,
+																 'list',
+																 DEDALO_DATA_LANG,
+																 $f_section_tipo);
+
+			$ar_list_of_values = $current_component->get_ar_list_of_values2(DEDALO_DATA_LANG);
+			foreach ((array)$ar_list_of_values->result as $key => $item) {
+
+				$current_label = $item->label;
+				$current_value = $item->value;
+
+				$current_locator = new locator();
+					$current_locator->set_type(DEDALO_RELATION_TYPE_LINK); # Add relation type (always link)
+					$current_locator->set_section_id($current_value->section_id);
+					$current_locator->set_section_tipo($current_value->section_tipo);										
+					$current_locator->set_from_component_tipo($f_component_tipo); # Add from_component_tipo
+				
+				$current_locator_json = json_encode($current_locator);
+				
+				$input_id = hash('sha256', $current_locator_json);
+
+				// Element
+				$element = new stdClass();
+					$element->id 		= $input_id;
+					$element->value 	= $current_locator;					
+					$element->label 	= $current_label;
+					$element->component_tipo = $f_component_tipo;
+
+				$filter_list_data[] = $element;
+
+			}//end foreach ((array)$ar_list_of_values->result as $key => $item)					
+		}
+
+
+		return $filter_list_data;
+	}//end get_filter_list_data
+
+
+
+	/**
+	* GET_FILTER_FIELDS_DATA
+	* Create all data needed for build service autocomplete filter options interface
+	* @param object $search_query_object
+	* @return array $filter_fields_data
+	*/
+	public static function get_filter_fields_data($search_query_object, $propiedades) {
+	
+		$filter_obj = $search_query_object->filter;
+
+		// exclude elements already used as filter list			
+			$ar_filters 	= [];
+			$filter_by_list = isset($propiedades->source->filter_by_list) ? $propiedades->source->filter_by_list : [];
+			foreach ($filter_by_list as $value) {
+				$ar_filters[] = $value->component_tipo;
+			}
+
+		$filter_fields_data = [];
+		foreach ($filter_obj as $operator => $ar_filter) foreach ($ar_filter as $key => $current_filter) {
+
+			$first_path 			= reset($current_filter->path);
+			$last_path 				= end($current_filter->path);
+			$base_component_tipo 	= $first_path->component_tipo;
+			$current_component_tipo = $last_path->component_tipo;
+			$current_section_tipo 	= $last_path->section_tipo;
+			$current_modelo_name 	= $last_path->modelo;			
+			$name 					= $last_path->name;
+
+			if (true===in_array($base_component_tipo, $ar_filters)) continue;
+
+			// type_map
+				if (isset($propiedades->source->type_map->$base_component_tipo)) {
+					$type_map = $propiedades->source->type_map->$base_component_tipo;				
+				}else{
+					$type_map = array();
+				}				
+				
+
+			// Element
+				$element = new stdClass();
+					$element->tipo 			= $current_component_tipo;
+					$element->name 			= $name;
+					$element->modelo_name 	= $current_modelo_name;
+					$element->type_map 		= $type_map;
+					$element->base_component_tipo 		= $base_component_tipo;
+
+				$filter_fields_data[] = $element;
+		}
+
+
+		return $filter_fields_data;
+	}//end get_filter_fields_data
 
 
 

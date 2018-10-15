@@ -149,7 +149,7 @@
 								$cookie_name = 'toponymy_list_'.$section_tipo .'_'. $tipo;
 								$html_content .= "<ul class=\"toponymy_list text_unselectable\">";
 								#$html_content .= "<div class=\"toponymy_list_close\">X</div>";
-								$html_content .= "<li><input type=\"checkbox\" id=\"select_all_{$tipo}\" onchange=\"component_autocomplete_hi.select_all_hierarchy_sections(this,'$cookie_name')\"> <label for=\"select_all_{$tipo}\">".label::get_label('todos')."</label></li><hr>";
+								$html_content 	  .= "<li><input type=\"checkbox\" id=\"select_all_{$tipo}\" onchange=\"component_autocomplete_hi.select_all_hierarchy_sections(this,'$cookie_name')\"> <label for=\"select_all_{$tipo}\">".label::get_label('todos')."</label></li><hr>";
 								foreach ((array)$ar_filter_options as $fo_key => $fo_label) {
 									$current_id = $tipo.'_'.md5($fo_key);
 									$html_content .= "<li>";

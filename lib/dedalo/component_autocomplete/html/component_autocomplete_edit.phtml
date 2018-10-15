@@ -15,14 +15,15 @@
 	print "data-lang=\"{$lang}\" ";
 	print "data-parent=\"{$parent}\" ";
 	print "data-section_tipo=\"{$section_tipo}\" ";
-	print "data-ar_target_section_tipo='{$ar_target_section_tipo_json}' ";
-	print "data-tipo_to_search='{$tipo_to_search}' ";
 	print "data-modo=\"{$modo}\" ";
-	print "data-from_modo=\"{$from_modo}\" ";
 	print "data-dato='{$dato_json}' ";
 	print "data-component_name=\"{$component_name}\" ";
 	print "data-component_info='{$component_info}' ";
-	print "data-search_query_object='{$json_search_query_object}' ";
+	print "data-ar_target_section_tipo='{$ar_target_section_tipo_json}' ";
+	print "data-tipo_to_search='{$tipo_to_search}' ";	
+	print "data-from_modo=\"{$from_modo}\" ";	
+	
+	print 'data-search_query_object=\''.$json_search_query_object.'\' ';
 	print "data-filter_by_list='{$json_filter_by_list}' ";
 	print "data-divisor=\"$divisor\" ";
 	print "data-limit=\"$limit\" ";
@@ -64,90 +65,55 @@
 				#
 				# OPTIONS 
 					$autosearch_options_html = '';
-					$autosearch_options_html .= "<div class=\"autosearch_options\" data-tipo=\"$tipo\">";
+					$autosearch_options_id 	 = 'autosearch_options_' . $section_tipo .'_'. $tipo;
+					$autosearch_options_html .= '<div id="' . $autosearch_options_id . '" class="autosearch_options hide" data-tipo="'.$tipo.'">';
 		
 						#
 						# FILTER_BY_LIST
-							#$filter_by_list= false;
-							$ar_filters = [];
 							if ($filter_by_list!==false) {
-								#$autosearch_options_html .= "<div class=\"icon_bs autocomplete_list_button_options edit_hidden\"></div>";
+								// Calculate ar elements to show in filter
+									$ar_elements = component_relation_common::get_filter_list_data($filter_by_list);
 
-								$cookie_name = 'filter_by_list_'. $section_tipo .'_'. $tipo;
-								$autosearch_options_html .= "<ul class=\"filter_by_list text_unselectable\">";
-								#$autosearch_options_html .= "<div class=\"toponymy_list_close\">X</div>";
-								
-								$total = count($filter_by_list); $n=0;
-								foreach ($filter_by_list as $current_obj_value) {
-				
-									$f_section_tipo   	= $current_obj_value->section_tipo;
-									$f_component_tipo 	= $current_obj_value->component_tipo;
-										#dump($f_component_tipo, ' f_component_tipo ++ '.to_string());
+								$filter_list_options = new stdClass();
+									$filter_list_options->target_id 	= $autosearch_options_id;
+									$filter_list_options->tipo 			= $tipo;
+									$filter_list_options->section_tipo 	= $section_tipo;
+									$filter_list_options->ar_elements 	= $ar_elements;
 
-									if (!isset($all_selector_check)) {
-										$label_all = label::get_label('todos').' <span>'. RecordObj_dd::get_termino_by_tipo($f_component_tipo);
-										if (SHOW_DEVELOPER===true) {
-											$label_all .= ' <span style="opacity:0.5">['.$f_component_tipo.']</span>';
-										}
-										$label_all .= '<span>';
-										$all_selector_check = "<li><input type=\"checkbox\" id=\"select_all_{$tipo}\" onchange=\"component_autocomplete.select_all_filter_sections(this,'$cookie_name')\"/><label for=\"select_all_{$tipo}\">".$label_all."</label></li><hr>";
-										$autosearch_options_html .= $all_selector_check;
-									}
-
-									$ar_filters[] = $f_component_tipo;
-
-									# Calculate list values of each element
-									$c_modelo_name 		= RecordObj_dd::get_modelo_name_by_tipo($f_component_tipo,true);
-									$current_component  = component_common::get_instance($c_modelo_name,
-																						 $f_component_tipo,
-																						 null,
-																						 'list',
-																						 DEDALO_DATA_LANG,
-																						 $f_section_tipo);
-
-									$ar_list_of_values = $current_component->get_ar_list_of_values2(DEDALO_DATA_LANG);
-									foreach ((array)$ar_list_of_values->result as $key => $item) {
-
-										$current_label = $item->label;
-										$current_value = $item->value;
-
-										$current_locator = new locator();
-											$current_locator->set_type(DEDALO_RELATION_TYPE_LINK); # Add relation type (always link)
-											$current_locator->set_section_id($current_value->section_id);
-											$current_locator->set_section_tipo($current_value->section_tipo);										
-											$current_locator->set_from_component_tipo($f_component_tipo); # Add from_component_tipo
-										
-										$current_locator_json = json_encode($current_locator);
-										
-										$input_id = hash('sha256', $current_locator_json);
-
-										$autosearch_options_html .= "<li>";
-										$autosearch_options_html .= "<input type=\"checkbox\" value='".$current_locator_json."' id=\"$input_id\" checked onchange=\"component_autocomplete.save_filter_sections(this,'$cookie_name')\"/>";
-										$autosearch_options_html .= "<label for=\"$input_id\">";
-										$autosearch_options_html .= $current_label;
-										if(SHOW_DEBUG===true) {
-											#$autosearch_options_html .= " <span class=\"notes\">[$current_locator_json]<span>";
-										}
-										$autosearch_options_html .= "</label>";
-										$autosearch_options_html .= "</li>";
-									}
-									$n++;
-									if ($total>1 && $n<$total) {
-										$autosearch_options_html .= "<hr>";
-									}
-								}
-								$autosearch_options_html .= "</ul>";							
+								$autosearch_options_html .= '<script>';
+								$autosearch_options_html .= 'service_autocomplete.build_filter_list('.json_encode($filter_list_options).');';
+								$autosearch_options_html .= '</script>';
 							}//end if ($filter_by_list!==false)
 
 
 						#
 						# FILTER FIELDS (ADVANCED SEARCH)
+							$ar_filters  = [];
 							$filter_by_fields = false;
 							$filter_obj = $search_query_object->filter;
 
+								// Calculate ar elements to show in filter
+								$ar_elements = component_relation_common::get_filter_fields_data($search_query_object, $propiedades);								
+
+								$filter_fields_options = new stdClass();
+									$filter_fields_options->tipo 		 = $tipo;
+									$filter_fields_options->section_tipo = $section_tipo;
+									$filter_fields_options->ar_elements  = $ar_elements;
+									$filter_fields_options->op_label_or  = RecordObj_dd::get_termino_by_tipo('dd1061',DEDALO_DATA_LANG,true);
+									$filter_fields_options->op_label_and = RecordObj_dd::get_termino_by_tipo('dd1060',DEDALO_DATA_LANG,true);
+									$filter_fields_options->operator  	 = isset($propiedades->source->operator) ? $propiedades->source->operator : 'or';
+									$filter_fields_options->q_split  	 = isset($propiedades->source->q_split) ? (bool)$propiedades->source->q_split : true;
+									$filter_fields_options->target_id 	 = $autosearch_options_id;
+
+								$autosearch_options_html .= '<script>';
+								$autosearch_options_html .= 'service_autocomplete.build_filter_fields('.json_encode($filter_fields_options).');';
+								$autosearch_options_html .= '</script>';
+
+							/*
 							$autosearch_options_html .= "<div class=\"filter_fields text_unselectable\">";
 							$autosearch_options_html .= "<ul>";
-							foreach ($filter_obj as $operator => $ar_filter) foreach ($ar_filter as $key => $current_filter) {					
+
+							foreach ($filter_obj as $operator => $ar_filter) foreach ($ar_filter as $key => $current_filter) {
 
 								$first_path 			= reset($current_filter->path);
 								$last_path 				= end($current_filter->path);
@@ -177,7 +143,7 @@
 								$autosearch_options_html .= "autocomplete='off'";
 								$autosearch_options_html .= 'onkeyup="component_autocomplete.search_from_filter_fields(this)" ';
 								$autosearch_options_html .= "name=\"{$input_name}\" ";
-								$autosearch_options_html .= 'value="" ';								
+								$autosearch_options_html .= 'value="" ';
 								if (SHOW_DEVELOPER===true) {
 								$autosearch_options_html .= 'placeholder="'.$current_component_tipo.'" ';
 								}							
@@ -187,13 +153,13 @@
 								$autosearch_options_html .= "/>";
 								
 								// Mode full component search							
-								/*$current_component  = component_common::get_instance($current_modelo_name,
-																					 $current_component_tipo,
-																					 null,
-																					 'search',
-																					 DEDALO_DATA_LANG,
-																					 $current_section_tipo);
-								$autosearch_options_html .= $current_component->get_html();*/								
+								#$current_component  = component_common::get_instance($current_modelo_name,
+								#													 $current_component_tipo,
+								#													 null,
+								#													 'search',
+								#													 DEDALO_DATA_LANG,
+								#													 $current_section_tipo);
+								#$autosearch_options_html .= $current_component->get_html();						
 								$autosearch_options_html .= "</li>";
 								
 
@@ -232,12 +198,13 @@
 								$autosearch_options_html .= "</div>";
 							
 							$autosearch_options_html .= "</div>";//end div filter_fields
+							*/
 
 					$autosearch_options_html .= "</div>";//end autosearch_options	
 					
 
 				#
-				# VALOR . STRING RESOLVED TO SHOW
+				# VALOR. STRING RESOLVED TO SHOW
 					$html_content .= '<ul class="css_autocomplete_valor '.$css_autocomplete_valor.'" data-role="autocomplete_valor">';
 					$i=0;
 					foreach ($ar_valor as $value_obj) {
@@ -320,9 +287,6 @@
 					$html_content .= '</ul>';
 
 
-
-
-
 				#
 				# BUTTONS_AND_FIELDS
 					if ($in_time_machine!==true) {
@@ -335,7 +299,7 @@
 							
 							# BUTTON SHOW OPTIONS
 							if ($filter_by_list!==false || $filter_by_fields!==false) {
-								$html_content .= "<div class=\"icon_bs autocomplete_list_button_options edit_hidden\" data-tipo=\"$tipo\" onclick=\"component_autocomplete.toggle_options(this)\"></div>";
+								$html_content .= "<div class=\"icon_bs autocomplete_list_button_options edit_hidden\" data-tipo=\"$tipo\" onclick=\"service_autocomplete.toggle_options(this)\"></div>";
 							}
 							
 							# Permissions of target section. Apply to current buttons
@@ -384,24 +348,23 @@
 					$html_content .= "/>";
 					// data-filter_by_list_component_tipo=\"$filter_by_list_component_tipo\"
 
+
 				#
 				# COMPONENT OPTIONS CONTAINER
-				$html_content .= '<div class="'.$css_component_options_container.'">';
-				
-					#
-					# NEW_ELEMENT_CONTAINER ajax loads here
-						$html_content .= "<div class=\"new_element_container\" data-role=\"new_element_container\" data-tipo=\"{$tipo}\"></div>";
+					$html_content .= '<div class="'.$css_component_options_container.'">';
+						#
+						# NEW_ELEMENT_CONTAINER ajax loads here
+							$html_content .= "<div class=\"new_element_container\" data-role=\"new_element_container\" data-tipo=\"{$tipo}\"></div>";
 
-					#
-					# AUTOSEARCH_OPTIONS (add after button)
-						$html_content .= $autosearch_options_html;
+						#
+						# AUTOSEARCH_OPTIONS (add after button)
+							$html_content .= $autosearch_options_html;
 
-					#
-					# AUTOCOMPLETE SERVICE
-						$autocomplete_wrapper_id = 'aw_' . $identificador_unico;
-						$html_content .= '<div class="autocomplete_wrapper '.$css_autocomplete_wrapper.'" id="'.$autocomplete_wrapper_id.'"></div>';
-
-				$html_content .= '</div>';
+						#
+						# AUTOCOMPLETE SERVICE
+							$autocomplete_wrapper_id = 'aw_' . $identificador_unico;
+							$html_content .= '<div class="autocomplete_wrapper '.$css_autocomplete_wrapper.'" id="'.$autocomplete_wrapper_id.'"></div>';
+					$html_content .= '</div>';
 
 
 				#
@@ -424,7 +387,7 @@
 				if(SHOW_DEBUG) {
 					#$html_content .= " <span class=\"css_span_debugger\" id=\"debugger_{$tipo}\" >{$debugger}</span>";
 					$html_content .= "<span class=\"debug_info\" id=\"debugger_{$tipo}\">";
-					$html_content .= json_encode($search_fields, JSON_PRETTY_PRINT);
+					#$html_content .= json_encode($search_fields, JSON_PRETTY_PRINT);
 					$html_content .= "<pre>";					
 					$json_indented_by_2 = preg_replace('/^(  +?)\\1(?=[^ ])/m', '$1', json_encode($search_query_object, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
 					$html_content .= $json_indented_by_2;
@@ -454,4 +417,3 @@
 	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'out', $modo, $lang);
 
 
-?>

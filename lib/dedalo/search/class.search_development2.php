@@ -216,15 +216,19 @@ class search_development2 {
 				$row->{$field_name} = $field_value;
 			}
 			
-			
+			#dump($this->relations_cache, ' $this->relations_cache ++ '.to_string());
+			#dump($ar_relations_cache_solved, ' ar_relations_cache_solved ++ '.to_string());
+			/* (!) NOTA: ESTA RESOLUCIÓN SÓLO ES VIABLE PARA EL PRIMER NIVEL. */
 			# Relation components. Get relations data from relations column and parse virtual columns values for each component
 			if (isset($this->relations_cache)) foreach ((array)$this->relations_cache as $table_alias => $ar_component_tipo) {
 				foreach ($ar_component_tipo as $component_tipo) {
 					$field_name  	= $component_tipo;
 					$property_name 	= 'relations_' . $table_alias;
 					#$field_value 	= $ar_relations_cache_solved[$property_name]; // Full relations data
-					$field_value 	= self::get_filtered_relations($ar_relations_cache_solved[$property_name], $component_tipo); // Filtered by from_component_tipo
-
+					//if (isset($ar_relations_cache_solved[$property_name])) {
+						$current_relations_cache_solved = $ar_relations_cache_solved[$property_name];
+						$field_value = self::get_filtered_relations($current_relations_cache_solved, $component_tipo); // Filtered by from_component_tipo
+					//}
 					# Add property
 					$row->{$field_name} = $field_value;
 				}
@@ -238,35 +242,35 @@ class search_development2 {
 
 		#
 		# FULL_COUNT
-		if ($this->search_query_object->full_count===true) {
-			# Exec a count query
-			# Converts json search_query_object to sql query string
-			$full_count_sql_query = $this->parse_search_query_object( $full_count=true );			
-			$full_count_result	  = JSON_RecordObj_matrix::search_free($full_count_sql_query);
-			$row_count 	 		  = pg_fetch_assoc($full_count_result);
-			$full_count 		  = $row_count['full_count'];
-			# Fix full_count value
-			$this->search_query_object->full_count = $full_count;
-		}
+			if ($this->search_query_object->full_count===true) {
+				# Exec a count query
+				# Converts json search_query_object to sql query string
+				$full_count_sql_query = $this->parse_search_query_object( $full_count=true );			
+				$full_count_result	  = JSON_RecordObj_matrix::search_free($full_count_sql_query);
+				$row_count 	 		  = pg_fetch_assoc($full_count_result);
+				$full_count 		  = $row_count['full_count'];
+				# Fix full_count value
+				$this->search_query_object->full_count = $full_count;
+			}
 
 		#
 		# RECORDS_DATA BUILD TO OUTPUT
-		$records_data = new stdClass();
-			#$records_data->search_query_object	= $this->search_query_object;
-			$records_data->ar_records = $ar_records;
-			if(SHOW_DEVELOPER===true) {
-				# Info about required time to exec the search
-				$records_data->generated_time['get_records_data'] = round(microtime(1)-$start_time,3);
-				# Query to database string
-				$records_data->strQuery = $sql_query;
-				if (isset($full_count_sql_query)) {				
-					$records_data->strQuery .= PHP_EOL . $full_count_sql_query;
-				}				
-				#$this->search_query_object->generated_time['get_records_data'] = round(microtime(1)-$start_time,3);
-				#dump($records_data, '$records_data', array());
-				$this->search_query_object->generated_time = $records_data->generated_time['get_records_data'];
-			}
-			#debug_log(__METHOD__." search_query_object ".json_encode($this->search_query_object, JSON_PRETTY_PRINT), logger::DEBUG);
+			$records_data = new stdClass();
+				#$records_data->search_query_object	= $this->search_query_object;
+				$records_data->ar_records = $ar_records;
+				if(SHOW_DEVELOPER===true) {
+					# Info about required time to exec the search
+					$records_data->generated_time['get_records_data'] = round(microtime(1)-$start_time,3);
+					# Query to database string
+					$records_data->strQuery = $sql_query;
+					if (isset($full_count_sql_query)) {				
+						$records_data->strQuery .= PHP_EOL . $full_count_sql_query;
+					}				
+					#$this->search_query_object->generated_time['get_records_data'] = round(microtime(1)-$start_time,3);
+					#dump($records_data, '$records_data', array());
+					$this->search_query_object->generated_time = $records_data->generated_time['get_records_data'];
+				}
+				#debug_log(__METHOD__." search_query_object ".json_encode($this->search_query_object, JSON_PRETTY_PRINT), logger::DEBUG);
 
 		return $records_data;
 	}//end search
@@ -830,7 +834,7 @@ class search_development2 {
 			#}
 
 			$this->join_group[] = $this->build_sql_join($select_object->path);
-		}
+		}		
 
 		# Add order columns to select when need
 		foreach ((array)$this->order_columns as $select_line) {
@@ -1719,7 +1723,7 @@ class search_development2 {
 		$path[] = $current_path;
 
 		if ($resolve_related===true) {
-			$ar_related_components 	= component_common::get_ar_components_with_references();
+			$ar_related_components 	= component_relation_common::get_components_with_relations();
 			if(in_array($term_model, $ar_related_components)===true) {
 
 				$ar_terminos_relacionados 	= RecordObj_dd::get_ar_terminos_relacionados($tipo,true,true);

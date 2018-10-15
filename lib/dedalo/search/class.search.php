@@ -258,7 +258,7 @@ class search extends common {
 						}
 
 						$column_modelo = RecordObj_dd::get_modelo_name_by_tipo($current_column_tipo,true);
-						if (in_array($column_modelo, component_common::get_ar_components_with_references())) {
+						if (in_array($column_modelo, component_relation_common::get_components_with_relations())) {
 							#$sql_columns .= "\n a.$sql_options->json_field#>>'{relations}' AS $current_column_tipo,";
 							$sql_columns .= "\n '' AS $current_column_tipo,";
 							#$sql_columns .= "\n to_json(ARRAY(SELECT arr1 FROM jsonb_array_elements(a.$sql_options->json_field#>'{relations}') as arr1 WHERE arr1 @> '{\"from_component_tipo\":\"$current_column_tipo\"}')) AS $current_column_tipo,";

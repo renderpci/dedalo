@@ -446,4 +446,75 @@ div.dato_refecence_default_lang {
 		background-color: lighten(@color_selected_wrap, 2%);
 	}
 
-
+	/* filter_by_list
+	----------------------------------------*/
+	@filter_by_list_column_width : 25%;
+	// filter_by_list 	
+		.filter_by_list {
+			display: table;
+			//display: table;
+			//background-color: #8E8E8E;
+			padding: 10px;	
+			z-index: 1001;
+			/*
+			position: absolute;
+			left: 0;
+			top: 0;*/
+			margin-top:10px;
+			border-radius: 4px;
+			white-space: nowrap;
+			//color: #ffffff !important;
+			width: 100%;
+			border-bottom: 1px solid #e6e6e6;
+			}
+			.filter_by_list li {
+				//display: table;
+				float: left;
+				//width: 33%;
+				width: @filter_by_list_column_width;
+				display: flex; // Important for text-overflow ellipsis
+			}				
+			.filter_by_list input {
+				margin: 2px;
+				margin-right: 4px;
+			}
+			.filter_by_list label {
+				white-space: nowrap;
+				overflow: hidden;
+				text-overflow: ellipsis;
+				max-width: 90%;
+				color: #7c7c7c;	
+				}
+				.filter_by_list li > label > span {
+					position: absolute;
+					right: 0;
+					padding-right: 15px;
+					color: #7c7c7c;	
+				}
+			.filter_by_list hr {
+				width: 100%;
+				display: -webkit-inline-box;
+				margin: 3px;
+				padding: 0;
+				float: left;
+			}
+			/*
+			.filter_by_list .filter_by_list_close {
+				float: right;
+				background-color: #a0a0a0;
+				padding: 3px;
+				width: 24px;
+				text-align: center;
+				border-radius: 4px;
+				position: relative;
+				right: 0px;
+				cursor: pointer;
+				font-weight: bold;
+				}
+				.filter_by_list .filter_by_list_close:active {
+					color: black;
+				}*/			
+			.filter_by_list mark {
+				color: #f5c39f !important;
+			}
+   

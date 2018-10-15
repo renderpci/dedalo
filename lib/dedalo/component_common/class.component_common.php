@@ -1532,7 +1532,7 @@ abstract class component_common extends common {
 					$key_result->section_id   = $current_locator->section_id;
 					$key_result->section_tipo = $current_locator->section_tipo;
 
-				$result[json_encode($key_result)] = component_relation_common::get_locator_value( $current_locator, DEDALO_DATA_LANG, $current_locator->section_tipo, $show_parents=false, $ar_componets_related, $divisor=', ' );
+				$result[json_encode($key_result)] = component_relation_common::get_locator_value( $current_locator, DEDALO_DATA_LANG, $show_parents=false, $ar_componets_related, $divisor=', ' );
 			}
 			# Sort result for easy user select
 			asort($result, SORT_NATURAL | SORT_FLAG_CASE);
@@ -1723,7 +1723,7 @@ abstract class component_common extends common {
 					$current_lang 	= $RecordObj_dd->get_traducible()==='no' ? DEDALO_DATA_NOLAN : DEDALO_DATA_LANG;
 					$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($current_component_tipo,true);
 
-					$ar_components_with_references 	= self::get_ar_components_with_references();
+					$ar_components_with_references 	= component_relation_common::get_components_with_relations();
 
 					if(in_array( $modelo_name,$ar_components_with_references )){
 
@@ -1934,8 +1934,8 @@ abstract class component_common extends common {
 				$value->section_id   = $current_locator->section_id;
 				$value->section_tipo = $current_locator->section_tipo;
 
-			# get_locator_value: $locator, $lang, $section_tipo, $show_parents=false, $ar_componets_related, $divisor=', '
-			$label = component_relation_common::get_locator_value($current_locator, $lang, $current_locator->section_tipo, false, $ar_componets_related, ', ');
+			# get_locator_value: $locator, $lang, $show_parents=false, $ar_componets_related, $divisor=', '
+			$label = component_relation_common::get_locator_value($current_locator, $lang, false, $ar_componets_related, ', ');
 
 			$item = new stdClass();
 				$item->value = $value;
@@ -2817,7 +2817,7 @@ abstract class component_common extends common {
 	* GET_AR_COMPONENTS_WITH_REFERENCES
 	* Get model name array of components that can store references (locators)
 	* @return array $ar_components_with_references
-	*/
+	*//* USE component_relation_common::get_components_with_relations <---
 	public static function get_ar_components_with_references() {
 		return [ 'component_autocomplete',
 				 'component_autocomplete_hi',
@@ -2831,6 +2831,7 @@ abstract class component_common extends common {
 				 'component_filter_master'  // added 6-05-2018
 				];
 	}//end get_ar_components_with_references
+	*/
 
 
 
@@ -3982,123 +3983,137 @@ abstract class component_common extends common {
 	* @return array $ar_result
 	*/
 	public function autocomplete_search($search_query_object, $divisor=', ') {
-		
-		# Remove option of sub_select_by_id (not work on left joins)
-		$search_query_object->allow_sub_select_by_id = false;
-		
-		# Avoid auto add filter by user projects in search
-		if (!property_exists($search_query_object,'skip_projects_filter')) {
-			$search_query_object->skip_projects_filter 	= true;
-		}
-
-		if(SHOW_DEBUG===true) {
-			debug_log(__METHOD__." search_query_object - modo:$this->modo - ".json_encode($search_query_object, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT), logger::DEBUG);
-		}		
-		
-		# Search with search_query_object
-		$search_development2 = new search_development2($search_query_object);
-		$rows_data 		 	 = $search_development2->search();	
-
-		$components_with_relations 	= component_relation_common::get_components_with_relations();
-		$propiedades 	 			= $this->get_propiedades();
-
-		// ar_result is array ob objects
-		$ar_result = [];
-		foreach ($rows_data->ar_records as $key => $row) {
-
-			$locator = new locator();
-				$locator->set_section_tipo($row->section_tipo);
-				$locator->set_section_id($row->section_id);
-				$locator->set_type(DEDALO_RELATION_TYPE_LINK);
-				$locator->set_from_component_tipo($this->tipo);
-
-			$locator_json = json_encode($locator);
-
-			# Join all fields except 2 first fixed (section_id, section_tipo)
-			$ar_full_label  = [];
-			$ar_original 	= [];
-			foreach ($row as $key => $value) {
-				if ($key==='section_id' || $key==='section_tipo') continue;				
-				if(!empty($value)) {
-
-					$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($key,true);
-					if (true===in_array($modelo_name, $components_with_relations) || $modelo_name==='component_text_area') {
-						// Resolve value with component					
-						$value = $modelo_name::render_list_value($value, $key, $row->section_id, 'list', DEDALO_DATA_LANG, $row->section_tipo, $row->section_id, null, null);
-					}else{
-						// Extract value from row data
-						$value = component_common::get_value_with_fallback_from_dato_full( $value, $mark=false );							
-					}					
-
-					if (!empty($value)) {
-
-						if (is_string($value)) {
-							$value = strip_tags($value);
-						}else{
-							$value = to_string($value); //gettype($value);
-						}
-
-						// Add value
-						$ar_full_label[] = $value;
-						$ar_original[] 	 = $value;
-					}					
-				}
-			}//end foreach ($row as $key => $value)
+	
+		// Conform search query object with some modifiers
+			# Remove option of sub_select_by_id (not work on left joins)
+			$search_query_object->allow_sub_select_by_id = false;
 			
-			#
-			# SHOW_PARENT_NAME (PROPIEDADES) Parent name . Parent locator is always calculated and is not in current record (data is as locator children in parent record)			
-			$show_parent_name = isset($propiedades->show_parent_name) ? $propiedades->show_parent_name : false;
-			if($show_parent_name===true) {				
-				// Directly, with recursive options true
-				// $locator, $lang=DEDALO_DATA_LANG, $section_tipo, $show_parents=false, $ar_componets_related=false, $divisor=false
-				$current_valor = component_relation_common::get_locator_value( $locator, DEDALO_DATA_LANG, $row->section_tipo, $show_parents=true, false, ', ');
-				if (!empty($current_valor)) {
-					// Remove first value (self)
-					$current_valor = substr($current_valor, strpos($current_valor,', ')+2);
-					// Add value
-					$ar_full_label[] = strip_tags($current_valor);
-				}
-			}//end if($show_parent_name===true)
-			
-			#
-			# SEARCH_LIST_ADD (PROPIEDADES) Add custom resolved values from same section. For example, add municipality for resolve a name ambiguity			
-			$search_list_add = isset($propiedades->search_list_add) ? $propiedades->search_list_add : false;
-			if ($search_list_add!==false) {
-				$ar_dd_value = [];
-				foreach ($search_list_add as $add_tipo) {
-					$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($add_tipo,true);
-					$component 		= component_common::get_instance($modelo_name,
-																	 $add_tipo,
-																	 $row->section_id,
-																	 'list',
-																	 DEDALO_DATA_LANG,
-																	 $row->section_tipo);
-					$current_value = strip_tags( $component->get_valor(DEDALO_DATA_LANG) );
-					if (!empty($current_value)) {
-						// Add value
-						$ar_full_label[] = strip_tags($current_value);
-					}
-				}
-			}//end if ($search_list_add!==false)
-
-			if(SHOW_DEBUG===true) {
-				$ar_full_label[] = ' ['.$row->section_tipo.'_'.$row->section_id.']';
+			# Avoid auto add filter by user projects in search
+			if (!property_exists($search_query_object,'skip_projects_filter')) {
+				$search_query_object->skip_projects_filter 	= true;
 			}
 
-			// Final value strings
-			$label 	  = implode($divisor, $ar_full_label);
-			$original = implode(', ', $ar_original);
-			
-			$value_obj = new stdClass();
-				$value_obj->value = $original;
-				$value_obj->label = $label;
-				$value_obj->key   = $locator_json;			
-
-			$ar_result[] = $value_obj;
-		}//end foreach ($rows_data->ar_records as $key => $row)
-		#debug_log(__METHOD__." ar_result ".to_string($ar_result), logger::DEBUG);
-
+			if(SHOW_DEBUG===true) {
+				debug_log(__METHOD__." search_query_object - modo:$this->modo - ".json_encode($search_query_object, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT), logger::DEBUG);
+			}		
 		
+		// Exec search
+			$search_development2 = new search_development2($search_query_object);
+			$rows_data 		 	 = $search_development2->search();	
+
+		// Set defaults for resolve row additions
+			$components_with_relations 	= component_relation_common::get_components_with_relations();
+			$propiedades 	 			= $this->get_propiedades();
+			$show_parent_name_default 	= get_called_class()==='component_autocomplete_hi' ? true : false;
+			$show_parent_name 			= isset($propiedades->show_parent_name) ? (bool)$propiedades->show_parent_name : $show_parent_name_default;
+			$search_list_add 			= isset($propiedades->search_list_add) ? (bool)$propiedades->search_list_add : false;
+
+		// Iterate rows to conform as final array result. ar_result is array ob objects
+			$ar_result = [];
+			foreach ($rows_data->ar_records as $key => $row) {
+
+				// Locator build
+					$locator = new locator();
+						$locator->set_section_tipo($row->section_tipo);
+						$locator->set_section_id($row->section_id);
+						$locator->set_type(DEDALO_RELATION_TYPE_LINK);
+						$locator->set_from_component_tipo($this->tipo);
+
+					$locator_json = json_encode($locator);
+
+				// Join all fields except 2 first fixed (section_id, section_tipo)
+					$ar_full_label  = [];
+					$ar_original 	= [];
+					foreach ($row as $key => $value) {
+						if ($key==='section_id' || $key==='section_tipo' || empty($value)) continue;					
+
+						// Resolve indirect values and exec fallback lang when empty
+							$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($key,true);
+							switch (true) {
+								case $modelo_name==='component_text_area':
+									// Resolve value with component					
+									$value = $modelo_name::render_list_value($value, $key, $row->section_id, 'list', DEDALO_DATA_LANG, $row->section_tipo, $row->section_id, null, null);
+									break;
+								case in_array($modelo_name, $components_with_relations):								
+									// Resolve value from locator					
+									$value_locators = json_decode($value);
+									if (isset($value_locators[0])) {
+										$value = component_relation_common::get_locator_value($value_locators[0], DEDALO_DATA_LANG, false, false, ', ');
+									}else{
+										continue 2; # Skip empty array
+									}
+									break;
+								default:
+									// Extract value from row data
+									$value = component_common::get_value_with_fallback_from_dato_full($value, $mark=false);
+									break;
+							}
+
+						// Skip still empty values
+							if (empty($value)) continue;
+
+						// Format the value
+							if (is_string($value)) {
+								$value = strip_tags($value);
+							}else{
+								$value = to_string($value); //gettype($value);
+							}
+
+						// Add value
+							$ar_full_label[] = $value;
+							$ar_original[] 	 = $value;
+					}//end foreach ($row as $key => $value)
+				
+				// Show_parent_name (propiedades). Parent locator is always calculated and is not in current record (data is as locator children in parent record)
+					if($show_parent_name===true) {				
+						// Directly, with recursive options true
+						// $locator, $lang=DEDALO_DATA_LANG, $show_parents=false, $ar_componets_related=false, $divisor=', ', $include_self=true
+						$parents_value = component_relation_common::get_locator_value($locator, DEDALO_DATA_LANG, true, false, ', ', false);
+						if (!empty($parents_value)) {
+							// Add value
+							$ar_full_label[] = strip_tags($parents_value);
+						}
+					}//end if($show_parent_name===true)/**/
+			
+				// Search_list_add (propiedades). Add custom resolved values from same section. For example, add municipality for resolve a name ambiguity
+					if ($search_list_add!==false) {
+						$ar_dd_value = [];
+						foreach ($search_list_add as $add_tipo) {
+							$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($add_tipo,true);
+							$component 		= component_common::get_instance($modelo_name,
+																			 $add_tipo,
+																			 $row->section_id,
+																			 'list',
+																			 DEDALO_DATA_LANG,
+																			 $row->section_tipo);
+							$current_value = strip_tags( $component->get_valor(DEDALO_DATA_LANG) );
+							if (!empty($current_value)) {
+								// Add value
+								$ar_full_label[] = strip_tags($current_value);
+							}
+						}
+					}//end if ($search_list_add!==false)
+					
+				// Debug added
+					if(SHOW_DEBUG===true) {
+						$ar_full_label[] = '['.$row->section_tipo.'_'.$row->section_id.']';
+					}
+
+				// Final value 
+					$label 	  = implode($divisor, $ar_full_label);
+					$original = implode(', ', $ar_original);
+					
+					$value_obj = new stdClass();
+						$value_obj->value = $original;
+						$value_obj->label = $label;
+						$value_obj->key   = $locator_json;
+
+					$ar_result[] = $value_obj;
+
+			}//end foreach ($rows_data->ar_records as $key => $row)
+			#debug_log(__METHOD__." ar_result ".to_string($ar_result), logger::DEBUG);
+
+			
 		return (array)$ar_result;
 	}//end autocomplete_search
 

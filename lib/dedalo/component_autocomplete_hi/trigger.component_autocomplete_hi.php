@@ -7,81 +7,6 @@ common::trigger_manager();
 
 
 /**
-* AUTOCOMPLETE
-* Get list of mathed DB results for current string by ajax call
-* @param $ar_tipo_to_search
-* @param $string_to_search
-*/
-function autocomplete($json_data) {
-	global $start_time;
-
-	session_write_close();
-
-	$response = new stdClass();
-		$response->result 	= false;
-		$response->msg 		= 'Error. Request failed ['.__METHOD__.']';	
-	
-	$vars = array('hierarchy_types','hierarchy_sections','string_to_search','from_component_tipo','distinct_values','relation_type','search_tipos','filter_custom');
-		foreach($vars as $name) {
-			$$name = common::setVarData($name, $json_data);
-			# DATA VERIFY
-			if ($name==='hierarchy_types' || $name==='distinct_values' || $name==='search_tipos' || $name==='filter_custom') continue; # Skip non mandatory
-			if (empty($$name)) {
-				$response->msg = 'Trigger Error: ('.__METHOD__.') Empty '.$name.' (is mandatory)';
-				return $response;
-			}
-		}
-	
-	$hierarchy_types 	= null; // json_decode($hierarchy_types);	
-
-
-	if (empty($search_tipos)) {
-		$search_tipos = [DEDALO_THESAURUS_TERM_TIPO];
-	}
-	if (is_string($search_tipos) && strpos($search_tipos,'[')===0) {
-		$search_tipos = json_decode($search_tipos);
-	}
-	#debug_log(__METHOD__." search_tipos ".print_r($search_tipos,true), logger::DEBUG);
-
-	$options = new stdClass();
-		$options->hierarchy_types 		= $hierarchy_types;
-		$options->hierarchy_sections 	= $hierarchy_sections;
-		$options->string_to_search 		= $string_to_search;
-		$options->max_results 			= 40;
-		$options->show_modelo_name 		= true;
-		$options->show_parent_name 		= true;
-		$options->distinct_values 		= $distinct_values;
-		$options->from_component_tipo 	= $from_component_tipo;
-		$options->relation_type 		= $relation_type; // DEDALO_RELATION_TYPE_LINK;
-		$options->search_tipos 			= $search_tipos;
-		$options->filter_custom 		= $filter_custom;
-
-
-	// $hierarchy_types, $hierarchy_sections, $string_to_search, $max_results=30, $show_modelo_name=false, $show_parent_name=false, $from_component_tipo, $distinct_values
-	$search = component_autocomplete_hi::autocomplete_hi_search($options);
-																
-
-	$response->result 				= $search->result;
-	$response->search_query_object 	= $search->search_query_object; // json encoded object
-	$response->msg 					= 'Ok. Request done ['.__FUNCTION__.']';
-
-	# Debug
-	if(SHOW_DEBUG===true) {
-		$debug = new stdClass();
-			$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
-			foreach($vars as $name) {
-				$debug->{$name} = $$name;
-			}
-
-		$response->debug = $debug;
-	}
-
-	return (object)$response;
-}//end autocomplete
-
-
-
-/**
 * UPDATE_COMPONENT_RELATED
 * @return object $response
 */
@@ -240,4 +165,78 @@ function build_grid_images($json_data) {
 
 
 
-?>
+/**
+* AUTOCOMPLETE
+* Get list of mathed DB results for current string by ajax call
+* @param $ar_tipo_to_search
+* @param $string_to_search
+*//*
+function autocomplete($json_data) {
+	global $start_time;
+
+	session_write_close();
+
+	$response = new stdClass();
+		$response->result 	= false;
+		$response->msg 		= 'Error. Request failed ['.__METHOD__.']';	
+	
+	$vars = array('hierarchy_types','hierarchy_sections','string_to_search','from_component_tipo','distinct_values','relation_type','search_tipos','filter_custom');
+		foreach($vars as $name) {
+			$$name = common::setVarData($name, $json_data);
+			# DATA VERIFY
+			if ($name==='hierarchy_types' || $name==='distinct_values' || $name==='search_tipos' || $name==='filter_custom') continue; # Skip non mandatory
+			if (empty($$name)) {
+				$response->msg = 'Trigger Error: ('.__METHOD__.') Empty '.$name.' (is mandatory)';
+				return $response;
+			}
+		}
+	
+	$hierarchy_types 	= null; // json_decode($hierarchy_types);	
+
+
+	if (empty($search_tipos)) {
+		$search_tipos = [DEDALO_THESAURUS_TERM_TIPO];
+	}
+	if (is_string($search_tipos) && strpos($search_tipos,'[')===0) {
+		$search_tipos = json_decode($search_tipos);
+	}
+	#debug_log(__METHOD__." search_tipos ".print_r($search_tipos,true), logger::DEBUG);
+
+	$options = new stdClass();
+		$options->hierarchy_types 		= $hierarchy_types;
+		$options->hierarchy_sections 	= $hierarchy_sections;
+		$options->string_to_search 		= $string_to_search;
+		$options->max_results 			= 40;
+		$options->show_modelo_name 		= true;
+		$options->show_parent_name 		= true;
+		$options->distinct_values 		= $distinct_values;
+		$options->from_component_tipo 	= $from_component_tipo;
+		$options->relation_type 		= $relation_type; // DEDALO_RELATION_TYPE_LINK;
+		$options->search_tipos 			= $search_tipos;
+		$options->filter_custom 		= $filter_custom;
+
+
+	// $hierarchy_types, $hierarchy_sections, $string_to_search, $max_results=30, $show_modelo_name=false, $show_parent_name=false, $from_component_tipo, $distinct_values
+	$search = component_autocomplete_hi::autocomplete_hi_search($options);
+																
+
+	$response->result 				= $search->result;
+	$response->search_query_object 	= $search->search_query_object; // json encoded object
+	$response->msg 					= 'Ok. Request done ['.__FUNCTION__.']';
+
+	# Debug
+	if(SHOW_DEBUG===true) {
+		$debug = new stdClass();
+			$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
+			foreach($vars as $name) {
+				$debug->{$name} = $$name;
+			}
+
+		$response->debug = $debug;
+	}
+
+	return (object)$response;
+}//end autocomplete
+*/
+
+
