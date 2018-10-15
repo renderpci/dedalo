@@ -1052,7 +1052,7 @@ class component_relation_common extends component_common {
 			# IS DIFFERENT
 			case ($q_operator==='!=' && !empty($q)):
 				$operator = '@>';
-				$q_clean  = '(\'['.$q.']\'::jsonb)=FALSE';
+				$q_clean  = '\'['.$q.']\'::jsonb=FALSE';
 				$query_object->operator = $operator;
 				$query_object->q_parsed = $q_clean;
 				break;
@@ -1062,7 +1062,7 @@ class component_relation_common extends component_common {
 				$q_obj = new stdClass();
 					$q_obj->from_component_tipo = end($query_object->path)->component_tipo;
 				$ar_q 	  = array($q_obj);
-				$q_clean  = '(\''.json_encode($ar_q).'\'::jsonb)=FALSE';
+				$q_clean  = '\''.json_encode($ar_q).'\'::jsonb=FALSE';
 				$query_object->operator = $operator;
 				$query_object->q_parsed	= $q_clean;
 				break;
