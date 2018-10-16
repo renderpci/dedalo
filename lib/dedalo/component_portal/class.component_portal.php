@@ -1772,16 +1772,10 @@ class component_portal extends component_relation_common {
 									$permission_target_section_delete = 0;
 									# Try to locate delete button inside
 									$delete_button_objects = section::get_ar_children_tipo_by_modelo_name_in_section($target_section_tipo, array('button_delete'), true, true, true, true);
-									#dump($delete_button_objects, ' delete_button_objects ++ '.to_string($target_section_tipo));
 									if (isset($delete_button_objects[0])) {
-										$permission_target_section_delete = common::get_permissions($delete_button_objects[0], $target_section_tipo);
+										$permission_target_section_delete = common::get_permissions($target_section_tipo, $delete_button_objects[0]);
 									}
-									#dump($permission_target_section_delete, ' permission_target_section_delete ++ '.to_string($delete_button_objects[0]));
 									
-									if(SHOW_DEBUG===true) {
-										$permission_target_section_delete = 2;  
-									}
-
 									$title	= label::get_label('borrar') .' '. label::get_label('recurso');													
 									$delete_button .= "<a href=\"javascript:void(0);\" class=\"id_column_buttons button_delete link\" ";
 									$delete_button .= "onclick=\"component_portal.open_delete_dialog(this)\" ";
