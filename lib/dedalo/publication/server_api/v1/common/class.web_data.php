@@ -1,4 +1,4 @@
-<?php
+ç<?php
 include(dirname(__FILE__).'/class.ts_term.php');
 include(dirname(__FILE__).'/class.indexation_node.php');
 include(dirname(__FILE__).'/class.free_node.php');
@@ -93,6 +93,7 @@ class web_data {
 				return $response;
 			}
 			#dump($sql_options, ' sql_options ++ '.to_string());
+			#dump(json_encode($sql_options, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT), ' sql_options->resolve_portal ++ '.to_string());
 
 			if ($sql_options->section_id!==false) {
 				if (empty($sql_options->sql_filter)) {
@@ -178,7 +179,7 @@ class web_data {
 				}
 			}
 
-			#debug_log(__METHOD__." Executing query ".trim($strQuery), logger::ERROR);
+	//debug_log(__METHOD__." Executing query ".trim($strQuery), logger::ERROR);
 			#if (strpos($sql_options->sql_filter, 'Barcelona')!==false ) {		
 				#dump($sql_options->sql_filter, ' strQuery ++ +++++++++++++++++++++++++++++++++++++++++++++++++++++++++ '.to_string($strQuery));
 				#error_log($strQuery);
@@ -212,8 +213,9 @@ class web_data {
 				$sql_options->ar_fields = array_keys((array)$result->fetch_assoc());
 				$result->data_seek(0); # Reset pointer of fetch_assoc
 			}
+	
 
-			# PUBLICATION_SCHEMA
+			# RESOLVE_PORTAL. PUBLICATION_SCHEMA
 			# When options resolve_portal is true, we create a virtual resolve_portals_custom options from publication_schema whith all portals
 			if ($sql_options->resolve_portal===true) {
 				$sql_options->resolve_portals_custom = self::get_publication_schema( $sql_options->table );
@@ -2502,6 +2504,8 @@ class web_data {
 		public static function get_thesaurus_parents( $request_options ) {
 			global $table_thesaurus_map; // From server api config
 
+			$start_time = microtime(1);	
+
 			$options = new stdClass();
 				$options->term_id  		= null;				
 				$options->recursive 	= true;
@@ -2515,7 +2519,18 @@ class web_data {
 			$table 			= $table_thesaurus_map[$section_tipo];
 			$lang 			= $options->lang;
 			$recursive 		= $options->recursive;	
-			$ar_fields 		= $options->ar_fields;		
+			$ar_fields 		= $options->ar_fields;
+
+			// term_id is mandatory
+				if (is_string($ar_fields)) {
+					$ar_fields = explode(',', $ar_fields);
+					$ar_fields = array_map(function($item){
+						return trim($item);
+					}, $ar_fields);
+				}				
+				if (!in_array('term_id', (array)$ar_fields)) {
+					$ar_fields[] = 'term_id';
+				}
 
 			// get_items. Recursion is optional
 			// if (!function_exists('get_items')) 
@@ -2553,6 +2568,9 @@ class web_data {
 			$response = new stdClass();
 				$response->result 	= $ar_parent;
 				$response->msg 		= 'Ok. Request done ['.__METHOD__.']';
+				if(SHOW_DEBUG===true) {
+					$response->debug['time'] = round(microtime(1)-$start_time,3);
+				}
 
 
 			return $response;
