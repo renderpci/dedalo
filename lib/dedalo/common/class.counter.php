@@ -90,9 +90,9 @@ abstract class counter {
 		}			
 		if (!$result) {
 			throw new Exception("Error Processing Request. DB error on update counter", 1);
-		}			
+		}
 
-		return (int)$counter_dato_updated;			
+		return (int)$counter_dato_updated;
 	}//end update_counter
 
 
@@ -109,8 +109,9 @@ abstract class counter {
 	public static function consolidate_counter( $section_tipo, $matrix_table, $counter_matrix_table='matrix_counter' ) {
 		
 		# BIGGER_SECTION_ID . Search bigger section_tipo existent
-		$strQuery = 'SELECT section_id FROM "$1" WHERE section_tipo = $2 ORDER BY section_id DESC LIMIT 1';
-		$result   = pg_query_params(DBi::_getConnection(), $strQuery, array( $matrix_table, $section_tipo ));
+		$strQuery = 'SELECT section_id FROM "'.$matrix_table.'" WHERE section_tipo = $1 ORDER BY section_id DESC LIMIT 1';
+		$result   = pg_query_params(DBi::_getConnection(), $strQuery, array($section_tipo));
+		if(!$result) throw new Exception("Error Processing Request. DB error on get last section_id of tipo: '$section_tipo' - table: '$matrix_table'", 1);
 		$rows 	  = (array)pg_fetch_assoc($result);
 
 		$bigger_section_id = reset($rows);
@@ -127,7 +128,7 @@ abstract class counter {
 		
 		#
 		# TEST IF COUNTER EXISTS BEFORE SET	
-		$counter_created = false;			
+		$counter_created = false;
 		# When current_value is bigger than zero, test is counter exits. If not, create calling counter with zero value				
 		$strQuery 	= 'SELECT dato AS counter_number FROM "'.$counter_matrix_table.'" WHERE tipo = $1 LIMIT 1';
 		$result	  	= pg_query_params(DBi::_getConnection(), $strQuery, array($section_tipo));
