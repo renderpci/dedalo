@@ -673,18 +673,32 @@ function convert_search_object_to_sql_query($json_data) {
 	if($search_query_object = json_decode($json_string)) {
 		
 		$search_development2 = new search_development2($search_query_object);
-		$sql_query = $search_development2->parse_search_query_object();
+		
+		#$sql_query = $search_development2->parse_search_query_object();
+		#$sql_query = addslashes($sql_query);	
+		#$sql_query = "<pre style=\"font-size:12px\">".$sql_query."</pre>";
 
-		#$sql_query = addslashes($sql_query);
-		$sql_query = "<pre style=\"font-size:12px\">".$sql_query."</pre>";
+		// search exec
+			$rows = $search_development2->search();
 
-		$rows = $search_development2->search();
+		// sql string query
+			$sql_query = $rows->strQuery;
 
+			$ar_lines = explode(PHP_EOL, $sql_query);
+			$ar_final = array_map(function($line){
+				$line = trim($line);
+				if (strpos($line, '--')===0) {
+					$line = '<span class="notes">'.$line.'</span>';
+				}
+				return $line;
+			}, $ar_lines);
+			$sql_query = implode(PHP_EOL, $ar_final);
+			$sql_query = "<pre style=\"font-size:12px\">".$sql_query."</pre>";
+		
 		$response->result 	= true;
 		$response->msg 		= $sql_query;
 		$response->rows 	= $rows;
-	}		
-
+	}
 	
 
 	# Debug
