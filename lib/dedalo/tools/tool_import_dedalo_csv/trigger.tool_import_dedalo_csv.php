@@ -159,7 +159,10 @@ function import_seleted_files($json_data) {
 		$ar_csv_data_final = array();
 		foreach ($ar_csv_data as $key => $value) {			
 		 	$ar_csv_data_final[$key] = $value;
-		 } 
+		} 
+
+		// Consolidate counter. Set counter value to last section_id in section 			
+			counter::consolidate_counter( $section_tipo, common::get_matrix_table_from_tipo($section_tipo) );
 
 		# IMPORT
 		$import_response[] = (object)tool_import_dedalo_csv::import_dedalo_csv_file($section_tipo, $ar_csv_data_final);

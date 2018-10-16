@@ -154,8 +154,7 @@ function import_files($json_data) {
 																$section_tipo
 															 );	
 				# Portal target_section_tipo
-				$target_section_tipo = $component_portal->get_ar_target_section_tipo()[0];				
-
+				$target_section_tipo = $component_portal->get_ar_target_section_tipo()[0];
 			
 			#
 			# SECTION
@@ -173,7 +172,6 @@ function import_files($json_data) {
 			// Fix new section created as current_section_id
 			$current_section_id = $portal_response->section_id;
 
-
 			#
 			# COMPONENT PORTAL NEW SECTION ORDER
 			# Order portal record when is $import_file_name_mode=numbered
@@ -187,7 +185,6 @@ function import_files($json_data) {
 					debug_log(__METHOD__." CHANGED ORDER FOR : ".$file_data['regex']->portal_order." ".to_string($file_data['regex']), logger::DEBUG);
 				}
 			}
-
 
 			#
 			# TEMP SECTION DATA
@@ -214,7 +211,6 @@ function import_files($json_data) {
 				#$tool_import_files->propagate_temp_section_data($temp_section_data, $temp_section_tipo, $temp_section_id);
 				section::propagate_temp_section_data($temp_section_data, $temp_section_tipo, $temp_section_id);
 			}
-
 	
 			#
 			# COPY_ALL_FILENAMES_TO
@@ -261,10 +257,6 @@ function import_files($json_data) {
 				}
 			}
 
-
-
-
-
 			#
 			# FILE_PROCESSOR
 			# Global var button propiedades json data array
@@ -308,10 +300,20 @@ function import_files($json_data) {
 			$total++;
 		}//end foreach ((array)$ar_data as $key => $value_obj)
 
-	//reset the temporary section of the components, for empty the fields.
-	if (isset($_SESSION['dedalo4']['section_temp_data'][$temp_data_uid])) {
-			unset( $_SESSION['dedalo4']['section_temp_data'][$temp_data_uid]);
-	}
+	// Reset the temporary section of the components, for empty the fields.
+		if (isset($_SESSION['dedalo4']['section_temp_data'][$temp_data_uid])) {
+				unset( $_SESSION['dedalo4']['section_temp_data'][$temp_data_uid]);
+		}
+
+	// Consolidate counter. Set counter value to last section_id in section
+		if ($total>0) {
+			$matrix_table = 'matrix';//common::get_matrix_table_from_tipo($section_tipo);
+			counter::consolidate_counter( $section_tipo, $matrix_table );
+			if (isset($target_section_tipo)) {
+				$matrix_table = common::get_matrix_table_from_tipo($target_section_tipo);
+				counter::consolidate_counter( $target_section_tipo, $matrix_table );
+			}
+		}	
 
 	$response->result 	= true;
 	$response->msg 		= 'Import files done successfully. Total: '.$total ." of " .count($ar_data);
