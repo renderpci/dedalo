@@ -94,14 +94,15 @@ class section extends common {
 
     	# OVERLOAD : If ar_section_instances > 99 , not add current section to cache to avoid overload
     	# array_slice ( array $array , int $offset [, int $length = NULL [, bool $preserve_keys = false ]] )
-    	if (isset($ar_section_instances) && count($ar_section_instances)>$max_cache_instances) { // 200 | 300			
-    		$ar_section_instances = array_slice($ar_section_instances, $cache_slice_on, null, true); // 100 | 150
+    	if (isset($ar_section_instances) && count($ar_section_instances)>$max_cache_instances) {			
+    		$ar_section_instances = array_slice($ar_section_instances, $cache_slice_on, null, true);
     		if(SHOW_DEBUG===true) {
     			debug_log(__METHOD__.' '.DEDALO_HOST." Overload secions prevent (max $max_cache_instances). Unset first $cache_slice_on cache items [$key]", logger::DEBUG);
     		}
 
     		// let GC do the memory job
-			time_nanosleep(0, 10000000); // 10 ms
+			//time_nanosleep(0, 10000000); // 10 ms
+			time_nanosleep(0, 5000000); // 05 ms
     	}
 
     	# FIND CURRENT INSTANCE IN CACHE
@@ -2798,7 +2799,6 @@ class section extends common {
 		# Store in cache for speed
 		$section_map_cache[$section_tipo] = $section_map;	
 
-
 		return $section_map;	
 	}//end get_section_map
 
@@ -3010,6 +3010,74 @@ class section extends common {
 		
 		return $dato_in_path;
 	}//end get_dato_in_path
+
+
+
+	/**
+	* GET_SEARCH_QUERY2
+	* Used for compatibility of search queries when need filter by section_tipo inside filter (thesaurus case for example)
+	* @return 
+	*/
+	public static function get_search_query2($query_object) {
+		
+		# component path default
+		$query_object->component_path = ['section_tipo'];
+
+		# Component class name calling here
+		$called_class = get_called_class();
+
+		# component lang
+		if (!isset($query_object->lang)) {
+			# default
+			$query_object->lang = 'all';
+		}
+
+		$current_query_object = $query_object;
+
+
+		# conform each object
+		if (search_development2::is_search_operator($current_query_object)===true) {
+			foreach ($current_query_object as $operator => $ar_elements) {
+				foreach ($ar_elements as $c_query_object) {
+					// Inject all resolved query objects
+					$c_query_object = $called_class::resolve_query_object_sql($c_query_object);
+				}
+			}
+		}else{
+			$current_query_object = $called_class::resolve_query_object_sql($current_query_object);
+		}
+
+		# Convert to array always
+		$ar_query_object = is_array($current_query_object) ? $current_query_object : array($current_query_object);
+
+		return $ar_query_object;
+	}//end get_search_query2
+
+
+
+	/**
+	* RESOLVE_QUERY_OBJECT_SQL
+	* @return object $query_object
+	*/
+	public static function resolve_query_object_sql($query_object) {
+		
+    	# Always set fixed values
+		$query_object->type = 'string';
+
+		# Always set format to column
+		$query_object->format = 'column';
+
+		$q = $query_object->q;
+		$q = pg_escape_string(stripslashes($q));
+       
+		$operator = '=';
+		$q_clean  = str_replace('\"', '', $q);
+		$query_object->operator = $operator;
+		$query_object->q_parsed	= '\''.$q_clean.'\'';				
+
+
+        return $query_object;
+	}//end resolve_query_object_sql
 
 	
 
