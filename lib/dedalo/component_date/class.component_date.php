@@ -1557,7 +1557,22 @@ class component_date extends component_common {
 					break;
 
 				case 'period':
-					// Not defined yet
+					// Compute days
+					if (isset($dato->period)) {
+						# $seconds = $dato->period->time;
+						# $days = ceil($seconds/3600/24);
+						$ar_string_period = [];
+						if (isset($dato->period->year)) {
+							$ar_string_period[] = $dato->period->year .' '. label::get_label('anyos', $lang);
+						}
+						if (isset($dato->period->month)) {
+							$ar_string_period[] = $dato->period->month .' '. label::get_label('meses', $lang);
+						}
+						if (isset($dato->period->day)) {
+							$ar_string_period[] = $dato->period->day .' '. label::get_label('dias', $lang);
+						}
+						$ar_diffusion_values[] = implode(' ',$ar_string_period);
+					}
 					break;
 
 				case 'date':
@@ -1592,7 +1607,7 @@ class component_date extends component_common {
 		#$diffusion_value = implode('|',$ar_diffusion_values);
 
 		# NOTA
-		# Para publicación, NO está solucionado el acso en que hay más de ina fecha... ejem.. VALORAR ;-)
+		# Para publicación, NO está solucionado el caso en que hay más de una fecha... ejem.. VALORAR ;-)
 		$diffusion_value = reset($ar_diffusion_values); // Temporal !!
 	
 		# Force null on empty to avoid errors on mysql save value invalid format
