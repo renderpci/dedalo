@@ -95,7 +95,7 @@ class component_relation_related extends component_relation_common {
 
 			$current_locator_json = json_encode($current_locator);
 
-			$ar_values[$current_locator_json] = self::get_locator_value( $current_locator, $lang, $this->section_tipo,false, $ar_componets_related, $divisor);
+			$ar_values[$current_locator_json] = self::get_locator_value($current_locator, $lang, false, $ar_componets_related, $divisor);
 
 		}//end if (!empty($dato))
 
@@ -278,7 +278,7 @@ class component_relation_related extends component_relation_common {
 	public function get_calculated_references() {
 
 		switch ($this->relation_type_rel) {
-			case DEDALO_RELATION_TYPE_RELATED_BIDIRECTIONAL_TIPO:				
+			case DEDALO_RELATION_TYPE_RELATED_BIDIRECTIONAL_TIPO:
 			case DEDALO_RELATION_TYPE_RELATED_MULTIDIRECTIONAL_TIPO:
 				$current_locator = new stdClass();
 					$current_locator->section_tipo 			= $this->section_tipo;
@@ -286,7 +286,7 @@ class component_relation_related extends component_relation_common {
 					$current_locator->from_component_tipo 	= $this->tipo;
 				$references = component_relation_related::get_references_recursive($this->tipo, $current_locator, $this->relation_type_rel, false );
 				break;
-			case DEDALO_RELATION_TYPE_RELATED_UNIDIRECTIONAL_TIPO:					
+			case DEDALO_RELATION_TYPE_RELATED_UNIDIRECTIONAL_TIPO:
 			default:
 				$references = [];
 				break;
@@ -296,7 +296,7 @@ class component_relation_related extends component_relation_common {
 			#dump($references, ' references ++ '.to_string());
 		}
 	
-		return $references;		
+		return $references;
 	}//end get_calculated_references
 
 
@@ -456,7 +456,7 @@ class component_relation_related extends component_relation_common {
 	* @return array $ar_references
 	*/
 	public static function get_references_recursive( $tipo, $locator, $type_rel=DEDALO_RELATION_TYPE_RELATED_MULTIDIRECTIONAL_TIPO, $recursion=false ) {
-
+	
 		static $ar_resolved;
 
 		$pseudo_locator = $locator->section_tipo .'_'. $locator->section_id;
@@ -478,6 +478,7 @@ class component_relation_related extends component_relation_common {
 		
 		# References to me
 		if (isset($locator->section_id) && isset($locator->section_tipo)) {
+			#$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($locator->from_component_tipo,true); // get_class();
 			$ref_component 	= component_common::get_instance('component_relation_related',
 															 $locator->from_component_tipo,
 															 $locator->section_id,
@@ -512,7 +513,8 @@ class component_relation_related extends component_relation_common {
 					$element->section_id 			= $dato_locator->section_id;
 					$element->from_component_tipo 	= $dato_locator->from_component_tipo;
 					#$element->label 				= ts_object::get_term_by_locator( $dato_locator, DEDALO_DATA_LANG, $from_cache=true);
-					$element->label 				= self::get_locator_value( $dato_locator, DEDALO_DATA_LANG, null, false, $ar_componets_related, $divisor); // $locator, $lang=DEDALO_DATA_LANG, $section_tipo, $show_parents=false, $ar_componets_related=false, $divisor=false
+					// $locator, $lang=DEDALO_DATA_LANG, $show_parents=false, $ar_componets_related=false, $divisor=false
+					$element->label 				= self::get_locator_value($dato_locator, DEDALO_DATA_LANG, false, $ar_componets_related, $divisor);
 				
 				# Only add dato when is recursion, not at the first call
 				if ($recursion===true) {
@@ -657,7 +659,7 @@ class component_relation_related extends component_relation_common {
 						break;
 				}*/
 
-				$label = self::get_locator_value( $element, DEDALO_DATA_LANG, null, false, $ar_componets_related, $divisor );
+				$label = self::get_locator_value($element, DEDALO_DATA_LANG, false, $ar_componets_related, $divisor);
 
 				$element->label = $label;
 			}else{
@@ -748,7 +750,7 @@ class component_relation_related extends component_relation_common {
 				$field->component_tipo 	= $c_tipo;
 
 			# COMPONENTS_WITH_REFERENCES case like autocomplete, select, etc.. 
-			if(in_array($modelo_name, component_common::get_ar_components_with_references())) {
+			if(in_array($modelo_name, component_relation_common::get_components_with_relations())) {
 				$field->search 	= $this->get_search_fields($c_tipo);
 			}
 

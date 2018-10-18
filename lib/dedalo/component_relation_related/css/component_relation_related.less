@@ -23,7 +23,7 @@
 	/* wrap_relation_related_values
 	---------------------------------------- */
 	.css_wrap_relation_related .content_data .wrap_relation_related_values {
-		display: inline-block;
+		//display: inline-block;
 		}
 		/* inputs line
 		---------------------------------------- */
@@ -78,30 +78,8 @@
 			.css_wrap_relation_related .content_data .wrap_relation_related_values .relation_related_input_line .locator_label {
 				
 			}
-			/* ADD BUTTON 
-			---------------------------------------- */
-			.css_wrap_relation_related .content_data .relation_related_add_button {
-				
-				/*
-				stroke: #a0e570;
-				fill: none;
-				stroke-width:21;
-				stroke-miterlimit:10;
-				background-color: #EEEEEE;
-				*/
-				opacity: 0.2;
-				position: absolute;
-				right: 0;
-				top: 0;
-			}
-			/* ADD BUTTON FROM TREE
-			---------------------------------------- */
-			.css_wrap_relation_related .content_data .relation_related_add_from_tree_button {
-				opacity: 0.5;
-				position: absolute;
-				right: 20px;
-				top: 0;
-			}
+			
+			
 
 
 /* AUTOCOMPLETE
@@ -122,5 +100,69 @@
 	    background-position: -456px 0;
 	    opacity: .3;
 	}
+
+	// buttons
+		/*.css_wrap_relation_related .buttons {
+			float: right;
+			position: relative;
+			// background-color: #F0F36D;
+			display: flex;
+			align-items: center;
+			justify-content: flex-end;
+		}
+		.css_wrap_relation_related .buttons > div {
+			margin-left: 5px;
+		}*/
+
+	// add button
+		.css_wrap_relation_related .relation_related_add_button {			
+			opacity: 0.2;
+			margin-right: 5px;			
+		}
+
+	// button add from tree
+		.css_wrap_relation_related .relation_related_add_from_tree_button {
+			opacity: 0.5;			
+		}
+
+	// button options to show/hide the options custom position
+		.css_wrap_relation_related .autocomplete_list_button_options {
+			
+		}
+
+// in_search_mode
+	.css_wrap_relation_related.wrap_component_search .component_options_container {
+		display: table;
+		position: initial;
+		width: 100%;
+    	height: initial;
+    	background-color: transparent;
+    	border: none;
+    	margin: 0;
+	}
+
+	// buttons_and_fields
+		.css_wrap_relation_related .buttons_and_fields {		
+			align-items: center;
+			justify-content: flex-end;		
+			position: absolute;	
+			right: 0;
+			top: -23px;
+			//background-color: @color_selected_wrap;
+			padding-left: 2px;
+			padding-right: 2px + 3px;
+			padding-top: 2px;
+			border-top-left-radius: 3px;
+			border-top-right-radius: 3px;
+			display: none;
+			}
+			// In search mode
+				.css_wrap_relation_related.wrap_component_search .buttons_and_fields {
+					display: block;
+					background-color: transparent;
+					top: 0.4em;
+					right: -0.6em;
+				}
+
 
 
