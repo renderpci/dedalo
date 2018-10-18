@@ -1,23 +1,36 @@
-
 <?php
 /*
 * CLASS COMPONENT_CALCULATION
+*
+*
 */
-
 class component_calculation extends component_common {
-	
-	# GET DATO
+
+
+
+	/**
+	* GET_DATO
+	* @return 
+	*/
 	public function get_dato() {
 		$dato = parent::get_dato();
 		
 		return $dato;
-	}
+	}//end get_dato
 
-	# SET_DATO
+
+
+	/**
+	* SET_DATO
+	* @return 
+	*/
 	public function set_dato($dato) {
-		parent::set_dato( $dato );			
-	}
-	
+		
+		return parent::set_dato( $dato );			
+	}//end set_dato
+
+
+
 	/**
 	* SAVE OVERRIDE
 	* Overwrite component_common method to set always lang to config:DEDALO_DATA_NOLAN before save
@@ -39,7 +52,8 @@ class component_calculation extends component_common {
 		RecordObj_time_machine::$save_time_machine_version = true; # Disable logging activity and time machine # !IMPORTANT
 
 		return $result;
-	}#end Save
+	}//end Save
+
 
 
 	/**
@@ -90,6 +104,7 @@ class component_calculation extends component_common {
 	}//end get_valor
 
 
+
 	/**
 	* GET_JSON_FORMULA
 	* @return $propiedades->formula;
@@ -98,20 +113,383 @@ class component_calculation extends component_common {
 
 		$propiedades = $this->get_propiedades();
 
-		if(empty($propiedades->formula)){
-			return false;
-		}else{
-			return $propiedades->formula;
+		$formula = false;
+
+		if(!empty($propiedades->formula)){			
+			$formula = $propiedades->formula;
 		}
-		
+
+		return $formula;	
 	}//end get_JSON_formula
+
+
 
 	/**
 	* RESOLVE_DATA_FOR_FORMULA
-	* @return 
+	* @param object $data
+	*	Propiedades formula->data
+	* @return object $data_resolved
 	*/
 	public function resolve_data_for_formula($data) {
+		
+		if(!isset($data)) return false;
 
+		$data_resolved = new StdClass();
+
+		//set the section tipo
+			switch ($data->section_tipo) {
+				case 'current':
+					$section_tipo = $this->section_tipo;
+					break;
+				default:
+					$section_tipo = $data->section_tipo ;
+			}
+
+		//set the section id
+			switch ($data->section_id) {
+				case 'current':
+					$section_id = $this->parent;
+
+					foreach ($data->component_tipo as $component_tipo) {
+						$component 		= new RecordObj_dd($component_tipo);
+						$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+
+						if($component->get_traducible() === 'no'){
+							$lang = DEDALO_DATA_NOLAN;
+						}else{
+							$lang = DEDALO_DATA_LANG;
+						}
+
+						$current_componet = component_common::get_instance($modelo_name,
+																			 $component_tipo,
+																			 $section_id,
+																			 'edit',
+																			 $lang,
+																			 $section_tipo);
+						$data_resolved->$component_tipo = $current_componet->get_valor();
+					}// end foreach ($data->component_tipo as $component_tipo)
+					break;
+
+				case 'all':
+					/*
+						$search_options_session_key = 'section_'.$this->section_tipo.$this->component_tipo;
+							#dump($_SESSION['dedalo4']['config']['search_options'][$search_options_session_key], ' _SESSION[] ++ '.to_string());
+						$current_options = $_SESSION['dedalo4']['config']['search_options'][$search_options_session_key];
+
+
+						if (isset($_SESSION['dedalo4']['config']['sum_total'][$search_options_session_key])) {
+							
+							# Precalculated value
+							$total = $_SESSION['dedalo4']['config']['sum_total'][$search_options_session_key];
+
+						}else{
+					*/
+						foreach ($data->component_tipo as $component_tipo) {
+							$component 		= new RecordObj_dd($component_tipo);
+							$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+
+							if($component->get_traducible() === 'no'){
+								$lang = DEDALO_DATA_NOLAN;
+							}else{
+								$lang = DEDALO_DATA_LANG;
+							}
+
+							$search_options = new StdClass;
+								$search_options->section_tipo   = $section_tipo;
+								$search_options->component_tipo = $component_tipo;
+							
+							$data_resolved->$component_tipo = $this->get_sum_from_component_tipo($search_options);
+						}
+
+						# Store for speed
+						#$_SESSION['dedalo4']['config']['sum_total'][$search_options_session_key] = $total;
+					#}
+					break;
+
+				case 'search_session':
+
+					foreach ($data->component_tipo as $component_tipo) {
+							$component 		= new RecordObj_dd($component_tipo);
+							$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+
+							if($component->get_traducible() === 'no'){
+								$lang = DEDALO_DATA_NOLAN;
+							}else{
+								$lang = DEDALO_DATA_LANG;
+							}
+
+							$search_options = new StdClass;
+								$search_options->section_tipo   = $section_tipo;
+								$search_options->component_tipo = $component_tipo;							
+							
+							if($data->value ==='value'){
+								$data_resolved->$component_tipo = $this->get_values_from_component_tipo($search_options, $data);
+									#dump($data_resolved, ' data_resolved'.to_string());
+							}else if($data->value ==='sum'){
+								$data_resolved->$component_tipo = $this->get_sum_from_component_tipo($search_options);
+							}
+							
+						}
+					break;
+
+				default:
+					$section_id = $data->section_id;
+					break;
+			}
+	
+		// filter true
+			if (isset($data->filter) && $data->filter===true) {
+				
+				$section_id = $this->parent;
+				foreach ($data->component_tipo as $component_tipo) {
+
+					// Component where is stored source data, a json search_query_object 
+						$component 			= new RecordObj_dd($component_tipo);
+						$modelo_name 		= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+						$lang 				= ($component->get_traducible()==='no') ? DEDALO_DATA_NOLAN : DEDALO_DATA_LANG;
+						$current_componet 	= component_common::get_instance($modelo_name,
+																			 $component_tipo,
+																			 $this->parent,
+																			 'edit',
+																			 $lang,
+																			 $this->section_tipo);
+						$dato = $current_componet->get_dato();
+						if (empty($dato) || !isset($dato->data)) {
+							continue; // Skip empty
+						}
+
+						$ar_search_query_object = !is_array($dato->data) ? [$dato->data] : $dato->data; // Always array
+
+					// Exec search with search_query_object
+						$ar_result = [];
+						foreach ($ar_search_query_object as $search_query_object) {
+
+							// Search
+								$search_development2 = new search_development2($search_query_object);
+								$search_data 		 = $search_development2->search();
+								$ar_records 		 = $search_data->ar_records;
+
+							// Result map. If result_map exists, parse result rows
+								$result_map = isset($search_query_object->result_map) ? $search_query_object->result_map : false;
+								if (!empty($result_map)) {
+
+									$ar_rows_mapped = [];
+									foreach ($ar_records as $key => $row) {
+								
+										$new_row = new stdClass();
+										foreach ($result_map as $map_item) {
+
+											if (isset($row->{$map_item->column})) {
+												
+												// Process value
+													$value = $row->{$map_item->column};
+													if ($value_decoded = json_decode($value)) {
+														$value = $value_decoded;
+													}
+													if (isset($map_item->process)) {
+														//$value = $map_item->process($value);
+														#$value = call_user_func_array($map_item->process, $value);
+														$value = call_user_func_array($map_item->process, array($value));
+													}
+
+												// Set mapped property
+													$new_row->{$map_item->key} = (array)$value;
+											}
+										}
+										$ar_rows_mapped[] = $new_row;
+									}
+
+									// Overwrite data property
+									$ar_records = $ar_rows_mapped;
+									#dump($ar_rows_mapped, ' ar_rows_mapped ++ '.to_string());
+								}
+
+							// Add and merge parsed rows
+							$ar_result = array_merge($ar_result, $ar_records);
+						}//end foreach ($ar_search_query_object as $search_query_object
+						
+
+					/* old way
+						$ar_result = array();	
+						foreach ((array)$ar_filter_search as $filter_search) {
+							if(empty($filter_search)) continue;	# Skip
+							#dump($filter_search, ' filter_search ++ '.to_string());
+							$result = new StdClass;
+							
+							$search_base 	= search::get_records_data($filter_search->search_base);
+							$search_table 	= $filter_search->search_map->search_base;
+							$search_map 	= $filter_search->search_map;
+							
+							$result->search_name 	= $search_map->search_name;
+							$result->search_layer 	= $search_map->search_layer;
+							$result->search_type 	= $search_map->search_type;
+							$result->data 			= array();
+
+							foreach ($search_base->result as $key => $current_result) {
+								foreach ($current_result as $current_key => $current_record) {
+									$result_base = new StdClass;
+									$result_base->$search_table= array();
+
+									foreach ($current_record as $field => $value) {
+										if($value_test = json_decode($value)){
+											$value = $value_test;
+										}
+										
+										if($field == 'section_id'){
+											#$result_base->$search_table->$field= new StdClass;
+											$result_base->$search_table[] = (int)$value;
+										}
+
+										if(isset($search_map->$field) && !empty($value)){
+											
+											switch ($search_map->$field->dato) {
+												case 'locator':
+													foreach ((array)$value as $current_locator) {
+														if(isset($current_locator->section_id)){
+															$field_name = $search_map->$field->name;
+															$result_base->$field_name[] = (int)$current_locator->section_id;
+														}
+
+														if(isset($search_map->$field->subquery)){
+															$search_locator = array();
+															$subquery_index = $search_map->$field->subquery - 1;
+															$subquery = $filter_search->subqueries[$subquery_index];
+															$search_locator[] = $current_locator;
+															$subquery->filter_by_locator = $search_locator;
+
+														 	$subquery = search::get_records_data($subquery);
+
+														 	foreach ($subquery->result as $record) {
+														 		foreach($record as $current_subquery_record){
+															 		foreach ($current_subquery_record as $key_field => $current_field_value) {
+															 			$result_subquery_final = array();
+															 			if (isset($search_map->$key_field)){
+															 				$map_field_name = $search_map->$key_field->name;
+																			$current_field_value = json_decode($current_field_value);
+																		
+															 				switch (isset($search_map->$key_field->action)) {
+															 					case 'convert_to_term_id':
+																 					if(!isset($current_field_value)){
+																 							continue;
+																 					}
+
+															 						foreach ($current_field_value as $current_result) {
+															 							$result_subquery_final[] = $current_result->section_tipo.'_'.$current_result->section_id;
+															 						}
+															 						break;
+															 					default:
+															 						$result_subquery_final = $current_field_value;
+															 						break;
+															 				}
+
+
+															 				$result_base->$map_field_name = $result_subquery_final;
+															 			}
+															 		}
+															 	}
+														 	}
+														}
+													}
+													break;
+
+												case 'text_area':
+													$map_field_name = $search_map->$field->name;
+													if (isset($search_map->$field->action)) {
+														$result_base->$map_field_name = call_user_func($search_map->$field->action,$value);
+													}
+
+												default:
+													# code...
+													break;
+											}												
+										}//end if(isset($search_map->$field))
+									}
+								$result->data[] = $result_base;
+								}
+							}//end foreach ($search_base->result as $key => $current_result)
+							$ar_result[] = $result;
+						}*/
+
+					
+					// Add dato object properties
+						$result = new StdClass();
+						foreach ($dato as $key => $value) {
+							if ($key==='result_map') continue; # Skip some reserved properties
+							// Add property
+							if ($key==='data') {
+								$result->data = $ar_result; # calculated
+							}else{
+								$result->{$key} = $value; # literal
+							}
+						}
+						#dump($ar_result, ' ar_result ++ '.to_string());
+
+					// Set result
+						$data_resolved->{$component_tipo} = $result;
+
+				}//end foreach ($data->component_tipo as $component_tipo)
+					
+			}//end if (isset($data->filter) && $data->filter===true)
+			#dump($data->filter, ' data->filter ++ '.to_string()); die();
+
+		// set the value of true variable
+			switch (true) {
+				case isset($data->true) && isset($data->true->ar_locators):
+
+					$ar_locators = json_decode( str_replace("'", '"', $data->true->ar_locators) );
+					
+					$options = new stdClass();
+						$options->lang 				= DEDALO_DATA_LANG;	
+						$options->data_to_be_used 	= 'valor';
+						$options->ar_locators 		= $ar_locators;
+						$options->separator_rows 	= isset($data->true->separator_rows) ? $data->true->separator_rows : false;
+						$options->separator_fields 	= isset($data->true->separator_fields) ? $data->true->separator_fields : false;
+
+						$valor_from_ar_locators 	= $this->get_valor_from_ar_locators($options);
+							#dump($valor_from_ar_locators, ' valor_from_ar_locators');$valor_from_ar_locators->result
+						$data_resolved->true = $valor_from_ar_locators->result;
+					break;
+				case isset($data->true):
+					$data_resolved->true = $data->true;
+					break;
+			}
+
+		// set the value of false variable
+			switch (true) {
+				case isset($data->false) && isset($data->false->ar_locators):
+					$ar_locators = json_decode( str_replace("'", '"', $data->false->ar_locators) );
+					
+					$options = new stdClass();
+						$options->lang 				= DEDALO_DATA_LANG;	
+						$options->data_to_be_used 	= 'valor';
+						$options->ar_locators 		= $ar_locators;
+						$options->separator_rows 	= isset($data->false->separator_rows) ? $data->false->separator_rows : false;
+						$options->separator_fields 	= isset($data->false->separator_fields) ? $data->false->separator_fields : false;
+
+					$valor_from_ar_locators 	= $this->get_valor_from_ar_locators($options);
+							#dump($valor_from_ar_locators, ' valor_from_ar_locators');$valor_from_ar_locators->result
+					$data_resolved->false = $valor_from_ar_locators->result;
+					break;
+				case isset($data->flase):
+					$data_resolved->false = $data->true;
+					break;
+			}
+
+		//set the filter
+		// NEED TO BE DEFINED
+		#dump($data_resolved, ' data_resolved ++ '.to_string());
+		
+		return $data_resolved;
+	}//end resolve_data_for_formula
+
+
+
+	/**
+	* RESOLVE_DATA_FOR_FORMULA__DEPRECATED
+	* @return 
+	*/
+	public function resolve_data_for_formula__DEPRECATED($data) {
+	
 		if(!isset($data)) return false;
 
 		$data_resolved = new StdClass;
@@ -403,7 +781,8 @@ class component_calculation extends component_common {
 		// NEED TO BE DEFINED
 		
 		return $data_resolved;
-	}//end resolve_data_for_formula
+	}//end resolve_data_for_formula__DEPRECATED
+
 
 
 	/**
@@ -424,9 +803,9 @@ class component_calculation extends component_common {
 
 		#dump($preprocess_formula, ' preprocess_formula ++ '.to_string());
 
-		return $preprocess_formula;	
-		
+		return $preprocess_formula;		
 	}//end apply_formula
+
 
 
 	/**
@@ -866,6 +1245,8 @@ class component_calculation extends component_common {
 
         return $query_object;
 	}//end resolve_query_object_sql
+
+
 
 	/**
 	* SEARCH_OPERATORS_INFO

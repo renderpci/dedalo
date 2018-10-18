@@ -46,7 +46,10 @@
 				$html_content .= "data-formula ='".$preprocess_formula."' ";
 				$html_content .= "title=\"$html_title\" ";
 				$html_content .= ">";
+				$html_content .= '<pre>';
 				$html_content .= $dato;
+				#$html_content .= json_encode($this->get_dato(), JSON_PRETTY_PRINT);
+				$html_content .= "</pre>";
 				$html_content .= "</div>";			
 
 				#$html_content .= "<hr>".$preprocess_formula;
@@ -87,4 +90,3 @@
 	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'out', $modo, $lang);
 
 
-?>

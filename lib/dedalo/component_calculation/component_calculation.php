@@ -15,8 +15,7 @@
 	if($modo != 'simple')
 	$permissions			= $this->get_component_permissions();	
 	$ejemplo				= $this->get_ejemplo();
-	$html_title				= "Info about $tipo";
-	
+	$html_title				= "Info about $tipo";	
 	$lang					= $this->get_lang();
 	$lang_name				= $this->get_lang_name();
 	$identificador_unico	= $this->get_identificador_unico();
@@ -26,38 +25,39 @@
 
 	if($permissions===0) return null;
 
-	# VISIBLE
-	if ($visible===false) {
-		#return null;
-	}
 
-	$file_name				= $modo;
+	$file_name = $modo;
 
 	
-	switch($modo) {
-		
+	switch($modo) {		
+
 		case 'tool_lang':
 				$file_name = 'edit';
 		case 'edit'	:
-				$valor					= $this->get_valor();
-				js::$ar_url[] = DEDALO_ROOT_WEB . "/lib/json-logic/logic.js";	
-				# Verify component content record is inside section record filter
-				if ($this->get_filter_authorized_record()===false) return NULL ;				
+				if ($this->get_filter_authorized_record()===false) return NULL;
 				
-				$id_wrapper = 'wrapper_'.$identificador_unico;
-				$input_name = "{$tipo}_{$parent}";
+				// Add library js
+					js::$ar_url[] = DEDALO_ROOT_WEB . "/lib/json-logic/logic.js";	
 				
-				$dato = htmlentities($valor);
+				// Edit vars
+					$valor 			= $this->get_valor();
+					$dato 			= htmlentities($valor);
+					$id_wrapper 	= 'wrapper_'.$identificador_unico;
+					$input_name 	= $tipo .'_'. $parent;
+					$component_info = $this->get_component_info('json');
+							
+				// Dato_reference_lang
+					$dato_reference_lang = null;
+
+				// default_component
+					if (empty($dato) && $this->get_traducible()==='si') { 
+						$default_component = $this->get_default_component();
+					}
 				
-				# DATO_REFERENCE_LANG
-				$dato_reference_lang= NULL;												
-				if (empty($dato) && $this->get_traducible()=='si') { 
-					$default_component = $this->get_default_component();
-						#dump($default_component,'$default_component');			
-				}
-				$component_info 	= $this->get_component_info('json');
-				$preprocess_formula = $this->preprocess_formula();
-				$preprocess_formula = json_encode($preprocess_formula, JSON_UNESCAPED_UNICODE);												
+				// preprocess_formula
+					$preprocess_formula = $this->preprocess_formula();
+					$preprocess_formula = json_encode($preprocess_formula, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE);
+				
 				break;
 
 		case 'print' :
@@ -75,7 +75,8 @@
 				if(empty($valor)) return null;					
 		case 'list_tm' :
 				$file_name = 'list';						
-		case 'list'	:	
+		case 'list'	:
+				$valor = $this->get_valor();
 				break;
 						
 		case 'list_of_values':				
@@ -106,4 +107,3 @@
 	if( !include($page_html) ) {
 		echo "<div class=\"error\">Invalid mode $this->modo</div>";
 	}
-?>

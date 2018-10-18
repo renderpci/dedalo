@@ -8,13 +8,15 @@
 	$html_contenido = '';
 	switch($permissions) {
 			
-		case 0	:	$html_contenido .= "";		
-					break;
+		case 0	:
+				$html_contenido .= "";		
+				break;
 					
 		case ($permissions>=1)	:
 			
-					$html_contenido .= "\n <span class=\"css_span_dato\">$valor</span>";
-					break;							
+				#$html_contenido .= "<span class=\"css_span_dato\">$valor</span>";
+				$html_contenido .= json_encode($valor);
+				break;							
 	}	
 
 	
