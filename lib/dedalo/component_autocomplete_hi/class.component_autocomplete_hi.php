@@ -1022,7 +1022,11 @@ class component_autocomplete_hi extends component_relation_common {
 					$current_label 	= strip_tags(RecordObj_dd::get_termino_by_tipo($hs_section_tipo, DEDALO_DATA_LANG, true, true));
 					$current_key 	= $hs_section_tipo;
 					
-					$ar_filter_options[$current_key] = $current_label;
+					$element = new stdClass();
+						$element->key 	= $current_key;
+						$element->label	= $current_label;
+
+					$ar_filter_options[] = $element;
 				}
 				break;
 			// Generic use compatible with old component_autocomplete
@@ -1047,14 +1051,21 @@ class component_autocomplete_hi extends component_relation_common {
 						$current_label 	= strip_tags($item->label);
 						$current_key 	= json_encode($item->value);
 
-						$ar_filter_options[$current_key] = $current_label;
+						$element = new stdClass();
+							$element->key 	= $current_key;
+							$element->label = $current_label;
+
+						$ar_filter_options[] = $element;
 					}
 				}
 				break;
 		}
 
 		// Sort elements		
-		asort($ar_filter_options, SORT_NATURAL);
+		//asort($ar_filter_options, SORT_NATURAL);
+		usort($ar_filter_options, function($a, $b){
+			return strcmp($a->label, $b->label);
+		});
 		
 		return $ar_filter_options;
 	}//end get_ar_filter_options
