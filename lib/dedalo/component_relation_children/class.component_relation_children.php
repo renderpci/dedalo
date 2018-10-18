@@ -30,7 +30,7 @@ class component_relation_children extends component_relation_common {
 		$ar_valor  	= array();
 		$dato   	= $this->get_dato();
 		foreach ((array)$dato as $key => $current_locator) {
-			#$ar_valor[] = self::get_locator_value( $current_locator, $lang, $this->section_tipo );
+			#$ar_valor[] = self::get_locator_value( $current_locator, $lang );
 			$ar_valor[] = ts_object::get_term_by_locator( $current_locator, $lang, $from_cache=true );		
 		}//end if (!empty($dato))
 
@@ -280,10 +280,10 @@ class component_relation_children extends component_relation_common {
 
 
 	/**
-	* GET_CHILDRENS_RECURSIVE
-	* @return 
+	* GET_CHILDRENS
+	* @return array $ar_childrens_recursive
 	*/
-	public static function get_childrens_recursive($section_id, $section_tipo, $component_tipo=null) {
+	public static function get_childrens($section_id, $section_tipo, $component_tipo=null, bool $recursive=true) {
 		
 		$ar_childrens_recursive = [];
 
@@ -300,7 +300,8 @@ class component_relation_children extends component_relation_common {
 
 		# Locate component children in current section when is not received
 		# Search always (using cache) for allow mix different section tipo (like beginning from root hierarchy note)
-		$ar_tipos = section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, [get_called_class()], $from_cache=true, $resolve_virtual=true, $recursive=true, $search_exact=true, $ar_tipo_exclude_elements=false);
+		# $section_tipo, [get_called_class()], $from_cache=true, $resolve_virtual=true, $recursive=true, $search_exact=true, $ar_tipo_exclude_elements=false
+		$ar_tipos = section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, [get_called_class()], true, true, true, true, false);
 		$component_tipo = reset($ar_tipos);
 		
 		# Create first component to get dato
@@ -313,22 +314,28 @@ class component_relation_children extends component_relation_common {
 														 false);
 		$dato = $component->get_dato();			
 
-		if (!empty($dato)) {
+		if ($recursive!==true) {
 
-			$ar_childrens_recursive = array_merge($ar_childrens_recursive, $dato);
+			$ar_childrens_recursive = $dato;
+		
+		}else{
 
-			# Set as resolved to avoid loops
-			$locators_resolved[] = $section_id .'_'. $section_tipo;
-			
-			foreach ((array)$dato as $key => $current_locator) {
-				$ar_childrens_recursive = array_merge($ar_childrens_recursive, self::get_childrens_recursive($current_locator->section_id, $current_locator->section_tipo, $component_tipo));
+			if (!empty($dato)) {
+
+				$ar_childrens_recursive = array_merge($ar_childrens_recursive, $dato);
+
+				# Set as resolved to avoid loops
+				$locators_resolved[] = $section_id .'_'. $section_tipo;
+				
+				foreach ((array)$dato as $key => $current_locator) {
+					$ar_childrens_recursive = array_merge($ar_childrens_recursive, self::get_childrens($current_locator->section_id, $current_locator->section_tipo, $component_tipo, $recursive));
+				}
 			}
-
-		}
+		}		
 
 
 		return $ar_childrens_recursive;
-	}//end get_childrens_recursive
+	}//end get_childrens
 
 
 

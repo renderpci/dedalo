@@ -95,7 +95,10 @@
 						$hierarchy_sections = [$section_tipo];
 					}
 				}
-				#dump($hierarchy_sections, ' hierarchy_sections ++ '.to_string());
+
+				// service autocomplete options
+					$search_sections = $hierarchy_sections;
+				
 
 				# search_tipos
 				$search_tipos = [];
@@ -178,6 +181,9 @@
 				}else{
 					$hierarchy_sections = [$section_tipo];
 				}
+
+				// service autocomplete options
+					$search_sections = $hierarchy_sections;
 
 				# search_tipos
 				$term_tipo 		= hierarchy::get_element_tipo_from_section_map( $section_tipo, 'term' );
