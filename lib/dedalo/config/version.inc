@@ -1412,6 +1412,9 @@
 		component_autocomplete : Unifified using service autocomple
 		component_autocomplete_hi : Unifified using service autocomple
 
+	Valencia 18-08-2018 4.9.11
+		unified service autocomplete for all components
+
 
 	WORK IN PROGRESS
 		component_date : mark as "red or similar" restricted an other terms based in x param..
@@ -1432,12 +1435,12 @@
 
 
 	# Version
-	$DEDALO_VERSION = '4.9.9cq';
+	$DEDALO_VERSION = '4.9.11a';
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '20-09-2018');  
+	define('DEDALO_BUILD'	, '18-10-2018');  
 
 
 	/*
