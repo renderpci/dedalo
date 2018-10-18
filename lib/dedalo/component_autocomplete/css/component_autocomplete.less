@@ -30,10 +30,8 @@
 		*/
 		//display: flex;
 		align-items: center;
-		justify-content: flex-end;
-		display: none;
-		position: absolute;
-		/* opacity: .5; */
+		justify-content: flex-end;		
+		position: absolute;	
 		right: 0;
 		top: -23px;
 		background-color: @color_selected_wrap;
@@ -42,7 +40,18 @@
 		padding-top: 2px;
 		border-top-left-radius: 3px;
 		border-top-right-radius: 3px;
+		display: none;
 		}
+		// In search mode
+			.css_wrap_autocomplete.wrap_component_search .buttons_and_fields {
+				display: block;
+				background-color: transparent;
+				top: 0.4em;
+				right: -0.6em;
+			}
+			.css_wrap_autocomplete.wrap_component_search .buttons_and_fields .new_autocomplete, .css_wrap_autocomplete.wrap_component_search .buttons_and_fields .edit_autocomplete {
+				display: none
+			}
 
 		// BTN DELETE 
 		.css_autocomplete_button_delete {
@@ -230,118 +239,18 @@
 
 
 
-	/* filter_by_list
-	----------------------------------------*/
-	@filter_by_list_column_width : 25%;
+	
 
-	/* button options to show/hide the options
-	----------------------------------------*/
-	.autocomplete_list_button_options {
-		opacity: .3;
-		background-position: -432px 0;
-		zoom: 120%;
-		-moz-transform: scale(1.20);
-		transform-origin: bottom;
-		margin-left: 3px;
-	}
-	.wrap_autocomplete_search .autocomplete_list_button_options {
-		top: 0;
-		right: 0;
-	}
-	.filter_by_list {
-		display: table;
-		//display: table;
-		//background-color: #8E8E8E;
-		padding: 10px;	
-		z-index: 1001;
-		/*
-		position: absolute;
-		left: 0;
-		top: 0;*/
-		margin-top:10px;
-		border-radius: 4px;
-		white-space: nowrap;
-		//color: #ffffff !important;
-		width: 100%;
+	// button options to show/hide the options custom position
+		.css_wrap_autocomplete .autocomplete_list_button_options {
+			top: -1px;
+			right: 1px;
 		}
-		.filter_by_list li {
-			//display: table;
-			float: left;
-			//width: 33%;
-			width: @filter_by_list_column_width;
-			display: flex; // Important for text-overflow ellipsis
-		}				
-		.filter_by_list input {
-			margin: 2px;
-			margin-right: 4px;
-		}
-		.filter_by_list label {
-			white-space: nowrap;
-			overflow: hidden;
-			text-overflow: ellipsis;
-			max-width: 90%;
-			color: #7c7c7c;	
-			}
-			.filter_by_list li > label > span {
-				position: absolute;
-				right: 0;
-				padding-right: 15px;
-				color: #7c7c7c;	
-			}
-		.filter_by_list hr {
-			width: 100%;
-			display: -webkit-inline-box;
-			margin: 3px;
-			padding: 0;
-			float: left;
-		}
-		/*
-		.filter_by_list .filter_by_list_close {
-			float: right;
-			background-color: #a0a0a0;
-			padding: 3px;
-			width: 24px;
-			text-align: center;
-			border-radius: 4px;
-			position: relative;
-			right: 0px;
-			cursor: pointer;
-			font-weight: bold;
-			}
-			.filter_by_list .filter_by_list_close:active {
-				color: black;
-			}*/
+		
+
+
 
 		
-		.filter_by_list mark {
-			color: #f5c39f !important;
-		}
-
-
-
-		/* AUTOSEARCH_OPTIONS
-		---------------------------------------- */
-			.autosearch_options {
-				//background-color: #DFFE79;
-				display: none;
-				padding: 5px;
-				//padding-right: 0; //100px;
-				//background-color: #8e8e8e;
-				color: #9e9e9e;
-				border-bottom: 0.5px solid #ccc;
-				//border-radius: 4px;
-				//margin-top: 0; //10px;
-				//margin-bottom: 5px;
-				clear: both;
-				//background-color: #cdcdcd;
-				background-color: darken(@color_selected_wrap, 5%);
-				
-				}
-			.autosearch_options.in_search_mode {
-				padding-right: 5px;
-				//padding-left: 150px;
-				}
-
 
 			.filter_fields {
 				text-align: right;

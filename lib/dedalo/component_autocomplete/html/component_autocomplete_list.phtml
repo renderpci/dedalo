@@ -43,15 +43,15 @@
 			#$html_contenido .= $valor ;
 			#break;
 
-				if($modo =='portal_list'){
+				if($modo==='portal_list'){
 					if(empty($ar_valor)){
 						$edit_class = 'css_autocomplete_ul_edit_in_portal';
 					}else{
 						$edit_class = 'css_autocomplete_ul';
 					}
-					$html_contenido .= " <ul class=\"$edit_class\" onclick=\"component_common.change_mode_component(this, '$modo','edit')\">";
+					$html_contenido .= "<ul class=\"$edit_class\" onclick=\"component_common.change_mode_component(this,'$modo','edit')\">";
 				}else{
-					$html_contenido .= " <ul>";
+					$html_contenido .= "<ul>";
 				}
 				
 				foreach ($ar_valor as $value_obj) {
@@ -59,7 +59,7 @@
 					$value = $value_obj->label;
 
 					$html_contenido .= "<li>";
-						$html_contenido .= $value;
+					$html_contenido .= $value;
 					$html_contenido .= "</li>";
 				}
 				$html_contenido .= "</ul>";
@@ -79,4 +79,5 @@
 
 	# html_delimiter
 	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'out', $modo, $lang);
-?>
+
+
