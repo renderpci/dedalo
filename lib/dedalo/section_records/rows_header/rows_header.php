@@ -120,7 +120,7 @@
 		}else{
 
 			# Get oomponent related
-			/*$ar_components_with_references = component_common::get_ar_components_with_references();
+			/*$ar_components_with_references = component_relation_common::get_components_with_relations();
 			if (in_array($modelo_name, $ar_components_with_references)) {
 				$RecordObj_dd = new RecordObj_dd($current_tipo);
 				$relaciones   = $RecordObj_dd->get_relaciones();

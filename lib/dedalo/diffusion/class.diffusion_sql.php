@@ -1400,7 +1400,7 @@ class diffusion_sql extends diffusion  {
 				#
 				# AR_SECTION_COMPONENTS . Get section components and look for references
 				$ar_components_with_references = array( 'component_portal',
-														'component_autocomplete'); #component_common::get_ar_components_with_references(); # Using modelo name
+														'component_autocomplete'); #component_relation_common::get_components_with_relations(); # Using modelo name
 				$ar_section_components = section::get_ar_children_tipo_by_modelo_name_in_section($options->section_tipo, $ar_components_with_references, $from_cache=true, $resolve_virtual=true);
 					#dump($ar_section_components, " ar_section_components ");
 

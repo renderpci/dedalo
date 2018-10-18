@@ -4008,7 +4008,7 @@ abstract class component_common extends common {
 			$show_parent_name 			= isset($propiedades->show_parent_name) ? (bool)$propiedades->show_parent_name : $show_parent_name_default;
 			$search_list_add 			= isset($propiedades->search_list_add) ? (bool)$propiedades->search_list_add : false;
 
-		// Iterate rows to conform as final array result. ar_result is array ob objects
+		// Iterate rows to conform as final array result. ar_result is array of objects
 			$ar_result = [];
 			foreach ($rows_data->ar_records as $key => $row) {
 
@@ -4075,7 +4075,7 @@ abstract class component_common extends common {
 						}
 					}//end if($show_parent_name===true)/**/
 			
-				// Search_list_add (propiedades). Add custom resolved values from same section. For example, add municipality for resolve a name ambiguity
+				// Search_list_add (propiedades). Add custom resolved values from same section. For example, add municipality for resolve an ambiguous name
 					if ($search_list_add!==false) {
 						$ar_dd_value = [];
 						foreach ($search_list_add as $add_tipo) {
@@ -4089,7 +4089,7 @@ abstract class component_common extends common {
 							$current_value = strip_tags( $component->get_valor(DEDALO_DATA_LANG) );
 							if (!empty($current_value)) {
 								// Add value
-								$ar_full_label[] = strip_tags($current_value);
+								$ar_full_label[] = $current_value;
 							}
 						}
 					}//end if ($search_list_add!==false)
@@ -4113,7 +4113,7 @@ abstract class component_common extends common {
 			}//end foreach ($rows_data->ar_records as $key => $row)
 			#debug_log(__METHOD__." ar_result ".to_string($ar_result), logger::DEBUG);
 
-			
+
 		return (array)$ar_result;
 	}//end autocomplete_search
 

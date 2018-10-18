@@ -65,7 +65,7 @@ if($this->generate_json_element===true) {
 						
 						#
 						# BUTTON NEW HTML
-						if( $permissions>=2 && $modo!='print') {
+						if( $permissions>=2 && $modo!=='print') {
 							foreach ($ar_target_section_tipo as $current_target_section_tipo) {										
 								$button_new = "<div class=\"css_button_generic btn_new_ep\" onclick=\"component_portal.new_portal_record(this)\"
 								data-portal_tipo=\"{$this->tipo}\" 
@@ -86,7 +86,7 @@ if($this->generate_json_element===true) {
 						
 						#
 						# BUTTON SELECT EXISTING RECORD HTML (BUTTON TOOL_PORTAL)	
-						if($modo!='print') {
+						if($modo!=='print') {
 													
 							foreach ($ar_target_section_tipo as $current_target_section_tipo) {
 								$button_select  = '';
@@ -110,7 +110,7 @@ if($this->generate_json_element===true) {
 
 						#
 						# VIEW MODE ICON BTN_VIEW_TOOGLE
-						if($modo!='print') {
+						if($modo!=='print') {
 							$button_toggle_view = "<div class=\"btn_view_toogle btn_view_mosaic\" onclick=\"component_portal.toggle_views(this)\"
 							data-view=\"mosaic\"></div>";
 							$html_contenido .= $button_toggle_view;
