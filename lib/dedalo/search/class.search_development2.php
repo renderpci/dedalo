@@ -1400,6 +1400,10 @@ class search_development2 {
 
 		preg_match("/^([a-z]+)([0-9]+)$/", $tipo, $matches);
 
+		if (empty($matches)) {
+			debug_log(__METHOD__." Error on preg match tipo: $tipo ".to_string(), logger::ERROR);
+		}
+
 		$name 	= $matches[1];
 		$number = $matches[2];
 
