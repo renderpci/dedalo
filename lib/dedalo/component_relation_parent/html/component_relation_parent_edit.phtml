@@ -14,9 +14,14 @@
 	print "data-modo=\"{$modo}\" ";
 	print "data-component_name=\"{$component_name}\" ";
 	print "data-component_info='{$component_info}' ";
+	
 	print "data-relation_type=\"".DEDALO_RELATION_TYPE_CHILDREN_TIPO."\" "; // Note that use CHILDREN_TIPO for search only 
 	print "data-search_tipos='".json_encode($search_tipos)."' ";
-	print "data-hierarchy_sections='".json_encode($hierarchy_sections)."' ";  // Default hierarchy_sections
+	#print "data-hierarchy_sections='".json_encode($hierarchy_sections)."' ";  // Default hierarchy_sections
+
+	// service autocomplete options
+	print "data-search_sections='". json_encode($search_sections)."' ";
+	
 	print 'data-search_query_object=\''.$json_search_query_object.'\' ';
 	print "data-limit=\"$limit\" ";
 	print ">";

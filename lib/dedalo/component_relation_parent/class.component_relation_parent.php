@@ -378,21 +378,22 @@ class component_relation_parent extends component_relation_common {
 		$parents_recursive = $ar_parents;
 
 		# Self include as reolved
-		$locators_resolved[] = $section_tipo.'_'.$section_id;
+		$lkey = $section_tipo.'_'.$section_id;
+		$locators_resolved[$lkey] = $ar_parents;
 
 	
 		foreach ($ar_parents as $current_locator) {
-			# Check self recursion			
-			if (in_array($current_locator->section_tipo.'_'.$current_locator->section_id, $locators_resolved)) {
+			# Check self recursion
+			$lkey = $current_locator->section_tipo.'_'.$current_locator->section_id;
+			//if (array_key_exists($lkey, $locators_resolved)) {
 				#debug_log(__METHOD__." SKIPPED $section_id, $section_tipo . Skipped resolution ".to_string(), logger::ERROR);
-				continue;
-			}
-
-			# Self include as reolved
-			$locators_resolved[] = $current_locator->section_tipo.'_'.$current_locator->section_id;
+				//$parents_recursive = array_merge($parents_recursive, $locators_resolved[$lkey]);
+				//continue;
+			//}			
 
 			// Add every parent level
 			$current_ar_parents	= component_relation_parent::get_parents_recursive($current_locator->section_id, $current_locator->section_tipo, $skip_root);
+			$current_ar_parents_safe = [];
 			foreach ($current_ar_parents as $c_parent) {
 				#debug_log(__METHOD__." c_parent ".to_string($c_parent), logger::DEBUG);
 				if ($skip_root===true) {
@@ -400,11 +401,16 @@ class component_relation_parent extends component_relation_common {
 				}
 				
 				# Add to array
-				$parents_recursive[] = $c_parent;
+				$current_ar_parents_safe[] = $c_parent;
 
 				# Self include as reolved
-				$locators_resolved[] = $c_parent->section_tipo.'_'.$c_parent->section_id;
-			}			
+				#$locators_resolved[$c_parent->section_tipo.'_'.$c_parent->section_id] = [$c_parent];
+			}
+
+			# Self include as reolved			
+			$locators_resolved[$lkey] = $current_ar_parents_safe;	
+			
+			$parents_recursive = array_merge($parents_recursive, $current_ar_parents_safe);				
 		}
 
 		# Set as resolved

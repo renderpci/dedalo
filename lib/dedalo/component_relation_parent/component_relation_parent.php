@@ -66,6 +66,9 @@
 					$hierarchy_sections = [$section_tipo];
 				}
 
+				// service autocomplete options
+					$search_sections = $hierarchy_sections;
+
 				# search_tipos
 				$search_tipos = [];
 				foreach ($hierarchy_sections as $current_section_tipo) {
@@ -149,6 +152,9 @@
 				if (empty($hierarchy_sections)) {
 					$hierarchy_sections = [$section_tipo];
 				}
+
+				// service autocomplete options
+					$search_sections = $hierarchy_sections;
 
 				# search_tipos
 				$search_tipos = [];
