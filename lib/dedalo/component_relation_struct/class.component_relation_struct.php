@@ -29,7 +29,7 @@ class component_relation_struct extends component_relation_common {
 		$ar_valor  	= array();		
 		$dato   	= $this->get_dato();
 		foreach ((array)$dato as $key => $current_locator) {
-			$ar_valor[] = self::get_locator_value( $current_locator, $lang, $this->section_tipo );
+			$ar_valor[] = self::get_locator_value( $current_locator, $lang );
 		}//end if (!empty($dato)) 
 
 		# Set component valor

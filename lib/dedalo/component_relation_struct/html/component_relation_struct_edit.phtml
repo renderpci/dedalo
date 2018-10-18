@@ -73,7 +73,7 @@
 						$html_content .= "</div>";//relation_index_input_line
 				}else{
 					foreach ((array)$dato as $key => $current_locator) {
-						$locator_value = component_relation_index::get_locator_value( $current_locator, $lang, $section_tipo );
+						$locator_value = component_relation_index::get_locator_value( $current_locator, $lang );
 
 						$current_locator_string = json_encode($current_locator);
 						$html_content .= "<div class=\"relation_index_input_line\">";
