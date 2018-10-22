@@ -1099,8 +1099,11 @@ class component_autocomplete_hi extends component_relation_common {
 	* @see class.diffusion_mysql.php
 	*/
 	public function get_diffusion_value( $lang=null, $type=false ) {
-	
-		$diffusion_value = $this->get_valor($lang, 'string', ', ');
+		
+		// separator. 
+		$separator = ' - '; # (!) Note here that more than one value can be returned by this method. To avoid duplicity of ',' separator, use '-' as default
+
+		$diffusion_value = $this->get_valor($lang, 'string', $separator);
 		$diffusion_value = strip_tags($diffusion_value);	
 			#dump($diffusion_value, ' diffusion_value ++ '.to_string());
 		#$term = $this->get_legacy_political_map_term( DEDALO_DATA_LANG, $dato_key=0, $type='municipality');
