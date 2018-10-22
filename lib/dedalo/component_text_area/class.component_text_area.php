@@ -1411,15 +1411,16 @@ class component_text_area extends component_common {
 		$result = component_relation_index::get_indexations_search( $options );
 
 		$ar_indexations = array();
-		while ($rows = pg_fetch_assoc($result)) {
+		foreach ($result as $key => $row) {
+		
 			#$current_section_id   	= $rows['section_id'];
 			#$current_section_tipo 	= $rows['section_tipo'];
 			#$relations 				= json_decode($rows['relations']);
 
-			$term_id = $rows['section_tipo'].'_'.$rows['section_id'];
+			$term_id = $row->section_tipo.'_'.$row->section_id;
  
 			$ar_indexations[] = $term_id;
-		}//end while
+		}//end foreach ($result as $key => $row)
 
 		$indexations_locators = json_encode($ar_indexations);
 
