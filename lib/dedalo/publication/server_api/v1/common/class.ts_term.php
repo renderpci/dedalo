@@ -98,18 +98,49 @@ class ts_term {
 				#$options->limit 		= 1;
 
 				$rows_data = (object)web_data::get_rows_data( $options );
-				#$cms_data 	= (object)end($rows_data->result);
+				#dump($rows_data, ' rows_data ++ '.to_string());
+
+				/* Example row
+					[table] => ts_onomastics
+                    [section_id] => 2398
+                    [lang] => lg-eng
+                    [publication] => yes
+                    [descriptor] => yes
+                    [tld] => on1
+                    [term_id] => on1_2398
+                    [term] => Descriptors of the media
+                    [model] => 
+                    [parent] => ["hierarchy1_245"]
+                    [childrens] => [{"type":"dd48","section_id":"2399","section_tipo":"on1","from_component_tipo":"hierarchy49"},{"type":"dd48","section_id":"2466","section_tipo":"on1","from_component_tipo":"hierarchy49"},{"type":"dd48","section_id":"5621","section_tipo":"on1","from_component_tipo":"hierarchy49"}]
+                    [indexation] => []
+                    [related] => []
+                    [time] => 
+                    [code] => 
+                    [space] => {"lat":"39.462571","lon":"-0.376295","zoom":12,"alt":16}
+                    [norder] => 7
+                    [space_marc] => 
+                    [indexation_cens] => []
+                    [indexation_espais] => []
+                    [indexation_bibliografia] => []
+                    */
 
 			if (isset($rows_data->result[0])) {
 				#$rows_data->result[0] = (array)web_data::no_descriptor_to_descriptor( (object)$rows_data->result[0] );
 
-				# Store some resolved vars for reuse
-				$this->indexation 	= (string)$rows_data->result[0]['indexation'];
-				$this->term 		= (string)$rows_data->result[0][FIELD_TERM];
+				// Store some resolved vars for reuse
+					$this->indexation 	= (string)$rows_data->result[0]['indexation'];
+					$this->term 		= (string)$rows_data->result[0][FIELD_TERM];
 
-				$this->time 		= (string)$rows_data->result[0]['time'];
-				$this->space 		= (string)$rows_data->result[0]['space'];
-				$this->scope_note 	= isset($rows_data->result[0]['scope_note']) ? (string)$rows_data->result[0]['scope_note'] : '';
+					$this->time 		= (string)$rows_data->result[0]['time'];
+					$this->space 		= (string)$rows_data->result[0]['space'];
+					$this->scope_note 	= isset($rows_data->result[0]['scope_note']) ? (string)$rows_data->result[0]['scope_note'] : '';
+
+				// All other fields from table. 2018-10-24
+					foreach ($rows_data->result[0] as $key => $value) {
+						if (!isset($this->{$key})) {
+							$this->{$key} = $value;
+						}
+					}
 			}
 		}
 		
@@ -245,7 +276,7 @@ class ts_term {
 
 		$options = new stdClass();
 			$options->table 		= (string)$table;
-			$options->ar_fields 	= array('id');			
+			$options->ar_fields 	= array('id');
 			$options->lang 			= WEB_CURRENT_LANG_CODE;
 			$options->sql_filter 	= $term_filter;
 			$options->limit 		= 1;
@@ -512,7 +543,7 @@ class ts_term {
 		
 		$options = new stdClass();
 			$options->table 		= (string)TABLE_THESAURUS;
-			$options->ar_fields 	= array('id');			
+			$options->ar_fields 	= array('id');
 			$options->lang 			= WEB_CURRENT_LANG_CODE;
 			$options->sql_filter 	= "indexation LIKE '%$term_id%'" . PUBLICACION_FILTER_SQL;
 			$options->limit 		= 1;
