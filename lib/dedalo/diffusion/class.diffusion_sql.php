@@ -28,7 +28,7 @@ class diffusion_sql extends diffusion  {
 	* Simply Exec self::build_table_columns for every table in structure
 	* @param string $database_tipo like 'dd521'
 	*//*
-	public function get_db_schema($database_tipo) {	
+	public function get_db_schema($database_tipo) {
 		
 		# DEFAULT CASE
 		# table in first level
@@ -826,6 +826,13 @@ class diffusion_sql extends diffusion  {
 			if ($options->delete_previous===true) {
 				diffusion_sql::delete_sql_record($options->section_id, $options->database_name, $options->table_name, $options->section_tipo);
 				debug_log(__METHOD__." Skipped (and mysql deleted) record $options->section_id ".$options->table_name." (publication=no)", logger::DEBUG);
+
+				// Global search case 
+					if (isset($options->table_propiedades->global_search_map)) {
+						# exists search global table (mdcat fix)						
+						diffusion_sql::delete_sql_record($options->section_id, $options->database_name, 'global_search', $options->section_tipo);
+						debug_log(__METHOD__." Deleted global_search record {$options->section_tipo}_{$options->section_id} (publication=no)", logger::DEBUG);
+					}					
 			}			
 
 			$section = section::get_instance($options->section_id, $options->section_tipo, $modo='list', false);
@@ -1284,28 +1291,28 @@ class diffusion_sql extends diffusion  {
 		#
 			#
 			# DIFFUSION_SECTION . Resolve diffusion section from section tipo
-			if (in_array($options->section_tipo, (array)$ar_unconfigured_diffusion_section)) {
-				$response->msg .= 'unconfigured_diffusion_section';	
-				return $response;
-			}
-			#$diffusion_section = self::get_diffusion_table_by_section( $options->section_tipo );
-			$diffusion_section = $table_tipo;
-			#dump($diffusion_section, " diffusion_section $options->section_tipo ".to_string()); #die();
-			if(!$diffusion_section) {
-				if(SHOW_DEBUG===true) {
-					$section_name = RecordObj_dd::get_termino_by_tipo($options->section_tipo, DEDALO_STRUCTURE_LANG, true, false);
-					#throw new Exception("Error Processing Request. diffusion_section not found in correspondence with section_tipo: $options->section_tipo . Nothing is updated", 1);
-					#echo "<hr> DEBUG update_record: Omitted update section <b>'$section_name'</b>. Optional diffusion_section not found in correspondence with section_tipo: $options->section_tipo [$options->section_id]<br>";
-					$msg = " Omitted update section <b>'$section_name'</b>. Optional diffusion_section not found in correspondence with section_tipo: $options->section_tipo [$options->section_id] ";
-					$response->msg .= $msg;
-					debug_log(__METHOD__." $msg", logger::DEBUG);
+				if (in_array($options->section_tipo, (array)$ar_unconfigured_diffusion_section)) {
+					$response->msg .= 'unconfigured_diffusion_section';	
+					return $response;
 				}
-				#error_log(__METHOD__." WARNING: diffusion_section not found in correspondence with section_tipo: $options->section_tipo . Nothing is updated !!");
-				$ar_unconfigured_diffusion_section[] = $options->section_tipo;
+				#$diffusion_section = self::get_diffusion_table_by_section( $options->section_tipo );
+				$diffusion_section = $table_tipo;
+				#dump($diffusion_section, " diffusion_section $options->section_tipo ".to_string()); #die();
+				if(!$diffusion_section) {
+					if(SHOW_DEBUG===true) {
+						$section_name = RecordObj_dd::get_termino_by_tipo($options->section_tipo, DEDALO_STRUCTURE_LANG, true, false);
+						#throw new Exception("Error Processing Request. diffusion_section not found in correspondence with section_tipo: $options->section_tipo . Nothing is updated", 1);
+						#echo "<hr> DEBUG update_record: Omitted update section <b>'$section_name'</b>. Optional diffusion_section not found in correspondence with section_tipo: $options->section_tipo [$options->section_id]<br>";
+						$msg = " Omitted update section <b>'$section_name'</b>. Optional diffusion_section not found in correspondence with section_tipo: $options->section_tipo [$options->section_id] ";
+						$response->msg .= $msg;
+						debug_log(__METHOD__." $msg", logger::DEBUG);
+					}
+					#error_log(__METHOD__." WARNING: diffusion_section not found in correspondence with section_tipo: $options->section_tipo . Nothing is updated !!");
+					$ar_unconfigured_diffusion_section[] = $options->section_tipo;
 
-				$response->msg .= " unconfigured_diffusion_section: $options->section_tipo";
-				return $response;
-			}					
+					$response->msg .= " unconfigured_diffusion_section: $options->section_tipo";
+					return $response;
+				}					
 
 			#
 			# TABLE FIELDS reference only	(not needed because tables are already created)
@@ -1362,7 +1369,7 @@ class diffusion_sql extends diffusion  {
 
 				# GLOBAL_SEARCH
 					#dump($table_propiedades, ' table_propiedades ++ $table_tipo: '.to_string($table_tipo));
-					if (isset($table_propiedades->global_search_map)) {						
+					if (isset($table_propiedades->global_search_map)) {
 						#dump($table_propiedades->global_search_map, ' table_propiedades ++ '.to_string($table_tipo));
 
 						$gs_options = new stdClass();
@@ -1373,10 +1380,9 @@ class diffusion_sql extends diffusion  {
 							$gs_options->ar_field_data 			= $ar_field_data;
 						self::save_global_search_data($gs_options);
 
-					}//end if (isset($table_propiedades->global_search_map))
-					
+					}//end if (isset($table_propiedades->global_search_map))			
 
-			}//end if(!empty($ar_field_data))			
+			}//end if(!empty($ar_field_data))
 		
 			# AR_RESOLVED . update				
 			$ar_resolved_static[$options->section_tipo][] = $options->section_id;
@@ -1783,6 +1789,7 @@ class diffusion_sql extends diffusion  {
 			$save_options->diffusion_element_tipo 	= $options->diffusion_element_tipo;
 			$save_options->section_tipo 			= $options->section_tipo;
 			$save_options->record_data 				= $ar_field_data;
+			$save_options->delete_previous 			= true;
 		#dump($save_options, ' save_options ++ '.to_string()); die();
 		$save = diffusion_mysql::save_record($save_options);
 			#dump($save, ' save ++ '.to_string());
@@ -2803,7 +2810,7 @@ class diffusion_sql extends diffusion  {
 	* RESOLVE_VALUE
 	* @return 
 	*/
-	public static function resolve_value( $options, $dato, $default_separator = " | " ) {
+	public static function resolve_value( $options, $dato, $default_separator=" | " ) {
 		#dump($options, ' options ++ '.to_string());
 		#dump($dato, ' dato ++ '.to_string());
 
@@ -2876,12 +2883,12 @@ class diffusion_sql extends diffusion  {
 		#$ar_value = array_unique($ar_value);
 
 		$separator 	= isset($process_dato_arguments->separator) ? $process_dato_arguments->separator : $default_separator;
-		
+	
 		$value = implode($separator,$ar_value);
 
 		# Remove duplicates 
 		#$uar_value 	= explode(',',$value);
-		#$uar_value 	= array_unique($uar_value);			
+		#$uar_value 	= array_unique($uar_value);
 		#$value 		= implode(',',$ar_value);
 
 		if (empty($value) && $value!='0') {
