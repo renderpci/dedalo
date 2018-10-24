@@ -612,7 +612,7 @@ class ts_object extends Accessors {
 				# dump($valor, ' valor ++ '.to_string());	
 			if (empty($valor)) {
 						
-				#$main_lang = hierarchy::get_main_lang( $locator->section_tipo );
+				$main_lang = hierarchy::get_main_lang( $locator->section_tipo );
 				#	#dump($main_lang, ' main_lang ++ '.to_string($locator->section_tipo));
 				#if($lang!==$main_lang) {
 				#	$component->set_lang($main_lang);
@@ -628,7 +628,8 @@ class ts_object extends Accessors {
 				#if (empty($valor)) {
 
 					$dato_full = $component->get_dato_full();
-					$valor = component_common::get_value_with_fallback_from_dato_full($dato_full, true);
+					# get_value_with_fallback_from_dato_full( $dato_full_json, $decore_untranslated=false, $main_lang=DEDALO_DATA_LANG_DEFAULT)
+					$valor = component_common::get_value_with_fallback_from_dato_full($dato_full, true, $main_lang);
 					if (is_array($valor)) {
 						$valor = implode(', ', $valor);
 					}
@@ -689,7 +690,7 @@ class ts_object extends Accessors {
 				}elseif ($this->section_tipo===DEDALO_THESAURUS_SECTION_TIPO) {
 					$tipo = DEDALO_THESAURUS_BUTTON_NEW_TIPO;
 					$permissions = common::get_permissions($this->section_tipo,$tipo);
-				}else{				
+				}else{
 					$ar_children = section::get_ar_children_tipo_by_modelo_name_in_section($this->section_tipo, array($element_name), $from_cache=true, $resolve_virtual=true, $recursive=false, $search_exact=true);
 					# dump($ar_children, ' ar_children ++ '.to_string());
 					if (isset($ar_children[0])) {

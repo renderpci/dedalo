@@ -513,7 +513,7 @@ class diffusion_mysql extends diffusion_sql  {
 				if ($options->delete_previous===true) {
 					$delete_result = self::delete_sql_record($section_id, $database_name, $table_name, $options->section_tipo, false);
 					$response->msg[] = $delete_result->msg;
-				}			
+				}
 			
 			#
 			# IS_PUBLICABLE : Skip non publicable records
@@ -560,7 +560,7 @@ class diffusion_mysql extends diffusion_sql  {
 					$response->msg[] = "Inserted record section_id:$section_id, table:$table_name, lang:$lang";
 			}//end foreach ($ar_fields as $lang => $fields) iterate langs
 
-			debug_log(__METHOD__." ++ strQuery ".to_string($strQuery), logger::DEBUG);
+			#debug_log(__METHOD__." ++ strQuery ".to_string($strQuery), logger::DEBUG);
 
 		}//end foreach ($ar_section_id as $section_id) 
 		#dump($result, ' result ++ '.to_string());

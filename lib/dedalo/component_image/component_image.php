@@ -65,6 +65,7 @@
 
 					# IMG : Dimensions w/h
 					$image_dimensions 	= $this->ImageObj->get_image_dimensions();
+						#dump($image_dimensions, ' image_dimensions ++ '.to_string());
 					
 					$original_img_width  = $image_dimensions[0];
 					$original_img_height = $image_dimensions[1];
