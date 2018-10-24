@@ -267,16 +267,21 @@ class tool_diffusion {
 	* Note: For better control, sections are TR of diffusion_elements. This correspondence always must exists in diffusion map
 	* @return bool true/false
 	*/
-	public static function have_section_diffusion( $section_tipo ) {
+	public static function have_section_diffusion( $section_tipo, $ar_diffusion_map_elements=null ) {
 		
-		$ar_diffusion_map_elements = diffusion::get_ar_diffusion_map_elements(DEDALO_DIFFUSION_DOMAIN);
-			#dump($ar_diffusion_map_elements, ' $ar_diffusion_map_elements ++ '.to_string(DEDALO_DIFFUSION_DOMAIN));
+		if (is_null($ar_diffusion_map_elements)) {
+			# calculate all
+			$ar_diffusion_map_elements = diffusion::get_ar_diffusion_map_elements(DEDALO_DIFFUSION_DOMAIN);
+				#dump($ar_diffusion_map_elements, ' $ar_diffusion_map_elements ++ '.to_string(DEDALO_DIFFUSION_DOMAIN));
+		}		
 
-		foreach ($ar_diffusion_map_elements as $diffusion_element_tipo => $obj_value) {
+		foreach ($ar_diffusion_map_elements as $obj_value) {
+
+			$diffusion_element_tipo = $obj_value->element_tipo;
 			
 			#$ar_related = common::get_ar_related_by_model('section',$diffusion_element_tipo); // Old way
 			$ar_related = self::get_diffusion_sections_from_diffusion_element($diffusion_element_tipo);
-				#dump($ar_related, ' $ar_related ++ '.to_string( $diffusion_element_tipo ));
+				#dump($ar_related, ' $ar_related ++ '.to_string( $diffusion_element_tipo )." - name:".$obj_value->name);
 				if(in_array($section_tipo, $ar_related)) {
 					return true;
 				}			
@@ -300,7 +305,8 @@ class tool_diffusion {
 			return $_SESSION['dedalo4']['config']['ar_diffusion_sections'][$diffusion_element_tipo];
 		}
 
-		$tables = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($diffusion_element_tipo, $modelo_name='table', $relation_type='children_recursive', $search_exact=false);
+		# tables. RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($diffusion_element_tipo, $modelo_name='table', $relation_type='children_recursive', $search_exact=false);
+		$tables = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($diffusion_element_tipo, 'table', 'children_recursive', false);
 		foreach ($tables as $current_table_tipo) {
 
 			$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_table_tipo,true);

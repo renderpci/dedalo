@@ -15,10 +15,17 @@
 			#$html_tool .= RecordObj_dd::get_termino_by_tipo($diffusion_group_tipo, DEDALO_DATA_LANG, true, false);
 			#$html_tool .= "</div>";
 
+			$have_section_diffusion = tool_diffusion::have_section_diffusion( $section_tipo, $ar_diffusion_element );
+				#dump($have_section_diffusion, ' have_section_diffusion ++ '.to_string($ar_diffusion_element));
+			if ($have_section_diffusion===false) {
+				# ignore
+				continue;
+			}
+
 			#$html_tool .= "<ul>"; 
 			foreach ($ar_diffusion_element as $obj_value) {				
 	
-				if ($obj_value->class_name=='diffusion_rdf') {
+				if ($obj_value->class_name==='diffusion_rdf') {
 					continue; # Skip rdf for now
 				}
 
@@ -65,5 +72,5 @@
 	
 	# PRINT HTML
 	echo $html_tool;
-	
-?>
+
+
