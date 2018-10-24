@@ -89,8 +89,8 @@ class section extends common {
     	# key for cache
     	$key = $section_id .'_'. $tipo;
 
-    	$max_cache_instances = 300*2; // Default 300
-		$cache_slice_on 	 = 100*2; // Default 100
+    	$max_cache_instances = 300*4; // Default 300
+		$cache_slice_on 	 = 100*4; // Default 100
 
     	# OVERLOAD : If ar_section_instances > 99 , not add current section to cache to avoid overload
     	# array_slice ( array $array , int $offset [, int $length = NULL [, bool $preserve_keys = false ]] )
