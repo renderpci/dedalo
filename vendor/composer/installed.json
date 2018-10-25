@@ -787,5 +787,40 @@
             "stream",
             "uri"
         ]
+    },
+    {
+        "name": "socrata/soda-php",
+        "version": "v1.1.0",
+        "version_normalized": "1.1.0.0",
+        "source": {
+            "type": "git",
+            "url": "https://github.com/socrata/soda-php.git",
+            "reference": "7c293d15e08ba04a9dd9d848243a71a790e782ee"
+        },
+        "dist": {
+            "type": "zip",
+            "url": "https://api.github.com/repos/socrata/soda-php/zipball/7c293d15e08ba04a9dd9d848243a71a790e782ee",
+            "reference": "7c293d15e08ba04a9dd9d848243a71a790e782ee",
+            "shasum": ""
+        },
+        "require": {
+            "ext-curl": "*",
+            "php": "~5.3"
+        },
+        "time": "2016-09-21T17:30:26+00:00",
+        "type": "library",
+        "installation-source": "dist",
+        "autoload": {
+            "files": [
+                "public/socrata.php"
+            ]
+        },
+        "notification-url": "https://packagist.org/downloads/",
+        "description": "A simple library to make it easier to access SODA services from PHP",
+        "homepage": "http://dev.socrata.com",
+        "keywords": [
+            "SODA",
+            "socrata"
+        ]
     }
 ]
