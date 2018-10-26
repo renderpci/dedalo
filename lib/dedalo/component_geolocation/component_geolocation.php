@@ -19,7 +19,7 @@
 	if($permissions===0) return null;
 	
 	# Verify component content record is inside section record filter
-	if ($this->get_filter_authorized_record()===false) return NULL ;
+	if ($this->get_filter_authorized_record()===false) return null;
 
 	$file_name = $modo;	
 	switch($modo) {		
@@ -35,7 +35,7 @@
 					array_unshift(css::$ar_url_basic, DEDALO_ROOT_WEB ."/lib/leaflet/$leaflet_dist/leaflet.draw/leaflet.draw.css");
 
 				# JS
-					js::$ar_url[] = defined('LEAFLET_JS_URL') ? LEAFLET_JS_URL : DEDALO_ROOT_WEB . "/lib/leaflet/$leaflet_dist/leaflet.js";									
+					js::$ar_url[] = defined('LEAFLET_JS_URL') ? LEAFLET_JS_URL : DEDALO_ROOT_WEB . "/lib/leaflet/$leaflet_dist/leaflet.js";											
 					js::$ar_url[] = DEDALO_ROOT_WEB . "/lib/leaflet/$leaflet_dist/leaflet.draw/leaflet.draw.js";
 					switch (DEDALO_GEO_PROVIDER) {
 						case 'GOOGLE':
@@ -78,4 +78,5 @@
 	if( !include($page_html) ) {
 		echo "<div class=\"error\">Invalid mode $this->modo</div>";
 	}
-?>
+
+
