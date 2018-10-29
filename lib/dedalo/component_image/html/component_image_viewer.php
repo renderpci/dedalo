@@ -30,28 +30,31 @@ position: fixed;top: 50%;left: 50%;transform: translate(-50%, -50%);
 function getBackgroundColor(img) {
 
 	// Image size	
-  	var height = img.height;
-  	var width  = img.width;
+  	const height = img.height;
+  	const width  = img.width;
   		//console.log(height+" - "+width)
 
-  	var tool_bar = 51
-  	if (typeof window.chrome=="undefined") {
-  		tool_bar = 22
-  	}
-  	window.resizeTo(width, height+tool_bar);
+    const tool_bar_height = (window.outerHeight - window.innerHeight) || 50
+   
+  	window.resizeTo(width, height+tool_bar_height)
 
   	//document.getElementById('image_container').style.opacity = 1
   
     var colorThief = new BackgroundColorTheif();  
     var rgb = colorThief.getBackGroundColor( document.getElementById('image_current') );  // document.getElementsByTagName('body')
-    console.log('background-color = '+rgb);
+    if(SHOW_DEBUG===true) {
+      console.log('background-color = '+rgb);
+    }    
     document.body.style.backgroundColor = 'rgb(' + rgb[0] + ',' + rgb[1] + ',' + rgb[2] +')';  return
 
+  return true
 }
 function download_original_image(button_obj, event) {
     event.stopPropagation()
     event.preventDefault()
-      console.log("event:",event);
+    if(SHOW_DEBUG===true) {
+      console.log("[download_original_image] event:",event);
+    }     
 
     let url = '<?php echo $f ?>';
     let default_quality = '<?php echo DEDALO_IMAGE_QUALITY_DEFAULT ?>'
