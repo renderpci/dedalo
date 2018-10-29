@@ -1,8 +1,8 @@
 <?php
+// Loads parent class diffusion
 include_once(DEDALO_LIB_BASE_PATH . '/diffusion/class.diffusion.php');
-#require_once(DEDALO_LIB_BASE_PATH . '/diffusion/class.event.php');
 /*
-* CLASS DIFUSSION SQL
+* CLASS DIFFUSION_SQL
 */
 class diffusion_sql extends diffusion  {
 		
@@ -78,7 +78,7 @@ class diffusion_sql extends diffusion  {
 				}
 			}
 		#dump(self::$ar_table, 'self::$ar_table ++ '.to_string()); die();
-	}#end get_db_schema*/
+	}//end get_db_schema*/
 	
 
 
@@ -228,9 +228,9 @@ class diffusion_sql extends diffusion  {
 							break;
 					}//end switch (true)				
 					break;
-			}#end switch modelo_name
+			}//end switch modelo_name
 			
-		}#end foreach ($ar_table_children as $curent_children_tipo)
+		}//end foreach ($ar_table_children as $curent_children_tipo)
 		#dump($ar_table_data, ' ar_table_data'); die();	
 
 		
@@ -343,7 +343,7 @@ class diffusion_sql extends diffusion  {
 		}
 
 		return $ar_field_data;
-	}#end create_field
+	}//end create_field
 
 
 
@@ -361,23 +361,24 @@ class diffusion_sql extends diffusion  {
 	*/
 	public static function build_table_columns_data( stdClass $request_options ) {
 
-		$options = new stdClass();
-			$options->table_tipo 			 	 = null;
-			$options->ar_section_id_portal 	 	 = array();
-			$options->database_name 		 	 = null;
-			$options->table_name 		 	 	 = null;
-			$options->table_propiedades 	 	 = null;
-			$options->table_from_alias 	 	 	 = null;
-			$options->ar_result 			 	 = false;
-			$options->diffusion_element_tipo 	 = null;
-			$options->ar_childrens_tipo 	 	 = null;
-			$options->component_publication_tipo = null;
-			$options->build_mode 				 = 'default';
-			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
-
-		foreach ($options as $var_name => $value) {
-			$$var_name = $value;
-		}
+		// options
+			$options = new stdClass();
+				$options->table_tipo 			 	 = null;
+				$options->ar_section_id_portal 	 	 = array();
+				$options->database_name 		 	 = null;
+				$options->table_name 		 	 	 = null;
+				$options->table_propiedades 	 	 = null;
+				$options->table_from_alias 	 	 	 = null;
+				$options->ar_result 			 	 = false;
+				$options->diffusion_element_tipo 	 = null;
+				$options->ar_childrens_tipo 	 	 = null;
+				$options->component_publication_tipo = null;
+				$options->build_mode 				 = 'default';
+				foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
+		
+				foreach ($options as $var_name => $value) {
+					$$var_name = $value; // move options var to self var
+				}
 
 		if(SHOW_DEBUG===true) {
 			#dump($table_tipo, ' table_tipo ++ ');
@@ -766,9 +767,9 @@ class diffusion_sql extends diffusion  {
 			# Forces collection of any existing garbage cycles			
 			gc_collect_cycles();			
 
-		}#end foreach ($ar_result as $current_section_id) end itearation of records
+		}//end foreach ($ar_result as $current_section_id) end itearation of records
 		#self::build_table_columns_data($section_tipo, $ar_portal_section_id_unique, $database_name, false, $diffusion_element_tipo);
-		
+		#dump($ar_field_data, ' ar_field_data ++ '.to_string());
 
 		# ASIGN VAR (If not empty ar_fields)
 		# After iterate all records and create the current section array fields, set to static class var (self::$ar_table_data)
@@ -787,7 +788,7 @@ class diffusion_sql extends diffusion  {
 		#	$portal_records = self::clean_duplicates( $portal_records );
 		#	self::build_table_columns_data($portal_tipo, $portal_records, $database_name, false, $diffusion_element_tipo);
 		#}		
-	}#end build_table_columns_data
+	}//end build_table_columns_data
 
 
 
@@ -1133,7 +1134,7 @@ class diffusion_sql extends diffusion  {
 		# DIFFUSION STRUCTURE
 	
 			# DIFFUSION_DOMAIN : Get structure tipo of current diffuision domain name
-			$diffusion_domain = self::get_my_diffusion_domain($this->domain, get_called_class());
+			$diffusion_domain = diffusion::get_my_diffusion_domain($this->domain, get_called_class());
 				#dump($diffusion_domain,'$diffusion_domain '.$this->domain." ".get_called_class());
 
 			# DATABASE :
@@ -1154,7 +1155,7 @@ class diffusion_sql extends diffusion  {
 
 				$ar_diffusion_map[] = $current_database_tipo;		
 				
-			}#end foreach ($ar_diffusion_database as $diffusion_section_tipo
+			}//end foreach ($ar_diffusion_database as $diffusion_section_tipo
 
 		#if(SHOW_DEBUG===true) dump( exec_time($start_time, __METHOD__) );
 
@@ -1163,7 +1164,7 @@ class diffusion_sql extends diffusion  {
 			#dump($this->ar_diffusion_map,"this->ar_diffusion_map ");#die();
 
 		return (array)$this->ar_diffusion_map;
-	}#end get_ar_diffusion_map_sql
+	}//end get_ar_diffusion_map_sql
 
 
 
@@ -1830,7 +1831,7 @@ class diffusion_sql extends diffusion  {
 		}
 
 		return $diffusion_database_name;
-	}#end get_diffusion_database_name_from_table
+	}//end get_diffusion_database_name_from_table
 
 
 
@@ -1847,7 +1848,7 @@ class diffusion_sql extends diffusion  {
 		}
 
 		return $ar_diffusion_map_elements[$diffusion_element_tipo];
-	}#end get_diffusion_element_from_element_tipo
+	}//end get_diffusion_element_from_element_tipo
 
 
 
@@ -2019,7 +2020,7 @@ class diffusion_sql extends diffusion  {
 		$ar_diffusion_element_tables_map[$diffusion_element_tipo] = $diffusion_element_tables_map;
 
 		return (object)$diffusion_element_tables_map;
-	}#end get_diffusion_element_tables_map
+	}//end get_diffusion_element_tables_map
 
 
 
@@ -2044,7 +2045,7 @@ class diffusion_sql extends diffusion  {
 		}
 
 		return false;
-	}#end get_diffusion_table_by_section
+	}//end get_diffusion_table_by_section
 	
 
 
@@ -2085,7 +2086,7 @@ class diffusion_sql extends diffusion  {
 		}
 
 		return $thesaurus_data;
-	}#end get_thesaurus_data
+	}//end get_thesaurus_data
 
 
 
@@ -2127,7 +2128,7 @@ class diffusion_sql extends diffusion  {
 		}
 
 		return (object)$response;
-	}#end diffusion_complete_dump
+	}//end diffusion_complete_dump
 
 
 
@@ -2159,7 +2160,7 @@ class diffusion_sql extends diffusion  {
 		}
 
 		return false;		
-	}#end delete_sql_record
+	}//end delete_sql_record
 
 
 
@@ -2185,7 +2186,7 @@ class diffusion_sql extends diffusion  {
 		}
 
 		return $component_publication_tipo;
-	}#end get_component_publication_tipo
+	}//end get_component_publication_tipo
 
 
 
@@ -2211,7 +2212,7 @@ class diffusion_sql extends diffusion  {
 		}		
 
 		return false;		
-	}#end get_component_publication_bool_value
+	}//end get_component_publication_bool_value
 
 
 

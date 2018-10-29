@@ -1,12 +1,11 @@
 <?php
-require_once(DEDALO_LIB_BASE_PATH . '/diffusion/class.diffusion_sql.php');
+// Loads parent class diffusion_sql
+include_once(DEDALO_LIB_BASE_PATH . '/diffusion/class.diffusion_sql.php');
 /*
 * CLASS DIFFUSION_MYSQL
 * Se encarga de gestionar la comunicación y el trasvase de datos desde Dédalo 4 hacia bases de datos de diffusión
 * basados en modelos sql convencionales (tipo dedalo3)
 */
-
-
 class diffusion_mysql extends diffusion_sql  {	
 
 
@@ -20,7 +19,7 @@ class diffusion_mysql extends diffusion_sql  {
 	function __construct($options=null) {
 		
 		parent::__construct($options=null);
-	}
+	}//end __construct
 
 
 
@@ -71,7 +70,7 @@ class diffusion_mysql extends diffusion_sql  {
 		}
 
 		return $result;
-	}#end exec_mysql_query	
+	}//end exec_mysql_query	
 
 
 
@@ -138,7 +137,7 @@ class diffusion_mysql extends diffusion_sql  {
 			debug_log(__METHOD__." Created new table $database_name.$table_name ".to_string(), logger::DEBUG);
 
 		return true;
-	}#end create_table
+	}//end create_table
 
 
 
@@ -209,7 +208,7 @@ class diffusion_mysql extends diffusion_sql  {
 
 							$sql_query_line .= $field_value.',';											
 
-						}#end foreach ($ar_row as $field)
+						}//end foreach ($ar_row as $field)
 						
 						# Remove last ','
 						$sql_query_line = substr($sql_query_line, 0,-1);
@@ -217,10 +216,10 @@ class diffusion_mysql extends diffusion_sql  {
 					# Close values group
 					$sql_query_line .= "),";
 
-				}#end foreach ($ar_group_rows as $lang => $ar_row)
+				}//end foreach ($ar_group_rows as $lang => $ar_row)
 				
 
-			}#end foreach ($ar_table as $key => $ar_values)
+			}//end foreach ($ar_table as $key => $ar_values)
 
 			# Remove last ','
 			$sql_query_line = substr($sql_query_line, 0,-1);
@@ -242,7 +241,7 @@ class diffusion_mysql extends diffusion_sql  {
 		#dump( stripslashes($sql_query), ' sql_query');
 
 		return true;
-	}#end insert_data	
+	}//end insert_data	
 
 	
 
@@ -271,7 +270,6 @@ class diffusion_mysql extends diffusion_sql  {
 		$db->next_result();
 	
 		return $result;
-
 	}//end multi
 	*/
 
@@ -332,7 +330,7 @@ class diffusion_mysql extends diffusion_sql  {
 		$sql_query = "PRIMARY KEY (`id`),".$sql_query; // Prepend primary key 
 
 		return $sql_query;
-	}#end generate_keys
+	}//end generate_keys
 
 
 
@@ -412,11 +410,11 @@ class diffusion_mysql extends diffusion_sql  {
 					break;
 			}
 
-		}#end foreach ($ar_fields as $key => $ar_data)
+		}//end foreach ($ar_fields as $key => $ar_data)
 		#dump($sql_query, ' sql_query');
 
 		return $sql_query;
-	}#end generate_fields
+	}//end generate_fields
 
 
 
@@ -807,7 +805,7 @@ class diffusion_mysql extends diffusion_sql  {
 		$result->free();
 
 		return (bool)$table_exits;
-	}#end table_exits
+	}//end table_exits
 
 
 
@@ -831,7 +829,7 @@ class diffusion_mysql extends diffusion_sql  {
 		}
 
 		return true;
-	}#end is_publicable
+	}//end is_publicable
 	*/
 
 
@@ -888,7 +886,7 @@ class diffusion_mysql extends diffusion_sql  {
 		}
 
 		return (object)$response;
-	}#end delete_sql_record
+	}//end delete_sql_record
 	
 
 
