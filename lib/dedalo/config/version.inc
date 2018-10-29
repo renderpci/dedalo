@@ -1412,8 +1412,14 @@
 		component_autocomplete : Unifified using service autocomple
 		component_autocomplete_hi : Unifified using service autocomple
 
+
 	Valencia 18-08-2018 4.9.11
 		unified service autocomplete for all components
+
+
+	Valencia 29-08-2018 4.9.12
+		component_geolocation : re-add interaction between map position/zoom and input fields to enable write numeric values interactively
+		component_image : re-enable paper.js lib version 0.9 because compatibility problems found with version >=0.10
 
 
 	WORK IN PROGRESS
@@ -1435,12 +1441,12 @@
 
 
 	# Version
-	$DEDALO_VERSION = '4.9.11c';
+	$DEDALO_VERSION = '4.9.12';
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '22-10-2018');  
+	define('DEDALO_BUILD'	, '29-10-2018');  
 
 
 	/*
