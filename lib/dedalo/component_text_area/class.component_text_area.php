@@ -1398,17 +1398,20 @@ class component_text_area extends component_common {
 	* @return string json encoded $indexations_locators
 	*/
 	public function get_component_indexations_term_id( $type ) {  // DEDALO_RELATION_TYPE_INDEX_TIPO
-		
+		/*
 		# Search relation index in hierarchy tables
 		$options = new stdClass();
 			$options->fields = new stdClass();
 			$options->fields->section_tipo 	= $this->section_tipo;
 			$options->fields->section_id 	= $this->parent;
-			#$options->fields->component_tipo= $this->tipo;
+		#$options->fields->component_tipo= $this->tipo;
 			$options->fields->type 			= $type;
 			$options->ar_tables 			= array('matrix_hierarchy');
 
 		$result = component_relation_index::get_indexations_search( $options );
+			#dump($result, ' result ++ '.to_string());
+		*/
+		$result = $this->get_component_indexations( $type );
 
 		$ar_indexations = array();
 		foreach ($result as $key => $row) {
@@ -1417,11 +1420,13 @@ class component_text_area extends component_common {
 			#$current_section_tipo 	= $rows['section_tipo'];
 			#$relations 				= json_decode($rows['relations']);
 
-			$term_id = $row->section_tipo.'_'.$row->section_id;
+			#$term_id = $row->section_tipo.'_'.$row->section_id;
+			$term_id = $row->from_section_tipo.'_'.$row->from_section_id;
  
 			$ar_indexations[] = $term_id;
 		}//end foreach ($result as $key => $row)
-
+		#dump($ar_indexations, ' ar_indexations ++ '.to_string());
+	
 		$indexations_locators = json_encode($ar_indexations);
 
 
