@@ -25,7 +25,9 @@ header("Access-Control-Allow-Origin: {$ACCESS_CONTROL_ALLOW_ORIGIN}");
 
 # safe_xss
 $safe_xss = function($value) {
+	return $value;
 
+	//var_dump($value);
 	if (is_string($value)) {
 		if ($decode_json=json_decode($value)) {
 			// If var is a stringify json, not verify string now
@@ -53,23 +55,26 @@ include(dirname(dirname(__FILE__)) .'/config_api/server_config_api.php');
 #
 # OPTIONS . Get request vars options to send to manager
 $options = isset($_REQUEST['options']) ? $safe_xss($_REQUEST['options']) : false;
+
 if ($options!==false) {	
 	$options = json_decode( $options );
 }else{
+
 	$options = new stdClass();
 	foreach ($_REQUEST as $key => $cvalue) {
-		$safe_cvalue = $safe_xss($key);
-		switch ($safe_cvalue) {
+		
+		switch ($cvalue) {
 			case 'true':
 				$cvalue = true;
 				break;
 			case 'false':
 				$cvalue = false;
-				break;			
+				break;
 		}
 		$options->$key = $cvalue;
 	}
 }
+
 
 
 # Inject option dedalo_get as current dir name (captured as var from Apache regex)
@@ -141,4 +146,3 @@ if ($dedalo_get!==false && is_object($options)) {
 header('Content-Type: application/json');
 $result = json_encode($dedalo_data, JSON_UNESCAPED_UNICODE);
 echo $result;
-?>
