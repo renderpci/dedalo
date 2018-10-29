@@ -98,23 +98,31 @@
 	//}
 	.image_buttons {
 		background-color: rgba(255,255,255,0.7);
-		display: block;
+		display: flex;
 		position: absolute;		
 		top: 10px;
 		left: 10px;
 		z-index: 10;
 		padding: 5px;
 		/*box-shadow: 0 1px 8px #7f7f7f;*/
-		border-radius: 3px;
-		
+		border-radius: 3px;			
 		}
 		.main_buttons {
-			display: none;
+			display: block;
+			width: 100;
 			z-index: 99;
-			height: 1.5em;			
+			height: 1.5em;	
+
+			
 			}
 			.main_buttons input[type="button"] {
 				border: 1px solid #DADADA;
+				opacity: 0.8;
+				&.button_active {
+					background-color: #da5b00 !important;
+					color: #ffffff !important;
+					opacity: 1 !important;
+				}
 				}
 				.main_buttons input[type="button"]:hover {
 					opacity: 0.8;
@@ -142,6 +150,7 @@
 			z-index: 99999;
 			display: inline-block;
 			border-radius: 3px;
+			border: none;
 			//box-shadow: none;
 		}
 		.image_buttons .save_image_path {
@@ -150,6 +159,21 @@
 			margin-left: 20px;			
 			//box-shadow: 0 2px 8px #999999 inset;
 		}
+		/*
+		.cuadrado:before {
+			content: " ";
+			display: inline-block;
+			width: 1em;
+			height: 1em;
+			background-image: url(../../themes/default/blank-check-box.svg);
+			background-repeat: no-repeat;
+			background-size: cover;
+			background-position: unset;
+			margin-right: 4px;
+		}
+		*/
+
+		
 
 		/*  CANVAS TRASCRIPTION
 		--------------------------------------------------- */
