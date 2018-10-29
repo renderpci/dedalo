@@ -19,7 +19,7 @@ class component_relation_model extends component_relation_common {
 	* Get value . default is get dato . overwrite in every different specific component
 	* @return string | null $valor
 	*/
-	public function get_valor($lang=DEDALO_DATA_LANG) {
+	public function get_valor($lang=DEDALO_DATA_LANG, $separator=', ') {
 
 		if (isset($this->valor)) {
 			if(SHOW_DEBUG) {
@@ -45,6 +45,7 @@ class component_relation_model extends component_relation_common {
 				}
 			}
 
+			/*
 			# Always run list of values			
 			$ar_list_of_values	= $this->get_ar_list_of_values2($lang);
 			foreach ($ar_list_of_values->result as $key => $item) {
@@ -57,6 +58,14 @@ class component_relation_model extends component_relation_common {
 					break;
 				}
 			}
+			*/
+			$ar_values = [];
+			foreach ($dato as $key => $value) {
+				$current_label = component_relation_common::get_locator_value($value, $lang, false);
+					#dump($current_label, ' current_label ++ '.to_string());
+				$ar_values[] = $current_label;
+			}
+			$valor = implode($separator, $ar_values);	
 
 		}//end if (!empty($dato)) 
 		#dump($valor, ' valor ++ '.to_string());
