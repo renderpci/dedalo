@@ -1732,17 +1732,20 @@ class search_development2 {
 
 				$ar_terminos_relacionados 	= RecordObj_dd::get_ar_terminos_relacionados($tipo,true,true);
 				$ar_related_section			= common::get_ar_related_by_model('section', $tipo);
-				$related_section_tipo 		= reset($ar_related_section);			
 
-				foreach ($ar_terminos_relacionados as $key => $current_tipo) {
-					$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
-					if (strpos($modelo_name,'component')!==0) continue;
-					# Recursion
-					$ar_path = self::get_query_path($current_tipo, $related_section_tipo);
-					foreach ($ar_path as $key => $value) {
-						$path[] = $value;
+				if (!empty($ar_related_section)) {
+
+					$related_section_tipo = reset($ar_related_section);
+					foreach ($ar_terminos_relacionados as $key => $current_tipo) {
+						$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
+						if (strpos($modelo_name,'component')!==0) continue;
+						# Recursion
+						$ar_path = self::get_query_path($current_tipo, $related_section_tipo);
+						foreach ($ar_path as $key => $value) {
+							$path[] = $value;
+						}
+						break; // Avoid multiple components in path !
 					}
-					break; // Avoid multiple components in path !
 				}
 			}
 		}
