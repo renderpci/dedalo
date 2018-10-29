@@ -18,14 +18,14 @@ class tool_diffusion {
 	/**
 	* __CONSTRUCT
 	*/
-	function __construct( $section_tipo=null, $modo='button' ) {
+	public function __construct( $section_tipo=null, $modo='button' ) {
 
 		if (empty($section_tipo)) {
 			throw new Exception("Error Processing Request. Var section_tipo is empty", 1);
 		}
 		$this->section_tipo = $section_tipo;
 		$this->modo 		= $modo;
-	}
+	}//end __construct
 
 
 
@@ -72,7 +72,12 @@ class tool_diffusion {
 
 	/**
 	* EXPORT_RECORD
-	* @return 
+	* @param string $section_tipo
+	* @param int $section_id
+	* @param string $diffusion_element_tipo
+	* @param bool $resolve_references
+	*	default: true
+	* @return object $response
 	*/
 	public static function export_record($section_tipo, $section_id, $diffusion_element_tipo, $resolve_references=true) {
 
@@ -100,7 +105,7 @@ class tool_diffusion {
 		# Each diffusion element is managed with their own class that extends the main diffusion class
 		$diffusion_class_name = $obj_diffusion_element->class_name;
 
-		include_once(DEDALO_LIB_BASE_PATH . '/diffusion/class.'.$diffusion_class_name.'.php');
+		require_once(DEDALO_LIB_BASE_PATH . '/diffusion/class.'.$diffusion_class_name.'.php');
 			#dump($diffusion_class_name, '$diffusion_class_name ++ '.to_string()); die();		
 		
 		$options = new stdClass();
@@ -344,8 +349,6 @@ class tool_diffusion {
 
 		return $ar_diffusion_sections;
 	}//end get_diffusion_sections_from_diffusion_element
-
-
 
 
 
