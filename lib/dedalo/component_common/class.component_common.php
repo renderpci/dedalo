@@ -116,7 +116,7 @@ abstract class component_common extends common {
 				dump($parent," parent - DEDALO_SECTION_ID_TEMP:".DEDALO_SECTION_ID_TEMP);
 				throw new Exception("Error Processing Request. trying to use wrong var: '$parent' as parent to load as component", 1);				
 			}			
-			$ar_valid_modo = array('edit','list','search','simple','list_tm','tool_portal','tool_lang','edit_tool','indexation','selected_fragment','tool_indexation','tool_transcription','print','edit_component','load_tr','update','portal_list','list_thesaurus','portal_list_view_mosaic','edit_in_list','edit_note','tool_structuration','dataframe_edit','tool_description','view_tool_description');
+			$ar_valid_modo = array('edit','list','search','simple','list_tm','tool_portal','tool_lang','edit_tool','indexation','selected_fragment','tool_indexation','tool_transcription','print','edit_component','load_tr','update','portal_list','list_thesaurus','portal_list_view_mosaic','edit_in_list','edit_note','tool_structuration','dataframe_edit','tool_description','view_tool_description','player');
 			if ( empty($modo) || !in_array($modo, $ar_valid_modo) ) {
 				if(SHOW_DEBUG===true) {
 					throw new Exception("Error Processing Request. trying to use wrong var: '$modo' as modo to load as component", 1);	;
@@ -1899,7 +1899,7 @@ abstract class component_common extends common {
 	*/
 	public function get_ar_list_of_values2($lang=DEDALO_DATA_LANG) {
 
-		$start_time = microtime(1);	
+		$start_time = microtime(1);
 
 		switch (true) {
 			case isset($this->propiedades->filtered_by_search):
@@ -1910,32 +1910,83 @@ abstract class component_common extends common {
 				# get_ar_related_by_model: $modelo_name, $tipo, $strict=true
   				# $target_section_tipo = common::get_ar_related_by_model('section', $this->tipo, true);
   				$target_section_tipo = $this->get_ar_target_section_tipo();
+  				$target_section_tipo = reset($target_section_tipo);
 
 				# new search_query_object
 				$search_query_object = new stdClass();
-					$search_query_object->section_tipo 			= reset($target_section_tipo);
+					$search_query_object->section_tipo 			= $target_section_tipo;
 					$search_query_object->limit 				= 0;
-					$search_query_object->skip_projects_filter 	= true;				
+					$search_query_object->skip_projects_filter 	= true;
 				break;
 		}
 
-		$search_development2 = new search_development2($search_query_object);		
-		$records_data 		 = $search_development2->search();
-		$ar_current_dato 	 = $records_data->ar_records;		
+		// cache
+			static $ar_list_of_values_data = [];
+			$uid = isset($search_query_object->section_tipo) ? $search_query_object->section_tipo : $this->tipo;
+			if (isset($ar_list_of_values_data[$uid])) {
+				#debug_log(__METHOD__." Return cached item for ar_list_of_values: ".to_string($uid), logger::DEBUG);
+				return $ar_list_of_values_data[$uid];
+			}
+
+		// ar_componets_related. get_ar_related_by_model: $modelo_name, $tipo, $strict=true
+			$ar_componets_related = common::get_ar_related_by_model('component_', $this->tipo, false);
+
+		// Build query select
+			$query_select = [];
+			foreach ($ar_componets_related as $related_tipo) {
+
+			    // path . search_development2::get_query_path($tipo, $section_tipo, $resolve_related=true)
+				$path = search_development2::get_query_path($related_tipo, $target_section_tipo, $resolve_related=true);
+
+				// add selector lag 'all' to last element of path
+				$end_path = end($path);
+				$end_path->lang = 'all';
 				
-		# get_ar_related_by_model: $modelo_name, $tipo, $strict=true
-		$ar_componets_related = common::get_ar_related_by_model('component_', $this->tipo, false);
+				$item = new stdClass();
+					$item->path = $path;
+
+				$query_select[] = $item;
+			}
+			$search_query_object->select = $query_select;
+			$search_query_object->allow_sub_select_by_id = false;
+
+
+		// Search
+			$search_development2 = new search_development2($search_query_object);
+			$records_data 		 = $search_development2->search();
+			$ar_current_dato 	 = $records_data->ar_records;
+				#dump( json_encode($search_query_object, JSON_PRETTY_PRINT), ' search_query_object ++ '.to_string());
+				#dump($ar_current_dato, ' ar_current_dato ++ '.json_encode($search_query_object, JSON_PRETTY_PRINT));
+		
 	
 		$result = [];
-		foreach ($ar_current_dato as $key => $current_locator) {
+		foreach ($ar_current_dato as $key => $current_row) {
 			
 			# value. is a basic locator section_id, section_tipo
 			$value = new stdClass();
-				$value->section_id   = $current_locator->section_id;
-				$value->section_tipo = $current_locator->section_tipo;
+				$value->section_id   = $current_row->section_id;
+				$value->section_tipo = $current_row->section_tipo;
 
 			# get_locator_value: $locator, $lang, $show_parents=false, $ar_componets_related, $divisor=', '
-			$label = component_relation_common::get_locator_value($current_locator, $lang, false, $ar_componets_related, ', ');
+			#$label = component_relation_common::get_locator_value($value, $lang, false, $ar_componets_related, ', ');
+			
+			// Build label
+				$label 	  = '';
+				$ar_label = [];
+				foreach ($ar_componets_related as $related_tipo) {
+
+					$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($related_tipo,true);
+					if ($modelo_name==='component_autocomplete_hi') {
+						# resolve
+						$current_label = component_relation_common::get_locator_value($value, $lang, false, $ar_componets_related, ', ');
+					}else{
+						# use query select value
+						$dato_full_json = $current_row->{$related_tipo};
+						$current_label = self::get_value_with_fallback_from_dato_full( $dato_full_json, false );
+					}
+					$ar_label[] = $current_label;
+				}
+				$label = implode(' | ', $ar_label);
 
 			$item = new stdClass();
 				$item->value = $value;
@@ -1954,8 +2005,10 @@ abstract class component_common extends common {
 			if(SHOW_DEBUG===true) {
 				$response->search_query_object 	= json_encode($search_query_object, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
 				$response->debug 				= 'Total time:' . exec_time_unit($start_time,'ms').' ms';
-			}			
-		#dump($response, ' response ++ '.to_string());
+			}
+
+		// cache
+			$ar_list_of_values_data[$uid] = $response;
 
 		return $response;		
 	}//end get_ar_list_of_values2
@@ -3305,16 +3358,15 @@ abstract class component_common extends common {
 	* 21-04-2017 Paco
 	* @return string $value
 	*/
-	public static function extract_component_value_fallback($component, $lang=DEDALO_DATA_LANG, $mark=true) {
+	public static function extract_component_value_fallback($component, $lang=DEDALO_DATA_LANG, $mark=true, $main_lang=DEDALO_DATA_LANG_DEFAULT) {
 	
 		# Try directe value
 		$value = $component->get_valor($lang);
 	
 		if (empty($value)) {			
 
-			# Try main lang. (Used config DEDALO_DATA_LANG_DEFAULT as main_lang)
-			$main_lang = DEDALO_DATA_LANG_DEFAULT;
-			if ($lang !== $main_lang) {
+			# Try main lang. (Used config DEDALO_DATA_LANG_DEFAULT as main_lang)			
+			if ($lang!==$main_lang) {
 				$component->set_lang($main_lang);
 				$value = $component->get_valor($main_lang);
 			}
@@ -3364,7 +3416,7 @@ abstract class component_common extends common {
 	* Expected dato is a string like '{"lg-eng": "", "lg-spa": "Comedor"}'
 	* @return string $value
 	*/
-	public static function get_value_with_fallback_from_dato_full( $dato_full_json, $decore_untranslated=false ) {
+	public static function get_value_with_fallback_from_dato_full( $dato_full_json, $decore_untranslated=false, $main_lang=DEDALO_DATA_LANG_DEFAULT) {
 
 		if (empty($dato_full_json)) {
 			return null;
@@ -3390,9 +3442,8 @@ abstract class component_common extends common {
 
 		if (empty($value)) {
 		
-			# Try main lang. (Used config DEDALO_DATA_LANG_DEFAULT as main_lang)
-			$main_lang = DEDALO_DATA_LANG_DEFAULT;
-			if ($lang !== $main_lang) {
+			# Try main lang. (Used config DEDALO_DATA_LANG_DEFAULT as main_lang)			
+			if ($lang!==$main_lang) {
 				$value = isset($decoded_obj->$main_lang) ? $decoded_obj->$main_lang : null;
 			}
 
