@@ -113,13 +113,13 @@ class diffusion_sql extends diffusion  {
 
 
 		# Table propiedades SCHEMA optional
-		$RecordObj_dd 	  = new RecordObj_dd($table_tipo);
-		$str_propiedades  = $RecordObj_dd->get_propiedades();
-		if($propiedades = json_decode($str_propiedades)) {
-			if (isset($propiedades->schema)) {
-				self::save_table_schema(  $database_name, $table_name, $propiedades->schema );
-			}
-		}
+		# $RecordObj_dd 	  = new RecordObj_dd($table_tipo);
+		# $str_propiedades  = $RecordObj_dd->get_propiedades();
+		# if($propiedades = json_decode($str_propiedades)) {
+		# 	if (isset($propiedades->schema)) {
+		# 		self::save_table_schema(  $database_name, $table_name, $propiedades->schema );
+		# 	}
+		# }
 
 		#
 		# ID FIELD	. Mandatory column
@@ -2220,15 +2220,12 @@ class diffusion_sql extends diffusion  {
 	* SAVE_TABLE_SCHEMA
 	* schema_obj is table propiedades json data
 	* @param string $database_name
-	* @param string $name
 	* @param object $schema_obj
 	* @return object $response
 	*/
-	public static function save_table_schema( $database_name, $name, $schema_obj ) {
+	public static function save_table_schema( $database_name, $schema_obj ) {
 		
-		$map = json_encode($schema_obj);
-
-		$response = diffusion_mysql::add_publication_schema( $database_name, $name, $map );
+		$response = diffusion_mysql::add_publication_schema( $database_name, json_encode($schema_obj) );
 
 		return $response;		
 	}//end save_table_schema

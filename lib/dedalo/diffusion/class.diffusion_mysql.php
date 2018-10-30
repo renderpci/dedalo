@@ -893,9 +893,13 @@ class diffusion_mysql extends diffusion_sql  {
 	/**
 	* ADD_PUBLICATION_SCHEMA
 	* Add record to table publication_schema
-	* @return 
+	* @return object $response
 	*/
-	public static function add_publication_schema( $database_name, $name, $data ) {
+	public static function add_publication_schema( $database_name, $data ) {
+
+		$response = new stdClass();
+			$response->result 	= false;
+			$response->msg 		= 'Error. Request failed '.__METHOD__;
 
 		$table_name = 'publication_schema';
 
@@ -905,7 +909,7 @@ class diffusion_mysql extends diffusion_sql  {
 
 		$data = addslashes($data);
 			#dump($data, ' data ++ '.to_string());
-
+		/*
 		$strQuery = "DELETE FROM `$database_name`.`$table_name` WHERE `name` = '$name';";
 		$result   = self::exec_mysql_query( $strQuery, $table_name, $database_name );
 		
@@ -915,11 +919,22 @@ class diffusion_mysql extends diffusion_sql  {
 				if(SHOW_DEBUG===true) { dump($strQuery, 'ERROR ON $strQuery '.to_string(DBi::_getConnection_mysql()->error)); }
 				$response->result = false;
 				$response->msg    = "Error Processing Request. Nothing is added. MySQL error".DBi::_getConnection_mysql()->error;
-				return (object)$response;						
+				return (object)$response;
+			}
+		*/
+
+		$id = 1; // Fix id always is 1
+		$strQuery = "REPLACE INTO `$database_name`.`$table_name` (`id`, `data`) VALUES ($id, '$data');"; // ON DUPLICATE KEY UPDATE data='$data'
+		$result   = self::exec_mysql_query( $strQuery, $table_name, $database_name );
+			if ($result===false) {
+				if(SHOW_DEBUG===true) { dump($strQuery, 'ERROR ON $strQuery '.to_string(DBi::_getConnection_mysql()->error)); }
+				$response->result = false;
+				$response->msg    = "Error Processing Request. Nothing is added. MySQL error".DBi::_getConnection_mysql()->error;
+				return (object)$response;
 			}
 
 		$response->result = true;
-		$response->msg 	  = "Added map '$name' successful";
+		$response->msg 	  = "Added publication_schema data successful";
 
 		return (object)$response;
 	}//end add_publication_schema
@@ -937,25 +952,31 @@ class diffusion_mysql extends diffusion_sql  {
 			$response->result 	= false;
 			$response->msg 		= '';
 
-		$strQuery = "DROP TABLE IF EXISTS `$table_name`;";	
-		$result   = self::exec_mysql_query( $strQuery, $table_name, $database_name);
+		// Drop previous existent table
+			$strQuery = "DROP TABLE IF EXISTS `$table_name`;";
+			$result  = self::exec_mysql_query( $strQuery, $table_name, $database_name);
+			if ($result===false) {
+				if(SHOW_DEBUG===true) { dump($strQuery, 'ERROR ON $strQuery '.to_string(DBi::_getConnection_mysql()->error)); }
+				$response->result = false;
+				$response->msg    = "Error Processing Request. Nothing is created 1. MySQL error".DBi::_getConnection_mysql()->error;
+				return (object)$response;
+			}
 
 		$strQuery = "
 		CREATE TABLE `$table_name` (
-		  `name` text COLLATE utf8_unicode_ci NOT NULL,
-		  `data` text COLLATE utf8_unicode_ci NOT NULL,
-		  PRIMARY KEY (`name`(128))
+		  `id` int(11) NOT NULL, `data` mediumtext COLLATE utf8_unicode_ci NOT NULL,
+		  PRIMARY KEY (`id`)
 		) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;";
 		$result  = self::exec_mysql_query( $strQuery, $table_name, $database_name);
 			if ($result===false) {
 				if(SHOW_DEBUG===true) { dump($strQuery, 'ERROR ON $strQuery '.to_string(DBi::_getConnection_mysql()->error)); }
 				$response->result = false;
-				$response->msg    = "Error Processing Request. Nothing is created. MySQL error".DBi::_getConnection_mysql()->error;
-				return (object)$response;						
+				$response->msg    = "Error Processing Request. Nothing is created 2. MySQL error".DBi::_getConnection_mysql()->error;
+				return (object)$response;
 			}
 
 		$response->result = true;
-		$response->msg 	  = "Created database map successful";	
+		$response->msg 	  = "Created table '$table_name' successful";	
 
 		return (object)$response;
 	}//end create_publication_schema_table
