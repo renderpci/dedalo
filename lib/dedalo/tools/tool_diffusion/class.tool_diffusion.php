@@ -352,5 +352,53 @@ class tool_diffusion {
 
 
 
+	/**
+	* UPDATE_PUBLICATION_SCHEMA
+	* @param string $diffusion_element_tipo
+	* @return object $response
+	*/
+	public static function update_publication_schema($diffusion_element_tipo) {
+
+		$response = new stdClass();
+			$response->result 	= false;
+			$response->msg 		= __METHOD__. ' Error. Request failed';
+
+
+		$RecordObj_dd = new RecordObj_dd($diffusion_element_tipo);
+		$propiedades  = json_decode( $RecordObj_dd->get_propiedades() );		
+		$schema_obj   = isset($propiedades->publication_schema) ? $propiedades->publication_schema : false;
+		if (!$schema_obj) {
+			return $response;
+		}
+
+		$class_name   = isset($propiedades->diffusion->class_name) ? $propiedades->diffusion->class_name : false;		
+
+		switch ($class_name) {
+			case 'diffusion_mysql':
+				// RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($tipo, $modelo_name, $relation_type, $search_exact=false)
+				$databases = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($diffusion_element_tipo, 'database', 'children', true);
+				if (isset($databases[0])) {
+					// Loads parent class diffusion
+					include_once(DEDALO_LIB_BASE_PATH . '/diffusion/class.'.$class_name.'.php');
+					// get_termino_by_tipo($terminoID, $lang=NULL, $from_cache=false, $fallback=true)
+					$database_name = RecordObj_dd::get_termino_by_tipo($databases[0]);
+					$response = (object)diffusion_sql::save_table_schema( $database_name, $schema_obj );
+				}else{
+					$response->msg .= " Database not found in structure for diffusion element: '$diffusion_element_tipo' ";
+				}				
+				break;
+			
+			default:
+				# Nothing to do
+				$response->result = true;
+				$response->msg 	  = "Ignored publication_schema for class_name: '$class_name' ";
+				break;
+		}
+
+		return $response;
+	}//end update_publication_schema
+
+
+
 }//end tool_diffusion
 ?>
