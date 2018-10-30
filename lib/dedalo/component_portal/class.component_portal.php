@@ -1184,6 +1184,8 @@ class component_portal extends component_relation_common {
 		$diffusion_value = null;
 
 		# Propiedades of diffusion element that references this component
+		# (!) Note that is possible overwrite real component properties injecting properties from diffusion (see diffusion_sql::resolve_value)
+		# 	  This is useful to change the 'data_to_be_used' param of target component (indirectly)
 		$diffusion_properties = $this->get_diffusion_properties();
 
 		$data_to_be_used = isset($diffusion_properties->data_to_be_used) ? $diffusion_properties->data_to_be_used : 'dato';

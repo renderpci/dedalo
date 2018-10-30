@@ -2846,6 +2846,13 @@ class diffusion_sql extends diffusion  {
 			
 			$method 	= isset($process_dato_arguments->component_method) ? $process_dato_arguments->component_method : 'get_diffusion_value';
 
+
+			// Inject custom properties to target component to manage 'get_diffusion_value' or another called method
+				if (isset($options->propiedades->process_dato_arguments->target_component_properties)) {
+					# Overwrite component properties
+					$component->diffusion_properties = $options->propiedades->process_dato_arguments->target_component_properties;
+				}
+			
 			#
 			# !! FALTA FILTRAR SI ES PUBLICABLE O NO EL DESTINO !!
 			# AHORA SE AÑADE TODO LO QUE ESTÉ EN EL DATO INDEPENDIENTEMENTE DE SI ES PUBLICABLE
