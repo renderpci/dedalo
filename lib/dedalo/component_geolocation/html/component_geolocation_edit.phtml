@@ -42,25 +42,25 @@
 					// map_inputs
 						$html_content .= '<div class="map_inputs">';
 
+
+
 							# LAT
 							$html_content .= '<span>'.label::get_label('latitud').'</span>';
-							$html_content .= "<input type=\"text\" name=\"lat\" value =\"{$dato->lat}\" class=\"geo_active_input\" ";
-							$html_content .= "data-name=\"lat\" ";
-							
+							$html_content .= '<input type="text" name="lat" value="'. $value_lat .'" data-name="lat" class="geo_active_input"/>';												
 							#$html_content .= "data-tipo=\"{$tipo}\" ";
 							#$html_content .= "data-lang=\"{$lang}\" ";
 							#$html_content .= "data-section_tipo=\"{$section_tipo}\" ";
 							#$html_content .= "data-parent=\"{$parent}\" ";
 							#$html_content .= "data-modo=\"{$modo}\" ";						
-							$html_content .= "/>";
+							#$html_content .= "/>";
 
 							# LON
 							$html_content .= '<span>'.label::get_label('longitud').'</span>';
-							$html_content .= "<input type=\"text\" name=\"lon\" value=\"{$dato->lon}\" data-name=\"lon\" class=\"geo_active_input\"/>";
+							$html_content .= '<input type="text" name="lon" value="'.$value_lon.'" data-name="lon" class="geo_active_input"/>';
 
 							# ZOOM
 							$html_content .= '<span>'.label::get_label('mapa_zoom').'</span>';
-							$html_content .= "<input type=\"text\" name=\"zoom\" value=\"{$dato->zoom}\" data-name=\"zoom\" class=\"geo_active_input\"/>";
+							$html_content .= '<input type="text" name="zoom" value="'.$value_zoom.'" data-name="zoom" class="geo_active_input"/>';
 
 							# ALTITUDE
 							$html_content .= '<span>'.label::get_label('altitude').'</span>';

@@ -5,8 +5,7 @@
 	$tipo 					= $this->get_tipo();
 	$parent 				= $this->get_parent();
 	$section_tipo			= $this->get_section_tipo();
-	$modo					= $this->get_modo();		
-	$dato 					= $this->get_dato();
+	$modo					= $this->get_modo();	
 	$label 					= $this->get_label();
 	$debugger				= $this->get_debugger();	
 	$permissions			= $this->get_component_permissions();
@@ -45,9 +44,14 @@
 							break;
 					}
 
+				$dato 			= $this->get_dato();
+				$dato_json		= json_encode($dato);				
 				$id_wrapper 	= 'wrapper_'.$identificador_unico;
 				$component_info = $this->get_component_info('json');
-				$dato_json		= json_encode($dato);
+
+				$value_lat = (strpos($dato->lat, ',')!==false) ? str_replace(',', '.', $dato->lat) : $dato->lat;
+				$value_lon = (strpos($dato->lon, ',')!==false) ? str_replace(',', '.', $dato->lon) : $dato->lon;
+				$value_zoom= (int)$dato->zoom;
 
 				# Related components
 				$ar_related_component_tipo 		= $this->get_ar_related_component_tipo();
