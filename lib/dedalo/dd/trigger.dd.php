@@ -91,7 +91,7 @@ if($accion==='insertTS') {
 	}
 
 	$esmodelo = 'no';
-	if($modo=='modelo_edit') $esmodelo	= 'si';
+	if($modo==='modelo_edit') $esmodelo	= 'si';
 
 	
 	$ar_childrens 	= RecordObj_dd::get_ar_childrens($parent);
@@ -270,7 +270,7 @@ if($accion==='deleteTS') {
 
 	
 		# HIJOS . Verificamos si tiene hijos (aunque el javascript debe haber evitado llegar aquí.)				
-			$RecordObj_dd_edit		= new RecordObj_dd_edit($terminoID);
+			$RecordObj_dd_edit	= new RecordObj_dd_edit($terminoID);
 			$n_hijos 			= $RecordObj_dd_edit->get_n_hijos();
 			if( $n_hijos >0 )	die("<div class=\"error\"> $el_descriptor_tiene_hijos_title.<br> $para_eliminar_una_rama_title  $renderBtnVolver</div>");				
 				
@@ -279,12 +279,12 @@ if($accion==='deleteTS') {
 			$arguments['strPrimaryKeyName']	= 'terminoID';
 			$arguments['sql_code']			= opTextSearch($campo='relaciones',$string="%\"$terminoID\"%",$boolean=2);
 			$prefijo = RecordObj_dd_edit::get_prefix_from_tipo($terminoID);
-			$RecordObj_dd_edit					= new RecordObj_dd_edit(NULL, $prefijo);
+			$RecordObj_dd_edit				= new RecordObj_dd_edit(NULL, $prefijo);
 			$ar_id							= $RecordObj_dd_edit->search($arguments);				
 			
 			if(count($ar_id)>0) foreach($ar_id as $terminoID_rel) {
 					
-				$RecordObj_dd_edit2 	= new RecordObj_dd_edit($terminoID_rel);							#echo " - $terminoID_rel <br> ";	
+				$RecordObj_dd_edit2 = new RecordObj_dd_edit($terminoID_rel);	
 				$RecordObj_dd_edit2->remove_element_from_ar_terminos_relacionados($terminoID);
 				$RecordObj_dd_edit2->Save();														
 			}
@@ -379,10 +379,10 @@ if($accion==='editTS') {
 	#if($prefijo_compare !== true) die("TS Edit Error: \n parentPost invalid! [$terminoID - $parentPost] (equal to self terminoID) \n Use a valid parent.");	
 	
 	# Imposibilita cambiar a NO descriptor un descriptor con hijos
-	if($esdescriptor =='no' && $nHijos>0 ) die(" $no_se_puede_cambiar_a_ND_title ");	
+	if($esdescriptor==='no' && $nHijos>0 ) die(" $no_se_puede_cambiar_a_ND_title ");	
 		
 	# si el término es ND, forzamos usableIndex = 'no' ...
-	if($esdescriptor == 'no') {		
+	if($esdescriptor==='no') {		
 		#$usableIndex 	= 'no';
 		$esmodelo		= 'no';
 	}else{
@@ -400,15 +400,15 @@ if($accion==='editTS') {
 	if(isset($_POST['esdescriptor']))	$RecordObj_dd_edit->set_esdescriptor( safe_xss($_POST['esdescriptor']) );
 	if(isset($_POST['modelo']))			$RecordObj_dd_edit->set_modelo( safe_xss($_POST['modelo']) );	
 	if(isset($_POST['traducible']))		$RecordObj_dd_edit->set_traducible( safe_xss($_POST['traducible']) );
-	if(isset($_POST['propiedades']) && $_POST['propiedades']!='{}')	$RecordObj_dd_edit->set_propiedades( safe_xss($_POST['propiedades']) );	
+	if(isset($_POST['propiedades']) && $_POST['propiedades']!=='{}')	$RecordObj_dd_edit->set_propiedades( safe_xss($_POST['propiedades']) );	
 	
 	# Verificamos si el padre asignado existe. (Antes verificamos el prefijo)
 	$RecordObj_dd_edit_parent	= new RecordObj_dd_edit($parentPost);
-	$parent_terminoID		= $RecordObj_dd_edit_parent->get_ID();
+	$parent_terminoID			= $RecordObj_dd_edit_parent->get_ID();
 	
 	#$prefijo = dd::terminoID2prefix($terminoID);
 	$prefijo = RecordObj_dd_edit::get_prefix_from_tipo($terminoID);
-	if( strlen($parent_terminoID)>=2 || $parentPost == 'dd0' ) {
+	if( strlen($parent_terminoID)>=2 || $parentPost==='dd0' ) {
 		
 		# El parent SI existe: Ejecutamos el UPDATE	
 		$current_id = $RecordObj_dd_edit->Save();
@@ -423,15 +423,24 @@ if($accion==='editTS') {
 	#
 	# CSS STRUCTURE . For easy css edit, save 
 	if (isset($_POST['propiedades']) && strpos($_POST['propiedades'], '"css"')!==false) {
-		debug_log(__METHOD__." Processing global structure_css: ".to_string( safe_xss($_POST['propiedades']) ), logger::DEBUG);
+		debug_log("trigger_dd.editTS ->  Processing global structure_css: ".to_string( safe_xss($_POST['propiedades']) ), logger::DEBUG);
 		$result = css::build_structure_css();
 	}
-	
+
+
+	#
+	# PUBLICATION SCHEMA
+	$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($terminoID,true);
+	if ($modelo_name==='diffusion_element') {
+		// Update schema data always		
+		$publication_schema_result = tool_diffusion::update_publication_schema($terminoID);
+		debug_log("trigger_dd.editTS -> Processing update_publication_schema: ".to_string($publication_schema_result), logger::DEBUG);
+	}
 	
 	
 	# Al acabar la secuencia de actualización, recargamos el listado (opener) y cerramos esta ventana flotante		
 	# Si llegamos desde el listado plano
-	if($from=='flat') {
+	if($from==='flat') {
 
 		$html .= "
 			<script type=\"text/javascript\">
@@ -611,5 +620,3 @@ if($accion==='searchTSform') {
 }//end SEARCH
 
 
-
-?>
