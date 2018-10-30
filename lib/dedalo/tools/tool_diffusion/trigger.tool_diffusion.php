@@ -94,6 +94,10 @@ function export_list($json_data) {
 				#dump($response, ' response ++ '.to_string());;
 			}
 		}
+
+		// Update schema data always
+		// $publication_schema_result = tool_diffusion::update_publication_schema($diffusion_element_tipo);
+
 		
 	}catch (Exception $e) {
 		$response->result = false;
@@ -108,6 +112,7 @@ function export_list($json_data) {
 			foreach($vars as $name) {
 				$debug->{$name} = $$name;
 			}
+			// $debug->publication_schema = $publication_schema_result;
 
 		$response->debug = $debug;
 	}
@@ -151,6 +156,9 @@ function export_record($json_data) {
 		
 		$response->result = $result->result;
 		$response->msg 	  = $result->msg;
+
+		// Update schema data always
+		// $publication_schema_result = tool_diffusion::update_publication_schema($diffusion_element_tipo);
 		
 	}catch (Exception $e) {
 		$response->result = false;
@@ -165,6 +173,7 @@ function export_record($json_data) {
 			foreach($vars as $name) {
 				$debug->{$name} = $$name;
 			}
+			// $debug->publication_schema = $publication_schema_result;
 
 		$response->debug = $debug;
 	}
