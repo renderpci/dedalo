@@ -1,12 +1,9 @@
 <?php
 
-	# VISUALIZADOR HTML	
-
-			
+	# VISUALIZADOR HTML			
 	
-	print "\n<!-- BUTTON LOGIN [tipo:$tipo id_matrix:$id] -->";
-
-	print "\n<div class=\"css_wrap_button_send\" >";
+	print "<!-- BUTTON LOGIN [tipo:$tipo id_matrix:$id] -->";
+	print '<div class="css_wrap_button_send">';
 	
 	# ETIQUETA (LABEL)
 	//$html_label = component_common_draw::draw_label($this);
@@ -14,17 +11,24 @@
 	# CONTENIDO (INPUT)
 	$html_contenido = '';
 	
-	switch($permissions) {
+	switch(true) {
 			
-		case 0	:	$html_contenido .= "";
-					break;
-						
-		case 1	: 	$html_contenido .= "";
-					break;	
-						
+		case ($permissions===0)	:
+				$html_contenido .= "";
+				break;
+
+		case ($permissions===1)	: 
+				$html_contenido .= "";
+				break;
+
 		case ($permissions>=2)	:
 		
-					$html_contenido .= "\n <input class=\"css_button_send\" type=\"button\" onclick=\"Login(this)\" data-tipo=\"{$target_tipo}\" value=\"$label\" title=\"$html_title\" />";											
+				$html_contenido .= "<input class=\"css_button_send\" type=\"button\" "; 
+				$html_contenido .= "onclick=\"Login()\" ";
+				$html_contenido .= "data-tipo=\"{$target_tipo}\" ";
+				$html_contenido .= "value=\"$label\" ";
+				$html_contenido .= "title=\"$html_title\" ";
+				$html_contenido .= "/>";
 	}
 	
 	
@@ -32,5 +36,4 @@
 	print $html_contenido;
 	
 	
-	print "\n</div>\n\n"; //wrap
-?>
+	print '</div>';//wrap

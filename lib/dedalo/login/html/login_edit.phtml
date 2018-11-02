@@ -2,9 +2,9 @@
 
 	# VISUALIZADOR HTML	
 	
-	print "<!-- LOGIN [tipo:$tipo id_matrix:$id] -->";
-	print "<div class=\"login_body\">";		
-	print "<div class=\"css_wrap_login\" id=\"wrap_login\">";	
+	print '<!-- LOGIN [tipo:$tipo id_matrix:$id] -->';
+	print '<div class="login_body">';
+	print '<div class="css_wrap_login" id="wrap_login">';
 
 	#
 	# MAINTENANCE
@@ -18,100 +18,100 @@
 		$maintenance_mode_class = 'maintenance_mode_class';
 	}
 
-	print "<form class=\"css_form $maintenance_mode_class\" name=\"form_login\" id=\"form_login\" action=\"\" onsubmit=\"login.Login()\" method=\"post\">";
+	print '<form class="css_form '.$maintenance_mode_class.'" name="form_login" id="form_login" action="" method="post">'; // onsubmit="login.Login()"
 
 
 		# CONTENIDO (INPUT)
-		$html_contenido = '';
+		$html_content = '';
 
-			# LANG JUMP
-			$html_contenido .= $dedalo_aplication_langs_selector_html;
+			// lang jump
+				$html_content .= $dedalo_aplication_langs_selector_html;
 			
-			#
-			# USERNAME
-			$username_value = (DEDALO_ENTITY==='dedalo4_demo') ? "dedalo" : null;
-			$html_contenido .= "<input type=\"text\" ";
-			$html_contenido .= "class=\"login_input\" ";
-			$html_contenido .= "id=\"login_username\" ";
-			$html_contenido .= "name=\"login_username\" ";
-			$html_contenido .= "value=\"$username_value\" ";
-			$html_contenido .= "placeholder=\"".$username_label."\" ";
-			$html_contenido .= "maxlength=\"64\" ";
-			$html_contenido .= "/>";
+			// username
+				$username_value = (DEDALO_ENTITY==='dedalo4_demo') ? "dedalo" : null;
+				$html_content .= "<input type=\"text\" ";
+				$html_content .= "class=\"login_input\" ";
+				$html_content .= "id=\"login_username\" ";
+				$html_content .= "name=\"login_username\" ";
+				$html_content .= "value=\"$username_value\" ";
+				$html_content .= "placeholder=\"".$username_label."\" ";
+				$html_content .= "maxlength=\"64\" ";
+				$html_content .= "/>";
 			
-			#
-			# PASSWORD
-			$username_password = (DEDALO_ENTITY==='dedalo4_demo') ? "dedalo4Demo" : null;
-			$html_contenido .= "<input type=\"password\" ";
-			$html_contenido .= "class=\"login_input\" ";
-			$html_contenido .= "id=\"login_password\" ";
-			$html_contenido .= "name=\"login_password\" ";
-			$html_contenido .= "value=\"$username_password\" ";
-			$html_contenido .= "placeholder=\"".$password_label."\" ";
-			$html_contenido .= "maxlength=\"64\" ";
-			$html_contenido .= "/>";
+			// password
+				$username_password = (DEDALO_ENTITY==='dedalo4_demo') ? "dedalo4Demo" : null;
+				$html_content .= "<input type=\"password\" ";
+				$html_content .= "class=\"login_input\" ";
+				$html_content .= "id=\"login_password\" ";
+				$html_content .= "name=\"login_password\" ";
+				$html_content .= "value=\"$username_password\" ";
+				$html_content .= "placeholder=\"".$password_label."\" ";
+				$html_content .= "maxlength=\"64\" ";
+				$html_content .= "/>";
 
-			$html_contenido .= $html_button_login;
+			// button login
+				$html_content .= $html_button_login;
 			
-			$html_contenido .= "<input type=\"hidden\" id=\"tipo_login\" value=\"$tipo\">";
-			$html_contenido .= "<input type=\"hidden\" id=\"tipo_username\" value=\"$tipo_username\">";
-			$html_contenido .= "<input type=\"hidden\" id=\"tipo_password\" value=\"$tipo_password\">";
-			$html_contenido .= "<input type=\"hidden\" id=\"tipo_active_account\" value=\"$tipo_active_account\">";
+			// hidden inputs
+				$html_content .= "<input type=\"hidden\" id=\"tipo_login\" value=\"$tipo\">";
+				$html_content .= "<input type=\"hidden\" id=\"tipo_username\" value=\"$tipo_username\">";
+				$html_content .= "<input type=\"hidden\" id=\"tipo_password\" value=\"$tipo_password\">";
+				$html_content .= "<input type=\"hidden\" id=\"tipo_active_account\" value=\"$tipo_active_account\">";
 
 		
 			#
 			# AJAX RESPONSE	
-			$html_contenido .= "<div id=\"login_ajax_response\" class=\"login_ajax_response\">  </div>";
+			$html_content .= "<div id=\"login_ajax_response\" class=\"login_ajax_response\">  </div>";
 
 			#
 			# VERSION : Dedalo verrsion info
-			$html_contenido .= "<div class=\"dedalo_version\"> Dédalo version ".DEDALO_VERSION. " - Build " .DEDALO_BUILD ;
+			$html_content .= "<div class=\"dedalo_version\"> Dédalo version ".DEDALO_VERSION. " - Build " .DEDALO_BUILD ;
 
 				# Postgres user and db name
-				if(DEDALO_ENTITY=='development') {
-					$html_contenido .= "<br> ".DEDALO_USERNAME_CONN." -> ".DEDALO_DATABASE_CONN ;
+				if(DEDALO_ENTITY==='development') {
+					$html_content .= "<br> ".DEDALO_USERNAME_CONN." -> ".DEDALO_DATABASE_CONN ;
 				}
 				
 
 				try {
 				    $str_version 	 = RecordObj_dd::get_termino_by_tipo(DEDALO_ROOT_TIPO);
-					$html_contenido .= "<br>DD version: $str_version";
+					$html_content .= "<br>DD version: $str_version";
 				} catch (Exception $e) {
 				    echo 'Excepction: ',  $e->getMessage(), "\n";
 				}
 
 
 				if(DEVELOPMENT_SERVER===true) {
-					$html_contenido .= "<span class=\"note\">";
-					$html_contenido .= " ".DEDALO_DATABASE_CONN." ";
-					$html_contenido .= "  - ".DEDALO_HOSTNAME_CONN." ";
-					$html_contenido .= "  - ".DEDALO_USERNAME_CONN." ";
-					#$html_contenido .= " : ".DEDALO_DB_PORT_CONN." ";
-					$html_contenido .= "</span>";
+					$html_content .= "<span class=\"note\">";
+					$html_content .= " ".DEDALO_DATABASE_CONN." ";
+					$html_content .= "  - ".DEDALO_HOSTNAME_CONN." ";
+					$html_content .= "  - ".DEDALO_USERNAME_CONN." ";
+					#$html_content .= " : ".DEDALO_DB_PORT_CONN." ";
+					$html_content .= "</span>";
 				}
 			
 		
-			$html_contenido .= "</div>";
+			$html_content .= "</div>";
 
 
-		# DEDALO_BACKUP_ON_LOGIN
-		$html_contenido .= "<script>";
-		$html_contenido .= "DEDALO_BACKUP_ON_LOGIN='".DEDALO_BACKUP_ON_LOGIN."';";
-		if (DEDALO_MAINTENANCE_MODE===true) {
-		$html_contenido .= "setTimeout(function(){window.location.reload(true);},30000);";
-		}
-		#$html_contenido .= "console.log('browser_info:',login.get_browser_info());";
-		$html_contenido .= "</script>";
+		// js
+			$html_content .= '<script>';
+			$init_options = new stdClass();
+				$init_options->development_server  		= DEVELOPMENT_SERVER;
+				$init_options->dedalo_maintenance_mode 	= DEDALO_MAINTENANCE_MODE;
+			$html_content .= "login.init(".json_encode($init_options).");";
+			$html_content .= '</script>';
 
 		
 		
 		# PRINT HTML
-		print $html_contenido;
+		print $html_content;
 
 
 	
 	
-	print "</form>";	
-	print "</div>"; //css_wrap_login	
-	print "</div>"; //login_body
-?>
+	print '</form>';	
+	print '</div>'; //css_wrap_login	
+	print '</div>'; //login_body
+
+

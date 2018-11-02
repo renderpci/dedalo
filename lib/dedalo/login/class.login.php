@@ -19,7 +19,9 @@ class login extends common {
 
 	const SU_DEFAULT_PASSWORD = ''; //Dedalo4debugChangePsW
 
-
+	/**
+	* __CONSTRUCT
+	*/
 	public function __construct($modo='edit') {
 
 		$this->is_logged = self::is_logged();
@@ -609,7 +611,7 @@ class login extends common {
 
 	/**
 	* GET_AUTH_COOKIE_NAME
-	* @return 
+	* @return string $cookie_name
 	*/
 	private static function get_auth_cookie_name() {
 		$date = getdate();
