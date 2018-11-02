@@ -117,36 +117,25 @@
 
 				# 
 				# GRAPH
-				$html_content .= "<div class=\"togge_state_graphs\" onclick=\"component_state.toggle_graphs(this);\" data-state_graphs_button=\"1\"></div>";
-				$html_content .= "<div class=\"state_graphs_content\" style=\"display:none\">";
-				foreach ($ar_graph as $key => $ar_value) {						
-					# Current_stats_item div
-					$html_content .= "<div class=\"current_stats_item\" id=\"current_stats_item_$key\">";
-					#
-					# SVG GRAPHIC BUILDED BY JS
-					$html_content .= "<script>";
-					$html_content .= "var current_chart = {'graph':".json_handler::encode($ar_value).", 'key':$key}; ";
-					$html_content .= "component_state.ar_charts.push(current_chart);";						
-					#$html_content .= "window.onload = function(){";
-					#$html_content .= " component_state.build_charts(".json_handler::encode($ar_value).", '$key')";
-					#$html_content .= "}";
-					$html_content .= "</script>";
+				$html_content .= '<div class="togge_state_graphs" onclick="component_state.toggle_graphs(this);" data-state_graphs_button="1"></div>';
+				$html_content .= '<div class="state_graphs_content" style="display:none">';
+				
+					$ar_charts_data = [];
+					foreach ($ar_graph as $key => $ar_value) {
+						
+						# Current_stats_item div
+						$html_content .= "<div class=\"current_stats_item\" id=\"current_stats_item_$key\"></div>";
+						
+						# SVG GRAPHIC BUILDED BY JS
+						$current_graph = new stdClass();
+							$current_graph->key 	= $key;
+							$current_graph->graph 	= $ar_value;
+							
+						$ar_charts_data[] = json_encode($current_graph);
+					}
+					#dump($ar_charts_data, ' ar_charts_data ++ '.to_string());
 
-					$html_content .= "</div>";
-				}
-				/*
-				$html_content .= "<script>";
-				//$html_content .= "window.onload = function(){";
-				#$html_content .= "$(function(){";
-				foreach ($ar_graph as $key => $ar_value) {
-					# SVG GRAPHIC BUILDED BY JS		
-					$html_content .= "$(function(){component_state.build_charts(".json_handler::encode($ar_value).",'$key')});";
-				}
-				//$html_content .= "}";
-				#$html_content .= "})";
-				$html_content .= "</script>";
-				*/
-				$html_content .= "</div>";
+				$html_content .= '</div>';//end state_graphs_content
 					
 		
 				if(SHOW_DEBUG===true) {
@@ -161,7 +150,8 @@
 					$init_options->component_name 	= $component_name;
 					$init_options->id_wrapper 		= $id_wrapper;
 					$init_options->uid 				= $identificador_unico;
-				$html_content .= 'component_common.init('.json_encode($init_options).');';
+					$init_options->ar_charts_data 	= $ar_charts_data;
+				$html_content .= 'component_common.init('.json_encode($init_options).');';				
 				$html_content .= '</script>';	
 				break;							
 	}
@@ -200,4 +190,3 @@
 	$html_content .= "</script>";
 	print $html_content;
 	*/
-?>

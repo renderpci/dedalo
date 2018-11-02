@@ -50,12 +50,13 @@
 			
 			#
 			# GRAPHICS
-				$ar_graph 	= $this->get_ar_graph();					
+				$ar_graph 	= $this->get_ar_graph();
 				# CSS includes
-					css::$ar_url[] = NVD3_URL_CSS;					
+					#css::$ar_url[] = NVD3_URL_CSS;	 // (!) Removed 2018-11-02 for interactions with component geolocation polygons css
 				# JS includes
 					js::$ar_url[] = D3_URL_JS;
 					js::$ar_url[] = NVD3_URL_JS;
+					
 			break;
 
 		case 'edit_component':
@@ -123,4 +124,4 @@
 	if( !include($page_html) ) {
 		echo "<div class=\"error\">Invalid mode $this->modo</div>";
 	}
-?>
+
