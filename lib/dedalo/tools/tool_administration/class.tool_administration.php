@@ -127,7 +127,11 @@ class tool_administration extends tool_common {
 
 		# Safe vars
 		$section_tipo 	= safe_tipo($section_tipo);
-		$component_tipo = safe_tipo($component_tipo);
+		if ($component_tipo==='inverse_locators') {
+			# Nothing to do
+		}else{
+			$component_tipo = safe_tipo($component_tipo);
+		}		
 
 		#select matrix table
 		$matrix_table 	= safe_table(common::get_matrix_table_from_tipo($section_tipo));
