@@ -1283,7 +1283,7 @@ class component_portal extends component_relation_common {
 				if (true===locator::compare_locators( $current_locator, $locator_to_search, $ar_properties)) {
 					if (!in_array($current_locator, $ar_found)) {
 						$ar_found[] = $current_locator;
-					}					
+					}
 				}
 			}*/		
 		}

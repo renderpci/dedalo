@@ -1196,7 +1196,7 @@ class hierarchy {
 		#$strQuery .= "\n datos#>>'{components,$hierarchy_tld_tipo,dato,$lang}' = '$prefix' ";
 		$strQuery .= "\n datos#>'{components,$hierarchy_tld_tipo,dato,$lang}' ? '$prefix' "; // Now hierarchy tld is an array
 		$strQuery .= "LIMIT 1";
-			#dump($strQuery, ' strQuery ++ '.to_string());
+			#dump(null, ' strQuery ++ '.to_string($strQuery));
 		$result	= JSON_RecordObj_matrix::search_free($strQuery);
 		$main_lang = null;		
 		while ($rows = pg_fetch_assoc($result)) {

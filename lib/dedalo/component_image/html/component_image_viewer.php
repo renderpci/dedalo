@@ -27,6 +27,7 @@ position: fixed;top: 50%;left: 50%;transform: translate(-50%, -50%);
 </body>
 </html>
 <script type="text/javascript">
+var SHOW_DEBUG = <?php echo json_encode(SHOW_DEBUG) ?>;
 function getBackgroundColor(img) {
 
 	// Image size	
@@ -43,11 +44,11 @@ function getBackgroundColor(img) {
     var colorThief = new BackgroundColorTheif();  
     var rgb = colorThief.getBackGroundColor( document.getElementById('image_current') );  // document.getElementsByTagName('body')
     if(SHOW_DEBUG===true) {
-      console.log('background-color = '+rgb);
+      console.log('[getBackgroundColor] set background-color = '+rgb);
     }    
-    document.body.style.backgroundColor = 'rgb(' + rgb[0] + ',' + rgb[1] + ',' + rgb[2] +')';  return
+    document.body.style.backgroundColor = 'rgb(' + rgb[0] + ',' + rgb[1] + ',' + rgb[2] +')';
 
-  return true
+  return rgb
 }
 function download_original_image(button_obj, event) {
     event.stopPropagation()

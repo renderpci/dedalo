@@ -13,7 +13,7 @@
 	print "data-lang=\"{$lang}\" ";
 	print "data-parent=\"{$parent}\" ";
 	print "data-section_tipo=\"{$section_tipo}\" ";
-	print "data-ar_target_section_tipo='{$ar_target_section_tipo_json}' ";
+	print "data-ar_target_section_tipo='". json_encode($ar_target_section_tipo)."' ";
 	print "data-tipo_to_search='{$tipo_to_search}' ";
 	print "data-modo=\"{$modo}\" ";
 	print "data-from_modo=\"{$from_modo}\" ";

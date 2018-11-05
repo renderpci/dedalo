@@ -2923,7 +2923,7 @@ class diffusion_sql extends diffusion  {
 
 		if ($selected_date!==false) {
 			
-			if (!isset($dato[$selected_key]->$selected_date)) {			
+			if (!isset($dato[$selected_key]->$selected_date)) {
 				return null;
 			}
 			$date_obj = $dato[$selected_key]->$selected_date;
