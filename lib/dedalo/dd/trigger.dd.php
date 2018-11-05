@@ -432,9 +432,11 @@ if($accion==='editTS') {
 	# PUBLICATION SCHEMA
 	$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($terminoID,true);
 	if ($modelo_name==='diffusion_element') {
-		// Update schema data always		
-		$publication_schema_result = tool_diffusion::update_publication_schema($terminoID);
-		debug_log("trigger_dd.editTS -> Processing update_publication_schema: ".to_string($publication_schema_result), logger::DEBUG);
+		if (defined('MYSQL_DEDALO_HOSTNAME_CONN') && defined('MYSQL_DEDALO_USERNAME_CONN') && defined('MYSQL_DEDALO_PASSWORD_CONN')) {			
+			// Update schema data always		
+			$publication_schema_result = tool_diffusion::update_publication_schema($terminoID);
+			debug_log("trigger_dd.editTS -> Processing update_publication_schema: ".to_string($publication_schema_result), logger::DEBUG);
+		}
 	}
 	
 	
