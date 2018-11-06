@@ -3,15 +3,17 @@
 	# PLAYER
 	$html_contenido = '';
 
-	$html_contenido .= "\n<div class=\"pdf_player_wrap\">";
+	$html_contenido .= '<div class="pdf_player_wrap">';
 
 
-		$html_contenido .= "\n <iframe id=\"pdf_viewer_frame\" name=\"pdf_viewer_frame\" class=\"pdf_viewer_frame\" src=\"\" allowfullscreen></iframe>";
+		$html_contenido .= '<iframe id="pdf_viewer_frame" name="pdf_viewer_frame" class="pdf_viewer_frame" src="" allowfullscreen></iframe>';
 
 
-	$html_contenido .= "\n</div><!-- /pdf_player_wrap -->";
+	$html_contenido .= '</div><!-- /pdf_player_wrap -->';
 
-	$html_contenido .= "<script>component_pdf.load_iframe_url('pdf_viewer_frame','$iframe_url')</script>";
+	$html_contenido .= '<script>';
+	$html_contenido .= "component_pdf.load_iframe_url('pdf_viewer_frame','$iframe_url')";
+	$html_contenido .= '</script>';
 	
 
 	# PRINT HTML
@@ -75,4 +77,3 @@
 	print "\n</div><!-- /css_wrap_pdf [tipo:$tipo section_id_matrix:$parent] $label -->\n"; //wrap
 	*/
 
-?>
