@@ -491,7 +491,7 @@ class lang {
 	* @return string $alpha2
 	*	Like 'en' from lg-eng
 	*/
-	public function get_alpha2_from_code( $lang_code ) {
+	public static function get_alpha2_from_code( $lang_code ) {
 		
 		$alpha2 = null;
 
@@ -706,6 +706,18 @@ class lang {
 		return $alpha2;
 	}//end get_alpha2_from_code
 
+
+	/**
+	* GET_LOCALE_FROM_CODE
+	* @return string $locale
+	*	Like 'en-EN' from lg-eng
+	*/
+	public static function get_locale_from_code( $lang_code ) {
+
+		$alpha2 = lang::get_alpha2_from_code($lang_code);
+		$locale = $alpha2 . '-'. strtoupper($alpha2);
+		return $locale;
+	}
 
 
 	/**
