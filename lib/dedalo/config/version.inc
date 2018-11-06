@@ -1417,9 +1417,18 @@
 		unified service autocomplete for all components
 
 
-	Valencia 29-08-2018 4.9.12
+	Valencia 29-09-2018 4.9.12
 		component_geolocation : re-add interaction between map position/zoom and input fields to enable write numeric values interactively
 		component_image : re-enable paper.js lib version 0.9 because compatibility problems found with version >=0.10
+
+
+	Valencia 29-10-2018 4.9.12
+		tool_diffusion : added auto-publish publication_schema on edit structure diffusion element 
+
+
+	Valencia 02-11-2018 4.9.14
+		component_state : removed NVD3_URL_CSS link because conflict with component geolocation polygon lines css (Intangible Heritage)
+
 
 
 	WORK IN PROGRESS
@@ -1441,12 +1450,12 @@
 
 
 	# Version
-	$DEDALO_VERSION = '4.9.12';
+	$DEDALO_VERSION = '5.0.0';
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '29-10-2018');  
+	define('DEDALO_BUILD'	, '05-11-2018');
 
 
 	/*
