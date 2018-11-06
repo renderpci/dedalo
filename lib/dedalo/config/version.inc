@@ -1429,6 +1429,17 @@
 	Valencia 02-11-2018 4.9.14
 		component_state : removed NVD3_URL_CSS link because conflict with component geolocation polygon lines css (Intangible Heritage)
 
+	
+	Valencia 05-11-2018 5.0.0
+		Updated version from 4 to 5
+
+	
+	Valencia 06-11-2018 5.0.1
+		component_pdf : updated pdfjs lib to 2.0.943
+						added full screen mode
+
+
+
 
 
 	WORK IN PROGRESS
@@ -1450,12 +1461,12 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.0.0';
+	$DEDALO_VERSION = '5.0.1';
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '05-11-2018');
+	define('DEDALO_BUILD'	, '06-11-2018');
 
 
 	/*
