@@ -506,7 +506,8 @@ class lang {
 			case 'lg-ara' 	: $code = 'ar';	break;
 			case 'lg-rus'	: $code = 'ru';	break;
 			case 'lg-ell' 	: $code = 'el';	break;
-			case 'lg-deu' 	: $code = 'de';	break;		
+			case 'lg-deu' 	: $code = 'de';	break;
+			case 'lg-ita' 	: $code = 'it';	break;
 
 			/*
 				case "aa" 	: $code = "lg-aar"; break;
@@ -707,17 +708,29 @@ class lang {
 	}//end get_alpha2_from_code
 
 
+
 	/**
 	* GET_LOCALE_FROM_CODE
 	* @return string $locale
 	*	Like 'en-EN' from lg-eng
 	*/
 	public static function get_locale_from_code( $lang_code ) {
-
-		$alpha2 = lang::get_alpha2_from_code($lang_code);
-		$locale = $alpha2 . '-'. strtoupper($alpha2);
+		
+		switch ($lang_code) {
+			case 'lg-eng':	$locale='en-US'; 	break;
+			case 'lg-spa':	$locale='es-ES'; 	break;
+			case 'lg-cat':	$locale='ca'; 		break;
+			
+			default:
+				$alpha2 = lang::get_alpha2_from_code($lang_code);
+				$locale = $alpha2 ; //. '-'. strtoupper($alpha2);
+				break;
+		}
+		
+		
 		return $locale;
-	}
+	}//end get_locale_from_code
+
 
 
 	/**
