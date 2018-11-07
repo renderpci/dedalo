@@ -62,7 +62,7 @@
 			# BUTTONS
 			# Calculate and prepare current section buttons to use as : $this->section_obj->ar_buttons
 				$ar_buttons = (array)$this->section->get_ar_buttons();
-					#dump($ar_buttons['button_new'][0], ' ar_buttons ++ '.to_string());
+					#dump($ar_buttons, ' ar_buttons ++ '.to_string());
 
 				# Button new 
 				$button_new_html = '';
@@ -79,4 +79,5 @@
 	
 	$page_html	= DEDALO_LIB_BASE_PATH .'/'. get_class($this) . '/html/' . get_class($this) . '_' . $file_name . '.phtml';
 	include($page_html);
-?>
+
+
