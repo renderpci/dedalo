@@ -1,4 +1,4 @@
-ç<?php
+<?php
 include(dirname(__FILE__).'/class.ts_term.php');
 include(dirname(__FILE__).'/class.indexation_node.php');
 include(dirname(__FILE__).'/class.free_node.php');
@@ -179,7 +179,7 @@ class web_data {
 				}
 			}
 
-	//debug_log(__METHOD__." Executing query ".trim($strQuery), logger::ERROR);
+		#debug_log(__METHOD__." Executing query ".trim($strQuery), logger::ERROR);
 			#if (strpos($sql_options->sql_filter, 'Barcelona')!==false ) {		
 				#dump($sql_options->sql_filter, ' strQuery ++ +++++++++++++++++++++++++++++++++++++++++++++++++++++++++ '.to_string($strQuery));
 				#error_log($strQuery);
@@ -436,25 +436,18 @@ class web_data {
 		public static function get_publication_schema( $table=null ) {
 
 			# Config file constant
-				$data = json_decode(PUBLICATION_SCHEMA);
-
-			/*
+			#	$data = json_decode(PUBLICATION_SCHEMA);
+			
 			$data = false;
 
-			$strQuery = "SELECT data FROM publication_schema WHERE name = '$table'";
+			$strQuery = "SELECT data FROM publication_schema WHERE id = 1";
 			$result   = DBi::_getConnection_mysql()->query($strQuery);
 
 			if($result) while ( $rows = $result->fetch_assoc() ) {
 				$data = json_decode($rows['data']);
 				break;
-			}else{
-				# Config file constant
-				$data = json_decode(PUBLICATION_SCHEMA);
 			}
-
-			#$data = new stdClass();
-			#	$data->obras_de_arte = 'obras_de_arte';
-			*/
+			
 
 			return $data;
 		}//end get_publication_schema
@@ -517,7 +510,7 @@ class web_data {
 		 			}	
 
 		 			# Resolve_portals_custom deeper
-		 			# If you need deep resolve, define resolve_portals_custom usin table name like:
+		 			# If you need deep resolve, define resolve_portals_custom using table name separated by point like:
 		 			# [
 					#	'eventos' 	 		 => 'eventos',
 					#	'eventos.documentos' => 'image'
