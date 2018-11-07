@@ -243,7 +243,7 @@ class component_calculation extends component_common {
 				$section_id = $this->parent;
 				foreach ($data->component_tipo as $component_tipo) {
 
-					// Component where is stored source data, a json search_query_object 
+					// Component (component_json) where is stored source data, a json search_query_object 
 						$component 			= new RecordObj_dd($component_tipo);
 						$modelo_name 		= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
 						$lang 				= ($component->get_traducible()==='no') ? DEDALO_DATA_NOLAN : DEDALO_DATA_LANG;
@@ -432,7 +432,7 @@ class component_calculation extends component_common {
 			}//end if (isset($data->filter) && $data->filter===true)
 			#dump($data->filter, ' data->filter ++ '.to_string()); die();
 
-		// set the value of true variable
+		// true. set the value of true variable
 			switch (true) {
 				case isset($data->true) && isset($data->true->ar_locators):
 
@@ -454,7 +454,7 @@ class component_calculation extends component_common {
 					break;
 			}
 
-		// set the value of false variable
+		// false. set the value of false variable
 			switch (true) {
 				case isset($data->false) && isset($data->false->ar_locators):
 					$ar_locators = json_decode( str_replace("'", '"', $data->false->ar_locators) );
@@ -487,7 +487,7 @@ class component_calculation extends component_common {
 	/**
 	* RESOLVE_DATA_FOR_FORMULA__DEPRECATED
 	* @return 
-	*/
+	*//*
 	public function resolve_data_for_formula__DEPRECATED($data) {
 	
 		if(!isset($data)) return false;
@@ -529,19 +529,19 @@ class component_calculation extends component_common {
 				break;
 
 			case 'all':
-			/*
-				$search_options_session_key = 'section_'.$this->section_tipo.$this->component_tipo;
-					#dump($_SESSION['dedalo4']['config']['search_options'][$search_options_session_key], ' _SESSION[] ++ '.to_string());
-				$current_options = $_SESSION['dedalo4']['config']['search_options'][$search_options_session_key];
-
-
-				if (isset($_SESSION['dedalo4']['config']['sum_total'][$search_options_session_key])) {
-					
-					# Precalculated value
-					$total = $_SESSION['dedalo4']['config']['sum_total'][$search_options_session_key];
-
-				}else{
-			*/
+			
+			#	$search_options_session_key = 'section_'.$this->section_tipo.$this->component_tipo;
+			#		#dump($_SESSION['dedalo4']['config']['search_options'][$search_options_session_key], ' _SESSION[] ++ '.to_string());
+			#	$current_options = $_SESSION['dedalo4']['config']['search_options'][$search_options_session_key];
+			#
+			#
+			#	if (isset($_SESSION['dedalo4']['config']['sum_total'][$search_options_session_key])) {
+			#		
+			#		# Precalculated value
+			#		$total = $_SESSION['dedalo4']['config']['sum_total'][$search_options_session_key];
+			#
+			#	}else{
+			
 					foreach ($data->component_tipo as $component_tipo) {
 						$component 		= new RecordObj_dd($component_tipo);
 						$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
@@ -782,6 +782,7 @@ class component_calculation extends component_common {
 		
 		return $data_resolved;
 	}//end resolve_data_for_formula__DEPRECATED
+	*/
 
 
 
@@ -811,7 +812,7 @@ class component_calculation extends component_common {
 	/**
 	* GET_SUM_FROM_COMPONENT_TIPO
 	* @return 
-	*/
+	*//*
 	public function get_sum_from_component_tipo__DEPECATED($search_options) {
 
 		$options = new stdClass();
@@ -836,6 +837,7 @@ class component_calculation extends component_common {
 
 		return $total;		
 	}//end get_sum_from_component_tipo
+	*/
 
 
 
@@ -937,7 +939,7 @@ class component_calculation extends component_common {
 	/**
 	* GET_SUM_FROM_COMPONENT_TIPO
 	* @return 
-	*/
+	*//*
 	public function get_values_from_component_tipo__OLD($search_options, $data) {
 
 		$search_sesion = $_SESSION['dedalo4']['config']['search_options']['section_'.$search_options->section_tipo];
@@ -1003,6 +1005,7 @@ class component_calculation extends component_common {
 
 		return $value;		
 	}//end get_sum_from_component_tipo
+	*/
 
 
 
