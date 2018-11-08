@@ -177,7 +177,7 @@ class js {
 	/**
 	* BUILD_TAG
 	*/
-	public static function build_tag($url) {
+	public static function build_tag($url, $modifier=false) {
 		if (strpos($url, 'section_group_')!==false) return null;
 
 		// LOCAL VERSIONS
@@ -188,7 +188,9 @@ class js {
 		# Add version
 		$url = $url .'?'. DEDALO_VERSION;
 
-		$tag = PHP_EOL . '<script src="'.$url.'"></script>';
+		$tag  = PHP_EOL . '<script ';
+		$tag .= $modifier!==false ? $modifier.' ' : '';
+		$tag .= 'src="'.$url.'"></script>';		
 
 		/*
 		// CDN VERSIONS
