@@ -60,7 +60,7 @@
 				$id_wrapper 			= 'wrap_section_'.$identificador_unico;
 
 				css::$ar_url[] = DEDALO_LIB_BASE_URL . '/section_group/css/section_group.css';
-				js::$ar_url[]  = DEDALO_LIB_BASE_URL."/section_group/js/section_group.js";	
+				js::$ar_url[]  = DEDALO_LIB_BASE_URL . '/section_group/js/section_group.js';
 				
 			
 				#
@@ -369,4 +369,4 @@
 	$page_html	= DEDALO_LIB_BASE_PATH .'/'. get_class($this) . '/html/' . get_class($this) . '_' . $file_name . '.phtml';	
 	include($page_html);
 
-?>
+

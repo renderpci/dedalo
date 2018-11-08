@@ -232,7 +232,7 @@ class AVPlayer extends Accessors {
 		$html  ='';
 		$html .= "<!-- HTML 5 TAG CODE -->";
 		$html .= "<video id=\"wrap_{$this->playerID}\" width=\"{$this->width}\" height=\"{$this->height}\" preload=\"{$this->preload}\" {$this->get_html5_controls_code()} poster=\"{$this->poster}\" {$this->autoplay} >";
-		$html .= " <source src=\"{$this->src}\" {$this->get_html5_source_type_code()} >";		
+		$html .= " <source src=\"{$this->src}\" {$this->get_html5_source_type_code()} >";
 		$html .= " <div class=\"message\">Sorry, you\'ll need an HTML5 Video capable browser to view this media.</div>";
 		$html .= "</video>";
 		
@@ -305,9 +305,19 @@ class AVPlayer extends Accessors {
 		$subtitle_track = null;
 
 		if(isset($_GET['subtitles_url'])){
-			$subtitles_url = safe_xss($_GET['subtitles_url']);
+			$subtitles_url = trim($_GET['subtitles_url']);
 			$subtitle_track= "<track label=\"Subtitle\" kind=\"subtitles\" srclang=\"en\" src=\"$subtitles_url\" default>";
+		}else{
+
+			// Temporal add subtitles
+				// '<track label="English" srclang="lg-eng" src="/dedalo/media_test/media_mht/av/subtitles/rsc35_rsc167_92_lg-eng.vtt?1541677237555">';				
+				$path = $this->AVObj->get_media_path(); // like '/dedalo/media_test/media_mht/av/404/'
+				$subtitles_url = str_replace('404', 'subtitles', $path) . $this->AVObj->get_reelID() . '_' . DEDALO_APPLICATION_LANG .'.vtt?' . time();
+					#dump($subtitles_url, ' subtitles_url ++ '.to_string());
+				$srclang = lang::get_alpha2_from_code(DEDALO_APPLICATION_LANG);
+				$subtitle_track= "<track label=\"Subtitle\" kind=\"subtitles\" srclang=\"en\" src=\"$subtitles_url\" default>";
 		}
+
 
 		$width  = $this->width;
 		$height = $this->height;

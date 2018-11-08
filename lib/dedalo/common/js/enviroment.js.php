@@ -55,7 +55,7 @@ header('Content-type: application/javascript');
 ?>
 "use strict";
 <?php /*const page_globals=<?php echo SHOW_DEBUG===true ? json_encode($page_globals, JSON_PRETTY_PRINT) : json_encode($page_globals) ?>; */?>
-const DEDALO_LIB_BASE_URL='<?php echo DEDALO_LIB_BASE_URL ?>',DEDALO_ROOT_WEB='<?php echo DEDALO_ROOT_WEB ?>',SHOW_DEBUG=<?php var_export(SHOW_DEBUG); ?>,SHOW_DEVELOPER=<?php var_export(SHOW_DEVELOPER); ?>,DEDALO_SECTION_ID_TEMP='<?php echo DEDALO_SECTION_ID_TEMP ?>',USE_CDN='<?php echo USE_CDN ?>';
+const DEDALO_LIB_BASE_URL='<?php echo DEDALO_LIB_BASE_URL ?>',DEDALO_ROOT_WEB='<?php echo DEDALO_ROOT_WEB ?>',SHOW_DEBUG=<?php var_export(SHOW_DEBUG); ?>,SHOW_DEVELOPER=<?php var_export(SHOW_DEVELOPER); ?>,DEDALO_SECTION_ID_TEMP='<?php echo DEDALO_SECTION_ID_TEMP ?>',USE_CDN='<?php echo USE_CDN ?>',PAPER_JS_URL='<?php echo PAPER_JS_URL ?>';
 <?php
 # Lang labels
 include dirname(__FILE__) . '/lang/'.DEDALO_APPLICATION_LANG.'.js';
