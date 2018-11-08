@@ -150,7 +150,10 @@ class component_calculation extends component_common {
 				case 'current':
 					$section_id = $this->parent;
 
-					foreach ($data->component_tipo as $component_tipo) {
+					foreach ($data->components as $current_component) {
+						$component_tipo = $current_component->tipo;
+						$var_name 		=  $current_component->var_name;
+						$options 		=  $current_component->options;
 						$component 		= new RecordObj_dd($component_tipo);
 						$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
 
@@ -166,7 +169,8 @@ class component_calculation extends component_common {
 																			 'edit',
 																			 $lang,
 																			 $section_tipo);
-						$data_resolved->$component_tipo = $current_componet->get_valor();
+
+						$data_resolved->{$var_name} = $current_componet->get_calculation_data($options);
 					}// end foreach ($data->component_tipo as $component_tipo)
 					break;
 
@@ -184,7 +188,10 @@ class component_calculation extends component_common {
 
 						}else{
 					*/
-						foreach ($data->component_tipo as $component_tipo) {
+						foreach ($data->components as $current_component) {
+							$component_tipo = $current_component->tipo;
+							$var_name 		= $current_component->var_name;
+							$options 		= $current_component->options;
 							$component 		= new RecordObj_dd($component_tipo);
 							$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
 
@@ -198,7 +205,7 @@ class component_calculation extends component_common {
 								$search_options->section_tipo   = $section_tipo;
 								$search_options->component_tipo = $component_tipo;
 							
-							$data_resolved->$component_tipo = $this->get_sum_from_component_tipo($search_options);
+							$data_resolved->{$var_name} = $this->get_sum_from_component_tipo($search_options);
 						}
 
 						# Store for speed
@@ -208,7 +215,10 @@ class component_calculation extends component_common {
 
 				case 'search_session':
 
-					foreach ($data->component_tipo as $component_tipo) {
+					foreach ($data->components as $current_component) {
+							$component_tipo = $current_component->tipo;
+							$var_name 		= $current_component->var_name;
+							$options 		= $current_component->options;
 							$component 		= new RecordObj_dd($component_tipo);
 							$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
 
@@ -223,10 +233,10 @@ class component_calculation extends component_common {
 								$search_options->component_tipo = $component_tipo;							
 							
 							if($data->value ==='value'){
-								$data_resolved->$component_tipo = $this->get_values_from_component_tipo($search_options, $data);
+								$data_resolved->{$var_name} = $this->get_values_from_component_tipo($search_options, $data);
 									#dump($data_resolved, ' data_resolved'.to_string());
 							}else if($data->value ==='sum'){
-								$data_resolved->$component_tipo = $this->get_sum_from_component_tipo($search_options);
+								$data_resolved->{$var_name} = $this->get_sum_from_component_tipo($search_options);
 							}
 							
 						}
@@ -241,7 +251,10 @@ class component_calculation extends component_common {
 			if (isset($data->filter) && $data->filter===true) {
 				
 				$section_id = $this->parent;
-				foreach ($data->component_tipo as $component_tipo) {
+				foreach ($data->components as $current_component) {
+							$component_tipo = $current_component->tipo;
+							$var_name 		= $current_component->var_name;
+							$options 		= $current_component->options;
 
 					// Component (component_json) where is stored source data, a json search_query_object 
 						$component 			= new RecordObj_dd($component_tipo);
@@ -425,7 +438,7 @@ class component_calculation extends component_common {
 						#dump($ar_result, ' ar_result ++ '.to_string());
 
 					// Set result
-						$data_resolved->{$component_tipo} = $result;
+						$data_resolved->{$var_name} = $result;
 
 				}//end foreach ($data->component_tipo as $component_tipo)
 					
@@ -808,6 +821,25 @@ class component_calculation extends component_common {
 	}//end apply_formula
 
 
+	/**
+	* GET_AR_COMPONENTS_FORMULA
+	* @return array($ar_components_formula)
+	*/
+	public function get_ar_components_formula(){
+
+		$formula 	= $this->get_JSON_formula();
+			//dump($formula, ' formula ++ '.to_string());
+		$ar_components_formula =[];
+
+		foreach ($formula as $current_formula) {
+			$ar_components = $current_formula->data->components;
+			foreach ($ar_components as $current_componet) {
+				$ar_components_formula[] = $current_componet->tipo;
+			}
+		}
+
+		return $ar_components_formula;
+	}//end get_ar_components_formula
 
 	/**
 	* GET_SUM_FROM_COMPONENT_TIPO

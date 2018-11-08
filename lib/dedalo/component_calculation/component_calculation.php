@@ -53,7 +53,11 @@
 					if (empty($dato) && $this->get_traducible()==='si') { 
 						$default_component = $this->get_default_component();
 					}
-				
+				//get the components that has the values to process
+
+					$ar_components_formula = $this->get_ar_components_formula();
+					$ar_components_formula = json_encode($ar_components_formula);
+
 				// preprocess_formula
 					$preprocess_formula = $this->preprocess_formula();
 					$preprocess_formula = json_encode($preprocess_formula, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE);

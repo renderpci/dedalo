@@ -4234,6 +4234,20 @@ abstract class component_common extends common {
 
 
 	/**
+	* GET_CALCULATION_DATA
+	* @return $data
+	* get the data of the component for do a calculation
+	*/
+	public function get_calculation_data($options = null){
+
+		$data = $this->get_valor();
+
+		return $data;
+	}//end get_calculation_data
+
+
+
+	/**
 	* GET_CERTAINTY
 	* @return (array)$certainty
 	* select the certainty of the dataframe

@@ -1642,5 +1642,34 @@ class component_date extends component_common {
 
 
 
+	/**
+	* GET_CALCULATION_DATA
+	* @return $data
+	* get the data of the component for do a calculation
+	*/
+	public function get_calculation_data($options = null){
+
+		$ar_data = [];
+
+		// select			
+		$select 	= $options->select;
+		$dato 		= $this->get_dato();
+		foreach ($dato as $current_dato) {
+			$data_obj 	= isset($current_dato->{$select}) ? $current_dato->{$select} : 0;
+		
+			// value to seconds
+			if (!empty($data_obj)) {
+				$dd_date 			= new dd_date($data_obj);
+				$unix_timestamp 	= $dd_date->convert_date_to_unix_timestamp();
+				$ar_data[] = $unix_timestamp ;
+			}
+		}
+
+		$data = array_sum($ar_data);
+
+		return (int)$data;
+	}//end get_calculation_data
+
+
 }
 ?>
