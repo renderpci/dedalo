@@ -535,7 +535,25 @@ class dd_date extends stdClass {
 
 		return (object)$response;
 	}//end convert_seconds_to_period 
-	
+
+
+
+	/**
+	* CONVERT_DATE_TO_UNIT
+	* Change the date to the unit (day, month, year)
+	*/
+	public function convert_date_to_unix_timestamp(){
+		
+		$time 			= $this->get_dd_timestamp();
+		#$unix_timestamp = strtotime($time);
+
+		$datetime = new DateTime($time);
+ 		$unix_timestamp =$datetime->getTimestamp();
+
+
+		return $unix_timestamp;
+	}//end convert_date_to_unit
+
 
 
 	/**
