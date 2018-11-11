@@ -153,7 +153,7 @@ class component_calculation extends component_common {
 					foreach ($data->components as $current_component) {
 						$component_tipo = $current_component->tipo;
 						$var_name 		=  $current_component->var_name;
-						$options 		=  isset($current_component->options) ? $current_component->options: null;
+						$options 		=  isset($current_component->options) ? $current_component->options : null;
 						$component 		= new RecordObj_dd($component_tipo);
 						$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
 
@@ -191,7 +191,7 @@ class component_calculation extends component_common {
 						foreach ($data->components as $current_component) {
 							$component_tipo = $current_component->tipo;
 							$var_name 		= $current_component->var_name;
-							$options 		=  isset($current_component->options) ? $current_component->options: null;
+							$options 		=  isset($current_component->options) ? $current_component->options : null;
 							$component 		= new RecordObj_dd($component_tipo);
 							$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
 
@@ -218,7 +218,7 @@ class component_calculation extends component_common {
 					foreach ($data->components as $current_component) {
 							$component_tipo = $current_component->tipo;
 							$var_name 		= $current_component->var_name;
-							$options 		=  isset($current_component->options) ? $current_component->options: null;
+							$options 		=  isset($current_component->options) ? $current_component->options : null;
 							$component 		= new RecordObj_dd($component_tipo);
 							$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
 
@@ -254,7 +254,7 @@ class component_calculation extends component_common {
 				foreach ($data->components as $current_component) {
 							$component_tipo = $current_component->tipo;
 							$var_name 		= $current_component->var_name;
-							$options 		=  isset($current_component->options) ? $current_component->options: null;
+							$options 		=  isset($current_component->options) ? $current_component->options : null;
 
 					// Component (component_json) where is stored source data, a json search_query_object 
 						$component 			= new RecordObj_dd($component_tipo);
@@ -810,14 +810,17 @@ class component_calculation extends component_common {
 		foreach ($formula as $current_formula) {
 			$data 		= $this->resolve_data_for_formula($current_formula->data);
 			$rules 		= $current_formula->rules;
+		
+			$preprocess_formula 		= new StdClass;
+			$preprocess_formula->data 	= $data;
+			$preprocess_formula->rules 	= $rules;
+			if(isset($current_formula->result) ){
+				$preprocess_formula->result = $current_formula->result;
+			}
+			break;
 		}
-		$preprocess_formula 		= new StdClass;
-		$preprocess_formula->data 	= $data;
-		$preprocess_formula->rules 	= $rules;
 
-		#dump($preprocess_formula, ' preprocess_formula ++ '.to_string());
-
-		return $preprocess_formula;		
+		return $preprocess_formula;
 	}//end apply_formula
 
 

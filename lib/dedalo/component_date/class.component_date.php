@@ -1650,13 +1650,20 @@ class component_date extends component_common {
 	public function get_calculation_data($options = null){
 
 		$ar_data = [];
-
+		
 		// select			
 		$select 	= $options->select;
+		$format 	= $options->format;
 		$dato 		= $this->get_dato();
+
 		foreach ($dato as $current_dato) {
 			$data_obj 	= isset($current_dato->{$select}) ? $current_dato->{$select} : 0;
-		
+
+			if($format ==='dd_date'){
+
+				$data_obj->format = $select==='period' ? 'period' : 'date';
+				return $data_obj;
+			}
 			// value to seconds
 			if (!empty($data_obj)) {
 				$dd_date 			= new dd_date($data_obj);
@@ -1666,6 +1673,8 @@ class component_date extends component_common {
 		}
 
 		$data = array_sum($ar_data);
+
+	
 
 		return (int)$data;
 	}//end get_calculation_data
