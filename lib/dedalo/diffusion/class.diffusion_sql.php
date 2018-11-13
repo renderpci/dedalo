@@ -2541,8 +2541,20 @@ class diffusion_sql extends diffusion  {
 	public static function map_project_to_section_id($options, $dato) {
 
 		$ar_section_id = array();
-		foreach ((array)$dato as $key => $value) {
-			$ar_section_id[] = (string)$key; 
+
+		$current_version = (array)tool_administration::get_current_version_in_db();
+
+		//prior to 4.8 dato : 49:2
+		if($current_version[0] <= 4 && $current_version[1] <= 8) {
+
+			foreach ((array)$dato as $key => $value) {
+				$ar_section_id[] = (string)$key; 
+			}
+		}else{
+			//post to 4.9 dato: locator
+			foreach ((array)$dato as $current_locator) {
+				$ar_section_id[] = $current_locator->section_id; 
+			}
 		}
 
 		return (array)$ar_section_id;
