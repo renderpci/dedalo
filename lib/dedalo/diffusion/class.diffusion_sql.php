@@ -1536,6 +1536,7 @@ class diffusion_sql extends diffusion  {
 		# FULL_DATA
 			$full_data_tipos 	= (array)$options->global_search_map->full_data;
 			$name_surname_tipos = (array)$options->global_search_map->name_surname;
+			$thesaurus_tipos 	= (array)$options->global_search_map->thesaurus;
 			$title_tipos 	 	= (array)$options->global_search_map->list_data->title;
 			$summary_tipos 	 	= (array)$options->global_search_map->list_data->summary;
 			$fields_tipos 	 	= (array)$options->global_search_map->list_data->fields;
@@ -1593,6 +1594,7 @@ class diffusion_sql extends diffusion  {
 
 					$full_data[$lang] 		 	= [];
 					$name_surname_data[$lang]	= [];
+					$thesaurus_data[$lang]		= [];
 					$filter_date_data[$lang] 	= [];
 					$filter_mdcat[$lang] 	 	= [];
 
@@ -1622,6 +1624,17 @@ class diffusion_sql extends diffusion  {
 									$name_surname_value = trim( strip_tags($column['field_value']) );
 									if (!empty($name_surname_value)) {
 										$name_surname_data[$lang][] = $name_surname_value;
+									}
+								}
+
+								# thesaurus_tipos. Added 13-11-2018 !!
+								if (in_array($column['tipo'], $thesaurus_tipos)) {
+									if (is_array($column['field_value'])) {
+										$column['field_value'] = json_encode($column['field_value']);
+									}
+									$thesaurus_value = trim( strip_tags($column['field_value']) );
+									if (!empty($thesaurus_value)) {
+										$thesaurus_data[$lang][] = $thesaurus_value;
 									}
 								}
 
@@ -1735,6 +1748,19 @@ class diffusion_sql extends diffusion  {
 						$ar_fields_global[$pseudo_section_id][$lang][] = [
 							'field_name'  => 'name_surname',
 							'field_value' => implode(' ',$name_surname_data[$lang])
+						];
+
+					# THESAURUS_DATA . Added 13-11-2018 !!
+						// merge all values in one only array
+						$ar_thesaurus_elements = [];
+						foreach ((array)$thesaurus_data[$lang] as $current_array_string) {
+							if ($current_array = json_decode($current_array_string)) {
+								$ar_thesaurus_elements = array_merge($ar_thesaurus_elements, (array)$current_array);
+							}
+						}
+						$ar_fields_global[$pseudo_section_id][$lang][] = [
+							'field_name'  => 'thesaurus',
+							'field_value' => (!empty($ar_thesaurus_elements)) ? json_encode($ar_thesaurus_elements) : null
 						];
 
 					# FIELDS
