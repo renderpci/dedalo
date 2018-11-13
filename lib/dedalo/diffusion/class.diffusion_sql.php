@@ -1562,7 +1562,7 @@ class diffusion_sql extends diffusion  {
 					'end_date',
 					'exile_place',
 					'municipality',
-					'name_surname',
+					//'name_surname',
 					'neighborhood',
 					'prison_municipality',
 					'prison',
@@ -1574,7 +1574,7 @@ class diffusion_sql extends diffusion  {
 					'residence_place',
 					'start_date',
 					'theme',
-					'thesaurus',
+					//'thesaurus',
 					'title',
 					'typology'
 				];
