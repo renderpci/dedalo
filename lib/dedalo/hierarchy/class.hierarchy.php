@@ -317,8 +317,8 @@ class hierarchy {
 				}
 
 		#
-		# VIRTUAL SECTION-LIST-THESARURUS . Listado thesaurus
-		/* USE SECTION-LIST-THESARURUS FROM REAL SECTION. ONLY OVERWRITE WHEN REALLY NEED */
+		# VIRTUAL SECTION-LIST-THESAURUS . Listado thesaurus
+		// USE SECTION-LIST-THESAURUS FROM REAL SECTION. ONLY OVERWRITE WHEN REALLY NEED
 		$options = new stdClass();
 			$options->terminoID 	= $tld2.'9';
 			$options->parent 		= $tld2.'1';
@@ -343,7 +343,7 @@ class hierarchy {
 				}		
 
 		#
-		# VIRTUAL SECTION-LIST-THESARURUS . MODELO . Model terms
+		# VIRTUAL SECTION-LIST-THESAURUS . MODELO . Model terms
 		$options = new stdClass();
 			$options->terminoID 	= $tld2.'4';
 			$options->parent 		= $tld2.'2';
