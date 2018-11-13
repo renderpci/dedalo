@@ -1653,7 +1653,11 @@ class component_date extends component_common {
 		
 		// select			
 		$select 	= $options->select;
-		$format 	= $options->format;
+		if(isset($options->format)){
+			$format 	= $options->format;
+		}else{
+			$format = 'unix_timestamp';
+		}
 		$dato 		= $this->get_dato();
 
 		foreach ($dato as $current_dato) {
