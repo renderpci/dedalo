@@ -2026,5 +2026,37 @@ class component_portal extends component_relation_common {
 
 
 
+	/*
+	* GET_CALCULATION_DATA
+	* @return $data
+	* get the data of the component for do a calculation
+	*/
+	public function get_calculation_data($options=null) {
+
+		$ar_data 			= [];
+		$ref_component_tipo = $options->get_data_of_component_tipo;
+		$dato 				= $this->get_dato();
+
+		foreach ($dato as $current_dato) {
+			$section_id 	= $current_dato->section_id;
+			$section_tipo 	= $current_dato->section_tipo;
+
+			$RecordObj_dd 		= new RecordObj_dd($ref_component_tipo);
+			$lang 				= ($RecordObj_dd->get_traducible()==='no') ? DEDALO_DATA_NOLAN : DEDALO_DATA_LANG;
+			$modelo_name 		= RecordObj_dd::get_modelo_name_by_tipo($ref_component_tipo,true);						
+			$current_componet 	= component_common::get_instance($modelo_name,
+																 $ref_component_tipo,
+																 $section_id,
+																 'edit',
+																 $lang,
+																 $section_tipo);
+			$ar_data[] = $current_componet->get_valor();
+		}
+
+		return $ar_data;
+	}//end get_calculation_data
+
+
+
 }//end class
 ?>
