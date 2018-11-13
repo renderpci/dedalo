@@ -1,7 +1,7 @@
 <?php
 /*
 * CLASS component_portal
-*
+* version 1.0
 *
 */
 class component_portal extends component_relation_common {
@@ -150,7 +150,9 @@ class component_portal extends component_relation_common {
 			#debug_log(__METHOD__." WARNING CALLED GET VALOR IN COMPONENT PORTAL !! ({$total_list_time}ms) ".$this->tipo, logger::WARNING);
 		}
 
-		return $this->valor = $valor_from_ar_locators->result;
+		$this->valor = $valor_from_ar_locators->result;
+
+		return $this->valor;
 	}//end get_valor
 
 
@@ -291,8 +293,7 @@ class component_portal extends component_relation_common {
 	public function Save() {
 
 		# Salvamos de forma estándar
-		$result = parent::Save();
-		
+		$result = parent::Save();		
 
 		return $result;
 	}//end Save
@@ -928,7 +929,6 @@ class component_portal extends component_relation_common {
 		return null; // DESACTIVO !!!
 
 
-
 		$stats_obj = new diffusion_stats_component_obj();
 
 		# PORTAL : ITERATE ALL PORTAL RECORDS
@@ -979,7 +979,7 @@ class component_portal extends component_relation_common {
 	* @return array $ar_portals_map in format:
 	* 							key = portal tipo
 	* 							value = target_section_tipo
-	*/
+	*//*
 	public static function get_ar_portals_map__DEPRECATED( $filter_section_tipo=false ) {
 
 		$component_portal_model = 'dd592';
@@ -1011,7 +1011,7 @@ class component_portal extends component_relation_common {
 		}
 
 		return (array)$ar_portals_map;
-	}//end get_ar_portals_map__DEPRECATED
+	}//end get_ar_portals_map__DEPRECATED */	
 
 
 
@@ -1026,7 +1026,7 @@ class component_portal extends component_relation_common {
 	*/
 	public function get_exclude_elements() {
 
-		if(isset($this->exclude_elements)) {			
+		if(isset($this->exclude_elements)) {
 			return $this->exclude_elements;
 		}
 
@@ -1168,6 +1168,7 @@ class component_portal extends component_relation_common {
 		
 		return $html;
 	}//end render_list_value 
+
 
 
 	/**
@@ -1376,14 +1377,14 @@ class component_portal extends component_relation_common {
 			$options->q 	 			= null;
 			$options->limit  			= 10;
 			$options->offset 			= 0;
-			$options->full_count		= false;
-			$options->order  			= null;
+			$options->full_count		= false;			
+			$options->order_custom 		= null;
 			$options->lang 				= DEDALO_DATA_LANG;
 			$options->id 				= 'temp';
 			$options->section_tipo		= null;
 			$options->select_fields		= 'default';
 			$options->filter_by_locator	= false;
-			$options->tipo 				= null;
+			$options->tipo 				= null;			
 			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 		
 		# Defaults		
@@ -1450,7 +1451,7 @@ class component_portal extends component_relation_common {
 			$query_object->limit   		= $options->limit;			
 			$query_object->offset  		= $options->offset;
 			$query_object->full_count  	= $total_locators>0 ? $total_locators : false ;//$options->full_count;
-			$query_object->order   		= $options->order;		
+			$query_object->order_custom = $options->order_custom;		
 			# Used only for time machine list
 			#if ($options->forced_matrix_table!==false) {
 				# add forced_matrix_table (time machine case)
@@ -1557,6 +1558,15 @@ class component_portal extends component_relation_common {
 				$search_query_object_options->limit 		 	= $max_records;
 				$search_query_object_options->offset 		 	= $offset;
 				#$search_query_object_options->full_count 		= count($dato);
+
+				// Order
+					$order_values = array_map(function($locator){
+						return (int)$locator->section_id;
+					}, $dato);					
+					$item = new stdClass();
+						$item->column_name 	 = 'section_id';
+						$item->column_values = $order_values;		
+					$search_query_object_options->order_custom = [$item];
 
 			$search_query_object = component_portal::build_search_query_object($search_query_object_options);
 				#debug_log(__METHOD__." search_query_object ".json_encode($search_query_object, JSON_PRETTY_PRINT), logger::DEBUG);
@@ -1879,7 +1889,7 @@ class component_portal extends component_relation_common {
 									}
 									break;
 								default:
-
+									#$render_list_mode = 'edit';
 									break;
 							}
 							#debug_log(__METHOD__." ++++++++++++++++++++++++++ render_list_mode ".to_string($render_list_mode), logger::ERROR);
@@ -1932,6 +1942,12 @@ class component_portal extends component_relation_common {
 
 			# Important : Rebuild array indexes to avoid objects when use offset
 			$json_d->rows_data_values = array_values($json_d->rows_data_values);
+
+			// working here (!)
+				if(SHOW_DEBUG===true) {
+					$json_d->json_rows = self::build_json_rows($rows_data);					
+				}
+				
 		
 
 		return $json_d;
@@ -1940,40 +1956,107 @@ class component_portal extends component_relation_common {
 
 
 	/**
+	* BUILD_JSON_rows
+	* @return array $ar_json_rows
+	*/
+	public function build_json_rows($rows_data) {
+		
+		$ar_json_rows = [];
+
+		// Empty result case
+			if (empty($rows_data->ar_records)) {
+				return $ar_json_rows;
+			}
+
+		// Iterate records
+			foreach ($rows_data->ar_records as $record) {
+
+				$section_id   = $record->section_id;
+				$section_tipo = $record->section_tipo;	
+
+				// Iterate record columns object
+					$ar_columns = [];
+					foreach ($record as $tipo => $value) {
+
+						switch ($tipo) {
+							case 'section_id':
+							case 'section_tipo':
+							case 'current_id':
+							case 'ordering_id':
+							case 'ordering':
+								# ignore
+								continue 2;
+								break;
+							default:
+								$modelo_name 	   = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+								$label 		 	   = RecordObj_dd::get_termino_by_tipo($tipo, DEDALO_DATA_LANG, true, true); // $terminoID, $lang=NULL, $from_cache=false, $fallback=true								
+								$render_list_mode  = 'edit';
+								$current_component = component_common::get_instance( $modelo_name,
+																					 $tipo,
+																					 $section_id,
+																					 $render_list_mode,
+																					 DEDALO_DATA_LANG,
+																					 $section_tipo);
+								$value = $current_component->get_html();
+								break;
+						}
+
+						$column = new stdClass();
+							$column->label 	= $label;
+							$column->tipo 	= $tipo;
+							$column->model 	= $modelo_name;
+							$column->value 	= $value;
+
+						$ar_columns[] = $column;
+					}
+
+				// Create row with columns
+					$row = new stdClass();
+						$row->section_id 	= $section_id;
+						$row->section_tipo 	= $section_tipo;
+						$row->ar_columns 	= $ar_columns;
+
+				$ar_json_rows[] = $row;
+
+			}//end foreach ($rows_data->ar_records as $row)
+			#dump($ar_json_rows, ' ar_json_rows ++ '.to_string());
+
+		return $ar_json_rows;
+	}//end build_json_rows
+
+
+
+	/*
 	* GET_CALCULATION_DATA
 	* @return $data
 	* get the data of the component for do a calculation
 	*/
-	public function get_calculation_data($options = null){
+	public function get_calculation_data($options=null) {
 
-		$ar_data = [];
-		$ref_component_tipo 	= $options->get_data_of_component_tipo;
-		$dato 		= $this->get_dato();
+		$ar_data 			= [];
+		$ref_component_tipo = $options->get_data_of_component_tipo;
+		$dato 				= $this->get_dato();
 
 		foreach ($dato as $current_dato) {
 			$section_id 	= $current_dato->section_id;
 			$section_tipo 	= $current_dato->section_tipo;
 
-			$component 		= new RecordObj_dd($ref_component_tipo);
-			$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($ref_component_tipo,true);
-
-			if($component->get_traducible() === 'no'){
-				$lang = DEDALO_DATA_NOLAN;
-			}else{
-				$lang = DEDALO_DATA_LANG;
-			}
-
-			$current_componet = component_common::get_instance($modelo_name,
-															 $ref_component_tipo,
-															 $section_id,
-															 'edit',
-															 $lang,
-															 $section_tipo);
+			$RecordObj_dd 		= new RecordObj_dd($ref_component_tipo);
+			$lang 				= ($RecordObj_dd->get_traducible()==='no') ? DEDALO_DATA_NOLAN : DEDALO_DATA_LANG;
+			$modelo_name 		= RecordObj_dd::get_modelo_name_by_tipo($ref_component_tipo,true);						
+			$current_componet 	= component_common::get_instance($modelo_name,
+																 $ref_component_tipo,
+																 $section_id,
+																 'edit',
+																 $lang,
+																 $section_tipo);
 			$ar_data[] = $current_componet->get_valor();
 		}
 
 		return $ar_data;
-	}
+	}//end get_calculation_data
+
+
 
 }//end class
 ?>

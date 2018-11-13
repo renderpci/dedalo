@@ -136,7 +136,7 @@ class component_calculation extends component_common {
 
 		$data_resolved = new StdClass();
 
-		//set the section tipo
+		// set the section tipo
 			switch ($data->section_tipo) {
 				case 'current':
 					$section_tipo = $this->section_tipo;
@@ -145,7 +145,7 @@ class component_calculation extends component_common {
 					$section_tipo = $data->section_tipo ;
 			}
 
-		//set the section id
+		// set the section id 
 			switch ($data->section_id) {
 				case 'current':
 					$section_id = $this->parent;
@@ -252,9 +252,10 @@ class component_calculation extends component_common {
 				
 				$section_id = $this->parent;
 				foreach ($data->components as $current_component) {
-							$component_tipo = $current_component->tipo;
-							$var_name 		= $current_component->var_name;
-							$options 		=  isset($current_component->options) ? $current_component->options : null;
+
+					$component_tipo = $current_component->tipo;
+					$var_name 		= $current_component->var_name;
+					$options 		= isset($current_component->options) ? $current_component->options : null;
 
 					// Component (component_json) where is stored source data, a json search_query_object 
 						$component 			= new RecordObj_dd($component_tipo);
@@ -267,60 +268,17 @@ class component_calculation extends component_common {
 																			 $lang,
 																			 $this->section_tipo);
 						$dato = $current_componet->get_dato();
-						if (empty($dato) || !isset($dato->data)) {
+						$dato = is_array($dato) ? $dato : [$dato]; // Array always						
+		
+						if (empty($dato) || !isset($dato[0]->data)) {
 							continue; // Skip empty
-						}
+						}					
 
-						$ar_search_query_object = !is_array($dato->data) ? [$dato->data] : $dato->data; // Always array
-
-					// Exec search with search_query_object
-						$ar_result = [];
-						foreach ($ar_search_query_object as $search_query_object) {
-
-							// Search
-								$search_development2 = new search_development2($search_query_object);
-								$search_data 		 = $search_development2->search();
-								$ar_records 		 = $search_data->ar_records;
-
-							// Result map. If result_map exists, parse result rows
-								$result_map = isset($search_query_object->result_map) ? $search_query_object->result_map : false;
-								if (!empty($result_map)) {
-
-									$ar_rows_mapped = [];
-									foreach ($ar_records as $key => $row) {
-								
-										$new_row = new stdClass();
-										foreach ($result_map as $map_item) {
-
-											if (isset($row->{$map_item->column})) {
-												
-												// Process value
-													$value = $row->{$map_item->column};
-													if ($value_decoded = json_decode($value)) {
-														$value = $value_decoded;
-													}
-													if (isset($map_item->process)) {
-														//$value = $map_item->process($value);
-														#$value = call_user_func_array($map_item->process, $value);
-														$value = call_user_func_array($map_item->process, array($value));
-													}
-
-												// Set mapped property
-													$new_row->{$map_item->key} = (array)$value;
-											}
-										}
-										$ar_rows_mapped[] = $new_row;
-									}
-
-									// Overwrite data property
-									$ar_records = $ar_rows_mapped;
-									#dump($ar_rows_mapped, ' ar_rows_mapped ++ '.to_string());
-								}
-
-							// Add and merge parsed rows
-							$ar_result = array_merge($ar_result, $ar_records);
-						}//end foreach ($ar_search_query_object as $search_query_object
-						
+						// exec_dato_filter_data
+							$result = [];
+							foreach ((array)$dato as $dato_item) {
+								$result[] = self::exec_dato_filter_data($dato_item);
+							}					
 
 					/* old way
 						$ar_result = array();	
@@ -425,7 +383,7 @@ class component_calculation extends component_common {
 
 					
 					// Add dato object properties
-						$result = new StdClass();
+						/*$result = new StdClass();
 						foreach ($dato as $key => $value) {
 							if ($key==='result_map') continue; # Skip some reserved properties
 							// Add property
@@ -435,7 +393,7 @@ class component_calculation extends component_common {
 								$result->{$key} = $value; # literal
 							}
 						}
-						#dump($ar_result, ' ar_result ++ '.to_string());
+						#dump($ar_result, ' ar_result ++ '.to_string()); */
 
 					// Set result
 						$data_resolved->{$var_name} = $result;
@@ -494,6 +452,80 @@ class component_calculation extends component_common {
 		
 		return $data_resolved;
 	}//end resolve_data_for_formula
+
+
+
+	/**
+	* EXEC_DATO_FILTER_DATA
+	* @return array $ar_result
+	*/
+	public static function exec_dato_filter_data($dato_item) {
+			
+		$ar_search_query_object = !is_array($dato_item->data) ? [$dato_item->data] : $dato_item->data; // Always array
+		
+		// Exec search with search_query_object
+			$ar_result = [];
+			foreach ($ar_search_query_object as $search_query_object) {
+
+				// Search
+					$search_development2 = new search_development2($search_query_object);
+					$search_data 		 = $search_development2->search();
+					$ar_records 		 = $search_data->ar_records;
+
+				// Result map. If result_map exists, parse result rows
+					$result_map = isset($search_query_object->result_map) ? $search_query_object->result_map : false;
+					if (!empty($result_map)) {
+
+						$ar_rows_mapped = [];
+						foreach ($ar_records as $key => $row) {
+					
+							$new_row = new stdClass();
+							foreach ($result_map as $map_item) {
+
+								if (isset($row->{$map_item->column})) {
+									
+									// Process value
+										$value = $row->{$map_item->column};
+										if ($value_decoded = json_decode($value)) {
+											$value = $value_decoded;
+										}
+										if (isset($map_item->process)) {
+											//$value = $map_item->process($value);
+											#$value = call_user_func_array($map_item->process, $value);
+											$value = call_user_func_array($map_item->process, array($value));
+										}
+
+									// Set mapped property
+										$new_row->{$map_item->key} = (array)$value;
+								}
+							}
+							$ar_rows_mapped[] = $new_row;
+						}
+
+						// Overwrite data property
+						$ar_records = $ar_rows_mapped;
+						#dump($ar_rows_mapped, ' ar_rows_mapped ++ '.to_string());
+					}
+
+				// Add and merge parsed rows
+				$ar_result = array_merge($ar_result, $ar_records);
+			}//end foreach ($ar_search_query_object as $search_query_object
+
+
+		// Add dato object properties
+			$result = new StdClass();
+			foreach ($dato_item as $key => $value) {
+				if ($key==='result_map') continue; # Skip some reserved properties
+				// Add property
+				if ($key==='data') {
+					$result->data = $ar_result; # calculated
+				}else{
+					$result->{$key} = $value; # literal
+				}
+			}
+	
+		return $result;	
+	}//end exec_dato_filter_data
 
 
 
