@@ -43,7 +43,9 @@ class web_data {
 	#static $version = "1.0.26";  // 23-03-2018
 	#static $version = "1.0.27";  // 29-03-2018
 	#static $version = "1.0.28";  // 17-07-2018
-	static $version = "1.0.29";  // 17-09-2018
+	#static $version = "1.0.29";  // 17-09-2018
+	static $version = "1.0.30";  // 13-11-2018
+	
 
 	/* ROWS_DATA (SQL)
 	----------------------------------------------------------------------- */
@@ -58,6 +60,7 @@ class web_data {
 		public static function get_rows_data( $request_options ) {
 			if(SHOW_DEBUG===true) {
 				#error_log(to_string($request_options));
+				#debug_log(__METHOD__." request_options ".to_string($request_options), logger::DEBUG);
 			}
 			
 			$response = new stdClass();
@@ -3012,6 +3015,11 @@ class web_data {
 				$options->q = DBi::_getConnection_mysql()->real_escape_string($options->q);
 			}
 
+			function escape_string($string) {
+				$result = DBi::_getConnection_mysql()->real_escape_string($string);
+				return $result;
+			}
+
 			#
 			# FILTER
 				$ar_filter = [];
@@ -3021,7 +3029,7 @@ class web_data {
 				}
 				# birth_place
 				if (!empty($json_data->filters->birth_place)) {
-					$ar_filter[] = "birth_place LIKE '%\"".$json_data->filters->birth_place."\"%'";
+					$ar_filter[] = "birth_place LIKE '%\"".escape_string($json_data->filters->birth_place)."\"%'";
 				}
 				# dead_at_prison
 				if (!empty($json_data->filters->dead_at_prison) && is_bool($json_data->filters->dead_at_prison)) {
@@ -3037,40 +3045,40 @@ class web_data {
 				}
 				# exile_place . like es1_967
 				if (!empty($json_data->filters->exile_place)) {
-					$ar_filter[] = "exile_place LIKE '%\"".$json_data->filters->exile_place."\"%'";
+					$ar_filter[] = "exile_place LIKE '%\"".escape_string($json_data->filters->exile_place)."\"%'";
 				}
 				# municipality . like es1_967
 				if (!empty($json_data->filters->municipality)) {
-					$ar_filter[] = "municipality LIKE '%\"".$json_data->filters->municipality."\"%'";
+					$ar_filter[] = "municipality LIKE '%\"".escape_string($json_data->filters->municipality)."\"%'";
 				}
 				# name_surname . like Rubianes
 				if (!empty($json_data->filters->name_surname)) {
 					#$ar_filter[] = "name_surname LIKE '%\"".$json_data->filters->name_surname."\"%'";
-					$ar_filter[] = "name_surname LIKE '%".$json_data->filters->name_surname."%'"; // Changed 18-03-2018 !!
+					$ar_filter[] = "name_surname LIKE '%".escape_string($json_data->filters->name_surname)."%'"; // Changed 18-03-2018 !!
 				}
 				# neighborhood . like es1_967
 				if (!empty($json_data->filters->neighborhood)) {
-					$ar_filter[] = "neighborhood LIKE '%\"".$json_data->filters->neighborhood."\"%'";
+					$ar_filter[] = "neighborhood LIKE '%\"".escape_string($json_data->filters->neighborhood)."\"%'";
 				}
 				# prison_municipality . like Barcelona
 				if (!empty($json_data->filters->prison_municipality)) {
-					$ar_filter[] = "prison_municipality LIKE '%".$json_data->filters->prison_municipality."%'";
+					$ar_filter[] = "prison_municipality LIKE '%".escape_string($json_data->filters->prison_municipality)."%'";
 				}
 				# prison . like ["582","3","4","12446"] (portal to table)
 				if (!empty($json_data->filters->prison)) {
-					$ar_filter[] = "prison LIKE '%\"".$json_data->filters->prison."\"%'";
+					$ar_filter[] = "prison LIKE '%\"".escape_string($json_data->filters->prison)."\"%'";
 				}
 				# project. like 68
 				if (!empty($json_data->filters->project)) {
-					$ar_filter[] = "project LIKE '%\"".$json_data->filters->project."\"%'";
+					$ar_filter[] = "project LIKE '%\"".escape_string($json_data->filters->project)."\"%'";
 				}
 				# pub_author . like Joan Porcel
 				if (!empty($json_data->filters->pub_author)) {
-					$ar_filter[] = "pub_author LIKE '%".$json_data->filters->pub_author."%'";
+					$ar_filter[] = "pub_author LIKE '%".escape_string($json_data->filters->pub_author)."%'";
 				}
 				# pub_editor . like Joan Porcel
 				if (!empty($json_data->filters->pub_editor)) {
-					$ar_filter[] = "pub_editor LIKE '%".$json_data->filters->pub_editor."%'";
+					$ar_filter[] = "pub_editor LIKE '%".escape_string($json_data->filters->pub_editor)."%'";
 				}
 				# pub_year . like 1920
 				if (!empty($json_data->filters->pub_year)) {
@@ -3078,11 +3086,11 @@ class web_data {
 				}
 				# region . like 
 				if (!empty($json_data->filters->region)) {
-					$ar_filter[] = "region LIKE '%\"".$json_data->filters->region."\"%'";
+					$ar_filter[] = "region LIKE '%\"".escape_string($json_data->filters->region)."\"%'";
 				}
 				# residence_place
 				if (!empty($json_data->filters->residence_place)) {
-					$ar_filter[] = "residence_place LIKE '%".$json_data->filters->residence_place."%'";
+					$ar_filter[] = "residence_place LIKE '%".escape_string($json_data->filters->residence_place)."%'";
 				}
 				# start_date . like 376790400
 				if (!empty($json_data->filters->start_date)) {
@@ -3091,7 +3099,7 @@ class web_data {
 				}
 				# theme . like Espais de la Guerra Civil
 				if (!empty($json_data->filters->theme)) {
-					$ar_filter[] = "theme LIKE '%".$json_data->filters->theme."%'";
+					$ar_filter[] = "theme LIKE '%".escape_string($json_data->filters->theme)."%'";
 				}
 				# thesaurus . like [“es1_2352”, “es1_967”]
 				if (!empty($json_data->filters->thesaurus)) {
@@ -3099,7 +3107,7 @@ class web_data {
 						#dump($ar_thesaurus, ' ar_thesaurus ++ '.to_string());
 					$ar_term = [];
 					foreach ((array)$ar_thesaurus as $key => $value) {
-						$ar_term[] = "`thesaurus` LIKE '%\"".$value."\"%'";
+						$ar_term[] = "`thesaurus` LIKE '%\"".escape_string($value)."\"%'";
 					}
 					#dump($ar_term, ' ar_term ++ '.to_string());
 					if (!empty($ar_term)) {
@@ -3110,7 +3118,7 @@ class web_data {
 				}
 				# title . like Ttile de la Guerra Civil
 				if (!empty($json_data->filters->title)) {
-					$ar_filter[] = "`title` LIKE '%".$json_data->filters->title."%'";
+					$ar_filter[] = "`title` LIKE '%".escape_string($json_data->filters->title)."%'";
 				}
 				# typology
 				if (!empty($json_data->filters->typology)) {
@@ -3190,7 +3198,7 @@ class web_data {
 				$search_options->count 		= $options->count;
 
 			$rows_data = (object)web_data::get_rows_data( $search_options );
-				#dump($rows_data->result, ' $rows_data ++ '.to_string());
+				#dump($rows_data, ' $rows_data ++ '.to_string($search_options));
 				#dump($search_options, ' $search_options ++ '.to_string()); die();	
 
 			if($rows_data->result===false) {
