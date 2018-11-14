@@ -27,62 +27,67 @@
 	switch($modo) {	
 		
 		case 'button':
-					#if (!file_exists( $this->component_obj->get_image_path() )) {
-					#	return null;
-					#}
-					break;
+			#if (!file_exists( $this->component_obj->get_image_path() )) {
+			#	return null;
+			#}
+			break;
 
 		case 'page':
 
-					# Because components are loaded by ajax, we need prepare js/css elements from tool
-					#					
-					# CSS
-						css::$ar_url[] = DEDALO_LIB_BASE_URL."/$component_name/css/$component_name.css";
-						
-					#
-					# JS includes
-						js::$ar_url[] = DEDALO_LIB_BASE_URL."/$component_name/js/$component_name.js";
+			# Because components are loaded by ajax, we need prepare js/css elements from tool
+			#					
+			# CSS
+				css::$ar_url[] = DEDALO_LIB_BASE_URL."/$component_name/css/$component_name.css";
+				
+			#
+			# JS includes
+				js::$ar_url[] = DEDALO_LIB_BASE_URL."/$component_name/js/$component_name.js";
 
-					$this->component_obj->set_modo('edit');
-					$thumb_html = $this->component_obj->get_html();
+			#
+			# JS includes additionals from component_image
+				#js::$ar_url[] = PAPER_JS_URL;
+				#js::$ar_url[] = DEDALO_LIB_BASE_URL . '/component_image/js/component_image_read.js';
 
-					$properties =  $this->component_obj->get_propiedades();
 
-					$external_source_html = false;
-					$external_source_active = false;
-					if (isset($properties->external_source)) {
-						
-						$component_tipo 	= $properties->external_source;
-						$component_model 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+			$this->component_obj->set_modo('edit');
+			$thumb_html = $this->component_obj->get_html();
 
-						$component 	= component_common::get_instance(	$component_model,
-																	 	$component_tipo,
-																	 	$parent,
-																	 	'edit',
-																	 	DEDALO_DATA_NOLAN,
-																		$section_tipo);
+			$properties =  $this->component_obj->get_propiedades();
 
-						$external_source_html	= $component->get_html();
+			$external_source_html = false;
+			$external_source_active = false;
+			if (isset($properties->external_source)) {
+				
+				$component_tipo 	= $properties->external_source;
+				$component_model 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
 
-						$dato	= $component->get_dato();
-						if($dato){
-							$dato = reset($dato);
-						}
+				$component 	= component_common::get_instance(	$component_model,
+															 	$component_tipo,
+															 	$parent,
+															 	'edit',
+															 	DEDALO_DATA_NOLAN,
+																$section_tipo);
 
-						#dump(empty($dato->dataframe));
-						if(!empty($dato->dataframe)){
-							if(isset($dato->iri) && !empty($dato->iri)){
-								$external_source_active = true;
-							}
-						}
-			
+				$external_source_html	= $component->get_html();
+
+				$dato	= $component->get_dato();
+				if($dato){
+					$dato = reset($dato);
+				}
+
+				#dump(empty($dato->dataframe));
+				if(!empty($dato->dataframe)){
+					if(isset($dato->iri) && !empty($dato->iri)){
+						$external_source_active = true;
 					}
-					
-					$ar_quality			= unserialize(DEDALO_IMAGE_AR_QUALITY);
+				}	
+			}
+			
+			$ar_quality			= unserialize(DEDALO_IMAGE_AR_QUALITY);
 
-					$media_base_path 	= DEDALO_MEDIA_BASE_URL . DEDALO_IMAGE_FOLDER 	; //$this->component_obj->get_media_base_path(); //			
-					$media_extension 	= DEDALO_IMAGE_EXTENSION ;
-					break;				
+			$media_base_path 	= DEDALO_MEDIA_BASE_URL . DEDALO_IMAGE_FOLDER 	; //$this->component_obj->get_media_base_path(); //			
+			$media_extension 	= DEDALO_IMAGE_EXTENSION ;
+			break;				
 		
 	}#end switch
 		
