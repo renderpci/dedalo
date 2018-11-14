@@ -80,7 +80,7 @@ class search_development2 {
 
 		# Set and fix class property search_query_object
 		$this->search_query_object = (object)$search_query_object;
-		#debug_log(__METHOD__." search_query_object ".to_string($search_query_object), logger::DEBUG);	
+		#debug_log(__METHOD__." search_query_object ".to_string($this->search_query_object), logger::DEBUG);	
 
 		# section tipo check and fixes
 		if (!isset($this->search_query_object->section_tipo)) {
@@ -515,7 +515,7 @@ class search_development2 {
 					}
 				break;
 
-			case (empty($this->search_query_object->order)):					
+			case (empty($this->search_query_object->order) && empty($this->search_query_object->order_custom)):
 				# Search Without order
 
 				# SELECT
@@ -701,8 +701,12 @@ class search_development2 {
 					$sql_query .= 'SELECT * FROM (';
 					$sql_query .= PHP_EOL . $query_inside. PHP_EOL;
 					$sql_query .= ') main_select';
-					# ORDER					
-						$sql_query .= PHP_EOL . 'ORDER BY ' . $sql_query_order;
+					# ORDER	
+						if(isset($this->sql_query_order_custom)) {
+							$sql_query .= PHP_EOL . $this->sql_query_order_custom;
+						}else{
+							$sql_query .= PHP_EOL . 'ORDER BY ' . $sql_query_order;
+						}						
 					# LIMIT
 						if ($this->search_query_object->limit>0) {
 							$sql_query .= PHP_EOL . 'LIMIT ' . $sql_limit;
@@ -1120,46 +1124,72 @@ class search_development2 {
 		
 		$sql_query_order = '';
 		$ar_order 		 = [];
-	
-		if (!empty($this->search_query_object->order)) {
+		
+		if (!empty($this->search_query_object->order_custom)) {
+			
+			// custom order
+				$ar_custom_query 	  = [];
+				$ar_custom_queryorder = [];
+				foreach ($this->search_query_object->order_custom as $item_key => $order_item) {
+					
+					$column_name   	= $order_item->column_name;
+					$column_values 	= $order_item->column_values;
+					$table 			= ($item_key>0) ? 'x'.$item_key : 'x';					
 
-			foreach ($this->search_query_object->order as $order_obj) {
-	
-				$direction 		= strtoupper($order_obj->direction);
-				$path 	   		= $order_obj->path;	
-				$end_path  		= end($path);
-				$component_tipo = $end_path->component_tipo;
-				
+					$pairs = [];
+					foreach ($column_values as $key => $value) {
+						$value 	 = is_string($value) ? "'" . $value . "'" : $value;
+						$pair 	 = '('.$value.','.($key+1).')';
+						$pairs[] = $pair;
+					}
+					// Join like: LEFT JOIN (VALUES (7,1),(1,2)) as x(ordering_id, ordering) ON main_select.section_id = x.ordering_id ORDER BY x.ordering ASC
+					$ar_custom_query[] 		= 'LEFT JOIN (VALUES '.implode(',', $pairs).') as '.$table.'(ordering_id, ordering) ON main_select.'.$column_name.'='.$table.'.ordering_id';
+					$ar_custom_queryorder[] = 'ORDER BY '.$table.'.ordering ASC';
+				}				
+				$this->sql_query_order_custom = implode(' ', $ar_custom_query) . ' ' . implode(',', $ar_custom_queryorder);
+								
+		
+		}elseif (!empty($this->search_query_object->order)) {
 
-				if ($component_tipo==='section_id') {
-					# section_id column case
-					$line = 'section_id ' . $direction;
+			// order 
+				foreach ($this->search_query_object->order as $order_obj) {
+		
+					$direction 		= strtoupper($order_obj->direction);
+					$path 	   		= $order_obj->path;	
+					$end_path  		= end($path);
+					$component_tipo = $end_path->component_tipo;
+					
 
-				}else{
+					if ($component_tipo==='section_id') {
+						# section_id column case
+						$line = 'section_id ' . $direction;
 
-					# Add join if not exists
-					$this->build_sql_join($path);					
+					}else{
 
-					$table_alias= $this->get_table_alias_from_path($path);
-					$selector 	= implode(',', $order_obj->component_path);
-					$alias 		= $component_tipo . '_order';
-					$base 		= $table_alias . '.datos#>>\'{'.$selector.'}\'';
-					$column 	= $base .' as '.$alias;
+						# Add join if not exists
+						$this->build_sql_join($path);					
 
-					# Add to global order columns (necessary for order...)
-					# This array is added when query select is calculated
-					$this->order_columns[] = $column;
+						$table_alias= $this->get_table_alias_from_path($path);
+						$selector 	= implode(',', $order_obj->component_path);
+						$alias 		= $component_tipo . '_order';
+						$base 		= $table_alias . '.datos#>>\'{'.$selector.'}\'';
+						$column 	= $base .' as '.$alias;
 
-					$line = $alias . ' ' . $direction;
-					#$line = $base . ' ' . $direction;
-					#debug_log(__METHOD__." line ".to_string($line), logger::DEBUG);		
-				}					
+						# Add to global order columns (necessary for order...)
+						# This array is added when query select is calculated
+						$this->order_columns[] = $column;
 
-				$ar_order[] = $line;				
-			}
+						$line = $alias . ' ' . $direction;
+						#$line = $base . ' ' . $direction;
+						#debug_log(__METHOD__." line ".to_string($line), logger::DEBUG);		
+					}
 
-			$sql_query_order = implode(',', $ar_order);
+					$ar_order[] = $line;
+				}
+
+				$sql_query_order = implode(',', $ar_order);
 		}
+
 		if(SHOW_DEBUG===true) {
 			#debug_log(__METHOD__." sql_query_order: ".to_string($sql_query_order), logger::DEBUG);
 		}
