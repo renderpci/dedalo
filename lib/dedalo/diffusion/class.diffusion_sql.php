@@ -206,18 +206,19 @@ class diffusion_sql extends diffusion  {
 									}
 								$options->curent_children_tipo  = $curent_children_tipo;
 								$options->request  				= 'columns';
-
-							$ar_dedalo_countries = (array)self::get_ar_dedalo_countries($options);
 							
-							foreach ($ar_dedalo_countries as $current_dedalo_country) {
-								$ar_column_data=array();
-								$ar_column_data['field_name']  		= (string)$current_dedalo_country;
-								$ar_column_data['field_type']  		= (string)'field_text';
-								$ar_column_data['field_coment'] 	= (string)'Autocreated column for country compatibility';
-								$ar_column_data['field_options'] 	= (string)' ';
-								$ar_table_data['ar_fields'][] 		= $ar_column_data;	# Add column
-								#error_log("Add column field_name:$current_dedalo_country - field_type:field_text, - field_coment:Autocreated column for country compatibility - field_options:'' ");
-							}							
+							// (!) Removed way.  
+								/*
+								$ar_dedalo_countries = (array)self::get_ar_dedalo_countries($options);								
+								foreach ($ar_dedalo_countries as $current_dedalo_country) {
+									$ar_column_data=array();
+									$ar_column_data['field_name']  		= (string)$current_dedalo_country;
+									$ar_column_data['field_type']  		= (string)'field_text';
+									$ar_column_data['field_coment'] 	= (string)'Autocreated column for country compatibility';
+									$ar_column_data['field_options'] 	= (string)' ';
+									$ar_table_data['ar_fields'][] 		= $ar_column_data;	# Add column
+									#error_log("Add column field_name:$current_dedalo_country - field_type:field_text, - field_coment:Autocreated column for country compatibility - field_options:'' ");
+								}*/						
 							break;
 						default:
 							# DEFAULT CASE
@@ -696,18 +697,20 @@ class diffusion_sql extends diffusion  {
 										$ts_map_options->parent  				= $current_section_id;
 										$ts_map_options->lang  					= $current_lang;
 
-									$ar_dedalo_countries = (array)self::get_ar_dedalo_countries($ts_map_options);
-										#dump($ar_dedalo_countries, ' ar_dedalo_countries');
-									
-									foreach ($ar_dedalo_countries as $current_dedalo_country => $current_value) {
-										$current_ts_map_ar_field_data=array();
-										$current_ts_map_ar_field_data['field_name']  = (string)$current_dedalo_country;
-										$current_ts_map_ar_field_data['field_value'] = (string)$current_value;
+									// (!) Removed way.
+										/*  
+										$ar_dedalo_countries = (array)self::get_ar_dedalo_countries($ts_map_options);
+											#dump($ar_dedalo_countries, ' ar_dedalo_countries');
+										
+										foreach ($ar_dedalo_countries as $current_dedalo_country => $current_value) {
+											$current_ts_map_ar_field_data=array();
+											$current_ts_map_ar_field_data['field_name']  = (string)$current_dedalo_country;
+											$current_ts_map_ar_field_data['field_value'] = (string)$current_value;
 
-										# COLUMN ADD ###################################################
-										$ar_field_data['ar_fields'][$current_section_id][$current_lang][] = $current_ts_map_ar_field_data;	# Add field
-										#error_log("Added field field_name:$current_dedalo_country - field_value:$current_value");
-									}
+											# COLUMN ADD ###################################################
+											$ar_field_data['ar_fields'][$current_section_id][$current_lang][] = $current_ts_map_ar_field_data;	# Add field
+											#error_log("Added field field_name:$current_dedalo_country - field_value:$current_value");
+										}*/
 									break;
 								
 								case ( is_object($propiedades) && property_exists($propiedades, 'table') ): # AUTOCOMPLETE COLUMN TABLE
