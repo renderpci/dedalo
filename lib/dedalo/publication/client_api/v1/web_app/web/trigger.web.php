@@ -146,7 +146,7 @@ function load_video_search_thematic($json_data) {
 
 
 /**
-* load_video_interview
+* LOAD_VIDEO_INTERVIEW
 * @return object $response
 */
 function load_video_interview($json_data) {

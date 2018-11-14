@@ -47,4 +47,4 @@
 	# HTML PAGE
 	include( dirname(__FILE__) .'/html/' . $cwd . '.phtml');
 
-?>
+

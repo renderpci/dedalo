@@ -74,12 +74,6 @@ class page {
 		page::$js_ar_url[] = __WEB_ROOT_WEB__ . '/common/js/common.js';
 		page::$js_ar_url[] = __WEB_ROOT_WEB__ . '/page/js/page.js.php'; // include page.js
 
-		// Video js
-		#page::$css_ar_url[] = 'http://vjs.zencdn.net/6.2.7/video-js.css';
-		#page::$js_ar_url[]  = 'http://vjs.zencdn.net/6.2.7/video.js';
-		#page::$css_ar_url[] = __WEB_ROOT_WEB__ . '/lib/video-js/video-js.min.css';
-		#page::$js_ar_url[]  = __WEB_ROOT_WEB__ . '/lib/video-js/video.min.js';
-
 		// Load template_map file
 		$this->template_map = (array)$this->get_template_map();
 		if(SHOW_DEBUG===true) {
@@ -192,6 +186,10 @@ class page {
 		$html = '';
 		switch ($type) {
 			case 'css':
+
+				# CSS main. Prepend main page css to the beginning of the array			
+				#array_unshift(page::$css_ar_url, __WEB_ROOT_WEB__ . '/page/css/page.css');
+
 				# Remove duplicates
 				page::$css_ar_url = array_unique(page::$css_ar_url);
 				foreach (page::$css_ar_url as $url) {
@@ -200,6 +198,10 @@ class page {
 				break;
 			
 			case 'js':
+
+				# JS main. Prepend main page js to the beginning of the array			
+				#array_unshift(page::$js_ar_url, __WEB_ROOT_WEB__ . '/common/js/common.js', __WEB_ROOT_WEB__ . '/page/js/page.js.php');				
+
 				# Remove duplicates
 				page::$js_ar_url = array_unique(page::$js_ar_url);
 				foreach (page::$js_ar_url as $url) {
@@ -1052,7 +1054,7 @@ class page {
 						Quam elementum pulvinar etiam non quam lacus suspendisse. Vel eros donec ac odio tempor orci dapibus. Amet est placerat in egestas erat. Fermentum dui faucibus in ornare quam viverra orci sagittis eu. Eget felis eget nunc lobortis mattis aliquam faucibus. Diam sollicitudin tempor id eu nisl nunc mi ipsum faucibus. Nulla pellentesque dignissim enim sit amet venenatis urna cursus eget. Porttitor massa id neque aliquam vestibulum. Mauris pharetra et ultrices neque ornare aenean euismod elementum. Purus gravida quis blandit turpis. Nisi porta lorem mollis aliquam ut porttitor leo a diam. Egestas integer eget aliquet nibh praesent tristique magna. Fusce id velit ut tortor pretium viverra. Eu lobortis elementum nibh tellus. Nunc sed velit dignissim sodales ut eu sem integer. Faucibus in ornare quam viverra orci sagittis eu. Viverra aliquet eget sit amet tellus cras adipiscing enim. Molestie at elementum eu facilisis sed odio morbi. Scelerisque eu ultrices vitae auctor eu augue ut. At volutpat diam ut venenatis tellus in metus vulputate.";
 						break;
 					case 'image':
-						$element_value = 'https://master.render.es/dedalo/lib/dedalo/themes/default/0.jpg';
+						#$element_value = 'https://master.render.es/dedalo/lib/dedalo/themes/default/0.jpg';
 						break;	
 					default:
 						# code...
