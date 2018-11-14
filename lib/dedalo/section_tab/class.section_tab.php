@@ -1,9 +1,9 @@
 <?php
 /*
 * CLASS SECTION TAB
+*
+*
 */
-
-
 class section_tab extends common {
 	
 	

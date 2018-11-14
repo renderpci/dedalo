@@ -5,59 +5,63 @@
 	print "<!-- SECTION TAB [tipo:$tipo] $label -->";
 
 	# CONTENT
-	$html_content = "<div class=\"css_section_tab_content \" >";
+	$html_content  = '';
+	$html_content .= '<div class="css_section_tab_content">';
 	
 	switch(true) {
 			
 		case $permissions===0 :
-				$html_content .= " <span class=\"css_span_dato\"> ".label::get_label('sin_acceso')." (tab)</span>"; 
+				$html_content .= "<span class=\"css_span_dato\"> ".label::get_label('sin_acceso')." (tab)</span>"; 
 				break;
 		
 		case ($permissions>=1) :
 
-				# TABS LABELS
-				$i=0; foreach ($ar_tab_html as $tab_tipo => $tab_html) {
-					$name = RecordObj_dd::get_termino_by_tipo($tab_tipo,DEDALO_DATA_LANG,true);
-					$active = $i===0 ? 'section_tab_active' : '';
+				// tabs html
+					$html_tab_label 	= '';
+					$html_tab_content 	= '';
+					$i=0; foreach ($ar_tab_html as $tab_tipo => $tab_html) {
 
-					$html_content .= "<span id=\"section_tab_{$tab_tipo}\" class=\"section_tab_label $active\" name=\"tabs\" data-tipo=\"$tab_tipo\" onclick=\"section_tabs.set_tab_active(this)\">";
-					$html_content .= $name;
+						// tabs labels 
+							$name   = RecordObj_dd::get_termino_by_tipo($tab_tipo,DEDALO_DATA_LANG,true);
+							$active = ($i===0) ? ' section_tab_active' : '';
+
+							$html_tab_label .= '<span id="section_tab_'.$tab_tipo.'" class="section_tab_label'.$active.'" name="tabs" data-tipo="'.$tab_tipo.'" onclick="section_tabs.set_tab_active(this)">';
+							$html_tab_label .= $name;
+							$html_tab_label .= '</span>';						
+
+						// tabs content 
+							$checked = ($i===0) ? ' tab_content_active' : '';
+				
+							$html_tab_content .= '<section id="section_tab_content_'.$tab_tipo.'" class="sgc_'.$modo.' section_tab_content'.$checked.'">';
+							$html_tab_content .= $tab_html;
+							$html_tab_content .= '</section>';
 						
-					$html_content .= "</span>";
-					$i++;
-				}
+					$i++;}
 
-				$i=0;
-				foreach ($ar_tab_html as $tab_tipo => $tab_html) {
-					$checked = $i===0 ? 'style="display: table;"' : null;
-		
-					$html_content .= "<section id=\"section_tab_content_{$tab_tipo}\" class=\"sgc_{$modo} section_tab_content\" $checked >";
-					$html_content .= $tab_html;
-					$html_content .= "</section>";
-					
-				}
+					$html_content .= $html_tab_label;
+					$html_content .= $html_tab_content;
 
+				// Tabs css 
+					# CSS control interactions between label and content and is necessary create custom css for each case
+					/*
+					$css_custom = '';
+					foreach ($ar_tab_html as $tab_tipo => $tab_html) {
+						$css_custom .= "#section_tab_{$tab_tipo}:checked ~ #section_tab_content_{$tab_tipo},";
+					}
+					$css_custom = substr($css_custom, 0,-1) . '{ display: table; }';
+					$html_content .= '<style>'.$css_custom.'</style>';
+					*/				
 
-				# TABS CSS
-				# CSS control interactions between label and content and is necessary create custom css for each case
-				/*
-				$css_custom = '';
-				foreach ($ar_tab_html as $tab_tipo => $tab_html) {
-					$css_custom .= "#section_tab_{$tab_tipo}:checked ~ #section_tab_content_{$tab_tipo},";
-				}
-				$css_custom = substr($css_custom, 0,-1) . '{ display: table; }';
-				$html_content .= '<style>'.$css_custom.'</style>';
-				*/
-				# TABS JS
-				# Select last active tab on every navigation
-				$html_content .= "<script>section_tabs.select_tab_active()</script>";
+				// Tabs js. Select last active tab on every navigation 
+					$html_content .= '<script>';
+					$html_content .= 'section_tabs.select_tab_active();';
+					$html_content .= '</script>';
+
 				break;
 	}
 	
-	$html_content .= "</div><!-- /css_section_tab_content -->";
+	$html_content .= '</div><!-- /css_section_tab_content -->';
 
-	
 	
 	# PRINT HTML
 	echo $html_content;
-?>

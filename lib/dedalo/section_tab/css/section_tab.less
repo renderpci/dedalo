@@ -3,49 +3,58 @@
 
 .css_section_tab_content {
 
-	
-	/* SECTIONS (CONTENTS OF TAB)
-	-------------------------------------------- */
-	> section {
-		//background-color: #A3E1BF;
-		display: none;
-		padding-top: 5px;
-		border: 1px solid #ddd;
-		background-color: rgba(249,249,249,0.65);
-		width: 100%;
-	}
+	// tab headers
+		>.section_tab_label {
+			display: inline-block;
+			margin: 0 0 -1px;
+			padding: 7px 25px;
+			font-weight: 600;
+			text-align: center;
+			color: #bbb;
+			border: 1px solid transparent;
+			-webkit-user-select: none;
+			-khtml-user-select: none;
+			-moz-user-select: none;
+			-o-user-select: none;
+			user-select: none;
+			
+			&:before {
+				//font-family: fontawesome;
+				//font-weight: normal;
+				margin-right: 10px;
+			}
+			
+			&:hover {
+				color: #888;
+				cursor: pointer;
+			}
 
-	.section_tab_label {
-		display: inline-block;
-		margin: 0 0 -1px;
-		padding: 7px 25px;
-		font-weight: 600;
-		text-align: center;
-		color: #bbb;
-		border: 1px solid transparent;
-		-webkit-user-select: none;
-		-khtml-user-select: none;
-		-moz-user-select: none;
-		-o-user-select: none;
-		user-select: none;
-	}
-	.section_tab_label:before {
-		//font-family: fontawesome;
-		//font-weight: normal;
-		margin-right: 10px;
-	}
-	.section_tab_label:hover {
-		color: #888;
-		cursor: pointer;
-	}
+			&.section_tab_active {
+				color: #555;
+				border: 1px solid #ddd;
+				border-top: 2px solid orange;
+				border-bottom: 1px solid #fbfbfb;
+				background-color: rgba(249,249,249,0.65);
+			}
+		}
 
-	.section_tab_active {
-		color: #555;
-		border: 1px solid #ddd;
-		border-top: 2px solid orange;
-		border-bottom: 1px solid #fbfbfb;
-		background-color: rgba(249,249,249,0.65);
-	}
+
+
+	// tab content
+		>.section_tab_content {
+			//background-color: #A3E1BF;
+			display: none;
+			padding-top: 5px;
+			border: 1px solid #ddd;
+			background-color: rgba(249,249,249,0.65);
+			width: 100%;
+
+			&.tab_content_active {
+				display: table;
+			}
+		}	
+
+
 
 }//end css_section_tab_content
 
