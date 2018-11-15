@@ -201,6 +201,25 @@ class component_geolocation extends component_common {
 	}//end build_geolocation_tag_string
 
 
+		/**
+	* GET_DIFFUSION_VALUE_SOCRATA
+	* Calculate current component diffusion value for target field in socrata
+	* Used for diffusion_mysql to unify components diffusion value call to publish in socrata
+	* @return string $diffusion_value_socrata
+	*
+	* @see class.diffusion_mysql.php
+	*/
+	public function get_diffusion_value_socrata( $lang=null ) {
+	
+		$dato 			 = $this->get_dato();
+		$socrata_data = "(".$dato->lat.", ".$dato->lon.")";
+		$diffusion_value_socrata = json_encode($socrata_data);
+
+		return (string)$diffusion_value_socrata;
+	}//end get_diffusion_value_socrata
+
+
+
 
 }
 ?>
