@@ -1436,12 +1436,12 @@ class component_text_area extends component_common {
 
 
 	/**
-	* GET_COMPONENT_INDEXATIONS
+	* GET_COMPONENT_INDEXATIONS_TERMS
 	* Used for diffusion global search
 	* @see diffusion global search needs
 	* @return string json encoded $indexations names
 	*/
-	public function get_component_indexations( $type ) {  // DEDALO_RELATION_TYPE_INDEX_TIPO
+	public function get_component_indexations_terms( $type ) {  // DEDALO_RELATION_TYPE_INDEX_TIPO
 		/*
 		# Search relation index in hierarchy tables
 		*/
@@ -1461,7 +1461,7 @@ class component_text_area extends component_common {
 
 
 		return $indexations_locators;
-	}//end get_component_indexations
+	}//end get_component_indexations_terms
 	
 
 
