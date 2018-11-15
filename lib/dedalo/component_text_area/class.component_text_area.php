@@ -1434,7 +1434,37 @@ class component_text_area extends component_common {
 	}//end get_component_indexations_term_id
 
 
+
+	/**
+	* GET_COMPONENT_INDEXATIONS
+	* Used for diffusion global search
+	* @see diffusion global search needs
+	* @return string json encoded $indexations names
+	*/
+	public function get_component_indexations( $type ) {  // DEDALO_RELATION_TYPE_INDEX_TIPO
+		/*
+		# Search relation index in hierarchy tables
+		*/
+		$result = $this->get_component_indexations( $type );
+
+		$ar_indexations = array();
+		foreach ($result as $key => $row) {
+
+			#$term_id = $row->section_tipo.'_'.$row->section_id;
+			$term = ts_object::get_term_by_locator($row);
+ 
+			$ar_indexations[] = $term;
+		}//end foreach ($result as $key => $row)
+		#dump($ar_indexations, ' ar_indexations ++ '.to_string());
 	
+		$indexations_locators = json_encode($ar_indexations);
+
+
+		return $indexations_locators;
+	}//end get_component_indexations
+	
+
+
 	/**
 	* GET_DIFFUSION_OBJ
 	*/
@@ -2539,6 +2569,7 @@ class component_text_area extends component_common {
 
         return $query_object;
 	}//end resolve_query_object_sql
+
 
 	/**
 	* SEARCH_OPERATORS_INFO
