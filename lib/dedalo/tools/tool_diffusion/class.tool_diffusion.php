@@ -125,8 +125,13 @@ class tool_diffusion {
 		}else{
 			$response->result = false;
 			$response->msg = "Error. Error on publish record $section_id";
-		}			
+			
+		}
 
+		// Add especific msg		
+			if (isset($update_record_result->msg)) {
+				$response->msg .= ' - ' . $update_record_result->msg;
+			}
 
 		if(SHOW_DEBUG===true) {
 			$response->debug = $update_record_result;
