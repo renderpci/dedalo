@@ -507,9 +507,9 @@ abstract class diffusion  {
 		* @param int $section_id
 		* @return string $id like 'oh_1'
 		*/
-		public static function build_id($section_tipo, $section_id) {
+		public static function build_id($section_tipo, $section_id, $lang) {
 			
-			$id = $section_tipo .'_'. $section_id;
+			$id = $section_tipo .'_'. $section_id .'_'. $lang ;
 			return $id;
 		}//end build_id
 
@@ -522,7 +522,7 @@ abstract class diffusion  {
 		*	JSON object with all field : field_value in given lang 
 		*/
 		public static function build_json_row($request_options) {
-
+	
 			// options
 				$options = new stdClass();
 					$options->section_tipo 			= null;
@@ -538,21 +538,52 @@ abstract class diffusion  {
 
 			// value
 				$row = new stdClass();
-					$row->id 			= diffusion::build_id($options->section_tipo, $options->section_id);
-					$row->section_tipo 	= $options->section_tipo;
-					$row->section_id 	= $options->section_id;
-					$row->lang 			= $options->lang;
-					$row->publish_date 	= date('Y-m-d H:i:s');
+
+					$item = new stdClass();
+						$item->value = diffusion::build_id($options->section_tipo, $options->section_id, $options->lang);
+						$item->model = 'field_text';
+					$row->id = $item;
+
+					$item = new stdClass();
+						$item->value = $options->section_tipo;
+						$item->model = 'field_text';
+					$row->section_tipo = $item;
+
+					$item = new stdClass();
+						$item->value = $options->section_id;
+						$item->model = 'field_int';
+					$row->section_id = $item;
+
+					$item = new stdClass();
+						$item->value = $options->lang;
+						$item->model = 'field_text';
+					$row->lang = $item;
+
+					$item = new stdClass();
+						$item->value = date('Y-m-d H:i:s');
+						$item->model = 'field_date';
+					$row->publish_date = $item;
+					
 					# resolve each field
 					foreach ($ar_fields as $field) {
 						#if ($field->label==='publication') continue;
 
 						$value = self::get_field_value($field->tipo, $options->section_tipo, $options->section_id, $options->lang, $request_options);
+
+						#if (is_array($value) || is_object($value)) {
+						#	$value = json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+						#}
+						$diffusion_model = RecordObj_dd::get_modelo_name_by_tipo($field->tipo,true);
+
+						$item = new stdClass();
+							$item->value = $value;
+							$item->model = $diffusion_model;
 						
 						// Add value
-						$row->{$field->label} = $value;
+						$row->{$field->label} = $item;
 					}					
 					#dump($row, ' row ++ '.to_string());
+
 
 			return $row;
 		}//end build_json_row
@@ -576,27 +607,29 @@ abstract class diffusion  {
 		*	Is the diffusion value of component called by field. Can be null, array, string, int
 		*/
 		public static function get_field_value($tipo, $section_tipo, $section_id, $lang, $request_options) {
-
+	
 			$field_value = null;
 			
 			// Component 
-				$component_tipo 		= RecordObj_dd::get_ar_terminos_relacionados($tipo, false, true)[0];
-				$modelo_name 			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);				
-				#$real_section_tipo 		= RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($component_tipo, 'section', 'parent')[0];
-				$current_component 		= component_common::get_instance($modelo_name,
-																		 $component_tipo,
-																		 $section_id,
-																		 'list', // Note that 'list' mode have dato fallback (in section)
-																		 $lang,
-																		 $section_tipo,
-																		 false);
+				$ar_related 		= common::get_ar_related_by_model('component_', $tipo, $strict=false);		
+				$component_tipo 	= reset($ar_related); //RecordObj_dd::get_ar_terminos_relacionados($tipo, false, true)[0];
+				$modelo_name 		= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);		
+				#$real_section_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($component_tipo, 'section', 'parent')[0];
+				$current_component 	= component_common::get_instance($modelo_name,
+																	 $component_tipo,
+																	 $section_id,
+																	 'list', // Note that 'list' mode have dato fallback (in section)
+																	 $lang,
+																	 $section_tipo,
+																	 false);
 				$dato = $current_component->get_dato();
 
-			// Diffusion element
-				$diffusion_term = new RecordObj_dd($tipo);
-				$propiedades 	= $diffusion_term->get_propiedades(true);	# Format: {"data_to_be_used": "dato"}
+			// Diffusion element (current column/field)
+				$diffusion_term  = new RecordObj_dd($tipo);
+				$propiedades 	 = $diffusion_term->get_propiedades(true);	# Format: {"data_to_be_used": "dato"}
+				#$diffusion_model = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 
-				# switch cases
+			# switch cases
 				switch (true) {
 
 					case ($modelo_name==='component_publication'):
@@ -648,10 +681,16 @@ abstract class diffusion  {
 						}
 						break;
 
-					case (is_object($propiedades) && property_exists($propiedades, 'process_dato')):
+					case (is_object($propiedades) && property_exists($propiedades, 'process_dato')):						
 						# Process dato with function
+						$options = $request_options;
+							$options->propiedades 	= $propiedades;
+							$options->tipo 			= $tipo;
+							$options->component_tipo= $component_tipo;
+							$options->section_id 	= $section_id;
+
 						$function_name 	= $propiedades->process_dato;
-						$field_value 	= call_user_func($function_name, $request_options, $dato);
+						$field_value 	= call_user_func($function_name, $options, $dato);
 						break;
 
 					default:
@@ -660,9 +699,69 @@ abstract class diffusion  {
 						break;
 				}//switch (true)
 
-
+	
 			return $field_value;
 		}//end get_field_value
+
+
+
+		/**
+		* RESOLVE_COMPONENT_VALUE
+		* Intermediathe method to call component methods from diffusion
+		* @return mixed $value
+		*/
+		public static function resolve_component_value( $options, $dato ) {
+			#dump($options, ' options ++ '.to_string());
+			#dump($dato, ' dato ++ '.to_string());
+
+			# Ref. $options
+			# [typology] => 
+		    # [value] => 
+		    # [tipo] => mdcat2447
+		    # [component_tipo] => mdcat1536
+		    # [section_id] => 1
+		    # [lang] => lg-fra
+		    # [section_tipo] => mdcat597
+		    # [caler_id] => 3
+		    # [propiedades] => stdClass Object
+		    #     (
+		    #         [varchar] => 1024
+		    #         [process_dato] => diffusion_sql::resolve_value
+		    #         [process_dato_arguments] => stdClass Object
+		    #             (
+		    #                 [target_component_tipo] => rsc92
+		    #                 [component_method] => map_locator_to_term_id
+		    #             )
+		    #     )
+		    # [diffusion_element_tipo] => mdcat353
+
+			$process_dato_arguments = (object)$options->propiedades->process_dato_arguments;
+			$method 				= $process_dato_arguments->component_method;
+			$custom_arguments 		= isset($process_dato_arguments->custom_arguments) ? $process_dato_arguments->custom_arguments : [];					
+
+			
+			$component_tipo = isset($options->component_tipo) ? $options->component_tipo : common::get_ar_related_by_model('component_', $options->tipo, $strict=false)[0];
+			$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+
+			$component 		= component_common::get_instance($modelo_name,
+															 $component_tipo,
+															 $options->section_id,
+															 'list',
+															 $options->lang,
+															 $options->section_tipo,
+															 false);
+
+			
+			$value = call_user_func_array(array($component, $method), $custom_arguments);
+
+			# Do not change output format (!)
+			#if (is_array($value) || is_object($value)) {
+			#	$value = json_encode($value);
+			#}
+			
+
+			return $value;
+		}//end resolve_component_value
 
 
 
