@@ -1944,8 +1944,8 @@ class component_portal extends component_relation_common {
 			$json_d->rows_data_values = array_values($json_d->rows_data_values);
 
 			// working here (!)
-				if(SHOW_DEBUG===true) {
-					$json_d->json_rows = self::build_json_rows($rows_data);					
+				if(SHOW_DEBUG===true && DEVELOPMENT_SERVER===true) {
+					#$json_d->json_rows = self::build_json_rows($rows_data);					
 				}
 				
 		
