@@ -844,6 +844,38 @@ class component_filter extends component_relation_common {
 
 
 
+	/**
+	* GET_DIFFUSION_VALUE
+	* Calculate current component diffsuion value for target field (usually a mysql field)
+	* Used for diffusion_mysql to unify components diffusion value call
+	* @return string | null $diffusion_value
+	*
+	* @see class.diffusion_mysql.php
+	*/
+	public function get_diffusion_value( $lang=DEDALO_DATA_LANG ) {
+				
+		$dato = $this->get_dato();
+	
+		$ar_label = [];
+		foreach ((array)$dato as $key => $locator) {
+			$label = ts_object::get_term_by_locator( $locator, $lang, true );
+			$label = strip_tags(trim($label));
+			if (!empty($label)) {
+				$ar_label[] = $label;
+			}			
+		}
+		
+		if (empty($ar_label)) {
+			$diffusion_value = null;
+		}else{
+			$diffusion_value = implode(' | ', $ar_label);
+		}		
+
+		return $diffusion_value;
+	}//end get_diffusion_value
+
+
+
 	
 }
 ?>
