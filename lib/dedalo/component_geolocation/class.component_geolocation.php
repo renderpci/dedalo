@@ -201,7 +201,8 @@ class component_geolocation extends component_common {
 	}//end build_geolocation_tag_string
 
 
-		/**
+
+	/**
 	* GET_DIFFUSION_VALUE_SOCRATA
 	* Calculate current component diffusion value for target field in socrata
 	* Used for diffusion_mysql to unify components diffusion value call to publish in socrata
@@ -209,15 +210,35 @@ class component_geolocation extends component_common {
 	*
 	* @see class.diffusion_mysql.php
 	*/
-	public function get_diffusion_value_socrata( $lang=null ) {
+	public function get_diffusion_value_socrata() {
 	
-		$dato 			 = $this->get_dato();
-		$socrata_data = "(".$dato->lat.", ".$dato->lon.")";
-		$diffusion_value_socrata = json_encode($socrata_data);
+		$dato 			= $this->get_dato();
+		$socrata_data 	= 'POINT ('.$dato->lat.', '.$dato->lon.')';
 
-		return (string)$diffusion_value_socrata;
+		# {
+		#   "type": "Point",
+		#   "coordinates": [
+		#     -87.653274,
+		#     41.936172
+		#   ]
+		# }
+
+		$geo_json_point = new stdClass();
+			$geo_json_point->type 		 = 'Point';
+			$geo_json_point->coordinates = [
+				floatval($dato->lon),
+				floatval($dato->lat)				
+			];
+
+		#$point = new stdClass();
+		#	$point->latitude  = 47.59815;
+		#	$point->longitude = -122.334540;
+
+					
+		$diffusion_value_socrata = $geo_json_point;// json_encode($geo_json_point, JSON_UNESCAPED_SLASHES); // json_encode($socrata_data, JSON_UNESCAPED_SLASHES);
+
+		return $diffusion_value_socrata;
 	}//end get_diffusion_value_socrata
-
 
 
 
