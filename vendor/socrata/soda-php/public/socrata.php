@@ -108,10 +108,14 @@ class Socrata {
     $response = curl_exec($handle);
     $code = curl_getinfo($handle, CURLINFO_HTTP_CODE);
     if($code != "200") {
-      throw new Exception("Error \"$code\" from server: $response");
+      #if(SHOW_DEBUG===true) {
+      #  dump($response, ' response ++ '.to_string($code));
+      #}        
+      #throw new Exception("Error \"$code\" from server: $response");
+      return json_decode($response, false);
     }
 
-    return json_decode($response, true);
+    return json_decode($response, false);
   }
 
   // Convenience function for Puts
