@@ -51,7 +51,7 @@ class diffusion_socrata extends diffusion  {
 			if(empty($options->section_tipo) || empty($options->section_id) || empty($options->diffusion_element_tipo)) {
 				debug_log(__METHOD__." ERROR ON UPDATE RECORD $options->section_id - $options->section_tipo - $options->diffusion_element_tipo. Undefined mandatory options var".to_string(), logger::ERROR);
 				return false;
-			}	
+			}
 
 		// Build data (array of json_row objects)
 			$ar_rows = [];
@@ -73,42 +73,122 @@ class diffusion_socrata extends diffusion  {
 			$socrata_delete = ':deleted';
 			$ar_socrata_rows = array_map(function($row) use($socrata_id, $socrata_delete){
 				// socrata_id. Add normalized socrata id
-				$row->$socrata_id = $row->id;
+				//$row->$socrata_id = $row->id;
 				// socrata_delete. Set to delete when publication is false
-				if (isset($row->publication) && $row->publication===false) {
-					$row->$socrata_delete = true;
+				
+
+				// publish_date. Format as Socrata need (date_time float with miliseconds)				
+				#$row->publish_date->value = date('Y-m-d\TH:i:s.u');
+
+				// Simplify values to plain value instead object
+				foreach ($row as $key => $value_obj) {
+
+					// Specific socrata formats
+					switch ($value_obj->model) {
+						case 'field_date':
+							$socrata_value = date("Y-m-d\TH:i:s.u", strtotime($value_obj->value));
+							break;
+						
+						default:
+							$socrata_value = $value_obj->value;
+							break;
+					}					
+
+					$row->$key = $socrata_value;
 				}
 
+				// Publication set to delete record on true
+				if (isset($row->publication)) {
+					if ($row->publication===false) {
+						$row->{$socrata_delete} = true;
+					}
+					unset($row->publication);
+				}
+				
 				return $row;
-			}, $ar_rows);
-			dump(json_encode($ar_socrata_rows, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), ' ar_socrata_rows ++ '.to_string());
+			}, $ar_rows);			
+			#dump($ar_socrata_rows, ' ar_socrata_rows ++ '.to_string());
+			#dump(json_encode($ar_socrata_rows, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), ' ar_socrata_rows ++ '.to_string());
+			debug_log(__METHOD__." ar_socrata_rows ".json_encode($ar_socrata_rows, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), logger::DEBUG);
 
 		// Update data
-			//self::upsert_data($ar_socrata_rows);
+			// Test data
+				/*
+				$ar_socrata_rows = [];
+				$socrata_row = new stdClass();
+					#$socrata_row->{$socrata_id}		= 3;
+					$socrata_row->id 				= 'oh1_1_lg-eng';				
+					$socrata_row->{$socrata_delete} = true;
+				$ar_socrata_rows[] = $socrata_row;
+				
+				$socrata_row = new stdClass();
+					#$socrata_row->{$socrata_id}	= 10;
+					$socrata_row->id 				= 6;
+					$socrata_row->name 				= 'Jane';
+					$socrata_row->surname 			= 'Flash '.$socrata_row->id;
+					#$socrata_row->{$socrata_delete} = true;
+				$ar_socrata_rows[] = $socrata_row; */
 
-		return false;
+				#$ar_socrata_rows = [$ar_socrata_rows[1]];
+
+		// Get socrata path from 'table' item 
+			$socrata_config = (object)SOCRATA_CONFIG;
+			$diffusion_element_tables_map = diffusion_sql::get_diffusion_element_tables_map($options->diffusion_element_tipo);
+			$table_obj = $diffusion_element_tables_map->{$options->section_tipo};
+			if ($socrata_config->mode==='pro') {
+				# production mode
+				$path = $table_obj->propiedades->path_pro;
+			}else{
+				# pre-production mode
+				$path = $table_obj->propiedades->path_pre;
+			}
+
+		// Upsert data
+			$result_obj = self::upsert_data($ar_socrata_rows, $path);
+
+			$result = isset($result_obj->error) ? false : true;
+			$msg 	= isset($result_obj->message) ? $result_obj->message : to_string($result);
+
+		$response->result 	= $result;
+		$response->msg 		= $msg;
+
+		return $response;
 	}//end update_record
 
 
 
 	/**
 	* UPSERT_DATA
+	* @see https://github.com/socrata/soda-php
 	* @return 
 	*/
-	public static function upsert_data( $data ) {
-
+	public static function upsert_data( $data, $path ) {
+		$socrata_config = (object)SOCRATA_CONFIG;
+	
 		require DEDALO_ROOT . '/autoload.php';
 
-		$app_token 			= null;
-		$socrata_user		= null;
-		$socrata_password 	= null;
+		$app_token 			= $socrata_config->app_token;
+		$socrata_user		= $socrata_config->socrata_user;
+		$socrata_password 	= $socrata_config->socrata_password;
+		$server 			= $socrata_config->server;
+		
+		// Test read data
+			/*
+			$socrata = new Socrata($server, $app_token, $socrata_user, $socrata_password);
+			$response = $socrata->get("7w3e-npuc");
+			dump($response, ' response ++ '.to_string());
+			*/
+
+		// https://ctti.azure-westeurope-prod.socrata.com/dataset/render_data_test/7w3e-npuc/revisions/0
+		// https://ctti.azure-westeurope-prod.socrata.com/resource/w4hd-c82i.json
 		
 		// Connect
-		$client = new Socrata("soda.demo.socrata.com", $app_token, $socrata_user, $socrata_password);
-	    
+		$client = new Socrata($server, $app_token, $socrata_user, $socrata_password);
+	    	
 	    // Post our response
-	    $response = $client->post("wezw-qxis", json_encode($data));
-
+	    $response = $client->post($path, json_encode($data));
+	    	#dump($response, ' response ++ '.to_string());
+	    	debug_log(__METHOD__." response ".json_encode($response, JSON_PRETTY_PRINT), logger::DEBUG);
 
 	    return $response;
 	}//end upsert_data
