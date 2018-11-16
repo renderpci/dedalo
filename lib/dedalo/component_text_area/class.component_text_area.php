@@ -1441,26 +1441,35 @@ class component_text_area extends component_common {
 	* @see diffusion global search needs
 	* @return string json encoded $indexations names
 	*/
-	public function get_component_indexations_terms( $type ) {  // DEDALO_RELATION_TYPE_INDEX_TIPO
+	public function get_component_indexations_terms( $type, $format='array', $separator=' | '  ) {  // DEDALO_RELATION_TYPE_INDEX_TIPO
 		/*
 		# Search relation index in hierarchy tables
 		*/
 		$result = $this->get_component_indexations( $type );
 
-		$ar_indexations = array();
-		foreach ($result as $key => $row) {
+		$ar_indexation_terms = array();
+		foreach ($result as $key => $row) {	
 
+			$locator = new locator();
+				$locator->set_section_tipo($row->from_section_tipo);
+				$locator->set_section_id($row->from_section_id);
+				$locator->set_component_tipo($row->from_component_tipo);
+			
 			#$term_id = $row->section_tipo.'_'.$row->section_id;
-			$term = ts_object::get_term_by_locator($row);
+			$term = ts_object::get_term_by_locator($locator);
  
-			$ar_indexations[] = $term;
+			$ar_indexation_terms[] = $term;
 		}//end foreach ($result as $key => $row)
-		#dump($ar_indexations, ' ar_indexations ++ '.to_string());
+		#dump($ar_indexation_terms, ' ar_indexation_terms ++ '.to_string());
 	
-		$indexations_locators = json_encode($ar_indexations);
+		if ($format==='text') {
+			$ar_terms = implode($separator, $ar_indexation_terms);	//json_encode($ar_indexation_terms);
+		}else{
+			$ar_terms = $ar_indexation_terms;
+		}		
+		#dump($ar_terms, ' ar_terms ++ '.to_string());
 
-
-		return $indexations_locators;
+		return $ar_terms;
 	}//end get_component_indexations_terms
 	
 
