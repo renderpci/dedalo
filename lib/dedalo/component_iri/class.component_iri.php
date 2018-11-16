@@ -486,6 +486,36 @@ class component_iri extends component_common {
 
 
 
+	/**
+	* GET_DIFFUSION_VALUE
+	* If index var is received, return dato element corresponding to this index if exists
+	* @return string $valor
+	*/
+	public function get_diffusion_value( $lang=DEDALO_DATA_LANG ) {
+		
+		$dato = $this->get_dato();
+				
+		$ar_values = [];
+		foreach ($dato as $key => $value) {
+			if(empty($value)) continue;
+
+			$ar_parts = [];
+			if (!empty($value->title)) {
+				$ar_parts[] = $value->title;
+			}
+			if (!empty($value->iri)) {
+				$ar_parts[] = $value->iri;
+			}
+			$ar_values[] = implode(', ', $ar_parts);
+		}
+		
+		$diffusion_value = implode(' | ', $ar_values);
+
+		return $diffusion_value;
+	}//end get_diffusion_value
+
+
+
 
 }//end class component_iri
 ?>
