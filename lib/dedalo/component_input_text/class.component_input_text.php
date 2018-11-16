@@ -467,6 +467,7 @@ class component_input_text extends component_common {
 		#}
 		
         switch (true) {
+        	# EMPTY VALUE (in current lang data)
 			case ($q==='!*'):
 				$operator = 'IS NULL';
 				$q_clean  = '';
@@ -474,20 +475,37 @@ class component_input_text extends component_common {
     			$query_object->q_parsed	= $q_clean;
     			$query_object->unaccent = false;
 
-    			$clone = clone($query_object);
-	    			$clone->operator = '~*';
-	    			$clone->q_parsed = '\'.*\[""]\'';
+    			#$clone = clone($query_object);
+	    		#	$clone->operator = '~*';
+	    		#	$clone->q_parsed = '\'.*\[""]\'';
 
-				$clone2 = clone($query_object);
-	    			$clone2->operator = '~*';
-	    			$clone2->q_parsed = '\'.*\[]\'';
+				#$clone2 = clone($query_object);
+	    		#	$clone2->operator = '~*';
+	    		#	$clone2->q_parsed = '\'.*\[]\'';
+
+    			// Is equal to nothing ("")
+	    		$clone3 = clone($query_object);
+	    			$clone3->operator = '=';
+	    			$clone3->q_parsed = '\'\'';
+	    			$clone3->lang 	  = DEDALO_DATA_LANG;
+	    		// Is equal to array ([])
+	    		$clone4 = clone($query_object);
+	    			$clone4->operator = '=';
+	    			$clone4->q_parsed = '\'[]\'';
+	    			$clone4->lang 	  = DEDALO_DATA_LANG;
+	    		// Is not set the property like 'lg-spa'
+	    		$clone5 = clone($query_object);
+	    			$clone5->operator = 'IS NULL';
+	    			$clone5->q_parsed = '';
+	    			$clone5->lang 	  = DEDALO_DATA_LANG;
 
 				$logical_operator = '$or';
-    			$new_query_json = new stdClass;    			
-	    			$new_query_json->$logical_operator = [$query_object, $clone, $clone2];
+    			$new_query_json = new stdClass;
+	    			$new_query_json->$logical_operator = [$query_object, $clone5, $clone3, $clone4];
     			# override
     			$query_object = $new_query_json ;
 				break;
+			# NOT EMPTY
 			case ($q==='*'):
 				$operator = 'IS NOT NULL';
 				$q_clean  = '';
@@ -535,7 +553,7 @@ class component_input_text extends component_common {
     			$query_object->q_parsed	= '\'.*\[".*'.$q_clean.'.*\'';
     			$query_object->unaccent = true;
 				break;
-			# CONTAIN				
+			# CONTAIN EXPLICIT
 			case (substr($q, 0, 1)==='*' && substr($q, -1)==='*'):
 				$operator = '~*';
 				$q_clean  = str_replace('*', '', $q);
@@ -559,14 +577,6 @@ class component_input_text extends component_common {
     			$query_object->q_parsed	= '\'.*\["'.$q_clean.'.*\'';
     			$query_object->unaccent = true;
 				break;
-			# CONTAIN
-			default:
-				$operator = '~*';
-				$q_clean  = str_replace('+', '', $q);				
-				$query_object->operator = $operator;
-    			$query_object->q_parsed	= '\'.*\[".*'.$q_clean.'.*\'';
-    			$query_object->unaccent = true;
-				break;
 			# LITERAL
 			case (substr($q, 0, 1)==='\"' && substr($q, -1)==='\"'):
 				$operator = '~';
@@ -575,6 +585,14 @@ class component_input_text extends component_common {
 				$query_object->q_parsed	= '\'.*"'.$q_clean.'".*\'';
 				$query_object->unaccent = false;
 				break;
+			# DEFAULT CONTAIN 
+			default:
+				$operator = '~*';
+				$q_clean  = str_replace('+', '', $q);				
+				$query_object->operator = $operator;
+    			$query_object->q_parsed	= '\'.*\[".*'.$q_clean.'.*\'';
+    			$query_object->unaccent = true;
+				break;			
 		}//end switch (true) {		
        
 
