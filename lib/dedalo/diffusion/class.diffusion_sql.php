@@ -1007,7 +1007,7 @@ class diffusion_sql extends diffusion  {
 				# Diffusion element
 				$diffusion_term 		= new RecordObj_dd($options->tipo);
 				$propiedades 			= $diffusion_term->get_propiedades(true);	# Format: {"data_to_be_used": "dato"}
-
+	
 				# Fix diffusion element propiedades on target component to enable configure response value
 				$current_component->set_diffusion_properties($propiedades);				
 
@@ -1049,7 +1049,7 @@ class diffusion_sql extends diffusion  {
 						}//end switch ($diffusion_modelo_name)
 						break;
 					
-					case (is_object($propiedades) && property_exists($propiedades, 'process_dato')):
+					case (is_object($propiedades) && property_exists($propiedades, 'process_dato')):											
 						# Process dato with function
 						$function_name = $propiedades->process_dato;							
 						$ar_field_data['field_value'] = call_user_func($function_name, $options, $dato); 	
@@ -1410,7 +1410,8 @@ class diffusion_sql extends diffusion  {
 				#
 				# AR_SECTION_COMPONENTS . Get section components and look for references
 				$ar_components_with_references = array( 'component_portal',
-														'component_autocomplete'); #component_relation_common::get_components_with_relations(); # Using modelo name
+														'component_autocomplete',
+														'component_autocomplete_hi'); #component_relation_common::get_components_with_relations(); # Using modelo name
 				$ar_section_components = section::get_ar_children_tipo_by_modelo_name_in_section($options->section_tipo, $ar_components_with_references, $from_cache=true, $resolve_virtual=true);
 					#dump($ar_section_components, " ar_section_components ");
 
@@ -1426,8 +1427,13 @@ class diffusion_sql extends diffusion  {
 				$group_by_section_tipo=array();
 				foreach ($ar_section_components as $current_component_tipo) {
 	
-					$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_component_tipo, true);
+					$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_component_tipo, true);					
 					if (!in_array($modelo_name, $ar_components_with_references)) continue;	// Skip component IMPORTANT to skip component_autocomplete_ts
+
+					// autocomplete_hi case. Avoid more recursion after resolve component_autocomplete_hi data 2018-11-16
+						if ($modelo_name==='component_autocomplete_hi') {
+						 	$options->recursion_level = $max_recursions -1;						 	
+						}
 					
 					$lang = RecordObj_dd::get_lang_by_tipo($current_component_tipo, true);				
 
@@ -1537,17 +1543,20 @@ class diffusion_sql extends diffusion  {
 			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
 		# FULL_DATA
-			$full_data_tipos 	= (array)$options->global_search_map->full_data;
-			$name_surname_tipos = (array)$options->global_search_map->name_surname;
-			$thesaurus_tipos 	= (array)$options->global_search_map->thesaurus;
-			$title_tipos 	 	= (array)$options->global_search_map->list_data->title;
-			$summary_tipos 	 	= (array)$options->global_search_map->list_data->summary;
-			$fields_tipos 	 	= (array)$options->global_search_map->list_data->fields;
-			$image_tipo 	 	= isset($options->global_search_map->list_data->image) ? $options->global_search_map->list_data->image : null;
-			$filter_date_tipo	= isset($options->global_search_map->filter_date) ? $options->global_search_map->filter_date : 'not_used';
-			$ar_fields 		 	= (array)$options->ar_field_data['ar_fields'];
-			$table_name 	 	= $options->ar_field_data['table_name'];
-			$database_name 	 	= $options->ar_field_data['database_name'];
+			$full_data_tipos 		= (array)$options->global_search_map->full_data;
+			$name_surname_tipos 	= isset($options->global_search_map->name_surname) ? (array)$options->global_search_map->name_surname : [];
+			$sort_tipos 			= isset($options->global_search_map->sort) ? (array)$options->global_search_map->sort : [];
+			$thesaurus_tipos 		= (array)$options->global_search_map->thesaurus;
+			$list_data_title_tipos 	= (array)$options->global_search_map->list_data->title;
+			$title_generic_tipos 	= isset($options->global_search_map->title) ? (array)$options->global_search_map->title : [];	// 15-11-2018
+			$pub_author_tipos 		= isset($options->global_search_map->pub_author) ? (array)$options->global_search_map->pub_author : []; // 15-11-2018
+			$summary_tipos 	 		= (array)$options->global_search_map->list_data->summary;
+			$fields_tipos 	 		= (array)$options->global_search_map->list_data->fields;
+			$image_tipo 	 		= isset($options->global_search_map->list_data->image) ? $options->global_search_map->list_data->image : null;
+			$filter_date_tipo		= isset($options->global_search_map->filter_date) ? $options->global_search_map->filter_date : 'not_used';
+			$ar_fields 		 		= (array)$options->ar_field_data['ar_fields'];
+			$table_name 	 		= $options->ar_field_data['table_name'];
+			$database_name 	 		= $options->ar_field_data['database_name'];
 				
 			$ar_fields_global = array();
 
@@ -1570,7 +1579,7 @@ class diffusion_sql extends diffusion  {
 					'prison_municipality',
 					'prison',
 					'project',
-					'pub_author',
+					//'pub_author',
 					'pub_editor',
 					'pub_year',
 					'region',
@@ -1578,7 +1587,7 @@ class diffusion_sql extends diffusion  {
 					'start_date',
 					'theme',
 					//'thesaurus',
-					'title',
+					//'title',
 					'typology'
 				];
 
@@ -1598,6 +1607,9 @@ class diffusion_sql extends diffusion  {
 					$full_data[$lang] 		 	= [];
 					$name_surname_data[$lang]	= [];
 					$thesaurus_data[$lang]		= [];
+					$sort_data[$lang]			= [];
+					$pub_author_data[$lang]		= [];
+					$title_generic_data[$lang]	= [];
 					$filter_date_data[$lang] 	= [];
 					$filter_mdcat[$lang] 	 	= [];
 
@@ -1609,65 +1621,98 @@ class diffusion_sql extends diffusion  {
 								break;
 							default:
 								# full_data (warning: can use fields used too for title etc. Not use "else" here)
-								if (in_array($column['tipo'], $full_data_tipos)) {
-									if (is_array($column['field_value'])) {
-										$column['field_value'] = json_encode($column['field_value']);
+									if (in_array($column['tipo'], $full_data_tipos)) {
+										if (is_array($column['field_value'])) {
+											$column['field_value'] = json_encode($column['field_value']);
+										}
+										$full_value = trim( strip_tags($column['field_value']) );
+										if (!empty($full_value)) {
+											$full_data[$lang][] = $full_value;
+										}
 									}
-									$full_value = trim( strip_tags($column['field_value']) );
-									if (!empty($full_value)) {
-										$full_data[$lang][] = $full_value;
-									}
-								}
 
 								# name_surname_tipos . Added 18-03-2018 !!
-								if (in_array($column['tipo'], $name_surname_tipos)) {
-									if (is_array($column['field_value'])) {
-										$column['field_value'] = json_encode($column['field_value']);
+									if (in_array($column['tipo'], $name_surname_tipos)) {
+										if (is_array($column['field_value'])) {
+											$column['field_value'] = json_encode($column['field_value']);
+										}
+										$name_surname_value = trim( strip_tags($column['field_value']) );
+										if (!empty($name_surname_value)) {
+											$name_surname_data[$lang][] = $name_surname_value;
+										}
 									}
-									$name_surname_value = trim( strip_tags($column['field_value']) );
-									if (!empty($name_surname_value)) {
-										$name_surname_data[$lang][] = $name_surname_value;
+
+								# sort_tipos . Added 18-03-2018 !!
+									if (in_array($column['tipo'], $sort_tipos)) {
+										if (is_array($column['field_value'])) {
+											$column['field_value'] = json_encode($column['field_value']);
+										}
+										$sort_value = trim( strip_tags($column['field_value']) );
+										if (!empty($sort_value)) {
+											$sort_data[$lang][] = $sort_value;
+										}
 									}
-								}
 
 								# thesaurus_tipos. Added 13-11-2018 !!
-								if (in_array($column['tipo'], $thesaurus_tipos)) {
-									if (is_array($column['field_value'])) {
-										$column['field_value'] = json_encode($column['field_value']);
+									if (in_array($column['tipo'], $thesaurus_tipos)) {
+										if (is_array($column['field_value'])) {
+											$column['field_value'] = json_encode($column['field_value']);
+										}
+										$thesaurus_value = trim( strip_tags($column['field_value']) );
+										if (!empty($thesaurus_value)) {
+											$thesaurus_data[$lang][] = $thesaurus_value;
+										}
+									}								
+
+								# pub_author_tipos
+									if (in_array($column['tipo'], $pub_author_tipos)) {
+										if (is_array($column['field_value'])) {
+											$column['field_value'] = json_encode($column['field_value']);
+										}
+										$pub_author_value = trim( strip_tags($column['field_value']) );
+										if (!empty($pub_author_value)) {
+											$pub_author_data[$lang][] = $pub_author_value;
+										}
 									}
-									$thesaurus_value = trim( strip_tags($column['field_value']) );
-									if (!empty($thesaurus_value)) {
-										$thesaurus_data[$lang][] = $thesaurus_value;
-									}
-								}
+
+								# title_generic_tipos
+									if (in_array($column['tipo'], $title_generic_tipos)) {
+										if (is_array($column['field_value'])) {
+											$column['field_value'] = json_encode($column['field_value']);
+										}
+										$title_generic_value = trim( strip_tags($column['field_value']) );
+										if (!empty($title_generic_value)) {
+											$title_generic_data[$lang][] = $title_generic_value;
+										}
+									}					
 
 								# Fields (special container json)
-								if(in_array($column['tipo'], $fields_tipos)) {
-									$fields_array[$column['tipo']] = $column['field_value'];
-								}
+									if(in_array($column['tipo'], $fields_tipos)) {
+										$fields_array[$column['tipo']] = $column['field_value'];
+									}
 
-								# title
-								if (in_array($column['tipo'], $title_tipos)) {
-									$list_data[$lang]->title[] = $column['field_value'];
-								}
+								# list_data_title (list_data)
+									if (in_array($column['tipo'], $list_data_title_tipos)) {
+										$list_data[$lang]->title[] = $column['field_value'];										
+									}
 								# summary
-								elseif (in_array($column['tipo'], $summary_tipos)) {
-									if (is_array($column['field_value'])) {
-										$column['field_value'] = json_encode($column['field_value']);
+									elseif (in_array($column['tipo'], $summary_tipos)) {
+										if (is_array($column['field_value'])) {
+											$column['field_value'] = json_encode($column['field_value']);
+										}
+										$summary_value = trim($column['field_value']);
+										if (!empty($summary_value)) {
+											$list_data[$lang]->summary[] = $summary_value;
+										}
 									}
-									$summary_value = trim($column['field_value']);
-									if (!empty($summary_value)) {
-										$list_data[$lang]->summary[] = $summary_value;
-									}
-								}
 								# image
-								elseif ($column['tipo']===$image_tipo) {
-									$list_data[$lang]->image = $column['field_value'];
-								}
+									elseif ($column['tipo']===$image_tipo) {
+										$list_data[$lang]->image = $column['field_value'];
+									}
 								# filter_date
-								elseif ($column['tipo']===$filter_date_tipo) {
-									$filter_date_data[$lang][] = $column['field_value'];
-								}
+									elseif ($column['tipo']===$filter_date_tipo) {
+										$filter_date_data[$lang][] = $column['field_value'];
+									}
 
 								$current_field_value = $column['field_value'];
 								
@@ -1747,14 +1792,19 @@ class diffusion_sql extends diffusion  {
 							'field_value' => implode(' ',$full_data[$lang])
 						];
 
-					# NAME_SURNAME_DATA . Added 18-03-2018 !!
+					# name_surname. NAME_SURNAME_DATA . Added 18-03-2018 !!
 						$ar_fields_global[$pseudo_section_id][$lang][] = [
 							'field_name'  => 'name_surname',
 							'field_value' => implode(' ',$name_surname_data[$lang])
 						];
 
-					# THESAURUS_DATA . Added 13-11-2018 !!
-						// merge all values in one only array
+					# sort. sort_data . Added 18-03-2018 !!
+						$ar_fields_global[$pseudo_section_id][$lang][] = [
+							'field_name'  => 'sort',
+							'field_value' => implode(' ',$sort_data[$lang])
+						];
+
+					# thesaurus. THESAURUS_DATA . Merge all values in one only array. Added 13-11-2018 !!					
 						$ar_thesaurus_elements = [];
 						foreach ((array)$thesaurus_data[$lang] as $current_array_string) {
 							if ($current_array = json_decode($current_array_string)) {
@@ -1764,6 +1814,30 @@ class diffusion_sql extends diffusion  {
 						$ar_fields_global[$pseudo_section_id][$lang][] = [
 							'field_name'  => 'thesaurus',
 							'field_value' => (!empty($ar_thesaurus_elements)) ? json_encode($ar_thesaurus_elements) : null
+						];
+
+					# pub_author. Merge all values in one only array. Added 15-11-2018 !!
+						$ar_pub_author_elements = [];
+						foreach ((array)$pub_author_data[$lang] as $current_item_string) {
+							if (!empty($current_item_string)) {
+								$ar_pub_author_elements[] = $current_item_string;
+							}
+						}
+						$ar_fields_global[$pseudo_section_id][$lang][] = [
+							'field_name'  => 'pub_author',
+							'field_value' => !empty($ar_pub_author_elements) ? implode(' | ', $ar_pub_author_elements) : null
+						];
+
+					# title_generic. title_generic_data. Merge all values in one only array. Added 15-11-2018 !!
+						$ar_title_generic_elements = [];
+						foreach ((array)$title_generic_data[$lang] as $current_item_string) {						
+							if (!empty($current_item_string)) {
+								$ar_title_generic_elements[] = $current_item_string;
+							}
+						}
+						$ar_fields_global[$pseudo_section_id][$lang][] = [
+							'field_name'  => 'title',
+							'field_value' => !empty($ar_title_generic_elements) ? implode(' | ', $ar_title_generic_elements) : null
 						];
 
 					# FIELDS
@@ -2810,7 +2884,7 @@ class diffusion_sql extends diffusion  {
 		#$request_options->raw_text = 'Hola que tal [geo-n-1--data:{\'type\':\'FeatureCollection\',\'features\':[{\'type\':\'Feature\',\'properties\':{},\'geometry\':{\'type\':\'Point\',\'coordinates\':[2.097785,41.393268]}}]}:data]Bateria antiaèria de Sant Pere Màrtir. Esplugues de Llobregat&nbsp;[geo-n-2--data:{\'type\':\'FeatureCollection\',\'features\':[{\'type\':\'Feature\',\'properties\':{},\'geometry\':{\'type\':\'Point\',\'coordinates\':[2.10389792919159,41.393728914379295]}}]}:data] Texto dos';
 
 		$options = new stdClass();
-			$options->raw_text			= false;		
+			$options->raw_text			= false;
 			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 		
 		
@@ -2819,6 +2893,9 @@ class diffusion_sql extends diffusion  {
 
 		return (string)$response; // json_encoded object
 	}//end build_geolocation_data
+
+
+
 
 
 
@@ -2944,7 +3021,7 @@ class diffusion_sql extends diffusion  {
 
 		return $value;
 	}//end resolve_value
-
+	
 
 
 	/**
