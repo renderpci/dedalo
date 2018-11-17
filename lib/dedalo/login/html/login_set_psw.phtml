@@ -1,63 +1,59 @@
 <?php
-
-	# VISUALIZADOR HTML	
-	
-	
-	print "\n<!-- LOGIN [tipo:$tipo id_matrix:$id] -->";		
-	print "\n<div class=\"css_wrap_login\" id=\"wrap_login\">";	
-	print "\n<form class=\"css_form\" name=\"form_set_psw\" id=\"form_set_psw\" action=\"\" onsubmit=\"login.set_psw()\" method=\"post\" >";
-
+		
+	print '<div class="css_wrap_login" id="wrap_login">';	
+	print '<form class="css_form" name="form_set_psw" id="form_set_psw" action="" onsubmit="login.set_psw()" method="post" >';
 
 		# CONTENIDO (INPUT)
-		$html_contenido = '';
+		$html_content = '';
 
-
-
-			# LANG JUMP
-			#$html_contenido .= $dedalo_aplication_langs_selector_html;
+			// Lang jump
+				#$html_content .= $dedalo_aplication_langs_selector_html;
 			
-			$html_contenido .= "<div>";
-			$html_contenido .= "Please set a password for <strong>root</strong> user to manage the system.<br>
-								<span class=\"warning\">
-								IMPORTANT: Remember this password because you can not change it later.
-								</span>";
+			// Inputs
+				$html_content .= "<div>";
+				$html_content .= "Please set a password for <strong>root</strong> user to manage the system.<br>
+									<span class=\"warning\">
+									IMPORTANT: Remember this password because you can not change it later.
+									</span>";
 
-			$html_contenido .= "<div class=\"set_pasw_input\">";	
-			$html_contenido .= " User : <strong>root</strong>";
-			$html_contenido .= "</div>";
+				$html_content .= "<div class=\"set_pasw_input\">";	
+				$html_content .= " User : <strong>root</strong>";
+				$html_content .= "</div>";
 
-			$html_contenido .= "<div class=\"set_pasw_input\">";	
-			$html_contenido .= " Password <input type=\"password\" name=\"psw\" id=\"psw\" class=\"login_input\" placeholder=\"Password\" />";
-			$html_contenido .= "</div>";
+				$html_content .= "<div class=\"set_pasw_input\">";	
+				$html_content .= " Password <input type=\"password\" name=\"psw\" id=\"psw\" class=\"login_input\" placeholder=\"Password\" />";
+				$html_content .= "</div>";
 
-			$html_contenido .= "<div class=\"set_pasw_input\">";	
-			$html_contenido .= " Retype <input type=\"password\" name=\"psw2\" id=\"psw2\" class=\"login_input\" placeholder=\"Retype password\" />";
-			$html_contenido .= "</div>";
+				$html_content .= "<div class=\"set_pasw_input\">";	
+				$html_content .= " Retype <input type=\"password\" name=\"psw2\" id=\"psw2\" class=\"login_input\" placeholder=\"Retype password\" />";
+				$html_content .= "</div>";
 
-			$html_contenido .= "<div class=\"set_pasw_input set_button\">";	
-			$html_contenido .= " <input type=\"button\" class=\"btn btn-default btn-sm\" name=\"submit\" value=\"Save\" onclick=\"login.set_psw()\" />";
-			$html_contenido .= "</div>";
+				$html_content .= "<div class=\"set_pasw_input set_button\">";	
+				$html_content .= " <input type=\"button\" class=\"btn btn-default btn-sm\" name=\"submit\" value=\"Save\" onclick=\"login.set_psw()\" />";
+				$html_content .= "</div>";
 
-
-			$html_contenido .= "</div>";
+				$html_content .= "</div>";
 			
-					
-			$html_contenido .= "\n<div class=\"login_ajax_response\" >  </div>";
-
-
-			
-
+			// Ajax response		
+				$html_content .= '<div class="login_ajax_response"></div>';		
 		
-		
-		$html_contenido .= "</div>";
+		$html_content .= "</div>"; // end css_wrap_login
+
+
+		// js
+			$html_content .= '<script>';
+			$init_options = new stdClass();
+				$init_options->development_server  		= DEVELOPMENT_SERVER;
+				$init_options->dedalo_maintenance_mode 	= DEDALO_MAINTENANCE_MODE;
+			$html_content .= "login.init(".json_encode($init_options).");";
+			$html_content .= '</script>';
 
 		
 		# PRINT HTML
-		print $html_contenido;
-
-
+		print $html_content;
 	
 	
-	print "\n</form>";	
-	print "\n</div>\n\n"; //css_wrap_login	
-?>
+	print '</form>';	
+	print '</div>'; //css_wrap_login	
+
+
