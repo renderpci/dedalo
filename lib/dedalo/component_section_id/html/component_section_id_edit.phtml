@@ -22,7 +22,7 @@
 		# CONTENIDO (INPUT)
 		$html_contenido = '';		
 			
-		$html_contenido .= "<div class=\"css_section_id\">".$dato."</div>";
+		$html_contenido .= '<div class="css_section_id">'.$dato.'</div>';
 		/*
 		$html_contenido .= " <input class=\"css_section_id\" type=\"text\" 
 		name=\"{$input_name}\" 
@@ -42,10 +42,9 @@
 		print $html_contenido;
 	
 	
-	print "</div>"; //wrap
+	print '</div>'; //wrap
 
 	# html_delimiter
 	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'out', $modo, $lang);
 
 
-?>
