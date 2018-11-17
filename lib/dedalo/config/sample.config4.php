@@ -95,7 +95,7 @@
 		# Use session_cache_expire to set duration of session 
 		# Set duration max of session data in hours (default 8 hours)
 		# Set before session start
-		if(!isset($session_duration_hours)) $session_duration_hours = 8 * 10;
+		if(!isset($session_duration_hours)) $session_duration_hours = 8;
 		$timeout_seconds = intval($session_duration_hours*3600); // in seconds
 
 		# Session
@@ -119,6 +119,16 @@
 
 
 ################################################################
+# IS_DEVELOPER : Logged user is developer value
+	$show_developer = false;
+	if (isset($_SESSION['dedalo4']['auth']['is_developer']) && $_SESSION['dedalo4']['auth']['is_developer']===true) {
+		$show_developer = true;
+	}
+	define('SHOW_DEVELOPER', $show_developer);
+
+
+
+################################################################
 # DEBUG : Application debug config
 	$show_debug = false;
 	if(
@@ -131,17 +141,6 @@
 		$show_debug = true;
 	}	
 	define('SHOW_DEBUG', $show_debug);
-
-
-
-################################################################
-# IS_DEVELOPER : Logged user is developer value
-	$show_developer = false;
-	if (isset($_SESSION['dedalo4']['auth']['is_developer']) && $_SESSION['dedalo4']['auth']['is_developer']===true) {
-		$show_developer = true;
-	}
-	define('SHOW_DEVELOPER', $show_developer);
-
 
 
 
