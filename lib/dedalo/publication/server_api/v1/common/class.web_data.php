@@ -2991,7 +2991,8 @@ class web_data {
 				if (!empty($json_data->sort) && !empty($json_data->sort->name) && !empty($json_data->sort->direction)) {
 					if ($json_data->sort->name==='name') {
 						#$json_data->sort->name = 'full_data';
-						$json_data->sort->name = 'name_surname'; // Changed 18-03-2018 !!
+						#$json_data->sort->name = 'name_surname'; // Changed 18-03-2018 !!
+						$json_data->sort->name = 'sort'; // Changed 16-11-2018 !!
 					}elseif ($json_data->sort->name==='date') {
 						$json_data->sort->name = 'start_date';
 					}					
