@@ -449,7 +449,7 @@ class component_input_text extends component_common {
 	public static function resolve_query_object_sql($query_object) {
 		#debug_log(__METHOD__." query_object ".to_string($query_object), logger::DEBUG);
 		
-		$q = $query_object->q;
+		$q = $query_object->q;	debug_log(__METHOD__." q1 : ".to_string($q), logger::DEBUG);
 		if (isset($query_object->type) && $query_object->type==='jsonb') {
 			$q = json_decode($q);
 		}	
@@ -465,7 +465,10 @@ class component_input_text extends component_common {
 		#if (isset($query_object->q_operator)) {
 		#	$q = $query_object->q_operator . $q;
 		#}
-		
+		debug_log(__METHOD__." q2 : ".to_string($q), logger::DEBUG);
+		debug_log(__METHOD__." substr 0,1 : ".substr($q, 0, 1), logger::DEBUG);
+		debug_log(__METHOD__." substr -1 : ".substr($q, -1), logger::DEBUG);
+
         switch (true) {
         	# EMPTY VALUE (in current lang data)
 			case ($q==='!*'):
@@ -578,9 +581,9 @@ class component_input_text extends component_common {
     			$query_object->unaccent = true;
 				break;
 			# LITERAL
-			case (substr($q, 0, 1)==='\"' && substr($q, -1)==='\"'):
+			case (substr($q, 0, 1)==="'" && substr($q, -1)==="'"):
 				$operator = '~';
-				$q_clean  = str_replace('\"', '', $q);
+				$q_clean  = str_replace("'", '', $q);
 				$query_object->operator = $operator;
 				$query_object->q_parsed	= '\'.*"'.$q_clean.'".*\'';
 				$query_object->unaccent = false;
@@ -617,7 +620,7 @@ class component_input_text extends component_common {
 			'*text*' => 'contiene',
 			'text*'  => 'empieza_con',
 			'*text'  => 'acaba_con',
-			'"text"' => 'literal',
+			'\'text\'' => 'literal',
 		];
 
 		return $ar_operators;

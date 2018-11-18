@@ -4000,7 +4000,8 @@ abstract class component_common extends common {
 			
 			$op = $first_2char;
 			$current_string = mb_substr($string, 2);
-			$current_string = trim($current_string,'"\'');
+			#$current_string = trim($current_string,'"\'');
+			$current_string = trim($current_string,'"');
 
 			$string = $op . $current_string;
 
@@ -4013,14 +4014,16 @@ abstract class component_common extends common {
 			
 			$op = $first_char;
 			$current_string = mb_substr($string, 1);
-			$current_string = trim($current_string,'"\'');
+			#$current_string = trim($current_string,'"\'');
+			$current_string = trim($current_string,'"');
 
 			$string = $op . $current_string;
 
 			return $string;
 		}
 
-		$string = trim($string,'"\'');
+		#$string = trim($string,'"\'');
+		$string = trim($string,'"');
 
 		return $string;
 	}//end remove_first_and_last_quotes
