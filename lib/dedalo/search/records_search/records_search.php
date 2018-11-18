@@ -2,8 +2,13 @@
 	
 	# CONTROLLER
 	$modo					= $this->get_modo();
-	$section_tipo 			= $this->section_tipo;	
-	$permissions			= common::get_permissions($section_tipo, $this->search_list_tipo);	
+	$section_tipo 			= $this->section_tipo;
+	if(SHOW_DEBUG===true) {
+		$permissions		= 3;
+	}else{
+		$permissions		= common::get_permissions($section_tipo, $this->search_list_tipo);	
+	}
+	
 	$ar_sections_by_type 	= isset($this->ar_sections_by_type) ? $this->ar_sections_by_type : null;
 	
 	#
