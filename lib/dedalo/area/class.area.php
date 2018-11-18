@@ -94,59 +94,70 @@ class area extends common  {
 		}
 
 		# AREA_ROOT
-		$current_tipo 						= RecordObj_dd::get_ar_terminoID_by_modelo_name('area_root')[0];
-		$area_root 							= new area_root($current_tipo);
-		$ar_ts_childrens_root 				= $area_root->get_ar_ts_children_areas($include_main_tipo);
+			$current_tipo 						= RecordObj_dd::get_ar_terminoID_by_modelo_name('area_root')[0];
+			$area_root 							= new area_root($current_tipo);
+			$ar_ts_childrens_root 				= $area_root->get_ar_ts_children_areas($include_main_tipo);
 
 		# AREA_ACTIVITY
-		$ar_ts_childrens_activity=array();
-		$ar_area_activity 					= RecordObj_dd::get_ar_terminoID_by_modelo_name('area_activity');
-		if (isset($ar_area_activity[0])) {
-			$current_tipo 					= $ar_area_activity[0];
-			$area_activity 					= new area_activity($current_tipo);
-			$ar_ts_childrens_activity 		= $area_activity->get_ar_ts_children_areas($include_main_tipo);
-		}		
+			$ar_ts_childrens_activity=array();
+			$ar_area_activity 					= RecordObj_dd::get_ar_terminoID_by_modelo_name('area_activity');
+			if (isset($ar_area_activity[0])) {
+				$current_tipo 					= $ar_area_activity[0];
+				$area_activity 					= new area_activity($current_tipo);
+				$ar_ts_childrens_activity 		= $area_activity->get_ar_ts_children_areas($include_main_tipo);
+			}		
 
 		# AREA_PUBLICATION
-		$ar_ts_childrens_publication=array();
-		$ar_area_publication 				= RecordObj_dd::get_ar_terminoID_by_modelo_name('area_publication');
-		if (isset($ar_area_publication[0])) {
-			$current_tipo 				 	= $ar_area_publication[0];
-			$area_publication 			 	= new area_publication($current_tipo);
-			$ar_ts_childrens_publication 	= $area_publication->get_ar_ts_children_areas($include_main_tipo);
-		}		
+			$ar_ts_childrens_publication=array();
+			$ar_area_publication 				= RecordObj_dd::get_ar_terminoID_by_modelo_name('area_publication');
+			if (isset($ar_area_publication[0])) {
+				$current_tipo 				 	= $ar_area_publication[0];
+				$area_publication 			 	= new area_publication($current_tipo);
+				$ar_ts_childrens_publication 	= $area_publication->get_ar_ts_children_areas($include_main_tipo);
+			}		
 		
 		# AREA_RESOURCE
-		$current_tipo 						= RecordObj_dd::get_ar_terminoID_by_modelo_name('area_resource')[0];
-		$area_resource 						= new area_resource($current_tipo);
-		$ar_ts_childrens_resource 			= $area_resource->get_ar_ts_children_areas($include_main_tipo);
+			$current_tipo 						= RecordObj_dd::get_ar_terminoID_by_modelo_name('area_resource')[0];
+			$area_resource 						= new area_resource($current_tipo);
+			$ar_ts_childrens_resource 			= $area_resource->get_ar_ts_children_areas($include_main_tipo);
 
 		# AREA_TOOLS
-		if (isset(RecordObj_dd::get_ar_terminoID_by_modelo_name('area_tool')[0])) {
-			$current_tipo 					= RecordObj_dd::get_ar_terminoID_by_modelo_name('area_tool')[0];
-			$area_tool 						= new area_tool($current_tipo);
-			$ar_ts_childrens_tools 			= $area_tool->get_ar_ts_children_areas($include_main_tipo);
-		}else{
-			$ar_ts_childrens_tools = array();
-		}
+			if (isset(RecordObj_dd::get_ar_terminoID_by_modelo_name('area_tool')[0])) {
+				$current_tipo 					= RecordObj_dd::get_ar_terminoID_by_modelo_name('area_tool')[0];
+				$area_tool 						= new area_tool($current_tipo);
+				$ar_ts_childrens_tools 			= $area_tool->get_ar_ts_children_areas($include_main_tipo);
+			}else{
+				$ar_ts_childrens_tools = array();
+			}
 
 		# AREA_THESAURUS
-		if (isset(RecordObj_dd::get_ar_terminoID_by_modelo_name('area_thesaurus')[0])) {
-			$current_tipo 					= RecordObj_dd::get_ar_terminoID_by_modelo_name('area_thesaurus')[0];
-			$area_thesaurus 				= new area_thesaurus($current_tipo);
-			$ar_ts_childrens_thesaurus 		= $area_thesaurus->get_ar_ts_children_areas($include_main_tipo);
-		}else{
-			$ar_ts_childrens_thesaurus 		= array();
-		}	
+			if (isset(RecordObj_dd::get_ar_terminoID_by_modelo_name('area_thesaurus')[0])) {
+				$current_tipo 					= RecordObj_dd::get_ar_terminoID_by_modelo_name('area_thesaurus')[0];
+				$area_thesaurus 				= new area_thesaurus($current_tipo);
+				$ar_ts_childrens_thesaurus 		= $area_thesaurus->get_ar_ts_children_areas($include_main_tipo);
+			}else{
+				$ar_ts_childrens_thesaurus 		= array();
+			}
 
 		# AREA_ADMIN
-		$current_tipo 						= RecordObj_dd::get_ar_terminoID_by_modelo_name('area_admin')[0];
-		$area_admin 						= new area_admin($current_tipo);
-		$ar_ts_childrens_admin 				= $area_admin->get_ar_ts_children_areas($include_main_tipo);
+			$current_tipo 						= RecordObj_dd::get_ar_terminoID_by_modelo_name('area_admin')[0];
+			$area_admin 						= new area_admin($current_tipo);
+			$ar_ts_childrens_admin 				= $area_admin->get_ar_ts_children_areas($include_main_tipo);
 
+		# AREA_DEVELOPMENT
+			$ar_ts_childrens_dev 		 		= [];
+			$logged_user_is_global_admin 		= component_security_administrator::is_global_admin(navigator::get_user_id());
+			if(SHOW_DEBUG===true && $logged_user_is_global_admin===true) {
+				$ar_current_tipo 				= RecordObj_dd::get_ar_terminoID_by_modelo_name('area_development');
+				if (isset($ar_current_tipo[0])) {
+					$area_development 			= new area_development($ar_current_tipo[0]);
+					$ar_ts_childrens_dev 		= $area_development->get_ar_ts_children_areas($include_main_tipo);
+				}
+				
+			}
 		
 		# ar_all merged
-		$ar_all = array_merge($ar_ts_childrens_root, $ar_ts_childrens_activity, $ar_ts_childrens_publication, $ar_ts_childrens_resource, $ar_ts_childrens_tools, $ar_ts_childrens_thesaurus, $ar_ts_childrens_admin);
+		$ar_all = array_merge($ar_ts_childrens_root, $ar_ts_childrens_activity, $ar_ts_childrens_publication, $ar_ts_childrens_resource, $ar_ts_childrens_tools, $ar_ts_childrens_thesaurus, $ar_ts_childrens_admin, $ar_ts_childrens_dev);
 
 		#
 		# ALLOW DENY AREAS

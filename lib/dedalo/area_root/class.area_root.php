@@ -20,14 +20,8 @@ class area_root extends area {
 	*/
 
 
-
-	
-
-
-
 	
 
 
 }
-
 ?>

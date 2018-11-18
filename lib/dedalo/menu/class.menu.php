@@ -12,7 +12,9 @@ class menu extends common {
 	
 	public function __construct($modo) {
 		$this->modo = $modo;
-	}
+
+		return true;
+	}//end __construct
 
 
 
@@ -35,7 +37,7 @@ class menu extends common {
 			$arguments_tree['dato'] = $ar_authorized_areas;
 				#dump($ar_authorized_areas,'ar_authorized_areas');
 		}
-	#dump($ar_authorized_areas, ' arguments_tree ++ '.to_string());
+	
 		$html = self::get_menu_structure_html($option='create_link', $arguments_tree);
 		
 		if(SHOW_DEBUG===true) {
@@ -43,7 +45,7 @@ class menu extends common {
 		}
 
 		return $html;
-	}
+	}//end get_html
 
 
 
@@ -57,12 +59,7 @@ class menu extends common {
 	*/
 	public static function get_menu_structure_html($option, $arguments_tree) {
 		#unset($_SESSION['dedalo4']['config']['menu_structure_html']);
-
-		#area::get_ar_ts_children_all_areas_plain();
-		#dump($option,'option');
-		#dump($arguments_tree,'arguments_tree');
-
-		/**/
+		
 		# STATIC CACHE	(Only for menu - option='create_link' -)
 		if ($option==='create_link') {
 			$uid=(string)$option;
@@ -119,16 +116,18 @@ class menu extends common {
 						}
 						*/
 
-						# STRUCTURE LINK IN MENU
-						if(SHOW_DEBUG===true && $logged_user_is_global_admin===true && file_exists(DEDALO_LIB_BASE_PATH.'/dd')) {
-							$menu_structure_html .= '<li class="has-sub menu_li_inactive">';
-								$structure_path = DEDALO_LIB_BASE_URL.'/dd/dd_list.php?modo=tesauro_edit';
-								$modelo_path 	= DEDALO_LIB_BASE_URL.'/dd/dd_list.php?modo=modelo_edit';
-								$menu_structure_html .= "<a href=\"javascript:menu.load_ref('$structure_path')\">Structure</a>";
-								$menu_structure_html .= '<ul>';
-								$menu_structure_html .= "<li><a href=\"javascript:menu.load_ref('$modelo_path')\">Modelo</a></li>";
-								$menu_structure_html .= '</ul>';
-							$menu_structure_html .= '</li>';
+						# STRUCTURE LINK IN MENU.  && file_exists(DEDALO_LIB_BASE_PATH.'/dd')
+						if(SHOW_DEBUG===true && $logged_user_is_global_admin===true) {							
+							// Structure links
+								$menu_structure_html .= '<li class="has-sub menu_li_inactive">';
+									$structure_path = DEDALO_LIB_BASE_URL.'/dd/dd_list.php?modo=tesauro_edit';
+									$modelo_path 	= DEDALO_LIB_BASE_URL.'/dd/dd_list.php?modo=modelo_edit';
+									$menu_structure_html .= "<a href=\"javascript:menu.load_ref('$structure_path')\">Structure</a>";
+									$menu_structure_html .= '<ul>';
+									$menu_structure_html .= "<li><a href=\"javascript:menu.load_ref('$modelo_path')\">Modelo</a></li>";
+
+									$menu_structure_html .= '</ul>';
+								$menu_structure_html .= '</li>';
 						}
 						break;
 					
