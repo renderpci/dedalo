@@ -49,12 +49,7 @@
 			}			
 			// Dont break here. Continue as modo edit
 
-		case 'edit'	:
-			// dato_external. Custom propiedades external dato (!) Always at beginning
-				if(isset($propiedades->source->mode) && $propiedades->source->mode==='external'){
-					$this->set_dato_external(false);	// Forces update dato with calculated external dato
-				}
-
+		case 'edit'	:			
 			// General vars	
 				$tipo_to_search			= $this->get_tipo_to_search();
 				$ar_valor 				= $this->get_valor($lang,'array');

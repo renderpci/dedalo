@@ -27,7 +27,17 @@ class component_autocomplete extends component_relation_common {
 	* GET_DATO
 	*/
 	public function get_dato() {
+
 		$dato = parent::get_dato();
+
+		// external mode
+			$propiedades = $this->get_propiedades();
+			if(isset($propiedades->source->mode) && $propiedades->source->mode==='external'){
+				// set_dato_external($save=false, $changed=false, $current_dato=false)
+				$this->set_dato_external(true, false, $dato);	// Forces save updated dato with calculated external dato ($save=false, $changed=false)
+				$dato = $this->dato;
+			}		
+		
 		/*
 		if (!empty($dato) && !is_array($dato)) {
 			#dump($dato,"dato");
@@ -905,10 +915,7 @@ class component_autocomplete extends component_relation_common {
 
 		# Custom propiedades external dato 
 		$propiedades = $this->get_propiedades();
-		#if(isset($propiedades->source->mode) && $propiedades->source->mode === 'external'){
-		#	$this->set_dato_external();	// Forces update dato with calculated external dato	
-		#}
-
+		
 		# Force loads dato always !IMPORTANT
 		$this->get_dato();
 
@@ -1117,6 +1124,53 @@ class component_autocomplete extends component_relation_common {
 
 		return (string)$diffusion_value;
 	}//end get_diffusion_dato
+
+
+
+	/**
+	* RENDER_LIST_VALUE
+	* Overwrite for non default behaviour
+	* Receive value from section list and return proper value to show in list
+	* Sometimes is the same value (eg. component_input_text), sometimes is calculated (e.g component_portal)
+	* @param string $value
+	* @param string $tipo
+	* @param int $parent
+	* @param string $modo
+	* @param string $lang
+	* @param string $section_tipo
+	* @param int $section_id
+	*
+	* @return string $list_value
+	*/
+	public static function render_list_value($value, $tipo, $parent, $modo, $lang, $section_tipo, $section_id, $current_locator=null, $caller_component_tipo=null) {
+		
+		# Activity case (in transition from component_autocomplete_ts to component_autocomplete_hi)
+		# Current stored data is in format: "dd546": {"dato": {"lg-nolan": "dd242"}} bypassing the component in write
+    	# file rows_activity.phtml parses current value to label in current lang
+		#if ($tipo==='dd545' || $tipo==='dd546') {
+		#	debug_log(__METHOD__." tipo: $tipo - section_tipo: $section_tipo - section_id: $section_id - parent: $parent - value: ".to_string($value), logger::DEBUG);
+		#	return $value;
+		#}
+
+		$component 	= component_common::get_instance(get_called_class(),
+													 $tipo,
+													 $parent,
+													 $modo, //'list',
+													 DEDALO_DATA_NOLAN,
+													 $section_tipo);	
+
+		# Use already query calculated values for speed
+		#$ar_records = (array)json_handler::decode($value);
+		#$component->set_dato($ar_records);
+
+		$component->set_identificador_unico($component->get_identificador_unico().'_'.$section_id.'_'.$caller_component_tipo); // Set unic id for build search_options_session_key used in sessions
+		
+		
+		$result = $component->get_html();
+		
+		
+		return $result;
+	}//end render_list_value
 
 
 

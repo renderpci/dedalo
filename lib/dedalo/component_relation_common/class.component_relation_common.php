@@ -1165,10 +1165,15 @@ class component_relation_common extends component_common {
 	* @see used by component_autocomplete and component_portal
 	* @return dato
 	*/
-	public function set_dato_external($save=false, $changed=false) {
+	public function set_dato_external($save=false, $changed=false, $current_dato=false) {
 		$start_time=microtime(1);
 
-		$dato 						= $this->get_dato();
+		if ($current_dato!==false) {
+			$dato = $current_dato;
+		}else{
+			$dato = $this->get_dato();
+		}
+		
 
 		# get the properties for get search section and component
 		$propiedades 				= $this->get_propiedades();
@@ -1200,7 +1205,7 @@ class component_relation_common extends component_common {
 																	$section_tipo,
 																	false);
 				$component_dato = $component_data_for_search->get_dato_with_references();
-
+	
 				foreach ($component_dato as $current_locator) {
 					$locator_dato 		= new locator();
 					$locator_dato->set_section_id($current_locator->section_id);
@@ -1280,8 +1285,7 @@ class component_relation_common extends component_common {
 		# From locators inside property 'relations'
 		#$ar_result = $this->get_external_result($new_dato, $ar_component_to_search, $ar_section_to_search);
 		# From table 'relations' (x number of locators in new_dato is fast aprox. because 'OR' problem in indexes)
-		$ar_result = $this->get_external_result_from_relations_table($new_dato, $ar_component_to_search);
-		
+		$ar_result = $this->get_external_result_from_relations_table($new_dato, $ar_component_to_search);		
 		
 
 		foreach ((array)$dato as $key => $current_locator) {
