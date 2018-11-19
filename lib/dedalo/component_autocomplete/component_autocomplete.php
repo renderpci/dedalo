@@ -50,6 +50,11 @@
 			// Dont break here. Continue as modo edit
 
 		case 'edit'	:
+			// dato_external. Custom propiedades external dato (!) Always at beginning
+				if(isset($propiedades->source->mode) && $propiedades->source->mode==='external'){
+					$this->set_dato_external(false);	// Forces update dato with calculated external dato
+				}
+
 			// General vars	
 				$tipo_to_search			= $this->get_tipo_to_search();
 				$ar_valor 				= $this->get_valor($lang,'array');
@@ -61,12 +66,7 @@
 				$id_wrapper 			= 'wrapper_'.$identificador_unico;
 				$input_name 			= "{$tipo}_{$parent}";
 				$component_info 		= $this->get_component_info('json');
-				$dato_json 				= json_handler::encode($dato);
-			
-			// dato_external. Custom propiedades external dato 
-				if(isset($propiedades->source->mode) && $propiedades->source->mode==='external'){
-					$this->set_dato_external(false);	// Forces update dato with calculated external dato
-				}	
+				$dato_json 				= json_handler::encode($dato);			
 
 			// service autocomplete options
 				$ar_target_section_tipo = $this->get_ar_target_section_tipo();
