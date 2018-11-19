@@ -1,8 +1,8 @@
 <?php
 
 	# VISUALIZADOR HTML
-	$html_tool  ='';
-	$html_tool .= "<div class=\"tool_inspector_div\">";
+	$html_tool  = '';
+	$html_tool .= '<div class="tool_inspector_div">';
 
 	#
 	# GROUPS
@@ -16,31 +16,19 @@
 			continue;
 		}
 		
-		$html_tool .= "<div class=\"diffusion_group\">";
+		$html_tool .= '<div class="diffusion_group">';
 			
-			$is_rdf=false;
-			foreach ($ar_diffusion_element as $diffusion_element) {
-				if ($diffusion_element->class_name=='diffusion_rdf') {
-					$html_tool .= "</div>";//end diffusion_group
-					continue 2;
-				}
-			}
-
 			#$html_tool .= label::get_label('tool_diffusion');		
-			$html_tool .= "<div class=\"diffusion_group_name\">";
-			$html_tool .= RecordObj_dd::get_termino_by_tipo($diffusion_group_tipo, DEDALO_DATA_LANG, true, false);
-			$html_tool .= "</div>";
+			$html_tool .= '<div class="diffusion_group_name">';
+			$html_tool .= RecordObj_dd::get_termino_by_tipo($diffusion_group_tipo, DEDALO_DATA_LANG, true, true);
+			$html_tool .= '</div>';
 
-			$html_tool .= "<ul>";			
+			$html_tool .= '<ul>';			
 			foreach ($ar_diffusion_element as $obj_value) {
 
-				$element_tipo = $obj_value->element_tipo;
+				$element_tipo = $obj_value->element_tipo;					
 
-				if ($obj_value->class_name=='diffusion_rdf') {
-					#continue; # Skip rdf for now
-				}			
-
-				$html_tool .= "<li>";
+				$html_tool .= '<li>';
 
 				$options = new stdClass();
 					$options->section_tipo  		= $this->section_tipo;
@@ -49,29 +37,29 @@
 
 				$options_json = json_encode($options);
 
-				$html_tool .= "<div class=\"link\" onclick=\"tool_diffusion.export_record(this)\" ";
-				$html_tool .= "data-options='$options_json' ";
-				$html_tool .= ">";
+				$html_tool .= '<div class="link" onclick="tool_diffusion.export_record(this)" ';
+				$html_tool .= 'data-options=\''.$options_json.'\' ';
+				$html_tool .= '>';
 
-				$html_tool .= "<div id=\"button_difussion_export_record\" class=\"icon_bs tool_diffusion tool_diffusion_inspector\"></div>";				
+				$html_tool .= '<div id="button_difussion_export_record" class="icon_bs tool_diffusion tool_diffusion_inspector"></div>';				
 			
 				$html_tool .= RecordObj_dd::get_termino_by_tipo($element_tipo, DEDALO_DATA_LANG, true, true); //$from_cache=false, $fallback=true
 				if ( SHOW_DEBUG && isset($diffusion_info->$element_tipo)) {
-					$html_tool .= "<i class=\"glyphicon glyphicon-ok\" style=\"color:green\"></i>";					
+					$html_tool .= '<i class="glyphicon glyphicon-ok" style="color:green"></i>';
 				}
 				if(SHOW_DEBUG===true) {
 					$html_tool .= ' ['.DEDALO_DIFFUSION_DOMAIN.']';
 				}
-				$html_tool .= "</div>";
+				$html_tool .= '</div>';
 
 				/*
 				$checked  = isset($obj_value->checked) && $obj_value->checked===true ? 'checked="checked"' : ''; // Default is not chechecd
 				$html_tool .= " <input type=\"checkbox\" name=\"diffusion_element_checkbox\" value=\"".$element_tipo."\" $checked />";
 				$html_tool .= " <span title=\"".$obj_value->class_name."\">".$obj_value->name."</span>";
 				*/
-				$html_tool .= "</li>";
+				$html_tool .= '</li>';
 			}
-			$html_tool .= "</ul>"; 
+			$html_tool .= '</ul>'; 
 			
 			/*
 			$html_tool .= "\n <div id=\"button_difussion_export_record\" class=\"tool_diffusion tool_diffusion_inspector link\"
@@ -87,13 +75,13 @@
 
 			#$html_tool .= "<div id=\"tool_diffusion_response\" ondblclick=\"return function(){this.innerHTML='';}\"></div>";
 
-		$html_tool .= "</div>";//end diffusion_group
+		$html_tool .= '</div>';//end diffusion_group
 	}
 		
-	$html_tool .= "</div>";
+	$html_tool .= '</div>';
 	
 	
 	# PRINT HTML
 	echo $html_tool;
-	
-?>
+
+

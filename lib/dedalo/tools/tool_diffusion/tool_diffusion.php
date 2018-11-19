@@ -21,13 +21,12 @@
 		case 'button':			
 			# Show tool button
 			$ar_diffusion_map = diffusion::get_ar_diffusion_map(DEDALO_DIFFUSION_DOMAIN);
-				#dump($ar_diffusion_map, ' ar_diffusion_map ++ '.to_string());
+				
 			break;
 
 		case 'button_inspector';
 			# Show tool buttons
 			$ar_diffusion_map = diffusion::get_ar_diffusion_map(DEDALO_DIFFUSION_DOMAIN);
-
 
 			#
 			# SECTION DIFFUSION_INFO		
