@@ -123,6 +123,27 @@ class component_portal extends component_relation_common {
 
 
 	/**
+	* GET_DATO
+	* @return 
+	*/
+	public function get_dato() {
+		
+		$dato = parent::get_dato();
+
+		// external mode
+			#$propiedades = $this->get_propiedades();
+			#if(isset($propiedades->source->mode) && $propiedades->source->mode==='external'){
+			#	// set_dato_external($save=false, $changed=false, $current_dato=false)
+			#	$this->set_dato_external(true, false, $dato);	// Forces save updated dato with calculated external dato ($save=false, $changed=false)
+			#	$dato = $this->dato;
+			#}
+
+		return (array)$dato;
+	}//end get_dato
+
+
+
+	/**
 	* GET VALOR 
 	* Get resolved string representation of current values (locators)	
 	* @return string | null
