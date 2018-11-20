@@ -70,7 +70,7 @@ class records_search extends common {
 				$msg = " (section_to_cache: $section_to_cache)";
 			}		
 			debug_log(__METHOD__." $msg  ".to_string(), logger::DEBUG);
-			return '';
+			#return '';
 		}
 		
 		ob_start();

@@ -23,8 +23,6 @@ if($is_global_admin!==true) {
 
 require_once(DEDALO_LIB_BASE_PATH . '/dd/class.dd.php');
 require_once(DEDALO_LIB_BASE_PATH . '/dd/d3_functions.php');
-#require_once(DEDALO_ROOT . '/inc/funciones.php');
-#require_once(DEDALO_ROOT . '/lang_translate/class.LangTranslate.php');
 
 
 

@@ -449,7 +449,7 @@ class component_input_text extends component_common {
 	public static function resolve_query_object_sql($query_object) {
 		#debug_log(__METHOD__." query_object ".to_string($query_object), logger::DEBUG);
 		
-		$q = $query_object->q;	debug_log(__METHOD__." q1 : ".to_string($q), logger::DEBUG);
+		$q = $query_object->q;
 		if (isset($query_object->type) && $query_object->type==='jsonb') {
 			$q = json_decode($q);
 		}	
@@ -465,9 +465,6 @@ class component_input_text extends component_common {
 		#if (isset($query_object->q_operator)) {
 		#	$q = $query_object->q_operator . $q;
 		#}
-		debug_log(__METHOD__." q2 : ".to_string($q), logger::DEBUG);
-		debug_log(__METHOD__." substr 0,1 : ".substr($q, 0, 1), logger::DEBUG);
-		debug_log(__METHOD__." substr -1 : ".substr($q, -1), logger::DEBUG);
 
         switch (true) {
         	# EMPTY VALUE (in current lang data)

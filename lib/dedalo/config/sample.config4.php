@@ -160,12 +160,16 @@
 	Debug default: DEBUG
 	Production default: ERROR
 	*/
-	define('LOGGER_LEVEL', logger::WARNING); 
+	if (SHOW_DEBUG===true) {
+		define('LOGGER_LEVEL', logger::DEBUG);
+	}else{
+		define('LOGGER_LEVEL', logger::WARNING);
+	} 
 	
 
 	# Log messages in page
 	$log_messages = array();
-	global $log_messages;		
+	global $log_messages;
 	
 	# ACTIVITY LOG DB
 	# Log application info in db
