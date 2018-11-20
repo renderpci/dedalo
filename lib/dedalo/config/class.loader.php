@@ -22,7 +22,6 @@ include(DEDALO_LIB_BASE_PATH . '/common/class.locator.php');
 include(DEDALO_LIB_BASE_PATH . '/common/class.dd_date.php');
 include(DEDALO_LIB_BASE_PATH . '/common/class.relation.php');
 include(DEDALO_LIB_BASE_PATH . '/component_common/class.component_common.php');
-#include(DEDALO_LIB_BASE_PATH . '/component_common/class.component_reference_common.php');
 include(DEDALO_LIB_BASE_PATH . '/component_relation_common/class.component_relation_common.php');
 include(DEDALO_LIB_BASE_PATH . '/search/class.search_development2.php');
 
