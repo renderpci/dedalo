@@ -67,7 +67,7 @@ class component_calculation extends component_common {
 
 		if(is_array($valor)){
 			$formula = $this->get_JSON_formula();
-			if($formula != false){
+			if($formula!==false){
 				if(isset($formula[0]->data->separator_fields)) {
 					$separator_fields = $formula[0]->data->separator_fields;
 				}else{
@@ -89,15 +89,15 @@ class component_calculation extends component_common {
 		}
 		
 
-		if(SHOW_DEBUG===true) {
-			if (!is_null($valor) && !is_string($valor) && !is_numeric($valor)) {
-				$msg = "WARNING: CURRENT 'valor' in $this->tipo is NOT valid string. Type is:\"".gettype($valor).'" - valor:'.to_string($valor);
-				trigger_error($msg);
-				debug_log(__METHOD__." ".$msg, logger::WARNING);
-				dump(debug_backtrace(), 'get_valor debug_backtrace() ++ '.to_string());
-			}
-		}
-			
+		#if(SHOW_DEBUG===true) {
+		#	if (!is_null($valor) && !is_string($valor) && !is_numeric($valor)) {
+		#		$msg = "WARNING: Current 'valor' in tipo:$this->tipo is NOT valid string. Type is:\"".gettype($valor).'" - valor:'. var_export($valor, true);
+		#		trigger_error($msg);
+		#		debug_log(__METHOD__." ".$msg, logger::WARNING);
+		#		dump(debug_backtrace(), 'get_valor debug_backtrace() ++ '.to_string());
+		#	}
+		#}
+		
 		if(!is_array($valor)) return $valor;
 
 		return "<em>No string value</em>";
