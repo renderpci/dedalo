@@ -2058,6 +2058,10 @@ class component_portal extends component_relation_common {
 		$ref_component_tipo = $options->get_data_of_component_tipo;
 		$dato 				= $this->get_dato();
 
+		if(empty($dato)){
+			return false;
+		}
+
 		foreach ($dato as $current_dato) {
 			$section_id 	= $current_dato->section_id;
 			$section_tipo 	= $current_dato->section_tipo;

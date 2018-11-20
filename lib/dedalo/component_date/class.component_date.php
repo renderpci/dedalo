@@ -1661,7 +1661,11 @@ class component_date extends component_common {
 		$dato 		= $this->get_dato();
 
 		foreach ($dato as $current_dato) {
-			$data_obj = isset($current_dato->{$select}) ? $current_dato->{$select} : 0;
+			if (isset($current_dato->{$select})){
+				$data_obj =	$current_dato->{$select};
+			}else{
+				return false;
+			} 
 
 			if($format==='dd_date'){
 				$data_obj->format = ($select==='period') ? 'period' : 'date';
