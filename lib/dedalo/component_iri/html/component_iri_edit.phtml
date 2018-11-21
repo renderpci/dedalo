@@ -34,11 +34,11 @@
 
 			case ($permissions===1) :
 					foreach ($dato as $value) {
-						$html_content .= " <span class=\"css_span_dato\">$value</span>";
+						$html_content .= "<span class=\"css_span_dato\">$value</span>";
 						# Button link
-						$html_content .= "<a class=\"input-group-addon css_button_generic btn_go_iri\" onclick=\"component_iri.go_iri_link(this)\">";
-						$html_content .= "<div class=\"link css_iri_link\"></div>";
-						$html_content .= "</a>";
+						$html_content .= '<a class="input-group-addon css_button_generic btn_go_iri" onclick="component_iri.go_iri_link(this)">';
+						$html_content .= '<div class="link css_iri_link"></div>';
+						$html_content .= '</a>';
 					}
 					break;
 
@@ -46,11 +46,11 @@
 
 				# Avoid autocomplete input username in Users section
 				$remove_autocomplete = null;
-				if ($section_tipo==DEDALO_SECTION_USERS_TIPO) {
+				if ($section_tipo===DEDALO_SECTION_USERS_TIPO) {
 					$remove_autocomplete = "readonly onfocus=\"this.removeAttribute('readonly');component_common.select_wrap(null,'$id_wrapper');\"";
 				}else{
-					$remove_autocomplete = '';//"onfocus=\"component_common.select_wrap(null,'$id_wrapper')\";\"";
-					$remove_autocomplete = "onfocus=\"component_common.select_wrap_on_tab_focus(this,'$id_wrapper')\"";
+					#$remove_autocomplete = '';//"onfocus=\"component_common.select_wrap(null,'$id_wrapper')\";\"";
+					#$remove_autocomplete = "onfocus=\"component_common.select_wrap_on_tab_focus(this,'$id_wrapper')\"";
 				}
 
 				# Read only mode (set in propiedades)
@@ -59,7 +59,7 @@
 					$read_only = 'readonly';
 				}
 				#IRI content
-				$html_content .= "<div class=\"css_iri_content\">";
+				$html_content .= '<div class="css_iri_content">';
 
 
 
@@ -71,7 +71,7 @@
 						$dato_view = $dato;
 					}
 
-					$html_content .= "<ul>";
+					$html_content .= '<ul>';
 					foreach ($dato_view as $key => $obj_value) {
 
 						if(isset($obj_value->iri)){
@@ -88,7 +88,7 @@
 							$value_title = "";
 						}
 
-						$html_content .= "<li class=\"input-group\">";
+						$html_content .= '<li class="input-group">';
 
 						# Title
 						$css_optional='';
@@ -143,36 +143,36 @@
 							$html_content .= $ar_dataframe_obj[$key]->get_html();
 						}
 
-						$html_content .= "</li>";
+						$html_content .= '</li>';
 						
 						
 					}//end foreach
-					$html_content .= "</ul>";
+					$html_content .= '</ul>';
 
 					# Button add
 					$css_optional_mv='';
 					if(!$multiple_value){
-						$css_optional_mv='css_iri_off';
+						$css_optional_mv=' css_iri_off';
 					}
-					$html_content .= "<div class=\"css_button_generic btn_add_iri $css_optional_mv\" onclick=\"component_iri.add_iri(this)\">";
-					$html_content .= "<div class=\"link css_iri_add\"></div>";
-					$html_content .= "</div>";
+					$html_content .= '<div class="css_button_generic btn_add_iri'.$css_optional_mv.'" onclick="component_iri.add_iri(this)">';
+					$html_content .= '<div class="link css_iri_add"></div>';
+					$html_content .= '</div>';
 
 					# Button reload_source_component
 					$css_optional_rc='';
 					if(!$source_for_component){
-						$css_optional_rc='css_iri_off';
+						$css_optional_rc=' css_iri_off';
 					}
-					$html_content .= "<div class=\"css_button_generic btn_reload_source_component $css_optional_rc\" onclick=\"component_iri.reload_source_component(this)\">";
-					$html_content .= "<div class=\"link css_reload_source_component\"></div>";
-					$html_content .= "</div>";
+					$html_content .= '<div class="css_button_generic btn_reload_source_component'.$css_optional_rc.'" onclick="component_iri.reload_source_component(this)">';
+					$html_content .= '<div class="link css_reload_source_component"></div>';
+					$html_content .= '</div>';
 					
 
 				#end IRI content
-				$html_content .= "</div>";
+				$html_content .= '</div>';
 
 				if(SHOW_DEBUG===true) {
-					$html_content .= " <span class=\"debug_info notes\">".$dato_json."</span>";
+					$html_content .= '<span class="debug_info notes">'.$dato_json.'</span>';
 				}
 
 				#
@@ -207,4 +207,4 @@
 	# html_delimiter
 	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'out');
 
-?>
+
