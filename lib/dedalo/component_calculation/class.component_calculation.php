@@ -841,11 +841,16 @@ class component_calculation extends component_common {
 		
 		foreach ($formula as $current_formula) {
 			$data 		= $this->resolve_data_for_formula($current_formula->data);
-			$rules 		= $current_formula->rules;
+			//$rules 		= $current_formula->rules;
 		
 			$preprocess_formula 		= new StdClass;
 			$preprocess_formula->data 	= $data;
-			$preprocess_formula->rules 	= $rules;
+			if(isset($current_formula->rules) ){
+				$preprocess_formula->rules 	= $current_formula->rules;
+			}
+			if(isset($current_formula->custom) ){
+				$preprocess_formula->custom = $current_formula->custom;
+			}
 			if(isset($current_formula->result) ){
 				$preprocess_formula->result = $current_formula->result;
 			}
