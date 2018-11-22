@@ -83,7 +83,7 @@ function build_grid_images($json_data) {
 		$response->result 	= false;
 		$response->msg 		= 'Error. Request failed '.__METHOD__;	
 	
-	$vars = array('search_query_object','component_tipo');
+	$vars = array('search_query_object','component_tipo','locator');
 		foreach($vars as $name) {
 			$$name = common::setVarData($name, $json_data);
 			# DATA VERIFY
@@ -93,39 +93,83 @@ function build_grid_images($json_data) {
 				return $response;
 			}
 		}
+	
+	// Locator
+		$locator = json_decode($locator);
 
-	// Filter is indexable
-	$filter_indexable = json_decode('
-      {
-        "q": "{\"section_id\":\"1\",\"section_tipo\":\"dd64\",\"type\":\"dd151\",\"from_component_tipo\":\"hierarchy24\"}",
-        "q_operator": null,
-        "path": [
-          {
-            "section_tipo": "hierarchy20",
-            "component_tipo": "hierarchy24",
-            "modelo": "component_radio_button",
-            "name": "Usable in indexing"
-          }
-        ]
-      }
-    ');
+	// (!) NOTE: search_query_object is not used anymore. Remove all code related with search_query_object here ann javascript when you this is stable this way !
+	
+		// Build new filted based on locator
+			/*		
+			$filter_section_id = '
+			{
+	            "q": "'.$locator->section_id.'",
+	            "q_operator": null,
+	            "path": [
+	                {
+	                    "section_tipo": "'.$locator->section_tipo.'",
+	                    "component_tipo": "hierarchy22",
+	                    "modelo": "component_section_id",
+	                    "name": "Id"
+	                }
+	            ]
+	        }';
+	        $op = '$and';
+			$search_query_object->filter->$op[] = $filter_section_id;
+			*/
 
-	$op = '$and';
-	$search_query_object->filter->$op[] = $filter_indexable;
-	#dump($search_query_object, ' search_query_object ++ '.to_string());
+		// Filter is indexable
+		    /*
+			$filter_indexable = json_decode('
+		      {
+		        "q": "{\"section_id\":\"1\",\"section_tipo\":\"dd64\",\"type\":\"dd151\",\"from_component_tipo\":\"hierarchy24\"}",
+		        "q_operator": null,
+		        "path": [
+		          {
+		            "section_tipo": "hierarchy20",
+		            "component_tipo": "hierarchy24",
+		            "modelo": "component_radio_button",
+		            "name": "Usable in indexing"
+		          }
+		        ]
+		      }
+		    ');
+			$op = '$and';
+			$search_query_object->filter->$op[] = $filter_indexable;
+			#dump($search_query_object, ' search_query_object ++ '.to_string());
+			*/
 
-	// Search
-	$search_development2 = new search_development2($search_query_object);
-	$search_result 		 = $search_development2->search();
-	$ar_records 		 = $search_result->ar_records;
+		// Search
+			/*
+			$search_development2 = new search_development2($search_query_object);
+			$search_result 		 = $search_development2->search();
+			$ar_records 		 = $search_result->ar_records;
+			*/
+
+		// add_childrens. Recombine result rows with childrens recursive
+			/*
+			$item = new stdClass();
+				$item->section_tipo = $locator->section_tipo;
+				$item->section_id   = $locator->section_id;
+			$ar_records = component_common::add_childrens([$item], true);
+			*/
+
+	// childrens . Get childrens recursive from user selected term no indexable
+	$ar_records = component_relation_children::get_childrens($locator->section_id, $locator->section_tipo, null, true);
 
 	$ar_items = [];
 	foreach ($ar_records as $key => $row) {
+
+		// Check if is indexable
+		$is_indexable = ts_object::is_indexable($row->section_tipo, $row->section_id);
+		if ($is_indexable!==true) {
+			continue; // Skip non indable terms
+		}
 		
-		$locator = new locator();
-			$locator->set_section_tipo($row->section_tipo);
-			$locator->set_section_id($row->section_id);
-			$locator->set_component_tipo($component_tipo);
+		$current_locator = new locator();
+			$current_locator->set_section_tipo($row->section_tipo);
+			$current_locator->set_section_id($row->section_id);
+			$current_locator->set_component_tipo($component_tipo);
 
 		$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
 		$component 		= component_common::get_instance($modelo_name,
@@ -134,11 +178,13 @@ function build_grid_images($json_data) {
 														 'list',
 														 DEDALO_DATA_NOLAN,
 														 $row->section_tipo);
-		$url = $component->get_url();
+		
+		$url = $component->get_url();	
+
 
 		$item = new stdClass();
 			$item->url 		= $url . '?' . start_time();
-			$item->locator 	= $locator;
+			$item->locator 	= $current_locator;
 			
 
 		$ar_items[] = $item;
