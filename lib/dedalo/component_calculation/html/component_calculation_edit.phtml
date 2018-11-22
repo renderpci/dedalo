@@ -75,9 +75,10 @@
 		$html_content .= '<script>';
 		# Init component
 		$init_options = new stdClass();
-			$init_options->component_name 	= $component_name;
-			$init_options->wrapper_id 		= $id_wrapper;
-			$init_options->uid 				= $identificador_unico;
+			$init_options->component_name 		= $component_name;
+			$init_options->wrapper_id 			= $id_wrapper;
+			$init_options->uid 					= $identificador_unico;
+			$init_options->aditional_save_event = $aditional_save_event;
 		$html_content .= 'component_common.init('.json_encode($init_options).');';
 		$html_content .= '</script>';
 

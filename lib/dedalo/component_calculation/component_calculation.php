@@ -53,15 +53,17 @@
 					if (empty($dato) && $this->get_traducible()==='si') { 
 						$default_component = $this->get_default_component();
 					}
-				//get the components that has the values to process
 
+				// components_formula . get the components that has the values to process
 					$ar_components_formula = $this->get_ar_components_formula();
 					$ar_components_formula = json_encode($ar_components_formula);
 
+				// aditional_save_event . propiedades aditional_save_event components
+					$aditional_save_event = (isset($propiedades->aditional_save_event)) ? (array)$propiedades->aditional_save_event : [];
+				
 				// preprocess_formula
 					$preprocess_formula = $this->preprocess_formula();
-					$preprocess_formula = json_encode($preprocess_formula, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE);
-				
+					$preprocess_formula = json_encode($preprocess_formula, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE);				
 				break;
 
 		case 'print' :
