@@ -130,7 +130,7 @@ class tool_diffusion {
 
 		// Add especific msg		
 			if (isset($update_record_result->msg)) {
-				$response->msg .= ' - ' . $update_record_result->msg;
+				$response->msg .= ' - ' . is_array($update_record_result->msg) ? implode(", ", $update_record_result->msg) : $update_record_result->msg;
 			}
 
 		if(SHOW_DEBUG===true) {
@@ -279,25 +279,27 @@ class tool_diffusion {
 	*/
 	public static function have_section_diffusion( $section_tipo, $ar_diffusion_map_elements=null ) {
 		
+		$have_section_diffusion = false;
+
 		if (is_null($ar_diffusion_map_elements)) {
 			# calculate all
 			$ar_diffusion_map_elements = diffusion::get_ar_diffusion_map_elements(DEDALO_DIFFUSION_DOMAIN);
-				#dump($ar_diffusion_map_elements, ' $ar_diffusion_map_elements ++ '.to_string(DEDALO_DIFFUSION_DOMAIN));
-		}		
+		}
+		#dump($ar_diffusion_map_elements, ' $ar_diffusion_map_elements ++ '.to_string(DEDALO_DIFFUSION_DOMAIN));
 
 		foreach ($ar_diffusion_map_elements as $obj_value) {
-
-			$diffusion_element_tipo = $obj_value->element_tipo;
 			
 			#$ar_related = common::get_ar_related_by_model('section',$diffusion_element_tipo); // Old way
-			$ar_related = self::get_diffusion_sections_from_diffusion_element($diffusion_element_tipo);
+			$ar_related = self::get_diffusion_sections_from_diffusion_element($obj_value->element_tipo, $obj_value->class_name);
 				#dump($ar_related, ' $ar_related ++ '.to_string( $diffusion_element_tipo )." - name:".$obj_value->name);
 				if(in_array($section_tipo, $ar_related)) {
-					return true;
+					$have_section_diffusion = true;
+					break;
 				}			
 		}
+		#dump($have_section_diffusion, '$have_section_diffusion ++ '.to_string($section_tipo));
 
-		return false;
+		return $have_section_diffusion;
 	}//end have_section_diffusion
 
 
@@ -307,48 +309,16 @@ class tool_diffusion {
 	* @param string $diffusion_element_tipo
 	* @return array $ar_diffusion_sections
 	*/
-	public static function get_diffusion_sections_from_diffusion_element($diffusion_element_tipo) {
-		$ar_diffusion_sections = array();
-		#if(SHOW_DEBUG===true) $start_time=microtime(1);
-
+	public static function get_diffusion_sections_from_diffusion_element($diffusion_element_tipo, $class_name) {		
+	
 		if( isset($_SESSION['dedalo4']['config']['ar_diffusion_sections'][$diffusion_element_tipo]) ) {
 			return $_SESSION['dedalo4']['config']['ar_diffusion_sections'][$diffusion_element_tipo];
 		}
 
-		# tables. RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($diffusion_element_tipo, $modelo_name='table', $relation_type='children_recursive', $search_exact=false);
-		$tables = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($diffusion_element_tipo, 'table', 'children_recursive', false);
-		foreach ($tables as $current_table_tipo) {
+		include_once(DEDALO_LIB_BASE_PATH . '/diffusion/class.'.$class_name.'.php');
 
-			$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_table_tipo,true);
-			switch ($modelo_name) {
-				case 'table_alias':
-					# First try section (thesaurus needed)
-					$ar_related = common::get_ar_related_by_model('section', $current_table_tipo);
-					if (!isset($ar_related[0])) {
-						# If not, We search 'table' now
-						$ar_table = common::get_ar_related_by_model('table', $current_table_tipo);
-						if (isset($ar_table[0])) {
-							$ar_related = common::get_ar_related_by_model('section', $ar_table[0]);
-						}
-					}					
-					break;
-				
-				case 'table':
-				default:
-					# Pointer to section
-					$ar_related = common::get_ar_related_by_model('section', $current_table_tipo);
-					break;
-			}
-		
-			if (isset($ar_related[0])) {
-				$ar_diffusion_sections[] = $ar_related[0];
-			}						
-		}
-
-		if(SHOW_DEBUG===true) {
-			#$total=round(microtime(1)-$start_time,3); debug_log(__METHOD__." Total: ".exec_time_unit($start_time,'ms')." ms");			
-		}
-
+		$ar_diffusion_sections 	= $class_name::get_diffusion_sections_from_diffusion_element($diffusion_element_tipo);
+	
 		# Store in session
 		$_SESSION['dedalo4']['config']['ar_diffusion_sections'][$diffusion_element_tipo] = $ar_diffusion_sections;
 
