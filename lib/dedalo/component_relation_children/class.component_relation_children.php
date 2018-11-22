@@ -301,8 +301,10 @@ class component_relation_children extends component_relation_common {
 		# Locate component children in current section when is not received
 		# Search always (using cache) for allow mix different section tipo (like beginning from root hierarchy note)
 		# $section_tipo, [get_called_class()], $from_cache=true, $resolve_virtual=true, $recursive=true, $search_exact=true, $ar_tipo_exclude_elements=false
-		$ar_tipos = section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, [get_called_class()], true, true, true, true, false);
-		$component_tipo = reset($ar_tipos);
+		if (empty($component_tipo)) {
+			$ar_tipos = section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, [get_called_class()], true, true, true, true, false);
+			$component_tipo = reset($ar_tipos);
+		}		
 		
 		# Create first component to get dato
 		$component 		= component_common::get_instance(get_called_class(),
