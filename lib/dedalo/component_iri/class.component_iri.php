@@ -85,20 +85,34 @@ class component_iri extends component_common {
 	* @return string $valor
 	*/
 	public function get_valor( $lang=DEDALO_DATA_LANG, $index='all' ) {
+		
 		$dato = $this->get_dato();
-				
+		
+
 		if ($index==='all') {
-			$valor='';
-			$last_value = end($dato);
+			$valor = null;
+			$ar_val = [];
 			foreach ($dato as $key => $value) {
-				$valor .= isset($value->title) ? $value->title : '';
-				$valor .= ' | ';
-				$valor .= $value->iri;
-				if ($value !== $last_value) {
-					$valor .= ', ';
+
+				$ar_line = [];
+
+				if (!empty($value->title)) {
+					$ar_line[] = $value->title;
+				}
+				if (!empty($value->iri)) {
+					$ar_line[] = $value->iri;
+				}
+
+				if (!empty($ar_line)) {
+					
+					$ar_val[] = implode(' | ', $ar_line);
 				}
 			}
+			
+			$valor = !empty($ar_val) ? implode(', ', $ar_val) : null;
+
 		}else{
+			
 			$index = (int)$index;
 			$valor = isset($dato[$index]) ? $dato[$index] : null;
 		}
