@@ -1061,7 +1061,7 @@ class diffusion_sql extends diffusion  {
 								foreach ($current_locator->ds as $key => $ar_locator_ds) {
 									foreach ($ar_locator_ds  as $locator_ds) {
 										$ar_term_ds[] = ts_object::get_term_by_locator( $locator_ds, $options->lang, $from_cache=true );
-									}									
+									}
 								}
 							}
 						}
@@ -1529,7 +1529,7 @@ class diffusion_sql extends diffusion  {
 
 	/**
 	* SAVE_GLOBAL_SEARCH_DATA
-	* v. 1.2 [18-03-2018]
+	* v. 1.3 [20-11-2018]
 	* @return object $save
 	*/
 	public function save_global_search_data( $request_options ) {
@@ -1547,6 +1547,7 @@ class diffusion_sql extends diffusion  {
 			$name_surname_tipos 	= isset($options->global_search_map->name_surname) ? (array)$options->global_search_map->name_surname : [];
 			$sort_tipos 			= isset($options->global_search_map->sort) ? (array)$options->global_search_map->sort : [];
 			$thesaurus_tipos 		= (array)$options->global_search_map->thesaurus;
+			$prison_tipos 			= (array)$options->global_search_map->prison;
 			$list_data_title_tipos 	= (array)$options->global_search_map->list_data->title;
 			$title_generic_tipos 	= isset($options->global_search_map->title) ? (array)$options->global_search_map->title : [];	// 15-11-2018
 			$pub_author_tipos 		= isset($options->global_search_map->pub_author) ? (array)$options->global_search_map->pub_author : []; // 15-11-2018
@@ -1607,6 +1608,7 @@ class diffusion_sql extends diffusion  {
 					$full_data[$lang] 		 	= [];
 					$name_surname_data[$lang]	= [];
 					$thesaurus_data[$lang]		= [];
+					$prison_data[$lang]			= [];
 					$sort_data[$lang]			= [];
 					$pub_author_data[$lang]		= [];
 					$title_generic_data[$lang]	= [];
@@ -1714,46 +1716,65 @@ class diffusion_sql extends diffusion  {
 										$filter_date_data[$lang][] = $column['field_value'];
 									}
 
+								if (in_array($column['tipo'], $prison_tipos)) {
+									if (is_array($column['field_value'])) {
+										$column['field_value'] = json_encode($column['field_value']);
+									}
+									$prison_value = trim( strip_tags($column['field_value']) );
+									if (!empty($prison_value)) {
+										$prison_data[$lang][] = $prison_value;
+									}
+								}
+
 								$current_field_value = $column['field_value'];
 								
 								# mdcat_tipos
 								foreach ($mdcat_tipos as $current_column_name) {
-									if (!isset($options->global_search_map->{$current_column_name})) continue;																
+									if (!isset($options->global_search_map->{$current_column_name})) continue;
 
-									if ($column['tipo']===$options->global_search_map->{$current_column_name} && !empty($column['field_value'])) {
+									if (in_array($column['tipo'], $prison_tipos)) {
+										#if (is_array($column['field_value'])) {
+										#	$column['field_value'] = json_encode($column['field_value']);
+										#}
+										#$prison_value = trim( strip_tags($column['field_value']) );
+										#if (!empty($prison_value)) {
+										#	$prison_data[$lang][] = $prison_value;
+										#}
+									
+									}else{
 
-										#$list_data[$lang]->{$current_column_name} = $column['field_value'];
-										#dump( $$column['tipo'] , '$column[field_value] ++ '.to_string($current_column_name));
-										$current_field_value = $column['field_value'];
-											
-										switch ($current_column_name) {
-											case 'end_date':
-												$ar_current_field_value = (array)explode(',', $current_field_value);
-												$current_field_value 	= end($ar_current_field_value);
-												$current_field_value 	= strtotime($current_field_value);
-												break;
-											case 'start_date':
-												$ar_current_field_value = (array)explode(',', $current_field_value);
-												$current_field_value 	= reset($ar_current_field_value);
-												$current_field_value 	= strtotime($current_field_value);
-												break;
-											case 'pub_year':
-												$ar_current_field_value = (array)explode(',', $current_field_value);
-												$current_field_value 	= reset($ar_current_field_value);
-												$ar_part = explode('-', $current_field_value);
-												$year 	 = isset($ar_part[0]) ? $ar_part[0] : null;
-												$current_field_value 	= $year;
-												break;
-											default:
-												break;
-										}
-										$ar_fields_global[$pseudo_section_id][$lang][] = [
-											#'field_name'  => '`'.$current_column_name.'`',
-											'field_name'  => ''.$current_column_name.'',
-											'field_value' => $current_field_value
-										];
-										#dump($current_field_value, ' current_field_value current_column_name ++ '.to_string($current_column_name));
-										#break;
+										if ($column['tipo']===$options->global_search_map->{$current_column_name} && !empty($column['field_value'])) {
+											#$list_data[$lang]->{$current_column_name} = $column['field_value'];
+											#dump( $$column['tipo'] , '$column[field_value] ++ '.to_string($current_column_name));
+											$current_field_value = $column['field_value'];										
+											switch ($current_column_name) {
+												case 'end_date':
+													$ar_current_field_value = (array)explode(',', $current_field_value);
+													$current_field_value 	= end($ar_current_field_value);
+													$current_field_value 	= strtotime($current_field_value);
+													break;
+												case 'start_date':
+													$ar_current_field_value = (array)explode(',', $current_field_value);
+													$current_field_value 	= reset($ar_current_field_value);
+													$current_field_value 	= strtotime($current_field_value);
+													break;
+												case 'pub_year':
+													$ar_current_field_value = (array)explode(',', $current_field_value);
+													$current_field_value 	= reset($ar_current_field_value);
+													$ar_part = explode('-', $current_field_value);
+													$year 	 = isset($ar_part[0]) ? $ar_part[0] : null;
+													$current_field_value 	= $year;
+													break;
+
+												default:
+													break;
+											}
+											$ar_fields_global[$pseudo_section_id][$lang][] = [
+												#'field_name'  => '`'.$current_column_name.'`',
+												'field_name'  => ''.$current_column_name.'',
+												'field_value' => $current_field_value
+											];
+										}//end if ($column['tipo']===$options->global_search_map->{$current_column_name} && !empty($column['field_value']))
 									}
 								}
 								break;
@@ -1804,16 +1825,30 @@ class diffusion_sql extends diffusion  {
 							'field_value' => implode(' ',$sort_data[$lang])
 						];
 
-					# thesaurus. THESAURUS_DATA . Merge all values in one only array. Added 13-11-2018 !!					
-						$ar_thesaurus_elements = [];
-						foreach ((array)$thesaurus_data[$lang] as $current_array_string) {
-							if ($current_array = json_decode($current_array_string)) {
-								$ar_thesaurus_elements = array_merge($ar_thesaurus_elements, (array)$current_array);
+					# thesaurus. THESAURUS_DATA . Merge all values in one only array. Added 13-11-2018 !!									
+						#$ar_thesaurus_elements = [];
+						#foreach ((array)$thesaurus_data[$lang] as $current_array_string) {							
+						#	if ($current_array = json_decode($current_array_string)) {
+						#		$ar_thesaurus_elements = array_merge($ar_thesaurus_elements, (array)$current_array);
+						#	}
+						#}
+						$ar_fields_global[$pseudo_section_id][$lang][] = [
+							'field_name'  => 'thesaurus',
+							#'field_value' => (!empty($ar_thesaurus_elements)) ? json_encode($ar_thesaurus_elements) : null
+							'field_value' => (!empty($thesaurus_data[$lang])) ? implode(' | ', $thesaurus_data[$lang]) : null
+						];
+					
+					# prison. Merge all values in one only array. Added 20-11-2018 !!
+							dump($prison_data[$lang], '$prison_data[$lang] ++ '.to_string());
+						$ar_prison_elements = [];
+						foreach ((array)$prison_data[$lang] as $current_item_string) {
+							if (!empty($current_item_string)) {
+								$ar_prison_elements[] = $current_item_string;
 							}
 						}
 						$ar_fields_global[$pseudo_section_id][$lang][] = [
-							'field_name'  => 'thesaurus',
-							'field_value' => (!empty($ar_thesaurus_elements)) ? json_encode($ar_thesaurus_elements) : null
+							'field_name'  => 'prison',
+							'field_value' => !empty($ar_prison_elements) ? implode(' | ', $ar_prison_elements) : null
 						];
 
 					# pub_author. Merge all values in one only array. Added 15-11-2018 !!
@@ -1923,7 +1958,7 @@ class diffusion_sql extends diffusion  {
 
 		switch (true) {
 			case $count===1:
-				$diffusion_database_tipo = reset($ar_terminoID);				
+				$diffusion_database_tipo = reset($ar_terminoID);
 				$diffusion_database_name = RecordObj_dd::get_termino_by_tipo($diffusion_database_tipo, DEDALO_STRUCTURE_LANG, true, false); // $terminoID, $lang=NULL, $from_cache=false, $fallback=true
 				break;
 			case $count>1:
@@ -2936,7 +2971,8 @@ class diffusion_sql extends diffusion  {
 			return null;
 		}
 
-		$process_dato_arguments = (object)$options->propiedades->process_dato_arguments;		
+		$process_dato_arguments = (object)$options->propiedades->process_dato_arguments;
+		$output 				= isset($process_dato_arguments->output) ? $process_dato_arguments->output : null;	
 
 		#$ar_target_component_tipo = array_filter($process_dato_arguments, function($item) {
 		#	return key($item) === 'target_component_tipo';
@@ -2964,7 +3000,6 @@ class diffusion_sql extends diffusion  {
 			
 			$method 	= isset($process_dato_arguments->component_method) ? $process_dato_arguments->component_method : 'get_diffusion_value';
 
-
 			// Inject custom properties to target component to manage 'get_diffusion_value' or another called method
 				if (isset($options->propiedades->process_dato_arguments->target_component_properties)) {
 					# Overwrite component properties
@@ -2991,23 +3026,43 @@ class diffusion_sql extends diffusion  {
 			}
 			$value = call_user_func_array(array($component, $method), $custom_arguments);
 
-			if (is_array($value) || is_object($value)) {
-				$value = json_encode($value);
-			}else{
-				$value = trim($value);
-			}
-			
-			if (!empty($value) && $value!=='[]' && $value!=='{}') {
-				$ar_value[] = $value;
-			}
+			switch ($output) {
+				case 'merged':
+					if ($value_array = json_decode($value)) {
+						# code...
+						$ar_value = array_merge($ar_value, (array)$value_array);
+					}					
+					break;
+				
+				default:
+					if (is_array($value) || is_object($value)) {
+						$value = json_encode($value);
+					}else{
+						$value = trim($value);
+					}
+					
+					if (!empty($value) && $value!=='[]' && $value!=='{}') {
+						$ar_value[] = $value;
+					}
+					break;
+			}			
 		}
 
-		# Remove duplicates (experimental for numisdata fichero : material 18-04-2018)
-		#$ar_value = array_unique($ar_value);
-
-		$separator 	= isset($process_dato_arguments->separator) ? $process_dato_arguments->separator : $default_separator;
 	
-		$value = implode($separator,$ar_value);
+		switch ($output) {
+			case 'merged':
+				# Merge all arrays values in one only array
+				#$ar_value = array_unique($ar_value);
+				$ar_value = array_values($ar_value); // Restore array keys
+				$value 	  = json_encode($ar_value);
+				break;
+			
+			default:
+				$separator 	= isset($process_dato_arguments->separator) ? $process_dato_arguments->separator : $default_separator;	
+				$value 		= implode($separator,$ar_value);
+				break;
+		}
+				
 
 		# Remove duplicates 
 		#$uar_value 	= explode(',',$value);
@@ -3069,6 +3124,49 @@ class diffusion_sql extends diffusion  {
 
 		return $value;
 	}//end split_date_range
+
+
+
+	/**
+	* GET_DIFFUSION_SECTIONS_FROM_DIFFUSION_ELEMENT
+	* @return array $ar_diffusion_sections
+	*/
+	public static function get_diffusion_sections_from_diffusion_element($diffusion_element_tipo) {
+		
+		$ar_diffusion_sections = array();
+
+		# tables. RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($diffusion_element_tipo, $modelo_name='table', $relation_type='children_recursive', $search_exact=false);
+		$tables = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($diffusion_element_tipo, 'table', 'children_recursive', false);
+		foreach ($tables as $current_table_tipo) {
+
+			$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_table_tipo,true);
+			switch ($modelo_name) {
+				case 'table_alias':
+					# First try section (thesaurus needed)
+					$ar_related = common::get_ar_related_by_model('section', $current_table_tipo);
+					if (!isset($ar_related[0])) {
+						# If not, We search 'table' now
+						$ar_table = common::get_ar_related_by_model('table', $current_table_tipo);
+						if (isset($ar_table[0])) {
+							$ar_related = common::get_ar_related_by_model('section', $ar_table[0]);
+						}
+					}
+					break;
+				
+				case 'table':
+				default:
+					# Pointer to section
+					$ar_related = common::get_ar_related_by_model('section', $current_table_tipo);
+					break;
+			}
+		
+			if (isset($ar_related[0])) {
+				$ar_diffusion_sections[] = $ar_related[0];
+			}
+		}
+
+		return $ar_diffusion_sections;
+	}//end get_diffusion_sections_from_diffusion_element
 
 
 
