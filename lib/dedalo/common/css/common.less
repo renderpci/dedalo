@@ -154,7 +154,7 @@ hr {
 ------------------------------------------------------- */
 .inspector_div_content,
 .css_section_group_wrap,
-.css_section_list_table TD {
+.css_section_list_table td {
 	background-color: #F9F9F9; 
 	background-color: rgba(249, 249, 249, 0.65);
 }
@@ -195,26 +195,23 @@ hr {
 	opacity: 0.6;
 	/*
 	background-color:#999999;
-
 	color: #535353;
-	text-shadow: 0 1px 0px #ccc;
-	
+	text-shadow: 0 1px 0px #ccc;	
 	box-shadow            : 0 1px 1px #444 ;
-
 	border-radius: 2px;
-
 	padding-top:0px !important;
 	padding-bottom:0px !important;
 	padding-left:3px;
 	padding-right:3px;
 	*/
+	:hover {
+		opacity: 1;
+	}
+	:active {
+		opacity: 0.6;
+	}
 }
-.div_image_link:hover {
-	opacity: 1;
-}
-.div_image_link:active {
-	opacity: 0.6;
-}
+
 .hide_area_element {
 	display: none !important;
 }
@@ -395,91 +392,98 @@ mark {
 
 /*-- THUMB IMAGES IN LIST (image,av,etc.)
 ----------------------------------------- */
-.thumb_in_list {
-	//box-shadow: 1px 1px 6px #CACACA;
-	border-radius: 1px;
-	width: 102px;
-	height: 57px;
-	background-size: contain;
-	background-repeat: no-repeat;
-	background-position: center;
-	//background-color: white;
-	}
-	.thumb_in_list:hover {
-		cursor: -webkit-zoom-in;
-		cursor: -moz-zoom-in;
+	.thumb_in_list {
+		//box-shadow: 1px 1px 6px #CACACA;
+		border-radius: 1px;
+		width: 102px;
+		height: 57px;
+		background-size: contain;
+		background-repeat: no-repeat;
+		background-position: center;
+		//background-color: white;
+
+		&:hover {
+			cursor: -webkit-zoom-in;
+			cursor: -moz-zoom-in;
+		}
 	}
 
 
 /* TABLE . General table style for section list and portals
 ----------------------------------------- */
-.table_rows_list {
-	width: 99.55%;
-	margin: 0;
-	margin-left: 5px;
-	margin-top: 5px;
-	box-shadow: 2px 2px 7px #D4D4D4;
-	border-radius: 4px;
-	}
 	.table_portal_rows_list {		
 		table-layout: fixed;
 	}
-	.table_rows_list tr {
-		background-color: #F9F9F9;
-		background-color: rgba(249, 249, 249, 0.85);
-	}
-	.table_rows_list th {
-		padding: 5px;
-		padding-top: 3px;
-		padding-bottom: 0px;
-		text-align: left;
-		font-weight: normal;
-		vertical-align: top;				
-		white-space: nowrap;
-		border-left: 1px solid #cccccc;
-		line-height: 14px;
-		//text-shadow: 0 0 0 transparent, 0 1px 0 #FFF;
-		//background-color: rgba(238,238,238,0.7);
-		//background-image: url('../../themes/default/tab_header2.jpg');
-		//background-repeat: repeat-x;
+	table.table_rows_list {
+		width: 99.55%;
+		margin: 0;
+		margin-left: 5px;
+		margin-top: 5px;
+		box-shadow: 2px 2px 7px #D4D4D4;
+		border-radius: 4px;
 
-		background-color: #e4e4e4;		
-		//border-bottom: .5px solid #d5d5d5;
-		height: 19px;
+		tr {
+			background-color: #F9F9F9;
+			background-color: rgba(249, 249, 249, 0.85);			
 		}
-		.table_rows_list th div.th_title {
-			width: auto;
-			max-width: 90px;
-			text-overflow: ellipsis;
-			overflow: hidden;
+
+		th {
+			padding: 5px;
+			padding-top: 3px;
+			padding-bottom: 0px;
+			text-align: left;
+			font-weight: normal;
+			vertical-align: top;
 			white-space: nowrap;
-			display: inline-block;
-			cursor: default;
-			color: #292B2A;
+			border-left: 1px solid #cccccc;
+			line-height: 14px;
+			//text-shadow: 0 0 0 transparent, 0 1px 0 #FFF;
+			//background-color: rgba(238,238,238,0.7);
+			//background-image: url('../../themes/default/tab_header2.jpg');
+			//background-repeat: repeat-x;
+			background-color: #e4e4e4;		
+			//border-bottom: .5px solid #d5d5d5;
+			height: 19px;
+
+			div.th_title {
+				width: auto;
+				max-width: 90px;
+				text-overflow: ellipsis;
+				overflow: hidden;
+				white-space: nowrap;
+				display: inline-block;
+				cursor: default;
+				color: #292B2A;
+			}
 		}
-		.table_rows_list th:first-child {
+		th:first-child {
 			border-top-left-radius: 5px;
 			border: none !important;
 		}
-		.table_rows_list th:last-child {
+		th:last-child {
 			border-top-right-radius: 4px;
 		}
-	.table_rows_list td {
-		position: relative;
-		color: #333;
-		text-align: left;
-		word-wrap: break-word;
-		border-top-width: 1px;
-		border-top-style: solid;
-		border-top-color: #CCC;
-		border-left-width: 1px;
-		border-left-style: solid;
-		border-left-color: #CCC;
-		border-left: none;
-		vertical-align: top;
-		padding: 3px;
-		overflow: hidden; 
+
+		td {
+			position: relative;
+			color: #333;
+			text-align: left;
+			word-wrap: break-word;
+			border-top-width: 1px;
+			border-top-style: solid;
+			border-top-color: #CCC;
+			border-left-width: 1px;
+			border-left-style: solid;
+			border-left-color: #CCC;
+			border-left: none;
+			vertical-align: top;
+			padding: 3px;
+			overflow: hidden; 
 		}
+	}//end table_rows_list
+	
+	
+	
 
 	/* ACTIVITY LIST TABLE
 	----------------------------------------- */			
@@ -649,15 +653,17 @@ mark {
 
 		/* DELETE
 		--------------------------------------------------------------------- */
-		.table_rows_list a.button_delete {			
-			background-image: url('../../themes/default/icon_delete.svg');
-			background-position:right 8px top 50%;
-			background-size: 16px;
+			.table_rows_list a.button_delete {
+				background-image: url('../../themes/default/icon_delete.svg');
+				background-position:right 8px top 50%;
+				background-size: 16px;
+
+				&:hover {
+					background-image: url('../../themes/default/icon_delete_hover.svg');
+					background-color: #bb3249;
+				}
 			}
-			.table_rows_list a.button_delete:hover {
-				background-image: url('../../themes/default/icon_delete_hover.svg');
-				background-color: #bb3249;				
-			}
+			
 			.table_rows_list a.button_delete mark.row_debug_info {
 				/*display:table-cell;*/
 				//display:table;
@@ -697,12 +703,14 @@ mark {
 			background-position:right 8px top 50%;
 			height: 100%;
 			min-height: 65px;
-			//position: absolute;		
-			}
-			.table_rows_list a.button_transcription:hover {
+			//position: absolute;
+
+			&:hover {
 				background-image: url('../../themes/default/icon_transcription_hover.svg');				
 				background-color: @color_trascription;
 			}
+		}
+		
 
 		/* BUTTON_TRANSLATION (PROCESSES)
 		--------------------------------------------------------------------- */
@@ -711,12 +719,13 @@ mark {
 			background-position:right 6px top 50%;
 			height: 100%;
 			min-height: 65px;
-			position: absolute;		
-			}
-			.table_rows_list a.button_translation:hover {
+			position: absolute;	
+
+			&:hover {
 				background-image: url('../../themes/default/icon_translation_hover.svg');				
 				background-color: @color_lang;
 			}
+		}
 
 
 		/* BUTTON_INDEXATION (PROCESSES)
@@ -727,11 +736,13 @@ mark {
 			height: 100%;
 			min-height: 65px;
 			position: absolute;
-			}
-			.table_rows_list a.button_indexation:hover {
+
+			&:hover {
 				background-image: url('../../themes/default/icon_indexation_hover.svg');
 				background-color: @color_indexation;
 			}
+		}
+		
 
 		/* BUTTON_STRUCTURATION (PROCESSES)
 		--------------------------------------------------------------------- */

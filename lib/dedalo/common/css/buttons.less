@@ -5,57 +5,46 @@
 @import "@{common_css}/library.less";
 
 
-/* BUTTON GENERIC
------------------------------------------ */
-.css_button_generic {
-	font-size: 100%;
-	display: inline-block;
-	cursor: pointer;
-	min-height: 1em;
-	line-height: 1em;
-	background-color: #f2f2f2;
-	/*color: #000000;*/
-	border: 1px;
-	border-style: solid;
-	border-color: @color_input_border; // #d6d6d6;
-	border-radius: 4px;
-	padding: 6px;
-	padding-left: 14px;
-	padding-right: 14px;
-	margin-left: 5px;
-	margin-top: 3px;
-	user-select:none;-webkit-user-select:none;
+// button generic
+	.css_button_generic {
+		font-size: 100%;
+		display: inline-block;
+		cursor: pointer;
+		min-height: 1em;
+		line-height: 1em;
+		background-color: #f2f2f2;
+		/*color: #000000;*/
+		border: 1px;
+		border-style: solid;
+		border-color: @color_input_border; // #d6d6d6;
+		border-radius: 4px;
+		padding: 6px;
+		padding-left: 14px;
+		padding-right: 14px;
+		margin-left: 5px;
+		margin-top: 3px;
+		user-select:none;-webkit-user-select:none;
+
+		&:hover { 
+			opacity: 1;
+			background-color: #ff9439;
+			color: #000000;		}
+		&:active {
+			opacity: 0.8;
+			color:#000000
+		}
+
+		> span {
+			padding-left: 4px;
+			@media screen and (max-width: @movil_max_width) {
+				display: none;
+			}
+		}
 	}
-	.css_button_generic:hover { 
-		opacity: 1;
-		background-color: #ff9439;
-		color: #000000;	
-
-	}
-	.css_button_generic:active {
-		opacity: 0.8;
-		color:#000000
-	}
-	.css_button_generic > span {
-		padding-left: 4px;
-	}
-
-/* HIDE BUTTONS TEXT ON SMALL SCREEN
- * and inside inspector
--------------------------------------------------------------- */
-.css_button_generic > span {
-	@media screen and (max-width: @movil_max_width) {
-		display: none;
-    }
-}
-#inspector_div .css_button_generic > span {
-	display: none;
-}
+		
 
 
-
-/* BUTTON WITH ICON LEFT
------------------------------------------ */
+// button with icon left
 	.button_with_icon_left {
 		display: inline-block;
 		font-size: 100%;
@@ -73,9 +62,9 @@
 		margin-top: 1px;
 		width: auto;
 		min-width: 100px;
-		background-color: rgba(201, 201, 201, 0.3);	
-		}
-		.button_with_icon_left::before {
+		background-color: rgba(201, 201, 201, 0.3);
+
+		&:before {
 			content: '';
 			//background-image: url("../../themes/default/glyphicons-halflings.png");
 			background-image: url("../../themes/default/svg_icons.svg");
@@ -87,14 +76,16 @@
 		  	float: left; 
 		  	opacity: 0.5;	
 		}
-		.button_with_icon_left:hover {
+		&:hover {
 			/*opacity: 0.7;*/
  			background-color: rgba(201, 201, 201, 1);
 		}
-		.button_with_icon_left:active {
+		&:active {
 			/*opacity: 0.7;*/
  			background-color: rgba(201, 201, 201, 0.3);
 		}
+	}
+
 
 
 /* ICONS BOOTSTRAP 
@@ -117,13 +108,15 @@
 		cursor: pointer;
 		opacity: 1;
 		//zoom: 1.25;
-		}
-		.icon_bs:hover {
+
+		&:hover {
 			opacity: 1
 		}
-		.icon_bs:active {
+		&:active {
 			opacity: 0.4
 		}
+	}
+	
 
 	.image_delete_icon {
 		/* background-image: url('../../../themes/default/delete.png'); 
@@ -152,10 +145,9 @@
 		background-position: -120px -24px;
 	}
 	.av_delete_icon {
-		/* background-image: url('../../../themes/default/delete.png'); 
-		width: 11px;
-		height: 13px;
-		*/
+		//background-image: url('../../../themes/default/delete.png'); 
+		//width: 11px;
+		//height: 13px;		
 		background-position: -456px 0px;
 	}
 	.av_generate_icon {
@@ -202,84 +194,74 @@
 
 
 
-/* BUTTONS_COMMON
- * Default properties for all buttons in the aplication
------------------------------------------------------ */
-.buttons_common {
-	cursor: pointer;
-	//vertical-align: middle;
-	vertical-align: text-top;
-	width: 15px;
-	height: 15px;
-	border: none;
-	margin: 0;
-	background-repeat: no-repeat;
-	background-position: center center;
-	background-color: transparent;
-	opacity: 0.7;
+// buttons_common. Default properties for all buttons in the aplication
+	.buttons_common {
+		cursor: pointer;
+		//vertical-align: middle;
+		vertical-align: text-top;
+		width: 15px;
+		height: 15px;
+		border: none;
+		margin: 0;
+		background-repeat: no-repeat;
+		background-position: center center;
+		background-color: transparent;
+		opacity: 0.7;
+
+		&:hover {
+			opacity: 1 !important;
+		}
+		&:active {
+			opacity: 1
+		}
 	}
-	.buttons_common:hover {
-		opacity: 1 !important;
-	}
-	.buttons_common:active {
-		opacity: 1
-	}
+
 
 
 /* BUTTON REMOVE
  * Trash icon
 ----------------------------------------------------- */
-.button_remove {
-	.buttons_common;
-	//background: url('../../themes/default/close.svg');
-	background-image: url(../../themes/default/trash.svg);
-	background-size: 76%;	
-	opacity: .75;
+	.button_remove {
+		.buttons_common;
+		//background: url('../../themes/default/close.svg');
+		background-image: url(../../themes/default/trash.svg);
+		background-size: 76%;
+		opacity: 0.75;
 	}
-	.button_remove:hover {
-
-	}
-	.button_remove:active {
 		
-	}
 
 /* BUTTON Add
  * + icon
 ----------------------------------------------------- */
-.button_add {
-	.buttons_common;
-	background-image: url('../../themes/default/close.svg');	
-	-webkit-transform: rotate(45deg);
-    -moz-transform: rotate(45deg);
-    -ms-transform: rotate(45deg);
-    -o-transform: rotate(45deg);
-    transform: rotate(45deg);
-    -webkit-filter: brightness(0%);
-    filter: brightness(0%);
+	.button_add {
+		.buttons_common;
+		background-image: url('../../themes/default/close.svg');
+		-webkit-transform: rotate(45deg);
+	    -moz-transform: rotate(45deg);
+	    -ms-transform: rotate(45deg);
+	    -o-transform: rotate(45deg);
+	    transform: rotate(45deg);
+	    -webkit-filter: brightness(0%);
+	    filter: brightness(0%);
 	}
-	.button_add:hover {
-
-	}
-	.button_add:active {
-		
-	}
+	
 
 
 /* BUTTON Close
  * X icon
 ----------------------------------------------------- */
-.button_close {	
-	position: absolute;
-	right: 5px;
-	top: 5px;
-	z-index: 2;
-	//background-position: -168px -96px;
-	//background-position: -48px -96px;
-	//opacity: 0.8;
-	
-	.buttons_common;
-	background-image: url('../../themes/default/close.svg');	
-}
+	.button_close {	
+		position: absolute;
+		right: 5px;
+		top: 5px;
+		z-index: 2;
+		//background-position: -168px -96px;
+		//background-position: -48px -96px;
+		//opacity: 0.8;
+		
+		.buttons_common;
+		background-image: url('../../themes/default/close.svg');	
+	}
 
 
 
