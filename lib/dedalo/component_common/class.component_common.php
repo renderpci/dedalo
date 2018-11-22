@@ -4039,7 +4039,23 @@ abstract class component_common extends common {
 	* @return array $ar_result
 	*/
 	public function autocomplete_search($search_query_object, $divisor=', ') {
-	
+		
+		// Set defaults for resolve row additions
+			$components_with_relations 	= component_relation_common::get_components_with_relations();
+			$propiedades 	 			= $this->get_propiedades();
+			$show_parent_name_default 	= get_called_class()==='component_autocomplete_hi' ? true : false;
+			$show_parent_name 			= isset($propiedades->show_parent_name) ? (bool)$propiedades->show_parent_name : $show_parent_name_default;
+			$search_list_add 			= isset($propiedades->search_list_add) ? (bool)$propiedades->search_list_add : false;
+			#$show_childrens 			= isset($propiedades->show_childrens) ? (bool)$propiedades->show_childrens : false;
+
+		// Search filter custom
+			if (isset($propiedades->source->filter_custom)) {				
+				$op = '$and';
+				foreach ($propiedades->source->filter_custom as $key => $filter_element) {
+					$search_query_object->filter->{$op}[] = $filter_element;
+				}
+			}
+
 		// Conform search query object with some modifiers
 			# Remove option of sub_select_by_id (not work on left joins)
 			$search_query_object->allow_sub_select_by_id = false;
@@ -4047,26 +4063,25 @@ abstract class component_common extends common {
 			# Avoid auto add filter by user projects in search
 			if (!property_exists($search_query_object,'skip_projects_filter')) {
 				$search_query_object->skip_projects_filter 	= true;
-			}
+			}		
 
 			if(SHOW_DEBUG===true) {
 				debug_log(__METHOD__." search_query_object - modo:$this->modo - ".json_encode($search_query_object, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT), logger::DEBUG);
-			}		
-		
+			}
+
 		// Exec search
 			$search_development2 = new search_development2($search_query_object);
-			$rows_data 		 	 = $search_development2->search();	
+			$rows_data 		 	 = $search_development2->search();
+			$ar_records 		 = $rows_data->ar_records;
 
-		// Set defaults for resolve row additions
-			$components_with_relations 	= component_relation_common::get_components_with_relations();
-			$propiedades 	 			= $this->get_propiedades();
-			$show_parent_name_default 	= get_called_class()==='component_autocomplete_hi' ? true : false;
-			$show_parent_name 			= isset($propiedades->show_parent_name) ? (bool)$propiedades->show_parent_name : $show_parent_name_default;
-			$search_list_add 			= isset($propiedades->search_list_add) ? (bool)$propiedades->search_list_add : false;
+		// 		
+			
+		// childrens addition optional
+			// see self add_childrens
 
 		// Iterate rows to conform as final array result. ar_result is array of objects
 			$ar_result = [];
-			foreach ($rows_data->ar_records as $key => $row) {
+			foreach ($ar_records as $key => $row) {
 
 				// Locator build
 					$locator = new locator();
@@ -4166,12 +4181,75 @@ abstract class component_common extends common {
 
 					$ar_result[] = $value_obj;
 
-			}//end foreach ($rows_data->ar_records as $key => $row)
+			}//end foreach ($ar_records as $key => $row)
 			#debug_log(__METHOD__." ar_result ".to_string($ar_result), logger::DEBUG);
 
 
 		return (array)$ar_result;
 	}//end autocomplete_search
+
+
+
+	/**
+	* ADD_CHILDRENS
+	* @return array $ar_records_edit
+	*/
+	public static function add_childrens($ar_records, $recursive=true) {		
+		
+		// Fields
+		$fields = [];
+		foreach ($ar_records[0] as $property => $rvalue) {
+			if ($property==='section_tipo' || $property==='section_id') continue;
+			$fields[] = $property;
+		}
+
+		$ar_records_edit = [];
+		foreach ($ar_records as $key => $value) {
+			// add self
+			$ar_records_edit[] = $value;
+			# get_childrens($section_id, $section_tipo, $component_tipo=null, bool $recursive=true)
+			$ar_childres = component_relation_children::get_childrens($value->section_id, $value->section_tipo, null, $recursive);
+			#dump($ar_childres, ' ar_childres ++ '.to_string());
+			foreach ($ar_childres as $ch_key => $ch_value) {
+
+				$finded = array_filter(
+					$ar_records_edit,
+					function ($e) use ($ch_value) {
+						return $e->section_section_tipo === $ch_value->section_section_tipo && $e->section_id == $ch_value->section_id;
+					}
+				);
+				if (!empty($finded)) {
+					continue; // Skip already existing items
+				}
+				
+				$item = new stdClass();
+					$item->section_id 	= $ch_value->section_id;
+					$item->section_tipo = $ch_value->section_tipo;
+
+				foreach ($fields as $field_tipo) {
+					$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($field_tipo,true);
+					$component 		= component_common::get_instance($modelo_name,
+																	 $field_tipo,
+																	 $ch_value->section_id,
+																	 'list',
+																	 DEDALO_DATA_LANG,
+																	 $ch_value->section_tipo);
+					$dato = $component->get_dato_full();
+					$item->{$field_tipo} = json_encode($dato);
+				}
+				$ar_records_edit[] = $item;
+			}
+		}
+		dump($ar_records, ' ar_records ++ '.to_string());
+		dump($ar_records_edit, ' ar_records_edit ++ '.to_string());
+		
+		
+		return $ar_records_edit;
+	}//end add_childrens
+
+
+
+
 
 
 
