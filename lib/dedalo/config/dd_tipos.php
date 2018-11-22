@@ -169,7 +169,8 @@ define('DEDALO_TEMP_PRESET_SECTION_TIPO'				, 'dd655');
 define('OP_OR'											, '$or');
 define('OP_AND'											, '$and');
 
-
+# SEARCH PRESETS
+define('DEDALO_SERVICES_SECTION_TIPO'					, 'dd1010');
 
 if (!defined('DEDALO_PROTOCOL')) {
 	define('DEDALO_PROTOCOL', 'http://');
