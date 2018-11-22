@@ -1902,7 +1902,7 @@ class component_portal extends component_relation_common {
 										continue;
 									}
 									break;
-								case 'view_tool_description':
+								case strrpos($edit_view, 'view_tool_description'):
 									if ($modelo_name==='component_portal') {
 										$render_list_mode = 'portal_list_view_mosaic';
 									}else{
