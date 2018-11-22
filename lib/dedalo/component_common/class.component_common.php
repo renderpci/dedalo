@@ -149,7 +149,7 @@ abstract class component_common extends common {
 					# Verify this section is from current component tipo
 					$ar_terminoID_by_modelo_name = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($tipo, 'section', 'parent');
 					if (!isset($ar_terminoID_by_modelo_name[0])) {
-						debug_log(__METHOD__." ar_terminoID_by_modelo_name is empty for tipo, ".to_string($ar_terminoID_by_modelo_name), logger::ERROR);
+						debug_log(__METHOD__." ar_terminoID_by_modelo_name is empty for tipo ($tipo), ar_terminoID_by_modelo_name:".to_string($ar_terminoID_by_modelo_name), logger::ERROR);
 						throw new Exception("Error Processing Request", 1);						
 					}
 					$calculated_section_tipo = $ar_terminoID_by_modelo_name[0];
@@ -1922,7 +1922,7 @@ abstract class component_common extends common {
 
 		// cache
 			static $ar_list_of_values_data = [];
-			$uid = isset($search_query_object->section_tipo) ? $search_query_object->section_tipo : $this->tipo;
+			$uid = isset($search_query_object->section_tipo) ? $search_query_object->section_tipo.'_'.$lang : $this->tipo.'_'.$lang;
 			if (isset($ar_list_of_values_data[$uid])) {
 				#debug_log(__METHOD__." Return cached item for ar_list_of_values: ".to_string($uid), logger::DEBUG);
 				return $ar_list_of_values_data[$uid];
@@ -1984,7 +1984,9 @@ abstract class component_common extends common {
 						$dato_full_json = $current_row->{$related_tipo};
 						$current_label = self::get_value_with_fallback_from_dato_full( $dato_full_json, false );
 					}
-					$ar_label[] = $current_label;
+					if (!empty($current_label)) {
+						$ar_label[] = $current_label;
+					}					
 				}
 				$label = implode(' | ', $ar_label);
 
@@ -2009,7 +2011,7 @@ abstract class component_common extends common {
 
 		// cache
 			$ar_list_of_values_data[$uid] = $response;
-
+	
 		return $response;		
 	}//end get_ar_list_of_values2
 

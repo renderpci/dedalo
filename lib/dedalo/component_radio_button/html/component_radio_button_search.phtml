@@ -42,7 +42,7 @@
 					$search_input_id = $search_input_name .'_'.$i;
 
 					$label   = (string)$item->label;
-					$locator = (object)$item->value;
+					$locator = (object)clone $item->value;
 
 					if (!property_exists($locator, 'type')) {
 						$locator->type = DEDALO_RELATION_TYPE_LINK;

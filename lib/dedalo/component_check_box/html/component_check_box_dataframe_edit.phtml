@@ -47,7 +47,7 @@
 			$i=1; foreach ($ar_list_of_values->result as $key => $item) {
 
 				$label   	= (string)$item->label;
-				$locator 	= (object)$item->value;
+				$locator 	= (object)clone $item->value;
 				
 				# complete locator properties
 				$locator->type 		= $this->caller_dataset->type;

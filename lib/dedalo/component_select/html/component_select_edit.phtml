@@ -64,12 +64,18 @@
 				
 				# Empty option
 				$html_content .= "<option value=\"\"></option>";
-
+	
 				# Available options
 				foreach ($ar_list_of_values->result as $key => $item) {
 
-					$locator = (object)$item->value;
 					$label   = (string)$item->label;
+					
+					$locator = new stdClass();
+						$locator->section_tipo 			= $item->value->section_tipo;
+						$locator->section_id 			= $item->value->section_id;
+						$locator->type 					= DEDALO_RELATION_TYPE_LINK;
+						$locator->from_component_tipo 	= $tipo;
+
 
 					$founded  = locator::in_array_locator( $locator, $ar_locator=$dato, $ar_properties=array('section_id','section_tipo') );
 					$selected = $founded ? 'selected' : '';

@@ -25,6 +25,8 @@
 	#if($required)
 	#	$required_code = 'style="font-weight:bold"';
 
+	
+
 	# CONTENIDO (INPUT)
 	$html_content = '';
 	switch($permissions) {
@@ -38,7 +40,7 @@
 				$i=1; foreach((array)$ar_list_of_values->result as $key => $item) {
 
 					$label   = (string)$item->label;
-					$locator = (object)$item->value;
+					$locator = (object)clone $item->value;
 
 					#$checked  = is_array($dato) && in_array($locator, $dato) ? true : false;
 					$checked  = '';
@@ -69,21 +71,20 @@
 
 		case 2 :
 		case 3 :
-				$html_content .= "<ul class=\"radio_button_ul_list\">";
-
+				$html_content .= '<ul class="radio_button_ul_list">';
+	
 				$i=1; foreach((array)$ar_list_of_values->result as $key => $item) {
 
 					$label   = (string)$item->label;
-					$locator = (object)$item->value;
-
-					if (!property_exists($locator, 'type')) {
-						$locator->type = DEDALO_RELATION_TYPE_LINK;
-					}
-					if (!property_exists($locator, 'from_component_tipo')) {
-						$locator->from_component_tipo = $tipo;
-					}
+	
+					$locator = new stdClass();
+						$locator->section_tipo 			= $item->value->section_tipo;
+						$locator->section_id 			= $item->value->section_id;
+						$locator->type 					= DEDALO_RELATION_TYPE_LINK;
+						$locator->from_component_tipo 	= $tipo;					
 
 					$locator_json = json_encode($locator);
+		
 
 					#$checked  = is_array($dato) && in_array($locator, $dato) ? 'checked="checked"' : '';
 					$checked  = '';
@@ -95,7 +96,7 @@
 
 					$input_id = $input_name.'_'.$i;
 
-					$html_content .= "<li>";
+					$html_content .= '<li>';
 
 						#
 						# INPUT
@@ -119,10 +120,10 @@
 						# LABEL
 						$html_content .= "<label for=\"$input_id\" class=\"css_radio_button_rotulo\" $required_code >$label</label>";
 
-					$html_content .= "</li>";
+					$html_content .= '</li>';
 					$i++;
 				}
-				$html_content .= "</ul>";
+				$html_content .= '</ul>';
 
 				#
 				# JS Init component

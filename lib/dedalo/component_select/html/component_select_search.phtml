@@ -55,8 +55,8 @@
 					# Available options
 					foreach ($ar_list_of_values->result as $key => $item) {
 
-						$locator = (object)$item->value;
 						$label   = (string)$item->label;	# Locator is json encoded object
+						$locator = (object)clone $item->value;						
 						#dump($locator," locator"); dump($dato," dato");
 
 						#$selected = in_array($locator, $dato) ? 'selected' : '';

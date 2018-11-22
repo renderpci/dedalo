@@ -41,12 +41,14 @@
 		
 			$html_content .= "<ul class=\"group\">";
 			$i=1; foreach ($ar_list_of_values->result as $key => $item) {
-
-				$locator = (object)$item->value;
+				
 				$label   = (string)$item->label;
 
-				# Add from_component_tipo
-				$locator->from_component_tipo = $tipo;
+				$locator = new stdClass();
+					$locator->section_tipo 			= $item->value->section_tipo;
+					$locator->section_id 			= $item->value->section_id;
+					$locator->type 					= DEDALO_RELATION_TYPE_LINK;
+					$locator->from_component_tipo 	= $tipo;
 
 				$locator_json = json_encode($locator);
 				

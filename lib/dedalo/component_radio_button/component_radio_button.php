@@ -45,7 +45,6 @@
 				$input_name 		= 'radio_button_'.$identificador_unico;
 				$js_code			= $this->generate_js();
 				$component_info 	= $this->get_component_info('json');
-				#$component_info  	= rawurlencode($component_info);
 
 				$mandatory 			= (isset($propiedades->mandatory) && $propiedades->mandatory===true) ? true : false;
 				$mandatory_json 	= json_encode($mandatory);

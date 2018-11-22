@@ -46,7 +46,7 @@
 				foreach ($ar_list_of_values->result as $key => $item) {
 
 					$label   = (string)$item->label;
-					$locator = (object)$item->value;
+					$locator = (object)clone $item->value;
 
 					if (!property_exists($locator, 'type')) {
 						$locator->type = DEDALO_RELATION_TYPE_LINK;
