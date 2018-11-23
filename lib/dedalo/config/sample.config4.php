@@ -48,6 +48,8 @@
 	define('DEDALO_ENTITY', 'my_entity_name'); # Like 'dedalo4'
 	# DEDALO_ENTITY_LABEL . (Showed title of html pages)
 	define('DEDALO_ENTITY_LABEL', DEDALO_ENTITY);
+	# DEDALO_ENTITY_ID . (From Dédalo private list)
+	define('DEDALO_ENTITY_ID', 0);
 	# DEVELOPMENT_SERVER
 	define('DEVELOPMENT_SERVER'	, false);
 

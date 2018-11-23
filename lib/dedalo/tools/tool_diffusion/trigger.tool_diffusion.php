@@ -41,6 +41,10 @@ function export_list($json_data) {
 	# Write session to unlock session file
 	session_write_close();
 
+	// diffusion_element
+		$RecordObj_dd		  = new RecordObj_dd($diffusion_element_tipo);
+		$propiedades 		  = $RecordObj_dd->get_propiedades(true);	
+		$diffusion_class_name = $propiedades->diffusion->class_name; 
 
 	try{
 		# Reset msg
@@ -71,7 +75,8 @@ function export_list($json_data) {
 			$section_id 	= (int)$row->section_id;
 			$section_tipo 	= (string)$row->section_tipo;
 			
-			$export_result = tool_diffusion::export_record($section_tipo, $section_id, $diffusion_element_tipo, $resolve_references=true);	
+			// tool_diffusion::export_record($section_tipo, $section_id, $diffusion_element_tipo, $resolve_references=true);
+			$export_result = tool_diffusion::export_record($section_tipo, $section_id, $diffusion_element_tipo, true, $rows_data->ar_records);	
 
 			if($export_result->result==true) {
 				$n_records_published++;
@@ -79,13 +84,21 @@ function export_list($json_data) {
 				$response->msg .= $export_result->msg;
 				debug_log(__METHOD__." export_result ".to_string($export_result), logger::DEBUG);
 			}
+
+			if ($diffusion_class_name==='diffusion_rdf') {
+				break; // Only one iteration is needed
+			}
 		}
 		$response->n_records_published = $n_records_published;	
 
 		if ($n_records_published>0) {
 			#echo "Published record: $section_id ";
 			$response->result = true;
-			$response->msg .= sprintf("<span class=\"ok\">Ok. Published %s records successfully</span>",$n_records_published);
+			if ($diffusion_class_name==='diffusion_rdf') {
+				$response->msg .= to_string($export_result->msg);
+			}else{
+				$response->msg .= sprintf("<span class=\"ok\">Ok. Published %s records successfully</span>",$n_records_published);
+			}			
 			
 		}else{
 			$response->result = false;

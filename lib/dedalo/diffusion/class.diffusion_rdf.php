@@ -20,6 +20,7 @@ class diffusion_rdf extends diffusion {
 
 	public $service_name;	// From propiedades of diffusion_element (Fixed on update_record)
 	public $entity_section_id; //Fixed on update_record
+	public $ar_records; // Inject data here by tool diffusion when update_record
 
 	public $DEDALO_EXTRAS_BASE_URL;
 
@@ -41,7 +42,7 @@ class diffusion_rdf extends diffusion {
 	* UPDATE_RECORD
 	*/
 	public function update_record( $request_options, $resolve_references=false ) {
-	
+
 		$response = new stdClass();
 			$response->result 	= false;
 			$response->msg 		= 'Error. Request failed';
@@ -52,17 +53,18 @@ class diffusion_rdf extends diffusion {
 				$options->section_id   			= null;
 				$options->diffusion_element_tipo= null;				
 				foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
-
+	
 		// target_section_tipo
 			$RecordObj_dd 		 = new RecordObj_dd($options->diffusion_element_tipo);
 			$propiedades 		 = $RecordObj_dd->get_propiedades(true);
-			$target_section_tipo = $propiedades->diffusion->target_section_tipo;
+			#$target_section_tipo = $propiedades->diffusion->target_section_tipo;			
 		
 		// Fix vars
 			$this->service_name		 = $propiedades->diffusion->service;
 			$this->entity_section_id = $options->section_id;
 	
 		// search records (Fichero)
+			/*
 			$target_rows = self::get_target_rows($target_section_tipo, $options->section_tipo, $options->section_id);
 				
 			$ar_section_id = array_map(function($item){
@@ -72,19 +74,62 @@ class diffusion_rdf extends diffusion {
 				$response->result 	= false;
 				$response->msg 		= 'Error. No records found for section_tipo: '.$target_section_tipo;
 				return $response;
-			}	
-		
-		// diffusion rdf
-			$rdf_file_name  = 'nomisma_'.$options->section_tipo.'_'.$options->section_id.'.rdf';
-			$xml_tipo 		= RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($options->diffusion_element_tipo, 'xml', 'children', true)[0];
-			$options = new stdClass();
-				$options->xml_tipo 			= $xml_tipo;	// Numisma RDF : modelo_name : xml
-				$options->section_tipo  	= $target_section_tipo;	// Fichero
-				$options->ar_section_id 	= $ar_section_id;	// Array like [45001,45002,45003];
-				$options->save_to_file_path = DEDALO_EXTRAS_PATH .'/nomisma/data/' . $rdf_file_name; // Target file	
-				$options->url_file 			= $this->DEDALO_EXTRAS_BASE_URL .'/nomisma/data/' . $rdf_file_name;
+			}
+			*/
+			#
+			if (empty($this->ar_records)) {
+				$ar_section_id = [$options->section_id];
+			}else{
+				$ar_section_id = array_map(function($item){
+					return $item->section_id;
+				}, (array)$this->ar_records);
+			}
+	
+		// filter to publish records
+			$ar_section_id = self::get_to_publish_rows($options->section_tipo, $ar_section_id);
 
-			$response = $this->build_xml_file( $options );
+		// Directory
+			$sub_path    = '/rdf/nomisma/';
+			$folder_path = DEDALO_MEDIA_BASE_PATH . $sub_path;
+			if (!is_dir($folder_path)) {
+				if(!mkdir($folder_path, 0777, true)) {
+					$response->msg = trim(" Error on read or create directory. Permission denied");
+					return $init_response;
+				}
+				debug_log(__METHOD__." CREATED DIR: $folder_path  ".to_string(), logger::DEBUG);
+			}
+			
+
+		// Filename. Format like: '1.rdf' for multiple or '1_1.rdf' for one record (entity_id.rdf, entity_id_section_id.rdf)
+			$collection_tipo = $propiedades->diffusion->collection_tipo; // expected 'numisdata159'
+			$modelo_name 	 = RecordObj_dd::get_modelo_name_by_tipo($collection_tipo,true); // expected 'component_autocomplete'
+			$component 		 = component_common::get_instance($modelo_name,
+															 $collection_tipo,
+															 $ar_section_id[0],
+															 'list',
+															 DEDALO_DATA_LANG,
+															 $options->section_tipo); // expected 'numisdata4'
+			$dato 		   = $component->get_dato();	// Get array of locators. One expected		
+			$collection_id = isset($dato[0]->section_id) ? $dato[0]->section_id : null;
+
+			if (count($ar_section_id)===1) {
+				$rdf_file_name  = $collection_id . '_' . $ar_section_id[0] . '.rdf';
+			}else{
+				$rdf_file_name  = $collection_id . '.rdf';
+			}
+			
+			
+		
+		// diffusion rdf			
+			$xml_tipo 		= RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($options->diffusion_element_tipo, 'xml', 'children', true)[0];
+			$xml_options = new stdClass();
+				$xml_options->xml_tipo 			= $xml_tipo;	// Numisma RDF : modelo_name : xml
+				$xml_options->section_tipo  	= $options->section_tipo; // $target_section_tipo;	// Fichero
+				$xml_options->ar_section_id 	= $ar_section_id;	// Array like [45001,45002,45003];
+				$xml_options->save_to_file_path = DEDALO_MEDIA_BASE_PATH . $sub_path . $rdf_file_name; // Target file	
+				$xml_options->url_file 			= DEDALO_MEDIA_BASE_URL  . $sub_path . $rdf_file_name;
+
+			$response = $this->build_xml_file( $xml_options );
 				#dump($response, ' response ++ '.to_string($options));
 
 		return $response;
@@ -105,8 +150,6 @@ class diffusion_rdf extends diffusion {
 			$response = $diffusion_rdf->build_xml_file( $options );
 
 		}*/
-
-		return $response;
 	}//end update_record
 
 
@@ -157,10 +200,7 @@ class diffusion_rdf extends diffusion {
 			$element 	  = $this->parse_rdf_object($rdf_object, $options->section_tipo, $current_section_id);
 			#dump($element, ' element ++ $current_section_id: '.to_string($current_section_id));			
 			$ar_element[] = $element;
-		}
-		#debug_log(__METHOD__." Stop here!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! ".to_string(), logger::DEBUG);
-		#throw new Exception(" Stop here!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!", 1);
-			
+		}			
 
 		# INJECT VALUE ON WRAPPER
 		$rdf_wrapper['rdf_value'] = implode("\n", $ar_element);
@@ -172,10 +212,10 @@ class diffusion_rdf extends diffusion {
 		# XML. Verify xml format is valid and format output	
 		$xml_string = self::xml_object($rdf_wrapper_string, $options->xml_validate, $options->xml_format_output);
 		if (!$xml_string) {
-			$response->msg[]  = "xml_string error. bas format";	// .": \n".htmlspecialchars($xml_string);
+			$response->msg[]  = "xml_string error. bab format";	// .": \n".htmlspecialchars($xml_string);
 			$response->result = false;	//$xml_string;
 		}else{
-			$response->msg[]  = "xml_string created successfully";	// .": \n".htmlspecialchars($xml_string);
+			$response->msg[]  = ''; // "xml_string created successfully";	// .": \n".htmlspecialchars($xml_string);
 			$response->result = true;	//$xml_string;
 		}						
 
@@ -499,7 +539,7 @@ class diffusion_rdf extends diffusion {
 				// base_uri.  Eg. http://domain.com/catalog/ + '?id=14527'
 				// base_uri_entity (resolve wit entity service data)
 					if (isset($propiedades->base_uri_entity)) {
-						$base_uri  = $this->resolve_base_uri_entity($propiedades->base_uri_entity);
+						$base_uri  = $this->resolve_base_uri_entity($propiedades->base_uri_entity, $section_id);
 					}else{
 						$base_uri  = isset($propiedades->base_uri)  ? $propiedades->base_uri : null;
 					}
@@ -896,7 +936,7 @@ class diffusion_rdf extends diffusion {
 	* RESOLVE_BASE_URI_ENTITY
 	* @return string $base_uri
 	*/
-	public function resolve_base_uri_entity($base_uri_entity) {
+	public function resolve_base_uri_entity($base_uri_entity, $section_id=null) {
 		
 		// Search Dedalo entities publication services
 			$section_tipo 			= $base_uri_entity->section_tipo; 	// services_section_tipo = 'dd1010';
@@ -984,17 +1024,29 @@ class diffusion_rdf extends diffusion {
 			}else{
 				// Case search in public entity section
 
-				$section_id = $this->entity_section_id;
+				// Collection (Entity)	
 
-				// component load
-					$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+					$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($base_uri_entity->from_component_tipo,true);
 					$component 		= component_common::get_instance($modelo_name,
-														$component_tipo,
+														$base_uri_entity->from_component_tipo,
 														$section_id,
 														'list',
 														DEDALO_DATA_NOLAN,
-														$section_tipo);
-					$dato = $component->get_dato();
+														$base_uri_entity->from_section_tipo);
+					$dato_entity = $component->get_dato();
+					
+					if (!empty($dato_entity)) {	
+						// component load
+						$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+						$component 		= component_common::get_instance($modelo_name,
+															$component_tipo,
+															$dato_entity[0]->section_id,
+															'list',
+															DEDALO_DATA_NOLAN,
+															$section_tipo);
+						$dato = $component->get_dato();	
+					}
+				
 
 				// base_uri
 					if (empty($dato)) {
@@ -1050,7 +1102,7 @@ class diffusion_rdf extends diffusion {
 	/**
 	* GET_TARGET_ROWS
 	* @return array $rows
-	*/
+	*//*
 	public static function get_target_rows($target_section_tipo, $section_tipo, $section_id) {
 			
 		$query = '
@@ -1103,6 +1155,69 @@ class diffusion_rdf extends diffusion {
 
 		return (array)$rows;
 	}//end get_target_rows
+	*/
+
+
+
+	/**
+	* GET_to_publish_ROWS
+	* @return array $ar_section_id_clean
+	*/
+	public static function get_to_publish_rows($section_tipo, $ar_section_id) {
+		
+        $q = implode(',', (array)$ar_section_id);
+
+        // query
+			$query = '
+			{
+			    "id": "numisdata4_list",
+			    "section_tipo": "'.$section_tipo.'",
+			    "limit": false,	 
+			    "filter": {
+			        "$and": [
+			            {
+			                "q": "'.$q.'",
+			                "q_operator": null,
+			                "path": [
+			                    {
+			                        "section_tipo": "'.$section_tipo.'",
+			                        "component_tipo": "numisdata130",
+			                        "modelo": "component_section_id",
+			                        "name": "ID"
+			                    }
+			                ]
+			            },
+			            {
+			                "q": "{\"section_id\":\"1\",\"section_tipo\":\"dd64\",\"type\":\"dd151\",\"from_component_tipo\":\"numisdata158\"}",
+			                "q_operator": null,
+			                "path": [
+			                    {
+			                        "section_tipo": "'.$section_tipo.'",
+			                        "component_tipo": "numisdata158",
+			                        "modelo": "component_publication",
+			                        "name": "Publish"
+			                    }
+			                ]
+			            }
+			        ]
+			    }
+			}';
+			$search_query_object = json_decode($query);
+			#dump($query, 'search_query_object ++ '.json_encode($search_query_object, JSON_PRETTY_PRINT));
+
+		// search
+			$search_development2 = new search_development2($search_query_object);
+			$result 			 = $search_development2->search();
+			$ar_records 		 = $result->ar_records;
+
+		// format output as array of id's
+			$ar_section_id_clean = array_map(function($item){
+				return $item->section_id;
+			}, (array)$ar_records);
+
+
+		return (array)$ar_section_id_clean;
+	}//end get_to_publish_rows
 
 
 

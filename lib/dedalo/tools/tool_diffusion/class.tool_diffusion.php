@@ -79,7 +79,7 @@ class tool_diffusion {
 	*	default: true
 	* @return object $response
 	*/
-	public static function export_record($section_tipo, $section_id, $diffusion_element_tipo, $resolve_references=true) {
+	public static function export_record($section_tipo, $section_id, $diffusion_element_tipo, $resolve_references=true, $ar_records=[]) {
 
 		$start_time = start_time();
 		
@@ -116,6 +116,7 @@ class tool_diffusion {
 		#
 		# UPDATE_RECORD
 		$diffusion 				= new $diffusion_class_name;
+		$diffusion->ar_records 	= $ar_records;
 		$update_record_result 	= $diffusion->update_record( $options, $resolve_references );
 			#dump($update_record_result, " update_record_result ".to_string() ); die();
 
