@@ -229,6 +229,8 @@ class css {
 			#$ar_term = ['numisdata201','numisdata572','numisdata573','numisdata560'];
 			#if(!in_array($terminoID, $ar_term)) continue;
 
+			$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($terminoID,false);
+
 			#
 			# get_css_prefix
 			$css_prefix = css::get_css_prefix($terminoID);
@@ -238,18 +240,28 @@ class css {
 			//wrap_section_{$modo}
 
 			#
-			# LESS CODE
-			$less_line='';
-			// En pruebas (el apliarlo solo a los de css_prefix wrap_component -los componentes-) 24-08-2018
-			#if (!isset($propiedades->alias_of)) {
-			if($css_prefix==='wrap_component'){				
-				$less_line .= '.sgc_edit>';	
-			}
-			$less_line .= '.'.$css_prefix.'_'.$terminoID.'{';
-			foreach ($css_obj as $key => $obj_value) {				
-				$less_line .= self::convert_to_less($key, $obj_value, $css_prefix, $terminoID);
-			}
-			$less_line .= "\n}";			
+			# LESS LINE
+				$less_line='';
+
+				if ($modelo_name==='section') {
+				
+					$css_prefix = '';
+					$less_line .= '.wrap_section{';					
+
+				}else{
+
+					// En pruebas (el ampliarlo solo a los de css_prefix wrap_component -los componentes-) 24-08-2018
+					#if (!isset($propiedades->alias_of)) {
+					if($css_prefix==='wrap_component'){				
+						$less_line .= '.sgc_edit>';	
+					}
+					$less_line .= '.'.$css_prefix.'_'.$terminoID.'{';
+				}
+				
+				foreach ($css_obj as $key => $obj_value) {				
+					$less_line .= self::convert_to_less($key, $obj_value, $css_prefix, $terminoID);
+				}
+				$less_line .= "\n}";
 					
 
 			$less_code .= $less_line; // Add
