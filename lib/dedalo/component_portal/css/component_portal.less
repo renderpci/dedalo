@@ -4,16 +4,16 @@
 // Usage
 @import "@{common_css}/library.less";
 
+
 /* WRAP DIV CONTAINER
 ------------------------------------------------------- */
 	.css_wrap_portal {
 		padding-top: 5px;
 		padding-bottom: 7px;
-
 		//overflow: auto;
-		}
-		/* > select only the first '.content_data' inside css_wrap_portal */
-		.css_wrap_portal > .content_data {
+
+		// > select only the first '.content_data' inside css_wrap_portal
+		> .content_data {
 			width: 100%;		
 			display: table ;
 			text-align: right;
@@ -23,12 +23,16 @@
 			//background-color: #edbff5;  
 			overflow: auto;
 		}
-		/* hide main label (> first label only) */
-		.css_wrap_portal > .css_label {
+
+		// hide main label (> first label only)
+		> .css_label {
 			/* display: none; */
 			position: absolute;
 			width: 50% !important; // Portal always is in vertical mode
 		}
+	}
+		
+		
 	.component_relation_portal {
 
 	}
@@ -70,7 +74,7 @@
 		.show_more_link:hover {
 			color: #ff9439;
 		}
-	.btn_view_toogle{
+	.btn_view_toogle {
 		float: none;
 		width: 20px;
 		height: 17px;
@@ -85,7 +89,7 @@
 		.btn_view_toogle:hover {
 			opacity: .7;
 		}
-	.btn_view_single{
+	.btn_view_single {
 		background: url('../../themes/default/view_single_line.svg') center center no-repeat;
 	}
 	.btn_view_mosaic {
@@ -208,19 +212,26 @@
 	table.table_portal_inside {
 		margin: 0;
 		/*margin-top: -5px;*/
-		}
-		table.table_portal_inside td {
+		
+		td {
 			border: none;
 		}
+
 		td.row_portal_inside {
 			font-size: 90%;
 			padding: 0 !important;
 		}
+		
 		div.portal_first_element_content {
 			min-height: 0px;
 			text-align: left;
 			/* background-color: #b8f3f3; */
 		}
+
+	}
+		
+		
+		
 
 
 
@@ -404,12 +415,12 @@
 				}
 				.mosaic_li .button_edit {
 					top: 0;
-					background-image: url(../../themes/default/icon_edit.svg);
+					background-image: url('../../themes/default/icon_edit.svg');
 				}				
 				.mosaic_li .button_delete {
 					top: initial;
 					bottom: 0;
-					background-image: url(../../themes/default/icon_delete.svg);
+					background-image: url('../../themes/default/icon_delete.svg');
 				}
 
 				.li_component_image {
@@ -464,8 +475,8 @@
 			//display: -webkit-flex;
 			flex-direction: row;
 			//-webkit-flex-direction: row;
-			flex-wrap: no-wrap;
-			//-webkit-flex-wrap: no-wrap;
+			flex-wrap: nowrap;
+			//-webkit-flex-wrap: nowrap;
 			width: 100%;
 			padding: 0;
 			//padding-left: 15px;
@@ -513,7 +524,9 @@
 				max-width: 68px !important;
 			}
 			.column.component_image, .column.component_av, .column:last-of-type {
-				width: 102px !important;
+				//@media screen and (max-width: @movil_max_width) {					
+					max-width: 102px !important;
+				//}
 				flex-grow: 0;
 				display: flex;
 				padding: 0;
@@ -590,7 +603,7 @@
 			}
 			.button_edit {
 				border-bottom: 1px solid #fff;
-    			background-image: url(../../themes/default/icon_edit.svg);
+    			background-image: url('../../themes/default/icon_edit.svg');
 				//padding-top: 9px;
 				//padding-left: 7px;
 				line-height: 1em;
@@ -601,7 +614,7 @@
 					background-image: url('../../themes/default/icon_edit_hover.svg');	
 				}
 			.button_delete {
-				background-image: url(../../themes/default/icon_delete.svg);
+				background-image: url('../../themes/default/icon_delete.svg');
 				background-position: right 8px top 50%;
 				background-size: 16px;				
 				}
@@ -646,7 +659,7 @@
 				background-repeat: no-repeat;
 				background-position: right 15px top 50%;
 				background-color: #ededed;				
-				background-image: url(../../themes/default/icon_delete.svg);				
+				background-image: url('../../themes/default/icon_delete.svg');				
 				background-size: 16px;
 				}
 				.button_delete:hover {
@@ -723,12 +736,12 @@
 			}
 			.mosaic_li .button_edit {
 				top: 0;
-				background-image: url(../../themes/default/icon_edit.svg);
+				background-image: url('../../themes/default/icon_edit.svg');
 			}
 			.mosaic_li .button_delete {
 				top: initial;
 				bottom: 0;
-				background-image: url(../../themes/default/icon_delete.svg);
+				background-image: url('../../themes/default/icon_delete.svg');
 			}
 
 		.mosaic_item {
@@ -831,16 +844,16 @@
 
 
 
-// Hide header list in portal when is empty
-.row_header_hide {
-	display: none !important;
-}
+	// Hide header list in portal when is empty
+	.row_header_hide {
+		display: none !important;
+	}
 
 
-// Hide buttons in tool portal
-#wrap_time_machine_page .btn_new_ep {
-	display: none;
-}
+	// Hide buttons in tool portal
+	#wrap_time_machine_page .btn_new_ep {
+		display: none;
+	}
 
 
 
