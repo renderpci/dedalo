@@ -1,20 +1,18 @@
 <?php
-
-
-
-
 /**
 * CSS
 * Control css files includes
 * Load common files and notified loaded components css files
 */
 class css {
-	
+
+
 	static $css_skin;
 	static $ar_url = array();
 	static $ar_url_basic = array();
 	static $structure_file_path = '/common/css/structure.css';
 	static $mixins_file_path 	= '/common/css/mixins.less';
+
 
 	
 	# CSS LINK CODE . RETURN COMBINATED CSS LINKS FOR INSERT IN HEADER  
@@ -199,7 +197,8 @@ class css {
 
 		include DEDALO_ROOT . '/vendor/leafo/lessphp/lessc.inc.php';
 		$less = new lessc;
-		$less_code = '/* Build: '.date("Y-m-d h:i:s").' */';
+		$less_code   = [];
+		$less_code[] = '/* Build: '.date("Y-m-d h:i:s").' */';
 
 		#
 		# SEARCH . Get all components custom css
@@ -233,7 +232,7 @@ class css {
 
 			#
 			# get_css_prefix
-			$css_prefix = css::get_css_prefix($terminoID);
+			$css_prefix = css::get_css_prefix($terminoID, $modelo_name);
 		
 			# Section
 			//$section_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($terminoID, 'section', 'parent', $search_exact=true);
@@ -241,33 +240,35 @@ class css {
 
 			#
 			# LESS LINE
-				$less_line='';
+				$ar_less_code = [];
+				foreach ($css_obj as $selector => $obj_value) {
+					$ar_less_code[] = self::convert_to_less($selector, $obj_value, $css_prefix, $terminoID);
+				}
 
 				if ($modelo_name==='section') {
 				
-					$css_prefix = '';
-					$less_line .= '.wrap_section{';					
+					// Envolve code into custom wrapper
+					$less_line = '.wrap_section_'.$terminoID.'{' . implode('', $ar_less_code) . "\n}";
+					#$less_line = '.'.$css_prefix.'_'.$terminoID.'{' . implode('', $ar_less_code) . "\n}";						
 
 				}else{
+					
+					// Envolve code into custom wrapper
+					$less_line = '.'.$css_prefix.'_'.$terminoID.'{' . implode('', $ar_less_code) . "\n}";
 
 					// En pruebas (el ampliarlo solo a los de css_prefix wrap_component -los componentes-) 24-08-2018
 					#if (!isset($propiedades->alias_of)) {
 					if($css_prefix==='wrap_component'){				
-						$less_line .= '.sgc_edit>';	
+						$less_line = '.sgc_edit>' . $less_line;	
 					}
-					$less_line .= '.'.$css_prefix.'_'.$terminoID.'{';
 				}
-				
-				foreach ($css_obj as $key => $obj_value) {				
-					$less_line .= self::convert_to_less($key, $obj_value, $css_prefix, $terminoID);
-				}
-				$less_line .= "\n}";
 					
 
-			$less_code .= $less_line; // Add
+			$less_code[] = $less_line; // Add
 		
 		}//end while ($rows = pg_fetch_assoc($result)) {
-		#debug_log(__METHOD__." less_code ".to_string($less_code), logger::DEBUG);	
+		#debug_log(__METHOD__." less_code ".to_string($less_code), logger::DEBUG);
+		$less_code = implode(' ', $less_code);	
 
 		#
 		# MXINS. Get mixixns file
@@ -280,96 +281,105 @@ class css {
 		# Write final file
 		$file_name = DEDALO_LIB_BASE_PATH . self::$structure_file_path;
 		
-		# FORMAT : lessjs (default) | compressed | classic
-		$less->setFormatter("compressed");	// lessjs (default) | compressed | classic
+		// Format : lessjs (default) | compressed | classic
+			$format = (DEVELOPMENT_SERVER===true) ? 'lessjs' : 'compressed';
+			$less->setFormatter($format);	// lessjs (default) | compressed | classic
 		
-		# PRESERVE COMMENTS : true | false	
-		#$less->setPreserveComments(false);	// true | false
+		// Preserve comments : true | false	
+			$less->setPreserveComments(false);	// true | false
 		
-		$compiled_css = $less->compile( $less_code );
+		// Compile 
+			#$compiled_css = $less->compile( $less_code );
+			try {
+				$compiled_css = $less->compile( $less_code );
+			} catch (exception $e) {
+				debug_log(__METHOD__." Error en compile less: ".$e->getMessage(), logger::ERROR);
+				echo "fatal error: " . $e->getMessage();
+			}
 
-		# Delete old version if exists
-		if ( file_exists($file_name) && !unlink($file_name)) {
-			$response->result 	= false;
-			$response->msg 	  	= "Error on remove old css file ($file_name) ";	
-		}
-
-		if( !$write = file_put_contents($file_name, $compiled_css) ) {
-			$response->result 	= false;
-			$response->msg 	  	= "Error on write css file ($file_name) ".to_string($write);
-		}else{
-			$file_size = format_size_units( filesize($file_name) );
-			$response->result 	 = true;
-			$response->msg 	  	 = "File css created successful. Size: $file_size";
-			$response->file_path = self::$structure_file_path;				
-		}
-		#debug_log(__METHOD__." Response: ".to_string($response), logger::DEBUG);
+		// Delete old version if exists
+			if ( file_exists($file_name) && !unlink($file_name) ) {
+				$response->result 	= false;
+				$response->msg 	  	= "Error on remove old css file ($file_name) ";	
+			}
+		
+		// write file
+			if( !$write = file_put_contents($file_name, $compiled_css) ) {
+				$response->result 	= false;
+				$response->msg 	  	= "Error on write css file ($file_name) ".to_string($write);
+			}else{
+				$file_size = format_size_units( filesize($file_name) );
+				$response->result 	 = true;
+				$response->msg 	  	 = "File css created successful. Size: $file_size";
+				$response->file_path = self::$structure_file_path;				
+			}
+			#debug_log(__METHOD__." Response: ".to_string($response), logger::DEBUG);
 	
 
 		return (object)$response;
-	}#end build_structure_css
+	}//end build_structure_css
 
 
 
 	/**
 	* CONVERT_TO_LESS
+	* @param $selector string
+	*	Is the css selector, like ".wrap_section_group_div_mdcat2576"
 	* @return string $less_value
 	*/
-	public static function convert_to_less($key, $obj_value, $css_prefix, $terminoID) {
+	public static function convert_to_less($selector, $obj_value, $css_prefix, $terminoID) {
 	
 		$less_value  = '';
 
 		if (is_object($obj_value)) {
 
 			$enclose = false;
-			if(strpos($key, $css_prefix)===false && ($css_prefix==='alias' && $key==='.wrap_component')===false) {
+			// wrap_section_group_div_mdcat2576 wrap_section
+			if( strpos($selector, $css_prefix)===false 
+				//&& ($css_prefix==='wrap_section')
+				&& ($css_prefix==='alias' && $selector==='.wrap_component')===false) {
 				$enclose = true;
 			}
 
 			# If current key is not defined as css_prefix, add as new style
 			if ($enclose===true) {
-				$less_value .= "\n$key{";
+				$less_value .= "\n$selector{";
 			}
 			
-			#
-			# MIXINGS
-			if (property_exists($obj_value, 'mixin')) {
-				foreach((array)$obj_value->mixin as $mixin_value) {					
-					$less_value .= "\n $mixin_value;";
+			// mixings
+				if (property_exists($obj_value, 'mixin')) {
+					foreach((array)$obj_value->mixin as $mixin_value) {
+						$less_value .= "\n $mixin_value;";
+					}
 				}
-			}
 
-			#
-			# STYLE
-			if (property_exists($obj_value, 'style') && !empty($obj_value->style)) {
-				foreach((array)$obj_value->style as $style_key => $style_value) {					
-					$less_value .= "\n $style_key:$style_value;";
+			
+			// style
+				if (property_exists($obj_value, 'style') && !empty($obj_value->style)) {
+					foreach((array)$obj_value->style as $style_key => $style_value) {
+						$less_value .= "\n $style_key:$style_value;";
+					}
 				}
-			}
 
 			if ($enclose===true) {
 				$less_value .= "\n}";
 			}
 
 		}else{
-			debug_log(__METHOD__." error. obj_value is not object ".json_encode($obj_value)." - css_prefix: ".json_encode($css_prefix)." - key: $key - terminoID : $terminoID", logger::ERROR);
+			debug_log(__METHOD__." error. obj_value is not object ".json_encode($obj_value)." - css_prefix: ".json_encode($css_prefix)." - key: $selector - terminoID : $terminoID", logger::ERROR);
 		}
 
 		return $less_value;
-	}#end convert_to_less
+	}//end convert_to_less
 
 
 
 	/**
 	* GET_CSS_PREFIX
-	* wrap_section_ts1
 	* @param string $tipo
 	* @return string $css_prefix
 	*/
-	public static function get_css_prefix($tipo) { 
-		
-		$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($tipo,false);
-			#dump($modelo_name, ' modelo_name ++ '.to_string());
+	public static function get_css_prefix($tipo, $modelo_name) {
 
 		switch (true) {		
 
@@ -384,9 +394,11 @@ class css {
 			case ($modelo_name === 'section_list') :
 				$css_prefix = 'wrap_section_records';
 				break;
+			
 			// section, section_tool
 			case strpos($modelo_name, 'section')===0 :
-				$css_prefix = 'wrap_section';
+				#$css_prefix = 'wrap_section';
+				$css_prefix = ' '; // (one space)
 				break;
 
 			case ($modelo_name === 'component_alias') :
@@ -396,11 +408,10 @@ class css {
 			case strpos($modelo_name, 'component')!==false :
 				$css_prefix = 'wrap_component';
 				break;		
-			/*
-			case strpos($modelo_name, 'section')!==false :
-				$css_prefix = 'wrap_section'; // section and section_list
-				break;
-			*/			
+			
+			#case strpos($modelo_name, 'section')!==false :
+			#	$css_prefix = 'wrap_section'; // section and section_list
+			#	break;						
 
 			default:
 				$css_prefix = $tipo;
@@ -409,7 +420,7 @@ class css {
 		}
 
 		return $css_prefix;
-	}#end get_css_prefix
+	}//end get_css_prefix
 
 
 	
