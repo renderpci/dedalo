@@ -20,7 +20,7 @@
 	# ETIQUETA (LABEL)
 	$html_label = component_common_draw::draw_label($this);
 
-	$required_code 	= NULL;
+	$required_code 	= null;
 	#if($required)
 	#	$required_code = 'style="font-weight:bold"';
 	
@@ -39,7 +39,7 @@
 		case 2 :
 		case 3 :					
 		
-			$html_content .= "<ul class=\"group\">";
+			$html_content .= '<ul class="group">';
 			$i=1; foreach ($ar_list_of_values->result as $key => $item) {
 				
 				$label   = (string)$item->label;
@@ -61,7 +61,7 @@
 
 				$current_id = $input_name.'_'.$i;
 				
-				$html_content .= "<li>";
+				$html_content .= '<li>';
 
 				# 
 				# INPUT
@@ -82,12 +82,19 @@
 				
 				#
 				# LABEL				
-				$html_content .= "<label for=\"$current_id\" class=\"css_check_box_rotulo\" {$required_code}>$label</label>";
+				$html_content .= '<label for="'.$current_id.'" class="css_check_box_rotulo'. $required_code .'"';
+				$html_content .= '>';
+				$html_content .= $label;
 
-				$html_content .= "</li>";
+				if(SHOW_DEBUG===true) {
+					$html_content .= ' <span class="notes">['.$locator->section_id.']</span>';
+				}
+				$html_content .= '</label>';
+
+				$html_content .= '</li>';
 				$i++;
 			}
-			$html_content .= "</ul>";
+			$html_content .= '</ul>';
 
 			#
 			# JS Init component
