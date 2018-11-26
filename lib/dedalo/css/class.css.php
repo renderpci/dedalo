@@ -227,59 +227,53 @@ class css {
 			// Debug only
 			#$ar_term = ['numisdata201','numisdata572','numisdata573','numisdata560'];
 			#if(!in_array($terminoID, $ar_term)) continue;
-
-			$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($terminoID,false);
-
-			#
-			# get_css_prefix
-			$css_prefix = css::get_css_prefix($terminoID, $modelo_name);
+			
+			// css_prefix. get_css_prefix
+				$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($terminoID,false);
+				$css_prefix  = css::get_css_prefix($terminoID, $modelo_name);
 		
-			# Section
-			//$section_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($terminoID, 'section', 'parent', $search_exact=true);
-			//wrap_section_{$modo}
 
-			#
-			# LESS LINE
-				$ar_less_code = [];
-				foreach ($css_obj as $selector => $obj_value) {
-					$ar_less_code[] = self::convert_to_less($selector, $obj_value, $css_prefix, $terminoID);
-				}
-
+			// less line				
 				if ($modelo_name==='section') {
+					
+					$ar_less_code = []; foreach ($css_obj as $selector => $obj_value) {
+						$ar_less_code[] = self::convert_to_less($selector, $obj_value, $css_prefix, $terminoID, true);
+					}
 				
 					// Envolve code into custom wrapper
-					$less_line = '.wrap_section_'.$terminoID.'{' . implode('', $ar_less_code) . "\n}";
-					#$less_line = '.'.$css_prefix.'_'.$terminoID.'{' . implode('', $ar_less_code) . "\n}";						
-
+					$less_line = '.wrap_section_'.$terminoID.'{' . implode('', $ar_less_code) . "\n}";					
+	
 				}else{
+
+					$ar_less_code = []; foreach ($css_obj as $selector => $obj_value) {
+						$ar_less_code[] = self::convert_to_less($selector, $obj_value, $css_prefix, $terminoID, false);
+					}
 					
 					// Envolve code into custom wrapper
 					$less_line = '.'.$css_prefix.'_'.$terminoID.'{' . implode('', $ar_less_code) . "\n}";
 
 					// En pruebas (el ampliarlo solo a los de css_prefix wrap_component -los componentes-) 24-08-2018
-					#if (!isset($propiedades->alias_of)) {
-					if($css_prefix==='wrap_component'){				
+					if($css_prefix==='wrap_component'){
 						$less_line = '.sgc_edit>' . $less_line;	
 					}
 				}
-					
 
-			$less_code[] = $less_line; // Add
+			// Add line code
+			$less_code[] = $less_line;
 		
 		}//end while ($rows = pg_fetch_assoc($result)) {
 		#debug_log(__METHOD__." less_code ".to_string($less_code), logger::DEBUG);
 		$less_code = implode(' ', $less_code);	
 
-		#
-		# MXINS. Get mixixns file
-		$file_name = DEDALO_LIB_BASE_PATH . self::$mixins_file_path;
-		if ($mixins_code = file_get_contents($file_name)) {
-			$less_code = $mixins_code.$less_code;
-		}	 
+		
+		// MXINS. Get mixixns file
+			$file_name = DEDALO_LIB_BASE_PATH . self::$mixins_file_path;
+			if ($mixins_code = file_get_contents($file_name)) {
+				$less_code = $mixins_code.$less_code;
+			}	 
 
-		#
-		# Write final file
-		$file_name = DEDALO_LIB_BASE_PATH . self::$structure_file_path;
+		// Write final file. Full path
+			$file_name = DEDALO_LIB_BASE_PATH . self::$structure_file_path;
 		
 		// Format : lessjs (default) | compressed | classic
 			$format = (DEVELOPMENT_SERVER===true) ? 'lessjs' : 'compressed';
@@ -327,13 +321,12 @@ class css {
 	*	Is the css selector, like ".wrap_section_group_div_mdcat2576"
 	* @return string $less_value
 	*/
-	public static function convert_to_less($selector, $obj_value, $css_prefix, $terminoID) {
+	public static function convert_to_less($selector, $obj_value, $css_prefix, $terminoID, $enclose=false) {
 	
 		$less_value  = '';
 
 		if (is_object($obj_value)) {
 
-			$enclose = false;
 			// wrap_section_group_div_mdcat2576 wrap_section
 			if( strpos($selector, $css_prefix)===false 
 				//&& ($css_prefix==='wrap_section')
@@ -397,8 +390,8 @@ class css {
 			
 			// section, section_tool
 			case strpos($modelo_name, 'section')===0 :
-				#$css_prefix = 'wrap_section';
-				$css_prefix = ' '; // (one space)
+				$css_prefix = 'wrap_section';
+				#$css_prefix = ' '; // (one space)
 				break;
 
 			case ($modelo_name === 'component_alias') :
