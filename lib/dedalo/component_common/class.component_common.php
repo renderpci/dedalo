@@ -2006,15 +2006,31 @@ abstract class component_common extends common {
 				$label = implode(' | ', $ar_label);
 
 			$item = new stdClass();
-				$item->value = $value;
-				$item->label = $label;
+				$item->value 	  = $value;
+				$item->label 	  = $label;
+				$item->section_id = $current_row->section_id;
 			
 			$result[] = $item;
 		}
 		# Sort result for easy user select
-		usort($result, function($a,$b){
-			return strcmp($a->label, $b->label);
-		});		
+			if(isset($this->propiedades->sort_by)){
+				$custom_sort = reset($this->propiedades->sort_by); // Only one at this time
+				if ($custom_sort->direction==='DESC') {
+					usort($result, function($a,$b) use($custom_sort){
+						return strcmp($b->{$custom_sort->path}, $a->{$custom_sort->path});
+					});
+				}else{
+					usort($result, function($a,$b) use($custom_sort){
+						return strcmp($a->{$custom_sort->path}, $b->{$custom_sort->path});
+					});	
+				}
+			}else{
+				// Deafult. Alphabetic ascendent
+				usort($result, function($a,$b){
+					return strcmp($a->label, $b->label);
+				});
+			}
+					
 
 		$response	= new stdClass();
 			$response->result   			= (array)$result;
