@@ -38,6 +38,7 @@
 				
 				// Add library js
 					js::$ar_url[] = DEDALO_ROOT_WEB . "/lib/json-logic/logic.js";	
+					#js::$ar_url[] = DEDALO_ROOT_WEB . '/lib/dedalo/extras/mdcat/calculation/mdcat.js'; //DEDALO_LIB_BASE_URL . "/extras/ "+custom.file;
 				
 				// Edit vars
 					$valor 			= $this->get_valor();

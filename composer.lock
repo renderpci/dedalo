@@ -779,7 +779,7 @@
             },
             "require": {
                 "ext-curl": "*",
-                "php": "~5.3"
+                "php": ">=7.0"
             },
             "type": "library",
             "autoload": {

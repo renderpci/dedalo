@@ -1902,8 +1902,21 @@ abstract class component_common extends common {
 		$start_time = microtime(1);
 
 		switch (true) {
-			case isset($this->propiedades->filtered_by_search):
-				$search_query_object = json_decode( json_encode($this->propiedades->filtered_by_search) );
+			case isset($this->propiedades->filtered_by_search):				
+							  				
+  				$filter = $this->propiedades->filtered_by_search;
+
+  				$target_section_tipo = $this->get_ar_target_section_tipo();
+  				$target_section_tipo = reset($target_section_tipo);
+  				
+				# new search_query_object
+				$search_query_object = new stdClass();
+					$search_query_object->section_tipo 			= $target_section_tipo;
+					$search_query_object->limit 				= 0;
+					$search_query_object->skip_projects_filter 	= true;
+					$search_query_object->filter 				= $filter;
+							
+				$hash_id = '_'.md5(json_encode($this->propiedades->filtered_by_search));				
 				break;
 			
 			default:
@@ -1917,12 +1930,14 @@ abstract class component_common extends common {
 					$search_query_object->section_tipo 			= $target_section_tipo;
 					$search_query_object->limit 				= 0;
 					$search_query_object->skip_projects_filter 	= true;
+
+				$hash_id ='';
 				break;
 		}
-
+	
 		// cache
 			static $ar_list_of_values_data = [];
-			$uid = isset($search_query_object->section_tipo) ? $search_query_object->section_tipo.'_'.$lang : $this->tipo.'_'.$lang;
+			$uid = isset($search_query_object->section_tipo) ? $search_query_object->section_tipo.'_'.$lang. $hash_id : $this->tipo.'_'.$lang. $hash_id;					
 			if (isset($ar_list_of_values_data[$uid])) {
 				#debug_log(__METHOD__." Return cached item for ar_list_of_values: ".to_string($uid), logger::DEBUG);
 				return $ar_list_of_values_data[$uid];
@@ -1991,15 +2006,31 @@ abstract class component_common extends common {
 				$label = implode(' | ', $ar_label);
 
 			$item = new stdClass();
-				$item->value = $value;
-				$item->label = $label;
+				$item->value 	  = $value;
+				$item->label 	  = $label;
+				$item->section_id = $current_row->section_id;
 			
 			$result[] = $item;
 		}
 		# Sort result for easy user select
-		usort($result, function($a,$b){
-			return strcmp($a->label, $b->label);
-		});		
+			if(isset($this->propiedades->sort_by)){
+				$custom_sort = reset($this->propiedades->sort_by); // Only one at this time
+				if ($custom_sort->direction==='DESC') {
+					usort($result, function($a,$b) use($custom_sort){
+						return strcmp($b->{$custom_sort->path}, $a->{$custom_sort->path});
+					});
+				}else{
+					usort($result, function($a,$b) use($custom_sort){
+						return strcmp($a->{$custom_sort->path}, $b->{$custom_sort->path});
+					});	
+				}
+			}else{
+				// Deafult. Alphabetic ascendent
+				usort($result, function($a,$b){
+					return strcmp($a->label, $b->label);
+				});
+			}
+					
 
 		$response	= new stdClass();
 			$response->result   			= (array)$result;
