@@ -2017,17 +2017,17 @@ abstract class component_common extends common {
 				$custom_sort = reset($this->propiedades->sort_by); // Only one at this time
 				if ($custom_sort->direction==='DESC') {
 					usort($result, function($a,$b) use($custom_sort){
-						return strcmp($b->{$custom_sort->path}, $a->{$custom_sort->path});
+						return strnatcmp($b->{$custom_sort->path}, $a->{$custom_sort->path});
 					});
 				}else{
 					usort($result, function($a,$b) use($custom_sort){
-						return strcmp($a->{$custom_sort->path}, $b->{$custom_sort->path});
+						return strnatcmp($a->{$custom_sort->path}, $b->{$custom_sort->path});
 					});	
 				}
 			}else{
 				// Deafult. Alphabetic ascendent
 				usort($result, function($a,$b){
-					return strcmp($a->label, $b->label);
+					return strnatcmp($a->label, $b->label);
 				});
 			}
 					
