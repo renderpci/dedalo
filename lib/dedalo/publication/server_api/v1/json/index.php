@@ -137,12 +137,24 @@ if ($dedalo_get!==false && is_object($options)) {
 	}
 	*/
 
-	$manager 	 = new manager();
-	$dedalo_data = $manager->manage_request( $options );
-		#dump($dedalo_data, ' dedalo_data'); #die();	
 
-#
-# PRINT AS JSON DATA
-header('Content-Type: application/json');
-$result = json_encode($dedalo_data, JSON_UNESCAPED_UNICODE);
-echo $result;
+
+	$manager  = new manager();
+
+	#
+	# PRINT AS JSON DATA
+	header('Content-Type: application/json');
+
+	try {
+		$dedalo_data = $manager->manage_request( $options );
+		$result 	 = json_encode($dedalo_data, JSON_UNESCAPED_UNICODE);
+		echo $result;
+	} catch (Exception $e) {
+		$error_obj = new stdClass();
+			$error_obj->result 	= false;
+			$error_obj->msg 	= 'Exception when calling Dédalo API: '. $e->getMessage();
+		$result = json_encode($error_obj, JSON_UNESCAPED_UNICODE);
+		echo $result;
+	}
+
+
