@@ -4076,7 +4076,7 @@ abstract class component_common extends common {
 			$propiedades 	 			= $this->get_propiedades();
 			$show_parent_name_default 	= get_called_class()==='component_autocomplete_hi' ? true : false;
 			$show_parent_name 			= isset($propiedades->show_parent_name) ? (bool)$propiedades->show_parent_name : $show_parent_name_default;
-			$search_list_add 			= isset($propiedades->search_list_add) ? (bool)$propiedades->search_list_add : false;
+			$search_list_add 			= isset($propiedades->search_list_add) ? (array)$propiedades->search_list_add : false;
 			#$show_childrens 			= isset($propiedades->show_childrens) ? (bool)$propiedades->show_childrens : false;
 
 		// Search filter custom
