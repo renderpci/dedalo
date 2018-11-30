@@ -18,17 +18,16 @@ function load_image_from_url($json_data) {
 	global $start_time;
 
 	$response = new stdClass();
-		$response->result 	= null;
-		$response->msg 		= 'Error. fail to parse request vars [get_relation_list_json]';
+		$response->result 	= false;
+		$response->msg 		= 'Error. Fail load_image_from_url';
 
 	$vars = array('image_id','quality','aditional_path','initial_media_path','source_quality','target_quality','tipo','parent','section_tipo', 'external_source');
 		foreach($vars as $name) {
 			$$name = common::setVarData($name, $json_data);			
 		}
 
-
-	$component_name = RecordObj_dd::get_modelo_name_by_tipo($tipo, true);
-	$component_image 	= component_common::get_instance($component_name, $tipo, $parent, 'edit', DEDALO_DATA_LANG, $section_tipo);
+	$component_name  = RecordObj_dd::get_modelo_name_by_tipo($tipo, true);
+	$component_image = component_common::get_instance($component_name, $tipo, $parent, 'edit', DEDALO_DATA_LANG, $section_tipo);
 
 	$component_image->set_quality($quality);
 	$component_image->set_image_id($image_id);
@@ -37,22 +36,34 @@ function load_image_from_url($json_data) {
 	$imageurl 		= $component_image->get_external_source();
 	$local_path 	= $component_image->ImageObj->media_path_server;
 	$extension 		= $component_image->ImageObj->get_extension();
-	$local_store 	= $local_path.$image_id.'.'.$extension; 
+	$local_store 	= $local_path.$image_id.'.'.$extension;
 
+	// tool_upload upload file
+		$tool_upload = new tool_upload($component_image);
 
-	#dump($component_image, '$component_image');
+		
+	// load_image_from_url
+		$tool_upload_response = (object)$tool_upload->load_image_from_url($imageurl, $local_store);
+	
+	// Create target_quality
+		if ($tool_upload_response->result===true) {
 
-	$tool_upload 	= new tool_upload($component_image);
+			$component_image->convert_quality( $source_quality, $target_quality );
+
+			$response->result 	= true;
+			$response->msg 		= 'Ok: '   . PHP_EOL . $tool_upload_response->msg;
+
+		}else{
+
+			$response->result 	= false;
+			$response->msg 		= 'Error: '. PHP_EOL . $tool_upload_response->msg;
+		}				
+
+				
+		//dump($tool_upload_response, ' tool_upload_response ++ '.to_string());
 	
 
-	$response = $tool_upload->load_image_from_url($imageurl, $local_store);
-
-	$component_image->convert_quality( $source_quality, $target_quality );
-
 	return (object)$response;
-
-
-
 }//end load_image_from_url
 
 

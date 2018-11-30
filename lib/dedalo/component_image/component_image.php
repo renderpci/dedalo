@@ -44,16 +44,24 @@
 				// Dont break here. Continue as modo edit
 
 		case 'edit'	:	
-				#
-				# JS includes additionals (!) Moved to init js
-					#js::$ar_url[] = PAPER_JS_URL;
-					#js::$ar_url[] = DEDALO_LIB_BASE_URL . '/component_image/js/component_image_read.js' ;
-				
-				$id_wrapper 	= 'wrapper_'.$identificador_unico;
-				$component_info = $this->get_component_info('json');
+			#
+			# JS includes additionals (!) Moved to init js
+				#js::$ar_url[] = PAPER_JS_URL;
+				#js::$ar_url[] = DEDALO_LIB_BASE_URL . '/component_image/js/component_image_read.js' ;
+			
+			$id_wrapper 	= 'wrapper_'.$identificador_unico;
+			$component_info = $this->get_component_info('json');
 
-				#
-				# IMAGE FOR CANVAS
+			#
+			# IMAGE FOR CANVAS
+				if (!empty($external_source)) {
+					
+					$image_url	= $external_source;
+
+					$original_img_width  = '';
+					$original_img_height = '';
+
+				}else{
 					# ImageObj				
 					$maxWidht 	= $widht ;
 					$maxHeight 	= $height  ;
@@ -70,6 +78,7 @@
 					$original_img_width  = $image_dimensions[0];
 					$original_img_height = $image_dimensions[1];
 						#dump($image_dimensions ,'$image_dimensions ');	
+				}					
 						
 						
 				# Related components

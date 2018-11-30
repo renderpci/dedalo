@@ -368,18 +368,42 @@ class tool_upload extends tool_common {
 
 	/**
 	* LOAD_IMAGE_FROM_URL
-	* @return $image
+	* @return object
 	*/
 	public function load_image_from_url($imageurl, $local_store){
 
-	file_put_contents($local_store, file_get_contents($imageurl));
+		$response = new stdClass();
+			$response->result 	= false;
+			$response->msg 		= 'Error. Request failed [load_image_from_url]. Remote resource: ' .PHP_EOL. $imageurl;
 
-	if(!file_exists($local_store)){
-		return false;
-	}
-	
-	return true;
-   }
+		// Get remote file
+			try {
+				
+				$content = file_get_contents($imageurl);
+			
+			} catch (Exception $e) {
+			    
+			    debug_log(__METHOD__." Error: ".$e->getMessage(), logger::ERROR);
+			    $response->msg .= ' Exception: ' . $e->getMessage();
+			}
+ 		
+		// Save to tocal
+			if ($content!==false) {
+
+				debug_log(__METHOD__." File downloaded successfully ".to_string(), logger::DEBUG);
+
+				$put_contents = file_put_contents($local_store, $content);		
+				if($put_contents!==false && file_exists($local_store)){
+
+					debug_log(__METHOD__." File write successfully ".to_string(), logger::DEBUG);
+
+					$response->result = true;
+					$response->msg 	  = 'Ok. File download and written successfully [load_image_from_url]';
+				}
+			}			
+		
+		return (object)$response;
+   }//end load_image_from_url
 
 
 
