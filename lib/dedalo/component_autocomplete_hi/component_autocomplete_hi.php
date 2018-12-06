@@ -20,7 +20,7 @@
 	$component_name			= get_class($this);
 	$relation_type 			= $this->get_relation_type();
 
-	
+		error_log($permissions);
 	if($permissions===0) return null;
 	# Verify component content record is inside section record filter
 	if ($this->get_filter_authorized_record()===false) return NULL ;
@@ -263,6 +263,9 @@
 					$json_search_query_object 	= json_encode( $search_query_object, JSON_UNESCAPED_UNICODE | JSON_HEX_APOS);
 						#dump($json_search_query_object, ' json_search_query_object ++ '.to_string());
 				
+				//search mode always can edit the field, permissions always in 2
+				$permissions = 2;
+
 				$file_name = 'edit';
 				break;
 						

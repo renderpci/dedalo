@@ -194,6 +194,9 @@
 					$query_object_options->tipo 				= $tipo;
 				$search_query_object 		= component_autocomplete::build_search_query_object($query_object_options);
 				$json_search_query_object 	= json_encode( $search_query_object, JSON_UNESCAPED_UNICODE | JSON_HEX_APOS);
+
+			//search mode always can edit the field, permissions always in 2
+			$permissions = 2;
 			
 			$file_name 	= 'edit';
 			break;

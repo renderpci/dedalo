@@ -2,6 +2,12 @@
 /*
 * CLASS SEARCH_DEVELOPMENT2
 *
+
+Portal use:
+
+GROUP BY md1015.id
+HAVING count(*) > 1
+
 *
 */
 class search_development2 {
