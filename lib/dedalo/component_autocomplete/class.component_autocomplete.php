@@ -100,7 +100,7 @@ class component_autocomplete extends component_relation_common {
 	* Get resolved string representation of current value (expected id_matrix of section or array)
 	* @return array $this->valor
 	*/
-	public function get_valor( $lang=DEDALO_DATA_LANG, $format='string', $ar_related_terms=false, $divisor="<br> " ) {
+	public function get_valor( $lang=DEDALO_DATA_LANG, $format='string', $ar_related_terms=false, $divisor='<br> ' ) {
 		
 		if (isset($this->valor)) {
 			if(SHOW_DEBUG===true) {
@@ -131,27 +131,26 @@ class component_autocomplete extends component_relation_common {
 		}
 		
 		# AR_COMPONETS_RELATED. By default, ar_related_terms is calculated. In some cases (diffusion for example) is needed overwrite ar_related_terms to obtain especific 'valor' form component
-		if ($ar_related_terms===false) {
-			$ar_related_terms = $this->RecordObj_dd->get_relaciones();
-				
-			$ar_componets_related = array();			
-			foreach ((array)$ar_related_terms as $ar_value) foreach ($ar_value as $modelo => $component_tipo) {
-				$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($component_tipo, true);
-				if ($modelo_name!=='section'){
-					$ar_componets_related[] = $component_tipo;
-				}
-			}			
-		}else{
-			$ar_componets_related = (array)$ar_related_terms;
-		}
-		#dump($ar_componets_related, ' ar_componets_related ++ '.to_string($this->tipo));
+			if ($ar_related_terms===false) {
+				$ar_related_terms = $this->RecordObj_dd->get_relaciones();
+					
+				$ar_componets_related = array();			
+				foreach ((array)$ar_related_terms as $ar_value) foreach ($ar_value as $modelo => $component_tipo) {
+					$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($component_tipo, true);
+					if ($modelo_name!=='section'){
+						$ar_componets_related[] = $component_tipo;
+					}
+				}			
+			}else{
+				$ar_componets_related = (array)$ar_related_terms;
+			}
+			#dump($ar_componets_related, ' ar_componets_related ++ '.to_string($this->tipo));
 
 		# lang never must be DEDALO_DATA_NOLAN
 		if ($lang===DEDALO_DATA_NOLAN) $lang=DEDALO_DATA_LANG;
 
 		$propiedades 	 = $this->get_propiedades();
 		$search_list_add = isset($propiedades->search_list_add) ? $propiedades->search_list_add : false;
-
 
 			
 		$ar_values = array();
@@ -192,27 +191,27 @@ class component_autocomplete extends component_relation_common {
 				}				
 			}			
 			$value = implode($divisor, $ar_current_values_clean);
-
-			// Add custom resolved values from same section. For example, add municipality for resolve a name ambiguity
-			if ($search_list_add!==false) {
-				$ar_dd_value = [];
-				foreach ($search_list_add as $add_tipo) {
-					$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($add_tipo,true);
-					$component 		= component_common::get_instance($modelo_name,
-																	 $add_tipo,
-																	 $current_locator->section_id,
-																	 'list',
-																	 $lang,
-																	 $current_locator->section_tipo);
-					$current_value = strip_tags( $component->get_valor(DEDALO_DATA_LANG) );
-					if (!empty($current_value)) {
-						$ar_dd_value[] = $current_value;
+			
+			// search_list_add . Add custom resolved values from same section. For example, add municipality for resolve a name ambiguity
+				if ($search_list_add!==false) {			
+					$ar_dd_value = [];
+					foreach ($search_list_add as $add_tipo) {
+						$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($add_tipo,true);
+						$component 		= component_common::get_instance($modelo_name,
+																		 $add_tipo,
+																		 $current_locator->section_id,
+																		 'list',
+																		 $lang,
+																		 $current_locator->section_tipo);
+						$current_value = strip_tags( $component->get_valor(DEDALO_DATA_LANG) );
+						if (!empty($current_value)) {
+							$ar_dd_value[] = $current_value;
+						}
+					}
+					if (!empty($ar_dd_value)) {
+						$value .= $divisor . implode($divisor, $ar_dd_value); // Add string to existing value
 					}
 				}
-				if (!empty($ar_dd_value)) {
-					$value .= $divisor . implode($divisor, $ar_dd_value); // Add string to existing value
-				}
-			}
 
 			#$ar_values[$current_locator_json] = $value;
 			$value_obj = new stdClass();
