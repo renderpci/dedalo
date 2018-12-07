@@ -516,6 +516,9 @@ class search_development2 {
 					#if (!empty($sql_projects_filter)) {
 					#	$sql_query .= $sql_projects_filter;
 					#}
+					if (isset($this->filter_by_user_records)) {
+						$sql_query .= $this->filter_by_user_records;
+					}
 					if (!empty($this->filter_join_where)) {
 						$sql_query .= $this->filter_join_where;
 					}
@@ -555,6 +558,9 @@ class search_development2 {
 					#if (!empty($sql_projects_filter)) {
 					#	$sql_query .= $sql_projects_filter;
 					#}
+					if (isset($this->filter_by_user_records)) {
+						$sql_query .= $this->filter_by_user_records;
+					}
 					if (!empty($this->filter_join_where)) {
 						$sql_query .= $this->filter_join_where;
 					}
@@ -671,8 +677,7 @@ class search_development2 {
 							$sql_query .= PHP_EOL . 'LIMIT ' . $sql_limit;
 							}
 						}
-					break;*/
-
+					break;*/	
 			
 				$query_inside = '';
 				# SELECT
@@ -697,6 +702,9 @@ class search_development2 {
 					}
 					if (!empty($sql_projects_filter)) {
 						$query_inside .= $sql_projects_filter;
+					}
+					if (isset($this->filter_by_user_records)) {
+						$query_inside .= $this->filter_by_user_records;
 					}
 				# ORDER (default for maintain result consistency)					
 					$query_inside .= PHP_EOL . 'ORDER BY ' . $this->build_sql_query_order_default();
@@ -727,7 +735,7 @@ class search_development2 {
 		$sql_query .= ';' . PHP_EOL;
 
 		#dump(null, ' sql_query ++ '.to_string($sql_query)); die();
-		#debug_log(__METHOD__." SQL QUERY: ".to_string($sql_query), logger::DEBUG);
+		debug_log(__METHOD__." SQL QUERY: ".to_string($sql_query), logger::DEBUG);
 		#debug_log(__METHOD__." this->search_query_object: ".to_string($this->search_query_object), logger::DEBUG);
 		#debug_log(__METHOD__." total time ".exec_time_unit($start_time,'ms').' ms', logger::DEBUG);
 		
@@ -1008,7 +1016,7 @@ class search_development2 {
 					$sql_filter .= ')';					
 					break;				
 				##### DEFAULT #########################################################
-				default:				 	
+				default:
 					if(SHOW_DEBUG===true || DEVELOPMENT_SERVER===true) {
 						$sql_filter .= "\n-- filter_by_projects --";
 					}					
@@ -1072,24 +1080,30 @@ class search_development2 {
 					
 				$filter_user_records_by_id = filter::get_filter_user_records_by_id( navigator::get_user_id() );
 				if ( isset($filter_user_records_by_id[$section_tipo]) ) {
+					
 					$ar_filter = array();
 					foreach ((array)$filter_user_records_by_id[$section_tipo] as $current_id) {
 						$ar_filter[] = $section_alias . '.section_id = ' . (int)$current_id;
 					}
 					if (!empty($ar_filter)) {
+						$filter_by_user_records = '';
 						if(SHOW_DEBUG===true || DEVELOPMENT_SERVER===true) {
-						$sql_filter .= "\n-- filter_user_records_by_id --";
+						$filter_by_user_records .= "\n-- filter_user_records_by_id --";
 						}
-						$sql_filter .= PHP_EOL . ' AND ('.implode(' OR ',$ar_filter) . ') ';
+						$filter_by_user_records .= PHP_EOL . ' AND ('.implode(' OR ',$ar_filter) . ') ';
+
+						// Fix filter_by_user_records
+						$this->filter_by_user_records = $filter_by_user_records;
 					}
 				}
 			}
 		
 			if (!empty( $sql_filter)) {
 				$sql_projects_filter = $sql_filter;
-			}			
+			}
 
 		}//endif ($is_global_admin!==true) {
+		#dump($sql_projects_filter, ' sql_projects_filter ++ '.to_string());
 
 		# Cache
 		$sql_projects_filter_data[$uid] = $sql_projects_filter;
@@ -1270,7 +1284,11 @@ class search_development2 {
 			if(!empty($ar_value)) {
 				$filter_query .= ' AND (';
 				$filter_query .= $this->filter_parser($operator, $ar_value);
-				$filter_query .= ')';	
+				$filter_query .= ')';
+
+				#if (isset($this->global_group_query)) {
+				#	$filter_query .= "\n" . $this->global_group_query;
+				#}
 			}			
 		}		
 
@@ -1281,7 +1299,9 @@ class search_development2 {
 
 	/**
 	* FILTER_PARSER
-	* @return 
+	* @param string $op
+	* @param array $ar_value
+	* @return string $string_query
 	*/
 	public function filter_parser($op, $ar_value) {
 
@@ -1291,11 +1311,40 @@ class search_development2 {
 			#dump($total, ' total 1 ++ '.to_string());
 		$operator = strtoupper( substr($op, 1) );
 
+		// Portal various values case
+			/*
+			#debug_log(__METHOD__." ar_value ($op) ".to_string($ar_value), logger::DEBUG);
+			$is_portal_linked = false;
+			if ($op==='$and') {
+				$n_match = 0;			
+				foreach ($ar_value as $key => $search_object) {					
+					$ar_values = !property_exists($search_object,'path') ? reset($search_object) : $search_object;
+					foreach ($ar_values as $vkey => $vvalue) {
+						if (!is_object($vvalue)) continue;
+						if ($vvalue->path[0]->modelo==='component_portal') {
+							$is_portal_linked = true;							
+						}else{
+							$is_portal_linked = false;
+						}
+					}
+					#dump($ar_values, ' ar_values ++  $key +'.to_string( $key));
+					if ($is_portal_linked===true) {
+						$n_match ++;
+					}
+				}
+				if ($is_portal_linked===true) {
+					// Change current operator
+					$operator = 'OR';
+					// Define global group code to add in sql query
+					$this->global_group_query = 'GROUP BY '.$this->main_section_tipo_alias.'.id HAVING count(*) > ' . ($n_match-1);					
+				}
+			}
+			*/
+
 		foreach ($ar_value as $key => $search_object) {			
 			#if (self::is_search_operator($search_object)===true) {
 			if (!property_exists($search_object,'path')) {
 				# Case operator
-
 				$op2 		= key($search_object);
 				$ar_value2 	= $search_object->$op2;
 
@@ -1329,8 +1378,8 @@ class search_development2 {
 				#}				
 			}
 		}//end foreach ($ar_value as $key => $search_object) {
-		
 
+		
 		return $string_query;
 	}//end filter_parser
 
@@ -1452,7 +1501,7 @@ class search_development2 {
 
 	/**
 	* GET_SQL_WHERE
-	* @return 
+	* @return string $sql_where
 	*/
 	public function get_sql_where($search_object) {
 		#dump($search_object, ' search_object ++ '.to_string());
