@@ -52,7 +52,6 @@
 					}
 
 					$locator_json = json_encode($locator);
-
 	
 					#$checked  = is_array($dato) && in_array($locator, $dato) ? true : false;
 					$checked  = '';
@@ -60,11 +59,11 @@
 						$checked  = 'checked="checked"';
 					}
 
-					$html_content .= "<li>";
+					$html_content .= '<li>';
 					
-					$html_content .= "<input class=\"css_radio_button\" type=\"radio\" name=\"{$search_input_name}\" id=\"$search_input_id\" ";
-					#$html_content .= "data-tipo=\"{$tipo}\" ";
-					$html_content .= "name=\"{$input_name}\" ";
+					$html_content .= "<input class=\"css_radio_button\" type=\"radio\" ";
+					$html_content .= "id=\"{$search_input_id}\" ";
+					$html_content .= "name=\"{$search_input_name}\" ";
 					$html_content .= "value='{$locator_json}' ";
 					$html_content .= "$checked ";
 					$html_content .= "onchange=\"component_common.fix_dato(this,'{$component_name}')\" ";
@@ -73,7 +72,7 @@
 
 					$html_content .= "<label for=\"{$search_input_id}\" class=\"css_radio_button_rotulo\">$label</label>";
 
-					$html_content .= "</li>";
+					$html_content .= '</li>';
 
 				$i++;}
 				#$html_content .= "</span>";

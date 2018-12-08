@@ -62,8 +62,6 @@
 		case 'search' :
 				# dato is injected by trigger search wen is needed
 				$dato = isset($this->dato) ? $this->dato : null;
-
-				$input_name 		= 'radio_button_'.$identificador_unico;
 				
 				$referenced_tipo 	= $this->get_referenced_tipo();
 				$ar_list_of_values	= $this->get_ar_list_of_values2();
@@ -74,7 +72,7 @@
 				# Search input name (var search_input_name is injected in search -> records_search_list.phtml)
 				# and recovered in component_common->get_search_input_name()
 				# Normally is section_tipo + component_tipo, but when in portal can be portal_tipo + section_tipo + component_tipo
-				$search_input_name = $this->get_search_input_name();
+				$search_input_name = $this->get_search_input_name().'_'.md5(microtime(true));
 				break;
 						
 		case 'portal_list' :
