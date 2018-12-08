@@ -2147,7 +2147,7 @@ class diffusion_sql extends diffusion  {
 				default:
 					# Skip no accepted models
 					debug_log(__METHOD__." Skiped invalid model: $modelo_name", logger::DEBUG);
-					continue;
+					#continue;
 					break;
 			}			
 		}//end foreach ($ar_terminoID as $current_table_tipo)
