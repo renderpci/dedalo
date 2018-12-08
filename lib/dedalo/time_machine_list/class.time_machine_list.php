@@ -100,7 +100,7 @@ class time_machine_list extends common {
 					$value ='';
 					break;
 				case 'section':
-					continue;
+					continue 2;
 					break;
 				default:
 					if (!is_string($dato)) {
