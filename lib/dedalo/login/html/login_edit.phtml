@@ -57,41 +57,49 @@
 				$html_content .= "<input type=\"hidden\" id=\"tipo_username\" value=\"$tipo_username\">";
 				$html_content .= "<input type=\"hidden\" id=\"tipo_password\" value=\"$tipo_password\">";
 				$html_content .= "<input type=\"hidden\" id=\"tipo_active_account\" value=\"$tipo_active_account\">";
-
-		
-			#
-			# AJAX RESPONSE	
-			$html_content .= "<div id=\"login_ajax_response\" class=\"login_ajax_response\">  </div>";
-
-			#
-			# VERSION : Dedalo verrsion info
-			$html_content .= "<div class=\"dedalo_version\"> Dédalo version ".DEDALO_VERSION. " - Build " .DEDALO_BUILD ;
-
-				# Postgres user and db name
-				if(DEDALO_ENTITY==='development') {
-					$html_content .= "<br> ".DEDALO_USERNAME_CONN." -> ".DEDALO_DATABASE_CONN ;
-				}
-				
-
-				try {
-				    $str_version 	 = RecordObj_dd::get_termino_by_tipo(DEDALO_ROOT_TIPO);
-					$html_content .= "<br>DD version: $str_version";
-				} catch (Exception $e) {
-				    echo 'Excepction: ',  $e->getMessage(), "\n";
-				}
-
-
-				if(DEVELOPMENT_SERVER===true) {
-					$html_content .= "<span class=\"note\">";
-					$html_content .= " ".DEDALO_DATABASE_CONN." ";
-					$html_content .= "  - ".DEDALO_HOSTNAME_CONN." ";
-					$html_content .= "  - ".DEDALO_USERNAME_CONN." ";
-					#$html_content .= " : ".DEDALO_DB_PORT_CONN." ";
-					$html_content .= "</span>";
-				}
 			
-		
-			$html_content .= "</div>";
+			// Ajax response	
+				$html_content .= '<div id="login_ajax_response" class="login_ajax_response"></div>';
+
+			// Version : Dedalo verrsion info
+				$html_content .= '<div class="dedalo_version">';
+
+					$html_content .= 'Dédalo version ' . DEDALO_VERSION . ' - Build ' . DEDALO_BUILD ;
+
+					# Postgres user and db name
+					if(DEDALO_ENTITY==='development') {
+						$html_content .= "<br> ".DEDALO_USERNAME_CONN." -> ".DEDALO_DATABASE_CONN ;
+					}					
+
+					try {
+					    $str_version   = RecordObj_dd::get_termino_by_tipo(DEDALO_ROOT_TIPO);
+						$html_content .= "<br>DD version: $str_version";
+					} catch (Exception $e) {
+					    $html_content .= 'Excepction: ' . $e->getMessage() . "\n";
+					}
+
+					if(DEVELOPMENT_SERVER===true) {
+						$html_content .= "<span class=\"note\">";
+						$html_content .= " ".DEDALO_DATABASE_CONN." ";
+						$html_content .= "  - ".DEDALO_HOSTNAME_CONN." ";
+						$html_content .= "  - ".DEDALO_USERNAME_CONN." ";
+						#$html_content .= " : ".DEDALO_DB_PORT_CONN." ";
+						$html_content .= "</span>";
+					}				
+			
+				$html_content .= "</div>";
+
+			// SAML login
+				if (defined('SAML_CONFIG') && SAML_CONFIG['active']===true) {
+					$html_content .= '<button type="button" class="btn btn-success btn-block autologin" onclick="login.autologin(\''.SAML_CONFIG['url'].'\')">'.label::get_label('autologin').'</button>';
+					if(DEVELOPMENT_SERVER===true) {
+						$html_content .= '<br>SAML ';
+						$html_content .= '   <a href="'.SAML_CONFIG['url'].'/metadata.php">Metadata</a>';
+						$html_content .= ' | <a href="'.SAML_CONFIG['url'].'/acs.php">ACS</a>';
+						$html_content .= ' | <a href="'.SAML_CONFIG['url'].'/sls.php">SLS</a>';
+						$html_content .= '</br>';
+					}
+				}
 
 
 		// js
