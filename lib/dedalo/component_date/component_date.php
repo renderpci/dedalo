@@ -21,8 +21,7 @@
 	$ejemplo 				= $this->get_ejemplo();
 	$propiedades 			= $this->get_propiedades();
 	$status 				= $this->get_status();	
-		
-
+	
 	$file_name 				= $modo;
 	$from_modo				= $modo;
 
@@ -47,22 +46,22 @@
 					$from_modo = $var_requested;
 				}
 
-				$ar_dato = $dato;
+				$ar_dato   = $dato;
 				$date_mode = $this->get_date_mode();
-
+	
 				//create the array varibles for the modo
 				switch ($date_mode) {
 					case 'range':
-						$uid_start	= $uid_end	=	$input_name_start	=	$input_name_end	= array();
+						$uid_start = $uid_end =	$input_name_start = $input_name_end = array();
 						$valor_start = array();
 						$valor_end = array();
 						break;
-					case 'period':	
-						$uid_year	= $uid_month	=	$uid_day	= array();
-						$input_name_year	=	$input_name_month	=	$input_name_day	= array();
+					case 'period':
+						$uid_year = $uid_month = $uid_day = array();
+						$input_name_year = $input_name_month = $input_name_day = array();
 						$valor_year	= $valor_month = $valor_day = array();
 					default:
-						$uid_start	=	$input_name_start	= array();
+						$uid_start = $input_name_start = array();
 						$valor_start = array();
 
 						// PREVIOUS TO 4.9.1
@@ -140,8 +139,8 @@
 							break;
 						case 'date':
 						default:
-							$uid_start[$key] 		  	= 'start_'.$key.'_'.$identificador_unico;
-							$input_name_start[$key] 	= 'start_'.$key.'_'."{$tipo}_{$parent}";
+							$uid_start[$key] 		= 'start_'.$key.'_'.$identificador_unico;
+							$input_name_start[$key] = 'start_'.$key.'_'."{$tipo}_{$parent}";
 
 							# Start
 							if(isset($current_dato->start)) {
@@ -171,16 +170,16 @@
 
 					#
 					# DATAFRAME MANAGER	
-					$ar_dataframe_obj = array();
-					$ar_dataframe = isset($propiedades->dataframe) ? $propiedades->dataframe : false;
-					if($ar_dataframe !==false){
-						foreach ($ar_dataframe as $current_dataframe) {
-							if ($current_dataframe->tipo!==false) {
-								$dataframe_obj = new dataframe($current_dataframe->tipo, $current_dataframe->type, $this, 'dataframe_edit', $key);
-								$ar_dataframe_obj[] = $dataframe_obj;
-							}	
+						$ar_dataframe_obj = array();
+						$ar_dataframe = isset($propiedades->dataframe) ? $propiedades->dataframe : false;
+						if($ar_dataframe !==false){
+							foreach ($ar_dataframe as $current_dataframe) {
+								if ($current_dataframe->tipo!==false) {
+									$dataframe_obj = new dataframe($current_dataframe->tipo, $current_dataframe->type, $this, 'dataframe_edit', $key);
+									$ar_dataframe_obj[] = $dataframe_obj;
+								}
+							}
 						}
-					}					
 
 				}//end foreach ($ar_dato as $key => $current_dato)
 
@@ -190,9 +189,7 @@
 				if ($modo==="search") {
 					$file_name = 'search';
 					# dato is injected by trigger search wen is needed
-					$dato = isset($this->dato) ? $this->dato : [''];
-					$ar_comparison_operators 	= $this->build_search_comparison_operators();
-					$ar_logical_operators 		= $this->build_search_logical_operators();
+					$dato = isset($this->dato) ? $this->dato : [''];					
 				}
 				break;
 		
