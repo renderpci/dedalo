@@ -17,6 +17,7 @@ class ComposerStaticInitd5dd6c026b5b62535b8b0d6c61365f3e
     public static $prefixLengthsPsr4 = array (
         'R' => 
         array (
+            'RobRichards\\XMLSecLibs\\' => 23,
             'RingCentral\\Psr7\\' => 17,
             'React\\Stream\\' => 13,
             'React\\Socket\\' => 13,
@@ -32,6 +33,10 @@ class ComposerStaticInitd5dd6c026b5b62535b8b0d6c61365f3e
         array (
             'Psr\\Http\\Message\\' => 17,
         ),
+        'O' => 
+        array (
+            'OneLogin\\' => 9,
+        ),
         'M' => 
         array (
             'MaxMind\\' => 8,
@@ -43,6 +48,10 @@ class ComposerStaticInitd5dd6c026b5b62535b8b0d6c61365f3e
     );
 
     public static $prefixDirsPsr4 = array (
+        'RobRichards\\XMLSecLibs\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/robrichards/xmlseclibs/src',
+        ),
         'RingCentral\\Psr7\\' => 
         array (
             0 => __DIR__ . '/..' . '/ringcentral/psr7/src',
@@ -86,6 +95,10 @@ class ComposerStaticInitd5dd6c026b5b62535b8b0d6c61365f3e
         'Psr\\Http\\Message\\' => 
         array (
             0 => __DIR__ . '/..' . '/psr/http-message/src',
+        ),
+        'OneLogin\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/onelogin/php-saml/src',
         ),
         'MaxMind\\' => 
         array (
