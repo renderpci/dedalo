@@ -1786,10 +1786,8 @@ class component_portal extends component_relation_common {
 									$edit_button .= $additional_css_style;
 									$edit_button .= "title=\"$title\">";
 										# SECTION_ID TEXT									
-										$edit_button .= "<span class=\"section_id_number\">";
-										if(SHOW_DEVELOPER===true) {
-										$edit_button .= $section_id;
-										} 
+										$edit_button .= "<span class=\"section_id_number\">";										
+										$edit_button .= $section_id;										
 										$edit_button .= "</span>";									
 									$edit_button .= "</a>";											
 								}
@@ -1899,7 +1897,7 @@ class component_portal extends component_relation_common {
 									if ($modelo_name!=='component_image' && $modelo_name!=='component_av' && $modelo_name!=='component_portal') {
 										# Only accept component_image as column
 										debug_log(__METHOD__." Skipped component $column_label ($column_tipo) modelo_name: $modelo_name. Only component_image/component_av/component_portal are valid in mosaic mode ", logger::DEBUG);
-										continue;
+										continue 2;
 									}
 									break;
 								case strrpos($edit_view, 'view_tool_description'):

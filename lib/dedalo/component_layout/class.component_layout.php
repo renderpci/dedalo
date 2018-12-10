@@ -825,7 +825,7 @@ class component_layout extends component_common {
 
 				# SECTION GROUP RELATION
 				case ($element_modelo_name==='section_group_relation') :
-						continue; // DEACTIVATED FOR NOW
+						continue 2; // DEACTIVATED FOR NOW
 
 						# Calcular html de cada seccion									
 						# SECTION GROUP RELATION
