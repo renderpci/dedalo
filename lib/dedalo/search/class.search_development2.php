@@ -735,7 +735,7 @@ class search_development2 {
 		$sql_query .= ';' . PHP_EOL;
 
 		#dump(null, ' sql_query ++ '.to_string($sql_query)); die();
-		debug_log(__METHOD__." SQL QUERY: ".to_string($sql_query), logger::DEBUG);
+		#debug_log(__METHOD__." SQL QUERY: ".to_string($sql_query), logger::DEBUG);
 		#debug_log(__METHOD__." this->search_query_object: ".to_string($this->search_query_object), logger::DEBUG);
 		#debug_log(__METHOD__." total time ".exec_time_unit($start_time,'ms').' ms', logger::DEBUG);
 		
@@ -2232,6 +2232,7 @@ class search_development2 {
 									'component_filter_records',
 									'component_image',
 									'component_av',
+									'component_pdf',
 									'component_security_administrator',
 									//'component_relation_children',
 									//'component_relation_related',
@@ -2240,6 +2241,8 @@ class search_development2 {
 									//'component_relation_index',
 									//'component_relation_struct',
 									'component_geolocation',
+									'component_info',
+									'component_state',
 									'section_tab'								
 								];
 
