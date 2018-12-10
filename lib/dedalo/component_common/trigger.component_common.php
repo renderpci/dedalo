@@ -103,8 +103,7 @@ function Save($json_data) {
 		# get current dato to compare with received dato
 		$old_dato 	= $component_obj->get_dato();
 	}
-	
-	
+
 	# Assign received dato to component
 	$component_obj->set_dato( $dato_clean );
 

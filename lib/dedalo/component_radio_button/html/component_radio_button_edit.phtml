@@ -103,6 +103,7 @@
 						$html_content .= "<input class=\"css_radio_button\" type=\"radio\" ";
 						$html_content .= "onfocus=\"component_common.select_wrap(null,'$id_wrapper');\" ";
 						$html_content .= "onchange=\"component_radio_button.Save(this)\" ";
+						$html_content .= "onclick=\"component_radio_button.check_radio(this,event)\" ";
 						$html_content .= "name=\"{$input_name}\" ";
 						$html_content .= "id=\"{$input_id}\" ";
 						$html_content .= "data-tipo=\"{$tipo}\" ";
