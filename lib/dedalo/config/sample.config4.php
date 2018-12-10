@@ -223,6 +223,9 @@
 													'lg-cat',
 													'lg-eng',
 													]));
+	# DEDALO_DIFFUSION_LANGS
+	# Default value is the same as proyect langs. Change for custom diffusion langs
+	define('DEDALO_DIFFUSION_LANGS'				, DEDALO_PROJECTS_DEFAULT_LANGS);
 
 	# TRANSLATOR
 	define('DEDALO_TRANSLATOR_URL'				, 'http://babel.antropolis.net/babel_engine/');	# Apertium, Google translator, etc..
@@ -236,9 +239,10 @@
 	# DEDALO_PREFIX_TIPOS
 	define('DEDALO_PREFIX_TIPOS', serialize( ['dd',
 											  'rsc',
+											  'hierarchy',
+											  'lg',
 											  'oh',
-											  'ich'
-											  ]
+											  'ich']
 											));
 
 	# Fallback section
@@ -273,7 +277,7 @@
 	define('TEXT_EDITOR_URL_JS'			, DEDALO_ROOT_WEB . '/lib/tinymce/js/tinymce/tinymce.min.js');
 	#define('TEXT_EDITOR_URL_JS'			, DEDALO_ROOT_WEB . '/vendor/tinymce/tinymce/tinymce.min.js');
 	# PAPER
-	define('PAPER_JS_URL' 				, DEDALO_ROOT_WEB .'/lib/paper/dist/paper-full.min.js');
+	define('PAPER_JS_URL' 				, DEDALO_ROOT_WEB .'/lib/paper/dist/paper-core.min.js');
 	# LEAFLET
 	define('LEAFLET_JS_URL' 			, DEDALO_ROOT_WEB .'/lib/leaflet/stable_versions/leaflet.js');
 	# D3
@@ -351,16 +355,18 @@
 		define('DEDALO_IMAGE_MIME_TYPE'				, 'image/jpeg');
 		# TYPE normally jpeg
 		define('DEDALO_IMAGE_TYPE'					, 'jpeg');
+		# DEDALO_IMAGE_EXTENSIONS_SUPPORTED
+		define('DEDALO_IMAGE_EXTENSIONS_SUPPORTED'	, serialize(['jpg','jpeg','png','tif','tiff','bmp','psd','raw']));
 		# QUALITY ORIGINAL normally 'original'
 		define('DEDALO_IMAGE_QUALITY_ORIGINAL'		, 'original');
+		# QUALITY MODIFY of original normally 'modify'
+		define('DEDALO_IMAGE_QUALITY_RETOUCHED'		, 'modified');
 		# QUALITY DEFAULT normally '1.5MB'
 		define('DEDALO_IMAGE_QUALITY_DEFAULT'		, '1.5MB');
 		# DEDALO_IMAGE_THUMB_DEFAULT
 		define('DEDALO_IMAGE_THUMB_DEFAULT'			, 'thumb');
 		# QUALITY FOLDERS ARRAY IN MB		
-		define('DEDALO_IMAGE_AR_QUALITY'			, serialize([DEDALO_IMAGE_QUALITY_ORIGINAL,'25MB','6MB','1.5MB','<1MB',DEDALO_IMAGE_THUMB_DEFAULT]));
-		# DEDALO_IMAGE_EXTENSIONS_SUPPORTED
-		define('DEDALO_IMAGE_EXTENSIONS_SUPPORTED'	, serialize(['jpg','jpeg','png','tif','tiff','bmp','psd','raw']));		
+		define('DEDALO_IMAGE_AR_QUALITY'			, serialize([DEDALO_IMAGE_QUALITY_ORIGINAL,DEDALO_IMAGE_QUALITY_RETOUCHED,'25MB','6MB','1.5MB','<1MB',DEDALO_IMAGE_THUMB_DEFAULT]));
 		# PRINT DPI (default 150. Used to calculate print size of images -tool_image_versions-)
 		define('DEDALO_IMAGE_PRINT_DPI'				, 150);
 		# IMAGE LIB
@@ -370,6 +376,7 @@
 		
 		# LIB ImageMagick MAGICK_PATH		
 		define('MAGICK_PATH'						, '/usr/bin/'); 	# Like '/usr/bin/';
+		# COLOR_PROFILES_PATH
 		define('COLOR_PROFILES_PATH'				, DEDALO_LIB_BASE_PATH . '/media_engine/lib/color_profiles_icc/');
 
 		define('DEDALO_IMAGE_THUMB_WIDTH'			, 102);	// Default 102
