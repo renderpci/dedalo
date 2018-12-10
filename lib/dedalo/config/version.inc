@@ -1439,7 +1439,9 @@
 						added full screen mode
 
 
-
+	Valencia 07-12-2018 5.0.23
+		search_development2 : Fixed bug on search_development2 that skip filter_by_user_records in some scenarios
+		
 
 
 	WORK IN PROGRESS
@@ -1461,12 +1463,12 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.0.3a';
+	$DEDALO_VERSION = '5.0.25';
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '17-11-2018');
+	define('DEDALO_BUILD'	, '09-12-2018');
 
 
 	/*

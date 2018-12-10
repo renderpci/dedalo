@@ -1415,8 +1415,12 @@ class hierarchy {
 	* @return array ar_elements
 	*/
 	public static function get_section_map_elemets( $section_tipo ) {
-
+	
 		$ar_elements = array();
+
+		if (empty($section_tipo)) {
+			return $ar_elements;
+		}
 		
 		static $section_map_elemets ;
 		if (isset($section_map_elemets[$section_tipo])) {

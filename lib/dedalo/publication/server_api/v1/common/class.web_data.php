@@ -2396,9 +2396,9 @@ class web_data {
 				$search_data = (object)web_data::get_rows_data( $sd_options );
 					#debug_log(__METHOD__." search data ".to_string($search_data), logger::DEBUG);
 
-				$ar_data = (array)$search_data->result;			
+				$ar_data = ($search_data->result!==false) ? (array)$search_data->result : [];		
 				
-				if ($recursive===true) {
+				if ($recursive===true && !empty($search_data->result)) {
 					foreach($ar_data as $current_row) {
 						#dump($current_row, ' current_row ++ '.to_string());
 						$items = get_items($current_row["term_id"], $table, $lang, $ar_fields, $recursive, $only_descriptors, $remove_restricted, $remove_unused_terms);

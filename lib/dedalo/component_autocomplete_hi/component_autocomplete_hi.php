@@ -20,7 +20,6 @@
 	$component_name			= get_class($this);
 	$relation_type 			= $this->get_relation_type();
 
-		error_log($permissions);
 	if($permissions===0) return null;
 	# Verify component content record is inside section record filter
 	if ($this->get_filter_authorized_record()===false) return NULL ;
