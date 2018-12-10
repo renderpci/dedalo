@@ -373,42 +373,59 @@ background-color: #FFFF00;
 
 	/* LABEL SECTION NAME
 	------------------------------------------------------- */
-	#menu_wrapper #current_section_label {
-		right: 10px;
-		top: 0;
-		width: auto;
-		color: #fff;
-		margin: 0;
-		margin-right: 5px;
-		padding: 7px;
-		padding-left: 9px;
-		padding-right: 9px;
-		line-height: 1.5em;
-		font-size: 100%;
-		white-space: nowrap;
-		/* border-radius: 4px; */
-		cursor: default;
-		letter-spacing: .7px;
-		font-weight: 300 !important;
-		font-size: 13px;
-		font-family: 'Oxygen-light';
-		-webkit-font-smoothing: subpixel-antialiased;
-		height: 29px;
+		#menu_wrapper #current_section_label {
+			right: 10px;
+			top: 0;
+			width: auto;
+			color: #fff;
+			margin: 0;
+			margin-right: 5px;
+			padding: 7px;
+			padding-left: 9px;
+			padding-right: 9px;
+			line-height: 1.5em;
+			font-size: 100%;
+			white-space: nowrap;
+			/* border-radius: 4px; */
+			cursor: default;
+			letter-spacing: .7px;
+			font-weight: 300 !important;
+			font-size: 13px;
+			font-family: 'Oxygen-light';
+			-webkit-font-smoothing: subpixel-antialiased;
+			height: 29px;
+				/*
+				@media screen and (max-width: @content_data_max_width) { // 768px
+					background-color: #727272;
+				    position: absolute;
+				    top: 32px;
+				    margin: 0;
+				    right: 0;
+				    height: 15px;
+				    padding-top: 0px;
+				    text-align: right;
+				}
+				*/
+
+			mark {
+				color: #FFFFFF !important;
+				opacity: 0.9;
+			}
+
+			&.section_label_edit {
+				//background-color: #000000;
+
+				&:hover {
+					cursor: pointer !important;
+					background-color: @menu_bg_color_active;
+				}
+				&:active {
+					background-color: darken(@menu_bg_color_active, 13%) !important;
+				}
+			}			
 		}
-		#menu_wrapper #current_section_label.section_label_edit {
-			//background-color: #000000;
-		}
-		#menu_wrapper #current_section_label.section_label_edit:hover {
-			cursor: pointer !important;
-			background-color: @menu_bg_color_active;
-		}
-		#menu_wrapper #current_section_label.section_label_edit:active {
-			background-color: darken(@menu_bg_color_active, 13%) !important;
-		}
-		#menu_wrapper #current_section_label mark {
-			color: #FFFFFF !important;
-			opacity: 0.9;
-		}
+		
+		
 		/*
 		#menu_wrapper #current_section_label::before {
 			content: '';
@@ -434,7 +451,7 @@ background-color: #FFFF00;
 		top: 9px;
 		width: 25px;
 		height: 25px;
-		background-image: url(../../themes/default/inspector.svg);
+		background-image: url('../../themes/default/inspector.svg');
 		background-repeat: no-repeat;
 		}
 		#button_toggle_inspector .button_toggle_inspector_in_dialog {
