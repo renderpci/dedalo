@@ -483,7 +483,11 @@
 				$render_vars = $this->get_render_vars();
 					#dump($render_vars, ' render_vars ++ '.to_string());
 				$icon_label = isset($render_vars->icon) ? $render_vars->icon : '';
-				break;		
+				break;	
+
+		case 'print':
+				$valor = $this->get_valor();
+				break;
 
 		default:
 	}

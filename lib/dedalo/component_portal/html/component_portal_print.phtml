@@ -73,7 +73,7 @@
 
 					# SECTION ID
 						$section_id = $current_row->section_id;
-
+						$id 		= $section_id;
 
 					# COLUMNS
 						$table .= "<tr class=\"portal_item_{$tipo} tr_sortable\">";
@@ -163,11 +163,12 @@
 										# COMPONENT HTML IN PRINT MODE (ignore 'valor_list' and build every component data)
 										$current_component = component_common::get_instance($modelo_name,
 																							$column_tipo,
-																							$current_row->lc_object->section_id,
+																							$current_row->section_id, //$current_row->lc_object->section_id,
 																							'print',
 																							DEDALO_DATA_LANG,
-																							$current_row->lc_object->section_tipo
+																							$current_row->section_tipo, //$current_row->lc_object->section_tipo
 																							);
+										#dump($current_component, ' current_component ++ '.to_string()."  "); #exit();	
 										$print_options = new stdClass();
 											$print_options->show_label = false;
 										$current_component->print_options = $print_options;

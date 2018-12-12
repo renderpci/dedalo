@@ -68,10 +68,22 @@
 			position: relative;
 			/*background-color: #9ad3ff*/
 		}
-		#wrap_list li span {
+		#wrap_list li span.template_label {
 			margin: 10px;
 			margin-left: 62px;
 			display: inline-block;
+			text-shadow: none;
+			font-size: 1.2em;
+
+			>.note {
+				display: block;
+				&:before {
+					content: '['
+				}
+				&:after {
+					content: ']'
+				}
+			}
 		}
 		#wrap_list hr {
 			background-color: #b2b2b2;

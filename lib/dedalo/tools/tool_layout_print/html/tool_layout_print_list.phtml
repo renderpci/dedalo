@@ -3,66 +3,97 @@
 
 $html='';
 
-	$html  .= "\n<!-- TOOL PAGE [tipo:$tipo] -->";
+	$html  .= '<!-- TOOL PAGE [tipo:'.$tipo.'] -->';
 
-	$html .= '<div class="top">';
-	$html .= "\n<div class=\"section_title \" > TOOL LAYOUT PRINT : $section_title</div>";
-	if(SHOW_DEBUG) {
-		$html .= "<div class=\"layout_debug_info\">context_name: $context_name</div>";
-	}
+	// Top div
+		$html .= '<div class="top">';
+		$html .= '<div class="section_title"> TOOL LAYOUT PRINT : '.$section_title.'</div>';	
+		if(SHOW_DEBUG===true) {
+			$html .= '<div class="layout_debug_info">context_name: '.$context_name.'</div>';
+		}
+		$html .= '</div>';//end top
 
-	$html .= '</div>';
 	
-	#
-	# Public templates	
-	$ar_templates = $ar_templates_public;
-	$html .= '<div class="wrap_public_templates">';
-	$html .= '<h2>'.$public_templates_title.'</h2>';
-	$html .= '<ul class="text_unselectable text_shadow_inset">';	
-		foreach ($ar_templates as $template_key => $obj) {			
-			$html .= '<li data-template_id="'.$obj->section_id.'" data-template_tipo="'.DEDALO_SECTION_LAYOUT_PUBLIC_TIPO.'">';
+	// Public templates	
+		$html .= '<div id="wrap_public_templates" class="wrap_public_templates"></div>';
+
+		
+	// Private templates 
+		$html .= '<div id="wrap_private_templates" class="wrap_private_templates"></div>';
+
+
+	// Public templates OLD 
+		/*
+		$ar_templates = $ar_templates_public;
+		$html .= '<div class="wrap_public_templates">';
+		$html .= '<h2>'.$public_templates_title.'</h2>';
+		$html .= '<ul class="text_unselectable text_shadow_inset">';	
+			foreach ($ar_templates as $template_key => $obj) {			
+				$html .= '<li data-template_id="'.$obj->section_id.'" data-template_tipo="'.DEDALO_SECTION_LAYOUT_PUBLIC_TIPO.'">';
+				$html .= '<div class="t_icon icon_template_mini icon_template_more"></div>';
+				$html .= '<div class="t_icon icon_template_mini icon_template_minus" onclick="tool_layout_print.delete_template(this)"></div>';
+				$html .= '<div class="t_icon icon_template icon_template_public" onclick="tool_layout_print.goto_edit(this)"></div>';
+				$html .= '<span>';
+				$html  .= $obj->label;
+				if(SHOW_DEBUG) {
+					$html  .= " [$template_key]";
+				}
+				$html .= '</span>';
+				$html .= '</li>';
+			}
+			$html .= '<li data-template_id="" data-template_tipo="'.DEDALO_SECTION_LAYOUT_PUBLIC_TIPO.'">';
+			$html .= '<div class="t_icon icon_template icon_template_public icon_add_template" onclick="tool_layout_print.goto_edit(this)"></div>';
+			$html .= '<span>'.label::get_label('nueva_plantilla_vacia').'</span>';
+			$html .= '</li>';
+		$html .= '</ul>';
+		$html .= '</div>';
+		*/
+
+	// Private templates OLD 
+		/*
+		$ar_templates = $ar_templates_private;
+		$html .= '<div class="wrap_private_templates">';
+		$html .= '<h2>'.$private_templates_title.'</h2>';
+		$html .= '<ul>';
+		foreach ($ar_templates as $template_key => $obj) {
+			$html .= '<li data-template_id="'.$obj->section_id.'" data-template_tipo="'.DEDALO_SECTION_LAYOUT_TEMPLATES_TIPO.'">';
 			$html .= '<div class="t_icon icon_template_mini icon_template_more"></div>';
-			$html .= '<div class="t_icon icon_template_mini icon_template_minus" onclick="tool_layout_print.delete_template(this)"></div>';
-			$html .= '<div class="t_icon icon_template icon_template_public" onclick="tool_layout_print.goto_edit(this)"></div>';
+			#$html .= '<div class="t_icon icon_template_minus"></div>';
+			$html .= '<div class="t_icon icon_template icon_template_private" onclick="tool_layout_print.goto_edit(this)"></div>';
 			$html .= '<span>';
 			$html  .= $obj->label;
 			if(SHOW_DEBUG) {
-				$html  .= " [$template_key]";
+				$html  .= " <span class=\"note\">[$template_key]</span>";
 			}
 			$html .= '</span>';
 			$html .= '</li>';
 		}
-		$html .= '<li data-template_id="" data-template_tipo="'.DEDALO_SECTION_LAYOUT_PUBLIC_TIPO.'">';
-		$html .= '<div class="t_icon icon_template icon_template_public icon_add_template" onclick="tool_layout_print.goto_edit(this)"></div>';
-		$html .= '<span>'.label::get_label('nueva_plantilla_vacia').'</span>';
-		$html .= '</li>';
-	$html .= '</ul>';
-	$html .= '</div>';
+		$html .= '</ul>';
+		$html .= '</div>';
+		*/
 
-	#$html .= '<hr>';
 
-	#
-	# Private templates
-	$ar_templates = $ar_templates_private;
-	$html .= '<div class="wrap_private_templates">';
-	$html .= '<h2>'.$private_templates_title.'</h2>';
-	$html .= '<ul>';
-	foreach ($ar_templates as $template_key => $obj) {
-		$html .= '<li data-template_id="'.$obj->section_id.'" data-template_tipo="'.DEDALO_SECTION_LAYOUT_TEMPLATES_TIPO.'">';
-		$html .= '<div class="t_icon icon_template_mini icon_template_more"></div>';
-		#$html .= '<div class="t_icon icon_template_minus"></div>';
-		$html .= '<div class="t_icon icon_template icon_template_private" onclick="tool_layout_print.goto_edit(this)"></div>';
-		$html .= '<span>';
-		$html  .= $obj->label;
-		if(SHOW_DEBUG) {
-			$html  .= " [$template_key]";
-		}
-		$html .= '</span>';
-		$html .= '</li>';
-	}
-	$html .= '</ul>';
-	$html .= '</div>';
+	// JS 
+		$html .= '<script>';
+		// Public list
+			$templates_list_options = new stdClass();
+				$templates_list_options->list_title 		 = $public_templates_title;
+				$templates_list_options->layout_section_tipo = DEDALO_SECTION_LAYOUT_PUBLIC_TIPO;
+				$templates_list_options->ar_templates 		 = $ar_templates_public_js;
+				$templates_list_options->list_wrapper_id 	 = 'wrap_public_templates';
+				$templates_list_options->list_type 			 = 'public';
+			$html .= 'tool_layout_print.build_templates_list('.json_encode($templates_list_options).');';
+		// Private list
+			$templates_list_options = new stdClass();
+				$templates_list_options->list_title 		 = $private_templates_title;
+				$templates_list_options->layout_section_tipo = DEDALO_SECTION_LAYOUT_TEMPLATES_TIPO;
+				$templates_list_options->ar_templates 		 = $ar_templates_private_js;
+				$templates_list_options->list_wrapper_id 	 = 'wrap_private_templates';
+				$templates_list_options->list_type 			 = 'private';
+			$html .= 'tool_layout_print.build_templates_list('.json_encode($templates_list_options).');';
+		$html .= '</script>';
 
 
 echo $html;
-?>
+
+

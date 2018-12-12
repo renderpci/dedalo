@@ -8,10 +8,10 @@ $html='';
 	# TOP
 	$html .= '<div class="top">';
 		
-		$html .= "\n<div class=\"section_title \" > TOOL LAYOUT PRINT : $section_title</div>";
+		$html .= "<div class=\"section_title\" onclick=\"tool_layout_print.go_home(this)\">TOOL LAYOUT PRINT : $section_title</div>";
 		if(SHOW_DEBUG) {
 			#dump($tool_layout_print_records, " tool_layout_print_records ".to_string());
-			$html .= "<div class=\"layout_debug_info\">context_name: $context_name [".reset($tool_layout_print_records)['section_id']."]</div>";
+			$html .= "<div class=\"layout_debug_info\">context_name: $context_name [".reset($tool_layout_print_records)->section_id."]</div>";
 		}
 
 		# Template_name
@@ -231,7 +231,7 @@ $html='';
 			# INFO STATS
 			$html .= "<div id=\"info_stats\" class=\"\">";
 			$html .= " <span>".label::get_label('total_records')."</span> <strong>$n_records</strong><br>";
-			$html .= " <span>".label::get_label('total_pages')."</span> <strong>$n_pages</strong>";
+			#$html .= " <span>".label::get_label('total_pages')."</span> <strong>$n_pages</strong>";
 			$html .= "</div>";
 
 

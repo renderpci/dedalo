@@ -32,27 +32,41 @@
 				# LIST
 				case 'list': # List of available templates
 
-					#
-					# TEMPLATES LIST
-						$ar_templates_public = $this->get_ar_templates('public');
+					// Aditional css / js 
+						css::$ar_url[] = DEDALO_LIB_BASE_URL."/tools/".$tool_name."/css/".$tool_name.".css";
+						js::$ar_url[]  = DEDALO_LIB_BASE_URL."/tools/".$tool_name."/js/".$tool_name.".js";
+					
+					// Templates list 
 
-						$ar_templates_private = $this->get_ar_templates('private');
+						// Public 
+							$public_templates_title = 'Custom templates';
+							$ar_templates_public  	= $this->get_ar_templates('public');
+							$ar_templates_public_js = array_map(function($item){
+								$element = [
+									'section_id' 	=> $item->section_id,
+									'section_tipo'  => $item->section_layout_tipo, //DEDALO_SECTION_LAYOUT_PUBLIC_TIPO,
+									'label' 		=> $item->label
+								];
+								return $element;
+							}, $ar_templates_public,[]); // (!) Note second argument '[]' avoid preserve original asociative array keys	
+						
+						// Private 
+							$private_templates_title = 'Default templates';
+							$ar_templates_private 	 = $this->get_ar_templates('private');
+							$ar_templates_private_js = array_map(function($item){
+								$element = [
+									'section_id' 	=> $item->section_id,
+									'section_tipo'  => $item->section_layout_tipo, //DEDALO_SECTION_LAYOUT_PUBLIC_TIPO,
+									'label' 		=> $item->label
+								];
+								return $element;
+							}, $ar_templates_private,[]); // (!) Note second argument '[]' avoid preserve original asociative array keys
 
-						# Store resolved data
-						$ar_templates_mix = array_merge($ar_templates_public, $ar_templates_private);
-						$_SESSION['dedalo4']['config']['ar_templates_mix'] = $ar_templates_mix;
+						// Store resolved data
+							$ar_templates_mix = array_merge($ar_templates_public, $ar_templates_private);
+							$_SESSION['dedalo4']['config']['ar_templates_mix'] = $ar_templates_mix;
 
-
-					# Aditional css / js
-					css::$ar_url[] = DEDALO_LIB_BASE_URL."/tools/".$tool_name."/css/".$tool_name.".css";
-					js::$ar_url[]  = DEDALO_LIB_BASE_URL."/tools/".$tool_name."/js/".$tool_name.".js";
-
-					if(SHOW_DEBUG) {
-					}
-
-					#
-					#
-					# PRINT_SEARCH_OPTIONS fix
+					// Print_search_options fix
 						#$search_options_session_key = 'section_'.$tipo;
 						#if (!isset($_SESSION['dedalo4']['config']['search_options'][$search_options_session_key])) {
 						#	throw new Exception("Error Processing Request. current_section_search_options not found", 1);
@@ -63,17 +77,14 @@
 						#	$print_search_options->modo  = 'list';
 							# layout map full with all section components
 						#	$ar_components = (array)section::get_ar_children_tipo_by_modelo_name_in_section($tipo, 'component_', $from_cache=true, $resolve_virtual=false);
-						#	$print_search_options->layout_map = array($tipo => $ar_components);
-						
+						#	$print_search_options->layout_map = array($tipo => $ar_components);						
 						#	$_SESSION['dedalo4']['config']['ar_templates_search_options'][$tipo] = (object)$print_search_options;
 
-						# Page areas fixed titles
-						$public_templates_title  = 'Custom templates';
-						$private_templates_title = 'Default templates';
+					// Build html
+						ob_start();
+						include ( DEDALO_LIB_BASE_PATH .'/tools/'.get_called_class().'/html/'.get_called_class().'_list.phtml' );
+						$html_list = ob_get_clean();
 
-					ob_start();
-					include ( DEDALO_LIB_BASE_PATH .'/tools/'.get_called_class().'/html/'.get_called_class().'_list.phtml' );
-					$html_list = ob_get_clean();
 					break;
 				
 
@@ -96,16 +107,35 @@
 					#js::$ar_url[] = DEDALO_LIB_BASE_URL."/component_layout/js/component_layout.js";
 					js::$ar_url[] = DEDALO_LIB_BASE_URL."/tools/".$tool_name."/js/".$tool_name.".js";
 					js::$ar_url[] = DEDALO_LIB_BASE_URL."/tools/tool_layout_print/js/tool_layout_edit.js";						
-						
 					
+					// Section current search (Like oh1)
+						if(SHOW_DEBUG) {
+							#dump($_SESSION['dedalo4']['config']['search_options'][$tipo]->search_query_object, '$_SESSION[search_options] ++ '.to_string());
+						}
+						$section_current_search_query_object = clone $_SESSION['dedalo4']['config']['search_options'][$tipo]->search_query_object;
+						// Prepare search_query_object for print purposes
+						$section_current_search_query_object->select 	 = [];
+						$section_current_search_query_object->full_count = false;
+						$section_current_search_query_object->limit 	 = 0;
+						$section_current_search_query_object->offset 	 = 0;
+						// Re-search
+						$search_development2 = new search_development2($section_current_search_query_object);
+						$result = $search_development2->search();
+							#dump($result, ' result ++ '.to_string()); die();
+						$ar_records 				= $result->ar_records;
+						$tool_layout_print_records 	= $ar_records;
+						#$tool_layout_print_records = array_map(function($item){
+						#	return $item->section_id;
+						#}, (array)$ar_records);
+					/*	
 					# Is set in search::get_records_data. NOTE: Only contain records in last visualized list page
 					if (!isset($_SESSION['dedalo4']['config']['ar_templates_search_options'][$tipo])) {
 						echo "Please select template"; return ;
 					}
 					$search_options = clone($_SESSION['dedalo4']['config']['ar_templates_search_options'][$tipo]);
 					$ar_records		= search::get_records_data($search_options);
-						$tool_layout_print_records = reset($ar_records->result);							
-
+						$tool_layout_print_records = reset($ar_records->result);
+					*/
 							/*# SEARCH_OPTIONS
 								$search_options_id    = $tipo; // section tipo like oh1
 								$saved_search_options = section_records::get_search_options($search_options_id);
@@ -188,13 +218,15 @@
 					
 					#
 					# INFO STATS
+					/*
 					$search_options_session_key = 'section_'.$tipo;
 					if (isset($_SESSION['dedalo4']['config']['search_options'][$search_options_session_key]) 
 						&& isset($_SESSION['dedalo4']['config']['search_options'][$search_options_session_key]->full_count)) {
 						$n_records = $_SESSION['dedalo4']['config']['search_options'][$search_options_session_key]->full_count;
 					}
-					$n_records 	= isset($n_records) ? $n_records : count($ar_records->result);					
-					$n_pages 	= isset($result->ar_pages) ? count($result->ar_pages)*$n_records : '';
+					*/
+					$n_records 	= isset($n_records) ? $n_records : count($ar_records);
+					$n_pages 	= '';
 					
 
 					ob_start();
@@ -224,6 +256,7 @@
 					
 					#
 					# AR_RECORDS
+						/*
 						$search_options_session_key = 'section_'.$tipo;
 						if (!isset($_SESSION['dedalo4']['config']['search_options'][$search_options_session_key])) {
 							echo "Please select template"; return ;
@@ -237,7 +270,23 @@
 							$print_search_options->layout_map = array($tipo => $ar_components);
 						
 						$ar_records		= search::get_records_data($print_search_options);
-					
+						*/
+					// Section current search (Like oh1)
+						if(SHOW_DEBUG) {
+							#dump($_SESSION['dedalo4']['config']['search_options'][$tipo]->search_query_object, '$_SESSION[search_options] ++ '.to_string());
+						}
+						$section_current_search_query_object = clone $_SESSION['dedalo4']['config']['search_options'][$tipo]->search_query_object;
+						// Prepare search_query_object for print purposes
+						$section_current_search_query_object->select 	 = [];
+						$section_current_search_query_object->full_count = false;
+						$section_current_search_query_object->limit 	 = 0;
+						$section_current_search_query_object->offset 	 = 0;
+						// Re-search
+						$search_development2 = new search_development2($section_current_search_query_object);
+						$result = $search_development2->search();
+							#dump($result, ' result ++ '.to_string()); die();
+						$ar_records 				= $result->ar_records;
+						$tool_layout_print_records 	= $ar_records;					
 
 					#
 					# TEMPLATE
@@ -258,25 +307,18 @@
 						$section_layout_dato = (object)$component_layout->get_dato();
 
 					#
-					# RENDER PAGES . Render with first record of $tool_layout_print_records
-						$ar_2 = array();
-						foreach ((array)$ar_records->result as $key => $current_record) {
-							$ar_2[] = reset($current_record);
-						}//end foreach ((array)$ar_records->result as $key => $current_record) {
+					# RENDER PAGES					
+						$pages_rendered = '';
+						if (isset($section_layout_dato->pages)) {
+							$options = new stdClass();
+								$options->pages 		= $section_layout_dato->pages;
+								$options->records 		= $ar_records;
+								$options->render_type 	= 'render';
+								$options->tipo 			= $tipo;
 
-							#$current_record = (object)reset($current_record);	
-							$pages_rendered = '';
-							if (isset($section_layout_dato->pages)) {
-								$options = new stdClass();
-									$options->pages 		= $section_layout_dato->pages;
-									$options->records 		= $ar_2;
-									$options->render_type 	= 'render';
-									$options->tipo 			= $tipo;
-
-								$result = tool_layout_print::render_pages( $options );
-								#$pages_rendered = implode('', $result->ar_pages);
-								
-							}//end if (isset($section_layout_dato->pages)) {
+							$result = tool_layout_print::render_pages( $options );
+							#$pages_rendered = implode('', $result->ar_pages);							
+						}//end if (isset($section_layout_dato->pages)) {
 						
 						
 					#
@@ -320,8 +362,8 @@
 					
 					#
 					# INFO STATS
-					$n_records 	= count($ar_records->result);
-					$n_pages 	= count($result->ar_pages);
+					$n_records 	= count($ar_records);
+					#$n_pages 	= count($result->ar_pages);
 					
 						
 					$ar_command 	 = $this->get_ar_command( $urls_group_by_section, $print_files_path, $pages_html_temp, $footer_html_url );

@@ -111,7 +111,8 @@ class tool_layout_print extends tool_common {
 	* @return string $html
 	*/
 	public static function render_pages( $request_options ) {
-	
+		#dump($request_options->records, ' request_options ++ '.to_string());
+
 		$options = new stdClass();
 			$options->pages 		= array();
 			$options->records 		= array();
@@ -152,7 +153,7 @@ class tool_layout_print extends tool_common {
 				$page_tipo = $current_page->data->tipo;
 					#dump($page_tipo, ' page_tipo'.to_string());
 
-				$page_key = $p.'_'.$page_tipo.'_'.$current_record['section_id'];
+				$page_key = $p.'_'.$page_tipo.'_'.$current_record->section_id;
 
 				
 					$main_section_key  = null;
@@ -188,7 +189,7 @@ class tool_layout_print extends tool_common {
 						#dump($portal_section, ' section_tipo_general ++ '.to_string($parent_portal));
 
 
-					if ( !isset($element[$parent_portal]) &&  !isset($element[$parent_portal2]) ) {
+					if ( !isset($element->$parent_portal) && !isset($element->$parent_portal2) ) {
 						# no data portal exists (in normal when no data is found)
 						/*
 						trigger_error("Sorry, no portal data exists for parent_portal:$parent_portal");
@@ -206,7 +207,7 @@ class tool_layout_print extends tool_common {
 						# Case level 3 of portal
 						if ($parent_portal2) {
 							#dump($parent_portal2, ' parent_portal2 ++ '.to_string());
-							$portal_data  = json_decode($element[$parent_portal2]);
+							$portal_data  = json_decode($element->$parent_portal2);
 								#dump($portal_data, ' portal_data ++ '.to_string());
 
 							foreach ((array)$portal_data as $parent_locator) {
@@ -243,7 +244,7 @@ class tool_layout_print extends tool_common {
 						}else{
 							
 							# Default
-							$portal_data  = json_decode($element[$parent_portal]);
+							$portal_data  = json_decode($element->$parent_portal);
 							#dump($portal_data, '$portal_data'.to_string());
 
 							foreach ((array)$portal_data as $current_locator) {
@@ -948,8 +949,8 @@ class tool_layout_print extends tool_common {
 				
 		}
 		$section_tipo	= $this->section_obj->get_tipo();
-		$layout_records = self::search_layout_records($component_section_tipo, $section_tipo, $matrix_table);
-
+		$layout_records = self::search_layout_records($component_section_tipo, $section_tipo, $matrix_table, $component_layout_tipo, $section_layout_tipo);
+	
 		$ar_layout_obj=array();
 		foreach ($layout_records as $section_id) {
 
@@ -980,23 +981,47 @@ class tool_layout_print extends tool_common {
 	* @param string $component_section_tipo like dd67	
 	* @return array $ar_section_id array of int id matrix
 	*/
-	protected static function search_layout_records($component_section_tipo, $section_tipo, $matrix_table) {
+	protected static function search_layout_records($component_section_tipo, $section_tipo, $matrix_table, $component_layout_tipo, $section_layout_tipo) {
 
-		$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($component_section_tipo,true);
-		$filter = $modelo_name::get_search_query( $json_field='datos', $component_section_tipo, $tipo_de_dato_search='dato', DEDALO_DATA_NOLAN, $section_tipo, $comparison_operator='=');
-			#dump($filter2, ' filter2 ++ '.to_string());
-		
-		$strQuery  = '';
-		$strQuery .= ' SELECT section_id ';
-		$strQuery .= ' FROM ' . $matrix_table .' a';
-		$strQuery .= ' WHERE ' . $filter;
-			#dump($strQuery," ");die();
-		$result	= JSON_RecordObj_matrix::search_free($strQuery);
-		
-		$ar_section_id=array();
-		while ($rows = pg_fetch_assoc($result)) {
-			$ar_section_id[] = $rows['section_id'];
+		if(SHOW_DEBUG===true) {
+			#dump(null, " component_section_tipo: $component_section_tipo - section_tipo:$section_tipo - matrix_table:$matrix_table - component_layout_tipo: $component_layout_tipo - section_layout_tipo: $section_layout_tipo ".to_string()); // DEDALO_SECTION_LAYOUT_PUBLIC_TIPO
 		}
+		
+		$component_section_tipo_model = RecordObj_dd::get_modelo_name_by_tipo($component_section_tipo,true);
+		$search_query_object = '
+		{
+		    "section_tipo": "'.$section_layout_tipo.'",
+		    "limit": 0,
+		    "order": null,
+		    "offset": 0,
+		    "filter": {
+		        "$and": [
+		            {
+		                "q": "\''.$section_tipo.'\'",
+		                "q_operator": null,
+		                "path": [
+		                    {
+		                        "section_tipo": "'.$section_layout_tipo.'",
+		                        "component_tipo": "'.$component_section_tipo.'",
+		                        "modelo": "'.$component_section_tipo_model.'",
+		                        "name": "Sección"
+		                    }
+		                ]
+		            }
+		        ]
+		    },
+		    "select": []
+		}
+		';
+		$search_query_object = json_decode($search_query_object);
+		$search_development2 = new search_development2($search_query_object);
+		$result = $search_development2->search();
+
+		$ar_section_id = array_map(function($item){
+			return $item->section_id;
+		}, (array)$result->ar_records);
+		
+
 		return $ar_section_id;
 	}//end search_layout_records
 
