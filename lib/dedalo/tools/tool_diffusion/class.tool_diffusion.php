@@ -131,7 +131,7 @@ class tool_diffusion {
 
 		// Add especific msg		
 			if (isset($update_record_result->msg)) {
-				$response->msg .= ' - ' . is_array($update_record_result->msg) ? implode(" | ", $update_record_result->msg) : $update_record_result->msg;
+				$response->msg .= ' - ' . is_array($update_record_result->msg)===true ? implode(" | ", $update_record_result->msg) : $update_record_result->msg;
 			}
 
 		if(SHOW_DEBUG===true) {
