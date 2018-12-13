@@ -2,7 +2,7 @@
 
 **README**
 
-*Dédalo Ver 4*
+*Dédalo*
 
 Dédalo is a knowledge management system for Cultural Heritage (tangible and intangible), Natural Heritage and Oral History/Memory. 
 
@@ -38,7 +38,9 @@ Some projects using Dédalo to manage their Cultural Heritage or Oral Archive:
 <p><a href="https://numisdata.org/sardinia/" target="_blank">Findsopts in Sardinia</a></p>
 <p><a href="http://museoprehistoriavalencia.org/web_mupreva/?q=en" target="_blank">Museu de Prehistòria de València</a></p>	
 <p><a href="http://bancmemorial.gencat.cat/web/home/?&amp;lang=eng" target="_blank">Memorial Democràtic</a> (Banco audiovisual de Memoria Colectiva)</p>
-<p><a href="http://www.mujerymemoria.org" target="_blank">Mujer y Memoria</a> (Woman and Memory - Mothers and daughters of the Spanish transition. An oral history project)</p>	
+<p><a href="https://www.mujerymemoria.org" target="_blank">Mujer y Memoria</a> (Woman and Memory - Mothers and daughters of the Spanish transition. An oral history project)</p>
+<p><a href="http://memoriahistorica.paiporta.es" target="_blank">Arxiu de la Memòria Històrica de Paiporta</a> Delegación de Memoria Histórica de la Diputación de Valencia </p>
+<p><a href="http://memoriahistorica.dival.es/recursos/archivo-memoria-historica/" target="_blank">Nuestra Memoria. Archivo de historia oral</a></p>	
 <p><a href="http://memorialdemocratic.gencat.cat/ca/exposicions/expcicions_virtuals/catalunya_en_transicio/" target="_blank">
 	Catalonia in transition</a> (Transition in Catalonia - Memorial Democràtic)</p>
 <p><a href="http://www.museudelaparaula.es" target="_blank">Museu de la Paraula</a> (Archivo de la Memoria Oral Valenciana)</p>
@@ -49,9 +51,9 @@ Some projects using Dédalo to manage their Cultural Heritage or Oral Archive:
 
 *Required for the OS*
 
-- PHP 7.0+
+- PHP 7.1+
 - Apache 2.4.2+
-- Postgres 9.6+
+- Postgres 10.1+
 - MySQL 5.6+ (NOT REQUIRED, only if you want use it for publication)
 
 *libs required for the Dédalo*
@@ -69,7 +71,7 @@ Some projects using Dédalo to manage their Cultural Heritage or Oral Archive:
 - json-logic
 - SWFObject v1.5
 - jwplayer 5.9.2118
-- leaflet 0.8
+- leaflet 1.0
 - lessphp v0.4.0
 - MediaElement 2.14.2
 - nvd3 1.7.1
@@ -113,7 +115,7 @@ Dédalo have three main updates procedures:
 1. Update the code files (php, js, css, html, etc)
 	-  Make backup of all files.
 	-  Download the new files and change the files in your server
-	-  You will need see the new config files and put the changes into your own config files (/lib/dedalo/config4.php and /lib/dedalo/config4_db.php) is not possible change this files automatically because are the configuration files and has specific pw and paths of the users. If you don't change the config files, Dédalo will require the new "define" variables and will stop the app.
+	-  You will need see the new config files and put the changes into your own config files (/lib/dedalo/config4.php and /lib/dedalo/config4_db.php) is not possible change this files automatically because are the configuration files and it has specific pw and paths of the users. If you don't change the config files, Dédalo will require the new "define" variables and will stop the app.
 
 2. Update the ontology structure with the sections, components, list, etc
 	-  Do the first update step
@@ -186,10 +188,10 @@ Browser	|	Version |	certificated
 Chrome	|	60+ | YES - recomended
 Chrome	|	50+ | Deprecated (Please update as soon as posible)	 
 Chrome	|	0 to 50 | NO	 
-Safari	|	9+ | YES;Safari has a conflict with the users section with the pw component and the browser autofill. USE IT WITH CARE.
-Safari	|	8 | Deprecated (Please update as soon as posible)
+Safari	|	10+ | YES;Safari has a conflict with the users section with the pw component and the browser autofill. USE IT WITH CARE.
+Safari	|	9 | Deprecated (Please update as soon as posible)
 Safari	|	0 to 7 | NO	
-Firefox	|	50+ | The compatibility now is complete, but we need feedback to resolve issues in the diary work with Firefox (28-03-2018), please test it and comment it.
+Firefox	|	50+ | The compatibility now is complete, but we need feedback to resolve issues in the diary work with Firefox (10-09-2018), please test it and comment it.
 Firefox	|	40-49 | NO
 Firefox	|	0-40 | NO
 EDGE	| All 	| For us NO, we don't test it. But, is possible that Dédalo run fine in the last versions, because Microsoft say that EDGE is ECMA and HTML5 standards compatible. But we insist that we don't test it.
