@@ -1,14 +1,0 @@
--— IMPORT TO LOCAL LAST VERSION OF DB
-
-/Library/PostgreSQL/9.4/pgAdmin3.app/Contents/SharedSupport/pg_restore --host localhost --port 5432 --username "postgres" --dbname "dedalo4_mupreva" --no-password  --no-owner --verbose "/Users/paco/Trabajos/Dedalo/site_dedalo_plataforma_40/lib/dedalo/extras/render/MUPREVA_MIGRATION_D2b3 to D4b4/Ultima base de datos de datos/2015-04-10_17.dedalo4_mupreva.postgresql_1.custom.backup"
-
--- IMPORT MATRIX_DD CON LOS SECTION_ID DUPLICADOS CORREGIDOS
-/Library/PostgreSQL/9.4/pgAdmin3.app/Contents/SharedSupport/pg_restore --host localhost --port 5432 --username "postgres" --dbname "dedalo4_mupreva" --no-password  --data-only --table matrix_dd --schema public --verbose "/Users/paco/Trabajos/Dedalo/site_dedalo_plataforma_40/lib/dedalo/extras/render/MUPREVA_MIGRATION_D2b3 to D4b4/matrix_dd corregidos los section_id duplicados/matrix_dd_9-4-2015.backup"—- NOTA: EN MATRIX HAY COMBINACIONES DUPLICADAS AL HACER EL CONSTRAIN. ELIMINAMOS RSC3 (PDF'S) QUE SON PRUEBAS QUE VAMOS A EMPEZAR DE CERO CON BIBLIOGRAFIA
-
-—- GUARDAMOS VERSION PASO 1 PARA NO VOLVER A REPETIR LAS TAREAS EN CASO DE PROBLEMAS
-/Library/PostgreSQL/9.4/pgAdmin3.app/Contents/SharedSupport/pg_dump --host localhost --port 5432 --username "postgres" --no-password  --format custom --blobs --verbose --file "/Users/paco/Trabajos/Dedalo/site_dedalo_plataforma_40/lib/dedalo/extras/render/MUPREVA_MIGRATION_D2b3 to D4b4/paso intermedio 1 backup/MUPREVA_PASO1_MIGRATION_B4_10-4-2015" "dedalo4_mupreva"/Library/PostgreSQL/9.4/pgAdmin3.app/Contents/SharedSupport/pg_dump --host localhost --port 5432 --username "postgres" --no-password  --format custom --blobs --verbose --file "/Users/paco/Trabajos/Dedalo/site_dedalo_plataforma_40/lib/dedalo/extras/render/MUPREVA_MIGRATION_D2b3 to D4b4/paso intermedio 2 backup/MUPREVA_PASO2_MIGRATION_B4_10-4-2015.backup" "dedalo4_mupreva"—- PASO 3 BACKUP YA ESTÁ PASADO TODOS LOS SCRIPTS DE REFERENCIAS DE COMPONENTES. SOLO QUEDA REHACER LOS INDICES Y REVISAR LOS CONTADORES Y LAS SEUENCIAS POSTGRES
-
-
-—- RESTORE RC TO CURRENT DB
-pg_restore -h localhost -p 5432 -U mupreva --dbname dedalo4_mupreva --no-password --clean --verbose dedalo4_mupreva_d4.backup
-pg_restore -h localhost -p 5432 -U mupreva --dbname dedalo4_mupreva --clean --verbose dedalo4_mupreva_d4.backup
