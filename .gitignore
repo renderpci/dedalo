@@ -43,7 +43,6 @@ write
 template_maps
 tpl
 lib/dedalo/publication/client_api/*/docu/ui/*
-lib/dedalo/publication/server_api/*/docu/ui/*
 lib/dedalo/tools/tool_layout_print/data/*
 lib/dedalo/tools/tool_layout_print/print_pdf/*
 
