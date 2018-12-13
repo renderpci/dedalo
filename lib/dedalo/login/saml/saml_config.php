@@ -6,5 +6,5 @@
 // SAML TOOLKIT_PATH
     define("TOOLKIT_PATH", 		 DEDALO_ROOT . '/vendor/onelogin/php-saml/'); 
 
-// Remove deprecated errors
+// Remove deprecated errors (saml library deprecated calls)
     error_reporting(E_ALL & ~E_DEPRECATED & ~E_NOTICE);
