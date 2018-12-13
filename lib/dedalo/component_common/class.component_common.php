@@ -4387,6 +4387,10 @@ abstract class component_common extends common {
 	*/
 	public static function parse_stats_values($tipo, $section_tipo, $propiedades, $lang=DEDALO_DATA_LANG, $selector='valor_list') {
 
+		if (isset($propiedades->valor_arguments)) {
+			$selector = 'dato'; 
+		}
+
 		// Search
 			if (isset($propiedades->stats_look_at)) {
 				$related_tipo = reset($propiedades->stats_look_at);
@@ -4418,12 +4422,16 @@ abstract class component_common extends common {
 			$ar_clean = [];
 	        foreach ($result->ar_records as $key => $item) {	        	
 				
-				#$uid = $locator->section_tipo.'_'.$locator->section_id;
+	        	$value = end($item);
 
-	        	$value = end($item);	        	
+	        	// Override label with custom component parse
+	        		if (isset($propiedades->valor_arguments)) {
+	        			$c_component_tipo = isset($propiedades->stats_look_at) ? reset($propiedades->stats_look_at) : $tipo;					
+						$modelo_name 	  = RecordObj_dd::get_modelo_name_by_tipo($c_component_tipo, true);
+						$value 		 	  = $modelo_name::get_stats_value_with_valor_arguments($value, $propiedades->valor_arguments);
+					}       	
 
-	        	$label = strip_tags(trim($value));
-	        	
+	        	$label = strip_tags(trim($value));	        	
 	        	$uid   = $label;
 	        	
 				if(!isset($ar_clean[$uid])){

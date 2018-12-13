@@ -1712,41 +1712,6 @@ class component_date extends component_common {
 
 
 	/**
-	* PARSE_STATS_VALUES
-	* @return array $ar_clean
-	*/
-	public static function parse_stats_values($tipo, $section_tipo, $propiedades, $lang=DEDALO_DATA_LANG, $selector='valor_list') {
-
-		if (isset($propiedades->valor_arguments)) {
-			$selector = 'dato'; 
-		}
-
-		$ar_clean = component_common::parse_stats_values($tipo, $section_tipo, $propiedades, $lang=DEDALO_DATA_LANG, $selector);
-		
-		if (isset($propiedades->valor_arguments)) {
-			foreach ($ar_clean as $key => $item) {
-
-				$item->value = self::get_stats_value_with_valor_arguments($item->value, $propiedades->valor_arguments);
-				
-				/*
-				$value = json_decode($item->value);
-					
-				if (!empty($value)) {
-					$date = reset($value);
-					if (isset($date->start->{$propiedades->valor_arguments})) {
-						$item->value = $date->start->{$propiedades->valor_arguments}; // Overwrite value
-					}
-				}
-				*/
-			}
-		}
-		
-		return $ar_clean;
-	}//end parse_stats_values
-
-
-
-	/**
 	* GET_STATS_VALUE_WITH_VALOR_ARGUMENTS
 	* @return string $label
 	*/
