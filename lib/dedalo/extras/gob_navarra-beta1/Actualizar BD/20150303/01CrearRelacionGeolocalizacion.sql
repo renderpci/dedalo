@@ -1,1 +1,0 @@
-UPDATE `jer_dd` SET `relaciones`='[{"dd9":"dd62"},{"dd66":"dd674"}]' WHERE `terminoID`='dd600'

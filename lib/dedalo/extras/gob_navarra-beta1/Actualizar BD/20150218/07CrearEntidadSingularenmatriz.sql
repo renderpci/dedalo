@@ -1,1 +1,0 @@
-INSERT INTO `matrix_descriptors` (`parent`, `dato`, `tipo`, `lang`) VALUES ('es8905','Entidad Singular','termino', 'lg-spa');

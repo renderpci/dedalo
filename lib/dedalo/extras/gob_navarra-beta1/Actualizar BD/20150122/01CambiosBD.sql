@@ -1,1 +1,0 @@
-UPDATE `Dedalo`.`jer_dd` SET `relaciones` = '[{"dd9":"dd62"},{"dd66":"dd659"}]' WHERE `jer_dd`.`id` = 657;
