@@ -1409,8 +1409,8 @@
 
 
 	Valencia 17-08-2018 4.9.9c
-		component_autocomplete : Unifified using service autocomple
-		component_autocomplete_hi : Unifified using service autocomple
+		component_autocomplete : Unified using service autocomple
+		component_autocomplete_hi : Unified using service autocomple
 
 
 	Valencia 18-08-2018 4.9.11
@@ -1441,7 +1441,17 @@
 
 	Valencia 07-12-2018 5.0.23
 		search_development2 : Fixed bug on search_development2 that skip filter_by_user_records in some scenarios
+
+
+	Valencia 12-12-2018 5.0.27
+		tool_layout_print : Reenabled search using search_query_object
 		
+
+	Valencia 12-12-2018 5.0.29
+		diffusion_stats : Reenabled diffusion_stats using search_query_object (Working here)		
+
+
+
 
 
 	WORK IN PROGRESS
@@ -1463,12 +1473,12 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.0.26';
+	$DEDALO_VERSION = '5.0.29';
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '12-12-2018');
+	define('DEDALO_BUILD'	, '13-12-2018');
 
 
 	/*
