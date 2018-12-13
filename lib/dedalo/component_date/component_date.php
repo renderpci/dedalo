@@ -189,7 +189,10 @@
 				if ($modo==="search") {
 					$file_name = 'search';
 					# dato is injected by trigger search wen is needed
-					$dato = isset($this->dato) ? $this->dato : [''];					
+					$dato = isset($this->dato) ? $this->dato : [''];
+
+					# q_operator is injected by trigger search2
+					$q_operator = isset($this->q_operator) ? $this->q_operator : null;					
 				}
 				break;
 		

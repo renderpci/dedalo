@@ -23,48 +23,54 @@
 						
 		case ($permissions>=1):
 
-				$html_content .= '<ul>';
-				foreach ((array)$ar_dato as $key => $current_dato) {
+				// q_operator
+					$html_content .= '<input class="q_operator" type="text" value="'.$q_operator.'" ';
+					$html_content .= "onchange=\"component_common.fix_dato(this,'{$component_name}')\" ";
+					$html_content .=' />';
+
+				// input date
+					$html_content .= '<ul>';
+					foreach ((array)$ar_dato as $key => $current_dato) {
+						
+						$html_content .= '<li>';
+						
+						// value 
+							$value = isset($valor_start[$key]) ? $valor_start[$key] : '';
+							// If operator exists prepend to value (search values)
+							//if (isset($current_dato->start->op)) {
+							//	$value = $current_dato->start->op . $value;
+							//}
 					
-					$html_content .= '<li>';
+						// role 
+							switch ($date_mode) {
+								case 'range':
+									$role = 'range_start';
+									break;
+								case 'period':
+									$role = 'period_year';
+									break;
+								case 'time':
+									$role = 'date_time';
+									break;
+								case 'date':
+								default:
+									$role = 'range_start';
+									break;
+							}
+
+						// input
+							$html_content .= '<input class="css_date" type="text" ';
+							$html_content .= 'data-role="'.$role.'" ';
+							$html_content .= 'value="'.$value.'" ';
+							$html_content .= "onchange=\"component_common.fix_dato(this,'{$component_name}')\" ";
+							$html_content .= '/>';
+
+						$html_content .= " <span class=\"css_span_ejemplo\">Format $ejemplo</span>";
+
 					
-					// value 
-						$value = isset($valor_start[$key]) ? $valor_start[$key] : '';
-						// If operator exists prepend to value (search values)
-						if (isset($current_dato->start->op)) {
-							$value = $current_dato->start->op . $value;
-						}
-				
-					// role 
-						switch ($date_mode) {
-							case 'range':
-								$role = 'range_start';
-								break;
-							case 'period':
-								$role = 'period_year';
-								break;
-							case 'time':
-								$role = 'date_time';
-								break;
-							case 'date':
-							default:
-								$role = 'range_start';
-								break;
-						}
-
-					// input
-						$html_content .= '<input class="css_date" type="text" ';
-						$html_content .= 'data-role="'.$role.'" ';
-						$html_content .= 'value="'.$value.'" ';
-						$html_content .= "onchange=\"component_common.fix_dato(this,'{$component_name}')\" ";
-						$html_content .= '/>';
-
-					$html_content .= " <span class=\"css_span_ejemplo\">Format $ejemplo</span>";
-
-				
-					$html_content .= '</li>';
-				}//end foreach ($ar_dato as $key => $current_dato)
-				$html_content .= '</ul>';
+						$html_content .= '</li>';
+					}//end foreach ($ar_dato as $key => $current_dato)
+					$html_content .= '</ul>';
 				break;				
 	}
 	
