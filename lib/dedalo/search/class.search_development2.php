@@ -1794,7 +1794,7 @@ class search_development2 {
 	* Used in component common and section to build components path for select
 	* @return array $path
 	*/
-	public static function get_query_path($tipo, $section_tipo, $resolve_related=true) {
+	public static function get_query_path($tipo, $section_tipo, $resolve_related=true, $related_tipo=false) {
 
 		$path = [];			
 		
@@ -1821,16 +1821,34 @@ class search_development2 {
 				if (!empty($ar_related_section)) {
 
 					$related_section_tipo = reset($ar_related_section);
-					foreach ($ar_terminos_relacionados as $key => $current_tipo) {
-						$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
-						if (strpos($modelo_name,'component')!==0) continue;
-						# Recursion
-						$ar_path = self::get_query_path($current_tipo, $related_section_tipo);
-						foreach ($ar_path as $key => $value) {
-							$path[] = $value;
+
+					if ($related_tipo!==false) {
+
+						$current_tipo = $related_tipo;
+						$modelo_name  = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
+						if (strpos($modelo_name,'component')===0) {
+							# Recursion
+							$ar_path = self::get_query_path($current_tipo, $related_section_tipo);
+							foreach ($ar_path as $key => $value) {
+								$path[] = $value;
+							}
 						}
-						break; // Avoid multiple components in path !
-					}
+						
+					}else{
+
+						foreach ($ar_terminos_relacionados as $key => $current_tipo) {
+						
+							// Use only first related tipo
+							$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
+							if (strpos($modelo_name,'component')!==0) continue;
+							# Recursion
+							$ar_path = self::get_query_path($current_tipo, $related_section_tipo);
+							foreach ($ar_path as $key => $value) {
+								$path[] = $value;
+							}
+							break; // Avoid multiple components in path !
+						}
+					}					
 				}
 			}
 		}

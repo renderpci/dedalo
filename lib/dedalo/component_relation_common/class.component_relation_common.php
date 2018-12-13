@@ -1647,5 +1647,102 @@ class component_relation_common extends component_common {
 
 
 
+	/**
+	* PARSE_STATS_VALUES
+	* @return array $ar_clean
+	*/
+	public static function parse_stats_values($tipo, $section_tipo, $propiedades, $lang=DEDALO_DATA_LANG, $selector='valor_list') {
+
+		// Search
+			if (isset($propiedades->stats_look_at)) {
+				$related_tipo = reset($propiedades->stats_look_at);
+				if (isset($propiedades->valor_arguments)) {
+					$selector = 'dato';
+				}				
+			}else{
+				$related_tipo = false; //$current_column_tipo;
+			}
+			$path 		= search_development2::get_query_path($tipo, $section_tipo, true, $related_tipo);
+			$end_path 	= end($path);
+			$end_path->selector = $selector;
+			
+			$search_query_object = '{
+			  "section_tipo": "'.$section_tipo.'",
+			  "allow_sub_select_by_id": false,
+			  "remove_distinct": true,
+			  "limit": 0,
+			  "select": [
+			    {
+			      "path": '.json_encode($path).'
+			    }
+			  ]
+			}';
+			#dump($search_query_object, ' search_query_object ** ++ '.to_string());
+			$search_query_object = json_decode($search_query_object);
+			$search_development2 = new search_development2($search_query_object);
+			$result 			 = $search_development2->search();
+			#dump($result, ' result ** ++ '.to_string());
+
+		// Parse results for stats
+			$ar_clean = [];
+	        foreach ($result->ar_records as $key => $item) {	        	
+				
+				#$uid = $locator->section_tipo.'_'.$locator->section_id;
+
+	        	$value = end($item);
+
+	        	// locators case (like component_select)
+	        	if (strpos($value, '[{')===0 && !isset($propiedades->valor_arguments)) {
+	        		$ar_locators = json_decode($value);
+		        	foreach ((array)$ar_locators as $locator) {			        	
+
+						$label = ts_object::get_term_by_locator( $locator, $lang, true );						
+						$label = strip_tags(trim($label));
+
+
+						$uid = $locator->section_tipo.'_'.$locator->section_id;
+			        	
+						if(!isset($ar_clean[$uid])){
+							$ar_clean[$uid] = new stdClass();
+							$ar_clean[$uid]->count = 0;
+						}
+
+						$ar_clean[$uid]->count++;
+						$ar_clean[$uid]->value = $label;
+					}
+				// resolved string case (like component_portal)
+	        	}else{
+
+		        	$label = strip_tags(trim($value));
+		        	if ($label==='[]') {
+		        		$label = 'not defined';
+		        	}
+
+		        	// Override label with custom component parse
+		        	if (isset($propiedades->stats_look_at) && isset($propiedades->valor_arguments)) {
+		        		$modelo_name = RecordObj_dd::get_modelo_name_by_tipo(reset($propiedades->stats_look_at), true);						
+						$label 		 = $modelo_name::get_stats_value_with_valor_arguments($value, $propiedades->valor_arguments);		        		
+		        	}
+
+		        	$uid = $label;
+		        	
+					if(!isset($ar_clean[$uid])){
+						$ar_clean[$uid] = new stdClass();
+						$ar_clean[$uid]->count = 0;
+					}
+
+					$ar_clean[$uid]->count++;
+					$ar_clean[$uid]->value = $label;
+	        	}
+	        					
+			}
+			#dump($ar_clean, ' ar_clean ++ ** '.to_string());
+
+		
+		return $ar_clean;
+	}//end parse_stats_values
+
+
+
 }//end component_relation_common
 ?>

@@ -228,7 +228,7 @@ class diffusion_section_stats extends diffusion {
 
 			$section_tipo = $current_obj->section;
 			$this->diffusion_map_object->$section_tipo = new stdClass();
-
+	
 			$cn=0;foreach ($current_obj->components as $current_component_tipo => $current_component_target_tipo) {
 				
 				if ($current_component_tipo==='dd1093') continue; # Skip stats field 'dato' stats
@@ -245,7 +245,7 @@ class diffusion_section_stats extends diffusion {
 				#if ($current_component_tipo=='dd1061') continue;
 
 				$RecordObj_dd 				= new RecordObj_dd($current_component_tipo);	
-				$propiedades 				= $RecordObj_dd->get_propiedades();	
+				$propiedades 				= $RecordObj_dd->get_propiedades(true);	
 					#dump($propiedades, ' propiedades ++ '.to_string());	continue;	
 
 				#
@@ -253,146 +253,221 @@ class diffusion_section_stats extends diffusion {
 				#
 				$current_obj->title		 	= (string)RecordObj_dd::get_termino_by_tipo($current_component_tipo, DEDALO_DATA_LANG, true);
 				$current_obj->graph_type 	= (string)RecordObj_dd::get_modelo_name_by_tipo($current_component_tipo,true);
-				$current_obj->propiedades 	= json_handler::decode($propiedades);
+				$current_obj->propiedades 	= $propiedades;
 					#dump($current_obj,'$current_obj '); continue;
 
 				# ar_related_component_tipo
 				$ar_related_component_tipo 	= $current_obj->components[$current_component_tipo];
-					#dump($ar_related_component_tipo,'$ar_related_component_tipo '); die();
+					#dump($ar_related_component_tipo,'$ar_related_component_tipo '); #die();
 				#
 				# SQL
 				$sql_columns='';
 				$sql_group='';
 				$change_section = false;
+						
+					if ($section_tipo===DEDALO_ACTIVITY_SECTION_TIPO) {	
 					
-					$i=0;foreach ($ar_related_component_tipo as $current_column_tipo) {
+						$i=0;foreach ($ar_related_component_tipo as $current_column_tipo) {
 
-						# Set section_tipo for search in query
-						$section_tipo 				= $current_obj->section;
-						$current_column_tipo_orig 	= $current_column_tipo;
-						$filter_custom 				= " (section_tipo = '$section_tipo') ";
-						# current_lang
-						$RecordObj_dd 	= new RecordObj_dd($current_column_tipo);
-						$model_name 	= $RecordObj_dd->get_modelo_name();	
-						$traducible 	= $RecordObj_dd->get_traducible();
-						$current_lang 	= ($traducible!=='si') ? DEDALO_DATA_NOLAN : DEDALO_DATA_LANG;
-							#dump($model_name, ' $model_name ++ '.to_string($current_lang)); continue;
-						
-						
-						#
-						# PORTALES
-						# Case portals change sql query and current column tipo
-						if (isset($current_obj->propiedades->stats_look_at)) {
-							#dump($current_obj->propiedades->stats_look_at);
-
-							#$options_search_portal = clone($options_search_sesion);
-							$options_search_portal = clone($options_search_from_user);
+							# Set section_tipo for search in query
+							$section_tipo 				= $current_obj->section;
+							$current_column_tipo_orig 	= $current_column_tipo;
+							$filter_custom 				= " (section_tipo = '$section_tipo') ";
+							# current_lang
+							$RecordObj_dd 	= new RecordObj_dd($current_column_tipo);
+							$model_name 	= $RecordObj_dd->get_modelo_name();	
+							$traducible 	= $RecordObj_dd->get_traducible();
+							$current_lang 	= ($traducible!=='si') ? DEDALO_DATA_NOLAN : DEDALO_DATA_LANG;
+								#dump($model_name, ' $model_name ++ '.to_string($current_lang)); continue;
 							
-							$options_search_portal->layout_map 					= array($current_column_tipo);
-							$options_search_portal->limit						= false;
-							$options_search_portal->offset						= false;
-							$options_search_portal->search_options_session_key 	= 'current_edit';
-							$options_search_portal->modo 						= 'edit';
-
-							$section_rows = search::get_records_data($options_search_portal);															
-								#dump($section_rows->result, ' section_rows->result ++ '.to_string()); #dump( reset(array_values($section_rows->result)), 'array_values() ++ '.to_string());
 							
-							$filtro_portal_sql = '';
-							foreach ((array)$section_rows->result as $key => $ar_value) foreach ($ar_value as $tipo => $dato) {
-									
-									if (empty($dato[$current_column_tipo])) continue;
-									
-									$ar_locators = json_decode($dato[$current_column_tipo]);									
-									foreach ((array)$ar_locators as $current_key => $current_locator) {
+							#
+							# PORTALES
+							# Case portals change sql query and current column tipo
+							if (isset($current_obj->propiedades->stats_look_at)) {
+								#dump($current_obj->propiedades->stats_look_at);
 
-										switch ($model_name) {
-											case 'component_filter':
-												# Change the dato of the proyect with standar locator												
-												$current_locator = new stdClass();
-													$current_locator->section_id   = $current_key;
-													$current_locator->section_tipo = DEDALO_SECTION_PROJECTS_TIPO;
-
-												# Change section_tipo for search in query
-												#$filter_custom = " section_tipo = '".DEDALO_SECTION_PROJECTS_TIPO."'";
-												$section_tipo = DEDALO_SECTION_PROJECTS_TIPO;
-											
-											default:
-												if (!isset($current_locator->section_tipo) || !isset($current_locator->section_id)) continue;
-												$filtro_portal_sql .= "\n(section_id = ".$current_locator->section_id." AND section_tipo = '".$current_locator->section_tipo."') OR";
-												#Change section_tipo for serarch in query
-												$section_tipo = $current_locator->section_tipo;
-												break;
-										}//end switch ($model_name) {
-										
-									}//end foreach ((array)$ar_locators as $current_key => $current_locator) {									
+								#$options_search_portal = clone($options_search_sesion);
+								$options_search_portal = clone($options_search_from_user);
 								
-							}//end foreach ($result as $key => $ar_value) {
+								$options_search_portal->layout_map 					= array($current_column_tipo);
+								$options_search_portal->limit						= false;
+								$options_search_portal->offset						= false;
+								$options_search_portal->search_options_session_key 	= 'current_edit';
+								$options_search_portal->modo 						= 'edit';
 
-							#$filter_custom = '';
-							if (!empty($filtro_portal_sql)) {
-								$filter_custom = "\n(".substr($filtro_portal_sql, 0,-3).") ";
-							}								
-							#dump($filtro_portal_sql ,'$filtro_portal_sql');
+								$section_rows = search::get_records_data($options_search_portal);															
+									#dump($section_rows->result, ' section_rows->result ++ '.to_string()); #dump( reset(array_values($section_rows->result)), 'array_values() ++ '.to_string());
+								
+								$filtro_portal_sql = '';
+								foreach ((array)$section_rows->result as $key => $ar_value) foreach ($ar_value as $tipo => $dato) {
+										
+										if (empty($dato[$current_column_tipo])) continue;
+										
+										$ar_locators = json_decode($dato[$current_column_tipo]);									
+										foreach ((array)$ar_locators as $current_key => $current_locator) {
 
-							$current_column_tipo = $current_obj->propiedades->stats_look_at[0];
-							$RecordObj_dd 		 = new RecordObj_dd($current_column_tipo);
-							$model_name 		 = $RecordObj_dd->get_modelo_name();	
-							$traducible 		 = $RecordObj_dd->get_traducible();
-							$current_lang 		 = ($traducible!=='si') ? DEDALO_DATA_NOLAN : DEDALO_DATA_LANG;							
-							$change_section 	 = true;
-							#$section_tipo_portal = component_common::get_section_tipo_from_component_tipo($current_column_tipo);
-								#dump($section_tipo,'$section_tipo - current_column_tipo:'.$current_column_tipo);							
-						}//if (isset($current_obj->propiedades->stats_look_at)){
+											switch ($model_name) {
+												case 'component_filter':
+													# Change the dato of the proyect with standar locator												
+													$current_locator = new stdClass();
+														$current_locator->section_id   = $current_key;
+														$current_locator->section_tipo = DEDALO_SECTION_PROJECTS_TIPO;
 
-						#PROPERTIES MODIFICATOR
-						#In propiedades is poosible put one modificator of the value. for ex: valor_arguments : year
-						#this value change the query for sql going to the depper into the value of the component.
-						
-						# propiedades valor_arguments
-						if(isset($current_obj->propiedades->valor_arguments)) {
-							$valor_arguments = ', '.$current_obj->propiedades->valor_arguments;
-						}else{
-							$valor_arguments = '';
-						}
+													# Change section_tipo for search in query
+													#$filter_custom = " section_tipo = '".DEDALO_SECTION_PROJECTS_TIPO."'";
+													$section_tipo = DEDALO_SECTION_PROJECTS_TIPO;
+												
+												default:
+													if (!isset($current_locator->section_tipo) || !isset($current_locator->section_id)) continue 2;
+													$filtro_portal_sql .= "\n(section_id = ".$current_locator->section_id." AND section_tipo = '".$current_locator->section_tipo."') OR";
+													#Change section_tipo for serarch in query
+													$section_tipo = $current_locator->section_tipo;
+													break;
+											}//end switch ($model_name) {
+											
+										}//end foreach ((array)$ar_locators as $current_key => $current_locator) {									
+									
+								}//end foreach ($result as $key => $ar_value) {
 
-						#
-						# COLUMNS
-						if ($i<1) {
+								#$filter_custom = '';
+								if (!empty($filtro_portal_sql)) {
+									$filter_custom = "\n(".substr($filtro_portal_sql, 0,-3).") ";
+								}								
+								#dump($filtro_portal_sql ,'$filtro_portal_sql');
+
+								$current_column_tipo = $current_obj->propiedades->stats_look_at[0];
+								$RecordObj_dd 		 = new RecordObj_dd($current_column_tipo);
+								$model_name 		 = $RecordObj_dd->get_modelo_name();	
+								$traducible 		 = $RecordObj_dd->get_traducible();
+								$current_lang 		 = ($traducible!=='si') ? DEDALO_DATA_NOLAN : DEDALO_DATA_LANG;							
+								$change_section 	 = true;
+								#$section_tipo_portal = component_common::get_section_tipo_from_component_tipo($current_column_tipo);
+									#dump($section_tipo,'$section_tipo - current_column_tipo:'.$current_column_tipo);							
+							}//if (isset($current_obj->propiedades->stats_look_at)){
+
+							#PROPERTIES MODIFICATOR
+							#In propiedades is poosible put one modificator of the value. for ex: valor_arguments : year
+							#this value change the query for sql going to the depper into the value of the component.
+							
+							# propiedades valor_arguments
+							if(isset($current_obj->propiedades->valor_arguments)) {
+								$valor_arguments = ', '.$current_obj->propiedades->valor_arguments;
+							}else{
+								$valor_arguments = '';
+							}
+
+							#
+							# COLUMNS
+							if ($i<1) {
+								switch (true) {
+									case ($current_column_tipo==='dd543') :
+										$sql_columns .= "\n COUNT (datos#>>'{relations}') AS count,";
+										break;
+									default:
+										$sql_columns .= "\n COUNT (datos#>>'{components, $current_column_tipo, dato, $current_lang $valor_arguments}') AS count,";
+								}
+							}
+							
 							switch (true) {
 								case ($current_column_tipo==='dd543') :
-									$sql_columns .= "\n COUNT (datos#>>'{relations}') AS count,";
+									$sql_columns .= "\n datos#>>'{relations}' AS $current_column_tipo";	
 									break;
+								case ($current_component_tipo==='dd1074') : # 'When' column (activity time is grouped by hour like '2014-10-23 21:56:49' => '21')
+									$sql_columns .= "\n substr(datos#>>'{components, $current_column_tipo, dato, $current_lang}', 12, 2) AS $current_column_tipo";	
+									break;							
 								default:
-									$sql_columns .= "\n COUNT (datos#>>'{components, $current_column_tipo, dato, $current_lang $valor_arguments}') AS count,";
+									$sql_columns .= "\n datos#>>'{components, $current_column_tipo, dato, $current_lang $valor_arguments}' AS $current_column_tipo";	
+							}											
+
+							#
+							# GROUP BY 
+							if ($i<1) {
+							$sql_group .= "\nGROUP BY";
 							}
-						}
-						
-						switch (true) {
-							case ($current_column_tipo==='dd543') :
-								$sql_columns .= "\n datos#>>'{relations}' AS $current_column_tipo";	
-								break;
-							case ($current_component_tipo==='dd1074') : # 'When' column (activity time is grouped by hour like '2014-10-23 21:56:49' => '21')
-								$sql_columns .= "\n substr(datos#>>'{components, $current_column_tipo, dato, $current_lang}', 12, 2) AS $current_column_tipo";	
-								break;							
-							default:
-								$sql_columns .= "\n datos#>>'{components, $current_column_tipo, dato, $current_lang $valor_arguments}' AS $current_column_tipo";	
-						}											
+							#$sql_group .= "\n datos#>>'{components, $current_column_tipo, dato, $current_lang}'";
+							$sql_group .= " $current_column_tipo"; 	
 
-						#
-						# GROUP BY 
-						if ($i<1) {
-						$sql_group .= "\nGROUP BY";
-						}
-						#$sql_group .= "\n datos#>>'{components, $current_column_tipo, dato, $current_lang}'";
-						$sql_group .= " $current_column_tipo"; 	
+							if ($current_column_tipo_orig != end($ar_related_component_tipo)) {
+								$sql_columns .= ',';
+								$sql_group .= ',';
+							}
 
-						if ($current_column_tipo_orig != end($ar_related_component_tipo)) {
-							$sql_columns .= ',';
-							$sql_group .= ',';
-						}
-
-					$i++;}//end $i=0;foreach ($ar_related_component_tipo as $current_column_tipo) {
+						$i++;}//end $i=0;foreach ($ar_related_component_tipo as $current_column_tipo) {
 					
+					}else{
+
+						$ar_stats = [];
+						foreach ($ar_related_component_tipo as $current_column_tipo) {
+							
+							// search_query_object here and search
+							#	$sql_query   = 'SELECT datos#>>\'{relations}\' AS relations FROM matrix WHERE section_tipo = \''.$section_tipo.'\' ';
+							#	$result		 = JSON_RecordObj_matrix::search_free($sql_query);
+	
+							if (isset($propiedades->stats_look_at)) {
+								$related_tipo = reset($propiedades->stats_look_at);
+							}else{
+								$related_tipo = false; //$current_column_tipo;
+							}
+							// search_development2:get_query_path($tipo, $section_tipo, $resolve_related=true, $related_tipo=false)
+							#$path = search_development2::get_query_path($current_column_tipo, $section_tipo, true, $related_tipo);
+		
+							#$search_query_object = '{
+							#  "section_tipo": "'.$section_tipo.'",
+							#  "allow_sub_select_by_id": false,
+							#  "remove_distinct": true,
+							#  "limit": 0,
+							#  "select": [
+							#    {
+							#      "path": '.json_encode($path).'
+							#    }
+							#  ]
+							#}';
+							##dump($search_query_object, ' search_query_object ++ '.to_string());
+							#$search_query_object = json_decode($search_query_object);							
+							#$search_development2 = new search_development2($search_query_object);
+							#$result 			 = $search_development2->search();
+							#dump($result->ar_records, ' result->ar_records ++ '.to_string());
+							
+							# Result data model
+							#[0] => stdClass Object
+				            #    (
+				            #        [section_id] => 1
+				            #        [section_tipo] => oh1
+				            #        [oh29] => 2017-03-15
+				            #    )
+
+							$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_column_tipo,true);
+				            $ar_clean 	 = $modelo_name::parse_stats_values($current_column_tipo, $section_tipo, $propiedades);
+
+							#$ar_clean = [];
+							#while ($row = pg_fetch_assoc($result)) {
+							#	$relations = json_decode($row['relations']);
+							#	
+							#	foreach ($relations as $item) {
+							#		if(isset($item->from_component_tipo) && $item->from_component_tipo===$current_column_tipo){
+							#			$uid = $item->section_tipo.'_'.$item->section_id;
+							#			if(!isset($ar_clean[$uid])){
+							#				$ar_clean[$uid] = new stdClass();
+							#				$ar_clean[$uid]->count = 0;
+							#			}
+							#			$ar_clean[$uid]->count++;
+							#			$ar_clean[$uid]->locator = $item;
+							#		}
+							#	}								
+							#}
+							#dump($ar_clean, ' ar_clean ++ '.to_string());
+							
+							foreach ($ar_clean as $c_uid => $c_item) {
+
+								$ar_stats[] = [
+									$current_column_tipo => $c_item->value,
+									'count' 			 => $c_item->count
+								];
+							}						
+						}
+						#dump($ar_stats, ' ar_stats ++ '.to_string($current_column_tipo));
+					}
 					
 					# DATE
 					if ($section_tipo===DEDALO_ACTIVITY_SECTION_TIPO) {
@@ -405,58 +480,61 @@ class diffusion_section_stats extends diffusion {
 					}						
 
 			
-					$current_matrix_table = common::get_matrix_table_from_tipo($section_tipo);
-					$filter_options = new stdClass();
-					/*
-						* If the model of the component is a portal the reference of the top tipo (creator top tipo) is the filter, because some portals can have the same info for two types of Heritage or OH
+					if ($section_tipo===DEDALO_ACTIVITY_SECTION_TIPO) {
+						$current_matrix_table = common::get_matrix_table_from_tipo($section_tipo);
+						$filter_options = new stdClass();
 						
-						if ($change_section){
-							$filter_by_section_tipo = "\n-- section_creator_top_tipo -- \n datos@>'{\"section_creator_top_tipo\":\"$section_tipo\"}'::jsonb ";
-							$filter_options->section_tipo 	= $section_tipo_portal;			
-
-						}else{
-							$filter_by_section_tipo = "\n-- filter_by_section_tipo -- \n section_tipo = '$section_tipo' ";
-							$filter_options->section_tipo 	= $section_tipo;			
+							#* If the model of the component is a portal the reference of the top tipo (creator top tipo) is the filter, because some portals can have the same info for two types of Heritage or OH
 							
+							#if ($change_section){
+							#	$filter_by_section_tipo = "\n-- section_creator_top_tipo -- \n datos@>'{\"section_creator_top_tipo\":\"$section_tipo\"}'::jsonb ";
+							#	$filter_options->section_tipo 	= $section_tipo_portal;			
+							#
+							#}else{
+							#	$filter_by_section_tipo = "\n-- filter_by_section_tipo -- \n section_tipo = '$section_tipo' ";
+							#	$filter_options->section_tipo 	= $section_tipo;			
+							#	
+							#}
+						
+						#$filter_by_projects		= filter::get_sql_filter($filter_options);
+						$filter_by_date			= $date_filter;
+						$group_by				= $sql_group;
+						#$strQuery ="\nSELECT $sql_columns \n FROM \"$current_matrix_table\" \nWHERE $filter_by_section_tipo $filter_by_projects $filter_by_date $group_by ORDER BY count DESC\n";
+						
+						$options_search_from_user->sql_columns 	= $sql_columns;
+						$options_search_from_user->matrix_table	= $current_matrix_table;
+						$options_search_from_user->group_by		= $group_by;
+						$options_search_from_user->limit		= '';
+						$options_search_from_user->order_by		= 'count';
+						$options_search_from_user->filter_custom= $filter_custom;
+
+							#dump($options_search_from_user,'$options_search_from_user');die();
+						$section_rows 	= search::get_records_data($options_search_from_user);
+							#dump($section_rows,'$section_rows');
+
+
+						$result	= $section_rows->result;
+					
+						
+						#
+						# 1 Construimos el array de la tabla temporal en base a los registros obtenidos en el query	
+						$ar_stats=array();
+						$stats_obj=new stdClass();
+						# Rows
+
+						foreach ($result as $key => $ar_value) {
+							foreach ($ar_value as $value) {
+								if(empty($value['count'])) continue;
+								$ar_stats[] = array_reverse($value);
+							}
 						}
-							*/
-					#$filter_by_projects		= filter::get_sql_filter($filter_options);
-					$filter_by_date			= $date_filter;
-					$group_by				= $sql_group;
-					#$strQuery ="\nSELECT $sql_columns \n FROM \"$current_matrix_table\" \nWHERE $filter_by_section_tipo $filter_by_projects $filter_by_date $group_by ORDER BY count DESC\n";
-					
-					$options_search_from_user->sql_columns 	= $sql_columns;
-					$options_search_from_user->matrix_table	= $current_matrix_table;
-					$options_search_from_user->group_by		= $group_by;
-					$options_search_from_user->limit		= '';
-					$options_search_from_user->order_by		= 'count';
-					$options_search_from_user->filter_custom= $filter_custom;
-
-						#dump($options_search_from_user,'$options_search_from_user');die();
-					$section_rows 	= search::get_records_data($options_search_from_user);
-						#dump($section_rows,'$section_rows');
+						#dump($ar_stats,'ar_stats');
+					}else{
 
 
-					$result	= $section_rows->result; 
-					#dump($result,"result");
-			
-
-					$sql_time = round(microtime(1)-$start_time,3);
-					
-					#
-					# 1 Construimos el array de la tabla temporal en base a los registros obtenidos en el query	
-					$ar_stats=array();
-					$stats_obj=new stdClass();
-					# Rows
-
-					foreach ($result as $key => $ar_value) {
-						foreach ($ar_value as $value) {
-							if(empty($value['count'])) continue;
-							$ar_stats[] = array_reverse($value);
-						}						
 					}
-					#dump($ar_stats,'ar_stats');
-
+					$sql_time = round(microtime(1)-$start_time,3);
+					#dump($result,"result");
 					/******************BEFORE****************
 						$r=0; while ($rows = pg_fetch_assoc($result)) {
 							
@@ -503,10 +581,10 @@ class diffusion_section_stats extends diffusion {
 						$js_obj->tipo 		= $current_component_tipo ;
 						if(SHOW_DEBUG===true) {
 							$js_obj->title .=  " <span>($current_obj->graph_type)</span>";
-							$js_obj->query = $section_rows->strQuery;						
+							$js_obj->query = isset($section_rows->strQuery) ? $section_rows->strQuery : '';
 						}
 						$js_obj->graph_type = $current_obj->graph_type;						
-						$js_obj->data 		= $this->washer($ar_stats, $current_component_tipo, $current_obj->propiedades);
+						$js_obj->data 		= $this->washer($ar_stats, $current_component_tipo, $current_obj->propiedades, $section_tipo);
 					$this->js_ar_obj[] = $js_obj;
 
 
@@ -520,7 +598,7 @@ class diffusion_section_stats extends diffusion {
 					# Debug
 					$this->diffusion_map_object->$section_tipo->$current_component_tipo->debug = new stdClass();
 						$this->diffusion_map_object->$section_tipo->$current_component_tipo->debug->sql_time = $sql_time;
-						$this->diffusion_map_object->$section_tipo->$current_component_tipo->debug->strQuery = $section_rows->strQuery;
+						$this->diffusion_map_object->$section_tipo->$current_component_tipo->debug->strQuery = isset($section_rows->strQuery) ? $section_rows->strQuery : '';
 
 				$cn++;
 				#if ($cn>=1) 
@@ -562,7 +640,7 @@ class diffusion_section_stats extends diffusion {
 	  }
 	]
 	*/
-	public function washer($ar_stats, $component_tipo, $propiedades) {
+	public function washer($ar_stats, $component_tipo, $propiedades, $section_tipo) {
 		$ar_stats_obj_resolved 	= array();
 
 		$x_axis = 'x';
@@ -634,7 +712,7 @@ class diffusion_section_stats extends diffusion {
 							break;
 						
 						# ACTIVITY : WHEN : Activity time
-						case ($component_tipo==='dd1074'):						
+						case ($component_tipo==='dd1074'):
 							if (!$added_extras) {
 								for ($i=0; $i < count($ar_stats) ; $i++) {
 									$ar_existing_hours[] = $ar_stats[$i]['dd547'];
@@ -708,7 +786,7 @@ class diffusion_section_stats extends diffusion {
 							break;
 						
 						# PROJECTS : components with model component_filter
-						case ($modelo_name==='component_filter'):
+						case ($modelo_name==='component_filter99'):
 							if(!isset($table_temp)) $table_temp=array();
 							
 							# Convert json data like '{"2": "2", "4": "2"}' to php array and get only keys like 'Array("2","4")' 
@@ -800,6 +878,58 @@ class diffusion_section_stats extends diffusion {
 									$current_obj->values[] = $current_value_obj;
 							}						
 							break;
+
+						#case (true===in_array($modelo_name, component_relation_common::get_components_with_relations())):
+						case ($modelo_name==='component_filter99999'):
+							if (isset($propiedades->stats_look_at)) {
+								$c_component_tipo 		= reset($propiedades->stats_look_at);
+								$target_component_tipo 	= common::get_ar_related_by_model('component_', $component_tipo, false)[0];
+								$c_section_tipo 		= common::get_ar_related_by_model('section', $target_component_tipo, true)[0];
+							}else{
+								$c_component_tipo 	= $key->from_component_tipo;
+								$c_section_tipo 	= $section_tipo;
+							}
+							#dump($c_section_tipo, ' c_section_tipo ++ c_component_tipo: '.to_string($c_component_tipo));
+
+							$component 		= component_common::get_instance($modelo_name,
+																			 $c_component_tipo,
+																			 null,
+																			 'list',
+																			 DEDALO_DATA_LANG,
+																			 $c_section_tipo,
+																			 false);
+							$component->set_dato([$key]);
+							$c_value = $component->get_valor();	
+							$c_value = strip_tags($c_value);
+							$ar_values = explode(',', $c_value);
+							$c_value = $ar_values[0];
+
+							$current_value_obj=new stdClass();
+								$current_value_obj->$x_axis = (string)$c_value;
+								if (empty($current_value_obj->$x_axis)) {
+									$current_value_obj->$x_axis = (string)'no avaliable';
+									if(SHOW_DEBUG===true) {
+										$current_value_obj->$x_axis .= " [key_resolved:".to_string($key_resolved)." - key:".to_string($key)."] $modelo_name - $component_tipo";
+									}
+								}
+								$current_value_obj->$y_axis = (int)$value;
+								$current_obj->values[] = $current_value_obj;
+							break;
+
+						case ($modelo_name!=='loquesea'):
+							$current_value_obj=new stdClass();
+								$current_value_obj->$x_axis = (string)$key; // Name
+								if (empty($current_value_obj->$x_axis)) {
+									$current_value_obj->$x_axis = (string)'no avaliable';
+									if(SHOW_DEBUG===true) {
+										$current_value_obj->$x_axis .= " [key:".to_string($key)."] $modelo_name - $component_tipo";
+									}
+								}
+								$current_value_obj->$y_axis = (int)$value; // Counter
+								$current_obj->values[] = $current_value_obj;
+							break;
+
+						
 
 						# DEFAULT BEHAVIOR
 						default:
@@ -903,7 +1033,7 @@ class diffusion_section_stats extends diffusion {
 							$key_resolved = isset($key_resolved) ? strip_tags($key_resolved) : null;
 								#dump($key_resolved, ' key_resolved '.$value);
 								if (empty($value)) {
-									continue; 	# Skip empty data
+									continue 2; 	# Skip empty data
 								}
 
 							#$stats_value_resolved = component_autocomplete_ts::get_stats_value_resolved( $first_key, $ar_stats, 'stats_bar' ,$propiedades ) ;

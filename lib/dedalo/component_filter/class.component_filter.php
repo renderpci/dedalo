@@ -783,10 +783,10 @@ class component_filter extends component_relation_common {
 
 		$component  	= component_common::get_instance(get_called_class(),
 														 $tipo,
-													 	 $parent,
-													 	 'list',
+														 $parent,
+														 'list',
 														 DEDALO_DATA_NOLAN,
-													 	 $section_tipo);
+														 $section_tipo);
 
 		if (!empty($value)) {
 			if($ar_val = json_decode($value)){
@@ -873,6 +873,86 @@ class component_filter extends component_relation_common {
 
 		return $diffusion_value;
 	}//end get_diffusion_value
+
+
+
+	/**
+	* PARSE_STATS_VALUES
+	* @return array $ar_clean
+	*/
+	public static function parse_stats_values($tipo, $section_tipo, $propiedades, $lang=DEDALO_DATA_LANG, $selector='dato') {
+	
+		// Search
+			if (isset($propiedades->stats_look_at)) {
+				$related_tipo = reset($propiedades->stats_look_at);
+			}else{
+				$related_tipo = false; //$current_column_tipo;
+			}
+			$path 		= search_development2::get_query_path($tipo, $section_tipo, true, false);
+			$end_path 	= end($path);
+			$end_path->selector = $selector;
+			
+			$search_query_object = '{
+			  "section_tipo": "'.$section_tipo.'",
+			  "allow_sub_select_by_id": false,
+			  "remove_distinct": true,
+			  "limit": 0,
+			  "select": [
+				{
+				  "path": '.json_encode($path).'
+				}
+			  ]
+			}';
+			#dump($search_query_object, ' search_query_object ** ++ '.to_string());
+			$search_query_object = json_decode($search_query_object);
+			$search_development2 = new search_development2($search_query_object);
+			$result 			 = $search_development2->search();
+			#dump($result, ' result ** ++ '.to_string());
+
+		// Parse results for stats
+			$ar_clean = [];
+			foreach ($result->ar_records as $key => $item) {
+
+				$ar_locators = end($item);
+				$ar_locators = json_decode($ar_locators);
+	
+				foreach ((array)$ar_locators as $locator) {					
+
+					if (isset($propiedades->stats_look_at)) {
+						$c_tipo 		= reset($propiedades->stats_look_at);
+						$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($c_tipo,true);
+						$component 		= component_common::get_instance( $modelo_name,
+																		  $c_tipo,
+																		  $locator->section_id,
+																		  'list',
+																		  $lang,
+																		  $locator->section_tipo);
+						$label = $component->get_valor($lang);
+					}else{
+						$label = ts_object::get_term_by_locator( $locator, $lang, true );
+					}
+
+					
+					
+					$label 	= strip_tags(trim($label));
+
+					#$uid 	= $locator->section_tipo.'_'.$locator->section_id;
+					$uid 	= $label;
+
+					if(!isset($ar_clean[$uid])){
+						$ar_clean[$uid] = new stdClass();
+						$ar_clean[$uid]->count = 0;
+					}
+
+					$ar_clean[$uid]->count++;
+					$ar_clean[$uid]->value = $label;
+				}
+			}
+			#dump($ar_clean, ' ar_clean ++ ** '.to_string());
+
+		
+		return $ar_clean;
+	}//end parse_stats_values
 
 
 

@@ -872,6 +872,8 @@ class component_date extends component_common {
 				return $query_object;
 			}
 		}
+	
+		$q_operator = isset($query_object->q_operator) ? $query_object->q_operator : null;
 		
 		$component_tipo = end($query_object->path)->component_tipo;
         $RecordObj   	= new RecordObj_dd($component_tipo);
@@ -892,65 +894,84 @@ class component_date extends component_common {
 					#$q_clean  = preg_replace("/^(\W{1,2})?/", "", $q);
 	        		// Extract directly from calculated time in javascript
 					$q_clean  = !empty($q_object->start->time) ? $q_object->start->time : 0;
-					$operator = !empty($q_object->start->op) ? $q_object->start->op : '=';
-
-
-
+					#$operator = !empty($q_object->start->op) ? $q_object->start->op : '=';
+					$operator = !empty($q_operator) ? trim($q_operator) : '=';
+					
 					$dd_date = new dd_date($q_object->start);
 					#$dd_date->get_date_from_timestamp( $q_clean );
 					#$q_clean = dd_date::convert_date_to_seconds($dd_date);
-					
-					$final_range = self::get_final_search_range_seconds($dd_date);
-					
-				# ARRAY ELEMENTS SUBGROUPS
-				# ARRAY ELEMENTS SUB_GROUP1
-					$query1 = new stdClass();
-						$query1->component_path 	= ['start','time'];
-						$query1->operator 			= '<=';
-						$query1->q_parsed			= '\''.$q_clean.'\'';
-						$query1->type 				= 'jsonb';
 
-					$query2 = new stdClass();
-						$query2->component_path 	= ['end','time'];
-						$query2->operator 			= '>=';
-						$query2->q_parsed			= '\''.$q_clean.'\'';
-						$query2->type 				= 'jsonb';
+					if (!empty($operator) && $operator!=='=') {
+						$query1 = new stdClass();
+							$query1->component_path 	= ['start','time'];
+							$query1->operator 			= $operator;
+							$query1->q_parsed			= '\''.$q_clean.'\'';
+							$query1->type 				= 'jsonb';
+
+						$group_op_name = '$or';	
+						$group_array_elements = new stdClass();
+							$group_array_elements->{$group_op_name} = [$query1];
+
+						# query_object config
+						$query_object->q_info 			= '';
+						$query_object->q_parsed			= null;
+						$query_object->format 			= 'array_elements';
+						$query_object->array_elements 	= $group_array_elements;
 						
-					# Add to sub_group1
-					$sub_group1 = new stdClass();
-						$sub_name1 = '$and';
-						$sub_group1->$sub_name1 = [$query1,$query2];
-							#dump($sub_group1, ' sub_group1 ++ '.to_string());
+					}else{
 
-				# ARRAY ELEMENTS SUB_GROUP2
-					$query1 = new stdClass();
-						$query1->component_path 	= ['start','time'];
-						$query1->operator 			= '>=';
-						$query1->q_parsed			= '\''.$q_clean.'\'';
-						$query1->type 				= 'jsonb';
+						$final_range = self::get_final_search_range_seconds($dd_date);
+							
+						# ARRAY ELEMENTS SUBGROUPS
+						# ARRAY ELEMENTS SUB_GROUP1
+							$query1 = new stdClass();
+								$query1->component_path 	= ['start','time'];
+								$query1->operator 			= '<=';
+								$query1->q_parsed			= '\''.$q_clean.'\'';
+								$query1->type 				= 'jsonb';
 
-					$query2 = new stdClass();
-						$query2->component_path 	= ['start','time'];
-						$query2->operator 			= '<=';
-						$query2->q_parsed			= '\''.$final_range.'\'';
-						$query2->type 				= 'jsonb';
+							$query2 = new stdClass();
+								$query2->component_path 	= ['end','time'];
+								$query2->operator 			= '>=';
+								$query2->q_parsed			= '\''.$q_clean.'\'';
+								$query2->type 				= 'jsonb';
+								
+							# Add to sub_group1
+							$sub_group1 = new stdClass();
+								$sub_name1 = '$and';
+								$sub_group1->$sub_name1 = [$query1,$query2];
+									#dump($sub_group1, ' sub_group1 ++ '.to_string());
 
-					# Add to sub_group2
-					$sub_group2 = new stdClass();
-						$sub_name2 = '$and';
-						$sub_group2->$sub_name2 = [$query1,$query2];
-							#dump($sub_group2, ' sub_group2 ++ '.to_string());
+						# ARRAY ELEMENTS SUB_GROUP2
+							$query1 = new stdClass();
+								$query1->component_path 	= ['start','time'];
+								$query1->operator 			= '>=';
+								$query1->q_parsed			= '\''.$q_clean.'\'';
+								$query1->type 				= 'jsonb';
 
-				# Group array elements
-				$group_op_name = '$or';
-				$group_array_elements = new stdClass();
-					$group_array_elements->{$group_op_name} = [$sub_group1,$sub_group2];
+							$query2 = new stdClass();
+								$query2->component_path 	= ['start','time'];
+								$query2->operator 			= '<=';
+								$query2->q_parsed			= '\''.$final_range.'\'';
+								$query2->type 				= 'jsonb';
 
-				
-				# query_object config
-				$query_object->q_parsed			= null;
-				$query_object->format 			= 'array_elements';
-				$query_object->array_elements  	= $group_array_elements;
+							# Add to sub_group2
+							$sub_group2 = new stdClass();
+								$sub_name2 = '$and';
+								$sub_group2->$sub_name2 = [$query1,$query2];
+									#dump($sub_group2, ' sub_group2 ++ '.to_string());
+
+						# Group array elements
+						$group_op_name = '$or';
+						$group_array_elements = new stdClass();
+							$group_array_elements->{$group_op_name} = [$sub_group1,$sub_group2];
+
+						
+						# query_object config
+						$query_object->q_parsed			= null;
+						$query_object->format 			= 'array_elements';
+						$query_object->array_elements  	= $group_array_elements;
+					}					
 
 				// Add query_object
 				$final_query_object = $query_object;
@@ -983,8 +1004,8 @@ class component_date extends component_common {
         	case 'time':
 
 				// Extract directly from calculated time in javascript
-				$q_clean  = !empty($q_object->time) ? $q_object->time : 0;
-				$operator = !empty($q_object->op) ? $q_object->op : '=';
+				$q_clean  = !empty($q_object->time) ? $q_object->time : 0;				
+				$operator = !empty($q_operator) ? trim($q_operator) : '=';
 
 				if ($operator!=="=") {
 					
@@ -999,6 +1020,7 @@ class component_date extends component_common {
 						$group_array_elements->{$group_op_name} = [$query1];
 
 				}else{
+					
 					$query1 = new stdClass();
 						$query1->component_path 	= ['time'];
 						$query1->operator 			= '>=';
@@ -1033,7 +1055,8 @@ class component_date extends component_common {
         		// Extract directly from calculated time in javascript
 
 				$q_clean  = !empty($q_object->start->time) ? $q_object->start->time : 0;
-				$operator = !empty($q_object->start->op) ? $q_object->start->op : '=';
+				#$operator = !empty($q_object->start->op) ? $q_object->start->op : '=';
+				$operator = !empty($q_operator) ? trim($q_operator) : '=';
 				
 				$query1 = new stdClass();
 					$query1->component_path 	= ['start','time'];
@@ -1685,6 +1708,62 @@ class component_date extends component_common {
 
 		return (int)$data;
 	}//end get_calculation_data
+
+
+
+	/**
+	* PARSE_STATS_VALUES
+	* @return array $ar_clean
+	*/
+	public static function parse_stats_values($tipo, $section_tipo, $propiedades, $lang=DEDALO_DATA_LANG, $selector='valor_list') {
+
+		if (isset($propiedades->valor_arguments)) {
+			$selector = 'dato'; 
+		}
+
+		$ar_clean = component_common::parse_stats_values($tipo, $section_tipo, $propiedades, $lang=DEDALO_DATA_LANG, $selector);
+		
+		if (isset($propiedades->valor_arguments)) {
+			foreach ($ar_clean as $key => $item) {
+
+				$item->value = self::get_stats_value_with_valor_arguments($item->value, $propiedades->valor_arguments);
+				
+				/*
+				$value = json_decode($item->value);
+					
+				if (!empty($value)) {
+					$date = reset($value);
+					if (isset($date->start->{$propiedades->valor_arguments})) {
+						$item->value = $date->start->{$propiedades->valor_arguments}; // Overwrite value
+					}
+				}
+				*/
+			}
+		}
+		
+		return $ar_clean;
+	}//end parse_stats_values
+
+
+
+	/**
+	* GET_STATS_VALUE_WITH_VALOR_ARGUMENTS
+	* @return string $label
+	*/
+	public static function get_stats_value_with_valor_arguments($value, $valor_arguments) {
+		
+		$value_decoded = json_decode($value);
+		if (!empty($value_decoded)) {
+			$date = reset($value_decoded);
+			if (isset($date->start->{$valor_arguments})) {
+				$label = $date->start->{$valor_arguments}; // Overwrite value
+			}
+		}else{
+			$label = $value;
+		}
+
+		return $label;
+	}//end get_stats_value_with_valor_arguments
 
 
 
