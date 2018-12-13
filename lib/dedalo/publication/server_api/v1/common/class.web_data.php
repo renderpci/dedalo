@@ -198,8 +198,8 @@ class web_data {
 				#if(SHOW_DEBUG===true) {
 					$msg = "Error processing request: ".$sql_options->conn->error;
 					// use always silent errors to not alter json result object
-					error_log(__METHOD__ ." $msg \n $strQuery ");
-					$response->msg .= $msg .' - '. $strQuery;
+					error_log(__METHOD__ ." $msg ".PHP_EOL." ". to_string($strQuery) );
+					$response->msg .= $msg .' - '. to_string($strQuery);
 				#}
 				return $response;
 			}

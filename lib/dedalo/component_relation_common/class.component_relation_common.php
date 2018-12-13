@@ -673,7 +673,7 @@ class component_relation_common extends component_common {
 		
 		# Activity case (in transition from component_autocomplete_ts to component_autocomplete_hi)
 		# Current stored data is in format: "dd546": {"dato": {"lg-nolan": "dd242"}} bypassing the component in write
-    	# file rows_activity.phtml parses current value to label in current lang
+		# file rows_activity.phtml parses current value to label in current lang
 		#if ($tipo==='dd545' || $tipo==='dd546') {
 		#	debug_log(__METHOD__." tipo: $tipo - section_tipo: $section_tipo - section_id: $section_id - parent: $parent - value: ".to_string($value), logger::DEBUG);
 		#	return $value;
@@ -1672,9 +1672,9 @@ class component_relation_common extends component_common {
 			  "remove_distinct": true,
 			  "limit": 0,
 			  "select": [
-			    {
-			      "path": '.json_encode($path).'
-			    }
+				{
+				  "path": '.json_encode($path).'
+				}
 			  ]
 			}';
 			#dump($search_query_object, ' search_query_object ** ++ '.to_string());
@@ -1685,23 +1685,23 @@ class component_relation_common extends component_common {
 
 		// Parse results for stats
 			$ar_clean = [];
-	        foreach ($result->ar_records as $key => $item) {	        	
+			foreach ($result->ar_records as $key => $item) {	        	
 				
 				#$uid = $locator->section_tipo.'_'.$locator->section_id;
 
-	        	$value = end($item);
+				$value = end($item);
 
-	        	// locators case (like component_select)
-	        	if (strpos($value, '[{')===0 && !isset($propiedades->valor_arguments)) {
-	        		$ar_locators = json_decode($value);
-		        	foreach ((array)$ar_locators as $locator) {			        	
+				// locators case (like component_select)
+				if (strpos($value, '[{')===0 && !isset($propiedades->valor_arguments)) {
+					$ar_locators = json_decode($value);
+					foreach ((array)$ar_locators as $locator) {			        	
 
 						$label = ts_object::get_term_by_locator( $locator, $lang, true );						
 						$label = strip_tags(trim($label));
 
 
 						$uid = $locator->section_tipo.'_'.$locator->section_id;
-			        	
+						
 						if(!isset($ar_clean[$uid])){
 							$ar_clean[$uid] = new stdClass();
 							$ar_clean[$uid]->count = 0;
@@ -1711,21 +1711,21 @@ class component_relation_common extends component_common {
 						$ar_clean[$uid]->value = $label;
 					}
 				// resolved string case (like component_portal)
-	        	}else{
+				}else{
 
-		        	$label = strip_tags(trim($value));
-		        	if ($label==='[]') {
-		        		$label = 'not defined';
-		        	}
+					$label = strip_tags(trim($value));
+					if ($label==='[]') {
+						$label = 'not defined';
+					}
 
-		        	// Override label with custom component parse
-		        	if (isset($propiedades->stats_look_at) && isset($propiedades->valor_arguments)) {
-		        		$modelo_name = RecordObj_dd::get_modelo_name_by_tipo(reset($propiedades->stats_look_at), true);						
-						$label 		 = $modelo_name::get_stats_value_with_valor_arguments($value, $propiedades->valor_arguments);		        		
-		        	}
+					// Override label with custom component parse
+					if (isset($propiedades->stats_look_at) && isset($propiedades->valor_arguments)) {
+						$modelo_name = RecordObj_dd::get_modelo_name_by_tipo(reset($propiedades->stats_look_at), true);
+						$label 		 = $modelo_name::get_stats_value_with_valor_arguments($value, $propiedades->valor_arguments);
+					}
 
-		        	$uid = $label;
-		        	
+					$uid = $label;
+					
 					if(!isset($ar_clean[$uid])){
 						$ar_clean[$uid] = new stdClass();
 						$ar_clean[$uid]->count = 0;
@@ -1733,8 +1733,8 @@ class component_relation_common extends component_common {
 
 					$ar_clean[$uid]->count++;
 					$ar_clean[$uid]->value = $label;
-	        	}
-	        					
+				}
+								
 			}
 			#dump($ar_clean, ' ar_clean ++ ** '.to_string());
 

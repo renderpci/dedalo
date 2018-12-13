@@ -454,7 +454,7 @@ class diffusion_section_stats extends diffusion {
 							#			$ar_clean[$uid]->count++;
 							#			$ar_clean[$uid]->locator = $item;
 							#		}
-							#	}								
+							#	}
 							#}
 							#dump($ar_clean, ' ar_clean ++ '.to_string());
 							
@@ -464,9 +464,38 @@ class diffusion_section_stats extends diffusion {
 									$current_column_tipo => $c_item->value,
 									'count' 			 => $c_item->count
 								];
-							}						
+							}
 						}
 						#dump($ar_stats, ' ar_stats ++ '.to_string($current_column_tipo));
+
+						// Limit total elements viewed
+							$limit = 20;
+							if (count($ar_stats>$limit)) {
+								// Sort big counts first
+								usort($ar_stats, function($a, $b) {
+									// compare numbers only
+									return $b['count'] - $a['count'];
+								});
+								// Select others group
+								$ar_others = array_slice($ar_stats, $limit);
+								// Select first part of array
+								$ar_stats = array_slice($ar_stats, 0, $limit);
+
+								if (count($ar_others)>0) {
+									$others_count = 0;
+									foreach ($ar_others as $key => $value) {
+										$others_count = $others_count + (int)$value['count'];
+										if (!isset($others_tipo)) {
+											$others_tipo  = key($value);
+										}
+									}
+									$ar_stats[] = array(
+										$others_tipo => 'others',
+										'count' 	 => $others_count
+									);
+								}
+							}
+						#dump($ar_stats, ' ar_stats 2 ++ '.to_string($current_column_tipo));
 					}
 					
 					# DATE
@@ -877,52 +906,15 @@ class diffusion_section_stats extends diffusion {
 										$current_value_obj->$y_axis = (int)$value;
 									$current_obj->values[] = $current_value_obj;
 							}						
-							break;
-
-						#case (true===in_array($modelo_name, component_relation_common::get_components_with_relations())):
-						case ($modelo_name==='component_filter99999'):
-							if (isset($propiedades->stats_look_at)) {
-								$c_component_tipo 		= reset($propiedades->stats_look_at);
-								$target_component_tipo 	= common::get_ar_related_by_model('component_', $component_tipo, false)[0];
-								$c_section_tipo 		= common::get_ar_related_by_model('section', $target_component_tipo, true)[0];
-							}else{
-								$c_component_tipo 	= $key->from_component_tipo;
-								$c_section_tipo 	= $section_tipo;
-							}
-							#dump($c_section_tipo, ' c_section_tipo ++ c_component_tipo: '.to_string($c_component_tipo));
-
-							$component 		= component_common::get_instance($modelo_name,
-																			 $c_component_tipo,
-																			 null,
-																			 'list',
-																			 DEDALO_DATA_LANG,
-																			 $c_section_tipo,
-																			 false);
-							$component->set_dato([$key]);
-							$c_value = $component->get_valor();	
-							$c_value = strip_tags($c_value);
-							$ar_values = explode(',', $c_value);
-							$c_value = $ar_values[0];
-
-							$current_value_obj=new stdClass();
-								$current_value_obj->$x_axis = (string)$c_value;
-								if (empty($current_value_obj->$x_axis)) {
-									$current_value_obj->$x_axis = (string)'no avaliable';
-									if(SHOW_DEBUG===true) {
-										$current_value_obj->$x_axis .= " [key_resolved:".to_string($key_resolved)." - key:".to_string($key)."] $modelo_name - $component_tipo";
-									}
-								}
-								$current_value_obj->$y_axis = (int)$value;
-								$current_obj->values[] = $current_value_obj;
-							break;
+							break;						
 
 						case ($modelo_name!=='loquesea'):
 							$current_value_obj=new stdClass();
 								$current_value_obj->$x_axis = (string)$key; // Name
 								if (empty($current_value_obj->$x_axis)) {
-									$current_value_obj->$x_axis = (string)'no avaliable';
+									$current_value_obj->$x_axis = (string)'not available';
 									if(SHOW_DEBUG===true) {
-										$current_value_obj->$x_axis .= " [key:".to_string($key)."] $modelo_name - $component_tipo";
+										#$current_value_obj->$x_axis .= " [key:".to_string($key)."] $modelo_name - $component_tipo";
 									}
 								}
 								$current_value_obj->$y_axis = (int)$value; // Counter
