@@ -70,6 +70,10 @@ lib/dedalo/*/*-min.css
 #lib/dedalo/*/*.css.map
 lib/dedalo/*/*/js/*-min.js
 
+
+lib/dedalo/extras/cedis
+lib/dedalo/extras/render
+
 cookie_auth.php
 
 /lib/dedalo/button_delete/js/button_delete-min.js
