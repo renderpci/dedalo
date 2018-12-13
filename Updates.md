@@ -1,4 +1,19 @@
 **UPDATES AND CHANGES**
+*Ver 5.0.0 - 12-11-2018
+Today we introduce the upgrade of the V4 to V5
+
+
+This update fixed some issues and bugs for the V4.9.0
+
+This version is a major update of Dédalo, this update the interface and usability, this version fixed all deep changes inside Dédalo for the V4, and focus to the user interface.
+
+In the future this update file will be used only for deep changes and now the commits will be autoexplained.
+
+All components has stable dato format and it was unify in all changes for the V4.
+
+PostgreSQL delay the implementation of SQL/JSON:2016 and we plan make adaptation to it when it will be ready.
+The next step will be the addaptation of our model to the SQL/JSON:2016 that will be implemented in postgres this year.
+
 
 *Ver 4.9.0 - 14-05-2018
 Today we introduce the update of the V4 to 4.9.0
@@ -13,8 +28,6 @@ And the new relation model add to the locator the new two propieties "from_compo
 	[{"type":"dd675","section_id":"1","section_tipo":"dd153","from_component_tipo":"mdcat1487"}]
 
 This version fix some issues in the search and close the beta situation with the new search model. 
-
-The next step will be the addaptation of our model to the SQL/JSON:2016 that will be implemented in postgres this year.
 
 
 *Ver 4.8.4 - 28-03-2018
