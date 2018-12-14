@@ -1,0 +1,169 @@
+<?php
+
+	# VISUALIZADOR HTML	
+	$html ='';	
+
+	$link_target = false;	// options: 'process', false
+
+	$ar_locators_resolved=array();
+	#dump($ar_locators, ' ar_locators ++ '.to_string());
+
+	$html .= "<ul class=\"widget_media_icons\">";
+	foreach ($ar_locators as $current_locator) {
+		
+		$key_resolved = $current_locator->section_tipo.'_'.$current_locator->section_id;
+		if (in_array($key_resolved, $ar_locators_resolved)) {
+			continue;
+		}
+
+		#
+		# MEDIA COMPONENT		
+		$media_component 	= component_common::get_instance( $media_component_modelo_name,
+															  $media_component_tipo,
+															  $current_locator->section_id,
+															  'list',
+															  DEDALO_DATA_NOLAN,
+															  $current_locator->section_tipo);
+		#$ar_locators = $component->get_dato();
+			#dump($media_component, ' media_component ++ '.to_string());
+			#dump($this, ' this ++ '.to_string());
+
+		$html .= "<li>";
+
+			#
+			# SECTION_ID link
+			$url = "?t=$current_locator->section_tipo&id=$current_locator->section_id&m=edit";
+			$title = label::get_label('edicion');
+			$html .= "<a href=\"$url\" class=\"label_section_id\" title=\"$title\">";
+			$html .=   $current_locator->section_id;
+			$html .= "</a>";
+
+			#
+			# MEDIA ICON
+			switch ($media_component_modelo_name) {
+				case 'component_av':
+					$video_path = $media_component->get_video_path(DEDALO_AV_QUALITY_DEFAULT);
+					
+					#$cache_key = $current_locator->section_tipo.'_'.$current_locator->section_id;
+
+					if (file_exists( $video_path = $media_component->get_video_path(DEDALO_AV_QUALITY_DEFAULT) )) {
+						# av duration
+						$tc 		= $media_component->get_duration_seconds('timecode');					
+						$video_id 	= $media_component->get_video_id();
+						$title = label::get_label('abrir');
+						$html .= "<a href=\"javascript:;\" class=\"icon_bs icon_video link\" onclick=\"tool_common.open_player(this,{'type':'component_av','reelID':'$video_id'})\" title=\"$title\"></a>";
+					}else{
+						$tc 		= null;
+						$html .= "<a class=\"icon_bs icon_video link\" style=\"visibility:hidden\"></a>";
+					}
+					break;
+				
+				default:
+					$icon_name = 'file_icon';
+					break;
+			}
+
+			#
+			# TRANSCRIPTION LINK
+			if (isset($this->transcription) && true===component_security_tools::is_authorized_tool_for_logged_user('tool_transcription')) {
+			$title = label::get_label('tool_transcription');
+			switch ($link_target) {
+				case 'process':
+					$url   = "?t={$this->transcription->process_section_tipo}&top_tipo=".TOP_TIPO."&auto_search=1&{$this->transcription->search_section_id}={$current_locator->section_id}";
+					$html .= "<a href=\"$url\" class=\"icon_bs icon_transcription link\" title=\"$title\"></a>";
+					break;					
+				default:
+					// icon_bs icon_transcription 
+					$html .= "<a href=\"javascript:;\" class=\"link icon_border\" title=\"$title\" ";
+					$html .= "data-tipo=\"{$this->transcription->component_tipo}\" ";
+					$html .= "data-section_tipo=\"$current_locator->section_tipo\" ";
+					$html .= "data-parent=\"$current_locator->section_id\" ";
+					$html .= "data-top_tipo=\"$section_tipo\" ";
+					$html .= "data-top_id=\"$parent\" ";
+					$html .= "data-context_name=\"component_av\" ";
+					$html .= "onclick=\"tool_common.open_tool_transcription(this)\">TR</a>";
+			}}
+
+			#
+			# INDEXATION LINK
+			if (isset($this->indexation) && true===component_security_tools::is_authorized_tool_for_logged_user('tool_indexation') ) {
+			$title = label::get_label('tool_indexation');
+			switch ($link_target) {
+				case 'process':
+					$url   = "?t={$this->indexation->process_section_tipo}&top_tipo=".TOP_TIPO."&auto_search=1&{$this->indexation->search_section_id}={$current_locator->section_id}";
+					$html .= "<a href=\"$url\" class=\"icon_bs icon_indexation link\" title=\"$title\"></a>";
+					break;
+				default:
+					// icon_bs icon_indexation 
+					$html .= "<a href=\"javascript:;\" class=\"link icon_border\" title=\"$title\" ";
+					$html .= "data-tipo=\"{$this->indexation->component_tipo}\" ";
+					$html .= "data-section_tipo=\"$current_locator->section_tipo\" ";
+					$html .= "data-parent=\"$current_locator->section_id\" ";
+					$html .= "data-top_tipo=\"$section_tipo\" ";
+					$html .= "data-top_id=\"$parent\" ";
+					$html .= "onclick=\"tool_common.open_tool_indexation(this)\">IN</a>";
+			}}
+
+			#
+			# STRUCTURATION LINK
+			if (isset($this->structuration) && true===component_security_tools::is_authorized_tool_for_logged_user('tool_structuration') ) {
+			$title = label::get_label('tool_structuration');
+			switch ($link_target) {
+				case 'process':
+					$url   = "?t={$this->structuration->process_section_tipo}&top_tipo=".TOP_TIPO."&auto_search=1&{$this->structuration->search_section_id}={$current_locator->section_id}";
+					$html .= "<a href=\"$url\" class=\"icon_bs icon_indexation link\" title=\"$title\"></a>";
+					break;
+				default:
+					// icon_bs icon_structuration 
+					$html .= "<a href=\"javascript:;\" class=\"link icon_border\" title=\"$title\" ";
+					$html .= "data-tipo=\"{$this->structuration->component_tipo}\" ";
+					$html .= "data-section_tipo=\"$current_locator->section_tipo\" ";
+					$html .= "data-parent=\"$current_locator->section_id\" ";
+					$html .= "data-top_tipo=\"$section_tipo\" ";
+					$html .= "data-top_id=\"$parent\" ";
+					$html .= "onclick=\"tool_common.open_tool_structuration(this)\">ST</a>";
+			}}
+
+			#
+			# TRANSLATION LINK
+			if (isset($this->translation) && true===component_security_tools::is_authorized_tool_for_logged_user('tool_lang') ) {
+			$title = label::get_label('tool_lang');
+			switch ($link_target) {
+				case 'process':
+					$url   = "?t={$this->translation->section_tipo}&top_tipo=".TOP_TIPO."&auto_search=1&{$this->translation->search_section_id}={$current_locator->section_id}";
+					$html .= "<a href=\"$url\" class=\"icon_bs icon_translation link\" title=\"$title\"></a>";
+					break;				
+				default:
+					// icon_bs icon_translation 
+					$html .= "<a href=\"javascript:;\" class=\"link icon_border\" title=\"$title\" ";
+					$html .= "data-tipo=\"{$this->translation->component_tipo}\" ";
+					$html .= "data-section_tipo=\"$current_locator->section_tipo\" ";
+					$html .= "data-parent=\"$current_locator->section_id\" ";
+					$html .= "data-top_tipo=\"$section_tipo\" ";
+					$html .= "data-top_id=\"$parent\" ";
+					$html .= "onclick=\"tool_common.open_tool_lang(this)\">";
+					$html .= "TL";
+					$html .= "</a>";	
+			}}
+
+			#
+			# TC DURATION
+			switch ($media_component_modelo_name) {
+				case 'component_av':					
+					$html .= "<div class=\"duration_tc\">". str_replace('.000', '', $tc) ."</div>";
+					break;
+				
+				default:
+					break;
+			}
+
+			$ar_locators_resolved[] = $key_resolved;
+		$html .= "</li>";
+
+	}//end foreach ($ar_locators as $current_locator) {
+	$html .= "</ul>";
+
+	print $html;	//"<br>Hello widget $widget_name";
+
+
+?>

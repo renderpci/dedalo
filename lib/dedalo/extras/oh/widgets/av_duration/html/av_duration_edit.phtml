@@ -1,0 +1,36 @@
+<?php
+
+	# VISUALIZADOR HTML	
+	$html ='';	
+
+	
+	$html .= "<ul class=\"widget_av_duration\">";
+
+	#
+	# HEADER
+	$html .= "<li class=\"tab_title\">";
+	#$html .= "  <div class=\"label_first header\">".label::get_label('total')."</div>";
+	$html .= "  <div class=\"label_second header\">".$total_duration_tc."</div>";
+	$html .= "</li>";
+/*
+	$html .= "<span class=\"\">";	//tab_content
+	foreach ($ar_duration as $section_id => $secs) {
+
+		$html .= "<li class=\"\">";		
+					
+			$html .= " <div class=\"label_first\">".$section_id."</div>";
+
+			$tc    = OptimizeTC::seg2tc($secs);	
+			$html .= " <div class=\"label_second\">".$tc."</div>";			
+			
+		$html .= "</li>";
+
+	}//end foreach ($ar_duration as $terminoID => $total) {
+	$html .= "</span>";
+*/	
+	$html .= "</ul>";
+
+	print $html;
+
+
+?>
