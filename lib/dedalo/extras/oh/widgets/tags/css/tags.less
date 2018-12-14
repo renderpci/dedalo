@@ -1,0 +1,107 @@
+
+
+.widgets_wrapper {
+	/*
+	width: inherit;
+    white-space: inherit;
+    */
+    padding: 0;
+    //max-width: 239px;
+    max-width: 256px;
+	width: inherit;
+}
+
+/* WIDGET_DESCRIPTORS
+------------------------------------------------ */ 
+ul.widget_descriptors {
+	margin-top: 4px;
+	-webkit-user-select: none;
+			user-select: none;
+	width: auto;
+	min-width: 110px;
+	float: left;
+	display: table;
+	margin: 0;
+	padding: 0;
+	padding-bottom: 8px;
+	}
+	.widget_descriptors li {		
+		display: table;
+		display: flex;
+		font-size: 92%;
+		width: 100%;
+		line-height: 1.1em;		
+		}		
+		.widget_descriptors li > .label_first, 
+		.widget_descriptors li > .label_second {
+			display: table-cell;
+			background-color: #F8F8F8;
+			border-bottom: 1px solid #E4E4E4;
+			padding-top: 3px;
+			padding-bottom: 0;
+			padding-right: 5px;
+			padding-left: 2px;
+		}
+		.widget_descriptors li > .label_first::last-of-type, 
+		.widget_descriptors li > .label_second:last-of-type {
+			//border: none !important;
+		}
+		.widget_descriptors li .label_first {
+			text-align: left;
+			padding-right: 5px;
+			min-width: 90px;
+			width: 13%;
+			text-transform: uppercase;
+		}
+		.widget_descriptors li .label_second {
+			/*		
+			white-space: initial;			
+			display: list-item;
+			*/
+			}
+			.widget_descriptors li .label_second img {
+				vertical-align: text-bottom;
+			}
+			.widget_descriptors li .label_second .error,
+			.widget_descriptors li .label_second .warning {
+				margin: 2px;
+				margin-left: 0;
+				margin-right: 0;
+				margin-top: 0;
+				width: 100%;
+
+				text-transform: uppercase;
+				font-size: 10px !important;
+				padding: 3px;
+				padding-bottom: 2px;
+				line-height: 1em;
+			}
+
+		.widget_descriptors li > .label_first, .widget_descriptors li > .label_second {
+			/*border: none !important;*/
+		}
+
+		/*
+		.widget_descriptors li .header {
+			border-top: 1px solid #ECECEC;
+			font-weight: normal;
+			text-transform: capitalize;			
+		}
+		.widget_descriptors li .label_second.header {
+			cursor: pointer;
+			background-image: url('../../../../themes/default/select_2x.png');
+			background-repeat: no-repeat;
+			background-position: right 4px top 7px;
+			background-size: 14px;
+			width: 100%;
+		}
+		*/
+		ul.widget_descriptors .tab_content {
+			display: none;
+		}
+		
+		/*
+		ul li:first-of-type .label_second:nth-of-type(2) {
+			padding-top: 0;
+		}*/
+		
