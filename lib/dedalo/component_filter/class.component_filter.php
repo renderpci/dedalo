@@ -942,6 +942,7 @@ class component_filter extends component_relation_common {
 					if(!isset($ar_clean[$uid])){
 						$ar_clean[$uid] = new stdClass();
 						$ar_clean[$uid]->count = 0;
+						$ar_clean[$uid]->tipo  = $tipo;
 					}
 
 					$ar_clean[$uid]->count++;

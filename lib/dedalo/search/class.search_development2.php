@@ -2688,4 +2688,63 @@ class search_development2 {
 
 
 
+	/**
+	* SEARCH_COUNT
+	* @param object $request_options
+	*
+	* Exec a custom count search, useful for stats
+	* LIKE:
+	* 	SELECT 
+	*	datos#>>'{components, dd544, dato, lg-nolan }' AS dd544
+	*	,COUNT (datos#>>'{components, dd544, dato, lg-nolan }') AS count
+	*	FROM "matrix_activity"
+	*	WHERE section_tipo = 'dd542'
+	*	GROUP BY dd544
+	*	ORDER BY count
+	* @return array $ar_result
+	*/
+	public static function search_count($request_options) {
+
+		# (!) Hecha para usar en estadísticas actividad pero no implementada todavía ! [2018-12-14]
+
+		$options = new stdClass();
+			$options->column_tipo  = null; // string like dd15
+			$options->column_path  = null; // string like datos#>>'{components, dd544, dato, lg-nolan }'
+			$options->section_tipo = null; // string like oh1
+
+			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
+
+		$matrix_table = common::get_matrix_table_from_tipo($options->section_tipo);
+
+		$strQuery = '
+		SELECT
+		'.$options->column_path.' AS '.$options->column_tipo.',
+		COUNT ('.$options->column_path.') AS count
+		FROM "'.$matrix_table.'"
+		WHERE section_tipo = \''.$options->section_tipo.'\'
+		GROUP BY '.$options->column_tipo.'
+		ORDER BY count
+		';
+
+		$result	= JSON_RecordObj_matrix::search_free($strQuery);
+		if (!is_resource($result)) {
+			trigger_error("Error Processing Request : Sorry cannot execute non resource query: ".PHP_EOL."<hr> $strQuery");
+			return null;
+		}
+		$ar_result = [];
+		while ($rows = pg_fetch_assoc($result)) {
+			
+			$item = new stdClass();
+				$item->tipo  = $options->column_tipo;
+				$item->count = $rows['count'];
+
+			$ar_result[] = $item;
+		}		
+
+		return $ar_result;
+	}//end search_count
+
+
+
+
 }//end search_development

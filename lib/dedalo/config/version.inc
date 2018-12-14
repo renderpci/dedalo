@@ -1451,6 +1451,9 @@
 		diffusion_stats : Reenabled diffusion_stats using search_query_object (Working here)		
 
 
+	Valencia 14-12-2018 5.0.32
+		diffusion_stats : Fixed issues and optimization works (Working here)		
+
 
 
 
@@ -1473,7 +1476,7 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.0.32b';
+	$DEDALO_VERSION = '5.0.32';
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
