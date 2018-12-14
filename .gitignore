@@ -1,7 +1,6 @@
 #
 # DEDALO4 FOR PUBLIC GITHUB PUBLICATION
 
-
 # Ignore configuration files that may contain sensitive information.
 config4*
 config.php
@@ -9,26 +8,37 @@ server_config_api.php
 json_config.php
 
 # various
-lib/*
-!lib/dedalo
 acc
 _acc
 des
 test
+.DS_Store
+.eslintrc
+#.htaccess
+*~
+.htaccess~
+.htaccess~~
+.htaccess~~~
+*.graffle
+*.data
+.smbdelete*
+
 install/import/hierarchy
-lib/dedalo/des/*
 str_data*
+
+# lib ignore all except dedalo
+lib/*
+!lib/dedalo
+lib/dedalo/des/*
 lib/dedalo/diffusion/diffusion_index_ts_V40
 lib/dedalo/publication/client_api/v1/sample*
 lib/dedalo/common/js/lang/*
-structure.css
 
 # extras ignore all except common
-#lib/*/extras/*
-#!lib/*/extras/oh
-lib/dedalo/extras/geonames/files/*
-#lib/dedalo/extras/*/str_data
-
+lib/dedalo/extras/*
+!lib/dedalo/extras/oh
+!lib/dedalo/extras/pci
+!lib/dedalo/extras/str_manager
 
 # Ignore paths that contain generated content.
 media/*
@@ -46,100 +56,51 @@ lib/dedalo/publication/client_api/*/docu/ui/*
 lib/dedalo/tools/tool_layout_print/data/*
 lib/dedalo/tools/tool_layout_print/print_pdf/*
 
+# Automatic created files
+cookie_auth.php
+structure.css
+*.log
+
 # Ignore default text files
 robots.txt
 
 # Ignore some special files 
 koala-config.json
-.DS_Store
-.eslintrc
-#.htaccess
-.htaccess~
-.htaccess~~
-.htaccess~~~
-*.log
-*.graffle
-*.data
-.smbdelete*
-*~
-
 config.codekit3
+
+# various minified
 lib/dedalo/*/*-min.js
 lib/dedalo/*/*-min.css
-#lib/dedalo/*/*.css
-#lib/dedalo/*/*.css.map
 lib/dedalo/*/*/js/*-min.js
-
-
-lib/dedalo/extras
-
-cookie_auth.php
-
 /lib/dedalo/button_delete/js/button_delete-min.js
-
 /lib/dedalo/button_delete/js/button_delete-min.js.map
-
 /lib/dedalo/common/js/common-min.js.map
-
 /lib/dedalo/component_autocomplete/js/component_autocomplete-min.js
-
 /lib/dedalo/component_autocomplete/js/component_autocomplete-min.js.map
-
 /lib/dedalo/component_autocomplete_hi/js/component_autocomplete_hi-min.js
-
 /lib/dedalo/component_calculation/js/component_calculation-min.js
-
 /lib/dedalo/component_calculation/js/component_calculation-min.js.map
-
 /lib/dedalo/component_common/js/component_common-min.js
-
 /lib/dedalo/component_common/js/component_common-min.js.map
-
 /lib/dedalo/component_geolocation/js/component_geolocation DES-min.js
-
 /lib/dedalo/component_geolocation/js/component_geolocation DES-min.js.map
-
 /lib/dedalo/component_image/js/component_image-min.js
-
 /lib/dedalo/component_image/js/component_image-min.js.map
-
 /lib/dedalo/component_image/js/component_image_read-min.js
-
 /lib/dedalo/component_image/js/component_image_read-min.js.map
-
 /lib/dedalo/component_portal/js/component_portal-min.js
-
 /lib/dedalo/component_portal/js/component_portal-min.js.map
-
 /lib/dedalo/component_state/js/component_state-min.js
-
 /lib/dedalo/component_state/js/component_state-min.js.map
-
 /lib/dedalo/login/js/login-min.js
-
 /lib/dedalo/login/js/login-min.js.map
-
 /lib/dedalo/section_group/js/section_group-min.js.map
-
 /lib/dedalo/section_tab/js/section_tab-min.js.map
-
 /lib/dedalo/services/service_autocomplete/js/service_autocomplete-min.js.map
-
 /lib/dedalo/tools/tool_common/js/tool_common-min.js.map
-
 /lib/dedalo/tools/tool_image_versions/js/tool_image_versions-min.js.map
-
 /lib/dedalo/tools/tool_transcription/js/tool_transcription-min.js.map
-
 /lib/dedalo/tools/tool_upload/js/tool_upload-min.js.map
-
 /lib/dedalo/ts_object/js/ts_object-min.js
-
 /lib/dedalo/ts_object/js/ts_object-min.js.map
-
-/lib/dedalo/common/css/structure.css
-
-/config.codekit3
-
-lib/dedalo/themes/default/select.odg
 
