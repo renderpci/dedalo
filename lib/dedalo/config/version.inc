@@ -1455,6 +1455,11 @@
 		diffusion_stats : Fixed issues and optimization works (Working here)		
 
 
+	Valencia 15-12-2018 5.0.33
+		diffusion_stats : Fixed stats portal resolution in activity (Working here)
+
+
+
 
 
 	WORK IN PROGRESS
@@ -1476,12 +1481,12 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.0.32';
+	$DEDALO_VERSION = '5.0.33';
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '14-12-2018');
+	define('DEDALO_BUILD'	, '15-12-2018');
 
 
 	/*
