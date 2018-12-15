@@ -261,14 +261,17 @@ class diffusion_section_stats extends diffusion {
 
 				# ar_related_component_tipo
 				$ar_related_component_tipo 	= $current_obj->components[$current_component_tipo];
-					#dump($ar_related_component_tipo,'$ar_related_component_tipo '); #die();
+					#dump($ar_related_component_tipo,' ar_related_component_tipo '.$current_component_tipo); #die();
+
+				$related_modelo_name = RecordObj_dd::get_modelo_name_by_tipo(reset($ar_related_component_tipo),true);
+
 				#
 				# SQL
 				$sql_columns 	= '';
 				$sql_group 		= '';
 				$change_section = false;
 						
-					if ($section_tipo===DEDALO_ACTIVITY_SECTION_TIPO) {	
+					if ($section_tipo===DEDALO_ACTIVITY_SECTION_TIPO && $related_modelo_name!=='component_filter') {	
 					
 						$i=0;foreach ($ar_related_component_tipo as $current_column_tipo) {
 
@@ -629,7 +632,7 @@ class diffusion_section_stats extends diffusion {
 			# Get model name when is applicable (used to discriminate options)
 				$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($column_tipo,true);
 			
-			if($section_tipo===DEDALO_ACTIVITY_SECTION_TIPO) {
+			if($section_tipo===DEDALO_ACTIVITY_SECTION_TIPO && $modelo_name!=='component_filter') {
 				
 				switch (true) {
 						
@@ -717,10 +720,10 @@ class diffusion_section_stats extends diffusion {
 							}
 							$current_value_obj->$y_axis = (int)$count;
 							$data_obj->values[] = $current_value_obj;
-						break;
-				
+						break;					
+					
 					# PROJECTS : components with model component_filter
-					case ($modelo_name==='component_filter'):
+					case ($modelo_name==='component_filter999'):
 						if(!isset($table_temp)) $table_temp=array();
 						
 						# Convert json data like '{"2": "2", "4": "2"}' to php array and get only keys like 'Array("2","4")' 
