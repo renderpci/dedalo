@@ -2338,7 +2338,7 @@ class search_development2 {
 						$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
 						if(true===in_array($modelo_name, $ar_components_exclude)) continue; // Skip excluded components				
 
-					// Check components with has_subquery						
+					// Check components with has_subquery
 						if ($modelo_name==='component_portal' || $modelo_name==='component_autocomplete') {
 							
 							// set has_subquery as true
@@ -2347,9 +2347,10 @@ class search_development2 {
 							// set target_section
 							$element->target_section = common::get_ar_related_by_model('section', $component_tipo);
 							
-							$current_target_section = reset($element->target_section);
+							$current_target_section  = reset($element->target_section);
+
 							if ($user_id_logged!=DEDALO_SUPERUSER && 
-								(!isset($ar_authorized_areas->$current_target_section) || (int)$ar_authorized_areas->$current_target_section<1)) {								
+								(!isset($ar_authorized_areas->$current_target_section) || (int)$ar_authorized_areas->$current_target_section<1)) {
 								// user don't have access to current section. skip section
 								continue;
 							}
