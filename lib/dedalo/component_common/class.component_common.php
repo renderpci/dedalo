@@ -3671,7 +3671,7 @@ abstract class component_common extends common {
 		if ($this->section_tipo===DEDALO_THESAURUS_SECTION_TIPO && $this->modo==='search') {
 			$this->permissions = 2; // Allow users to search in thesaurus
 		}else{
-			$this->permissions = common::get_permissions($this->section_tipo, $this->tipo);	
+			$this->permissions = common::get_permissions($this->section_tipo, $this->tipo);
 		}
 
 

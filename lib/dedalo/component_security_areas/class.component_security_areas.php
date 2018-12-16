@@ -162,7 +162,7 @@ class component_security_areas extends component_common {
 				break;
 
 			case 'admin':
-				#return de athotized admin areas ONLY 
+				#return de authorized admin areas ONLY 
 				if( !empty($dato) ) {
 					foreach ($dato as $tipo => $estado) {
 						#if(strpos($tipo, '-admin')!==false && $estado>=1){
