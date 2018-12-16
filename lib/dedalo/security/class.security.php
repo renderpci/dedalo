@@ -102,14 +102,14 @@ class security {
 			return 3;
 		}
 		*/
-		if (isset($_SESSION['dedalo4']['auth']['is_global_admin']) && $_SESSION['dedalo4']['auth']['is_global_admin']===true && (int)$_SESSION['dedalo4']['auth']['user_id']===-1) {
+		if (isset($_SESSION['dedalo4']['auth']['is_global_admin']) && ($_SESSION['dedalo4']['auth']['is_global_admin']===true && (int)$_SESSION['dedalo4']['auth']['user_id']===-1)) {
 			return 3;
 		}
 
 	
 		# PERMISSIONS_TABLE		
 		$permissions_table = self::get_permissions_table();
-
+		
 		
 		# PERMISSIONS FOR CURRENT ELEMENT TIPO
 		if (isset($permissions_table->$tipo->$sub_tipo)) {
