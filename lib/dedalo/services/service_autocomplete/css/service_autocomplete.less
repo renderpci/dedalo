@@ -92,7 +92,7 @@
 
 
 // search_sections_list
-	@column_width : 33%;
+	@column_width : 33%;	
 	ul.search_sections_list {
 		display: table;
 		background-color: #8E8E8E;
@@ -103,14 +103,14 @@
 		width: 100%;
 		top: 5px;
 	    position: relative;
-		margin-bottom: 5px;
+		margin-bottom: 5px;		
 
 		>li {
+			display: flex; // Important for text-overflow ellipsis
 			float: left;
 			width: @column_width;
 			white-space: nowrap;
-			overflow: hidden;
-			display: flex; // Important for text-overflow ellipsis
+			overflow: hidden;			
 
 			>input {
 				margin: 2px;
@@ -128,7 +128,16 @@
 				color: #f5c39f !important;
 			}
 		}
-		
+
+		&.one_column {
+			>li { width: 100%; }
+		}
+		&.two_column {
+			>li { width: 50%; }
+		}
+		&.three_column {
+			>li { width: 33%; }
+		}
 
 		hr {
 			width: 100%;
