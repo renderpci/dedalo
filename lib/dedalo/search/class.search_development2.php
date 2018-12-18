@@ -1507,45 +1507,43 @@ class search_development2 {
 		#dump($search_object, ' search_object ++ '.to_string());
 		//oh1_oh24_rsc197_rsc86.datos#>'{relations}' @> '[{"section_id":"2","section_tipo":"dd861","from_component_tipo":"rsc93"}]'::jsonb
 		//unaccent(oh1_oh24_rsc197_rsc453.datos#>>'{components, rsc85, dato}') ~* unaccent('.*\[".*ana.*')
-
-			/* 
-			{
-			  "q": "'.*\[".*ana.*'",						// the regext, text, number, etc that the component created
-			  "unaccent":true,								// true or false
-			  "operator":"~*",								// the operator for query
-			  "type": "string",								// string or jsonb
-			  "lang": "lg-nolan",							// if not defined lang = all langs, if defined lang = the lang sended
-			  "path": [										// path for locate the component into the joins
-			    {
-			      "section_tipo": "oh1",
-			      "component_tipo": "oh24"
-			    },
-			    {
-			      "section_tipo": "rsc197",
-			      "component_tipo": "rsc453"
-			    }
-			  ],
-			  "component_path": [							// the component path to find the dato or valor...
-			    "components",
-			    "rsc85",
-			    "dato"
-			  ]
-			}
-          	*/
-			/*
-				SELECT columns_that_define_duplicates
-						, count(*)
-				FROM your_sql_table
-				GROUP BY columns_that_define_duplicates
-				HAVING count(*) > 1;
-			*/
+		
+		# {
+		#   "q": "'.*\[".*ana.*'",						// the regext, text, number, etc that the component created
+		#   "unaccent":true,								// true or false
+		#   "operator":"~*",								// the operator for query
+		#   "type": "string",								// string or jsonb
+		#   "lang": "lg-nolan",							// if not defined lang = all langs, if defined lang = the lang sended
+		#   "path": [										// path for locate the component into the joins
+		#     {
+		#       "section_tipo": "oh1",
+		#       "component_tipo": "oh24"
+		#     },
+		#     {
+		#       "section_tipo": "rsc197",
+		#       "component_tipo": "rsc453"
+		#     }
+		#   ],
+		#   "component_path": [							// the component path to find the dato or valor...
+		#     "components",
+		#     "rsc85",
+		#     "dato"
+		#   ]
+		# }          	
+			
 		#dump($search_object, ' search_object ++ '.to_string());
 		
 		$path					= $search_object->path;
 		$table_alias 			= $this->get_table_alias_from_path($path);
 		
 		if ($search_object->lang!=='all') {
-			$search_object->component_path[] = $search_object->lang;
+
+			// Search already existing lang (maybe added in previous get_sql_where of current search_object like when count) 2018-12-18		
+			$last_component_path = end($search_object->component_path);			
+			if ( substr($last_component_path, 0, 3)!=='lg-' ) {				
+				// Add lang to path once
+				$search_object->component_path[] = $search_object->lang;
+			}
 		}
 		$component_path 		= implode(',', $search_object->component_path);
 
@@ -2269,7 +2267,7 @@ class search_development2 {
 		#$ar_section_tipo = (array)$section_tipo;
 
 		$user_id_logged		 = navigator::get_user_id();
-		$ar_authorized_areas = component_security_areas::get_ar_authorized_areas_for_user($user_id_logged, $mode_result='full');
+		$ar_authorized_areas = component_security_areas::get_ar_authorized_areas_for_user($user_id_logged, 'full');
 		#dump($ar_authorized_areas, ' ar_authorized_areas ++ '.to_string());
 
 		foreach ((array)$ar_section_tipo as $section_tipo) {
