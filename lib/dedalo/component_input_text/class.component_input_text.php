@@ -477,12 +477,13 @@ class component_input_text extends component_common {
 				$component_tipo = $path_end->component_tipo;
 				$RecordObj_dd   = new RecordObj_dd($component_tipo);
 				$lang 			= $RecordObj_dd->get_traducible()!=='si' ? DEDALO_DATA_NOLAN : DEDALO_DATA_LANG;
-
+				
 				$operator = 'IS NULL';
 				$q_clean  = '';
 				$query_object->operator = $operator;
     			$query_object->q_parsed	= $q_clean;
     			$query_object->unaccent = false;
+    			$query_object->lang 	= 'all';
 
     			#$clone = clone($query_object);
 	    		#	$clone->operator = '~*';
@@ -602,7 +603,8 @@ class component_input_text extends component_common {
     			$query_object->q_parsed	= '\'.*\[".*'.$q_clean.'.*\'';
     			$query_object->unaccent = true;
 				break;			
-		}//end switch (true) {		
+		}//end switch (true) {
+		#dump($query_object, ' query_object ++ '.to_string());
        
 
         return $query_object;
