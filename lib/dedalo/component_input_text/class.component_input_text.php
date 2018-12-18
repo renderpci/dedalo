@@ -444,7 +444,9 @@ class component_input_text extends component_common {
 
 	/**
 	* RESOLVE_QUERY_OBJECT_SQL
+	* @param object $query_object
 	* @return object $query_object
+	*	Edited/parsed version of received object 
 	*/
 	public static function resolve_query_object_sql($query_object) {
 		#debug_log(__METHOD__." query_object ".to_string($query_object), logger::DEBUG);
@@ -469,6 +471,13 @@ class component_input_text extends component_common {
         switch (true) {
         	# EMPTY VALUE (in current lang data)
 			case ($q==='!*'):
+
+				// Resolve lang based on if is translatable
+				$path_end 		= end($query_object->path);
+				$component_tipo = $path_end->component_tipo;
+				$RecordObj_dd   = new RecordObj_dd($component_tipo);
+				$lang 			= $RecordObj_dd->get_traducible()!=='si' ? DEDALO_DATA_NOLAN : DEDALO_DATA_LANG;
+
 				$operator = 'IS NULL';
 				$q_clean  = '';
 				$query_object->operator = $operator;
@@ -487,17 +496,17 @@ class component_input_text extends component_common {
 	    		$clone3 = clone($query_object);
 	    			$clone3->operator = '=';
 	    			$clone3->q_parsed = '\'\'';
-	    			$clone3->lang 	  = DEDALO_DATA_LANG;
+	    			$clone3->lang 	  = $lang;
 	    		// Is equal to array ([])
 	    		$clone4 = clone($query_object);
 	    			$clone4->operator = '=';
 	    			$clone4->q_parsed = '\'[]\'';
-	    			$clone4->lang 	  = DEDALO_DATA_LANG;
+	    			$clone4->lang 	  = $lang;
 	    		// Is not set the property like 'lg-spa'
 	    		$clone5 = clone($query_object);
 	    			$clone5->operator = 'IS NULL';
 	    			$clone5->q_parsed = '';
-	    			$clone5->lang 	  = DEDALO_DATA_LANG;
+	    			$clone5->lang 	  = $lang;
 
 				$logical_operator = '$or';
     			$new_query_json = new stdClass;

@@ -1459,8 +1459,12 @@
 		diffusion_stats : Fixed stats portal resolution in activity (Working here)
 
 
+	Valencia 17-12-2018 5.0.35
+		component_input_text : Fixed error when search empty values on non translatable components (DEDALO_DATA_NOLAN)
 
 
+
+	
 
 	WORK IN PROGRESS
 		component_date : mark as "red or similar" restricted an other terms based in x param..
@@ -1481,12 +1485,12 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.0.33';
+	$DEDALO_VERSION = '5.0.35';
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '15-12-2018');
+	define('DEDALO_BUILD'	, '17-12-2018');
 
 
 	/*
