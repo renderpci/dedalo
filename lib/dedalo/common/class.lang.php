@@ -35,23 +35,17 @@ class lang {
 			return $resolve_response[$lang_tld];
 		}
 		
-		$tipo 	 	 = DEDALO_THESAURUS_CODE_TIPO;
+		$tipo 	 	 = DEDALO_THESAURUS_CODE_TIPO; // hierarchy41
 		$table 		 = lang::$langs_matrix_table;
 		$term_tipo	 = DEDALO_THESAURUS_TERM_TIPO;
 
 		$strQuery  = '';
-		$strQuery .= "SELECT";
-		$strQuery .= "\n section_id, section_tipo, datos#>'{components, $term_tipo, dato}' AS names";
-		$strQuery .= "\n FROM \"$table\"";
-		$strQuery .= "\n WHERE";
-		#$strQuery .= "\n datos#>>'{components, $tipo, dato, lg-nolan}' = '$lang_tld';";
-		$strQuery .= "\n datos#>'{components, $tipo, dato, lg-nolan}' ? '$lang_tld';";
-
-					if(SHOW_DEBUG===true) {
-						#debug_log(__METHOD__." query: $strQuery ".to_string($lang_tld), logger::DEBUG);
-						#dump($strQuery, ' $strQuery ++ '.to_string());
-					}
-
+		$strQuery .= 'SELECT';
+		$strQuery .= PHP_EOL . 'section_id, section_tipo, datos#>\'{components, '.$term_tipo.', dato}\' AS names';
+		$strQuery .= PHP_EOL . 'FROM "'.$table.'"';
+		$strQuery .= PHP_EOL . 'WHERE';
+		$strQuery .= PHP_EOL . 'datos#>\'{components, '.$tipo.', dato, lg-nolan}\' ? \''.$lang_tld.'\';';
+	
 		$response = new stdClass();
 		$result	  = JSON_RecordObj_matrix::search_free($strQuery);
 					while ($rows = pg_fetch_assoc($result)) {
