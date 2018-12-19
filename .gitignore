@@ -31,7 +31,7 @@ lib/*
 !lib/dedalo
 lib/dedalo/des/*
 lib/dedalo/diffusion/diffusion_index_ts_V40
-lib/dedalo/publication/client_api/v1/sample*
+lib/dedalo/publication/client_api
 lib/dedalo/common/js/lang/*
 
 # extras ignore all except common
