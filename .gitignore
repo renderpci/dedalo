@@ -39,6 +39,9 @@ lib/dedalo/extras/*
 !lib/dedalo/extras/oh
 !lib/dedalo/extras/pci
 !lib/dedalo/extras/str_manager
+!lib/dedalo/extras/mdcat
+!lib/dedalo/extras/numisdata
+!lib/dedalo/extras/muvaet
 
 # Ignore paths that contain generated content.
 media/*
