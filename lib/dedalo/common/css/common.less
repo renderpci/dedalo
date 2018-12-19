@@ -478,7 +478,14 @@ mark {
 			border-left: none;
 			vertical-align: top;
 			padding: 3px;
-			overflow: hidden; 
+			overflow: hidden;
+
+			&.td_component_filter_master {
+			//>div {
+				max-height: 65px;
+				overflow: auto;
+				display: block;
+			}
 		}
 	}//end table_rows_list
 	
