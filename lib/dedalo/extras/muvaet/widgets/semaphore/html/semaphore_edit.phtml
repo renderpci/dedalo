@@ -1,0 +1,42 @@
+<?php
+
+	# VISUALIZADOR HTML	
+	$html ='';	
+
+	
+	$html .= "<div id=\"widget_semaphore\" class=\"widget_semaphore\">";
+
+		#
+		# SEMAPHORE
+		switch ($state) {
+			case 'green':
+				$css_class = 'semaphore_green';
+				break;
+			case 'orange':
+				$css_class = 'semaphore_orange';
+				break;	
+			case 'red':
+			default:
+				$css_class = 'semaphore_red';				
+				break;
+		}
+		$html .= "<div class=\"semaphore_icon $css_class\">";
+		switch ($state) {
+			case 'green':
+				$html .= 'Disponible';	//label::get_label('');
+				break;
+			case 'red':
+			default:
+				$html .= 'No disponible';	
+		}
+		$html .= "</div>";
+
+
+	$html .= "</div>";
+
+	$html .= "<script>widget_semaphore.activate_listener_value('".$component_referenced_tipo."');</script>";
+
+	print $html;
+
+
+?>
