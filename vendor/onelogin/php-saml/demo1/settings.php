@@ -1,6 +1,6 @@
 <?php
 
-    $spBaseUrl = 'http://benimamet.no-ip.org:8080/dedalo/vendor/onelogin/php-saml'; //or http://<your_domain>
+    $spBaseUrl = ''; //or http://<your_domain>
 
     $settingsInfo = array (
         'sp' => array (
@@ -14,12 +14,12 @@
             'NameIDFormat' => 'urn:oasis:names:tc:SAML:1.1:nameid-format:unspecified',
         ),
         'idp' => array (
-            'entityId' => 'https://preproduccio.idp1-gicar.gencat.cat/idp/profile/SAML2/Redirect/SSO',
+            'entityId' => '',
             'singleSignOnService' => array (
-                'url' => 'https://preproduccio.idp1-gicar.gencat.cat/idp/profile/SAML2/Redirect/SSO',
+                'url' => '',
             ),
             'singleLogoutService' => array (
-                'url' => 'https://preproduccio.idp1-gicar.gencat.cat/idp/profile/SAML2/Redirect/SSO',
+                'url' => '',
             ),
             'x509cert' => '',
         ),
