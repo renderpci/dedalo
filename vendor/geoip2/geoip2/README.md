@@ -46,9 +46,30 @@ require 'vendor/autoload.php';
 ## Install via Phar ##
 
 Although we strongly recommend using Composer, we also provide a
-[phar archive](http://php.net/manual/en/book.phar.php) containing all of the
+[phar archive](http://php.net/manual/en/book.phar.php) containing most of the
 dependencies for GeoIP2. Our latest phar archive is available on
 [our releases page](https://github.com/maxmind/GeoIP2-php/releases).
+
+### Install Dependencies ###
+
+In order to use the phar archive, you must have the PHP
+[Phar extension](http://php.net/manual/en/book.phar.php) installed and
+enabled.
+
+If you will be making web service requests, you must have the PHP
+[cURL extension](http://php.net/manual/en/book.curl.php)
+installed to use this archive. For Debian based distributions, this can
+typically be found in the the `php-curl` package. For other operating
+systems, please consult the relevant documentation. After installing the
+extension you may need to restart your web server.
+
+If you are missing this extension, you will see errors like the following:
+
+```
+PHP Fatal error:  Uncaught Error: Call to undefined function MaxMind\WebService\curl_version()
+```
+
+### Require Package ###
 
 To use the archive, just require it from your script:
 
@@ -203,7 +224,7 @@ print($record->city->name . "\n"); // 'Minneapolis'
 
 print($record->postal->code . "\n"); // '55455'
 
-print($record->location->accuracy_radius . "\n"); // 50
+print($record->location->accuracyRadius . "\n"); // 50
 print($record->location->latitude . "\n"); // 44.9733
 print($record->location->longitude . "\n"); // -93.2323
 
@@ -236,7 +257,7 @@ print($record->ipAddress . "\n"); // '128.101.101.101'
 ### Usage ###
 
 To use this API, you must create a new `\GeoIp2\WebService\Client`
-object with your `$userId` and `$licenseKey`, then you call the method
+object with your `$accountId` and `$licenseKey`, then you call the method
 corresponding to a specific end point, passing it the IP address you want to
 look up.
 
@@ -256,7 +277,7 @@ require_once 'vendor/autoload.php';
 use GeoIp2\WebService\Client;
 
 // This creates a Client object that can be reused across requests.
-// Replace "42" with your user ID and "license_key" with your license
+// Replace "42" with your account ID and "license_key" with your license
 // key.
 $client = new Client(42, 'abcdef123456');
 
@@ -355,13 +376,10 @@ to the client API, please see
 
 ## Requirements  ##
 
-This code requires PHP 5.3 or greater. Older versions of PHP are not
-supported. This library works and is tested with HHVM.
+This library requires PHP 5.4 or greater. This library works and is tested
+with HHVM.
 
 This library also relies on the [MaxMind DB Reader](https://github.com/maxmind/MaxMind-DB-Reader-php).
-
-If you are using PHP 5.3 with an autoloader besides Composer, you must load
-`JsonSerializable.php` in the `compat` directory.
 
 ## Contributing ##
 
@@ -377,7 +395,7 @@ The GeoIP2 PHP API uses [Semantic Versioning](http://semver.org/).
 
 ## Copyright and License ##
 
-This software is Copyright (c) 2013-2016 by MaxMind, Inc.
+This software is Copyright (c) 2013-2018 by MaxMind, Inc.
 
 This is free software, licensed under the Apache License, Version 2.0.
 
