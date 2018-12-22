@@ -20,6 +20,7 @@
 #include <php.h>
 #include <zend.h>
 #include "Zend/zend_exceptions.h"
+#include "ext/standard/info.h"
 #include <maxminddb.h>
 
 #ifdef ZTS
@@ -115,19 +116,23 @@ static inline maxminddb_obj *php_maxminddb_fetch_object(zend_object *obj TSRMLS_
 #endif
 }
 
+ZEND_BEGIN_ARG_INFO_EX(arginfo_maxmindbreader_construct, 0, 0, 1)
+    ZEND_ARG_INFO(0, db_file)
+ZEND_END_ARG_INFO()
+
 PHP_METHOD(MaxMind_Db_Reader, __construct){
     char *db_file = NULL;
     strsize_t name_len;
     zval * _this_zval = NULL;
 
-    if (zend_parse_method_parameters(ZEND_NUM_ARGS() TSRMLS_CC, getThis(), "Os", 
+    if (zend_parse_method_parameters(ZEND_NUM_ARGS() TSRMLS_CC, getThis(), "Os",
             &_this_zval, maxminddb_ce, &db_file, &name_len) == FAILURE) {
         THROW_EXCEPTION("InvalidArgumentException",
                         "The constructor takes exactly one argument.");
         return;
     }
 
-    if (0 != access(db_file, R_OK)) {
+    if (0 != php_check_open_basedir(db_file TSRMLS_CC) || 0 != access(db_file, R_OK)) {
         THROW_EXCEPTION("InvalidArgumentException",
                         "The file \"%s\" does not exist or is not readable.",
                         db_file);
@@ -150,12 +155,16 @@ PHP_METHOD(MaxMind_Db_Reader, __construct){
     mmdb_obj->mmdb = mmdb;
 }
 
+ZEND_BEGIN_ARG_INFO_EX(arginfo_maxmindbreader_get, 0, 0, 1)
+    ZEND_ARG_INFO(0, ip_address)
+ZEND_END_ARG_INFO()
+
 PHP_METHOD(MaxMind_Db_Reader, get){
     char *ip_address = NULL;
     strsize_t name_len;
     zval * _this_zval = NULL;
 
-    if (zend_parse_method_parameters(ZEND_NUM_ARGS() TSRMLS_CC, getThis(), "Os", 
+    if (zend_parse_method_parameters(ZEND_NUM_ARGS() TSRMLS_CC, getThis(), "Os",
             &_this_zval, maxminddb_ce, &ip_address, &name_len) == FAILURE) {
         THROW_EXCEPTION("InvalidArgumentException",
                         "Method takes exactly one argument.");
@@ -225,6 +234,9 @@ PHP_METHOD(MaxMind_Db_Reader, get){
     MMDB_free_entry_data_list(entry_data_list);
 }
 
+ZEND_BEGIN_ARG_INFO_EX(arginfo_maxmindbreader_void, 0, 0, 0)
+ZEND_END_ARG_INFO()
+
 PHP_METHOD(MaxMind_Db_Reader, metadata){
     if (ZEND_NUM_ARGS() != 0) {
         THROW_EXCEPTION("InvalidArgumentException",
@@ -284,7 +296,7 @@ PHP_METHOD(MaxMind_Db_Reader, close){
         return;
     }
 
-    maxminddb_obj *mmdb_obj = 
+    maxminddb_obj *mmdb_obj =
 	(maxminddb_obj *)Z_MAXMINDDB_P(getThis());
 
     if (NULL == mmdb_obj->mmdb) {
@@ -520,11 +532,11 @@ static zend_object_value maxminddb_create_handler(
 
 /* *INDENT-OFF* */
 static zend_function_entry maxminddb_methods[] = {
-    PHP_ME(MaxMind_Db_Reader, __construct, NULL,
+    PHP_ME(MaxMind_Db_Reader, __construct, arginfo_maxmindbreader_construct,
            ZEND_ACC_PUBLIC | ZEND_ACC_CTOR)
-    PHP_ME(MaxMind_Db_Reader, close,    NULL, ZEND_ACC_PUBLIC)
-    PHP_ME(MaxMind_Db_Reader, get,      NULL, ZEND_ACC_PUBLIC)
-    PHP_ME(MaxMind_Db_Reader, metadata, NULL, ZEND_ACC_PUBLIC)
+    PHP_ME(MaxMind_Db_Reader, close,    arginfo_maxmindbreader_void, ZEND_ACC_PUBLIC)
+    PHP_ME(MaxMind_Db_Reader, get,      arginfo_maxmindbreader_get,  ZEND_ACC_PUBLIC)
+    PHP_ME(MaxMind_Db_Reader, metadata, arginfo_maxmindbreader_void, ZEND_ACC_PUBLIC)
     { NULL, NULL, NULL }
 };
 /* *INDENT-ON* */
@@ -535,7 +547,6 @@ PHP_MINIT_FUNCTION(maxminddb){
     INIT_CLASS_ENTRY(ce, PHP_MAXMINDDB_READER_NS, maxminddb_methods);
     maxminddb_ce = zend_register_internal_class(&ce TSRMLS_CC);
     maxminddb_ce->create_object = maxminddb_create_handler;
-    maxminddb_ce->ce_flags |= ZEND_ACC_FINAL;
     memcpy(&maxminddb_obj_handlers,
            zend_get_std_object_handlers(), sizeof(zend_object_handlers));
     maxminddb_obj_handlers.clone_obj = NULL;
@@ -547,6 +558,17 @@ PHP_MINIT_FUNCTION(maxminddb){
     return SUCCESS;
 }
 
+static PHP_MINFO_FUNCTION(maxminddb)
+{
+    php_info_print_table_start();
+
+    php_info_print_table_row(2, "MaxMind DB Reader", "enabled");
+    php_info_print_table_row(2, "maxminddb extension version", PHP_MAXMINDDB_VERSION);
+    php_info_print_table_row(2, "libmaxminddb library version", MMDB_lib_version());
+
+    php_info_print_table_end();
+}
+
 zend_module_entry maxminddb_module_entry = {
     STANDARD_MODULE_HEADER,
     PHP_MAXMINDDB_EXTNAME,
@@ -555,7 +577,7 @@ zend_module_entry maxminddb_module_entry = {
     NULL,
     NULL,
     NULL,
-    NULL,
+    PHP_MINFO(maxminddb),
     PHP_MAXMINDDB_VERSION,
     STANDARD_MODULE_PROPERTIES
 };
