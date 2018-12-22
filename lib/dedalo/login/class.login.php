@@ -104,7 +104,8 @@ class login extends common {
 		$current_data_version = tool_administration::get_current_version_in_db();
 		# Username query
 		$min_subversion = 22;
-		if( ($current_data_version[0] >= 4 && $current_data_version[1] >= 0 && $current_data_version[2] >= $min_subversion) || 
+		if( $current_data_version[0] >= 5 ||
+			($current_data_version[0] >= 4 && $current_data_version[1] >= 0 && $current_data_version[2] >= $min_subversion) || 
 			($current_data_version[0] >= 4 && $current_data_version[1] >= 5) ||
 			$current_data_version[0] > 4 ) {
 			// Dato of component_input_text is array
@@ -117,7 +118,7 @@ class login extends common {
 		$JSON_RecordObj_matrix	= new JSON_RecordObj_matrix($matrix_table,NULL,DEDALO_SECTION_USERS_TIPO);
 		$ar_result				= (array)$JSON_RecordObj_matrix->search($arguments);
 
-		if( !is_array($ar_result) || empty($ar_result[0])  ) {
+		if( !is_array($ar_result) || empty($ar_result[0]) ) {
 
 			#
 			# STOP: USERNAME NOT EXISTS
@@ -133,7 +134,7 @@ class login extends common {
 				'LOG IN',
 				$activity_datos
 				);
-			# delay failed output after 2 seconds to prevent bruit force attacks
+			# delay failed output after 2 seconds to prevent brute force attacks
 	        sleep(2);
 			#exit("Error: User $username not exists !");
 			$response->msg = "Error: User not exists or password si invalid!";
@@ -171,7 +172,7 @@ class login extends common {
 						'LOG IN',
 						$activity_datos
 						);
-					# delay failed output by 2 seconds to prevent bruit force attacks
+					# delay failed output by 2 seconds to prevent brute force attacks
 	        		sleep(2);
 					
 					$response->msg = "Error: Wrong password [1]";
@@ -181,102 +182,65 @@ class login extends common {
 
 				if( isset($password_dato) && strlen($password_dato) ) {
 
-					if(!component_security_administrator::is_global_admin($user_id)) {
-						
-						#
-						# ACTIVE ACCOUNT CHECK
-							$modelo_name = RecordObj_dd::get_modelo_name_by_tipo(DEDALO_CUENTA_ACTIVA_TIPO,true);
-							$component_radio_button = component_common::get_instance($modelo_name,
-																					 DEDALO_CUENTA_ACTIVA_TIPO,
-																					 $section_id,
-																					 'edit',
-																					 DEDALO_DATA_NOLAN,
-																					 DEDALO_SECTION_USERS_TIPO);
-							$cuenta_activa_dato 	= $component_radio_button->get_dato();
+					// Active account check 
+						$active_account = login::active_account_check($section_id);
+					
+						if( $active_account!==true ) {
+
+							#
+							# STOP : ACCOUNT INACTIVE
+							#
+
+							# LOGIN ACTIVITY REPORT
+							self::login_activity_report(
+								"Denied login attempted by username: $username, id: $section_id. Account inactive or not defined [1]",
+								NULL,
+								'LOG IN',
+								// activity_datos
+								array(
+									'result' 	=> 'deny',
+									'cause' 	=> 'account inactive',
+									'username' 	=> $username
+								)
+							);
 
 
-							# OJO: El valor válido sólo puede ser 1 que es 'Si' en la lista de valores referenciada y se asigna como constante en config 'NUMERICAL_MATRIX_VALUE_YES'					
-							if( empty($cuenta_activa_dato[0]) || !isset($cuenta_activa_dato[0]->section_id) || $cuenta_activa_dato[0]->section_id!=NUMERICAL_MATRIX_VALUE_YES ) {
+							# delay failed output by 2 seconds to prevent brute force attacks
+							sleep(2);
+							#exit("Error: Account inactive or not defined [1]");
+							$response->msg = "Error: Account inactive or not defined [1]";
+							error_log("DEDALO LOGIN ERROR : Account inactive");
+							return $response;
+						}
 
-								#
-								# STOP : ACCOUNT INACTIVE
-								#
-								$activity_datos['result'] 	= "deny";
-								$activity_datos['cause'] 	= "account inactive";
-								$activity_datos['username']	= $username;
+					// Is global admin
+						$is_global_admin = component_security_administrator::is_global_admin($user_id);
 
-								# LOGIN ACTIVITY REPORT
-								self::login_activity_report(
-									"Denied login attempted by: $username. Account inactive or not defined [1]",
-									NULL,
-									'LOG IN',
-									$activity_datos
-									);
+					// Profile / projects check
+						if($is_global_admin!==true) {
+							
+							#
+							# PROFILE							
+								$user_have_profile = login::user_have_profile_check($user_id);
+								if ($user_have_profile!==true) {
+									$response->msg = label::get_label('error_usuario_sin_perfil');
+									return $response;
+								}
 
-								# delay failed output by 2 seconds to prevent bruit force attacks
-								sleep(2);
-								#exit("Error: Account inactive or not defined [1]");
-								$response->msg = "Error: Account inactive or not defined [1]";
-								error_log("DEDALO LOGIN ERROR : Account inactive");
-								return $response;
-							}
-						
-						#
-						# PROFILE				
-							# USER : TEST SECURITY AREAS VALUES
-							/*
-							# Comprobamos que el usuario tiene algún área asignada antes de dejarlo entrar (los administradores suelen olvidarse de hacerlo)
-							$component_security_areas 	= component_common::get_instance('component_security_areas', DEDALO_COMPONENT_SECURITY_AREAS_USER_TIPO, $user_id, 'edit', DEDALO_DATA_LANG,DEDALO_SECTION_USERS_TIPO);
-							$security_areas_dato 		= (object)$component_security_areas->get_dato();
-							if (empty($security_areas_dato) || count((array)$security_areas_dato)<1) {
-								exit(label::get_label('error_usuario_sin_areas'));
-							}
-							*/
-							$component_profile 		  = component_common::get_instance('component_profile',
-																						DEDALO_USER_PROFILE_TIPO,
-																						$user_id,
-																						'list',
-																						DEDALO_DATA_NOLAN,
-																						DEDALO_SECTION_USERS_TIPO);
-							$profile_dato 	  		  = $component_profile->get_dato();
-							if (empty($profile_dato) || $profile_dato<1) {
-								#exit(label::get_label('error_usuario_sin_perfil'));
-								$response->msg = label::get_label('error_usuario_sin_perfil');
-								return $response;
-							}
+							#
+							# PROJECTS : TEST FILTER MASTER VALUES
+								$user_have_projects = login::user_have_projects_check($user_id);
+								if ($user_have_projects!==true) {
+									$response->msg = label::get_label('error_usuario_sin_proyectos');
+									return $response;
+								}
 
+						}//end if(!component_security_administrator::is_global_admin($user_id))
 
-						#
-						# USER : TEST FILTER MASTER VALUES
-							# Comprobamos que el usuario tiene algún proyecto asignado antes de dejarlo entrar (los administradores suelen olvidarse de hacerlo)
-							$component_filter_master 	= component_common::get_instance('component_filter_master',
-																						 DEDALO_FILTER_MASTER_TIPO,
-																						 $user_id,
-																						 'list',
-																						 DEDALO_DATA_LANG, DEDALO_SECTION_USERS_TIPO); 
-							$filter_master_dato 		= (array)$component_filter_master->get_dato();
-							if (empty($filter_master_dato) || count($filter_master_dato)<1) {
-								#exit(label::get_label('error_usuario_sin_proyectos'));
-								$response->msg = label::get_label('error_usuario_sin_proyectos');
-								return $response;
-							}
-
-					}//end if(!component_security_administrator::is_global_admin($user_id))
-
-
-					#
-					# FULL_USERNAME
-						$component = component_common::get_instance('component_input_text',
-																	DEDALO_FULL_USER_NAME_TIPO,
-																	$user_id,
-																	'edit',
-																	DEDALO_DATA_NOLAN,
-																	DEDALO_SECTION_USERS_TIPO);
-						$full_username = $component->get_valor();
-
-
-					#
-					# LOGIN (ALL IS OK) - INIT LOGIN SECUENCE WHEN ALL IS OK
+					// Full_username
+						$full_username = login::get_full_username($user_id);
+					
+					// Login (all is ok) - init login secuence when all is ok
 						$init_user_login_secuence = login::init_user_login_secuence($user_id, $username, $full_username);
 						if ($init_user_login_secuence->result===false) {
 							# RETURN FALSE
@@ -288,7 +252,7 @@ class login extends common {
 							$response->msg 	  = " Login.. ";
 						}
 
-				}#if(isset($ar_password_id[0])
+				}//end if(isset($ar_password_id[0])
 
 			}#if( is_array($ar_result) ) foreach($ar_result as $section_id)
 
@@ -296,6 +260,290 @@ class login extends common {
 
 		return (object)$response;
 	}//end Login
+
+
+
+	/**
+	* LOGIN_SAML
+	* @param object $request_options
+	* @return object $response
+	*/
+	public static function Login_SAML($request_options) {
+
+		$response = new stdClass();
+			$response->result 	= false;
+			$response->msg 		= __METHOD__.' Error. Request failed';
+		
+		$options = new stdClass();
+			$options->code = null;
+			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
+
+		// IP validation
+			if (!empty(SAML_CONFIG['idp_ip'])) {
+				$client_ip = common::get_client_ip();
+				if (!in_array($client_ip, SAML_CONFIG['idp_ip'])) {
+					$response->msg = "Error. Invalid client IP !";
+					return $response;
+				}
+			}					
+
+		# Search code
+			$arguments=array();
+			$arguments["strPrimaryKeyName"] = 'section_id';
+			$arguments["section_tipo"]  	= DEDALO_SECTION_USERS_TIPO;
+			$arguments["datos#>>'{components,dd1053,dato,lg-nolan}'"] = json_encode((array)$options->code,JSON_UNESCAPED_UNICODE);
+			
+			$matrix_table 			= common::get_matrix_table_from_tipo(DEDALO_SECTION_USERS_TIPO);
+			$JSON_RecordObj_matrix	= new JSON_RecordObj_matrix($matrix_table,NULL,DEDALO_SECTION_USERS_TIPO);
+			$ar_result				= (array)$JSON_RecordObj_matrix->search($arguments);
+
+			$section_id = !empty($ar_result[0]) ? $ar_result[0] : false;
+			if($section_id!==false) {
+				
+				// Ok
+
+					$section_id = $ar_result[0];
+					$username 	= 'saml_user';
+
+					// Is already logged check
+						if (login::is_logged()===true) {
+							if ($_SESSION['dedalo4']['auth']['user_id']==$section_id) {
+								# Logged as same user
+								$response->result = true;
+								$response->msg 	  = " User already logged. ";
+								return $response;
+							}else{
+								# Logged as different user
+								login::Quit(array(
+									'mode' => 'saml',
+									'cause'=> 'Browser already logged as different user'
+								)); // Logout old user before continue login 
+							}							
+						}
+					
+					// Active account check 
+						$active_account = login::active_account_check($section_id);
+						if( $active_account!==true ) {
+
+							#
+							# STOP : ACCOUNT INACTIVE
+							#
+							
+							# LOGIN ACTIVITY REPORT
+							self::login_activity_report(
+								"Denied login attempted by username: $username, id: $section_id. Account inactive or not defined [1]",
+								NULL,
+								'LOG IN',
+								// activity_datos
+								array(
+									'result' 	=> 'deny',
+									'cause' 	=> 'account inactive',
+									'username' 	=> $username
+								)
+							);
+
+							# delay failed output by 2 seconds to prevent brute force attacks
+							sleep(2);
+							$response->msg = "Error: Account inactive or not defined [1]";
+							error_log("DEDALO LOGIN ERROR : Account inactive");
+							return $response;
+						}
+
+					// Is global admin
+						$is_global_admin = component_security_administrator::is_global_admin($section_id);
+
+					// Profile / projects check
+						if($is_global_admin!==true) {
+							
+							#
+							# PROFILE							
+								$user_have_profile = login::user_have_profile_check($section_id);
+								if ($user_have_profile!==true) {
+									$response->msg = label::get_label('error_usuario_sin_perfil');
+									return $response;
+								}
+
+							#
+							# PROJECTS : TEST FILTER MASTER VALUES
+								$user_have_projects = login::user_have_projects_check($section_id);
+								if ($user_have_projects!==true) {
+									$response->msg = label::get_label('error_usuario_sin_proyectos');
+									return $response;
+								}
+
+						}//end if(!component_security_administrator::is_global_admin($section_id))					
+					
+					// LOGIN (ALL IS OK) - INIT LOGIN SECUENCE WHEN ALL IS OK
+						
+						// User name
+							$username = login::get_username($section_id);
+
+						// Full username
+							$full_username = login::get_full_username($section_id);
+
+						// init_user_login_secuence
+							$init_user_login_secuence = login::init_user_login_secuence($section_id, $username, $full_username, $init_test=false);
+							if ($init_user_login_secuence->result===false) {
+								# RETURN FALSE
+								$response->result = false;
+								$response->msg 	  = $init_user_login_secuence->msg;
+							}else if($init_user_login_secuence->result===true) {
+								# RETURN OK AND RELOAD PAGE
+								$response->result = true;
+								$response->msg 	  = " Login.. ";
+							}
+			}else{
+
+				// Error
+					#
+					# STOP: CODE NOT EXISTS
+					#
+
+					// LOGIN ACTIVITY REPORT ($msg, $projects=NULL, $login_label='LOG IN', $ar_datos=NULL)
+						self::login_activity_report(
+							"Denied login attempted by: saml_user. This code does not exist in the database",
+							NULL,
+							'LOG IN',
+							// activity_datos
+							array(
+								'result' 	=> 'deny',
+								'cause' 	=> 'code not exist',
+								'username' 	=> 'from saml',
+								'code' 		=> $options->code
+							)
+						);
+
+					# delay failed output after 2 seconds to prevent brute force attacks
+			        sleep(2);					
+					$response->msg = "Error: Code not exists or is invalid!";
+					error_log("DEDALO LOGIN ERROR : Invalid saml code");
+					return $response;			
+			}
+
+
+		return $response;
+	}//end Login_SAML
+
+
+
+	/**
+	* GET_USERNAME
+	* @param int $section_id (is user section id)
+	* @return string $full_username
+	*/
+	public static function get_username($section_id) {
+
+		$component = component_common::get_instance('component_input_text',
+													DEDALO_USER_NAME_TIPO,
+													$section_id,
+													'list',
+													DEDALO_DATA_NOLAN,
+													DEDALO_SECTION_USERS_TIPO);
+		$username = $component->get_valor();
+
+		return $username;
+	}//end get_username
+
+
+
+	/**
+	* GET_FULL_USERNAME
+	* @param int $section_id (is user section id)
+	* @return string $full_username
+	*/
+	public static function get_full_username($section_id) {
+
+		$component = component_common::get_instance('component_input_text',
+													DEDALO_FULL_USER_NAME_TIPO,
+													$section_id,
+													'list',
+													DEDALO_DATA_NOLAN,
+													DEDALO_SECTION_USERS_TIPO);
+		$full_username = $component->get_valor();
+
+		return $full_username;
+	}//end get_full_username
+
+
+
+	/**
+	* ACTIVE_ACCOUNT_CHECK
+	* @param int $section_id
+	* @return bool
+	*/
+	public static function active_account_check($section_id) {
+
+		$active_account = false; // Default false
+		
+		$modelo_name = RecordObj_dd::get_modelo_name_by_tipo(DEDALO_CUENTA_ACTIVA_TIPO,true);
+		$component_radio_button = component_common::get_instance($modelo_name,
+																 DEDALO_CUENTA_ACTIVA_TIPO,
+																 $section_id,
+																 'edit',
+																 DEDALO_DATA_NOLAN,
+																 DEDALO_SECTION_USERS_TIPO);
+		$cuenta_activa_dato 	= $component_radio_button->get_dato();
+
+		# OJO: El valor válido sólo puede ser 1 que es 'Si' en la lista de valores referenciada y se asigna como constante en config 'NUMERICAL_MATRIX_VALUE_YES'
+		if (isset($cuenta_activa_dato[0]) && isset($cuenta_activa_dato[0]->section_id) && $cuenta_activa_dato[0]->section_id==NUMERICAL_MATRIX_VALUE_YES) {
+			
+			$active_account = true;
+		}
+
+		return (bool)$active_account;
+	}//end active_account_check
+
+
+
+	/**
+	* USER_HAVE_PROFILE_CHECK
+	* @param int $section_id
+	* @return bool
+	*/
+	public static function user_have_profile_check($section_id) {
+
+		$user_have_profile = false; // Default false
+		
+		$component_profile 		  = component_common::get_instance('component_profile',
+																	DEDALO_USER_PROFILE_TIPO,
+																	$section_id,
+																	'list',
+																	DEDALO_DATA_NOLAN,
+																	DEDALO_SECTION_USERS_TIPO);
+		$profile_dato = (int)$component_profile->get_dato();
+		if (!empty($profile_dato) && $profile_dato>0) {
+			
+			$user_have_profile = true;
+		}
+
+		return (bool)$user_have_profile;
+	}//end user_have_profile_check
+
+
+
+	/**
+	* USER_HAVE_PROJECTS_CHECK
+	* @param int $section_id
+	* @return bool
+	*/
+	public static function user_have_projects_check($section_id) {
+
+		$user_have_projects = false; // Default false
+		
+		$component_filter_master 	= component_common::get_instance('component_filter_master',
+																	 DEDALO_FILTER_MASTER_TIPO,
+																	 $section_id,
+																	 'list',
+																	 DEDALO_DATA_LANG,
+																	 DEDALO_SECTION_USERS_TIPO); 
+		$filter_master_dato 		= (array)$component_filter_master->get_dato();
+		if (!empty($filter_master_dato) && count($filter_master_dato)>0) {
+			
+			$user_have_projects = true;
+		}
+
+		return (bool)$user_have_projects;
+	}//end user_have_projects_check
 
 
 
@@ -383,7 +631,9 @@ class login extends common {
 	* @param string $username
 	* @return bool 
 	*/
-	private static function init_user_login_secuence($user_id, $username, $full_username) {
+	private static function init_user_login_secuence($user_id, $username, $full_username, $init_test=true) {
+
+		$start_time=microtime(1);
 
 		$response = new stdClass();
 			$response->result 	= false;
@@ -397,13 +647,14 @@ class login extends common {
 		#}	
 		
 		# DEDALO INIT TEST SECUENCE
-		require(DEDALO_LIB_BASE_PATH.'/config/dd_init_test.php');
-		if ($init_response->result===false) {
-			$response->result 	= false;
-			$response->msg 		= $init_response->msg;
-			return $response;
+		if ($init_test===true) {
+			require(DEDALO_LIB_BASE_PATH.'/config/dd_init_test.php');
+			if ($init_response->result===false) {
+				$response->result 	= false;
+				$response->msg 		= $init_response->msg;
+				return $response;
+			}
 		}
-
 
 		# IS_GLOBAL_ADMIN (before set user session vars)
 		$_SESSION['dedalo4']['auth']['is_global_admin'] = (bool)component_security_administrator::is_global_admin($user_id);
@@ -823,50 +1074,58 @@ class login extends common {
 	* QUIT
 	* Made logout
 	*/
-	public static function Quit($trigger_post_vars) {
+	public static function Quit($request_options) {
+
+		$options = new stdClass();
+			$options->mode 	= null;
+			$options->cause = 'called quit method';
+			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
+
 
 		if (self::is_logged()!==true) {
 			return false;
 		}
 
-		$user_id 	 = $_SESSION['dedalo4']['auth']['user_id'];
-		$username	 = $_SESSION['dedalo4']['auth']['username'];		
+		$user_id  = $_SESSION['dedalo4']['auth']['user_id'];
+		$username = $_SESSION['dedalo4']['auth']['username'];
 
-		$activity_datos['result'] 	= "quit";
-		$activity_datos['cause'] 	= "called quit method";
-		$activity_datos['username']	= $username;
+		// LOCK_COMPONENTS. Remove lock_components elements
+			if (defined('DEDALO_LOCK_COMPONENTS') && DEDALO_LOCK_COMPONENTS===true) {
+				lock_components::force_unlock_all_components($user_id);
+			}
 
-		# REMOVE LOCK_COMPONENTS ELEMENTS
-		if (defined('DEDALO_LOCK_COMPONENTS') && DEDALO_LOCK_COMPONENTS===true) {
-			lock_components::force_unlock_all_components($user_id);
-		}
-
-		# LOGIN ACTIVITY REPORT
-		self::login_activity_report(
-			"User $user_id was logout. Bye $username",
-			null,
-			'LOG OUT',
-			$activity_datos
+		// LOGIN ACTIVITY REPORT
+			self::login_activity_report(
+				"User $user_id was logout. Bye $username",
+				null,
+				'LOG OUT',
+				// $activity_datos
+				array(
+					'result' 	=> 'quit',
+					'cause' 	=> $options->cause,
+					'username' 	=> $username,
+					'mode' 		=> $options->mode
+				)
 			);
 
-		# Cookie properties
-		$cookie_properties = common::get_cookie_properties();
+		// Cookie properties
+			$cookie_properties = common::get_cookie_properties();
 
-		# Delete auth cookie
-		if (defined('DEDALO_PROTECT_MEDIA_FILES') && DEDALO_PROTECT_MEDIA_FILES===true) {
-			$cookie_auth = (object)$_SESSION['dedalo4']['auth']['cookie_auth'];
-			$ktoday 	 = date("Y_m_d");
-			$kyesterday  = date("Y_m_d",strtotime("-1 day"));
-	
-			if (isset($cookie_auth->$ktoday->cookie_name)) {
-				#setcookie($cookie_auth->$ktoday->cookie_name, null, -1, '/');
-				setcookie($cookie_auth->$ktoday->cookie_name, null, -1, '/', $cookie_properties->domain, $cookie_properties->secure, $cookie_properties->httponly);
+		// Delete auth cookie
+			if (defined('DEDALO_PROTECT_MEDIA_FILES') && DEDALO_PROTECT_MEDIA_FILES===true) {
+				$cookie_auth = (object)$_SESSION['dedalo4']['auth']['cookie_auth'];
+				$ktoday 	 = date("Y_m_d");
+				$kyesterday  = date("Y_m_d",strtotime("-1 day"));
+		
+				if (isset($cookie_auth->$ktoday->cookie_name)) {
+					#setcookie($cookie_auth->$ktoday->cookie_name, null, -1, '/');
+					setcookie($cookie_auth->$ktoday->cookie_name, null, -1, '/', $cookie_properties->domain, $cookie_properties->secure, $cookie_properties->httponly);
+				}
+				if (isset($cookie_auth->$kyesterday->cookie_name)) {
+					#setcookie($cookie_auth->$kyesterday->cookie_name, null, -1, '/');
+					setcookie($cookie_auth->$kyesterday->cookie_name, null, -1, '/', $cookie_properties->domain, $cookie_properties->secure, $cookie_properties->httponly);
+				}
 			}
-			if (isset($cookie_auth->$kyesterday->cookie_name)) {
-				#setcookie($cookie_auth->$kyesterday->cookie_name, null, -1, '/');
-				setcookie($cookie_auth->$kyesterday->cookie_name, null, -1, '/', $cookie_properties->domain, $cookie_properties->secure, $cookie_properties->httponly);
-			}
-		}			
 
 		#unset($_SESSION['dedalo4']['auth']);
 		#unset($_SESSION['dedalo4']['config']);
@@ -876,6 +1135,11 @@ class login extends common {
 		setcookie($cookie_name, null, -1, '/', $cookie_properties->domain, $cookie_properties->secure, $cookie_properties->httponly);
 		#unset($_SESSION);
 		debug_log(__METHOD__." Unset session and cookie. cookie_name: $cookie_name ".to_string(), logger::DEBUG);
+
+		// SAML LOGOUT
+			if (defined('SAML_CONFIG') && SAML_CONFIG['active']===true && isset(SAML_CONFIG['logout_url'])) {
+				# code...
+			}
 
 		return true;
 	}//end Quit
@@ -975,6 +1239,10 @@ class login extends common {
 
 		return $is_developer;
 	}//end is_developer
+
+
+
+	
 
 
 
