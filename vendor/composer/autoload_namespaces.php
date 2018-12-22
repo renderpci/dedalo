@@ -6,6 +6,7 @@ $vendorDir = dirname(dirname(__FILE__));
 $baseDir = dirname($vendorDir);
 
 return array(
-    'MaxMind' => array($vendorDir . '/maxmind-db/reader/src'),
+    'LightSaml\\Tests\\' => array($vendorDir . '/lightsaml/lightsaml/tests'),
+    'LightSaml\\' => array($vendorDir . '/lightsaml/lightsaml/src'),
     'Evenement' => array($vendorDir . '/evenement/evenement/src'),
 );

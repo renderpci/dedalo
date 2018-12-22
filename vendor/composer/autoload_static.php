@@ -9,12 +9,20 @@ class ComposerStaticInitd5dd6c026b5b62535b8b0d6c61365f3e
     public static $files = array (
         'ad155f8f1cf0d418fe49e248db8c661b' => __DIR__ . '/..' . '/react/promise/src/functions_include.php',
         '6b06ce8ccf69c43a60a1e48495a034c9' => __DIR__ . '/..' . '/react/promise-timer/src/functions.php',
+        '0e6d7bf4a5811bfa5cf40c5ccd6fae6a' => __DIR__ . '/..' . '/symfony/polyfill-mbstring/bootstrap.php',
         'cea474b4340aa9fa53661e887a21a316' => __DIR__ . '/..' . '/react/promise-stream/src/functions_include.php',
         'ebf8799635f67b5d7248946fe2154f4a' => __DIR__ . '/..' . '/ringcentral/psr7/src/functions_include.php',
         '3316707aeec0f4d2879c99a87a32abd2' => __DIR__ . '/..' . '/socrata/soda-php/public/socrata.php',
     );
 
     public static $prefixLengthsPsr4 = array (
+        'S' => 
+        array (
+            'Symfony\\Polyfill\\Mbstring\\' => 26,
+            'Symfony\\Contracts\\' => 18,
+            'Symfony\\Component\\HttpFoundation\\' => 33,
+            'Symfony\\Component\\EventDispatcher\\' => 34,
+        ),
         'R' => 
         array (
             'RobRichards\\XMLSecLibs\\' => 23,
@@ -39,15 +47,37 @@ class ComposerStaticInitd5dd6c026b5b62535b8b0d6c61365f3e
         ),
         'M' => 
         array (
-            'MaxMind\\' => 8,
+            'MaxMind\\WebService\\' => 19,
+            'MaxMind\\Exception\\' => 18,
+            'MaxMind\\Db\\' => 11,
         ),
         'G' => 
         array (
             'GeoIp2\\' => 7,
         ),
+        'C' => 
+        array (
+            'Composer\\CaBundle\\' => 18,
+        ),
     );
 
     public static $prefixDirsPsr4 = array (
+        'Symfony\\Polyfill\\Mbstring\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/symfony/polyfill-mbstring',
+        ),
+        'Symfony\\Contracts\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/symfony/contracts',
+        ),
+        'Symfony\\Component\\HttpFoundation\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/symfony/http-foundation',
+        ),
+        'Symfony\\Component\\EventDispatcher\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/symfony/event-dispatcher',
+        ),
         'RobRichards\\XMLSecLibs\\' => 
         array (
             0 => __DIR__ . '/..' . '/robrichards/xmlseclibs/src',
@@ -100,22 +130,38 @@ class ComposerStaticInitd5dd6c026b5b62535b8b0d6c61365f3e
         array (
             0 => __DIR__ . '/..' . '/onelogin/php-saml/src',
         ),
-        'MaxMind\\' => 
+        'MaxMind\\WebService\\' => 
         array (
-            0 => __DIR__ . '/..' . '/maxmind/web-service-common/src',
+            0 => __DIR__ . '/..' . '/maxmind/web-service-common/src/WebService',
+        ),
+        'MaxMind\\Exception\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/maxmind/web-service-common/src/Exception',
+        ),
+        'MaxMind\\Db\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/maxmind-db/reader/src/MaxMind/Db',
         ),
         'GeoIp2\\' => 
         array (
             0 => __DIR__ . '/..' . '/geoip2/geoip2/src',
         ),
+        'Composer\\CaBundle\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/composer/ca-bundle/src',
+        ),
     );
 
     public static $prefixesPsr0 = array (
-        'M' => 
+        'L' => 
         array (
-            'MaxMind' => 
+            'LightSaml\\Tests\\' => 
             array (
-                0 => __DIR__ . '/..' . '/maxmind-db/reader/src',
+                0 => __DIR__ . '/..' . '/lightsaml/lightsaml/tests',
+            ),
+            'LightSaml\\' => 
+            array (
+                0 => __DIR__ . '/..' . '/lightsaml/lightsaml/src',
             ),
         ),
         'E' => 
