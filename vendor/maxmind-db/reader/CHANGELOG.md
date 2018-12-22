@@ -1,6 +1,63 @@
 CHANGELOG
 =========
 
+1.4.0 (2018-11-20)
+------------------
+
+* The `maxminddb` extension now has the arginfo when using reflection.
+  PR by Remi Collet. GitHub #75.
+* The `maxminddb` extension now provides `MINFO()` function that
+  displays the extension version and the libmaxminddb version. PR by
+  Remi Collet. GitHub #74.
+* The `maxminddb` `configure` script now uses `pkg-config` when
+  available to get libmaxmindb build info. PR by Remi Collet.
+  GitHub #73.
+* The pure PHP reader now correctly decodes integers on 32-bit platforms.
+  Previously, large integers would overflow. Reported by Remi Collet.
+  GitHub #77.
+* There are small performance improvements for the pure PHP reader.
+
+1.3.0 (2018-02-21)
+------------------
+
+* IMPORTANT: The `maxminddb` extension now obeys `open_basedir`. If
+  `open_basedir` is set, you _must_ store the database within the
+  specified directory. Placing the file outside of this directory
+  will result in an exception. Please test your integration before
+  upgrading the extension. This does not affect the pure PHP
+  implementation, which has always had this restriction. Reported
+  by Benoît Burnichon. GitHub #61.
+* A custom `autoload.php` file is provided for installations without
+  Composer. GitHub #56.
+
+1.2.0 (2017-10-27)
+------------------
+
+* PHP 5.4 or greater is now required.
+* The `Reader` class for the `maxminddb` extension is no longer final.
+  This was change to match the behavior of the pure PHP class.
+  Reported and fixed by venyii. GitHub #52 & #54.
+
+1.1.3 (2017-01-19)
+------------------
+
+* Fix incorrect version in `ext/php_maxminddb.h`. GitHub #48.
+
+1.1.2 (2016-11-22)
+------------------
+
+* Searching for database metadata only occurs within the last 128KB
+  (128 * 1024 bytes) of the file, speeding detection of corrupt
+  datafiles. Reported by Eric Teubert. GitHub #42.
+* Suggest relevant extensions when installing with Composer. GitHub #37.
+
+1.1.1 (2016-09-15)
+------------------
+
+* Development files were added to the `.gitattributes` as `export-ignore` so
+  that they are not part of the Composer release. Pull request by Michele
+  Locati. GitHub #39.
+
 1.1.0 (2016-01-04)
 ------------------
 
