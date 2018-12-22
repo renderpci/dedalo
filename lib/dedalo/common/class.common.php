@@ -475,9 +475,9 @@ abstract class common {
 																 $section_tipo);
 				 $dato = $component->get_dato();
 				 if (isset($dato[0])) {
-				 	$lang_code = lang::get_code_from_locator($dato[0], $add_prefix=true);
-				 	# dump($lang_code, ' lang_code ++ '.to_string());
-				 	$main_lang = $lang_code;
+					$lang_code = lang::get_code_from_locator($dato[0], $add_prefix=true);
+					# dump($lang_code, ' lang_code ++ '.to_string());
+					$main_lang = $lang_code;
 				 }
 			}			
 		
@@ -647,8 +647,8 @@ abstract class common {
 	
 	# __TOSTRING
 	public function __toString() {
-        return 'Obj: '.get_called_class();
-    }
+		return 'Obj: '.get_called_class();
+	}
 	
 	
 	
@@ -1282,6 +1282,33 @@ abstract class common {
 
 		return $cookie_properties;
 	}//end get_cookie_properties
+
+
+	/**
+	* GET_CLIENT_IP
+	* @return string $ipaddress
+	*/
+	public static function get_client_ip() {
+
+		$ipaddress = '';
+		if (isset($_SERVER['HTTP_CLIENT_IP']))
+			$ipaddress = $_SERVER['HTTP_CLIENT_IP'];
+		else if(isset($_SERVER['HTTP_X_FORWARDED_FOR']))
+			$ipaddress = $_SERVER['HTTP_X_FORWARDED_FOR'];
+		else if(isset($_SERVER['HTTP_X_FORWARDED']))
+			$ipaddress = $_SERVER['HTTP_X_FORWARDED'];
+		else if(isset($_SERVER['HTTP_FORWARDED_FOR']))
+			$ipaddress = $_SERVER['HTTP_FORWARDED_FOR'];
+		else if(isset($_SERVER['HTTP_FORWARDED']))
+			$ipaddress = $_SERVER['HTTP_FORWARDED'];
+		else if(isset($_SERVER['REMOTE_ADDR']))
+			$ipaddress = $_SERVER['REMOTE_ADDR'];
+		else
+			$ipaddress = 'UNKNOWN';
+
+		return $ipaddress;
+	}//end get_client_ip
+
 
 
 
