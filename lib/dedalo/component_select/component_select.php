@@ -47,6 +47,10 @@
 				$dato_string		= json_handler::encode($dato);				
 				$mandatory 			= (isset($propiedades->mandatory) && $propiedades->mandatory===true) ? true : false;
 				$mandatory_json 	= json_encode($mandatory);
+				if( isset($propiedades->controller) and $propiedades->controller === true){
+					$controller_data = $this->get_controller_data();
+				}
+
 				break;
 
 		case 'tool_time_machine' :
