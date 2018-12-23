@@ -98,6 +98,10 @@
 				$html_content .= "<div class=\"debug_info notes\">".json_encode( $dato )."</div>";				
 				#$html_content .= " <span class=\"css_span_debugger\" id=\"debugger_{$tipo}\" >{$debugger}</span>";
 			}
+			if( isset($propiedades->controller) && $propiedades->controller === true){
+					$html_content .= "<input class=\"components_controller\" value=".json_encode($controller_data).">";
+			}
+
 
 			#
 			# JS Init component
