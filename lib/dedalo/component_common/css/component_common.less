@@ -21,29 +21,30 @@
 
 /* WRAP
 ------------------------------------------------------- */
-.wrap_component {
-	position: relative;
-	float: left;
-	//overflow: hidden;
-	padding: 5px;	
-	border:none;
-	margin: 0;	
-	min-height: 2.333em;
-	width: 100%;
-	//transition: all .180s ease-in-out;
-	//display: flex;
-	// flex-wrap: wrap;
+	.wrap_component {
+		position: relative;
+		float: left;
+		//overflow: hidden;
+		padding: 5px;	
+		border:none;
+		margin: 0;	
+		min-height: 2.333em;
+		width: 100%;
+		//transition: all .180s ease-in-out;
+		//display: flex;
+		// flex-wrap: wrap;
 
-	//pointer-events: initial;
-	//background-color: rgba(175, 204, 246, 0.16);
-	//border-top: 1px solid #EBEBEB;
+		//pointer-events: initial;
+		//background-color: rgba(175, 204, 246, 0.16);
+		//border-top: 1px solid #EBEBEB;
 		@media screen and (max-width: @movil_max_width) {
 			width: 100% !important;
 		}
-	}
-	.wrap_component::before {
-		//content: " ";
-		//clear: left;
+
+		&::before {
+			//content: " ";
+			//clear: left;
+		}
 	}
 
 
@@ -55,48 +56,53 @@
 
 /* LOCKED_WRAP . Apperance when component is locked
 ------------------------------------------------------- */
-.locked_wrap {
-	/*background-color: #ED2112;*/	
-	user-select: none;
-        -moz-user-select: none;
-        -khtml-user-select: none;
-        -webkit-user-select: none;
-        -o-user-select: none;
-    opacity: 0.80;    
-    //pointer-events:none;   
-	}
-	.locked_wrap > label {
-		color: red;
-	}
-	.locked_wrap > .content_data {
-		//opacity: 0.35;
-		//cursor: not-allowed;
-		//pointer-events:none; 
-		}
-		.locked_wrap > .content_data::before {
-			content: " ";
-			display: block;
+	.locked_wrap {
+		/*background-color: #ED2112;*/	
+		user-select: none;
+	        -moz-user-select: none;
+	        -khtml-user-select: none;
+	        -webkit-user-select: none;
+	        -o-user-select: none;
+	    opacity: 0.80;    
+	    //pointer-events:none; 
+
+	    &::before {
+			content: "\e033";
 			position: absolute;
-			width: 100%;
-			height: 100%;
-			top: 0;
-			left: 0;
-			background-color: @color_locked_wrap;
-			z-index: 999;
-			opacity: 0.16;
-			//pointer-events:none; 
+			color: red;
+			right: 10px;
+			font-family: 'Glyphicons Halflings';
+		    font-style: normal;
+		    font-weight: 400;
+		    -webkit-font-smoothing: antialiased;
+		    z-index: 1;
+		} 
+
+	    > label {
+			color: red;
 		}
-	.locked_wrap::before {
-		content: "\e033";
-		position: absolute;
-		color: red;
-		right: 10px;
-		font-family: 'Glyphicons Halflings';
-	    font-style: normal;
-	    font-weight: 400;
-	    -webkit-font-smoothing: antialiased;
-	    z-index: 1;
-	}
+
+		> .content_data {
+			//opacity: 0.35;
+			//cursor: not-allowed;
+			//pointer-events:none; 
+
+			&::before {
+				content: " ";
+				display: block;
+				position: absolute;
+				width: 100%;
+				height: 100%;
+				top: 0;
+				left: 0;
+				background-color: @color_locked_wrap;
+				z-index: 999;
+				opacity: 0.16;
+				//pointer-events:none; 
+			}
+		}
+	}	
+
 	.locked_wrap_username {
 		font-family: Arial, sans-serif;
 		font-size: 96%;
@@ -119,17 +125,17 @@
 
 /* CONTENT DATA
 ------------------------------------------------------- */
-.content_data {
-	position: relative;
-	display: inline-block;
-	padding: 0;
-	margin: 0;	
-	width: 83%;
-	height: 100%;
-	@media screen and (max-width: @content_data_max_width) {		
-		display: block !important;
-		width: 100% !important;		
-	}
+	.content_data {
+		position: relative;
+		display: inline-block;
+		padding: 0;
+		margin: 0;	
+		width: 83%;
+		height: 100%;
+		@media screen and (max-width: @content_data_max_width) {		
+			display: block !important;
+			width: 100% !important;
+		}
 	}
 
 	
@@ -215,14 +221,13 @@ input[type="text"], input[type="password"], input[type="url"],textarea {
 		font-weight: 100;
 		color: #9e9e9e;
 
+
 		@media screen and (max-width: @movil_max_width) {
 			width: 100% !important;
 			max-width: 100%;
 		}
-		}
-		.wrap_component .label:hover {
-
-		}
+	}
+		
 
 
 
@@ -358,45 +363,43 @@ div.dato_refecence_default_lang {
 
 /* OVERRIDE JQUERY UI
 ------------------------------------------------------- */
-.ui-menu-item {
-	font-weight: normal !important;
+	.ui-menu-item {
+		font-weight: normal !important;
 	}
-	.ui-menu-item:hover {
-		
-	}
+	
 
 
 /* mandatory common
 ------------------------------------------------------- */
-.wrap_component .mandatory {
-	border-color: red;
-	background-color: rgba(255, 0, 0, 0.11);
-}
+	.wrap_component .mandatory {
+		border-color: red;
+		background-color: rgba(255, 0, 0, 0.11);
+	}
 
 
-.select_fast_lang_switch {
-	position: absolute;
-    //right: 57px;
-   // top: 3px;
-    z-index: 9;
-    //height: 26px;
+	.select_fast_lang_switch {
+		position: absolute;
+	    //right: 57px;
+	   // top: 3px;
+	    z-index: 9;
+	    //height: 26px;
 
-    right: 2px;
-    top: 2px;
-    height: 20px;
+	    right: 2px;
+	    top: 2px;
+	    height: 20px;
 
-    top: 0;
-    right: 0;
-    margin: 2px;
+	    top: 0;
+	    right: 0;
+	    margin: 2px;
 
-    //display: none;
-    opacity: 0;
-}
+	    //display: none;
+	    opacity: 0;
+	}
 
-.selected_wrap > .select_fast_lang_switch {
-	//display: block;
-	opacity: 1;
-}
+	.selected_wrap > .select_fast_lang_switch {
+		//display: block;
+		opacity: 1;
+	}
 
 
 .component_with_value {
@@ -518,8 +521,25 @@ div.dato_refecence_default_lang {
 				color: #f5c39f !important;
 			}
    
-   /* Read only / editable
-	----------------------------------------*/
-	.read_only{
-		pointer-events: none;
-	}
+
+	// component_read_only. Read only / editable
+		.component_read_only {
+			
+			pointer-events: none;
+			background-color: #ffebeb !important;
+
+			&::before {
+				content: "\e033";
+				position: absolute;
+				color: red;
+				right: 10px;
+				font-family: 'Glyphicons Halflings';
+			    font-style: normal;
+			    font-weight: 400;
+			    -webkit-font-smoothing: antialiased;
+			    z-index: 1;
+			    opacity: 0.3
+			}
+		}
+
+
