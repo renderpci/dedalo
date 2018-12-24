@@ -1884,7 +1884,10 @@ class component_portal extends component_relation_common {
 
 							# Detect and avoid structure errors (portal list with deprecated elements for example)
 							if (strpos($modelo_name, 'component_')===false) {
-								dump($modelo_name, ' wrong modelo_name ++ column_tipo: '.to_string($column_tipo));
+								dump($modelo_name, ' SKIPPED wrong modelo_name ++ column_tipo: '.to_string($column_tipo));
+								if(SHOW_DEBUG===true) {
+									throw new Exception("Error Processing Request", 1);
+								}
 								continue;
 							}
 
