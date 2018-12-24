@@ -84,7 +84,7 @@ class tool_import_dedalo_csv extends tool_common {
 
 			# Iterate fields/columns
 			foreach ($row as $key => $value) {
-
+	
 				if ($csv_map[$key]==='section_id') continue; # Skip section_id value column
 
 				# created_by_userID
@@ -150,12 +150,14 @@ class tool_import_dedalo_csv extends tool_common {
 				$value = trim($value); // Avoid wrong final return problems
 				# Remove delimiter escape (U+003B for ;)
 				$value = str_replace('U+003B', ';', $value);
-				$dato_from_json = json_decode($value);
-				# debug_log(__METHOD__." Result decode json: type:".gettype($dato_from_json).' -> value: '.$value.' => decoded: '.to_string($dato_from_json), logger::DEBUG);
-				if($dato_from_json!==null) {
-					$value = $dato_from_json;	
-				}
 
+				// Check if is a json string. Is yes, decode
+					if(strpos($value, '[')===0 || strpos($value, '{')===0) {
+						if($dato_from_json = json_decode($value)) {
+							$value = $dato_from_json;
+						}
+					}				
+					# debug_log(__METHOD__." Result decode json: type:".gettype($dato_from_json).' -> value: '.$value.' => decoded: '.to_string($dato_from_json), logger::DEBUG);
 
 				# Checks value contains dataframe or dato keys
 				if (is_object($value)) {

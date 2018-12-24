@@ -1463,6 +1463,12 @@
 		component_input_text : Fixed error when search empty values on non translatable components (DEDALO_DATA_NOLAN)
 
 
+	Valencia 24-12-2018 5.0.36
+		tool_import_dedalo_csv : Fix bug in import_dedalo_csv_file when numbers are wrong json decoded an float
+
+
+
+
 
 	
 
@@ -1485,12 +1491,12 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.0.35';
+	$DEDALO_VERSION = '5.0.39';
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '17-12-2018');
+	define('DEDALO_BUILD'	, '22-12-2018');
 
 
 	/*
