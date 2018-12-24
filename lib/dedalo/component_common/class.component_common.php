@@ -1903,8 +1903,8 @@ abstract class component_common extends common {
 
 		switch (true) {
 			case isset($this->propiedades->filtered_by_search):				
-							  				
-  				$filter = $this->propiedades->filtered_by_search;
+
+  				$filter = json_decode( json_encode($this->propiedades->filtered_by_search) );
 
   				$target_section_tipo = $this->get_ar_target_section_tipo();
   				$target_section_tipo = reset($target_section_tipo);
@@ -2515,7 +2515,7 @@ abstract class component_common extends common {
 			if (get_class($this)==='component_calculation') {
 				# code...
 			}else{
-				$component_info->propiedades 	= $this->get_propiedades();
+				$component_info->propiedades = $this->get_propiedades();
 			}
 			
 
