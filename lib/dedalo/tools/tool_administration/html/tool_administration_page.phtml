@@ -413,6 +413,15 @@
 				$html   .= "</div>";#end panel_option
 
 
+			#
+			# NAVIGATE RECORDS
+				$html   .= "<div class=\"panel_option form-inline\"> ";	
+				$html   .= " <span class=\"glyphicon glyphicon-cog\" aria-hidden=\"true\"></span>";
+				$url 	 = DEDALO_LIB_BASE_URL."/tools/tool_administration/html/navigate_records.php?section_tipo=";
+				$html   .= " <a href=\"$url\" target=\"_blank\" data-mode=\"\">Navigate records</a>";
+				$html   .= "</div>";#end panel_option
+
+
 
 		$html   .= "  </div>";//end panel-body
 		$html   .= "</div>";//end panel-primary
