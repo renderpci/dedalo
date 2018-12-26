@@ -145,7 +145,7 @@ abstract class component_common extends common {
 					debug_log(__METHOD__." ERROR: debug_backtrace ".to_string( debug_backtrace() ), logger::DEBUG);
 					trigger_error("ERROR - Error Processing Request. Direct call to resource section_tipo");										
 					#throw new Exception("Error Processing Request. Direct call to resource section_tipo ($section_tipo) is not legal", 1);					
-				}else if($tipo!=='dd200' && strpos($modo, 'dataframe')===false){
+				}else if(strpos($modo, 'dataframe')===false){
 					# Verify this section is from current component tipo
 					$ar_terminoID_by_modelo_name = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($tipo, 'section', 'parent');
 					if (!isset($ar_terminoID_by_modelo_name[0])) {
