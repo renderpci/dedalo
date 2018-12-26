@@ -95,8 +95,6 @@ class component_date extends component_common {
 	*    "minute": 56,
 	*    "second": 43
 	* }}]
-	*
-	*
 	*/
 	public function get_dato() {
 		
@@ -118,17 +116,17 @@ class component_date extends component_common {
 				#dump( $dato, "WRONG TYPE of dato. tipo: $this->tipo - section_tipo: $this->section_tipo - section_id: $this->parent");
 			}
 		}
-		return (array)$dato;
 
 		# Compatibility old dedalo instalations before 4.014
-		/*if (is_string($dato)) {
-			$dd_date    = new dd_date();
-			$this->dato = (object)$dd_date->get_date_from_timestamp( $dato );
-			$this->Save();
-			$dato = parent::get_dato();
-		}*/
+		# if (is_string($dato)) {
+		# 	$dd_date    = new dd_date();
+		# 	$this->dato = (object)$dd_date->get_date_from_timestamp( $dato );
+		# 	$this->Save();
+		# 	$dato = parent::get_dato();
+		# }
 		#dump( $dato, ' dato get_dato ++ '.to_string());
-
+		
+		return (array)$dato;
 	}//end get_dato
 
 
@@ -435,7 +433,7 @@ class component_date extends component_common {
 	* using dd_date class call
 	* DEPRECATED 22-08-2017
 	* @return string $timestamp
-	*/
+	*//*
 	public function get_dato_as_timestamp_DEPRECATED() {
 		$dato 	 	= $this->get_dato();
 		$dd_date 	= new dd_date($dato);
@@ -443,6 +441,7 @@ class component_date extends component_common {
 
 		return (string)$timestamp;
 	}//end get_dato_as_timestamp
+	*/
 
 
 
