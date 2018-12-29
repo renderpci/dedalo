@@ -39,7 +39,7 @@
 					}
 				}					
 
-				$html_content .= "<input class=\"css_number\" type=\"text\" onchange=\"component_number.Save(this)\" ";
+				$html_content .= "<input class=\"css_number\" type=\"number\" onchange=\"component_number.Save(this)\" ";
 				$html_content .= "name=\"{$input_name}\" ";
 				$html_content .= "data-tipo=\"{$tipo}\" ";
 				$html_content .= "data-section_tipo=\"{$section_tipo}\" ";
@@ -47,7 +47,7 @@
 				$html_content .= "data-lang=\"{$lang}\" ";
 				$html_content .= 'value="'.$dato_string.'" ';
 				$html_content .= "title=\"$html_title\" ";
-				$html_content .= "onkeyup=\"component_number.keyup_fix_number_format(this)\" ";
+				//$html_content .= "onkeyup=\"component_number.keyup_fix_number_format(this)\" ";
 				$html_content .= "/>";
 				
 				$html_content .= "<span class=\"css_span_log\"></span>";					
