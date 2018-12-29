@@ -1203,12 +1203,13 @@ class component_calculation extends component_common {
 	* @return object $query_object
 	*/
 	public static function resolve_query_object_sql($query_object) {
-		
     	# Always set fixed values
 		$query_object->type = 'string';
 
 		$q = $query_object->q;
 		$q = pg_escape_string(stripslashes($q));
+
+	
 
         switch (true) {
         	# IS NULL
@@ -1300,9 +1301,9 @@ class component_calculation extends component_common {
     			$query_object->unaccent = true;
 				break;
 			# LITERAL
-			case (substr($q, 0, 1)==='\"' && substr($q, -1)==='\"'):
+			case (substr($q, 0, 1)==="'" && substr($q, -1)==="'"):
 				$operator = '~';
-				$q_clean  = str_replace('\"', '', $q);
+				$q_clean  = str_replace("'", '', $q);
 				$query_object->operator = $operator;
 				$query_object->q_parsed	= '\'.*"'.$q_clean.'".*\'';
 				$query_object->unaccent = false;
