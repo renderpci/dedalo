@@ -1257,9 +1257,11 @@ class search_development2 {
 		}
 		$main_where_sql = '(' . implode(' OR ', $ar_sentences) . ')';		
 		
-		# Avoid root user is showed
+		# Avoid root user is showed except for root
 		if ($main_section_tipo===DEDALO_SECTION_USERS_TIPO) {
-			$main_where_sql .= ' AND '.$main_section_tipo_alias.'.section_id>0 ';
+			if(SHOW_DEBUG!==true) {
+				$main_where_sql .= ' AND '.$main_section_tipo_alias.'.section_id>0 ';
+			}			
 		}		
 
 		# Fix values
@@ -2284,7 +2286,9 @@ class search_development2 {
 			$ar_children 	  = section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, ['component'], $from_cache=true, $resolve_virtual=true, $recursive=true, $search_exact=false, $ar_tipo_exclude_elements);
 			$ar_section_group = section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, ['section_group','section_group_div','section_tab'], $from_cache=true, $resolve_virtual=true, $recursive=true, $search_exact=true, $ar_tipo_exclude_elements);
 			
-			
+			// Add section common info
+			$ar_section_group[] = DEDALO_SECTION_INFO_SECTION_GROUP;	
+
 			$ar_section_group_parsed = [];
 			foreach ($ar_section_group as $section_group_tipo) {				
 
@@ -2303,17 +2307,17 @@ class search_development2 {
 						break;
 				}
 			}		
-
+	
 			foreach ($ar_section_group_parsed as $section_group_tipo) {				
 
 				# section_group_label
 				$section_group_label 		= RecordObj_dd::get_termino_by_tipo($section_group_tipo, DEDALO_DATA_LANG , true, true);
 				$ar_section_group_childrens = RecordObj_dd::get_ar_childrens($section_group_tipo, $order_by='norden');
 				#$ar_section_group_childrens = RecordObj_dd::get_ar_recursive_childrens($section_group_tipo, $is_recursion=false, $ar_exclude_models=false, $order_by='norden');				
-			
+				
 				foreach ($ar_section_group_childrens as $component_tipo) {
 					
-					if (!in_array($component_tipo, $ar_children)) {
+					if ($section_group_tipo!==DEDALO_SECTION_INFO_SECTION_GROUP && !in_array($component_tipo, $ar_children)) {
 						continue;
 					}
 
@@ -2385,6 +2389,8 @@ class search_development2 {
 			}//end foreach ($ar_section_group_childrens as $component_tipo)
 
 		}
+		#dump($ar_result, ' ar_result ++ '.to_string());
+
 		$response->result 	= $ar_result;
 		$response->msg 		= 'Ok. Request done.';
 		if(SHOW_DEBUG===true) {
