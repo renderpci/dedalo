@@ -26,7 +26,7 @@ class component_calculation extends component_common {
 	*/
 	public function set_dato($dato) {
 		
-		return parent::set_dato( $dato );			
+		return parent::set_dato( $dato );
 	}//end set_dato
 
 
@@ -1344,6 +1344,34 @@ class component_calculation extends component_common {
 
 		return $ar_operators;
 	}//end search_operators_info
+
+
+
+	/**
+	* RENDER_LIST_VALUE
+	* (Overwrite for non default behaviour)
+	* Receive value from section list and return proper value to show in list
+	* Sometimes is the same value (eg. component_input_text), sometimes is calculated (e.g component_portal)
+	* @param string $value
+	* @param string $tipo
+	* @param int $parent
+	* @param string $modo
+	* @param string $lang
+	* @param string $section_tipo
+	* @param int $section_id
+	*
+	* @return string $list_value
+	*/
+	public static function render_list_value($value, $tipo, $parent, $modo, $lang, $section_tipo, $section_id, $current_locator=null, $caller_component_tipo=null) {
+		
+		try{
+			$clean_value = json_decode($value);
+		}catch(Exception $e){
+			$clean_value = $value;
+		} 
+		
+		return $clean_value;
+	}//end render_list_value
 
 
 
