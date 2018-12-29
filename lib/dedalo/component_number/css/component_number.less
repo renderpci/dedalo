@@ -17,6 +17,17 @@ input.css_number {
 	max-width: 60px;
 	text-align: center;
 }
+/*
+* Remove the arrows (spinners) in the component_number, the arrows are showed by default by the browser
+/*
+input[type=number]::-webkit-inner-spin-button, 
+input[type=number]::-webkit-outer-spin-button { 
+	-webkit-appearance: none;
+	-moz-appearance: none;
+	appearance: none;
+	margin: 0; 
+}
+*/
 
 /*LANG*/
 .css_lang_image_delete {
