@@ -85,24 +85,28 @@ require_once( dirname(dirname(dirname(dirname(__FILE__)))) .'/config/config4.php
 			color: #9B9B9B;
 			padding: 1px;
 		}
+		#offset, #delay_ms {
+			width: 70px;
+			text-align: center;
+		}
 	</style>
 	<script type="text/javascript">		
 		
 		const ar_records 		= <?php echo json_encode($ar_section_id) ?>;
 		const n_records			= ar_records.length;
 		const section_tipo 		= '<?php echo $section_tipo ?>';
-		const url_base 			= '<?php echo DEDALO_LIB_BASE_URL ?>' + '/main/';
-		const delay_ms 			= 1;
+		const url_base 			= '<?php echo DEDALO_LIB_BASE_URL ?>' + '/main/';		
 		var current_key 		= 0;
 		var enable_navigation   = true;
 		
 		const get_time_to_end = function(load_time) {
 
-			const n_to_load = n_records - (current_key+1)
-
-			let resto 			= (n_to_load*load_time) / 1000 
+			let n_to_load 		= n_records - (parseInt(offset.value)+1)
+			let resto 			= Math.round((n_to_load*load_time) / 1000) 
 			let remaining_time 	= ''
 
+			//console.log("resto n_to_load:", n_to_load, "- load_time:",load_time, '- secs', resto);
+		
 			switch(true){
 				case resto>3600: 
 					remaining_time = Math.round(resto / 3600) + " hour"
@@ -111,7 +115,7 @@ require_once( dirname(dirname(dirname(dirname(__FILE__)))) .'/config/config4.php
 					remaining_time = Math.round(resto / 60) + " min"
 					break;
 				default:
-					remaining_time = (resto) + " secs"
+					remaining_time = resto + " secs"
 			}
 			//console.log("load_time:",load_time, " resto", resto, " remaining_time",remaining_time);
 
@@ -127,7 +131,9 @@ require_once( dirname(dirname(dirname(dirname(__FILE__)))) .'/config/config4.php
 				return false;
 			}
 
-			const timerStart = Date.now();	
+			const timerStart = Date.now();
+
+			let current_key = parseInt(offset.value)
 
 			const target_iframe = document.getElementById("iframe")
 			const section_id 	= ar_records[current_key]
@@ -139,12 +145,13 @@ require_once( dirname(dirname(dirname(dirname(__FILE__)))) .'/config/config4.php
 			// event load
 				target_iframe.onload = function() {
 
-					const next_key = (current_key + 1)
+					const next_key = (current_key + 1) // (current_key + 1)
 
 					if (next_key>=n_records) {
 						
 						// Finished loop
-							console.log("Loop ended !");
+							console.log("Loop ended at " + current_key);
+							alert("Loop ended at " + current_key);
 							return false;
 					
 					}else{
@@ -157,10 +164,13 @@ require_once( dirname(dirname(dirname(dirname(__FILE__)))) .'/config/config4.php
 						// Callback 
 						setTimeout(function(){
 							navigate_record(next_key)
-						},delay_ms)
+						}, parseInt(delay_ms.value))
 
 						const load_time = Date.now()-timerStart
 						get_time_to_end(load_time)
+
+						// Update offset						
+							offset.value = current_key
 					}
 				}
 
@@ -183,17 +193,21 @@ require_once( dirname(dirname(dirname(dirname(__FILE__)))) .'/config/config4.php
 			// Load first record as sample
 			document.getElementById("iframe").src = url_base + '?t=' + section_tipo + '&id=' + ar_records[0]
 
-			
+			const offset 	= document.getElementById("offset")
+			const delay_ms 	= document.getElementById("delay_ms")
 		}
 	</script>
 </head>
 <body>
 	<div class="container">
 	<section>
-	<h3>Navigate records </h3>
+	<h3>Navigate records <?php echo $section_tipo ?></h3>
 	<!-- <input type="text" name="section_tipo" placeholder=" section tipo like oh1">	-->
+	Offset <input type="text" id="offset" value="0">
+	Delay ms <input type="text" id="delay_ms" value="1000">
 	<button type="button" class="btn btn-primary btn-sm" id="button_navigate_record" onclick="enable_navigation=true;navigate_record()">Start</button>
 	<button type="button" class="btn btn-secondary btn-sm" onclick="stop()">Stop</button>
+	
 	<span id="current_id_info"></span>
 	<span id="remaining_info"></span>
 	</section>
