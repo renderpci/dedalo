@@ -90,7 +90,7 @@
 
 				# Button add
 				if (isset($propiedades->multi_value) && $propiedades->multi_value==true) {
-					$html_content .= "<div class=\"css_button_generic btn_add_date\" onclick=\"component_date.add_date(this)\">";
+					$html_content .= "<div class=\"css_button_generic btn_add_date\" onclick=\"{$component_name}.add_date(this)\">";
 					$html_content .= "<div class=\"link css_date_add\"></div>";
 					$html_content .= "</div>";
 				}
@@ -104,8 +104,8 @@
 							$value_start = isset($valor_start[$key]) ? $valor_start[$key] : '';
 							$html_content .= "<div class=\"css_date_imput_twice_date\">";
 							$html_content .= "<input type=\"text\" class=\"css_date full range_start\" id=\"".$uid_start[$key]."\" ";
-							$html_content .= "onclick=\"component_date.activate_datepicker(this)\" ";
-							$html_content .= "onchange=\"component_date.Save(this,'$date_mode')\" ";
+							$html_content .= "onclick=\"{$component_name}.activate_datepicker(this)\" ";
+							$html_content .= "onchange=\"{$component_name}.Save(this,'$date_mode')\" ";
 							$html_content .= "onfocus=\"component_common.select_wrap(null,'$id_wrapper');\" ";
 							$html_content .= "name=\"".$input_name_start[$key]."\" ";
 							$html_content .= "data-role=\"range_start\" ";
@@ -135,8 +135,8 @@
 							$html_content .= "value=\"".$value_end."\" ";
 							$html_content .= "title=\"$html_title\" ";
 							$html_content .= "placeholder=\"$ejemplo\" ";
-							$html_content .= "onclick=\"component_date.activate_datepicker(this)\" ";
-							$html_content .= "onchange=\"component_date.Save(this,'$date_mode')\" ";
+							$html_content .= "onclick=\"{$component_name}.activate_datepicker(this)\" ";
+							$html_content .= "onchange=\"{$component_name}.Save(this,'$date_mode')\" ";
 							$html_content .= "onfocus=\"component_common.select_wrap(null,'$id_wrapper');\" ";
 							$html_content .= "tabindex=\"1\" ";
 							$html_content .= "/>";
@@ -161,7 +161,7 @@
 							$html_content .= "value=\"{$value_year}\" ";
 							$html_content .= "title=\"$html_title\" ";
 							$html_content .= "placeholder=\"$placeholder_year\" ";
-							$html_content .= "onchange=\"component_date.Save(this,'$date_mode')\" ";
+							$html_content .= "onchange=\"{$component_name}.Save(this,'$date_mode')\" ";
 							$html_content .= "onfocus=\"component_common.select_wrap(null,'$id_wrapper');\" ";
 							$html_content .= "tabindex=\"1\" ";
 							$html_content .= "/> ";
@@ -183,7 +183,7 @@
 							$html_content .= "value=\"{$value_month}\" ";
 							$html_content .= "title=\"$html_title\" ";
 							$html_content .= "placeholder=\"$placeholder_month\" ";
-							$html_content .= "onchange=\"component_date.Save(this,'$date_mode')\" ";
+							$html_content .= "onchange=\"{$component_name}.Save(this,'$date_mode')\" ";
 							$html_content .= "onfocus=\"component_common.select_wrap(null,'$id_wrapper');\" ";
 							$html_content .= "tabindex=\"1\" ";
 							$html_content .= "/> ";
@@ -206,7 +206,7 @@
 							$html_content .= "value=\"{$value_day}\" ";
 							$html_content .= "title=\"$html_title\" ";
 							$html_content .= "placeholder=\"$placeholder_day\" ";
-							$html_content .= "onchange=\"component_date.Save(this,'$date_mode')\" ";
+							$html_content .= "onchange=\"{$component_name}.Save(this,'$date_mode')\" ";
 							$html_content .= "onfocus=\"component_common.select_wrap(null,'$id_wrapper');\" ";
 							$html_content .= "tabindex=\"1\" ";
 							$html_content .= "/> ";
@@ -230,7 +230,7 @@
 							$html_content .= "value=\"{$value}\" ";
 							$html_content .= "title=\"$html_title\" ";
 							$html_content .= "placeholder=\"23:40:59\" ";
-							$html_content .= "onchange=\"component_date.Save(this,'$date_mode')\" ";
+							$html_content .= "onchange=\"{$component_name}.Save(this,'$date_mode')\" ";
 							$html_content .= "onfocus=\"component_common.select_wrap(null,'$id_wrapper');\" ";
 							$html_content .= "tabindex=\"1\" ";
 							$html_content .= "/>";
@@ -247,8 +247,8 @@
 							$value_start = isset($valor_start[$key]) ? $valor_start[$key] : '';
 							$html_content .= "<div class=\"css_date_imput_twice_date\">";
 							$html_content .= "<input type=\"text\" class=\"css_date full $add_class\" id=\"".$uid_start[$key]."\" ";
-							$html_content .= "onclick=\"component_date.activate_datepicker(this)\" ";
-							$html_content .= "onchange=\"component_date.Save(this,'$date_mode')\" ";
+							$html_content .= "onclick=\"{$component_name}.activate_datepicker(this)\" ";
+							$html_content .= "onchange=\"{$component_name}.Save(this,'$date_mode')\" ";
 							$html_content .= "onfocus=\"component_common.select_wrap(null,'$id_wrapper');\" ";
 							$html_content .= "name=\"".$input_name_start[$key]."\" ";
 							$html_content .= "data-role=\"range_start\" ";
@@ -281,8 +281,8 @@
 							$html_content .= "value=\"{$value}\" ";
 							$html_content .= "title=\"$html_title\" ";
 							$html_content .= "placeholder=\"$ejemplo\" ";
-							$html_content .= "onclick=\"component_date.activate_datepicker(this)\" ";
-							$html_content .= "onchange=\"component_date.Save(this,'$date_mode')\" ";
+							$html_content .= "onclick=\"{$component_name}.activate_datepicker(this)\" ";
+							$html_content .= "onchange=\"{$component_name}.Save(this,'$date_mode')\" ";
 							$html_content .= "onfocus=\"component_common.select_wrap(null,'$id_wrapper');\" ";
 							$html_content .= "tabindex=\"1\" ";
 							$html_content .= "/>";
@@ -309,7 +309,7 @@
 				#$html_content .= "\n <span  class=\"css_span_ejemplo\">$ejemplo</span>";
 
 				# Save handler js
-				#$html_content .= "<script>$('#$identificador_unico').on(\"change\",function(){component_date.Save(this);})</script>";
+				#$html_content .= "<script>$('#$identificador_unico').on(\"change\",function(){{$component_name}.Save(this);})</script>";
 
 				#
 				# JS Init component
@@ -343,7 +343,7 @@
 
 	// First test on load element
 	if ($mandatory===true) {
-		echo "<script>component_date.mandatory('{$id_wrapper}')</script>";
+		echo "<script>{$component_name}.mandatory('{$id_wrapper}')</script>";
 	}
 
 	# html_delimiter
