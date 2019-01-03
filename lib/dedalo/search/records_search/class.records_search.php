@@ -229,7 +229,7 @@ class records_search extends common {
 	/**
 	* GET_AR_TOOLS_SEARCH
 	* Obtenemos los campos de la lista (equivale a los términos relacionados)
-	*/
+	*/ /*
 	public function get_ar_tools_search() {
 
 		# CACHE
@@ -286,13 +286,13 @@ class records_search extends common {
 		#dump($ar_tools_search,'$ar_tools_search');
 
 		return $ar_tools_search ;
-	}
+	}//end get_ar_tools_search */
 
 
 
 	/**
 	* SET_AR_COMPONENT_SEARCH_OBJ
-	*/
+	*//*
 	public function set_ar_component_search_obj() {
 
 		$ar_component_search = array();
@@ -323,7 +323,7 @@ class records_search extends common {
 		#dump($this->ar_components_search_obj,'$this->ar_components_search_obj');
 
 		return true;
-	}//end set_ar_component_search_obj
+	}//end set_ar_component_search_obj */
 
 
 
