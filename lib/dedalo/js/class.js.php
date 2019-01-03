@@ -129,6 +129,7 @@ class js {
 				if(navigator::get_selected('modo')==='list') {
 				$html .= self::build_tag( DEDALO_LIB_BASE_URL . '/button_delete/js/button_delete.js' );
 				$html .= self::build_tag( DEDALO_LIB_BASE_URL . '/button_stats/js/button_stats.js' );
+				#$html .= self::build_tag( DEDALO_LIB_BASE_URL . '/component_date/js/component_date.js' );
 				}				
 
 				# tool common
