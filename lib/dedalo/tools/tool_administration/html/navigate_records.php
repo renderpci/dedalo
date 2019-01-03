@@ -102,7 +102,8 @@ require_once( dirname(dirname(dirname(dirname(__FILE__)))) .'/config/config4.php
 		const get_time_to_end = function(load_time) {
 
 			let n_to_load 		= n_records - (parseInt(offset.value)+1)
-			let resto 			= Math.round((n_to_load*load_time) / 1000) 
+			let delay_ms_vale	= parseInt(delay_ms.value)
+			let resto 			= Math.round((n_to_load*(load_time + delay_ms_vale)) / 1000) 
 			let remaining_time 	= ''
 
 			//console.log("resto n_to_load:", n_to_load, "- load_time:",load_time, '- secs', resto);
