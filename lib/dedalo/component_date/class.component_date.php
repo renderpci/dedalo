@@ -178,9 +178,9 @@ class component_date extends component_common {
 		$propiedades = $this->get_propiedades();
 
 		if (isset($propiedades->date_mode)) {
-					$date_mode = $propiedades->date_mode; // Default from structure if is defined
-				}else{
-					$date_mode = 'date'; // Default
+			$date_mode = $propiedades->date_mode; // Default from structure if is defined
+		}else{
+			$date_mode = 'date'; // Default
 		}
 
 		/*
@@ -878,6 +878,7 @@ class component_date extends component_common {
         $RecordObj   	= new RecordObj_dd($component_tipo);
         $propiedades 	= json_decode($RecordObj->get_propiedades());
         $date_mode 	 	= isset($propiedades->date_mode) ? $propiedades->date_mode : 'date';
+        	dump($query_object, ' date_mode ++ '.to_string($date_mode));
 	
 		$query_object->component_path = ['components',$component_tipo,'dato',DEDALO_DATA_NOLAN];
 		$query_object->type 		  = 'jsonb';
@@ -1005,11 +1006,11 @@ class component_date extends component_common {
 				// Extract directly from calculated time in javascript
 				$q_clean  = !empty($q_object->time) ? $q_object->time : 0;				
 				$operator = !empty($q_operator) ? trim($q_operator) : '=';
-
+		
 				if ($operator!=="=") {
 					
 					$query1 = new stdClass();
-					$query1->component_path 	= ['time'];
+					$query1->component_path 	= ['start','time'];
 					$query1->operator 			= $operator;
 					$query1->q_parsed			= '\''.$q_clean.'\'';
 					$query1->type 				= 'jsonb';
@@ -1021,7 +1022,7 @@ class component_date extends component_common {
 				}else{
 					
 					$query1 = new stdClass();
-						$query1->component_path 	= ['time'];
+						$query1->component_path 	= ['start','time'];
 						$query1->operator 			= '>=';
 						$query1->q_parsed 			= '\''.$q_clean.'\'';
 						$query1->type 				= 'jsonb';
@@ -1029,7 +1030,7 @@ class component_date extends component_common {
 					$dd_date = new dd_date($q_object);
 					$final_range = self::get_final_search_range_seconds($dd_date);
 					$query2 = new stdClass();
-						$query2->component_path 	= ['time'];
+						$query2->component_path 	= ['start','time'];
 						$query2->operator 			= '<=';
 						$query2->q_parsed			= '\''.$final_range.'\'';
 						$query2->type 				= 'jsonb';
