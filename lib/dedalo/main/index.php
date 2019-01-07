@@ -50,9 +50,9 @@ if ( strpos($_SERVER["REQUEST_URI"], '.php')!==false ) {
 	# IS MANDATORY. Verify tipo received is valid. If not, redirect to default fallback section
 	if( empty($tipo) || false===verify_dedalo_prefix_tipos($tipo)) {
 		$tipo_to_msg 						= 'empty';
-		if (strlen($tipo)>0) $tipo_to_msg 	= 'not valid';		
+		if (strlen($tipo)>0) $tipo_to_msg 	= 'not valid';
 		$msg = "Error Processing Request: Main Page tipo:'$tipo' is $tipo_to_msg! Main Page redirected to secure MAIN_FALLBACK_SECTION: ".MAIN_FALLBACK_SECTION." ".RecordObj_dd::get_termino_by_tipo(MAIN_FALLBACK_SECTION);
-		debug_log(__METHOD__." $msg ".to_string(), logger::DEBUG);		
+		debug_log(__METHOD__." $msg ".to_string(), logger::ERROR);
 		
 		if (verify_dedalo_prefix_tipos(MAIN_FALLBACK_SECTION)) {
 			header("Location: ".DEDALO_LIB_BASE_URL."/main/?t=".MAIN_FALLBACK_SECTION);
@@ -101,7 +101,7 @@ if ( strpos($_SERVER["REQUEST_URI"], '.php')!==false ) {
 				# build element (component / section)
 				$tool_name 	 = $modo;
 
-				$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);		
+				$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 				switch (true) {
 					
 					case ($modelo_name==='section_tool 99999'):
@@ -136,8 +136,9 @@ if ( strpos($_SERVER["REQUEST_URI"], '.php')!==false ) {
 					
 					case (strpos($modelo_name,'component')!==false):
 
-						$section_tipo = isset($_REQUEST['section_tipo']) ? safe_tipo($_REQUEST['section_tipo']) : null;
-
+						// section tipo
+							$section_tipo = isset($_REQUEST['section_tipo']) ? safe_tipo($_REQUEST['section_tipo']) : null;
+						
 						#
 						# FIX SECTION TIPO
 						define('SECTION_TIPO', $section_tipo);
@@ -180,40 +181,49 @@ if ( strpos($_SERVER["REQUEST_URI"], '.php')!==false ) {
 
 						case ($modelo_name==='section') :
 
-									$element_obj = section::get_instance($id, $tipo, $modo);
-										#dump($element_obj," element_obj");
-										#$element_obj->set_caller_id($caller_id);
+								$element_obj = section::get_instance($id, $tipo, $modo);
+									#dump($element_obj," element_obj");
+									#$element_obj->set_caller_id($caller_id);
 
-									# FIX SECTION TIPO
-									define('SECTION_TIPO', $tipo);
-									break;
+								# FIX SECTION TIPO
+								define('SECTION_TIPO', $tipo);
+								break;
 						
 						case ($modelo_name==='section_tool') :
 
-									# Confiure section from section_tool data
-									$RecordObj_dd = new RecordObj_dd($tipo);
-									$propiedades  = json_decode($RecordObj_dd->get_propiedades());
-										#dump($propiedades->context->target_section_tipo, ' propiedades ++ '.to_string());
+								# Confiure section from section_tool data
+								$RecordObj_dd = new RecordObj_dd($tipo);
+								$propiedades  = json_decode($RecordObj_dd->get_propiedades());
+									#dump($propiedades->context->target_section_tipo, ' propiedades ++ '.to_string());
 
-									$section_tipo = $propiedades->context->target_section_tipo;
-									
-									$element_obj = section::get_instance($id, $section_tipo, $modo);
-									
-									# Fix section_tool context params
-									$element_obj->context = (object)$propiedades->context;
+								$section_tipo = $propiedades->context->target_section_tipo;
+								
+								$element_obj = section::get_instance($id, $section_tipo, $modo);
+								
+								# Fix section_tool context params
+								$element_obj->context = (object)$propiedades->context;
 
-									# FIX SECTION TIPO
-									define('SECTION_TIPO', $section_tipo);
-									break;
+								# FIX SECTION TIPO
+								define('SECTION_TIPO', $section_tipo);
+								break;
 
-						case (strpos($modelo_name, 'area')!==false) :
+						case (strpos($modelo_name, 'area')===0) :
 						
-									$element_obj = new $modelo_name($tipo, $modo);
-									break;
+								$element_obj = new $modelo_name($tipo, $modo);
+								break;
 
-						default :	throw new Exception("Error Processing Request: modelo name '".safe_xss($modelo_name)."' not valid (1)", 1);
-									break;
-						
+						default :	
+								#throw new Exception("Error Processing Request: modelo name '".safe_xss($modelo_name)."' not valid (1)", 1);									
+								$msg = "Error Processing Request: modelo name: '".$modelo_name."' is not valid for main page tipo ";
+								debug_log(__METHOD__." $msg ".to_string(), logger::ERROR);
+								
+								if (verify_dedalo_prefix_tipos(MAIN_FALLBACK_SECTION)) {
+									header("Location: ".DEDALO_LIB_BASE_URL."/main/?t=".MAIN_FALLBACK_SECTION);
+								}else{
+									header("Location: ".DEDALO_LIB_BASE_URL."/main/?t=".DEDALO_AREA_ROOT_TIPO); # Avoid loop on misconfig
+								}	
+								exit();									
+								break;						
 					}
 
 				} catch (Exception $e) {
