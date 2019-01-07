@@ -94,13 +94,16 @@ class tool_import_dedalo_csv extends tool_common {
 			$section_id 	= $section->get_section_id();
 			# dump($section_id, ' section_id ++ '.to_string());
 
+			// section save_modified (!) Important
+				$section->save_modified = false; # Change temporally section param 'save_modified' before save to avoid overwrite possible modified import data
+
 			# Iterate fields/columns
 			foreach ($row as $key => $value) {
 	
 				if ($csv_map[$key]==='section_id') continue; # Skip section_id value column
 
 				# created_by_userID
-				if ($csv_map[$key]==='created_by_user') {					
+				if ($csv_map[$key]==='created_by_user') {
 					
 					$user_locator 	 = self::build_user_locator($value, $created_by_user['tipo']);
 
@@ -153,9 +156,8 @@ class tool_import_dedalo_csv extends tool_common {
 							$section->Save();
 					}
 					continue;
-				}
-				/*
-				elseif ($csv_map[$key]==='modified_by_user') {
+				# modified_by_user
+				}elseif ($csv_map[$key]==='modified_by_user') {
 
 					# (!) Note: modified_by_user will be changed on save section to current logged user					
 					
@@ -213,7 +215,6 @@ class tool_import_dedalo_csv extends tool_common {
 					}
 					continue;
 				}
-				*/
 			
 				# Target component is always the csv map element with current key
 				$component_tipo	= $csv_map[$key];
@@ -330,24 +331,25 @@ class tool_import_dedalo_csv extends tool_common {
 					$component->Save();
 				}				
 			}//end foreach ($row as $key => $value)
-			
-			if($create_record) {
-				$created_rows[] = $section_id;
-				$action = "created"; 
-			}else{
-				$updated_rows[] = $section_id;
-				$action = "updated";
-			}
 
-			# ROW SAVE . Save edited by components section once per row
-			$section->Save();
+			// action 
+				if($create_record) {
+					$created_rows[] = $section_id;
+					$action = "created"; 
+				}else{
+					$updated_rows[] = $section_id;
+					$action = "updated";
+				}
 
-			# Forces collection of any existing garbage cycles
-			$counter++;
-			if ($counter===100) {
-				$counter = 0;
-				gc_collect_cycles();
-			}			
+			// SAVE . ROW SAVE . Save edited by components section once per row
+				$section->Save();
+
+			// Forces collection of any existing garbage cycles
+				$counter++;
+				if ($counter===100) {
+					$counter = 0;
+					gc_collect_cycles();
+				}			
 
 			#debug_log(__METHOD__." +++ $action section $section_tipo - $section_id - in ".exec_time_unit($row_start_time,'ms').' ms', logger::ERROR);		
 		}//end foreach ($ar_csv_data as $key => $value) 
@@ -502,9 +504,9 @@ class tool_import_dedalo_csv extends tool_common {
 				
 			if(	   $component_tipo==='section_id'
 				|| $component_tipo==='created_by_user'
-				|| $component_tipo==='created_date'  ) continue; 
-				#$component_tipo==='modified_by_user' || 
-				#$component_tipo==='modified_date') continue;
+				|| $component_tipo==='created_date'
+				|| $component_tipo==='modified_by_user'
+				|| $component_tipo==='modified_date') continue;
 
 			if (!in_array($component_tipo, $ar_component_tipo)) {
 				$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($component_tipo, true);
