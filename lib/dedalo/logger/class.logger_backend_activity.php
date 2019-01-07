@@ -200,20 +200,15 @@ class logger_backend_activity extends logger_backend {
 					$component_tipo = self::$_COMPONENT_QUIEN['tipo'];
 
 					# Switch data version
-					if( $current_data_version[0] >= 4 && $current_data_version[1] >= 8 ) {
-						$locator_user_id->set_type(DEDALO_RELATION_TYPE_LINK);
-						$locator_user_id->set_from_component_tipo($component_tipo);
-						$relations[] = $locator_user_id; // Direct to relations container
-					}else{
-						$component_obj  = self::build_component_activity_object( array($locator_user_id) );
-						$main_components_obj->$component_tipo = $component_obj;
-					}
+					$locator_user_id->set_type(DEDALO_RELATION_TYPE_LINK);
+					$locator_user_id->set_from_component_tipo($component_tipo);
+					$relations[] = $locator_user_id; // Direct to relations container
+					
 
 				# WHAT (msg) # Message ########################################################################### 
 					$message 	= str_replace("\t", ' ', $message);
 					$message 	= str_replace("\n", ' ', $message);
-					$message 	= trim($message);
-						#dump($message,"message");	
+					$message 	= trim($message);	
 
 					$label_tipo = NULL;
 					if (isset(self::$que[$message])) {
