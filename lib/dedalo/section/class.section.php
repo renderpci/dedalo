@@ -53,6 +53,8 @@ class section extends common {
 		# static cache for section instances
 		static $ar_section_instances;
 
+		public $save_modified; # Default is true
+
 
 	# DIFFUSION INFO
 	# Store section diffusion info. If empty, current section is not publish.
@@ -832,20 +834,26 @@ class section extends common {
 			################################################################################
 			# UPDATE RECORD : Update current matrix section record trigered by one component
 
-			// update_modified_section_data . Resolve and add modification date and user to current section dato
-				$this->update_modified_section_data(array(
-					'mode' => 'update_record'
-				));				
-							
-			// section dato
-				$section_dato = (object)$this->get_dato();
+			if ($this->save_modified===false) {
+				// section dato only
+					$section_dato = (object)$this->get_dato();
 
-			// dato add modification info 
-				# Section modified by userID
-				$section_dato->modified_by_userID 	= (int)$user_id;			
-				# Section modified date
-				$section_dato->modified_date 		= (string)$date_now;	# Format 2012-11-05 19:50:44
+			}else{
+				// update_modified_section_data . Resolve and add modification date and user to current section dato
+					$this->update_modified_section_data(array(
+						'mode' => 'update_record'
+					));
+				
+				// section dato
+					$section_dato = (object)$this->get_dato();
 
+				// dato add modification info 
+					# Section modified by userID
+					$section_dato->modified_by_userID 	= (int)$user_id;
+					# Section modified date
+					$section_dato->modified_date 		= (string)$date_now;	# Format 2012-11-05 19:50:44
+			}
+	
 			# Save section dato
 				$JSON_RecordObj_matrix	= new JSON_RecordObj_matrix( (string)$matrix_table, (int)$this->section_id, (string)$tipo );
 				$JSON_RecordObj_matrix->set_datos($section_dato);
@@ -2318,9 +2326,10 @@ class section extends common {
 
 		$start_time = start_time();		
 
-		if(is_null($this->section_id)) {
+		if(is_null($this->section_id)) {			
 
 			// Save to obtain a new incrmental section_id
+			#debug_log(__METHOD__." == SECTION : Record already exists ($this->section_id, $section_tipo) ".to_string(), logger::DEBUG);
 			$this->Save();
 			return true;
 
@@ -2341,6 +2350,7 @@ class section extends common {
 				}
 				
 			// section_id not exists. Create a new section record // ADDED 27-12-2018
+				#debug_log(__METHOD__." == SECTION : Creating new forced record ($this->section_id, $section_tipo) ".to_string(), logger::DEBUG);
 				$save_options = new stdClass();
 					$save_options->forced_create_record = $this->section_id;
 				$this->Save($save_options);

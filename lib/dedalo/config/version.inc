@@ -1471,6 +1471,9 @@
 		section : Added created and modified info about section in components / relations container to allow search with them
 
 
+	Valencia 06-01-2019 5.1.1
+		section : Allow skip save save_modified to import info about section modification user and date
+
 
 
 
@@ -1496,12 +1499,12 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.1.0';
+	$DEDALO_VERSION = '5.1.2';
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '29-12-2018');
+	define('DEDALO_BUILD'	, '07-01-2019');
 
 
 	/*
