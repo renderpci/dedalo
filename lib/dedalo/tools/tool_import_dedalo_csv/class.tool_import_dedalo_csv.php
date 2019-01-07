@@ -447,7 +447,7 @@ class tool_import_dedalo_csv extends tool_common {
 						debug_log(__METHOD__." Warning. Added property start to data value ".to_string($value), logger::ERROR);
 					}
 				// Check object mandatory properties
-					$ar_properties = ['year','month','day','hour','minute','second'];
+					$ar_properties = ['year','month','day']; // ,'hour','minute','second'
 					foreach ($ar_properties as $name) {
 						if (!isset($value_obj->start->$name)) {
 							debug_log(__METHOD__." Error. ignored invalid date value (property $name not found) ".to_string($value), logger::ERROR);
