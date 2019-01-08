@@ -871,9 +871,17 @@ class section extends common {
 			# contador distinta formateada como 'matrix_counter' + substr($matrix_table, 6). Por ejemplo 'matrix_counter_dd' para matrix_dd 
 				if ($options->forced_create_record===false) {
 					
-					// Use normal incrmental counter
+					// Use normal incremental counter
 					$matrix_table_counter 	= (substr($matrix_table, -3)==='_dd') ? 'matrix_counter_dd' : 'matrix_counter';
 					$current_id_counter 	= (int)counter::get_counter_value($tipo, $matrix_table_counter);
+
+					// Create a counter if not exists
+						if ($current_id_counter===0 && $tipo!==DEDALO_ACTIVITY_SECTION_TIPO) {
+							$consolidate_counter 	= counter::consolidate_counter( $tipo, $matrix_table, $matrix_table_counter );
+							// Re-check counter value
+							$current_id_counter 	= (int)counter::get_counter_value($tipo, $matrix_table_counter);							
+						}
+
 					$section_id_counter 	= $current_id_counter+1;
 
 					# section_id. Fix section_id (Non return point, next calls to Save will be updates)
