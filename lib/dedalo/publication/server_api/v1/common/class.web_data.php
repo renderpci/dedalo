@@ -925,10 +925,11 @@ class web_data {
 			$response->msg 		= 'Error. Request failed. '.__METHOD__;
 
 		$options = new stdClass();
-			$options->av_section_id = null;
-			$options->type 			= 'indexIn'; // Deafult is indexIn
-			$options->lang 			= WEB_CURRENT_LANG_CODE;
-			$options->return_text	= false;
+			$options->av_section_id 	= null;
+			$options->type 				= 'indexIn'; // Deafult is indexIn
+			$options->lang 				= WEB_CURRENT_LANG_CODE;
+			$options->return_text		= false;
+			$options->filter_by_tag_id	= false; // false | array
 			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
 		#
@@ -977,6 +978,14 @@ class web_data {
 			$fr_options->indexation_terms 		= false; # If true, calculate all terms used in this indexation
 		
 		foreach ($ar_tag_id as $tag_id) {
+
+			// filter_by_tag_id
+				if ($options->filter_by_tag_id!==false) {
+					if (!in_array($tag_id, $options->filter_by_tag_id)) {
+						continue; // Skip
+					}
+				}
+
 			# Set tag_id
 			$fr_options->tag_id = $tag_id;
 
