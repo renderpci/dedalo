@@ -231,7 +231,7 @@ class component_layout extends component_common {
 
 						if(!empty($ar_terminos_relacionados)) foreach ($ar_terminos_relacionados as $terminoID) {
 							$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($terminoID,true);
-							# Exclude 'tools_search'
+							# Exclude non components
 							if(strpos($modelo_name, 'component_')!==false) {
 								$layout_map[$section_list_tipo][] = $terminoID;
 							}								

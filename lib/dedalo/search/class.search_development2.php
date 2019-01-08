@@ -1257,9 +1257,11 @@ class search_development2 {
 		}
 		$main_where_sql = '(' . implode(' OR ', $ar_sentences) . ')';		
 		
-		# Avoid root user is showed
+		# Avoid root user is showed except for root
 		if ($main_section_tipo===DEDALO_SECTION_USERS_TIPO) {
-			$main_where_sql .= ' AND '.$main_section_tipo_alias.'.section_id>0 ';
+			if(SHOW_DEBUG!==true) {
+				$main_where_sql .= ' AND '.$main_section_tipo_alias.'.section_id>0 ';
+			}			
 		}		
 
 		# Fix values
@@ -2154,71 +2156,105 @@ class search_development2 {
 			$response->result 	= false;
 			$response->msg 		= array('Error. Request failed '.__METHOD__);
 
-		$options = new stdClass();
-			$options->ar_locators 		  = null;
-			$options->section_tipo 		  = null;
-			$options->section_id 		  = null;
-			$options->from_component_tipo = null;
-			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
+		// options
+			$options = new stdClass();
+				$options->ar_locators 		  = null;
+				$options->section_tipo 		  = null;
+				$options->section_id 		  = null;
+				$options->from_component_tipo = null;
+				foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
-		if (strpos($options->section_id, DEDALO_SECTION_ID_TEMP)!==false) {
-			$response->result 	= true;
-			$response->msg 		= 'Ok. Request skipped for temp section: '.DEDALO_SECTION_ID_TEMP.' - '.__METHOD__;
-			return $response;
-		}
-	
-		if (empty($options->from_component_tipo)) {			
-			$response->msg[] = " options->from_component_tipo is mandatory ! Stopped action";
-			$response->msg   = implode(', ', $response->msg);
-			debug_log(__METHOD__." $response->msg ".to_string(), logger::ERROR);
-			return $response;
-		}
-		
-		$table = 'relations';
-		
-		$section_id 		 = $options->section_id;
-		$section_tipo 		 = $options->section_tipo;
-		$from_component_tipo = $options->from_component_tipo;
-		
-		# DELETE . Remove all relations of current component
-		$strQuery 	= "DELETE FROM $table WHERE section_id = $section_id AND section_tipo = '$section_tipo' AND from_component_tipo = '$from_component_tipo' ";
-		$result 	= JSON_RecordDataBoundObject::search_free($strQuery);
-		
-		foreach ((array)$options->ar_locators as $key => $locator) {
-
-			if(!isset($locator->section_tipo)) {
-				debug_log(__METHOD__." Error. empty section_tipo. Ignored insert locator: ".to_string($locator), logger::ERROR);
-				continue;
+			if (strpos($options->section_id, DEDALO_SECTION_ID_TEMP)!==false) {
+				$response->result 	= true;
+				$response->msg 		= 'Ok. Request skipped for temp section: '.DEDALO_SECTION_ID_TEMP.' - '.__METHOD__;
+				return $response;
 			}
-
-			$target_section_tipo = $locator->section_tipo;
-			$target_section_id 	 = $locator->section_id;
-			#$from_component_tipo = $locator->from_component_tipo; // Already defined before			
-
-			# INSERT . Create new
-			$strQuery = "INSERT INTO $table (section_id, section_tipo, target_section_id, target_section_tipo, from_component_tipo) VALUES ($1, $2, $3, $4, $5) RETURNING id";
-			# Exec query
-			$result = pg_query_params(DBi::_getConnection(), $strQuery, array( $section_id, $section_tipo, $target_section_id, $target_section_tipo, $from_component_tipo ));
-			if(!$result) {			
-				$msg = " Failed Insert relations record - $strQuery";
-				debug_log(__METHOD__." ERROR: $msg ".to_string(), logger::ERROR);
-				$response->msg[] = $msg;
-			}else{
-				$msg = " Created relations row ({$section_tipo}-{$section_id}) target_section_id:$target_section_id, target_section_tipo:$target_section_tipo, from_component_tipo:$from_component_tipo";
-				$response->msg[] = $msg;
-				if(SHOW_DEBUG===true) {
-					if ($section_tipo!==DEDALO_ACTIVITY_SECTION_TIPO) {
-						$msg .= ' ('.RecordObj_dd::get_termino_by_tipo($section_tipo).' - '.RecordObj_dd::get_termino_by_tipo($from_component_tipo).')';
-						debug_log(__METHOD__." OK: ".$msg, logger::DEBUG);
-					}					
-				}				
+		
+			if (empty($options->from_component_tipo)) {			
+				$response->msg[] = " options->from_component_tipo is mandatory ! Stopped action";
+				$response->msg   = implode(', ', $response->msg);
+				debug_log(__METHOD__." $response->msg ".to_string(), logger::ERROR);
+				return $response;
 			}
-		}
+		
+		// sort vars
+			$table 				 = 'relations';		
+			$section_id 		 = $options->section_id;
+			$section_tipo 		 = $options->section_tipo;
+			$from_component_tipo = $options->from_component_tipo;
+		
+		// DELETE . Remove all relations of current component
+			$strQuery 	= "DELETE FROM $table WHERE section_id = $section_id AND section_tipo = '$section_tipo' AND from_component_tipo = '$from_component_tipo' ";
+			$result 	= JSON_RecordDataBoundObject::search_free($strQuery);
+		
+		// INSERT . Create all relations again (multiple)
+			/* Old way, one insert by record
+				foreach ((array)$options->ar_locators as $key => $locator) {
 
+					if(!isset($locator->section_tipo)) {
+						debug_log(__METHOD__." Error. empty section_tipo. Ignored insert locator: ".to_string($locator), logger::ERROR);
+						continue;
+					}
 
-		$response->result = true;
-		$response->msg[0] = "Ok. Relations row successfully"; // Override first message
-		$response->msg    = "<br>".implode('<br>', $response->msg);
+					$target_section_tipo = $locator->section_tipo;
+					$target_section_id 	 = $locator->section_id;
+					#$from_component_tipo = $locator->from_component_tipo; // Already defined before			
+
+					# INSERT . Create new
+					$strQuery = "INSERT INTO $table (section_id, section_tipo, target_section_id, target_section_tipo, from_component_tipo) VALUES ($1, $2, $3, $4, $5) RETURNING id";
+					# Exec query
+					$result = pg_query_params(DBi::_getConnection(), $strQuery, array( $section_id, $section_tipo, $target_section_id, $target_section_tipo, $from_component_tipo ));
+					if(!$result) {			
+						$msg = " Failed Insert relations record - $strQuery";
+						debug_log(__METHOD__." ERROR: $msg ".to_string(), logger::ERROR);
+						$response->msg[] = $msg;
+					}else{
+						$msg = " Created relations row ({$section_tipo}-{$section_id}) target_section_id:$target_section_id, target_section_tipo:$target_section_tipo, from_component_tipo:$from_component_tipo";
+						$response->msg[] = $msg;
+						if(SHOW_DEBUG===true) {
+							if ($section_tipo!==DEDALO_ACTIVITY_SECTION_TIPO) {
+								$msg .= ' ('.RecordObj_dd::get_termino_by_tipo($section_tipo).' - '.RecordObj_dd::get_termino_by_tipo($from_component_tipo).')';
+								debug_log(__METHOD__." OK: ".$msg, logger::DEBUG);
+							}
+						}
+					}
+				}
+				*/
+			$ar_insert_values = [];
+			foreach ((array)$options->ar_locators as $key => $locator) {
+
+				if(!isset($locator->section_tipo) || !isset($locator->section_id)) {
+					debug_log(__METHOD__." Error. empty section_tipo or section_id. Ignored relations insert locator: ".to_string($locator), logger::ERROR);
+					continue;
+				}
+				$target_section_tipo  = $locator->section_tipo;
+				$target_section_id 	  = $locator->section_id;
+
+				$ar_insert_values[]   = "($section_id, '$section_tipo', $target_section_id, '$target_section_tipo', '$from_component_tipo')";
+			}
+			# Exec query (all records at once)
+				$strQuery = 'INSERT INTO '.$table.' (section_id, section_tipo, target_section_id, target_section_tipo, from_component_tipo) VALUES '.implode(',', $ar_insert_values).';';
+				$result = pg_query(DBi::_getConnection(), $strQuery);
+				if(!$result) {			
+					$msg = " Failed Insert relations record - $strQuery";
+					debug_log(__METHOD__." ERROR: $msg ".to_string(), logger::ERROR);
+					$response->msg[] = $msg;
+				}else{
+					$msg = " Created " . count($ar_insert_values) . " relations rows (section_tipo:$section_tipo,  section_id:$section_id, from_component_tipo:$from_component_tipo, target_section_tipo:$target_section_tipo)";
+					$response->msg[] = $msg;
+					if(SHOW_DEBUG===true) {
+						if ($section_tipo!==DEDALO_ACTIVITY_SECTION_TIPO) {
+							$msg .= ' ('.RecordObj_dd::get_termino_by_tipo($section_tipo).' - '.RecordObj_dd::get_termino_by_tipo($from_component_tipo).')';
+							debug_log(__METHOD__." OK: ".$msg, logger::DEBUG);
+						}
+					}
+				}
+
+		// response
+			$response->result = true;
+			$response->msg[0] = "Ok. Relations row successfully"; // Override first message
+			$response->msg    = "<br>".implode('<br>', $response->msg);
+
 		
 		return $response;
 	}//end propagate_component_dato_to_relations_table
@@ -2284,7 +2320,9 @@ class search_development2 {
 			$ar_children 	  = section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, ['component'], $from_cache=true, $resolve_virtual=true, $recursive=true, $search_exact=false, $ar_tipo_exclude_elements);
 			$ar_section_group = section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, ['section_group','section_group_div','section_tab'], $from_cache=true, $resolve_virtual=true, $recursive=true, $search_exact=true, $ar_tipo_exclude_elements);
 			
-			
+			// Add section common info
+			$ar_section_group[] = DEDALO_SECTION_INFO_SECTION_GROUP;	
+
 			$ar_section_group_parsed = [];
 			foreach ($ar_section_group as $section_group_tipo) {				
 
@@ -2303,17 +2341,17 @@ class search_development2 {
 						break;
 				}
 			}		
-
+	
 			foreach ($ar_section_group_parsed as $section_group_tipo) {				
 
 				# section_group_label
 				$section_group_label 		= RecordObj_dd::get_termino_by_tipo($section_group_tipo, DEDALO_DATA_LANG , true, true);
 				$ar_section_group_childrens = RecordObj_dd::get_ar_childrens($section_group_tipo, $order_by='norden');
 				#$ar_section_group_childrens = RecordObj_dd::get_ar_recursive_childrens($section_group_tipo, $is_recursion=false, $ar_exclude_models=false, $order_by='norden');				
-			
+				
 				foreach ($ar_section_group_childrens as $component_tipo) {
 					
-					if (!in_array($component_tipo, $ar_children)) {
+					if ($section_group_tipo!==DEDALO_SECTION_INFO_SECTION_GROUP && !in_array($component_tipo, $ar_children)) {
 						continue;
 					}
 
@@ -2385,6 +2423,8 @@ class search_development2 {
 			}//end foreach ($ar_section_group_childrens as $component_tipo)
 
 		}
+		#dump($ar_result, ' ar_result ++ '.to_string());
+
 		$response->result 	= $ar_result;
 		$response->msg 		= 'Ok. Request done.';
 		if(SHOW_DEBUG===true) {

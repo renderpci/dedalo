@@ -96,15 +96,6 @@
 				$file_name = 'list';
 
 		case 'list':
-				/*
-				# FIELDS
-				$ar_search_fields = $this->get_ar_search_fields();
-					#dump($ar_search_fields, ' $ar_search_fields ++ '.to_string());
-
-				# BUTTONS						
-				$ar_tools_search = $this->get_ar_tools_search();
-					#dump($ar_tools_search, ' ar_tools_search ++ '.to_string());
-				*/			
 				break;
 
 		case 'relation':

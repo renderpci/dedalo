@@ -29,8 +29,8 @@
 	switch($modo) {
 
 		case 'edit_in_list':
-						$file_name = 'edit';
-						$wrap_style 	= '';	// 'width:100%'; // Overwrite possible custon component structure css
+				$file_name = 'edit';
+				$wrap_style 	= '';	// 'width:100%'; // Overwrite possible custon component structure css
 				// Dont break here. Continue as modo edit		
 		
 		case 'edit'	:		
@@ -49,8 +49,7 @@
 				$mandatory_json 	= json_encode($mandatory);
 				if( isset($propiedades->controller) and $propiedades->controller === true){
 					$controller_data = $this->get_controller_data();
-				}
-
+				}				
 				break;
 
 		case 'tool_time_machine' :

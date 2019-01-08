@@ -1481,6 +1481,230 @@ class tool_administration extends tool_common {
 
 
 
+	/**
+	* PROPAGATE_SECTION_INFO_TO_DATO
+	* (!) Note that current script NOT create relations records (expensive and not useful for direct search purposes)
+	* @return object $response
+	*/
+	public static function propagate_section_info_to_dato($target_tables=null) {
+
+		$response = new stdClass();
+			$response->result 	= false;
+			$response->msg 		= 'Error. Request failed [propagate_section_info_to_dato]';
+
+		$n = 0;
+		
+		if (empty($target_tables)) $target_tables = array(
+			'matrix_dd',
+			'matrix',
+			'matrix_activities',
+			'matrix_dataframe',
+			'matrix_hierarchy',
+			'matrix_hierarchy_main',
+			'matrix_indexations',
+			'matrix_layout',
+			'matrix_layout_dd',
+			'matrix_list',
+			'matrix_notes',
+			'matrix_profiles',
+			'matrix_projects',
+			'matrix_structurations',
+			'matrix_users'
+		);
+
+		foreach ($target_tables as $table) {
+
+			debug_log(__METHOD__." Iterating table $table ".to_string(), logger::DEBUG);
+			
+			$strQuery = "SELECT id, section_id, section_tipo, datos FROM \"$table\" ORDER BY section_tipo ASC, section_id ASC ;";
+			$result   = pg_query(DBi::_getConnection(), $strQuery);
+			if (!$result) {
+				$response->msg .= " Error on select db records on table $table . ".pg_last_error();
+				return $response;
+			}			
+
+			# Iterate found records
+			$section_tipo_old = '';
+			while ($row = pg_fetch_assoc($result)) {
+
+				$id 			= $row['id'];
+				$section_id 	= $row['section_id'];
+				$section_tipo 	= $row['section_tipo'];
+				$datos 			= $row['datos'];
+
+				if ($section_tipo!==$section_tipo_old) {
+					debug_log(__METHOD__." Iterating table $table - section_tipo $section_tipo ".to_string(), logger::DEBUG);
+					$section_tipo_old = $section_tipo;
+				}
+
+				// Convert section dato
+					$section_dato 	   	= json_decode($datos);
+					$new_section_dato 	= self::convert_section_dato_info($section_dato);
+					$new_section_dato 	= json_encode($new_section_dato);
+
+				// Save new dato
+					$strQuery_update = "UPDATE \"$table\" SET datos = $1 WHERE id = $2";					
+					$result_update   = pg_query_params(DBi::_getConnection(), $strQuery_update, array( $new_section_dato, $id ));
+					if (!$result_update) {
+						$response->msg .= " Error on UPDATE db record on table $table, id: $id. ".pg_last_error();
+						return $response;
+					}					
+				$n++;
+			}//end while ($row = pg_fetch_assoc($result))
+		}//end foreach ($target_tables as $table)
+
+		$response->result 	= true;
+		$response->msg 		= 'Ok. Request done successfully ('.$n.' records in '.count($target_tables).' tables)';
+
+		return $response;
+	}//end propagate_section_info_to_dato
+
+
+
+	/**
+	* CONVERT_SECTION_DATO_INFO
+	* @return 
+	*/
+	public static function convert_section_dato_info($section_dato) {
+
+		$section_tipo = $section_dato->section_tipo;
+		$section_id   = $section_dato->section_id;
+
+		if (!isset($section_dato->components)) {
+			$section_dato->components = new stdClass();
+		}
+		if (!isset($section_dato->relations)) {
+			$section_dato->relations = [];
+		}
+
+		// Clean inverse_locators also
+			if (isset($section_dato->inverse_locators)) {
+				unset($section_dato->inverse_locators);
+			}
+		
+		$value_created_by_userID 	= isset($section_dato->created_by_userID) ? $section_dato->created_by_userID : null;
+		$value_created_date 		= isset($section_dato->created_date) ? $section_dato->created_date : null;
+		$value_modified_by_userID 	= isset($section_dato->modified_by_userID) ? $section_dato->modified_by_userID : null;
+		$value_modified_date 		= isset($section_dato->modified_date) ? $section_dato->modified_date : null;
+
+		$modified_section_tipos = section::get_modified_section_tipos();
+		# Items
+		$created_by_user 		= array_filter($modified_section_tipos, function($item){ return $item['name']==='created_by_user'; });
+		$created_date 			= array_filter($modified_section_tipos, function($item){ return $item['name']==='created_date'; });
+		$modified_by_user 		= array_filter($modified_section_tipos, function($item){ return $item['name']==='modified_by_user'; });
+		$modified_date 			= array_filter($modified_section_tipos, function($item){ return $item['name']==='modified_date'; });
+
+		// created_by_user
+			if (!empty($value_created_by_userID)) {
+				
+				$current_tipo = reset($created_by_user)['tipo'];
+				$locator = new locator();
+					$locator->set_type(DEDALO_RELATION_TYPE_LINK);
+					$locator->set_section_tipo(DEDALO_SECTION_USERS_TIPO);
+					$locator->set_section_id($value_created_by_userID);
+					$locator->set_from_component_tipo($current_tipo);				
+				
+				// Update section dato
+				$section_dato->relations[] = $locator;
+			}
+
+		// created_date
+			if (!empty($value_created_date)) {
+				$component_data = self::create_component_date_from_value($value_created_date, 'Created date');
+				if (!empty($component_data)) {
+					// Update section dato
+					$current_tipo = reset($created_date)['tipo'];
+					$section_dato->components->$current_tipo = $component_data;
+				}
+			}
+
+		// modified_by_user
+			if (!empty($value_modified_by_userID)) {
+				
+				$current_tipo = reset($modified_by_user)['tipo'];
+				$locator = new locator();
+					$locator->set_type(DEDALO_RELATION_TYPE_LINK);
+					$locator->set_section_tipo(DEDALO_SECTION_USERS_TIPO);
+					$locator->set_section_id($value_modified_by_userID);
+					$locator->set_from_component_tipo($current_tipo);				
+				
+				// Update section dato
+				$section_dato->relations[] = $locator;
+			}
+
+		// modified_date
+			if (!empty($value_modified_date)) {
+				$component_data = self::create_component_date_from_value($value_modified_date, 'Modified date');
+				if (!empty($component_data)) {
+					// Update section dato
+					$current_tipo = reset($modified_date)['tipo'];
+					$section_dato->components->$current_tipo = $component_data;
+				}
+			}
+		#dump(json_encode($section_dato, JSON_PRETTY_PRINT), ' section_dato ++ '.to_string());
+
+		return $section_dato;
+	}//end convert_section_dato_info
+
+
+
+	/**
+	* CREATE_COMPONENT_DATE_FROM_VALUE
+	* @param string $value like '2018-12-28 10:33:15'
+	* @return object $current_dato (component full data)
+	*/
+	public static function create_component_date_from_value($value, $label='') {
+
+		$dd_date = new dd_date();
+		$dd_date->get_date_from_timestamp( $value );
+		$time 	 = dd_date::convert_date_to_seconds( $dd_date );
+		
+		$current_dato = '
+		{
+		  "dato": {
+		    "lg-nolan": [
+		      {
+		        "start": {
+		          "day": '.$dd_date->day.',
+		          "hour": '.$dd_date->hour.',
+		          "time": '.$time.',
+		          "year": '.$dd_date->year.',
+		          "month": '.$dd_date->month.',
+		          "minute": '.$dd_date->minute.',
+		          "second": '.$dd_date->second.'
+		        }
+		      }
+		    ]
+		  },
+		  "info": {
+		    "label": "'.$label.'",
+		    "modelo": "component_date"
+		  },
+		  "valor": {
+		    "lg-nolan": [
+		      {
+		        "start": {
+		          "day": '.$dd_date->day.',
+		          "hour": '.$dd_date->hour.',
+		          "time": '.$time.',
+		          "year": '.$dd_date->year.',
+		          "month": '.$dd_date->month.',
+		          "minute": '.$dd_date->minute.',
+		          "second": '.$dd_date->second.'
+		        }
+		      }
+		    ]
+		  },
+		  "valor_list": {
+		    "lg-nolan": "'.$value.'"
+		  }
+		}
+		';
+
+		return json_decode($current_dato);
+	}//end create_component_date_from_value
+
+
 
 }//end class
 ?>

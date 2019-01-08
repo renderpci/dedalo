@@ -145,20 +145,27 @@ abstract class component_common extends common {
 					debug_log(__METHOD__." ERROR: debug_backtrace ".to_string( debug_backtrace() ), logger::DEBUG);
 					trigger_error("ERROR - Error Processing Request. Direct call to resource section_tipo");										
 					#throw new Exception("Error Processing Request. Direct call to resource section_tipo ($section_tipo) is not legal", 1);					
-				}else if(strpos($modo, 'dataframe')===false){
-					# Verify this section is from current component tipo
-					$ar_terminoID_by_modelo_name = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($tipo, 'section', 'parent');
-					if (!isset($ar_terminoID_by_modelo_name[0])) {
-						debug_log(__METHOD__." ar_terminoID_by_modelo_name is empty for tipo ($tipo), ar_terminoID_by_modelo_name:".to_string($ar_terminoID_by_modelo_name), logger::ERROR);
-						throw new Exception("Error Processing Request", 1);						
-					}
-					$calculated_section_tipo = $ar_terminoID_by_modelo_name[0];
-					$real_section 			 = section::get_section_real_tipo_static($section_tipo);
-					$is_real 				 = $real_section===$section_tipo ? true : false;
-					if ( $is_real && $section_tipo!=$calculated_section_tipo && $modo!=='search' && SHOW_DEBUG===true) {
-						#dump(debug_backtrace(), ' debug_backtrace '.to_string());
-						#throw new Exception("Error Processing Request. Current component ($tipo) is not children of received section_tipo: $section_tipo.<br> Real section_tipo is: $real_section and calculated_section_tipo: $calculated_section_tipo ", 1);
-					}
+				}else if(strpos($modo, 'dataframe')===false){					
+					$ar_modified_section_tipos = array_map(function($item){
+						return $item['tipo'];
+					}, section::get_modified_section_tipos());
+					if (true===in_array($tipo, $ar_modified_section_tipos)) {
+						# skip verification
+					}else{
+						# Verify this section is from current component tipo
+						$ar_terminoID_by_modelo_name = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($tipo, 'section', 'parent');
+						if (!isset($ar_terminoID_by_modelo_name[0])) {
+							debug_log(__METHOD__." ar_terminoID_by_modelo_name is empty for tipo ($tipo), ar_terminoID_by_modelo_name:".to_string($ar_terminoID_by_modelo_name), logger::ERROR);
+							throw new Exception("Error Processing Request", 1);						
+						}
+						$calculated_section_tipo = $ar_terminoID_by_modelo_name[0];
+						$real_section 			 = section::get_section_real_tipo_static($section_tipo);
+						$is_real 				 = $real_section===$section_tipo ? true : false;
+						if ( $is_real && $section_tipo!=$calculated_section_tipo && $modo!=='search' && SHOW_DEBUG===true) {
+							#dump(debug_backtrace(), ' debug_backtrace '.to_string());
+							#throw new Exception("Error Processing Request. Current component ($tipo) is not children of received section_tipo: $section_tipo.<br> Real section_tipo is: $real_section and calculated_section_tipo: $calculated_section_tipo ", 1);
+						}
+					}					
 				}				
 			}
 		
@@ -1994,6 +2001,8 @@ abstract class component_common extends common {
 					if ($modelo_name==='component_autocomplete_hi') {
 						# resolve
 						$current_label = component_relation_common::get_locator_value($value, $lang, false, $ar_componets_related, ', ');
+					}elseif ($modelo_name==='component_section_id') {
+						$current_label = $current_row->{$related_tipo};					
 					}else{
 						# use query select value
 						$dato_full_json = $current_row->{$related_tipo};
@@ -3667,12 +3676,25 @@ abstract class component_common extends common {
 			return $this->permissions;
 		}
 
-		# Thesaurus exception
-		if ($this->section_tipo===DEDALO_THESAURUS_SECTION_TIPO && $this->modo==='search') {
-			$this->permissions = 2; // Allow users to search in thesaurus
+		if ($this->modo==='search') {
+			
+			if ( $this->section_tipo===DEDALO_THESAURUS_SECTION_TIPO ) {		
+				
+				$this->permissions = 2; // Allow all users to search in thesaurus
+			
+			}elseif ( true===in_array($this->tipo, section::get_modified_section_tipos_basic()) ) {
+				
+				$this->permissions = 2; // Allow all users to search with section info components
+			
+			}else{
+
+				$this->permissions = common::get_permissions($this->section_tipo, $this->tipo);
+			}
+
 		}else{
+
 			$this->permissions = common::get_permissions($this->section_tipo, $this->tipo);
-		}
+		}		
 
 
 		return $this->permissions;
