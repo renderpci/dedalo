@@ -42,6 +42,7 @@
 		case 'edit'	:
 
 				$dato 	= $this->get_dato();
+				#$dato 	= $this->set_display_format_from_type($dato);
 				$valor	= $this->get_valor();
 
 				# Verify component content record is inside section record filter

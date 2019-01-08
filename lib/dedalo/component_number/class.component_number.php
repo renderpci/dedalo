@@ -32,7 +32,7 @@ class component_number extends component_common {
 		}
 
 		$format_dato = $this->set_format_form_type($dato);
-	
+
 		return parent::set_dato( $format_dato );			
 	}//end set_dato
 
@@ -87,8 +87,7 @@ class component_number extends component_common {
 						break;
 					
 					default:
-
-						$dato = (float)number_format($dato,$value);
+						$dato = (float)round($dato,$value);
 						break;
 				}
 
@@ -99,26 +98,46 @@ class component_number extends component_common {
 	}//end set_format_form_type
 
 
-
-	/**
+	/*
 	* NUMBER_TO_STRING
-	* Returns a string representation of number. Uses . as decimal separators
-	* @return 
+	* Format the dato into the standard format or the propiedades format of the current intance of the component
 	*/
-	public static function number_to_string( $number ) {
-		
-		switch (true) {
-			case is_float($number):
-				$string = (string)$number;
-				$string = str_replace(',', '.', $string);
-				break;
-			
-			default:
-				$string = (string)$number;
-				break;
+	public function number_to_string( $dato ) {
+
+		$propiedades = $this->get_propiedades();
+
+		if($dato === null || empty($dato)){
+			return $dato;
 		}
 
-		return $string;
+		if(empty($propiedades->type)){			
+			return (string)$dato;
+		}else{
+			foreach ($propiedades->type as $key => $value) {
+
+				switch ($key) {
+					case 'int':
+						if($value === 0 || empty($value)){
+							return (string)$dato;
+						}
+						if ( strpos($dato, '-')===0 )  {
+							$dato = '-'.substr($dato,1,$value);
+							$dato = (string)$dato;
+
+						}else{
+							$dato = (string)substr($dato,0,$value);
+						}						
+						break;
+					
+					default:
+						$dato = number_format($dato,$value,'.','');
+						break;
+				}
+
+			}//end foreach ($propiedades->type as $key => $value)
+		}//end if(empty($propiedades->type))
+
+		return $dato;
 	}//end number_to_string
 
 
