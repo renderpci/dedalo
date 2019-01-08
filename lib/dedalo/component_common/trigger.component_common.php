@@ -23,114 +23,113 @@ function Save($json_data) {
 		$response->result 	= false;
 		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
 
+	// vars
+		$vars = array('parent','tipo','lang','modo','section_tipo','dato','top_tipo','top_id','caller_dataset');
+			foreach($vars as $name) {
+				$$name = common::setVarData($name, $json_data);
+				# DATA VERIFY
+				if ($name==='dato' || $name==='top_id' || $name==='caller_dataset') continue; # Skip non mandatory
+				if (empty($$name)) {
+					$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty '.$name.' (is mandatory)';
+					return $response;
+				}
+			}
+	
+	// dato . json decode try
+		if (!$dato_clean = json_decode($dato)) {
+			$dato_clean = $dato;
+		}
+	
+	// caller_dataset check
+		if (!empty($caller_dataset)) {
+			$caller_dataset = json_decode($caller_dataset);
+		}
+	
+	// permissions
+		if(isset($caller_dataset->component_tipo)) {
+			# if the component send a dataset, the tipo will be the component_tipo of the caller_dataset	
+			$permissions = common::get_permissions($section_tipo, $caller_dataset->component_tipo);
+		}else{
+			$permissions = common::get_permissions($section_tipo, $tipo);
+		}		
+		if ($permissions<2) {
+			$response->msg = "Trigger Error: Nothing is saved. Invalid user permissions for this component. ($permissions)";
+			return $response;
+		}
 
-	$vars = array('parent','tipo','lang','modo','section_tipo','dato','top_tipo','top_id','caller_dataset');
-		foreach($vars as $name) {
-			$$name = common::setVarData($name, $json_data);
-			# DATA VERIFY
-			if ($name==='dato' || $name==='top_id' || $name==='caller_dataset') continue; # Skip non mandatory
-			if (empty($$name)) {
-				$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty '.$name.' (is mandatory)';
+	// model
+		$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($tipo, true);
+
+	// callable : Verify component name is callable
+		if (!class_exists($modelo_name)) {
+			#throw new Exception("Trigger Error: class: $modelo_name not found", 1);
+			$response->msg = "Trigger Error: Nothing is saved. class: '$modelo_name' not found in Dédalo";
+			return $response;
+		}	
+		
+	// component : Build component as construct ($id=NULL, $tipo=false, $modo='edit', $parent=NULL)
+		$component_obj = component_common::get_instance($modelo_name,
+														$tipo,
+														$parent,
+														$modo,
+														$lang,
+														$section_tipo);
+	
+	// unique value server check
+		$properties = $component_obj->get_propiedades();
+		if(isset($properties->unique->server_check) && $properties->unique->server_check===true){
+			$check_dato = (is_array($dato_clean)) ?	reset($dato_clean) : $dato_clean;
+			$unique_server_check = $component_obj->unique_server_check($check_dato);
+			if($unique_server_check === false){
+				// Trigger Error: Nothing is saved.
+				$response->msg = label::get_label("value_already_exists");
 				return $response;
 			}
 		}
 
-	
-	# DATO . JSON DECODE TRY
-	if (!$dato_clean = json_decode($dato)) {
-		$dato_clean = $dato;
-	}
-	
-	# CALLER_DATASET check
-	if (!empty($caller_dataset)) {
-		$caller_dataset = json_decode($caller_dataset);
-	}
-	
-	# PERMISSIONS
-	if(isset($caller_dataset->component_tipo)) {
-		# if the component send a dataset, the tipo will be the component_tipo of the caller_dataset	
-		$permissions = common::get_permissions($section_tipo, $caller_dataset->component_tipo);
-	}else{
-		$permissions = common::get_permissions($section_tipo, $tipo);
-	}		
-	if ($permissions<2) {
-		$response->msg = "Trigger Error: Nothing is saved. Invalid user permissions for this component. ($permissions)";
-		return $response;
-	}
+	// caller_dataset optional
+		if (!empty($caller_dataset)) {
+			
+			# inject component caller_dataset
+			$component_obj->caller_dataset = $caller_dataset;		
 
-	$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($tipo, true);
+			# force to save component
+			$old_dato 	= 'impossible data' . microtime(true);
 
-	# CALLABLE : Verify component name is callable
-	if (!class_exists($modelo_name)) {
-		#throw new Exception("Trigger Error: class: $modelo_name not found", 1);
-		$response->msg = "Trigger Error: Nothing is saved. class: '$modelo_name' not found in Dédalo";
-		return $response;
-	}	
-	
-	
-	# COMPONENT : Build component as construct ($id=NULL, $tipo=false, $modo='edit', $parent=NULL)
-	$component_obj = component_common::get_instance($modelo_name,
-													$tipo,
-													$parent,
-													$modo,
-													$lang,
-													$section_tipo);
-	
-	#unique value server check
-	$properties = $component_obj->get_propiedades();
+		}else{
 
-	if(isset($properties->unique->server_check) && $properties->unique->server_check===true){
-		$check_dato = (is_array($dato_clean)) ?	reset($dato_clean) : $dato_clean;
-		$unique_server_check = $component_obj->unique_server_check($check_dato);
-		if($unique_server_check === false){
-			//Trigger Error: Nothing is saved.
-			$response->msg = label::get_label("value_already_exists");
-			return $response;
+			# get current dato to compare with received dato
+			$old_dato 	= $component_obj->get_dato();
 		}
-	}
 
-	# CALLER_DATASET optional
-	if (!empty($caller_dataset)) {
-		
-		# inject component caller_dataset
-		$component_obj->caller_dataset = $caller_dataset;		
+	// Assign received dato to component
+		$component_obj->set_dato( $dato_clean );
 
-		# force to save component
-		$old_dato 	= 'impossible data' . microtime(true);
-
-	}else{
-
-		# get current dato to compare with received dato
-		$old_dato 	= $component_obj->get_dato();
-	}
-
-	# Assign received dato to component
-	$component_obj->set_dato( $dato_clean );
-
-	# Check if dato is changed 
+	// Check if dato is changed 
 	$new_dato	= $component_obj->get_dato();
-		#dump($new_dato, ' $new_dato ++ '.to_string());
 
-	if ($new_dato===$old_dato) {
-		
-		$response->result 	= $parent;
-		$response->msg 		= 'Ok. Request done [Save]. Data is not changed. Is not necessary update component db data';
+	// Response . Check if new dato is different of current dato. 
+	// (!) Important: use operator '==' to allow compare objects properly
+		if ($new_dato==$old_dato) {
+			
+			$response->result 	= $parent;
+			$response->msg 		= 'Ok. Request done [Save]. Data is not changed. Is not necessary update component db data';
 
-	}else{
+		}else{
 
-		# Call the specific function of the current component that handles the data saving with your specific preprocessing language, etc ..
-		$section_id = $component_obj->Save();
-		#debug_log(__METHOD__." current (get_dato) ".to_string($component_obj->get_dato()), logger::DEBUG);
+			# Call the specific function of the current component that handles the data saving with your specific preprocessing language, etc ..
+			$section_id = $component_obj->Save();
+			#debug_log(__METHOD__." current (get_dato) ".to_string($component_obj->get_dato()), logger::DEBUG);
 
-		if ($section_id>0 || $parent===DEDALO_SECTION_ID_TEMP) {
-			# Return id
-			$response->result 	= $section_id;
-			$response->msg 		= 'Ok. Request done [Save]';
-		}else{			
-			$response->result 	= false;
-			$response->msg 		= 'Error. Received section_id is invalid [Save] '.json_encode($section_id);
+			if ($section_id>0 || $parent===DEDALO_SECTION_ID_TEMP) {
+				# Return id
+				$response->result 	= $section_id;
+				$response->msg 		= 'Ok. Request done [Save]';
+			}else{			
+				$response->result 	= false;
+				$response->msg 		= 'Error. Received section_id is invalid [Save] '.json_encode($section_id);
+			}
 		}
-	}
 	
 
 	# Debug

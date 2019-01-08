@@ -954,9 +954,9 @@ class RecordObj_dd extends RecordDataBoundObject {
 
 						if(empty($modelo)) {
 							$name = RecordObj_dd::get_termino_by_tipo($terminoID);
-							trigger_error("Error Processing Request. Modelo is empty. Please define modelo for this component $terminoID ($name)");
+							trigger_error("Error Processing get_ar_terminoID_by_modelo_name_and_relation [children - $tipo]. Modelo is empty. Please define modelo for this component $terminoID ($name)");
 							return array();
-							#throw new Exception("Error Processing Request. Modelo is empty. Please define modelo for this component $terminoID ($name)", 1);							
+							#throw new Exception("Error Processing get_ar_terminoID_by_modelo_name_and_relation. Modelo is empty. Please define modelo for this component $terminoID ($name)", 1);							
 						}
 						$current_modelo_name	= $RecordObj_dd->get_termino_by_tipo($modelo);	#dump($modelo_name);
 						
@@ -986,9 +986,9 @@ class RecordObj_dd extends RecordDataBoundObject {
 
 						if(empty($modelo)) {
 							$clabel = RecordObj_dd::get_termino_by_tipo($terminoID);
-							trigger_error("Error Processing Request. Modelo is empty. Please define modelo for this component $terminoID ($clabel)");
+							trigger_error("Error Processing get_ar_terminoID_by_modelo_name_and_relation [children_recursive - $tipo]. Modelo is empty. Please define modelo for this component $terminoID ($clabel)");
 							return array();
-							#throw new Exception("Error Processing Request. Modelo is empty. Please define modelo for this component $terminoID ($name)", 1);							
+							#throw new Exception("Error Processing get_ar_terminoID_by_modelo_name_and_relation. Modelo is empty. Please define modelo for this component $terminoID ($name)", 1);							
 						}
 						$current_modelo_name	= $RecordObj_dd->get_termino_by_tipo($modelo);	#dump($modelo_name);
 						
@@ -1022,8 +1022,8 @@ class RecordObj_dd extends RecordDataBoundObject {
 						if(empty($modelo)) {
 							$clabel = RecordObj_dd::get_termino_by_tipo($terminoID);
 							
-							trigger_error("Error Processing Request. Modelo is empty. Please define modelo for this component terminoID:$terminoID, name:$clabel ");
-							#throw new Exception(__METHOD__." Error Processing Request. Modelo is empty. Please define modelo for this terminoID: $terminoID (name: $clabel)", 1);
+							trigger_error("Error Processing get_ar_terminoID_by_modelo_name_and_relation [termino_relacionado - $tipo]. Modelo is empty. Please define modelo for this component terminoID:$terminoID, name:$clabel ");
+							#throw new Exception(__METHOD__." Error Processing get_ar_terminoID_by_modelo_name_and_relation. Modelo is empty. Please define modelo for this terminoID: $terminoID (name: $clabel)", 1);
 							return array();														
 						}
 						$current_modelo_name	= $RecordObj_dd->get_termino_by_tipo($modelo);
@@ -1054,9 +1054,9 @@ class RecordObj_dd extends RecordDataBoundObject {
 
 						if(empty($modelo)) {
 							$clabel = RecordObj_dd::get_termino_by_tipo($terminoID);
-							trigger_error("Error Processing Request. Modelo is empty. Please define modelo for this component $terminoID ($clabel)");
+							trigger_error("Error Processing get_ar_terminoID_by_modelo_name_and_relation [parent - $tipo]. Modelo is empty. Please define modelo for this component $terminoID ($clabel)");
 							return array();
-							#throw new Exception("Error Processing Request. Modelo is empty. Please define modelo for this component $terminoID ($name)", 1);							
+							#throw new Exception("Error Processing get_ar_terminoID_by_modelo_name_and_relation. Modelo is empty. Please define modelo for this component $terminoID ($name)", 1);							
 						}
 						$current_modelo_name	= $RecordObj_dd->get_termino_by_tipo($modelo);		#dump($modelo_name);
 						
