@@ -941,7 +941,7 @@ class web_data {
 				
 		$s_options = new stdClass();
 			$s_options->table 		= (string)TABLE_AUDIOVISUAL;
-			$s_options->ar_fields 	= array(TRANSCRIPTION_TIPO);
+			$s_options->ar_fields 	= array(TRANSCRIPTION_TIPO,FIELD_VIDEO);
 			$s_options->lang 		= (string)$options->lang;
 			$s_options->sql_filter 	= (string)$sql_filter;
 
@@ -996,6 +996,7 @@ class web_data {
 				$element->tag_id  	 = $tag_id;
 				$element->tcin_secs  = $fragment->tcin_secs;
 				$element->tcout_secs = $fragment->tcout_secs;
+				$element->video_url  = $fragment->video_url;
 
 				if ($options->return_text===true) {
 				$element->fragm = $fragment->fragm;
@@ -1232,7 +1233,7 @@ class web_data {
 		# Video filename ()
 		if (is_null($options->video_url)) {
 			$base_url 	= WEB_VIDEO_BASE_URL;
-			$file_name  = $options->component_tipo.'_'.$options->section_tipo.'_'.$options->av_section_id.'.mp4';// Like : rsc35_rsc167_1
+			$file_name  = AV_TIPO.'_'.$options->section_tipo.'_'.$options->av_section_id.'.mp4';// Like : rsc35_rsc167_1
 			$av_path 	= $base_url .'/'. $file_name;
 		}else{
 			$av_path  	= $options->video_url;
