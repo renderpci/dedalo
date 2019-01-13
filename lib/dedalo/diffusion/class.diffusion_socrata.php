@@ -86,7 +86,15 @@ class diffusion_socrata extends diffusion  {
 					// Specific socrata formats
 					switch ($value_obj->model) {
 						case 'field_date':
-							$socrata_value = date("Y-m-d\TH:i:s.u", strtotime($value_obj->value));
+							// (!) Note that socrata not support zero values in date (like 1998-00-00)
+							// because you need fill this values with number one like '01'
+							// #$socrata_value = date("Y-m-d\TH:i:s.u", strtotime($value_obj->value));
+							if (!empty($value_obj->value)) {
+								$socrata_value = preg_replace('/(-00-00)/', '-01-01', $value_obj->value);
+								$socrata_value = preg_replace('/( )/', 'T', $socrata_value) . '.000';
+							}else{
+								$socrata_value = null;
+							}
 							break;
 						
 						default:
@@ -184,13 +192,16 @@ class diffusion_socrata extends diffusion  {
 		
 		// Connect
 		$client = new Socrata($server, $app_token, $socrata_user, $socrata_password);
-	    	
-	    // Post our response
-	    $response = $client->post($path, json_encode($data));
-	    	#dump($response, ' response ++ '.to_string());
-	    	debug_log(__METHOD__." response ".json_encode($response, JSON_PRETTY_PRINT), logger::DEBUG);
+			
+		// Post our response
+			$data_json = json_encode($data, JSON_UNESCAPED_SLASHES | JSON_HEX_QUOT | JSON_HEX_TAG | JSON_HEX_APOS );
+			$response  = $client->post($path, $data_json);
+			#dump($response, ' response ++ '.to_string());
+			debug_log(__METHOD__." +++ response ".json_encode($response, JSON_PRETTY_PRINT), logger::DEBUG);
+			#debug_log(__METHOD__." ++++++++++++ data_json ". json_encode(json_decode($data_json), JSON_PRETTY_PRINT) , logger::DEBUG);
 
-	    return $response;
+
+		return $response;
 	}//end upsert_data
 
 
