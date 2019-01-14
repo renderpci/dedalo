@@ -158,10 +158,9 @@ class video_view_data {
 
 		#
 		# SUBTITLES
-			if ($this->add_subtitles===true) {
-				$this->subtitles = $this->get_subtitles();				
-			}
-
+			#if ($this->add_subtitles===true) {
+			#	$this->subtitles = $this->get_subtitles();				
+			#}
 
 		#
 		# AR_RESTRICTED_FRAGMENTS
@@ -215,7 +214,7 @@ class video_view_data {
 	/**
 	* GET_SUBTITLES
 	* @return array $ar_subtitles
-	*/
+	*//*
 	public function get_subtitles($av_section_id) {
 
 		$ar_subtitles = array();
@@ -246,6 +245,7 @@ class video_view_data {
 
 		return $ar_subtitles;
 	}//end get_subtitles
+	*/
 
 
 
@@ -291,11 +291,11 @@ class video_view_data {
 
 		$options = new stdClass();
 			$options->table 		= (string)TABLE_AUDIOVISUAL;
-			$options->ar_fields 	= array(FIELD_VIDEO, FIELD_TRANSCRIPTION);
-			$options->sql_filter 	= "section_id = $av_section_id". PUBLICACION_FILTER_SQL;
+			$options->ar_fields 	= array(FIELD_VIDEO, FIELD_TRANSCRIPTION, 'duration');
+			$options->sql_filter 	= 'section_id = '.(int)$av_section_id .' '. PUBLICACION_FILTER_SQL;
 			$options->lang 			= $this->lang;
 			$options->order 		= null;
-			$options->limit 		= 1;	
+			$options->limit 		= 1;
 			
 			$rows_data = (object)web_data::get_rows_data( $options );
 

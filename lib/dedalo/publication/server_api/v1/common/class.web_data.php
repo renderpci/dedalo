@@ -1233,7 +1233,7 @@ class web_data {
 		# Video filename ()
 		if (is_null($options->video_url)) {
 			$base_url 	= WEB_VIDEO_BASE_URL;
-			$file_name  = AV_TIPO.'_'.$options->section_tipo.'_'.$options->av_section_id.'.mp4';// Like : rsc35_rsc167_1
+			$file_name  = AV_TIPO.'_'.$options->section_tipo.'_'.$options->$options->av_section_id.'.mp4';// Like : rsc35_rsc167_1
 			$av_path 	= $base_url .'/'. $file_name;
 		}else{
 			$av_path  	= $options->video_url;
@@ -1317,7 +1317,10 @@ class web_data {
 
 						// VIDEO_URL Like: /dedalo/media/av/404/rsc35_rsc167_1.mp4?vbegin=0&vend=42
 						#$video_url = $base_url.'/'.$file_name.'?vbegin='.$tcin_secs.'&vend='.$tcout_secs;
-						$video_url = $av_path.'?vbegin='.floor($tcin_secs).'&vend='.ceil($tcout_secs);						
+						$video_url = $av_path.'?vbegin='.floor($tcin_secs).'&vend='.ceil($tcout_secs);
+
+						// Subtitles url
+						$subtitles_url 	= subtitles::get_subtitles_url($options->av_section_id, $tcin_secs, $tcout_secs);
 						
 						$result->fragm 			= $fragment_text_raw; //$fragment_text; [!IMPORTANTE: DEVOLVER TEXT RAW AQUÍ Y LIMPIAR ETIQUETAS EN EL RESULTADO FINAL !]
 						#$result->fragm_raw 	= $fragment_text_raw;

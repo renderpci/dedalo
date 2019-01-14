@@ -271,14 +271,17 @@ class free_node {
 						#dump( $fragment_terms , " fragment_terms ++++ i:$i key:$key ".to_string($word));
 
 				# URL
-					$tcin_secs 	= OptimizeTC::TC2seg($tcin);
-					$tcout_secs = OptimizeTC::TC2seg($tcout);
-					$video_url 	= $this->video .'?vbegin='.$tcin_secs.'&vend='.$tcout_secs;
+					$tcin_secs 		= OptimizeTC::TC2seg($tcin);
+					$tcout_secs 	= OptimizeTC::TC2seg($tcout);
+					$video_url 		= $this->video .'?vbegin='.$tcin_secs.'&vend='.$tcout_secs;
+					$subtitles_url 	= subtitles::get_subtitles_url($av_section_id, $tcin_secs, $tcout_secs);
 
-				$fragment_obj->video_url  = $video_url;
-				$fragment_obj->fragm 	  = $fragm;
-				$fragment_obj->tcin_secs  = $tcin_secs;
-				$fragment_obj->tcout_secs = $tcout_secs;
+				// fragment_obj
+					$fragment_obj->video_url  	 = $video_url;
+					$fragment_obj->fragm 	  	 = $fragm;
+					$fragment_obj->tcin_secs  	 = $tcin_secs;
+					$fragment_obj->tcout_secs 	 = $tcout_secs;
+					$fragment_obj->subtitles_url = $subtitles_url;
 
 			}//end if ($this->video_fragment===true)
 
