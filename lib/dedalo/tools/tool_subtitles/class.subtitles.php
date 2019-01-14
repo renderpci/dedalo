@@ -236,8 +236,12 @@ abstract class subtitles {
 
 		# Explode text by tc pattern		
 		#$tcPattern 	= "/(\[TC_[0-9]{2}:[0-9]{2}:[0-9]{2}\.?[0-9]{3}?_TC\])/";
-		#$tcPattern 	= "/(\[TC_[0-9][0-9]:[0-9][0-9]:[0-9][0-9].[0-9]{1,3}_TC\])/";
-		$tcPattern 		= TR::get_mark_pattern('tc_full',$standalone=true);
+		
+		#$tcPattern 	= TR::get_mark_pattern('tc_full',$standalone=true);
+		
+		// Allow old codes like [TC_00:00:03_TC]
+			$tcPattern 	= "/(\[TC_[0-9]{1,2}:[0-9]{1,2}:[0-9]{1,2}(\.[0-9]{1,3})?_TC\])/";
+		
 		$ar_fragments	= preg_split($tcPattern, $text, -1, PREG_SPLIT_NO_EMPTY | PREG_SPLIT_DELIM_CAPTURE);
 		#preg_match_all("/(\[TC_[0-9][0-9]:[0-9][0-9]:[0-9][0-9]_TC\])/", $text, $ar_fragments, PREG_SET_ORDER);
 			#dump($ar_fragments,'$ar_fragments - '); die();
