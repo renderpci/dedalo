@@ -23,50 +23,57 @@ abstract class subtitles {
 	/**
 	* BUILD_SUBTITLES_TEXT
 	* @param object $request_options
-	* @return 
+	* @return string | false $srt
 	*/
 	public static function build_subtitles_text( $request_options ) {
 
 		$options = new stdClass();
 			$options->sourceText  					= null;		# clean text fragment without <p>, [TC], [INDEX] tags
 			$options->sourceText_unrestricted  		= null;
-			$options->total_ms 						= null;		# total of secs (tcout-tcin)
+			$options->total_ms 						= null;		# total of miliseconds (tcout-tcin)
 			$options->maxCharLine 					= 144;		# max number of char for subtitle line. Default 144			
 			$options->type 							= 'srt';	# File type: srt or xml
 			$options->show_debug    				= false;	# Default false
-			$options->advice_text_subtitles_title  	= null;  # Text like "Automatic translation"			
+			$options->advice_text_subtitles_title  	= null;  	# Text like "Automatic translation"
+			$options->tc_in_secs 					= false;	# Optional subtitles filter from in tc
+			$options->tc_out_secs   				= false;	# Optional subtitles filter from out tc
 			
 			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 						
-		# Set static vars
-		$maxCharLine = $options->maxCharLine;
-		subtitles::$maxCharLine = $maxCharLine;
+		// Set static vars
+			$maxCharLine = $options->maxCharLine;
+			subtitles::$maxCharLine = $maxCharLine;
 
-		# Mandatory vars
-		$ar_mandatory = array('sourceText','maxCharLine');
-		foreach ($ar_mandatory as $value) {
-			if (empty($options->$value)) {
-				trigger_error("Unable build_subtitles_text. Few vars ($value)");
-				return false;
+		// Mandatory vars check
+			$ar_mandatory = array('sourceText','maxCharLine');
+			foreach ($ar_mandatory as $value) {
+				if (empty($options->$value)) {
+					trigger_error("Unable build_subtitles_text. Few vars ($value)");
+					return false;
+				}
 			}
-		}
-		#$options->sourceText = $options->sourceText_unrestricted;
+			#$options->sourceText = $options->sourceText_unrestricted;
 
-		# Clean text from non tc tags
-		if (is_null($options->sourceText_unrestricted)) {
-			$clean_sourceText_unrestricted = $clean_sourceText = subtitles::clean_text_for_subtitles($options->sourceText);			
-		}else{
-			$clean_sourceText_unrestricted = subtitles::clean_text_for_subtitles($options->sourceText_unrestricted);
-			$clean_sourceText 			   = subtitles::clean_text_for_subtitles($options->sourceText);			
-		}		
+		// Clean text from non tc tags
+			if (is_null($options->sourceText_unrestricted)) {
+				$clean_sourceText_unrestricted = $clean_sourceText = subtitles::clean_text_for_subtitles($options->sourceText);			
+			}else{
+				$clean_sourceText_unrestricted = subtitles::clean_text_for_subtitles($options->sourceText_unrestricted);
+				$clean_sourceText 			   = subtitles::clean_text_for_subtitles($options->sourceText);			
+			}
 
-		# Global char time in seconds (float)
-		subtitles::$charTime = subtitles::calculate_global_char_time( $clean_sourceText_unrestricted, $options->total_ms );
-			#dump(subtitles::$charTime , ' calculate_global_char_time subtitles::$charTime  ++ '.to_string($options->total_ms));
+		// Global char time in seconds (float)
+			subtitles::$charTime = subtitles::calculate_global_char_time( $clean_sourceText_unrestricted, $options->total_ms );
+				#dump(subtitles::$charTime , ' calculate_global_char_time subtitles::$charTime  ++ '.to_string($options->total_ms));
 
-		# Calculate ar_lines
-		$ar_lines = (array)subtitles::get_ar_lines($clean_sourceText);
-			#dump($ar_lines, ' ar_lines'); #die();
+		// Calculate ar_lines
+			$ar_lines = (array)subtitles::get_ar_lines($clean_sourceText);
+				#dump($ar_lines, ' ar_lines'); #die();
+
+		// Fragment subtitles
+			if ($options->tc_in_secs!==false) {
+				$ar_lines = subtitles::build_fragment($ar_lines, $options->tc_in_secs, $options->tc_out_secs);
+			}
 
 		#
 		# CREATE FILE
@@ -77,52 +84,63 @@ abstract class subtitles {
 				
 			$i=1; foreach($ar_lines as $key => $line) {
 
-				$tcin	= $line['tcin'];
-				$text	= subtitles::trim_text($line['text']);
-				# generamos si o si el retorno de carro en pregunta respuesta
-				$text 	= str_replace('</b>',"</b>\n",$text);
-				#$text 	= str_replace('<b>',"<b>\n",$text);
-				$text 	= str_replace('\n\n', '\n', $text);
-				$text 	= str_replace("  ", " ", $text);
-				$text 	= trim($text);
+				// tcin
+					$tcin = $line['tcin']; # Like '00:00:03.000'
+						#dump($line, ' line ++ '.to_string());
+
+				// $options->tc_in
+
+				// Text
+					$text	= subtitles::trim_text($line['text']);
+					# generamos si o si el retorno de carro en pregunta respuesta
+					$text 	= str_replace('</b>',"</b>\n",$text);
+					#$text 	= str_replace('<b>',"<b>\n",$text);
+					// Remove double returns
+					$text 	= str_replace('\n\n', '\n', $text);
+					// Remove double spaces
+					$text 	= str_replace("  ", " ", $text);
+					// Remove spaces at end and beginning of text
+					$text 	= trim($text);
+					// Remove tag <br> at end and beginning of text
+					$text 	= preg_replace('/^(<\/?br>)|(<\/?br>)$/i', '', $text);
 				
-				$text_final = $text;
+					$text_final = $text;
 
 				#
 				# 2 LINES : Si el text es mas largo de 1 linea (la mitad de $maxCharLine) lo fragmentamos en 2 lineas separadas por un retorno de carro '\n'
-				$text_line_lenght = subtitles::text_lenght($text);
-				if( $text_line_lenght > ($maxCharLine/2)  ) {
+					$text_line_lenght = subtitles::text_lenght($text);
+					if( $text_line_lenght > ($maxCharLine/2)  ) {
 
-					$sub_text 	= subtitles::truncate_text($text, ($maxCharLine/2), $break=" ", $pad="");
-					$sub_text2 	= str_replace($sub_text, '', $text);
+						$sub_text 	= subtitles::truncate_text($text, ($maxCharLine/2), $break=" ", $pad="");
+						$sub_text2 	= str_replace($sub_text, '', $text);
 
-					$text_final = trim($sub_text) . "\n" . trim($sub_text2);
-				}
-				#dump($text_final, '$text_final', array());
+						$text_final = trim($sub_text) . "\n" . trim($sub_text2);
+					}
+					#dump($text_final, '$text_final', array());
 
 				#
 				# TC_OUT
 				# Normalmente, la línea siguiente (en el array de líneas) será un tag tc de tipo [TC_00:01:08_TC]
 				# Si no lo fuera (la última línea por ejemplo), lo suplantaremos son un cálculo fijo				
-				if (!empty($ar_lines[$key+1]['tcin'])) {
+					if (!empty($ar_lines[$key+1]['tcin'])) {
 
-					$tcout 	= $ar_lines[$key+1]['tcin'];
-						#dump($tcin,'$tcin '." key: $key -  tcout: $tcout - $text_final");
-				}else{
+						$tcout 	= $ar_lines[$key+1]['tcin'];
+							#dump($tcin,'$tcin '." key: $key -  tcout: $tcout - $text_final");
+					}else{
 
-					$tcin_value = OptimizeTC::TC2seg($ar_lines[$key]['tcin']);
+						$tcin_value = OptimizeTC::TC2seg($ar_lines[$key]['tcin']);
 
-					# Seconds +5
-					$tcout_final_secs 		= $tcin_value + 5;
-						#dump($tcout_final_secs, 'tcout_final_secs', array());
+						# Seconds +5
+						$tcout_final_secs 		= $tcin_value + 5;
+							#dump($tcout_final_secs, 'tcout_final_secs', array());
 
-					# Format as tc like '00:01:03.765'			
-					$tcout_final_formated 	= OptimizeTC::seg2tc($tcout_final_secs);	
+						# Format as tc like '00:01:03.765'
+						$tcout_final_formated 	= OptimizeTC::seg2tc($tcout_final_secs);	
 
-					# tcout
-					$tcout = $tcout_final_formated;
-						#dump($tcout, 'tcout '.$ar_lines[$key]['tcin'], array());		
-				}
+						# tcout
+						$tcout = $tcout_final_formated;
+							#dump($tcout, 'tcout '.$ar_lines[$key]['tcin'], array());
+					}
 
 				#
 				# LINE				
@@ -145,7 +163,7 @@ abstract class subtitles {
 					# vtt line break
 					$srt .= "\n";
 					
-			$i++; }#foreach($ar_lines
+			$i++; }#foreach($ar_lines as $key => $line)
 
 			$srt = "WEBVTT\n\n".$srt;
 
@@ -155,6 +173,55 @@ abstract class subtitles {
 
 			return (string)$srt;
 	}//end build_subtitles_text
+
+
+
+	/**
+	* BUILD_FRAGMENT
+	* Rebuild array ar_lines to conform length and offset of lines based on $tc_in_secs, $tc_out_secs
+	* @param array $ar_lines
+	*	Like  	array(
+	*			[text] => Hola Anna. Gràcies per venir. Benvinguda. Comencem amb la primera pregunta. Llegint la teva entrevista ens va cridar l'atenció la particular
+	*        	[tcin] => 00:00:03.000
+	*        	)
+	* @param int $tc_in_secs
+	*	Like '12'
+	* @param int $tc_out_secs
+	*	Like '56' // Zero for empty value
+	* @return array $fragment_ar_lines
+	*/
+	public static function build_fragment($ar_lines, $tc_in_secs, $tc_out_secs) {
+		
+		$fragment_ar_lines = [];
+
+		$tc_in_secs = (int)$tc_in_secs;
+		$tc_out_secs= (int)$tc_out_secs ;
+	
+		foreach ($ar_lines as $key => $line) {
+			
+			$tc = (int)OptimizeTC::TC2seg($line['tcin']);
+			
+			// Skip lines before tc_in_secs
+				if ( $tc < $tc_in_secs ) {
+					continue; # Skip
+				}
+
+			// Offset
+				$current_time 	= $tc - $tc_in_secs; // Use tc_in_secs as offset
+				$current_tc 	= OptimizeTC::seg2tc($current_time);
+				$line['tcin']	= $current_tc;
+
+			// Add valid line
+				$fragment_ar_lines[] = $line;
+
+			// Skip lines after tc_out_secs
+				if ( !empty($tc_out_secs) && $tc > $tc_out_secs ) {
+					break;
+				}
+		}
+
+		return $fragment_ar_lines;
+	}//end build_fragment
 
 
 
@@ -507,7 +574,7 @@ abstract class subtitles {
 	*/
 	public static function truncate_text($string, $limit, $break=" ", $pad="...") {
 
-	  	# return with no change if string is shorter than $limit
+		# return with no change if string is shorter than $limit
 		$str_len = subtitles::text_lenght($string);  // strlen($string)
 		if($str_len <= $limit) return $string;
 		
@@ -519,6 +586,7 @@ abstract class subtitles {
 
 		return $string . $pad;
 	}//end truncate_text
+
 
 
 	/**
@@ -535,11 +603,12 @@ abstract class subtitles {
 		
 		return trim($string) ;
 	}//end trim_text
-	
+
 
 
 	/**
 	* TEXT_LENGHT
+	* Get multibyte text lenght
 	* @return int | false $text_lenght
 	*/
 	public static function text_lenght($text) {
@@ -549,6 +618,40 @@ abstract class subtitles {
 
 		return $text_lenght;
 	}//end text_lenght
+
+
+
+	/**
+	* GET_SUBTITLES_URL
+	* @return string $subtitles_url
+	*/
+	public static function get_subtitles_url($section_id, $tc_in=false, $tc_out=false, $lang=DEDALO_DATA_LANG) {		
+		
+		// Subtitles url base
+			$TEXT_SUBTITLES_URL_BASE = DEDALO_LIB_BASE_URL . '/publication/server_api/v1/subtitles/';
+			#define('TEXT_SUBTITLES_URL_BASE', DEDALO_LIB_BASE_URL . '/publication/server_api/v1/subtitles/');
+		
+		// url vars	
+			$url_vars = [];
+
+			$url_vars[] = 'section_id=' . $section_id;
+
+			if (!empty($lang)) {
+				$url_vars[] = 'lang=' . $lang;
+			}
+
+			if (!empty($tc_in)) {
+				$url_vars[] = 'tc_in=' . $tc_in;
+			}
+
+			if (!empty($tc_out)) {
+				$url_vars[] = 'tc_out=' . $tc_out;
+			}
+
+		$subtitles_url = $TEXT_SUBTITLES_URL_BASE . '?' . implode('&', $url_vars); 
+
+		return $subtitles_url;
+	}//end get_subtitles_url
 	
 
 
