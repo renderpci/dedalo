@@ -174,8 +174,10 @@ class full_node {
 		
 		$full_fragments = array();
 		$obj = new stdClass();
-			$obj->video_url = $this->video;
-			$obj->fragm 	= $fragm;
+			$obj->video_url 	= $this->video;
+			$obj->subtitles_url = subtitles::get_subtitles_url($this->av_section_id, false, false, $this->lang);
+			$obj->fragm 		= $fragm;
+			
 			
 		$full_fragments[] = $obj;
 
