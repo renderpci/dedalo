@@ -806,6 +806,23 @@ abstract class diffusion  {
 
 	// BUILD JSON DATA OUT //////////////////////////////////////////////////////////////////////
 
+
+
+	/**
+	* MAP_SECTION_ID_TO_SUBTITLES_URL
+	* @return string $subtitles_url
+	*/
+	public static function map_section_id_to_subtitles_url($options, $dato) {
+	
+		require_once(DEDALO_LIB_BASE_PATH . '/tools/tool_subtitles/class.subtitles.php');
+		
+		$section_id 	= (int)$dato;
+		$lang 			= $options->lang;
+		$subtitles_url 	= subtitles::get_subtitles_url($section_id, $tc_in=false, $tc_out=false, $lang);
+
+		return $subtitles_url;
+	}//end map_section_id_to_subtitles_url
+
 	
 
 
