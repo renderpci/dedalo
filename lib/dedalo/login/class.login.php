@@ -382,7 +382,7 @@ class login extends common {
 							$full_username = login::get_full_username($section_id);
 
 						// init_user_login_secuence
-							$init_user_login_secuence = login::init_user_login_secuence($section_id, $username, $full_username, $init_test=false);
+							$init_user_login_secuence = login::init_user_login_secuence($section_id, $username, $full_username, $init_test=false, 'saml');
 							if ($init_user_login_secuence->result===false) {
 								# RETURN FALSE
 								$response->result = false;
@@ -631,7 +631,7 @@ class login extends common {
 	* @param string $username
 	* @return bool 
 	*/
-	private static function init_user_login_secuence($user_id, $username, $full_username, $init_test=true) {
+	private static function init_user_login_secuence($user_id, $username, $full_username, $init_test=true, $login_type='default') {
 
 		$start_time=microtime(1);
 
@@ -656,19 +656,23 @@ class login extends common {
 			}
 		}
 
-		# IS_GLOBAL_ADMIN (before set user session vars)
-		$_SESSION['dedalo4']['auth']['is_global_admin'] = (bool)component_security_administrator::is_global_admin($user_id);
-		# IS_DEVELOPER (before set user session vars)
-		$_SESSION['dedalo4']['auth']['is_developer'] 	= (bool)login::is_developer($user_id);
+		// IS_GLOBAL_ADMIN (before set user session vars)
+			$_SESSION['dedalo4']['auth']['is_global_admin'] = (bool)component_security_administrator::is_global_admin($user_id);
+		
+		// IS_DEVELOPER (before set user session vars)
+			$_SESSION['dedalo4']['auth']['is_developer'] 	= (bool)login::is_developer($user_id);
 
-		# SESSION : If backup is ok, fix session data
-		$_SESSION['dedalo4']['auth']['user_id']			= $user_id;
-		$_SESSION['dedalo4']['auth']['username']		= $username;
-		$_SESSION['dedalo4']['auth']['full_username'] 	= $full_username;
-		$_SESSION['dedalo4']['auth']['is_logged']		= 1;
+		// SESSION : If backup is ok, fix session data
+			$_SESSION['dedalo4']['auth']['user_id']			= $user_id;
+			$_SESSION['dedalo4']['auth']['username']		= $username;
+			$_SESSION['dedalo4']['auth']['full_username'] 	= $full_username;
+			$_SESSION['dedalo4']['auth']['is_logged']		= 1;
 
-		# CONFIG KEY
-		$_SESSION['dedalo4']['auth']['salt_secure']	= dedalo_encrypt_openssl(DEDALO_SALT_STRING);
+		// CONFIG KEY
+			$_SESSION['dedalo4']['auth']['salt_secure']	= dedalo_encrypt_openssl(DEDALO_SALT_STRING);
+
+		// login_type
+			$_SESSION['dedalo4']['auth']['login_type']  = $login_type;			
 
 		# Auth cookie
 		if (defined('DEDALO_PROTECT_MEDIA_FILES') && DEDALO_PROTECT_MEDIA_FILES===true) {

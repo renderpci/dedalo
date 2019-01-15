@@ -53,30 +53,37 @@ function Quit($json_data) {
 		$response->result 	= false;
 		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
 
-	$trigger_post_vars = array();
-	foreach ($json_data as $key => $value) {
-		$trigger_post_vars[$key] = $value;
-	}
+	// post vars
+		$trigger_post_vars = array();
+		foreach ($json_data as $key => $value) {
+			$trigger_post_vars[$key] = $value;
+		}
 
-	# If all is ok, return string 'ok'
-	$result = login::Quit( $trigger_post_vars );
+	// Login type . Get before unset session
+		$login_type = isset($_SESSION['dedalo4']['auth']['login_type']) ? $_SESSION['dedalo4']['auth']['login_type'] : 'default';
 
-	# Close script session
-	session_write_close();
+	// Quit action
+		$result = login::Quit( $trigger_post_vars );
+
+	// Close script session
+		session_write_close();
 	
-	# Exit printing result
-	# exit($result);
+	// Response
+		$response->result 	= $result;
+		$response->msg 		= 'Ok. Request done ['.__FUNCTION__.']';
 
-	$response->result 	= $result;
-	$response->msg 		= 'Ok. Request done ['.__FUNCTION__.']';
+		// saml logout
+			if ($login_type==='saml' && defined('SAML_CONFIG') && SAML_CONFIG['active']===true && isset(SAML_CONFIG['logout_url'])) {
+				$response->saml_redirect = SAML_CONFIG['logout_url'];
+			}
 
-	# Debug
-	if(SHOW_DEBUG===true) {
-		$debug = new stdClass();
-			$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";			
+		// debug
+		if(SHOW_DEBUG===true) {
+			$debug = new stdClass();
+				$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";			
 
-		$response->debug = $debug;
-	}
+			$response->debug = $debug;
+		}
 	
 	return (object)$response;
 }//end Quit()
