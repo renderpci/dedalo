@@ -1502,12 +1502,12 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.1.7';
+	$DEDALO_VERSION = '5.1.8';
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '14-01-2019');
+	define('DEDALO_BUILD'	, '15-01-2019');
 
 
 	/*
