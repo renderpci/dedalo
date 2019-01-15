@@ -34,8 +34,7 @@ $js_url = DEDALO_LIB_BASE_URL.'/component_image/js/component_image_read.js';
 							
 			case ($permissions>=1) :
 					
-
-				if (file_exists($thumb_path)) {
+				if (file_exists($thumb_path) || !empty($external_source)) {
 					
 					# CLICK_ACTION
 					$click_action="onclick=\"tool_common.open_player(this,{'type':'component_image','image_full_url':'$image_full_url'});\" ";

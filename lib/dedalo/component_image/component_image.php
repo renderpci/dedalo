@@ -92,17 +92,26 @@
 				$file_name		= 'portal_list';
 				$id_wrapper 	= 'wrapper_'.$identificador_unico;
 				$component_info = $this->get_component_info('json');
+
+				if (!empty($external_source)) {
+					
+					//$thumb_file_url	= $external_source;
+					$thumb_path 	= $external_source;
+					$image_full_url = $external_source;
+
+				}else{
 				
-				#
-				# DEFAULT QUALITY IMAGE URL (onclick go to)
-				$this->ImageObj->set_quality(DEDALO_IMAGE_QUALITY_DEFAULT); // Force default quality always
-				$image_full_url = $this->ImageObj->get_url();
+					#
+					# DEFAULT QUALITY IMAGE URL (onclick go to)
+					$this->ImageObj->set_quality(DEDALO_IMAGE_QUALITY_DEFAULT); // Force default quality always
+					$image_full_url = $this->ImageObj->get_url();
 					#dump($this->ImageObj, ' ImageObj ++ '.to_string());
-				
-				#
-				# THUMB URL
-				$thumb_path 	= $this->get_thumb_path();				
-				$thumb_file_url = $this->get_thumb_url();	
+
+					#
+					# THUMB URL
+					$thumb_path 	= $this->get_thumb_path();				
+					$thumb_file_url = $this->get_thumb_url();
+				}
 				break;
 
 		case 'player':
@@ -164,16 +173,27 @@
 				#
 				# DEFAULT QUALITY IMAGE URL (onclick go to)
 				$this->ImageObj->set_quality(DEDALO_IMAGE_QUALITY_DEFAULT); // Force default quality always
-				$image_full_url = $this->ImageObj->get_url();
-					#dump($this->ImageObj, ' ImageObj ++ '.to_string());
-				
-				#
-				# THUMB URL
-				$thumb_path = $this->get_thumb_path();
-				if (!file_exists($thumb_path)) {
-					return null;
-				}
-				$thumb_file_url = $this->get_thumb_url();						
+
+				if (!empty($external_source)) {
+					
+					//$thumb_file_url	= $external_source;
+					$thumb_path 	= $external_source;
+					$image_full_url = $external_source;
+					$thumb_file_url = $external_source;
+
+				}else{
+					
+					$image_full_url = $this->ImageObj->get_url();
+						#dump($this->ImageObj, ' ImageObj ++ '.to_string());
+					
+					#
+					# THUMB URL
+					$thumb_path = $this->get_thumb_path();
+					if (!file_exists($thumb_path)) {
+						return null;
+					}
+					$thumb_file_url = $this->get_thumb_url();
+				}					
 				break;
 
 		case 'list_ts':
