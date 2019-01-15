@@ -1464,7 +1464,7 @@
 
 
 	Valencia 24-12-2018 5.0.36
-		tool_import_dedalo_csv : Fix bug in import_dedalo_csv_file when numbers are wrong json decoded an float
+		tool_import_dedalo_csv : Fix bug in import_dedalo_csv_file when numbers are wrong json decoded as float
 
 
 	Valencia 29-12-2018 5.1.0
@@ -1474,6 +1474,9 @@
 	Valencia 06-01-2019 5.1.1
 		section : Allow skip save save_modified to import info about section modification user and date
 
+
+	Valencia 08-01-2019 5.1.4
+		search_development2 : Changed sequential insert relations sql in propagate_component_dato_to_relations_table to múltiple insert for speed
 
 
 
@@ -1499,12 +1502,12 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.1.2';
+	$DEDALO_VERSION = '5.1.7';
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '07-01-2019');
+	define('DEDALO_BUILD'	, '14-01-2019');
 
 
 	/*
