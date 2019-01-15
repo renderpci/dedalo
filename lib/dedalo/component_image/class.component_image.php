@@ -1103,7 +1103,7 @@ class component_image extends component_common {
 	*/
 	public static function render_list_value($value, $tipo, $parent, $modo, $lang, $section_tipo, $section_id, $current_locator=null, $caller_component_tipo=null) {
 	
-		if ( (empty($value) && $modo==='portal_list') || $modo==='list_tm' || $modo==='portal_list_view_mosaic' || $modo==='edit' || $modo==='edit_in_list') {
+		//if ( (empty($value) && $modo==='portal_list') || $modo==='list_tm' || $modo==='portal_list_view_mosaic' || $modo==='edit' || $modo==='edit_in_list') {
 			
 			$component	= component_common::get_instance(__CLASS__,
 														 $tipo,
@@ -1112,7 +1112,7 @@ class component_image extends component_common {
 														 $lang,
 														 $section_tipo);
 			$value 		= $component->get_html();
-		}
+		//}
 
 		return $value;
 	}//end render_list_value
