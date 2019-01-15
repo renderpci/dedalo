@@ -1558,6 +1558,11 @@ class component_date extends component_common {
 
 		$diffusion_value = '';		
 		$ar_dato 		 = $this->get_dato();
+
+		if(empty($ar_dato)){
+			return null;
+		}
+
 		$date_mode 		 = $this->get_date_mode();
 		$ar_diffusion_values = array();
 		foreach ($ar_dato as $dato) {
@@ -1620,9 +1625,9 @@ class component_date extends component_common {
 					if (isset($current_date->start)) {
 						$current_date = $current_date->start;
 					}
-					$dd_date 		 = new dd_date($current_date);
-					$timestamp 		 = $dd_date->get_dd_timestamp("Y-m-d H:i:s");
-					$ar_diffusion_values[] = $timestamp;
+					$dd_date 		 		= new dd_date($current_date);
+					$timestamp 				= $dd_date->get_dd_timestamp("Y-m-d H:i:s");
+					$ar_diffusion_values[] 	= $timestamp;
 					break;
 			}
 		}
