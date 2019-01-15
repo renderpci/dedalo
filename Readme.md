@@ -58,24 +58,22 @@ Some projects using Dédalo to manage their Cultural Heritage or Oral Archive:
 
 *libs required for the Dédalo*
 
+Note: If you want install a basic libs dependences pre-builded and tested, you can use the pack in:
+	/install/library_packs/Dedalo_basic_library_pack_2019.zip
+un zip the file and move th libraries to:
+	/dedalo/lib/ 
+
 - Jquery 2.2.3
 - bootstrap 3.1.1
 - calendar 1.25
 - Captionator 0.5.1
-- ffmpeg 2.6.1+
-- qtfaststart 1.0
-- ImageMagick 6.9+
 - FullCalendar v2.3.1
 - geoip2
 - jshash md5 v2.2
 - json-logic
-- SWFObject v1.5
-- jwplayer 5.9.2118
 - leaflet 1.0
 - lessphp v0.4.0
-- MediaElement 2.14.2
 - nvd3 1.7.1
-- NodeJS 5.10.1
 - paper 0.9.25
 - pdfjs 1.1.1
 - pdfkit
@@ -83,7 +81,16 @@ Some projects using Dédalo to manage their Cultural Heritage or Oral Archive:
 - tcpdf 6.2.5
 - tinymce 4.3.10
 - wexflow 1.2
-- videojs 3.0r2
+
+Some libraries like ffmpeg or ImageMagick need to be install direclly in the system (CentOs, Debian, MacOs X, etc)
+
+SO libraries:
+- ffmpeg 2.6.1+
+- qtfaststart 1.0
+- ImageMagick 6.9+
+- ffprobe 2.6.1+
+- NodeJS 5.10.1
+- Xpdf 4.00.01+
 - wkhtmltopdf 0.12.1-08b0817
 
 
@@ -93,7 +100,11 @@ Some projects using Dédalo to manage their Cultural Heritage or Oral Archive:
 2. Create a DB in PostgreSQL and name it to: dedalo_xx (you can change the xx with own name).
 3. Restore the file /install/db/dedalo4_install.backup to the postgres created DB. 
 
+		Basic pg_restore:
 		pg_restore /install/db/dedalo4_install.backup dedalo_xx
+
+		Example of actual use:
+		pg_restore --host localhost --port 5432 --username "XXX" --dbname "dedalo4_xx" --role "xxx" --no-owner --no-privileges --clean --verbose "/install/db/dedalo4_install.backup"
 
 4. Download the dependences and libs for Dédalo and install it into the /lib/ folder. In some cases you need see the /lib/dedalo/config/sample.config4.php file in order to change or customize the installation.
 5. Rename the /lib/dedalo/config/sample.config4.php to /lib/dedalo/config/config4.php.
@@ -180,7 +191,7 @@ Windows: is possible that Dédalo can run, but we NO TESTED.
 
 **USE**
 
-Dédalo version 4, is only certificated and proved into the webkit browsers (Chrome, Safari,...). 
+Dédalo version 4, is only certificated and proved into the chromium or webkit browsers (Chrome, Safari, ...). 
 Firefox situation: This version of Dédalo(V4.8+) is full compatible, and can be used in production, but we need more feedback from the users, please comment your experience. 
 
 Browser	|	Version |	certificated
@@ -188,7 +199,7 @@ Browser	|	Version |	certificated
 Chrome	|	60+ | YES - recomended
 Chrome	|	50+ | Deprecated (Please update as soon as posible)	 
 Chrome	|	0 to 50 | NO	 
-Safari	|	10+ | YES;Safari has a conflict with the users section with the pw component and the browser autofill. USE IT WITH CARE.
+Safari	|	10+ | YES
 Safari	|	9 | Deprecated (Please update as soon as posible)
 Safari	|	0 to 7 | NO	
 Firefox	|	50+ | The compatibility now is complete, but we need feedback to resolve issues in the diary work with Firefox (10-09-2018), please test it and comment it.
