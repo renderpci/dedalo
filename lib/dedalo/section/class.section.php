@@ -2817,7 +2817,7 @@ class section extends common {
 				# Ignoerd locator
 				$ar_deleted_locators[] = $current_locator;				
 				$removed = true;
-				debug_log(__METHOD__." Deleted locator in $relations_container. $component_tipo - $current_locator->section_tipo - $component_tipo ".to_string($current_locator), logger::DEBUG);
+				debug_log(__METHOD__." Deleted locator in $relations_container. component_tipo:$component_tipo - section_tipo:$current_locator->section_tipo ".to_string($current_locator), logger::DEBUG);
 			}else{
 				# Add normally
 				$new_relations[] = $current_locator;

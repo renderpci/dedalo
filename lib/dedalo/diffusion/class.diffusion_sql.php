@@ -990,7 +990,11 @@ class diffusion_sql extends diffusion  {
 
 				#
 				# Component target
-				$termino_relacionado 			= RecordObj_dd::get_ar_terminos_relacionados($options->tipo, false, true)[0];
+				$ar_terminos_relacionados 		= RecordObj_dd::get_ar_terminos_relacionados($options->tipo, false, true);
+				if (empty($ar_terminos_relacionados)) {
+					throw new Exception("Error Processing Request. Empty mandatory structure related term for tipo: ".$options->tipo.' ('.$ar_field_data['field_name'].')', 1);
+				}
+				$termino_relacionado 			= reset($ar_terminos_relacionados);
 				$modelo_name 					= RecordObj_dd::get_modelo_name_by_tipo($termino_relacionado,true);				
 				$real_section_tipo 				= RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($termino_relacionado, 'section', 'parent')[0];
 				$current_component 				= component_common::get_instance($modelo_name,

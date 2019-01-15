@@ -21,7 +21,7 @@ abstract class counter {
 
 		# ACTIVITY_SECTION DON'T USE COUNTERS
 		if ($tipo===DEDALO_ACTIVITY_SECTION_TIPO) {
-			return (int)0;
+			return 0;
 		}
 		
 		$strQuery 	= 'SELECT dato AS counter_number FROM "'.$matrix_table.'" WHERE tipo = $1 LIMIT 1';

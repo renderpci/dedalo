@@ -198,8 +198,11 @@ class diffusion_socrata extends diffusion  {
 			$response  = $client->post($path, $data_json);
 			#dump($response, ' response ++ '.to_string());
 			debug_log(__METHOD__." +++ response ".json_encode($response, JSON_PRETTY_PRINT), logger::DEBUG);
-			#debug_log(__METHOD__." ++++++++++++ data_json ". json_encode(json_decode($data_json), JSON_PRETTY_PRINT) , logger::DEBUG);
-
+			
+			if (isset($response->Errors) && (int)$response->Errors>0) {
+				debug_log(__METHOD__." !!! ERROR ON UPSERT SOCRATA RECORD ".json_encode($response, JSON_PRETTY_PRINT), logger::ERROR);
+				debug_log(__METHOD__." !!! ERROR +++++ data_json ". json_encode(json_decode($data_json), JSON_PRETTY_PRINT) , logger::ERROR);
+			}
 
 		return $response;
 	}//end upsert_data
