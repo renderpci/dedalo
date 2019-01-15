@@ -10,7 +10,7 @@ abstract class subtitles {
 
 
 	# Version. Important!
-	static $version = "1.0.1"; // 07-03-2017
+	static $version = "1.0.2"; // 15-01-2019
 
 	# int $maxCharLine . Max number of chars for subtitle line. Default 144
 	static $maxCharLine;
@@ -71,7 +71,7 @@ abstract class subtitles {
 				#dump($ar_lines, ' ar_lines'); #die();
 
 		// Fragment subtitles
-			if ($options->tc_in_secs!==false) {
+			if ($options->tc_in_secs!==false || $options->tc_out_secs!==false) {
 				$ar_lines = subtitles::build_fragment($ar_lines, $options->tc_in_secs, $options->tc_out_secs);
 			}
 
@@ -240,9 +240,9 @@ abstract class subtitles {
 		#$tcPattern 	= TR::get_mark_pattern('tc_full',$standalone=true);
 		
 		// Allow old codes like [TC_00:00:03_TC]
-			$tcPattern 	= "/(\[TC_[0-9]{1,2}:[0-9]{1,2}:[0-9]{1,2}(\.[0-9]{1,3})?_TC\])/";
+			$tcPattern 	= "/(\[TC_[0-9]{1,2}:[0-9]{1,2}:[0-9]{1,2}\.[0-9]{1,3}_TC\]|\[TC_[0-9]{1,2}:[0-9]{1,2}:[0-9]{1,2}_TC\])/";
 		
-		$ar_fragments	= preg_split($tcPattern, $text, -1, PREG_SPLIT_NO_EMPTY | PREG_SPLIT_DELIM_CAPTURE);
+		$ar_fragments	= preg_split($tcPattern, $text, -1, PREG_SPLIT_NO_EMPTY | PREG_SPLIT_DELIM_CAPTURE );
 		#preg_match_all("/(\[TC_[0-9][0-9]:[0-9][0-9]:[0-9][0-9]_TC\])/", $text, $ar_fragments, PREG_SET_ORDER);
 			#dump($ar_fragments,'$ar_fragments - '); die();
 
