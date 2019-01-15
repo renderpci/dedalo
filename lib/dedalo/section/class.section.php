@@ -973,6 +973,9 @@ class section extends common {
 
 					// update section dato with final object. Important
 						$this->dato = $section_dato;
+
+					// Set as loaded 
+    					$this->bl_loaded_matrix_data = true;
 			
 			// Real data save			
 				// Time machine data. We save only current new section in time machine once (section info not change, only components changes)			
@@ -1019,10 +1022,10 @@ class section extends common {
 					}
 				}
 
-				// Store in cached sections . Important
+				// Store in cached sections . (!) Important
 					# key for cache
     				$key = $this->section_id .'_'. $tipo;
-    				self::$ar_section_instances[$key] = $this;
+    				self::$ar_section_instances[$key] = $this;    			
 
 				
 				// TOP_ID : Si se crea desde un portal, el top_id está fijado en sesion "TOP_ID". Si no, es el propio section_id de la sección creada
