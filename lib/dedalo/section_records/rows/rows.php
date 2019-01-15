@@ -85,6 +85,11 @@
 						#	continue;
 						#}
 
+						// Skip negative section_id
+							if ($section_id<0) {
+								continue;
+							}
+
 					# REL_LOCATOR : The current_id can be id matrix or locator like object
 						/*$rel_locator = $current_id;		 # Temporal. Luego se sobreescribe 				
 						
@@ -208,6 +213,11 @@
 					# ROW
 					$id_time_machine = $row->id;
 					$section_id 	 = $row->section_id;
+
+					// Skip negative section_id
+						if ($section_id<0) {
+							continue;
+						}
 
 					#
 					# COLUMNS.
