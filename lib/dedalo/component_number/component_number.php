@@ -21,6 +21,7 @@
 	$visible				= $this->get_visible();
 	$propiedades 			= $this->get_propiedades();
 	
+	
 	$file_name				= $modo;
 	$from_modo				= $modo;
 	
