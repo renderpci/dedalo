@@ -387,7 +387,7 @@ class tool_upload extends tool_common {
 			    $response->msg .= ' Exception: ' . $e->getMessage();
 			}
  		
-		// Save to tocal
+		// Save to local
 			if ($content!==false) {
 
 				debug_log(__METHOD__." File downloaded successfully ".to_string(), logger::DEBUG);

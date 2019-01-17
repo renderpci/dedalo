@@ -476,7 +476,7 @@ class tool_export extends tool_common {
 					#$cell = str_replace("\t", " <blockquote> </blockquote> ", $cell);
 					
 					# IMAGES . Replace images url to html img tags
-					$regex = '/https?\:\/\/[^\\" ]+.jpg/i';
+					$regex = '/https?\:\/\/[^\\" ]+.(jpg|svg)/i';
 					$cell  = preg_replace($regex, "<img src=\"$0\" style=\"width:auto;height:57px\"/>", $cell);
 
 					# unescape separator ;
