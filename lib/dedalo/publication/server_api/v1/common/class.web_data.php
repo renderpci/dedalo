@@ -46,7 +46,25 @@ class web_data {
 	#static $version = "1.0.28";  // 17-07-2018
 	#static $version = "1.0.29";  // 17-09-2018
 	static $version = "1.0.30";  // 13-11-2018
-	
+
+
+
+	/**
+	* GET_DB_CONNECTION
+	* @return resource $mysql_conn
+	*/
+	public static function get_db_connection() {
+
+		$mysql_conn = DBi::_getConnection_mysql(MYSQL_DEDALO_HOSTNAME_CONN,
+										 		MYSQL_DEDALO_USERNAME_CONN,
+										 		MYSQL_DEDALO_PASSWORD_CONN,
+										 		MYSQL_WEB_DATABASE_CONN,
+										 		MYSQL_DEDALO_DB_PORT_CONN,
+										 		MYSQL_DEDALO_SOCKET_CONN);
+		return $mysql_conn;
+	}//end get_db_connection
+
+
 
 	/* ROWS_DATA (SQL)
 	----------------------------------------------------------------------- */
@@ -87,7 +105,7 @@ class web_data {
 				$sql_options->resolve_portals_custom = false; // array | bool
 				$sql_options->apply_postprocess = false; //  bool default true
 				$sql_options->map 				= false; //  object | bool (default false). Apply map function to value like [{"field":birthplace_id","function":"resolve_geolocation","otuput_field":"birthplace_obj"}]
-				$sql_options->conn 			 	= DBi::_getConnection_mysql();
+				$sql_options->conn 			 	= web_data::get_db_connection();
 
 				foreach ($request_options as $key => $value) {if (property_exists($sql_options, $key)) $sql_options->$key = $value;}
 
@@ -273,7 +291,7 @@ class web_data {
 			$i++;}; 
 			
 			$result->free();
-			#DBi::_getConnection_mysql()->close();
+			#web_data::get_db_connection()->close();
 
 			# MAP
 			# Format : [{"field":birthplace_id","function":"resolve_geolocation","output_field":"birthplace_obj"}]
@@ -445,7 +463,7 @@ class web_data {
 			$data = false;
 
 			$strQuery = "SELECT data FROM publication_schema WHERE id = 1";
-			$result   = DBi::_getConnection_mysql()->query($strQuery);
+			$result   = web_data::get_db_connection()->query($strQuery);
 
 			if($result) while ( $rows = $result->fetch_assoc() ) {
 				$data = json_decode($rows['data']);
@@ -466,7 +484,7 @@ class web_data {
 			$data = false;
 
 			$strQuery = "SELECT name, data FROM publication_schema ";
-			$result   = DBi::_getConnection_mysql()->query($strQuery);
+			$result   = web_data::get_db_connection()->query($strQuery);
 
 			$ar_tables=array();
 			if ($result) {
@@ -575,7 +593,7 @@ class web_data {
 		*/
 		private static function count_records( $sql, $conn=false ) {
 
-			if($conn===false) $conn=DBi::_getConnection_mysql();			
+			if($conn===false) $conn=web_data::get_db_connection();			
 			debug_log(__METHOD__." sql ".to_string($sql), logger::DEBUG);
 			$ar = explode("\n", $sql);			
 			foreach ($ar as $key => $line) {
@@ -700,7 +718,7 @@ class web_data {
 			
 			$strQuery = "SHOW TABLES";		
 			
-			$conn=DBi::_getConnection_mysql();
+			$conn=web_data::get_db_connection();
 
 			# EXEC QUERY
 			$result = $conn->query($strQuery);
@@ -725,7 +743,7 @@ class web_data {
 			$strQuery = "SHOW COLUMNS FROM $table";
 			
 			# EXEC QUERY
-			$conn=DBi::_getConnection_mysql();
+			$conn=web_data::get_db_connection();
 
 			$result = $conn->query($strQuery);
 
@@ -1773,7 +1791,7 @@ class web_data {
 			# q (real_escape_string)
 			$q = $options->q;
 			if ($q!==false) {
-				$q = DBi::_getConnection_mysql()->real_escape_string($q);
+				$q = web_data::get_db_connection()->real_escape_string($q);
 			}
 			
 			
@@ -1958,7 +1976,7 @@ class web_data {
 
 			# q scape
 			if ($options->q!==false) {
-				$options->q = DBi::_getConnection_mysql()->real_escape_string($options->q);
+				$options->q = web_data::get_db_connection()->real_escape_string($options->q);
 			}			
 
 			if ($options->q!==false) {
@@ -2624,7 +2642,7 @@ class web_data {
 		
 			# Search string is expected rawurlencoded — URL-encode according to RFC 3986 
 			#$options->q = addslashes( rawurldecode($options->q) );
-			$options->q = DBi::_getConnection_mysql()->real_escape_string($options->q);
+			$options->q = web_data::get_db_connection()->real_escape_string($options->q);
 
 			# Offset
 			if ($options->page_number>1) {
@@ -2863,7 +2881,7 @@ class web_data {
 			# Search string is expected rawurlencoded — URL-encode according to RFC 3986 			
 			# q scape
 			if ($options->q!==false) {
-				$options->q = DBi::_getConnection_mysql()->real_escape_string($options->q);
+				$options->q = web_data::get_db_connection()->real_escape_string($options->q);
 			}
 
 			# Offset
@@ -3028,11 +3046,11 @@ class web_data {
 			# Search string is expected rawurlencoded — URL-encode according to RFC 3986 
 			# q scape
 			if ($options->q!==false) {
-				$options->q = DBi::_getConnection_mysql()->real_escape_string($options->q);
+				$options->q = web_data::get_db_connection()->real_escape_string($options->q);
 			}
 
 			function escape_string($string) {
-				$result = DBi::_getConnection_mysql()->real_escape_string($string);
+				$result = web_data::get_db_connection()->real_escape_string($string);
 				return $result;
 			}
 
