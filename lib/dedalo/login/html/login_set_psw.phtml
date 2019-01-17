@@ -10,7 +10,7 @@
 				#$html_content .= $dedalo_aplication_langs_selector_html;
 			
 			// Inputs
-				$html_content .= "<div>";
+				$html_content .= "<div id=\"form_container\">";
 				$html_content .= "Please set a password for <strong>root</strong> user to manage the system.<br>
 									<span class=\"warning\">
 									IMPORTANT: Remember this password because you can not change it later.
@@ -29,7 +29,7 @@
 				$html_content .= "</div>";
 
 				$html_content .= "<div class=\"set_pasw_input set_button\">";	
-				$html_content .= " <input type=\"button\" class=\"btn btn-default btn-sm\" name=\"submit\" value=\"Save\" onclick=\"login.set_psw()\" />";
+				$html_content .= " <input type=\"button\" class=\"btn btn-primary\" name=\"submit\" value=\"Save\" onclick=\"login.set_psw()\" />";
 				$html_content .= "</div>";
 
 				$html_content .= "</div>";
