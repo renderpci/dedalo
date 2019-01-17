@@ -469,7 +469,7 @@ class diffusion_sql extends diffusion  {
 		#
 		# COMPONENT PUBLICATION - CHECK (once)
 			if(is_null($component_publication_tipo)) {
-				$component_publication_tipo = self::get_component_publication_tipo($ar_table_children);
+				$component_publication_tipo = diffusion::get_component_publication_tipo($ar_table_children);
 				#dump($component_publication_tipo, ' component_publication_tipo ++ ar_table_children: '.to_string($ar_table_children));
 				if (empty($component_publication_tipo)) {
 					if(SHOW_DEBUG===true) {
@@ -531,7 +531,7 @@ class diffusion_sql extends diffusion  {
 			#
 			# COMPONENT PUBLICATION - CHECK (once)
 			/*
-			$component_publication_bool_value = (bool)self::get_component_publication_bool_value($component_publication_tipo, $current_section_id, $section_tipo);
+			$component_publication_bool_value = (bool)diffusion::get_component_publication_bool_value($component_publication_tipo, $current_section_id, $section_tipo);
 				#dump($component_publication_bool_value, ' component_publication_bool_value ++ '.to_string());					
 				if ($component_publication_bool_value===false) {
 					# Skip this record
@@ -823,7 +823,7 @@ class diffusion_sql extends diffusion  {
 		
 		#
 		# COMPONENT PUBLICATION - CHECK (once)
-		$component_publication_bool_value = (bool)self::get_component_publication_bool_value($options->component_publication_tipo, $options->section_id, $options->section_tipo);
+		$component_publication_bool_value = (bool)diffusion::get_component_publication_bool_value($options->component_publication_tipo, $options->section_id, $options->section_tipo);
 
 		if ($component_publication_bool_value===false) {
 			# Delete this record
@@ -1041,9 +1041,17 @@ class diffusion_sql extends diffusion  {
 								$ar_field_data['field_value'] = (string)$propiedades->enum->$dato;		# Format: "enum":{"1":"si", "2":"no"}							
 								break;
 							default:
-								if (is_array($dato)) {
+								if (is_array($dato)) {									
 									$ar_id = array();
 									foreach ($dato as $current_locator) {
+	
+										// Check target is publicable
+											$current_is_publicable = diffusion::get_is_publicable($current_locator);
+											if ($current_is_publicable!==true) {
+												debug_log(__METHOD__." + Skipped locator not publicable: ".to_string($current_locator), logger::ERROR);
+												continue;
+											}
+
 										$ar_id[] = $current_locator->section_id;
 									}
 									$dato = $ar_id;
@@ -2303,58 +2311,6 @@ class diffusion_sql extends diffusion  {
 
 		return false;		
 	}//end delete_sql_record
-
-
-
-	/**
-	* GET_COMPONENT_PUBLICATION_TIPO
-	* @return 
-	*/
-	public static function get_component_publication_tipo($ar_fields_tipo) {
-		
-		$component_publication_tipo = false;
-
-		// section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, $ar_modelo_name_required, $from_cache=true, $resolve_virtual=false, $recursive=true, $search_exact=false) 
-
-		foreach ($ar_fields_tipo as $curent_children_tipo) {
-
-			$ar_related = common::get_ar_related_by_model('component_publication', $curent_children_tipo);
-				#dump($component_publication, ' component_publication ++ '.to_string($curent_children_tipo));
-
-			if (!empty($ar_related)) {
-				$component_publication_tipo = reset($ar_related);
-				break;
-			}
-		}
-
-		return $component_publication_tipo;
-	}//end get_component_publication_tipo
-
-
-
-	/**
-	* GET_COMPONENT_PUBLICATION_bool_VALUE
-	* @return bool
-	*/
-	public static function get_component_publication_bool_value( $component_publication_tipo, $section_id, $section_tipo ) {
-			
-		$component_publication = component_common::get_instance( 'component_publication',
-																  $component_publication_tipo,
-																  $section_id,
-																  'list',
-																  DEDALO_DATA_NOLAN,
-																  $section_tipo,
-																  false);
-		$dato = $component_publication->get_dato();
-			#dump($dato, ' dato ++ '.to_string());
-
-		if (isset($dato[0]->section_tipo) && $dato[0]->section_tipo === DEDALO_SECTION_SI_NO_TIPO && 
-			isset($dato[0]->section_id)   && (int)$dato[0]->section_id === NUMERICAL_MATRIX_VALUE_YES) {
-			return true;
-		}		
-
-		return false;		
-	}//end get_component_publication_bool_value
 
 
 
