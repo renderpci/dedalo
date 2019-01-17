@@ -1222,6 +1222,14 @@ class component_portal extends component_relation_common {
 				if (!empty($dato)) {
 					$ar_values = [];
 					foreach ((array)$dato as $current_locator) {
+
+						// Check target is publicable
+							$current_is_publicable = diffusion::get_is_publicable($current_locator);
+							if ($current_is_publicable!==true) {
+								debug_log(__METHOD__." + Skipped locator not publicable: ".to_string($current_locator), logger::DEBUG);
+								continue;
+							}
+
 						$ar_values[] = $current_locator;
 					}
 				}
@@ -1234,6 +1242,14 @@ class component_portal extends component_relation_common {
 				if (!empty($dato)) {
 					$ar_values = [];
 					foreach ((array)$dato as $current_locator) {
+
+						// Check target is publicable
+							$current_is_publicable = diffusion::get_is_publicable($current_locator);
+							if ($current_is_publicable!==true) {
+								debug_log(__METHOD__." + Skipped locator not publicable: ".to_string($current_locator), logger::DEBUG);
+								continue;
+							}
+							
 						$ar_values[] = $current_locator->section_id;
 					}
 				}

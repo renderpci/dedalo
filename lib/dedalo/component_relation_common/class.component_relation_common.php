@@ -452,25 +452,26 @@ class component_relation_common extends component_common {
 			return $new_component->Save();
 		}//end if (strpos($modo,'dataframe')===0 && isset($this->caller_dataset))
 
-		
 
-		# PARENT : Verify parent
-		if(abs($parent)<1 && strpos($parent, DEDALO_SECTION_ID_TEMP)===false) {
-			if(SHOW_DEBUG===true) {
-				dump($this, "this section_tipo:$section_tipo - parent:$parent - tipo:$tipo - lang:$lang");
-				throw new Exception("Error Processing Request. Inconsistency detected: component trying to save without parent ($parent) ", 1);
+		// Verify component main vars
+			if (!isset($this->save_to_database) || $this->save_to_database!==false) {
+				# PARENT : Verify parent
+				if( abs($parent)<1 && strpos($parent, DEDALO_SECTION_ID_TEMP)===false) {
+					if(SHOW_DEBUG===true) {
+						dump($this, "this section_tipo:$section_tipo - parent:$parent - tipo:$tipo - lang:$lang");
+						throw new Exception("Error Processing Request. Inconsistency detected: component trying to save without parent ($parent) ", 1);
+					}
+					die("Error. Save component data is stopped. Inconsistency detected. Contact with your administrator ASAP");
+				}
+
+				# Verify component minumun vars before save
+				if( (empty($parent) || empty($tipo) || empty($lang)) )
+					throw new Exception("Save: More data are needed!  section_tipo:$section_tipo, parent:$parent, tipo,$tipo, lang,$lang", 1);
 			}
-			die("Error. Save component data is stopped. Inconsistency detected. Contact with your administrator ASAP");
-		}
-
-		# Verify component minumun vars before save
-		if( (empty($parent) || empty($tipo) || empty($lang)) )
-			throw new Exception("Save: More data are needed!  section_tipo:$section_tipo, parent:$parent, tipo,$tipo, lang,$lang", 1);
-
 	
 		# SECTION : Preparamos la sección que será la que se encargue de salvar el dato del componente
-		$section 	= section::get_instance($parent, $section_tipo);
-		$section_id = $section->save_component_dato($this, 'relation');
+			$section 	= section::get_instance($parent, $section_tipo);
+			$section_id = $section->save_component_dato($this, 'relation');
 
 		if(SHOW_DEBUG===true) {
 			#debug_log(__METHOD__." section saved from relation common: ($section_id) ".json_encode($section), logger::DEBUG);;
@@ -1144,8 +1145,16 @@ class component_relation_common extends component_common {
 		$dato = $this->get_dato();
 
 		$ar_term = [];
-		foreach ((array)$dato as $key => $locator) {
-			$term_id = locator::get_term_id_from_locator($locator);
+		foreach ((array)$dato as $key => $current_locator) {
+
+			// Check target is publicable
+				$current_is_publicable = diffusion::get_is_publicable($current_locator);
+				if ($current_is_publicable!==true) {
+					debug_log(__METHOD__." + Skipped locator not publicable: ".to_string($current_locator), logger::DEBUG);
+					continue;
+				}
+							
+			$term_id = locator::get_term_id_from_locator($current_locator);
 			$ar_term[] = $term_id;
 		}
 
@@ -1743,6 +1752,180 @@ class component_relation_common extends component_common {
 		
 		return $ar_clean;
 	}//end parse_stats_values
+
+
+	/**
+	* BUILD_LIST_DATA
+	* Build list data to manage with service_list
+	* @return array
+	*/
+	public function build_list_data($request_options=[]) {
+
+		$start_time=microtime(1);
+
+		$response = new stdClass();
+			$response->result 	= false;
+			$response->msg 		= __METHOD__.' Error. Request failed';
+
+		// Options
+			$options = new stdClass();
+				$options->limit 	= 10;
+				$options->offset 	= 0;
+
+				foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
+		
+		// Search records . Search filtering with component dato allow paginate records for big portals, etc.
+			$tipo 					= $this->get_tipo();
+			$dato 					= (array)$this->get_dato();
+			$filter_by_locator 		= (array)$dato;
+			$ar_target_section_tipo = $this->get_ar_target_section_tipo();
+			$propiedades 			= $this->get_propiedades();
+
+			// Select. Generate select columns based on propedades.data_list array of objects
+				$select_group = [];
+				if (isset($propiedades->data_list)) {	
+
+					# Create from related terms	
+					foreach ($propiedades->data_list as $item) {
+
+						$current_section_tipo = ($item->section_tipo==='current') ? reset($ar_target_section_tipo) : $item->section_tipo;						
+						
+						$path = search_development2::get_query_path($item->component_tipo, $current_section_tipo, false);
+											
+						// Select_element (select_group)
+							$select_element = new stdClass();							
+								$select_element->path = $path;
+
+							$select_group[] = $select_element;
+					}
+				}
+
+			// Filter. Generate filter based on dato locators
+				$filter_group  = null;
+				$ar_section_id = [];
+				if (!empty($filter_by_locator)) {
+
+					// Is an array of objects
+					foreach ((array)$filter_by_locator as $key => $value_obj) {
+						$current_section_id = (int)$value_obj->section_id;
+						if (!in_array($current_section_id, $ar_section_id)) {
+							$ar_section_id[] = $current_section_id;
+						}
+					}
+
+					$ar_filter_element = [];
+					foreach ($ar_target_section_tipo as $target_section_tipo) {
+						
+						$filter_element = new stdClass();
+							$filter_element->q 		= json_encode($ar_section_id);
+							$filter_element->path 	= json_decode('[
+								{
+									"section_tipo": "'.$target_section_tipo.'",
+									"component_tipo": "dummy",
+									"modelo": "component_section_id",
+									"name": "build_list_data searching"
+								}
+							]');
+						$ar_filter_element[] = $filter_element;
+					}
+					
+						
+					$op = '$and';
+					$filter_group = new stdClass();
+						$filter_group->$op = $ar_filter_element;
+
+				}//end if ($filter_by_locator!==false)
+				$total_locators = count($ar_section_id);
+
+			// Order
+				$order_values = array_map(function($locator){
+					return (int)$locator->section_id;
+				}, $dato);
+				$item = new stdClass();
+					$item->column_name 	 = 'section_id';
+					$item->column_values = $order_values;
+				$order_custom = [$item];
+
+			// Search query object
+				$search_query_object = new stdClass();
+					$search_query_object->section_tipo  = $ar_target_section_tipo;
+					$search_query_object->limit   		= $options->limit;
+					$search_query_object->offset  		= $options->offset;
+					$search_query_object->full_count  	= $total_locators>0 ? $total_locators : false ;
+					$search_query_object->order_custom  = $order_custom;
+					$search_query_object->filter  		= $filter_group;
+					$search_query_object->select  		= $select_group;
+
+			// Search
+				$search_develoment2  = new search_development2($search_query_object);
+				$rows_data 		 	 = $search_develoment2->search();
+					#dump($rows_data, ' rows_data ++ '.to_string());
+
+			// Resolve columns				
+				$rows_resolved = [];
+				foreach ($rows_data->ar_records as $key => $row) {
+					
+					// Iterate row object
+					foreach ($row as $column_key => $column_value) {
+
+						// Skip temp columns
+							if (strpos($column_key, 'ordering')===0) {
+								continue;
+							}
+						
+						// label. Resolve non control column keys
+							preg_match('/section/', $column_key, $output_array);
+							$control_column = isset($output_array[0]) ? true : false;
+							$label = ($control_column===true) ? $column_key : RecordObj_dd::get_termino_by_tipo($column_key,DEDALO_APPLICATION_LANG,true);
+						
+						// value. Resolve non control column values
+							if ($control_column===false) {								
+								$column_tipo 		= $column_key;
+								$section_id  		= $row->section_id;
+								$render_list_mode 	= 'list';
+								$modelo_name 		= RecordObj_dd::get_modelo_name_by_tipo($column_tipo,true);	
+								$target_section_tipo= $row->section_tipo;
+
+								$value = (string)$modelo_name::render_list_value($column_value, // value string from db
+																				 $column_tipo, // current component tipo
+																				 $section_id, // current portal row section id
+																				 $render_list_mode, // mode get form properties or default
+																				 DEDALO_DATA_LANG, // current data lang
+																				 $target_section_tipo, // current section tipo
+																				 $section_id // Current portal parent
+																				 #$current_locator, // Used by text_area to select fragment
+																				 #$tipo // Current component_portal tipo
+																				);	
+							}else{
+								$value = $column_value;
+							}
+						$item = new stdClass();
+							$item->tipo  = $column_key;							
+							$item->label = $label;
+							$item->value = $value;
+
+						$rows_resolved[$key][] = $item;
+					}					
+				}
+				#dump($result, ' result ++ '.to_string());
+
+			// Final object
+				$result = new stdClass();
+					$result->rows = $rows_resolved;
+
+				if(SHOW_DEBUG===true) {
+					$result->generated_time = $rows_data->generated_time;
+					$result->generated_time['total_time'] = exec_time_unit($start_time,'sec') .' sec';				
+					dump($result, ' result ++ '.to_string());
+				}	
+
+			// response
+				$response->result 	= $result;
+				$response->msg 		= 'Error. Request failed';
+
+		return $response;
+	}//end build_list_data 
+
 
 
 

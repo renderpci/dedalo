@@ -460,7 +460,7 @@ abstract class diffusion  {
 			}#foreach ($ar_diffusion_element_tipo as $element_tipo)			
 
 		}//end foreach ($ar_diffusion_group as $diffusion_group_tipo)
-		#dump($ar_diffusion_map, ' ar_diffusion_map ++ '.to_string());		
+		#dump($ar_diffusion_map, ' ar_diffusion_map by diffusion_group_tipo ++ '.to_string());		
 
 		return (object)$ar_diffusion_map;		
 	}//end get_ar_diffusion_map
@@ -822,6 +822,89 @@ abstract class diffusion  {
 
 		return $subtitles_url;
 	}//end map_section_id_to_subtitles_url
+
+
+
+	/**
+	* GET_IS_PUBLICABLE
+	* Locate component_publication in requested locator section and get its boolean value
+	* @param object $locator
+	* @return bool $is_publicable
+	*/
+	public static function get_is_publicable($locator) {
+		
+		// Locate component_publication in current section
+		$ar_children = section::get_ar_children_tipo_by_modelo_name_in_section(	$locator->section_tipo,
+																				'component_publication',
+																				$from_cache=true,
+																				$resolve_virtual=true,
+																				$recursive=true,
+																				$search_exact=true,
+																				$ar_tipo_exclude_elements=false);
+		// Check list of values cases (returns is_publicable true by default)
+		if (empty($ar_children)) {
+			return true;
+		}
+
+		$component_publication_tipo = reset($ar_children);
+		
+
+		$is_publicable = self::get_component_publication_bool_value( $component_publication_tipo, $locator->section_id, $locator->section_tipo );
+
+		return (bool)$is_publicable;
+	}//end get_is_publicable
+
+
+
+	/**
+	* GET_COMPONENT_PUBLICATION_TIPO
+	* @return 
+	*/
+	public static function get_component_publication_tipo($ar_fields_tipo) {
+		
+		$component_publication_tipo = false;
+
+		// section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, $ar_modelo_name_required, $from_cache=true, $resolve_virtual=false, $recursive=true, $search_exact=false) 
+
+		foreach ($ar_fields_tipo as $curent_children_tipo) {
+
+			$ar_related = common::get_ar_related_by_model('component_publication', $curent_children_tipo);
+				#dump($component_publication, ' component_publication ++ '.to_string($curent_children_tipo));
+
+			if (!empty($ar_related)) {
+				$component_publication_tipo = reset($ar_related);
+				break;
+			}
+		}
+
+		return $component_publication_tipo;
+	}//end get_component_publication_tipo
+
+
+
+	/**
+	* GET_COMPONENT_PUBLICATION_bool_VALUE
+	* @return bool
+	*/
+	public static function get_component_publication_bool_value( $component_publication_tipo, $section_id, $section_tipo ) {
+			
+		$component_publication = component_common::get_instance( 'component_publication',
+																  $component_publication_tipo,
+																  $section_id,
+																  'list',
+																  DEDALO_DATA_NOLAN,
+																  $section_tipo,
+																  false);
+		$dato = $component_publication->get_dato();
+			#dump($dato, ' dato ++ '.to_string());
+
+		if (isset($dato[0]->section_tipo) && $dato[0]->section_tipo === DEDALO_SECTION_SI_NO_TIPO && 
+			isset($dato[0]->section_id)   && (int)$dato[0]->section_id === NUMERICAL_MATRIX_VALUE_YES) {
+			return true;
+		}		
+
+		return false;		
+	}//end get_component_publication_bool_value
 
 	
 
