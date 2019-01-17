@@ -9,6 +9,39 @@ class component_svg extends component_common {
 
 
 	/**
+	* GET VALOR
+	* LIST:
+	* GET VALUE . DEFAULT IS GET DATO . OVERWRITE IN EVERY DIFFERENT SPECIFIC COMPONENT
+	*/
+	public function get_valor() {
+
+		return $this->valor = $this->get_svg_id() .'.'. DEDALO_SVG_EXTENSION;	
+	}//end get_valor
+
+
+
+	/**
+	* GET_VALOR_EXPORT
+	* Return component value sended to export data
+	* @return string $valor_export
+	*/
+	public function get_valor_export( $valor=null, $lang=DEDALO_DATA_LANG, $quotes=null, $add_id=null ) {
+			
+		if (empty($valor)) {
+			$dato = $this->get_dato();				// Get dato from DB
+		}else{
+			$this->set_dato( json_decode($valor) );	// Use parsed json string as dato
+		}
+		
+		$valor 			= $this->get_url(true);
+		
+		dump($valor,'$valor ');
+		return $valor;
+	}//end get_valor_export
+
+
+
+	/**
 	* GET SVG ID
 	* Por defecto se construye con el tipo del component_image actual y el número de orden, ej. 'dd20_rsc750_1'
 	* Se puede sobreescribir en propiedades con json ej. {"svg_id":"dd851"} y se leerá del contenido del componente referenciado
@@ -205,13 +238,20 @@ class component_svg extends component_common {
 	/**
 	* GET_URL
 	* @return string $url
+	* @param bool $absolute
+	*	Return relative o absolute url. Default false (relative)
 	*/
-	public function get_url() {
+	public function get_url($absolute=false) {
 
 		$aditional_path = $this->get_aditional_path();
 		
 		$file_name 	= $this->get_svg_id() .'.'. DEDALO_SVG_EXTENSION;
 		$url 		= DEDALO_MEDIA_BASE_URL .''. DEDALO_SVG_FOLDER . $aditional_path . '/' . $file_name;
+
+		# ABSOLUTE (Default false)
+		if ($absolute) {
+			$url = DEDALO_PROTOCOL . DEDALO_HOST . $url;
+		}
 
 		return $url;
 	}//end get_url
@@ -312,8 +352,6 @@ class component_svg extends component_common {
 		return (string)$diffusion_value;
 	}//end get_diffusion_value	
 
-
-	
 
 
 
