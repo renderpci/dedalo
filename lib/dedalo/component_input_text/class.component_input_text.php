@@ -142,74 +142,58 @@ class component_input_text extends component_common {
 		if (strpos($modo, 'edit')!==false) {
 			$component 			= component_common::get_instance(__CLASS__,
 																 $tipo,
-															 	 $parent,
-															 	 $modo,
+																 $parent,
+																 $modo,
 																 $lang,
-															 	 $section_tipo);					
+																 $section_tipo);					
 			$value = $component->get_html();
 
-		}else{
-	
+		}else{	
 
-				# Si el valor está vacío, es posible que este componente no tenga dato en este idioma. Si es así,
-				# verificamos que NO estamos en el lenguaje principal (de momento config:DEDALO_DATA_LANG_DEFAULT)
-				# creamos el componente para pedirle el valor en el lenguaje principal.
-				# Esto es más lento, pero proporciona un fallback al lenguaje principal en los listados (de agradecer en los tesauros, por ejemplo)
-				#
-				# NOTA: Valorar de recorrer más idiomas o discriminar el cálculo de main_lang desde jerarquías (hierarchy1) o desde config 
-				#
-				# FALLBACK TO MAIN_LANG
-				# dump($value, ' value ++ '.to_string());
-				$empty_list_value = "\n".' <span class="css_span_dato"></span>';
-				if (empty($value) || $value===$empty_list_value) {
+			# Si el valor está vacío, es posible que este componente no tenga dato en este idioma. Si es así,
+			# verificamos que NO estamos en el lenguaje principal (de momento config:DEDALO_DATA_LANG_DEFAULT)
+			# creamos el componente para pedirle el valor en el lenguaje principal.
+			# Esto es más lento, pero proporciona un fallback al lenguaje principal en los listados (de agradecer en los tesauros, por ejemplo)
+			#
+			# NOTA: Valorar de recorrer más idiomas o discriminar el cálculo de main_lang desde jerarquías (hierarchy1) o desde config 
+			#
+			# FALLBACK TO MAIN_LANG
+			# dump($value, ' value ++ '.to_string());
+			$empty_list_value = "\n".' <span class="css_span_dato"></span>';
+			if (empty($value) || $value===$empty_list_value) {
 
+				$component 	= component_common::get_instance(__CLASS__,
+															 $tipo,
+															 $parent,
+															 $modo,
+															 DEDALO_DATA_LANG,
+															 $section_tipo); 
 
-
-					#$main_lang = common::get_main_lang( $section_tipo, $parent );			
-					# main lang
-					#if ($main_lang!=$lang) {
-
-						$component 	= component_common::get_instance(__CLASS__,
-																	 $tipo,
-																 	 $parent,
-																 	 $modo,
-																	 DEDALO_DATA_LANG,
-																 	 $section_tipo); 
-
-						$dato_full = $component->get_dato_full();
-							#dump($dato_full, ' dato_full ++ '.to_string());
-						$value = component_common::get_value_with_fallback_from_dato_full( $dato_full, true );
-						
-					#	$value = $component->get_valor($main_lang);
-					#	$value = component_common::decore_untranslated( $value );
-							#dump($value, ' value ++ '.to_string($main_lang));
-						
-						#$component->set_lang($main_lang);
-						#$valor = $component->get_valor($main_lang);
-						#$valor = component_common::decore_untranslated( $valor );
-					#}
-				}			
+				#$dato_full = $component->get_dato_full();					
+				#$value = component_common::get_value_with_fallback_from_dato_full( $dato_full, true );
+				$value = component_common::extract_component_value_fallback($component, $lang=DEDALO_DATA_LANG, $mark=true, $main_lang=DEDALO_DATA_LANG_DEFAULT);							
+			}			
 		
 		}//end if (strpos($modo, 'edit')!==false)	
 
 		
 		# Add value of current lang to nolan data
-		$RecordObj_dd = new RecordObj_dd($tipo);
-		$propiedades  = json_decode($RecordObj_dd->get_propiedades());
-		if (isset($propiedades->with_lang_versions) && $propiedades->with_lang_versions===true) {
-			
-			$component 			= component_common::get_instance(__CLASS__,
-																 $tipo,
-															 	 $parent,
-															 	 $modo,
-																 $lang,
-															 	 $section_tipo);
-			#$add_value = component_common::extract_component_value_fallback($component);
-			$add_value = $component->get_valor($lang);
-			if (!empty($add_value) && $add_value!==$value) {
-				$value .= ' ('.$add_value.')';
+			$RecordObj_dd = new RecordObj_dd($tipo);
+			$propiedades  = json_decode($RecordObj_dd->get_propiedades());
+			if (isset($propiedades->with_lang_versions) && $propiedades->with_lang_versions===true) {
+				
+				$component 			= component_common::get_instance(__CLASS__,
+																	 $tipo,
+																	 $parent,
+																	 $modo,
+																	 $lang,
+																	 $section_tipo);
+				#$add_value = component_common::extract_component_value_fallback($component);
+				$add_value = $component->get_valor($lang);
+				if (!empty($add_value) && $add_value!==$value) {
+					$value .= ' ('.$add_value.')';
+				}
 			}
-		}
 
 
 		return $value;
@@ -456,7 +440,7 @@ class component_input_text extends component_common {
 			$q = json_decode($q);
 		}	
 
-    	# Always set fixed values
+		# Always set fixed values
 		$query_object->type = 'string';
 		
 		$q = pg_escape_string(stripslashes($q));
@@ -468,124 +452,149 @@ class component_input_text extends component_common {
 		#	$q = $query_object->q_operator . $q;
 		#}
 
-        switch (true) {
-        	# EMPTY VALUE (in current lang data)
+		switch (true) {
+			# EMPTY VALUE (in current lang data)
 			case ($q==='!*'):
-
-				// Resolve lang based on if is translatable
-				$path_end 		= end($query_object->path);
-				$component_tipo = $path_end->component_tipo;
-				$RecordObj_dd   = new RecordObj_dd($component_tipo);
-				$lang 			= $RecordObj_dd->get_traducible()!=='si' ? DEDALO_DATA_NOLAN : DEDALO_DATA_LANG;
-				
 				$operator = 'IS NULL';
 				$q_clean  = '';
 				$query_object->operator = $operator;
-    			$query_object->q_parsed	= $q_clean;
-    			$query_object->unaccent = false;
-    			$query_object->lang 	= 'all';
-
-    			#$clone = clone($query_object);
-	    		#	$clone->operator = '~*';
-	    		#	$clone->q_parsed = '\'.*\[""]\'';
-
-				#$clone2 = clone($query_object);
-	    		#	$clone2->operator = '~*';
-	    		#	$clone2->q_parsed = '\'.*\[]\'';
-
-    			// Is equal to nothing ("")
-	    		$clone3 = clone($query_object);
-	    			$clone3->operator = '=';
-	    			$clone3->q_parsed = '\'\'';
-	    			$clone3->lang 	  = $lang;
-	    		// Is equal to array ([])
-	    		$clone4 = clone($query_object);
-	    			$clone4->operator = '=';
-	    			$clone4->q_parsed = '\'[]\'';
-	    			$clone4->lang 	  = $lang;
-	    		// Is not set the property like 'lg-spa'
-	    		$clone5 = clone($query_object);
-	    			$clone5->operator = 'IS NULL';
-	    			$clone5->q_parsed = '';
-	    			$clone5->lang 	  = $lang;
+				$query_object->q_parsed	= $q_clean;
+				$query_object->unaccent = false;
+				$query_object->lang 	= 'all';
 
 				$logical_operator = '$or';
-    			$new_query_json = new stdClass;
-	    			$new_query_json->$logical_operator = [$query_object, $clone5, $clone3, $clone4];
-    			# override
-    			$query_object = $new_query_json ;
+				$new_query_json = new stdClass;
+					$new_query_json->$logical_operator = [$query_object];
+
+				// Search empty only in current lang
+				// Resolve lang based on if is translatable
+					$path_end 		= end($query_object->path);
+					$component_tipo = $path_end->component_tipo;
+					$RecordObj_dd   = new RecordObj_dd($component_tipo);
+					$lang 			= $RecordObj_dd->get_traducible()!=='si' ? DEDALO_DATA_NOLAN : DEDALO_DATA_LANG;
+
+					$clone = clone($query_object);
+						$clone->operator = '=';
+						$clone->q_parsed = '\'[]\'';
+						$clone->lang 	 = $lang;
+
+					$new_query_json->$logical_operator[] = $clone;
+
+					// legacy data (set as null instead [])
+					$clone = clone($query_object);
+						$clone->operator = 'IS NULL';
+						$clone->lang 	 = $lang;
+
+					$new_query_json->$logical_operator[] = $clone;
+
+				// langs check all
+					/*
+					$ar_query_object = [];
+					$ar_all_langs 	 = common::get_ar_all_langs();
+					$ar_all_langs[]  = DEDALO_DATA_NOLAN; // Added no lang also
+					foreach ($ar_all_langs as $current_lang) {
+						// Empty data is blank array []
+						$clone = clone($query_object);
+							$clone->operator = '=';
+							$clone->q_parsed = '\'[]\'';
+							$clone->lang 	 = $current_lang;
+
+						$ar_query_object[] = $clone;
+
+						// legacy data (set as null instead [])
+						$clone = clone($query_object);
+							$clone->operator = 'IS NULL';
+							$clone->lang 	 = $current_lang;
+
+						$ar_query_object[] = $clone;
+					}			
+
+					$new_query_json->$logical_operator = array_merge($new_query_json->$logical_operator, $ar_query_object);
+					*/
+
+				# override
+				$query_object = $new_query_json ;
 				break;
-			# NOT EMPTY
+
+			# NOT EMPTY (in any project lang data)
 			case ($q==='*'):
 				$operator = 'IS NOT NULL';
 				$q_clean  = '';
 				$query_object->operator = $operator;
-    			$query_object->q_parsed	= $q_clean;
-    			$query_object->unaccent = false;
-
-    			$clone = clone($query_object);
-	    			//$clone->operator = '!=';
-	    			$clone->operator = '!~';
-	    			$clone->q_parsed = '\'.*\[""]\'';
-
-				$clone2 = clone($query_object);
-	    			//$clone->operator = '!=';
-	    			$clone2->operator = '!~';
-	    			$clone2->q_parsed = '\'.*\[]\'';
+				$query_object->q_parsed	= $q_clean;
+				$query_object->unaccent = false;
 
 				$logical_operator ='$and';
-    			$new_query_json = new stdClass;    			
-    				$new_query_json->$logical_operator = [$query_object, $clone, $clone2];    			
-    			# override
-    			$query_object = $new_query_json ;
+				$new_query_json = new stdClass;
+					$new_query_json->$logical_operator = [$query_object];
+
+				// langs check
+					$ar_query_object = [];
+					$ar_all_langs 	 = common::get_ar_all_langs();
+					$ar_all_langs[]  = DEDALO_DATA_NOLAN; // Added no lang also
+					foreach ($ar_all_langs as $current_lang) {
+						$clone = clone($query_object);
+							$clone->operator = '!=';
+							$clone->q_parsed = '\'[]\'';
+							$clone->lang 	 = $current_lang;
+
+						$ar_query_object[] = $clone;
+					}
+
+					$logical_operator ='$or';
+					$langs_query_json = new stdClass;
+						$langs_query_json->$logical_operator = $ar_query_object;				
+
+				# override
+				$query_object = [$new_query_json, $langs_query_json];
 				break;
 			# IS DIFFERENT			
 			case (strpos($q, '!=')===0 || $q_operator==='!='):
 				$operator = '!=';
 				$q_clean  = str_replace($operator, '', $q);
 				$query_object->operator = '!~';
-    			$query_object->q_parsed = '\'.*"'.$q_clean.'".*\'';
-    			$query_object->unaccent = false;
+				$query_object->q_parsed = '\'.*"'.$q_clean.'".*\'';
+				$query_object->unaccent = false;
 				break;
 			# IS SIMILAR
 			case (strpos($q, '=')===0 || $q_operator==='='):
 				$operator = '=';
 				$q_clean  = str_replace($operator, '', $q);
 				$query_object->operator = '~*';
-    			$query_object->q_parsed	= '\'.*"'.$q_clean.'".*\'';
-    			$query_object->unaccent = true;
+				$query_object->q_parsed	= '\'.*"'.$q_clean.'".*\'';
+				$query_object->unaccent = true;
 				break;
 			# NOT CONTAIN
 			case (strpos($q, '-')===0 || $q_operator==='-'):
 				$operator = '!~*';
 				$q_clean  = str_replace('-', '', $q);
 				$query_object->operator = $operator;
-    			$query_object->q_parsed	= '\'.*\[".*'.$q_clean.'.*\'';
-    			$query_object->unaccent = true;
+				$query_object->q_parsed	= '\'.*\[".*'.$q_clean.'.*\'';
+				$query_object->unaccent = true;
 				break;
 			# CONTAIN EXPLICIT
 			case (substr($q, 0, 1)==='*' && substr($q, -1)==='*'):
 				$operator = '~*';
 				$q_clean  = str_replace('*', '', $q);
 				$query_object->operator = $operator;
-    			$query_object->q_parsed	= '\'.*\[".*'.$q_clean.'.*\'';
-    			$query_object->unaccent = true;
+				$query_object->q_parsed	= '\'.*\[".*'.$q_clean.'.*\'';
+				$query_object->unaccent = true;
 				break;
 			# ENDS WITH
 			case (substr($q, 0, 1)==='*'):
 				$operator = '~*';
 				$q_clean  = str_replace('*', '', $q);
 				$query_object->operator = $operator;
-    			$query_object->q_parsed	= '\'.*\[".*'.$q_clean.'".*\'';
-    			$query_object->unaccent = true;
+				$query_object->q_parsed	= '\'.*\[".*'.$q_clean.'".*\'';
+				$query_object->unaccent = true;
 				break;
 			# BEGINS WITH
 			case (substr($q, -1)==='*'):
 				$operator = '~*';
 				$q_clean  = str_replace('*', '', $q);
 				$query_object->operator = $operator;
-    			$query_object->q_parsed	= '\'.*\["'.$q_clean.'.*\'';
-    			$query_object->unaccent = true;
+				$query_object->q_parsed	= '\'.*\["'.$q_clean.'.*\'';
+				$query_object->unaccent = true;
 				break;
 			# LITERAL
 			case (substr($q, 0, 1)==="'" && substr($q, -1)==="'"):
@@ -600,14 +609,14 @@ class component_input_text extends component_common {
 				$operator = '~*';
 				$q_clean  = str_replace('+', '', $q);				
 				$query_object->operator = $operator;
-    			$query_object->q_parsed	= '\'.*\[".*'.$q_clean.'.*\'';
-    			$query_object->unaccent = true;
+				$query_object->q_parsed	= '\'.*\[".*'.$q_clean.'.*\'';
+				$query_object->unaccent = true;
 				break;			
 		}//end switch (true) {
 		#dump($query_object, ' query_object ++ '.to_string());
-       
+	   
 
-        return $query_object;
+		return $query_object;
 	}//end resolve_query_object_sql
 
 
