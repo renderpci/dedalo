@@ -1479,7 +1479,10 @@
 		search_development2 : Changed sequential insert relations sql in propagate_component_dato_to_relations_table to múltiple insert for speed
 
 
+	Valencia 17-01-2019 5.1.9
+		component_input_text : Fixed issue when render_list_value with empty value in current lang. Fixed search issues with empty and not empty values in all langs
 
+	
 
 	
 
@@ -1502,12 +1505,12 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.1.8';
+	$DEDALO_VERSION = '5.1.10';
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '15-01-2019');
+	define('DEDALO_BUILD'	, '17-01-2019');
 
 
 	/*
