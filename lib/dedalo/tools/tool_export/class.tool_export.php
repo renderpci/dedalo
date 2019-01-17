@@ -257,11 +257,13 @@ class tool_export extends tool_common {
 				$valor_export 	 = str_replace(';','U+003B',$valor_export);	
 				
 			}else{
-
-				$valor_export 	 = $component->get_valor_export( $value, $lang, $quotes, $add_id=false );
-				#$valor_export 	 = str_replace(PHP_EOL, '; ', $valor_export);
-				$valor_export 	 = addslashes($valor_export);
-				$valor_export 	 = $quotes.trim($valor_export).$quotes;
+				// Call to component for get valor export
+					$valor_export 	 = $component->get_valor_export( $value, $lang, $quotes, $add_id=false );
+					#$valor_export 	 = str_replace(PHP_EOL, '; ', $valor_export);					
+				// csv scape with double quotes	
+					$valor_export 	 = str_replace('"', '""', $valor_export);
+				// Create final value inside csv quotes 		
+					$valor_export 	 = $quotes.trim($valor_export).$quotes;
 			}	
 			
 			$row_deep_resolved[$key] = $valor_export;
