@@ -382,6 +382,7 @@ class diffusion_sql extends diffusion  {
 				}
 
 		if(SHOW_DEBUG===true) {
+			#dump($options, ' options ++ '.to_string());
 			#dump($table_tipo, ' table_tipo ++ ');
 			#dump($ar_section_id_portal, ' ar_section_id_portal ++ ');
 			#dump($database_name, ' database_name ++ ');
@@ -392,26 +393,28 @@ class diffusion_sql extends diffusion  {
 		}
 
 		set_time_limit ( 259200 );  // 3 dias
-
-		# SECTION try . Target section is a related term of current diffusion pointer. Normally is section, but can be a portal 
-			$pointer_type='section';
-			$ar_section_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($table_tipo, 'section', 'termino_relacionado');
-			if (!isset($ar_section_tipo[0])) {
-				# PORTAL try
-				$pointer_type='portal';
-				$ar_section_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($table_tipo, 'component_portal', 'termino_relacionado');
-			}
-			if(!isset($ar_section_tipo[0])) {
-				debug_log(__METHOD__." Error Processing Request, related section_tipo not found for $table_tipo. Please define valid related term (section or portal) for pointer table_tipo:$table_tipo (Ignored element $table_tipo!)", logger::ERROR);	
-				return false;
-			}
-			
-		# SECTION_TIPO . Set section tipo
-			$section_tipo = $ar_section_tipo[0];
+		
 		
 		# AR_RESULT . Get all matrix records in current table / portal. When portal is request, records of portal are in var '$ar_section_id_portal'
 		# NOTE : Because we need section_id and section_tipo of every item (multi-target portals), format $ar_result contains this data always 
 			if ($ar_result===false) {
+
+				// SECTION try . Target section is a related term of current diffusion pointer. Normally is section, but can be a portal 
+					$pointer_type='section';
+					$ar_section_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($table_tipo, 'section', 'termino_relacionado');
+					if (!isset($ar_section_tipo[0])) {
+						# PORTAL try
+						$pointer_type='portal';
+						$ar_section_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($table_tipo, 'component_portal', 'termino_relacionado');
+					}
+					if(!isset($ar_section_tipo[0])) {
+						debug_log(__METHOD__." Error Processing Request, related section_tipo not found for $table_tipo. Please define valid related term (section or portal) for pointer table_tipo:$table_tipo (Ignored element $table_tipo!)", logger::ERROR);	
+						return false;
+					}
+					
+				// SECTION_TIPO . Set section tipo
+					$section_tipo = $ar_section_tipo[0];
+
 				$ar_result = array();
 				if(!empty($ar_section_id_portal)) {
 					# Records here are the portal dato locators
