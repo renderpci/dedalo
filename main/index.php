@@ -1,5 +1,5 @@
 <?php
-# REDIRECT TO DEDALO4/MAIN 
+# REDIRECT TO DEDALO/MAIN 
 header("HTTP/1.1 301 Moved Permanently"); 
 header("Location: ../lib/dedalo/main/"); exit();
 
