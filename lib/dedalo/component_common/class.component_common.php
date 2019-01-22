@@ -713,7 +713,7 @@ abstract class component_common extends common {
 		# DATO
 		$dato = $this->dato;
 
-	
+
 		#
 		# IS TEMP CASE
 		# Sometimes we need use component as temporal element without save real data to database. Is this case
