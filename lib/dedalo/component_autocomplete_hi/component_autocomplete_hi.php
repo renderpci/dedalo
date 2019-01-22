@@ -103,17 +103,27 @@
 
 							// service autocomplete options
 								$search_sections = $hierarchy_sections;
-								
-							
+
+							//Get the term_tipo of the hierarchy_sections defined in structure in section_map
+								$ar_terms = [];
+								foreach ($hierarchy_sections as $current_section) {
+									$ar_terms[] = hierarchy::get_element_tipo_from_section_map($current_section,'term');
+								}
+								$ar_terms = array_unique($ar_terms);
+
 							$ar_filter_options = $this->get_ar_filter_options($options_type, $hierarchy_sections);
 							break;
 						
+						/*
+						* Don't used for now, maybe can unify with the component_autocomplete (it use the "filter_by_list")
+						*
 						case 'generic':
 							# FIlTER_BY_LIST (Propiedades option)			
 							if (isset($propiedades->source->filter_by_list)) {
 								$ar_filter_options = $this->get_ar_filter_options($options_type, $propiedades->source->filter_by_list);
 							}
 							break;
+							*/
 					}
 					#dump($ar_filter_options, ' ar_filter_options ++ '.to_string());
 					
@@ -135,7 +145,10 @@
 						$search_query_object_options->logical_operator 	= '$or';
 						$search_query_object_options->id 				= 'autocomplete_hi_search';
 						$search_query_object_options->section_tipo		= []; //$hierarchy_sections; // Normally hierarchy_sections
-						$search_query_object_options->search_tipos 		= [DEDALO_THESAURUS_TERM_TIPO];
+						//$search_query_object_options->search_tipos 		= [DEDALO_THESAURUS_TERM_TIPO];
+						$search_query_object_options->search_tipos 		= $ar_terms;
+
+
 						$search_query_object_options->distinct_values	= isset($propiedades->distinct_values) ? $propiedades->distinct_values : false;
 						$search_query_object_options->show_modelo_name 	= true;
 						$search_query_object_options->filter_custom 	= isset($filter_custom) ? $filter_custom : null; // See $propiedades->source->hierarchy_terms above
@@ -225,6 +238,13 @@
 							// service autocomplete options
 								$search_sections = $hierarchy_sections;
 
+							//Get the term_tipo of the hierarchy_sections defined in structure in section_map
+								$ar_terms = [];
+								foreach ($hierarchy_sections as $current_section) {
+									$ar_terms[] = hierarchy::get_element_tipo_from_section_map($current_section,'term');
+								}
+								$ar_terms = array_unique($ar_terms);
+
 							$ar_filter_options = $this->get_ar_filter_options($options_type, $hierarchy_sections);
 							break;
 						
@@ -253,7 +273,8 @@
 						$search_query_object_options->logical_operator 	= '$or';
 						$search_query_object_options->id 				= 'autocomplete_hi_search';
 						$search_query_object_options->section_tipo		= []; //$hierarchy_sections; // Normally hierarchy_sections
-						$search_query_object_options->search_tipos 		= [DEDALO_THESAURUS_TERM_TIPO];
+						//$search_query_object_options->search_tipos 		= [DEDALO_THESAURUS_TERM_TIPO];
+						$search_query_object_options->search_tipos 		= $ar_terms;
 						$search_query_object_options->distinct_values	= false;
 						$search_query_object_options->show_modelo_name 	= true;
 						$search_query_object_options->filter_custom 	= null;
