@@ -262,7 +262,11 @@ class ts_object extends Accessors {
 															  DEDALO_DATA_LANG,
 															  $this->section_tipo);
 				$dato = $component->get_dato();
-				if ($modelo_name==='component_input_text') {
+				if ($modelo_name==='component_autocomplete_hi') {
+
+					$dato = $component->get_valor();
+
+				}else if ($modelo_name==='component_input_text') {
 					
 					$dato = $component->get_valor(0);
 						#debug_log(__METHOD__." $dato ".to_string($dato), logger::DEBUG);
@@ -309,12 +313,12 @@ class ts_object extends Accessors {
 				#debug_log(__METHOD__." render_vars ".to_string($render_vars), logger::DEBUG);
 
 				switch (true) {
-
 					case ($element_obj->type==='term'):
 						# term Is traducible and uses lang fallback here						
 						// $value, $tipo, $parent, $modo, $lang, $section_tipo, $section_id, $current_locator=null, $caller_component_tipo=null
 						if (empty($dato)) {
-							$element_value = component_input_text::render_list_value(null, $element_tipo, $this->section_id, 'list_thesaurus', DEDALO_DATA_LANG, $this->section_tipo);
+							$modelo_name_term = RecordObj_dd::get_modelo_name_by_tipo($element_tipo,true);
+							$element_value = $modelo_name_term::render_list_value(null, $element_tipo, $this->section_id, 'list_thesaurus', DEDALO_DATA_LANG, $this->section_tipo, $this->section_id);
 						}else{
 							$element_value = $dato;
 						}
@@ -596,12 +600,13 @@ class ts_object extends Accessors {
 			$parent 		= $locator->section_id;
 			$section_tipo 	= $locator->section_tipo;
 			$modelo_name 	= 'component_input_text';
-			if(SHOW_DEBUG===true) {
-				$real_modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
-				if ($real_modelo_name!==$modelo_name) {
-					trigger_error("Error. modelo_name of component $tipo must be $modelo_name. $real_modelo_name is defined");
-				}
-			}
+			$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+			#if(SHOW_DEBUG===true) {
+			#	$real_modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+			#	if ($real_modelo_name!==$modelo_name) {
+			#		trigger_error("Error. modelo_name of component $tipo must be $modelo_name. $#real_modelo_name is defined");#
+			#	}
+			#}
 			$component 		= component_common::get_instance( $modelo_name,
 															  $tipo,
 															  $parent,
@@ -609,7 +614,7 @@ class ts_object extends Accessors {
 															  $lang,
 															  $section_tipo);
 			$valor = $component->get_valor($lang);
-				# dump($valor, ' valor ++ '.to_string());	
+				//dump($valor, ' valor ++ '.to_string($tipo));	
 			if (empty($valor)) {
 						
 				$main_lang = hierarchy::get_main_lang( $locator->section_tipo );
