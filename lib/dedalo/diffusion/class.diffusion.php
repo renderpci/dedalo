@@ -826,6 +826,57 @@ abstract class diffusion  {
 
 
 	/**
+	* MAP_IMAGE_INFO
+	* @param $dato
+	*	object locator like (
+	*	    [section_id] => 248
+	*	    [section_tipo] => rsc170
+	*	    [component_tipo] => rsc29
+	*	)
+	* @return object $image_size
+	*/
+	public static function map_image_info($options, $dato) {
+		
+		//dump($options, ' options ++ '.to_string());
+		//dump($dato, ' dato ++ '.to_string());
+
+		$locator = $dato;
+
+		// component image
+			$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($locator->component_tipo,true);
+			$component 	 = component_common::get_instance($modelo_name,
+														  $locator->component_tipo,
+														  $locator->section_id,
+														  'list',
+														  DEDALO_DATA_NOLAN,
+														  $locator->section_tipo);
+		// Dimensions from default quality
+			$image_dimensions = $component->ImageObj->get_image_dimensions();
+
+		// Response (from imagemagick)
+			# [0] => 617
+		    # [1] => 849
+		    # [2] => 2
+		    # [3] => width="617" height="849"
+		    # [bits] => 8
+		    # [channels] => 3
+		    # [mime] => image/jpeg
+
+		// image_info object
+		    $image_info = new stdClass();
+		    	$image_info->width  	= $image_dimensions[0];
+		    	$image_info->height 	= $image_dimensions[1];
+		    	$image_info->bits   	= $image_dimensions['bits'];
+		    	$image_info->channels  	= $image_dimensions['channels'];
+		    	$image_info->mime  		= $image_dimensions['mime'];
+
+
+		return $image_info;
+	}//end map_image_info
+
+
+
+	/**
 	* GET_IS_PUBLICABLE
 	* Locate component_publication in requested locator section and get its boolean value
 	* @param object $locator
@@ -905,6 +956,10 @@ abstract class diffusion  {
 
 		return false;		
 	}//end get_component_publication_bool_value
+
+
+
+	
 
 	
 
