@@ -110,7 +110,7 @@ function Save($json_data) {
 
 	// Response . Check if new dato is different of current dato. 
 	// (!) Important: use operator '==' to allow compare objects properly
-		if ($new_dato==$old_dato) {
+		if((is_object($new_dato) && $new_dato==$old_dato) || $new_dato===$old_dato){
 			
 			$response->result 	= $parent;
 			$response->msg 		= 'Ok. Request done [Save]. Data is not changed. Is not necessary update component db data';

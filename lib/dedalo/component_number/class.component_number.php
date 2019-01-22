@@ -203,7 +203,7 @@ class component_number extends component_common {
 		$query_object->unaccent = false;
 
 		$between_separator  = '...';
-		$sequence_separator = ',';
+		//$sequence_separator = ',';
 
         switch (true) {
         	
@@ -233,7 +233,7 @@ class component_number extends component_common {
 				$query_object = $new_query_object;
 				break;	
         	# SEQUENCE
-			case (strpos($q, $sequence_separator)!==false):
+			/*case (strpos($q, $sequence_separator)!==false):
 				// Transform "12,25,36" to "(12 OR 25 OR 36)"
 				$ar_parts 	= explode($sequence_separator, $q);
 				$ar_result  = []; 
@@ -251,39 +251,39 @@ class component_number extends component_common {
 					$new_object->{$cop} = $ar_result;
 				$query_object = $new_object;
 				break;
-				/**/
+				*/
 			# BIGGER OR EQUAL THAN
 			case (substr($q, 0, 2)==='>='):
 				$operator = '>=';
-				$q_clean  = (int)str_replace($operator, '', $q);
+				$q_clean  = str_replace($operator, '', $q);
 				$query_object->operator = $operator;
     			$query_object->q_parsed	= '\''.$q_clean.'\'';
 				break;
 			# SMALLER OR EQUAL THAN
 			case (substr($q, 0, 2)==='<='):
 				$operator = '<=';
-				$q_clean  = (int)str_replace($operator, '', $q);
+				$q_clean  = str_replace($operator, '', $q);
 				$query_object->operator = $operator;
     			$query_object->q_parsed	= '\''.$q_clean.'\'';
 				break;		
 			# BIGGER THAN
 			case (substr($q, 0, 1)==='>'):
 				$operator = '>';
-				$q_clean  = (int)str_replace($operator, '', $q);
+				$q_clean  = str_replace($operator, '', $q);
 				$query_object->operator = $operator;
     			$query_object->q_parsed	= '\''.$q_clean.'\'';
 				break;
 			# SMALLER THAN
 			case (substr($q, 0, 1)==='<'):
 				$operator = '<';
-				$q_clean  = (int)str_replace($operator, '', $q);
+				$q_clean  = str_replace($operator, '', $q);
 				$query_object->operator = $operator;
     			$query_object->q_parsed	= '\''.$q_clean.'\'';
 				break;
 			// EQUAL DEFAULT
 			default:
 				$operator = '=';
-				$q_clean  = (int)str_replace('+', '', $q);				
+				$q_clean  = str_replace('+', '', $q);				
 				$query_object->operator = $operator;
     			$query_object->q_parsed	= '\''.$q_clean.'\'';	
 				break;
@@ -304,7 +304,7 @@ class component_number extends component_common {
 		
 		$ar_operators = [
 			'...' 	=> 'entre',
-			',' 	=> 'secuencia',
+			#',' 	=> 'secuencia',
 			'>=' 	=> 'mayor_o_igual_que',
 			'<='	=> 'menor_o_igual_que',
 			'>' 	=> 'mayor_que',
