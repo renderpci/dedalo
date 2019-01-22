@@ -92,7 +92,8 @@ class image {
 
 		$options = new stdClass();
 			$options->table 		= (string)TABLE_IMAGE;
-			$options->ar_fields 	= array('image','title','footprint','description','dating');
+			#$options->ar_fields 	= array('image','title','footprint','description','dating');
+			$options->ar_fields 	= array('*');
 			$options->sql_filter 	= 'section_id = ' . (int)$section_id;
 			$options->lang 			= $this->lang;
 			$options->order 		= null;
@@ -103,16 +104,6 @@ class image {
 
 		return $rows_data;
 	}//end get_row_image_data
-
-
-
-	
-
-
-
-
-
-
 
 
 
