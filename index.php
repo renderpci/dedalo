@@ -19,6 +19,7 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 	
 	http://www.fmomo.org
+    https://github.com/renderpci/dedalo
 	dedalo@fmomo.org
 	
 ************************************************************************/
