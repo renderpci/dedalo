@@ -2697,7 +2697,7 @@ class search_development2 {
 		$section_tipo 	= $section_obj->get_tipo();
 
 		// ar_components_tipo
-			if (empty($layout_map) {				
+			if (empty($layout_map)) {				
 				// we obtain target components from section layout map
 					$layout_map 	= component_layout::get_layout_map_from_section( $section_obj );		
 			}
