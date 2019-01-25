@@ -1,10 +1,10 @@
 <?php
 /*
-* CLASS TOOL_CATALOGUE
+* CLASS TOOL_CATALOGING
 *
 *
 */
-class tool_catalogue extends tool_common {
+class tool_cataloging extends tool_common {
 	
 
 	public $section_tipo;
