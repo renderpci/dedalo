@@ -540,6 +540,7 @@ class component_image extends component_common {
 	/**
 	* GET_IMAGE_SIZE
 	* Alias of $ImageObj->get_size()
+	* Get file size in KB, MB, etc..
 	*/
 	public function get_image_size($quality=false) {
 		
