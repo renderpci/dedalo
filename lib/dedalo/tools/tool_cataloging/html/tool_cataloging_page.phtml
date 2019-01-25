@@ -1,0 +1,128 @@
+<?php
+
+	# VISUALIZADOR HTML
+	$html    = "<!-- $tool_name $modo -->";
+
+	#
+	# TOOL HEADER
+	include($tool_name.'_header.phtml');
+
+
+	#
+	# TOOL BODY
+	$html .= '<div class="wrap_'.$tool_name.'_page wrap_section_'.$tool_tipo.'">';
+
+
+		# Components
+		#$html .= '<div class="container_rigth">';
+		$ar_used_values = [];
+		foreach ($section_groups as $current_section_group) {
+
+			$section_group_tipo = $current_section_group->tipo;
+
+			$sg_ar_components = array_filter($ar_components, function($element) use($section_group_tipo) {
+				return ($element->section_group===$section_group_tipo);
+			});
+
+			$html .= '<div class="section_group_container container_'.$section_group_tipo.' wrap_section_group_'.$section_group_tipo.'">';
+				
+				foreach ($sg_ar_components as $key => $current_element) {	
+					
+					$current_component  = $current_element->component;
+					$current_tipo 		= $current_component->get_tipo();
+	
+					# Skip propiedades defined skip_components
+					if (in_array($current_tipo, $skip_components)) {
+						continue;
+					}else{
+						// propagate skip_components info to next level
+						if (!isset($current_component->context)) {
+							$current_component->context = new stdClass();
+						}
+						$current_component->context->skip_components = $skip_components;
+					}
+						
+					$current_component->set_modo('edit'); // $tool_name					
+
+					$current_component_dato = $current_component->get_dato();
+						#dump($current_component_dato, '$current_component_dato ++ '.to_string());
+					if (isset($current_component_dato[0])) {
+						$pseudo_locator_dato = $current_component_dato[0]->section_tipo .'_'. $current_component_dato[0]->section_id;
+					}else{
+						$pseudo_locator_dato = $key;
+					}					
+										
+					#if (in_array($pseudo_locator_dato, $ar_used_values)) {
+						
+					#	$value  = "Opss. Target component value duplicate found! <div class=\"notes\">" .to_string($current_component_dato[0])."</div>";
+					#	$value .= "Info: <i>".$current_component->get_label()."</i> value in <i>".$section_label."</i>";
+					#	$value .= "<br><h5><a href=\"".DEDALO_LIB_BASE_URL."/main/?t=$section_tipo&id=$section_id\" target=\"_blank\">Go to section: ".$section_label."</a></h5>";
+					
+					#}else{					
+
+						$value = $current_component->get_html();
+					#}
+
+					#$ar_used_values[] = $pseudo_locator_dato; 
+
+					#
+					# Component wrap
+					$html .= '<div class="component_container container_'.$current_tipo.'">';
+					$html .= $value;
+					
+					# look_inside
+					$look_inside = isset($current_element->component->propiedades->look_inside) ? (bool)$current_element->component->propiedades->look_inside : false;
+					# Iterate relationable components too when look_inside is true
+					$current_modelo_name = get_class($current_component);
+					if( $look_inside===true && true===in_array($current_modelo_name, component_relation_common::get_components_with_relations()) ) {
+						#
+						# INDIRECT COMPONENTS
+						$ar_related_component_tipo = common::get_ar_related_by_model('component_',$current_tipo,false);
+						foreach ((array)$current_component_dato as $current_locator) {
+											
+							foreach ($ar_related_component_tipo as $current_component_tipo) {
+								
+								# Skip propiedades defined skip_components
+								if (in_array($current_component_tipo, $skip_components)) {
+									continue;
+								}
+
+								$current_section_tipo 	= $current_locator->section_tipo;
+								$current_section_id 	= $current_locator->section_id;
+								$current_modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($current_component_tipo,true);
+
+								$current_component 		= component_common::get_instance($current_modelo_name,
+																						 $current_component_tipo,
+																						 $current_section_id,
+																						 'edit',
+																						 DEDALO_DATA_LANG,
+																						 $current_section_tipo);
+
+								$value = $current_component->get_html();								
+								
+								$html .= '<div class="component_container container_look_inside container_'.$current_component_tipo.'">';
+								$html .= $value;
+								$html .= '</div>';
+							}
+						}						
+					}//end if( true===in_array($current_modelo_name, component_relation_common::get_components_with_relations()) )
+
+					$html .= '</div>';
+				}//end if( true===in_array($current_modelo_name, component_relation_common::get_components_with_relations()) )
+
+			$html .= '</div>';
+		}
+		#$html .= '</div>';//end container_rigth
+
+
+		
+	$html .= '</div>'; //<!-- /wrap_tool_description_page -->"; //page body wrap
+
+
+	# INSPECTOR LOG TOOL_LANG ()
+	$html 	.= "<div id=\"inspector_log\" class=\"tool_inspector_log tool_cataloging_inspector_log\"> </div>";
+
+
+
+	print $html;		
+?>
