@@ -1259,9 +1259,9 @@ class search_development2 {
 		
 		# Avoid root user is showed except for root
 		if ($main_section_tipo===DEDALO_SECTION_USERS_TIPO) {
-			if(SHOW_DEBUG!==true) {
+			#if(SHOW_DEBUG!==true) {
 				$main_where_sql .= ' AND '.$main_section_tipo_alias.'.section_id>0 ';
-			}			
+			#}			
 		}		
 
 		# Fix values
@@ -2690,14 +2690,19 @@ class search_development2 {
 	* Temporal method to obtain search select paths to build a search_json_object
 	* @return array $path
 	*/
-	public static function get_search_select_from_section($section_obj) {
+	public static function get_search_select_from_section($section_obj, $layout_map=false) {
 
 		$select = [];
-		
-		// For now, we obtain target components from section layout map
-		$layout_map 	= component_layout::get_layout_map_from_section( $section_obj );
+
 		$section_tipo 	= $section_obj->get_tipo();
-		$ar_values  = reset($layout_map);
+
+		// ar_components_tipo
+			if (empty($layout_map) {				
+				// we obtain target components from section layout map
+					$layout_map 	= component_layout::get_layout_map_from_section( $section_obj );		
+			}
+		
+		$ar_values = reset($layout_map);
 		foreach ($ar_values as $current_tipo) {
 
 			$path = new stdClass();

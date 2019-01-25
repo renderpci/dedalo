@@ -59,8 +59,13 @@
 		
 			$select_path 	= []; // Always empty
 
-		}else{			
-			$select_path 	= search_development2::get_search_select_from_section( $this->section_obj ); // Calculated from section list		
+		}else{
+			
+			// injected layout map
+				$layout_map 	= isset($this->section_obj->layout_map) ? $this->section_obj->layout_map : false;
+			
+			// Select path
+				$select_path 	= search_development2::get_search_select_from_section( $this->section_obj,  $layout_map); // Calculated from section list		
 		}
 
 		$select_path_json 	= json_encode($select_path);
