@@ -1,6 +1,6 @@
 <?php
 
-	# CONTROLLER TOOL_CATALOGUE
+	# CONTROLLER TOOL_CATALOGING
 
 	$tool_name 		= get_class($this);
 	$section_tipo 	= $this->section_tipo;
