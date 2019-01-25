@@ -3,10 +3,6 @@
 	# VISUALIZADOR HTML	
 
 	
-	#print "\n\n<!-- BUTTON TRIGGER [tipo:$tipo id_matrix:$id] -->";
-
-	#print "\n<div class=\"css_wrap_button_trigger\">";
-	
 	# CONTENIDO
 	$html_contenido = '';
 	
@@ -14,22 +10,27 @@
 						
 		case ($permissions>=2) :
 
+			// Action js
+				// Default (when not defined)
 				$js_action = 'button_trigger.trigger(this)';
+				// Custom (defined in propiedades)
 				if ($js_exec_function!==false) {
 					$js_action = $js_exec_function .'(this, event)';
 				}
-
-				# BUTTON
-				$html_contenido .= "<div class='css_button_generic css_button_trigger' onclick=\"{$js_action}\"
-				data-parent='$this->parent'
-				data-tipo='$tipo'
-				data-propiedades='$propiedades_json'
-				>";
+	
+			# BUTTON
+				$html_contenido .= '<div class="css_button_generic css_button_trigger" ';
+				$html_contenido .= 'onclick="'.$js_action.'" ';
+				$html_contenido .= 'data-parent="'.$this->parent.'" ';
+				$html_contenido .= 'data-tipo="'.$tipo.'" ';
+				$html_contenido .= 'data-section_tipo="'.$section_tipo.'" ';
+				$html_contenido .= 'data-propiedades=\''.$propiedades_json.'\' ';
+				$html_contenido .= '>';
 				$html_contenido .= $label;
-				$html_contenido .= "</div>";
+				$html_contenido .= '</div>';
 
 
-				# RESPONSE
+			# RESPONSE
 				$html_contenido .= "<div class='button_trigger_response' id=\"button_trigger_$tipo\">";
 				$html_contenido .= "";
 				$html_contenido .= "</div>";
@@ -38,7 +39,5 @@
 	
 	# PRINT HTML
 	print $html_contenido;
+
 	
-	
-	#print "\n</div><!-- /css_wrap_button_trigger -->\n\n"; //wrap
-?>
