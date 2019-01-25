@@ -2,8 +2,8 @@
 $TIMER['main_start']=microtime(1);
 /**
 * MAIN PAGE ######################################################################################
-* Crea un objeto de página (habitualmente una sección o un tool) a partir de la información recibida 
-* y la pasa a la clase 'html_page' para construir la página a visualizar.
+* Build a page object (usually a section or a tool) from the information received
+* and pass it to the class 'html_page' to build the page to be displayed.
 *
 */
 require dirname(dirname(__FILE__)).'/config/config4.php';
