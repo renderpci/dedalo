@@ -1505,12 +1505,12 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.1.11';
+	$DEDALO_VERSION = '5.1.16';
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '17-01-2019');
+	define('DEDALO_BUILD'	, '25-01-2019');
 
 
 	/*
@@ -1531,4 +1531,5 @@
 		$_SESSION['dedalo4']['config']['DEDALO_BUILD'] = DEDALO_BUILD;
 	}
 	*/
-?>
+
+
