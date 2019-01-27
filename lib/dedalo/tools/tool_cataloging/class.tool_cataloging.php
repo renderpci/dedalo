@@ -32,6 +32,41 @@ class tool_cataloging {
 
 
 	/**
+	* GET_CONTEXT_DATA
+	* get the @context of the data for sended to the JS for process the data.
+	* @return $context_data array
+	*/
+	public function get_context_data(){
+
+		$context_data = [];
+
+		$button_triguer_tipo = $this->button_triguer_tipo;
+
+		$context_object = new stdClass();
+		$context_object->tool 		= get_class($this);
+		$context_object->tool_label	= RecordObj_dd::get_termino_by_tipo($button_triguer_tipo, DEDALO_APPLICATION_LANG, true);
+		$context_object->type 		= 'info';
+
+		$context_data[] = $context_object;
+		
+		return $context_data;
+	}// end get_context_data
+
+
+
+	/**
+	* GET_DATA
+	* get the @data for sended to the JS for process it.
+	* @return $data array
+	*/
+	public function get_data(){
+		$data = $this->get_sections_to_catalog();
+		return $data;
+	}// end get_data
+
+
+
+	/**
 	* GET_FILTER_HTML
 	* Resolve the source list to get the section_list
 	* @return html
@@ -48,8 +83,10 @@ class tool_cataloging {
 
 			$section_object = new stdClass();
 				$section_object->section_tipo 	= $section_tipo;
+				$section_object->label 			= RecordObj_dd::get_termino_by_tipo($section_tipo, DEDALO_APPLICATION_LANG, true);
 				$section_object->filter_html	= $this->get_filter_html($section_tipo, $current_section_list);
 				$section_object->search_options = $this->get_search_options($section_tipo, $current_section_list);
+				$section_object->type 			= 'sections';
 
 			$sections_to_catalog[] = $section_object;
 		}

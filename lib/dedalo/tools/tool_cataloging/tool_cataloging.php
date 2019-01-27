@@ -2,14 +2,13 @@
 
 	# CONTROLLER TOOL_CATALOGING
 
-	$tool_name 		= get_class($this);
-	$source_list 	= $this->source_list;
+	$tool_name 			= get_class($this);
+	$source_list 		= $this->source_list;
 	$source_thesaurus 	= $this->source_thesaurus;
-	$modo 			= $this->modo;
-	$file_name		= $modo;
-
-	$tool_tipo 		= $this->button_triguer_tipo;
-	$tool_label 	= label::get_label('cataloging');
+	$modo 				= $this->modo;
+	$file_name			= $modo;
+	$tool_tipo 			= $this->button_triguer_tipo;
+	$tool_label 		= label::get_label('cataloging');
 
 
 	switch($modo) {
@@ -20,10 +19,14 @@
 
 		case 'page':
 
-			$sections_to_catalog 	= $this->get_sections_to_catalog();
+			$context_data 	= $this->get_context_data();
+			$data 			= $this->get_data();
 			
-			$data_json = encodeURIComponent(json_encode($sections_to_catalog));
-
+			$tool_object 	= new stdClass();
+				$tool_object->context_data 	= $context_data;
+				$tool_object->data 			= $data;
+			
+			$data_json = encodeURIComponent(json_encode($tool_object));
 
 			#dump($data,'$data');
 			# TOOL CSS / JS MAIN FILES
