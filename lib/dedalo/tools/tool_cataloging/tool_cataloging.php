@@ -3,13 +3,13 @@
 	# CONTROLLER TOOL_CATALOGING
 
 	$tool_name 		= get_class($this);
-	$section_tipo 	= $this->section_tipo;
-	$section_id 	= $this->section_id;
+	$source_list 	= $this->source_list;
+	$source_thesaurus 	= $this->source_thesaurus;
 	$modo 			= $this->modo;
 	$file_name		= $modo;
-	$tool_name		= get_class($this);
-	$section_label	= RecordObj_dd::get_termino_by_tipo($section_tipo);
-	$tool_tipo		= $this->get_tool_tipo();
+
+	$tool_tipo 		= $this->button_triguer_tipo;
+	$tool_label 	= label::get_label('cataloging');
 
 
 	switch($modo) {
@@ -20,38 +20,17 @@
 
 		case 'page':
 
-			$ar_elements = $this->get_ar_elements();
-
-			$section_groups = array_filter($ar_elements, function($element){
-				return ($element->model==='section_group');
-			});
-
-			$ar_components = array_filter($ar_elements, function($element){
-				return strpos($element->model, 'component_')!==false;
-			});
+			$sections_to_catalog 	= $this->get_sections_to_catalog();
 			
-			# Propiedaes
-			$RecordObj_dd 	= new RecordObj_dd($tool_tipo);
-			$propiedades 	= json_decode($RecordObj_dd->get_propiedades());
-				#dump($propiedades, ' propiedades ++ '.to_string());				
+			$data_json = encodeURIComponent(json_encode($sections_to_catalog));
 
-			# TOOL CSS / JS MAIN FILES			
+
+			#dump($data,'$data');
+			# TOOL CSS / JS MAIN FILES
+			# CSS
 			css::$ar_url[] = DEDALO_LIB_BASE_URL."/tools/".$tool_name."/css/".$tool_name.".css";
+			# JS
 			js::$ar_url[]  = DEDALO_LIB_BASE_URL."/tools/".$tool_name."/js/".$tool_name.".js";
-
-
-			# CUSTOM_CSS_FILE_PATH
-			# To specify a custom css file for manage current tool css, create a css file named like 'numisdata201.css' (tool_tipo.css) in tool css dir
-			#$custom_css_file_path = DEDALO_LIB_BASE_PATH.'/tools/'.$tool_name.'/css/'.$tool_tipo.'.css';
-			#if (file_exists($custom_css_file_path)) {
-			#	css::$ar_url[] = DEDALO_LIB_BASE_URL.'/tools/'.$tool_name.'/css/'.$tool_tipo.'.css';
-			#}
-
-			# Inverse_code
-				$inverse_code = tool_common::get_inverse_element('code', $section_id, $section_tipo);
-	
-			# skip_components
-				$skip_components = isset($propiedades->context->skip_components) ? (array)$propiedades->context->skip_components : [];
 
 			break;		
 	}//end switch
