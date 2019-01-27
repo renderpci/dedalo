@@ -57,10 +57,10 @@ class relation_list extends common {
 
 
 	/**
-	* GET_REALTION_LIST_OBJ
+	* GET_RELATION_LIST_OBJ
 	*
 	*/
-	public function get_realtion_list_obj($ar_inverse_references, $value_resolved = false){
+	public function get_relation_list_obj($ar_inverse_references, $value_resolved = false){
 		
 		$json 			= new stdClass;
 		$ar_context 	= [];
@@ -139,7 +139,7 @@ class relation_list extends common {
 
 		return $json;
 
-	}//get_realtion_list_obj
+	}//get_relation_list_obj
 
 
 

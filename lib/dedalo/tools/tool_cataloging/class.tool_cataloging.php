@@ -4,130 +4,167 @@
 *
 *
 */
-class tool_cataloging extends tool_common {
+class tool_cataloging {
 	
 
-	public $section_tipo;
-	public $section_id;
-	public $modo;
-	public $tool_tipo;
+	public $source_list;
+	public $source_thesaurus;
+	public $button_triguer_tipo;
 
+	public function __construct($section_tipo=null, $modo='button') {
 
-
-	public function __construct($section=null, $modo='button') {
+		$button_triguer_tipo = isset($_REQUEST['button_tipo']) ? safe_tipo($_REQUEST['button_tipo']) : null;
 		
-		if (empty($section)) {
+		if (empty($button_triguer_tipo)) {
 			throw new Exception("Error Processing Request. Var section is empty", 1);
 		}
-		$this->section_tipo 		= $section->get_tipo();
-		$this->section_id			= $section->get_section_id();
+
+		$button_triguer = new RecordObj_dd($button_triguer_tipo);
+		$button_triguer_properties = $button_triguer->get_propiedades(true);
+
+		$this->source_list 			= $button_triguer_properties->source_list;
+		$this->source_thesaurus		= $button_triguer_properties->source_thesaurus;
 		$this->modo 				= $modo;
-
-		switch ($modo) {
-			case 'button':
-				# Injected in section obj (rows_list.phtml)
-				$tool_tipo = $section->tool_section_tipo;
-				break;
-			
-			default:
-				# Form url get vars
-				if(isset($_REQUEST['tool_tipo'])) {
-					$tool_tipo = $_REQUEST['tool_tipo'];
-				}else{
-					$tool_tipo = false;
-					if ($modo!=='button') {
-						trigger_error("Invalid param get tool_tipo");
-					}
-				}
-				break;
-		}		
-
-		# Fix tool_tipo
-		$this->tool_tipo = $tool_tipo;
-
+		$this->button_triguer_tipo 	= $button_triguer_tipo;
 
 		return true;
 	}//end __construct
 
 
+	/**
+	* GET_FILTER_HTML
+	* Resolve the source list to get the section_list
+	* @return html
+	*/
+	public function get_sections_to_catalog(){
+		
+		$ar_source_list = $this->source_list;
+
+		$sections_to_catalog = [];
+
+		foreach ($ar_source_list as $current_section_list) {
+
+			$section_tipo = $current_section_list->section_tipo;
+
+			$section_object = new stdClass();
+				$section_object->section_tipo 	= $section_tipo;
+				$section_object->filter_html	= $this->get_filter_html($section_tipo, $current_section_list);
+				$section_object->search_options = $this->get_search_options($section_tipo, $current_section_list);
+
+			$sections_to_catalog[] = $section_object;
+		}
+
+		return $sections_to_catalog;
+	}//end sections_to_catalog
+
+
 
 	/**
-	* GET_AR_ELEMENTS
-	* Resolve all component alias, childrens of current tool in structure
-	* @return array $ar_components
-	*	Array of component objects
+	* GET_FILTER_HTML
+	* Resolve the source list to get the section_list
+	* @return html
 	*/
-	public function get_ar_elements() {
+	public function get_filter_html($section_tipo, $current_section_list) {
 
-		$ar_components = array();
+		$current_section = section::get_instance(null, $section_tipo, 'list');
+		//create the layout_map for the section to get the rows for the list
+		// [section_tipo] => ["component_tipo1","component_tipo2",...]
+		$layout_map = [];
+		$layout_map[$section_tipo] = $current_section_list->section_list;
+		$current_section->layout_map = $layout_map;
 
-		// Tool childrens of type 'component_alias'
-		#$ar_component_tipos = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($this->tool_tipo, $modelo_name='component_alias', $relation_type='children');
-		$ar_component_tipos = RecordObj_dd::get_ar_childrens($this->tool_tipo);	
-			
-		foreach ($ar_component_tipos as $current_tipo) {
+		$records_search = new records_search($current_section,'list');
 
-			$current_modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
-			
-			# Only components and section goups are allowed
-			if(strpos($current_modelo_name, 'component_')===false && strpos($current_modelo_name, 'section_group')===false) continue;
-			
-			$section_group = null; # Default is null in each loop
-			if ($current_modelo_name==='section_group') {
+		$filter_html = $records_search->get_html();
 
-				$section_group = $current_tipo;
+
+		return $filter_html;
+	
+	}//end get_filter_html
+
+
+
+	/**
+	* GET_SEARCH_OPTIONS
+	* Resolve the search options for the section
+	* @return html
+	*/
+	public function get_search_options($section_tipo, $current_section_list){
+
+		$current_section = section::get_instance(null, $section_tipo, 'list');
+		//create the layout_map for the section to get the rows for the list
+		// [section_tipo] => ["component_tipo1","component_tipo2",...]
+		$layout_map = [];
+		$layout_map[$section_tipo] = $current_section_list->section_list;
+		$current_section->layout_map = $layout_map;
+
+		# SEARCH_OPTIONS
+		$saved_search_options = section_records::get_search_options( $section_tipo .'_tool_cataloging' );
+
+		if ($saved_search_options===false) {
+			# Is not defined
+			$search_options = new stdClass();
+				$search_options->modo 	 = 'list';
 				
-				$element = new stdClass();
-					$element->model 	= $current_modelo_name;
-					$element->tipo 		= $current_tipo;
-
-				$ar_components[] = $element;
-
-				$ar_tipos = RecordObj_dd::get_ar_childrens($current_tipo);			
-			}else{
-				$ar_tipos = [$current_tipo];
-			}
+			# SEARCH_QUERY_OBJECT . Add search_query_object to options
+				$search_query_object = $current_section->build_search_query_object();							
 			
-			foreach ($ar_tipos as $current_alias_component_tipo) {
+				$search_options->search_query_object = $search_query_object;
+		}else{
+			# Use saved search options
+			$search_options = $saved_search_options;
 							
-				$current_alias_component 	= new RecordObj_dd($current_alias_component_tipo);
-				$current_alias_properties 	= $current_alias_component->get_propiedades(true);
-				# Inject in propiedades current component tipo
-				$current_alias_properties->alias_component_tipo = $current_alias_component_tipo;
-
-				$current_component_tipo 	= $current_alias_properties->alias_of;				
-
-				if(isset($current_component_tipo)){
-					
-					$modelo_name 		= RecordObj_dd::get_modelo_name_by_tipo($current_component_tipo,true);				
-					$modo 		 		= 'edit';				
-
-					$current_component 	= component_common::get_instance($modelo_name,
-																		 $current_component_tipo,
-																		 $this->section_id,
-																		 $modo,
-																		 DEDALO_DATA_LANG,
-																		 $this->section_tipo);
-
-					$current_component->set_propiedades($current_alias_properties);
-						#dump($current_component->get_propiedades(), ' current_component ++ '.to_string($modelo_name));
-
-					#$ar_components[] = $current_component;
-					$element = new stdClass();
-						$element->model 		= $modelo_name;
-						$element->tipo 			= $current_alias_component_tipo;
-						$element->section_group = isset($section_group) ? $section_group : null;
-						$element->component 	= $current_component;
-
-					$ar_components[] = $element;
-				}
-			}			
 		}
-		#dump($ar_components, ' ar_components ++ '.to_string());
+		#$search_options_json = json_encode($search_options, JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE );
+		$search_options_json = json_encode($search_options, JSON_UNESCAPED_UNICODE );
 
-		return $ar_components;		
-	}//end get_ar_elements
+		
+		return $search_options_json;
 
+	}//get_search_options
+
+
+
+	/**
+	* GET_HTML
+	* 
+	*/
+	public function get_html(){
+		if(SHOW_DEBUG===true) {
+			#global$TIMER;$TIMER[get_called_class().'_'.$this->tipo.'_'.$this->modo.'_'.microtime(1)]=microtime(1);
+		}
+
+		ob_start();
+		include ( DEDALO_LIB_BASE_PATH .'/tools/'.get_called_class().'/'.get_called_class().'.php' );
+		$html = ob_get_clean();
+		
+
+		if(SHOW_DEBUG===true) {
+			#global$TIMER;$TIMER[__METHOD__.'_'.get_called_class().'_'.$this->modo.'_'.microtime(1)]=microtime(1);
+		}
+
+		return $html;
+	}
+
+
+	/**
+	* GET_JSON
+	* 
+	*/
+	public function get_json(){
+
+		if(SHOW_DEBUG===true) $start_time = start_time();		
+		
+			# Class name is called class (ex. component_input_text), not this class (common)	
+			include ( DEDALO_LIB_BASE_PATH .'/'. get_called_class() .'/'. get_called_class() .'_json.php' );
+
+		if(SHOW_DEBUG===true) {
+			#$GLOBALS['log_messages'][] = exec_time($start_time, __METHOD__. ' ', "html");
+			global$TIMER;$TIMER[__METHOD__.'_'.get_called_class().'_'.$this->tipo.'_'.$this->modo.'_'.microtime(1)]=microtime(1);
+		}
+		
+		return $json;
+	}//end get_json
 
 	
 }//end class tool_catalogue
