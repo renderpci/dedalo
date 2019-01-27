@@ -38,7 +38,7 @@ class relation_list extends common {
 	public function get_inverse_references($limit=1, $offset=0, $count=false) {
 
 		if (empty($this->section_id)) {
-			# Section not exists yet. Return empty array
+			# Section not exists yet. Return empty $arrayName = array('' => , );
 			return array();
 		}
 
