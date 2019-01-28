@@ -6,32 +6,22 @@
 
 
 
-/* SEARCH
-------------------------------------------------------- */
-	.css_wrap_rows_search {
-		margin: 0px;
-		margin-left: 6px;
-		//margin-bottom: 5px;
-		/*
-		-moz-user-select: none;
-		-khtml-user-select: none;
-			-webkit-user-select: none;
-			user-select: none;
-			*/
-		}
+	/* SEARCH
+	------------------------------------------------------- */
+		/*	
 		.css_rows_search_tap {
-			/* background-color: #e7e7e7; */
+			// background-color: #e7e7e7; 
 			cursor: pointer;
 			width: auto;
 			padding: 5px;
-			/* background-image: none; */
+			// background-image: none; 
 			padding-left: 10px;
 			padding-right: 10px;
-			/* display: inline-block; */
+			// display: inline-block; 
 			border-radius: 5px;
-			/* border-top-right-radius: 5px; */
-			/* z-index: 0; */
-			/* margin-left: 5px; */
+			// border-top-right-radius: 5px; 
+			// z-index: 0; 
+			// margin-left: 5px; 
 			-moz-user-select: none;
 			-khtml-user-select: none;
 			-webkit-user-select: none;
@@ -39,12 +29,14 @@
 			text-transform: capitalize;
 			margin-top: 3px;
 			float: left;
-			}
-			.css_rows_search_tap:hover {
+
+			&:hover {
 				background-color: #666666;
 				color: #CCCCCC;
 				box-shadow: 2px 2px 16px #888888;
 			}
+		}		
+			
 		.css_rows_search_content {
 			padding: 10px;	
 			box-shadow: 2px 2px 8px #888888;
@@ -52,60 +44,59 @@
 			z-index: 1;
 			width: 100%;
 			position: relative;
-			/*display: none;*/
+			// display: none;
 			display: table;
 		}
+		*/
 
-		/* COMOPONETS
-		------------------------------------------------------- */
-		.css_portal_title{
-			
-		}
 
 
 
 		/* SEARCH_OPERATORS
 		------------------------------------------------------- */
-		.css_operator_select {
-			display: none;
-		}
-		.toggle_search_operators {
-			background-position: -360px -144px;
-			position: absolute;
-			right: 10px;
-			z-index: 9999;
-			@media screen and (max-width: 1024px) {
-				position: relative;
-				float: right;
+			.css_operator_select {
+				display: none;
 			}
-		}
-		.comparison_operator, .logical_operator {
-			opacity: 0.6;
-			background-color: #CFCFCF;
-		}
-		.comparison_operator {
-			margin-right: 5px;
-			width: 110px;
-		}
-		.logical_operator {
-			margin-left: 5px;
-			width: 40px;
-		}
+			.toggle_search_operators {
+				background-position: -360px -144px;
+				position: absolute;
+				right: 10px;
+				z-index: 9999;
+				@media screen and (max-width: 1024px) {
+					position: relative;
+					float: right;
+				}
+			}
+			.comparison_operator, .logical_operator {
+				opacity: 0.6;
+				background-color: #CFCFCF;
+			}
+			.comparison_operator {
+				margin-right: 5px;
+				width: 110px;
+			}
+			.logical_operator {
+				margin-left: 5px;
+				width: 40px;
+			}
 
 
 
 /* MAX_ROWS (COMPONENT MAX ROWS)
-------------------------------------------------------- */
+------------------------------------------------------- 
 	.css_wrap_max_rows {
 		padding: 0px;
 		padding-left: 5px;
 		display: inline-block;
 		width: 17%;
 		max-width: 16.66%;
-		}
-		.css_wrap_max_rows .label {
+
+		.label {
 			vertical-align: middle;
 		}
+	}
+	
+
 	.css_max_rows {
 		padding: 2px;
 		//border: 1px solid #9E9E9E;
@@ -116,13 +107,17 @@
 		height: 22px;
 		vertical-align: middle;
 		margin-right: 39px;
-		}
-		.css_max_rows:hover {
+	
+		&:hover {
 			background-color: #F1F1F1;
 		}
-		.css_max_rows:focus {
+		&:focus {
 			box-shadow: 0 0 5px #CCC;
 		}
+	}
+	*/	
+
+
 
 	/* MAX_GROUP
 	------------------------------------------------------- */
@@ -138,27 +133,29 @@
 		// border: 1px solid #e6e6e6;
 		overflow: hidden;
 		margin-right: 0px;
-		}
-		.max_group .max_input_label {
+	
+		.max_input_label {
 			display: block;
 			width: 100%;
 			text-align: center;
 			padding: 3px;
 			position: absolute;
 		}
-		.max_group input.max_input {
+
+		input.max_input {
 			border: none;
 			width: 100%;
 			height:100%;
-			cursor: default;		
+			cursor: default;
 			text-align: center;
 			font-size: 1.2em;
 		}
-		
+	}
+			
 
 
 	/* BUTTON_RESET
-	------------------------------------------------------- */
+	------------------------------------------------------- 
 		.css_wrap_button_reset {
 			display: inline-block;
 			padding: 3px;
@@ -177,14 +174,18 @@
 			background-position: 0 -1px;
 			box-shadow: 1px 2px 2px #888888;
 			cursor: pointer;
-			}
-			.css_button_reset:hover{
+
+			&:hover{
 				color: #FFFFFF;
 			}
+		}
+		*/	
+
 
 
 	/* BUTTON_SEARCH
 	------------------------------------------------------- */
+		/*
 		.css_wrap_button_search {
 			display: inline-block;
 			padding: 3px;
@@ -206,7 +207,7 @@
 			padding-right: 5px;
 			margin-left: 10px;
 			margin-top: 5px;
-		}		
+		} */	
 		#search_response {
 			margin-left: 10px;
 			margin-top: 5px;
