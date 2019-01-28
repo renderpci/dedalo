@@ -128,6 +128,10 @@
 					$search_query_object_options->tipo 				= $tipo;
 				$search_query_object 		= component_autocomplete_hi::build_search_query_object($search_query_object_options);
 				$json_search_query_object 	= json_encode( $search_query_object, JSON_UNESCAPED_UNICODE | JSON_HEX_APOS);
+
+				#if(SHOW_DEBUG===true && DEVELOPMENT_SERVER===true) {
+				#	$this->build_list_data();
+				#}				
 				break;
 
 		case 'tool_time_machine' :
