@@ -93,7 +93,7 @@
 				# FIX BROKEN TAGS										
 				$ar_fix_broquen_tags_tipos = unserialize(DEDALO_TEXTAREA_FIX_BROQUEN_TAGS_TIPOS);
 				if (  in_array($this->tipo, $ar_fix_broquen_tags_tipos) ) {	
-					if (isset($context) && $context->context_name==='default') {
+					if (isset($context->context_name) && $context->context_name==='default') {
 						$save=true;
 						if(SHOW_DEBUG===true) {
 							$save=false;
