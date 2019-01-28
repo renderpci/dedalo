@@ -32,7 +32,7 @@
 			# SECTION DIFFUSION_INFO		
 			$section 		= section::get_instance($section_id, $section_tipo, 'edit');
 			$diffusion_info = $section->get_diffusion_info();
-				#dump($diffusion_info, ' $diffusion_info ++ '.to_string());				
+				#dump($diffusion_info, ' $diffusion_info ++ '.to_string());
 			break;
 
 		case 'button_thesaurus';
@@ -43,7 +43,7 @@
 			#	return null;
 			#}
 
-			# Show tool button			
+			# Show tool button 
 
 			#
 			# DIFFUSION_ELEMENT_TIPO
