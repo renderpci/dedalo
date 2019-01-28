@@ -1483,6 +1483,10 @@
 		component_input_text : Fixed issue when render_list_value with empty value in current lang. Fixed search issues with empty and not empty values in all langs
 
 	
+	Valencia 28-01-2019 5.2.0
+		search : Recoded to make it independent of initator (js/php) and context
+
+	
 
 	
 
@@ -1505,7 +1509,7 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.1.16';
+	$DEDALO_VERSION = '5.2.0';
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}

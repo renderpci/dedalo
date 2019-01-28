@@ -64,7 +64,7 @@ temp
 write
 template_maps
 tpl
-lib/dedalo/publication/client_api/*/docu/ui/*
+lib/dedalo/publication/client_api/**/docu/ui/*
 lib/dedalo/tools/tool_layout_print/data/*
 lib/dedalo/tools/tool_layout_print/print_pdf/*
 
@@ -82,21 +82,17 @@ config.codekit3
 
 # various minified
 # js min
-lib/dedalo/*/*-min.js
-lib/dedalo/*/js/*-min.js
-lib/dedalo/*/*/js/*-min.js
+lib/dedalo/**/*-min.js
+
 # js map
-lib/dedalo/*/*-min.js.map
-lib/dedalo/*/js/*-min.js.map
-lib/dedalo/*/*/js/*-min.js.map
+lib/dedalo/**/*-min.js.map
+
 # css min
-lib/dedalo/*/*-min.css
-lib/dedalo/*/css/*-min.css
-lib/dedalo/*/*/css/*-min.css
+lib/dedalo/**/*-min.css
+
 # css map
-lib/dedalo/*/*.css.map
-lib/dedalo/*/css/*.css.map
-lib/dedalo/*/*/css/*.css.map
+lib/dedalo/**/*.css.map
+
 
 # saml
 lib/dedalo/login/saml/test_js.html
@@ -105,4 +101,6 @@ lib/dedalo/login/saml/test.php
 # Drafs
 lib/dedalo/component_date_mod/
 lib/dedalo/component_portal/_versions/
+
+
 
