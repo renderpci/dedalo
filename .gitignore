@@ -102,6 +102,7 @@ lib/dedalo/*/*/css/*.css.map
 lib/dedalo/login/saml/test_js.html
 lib/dedalo/login/saml/test.php
 
-
-
+# Drafs
+lib/dedalo/component_date_mod/
+lib/dedalo/component_portal/_versions/
 
