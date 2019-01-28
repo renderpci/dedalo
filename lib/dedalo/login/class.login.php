@@ -415,7 +415,7 @@ class login extends common {
 
 					# delay failed output after 2 seconds to prevent brute force attacks
 			        sleep(2);					
-					$response->msg = "Error: Code not exists or is invalid!";
+					$response->msg = label::get_label('error_el_codigo_de_usuario_no_existe'); # "Error: User Code not exists! Please try again";
 					error_log("DEDALO LOGIN ERROR : Invalid saml code");
 					return $response;			
 			}
