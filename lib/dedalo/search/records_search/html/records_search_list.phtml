@@ -2,34 +2,26 @@
 
 	# VISUALIZADOR HTML
 	print '<!-- '.__CLASS__.' -->';
-	print '<div class="css_wrap_rows_search">';
+	print '<div id="wrap_rows_search" class="css_wrap_rows_search">';
 
 	
 		# CONTENIDO (INPUT)
 		$html_content   = '';		
 
 
-	#
-	# DEVELOPMENT 2	- SEARCH2
-		js::$ar_url[]  = DEDALO_LIB_BASE_URL . '/search/js/search2.js';
-
+		# VISUALIZADOR HTML
+		$html_content 	.= '<script>search2.init('.$init_options_json.')</script>';
 		
 
-		# Get current search_options 
-		# $search_options_id 	 = $section_tipo;
-		# $search_options 	 = section_records::get_search_options( $search_options_id );
-		#$search_options_json = json_encode($search_options);
-		$user_id 	 = navigator::get_user_id();
-		$temp_preset = search_development2::get_preset(DEDALO_TEMP_PRESET_SECTION_TIPO, $user_id, $section_tipo);
-		$temp_filter = isset($temp_preset->json_filter) ? $temp_preset->json_filter : null;
-	
-		$init_options  = array(
-							"section_tipo" 			=> $section_tipo,
-							"temp_filter" 			=> encodeURIComponent($temp_filter),
-							"modo" 					=> $this->modo,
-							"ar_real_section_tipo" 	=> isset($this->ar_real_section_tipo) ? $this->ar_real_section_tipo : null
-							);
-		$init_options_json = json_encode($init_options, JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP | JSON_HEX_TAG);
+	print $html_content;
+
+
+	print '</div><!-- /css_wrap_rows_search -->';
+
+
+
+
+/*
 
 		$search2_html = '';
 
@@ -116,4 +108,6 @@
 
 
 	print '</div><!-- /css_wrap_rows_search -->';
+*/
+
 ?>
