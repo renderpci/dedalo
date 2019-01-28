@@ -94,7 +94,26 @@ $start_time=microtime(1);
 								
 							}else{
 
-								echo $response->msg;
+								#echo $response->msg;
+
+								// Error msg
+									$html_content  = '';
+									$html_content .= '<div class="raw_msg">';
+
+										$html_content .= '<div class="content">';
+											$html_content .= '<h3>'.$response->msg.'</h3>';
+											$html_content .= '<div class="saml_button">';
+											#$load_logout = file_get_contents_curl(SAML_CONFIG['logout_url']);
+											#$html_content .= '<iframe class="hide" src="'.SAML_CONFIG['logout_url'].'"></iframe>';
+											#$html_content .= '<script>var my_window=window.open("'.SAML_CONFIG['logout_url'].'");</script>';
+											#$html_content .= include( DEDALO_LIB_BASE_PATH . '/login/html/saml_button.phtml');
+											$html_content .= '<a type="button" class="btn btn-success btn-block" href="'.DEDALO_ROOT_WEB.'">Dédalo Login</a>';
+											$html_content .= '</div>';											
+										$html_content .= '</div>';
+
+									$html_content .= '</div>';
+
+									echo html_page::get_html($html_content, true);
 							}
 							exit();
 				}
