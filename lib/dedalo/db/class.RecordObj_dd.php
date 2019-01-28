@@ -56,9 +56,11 @@ class RecordObj_dd extends RecordDataBoundObject {
 			$msg = 'This record dd not exists! [terminoID:"'.$terminoID.'" - prefijo:"'.$prefijo.'"] ';
 			if(isset($_REQUEST['terminoID'])) $msg .= ' - terminoID:'.safe_xss($_REQUEST['terminoID']); 
 
-			debug_log(__METHOD__." $msg ".to_string(), logger::ERROR);
+			#debug_log(__METHOD__." $msg ".to_string(), logger::ERROR);
+			$bt = debug_backtrace();
+			debug_log(__METHOD__." $msg - debug_backtrace:  " . PHP_EOL . to_string($bt), logger::ERROR);
 			
-			if(SHOW_DEBUG===true) {        		
+			if(SHOW_DEBUG===true) {
         		throw new Exception("Error Processing Request $msg", 1);
 			}			
 			trigger_error($msg);
@@ -1020,10 +1022,12 @@ class RecordObj_dd extends RecordDataBoundObject {
 						#	dump($current_modelo_name, ' current_modelo_name ++ '.to_string());
 
 						if(empty($modelo)) {
-							$clabel = RecordObj_dd::get_termino_by_tipo($terminoID);
+							$clabel = ''; //RecordObj_dd::get_termino_by_tipo($terminoID);
 							
 							trigger_error("Error Processing get_ar_terminoID_by_modelo_name_and_relation [termino_relacionado - $tipo]. Modelo is empty. Please define modelo for this component terminoID:$terminoID, name:$clabel ");
-							#throw new Exception(__METHOD__." Error Processing get_ar_terminoID_by_modelo_name_and_relation. Modelo is empty. Please define modelo for this terminoID: $terminoID (name: $clabel)", 1);
+								# $bt = debug_backtrace();
+								# dump($bt, '$bt ++ '.to_string());
+								# throw new Exception(__METHOD__." Error Processing get_ar_terminoID_by_modelo_name_and_relation. Modelo is empty. Please define modelo for this terminoID: $terminoID (name: $clabel)", 1);
 							return array();														
 						}
 						$current_modelo_name	= $RecordObj_dd->get_termino_by_tipo($modelo);
