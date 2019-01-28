@@ -95,7 +95,7 @@ class records_search extends common {
 
 		# SEARCH_LIST : Buscamos el termino relacionado de modelo 'search_list'
 		$ar_search_list_tipo = section::get_ar_children_tipo_by_modelo_name_in_section($this->section_tipo, 'search_list', true);
-			#dump($search_list_tipo, 'search_list_tipo');
+			#dump($ar_search_list_tipo, 'ar_search_list_tipo');
 
 		if(empty($ar_search_list_tipo[0])) {
 			$search_list_tipo = false;

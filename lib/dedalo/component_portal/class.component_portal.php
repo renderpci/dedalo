@@ -1983,84 +1983,14 @@ class component_portal extends component_relation_common {
 
 			// working here (!)
 				if(SHOW_DEBUG===true && DEVELOPMENT_SERVER===true) {
-					#$json_d->json_rows = self::build_json_rows($rows_data);					
+					if ($tipo==='oh17') 
+					$json_d->json_rows = section::build_json_rows($rows_data,'list');					
 				}
 				
 		
 
 		return $json_d;
 	}//end build_component_json_data
-
-
-
-	/**
-	* BUILD_JSON_rows
-	* @return array $ar_json_rows
-	*/
-	public function build_json_rows($rows_data) {
-		
-		$ar_json_rows = [];
-
-		// Empty result case
-			if (empty($rows_data->ar_records)) {
-				return $ar_json_rows;
-			}
-
-		// Iterate records
-			foreach ($rows_data->ar_records as $record) {
-
-				$section_id   = $record->section_id;
-				$section_tipo = $record->section_tipo;	
-
-				// Iterate record columns object
-					$ar_columns = [];
-					foreach ($record as $tipo => $value) {
-
-						switch ($tipo) {
-							case 'section_id':
-							case 'section_tipo':
-							case 'current_id':
-							case 'ordering_id':
-							case 'ordering':
-								# ignore
-								continue 2;
-								break;
-							default:
-								$modelo_name 	   = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
-								$label 		 	   = RecordObj_dd::get_termino_by_tipo($tipo, DEDALO_DATA_LANG, true, true); // $terminoID, $lang=NULL, $from_cache=false, $fallback=true								
-								$render_list_mode  = 'edit';
-								$current_component = component_common::get_instance( $modelo_name,
-																					 $tipo,
-																					 $section_id,
-																					 $render_list_mode,
-																					 DEDALO_DATA_LANG,
-																					 $section_tipo);
-								$value = $current_component->get_html();
-								break;
-						}
-
-						$column = new stdClass();
-							$column->label 	= $label;
-							$column->tipo 	= $tipo;
-							$column->model 	= $modelo_name;
-							$column->value 	= $value;
-
-						$ar_columns[] = $column;
-					}
-
-				// Create row with columns
-					$row = new stdClass();
-						$row->section_id 	= $section_id;
-						$row->section_tipo 	= $section_tipo;
-						$row->ar_columns 	= $ar_columns;
-
-				$ar_json_rows[] = $row;
-
-			}//end foreach ($rows_data->ar_records as $row)
-			#dump($ar_json_rows, ' ar_json_rows ++ '.to_string());
-
-		return $ar_json_rows;
-	}//end build_json_rows
 
 
 

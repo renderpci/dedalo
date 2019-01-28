@@ -98,7 +98,7 @@ if ($dedalo_get!==false && is_object($options)) {
 	# $options->offset 		 	 = false;
 	# $options->count 		 	 = false;
 	# $options->resolve_portal 	 = false;
-	# $options->conn 			 = DBi::_getConnection_mysql();	
+	# $options->conn 			 = web_data::get_db_connection();	
 
 	#
 	# DATA 
