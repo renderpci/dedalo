@@ -157,8 +157,13 @@
 				#
 					#
 					# SEARCH_FORM_HTML
+					if(SHOW_DEBUG===true)
+					$html_content .= '<!-- RECORDS SEARCH [tipo:$tipo modo:$modo] -->';
+					$html_content .= '<div class="css_wrap_rows_search">';
 					$html_content .= $search_form_html;
-
+					$html_content .= '</div>';
+					if(SHOW_DEBUG===true)
+					$html_content .= '<!-- /RECORDS SEARCH -->';
 					
 					#
 					# ROWS_LIST_HTML
