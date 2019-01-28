@@ -98,6 +98,10 @@
 		case 'list':
 				break;
 
+		case 'json':
+				$file_name = 'list';
+				break;
+
 		case 'relation':
 				# Nothing to do
 				break;		
