@@ -55,6 +55,8 @@ class section extends common {
 
 		public $save_modified; # Default is true
 
+		public $layout_map;
+
 
 	# DIFFUSION INFO
 	# Store section diffusion info. If empty, current section is not publish.
@@ -3304,6 +3306,95 @@ class section extends common {
 
 		return true;
 	}//end update_modified_section_data
+
+
+
+	/**
+	* BUILD_JSON_ROWS
+	* @return object $result
+	*/
+	public static function build_json_rows($rows_data, $modo) {
+		#dump($rows_data->ar_records, ' rows_data->ar_records ++ '.to_string());
+		
+		$ar_json_rows = [];
+
+		// Empty result case
+			if (empty($rows_data->ar_records)) {
+				return $ar_json_rows;
+			}
+
+		// context
+			$context = [];
+
+		// data
+			$data = [];
+
+
+		// Iterate records
+			$i=0; foreach ($rows_data->ar_records as $record) {
+
+				$section_id   = $record->section_id;
+				$section_tipo = $record->section_tipo;	
+
+				// Iterate record columns object 
+					foreach ($record as $tipo => $value) {
+
+						switch ($tipo) {
+							case 'section_id':
+							case 'section_tipo':
+							case 'current_id':
+							case 'ordering_id':
+							case 'ordering':
+								# ignore
+								continue 2;
+								break;
+							default:
+								$modelo_name 	   = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+								$label 		 	   = RecordObj_dd::get_termino_by_tipo($tipo, DEDALO_DATA_LANG, true, true); // $terminoID, $lang=NULL, $from_cache=false, $fallback=true								
+								$render_list_mode  = $modo;
+								$current_component = component_common::get_instance( $modelo_name,
+																					 $tipo,
+																					 $section_id,
+																					 $render_list_mode,
+																					 DEDALO_DATA_LANG,
+																					 $section_tipo);
+								$value = $current_component->get_html();
+								break;
+						}
+
+						$value = trim($value);
+
+						$column = new stdClass();
+							$column->section_id = $section_id;
+							$column->tipo 		= $tipo;
+							#$column->label 	= $label;							
+							#$column->model 	= $modelo_name;
+							$column->value 		= $value;
+
+						$data[] = $column;
+
+						// get context labels of all columns of first row
+							if ($i===0) {
+								$context_item = new stdClass();
+									$context_item->type  = 'column_info';
+									$context_item->tipo  = $tipo;
+									$context_item->model = $modelo_name;
+									$context_item->label = $label;									
+								$context[] = $context_item;
+							}
+					}//end iterate columns			
+
+			$i++; }//end foreach ($rows_data->ar_records as $row)
+			
+
+		$result = new stdClass();
+			$result->context = $context;
+			$result->data 	 = $data;
+
+			dump($result, ' result ++ '.to_string());
+
+		return $result;
+	}//end build_json_rows
 
 	
 
