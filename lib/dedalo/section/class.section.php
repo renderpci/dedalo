@@ -260,7 +260,7 @@ class section extends common {
 			
 			$section_tipo 			= $this->tipo;
 			$matrix_table 			= common::get_matrix_table_from_tipo($section_tipo);
-			$JSON_RecordObj_matrix	= new JSON_RecordObj_matrix($matrix_table,$this->section_id, $tipo);
+			$JSON_RecordObj_matrix	= new JSON_RecordObj_matrix($matrix_table, $this->section_id, $tipo);
 
 			$dato = $JSON_RecordObj_matrix->get_dato();
 
@@ -3313,7 +3313,8 @@ class section extends common {
 	* BUILD_JSON_ROWS
 	* @return object $result
 	*/
-	public static function build_json_rows($rows_data, $modo) {
+	public static function build_json_rows($rows_data, $modo, $ar_layout_map) {
+		$start_time=microtime(1);
 		#dump($rows_data->ar_records, ' rows_data->ar_records ++ '.to_string());
 		
 		$ar_json_rows = [];
@@ -3326,72 +3327,100 @@ class section extends common {
 		// context
 			$context = [];
 
+			// Iterate kayout maps
+				foreach ((array)$ar_layout_map as $section_tipo => $layout_map) {
+
+					// context section info
+						$context_item = new stdClass();
+							$context_item->type  		 = 'section_info';
+							$context_item->section_tipo  = $section_tipo;
+							$context_item->section_label = RecordObj_dd::get_termino_by_tipo($section_tipo, DEDALO_DATA_LANG, true, true);
+						$context[] = $context_item;
+
+					foreach ($layout_map as $component_tipo) {
+
+						$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+						$label 		 = RecordObj_dd::get_termino_by_tipo($component_tipo, DEDALO_DATA_LANG, true, true);
+						
+						// context column_info
+							$context_item = new stdClass();
+								$context_item->type  		 = 'column_info';
+								$context_item->tipo  		 = $component_tipo;
+								$context_item->section_tipo  = $section_tipo;
+								$context_item->model 		 = $modelo_name;
+								$context_item->label 		 = $label;
+							$context[] = $context_item;
+					}
+				}
+
 		// data
 			$data = [];
 
+			// Iterate records
+				$i=0; foreach ($rows_data->ar_records as $record) {
 
-		// Iterate records
-			$i=0; foreach ($rows_data->ar_records as $record) {
+					$section_id   = $record->section_id;
+					$section_tipo = $record->section_tipo;
+					$datos   	  = json_decode($record->datos);
 
-				$section_id   = $record->section_id;
-				$section_tipo = $record->section_tipo;	
+					// Inject known dato to avoid re connect to database
+					$section = section::get_instance($section_id, $section_tipo);				
+					$section->set_dato($datos);
+					$section->bl_loaded_matrix_data = true;
+						
+						#dump($section->bl_loaded_matrix_data, ' section->bl_loaded_matrix_data ++ '.to_string($section_id));
+						#dump($datos, ' datos ++ '.to_string());
 
-				// Iterate record columns object 
-					foreach ($record as $tipo => $value) {
+					// Iterate layout_map for colums
+						foreach ($ar_layout_map[$section_tipo] as $tipo) {
+						
+							switch ($tipo) {
+								#case 'section_id':
+								case 'section_tipo':
+								#case 'current_id':
+								#case 'ordering_id':
+								#case 'ordering':
+									# ignore
+									continue 2;
+									break;
 
-						switch ($tipo) {
-							case 'section_id':
-							case 'section_tipo':
-							case 'current_id':
-							case 'ordering_id':
-							case 'ordering':
-								# ignore
-								continue 2;
-								break;
-							default:
-								$modelo_name 	   = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
-								$label 		 	   = RecordObj_dd::get_termino_by_tipo($tipo, DEDALO_DATA_LANG, true, true); // $terminoID, $lang=NULL, $from_cache=false, $fallback=true								
-								$render_list_mode  = $modo;
-								$current_component = component_common::get_instance( $modelo_name,
-																					 $tipo,
-																					 $section_id,
-																					 $render_list_mode,
-																					 DEDALO_DATA_LANG,
-																					 $section_tipo);
-								$value = $current_component->get_html();
-								break;
-						}
-
-						$value = trim($value);
-
-						$column = new stdClass();
-							$column->section_id = $section_id;
-							$column->tipo 		= $tipo;
-							#$column->label 	= $label;							
-							#$column->model 	= $modelo_name;
-							$column->value 		= $value;
-
-						$data[] = $column;
-
-						// get context labels of all columns of first row
-							if ($i===0) {
-								$context_item = new stdClass();
-									$context_item->type  = 'column_info';
-									$context_item->tipo  = $tipo;
-									$context_item->model = $modelo_name;
-									$context_item->label = $label;									
-								$context[] = $context_item;
+								default:
+									$modelo_name 		= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);								
+									$render_mode   		= $modo;
+									$current_component  = component_common::get_instance($modelo_name,
+																						 $tipo,
+																						 $section_id,
+																						 $render_mode,
+																						 DEDALO_DATA_LANG,
+																						 $section_tipo);
+									$value = $current_component->get_html();																
+									break;
 							}
-					}//end iterate columns			
 
-			$i++; }//end foreach ($rows_data->ar_records as $row)
+							$column = new stdClass();
+								$column->section_id 	= $section_id;
+								$column->tipo 			= $tipo;
+								$column->section_tipo 	= $section_tipo;							
+								$column->value 			= $value;
+
+							$data[] = $column;
+						}//end iterate layout_map
+
+				$i++; }//end iterate records
 			
 
 		$result = new stdClass();
 			$result->context = $context;
 			$result->data 	 = $data;
 
-			dump($result, ' result ++ '.to_string());
+			// Debug
+				if(SHOW_DEBUG===true) {
+					$debug = new stdClass();
+						$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";					
+				}
+			$result->debug 	 = $debug;
+
+			#dump($result, ' result ++ '.to_string());
 
 		return $result;
 	}//end build_json_rows

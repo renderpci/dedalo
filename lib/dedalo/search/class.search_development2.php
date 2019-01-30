@@ -761,106 +761,111 @@ class search_development2 {
 
 		if ($this->remove_distinct===true) {
 			$ar_sql_select[] = $this->main_section_tipo_alias.'.section_id';
-		}else{			
-			$ar_sql_select[] = 'DISTINCT ON ('.$this->main_section_tipo_alias.'.section_id) '.$this->main_section_tipo_alias.'.section_id';								
-		}		
+		}else{
+			$ar_sql_select[] = 'DISTINCT ON ('.$this->main_section_tipo_alias.'.section_id) '.$this->main_section_tipo_alias.'.section_id';
+		}
 
 		$ar_sql_select[] = $this->main_section_tipo_alias.'.section_tipo';
 		
-		foreach ($search_query_object->select as $key => $select_object) {
-
-			$path 				 = $select_object->path;
-			$table_alias 		 = $this->get_table_alias_from_path($path);
-			$last_item 		 	 = end($path);
-			$component_tipo 	 = $last_item->component_tipo;
-			$column_alias 		 = $component_tipo;
-			$modelo_name 		 = $last_item->modelo;
-			$select_object_type  = isset($select_object->type) ? $select_object->type : 'string';
-			#$aply_distinct 	 = isset($last_item->distinct_values) ? $last_item->distinct_values : false; // From item path
-			$aply_distinct 		 = (isset($search_query_object->distinct_values) && $search_query_object->distinct_values===$component_tipo) ? true : false; // From global object
-			$component_path 	 = implode(',', $select_object->component_path);
-			if ($this->main_section_tipo===DEDALO_ACTIVITY_SECTION_TIPO) {
-				# In activity section, data container is allways 'dato'
-				$component_path  = str_replace('valor_list', 'dato', $component_path);
-			}
-
-			$sql_select = '';
-	
-			if ($modelo_name==='component_section_id') {
-				
-				$sql_select .= $table_alias.'.section_id';
-				$sql_select .= ' as '.$column_alias;
-
+		// Select fallback to 'datos' when $search_query_object->select is empty or unset
+			if (empty($search_query_object->select)) {
+				$ar_sql_select[] = 'datos';
 			}else{
+				foreach ($search_query_object->select as $key => $select_object) {
 
-				if ($component_path==='relations') {
-					
-					if (!isset($this->relations_cache[$table_alias])) {
-
-						# Add original always to conserve row property position
-						$ar_sql_select[] = '\'\''.' as '.$column_alias;
-
-						# New temporal column
-						$sql_select .= $table_alias.'.datos#>\'{relations}\'';
-						$column_alias = 'relations_' . $table_alias; // Override table alias for generic name
-
-						$this->relations_cache[$table_alias][] = $component_tipo;						
-
-					}else{
-						# Already exists a relations column. Skip select again
-						$sql_select .= '\'\'';						
-					}					
-				
-				}else{
-
-					$sql_select .= $table_alias.'.datos';
-					if($select_object_type==='string') {
-						$sql_select .= '#>>';
-					}else{
-						$sql_select .= '#>';
+					$path 				 = $select_object->path;
+					$table_alias 		 = $this->get_table_alias_from_path($path);
+					$last_item 		 	 = end($path);
+					$component_tipo 	 = $last_item->component_tipo;
+					$column_alias 		 = $component_tipo;
+					$modelo_name 		 = $last_item->modelo;
+					$select_object_type  = isset($select_object->type) ? $select_object->type : 'string';
+					#$aply_distinct 	 = isset($last_item->distinct_values) ? $last_item->distinct_values : false; // From item path
+					$aply_distinct 		 = (isset($search_query_object->distinct_values) && $search_query_object->distinct_values===$component_tipo) ? true : false; // From global object
+					$component_path 	 = implode(',', $select_object->component_path);
+					if ($this->main_section_tipo===DEDALO_ACTIVITY_SECTION_TIPO) {
+						# In activity section, data container is allways 'dato'
+						$component_path  = str_replace('valor_list', 'dato', $component_path);
 					}
-					$sql_select .= '\'{';
-					$sql_select .= $component_path;
-					$sql_select .= '}\'';
-				}				
 
-				# All
-				if ($aply_distinct===true) {
-					# Define as default order prevent apply default behavior
-					$this->sql_query_order_default = $sql_select .' ASC';
-					# Define custom sql_query_order_window_subselect
-						# (!) Commented 16-09-2018 because not work with distinct_values true clause
-						### $this->sql_query_order_window_subselect = $this->main_section_tipo_alias.'.id, ' . $sql_select .' ASC';
-					# Wrap sentence
-					$sql_select = 'DISTINCT ON ('.$sql_select.') '.$sql_select;					 
+					$sql_select = '';
+			
+					if ($modelo_name==='component_section_id') {
+						
+						$sql_select .= $table_alias.'.section_id';
+						$sql_select .= ' as '.$column_alias;
+
+					}else{
+
+						if ($component_path==='relations') {
+							
+							if (!isset($this->relations_cache[$table_alias])) {
+
+								# Add original always to conserve row property position
+								$ar_sql_select[] = '\'\''.' as '.$column_alias;
+
+								# New temporal column
+								$sql_select .= $table_alias.'.datos#>\'{relations}\'';
+								$column_alias = 'relations_' . $table_alias; // Override table alias for generic name
+
+								$this->relations_cache[$table_alias][] = $component_tipo;						
+
+							}else{
+								# Already exists a relations column. Skip select again
+								$sql_select .= '\'\'';						
+							}					
+						
+						}else{
+
+							$sql_select .= $table_alias.'.datos';
+							if($select_object_type==='string') {
+								$sql_select .= '#>>';
+							}else{
+								$sql_select .= '#>';
+							}
+							$sql_select .= '\'{';
+							$sql_select .= $component_path;
+							$sql_select .= '}\'';
+						}				
+
+						# All
+						if ($aply_distinct===true) {
+							# Define as default order prevent apply default behavior
+							$this->sql_query_order_default = $sql_select .' ASC';
+							# Define custom sql_query_order_window_subselect
+								# (!) Commented 16-09-2018 because not work with distinct_values true clause
+								### $this->sql_query_order_window_subselect = $this->main_section_tipo_alias.'.id, ' . $sql_select .' ASC';
+							# Wrap sentence
+							$sql_select = 'DISTINCT ON ('.$sql_select.') '.$sql_select;					 
+						}
+						$sql_select .= ' as '.$column_alias;
+					}
+
+					# Add line
+					if ($aply_distinct===true) {
+						# Force key 0 to overwrite first select line
+						$ar_sql_select[0] = $sql_select;
+						# Move section_id column to end of select
+						$ar_sql_select[] = $this->main_section_tipo_alias.'.section_id';
+					}else{
+						$ar_sql_select[] = $sql_select;
+					}			
+
+					#if ($n_levels>1) {
+					#	$this->join_group[] = $this->build_sql_join($select_object->path);
+					#}
+
+					$this->join_group[] = $this->build_sql_join($select_object->path);
 				}
-				$sql_select .= ' as '.$column_alias;
 			}
-
-			# Add line
-			if ($aply_distinct===true) {
-				# Force key 0 to overwrite first select line
-				$ar_sql_select[0] = $sql_select;
-				# Move section_id column to end of select
-				$ar_sql_select[] = $this->main_section_tipo_alias.'.section_id';
-			}else{
-				$ar_sql_select[] = $sql_select;
-			}			
-
-			#if ($n_levels>1) {
-			#	$this->join_group[] = $this->build_sql_join($select_object->path);
-			#}
-
-			$this->join_group[] = $this->build_sql_join($select_object->path);
-		}		
 
 		# Add order columns to select when need
-		foreach ((array)$this->order_columns as $select_line) {
-			$ar_sql_select[] = $select_line;
-		}	
+			foreach ((array)$this->order_columns as $select_line) {
+				$ar_sql_select[] = $select_line;
+			}
 
 		# Join all
-		$sql_query_select = implode(','.PHP_EOL, $ar_sql_select);
+			$sql_query_select = implode(','.PHP_EOL, $ar_sql_select);
 
 
 		return $sql_query_select;
@@ -2308,8 +2313,9 @@ class search_development2 {
 
 		foreach ((array)$ar_section_tipo as $section_tipo) {
 
-			if ($user_id_logged!=DEDALO_SUPERUSER && 
-				(!isset($ar_authorized_areas->$section_tipo) || (int)$ar_authorized_areas->$section_tipo<1)) {				
+			if ( $section_tipo!==DEDALO_THESAURUS_SECTION_TIPO
+				&& $user_id_logged!=DEDALO_SUPERUSER
+				&& (!isset($ar_authorized_areas->$section_tipo) || (int)$ar_authorized_areas->$section_tipo<1)) {				
 				// user don't have access to current section. skip section
 				continue;
 			}
