@@ -3313,10 +3313,10 @@ class section extends common {
 	* BUILD_JSON_ROWS
 	* @return object $result
 	*/
-	public static function build_json_rows($rows_data, $modo, $ar_layout_map) {
+	public static function build_json_rows($rows_data, $modo, $ar_list_map) {
 		$start_time=microtime(1);
 		#dump($rows_data->ar_records, ' rows_data->ar_records ++ '.to_string());
-		
+		#dump($ar_list_map,'$ar_list_map');die();
 		$ar_json_rows = [];
 
 		// Empty result case
@@ -3328,16 +3328,19 @@ class section extends common {
 			$context = [];
 
 			// Iterate kayout maps
-				foreach ((array)$ar_layout_map as $section_tipo => $layout_map) {
+				foreach ($ar_list_map as $section_tipo => $list_map) {
 
 					// context section info
 						$context_item = new stdClass();
 							$context_item->type  		 = 'section_info';
 							$context_item->section_tipo  = $section_tipo;
 							$context_item->section_label = RecordObj_dd::get_termino_by_tipo($section_tipo, DEDALO_DATA_LANG, true, true);
+							$context_item->modo 		 = $modo;
 						$context[] = $context_item;
 
-					foreach ($layout_map as $component_tipo) {
+					foreach ($list_map as $list_item) {
+
+						$component_tipo = $list_item->tipo;
 
 						$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
 						$label 		 = RecordObj_dd::get_termino_by_tipo($component_tipo, DEDALO_DATA_LANG, true, true);
@@ -3371,9 +3374,12 @@ class section extends common {
 						#dump($section->bl_loaded_matrix_data, ' section->bl_loaded_matrix_data ++ '.to_string($section_id));
 						#dump($datos, ' datos ++ '.to_string());
 
-					// Iterate layout_map for colums
-						foreach ($ar_layout_map[$section_tipo] as $tipo) {
-						
+					// Iterate list_map for colums
+						foreach ($ar_list_map->$section_tipo as $list_item) {
+
+							$tipo = $list_item->tipo;
+							$modo = $list_item->modo;
+
 							switch ($tipo) {
 								#case 'section_id':
 								case 'section_tipo':
@@ -3385,6 +3391,7 @@ class section extends common {
 									break;
 
 								default:
+									
 									$modelo_name 		= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);								
 									$render_mode   		= $modo;
 									$current_component  = component_common::get_instance($modelo_name,
@@ -3393,7 +3400,11 @@ class section extends common {
 																						 $render_mode,
 																						 DEDALO_DATA_LANG,
 																						 $section_tipo);
-									$value = $current_component->get_html();																
+									#if ($render_mode==='dato') {
+										$value = $current_component->get_diffusion_value(DEDALO_DATA_LANG);
+									#}else{
+									#	$value = $current_component->get_html();
+									#}																									
 									break;
 							}
 
@@ -3404,7 +3415,7 @@ class section extends common {
 								$column->value 			= $value;
 
 							$data[] = $column;
-						}//end iterate layout_map
+						}//end iterate ar_list_map
 
 				$i++; }//end iterate records
 			

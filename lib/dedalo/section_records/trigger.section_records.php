@@ -86,7 +86,7 @@ function search_rows($json_data) {
 		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
 	
 	# set vars
-	$vars = array('search_query_object','result_parse_mode');
+	$vars = array('search_query_object','result_parse_mode','ar_list_map');
 		foreach($vars as $name) {
 			$$name = common::setVarData($name, $json_data);
 			# DATA VERIFY
@@ -114,24 +114,19 @@ function search_rows($json_data) {
 		$search_development2 = new search_development2($search_query_object);
 		$rows_data 		 	 = $search_development2->search();
 
-		$ar_layout_map = ["oh1" => ['oh28','oh87','oh14','oh16','oh24','oh22','oh20','oh19','oh25','oh17']];
-		#$ar_layout_map = ["rsc170" => ['rsc20','rsc23','rsc25','rsc52','rsc31','rsc44','rsc30','rsc29']];
-
-	$result_parse_mode = 'edit';
-
 	// result_parse_mode optional
 		switch ($result_parse_mode) {
 			case 'list':
 				// Resolve components in mode list
-				$ar_records = section::build_json_rows($rows_data, $result_parse_mode, $ar_layout_map);
+				$ar_records = section::build_json_rows($rows_data, $result_parse_mode, $ar_list_map);
 				break;
 			case 'edit':
 				// Resolve components in mode edit
-				$ar_records = section::build_json_rows($rows_data, $result_parse_mode, $ar_layout_map);
+				$ar_records = section::build_json_rows($rows_data, $result_parse_mode, $ar_list_map);
 				break;
 			#case 'db':
 			#	// Only format data as {data:ar_records,context:ar_context}
-			#	$ar_records = section::build_json_rows($rows_data, $result_parse_mode, $ar_layout_map);
+			#	$ar_records = section::build_json_rows($rows_data, $result_parse_mode, $ar_list_map);
 			#	break;
 			default:
 				// false / none mode. Nothing to do

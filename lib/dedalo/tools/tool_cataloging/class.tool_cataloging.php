@@ -84,8 +84,9 @@ class tool_cataloging {
 			$section_object = new stdClass();
 				$section_object->section_tipo 	= $section_tipo;
 				$section_object->label 			= RecordObj_dd::get_termino_by_tipo($section_tipo, DEDALO_APPLICATION_LANG, true);
-				$section_object->filter_html	= $this->get_filter_html($section_tipo, $current_section_list);
-				$section_object->search_options = $this->get_search_options($section_tipo, $current_section_list);
+				$section_object->temp_preset_filter	= $this->get_temp_preset_filter($section_tipo);
+				$section_object->search_options = $this->get_search_options($section_tipo);
+				$section_object->ar_list_map 	= $this->get_ar_list_map($section_tipo, $current_section_list);
 				$section_object->type 			= 'sections';
 
 			$sections_to_catalog[] = $section_object;
@@ -97,26 +98,19 @@ class tool_cataloging {
 
 
 	/**
-	* GET_FILTER_HTML
-	* Resolve the source list to get the section_list
+	* GET_TEMP_PRESET_FILTER
+	* Get the temp filter of the user preset to search
 	* @return html
 	*/
-	public function get_filter_html($section_tipo, $current_section_list) {
-
-		$current_section = section::get_instance(null, $section_tipo, 'list');
-		//create the layout_map for the section to get the rows for the list
-		// [section_tipo] => ["component_tipo1","component_tipo2",...]
-		$layout_map = [];
-		$layout_map[$section_tipo] = $current_section_list->section_list;
-		$current_section->layout_map = $layout_map;
-
-		$records_search = new records_search($current_section,'json');
-
-		$filter_html = $records_search->get_html();
-
-		return $filter_html;
+	public function get_temp_preset_filter($section_tipo) {
 	
-	}//end get_filter_html
+		$user_id 	 = navigator::get_user_id();
+		$temp_preset = search_development2::get_preset(DEDALO_TEMP_PRESET_SECTION_TIPO, $user_id, $section_tipo);
+		$temp_preset_filter = isset($temp_preset->json_filter) ? $temp_preset->json_filter : null;
+	
+
+		return $temp_preset_filter;
+	}//end get_temp_preset_filter
 
 
 
@@ -125,13 +119,12 @@ class tool_cataloging {
 	* Resolve the search options for the section
 	* @return html
 	*/
-	public function get_search_options($section_tipo, $current_section_list){
+	public function get_search_options($section_tipo){
 
 		$current_section = section::get_instance(null, $section_tipo, 'list');
 		//create the layout_map for the section to get the rows for the list
 		// [section_tipo] => ["component_tipo1","component_tipo2",...]
 		$layout_map = [];
-		$layout_map[$section_tipo] = $current_section_list->section_list;
 		$current_section->layout_map = $layout_map;
 
 		# SEARCH_OPTIONS
@@ -158,6 +151,22 @@ class tool_cataloging {
 		return $search_options_json;
 
 	}//get_search_options
+
+
+	/**
+	* GET_AR_LIST_MAP
+	* Resolve the layout map of the section_list
+	* @return $ar_list_map
+	*/
+	public function get_ar_list_map($section_tipo, $current_section_list) {
+
+		//create the layout_map for the section to get the rows for the list
+		// [section_tipo] => ["component_tipo1","component_tipo2",...]
+		$ar_list_map = [];
+		$ar_list_map[$section_tipo] = $current_section_list->section_list;
+		
+		return $ar_list_map;
+	}// end get_ar_list_map
 
 
 

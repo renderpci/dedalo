@@ -1983,8 +1983,8 @@ class component_portal extends component_relation_common {
 
 			// working here (!)
 				if(SHOW_DEBUG===true && DEVELOPMENT_SERVER===true) {
-					if ($tipo==='oh17') 
-					$json_d->json_rows = section::build_json_rows($rows_data,'list');					
+					//if ($tipo==='oh17') 
+					//$json_d->json_rows = section::build_json_rows($rows_data,'list');					
 				}
 				
 		

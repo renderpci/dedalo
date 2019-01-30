@@ -32,8 +32,11 @@
 			# TOOL CSS / JS MAIN FILES
 			# CSS
 			css::$ar_url[] = DEDALO_LIB_BASE_URL."/tools/".$tool_name."/css/".$tool_name.".css";
+			css::$ar_url[] = DEDALO_LIB_BASE_URL."/component_portal/css/component_portal.css";
 			# JS
+			js::$ar_url[]  = DEDALO_LIB_BASE_URL."/search/js/search2.js";
 			js::$ar_url[]  = DEDALO_LIB_BASE_URL."/tools/".$tool_name."/js/".$tool_name.".js";
+			js::$ar_url[] = DEDALO_LIB_BASE_URL."/component_portal/js/component_portal.js";
 
 			break;		
 	}//end switch
