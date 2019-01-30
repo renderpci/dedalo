@@ -110,10 +110,9 @@ class tool_cataloging {
 		$layout_map[$section_tipo] = $current_section_list->section_list;
 		$current_section->layout_map = $layout_map;
 
-		$records_search = new records_search($current_section,'list');
+		$records_search = new records_search($current_section,'json');
 
 		$filter_html = $records_search->get_html();
-
 
 		return $filter_html;
 	
