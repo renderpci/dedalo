@@ -1,0 +1,24 @@
+{
+    "name": "react/http",
+    "description": "Event-driven, streaming plaintext HTTP and secure HTTPS server for ReactPHP",
+    "keywords": ["event-driven", "streaming", "HTTP", "HTTPS", "server", "ReactPHP"],
+    "license": "MIT",
+    "require": {
+        "php": ">=5.3.0",
+        "ringcentral/psr7": "^1.2",
+        "react/socket": "^1.0 || ^0.8.3",
+        "react/stream": "^1.0 || ^0.7.1",
+        "react/promise": "^2.3 || ^1.2.1",
+        "evenement/evenement": "^3.0 || ^2.0 || ^1.0",
+        "react/promise-stream": "^1.1"
+    },
+    "autoload": {
+        "psr-4": {
+            "React\\Http\\": "src"
+        }
+    },
+    "require-dev": {
+        "clue/block-react": "^1.1",
+        "phpunit/phpunit": "^6.4 || ^5.7 || ^4.8.35"
+    }
+}

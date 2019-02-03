@@ -47,6 +47,7 @@ lib/dedalo/extras/*
 vendor/*
 !vendor/maxmind
 !vendor/maxmind-db
+!vendor/react
 !vendor/geoip2
 !vendor/socrata
 !vendor/composer
