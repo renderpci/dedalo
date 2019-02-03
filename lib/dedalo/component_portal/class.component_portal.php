@@ -719,7 +719,7 @@ class component_portal extends component_relation_common {
 
 		$ar_related=array();
 		switch ($this->modo) {
-			case 'list':
+			case 'list':			
 			case 'portal_list':
 				# CASE SECTION LIST IS DEFINED				
 				$ar_terms 		  = (array)RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($this->tipo, 'section_list', 'children', true);
@@ -1441,9 +1441,9 @@ class component_portal extends component_relation_common {
 					if (strpos($modelo_name,'component')!==0) continue;
 
 					$path = search_development2::get_query_path($current_tipo, $section_tipo, false);
-										
+					
 					# SELECT . Select_element (select_group)
-						$select_element = new stdClass();							
+						$select_element = new stdClass();
 							$select_element->path = $path;
 
 						$select_group[] = $select_element;

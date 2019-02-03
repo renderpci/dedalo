@@ -400,35 +400,42 @@ class component_image extends component_common {
 	* @param bool $absolute
 	*	Return relative o absolute url. Default false (relative)
 	*/
-	public function get_image_url($quality=false, $test_file=true, $absolute=false) {
+	public function get_image_url($quality=false, $test_file=true, $absolute=false, $default_add=true) {
 		
-		if(!$quality)
-		$quality 	= $this->get_quality();
-		$image_id 	= $this->get_image_id();
+		// quality fallback to default 
+			if(!$quality)
+			$quality 	= $this->get_quality();
+		
+		// image id
+			$image_id 	= $this->get_image_id();
 
-			#dump($this->ImageObj,"ImageObj");dump($this,"this");
-		if (!isset($this->ImageObj)) {
-			throw new Exception("Error Processing Request (get_image_url)", 1);			
-		}
-
-		$ImageObj = (object)$this->ImageObj;
-		$ImageObj->set_quality($quality);
-
-		$image_url = $ImageObj->get_media_path() . $image_id .'.'. $ImageObj->get_extension();
-
-		# FILE EXISTS TEST : If not, show '0' dedalo image logo
-		if($test_file) {
-			$file = $ImageObj->get_local_full_path();
-			if(!file_exists($file)) {
-				#$image_id = '0';
-				$image_url = DEDALO_LIB_BASE_URL . '/themes/default/0.jpg';
+		// Check ImageObj
+			if (!isset($this->ImageObj)) {
+				throw new Exception("Error Processing Request (get_image_url)", 1);			
 			}
-		}		
 
-		# ABSOLUTE (Default false)
-		if ($absolute) {
-			$image_url = DEDALO_PROTOCOL . DEDALO_HOST . $image_url;
-		}
+		// ImageObj
+			$ImageObj = (object)$this->ImageObj;
+			$ImageObj->set_quality($quality);
+
+		// url
+			$image_url = $ImageObj->get_media_path() . $image_id .'.'. $ImageObj->get_extension();
+
+		// File exists test : If not, show '0' dedalo image logo
+			if($test_file) {
+				$file = $ImageObj->get_local_full_path();
+				if(!file_exists($file)) {
+					if ($default_add===false) {
+						return false;
+					}
+					$image_url = DEDALO_LIB_BASE_URL . '/themes/default/0.jpg';
+				}
+			}		
+
+		// Absolute (Default false)
+			if ($absolute) {
+				$image_url = DEDALO_PROTOCOL . DEDALO_HOST . $image_url;
+			}
 	
 		return $image_url;
 	}//end get_image_url
@@ -1164,6 +1171,20 @@ class component_image extends component_common {
 
 		return $file_path;	
 	}//end build_standar_image_format
+
+
+
+	/**
+	* GET_AR_IMAGE_QUALITY
+	* Get the list of defined image qualities in Dédalo config
+	* @return array $ar_image_quality
+	*/
+	public function get_ar_image_quality() {
+
+		$ar_image_quality = unserialize(DEDALO_IMAGE_AR_QUALITY);
+		
+		return $ar_image_quality;
+	}//end get_ar_image_quality
 
 
 
