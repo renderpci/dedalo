@@ -48,6 +48,7 @@ vendor/*
 !vendor/maxmind
 !vendor/maxmind-db
 !vendor/react
+!vendor/symfony
 !vendor/geoip2
 !vendor/socrata
 !vendor/composer
