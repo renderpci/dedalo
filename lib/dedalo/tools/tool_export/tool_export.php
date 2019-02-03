@@ -46,10 +46,17 @@
 
 					$section_label = RecordObj_dd::get_termino_by_tipo($section_tipo, DEDALO_APPLICATION_LANG, true, true);
 
-					# SAVED_SEARCH_OPTIONS
-					$search_options_id 	  = $section_tipo; // section tipo like oh1
-					$saved_search_options = section_records::get_search_options( $search_options_id );
-					$search_query_object  = $saved_search_options->search_query_object;
+					# SAVED_SEARCH_OPTIONS					
+						$search_options_id 	  = $section_tipo; // section tipo like oh1
+						$saved_search_options = section_records::get_search_options( $search_options_id );
+						if (!isset($saved_search_options->search_query_object)) {
+							$msg = '<h3 class="raw_msg">Error. search_query_object is not available.  ';
+							$msg .= '<a href="'.DEDALO_LIB_BASE_URL .'/main/?t=' .$section_tipo .'">Load '.RecordObj_dd::get_termino_by_tipo($section_tipo).' ['.$section_tipo.']</a>';
+							$msg .= '</h3>';
+							echo html_page::get_html($msg, true);
+							exit();
+						}
+						$search_query_object  = $saved_search_options->search_query_object;
 
 					#
 					# Current searched records stats info
