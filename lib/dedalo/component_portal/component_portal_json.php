@@ -106,9 +106,8 @@
 									$context[0]->json_related_component[] = $current_tipo;
 							}
 						}
-					}//end foreach ($layout_map as $ar_value)
-				
-				// sub_context
+					}
+					
 					$context[0]->sub_context = $ar_subcontext;
 
 					#$current_subcontext 	 = isset($component_json->context[0]->sub_context) ? $component_json->context[0]->sub_context : [];
@@ -120,23 +119,27 @@
 					#$json_rows = section::build_json_rows($rows_data, 'list', $ar_list_map);
 					#dump($json_rows, ' json_rows ++ '.to_string());
 
-					#$context = array_merge($context, $json_rows->context);
+				#$context = array_merge($context, $json_rows->context);
 
-				// sub_context add temp container if not exists
-					foreach ($context[0]->sub_context as $value) {
-						if (!in_array($value, $context)) {
-							$context[] = $value;
-						}
+				#$data = $json_rows->data;
+			}
+
+
+			// sub_context add temp container if not exists
+				foreach ($context[0]->sub_context as $value) {
+					if (!in_array($value, $context)) {
+						$context[] = $value;
 					}
-					
+				}
 				
-				// remove after use temporal container
-					unset($context[0]->sub_context);
+			
+			// remove after use temporal container
+				unset($context[0]->sub_context);
+			
+			
+			#$data = $component_json->data;
 
-			}//end if (!empty($dato))
-
-
-		// Value. Gets paginated dato value (1 record for list)
+		// Value
 			$value = reset($this->get_dato());	
 			
 			$item = new stdClass();
@@ -151,3 +154,5 @@
 
 // JSON string
 	return common::build_element_json_output($context, $data);
+
+
