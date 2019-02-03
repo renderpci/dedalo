@@ -110,6 +110,9 @@ function search_rows($json_data) {
 	// Change search_query_object id to avoid collisions
 		$search_query_object->id = $search_query_object->section_tipo . '_search_rows_temp';
 
+	// Debug
+		#$search_query_object->limit = 20;
+
 	// Search against database
 		$search_development2 = new search_development2($search_query_object);
 		$rows_data 		 	 = $search_development2->search();

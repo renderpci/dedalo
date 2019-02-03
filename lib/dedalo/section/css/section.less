@@ -200,13 +200,14 @@
 
 		>.row_container {			
 			display: grid;
+			padding: 2em;
 			//@colum_with : percentage(0.1428);
 			//grid-template-columns: @colum_with @colum_with @colum_with @colum_with @colum_with @colum_with @colum_with;
 			
 			// Autosize columns @see https://css-tricks.com/auto-sizing-columns-css-grid-auto-fill-vs-auto-fit/
 			grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); 
 
-			height: 57px;
+			min-height: 57px;
 			border-top: 1px solid #e8e8e8;
 
 			&.header {
@@ -217,9 +218,29 @@
 					color: #ffffff;
 					padding: 5px;
 				}
-			}
+			}			
 
-			>.component_wrapper_container {
+			>.column_cell {
+
+				display: flex;
+
+				.component_portal_list {					
+					display: flex;
+					justify-content: center;
+					flex-direction: row;
+					
+					>.component_portal_column {
+						display: flex;
+						justify-content: center;
+						flex-direction: column;
+						padding-left: 4px;
+						padding-right: 4px;
+					}
+				}
+
+				img {
+					height: 100px;
+				}
 
 				>.wrap_component {
 					width: 100%;

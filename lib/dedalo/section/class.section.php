@@ -3338,22 +3338,22 @@ class section extends common {
 							$context_item->modo 		 = $modo;
 						$context[] = $context_item;
 
-					foreach ($list_map as $list_item) {
-
-						$component_tipo = $list_item->tipo;
-
-						$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
-						$label 		 = RecordObj_dd::get_termino_by_tipo($component_tipo, DEDALO_DATA_LANG, true, true);
-						
-						// context column_info
-							$context_item = new stdClass();
-								$context_item->type  		 = 'column_info';
-								$context_item->tipo  		 = $component_tipo;
-								$context_item->section_tipo  = $section_tipo;
-								$context_item->model 		 = $modelo_name;
-								$context_item->label 		 = $label;
-							$context[] = $context_item;
-					}
+					#foreach ($list_map as $list_item) {
+					#
+					#	$component_tipo = $list_item->tipo;
+					#
+					#	$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+					#	$label 		 = RecordObj_dd::get_termino_by_tipo($component_tipo, DEDALO_DATA_LANG, true, true);
+					#	
+					#	// context column_info
+					#		$context_item = new stdClass();
+					#			$context_item->type  		 = 'column_info';
+					#			$context_item->tipo  		 = $component_tipo;
+					#			$context_item->section_tipo  = $section_tipo;
+					#			$context_item->model 		 = $modelo_name;
+					#			$context_item->label 		 = $label;
+					#		$context[] = $context_item;
+					#}
 				}
 
 		// data
@@ -3375,7 +3375,8 @@ class section extends common {
 						#dump($datos, ' datos ++ '.to_string());
 
 					// Iterate list_map for colums
-						foreach ($ar_list_map->$section_tipo as $list_item) {
+						#if(isset($ar_list_map->$section_tipo)) 
+						foreach ((array)$ar_list_map->$section_tipo as $list_item) {
 
 							$tipo = $list_item->tipo;
 							$modo = $list_item->modo;
@@ -3392,29 +3393,36 @@ class section extends common {
 
 								default:
 									
-									$modelo_name 		= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);								
-									$render_mode   		= $modo;
+									$modelo_name 		= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 									$current_component  = component_common::get_instance($modelo_name,
 																						 $tipo,
 																						 $section_id,
-																						 $render_mode,
+																						 'list',
 																						 DEDALO_DATA_LANG,
 																						 $section_tipo);
-									#if ($render_mode==='dato') {
-										$value = $current_component->get_diffusion_value(DEDALO_DATA_LANG);
-									#}else{
-									#	$value = $current_component->get_html();
-									#}																									
+									
+									$component_json = $current_component->get_json();									
 									break;
 							}
 
-							$column = new stdClass();
-								$column->section_id 	= $section_id;
-								$column->tipo 			= $tipo;
-								$column->section_tipo 	= $section_tipo;							
-								$column->value 			= $value;
+							// data add
+								$data = array_merge($data, $component_json->data);
 
-							$data[] = $column;
+							// context add if not already exists
+								$ar_found = array_filter($context, function($item) use($tipo){
+									return $item->type==="component_info" && $item->tipo===$tipo;
+								});
+								if (empty($ar_found)) {
+									$context = array_merge($context, $component_json->context);
+								}								
+
+							#$column = new stdClass();
+							#	$column->section_id 	= $section_id;
+							#	$column->tipo 			= $tipo;
+							#	$column->section_tipo 	= $section_tipo;							
+							#	$column->value 			= $value;
+							#
+							#$data[] = $column;
 						}//end iterate ar_list_map
 
 				$i++; }//end iterate records
@@ -3435,8 +3443,8 @@ class section extends common {
 
 		return $result;
 	}//end build_json_rows
-
 	
+
 
 }//end section
 ?>
