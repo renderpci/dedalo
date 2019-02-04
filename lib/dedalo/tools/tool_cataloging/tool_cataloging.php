@@ -42,6 +42,7 @@
 			js::$ar_url[] = DEDALO_LIB_BASE_URL."/component_input_text/js/render_component_input_text.js";
 			js::$ar_url[] = DEDALO_LIB_BASE_URL."/component_portal/js/render_component_portal.js";
 			js::$ar_url[] = DEDALO_LIB_BASE_URL."/component_image/js/render_component_image.js";
+			js::$ar_url[] = DEDALO_LIB_BASE_URL."/component_text_area/js/render_component_text_area.js";
 			break;		
 	}//end switch
 
