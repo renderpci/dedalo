@@ -3362,9 +3362,9 @@ class section extends common {
 			// Iterate records
 				$i=0; foreach ($rows_data->ar_records as $record) {
 
-					$section_id   = $record->section_id;
-					$section_tipo = $record->section_tipo;
-					$datos   	  = json_decode($record->datos);
+					$section_id   	= $record->section_id;
+					$section_tipo 	= $record->section_tipo;
+					$datos			= json_decode($record->datos);
 
 					// Inject known dato to avoid re connect to database
 					$section = section::get_instance($section_id, $section_tipo);				
@@ -3407,6 +3407,7 @@ class section extends common {
 
 							// data add
 								$data = array_merge($data, $component_json->data);
+
 
 							// context add if not already exists
 								$ar_found = array_filter($context, function($item) use($tipo){
