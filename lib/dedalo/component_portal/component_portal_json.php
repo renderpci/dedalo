@@ -122,25 +122,25 @@
 				#$context = array_merge($context, $json_rows->context);
 
 				#$data = $json_rows->data;
-			}
+			
 
 
-			// sub_context add temp container if not exists
-				foreach ($context[0]->sub_context as $value) {
-					if (!in_array($value, $context)) {
-						$context[] = $value;
+				// sub_context add temp container if not exists
+					foreach ($context[0]->sub_context as $value) {
+						if (!in_array($value, $context)) {
+							$context[] = $value;
+						}
 					}
-				}
+					
 				
+				// remove after use temporal container
+					unset($context[0]->sub_context);
 			
-			// remove after use temporal container
-				unset($context[0]->sub_context);
-			
-			
+			}
 			#$data = $component_json->data;
 
 		// Value
-			$value = reset($this->get_dato());	
+			$value = reset($dato);	
 			
 			$item = new stdClass();
 				$item->section_id 			= $this->get_section_id();
@@ -151,6 +151,7 @@
 				$item->value 				= $value;
 
 			$data[] = $item;
+			
 
 // JSON string
 	return common::build_element_json_output($context, $data);
