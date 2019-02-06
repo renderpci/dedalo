@@ -117,7 +117,9 @@ class menu extends common {
 						*/
 
 						# STRUCTURE LINK IN MENU.  && file_exists(DEDALO_LIB_BASE_PATH.'/dd')
-						if(SHOW_DEBUG===true && $logged_user_is_global_admin===true) {							
+						if( (SHOW_DEBUG===true) || 
+							(DEDALO_ENTITY==='master' && $logged_user_is_global_admin===true && SHOW_DEVELOPER===true)
+						) {							
 							// Structure links
 								$menu_structure_html .= '<li class="has-sub menu_li_inactive">';
 									$structure_path = DEDALO_LIB_BASE_URL.'/dd/dd_list.php?modo=tesauro_edit';
