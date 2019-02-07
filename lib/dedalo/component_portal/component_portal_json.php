@@ -140,8 +140,8 @@
 			#$data = $component_json->data;
 
 		// Value
-			$value = reset($dato);	
-			
+			$value = reset($dato);
+						
 			$item = new stdClass();
 				$item->section_id 			= $this->get_section_id();
 				$item->tipo 				= $this->get_tipo();
@@ -155,5 +155,3 @@
 
 // JSON string
 	return common::build_element_json_output($context, $data);
-
-

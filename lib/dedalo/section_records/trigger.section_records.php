@@ -121,23 +121,26 @@ function search_rows($json_data) {
 		switch ($result_parse_mode) {
 			case 'list':
 				// Resolve components in mode list
-				$ar_records = section::build_json_rows($rows_data, $result_parse_mode, $ar_list_map);
+				$result = section::build_json_rows($rows_data, $result_parse_mode, $ar_list_map);
 				break;
 			case 'edit':
 				// Resolve components in mode edit
-				$ar_records = section::build_json_rows($rows_data, $result_parse_mode, $ar_list_map);
+				$result = section::build_json_rows($rows_data, $result_parse_mode, $ar_list_map);
 				break;
 			#case 'db':
 			#	// Only format data as {data:ar_records,context:ar_context}
-			#	$ar_records = section::build_json_rows($rows_data, $result_parse_mode, $ar_list_map);
+			#	$result = section::build_json_rows($rows_data, $result_parse_mode, $ar_list_map);
 			#	break;
 			default:
 				// false / none mode. Nothing to do
-				$ar_records = $rows_data->ar_records;
+				$result = $rows_data->ar_records;
 				break;
 		}
 
-	$response->result 	= $ar_records;
+	// search_query_object. Add updated search_query_object
+		$result->search_query_object = $search_query_object;
+
+	$response->result 	= $result;
 	$response->msg 		= 'Ok. Request done ['.__FUNCTION__.']';
 
 	# Debug
