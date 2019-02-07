@@ -111,7 +111,7 @@ print js::build_tag(DEDALO_LIB_BASE_URL . '/dd/js/dd_edit.js');
 							<td align="center"  valign="top">
 								<?php 
 								echo ucfirst($modelo_title);
-								if(SHOW_DEBUG==true) echo " (esmodelo:$esmodelo)" ;
+								if(SHOW_DEBUG==true || SHOW_DEVELOPER===true) echo " (esmodelo:$esmodelo)" ;
 								?>
 								<br>
 								<?php 
