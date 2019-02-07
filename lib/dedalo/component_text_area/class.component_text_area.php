@@ -1717,7 +1717,7 @@ class component_text_area extends component_common {
 			$dato 			= TR::deleteMarks($valor, $options );
 
 			// delete all html tags
-			$dato 			= strip_tags($dato);
+			#$dato 			= strip_tags($dato);
 			
 			//get the pattern of the svg tags for cut the text
 			$pattern = TR::get_mark_pattern('svg_full_text');
