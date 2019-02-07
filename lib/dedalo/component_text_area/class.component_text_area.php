@@ -1684,7 +1684,6 @@ class component_text_area extends component_common {
 	}//end get_diffusion_value
 
 
-
 	/**
 	* GET_VALOR_LIST_HTML_TO_SAVE
 	* Usado por section:save_component_dato
@@ -1717,7 +1716,7 @@ class component_text_area extends component_common {
 			$dato 			= TR::deleteMarks($valor, $options );
 
 			// delete all html tags
-			$dato 			= strip_tags($dato);
+			#$dato 			= strip_tags($dato);
 			
 			//get the pattern of the svg tags for cut the text
 			$pattern = TR::get_mark_pattern('svg_full_text');
