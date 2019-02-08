@@ -44,42 +44,36 @@
 		#return false;
 	}
 	
-	
-#return $ar_search_fields;
 
-	/*
-	$ar_component_obj				= $this->ar_component_obj;
-	$ar_components_search_obj		= $this->ar_components_search_obj;
-	$ar_buttons_search_obj			= $this->ar_buttons_search_obj;				
-					
-	$ar_component_obj_html			= array();	
-	$ar_components_search_obj_html	= array();	
-	$ar_buttons_search_obj_html		= array();
-	*/
 	$form_action_url 				= '';
 
 	$file_name						= $modo;
 
+
+	#
+	# DEVELOPMENT 2	- SEARCH2
+		js::$ar_url[]  = DEDALO_LIB_BASE_URL . '/search/js/search2.js';
+
+		
+
+		# Get current search_options 
+		# $search_options_id 	 = $section_tipo;
+		# $search_options 	 = section_records::get_search_options( $search_options_id );
+		#$search_options_json = json_encode($search_options);
+		$user_id 	 = navigator::get_user_id();
+		$temp_preset = search_development2::get_preset(DEDALO_TEMP_PRESET_SECTION_TIPO, $user_id, $section_tipo);
+		$temp_filter = isset($temp_preset->json_filter) ? $temp_preset->json_filter : null;
 	
-	/*
-	# COMPONENTS (CAMPOS)
-	if(isset($ar_component_obj) && is_array($ar_component_obj)) foreach($ar_component_obj as $component_obj) {
-						
-		$ar_component_obj_html[]			= $component_obj->get_html(); 
-	}
-	
-	# SEARCH COMPONENTS	
-	if(isset($ar_components_search_obj) && is_array($ar_components_search_obj)) foreach($ar_components_search_obj as $component_search_obj) {
-						
-		$ar_components_search_obj_html[]	= $component_search_obj->get_html();
-	}
-	
-	# SEARCH BUTTONS	
-	if(isset($ar_buttons_search_obj) && is_array($ar_buttons_search_obj)) foreach($ar_buttons_search_obj as $button_search_obj) {
-						
-		$ar_buttons_search_obj_html[]		= $button_search_obj->get_html();
-	}	
-	*/
+		$init_options  = array(
+							"section_tipo" 			=> $section_tipo,
+							"temp_filter" 			=> encodeURIComponent($temp_filter),
+							"modo" 					=> $this->modo,
+							"ar_real_section_tipo" 	=> isset($this->ar_real_section_tipo) ? $this->ar_real_section_tipo : null,
+							"ar_sections_by_type"	=> $ar_sections_by_type
+							);
+		$init_options_json = json_encode($init_options, JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP | JSON_HEX_TAG);
+
+
 	
 	switch($modo) {			
 		
@@ -96,6 +90,10 @@
 				$file_name = 'list';
 
 		case 'list':
+				break;
+
+		case 'json':
+				$file_name = 'list';
 				break;
 
 		case 'relation':

@@ -91,6 +91,7 @@
 
 			// SAML login
 				if (defined('SAML_CONFIG') && SAML_CONFIG['active']===true) {
+					/*
 					$button_label = 'Autologin';// label::get_label('autologin')
 					$html_content .= '<button type="button" class="btn btn-success btn-block autologin" onclick="login.autologin(\''.SAML_CONFIG['url'].'\')">'.$button_label.'</button>';
 					if(SAML_CONFIG['debug']===true) {
@@ -100,6 +101,8 @@
 						$html_content .= ' | <a href="'.SAML_CONFIG['url'].'/sls.php">SLS</a>';
 						$html_content .= '</br>';
 					}
+					*/
+					$html_content .= include(dirname(__FILE__) . '/saml_button.phtml');
 				}
 
 

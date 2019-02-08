@@ -1311,6 +1311,68 @@ abstract class common {
 
 
 
+	/**
+	* BUILD_ELEMENT_JSON_OUTPUT
+	* Simply group context and data into a ¡n object and encode as JSON string
+	* @param object $context
+	* @param object $data
+	* @return string $result
+	*/
+	public static function build_element_json_output($context, $data) {
+		
+		$element = new stdClass();
+			$element->context = $context;
+			$element->data 	 = $data;
+
+		#if(SHOW_DEBUG===true) {
+		#	$result = json_encode($element, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+		#}else{
+		#	$result = json_encode($element, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+		#}
+		$result = $element;
+
+		return $result;
+	}//end build_element_json_output
+
+
+
+	/**
+	* GET_JSON
+	* @return ogject $json 
+	*/
+	public function get_json() {
+
+		// Debug
+			if(SHOW_DEBUG===true) $start_time = start_time();
+
+		// path. Class name is called class (ex. component_input_text), not this class (common)
+			$path = DEDALO_LIB_BASE_PATH .'/'. get_called_class() .'/'. get_called_class() .'_json.php';
+
+		// controller include
+			$json = include( $path );
+					
+			#ob_start();
+			#include( $path );
+			#$json = ob_get_clean();
+
+		// Debug
+			if(SHOW_DEBUG===true) {
+				$exec_time = exec_time_unit($start_time,'ms')." ms";
+				
+				#$element = json_decode($json);
+				#	$element->debug = new stdClass();
+				#	$element->debug->exec_time = $exec_time;
+				#$json = json_encode($element, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+				$json->debug = new stdClass();
+					$json->debug->exec_time = $exec_time;
+			}
+			#dump($json, ' json ++ '.to_string());
+
+		return $json;		
+	}//end get_json
+
+
+
 
 }//end class
 ?>

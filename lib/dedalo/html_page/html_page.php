@@ -14,67 +14,65 @@
 	# LOAD TIME INIT	
 	#$start = microtime(TRUE);
 	#global $start;
-		
-	# set vars
-	$vars = array('caller_tipo','id','t','tipo','m','modo','context_name','parent');
-		foreach($vars as $name) $$name = common::setVar($name);
-	if($t) $tipo = $t;
-	if($m) $modo = $m;
-
 	
+	# set vars
+		$vars = array('caller_tipo','id','t','tipo','m','modo','context_name','parent');
+			foreach($vars as $name) $$name = common::setVar($name);
+		if($t) $tipo = $t;
+		if($m) $modo = $m;
+
 
 	# Modos autointerpretados
-	if($modo===false) {
-		if(empty($id)) {
-			$modo = 'list';
-		}else{
-			$modo = 'edit';
+		if($modo===false) {
+			if(empty($id)) {
+				$modo = 'list';
+			}else{
+				$modo = 'edit';
+			}
 		}
-	}
-
 
 	
 	# Store section tipo
-	navigator::set_selected('section', $tipo);
+		navigator::set_selected('section', $tipo);
 
 
 	# SECTION_TIPO
-	if (!defined('SECTION_TIPO')) {
-		define('SECTION_TIPO', $tipo);
-		
-		# Check if requested tipo exists or is not a valid section
-		# (!) When you edit config file and set a not yet loaded section tipo like 'numistada1' (with base structure), execution is stopped here to notify the problem to admin.
-		if(SHOW_DEBUG===true || DEDALO_TEST_INSTALL===true) {
-			$modelo_name = RecordObj_dd::get_modelo_name_by_tipo(SECTION_TIPO, true);
-			if ($modelo_name!=='section' && strpos($modelo_name, 'area')===false ) {
-				#throw new Exception("DEBUG INFO: Error Processing Request current assigned SECTION_TIPO is not a section ($tipo - $modelo_name)", 1);
-				$msg = "ERROR: Current requested SECTION_TIPO is not a section/area.
-				<br> tipo: $tipo 
-				<br> modelo_name: $modelo_name";
-				debug_log(__METHOD__." $msg ", logger::ERROR);
-				echo show_msg($msg, 'ERROR');
-				if (SECTION_TIPO===MAIN_FALLBACK_SECTION) {
-					$msg = "A problem with config MAIN_FALLBACK_SECTION was found!. Please verify tipo ".MAIN_FALLBACK_SECTION." in structure.";
+		if ($html_raw!==true && !defined('SECTION_TIPO')) {
+			define('SECTION_TIPO', $tipo);
+			
+			# Check if requested tipo exists or is not a valid section
+			# (!) When you edit config file and set a not yet loaded section tipo like 'numistada1' (with base structure), execution is stopped here to notify the problem to admin.
+			if(SHOW_DEBUG===true || DEDALO_TEST_INSTALL===true) {
+				$modelo_name = RecordObj_dd::get_modelo_name_by_tipo(SECTION_TIPO, true);
+				if ($modelo_name!=='section' && strpos($modelo_name, 'area')===false ) {
+					#throw new Exception("DEBUG INFO: Error Processing Request current assigned SECTION_TIPO is not a section ($tipo - $modelo_name)", 1);
+					$msg = "ERROR: Current requested SECTION_TIPO is not a section/area.
+					<br> tipo: $tipo 
+					<br> modelo_name: $modelo_name";
 					debug_log(__METHOD__." $msg ", logger::ERROR);
-					echo wrap_pre($msg);
+					echo show_msg($msg, 'ERROR');
+					if (SECTION_TIPO===MAIN_FALLBACK_SECTION) {
+						$msg = "A problem with config MAIN_FALLBACK_SECTION was found!. Please verify tipo ".MAIN_FALLBACK_SECTION." in structure.";
+						debug_log(__METHOD__." $msg ", logger::ERROR);
+						echo wrap_pre($msg);
+					}
+					die();
 				}
-				die();				
 			}
 		}
-	}
 
 
 
 	# DEBUG	
-	if(SHOW_DEBUG===true) {
-		unset($_SESSION['debug_content']);
+		if(SHOW_DEBUG===true) {
+			unset($_SESSION['debug_content']);
 
-		if(!empty($_SESSION['dedalo4']['auth']))
-		$_SESSION['debug_content']['SESSION AUTH4']	  = $_SESSION['dedalo4']['auth'];
-		
-		if(!empty($_SESSION['dedalo4']['config']))
-		$_SESSION['debug_content']['SESSION CONFIG4'] = $_SESSION['dedalo4']['config'];
-	}
+			if(!empty($_SESSION['dedalo4']['auth']))
+			$_SESSION['debug_content']['SESSION AUTH4']	  = $_SESSION['dedalo4']['auth'];
+			
+			if(!empty($_SESSION['dedalo4']['config']))
+			$_SESSION['debug_content']['SESSION CONFIG4'] = $_SESSION['dedalo4']['config'];
+		}
 
 	
 	

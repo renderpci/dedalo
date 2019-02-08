@@ -4,7 +4,7 @@
 
 // Usage
 @import "@{common_css}/library.less";
- 
+
 
 /* RESET */
 html, body, div, image, ul, ol, li, dl, dt, dd, h1, h2, h3, h4, h5, h6, pre, form, p, fieldset, input, abbr, article, aside, command, details, figcaption, figure, footer, 
@@ -38,7 +38,7 @@ input, select {
 	color: initial;
 	border-color: @color_input_border;
 }
-select {	
+select {
 	height: 25px;
 }
 html {
@@ -619,6 +619,46 @@ span.ajax_loading_msg {
 		border: none;
 		background-color: #FFFFFF;
 		}
+
+
+
+// raw_msg (used in saml error)
+	.raw_msg {
+
+		background-image: url(../../themes/default/dedalo_icon_big.png);
+		background-repeat: no-repeat;
+		background-position: 0 top;
+		background-size: 527px 1024px;
+		height: 100vh;
+		max-height: 1000px;
+		//position: absolute;
+		width: 100%;
+
+		display: flex;
+		align-items: center;
+		justify-content: center;
+
+		flex-wrap: wrap;
+
+		>.content {
+			display: block;
+			clear: both;
+			position: relative;
+
+			>* {
+				margin: 30px;
+			}
+
+			>.saml_button {
+				text-align: center;
+				padding: 10px;
+				padding-left: 30%;
+				padding-right: 30%;
+			}
+
+		}
+
+	}//end raw_msg
 
 
 

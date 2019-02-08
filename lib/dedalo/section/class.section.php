@@ -55,6 +55,8 @@ class section extends common {
 
 		public $save_modified; # Default is true
 
+		public $layout_map;
+
 
 	# DIFFUSION INFO
 	# Store section diffusion info. If empty, current section is not publish.
@@ -258,7 +260,7 @@ class section extends common {
 			
 			$section_tipo 			= $this->tipo;
 			$matrix_table 			= common::get_matrix_table_from_tipo($section_tipo);
-			$JSON_RecordObj_matrix	= new JSON_RecordObj_matrix($matrix_table,$this->section_id, $tipo);
+			$JSON_RecordObj_matrix	= new JSON_RecordObj_matrix($matrix_table, $this->section_id, $tipo);
 
 			$dato = $JSON_RecordObj_matrix->get_dato();
 
@@ -3305,7 +3307,145 @@ class section extends common {
 		return true;
 	}//end update_modified_section_data
 
+
+
+	/**
+	* BUILD_JSON_ROWS
+	* @return object $result
+	*/
+	public static function build_json_rows($rows_data, $modo, $ar_list_map) {
+		$start_time=microtime(1);
+		#dump($rows_data->ar_records, ' rows_data->ar_records ++ '.to_string());
+		#dump($ar_list_map,'$ar_list_map');die();
+		$ar_json_rows = [];
+
+		// Empty result case
+			if (empty($rows_data->ar_records)) {
+				return $ar_json_rows;
+			}
+
+		// context
+			$context = [];
+
+			// Iterate kayout maps
+				foreach ($ar_list_map as $section_tipo => $list_map) {
+
+					// context section info
+						$context_item = new stdClass();
+							$context_item->type  		 = 'section_info';
+							$context_item->section_tipo  = $section_tipo;
+							$context_item->section_label = RecordObj_dd::get_termino_by_tipo($section_tipo, DEDALO_DATA_LANG, true, true);
+							$context_item->modo 		 = $modo;
+						$context[] = $context_item;
+
+					#foreach ($list_map as $list_item) {
+					#
+					#	$component_tipo = $list_item->tipo;
+					#
+					#	$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+					#	$label 		 = RecordObj_dd::get_termino_by_tipo($component_tipo, DEDALO_DATA_LANG, true, true);
+					#	
+					#	// context column_info
+					#		$context_item = new stdClass();
+					#			$context_item->type  		 = 'column_info';
+					#			$context_item->tipo  		 = $component_tipo;
+					#			$context_item->section_tipo  = $section_tipo;
+					#			$context_item->model 		 = $modelo_name;
+					#			$context_item->label 		 = $label;
+					#		$context[] = $context_item;
+					#}
+				}
+
+		// data
+			$data = [];
+
+			// Iterate records
+				$i=0; foreach ($rows_data->ar_records as $record) {
+
+					$section_id   	= $record->section_id;
+					$section_tipo 	= $record->section_tipo;
+					$datos			= json_decode($record->datos);
+
+					// Inject known dato to avoid re connect to database
+					$section = section::get_instance($section_id, $section_tipo);				
+					$section->set_dato($datos);
+					$section->bl_loaded_matrix_data = true;
+						
+						#dump($section->bl_loaded_matrix_data, ' section->bl_loaded_matrix_data ++ '.to_string($section_id));
+						#dump($datos, ' datos ++ '.to_string());
+
+					// Iterate list_map for colums
+						#if(isset($ar_list_map->$section_tipo)) 
+						foreach ((array)$ar_list_map->$section_tipo as $list_item) {
+
+							$tipo = $list_item->tipo;
+							$modo = $list_item->modo;
+
+							switch ($tipo) {
+								#case 'section_id':
+								case 'section_tipo':
+								#case 'current_id':
+								#case 'ordering_id':
+								#case 'ordering':
+									# ignore
+									continue 2;
+									break;
+
+								default:
+									
+									$modelo_name 		= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+									$current_component  = component_common::get_instance($modelo_name,
+																						 $tipo,
+																						 $section_id,
+																						 'list',
+																						 DEDALO_DATA_LANG,
+																						 $section_tipo);
+									
+									$component_json = $current_component->get_json();									
+									break;
+							}
+
+							// data add
+								$data = array_merge($data, $component_json->data);
+
+
+							// context add if not already exists
+								$ar_found = array_filter($context, function($item) use($tipo){
+									return $item->type==="component_info" && $item->tipo===$tipo;
+								});
+								if (empty($ar_found)) {
+									$context = array_merge($context, $component_json->context);
+								}								
+
+							#$column = new stdClass();
+							#	$column->section_id 	= $section_id;
+							#	$column->tipo 			= $tipo;
+							#	$column->section_tipo 	= $section_tipo;							
+							#	$column->value 			= $value;
+							#
+							#$data[] = $column;
+						}//end iterate ar_list_map
+
+				$i++; }//end iterate records
+			
+
+		$result = new stdClass();
+			$result->context = $context;
+			$result->data 	 = $data;
+
+			// Debug
+				if(SHOW_DEBUG===true) {
+					$debug = new stdClass();
+						$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";					
+				}
+			$result->debug 	 = $debug;
+
+			#dump($result, ' result ++ '.to_string());
+
+		return $result;
+	}//end build_json_rows
 	
+
 
 }//end section
 ?>

@@ -3,24 +3,17 @@
 	# VISUALIZADOR HTML	
 		
 	# BUTTON TOOL
-	$html_tool    = '';
-	#$html_tool   .= "\n<!-- TOOL TRANSCRIPTION [tipo:$tipo parent:$parent] -->";
-	
-	#$html_tool   .= "<div class=\"tool_inspector_div\">";
+	$html_tool    = '';	
 
 	# ICON
 	$title	  = label::get_label('abrir').' '.label::get_label('herramienta');
-	/*
-	$html_tool   .= "\n<div id=\"btn_transcription_open\" class=\"icon_bs tool_transcription_icon link\" onclick=\"tool_common.open_tool_transcription(this)\"
-	data-tipo=\"{$tipo}\"
-	data-section_tipo=\"{$section_tipo}\"
-	data-parent=\"{$parent}\"
-	data-lang=\"{$lang}\"
-	data-tab_id=\"img_lang_{$tipo}_{$parent}\"
-	data-context_name=\"$component_name\"
-	title=\"$title\"></div>";
-	*/
-	$html_tool .= "<a href=\"javascript:void(0);\" class=\"id_column_buttons button_transcription link\" title=\"$title\" onclick=\"tool_common.open_tool_transcription(this)\" ";
+	
+	$refernces_css = '';
+	if ($contain_references===false) {
+		$refernces_css = 'no_references';
+	}
+
+	$html_tool .= '<a href="javascript:void(0);" class="id_column_buttons button_transcription link '.$refernces_css.'" title="$title" onclick="tool_common.open_tool_transcription(this)" ';
 	$html_tool .= "data-tipo=\"{$tipo}\" ";
 	$html_tool .= "data-section_tipo=\"{$section_tipo}\" ";
 	$html_tool .= "data-parent=\"{$parent}\" ";
@@ -38,12 +31,5 @@
 	#$html_tool   .= label::get_label($tool_name="tool_transcription");
 
 	
-
-	#$html_tool   .= "</div>";#/tool_inspector_div
-
-
-	
 	# PRINT HTML
 	print $html_tool;
-	
-?>

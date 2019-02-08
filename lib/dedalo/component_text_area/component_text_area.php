@@ -23,15 +23,15 @@
 
 	if($permissions===0) return null;
 
-	# Context
-	$context = $this->get_context();
-	
-	$req_context_name = common::get_request_var('context_name');
-	if (false!==$req_context_name) {
-		$context->context_name = $req_context_name;
-		$this->set_context($context);
-	}
-	$context_name = isset($context->context_name) ? $context->context_name : null;
+	// Context
+		$context = $this->get_context();
+		
+		$req_context_name = common::get_request_var('context_name');
+		if (false!==$req_context_name) {
+			$context->context_name = $req_context_name;
+			$this->set_context($context);
+		}
+		$context_name = isset($context->context_name) ? $context->context_name : null;
 	
 	#get the change modo from portal list to edit
 	/*
@@ -46,15 +46,15 @@
 	
 
 	# CSS / JS MAIN FILES
-	css::$ar_url[] = DEDALO_LIB_BASE_URL."/component_autocomplete_hi/css/component_autocomplete_hi.css";
-	js::$ar_url[]  = DEDALO_LIB_BASE_URL."/component_autocomplete_hi/js/component_autocomplete_hi.js";
+		css::$ar_url[] = DEDALO_LIB_BASE_URL."/component_autocomplete_hi/css/component_autocomplete_hi.css";
+		js::$ar_url[]  = DEDALO_LIB_BASE_URL."/component_autocomplete_hi/js/component_autocomplete_hi.js";
 
-	js::$ar_url[]  = DEDALO_LIB_BASE_URL."/component_text_area/js/mce_editor.js";
-	js::$ar_url[]  = DEDALO_LIB_BASE_URL."/component_text_area/js/text_editor.js";
-
+		js::$ar_url[]  = DEDALO_LIB_BASE_URL."/component_text_area/js/mce_editor.js";
+		js::$ar_url[]  = DEDALO_LIB_BASE_URL."/component_text_area/js/text_editor.js";
 
 	
 	$file_name = $modo;
+
 
 	switch($modo) {
 
@@ -93,7 +93,7 @@
 				# FIX BROKEN TAGS										
 				$ar_fix_broquen_tags_tipos = unserialize(DEDALO_TEXTAREA_FIX_BROQUEN_TAGS_TIPOS);
 				if (  in_array($this->tipo, $ar_fix_broquen_tags_tipos) ) {	
-					if (isset($context) && $context->context_name==='default') {
+					if (isset($context->context_name) && $context->context_name==='default') {
 						$save=true;
 						if(SHOW_DEBUG===true) {
 							$save=false;
@@ -455,7 +455,76 @@
 		case 'list_tm':
 				$file_name = 'list';
 						
-		case 'list':				
+		case 'list':
+
+
+					$lang_received = $lang;
+	
+					# Always use original lang (defined by optional component_select_lang asociated)
+					$original_lang 	= component_text_area::force_change_lang($tipo, $parent, $modo, $lang, $section_tipo);		
+					$component 		= component_common::get_instance($component_name,
+																	 $tipo,
+																 	 $parent,
+																 	 $modo,
+																	 $original_lang,
+																 	 $section_tipo);
+
+					// Eliminado 17-2-2018 (Imposibilita el corte de texto por tag_id en los portales)
+					#if($modo === 'portal_list'){
+					#	$list_value = $component->get_html();				
+					#	return $list_value; 
+					#}
+
+					$value = $component->get_valor_list_html_to_save();
+					
+
+					#$obj_value = json_decode($value); # Evitamos los errores del handler accediendo directamente al json_decode de php
+					$obj_value = $value;
+
+					# value from database is always an array of strings. default we select first element (complete text)
+					# other array index are fragments of complete text
+					$current_tag = 0;
+
+					#
+					# Portal tables can reference fragments of text inside components (tags). In this cases
+					# we verify current required text is from correct component and tag
+					if ( isset($locator->component_tipo) && isset($locator->tag_id) ) {
+						$locator_component_tipo = $locator->component_tipo;
+						$locator_tag_id 		= $locator->tag_id;
+						if ($locator_component_tipo===$tipo) {
+							# Override current_tag	
+							$current_tag = (int)$locator_tag_id;
+						}
+					}
+					
+					if (is_object($obj_value) && isset($obj_value->$current_tag)) {
+						$list_value = $obj_value->$current_tag;
+					}else{			
+						$list_value = $value;
+					}
+
+					if (!is_string($list_value)) {
+						if(SHOW_DEBUG===true) {
+							#dump($list_value, ' render_list_value : list_value expected string. But received: '.gettype($list_value) .to_string($list_value));
+							#throw new Exception("Error Processing Request. list_value expected string", 1);				
+						}			
+						
+						debug_log(__METHOD__." Invalid value! Force convert to string ".to_string($value), logger::ERROR);
+						$list_value = to_string($list_value);			
+					}		
+
+					# TRUNCATE ALL FRAGMENTS		
+					//TR::limpiezaFragmentoEnListados($list_value,160);
+
+					#if($calculated_value===true) $list_value = component_common::decore_untranslated( $list_value );
+					if($lang_received!==$original_lang) $list_value = component_common::decore_untranslated( $list_value );
+
+
+					echo $list_value; return;
+
+
+
+
 				break;
 
 		case 'relation':# Force modo list
