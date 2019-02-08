@@ -32,7 +32,7 @@ lib/*
 lib/dedalo/des/*
 lib/dedalo/diffusion/diffusion_index_ts_V40
 lib/dedalo/publication/client_api
-lib/dedalo/common/js/lang/*
+#lib/dedalo/common/js/lang/*
 
 # extras ignore all except common
 lib/dedalo/extras/*
@@ -73,7 +73,7 @@ lib/dedalo/tools/tool_layout_print/print_pdf/*
 
 # Automatic created files
 cookie_auth.php
-structure.css
+#structure.css
 *.log
 
 # Ignore default text files
