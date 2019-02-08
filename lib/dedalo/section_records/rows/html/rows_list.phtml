@@ -89,43 +89,39 @@
 							break;
 						
 						case 'section_tool':
+
 							#
 							# SECTION TOOL: 
-							# Buttons calculated for section tool (tool_indexation, tool_transcription, tool_lang, etc..)
-								if(true===search_development2::have_inverse_relations($section_tipo, $section_id)) {
-									
-									$tool_name  = $context->target_tool;
+							# Buttons calculated for section tool (tool_indexation, tool_transcription, tool_lang, etc..)									
+								$tool_name  = $context->target_tool;
 
-									if(isset($context->target_component_tipo)){							
-										$modelo_name= RecordObj_dd::get_modelo_name_by_tipo( $context->target_component_tipo, true );
-										$component 	= component_common::get_instance( $modelo_name,
-																					  $context->target_component_tipo,
-																					  $section_id,
-																					  $modo,
-																					  DEDALO_DATA_LANG,
-																					  $section_tipo);
+								if(isset($context->target_component_tipo)){							
+									$modelo_name= RecordObj_dd::get_modelo_name_by_tipo( $context->target_component_tipo, true );
+									$component 	= component_common::get_instance( $modelo_name,
+																				  $context->target_component_tipo,
+																				  $section_id,
+																				  $modo,
+																				  DEDALO_DATA_LANG,
+																				  $section_tipo);
 
-										$tool = new $tool_name($component,'button');
-									}else{
-										$section = section::get_instance( 	$section_id,
-																			$section_tipo,
-																			$modo
-																		);
-										$section->tool_section_tipo = $context->tool_section_tipo;
-										$tool = new $tool_name($section,'button');
-									}
-									
-									#dump($tool->get_html(), ' tool ++ '.to_string());
-
-									# Inverse locators info
-									#$section = section::get_instance($section_id, $section_tipo);
-									#$inverse_references = $section->get_inverse_references();								
-									#if (!empty($inverse_references)) {
-								
-									$html_content .= $tool->get_html();								
+									$tool = new $tool_name($component,'button');
 								}else{
-									$html_content .= '<span class="section_id_number">'.$section_id.'</span>';
-								}							
+									$section = section::get_instance( 	$section_id,
+																		$section_tipo,
+																		$modo
+																	);
+									$section->tool_section_tipo = $context->tool_section_tipo;
+									$tool = new $tool_name($section,'button');
+								}
+								
+								#dump($tool->get_html(), ' tool ++ '.to_string());
+
+								# Inverse locators info
+								#$section = section::get_instance($section_id, $section_tipo);
+								#$inverse_references = $section->get_inverse_references();								
+								#if (!empty($inverse_references)) {
+							
+								$html_content .= $tool->get_html();														
 							break;
 
 						case 'list_into_tool_relation':
