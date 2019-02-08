@@ -47,7 +47,7 @@
 			#
 			# JS includes additionals (!) Moved to init js
 				#js::$ar_url[] = PAPER_JS_URL;
-				#js::$ar_url[] = DEDALO_LIB_BASE_URL . '/component_image/js/component_image_read.js' ;
+				#js::$ar_url[] = DEDALO_LIB_BASE_URL . '/component_image/js/component_image_read.js' ;			
 			
 			$id_wrapper 	= 'wrapper_'.$identificador_unico;
 			$component_info = $this->get_component_info('json');
@@ -76,14 +76,12 @@
 						#dump($image_dimensions, ' image_dimensions ++ '.to_string());
 					
 					$original_img_width  = $image_dimensions[0];
-					$original_img_height = $image_dimensions[1];
-						#dump($image_dimensions ,'$image_dimensions ');	
-				}					
-						
+					$original_img_height = $image_dimensions[1];					
+				}						
 						
 				# Related components
 				$ar_related_component_tipo 		= $this->get_ar_related_component_tipo();
-				$ar_related_component_tipo_json = json_encode($ar_related_component_tipo);
+				$ar_related_component_tipo_json = json_encode($ar_related_component_tipo);				
 				break;
 
 		case 'portal_list':

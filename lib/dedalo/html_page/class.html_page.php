@@ -3,10 +3,7 @@
 * CLASS HTML PAGE
 
 	CREATE A FULL HTML PAGE AND INSERT HTMLOBJECT IN THE BODY
-
 */
-
-
 abstract class html_page {
 
 
@@ -16,7 +13,7 @@ abstract class html_page {
 	* @param $content (String or Obj)
 	*/
 	public static function get_html( $content, $html_raw=false ) {
-
+	
 		if(SHOW_DEBUG===true) $start_time = start_time();
 		
 		ob_start();
@@ -32,7 +29,7 @@ abstract class html_page {
 		}
 		
 		return $html;
-	}
+	}//end get_html
 
 
 
@@ -75,7 +72,6 @@ abstract class html_page {
 		
 		return $html;
 	}//end get_dedalo_data_langs_selector_html
-
 
 
 
@@ -149,16 +145,10 @@ abstract class html_page {
 
 		}//end if (in_array($tipo, logger_backend_activity::$ar_elements_activity_tipo))
 
-		return false;
-		
-	}#end log_page_visit
+		return false;		
+	}//end log_page_visit
 
 
 
-	//pg_close(DBi::_getConnection());
-
-
-		
-		
 }
 ?>

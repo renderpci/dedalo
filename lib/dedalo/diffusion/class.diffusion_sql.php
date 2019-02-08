@@ -1562,11 +1562,11 @@ class diffusion_sql extends diffusion  {
 			$name_surname_tipos 	= isset($options->global_search_map->name_surname) ? (array)$options->global_search_map->name_surname : [];
 			$sort_tipos 			= isset($options->global_search_map->sort) ? (array)$options->global_search_map->sort : [];
 			$thesaurus_tipos 		= (array)$options->global_search_map->thesaurus;
-			$prison_tipos 			= (array)$options->global_search_map->prison;
-			$list_data_title_tipos 	= (array)$options->global_search_map->list_data->title;
+			$prison_tipos 			= isset($options->global_search_map->prison) ? (array)$options->global_search_map->prison : []; // 25-01-2018
+			$list_data_title_tipos 	= isset($options->global_search_map->list_data->title) ? (array)$options->global_search_map->list_data->title : []; // 25-01-2018
 			$title_generic_tipos 	= isset($options->global_search_map->title) ? (array)$options->global_search_map->title : [];	// 15-11-2018
 			$pub_author_tipos 		= isset($options->global_search_map->pub_author) ? (array)$options->global_search_map->pub_author : []; // 15-11-2018
-			$summary_tipos 	 		= (array)$options->global_search_map->list_data->summary;
+			$summary_tipos 	 		= isset($options->global_search_map->list_data->summary) ? (array)$options->global_search_map->list_data->summary : []; // 25-01-2018
 			$fields_tipos 	 		= (array)$options->global_search_map->list_data->fields;
 			$image_tipo 	 		= isset($options->global_search_map->list_data->image) ? $options->global_search_map->list_data->image : null;
 			$filter_date_tipo		= isset($options->global_search_map->filter_date) ? $options->global_search_map->filter_date : 'not_used';

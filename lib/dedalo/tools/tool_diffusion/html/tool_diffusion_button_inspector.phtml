@@ -8,11 +8,11 @@
 	# GROUPS
 	# dump($ar_diffusion_map, ' ar_diffusion_map ++ '.to_string());
 	foreach ($ar_diffusion_map as $diffusion_group_tipo => $ar_diffusion_element) {
-
+	
 		$have_section_diffusion = tool_diffusion::have_section_diffusion( $section_tipo, $ar_diffusion_element );
 			#dump($have_section_diffusion, ' have_section_diffusion ++ '.to_string($ar_diffusion_element));
 		if ($have_section_diffusion===false) {
-			# ignore
+			# Ignore current diffusion group
 			continue;
 		}
 		

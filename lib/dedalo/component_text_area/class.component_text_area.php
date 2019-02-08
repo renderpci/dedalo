@@ -1581,98 +1581,85 @@ class component_text_area extends component_common {
 	* @return string $list_value
 	*/ // ($value, $tipo, $parent, $modo, $lang, $section_tipo, $section_id, $caller_component_tipo=null) ? locator ?? 
 	public static function render_list_value($value, $tipo, $parent, $modo, $lang, $section_tipo, $section_id, $locator=null, $caller_component_tipo=null) {
-		
-		# Ignore DB data
-		$value = null;
 
-		$lang_received = $lang;
-
-		# Always use original lang (defined by optional component_select_lang asociated)
-		$original_lang 	= self::force_change_lang($tipo, $parent, $modo, $lang, $section_tipo);		
 		$component 		= component_common::get_instance(__CLASS__,
 														 $tipo,
 													 	 $parent,
 													 	 $modo,
-														 $original_lang,
+														 $lang,
 													 	 $section_tipo);
+		$value = $component->get_html();
 
-		// Eliminado 17-2-2018 (Imposibilita el corte de texto por tag_id en los portales)
-		#if($modo === 'portal_list'){
-		#	$list_value = $component->get_html();				
-		#	return $list_value; 
-		#}
+		return $value;
+		
+		/* pasado al controlador (!)
+			# Ignore DB data
+			$value = null;
 
-		$value 			= $component->get_valor_list_html_to_save();
-		#$value = $component->get_valor($original_lang);		
+			$lang_received = $lang;
 
-		#
-		# FALLBACK
-		#$calculated_value=false;
-		#if (empty($value)) {
-			/*
-			# Fallback 1 Fallback to main_lang
-			$main_lang = common::get_main_lang( $section_tipo );
-			if ($main_lang!=$lang) {
-
-				$component 	= component_common::get_instance(__CLASS__,
+			# Always use original lang (defined by optional component_select_lang asociated)
+			$original_lang 	= component_text_area::force_change_lang($tipo, $parent, $modo, $lang, $section_tipo);		
+			$component 		= component_common::get_instance(__CLASS__,
 															 $tipo,
 														 	 $parent,
 														 	 $modo,
-															 $main_lang,
-														 	 $section_tipo); 
-				
-				$value = $component->get_valor($main_lang);
-				#$value = component_common::decore_untranslated( $value );
-				
-				$calculated_value=true;
-			}
-			*/			
-		#}//end calculated_value
+															 $original_lang,
+														 	 $section_tipo);
 
+			// Eliminado 17-2-2018 (Imposibilita el corte de texto por tag_id en los portales)
+			#if($modo === 'portal_list'){
+			#	$list_value = $component->get_html();
+			#	return $list_value; 
+			#}
 
-		#$obj_value = json_decode($value); # Evitamos los errores del handler accediendo directamente al json_decode de php
-		$obj_value = $value;
-
-		# value from database is always an array of strings. default we select first element (complete text)
-		# other array index are fragments of complete text
-		$current_tag = 0;
-
-		#
-		# Portal tables can reference fragments of text inside components (tags). In this cases
-		# we verify current required text is from correct component and tag
-		if ( isset($locator->component_tipo) && isset($locator->tag_id) ) {
-			$locator_component_tipo = $locator->component_tipo;
-			$locator_tag_id 		= $locator->tag_id;
-			if ($locator_component_tipo===$tipo) {
-				# Override current_tag	
-				$current_tag = (int)$locator_tag_id;
-			}
-		}
-		
-		if (is_object($obj_value) && isset($obj_value->$current_tag)) {
-			$list_value = $obj_value->$current_tag;
-		}else{			
-			$list_value = $value;
-		}
-
-		if (!is_string($list_value)) {
-			if(SHOW_DEBUG===true) {
-				#dump($list_value, ' render_list_value : list_value expected string. But received: '.gettype($list_value) .to_string($list_value));
-				#throw new Exception("Error Processing Request. list_value expected string", 1);				
-			}			
+			$value = $component->get_valor_list_html_to_save();
 			
-			debug_log(__METHOD__." Invalid value! Force convert to string ".to_string($value), logger::ERROR);
-			$list_value = to_string($list_value);			
-		}		
 
-		# TRUNCATE ALL FRAGMENTS		
-		//TR::limpiezaFragmentoEnListados($list_value,160);
+			#$obj_value = json_decode($value); # Evitamos los errores del handler accediendo directamente al json_decode de php
+			$obj_value = $value;
 
-		#if($calculated_value===true) $list_value = component_common::decore_untranslated( $list_value );
-		if($lang_received!==$original_lang) $list_value = component_common::decore_untranslated( $list_value );
+			# value from database is always an array of strings. default we select first element (complete text)
+			# other array index are fragments of complete text
+			$current_tag = 0;
+
+			#
+			# Portal tables can reference fragments of text inside components (tags). In this cases
+			# we verify current required text is from correct component and tag
+			if ( isset($locator->component_tipo) && isset($locator->tag_id) ) {
+				$locator_component_tipo = $locator->component_tipo;
+				$locator_tag_id 		= $locator->tag_id;
+				if ($locator_component_tipo===$tipo) {
+					# Override current_tag	
+					$current_tag = (int)$locator_tag_id;
+				}
+			}
+			
+			if (is_object($obj_value) && isset($obj_value->$current_tag)) {
+				$list_value = $obj_value->$current_tag;
+			}else{			
+				$list_value = $value;
+			}
+
+			if (!is_string($list_value)) {
+				if(SHOW_DEBUG===true) {
+					#dump($list_value, ' render_list_value : list_value expected string. But received: '.gettype($list_value) .to_string($list_value));
+					#throw new Exception("Error Processing Request. list_value expected string", 1);				
+				}			
+				
+				debug_log(__METHOD__." Invalid value! Force convert to string ".to_string($value), logger::ERROR);
+				$list_value = to_string($list_value);			
+			}		
+
+			# TRUNCATE ALL FRAGMENTS		
+			//TR::limpiezaFragmentoEnListados($list_value,160);
+
+			#if($calculated_value===true) $list_value = component_common::decore_untranslated( $list_value );
+			if($lang_received!==$original_lang) $list_value = component_common::decore_untranslated( $list_value );
 
 
-		return $list_value;
+			return $list_value;
+			*/
 	}//end render_list_value
 
 
@@ -1695,7 +1682,6 @@ class component_text_area extends component_common {
 
 		return (string)$diffusion_value;
 	}//end get_diffusion_value
-
 
 
 	/**

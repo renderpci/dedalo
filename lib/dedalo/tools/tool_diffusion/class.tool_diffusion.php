@@ -286,19 +286,19 @@ class tool_diffusion {
 			# calculate all
 			$ar_diffusion_map_elements = diffusion::get_ar_diffusion_map_elements(DEDALO_DIFFUSION_DOMAIN);
 		}
-		#dump($ar_diffusion_map_elements, ' $ar_diffusion_map_elements ++ '.to_string(DEDALO_DIFFUSION_DOMAIN));
 
-		foreach ($ar_diffusion_map_elements as $obj_value) {
+		foreach ($ar_diffusion_map_elements as $diffusion_group_tipo => $obj_value) {
 			
+			$diffusion_element_tipo = $obj_value->element_tipo;
+
 			#$ar_related = common::get_ar_related_by_model('section',$diffusion_element_tipo); // Old way
-			$ar_related = self::get_diffusion_sections_from_diffusion_element($obj_value->element_tipo, $obj_value->class_name);
+			$ar_related = self::get_diffusion_sections_from_diffusion_element($diffusion_element_tipo, $obj_value->class_name);
 				#dump($ar_related, ' $ar_related ++ '.to_string( $diffusion_element_tipo )." - name:".$obj_value->name);
 				if(in_array($section_tipo, $ar_related)) {
 					$have_section_diffusion = true;
 					break;
-				}			
+				}
 		}
-		#dump($have_section_diffusion, '$have_section_diffusion ++ '.to_string($section_tipo));
 
 		return $have_section_diffusion;
 	}//end have_section_diffusion

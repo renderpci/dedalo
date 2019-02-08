@@ -25,7 +25,7 @@ $file_name = $modo;
 			if($count === true){
 				$json 					= $ar_inverse_references;
 			}else{
-				$ar_relations_lists 	= $this->get_realtion_list_obj($ar_inverse_references, $value_resolved);
+				$ar_relations_lists 	= $this->get_relation_list_obj($ar_inverse_references, $value_resolved);
 				$json 					= $ar_relations_lists;
 			}
 			break;	

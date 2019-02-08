@@ -6,8 +6,6 @@
 
 
 
-
-
 /* SECTION_WRAP
 ----------------------------------------- */
 .css_section_wrap {
@@ -190,3 +188,88 @@
 	#load_rows_button span {
 		align-self: center;
 	}
+
+
+
+// rows_container | TEST ROWS CONTAINER FROM JSON DATA (!)
+	.rows_container {
+		padding: 1em;
+		background-color: #f5f5f5;
+		display: block;
+		overflow: hidden;
+		clear: both;
+
+		>.row_container {			
+			display: grid;
+			padding: 2em;
+			//@colum_with : percentage(0.1428);
+			//grid-template-columns: @colum_with @colum_with @colum_with @colum_with @colum_with @colum_with @colum_with;
+			
+			// Autosize columns @see https://css-tricks.com/auto-sizing-columns-css-grid-auto-fill-vs-auto-fit/
+			grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); 
+
+			min-height: 57px;
+			border-top: 1px solid #e8e8e8;
+
+			&.header {
+				height: auto;
+
+				>div {
+					background-color: #A6A6A6;
+					color: #ffffff;
+					padding: 5px;
+				}
+			}			
+
+			>.column_cell {
+
+				display: flex;
+
+				.component_portal_list {					
+					display: flex;
+					justify-content: center;
+					flex-direction: row;
+					
+					>.component_portal_column {
+						display: flex;
+						justify-content: center;
+						flex-direction: column;
+						padding-left: 4px;
+						padding-right: 4px;
+					}
+				}
+
+				img {
+					height: 100px;
+				}
+
+				>.wrap_component {
+					width: 100%;
+
+					>label.css_label {
+						width: 100%;
+						//background-color: #E0D712
+					}
+				}
+				
+			}
+			
+		}
+	}//end rows_container
+
+
+
+// css_wrap_rows_search
+	.css_wrap_rows_search {
+		margin: 0px;
+		margin-left: 6px;
+		//margin-bottom: 5px;
+		/*
+		-moz-user-select: none;
+		-khtml-user-select: none;
+			-webkit-user-select: none;
+			user-select: none;
+			*/
+	}
+
+

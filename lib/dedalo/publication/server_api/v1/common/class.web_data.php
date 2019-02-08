@@ -55,10 +55,17 @@ class web_data {
 	*/
 	public static function get_db_connection() {
 
+		// Custom database defined in api server check
+			if (defined('MYSQL_WEB_DATABASE_CONN')) {
+				$database = MYSQL_WEB_DATABASE_CONN;
+			}else{
+				$database = MYSQL_DEDALO_DATABASE_CONN;
+			}
+
 		$mysql_conn = DBi::_getConnection_mysql(MYSQL_DEDALO_HOSTNAME_CONN,
 										 		MYSQL_DEDALO_USERNAME_CONN,
 										 		MYSQL_DEDALO_PASSWORD_CONN,
-										 		MYSQL_WEB_DATABASE_CONN,
+										 		$database,
 										 		MYSQL_DEDALO_DB_PORT_CONN,
 										 		MYSQL_DEDALO_SOCKET_CONN);
 		return $mysql_conn;
@@ -1012,13 +1019,21 @@ class web_data {
 				#dump($fragment, ' fragment ++ '.to_string());
 			
 			$element = new stdClass();
-				$element->tag_id  	 = $tag_id;
-				$element->tcin_secs  = $fragment->tcin_secs;
-				$element->tcout_secs = $fragment->tcout_secs;
-				$element->video_url  = $fragment->video_url;
+				$element->tag_id  	 	= $tag_id;
+				$element->tcin_secs  	= $fragment->tcin_secs;
+				$element->tcout_secs 	= $fragment->tcout_secs;
+				$element->video_url  	= $fragment->video_url;
+				$element->subtitles_url = $fragment->subtitles_url;
 
 				if ($options->return_text===true) {
-				$element->fragm = $fragment->fragm;
+					//$element->fragm = $fragment->fragm;
+
+					// Remove restricted_text from raw text
+					$clean_fragm 		  = web_data::remove_restricted_text( $fragment->fragm, $options->av_section_id );
+					// Finally remove all tags (deleteMarks is the last proccess before send the text)
+					$clean_fragm 		  = TR::deleteMarks($clean_fragm);
+
+					$element->fragm 	  = $clean_fragm;
 				}
 
 			$ar_fragments[] = $element;

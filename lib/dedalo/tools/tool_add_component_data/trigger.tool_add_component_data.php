@@ -43,7 +43,7 @@ if(empty($mode)) exit("<span class='error'> Trigger: Error Need mode..</span>");
 
 
 /**
-* BUILD_SUBTITLES_TEXT
+* Add the data to the component
 */
 if ($mode=='add_data') {
 
