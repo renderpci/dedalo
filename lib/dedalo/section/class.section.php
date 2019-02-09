@@ -3468,9 +3468,20 @@ class section extends common {
 		$clean_data = [];
 		foreach ($data as $key => $value_obj) {
 			
-			if (!in_array($value_obj, $clean_data)) {				
-				$clean_data[] = $value_obj;
-			}			
+			// Filter to avoid add existing items
+				$ar_filter = array_filter($clean_data, function($item) use($clean_data){
+					return ($item->tipo===$clean_data->tipo && 
+							$item->from_component_tipo===$clean_data->from_component_tipo && 
+							$item->section_tipo===$clean_data->section_tipo && 
+							$item->section_id===$clean_data->section_id);
+				});
+				if (count($ar_filter)===0) {
+					$clean_data[] = $value_obj;
+				}
+			
+			#if (!in_array($value_obj, $clean_data)) {				
+			#	$clean_data[] = $value_obj;
+			#}			
 		}
 
 		return $clean_data;
