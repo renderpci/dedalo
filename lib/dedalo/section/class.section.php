@@ -3315,13 +3315,18 @@ class section extends common {
 	*/
 	public static function build_json_rows($rows_data, $modo, $ar_list_map) {
 		$start_time=microtime(1);
-		
-		$ar_json_rows = [];
+
+		// default result
+			$result = new stdClass();
+				$result->context = [];
+				$result->data 	 = [];
 
 		// Empty result case
-			if (empty($rows_data->ar_records)) {
-				return $ar_json_rows;
-			}
+			if (empty($rows_data->ar_records)) {				
+				return $result;
+			}		
+		
+		$ar_json_rows = [];		
 
 		// context
 			$context = [];
@@ -3411,9 +3416,9 @@ class section extends common {
 
 		// smart remove data duplicates (!)
 			$data = section::smart_remove_data_duplicates($data);
-					dump($data, ' data ++ '.to_string());	
+		
 
-		$result = new stdClass();
+		// Set result object
 			$result->context = $context;
 			$result->data 	 = $data;
 
@@ -3424,7 +3429,6 @@ class section extends common {
 				}
 			$result->debug 	 = $debug;
 
-			#dump($result, ' result ++ '.to_string());
 
 		return $result;
 	}//end build_json_rows
@@ -3463,7 +3467,7 @@ class section extends common {
 	* @param array $data
 	* @return array $clean_data
 	*/
-	public static function smart_remove_data_duplicates($data) {		
+	public static function smart_remove_data_duplicates($data) {
 		
 		$clean_data = [];
 		foreach ($data as $key => $value_obj) {			
