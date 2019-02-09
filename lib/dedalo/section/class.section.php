@@ -3465,15 +3465,15 @@ class section extends common {
 	*/
 	public static function smart_remove_data_duplicates($data) {		
 		
-		#$clean_data = [];
-		#foreach ($data as $key => $value_obj) {			
-		#	if (!in_array($value_obj, $clean_data, true)) {				
-		#		$clean_data[] = $value_obj;
-		#	}			
-		#}
+		$clean_data = [];
+		foreach ($data as $key => $value_obj) {			
+			if (!in_array($value_obj, $clean_data, false)) {
+				$clean_data[] = $value_obj;
+			}			
+		}
 
-		$clean_data = array_unique($data, SORT_REGULAR);
-		$clean_data = array_values($clean_data);
+		#$clean_data = array_unique($data, SORT_REGULAR);
+		#$clean_data = array_values($clean_data);
 
 		return $clean_data;
 	}//end smart_remove_data_duplicates
