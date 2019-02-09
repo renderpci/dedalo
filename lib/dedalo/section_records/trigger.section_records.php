@@ -136,7 +136,7 @@ function search_rows($json_data) {
 				$result = $rows_data->ar_records;
 				break;
 		}
-
+		
 	// search_query_object. Add updated search_query_object
 		$result->search_query_object = $search_query_object;
 
