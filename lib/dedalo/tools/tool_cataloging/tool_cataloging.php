@@ -26,7 +26,7 @@
 				$tool_object->context_data 	= $context_data;
 				$tool_object->data 			= $data;
 			
-			$data_json = encodeURIComponent(json_encode($tool_object));
+			$data_json = json_encode($tool_object);
 
 			#dump($data,'$data');
 			# TOOL CSS / JS MAIN FILES
@@ -54,5 +54,3 @@
 	if( !include($page_html) ) {
 		echo "<div class=\"error\">Invalid mode $this->modo</div>";
 	}
-
-?>
