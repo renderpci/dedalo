@@ -42,31 +42,19 @@
 					$search_query_object = component_portal::build_search_query_object($search_query_object_options);
 					$search_query_object->select = [];
 
-
 				// search 
 					$search_development2 = new search_development2($search_query_object);
 					$rows_data 		 	 = $search_development2->search();
 
-
-				// ar_list_map 
-					$ar_components_with_relations = component_relation_common::get_components_with_relations();
-					$ar_list_map = new stdClass();
-					// section list
-					$layout_map = $this->get_layout_map();
-					$ar_subcontext = [];
-					foreach ($layout_map as $ar_value) {
-						foreach ($ar_value as $current_tipo) {
+				// layout_map 
+					$layout_map 	= $this->get_layout_map();
+					$ar_subcontext 	= [];
+					foreach ($layout_map as $section_tipo => $ar_list_tipos) foreach ($ar_list_tipos as $current_tipo) {
 							
-							$item = new stdClass();
-								$item->tipo 	 = $current_tipo;
-
-							$ar_list_map->$target_section_tipo[] = $item;
-
-							$modo 			 = 'list';
-							$RecordObj_dd 	 = new RecordObj_dd($current_tipo);
-							$model 			 = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
-							$is_translatable = $RecordObj_dd->get_traducible();
-							$lang 			 = ($is_translatable ==='si') ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;								
+							$modo 			= 'list';
+							$model 			= RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
+							$RecordObj_dd 	= new RecordObj_dd($current_tipo);
+							$lang 			= ($RecordObj_dd->get_traducible()==='si') ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
 
 							foreach ($rows_data->ar_records as $current_record) {
 							
@@ -81,66 +69,31 @@
 									$related_component->from_component_tipo = $this->tipo;
 									$related_component->from_section_tipo 	= $this->section_tipo;
 
-								$component_json = $related_component->get_json();								
-								#$context[0]->json_related_component = $current_tipo;
-								#$data =$component_json
+								$component_json = $related_component->get_json();
 
-								// Add data when current component is not with relations
-									#if (!in_array($model, $ar_components_with_relations)) {
-										$data = array_merge($data, $component_json->data);
-									#}
+								// Add data
+									$data = array_merge($data, $component_json->data);
 
-									#if (!in_array($model, $ar_components_with_relations)) {
-									#	$section_info = new stdClass();
-									#		$section_info->type 		= 'section_info';
-									#		$section_info->modo 		= 'list';
-									#		$section_info->section_label= RecordObj_dd::get_termino_by_tipo($current_record->section_tipo, DEDALO_APPLICATION_LANG, true);
-									#		$section_info->section_tipo = $current_record->section_tipo;
-									#	if (!in_array($section_info, $context)) {
-									#		$context[] = $section_info;
-									#	}										
-									#}
-
-								// Temp ar_subcontext
+								// temp ar_subcontext
 									$ar_subcontext = array_merge($ar_subcontext, $component_json->context);
-									$context[0]->json_related_component[] = $current_tipo;
-							}
-						}
-					}
+
+							}//end foreach ($rows_data->ar_records as $current_record)
 					
-					$context[0]->sub_context = $ar_subcontext;
+					}//end foreach ($layout_map as $section_tipo => $ar_list_tipos) foreach ($ar_list_tipos as $current_tipo)
 
-					#$current_subcontext 	 = isset($component_json->context[0]->sub_context) ? $component_json->context[0]->sub_context : [];
-					#$context[0]->sub_context = array_merge($context[0]->sub_context, $current_subcontext);
-
-					#dump($ar_list_map, ' ar_list_map ++ '.to_string());
-				
-					#dump($rows_data, ' rows_data ++ '.to_string());
-					#$json_rows = section::build_json_rows($rows_data, 'list', $ar_list_map);
-					#dump($json_rows, ' json_rows ++ '.to_string());
-
-				#$context = array_merge($context, $json_rows->context);
-
-				#$data = $json_rows->data;
-			
-
-
-				// sub_context add temp container if not exists
-					foreach ($context[0]->sub_context as $value) {
+				// ar_subcontext add everyone
+					foreach ($ar_subcontext as $value) {
 						if (!in_array($value, $context)) {
 							$context[] = $value;
 						}
 					}
-					
-				
-				// remove after use temporal container
-					unset($context[0]->sub_context);
-			
-			}
-			#$data = $component_json->data;
+
+			}//end if (!empty($dato))
+
+
 
 		// Value
-			$value = reset($dato);
+			$value = reset($dato); // Solo el primero para el list de mometo (en pruebas)
 						
 			$item = new stdClass();
 				$item->section_id 			= $this->get_section_id();
