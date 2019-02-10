@@ -27,6 +27,7 @@ body {
     background-position-x: 6px !important;
 } 
 
+
 /* tool_cataloging CASE
 	--------------------------------------------- */
 	.html_page_wrap_tool_cataloging .content_data {
@@ -128,25 +129,43 @@ body {
 	}
 	
 
-/* COMMON
------------------------------------------------------- 
-	// All components containers default
-	.component_container {
-		//background-color: #EBD4F5;
-		display: flex;
-		width: 50%;
-
-	}
-	// Components containers inside others
-	.container_look_inside {
-		width: 100%;
-	}
-*/
 
 
 
-// toll list paginator
+// tool list paginator
 	#section_filter_paginator {
 		padding-top: 0.5em;
 	}
+
+
+
+// tool_grid
+	.tool_grid {
+		display: grid;
+		grid-template-columns: 0.8fr 1.2fr;
+		height: 100vh;
+	}
+
+
+// tool_grid_left
+	.tool_grid_left {
+		background-color: #D9D4EF;
+
+		#search2_container_selection .search_component {
+			flex-basis: 96%;
+		}
+
+		
+	}
+
+// tool_grid_rigth
+	.tool_grid_rigth {
+		background-color: #E8E8E8;
+	}
+
+
+
+
+
+
 

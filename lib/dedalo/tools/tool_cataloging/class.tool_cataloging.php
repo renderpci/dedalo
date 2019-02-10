@@ -71,7 +71,7 @@ class tool_cataloging {
 	* Resolve the source list to get the section_list
 	* @return html
 	*/
-	public function get_sections_to_catalog(){
+	public function get_sections_to_catalog() {
 		
 		$ar_source_list = $this->source_list;
 
@@ -82,12 +82,12 @@ class tool_cataloging {
 			$section_tipo = $current_section_list->section_tipo;
 
 			$section_object = new stdClass();
-				$section_object->section_tipo 	= $section_tipo;
-				$section_object->label 			= RecordObj_dd::get_termino_by_tipo($section_tipo, DEDALO_APPLICATION_LANG, true);
+				$section_object->section_tipo 		= $section_tipo;
+				$section_object->label 				= RecordObj_dd::get_termino_by_tipo($section_tipo, DEDALO_APPLICATION_LANG, true);
 				$section_object->temp_preset_filter	= $this->get_temp_preset_filter($section_tipo);
-				$section_object->search_options = $this->get_search_options($section_tipo);
-				$section_object->ar_list_map 	= $this->get_ar_list_map($section_tipo, $current_section_list);
-				$section_object->type 			= 'sections';
+				$section_object->search_options 	= $this->get_search_options($section_tipo);
+				$section_object->ar_list_map 		= $this->get_ar_list_map($section_tipo, $current_section_list);
+				$section_object->type 				= 'sections';
 
 			$sections_to_catalog[] = $section_object;
 		}
@@ -127,9 +127,10 @@ class tool_cataloging {
 		$layout_map = [];
 		$current_section->layout_map = $layout_map;
 
-		# SEARCH_OPTIONS
-		$saved_search_options = section_records::get_search_options( $section_tipo .'_tool_cataloging' );
-
+		# SEARCH_OPTIONS (use equal id in trigger search)
+		$search_options_id 	  = $section_tipo .'_json';
+		$saved_search_options = section_records::get_search_options( $search_options_id );
+	
 		if ($saved_search_options===false) {
 			# Is not defined
 			$search_options = new stdClass();
