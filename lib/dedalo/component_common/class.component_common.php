@@ -3396,6 +3396,56 @@ abstract class component_common extends common {
 
 
 	/**
+	* EXTRACT_COMPONENT_dato_FALLBACK
+	* 21-04-2017 Paco
+	* @return string $value
+	*/
+	public static function extract_component_dato_fallback($component, $lang=DEDALO_DATA_LANG, $main_lang=DEDALO_DATA_LANG_DEFAULT) {
+
+		// get and store initial lang
+			$inital_lang = $component->get_lang();
+
+		// Try directe dato
+			$dato = $component->get_dato();	
+	
+		// fallback if empty
+			if (empty($dato)) {
+
+				// Try main lang. (Used config DEDALO_DATA_LANG_DEFAULT as main_lang)
+					if ($lang!==$main_lang) {
+						$component->set_lang($main_lang);
+						$dato = $component->get_dato();
+					}
+
+				// Try nolan
+					if (empty($dato)) {
+						$component->set_lang(DEDALO_DATA_NOLAN);
+						$dato = $component->get_dato(DEDALO_DATA_NOLAN);
+					}
+
+				// Try all projects langs sequence
+					if (empty($dato)) {
+						$data_langs = common::get_ar_all_langs(); # Langs from config projects
+						foreach ($data_langs as $current_lang) {
+							if ($current_lang===$lang || $current_lang===$main_lang) {
+								continue; // Already checked
+							}
+							$component->set_lang($current_lang);
+							$dato = $component->get_dato($current_lang);
+							if (!empty($dato)) break; # Stops when first data is found
+						}
+					}
+			}
+
+		// restore initial lang
+			$component->set_lang($inital_lang);
+
+		return $dato;
+	}//end extract_component_dato_fallback
+
+
+
+	/**
 	* EXTRACT_COMPONENT_VALUE_FALLBACK
 	* 21-04-2017 Paco
 	* @return string $value
