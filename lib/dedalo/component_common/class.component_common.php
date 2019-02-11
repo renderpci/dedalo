@@ -4151,12 +4151,29 @@ abstract class component_common extends common {
 			$search_list_add 			= isset($propiedades->search_list_add) ? (array)$propiedades->search_list_add : false;
 			#$show_childrens 			= isset($propiedades->show_childrens) ? (bool)$propiedades->show_childrens : false;
 
+		#// Search filter custom
+		#	if (isset($propiedades->source->filter_custom)) {				
+		#		$op = '$and';
+		#		foreach ($propiedades->source->filter_custom as $key => $filter_element) {
+		#			$search_query_object->filter->{$op}[] = $filter_element;
+		#		}
+		#	}
+
 		// Search filter custom
-			if (isset($propiedades->source->filter_custom)) {				
-				$op = '$and';
-				foreach ($propiedades->source->filter_custom as $key => $filter_element) {
-					$search_query_object->filter->{$op}[] = $filter_element;
-				}
+			if (isset($propiedades->source->filter_custom)) {
+
+				// Build custom filter from propiedades
+					$op = '$and';
+					$filter_custom = new stdClass();
+					foreach ($propiedades->source->filter_custom as $key => $filter_element) {
+						$filter_custom->{$op}[] = $filter_element;
+					}
+
+				// Add user filter inside
+					$filter_custom->{$op}[] = $search_query_object->filter;
+
+				// Replace final filter
+					$search_query_object->filter = $filter_custom;
 			}
 
 		// Conform search query object with some modifiers
