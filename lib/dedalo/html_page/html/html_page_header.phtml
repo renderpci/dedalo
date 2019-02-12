@@ -158,7 +158,7 @@ if (login::is_logged()) {
 
 			#
 			# STRUCTURE LINKS
-			if ( (SHOW_DEBUG===true || SHOW_DEVELOPER===true) && strpos($_SERVER['REQUEST_URI'], 'dd_list.php')!==false ) {
+			if ( SHOW_DEBUG===true && strpos($_SERVER['REQUEST_URI'], 'dd_list.php')!==false ) {
 
 					# IMPORT BUTTON (ADMIN)
 					/*
