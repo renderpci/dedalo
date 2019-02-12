@@ -8,8 +8,7 @@ $html='';
 	
 	#
 	# WRAP_TOOL_EXPORT
-	$html .= "<div id=\"wrap_columns_selector\">";
-	
+	$html .= "<div id=\"wrap_columns_selector\" class=\"no-print\">";	
 		
 		
 
@@ -106,7 +105,12 @@ $html='';
 				$html .= "<select id=\"select_data_format_export\" class=\"form-control\">
 							<option value=\"standar\">Standar (Resolved)</option>
 							<option value=\"dedalo\">Dédalo (Raw)</option>
-						 </select>";				
+						 </select>";
+
+
+				$html .= '<a id="active_all_columns" class="move_columns" onclick="tool_export.active_all_columns(this);">Active all columns</a>';
+				$html .= '<a id="unactive_all_columns" class="move_columns" onclick="tool_export.unactive_all_columns(this);">Unactive all columns</a>';
+
 				$html .= '</div>';		 
 
 			$html .= "</div>";//end buttons_div
@@ -121,11 +125,15 @@ $html='';
 
 	#
 	# DOWNLOAD_FILE
-	$html .= "<div id=\"download_file\">";
+	$html .= "<div id=\"download_file\" class=\"no-print\">";
 	# DOWNLOAD_FILE CSV UTF-8
-	$html .= "	<h2><a href=\"\" target=\"_blank\" id=\"download_file_link\">".label::get_label("descargar")."</a></h2>";
+	#$html .= "	<h2><a href=\"\" target=\"_blank\" id=\"download_file_link\">".label::get_label("descargar")." CSV</a></h2>";
+	$html .= '<a id="download_file_link" class="btn btn-success fileinput-button"><strong>'.label::get_label("descargar").' CSV</strong></a>';
+
 	# DOWNLOAD_FILE_EXCEL
-	$html .= "	<h2><a href=\"\" target=\"_blank\" id=\"download_file_link_excel\">".label::get_label("descargar")." Excel</a></h2>";
+	#$html .= "<h2><a href=\"\" target=\"_blank\" id=\"download_file_link_excel\">".label::get_label("descargar")." Excel</a></h2>";
+	$html .= '<a id="download_file_link_excel" class="btn btn-success fileinput-button"><strong>'.label::get_label("descargar").' Excel</strong></a>';
+	
 	$html .= "</div>";
 
 

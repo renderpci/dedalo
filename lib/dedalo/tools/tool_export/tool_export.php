@@ -33,7 +33,7 @@
 
 			$var_requested 	= common::get_request_var('button_tipo');
 			$button_tipo 	= !empty($var_requested) ? $var_requested : null;
-
+	
 			# Context
 			switch ($context_name) {
 

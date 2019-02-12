@@ -465,7 +465,7 @@ class tool_export extends tool_common {
 		$table_html .= "<table class=\"table_csv\">\n\n";		
 		ini_set('auto_detect_line_endings',TRUE);
 		$f = fopen($file, "r");
-		$table_html .= "<caption>TABLE FROM:  $file</caption>";
+		$table_html .= "<caption class=\"no-print\">TABLE FROM: $file</caption>";
 		$i=0; while (($line = fgetcsv($f, 300000, $delimiter)) !== false) {
 			
 				$table_html .= "<tr>";
