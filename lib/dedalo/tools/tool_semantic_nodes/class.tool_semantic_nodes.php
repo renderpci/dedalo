@@ -1,11 +1,11 @@
 <?php
 /*
-* CLASS TOOL RELATION
+* CLASS TOOL SEMANTIC NODES
 */
 require_once( dirname(dirname(dirname(__FILE__))) .'/config/config4.php');
 
 
-class tool_portal extends tool_common {
+class tool_semantic_nodes extends tool_common {
 	
 	# media component
 	protected $component_obj ;
@@ -28,5 +28,5 @@ class tool_portal extends tool_common {
 
 	
 	
-}//end tool_portal
+}//end tool_semantic_nodes
 ?>
