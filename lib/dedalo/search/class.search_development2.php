@@ -254,7 +254,7 @@ class search_development2 {
 				$full_count_sql_query = $this->parse_search_query_object( $full_count=true );			
 				$full_count_result	  = JSON_RecordObj_matrix::search_free($full_count_sql_query);
 				$row_count 	 		  = pg_fetch_assoc($full_count_result);
-				$full_count 		  = $row_count['full_count'];
+				$full_count 		  = (int)$row_count['full_count'];
 				# Fix full_count value
 				$this->search_query_object->full_count = $full_count;
 			}

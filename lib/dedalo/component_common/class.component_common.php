@@ -3396,6 +3396,56 @@ abstract class component_common extends common {
 
 
 	/**
+	* EXTRACT_COMPONENT_dato_FALLBACK
+	* 21-04-2017 Paco
+	* @return string $value
+	*/
+	public static function extract_component_dato_fallback($component, $lang=DEDALO_DATA_LANG, $main_lang=DEDALO_DATA_LANG_DEFAULT) {
+
+		// get and store initial lang
+			$inital_lang = $component->get_lang();
+
+		// Try directe dato
+			$dato = $component->get_dato();	
+	
+		// fallback if empty
+			if (empty($dato)) {
+
+				// Try main lang. (Used config DEDALO_DATA_LANG_DEFAULT as main_lang)
+					if ($lang!==$main_lang) {
+						$component->set_lang($main_lang);
+						$dato = $component->get_dato();
+					}
+
+				// Try nolan
+					if (empty($dato)) {
+						$component->set_lang(DEDALO_DATA_NOLAN);
+						$dato = $component->get_dato(DEDALO_DATA_NOLAN);
+					}
+
+				// Try all projects langs sequence
+					if (empty($dato)) {
+						$data_langs = common::get_ar_all_langs(); # Langs from config projects
+						foreach ($data_langs as $current_lang) {
+							if ($current_lang===$lang || $current_lang===$main_lang) {
+								continue; // Already checked
+							}
+							$component->set_lang($current_lang);
+							$dato = $component->get_dato($current_lang);
+							if (!empty($dato)) break; # Stops when first data is found
+						}
+					}
+			}
+
+		// restore initial lang
+			$component->set_lang($inital_lang);
+
+		return $dato;
+	}//end extract_component_dato_fallback
+
+
+
+	/**
 	* EXTRACT_COMPONENT_VALUE_FALLBACK
 	* 21-04-2017 Paco
 	* @return string $value
@@ -4101,12 +4151,29 @@ abstract class component_common extends common {
 			$search_list_add 			= isset($propiedades->search_list_add) ? (array)$propiedades->search_list_add : false;
 			#$show_childrens 			= isset($propiedades->show_childrens) ? (bool)$propiedades->show_childrens : false;
 
+		#// Search filter custom
+		#	if (isset($propiedades->source->filter_custom)) {				
+		#		$op = '$and';
+		#		foreach ($propiedades->source->filter_custom as $key => $filter_element) {
+		#			$search_query_object->filter->{$op}[] = $filter_element;
+		#		}
+		#	}
+
 		// Search filter custom
-			if (isset($propiedades->source->filter_custom)) {				
-				$op = '$and';
-				foreach ($propiedades->source->filter_custom as $key => $filter_element) {
-					$search_query_object->filter->{$op}[] = $filter_element;
-				}
+			if (isset($propiedades->source->filter_custom)) {
+
+				// Build custom filter from propiedades
+					$op = '$and';
+					$filter_custom = new stdClass();
+					foreach ($propiedades->source->filter_custom as $key => $filter_element) {
+						$filter_custom->{$op}[] = $filter_element;
+					}
+
+				// Add user filter inside
+					$filter_custom->{$op}[] = $search_query_object->filter;
+
+				// Replace final filter
+					$search_query_object->filter = $filter_custom;
 			}
 
 		// Conform search query object with some modifiers
@@ -4504,6 +4571,15 @@ abstract class component_common extends common {
 			$item->properties 		= $this->get_propiedades();
 			$item->parent 			= $this->RecordObj_dd->get_parent();
 			$item->related 			= $this->get_ar_related_component_tipo();
+
+		// section_list optional for get related_list
+			$ar_section_list = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($item->tipo, 'section_list', 'children', true);
+			if (isset($ar_section_list[0])) {
+				
+				$related_list_tipo 	= $ar_section_list[0];				
+				$ar_components 		= RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($related_list_tipo, 'component_', 'termino_relacionado', false);				
+				$item->related_list = $ar_components;
+			}
 
 		return $item;
 	}//end get_structure_context

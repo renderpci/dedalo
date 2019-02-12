@@ -10,7 +10,12 @@
 	# ICON
 	$title	  = label::get_label('abrir').' '.label::get_label('herramienta');
 	
-	$html_tool .= '<a href="javascript:void(0);" class="id_column_buttons button_transcription link" title="'.$title.'" onclick="tool_common.open_tool_description(this)" ';
+	$refernces_css = '';
+	if ($contain_references===false) {
+		$refernces_css = 'no_references';
+	}
+	
+	$html_tool .= '<a href="javascript:void(0);" class="id_column_buttons button_transcription link '.$refernces_css.'" title="'.$title.'" onclick="tool_common.open_tool_description(this)" ';
 	$html_tool .= 'data-tool_tipo="'.$tool_tipo.'" ';
 	$html_tool .= 'data-section_tipo="'.$section_tipo.'" ';
 	$html_tool .= 'data-section_id="'.$section_id.'" ';

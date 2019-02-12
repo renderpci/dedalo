@@ -1684,7 +1684,6 @@ class component_text_area extends component_common {
 	}//end get_diffusion_value
 
 
-
 	/**
 	* GET_VALOR_LIST_HTML_TO_SAVE
 	* Usado por section:save_component_dato
