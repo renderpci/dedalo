@@ -27,6 +27,7 @@ body {
     background-position-x: 6px !important;
 } 
 
+
 /* tool_cataloging CASE
 	--------------------------------------------- */
 	.html_page_wrap_tool_cataloging .content_data {
@@ -128,19 +129,153 @@ body {
 	}
 	
 
-/* COMMON
------------------------------------------------------- 
-	// All components containers default
-	.component_container {
-		//background-color: #EBD4F5;
-		display: flex;
-		width: 50%;
 
+
+
+
+
+// tool list paginator
+	#section_filter_paginator {
+		padding-top: 0.5em;
 	}
-	// Components containers inside others
-	.container_look_inside {
-		width: 100%;
+
+
+
+// tool_grid
+	.tool_grid {
+		display: grid;
+		//grid-template-columns: 0.8fr 1.2fr;
+		grid-template-columns: 550px auto;
+		height: 100vh;
 	}
-*/
-	
+
+
+// tool_grid_left
+	.tool_grid_left {
+		background-color: #f3f3f3;
+
+		#search2_container_selection .search_component {
+			flex-basis: 96%;
+		}
+
+		
+	}
+
+// tool_grid_rigth
+	.tool_grid_rigth {
+		background-color: #E8E8E8;
+	}
+
+
+// rows_container
+	.rows_container._numisdata3 {
+
+		>.row_container {
+			display: flex;
+			flex-flow: column-reverse;
+			padding: 2px;
+			width: 100%;
+			position: relative;
+			//background-color: #F6B4CD;
+
+			>.column_cell {
+
+				flex-direction: column;
+				width: 92%;
+
+				// portal
+					>.component_portal_list >.component_portal_column {
+						padding-left: 0;
+
+						>img {
+							height: 150px;
+							cursor: zoom-in;
+						}
+					}
+				
+				// input text name
+				>.component_input_text_list {
+					padding: 1em;
+					text-align: center;
+					width: 100%;
+				}
+
+			}//end >.column_cell
+
+			&:after {
+				/*
+				content: " ";
+				display: block;
+				background-color: #7f7f7f;
+				width: 30px;
+				height: 100%;
+				position: absolute;
+				right: -12px;
+				bottom: 0;
+				color: #ffffff;
+				cursor: move;
+				*/
+			}
+
+			.drag_item {
+				background-color: #7f7f7f;
+				width: 6%;
+				height: 100%;
+				position: absolute;
+				right: -10px;
+				bottom: 0;
+				cursor: move;
+
+				&:hover {
+					background-color: #9B9B9B;
+				}
+			}
+			
+		}//end >.row_container
+
+	}//end rows_container
+
+
+
+// search_group_container
+	#search_group_container {
+		flex-wrap: wrap;
+
+		#root_search_group {
+			width: 100%;
+		}
+
+		@down_width: 32%;
+		.max_group {
+			margin-left: 5px;
+			width: @down_width;
+		}
+		.reset_group {
+			width: @down_width;
+		}
+		#button_submit {
+			width: @down_width;
+			margin-right: 5px;
+		}
+	}
+
+
+
+// sections_select
+	#sections_select {
+		height: 25px;
+		float: right;
+		margin: 5px;
+		height: 2.3em;
+	}
+
+
+
+// button_open_search2
+	.button_open_search2 {
+		margin-left: 2px;
+	}
+
+
+
 

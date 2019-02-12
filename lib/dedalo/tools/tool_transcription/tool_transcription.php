@@ -19,7 +19,7 @@
 	switch($modo) {	
 		
 		case 'button':
-				
+			$contain_references = search_development2::have_inverse_relations($section_tipo, $section_id);	
 			break;
 
 		case 'page':				

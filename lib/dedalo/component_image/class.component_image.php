@@ -422,7 +422,7 @@ class component_image extends component_common {
 			$image_url = $ImageObj->get_media_path() . $image_id .'.'. $ImageObj->get_extension();
 
 		// File exists test : If not, show '0' dedalo image logo
-			if($test_file) {
+			if($test_file===true) {
 				$file = $ImageObj->get_local_full_path();
 				if(!file_exists($file)) {
 					if ($default_add===false) {
@@ -433,7 +433,7 @@ class component_image extends component_common {
 			}		
 
 		// Absolute (Default false)
-			if ($absolute) {
+			if ($absolute===true) {
 				$image_url = DEDALO_PROTOCOL . DEDALO_HOST . $image_url;
 			}
 	
