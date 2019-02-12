@@ -42,6 +42,7 @@
 	width: 100%;
 	display: table;
 	margin-left: 40px;
+	margin-bottom: 65px;
 	}
 	.col {
 		width: 24.998%;
@@ -142,6 +143,33 @@
 		}
 	
 
+	.move_columns {
+		display: block;
+		padding-top: 20px;
+		font-size: 1.1em;
+		cursor: pointer;
+		width: 100%;
+		margin-bottom: 0;
+	}
+	#active_all_columns {
+		margin-top: 40px;		
+
+		&:before {
+			content: ">>";
+			margin-right: 2px;
+		}
+	}
+
+	#unactive_all_columns {
+		margin-top: 0;
+		padding-top: 10px;
+
+		&:before {
+			content: "<<";
+			margin-right: 2px;
+		}
+	}
+
 
 
 	/* DOWNLOAD_FILE
@@ -150,26 +178,37 @@
 		clear: both;
 		border-bottom: 1px solid #B2B2B2;
 		display: none;
-		}
-		#download_file:before {
+		padding: 20px;
+
+		&:before {
 			content: " ";
 			display: table;
 			clear: both;
 			margin-top: 40px;
 		}
-		#download_file h2{
+
+		h2{
 			display: inline-block;
 		}
-		#download_file a {
-			font-size: 30px;
-    		margin-left: 40px;
-			background-image: url('../../../../../images/icon-download.png');
-			background-size: auto 100%;
-			background-repeat: no-repeat;
-			background-position: right;
-			height: 40px;
-			padding-right: 50px;
+
+		a {
+			margin-left: 20px;
+			//font-size: 30px;
+    		//margin-left: 40px;
+			//background-image: url('../../../../../images/icon-download.png');
+			//background-size: auto 100%;
+			//background-repeat: no-repeat;
+			//background-position: right;
+			//height: 40px;
+			//padding-right: 50px;
+			text-transform: capitalize;
 		}
+
+
+	}//end #download_file
+		
+		
+		
 
 	
 		
@@ -188,6 +227,17 @@
 			margin-top: 40px;
 		}
 
+
+
+
+
+// print
+	@media print {    
+    .no-print, .no-print *
+    {
+        display: none !important;
+    }
+}
 
 
 

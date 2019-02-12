@@ -546,11 +546,14 @@ class tool_import_dedalo_csv extends tool_common {
 				
 				foreach ($current_line as $key => $value) {					
 					$value = str_replace('U+003B', ';', $value);
+
 					# Test valid json
 					if (strpos($value,'[')===0 || strpos($value,'{')===0) {
-						$test = json_decode($value);
+						
+						$test = json_decode($value, JSON_THROW_ON_ERROR);
 						if ($test===null) {
-							$current_line = "<span class=\"error\">ERROR!! BAD JSON FORMAT</span>: ".$value;
+							$current_line = "<span class=\"error\">ERROR!! BAD JSON FORMAT</span>";
+							debug_log(__METHOD__." ERROR!! BAD JSON FORMAT  ".to_string($value), logger::ERROR);
 						}
 					}					
 				}
@@ -566,6 +569,7 @@ class tool_import_dedalo_csv extends tool_common {
 			$response->msg 	  		= !empty($result) && is_array($result) ? "Found ".count($result)." files" : "No files found at $dir";
 			$response->files  		= $result;
 			$response->files_info  = $files_info;
+
 
 		return (object)$response;
 	}//end get_csv_files
