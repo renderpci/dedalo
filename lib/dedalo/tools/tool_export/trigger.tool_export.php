@@ -36,7 +36,7 @@ function export_data($json_data) {
 	$tool_export  = new tool_export($section_tipo,'edit',$data_format);
 
 	$layout_map = tool_export::columns_to_layout_map($columns, $section_tipo);
-		#dump($layout_map, ' $layout_map ++ '.to_string($columns));
+		# dump($layout_map, ' $layout_map ++ '.to_string($columns));
 		if (empty($layout_map)) {			
 			$response->msg = "Error: layout_map is empty";
 			return $response;
@@ -49,7 +49,7 @@ function export_data($json_data) {
 		#dump($records, ' records ++ '.to_string());
 
 	// Result parsed as final string
-	$result_string = $tool_export->export_to('csv', $records, $encoding);
+	$result_string = $tool_export->export_to('csv', $records, $encoding, $section_tipo);
 		#dump($result, ' result ++ '.to_string());
 
 	// Write result to file (UTF8)
