@@ -24,7 +24,10 @@ $html='';
 				$html .= "<li data-tipo=\"$tipo\">";
 				$html .= $name;
 				if(SHOW_DEVELOPER===true) {
-					$html .= " [$tipo]";
+					$html .= ' <span class="small">';
+					$html .= "[$tipo]";
+					$html .= ' '.RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+					$html .= '</span>';
 				}
 				$html .= "</li>";
 			}
