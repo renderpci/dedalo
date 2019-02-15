@@ -5,6 +5,10 @@
 @import "@{common_css}/library.less";
 
 
+.caption {
+	background-color: #F0F0F0;
+	padding: 10px;
+}
 
 /* TABLE_CSV
 ----------------------------------------- */
@@ -13,11 +17,7 @@
 		font-family: Arial, sans-serif;
 		font-size: 12px;
 		width: 100%;
-		table-layout: fixed;
-
-		caption {
-			background-color: #F0F0F0
-		}
+		table-layout: fixed;		
 	
 		tr {
 
@@ -35,6 +35,13 @@
 				background-color: #E2E2E2;
 				vertical-align: text-top;
 				border-bottom: 1px solid #eeeeee;
+
+				position: -webkit-sticky;
+				position: sticky;
+
+    			top: -1px;
+    			//top: -34px;
+    			opacity: 0.95;
 			}
 
 			>td {
@@ -274,6 +281,8 @@
 
 
 
+
+
 // print
 	@media print {    
 	    .no-print, .no-print *
@@ -283,6 +292,10 @@
 	    #table_data_preview {
 	    	margin: 0;
 	    	padding: 0;
+
+	    	th {
+	    		position: initial;
+	    	}
 	    }
 	}
 
