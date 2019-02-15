@@ -286,14 +286,16 @@
 	$path 			= $php_user_home . '/.pgpass';
 	if (!file_exists($path )) {
 		$init_response->msg .= trim('File .pgpass not found at: '.$path . PHP_EOL . ' Check your .pgpass file into php user home dir');
-		return $init_response;
+		debug_log(__METHOD__. $init_response->msg, logger::ERROR);
+		#return $init_response;
 	}
 	$file_permissions = substr(sprintf('%o', fileperms($path)), -4);
 	if ($file_permissions!=='0600') {
 		// Try to change it
 			if(false===chmod($path, 0600)){
 				$init_response->msg .= trim('File .pgpass permissions is : '.$file_permissions . PHP_EOL . ' Unable to automatic set. Check manually your .pgpass file permissions and set to: 0600');
-				return $init_response;
+				debug_log(__METHOD__. $init_response->msg, logger::ERROR);
+				#return $init_response;
 			}else{
 				debug_log(__METHOD__." Changed permissions of file .pgpass to 0600 ".to_string(), logger::ERROR);
 			}	
