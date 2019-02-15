@@ -12,6 +12,9 @@ abstract class diffusion  {
 	protected $domain;
 	public $ar_diffusion_map;
 
+	public static $update_record_actions = [];
+
+
 
 	/**
 	* CONSTRUCT
@@ -960,6 +963,80 @@ abstract class diffusion  {
 
 
 	
+	/**
+	* ADD_TO_UPDATE_RECORD_ACTIONS
+	* @return 
+	*/
+	public static function add_to_update_record_actions($request_options) {
+		#dump($request_options, ' request_options ++ '.to_string());
+
+		$added = false;
+
+		// options parse from request_options
+			$options = new stdClass();
+				$options->component_tipo 		 = null;
+				$options->section_tipo 	 		 = null;
+				$options->section_id 	 		 = null;
+				$options->lang 			 		 = null;
+				$options->model 		 		 = null;
+				$options->diffusion_element_tipo = null;
+				foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
+
+		switch ($options->model) {
+			case 'component_text_area':
+				// Check component index tags
+				$component 	= component_common::get_instance($options->model,
+															 $options->component_tipo,
+															 $options->section_id,
+															 'list',
+															 $options->lang,
+															 $options->section_tipo);
+				$ar_indexations = $component->get_component_indexations(DEDALO_RELATION_TYPE_INDEX_TIPO); # dd96
+					#dump($ar_indexations, ' ar_indexations ++ '." section_id: $options->section_id - lang: $options->lang - dato:".$component->get_dato());
+
+				if (!empty($ar_indexations)) {					
+					foreach ($ar_indexations as $current_locator) {
+						
+						# locator like...
+							# {
+							# 	[type] => dd96
+							# 	[tag_id] => 1
+							# 	[section_id] => 13
+							# 	[section_tipo] => rsc167
+							# 	[component_tipo] => rsc36
+							# 	[section_top_id] => 44
+							# 	[section_top_tipo] => oh1
+							# 	[from_component_tipo] => hierarchy40
+							# 	[from_section_tipo] => ts1
+							# 	[from_section_id] => 29
+							# }
+
+						$options_update_record = new stdClass();
+							$options_update_record->section_tipo 			= $current_locator->from_section_tipo;
+							$options_update_record->section_id 	 			= $current_locator->from_section_id;
+							$options_update_record->recursion_level 		= 0;
+							$options_update_record->diffusion_element_tipo 	= $options->diffusion_element_tipo;
+
+						$ar_found = array_filter(diffusion::$update_record_actions, function($item) use($options_update_record){
+							return ($item->section_tipo===$options_update_record->section_tipo && $item->section_id===$options_update_record->section_id);
+						});
+						if (count($ar_found)===0) {
+							// add unique 
+								diffusion::$update_record_actions[] = $options_update_record;
+						}
+					}
+				}				
+				$added = true;
+				break;
+			
+			default:
+				debug_log(__METHOD__." Error on add. Ignored not defained model: ".to_string($options->model), logger::ERROR);
+				break;
+		}
+		
+
+		return $added;
+	}//end add_to_update_record_actions
 
 	
 
