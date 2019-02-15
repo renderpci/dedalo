@@ -9,7 +9,7 @@
 	$context_name		= !empty($var_requested) ? $var_requested : null;;	
 	$tool_name 			= get_class($this);
 	$file_name			= $modo;	
-	
+
 	
 	switch($modo) {
 

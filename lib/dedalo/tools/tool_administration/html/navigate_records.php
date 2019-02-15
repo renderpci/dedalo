@@ -138,7 +138,7 @@ require_once( dirname(dirname(dirname(dirname(__FILE__)))) .'/config/config4.php
 
 			const target_iframe = document.getElementById("iframe")
 			const section_id 	= ar_records[current_key]
-			const url 	 		= url_base + '?t=' + section_tipo + '&id=' + section_id
+			const url 	 		= url_base + '?t=' + section_tipo + '&id=' + section_id + '&skip_log=1'
 
 			// current_id_info				
 				current_id_info.innerHTML = " Loading " + (current_key +1) + ' of ' + n_records
@@ -192,7 +192,7 @@ require_once( dirname(dirname(dirname(dirname(__FILE__)))) .'/config/config4.php
 				  current_id_info.innerHTML = "Total: " + n_records
 			
 			// Load first record as sample
-			document.getElementById("iframe").src = url_base + '?t=' + section_tipo + '&id=' + ar_records[0]
+			document.getElementById("iframe").src = url_base + '?t=' + section_tipo + '&id=' + ar_records[0] + '&skip_log=1'
 
 			const offset 	= document.getElementById("offset")
 			const delay_ms 	= document.getElementById("delay_ms")
