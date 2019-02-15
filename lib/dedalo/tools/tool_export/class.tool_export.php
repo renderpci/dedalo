@@ -158,15 +158,16 @@ class tool_export extends tool_common {
 				// header tipos calculate looking all rows different columns
 					$header_tipos = [];
 					foreach ($ar_records_deep_resolved as $key => $ar_value) {
-							dump($ar_value, ' ar_value ++ '.to_string());
+						#dump($ar_value, ' ar_value ++ '.to_string());
 						foreach ($ar_value as $item) {
 							$ar_found = array_filter($header_tipos, function($element) use($item){
-								return $element->component_tipo===$item->component_tipo;
+								return $element->component_tipo===$item->component_tipo && $element->from_section_tipo===$item->from_section_tipo;
 							});
 							if (empty($ar_found)) {
 								$h_item = new stdClass();
-									$h_item->component_tipo = $item->component_tipo;
-									$h_item->section_tipo   = $item->section_tipo;
+									$h_item->component_tipo 	= $item->component_tipo;
+									$h_item->section_tipo   	= $item->section_tipo;
+									$h_item->from_section_tipo  = $item->from_section_tipo;
 								$header_tipos[] = $h_item;
 							}
 						}
@@ -181,23 +182,38 @@ class tool_export extends tool_common {
 						if ($current_tipo!=='id' && $current_tipo!=='section_id' && $current_tipo!=='section_tipo') {
 							# Resolve name
 							if($this->data_format==='dedalo') {
+								
 								$column_name = trim($current_tipo);
+							
 							}else{
-								$column_name = RecordObj_dd::get_termino_by_tipo($current_tipo, DEDALO_DATA_LANG, true, true);
-								if ($h_item->section_tipo!==$section_tipo) {									
-									$column_name .= PHP_EOL .' ['. RecordObj_dd::get_termino_by_tipo($h_item->section_tipo, DEDALO_DATA_LANG, true, true).']';
-								}
+
+								#if ($h_item->section_tipo!==$section_tipo) {
+									$column_name  = '';
+									// from_section label
+										if ($h_item->from_section_tipo!==$h_item->section_tipo) {											
+											$column_name .= RecordObj_dd::get_termino_by_tipo($h_item->from_section_tipo, DEDALO_DATA_LANG, true, true) . PHP_EOL ;
+										}									
+									// section label
+										$column_name .= RecordObj_dd::get_termino_by_tipo($h_item->section_tipo, DEDALO_DATA_LANG, true, true) . PHP_EOL ;									
+									// component label
+										$column_name .= RecordObj_dd::get_termino_by_tipo($current_tipo, DEDALO_DATA_LANG, true, true);
+								#}else{
+								#	$column_name = RecordObj_dd::get_termino_by_tipo($current_tipo, DEDALO_DATA_LANG, true, true);
+								#}
 								if(SHOW_DEBUG===true) {
-									$column_name .= ' '.$current_tipo;
+									// component tipo
+										$column_name .= ' ['.$current_tipo.']';
 								}
+
 							}
 						}else{
 							$column_name = $current_tipo;
 						}
-						$header_columns[] = $com.$column_name.$com;
+						// add
+							$header_columns[] = $com.$column_name.$com;
 					}
 					#dump($header_columns, ' header_columns ++ '.to_string()); die();
-					$export_str_data = implode($delimiter, $header_columns) . PHP_EOL;
+					$export_str_data .= implode($delimiter, $header_columns) . PHP_EOL;
 
 				// build rows. parse and fill empty columns
 					foreach ($ar_records_deep_resolved as $section_id => $ar_value) {
@@ -205,23 +221,21 @@ class tool_export extends tool_common {
 						$ar_columns = [];
 						foreach ($header_tipos as $h_item) {
 
-							$current_tipo = $h_item->component_tipo;
-
-							$ar_found = array_filter($ar_value, function($element) use($current_tipo){
-								return $element->component_tipo===$current_tipo;
+							$ar_found = array_filter($ar_value, function($element) use($h_item){
+								return $element->component_tipo===$h_item->component_tipo && $element->from_section_tipo===$h_item->from_section_tipo;
 							});
-							
 							if (!empty($ar_found)) {
 								$current_value = reset($ar_found)->value;
-								$ar_columns[$current_tipo] = $current_value;
 							}else{
-								$ar_columns[$current_tipo] = ' ';
+								$current_value = ' ';
 							}
+							// add
+								$ar_columns[] = $current_value;
 						}
 						#dump($ar_columns, ' ar_columns ++ '.to_string());
 						
 						// Rows
-							$export_str_data .= implode($delimiter, $ar_columns) .PHP_EOL;
+							$export_str_data .= implode($delimiter, $ar_columns) .PHP_EOL;					
 					}
 
 				break;
@@ -261,7 +275,7 @@ class tool_export extends tool_common {
 	* @param string $lang
 	* @return array $row_deep_resolved
 	*/
-	public function deep_resolve_row( $record, $lang=DEDALO_DATA_LANG ) {		
+	public function deep_resolve_row( $record, $lang=DEDALO_DATA_LANG ) {
 		#dump($record, ' record ++ '.to_string());
 
 		$quotes ='"';
@@ -321,7 +335,7 @@ class tool_export extends tool_common {
 						#dump($valor_export, ' valor_export ++ '.to_string());
 				
 				// add merged
-					$row_deep_resolved = array_merge($row_deep_resolved, tool_export::recursive_value_resolve($component_tipo, $section_tipo, $valor_export, $quotes));
+					$row_deep_resolved = array_merge($row_deep_resolved, tool_export::recursive_value_resolve($component_tipo, $section_tipo, $from_section_tipo=$section_tipo, $valor_export, $quotes));
 			}			
 			
 
@@ -337,9 +351,9 @@ class tool_export extends tool_common {
 	* RECURSIVE_VALUE_RESOLVE
 	* @return array $ar_values
 	*/
-	public static function recursive_value_resolve($component_tipo, $section_tipo, $valor_export, $quotes, $separator=PHP_EOL) {
+	public static function recursive_value_resolve($component_tipo, $section_tipo, $from_section_tipo, $valor_export, $quotes, $separator=PHP_EOL) {
 		
-		static $ar_values = [];
+		$ar_values = [];
 
 		if (is_array($valor_export)) {	
 			
@@ -348,13 +362,13 @@ class tool_export extends tool_common {
 				if (is_array($item->value)) {
 
 					// Recursion resolve
-						$ar_values = array_merge($ar_values, tool_export::recursive_value_resolve($item->component_tipo, $item->section_tipo, $item->value, $quotes));
+						$ar_values = array_merge($ar_values, tool_export::recursive_value_resolve($item->component_tipo, $item->section_tipo, $item->from_section_tipo, $item->value, $quotes));
 				
 				}else{
 					
 					// vertical format 
 						$ar_found = array_filter($ar_values, function($element) use($item){
-							return $element->component_tipo===$item->component_tipo;
+							return $element->component_tipo===$item->component_tipo && $element->from_section_tipo===$item->from_section_tipo;
 						});					
 						if (!empty($ar_found)) {
 
@@ -370,6 +384,7 @@ class tool_export extends tool_common {
 								$row_item = new stdClass();
 									$row_item->component_tipo	= $item->component_tipo;
 									$row_item->section_tipo 	= $item->section_tipo;
+									$row_item->from_section_tipo= $item->from_section_tipo;
 									$row_item->value 			= $current_value;
 
 								$ar_values[] = $row_item;
@@ -381,8 +396,8 @@ class tool_export extends tool_common {
 		}else{			
 			
 			// vertical format
-				$ar_found = array_filter($ar_values, function($element) use($component_tipo){
-					return $element->component_tipo===$component_tipo;
+				$ar_found = array_filter($ar_values, function($element) use($component_tipo, $from_section_tipo){
+					return $element->component_tipo===$component_tipo && $element->from_section_tipo===$from_section_tipo;
 				});					
 				if (!empty($ar_found)) {
 
@@ -398,6 +413,7 @@ class tool_export extends tool_common {
 						$row_item = new stdClass();
 							$row_item->component_tipo	= $component_tipo;
 							$row_item->section_tipo 	= $section_tipo;
+							$row_item->from_section_tipo= $from_section_tipo;
 							$row_item->value 			= $current_value;
 
 						$ar_values[] = $row_item;
@@ -627,7 +643,7 @@ class tool_export extends tool_common {
 					
 					# IMAGES . Replace images url to html img tags
 					$regex = '/https?\:\/\/[^\\" ]+.(jpg|svg)/i';
-					$cell  = preg_replace($regex, "<img src=\"$0\" style=\"width:auto;height:57px\"/>", $cell);
+					$cell  = preg_replace($regex, "<img src=\"$0\"/>", $cell);
 
 					# unescape separator ;
 					$cell  = str_replace('U+003B', ';', $cell);

@@ -327,6 +327,7 @@ class component_portal extends component_relation_common {
 					$item->section_id 		= $section_id;
 					$item->component_tipo 	= $current_tipo;
 					$item->section_tipo 	= $section_tipo;
+					$item->from_section_tipo= $this->section_tipo;
 					$item->model 			= $modelo_name;
 					$item->value 			= $current_value_export;
 
@@ -336,7 +337,7 @@ class component_portal extends component_relation_common {
 		#dump($ar_resolved, ' ar_resolved ++ '.to_string($this->tipo));
 		
 		$valor_export = $ar_resolved;
-		
+		#dump($valor_export, ' valor_export ++ '.to_string($this->tipo));
 		
 		return $valor_export;
 	}//end get_valor_export
