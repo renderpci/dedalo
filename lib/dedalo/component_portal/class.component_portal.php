@@ -324,12 +324,13 @@ class component_portal extends component_relation_common {
 				$current_value_export = $component->get_valor_export( null, $lang, $quotes, $add_id );
 
 				$item = new stdClass();
-					$item->section_id 		= $section_id;
-					$item->component_tipo 	= $current_tipo;
-					$item->section_tipo 	= $section_tipo;
-					$item->from_section_tipo= $this->section_tipo;
-					$item->model 			= $modelo_name;
-					$item->value 			= $current_value_export;
+					$item->section_id 			= $section_id;
+					$item->component_tipo 		= $current_tipo;
+					$item->section_tipo 		= $section_tipo;
+					$item->from_section_tipo 	= $this->section_tipo;
+					$item->from_component_tipo 	= $this->tipo;
+					$item->model 				= $modelo_name;
+					$item->value 				= $current_value_export;
 
 				$ar_resolved[] = $item;
 			}

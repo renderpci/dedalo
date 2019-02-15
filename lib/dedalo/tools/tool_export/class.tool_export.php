@@ -165,9 +165,10 @@ class tool_export extends tool_common {
 							});
 							if (empty($ar_found)) {
 								$h_item = new stdClass();
-									$h_item->component_tipo 	= $item->component_tipo;
-									$h_item->section_tipo   	= $item->section_tipo;
-									$h_item->from_section_tipo  = $item->from_section_tipo;
+									$h_item->component_tipo 	  = $item->component_tipo;
+									$h_item->section_tipo   	  = $item->section_tipo;
+									$h_item->from_section_tipo    = $item->from_section_tipo;
+									$h_item->from_component_tipo  = $item->from_component_tipo;
 								$header_tipos[] = $h_item;
 							}
 						}
@@ -190,11 +191,16 @@ class tool_export extends tool_common {
 								#if ($h_item->section_tipo!==$section_tipo) {
 									$column_name  = '';
 									// from_section label
-										if ($h_item->from_section_tipo!==$h_item->section_tipo) {											
-											$column_name .= RecordObj_dd::get_termino_by_tipo($h_item->from_section_tipo, DEDALO_DATA_LANG, true, true) . PHP_EOL ;
-										}									
+										if ($h_item->from_section_tipo!==$h_item->section_tipo && $h_item->from_section_tipo!==$section_tipo) {											
+											$column_name .= ''.RecordObj_dd::get_termino_by_tipo($h_item->from_section_tipo, DEDALO_DATA_LANG, true, true) . PHP_EOL ;
+										}
 									// section label
-										$column_name .= RecordObj_dd::get_termino_by_tipo($h_item->section_tipo, DEDALO_DATA_LANG, true, true) . PHP_EOL ;									
+										#$column_name .= RecordObj_dd::get_termino_by_tipo($h_item->section_tipo, DEDALO_DATA_LANG, true, true) . PHP_EOL ;
+
+									// from_component label
+										if ($h_item->from_component_tipo!==$h_item->component_tipo) {											
+											$column_name .= ''.RecordObj_dd::get_termino_by_tipo($h_item->from_component_tipo, DEDALO_DATA_LANG, true, true) . PHP_EOL ;
+										}									
 									// component label
 										$column_name .= RecordObj_dd::get_termino_by_tipo($current_tipo, DEDALO_DATA_LANG, true, true);
 								#}else{
@@ -335,7 +341,7 @@ class tool_export extends tool_common {
 						#dump($valor_export, ' valor_export ++ '.to_string());
 				
 				// add merged
-					$row_deep_resolved = array_merge($row_deep_resolved, tool_export::recursive_value_resolve($component_tipo, $section_tipo, $from_section_tipo=$section_tipo, $valor_export, $quotes));
+					$row_deep_resolved = array_merge($row_deep_resolved, tool_export::recursive_value_resolve($component_tipo, $section_tipo, $from_section_tipo=$section_tipo, $from_component_tipo=$component_tipo, $valor_export, $quotes));
 			}			
 			
 
@@ -351,7 +357,7 @@ class tool_export extends tool_common {
 	* RECURSIVE_VALUE_RESOLVE
 	* @return array $ar_values
 	*/
-	public static function recursive_value_resolve($component_tipo, $section_tipo, $from_section_tipo, $valor_export, $quotes, $separator=PHP_EOL) {
+	public static function recursive_value_resolve($component_tipo, $section_tipo, $from_section_tipo, $from_component_tipo, $valor_export, $quotes, $separator=PHP_EOL) {
 		
 		$ar_values = [];
 
@@ -362,7 +368,7 @@ class tool_export extends tool_common {
 				if (is_array($item->value)) {
 
 					// Recursion resolve
-						$ar_values = array_merge($ar_values, tool_export::recursive_value_resolve($item->component_tipo, $item->section_tipo, $item->from_section_tipo, $item->value, $quotes));
+						$ar_values = array_merge($ar_values, tool_export::recursive_value_resolve($item->component_tipo, $item->section_tipo, $item->from_section_tipo, $item->from_component_tipo, $item->value, $quotes));
 				
 				}else{
 					
@@ -382,10 +388,11 @@ class tool_export extends tool_common {
 							// create new and add
 								$current_value 	= tool_export::format_valor_csv_export_string($item->value, $quotes); // $item->value;
 								$row_item = new stdClass();
-									$row_item->component_tipo	= $item->component_tipo;
-									$row_item->section_tipo 	= $item->section_tipo;
-									$row_item->from_section_tipo= $item->from_section_tipo;
-									$row_item->value 			= $current_value;
+									$row_item->component_tipo		= $item->component_tipo;
+									$row_item->section_tipo 		= $item->section_tipo;
+									$row_item->from_section_tipo 	= $item->from_section_tipo;
+									$row_item->from_component_tipo 	= $item->from_component_tipo;
+									$row_item->value 				= $current_value;
 
 								$ar_values[] = $row_item;
 						}
@@ -411,10 +418,11 @@ class tool_export extends tool_common {
 					// create new and add
 						$current_value 	= tool_export::format_valor_csv_export_string($valor_export, $quotes); //$valor_export;
 						$row_item = new stdClass();
-							$row_item->component_tipo	= $component_tipo;
-							$row_item->section_tipo 	= $section_tipo;
-							$row_item->from_section_tipo= $from_section_tipo;
-							$row_item->value 			= $current_value;
+							$row_item->component_tipo		= $component_tipo;
+							$row_item->section_tipo 		= $section_tipo;
+							$row_item->from_section_tipo	= $from_section_tipo;
+							$row_item->from_component_tipo 	= $from_component_tipo;
+							$row_item->value 				= $current_value;
 
 						$ar_values[] = $row_item;
 				}
@@ -437,7 +445,7 @@ class tool_export extends tool_common {
 		
 		// csv scape with double quotes	
 			$valor_export = str_replace('"', '""', $valor_export);
-			
+
 		// Create final value inside csv quotes
 			$valor_export = $quotes.trim($valor_export).$quotes;
 
