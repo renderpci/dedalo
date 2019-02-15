@@ -65,40 +65,49 @@ class component_calculation extends component_common {
 
 		$valor = self::get_dato();
 
+		#if($this->tipo==='mdcat2434')
+			#dump($valor, ' valor ++ '.to_string());
+
 		if(is_array($valor)){
-			$formula = $this->get_JSON_formula();
-			if($formula!==false){
-				if(isset($formula[0]->data->separator_fields)) {
-					$separator_fields = $formula[0]->data->separator_fields;
+
+			// separator_fields from formula
+				$formula = $this->get_JSON_formula();
+				if($formula!==false){
+					if(isset($formula[0]->data->separator_fields)) {
+						$separator_fields = $formula[0]->data->separator_fields;
+					}else{
+						$separator_fields = ' | ';
+					}
 				}else{
 					$separator_fields = ' | ';
 				}
-			}else{
-				$separator_fields = ' | ';
-			}
 			
-			#$valor = implode($separator_fields,$valor);
-			$ar_values = array();
-			foreach ($valor as $key => $current_value) {
-				if (is_object($current_value) || is_array($current_value)) {
-					$current_value = json_encode($current_value, JSON_PRETTY_PRINT);
+			// ar values
+				$ar_values = array();
+				foreach ($valor as $key => $current_value) {
+					if (is_object($current_value) || is_array($current_value)) {
+						$current_value = json_encode($current_value, JSON_PRETTY_PRINT);
+					}
+					$ar_values[] = $current_value;
 				}
-				$ar_values[] = $current_value;
-			}
-			$valor = implode($separator_fields, $ar_values);
+
+			// value string
+				$valor = implode($separator_fields, $ar_values);
 		}
 		
 
-		#if(SHOW_DEBUG===true) {
-		#	if (!is_null($valor) && !is_string($valor) && !is_numeric($valor)) {
-		#		$msg = "WARNING: Current 'valor' in tipo:$this->tipo is NOT valid string. Type is:\"".gettype($valor).'" - valor:'. var_export($valor, true);
-		#		trigger_error($msg);
-		#		debug_log(__METHOD__." ".$msg, logger::WARNING);
-		#		dump(debug_backtrace(), 'get_valor debug_backtrace() ++ '.to_string());
-		#	}
-		#}
+		// debug
+			#if(SHOW_DEBUG===true) {
+			#	if (!is_null($valor) && !is_string($valor) && !is_numeric($valor)) {
+			#		$msg = "WARNING: Current 'valor' in tipo:$this->tipo is NOT valid string. Type is:\"".gettype($valor).'" - valor:'. var_export($valor, true);
+			#		trigger_error($msg);
+			#		debug_log(__METHOD__." ".$msg, logger::WARNING);
+			#		dump(debug_backtrace(), 'get_valor debug_backtrace() ++ '.to_string());
+			#	}
+			#}
 		
-		if(!is_array($valor)) return $valor;
+		// string and numbers
+			if(!is_array($valor)) return $valor;
 
 		return "<em>No string value</em>";
 	}//end get_valor
@@ -1373,6 +1382,44 @@ class component_calculation extends component_common {
 		
 		return $clean_value;
 	}//end render_list_value
+
+
+
+	/**
+	* GET_VALOR_LIST_HTML_TO_SAVE
+	* Usado por section:save_component_dato
+	* Devuelve a section el html a usar para rellenar el 'campo' 'valor_list' al guardar
+	* Por defecto será el html generado por el componente en modo 'list', pero en algunos casos
+	* es necesario sobre-escribirlo, como en component_portal, que ha de resolverse obigatoriamente en cada row de listado
+	* @see class.section.php
+	* @return string $html
+	*/
+	public function get_valor_list_html_to_save() {
+		$valor = $this->get_valor();
+		
+		return $valor;
+	}//end get_valor_list_html_to_save
+
+
+
+	/**
+	* GET_VALOR_EXPORT
+	* Return component value sended to export data
+	* @return string $valor
+	*/
+	public function get_valor_export( $valor=null, $lang=DEDALO_DATA_LANG, $quotes, $add_id ) {
+
+		#if (empty($valor)) {
+			$valor = $this->get_valor();
+		#}
+
+		if(SHOW_DEBUG===true) {
+			#$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($this->tipo,true);
+			#return "COMMON[$modelo_name]: ".to_string($valor);
+		}
+
+		return to_string($valor);
+	}//end get_valor_export	
 
 
 
