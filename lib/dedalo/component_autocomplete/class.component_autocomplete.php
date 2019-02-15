@@ -365,6 +365,7 @@ class component_autocomplete extends component_relation_common {
 					$item->section_id 		= $section_id;
 					$item->component_tipo 	= $current_tipo;
 					$item->section_tipo 	= $section_tipo;
+					$item->from_section_tipo= $this->section_tipo;
 					$item->model 			= $modelo_name;
 					$item->value 			= $current_value_export;
 
