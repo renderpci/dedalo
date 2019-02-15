@@ -615,7 +615,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 			if ($ar_exclude_models!==false) {
 				$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_terminoID,true);
 				if (in_array($modelo_name, $ar_exclude_models)) {
-					debug_log(__METHOD__." Skiped model '$modelo_name' ".to_string($current_terminoID), logger::DEBUG);
+					#debug_log(__METHOD__." Skiped model '$modelo_name' ".to_string($current_terminoID), logger::DEBUG);
 					continue;	// Skip current modelo and childrens 
 				}				
 			}
