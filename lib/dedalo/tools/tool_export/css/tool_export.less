@@ -5,32 +5,68 @@
 @import "@{common_css}/library.less";
 
 
+.caption {
+	background-color: #F0F0F0;
+	padding: 10px;
+}
 
 /* TABLE_CSV
 ----------------------------------------- */
-.table_csv {
-	background-color: #C9EDB8;
-	font-family: Arial, sans-serif;
-	font-size: 12px;
-	width: 100%;
-	table-layout: fixed;
-	}
-	.table_csv tr {
+	table.table_csv {
+		background-color: #C9EDB8;
+		font-family: Arial, sans-serif;
+		font-size: 12px;
+		width: 100%;
+		table-layout: fixed;		
+	
+		tr {
 
-	}	
-	.table_csv td, .table_csv th {
-		display: table-cell;
-		max-height: 50px;
-		overflow: auto;
-		background-color: #F5F5F5;
-		padding: 2px;
-		overflow-wrap: break-word;
-		border: 1px solid rgb(255, 255, 255);
-	}
-	.table_csv th {
-		background-color: #E2E2E2;
-	}
+			>th, >td {
+				display: table-cell;
+				max-height: 50px;
+				overflow: auto;				
+				padding: 2px;
+				padding-left: 0.4em;
+				overflow-wrap: break-word;
+				border: 1px solid rgb(255, 255, 255);
+			}
 
+			>th {
+				background-color: #E2E2E2;
+				vertical-align: text-top;
+				border-bottom: 1px solid #eeeeee;
+
+				position: -webkit-sticky;
+				position: sticky;
+
+    			top: -1px;
+    			//top: -34px;
+    			opacity: 0.95;
+			}
+
+			>td {
+				background-color: #F5F5F5;
+				border-bottom: 1px solid #eeeeee;
+
+				img {
+					height: 57px;
+					width: auto;
+				}
+			}
+
+			&:nth-child(even) {
+
+				>td {
+					background-color: #f9f9f9;
+				}				
+			}
+
+		}
+		
+	}//end .table_csv
+		
+	
+	
 
 
 
@@ -41,7 +77,7 @@
 	/*background-color: #F1EA67;*/
 	width: 100%;
 	display: table;
-	margin-left: 40px;
+	padding-left: 40px;
 	margin-bottom: 65px;
 	}
 	.col {
@@ -87,6 +123,10 @@
 		/*min-width: 250px;*/
 		padding: 10px;
 		height: 100%;
+		//padding-bottom: 0;
+		//margin-bottom: 0;
+		//display: grid;
+
 	}
 	#wrap_columns_selector li {
 		min-width: 250px;
@@ -207,18 +247,14 @@
 
 	}//end #download_file
 		
-		
-		
-
-	
-		
-		
+			
 
 
 	/* TABLE_DATA_PREVIEW
 	----------------------------------------- */
 	#table_data_preview {
 		clear: both;
+		margin-bottom: 40px;
 		}
 		#table_data_preview:before {
 			content: " ";
@@ -229,15 +265,39 @@
 
 
 
+// content_html
+	.content_html {		
+		width: 100%;
+		height: 100vh;
+		display: block;		
+	}	
+
+
+// tool_title
+	.tool_title {
+		margin: 0;
+		padding: 40px;
+	}
+
+
+
 
 
 // print
 	@media print {    
-    .no-print, .no-print *
-    {
-        display: none !important;
-    }
-}
+	    .no-print, .no-print *
+	    {
+	        display: none !important;
+	    }
+	    #table_data_preview {
+	    	margin: 0;
+	    	padding: 0;
+
+	    	th {
+	    		position: initial;
+	    	}
+	    }
+	}
 
 
 

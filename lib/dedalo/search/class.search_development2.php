@@ -324,10 +324,14 @@ class search_development2 {
 					$new_search_query_object_filter = self::conform_search_query_object($op, $ar_value);
 					break; // Only expected one
 				}
-
+	
 				# Replace filter array with components preparsed values
-				$this->search_query_object->filter = $new_search_query_object_filter;
-					#dump( json_encode($this->search_query_object, JSON_PRETTY_PRINT), ' json_encode(value) ++ '.to_string());
+				if (isset($new_search_query_object_filter)) {
+					$this->search_query_object->filter = $new_search_query_object_filter;
+						#dump( json_encode($this->search_query_object, JSON_PRETTY_PRINT), ' json_encode(value) ++ '.to_string());
+				}else{
+					$this->search_query_object->filter = null;
+				}			
 			}		
 
 		# SELECT

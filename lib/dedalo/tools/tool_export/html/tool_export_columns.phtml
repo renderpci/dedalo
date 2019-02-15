@@ -24,7 +24,10 @@ $html='';
 				$html .= "<li data-tipo=\"$tipo\">";
 				$html .= $name;
 				if(SHOW_DEVELOPER===true) {
-					$html .= " [$tipo]";
+					$html .= ' <span class="small">';
+					$html .= "[$tipo]";
+					$html .= ' '.RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+					$html .= '</span>';
 				}
 				$html .= "</li>";
 			}
@@ -133,6 +136,9 @@ $html='';
 	# DOWNLOAD_FILE_EXCEL
 	#$html .= "<h2><a href=\"\" target=\"_blank\" id=\"download_file_link_excel\">".label::get_label("descargar")." Excel</a></h2>";
 	$html .= '<a id="download_file_link_excel" class="btn btn-success fileinput-button"><strong>'.label::get_label("descargar").' Excel</strong></a>';
+
+	// print
+		$html .= '<a id="print_button" class="btn btn-success fileinput-button" onclick="window.print()"><strong>'.label::get_label("imprimir").'</strong></a>';
 	
 	$html .= "</div>";
 

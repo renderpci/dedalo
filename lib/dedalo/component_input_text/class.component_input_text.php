@@ -228,6 +228,10 @@ class component_input_text extends component_common {
 			}
 		}
 
+		if (empty($valor)) {
+			$valor = component_common::extract_component_value_fallback($this, $lang=DEDALO_DATA_LANG, $mark=true, $main_lang=DEDALO_DATA_LANG_DEFAULT);
+		}
+
 		return to_string($valor);
 	}//end get_valor_export	
 

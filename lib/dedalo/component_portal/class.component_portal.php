@@ -179,11 +179,11 @@ class component_portal extends component_relation_common {
 
 
 	/**
-	* GET_VALOR_EXPORT
+	* GET_VALOR_EXPORT_OLD
 	* Return component value sended to export data
 	* @return string $valor
-	*/
-	public function get_valor_export( $valor=null, $lang=DEDALO_DATA_LANG, $quotes, $add_id ) {
+	*//*
+	public function get_valor_export_OLD( $valor=null, $lang=DEDALO_DATA_LANG, $quotes, $add_id ) {
 		
 		if (empty($valor)) {
 			$dato = $this->get_dato();				// Get dato from DB
@@ -237,9 +237,18 @@ class component_portal extends component_relation_common {
 				$current_value_export = str_replace(array("\n","  "),array(' ',' '),$current_value_export);
 
 				$ar_resolved[$section_id][] = $current_value_export;
+
+				$item = new stdClass();
+					$item->section_id 	= $section_id;
+					$item->tipo 		= $current_tipo;
+					$item->model 		= $modelo_name;
+					$item->value 		= $current_value_export;
+
+				$ar_resolved[] = $item;
 			}
 		}//end foreach( (array)$dato as $key => $value)
-
+				
+		
 		$ar_valor_export=array();
 		foreach ($ar_resolved as $key => $ar_value) {
 			#$valor_export .= implode("\t", $ar_value).PHP_EOL;
@@ -257,9 +266,81 @@ class component_portal extends component_relation_common {
 		}
 
 		$valor_export = implode(PHP_EOL, $ar_valor_export);
-
+	
 
 		return (string)$valor_export;
+	}//end get_valor_export_OLD
+	*/
+
+
+
+	/**
+	* GET_VALOR_EXPORT
+	* Return component value sended to export data
+	* @return string $valor
+	*/
+	public function get_valor_export( $valor=null, $lang=DEDALO_DATA_LANG, $quotes, $add_id ) {
+		
+		if (empty($valor)) {
+			$dato = $this->get_dato();				// Get dato from DB
+		}else{
+			$this->set_dato( json_decode($valor) );	// Use parsed json string as dato
+		}
+
+		$dato = $this->get_dato();
+		
+
+		// TERMINOS_RELACIONADOS . Obtenemos los terminos relacionados del componente actual	
+			$ar_terminos_relacionados = (array)$this->RecordObj_dd->get_relaciones();
+
+		
+		// FIELDS
+			$fields=array();
+			foreach ($ar_terminos_relacionados as $key => $ar_value) {
+				foreach ($ar_value as $current_tipo) {
+					
+					$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
+					if (strpos($modelo_name, 'component_')!==false) {
+						$fields[] = $current_tipo;
+					}
+				}
+			}
+
+		$ar_resolved=array();
+		foreach( (array)$dato as $key => $value) {
+
+			$section_tipo 	= $value->section_tipo;
+			$section_id 	= $value->section_id;
+			
+			foreach ($fields as $current_tipo) {				
+			
+				$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
+				$component 		= component_common::get_instance($modelo_name,
+																 $current_tipo,
+																 $section_id,
+																 'list',
+																 $lang,
+																 $section_tipo);
+				$current_value_export = $component->get_valor_export( null, $lang, $quotes, $add_id );
+
+				$item = new stdClass();
+					$item->section_id 			= $section_id;
+					$item->component_tipo 		= $current_tipo;
+					$item->section_tipo 		= $section_tipo;
+					$item->from_section_tipo 	= $this->section_tipo;
+					$item->from_component_tipo 	= $this->tipo;
+					$item->model 				= $modelo_name;
+					$item->value 				= $current_value_export;
+
+				$ar_resolved[] = $item;
+			}
+		}//end foreach( (array)$dato as $key => $value)
+		#dump($ar_resolved, ' ar_resolved ++ '.to_string($this->tipo));
+		
+		$valor_export = $ar_resolved;
+		#dump($valor_export, ' valor_export ++ '.to_string($this->tipo));
+		
+		return $valor_export;
 	}//end get_valor_export
 
 
