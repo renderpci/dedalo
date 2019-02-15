@@ -640,15 +640,15 @@ class tool_export extends tool_common {
 		#
 		# TABLE HTML
 		$table_html ='';
+		$table_html .= "<div class=\"caption no-print\">TABLE FROM: $file</div>";
 		$table_html .= "<table class=\"table_csv\">\n\n";		
 		ini_set('auto_detect_line_endings',TRUE);
-		$f = fopen($file, "r");
-		$table_html .= "<caption class=\"no-print\">TABLE FROM: $file</caption>";
-		$i=0; while (($line = fgetcsv($f, 300000, $delimiter)) !== false) {
-			
-				$table_html .= "<tr>";
+		$f = fopen($file, "r");			
+		$i=0; while (($line = fgetcsv($f, 300000, $delimiter)) !== false) {			
+				
+				$table_html .= '<tr>';
 				foreach ($line as $cell) {
-					$table_html .= ($header && $i==0) ? '<th>' : '<td>';
+					$table_html .= ($header && $i===0) ? '<th>' : '<td>';
 					$cell=nl2br($cell);					
 					#$cell=htmlspecialchars($cell); // htmlspecialchars_decode($cell);					
 					#$cell = str_replace("\t", " <blockquote> </blockquote> ", $cell);
@@ -667,8 +667,9 @@ class tool_export extends tool_common {
 					$table_html .= ($header && $i==0) ? '</th>' : '</td>';
 				}
 				$table_html .= "</tr>\n";
+				
 				$i++;
-		}
+		}		
 		fclose($f);
 		ini_set('auto_detect_line_endings',FALSE);
 		$table_html .= "\n</table>";
