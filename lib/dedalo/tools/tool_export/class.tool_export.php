@@ -431,9 +431,13 @@ class tool_export extends tool_common {
 	* @return string
 	*/
 	public static function format_valor_csv_export_string($valor_export, $quotes) {
+
+		// remove untranstaled tags
+			$valor_export = preg_replace('/<\/?mark[^>]*>/i', '', $valor_export);
 		
 		// csv scape with double quotes	
 			$valor_export = str_replace('"', '""', $valor_export);
+			
 		// Create final value inside csv quotes
 			$valor_export = $quotes.trim($valor_export).$quotes;
 
@@ -636,20 +640,23 @@ class tool_export extends tool_common {
 			
 				$table_html .= "<tr>";
 				foreach ($line as $cell) {
-					$table_html .= ($header && $i==0) ? "<th>" : "<td>";
+					$table_html .= ($header && $i==0) ? '<th>' : '<td>';
 					$cell=nl2br($cell);					
 					#$cell=htmlspecialchars($cell); // htmlspecialchars_decode($cell);					
 					#$cell = str_replace("\t", " <blockquote> </blockquote> ", $cell);
 					
-					# IMAGES . Replace images url to html img tags
-					$regex = '/https?\:\/\/[^\\" ]+.(jpg|svg)/i';
-					$cell  = preg_replace($regex, "<img src=\"$0\"/>", $cell);
+					// images . Replace images url to html img tags
+						$regex = '/https?\:\/\/[^\\" ]+.(jpg|svg)/i';
+						$cell  = preg_replace($regex, "<img src=\"$0\"/>", $cell);
 
-					# unescape separator ;
-					$cell  = str_replace('U+003B', ';', $cell);
+					// unescape separator ;
+						$cell  = str_replace('U+003B', ';', $cell);
+
+					// Revove html mark tags
+						#$cell = preg_replace('/<\/?mark[^>]*>/i', '', $cell);
 					
 					$table_html .= $cell;
-					$table_html .= ($header && $i==0) ? "</th>" : "</td>";
+					$table_html .= ($header && $i==0) ? '</th>' : '</td>';
 				}
 				$table_html .= "</tr>\n";
 				$i++;
