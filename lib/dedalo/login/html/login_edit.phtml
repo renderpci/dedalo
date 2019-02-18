@@ -2,27 +2,28 @@
 
 	# VISUALIZADOR HTML	
 	
-	print '<!-- LOGIN [tipo:$tipo id_matrix:$id] -->';
+	print '<!-- LOGIN -->';
 	print '<div class="login_body">';
 	print '<div class="css_wrap_login" id="wrap_login">';
 
-	#
-	# MAINTENANCE
-	$maintenance_mode_class='';
-	if (DEDALO_MAINTENANCE_MODE===true) {
-		$label = label::get_label('sitio_en_mantenimiento');		
-		if ( strpos($label, '.')!==false ) {
-			$label = substr($label, 0, strpos($label, '.') );
+
+	// maintenance
+		$maintenance_mode_class='';
+		if (DEDALO_MAINTENANCE_MODE===true) {
+			$label = label::get_label('sitio_en_mantenimiento');
+			if ( strpos($label, '.')!==false ) {
+				$label = substr($label, 0, strpos($label, '.') );
+			}
+			echo "<div class=\"maintenance_advice main_font_light\">$label</div>";
+			$maintenance_mode_class = 'maintenance_mode_class';
 		}
-		echo "<div class=\"maintenance_advice main_font_light\">$label</div>";
-		$maintenance_mode_class = 'maintenance_mode_class';
-	}
 
-	print '<form class="css_form '.$maintenance_mode_class.'" name="form_login" id="form_login" action="" method="post">'; // onsubmit="login.Login()"
+	
+	$html_content  = '';
 
 
-		# CONTENIDO (INPUT)
-		$html_content = '';
+	// form	
+		$html_content .= '<form class="css_form '.$maintenance_mode_class.'" name="form_login" id="form_login" action="" method="post">';
 
 			// lang jump
 				$html_content .= $dedalo_aplication_langs_selector_html;
@@ -85,45 +86,42 @@
 						$html_content .= "  - ".DEDALO_USERNAME_CONN." ";
 						#$html_content .= " : ".DEDALO_DB_PORT_CONN." ";
 						$html_content .= "</span>";
-					}				
+					}
 			
 				$html_content .= "</div>";
 
 			// SAML login
 				if (defined('SAML_CONFIG') && SAML_CONFIG['active']===true) {
 					/*
-					$button_label = 'Autologin';// label::get_label('autologin')
-					$html_content .= '<button type="button" class="btn btn-success btn-block autologin" onclick="login.autologin(\''.SAML_CONFIG['url'].'\')">'.$button_label.'</button>';
-					if(SAML_CONFIG['debug']===true) {
-						$html_content .= '<br>SAML ';
-						$html_content .= '   <a href="'.SAML_CONFIG['url'].'/metadata.php">Metadata</a>';
-						$html_content .= ' | <a href="'.SAML_CONFIG['url'].'/acs.php">ACS</a>';
-						$html_content .= ' | <a href="'.SAML_CONFIG['url'].'/sls.php">SLS</a>';
-						$html_content .= '</br>';
-					}
-					*/
+						$button_label = 'Autologin';// label::get_label('autologin')
+						$html_content .= '<button type="button" class="btn btn-success btn-block autologin" onclick="login.autologin(\''.SAML_CONFIG['url'].'\')">'.$button_label.'</button>';
+						if(SAML_CONFIG['debug']===true) {
+							$html_content .= '<br>SAML ';
+							$html_content .= '   <a href="'.SAML_CONFIG['url'].'/metadata.php">Metadata</a>';
+							$html_content .= ' | <a href="'.SAML_CONFIG['url'].'/acs.php">ACS</a>';
+							$html_content .= ' | <a href="'.SAML_CONFIG['url'].'/sls.php">SLS</a>';
+							$html_content .= '</br>';
+						}
+						*/
 					$html_content .= include(dirname(__FILE__) . '/saml_button.phtml');
 				}
 
-
-		// js
-			$html_content .= '<script>';
-			$init_options = new stdClass();
-				$init_options->development_server  		= DEVELOPMENT_SERVER;
-				$init_options->dedalo_maintenance_mode 	= DEDALO_MAINTENANCE_MODE;
-			$html_content .= "login.init(".json_encode($init_options).");";
-			$html_content .= '</script>';
-
-		
-		
-		# PRINT HTML
-		print $html_content;
+			// js
+				$html_content .= '<script>';
+				$init_options = new stdClass();
+					$init_options->development_server  		= DEVELOPMENT_SERVER;
+					$init_options->dedalo_maintenance_mode 	= DEDALO_MAINTENANCE_MODE;
+				$html_content .= "login.init(".json_encode($init_options).");";
+				$html_content .= '</script>';
 
 
-	
-	
-	print '</form>';	
+		$html_content .= '</form>';	
+			
+
+
+	// print html
+		print $html_content;	
+
+
 	print '</div>'; //css_wrap_login	
 	print '</div>'; //login_body
-
-
