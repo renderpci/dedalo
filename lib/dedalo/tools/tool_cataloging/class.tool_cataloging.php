@@ -9,23 +9,23 @@ class tool_cataloging {
 
 	public $source_list;
 	public $source_thesaurus;
-	public $button_triguer_tipo;
+	public $button_trigger_tipo;
 
 	public function __construct($section_tipo=null, $modo='button') {
 
-		$button_triguer_tipo = isset($_REQUEST['button_tipo']) ? safe_tipo($_REQUEST['button_tipo']) : null;
+		$button_trigger_tipo = isset($_REQUEST['button_tipo']) ? safe_tipo($_REQUEST['button_tipo']) : null;
 		
-		if (empty($button_triguer_tipo)) {
+		if (empty($button_trigger_tipo)) {
 			throw new Exception("Error Processing Request. Var section is empty", 1);
 		}
 
-		$button_triguer = new RecordObj_dd($button_triguer_tipo);
+		$button_triguer = new RecordObj_dd($button_trigger_tipo);
 		$button_triguer_properties = $button_triguer->get_propiedades(true);
 
 		$this->source_list 			= $button_triguer_properties->source_list;
 		$this->source_thesaurus		= $button_triguer_properties->source_thesaurus;
 		$this->modo 				= $modo;
-		$this->button_triguer_tipo 	= $button_triguer_tipo;
+		$this->button_trigger_tipo 	= $button_trigger_tipo;
 
 		return true;
 	}//end __construct
@@ -40,11 +40,11 @@ class tool_cataloging {
 
 		$context_data = [];
 
-		$button_triguer_tipo = $this->button_triguer_tipo;
+		$button_trigger_tipo = $this->button_trigger_tipo;
 
 		$context_object = new stdClass();
 		$context_object->tool 		= get_class($this);
-		$context_object->tool_label	= RecordObj_dd::get_termino_by_tipo($button_triguer_tipo, DEDALO_APPLICATION_LANG, true);
+		$context_object->tool_label	= RecordObj_dd::get_termino_by_tipo($button_trigger_tipo, DEDALO_APPLICATION_LANG, true);
 		$context_object->type 		= 'info';
 
 		$context_data[] = $context_object;
