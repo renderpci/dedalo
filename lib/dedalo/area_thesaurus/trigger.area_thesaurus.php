@@ -29,10 +29,29 @@ function search_thesaurus($json_data) {
 			}
 		}
 
+	// force search_query_object->select not empty
+		if (empty($search_options->search_query_object->select)) {
+			
+			$search_options->search_query_object->select = json_decode('
+			  [
+			    {
+			      "path": [
+			        {
+			          "section_tipo": "'.DEDALO_TESAURO_TIPO.'",
+			          "component_tipo": "hierarchy22",
+			          "modelo": "component_section_id",
+			          "name": "Id"
+			        }
+			      ]
+			    }
+			  ]
+			');		
+		}
+		#dump( json_encode($search_options, JSON_PRETTY_PRINT), ' search_options ++ '.to_string()); die();
 
 	$area_thesaurus = new area_thesaurus(DEDALO_TESAURO_TIPO);
 	$response 		= $area_thesaurus->search_thesaurus( $search_options );
-		#dump( json_encode((array)$response), ' $response ++ '.to_string());
+		#dump( json_encode((array)$response), ' $response ++ '.to_string()); die();
 
 	# Debug
 	if(SHOW_DEBUG===true) {
@@ -47,7 +66,6 @@ function search_thesaurus($json_data) {
 
 	return (object)$response;
 }//end search_thesaurus
-
 
 
 
