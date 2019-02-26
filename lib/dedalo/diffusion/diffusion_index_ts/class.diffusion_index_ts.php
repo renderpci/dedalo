@@ -147,13 +147,6 @@ class diffusion_index_ts extends diffusion {
 		#	return $this->ar_locators;
 		#}
 
-		/* Es un poco más rápido a través de la búsqueda
-			$matrix_table 			= RecordObj_descriptors::get_matrix_table_from_tipo( $this->terminoID );
-			$RecordObj_descriptors 	= new RecordObj_descriptors($matrix_table, null, $this->terminoID, DEDALO_DATA_NOLAN, 'index', false);	//($matrix_table=null, $id=NULL, $parent=NULL, $lang=NULL, $tipo='termino', $fallback=false) { 
-			$ar_indexations 		= json_decode( $RecordObj_descriptors->get_dato() );
-				#dump($ar_indexations, ' ar_indexations ++ '.to_string());
-			*/
-
 		#$ar_indexations = Tesauro::get_ar_indexations( $this->terminoID );
 			#dump($ar_indexations,'$ar_indexations');
 
@@ -168,17 +161,6 @@ class diffusion_index_ts extends diffusion {
 														 $this->section_tipo);
 
 		$ar_locators = $component->get_dato();
-
-		/*
-		$component 		= component_common::get_instance('component_relation_struct',
-														 $relation_struct_component_tipo,
-														 $this->section_id,
-														 'list',
-														 DEDALO_DATA_NOLAN,
-														 $this->section_tipo); 
-
-		$ar_locators = $component->get_dato(); */
-			#dump($ar_locators, ' ar_locators ++ '.to_string());
 
 		return (array)$ar_locators;
 	}
