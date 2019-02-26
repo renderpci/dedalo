@@ -956,6 +956,7 @@ class web_data {
 			$options->lang 				= WEB_CURRENT_LANG_CODE;
 			$options->return_text		= false;
 			$options->filter_by_tag_id	= false; // false | array
+			$options->return_restricted	= false;
 			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
 		#
@@ -972,7 +973,7 @@ class web_data {
 			$s_options->sql_filter 	= (string)$sql_filter;
 
 		$rows_data	= (object)web_data::get_rows_data( $s_options );
-			#dump($rows_data, ' rows_data ++ '.to_string()); die();
+			#dump($rows_data, ' rows_data ++ '.to_string()); #die();
 
 		$raw_text = '';
 		if (is_array($rows_data->result)) foreach($rows_data->result as $key => $value) {			
@@ -1000,7 +1001,7 @@ class web_data {
 			$fr_options->video_url 	 	 		= null; # Like 'http://mydomain.org/dedalo/media/av/404/'
 			$fr_options->margin_seconds_in  	= null;
 			$fr_options->margin_seconds_out 	= null;
-			$fr_options->fragment_terms_inside 	= false; # If true, calculate terms indexed inide this fragment 
+			$fr_options->fragment_terms_inside 	= false; # If true, calculate terms indexed inside this fragment 
 			$fr_options->indexation_terms 		= false; # If true, calculate all terms used in this indexation
 		
 		foreach ($ar_tag_id as $tag_id) {
@@ -1016,7 +1017,7 @@ class web_data {
 			$fr_options->tag_id = $tag_id;
 
 			$fragment = web_data::build_fragment($fr_options);
-				#dump($fragment, ' fragment ++ '.to_string());
+				#dump($fragment, ' fragment ++ '.to_string($fr_options));
 			
 			$element = new stdClass();
 				$element->tag_id  	 	= $tag_id;
@@ -1037,10 +1038,20 @@ class web_data {
 				}
 
 			$ar_fragments[] = $element;
-		}
+		}//end foreach ($ar_tag_id as $tag_id)
 
-		$response->result 	= $ar_fragments;
-		$response->msg 		= 'Ok. Request done. '.__METHOD__;
+
+		// response
+			$response->result 	= $ar_fragments;
+			$response->msg 		= 'Ok. Request done. '.__METHOD__;
+
+
+		// restricted fragments. optional
+			if ($options->return_restricted===true) {
+				$ar_restricted_fragments = web_data::get_ar_restricted_fragments( $options->av_section_id );
+					#dump($ar_restricted_fragments, ' ar_restricted_fragments ++ '.to_string($options->av_section_id));
+				$response->ar_restricted_fragments = $ar_restricted_fragments;
+			}	
 
 
 		return (object)$response;
@@ -1149,31 +1160,31 @@ class web_data {
 	*/
 	public static function get_indexation_terms( $tag_id, $av_section_id, $lang ) {
 		/*
-		$AUDIOVISUAL_SECTION_TIPO 	= AUDIOVISUAL_SECTION_TIPO;
+			$AUDIOVISUAL_SECTION_TIPO 	= AUDIOVISUAL_SECTION_TIPO;
 
-		$options = new stdClass();
-			$options->table 		= (string)TABLE_THESAURUS;
-			$options->ar_fields 	= array('term_id',FIELD_TERM);
-			$options->lang 			= $lang;
-			$options->order 		= null;
-			#$options->sql_filter 	= (string)"`index` LIKE '%\"section_id\":\"$av_section_id\",\"component_tipo\":\"$TRANSCRIPTION_TIPO\",\"tag_id\":\"$tag_id\"%'" . PUBLICACION_FILTER_SQL;
-			// "type":"dd96","tag_id":"1","section_id":"22","section_tipo":"rsc167","component_tipo":"rsc36","section_top_id":"17","section_top_tipo":"oh1","from_component_tipo":"hierarchy40"
-			# {"type":"dd96","tag_id":"10","section_id":"9","section_tipo":"rsc167","component_tipo":"rsc36","section_top_id":"9","section_top_tipo":"oh1","from_component_tipo":"hierarchy40"}
-			$options->sql_filter 	= (string)"`indexation` LIKE '%\"type\":\"dd96\",\"tag_id\":\"$tag_id\",\"section_id\":\"$av_section_id\",\"section_tipo\":\"$AUDIOVISUAL_SECTION_TIPO\"%'" . PUBLICACION_FILTER_SQL;
+			$options = new stdClass();
+				$options->table 		= (string)TABLE_THESAURUS;
+				$options->ar_fields 	= array('term_id',FIELD_TERM);
+				$options->lang 			= $lang;
+				$options->order 		= null;
+				#$options->sql_filter 	= (string)"`index` LIKE '%\"section_id\":\"$av_section_id\",\"component_tipo\":\"$TRANSCRIPTION_TIPO\",\"tag_id\":\"$tag_id\"%'" . PUBLICACION_FILTER_SQL;
+				// "type":"dd96","tag_id":"1","section_id":"22","section_tipo":"rsc167","component_tipo":"rsc36","section_top_id":"17","section_top_tipo":"oh1","from_component_tipo":"hierarchy40"
+				# {"type":"dd96","tag_id":"10","section_id":"9","section_tipo":"rsc167","component_tipo":"rsc36","section_top_id":"9","section_top_tipo":"oh1","from_component_tipo":"hierarchy40"}
+				$options->sql_filter 	= (string)"`indexation` LIKE '%\"type\":\"dd96\",\"tag_id\":\"$tag_id\",\"section_id\":\"$av_section_id\",\"section_tipo\":\"$AUDIOVISUAL_SECTION_TIPO\"%'" . PUBLICACION_FILTER_SQL;
 
-		$rows_data	= (object)web_data::get_rows_data( $options );
-			#dump($rows_data, ' rows_data ++ '.to_string($tag_id));
+			$rows_data	= (object)web_data::get_rows_data( $options );
+				#dump($rows_data, ' rows_data ++ '.to_string($tag_id));
 
-		$AR_RESTRICTED_TERMS = json_decode(AR_RESTRICTED_TERMS);
-		foreach ($rows_data->result as $key => $value) {
-			# Remove restricted terms
-			if (in_array($value['term_id'], $AR_RESTRICTED_TERMS)) {
-				unset($rows_data->result[$key]);
+			$AR_RESTRICTED_TERMS = json_decode(AR_RESTRICTED_TERMS);
+			foreach ($rows_data->result as $key => $value) {
+				# Remove restricted terms
+				if (in_array($value['term_id'], $AR_RESTRICTED_TERMS)) {
+					unset($rows_data->result[$key]);
+				}
 			}
-		}
-		# Reset array keys
-		$rows_data->result = array_values($rows_data->result);
-		*/
+			# Reset array keys
+			$rows_data->result = array_values($rows_data->result);
+			*/
 		
 		# Unified version
 		$locator = new locator();
@@ -1305,8 +1316,7 @@ class web_data {
 			#if(SHOW_DEBUG===true) {
 				#dump($matches, ' matches preg_match_all_result ++ '.to_string($regexp)); #die();
 			#}			
-			if( !empty($preg_match_all_result) ) {
-				#dump($matches,'$matches');
+			if( !empty($preg_match_all_result) ) {				
 
 				$fragment_inside_key = 3;
 				$tag_in_pos_key 	 = 1;
@@ -1327,6 +1337,7 @@ class web_data {
 						# tag in position
 						$tag_in_pos = $match[$tag_in_pos_key][1];
 						#$tag_in_pos = $match[$fragment_inside_key][1];
+							#dump($tag_in_pos, ' tag_in_pos ++ '.to_string());
 
 						# tag out position
 						#$tag_out_pos = $tag_in_pos + strlen($match[0][0]);
@@ -1334,7 +1345,7 @@ class web_data {
 
 						# TC . Localizamos los TC apropiados
 						#$tcin  = OptimizeTC::optimize_tcIN(  $raw_text, false, $tag_in_pos, $pos_in_margin=0  );
-						$tcin  = OptimizeTC::optimize_tcIN(  $raw_text, $match[$tag_in_pos_key][0], false, $pos_in_margin=200  );
+						$tcin  = OptimizeTC::optimize_tcIN(  $raw_text, $match[$tag_in_pos_key][0], false, $pos_in_margin=40  );
 						#$tcout = OptimizeTC::optimize_tcOUT( $raw_text, false, $tag_out_pos, $pos_in_margin=0 );
 						$tcout = OptimizeTC::optimize_tcOUT( $raw_text, $match[$tag_out_pos_key][0], false, $pos_in_margin=100 );
 
@@ -1531,7 +1542,7 @@ class web_data {
 		if ($term_id) {
 			$filter = "`term_id` = '$term_id' AND $filter ";
 		}
-
+	
 		$options = new stdClass();
 			$options->table 		= (string)TABLE_THESAURUS;
 			$options->ar_fields 	= array('indexation','term_id');
