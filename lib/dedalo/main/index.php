@@ -6,7 +6,10 @@ $TIMER['main_start']=microtime(1);
 * and pass it to the class 'html_page' to build the page to be displayed.
 *
 */
-require dirname(dirname(__FILE__)).'/config/config4.php';
+$config4_path = dirname(dirname(__FILE__)).'/config/config4.php';
+if( !include($config4_path) ) {
+	die("Dédalo is misconfigured. Please review your app config");
+}
 
 $TIMER['config4_includes']=microtime(1);
 
