@@ -12,9 +12,9 @@ abstract class html_page {
 	* STATIC METHOD GET_HTML
 	* @param $content (String or Obj)
 	*/
-	public static function get_html( $content, $html_raw=false ) {
-	
-		if(SHOW_DEBUG===true) $start_time = start_time();
+	public static function get_html( $content, $html_raw=false, $ar_vars=[] ) {
+		
+		if(SHOW_DEBUG===true) $start_time = start_time();		
 		
 		ob_start();
 		include ( DEDALO_LIB_BASE_PATH .'/'. get_class() . '/' . get_class() . '.php' );
