@@ -1340,7 +1340,7 @@ class component_relation_common extends component_common {
 	* @return array $ar_result
 	* 	Array of locators
 	*/
-	private function get_external_result($new_dato, $ar_component_to_search, $ar_section_to_search) {
+	private function get_external_result_DES($new_dato, $ar_component_to_search, $ar_section_to_search) {
 		$start_time=microtime(1);
 
 		$value_to_search  = $new_dato;
