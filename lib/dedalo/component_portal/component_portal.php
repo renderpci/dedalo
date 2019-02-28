@@ -230,8 +230,18 @@
 		# LIST MODE
 		# Build section list from array of section's id stored in component_portal dato
 		case 'list' :
+
+				# Custom propiedades external dato 
 				$dato = $this->get_dato();
-				if (empty($dato)) return null;
+				if (empty($dato)){
+					if(isset($propiedades->source->mode) && $propiedades->source->mode==='external') {
+						$this->set_dato_external(false);	// Forces update dato with calculated external dato					
+						$dato = $this->get_dato();
+						if (empty($dato)) return null;
+					}else{
+						return null;
+					}
+				} 
 				
 				$ar_target_section_tipo 	 = $this->get_ar_target_section_tipo();
 				$ar_target_section_tipo_json = json_encode($ar_target_section_tipo);
