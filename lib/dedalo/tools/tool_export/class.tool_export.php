@@ -159,9 +159,9 @@ class tool_export extends tool_common {
 					$header_tipos = [];
 					foreach ($ar_records_deep_resolved as $key => $ar_value) {
 						#dump($ar_value, ' ar_value ++ '.to_string());
-						foreach ($ar_value as $item) {
+						foreach ($ar_value as $item) {							
 							$ar_found = array_filter($header_tipos, function($element) use($item){
-								return $element->component_tipo===$item->component_tipo && $element->from_section_tipo===$item->from_section_tipo;
+								return $element->component_tipo===$item->component_tipo && $element->from_section_tipo===$item->from_section_tipo && $element->from_component_tipo===$item->from_component_tipo;
 							});
 							if (empty($ar_found)) {
 								$h_item = new stdClass();
@@ -228,7 +228,7 @@ class tool_export extends tool_common {
 						foreach ($header_tipos as $h_item) {
 
 							$ar_found = array_filter($ar_value, function($element) use($h_item){
-								return $element->component_tipo===$h_item->component_tipo && $element->from_section_tipo===$h_item->from_section_tipo;
+								return $element->component_tipo===$h_item->component_tipo && $element->from_section_tipo===$h_item->from_section_tipo && $element->from_component_tipo===$h_item->from_component_tipo;
 							});
 							if (!empty($ar_found)) {
 								$current_value = reset($ar_found)->value;
@@ -361,7 +361,7 @@ class tool_export extends tool_common {
 		
 		$ar_values = [];
 
-		if (is_array($valor_export)) {	
+		if (is_array($valor_export)) {
 			
 			foreach ($valor_export as $item) {
 				
@@ -374,7 +374,7 @@ class tool_export extends tool_common {
 					
 					// vertical format 
 						$ar_found = array_filter($ar_values, function($element) use($item){
-							return $element->component_tipo===$item->component_tipo && $element->from_section_tipo===$item->from_section_tipo;
+							return $element->component_tipo===$item->component_tipo && $element->from_section_tipo===$item->from_section_tipo && $element->from_component_tipo===$item->from_component_tipo;
 						});					
 						if (!empty($ar_found)) {
 
@@ -403,8 +403,8 @@ class tool_export extends tool_common {
 		}else{			
 			
 			// vertical format
-				$ar_found = array_filter($ar_values, function($element) use($component_tipo, $from_section_tipo){
-					return $element->component_tipo===$component_tipo && $element->from_section_tipo===$from_section_tipo;
+				$ar_found = array_filter($ar_values, function($element) use($component_tipo, $from_section_tipo, $from_component_tipo){
+					return $element->component_tipo===$component_tipo && $element->from_section_tipo===$from_section_tipo && $element->from_component_tipo===$from_component_tipo;
 				});					
 				if (!empty($ar_found)) {
 
