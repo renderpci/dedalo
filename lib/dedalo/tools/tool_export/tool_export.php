@@ -9,7 +9,7 @@
 	$context_name		= !empty($var_requested) ? $var_requested : null;;	
 	$tool_name 			= get_class($this);
 	$file_name			= $modo;	
-	
+
 	
 	switch($modo) {
 
@@ -33,7 +33,7 @@
 
 			$var_requested 	= common::get_request_var('button_tipo');
 			$button_tipo 	= !empty($var_requested) ? $var_requested : null;
-
+	
 			# Context
 			switch ($context_name) {
 

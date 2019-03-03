@@ -34,66 +34,65 @@
 		
 		case 'list':
 
-				# ts_object class
-				include(DEDALO_LIB_BASE_PATH."/ts_object/class.ts_object.php");
+				// ts_object class
+					include(DEDALO_LIB_BASE_PATH."/ts_object/class.ts_object.php");
+				
+				// Load necessary js /css elements when we in thesaurus
+					$element_name = 'ts_object';				
+					css::$ar_url[] = DEDALO_LIB_BASE_URL."/$element_name/css/$element_name.css";
+					js::$ar_url[]  = DEDALO_LIB_BASE_URL."/$element_name/js/$element_name.js";
 
-				#
-				# Load necessary js /css elements when we in thesaurus
-				$element_name = 'ts_object';				
-				css::$ar_url[] = DEDALO_LIB_BASE_URL."/$element_name/css/$element_name.css";
-				js::$ar_url[]  = DEDALO_LIB_BASE_URL."/$element_name/js/$element_name.js";
+					$element_name = 'diffusion_index_ts';
+					css::$ar_url[] = DEDALO_LIB_BASE_URL."/diffusion/$element_name/css/$element_name.css";
+					#js::$ar_url[]  = DEDALO_LIB_BASE_URL."/$element_name/js/$element_name.js";
 
-				$element_name = 'diffusion_index_ts';
-				css::$ar_url[] = DEDALO_LIB_BASE_URL."/diffusion/$element_name/css/$element_name.css";
-				#js::$ar_url[]  = DEDALO_LIB_BASE_URL."/$element_name/js/$element_name.js";
+					$element_name = 'tool_av_versions';
+					#css::$ar_url[] = DEDALO_LIB_BASE_URL."/tools/$element_name/css/$element_name.css";
+					js::$ar_url[]  = DEDALO_LIB_BASE_URL."/tools/$element_name/js/$element_name.js";
 
-				$element_name = 'tool_av_versions';
-				#css::$ar_url[] = DEDALO_LIB_BASE_URL."/tools/$element_name/css/$element_name.css";
-				js::$ar_url[]  = DEDALO_LIB_BASE_URL."/tools/$element_name/js/$element_name.js";
-
-				css::$ar_url[] = DEDALO_LIB_BASE_URL."/section_records/css/section_records.css";
+					css::$ar_url[] = DEDALO_LIB_BASE_URL."/section_records/css/section_records.css";
 
 				# Components
-				/*$ar_component_name = [
-					'component_text_area',
-					'component_order',
-					'component_input_text',
-					'component_input_text_large',
-					'component_relation_children',
-					'component_relation_model',
-					'component_relation_related',
-					'component_relation_index',
-					'component_number',
-					'component_radio_button',
-					'component_autocomplete'
-				];
-				foreach ($ar_component_name as $current_modelo_name) {
-					common::notify_load_lib_element_tipo($current_modelo_name, 'edit');
-				}*/				
+					/*$ar_component_name = [
+						'component_text_area',
+						'component_order',
+						'component_input_text',
+						'component_input_text_large',
+						'component_relation_children',
+						'component_relation_model',
+						'component_relation_related',
+						'component_relation_index',
+						'component_number',
+						'component_radio_button',
+						'component_autocomplete'
+					];
+					foreach ($ar_component_name as $current_modelo_name) {
+						common::notify_load_lib_element_tipo($current_modelo_name, 'edit');
+					}*/				
 
-				#
+				
 				# HIERARCHY_SECTIONS
 				# Get all available sections except when filters are present
-				$hierarchy_types_filter = false;
-				if (isset($_GET['hierarchy_types'])) {
-					$hierarchy_types_filter = json_decode( safe_xss($_GET['hierarchy_types']) );
-				}
-				$hierarchy_sections_filter = false;
-				if (isset($_GET['hierarchy_sections'])) {
-					$hierarchy_sections_filter = json_decode( safe_xss($_GET['hierarchy_sections']) );
-				}
-				$hierarchy_sections = $this->get_hierarchy_sections($hierarchy_types_filter, $hierarchy_sections_filter);
-				
-				# Group sections by typology
-				$ar_sections_by_type = [];
-				foreach ($hierarchy_sections as $key => $item) {
-					$ar_sections_by_type[$item->typology][] = $item;
-				}
-				# Sort by typology section_id ASC
-				ksort($ar_sections_by_type);
-				if(SHOW_DEBUG===true) {
-					#dump($ar_sections_by_type, ' ar_sections_by_type ++ '.to_string());
-				}
+					$hierarchy_types_filter = false;
+					if (isset($_GET['hierarchy_types'])) {
+						$hierarchy_types_filter = json_decode( safe_xss($_GET['hierarchy_types']) );
+					}
+					$hierarchy_sections_filter = false;
+					if (isset($_GET['hierarchy_sections'])) {
+						$hierarchy_sections_filter = json_decode( safe_xss($_GET['hierarchy_sections']) );
+					}
+					$hierarchy_sections = $this->get_hierarchy_sections($hierarchy_types_filter, $hierarchy_sections_filter);
+					
+					# Group sections by typology
+					$ar_sections_by_type = [];
+					foreach ($hierarchy_sections as $key => $item) {
+						$ar_sections_by_type[$item->typology][] = $item;
+					}
+					# Sort by typology section_id ASC
+					ksort($ar_sections_by_type);
+					if(SHOW_DEBUG===true) {
+						#dump($ar_sections_by_type, ' ar_sections_by_type ++ '.to_string());
+					}
 
 				# Section tipos . Simple array of current sections tipo
 				$ar_section_tipos	= [];
@@ -222,8 +221,8 @@
 					
 					$search_form_html 	= '';
 					$records_search 	= new records_search($section, 'thesaurus'); // list
-					$records_search->ar_sections_by_type  = $ar_sections_by_type; // Inject ar_sections_by_type
-					$records_search->ar_real_section_tipo = array_keys($ar_sections_group); // Inject ar_sections_group
+						$records_search->ar_sections_by_type  = $ar_sections_by_type; // Inject ar_sections_by_type
+						$records_search->ar_real_section_tipo = array_keys($ar_sections_group); // Inject ar_sections_group
 					$search_form_html 	= $records_search->get_html();
 						#dump($records_search, ' $records_search ++ '.to_string());
 					
@@ -263,4 +262,3 @@
 	if( !include($page_html) ) {
 		echo "<div class=\"error\">Invalid mode $this->modo</div>";
 	}
-?>

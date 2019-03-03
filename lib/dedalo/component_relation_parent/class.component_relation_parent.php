@@ -362,62 +362,67 @@ class component_relation_parent extends component_relation_common {
 	*/
 	public static function get_parents_recursive($section_id, $section_tipo, $skip_root=true) {
 
-		static $ar_parents_recursive_resolved = array();
-		static $locators_resolved 			  = array();
+		// static vars set
+			static $ar_parents_recursive_resolved = array();
+			static $locators_resolved 			  = array();
 
-		$key_resolve = $section_tipo.'_'.$section_id;
-		if (isset($ar_parents_recursive_resolved[$key_resolve])) {
-			#debug_log(__METHOD__." RETURN ALREADY RESOLVED VALUE FROM ".to_string($key_resolve), logger::DEBUG);
-			return $ar_parents_recursive_resolved[$key_resolve];
-		}
-
-		$parents_recursive = array();
-		
-		// Add first level
-		$ar_parents 	   = component_relation_parent::get_parents($section_id, $section_tipo);
-		$parents_recursive = $ar_parents;
-
-		# Self include as reolved
-		$lkey = $section_tipo.'_'.$section_id;
-		$locators_resolved[$lkey] = $ar_parents;
-
-	
-		foreach ($ar_parents as $current_locator) {
-			# Check self recursion
-			$lkey = $current_locator->section_tipo.'_'.$current_locator->section_id;
-			//if (array_key_exists($lkey, $locators_resolved)) {
-				#debug_log(__METHOD__." SKIPPED $section_id, $section_tipo . Skipped resolution ".to_string(), logger::ERROR);
-				//$parents_recursive = array_merge($parents_recursive, $locators_resolved[$lkey]);
-				//continue;
-			//}			
-
-			// Add every parent level
-			$current_ar_parents	= component_relation_parent::get_parents_recursive($current_locator->section_id, $current_locator->section_tipo, $skip_root);
-			$current_ar_parents_safe = [];
-			foreach ($current_ar_parents as $c_parent) {
-				#debug_log(__METHOD__." c_parent ".to_string($c_parent), logger::DEBUG);
-				if ($skip_root===true) {
-					if ($c_parent->section_tipo===DEDALO_HIERARCHY_SECTION_TIPO) continue; // Skip root hierarchy term 
-				}
-				
-				# Add to array
-				$current_ar_parents_safe[] = $c_parent;
-
-				# Self include as reolved
-				#$locators_resolved[$c_parent->section_tipo.'_'.$c_parent->section_id] = [$c_parent];
+		// key_resolve
+			$key_resolve = $section_tipo.'_'.$section_id;
+			if (isset($ar_parents_recursive_resolved[$key_resolve])) {
+				#debug_log(__METHOD__." RETURN ALREADY RESOLVED VALUE FROM ".to_string($key_resolve), logger::DEBUG);
+				return $ar_parents_recursive_resolved[$key_resolve];
 			}
 
-			# Self include as reolved			
-			$locators_resolved[$lkey] = $current_ar_parents_safe;	
-			
-			$parents_recursive = array_merge($parents_recursive, $current_ar_parents_safe);				
-		}
+		// parents_recursive set
+			$parents_recursive = array();
+		
+		// Add first level
+			$ar_parents 	   = component_relation_parent::get_parents($section_id, $section_tipo);
+			$parents_recursive = $ar_parents;
 
-		# Set as resolved
-		$ar_parents_recursive_resolved[$key_resolve] = $parents_recursive;
+		// Self include as resolved
+			$lkey 						= $section_tipo.'_'.$section_id;
+			$locators_resolved[$lkey] 	= $ar_parents;
+
+		// iterate ar_parents
+			foreach ($ar_parents as $current_locator) {
+				
+				// Check self recursion
+					$lkey = $current_locator->section_tipo.'_'.$current_locator->section_id;
+					if (array_key_exists($lkey, $locators_resolved)) {
+						#debug_log(__METHOD__." SKIPPED $section_id, $section_tipo . Skipped resolution ".to_string(), logger::ERROR);
+						#$parents_recursive = array_merge($parents_recursive, $locators_resolved[$lkey]);
+						continue;
+					}			
+
+				// Add every parent level
+					$current_ar_parents		 = component_relation_parent::get_parents_recursive($current_locator->section_id, $current_locator->section_tipo, $skip_root);
+					$current_ar_parents_safe = [];
+					foreach ($current_ar_parents as $c_parent) {
+						#debug_log(__METHOD__." c_parent ".to_string($c_parent), logger::DEBUG);
+						if ($skip_root===true) {
+							if ($c_parent->section_tipo===DEDALO_HIERARCHY_SECTION_TIPO) continue; // Skip root hierarchy term 
+						}
+						
+						// Add to array
+							$current_ar_parents_safe[] = $c_parent;
+
+						// Self include as resolved
+							#$locators_resolved[$c_parent->section_tipo.'_'.$c_parent->section_id] = [$c_parent];
+					}
+
+				// Self include as resolved
+					$locators_resolved[$lkey] = $current_ar_parents_safe;	
+				
+				// add
+					$parents_recursive = array_merge($parents_recursive, $current_ar_parents_safe);				
+			}
+
+		// Set as resolved
+			$ar_parents_recursive_resolved[$key_resolve] = $parents_recursive;
 		
 		
-		return (array)$parents_recursive;
+		return $parents_recursive;
 	}//end get_parents_recursive
 
 

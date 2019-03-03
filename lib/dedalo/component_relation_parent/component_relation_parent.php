@@ -105,7 +105,7 @@
 				break;
 						
 		case 'search':
-				# dato is injected by trigger search wen is needed
+				# dato is injected by trigger search when is needed
 				$dato 		= isset($this->dato) ? $this->dato : [];				
 				$dato_json 	= json_encode($dato);
 				

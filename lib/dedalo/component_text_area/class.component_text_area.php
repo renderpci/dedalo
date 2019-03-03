@@ -1261,7 +1261,7 @@ class component_text_area extends component_common {
 	* GET_COMPONENT_INDEXATIONS
 	* @return array $ar_indexations
 	*/
-	protected function get_component_indexations( $type ) {
+	public function get_component_indexations( $type ) {
 		
 		# Search relation index in hierarchy tables
 		$options = new stdClass();
@@ -1495,8 +1495,11 @@ class component_text_area extends component_common {
 		
 		$diffusion_value = $this->get_dato();  # Important: use raw text
 
-		# Decode entrities
-		$diffusion_value = html_entity_decode($diffusion_value);
+		// Decode entities
+			$diffusion_value = html_entity_decode($diffusion_value);
+
+
+
 
 		return (string)$diffusion_value;
 	}//end get_diffusion_value

@@ -1486,7 +1486,8 @@
 	Valencia 28-01-2019 5.2.0
 		search : Recoded to make it independent of initator (js/php) and context
 
-	
+	Valencia 11-02-2019 5.2.2
+		Added psql and pgpass file check on Dédalo init sequence
 
 	
 
@@ -1509,12 +1510,12 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.2.1';
+	$DEDALO_VERSION = '5.2.10';
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '08-02-2019');
+	define('DEDALO_BUILD'	, '27-02-2019');
 
 
 	/*
