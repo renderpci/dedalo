@@ -28,8 +28,23 @@ if ( strpos($_SERVER["REQUEST_URI"], '.php')!==false ) {
 */
 
 	# set vars
-	$vars = array('t','tipo','m','modo','id','h','parent');
+	$vars = array('t','tipo','m','modo','id','h','parent','json');
 		foreach($vars as $name) $$name = common::setVar($name);
+
+
+	if (isset($json)) {
+		if ($json_object = json_decode($json)) {
+			
+			// tipo
+				$t 	= $json_object->section_tipo;
+				#$_GET["t"] = $t;
+
+			// section_id
+				if (property_exists($json_object, 'section_id')) {
+					$id 	= $json_object->section_id;
+				}			
+		}		
+	}
 
 
 	if(SHOW_DEBUG===true) {
@@ -174,8 +189,13 @@ if ( strpos($_SERVER["REQUEST_URI"], '.php')!==false ) {
 				$tool_obj 		= new $tool_name($element, 'page');
 				$content		= $tool_obj->get_html();
 
-				$html 			= html_page::get_html($content);
-				print($html);
+				// html ('t','tipo','m','modo','id','h','parent','json') => ('caller_tipo','id','t','tipo','m','modo','context_name','parent')
+					$html	= html_page::get_html($content, false, [
+						'tipo' => $tipo,
+						'modo' => $modo,
+						'id'   => $id
+					]); 
+					echo $html;
 				break;
 		
 		# SECTION
@@ -260,11 +280,14 @@ if ( strpos($_SERVER["REQUEST_URI"], '.php')!==false ) {
 				# NAVIGATOR . Fixx tipo
 				navigator::set_selected('area', $tipo); # Fix area
 				
-
-				# HTML CONTENT
-				$html = html_page::get_html( $element_obj );
-
-				print($html);
+				// html ('t','tipo','m','modo','id','h','parent','json') => ('caller_tipo','id','t','tipo','m','modo','context_name','parent')
+					$html	= html_page::get_html($element_obj, false, [
+						'tipo' => $tipo,
+						'modo' => $modo,
+						'id'   => $id
+					]);
+					#$html = html_page::get_html( $element_obj );
+					echo $html;
 				break;
 
 		default : # MODO NOT VALID
