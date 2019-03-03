@@ -6,7 +6,10 @@ $TIMER['main_start']=microtime(1);
 * and pass it to the class 'html_page' to build the page to be displayed.
 *
 */
-require dirname(dirname(__FILE__)).'/config/config4.php';
+$config4_path = dirname(dirname(__FILE__)).'/config/config4.php';
+if( !include($config4_path) ) {
+	die("Dédalo is misconfigured. Please review your app config");
+}
 
 $TIMER['config4_includes']=microtime(1);
 
@@ -62,6 +65,14 @@ if ( strpos($_SERVER["REQUEST_URI"], '.php')!==false ) {
 		exit();
 	}
 
+
+	// skip_log
+		if (isset($_GET['skip_log']) && $_GET['skip_log']==='1') {
+			# Disable logging activity and time machine # !IMPORTANT
+			logger_backend_activity::$enable_log = false;
+			RecordObj_time_machine::$save_time_machine_version = false;
+			#debug_log(__METHOD__." Disabled enable_log/save_time_machine_version for skip_log mode ".to_string(), logger::DEBUG);
+		}
 
 	#
 	# MODO : list, edit, etc..

@@ -36,18 +36,20 @@ function export_data($json_data) {
 	$tool_export  = new tool_export($section_tipo,'edit',$data_format);
 
 	$layout_map = tool_export::columns_to_layout_map($columns, $section_tipo);
-		#dump($layout_map, ' $layout_map ++ '.to_string($columns));
+		# dump($layout_map, ' $layout_map ++ '.to_string($columns));
 		if (empty($layout_map)) {			
 			$response->msg = "Error: layout_map is empty";
 			return $response;
 		}
 
+	$response->data_format = $data_format;
+	
 	// Get records to export
 	$records = $tool_export->get_records( $layout_map );
 		#dump($records, ' records ++ '.to_string());
 
 	// Result parsed as final string
-	$result_string = $tool_export->export_to('csv', $records, $encoding);
+	$result_string = $tool_export->export_to('csv', $records, $encoding, $section_tipo);
 		#dump($result, ' result ++ '.to_string());
 
 	// Write result to file (UTF8)
@@ -57,10 +59,12 @@ function export_data($json_data) {
 	
 	if ($write_result->result===true ) {
 
-		# Build excel version (ISO-8859-1)
+		// Build excel version (ISO-8859-1)
 		// Write result to file (excel ISO-8859-1)
-		$change_encodig_to_ISO  = $tool_export->change_encoding_from_uft8($result_string,'ISO-8859-1');
-		$write_result_ISO 		= $tool_export->write_result($change_encodig_to_ISO, 'excel_');
+			if ($data_format!=='dedalo') {
+				$change_encodig_to_ISO  = $tool_export->change_encoding_from_uft8($result_string,'ISO-8859-1');
+				$write_result_ISO 		= $tool_export->write_result($change_encodig_to_ISO, 'excel_');
+			}
 
 		#
 		# GET CSV FILE AS TABLE
@@ -69,7 +73,9 @@ function export_data($json_data) {
 		$response->result 	= true;						// E.g. 'ok'
 		$response->msg 		= $write_result->msg;		// E.g. 'Exported successfully'
 		$response->url 		= $write_result->url; 		// E.g. 'http://mydomain/path/file.csv'
-		$response->url_excel= $write_result_ISO->url; 	// E.g. 'http://mydomain/path/excel_file.csv'
+		if ($data_format!=='dedalo') {
+			$response->url_excel = $write_result_ISO->url; 	// E.g. 'http://mydomain/path/excel_file.csv'
+		}
 		$response->table 	= $table; 					// Table is created reading exported file
 
 	}else{

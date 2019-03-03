@@ -225,6 +225,8 @@ class ts_object extends Accessors {
 			$childrens_data->is_indexable	= (bool)self::is_indexable($this->section_tipo, $this->section_id);			
 			$childrens_data->permissions_button_new		= $this->get_permissions_element('button_new');
 			$childrens_data->permissions_button_delete 	= $this->get_permissions_element('button_delete');
+			$childrens_data->permissions_indexation 	= $this->get_permissions_element('component_relation_index');
+			$childrens_data->permissions_structuration 	= $this->get_permissions_element('component_relation_struct');
 			$childrens_data->ar_elements 	= array();
 
 		$model = isset($this->options->model) ? $this->options->model : null;
@@ -721,16 +723,23 @@ class ts_object extends Accessors {
 						$permissions = 0;
 					}				
 				}
-				break;
+				break;			
 			default:
-				debug_log(__METHOD__." ERROR. Element not defined: $element_name . Zero value is returned ".to_string(), logger::ERROR);
-				$permissions = 0;
+				$ar_children = section::get_ar_children_tipo_by_modelo_name_in_section($this->section_tipo, array($element_name), $from_cache=true, $resolve_virtual=true, $recursive=true, $search_exact=true);
+				# dump($ar_children, ' ar_children ++ '.to_string());
+				if (isset($ar_children[0])) {
+					$permissions = common::get_permissions($this->section_tipo, $ar_children[0]);
+				}else{
+					$permissions = 0;
+					debug_log(__METHOD__." ERROR. Element not defined: $element_name . Zero value is returned ".to_string(), logger::ERROR);
+				}
 				break;
 		}
 		#dump($permissions, ' permissions ++ '.to_string($element_name.' - '.$this->section_tipo));
 
 		return (int)$permissions;
 	}//end get_permissions_element
+
 
 	
 }//end ts_object

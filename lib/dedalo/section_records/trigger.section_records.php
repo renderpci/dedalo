@@ -76,7 +76,7 @@ function load_rows($json_data) {
 
 
 /**
-* SEARCH_ROWS
+* SEARCH_ROWS (JSON VERSION)
 */
 function search_rows($json_data) {
 	global $start_time;
@@ -136,9 +136,19 @@ function search_rows($json_data) {
 				$result = $rows_data->ar_records;
 				break;
 		}
-
+		
 	// search_query_object. Add updated search_query_object
 		$result->search_query_object = $search_query_object;
+
+	// Save current search options
+		$search_options = new stdClass();
+			$search_options->modo 	 = 'list';
+			$search_options->context = new stdClass();
+				$search_options->context->context_name = 'default';
+			$search_options->search_query_object = $search_query_object;
+		$search_options_id = $search_query_object->section_tipo . '_json'; // section tipo like oh1	
+		section_records::set_search_options($search_options, $search_options_id);
+		
 
 	$response->result 	= $result;
 	$response->msg 		= 'Ok. Request done ['.__FUNCTION__.']';

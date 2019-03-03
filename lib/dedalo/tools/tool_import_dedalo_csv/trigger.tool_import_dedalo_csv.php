@@ -24,7 +24,7 @@ ignore_user_abort(true);
 */
 function get_dir_files($json_data) {
 	global $start_time;
-
+	
 	$response = new stdClass();
 		$response->result 	= false;
 		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
@@ -41,6 +41,7 @@ function get_dir_files($json_data) {
 		}
 
 	$response = (object)tool_import_dedalo_csv::get_csv_files( $dir );
+
 	
 	# Debug
 	if(SHOW_DEBUG===true) {

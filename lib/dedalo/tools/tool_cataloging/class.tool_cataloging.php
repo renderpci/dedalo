@@ -9,23 +9,23 @@ class tool_cataloging {
 
 	public $source_list;
 	public $source_thesaurus;
-	public $button_triguer_tipo;
+	public $button_trigger_tipo;
 
 	public function __construct($section_tipo=null, $modo='button') {
 
-		$button_triguer_tipo = isset($_REQUEST['button_tipo']) ? safe_tipo($_REQUEST['button_tipo']) : null;
+		$button_trigger_tipo = isset($_REQUEST['button_tipo']) ? safe_tipo($_REQUEST['button_tipo']) : null;
 		
-		if (empty($button_triguer_tipo)) {
+		if (empty($button_trigger_tipo)) {
 			throw new Exception("Error Processing Request. Var section is empty", 1);
 		}
 
-		$button_triguer = new RecordObj_dd($button_triguer_tipo);
+		$button_triguer = new RecordObj_dd($button_trigger_tipo);
 		$button_triguer_properties = $button_triguer->get_propiedades(true);
 
 		$this->source_list 			= $button_triguer_properties->source_list;
 		$this->source_thesaurus		= $button_triguer_properties->source_thesaurus;
 		$this->modo 				= $modo;
-		$this->button_triguer_tipo 	= $button_triguer_tipo;
+		$this->button_trigger_tipo 	= $button_trigger_tipo;
 
 		return true;
 	}//end __construct
@@ -40,11 +40,11 @@ class tool_cataloging {
 
 		$context_data = [];
 
-		$button_triguer_tipo = $this->button_triguer_tipo;
+		$button_trigger_tipo = $this->button_trigger_tipo;
 
 		$context_object = new stdClass();
 		$context_object->tool 		= get_class($this);
-		$context_object->tool_label	= RecordObj_dd::get_termino_by_tipo($button_triguer_tipo, DEDALO_APPLICATION_LANG, true);
+		$context_object->tool_label	= RecordObj_dd::get_termino_by_tipo($button_trigger_tipo, DEDALO_APPLICATION_LANG, true);
 		$context_object->type 		= 'info';
 
 		$context_data[] = $context_object;
@@ -71,7 +71,7 @@ class tool_cataloging {
 	* Resolve the source list to get the section_list
 	* @return html
 	*/
-	public function get_sections_to_catalog(){
+	public function get_sections_to_catalog() {
 		
 		$ar_source_list = $this->source_list;
 
@@ -82,12 +82,12 @@ class tool_cataloging {
 			$section_tipo = $current_section_list->section_tipo;
 
 			$section_object = new stdClass();
-				$section_object->section_tipo 	= $section_tipo;
-				$section_object->label 			= RecordObj_dd::get_termino_by_tipo($section_tipo, DEDALO_APPLICATION_LANG, true);
+				$section_object->section_tipo 		= $section_tipo;
+				$section_object->label 				= RecordObj_dd::get_termino_by_tipo($section_tipo, DEDALO_APPLICATION_LANG, true);
 				$section_object->temp_preset_filter	= $this->get_temp_preset_filter($section_tipo);
-				$section_object->search_options = $this->get_search_options($section_tipo);
-				$section_object->ar_list_map 	= $this->get_ar_list_map($section_tipo, $current_section_list);
-				$section_object->type 			= 'sections';
+				$section_object->search_options 	= $this->get_search_options($section_tipo);
+				$section_object->ar_list_map 		= $this->get_ar_list_map($section_tipo, $current_section_list);
+				$section_object->type 				= 'sections';
 
 			$sections_to_catalog[] = $section_object;
 		}
@@ -127,9 +127,10 @@ class tool_cataloging {
 		$layout_map = [];
 		$current_section->layout_map = $layout_map;
 
-		# SEARCH_OPTIONS
-		$saved_search_options = section_records::get_search_options( $section_tipo .'_tool_cataloging' );
-
+		# SEARCH_OPTIONS (use equal id in trigger search)
+		$search_options_id 	  = $section_tipo .'_json';
+		$saved_search_options = section_records::get_search_options( $search_options_id );
+	
 		if ($saved_search_options===false) {
 			# Is not defined
 			$search_options = new stdClass();

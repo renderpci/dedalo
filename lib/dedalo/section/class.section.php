@@ -3315,19 +3315,23 @@ class section extends common {
 	*/
 	public static function build_json_rows($rows_data, $modo, $ar_list_map) {
 		$start_time=microtime(1);
-		#dump($rows_data->ar_records, ' rows_data->ar_records ++ '.to_string());
-		#dump($ar_list_map,'$ar_list_map');die();
-		$ar_json_rows = [];
+
+		// default result
+			$result = new stdClass();
+				$result->context = [];
+				$result->data 	 = [];
 
 		// Empty result case
-			if (empty($rows_data->ar_records)) {
-				return $ar_json_rows;
-			}
+			if (empty($rows_data->ar_records)) {				
+				return $result;
+			}		
+		
+		$ar_json_rows = [];		
 
 		// context
 			$context = [];
 
-			// Iterate kayout maps
+			// Iterate list map
 				foreach ($ar_list_map as $section_tipo => $list_map) {
 
 					// context section info
@@ -3367,32 +3371,23 @@ class section extends common {
 					$datos			= json_decode($record->datos);
 
 					// Inject known dato to avoid re connect to database
-					$section = section::get_instance($section_id, $section_tipo);				
-					$section->set_dato($datos);
-					$section->bl_loaded_matrix_data = true;
-						
-						#dump($section->bl_loaded_matrix_data, ' section->bl_loaded_matrix_data ++ '.to_string($section_id));
-						#dump($datos, ' datos ++ '.to_string());
+						$section = section::get_instance($section_id, $section_tipo);
+						$section->set_dato($datos);
+						$section->bl_loaded_matrix_data = true;
 
 					// Iterate list_map for colums
-						#if(isset($ar_list_map->$section_tipo)) 
 						foreach ((array)$ar_list_map->$section_tipo as $list_item) {
 
 							$tipo = $list_item->tipo;
 							$modo = $list_item->modo;
 
-							switch ($tipo) {
-								#case 'section_id':
-								case 'section_tipo':
-								#case 'current_id':
-								#case 'ordering_id':
-								#case 'ordering':
+							switch ($tipo) {								
+								case 'section_tipo':								
 									# ignore
 									continue 2;
 									break;
 
-								default:
-									
+								default:									
 									$modelo_name 		= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 									$current_component  = component_common::get_instance($modelo_name,
 																						 $tipo,
@@ -3408,28 +3403,22 @@ class section extends common {
 							// data add
 								$data = array_merge($data, $component_json->data);
 
+							// context add 
+								$context = array_merge($context, $component_json->context);
 
-							// context add if not already exists
-								$ar_found = array_filter($context, function($item) use($tipo){
-									return $item->type==="component_info" && $item->tipo===$tipo;
-								});
-								if (empty($ar_found)) {
-									$context = array_merge($context, $component_json->context);
-								}								
-
-							#$column = new stdClass();
-							#	$column->section_id 	= $section_id;
-							#	$column->tipo 			= $tipo;
-							#	$column->section_tipo 	= $section_tipo;							
-							#	$column->value 			= $value;
-							#
-							#$data[] = $column;
 						}//end iterate ar_list_map
 
 				$i++; }//end iterate records
-			
 
-		$result = new stdClass();
+
+		// smart remove context duplicates (!)
+			$context = section::smart_remove_context_duplicates($context);
+
+		// smart remove data duplicates (!)
+			$data = section::smart_remove_data_duplicates($data);
+		
+
+		// Set result object
 			$result->context = $context;
 			$result->data 	 = $data;
 
@@ -3440,10 +3429,58 @@ class section extends common {
 				}
 			$result->debug 	 = $debug;
 
-			#dump($result, ' result ++ '.to_string());
 
 		return $result;
 	}//end build_json_rows
+
+
+
+	/**
+	* SMART_REMOVE_CONTEXT_DUPLICATES
+	* @param array $context
+	* @return array $clean_context
+	*/
+	public static function smart_remove_context_duplicates($context) {
+		
+		$ar_component_info = [];
+		foreach ($context as $key => $value) {
+			
+			if (($value->type==='component_info')) {
+				$tipo = $value->tipo;
+				if (in_array($tipo, $ar_component_info)) {
+					unset($context[$key]);
+				}else{
+					$ar_component_info[] = $tipo;
+				}
+			}
+		}
+		$clean_context = array_values($context);
+			#dump($clean_context, ' clean_context ++ '.to_string());
+
+		return $clean_context;
+	}//end smart_remove_context_duplicates
+
+
+
+	/**
+	* SMART_REMOVE_data_DUPLICATES
+	* @param array $data
+	* @return array $clean_data
+	*/
+	public static function smart_remove_data_duplicates($data) {
+		
+		$clean_data = [];
+		foreach ($data as $key => $value_obj) {			
+			if (!in_array($value_obj, $clean_data, false)) {
+				$clean_data[] = $value_obj;
+			}			
+		}
+
+		#$clean_data = array_unique($data, SORT_REGULAR);
+		#$clean_data = array_values($clean_data);
+
+		return $clean_data;
+	}//end smart_remove_data_duplicates
 	
 
 
