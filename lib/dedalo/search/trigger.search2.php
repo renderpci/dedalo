@@ -15,7 +15,8 @@ common::trigger_manager();
 
 
 /**
-* GET_COMPONENTS_FROM_SECTION 
+* GET_COMPONENTS_FROM_SECTION
+* @return object $response
 */
 function get_components_from_section($json_data) {
 	global $start_time;
@@ -500,6 +501,57 @@ function save_temp_preset($json_data) {
 
 	return (object)$response;
 }//end save_temp_preset
+
+
+
+/**
+* LOAD_TEMP_FILTER
+* @return object $response
+*/
+function load_temp_filter($json_data) {
+	global $start_time;
+
+	session_write_close();
+
+	$response = new stdClass();
+		$response->result 	= false;
+		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
+	
+	# set vars
+	$vars = array('section_tipo');
+		foreach($vars as $name) {
+			$$name = common::setVarData($name, $json_data);
+			# DATA VERIFY
+			# if ($name==='dato') continue; # Skip non mandatory
+			if (empty($$name)) {
+				$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty '.safe_xss($name).' (is mandatory)';
+				return $response;
+			}
+		}
+
+
+	$user_id 	 = navigator::get_user_id();
+	$temp_preset = search_development2::get_preset(DEDALO_TEMP_PRESET_SECTION_TIPO, $user_id, $section_tipo);
+	$temp_filter = isset($temp_preset->json_filter) ? $temp_preset->json_filter : null;
+	
+	$response->result 	= $temp_filter;
+	$response->msg 		= 'Ok. Request done ['.__FUNCTION__.']';
+
+	# Debug
+	if(SHOW_DEBUG===true) {
+		$debug = new stdClass();
+			$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
+			foreach($vars as $name) {
+				$debug->{$name} = $$name;
+			}
+
+		$response->debug = $debug;
+	}
+
+
+	return (object)$response;
+}//end load_temp_filter
+
 
 
 

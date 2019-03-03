@@ -6,7 +6,10 @@ $TIMER['main_start']=microtime(1);
 * and pass it to the class 'html_page' to build the page to be displayed.
 *
 */
-require dirname(dirname(__FILE__)).'/config/config4.php';
+$config4_path = dirname(dirname(__FILE__)).'/config/config4.php';
+if( !include($config4_path) ) {
+	die("Dédalo is misconfigured. Please review your app config");
+}
 
 $TIMER['config4_includes']=microtime(1);
 
@@ -25,8 +28,23 @@ if ( strpos($_SERVER["REQUEST_URI"], '.php')!==false ) {
 */
 
 	# set vars
-	$vars = array('t','tipo','m','modo','id','h','parent');
+	$vars = array('t','tipo','m','modo','id','h','parent','json');
 		foreach($vars as $name) $$name = common::setVar($name);
+
+
+	if (isset($json)) {
+		if ($json_object = json_decode($json)) {
+			
+			// tipo
+				$t 	= $json_object->section_tipo;
+				#$_GET["t"] = $t;
+
+			// section_id
+				if (property_exists($json_object, 'section_id')) {
+					$id 	= $json_object->section_id;
+				}			
+		}		
+	}
 
 
 	if(SHOW_DEBUG===true) {
@@ -62,6 +80,14 @@ if ( strpos($_SERVER["REQUEST_URI"], '.php')!==false ) {
 		exit();
 	}
 
+
+	// skip_log
+		if (isset($_GET['skip_log']) && $_GET['skip_log']==='1') {
+			# Disable logging activity and time machine # !IMPORTANT
+			logger_backend_activity::$enable_log = false;
+			RecordObj_time_machine::$save_time_machine_version = false;
+			#debug_log(__METHOD__." Disabled enable_log/save_time_machine_version for skip_log mode ".to_string(), logger::DEBUG);
+		}
 
 	#
 	# MODO : list, edit, etc..
@@ -163,8 +189,13 @@ if ( strpos($_SERVER["REQUEST_URI"], '.php')!==false ) {
 				$tool_obj 		= new $tool_name($element, 'page');
 				$content		= $tool_obj->get_html();
 
-				$html 			= html_page::get_html($content);
-				print($html);
+				// html ('t','tipo','m','modo','id','h','parent','json') => ('caller_tipo','id','t','tipo','m','modo','context_name','parent')
+					$html	= html_page::get_html($content, false, [
+						'tipo' => $tipo,
+						'modo' => $modo,
+						'id'   => $id
+					]); 
+					echo $html;
 				break;
 		
 		# SECTION
@@ -249,11 +280,14 @@ if ( strpos($_SERVER["REQUEST_URI"], '.php')!==false ) {
 				# NAVIGATOR . Fixx tipo
 				navigator::set_selected('area', $tipo); # Fix area
 				
-
-				# HTML CONTENT
-				$html = html_page::get_html( $element_obj );
-
-				print($html);
+				// html ('t','tipo','m','modo','id','h','parent','json') => ('caller_tipo','id','t','tipo','m','modo','context_name','parent')
+					$html	= html_page::get_html($element_obj, false, [
+						'tipo' => $tipo,
+						'modo' => $modo,
+						'id'   => $id
+					]);
+					#$html = html_page::get_html( $element_obj );
+					echo $html;
 				break;
 
 		default : # MODO NOT VALID

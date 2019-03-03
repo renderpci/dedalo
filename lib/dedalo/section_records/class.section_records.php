@@ -99,7 +99,6 @@ class section_records extends common {
 			#debug_log(__METHOD__." this->search_options **** ".json_encode($this->search_options), logger::DEBUG);						
 		}
 
-
 		# Fix records_data
 		$this->records_data = $records_data;
 
