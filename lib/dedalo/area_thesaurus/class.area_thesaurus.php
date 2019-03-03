@@ -400,6 +400,7 @@ class area_thesaurus extends area {
 		$search_development2 = new search_development2($search_query_object);
 		$search_result 		 = $search_development2->search();
 		$ar_records 		 = $search_result->ar_records;
+			#dump($ar_records, ' ar_records ++ '.to_string()); die();
 
 		# ar_path_mix . Calculate full path of each result
 		$ar_path_mix = array();
@@ -409,7 +410,7 @@ class area_thesaurus extends area {
 			$section_id   = $row->section_id;
 
 			$ar_parents = component_relation_parent::get_parents_recursive($section_id, $section_tipo, false);
-				#dump($ar_parents, ' ar_parents ++ '.to_string("$section_id, $section_tipo"));
+				#dump($ar_parents, ' ar_parents ++ '.to_string("$section_id, $section_tipo")); die();
 
 			$locator = new locator();
 				$locator->set_section_tipo($section_tipo);
@@ -422,7 +423,7 @@ class area_thesaurus extends area {
 		}
 		# Root parents
 		if(SHOW_DEBUG===true) {
-			#dump($ar_path_mix, ' ar_path_mix ++ '.to_string());
+			#dump($ar_path_mix, ' ar_path_mix ++ '.to_string()); die();
 		}
 
 		# AR_DATA_COMBINED

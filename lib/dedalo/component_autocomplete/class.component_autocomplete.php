@@ -38,27 +38,27 @@ class component_autocomplete extends component_relation_common {
 				$dato = $this->dato;
 			}		
 		
-		/*
-		if (!empty($dato) && !is_array($dato)) {
-			#dump($dato,"dato");
-			trigger_error("Error: ".__CLASS__." dato type is wrong. Array expected and ".gettype($dato)." is received for tipo:$this->tipo, parent:$this->parent");
-			$this->set_dato(array());
-			$this->Save();
-		}
-		if ($dato===null) {
-			$dato=array();
-		}
-		#$dato = json_handler::decode(json_encode($dato));	# Force array of objects instead default array of arrays
-		*/
-		#dump($dato," dato");
-		/*
-		if (!empty($dato)) foreach((array)$dato as $key => $value) {
-			if (empty($value) || $value==='[]') {
-				unset($dato[$key]);
-				$this->dato = array_values($dato);
-				$this->ave();
+		/* des
+			if (!empty($dato) && !is_array($dato)) {
+				#dump($dato,"dato");
+				trigger_error("Error: ".__CLASS__." dato type is wrong. Array expected and ".gettype($dato)." is received for tipo:$this->tipo, parent:$this->parent");
+				$this->set_dato(array());
+				$this->Save();
 			}
-		}*/
+			if ($dato===null) {
+				$dato=array();
+			}
+			#$dato = json_handler::decode(json_encode($dato));	# Force array of objects instead default array of arrays
+			*/
+			#dump($dato," dato");
+			/*
+			if (!empty($dato)) foreach((array)$dato as $key => $value) {
+				if (empty($value) || $value==='[]') {
+					unset($dato[$key]);
+					$this->dato = array_values($dato);
+					$this->ave();
+				}
+			}*/
 
 		return (array)$dato;
 	}//end get_dato
@@ -73,22 +73,24 @@ class component_autocomplete extends component_relation_common {
 		if (is_string($dato)) { # Tool Time machine case, dato is string
 			$dato = json_handler::decode($dato);
 		}
-		/*
-		if (is_object($dato)) {
-			$dato = array($dato); // IMPORTANT 
-		}else if (is_string($dato)) {
-			$dato = array();
-		}
 
-		# Remove possible duplicates
-		$dato_unique=array();
-		foreach ((array)$dato as $locator) {
-			if (!in_array($locator, $dato_unique)) {
-				$dato_unique[] = $locator;
+		/* des
+			if (is_object($dato)) {
+				$dato = array($dato); // IMPORTANT 
+			}else if (is_string($dato)) {
+				$dato = array();
 			}
-		}
-		$dato = $dato_unique;*/
-		#dump($dato, ' set dato ++ '.to_string());
+
+			# Remove possible duplicates
+			$dato_unique=array();
+			foreach ((array)$dato as $locator) {
+				if (!in_array($locator, $dato_unique)) {
+					$dato_unique[] = $locator;
+				}
+			}
+			$dato = $dato_unique;
+			*/
+			
 
 		return parent::set_dato( (array)$dato );
 	}//end set_dato
@@ -241,7 +243,7 @@ class component_autocomplete extends component_relation_common {
 	* GET_VALOR_EXPORT
 	* Return component value sended to export data
 	* @return string $valor
-	*/
+	*//*
 	public function get_valor_export( $valor=null, $lang=DEDALO_DATA_LANG, $quotes, $add_id ) {
 		
 		if (empty($valor)) {
@@ -308,6 +310,78 @@ class component_autocomplete extends component_relation_common {
 
 		return $valor_export;
 	}//end get_valor_export
+	*/
+
+
+
+	/**
+	* GET_VALOR_EXPORT
+	* Return component value sended to export data
+	* @return string $valor
+	*/
+	public function get_valor_export( $valor=null, $lang=DEDALO_DATA_LANG, $quotes, $add_id ) {
+		
+		if (empty($valor)) {
+			$dato = $this->get_dato();				// Get dato from DB
+		}else{
+			$this->set_dato( json_decode($valor) );	// Use parsed json string as dato
+		}
+
+		$dato = $this->get_dato();
+		
+
+		// TERMINOS_RELACIONADOS . Obtenemos los terminos relacionados del componente actual	
+			$ar_terminos_relacionados = (array)$this->RecordObj_dd->get_relaciones();
+
+		
+		// FIELDS
+			$fields=array();
+			foreach ($ar_terminos_relacionados as $key => $ar_value) {
+				foreach ($ar_value as $current_tipo) {
+					
+					$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
+					if (strpos($modelo_name, 'component_')!==false) {
+						$fields[] = $current_tipo;
+					}
+				}
+			}
+
+		$ar_resolved=array();
+		foreach( (array)$dato as $key => $value) {
+
+			$section_tipo 	= $value->section_tipo;
+			$section_id 	= $value->section_id;
+			
+			foreach ($fields as $current_tipo) {				
+			
+				$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
+				$component 		= component_common::get_instance($modelo_name,
+																 $current_tipo,
+																 $section_id,
+																 'list',
+																 $lang,
+																 $section_tipo);
+				$current_value_export = $component->get_valor_export( null, $lang, $quotes, $add_id );
+
+				$item = new stdClass();
+					$item->section_id 			= $section_id;
+					$item->component_tipo 		= $current_tipo;
+					$item->section_tipo 		= $section_tipo;
+					$item->from_section_tipo 	= $this->section_tipo;
+					$item->from_component_tipo 	= $this->tipo;
+					$item->model 				= $modelo_name;
+					$item->value 				= $current_value_export;
+
+				$ar_resolved[] = $item;
+			}
+		}//end foreach( (array)$dato as $key => $value)
+		#dump($ar_resolved, ' ar_resolved ++ '.to_string($this->tipo));
+		
+		$valor_export = $ar_resolved;
+		
+		
+		return $valor_export;
+	}//end get_valor_export
 
 
 
@@ -350,28 +424,27 @@ class component_autocomplete extends component_relation_common {
 		}
 
 		# DESECHADO POR PROBLEMAS AL SELECCIONAR EL PRIMERO. EL ORDEN NO ES RESPETADO...
-		# $ar_related_terms = (array)$this->RecordObj_dd->get_relaciones();
-		# 	#dump($ar_related_terms, ' ar_related_terms');
-		# foreach ($ar_related_terms as $related_terms)		
-		# foreach ($related_terms as $modelo => $current_tipo) {
-		# 	$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
-		# 	# Get first component only
-		# 	if (strpos($modelo_name, 'component_')!==false) {
-		# 		$tipo_to_search = $current_tipo; break;
-		# 	}
-		# }		
+			# $ar_related_terms = (array)$this->RecordObj_dd->get_relaciones();
+			# 	#dump($ar_related_terms, ' ar_related_terms');
+			# foreach ($ar_related_terms as $related_terms)		
+			# foreach ($related_terms as $modelo => $current_tipo) {
+			# 	$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
+			# 	# Get first component only
+			# 	if (strpos($modelo_name, 'component_')!==false) {
+			# 		$tipo_to_search = $current_tipo; break;
+			# 	}
+			# }		
 
 		$ar_terminoID_by_modelo_name = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($this->tipo, 'component_', 'termino_relacionado'); 
-				#dump($ar_terminoID_by_modelo_name, ' ar_terminoID_by_modelo_name '.$this->tipo.' ');
+			#dump($ar_terminoID_by_modelo_name, ' ar_terminoID_by_modelo_name '.$this->tipo.' ');
 		$tipo_to_search = reset($ar_terminoID_by_modelo_name);
 
 		if (!isset($tipo_to_search)) {
 			throw new Exception("Error Processing Request. Inconsistency detect. This component need related component to search always", 1);			
-		}
-		#dump($tipo_to_search, ' tipo_to_search');
+		}		
 
-		# Fix value
-		$this->tipo_to_search = $tipo_to_search;
+		// Fix value
+			$this->tipo_to_search = $tipo_to_search;
 
 		return $tipo_to_search;
 	}//end get_tipo_to_search
@@ -496,56 +569,57 @@ class component_autocomplete extends component_relation_common {
 	* @return array
 	*/
 	public static function get_search_subquery($field, $string_to_search) {
-		$ar_subquery = array();
-				# ar_search : set always as array
-		# When key 'search' is defined, use it as search values. Else use normal default values
-		if (isset($field->search)) {
-			# subquery_type = 'with_reference';
-			$ar_search 		= (array)$field->search;
-			$search_in 		= $field->component_tipo.'_array_elements'."->>'section_id'";
-			#$search_in 		= $field->component_tipo.''."->>'section_id'";
-		}else{
-			# subquery_type = 'default';
-			$ar_search 		= array($field);
-			$search_in 		= 'section_id::text';
-		}
-
 		
-		foreach ($ar_search as $search_field) {
-			
-			# Select elements
-			$current_section_tipo   = $search_field->section_tipo;
-			$current_component_tipo = $search_field->component_tipo;
-
-			#$RecordObj_dd = new RecordObj_dd($current_component_tipo);
-			#$current_lang = $RecordObj_dd->get_traducible()!=='si' ? DEDALO_DATA_NOLAN : DEDALO_DATA_LANG;
-			$search_modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_component_tipo,true);
-
-			# COMPONENTS_WITH_REFERENCES case like autocomplete, select, etc.. 
-			$search_query = array();
-			if(in_array($search_modelo_name, component_relation_common::get_components_with_relations())) {
-				$search_query 		= (array)component_autocomplete::get_search_subquery($search_field, $string_to_search);
-				$subquery_type 		= 'with_references';
+		$ar_subquery = array();
+		
+		// When key 'search' is defined, use it as search values. Else use normal default values. ar_search : set always as array
+			if (isset($field->search)) {
+				# subquery_type = 'with_reference';
+				$ar_search 		= (array)$field->search;
+				$search_in 		= $field->component_tipo.'_array_elements'."->>'section_id'";
+				#$search_in 		= $field->component_tipo.''."->>'section_id'";
 			}else{
-				$search_query[] 	= $search_modelo_name::get_search_query('datos', $current_component_tipo, 'dato', 'all', $string_to_search);
-				$subquery_type 		= '';
+				# subquery_type = 'default';
+				$ar_search 		= array($field);
+				$search_in 		= 'section_id::text';
 			}
 
-			#$bracket 	  = ($search_modelo_name==='component_input_text') ? '[' : '';
-			#$search_query = "f_unaccent(a.datos#>>'{components, $current_component_tipo, dato}') ILIKE f_unaccent('%{$bracket}\"{$string_to_search}%')"; # Force custom search instead standar ?
-			#error_log($search_query); continue;
-			foreach ($search_query as $current_query) {
-				$options = new stdClass();
-					$options->search_in 	 		= $search_in;
-					$options->search_tipo 	 		= $current_component_tipo;
-					$options->search_section_tipo 	= $current_section_tipo;
-					$options->matrix_table 	 		= common::get_matrix_table_from_tipo( $current_section_tipo );
-					$options->search_query 	 		= $current_query;
-					$options->subquery_type 		= $subquery_type;
-				$subquery = search::get_subquery($options);
-				$ar_subquery[] = $subquery;
+		// Iterate fields
+			foreach ($ar_search as $search_field) {
+				
+				# Select elements
+				$current_section_tipo   = $search_field->section_tipo;
+				$current_component_tipo = $search_field->component_tipo;
+
+				#$RecordObj_dd = new RecordObj_dd($current_component_tipo);
+				#$current_lang = $RecordObj_dd->get_traducible()!=='si' ? DEDALO_DATA_NOLAN : DEDALO_DATA_LANG;
+				$search_modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_component_tipo,true);
+
+				# COMPONENTS_WITH_REFERENCES case like autocomplete, select, etc.. 
+				$search_query = array();
+				if(in_array($search_modelo_name, component_relation_common::get_components_with_relations())) {
+					$search_query 	= (array)component_autocomplete::get_search_subquery($search_field, $string_to_search);
+					$subquery_type 	= 'with_references';
+				}else{
+					$search_query[] = $search_modelo_name::get_search_query('datos', $current_component_tipo, 'dato', 'all', $string_to_search);
+					$subquery_type 	= '';
+				}
+
+				#$bracket 	  = ($search_modelo_name==='component_input_text') ? '[' : '';
+				#$search_query = "f_unaccent(a.datos#>>'{components, $current_component_tipo, dato}') ILIKE f_unaccent('%{$bracket}\"{$string_to_search}%')"; # Force custom search instead standar ?
+				#error_log($search_query); continue;
+				foreach ($search_query as $current_query) {
+					$options = new stdClass();
+						$options->search_in 	 		= $search_in;
+						$options->search_tipo 	 		= $current_component_tipo;
+						$options->search_section_tipo 	= $current_section_tipo;
+						$options->matrix_table 	 		= common::get_matrix_table_from_tipo( $current_section_tipo );
+						$options->search_query 	 		= $current_query;
+						$options->subquery_type 		= $subquery_type;
+					$subquery = search::get_subquery($options);
+					$ar_subquery[] = $subquery;
+				}
 			}
-		}
 
 		return $ar_subquery;
 	}//end get_search_subquery
@@ -566,13 +640,10 @@ class component_autocomplete extends component_relation_common {
 		}
 
 		$termonioID_related = array_values($relacionados[0])[0];
-		$RecordObj_dd = new RecordObj_dd($termonioID_related);
+		$RecordObj_dd 		= new RecordObj_dd($termonioID_related);
 
-		if($RecordObj_dd->get_traducible() === 'no'){
-			$lang = DEDALO_DATA_NOLAN;
-		}else{
-			$lang = DEDALO_DATA_LANG;
-		}
+		$lang = ($RecordObj_dd->get_traducible()==='no') ? DEDALO_DATA_NOLAN : DEDALO_DATA_LANG;
+		
 
 		return $lang;
 	}//end get_valor_lang	
@@ -592,130 +663,122 @@ class component_autocomplete extends component_relation_common {
 	*/
 	public static function create_new_autocomplete_record($parent, $tipo, $target_section_tipo, $section_tipo, $ar_data ) {
 
-		# Set from_component_tipo
-		$from_component_tipo = $tipo;
+		// set from_component_tipo
+			$from_component_tipo = $tipo;
 		
-		#
-		# PROJECTS HERITAGE
-		if ($section_tipo!==DEDALO_SECTION_PROJECTS_TIPO) {
-			# All except main section Projects
-			$source_ar_filter = section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, 'component_filter', true, true); //$section_tipo, $ar_modelo_name_required, $from_cache=true, $resolve_virtual=false
-			if (!isset($source_ar_filter[0])) {
-				if(SHOW_DEBUG===true) {
-					throw new Exception("Error Processing Request. component_filter is not defined! ($section_tipo)", 1);
+		// projects heritage 
+			if ($section_tipo!==DEDALO_SECTION_PROJECTS_TIPO) {
+				# All except main section Projects
+				$source_ar_filter = section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, 'component_filter', true, true); //$section_tipo, $ar_modelo_name_required, $from_cache=true, $resolve_virtual=false
+				if (!isset($source_ar_filter[0])) {
+					if(SHOW_DEBUG===true) {
+						throw new Exception("Error Processing Request. component_filter is not defined! ($section_tipo)", 1);
+					}
+					return "Error: component_filter is not defined!";
 				}
-				return "Error: component_filter is not defined!";
+				$source_component_filter = component_common::get_instance('component_filter',
+																		  $source_ar_filter[0],
+																		  $parent,
+																		  'edit',
+																		  DEDALO_DATA_NOLAN,
+																		  $section_tipo);
+				$source_component_filter_dato = $source_component_filter->get_dato();
+					#dump($source_component_filter_dato, ' source_component_filter_dato'.to_string());die();
 			}
-			$source_component_filter = component_common::get_instance('component_filter',
-																	  $source_ar_filter[0],
-																	  $parent,
-																	  'edit',
-																	  DEDALO_DATA_NOLAN,
-																	  $section_tipo);
-			$source_component_filter_dato = $source_component_filter->get_dato();
-				#dump($source_component_filter_dato, ' source_component_filter_dato'.to_string());die();
-		}
 		
-		#
-		# SECTION : Create a new section
-		$section 	= section::get_instance(null,$target_section_tipo);
-		$section_id = $section->Save();			
+		// section : Create a new section
+			$section 	= section::get_instance(null,$target_section_tipo);
+			$section_id = $section->Save();			
 		
-		#
-		# FILTER : Set heritage of projects
-		if ($section_tipo!==DEDALO_SECTION_PROJECTS_TIPO) {
-			# All except main section Projects
-			$target_ar_filter  = section::get_ar_children_tipo_by_modelo_name_in_section($target_section_tipo, 'component_filter', true, true);
-			if (!isset($target_ar_filter[0])) {
-				if(SHOW_DEBUG===true) {
-					throw new Exception("Error Processing Request. target component_filter is not defined! ($target_section_tipo)", 1);
+		// filter : Set heritage of projects
+			if ($section_tipo!==DEDALO_SECTION_PROJECTS_TIPO) {
+				# All except main section Projects
+				$target_ar_filter  = section::get_ar_children_tipo_by_modelo_name_in_section($target_section_tipo, 'component_filter', true, true);
+				if (!isset($target_ar_filter[0])) {
+					if(SHOW_DEBUG===true) {
+						throw new Exception("Error Processing Request. target component_filter is not defined! ($target_section_tipo)", 1);
+					}
+					return "Error: target component_filter is not defined!";
 				}
-				return "Error: target component_filter is not defined!";
+				$target_component_filter = component_common::get_instance('component_filter',
+																		  $target_ar_filter[0],
+																		  $section_id,
+																		  'list', // 'list' mode avoid autosave default project
+																		  DEDALO_DATA_NOLAN,
+																		  $target_section_tipo);
+				$target_component_filter->set_dato($source_component_filter_dato);
+				$target_component_filter->Save();
 			}
-			$target_component_filter = component_common::get_instance('component_filter',
-																	  $target_ar_filter[0],
-																	  $section_id,
-																	  'list', // 'list' mode avoid autosave default project
-																	  DEDALO_DATA_NOLAN,
-																	  $target_section_tipo);
-			$target_component_filter->set_dato($source_component_filter_dato);
-			$target_component_filter->Save();
-		}		
 
-		#
-		# component_autocomplete
-		$component_autocomplete 	= component_common::get_instance('component_autocomplete',
-																	  $tipo,
-																	  $section_id,
-																	  'edit',
-																	  DEDALO_DATA_NOLAN,
-																	  $section_tipo);
+		// component_autocomplete
+			$component_autocomplete 	= component_common::get_instance('component_autocomplete',
+																		  $tipo,
+																		  $section_id,
+																		  'edit',
+																		  DEDALO_DATA_NOLAN,
+																		  $section_tipo);
+		
+		// propiedades
+			$propiedades = $component_autocomplete->get_propiedades();
+			if (!empty($propiedades)) {
+				
+				if (isset($propiedades->filtered_by)) foreach($propiedades->filtered_by as $current_tipo => $current_value) {
 
-		#
-		# PROPIEDADES
-		$propiedades = $component_autocomplete->get_propiedades();
-		if (!empty($propiedades)) {
-			
-			if (isset($propiedades->filtered_by)) foreach($propiedades->filtered_by as $current_tipo => $current_value) {
+					$current_lang = DEDALO_DATA_LANG;
+					$RecordObj_dd = new RecordObj_dd($current_tipo);
+					if ($RecordObj_dd->get_traducible()==='no') {
+						$current_lang = DEDALO_DATA_NOLAN;
+					}
+
+					$curren_modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
+					$component 			= component_common::get_instance($curren_modelo_name,
+																		$current_tipo,
+																		$section_id,
+																		'edit',
+																		$current_lang,
+																		$target_section_tipo);
+					$component->set_dato($current_value);
+					$component->Save();
+
+					debug_log(__METHOD__." Updated target section component $current_tipo [$curren_modelo_name] to ".to_string($current_value), logger::DEBUG);
+				}
+			}
+			#dump($propiedades, ' propiedades');	die("section_id: $section_id B");
+		
+		// components
+			# Format:
+			# value: stdClass Object
+			# (
+			#    [rsc85] => a
+			#    [rsc86] => b
+			# )
+			#
+			foreach ($ar_data as $current_tipo => $current_value) {
 
 				$current_lang = DEDALO_DATA_LANG;
 				$RecordObj_dd = new RecordObj_dd($current_tipo);
 				if ($RecordObj_dd->get_traducible()==='no') {
 					$current_lang = DEDALO_DATA_NOLAN;
 				}
-
+				
 				$curren_modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
-				$component 			= component_common::get_instance($curren_modelo_name,
-																	$current_tipo,
-																	$section_id,
-																	'edit',
-																	$current_lang,
-																	$target_section_tipo);
-				$component->set_dato($current_value);
+				$component = component_common::get_instance($curren_modelo_name,
+															$current_tipo,
+															$section_id,
+															'edit',
+															$current_lang,
+															$target_section_tipo);	
+				$component->set_dato( $current_value );
 				$component->Save();
-
-				debug_log(__METHOD__." Updated target section component $current_tipo [$curren_modelo_name] to ".to_string($current_value), logger::DEBUG);
 			}
-		}
-		#dump($propiedades, ' propiedades');	die("section_id: $section_id B");
 
-		#
-		# COMPONENTS
-		# Format:
-		# value: stdClass Object
-		# (
-		#    [rsc85] => a
-		#    [rsc86] => b
-		# )
-		#
-		foreach ($ar_data as $current_tipo => $current_value) {
-
-			$current_lang = DEDALO_DATA_LANG;
-			$RecordObj_dd = new RecordObj_dd($current_tipo);
-			if ($RecordObj_dd->get_traducible()==='no') {
-				$current_lang = DEDALO_DATA_NOLAN;
-			}
-			
-			$curren_modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
-			$component = component_common::get_instance($curren_modelo_name,
-														$current_tipo,
-														$section_id,
-														'edit',
-														$current_lang,
-														$target_section_tipo);	
-			$component->set_dato( $current_value );
-			$component->Save();
-		}
-
-
-		#
-		# RETURN LOCATOR OBJECT OF CREATED SECTION
-		$locator = new locator();
-			$locator->set_type(DEDALO_RELATION_TYPE_LINK);
-			$locator->set_section_id($section_id);
-			$locator->set_section_tipo($target_section_tipo);			
-			$locator->set_from_component_tipo($from_component_tipo);
-				#dump($locator,'locator');
+		// locator . return locator object of created section
+			$locator = new locator();
+				$locator->set_type(DEDALO_RELATION_TYPE_LINK);
+				$locator->set_section_id($section_id);
+				$locator->set_section_tipo($target_section_tipo);
+				$locator->set_from_component_tipo($from_component_tipo);
+					#dump($locator,'locator');
 
 
 		return $locator;
@@ -724,54 +787,14 @@ class component_autocomplete extends component_relation_common {
 
 
 	/**
-	* RENDER_LIST_VALUE
-	* Overwrite for non default behaviour
-	* Receive value from section list and return proper value to show in list
-	* Sometimes is the same value (eg. component_input_text), sometimes is calculated (e.g component_portal)
-	* @param string $value
-	* @param string $tipo
-	* @param int $parent
-	* @param string $modo
-	* @param string $lang
-	* @param string $section_tipo
-	* @param int $section_id
-	*
-	* @return string $list_value
-	*//*
-	public static function render_list_value($value, $tipo, $parent, $modo, $lang, $section_tipo, $section_id, $current_locator=null, $caller_component_tipo=null) {
-	
-		$component 	= component_common::get_instance(__CLASS__,
-													 $tipo,
-													 $parent,
-													 $modo,
-													 DEDALO_DATA_NOLAN,
-													 $section_tipo);
-
-
-		# Use already query calculated values for speed
-		#$ar_records   = (array)json_handler::decode($value);
-		#$component->set_dato($ar_records);
-		$dato = $component->get_dato();
-		$component->set_identificador_unico($component->get_identificador_unico().'_'.$section_id.'_'.$caller_component_tipo); // Set unic id for build search_options_session_key used in sessions
-		
-		if($modo === 'portal_list' || $modo === 'edit_in_list') {
-			$valor = $component->get_html();
-		}else{
-			$valor = $component->get_valor($lang, 'string', false, "<br> "); // $lang=DEDALO_DATA_LANG, $format='string', $ar_related_terms=false, $divisor="<br> "
-		}
-
-		return $valor;
-	}//end render_list_value */
-
-
-
-	/**
-	* IMPORT_plain_VALUE (IN PROGRESS)
+	* IMPORT_PLAIN_VALUE (IN PROGRESS)
 	* @return 
 	*/
 	public function import_plain_value( $value ) {
 		
 		return false;
+
+
 		if($this->tipo!='rsc49') return false;
 
 		$target_section_tipo = common::get_ar_related_by_model('section', $this->tipo); 
@@ -791,52 +814,52 @@ class component_autocomplete extends component_relation_common {
 		}
 
 		// Unify value format as array		
-		$ar_value = (strpos($value,',')!==false) ? explode(',', $value) : array($value);
+			$ar_value = (strpos($value,',')!==false) ? explode(',', $value) : array($value);
 				dump($ar_value, ' $ar_value ++ '.to_string());
 
 
 		#
 		# SEARCH FOR EXISTING ITEMS
-		/*
-		#
-		# FILTER
-		$filter_by_search = new stdClass();
-			$i=0;foreach ($ar_related as $related_tipo => $related_modelo_name) {
-				$filter_by_search->$related_tipo = trim($ar_value[$i]);
-			$i++;}
-			
-				dump($filter_by_search, ' $filter_by_search ++ '.to_string()); #die();
-		#
-		# OPERATORS
-		$operators = new stdClass();
-			
-			$comparison_operator = new stdClass();
+			/*
+			#
+			# FILTER
+			$filter_by_search = new stdClass();
 				$i=0;foreach ($ar_related as $related_tipo => $related_modelo_name) {
-					$comparison_operator->$related_tipo = 'ILIKE';
+					$filter_by_search->$related_tipo = trim($ar_value[$i]);
 				$i++;}
+				
+					dump($filter_by_search, ' $filter_by_search ++ '.to_string()); #die();
+			#
+			# OPERATORS
+			$operators = new stdClass();
+				
+				$comparison_operator = new stdClass();
+					$i=0;foreach ($ar_related as $related_tipo => $related_modelo_name) {
+						$comparison_operator->$related_tipo = 'ILIKE';
+					$i++;}
 
-			$operators->comparison_operator = $comparison_operator;
+				$operators->comparison_operator = $comparison_operator;
 
-			$logical_operator = new stdClass();
-				$i=0;foreach ($ar_related as $related_tipo => $related_modelo_name) {
-					$logical_operator->$related_tipo = 'AND';
-				$i++;}
+				$logical_operator = new stdClass();
+					$i=0;foreach ($ar_related as $related_tipo => $related_modelo_name) {
+						$logical_operator->$related_tipo = 'AND';
+					$i++;}
 
-			$operators->logical_operator = $logical_operator;
+				$operators->logical_operator = $logical_operator;
 
-		# OPTIONS
-		$options = new stdClass();
-			$options->section_tipo  			 = $target_section_tipo;
-			$options->filter_by_search 			 = $filter_by_search;
-			$options->operators 			 	 = $operators;
-			$options->layout_map  				 = array();
-			$options->modo  					 = 'edit';
-			$options->limit 					 = false; # IMPORTANT : No limit is applicated to portal list. All records are viewed always
-			$options->search_options_session_key = 'import_plain_value';
+			# OPTIONS
+			$options = new stdClass();
+				$options->section_tipo  			 = $target_section_tipo;
+				$options->filter_by_search 			 = $filter_by_search;
+				$options->operators 			 	 = $operators;
+				$options->layout_map  				 = array();
+				$options->modo  					 = 'edit';
+				$options->limit 					 = false; # IMPORTANT : No limit is applicated to portal list. All records are viewed always
+				$options->search_options_session_key = 'import_plain_value';
 
-		$rows_data = search::get_records_data($options);
-			dump($rows_data, ' rows_data ++ '.to_string());	
-		*/
+			$rows_data = search::get_records_data($options);
+				dump($rows_data, ' rows_data ++ '.to_string());	
+			*/
 		
 		return true;
 	}//end import_plain_value
@@ -1107,19 +1130,19 @@ class component_autocomplete extends component_relation_common {
 
 	/**
 	* GET_DIFFUSION_DATO
-	* @return 
+	* @return string $diffusion_value
 	*/
 	public function get_diffusion_dato() {
 
-			$dato = $this->get_dato();
-			if (is_array($dato)) {
-				$ar_id =array();
-				foreach ($dato as $current_locator) {
-					$ar_id[] = $current_locator->section_id;
-				}
-				$final_dato = $ar_id;
+		$dato = $this->get_dato();
+		if (is_array($dato)) {
+			$ar_id =array();
+			foreach ($dato as $current_locator) {
+				$ar_id[] = $current_locator->section_id;
 			}
-			$diffusion_value = json_encode($final_dato);
+			$final_dato = $ar_id;
+		}
+		$diffusion_value = json_encode($final_dato);
 
 		return (string)$diffusion_value;
 	}//end get_diffusion_dato

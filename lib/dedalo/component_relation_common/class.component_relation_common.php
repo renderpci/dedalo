@@ -1193,7 +1193,7 @@ class component_relation_common extends component_common {
 		$section_id 	= $this->get_parent();
 		$section_tipo 	= $this->get_section_tipo();
 
-		$locator 		= new locator();
+		$locator = new locator();
 			$locator->set_section_id($section_id);
 			$locator->set_section_tipo($section_tipo);
 
@@ -1215,10 +1215,10 @@ class component_relation_common extends component_common {
 																	false);
 				$component_dato = $component_data_for_search->get_dato_with_references();
 	
-				foreach ($component_dato as $current_locator) {
-					$locator_dato 		= new locator();
-					$locator_dato->set_section_id($current_locator->section_id);
-					$locator_dato->set_section_tipo($current_locator->section_tipo);
+				foreach ($component_dato as $current_locator) {					
+					$locator_dato = new locator();
+						$locator_dato->set_section_id($current_locator->section_id);
+						$locator_dato->set_section_tipo($current_locator->section_tipo);
 
 					$new_dato[] = $locator_dato;
 				}
@@ -1227,7 +1227,7 @@ class component_relation_common extends component_common {
 		# Add locator at end
 		$new_dato[] = $locator;
 		
-		/*	
+		/* DES	
 			$value_to_search  = $new_dato;
 			$ar_filter_fields = [];
 			foreach ($ar_component_to_search as $component_to_search) {
@@ -1289,7 +1289,7 @@ class component_relation_common extends component_common {
 					$locator->set_from_component_tipo($this->get_tipo());
 				$ar_result[] = $locator;
 			}
-		*/
+			*/
 
 		# From locators inside property 'relations'
 		#$ar_result = $this->get_external_result($new_dato, $ar_component_to_search, $ar_section_to_search);
@@ -1340,7 +1340,7 @@ class component_relation_common extends component_common {
 	* @return array $ar_result
 	* 	Array of locators
 	*/
-	private function get_external_result($new_dato, $ar_component_to_search, $ar_section_to_search) {
+	private function get_external_result_DES($new_dato, $ar_component_to_search, $ar_section_to_search) {
 		$start_time=microtime(1);
 
 		$value_to_search  = $new_dato;

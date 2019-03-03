@@ -15,14 +15,23 @@
 	#$start = microtime(TRUE);
 	#global $start;
 	
-	# set vars
+	// set vars. (!) note that '$ar_vars' is received on call static method get_html of current class
 		$vars = array('caller_tipo','id','t','tipo','m','modo','context_name','parent');
-			foreach($vars as $name) $$name = common::setVar($name);
+		foreach($vars as $name) {
+			if (isset($ar_vars[$name])) {
+				// Use vars from current function param
+					$$name = $ar_vars[$name];
+			}else{
+				// Calculate var from GET enviroment
+					$$name = common::setVar($name);
+			}			
+		}
 		if($t) $tipo = $t;
 		if($m) $modo = $m;
 
 
-	# Modos autointerpretados
+	
+	// Modos autointerpretados
 		if($modo===false) {
 			if(empty($id)) {
 				$modo = 'list';
@@ -32,11 +41,11 @@
 		}
 
 	
-	# Store section tipo
+	// Store section tipo
 		navigator::set_selected('section', $tipo);
 
 
-	# SECTION_TIPO
+	// section_tipo
 		if ($html_raw!==true && !defined('SECTION_TIPO')) {
 			define('SECTION_TIPO', $tipo);
 			
@@ -63,7 +72,7 @@
 
 
 
-	# DEBUG	
+	// DEBUG
 		if(SHOW_DEBUG===true) {
 			unset($_SESSION['debug_content']);
 
