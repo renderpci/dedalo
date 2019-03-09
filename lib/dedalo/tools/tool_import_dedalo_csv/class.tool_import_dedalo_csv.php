@@ -33,7 +33,7 @@ class tool_import_dedalo_csv extends tool_common {
 
 		# Disable logging activity and time machine # !IMPORTANT
 		logger_backend_activity::$enable_log = false;
-		RecordObj_time_machine::$save_time_machine_version = false;
+		#RecordObj_time_machine::$save_time_machine_version = false;
 
 		$result = new stdClass();
 			$result->result = false;
