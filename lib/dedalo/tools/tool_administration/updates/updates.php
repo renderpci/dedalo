@@ -79,7 +79,7 @@ $updates->$v = new stdClass();
 	$updates->$v->update_from_minor  = 0;
 
 	#UPDATE COMPONENTS
-	$updates->$v->components_update = ['component_date'];	// Force recalculate inaccurate time			
+	$updates->$v->components_update = ['component_date'];	// Force recalculate inaccurate time	
 
 
 
