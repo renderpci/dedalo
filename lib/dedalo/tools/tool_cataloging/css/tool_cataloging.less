@@ -239,10 +239,10 @@ body {
 				background-image: url(../../../themes/default/move.svg);
 				background-repeat: no-repeat;
 				background-position: center;
-				background-size: 25px 25px;
+				background-size: 18px 18px;
 				//background-color: #dbdbdb;
 				opacity: 0.3;
-				width: 6%;
+				width: 5.8%;
 				height: 100%;
 				position: absolute;
 				right: -1px;
@@ -302,5 +302,36 @@ body {
 	}
 
 
+// thesaurus_container
+	#thesaurus_container {
+		padding: 10px;
 
+		position: -webkit-sticky;
+		position: sticky;
+		top: 0;
+	}
+
+// test portal
+	.css_wrap_portal {
+
+		>.content_data {
+
+			overflow: unset;
+
+			>.css_button_generic {
+				display: none
+			}
+
+			.mosaic_ul .mosaic_li .button_edit, .mosaic_ul .mosaic_li .button_delete {
+				display: none !important;
+			}
+		}
+
+		.mosaic_item .div_image_portal_list_view_mosaic {
+			background-size: contain !important;
+			background-color: #ffffff;
+		}
+	}
+
+	
 

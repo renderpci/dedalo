@@ -36,7 +36,7 @@
 
 			//background: transparent url(../../themes/default/drop-down-arrow.png) no-repeat right center;
 			//background-size: 12px;
-			//background-position: right 10px center;    
+			//background-position: right 10px center;   
 			}
 			.css_wrap_area_thesaurus .tipology_name:hover {
 				background-color: #E0E0E0;
@@ -94,7 +94,8 @@
 			//background-color: #EDEDED;
 			//min-height: @ts_line_height;
 			//padding: 7px;			
-			margin: 0;				
+			margin: 0;
+			padding: 0;			
 			}
 			/* ID_COLUMN_CONTENT
 			------------------------------------------------ */
@@ -207,22 +208,23 @@
 			width: auto;
 			min-width: 30%;
 		}
+
 		// Inside all ts objects
 		.wrap_ts_object {
 			//height: 22px;
-			.wrap_component {
+			>.wrap_component {
 				.reset_wrap;
 			}
-			.wrap_component label {
+			>.wrap_component label {
 				.reset_label;
 			}
-			.wrap_component .content_data {
+			>.wrap_component .content_data {
 				.reset_content_data;
 			}
-			.wrap_component .content_data .button_add {
+			>.wrap_component .content_data .button_add {
 				top: 4px;
 			}
-			.wrap_component .content_data .css_input_text {
+			>.wrap_component .content_data .css_input_text {
 				min-width: 260px;
 			}
 			/*
