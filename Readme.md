@@ -180,10 +180,10 @@ Dédalo have three main updates procedures:
 **SERVER SYSTEM**
 
 Dédalo in the server part is tested into the next Operating Systems:
-- CentOS 6.5 (deprecated update as soon as possible), 6.6, 7.1
-- Red Hat Enterprise Linux 6.5 (deprecated update as soon as possible), 6.6, 7.1
+- CentOS 6.5 (deprecated update as soon as possible), 6.6, 7.1, 7,5
+- Red Hat Enterprise Linux 6.5 (deprecated update as soon as possible), 6.6, 7.1, 7.5
 - Debian 8.7
-- MacOsX 10.9 (deprecated update as soon as possible), 10.10, 10.11+
+- MacOsX 10.10 (deprecated update as soon as possible), 10.11, 10.12+
 
 All other Linux will be compatible but we don't test it.
 
@@ -192,7 +192,7 @@ Windows: is possible that Dédalo can run, but we NO TESTED.
 **USE**
 
 Dédalo version 4, is only certificated and proved into the chromium or webkit browsers (Chrome, Safari, ...). 
-Firefox situation: This version of Dédalo(V4.8+) is full compatible, and can be used in production, but we need more feedback from the users, please comment your experience. 
+Firefox situation: From the 4.8 version of Dédalo is full compatible with Firefox, and can be used in production, but we need more feedback from the users, please comment your experience. 
 
 Browser	|	Version |	certificated
 --------- | --------- | ---------
