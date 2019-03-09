@@ -72,26 +72,30 @@
 				$data->context_data 	= $this->get_context_data();
 				$data->data 			= $this->get_data();
 
-			$options = new stdClass();
-				$options->data 		= $data;
-				$options->hierarchy = $hierarchy_sections;
 
+			$options = new stdClass();
+				$options->data 		 			= $data;
+				$options->hierarchy  			= $hierarchy_sections;
+				$options->new_thesaurus_value 	= $properties->set_new_thesaurus_value;
+				$options->icon_show 			= $properties->icon_show;
+				$options->update_component 		= $properties->update_component;
+	
 			$options_json = json_encode($options);
 				
 			# TOOL CSS / JS MAIN FILES
-			# CSS
-				css::$ar_url[] = DEDALO_LIB_BASE_URL."/tools/".$tool_name."/css/".$tool_name.".css";
-				css::$ar_url[] = DEDALO_LIB_BASE_URL."/section/css/section.css";
-				css::$ar_url[] = DEDALO_LIB_BASE_URL."/component_portal/css/component_portal.css";
-				# JS
-				js::$ar_url[]  = DEDALO_LIB_BASE_URL."/search/js/search2.js";
-				js::$ar_url[]  = DEDALO_LIB_BASE_URL."/tools/".$tool_name."/js/".$tool_name.".js";
-				js::$ar_url[] = DEDALO_LIB_BASE_URL."/component_portal/js/component_portal.js";
-
-				js::$ar_url[] = DEDALO_LIB_BASE_URL."/component_input_text/js/render_component_input_text.js";
-				js::$ar_url[] = DEDALO_LIB_BASE_URL."/component_portal/js/render_component_portal.js";
-				js::$ar_url[] = DEDALO_LIB_BASE_URL."/component_image/js/render_component_image.js";
-				js::$ar_url[] = DEDALO_LIB_BASE_URL."/component_text_area/js/render_component_text_area.js";
+				// CSS					
+					css::$ar_url[] = DEDALO_LIB_BASE_URL."/section/css/section.css";
+					css::$ar_url[] = DEDALO_LIB_BASE_URL."/component_portal/css/component_portal.css";
+					css::$ar_url[] = DEDALO_LIB_BASE_URL."/tools/".$tool_name."/css/".$tool_name.".css";
+				// JS
+					js::$ar_url[]  = DEDALO_LIB_BASE_URL."/search/js/search2.js";
+					js::$ar_url[]  = DEDALO_LIB_BASE_URL."/component_portal/js/component_portal.js";
+					js::$ar_url[]  = DEDALO_LIB_BASE_URL."/tools/".$tool_name."/js/".$tool_name.".js";					
+					// render_component js
+						js::$ar_url[] = DEDALO_LIB_BASE_URL."/component_input_text/js/render_component_input_text.js";
+						js::$ar_url[] = DEDALO_LIB_BASE_URL."/component_portal/js/render_component_portal.js";
+						js::$ar_url[] = DEDALO_LIB_BASE_URL."/component_image/js/render_component_image.js";
+						js::$ar_url[] = DEDALO_LIB_BASE_URL."/component_text_area/js/render_component_text_area.js";
 
 
 			# ts_object class

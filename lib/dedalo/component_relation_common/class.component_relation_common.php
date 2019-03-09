@@ -1185,7 +1185,7 @@ class component_relation_common extends component_common {
 			}
 			#dump($dato, ' dato ++ '.to_string());		
 
-		// propiedadesd. get the properties for get search section and component
+		// propiedades . get the properties for get search section and component
 			$propiedades 				= $this->get_propiedades();
 			$ar_section_to_search 		= $propiedades->source->section_to_search;
 			$ar_component_to_search 	= $propiedades->source->component_to_search;
@@ -1194,7 +1194,7 @@ class component_relation_common extends component_common {
 			$section_id 	= $this->get_parent();
 			$section_tipo 	= $this->get_section_tipo();
 
-		// data source overwrite
+		// data source overwrite (tool cataloging case)
 			if (isset($propiedades->source->source_overwrite) && isset($propiedades->source->component_to_search)) {
 				// overwrite source locator 					
 					$component_to_search_tipo 	= reset($ar_component_to_search);
@@ -1206,13 +1206,30 @@ class component_relation_common extends component_common {
 																				 DEDALO_DATA_NOLAN,
 																				 $section_tipo);
 					$component_to_search_dato = $component_to_search->get_dato();
-
 					foreach ($component_to_search_dato as $current_locator) {
 						$locator = new locator();
 							$locator->set_section_id($current_locator->section_id);
 							$locator->set_section_tipo($current_locator->section_tipo);
-						break; // Only first
+						break; // Only first is allowed
 					}
+
+				// get overwrite source data when exists
+					if (isset($locator)) {
+
+						$data_from_field_tipo		= $propiedades->source->source_overwrite->data_from_field;
+						$modelo_name 	  		   	= RecordObj_dd::get_modelo_name_by_tipo($data_from_field_tipo, true);
+						$component_overwrite 		= component_common::get_instance($modelo_name,
+																					 $data_from_field_tipo,
+																					 $locator->section_id,
+																					 'list',
+																					 DEDALO_DATA_NOLAN,
+																					 $locator->section_tipo);
+						$overwrite_dato = $component_overwrite->get_dato();
+						
+						$this->set_dato($overwrite_dato);
+						$this->Save();
+					}
+				return true; // task done. return
 			
 			}else{
 				// default normal case
@@ -1320,12 +1337,12 @@ class component_relation_common extends component_common {
 		# From locators inside property 'relations'
 		#$ar_result = $this->get_external_result($new_dato, $ar_component_to_search, $ar_section_to_search);
 		# From table 'relations' (x number of locators in new_dato is fast aprox. because 'OR' problem in indexes)
-			if (isset($propiedades->source->source_overwrite)) {
-				# replace on the fly
-					$ar_component_to_search = [$propiedades->source->source_overwrite->from_component_tipo];
-			}else{
-				# untouch ar_component_to_search
-			}
+			# if (isset($propiedades->source->source_overwrite)) {
+			# 	# replace on the fly (tool cataloging case)
+			# 		$ar_component_to_search = [$propiedades->source->source_overwrite->from_component_tipo];
+			# }else{
+			# 	# untouch ar_component_to_search
+			# }
 			$ar_result = $this->get_external_result_from_relations_table($new_dato, $ar_component_to_search);		
 				#dump($ar_result, ' ar_result ++ '.to_string()); #die();					
 
@@ -1336,29 +1353,32 @@ class component_relation_common extends component_common {
 				}
 			}
 
-		$total_ar_result = count($ar_result);
-		if (count($dato)!==$total_ar_result) {			
-			foreach ($ar_result as $key => $current_locator) {
-				if(	locator::in_array_locator( $current_locator, $dato, $ar_properties=array('section_id','section_tipo') )===false){
-					array_push($dato, $current_locator);
-					$changed = true;
+		// dato update
+			$total_ar_result = count($ar_result);
+			if (count($dato)!==$total_ar_result) {
+				foreach ($ar_result as $key => $current_locator) {
+					if(	locator::in_array_locator( $current_locator, $dato, $ar_properties=array('section_id','section_tipo') )===false){
+						array_push($dato, $current_locator);
+						$changed = true;
+					}
 				}
 			}
-		}
-
-		if ($changed===true) {
-			$dato = array_values($dato);
-			$this->set_dato($dato);
-			if ($save===true) {
-				$this->Save();
-				debug_log(__METHOD__." Saved modified dato to sustain the order - $total_ar_result locators in section_id = $section_id ".to_string(), logger::DEBUG);
+			
+		// changed true
+			if ($changed===true) {
+				$dato = array_values($dato);
+				$this->set_dato($dato);
+				if ($save===true) {
+					$this->Save();
+					debug_log(__METHOD__." Saved modified dato to sustain the order - $total_ar_result locators in section_id = $section_id ".to_string(), logger::DEBUG);
+				}
 			}
-		}
 
-		if(SHOW_DEBUG===true) {
-			//$total = exec_time_unit($start_time,'ms')." ms";
-			//debug_log(__METHOD__." Total time $total - $total_ar_result locators [$this->section_tipo, $this->tipo, $this->parent] ".get_class($this) .' : '. RecordObj_dd::get_termino_by_tipo($this->tipo) . to_string(), logger::DEBUG);
-		}
+		// debug
+			if(SHOW_DEBUG===true) {
+				//$total = exec_time_unit($start_time,'ms')." ms";
+				//debug_log(__METHOD__." Total time $total - $total_ar_result locators [$this->section_tipo, $this->tipo, $this->parent] ".get_class($this) .' : '. RecordObj_dd::get_termino_by_tipo($this->tipo) . to_string(), logger::DEBUG);
+			}
 
 		#return $dato;
 		#$this->set_dato($ar_result);
