@@ -157,6 +157,24 @@ function add_children($json_data) {
 					}
 
 
+	// set new section component 'is_indexable' value
+		$section_map = hierarchy::get_section_map_elemets( $section_tipo );
+		if (!isset($section_map['thesaurus']->is_indexable)) {
+			debug_log(__METHOD__." Invalid section_map 'is_indexable' property from section $section_tipo ".to_string($section_map), logger::DEBUG);
+		}else{
+
+			$component_tipo = $section_map['thesaurus']->is_indexable;
+			$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+			$component 	 	= component_common::get_instance($modelo_name,
+															 $component_tipo,
+															 $new_section_id,
+															 'edit', // note mode edit autosave default value
+															 DEDALO_DATA_NOLAN,
+															 $section_tipo);
+			$component->get_dato();
+		}
+
+
 	# COMPONENT_RELATION_CHILDREN
 	$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 	if ($modelo_name!=='component_relation_children') {
@@ -241,7 +259,7 @@ function add_children_from_hierarchy($json_data) {
 			$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
 			$component 	 	= component_common::get_instance($modelo_name,
 															 $component_tipo,
-															 $section_id,
+															 $new_section_id,
 															 'edit', // note mode edit autosave default value
 															 DEDALO_DATA_NOLAN,
 															 $section_tipo);
