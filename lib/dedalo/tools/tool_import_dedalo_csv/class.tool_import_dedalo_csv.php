@@ -71,10 +71,10 @@ class tool_import_dedalo_csv extends tool_common {
 			$updated_rows=array();
 
 		# sort ar_csv_data by section_id (first column)
-		#uasort($ar_csv_data, function($a, $b) {
-		#    return $a[0] > $b[0];
-		#});
-		# dump($ar_csv_data, ' ar_csv_data ++ '.to_string()); die();
+			#uasort($ar_csv_data, function($a, $b) {
+			#    return $a[0] > $b[0];
+			#});
+			# dump($ar_csv_data, ' ar_csv_data ++ '.to_string()); die();
 		$counter = 0;
 		foreach ((array)$ar_csv_data as $rkey => $row) {
 			$row_start_time = start_time();
@@ -88,14 +88,10 @@ class tool_import_dedalo_csv extends tool_common {
 				continue;
 			}
 
-			# Always force create/re use section
-			$section 		= section::get_instance($section_id, $section_tipo, false);
-			$create_record 	= $section->forced_create_record();
-			$section_id 	= $section->get_section_id();
-			# dump($section_id, ' section_id ++ '.to_string());
-
-			// section save_modified (!) Important
-				$section->save_modified = false; # Change temporally section param 'save_modified' before save to avoid overwrite possible modified import data
+			// always force create/re use section
+				$section 		= section::get_instance($section_id, $section_tipo, false);
+				$create_record 	= $section->forced_create_record();
+				$section_id 	= $section->get_section_id();
 
 			# Iterate fields/columns
 			foreach ($row as $key => $value) {
@@ -158,10 +154,9 @@ class tool_import_dedalo_csv extends tool_common {
 					continue;
 				# modified_by_user
 				}elseif ($csv_map[$key]==='modified_by_user') {
-
-					# (!) Note: modified_by_user will be changed on save section to current logged user					
 					
 					$user_locator 	 = self::build_user_locator($value, $modified_by_user['tipo']);
+						dump($user_locator, ' user_locator ++ '.to_string());
 
 					if (!empty($user_locator)) {
 						// component build and set dato
@@ -175,17 +170,17 @@ class tool_import_dedalo_csv extends tool_common {
 							$section->set_component_relation_dato($component);
 
 						// Set direct property also
-							$dato = (object)$section->get_dato();
-							$dato->modified_by_userID = (int)$user_locator->section_id;
+							$section_dato = (object)$section->get_dato();
+							$section_dato->modified_by_userID = (int)$user_locator->section_id;
+							$section->set_dato($section_dato);
 						
 						// Save section
+							$section->save_modified = false;
 							$section->Save();
 					}
 					continue;			
 				# modified_date
 				}elseif ($csv_map[$key]==='modified_date') {
-
-					# (!) Note: modified_date will be changed on save section to current logged user	
 					
 					$current_date 	= self::build_date_from_value($value);
 
@@ -207,10 +202,12 @@ class tool_import_dedalo_csv extends tool_common {
 							$section->set_component_direct_dato($component);
 
 						// Set direct property also
-							$dato = (object)$section->get_dato();
-							$dato->modified_date = $current_date->timestamp;
+							$section_dato = (object)$section->get_dato();
+							$section_dato->modified_date = $current_date->timestamp;
+							$section->set_dato($section_dato);
 						
 						// Save
+							$section->save_modified = false;
 							$section->Save();
 					}
 					continue;
