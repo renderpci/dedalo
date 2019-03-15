@@ -1486,8 +1486,14 @@
 	Valencia 28-01-2019 5.2.0
 		search : Recoded to make it independent of initator (js/php) and context
 
+
 	Valencia 11-02-2019 5.2.2
 		Added psql and pgpass file check on Dédalo init sequence
+
+
+	Valencia 21-02-2019 5.2.21
+		Fixed error on tool_import_dedalo_csv when import modified_by_user and modified_date
+
 
 	
 
@@ -1510,12 +1516,12 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.2.18';
+	$DEDALO_VERSION = '5.2.21';
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '06-03-2019');
+	define('DEDALO_BUILD'	, '15-03-2019');
 
 
 	/*
