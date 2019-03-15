@@ -1441,7 +1441,7 @@ class web_data {
 				}
 
 			if(SHOW_DEBUG===true) {
-				error_log("-- Replaced $count concurrences of fragm (reel $av_section_id - $key)");
+				error_log("-- Replaced concurrences of fragm (reel $av_section_id - $key)");
 			}
 		}
 
