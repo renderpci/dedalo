@@ -108,7 +108,7 @@ function process_file($json_data) {
 
 	# Enable logging activity and time machine # !IMPORTANT
 	logger_backend_activity::$enable_log = true;
-	RecordObj_time_machine::$save_time_machine_version = true;
+	#RecordObj_time_machine::$save_time_machine_version = true;
 
 
 	#

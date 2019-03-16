@@ -85,7 +85,7 @@ if ( strpos($_SERVER["REQUEST_URI"], '.php')!==false ) {
 		if (isset($_GET['skip_log']) && $_GET['skip_log']==='1') {
 			# Disable logging activity and time machine # !IMPORTANT
 			logger_backend_activity::$enable_log = false;
-			RecordObj_time_machine::$save_time_machine_version = false;
+			#RecordObj_time_machine::$save_time_machine_version = false;
 			#debug_log(__METHOD__." Disabled enable_log/save_time_machine_version for skip_log mode ".to_string(), logger::DEBUG);
 		}
 

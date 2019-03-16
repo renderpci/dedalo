@@ -1242,7 +1242,7 @@ abstract class common {
 		}else{
 			$response = new stdClass();
 				$response->result 	= false;
-				$response->msg 		= 'Error. Request failed. json_data->mode not exists';
+				$response->msg 		= 'Error. Request failed. json_data->mode not exists: '.to_string($json_data->mode);
 			echo json_encode($response);
 		}
 

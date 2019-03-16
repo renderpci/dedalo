@@ -73,17 +73,19 @@ class dd_date extends stdClass {
 	/**
 	* SET_TIME
 	* Store absolute date value in seconds
-	* @return 
+	* @return bool true
 	*/
 	public function set_time($value) {
 		$this->time = (int)$value;
+
+		return true;
 	}//end set_time
 
 
 
 	/**
 	* SET_YEAR
-	* @return bool 
+	* @return bool true
 	*/
 	public function set_year($value) {
 		/*
@@ -98,18 +100,25 @@ class dd_date extends stdClass {
 		return true;
 	}//end set_year
 
+
+
 	/**
 	* SET_MONTH
 	* @return bool true
 	*/
 	public function set_month($value, $constrain=false) {
-		if( (int)$value<1 || (int)$value>12 ) {
-		  #throw new Exception("Error Processing Request. Invalid month: $value", 1);
-		  #$this->errors[] = "Error on set month. Value is not standard: ".to_string($value);
-		  debug_log(__METHOD__." Error on set month. Value is not standard ".to_string($value), logger::WARNING);
-		  if ($constrain===true) return false;
-		}
-		$this->month = (int)$value;
+
+		// check valid value (constrain)
+			if( (int)$value<1 || (int)$value>12 ) {
+			  #throw new Exception("Error Processing Request. Invalid month: $value", 1);
+			  #$this->errors[] = "Error on set month. Value is not standard: ".to_string($value);
+			  debug_log(__METHOD__." Error on set month. Value is not standard ".to_string($value), logger::WARNING);
+			  if ($constrain===true) return false;
+			}
+
+		// set value
+			$this->month = (int)$value;
+
 		return true;
 	}//end set_month
 
@@ -120,13 +129,17 @@ class dd_date extends stdClass {
 	* @return bool true
 	*/
 	public function set_day($value, $constrain=false) {
-		if( (int)$value<1 || (int)$value>31 ) {
-			# throw new Exception("Error Processing Request. Invalid day: $value", 1);
-			#$this->errors[] = "Error on set day. Value is not standard: ".to_string($value);
-			debug_log(__METHOD__." Error on set day. Value is not standard ".to_string($value), logger::WARNING);
-			if ($constrain===true) return false;
-		}
-		$this->day = (int)$value;
+
+		// check valid value (constrain)
+			if( (int)$value<1 || (int)$value>31 ) {
+				# throw new Exception("Error Processing Request. Invalid day: $value", 1);
+				#$this->errors[] = "Error on set day. Value is not standard: ".to_string($value);
+				debug_log(__METHOD__." Error on set day. Value is not standard ".to_string($value), logger::WARNING);
+				if ($constrain===true) return false;
+			}
+		
+		// set value
+			$this->day = (int)$value;
 
 		return true;
 	}//end set_day
@@ -138,13 +151,17 @@ class dd_date extends stdClass {
 	* @return bool true
 	*/
 	public function set_hour($value, $constrain=false) {
-		if( (int)$value<0 || (int)$value>23 ) {
-			#throw new Exception("Error Processing Request. Invalid hour: $value", 1);
-			#$this->errors[] = "Error on set hour. Value is invalid: ".to_string($value);
-			debug_log(__METHOD__." Error on set hour. Value is invalid: ".to_string($value), logger::WARNING);
-			if ($constrain===true) return false;
-		}
-		$this->hour = (int)$value;
+
+		// check valid value (constrain)
+			if( (int)$value<0 || (int)$value>23 ) {
+				#throw new Exception("Error Processing Request. Invalid hour: $value", 1);
+				#$this->errors[] = "Error on set hour. Value is invalid: ".to_string($value);
+				debug_log(__METHOD__." Error on set hour. Value is invalid: ".to_string($value), logger::WARNING);
+				if ($constrain===true) return false;
+			}
+
+		// set value
+			$this->hour = (int)$value;
 
 		return true;
 	}//end set_hour
@@ -156,13 +173,18 @@ class dd_date extends stdClass {
 	* @return bool 
 	*/
 	public function set_minute($value, $constrain=false) {
-		if( (int)$value<0 || (int)$value>59 ) {
-			#throw new Exception("Error Processing Request. Invalid minute: $value", 1);
-			#$this->errors[] = "Error on set minute. Value is invalid: ".to_string($value);
-			debug_log(__METHOD__." Error on set minute. Value is invalid: ".to_string($value), logger::WARNING);
-			if ($constrain===true) return false;
-		}
-		$this->minute = (int)$value;
+
+		// check valid value (constrain)
+			if( (int)$value<0 || (int)$value>59 ) {
+				#throw new Exception("Error Processing Request. Invalid minute: $value", 1);
+				#$this->errors[] = "Error on set minute. Value is invalid: ".to_string($value);
+				debug_log(__METHOD__." Error on set minute. Value is invalid: ".to_string($value), logger::WARNING);
+				if ($constrain===true) return false;
+			}
+
+		// set value
+			$this->minute = (int)$value;
+
 		return true;
 	}//end set_minute
 	#public function set_min($value, $constrain=false) {	return $this->set_minute($value, $constrain); }
@@ -170,16 +192,21 @@ class dd_date extends stdClass {
 
 	/**
 	* SET_SECOND
-	* @return bool 
+	* @return bool true
 	*/
 	public function set_second($value, $constrain=false) {
-		if( (int)$value<0 || (int)$value>59 ) {
-			#throw new Exception("Error Processing Request. Invalid second: $value", 1);
-			#$this->errors[] = "Error on set second. Value is invalid: ".to_string($value);
-			debug_log(__METHOD__." Error on set second. Value is invalid: ".to_string($value), logger::WARNING);
-			if ($constrain===true) return false;
-		}
-		$this->second = (int)$value;
+
+		// check valid value (constrain)
+			if( (int)$value<0 || (int)$value>59 ) {
+				#throw new Exception("Error Processing Request. Invalid second: $value", 1);
+				#$this->errors[] = "Error on set second. Value is invalid: ".to_string($value);
+				debug_log(__METHOD__." Error on set second. Value is invalid: ".to_string($value), logger::WARNING);
+				if ($constrain===true) return false;
+			}
+
+		// set value
+			$this->second = (int)$value;
+
 		return true;
 	}//end set_second
 
@@ -187,16 +214,21 @@ class dd_date extends stdClass {
 
 	/**
 	* SET_MS
-	* @return bool 
+	* @return bool true 
 	*/
 	public function set_ms($value, $constrain=false) {
-		if( (int)$value<0 || (int)$value>999 ) {
-			#throw new Exception("Error Processing Request. Invalid ms: $value", 1);
-			#$this->errors[] = "Error on set ms. Value is invalid: ".to_string($value);
-			debug_log(__METHOD__." Error on set ms. Value is invalid: ".to_string($value), logger::WARNING);
-			if ($constrain===true) return false;
-		}
-		$this->ms = (int)$value;
+
+		// check valid value (constrain)
+			if( (int)$value<0 || (int)$value>999 ) {
+				#throw new Exception("Error Processing Request. Invalid ms: $value", 1);
+				#$this->errors[] = "Error on set ms. Value is invalid: ".to_string($value);
+				debug_log(__METHOD__." Error on set ms. Value is invalid: ".to_string($value), logger::WARNING);
+				if ($constrain===true) return false;
+			}
+
+		// set value
+			$this->ms = (int)$value;
+
 		return true;
 	}//end set_ms
 
@@ -205,10 +237,12 @@ class dd_date extends stdClass {
 	/**
 	* SET_OP
 	* Only for search purposses
-	* @return 
+	* @return bool true
 	*/
 	public function set_op($value) {
-		$this->op = (string)$value;
+		// set value
+			$this->op = (string)$value;
+
 		return true;
 	}//end set_op
 
