@@ -152,6 +152,9 @@
 							$autosearch_options_html = '';					
 							$autosearch_options_js 	 = '';
 							$autosearch_options_id 	 = 'autosearch_options_' . $section_tipo .'_'. $tipo .'_'. $parent;
+							if ($modo==='search') {
+								$autosearch_options_id .= '_'.microtime(true);
+							}
 							$autosearch_options_html .= '<div id="' . $autosearch_options_id . '" class="autosearch_options'.$in_search_mode_css.'" data-tipo="'.$tipo.'">';
 							#$html_content .= '<div class="component_options_container '.$in_search_mode_css.'">';
 								// search_sections list
