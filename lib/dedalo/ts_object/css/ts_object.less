@@ -1,13 +1,14 @@
 
 @line_height: 20px;
 
-.inline_common {
-	display: inline-table;
-	height: 1.4em;
-	height: @line_height;
-	font-size: 1em;
-	float: left;
-}
+// mixin
+	.inline_common {
+		display: inline-table;
+		//height: 1.4em;
+		height: @line_height;
+		font-size: 1em;
+		float: left;
+	}
 
 
 /* WRAP_TS_OBJECT
@@ -21,7 +22,8 @@
 	//margin-left: 52px;
 	//height: 1em;
 	//border-bottom: 1px #E0E0E0 solid;
-	width: inherit;
+	//width: inherit;
+	width: 100%;
 	}	
 	.wrap_ts_object:hover > .id_column_content {
 		opacity: 1;
@@ -447,7 +449,8 @@
 		.inline_common ;
 		width: 100%;
 		height: 0;
-		margin-left: 30px-3;
+		//margin-left: 30px-3;
+		padding-left: 27px;
 	}
 
 	/* CHILDRENS_TOOGLE_VIEW

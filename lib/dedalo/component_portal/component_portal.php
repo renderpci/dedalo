@@ -10,7 +10,6 @@
 	$label 					= $this->get_label();
 	$debugger				= $this->get_debugger();
 	$permissions			= $this->get_component_permissions();
-	
 	if($permissions===0) return null;
 
 	$lang					= $this->get_lang();
@@ -45,7 +44,7 @@
 	#debug_log(__METHOD__." POR RREVISAR A FONDO EL KEY search_options_session_key !!!! ".to_string($this->section_list_key), logger::DEBUG);
 		#dump($modo, ' modo ++ '.to_string());
 
-
+	
 	switch($modo) {
 		
 		# EDIT MODE

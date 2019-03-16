@@ -633,7 +633,13 @@ class tool_administration extends tool_common {
 							$component->set_dato($response->new_dato);
 							$component->update_diffusion_info_propagate_changes = false;
 							$component->set_dato_resolved($response->new_dato); // Fix as resolved
-							$component->Save();
+
+							// section set as not save_modified
+								$component_section = $component->get_my_section();
+								$component_section->save_modified = false; # Change temporally section param 'save_modified' before save to avoid overwrite possible modified import data
+
+							// save component
+								$component->Save();
 							#debug_log(__METHOD__." UPDATED dato from component [$modelo_name][{$current_section_tipo}-{$section_id}] ".to_string(), logger::DEBUG);
 							$i++;
 							#$total_update[$current_section_tipo][$current_component_tipo][$current_lang]['i']=$i;
@@ -932,6 +938,10 @@ class tool_administration extends tool_common {
 			if (empty($options->target_section_id)) {
 				# Create a new section and gei section_id
 				$section_target = section::get_instance(null, $options->target_section_tipo);
+
+				// section set as not save_modified
+					$section_target->save_modified = false; # Change temporally section param 'save_modified' before save to avoid overwrite possible modified import data
+
 				$section_target->Save();
 				$target_parent  = $section_target->get_section_id();
 
@@ -982,6 +992,11 @@ class tool_administration extends tool_common {
 																		  false);
 					$target_component->set_dato( $dato );
 					$target_component->update_diffusion_info_propagate_changes = false;
+
+					// section set as not save_modified
+						$component_section = $target_component->get_my_section();
+						$component_section->save_modified = false; # Change temporally section param 'save_modified' before save to avoid overwrite possible modified import data
+
 					$save_result = $target_component->Save();
 				}//end foreach langs
 
@@ -1010,6 +1025,11 @@ class tool_administration extends tool_common {
 				
 				$component_portal->add_locator( $locator );
 				$component_portal->update_diffusion_info_propagate_changes = false;
+
+				// section set as not save_modified
+					$component_section = $component_portal->get_my_section();
+					$component_section->save_modified = false; # Change temporally section param 'save_modified' before save to avoid overwrite possible modified import data
+			
 				$component_portal->Save();
 			}//end if (!is_null($options->source_portal_tipo))
 			
