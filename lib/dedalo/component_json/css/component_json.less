@@ -2,7 +2,22 @@
 @common_css: "../../common/css";
 
 // Usage
-@import "@{common_css}/library.less"; 
+@import "@{common_css}/library.less";
+
+
+// wrapper
+	.css_wrap_component_json {
+
+		>.content_data {
+			height: 100%;
+
+			>.editor_json {
+				height: 100%;
+				padding-bottom: 25px;
+			}
+		}
+
+	}
 
 
 .json_key_label {

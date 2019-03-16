@@ -992,7 +992,12 @@ class RecordObj_dd extends RecordDataBoundObject {
 							return array();
 							#throw new Exception("Error Processing get_ar_terminoID_by_modelo_name_and_relation. Modelo is empty. Please define modelo for this component $terminoID ($name)", 1);							
 						}
-						$current_modelo_name	= $RecordObj_dd->get_termino_by_tipo($modelo);	#dump($modelo_name);
+						$current_modelo_name	= $RecordObj_dd->get_termino_by_tipo($modelo);
+
+						#if ($current_modelo_name==='box elements') {
+						#	debug_log(__METHOD__." Ignored tipo $terminoID of model 'box elements' ".to_string(), logger::DEBUG);
+						#	continue;
+						#}
 						
 						if($search_exact===true) {
 							if ($current_modelo_name===$modelo_name) {

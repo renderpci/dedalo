@@ -497,6 +497,7 @@ abstract class subtitles {
 	}//end calculate_global_char_time
 
 
+
 	/**
 	* REVISE_TAG_IN_LINE
 	* Fix possible errors on line string with received tag
@@ -505,9 +506,9 @@ abstract class subtitles {
 	public static function revise_tag_in_line($line_string, $tag_name) {
 		
 		$line_string = str_replace('</'.$tag_name.'>'.'<'.$tag_name.'>', '', $line_string);
-		$line_string = str_replace('</'.$tag_name.'> <'.$tag_name.'>', '', $line_string);
+		$line_string = str_replace('</'.$tag_name.'> <'.$tag_name.'>', ' ', $line_string);
 		$line_string = str_replace('<'.$tag_name.'>'.'</'.$tag_name.'>', '', $line_string);
-		$line_string = str_replace('<'.$tag_name.'> </'.$tag_name.'>', '', $line_string);
+		$line_string = str_replace('<'.$tag_name.'> </'.$tag_name.'>', ' ', $line_string);
 
 		$open_tag_count = substr_count($line_string, '<'.$tag_name.'>');
 			#dump($open_tag_count, "OPEN ".htmlspecialchars($line_string) );

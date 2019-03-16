@@ -331,26 +331,27 @@ class ts_object extends Accessors {
 						break;
 
 					case ($element_obj->type==='icon'):
-
+	
 						if($render_vars->icon==='CH') {
 							continue 2;
 						}
 
-
 						// ND element can change term value when 'esdecriptor' value is 'no' (locator of 'no')
-						if($render_vars->icon==='ND') {
-							#debug_log(__METHOD__." childrens_data->ar_elements ".to_string($childrens_data->ar_elements), logger::DEBUG);
-							#debug_log(__METHOD__." dato->section_id ".to_string($dato), logger::DEBUG);
-							if (isset($dato[0]) && isset($dato[0]->section_id) && (int)$dato[0]->section_id===2) {
-								ts_object::set_term_as_nd($childrens_data->ar_elements);
-								$childrens_data->is_descriptor = false;
+							if($render_vars->icon==='ND') {
+								#debug_log(__METHOD__." childrens_data->ar_elements ".to_string($childrens_data->ar_elements), logger::DEBUG);
+								#debug_log(__METHOD__." dato->section_id ".to_string($dato), logger::DEBUG);
+								if (isset($dato[0]) && isset($dato[0]->section_id) && (int)$dato[0]->section_id===2) {
+									ts_object::set_term_as_nd($childrens_data->ar_elements);
+									$childrens_data->is_descriptor = false;
+								}
+								continue 2;
 							}
-							continue 2;
-						}
 
 						# icon Not need more info. Value is property 'type'
 						$element_obj->value = $render_vars->icon;
-						if(empty($dato)) continue 2; // Skip empty icon value links
+
+						// dato check
+							if(empty($dato)) continue 2; // Skip empty icon value links														
 
 						if ($modelo_name==='component_relation_index' || $modelo_name==='component_relation_struct') {
 							#dump($dato, ' dato ++ '.to_string($element_tipo));
@@ -731,7 +732,7 @@ class ts_object extends Accessors {
 					$permissions = common::get_permissions($this->section_tipo, $ar_children[0]);
 				}else{
 					$permissions = 0;
-					debug_log(__METHOD__." ERROR. Element not defined: $element_name . Zero value is returned ".to_string(), logger::ERROR);
+					debug_log(__METHOD__." ERROR. Element not defined: $element_name . Zero value is returned as permissions ".to_string(), logger::DEBUG);
 				}
 				break;
 		}
