@@ -173,7 +173,6 @@ function Save($json_data) {
 function load_component_by_ajax($json_data) {
 	global $start_time;
 
-
 	# Write session to unlock session file
 	session_write_close();
 
@@ -181,72 +180,78 @@ function load_component_by_ajax($json_data) {
 		$response->result 	= false;
 		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
 
-	$vars = array('parent','tipo','lang','modo','section_tipo','current_tipo_section','context_name','arguments','top_tipo','top_id');
-		foreach($vars as $name) {
-			$$name = common::setVarData($name, $json_data);
-			# DATA VERIFY
-			if ($name==='current_tipo_section' || $name==='context_name' || $name==='arguments' || $name==='top_id') continue; # Skip non mandatory
-			if (empty($$name)) {
-				$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty '.$name.' (is mandatory)';
-				return $response;
+	// vars 
+		$vars = array('parent','tipo','lang','modo','section_tipo','current_tipo_section','context_name','arguments','top_tipo','top_id');
+			foreach($vars as $name) {
+				$$name = common::setVarData($name, $json_data);
+				# DATA VERIFY
+				if ($name==='current_tipo_section' || $name==='context_name' || $name==='arguments' || $name==='top_id') continue; # Skip non mandatory
+				if (empty($$name)) {
+					$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty '.$name.' (is mandatory)';
+					return $response;
+				}
 			}
+
+	// component 
+		$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+		$component_obj 	= component_common::get_instance($modelo_name,
+														 $tipo,
+														 $parent,
+														 $modo,
+														 $lang,
+														 $section_tipo);
+
+	// current_tipo_section
+		// Si se recibe section_tipo, configuramos el objeto para que tenga ese parámetro asignado
+		// Por ejemplo, en relaciones, se requiere para discriminar qué seccion querenmos actualizar
+		if (!empty($current_tipo_section)) {
+			$component_obj->current_tipo_section = $current_tipo_section;
 		}
 
-
-	$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
-	$component_obj 	= component_common::get_instance($modelo_name,
-													 $tipo,
-													 $parent,
-													 $modo,
-													 $lang,
-													 $section_tipo);
-	#
-	# CURRENT_TIPO_SECTION
-	# Si se recibe section_tipo, configuramos el objeto para que tenga ese parámetro asignado
-	# Por ejemplo, en relaciones, se requiere para discriminar qué seccion querenmos actualizar
-	if (!empty($current_tipo_section)) {
-		$component_obj->current_tipo_section = $current_tipo_section;
-	}
-
-	#
-	# CONTEXT_NAME : CONTEXT OF COMPONENT
-	if (!empty($context_name)) {
-		$context = new stdClass();
-			$context->context_name = $context_name;
-		$component_obj->set_context($context);
-		#dump($context_name,"context_name");
-	}
-
-	#
-	# ARGUMENTS
-	if (!empty($arguments)) {
-		$component_obj->set_arguments($arguments);
-	}
+	// context_name : context of component
+		if (!empty($context_name)) {
+			$context = new stdClass();
+				$context->context_name = $context_name;
+			$component_obj->set_context($context);
+			#dump($context_name,"context_name");
+		}
 	
-	# Get component html
-	$html = $component_obj->get_html();
-	#echo $html;
+	// arguments
+		if (!empty($arguments)) {
+			$component_obj->set_arguments($arguments);
+		}
+		
+	// html. Get component html
+		# $arguments = new stdClass();
+		# 	$arguments->permissions = 1;
+		# if (isset($arguments->permissions)) {
+		# 	// set custom permissions (to load html as read only for example)
+		# 		$component_obj->set_permissions($arguments->permissions);
+		# }
+		$html = $component_obj->get_html();
+		# dump($html, ' html ++ '.to_string());
 
-	# Write session to unlock session file
-	#session_write_close();
+	// write session to unlock session file
+		#session_write_close();
 
-	$response->result 	= $html;
-	$response->msg 		= 'Ok. Request done ['.__FUNCTION__.']';
+	// response
+		$response->result 	= $html;
+		$response->msg 		= 'Ok. Request done ['.__FUNCTION__.']';
 
-	# Debug
-	if(SHOW_DEBUG===true) {
-		$debug = new stdClass();
-			$debug->exec_time 	= exec_time_unit($start_time,'ms')." ms";
-			$debug->modelo_name = $modelo_name;
-			$debug->label 		= $component_obj->get_label();
-			$debug->tipo 		= $tipo;
-			$debug->section_tipo= $section_tipo;
-			$debug->section_id 	= $parent;
-			$debug->lang 		= $lang;
-			$debug->modo 		= $modo;
+	// debug 
+		if(SHOW_DEBUG===true) {
+			$debug = new stdClass();
+				$debug->exec_time 	= exec_time_unit($start_time,'ms')." ms";
+				$debug->modelo_name = $modelo_name;
+				$debug->label 		= $component_obj->get_label();
+				$debug->tipo 		= $tipo;
+				$debug->section_tipo= $section_tipo;
+				$debug->section_id 	= $parent;
+				$debug->lang 		= $lang;
+				$debug->modo 		= $modo;
 
-		$response->debug = $debug;
-	}
+			$response->debug = $debug;
+		}
 	
 
 	return (object)$response;
