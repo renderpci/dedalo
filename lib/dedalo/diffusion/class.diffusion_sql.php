@@ -2019,12 +2019,13 @@ class diffusion_sql extends diffusion  {
 		# Search inside current entity_domain and iterate all tables resolving alias and store target sections of every table
 		$ar_terminoID = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($diffusion_element_tipo_tables, // Note that can be different to diffusion_element_tipo
 																				   $modelo_name='table',
-																				   $relation_type='children_recursive',
+																				   $relation_type='children_recursive', // children_recursive
 																				   $search_exact=false);
 			#dump($ar_terminoID, ' ar_terminoID ++ '.to_string($diffusion_element_tipo_tables));
 		
 		$diffusion_element = self::get_diffusion_element_from_element_tipo($diffusion_element_tipo);
 			#dump($diffusion_element, ' diffusion_element ++ '.to_string());
+		
 		
 		#
 		# DATABASE_NAME . Diffusion domain web_default case
@@ -2077,6 +2078,11 @@ class diffusion_sql extends diffusion  {
 					$ar_related_tables   = common::get_ar_related_by_model('table', $current_table_tipo);	
 					$real_table 		 = reset($ar_related_tables);
 
+					if (empty($real_table)) {
+						// bad structure configuration for current diffusion element
+							throw new Exception("Error Processing Request. Bad structure configuration for 'real_table' of 'table_alias'. Expected 'table' related and nothing found for tipo: ".to_string($current_table_tipo), 1);						
+					}
+
 					# RELATED_SECTION . Direct related section case
 					$ar_direct_related_sections = common::get_ar_related_by_model('section', $current_table_tipo);
 					if (!empty($ar_direct_related_sections)) {
@@ -2110,6 +2116,9 @@ class diffusion_sql extends diffusion  {
 							$data->from_alias 	= $current_table_tipo;
 						
 						$diffusion_element_tables_map->$section_tipo = $data;						
+					}else{
+						// bad structure configuration for current diffusion element
+							debug_log(__METHOD__." ERROR: Bad structure configuration for current diffusion element. Expected section related for tipo: ".to_string($real_table), logger::ERROR);
 					}					
 					break;
 				/*

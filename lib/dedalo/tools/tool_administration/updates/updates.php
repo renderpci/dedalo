@@ -56,13 +56,12 @@ $updates->$v = new stdClass();
 
 	# Update datos to section_data
 	$script_obj = new stdClass();
-		$script_obj->info   		= "Propagate section info about creation and modification to components data searchable";
+		$script_obj->info   		= "Propagate section info about section creation and modification to searchable components data";
 		$script_obj->script_class   = "tool_administration";
 		$script_obj->script_method  = "propagate_section_info_to_dato";
 		$script_obj->script_vars    = []; // Note that only ONE argument as array is sended
 	$updates->$v->run_scripts[] = $script_obj;
 
-	    
 
 
 $v=491; #####################################################################################
@@ -79,7 +78,7 @@ $updates->$v = new stdClass();
 	$updates->$v->update_from_minor  = 0;
 
 	#UPDATE COMPONENTS
-	$updates->$v->components_update = ['component_date'];	// Force recalculate inaccurate time			
+	$updates->$v->components_update = ['component_date'];	// Force recalculate inaccurate time	
 
 
 
