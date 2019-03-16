@@ -141,7 +141,8 @@ class JSON_RecordObj_matrix extends JSON_RecordDataBoundObject {
 
 		# TIME MACHINE COPY SAVE (Return assigned id on save)
 		# Every record saved in matrix is saved as copy in 'matrix_time_machine' except logger and TM recover section
-		if(RecordObj_time_machine::$save_time_machine_version===true && $this->matrix_table!=='matrix_activity')	{
+		# if(RecordObj_time_machine::$save_time_machine_version===true && $this->matrix_table!=='matrix_activity') {
+		if($this->matrix_table!=='matrix_activity') {
 			# Exec time machine save and set returned id
 			$this->time_machine_last_id = $this->save_time_machine( $save_options );
 		}
@@ -205,7 +206,7 @@ class JSON_RecordObj_matrix extends JSON_RecordDataBoundObject {
 		$RecordObj_time_machine->set_userID( navigator::get_user_id() );
 		# dato
 		if(isset($save_options->time_machine_data))
-		$RecordObj_time_machine->set_dato( $save_options->time_machine_data );			
+		$RecordObj_time_machine->set_dato( $save_options->time_machine_data );
 		
 		
 		#dump($save_options,'$save_options->time_machine_data');

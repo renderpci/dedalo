@@ -1176,56 +1176,99 @@ class component_relation_common extends component_common {
 	*/
 	public function set_dato_external($save=false, $changed=false, $current_dato=false) {
 		$start_time=microtime(1);
-
-		if ($current_dato!==false) {
-			$dato = $current_dato;
-		}else{
-			$dato = $this->get_dato();
-		}
-		
-
-		# get the properties for get search section and component
-		$propiedades 				= $this->get_propiedades();
-		$ar_section_to_search 		= $propiedades->source->section_to_search;
-		$ar_component_to_search 	= $propiedades->source->component_to_search;
-			
-		//get the locator of the current section for search in the component that call this section
-		$section_id 	= $this->get_parent();
-		$section_tipo 	= $this->get_section_tipo();
-
-		$locator = new locator();
-			$locator->set_section_id($section_id);
-			$locator->set_section_tipo($section_tipo);
-
-		$new_dato = [];
-		
-		# get if the search need add fields data:		
-		if(isset($propiedades->source->data_from_field )){
-			$data_from_field  = $propiedades->source->data_from_field;
-
-			foreach ($data_from_field as $current_component_tipo) {		
-				$modelo_name 	  = RecordObj_dd::get_modelo_name_by_tipo($current_component_tipo, true);
-				$modo 			  = 'edit';
-				$component_data_for_search = component_common::get_instance( $modelo_name,
-																	$current_component_tipo,
-																	$section_id,
-																	$modo,
-																	DEDALO_DATA_NOLAN,
-																	$section_tipo,
-																	false);
-				$component_dato = $component_data_for_search->get_dato_with_references();
 	
-				foreach ($component_dato as $current_locator) {					
-					$locator_dato = new locator();
-						$locator_dato->set_section_id($current_locator->section_id);
-						$locator_dato->set_section_tipo($current_locator->section_tipo);
+		// dato set
+			if ($current_dato!==false) {
+				$dato = $current_dato;
+			}else{
+				$dato = $this->get_dato();
+			}
+			#dump($dato, ' dato ++ '.to_string());		
 
-					$new_dato[] = $locator_dato;
+		// propiedades . get the properties for get search section and component
+			$propiedades 				= $this->get_propiedades();
+			$ar_section_to_search 		= $propiedades->source->section_to_search;
+			$ar_component_to_search 	= $propiedades->source->component_to_search;
+		
+		// current section tipo/id	
+			$section_id 	= $this->get_parent();
+			$section_tipo 	= $this->get_section_tipo();
+
+		// data source overwrite (tool cataloging case)
+			if (isset($propiedades->source->source_overwrite) && isset($propiedades->source->component_to_search)) {
+				// overwrite source locator 					
+					$component_to_search_tipo 	= reset($ar_component_to_search);
+					$modelo_name 	  		   	= RecordObj_dd::get_modelo_name_by_tipo($component_to_search_tipo, true);
+					$component_to_search 		= component_common::get_instance($modelo_name,
+																				 $component_to_search_tipo,
+																				 $section_id,
+																				 'list',
+																				 DEDALO_DATA_NOLAN,
+																				 $section_tipo);
+					$component_to_search_dato = $component_to_search->get_dato();
+					foreach ($component_to_search_dato as $current_locator) {
+						$locator = new locator();
+							$locator->set_section_id($current_locator->section_id);
+							$locator->set_section_tipo($current_locator->section_tipo);
+						break; // Only first is allowed
+					}
+
+				// get overwrite source data when exists
+					if (isset($locator)) {
+
+						$data_from_field_tipo		= $propiedades->source->source_overwrite->data_from_field;
+						$modelo_name 	  		   	= RecordObj_dd::get_modelo_name_by_tipo($data_from_field_tipo, true);
+						$component_overwrite 		= component_common::get_instance($modelo_name,
+																					 $data_from_field_tipo,
+																					 $locator->section_id,
+																					 'list',
+																					 DEDALO_DATA_NOLAN,
+																					 $locator->section_tipo);
+						$overwrite_dato = $component_overwrite->get_dato();
+						
+						$this->set_dato($overwrite_dato);
+						$this->Save();
+					}
+				return true; // task done. return
+			
+			}else{
+				// default normal case
+				// locator . get the locator of the current section for search in the component that call this section
+					$locator = new locator();
+						$locator->set_section_id($section_id);
+						$locator->set_section_tipo($section_tipo);
+			}
+
+		// new dato
+			$new_dato = [];
+		
+		// data_from_field. get if the search need add fields data:	
+			if(isset($propiedades->source->data_from_field)){
+				$data_from_field  = $propiedades->source->data_from_field;
+
+				foreach ($data_from_field as $current_component_tipo) {		
+					$modelo_name 	  		   = RecordObj_dd::get_modelo_name_by_tipo($current_component_tipo, true);					
+					$component_data_for_search = component_common::get_instance($modelo_name,
+																				$current_component_tipo,
+																				$locator->section_id,
+																				'list',
+																				DEDALO_DATA_NOLAN,
+																				$locator->section_tipo,
+																				false);
+					$component_dato = $component_data_for_search->get_dato_with_references();
+	
+					foreach ($component_dato as $current_locator) {					
+						$locator_dato = new locator();
+							$locator_dato->set_section_id($current_locator->section_id);
+							$locator_dato->set_section_tipo($current_locator->section_tipo);
+
+						$new_dato[] = $locator_dato;
+					}
 				}
-			}			
-		}		
-		# Add locator at end
-		$new_dato[] = $locator;
+			}
+
+		// Add locator at end
+			$new_dato[] = $locator;			
 		
 		/* DES	
 			$value_to_search  = $new_dato;
@@ -1294,39 +1337,48 @@ class component_relation_common extends component_common {
 		# From locators inside property 'relations'
 		#$ar_result = $this->get_external_result($new_dato, $ar_component_to_search, $ar_section_to_search);
 		# From table 'relations' (x number of locators in new_dato is fast aprox. because 'OR' problem in indexes)
-		$ar_result = $this->get_external_result_from_relations_table($new_dato, $ar_component_to_search);		
-		
+			# if (isset($propiedades->source->source_overwrite)) {
+			# 	# replace on the fly (tool cataloging case)
+			# 		$ar_component_to_search = [$propiedades->source->source_overwrite->from_component_tipo];
+			# }else{
+			# 	# untouch ar_component_to_search
+			# }
+			$ar_result = $this->get_external_result_from_relations_table($new_dato, $ar_component_to_search);		
+				#dump($ar_result, ' ar_result ++ '.to_string()); #die();					
 
-		foreach ((array)$dato as $key => $current_locator) {
-			if(	locator::in_array_locator( $current_locator, $ar_result, $ar_properties=array('section_id','section_tipo') ) === false){
-				unset($dato[$key]);
-				$changed = true;
-			}
-		}
-
-		$total_ar_result = count($ar_result);
-		if (count($dato)!==$total_ar_result) {
-			foreach ($ar_result as $key => $current_locator) {
-				if(	locator::in_array_locator( $current_locator, $dato, $ar_properties=array('section_id','section_tipo') ) === false){
-					array_push($dato, $current_locator);
+			foreach ((array)$dato as $key => $current_locator) {
+				if(	locator::in_array_locator( $current_locator, $ar_result, $ar_properties=array('section_id','section_tipo') )===false){
+					unset($dato[$key]);
 					$changed = true;
 				}
 			}
-		}
 
-		if ($changed===true) {
-			$dato = array_values($dato);
-			$this->set_dato($dato);
-			if ($save===true) {
-				$this->Save();
-				debug_log(__METHOD__." Saved modified dato to sustain the order - $total_ar_result locators in section_id = $section_id ".to_string(), logger::DEBUG);
+		// dato update
+			$total_ar_result = count($ar_result);
+			if (count($dato)!==$total_ar_result) {
+				foreach ($ar_result as $key => $current_locator) {
+					if(	locator::in_array_locator( $current_locator, $dato, $ar_properties=array('section_id','section_tipo') )===false){
+						array_push($dato, $current_locator);
+						$changed = true;
+					}
+				}
 			}
-		}
+			
+		// changed true
+			if ($changed===true) {
+				$dato = array_values($dato);
+				$this->set_dato($dato);
+				if ($save===true) {
+					$this->Save();
+					debug_log(__METHOD__." Saved modified dato to sustain the order - $total_ar_result locators in section_id = $section_id ".to_string(), logger::DEBUG);
+				}
+			}
 
-		if(SHOW_DEBUG===true) {
-			//$total = exec_time_unit($start_time,'ms')." ms";
-			//debug_log(__METHOD__." Total time $total - $total_ar_result locators [$this->section_tipo, $this->tipo, $this->parent] ".get_class($this) .' : '. RecordObj_dd::get_termino_by_tipo($this->tipo) . to_string(), logger::DEBUG);
-		}
+		// debug
+			if(SHOW_DEBUG===true) {
+				//$total = exec_time_unit($start_time,'ms')." ms";
+				//debug_log(__METHOD__." Total time $total - $total_ar_result locators [$this->section_tipo, $this->tipo, $this->parent] ".get_class($this) .' : '. RecordObj_dd::get_termino_by_tipo($this->tipo) . to_string(), logger::DEBUG);
+			}
 
 		#return $dato;
 		#$this->set_dato($ar_result);
@@ -1415,6 +1467,11 @@ class component_relation_common extends component_common {
 	private function get_external_result_from_relations_table($new_dato, $ar_component_to_search) {
 		$start_time=microtime(1);
 
+		if (empty($new_dato)) {
+			debug_log(__METHOD__." ERROR. Empty new_dato is received !! Skipped search of external results from relations table. ".to_string(), logger::ERROR);
+			return [];
+		}
+			
 		$value_to_search  = $new_dato;
 		$ar_filter_fields = [];
 		foreach ($ar_component_to_search as $component_to_search_tipo) {
@@ -1426,13 +1483,14 @@ class component_relation_common extends component_common {
 			}			
 			break; // Only one exists
 		}
-		$filter_fields = implode( PHP_EOL.' OR ', $ar_filter_fields);			
+		$filter_fields = implode( PHP_EOL.' OR ', $ar_filter_fields);
+			
 
 		# Build the search query		
-		$strQuery =  PHP_EOL.'-- '.__METHOD__ .PHP_EOL. 'SELECT section_id, section_tipo FROM "relations" WHERE' .PHP_EOL . $filter_fields;
-		if(SHOW_DEBUG===true) {
-			//error_log("***+++ set_dato_external *** ".$strQuery);
-		}
+			$strQuery =  PHP_EOL.'-- '.__METHOD__ .PHP_EOL. 'SELECT section_id, section_tipo FROM "relations" WHERE' .PHP_EOL . $filter_fields;
+			if(SHOW_DEBUG===true) {
+				error_log("***+++ set_dato_external *** ".$strQuery);
+			}
 
 		$result	= JSON_RecordObj_matrix::search_free($strQuery, false);
 
@@ -1442,15 +1500,16 @@ class component_relation_common extends component_common {
 		}
 
 		# Build the locators with the result
-		$ar_result = array();
-		while ($rows = pg_fetch_assoc($result)) {
-			$locator = new locator();
-				$locator->set_section_id($rows['section_id']);
-				$locator->set_section_tipo($rows['section_tipo']);
-				$locator->set_type($this->get_relation_type());
-				$locator->set_from_component_tipo($this->get_tipo());
-			$ar_result[] = $locator;
-		}
+			$ar_result = array();
+			while ($rows = pg_fetch_assoc($result)) {
+				$locator = new locator();
+					$locator->set_section_id($rows['section_id']);
+					$locator->set_section_tipo($rows['section_tipo']);
+					$locator->set_type($this->get_relation_type());
+					$locator->set_from_component_tipo($this->get_tipo());
+				$ar_result[] = $locator;
+			}
+		
 
 		return $ar_result;
 	}//end get_external_result_from_relations_table
