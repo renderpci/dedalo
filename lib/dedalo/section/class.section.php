@@ -3425,9 +3425,9 @@ class section extends common {
 			// Debug
 				if(SHOW_DEBUG===true) {
 					$debug = new stdClass();
-						$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";					
-				}
-			$result->debug 	 = $debug;
+						$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
+					$result->debug = $debug;	
+				}			
 
 
 		return $result;
