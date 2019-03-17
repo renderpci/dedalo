@@ -14,7 +14,7 @@ class tool_export extends tool_common {
 	public $section_tipo;
 	public $section_obj;	# received section
 	public $ar_records;		# Array of records to export (section_id) or null
-	public $data_format;  	# string 'standar', 'dedalo'
+	public $data_format;  	# string 'standard', 'dedalo'
 
 	public static $delimiter = ';';
 
@@ -22,7 +22,7 @@ class tool_export extends tool_common {
 	/**
 	* __CONSTRUCT
 	*/
-	public function __construct( $section_tipo, $modo, $data_format='standar' ) {
+	public function __construct( $section_tipo, $modo, $data_format='standard' ) {
 
 		# Verify type section object
 		#if ( get_class($section_obj) !== 'section' ) {
@@ -159,18 +159,22 @@ class tool_export extends tool_common {
 					$header_tipos = [];
 					foreach ($ar_records_deep_resolved as $key => $ar_value) {
 						#dump($ar_value, ' ar_value ++ '.to_string());
-						foreach ($ar_value as $item) {							
-							$ar_found = array_filter($header_tipos, function($element) use($item){
-								return $element->component_tipo===$item->component_tipo && $element->from_section_tipo===$item->from_section_tipo && $element->from_component_tipo===$item->from_component_tipo;
-							});
-							if (empty($ar_found)) {
-								$h_item = new stdClass();
-									$h_item->component_tipo 	  = $item->component_tipo;
-									$h_item->section_tipo   	  = $item->section_tipo;
-									$h_item->from_section_tipo    = $item->from_section_tipo;
-									$h_item->from_component_tipo  = $item->from_component_tipo;
-								$header_tipos[] = $h_item;
-							}
+						foreach ($ar_value as $item) {
+							
+							// search for look if already exists
+								$ar_found = array_filter($header_tipos, function($element) use($item){
+									return $element->component_tipo===$item->component_tipo && $element->from_section_tipo===$item->from_section_tipo && $element->from_component_tipo===$item->from_component_tipo;
+								});
+							// if not already exists, add
+								if (empty($ar_found)) {
+									// add
+										$h_item = new stdClass();
+											$h_item->component_tipo 	  = $item->component_tipo;
+											$h_item->section_tipo   	  = $item->section_tipo;
+											$h_item->from_section_tipo    = $item->from_section_tipo;
+											$h_item->from_component_tipo  = $item->from_component_tipo;
+										$header_tipos[] = $h_item;
+								}
 						}
 					}
 					#dump($header_tipos, ' header_tipos ++ '.to_string()); die();
@@ -214,7 +218,13 @@ class tool_export extends tool_common {
 							}
 						}else{
 							$column_name = $current_tipo;
+							
+							// from_section label
+								if ($h_item->from_section_tipo!==$h_item->section_tipo) {
+									$column_name .= PHP_EOL . RecordObj_dd::get_termino_by_tipo($h_item->from_section_tipo, DEDALO_DATA_LANG, true, true) . PHP_EOL ;
+								}							
 						}
+
 						// add
 							$header_columns[] = $com.$column_name.$com;
 					}
@@ -232,9 +242,10 @@ class tool_export extends tool_common {
 							});
 							if (!empty($ar_found)) {
 								$current_value = reset($ar_found)->value;
-							}else{
+							}else{								
 								$current_value = ' ';
 							}
+
 							// add
 								$ar_columns[] = $current_value;
 						}
