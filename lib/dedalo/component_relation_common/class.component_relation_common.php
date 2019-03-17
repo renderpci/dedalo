@@ -602,7 +602,7 @@ class component_relation_common extends component_common {
 				#$ar_parents = component_relation_parent::get_parents_recursive($locator->section_id, $locator->section_tipo);
 				# NOTE: get_parents_recursive is disabled because generate some problems to fix. For now we use only first parent
 				#$ar_parents	= component_relation_parent::get_parents($locator->section_id, $locator->section_tipo);					
-				$ar_parents   = component_relation_parent::get_parents_recursive($locator->section_id, $locator->section_tipo, $skip_root=true);			
+				$ar_parents   = component_relation_parent::get_parents_recursive($locator->section_id, $locator->section_tipo, $skip_root=true);	
 				#$n_ar_parents = count($ar_parents);
 					#dump($ar_parents, ' ar_parents ++ '.to_string($locator)); die();
 			
