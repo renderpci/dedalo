@@ -311,6 +311,18 @@ class component_portal extends component_relation_common {
 
 			$section_tipo 	= $value->section_tipo;
 			$section_id 	= $value->section_id;
+
+			// always add section_id
+				$item = new stdClass();
+					$item->section_id 			= $section_id;
+					$item->component_tipo 		= 'section_id';
+					$item->section_tipo 		= $section_tipo;
+					$item->from_section_tipo 	= $this->section_tipo;
+					$item->from_component_tipo 	= null;
+					$item->model 				= null;
+					$item->value 				= $section_id;
+
+				$ar_resolved[] = $item;
 			
 			foreach ($fields as $current_tipo) {				
 			
