@@ -27,9 +27,9 @@
 
 		case 'page': # Default called from main page. We will use upload as html file and script
 
-			# TOOL CSS / JS MAIN FILES
-			css::$ar_url[] 	= DEDALO_LIB_BASE_URL."/tools/".$tool_name."/css/".$tool_name.".css";
-			js::$ar_url[]  	= DEDALO_LIB_BASE_URL."/tools/".$tool_name."/js/".$tool_name.".js";
+			// tool css / js main files
+				css::$ar_url[] 	= DEDALO_LIB_BASE_URL."/tools/".$tool_name."/css/".$tool_name.".css";
+				js::$ar_url[]  	= DEDALO_LIB_BASE_URL."/tools/".$tool_name."/js/".$tool_name.".js";
 
 			$var_requested 	= common::get_request_var('button_tipo');
 			$button_tipo 	= !empty($var_requested) ? $var_requested : null;
