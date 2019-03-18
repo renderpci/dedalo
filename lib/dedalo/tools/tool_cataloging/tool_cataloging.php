@@ -22,7 +22,6 @@
 
 		case 'page':
 
-
 			if(!isset($properties->source_thesaurus)){
 				$msg  = '<h3 class="raw_msg">Error.missing the source_thesaurus in the structure, please config it.  ';
 				$msg .= $tool_tipo;
