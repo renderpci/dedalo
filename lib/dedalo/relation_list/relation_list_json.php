@@ -20,7 +20,7 @@ $file_name = $modo;
 	switch($modo) {
 		
 		case 'edit':
-			$ar_inverse_references 	= $this->get_inverse_references((int)$limit, (int)$offset, $count);
+			$ar_inverse_references 	= $this->get_inverse_references($limit, (int)$offset, $count);
 
 			if($count === true){
 				$json 					= $ar_inverse_references;
