@@ -3269,6 +3269,13 @@ class web_data {
 					$options->order = "relevance DESC";
 				}
 
+				// sort by 'sort_id' always
+					if (empty($options->order)) {
+						$options->order = 'sort_id ASC';
+					}else{
+						$options->order .= ', sort_id ASC';
+					}
+
 				$search_options->lang 		= $options->lang;				
 				$search_options->order 		= $options->order;
 				$search_options->limit 		= $options->rows_per_page;
