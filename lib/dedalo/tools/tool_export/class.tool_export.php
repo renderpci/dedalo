@@ -166,7 +166,7 @@ class tool_export extends tool_common {
 									return $element->component_tipo===$item->component_tipo && $element->from_section_tipo===$item->from_section_tipo && $element->from_component_tipo===$item->from_component_tipo;
 								});
 							// if not already exists, add
-								if (empty($ar_found)) {
+								if (empty($ar_found)) {									
 									// add
 										$h_item = new stdClass();
 											$h_item->component_tipo 	  = $item->component_tipo;
