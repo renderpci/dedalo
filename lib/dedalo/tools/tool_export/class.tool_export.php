@@ -133,11 +133,12 @@ class tool_export extends tool_common {
 	* @return string $export_str_data
 	*/
 	public function export_to( $format, $ar_records=null, $encoding='UTF-8', $section_tipo) {
-
+	
 		if (is_null($ar_records)) {
 			// Calculate records when not are already received
 			$ar_records = $this->get_records();
 		}
+		#dump($ar_records, ' ar_records ++ '.to_string());
 
 		$ar_records_deep_resolved=array();
 		foreach ((array)$ar_records as $key => $row) {			
@@ -163,7 +164,10 @@ class tool_export extends tool_common {
 							
 							// search for look if already exists
 								$ar_found = array_filter($header_tipos, function($element) use($item){
-									return $element->component_tipo===$item->component_tipo && $element->from_section_tipo===$item->from_section_tipo && $element->from_component_tipo===$item->from_component_tipo;
+									return $element->component_tipo===$item->component_tipo
+										&& $element->from_component_tipo===$item->from_component_tipo
+										&& $element->from_section_tipo===$item->from_section_tipo;
+										
 								});
 							// if not already exists, add
 								if (empty($ar_found)) {									
@@ -221,7 +225,7 @@ class tool_export extends tool_common {
 							
 							// from_section label
 								if ($h_item->from_section_tipo!==$h_item->section_tipo) {
-									$column_name .= PHP_EOL . RecordObj_dd::get_termino_by_tipo($h_item->from_section_tipo, DEDALO_DATA_LANG, true, true) . PHP_EOL ;
+									$column_name = RecordObj_dd::get_termino_by_tipo($h_item->section_tipo, DEDALO_DATA_LANG, true, true) . PHP_EOL . $column_name;
 								}							
 						}
 
@@ -233,12 +237,14 @@ class tool_export extends tool_common {
 
 				// build rows. parse and fill empty columns
 					foreach ($ar_records_deep_resolved as $section_id => $ar_value) {
-
+	
 						$ar_columns = [];
 						foreach ($header_tipos as $h_item) {
 
 							$ar_found = array_filter($ar_value, function($element) use($h_item){
-								return $element->component_tipo===$h_item->component_tipo && $element->from_section_tipo===$h_item->from_section_tipo && $element->from_component_tipo===$h_item->from_component_tipo;
+								return $element->component_tipo===$h_item->component_tipo
+									&& $element->from_component_tipo===$h_item->from_component_tipo
+									&& $element->from_section_tipo===$h_item->from_section_tipo;
 							});
 							if (!empty($ar_found)) {
 								$current_value = reset($ar_found)->value;
@@ -310,9 +316,11 @@ class tool_export extends tool_common {
 					#$row_deep_resolved[$key] = $quotes.$value.$quotes;
 					$current_value = $quotes.$value.$quotes;
 					$row_item = new stdClass();
-						$row_item->component_tipo	= $component_tipo;
-						$row_item->section_tipo 	= $section_tipo;
-						$row_item->value 			= $current_value;
+						$row_item->component_tipo		= $component_tipo;
+						$row_item->section_tipo 		= $section_tipo;
+						$row_item->value 				= $current_value;
+						$row_item->from_component_tipo	= $component_tipo;
+						$row_item->from_section_tipo 	= $section_tipo;
 				
 					$row_deep_resolved[] = $row_item;
 				}				
@@ -340,9 +348,11 @@ class tool_export extends tool_common {
 					#$row_deep_resolved[$key] = $valor_export;
 					$current_value = $valor_export;
 					$row_item = new stdClass();
-						$row_item->component_tipo	= $component_tipo;
-						$row_item->section_tipo 	= $section_tipo;
-						$row_item->value 			= $current_value;
+						$row_item->component_tipo		= $component_tipo;
+						$row_item->section_tipo 		= $section_tipo;
+						$row_item->value 				= $current_value;
+						$row_item->from_component_tipo	= $component_tipo;
+						$row_item->from_section_tipo 	= $section_tipo;
 				
 					$row_deep_resolved[] = $row_item;
 			}else{
