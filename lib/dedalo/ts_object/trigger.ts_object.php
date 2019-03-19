@@ -267,11 +267,11 @@ function add_children_from_hierarchy($json_data) {
 							return $response;
 						}
 	// section map
-		$section_map = hierarchy::get_section_map_elemets( $section_tipo );
+		$section_map = hierarchy::get_section_map_elemets( $target_section_tipo );
 
 	// set new section component 'is_descriptor' value
 		if (!isset($section_map['thesaurus']->is_descriptor)) {
-			debug_log(__METHOD__." Invalid section_map 'is_descriptor' property from section $section_tipo ".to_string($section_map), logger::DEBUG);
+			debug_log(__METHOD__." Invalid section_map 'is_descriptor' property from section $target_section_tipo ".to_string($section_map), logger::DEBUG);
 		}else{
 
 			$component_tipo = $section_map['thesaurus']->is_descriptor;
@@ -281,13 +281,13 @@ function add_children_from_hierarchy($json_data) {
 															 $new_section_id,
 															 'edit', // note mode edit autosave default value
 															 DEDALO_DATA_NOLAN,
-															 $section_tipo);
+															 $target_section_tipo);
 			$component->get_dato();
 		}
 
 	// set new section component 'is_indexable' value
 		if (!isset($section_map['thesaurus']->is_indexable)) {
-			debug_log(__METHOD__." Invalid section_map 'is_indexable' property from section $section_tipo ".to_string($section_map), logger::DEBUG);
+			debug_log(__METHOD__." Invalid section_map 'is_indexable' property from section $target_section_tipo ".to_string($section_map), logger::DEBUG);
 		}else{
 
 			$component_tipo = $section_map['thesaurus']->is_indexable;
@@ -297,7 +297,7 @@ function add_children_from_hierarchy($json_data) {
 															 $new_section_id,
 															 'edit', // note mode edit autosave default value
 															 DEDALO_DATA_NOLAN,
-															 $section_tipo);
+															 $target_section_tipo);
 			$component->get_dato();
 		}
 
