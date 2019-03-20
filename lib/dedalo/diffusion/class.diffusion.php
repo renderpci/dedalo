@@ -1038,6 +1038,112 @@ abstract class diffusion  {
 		return $added;
 	}//end add_to_update_record_actions
 
+
+
+	/**
+	* DELETE_RECORD
+	* @param string $section_tipo
+	* @param int $section_id
+	* @return object $response
+	*/
+	public static function delete_record($section_tipo, $section_id) {
+
+		$response = new stdClass();
+			$response->result 		= false;
+			$response->msg 			= __METHOD__ . ' Error. Request failed ';
+			$response->ar_deleted 	= [];
+
+		$ar_diffusion_element = self::get_ar_diffusion_map_elements();		
+		foreach ($ar_diffusion_element as $diffusion_element) {
+			
+			$diffusion_element_tipo = $diffusion_element->element_tipo;
+			$class_name 			= $diffusion_element->class_name;
+
+			switch ($class_name) {
+				case 'diffusion_mysql':
+
+					$database_name 	= $diffusion_element->database_name;
+					
+					$table_name = false;
+
+					// table real 
+						$ar_tables_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($diffusion_element_tipo, 'table', 'children_recursive', true);
+						foreach ($ar_tables_tipo as $table_tipo) {
+							$ar_section_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($table_tipo, 'section', 'termino_relacionado', true);
+							if (!isset($ar_section_tipo[0])) {
+								debug_log(__METHOD__." Error. Diffusion section without section relation (1). Please fix this ASAP. Table tipo: ".to_string($table_tipo)." - name: ".RecordObj_dd::get_termino_by_tipo($table_tipo, DEDALO_STRUCTURE_LANG, true), logger::ERROR);
+								continue;
+							}
+
+							$current_section_tipo = $ar_section_tipo[0];
+							if ($current_section_tipo===$section_tipo) {
+								// matched . delete record in current table
+								$table_name = RecordObj_dd::get_termino_by_tipo($table_tipo, DEDALO_STRUCTURE_LANG, true);																	
+								break; // stop loop
+							}
+						}
+					
+					// table alias 
+						if ($table_name===false) {
+							
+							$ar_tables_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($diffusion_element_tipo, 'table_alias', 'children_recursive', true);
+							foreach ($ar_tables_tipo as $table_tipo) {
+
+								// direct relation case (used mainly in thesaurus tables)
+									$ar_section_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($table_tipo, 'section', 'termino_relacionado', true);
+									if (empty($ar_section_tipo)) {
+										// try to search section in target table
+											$real_table_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($table_tipo, 'table', 'termino_relacionado', true)[0];
+											$ar_section_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($real_table_tipo, 'section', 'termino_relacionado', true);
+									}
+									if (!isset($ar_section_tipo[0])) {
+										debug_log(__METHOD__." Error. Diffusion section without section relation (2). Please fix this ASAP. Table tipo: ".to_string($table_tipo)." - name: ".RecordObj_dd::get_termino_by_tipo($table_tipo, DEDALO_STRUCTURE_LANG, true), logger::ERROR);
+										continue;
+									}
+									
+									$current_section_tipo = $ar_section_tipo[0];
+									if ($current_section_tipo===$section_tipo) {
+										// matched . delete record in current table
+										$table_name = RecordObj_dd::get_termino_by_tipo($table_tipo, DEDALO_STRUCTURE_LANG, true);																	
+										break; // stop loop
+									}									
+							}
+						}
+
+					// delete
+						if ($table_name!==false) {
+							include_once(DEDALO_LIB_BASE_PATH . '/diffusion/class.'.$class_name.'.php');
+							$result = (bool)diffusion_sql::delete_sql_record($section_id, $database_name, $table_name, $section_tipo);
+							if ($result===true) {
+								$response->result 		= true;
+								$response->msg 			= "Deleted record successful ($table_name - $section_id) in db $database_name (all langs)";
+								$response->ar_deleted[] = (object)[
+									"section_id" 			 => $section_id,
+									"section_tipo" 			 => $section_tipo,
+									"database_name" 		 => $database_name,
+									"table_name" 			 => $table_name,
+									"diffusion_element_tipo" => $diffusion_element_tipo,
+									"class_name" 			 => $class_name
+								];
+							}else{
+								$response->msg = "Unable to delete record ($table_name - $section_id). Maybe the record not exists in db ($database_name)";								
+							}							
+						}											
+					break;
+				
+				default:
+					debug_log(__METHOD__." ERROR. Ignored class name not defined for delete: ".to_string($class_name), logger::ERROR);
+					break;
+
+			}//end switch ($class_name)				
+
+		}//end foreach ($ar_diffusion_element as $diffusion_element)
+		debug_log(__METHOD__." response:  ".json_encode($response, JSON_PRETTY_PRINT), logger::DEBUG);
+
+
+		return $response;
+	}//end delete_record
+
 	
 
 
