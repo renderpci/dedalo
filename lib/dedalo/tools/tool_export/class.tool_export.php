@@ -165,6 +165,7 @@ class tool_export extends tool_common {
 							// search for look if already exists
 								$ar_found = array_filter($header_tipos, function($element) use($item){
 									return $element->component_tipo===$item->component_tipo
+										&& $element->section_tipo===$item->section_tipo
 										&& $element->from_component_tipo===$item->from_component_tipo
 										&& $element->from_section_tipo===$item->from_section_tipo;
 										
