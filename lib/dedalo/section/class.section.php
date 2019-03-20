@@ -1276,7 +1276,7 @@ class section extends common {
 					#
 					# MEDIA
 					# Remove media files associated to this section
-					$this->remove_section_media_files();				
+					$this->remove_section_media_files();
 					
 
 					$logger_msg = "DEBUG INFO ".__METHOD__." Deleted section and children records. delete_mode $delete_mode";				
@@ -1289,7 +1289,10 @@ class section extends common {
 		if (SHOW_DEBUG) {			
 			debug_log(__METHOD__." Deleted section $this->section_id and their 'childrens'. delete_mode $delete_mode");
 		}
-		
+
+	
+		// publication . Remove published records in mysql, etc.
+			diffusion::delete_record($this->tipo, $this->section_id);
 
 
 		if( TOP_TIPO != $this->tipo ){
