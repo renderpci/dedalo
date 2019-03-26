@@ -208,7 +208,7 @@ class web_data {
 				}
 			}
 
-		#debug_log(__METHOD__." Executing query ".trim($strQuery), logger::ERROR);
+			#debug_log(__METHOD__." Executing query ".trim($strQuery), logger::ERROR);
 			#if (strpos($sql_options->sql_filter, 'Barcelona')!==false ) {		
 				#dump($sql_options->sql_filter, ' strQuery ++ +++++++++++++++++++++++++++++++++++++++++++++++++++++++++ '.to_string($strQuery));
 				#error_log($strQuery);
@@ -386,10 +386,10 @@ class web_data {
 		*/
 		private static function build_sql_where($lang, $sql_filter) {
 			$sql='';
-			$sql .= "\nWHERE section_id IS NOT NULL";
-								
+			$sql .= "\nWHERE section_id IS NOT NULL";			
+
 			# SQL_FILTER
-			if(!empty($sql_filter) AND strlen($sql_filter)>2 ) {
+			if(!empty($sql_filter) && strlen($sql_filter)>2 ) {
 				if($sql_filter===PUBLICACION_FILTER_SQL) {
 					$sql .= "\n$sql_filter";
 				}else{
@@ -1370,7 +1370,7 @@ class web_data {
 							$video_url 		= $av_path.'?vbegin='.floor($tcin_secs).'&vend='.ceil($tcout_secs);
 
 						// Subtitles url
-							$subtitles_url 	= subtitles::get_subtitles_url($options->av_section_id, $tcin_secs, $tcout_secs);
+							$subtitles_url 	= subtitles::get_subtitles_url($options->av_section_id, $tcin_secs, $tcout_secs, $options->lang);
 						
 						$result->fragm 			= $fragment_text_raw; //$fragment_text; [!IMPORTANTE: DEVOLVER TEXT RAW AQUÍ Y LIMPIAR ETIQUETAS EN EL RESULTADO FINAL !]
 						#$result->fragm_raw 	= $fragment_text_raw;
@@ -3350,10 +3350,11 @@ class web_data {
 			$options = new stdClass();
 				$options->ar_query 	= [];
 				$options->limit 	= 10;
+				$options->order 	= null;
 				$options->operator 	= 'AND';
 				$options->lang 		= WEB_CURRENT_LANG_CODE;
 				foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}			
-
+	
 			$ar_monedas_filter = false;
 
 
@@ -3575,9 +3576,10 @@ class web_data {
 			$tipos_options = new stdClass();
 				$tipos_options->table  	 	= 'tipos';
 				$tipos_options->lang  	 	= $options->lang;
-				$tipos_options->limit 		= 0;//(int)$options->limit;
-				$tipos_options->sql_filter 	= $filter;
-				$tipos_options->order 		= 'section_id ASC';
+				$tipos_options->limit 		= (int)$options->limit;
+				#$tipos_options->order 		= 'section_id ASC';
+				$tipos_options->order 		= $options->order;
+				$tipos_options->sql_filter 	= $filter;				
 				$tipos_options->resolve_portals_custom = new stdClass();
 					$tipos_options->resolve_portals_custom->autoridad_dato = 'personalidades';
 					$tipos_options->resolve_portals_custom->catalogo_dato  = 'catalogo';
