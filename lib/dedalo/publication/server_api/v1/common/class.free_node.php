@@ -182,6 +182,8 @@ class free_node {
 	*/	
 	protected function find_word_in_text($word, $raw_text, $av_section_id, $n_chars, $limit, $match_select=false) {
 
+		$lang = $this->lang;
+
 		$ar_word_fragment = array();
 
 		mb_internal_encoding('UTF-8'); // Set in config
@@ -274,7 +276,7 @@ class free_node {
 					$tcin_secs 		= OptimizeTC::TC2seg($tcin);
 					$tcout_secs 	= OptimizeTC::TC2seg($tcout);
 					$video_url 		= $this->video .'?vbegin='.$tcin_secs.'&vend='.$tcout_secs;
-					$subtitles_url 	= subtitles::get_subtitles_url($av_section_id, $tcin_secs, $tcout_secs);
+					$subtitles_url 	= subtitles::get_subtitles_url($av_section_id, $tcin_secs, $tcout_secs, $lang);
 
 				// fragment_obj
 					$fragment_obj->video_url  	 = $video_url;
