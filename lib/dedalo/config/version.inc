@@ -1495,7 +1495,11 @@
 		Fixed error on tool_import_dedalo_csv when import modified_by_user and modified_date
 
 
-	
+	Valencia 26-02-2019 5.3.2
+		Fixed error on tool_image_versions when regular image_id is overwrited by external image_id
+
+
+
 
 	WORK IN PROGRESS
 		component_date : mark as "red or similar" restricted an other terms based in x param..
@@ -1516,12 +1520,12 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.3.1';
+	$DEDALO_VERSION = '5.3.2';
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '20-03-2019');
+	define('DEDALO_BUILD'	, '26-03-2019');
 
 
 	/*
