@@ -87,6 +87,18 @@
 					$autosearch_options_js 	 = '';
 					$autosearch_options_id 	 = 'autosearch_options_' . $section_tipo .'_'. $tipo .'_'. $parent;
 					$autosearch_options_html .= '<div id="' . $autosearch_options_id . '" class="autosearch_options hide" data-tipo="'.$tipo.'">';
+
+					// external source
+						if (isset($propiedades->source->external)) {
+
+							$external_list_options = new stdClass();
+								$external_list_options->target_id 		= $autosearch_options_id;
+								$external_list_options->tipo 			= $tipo;
+								$external_list_options->section_tipo 	= $section_tipo;
+								$external_list_options->external 		= $propiedades->source->external;
+
+							$autosearch_options_js .= 'service_autocomplete.build_external_source_list('.json_encode($external_list_options).');';
+						}
 		
 					// Filter_by_list
 						if ($filter_by_list!==false) {

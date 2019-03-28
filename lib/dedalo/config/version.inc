@@ -1499,6 +1499,9 @@
 		Fixed error on tool_image_versions when regular image_id is overwrited by external image_id
 
 
+	Valencia 28-02-2019 5.3.3
+		Fixed error on component_autocomplete_hi when any related section have missconfigurated property 'term' and is not found in section map thesaurus
+
 
 
 	WORK IN PROGRESS
@@ -1520,7 +1523,7 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.3.2';
+	$DEDALO_VERSION = '5.3.3';
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
