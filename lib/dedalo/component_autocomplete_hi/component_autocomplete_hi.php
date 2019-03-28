@@ -104,10 +104,16 @@
 							// service autocomplete options
 								$search_sections = $hierarchy_sections;
 
-							//Get the term_tipo of the hierarchy_sections defined in structure in section_map
+							// Get the term_tipo of the hierarchy_sections defined in structure in section_map
 								$ar_terms = [];
 								foreach ((array)$hierarchy_sections as $current_section) {
-									$ar_terms[] = hierarchy::get_element_tipo_from_section_map($current_section,'term');
+									// resolve and set if not empty
+									$current_term = hierarchy::get_element_tipo_from_section_map($current_section,'term');
+									if (!empty($current_term)) {
+										$ar_terms[] = $current_term;
+									}else{
+										debug_log(__METHOD__." ERROR: Misconfigured section tipo: '$current_section'. No property 'term' found in section map thesaurus. Fix ASAP this structure error".to_string(), logger::ERROR);
+									}
 								}
 								$ar_terms = array_unique($ar_terms);
 
