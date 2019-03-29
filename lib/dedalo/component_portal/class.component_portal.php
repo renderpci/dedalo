@@ -776,7 +776,7 @@ class component_portal extends component_relation_common {
 	/**
 	* REMOVE_LOCATOR
 	* @param object $locator
-	* @return bool true if added, false if not
+	* @return bool true if removed, false if not
 	*/
 	public function remove_locator($locator) {
 

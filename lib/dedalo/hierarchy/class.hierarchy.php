@@ -1398,11 +1398,11 @@ class hierarchy {
 
 		foreach ($ar_elements as $object_value) {
 			if (property_exists($object_value, $type)) {
-				$element_tipo = $object_value->$type;
+				$element_tipo = $object_value->{$type};
 				break;
 			}
 		}
-		#dump($element_tipo, ' element_tipo ++ '.to_string());		
+		#dump($element_tipo, ' element_tipo ++ '.$type.' - '.to_string($section_tipo));		
 
 		return $element_tipo;
 	}//end get_element_tipo_from_section_map
@@ -1466,7 +1466,7 @@ class hierarchy {
 			$ar_elements = (array)$ar_propiedades;		
 			#debug_log(__METHOD__." ar_propiedades ".to_string($ar_propiedades), logger::DEBUG);
 		}
-
+	
 		# Set static var for reuse
 		$section_map_elemets[$section_tipo] = $ar_elements;
 		#debug_log(__METHOD__." ar_elements $section_tipo - ".to_string($ar_elements), logger::DEBUG);
