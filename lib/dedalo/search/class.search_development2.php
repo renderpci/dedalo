@@ -2608,6 +2608,11 @@ class search_development2 {
 			$ar_insert_values = [];
 			foreach ((array)$options->ar_locators as $key => $locator) {
 
+				if (empty($locator)) {
+					debug_log(__METHOD__." Error. empty locator. Ignored relations insert empty locator.", logger::ERROR);
+					continue;
+				}
+
 				if(!isset($locator->section_tipo) || !isset($locator->section_id)) {
 					debug_log(__METHOD__." Error. empty section_tipo or section_id. Ignored relations insert locator: ".to_string($locator), logger::ERROR);
 					continue;
@@ -2618,27 +2623,30 @@ class search_development2 {
 				$ar_insert_values[]   = "($section_id, '$section_tipo', $target_section_id, '$target_section_tipo', '$from_component_tipo')";
 			}
 			# Exec query (all records at once)
-				$strQuery = 'INSERT INTO '.$table.' (section_id, section_tipo, target_section_id, target_section_tipo, from_component_tipo) VALUES '.implode(',', $ar_insert_values).';';
-				$result = pg_query(DBi::_getConnection(), $strQuery);
-				if(!$result) {			
-					$msg = " Failed Insert relations record - $strQuery";
-					debug_log(__METHOD__." ERROR: $msg ".to_string(), logger::ERROR);
-					$response->msg[] = $msg;
-				}else{
-					$msg = " Created " . count($ar_insert_values) . " relations rows (section_tipo:$section_tipo,  section_id:$section_id, from_component_tipo:$from_component_tipo, target_section_tipo:$target_section_tipo)";
-					$response->msg[] = $msg;
-					if(SHOW_DEBUG===true) {
-						if ($section_tipo!==DEDALO_ACTIVITY_SECTION_TIPO) {
-							$msg .= ' ('.RecordObj_dd::get_termino_by_tipo($section_tipo).' - '.RecordObj_dd::get_termino_by_tipo($from_component_tipo).')';
-							debug_log(__METHOD__." OK: ".$msg, logger::DEBUG);
+				if (!empty($ar_insert_values)) {
+									
+					$strQuery = 'INSERT INTO '.$table.' (section_id, section_tipo, target_section_id, target_section_tipo, from_component_tipo) VALUES '.implode(',', $ar_insert_values).';';
+					$result = pg_query(DBi::_getConnection(), $strQuery);
+					if(!$result) {			
+						$msg = " Failed Insert relations record - $strQuery";
+						debug_log(__METHOD__." ERROR: $msg ".to_string(), logger::ERROR);
+						$response->msg[] = $msg;
+					}else{
+						$msg = " Created " . count($ar_insert_values) . " relations rows (section_tipo:$section_tipo,  section_id:$section_id, from_component_tipo:$from_component_tipo, target_section_tipo:$target_section_tipo)";
+						$response->msg[] = $msg;
+						if(SHOW_DEBUG===true) {
+							if ($section_tipo!==DEDALO_ACTIVITY_SECTION_TIPO) {
+								$msg .= ' ('.RecordObj_dd::get_termino_by_tipo($section_tipo).' - '.RecordObj_dd::get_termino_by_tipo($from_component_tipo).')';
+								debug_log(__METHOD__." OK: ".$msg, logger::DEBUG);
+							}
 						}
 					}
-				}
 
-		// response
-			$response->result = true;
-			$response->msg[0] = "Ok. Relations row successfully"; // Override first message
-			$response->msg    = "<br>".implode('<br>', $response->msg);
+					// response
+						$response->result = true;
+						$response->msg[0] = "Ok. Relations row successfully"; // Override first message
+						$response->msg    = "<br>".implode('<br>', $response->msg);
+				}
 
 		
 		return $response;
