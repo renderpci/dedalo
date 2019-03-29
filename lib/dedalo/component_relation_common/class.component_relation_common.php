@@ -482,13 +482,20 @@ class component_relation_common extends component_common {
 
 
 		# RELATIONS TABLE LINKS
-		if ($this->save_to_database_relations!==false) {		
-			$relation_options = new stdClass();
-				$relation_options->section_tipo 		= $section_tipo;
-				$relation_options->section_id 			= $parent;
-				$relation_options->from_component_tipo 	= $tipo;
-				$relation_options->ar_locators 			= $this->get_dato();
-			$propagate_response = search_development2::propagate_component_dato_to_relations_table($relation_options);
+		if ($this->save_to_database_relations!==false) {
+
+			$current_dato = $this->get_dato();
+
+			if (!empty($current_dato)) {			
+			
+				$relation_options = new stdClass();
+					$relation_options->section_tipo 		= $section_tipo;
+					$relation_options->section_id 			= $parent;
+					$relation_options->from_component_tipo 	= $tipo;
+					$relation_options->ar_locators 			= $current_dato;
+				
+				$propagate_response = search_development2::propagate_component_dato_to_relations_table($relation_options);
+			}
 		}
 
 
