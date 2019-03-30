@@ -2450,7 +2450,7 @@ class diffusion_sql extends diffusion  {
 	* Used to trigger parent publication when children is published (useful in thesaurus web publications like mupreva)
 	*/
 	public static function map_locator_to_terminoID_parent($options, $dato) {
-
+	
 		# Reference:
 		# dato:
 		# [0] => stdClass Object
@@ -2488,6 +2488,9 @@ class diffusion_sql extends diffusion  {
 			$section_tipo 			= $locator->section_tipo;
 			$section_id 			= $locator->section_id;
 			$diffusion_element_tipo = $options->diffusion_element_tipo;
+
+			// Force section tipo from locator
+				$options->section_tipo = $section_tipo;
 			
 			$terminoID = diffusion_sql::map_to_terminoID($options, $section_id);
 
