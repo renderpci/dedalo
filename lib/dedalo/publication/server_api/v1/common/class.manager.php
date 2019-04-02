@@ -177,6 +177,12 @@ class manager {
 				$dedalo_data = (object)web_data::get_image_data( $options );
 				break;
 
+			case 'menu_tree_plain':
+				#
+				# Execute data retrieving
+				$dedalo_data = (object)web_data::get_menu_tree_plain( $options );
+				break;	
+
 			default:
 				$dedalo_data = new stdClass();
 					$dedalo_data->result = false;
