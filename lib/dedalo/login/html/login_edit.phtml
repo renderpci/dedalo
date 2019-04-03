@@ -28,8 +28,7 @@
 			// lang jump
 				$html_content .= $dedalo_aplication_langs_selector_html;
 			
-			// username
-				$username_value = (DEDALO_ENTITY==='dedalo4_demo') ? "dedalo" : null;
+			// username				
 				$html_content .= "<input type=\"text\" ";
 				$html_content .= "class=\"login_input\" ";
 				$html_content .= "id=\"login_username\" ";
@@ -40,12 +39,11 @@
 				$html_content .= "/>";
 			
 			// password
-				$username_password = (DEDALO_ENTITY==='dedalo4_demo') ? "dedalo4Demo" : null;
 				$html_content .= "<input type=\"password\" ";
 				$html_content .= "class=\"login_input\" ";
 				$html_content .= "id=\"login_password\" ";
 				$html_content .= "name=\"login_password\" ";
-				$html_content .= "value=\"$username_password\" ";
+				$html_content .= "value=\"$password_value\" ";
 				$html_content .= "placeholder=\"".$password_label."\" ";
 				$html_content .= "maxlength=\"64\" ";
 				$html_content .= "/>";
@@ -62,7 +60,7 @@
 			// Ajax response	
 				$html_content .= '<div id="login_ajax_response" class="login_ajax_response"></div>';
 
-			// Version : Dedalo verrsion info
+			// Version : Dedalo version info
 				$html_content .= '<div class="dedalo_version">';
 
 					$html_content .= 'Dédalo version ' . DEDALO_VERSION . ' - Build ' . DEDALO_BUILD ;

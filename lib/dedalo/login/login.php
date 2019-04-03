@@ -4,15 +4,14 @@
 		$id						= NULL;
 		$modo					= $this->get_modo();
 		$tipo 					= $this->get_tipo();	
-		$ar_tools_obj			= false;
-		$ar_components_obj		= $this->load_components();						
-		$tipo_active_account	= $this->get_tipo_active_account();
+		$ar_tools_obj			= false;					
+		$tipo_active_account	= $this->tipo_active_account;
+		$tipo_button_login 		= $this->tipo_button_login;
 		$component_name			= get_class($this);
 		$file_name				= $modo;
 
 	
-	// Verify current URL tipo exists as DEDALO_ROOT_TIPO children before login
-	// If not, redirect to MAIN_FALLBACK_SECTION tipo
+	// Verify current URL tipo exists as DEDALO_ROOT_TIPO children before login. If not, redirect to MAIN_FALLBACK_SECTION tipo
 		$RecordObj_dd 	= new RecordObj_dd(TOP_TIPO);
 		$ar_parents 	= $RecordObj_dd->get_ar_parents_of_this();
 		if (!in_array(DEDALO_ROOT_TIPO, $ar_parents)) {		
@@ -43,31 +42,19 @@
 	
 	// username
 		$tipo_username	= DEDALO_USER_NAME_TIPO;
-		$username_label = RecordObj_dd::get_termino_by_tipo($tipo_username, DEDALO_DATA_LANG,true);
-		
+		$username_label = RecordObj_dd::get_termino_by_tipo($tipo_username, DEDALO_DATA_LANG, true);
+		$username_value = (DEDALO_ENTITY==='dedalo4_demo') ? "dedalo" : null;
+
 		
 	// password	
 		$tipo_password	= DEDALO_USER_PASSWORD_TIPO;
-		$password_label = RecordObj_dd::get_termino_by_tipo($tipo_password, DEDALO_DATA_LANG,true);
-		
-	
-	// email
-		$html_email 	= '';
-		$name			= 'email';
-		if(isset($ar_components_obj[$name]) && is_object($ar_components_obj[$name])) {
-			$ar_components_obj[$name]->set_ejemplo(NULL);
-			$ar_components_obj[$name]->set_id($name);
-			$html_email		= $ar_components_obj[$name]->get_html();
-		}
+		$password_label = RecordObj_dd::get_termino_by_tipo($tipo_password, DEDALO_DATA_LANG, true);
+		$password_value = (DEDALO_ENTITY==='dedalo4_demo') ? "dedalo4Demo" : null;
 	
 
 	// button login (send) 
-		$html_button_login 	= '';
-		$name			= 'button_login';
-		if(isset($ar_components_obj[$name]) && is_object($ar_components_obj[$name])) {
-			$ar_components_obj[$name]->set_ejemplo(NULL);
-			$html_button_login		= $ar_components_obj[$name]->get_html();
-		}	
+		$button_login 		= new button_login($tipo_button_login, null,  null);
+		$html_button_login	= $button_login->get_html();
 	
 
 	// modo 
