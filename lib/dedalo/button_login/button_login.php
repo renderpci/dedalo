@@ -16,7 +16,7 @@
 		
 		case 'edit'	:
 
-				break;
+			break;
 	}
 
 	$file_name = $modo;

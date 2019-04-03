@@ -12,12 +12,12 @@ class login extends common {
 	protected $modo;
 
 	protected $modelo;
-	protected $tipo_active_account;
-	protected $ar_components;
-
+	protected $tipo_active_account 	= 'dd131';
+	protected $tipo_button_login 	= 'dd259';
+	
 	protected static $login_matrix_table = 'matrix';
 
-	const SU_DEFAULT_PASSWORD = ''; //Dedalo4debugChangePsW
+	const SU_DEFAULT_PASSWORD = '';
 
 	/**
 	* __CONSTRUCT
@@ -246,17 +246,20 @@ class login extends common {
 							# RETURN FALSE
 							$response->result = false;
 							$response->msg 	  = $init_user_login_secuence->msg;
+							$response->errors = isset($init_user_login_secuence->errors) ? $init_user_login_secuence->errors : [];
 						}else if($init_user_login_secuence->result===true) {
 							# RETURN OK AND RELOAD PAGE
 							$response->result = true;
 							$response->msg 	  = " Login.. ";
+							$response->errors = isset($init_user_login_secuence->errors) ? $init_user_login_secuence->errors : [];
 						}
 
 				}//end if(isset($ar_password_id[0])
 
 			}#if( is_array($ar_result) ) foreach($ar_result as $section_id)
 
-		}#if( !is_array($ar_result) || count($ar_result)==0 || empty($ar_result[0]) )
+		}//if( !is_array($ar_result) || count($ar_result)==0 || empty($ar_result[0]) )
+
 
 		return (object)$response;
 	}//end Login
@@ -387,10 +390,12 @@ class login extends common {
 								# RETURN FALSE
 								$response->result = false;
 								$response->msg 	  = $init_user_login_secuence->msg;
+								$response->errors = isset($init_user_login_secuence->errors) ? $init_user_login_secuence->errors : [];
 							}else if($init_user_login_secuence->result===true) {
 								# RETURN OK AND RELOAD PAGE
 								$response->result = true;
 								$response->msg 	  = " Login.. ";
+								$response->errors = isset($init_user_login_secuence->errors) ? $init_user_login_secuence->errors : [];
 							}
 			}else{
 
@@ -419,7 +424,7 @@ class login extends common {
 					error_log("DEDALO LOGIN ERROR : Invalid saml code");
 					return $response;			
 			}
-
+	
 
 		return $response;
 	}//end Login_SAML
@@ -638,6 +643,7 @@ class login extends common {
 		$response = new stdClass();
 			$response->result 	= false;
 			$response->msg 	 	= 'Error on init_user_login_secuence';
+			$response->errors 	= [];
 
 		#ob_implicit_flush(true);
 		
@@ -650,9 +656,12 @@ class login extends common {
 		if ($init_test===true) {
 			require(DEDALO_LIB_BASE_PATH.'/config/dd_init_test.php');
 			if ($init_response->result===false) {
-				$response->result 	= false;
-				$response->msg 		= $init_response->msg;
-				return $response;
+				debug_log(__METHOD__." Init test error: ".$init_response->msg.to_string(), logger::ERROR);
+				// Don't stop here. Only inform user of init error via jasvascript 
+					# $response->result 	= false;
+					# $response->msg 		= $init_response->msg;
+					# return $response;
+				$response->errors[] = $init_response->msg;
 			}
 		}
 
@@ -726,6 +735,7 @@ class login extends common {
 
 		$response->result 	= true;
 		$response->msg 	 	= 'Ok init_user_login_secuence is done';
+
 		
 		return $response;
 	}//end init_user_login_secuence
@@ -977,86 +987,6 @@ class login extends common {
 
 
 	/**
-	* LOAD_COMPONENTS
-	* Despeja y carga los componentes requeridos para el login
-	* - username	(component_input_text)
-	* - password	(component_password)
-	* - email		(component_email)
-	* Deben estar definidos en la estructura con el modelo apropiado
-	*/
-	protected function load_components() {
-
-		$ar_components	= array();
-
-		$RecordObj_dd	= new RecordObj_dd($this->tipo);
-		$ar_childrens 	= $RecordObj_dd->get_ar_childrens_of_this();
-
-		if(is_array($ar_childrens)) foreach($ar_childrens as $terminoID) {
-
-			# Para cada hijo, verificamos su modelo
-			$RecordObj_dd	= new RecordObj_dd($terminoID);
-			$modeloID		= $RecordObj_dd->get_modelo();
-			$modelo_current	= RecordObj_dd::get_termino_by_tipo($modeloID);
-
-			# Despejamos el nombre del modelo que será el tipo del componente (ej. 'component_input_text') y es también el nombre de la clase del mismo
-			#$clase_name	= RecordObj_dd::get_termino_by_tipo($modeloID);
-			$modo			= 'simple';
-
-			$ar_terminos_relacionados	= $RecordObj_dd->get_relaciones();
-
-			switch($modelo_current) {
-				/*
-				case 'login_username'	:
-
-						if(isset($ar_terminos_relacionados[0]))	foreach($ar_terminos_relacionados[0] as $key => $current_tipo) {
-							$ar_components['username']	= component_common::get_instance('component_input_text', $current_tipo, 0, $modo, DEDALO_DATA_NOLAN, DEDALO_SECTION_USERS_TIPO);
-							break;
-						}
-						# Store session user tipo (used in matrix time machine)
-						$_SESSION['dedalo4']['config']['user_name_tipo'] = $current_tipo;
-
-						break;
-
-				case 'component_password' 	:
-
-						if(isset($ar_terminos_relacionados[0]))	foreach($ar_terminos_relacionados[0] as $key => $current_tipo) {
-							$ar_components['password']	= component_common::get_instance('component_password', $current_tipo,0, $modo, DEDALO_DATA_NOLAN, DEDALO_SECTION_USERS_TIPO);
-							break;
-						}
-						break;
-				*/
-				case 'component_active_account'		:
-
-						if(isset($ar_terminos_relacionados[0])) foreach($ar_terminos_relacionados[0] as $key => $current_tipo) {
-							$this->tipo_active_account	= $current_tipo;
-							break;
-						}
-						break;
-
-				case 'component_email'		:
-
-						if(isset($ar_terminos_relacionados[0])) foreach($ar_terminos_relacionados[0] as $key => $current_tipo) {
-							$ar_components['email']		= component_common::get_instance('component_email', $current_tipo, 0, $modo, DEDALO_DATA_NOLAN, DEDALO_SECTION_USERS_TIPO);
-							break;
-						}
-						break;
-
-				case 'button_login'			:
-
-						$ar_components['button_login']	= new button_login($terminoID, null,  null);
-						break;
-
-				#default	: print(__METHOD__ . "  <span class='error'>modelo: $modelo_current [$terminoID] is not valid !</span>");
-			}
-		}		
-		$this->ar_components = $ar_components;
-
-		return 	$this->ar_components;
-	}//end load_components
-
-
-
-	/**
 	* GET HTML CODE .
 	* Return include file __class__.php
 	*/
@@ -1243,10 +1173,6 @@ class login extends common {
 
 		return $is_developer;
 	}//end is_developer
-
-
-
-	
 
 
 
