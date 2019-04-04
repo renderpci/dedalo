@@ -3826,6 +3826,51 @@ class web_data {
 
 
 
+	/**
+	* GET_COMBI
+	* @param object $request_options
+	*	Contains a set of calls to this class
+	*	Like: {
+	*		ar_calls : [
+	*			{ id : menu_all,
+	*			  options : options 
+	*			}
+	*		]
+	*	}
+	* @return object $response
+	*/
+	public static function get_combi( $request_options ) {
+		
+		$response = new stdClass();
+			$response->result 	= false;
+			$response->msg 		= __METHOD__ . ' Error. Request failed';
+
+		$ar_response = [];
+
+		// iterate all calls
+			foreach ($request_options->ar_calls as $call_obj) {				
+
+				// call to local static method 
+					$manager = new manager();
+					$current_response = $manager->manage_request($call_obj->options);
+
+				// inject id
+					$current_response->id = $call_obj->id;
+
+				// store response
+					$ar_response[] = $current_response;								
+			}
+
+
+		$response->result 	= $ar_response;
+		$response->msg 		= __METHOD__ . ' Ok. Request done';
+
+
+		return $response;
+	}//end get_combi
+
+
+
 }//end class web_data
 
 
