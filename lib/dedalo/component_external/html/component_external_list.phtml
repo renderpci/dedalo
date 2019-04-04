@@ -1,0 +1,39 @@
+<?php
+
+	# VIEW HTML	
+		
+	# CONTENT
+	$html_content  = '';
+	$html_content .= "<div class=\"list_thesaurus_element input_text_list_thesaurus\" onclick=\"component_input_text.show_component_in_row_thesaurus(this)\" ";
+	$html_content .= "data-section_tipo=\"$section_tipo\" ";
+	$html_content .= "data-parent=\"$parent\" ";
+	$html_content .= "data-tipo=\"$tipo\" ";
+	$html_content .= "data-lang=\"$lang\" ";
+	$html_content .= "data-modo=\"edit\" ";
+
+	# Content inside div
+	# dump($render_vars, ' render_vars ++ '.to_string());		
+	switch (true) {
+		case (isset($render_vars->type) && $render_vars->type=='term'):
+			$value = $this->get_valor(DEDALO_DATA_LANG);
+			$valor = component_input_text::render_list_value($value, $tipo, $parent, $modo, $lang, $section_tipo, $parent);
+			#dump($valor, ' $valor ++ '.to_string());
+			foreach ($render_vars as $rv_key => $rv_value) {
+				$html_content .= " data-{$rv_key}='{$rv_value}'";
+			}
+			$html_content .= ">";
+			$html_content .= $valor;
+			break;
+
+		default:
+			$html_content .= ">";
+			$html_content .= $icon_label;
+	}
+	
+	$html_content .= "</div>";	
+
+	
+	
+	# PRINT HTML
+	print $html_content;	
+?>
