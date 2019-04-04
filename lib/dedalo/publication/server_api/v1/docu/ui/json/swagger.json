@@ -1,8 +1,8 @@
 {
   "swagger" : "2.0",
   "info" : {
-    "version" : "1.0.7",
-    "title" : "Dédalo Web REST API 1.0.7",
+    "version" : "1.0.8",
+    "title" : "Dédalo Web REST API 1.0.8",
     "description" : "Builds Public Dédalo data for publication. <br>Use this online tool to test your data and remember always write your <i>Auth code</i> when executes a try call.<br> <strong>This API is focused to Oral History archives and is for general pourposes.<br>If you need special features or custom results, you are wellcome to join API develop team contacting with the source developers (aka Alex&Paco)</strong> in webmaster@render.es",
     "license" : {
       "name" : "Apache 2.0 license",
@@ -35,6 +35,9 @@
   }, {
     "name" : "Global",
     "description" : "Search in all data functions"
+  }, {
+    "name" : "Utils",
+    "description" : "Special utils"
   } ],
   "definitions" : {
     "table_list" : {
@@ -66,6 +69,38 @@
         "table" : {
           "type" : "string",
           "example" : "interview"
+        }
+      }
+    },
+    "msg" : {
+      "type" : "string",
+      "example" : "Request done"
+    },
+    "item_object" : {
+      "type" : "object"
+    },
+    "item_response" : {
+      "type" : "object",
+      "properties" : {
+        "msg" : {
+          "$ref" : "#/definitions/msg"
+        },
+        "result" : {
+          "type" : "array",
+          "items" : {
+            "$ref" : "#/definitions/item_object"
+          }
+        }
+      }
+    },
+    "response" : {
+      "type" : "object",
+      "properties" : {
+        "result" : {
+          "type" : "array",
+          "items" : {
+            "$ref" : "#/definitions/item_response"
+          }
         }
       }
     }
@@ -836,7 +871,7 @@
     },
     "/global_search" : {
       "post" : {
-        "summary" : "Find word/s in table global_search",
+        "summary" : "Find word/s in table global_search. Require special server config!",
         "description" : "Exec a search against full_data column in global_search table",
         "parameters" : [ {
           "$ref" : "#/parameters/code"
@@ -898,6 +933,31 @@
         "responses" : {
           "200" : {
             "description" : "OK"
+          }
+        }
+      }
+    },
+    "/combi" : {
+      "post" : {
+        "summary" : "Combined calls to api in one request",
+        "description" : "Exec an array of api request in only one call to server.",
+        "parameters" : [ {
+          "$ref" : "#/parameters/code"
+        }, {
+          "name" : "ar_calls",
+          "in" : "query",
+          "description" : "JSON stringified array of calls to api. Will be iterated and resolved in the server side",
+          "required" : true,
+          "type" : "string",
+          "format" : "string"
+        } ],
+        "tags" : [ "Utils" ],
+        "responses" : {
+          "200" : {
+            "description" : "Successful response",
+            "schema" : {
+              "$ref" : "#/definitions/response"
+            }
           }
         }
       }
