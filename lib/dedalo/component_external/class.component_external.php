@@ -1,7 +1,7 @@
 <?php
 /*
-* CLASS component_external
-* Manage specific component input text logic
+* CLASS COMPONENT_EXTERNAL
+* Manage specific component logic
 * Common components properties and method are inherited of component_common class that are inherited from common class
 */
 class component_external extends component_common {
@@ -14,12 +14,6 @@ class component_external extends component_common {
 	public function get_dato() {
 
 		$dato = parent::get_dato();
-		
-		if(SHOW_DEBUG===true) {
-			#if ( !is_null($dato) && !is_array($dato)  ) {
-				#dump( $dato, "WRONG TYPE of dato. tipo: $this->tipo - section_tipo: $this->section_tipo - section_id: $this->parent");
-			#}
-		}
 
 		return (array)$dato;
 	}//end get_dato
@@ -41,7 +35,6 @@ class component_external extends component_common {
 			}else{
 				# dato is string plain value
 				$dato = array($dato);
-				#debug_log(__METHOD__." Warning. [$this->tipo,$this->parent] Dato received is a plain string. Support for this type is deprecated. Use always an array to set dato. ".to_string($dato), logger::DEBUG);
 			}
 		}
 
@@ -49,7 +42,6 @@ class component_external extends component_common {
 			if (!is_array($dato)) {
 				debug_log(__METHOD__." Warning. [$this->tipo,$this->parent]. Received dato is NOT array. Type is '".gettype($dato)."' and dato: '".to_string($dato)."' will be converted to array", logger::DEBUG);
 			}
-			#debug_log(__METHOD__." dato [$this->tipo,$this->parent] Type is ".gettype($dato)." -> ".to_string($dato), logger::ERROR);
 		}
 
 		$safe_dato=array();
@@ -261,183 +253,12 @@ class component_external extends component_common {
 
 
 	/**
-	* UPDATE_DATO_VERSION
-	* @return object $response
-	*/
-	public static function update_dato_version($request_options) {
-
-		$options = new stdClass();
-			$options->update_version 	= null;
-			$options->dato_unchanged 	= null;
-			$options->reference_id 		= null;
-			$options->tipo 				= null;
-			$options->section_id 		= null;
-			$options->section_tipo 		= null;
-			$options->context 			= 'update_component_dato';
-			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
-
-			$update_version = $options->update_version;
-			$dato_unchanged = $options->dato_unchanged;
-			$reference_id 	= $options->reference_id;
-		
-
-		$update_version = implode(".", $update_version);
-
-		switch ($update_version) {
-			case '4.0.21':
-				#$dato = $this->get_dato_unchanged();
-				
-				# Compatibility old dedalo instalations
-				if (!empty($dato_unchanged) && is_string($dato_unchanged)) {
-
-					$new_dato = (array)$dato_unchanged;
-
-					$response = new stdClass();
-						$response->result   = 1;
-						$response->new_dato = $new_dato;
-						$response->msg = "[$reference_id] Dato is changed from ".to_string($dato_unchanged)." to ".to_string($new_dato).".<br />";
-					return $response;
-
-				}else if(is_array($dato_unchanged)){
-
-					$response = new stdClass();
-						$response->result   = 1;
-						$response->new_dato = $dato_unchanged;
-						$response->msg = "[$reference_id] Dato is array ".to_string($dato_unchanged)." only save .<br />";
-					return $response;
-
-				}else{
-					
-					$response = new stdClass();
-						$response->result = 2;
-						$response->msg = "[$reference_id] Current dato don't need update.<br />";	// to_string($dato_unchanged)." 
-					return $response;
-				}
-				break;
-		}
-	}//end update_dato_version
-
-
-
-	/**
-	* GET_SEARCH_QUERY
-	* DEPRECATED 12-08-2018
-	* Build search query for current component . Overwrite for different needs in other components 
-	* (is static to enable direct call from section_records without construct component)
-	* Params
-	* @param string $json_field . JSON container column Like 'dato'
-	* @param string $search_tipo . Component tipo Like 'dd421'
-	* @param string $tipo_de_dato_search . Component dato container Like 'dato' or 'valor'
-	* @param string $current_lang . Component dato lang container Like 'lg-spa' or 'lg-nolan'
-	* @param string $search_value . Value received from search form request Like 'paco'
-	* @param string $comparison_operator . SQL comparison operator Like 'ILIKE'
-	*
-	* @see class.section_records.php get_rows_data filter_by_search
-	* @return string $search_query . POSTGRE SQL query (like 'datos#>'{components, oh21, dato, lg-nolan}' ILIKE '%paco%' )
-	*/
-	public static function get_search_query( $json_field, $search_tipo, $tipo_de_dato_search, $current_lang, $search_value, $comparison_operator='ILIKE') {//, $logical_operator = 'AND' 
-		
-		if (empty($search_value)) return false;
-
-		#$tipo_de_dato_search = 'valor';
-
-		$json_field = 'a.'.$json_field; // Add 'a.' for mandatory table alias search	
-
-
-		$current_lang='all'; // Forced to search in all langs always	
-
-		$search_query='';
-		switch (true) {
-			case ($comparison_operator==='ILIKE' || $comparison_operator==='LIKE'):
-				// Allow wildcards like "house*" or "*house"
-				// dump($search_value[strlen($search_value) - 1], "$search_value[0] ".to_string());
-				$separator 	   = '*';			
-				if ( $search_value[0] === $separator ) {
-					// Begin with * like
-					$search_value = str_replace($separator, '', $search_value);
-					if ($current_lang=='all') {
-						$search_query = " unaccent({$json_field}#>>'{components, $search_tipo, $tipo_de_dato_search}') $comparison_operator unaccent('%[\"%{$search_value}') ";
-					}else{
-						$search_query = " unaccent({$json_field}#>>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}') $comparison_operator unaccent('%$search_value') ";
-					}
-				
-				}else if ( $search_value[strlen($search_value) - 1] === $separator ) {
-					// End with *
-					$search_value = str_replace($separator, '', $search_value);
-					if ($current_lang=='all') {
-						$search_query = " unaccent({$json_field}#>>'{components, $search_tipo, $tipo_de_dato_search}') $comparison_operator unaccent('%[\"{$search_value}%') ";
-					}else{
-						$search_query = " unaccent({$json_field}#>>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}') $comparison_operator unaccent('$search_value%') ";
-					}
-				}else{
-					// Contain
-					$search_value = str_replace($separator, '', $search_value);
-					if ($current_lang=='all') {
-						if ($comparison_operator==="LIKE") {
-							$search_query = " {$json_field}#>>'{components, $search_tipo, $tipo_de_dato_search}' ~ '.*\[\".*$search_value.*' ";
-						}else{
-							$search_query = " unaccent({$json_field}#>>'{components, $search_tipo, $tipo_de_dato_search}') ~* unaccent('.*\[\".*$search_value.*') ";
-						}						
-					}else{
-						$search_query = " unaccent({$json_field}#>>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}') $comparison_operator unaccent('%$search_value%') ";
-					}
-				}
-				break;
-
-			case ($comparison_operator==='=' || $comparison_operator==='!='):
-				$json_operator = '@>';
-				if ($current_lang=='all') {
-					$ar_lang_search_query = array();
-					foreach (common::get_ar_all_langs() as $iter_lang) {
-						if ($comparison_operator==="!=") {							
-							$ar_lang_search_query[] = "({$json_field}#>'{components, $search_tipo, $tipo_de_dato_search, ". $iter_lang ."}' $json_operator '\"$search_value\"') = false";
-						}else{
-							$ar_lang_search_query[] = "{$json_field}#>'{components, $search_tipo, $tipo_de_dato_search, ". $iter_lang ."}' $json_operator '\"$search_value\"'";
-						}						
-					}
-					$search_query = " (".implode(" OR ", $ar_lang_search_query).") ";
-				}else{
-					$search_query = " {$json_field}#>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}' $comparison_operator '\"$search_value\"' ";
-				}				
-				break;
-
-			case ($comparison_operator==='IS NULL' || $comparison_operator==='IS NOT NULL'):
-				if($comparison_operator === 'IS NULL'){
-					$comparison_operator2 = '=';
-					$union_operator = 'OR';
-				}else{
-					$comparison_operator2 = '!=';
-					$union_operator = 'AND';
-				}
-				$search_query  = " ({$json_field}#>>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}') $comparison_operator $union_operator ";
-				$search_query .= " {$json_field}#>>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}') $comparison_operator2 '' )";								
-				break;
-
-			default:
-				if ($current_lang=='all') {
-					$search_query = " unaccent({$json_field}#>>'{components, $search_tipo, $tipo_de_dato_search}') $comparison_operator '%$search_value%' ";
-				}else{
-					$search_query = " unaccent({$json_field}#>>'{components, $search_tipo, $tipo_de_dato_search, ". $current_lang ."}') $comparison_operator '%$search_value%' ";
-				}
-				break;
-		}
-		
-		if(SHOW_DEBUG===true) {
-			$search_query = " -- filter_by_search $search_tipo ". get_called_class() ." \n".$search_query;
-		}
-		return (string)$search_query;
-	}//end get_search_query
-
-
-
-	/**
 	* RESOLVE_QUERY_OBJECT_SQL
 	* @param object $query_object
 	* @return object $query_object
 	*	Edited/parsed version of received object 
 	*/
 	public static function resolve_query_object_sql($query_object) {
-		#debug_log(__METHOD__." query_object ".to_string($query_object), logger::DEBUG);
 		
 		$q = $query_object->q;
 		if (isset($query_object->type) && $query_object->type==='jsonb') {
@@ -450,11 +271,6 @@ class component_external extends component_common {
 		$q = pg_escape_string(stripslashes($q));
 
 		$q_operator = isset($query_object->q_operator) ? $query_object->q_operator : null;
-
-		# Prepend if exists
-		#if (isset($query_object->q_operator)) {
-		#	$q = $query_object->q_operator . $q;
-		#}
 
 		switch (true) {
 			# EMPTY VALUE (in current lang data)
@@ -490,31 +306,6 @@ class component_external extends component_common {
 						$clone->lang 	 = $lang;
 
 					$new_query_json->$logical_operator[] = $clone;
-
-				// langs check all
-					/*
-					$ar_query_object = [];
-					$ar_all_langs 	 = common::get_ar_all_langs();
-					$ar_all_langs[]  = DEDALO_DATA_NOLAN; // Added no lang also
-					foreach ($ar_all_langs as $current_lang) {
-						// Empty data is blank array []
-						$clone = clone($query_object);
-							$clone->operator = '=';
-							$clone->q_parsed = '\'[]\'';
-							$clone->lang 	 = $current_lang;
-
-						$ar_query_object[] = $clone;
-
-						// legacy data (set as null instead [])
-						$clone = clone($query_object);
-							$clone->operator = 'IS NULL';
-							$clone->lang 	 = $current_lang;
-
-						$ar_query_object[] = $clone;
-					}			
-
-					$new_query_json->$logical_operator = array_merge($new_query_json->$logical_operator, $ar_query_object);
-					*/
 
 				# override
 				$query_object = $new_query_json ;
@@ -617,7 +408,6 @@ class component_external extends component_common {
 				$query_object->unaccent = true;
 				break;			
 		}//end switch (true) {
-		#dump($query_object, ' query_object ++ '.to_string());
 	   
 
 		return $query_object;
@@ -657,7 +447,7 @@ class component_external extends component_common {
 	*
 	* @see class.diffusion_mysql.php
 	*/
-	public function get_diffusion_value( $lang ) {		
+	public function get_diffusion_value( $lang ) {
 
 		# Default behaviour is get value
 		$diffusion_value = $this->get_valor( $lang );

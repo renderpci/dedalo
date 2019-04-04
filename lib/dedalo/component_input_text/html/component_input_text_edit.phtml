@@ -8,23 +8,23 @@
 
 
 	$wrap_style = isset($wrap_style) ? $wrap_style : '';
-	print "<div class=\"wrap_component css_wrap_input_text wrap_component_{$modo} wrap_component_{$tipo}\" id=\"{$id_wrapper}\" ";
-	print "style=\"$wrap_style\" ";
-	print "data-tipo=\"{$tipo}\" ";
-	print "data-lang=\"{$lang}\" ";
-	print "data-section_tipo=\"{$section_tipo}\" ";
-	print "data-parent=\"{$parent}\" ";
-	print "data-modo=\"{$modo}\" ";
-	print "data-dato='{$dato_json}' ";
-	print "data-unique='{$unique_json}' ";
+	print '<div class="wrap_component css_wrap_input_text wrap_component_'.$modo.' wrap_component_'.$tipo.'" id="'.$id_wrapper.'" ';
+	print 'style="'.$wrap_style.'" ';
+	print 'data-tipo="'.$tipo.'" ';
+	print 'data-lang="'.$lang.'" ';
+	print 'data-section_tipo="'.$section_tipo.'" ';
+	print 'data-parent="'.$parent.'" ';
+	print 'data-modo="'.$modo.'" ';
+	print 'data-dato=\''.$dato_json.'\' ';
+	print 'data-unique=\''.$unique_json.'\' ';
 	if($unique_disable_save_json === true){
-		print "data-is_saveable=\"false\" ";
+		print 'data-is_saveable="false" ';
 	}else{
-		print "data-is_saveable=\"true\" ";
+		print 'data-is_saveable="true" ';
 	}
-	print "data-component_name=\"{$component_name}\" ";
-	print "data-component_info='{$component_info}' ";
-	print ">";
+	print 'data-component_name="'.$component_name.'" ';
+	print 'data-component_info=\''.$component_info.'\' ';
+	print '>';
 	
 
 	# LABEL
@@ -48,7 +48,7 @@
 
 		case 1 :
 				foreach ($dato as $value) {
-					$html_content .= "<span class=\"css_span_dato\">$value</span>";
+					$html_content .= '<span class="css_span_dato">'.$value.'</span>';
 				}
 				break;
 
@@ -93,12 +93,12 @@
 
 				# dato_view
 				$dato_view = empty($dato) ? array("") : $dato;
-				$html_content .= "<ul>";
+				$html_content .= '<ul>';
 				foreach ($dato_view as $key => $value) {
 					# Fix issues with quotes
 					$value = htmlentities($value);
 
-					$html_content .= "<li>";
+					$html_content .= '<li>';
 
 					$html_content .= "<input class=\"css_input_text\" type=\"text\" ";
 					if($context_name==='default') {
@@ -121,10 +121,10 @@
 					$html_content .= "data-mandatory='{$mandatory_json}' ";
 					$html_content .= "/>";
 					
-					$html_content .= "</li>"; // tabindex=\"1\"
+					$html_content .= '</li>'; // tabindex=\"1\"
 
 				}//end foreach
-				$html_content .= "</ul>";			
+				$html_content .= '</ul>';			
 				
 
 				#$html_content .= "<script>setAttribute(“autocomplete”,”off”)</script>";
@@ -200,11 +200,10 @@
 	print $html_content;
 
 
-	print "</div>"; //wrap
+	print '</div>'; //wrap
 
 	
 
 	print component_common_draw::html_delimiter($component_name, $tipo, $parent, $label, 'out', $modo, $lang);
 
 	
-?>

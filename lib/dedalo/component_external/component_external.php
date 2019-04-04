@@ -96,13 +96,6 @@
 		case 'print' :
 				#$dato = htmlentities($dato);
 				break;
-
-		case 'tool_time_machine'	:	
-				$id_wrapper = 'wrapper_'.$identificador_unico.'_tm';
-				$input_name = "{$tipo}_{$parent}_tm";	
-				# Force file_name
-				$file_name  = 'edit';
-				break;
 				
 		case 'portal_list':
 				if(empty($valor)) return null;
