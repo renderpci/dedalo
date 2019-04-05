@@ -1711,6 +1711,50 @@ class hierarchy {
 	}//end get_hierarchy_type_from_section_tipo
 
 
+	/**
+	* GET_HIERARCHY_SECTION
+	* @param $section_tipo
+	*	Source section_tipo
+	* @param $hierarchy_component_tipo
+	*	Target component tipo where search section_tipo
+	* @return int $section_id | null
+	*/
+	public static function get_hierarchy_section($section_tipo, $hierarchy_component_tipo) {
+		
+		$model = RecordObj_dd::get_modelo_name_by_tipo($hierarchy_component_tipo,true); 
+
+		// search query object
+			$search_query_object = json_decode('{
+			  "section_tipo": "'.DEDALO_HIERARCHY_SECTION_TIPO.'",
+			  "filter": {
+			    "$and": [
+			      {
+			        "q": "'.$section_tipo.'",
+			        "path": [
+			          {
+			            "section_tipo": "'.DEDALO_HIERARCHY_SECTION_TIPO.'",
+			            "component_tipo": "'.$hierarchy_component_tipo.'",
+			            "modelo": "'.$model.'",
+			            "name": "'.$model.' '.$hierarchy_component_tipo.'"
+			          }
+			        ]
+			      }
+			    ]
+			  }
+			}');
+
+		// search
+			$search_development2 = new search_development2($search_query_object);
+			$search_result 		 = $search_development2->search();
+			$record 		 	 = reset($search_result->ar_records);		
+		
+		// section id
+			$section_id = isset($record->section_id) ? $record->section_id : null;
+		
+		return $section_id;	
+	}//end get_hierarchy_section
+
+
 
 }//end class hierarchy
 ?>

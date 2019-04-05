@@ -145,11 +145,32 @@ class component_relation_model extends component_relation_common {
 				$ar_target_section_tipo = (array)$this->propiedades->target_values;
 				break;
 			
-			default:
-				# Default (calculated from current prefix)
-				$prefix = RecordObj_dd::get_prefix_from_tipo($this->section_tipo);
+			default:				
+				// try to calculate from hierarchy section
+					$section_tipo 				= $this->section_tipo;
+					$hierarchy_component_tipo 	= DEDALO_HIERARCHY_TARGET_SECTION_TIPO;
+					$section_id = hierarchy::get_hierarchy_section($section_tipo, $hierarchy_component_tipo);
 
-				$ar_target_section_tipo = array($prefix.'2');
+				if (!empty($section_id)) {
+					// get target section model component value 
+						$model 			= RecordObj_dd::get_modelo_name_by_tipo(DEDALO_HIERARCHY_TARGET_SECTION_MODEL_TIPO,true);
+						$component 		= component_common::get_instance($model,
+																		 DEDALO_HIERARCHY_TARGET_SECTION_MODEL_TIPO,
+																		 $section_id,
+																		 'list',
+																		 DEDALO_DATA_NOLAN,
+																		 DEDALO_HIERARCHY_SECTION_TIPO);
+
+						$target_section_tipo 	= $component->get_valor();
+						$ar_target_section_tipo = [$target_section_tipo];
+				
+				}else{
+
+					// Default (calculated from current prefix)
+						$prefix = RecordObj_dd::get_prefix_from_tipo($this->section_tipo);
+
+						$ar_target_section_tipo = array($prefix.'2');
+				}
 				break;
 		}
 		
