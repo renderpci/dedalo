@@ -1941,6 +1941,16 @@ abstract class component_common extends common {
 				$hash_id ='';
 				break;
 		}
+
+		// check target_section_tipo
+			$target_section_model = RecordObj_dd::get_modelo_name_by_tipo($target_section_tipo,true);			
+			if ($target_section_model!=='section') {
+				$response = new stdClass();
+					$response->result   			= [];
+					$response->msg 	  				= 'Error. section tipo: '.$target_section_tipo.' is not a valid section ('.$target_section_model.')';
+					debug_log(__METHOD__."  ".$response->msg.to_string(), logger::ERROR);
+				return $response;
+			}
 	
 		// cache
 			static $ar_list_of_values_data = [];
@@ -2041,7 +2051,7 @@ abstract class component_common extends common {
 			}
 					
 
-		$response	= new stdClass();
+		$response = new stdClass();
 			$response->result   			= (array)$result;
 			$response->msg 	  				= 'Ok';
 			if(SHOW_DEBUG===true) {
