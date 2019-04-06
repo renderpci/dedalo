@@ -146,31 +146,34 @@ class component_relation_model extends component_relation_common {
 				break;
 			
 			default:				
-				// try to calculate from hierarchy section
+				// try to calculate from hierarchy section looking in target model value of hierarchy
 					$section_tipo 				= $this->section_tipo;
 					$hierarchy_component_tipo 	= DEDALO_HIERARCHY_TARGET_SECTION_TIPO;
 					$section_id = hierarchy::get_hierarchy_section($section_tipo, $hierarchy_component_tipo);
 
-				if (!empty($section_id)) {
-					// get target section model component value 
-						$model 			= RecordObj_dd::get_modelo_name_by_tipo(DEDALO_HIERARCHY_TARGET_SECTION_MODEL_TIPO,true);
-						$component 		= component_common::get_instance($model,
-																		 DEDALO_HIERARCHY_TARGET_SECTION_MODEL_TIPO,
-																		 $section_id,
-																		 'list',
-																		 DEDALO_DATA_NOLAN,
-																		 DEDALO_HIERARCHY_SECTION_TIPO);
+					if (!empty($section_id)) {
+						// get target section model component value 
+							$model 			= RecordObj_dd::get_modelo_name_by_tipo(DEDALO_HIERARCHY_TARGET_SECTION_MODEL_TIPO,true);
+							$component 		= component_common::get_instance($model,
+																			 DEDALO_HIERARCHY_TARGET_SECTION_MODEL_TIPO,
+																			 $section_id,
+																			 'list',
+																			 DEDALO_DATA_NOLAN,
+																			 DEDALO_HIERARCHY_SECTION_TIPO);
 
-						$target_section_tipo 	= $component->get_valor();
-						$ar_target_section_tipo = [$target_section_tipo];
-				
-				}else{
+							$target_section_tipo 	= $component->get_valor();
+							
+					
+					}
 
-					// Default (calculated from current prefix)
-						$prefix = RecordObj_dd::get_prefix_from_tipo($this->section_tipo);
-
-						$ar_target_section_tipo = array($prefix.'2');
-				}
+				// final fallback (calculated from current prefix)
+					if (empty($target_section_tipo)) {
+						$prefix = RecordObj_dd::get_prefix_from_tipo($section_tipo);
+						$target_section_tipo = $prefix.'2';
+					}
+					
+				// set into array 
+					$ar_target_section_tipo = [$target_section_tipo];
 				break;
 		}
 		
