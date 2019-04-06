@@ -17,6 +17,16 @@ class component_external extends component_common {
 		$section_id 		 = $this->get_parent();
 		$section_tipo 		 = $this->section_tipo;
 		$lang 				 = DEDALO_DATA_LANG;
+
+		// cache
+			static $data_from_remote_cache = [];
+			$uid = $section_tipo . '_'. $section_id .'_'. $lang;
+			if (isset($data_from_remote_cache[$uid])) {
+				debug_log(__METHOD__." Loaded from cache: $uid ".to_string(), logger::DEBUG);
+				return $data_from_remote_cache[$uid];
+			}
+
+
 		$RecordObj_dd 		 = new RecordObj_dd($section_tipo);
 		$section_propiedades = $RecordObj_dd->get_propiedades(true);
 
@@ -103,6 +113,8 @@ class component_external extends component_common {
 				return $carry;
 			});
 
+		// cache
+			$data_from_remote_cache[$uid] = $row_data;
 
 		return $row_data;
 	}//end load_data_from_remote
