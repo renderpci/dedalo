@@ -5,6 +5,107 @@
 * Common components properties and method are inherited of component_common class that are inherited from common class
 */
 class component_external extends component_common {
+
+
+
+	/**
+	* LOAD_DATA_FROM_REMOTE
+	* @return 
+	*/
+	public function load_data_from_remote() {
+
+		$section_id 		 = $this->get_parent();
+		$section_tipo 		 = $this->section_tipo;
+		$lang 				 = DEDALO_DATA_LANG;
+		$RecordObj_dd 		 = new RecordObj_dd($section_tipo);
+		$section_propiedades = $RecordObj_dd->get_propiedades(true);
+
+		// format reference
+			# {
+			#   "external_data": {
+			#     "entity": "zenon",
+			#     "api_url": "https://zenon.dainst.org/api/v1/record",
+			#     "response_map": [
+			#       {
+			#         "local": "ar_records",
+			#         "remote": "records"
+			#       },
+			#       {
+			#         "local": "msg",
+			#         "remote": "status"
+			#       }
+			#     ]
+			#   }
+			# }
+
+		// check properties config 
+			if (!isset($section_propiedades->external_data)) {
+				debug_log(__METHOD__." ERROR. Empty properties section external_data".to_string(), logger::ERROR);
+				return null;
+			}
+		
+		// properties external_data vars
+			$external_data  = $section_propiedades->external_data;
+			$api_url 		= $external_data->api_url;
+			$response_map 	= $external_data->response_map;
+			$entity 		= $external_data->entity;		
+		
+			// fields
+				$ar_fields = [];
+				# get_ar_children_tipo_by_modelo_name_in_section($section_tipo, $ar_modelo_name_required, $from_cache=true, $resolve_virtual=false, $recursive=true, $search_exact=false, $ar_tipo_exclude_elements=false)
+				$ar_component_tipo = section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, ['component'], true, true, true, false, false);
+				foreach ($ar_component_tipo as $component_tipo) {
+					$RecordObj_dd 		 	= new RecordObj_dd($component_tipo);
+					$component_propiedades 	= $RecordObj_dd->get_propiedades(true);
+					if (empty($component_propiedades)) {
+						continue;
+					}
+
+					$field_name = array_reduce($component_propiedades->fields_map, function($carry, $item){
+						return ($item->local==='dato') ? $item->remote : $carry;
+					});
+					if (!empty($field_name)) {
+						$ar_fields[] = $field_name;
+					}					
+				}
+
+			// call entity class to build custom api url
+				include_once( dirname(__FILE__) . '/entities/class.'.$entity.'.php' );		
+
+				$options = new stdClass();
+					$options->api_url 		= $api_url;
+					$options->ar_fields 	= $ar_fields;
+					$options->section_id 	= $section_id;
+					$options->lang 			= $lang;
+
+				$url = $entity::build_row_request_url($options);
+				
+				$response = file_get_contents_curl($url);
+
+		// check response
+			if (empty($response)) {
+				debug_log(__METHOD__." ERROR. Empty response from external_data".to_string(), logger::ERROR);
+				return null;
+			}
+
+		// decode json response
+			if (!$response_obj=json_decode($response)) {
+				debug_log(__METHOD__." ERROR. Empty parse json response from external_data".to_string($response), logger::ERROR);
+				return null;	
+			}
+
+		// row_data
+			$row_data = array_reduce($response_map, function($carry, $item) use($response_obj){
+				if ($item->local==='ar_records') {
+					$name = $item->remote;
+					return isset($response_obj->{$name}) ? reset($response_obj->{$name}) : null;
+				}
+				return $carry;
+			});
+
+
+		return $row_data;
+	}//end load_data_from_remote
 	
 
 
@@ -13,9 +114,50 @@ class component_external extends component_common {
 	*/
 	public function get_dato() {
 
-		$dato = parent::get_dato();
+		//$dato = parent::get_dato();
 
-		return (array)$dato;
+		// load data from remote
+			$row_data = $this->load_data_from_remote();
+
+		// properties
+			$properties = $this->get_propiedades();
+
+		// dato
+			$dato = array_reduce($properties->fields_map, function($carry, $item) use($row_data){
+				if($item->local==='dato') {
+					$name = $item->remote;
+					if (isset($row_data->{$name})) {
+
+						if (isset($item->format)) {
+							switch ($item->format) {
+								case 'array_values':
+									$value = implode(' | ', $row_data->{$name});
+									break;
+								case 'zenon_authors':
+									$ar_names = [];
+									foreach ($row_data->{$name} as $key => $element) {										
+										if (empty($element)) continue;
+										$ar_names[] = $key  .': '. implode(' - ', array_keys((array)$element));
+									}
+									$value = implode(' | ', $ar_names);
+									break;
+								default:
+									$value = to_string($row_data->{$name});
+									break;
+							}
+						}else{
+							$value = $row_data->{$name};
+						}
+						return $value;			
+					}else{
+						debug_log(__METHOD__." Error. Not found key: $name in row_data".to_string(), logger::ERROR);
+					}					 
+				}
+				return $carry;				
+			});
+
+		#dump($dato, ' dato ++ '.to_string($this->tipo)); 
+		return $dato;
 	}//end get_dato
 
 
@@ -65,32 +207,13 @@ class component_external extends component_common {
 	* If index var is received, return dato element corresponding to this index if exists
 	* @return string $valor
 	*/
-	public function get_valor( $lang=DEDALO_DATA_LANG, $index='all' ) {
+	public function get_valor( $lang=DEDALO_DATA_LANG ) {
 		
 		$valor ='';
 
 		$dato = $this->get_dato();
 
-		if(empty($dato)) {			
-			return (string)$valor;
-		}
-				
-		if ($index==='all') {			
-			$ar = array();
-			foreach ($dato as $key => $value) {
-				$value = trim($value);
-				if (!empty($value)) {
-					$ar[] = $value;	
-				}							
-			}
-			if (count($ar)>0) {
-				$valor = implode(',',$ar);
-			}			
-		}else{
-			$index = (int)$index;
-			$valor = isset($dato[$index]) ? $dato[$index] : null;
-		}
-
+		$valor = $dato;
 
 		return (string)$valor;
 	}//end get_valor
@@ -99,373 +222,12 @@ class component_external extends component_common {
 
 	/**
 	* LOAD TOOLS
-	*//**/
+	*/
 	public function load_tools( $check_lang_tools=true ) {
 
-		$propiedades = $this->get_propiedades();
-		if (isset($propiedades->with_lang_versions) && $propiedades->with_lang_versions===true) {			
-			# Allow tool lang on non translatable components
-			$check_lang_tools = false;
-		}
-
-		return parent::load_tools( $check_lang_tools );
+		return false;
 	}//end load_tools 
 	
-
-
-
-	/**
-	* RENDER_LIST_VALUE
-	* Overwrite for non default behaviour
-	* Receive value from section list and return proper value to show in list
-	* Sometimes is the same value (eg. component_external), sometimes is calculated (e.g component_portal)
-	* @param string $value
-	* @param string $tipo
-	* @param int $parent
-	* @param string $modo
-	* @param string $lang
-	* @param string $section_tipo
-	* @param int $section_id
-	*
-	* @return string $list_value
-	*/
-	public static function render_list_value($value, $tipo, $parent, $modo, $lang, $section_tipo, $section_id=null, $current_locator=null, $caller_component_tipo=null) {
-		
-		if (strpos($modo, 'edit')!==false) {
-			$component 			= component_common::get_instance(__CLASS__,
-																 $tipo,
-																 $parent,
-																 $modo,
-																 $lang,
-																 $section_tipo);					
-			$value = $component->get_html();
-
-		}else{	
-
-			# Si el valor está vacío, es posible que este componente no tenga dato en este idioma. Si es así,
-			# verificamos que NO estamos en el lenguaje principal (de momento config:DEDALO_DATA_LANG_DEFAULT)
-			# creamos el componente para pedirle el valor en el lenguaje principal.
-			# Esto es más lento, pero proporciona un fallback al lenguaje principal en los listados (de agradecer en los tesauros, por ejemplo)
-			#
-			# NOTA: Valorar de recorrer más idiomas o discriminar el cálculo de main_lang desde jerarquías (hierarchy1) o desde config 
-			#
-			# FALLBACK TO MAIN_LANG
-			# dump($value, ' value ++ '.to_string());
-			$empty_list_value = "\n".' <span class="css_span_dato"></span>';
-			if (empty($value) || $value===$empty_list_value) {
-
-				$component 	= component_common::get_instance(__CLASS__,
-															 $tipo,
-															 $parent,
-															 $modo,
-															 DEDALO_DATA_LANG,
-															 $section_tipo); 
-
-				#$dato_full = $component->get_dato_full();					
-				#$value = component_common::get_value_with_fallback_from_dato_full( $dato_full, true );
-				$value = component_common::extract_component_value_fallback($component, $lang=DEDALO_DATA_LANG, $mark=true, $main_lang=DEDALO_DATA_LANG_DEFAULT);							
-			}			
-		
-		}//end if (strpos($modo, 'edit')!==false)	
-
-		
-		# Add value of current lang to nolan data
-			$RecordObj_dd = new RecordObj_dd($tipo);
-			$propiedades  = json_decode($RecordObj_dd->get_propiedades());
-			if (isset($propiedades->with_lang_versions) && $propiedades->with_lang_versions===true) {
-				
-				$component 			= component_common::get_instance(__CLASS__,
-																	 $tipo,
-																	 $parent,
-																	 $modo,
-																	 $lang,
-																	 $section_tipo);
-				#$add_value = component_common::extract_component_value_fallback($component);
-				$add_value = $component->get_valor($lang);
-				if (!empty($add_value) && $add_value!==$value) {
-					$value .= ' ('.$add_value.')';
-				}
-			}
-
-
-		return $value;
-	}//end render_list_value
-
-
-
-	/**
-	* GET_VALOR_EXPORT
-	* Return component value sended to export data
-	* @return string $valor
-	*/
-	public function get_valor_export( $valor=null, $lang=DEDALO_DATA_LANG, $quotes, $add_id ) {
-		
-		if (empty($valor)) {
-			
-			$valor = $this->get_valor($lang);
-		
-		}else{
-
-			# Add value of current lang to nolan data
-			$propiedades = $this->get_propiedades();
-			if (isset($propiedades->with_lang_versions) && $propiedades->with_lang_versions===true) {
-				
-				$component = $this;
-				$component->set_lang($lang);
-				#$add_value = component_common::extract_component_value_fallback($component);
-				$add_value = $component->get_valor($lang);
-				if (!empty($add_value) && $add_value!==$valor) {
-					$valor .= ' ('.$add_value.')';
-				}
-			}
-		}
-
-		if (empty($valor)) {
-			$valor = component_common::extract_component_value_fallback($this, $lang=DEDALO_DATA_LANG, $mark=true, $main_lang=DEDALO_DATA_LANG_DEFAULT);
-		}
-
-		return to_string($valor);
-	}//end get_valor_export	
-
-
-
-	/**
-	* GET_VALOR_LIST_HTML_TO_SAVE
-	* Usado por section:save_component_dato
-	* Devuelve a section el html a usar para rellenar el 'campo' 'valor_list' al guardar
-	* Por defecto será el html generado por el componente en modo 'list', pero en algunos casos
-	* es necesario sobre-escribirlo, como en component_portal, que ha de resolverse obigatoriamente en cada row de listado
-	*
-	* Usaremos get_valor para permitir importaciones de fichas en lenguajes distintos al actual. Ejemplo: importar
-	* Francia (jer_fr) en castellano (lg-spa)
-	*
-	* @see class.section.php
-	* @return string $html
-	*/
-	public function get_valor_list_html_to_save() {
-		
-		# Get html from current component
-		$html = $this->get_valor();		
-		
-		return (string)$html;
-	}//end get_valor_list_html_to_save
-
-
-
-	/**
-	* RESOLVE_QUERY_OBJECT_SQL
-	* @param object $query_object
-	* @return object $query_object
-	*	Edited/parsed version of received object 
-	*/
-	public static function resolve_query_object_sql($query_object) {
-		
-		$q = $query_object->q;
-		if (isset($query_object->type) && $query_object->type==='jsonb') {
-			$q = json_decode($q);
-		}	
-
-		# Always set fixed values
-		$query_object->type = 'string';
-		
-		$q = pg_escape_string(stripslashes($q));
-
-		$q_operator = isset($query_object->q_operator) ? $query_object->q_operator : null;
-
-		switch (true) {
-			# EMPTY VALUE (in current lang data)
-			case ($q==='!*'):
-				$operator = 'IS NULL';
-				$q_clean  = '';
-				$query_object->operator = $operator;
-				$query_object->q_parsed	= $q_clean;
-				$query_object->unaccent = false;
-				$query_object->lang 	= 'all';
-
-				$logical_operator = '$or';
-				$new_query_json = new stdClass;
-					$new_query_json->$logical_operator = [$query_object];
-
-				// Search empty only in current lang
-				// Resolve lang based on if is translatable
-					$path_end 		= end($query_object->path);
-					$component_tipo = $path_end->component_tipo;
-					$RecordObj_dd   = new RecordObj_dd($component_tipo);
-					$lang 			= $RecordObj_dd->get_traducible()!=='si' ? DEDALO_DATA_NOLAN : DEDALO_DATA_LANG;
-
-					$clone = clone($query_object);
-						$clone->operator = '=';
-						$clone->q_parsed = '\'[]\'';
-						$clone->lang 	 = $lang;
-
-					$new_query_json->$logical_operator[] = $clone;
-
-					// legacy data (set as null instead [])
-					$clone = clone($query_object);
-						$clone->operator = 'IS NULL';
-						$clone->lang 	 = $lang;
-
-					$new_query_json->$logical_operator[] = $clone;
-
-				# override
-				$query_object = $new_query_json ;
-				break;
-
-			# NOT EMPTY (in any project lang data)
-			case ($q==='*'):
-				$operator = 'IS NOT NULL';
-				$q_clean  = '';
-				$query_object->operator = $operator;
-				$query_object->q_parsed	= $q_clean;
-				$query_object->unaccent = false;
-
-				$logical_operator ='$and';
-				$new_query_json = new stdClass;
-					$new_query_json->$logical_operator = [$query_object];
-
-				// langs check
-					$ar_query_object = [];
-					$ar_all_langs 	 = common::get_ar_all_langs();
-					$ar_all_langs[]  = DEDALO_DATA_NOLAN; // Added no lang also
-					foreach ($ar_all_langs as $current_lang) {
-						$clone = clone($query_object);
-							$clone->operator = '!=';
-							$clone->q_parsed = '\'[]\'';
-							$clone->lang 	 = $current_lang;
-
-						$ar_query_object[] = $clone;
-					}
-
-					$logical_operator ='$or';
-					$langs_query_json = new stdClass;
-						$langs_query_json->$logical_operator = $ar_query_object;				
-
-				# override
-				$query_object = [$new_query_json, $langs_query_json];
-				break;
-			# IS DIFFERENT			
-			case (strpos($q, '!=')===0 || $q_operator==='!='):
-				$operator = '!=';
-				$q_clean  = str_replace($operator, '', $q);
-				$query_object->operator = '!~';
-				$query_object->q_parsed = '\'.*"'.$q_clean.'".*\'';
-				$query_object->unaccent = false;
-				break;
-			# IS SIMILAR
-			case (strpos($q, '=')===0 || $q_operator==='='):
-				$operator = '=';
-				$q_clean  = str_replace($operator, '', $q);
-				$query_object->operator = '~*';
-				$query_object->q_parsed	= '\'.*"'.$q_clean.'".*\'';
-				$query_object->unaccent = true;
-				break;
-			# NOT CONTAIN
-			case (strpos($q, '-')===0 || $q_operator==='-'):
-				$operator = '!~*';
-				$q_clean  = str_replace('-', '', $q);
-				$query_object->operator = $operator;
-				$query_object->q_parsed	= '\'.*\[".*'.$q_clean.'.*\'';
-				$query_object->unaccent = true;
-				break;
-			# CONTAIN EXPLICIT
-			case (substr($q, 0, 1)==='*' && substr($q, -1)==='*'):
-				$operator = '~*';
-				$q_clean  = str_replace('*', '', $q);
-				$query_object->operator = $operator;
-				$query_object->q_parsed	= '\'.*\[".*'.$q_clean.'.*\'';
-				$query_object->unaccent = true;
-				break;
-			# ENDS WITH
-			case (substr($q, 0, 1)==='*'):
-				$operator = '~*';
-				$q_clean  = str_replace('*', '', $q);
-				$query_object->operator = $operator;
-				$query_object->q_parsed	= '\'.*\[".*'.$q_clean.'".*\'';
-				$query_object->unaccent = true;
-				break;
-			# BEGINS WITH
-			case (substr($q, -1)==='*'):
-				$operator = '~*';
-				$q_clean  = str_replace('*', '', $q);
-				$query_object->operator = $operator;
-				$query_object->q_parsed	= '\'.*\["'.$q_clean.'.*\'';
-				$query_object->unaccent = true;
-				break;
-			# LITERAL
-			case (substr($q, 0, 1)==="'" && substr($q, -1)==="'"):
-				$operator = '~';
-				$q_clean  = str_replace("'", '', $q);
-				$query_object->operator = $operator;
-				$query_object->q_parsed	= '\'.*"'.$q_clean.'".*\'';
-				$query_object->unaccent = false;
-				break;
-			# DEFAULT CONTAIN 
-			default:
-				$operator = '~*';
-				$q_clean  = str_replace('+', '', $q);				
-				$query_object->operator = $operator;
-				$query_object->q_parsed	= '\'.*\[".*'.$q_clean.'.*\'';
-				$query_object->unaccent = true;
-				break;			
-		}//end switch (true) {
-	   
-
-		return $query_object;
-	}//end resolve_query_object_sql
-
-
-
-	/**
-	* SEARCH_OPERATORS_INFO
-	* Return valid operators for search in current component
-	* @return array $ar_operators
-	*/
-	public function search_operators_info() {
-		
-		$ar_operators = [
-			'*' 	 => 'no_vacio', // not null
-			'!*' 	 => 'campo_vacio', // null	
-			'=' 	 => 'similar_a',
-			'!=' 	 => 'distinto_de',
-			'-' 	 => 'no_contiene',
-			'*text*' => 'contiene',
-			'text*'  => 'empieza_con',
-			'*text'  => 'acaba_con',
-			'\'text\'' => 'literal',
-		];
-
-		return $ar_operators;
-	}//end search_operators_info
-
-
-
-	/**
-	* GET_DIFFUSION_VALUE
-	* Calculate current component diffsuion value for target field (usually a mysql field)
-	* Used for diffusion_mysql to unify components diffusion value call
-	* @return string $diffusion_value
-	*
-	* @see class.diffusion_mysql.php
-	*/
-	public function get_diffusion_value( $lang ) {
-
-		# Default behaviour is get value
-		$diffusion_value = $this->get_valor( $lang );
-
-		// Fallback to nolan dato
-		if (empty($diffusion_value) && $this->traducible==='no') {
-			# try no lang
-			$this->set_lang(DEDALO_DATA_NOLAN);
-			$diffusion_value = $this->get_valor( DEDALO_DATA_NOLAN );
-		}
-
-		# strip_tags all values (remove untranslate mark elements)
-		$diffusion_value = preg_replace("/<\/?mark>/", "", $diffusion_value);
-		
-
-		return (string)$diffusion_value;
-	}//end get_diffusion_value
-
 
 
 }//end class component_external
