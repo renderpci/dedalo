@@ -100,26 +100,26 @@
 
 					$html_content .= '<li>';
 
-					$html_content .= "<input class=\"css_input_text\" type=\"text\" ";
+					$html_content .= '<input class="css_input_text" type="text" ';
 					if($context_name==='default') {
-						$html_content .= "onchange=\"component_input_text.Save(this)\" ";
+						$html_content .= 'onchange="component_input_text.Save(this)" ';
 					}
 					if($unique === true){
-						$html_content .= "onkeyup=\"component_input_text.is_unique(this)\" ";
+						$html_content .= 'onkeyup="component_input_text.is_unique(this)" ';
 					}
-					$html_content .= "id=\"{$id_wrapper}_input_{$key}\" ";
-					$html_content .= "name=\"{$input_name}\" ";
-					$html_content .= "value=\"{$value}\" ";
-					$html_content .= "title=\"$html_title\" ";
-					$html_content .= "$read_only ";
-					$html_content .= "autocomplete=\"off\" ";
-					#$html_content .= "$remove_autocomplete "; // Events to remove autocomplete safari behavior
-					$html_content .= "data-tipo=\"{$tipo}\" ";
-					$html_content .= "data-section_tipo=\"{$section_tipo}\" ";
-					$html_content .= "data-parent=\"{$parent}\" ";
-					$html_content .= "data-lang=\"{$lang}\" ";
-					$html_content .= "data-mandatory='{$mandatory_json}' ";
-					$html_content .= "/>";
+					$html_content .= 'id="'.$id_wrapper.'_input_'.$key.'" ';
+					$html_content .= 'name="'.$input_name.'" ';
+					$html_content .= 'value="'.$value.'" ';
+					$html_content .= 'title="'.$html_title.'" ';
+					$html_content .= $read_only .' ';
+					$html_content .= 'autocomplete="off" ';
+					#$html_content .= $remove_autocomplete.' '; // Events to remove autocomplete safari behavior
+					$html_content .= 'data-tipo="'.$tipo.'" ';
+					$html_content .= 'data-section_tipo="'.$section_tipo.'" ';
+					$html_content .= 'data-parent="'.$parent.'" ';
+					$html_content .= 'data-lang="'.$lang.'" ';
+					$html_content .= 'data-mandatory=\''.$mandatory_json.'\' ';
+					$html_content .= '/>';
 					
 					$html_content .= '</li>'; // tabindex=\"1\"
 
@@ -133,7 +133,6 @@
 
 				#$html_content .= " <span  class=\"css_span_log\"></span>";
 				#$html_content .= " <span  class=\"css_span_ejemplo\">$ejemplo</span>";
-
 
 
 				$RecordObj_dd = new RecordObj_dd($tipo);
@@ -156,7 +155,7 @@
 
 
 				if(SHOW_DEBUG===true) {
-					$html_content .= "<span class=\"debug_info notes\">".$dato_json."</span>";					
+					$html_content .= '<span class="debug_info notes">'.$dato_json.'</span>';
 				}
 
 				# JS
