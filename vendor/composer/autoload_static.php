@@ -40,6 +40,7 @@ class ComposerStaticInitd5dd6c026b5b62535b8b0d6c61365f3e
         'P' => 
         array (
             'Psr\\Http\\Message\\' => 17,
+            'PHPMailer\\PHPMailer\\' => 20,
         ),
         'O' => 
         array (
@@ -125,6 +126,10 @@ class ComposerStaticInitd5dd6c026b5b62535b8b0d6c61365f3e
         'Psr\\Http\\Message\\' => 
         array (
             0 => __DIR__ . '/..' . '/psr/http-message/src',
+        ),
+        'PHPMailer\\PHPMailer\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/phpmailer/phpmailer/src',
         ),
         'OneLogin\\' => 
         array (
