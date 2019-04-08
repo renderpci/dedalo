@@ -149,6 +149,11 @@ abstract class component_common extends common {
 					$ar_modified_section_tipos = array_map(function($item){
 						return $item['tipo'];
 					}, section::get_modified_section_tipos());
+					// add publication info
+						$ar_modified_section_tipos[] = diffusion::$publication_first_tipo;
+						$ar_modified_section_tipos[] = diffusion::$publication_last_tipo;
+						$ar_modified_section_tipos[] = diffusion::$publication_first_user_tipo;
+						$ar_modified_section_tipos[] = diffusion::$publication_last_user_tipo;
 					if (true===in_array($tipo, $ar_modified_section_tipos)) {
 						# skip verification
 					}else{

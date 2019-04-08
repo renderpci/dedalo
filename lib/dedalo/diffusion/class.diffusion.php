@@ -14,7 +14,10 @@ abstract class diffusion  {
 
 	public static $update_record_actions = [];
 
-
+	public static $publication_first_tipo 		= 'dd271';
+	public static $publication_last_tipo  		= 'dd1223';
+	public static $publication_first_user_tipo  = 'dd1224';
+	public static $publication_last_user_tipo  	= 'dd1225';
 
 	/**
 	* CONSTRUCT
@@ -1143,6 +1146,98 @@ abstract class diffusion  {
 
 		return $response;
 	}//end delete_record
+
+
+
+	/**
+	* UPDATE_PUBLICATION_DATA
+	* @return bool
+	*/
+	public static function update_publication_data($section_tipo, $section_id) {
+
+		// tipos 
+			$publication_first_tipo 		= diffusion::$publication_first_tipo;
+			$publication_last_tipo 			= diffusion::$publication_last_tipo;
+			$publication_first_user_tipo 	= diffusion::$publication_first_user_tipo;
+			$publication_last_user_tipo 	= diffusion::$publication_last_user_tipo;
+
+		// current date in dd_date format (usable as dato) 			
+			$current_date_dato = new stdClass();
+				$current_date_dato->start = component_date::get_date_now();
+
+		// current user dato
+			$user_id = navigator::get_user_id();
+			
+
+		// first . component publication first. save if not exist 
+			// date
+				$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($publication_first_tipo,true);
+				$component 		= component_common::get_instance($modelo_name,
+																 $publication_first_tipo,
+																 $section_id,
+																 'list',
+																 DEDALO_DATA_NOLAN,
+																 $section_tipo);
+				$dato = $component->get_dato();
+				if (empty($dato)) {
+					$component->set_dato($current_date_dato);
+					$component->Save();
+					$save_first = true;
+				}
+			// user
+				if (isset($save_first)) {
+
+					$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($publication_first_user_tipo,true);
+					$component 		= component_common::get_instance($modelo_name,
+																	 $publication_first_user_tipo,
+																	 $section_id,
+																	 'list',
+																	 DEDALO_DATA_NOLAN,
+																	 $section_tipo);
+					$locator = new locator();
+						$locator->set_section_tipo(DEDALO_SECTION_USERS_TIPO);
+						$locator->set_section_id($user_id);
+						$locator->set_type(DEDALO_RELATION_TYPE_LINK);
+						$locator->set_from_component_tipo($publication_first_user_tipo);
+					
+					$component->set_dato([$locator]);
+					$component->Save();
+				}	
+
+		// last . publication last. save updated date always 
+			// date 
+				$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($publication_last_tipo,true);
+				$component 		= component_common::get_instance($modelo_name,
+																 $publication_last_tipo,
+																 $section_id,
+																 'list',
+																 DEDALO_DATA_NOLAN,
+																 $section_tipo);
+				$component->set_dato($current_date_dato);
+				$component->Save();
+
+			// user
+				$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($publication_last_user_tipo,true);
+				$component 		= component_common::get_instance($modelo_name,
+																 $publication_last_user_tipo,
+																 $section_id,
+																 'list',
+																 DEDALO_DATA_NOLAN,
+																 $section_tipo);
+				$locator = new locator();
+					$locator->set_section_tipo(DEDALO_SECTION_USERS_TIPO);
+					$locator->set_section_id($user_id);
+					$locator->set_type(DEDALO_RELATION_TYPE_LINK);
+					$locator->set_from_component_tipo($publication_last_user_tipo);
+				
+				$component->set_dato([$locator]);
+				$component->Save();
+
+
+		debug_log(__METHOD__." Updated publication date in section: $section_tipo, $section_id ".to_string(), logger::DEBUG);
+				
+		return true;
+	}//end update_publication_data
 
 	
 

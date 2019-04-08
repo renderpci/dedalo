@@ -1506,8 +1506,12 @@ class diffusion_sql extends diffusion  {
 
 		$this->ar_published_records = $ar_resolved_static;
 
-		$response->result = true;
-		$response->msg .= "Ok. Record updated $options->section_id and n references: ".count($ar_resolved_static);
+		// saves publication data 
+			diffusion::update_publication_data($options->section_tipo, $options->section_id);
+
+		//response 
+			$response->result = true;
+			$response->msg .= "Ok. Record updated $options->section_id and n references: ".count($ar_resolved_static);
 				
 
 		return $response;
