@@ -52,7 +52,7 @@
 				
 				// General vars
 					$section_id 			= $this->get_section_id();
-					$section_info 			= $this->get_section_info('json');
+					#$section_info 			= $this->get_section_info('json');
 					$current_section_obj  	= $this;
 					$ar_exclude_elements  	= array(); #array('dd1106');
 					$section_real_tipo  	= $this->get_section_real_tipo();	# Important: Fija $this->section_real_tipo que es necesario luego				
