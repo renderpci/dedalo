@@ -93,10 +93,6 @@
 					$filter_by_list = $propiedades->source->filter_by_list;
 				}
 				$json_filter_by_list = json_encode($filter_by_list);
-			
-			// Search_fields
-				$search_fields 		= $this->get_search_fields($tipo);
-				$search_fields_json = json_encode($search_fields);
 								
 			// search_query_object params
 				# Limit
@@ -174,10 +170,6 @@
 					$filter_by_list = $propiedades->source->filter_by_list;
 				}
 				$json_filter_by_list = json_encode($filter_by_list);
-
-			// search_fields
-				$search_fields 		= $this->get_search_fields($tipo);
-				$search_fields_json = json_encode($search_fields);
 
 			// search_query_object params
 				$limit 		= 1;

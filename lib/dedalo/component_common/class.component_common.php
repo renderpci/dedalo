@@ -2704,6 +2704,14 @@ abstract class component_common extends common {
 
 		$ar_terminoID_by_modelo_name = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($this->tipo, 'section', 'termino_relacionado', $search_exact=true);
 
+		$propiedades 	 = $this->get_propiedades();
+
+		if(isset($propiedades->source->search)){
+			foreach ($propiedades->source->search as $current_search) {
+				$ar_terminoID_by_modelo_name[] =  $current_search->section_tipo;
+			}
+		}
+
 		if(SHOW_DEBUG===true) {
 			if ( empty( $ar_terminoID_by_modelo_name)) {
 				$component_name = RecordObj_dd::get_termino_by_tipo($this->tipo,null,true);
@@ -3799,13 +3807,27 @@ abstract class component_common extends common {
 		$filter_group = null;
 		$select_group = array();		
 
-		# iterate related terms
-		$ar_related_section_tipo = common::get_ar_related_by_model('section', $tipo);
-		if (isset($ar_related_section_tipo[0])) {
+		$RecordObj_dd_component_tipo = new RecordObj_dd($tipo);
+		$component_tipo_properties 	= $RecordObj_dd_component_tipo->get_propiedades(true);
 
+		//get the properties of the component to get the section_tipo and components to search if no defined get it of the relation_terms of the component
+		if(isset($component_tipo_properties->source->search)){
+			$source_search = $component_tipo_properties->source->search;
+			foreach ($source_search as $current_search) {
+				if ($current_search->type === 'internal'){
+					$ar_related_section_tipo[] 	= $current_search->section_tipo;
+					$ar_terminos_relacionados 	=	$current_search->components;
+				}
+			}
+		}else{
+			# iterate related terms
+			$ar_related_section_tipo = common::get_ar_related_by_model('section', $tipo);
+			$ar_terminos_relacionados 	= RecordObj_dd::get_ar_terminos_relacionados($tipo, true, true);	
+		}
+
+		if (isset($ar_related_section_tipo[0])) {
 			# Create from related terms
 			$section_tipo 				= reset($ar_related_section_tipo); // Note override section_tipo here !
-			$ar_terminos_relacionados 	= RecordObj_dd::get_ar_terminos_relacionados($tipo, true, true);	
 			foreach ($ar_terminos_relacionados as $current_tipo) {
 				$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_tipo, true);
 				if (strpos($modelo_name,'component')!==0) continue;
