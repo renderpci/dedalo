@@ -1,0 +1,70 @@
+<?php 
+	
+	$html = '';
+
+	// wrapper
+		$html .= '<div class="user_admin_wrapper">';
+
+	// build components
+		foreach ($ar_components as $item) {
+
+			$component_tipo = $item['tipo'];
+			$permissions 	= $item['permissions'];
+
+			$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+			$component 		= component_common::get_instance($modelo_name,
+															 $component_tipo,
+															 $section_id,
+															 'edit',
+															 DEDALO_DATA_LANG,
+															 $section_tipo);
+			$component->set_permissions($permissions);
+			$component_html = $component->get_html();
+			
+			$html .= '<section class"component_container">';
+			
+			$html .= $component_html;
+
+			if ($modelo_name==='component_image') {
+
+				$tools_data = [];
+
+				// tool_image_versions
+					$tool_name = 'tool_image_versions';
+					$tools_data[] = [
+						'context_name' 	=> $modelo_name,
+						'label' 		=> label::get_label($tool_name),
+						'lang' 			=> 'lg-nolan',
+						'parent' 		=> $section_id,
+						'section_tipo' 	=> $section_tipo,
+						'tipo' 			=> $component_tipo,
+						'title' 		=> 'Open Tool',
+						'tool_name' 	=> $tool_name
+					];
+
+				// add tools by js	
+					$html .= '<div class="tool">';
+							
+						$html .= '<script>';
+						$html .= 'tool_user_admin.build_tools(document.currentScript, '.json_encode($tools_data).')'; // 
+						
+						# foreach ($tools_data as $key => $tool_item) {
+						# 	$tool_obj = json_encode($tool_item);
+						# 	$html .= 'var tool = inspector.build_tool_button('.$tool_obj.'); document.write(tool)';
+						# }
+						$html .= '</script>';
+
+					$html .= '</div>';
+			}
+			$html .= '</section>';
+		}
+
+
+	// end wapper
+		$html .= '</div>';
+
+
+	// inspector
+		$html .= '<div id="inspector_log" class="tool_inspector_log"></div>';
+
+	echo $html;
