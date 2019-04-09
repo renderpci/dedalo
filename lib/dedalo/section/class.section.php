@@ -2138,13 +2138,31 @@ class section extends common {
 		
 		$section_info = new stdClass();
 		
-		$section_info->created_date 			= (string)$this->get_created_date();		
-		$section_info->created_by_user_name		= (string)$this->get_created_by_user_name();	
-		$section_info->modified_date 			= (string)$this->get_modified_date();
-		$section_info->modified_by_user_name	= (string)$this->get_modified_by_user_name();
+			$section_info->created_date 			= (string)$this->get_created_date();		
+			$section_info->created_by_user_name		= (string)$this->get_created_by_user_name();	
+			$section_info->modified_date 			= (string)$this->get_modified_date();
+			$section_info->modified_by_user_name	= (string)$this->get_modified_by_user_name();
 
-		$section_info->label					= (string)rawurlencode($this->get_label());
-		$section_info->section_id				= (string)$this->get_section_id();
+			$section_info->label					= (string)rawurlencode($this->get_label());
+			$section_info->section_id				= (string)$this->get_section_id();
+
+		// publication info
+			$section_info->publication_first 		= array(
+				'label' => RecordObj_dd::get_termino_by_tipo(diffusion::$publication_first_tipo, DEDALO_DATA_LANG, true, true),
+				'value' => $this->get_publication_date(diffusion::$publication_first_tipo)
+			);
+			$section_info->publication_last 		= array(
+				'label' => RecordObj_dd::get_termino_by_tipo(diffusion::$publication_last_tipo, DEDALO_DATA_LANG, true, true),
+				'value' => $this->get_publication_date(diffusion::$publication_last_tipo)
+			);
+			$section_info->publication_first_user 	= array(
+				'label' => null, // RecordObj_dd::get_termino_by_tipo(diffusion::$publication_first_user_tipo, DEDALO_DATA_LANG, true, true),
+				'value' => $this->get_publication_user(diffusion::$publication_first_user_tipo)
+			);
+			$section_info->publication_last_user 		= array(
+				'label' => null, // RecordObj_dd::get_termino_by_tipo(diffusion::$publication_last_user_tipo, DEDALO_DATA_LANG, true, true),
+				'value' => $this->get_publication_user(diffusion::$publication_last_user_tipo)
+			);
 
 		switch ($format) {
 			case 'json':
@@ -2158,6 +2176,82 @@ class section extends common {
 
 		return null;
 	}//end get_section_info
+
+
+
+	/**
+	* GET_PUBLICATION_DATE
+	* @return string $local_date
+	*/
+	public function get_publication_date($component_tipo) {
+
+		// tipos
+			#$component_tipo	= ($type==='first') ? diffusion::$publication_first_tipo : diffusion::$publication_last_tipo;
+			$section_id 	= $this->section_id;
+			$section_tipo 	= $this->tipo;
+		
+		// component 
+			$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+			$component 		= component_common::get_instance($modelo_name,
+															 $component_tipo,
+															 $section_id,
+															 'list',
+															 DEDALO_DATA_NOLAN,
+															 $section_tipo);
+			$dato = $component->get_dato();
+
+		// local_date
+			if (empty($dato)) {
+
+				$local_date = null;
+			
+			}else{
+
+				$current_date 	= reset($dato);	
+				$dd_date 		= new dd_date($current_date->start);
+				$timestamp 		= $dd_date->get_dd_timestamp();
+				$local_date 	= component_date::timestamp_to_date($timestamp, true);
+			}		
+
+		return $local_date;
+	}//end get_publication_date
+
+
+
+	/**
+	* GET_PUBLICATION_USER
+	* @return string $local_date
+	*/
+	public function get_publication_user($component_tipo) {
+
+		// tipos
+			$section_id 	= $this->section_id;
+			$section_tipo 	= $this->tipo;
+		
+		// component 
+			$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+			$component 		= component_common::get_instance($modelo_name,
+															 $component_tipo,
+															 $section_id,
+															 'list',
+															 DEDALO_DATA_NOLAN,
+															 $section_tipo);
+			$dato = $component->get_dato();
+
+		// user name
+			if (empty($dato)) {
+
+				$user_name = null;
+			
+			}else{
+				$user_id 	= reset($dato)->section_id;
+				#$user_name 	= section::get_user_name_by_userID($user_id);
+				$component_input_text = component_common::get_instance('component_input_text',DEDALO_USER_NAME_TIPO, $user_id, 'edit', DEDALO_DATA_NOLAN, DEDALO_SECTION_USERS_TIPO);
+				$user_name = $component_input_text->get_valor();
+			}		
+
+		return $user_name;
+	}//end get_publication_user
 
 
 
