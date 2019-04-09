@@ -131,18 +131,25 @@ class component_autocomplete extends component_relation_common {
 				return $this->valor = null;
 			}
 		}
+
+		$propiedades 	 = $this->get_propiedades();
+		$search_list_add = isset($propiedades->search_list_add) ? $propiedades->search_list_add : false;
 		
+
 		# AR_COMPONETS_RELATED. By default, ar_related_terms is calculated. In some cases (diffusion for example) is needed overwrite ar_related_terms to obtain especific 'valor' form component
 			if ($ar_related_terms===false) {
+				
+				$ar_componets_related = array();
+
 				$ar_related_terms = $this->RecordObj_dd->get_relaciones();
 					
-				$ar_componets_related = array();			
 				foreach ((array)$ar_related_terms as $ar_value) foreach ($ar_value as $modelo => $component_tipo) {
 					$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($component_tipo, true);
 					if ($modelo_name!=='section'){
 						$ar_componets_related[] = $component_tipo;
 					}
-				}			
+				}
+						
 			}else{
 				$ar_componets_related = (array)$ar_related_terms;
 			}
@@ -151,13 +158,19 @@ class component_autocomplete extends component_relation_common {
 		# lang never must be DEDALO_DATA_NOLAN
 		if ($lang===DEDALO_DATA_NOLAN) $lang=DEDALO_DATA_LANG;
 
-		$propiedades 	 = $this->get_propiedades();
-		$search_list_add = isset($propiedades->search_list_add) ? $propiedades->search_list_add : false;
 
 			
 		$ar_values = array();
 		$divisor   = $this->get_divisor();
 		foreach ($dato as $current_locator) {
+
+			if(isset($propiedades->source->search)){
+				foreach ($propiedades->source->search as $current_search) {
+					if($current_search->section_tipo === $current_locator->section_tipo){
+						$ar_componets_related =  $current_search->components;
+					}
+				}
+			}
 
 			$current_locator_json = json_encode($current_locator);
 			
@@ -238,82 +251,6 @@ class component_autocomplete extends component_relation_common {
 	}//end get valor
 
 
-
-	/**
-	* GET_VALOR_EXPORT
-	* Return component value sended to export data
-	* @return string $valor
-	*//*
-	public function get_valor_export( $valor=null, $lang=DEDALO_DATA_LANG, $quotes, $add_id ) {
-		
-		if (empty($valor)) {
-			$dato = $this->get_dato();				// Get dato from DB
-		}else{
-			$this->set_dato( json_decode($valor) );	// Use parsed json string as dato
-		}
-
-		#$valor = $this->get_valor($lang);
-		$dato = $this->get_dato();
-		if (empty($dato)) {
-			if(SHOW_DEBUG===true) {
-				#return "AUTOCOMPLETE: ";
-			}
-			return '';
-		}
-
-		#
-		# TERMINOS_RELACIONADOS . Obtenemos los terminos relacionados del componente actual	
-		$ar_terminos_relacionados = (array)$this->RecordObj_dd->get_relaciones();
-			#dump($ar_terminos_relacionados, ' ar_terminos_relacionados');
-		
-		#
-		# FIELDS
-		$fields=array();
-		$ar_skip = array(MODELO_SECTION, $modelo_exclude_elements='dd1129');
-		foreach ($ar_terminos_relacionados as $key => $ar_value) {
-			$modelo = key($ar_value);
-			$tipo 	= $ar_value[$modelo];
-			if (!in_array($modelo, $ar_skip)) {
-				$fields[] = $tipo;
-			}
-		}
-
-		$ar_resolved=array();
-		foreach( (array)$dato as $key => $value) {
-			#dump($value, ' value ++ '.to_string());
-			$section_tipo 	= $value->section_tipo;
-			$section_id 	= $value->section_id;
-
-			foreach ($fields as $current_tipo) {				
-			
-				$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
-				$component 		= component_common::get_instance($modelo_name,
-																 $current_tipo,
-																 $section_id,
-																 'list',
-																 $lang,
-																 $section_tipo);
-				$ar_resolved[$section_id][] = $component->get_valor_export( null, $lang, $quotes, $add_id );
-			}
-		}
-		#dump($ar_resolved, ' $ar_resolved ++ '.to_string());
-
-		$valor_export='';
-		foreach ($ar_resolved as $key => $ar_value) {
-			$valor_export .= implode("\n", $ar_value) . "\n";
-		}
-		$valor_export = trim($valor_export);
-
-		if(SHOW_DEBUG===true) {
-			#return "AUTOCOMPLETE: ".$valor_export;
-		}
-
-		return $valor_export;
-	}//end get_valor_export
-	*/
-
-
-
 	/**
 	* GET_VALOR_EXPORT
 	* Return component value sended to export data
@@ -327,7 +264,8 @@ class component_autocomplete extends component_relation_common {
 			$this->set_dato( json_decode($valor) );	// Use parsed json string as dato
 		}
 
-		$dato = $this->get_dato();
+		$dato 			= $this->get_dato();
+		$propiedades 	= $this->get_propiedades();
 		
 
 		// TERMINOS_RELACIONADOS . Obtenemos los terminos relacionados del componente actual	
@@ -351,6 +289,14 @@ class component_autocomplete extends component_relation_common {
 
 			$section_tipo 	= $value->section_tipo;
 			$section_id 	= $value->section_id;
+
+			if(isset($propiedades->source->search)){
+				foreach ($propiedades->source->search as $current_search) {
+					if($current_search->section_tipo === $section_tipo){
+						$ar_componets_related =  $current_search->components;
+					}
+				}
+			}
 			
 			foreach ($fields as $current_tipo) {				
 			
@@ -386,33 +332,6 @@ class component_autocomplete extends component_relation_common {
 
 
 	/**
-	* GET_ar_target_section_tipo
-	* Locate in structure TR the target section (remember, components are from real section, but you can target to virtual setion)
-	* @return string $ar_target_section_tipo
-	*//*
-	public function get_ar_target_section_tipo($options=null) {
-		#dump($this->RecordObj_dd->get_relaciones(), ' var');
-		$ar_related_terms = (array)$this->RecordObj_dd->get_relaciones();		
-		
-		foreach ($ar_related_terms as $related_terms)
-		foreach ($related_terms as $modelo => $current_tipo) {
-			$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
-			if ($modelo_name=='section') {
-				$ar_target_section_tipo = $current_tipo; break;
-			}
-		}
-		if (!isset($ar_target_section_tipo)) {
-			throw new Exception("Error Processing Request. Inconsistency detect. This component need related section always", 1);			
-		}
-		#dump($ar_target_section_tipo, ' ar_target_section_tipo');
-
-		return $ar_target_section_tipo;
-	}//end get_ar_target_section_tipo
-	*/
-
-
-
-	/**
 	* GET_TIPO_TO_SEARCH
 	* Locate in structure TR the component tipo to search
 	* @return string $tipo_to_search
@@ -423,19 +342,18 @@ class component_autocomplete extends component_relation_common {
 			return $this->tipo_to_search;
 		}
 
-		# DESECHADO POR PROBLEMAS AL SELECCIONAR EL PRIMERO. EL ORDEN NO ES RESPETADO...
-			# $ar_related_terms = (array)$this->RecordObj_dd->get_relaciones();
-			# 	#dump($ar_related_terms, ' ar_related_terms');
-			# foreach ($ar_related_terms as $related_terms)		
-			# foreach ($related_terms as $modelo => $current_tipo) {
-			# 	$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
-			# 	# Get first component only
-			# 	if (strpos($modelo_name, 'component_')!==false) {
-			# 		$tipo_to_search = $current_tipo; break;
-			# 	}
-			# }		
+		$propiedades 	 = $this->get_propiedades();
 
-		$ar_terminoID_by_modelo_name = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($this->tipo, 'component_', 'termino_relacionado'); 
+		if(isset($propiedades->source->search)){
+				foreach ($propiedades->source->search as $current_search) {
+					if($current_search->type === "internal"){
+						$ar_terminoID_by_modelo_name =  $current_search->components;
+					}
+				}
+			}else{
+				$ar_terminoID_by_modelo_name = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($this->tipo, 'component_', 'termino_relacionado'); 
+			}
+
 			#dump($ar_terminoID_by_modelo_name, ' ar_terminoID_by_modelo_name '.$this->tipo.' ');
 		$tipo_to_search = reset($ar_terminoID_by_modelo_name);
 
@@ -867,27 +785,6 @@ class component_autocomplete extends component_relation_common {
 
 
 	/**
-	* GET_VALOR_LIST_HTML_TO_SAVE
-	* Usado por section:save_component_dato
-	* Devuelve a section el html a usar para rellenar el 'campo' 'valor_list' al guardar
-	* Por defecto será el html generado por el componente en modo 'list', pero en algunos casos
-	* es necesario sobre-escribirlo, como en component_portal, que ha de resolverse obigatoriamente en cada row de listado
-	*
-	* En este caso, usaremos únicamente el valor en bruto devuelto por el método 'get_dato_unchanged'
-	*
-	* @see class.section.php
-	* @return mixed $result
-	*//*
-	public function get_valor_list_html_to_save() {
-		$result = $this->get_dato_unchanged();
-
-		return $result;		
-	}//end get_valor_list_html_to_save
-	*/
-
-
-
-	/**
 	* GET_ORDER_BY_LOCATOR
 	* OVERWRITE COMPONENT COMMON METHOD
 	* @return bool
@@ -950,58 +847,6 @@ class component_autocomplete extends component_relation_common {
 		
 		return true;
 	}//end regenerate_component
-
-
-
-	/**
-	* GET_SEARCH_FIELDS
-	* @return array $search_fields
-	* Sample: 
-	[
-	  {
-		"section_tipo": "numisdata3",
-		"component_tipo": "numisdata27"
-	  },
-	  {
-		"section_tipo": "numisdata3",
-		"component_tipo": "numisdata30",
-		"search": [
-		  {
-			"section_tipo": "numisdata6",
-			"component_tipo": "numisdata16"
-		  }
-		]
-	  }
-	]
-	*/
-	public function get_search_fields($search_tipo) {
-		//chenk the recursion 
-
-		$current_tipo 				= $search_tipo;
-		$ar_target_section_tipo 	= common::get_ar_related_by_model('section',$current_tipo);
-		$target_section_tipo    	= reset($ar_target_section_tipo);
-		$ar_terminos_relacionados 	= RecordObj_dd::get_ar_terminos_relacionados($current_tipo, true, true);
-		
-		$search_fields = array();
-		foreach ($ar_terminos_relacionados as $key => $c_tipo) {
-			$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($c_tipo,true);
-			if ($modelo_name==='section') continue;
-			
-			$field = new stdClass();
-				$field->section_tipo 	= $target_section_tipo;
-				$field->component_tipo 	= $c_tipo;
-
-			# COMPONENTS_WITH_REFERENCES case like autocomplete, select, etc.. 
-			if(in_array($modelo_name, component_relation_common::get_components_with_relations())) {
-				$field->search 	= $this->get_search_fields($c_tipo);
-			}
-
-			$search_fields[] = $field;
-		}
-
-		return $search_fields;
-	}//end get_search_fields
-
 
 
 	/**
@@ -1075,33 +920,6 @@ class component_autocomplete extends component_relation_common {
 				break;
 		}
 	}//end update_dato_version
-
-
-
-	/**
-	* GET_DIFFUSION_VALUE
-	* Overwrite component common method
-	* Calculate current component diffusion value for target field (usually a mysql field)
-	* Used for diffusion_mysql to unify components diffusion value call
-	* @return string $diffusion_value
-	*
-	* @see class.diffusion_mysql.php
-	*//*
-	public function get_diffusion_value( $lang=null ) {
-
-		$dato 	= $this->get_dato();		
-		$valor	= $this->get_valor( $lang );			
-
-		if (empty($valor) && !empty($dato) ) {
-
-			#debug_log(__METHOD__.' sorry resolve value diffusion component_autocomplete in progress.. ('.$this->get_tipo().', '.$this->get_parent().', '.$this->get_section_tipo().') '.to_string(), logger::WARNING);
-			$valor = ""; // 'sorry resolve value in progress..';
-		}				
-		$diffusion_value = $valor;
-		
-
-		return (string)$diffusion_value;
-	}//end get_diffusion_value*/
 
 
 
