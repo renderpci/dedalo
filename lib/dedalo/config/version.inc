@@ -1503,6 +1503,11 @@
 		Fixed error on component_autocomplete_hi when any related section have missconfigurated property 'term' and is not found in section map thesaurus
 
 
+	Valencia 08-04-2019 5.4.0
+		Added publication (diffusion) info data to section. First publication date and user and last publication date and user
+
+
+
 
 	WORK IN PROGRESS
 		component_date : mark as "red or similar" restricted an other terms based in x param..
@@ -1523,12 +1528,12 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.3.9';
+	$DEDALO_VERSION = '5.4.0';
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '05-04-2019');
+	define('DEDALO_BUILD'	, '08-04-2019');
 
 
 	/*

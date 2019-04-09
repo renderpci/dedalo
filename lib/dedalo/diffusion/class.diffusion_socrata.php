@@ -157,6 +157,9 @@ class diffusion_socrata extends diffusion  {
 			$result = isset($result_obj->error) ? false : true;
 			$msg 	= isset($result_obj->message) ? $result_obj->message : to_string($result);
 
+		// saves publication data 
+			diffusion::update_publication_data($options->section_tipo, $options->section_id);
+
 		$response->result 	= $result;
 		$response->msg 		= $msg;
 
