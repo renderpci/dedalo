@@ -51,33 +51,33 @@
 					$ar_subcontext 	= [];
 					foreach ($layout_map as $section_tipo => $ar_list_tipos) foreach ($ar_list_tipos as $current_tipo) {
 							
-							$modo 			= 'list';
-							$model 			= RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
-							$RecordObj_dd 	= new RecordObj_dd($current_tipo);
-							$lang 			= ($RecordObj_dd->get_traducible()==='si') ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
+						$modo 			= 'list';
+						$model 			= RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
+						$RecordObj_dd 	= new RecordObj_dd($current_tipo);
+						$lang 			= ($RecordObj_dd->get_traducible()==='si') ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
 
-							foreach ($rows_data->ar_records as $current_record) {
-							
-								$related_component = component_common::get_instance($model,
-																			 $current_tipo,
-																			 $current_record->section_id,
-																			 $modo,
-																			 $lang,
-																			 $current_record->section_tipo);
+						foreach ($rows_data->ar_records as $current_record) {
+						
+							$related_component = component_common::get_instance($model,
+																		 $current_tipo,
+																		 $current_record->section_id,
+																		 $modo,
+																		 $lang,
+																		 $current_record->section_tipo);
 
-								// Inject this tipo as related component from_component_tipo
-									$related_component->from_component_tipo = $this->tipo;
-									$related_component->from_section_tipo 	= $this->section_tipo;
+							// Inject this tipo as related component from_component_tipo
+								$related_component->from_component_tipo = $this->tipo;
+								$related_component->from_section_tipo 	= $this->section_tipo;
 
-								$component_json = $related_component->get_json();
+							$component_json = $related_component->get_json();
 
-								// Add data
-									$data = array_merge($data, $component_json->data);
+							// Add data
+								$data = array_merge($data, $component_json->data);
 
-								// temp ar_subcontext
-									$ar_subcontext = array_merge($ar_subcontext, $component_json->context);
+							// temp ar_subcontext
+								$ar_subcontext = array_merge($ar_subcontext, $component_json->context);
 
-							}//end foreach ($rows_data->ar_records as $current_record)
+						}//end foreach ($rows_data->ar_records as $current_record)
 					
 					}//end foreach ($layout_map as $section_tipo => $ar_list_tipos) foreach ($ar_list_tipos as $current_tipo)
 
