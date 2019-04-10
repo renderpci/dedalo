@@ -10,7 +10,7 @@ class component_external extends component_common {
 
 	/**
 	* LOAD_DATA_FROM_REMOTE
-	* @return 
+	* @return array $row_data
 	*/
 	public function load_data_from_remote() {
 
@@ -22,7 +22,7 @@ class component_external extends component_common {
 			static $data_from_remote_cache = [];
 			$uid = $section_tipo . '_'. $section_id .'_'. $lang;
 			if (isset($data_from_remote_cache[$uid])) {
-				debug_log(__METHOD__." Loaded from cache: $uid ".to_string(), logger::DEBUG);
+				#debug_log(__METHOD__." Loaded from cache: $uid ".to_string(), logger::DEBUG);
 				return $data_from_remote_cache[$uid];
 			}
 

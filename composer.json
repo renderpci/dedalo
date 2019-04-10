@@ -6,6 +6,7 @@
         "react/http": "^0.8.3",
         "socrata/soda-php": "^1.1",
         "onelogin/php-saml": "3.X.X",
-        "lightsaml/lightsaml": "^1.4"
+        "lightsaml/lightsaml": "^1.4",
+        "phpmailer/phpmailer": "^6.0"
   }
 }

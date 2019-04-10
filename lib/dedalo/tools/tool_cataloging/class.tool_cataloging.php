@@ -11,14 +11,14 @@ class tool_cataloging {
 	public $source_thesaurus;
 	public $button_trigger_tipo;
 
-	public function __construct($section_tipo=null, $modo='button') {
+	public function __construct($section_obj=null, $modo='button') {
 
 		$button_trigger_tipo = isset($_REQUEST['button_tipo']) ? safe_tipo($_REQUEST['button_tipo']) : null;
 		
 		if (empty($button_trigger_tipo)) {
 			throw new Exception("Error Processing Request. Var section is empty", 1);
 		}
-
+	
 		$button_triguer = new RecordObj_dd($button_trigger_tipo);
 		$button_triguer_properties = $button_triguer->get_propiedades(true);
 
@@ -78,7 +78,7 @@ class tool_cataloging {
 		$sections_to_catalog = [];
 
 		foreach ($ar_source_list as $current_section_list) {
-
+	
 			$section_tipo = $current_section_list->section_tipo;
 
 			$section_object = new stdClass();
@@ -91,7 +91,7 @@ class tool_cataloging {
 
 			$sections_to_catalog[] = $section_object;
 		}
-
+	
 		return $sections_to_catalog;
 	}//end sections_to_catalog
 
