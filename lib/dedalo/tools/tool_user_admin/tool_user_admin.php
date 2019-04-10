@@ -16,6 +16,13 @@
 			// section info
 				$section_tipo = DEDALO_SECTION_USERS_TIPO; 
 				$section_id   = navigator::get_user_id(); // current logged user
+		
+				#dump(intval($section_id), ' section_id ++ '.to_string());
+				if (intval($section_id)<1) {
+					
+					echo '<span class="error">Error. Invalid user!</span>';
+					return null;
+				}
 
 			// user section components
 				$ar_components = [
