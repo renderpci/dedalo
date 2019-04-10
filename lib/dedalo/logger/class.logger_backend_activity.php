@@ -287,8 +287,9 @@ class logger_backend_activity extends logger_backend {
 							foreach ((array)$projects_dato as $project_locator) {
 								if (isset($project_locator->from_component_tipo)) {
 									# Override from_component_tipo
-									$project_locator->from_component_tipo = self::$_COMPONENT_PROYECTOS['tipo'];
-									$project_relations[] = $project_locator;
+									$project_locator_safe = clone $project_locator;
+									$project_locator_safe->from_component_tipo = self::$_COMPONENT_PROYECTOS['tipo'];
+									$project_relations[] = $project_locator_safe;
 								}
 							}
 							# Add to relations container

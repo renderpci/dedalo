@@ -287,7 +287,7 @@ class section extends common {
 
 		if(SHOW_DEBUG===true) {
 			#$start_time = start_time();
-			#global$TIMER;$TIMER[__METHOD__.'_OUT_'.$this->tipo.'_'.$this->modo.'_'.microtime(1)]=microtime(1);
+			#global$TIMER;$TIMER[__METHOD__.'_OUT_'.$this->tipo.'_'.$this->modo.'_'.microtime(1)]=microtime(1);			
 		}
 		
 		return $this->dato;
@@ -813,8 +813,8 @@ class section extends common {
 			$date_now = component_date::get_timestamp_now_for_db();
 		
 		// Save_handler different to database case
-		// Sometimes we need use section as temporal element without save real data to database. Is this case
-		// data is saved to session as temporal data and can be recovered from $_SESSION['dedalo4']['section_temp_data'] using key '$this->tipo.'_'.$this->section_id'
+			// Sometimes we need use section as temporal element without save real data to database. Is this case
+			// data is saved to session as temporal data and can be recovered from $_SESSION['dedalo4']['section_temp_data'] using key '$this->tipo.'_'.$this->section_id'
 			if (isset($this->save_handler) && $this->save_handler==='session') {
 				
 				$temp_data_uid 		= $this->tipo.'_'.$this->section_id;
@@ -855,7 +855,7 @@ class section extends common {
 					# Section modified date
 					$section_dato->modified_date 		= (string)$date_now;	# Format 2012-11-05 19:50:44
 			}
-	
+
 			# Save section dato
 				$JSON_RecordObj_matrix	= new JSON_RecordObj_matrix( (string)$matrix_table, (int)$this->section_id, (string)$tipo );
 				$JSON_RecordObj_matrix->set_datos($section_dato);
@@ -1129,15 +1129,16 @@ class section extends common {
 		}//end if ($this->id >= 1)	
 
 
-		# DEDALO_CACHE_MANAGER : reset caches
-		if( DEDALO_CACHE_MANAGER===true ) {
-			debug_log(__METHOD__." Deleted cache keys contains '$this->tipo' from section:Save method");
-			cache::del_contains( $this->tipo );
-		}
+		// dedalo_cache_manager : reset caches
+			if( DEDALO_CACHE_MANAGER===true ) {
+				debug_log(__METHOD__." Deleted cache keys contains '$this->tipo' from section:Save method");
+				cache::del_contains( $this->tipo );
+			}
 
-		if(SHOW_DEBUG===true) {
-			global$TIMER;$TIMER[__METHOD__.'_OUT_'.$this->tipo.'_'.$this->modo.'_'.microtime(1)]=microtime(1);
-		}		
+		// debug
+			if(SHOW_DEBUG===true) {
+				global$TIMER;$TIMER[__METHOD__.'_OUT_'.$this->tipo.'_'.$this->modo.'_'.microtime(1)]=microtime(1);
+			}		
 
 		return $this->section_id;
 	}//end Save

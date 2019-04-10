@@ -118,6 +118,7 @@ class login extends common {
 		$JSON_RecordObj_matrix	= new JSON_RecordObj_matrix($matrix_table,NULL,DEDALO_SECTION_USERS_TIPO);
 		$ar_result				= (array)$JSON_RecordObj_matrix->search($arguments);
 
+
 		if( !is_array($ar_result) || empty($ar_result[0]) ) {
 
 			#
@@ -139,6 +140,29 @@ class login extends common {
 			#exit("Error: User $username not exists !");
 			$response->msg = "Error: User not exists or password si invalid!";
 			error_log("DEDALO LOGIN ERROR : Invalid user or password");
+			return $response;
+
+		}else if( count($ar_result)>1 ) {
+
+			#
+			# STOP: USERNAME DUPLICATED
+			#
+			$activity_datos['result'] 	= "deny";
+			$activity_datos['cause'] 	= "user duplicated in database";
+			$activity_datos['username']	= $username;
+
+			# LOGIN ACTIVITY REPORT ($msg, $projects=NULL, $login_label='LOG IN', $ar_datos=NULL)
+			self::login_activity_report(
+				"Denied login attempted by: $username. This user exist more than once in the database ".count($ar_result),
+				NULL,
+				'LOG IN',
+				$activity_datos
+				);
+			# delay failed output after 2 seconds to prevent brute force attacks
+	        sleep(2);
+			#exit("Error: User $username not exists !");
+			$response->msg = "Error: User ambiguous";
+			error_log("DEDALO LOGIN ERROR : Invalid user or password. User ambiguous ($username)");
 			return $response;
 
 		}else{

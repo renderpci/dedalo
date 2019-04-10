@@ -13,7 +13,7 @@ common::trigger_manager();
 */
 function Save($json_data) {
 	global $start_time;
-
+	
 	# Write session to unlock session file
 	#session_write_close();
 	#dump($maintenance_mode, ' maintenance_mode ++ '.to_string());
@@ -46,16 +46,34 @@ function Save($json_data) {
 		}
 	
 	// permissions
-		if(isset($caller_dataset->component_tipo)) {
-			# if the component send a dataset, the tipo will be the component_tipo of the caller_dataset	
-			$permissions = common::get_permissions($section_tipo, $caller_dataset->component_tipo);
-		}else{
-			$permissions = common::get_permissions($section_tipo, $tipo);
-		}		
-		if ($permissions<2) {
-			$response->msg = "Trigger Error: Nothing is saved. Invalid user permissions for this component. ($permissions)";
-			return $response;
-		}
+		// case tool user admin (user editing self) 
+			$ar_user_allow_tipos = [
+				DEDALO_USER_PASSWORD_TIPO, // password
+				DEDALO_FULL_USER_NAME_TIPO, // full user name
+				DEDALO_USER_EMAIL_TIPO, // email
+				DEDALO_USER_IMAGE_TIPO // image
+			];
+			$user_id = navigator::get_user_id(); // current logged user
+			$is_user_admin_edit = (bool)($section_tipo===DEDALO_SECTION_USERS_TIPO && in_array($tipo, $ar_user_allow_tipos) && $parent==$user_id);		
+		// switch 
+			if ($is_user_admin_edit===true) {
+				
+				$permissions = 2;
+			
+			}else{
+				if(isset($caller_dataset->component_tipo)) {
+					# if the component send a dataset, the tipo will be the component_tipo of the caller_dataset	
+					$permissions = common::get_permissions($section_tipo, $caller_dataset->component_tipo);
+				}else{
+					$permissions = common::get_permissions($section_tipo, $tipo);
+				}
+			}
+		// return on insufficient permissions 
+			if ($permissions<2) {
+				$response->msg = "Trigger Error: Nothing is saved. Invalid user permissions for this component. ($permissions)";
+				debug_log(__METHOD__." $response->msg ".to_string(), logger::DEBUG);
+				return $response;
+			}
 
 	// model
 		$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($tipo, true);

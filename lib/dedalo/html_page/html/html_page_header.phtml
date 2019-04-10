@@ -15,7 +15,7 @@ if (login::is_logged()) {
 		case (SHOW_DEBUG ):
 			$menu_wrapper_css = 'menu_wrapper_debug';
 			break;
-		case ( component_security_administrator::is_global_admin( navigator::get_user_id() ) ):
+		case ( component_security_administrator::is_global_admin( $user_id ) ):
 			$menu_wrapper_css = 'menu_wrapper_global_admin';
 			break;
 		default:
@@ -56,7 +56,16 @@ if (login::is_logged()) {
 		#echo "</div>";
 		
 		# Logged user
-		echo "<div class=\"button_in_menu logged_user_name\">".navigator::get_username()."</div>";	
+			echo '<div class="button_in_menu logged_user_name" data-section_id="'.$user_id.'" ';
+			#if (intval($user_id)>0) {
+				echo 'onclick="tool_common.open_tool_user_admin(this)"';
+			#}			
+			echo '>';				
+			echo navigator::get_username();
+			if(SHOW_DEBUG===true) {
+				echo ' '.$user_id.'';
+			}
+			echo '</div>';	
 		
 		
 		#
@@ -67,7 +76,7 @@ if (login::is_logged()) {
 		
 		#
 		# DATA LANG JUMP
-		if(component_security_administrator::is_global_admin( navigator::get_user_id() )===true || (defined('DEDALO_DATA_LANG_SELECTOR') && DEDALO_DATA_LANG_SELECTOR===true)) {
+		if(component_security_administrator::is_global_admin( $user_id )===true || (defined('DEDALO_DATA_LANG_SELECTOR') && DEDALO_DATA_LANG_SELECTOR===true)) {
 
 			$dedalo_data_langs_selector_html = html_page::get_dedalo_data_langs_selector_html();
 			echo $dedalo_data_langs_selector_html;
