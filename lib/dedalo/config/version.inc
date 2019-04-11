@@ -1505,6 +1505,7 @@
 
 	Valencia 08-04-2019 5.4.0
 		Added publication (diffusion) info data to section. First publication date and user and last publication date and user
+		(!) Need structure version >= 08-04-2019 16:06 
 
 
 
@@ -1528,12 +1529,12 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.4.0';
+	$DEDALO_VERSION = '5.4.7';
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '08-04-2019');
+	define('DEDALO_BUILD'	, '11-04-2019');
 
 
 	/*
