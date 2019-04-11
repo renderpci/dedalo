@@ -1906,6 +1906,77 @@ abstract class component_common extends common {
 
 
 	/**
+	* PARSE_SEARCH_DYNAMIC
+	* Check existence of $source in properties and resolve filter if yes
+	* @return object $filter
+	*/
+	public function parse_search_dynamic($ar_filtered_by_search_dynamic) {
+
+		// resolve_section_id
+			$resolve_section_id = function ($source_section_id){
+				switch ($source_section_id) {
+					case 'current':
+						$result = $this->get_parent();
+						break;
+					default:
+						$result = $source_section_id;
+				}	
+				return $result;
+			};
+		// resolve_section_tipo
+			$resolve_section_tipo = function ($source_section_tipo){
+				switch ($source_section_tipo) {
+					case 'current':
+						$result = $this->get_section_tipo();
+						break;
+					default:
+						$result = $source_section_tipo;
+				}	
+				return $result;
+			};
+		
+
+		$ar_filter_items = [];
+		foreach ($ar_filtered_by_search_dynamic->filter_elements as $current_element) {			
+
+			// source			
+				$current_q 			= $current_element->q;
+				$source 			= $current_q->source;
+				$component_tipo 	= $source->component_tipo;
+				$section_id 		= $resolve_section_id($source->section_id);
+				$section_tipo 		= $resolve_section_tipo($source->section_tipo);
+
+				$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+				$component 		= component_common::get_instance($modelo_name,
+																 $component_tipo,
+																 $section_id,
+																 'list',
+																 DEDALO_DATA_LANG,
+																 $section_tipo);
+				$dato = $component->get_dato();
+
+			// filter item
+				$item = new stdClass();
+					$item->q 	= $dato;
+					$item->path = $current_element->path;
+
+			$ar_filter_items[] = $item;
+		}
+
+		// operator global
+			$operator = $ar_filtered_by_search_dynamic->operator;
+
+		// filter object			
+			$filter = new stdClass();
+				$filter->{$operator} = $ar_filter_items;
+		
+
+		return $filter;
+	}//end parse_search_dynamic
+
+
+
+	/**
 	* GET_AR_LIST_OF_VALUES2
 	* @return array $ar_list_of_values
 	*/
@@ -1914,9 +1985,14 @@ abstract class component_common extends common {
 		$start_time = microtime(1);
 
 		switch (true) {
-			case isset($this->propiedades->filtered_by_search):				
-
-  				$filter = json_decode( json_encode($this->propiedades->filtered_by_search) );
+			case isset($this->propiedades->filtered_by_search_dynamic) || isset($this->propiedades->filtered_by_search):
+				
+				$filter = [];
+				if(isset($this->propiedades->filtered_by_search_dynamic)){
+					$filter = $this->parse_search_dynamic($this->propiedades->filtered_by_search_dynamic);
+				}else{
+					$filter = json_decode( json_encode($this->propiedades->filtered_by_search));
+				}  				
 
   				$target_section_tipo = $this->get_ar_target_section_tipo();
   				$target_section_tipo = reset($target_section_tipo);
@@ -1928,7 +2004,7 @@ abstract class component_common extends common {
 					$search_query_object->skip_projects_filter 	= true;
 					$search_query_object->filter 				= $filter;
 							
-				$hash_id = '_'.md5(json_encode($this->propiedades->filtered_by_search));				
+				$hash_id = '_'.md5(json_encode($filter));				
 				break;
 			
 			default:
