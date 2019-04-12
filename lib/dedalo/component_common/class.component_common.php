@@ -1940,24 +1940,30 @@ abstract class component_common extends common {
 		foreach ($ar_filtered_by_search_dynamic->filter_elements as $current_element) {			
 
 			// source			
-				$current_q 			= $current_element->q;
-				$source 			= $current_q->source;
+				$q 					= $current_element->q;
+				$source 			= $q->source;				
 				$component_tipo 	= $source->component_tipo;
 				$section_id 		= $resolve_section_id($source->section_id);
 				$section_tipo 		= $resolve_section_tipo($source->section_tipo);
 
-				$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
-				$component 		= component_common::get_instance($modelo_name,
-																 $component_tipo,
-																 $section_id,
-																 'list',
-																 DEDALO_DATA_LANG,
-																 $section_tipo);
+				$modelo_name 		= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+				$component 			= component_common::get_instance($modelo_name,
+																	 $component_tipo,
+																	 $section_id,
+																	 'list',
+																	 DEDALO_DATA_LANG,
+																	 $section_tipo);
 				$dato = $component->get_dato();
+
+				// resolve base_value object
+					$base_value = reset($dato);
+				// replaces locator from_component_tipo with path info
+					$base_value->from_component_tipo = reset($current_element->path)->component_tipo;
+					
 
 			// filter item
 				$item = new stdClass();
-					$item->q 	= $dato;
+					$item->q 	= $base_value;
 					$item->path = $current_element->path;
 
 			$ar_filter_items[] = $item;
@@ -1970,6 +1976,11 @@ abstract class component_common extends common {
 			$filter = new stdClass();
 				$filter->{$operator} = $ar_filter_items;
 		
+		// debug
+			if(SHOW_DEBUG===true) {
+				#dump(nul, ' filter ++ '.json_encode($filter, JSON_PRETTY_PRINT));
+			}
+	
 
 		return $filter;
 	}//end parse_search_dynamic
