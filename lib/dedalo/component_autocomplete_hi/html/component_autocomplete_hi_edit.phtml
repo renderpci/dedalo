@@ -81,8 +81,11 @@
 			// Rows
 				$html_content .= '<ul class="css_autocomplete_hi_valor '.$in_search_mode_css.'">';
 				foreach ($ar_valor as $current_value => $value) {
-
+	
 					$html_content .= '<li>';
+
+					// locator
+						$locator = json_decode($current_value);
 
 					// Button delete
 						switch ($source_mode) {
@@ -102,7 +105,11 @@
 
 					// Value. String resolved to show
 						$value = strip_tags($value);
-						$html_content .= $value;						
+						$html_content .= '<span>'.$value.'</span>';
+
+					// button edit
+						$html_content .= '<div class="icon_bs link edit_autocomplete_hi edit_autocomplete_hi_row edit_hidden" onclick="component_autocomplete_hi.open_element(this)" data-section_tipo="'.$locator->section_tipo.'" data-section_id="'.$locator->section_id.'"></div>';
+						
 
 					$html_content .= '</li>';
 				}
@@ -152,6 +159,9 @@
 							$autosearch_options_html = '';					
 							$autosearch_options_js 	 = '';
 							$autosearch_options_id 	 = 'autosearch_options_' . $section_tipo .'_'. $tipo .'_'. $parent;
+							if ($modo==='search') {
+								$autosearch_options_id .= '_'.microtime(true);
+							}
 							$autosearch_options_html .= '<div id="' . $autosearch_options_id . '" class="autosearch_options'.$in_search_mode_css.'" data-tipo="'.$tipo.'">';
 							#$html_content .= '<div class="component_options_container '.$in_search_mode_css.'">';
 								// search_sections list

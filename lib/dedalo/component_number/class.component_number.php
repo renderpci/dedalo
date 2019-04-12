@@ -328,9 +328,9 @@ class component_number extends component_common {
 	public function get_diffusion_value( $lang ) {
 		
 		$dato 			 = parent::get_dato();
-		$diffusion_value = intval($dato);
+		$diffusion_value = $dato;
 
-		return (int)$diffusion_value;
+		return $diffusion_value;
 	}//end get_diffusion_value
 
 

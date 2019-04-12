@@ -156,7 +156,8 @@
 	# lang tld2
 		$lang_tld2 = app_lang_to_tld2(DEDALO_APPLICATION_LANG);
 
-		
+	// user_id
+		$user_id = navigator::get_user_id();
 	
 	#
 	# JAVASCRIPT
@@ -257,7 +258,7 @@
 		}
 
 
-	$is_global_admin = (bool)component_security_administrator::is_global_admin(navigator::get_user_id());
+	$is_global_admin = (bool)component_security_administrator::is_global_admin($user_id);
 
 
 	#

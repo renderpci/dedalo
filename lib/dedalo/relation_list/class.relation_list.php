@@ -60,7 +60,7 @@ class relation_list extends common {
 	* GET_RELATION_LIST_OBJ
 	*
 	*/
-	public function get_relation_list_obj($ar_inverse_references, $value_resolved = false){
+	public function get_relation_list_obj($ar_inverse_references, $value_resolved=false){
 		
 		$json 			= new stdClass;
 		$ar_context 	= [];
@@ -84,7 +84,8 @@ class relation_list extends common {
 					$current_id->section_label 		= RecordObj_dd::get_termino_by_tipo($current_section_tipo,DEDALO_APPLICATION_LANG, true);
 					$current_id->component_tipo		= 'id';
 					$current_id->component_label	= 'id';
-				$ar_context[] = $current_id;
+
+					$ar_context[] = $current_id;
 
 				//get the columns of the @context
 				$ar_modelo_name_required = array('relation_list');
@@ -138,7 +139,6 @@ class relation_list extends common {
 		$json->data 	= $ar_data;
 
 		return $json;
-
 	}//get_relation_list_obj
 
 
@@ -187,7 +187,6 @@ class relation_list extends common {
 		}
 	
 		return $data;
-
 	}//end get_data
 
 
@@ -198,7 +197,7 @@ class relation_list extends common {
 	*/
 	public function get_json(){
 
-		if(SHOW_DEBUG===true) $start_time = start_time();		
+		if(SHOW_DEBUG===true) $start_time = start_time();
 		
 			# Class name is called class (ex. component_input_text), not this class (common)	
 			include ( DEDALO_LIB_BASE_PATH .'/'. get_called_class() .'/'. get_called_class() .'_json.php' );
@@ -211,27 +210,7 @@ class relation_list extends common {
 		return $json;
 	}//end get_json
 
-/*
-	public function set_value_resolved($value_resolved){
-		$this->value_resolved = $value_resolved;
-	}
-
-	public function set_limit($limit){
-		$this->limit = $limit;
-	}
-
-	public function set_offset($offset){
-		$this->offset = $offset;
-	}
-
-	public function set_count($count){
-		$this->count = $count;
-	}
-	*/
-
-
 
 
 }//relation_list
-
 ?>

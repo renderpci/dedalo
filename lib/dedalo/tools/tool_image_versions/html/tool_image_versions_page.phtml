@@ -24,31 +24,33 @@
 
 
 		// external source html
-			$html .= '<div class="external_source">';
-				
-				$html .= $external_source_html;
+			if (isset($properties->external_source)) {
+				$html .= '<div class="external_source">';
+					
+					$html .= $external_source_html;
 
-				$var_requested 		  	= common::get_request_var('section_tipo');
-				$current_section_tipo 	= !empty($var_requested) ? $var_requested : '';
-				$original_quality 		= DEDALO_IMAGE_QUALITY_ORIGINAL;
-				$target_quality  		= DEDALO_IMAGE_QUALITY_DEFAULT;
-				$image_id 				= $tipo .'_'.$current_section_tipo.'_'.$parent;
+					$var_requested 		  	= common::get_request_var('section_tipo');
+					$current_section_tipo 	= !empty($var_requested) ? $var_requested : '';
+					$original_quality 		= DEDALO_IMAGE_QUALITY_ORIGINAL;
+					$target_quality  		= DEDALO_IMAGE_QUALITY_DEFAULT;
+					$image_id 				= $tipo .'_'.$current_section_tipo.'_'.$parent;
 
-				# Get the external source to local file
-				$html .= '<div class="css_button_generic btn_get_external_source" onclick="tool_image_versions.get_the_external_source_to_file(this)" ';
-				$html .= "data-image_id=\"$image_id\" ";
-				$html .= "data-quality=\"$original_quality\" ";
-				$html .= "data-target_quality=\"$target_quality\" ";
-				$html .= "data-aditional_path=\"$aditional_path\" ";
-				$html .= "data-initial_media_path=\"$initial_media_path\" ";
-				$html .= "data-tipo=\"$tipo\" ";
-				$html .= "data-parent=\"$parent\" ";
-				$html .= "data-section_tipo=\"$current_section_tipo\" ";
-				$html .= '>';
-				$html .= '<label class="css_download_external_source">'.label::get_label('descargar').'</label>';
+					# Get the external source to local file
+					$html .= '<div class="css_button_generic btn_get_external_source" onclick="tool_image_versions.get_the_external_source_to_file(this)" ';
+					$html .= "data-image_id=\"$image_id\" ";
+					$html .= "data-quality=\"$original_quality\" ";
+					$html .= "data-target_quality=\"$target_quality\" ";
+					$html .= "data-aditional_path=\"$aditional_path\" ";
+					$html .= "data-initial_media_path=\"$initial_media_path\" ";
+					$html .= "data-tipo=\"$tipo\" ";
+					$html .= "data-parent=\"$parent\" ";
+					$html .= "data-section_tipo=\"$current_section_tipo\" ";
+					$html .= '>';
+					$html .= '<label class="css_download_external_source">'.label::get_label('descargar').'</label>';
+					$html .= '</div>';
+					
 				$html .= '</div>';
-				
-			$html .= '</div>';
+			}
 		
 		
 		# VERSIONS
@@ -216,7 +218,7 @@
 				    	$td_style = null; if($quality==DEDALO_IMAGE_QUALITY_DEFAULT) $td_style = 'td_default_quality';
 			    		$html .= " <td class=\"$td_style\">";
 
-			    		if( file_exists($this->component_obj->get_image_path($quality)) ) {		    			
+			    		if( file_exists($this->component_obj->get_image_path($quality)) ) {  			
 			    		
 					    	$html .= "<div class=\"icon_bs link image_download_icon\"
 					    	data-image_id=\"$image_id\" data-quality=\"$quality\" data-aditional_path=\"$aditional_path\" data-initial_media_path=\"$initial_media_path\"
@@ -259,11 +261,16 @@
 
 			    		if( file_exists($this->component_obj->get_image_path($quality)) ) {
 
-					    	$html .= "<div class=\"icon_bs link image_zoom_in_icon\"
-					    	data-image_id=\"$image_id\" data-quality=\"$quality\" data-aditional_path=\"$aditional_path\" data-initial_media_path=\"$initial_media_path\"
-					    	data-tipo=\"$tipo\" data-parent=\"$parent\"
-					    	onclick=\"tool_image_versions.view_image(this)\"
-					    	></div>";
+					    	$html .= '<div class="icon_bs link image_zoom_in_icon" ';
+					    	$html .= 'data-image_id="'.$image_id.'" ';
+					    	$html .= 'data-quality="'.$quality.'" ';
+					    	$html .= 'data-aditional_path="'.$aditional_path.'" ';
+					    	$html .= 'data-initial_media_path="'.$initial_media_path.'" ';
+					    	$html .= 'data-tipo="'.$tipo.'" ';
+					    	$html .= 'data-parent="'.$parent.'" ';
+					    	$html .= 'onclick="tool_image_versions.view_image(this)" ';
+					    	$html .= '>';
+					    	$html .= '</div>';
 						}
 
 				    	$html .= " </td>";

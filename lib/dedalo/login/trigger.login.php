@@ -35,7 +35,7 @@ function Login($json_data) {
 	# Debug
 	if(SHOW_DEBUG===true) {
 		$debug = new stdClass();
-			$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";			
+			$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
 
 		$response->debug = $debug;
 	}
@@ -89,5 +89,3 @@ function Quit($json_data) {
 }//end Quit()
 
 
-
-?>

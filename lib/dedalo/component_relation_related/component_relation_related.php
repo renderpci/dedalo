@@ -59,11 +59,14 @@
 					$search_tipos 	= [$term_tipo]; // DEDALO_THESAURUS_TERM_TIPO
 
 				// hierarchy_type . Get hierarchy_type from current section
-					$hierarchy_type 	= hierarchy::get_hierarchy_type_from_section_tipo($section_tipo);
-					# hierarchy_types .  Array of all (only one in this case)
-					$hierarchy_types 	= [$hierarchy_type];
-					# hierarchy_sections .  Calculate all sections of current types
-					$hierarchy_sections = component_autocomplete_hi::get_hierarchy_sections_from_types( $hierarchy_types );
+					$hierarchy_types 	= isset($propiedades->source->hierarchy_types) ? $propiedades->source->hierarchy_types : null;
+					$hierarchy_sections = isset($propiedades->source->hierarchy_sections) ? $propiedades->source->hierarchy_sections : null;
+		
+					# Resolve hierarchy_sections for speed
+					if (!empty($hierarchy_types)) {
+						$hierarchy_sections = component_autocomplete_hi::add_hierarchy_sections_from_types($hierarchy_types, (array)$hierarchy_sections);
+						$hierarchy_types 	= null; // Remove filter by type because we know all hierarchy_sections now
+					}
 
 				// service autocomplete options
 					$search_sections = $hierarchy_sections;

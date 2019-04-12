@@ -34,8 +34,18 @@ function new_element($json_data) {
 	
 	
 	$lang = DEDALO_DATA_LANG;
-	
-	$ar_terminos_relacionados = RecordObj_dd::get_ar_terminos_relacionados($tipo, true, true);
+	$RecordObj_dd = new RecordObj_dd($tipo);
+	$propiedades 	 = $RecordObj_dd->get_propiedades(true);
+
+	if(isset($propiedades->source->search)){
+			foreach ($propiedades->source->search as $current_search) {
+				if($current_search->type === "internal"){
+					$ar_terminos_relacionados =  $current_search->components;
+				}
+			}
+		}else{
+			$ar_terminos_relacionados = RecordObj_dd::get_ar_terminos_relacionados($tipo, true, true);
+		}
 		#dump($ar_terminos_relacionados, ' ar_terminos_relacionados ++ '.to_string());
 	
 	if(SHOW_DEBUG) {

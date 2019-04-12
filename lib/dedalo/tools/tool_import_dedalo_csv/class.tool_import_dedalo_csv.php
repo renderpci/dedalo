@@ -156,7 +156,7 @@ class tool_import_dedalo_csv extends tool_common {
 				}elseif ($csv_map[$key]==='modified_by_user') {
 					
 					$user_locator 	 = self::build_user_locator($value, $modified_by_user['tipo']);
-						dump($user_locator, ' user_locator ++ '.to_string());
+						#dump($user_locator, ' user_locator ++ '.to_string());
 
 					if (!empty($user_locator)) {
 						// component build and set dato

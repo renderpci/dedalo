@@ -29,8 +29,13 @@
 				# Verify component content record is inside section record filter
 				if ($this->get_filter_authorized_record()===false) return null; //($lang=DEDALO_DATA_LANG, $id_path=false, $referenced_section_tipo=false, $filter_custom=false) 
 
-				$referenced_tipo 	= $this->get_referenced_tipo();
-				$ar_list_of_values  = $this->get_ar_list_of_values2();
+				// referenced section tipo
+					$referenced_tipo 	= $this->get_referenced_tipo();
+
+				// ar list of values					
+					$ar_list_of_values  = $this->get_ar_list_of_values2();
+					
+				
 				$id_wrapper 		= 'wrapper_'.$identificador_unico;
 				$input_name 		= "{$tipo}_{$parent}";
 				$component_info 	= $this->get_component_info('json');
