@@ -1506,8 +1506,12 @@ class diffusion_sql extends diffusion  {
 
 		$this->ar_published_records = $ar_resolved_static;
 
-		$response->result = true;
-		$response->msg .= "Ok. Record updated $options->section_id and n references: ".count($ar_resolved_static);
+		// saves publication data 
+			diffusion::update_publication_data($options->section_tipo, $options->section_id);
+
+		//response 
+			$response->result = true;
+			$response->msg .= "Ok. Record updated $options->section_id and n references: ".count($ar_resolved_static);
 				
 
 		return $response;
@@ -1604,9 +1608,11 @@ class diffusion_sql extends diffusion  {
 					$filter_mdcat[$lang] 	 	= [];
 
 					foreach ($ar_columns as $column) {
-						switch ($column['field_name']) {
-							case 'section_id':
+						switch ($column['field_name']) {							
 							case 'lang':
+								# Skip
+								break;
+							case 'section_id':
 								# Skip
 								break;
 							default:
@@ -1813,6 +1819,12 @@ class diffusion_sql extends diffusion  {
 							'field_value' => implode(' ',$sort_data[$lang])
 						];
 
+					# sort_id
+						$ar_fields_global[$pseudo_section_id][$lang][] = [
+							'field_name'  => 'sort_id',
+							'field_value' => $section_id
+						];
+
 					# thesaurus. THESAURUS_DATA . Merge all values in one only array. Added 13-11-2018 !!									
 						#$ar_thesaurus_elements = [];
 						#foreach ((array)$thesaurus_data[$lang] as $current_array_string) {							
@@ -1826,8 +1838,7 @@ class diffusion_sql extends diffusion  {
 							'field_value' => (!empty($thesaurus_data[$lang])) ? implode(' | ', $thesaurus_data[$lang]) : null
 						];
 					
-					# prison. Merge all values in one only array. Added 20-11-2018 !!
-							dump($prison_data[$lang], '$prison_data[$lang] ++ '.to_string());
+					# prison. Merge all values in one only array. Added 20-11-2018 !!						
 						$ar_prison_elements = [];
 						foreach ((array)$prison_data[$lang] as $current_item_string) {
 							if (!empty($current_item_string)) {
@@ -2443,7 +2454,7 @@ class diffusion_sql extends diffusion  {
 	* Used to trigger parent publication when children is published (useful in thesaurus web publications like mupreva)
 	*/
 	public static function map_locator_to_terminoID_parent($options, $dato) {
-
+	
 		# Reference:
 		# dato:
 		# [0] => stdClass Object
@@ -2481,6 +2492,9 @@ class diffusion_sql extends diffusion  {
 			$section_tipo 			= $locator->section_tipo;
 			$section_id 			= $locator->section_id;
 			$diffusion_element_tipo = $options->diffusion_element_tipo;
+
+			// Force section tipo from locator
+				$options->section_tipo = $section_tipo;
 			
 			$terminoID = diffusion_sql::map_to_terminoID($options, $section_id);
 

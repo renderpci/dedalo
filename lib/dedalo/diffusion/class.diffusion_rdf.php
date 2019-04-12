@@ -132,6 +132,9 @@ class diffusion_rdf extends diffusion {
 			$response = $this->build_xml_file( $xml_options );
 				#dump($response, ' response ++ '.to_string($options));
 
+		// saves publication data 
+			diffusion::update_publication_data($options->section_tipo, $options->section_id);
+
 		return $response;
 		/*
 		$elements = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($options->diffusion_element_tipo, 'xml', 'children', true);

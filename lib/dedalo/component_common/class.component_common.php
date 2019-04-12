@@ -149,6 +149,11 @@ abstract class component_common extends common {
 					$ar_modified_section_tipos = array_map(function($item){
 						return $item['tipo'];
 					}, section::get_modified_section_tipos());
+					// add publication info
+						$ar_modified_section_tipos[] = diffusion::$publication_first_tipo;
+						$ar_modified_section_tipos[] = diffusion::$publication_last_tipo;
+						$ar_modified_section_tipos[] = diffusion::$publication_first_user_tipo;
+						$ar_modified_section_tipos[] = diffusion::$publication_last_user_tipo;
 					if (true===in_array($tipo, $ar_modified_section_tipos)) {
 						# skip verification
 					}else{
@@ -1901,6 +1906,88 @@ abstract class component_common extends common {
 
 
 	/**
+	* PARSE_SEARCH_DYNAMIC
+	* Check existence of $source in properties and resolve filter if yes
+	* @return object $filter
+	*/
+	public function parse_search_dynamic($ar_filtered_by_search_dynamic) {
+
+		// resolve_section_id
+			$resolve_section_id = function ($source_section_id){
+				switch ($source_section_id) {
+					case 'current':
+						$result = $this->get_parent();
+						break;
+					default:
+						$result = $source_section_id;
+				}	
+				return $result;
+			};
+		// resolve_section_tipo
+			$resolve_section_tipo = function ($source_section_tipo){
+				switch ($source_section_tipo) {
+					case 'current':
+						$result = $this->get_section_tipo();
+						break;
+					default:
+						$result = $source_section_tipo;
+				}	
+				return $result;
+			};
+		
+
+		$ar_filter_items = [];
+		foreach ($ar_filtered_by_search_dynamic->filter_elements as $current_element) {			
+
+			// source			
+				$q 					= $current_element->q;
+				$source 			= $q->source;				
+				$component_tipo 	= $source->component_tipo;
+				$section_id 		= $resolve_section_id($source->section_id);
+				$section_tipo 		= $resolve_section_tipo($source->section_tipo);
+
+				$modelo_name 		= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+				$component 			= component_common::get_instance($modelo_name,
+																	 $component_tipo,
+																	 $section_id,
+																	 'list',
+																	 DEDALO_DATA_LANG,
+																	 $section_tipo);
+				$dato = $component->get_dato();
+
+				// resolve base_value object
+					$base_value = reset($dato);
+				// replaces locator from_component_tipo with path info
+					$base_value->from_component_tipo = reset($current_element->path)->component_tipo;
+					
+
+			// filter item
+				$item = new stdClass();
+					$item->q 	= $base_value;
+					$item->path = $current_element->path;
+
+			$ar_filter_items[] = $item;
+		}
+
+		// operator global
+			$operator = $ar_filtered_by_search_dynamic->operator;
+
+		// filter object			
+			$filter = new stdClass();
+				$filter->{$operator} = $ar_filter_items;
+		
+		// debug
+			if(SHOW_DEBUG===true) {
+				#dump(nul, ' filter ++ '.json_encode($filter, JSON_PRETTY_PRINT));
+			}
+	
+
+		return $filter;
+	}//end parse_search_dynamic
+
+
+
+	/**
 	* GET_AR_LIST_OF_VALUES2
 	* @return array $ar_list_of_values
 	*/
@@ -1909,9 +1996,14 @@ abstract class component_common extends common {
 		$start_time = microtime(1);
 
 		switch (true) {
-			case isset($this->propiedades->filtered_by_search):				
-
-  				$filter = json_decode( json_encode($this->propiedades->filtered_by_search) );
+			case isset($this->propiedades->filtered_by_search_dynamic) || isset($this->propiedades->filtered_by_search):
+				
+				$filter = [];
+				if(isset($this->propiedades->filtered_by_search_dynamic)){
+					$filter = $this->parse_search_dynamic($this->propiedades->filtered_by_search_dynamic);
+				}else{
+					$filter = json_decode( json_encode($this->propiedades->filtered_by_search));
+				}  				
 
   				$target_section_tipo = $this->get_ar_target_section_tipo();
   				$target_section_tipo = reset($target_section_tipo);
@@ -1923,7 +2015,7 @@ abstract class component_common extends common {
 					$search_query_object->skip_projects_filter 	= true;
 					$search_query_object->filter 				= $filter;
 							
-				$hash_id = '_'.md5(json_encode($this->propiedades->filtered_by_search));				
+				$hash_id = '_'.md5(json_encode($filter));				
 				break;
 			
 			default:
@@ -1941,6 +2033,16 @@ abstract class component_common extends common {
 				$hash_id ='';
 				break;
 		}
+
+		// check target_section_tipo
+			$target_section_model = RecordObj_dd::get_modelo_name_by_tipo($target_section_tipo,true);			
+			if ($target_section_model!=='section') {
+				$response = new stdClass();
+					$response->result   			= [];
+					$response->msg 	  				= 'Error. section tipo: '.$target_section_tipo.' is not a valid section ('.$target_section_model.')';
+					debug_log(__METHOD__."  ".$response->msg.to_string(), logger::ERROR);
+				return $response;
+			}
 	
 		// cache
 			static $ar_list_of_values_data = [];
@@ -2041,7 +2143,7 @@ abstract class component_common extends common {
 			}
 					
 
-		$response	= new stdClass();
+		$response = new stdClass();
 			$response->result   			= (array)$result;
 			$response->msg 	  				= 'Ok';
 			if(SHOW_DEBUG===true) {
@@ -2693,6 +2795,14 @@ abstract class component_common extends common {
 		}
 
 		$ar_terminoID_by_modelo_name = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($this->tipo, 'section', 'termino_relacionado', $search_exact=true);
+
+		$propiedades 	 = $this->get_propiedades();
+
+		if(isset($propiedades->source->search)){
+			foreach ($propiedades->source->search as $current_search) {
+				$ar_terminoID_by_modelo_name[] =  $current_search->section_tipo;
+			}
+		}
 
 		if(SHOW_DEBUG===true) {
 			if ( empty( $ar_terminoID_by_modelo_name)) {
@@ -3789,13 +3899,27 @@ abstract class component_common extends common {
 		$filter_group = null;
 		$select_group = array();		
 
-		# iterate related terms
-		$ar_related_section_tipo = common::get_ar_related_by_model('section', $tipo);
-		if (isset($ar_related_section_tipo[0])) {
+		$RecordObj_dd_component_tipo = new RecordObj_dd($tipo);
+		$component_tipo_properties 	= $RecordObj_dd_component_tipo->get_propiedades(true);
 
+		//get the properties of the component to get the section_tipo and components to search if no defined get it of the relation_terms of the component
+		if(isset($component_tipo_properties->source->search)){
+			$source_search = $component_tipo_properties->source->search;
+			foreach ($source_search as $current_search) {
+				if ($current_search->type === 'internal'){
+					$ar_related_section_tipo[] 	= $current_search->section_tipo;
+					$ar_terminos_relacionados 	=	$current_search->components;
+				}
+			}
+		}else{
+			# iterate related terms
+			$ar_related_section_tipo = common::get_ar_related_by_model('section', $tipo);
+			$ar_terminos_relacionados 	= RecordObj_dd::get_ar_terminos_relacionados($tipo, true, true);	
+		}
+
+		if (isset($ar_related_section_tipo[0])) {
 			# Create from related terms
 			$section_tipo 				= reset($ar_related_section_tipo); // Note override section_tipo here !
-			$ar_terminos_relacionados 	= RecordObj_dd::get_ar_terminos_relacionados($tipo, true, true);	
 			foreach ($ar_terminos_relacionados as $current_tipo) {
 				$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_tipo, true);
 				if (strpos($modelo_name,'component')!==0) continue;

@@ -167,6 +167,12 @@ body {
 	}
 
 
+// row_container
+	.row_container {
+
+	}
+
+
 // rows_container
 	.rows_container._numisdata3 {
 
@@ -279,7 +285,7 @@ body {
 			width: @down_width;
 		}
 		#button_submit {
-			width: @down_width;
+			width: @down_width - 0.5;
 			margin-right: 5px;
 		}
 	}
@@ -333,5 +339,30 @@ body {
 		}
 	}
 
-	
+// remove border on components showed in thesaurus
+	.wrap_ts_object .data_container .wrap_component {
+		border: none !important;
+	}
 
+	
+// row_used
+	.row_used {
+		transition: all 1s ease;
+		//transition: opacity 1s ease;
+		background-color: #ff9b00;
+    	opacity: 0.8 !important;
+
+		/*
+		&:after {
+			content: " ";
+			background-color: #ec8a0a;
+			color: #fff;
+			position: absolute;
+			right: 0;
+			top: 0;
+			width: 29px;
+			text-align: center;
+			height: 2em;
+			line-height: 2em;
+		}*/
+	}

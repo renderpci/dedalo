@@ -134,83 +134,103 @@ function add_children($json_data) {
 	$response->result 	= false;
 	$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
 
-	# set vars
-	$vars = array('section_tipo','section_id','node_type','tipo');
-		foreach($vars as $name) {
-			$$name = common::setVarData($name, $json_data);
-			# DATA VERIFY
-			#if ($name==='dato') continue; # Skip non mandatory
-			if (empty($$name)) {
-				$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty '.$name.' (is mandatory)';
-				return $response;
+	// set vars
+		$vars = array('section_tipo','section_id','node_type','tipo');
+			foreach($vars as $name) {
+				$$name = common::setVarData($name, $json_data);
+				# DATA VERIFY
+				#if ($name==='dato') continue; # Skip non mandatory
+				if (empty($$name)) {
+					$response->msg = 'Trigger Error: ('.__FUNCTION__.') Empty '.$name.' (is mandatory)';
+					return $response;
+				}
+			}
+
+	// new section. Create a new empty section
+		$new_section 	= section::get_instance(null,$section_tipo);
+		$new_section_id	= $new_section->Save();
+						if (empty($new_section_id)) {
+							#debug_log(__METHOD__." Error on create new section from parent. Stoped add_children process !".to_string(), logger::ERROR);
+							$response->msg 		= 'Error on create new section from parent. Stoped add_children process !';
+							return $response;
+						}
+
+	// section map
+		$section_map = hierarchy::get_section_map_elemets( $section_tipo );
+
+	// set new section component 'is_descriptor' value		
+		if (!isset($section_map['thesaurus']->is_descriptor)) {
+			debug_log(__METHOD__." Invalid section_map 'is_descriptor' property from section $section_tipo ".to_string($section_map), logger::DEBUG);
+		}else{
+			if ($section_map['thesaurus']->is_descriptor!==false) {
+				$component_tipo = $section_map['thesaurus']->is_descriptor;
+				$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+				$component 	 	= component_common::get_instance($modelo_name,
+																 $component_tipo,
+																 $new_section_id,
+																 'edit', // note mode edit autosave default value
+																 DEDALO_DATA_NOLAN,
+																 $section_tipo);
+				$component->get_dato();
+				debug_log(__METHOD__." Saved default dato to 'is_descriptor' component ($component_tipo : $modelo_name) on section_id: ".to_string($new_section_id), logger::DEBUG);
 			}
 		}
 
-	# NEW SECTION
-	# Create a new empty section
-	$new_section 	= section::get_instance(null,$section_tipo);
-	$new_section_id	= $new_section->Save();
-					if (empty($new_section_id)) {
-						#debug_log(__METHOD__." Error on create new section from parent. Stoped add_children process !".to_string(), logger::ERROR);
-						$response->msg 		= 'Error on create new section from parent. Stoped add_children process !';
-						return $response;
-					}
-
-
-	// set new section component 'is_indexable' value
-		$section_map = hierarchy::get_section_map_elemets( $section_tipo );
+	// is_indexable default value set
 		if (!isset($section_map['thesaurus']->is_indexable)) {
 			debug_log(__METHOD__." Invalid section_map 'is_indexable' property from section $section_tipo ".to_string($section_map), logger::DEBUG);
 		}else{
-
-			$component_tipo = $section_map['thesaurus']->is_indexable;
-			$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
-			$component 	 	= component_common::get_instance($modelo_name,
-															 $component_tipo,
-															 $new_section_id,
-															 'edit', // note mode edit autosave default value
-															 DEDALO_DATA_NOLAN,
-															 $section_tipo);
-			$component->get_dato();
+			if ($section_map['thesaurus']->is_indexable!==false) {
+				$component_tipo = $section_map['thesaurus']->is_indexable;
+				$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+				$component 	 	= component_common::get_instance($modelo_name,
+																 $component_tipo,
+																 $new_section_id,
+																 'edit', // note mode edit autosave default value
+																 DEDALO_DATA_NOLAN,
+																 $section_tipo);
+				$component->get_dato();
+				debug_log(__METHOD__." Saved default dato to 'is_indexable' component ($component_tipo : $modelo_name) on section_id: ".to_string($new_section_id), logger::DEBUG);
+			}
 		}
 
 
-	# COMPONENT_RELATION_CHILDREN
-	$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
-	if ($modelo_name!=='component_relation_children') {
-		$response->msg = 'Error on create new section from parent. Invalid model: '.$modelo_name.'. Expected: "component_relation_children" ';
-		return $response;
-	}	
-	$modo 			= 'edit';
-	$lang			= DEDALO_DATA_NOLAN;
-	$component_relation_children = component_common::get_instance($modelo_name,
-																  $tipo,
-																  $section_id,
-																  $modo,
-																  $lang,
-																  $section_tipo);
+	// component_relation_children
+		$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+		if ($modelo_name!=='component_relation_children') {
+			$response->msg = 'Error on create new section from parent. Invalid model: '.$modelo_name.'. Expected: "component_relation_children" ';
+			return $response;
+		}	
+		$modo 			= 'edit';
+		$lang			= DEDALO_DATA_NOLAN;
+		$component_relation_children = component_common::get_instance($modelo_name,
+																	  $tipo,
+																	  $section_id,
+																	  $modo,
+																	  $lang,
+																	  $section_tipo);
+	// add
+		$added = (bool)$component_relation_children->make_me_your_children( $section_tipo, $new_section_id );
+		if ($added===true) {
 
-	$added = (bool)$component_relation_children->make_me_your_children( $section_tipo, $new_section_id );
-	if ($added===true) {
+			# Save relation children data
+			$component_relation_children->Save();
 
-		# Save relation children data
-		$component_relation_children->Save();
+			# All is ok. Result is new created section section_id
+			$response->result  	= (int)$new_section_id;
+			$response->msg 		= 'Ok. Request done ['.__FUNCTION__.']';
 
-		# All is ok. Result is new created section section_id
-		$response->result  	= (int)$new_section_id;
-		$response->msg 		= 'Ok. Request done ['.__FUNCTION__.']';
-
-		# Debug
-		if(SHOW_DEBUG===true) {
-			$debug = new stdClass();
-				$debug->exec_time 	= exec_time_unit($start_time,'ms')." ms";			
-				foreach($vars as $name) {
-					$debug->{$name} = $$name;
+			// debug
+				if(SHOW_DEBUG===true) {
+					$debug = new stdClass();
+						$debug->exec_time 	= exec_time_unit($start_time,'ms')." ms";
+						foreach($vars as $name) {
+							$debug->{$name} = $$name;
+						}
+					$response->debug = $debug;
 				}
-			$response->debug = $debug;
 		}
-	}
-	
+		
 
 	return (object)$response;
 }//end add_children
@@ -248,22 +268,41 @@ function add_children_from_hierarchy($json_data) {
 							$response->msg = 'Trigger Error: ('.__FUNCTION__.') Error on create new section from parent. Stoped add_children process !';
 							return $response;
 						}
+	// section map
+		$section_map = hierarchy::get_section_map_elemets( $target_section_tipo );
+
+	// set new section component 'is_descriptor' value
+		if (!isset($section_map['thesaurus']->is_descriptor)) {
+			debug_log(__METHOD__." Invalid section_map 'is_descriptor' property from section $target_section_tipo ".to_string($section_map), logger::DEBUG);
+		}else{
+			if ($section_map['thesaurus']->is_descriptor!==false) {
+				$component_tipo = $section_map['thesaurus']->is_descriptor;
+				$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+				$component 	 	= component_common::get_instance($modelo_name,
+																 $component_tipo,
+																 $new_section_id,
+																 'edit', // note mode edit autosave default value
+																 DEDALO_DATA_NOLAN,
+																 $target_section_tipo);
+				$component->get_dato();
+			}
+		}
 
 	// set new section component 'is_indexable' value
-		$section_map = hierarchy::get_section_map_elemets( $section_tipo );
 		if (!isset($section_map['thesaurus']->is_indexable)) {
-			debug_log(__METHOD__." Invalid section_map 'is_indexable' property from section $section_tipo ".to_string($section_map), logger::DEBUG);
+			debug_log(__METHOD__." Invalid section_map 'is_indexable' property from section $target_section_tipo ".to_string($section_map), logger::DEBUG);
 		}else{
-
-			$component_tipo = $section_map['thesaurus']->is_indexable;
-			$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
-			$component 	 	= component_common::get_instance($modelo_name,
-															 $component_tipo,
-															 $new_section_id,
-															 'edit', // note mode edit autosave default value
-															 DEDALO_DATA_NOLAN,
-															 $section_tipo);
-			$component->get_dato();
+			if ($section_map['thesaurus']->is_indexable!==false) {
+				$component_tipo = $section_map['thesaurus']->is_indexable;
+				$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+				$component 	 	= component_common::get_instance($modelo_name,
+																 $component_tipo,
+																 $new_section_id,
+																 'edit', // note mode edit autosave default value
+																 DEDALO_DATA_NOLAN,
+																 $target_section_tipo);
+				$component->get_dato();
+			}
 		}
 
 	// component_relation_children

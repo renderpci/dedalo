@@ -884,7 +884,9 @@ class diffusion_mysql extends diffusion_sql  {
 			$response->result = true;
 			$response->msg 	  = "Deleted record section_id:$section_id, table:$table_name, all langs. Affected rows:".DBi::_getConnection_mysql()->affected_rows;
 		}
+		#debug_log(__METHOD__." response ".json_encode($response, JSON_PRETTY_PRINT), logger::DEBUG);
 
+		
 		return (object)$response;
 	}//end delete_sql_record
 	

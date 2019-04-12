@@ -1495,7 +1495,20 @@
 		Fixed error on tool_import_dedalo_csv when import modified_by_user and modified_date
 
 
-	
+	Valencia 26-02-2019 5.3.2
+		Fixed error on tool_image_versions when regular image_id is overwrited by external image_id
+
+
+	Valencia 28-02-2019 5.3.3
+		Fixed error on component_autocomplete_hi when any related section have missconfigurated property 'term' and is not found in section map thesaurus
+
+
+	Valencia 08-04-2019 5.4.0
+		Added publication (diffusion) info data to section. First publication date and user and last publication date and user
+		(!) Need structure version >= 08-04-2019 16:06 
+
+
+
 
 	WORK IN PROGRESS
 		component_date : mark as "red or similar" restricted an other terms based in x param..
@@ -1516,12 +1529,12 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.2.21a';
+	$DEDALO_VERSION = '5.4.7';
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '15-03-2019');
+	define('DEDALO_BUILD'	, '11-04-2019');
 
 
 	/*

@@ -21,31 +21,31 @@ require_once(dirname(dirname(dirname(dirname(dirname(__FILE__))))).'/tools/tool_
 class web_data {
 
 
-	# Version. Important!
-	#static $version = "1.0.4";  // 11-03-2017
-	#static $version = "1.0.6";  // 05-06-2017
-	#static $version = "1.0.8";  // 07-06-2017
-	#static $version = "1.0.9";  // 09-06-2017
-	#static $version = "1.0.10"; // 11-07-2017
-	#static $version = "1.0.11"; // 12-07-2017
-	#static $version = "1.0.12"; // 24-07-2017
-	#static $version = "1.0.13"; // 25-07-2017
-	#static $version = "1.0.14"; // 26-07-2017
-	#static $version = "1.0.15"; // 28-07-2017
-	#static $version = "1.0.16"; // 06-09-2017
-	#static $version = "1.0.17"; // 01-10-2017
-	#static $version = "1.0.18"; // 06-10-2017
-	#static $version = "1.0.20"; // 24-10-2017
-	#static $version = "1.0.21"; // 30-10-2017 
-	#static $version = "1.0.22"; // 19-12-2017
-	#static $version = "1.0.23";  // 20-12-2017
-	#static $version = "1.0.24";  // 16-01-2018 fixed get_thesaurus_root_list comma separated parents issue
-	#static $version = "1.0.25";  // 10-01-2018
-	#static $version = "1.0.26";  // 23-03-2018
-	#static $version = "1.0.27";  // 29-03-2018
-	#static $version = "1.0.28";  // 17-07-2018
-	#static $version = "1.0.29";  // 17-09-2018
-	static $version = "1.0.30";  // 13-11-2018
+	// Version. Important!
+		#static $version = "1.0.4";  // 11-03-2017
+		#static $version = "1.0.6";  // 05-06-2017
+		#static $version = "1.0.8";  // 07-06-2017
+		#static $version = "1.0.9";  // 09-06-2017
+		#static $version = "1.0.10"; // 11-07-2017
+		#static $version = "1.0.11"; // 12-07-2017
+		#static $version = "1.0.12"; // 24-07-2017
+		#static $version = "1.0.13"; // 25-07-2017
+		#static $version = "1.0.14"; // 26-07-2017
+		#static $version = "1.0.15"; // 28-07-2017
+		#static $version = "1.0.16"; // 06-09-2017
+		#static $version = "1.0.17"; // 01-10-2017
+		#static $version = "1.0.18"; // 06-10-2017
+		#static $version = "1.0.20"; // 24-10-2017
+		#static $version = "1.0.21"; // 30-10-2017 
+		#static $version = "1.0.22"; // 19-12-2017
+		#static $version = "1.0.23";  // 20-12-2017
+		#static $version = "1.0.24";  // 16-01-2018 fixed get_thesaurus_root_list comma separated parents issue
+		#static $version = "1.0.25";  // 10-01-2018
+		#static $version = "1.0.26";  // 23-03-2018
+		#static $version = "1.0.27";  // 29-03-2018
+		#static $version = "1.0.28";  // 17-07-2018
+		#static $version = "1.0.29";  // 17-09-2018
+		static $version = "1.0.30";  // 13-11-2018
 
 
 
@@ -208,7 +208,7 @@ class web_data {
 				}
 			}
 
-		#debug_log(__METHOD__." Executing query ".trim($strQuery), logger::ERROR);
+			#debug_log(__METHOD__." Executing query ".trim($strQuery), logger::ERROR);
 			#if (strpos($sql_options->sql_filter, 'Barcelona')!==false ) {		
 				#dump($sql_options->sql_filter, ' strQuery ++ +++++++++++++++++++++++++++++++++++++++++++++++++++++++++ '.to_string($strQuery));
 				#error_log($strQuery);
@@ -386,10 +386,10 @@ class web_data {
 		*/
 		private static function build_sql_where($lang, $sql_filter) {
 			$sql='';
-			$sql .= "\nWHERE section_id IS NOT NULL";
-								
+			$sql .= "\nWHERE section_id IS NOT NULL";			
+
 			# SQL_FILTER
-			if(!empty($sql_filter) AND strlen($sql_filter)>2 ) {
+			if(!empty($sql_filter) && strlen($sql_filter)>2 ) {
 				if($sql_filter===PUBLICACION_FILTER_SQL) {
 					$sql .= "\n$sql_filter";
 				}else{
@@ -1370,7 +1370,7 @@ class web_data {
 							$video_url 		= $av_path.'?vbegin='.floor($tcin_secs).'&vend='.ceil($tcout_secs);
 
 						// Subtitles url
-							$subtitles_url 	= subtitles::get_subtitles_url($options->av_section_id, $tcin_secs, $tcout_secs);
+							$subtitles_url 	= subtitles::get_subtitles_url($options->av_section_id, $tcin_secs, $tcout_secs, $options->lang);
 						
 						$result->fragm 			= $fragment_text_raw; //$fragment_text; [!IMPORTANTE: DEVOLVER TEXT RAW AQUÍ Y LIMPIAR ETIQUETAS EN EL RESULTADO FINAL !]
 						#$result->fragm_raw 	= $fragment_text_raw;
@@ -3269,6 +3269,13 @@ class web_data {
 					$options->order = "relevance DESC";
 				}
 
+				// sort by 'sort_id' always
+					if (empty($options->order)) {
+						$options->order = 'sort_id ASC';
+					}else{
+						$options->order .= ', sort_id ASC';
+					}
+
 				$search_options->lang 		= $options->lang;				
 				$search_options->order 		= $options->order;
 				$search_options->limit 		= $options->rows_per_page;
@@ -3339,245 +3346,253 @@ class web_data {
 		* @return array $ar_result
 		*/
 		public static function get_search_tipos($request_options) {
-		
+			#dump($request_options, ' request_options ++ '.to_string());
 			$options = new stdClass();
 				$options->ar_query 	= [];
 				$options->limit 	= 10;
+				$options->offset 	= null;
+				$options->count 	= false;
+				$options->total 	= false;
+				$options->order 	= null;
 				$options->operator 	= 'AND';
 				$options->lang 		= WEB_CURRENT_LANG_CODE;
 				foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}			
-
+		
 			$ar_monedas_filter = false;
 
+			// Filter
+				$filter = null;
+				if ($options->ar_query) {
+					$ar_filter = [];
 
-			#
-			# Filter
-			$filter = null;
-			if ($options->ar_query) {
-				$ar_filter = [];
+					foreach ($options->ar_query as $key => $value_obj) {
 
-				foreach ($options->ar_query as $key => $value_obj) {
+						$current_value = addslashes($value_obj->value);
+						$current_name  = $value_obj->name;					
 
-					$current_value = addslashes($value_obj->value);
-					$current_name  = $value_obj->name;					
+						if (!isset($value_obj->eq)) {
+							$value_obj->eq = 'LIKE';
+						}
 
-					if (!isset($value_obj->eq)) {
-						$value_obj->eq = 'LIKE';
-					}
+						switch ($value_obj->table) {
 
-					switch ($value_obj->table) {
-
-						// FICHERO . SUBQUERY
-						case 'fichero':
-							$fichero_options = new stdClass();								
-								$fichero_options->table  	 	= 'fichero';
-								$fichero_options->ar_fields  	= ['section_id'];
-								$fichero_options->lang  	 	= $options->lang;
-								$fichero_options->limit 		= 0;
-								$fichero_options->order 		= 'section_id ASC';
-								switch ($value_obj->eq) {
-									case '=':
-										$fichero_options->sql_filter = '`'.$value_obj->name."` = '".$current_value.'\'';
-										break;
-									default:
-										if ($value_obj->search_mode==='int') {
-											$fichero_options->sql_filter = '`'.$value_obj->name."` = ".(int)$current_value;
-										}else{
-											$fichero_options->sql_filter = '`'.$value_obj->name."` LIKE '%".$current_value."%'";
-										}
-										break;
-								}
-							$web_data = self::get_rows_data($fichero_options);
-
-							$monedas_ar_filter = [];
-							foreach ($web_data->result as $key => $row) {
-								$row = (object)$row;
-								$monedas_ar_filter[] = '`monedas` LIKE \'%"'.(int)$row->section_id.'"%\''; // Filter for table tipos
-								# Store for filter later
-								$ar_monedas_filter[] = $row->section_id;
-							}
-							
-							$ar_filter[$current_name][] = '('.implode(' OR ', $monedas_ar_filter).')';
-							break;
-
-						// TS_LUGAR_DE_HALLAZGO . SUBQUERY
-						case 'ts_lugar_de_hallazgo':
-							$lugar_de_hallazgo_options = new stdClass();
-								$lugar_de_hallazgo_options->table  	 	= $value_obj->table; //'ts_cultura';
-								$lugar_de_hallazgo_options->ar_fields  	= ['term_id'];
-								$lugar_de_hallazgo_options->lang  	 	= $options->lang;
-								$lugar_de_hallazgo_options->limit 		= 0;
-
-							switch ($value_obj->eq) {
-								case '=':
-									$lugar_de_hallazgo_options->sql_filter = '`'.$value_obj->name."` = '".$current_value.'\'';
-									break;
-								default:
-									if ($value_obj->search_mode==='int') {
-										$lugar_de_hallazgo_options->sql_filter = '`'.$value_obj->name."` = ".(int)$current_value;
-									}else{
-										$lugar_de_hallazgo_options->sql_filter = '`'.$value_obj->name."` LIKE '%".$current_value."%'";
+							// FICHERO . SUBQUERY
+							case 'fichero':
+								$fichero_options = new stdClass();								
+									$fichero_options->table  	 	= 'fichero';
+									$fichero_options->ar_fields  	= ['section_id'];
+									$fichero_options->lang  	 	= $options->lang;
+									$fichero_options->limit 		= 0;
+									$fichero_options->order 		= 'section_id ASC';
+									switch ($value_obj->eq) {
+										case '=':
+											$fichero_options->sql_filter = '`'.$value_obj->name."` = '".$current_value.'\'';
+											break;
+										default:
+											if ($value_obj->search_mode==='int') {
+												$fichero_options->sql_filter = '`'.$value_obj->name."` = ".(int)$current_value;
+											}else{
+												$fichero_options->sql_filter = '`'.$value_obj->name."` LIKE '%".$current_value."%'";
+											}
+											break;
 									}
-									break;
-							}
-							$web_data = self::get_rows_data($lugar_de_hallazgo_options);
-							
-							# Ahora buscamos en hallazgos, que es el que está conectado con ts_lugar_de_hallazgo
-							$hallazgos_filter = [];						
-							foreach ($web_data->result as $lugar_de_hallazgo_value) {
-								$lugar_de_hallazgo_value = (object)$lugar_de_hallazgo_value;
-								$hallazgos_filter[] = '`tipologia_dato` LIKE \'%"'.$lugar_de_hallazgo_value->term_id.'"%\'';
-							}						
-							$hallazgos_options = new stdClass();
-								$hallazgos_options->table  	 	= 'hallazgos'; //'ts_cultura';
-								$hallazgos_options->ar_fields  	= ['section_id'];
-								$hallazgos_options->lang  	 	= $options->lang;
-								$hallazgos_options->limit 		= 0;
-								$hallazgos_options->sql_filter 	= '('.implode(' OR ', $hallazgos_filter).')';
-							$web_data = self::get_rows_data($hallazgos_options);
-								#dump($web_data, ' $web_data ++ '.to_string($hallazgos_options));
+								$web_data = self::get_rows_data($fichero_options);
 
-							# Ahora buscamos en fichero, que es el que está conectado con hallazgos
-							$fichero_filter = [];						
-							foreach ($web_data->result as $hallazgos_value) {
-								$hallazgos_value = (object)$hallazgos_value;
-								$fichero_filter[] = '`hallazgo_dato` LIKE \'%"'.$hallazgos_value->section_id.'"%\'';
-							}
-							$fichero_options = new stdClass();
-								$fichero_options->table  	 	= 'fichero';
-								$fichero_options->ar_fields  	= ['section_id'];
-								$fichero_options->lang  	 	= $options->lang;
-								$fichero_options->limit 		= 0;
-								$fichero_options->sql_filter 	= '('.implode(' OR ', $fichero_filter).')';
-								$fichero_options->order 		= 'section_id ASC';
-							$web_data = self::get_rows_data($fichero_options);
-								#dump($web_data, ' $web_data ++ '.to_string($hallazgos_options));
+								$monedas_ar_filter = [];
+								foreach ($web_data->result as $key => $row) {
+									$row = (object)$row;
+									$monedas_ar_filter[] = '`monedas` LIKE \'%"'.(int)$row->section_id.'"%\''; // Filter for table tipos
+									# Store for filter later
+									$ar_monedas_filter[] = $row->section_id;
+								}
+								
+								$ar_filter[$current_name][] = '('.implode(' OR ', $monedas_ar_filter).')';
+								break;
 
-							$monedas_ar_filter = [];
-							foreach ($web_data->result as $key => $row_monedas) {
-								$row_monedas = (object)$row_monedas;
-								$monedas_ar_filter[] = '`monedas` LIKE \'%"'.(int)$row_monedas->section_id.'"%\''; // Filter for table tipos
-								# Store for filter later
-								$ar_monedas_filter[] = $row_monedas->section_id;
-							}
-							if(!empty($monedas_ar_filter))	$ar_filter[$current_name][] = '('.implode(' OR ', $monedas_ar_filter).')';
-							break;
+							// TS_LUGAR_DE_HALLAZGO . SUBQUERY
+							case 'ts_lugar_de_hallazgo':
+								$lugar_de_hallazgo_options = new stdClass();
+									$lugar_de_hallazgo_options->table  	 	= $value_obj->table; //'ts_cultura';
+									$lugar_de_hallazgo_options->ar_fields  	= ['term_id'];
+									$lugar_de_hallazgo_options->lang  	 	= $options->lang;
+									$lugar_de_hallazgo_options->limit 		= 0;
 
-						// TS_CULTURA . SUBQUERY
-						case 'ts_cultura':
-							$cultura_options = new stdClass();
-								$cultura_options->table  	 	= $value_obj->table; //'ts_cultura';
-								$cultura_options->ar_fields  	= ['term_id'];
-								$cultura_options->lang  	 	= $options->lang;
-								$cultura_options->limit 		= 0;
 								switch ($value_obj->eq) {
 									case '=':
-										$cultura_options->sql_filter = '`'.$value_obj->name."` = '".$current_value.'\'';
+										$lugar_de_hallazgo_options->sql_filter = '`'.$value_obj->name."` = '".$current_value.'\'';
 										break;
 									default:
 										if ($value_obj->search_mode==='int') {
-											$cultura_options->sql_filter = '`'.$value_obj->name."` = ".(int)$current_value;
+											$lugar_de_hallazgo_options->sql_filter = '`'.$value_obj->name."` = ".(int)$current_value;
 										}else{
-											$cultura_options->sql_filter = '`'.$value_obj->name."` LIKE '%".$current_value."%'";
+											$lugar_de_hallazgo_options->sql_filter = '`'.$value_obj->name."` LIKE '%".$current_value."%'";
 										}
 										break;
 								}
-							$web_data = self::get_rows_data($cultura_options);
-							foreach ($web_data->result as $key => $row) {
-								$row = (object)$row;
-								$ar_filter[$current_name][] = '`cultura` LIKE \'%"'.$row->term_id.'"%\''; // Filter for table tipos
-							}
-							break;
-						
-						// TIPOS . DIRECT
-						case 'tipos':
-						default:
-							if ($value_obj->name==='fecha_inicio' || $value_obj->name==='fecha_fin') {
-
-								if ($value_obj->name==='fecha_inicio') {
-									$ar_field = array_filter($options->ar_query,function($element){
-										return $element->name==='fecha_fin';
-									});
-									$ar_field = array_values($ar_field); # Reset keys
-									if (!empty($ar_field) && !empty($ar_field[0]->value)) {																		
-										# Existe valor de fecha_inicio
-										$ar_filter[$current_name][] = '(CAST(`fecha_inicio` AS INT) >= '.$current_value.')';
-										
-									}else{
-										$ar_filter[$current_name][] = '((`fecha_fin` IS NULL AND `fecha_inicio` = '.$current_value.') OR (CAST(`fecha_fin` AS INT) >= '.$current_value.' AND CAST(`fecha_inicio` AS INT) <= '.$current_value.'))';
-									}								
+								$web_data = self::get_rows_data($lugar_de_hallazgo_options);
 								
-								}elseif ($value_obj->name==='fecha_fin') {
-									
-									$ar_field = array_filter($options->ar_query,function($element){
-										return $element->name==='fecha_inicio';
-									});
-									$ar_field = array_values($ar_field); # Reset keys
-									if (!empty($ar_field) && !empty($ar_field[0]->value)) {																		
-										# Existe valor de fecha_inicio
-										$ar_filter[$current_name][] = '(CAST(`fecha_fin` AS INT) <= '.$current_value.')';
-									
-									}else{
-										# No hay fecha de inicio
-										$ar_filter[$current_name][] = '(`fecha_fin` = '.$current_value.')';
-									}									
-								}							
+								# Ahora buscamos en hallazgos, que es el que está conectado con ts_lugar_de_hallazgo
+								$hallazgos_filter = [];						
+								foreach ($web_data->result as $lugar_de_hallazgo_value) {
+									$lugar_de_hallazgo_value = (object)$lugar_de_hallazgo_value;
+									$hallazgos_filter[] = '`tipologia_dato` LIKE \'%"'.$lugar_de_hallazgo_value->term_id.'"%\'';
+								}						
+								$hallazgos_options = new stdClass();
+									$hallazgos_options->table  	 	= 'hallazgos'; //'ts_cultura';
+									$hallazgos_options->ar_fields  	= ['section_id'];
+									$hallazgos_options->lang  	 	= $options->lang;
+									$hallazgos_options->limit 		= 0;
+									$hallazgos_options->sql_filter 	= '('.implode(' OR ', $hallazgos_filter).')';
+								$web_data = self::get_rows_data($hallazgos_options);
+									#dump($web_data, ' $web_data ++ '.to_string($hallazgos_options));
 
-							}else{
-								switch ($value_obj->eq) {
-									case '=':
-										$ar_filter[$current_name][] = '`'.$value_obj->name."` = '".$current_value.'\'';
-										break;
-									case 'LIKE':
-									default:
-										if ($value_obj->search_mode==='int') {
-											$ar_filter[$current_name][] = '`'.$value_obj->name."` = ".(int)$current_value;
+								# Ahora buscamos en fichero, que es el que está conectado con hallazgos
+								$fichero_filter = [];						
+								foreach ($web_data->result as $hallazgos_value) {
+									$hallazgos_value = (object)$hallazgos_value;
+									$fichero_filter[] = '`hallazgo_dato` LIKE \'%"'.$hallazgos_value->section_id.'"%\'';
+								}
+								$fichero_options = new stdClass();
+									$fichero_options->table  	 	= 'fichero';
+									$fichero_options->ar_fields  	= ['section_id'];
+									$fichero_options->lang  	 	= $options->lang;
+									$fichero_options->limit 		= 0;
+									$fichero_options->sql_filter 	= '('.implode(' OR ', $fichero_filter).')';
+									$fichero_options->order 		= 'section_id ASC';
+								$web_data = self::get_rows_data($fichero_options);
+									#dump($web_data, ' $web_data ++ '.to_string($hallazgos_options));
+
+								$monedas_ar_filter = [];
+								foreach ($web_data->result as $key => $row_monedas) {
+									$row_monedas = (object)$row_monedas;
+									$monedas_ar_filter[] = '`monedas` LIKE \'%"'.(int)$row_monedas->section_id.'"%\''; // Filter for table tipos
+									# Store for filter later
+									$ar_monedas_filter[] = $row_monedas->section_id;
+								}
+								if(!empty($monedas_ar_filter))	$ar_filter[$current_name][] = '('.implode(' OR ', $monedas_ar_filter).')';
+								break;
+
+							// TS_CULTURA . SUBQUERY
+							case 'ts_cultura':
+								$cultura_options = new stdClass();
+									$cultura_options->table  	 	= $value_obj->table; //'ts_cultura';
+									$cultura_options->ar_fields  	= ['term_id'];
+									$cultura_options->lang  	 	= $options->lang;
+									$cultura_options->limit 		= 0;
+									switch ($value_obj->eq) {
+										case '=':
+											$cultura_options->sql_filter = '`'.$value_obj->name."` = '".$current_value.'\'';
+											break;
+										default:
+											if ($value_obj->search_mode==='int') {
+												$cultura_options->sql_filter = '`'.$value_obj->name."` = ".(int)$current_value;
+											}else{
+												$cultura_options->sql_filter = '`'.$value_obj->name."` LIKE '%".$current_value."%'";
+											}
+											break;
+									}
+								$web_data = self::get_rows_data($cultura_options);
+								foreach ($web_data->result as $key => $row) {
+									$row = (object)$row;
+									$ar_filter[$current_name][] = '`cultura` LIKE \'%"'.$row->term_id.'"%\''; // Filter for table tipos
+								}
+								break;
+							
+							// TIPOS . DIRECT
+							case 'tipos':
+							default:
+								if ($value_obj->name==='fecha_inicio' || $value_obj->name==='fecha_fin') {
+
+									if ($value_obj->name==='fecha_inicio') {
+										$ar_field = array_filter($options->ar_query,function($element){
+											return $element->name==='fecha_fin';
+										});
+										$ar_field = array_values($ar_field); # Reset keys
+										if (!empty($ar_field) && !empty($ar_field[0]->value)) {																		
+											# Existe valor de fecha_inicio
+											$ar_filter[$current_name][] = '(CAST(`fecha_inicio` AS INT) >= '.$current_value.')';
+											
 										}else{
-											$ar_filter[$current_name][] = '`'.$value_obj->name."` LIKE '%".$current_value."%'";
-										}
-										break;
-								}//end switch ($value_obj->eq)																				
-							}					
-							break;
-					}//end switch ($value_obj->table)
+											$ar_filter[$current_name][] = '((`fecha_fin` IS NULL AND `fecha_inicio` = '.$current_value.') OR (CAST(`fecha_fin` AS INT) >= '.$current_value.' AND CAST(`fecha_inicio` AS INT) <= '.$current_value.'))';
+										}								
+									
+									}elseif ($value_obj->name==='fecha_fin') {
+										
+										$ar_field = array_filter($options->ar_query,function($element){
+											return $element->name==='fecha_inicio';
+										});
+										$ar_field = array_values($ar_field); # Reset keys
+										if (!empty($ar_field) && !empty($ar_field[0]->value)) {																		
+											# Existe valor de fecha_inicio
+											$ar_filter[$current_name][] = '(CAST(`fecha_fin` AS INT) <= '.$current_value.')';
+										
+										}else{
+											# No hay fecha de inicio
+											$ar_filter[$current_name][] = '(`fecha_fin` = '.$current_value.')';
+										}									
+									}							
 
-				}//end if ($options->ar_query)
+								}else{
+									switch ($value_obj->eq) {
+										case '=':
+											$ar_filter[$current_name][] = '`'.$value_obj->name."` = '".$current_value.'\'';
+											break;
+										case 'LIKE':
+										default:
+											if ($value_obj->search_mode==='int') {
+												$ar_filter[$current_name][] = '`'.$value_obj->name."` = ".(int)$current_value;
+											}else{
+												$ar_filter[$current_name][] = '`'.$value_obj->name."` LIKE '%".$current_value."%'";
+											}
+											break;
+									}//end switch ($value_obj->eq)																				
+								}					
+								break;
+						}//end switch ($value_obj->table)
 
-				// Overrides ar_monedas_filter when is received search for 'fichero' section_id
-				$ar_fichero_section_id = array_filter($options->ar_query, function($element){
-					return ($element->table === 'fichero' && $element->name === 'section_id'); 
-				});
-				if (!empty($ar_fichero_section_id)) {
-					$ar_monedas_filter = []; // reset
-					foreach ($options->ar_query as $value_obj) {
-						$ar_monedas_filter[] = $value_obj->value;
+					}//end if ($options->ar_query)
+
+					// Overrides ar_monedas_filter when is received search for 'fichero' section_id
+					$ar_fichero_section_id = array_filter($options->ar_query, function($element){
+						return ($element->table === 'fichero' && $element->name === 'section_id'); 
+					});
+					if (!empty($ar_fichero_section_id)) {
+						$ar_monedas_filter = []; // reset
+						foreach ($options->ar_query as $value_obj) {
+							$ar_monedas_filter[] = $value_obj->value;
+						}
 					}
-				}
 
-				// Create final filter
-				$ar_filter_final = [];
-				foreach ($ar_filter as $current_name => $ar_value) {
-					$ar_filter_final[] = '('.implode(' OR ', $ar_value).')';
+					// Create final filter
+					$ar_filter_final = [];
+					foreach ($ar_filter as $current_name => $ar_value) {
+						$ar_filter_final[] = '('.implode(' OR ', $ar_value).')';
+					}
+					$filter = '('.implode(' '.$options->operator.' ', $ar_filter_final).')';
 				}
-				$filter = '('.implode(' '.$options->operator.' ', $ar_filter_final).')';
-			}
-			debug_log(__METHOD__." filter ".to_string($filter), 'DEBUG');
+				debug_log(__METHOD__." filter ".to_string($filter), 'DEBUG');
 			
+			// Search		
+				$tipos_options = new stdClass();
+					$tipos_options->table  	 	= 'tipos';
+					$tipos_options->lang  	 	= $options->lang;
+					$tipos_options->limit 		= (int)$options->limit;
+					$tipos_options->offset 		= $options->offset;
+					$tipos_options->count 		= ($options->total!==false) ? false : $options->count;
+					$tipos_options->order 		= $options->order;
+					$tipos_options->sql_filter 	= $filter;				
+					$tipos_options->resolve_portals_custom = new stdClass();
+						$tipos_options->resolve_portals_custom->autoridad_dato = 'personalidades';
+						$tipos_options->resolve_portals_custom->catalogo_dato  = 'catalogo';
 
-			# Search		
-			$tipos_options = new stdClass();
-				$tipos_options->table  	 	= 'tipos';
-				$tipos_options->lang  	 	= $options->lang;
-				$tipos_options->limit 		= 0;//(int)$options->limit;
-				$tipos_options->sql_filter 	= $filter;
-				$tipos_options->order 		= 'section_id ASC';
-				$tipos_options->resolve_portals_custom = new stdClass();
-					$tipos_options->resolve_portals_custom->autoridad_dato = 'personalidades';
-					$tipos_options->resolve_portals_custom->catalogo_dato  = 'catalogo';
+				# Http request in php to the API
+				$web_data = self::get_rows_data($tipos_options);
+					#dump($web_data, ' web_data ++ '.to_string());
 
-			# Http request in php to the API
-			$web_data = self::get_rows_data($tipos_options);
-				#dump($web_data, ' web_data ++ '.to_string());
+				// total . inject when value is already know
+					if ($options->total!==false) {
+						$web_data->total = $options->total;
+					}
 			
 			# Convert to object all row_tipo
 			$ar_tipos = [];
@@ -3587,7 +3602,7 @@ class web_data {
 
 
 			$cultura_section_tipo = 'cult1';
-			foreach ($ar_tipos as $key => $row_tipo) {				
+			foreach ($ar_tipos as $key => $row_tipo) {
 				if (empty($row_tipo->monedas)) continue;	
 
 				$monedas = json_decode($row_tipo->monedas);
@@ -3705,7 +3720,6 @@ class web_data {
 					}
 				}			
 			
-				
 			}//end foreach ($web_data->result as $key => $row_tipo)
 			#dump($web_data->result, '$web_data->result ++ '.to_string());
 
@@ -3715,6 +3729,7 @@ class web_data {
 
 			$response = new stdClass();
 				$response->result 	= $ar_result;
+				$response->total 	= isset($web_data->total) ? $web_data->total : null;
 				$response->msg 		= 'Ok. Request done!';
 
 			
@@ -3751,6 +3766,108 @@ class web_data {
 
 		return $response;
 	}//end get_ar_fragments_from_reel
+
+
+
+	/**
+	* GET_MENU_TREE_PLAIN
+	* @param object $request_options
+	* @return array $ar_data
+	*/
+	public static function get_menu_tree_plain( $request_options ) {
+
+		$response = new stdClass();
+			$response->result 	= false;
+			$response->msg 		= __METHOD__ .' Error. Request failed';
+
+		$options = new stdClass();
+			$options->table 	= null;
+			$options->fields 	= ['*'];
+			$options->term_id 	= null;
+			$options->lang 		= null;
+			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
+				#dump($options, ' options ++ '.to_string());
+
+		// search
+			$search_options = new stdClass();
+				$search_options->dedalo_get = 'records';
+				$search_options->lang 		= $options->lang;
+				$search_options->table 		= $options->table;
+				$search_options->ar_fields 	= $options->fields;
+				$search_options->sql_filter = '`parent` = \''.$options->term_id.'\'';
+				$search_options->order 		= '`norder` ASC';
+			$data = self::get_rows_data($search_options);
+				#dump($data, ' data ++ '.to_string($search_options));
+		
+		$ar_data = $data->result;	
+			#dump($ar_data, ' ar_data ++ '.to_string($term_id));
+
+		foreach ((array)$data->result as $key => $value) {
+
+			$value 		= (object)$value;
+			$childrens 	= json_decode($value->childrens);
+						
+			if (!empty($childrens)) {
+
+				$childrens_options = clone $options;
+					$childrens_options->term_id = $value->term_id;
+
+				$ar_data = array_merge($ar_data, self::get_menu_tree_plain($childrens_options)->result );
+			}
+		}
+		#dump($ar_data, ' ar_data ++ '.to_string());
+
+		// set response
+			$response->result 	= $ar_data;
+			$response->msg 		= 'Ok. Request done!';
+
+		return $response;
+	}//end get_menu_tree_plain
+
+
+
+	/**
+	* GET_COMBI
+	* @param object $request_options
+	*	Contains a set of calls to this class
+	*	Like: {
+	*		ar_calls : [
+	*			{ id : menu_all,
+	*			  options : options 
+	*			}
+	*		]
+	*	}
+	* @return object $response
+	*/
+	public static function get_combi( $request_options ) {
+		
+		$response = new stdClass();
+			$response->result 	= false;
+			$response->msg 		= __METHOD__ . ' Error. Request failed';
+
+		$ar_response = [];
+
+		// iterate all calls
+			foreach ($request_options->ar_calls as $call_obj) {				
+
+				// call to local static method 
+					$manager = new manager();
+					$current_response = $manager->manage_request($call_obj->options);
+
+				// inject id
+					$current_response->id = $call_obj->id;
+
+				// store response
+					$ar_response[] = $current_response;								
+			}
+
+
+		$response->result 	= $ar_response;
+		$response->msg 		= __METHOD__ . ' Ok. Request done';
+
+
+		return $response;
+	}//end get_combi
 
 
 

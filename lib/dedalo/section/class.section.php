@@ -287,7 +287,7 @@ class section extends common {
 
 		if(SHOW_DEBUG===true) {
 			#$start_time = start_time();
-			#global$TIMER;$TIMER[__METHOD__.'_OUT_'.$this->tipo.'_'.$this->modo.'_'.microtime(1)]=microtime(1);
+			#global$TIMER;$TIMER[__METHOD__.'_OUT_'.$this->tipo.'_'.$this->modo.'_'.microtime(1)]=microtime(1);			
 		}
 		
 		return $this->dato;
@@ -813,8 +813,8 @@ class section extends common {
 			$date_now = component_date::get_timestamp_now_for_db();
 		
 		// Save_handler different to database case
-		// Sometimes we need use section as temporal element without save real data to database. Is this case
-		// data is saved to session as temporal data and can be recovered from $_SESSION['dedalo4']['section_temp_data'] using key '$this->tipo.'_'.$this->section_id'
+			// Sometimes we need use section as temporal element without save real data to database. Is this case
+			// data is saved to session as temporal data and can be recovered from $_SESSION['dedalo4']['section_temp_data'] using key '$this->tipo.'_'.$this->section_id'
 			if (isset($this->save_handler) && $this->save_handler==='session') {
 				
 				$temp_data_uid 		= $this->tipo.'_'.$this->section_id;
@@ -855,7 +855,7 @@ class section extends common {
 					# Section modified date
 					$section_dato->modified_date 		= (string)$date_now;	# Format 2012-11-05 19:50:44
 			}
-	
+
 			# Save section dato
 				$JSON_RecordObj_matrix	= new JSON_RecordObj_matrix( (string)$matrix_table, (int)$this->section_id, (string)$tipo );
 				$JSON_RecordObj_matrix->set_datos($section_dato);
@@ -1129,15 +1129,16 @@ class section extends common {
 		}//end if ($this->id >= 1)	
 
 
-		# DEDALO_CACHE_MANAGER : reset caches
-		if( DEDALO_CACHE_MANAGER===true ) {
-			debug_log(__METHOD__." Deleted cache keys contains '$this->tipo' from section:Save method");
-			cache::del_contains( $this->tipo );
-		}
+		// dedalo_cache_manager : reset caches
+			if( DEDALO_CACHE_MANAGER===true ) {
+				debug_log(__METHOD__." Deleted cache keys contains '$this->tipo' from section:Save method");
+				cache::del_contains( $this->tipo );
+			}
 
-		if(SHOW_DEBUG===true) {
-			global$TIMER;$TIMER[__METHOD__.'_OUT_'.$this->tipo.'_'.$this->modo.'_'.microtime(1)]=microtime(1);
-		}		
+		// debug
+			if(SHOW_DEBUG===true) {
+				global$TIMER;$TIMER[__METHOD__.'_OUT_'.$this->tipo.'_'.$this->modo.'_'.microtime(1)]=microtime(1);
+			}		
 
 		return $this->section_id;
 	}//end Save
@@ -1276,7 +1277,7 @@ class section extends common {
 					#
 					# MEDIA
 					# Remove media files associated to this section
-					$this->remove_section_media_files();				
+					$this->remove_section_media_files();
 					
 
 					$logger_msg = "DEBUG INFO ".__METHOD__." Deleted section and children records. delete_mode $delete_mode";				
@@ -1289,7 +1290,10 @@ class section extends common {
 		if (SHOW_DEBUG) {			
 			debug_log(__METHOD__." Deleted section $this->section_id and their 'childrens'. delete_mode $delete_mode");
 		}
-		
+
+	
+		// publication . Remove published records in mysql, etc.
+			diffusion::delete_record($this->tipo, $this->section_id);
 
 
 		if( TOP_TIPO != $this->tipo ){
@@ -2135,13 +2139,31 @@ class section extends common {
 		
 		$section_info = new stdClass();
 		
-		$section_info->created_date 			= (string)$this->get_created_date();		
-		$section_info->created_by_user_name		= (string)$this->get_created_by_user_name();	
-		$section_info->modified_date 			= (string)$this->get_modified_date();
-		$section_info->modified_by_user_name	= (string)$this->get_modified_by_user_name();
+			$section_info->created_date 			= (string)$this->get_created_date();		
+			$section_info->created_by_user_name		= (string)$this->get_created_by_user_name();	
+			$section_info->modified_date 			= (string)$this->get_modified_date();
+			$section_info->modified_by_user_name	= (string)$this->get_modified_by_user_name();
 
-		$section_info->label					= (string)rawurlencode($this->get_label());
-		$section_info->section_id				= (string)$this->get_section_id();
+			$section_info->label					= (string)rawurlencode($this->get_label());
+			$section_info->section_id				= (string)$this->get_section_id();
+
+		// publication info
+			$section_info->publication_first 		= array(
+				'label' => RecordObj_dd::get_termino_by_tipo(diffusion::$publication_first_tipo, DEDALO_DATA_LANG, true, true),
+				'value' => $this->get_publication_date(diffusion::$publication_first_tipo)
+			);
+			$section_info->publication_last 		= array(
+				'label' => RecordObj_dd::get_termino_by_tipo(diffusion::$publication_last_tipo, DEDALO_DATA_LANG, true, true),
+				'value' => $this->get_publication_date(diffusion::$publication_last_tipo)
+			);
+			$section_info->publication_first_user 	= array(
+				'label' => null, // RecordObj_dd::get_termino_by_tipo(diffusion::$publication_first_user_tipo, DEDALO_DATA_LANG, true, true),
+				'value' => $this->get_publication_user(diffusion::$publication_first_user_tipo)
+			);
+			$section_info->publication_last_user 		= array(
+				'label' => null, // RecordObj_dd::get_termino_by_tipo(diffusion::$publication_last_user_tipo, DEDALO_DATA_LANG, true, true),
+				'value' => $this->get_publication_user(diffusion::$publication_last_user_tipo)
+			);
 
 		switch ($format) {
 			case 'json':
@@ -2155,6 +2177,82 @@ class section extends common {
 
 		return null;
 	}//end get_section_info
+
+
+
+	/**
+	* GET_PUBLICATION_DATE
+	* @return string $local_date
+	*/
+	public function get_publication_date($component_tipo) {
+
+		// tipos
+			#$component_tipo	= ($type==='first') ? diffusion::$publication_first_tipo : diffusion::$publication_last_tipo;
+			$section_id 	= $this->section_id;
+			$section_tipo 	= $this->tipo;
+		
+		// component 
+			$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+			$component 		= component_common::get_instance($modelo_name,
+															 $component_tipo,
+															 $section_id,
+															 'list',
+															 DEDALO_DATA_NOLAN,
+															 $section_tipo);
+			$dato = $component->get_dato();
+
+		// local_date
+			if (empty($dato)) {
+
+				$local_date = null;
+			
+			}else{
+
+				$current_date 	= reset($dato);	
+				$dd_date 		= new dd_date($current_date->start);
+				$timestamp 		= $dd_date->get_dd_timestamp();
+				$local_date 	= component_date::timestamp_to_date($timestamp, true);
+			}		
+
+		return $local_date;
+	}//end get_publication_date
+
+
+
+	/**
+	* GET_PUBLICATION_USER
+	* @return string $local_date
+	*/
+	public function get_publication_user($component_tipo) {
+
+		// tipos
+			$section_id 	= $this->section_id;
+			$section_tipo 	= $this->tipo;
+		
+		// component 
+			$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+			$component 		= component_common::get_instance($modelo_name,
+															 $component_tipo,
+															 $section_id,
+															 'list',
+															 DEDALO_DATA_NOLAN,
+															 $section_tipo);
+			$dato = $component->get_dato();
+
+		// user name
+			if (empty($dato)) {
+
+				$user_name = null;
+			
+			}else{
+				$user_id 	= reset($dato)->section_id;
+				#$user_name 	= section::get_user_name_by_userID($user_id);
+				$component_input_text = component_common::get_instance('component_input_text',DEDALO_USER_NAME_TIPO, $user_id, 'edit', DEDALO_DATA_NOLAN, DEDALO_SECTION_USERS_TIPO);
+				$user_name = $component_input_text->get_valor();
+			}		
+
+		return $user_name;
+	}//end get_publication_user
 
 
 
@@ -3425,9 +3523,9 @@ class section extends common {
 			// Debug
 				if(SHOW_DEBUG===true) {
 					$debug = new stdClass();
-						$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";					
-				}
-			$result->debug 	 = $debug;
+						$debug->exec_time	= exec_time_unit($start_time,'ms')." ms";
+					$result->debug = $debug;	
+				}			
 
 
 		return $result;

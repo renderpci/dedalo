@@ -482,13 +482,20 @@ class component_relation_common extends component_common {
 
 
 		# RELATIONS TABLE LINKS
-		if ($this->save_to_database_relations!==false) {		
-			$relation_options = new stdClass();
-				$relation_options->section_tipo 		= $section_tipo;
-				$relation_options->section_id 			= $parent;
-				$relation_options->from_component_tipo 	= $tipo;
-				$relation_options->ar_locators 			= $this->get_dato();
-			$propagate_response = search_development2::propagate_component_dato_to_relations_table($relation_options);
+		if ($this->save_to_database_relations!==false) {
+
+			$current_dato = $this->get_dato();
+
+			if (!empty($current_dato)) {			
+			
+				$relation_options = new stdClass();
+					$relation_options->section_tipo 		= $section_tipo;
+					$relation_options->section_id 			= $parent;
+					$relation_options->from_component_tipo 	= $tipo;
+					$relation_options->ar_locators 			= $current_dato;
+				
+				$propagate_response = search_development2::propagate_component_dato_to_relations_table($relation_options);
+			}
 		}
 
 
@@ -602,7 +609,7 @@ class component_relation_common extends component_common {
 				#$ar_parents = component_relation_parent::get_parents_recursive($locator->section_id, $locator->section_tipo);
 				# NOTE: get_parents_recursive is disabled because generate some problems to fix. For now we use only first parent
 				#$ar_parents	= component_relation_parent::get_parents($locator->section_id, $locator->section_tipo);					
-				$ar_parents   = component_relation_parent::get_parents_recursive($locator->section_id, $locator->section_tipo, $skip_root=true);			
+				$ar_parents   = component_relation_parent::get_parents_recursive($locator->section_id, $locator->section_tipo, $skip_root=true);	
 				#$n_ar_parents = count($ar_parents);
 					#dump($ar_parents, ' ar_parents ++ '.to_string($locator)); die();
 			
@@ -1678,36 +1685,91 @@ class component_relation_common extends component_common {
 			}
 
 		$filter_fields_data = [];
-		foreach ($filter_obj as $operator => $ar_filter) foreach ($ar_filter as $key => $current_filter) {
+		//source search components
+			if(isset($propiedades->source->search)){
+				$source_search = $propiedades->source->search;
 
-			$first_path 			= reset($current_filter->path);
-			$last_path 				= end($current_filter->path);
-			$base_component_tipo 	= $first_path->component_tipo;
-			$current_component_tipo = $last_path->component_tipo;
-			$current_section_tipo 	= $last_path->section_tipo;
-			$current_modelo_name 	= $last_path->modelo;			
-			$name 					= $last_path->name;
+				foreach ($source_search as $current_search) {
 
-			if (true===in_array($base_component_tipo, $ar_filters)) continue;
+					$current_section_tipo 	= $current_search->section_tipo;
+					$section_tipo_name 		= RecordObj_dd::get_termino_by_tipo($current_section_tipo,DEDALO_APPLICATION_LANG,true);
+					$RecordObj_dd 			= new RecordObj_dd($current_section_tipo);
+					$section_properties		= $RecordObj_dd->get_propiedades(true);
+					$search_engine 			= isset($section_properties->search_engine) ? $section_properties->search_engine : null;
 
-			// type_map
-				if (isset($propiedades->source->type_map->$base_component_tipo)) {
-					$type_map = $propiedades->source->type_map->$base_component_tipo;				
-				}else{
-					$type_map = array();
-				}				
+
+					foreach ($current_search->components as $current_component_tipo) {
+
+						$name 					= RecordObj_dd::get_termino_by_tipo($current_component_tipo,DEDALO_APPLICATION_LANG,true);
+						$current_modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($current_component_tipo,true);
+						$RecordObj_dd 			= new RecordObj_dd($current_component_tipo);
+						$section_properties		= $RecordObj_dd->get_propiedades(true);
+						$fields_map 			= isset($section_properties->fields_map) ? $section_properties->fields_map : null;
+
+
+						// type_map
+							if (isset($propiedades->source->type_map->$current_component_tipo)) {
+								$type_map = $propiedades->source->type_map->$current_component_tipo;				
+							}else{
+								$type_map = array();
+							}	
 				
+						// Element
+						$element = new stdClass();
+							$element->section_tipo 	= $current_section_tipo;
+							$element->section_tipo_name 	= $section_tipo_name;
+							$element->tipo 			= $current_component_tipo;
+							$element->name 			= $name;
+							$element->modelo_name 	= $current_modelo_name;
+							$element->type_map 		= $type_map;
+							$element->base_component_tipo 		= $current_component_tipo;
+							$element->search_engine = $search_engine;
+							$element->fields_map 	= $fields_map;
 
-			// Element
-				$element = new stdClass();
-					$element->tipo 			= $current_component_tipo;
-					$element->name 			= $name;
-					$element->modelo_name 	= $current_modelo_name;
-					$element->type_map 		= $type_map;
-					$element->base_component_tipo 		= $base_component_tipo;
+						$filter_fields_data[] = $element;
+					}
+					
+				}
+			}else{
 
-				$filter_fields_data[] = $element;
-		}
+				// relation terms
+				foreach ($filter_obj as $operator => $ar_filter) foreach ($ar_filter as $key => $current_filter) {
+
+					$first_path 			= reset($current_filter->path);
+					$last_path 				= end($current_filter->path);
+					$base_component_tipo 	= $first_path->component_tipo;
+					$base_section_tipo 		= $first_path->section_tipo;
+					$section_tipo_name		= RecordObj_dd::get_termino_by_tipo($base_section_tipo,DEDALO_APPLICATION_LANG,true);
+					$current_component_tipo = $last_path->component_tipo;
+					$current_section_tipo 	= $last_path->section_tipo;
+					$current_modelo_name 	= $last_path->modelo;			
+					$name 					= $last_path->name;
+
+					if (true===in_array($base_component_tipo, $ar_filters)) continue;
+
+					// type_map
+						if (isset($propiedades->source->type_map->$base_component_tipo)) {
+							$type_map = $propiedades->source->type_map->$base_component_tipo;				
+						}else{
+							$type_map = array();
+						}				
+						
+					// Element
+						$element = new stdClass();
+							$element->section_tipo 	= $base_section_tipo;
+							$element->section_tipo_name 	= $section_tipo_name;
+							$element->tipo 			= $current_component_tipo;
+							$element->name 			= $name;
+							$element->modelo_name 	= $current_modelo_name;
+							$element->type_map 		= $type_map;
+							$element->base_component_tipo 		= $base_component_tipo;
+							$element->search_engine = "search_dedalo";
+
+						$filter_fields_data[] = $element;
+				}
+
+
+			}
 
 
 		return $filter_fields_data;

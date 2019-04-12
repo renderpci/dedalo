@@ -391,7 +391,7 @@ class component_relation_parent extends component_relation_common {
 					$lkey = $current_locator->section_tipo.'_'.$current_locator->section_id;
 					if (array_key_exists($lkey, $locators_resolved)) {
 						#debug_log(__METHOD__." SKIPPED $section_id, $section_tipo . Skipped resolution ".to_string(), logger::ERROR);
-						#$parents_recursive = array_merge($parents_recursive, $locators_resolved[$lkey]);
+						$parents_recursive = array_merge($parents_recursive, $locators_resolved[$lkey]);
 						continue;
 					}			
 

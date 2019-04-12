@@ -1,0 +1,57 @@
+// Vars
+@common_css: "../../../common/css";
+
+// Usage
+@import "@{common_css}/library.less";
+
+
+
+
+// toool wrapper
+	.user_admin_wrapper {
+		margin: 5em;
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+		grid-column-gap: 2rem;
+		padding: 2rem;		
+		border: 1px solid #eeeeee;
+
+		@media screen and (max-width: @tablet_max_width) { // 980px
+			grid-template-columns: 1fr;
+		}
+
+		>section {
+			position: relative;
+			float: left;
+			padding: 5px;
+			border: none;
+			margin: 0;
+			min-height: 2.333em;
+			width: 100%;
+			margin-bottom: 0.5em;
+			margin-top: 0.5em;
+			border: 1px solid #eeeeee;
+			padding-top: 8px;
+
+			.wrap_component.css_wrap_section_id_edit {
+				background-color: unset;
+				color: unset !important;
+				border-radius: unset;
+				min-height: unset;
+				width: 100%;
+				border: unset;
+
+				>.content_data {
+					width: unset;
+				}
+			}
+
+			>.tool {
+				display: flex;
+				flex-flow: row-reverse;
+				width: 100%;
+				padding: 0.5rem;
+			}
+		}
+	}
+	    

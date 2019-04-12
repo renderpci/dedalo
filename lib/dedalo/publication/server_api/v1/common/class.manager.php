@@ -40,6 +40,13 @@ class manager {
 		$dedalo_get  = $options->dedalo_get;
 		switch ($options->dedalo_get) {
 
+			## RECORDS ##
+			case 'records':
+				#
+				# Execute data retrieving
+				$dedalo_data = (object)web_data::get_rows_data( $options );
+				break;
+
 			## INFO ##
 			case 'tables_info':
 				#
@@ -53,15 +60,7 @@ class manager {
 				# Execute data retrieving
 				# $dedalo_data = (array)web_data::get_full_publication_schema( );
 				$dedalo_data = (array)web_data::get_publication_schema( );
-				break;
-
-
-			## RECORDS ##
-			case 'records':
-				#
-				# Execute data retrieving
-				$dedalo_data = (object)web_data::get_rows_data( $options );
-				break;
+				break;			
 
 			
 			## THESAURUS ##
@@ -176,6 +175,18 @@ class manager {
 				# Execute data retrieving
 				$dedalo_data = (object)web_data::get_image_data( $options );
 				break;
+
+			case 'menu_tree_plain':
+				#
+				# Execute data retrieving
+				$dedalo_data = (object)web_data::get_menu_tree_plain( $options );
+				break;
+
+			case 'combi':
+				#
+				# Execute data retrieving
+				$dedalo_data = (object)web_data::get_combi( $options );
+				break;	
 
 			default:
 				$dedalo_data = new stdClass();

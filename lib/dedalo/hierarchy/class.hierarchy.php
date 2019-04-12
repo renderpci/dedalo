@@ -1398,11 +1398,11 @@ class hierarchy {
 
 		foreach ($ar_elements as $object_value) {
 			if (property_exists($object_value, $type)) {
-				$element_tipo = $object_value->$type;
+				$element_tipo = $object_value->{$type};
 				break;
 			}
 		}
-		#dump($element_tipo, ' element_tipo ++ '.to_string());		
+		#dump($element_tipo, ' element_tipo ++ '.$type.' - '.to_string($section_tipo));		
 
 		return $element_tipo;
 	}//end get_element_tipo_from_section_map
@@ -1466,7 +1466,7 @@ class hierarchy {
 			$ar_elements = (array)$ar_propiedades;		
 			#debug_log(__METHOD__." ar_propiedades ".to_string($ar_propiedades), logger::DEBUG);
 		}
-
+	
 		# Set static var for reuse
 		$section_map_elemets[$section_tipo] = $ar_elements;
 		#debug_log(__METHOD__." ar_elements $section_tipo - ".to_string($ar_elements), logger::DEBUG);
@@ -1709,6 +1709,50 @@ class hierarchy {
 
 		return $hierarchy_type;
 	}//end get_hierarchy_type_from_section_tipo
+
+
+	/**
+	* GET_HIERARCHY_SECTION
+	* @param $section_tipo
+	*	Source section_tipo
+	* @param $hierarchy_component_tipo
+	*	Target component tipo where search section_tipo
+	* @return int $section_id | null
+	*/
+	public static function get_hierarchy_section($section_tipo, $hierarchy_component_tipo) {
+		
+		$model = RecordObj_dd::get_modelo_name_by_tipo($hierarchy_component_tipo,true); 
+
+		// search query object
+			$search_query_object = json_decode('{
+			  "section_tipo": "'.DEDALO_HIERARCHY_SECTION_TIPO.'",
+			  "filter": {
+			    "$and": [
+			      {
+			        "q": "'.$section_tipo.'",
+			        "path": [
+			          {
+			            "section_tipo": "'.DEDALO_HIERARCHY_SECTION_TIPO.'",
+			            "component_tipo": "'.$hierarchy_component_tipo.'",
+			            "modelo": "'.$model.'",
+			            "name": "'.$model.' '.$hierarchy_component_tipo.'"
+			          }
+			        ]
+			      }
+			    ]
+			  }
+			}');
+
+		// search
+			$search_development2 = new search_development2($search_query_object);
+			$search_result 		 = $search_development2->search();
+			$record 		 	 = reset($search_result->ar_records);		
+		
+		// section id
+			$section_id = isset($record->section_id) ? $record->section_id : null;
+		
+		return $section_id;	
+	}//end get_hierarchy_section
 
 
 

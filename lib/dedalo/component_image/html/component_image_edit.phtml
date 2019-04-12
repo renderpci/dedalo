@@ -48,7 +48,8 @@
 				# IMAGE NOT EXISTS. PLACE DEDALO IMAGE WITH LINK TO DEFAULT TOOL
 				if (component_security_tools::is_authorized_tool_for_logged_user('tool_upload') &&
 					!$this->ImageObj->get_file_exists() &&
-					!$this->get_original(DEDALO_IMAGE_QUALITY_ORIGINAL,false)
+					!$this->get_original(DEDALO_IMAGE_QUALITY_ORIGINAL,false) &&
+					$permissions>=2
 					) {
 					$open_tool_default .= "data-image_id=\"$image_id\" ";
 					$open_tool_default .= "data-quality=\"".DEDALO_IMAGE_QUALITY_ORIGINAL."\" ";
