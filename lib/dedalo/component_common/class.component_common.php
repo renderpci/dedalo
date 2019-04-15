@@ -1955,16 +1955,21 @@ abstract class component_common extends common {
 																	 $section_tipo);
 				$dato = $component->get_dato();
 
-				// resolve base_value object
-					$base_value = reset($dato);
-				// replaces locator from_component_tipo with path info
-					$base_value->from_component_tipo = reset($current_element->path)->component_tipo;
-					
+				if(!empty($dato)){
 
-			// filter item
-				$item = new stdClass();
-					$item->q 	= $base_value;
-					$item->path = $current_element->path;
+					// resolve base_value object
+						$base_value = reset($dato);
+					// replaces locator from_component_tipo with path info
+						$base_value->from_component_tipo = reset($current_element->path)->component_tipo;
+
+				}else{
+						$base_value = [];
+				}
+
+					// filter item
+						$item = new stdClass();
+							$item->q 	= $base_value;
+							$item->path = $current_element->path;
 
 			$ar_filter_items[] = $item;
 		}
