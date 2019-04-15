@@ -1508,6 +1508,14 @@
 		(!) Need structure version >= 08-04-2019 16:06 
 
 
+	Valencia 11-04-2019 5.4.8
+		Added new component layout render_layout_map engine in test develop mode
+
+
+	Valencia 15-04-2019 5.4.11
+		Fixed error on tool import files thats not show correctly the temporal section
+
+
 
 
 	WORK IN PROGRESS
@@ -1529,12 +1537,12 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.4.7';
+	$DEDALO_VERSION = '5.4.11';
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '11-04-2019');
+	define('DEDALO_BUILD'	, '15-04-2019');
 
 
 	/*

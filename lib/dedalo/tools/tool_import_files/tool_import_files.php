@@ -114,17 +114,17 @@
 							$propiedades->ar_tools_name->tool_import_files = $custom_params->tool_import_files;
 						}				
 
-						# Import mode (default is 'default')
-						$import_mode = isset($propiedades->ar_tools_name->tool_import_files->import_mode) ? $propiedades->ar_tools_name->tool_import_files->import_mode : 'default';
+						// import mode (default is 'default')
+							$import_mode = isset($propiedades->ar_tools_name->tool_import_files->import_mode) ? $propiedades->ar_tools_name->tool_import_files->import_mode : 'default';
+							# parent is tmp on import_mode 'section' because is general import
+							if ($import_mode==='section') {
+								$parent = DEDALO_SECTION_ID_TEMP; // 'tmp';
+							}
 
 						# Target section tipo						
 						$target_section_tipo = $component_obj->get_ar_target_section_tipo()[0];
 						
-						# parent is tmp on import_mode section because is general import
-						if ($import_mode==='section') {
-							$parent = DEDALO_SECTION_ID_TEMP; // 'tmp';							
-						}						
-
+						
 						# Target component (portal)
 						$target_component  = $propiedades->ar_tools_name->tool_import_files->target_component;
 
