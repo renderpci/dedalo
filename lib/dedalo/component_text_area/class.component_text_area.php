@@ -2547,12 +2547,12 @@ class component_text_area extends component_common {
     			$query_object->unaccent = true;
 				break;
 			# LITERAL
-			case (substr($q, 0, 1)==='\"' && substr($q, -1)==='\"'):
-				$operator = '~';
-				$q_clean  = str_replace('\"', '', $q);
+			case (substr($q, 0, 1)==='"' && substr($q, -1)==='"'):
+				$operator = '~*';
+				$q_clean  = str_replace('"', '', $q);
 				$query_object->operator = $operator;
-				$query_object->q_parsed	= '\'.*"'.$q_clean.'".*\'';
-				$query_object->unaccent = false;
+				$query_object->q_parsed	= '\'.*'.$q_clean.'.*\'';
+				$query_object->unaccent = true;
 				break;
 			# CONTAIN
 			default:
@@ -2567,6 +2567,7 @@ class component_text_area extends component_common {
 
         return $query_object;
 	}//end resolve_query_object_sql
+
 
 
 	/**
