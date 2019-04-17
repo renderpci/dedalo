@@ -140,39 +140,44 @@ class section extends common {
 			#global$TIMER;$TIMER[__METHOD__.'_' .$section_name.'_IN_'.$tipo.'_'.$modo.'_'.$section_id.'_'.microtime(1)]=microtime(1);
 		}
 
-		# Set general vars
-		$this->section_id 	= $section_id;
-		$this->tipo 		= $tipo;
-		$this->modo 		= $modo;
-		$this->parent 		= 0;
+		// Set general vars
+			$this->section_id 	= $section_id;
+			$this->tipo 		= $tipo;
+			$this->modo 		= $modo;
+			$this->parent 		= 0;
 
 
-		# When tipo is set, calculate structure data
-		parent::load_structure_data();
+		// load_structure_data. When tipo is set, calculate structure data
+			parent::load_structure_data();
 
-		/*
-			# Relaciones
-			$relaciones = $this->RecordObj_dd->get_relaciones()[0];
+		
+		# Relaciones
+			#	$relaciones = $this->RecordObj_dd->get_relaciones()[0];
+			#
+			#	if(!empty($relaciones)) {
+			#		foreach ($relaciones as $key => $value) {
+			#			$modelo 	= RecordObj_dd::get_termino_by_tipo($key);
+			#			if($modelo=='section')
+			#			$this->tipo = $value;
+			#		}
+			#	}
+		
+	
+		// active_section_section_id : Set global var
+			if($modo==='edit'
+			 	&& ($this->section_id>0 || strpos($this->section_id, DEDALO_SECTION_ID_TEMP)!==false)
+				&& !isset(section::$active_section_id) ) {
 
-			if(!empty($relaciones)) {
-				foreach ($relaciones as $key => $value) {
-					$modelo 	= RecordObj_dd::get_termino_by_tipo($key);
-					if($modelo=='section')
-					$this->tipo = $value;
-				}
+					// fix active_section_id
+						section::$active_section_id = $this->get_section_id();
 			}
-		*/
+		
+		// debug
+			if(SHOW_DEBUG===true) {
+				#global$TIMER;$TIMER[__METHOD__.'_' .$section_name.'_OUT_'.$tipo.'_'.$modo.'_'.$section_id.'_'.microtime(1)]=microtime(1);				
+			}
 
-		# ACTIVE_SECTION_section_id : Set global var
-		if($modo==='edit'
-		 	&& ($this->section_id>0 || strpos($this->section_id, DEDALO_SECTION_ID_TEMP)!==false)
-			&& !isset(section::$active_section_id) ) {
-				section::$active_section_id = $this->get_section_id();
-		}
-
-		if(SHOW_DEBUG===true) {
-			#global$TIMER;$TIMER[__METHOD__.'_' .$section_name.'_OUT_'.$tipo.'_'.$modo.'_'.$section_id.'_'.microtime(1)]=microtime(1);
-		}
+		return true;
 	}//end __construct
 	
 
@@ -181,18 +186,18 @@ class section extends common {
 	* GET DATO
 	*/
 	public function get_dato() {
-
+	
 		# If section_id have a temporal string the save hander will be 'session' the section will save into the menory NOT to database
 		if( strpos($this->section_id, DEDALO_SECTION_ID_TEMP)!==false ){
 			$this->save_handler = 'session';
-		}
+		}			
+		
 
 		#
 		# SAVE_HANDLER DIFFERENT TO DATABASE CASE
 		# Sometimes we need use section as temporal element without save real data to database. Is this case
 		# data is saved to session as temporal data and can be recovered from $_SESSION['dedalo4']['section_temp_data'] using key '$this->tipo.'_'.$this->section_id'
-		if (isset($this->save_handler) && $this->save_handler==='session') {
-		
+		if (isset($this->save_handler) && $this->save_handler==='session') {		
 
 			if (!isset($this->dato)) {
 

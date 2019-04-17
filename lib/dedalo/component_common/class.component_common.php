@@ -4133,7 +4133,8 @@ abstract class component_common extends common {
 
 	/**
 	* SPLIT_QUERY
-	* @return 
+	* @param object $query_object
+	* @return array $ar_query_object
 	*/
 	public static function split_query($query_object) {
 		
@@ -4145,7 +4146,8 @@ abstract class component_common extends common {
 			$search_value = json_encode($search_value);
 		}
 
-		$operator_between = '$or';
+		#$operator_between = '$or';
+		$operator_between = '$and';
 			
 		# JSON CASE
 		if ($json_value = json_decode($search_value)) {			
