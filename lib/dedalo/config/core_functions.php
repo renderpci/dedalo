@@ -323,7 +323,7 @@ function get_last_modification_date($path, $allowedExtensions=null, $ar_exclude=
 * @param string $path
 * @return string $last_modified_file
 */
-function get_last_modified_file($path) {
+function get_last_modified_file($path, $allowed_extensions) {
 	
 	// First we set up the iterator 
 		$iterator 			= new RecursiveDirectoryIterator($path);
@@ -334,6 +334,11 @@ function get_last_modified_file($path) {
 
 	// Then we walk through all the files inside all folders in the base folder 
 		foreach ($directory_iterator as $name => $object) {
+			
+			$ar_bits = explode(".", $name);
+			$extension = end($ar_bits);
+			if (!in_array($extension, $allowed_extensions)) continue;
+
 			// In the first iteration, we set the $lastModified 
 			if (empty($last_modified_file)) {
 				$last_modified_file = $name;
