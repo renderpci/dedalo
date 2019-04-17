@@ -1737,7 +1737,7 @@ class tool_administration extends tool_common {
 			$allowed_extensions = ['backup'];
 
 		// call to core function
-			$last_modified_file = get_last_modified_file($path, $allowed_extensions);	
+			$last_modified_file = get_last_modified_file($path, $allowed_extensions);
 		
 
 		return $last_modified_file;
