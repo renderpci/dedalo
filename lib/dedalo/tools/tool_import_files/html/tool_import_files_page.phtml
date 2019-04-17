@@ -181,20 +181,21 @@
 	#
 	# FORM (Temporal section)
 		# Note that current section_id received in get url is like 'tmp1'. Section change automatically save_handler (to 'session') for manage this cases as temporal section		
-		$temp_id 			= DEDALO_SECTION_ID_TEMP.'_'.$parent.'_'.$user_id;
+		$temp_id 			= DEDALO_SECTION_ID_TEMP.'_'.$component_obj->get_parent().'_'.$user_id;
+		#$temp_id 			= $parent.'_'.$user_id;	
 		$temp_section_tipo  = $target_section_tipo; // Default
 		if ($import_mode==='section') {
 			$temp_section_tipo = $section_tipo;
 			#dump($section_tipo, ' section_tipo ++ '.to_string());
 		}
 		$section = section::get_instance($temp_id, $temp_section_tipo, 'edit');
+		$section->get_dato(); // 'get_dato' force update section->save_handler (!)
 
 		# Add custom layout map defined in propiedades of current component portal
 		if (!empty($custom_layout_map)) {
 			$section->layout_map = $custom_layout_map;	// Inject custom layout map fron propiedades
-		}		
+		}
 		$section->show_inspector = (bool)false;
-			
 		
 		# Check params
 			#dump($custom_params, ' custom_params ++ '.to_string());
