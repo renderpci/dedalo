@@ -318,6 +318,45 @@ function get_last_modification_date($path, $allowedExtensions=null, $ar_exclude=
 
 
 
+/**
+* GET_LAST_MODIFIED_FILE
+* @param string $path
+* @return string $last_modified_file
+*/
+function get_last_modified_file($path) {
+	
+	// First we set up the iterator 
+		$iterator 			= new RecursiveDirectoryIterator($path);
+		$directory_iterator = new RecursiveIteratorIterator($iterator);
+
+	// Sets a var to receive the last modified filename 
+		$last_modified_file = "";
+
+	// Then we walk through all the files inside all folders in the base folder 
+		foreach ($directory_iterator as $name => $object) {
+			// In the first iteration, we set the $lastModified 
+			if (empty($last_modified_file)) {
+				$last_modified_file = $name;
+			}else{
+				$date_modified_candidate = filemtime($last_modified_file);
+				$date_modified_current 	 = filemtime($name);
+
+				// If the file we thought to be the last modified was modified before the current one, then we set it to the current 
+				if ($date_modified_candidate < $date_modified_current) {
+					$last_modified_file = $name;
+				}
+			}
+		}
+	// If the $last_modified_file isn't set, there were no files we throw an exception 
+		if (empty($last_modified_file)) {
+			throw new Exception("No files in the directory");
+		}
+
+	return $last_modified_file;
+}//end get_last_modified_file
+
+
+
 # CRIPTO : if (!function_exists('mcrypt_encrypt'))
 function dedalo_encrypt_openssl($stringArray, $key=DEDALO_INFORMACION) {
 	
