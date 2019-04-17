@@ -288,7 +288,7 @@ function remove_server_dato_of_hidden_components($json_data){
 		$response->msg 		= 'Error. Request failed ['.__FUNCTION__.']';
 
 	// vars 
-		$vars = array('section_id','ar_section_group','lang','modo','section_tipo');
+		$vars = array('section_id','ar_group','lang','modo','section_tipo');
 			foreach($vars as $name) {
 				$$name = common::setVarData($name, $json_data);
 				# DATA VERIFY
@@ -299,11 +299,11 @@ function remove_server_dato_of_hidden_components($json_data){
 			}
 	//create the section group
 
-		foreach ($ar_section_group as $current_tipo) {
+		foreach ($ar_group as $current_tipo) {
 			//get the childrens of the current section group
 			$ar_recursive_childrens = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($current_tipo, 'component_', 'children_recursive', $search_exact=false);
 
-				dump($ar_recursive_childrens);
+				#dump($ar_recursive_childrens);
 			foreach ($ar_recursive_childrens as $current_tipo) {
 		
 				$modelo_name 	= RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
