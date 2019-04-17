@@ -15,14 +15,15 @@
 
 			// section info
 				$section_tipo = DEDALO_SECTION_USERS_TIPO; 
-				$section_id   = navigator::get_user_id(); // current logged user
+				$section_id   = navigator::get_user_id();  // current logged user
+				$user_name 	  = navigator::get_username(); // current logged username
 		
-				#dump(intval($section_id), ' section_id ++ '.to_string());
-				if (intval($section_id)<1) {
-					
-					echo '<span class="error">Error. Invalid user!</span>';
-					return null;
-				}
+				// avoid acces of user root and demo to this tool
+					$ar_skip_users = ['root','dedalo','demo'];
+					if (intval($section_id)<1 || in_array($user_name, $ar_skip_users)) {
+						echo '<span class="error">Error. Invalid user '.$user_name.' !</span>';
+						return null;
+					}
 
 			// user section components
 				$ar_components = [
@@ -41,7 +42,6 @@
 				js::$ar_url[]  = DEDALO_LIB_BASE_URL . '/tools/' . get_class($this).  '/js/' . get_class($this) . '.js';
 
 				js::$ar_url[] = DEDALO_LIB_BASE_URL."/section/js/section.js";
-
 
 			break;
 	}//end switch	

@@ -238,6 +238,12 @@ function load_component_by_ajax($json_data) {
 		if (!empty($arguments)) {
 			$component_obj->set_arguments($arguments);
 		}
+
+	// tool user admin case
+		$user_id = navigator::get_user_id();
+		if ( $section_tipo===DEDALO_SECTION_USERS_TIPO && $user_id==$parent && $tipo===DEDALO_USER_IMAGE_TIPO ) {
+			$component_obj->permissions = 2;
+		}
 		
 	// html. Get component html
 		# $arguments = new stdClass();

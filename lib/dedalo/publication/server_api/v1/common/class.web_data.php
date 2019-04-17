@@ -3541,8 +3541,22 @@ class web_data {
 										default:
 											if ($value_obj->search_mode==='int') {
 												$ar_filter[$current_name][] = '`'.$value_obj->name."` = ".(int)$current_value;
-											}else{
-												$ar_filter[$current_name][] = '`'.$value_obj->name."` LIKE '%".$current_value."%'";
+											}else{												
+												switch ($value_obj->name) {
+													case 'leyenda':
+														$filter  = "CONCAT_WS(' ', `leyenda_anverso`, `leyenda_reverso`) LIKE '%".trim($current_value)."%'";
+														$filter .= " AND LENGTH(CONCAT_WS('', `leyenda_anverso`, `leyenda_reverso`))>3";
+														$ar_filter[$current_name][] = $filter;
+														break;
+													case 'diseno':
+														$filter  = "CONCAT_WS(' ', `tipo_anverso`, `tipo_reverso`) LIKE '%".trim($current_value)."%'";
+														$filter .= " AND LENGTH(CONCAT_WS('', `tipo_anverso`, `tipo_reverso`))>3";
+														$ar_filter[$current_name][] = $filter;
+														break;
+													default:
+														$ar_filter[$current_name][] = '`'.$value_obj->name."` LIKE '%".$current_value."%'";
+														break;
+												}
 											}
 											break;
 									}//end switch ($value_obj->eq)																				
