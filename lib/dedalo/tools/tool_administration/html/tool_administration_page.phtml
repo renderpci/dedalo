@@ -3,9 +3,7 @@
 	# VISUALIZADOR HTML		
 
 	$html    = "<!-- TOOL ADMINISTRATION -->";	
-	$html   .= "<div class=\"wrap_tool wrap_tool_administration_page\">";
-
-	
+	$html   .= "<div class=\"wrap_tool wrap_tool_administration_page\">";	
 	
 
 
@@ -57,6 +55,10 @@
 				$html   .= "  <a href=\"javascript:;\" data-mode=\"make_backup\" onclick=\"tool_administration.make_backup(this,event)\">".label::get_label('hacer_backup')."</a>";
 				$html   .= " <div class=\"panel_option_subcontent\">";
 				$html   .= "  <div id=\"make_backup_response\"></div>";
+				$html   .= "  <div id=\"last_backup_info\">";
+				$last_backup_info = $this->get_last_backup_info();
+				$html   .= "Last backup file: <div>$last_backup_info</div>";
+				$html   .= "  </div>";
 				$html   .= " </div>";#end panel_option_subcontent
 				$html   .= "</div>";#end panel_option
 

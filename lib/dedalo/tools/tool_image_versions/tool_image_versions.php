@@ -19,6 +19,13 @@
 	$modo 					= $this->get_modo();
 	$file_name 				= $modo;
 
+
+	// tool user admin case
+		$user_id = navigator::get_user_id();
+		if ( $section_tipo===DEDALO_SECTION_USERS_TIPO && $user_id==$parent && $tipo===DEDALO_USER_IMAGE_TIPO ) {
+			$permissions = 2;
+		}	
+
 	
 	# TOOL CSS / JS MAIN FILES
 	css::$ar_url[] = DEDALO_LIB_BASE_URL."/tools/".$tool_name."/css/".$tool_name.".css";
@@ -43,11 +50,17 @@
 			#
 			# JS includes
 				js::$ar_url[] = DEDALO_LIB_BASE_URL."/$component_name/js/$component_name.js";
+				js::$ar_url[] = DEDALO_LIB_BASE_URL."/component_image/js/component_image_read.js";
 
 			#
 			# JS includes additionals from component_image
 				#js::$ar_url[] = PAPER_JS_URL;
 				#js::$ar_url[] = DEDALO_LIB_BASE_URL . '/component_image/js/component_image_read.js';
+
+			// tool user admin case
+				if ( $section_tipo===DEDALO_SECTION_USERS_TIPO && $user_id==$parent && $tipo===DEDALO_USER_IMAGE_TIPO ) {
+					$this->component_obj->permissions = 2;
+				}
 
 
 			$this->component_obj->set_modo('edit');
