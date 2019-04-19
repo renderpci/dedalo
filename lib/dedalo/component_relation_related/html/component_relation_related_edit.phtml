@@ -96,7 +96,7 @@
 								$filter_fields_options->q_split  	 = isset($propiedades->source->q_split) ? (bool)$propiedades->source->q_split : true;
 								$filter_fields_options->target_id 	 = $autosearch_options_id;
 							
-							$autosearch_options_js .= 'service_autocomplete.build_filter_fields('.json_encode($filter_fields_options).');';
+							$autosearch_options_js .= 'service_autocomplete.build_filter_fields(\''.$section_tipo.'\','.json_encode($filter_fields_options).');';
 						}
 				$autosearch_options_html .= "</div>";//end autosearch_options
 
