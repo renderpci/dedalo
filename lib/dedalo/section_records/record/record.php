@@ -36,7 +36,7 @@
 				#
 				# FIRST RECORD (AND THE ONLY ONE RECORD)
 				# Get the only one (limit 1) record found in data->result
-					if ( !isset($ar_records[0]) ) {						
+					if ( !isset($ar_records[0]) ) {
 						return null;
 					}
 					$first_record = $ar_records[0];
@@ -136,7 +136,7 @@
 							$ar_exclude_elements = array_merge($ar_exclude_elements,$DEDALO_AR_EXCLUDE_COMPONENTS);
 							debug_log(__METHOD__." DEDALO_AR_EXCLUDE_COMPONENTS: Added terms to ar_exclude_elements: ".to_string($DEDALO_AR_EXCLUDE_COMPONENTS), logger::DEBUG);
 						}
-
+	
 					#
 					# LAYOUT MAP : PENDIENTE UNIFICAR MAQUETACIÓN CON LAYOUT MAP A PARTIR DEL MODO EDIT <------
 					# Consulta el listado de componentes a mostrar en el listado / grupo actual
@@ -156,7 +156,18 @@
 							#$records_search = new records_search($this, $modo);
 							#$record_layout_html .= $records_search->get_html();
 
-							$record_layout_html .= component_layout::walk_layout_map($current_section_obj, $layout_map, $ar, $ar_exclude_elements);
+							// render layout_map
+								$render_mode = 'render_layout_map'; // render_layout_map | walk_layout_map
+								$start_time2=microtime(1);
+								if ($render_mode==='render_layout_map') {
+									// new 
+									$record_layout_html .= component_layout::render_layout_map($current_section_obj, $layout_map, $ar_exclude_elements);
+								}else{
+									// actual
+									$record_layout_html .= component_layout::walk_layout_map($current_section_obj, $layout_map, $ar, $ar_exclude_elements);
+								}
+								$total2 = exec_time_unit($start_time2,'ms')." ms";
+								debug_log(__METHOD__." Total time render mode: $render_mode -  $total2 ", logger::DEBUG);															
 
 							if(SHOW_DEBUG) {
 								global$TIMER;$TIMER['component_layout::walk_layout_map'.'_OUT_'.$section->get_tipo().'_'.$section->get_modo().'_'.microtime(1)]=microtime(1);
@@ -167,11 +178,9 @@
 				# LOAD HTML FOR CURRENT ROW
 					$row_html_file	= dirname(__FILE__) . '/html/'. basename(dirname(__FILE__)) .'_'. $modo .'.phtml';
 					include($row_html_file);
+
 				break;
 	
-	}#end switch($modo)
+	}//end switch($modo)
 
 
-
-
-?>
