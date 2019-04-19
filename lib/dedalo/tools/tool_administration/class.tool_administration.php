@@ -1738,7 +1738,10 @@ class tool_administration extends tool_common {
 
 		// call to core function
 			$last_modified_file = get_last_modified_file($path, $allowed_extensions);
-		
+
+
+		#$info = new SplFileInfo($last_modified_file);		
+
 
 		return $last_modified_file;
 	}//end get_last_backup_info
