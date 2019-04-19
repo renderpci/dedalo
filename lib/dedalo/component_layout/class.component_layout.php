@@ -503,7 +503,7 @@ class component_layout extends component_common {
 	* @param array &$ar_resolved_elements
 	* @param array $ar_exclude_elements
 	*/
-	public static function walk_layout_map( $section_obj, $ar_tipo, &$ar_resolved_elements=array() ,$ar_exclude_elements) {
+	public static function walk_layout_map( $section_obj, $ar_tipo, &$ar_resolved_elements=array(), $ar_exclude_elements ) {
 
 		$section_id				= $section_obj->get_section_id();
 		$modo 					= $section_obj->get_modo();
@@ -533,7 +533,7 @@ class component_layout extends component_common {
 
 			# Resolvemos el elemento actual (será alguno de modelo 'section_group','section_tab','section_group_relation','section_group_portal')
 			$RecordObj_dd 			= new RecordObj_dd($terminoID);
-			$element_modelo_name	= $RecordObj_dd->get_modelo_name();		#dump($element_modelo_name,'switch element_modelo_name '.$terminoID);
+			$element_modelo_name	= $RecordObj_dd->get_modelo_name();
 			$element_tipo 			= $terminoID;
 			$element_lang 			= ($RecordObj_dd->get_traducible()==='no') ? DEDALO_DATA_NOLAN : DEDALO_DATA_LANG;
 			$html_elements			= '';	# Important: reset html_elements every iteration
@@ -543,6 +543,7 @@ class component_layout extends component_common {
 
 			switch (true) {
 
+				# section_group_div
 				case ($element_modelo_name==='section_group_div'):
 
 						# El html a incluir será el resultado de la recursión de sus hijos
@@ -600,7 +601,7 @@ class component_layout extends component_common {
 						$html .= $current_element_html;
 						break;
 
-				# SECTION GROUP
+				# section group
 				case ($element_modelo_name==='section_group' || $element_modelo_name==='section_group_portal') :
 					
 						# El html a incluir será el resultado de la recursión de sus hijos
@@ -680,13 +681,12 @@ class component_layout extends component_common {
 						$html .= $current_element_html;				
 						break;
 
-				# SECTION TAB
-
+				# section tab
 				case ($element_modelo_name==='section_tab'):
 					$ar_tab_html = array();
 					# El html a incluir será el resultado de la recursión de sus hijos
 					$ar_children_elements = $RecordObj_dd->get_ar_childrens_of_this();
-					
+
 					foreach ($ar_children_elements as $children_tipo) {
 
 						$ar_tab_html[$children_tipo] = '';
@@ -699,6 +699,7 @@ class component_layout extends component_common {
 							$tap_RecordObj_dd		= new RecordObj_dd($children_tipo);
 							$ar_tap_children_elements	= $tap_RecordObj_dd->get_ar_childrens_of_this();
 							#$ar_tap_children_elements = RecordObj_dd::get_ar_childrens($terminoID);
+								#dump($ar_tap_children_elements, ' ar_tap_children_elements ++ '.to_string($children_tipo));
 
 							$html_elements = '';
 							foreach ($ar_tap_children_elements as $tap_children_tipo) {
@@ -707,10 +708,11 @@ class component_layout extends component_common {
 									#dump($tap_children_modelo_name,'tap_children_modelo_name');
 
 								if ($tap_children_modelo_name==='section_group_div' || $tap_children_modelo_name==='section_group') {
-										#dump($tap_children_modelo_name,'$tap_children_modelo_name');
+										#dump($tap_children_modelo_name,'$tap_children_modelo_name '.$tap_children_tipo);
 
 										# Extraemos el html del conjunto recursivamente
-										$html_elements .= component_layout::walk_layout_map($section_obj, $ar_tipo_next_level[$children_tipo], $ar_resolved_elements, $ar_exclude_elements);
+										$current_html_elements = component_layout::walk_layout_map($section_obj, $ar_tipo_next_level[$children_tipo], $ar_resolved_elements, $ar_exclude_elements);										
+										$html_elements .= $current_html_elements;
 
 								}# if ($tap_children_modelo_name==='section_group')
 								else if ( strpos($tap_children_modelo_name, 'component_')!==false ) { 
@@ -763,7 +765,6 @@ class component_layout extends component_common {
 					$html .= $current_element_html;
 					break;
 
-
 				case ($element_modelo_name==='tab'):
 
 					# El html a incluir será el resultado de la recursión de sus hijos
@@ -771,7 +772,6 @@ class component_layout extends component_common {
 					#$ar_children_elements = RecordObj_dd::get_ar_childrens($terminoID);
 
 					foreach ($ar_children_elements as $children_tipo) {
-
 						
 						$children_modelo_name = RecordObj_dd::get_modelo_name_by_tipo($children_tipo,true);
 							#dump($children_modelo_name,'children_modelo_name');
@@ -822,8 +822,7 @@ class component_layout extends component_common {
 				
 					break;
 
-
-				# SECTION GROUP RELATION
+				# section group relation
 				case ($element_modelo_name==='section_group_relation') :
 						continue 2; // DEACTIVATED FOR NOW
 
@@ -882,7 +881,7 @@ class component_layout extends component_common {
 						*/	
 						break;
 
-				# COMPONENTS
+				# components
 				case (strpos($element_modelo_name, 'component_')!==false) :
 
 						$component_obj	= component_common::get_instance($element_modelo_name,
@@ -898,7 +897,7 @@ class component_layout extends component_common {
 							#dump($component_obj->generate_json_element, '$component_obj->generate_json_element ++ '.to_string());					
 						break;
 
-				# BUTTONS
+				# buttons
 				case (strpos($element_modelo_name, 'button_')!==false) :
 						$button_obj	= new $element_modelo_name($terminoID, ''); #$tipo, $target
 						# Inyectamos el section id matrix al boton
@@ -908,16 +907,18 @@ class component_layout extends component_common {
 
 						break;
 				
-				# RELATION_LIST
+				# relation_list
 				case (strpos($element_modelo_name, 'relation_list')!==false):
 						# Nothing to do
 						break;
 
-				# COMPONENTS
+				# box elements
 				case ($element_modelo_name==='box elements') :
 						# Nothing to do
 						debug_log(__METHOD__." Skipped box element ".to_string($terminoID), logger::DEBUG);
-						break;		
+						break;
+
+				# error		
 				default:
 						throw new Exception("Error Processing Request. Tipo $terminoID ($element_modelo_name) not valid", 1);													
 						break;
@@ -926,7 +927,7 @@ class component_layout extends component_common {
 
 		}# end foreach
 		
-
+	
 		return $html;
 	}//end walk_layout_map
 
@@ -950,6 +951,216 @@ class component_layout extends component_common {
 			}
 	 	}#end foreach($array as $k=>$each)
 	}//end get_value_by_key
+
+
+
+	
+	/**
+	* RENDER_LAYOUT_MAP
+	* @return string $html
+	*/
+	public static function render_layout_map($section_obj, $layout_map, $ar_exclude_elements) {
+
+		// declare as 'global' for allow get from inside functions
+			global $section_tipo, $section_id, $modo, $ar_layout_map_items;
+
+		// section vars
+			$section_tipo 	= $section_obj->get_tipo();
+			$section_id 	= $section_obj->get_section_id();
+			$modo 			= 'edit';
+
+		// layout plain
+			function make_plain($ar_values) {
+				$ar_plain = [];
+				foreach ($ar_values as $key => $value) {					
+					$ar_plain[] = $key;					
+					if (!empty($value)) {
+						$ar_plain = array_merge($ar_plain, make_plain($value));
+					}
+				}				
+				return $ar_plain;
+			};
+			$layout_map_plain = make_plain($layout_map);			
+				#dump($layout_map_plain, ' layout_map_plain ++ '.to_string());
+			$ar_layout_map_items 		  = self::resolve_layout_map_plain($layout_map_plain);
+				#dump($ar_layout_map_items, ' ar_items ++ '.to_string());
+
+		// solve functions 
+			// solve item manager 
+				function solve_item($item) {
+
+					// skip already solved items
+						if (property_exists($item, 'solved')) return '';
+
+					switch (true) {
+						case (strpos($item->model, 'component')===0): // components
+							$result = solve_component($item);
+							break;
+						case (strpos($item->model, 'section_group')===0): // section_group, section_group_div
+							$result = solve_section_group($item);
+							break;						
+						default:
+							$result = call_user_func('solve_'.$item->model, $item); // others (section_tab, ..)
+							break;
+					}
+
+					return $result;
+				}
+			// solve_component 
+				function solve_component($item) {
+					global $section_id, $section_tipo, $modo;
+		
+					$component 	= component_common::get_instance($item->model,
+																 $item->tipo,
+																 $section_id,
+																 $modo,
+																 DEDALO_DATA_LANG,
+																 $section_tipo);
+					$html = $component->get_html();
+
+					$item->solved = true;
+
+					return $html;
+				}
+			// solve section_group and section_group_div 
+				function solve_section_group($item) {
+					global $ar_layout_map_items, $section_id, $section_tipo, $modo;					
+
+					$ar_html_elements = [];
+
+					// get childrens searching in ar_items
+						$ar_childrens = array_filter($ar_layout_map_items, function($children_item) use($item){
+							return $children_item->parent===$item->tipo;
+						});
+						foreach ($ar_childrens as $key => $children_item) {
+							$ar_html_elements[] = solve_item($children_item);
+						}
+					
+					$current_html = implode('', $ar_html_elements);
+
+					$fn_name 		= $item->model;
+					$section_group	= new $fn_name($item->tipo, $section_tipo, $modo, $current_html);
+					$html = $section_group->get_html();
+
+					$item->solved = true;
+
+					return $html;
+				}
+			// solve section_tab 
+				function solve_section_tab($item) {
+					global $ar_layout_map_items, $section_id, $section_tipo, $modo;
+
+					$ar_html_elements = [];
+
+					// get childrens searching in ar_items
+						$ar_childrens = array_filter($ar_layout_map_items, function($children_item) use($item){
+							return $children_item->parent===$item->tipo;
+						});
+						foreach ($ar_childrens as $key => $children_item) {
+							$ar_html_elements[$children_item->tipo] = solve_item($children_item);
+						}
+
+					$section_tab  = new section_tab($item->tipo, $section_tipo, $modo, $ar_html_elements, $section_id);
+					$html = $section_tab->get_html();
+
+					$item->solved = true;
+
+					return $html;
+				}
+			// solve tab 
+				function solve_tab($item) {
+					global $ar_layout_map_items, $section_id, $section_tipo, $modo;
+
+					$ar_html_elements = [];
+
+					// get childrens searching in ar_items
+						$ar_childrens = array_filter($ar_layout_map_items, function($children_item) use($item){
+							return $children_item->parent===$item->tipo;
+						});
+						foreach ($ar_childrens as $key => $children_item) {
+							$ar_html_elements[] = solve_item($children_item);
+						}
+
+					$item->solved = true;
+					$current_html = implode('', $ar_html_elements);
+
+					$html = $current_html;
+
+					$item->solved = true;
+
+					return $html;
+				}
+
+		// iterate items
+			$ar_html_elements = [];
+			foreach ($ar_layout_map_items as $key => $item) {
+				$current_html = solve_item($item);
+				if (!empty($current_html)) {
+					$ar_html_elements[] = $current_html;
+				}								
+			}
+			$html = implode('', $ar_html_elements);
+
+		return $html;
+	}//end render_layout_map
+
+
+
+	/**
+	* RESOLVE_LAYOUT_MAP_PLAIN
+	* @return array $ar_items
+	* 	Array of objects
+	*/
+	public static function resolve_layout_map_plain($ar_tipos, $ar_exclude_elements=[]) {
+
+		static $layout_solved = [];
+
+		$ar_include_modelo_name = ['section_group','section_group_div','section_tab','tab']; // Unused?: 'section_group_relation','section_group_portal'
+		
+		$ar_items = [];
+		foreach ($ar_tipos as $current_tipo) {
+
+			// skip already resolved tipos
+				if (in_array($current_tipo, $layout_solved)) {
+					continue;
+				}
+
+			// exclude tipos 
+				if (in_array($current_tipo, $ar_exclude_elements)) {
+					continue;
+				}
+			
+			$RecordObj_dd = new RecordObj_dd($current_tipo);
+			$model 		  = $RecordObj_dd->get_modelo_name();
+			#$model = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
+
+			// skip non valid models
+				if (!in_array($model, $ar_include_modelo_name) && strpos($model, 'component_')!==0) {
+					continue;
+				}
+
+			$parent 	= $RecordObj_dd->get_parent();
+			$childrens 	= $RecordObj_dd->get_ar_childrens_of_this();
+
+
+			$item = new stdClass();
+				$item->tipo 		= $current_tipo;
+				$item->model 		= $model;
+				$item->parent 		= $parent;
+				#$item->childrens 	= $childrens;
+
+			$ar_items[] = $item;
+
+			$layout_solved[] = $current_tipo;
+
+			if (!empty($childrens)) {
+				$ar_items = array_merge($ar_items, self::resolve_layout_map_plain($childrens, $ar_exclude_elements));				
+			}
+		}
+
+		return $ar_items;
+	}//end resolve_layout_map_plain
+
 	
 
 };#END CLASS
