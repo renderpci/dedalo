@@ -48,6 +48,9 @@ header("Access-Control-Allow-Origin: {$ACCESS_CONTROL_ALLOW_ORIGIN}");
 // lang 
 	$lang = isset($_REQUEST['lang']) ? $safe_xss($_REQUEST['lang']) : false;
 
+// db 
+	$db = isset($_REQUEST['db']) ? $safe_xss($_REQUEST['db']) : false;
+
 // config . Loads server api config vars 
 	# If received code if different to defined code, and error was launched
 	# lang for the api was fixed here with received lang var or default value is used if not
