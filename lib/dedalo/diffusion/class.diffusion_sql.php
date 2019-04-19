@@ -2457,61 +2457,61 @@ class diffusion_sql extends diffusion  {
 	
 		# Reference:
 		# dato:
-		# [0] => stdClass Object
-        # (
-        #     [section_tipo] => mupreva2564
-        #     [section_id] => 1
-        #     [component_tipo] => mupreva2571
-        # )
+		#   [0] => stdClass Object
+        #   (
+        #       [section_tipo] => mupreva2564
+        #       [section_id] => 1
+        #       [component_tipo] => mupreva2571
+        #   )
         # options:
-        # [typology] => 
-	    # [value] => 
-	    # [tipo] => mupreva2586
-	    # [parent] => 2
-	    # [lang] => lg-vlca
-	    # [section_tipo] => mupreva2564
-	    # [caler_id] => 3
-	    # [propiedades] => stdClass Object
-	    #     (
-	    #         [varchar] => 128
-	    #         [process_dato] => diffusion_sql::map_locator_to_terminoID_parent
-	    #     )
-	    # [diffusion_element_tipo] => mupreva800
+        #   [typology] => 
+	    #   [value] => 
+	    #   [tipo] => mupreva2586
+	    #   [parent] => 2
+	    #   [lang] => lg-vlca
+	    #   [section_tipo] => mupreva2564
+	    #   [caler_id] => 3
+	    #   [propiedades] => stdClass Object
+	    #       (
+	    #           [varchar] => 128
+	    #           [process_dato] => diffusion_sql::map_locator_to_terminoID_parent
+	    #       )
+	    #   [diffusion_element_tipo] => mupreva800
 
 		$terminoID = null;
 
-		$locator = false;
-		if (is_array($dato)) {
-			$locator = reset($dato);
-		}
+		// locator
+			$locator = false;
+			if (is_array($dato)) {
+				$locator = reset($dato);
+			}
 
-		# Trigger update parent here
-			#dump($dato, ' dato ++ '.to_st#ring($options));
-		if ($locator) {
+		// Trigger update parent here
+			if ($locator) {
 
-			$section_tipo 			= $locator->section_tipo;
-			$section_id 			= $locator->section_id;
-			$diffusion_element_tipo = $options->diffusion_element_tipo;
+				$section_tipo 			= $locator->section_tipo;
+				$section_id 			= $locator->section_id;
+				$diffusion_element_tipo = $options->diffusion_element_tipo;
 
-			// Force section tipo from locator
-				$options->section_tipo = $section_tipo;
+				// Force section tipo from locator
+					$options->section_tipo = $section_tipo;
+				
+				$terminoID = diffusion_sql::map_to_terminoID($options, $section_id);
+
+				$current_skip_publication_state_check = $_SESSION['dedalo4']['config']['skip_publication_state_check'];
+
+				# Set temporally to skip and force parent publication
+				$_SESSION['dedalo4']['config']['skip_publication_state_check'] = 1;
+
+				tool_diffusion::export_record($section_tipo, $section_id, $diffusion_element_tipo, $resolve_references=true);
+				debug_log(__METHOD__." *** Triggered tool_diffusion::export_record for parent ($section_tipo  - $section_id) ".to_string(), logger::DEBUG);
 			
-			$terminoID = diffusion_sql::map_to_terminoID($options, $section_id);
+				# Restore previous skip_publication_state_check state
+				$_SESSION['dedalo4']['config']['skip_publication_state_check'] = $current_skip_publication_state_check;
 
-			$current_skip_publication_state_check = $_SESSION['dedalo4']['config']['skip_publication_state_check'];
-
-			# Set temporally to skip and force parent publication
-			$_SESSION['dedalo4']['config']['skip_publication_state_check'] = 1;
-
-			tool_diffusion::export_record($section_tipo, $section_id, $diffusion_element_tipo, $resolve_references=true);
-			debug_log(__METHOD__." *** Triggered tool_diffusion::export_record for parent ($section_tipo  - $section_id) ".to_string(), logger::DEBUG);
-		
-			# Restore previous skip_publication_state_check state
-			$_SESSION['dedalo4']['config']['skip_publication_state_check'] = $current_skip_publication_state_check;
-
-		}else{
-			#debug_log(__METHOD__." ============ NOT Triggered tool_diffusion::export_record dato: ".to_string($dato), logger::ERROR);
-		}
+			}else{
+				#debug_log(__METHOD__." ============ NOT Triggered tool_diffusion::export_record dato: ".to_string($dato), logger::ERROR);
+			}
 		
 
 		return $terminoID;
@@ -2580,6 +2580,46 @@ class diffusion_sql extends diffusion  {
 
 		return self::map_locator_to_terminoID($options, $dato);
 	}//end map_locator_to_term_id
+
+
+
+	/**
+	* MAP_TO_POLITICAL_TOPONYMY
+	* @return string $term
+	*/
+	public static function map_to_political_toponymy($options, $dato) {
+		
+		#dump($options, ' options ++ '.to_string());
+		#dump($dato, ' dato ++ '.to_string());
+
+		// empty dato case
+			if (empty($dato) || empty($dato[0]->from_component_tipo)) {
+				return null;
+			}
+
+		// component to manage (usually component_autocomplete_hi)
+			$tipo 		= $dato[0]->from_component_tipo;
+			$model_name = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+
+		// properties
+			$properties = $options->propiedades;
+			if (!isset($properties->political_toponymy_type)) {
+				debug_log(__METHOD__." Error. Structure political_toponymy_type is not defined for tipo: ".to_string($tipo), logger::ERROR);
+				return null;
+			}
+
+		// options
+			$toponymy_options = new stdClass();
+				$toponymy_options->locator 	= $dato[0];
+				$toponymy_options->lang 	= $options->lang;
+				$toponymy_options->type 	= $properties->political_toponymy_type;
+		
+		// call get_political_toponymy
+			$term = $model_name::get_political_toponymy($toponymy_options);
+
+
+		return $term;
+	}//end map_to_political_toponymy
 
 
 
@@ -3049,7 +3089,7 @@ class diffusion_sql extends diffusion  {
 		$selected_date 			= isset($process_dato_arguments->selected_date) ? $process_dato_arguments->selected_date : false; // 'start';
 		$date_format 			= isset($process_dato_arguments->date_format) ? $process_dato_arguments->date_format : 'full';
 
-			dump($options, ' options ++ '.to_string());
+			#dump($options, ' options ++ '.to_string());
 			#dump($dato, ' dato ++ '.to_string());
 			#dump($process_dato_arguments, ' process_dato_arguments ++ '.to_string());
 			#dump($selected_date, ' selected_date ++ '.to_string());
@@ -3072,13 +3112,13 @@ class diffusion_sql extends diffusion  {
 		}
 		
 
-		// date_format		
+		// date_format
 		switch ($date_format) {
 			case 'year':
 				$dd_date = new dd_date($date_obj);
 				$value 	 = $dd_date->year;
 				break;
-			
+			case 'full':
 			default:
 				// Default
 				$dd_date = new dd_date($date_obj);

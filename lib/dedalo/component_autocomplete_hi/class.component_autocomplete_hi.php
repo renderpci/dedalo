@@ -650,97 +650,114 @@ class component_autocomplete_hi extends component_relation_common {
 
 
 	/**
-	* get_legacy_political_map_term
-	* @return 
+	* GET_POLITICAL_TOPONYMY
+	* @return string $term
 	*/
-	public function get_legacy_political_map_term( $lang=DEDALO_DATA_LANG, $dato_key=0, $type='municipality' ) {
-		$value = '';
-
-		$dato = $this->get_dato();
-		if (!empty($dato[$dato_key])) {			
-
-			$ar_hierarchy 	= [];
-			$locator		= $dato[$dato_key];
-			$political_map 	= self::get_legacy_political_map($locator->section_tipo);
-				#dump($political_map, ' political_map ++ '.to_string());
-			if (!empty($political_map[$type])) {
-
-				# political_model_locator. Get current model locator to requested type (like es2,8868 for municipality in spain)
-				$political_model_locator = reset($political_map[$type]);
-					#dump($political_model_locator, ' political_model_locator ++ '.to_string());
-				# model_obj. Get model info (name and locator)
-				$model_obj 				 = self::get_legacy_model($locator, $lang);
-					#dump($model_obj, ' model_obj ++ '.to_string());
-
-				if ($political_model_locator->section_tipo===$model_obj->locator->section_tipo && 
-					$political_model_locator->section_id==$model_obj->locator->section_id) {
-
-					$term = ts_object::get_term_by_locator( $locator, $lang, $from_cache=true );
-					return strip_tags($term);
-				}
-				#$ar_hierarchy[] = $locator;
-
-				$ar_parents	= component_relation_parent::get_parents($locator->section_id, $locator->section_tipo);
-				while (!empty($ar_parents[0])) {				
-					$locator 	= $ar_parents[0];
-					$model_obj	= self::get_legacy_model($locator, $lang);
-					#$ar_hierarchy[] = $locator;
-					if ($political_model_locator->section_tipo===$model_obj->locator->section_tipo &&
-						$political_model_locator->section_id==$model_obj->locator->section_id) {
-
-						$term = ts_object::get_term_by_locator( $locator, $lang, $from_cache=true );
-						return strip_tags($term);
-					}
-
-					$ar_parents	= component_relation_parent::get_parents($locator->section_id, $locator->section_tipo);
-				}
-				#dump($ar_hierarchy, ' ar_hierarchy ++ '.to_string());
-				/*
-					$ar_term = [];
-					foreach ($ar_hierarchy as $key => $locator) {
-						$term = ts_object::get_term_by_locator( $locator, $lang, $from_cache=true );
-						$ar_term[] = strip_tags($term);
-					}
-					dump($ar_term, ' $ar_term ++ '.to_string());
-
-					# [0] => <mark>Cornellà de Llobregat</mark>
-					# [1] => <mark>Baix Llobregat</mark>
-					# [2] => <mark>Barcelona</mark>
-					# [3] => <mark>Catalunya</mark>
-					# [4] => <mark>España</mark>
-					# [5] => Espanya
-
-					switch ($type) {
-						case 'municipality':
-							$value = reset($ar_term);
-							break;
-						case 'country':
-							$value = end($ar_term);
-							break;
-						case 'comarca':					
-							switch ($locator->section_tipo) {						
-								case 'es1':						
-								default:
-									$level = 1;
-									break;
-							}					
-							$value = isset($ar_term[$level]) ? $ar_term[$level] : '';										
-							break;
-
-
-						default:
-							# code...
-							break;
-					}
-				*/
-				#$value = strip_tags($value);
-			}//end if (!empty($political_map[$type])) {
-		}//end if (!empty($dato[$dato_key]))
+	public static function get_political_toponymy( $request_options ) {
 		
+		// options parse
+			$options = new stdClass();
+				$options->locator 	= null;
+				$options->lang 		= DEDALO_DATA_LANG;				
+				$options->type 		= 'municipality';
+				foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
+
+		// sort vars
+			$locator = $options->locator;
+			$lang 	 = $options->lang;
+			$type 	 = $options->type;
+
+		// empty locator case
+			if (empty($locator)) {
+				return null;
+			}
+
+		// self option
+			if ($options->type==='self') {
+
+				// term plain without parents
+					$term = ts_object::get_term_by_locator( $locator, $options->lang, true );
+
+			}else{			
+
+				// section data of current locator
+					$section_tipo 	= $options->locator->section_tipo;
+					$section_id 	= $options->locator->section_id;
+
+				// political_map
+					$political_map 	= self::get_legacy_political_map($section_tipo);
+					if(empty($political_map)){
+						
+						debug_log(__METHOD__." Empty political_map (ignored resolution by political_map for section: $section_tipo) ".to_string(), logger::WARNING);
+						return null;
+					
+					}else{
+					
+						// current_map check
+							$current_map = array_reduce($political_map, function($carry, $item) use($type){
+								return $item->type===$type ? $item : $carry;
+							});				
+							if (empty($current_map)) {
+								debug_log(__METHOD__." Empty political_map type (ignored resolution by political_map for type: $options->type in section: $section_tipo) ".to_string(), logger::WARNING);
+								return null;
+							}
+					}
+
+				// component_model_tipo of current section
+					$ar_component_model_tipo = section::get_ar_children_tipo_by_modelo_name_in_section($section_tipo, ['component_relation_model'], $from_cache=true, $resolve_virtual=true, $recursive=true, $search_exact=true);				
+					$component_model_tipo 	 = reset($ar_component_model_tipo);
+					if (empty($component_model_tipo)) {
+						debug_log(__METHOD__." Empty section component_model_tipo. Please, review structure of section: '$section_tipo' and add a component_relation_model ) ".to_string(), logger::ERROR);
+						return null;
+					}			
+
+				// compare model
+					$compare_model = function($section_tipo, $section_id, $component_model_tipo, $current_map) {
+
+						// get model value
+							$component_model 	= component_common::get_instance('component_relation_model',
+																				 $component_model_tipo,
+																				 $section_id,
+																				 'list',
+																				 DEDALO_DATA_NOLAN,
+																				 $section_tipo);
+							$model_dato 	= $component_model->get_dato();
+							if (empty($model_dato)) {
+								return false;
+							}
+
+							$model_locator 	= reset($model_dato);
+
+						// check match 'section_tipo','section_id'
+							$result = locator::compare_locators( $current_map, $model_locator, ['section_tipo','section_id'] );
+
+						return $result;
+					};
+
+				// self term check 
+					if (true===$compare_model($section_tipo, $section_id, $component_model_tipo, $current_map)) {
+						// term
+							$term = ts_object::get_term_by_locator( $locator, $options->lang, true );
+				// childrens check 
+					}else{
+						// search in parents recursive
+							$parents_recursive = component_relation_parent::get_parents_recursive($locator->section_id, $locator->section_tipo, true);					
+							foreach ($parents_recursive as $key => $current_parent_locator) {
+								if (true===$compare_model($current_parent_locator->section_tipo, $current_parent_locator->section_id, $component_model_tipo, $current_map)) {
+									// term
+										$term = ts_object::get_term_by_locator( $current_parent_locator, $options->lang, true );
+									break;
+								}
+							}
+					}
+			}
+
+		// term
+			$term = isset($term) ? strip_tags($term) : null;			
 
 
-		return $value;
-	}//end get_legacy_political_map_term
+		return $term;
+	}//end get_political_toponymy
 
 
 
@@ -755,35 +772,25 @@ class component_autocomplete_hi extends component_relation_common {
 		
 		switch ($section_tipo) {
 			# Spain
-			case 'es1':
-				$country 				= json_decode('[{"section_tipo":"es2","section_id":"8868"}]');
-				$autonomous_community 	= json_decode('[{"section_tipo":"es2","section_id":"8869"}]');
-				$province 				= json_decode('[{"section_tipo":"es2","section_id":"8870"}]');
-				$comarca 				= json_decode('[{"section_tipo":"es2","section_id":"8871"}]');
-				$municipality 			= json_decode('[{"section_tipo":"es2","section_id":"8872"}]');
+			case 'es1':				
 				# models
 				$ar_models = [
-					'country' 				=> $country,
-					'autonomous_community' 	=> $autonomous_community,
-					'province' 				=> $province,
-					'comarca' 				=> $comarca,
-					'municipality' 			=> $municipality
+					(object)['type' => 'country', 				'section_tipo' => 'es2', 'section_id' => '8868'],
+					(object)['type' => 'autonomous_community', 	'section_tipo' => 'es2', 'section_id' => '8869'],
+					(object)['type' => 'province', 				'section_tipo' => 'es2', 'section_id' => '8870'],
+					(object)['type' => 'region', 				'section_tipo' => 'es2', 'section_id' => '8871'], // comarca
+					(object)['type' => 'municipality', 			'section_tipo' => 'es2', 'section_id' => '8872']
 				];
 				break;
 			# France
 			case 'fr1':
-				$country 				= json_decode('[{"section_tipo":"fr2","section_id":"41189"}]');
-				$autonomous_community 	= json_decode('[]');
-				$province 				= json_decode('[{"section_tipo":"fr2","section_id":"41190"}]');
-				$comarca 				= json_decode('[{"section_tipo":"fr2","section_id":"41191"}]');
-				$municipality 			= json_decode('[{"section_tipo":"fr2","section_id":"41192"}]');
 				# models
 				$ar_models = [
-					'country' 				=> $country,
-					'autonomous_community' 	=> $autonomous_community,
-					'province' 				=> $province,
-					'comarca' 				=> $comarca,
-					'municipality' 			=> $municipality
+					['type' => 'country', 				'section_tipo' => 'fr2', 'section_id' => '41189'],
+					['type' => 'autonomous_community'],
+					['type' => 'province', 				'section_tipo' => 'fr2', 'section_id' => '41190'],
+					['type' => 'region', 				'section_tipo' => 'fr2', 'section_id' => '41191'], // comarca
+					['type' => 'municipality', 			'section_tipo' => 'fr2', 'section_id' => '41192']
 				];
 				break;
 			default:
@@ -850,7 +857,6 @@ class component_autocomplete_hi extends component_relation_common {
 
 		return $group;
 	}//end resolve_query_object_sql
-
 
 
 
