@@ -998,7 +998,10 @@ class component_layout extends component_common {
 							break;
 						case (strpos($item->model, 'section_group')===0): // section_group, section_group_div
 							$result = solve_section_group($item);
-							break;						
+							break;
+						case (strpos($item->model, 'button')===0):
+							$result = solve_button($item);
+							break;
 						default:
 							$result = call_user_func('solve_'.$item->model, $item); // others (section_tab, ..)
 							break;
@@ -1017,6 +1020,21 @@ class component_layout extends component_common {
 																 DEDALO_DATA_LANG,
 																 $section_tipo);
 					$html = $component->get_html();
+
+					$item->solved = true;
+
+					return $html;
+				}
+			// solve_button 
+				function solve_button($item) {
+					global $section_id, $section_tipo, $modo;
+
+					$button = new $item->model($item->tipo);
+					
+					// Inject section_id as parent to current button object (!)
+						$button->set_parent($section_id);									
+					
+					$html = $button->get_html();
 
 					$item->solved = true;
 
@@ -1135,7 +1153,7 @@ class component_layout extends component_common {
 			#$model = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
 
 			// skip non valid models
-				if (!in_array($model, $ar_include_modelo_name) && strpos($model, 'component_')!==0) {
+				if (!in_array($model, $ar_include_modelo_name) && strpos($model, 'component_')!==0 && strpos($model, 'button_')!==0) {
 					continue;
 				}
 
