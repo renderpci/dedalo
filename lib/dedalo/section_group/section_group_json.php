@@ -1,5 +1,5 @@
 <?php
-// JSON data component controller
+// JSON data for section_group controller
 
 // context
 	$context = [];
