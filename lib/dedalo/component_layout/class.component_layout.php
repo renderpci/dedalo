@@ -1153,7 +1153,7 @@ class component_layout extends component_common {
 			#$model = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
 
 			// skip non valid models
-				if (!in_array($model, $ar_include_modelo_name) && strpos($model, 'component_')!==0 && strpos($model, 'button_')!==0) {
+				if (strpos($model, 'component_')!==0 && strpos($model, 'button_')!==0 && !in_array($model, $ar_include_modelo_name) ) {
 					continue;
 				}
 
