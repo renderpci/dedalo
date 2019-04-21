@@ -4146,11 +4146,10 @@ abstract class component_common extends common {
 			$search_value = json_encode($search_value);
 		}
 
-		#$operator_between = '$or';
-		$operator_between = '$and';
+		$operator_between = '$or';	// default (!)	
 			
 		# JSON CASE
-		if ($json_value = json_decode($search_value)) {			
+		if ($json_value = json_decode($search_value)) {
 			if (is_array($json_value) && count($json_value)>1) {			
 				$group = new stdClass();
 					$name = $operator_between;
@@ -4170,6 +4169,9 @@ abstract class component_common extends common {
 
 		# STRING CASE
 		}else{
+
+			$operator_between = '$and'; // only when is string
+
 			# \S?"([^\"]+)"|\S?'([^\']+)'|[^\s]+
 			$pattern = '/\S?"([^\"]+)"|\S?\'([^\\\']+)\'|[^\s]+/iu';
 			preg_match_all($pattern, $search_value, $matches);
