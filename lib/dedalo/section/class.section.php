@@ -3413,6 +3413,19 @@ class section extends common {
 
 
 	/**
+	* GET_AR_GROUPER_MODELS
+	* @return array $ar_groupers_models
+	*/
+	public static function get_ar_grouper_models() {
+		
+		$ar_groupers_models = ['section_group','section_group_div','section_tab','tab'];
+
+		return $ar_groupers_models;
+	}//end get_ar_grouper_models
+
+
+
+	/**
 	* BUILD_JSON_ROWS
 	* @return object $result
 	*/
@@ -3439,28 +3452,28 @@ class section extends common {
 
 					// context section info
 						$context_item = new stdClass();
-							$context_item->type  		 = 'section_info';
+							$context_item->type  		 = 'section';
 							$context_item->section_tipo  = $section_tipo;
 							$context_item->section_label = RecordObj_dd::get_termino_by_tipo($section_tipo, DEDALO_DATA_LANG, true, true);
 							$context_item->modo 		 = $modo;
 						$context[] = $context_item;
 
 					#foreach ($list_map as $list_item) {
-					#
-					#	$component_tipo = $list_item->tipo;
-					#
-					#	$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
-					#	$label 		 = RecordObj_dd::get_termino_by_tipo($component_tipo, DEDALO_DATA_LANG, true, true);
-					#	
-					#	// context column_info
-					#		$context_item = new stdClass();
-					#			$context_item->type  		 = 'column_info';
-					#			$context_item->tipo  		 = $component_tipo;
-					#			$context_item->section_tipo  = $section_tipo;
-					#			$context_item->model 		 = $modelo_name;
-					#			$context_item->label 		 = $label;
-					#		$context[] = $context_item;
-					#}
+						#
+						#	$component_tipo = $list_item->tipo;
+						#
+						#	$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+						#	$label 		 = RecordObj_dd::get_termino_by_tipo($component_tipo, DEDALO_DATA_LANG, true, true);
+						#	
+						#	// context column_info
+						#		$context_item = new stdClass();
+						#			$context_item->type  		 = 'column_info';
+						#			$context_item->tipo  		 = $component_tipo;
+						#			$context_item->section_tipo  = $section_tipo;
+						#			$context_item->model 		 = $modelo_name;
+						#			$context_item->label 		 = $label;
+						#		$context[] = $context_item;
+						#}
 				}
 
 		// data
@@ -3481,33 +3494,55 @@ class section extends common {
 					// Iterate list_map for colums
 						foreach ((array)$ar_list_map->$section_tipo as $list_item) {
 
-							$tipo = $list_item->tipo;
-							$modo = $list_item->modo;
+							$tipo 		= $list_item->tipo;
+							$modo 		= $list_item->modo;
+							$modelo_name= RecordObj_dd::get_modelo_name_by_tipo($tipo,true); 
 
-							switch ($tipo) {								
-								case 'section_tipo':								
+							switch (true) {								
+								case ($tipo==='section_tipo'):								
 									# ignore
 									continue 2;
 									break;
 
-								default:									
-									$modelo_name 		= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+								case (strpos($modelo_name, 'component_')===0):									
+									# components
 									$current_component  = component_common::get_instance($modelo_name,
 																						 $tipo,
 																						 $section_id,
 																						 'list',
 																						 DEDALO_DATA_LANG,
-																						 $section_tipo);
-									
-									$component_json = $current_component->get_json();									
+																						 $section_tipo);									
+									$component_json = $current_component->get_json();
+
+									// data add
+										$data = array_merge($data, $component_json->data);
+
+									// context add 
+										$context = array_merge($context, $component_json->context);
 									break;
-							}
+								
+								case (in_array($modelo_name, section::get_ar_grouper_models())): // ['section_group','section_group_div','section_tab','tab']
+									# groupers
+									$current_class_name = $modelo_name;
+									if ($modelo_name==='tab') {
+										$current_class_name = 'section_tab';
+									}
+									$current_grouper  = new $current_class_name($tipo, $section_tipo, $modo, null);									
+									
+									$grouper_json = $current_grouper->get_json();
 
-							// data add
-								$data = array_merge($data, $component_json->data);
+									// data . No add data here is necessary because is always empty
+										#$data = array_merge($data, $grouper_json->data);										
 
-							// context add 
-								$context = array_merge($context, $component_json->context);
+									// context add 
+										$context = array_merge($context, $grouper_json->context);
+									break;
+
+								default:
+									# not defined modelfro context / data								
+									debug_log(__METHOD__." Ignored model $modelo_name - $tipo ".to_string(), logger::WARNING);
+									break;
+							}							
 
 						}//end iterate ar_list_map
 
@@ -3548,7 +3583,7 @@ class section extends common {
 		$ar_component_info = [];
 		foreach ($context as $key => $value) {
 			
-			if (($value->type==='component_info')) {
+			if (($value->type==='component')) {
 				$tipo = $value->tipo;
 				if (in_array($tipo, $ar_component_info)) {
 					unset($context[$key]);
