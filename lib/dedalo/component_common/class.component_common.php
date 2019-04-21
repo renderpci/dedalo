@@ -4684,38 +4684,5 @@ abstract class component_common extends common {
 
 
 
-	/**
-	* GET_STRUCTURE_CONTEXT
-	* @return object $item
-	*/
-	public function get_structure_context() {
-		
-		$item = new stdClass();
-			$item->type 			= 'component_info';
-			$item->tipo 			= $this->get_tipo();			
-			$item->model 			= get_called_class();
-			$item->label 			= $this->get_label();
-			$item->section_tipo		= $this->get_section_tipo();		
-			$item->lang				= $this->get_lang();
-			$item->translatable 	= $this->RecordObj_dd->get_traducible()==='si' ? true : false;
-			
-			$item->properties 		= $this->get_propiedades();
-			$item->parent 			= $this->RecordObj_dd->get_parent();
-			$item->related 			= $this->get_ar_related_component_tipo();
-
-		// section_list optional for get related_list
-			$ar_section_list = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($item->tipo, 'section_list', 'children', true);
-			if (isset($ar_section_list[0])) {
-				
-				$related_list_tipo 	= $ar_section_list[0];				
-				$ar_components 		= RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($related_list_tipo, 'component_', 'termino_relacionado', false);				
-				$item->related_list = $ar_components;
-			}
-
-		return $item;
-	}//end get_structure_context
-
-
-
 }//end class
 ?>
