@@ -1,10 +1,10 @@
 <?php
-// JSON data component controller
+// JSON data for section_group_div controller
 
 // context
 	$context = [];
 
-		// Component structure context (tipo, relations, properties, etc.)
+		// Element structure context (tipo, relations, properties, etc.)
 			$context[] = $this->get_structure_context();
 
 // data
