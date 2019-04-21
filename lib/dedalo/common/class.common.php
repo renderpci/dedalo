@@ -1318,11 +1318,11 @@ abstract class common {
 	* @param object $data
 	* @return string $result
 	*/
-	public static function build_element_json_output($context, $data) {
+	public static function build_element_json_output($context, $data=[]) {
 		
 		$element = new stdClass();
 			$element->context = $context;
-			$element->data 	 = $data;
+			$element->data 	  = $data;
 
 		#if(SHOW_DEBUG===true) {
 		#	$result = json_encode($element, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
@@ -1371,6 +1371,53 @@ abstract class common {
 		return $json;		
 	}//end get_json
 
+
+
+	/**
+	* GET_STRUCTURE_CONTEXT
+	* @return object $item
+	*/
+	public function get_structure_context() {
+
+		// class called (model name too like component_input_text)
+			$model = get_called_class();
+
+		// resolve type
+			if (strpos($model, 'component_')===0) {
+				$type = 'component';
+			}elseif (in_array($model, section::get_ar_grouper_models())) {
+				$type = 'grouper';
+			}else{
+				debug_log(__METHOD__." UNDEFINED model: $model - ".$this->get_tipo(), logger::ERROR);
+				throw new Exception("Error Processing Request", 1);				
+				return false;
+			}
+			
+		// build context item
+			$item = new stdClass();
+				$item->type 			= $type; // like 'component_info';
+				$item->tipo 			= $this->get_tipo();
+				$item->model 			= $model;
+				$item->label 			= $this->get_label();
+				$item->section_tipo		= $this->get_section_tipo();
+				$item->lang				= $this->get_lang();
+				$item->translatable 	= $this->RecordObj_dd->get_traducible()==='si' ? true : false;
+				
+				$item->properties 		= $this->get_propiedades();
+				$item->parent 			= $this->RecordObj_dd->get_parent();
+				$item->related 			= $this->get_ar_related_component_tipo();
+
+		// section_list optional for get related_list
+			$ar_section_list = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($item->tipo, 'section_list', 'children', true);
+			if (isset($ar_section_list[0])) {
+				
+				$related_list_tipo 	= $ar_section_list[0];
+				$ar_components 		= RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($related_list_tipo, 'component_', 'termino_relacionado', false);				
+				$item->related_list = $ar_components;
+			}
+
+		return $item;
+	}//end get_structure_context
 
 
 
