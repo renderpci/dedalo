@@ -3496,10 +3496,10 @@ class section extends common {
 
 							$tipo 		= $list_item->tipo;
 							$modo 		= $list_item->modo;
-							$modelo_name= RecordObj_dd::get_modelo_name_by_tipo($tipo,true); 
+							$modelo_name= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 
 							switch (true) {								
-								case ($tipo==='section_tipo'):								
+								case ($tipo==='section_tipo'): 
 									# ignore
 									continue 2;
 									break;
@@ -3521,7 +3521,7 @@ class section extends common {
 										$context = array_merge($context, $component_json->context);
 									break;
 								
-								case (in_array($modelo_name, section::get_ar_grouper_models())): // ['section_group','section_group_div','section_tab','tab']
+								case ($i===0 && in_array($modelo_name, section::get_ar_grouper_models())): // ['section_group','section_group_div','section_tab','tab']
 									# groupers
 									$current_class_name = $modelo_name;
 									if ($modelo_name==='tab') {
