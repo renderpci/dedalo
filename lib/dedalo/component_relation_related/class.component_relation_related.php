@@ -772,13 +772,30 @@ class component_relation_related extends component_relation_common {
 	* @see class.diffusion_mysql.php
 	*/
 	public function get_diffusion_value( $lang=null, $type=false ) {
+
+		$separator = '<br>';
 	
 		$diffusion_value = $this->get_valor($lang, $format='array');
-		$diffusion_value = implode('<br>', $diffusion_value);
-		$diffusion_value = strip_tags($diffusion_value, '<br>');
+		$diffusion_value = implode($separator, $diffusion_value);
+		$diffusion_value = strip_tags($diffusion_value, $separator);
 			#dump($diffusion_value, ' diffusion_value ++ '.to_string());
 		#$term = $this->get_legacy_political_map_term( DEDALO_DATA_LANG, $dato_key=0, $type='municipality');
 			#dump($term, ' term ++ '.to_string());
+
+		// calculated references
+			$calculated_references = $this->get_calculated_references();
+				#dump($calculated_references, ' +++++ calculated_references ++ tipo: '.$this->get_tipo());
+			if (!empty($calculated_references)) {
+				$ar_references = [];
+				foreach ($calculated_references as $key => $ref_obj) {
+					$ar_references[] = $ref_obj->label;
+				}
+				if (!empty($diffusion_value)) {
+					$diffusion_value .= $separator;
+				}
+				$diffusion_value .= implode($separator, $ar_references);
+			}
+				dump($diffusion_value, ' diffusion_value ++ '.to_string());	
 
 		return (string)$diffusion_value;
 	}//end get_diffusion_value
