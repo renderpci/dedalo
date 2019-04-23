@@ -284,7 +284,7 @@ class component_relation_related extends component_relation_common {
 					$current_locator->section_tipo 			= $this->section_tipo;
 					$current_locator->section_id 			= $this->parent;
 					$current_locator->from_component_tipo 	= $this->tipo;
-				$references = component_relation_related::get_references_recursive($this->tipo, $current_locator, $this->relation_type_rel, false );
+				$references = component_relation_related::get_references_recursive($this->tipo, $current_locator, $this->relation_type_rel, false, $this->lang );
 				break;
 			case DEDALO_RELATION_TYPE_RELATED_UNIDIRECTIONAL_TIPO:
 			default:
@@ -455,11 +455,11 @@ class component_relation_related extends component_relation_common {
 	# 	DEDALO_RELATION_TYPE_RELATED_MULTIDIRECTIONAL_TIPO
 	* @return array $ar_references
 	*/
-	public static function get_references_recursive( $tipo, $locator, $type_rel=DEDALO_RELATION_TYPE_RELATED_MULTIDIRECTIONAL_TIPO, $recursion=false ) {
+	public static function get_references_recursive( $tipo, $locator, $type_rel=DEDALO_RELATION_TYPE_RELATED_MULTIDIRECTIONAL_TIPO, $recursion=false, $lang ) {
 	
 		static $ar_resolved;
 
-		$pseudo_locator = $locator->section_tipo .'_'. $locator->section_id;
+		$pseudo_locator = $locator->section_tipo .'_'. $locator->section_id . '_'. $lang;
 		$ar_resolved[]  = $pseudo_locator; # set self as resolved
 
 		$ar_references 	= [];
@@ -487,7 +487,7 @@ class component_relation_related extends component_relation_common {
 															 $locator->section_tipo);
 			$ar_result = $ref_component->get_references();
 			foreach ($ar_result as $key => $result_locator) {
-				$pseudo_locator = $result_locator->section_tipo .'_'. $result_locator->section_id;
+				$pseudo_locator = $result_locator->section_tipo .'_'. $result_locator->section_id . '_'. $lang;
 				if (in_array($pseudo_locator, $ar_resolved)) {
 					continue;
 				}
@@ -503,7 +503,7 @@ class component_relation_related extends component_relation_common {
 			$dato = $ref_component->get_dato();
 			foreach ($dato as $key => $dato_locator) {
 
-				$pseudo_locator = $dato_locator->section_tipo .'_'. $dato_locator->section_id;
+				$pseudo_locator = $dato_locator->section_tipo .'_'. $dato_locator->section_id . '_'. $lang;
 				if (in_array($pseudo_locator, $ar_resolved)) {
 					continue;
 				}	
@@ -525,14 +525,14 @@ class component_relation_related extends component_relation_common {
 
 				# References to dato
 				# Recursion (dato)
-				$ar_result 		= self::get_references_recursive($tipo, $dato_locator, $type_rel , true);
+				$ar_result 		= self::get_references_recursive($tipo, $dato_locator, $type_rel , true, $lang);
 				$ar_references 	= array_merge($ar_references, $ar_result);
 			}		
 
 			# References to references
 			foreach ($ar_references as $key => $current_locator) {
 				# Recursion (references)
-				$ar_result = self::get_references_recursive($tipo, $current_locator, $type_rel, true);
+				$ar_result = self::get_references_recursive($tipo, $current_locator, $type_rel, true, $lang);
 				$ar_references = array_merge($ar_references, $ar_result);
 			}
 			#dump($ar_resolved, ' ar_resolved ++ '.to_string());
@@ -773,8 +773,13 @@ class component_relation_related extends component_relation_common {
 	*/
 	public function get_diffusion_value( $lang=null, $type=false ) {
 
+		$diffusion_value = null;
+
 		$separator = '<br>';
-	
+
+		# $dato_with_references = $this->get_dato_with_references();
+		# 	dump($dato_with_references, ' dato_with_references ++ tipo: '.$this->get_tipo()." - ".$this->lang." - ".$this->get_parent());
+		
 		$diffusion_value = $this->get_valor($lang, $format='array');
 		$diffusion_value = implode($separator, $diffusion_value);
 		$diffusion_value = strip_tags($diffusion_value, $separator);
@@ -784,7 +789,7 @@ class component_relation_related extends component_relation_common {
 
 		// calculated references
 			$calculated_references = $this->get_calculated_references();
-				#dump($calculated_references, ' +++++ calculated_references ++ tipo: '.$this->get_tipo());
+			#dump($calculated_references, ' +++++ calculated_references ++ tipo: '.$this->get_tipo()." - ".$this->lang." - ".$this->get_parent());
 			if (!empty($calculated_references)) {
 				$ar_references = [];
 				foreach ($calculated_references as $key => $ref_obj) {
@@ -795,8 +800,8 @@ class component_relation_related extends component_relation_common {
 				}
 				$diffusion_value .= implode($separator, $ar_references);
 			}
-				dump($diffusion_value, ' diffusion_value ++ '.to_string());	
-
+			#dump($diffusion_value, ' diffusion_value ++ '.to_string());	
+		
 		return (string)$diffusion_value;
 	}//end get_diffusion_value
 
