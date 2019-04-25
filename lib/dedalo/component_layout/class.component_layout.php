@@ -1012,12 +1012,15 @@ class component_layout extends component_common {
 			// solve_component 
 				function solve_component($item) {
 					global $section_id, $section_tipo, $modo;
+
+					$RecordObj_dd = new RecordObj_dd($item->tipo);
+					$element_lang = ($RecordObj_dd->get_traducible()==='no') ? DEDALO_DATA_NOLAN : DEDALO_DATA_LANG;
 		
 					$component 	= component_common::get_instance($item->model,
 																 $item->tipo,
 																 $section_id,
 																 $modo,
-																 DEDALO_DATA_LANG,
+																 $element_lang,
 																 $section_tipo);
 					$html = $component->get_html();
 
