@@ -1520,6 +1520,11 @@
 		Fixed issue on diffusion component_relation_related value when references are not included in publication data 
 
 
+	Valencia 25-04-2019 5.4.18
+		Fixed date error on import zotero. Now format is correct (using 'start' property always)
+
+
+
 
 	WORK IN PROGRESS
 		component_date : mark as "red or similar" restricted an other terms based in x param..
@@ -1540,12 +1545,12 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.4.17';
+	$DEDALO_VERSION = '5.4.18';
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '23-04-2019');
+	define('DEDALO_BUILD'	, '25-04-2019');
 
 
 	/*
