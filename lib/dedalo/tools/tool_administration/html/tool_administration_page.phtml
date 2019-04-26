@@ -45,8 +45,16 @@
 			$html   .= "  <div class=\"panel-heading\">";
 			$html   .= "    <h3 class=\"panel-title\"> ADMIN UTILS </h3>";
 			$html   .= "  </div>";
-			$html   .= "  <div class=\"panel-body\">";		
+			$html   .= "  <div class=\"panel-body\">";
 
+
+			#
+			# Long time process test
+				if(SHOW_DEBUG===true) {					
+					$html   .= "<div class=\"panel_option\">";
+					$html   .= "  <a href=\"javascript:;\" data-mode=\"make_backup\" onclick=\"tool_administration.long_time_process(this,event)\">Long time process</a>";				
+					$html   .= "</div>";#end panel_option
+				}
 
 			#
 			# BACKUP FORCE
@@ -398,10 +406,25 @@
 			#
 			# API DOC
 				if(SHOW_DEBUG===true) {				
-				$html   .= "<div class=\"panel_option form-inline\"> ";			
-				$html   .= " <span class=\"glyphicon glyphicon-cog\" aria-hidden=\"true\"></span>";				
-				$url 	 = DEDALO_LIB_BASE_URL."/publication/server_api/v1/docu/ui?code=" . API_WEB_USER_CODE;
-				$html   .= " <a href=\"$url\" target=\"_blank\" data-mode=\"\">API DOC</a>";
+				$html   .= "<div class=\"panel_option form-inline\"> ";				
+
+				// API_WEB_USER_CODE | API_WEB_USER_CODE_MULTIPLE
+					if(defined('API_WEB_USER_CODE_MULTIPLE')) {
+						$api_web_user_code_multiple = API_WEB_USER_CODE_MULTIPLE;
+					}else{
+						$api_web_user_code_multiple = [
+							[
+								'code' 	  => API_WEB_USER_CODE, // old fashion code value from config
+								'db_name' => MYSQL_DEDALO_DATABASE_CONN // default database from config_db
+							]
+						];
+					}
+					foreach ($api_web_user_code_multiple as $key => $current_element) {
+						$html .= " <span class=\"glyphicon glyphicon-cog\" aria-hidden=\"true\"></span>";
+						$url   = DEDALO_LIB_BASE_URL."/publication/server_api/v1/docu/ui?code=" . $current_element['code'] .'&db_name='.$current_element['db_name'];
+						$html .= ' <a href="'.$url.'" target="_blank" data-mode="">API DOC -> '.$current_element['db_name'].'</a> <br>';
+					}								
+
 				$html   .= "</div>";#end panel_option
 				}
 
