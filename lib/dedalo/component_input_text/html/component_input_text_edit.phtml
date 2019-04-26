@@ -139,7 +139,7 @@
 				$propiedades  = json_decode($RecordObj_dd->get_propiedades());
 				if (isset($propiedades->with_lang_versions) && $propiedades->with_lang_versions===true) {
 					
-					$component 			= component_common::get_instance(__CLASS__,
+					$component 			= component_common::get_instance($component_name,
 																		 $tipo,
 																	 	 $parent,
 																	 	 $modo,

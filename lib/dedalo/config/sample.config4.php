@@ -465,6 +465,7 @@
 	define('DEDALO_TEST_INSTALL', true);
 
 
+
 ################################################################
 # DEDALO_SECTION_ID_TEMP : Name / prefix of section_id temporals used to store special sections in memory or session
 	define('DEDALO_SECTION_ID_TEMP', 'tmp');
@@ -546,10 +547,17 @@
 	define('STRUCTURE_DOWNLOAD_DIR'		, DEDALO_LIB_BASE_PATH . '/backup/backups_structure/srt_download');
 
 
+
 ################################################################
 # API
 	# Auth code for acces to rest api server
-	define('API_WEB_USER_CODE' , 'not defined'); # string like mJdUs745Ew38Wq
+	define('API_WEB_USER_CODE_MULTIPLE' , [
+		[
+			'db_name'	=> '', // like web_my_entity
+			'code' 		=> ''  // like asd38kjlkasd6gadsg2fasdoijQks
+		]
+	]);
+
 
 
 ################################################################

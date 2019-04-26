@@ -2522,7 +2522,7 @@ class diffusion_sql extends diffusion  {
 	/**
 	* MAP_LOCATOR_TO_TERMINOID
 	* Returns map first locator to plain "terminoID" like "es_2"
-	* @return string $section_tipo
+	* @return string $terminoID
 	*/
 	public static function map_locator_to_terminoID($options, $dato) {
 
@@ -2930,9 +2930,6 @@ class diffusion_sql extends diffusion  {
 
 
 
-
-
-
 	/**
 	* RETURN_EMPTY_STRING
 	* Fake method to return true always
@@ -3034,15 +3031,28 @@ class diffusion_sql extends diffusion  {
 					break;
 				
 				default:
-					if (is_array($value) || is_object($value)) {
-						$value = json_encode($value);
-					}else{
-						$value = trim($value);
-					}
-					
-					if (!empty($value) && $value!=='[]' && $value!=='{}') {
-						$ar_value[] = $value;
-					}
+					// empty_value. if defined, force custom empty value from properties arguments to insert into result array
+						if (empty($value) && isset($process_dato_arguments->empty_value)) {
+							$value = $process_dato_arguments->empty_value; // any type is accepted: array, object, string ..
+						}
+
+					// convert to string always
+						if (is_array($value) || is_object($value)) {
+							$value = json_encode($value);
+						}else{
+							$value = trim($value);
+						}
+
+					// store value in array	
+						if (isset($process_dato_arguments->empty_value)) {
+							// always store
+							$ar_value[] = $value;
+						}else{
+							// only store if not empty
+							if (!empty($value) && $value!=='[]' && $value!=='{}') {
+								$ar_value[] = $value;
+							}
+						}																	
 					break;
 			}			
 		}
@@ -3061,7 +3071,6 @@ class diffusion_sql extends diffusion  {
 				$value 		= implode($separator,$ar_value);
 				break;
 		}
-				
 
 		# Remove duplicates 
 		#$uar_value 	= explode(',',$value);
@@ -3069,9 +3078,9 @@ class diffusion_sql extends diffusion  {
 		#$value 		= implode(',',$ar_value);
 
 		if (empty($value) && $value!='0') {
-			$value = null;
+			$value = null; // default empty value is 'null'					
 		}
-		
+
 
 		return $value;
 	}//end resolve_value
