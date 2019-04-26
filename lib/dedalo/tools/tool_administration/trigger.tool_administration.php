@@ -758,4 +758,26 @@ function export_hierarchy($json_data) {
 
 	return (object)$response;
 }//end export_hierarchy
-?>
+
+
+
+function long_time_process($json_data) {
+	global $start_time;
+
+	session_write_close();
+	
+	$seconds = 0;
+	$range = range(0, 120);
+	foreach ($range as $key => $value) {
+		debug_log(__METHOD__." Exec iteration: $key , value: $value ".to_string(), logger::DEBUG);
+		sleep(1); // seconds
+		$seconds++;
+	}	
+
+	$response = new stdClass();
+		$response->result 	= true;
+		$response->msg 		= 'Ok. Request done. secondes: '.$seconds;
+
+	return (object)$response;
+}
+

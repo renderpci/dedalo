@@ -1739,11 +1739,20 @@ class tool_administration extends tool_common {
 		// call to core function
 			$last_modified_file = get_last_modified_file($path, $allowed_extensions);
 
+		// file_size
+			$filesize_formatted = function($path) {
+				$size  = filesize($path);
+				$units = array( 'B', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB');
+				$power = $size > 0 ? floor(log($size, 1024)) : 0;
+				return number_format($size / pow(1024, $power), 2, '.', ',') . ' ' . $units[$power];
+			};		
+			//$info = new SplFileInfo($last_modified_file);
+			//$size = $info->getSize();
+			$file_size = $filesize_formatted($last_modified_file);
 
-		#$info = new SplFileInfo($last_modified_file);		
+		$last_backup_info = $last_modified_file .PHP_EOL. $file_size;
 
-
-		return $last_modified_file;
+		return $last_backup_info;
 	}//end get_last_backup_info
 
 
