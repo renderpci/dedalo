@@ -1516,6 +1516,14 @@
 		Fixed error on tool import files thats not show correctly the temporal section
 
 
+	Valencia 23-04-2019 5.4.17
+		Fixed issue on diffusion component_relation_related value when references are not included in publication data 
+
+
+	Valencia 25-04-2019 5.4.18
+		Fixed date error on import zotero. Now format is correct (using 'start' property always)
+
+
 
 
 	WORK IN PROGRESS
@@ -1537,12 +1545,12 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.4.16';
+	$DEDALO_VERSION = '5.4.21';
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '19-04-2019');
+	define('DEDALO_BUILD'	, '26-04-2019');
 
 
 	/*
