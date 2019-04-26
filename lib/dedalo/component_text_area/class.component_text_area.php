@@ -1689,6 +1689,24 @@ class component_text_area extends component_common {
 
 	/**
 	* GET_VALOR_LIST_HTML_TO_SAVE
+	* Used for resolve the links of the svg and images inside the text_area
+	* @return 
+	*/
+	public function get_diffusion_value_with_images() {
+
+		$diffusion_value = $this->get_valor_list_html_to_save(60000);
+
+		$key = '0';
+		$diffusion_value_with_images = $diffusion_value->$key;
+
+		return (string)$diffusion_value_with_images;
+		
+	}//end get_valor_list_html_to_save
+
+
+
+	/**
+	* GET_VALOR_LIST_HTML_TO_SAVE
 	* Usado por section:save_component_dato
 	* Devuelve a section el html a usar para rellenar el 'campo' 'valor_list' al guardar
 	* Por defecto será el html generado por el componente en modo 'list', pero en algunos casos
