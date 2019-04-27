@@ -1680,17 +1680,14 @@ class component_text_area extends component_common {
 		// Decode entities
 			$diffusion_value = html_entity_decode($diffusion_value);
 
-
-
-
 		return (string)$diffusion_value;
 	}//end get_diffusion_value
 
 
 	/**
-	* GET_VALOR_LIST_HTML_TO_SAVE
-	* Used for resolve the links of the svg and images inside the text_area
-	* @return 
+	* GET_DIFFUSION_VALUE_WITH_IMAGES
+	* Used in diffusion (see properties) for resolve the links of the svg and images inside the text_area
+	* @return string $diffusion_value_with_images
 	*/
 	public function get_diffusion_value_with_images() {
 
@@ -1699,9 +1696,8 @@ class component_text_area extends component_common {
 		$key = '0';
 		$diffusion_value_with_images = $diffusion_value->$key;
 
-		return (string)$diffusion_value_with_images;
-		
-	}//end get_valor_list_html_to_save
+		return (string)$diffusion_value_with_images;		
+	}//end get_diffusion_value_with_images
 
 
 
