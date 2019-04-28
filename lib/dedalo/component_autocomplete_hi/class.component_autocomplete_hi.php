@@ -789,11 +789,22 @@ class component_autocomplete_hi extends component_relation_common {
 			case 'fr1':
 				# models
 				$ar_models = [
-					['type' => 'country', 				'section_tipo' => 'fr2', 'section_id' => '41189'],
-					['type' => 'autonomous_community'],
-					['type' => 'province', 				'section_tipo' => 'fr2', 'section_id' => '41190'],
-					['type' => 'region', 				'section_tipo' => 'fr2', 'section_id' => '41191'], // comarca
-					['type' => 'municipality', 			'section_tipo' => 'fr2', 'section_id' => '41192']
+					(object)['type' => 'country', 				'section_tipo' => 'fr2', 'section_id' => '41189'],
+					(object)['type' => 'autonomous_community'],
+					(object)['type' => 'province', 				'section_tipo' => 'fr2', 'section_id' => '41190'],
+					(object)['type' => 'region', 				'section_tipo' => 'fr2', 'section_id' => '41191'], // comarca
+					(object)['type' => 'municipality', 			'section_tipo' => 'fr2', 'section_id' => '41192']
+				];
+				break;
+			# Cuba
+			case 'cu1':
+				# models
+				$ar_models = [
+					(object)['type' => 'country', 				'section_tipo' => 'cu2', 'section_id' => '325'],
+					(object)['type' => 'autonomous_community'],
+					(object)['type' => 'province', 				'section_tipo' => 'cu2', 'section_id' => '326'],
+					(object)['type' => 'region', 				'section_tipo' => 'cu2', 'section_id' => '329'], // comarca | reparto
+					(object)['type' => 'municipality', 			'section_tipo' => 'cu2', 'section_id' => '327']
 				];
 				break;
 			default:

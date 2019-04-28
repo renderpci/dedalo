@@ -3115,9 +3115,9 @@ class section extends common {
 				
 				if (!empty($layout_map)) {
 					$ar_component_tipo = reset($layout_map);
-					foreach ($ar_component_tipo as $component_tipo) {
+					foreach ($ar_component_tipo as $key => $component_tipo) {
 						if (empty($component_tipo)) {
-							debug_log(__METHOD__." Ignored empty component tipo received from layout map: ".to_string($layout_map), logger::ERROR);
+							debug_log(__METHOD__." Ignored empty component tipo (key:$key) received from layout map: ".json_encode($layout_map, JSON_PRETTY_PRINT), logger::ERROR);
 							continue;
 						}
 						$select_element = new stdClass();

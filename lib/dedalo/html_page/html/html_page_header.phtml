@@ -15,7 +15,7 @@ if (login::is_logged()) {
 		case (SHOW_DEBUG ):
 			$menu_wrapper_css = 'menu_wrapper_debug';
 			break;
-		case ( component_security_administrator::is_global_admin( $user_id ) ):
+		case ( component_security_administrator::is_global_admin( navigator::get_user_id() ) ):
 			$menu_wrapper_css = 'menu_wrapper_global_admin';
 			break;
 		default:
@@ -24,9 +24,9 @@ if (login::is_logged()) {
 	}
 
 	
-	echo "<div id=\"menu_wrapper\" class=\"$menu_wrapper_css\" >";
+	echo '<div id="menu_wrapper" class="'.$menu_wrapper_css.'">';
 
-		echo "<div id=\"menu_background\" class=\"menu_background\" >";
+		echo '<div id="menu_background" class="menu_background">';
 			#
 			# Quit button
 			echo "<div id=\"quit\" class=\"glyphicon glyphicon-off link\" title=\"".label::get_label('salir')."\" onclick=\"login.Quit()\"></div>";
@@ -42,11 +42,11 @@ if (login::is_logged()) {
 			# INSPECTOR : button open / hide sidebar 
 			$caller_id = navigator::get_selected('caller_id');
 			if( empty($caller_id) && $modo==='edit' ) {
-				echo "<!-- Inspector toggle button -->";
+				echo '<!-- Inspector toggle button -->';
 				#echo "<div id=\"button_toggle_inspector\" class=\"button_in_menu text_unselectable'\" onclick=\"inspector.toggle_sidebar()\">INSPECTOR $caller_id</div>";
 				echo "<div id=\"button_toggle_inspector\" class=\"link'\" title=\"".label::get_label('mostrar_inspector')."\" onclick=\"inspector.toggle_sidebar()\"></div>";
 			}
-		echo "</div><!-- /menu_background -->";
+		echo '</div><!-- /menu_background -->';
 
 
 		#
@@ -56,14 +56,14 @@ if (login::is_logged()) {
 		#echo "</div>";
 		
 		# Logged user
-			echo '<div class="button_in_menu logged_user_name" data-section_id="'.$user_id.'" ';
-			#if (intval($user_id)>0) {
+			echo '<div class="button_in_menu logged_user_name" data-section_id="'.navigator::get_user_id().'" ';
+			#if (intval(navigator::get_user_id())>0) {
 				echo 'onclick="tool_common.open_tool_user_admin(this)"';
 			#}			
 			echo '>';				
 			echo navigator::get_username();
 			if(SHOW_DEBUG===true) {
-				echo ' '.$user_id.'';
+				echo ' '.navigator::get_user_id().'';
 			}
 			echo '</div>';	
 		
@@ -76,7 +76,7 @@ if (login::is_logged()) {
 		
 		#
 		# DATA LANG JUMP
-		if(component_security_administrator::is_global_admin( $user_id )===true || (defined('DEDALO_DATA_LANG_SELECTOR') && DEDALO_DATA_LANG_SELECTOR===true)) {
+		if(component_security_administrator::is_global_admin( navigator::get_user_id() )===true || (defined('DEDALO_DATA_LANG_SELECTOR') && DEDALO_DATA_LANG_SELECTOR===true)) {
 
 			$dedalo_data_langs_selector_html = html_page::get_dedalo_data_langs_selector_html();
 			echo $dedalo_data_langs_selector_html;
@@ -110,7 +110,7 @@ if (login::is_logged()) {
 					$section_name .= " [$current_table]";
 				}				
 			}		
-			echo "<!-- Section label -->";
+			echo '<!-- Section label -->';
 			if( !empty($section_tipo) && $modo==='list' ) {
 				echo "<div id=\"current_section_label\" class=\"button_in_menu css_label text_unselectable section_label_list \">$section_name</div>";
 			}else if(!empty($section_tipo)) {
@@ -123,7 +123,7 @@ if (login::is_logged()) {
 		}#end if(!empty($current_selected_area))
 		
 	
-	echo "</div><!-- /menu_wrapper -->";
+	echo '</div><!-- /menu_wrapper -->';
 
 
 
@@ -198,17 +198,13 @@ if (login::is_logged()) {
 
 	
 	# Sólo se usa para ocupar el espacio del mewnu_wrapper ya que este es de posición fija y no ocupa espacio en la página
-	echo "<div class=\"menu_wrapper_space\"></div>";
+	echo '<div class="menu_wrapper_space"></div>';
 
-	if (isset($debug_line_html)) {
-		echo "<div class=\"debug_line_wrap_spacer\"></div>";
-	}
+	// debug_line
+		if (isset($debug_line_html)) {
+			echo '<div class="debug_line_wrap_spacer"></div>';
+		}
 
 
-	
-	
-		
 
-	
-}
-?>
+}//end if (login::is_logged())
