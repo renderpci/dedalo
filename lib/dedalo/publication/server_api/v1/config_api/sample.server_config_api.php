@@ -17,10 +17,8 @@
 	// API_WEB_USER_CODE . Verification user code (must be identical in config of client and server)
 	if (isset($skip_api_web_user_code_verification) && $skip_api_web_user_code_verification===true) {
 		# Ignore api code verification
-	}else{
-		if(!defined('API_WEB_USER_CODE')) {
-			define('API_WEB_USER_CODE', 'xxxxxxxxxxxxxxxxxxxxxx');
-		}	
+	}else{		
+		define('API_WEB_USER_CODE', 'xxxxxxxxxxxxxxxxxxxxxx');
 		if (empty($code)) {
 			echo json_encode("Sorry. Empty user code");
 			die();
