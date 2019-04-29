@@ -1028,11 +1028,14 @@ class component_autocomplete extends component_relation_common {
 						$external_section_tipo = $current_search->section_tipo;
 						$current_recordObjdd = new RecordObj_dd($external_section_tipo);
 						$external_section_properties = $current_recordObjdd->get_propiedades(true);
+						
+						if (isset($external_section_properties->external_data)) {
+							
+							$external_data = $external_section_properties->external_data;
+							$external_data->section_tipo = $external_section_tipo;
 
-						$external_data = $external_section_properties->external_data;
-						$external_data->section_tipo = $external_section_tipo;
-
-						$component_info_obj->external_data[] = $external_data;
+							$component_info_obj->external_data[] = $external_data;
+						}						
 					}
 				}
 			}
