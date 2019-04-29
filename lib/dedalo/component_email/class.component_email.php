@@ -20,6 +20,7 @@ class component_email extends component_common {
 	}//end get_dato
 
 
+
 	/**
 	* SET_DATO
 	*/
@@ -82,8 +83,6 @@ class component_email extends component_common {
 
 
 
-
-
 	/**
 	* RESOLVE_QUERY_OBJECT_SQL
 	* @param object $query_object
@@ -91,9 +90,7 @@ class component_email extends component_common {
 	*	Edited/parsed version of received object 
 	*/
 	public static function resolve_query_object_sql($query_object) {
-		debug_log(__METHOD__." query_object ".to_string($query_object), logger::DEBUG);
-
-			dump($query_object, ' query_object ++ '.to_string());
+		#debug_log(__METHOD__." query_object ".to_string($query_object), logger::DEBUG);
 		
 		$q = $query_object->q;
 		if (isset($query_object->type) && $query_object->type==='jsonb') {
@@ -133,49 +130,27 @@ class component_email extends component_common {
 					$RecordObj_dd   = new RecordObj_dd($component_tipo);
 					$lang 			= $RecordObj_dd->get_traducible()!=='si' ? DEDALO_DATA_NOLAN : DEDALO_DATA_LANG;
 
+					#$clone = clone($query_object);
+					#	$clone->operator = '=';
+					#	$clone->q_parsed = '\'[]\'';
+					#	$clone->lang 	 = $lang;
+					#$new_query_json->$logical_operator[] = $clone;
+
 					$clone = clone($query_object);
 						$clone->operator = '=';
-						$clone->q_parsed = '\'[]\'';
+						$clone->q_parsed = '\'\'';
 						$clone->lang 	 = $lang;
-
 					$new_query_json->$logical_operator[] = $clone;
 
-					// legacy data (set as null instead [])
+					// legacy data (set as null instead '')
 					$clone = clone($query_object);
 						$clone->operator = 'IS NULL';
 						$clone->lang 	 = $lang;
-
-					$new_query_json->$logical_operator[] = $clone;
-
-				// langs check all
-					/*
-					$ar_query_object = [];
-					$ar_all_langs 	 = common::get_ar_all_langs();
-					$ar_all_langs[]  = DEDALO_DATA_NOLAN; // Added no lang also
-					foreach ($ar_all_langs as $current_lang) {
-						// Empty data is blank array []
-						$clone = clone($query_object);
-							$clone->operator = '=';
-							$clone->q_parsed = '\'[]\'';
-							$clone->lang 	 = $current_lang;
-
-						$ar_query_object[] = $clone;
-
-						// legacy data (set as null instead [])
-						$clone = clone($query_object);
-							$clone->operator = 'IS NULL';
-							$clone->lang 	 = $current_lang;
-
-						$ar_query_object[] = $clone;
-					}			
-
-					$new_query_json->$logical_operator = array_merge($new_query_json->$logical_operator, $ar_query_object);
-					*/
+					$new_query_json->$logical_operator[] = $clone;			
 
 				# override
 				$query_object = $new_query_json ;
 				break;
-
 			# NOT EMPTY (in any project lang data)
 			case ($q==='*'):
 				$operator = 'IS NOT NULL';
@@ -190,16 +165,19 @@ class component_email extends component_common {
 
 				// langs check
 					$ar_query_object = [];
-					$ar_all_langs 	 = common::get_ar_all_langs();
-					$ar_all_langs[]  = DEDALO_DATA_NOLAN; // Added no lang also
-					foreach ($ar_all_langs as $current_lang) {
+					
+						#$clone = clone($query_object);
+						#	$clone->operator = '!=';
+						#	$clone->q_parsed = '\'[]\'';
+						#	$clone->lang 	 = DEDALO_DATA_NOLAN;
+						#$ar_query_object[] = $clone;
+
 						$clone = clone($query_object);
 							$clone->operator = '!=';
 							$clone->q_parsed = '\'\'';
-							$clone->lang 	 = $current_lang;
-
+							$clone->lang 	 = DEDALO_DATA_NOLAN;
 						$ar_query_object[] = $clone;
-					}
+					
 
 					$logical_operator ='$or';
 					$langs_query_json = new stdClass;
@@ -229,7 +207,7 @@ class component_email extends component_common {
 				$operator = '!~*';
 				$q_clean  = str_replace('-', '', $q);
 				$query_object->operator = $operator;
-				$query_object->q_parsed	= '\'.*\[".*'.$q_clean.'.*\'';
+				$query_object->q_parsed	= '\'.*".*'.$q_clean.'.*\'';
 				$query_object->unaccent = true;
 				break;
 			# CONTAIN EXPLICIT
@@ -237,7 +215,7 @@ class component_email extends component_common {
 				$operator = '~*';
 				$q_clean  = str_replace('*', '', $q);
 				$query_object->operator = $operator;
-				$query_object->q_parsed	= '\'.*\[".*'.$q_clean.'.*\'';
+				$query_object->q_parsed	= '\'.*".*'.$q_clean.'.*\'';
 				$query_object->unaccent = true;
 				break;
 			# ENDS WITH
@@ -245,7 +223,7 @@ class component_email extends component_common {
 				$operator = '~*';
 				$q_clean  = str_replace('*', '', $q);
 				$query_object->operator = $operator;
-				$query_object->q_parsed	= '\'.*\[".*'.$q_clean.'".*\'';
+				$query_object->q_parsed	= '\'.*".*'.$q_clean.'".*\'';
 				$query_object->unaccent = true;
 				break;
 			# BEGINS WITH
@@ -253,7 +231,7 @@ class component_email extends component_common {
 				$operator = '~*';
 				$q_clean  = str_replace('*', '', $q);
 				$query_object->operator = $operator;
-				$query_object->q_parsed	= '\'.*\["'.$q_clean.'.*\'';
+				$query_object->q_parsed	= '\'.*"'.$q_clean.'.*\'';
 				$query_object->unaccent = true;
 				break;
 			# LITERAL
@@ -269,7 +247,7 @@ class component_email extends component_common {
 				$operator = '~*';
 				$q_clean  = str_replace('+', '', $q);				
 				$query_object->operator = $operator;
-				$query_object->q_parsed	= '\'.*\[".*'.$q_clean.'.*\'';
+				$query_object->q_parsed	= '\'.*".*'.$q_clean.'.*\'';
 				$query_object->unaccent = true;
 				break;			
 		}//end switch (true) {
@@ -302,7 +280,6 @@ class component_email extends component_common {
 
 		return $ar_operators;
 	}//end search_operators_info
-
 
 
 
