@@ -412,6 +412,7 @@
 					if(defined('API_WEB_USER_CODE_MULTIPLE')) {
 						$api_web_user_code_multiple = API_WEB_USER_CODE_MULTIPLE;
 					}else{
+						// create unified array format from old config
 						$api_web_user_code_multiple = [
 							[
 								'code' 	  => API_WEB_USER_CODE, // old fashion code value from config
@@ -422,7 +423,7 @@
 					foreach ($api_web_user_code_multiple as $key => $current_element) {
 						$html .= " <span class=\"glyphicon glyphicon-cog\" aria-hidden=\"true\"></span>";
 						$url   = DEDALO_LIB_BASE_URL."/publication/server_api/v1/docu/ui?code=" . $current_element['code'] .'&db_name='.$current_element['db_name'];
-						$html .= ' <a href="'.$url.'" target="_blank" data-mode="">API DOC -> '.$current_element['db_name'].'</a> <br>';
+						$html .= ' <a href="'.$url.'" target="_blank" data-mode="">API DOC --> '.$current_element['db_name'].'</a> <br>';
 					}								
 
 				$html   .= "</div>";#end panel_option
