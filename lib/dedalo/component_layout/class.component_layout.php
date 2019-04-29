@@ -959,20 +959,29 @@ class component_layout extends component_common {
 	* RENDER_LAYOUT_MAP
 	* @return string $html
 	*/
-	public static function render_layout_map($section_obj, $layout_map, $ar_exclude_elements) {
+	public static function render_layout_map($section_obj, $layout_map, $ar_exclude_elements=[]) {
 
 		// declare as 'global' for allow get from inside functions
-			global $section_tipo, $section_id, $modo, $ar_layout_map_items;
+			global $section_tipo, $section_id, $modo, $ar_layout_map_items, $current_ar_exclude_elements;
 
 		// section vars
 			$section_tipo 	= $section_obj->get_tipo();
 			$section_id 	= $section_obj->get_section_id();
 			$modo 			= 'edit';
 
+			$current_ar_exclude_elements = $ar_exclude_elements;
+	
 		// layout plain
 			function make_plain($ar_values) {
+				global $current_ar_exclude_elements;
 				$ar_plain = [];
-				foreach ($ar_values as $key => $value) {					
+				foreach ($ar_values as $key => $value) {
+
+					// Skip to remove elements
+						if(in_array($key, $current_ar_exclude_elements)) {
+							continue; # skip
+						}
+
 					$ar_plain[] = $key;					
 					if (!empty($value)) {
 						$ar_plain = array_merge($ar_plain, make_plain($value));
@@ -982,7 +991,7 @@ class component_layout extends component_common {
 			};
 			$layout_map_plain = make_plain($layout_map);			
 				#dump($layout_map_plain, ' layout_map_plain ++ '.to_string());
-			$ar_layout_map_items 		  = self::resolve_layout_map_plain($layout_map_plain);
+			$ar_layout_map_items = self::resolve_layout_map_plain($layout_map_plain);
 				#dump($ar_layout_map_items, ' ar_items ++ '.to_string());
 
 		// solve functions 
@@ -1115,6 +1124,13 @@ class component_layout extends component_common {
 		// iterate items
 			$ar_html_elements = [];
 			foreach ($ar_layout_map_items as $key => $item) {
+
+				// Skip to remove elements
+					#if(in_array($item->tipo, $ar_exclude_elements)) {
+					#	#if(SHOW_DEBUG===true) dump($terminoID,"removed 4 $terminoID");
+					#	continue; # skip
+					#}
+
 				$current_html = solve_item($item);
 				if (!empty($current_html)) {
 					$ar_html_elements[] = $current_html;
