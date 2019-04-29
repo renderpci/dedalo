@@ -1421,5 +1421,122 @@ abstract class common {
 
 
 
+	/**
+	* TRUNCATE_TEXT
+	* Multibyte truncate or trim text
+	*/
+	public static function truncate_text($string, $limit, $break=" ", $pad='...') {
+
+		// returns with no change if string is shorter than $limit
+			$str_len = mb_strlen($string, '8bit');
+			if($str_len <= $limit) {
+				return $string;
+			}
+		// substring multibyte
+			$string_fragment = mb_substr($string, 0, $limit);
+
+		// cut fragment by break char (if is possible)
+			if(false !== ($breakpoint = mb_strrpos($string_fragment, $break))) {
+				$final_string = mb_substr($string_fragment, 0, $breakpoint);
+			}else{
+				$final_string = $string_fragment;
+			}
+
+		return $final_string . $pad;
+	}//end truncate_text
+
+
+
+	/**
+	* TRUNCATE_HTML
+	* Thanks to Søren Løvborg (printTruncated)
+	*/
+	public static function truncate_html($maxLength, $html, $isUtf8=true) {
+	    $printedLength = 0;
+	    $position = 0;
+	    $tags = array();
+
+	    $full_text = '';
+
+	    // For UTF-8, we need to count multibyte sequences as one character.
+	    $re = $isUtf8
+	        ? '{</?([a-z]+)[^>]*>|&#?[a-zA-Z0-9]+;|[\x80-\xFF][\x80-\xBF]*}'
+	        : '{</?([a-z]+)[^>]*>|&#?[a-zA-Z0-9]+;}';
+
+	    while ($printedLength < $maxLength && preg_match($re, $html, $match, PREG_OFFSET_CAPTURE, $position))
+	    {
+	        list($tag, $tagPosition) = $match[0];
+
+	        // Print text leading up to the tag.
+	        $str = substr($html, $position, $tagPosition - $position);
+	        if ($printedLength + strlen($str) > $maxLength)
+	        {
+	            #print(substr($str, 0, $maxLength - $printedLength));
+	            $full_text .= substr($str, 0, $maxLength - $printedLength);
+	            $printedLength = $maxLength;
+	            break;
+	        }
+
+	        #print($str);
+	        $full_text .= $str;
+	        $printedLength += strlen($str);
+	        if ($printedLength >= $maxLength) break;
+
+	        if ($tag[0] == '&' || ord($tag) >= 0x80)
+	        {
+	            // Pass the entity or UTF-8 multibyte sequence through unchanged.
+	            #print($tag);
+	            $full_text .= $tag;
+	            $printedLength++;
+	        }
+	        else
+	        {
+	            // Handle the tag.
+	            $tagName = $match[1][0];
+	            if ($tag[1] == '/')
+	            {
+	                // This is a closing tag.
+
+	                $openingTag = array_pop($tags);
+	                assert($openingTag == $tagName); // check that tags are properly nested.
+
+	                #print($tag);
+	                $full_text .= $tag;
+	            }
+	            else if ($tag[strlen($tag) - 2] == '/')
+	            {
+	                // Self-closing tag.
+	                #print($tag);
+	                $full_text .= $tag;
+	            }
+	            else
+	            {
+	                // Opening tag.
+	                #print($tag);
+	                $full_text .= $tag;
+	                $tags[] = $tagName;
+	            }
+	        }
+
+	        // Continue after the tag.
+	        $position = $tagPosition + strlen($tag);
+	    }
+
+	    // Print any remaining text.
+	    if ($printedLength < $maxLength && $position < strlen($html))
+	        #print(substr($html, $position, $maxLength - $printedLength));
+	    	$full_text .= substr($html, $position, $maxLength - $printedLength);
+
+	    // Close any open tags.
+	    while (!empty($tags)) {	    	
+	        #printf('</%s>', array_pop($tags));
+	        $full_text .= sprintf('</%s>', array_pop($tags));
+	    }
+
+	    return $full_text;
+	}//end truncate_html
+
+
+
 }//end class
 ?>
