@@ -65,8 +65,10 @@
 
 			// service autocomplete options
 				$ar_target_section_tipo = $this->get_ar_target_section_tipo();
-				$search_sections 		= $ar_target_section_tipo;
 
+			// search_sections . set and remove search sections duplicates
+				$search_sections 		= array_values( array_unique($ar_target_section_tipo) );
+				
 			// from_modo. get the change modo from portal list to edit
 				$from_modo_requested = common::get_request_var('from_modo');
 				if ($from_modo_requested!==false) {
