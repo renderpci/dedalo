@@ -1159,21 +1159,21 @@ class login extends common {
 	* @return bool
 	*/
 	public static function is_developer($user_id) {
-
+	
 		$is_developer = false;
 		
 		$user_id = (int)$user_id;
 
 		# Dedalo superuser case
-		if ($user_id===DEDALO_SUPERUSER) return true;
+		if ($user_id==DEDALO_SUPERUSER) return true;
 	
 		# Empty user_id
 		if ($user_id<1) return false;
 
 		# If request user_id is the same as current logged user, return session value, without acces to component
-		if ( isset($_SESSION['dedalo4']['auth']['user_id']) && $user_id==$_SESSION['dedalo4']['auth']['user_id'] ) {
+		#if ( isset($_SESSION['dedalo4']['auth']['user_id']) && $user_id==$_SESSION['dedalo4']['auth']['user_id'] ) {
 			#return (bool)$_SESSION['dedalo4']['auth']['is_developer'];
-		}
+		#}
 
 		# Resolve from component
 		$component 	 = component_common::get_instance('component_radio_button',
@@ -1194,7 +1194,7 @@ class login extends common {
 			$is_developer = true;
 		}
 	
-
+	
 		return $is_developer;
 	}//end is_developer
 
