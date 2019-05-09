@@ -1716,58 +1716,57 @@ class component_relation_common extends component_common {
 				
 						// Element
 						$element = new stdClass();
-							$element->section_tipo 	= $current_section_tipo;
-							$element->section_tipo_name 	= $section_tipo_name;
-							$element->tipo 			= $current_component_tipo;
-							$element->name 			= $name;
-							$element->modelo_name 	= $current_modelo_name;
-							$element->type_map 		= $type_map;
-							$element->base_component_tipo 		= $current_component_tipo;
-							$element->search_engine = $search_engine;
-							$element->fields_map 	= $fields_map;
+							$element->section_tipo 		= $current_section_tipo;
+							$element->section_tipo_name = $section_tipo_name;
+							$element->tipo 				= $current_component_tipo;
+							$element->name 				= $name;
+							$element->modelo_name 		= $current_modelo_name;
+							$element->type_map 			= $type_map;
+							$element->base_component_tipo = $current_component_tipo;
+							$element->search_engine 	= $search_engine;
+							$element->fields_map 		= $fields_map;
 
 						$filter_fields_data[] = $element;
 					}
 					
 				}
+				
 			}else{
 
 				// relation terms
-				foreach ($filter_obj as $operator => $ar_filter) foreach ($ar_filter as $key => $current_filter) {
+					foreach ($filter_obj as $operator => $ar_filter) foreach ($ar_filter as $key => $current_filter) {
+						$first_path 			= reset($current_filter->path);
+						$last_path 				= end($current_filter->path);
+						$base_component_tipo 	= $first_path->component_tipo;
+						$base_section_tipo 		= $first_path->section_tipo;
+						$section_tipo_name		= RecordObj_dd::get_termino_by_tipo($base_section_tipo,DEDALO_APPLICATION_LANG,true);
+						$current_component_tipo = $last_path->component_tipo;
+						$current_section_tipo 	= $last_path->section_tipo;
+						$current_modelo_name 	= $last_path->modelo;			
+						$name 					= $last_path->name;
 
-					$first_path 			= reset($current_filter->path);
-					$last_path 				= end($current_filter->path);
-					$base_component_tipo 	= $first_path->component_tipo;
-					$base_section_tipo 		= $first_path->section_tipo;
-					$section_tipo_name		= RecordObj_dd::get_termino_by_tipo($base_section_tipo,DEDALO_APPLICATION_LANG,true);
-					$current_component_tipo = $last_path->component_tipo;
-					$current_section_tipo 	= $last_path->section_tipo;
-					$current_modelo_name 	= $last_path->modelo;			
-					$name 					= $last_path->name;
+						if (true===in_array($base_component_tipo, $ar_filters)) continue;
 
-					if (true===in_array($base_component_tipo, $ar_filters)) continue;
+						// type_map
+							if (isset($propiedades->source->type_map->$base_component_tipo)) {
+								$type_map = $propiedades->source->type_map->$base_component_tipo;				
+							}else{
+								$type_map = array();
+							}				
+							
+						// Element
+							$element = new stdClass();
+								$element->section_tipo 	= $base_section_tipo;
+								$element->section_tipo_name 	= $section_tipo_name;
+								$element->tipo 			= $current_component_tipo;
+								$element->name 			= $name;
+								$element->modelo_name 	= $current_modelo_name;
+								$element->type_map 		= $type_map;
+								$element->base_component_tipo 		= $base_component_tipo;
+								$element->search_engine = "search_dedalo";
 
-					// type_map
-						if (isset($propiedades->source->type_map->$base_component_tipo)) {
-							$type_map = $propiedades->source->type_map->$base_component_tipo;				
-						}else{
-							$type_map = array();
-						}				
-						
-					// Element
-						$element = new stdClass();
-							$element->section_tipo 	= $base_section_tipo;
-							$element->section_tipo_name 	= $section_tipo_name;
-							$element->tipo 			= $current_component_tipo;
-							$element->name 			= $name;
-							$element->modelo_name 	= $current_modelo_name;
-							$element->type_map 		= $type_map;
-							$element->base_component_tipo 		= $base_component_tipo;
-							$element->search_engine = "search_dedalo";
-
-						$filter_fields_data[] = $element;
-				}
-
+							$filter_fields_data[] = $element;
+					}
 
 			}
 

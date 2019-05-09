@@ -4292,7 +4292,7 @@ abstract class component_common extends common {
 		#		}
 		#	}
 
-		// Search filter custom
+		// Search filter custom (properties)
 			if (isset($propiedades->source->filter_custom)) {
 
 				// Build custom filter from propiedades
@@ -4316,10 +4316,6 @@ abstract class component_common extends common {
 			# Avoid auto add filter by user projects in search
 			if (!property_exists($search_query_object,'skip_projects_filter')) {
 				$search_query_object->skip_projects_filter 	= true;
-			}		
-
-			if(SHOW_DEBUG===true) {
-				debug_log(__METHOD__." search_query_object - modo:$this->modo - ".json_encode($search_query_object, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT), logger::DEBUG);
 			}
 
 		// Exec search
@@ -4327,7 +4323,11 @@ abstract class component_common extends common {
 			$rows_data 		 	 = $search_development2->search();
 			$ar_records 		 = $rows_data->ar_records;
 
-		// 		
+		// debug
+			if(SHOW_DEBUG===true) {
+				debug_log(__METHOD__." search_query_object - modo:$this->modo - ".json_encode($search_query_object, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT), logger::DEBUG);
+				debug_log(__METHOD__." rows_data->strQuery ".to_string($rows_data->strQuery), logger::DEBUG);
+			}			
 			
 		// childrens addition optional
 			// see self add_childrens
