@@ -1,0 +1,40 @@
+<?php
+
+	# VISUALIZADOR HTML	
+
+	$ar_parts = [];
+	foreach ($ar_locators as $current_locator) {
+
+		$current_parts = [];
+
+		# SECTION_ID link
+		$current_parts[] = $current_locator->section_id;
+
+		#
+		# MEDIA COMPONENT		
+		$media_component 	= component_common::get_instance( $media_component_modelo_name,
+															  $media_component_tipo,
+															  $current_locator->section_id,
+															  'list',
+															  DEDALO_DATA_NOLAN,
+															  $current_locator->section_tipo);		
+
+		
+		# TC DURATION
+		switch ($media_component_modelo_name) {
+			case 'component_av':
+				$tc 			 = $media_component->get_duration_seconds('timecode');			 
+				$current_parts[] = str_replace('.000', '', $tc);
+				break;
+			
+			default:
+				break;
+		}
+
+		$ar_parts[] = implode(' - ', $current_parts);
+
+	}//end foreach ($ar_locators as $current_locator) {
+	
+	$html = implode(PHP_EOL, $ar_parts);
+
+	print $html;
