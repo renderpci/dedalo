@@ -11,13 +11,19 @@
 	$data_source 				= $this->data_source;
 	$component_portal_tipo 		= key($data_source);
 	$component_text_area_tipo 	= reset($data_source);
-	$filename 					= $modo;
+	
+	// overwrite modo if widget_mode exists (export case)
+		if (!empty($widget_mode)) {
+		 	$modo  = $widget_mode;
+		 } 
 
-	#dump($modo, ' modo ++ '.to_string());
-	#js::$ar_url[]  = DEDALO_LIB_BASE_URL."/extras/oh/widgets/descriptors/js/descriptors.js";
+	$filename = $modo;
 
 	switch ($modo) {
 
+		case 'export' :
+			return null;
+			
 		case 'list':
 			$filename = 'list';
 			
@@ -31,8 +37,7 @@
 			$js_url = $widget_base_url ."/js/".$widget_name.".js";
 			if ( !in_array($js_url, js::$ar_url) ) {
 				js::$ar_url[] = $js_url;
-			}
-							
+			}							
 			break;
 
 		case 'edit':

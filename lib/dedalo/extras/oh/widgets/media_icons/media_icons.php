@@ -9,13 +9,22 @@
 		$section_tipo 			= $this->component_info->get_section_tipo();
 		$data_source 			= $this->data_source;
 		$component_portal_tipo 	= key($data_source);
-		$media_component_tipo 	= reset($data_source);
-		$filename 				= $modo;
+		$media_component_tipo 	= reset($data_source);		
+
+		// overwrite modo if widget_mode exists (export case)
+			if (!empty($widget_mode)) {
+			 	$modo  = $widget_mode;
+			 } 
+
+		$filename = $modo;
+
 		switch ($modo) {
 
 			case 'list':
 				$filename = 'edit';
-			case 'edit':				
+			case 'export' :
+
+			case 'edit':
 
 				#
 				# DATA_SOURCE
@@ -54,20 +63,16 @@
 				
 				$media_component_modelo_name = RecordObj_dd::get_modelo_name_by_tipo($media_component_tipo, true);
 
-				$use_cache = true;			
-
-				break;				
+				$use_cache = true;
+				break;		
 
 			default:
 				return "Sorry. Mode: $modo is not supported";
 		}
 
-
 		
 		
-		$page_html = dirname(__FILE__) . '/html/' . $widget_name . '_' . $filename . '.phtml';	
-		if( !include($page_html) ) {
-			echo "<div class=\"error\">Invalid widget mode $modo</div>";
-		}
-
-?>
+	$page_html = dirname(__FILE__) . '/html/' . $widget_name . '_' . $filename . '.phtml';	
+	if( !include($page_html) ) {
+		echo "<div class=\"error\">Invalid widget mode 1 $modo</div>";
+	}
