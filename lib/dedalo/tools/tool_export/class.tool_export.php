@@ -238,12 +238,13 @@ class tool_export extends tool_common {
 
 				// build rows. parse and fill empty columns
 					foreach ($ar_records_deep_resolved as $section_id => $ar_value) {
-	
+		
 						$ar_columns = [];
 						foreach ($header_tipos as $h_item) {
 
 							$ar_found = array_filter($ar_value, function($element) use($h_item){
 								return $element->component_tipo===$h_item->component_tipo
+									&& $element->section_tipo===$h_item->section_tipo
 									&& $element->from_component_tipo===$h_item->from_component_tipo
 									&& $element->from_section_tipo===$h_item->from_section_tipo;
 							});
