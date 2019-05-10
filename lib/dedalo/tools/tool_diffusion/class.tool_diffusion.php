@@ -128,10 +128,16 @@ class tool_diffusion {
 			$response->msg = "Error. Error on publish record $section_id";
 			
 		}
-
+	
 		// Add especific msg		
 			if (isset($update_record_result->msg)) {
-				$response->msg .= ' - ' . is_array($update_record_result->msg)===true ? implode(" | ", $update_record_result->msg) : $update_record_result->msg;
+				$update_record_result_msg = array_reduce((array)$update_record_result->msg, function($carry, $item){
+					if (!empty($item)) {
+						return $item;
+					}
+					return $carry;
+				});
+				$response->msg .= ' - ' . $update_record_result_msg;
 			}
 
 		if(SHOW_DEBUG===true) {
