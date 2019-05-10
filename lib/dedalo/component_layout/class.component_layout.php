@@ -32,7 +32,7 @@ class component_layout extends component_common {
 	/**
 	* GET_DATO
 	*/
-	public function get_dato() {		
+	public function get_dato() {
 		$dato = parent::get_dato();
 
 		if(!empty($dato) && !is_object($dato)) {
@@ -962,36 +962,34 @@ class component_layout extends component_common {
 	public static function render_layout_map($section_obj, $layout_map, $ar_exclude_elements=[]) {
 
 		// declare as 'global' for allow get from inside functions
-			global $section_tipo, $section_id, $modo, $ar_layout_map_items, $current_ar_exclude_elements;
+			global $section_tipo, $section_id, $modo, $ar_layout_map_items;
 
 		// section vars
 			$section_tipo 	= $section_obj->get_tipo();
 			$section_id 	= $section_obj->get_section_id();
 			$modo 			= 'edit';
-
-			$current_ar_exclude_elements = $ar_exclude_elements;
 	
 		// layout plain
-			function make_plain($ar_values) {
-				global $current_ar_exclude_elements;
+			function make_plain($ar_values, $ar_exclude_elements) {				
+
 				$ar_plain = [];
 				foreach ($ar_values as $key => $value) {
 
 					// Skip to remove elements
-						if(in_array($key, $current_ar_exclude_elements)) {
+						if(in_array($key, $ar_exclude_elements)) {
 							continue; # skip
 						}
 
 					$ar_plain[] = $key;					
 					if (!empty($value)) {
-						$ar_plain = array_merge($ar_plain, make_plain($value));
+						$ar_plain = array_merge($ar_plain, make_plain($value, $ar_exclude_elements));
 					}
 				}				
 				return $ar_plain;
 			};
-			$layout_map_plain = make_plain($layout_map);			
+			$layout_map_plain = make_plain($layout_map, $ar_exclude_elements);			
 				#dump($layout_map_plain, ' layout_map_plain ++ '.to_string());
-			$ar_layout_map_items = self::resolve_layout_map_plain($layout_map_plain);
+			$ar_layout_map_items = self::resolve_layout_map_plain($layout_map_plain, $ar_exclude_elements);
 				#dump($ar_layout_map_items, ' ar_items ++ '.to_string());
 
 		// solve functions 
