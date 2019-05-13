@@ -432,8 +432,9 @@ class component_autocomplete_hi extends component_relation_common {
 			$search_query_object->section_tipo 		= $options->section_tipo; // $hierarchy_sections;
 			$search_query_object->limit 			= (int)$options->limit;
 			$search_query_object->distinct_values 	= $options->distinct_values;
-			# Filter
-			$search_query_object->filter = new stdClass();
+			
+			// filter 
+				$search_query_object->filter = new stdClass();
 				
 				$search_tipos_op = count($options->search_tipos)>1 ? '$or' : '$and';
 				foreach ($options->search_tipos as $current_search_tipo) {
@@ -466,9 +467,10 @@ class component_autocomplete_hi extends component_relation_common {
 					}
 					$search_query_object->filter->{$op_and}[] = $group;
 				}
-			# Select
-			$search_query_object->select = [];
-				
+
+			// select 
+				$search_query_object->select = [];
+
 				foreach ($options->search_tipos as $current_search_tipo) {
 					$select_obj = new stdClass();
 
@@ -498,6 +500,7 @@ class component_autocomplete_hi extends component_relation_common {
 					# Select add (model)
 					$search_query_object->select[] = $select_obj;
 				}
+
 		#dump( json_encode($search_query_object, JSON_PRETTY_PRINT) , ' search_query_object ++ '.to_string());
 
 		return (object)$search_query_object;

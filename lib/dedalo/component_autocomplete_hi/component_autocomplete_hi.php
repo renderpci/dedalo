@@ -63,7 +63,7 @@
 							$ar_childrens = array_merge($ar_childrens, component_relation_children::get_childrens($item->section_id, $item->section_tipo, null, $resursive));	
 
 							# Add pseudo locator
-							$hierarchy_terms[] = $item->section_tipo .'_'. $item->section_id;	
+							$hierarchy_terms[] = $item->section_tipo .'_'. $item->section_id;
 						}
 						$constrain_data = $ar_childrens;
 										
@@ -86,7 +86,7 @@
 						}
 
 						$hierarchy_terms_json = json_encode($hierarchy_terms);
-					}//end if (isset($propiedades->source->hierarchy_terms))		
+					}//end if (isset($propiedades->source->hierarchy_terms))
 				
 				// ar_filter_options
 					$ar_filter_options = false; // Default
@@ -161,14 +161,14 @@
 						$search_query_object_options->tipo 			 	= $tipo;
 					$search_query_object 		= component_autocomplete_hi::build_search_query_object($search_query_object_options);
 					$json_search_query_object 	= json_encode( $search_query_object, JSON_UNESCAPED_UNICODE | JSON_HEX_APOS);
-						#dump($json_search_query_object, ' json_search_query_object ++ '.to_string());
+						#dump($json_search_query_object, ' json_search_query_object ++ '.to_string());						
 				break;		
 		
 		case 'search' :
 				// General vars
 					# dato is injected by trigger search wen is needed
 					$dato 					= isset($this->dato) ? $this->dato : [];
-					$dato_json 				= json_handler::encode($dato);					
+					$dato_json 				= json_handler::encode($dato);
 					$id_wrapper 			= 'wrapper_'.$identificador_unico;
 					$input_name 			= $tipo;
 					$valor 					= $this->get_valor($lang);
@@ -177,7 +177,7 @@
 					# Valor searched
 					$valor_searched 		= null;
 					$valor_searched_string 	= null;
-					$ar_valor 				= $this->get_valor($lang,'array');										
+					$ar_valor 				= $this->get_valor($lang,'array');
 					# Search input name (var search_input_name is injected in search -> records_search_list.phtml)
 					# and recovered in component_common->get_search_input_name()
 					# Normally is section_tipo + component_tipo, but when in portal can be portal_tipo + section_tipo + component_tipo
@@ -186,7 +186,7 @@
 					$options_type 			= $this->get_options_type();
 					
 					$ar_referenced_tipo 	= $this->get_ar_referenced_tipo();
-					$ar_referenced_tipo_json= json_handler::encode($this->get_ar_referenced_tipo());				
+					$ar_referenced_tipo_json= json_handler::encode($this->get_ar_referenced_tipo());
 
 				// hierarchy_terms. Defined in propiedades, constrain searched terms using children terms
 					$hierarchy_terms_json = null;
@@ -296,7 +296,7 @@
 				break;
 						
 		case 'list_tm' :
-				$file_name = 'list';						
+				$file_name = 'list';
 		case 'portal_list':
 				$dato 			= $this->get_dato();
 				$id_wrapper 	= 'wrapper_'.$identificador_unico;
