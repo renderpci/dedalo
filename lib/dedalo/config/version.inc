@@ -1525,7 +1525,13 @@
 
 
 	Valencia 25-04-2019 5.4.31
-		Fixed component_autocomplete error on parse filter fields from properties (bibliography author case)
+		Fixed component_autocomplete error on parse filter fields from properties (get_filter_fields_data) (bibliography author case)
+
+	
+	Valencia 25-04-2019 5.4.32
+		Fixed thesaurus scope note issue on load text area editor (changed from component_input_text_large to component_text_area)
+
+
 
 
 
@@ -1548,7 +1554,7 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.4.31';
+	$DEDALO_VERSION = '5.4.32';
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
