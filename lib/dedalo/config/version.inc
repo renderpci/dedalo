@@ -1524,6 +1524,9 @@
 		Fixed date error on import zotero. Now format is correct (using 'start' property always)
 
 
+	Valencia 25-04-2019 5.4.31
+		Fixed component_autocomplete error on parse filter fields from properties (bibliography author case)
+
 
 
 	WORK IN PROGRESS
@@ -1545,12 +1548,12 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.4.30';
+	$DEDALO_VERSION = '5.4.31';
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '10-05-2019');
+	define('DEDALO_BUILD'	, '13-05-2019');
 
 
 	/*

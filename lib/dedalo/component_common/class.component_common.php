@@ -3907,53 +3907,57 @@ abstract class component_common extends common {
 		$RecordObj_dd_component_tipo = new RecordObj_dd($tipo);
 		$component_tipo_properties 	= $RecordObj_dd_component_tipo->get_propiedades(true);
 
-		//get the properties of the component to get the section_tipo and components to search if no defined get it of the relation_terms of the component
-		if(isset($component_tipo_properties->source->search)){
-			$source_search = $component_tipo_properties->source->search;
-			foreach ($source_search as $current_search) {
-				if ($current_search->type === 'internal'){
-					$ar_related_section_tipo[] 	= $current_search->section_tipo;
-					$ar_terminos_relacionados 	=	$current_search->components;
+		// source. get the properties of the component to get the section_tipo and components to search if no defined get it of the relation_terms of the component
+			if(isset($component_tipo_properties->source->search)){
+				// properties terms (new way)
+				$source_search = $component_tipo_properties->source->search;
+				foreach ($source_search as $current_search) {
+					if ($current_search->type === 'internal'){
+						$ar_related_section_tipo[] 	= $current_search->section_tipo;
+						$ar_terminos_relacionados 	= $current_search->components;
+					}
 				}
+			}else{
+				// structure related terms (legacy)
+				$ar_related_section_tipo  = common::get_ar_related_by_model('section', $tipo);
+				$ar_terminos_relacionados = RecordObj_dd::get_ar_terminos_relacionados($tipo, true, true);
 			}
-		}else{
-			# iterate related terms
-			$ar_related_section_tipo = common::get_ar_related_by_model('section', $tipo);
-			$ar_terminos_relacionados 	= RecordObj_dd::get_ar_terminos_relacionados($tipo, true, true);	
-		}
 
 		if (isset($ar_related_section_tipo[0])) {
-			# Create from related terms
-			$section_tipo 				= reset($ar_related_section_tipo); // Note override section_tipo here !
-			foreach ($ar_terminos_relacionados as $current_tipo) {
-				$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_tipo, true);
-				if (strpos($modelo_name,'component')!==0) continue;
 
-				$path = search_development2::get_query_path($current_tipo, $section_tipo);
+			// Create from related terms
+				$section_tipo = reset($ar_related_section_tipo); // Note override section_tipo here !
+				foreach ($ar_terminos_relacionados as $current_tipo) {
+					$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($current_tipo, true);
+					if (strpos($modelo_name,'component')!==0) continue;
 
-				# FILTER . filter_element (operator_group)
-					if ($options->add_filter===true) {	
-									
-						$filter_element = new stdClass();
-							$filter_element->q 		= $options->q;
-							$filter_element->lang 	= $options->lang;
-							$filter_element->path 	= $path;
+					$path = search_development2::get_query_path($current_tipo, $section_tipo);
+						#dump($path, ' path ++ current_tipo:'.$current_tipo.' - section_tipo:'.to_string($section_tipo));
 
-						if(!isset($filter_group)) {
-							$filter_group = new stdClass();
+
+					# FILTER . filter_element (operator_group)
+						if ($options->add_filter===true) {
+										
+							$filter_element = new stdClass();
+								$filter_element->q 		= $options->q;
+								$filter_element->lang 	= $options->lang;
+								$filter_element->path 	= $path;
+
+							if(!isset($filter_group)) {
+								$filter_group = new stdClass();
+							}
+							$filter_group->$logical_operator[] = $filter_element;
 						}
-						$filter_group->$logical_operator[] = $filter_element;
-					}
-				# SELECT . Select_element (select_group)
-					# Add options lang
-					$end_path = end($path);
-					$end_path->lang = $options->lang;
+					# SELECT . Select_element (select_group)
+						# Add options lang
+						$end_path = end($path);
+						$end_path->lang = $options->lang;
 
-					$select_element = new stdClass();
-						$select_element->path = $path;
+						$select_element = new stdClass();
+							$select_element->path = $path;
 
-					$select_group[] = $select_element;
-			}
+						$select_group[] = $select_element;
+				}
 		}else{
 			if($options->add_filter === true){
 
