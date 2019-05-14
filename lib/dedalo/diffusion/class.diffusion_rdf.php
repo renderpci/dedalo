@@ -137,22 +137,22 @@ class diffusion_rdf extends diffusion {
 
 		return $response;
 		/*
-		$elements = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($options->diffusion_element_tipo, 'xml', 'children', true);
-		foreach ($elements as $current_element_tipo) {
+			$elements = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($options->diffusion_element_tipo, 'xml', 'children', true);
+			foreach ($elements as $current_element_tipo) {
 
-			# Pointer to section
-			$ar_related = common::get_ar_related_by_model('section', $current_element_tipo);
+				# Pointer to section
+				$ar_related = common::get_ar_related_by_model('section', $current_element_tipo);
 
-			$options = new stdClass();
-				$options->xml_tipo 			= $current_element_tipo;	// Numisma RDF : molelo_name : xml
-				$options->section_tipo  	= $ar_related[0];			// Catálogo
-				$options->ar_section_id 	= $options->section_id;
-				$options->save_to_file_path = DEDALO_EXTRAS_PATH .'/mupreva/nomisma/data/' . $rdf_file_name; // Target file
+				$options = new stdClass();
+					$options->xml_tipo 			= $current_element_tipo;	// Numisma RDF : molelo_name : xml
+					$options->section_tipo  	= $ar_related[0];			// Catálogo
+					$options->ar_section_id 	= $options->section_id;
+					$options->save_to_file_path = DEDALO_EXTRAS_PATH .'/mupreva/nomisma/data/' . $rdf_file_name; // Target file
 
 
-			$response = $diffusion_rdf->build_xml_file( $options );
+				$response = $diffusion_rdf->build_xml_file( $options );
 
-		}*/
+			}*/
 	}//end update_record
 
 
@@ -215,7 +215,7 @@ class diffusion_rdf extends diffusion {
 		# XML. Verify xml format is valid and format output	
 		$xml_string = self::xml_object($rdf_wrapper_string, $options->xml_validate, $options->xml_format_output);
 		if (!$xml_string) {
-			$response->msg[]  = "xml_string error. bab format";	// .": \n".htmlspecialchars($xml_string);
+			$response->msg[]  = "xml_string error. Bad format";	// .": \n".htmlspecialchars($xml_string);
 			$response->result = false;	//$xml_string;
 		}else{
 			$response->msg[]  = ''; // "xml_string created successfully";	// .": \n".htmlspecialchars($xml_string);
@@ -235,9 +235,13 @@ class diffusion_rdf extends diffusion {
 					$response->msg[] = $msg;
 				}
 			}
+
+		// response additional info
+			$response->url = $options->url_file;
 			
 		$total_time=round(microtime(1)-$start_time,3);
 		$response->debug[] = "Generated [".count($options->ar_section_id)." elements] in $total_time secs";
+
 
 		return $response;
 	}//end build_xml_file

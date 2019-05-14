@@ -5,20 +5,23 @@
 *
 */
 class component_info extends component_common {
-	
-	
+
+
 
 	/**
 	* GET_DATO
 	* @return 
 	*/
 	public function get_dato() {
+
 		return null;
 	}//end get_dato
 
+
+
 	/**
 	* GET_VALOR
-	* @return 
+	* @return string $valor
 	*/
 	public function get_valor( $widget_lang=DEDALO_DATA_LANG ) {
 
@@ -29,6 +32,7 @@ class component_info extends component_common {
 
 		return $valor;
 	}//end get_valor
+
 
 
 	/**
@@ -79,8 +83,33 @@ class component_info extends component_common {
 			}
 			*/
 		
-		return $component_info->get_html();
+		$html = $component_info->get_html();
+
+		return $html;
 	}//end render_list_value
+
+
+
+	/**
+	* GET_VALOR_EXPORT
+	* Return component value sended to export data
+	* @return string $valor
+	*/
+	public function get_valor_export( $valor=null, $lang=DEDALO_DATA_LANG, $quotes, $add_id ) {
+		
+		#if (empty($valor)) {
+
+			#$this->set_modo('export');			
+
+			$this->widget_lang = $lang;
+			$this->widget_mode = 'export';
+			
+			$valor = $this->get_html();
+			#$valor = strip_tags($valor);
+		#}
+
+		return to_string($valor);
+	}//end get_valor_export
 
 
 

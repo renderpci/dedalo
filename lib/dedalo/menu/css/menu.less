@@ -99,7 +99,7 @@ background-color: #FFFF00;
 		#menu_wrapper #quit:active {
 			color: #7F7F7F;
 		}
-	/*-- Toggle button --*/
+	/*-- Toggle button in mobil version --*/
 	#menu_wrapper #toggle_menu {
 		float: left;
 		top: 7px;
@@ -126,113 +126,166 @@ background-color: #FFFF00;
 		background-size: 90%;
 		background-position: center;
 	}
-	
 
 
 
+// menu : Menu tree 
+	@menu_bg_color_active : #ffa43d;
+	@menu_box_shadow : 5px 5px 15px rgba(0, 0, 0, 0.1);
 
-
-/* MENU : Menu tree
-------------------------------------------------------- */
-@menu_bg_color_active : #ffa43d;
-@menu_box_shadow : 5px 5px 15px rgba(0, 0, 0, 0.1);
-
-#menu {
-	font-family: "Oxygen-light";
-	//-webkit-font-smoothing: subpixel-antialiased;
-	z-index: 100;
-	float: left;
-	display: inline-block;
-	margin: 0;
-	margin-left: 64px;
-	padding: 0;
-	text-align: left;
-	}
-	#menu li {
-		margin: 0 2px;
-		padding: 0 0 0px;
+	#menu {
+		font-family: "Oxygen-light";
+		//-webkit-font-smoothing: subpixel-antialiased;
+		z-index: 100;
 		float: left;
-		position: relative;
-		list-style: none;
-	}
-	// link common
-	#menu a {
-		color: #EEECEC;
-		text-decoration: none;
-		display: block;
-		width: 100%;
+		display: inline-block;
 		margin: 0;
-		padding: 4px;
-		padding-left: 6px;
-		letter-spacing: 0.7px;
-		font-weight: 300 !important;
-		font-size: 13px;
-		}
-		// On click menu link a
-		#menu a:active {
-			background-color: darken(@menu_bg_color_active, 13%) !important;
-		}
-	// main level link
-	#menu > li > a {
-		padding: 6px;
-		/*padding-bottom: 5px;*/
-	}
-
-
-	// level 2 list
-	#menu ul {
-		background: #fcfcfc;
-		display: none;
-		margin: 0;
+		margin-left: 64px;
 		padding: 0;
-		min-width: 200px;
-		position: absolute;
-		top: 25px;
-		left: -1px;
-		box-shadow: @menu_box_shadow;
-		/*left: -2px;*/
-		border: 1px solid #B4B4B4;
-		border-radius: 4px;
-		}
-		#menu ul a {
-			color: #4F4F4F;
+		text-align: left;
+
+		li {
+			margin: 0 2px;
+			padding: 0 0 0px;
+			float: left;
+			position: relative;
+			list-style: none;
 		}
 
+		// link common
+		a {
+			color: #EEECEC;
+			text-decoration: none;
+			display: block;
+			width: 100%;
+			margin: 0;
+			padding: 4px;
+			padding-left: 6px;
+			letter-spacing: 0.7px;
+			font-weight: 300 !important;
+			font-size: 13px;
 
-
-	// Removes first ul top border radius
-	#menu > li > ul  {
-		border-radius: 0px 0px 4px 4px; /* top left, top right, bottom right, bottom left */
-	}
-
-	// dropdown
-	#menu li > ul {
-		margin-top: 4px;
-	}
-
-
-	#menu ul li {
-		border: 1px solid #7F7F7F;
-		border-style: none none inset;
-		float: none;
-		margin: 0;
-		padding-top: 2px;
-		padding-bottom: 2px;
-		padding-right: 0px;
-		padding-left: 0px;
+			// On click menu link a
+			&:active {
+				background-color: darken(@menu_bg_color_active, 13%) !important;
+			}
 		}
 
+		// main level link
+		> li > a {
+			padding: 6px;
+			/*padding-bottom: 5px;*/
+		}
 
-	#menu ul li:last-child {
-		border: none;
-	}
+		// level 2 list
+		ul {
+			background: #fcfcfc;
+			display: none;
+			margin: 0;
+			padding: 0;
+			min-width: 200px;
+			position: absolute;
+			top: 25px;
+			left: -1px;
+			box-shadow: @menu_box_shadow;
+			/*left: -2px;*/
+			border: 1px solid #B4B4B4;
+			border-radius: 4px;
+			
+			a {
+				color: #4F4F4F;
+			}
+		}
+			
+		// Removes first ul top border radius
+		> li > ul  {
+			border-radius: 0px 0px 4px 4px; /* top left, top right, bottom right, bottom left */
+		}
 
+		// dropdown
+		li > ul {
+			margin-top: 4px;
+		}
 
-	// level 3+ list
-	#menu ul ul {
-		left: 100%;
-		top: -5px;
-	}
+		ul li {
+			border: 1px solid #7F7F7F;
+			border-style: none none inset;
+			float: none;
+			margin: 0;
+			padding-top: 2px;
+			padding-bottom: 2px;
+			padding-right: 0px;
+			padding-left: 0px;
+
+			&:last-child {
+				border: none;
+			}
+		}
+
+		// level 3+ list
+		ul ul {
+			left: 100%;
+			top: -5px;
+		}
+
+		// active
+		.menu_li_active > a {
+			background: @menu_bg_color_active;
+			color: #ffffff !important;
+			/*border-bottom: 1px solid #ffa43d;*/
+		}
+		.menu_li_active ul {
+			display: block !important;
+		}
+
+		// inactive
+		.menu_li_inactive > a {
+			background:transparent !important;
+		}
+		.menu_li_inactive ul {
+			display: none !important;
+		}
+
+		// ARROW : Add arrow right
+		li.has-sub::after {
+			content: " ";
+			display: inline-block;
+		    width: 0;
+		    height: 0;
+		    margin-left: 3px;
+		    vertical-align: middle;
+
+		  	border-bottom: 5px solid transparent;
+		    border-top: 5px solid transparent;
+		    border-left: 5px solid #000000;
+
+			position: absolute;
+		    right: 8px;
+		    top: 9px;
+		    pointer-events: none;
+		
+		}
+
+		// arrow white on active
+		li.has-sub.menu_li_active::after {
+			border-left: 5px solid #FFFFFF;
+		}
+
+		// Hides arrow in first level of li (fisrt menu line)
+		> li.has-sub::after {
+			display: none;
+		}
+
+		// shadow for fir level when active
+		> li.menu_li_active {
+			box-shadow: @menu_box_shadow;
+			/*border-left: 1px solid #b4b4b4;*/
+		}
+
+	}//end #menu
+	
+	
+	
 	/*rounded corners for first and last child
 	#menu ul li:first-child {
 		border-top-left-radius: 4px;
@@ -257,58 +310,6 @@ background-color: #FFFF00;
 		height: 0;
 	}*/
 
-
-	// ACTIVE
-	#menu .menu_li_active > a {
-		background: @menu_bg_color_active;
-		color: #ffffff !important;
-		/*border-bottom: 1px solid #ffa43d;*/
-	}
-	#menu .menu_li_active ul {
-		display: block !important;
-	}
-
-	// INACTIVE
-	#menu .menu_li_inactive > a {
-		background:transparent !important;
-	}
-	#menu .menu_li_inactive ul {
-		display: none !important;
-	}
-
-	// ARROW : Add arrow right
-	#menu li.has-sub::after {
-		content: " ";
-		display: inline-block;
-	    width: 0;
-	    height: 0;
-	    margin-left: 3px;
-	    vertical-align: middle;
-
-	  	border-bottom: 5px solid transparent;
-	    border-top: 5px solid transparent;
-	    border-left: 5px solid #000000;
-
-		position: absolute;
-	    right: 8px;
-	    top: 9px;
-	    pointer-events: none;
-		}
-		// arrow white on active
-		#menu li.has-sub.menu_li_active::after {
-			border-left: 5px solid #FFFFFF;
-		}
-
-		// Hides arrow in first level of li (fisrt menu line)
-		#menu > li.has-sub::after {
-			display: none;
-		}
-
-		// shadow for fir level when active
-		#menu > li.menu_li_active {
-			box-shadow: @menu_box_shadow;
-			/*border-left: 1px solid #b4b4b4;*/
-		}
 
 
 
@@ -468,8 +469,6 @@ background-color: #FFFF00;
 	.menu_wrapper_space {
 		height: 29px;
 	}
-
-
 
 
 

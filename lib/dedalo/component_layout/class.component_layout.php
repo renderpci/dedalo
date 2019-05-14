@@ -32,7 +32,7 @@ class component_layout extends component_common {
 	/**
 	* GET_DATO
 	*/
-	public function get_dato() {		
+	public function get_dato() {
 		$dato = parent::get_dato();
 
 		if(!empty($dato) && !is_object($dato)) {
@@ -959,7 +959,7 @@ class component_layout extends component_common {
 	* RENDER_LAYOUT_MAP
 	* @return string $html
 	*/
-	public static function render_layout_map($section_obj, $layout_map, $ar_exclude_elements) {
+	public static function render_layout_map($section_obj, $layout_map, $ar_exclude_elements=[]) {
 
 		// declare as 'global' for allow get from inside functions
 			global $section_tipo, $section_id, $modo, $ar_layout_map_items;
@@ -968,21 +968,28 @@ class component_layout extends component_common {
 			$section_tipo 	= $section_obj->get_tipo();
 			$section_id 	= $section_obj->get_section_id();
 			$modo 			= 'edit';
-
+	
 		// layout plain
-			function make_plain($ar_values) {
+			function make_plain($ar_values, $ar_exclude_elements) {				
+
 				$ar_plain = [];
-				foreach ($ar_values as $key => $value) {					
+				foreach ($ar_values as $key => $value) {
+
+					// Skip to remove elements
+						if(in_array($key, $ar_exclude_elements)) {
+							continue; # skip
+						}
+
 					$ar_plain[] = $key;					
 					if (!empty($value)) {
-						$ar_plain = array_merge($ar_plain, make_plain($value));
+						$ar_plain = array_merge($ar_plain, make_plain($value, $ar_exclude_elements));
 					}
 				}				
 				return $ar_plain;
 			};
-			$layout_map_plain = make_plain($layout_map);			
+			$layout_map_plain = make_plain($layout_map, $ar_exclude_elements);			
 				#dump($layout_map_plain, ' layout_map_plain ++ '.to_string());
-			$ar_layout_map_items 		  = self::resolve_layout_map_plain($layout_map_plain);
+			$ar_layout_map_items = self::resolve_layout_map_plain($layout_map_plain, $ar_exclude_elements);
 				#dump($ar_layout_map_items, ' ar_items ++ '.to_string());
 
 		// solve functions 
@@ -1115,6 +1122,13 @@ class component_layout extends component_common {
 		// iterate items
 			$ar_html_elements = [];
 			foreach ($ar_layout_map_items as $key => $item) {
+
+				// Skip to remove elements
+					#if(in_array($item->tipo, $ar_exclude_elements)) {
+					#	#if(SHOW_DEBUG===true) dump($terminoID,"removed 4 $terminoID");
+					#	continue; # skip
+					#}
+
 				$current_html = solve_item($item);
 				if (!empty($current_html)) {
 					$ar_html_elements[] = $current_html;
