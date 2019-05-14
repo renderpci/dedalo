@@ -617,6 +617,11 @@ abstract class diffusion  {
 	public static function get_field_value($tipo, $section_tipo, $section_id, $lang, $request_options) {
 
 		$field_value = null;
+
+		// Diffusion element (current column/field)
+			$diffusion_term  = new RecordObj_dd($tipo);
+			$propiedades 	 = $diffusion_term->get_propiedades(true);	# Format: {"data_to_be_used": "dato"}
+			#$diffusion_model = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 		
 		// Component 
 			$ar_related 		= common::get_ar_related_by_model('component_', $tipo, $strict=false);		
@@ -630,12 +635,16 @@ abstract class diffusion  {
 																 $lang,
 																 $section_tipo,
 																 false);
-			$dato = $current_component->get_dato();
 
-		// Diffusion element (current column/field)
-			$diffusion_term  = new RecordObj_dd($tipo);
-			$propiedades 	 = $diffusion_term->get_propiedades(true);	# Format: {"data_to_be_used": "dato"}
-			#$diffusion_model = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+			if(property_exists($propiedades, 'get_field_value') && isset($propiedades->get_field_value->get_dato_method)){
+				$get_dato_method = $propiedades->get_field_value->get_dato_method;
+				$dato = $current_component->{$get_dato_method}();
+			}else{
+				$dato = $current_component->get_dato();
+			}
+			
+
+		
 
 		# switch cases
 			switch (true) {
