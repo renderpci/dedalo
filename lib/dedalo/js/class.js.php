@@ -182,7 +182,7 @@ class js {
 		if (strpos($url, 'section_group_')!==false) return null;
 
 		// LOCAL VERSIONS
-		if (USE_CDN!==false) {
+		if (USE_CDN!==false && substr($url,-4)!=='.php') {
 			$url = USE_CDN . $url;
 		}
 

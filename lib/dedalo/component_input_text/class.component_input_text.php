@@ -517,7 +517,7 @@ class component_input_text extends component_common {
 					*/
 
 				# override
-				$query_object = $new_query_json ;
+				$query_object = $new_query_json;
 				break;
 
 			# NOT EMPTY (in any project lang data)
