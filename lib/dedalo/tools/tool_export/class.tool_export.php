@@ -496,11 +496,17 @@ class tool_export extends tool_common {
 
 		$valor_dedalo = '';
 
-	
-		if (get_parent_class($component)==='component_relation_common' || strpos($component, 'filter')!==false) {
+		$component_name 				= get_class($component);
+		$ar_components_with_relations 	= component_relation_common::get_components_with_relations($component_name);
+		
+		if (in_array($component_name, $ar_components_with_relations)) {
 			
 			# Relations
-			$ar_valor = $component->get_dato();
+			if ($component_name==='component_relation_parent') {
+				$ar_valor = $component->get_dato_export();
+			}else{
+				$ar_valor = $component->get_dato();
+			}			
 
 		}else{
 
