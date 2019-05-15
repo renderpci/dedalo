@@ -262,8 +262,9 @@ class component_relation_related extends component_relation_common {
 
 		$dato = $this->get_dato();
 		$references = $this->get_calculated_references();
+			#dump($references, ' references 2 ++ '."$this->tipo, $this->parent, $this->relation_type_rel");
 
-		$dato_with_references = array_merge($dato,$references);
+		$dato_with_references = array_merge($dato, $references);
 
 		return $dato_with_references;
 	}//end get_dato_with_references
@@ -293,7 +294,7 @@ class component_relation_related extends component_relation_common {
 		}
 		
 		if(SHOW_DEBUG===true) {
-			#dump($references, ' references ++ '.to_string());
+			#dump($references, ' references ++ **** '.to_string());
 		}
 	
 		return $references;
@@ -459,6 +460,10 @@ class component_relation_related extends component_relation_common {
 	
 		static $ar_resolved;
 
+		if ($recursion===false) {
+			$ar_resolved = [];
+		}
+
 		$pseudo_locator = $locator->section_tipo .'_'. $locator->section_id . '_'. $lang;
 		$ar_resolved[]  = $pseudo_locator; # set self as resolved
 
@@ -485,7 +490,7 @@ class component_relation_related extends component_relation_common {
 															 'edit',
 															 DEDALO_DATA_NOLAN,
 															 $locator->section_tipo);
-			$ar_result = $ref_component->get_references();
+			$ar_result = $ref_component->get_references();			
 			foreach ($ar_result as $key => $result_locator) {
 				$pseudo_locator = $result_locator->section_tipo .'_'. $result_locator->section_id . '_'. $lang;
 				if (in_array($pseudo_locator, $ar_resolved)) {
@@ -495,7 +500,7 @@ class component_relation_related extends component_relation_common {
 				$ar_resolved[]   = $pseudo_locator; # set as resolved
 			}
 		}
-
+	
 		# Only DEDALO_RELATION_TYPE_RELATED_MULTIDIRECTIONAL_TIPO
 		if ($type_rel===DEDALO_RELATION_TYPE_RELATED_MULTIDIRECTIONAL_TIPO) {
 					
@@ -538,7 +543,7 @@ class component_relation_related extends component_relation_common {
 			#dump($ar_resolved, ' ar_resolved ++ '.to_string());
 
 		}//end if ($type_rel===DEDALO_RELATION_TYPE_RELATED_MULTIDIRECTIONAL_TIPO)
-
+	
 	
 		return $ar_references;
 	}//end get_references_recursive
