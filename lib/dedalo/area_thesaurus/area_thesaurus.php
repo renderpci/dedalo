@@ -51,7 +51,7 @@
 					js::$ar_url[]  = DEDALO_LIB_BASE_URL."/tools/$element_name/js/$element_name.js";
 
 					$element_name = 'component_text_area';
-					js::$ar_url[]  = DEDALO_LIB_BASE_URL."/tools/$element_name/js/mce_editor.js";
+					js::$ar_url[]  = DEDALO_LIB_BASE_URL."/$element_name/js/mce_editor.js";
 
 					css::$ar_url[] = DEDALO_LIB_BASE_URL."/section_records/css/section_records.css";
 
