@@ -456,13 +456,14 @@ class component_relation_related extends component_relation_common {
 	# 	DEDALO_RELATION_TYPE_RELATED_MULTIDIRECTIONAL_TIPO
 	* @return array $ar_references
 	*/
-	public static function get_references_recursive( $tipo, $locator, $type_rel=DEDALO_RELATION_TYPE_RELATED_MULTIDIRECTIONAL_TIPO, $recursion=false, $lang ) {
+	public static function get_references_recursive($tipo, $locator, $type_rel=DEDALO_RELATION_TYPE_RELATED_MULTIDIRECTIONAL_TIPO, $recursion=false, $lang) {
 	
-		static $ar_resolved;
+		static $ar_resolved = array();
 
-		if ($recursion===false) {
-			$ar_resolved = [];
-		}
+		// reset ar_resolved on first call
+			if ($recursion===false) {
+				$ar_resolved = [];
+			}
 
 		$pseudo_locator = $locator->section_tipo .'_'. $locator->section_id . '_'. $lang;
 		$ar_resolved[]  = $pseudo_locator; # set self as resolved
@@ -471,7 +472,7 @@ class component_relation_related extends component_relation_common {
 
 		$RecordObj_dd = new RecordObj_dd($tipo);
 		$ar_related_terms = $RecordObj_dd->get_relaciones();
-		$ar_componets_related = array();			
+		$ar_componets_related = array();
 		foreach ((array)$ar_related_terms as $ar_value) foreach ($ar_value as $modelo => $component_tipo) {
 			$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($component_tipo, true);
 			if ($modelo_name !== 'section'){
