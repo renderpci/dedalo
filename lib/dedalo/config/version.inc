@@ -1535,7 +1535,10 @@
 	Valencia 14-05-2019 5.4.34
 		Fixed thesaurus no descriptors issue when more than one is not showed
 
-
+	
+	Valencia 20-05-2019 5.4.36
+		Fixed unnecessary reset values (make slow resolutions in large component_select) in component_relation_parent get_parents_recursive
+		Added get_dato_export custom resolution for component_relation_parent
 
 
 
@@ -1558,12 +1561,12 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.4.34';
+	$DEDALO_VERSION = '5.4.36';
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '14-05-2019');
+	define('DEDALO_BUILD'	, '20-05-2019');
 
 
 	/*
