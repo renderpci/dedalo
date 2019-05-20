@@ -58,6 +58,29 @@ class component_relation_parent extends component_relation_common {
 			$this->set_dato( $dato );
 			$this->Save();
 		}
+
+			
+		// rebuild dato option 
+			/*
+			if (empty($dato)) {
+				$dato_clean = $dato;
+			}else{
+				$tipo 		 = $this->get_tipo();
+				$dato_clean = [];
+				foreach ((array)$dato as $key => $item) {
+					
+					// create a new locator and change from component tipo. Note that this component dont have relation type (!)
+					$locator = new locator();
+						$locator->set_section_tipo($item->section_tipo);
+						$locator->set_section_id($item->section_id);
+						$locator->set_from_component_tipo($tipo);
+
+					$dato_clean[] = $locator;
+				}
+			}
+
+			return (array)$dato_clean;
+			*/
 	
 		return (array)$dato;
 	}//end get_dato
@@ -360,11 +383,11 @@ class component_relation_parent extends component_relation_common {
 	* @param string $section_tipo
 	* @return array $parents_recursive
 	*/
-	public static function get_parents_recursive($section_id, $section_tipo, $skip_root=true) {
+	public static function get_parents_recursive($section_id, $section_tipo, $skip_root=true, $is_recursion=false) {
 
 		// static vars set
 			static $ar_parents_recursive_resolved = array();
-			static $locators_resolved 			  = array();
+			static $locators_resolved 			  = array();		
 
 		// key_resolve
 			$key_resolve = $section_tipo.'_'.$section_id;
@@ -396,7 +419,7 @@ class component_relation_parent extends component_relation_common {
 					}			
 
 				// Add every parent level
-					$current_ar_parents		 = component_relation_parent::get_parents_recursive($current_locator->section_id, $current_locator->section_tipo, $skip_root);
+					$current_ar_parents		 = component_relation_parent::get_parents_recursive($current_locator->section_id, $current_locator->section_tipo, $skip_root, $is_recursion=true);
 					$current_ar_parents_safe = [];
 					foreach ($current_ar_parents as $c_parent) {
 						#debug_log(__METHOD__." c_parent ".to_string($c_parent), logger::DEBUG);
@@ -740,6 +763,36 @@ class component_relation_parent extends component_relation_common {
 
 		return $target_component_children_tipos;
 	}//end get_target_component_children_tipos
+
+
+
+	/**
+	* GET_DATO_EXPORT
+	* @return array $dato_export
+	*/
+	public function get_dato_export() {
+		
+		$dato = $this->get_dato();
+		$tipo = $this->get_tipo();
+		
+		if (empty($dato)) {
+			$dato_export = $dato;
+		}else{
+			$dato_export = [];
+			foreach ((array)$dato as $key => $item) {
+				
+				// create a new locator and change from component tipo. Note that this component dont have relation type (!)
+				$locator = new locator();
+					$locator->set_section_tipo($item->section_tipo);
+					$locator->set_section_id($item->section_id);
+					$locator->set_from_component_tipo($tipo);
+
+				$dato_export[] = $locator;
+			}
+		}
+
+		return $dato_export;
+	}//end get_dato_export
 
 
 	
