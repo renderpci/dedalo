@@ -13,21 +13,23 @@
 
 /* WRAP_TS_OBJECT
 ------------------------------------------------------- */
-.wrap_ts_object {
-	//background-color: rgba(198, 179, 227, 0.39);
-	//width: 100%;
-	position: relative;
-	display: table;
-	clear: both;
-	//margin-left: 52px;
-	//height: 1em;
-	//border-bottom: 1px #E0E0E0 solid;
-	//width: inherit;
-	width: 100%;
+	.wrap_ts_object {
+		//background-color: rgba(198, 179, 227, 0.39);
+		//width: 100%;
+		position: relative;
+		display: table;
+		clear: both;
+		//margin-left: 52px;
+		//height: 1em;
+		//border-bottom: 1px #E0E0E0 solid;
+		//width: inherit;
+		width: 100%;
+
+		&:hover > .id_column_content {
+			opacity: 1;
+		}
 	}	
-	.wrap_ts_object:hover > .id_column_content {
-		opacity: 1;
-	}
+	
 
 	/* icons COMMON (ts_icons_all)
 	------------------------------------------------------- */
@@ -506,25 +508,27 @@
 		.inline_common ;
 		width: 100%;
 		height: 0;		
-		}
-		.wrap_ts_object .indexations_container .css_spinner {
+	
+		.css_spinner {
 			float: left;
 			width: 21px;
 			margin-left: 80px;
 			min-height: 24px;
 		}
-		.wrap_ts_object .indexations_container .blink {
+		.blink {
 			position: relative;
 			top: 2px;
 			color: #727272;
 			font-size: 13px;
 		}
+	}
+		
 		
 
 
 	.wrap_ts_object_nd {
 		background-color: #f5f5f5;
-		padding: 5px;
+		padding: 2px;
 		padding-left: 0;
 		padding-right: 0;
     	width: auto;
@@ -534,23 +538,24 @@
 
 
 
-	/* LOADING
-	------------------------------------------------------- */
-	.loading_list_thesaurus_data {
-		min-height: 42px;
-		//background-color: transparent !important;
+	// loading
+		.loading_list_thesaurus_data {
+			min-height: 42px;
+			//background-color: transparent !important;
+		
+			&:after {
+				content: " loading... ";
+				display: table-cell;
+				padding: 10px;
+				padding-left: 45px;
+				background: url(../../themes/default/spinner.svg);
+				background-position: 10px;
+				background-size: 30px;
+				background-repeat: no-repeat;
+				margin-left: 50px;
+			}
 		}
-		.loading_list_thesaurus_data:after {
-			content: " loading... ";
-			display: table-cell;
-			padding: 10px;
-			padding-left: 45px;
-			background: url(../../themes/default/spinner.svg);
-			background-position: 10px;
-			background-size: 30px;
-			background-repeat: no-repeat;
-			margin-left: 50px;
-		}
+			
 
 
 		.visible_element {

@@ -1482,7 +1482,7 @@ abstract class common {
 	        $printedLength += strlen($str);
 	        if ($printedLength >= $maxLength) break;
 
-	        if ($tag[0] == '&' || ord($tag) >= 0x80)
+	        if ($tag[0] === '&' || ord($tag) >= 0x80)
 	        {
 	            // Pass the entity or UTF-8 multibyte sequence through unchanged.
 	            #print($tag);
@@ -1493,17 +1493,17 @@ abstract class common {
 	        {
 	            // Handle the tag.
 	            $tagName = $match[1][0];
-	            if ($tag[1] == '/')
+	            if ($tag[1] === '/')
 	            {
 	                // This is a closing tag.
 
 	                $openingTag = array_pop($tags);
-	                assert($openingTag == $tagName); // check that tags are properly nested.
+	                assert($openingTag === $tagName); // check that tags are properly nested.
 
 	                #print($tag);
 	                $full_text .= $tag;
 	            }
-	            else if ($tag[strlen($tag) - 2] == '/')
+	            else if ($tag[strlen($tag) - 2] === '/')
 	            {
 	                // Self-closing tag.
 	                #print($tag);
