@@ -642,8 +642,6 @@ abstract class diffusion  {
 			}else{
 				$dato = $current_component->get_dato();
 			}
-			
-
 		
 
 		# switch cases

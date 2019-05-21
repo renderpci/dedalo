@@ -354,16 +354,14 @@ class component_text_area extends component_common {
 	* @return string $valor
 	*/
 	public function get_valor_export( $valor=null, $lang=DEDALO_DATA_LANG, $quotes, $add_id ) {
-		
-		#if (empty($valor)) {
-		#	$dato = $this->get_dato();				// Get dato from DB
-		#}else{
-		#	$this->set_dato( $valor );	// Use parsed json string as dato
-		#}
-
+	
 		$valor_export = $this->get_valor($lang);
 		#$valor_export = br2nl($valor_export);
+		#dump($valor_export, ' valor_export ++ '."$this->tipo - $this->parent".to_string());
 
+		#$valor_export = strip_tags($valor_export);
+		#$valor_export = htmlspecialchars_decode($valor_export);
+		#$valor_export = html_entity_decode($valor_export);
 
 		return $valor_export;
 	}//end get_valor_export
