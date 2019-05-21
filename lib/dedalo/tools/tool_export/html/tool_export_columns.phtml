@@ -105,9 +105,11 @@ $html='';
 							// format
 								$html .= '<span class="input-label">Format</span>';
 								$html .= '<select id="select_data_format_export" class="form-control">';
-								$html .= '<option value="standard">Standard (Resolved)</option>';
+								$html .= '<option value="standard">Standard</option>';
+								$html .= '<option value="html">HTML</option>';
 								if(SHOW_DEBUG===true) {
-									$html .= '<option value="standard_breakdown">Standard Breakdow (Resolved)</option>';
+									$html .= '<option value="breakdown">Breakdown</option>';
+									$html .= '<option value="breakdown_html">Breakdown HTML</option>';
 								}
 								$html .= '<option value="dedalo">Dédalo (Raw)</option>';
 								$html .= '</select>';
