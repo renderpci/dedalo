@@ -46,11 +46,12 @@ function export_data($json_data) {
 	
 	// Get records to export
 	$records = $tool_export->get_records( $layout_map );
-		#dump($records, ' records ++ '.to_string());
+		#dump($records, ' records ++ '.to_string());		
 
 	// Result parsed as final string
-	$result_string = $tool_export->export_to('csv', $records, $encoding, $section_tipo);
-		#dump($result, ' result ++ '.to_string());
+	$result_string = $tool_export->export_to('csv', $records, $encoding, $section_tipo);		
+		#dump(dd_memory_usage(), ' dd_memory_usage fin export_to ++ '.to_string());
+		#error_log($result_string);
 
 	// Write result to file (UTF8)
 	$write_result = $tool_export->write_result( $result_string );
