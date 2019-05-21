@@ -1394,7 +1394,7 @@ class web_data {
 						if ($options->indexation_terms===true) {
 							$result->terms = web_data::get_indexation_terms( $options->tag_id, $options->av_section_id, $options->lang )->result ;
 						} 
-
+							dump($result, ' result ++ '.to_string());
 						return (object)$result;
 					}
 				}//end foreach($matches as $match) {
@@ -1522,6 +1522,8 @@ class web_data {
 			$options->video_url 	 	 = '';	//$video_url; # Like 'http://mydomain.org/dedalo/media/av/404/'
 			$options->margin_seconds_in  = null;
 			$options->margin_seconds_out = null;
+			$options->margin_chars_in 	 = 0;	# default 100
+			$options->margin_chars_out	 = 0;	# default 100
 			$options->raw_text 			 = $raw_text;
 		
 			$fragments_obj = web_data::build_fragment( $options );
