@@ -91,8 +91,7 @@
 					foreach ($hierarchy_sections as $key => $item) {
 						$ar_sections_by_type[$item->typology][] = $item;
 					}
-					# Sort by typology section_id ASC
-					ksort($ar_sections_by_type);
+
 					if(SHOW_DEBUG===true) {
 						#dump($ar_sections_by_type, ' ar_sections_by_type ++ '.to_string());
 					}
