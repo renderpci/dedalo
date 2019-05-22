@@ -1540,6 +1540,10 @@
 		Fixed unnecessary reset values (make slow resolutions in large component_select) in component_relation_parent get_parents_recursive
 		Added get_dato_export custom resolution for component_relation_parent
 
+	Valencia 22-05-2019 5.4.40
+		Added thesaurus list sort alphabetically by group
+		
+
 
 
 	WORK IN PROGRESS
@@ -1561,12 +1565,12 @@
 
 
 	# Version
-	$DEDALO_VERSION = '5.4.36';
+	$DEDALO_VERSION = '5.4.40';
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.'.time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '20-05-2019');
+	define('DEDALO_BUILD'	, '22-05-2019');
 
 
 	/*

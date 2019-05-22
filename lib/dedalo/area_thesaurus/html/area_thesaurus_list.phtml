@@ -47,7 +47,14 @@
 		#
 		# HIERARCHY TIPOLOGY NAME Like 'Toponimia'
 		$html .= '<div class="tipology_name '.$tipology_name_model_css.'" onclick="area_thesaurus.toggle_tipology(this)" data-state="show" data-section_id="'.$tipology_section_id.'"><strong>'.trim($tipology_name).'</strong></div>';
-					
+			
+			// sort alphabetically (take care of non translated names like <mark>Name</mark>)
+				usort($ar_items, function($a, $b) {
+					$hierarchy_target_section_name_a = strip_tags($a->hierarchy_target_section_name);
+					$hierarchy_target_section_name_b = strip_tags($b->hierarchy_target_section_name);
+					return strcasecmp($hierarchy_target_section_name_a, $hierarchy_target_section_name_b);
+				});
+
 			foreach ($ar_items as $item) {
 				
 				$hierarchy_section_id   		= $item->section_id;
