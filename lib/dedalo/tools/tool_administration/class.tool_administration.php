@@ -209,7 +209,7 @@ class tool_administration extends tool_common {
 			
 			if($proced===true){
 
-		 		$datos = (string)json_handler::encode($datos);		
+				$datos = (string)json_handler::encode($datos);		
 				$datos = pg_escape_string($datos);
 
 				// Save section dato			
@@ -264,7 +264,7 @@ class tool_administration extends tool_common {
 			self::create_table(
 					$table_name = "matrix_updates", 
 					$ar_columns = array("id" 	=> "serial NOT NULL",
-								 		"datos" => "jsonb NULL")
+										"datos" => "jsonb NULL")
 					);
 			# Set to default minimal db version	(4.0.9)
 			self::update_dedalo_data_version('4.0.9');
@@ -833,9 +833,9 @@ class tool_administration extends tool_common {
 
 				if ($extension==='sh' || $extension==='log') {
 					$file_name = pathinfo($file,PATHINFO_BASENAME);
-			  		$ar_deleted_files[] = $file_name;
+					$ar_deleted_files[] = $file_name;
 
-			  		unlink($file); // delete file
+					unlink($file); // delete file
 				}
 			}
 		}
@@ -1682,47 +1682,78 @@ class tool_administration extends tool_common {
 		$current_dato = '
 		{
 		  "dato": {
-		    "lg-nolan": [
-		      {
-		        "start": {
-		          "day": '.$dd_date->day.',
-		          "hour": '.$dd_date->hour.',
-		          "time": '.$time.',
-		          "year": '.$dd_date->year.',
-		          "month": '.$dd_date->month.',
-		          "minute": '.$dd_date->minute.',
-		          "second": '.$dd_date->second.'
-		        }
-		      }
-		    ]
+			"lg-nolan": [
+			  {
+				"start": {
+				  "day": '.$dd_date->day.',
+				  "hour": '.$dd_date->hour.',
+				  "time": '.$time.',
+				  "year": '.$dd_date->year.',
+				  "month": '.$dd_date->month.',
+				  "minute": '.$dd_date->minute.',
+				  "second": '.$dd_date->second.'
+				}
+			  }
+			]
 		  },
 		  "info": {
-		    "label": "'.$label.'",
-		    "modelo": "component_date"
+			"label": "'.$label.'",
+			"modelo": "component_date"
 		  },
 		  "valor": {
-		    "lg-nolan": [
-		      {
-		        "start": {
-		          "day": '.$dd_date->day.',
-		          "hour": '.$dd_date->hour.',
-		          "time": '.$time.',
-		          "year": '.$dd_date->year.',
-		          "month": '.$dd_date->month.',
-		          "minute": '.$dd_date->minute.',
-		          "second": '.$dd_date->second.'
-		        }
-		      }
-		    ]
+			"lg-nolan": [
+			  {
+				"start": {
+				  "day": '.$dd_date->day.',
+				  "hour": '.$dd_date->hour.',
+				  "time": '.$time.',
+				  "year": '.$dd_date->year.',
+				  "month": '.$dd_date->month.',
+				  "minute": '.$dd_date->minute.',
+				  "second": '.$dd_date->second.'
+				}
+			  }
+			]
 		  },
 		  "valor_list": {
-		    "lg-nolan": "'.$value.'"
+			"lg-nolan": "'.$value.'"
 		  }
 		}
 		';
 
 		return json_decode($current_dato);
 	}//end create_component_date_from_value
+
+
+
+	/**
+	* GET_LAST_BACKUP_INFO
+	* @return string $last_modified_file
+	*/
+	public function get_last_backup_info() {
+		
+		// read dir
+			$path 				= DEDALO_LIB_BASE_PATH.'/backup/backups';
+			$allowed_extensions = ['backup'];
+
+		// call to core function
+			$last_modified_file = get_last_modified_file($path, $allowed_extensions);
+
+		// file_size
+			$filesize_formatted = function($path) {
+				$size  = filesize($path);
+				$units = array( 'B', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB');
+				$power = $size > 0 ? floor(log($size, 1024)) : 0;
+				return number_format($size / pow(1024, $power), 2, '.', ',') . ' ' . $units[$power];
+			};		
+			//$info = new SplFileInfo($last_modified_file);
+			//$size = $info->getSize();
+			$file_size = $filesize_formatted($last_modified_file);
+
+		$last_backup_info = $last_modified_file .PHP_EOL. $file_size;
+
+		return $last_backup_info;
+	}//end get_last_backup_info
 
 
 

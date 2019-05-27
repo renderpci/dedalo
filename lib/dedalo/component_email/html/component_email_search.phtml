@@ -24,7 +24,7 @@
 						
 		case ($permissions>=2)	:
 					# COMPARISON OPERATORS
-					$html_content .= operator::get_search_comparison_operators_html($tipo,$ar_comparison_operators);
+					#$html_content .= operator::get_search_comparison_operators_html($tipo,$ar_comparison_operators);
 		
 					$html_content .= "<input class=\"css_email\" type=\"text\" name=\"{$search_input_name}\" ";
 					$html_content .= "id=\"{$identificador_unico}\" ";
@@ -34,10 +34,11 @@
 					$html_content .= "data-lang=\"{$lang}\" ";
 					$html_content .= "value=\"{$dato}\" ";
 					$html_content .= "title=\"$html_title\" ";
+					$html_content .= "onchange=\"component_common.fix_dato(this,'{$component_name}')\" ";
 					$html_content .= "/>";
 
 					# LOGICAL OPERATORS
-					$html_content .= operator::get_search_logical_operators_html($tipo,$ar_logical_operators);
+					#$html_content .= operator::get_search_logical_operators_html($tipo,$ar_logical_operators);
 
 					if(SHOW_DEBUG===true) {
 						$html_content .= "<span class=\"debug_info\">$search_input_name</span>";

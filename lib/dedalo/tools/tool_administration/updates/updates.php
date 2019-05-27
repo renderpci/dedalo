@@ -18,7 +18,7 @@ $updates->$v = new stdClass();
 	# MINIM UPDATE FROM
 	$updates->$v->update_from_major  = 4;
 	$updates->$v->update_from_medium = 9;
-	$updates->$v->update_from_minor  = 1;
+	$updates->$v->update_from_minor  = 2;
 
 
 	/* en proceso !!
@@ -61,6 +61,23 @@ $updates->$v = new stdClass();
 		$script_obj->script_method  = "propagate_section_info_to_dato";
 		$script_obj->script_vars    = []; // Note that only ONE argument as array is sended
 	$updates->$v->run_scripts[] = $script_obj;
+
+
+
+$v=492; #####################################################################################
+$updates->$v = new stdClass();
+
+	// only for compatibility
+
+	# UPDATE TO
+	$updates->$v->version_major 	 = 4;
+	$updates->$v->version_medium 	 = 9;
+	$updates->$v->version_minor 	 = 2;
+
+	# MINIM UPDATE FROM
+	$updates->$v->update_from_major  = 4;
+	$updates->$v->update_from_medium = 9;
+	$updates->$v->update_from_minor  = 1;
 
 
 

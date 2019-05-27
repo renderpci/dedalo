@@ -33,11 +33,17 @@ class component_input_text extends component_common {
 	*	but in some cases can be an array json encoded or some rare times a plain string
 	*/
 	public function set_dato($dato) {
-		
+
 		if (is_string($dato)) { # Tool Time machine case, dato is string
-			if (strpos($dato, '[')!==false) {
+
+			//check the dato for determinate the original format and if the $dato is correct.
+			$dato_trim				= trim($dato);
+			$dato_first_character 	= substr($dato_trim, 0, 1);
+			$dato_last_character  	= substr($dato_trim, -1);
+
+			if ($dato_first_character==='[' && $dato_last_character===']') {
 				# dato is json encoded 
-				$dato = json_handler::decode($dato);
+				$dato = json_handler::decode($dato_trim);
 			}else{
 				# dato is string plain value
 				$dato = array($dato);
@@ -517,7 +523,7 @@ class component_input_text extends component_common {
 					*/
 
 				# override
-				$query_object = $new_query_json ;
+				$query_object = $new_query_json;
 				break;
 
 			# NOT EMPTY (in any project lang data)

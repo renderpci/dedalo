@@ -283,11 +283,16 @@ class component_relation_children extends component_relation_common {
 	* GET_CHILDRENS
 	* @return array $ar_childrens_recursive
 	*/
-	public static function get_childrens($section_id, $section_tipo, $component_tipo=null, bool $recursive=true) {
-		
-		$ar_childrens_recursive = [];
+	public static function get_childrens($section_id, $section_tipo, $component_tipo=null, bool $recursive=true, $is_recursion=false) {
 
 		static $locators_resolved = array();
+
+		// reset ar_resolved on first call
+			if ($is_recursion===false) {
+				$locators_resolved = [];
+			}
+
+		$ar_childrens_recursive = [];
 
 		# Infinite loops prevention
 		$pseudo_locator = $section_id .'_'. $section_tipo;
@@ -330,7 +335,7 @@ class component_relation_children extends component_relation_common {
 				$locators_resolved[] = $section_id .'_'. $section_tipo;
 				
 				foreach ((array)$dato as $key => $current_locator) {
-					$ar_childrens_recursive = array_merge($ar_childrens_recursive, self::get_childrens($current_locator->section_id, $current_locator->section_tipo, $component_tipo, $recursive));
+					$ar_childrens_recursive = array_merge($ar_childrens_recursive, self::get_childrens($current_locator->section_id, $current_locator->section_tipo, $component_tipo, $recursive, $is_recursion=true));
 				}
 			}
 		}		

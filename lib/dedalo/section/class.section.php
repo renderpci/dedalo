@@ -140,39 +140,44 @@ class section extends common {
 			#global$TIMER;$TIMER[__METHOD__.'_' .$section_name.'_IN_'.$tipo.'_'.$modo.'_'.$section_id.'_'.microtime(1)]=microtime(1);
 		}
 
-		# Set general vars
-		$this->section_id 	= $section_id;
-		$this->tipo 		= $tipo;
-		$this->modo 		= $modo;
-		$this->parent 		= 0;
+		// Set general vars
+			$this->section_id 	= $section_id;
+			$this->tipo 		= $tipo;
+			$this->modo 		= $modo;
+			$this->parent 		= 0;
 
 
-		# When tipo is set, calculate structure data
-		parent::load_structure_data();
+		// load_structure_data. When tipo is set, calculate structure data
+			parent::load_structure_data();
 
-		/*
-			# Relaciones
-			$relaciones = $this->RecordObj_dd->get_relaciones()[0];
+		
+		# Relaciones
+			#	$relaciones = $this->RecordObj_dd->get_relaciones()[0];
+			#
+			#	if(!empty($relaciones)) {
+			#		foreach ($relaciones as $key => $value) {
+			#			$modelo 	= RecordObj_dd::get_termino_by_tipo($key);
+			#			if($modelo=='section')
+			#			$this->tipo = $value;
+			#		}
+			#	}
+		
+	
+		// active_section_section_id : Set global var
+			if($modo==='edit'
+			 	&& ($this->section_id>0 || strpos($this->section_id, DEDALO_SECTION_ID_TEMP)!==false)
+				&& !isset(section::$active_section_id) ) {
 
-			if(!empty($relaciones)) {
-				foreach ($relaciones as $key => $value) {
-					$modelo 	= RecordObj_dd::get_termino_by_tipo($key);
-					if($modelo=='section')
-					$this->tipo = $value;
-				}
+					// fix active_section_id
+						section::$active_section_id = $this->get_section_id();
 			}
-		*/
+		
+		// debug
+			if(SHOW_DEBUG===true) {
+				#global$TIMER;$TIMER[__METHOD__.'_' .$section_name.'_OUT_'.$tipo.'_'.$modo.'_'.$section_id.'_'.microtime(1)]=microtime(1);				
+			}
 
-		# ACTIVE_SECTION_section_id : Set global var
-		if($modo==='edit'
-		 	&& ($this->section_id>0 || strpos($this->section_id, DEDALO_SECTION_ID_TEMP)!==false)
-			&& !isset(section::$active_section_id) ) {
-				section::$active_section_id = $this->get_section_id();
-		}
-
-		if(SHOW_DEBUG===true) {
-			#global$TIMER;$TIMER[__METHOD__.'_' .$section_name.'_OUT_'.$tipo.'_'.$modo.'_'.$section_id.'_'.microtime(1)]=microtime(1);
-		}
+		return true;
 	}//end __construct
 	
 
@@ -181,18 +186,18 @@ class section extends common {
 	* GET DATO
 	*/
 	public function get_dato() {
-
+	
 		# If section_id have a temporal string the save hander will be 'session' the section will save into the menory NOT to database
 		if( strpos($this->section_id, DEDALO_SECTION_ID_TEMP)!==false ){
 			$this->save_handler = 'session';
-		}
+		}			
+		
 
 		#
 		# SAVE_HANDLER DIFFERENT TO DATABASE CASE
 		# Sometimes we need use section as temporal element without save real data to database. Is this case
 		# data is saved to session as temporal data and can be recovered from $_SESSION['dedalo4']['section_temp_data'] using key '$this->tipo.'_'.$this->section_id'
-		if (isset($this->save_handler) && $this->save_handler==='session') {
-		
+		if (isset($this->save_handler) && $this->save_handler==='session') {		
 
 			if (!isset($this->dato)) {
 
@@ -2920,7 +2925,11 @@ class section extends common {
 				# Ignoerd locator
 				$ar_deleted_locators[] = $current_locator;				
 				$removed = true;
-				debug_log(__METHOD__." Deleted locator in $relations_container. component_tipo:$component_tipo - section_tipo:$current_locator->section_tipo ".to_string($current_locator), logger::DEBUG);
+				if(SHOW_DEBUG===true) {
+					$c_section_label 	= RecordObj_dd::get_termino_by_tipo($current_locator->section_tipo);
+					$c_scomponent_label = RecordObj_dd::get_termino_by_tipo($component_tipo);
+					debug_log(__METHOD__." Deleted locator in '$relations_container'. component_tipo:$component_tipo - section_tipo:$current_locator->section_tipo - $c_section_label - $c_scomponent_label " . PHP_EOL . to_string($current_locator), logger::DEBUG);
+				}				
 			}else{
 				# Add normally
 				$new_relations[] = $current_locator;
@@ -3110,9 +3119,9 @@ class section extends common {
 				
 				if (!empty($layout_map)) {
 					$ar_component_tipo = reset($layout_map);
-					foreach ($ar_component_tipo as $component_tipo) {
+					foreach ($ar_component_tipo as $key => $component_tipo) {
 						if (empty($component_tipo)) {
-							debug_log(__METHOD__." Ignored empty component tipo received from layout map: ".to_string($layout_map), logger::ERROR);
+							debug_log(__METHOD__." Ignored empty component tipo (key:$key) received from layout map: ".json_encode($layout_map, JSON_PRETTY_PRINT), logger::ERROR);
 							continue;
 						}
 						$select_element = new stdClass();
@@ -3408,6 +3417,19 @@ class section extends common {
 
 
 	/**
+	* GET_AR_GROUPER_MODELS
+	* @return array $ar_groupers_models
+	*/
+	public static function get_ar_grouper_models() {
+		
+		$ar_groupers_models = ['section_group','section_group_div','section_tab','tab'];
+
+		return $ar_groupers_models;
+	}//end get_ar_grouper_models
+
+
+
+	/**
 	* BUILD_JSON_ROWS
 	* @return object $result
 	*/
@@ -3434,28 +3456,28 @@ class section extends common {
 
 					// context section info
 						$context_item = new stdClass();
-							$context_item->type  		 = 'section_info';
+							$context_item->type  		 = 'section';
 							$context_item->section_tipo  = $section_tipo;
 							$context_item->section_label = RecordObj_dd::get_termino_by_tipo($section_tipo, DEDALO_DATA_LANG, true, true);
 							$context_item->modo 		 = $modo;
 						$context[] = $context_item;
 
 					#foreach ($list_map as $list_item) {
-					#
-					#	$component_tipo = $list_item->tipo;
-					#
-					#	$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
-					#	$label 		 = RecordObj_dd::get_termino_by_tipo($component_tipo, DEDALO_DATA_LANG, true, true);
-					#	
-					#	// context column_info
-					#		$context_item = new stdClass();
-					#			$context_item->type  		 = 'column_info';
-					#			$context_item->tipo  		 = $component_tipo;
-					#			$context_item->section_tipo  = $section_tipo;
-					#			$context_item->model 		 = $modelo_name;
-					#			$context_item->label 		 = $label;
-					#		$context[] = $context_item;
-					#}
+						#
+						#	$component_tipo = $list_item->tipo;
+						#
+						#	$modelo_name = RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+						#	$label 		 = RecordObj_dd::get_termino_by_tipo($component_tipo, DEDALO_DATA_LANG, true, true);
+						#	
+						#	// context column_info
+						#		$context_item = new stdClass();
+						#			$context_item->type  		 = 'column_info';
+						#			$context_item->tipo  		 = $component_tipo;
+						#			$context_item->section_tipo  = $section_tipo;
+						#			$context_item->model 		 = $modelo_name;
+						#			$context_item->label 		 = $label;
+						#		$context[] = $context_item;
+						#}
 				}
 
 		// data
@@ -3476,33 +3498,55 @@ class section extends common {
 					// Iterate list_map for colums
 						foreach ((array)$ar_list_map->$section_tipo as $list_item) {
 
-							$tipo = $list_item->tipo;
-							$modo = $list_item->modo;
+							$tipo 		= $list_item->tipo;
+							$modo 		= $list_item->modo;
+							$modelo_name= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 
-							switch ($tipo) {								
-								case 'section_tipo':								
+							switch (true) {								
+								case ($tipo==='section_tipo'): 
 									# ignore
 									continue 2;
 									break;
 
-								default:									
-									$modelo_name 		= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+								case (strpos($modelo_name, 'component_')===0):									
+									# components
 									$current_component  = component_common::get_instance($modelo_name,
 																						 $tipo,
 																						 $section_id,
 																						 'list',
 																						 DEDALO_DATA_LANG,
-																						 $section_tipo);
-									
-									$component_json = $current_component->get_json();									
+																						 $section_tipo);									
+									$component_json = $current_component->get_json();
+
+									// data add
+										$data = array_merge($data, $component_json->data);
+
+									// context add 
+										$context = array_merge($context, $component_json->context);
 									break;
-							}
+								
+								case ($i===0 && in_array($modelo_name, section::get_ar_grouper_models())): // ['section_group','section_group_div','section_tab','tab']
+									# groupers
+									$current_class_name = $modelo_name;
+									if ($modelo_name==='tab') {
+										$current_class_name = 'section_tab';
+									}
+									$current_grouper  = new $current_class_name($tipo, $section_tipo, $modo, null);									
+									
+									$grouper_json = $current_grouper->get_json();
 
-							// data add
-								$data = array_merge($data, $component_json->data);
+									// data . No add data here is necessary because is always empty
+										#$data = array_merge($data, $grouper_json->data);										
 
-							// context add 
-								$context = array_merge($context, $component_json->context);
+									// context add 
+										$context = array_merge($context, $grouper_json->context);
+									break;
+
+								default:
+									# not defined modelfro context / data								
+									debug_log(__METHOD__." Ignored model $modelo_name - $tipo ".to_string(), logger::WARNING);
+									break;
+							}							
 
 						}//end iterate ar_list_map
 
@@ -3543,7 +3587,7 @@ class section extends common {
 		$ar_component_info = [];
 		foreach ($context as $key => $value) {
 			
-			if (($value->type==='component_info')) {
+			if (($value->type==='component')) {
 				$tipo = $value->tipo;
 				if (in_array($tipo, $ar_component_info)) {
 					unset($context[$key]);

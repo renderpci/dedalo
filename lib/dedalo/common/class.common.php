@@ -1318,11 +1318,11 @@ abstract class common {
 	* @param object $data
 	* @return string $result
 	*/
-	public static function build_element_json_output($context, $data) {
+	public static function build_element_json_output($context, $data=[]) {
 		
 		$element = new stdClass();
 			$element->context = $context;
-			$element->data 	 = $data;
+			$element->data 	  = $data;
 
 		#if(SHOW_DEBUG===true) {
 		#	$result = json_encode($element, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
@@ -1371,6 +1371,170 @@ abstract class common {
 		return $json;		
 	}//end get_json
 
+
+
+	/**
+	* GET_STRUCTURE_CONTEXT
+	* @return object $item
+	*/
+	public function get_structure_context() {
+
+		// class called (model name too like component_input_text)
+			$model = get_called_class();
+
+		// resolve type
+			if (strpos($model, 'component_')===0) {
+				$type = 'component';
+			}elseif (in_array($model, section::get_ar_grouper_models())) {
+				$type = 'grouper';
+			}else{
+				debug_log(__METHOD__." UNDEFINED model: $model - ".$this->get_tipo(), logger::ERROR);
+				throw new Exception("Error Processing Request", 1);				
+				return false;
+			}
+			
+		// build context item
+			$item = new stdClass();
+				$item->type 			= $type; // like 'component_info';
+				$item->tipo 			= $this->get_tipo();
+				$item->model 			= $model;
+				$item->label 			= $this->get_label();
+				$item->section_tipo		= $this->get_section_tipo();
+				$item->lang				= $this->get_lang();
+				$item->translatable 	= $this->RecordObj_dd->get_traducible()==='si' ? true : false;
+				
+				$item->properties 		= $this->get_propiedades();
+				$item->parent 			= $this->RecordObj_dd->get_parent();
+				$item->related 			= $this->get_ar_related_component_tipo();
+
+		// section_list optional for get related_list
+			$ar_section_list = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($item->tipo, 'section_list', 'children', true);
+			if (isset($ar_section_list[0])) {
+				
+				$related_list_tipo 	= $ar_section_list[0];
+				$ar_components 		= RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($related_list_tipo, 'component_', 'termino_relacionado', false);				
+				$item->related_list = $ar_components;
+			}
+
+		return $item;
+	}//end get_structure_context
+
+
+
+	/**
+	* TRUNCATE_TEXT
+	* Multibyte truncate or trim text
+	*/
+	public static function truncate_text($string, $limit, $break=" ", $pad='...') {
+
+		// returns with no change if string is shorter than $limit
+			$str_len = mb_strlen($string, '8bit');
+			if($str_len <= $limit) {
+				return $string;
+			}
+		// substring multibyte
+			$string_fragment = mb_substr($string, 0, $limit);
+
+		// cut fragment by break char (if is possible)
+			if(false !== ($breakpoint = mb_strrpos($string_fragment, $break))) {
+				$final_string = mb_substr($string_fragment, 0, $breakpoint);
+			}else{
+				$final_string = $string_fragment;
+			}
+
+		return $final_string . $pad;
+	}//end truncate_text
+
+
+
+	/**
+	* TRUNCATE_HTML
+	* Thanks to Søren Løvborg (printTruncated)
+	*/
+	public static function truncate_html($maxLength, $html, $isUtf8=true) {
+	    $printedLength = 0;
+	    $position = 0;
+	    $tags = array();
+
+	    $full_text = '';
+
+	    // For UTF-8, we need to count multibyte sequences as one character.
+	    $re = $isUtf8
+	        ? '{</?([a-z]+)[^>]*>|&#?[a-zA-Z0-9]+;|[\x80-\xFF][\x80-\xBF]*}'
+	        : '{</?([a-z]+)[^>]*>|&#?[a-zA-Z0-9]+;}';
+
+	    while ($printedLength < $maxLength && preg_match($re, $html, $match, PREG_OFFSET_CAPTURE, $position))
+	    {
+	        list($tag, $tagPosition) = $match[0];
+
+	        // Print text leading up to the tag.
+	        $str = substr($html, $position, $tagPosition - $position);
+	        if ($printedLength + strlen($str) > $maxLength)
+	        {
+	            #print(substr($str, 0, $maxLength - $printedLength));
+	            $full_text .= substr($str, 0, $maxLength - $printedLength);
+	            $printedLength = $maxLength;
+	            break;
+	        }
+
+	        #print($str);
+	        $full_text .= $str;
+	        $printedLength += strlen($str);
+	        if ($printedLength >= $maxLength) break;
+
+	        if ($tag[0] === '&' || ord($tag) >= 0x80)
+	        {
+	            // Pass the entity or UTF-8 multibyte sequence through unchanged.
+	            #print($tag);
+	            $full_text .= $tag;
+	            $printedLength++;
+	        }
+	        else
+	        {
+	            // Handle the tag.
+	            $tagName = $match[1][0];
+	            if ($tag[1] === '/')
+	            {
+	                // This is a closing tag.
+
+	                $openingTag = array_pop($tags);
+	                assert($openingTag === $tagName); // check that tags are properly nested.
+
+	                #print($tag);
+	                $full_text .= $tag;
+	            }
+	            else if ($tag[strlen($tag) - 2] === '/')
+	            {
+	                // Self-closing tag.
+	                #print($tag);
+	                $full_text .= $tag;
+	            }
+	            else
+	            {
+	                // Opening tag.
+	                #print($tag);
+	                $full_text .= $tag;
+	                $tags[] = $tagName;
+	            }
+	        }
+
+	        // Continue after the tag.
+	        $position = $tagPosition + strlen($tag);
+	    }
+
+	    // Print any remaining text.
+	    if ($printedLength < $maxLength && $position < strlen($html))
+	        #print(substr($html, $position, $maxLength - $printedLength));
+	    	$full_text .= substr($html, $position, $maxLength - $printedLength);
+
+	    // Close any open tags.
+	    while (!empty($tags)) {	    	
+	        #printf('</%s>', array_pop($tags));
+	        $full_text .= sprintf('</%s>', array_pop($tags));
+	    }
+
+	    return $full_text;
+	}//end truncate_html
 
 
 

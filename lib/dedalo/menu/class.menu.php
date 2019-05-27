@@ -50,6 +50,20 @@ class menu extends common {
 
 
 	/**
+	* BUILD_MENU_LINK
+	* @return string $link
+	*/
+	public static function build_menu_link($url, $label) {
+		$link = "<a href=\"javascript:menu.load_ref('$url')\">$label</a>";
+		#$link = '<a href="javascript:void(0);" onclick="menu.load_ref(this, event, \''.$url.'\')">'.$label.'</a>';
+		#$link = '<a href="javascript:void(0);" class="menu_link_a" data-url="'.$url.'">'.$label.'</a>';
+		
+		return $link;
+	}//end build_menu_link
+
+
+
+	/**
 	* GET MENU STRUCTURE HTML (TREE)
 	*
 	* @param $option
@@ -123,11 +137,12 @@ class menu extends common {
 							// Structure links
 								$menu_structure_html .= '<li class="has-sub menu_li_inactive">';
 									$structure_path = DEDALO_LIB_BASE_URL.'/dd/dd_list.php?modo=tesauro_edit';
-									$modelo_path 	= DEDALO_LIB_BASE_URL.'/dd/dd_list.php?modo=modelo_edit';
-									$menu_structure_html .= "<a href=\"javascript:menu.load_ref('$structure_path')\">Structure</a>";
+									$modelo_path 	= DEDALO_LIB_BASE_URL.'/dd/dd_list.php?modo=modelo_edit';								
+									$menu_structure_html .= self::build_menu_link($structure_path, 'Structure');
 									$menu_structure_html .= '<ul>';
-									$menu_structure_html .= "<li><a href=\"javascript:menu.load_ref('$modelo_path')\">Modelo</a></li>";
-
+									$menu_structure_html .= '<li>';
+									$menu_structure_html .= self::build_menu_link($modelo_path, 'Model');
+									$menu_structure_html .= '</li>';
 									$menu_structure_html .= '</ul>';
 								$menu_structure_html .= '</li>';
 						}
@@ -174,7 +189,7 @@ class menu extends common {
 		$url  = "{$path}?t=$tipo";
 
 		# Redirections when area is a special thesaurus class
-		if ($tipo===DEDALO_THESAURUS_VIRTUALS_AREA_TIPO) { // hierarchy56			
+		if ($tipo===DEDALO_THESAURUS_VIRTUALS_AREA_TIPO) { // hierarchy56
 			$url  = "{$path}?t=".DEDALO_TESAURO_TIPO;
 		}elseif ($tipo===DEDALO_THESAURUS_VIRTUALS_MODELS_AREA_TIPO) {
 			$url  = "{$path}?t=".DEDALO_TESAURO_TIPO.'&model=1';
@@ -190,10 +205,10 @@ class menu extends common {
 			//dump($propiedades, ' propiedades ++ '.to_string());
 		}
 		
-		$link = "<a href=\"javascript:menu.load_ref('$url')\">$termino</a>";
+		$link = self::build_menu_link($url, $termino);
 
 		return $link;
-	}
+	}//end create_link
 
 
 

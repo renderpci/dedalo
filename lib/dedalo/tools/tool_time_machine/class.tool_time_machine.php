@@ -333,6 +333,18 @@ class tool_time_machine extends tool_common {
 
 			$ar_source_langs[$current_lang] = $name;
 		}
+
+		// add project langs always
+			$DEDALO_PROJECTS_DEFAULT_LANGS = unserialize(DEDALO_PROJECTS_DEFAULT_LANGS);
+			foreach ($DEDALO_PROJECTS_DEFAULT_LANGS as $current_lang) {
+				
+				if (!isset($ar_source_langs[$current_lang])) {
+
+					$name = lang::get_name_from_code($current_lang);
+
+					$ar_source_langs[$current_lang] = $name;
+				}
+			}
 	
 		return $ar_source_langs;
 	}//end get_source_langs

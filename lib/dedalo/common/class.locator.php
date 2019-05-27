@@ -8,14 +8,14 @@
 
 	$locator->section_top_tipo		= (string)$section_top_tipo;
 	$locator->section_top_id		= (string)$section_top_id;
-	$locator->section_id			= (string)$section_id;
+	$locator->section_id			= (string)$section_id; 
 	$locator->section_tipo			= (string)$section_tipo; 
-	$locator->component_tipo		= (string)$component_tipo;
-	$locator->from_component_tipo	= (string)$component_tipo;
+	$locator->component_tipo		= (string)$component_tipo; //destination component tipo
+	$locator->from_component_tipo	= (string)$component_tipo; // source component tipo
 	$locator->tag_id				= (string)$tag_id;
 	$locator->state					= (object)$state;
 	$locator->semantic				= (object)$semantic;
-	$locator->from_key				= (int)$from_key;
+	$locator->from_key				= (int)$from_key; //dataframe index array number of the data taht reference
 
 	Note that properties can exists or not (are created on the fly). Final result object only contain set properties and locator object can be empty or partially set.
 	For example, component portal only use section_tipo an section_id in many cases

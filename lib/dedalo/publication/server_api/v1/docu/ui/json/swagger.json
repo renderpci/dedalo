@@ -1,8 +1,8 @@
 {
   "swagger" : "2.0",
   "info" : {
-    "version" : "1.0.8",
-    "title" : "Dédalo Web REST API 1.0.8",
+    "version" : "1.0.9",
+    "title" : "Dédalo Web REST API 1.0.9",
     "description" : "Builds Public Dédalo data for publication. <br>Use this online tool to test your data and remember always write your <i>Auth code</i> when executes a try call.<br> <strong>This API is focused to Oral History archives and is for general pourposes.<br>If you need special features or custom results, you are wellcome to join API develop team contacting with the source developers (aka Alex&Paco)</strong> in webmaster@render.es",
     "license" : {
       "name" : "Apache 2.0 license",
@@ -76,9 +76,6 @@
       "type" : "string",
       "example" : "Request done"
     },
-    "item_object" : {
-      "type" : "object"
-    },
     "item_response" : {
       "type" : "object",
       "properties" : {
@@ -92,6 +89,9 @@
           }
         }
       }
+    },
+    "item_object" : {
+      "type" : "object"
     },
     "response" : {
       "type" : "object",
@@ -111,6 +111,13 @@
       "in" : "query",
       "required" : true,
       "description" : "Auth code (mandatory)",
+      "type" : "string"
+    },
+    "db_name" : {
+      "name" : "db_name",
+      "in" : "query",
+      "required" : false,
+      "description" : "Database name. If not defined, the default database will be used",
       "type" : "string"
     },
     "lang" : {
@@ -144,6 +151,8 @@
         "description" : "Get complete info about current disposable tables and columns.",
         "parameters" : [ {
           "$ref" : "#/parameters/code"
+        }, {
+          "$ref" : "#/parameters/db_name"
         } ],
         "tags" : [ "Info" ],
         "responses" : {
@@ -162,6 +171,8 @@
         "summary" : "Get records from DDBB",
         "parameters" : [ {
           "$ref" : "#/parameters/code"
+        }, {
+          "$ref" : "#/parameters/db_name"
         }, {
           "name" : "table",
           "in" : "query",
@@ -270,6 +281,8 @@
         "parameters" : [ {
           "$ref" : "#/parameters/code"
         }, {
+          "$ref" : "#/parameters/db_name"
+        }, {
           "$ref" : "#/parameters/lang"
         }, {
           "name" : "av_section_id",
@@ -295,6 +308,8 @@
         "description" : "Calculate all fragments indexed with this locator.",
         "parameters" : [ {
           "$ref" : "#/parameters/code"
+        }, {
+          "$ref" : "#/parameters/db_name"
         }, {
           "$ref" : "#/parameters/lang"
         }, {
@@ -322,6 +337,8 @@
         "description" : "Return a array of 'ts_term' objects with resolved data. You can use only the data or (in PHP) manage 'ts_term' objects to build custom html.",
         "parameters" : [ {
           "$ref" : "#/parameters/code"
+        }, {
+          "$ref" : "#/parameters/db_name"
         }, {
           "$ref" : "#/parameters/lang"
         }, {
@@ -377,6 +394,8 @@
         "parameters" : [ {
           "$ref" : "#/parameters/code"
         }, {
+          "$ref" : "#/parameters/db_name"
+        }, {
           "$ref" : "#/parameters/lang"
         }, {
           "name" : "table",
@@ -423,6 +442,8 @@
         "description" : "Execute a search against thesaurus tables",
         "parameters" : [ {
           "$ref" : "#/parameters/code"
+        }, {
+          "$ref" : "#/parameters/db_name"
         }, {
           "$ref" : "#/parameters/lang"
         }, {
@@ -499,6 +520,8 @@
         "parameters" : [ {
           "$ref" : "#/parameters/code"
         }, {
+          "$ref" : "#/parameters/db_name"
+        }, {
           "$ref" : "#/parameters/lang"
         }, {
           "name" : "table",
@@ -552,6 +575,8 @@
         "parameters" : [ {
           "$ref" : "#/parameters/code"
         }, {
+          "$ref" : "#/parameters/db_name"
+        }, {
           "$ref" : "#/parameters/lang"
         }, {
           "name" : "ar_term_id",
@@ -581,6 +606,8 @@
         "description" : "Builds a indexation_node data object",
         "parameters" : [ {
           "$ref" : "#/parameters/code"
+        }, {
+          "$ref" : "#/parameters/db_name"
         }, {
           "$ref" : "#/parameters/lang"
         }, {
@@ -619,6 +646,8 @@
         "parameters" : [ {
           "$ref" : "#/parameters/code"
         }, {
+          "$ref" : "#/parameters/db_name"
+        }, {
           "$ref" : "#/parameters/lang"
         }, {
           "name" : "term_id",
@@ -656,6 +685,8 @@
         "description" : "Exec a records query in current term table to find records with data parent equal to current term_id",
         "parameters" : [ {
           "$ref" : "#/parameters/code"
+        }, {
+          "$ref" : "#/parameters/db_name"
         }, {
           "$ref" : "#/parameters/lang"
         }, {
@@ -699,6 +730,8 @@
         "parameters" : [ {
           "$ref" : "#/parameters/code"
         }, {
+          "$ref" : "#/parameters/db_name"
+        }, {
           "$ref" : "#/parameters/lang"
         }, {
           "$ref" : "#/parameters/ar_fields"
@@ -727,6 +760,8 @@
         "description" : "Exec a search against transcription column in audiovisual table",
         "parameters" : [ {
           "$ref" : "#/parameters/code"
+        }, {
+          "$ref" : "#/parameters/db_name"
         }, {
           "$ref" : "#/parameters/lang"
         }, {
@@ -828,6 +863,8 @@
         "parameters" : [ {
           "$ref" : "#/parameters/code"
         }, {
+          "$ref" : "#/parameters/db_name"
+        }, {
           "$ref" : "#/parameters/lang"
         }, {
           "name" : "av_section_id",
@@ -875,6 +912,8 @@
         "description" : "Exec a search against full_data column in global_search table",
         "parameters" : [ {
           "$ref" : "#/parameters/code"
+        }, {
+          "$ref" : "#/parameters/db_name"
         }, {
           "$ref" : "#/parameters/lang"
         }, {
@@ -943,6 +982,8 @@
         "description" : "Exec an array of api request in only one call to server.",
         "parameters" : [ {
           "$ref" : "#/parameters/code"
+        }, {
+          "$ref" : "#/parameters/db_name"
         }, {
           "name" : "ar_calls",
           "in" : "query",

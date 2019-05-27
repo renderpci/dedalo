@@ -85,6 +85,7 @@
 							#$edit_class = 'css_date_span_edit_in_portal';	
 						}else{
 							$html_content .= "<span class=\"css_date_span\" onclick=\"component_common.change_mode_component(this, '$modo','edit')\">";
+							$html_content .= "</span>";
 							#$edit_class = 'css_date_span';
 						}
 						#$html_content .= " <span class=$edit_class onclick=\"component_common.change_mode_component(this, '$modo','edit')\">";
@@ -145,7 +146,7 @@
 
 	# Prepare content to show in page
 	tools::prepare_content($html_content);
-
+	print "</div>";
 	# PRINT HTML	
 	print $html_content;
 
